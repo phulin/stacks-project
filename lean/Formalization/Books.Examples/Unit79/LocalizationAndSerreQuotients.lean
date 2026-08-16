@@ -1,5 +1,5 @@
 import Mathlib.Algebra.Category.Grp.ZModuleEquivalence
-import Mathlib.Algebra.Category.ModuleCat.Abelian
+import Mathlib.Algebra.Category.FGModuleCat.Abelian
 import Mathlib.Algebra.Category.ModuleCat.ChangeOfRings
 import Mathlib.Algebra.Category.ModuleCat.Localization
 import Mathlib.Algebra.Module.Torsion.Basic
@@ -173,20 +173,21 @@ theorem quotientByTorsionModules_equiv_fractionField
 
 /-! ## Finitely generated modules over a Noetherian domain -/
 
-/-- The source's category `Mod_A^fg` as a full subcategory of `Mod_A`. -/
-def finitelyGeneratedModuleProperty (A : Type u) [CommRing A] :
+/-- Mathlib's `FGModuleCat` is the canonical full subcategory for the source's
+category `Mod_A^fg`. -/
+abbrev finitelyGeneratedModuleProperty (A : Type u) [CommRing A] :
     ObjectProperty (moduleCategory A) :=
-  fun M => Module.Finite A (M : Type u)
+  ModuleCat.isFG.{u} A
 
 abbrev finitelyGeneratedModuleCategory (A : Type u) [CommRing A] :=
-  (finitelyGeneratedModuleProperty A).FullSubcategory
+  FGModuleCat.{u} A
 
 /- The Noetherian hypothesis is exactly the source's hypothesis ensuring that
-   the finitely generated module category is abelian. -/
+   the finitely generated module category is abelian; this is Mathlib's
+   canonical instance for `FGModuleCat`. -/
 instance finitelyGeneratedModuleCategory_abelian
     (A : Type u) [CommRing A] [IsNoetherianRing A] :
-    Abelian (finitelyGeneratedModuleCategory A) := by
-  sorry
+    Abelian (finitelyGeneratedModuleCategory A) := inferInstance
 
 /-- The canonical inclusion `Mod_A^fg ↪ Mod_A`. -/
 def finitelyGeneratedModuleInclusion (A : Type u) [CommRing A] :

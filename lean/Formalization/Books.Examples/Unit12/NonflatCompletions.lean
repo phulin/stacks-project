@@ -3,6 +3,8 @@ import Mathlib.RingTheory.AdicCompletion.Algebra
 import Mathlib.RingTheory.AdicCompletion.Completeness
 import Mathlib.RingTheory.Flat.Basic
 import Mathlib.RingTheory.Flat.FaithfullyFlat.Basic
+import Mathlib.RingTheory.RingHom.Flat
+import Mathlib.RingTheory.RingHom.FaithfullyFlat
 import Mathlib.RingTheory.IntegralClosure.IntegrallyClosed
 import Mathlib.RingTheory.IntegralClosure.IsIntegral.AlmostIntegral
 import Mathlib.RingTheory.KrullDimension.Basic
@@ -105,6 +107,12 @@ theorem powerSeries_flat_iff_isCoherent
     Module.Flat R (PowerSeries R) ↔ IsCoherent R := by
   sorry
 
+theorem powerSeries_algebraMap_flat_iff_isCoherent
+    (R : Type u) [CommRing R] [Countable R] :
+    RingHom.Flat (algebraMap R (PowerSeries R)) ↔ IsCoherent R := by
+  rw [RingHom.flat_algebraMap_iff]
+  exact powerSeries_flat_iff_isCoherent R
+
 /-! ## The explicitly displayed noncoherent ring -/
 
 abbrev NoncoherentExampleVariables := Fin 2 ⊕ (ℕ × Bool)
@@ -148,6 +156,11 @@ theorem noncoherentExample_countable
     Countable (noncoherentExampleRing k) := by
   sorry
 
+instance noncoherentExample_countable_inst
+    (k : Type u) [Field k] [Countable k] :
+    Countable (noncoherentExampleRing k) :=
+  noncoherentExample_countable k
+
 theorem noncoherentExample_ideal_not_finitePresented
     (k : Type u) [Field k] [Countable k] :
     ¬ Module.FinitePresentation (noncoherentExampleRing k)
@@ -158,6 +171,13 @@ theorem noncoherentExample_not_coherent
     (k : Type u) [Field k] [Countable k] :
     ¬ IsCoherent (noncoherentExampleRing k) := by
   sorry
+
+theorem noncoherentExample_powerSeries_not_flat
+    (k : Type u) [Field k] [Countable k] :
+    ¬ Module.Flat (noncoherentExampleRing k)
+        (PowerSeries (noncoherentExampleRing k)) := by
+  rw [powerSeries_flat_iff_isCoherent]
+  exact noncoherentExample_not_coherent k
 
 /-! ## Completion of a polynomial ring -/
 
@@ -200,17 +220,16 @@ theorem valuationRing_powerSeries_flat (R : Type u) [CommRing R] [IsDomain R]
     Module.Flat R (PowerSeries R) := by
   sorry
 
-def IsCompletelyNormal (R K : Type*) [CommRing R] [Field K]
+def IsCompletelyNormal (R K : Type*) [CommRing R] [IsDomain R] [Field K]
     [Algebra R K] [IsFractionRing R K] : Prop :=
   ∀ {x : K}, IsAlmostIntegral R x → ∃ r : R, algebraMap R K r = x
 
 /-
 The series used in the almost-integral argument is represented by its
-coefficient data.  The source writes the coefficient at degree `n` as
-`r * α ^ (n - 1)` while also displays the identity
-`(a x - b) f = -r b`.  The latter identity uses the shifted coefficients
-`r * α ^ n`, including the constant term `r`, so that is the convention
-used here.
+coefficient data.  The source writes the coefficient of `x ^ n` as
+`r * α ^ (n - 1)` but displays the identity `(a x - b) f = -r b`.
+That identity uses the shifted coefficients `r * α ^ n`, including the
+constant term `r`, so that is the convention used here.
 -/
 structure AlmostIntegralSeriesData (R : Type u) (K : Type v)
     [CommRing R] [Field K] [Algebra R K] [IsFractionRing R K]
@@ -274,7 +293,7 @@ noncomputable instance almostIntegralPolynomialLocalizationPowerSeriesAlgebra
 theorem almostIntegralPolynomialLocalization_faithfullyFlat
     (R : Type u) [CommRing R] [IsDomain R]
     (hflat : Module.Flat (Polynomial R) (PowerSeries R)) :
-    Module.FaithfullyFlat (almostIntegralPolynomialLocalization R) (PowerSeries R) := by
+    RingHom.FaithfullyFlat (almostIntegralPolynomialLocalizationMap R) := by
   sorry
 
 def almostIntegralPrincipalPolynomial (R : Type u) [CommRing R]
@@ -330,7 +349,12 @@ theorem valuationRing_dimension_gt_one_not_flat_over_polynomial
       ¬ Module.Flat (Polynomial R) (PowerSeries R) := by
   sorry
 
-/-! ## The nonflat localized completion -/
+/-! ## The nonflat localized completion
+
+The source leaves the coefficient ring `k` implicit.  The Noetherian step in
+the argument uses that `k[z][[x]]` is Noetherian, so the interfaces below
+make the standard smallest correction and assume `[Field k]`.
+-/
 
 abbrev NonflatLocalizationVariables := Fin 2 ⊕ ℕ
 
@@ -473,12 +497,12 @@ theorem nonflatLocalizationWitness_coeff
   simp [nonflatLocalizationWitness]
 
 theorem nonflatLocalizationWitness_mem_kernel
-    (k : Type u) [Field k] [Countable k] :
+    (k : Type u) [Field k] :
     nonflatLocalizationWitness k ∈ nonflatLocalizationKernel k := by
   sorry
 
 theorem nonflatLocalizationWitness_not_mem_mapped_kernel
-    (k : Type u) [Field k] [Countable k] :
+    (k : Type u) [Field k] :
     nonflatLocalizationWitness k ∉
       Ideal.map (algebraMap (PowerSeries (nonflatLocalizationRing k))
         (nonflatLocalizationPowerSeries k))
@@ -486,7 +510,7 @@ theorem nonflatLocalizationWitness_not_mem_mapped_kernel
   sorry
 
 theorem nonflatLocalizationKernel_ne_mapped_kernel
-    (k : Type u) [Field k] [Countable k] :
+    (k : Type u) [Field k] :
     nonflatLocalizationKernel k ≠
       Ideal.map (algebraMap (PowerSeries (nonflatLocalizationRing k))
         (nonflatLocalizationPowerSeries k))
@@ -495,11 +519,21 @@ theorem nonflatLocalizationKernel_ne_mapped_kernel
   exact nonflatLocalizationWitness_not_mem_mapped_kernel k
     (h ▸ nonflatLocalizationWitness_mem_kernel k)
 
-theorem nonflatLocalizationCompletionMap_not_flat
-    (k : Type u) [Field k] [Countable k] :
-    ¬ Module.Flat (PowerSeries (nonflatLocalizationRing k))
-      (nonflatLocalizationPowerSeries k) := by
+theorem nonflatLocalizationCompletionMap_flat_implies_kernel_eq
+    (k : Type u) [Field k]
+    (hflat : RingHom.Flat (nonflatLocalizationCompletionMap k)) :
+    nonflatLocalizationKernel k =
+      Ideal.map (algebraMap (PowerSeries (nonflatLocalizationRing k))
+        (nonflatLocalizationPowerSeries k))
+        (nonflatLocalizationSourceKernel k) := by
   sorry
+
+theorem nonflatLocalizationCompletionMap_not_flat
+    (k : Type u) [Field k] :
+    ¬ RingHom.Flat (nonflatLocalizationCompletionMap k) := by
+  intro hflat
+  exact nonflatLocalizationKernel_ne_mapped_kernel k
+    (nonflatLocalizationCompletionMap_flat_implies_kernel_eq k hflat)
 
 /-! ## Completion after localization -/
 
@@ -531,7 +565,7 @@ theorem nonflatLocalizationPowerSeries_completion_equiv
   sorry
 
 theorem nonflatLocalizationAdicCompletion_not_flat
-    (k : Type u) [Field k] [Countable k] :
+    (k : Type u) [Field k] :
     ¬ Module.Flat (PowerSeries (nonflatLocalizationRing k))
       (nonflatLocalizationAdicCompletion k) := by
   sorry

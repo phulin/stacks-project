@@ -2,7 +2,7 @@ import Mathlib.Data.PNat.Notation
 import Mathlib.RingTheory.Ideal.KrullsHeightTheorem
 import Mathlib.RingTheory.KrullDimension.Basic
 import Mathlib.RingTheory.MvPolynomial.Ideal
-import Mathlib.RingTheory.Localization.LocalizationLocalization
+import Mathlib.RingTheory.Localization.AtPrime.Basic
 
 /-!
 # Examples, Chapter 16: A Noetherian ring of infinite dimension
@@ -41,7 +41,11 @@ def noetherianInfiniteDimensionVariable (k : Type u) [Field k] (n : ℕ+) :
     NoetherianInfiniteDimensionPolynomialRing k :=
   MvPolynomial.X n
 
-/-- The block of indices from `2^(i - 1)` through `2^i - 1`. -/
+/-- The block of indices from `2^(i - 1)` through `2^i - 1`.
+
+The half-open interval is the canonical set-level representation of the
+finite list of variables displayed in the source.
+-/
 def noetherianInfiniteDimensionBlock (i : ℕ+) : Set ℕ+ :=
   Set.Ico
     ⟨2 ^ ((i : ℕ) - 1), by positivity⟩

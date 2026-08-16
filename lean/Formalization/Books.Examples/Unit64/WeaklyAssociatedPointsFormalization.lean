@@ -575,6 +575,16 @@ theorem gabberFunctionRing_primeSpectrum_homeomorph_stoneCech
       ∀ n : ℕ, e (gabberFunctionRingPoint k n) = stoneCechUnit n := by
   sorry
 
+/-- The universal property of the Stone–Čech description: every map from
+`ℕ` to a compact Hausdorff space extends uniquely across the spectrum. -/
+theorem gabberFunctionRing_primeSpectrum_stoneCech_universal
+    (k : Type u) [Field k] :
+    ∀ (X : Type v) [TopologicalSpace X] [CompactSpace X] [T2Space X]
+      (f : ℕ → X),
+      ∃! F : gabberFunctionRingSpectrum k → X,
+        Continuous F ∧ ∀ n : ℕ, F (gabberFunctionRingPoint k n) = f n := by
+  sorry
+
 /-! ## The locally constant-function map from the Stone–Čech footnote -/
 
 /-- Restriction of a locally constant function along a map from the discrete `ℕ`. -/

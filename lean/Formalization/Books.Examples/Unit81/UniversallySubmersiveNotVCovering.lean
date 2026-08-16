@@ -72,6 +72,26 @@ noncomputable def disjointUnionAffineSchemeIsoCoproduct (A : Type u) [CommRing A
         Spec (CommRingCat.of (residueRing A p)) ≅ disjointUnionAffineScheme A p :=
   asIso (AlgebraicGeometry.coprodSpec (localizedRing A p) (residueRing A p))
 
+/- The source displays the morphism with the coproduct itself as its source.
+   The product-ring spectrum above is its canonical affine realization. -/
+noncomputable def disjointUnionSchemeMap (A : Type u) [CommRing A]
+    (p : PrimeSpectrum A) :
+    (Spec (CommRingCat.of (localizedRing A p)) ⨿
+      Spec (CommRingCat.of (residueRing A p))) ⟶ Spec (CommRingCat.of A) :=
+  (disjointUnionAffineSchemeIsoCoproduct A p).hom ≫ disjointUnionAffineSchemeMap A p
+
+/-- The coproduct map restricts on the localization component to the canonical map. -/
+theorem disjointUnionSchemeMap_inl (A : Type u) [CommRing A] (p : PrimeSpectrum A) :
+    coprod.inl ≫ disjointUnionSchemeMap A p =
+      Spec.map (CommRingCat.ofHom (algebraMap A (localizedRing A p))) := by
+  sorry
+
+/-- The coproduct map restricts on the residue component to the quotient map. -/
+theorem disjointUnionSchemeMap_inr (A : Type u) [CommRing A] (p : PrimeSpectrum A) :
+    coprod.inr ≫ disjointUnionSchemeMap A p =
+      Spec.map (CommRingCat.ofHom (Ideal.Quotient.mk p.asIdeal)) := by
+  sorry
+
 /-! ## The base change appearing in the proof of universal submersiveness -/
 
 /-- The extension of `𝔭` to `B` along an `A`-algebra structure. -/

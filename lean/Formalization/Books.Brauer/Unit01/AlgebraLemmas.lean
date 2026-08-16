@@ -199,8 +199,9 @@ theorem simple_module_center_and_dimension (k A M : Type*) [Field k]
     [Ring A] [Algebra k A] [FiniteDimensional k A] [IsSimpleRing A]
     [AddCommGroup M] [Module A M] [IsSimpleModule A M]
     [Module k M] [IsScalarTower k A M]
-    [Algebra k (Module.End A M)] [FiniteDimensional k (Module.End A M)] :
+    [Algebra k (Module.End A M)] :
     Nonempty (Subalgebra.center k A ≃+* Subalgebra.center k (Module.End A M)) ∧
+      FiniteDimensional k (Module.End A M) ∧
       Module.finrank k A * Module.finrank k (Module.End A M) =
         Module.finrank k M ^ 2 := by
   sorry
@@ -209,7 +210,7 @@ theorem simple_module_end_is_finite (k A M : Type*) [Field k] [Ring A]
     [Algebra k A] [FiniteDimensional k A] [IsSimpleRing A]
     [AddCommGroup M] [Module A M] [IsSimpleModule A M]
     [Module k M] [IsScalarTower k A M]
-    [Algebra k (Module.End A M)] [FiniteDimensional k (Module.End A M)] :
+    [Algebra k (Module.End A M)] :
     Nonempty (DivisionRing (Module.End A M)) ∧
       FiniteDimensional k (Module.End A M) := by
   classical
@@ -250,10 +251,9 @@ theorem base_change_finite_central_simple (k A k' : Type*) [Field k]
 theorem inverse_of_finite_central_simple (k A : Type*) [Field k] [Ring A]
     [Algebra k A] [FiniteDimensional k A] [Algebra.IsCentral k A]
     [IsSimpleRing A] :
-    ∃ n : ℕ, Module.finrank k A = n ^ 2 ∧
-      Nonempty
-        ((A ⊗[k] Aᵐᵒᵖ) ≃ₐ[k]
-          Matrix (Fin n) (Fin n) k) := by
+    Nonempty
+      ((A ⊗[k] Aᵐᵒᵖ) ≃ₐ[k]
+        Matrix (Fin (Module.finrank k A)) (Fin (Module.finrank k A)) k) := by
   sorry
 
 end TensorProducts

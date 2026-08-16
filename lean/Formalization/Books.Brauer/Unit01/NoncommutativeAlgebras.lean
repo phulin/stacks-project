@@ -17,11 +17,18 @@ are introduced here.
 namespace Formalization.Books.Brauer
 
 /- The source's convention that the scalar image is central is built into
-   `Algebra`; its right-module convention is the ordinary `Module` API. -/
+   `Algebra`; its right-module convention is represented by `Module` over
+   the opposite ring.  The source's “finite” is exactly Mathlib's
+   `FiniteDimensional`, and `[A : k]` is `Module.finrank k A`. -/
 
-/- The source calls a finite-dimensional algebra "finite" and writes its
-   dimension as `[A : k]`.  The canonical Lean expression for that dimension
-   is `Module.finrank k A`. -/
+theorem algebra_map_scalar_is_central (k A : Type*) [CommSemiring k]
+    [Semiring A] [Algebra k A] (r : k) (a : A) :
+    algebraMap k A r * a = a * algebraMap k A r := by
+  simpa using Algebra.commutes r a
+
+/- `DivisionRing`, `IsSimpleModule`, `IsSimpleRing`, and `Algebra.IsCentral`
+   are used directly below rather than shadowed by parallel textbook
+   predicates. -/
 
 theorem divisionRing_module_is_free (D M : Type*) [DivisionRing D]
     [AddCommGroup M] [Module D M] : Module.Free D M := by

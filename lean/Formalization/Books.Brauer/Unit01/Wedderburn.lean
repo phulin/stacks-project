@@ -17,7 +17,7 @@ universe u v
 /- The right action of a ring `A` is represented by a left action of
    `Aᵐᵒᵖ`. -/
 abbrev Bicommutant (A : Type u) [Ring A] (M : Submodule Aᵐᵒᵖ A) : Type u :=
-  Module.End (Module.End Aᵐᵒᵖ M) M
+  (Module.End (Module.End Aᵐᵒᵖ M) M)ᵐᵒᵖ
 
 theorem rieffel_bicommutant (A : Type u) [Ring A] [IsSimpleRing A]
     (M : Submodule Aᵐᵒᵖ A) (hM : M ≠ ⊥) :

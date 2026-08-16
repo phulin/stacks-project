@@ -180,6 +180,11 @@ def exampleSumOpen (k : Type u) [Field k] : (exampleAffinePlane k).Opens :=
 abbrev exampleSumOpenScheme (k : Type u) [Field k] : Scheme.{u} :=
   (exampleSumOpen k).toScheme
 
+noncomputable def exampleSumOpenIsoSpecLocalization (k : Type u) [Field k] :
+    exampleSumOpenScheme k ≅
+      Spec (CommRingCat.of (Localization.Away (exampleXPlusY k))) :=
+  basicOpenIsoSpecAway (R := CommRingCat.of (examplePlaneRing k)) (exampleXPlusY k)
+
 theorem exampleCurveOneToSumOpen_exists (k : Type u) [Field k] :
     ∃ f : exampleCurveOne k ⟶ exampleSumOpenScheme k,
       f ≫ (exampleSumOpen k).ι = exampleCurveOneToAffinePlane k := by
@@ -227,6 +232,11 @@ def exampleXYOpen (k : Type u) [Field k] : (exampleAffinePlane k).Opens :=
 
 abbrev exampleXYOpenScheme (k : Type u) [Field k] : Scheme.{u} :=
   (exampleXYOpen k).toScheme
+
+noncomputable def exampleXYOpenIsoSpecLocalization (k : Type u) [Field k] :
+    exampleXYOpenScheme k ≅
+      Spec (CommRingCat.of (Localization.Away (exampleXY k))) :=
+  basicOpenIsoSpecAway (R := CommRingCat.of (examplePlaneRing k)) (exampleXY k)
 
 theorem exampleXYOpen_toPuncturedAffinePlane_exists (k : Type u) [Field k] :
     ∃ f : exampleXYOpenScheme k ⟶ examplePuncturedAffinePlane k,
@@ -589,28 +599,120 @@ theorem exampleAChartIntoGlued_exists (k : Type u) [Field k] :
     ∃ i : exampleAChart k ⟶ exampleGluedScheme k, IsOpenImmersion i := by
   sorry
 
-noncomputable def exampleAChartIntoGlued (k : Type u) [Field k] :
+def exampleAChartIntoGlued (k : Type u) [Field k] :
     exampleAChart k ⟶ exampleGluedScheme k :=
-  Classical.choose (exampleAChartIntoGlued_exists k)
+  (exampleSchemeGlueData k).ι (ULift.up false)
 
 instance exampleAChartIntoGlued_isOpenImmersion (k : Type u) [Field k] :
     IsOpenImmersion (exampleAChartIntoGlued k) := by
-  exact Classical.choose_spec (exampleAChartIntoGlued_exists k)
+  exact Scheme.GlueData.ι_isOpenImmersion (exampleSchemeGlueData k) (ULift.up false)
 
 theorem exampleBChartIntoGlued_exists (k : Type u) [Field k] :
     ∃ i : exampleBChart k ⟶ exampleGluedScheme k, IsOpenImmersion i := by
   sorry
 
-noncomputable def exampleBChartIntoGlued (k : Type u) [Field k] :
+def exampleBChartIntoGlued (k : Type u) [Field k] :
     exampleBChart k ⟶ exampleGluedScheme k :=
-  Classical.choose (exampleBChartIntoGlued_exists k)
+  (exampleSchemeGlueData k).ι (ULift.up true)
 
 instance exampleBChartIntoGlued_isOpenImmersion (k : Type u) [Field k] :
     IsOpenImmersion (exampleBChartIntoGlued k) := by
-  exact Classical.choose_spec (exampleBChartIntoGlued_exists k)
+  exact Scheme.GlueData.ι_isOpenImmersion (exampleSchemeGlueData k) (ULift.up true)
 
 def IsSchemeCoequalizer {C Y X : Scheme.{u}} (f g : C ⟶ Y) (π : Y ⟶ X) : Prop :=
   ∃ h : f ≫ π = g ≫ π, Nonempty (IsColimit (Cofork.ofπ π h))
+
+/-! ## The morphism from `Y` to the glued scheme -/
+
+/-- The `D(x+y)` chart as an open subscheme of the punctured affine plane. -/
+def exampleSumOpenInY (k : Type u) [Field k] :
+    (examplePuncturedAffinePlane k).Opens :=
+  (examplePuncturedAffinePlaneOpen k).ι ⁻¹ᵁ exampleSumOpen k
+
+/-- The `D(xy)` chart as an open subscheme of the punctured affine plane. -/
+def exampleXYOpenInY (k : Type u) [Field k] :
+    (examplePuncturedAffinePlane k).Opens :=
+  (examplePuncturedAffinePlaneOpen k).ι ⁻¹ᵁ exampleXYOpen k
+
+theorem exampleY_two_chart_cover_isOpenCover (k : Type u) [Field k] :
+    IsOpenCover (fun b : Bool =>
+      match b with
+      | false => exampleSumOpenInY k
+      | true => exampleXYOpenInY k) := by
+  sorry
+
+/-- The two affine opens used to glue the morphism from the punctured plane. -/
+noncomputable def exampleY_two_chart_cover (k : Type u) [Field k] :
+    Scheme.OpenCover (examplePuncturedAffinePlane k) :=
+  (examplePuncturedAffinePlane k).openCoverOfIsOpenCover
+    (fun b : Bool =>
+      match b with
+      | false => exampleSumOpenInY k
+      | true => exampleXYOpenInY k)
+    (exampleY_two_chart_cover_isOpenCover k)
+
+/-- The natural map from the `D(x+y)` affine chart to the `A`-chart. -/
+def exampleSumOpenToAChart (k : Type u) [Field k] :
+    exampleSumOpenScheme k ⟶ exampleAChart k :=
+  (exampleSumOpenIsoSpecLocalization k).hom ≫
+    Spec.map (CommRingCat.ofHom
+      (Subalgebra.val (exampleLocalizedInvariantSubalgebra k)))
+
+/-- The natural map from the `D(xy)` affine chart to the `B`-chart. -/
+def exampleXYOpenToBChart (k : Type u) [Field k] :
+    exampleXYOpenScheme k ⟶ exampleBChart k :=
+  (exampleXYOpenIsoSpecLocalization k).hom
+
+/-- The chart map from the `D(x+y)` open of `Y` to the glued scheme. -/
+def exampleSumOpenInYToGlued (k : Type u) [Field k] :
+    (exampleY_two_chart_cover k).X false ⟶ exampleGluedScheme k :=
+  (morphismRestrict (examplePuncturedAffinePlaneOpen k).ι (exampleSumOpen k) ≫
+      exampleSumOpenToAChart k) ≫ exampleAChartIntoGlued k
+
+/-- The chart map from the `D(xy)` open of `Y` to the glued scheme. -/
+def exampleXYOpenInYToGlued (k : Type u) [Field k] :
+    (exampleY_two_chart_cover k).X true ⟶ exampleGluedScheme k :=
+  (morphismRestrict (examplePuncturedAffinePlaneOpen k).ι (exampleXYOpen k) ≫
+      exampleXYOpenToBChart k) ≫ exampleBChartIntoGlued k
+
+def exampleY_two_chart_cover_toGlued (k : Type u) [Field k] (b : Bool) :
+    (exampleY_two_chart_cover k).X b ⟶ exampleGluedScheme k :=
+  match b with
+  | false => exampleSumOpenInYToGlued k
+  | true => exampleXYOpenInYToGlued k
+
+theorem exampleY_two_chart_cover_toGlued_compatible (k : Type u) [Field k] :
+    ∀ i j, pullback.fst ((exampleY_two_chart_cover k).f i)
+        ((exampleY_two_chart_cover k).f j) ≫
+        exampleY_two_chart_cover_toGlued k i =
+      pullback.snd ((exampleY_two_chart_cover k).f i)
+        ((exampleY_two_chart_cover k).f j) ≫
+        exampleY_two_chart_cover_toGlued k j := by
+  intro i j
+  sorry
+
+/-- The morphism `π : Y ⟶ X`, obtained by gluing the two natural chart maps. -/
+noncomputable def exampleMorphism (k : Type u) [Field k] :
+    examplePuncturedAffinePlane k ⟶ exampleGluedScheme k :=
+  Scheme.Cover.glueMorphisms (exampleY_two_chart_cover k)
+    (exampleY_two_chart_cover_toGlued k)
+    (exampleY_two_chart_cover_toGlued_compatible k)
+
+theorem exampleMorphism_sum_chart_fac (k : Type u) [Field k] :
+    (exampleY_two_chart_cover k).f false ≫ exampleMorphism k =
+      exampleY_two_chart_cover_toGlued k false := by
+  simpa [exampleMorphism] using
+    Scheme.Cover.ι_glueMorphisms (exampleY_two_chart_cover k)
+      (exampleY_two_chart_cover_toGlued k)
+      (exampleY_two_chart_cover_toGlued_compatible k) false
+
+theorem exampleMorphism_XY_chart_fac (k : Type u) [Field k] :
+    (exampleY_two_chart_cover k).f true ≫ exampleMorphism k =
+      exampleY_two_chart_cover_toGlued k true := by
+  simpa [exampleMorphism] using
+    Scheme.Cover.ι_glueMorphisms (exampleY_two_chart_cover k)
+      (exampleY_two_chart_cover_toGlued k)
+      (exampleY_two_chart_cover_toGlued_compatible k) true
 
 /-- The pair of curve maps appearing in the coequalizer diagram. -/
 def exampleCurveOneAndTwoToY (k : Type u) [Field k] :
@@ -665,15 +767,14 @@ def IsExampleQuotientMorphism (k : Type u) [Field k] {X : Scheme.{u}}
 
 /-- The exact finite, surjective, birational morphism asserted in the example. -/
 structure ExampleFiniteBirationalData (k : Type u) [Field k] where
-  morphism : examplePuncturedAffinePlane k ⟶ exampleGluedScheme k
-  finite : IsFinite morphism
-  surjective : Surjective morphism
+  finite : IsFinite (exampleMorphism k)
+  surjective : Surjective (exampleMorphism k)
   birational : Scheme.Birational (examplePuncturedAffinePlane k) (exampleGluedScheme k)
   coequalizer : IsSchemeCoequalizer
-    (exampleCurveOneAndTwoToY k) (exampleCurveOneViaInversionToY k) morphism
+    (exampleCurveOneAndTwoToY k) (exampleCurveOneViaInversionToY k) (exampleMorphism k)
   variety : IsVarietyOver k (exampleGluedScheme k)
   not_quasi_affine : ¬ Scheme.IsQuasiAffine (exampleGluedScheme k)
-  normalization_quasi_affine : IsQuasiAffineNormalization morphism
+  normalization_quasi_affine : IsQuasiAffineNormalization (exampleMorphism k)
   source_normalization_is_quasi_affine :
     Scheme.IsQuasiAffine (examplePuncturedAffinePlane k)
 
@@ -681,13 +782,9 @@ theorem example_finite_birational_data_exists (k : Type u) [Field k] :
     Nonempty (ExampleFiniteBirationalData k) := by
   sorry
 
-noncomputable def exampleFiniteBirationalData (k : Type u) [Field k] :
-    ExampleFiniteBirationalData k :=
+theorem exampleFiniteBirationalData (k : Type u) [Field k] :
+  ExampleFiniteBirationalData k :=
   Classical.choice (example_finite_birational_data_exists k)
-
-abbrev exampleMorphism (k : Type u) [Field k] :
-    examplePuncturedAffinePlane k ⟶ exampleGluedScheme k :=
-  (exampleFiniteBirationalData k).morphism
 
 theorem exampleMorphism_is_finite (k : Type u) [Field k] :
     IsFinite (exampleMorphism k) :=
@@ -705,6 +802,11 @@ theorem exampleMorphism_is_coequalizer (k : Type u) [Field k] :
     IsSchemeCoequalizer
       (exampleCurveOneAndTwoToY k) (exampleCurveOneViaInversionToY k) (exampleMorphism k) :=
   (exampleFiniteBirationalData k).coequalizer
+
+theorem exampleMorphism_is_example_quotient_morphism (k : Type u) [Field k] :
+    IsExampleQuotientMorphism k (exampleMorphism k) := by
+  exact ⟨exampleMorphism_is_finite k, exampleMorphism_is_surjective k,
+    exampleMorphism_is_birational k, exampleMorphism_is_coequalizer k⟩
 
 theorem exampleMorphism_is_given_by_chart_maps (k : Type u) [Field k] :
     ∃ fA : exampleSumOpenScheme k ⟶ exampleAChart k,
@@ -796,6 +898,13 @@ theorem exampleSeparatingFunctionValue_one (k : Type u) [Field k] :
 theorem exampleSeparatingFunctionValue_neg_one (k : Type u) [Field k] :
     exampleSeparatingFunctionValue k (-1) 0 = -1 := by
   sorry
+
+theorem exampleSeparatingFunctionValue_one_ne_neg_one (k : Type u) [Field k]
+    (hchar : (1 : k) ≠ (-1 : k)) :
+    exampleSeparatingFunctionValue k 1 0 ≠
+      exampleSeparatingFunctionValue k (-1) 0 := by
+  rw [exampleSeparatingFunctionValue_one, exampleSeparatingFunctionValue_neg_one]
+  exact hchar
 
 structure ExamplePointSeparationData (k : Type u) [Field k] where
   pointOne : exampleGluedScheme k

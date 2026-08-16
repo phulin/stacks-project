@@ -93,11 +93,35 @@ noncomputable def locallyClosedExampleIdealAfterInverting
       (locallyClosedExampleVariable k n)
       (locallyClosedExampleVariable k m))
 
+/-- The restriction of `Iₘ` to the same overlap `D(xₙxₘ)`. -/
+noncomputable def locallyClosedExampleOtherIdealAfterInverting
+    (k : Type u) [Field k] (n m : ℕ+) :
+    Ideal (Localization.Away
+      (locallyClosedExampleVariable k n * locallyClosedExampleVariable k m)) :=
+  (locallyClosedExampleIdeal k m).map
+    (IsLocalization.Away.awayToAwayLeft
+      (locallyClosedExampleVariable k m)
+      (locallyClosedExampleVariable k n))
+
 /-- If `m ≠ n`, the restriction of `Iₙ` to `D(xₙxₘ)` is the unit ideal. -/
 theorem locallyClosedExampleIdealAfterInverting_eq_top
     (k : Type u) [Field k] (n m : ℕ+) (h : n ≠ m) :
     locallyClosedExampleIdealAfterInverting k n m = ⊤ := by
   sorry
+
+/-- The restriction of `Iₘ` to `D(xₙxₘ)` is also the unit ideal when `m ≠ n`. -/
+theorem locallyClosedExampleOtherIdealAfterInverting_eq_top
+    (k : Type u) [Field k] (n m : ℕ+) (h : n ≠ m) :
+    locallyClosedExampleOtherIdealAfterInverting k n m = ⊤ := by
+  sorry
+
+/-- The two local ideals have equal restrictions on the common overlap. -/
+theorem locallyClosedExampleIdeal_restrictions_agree
+    (k : Type u) [Field k] (n m : ℕ+) (h : n ≠ m) :
+    locallyClosedExampleIdealAfterInverting k n m =
+      locallyClosedExampleOtherIdealAfterInverting k n m := by
+  rw [locallyClosedExampleIdealAfterInverting_eq_top k n m h,
+    locallyClosedExampleOtherIdealAfterInverting_eq_top k n m h]
 
 /-- The local ideals agree on every overlap `D(xₙxₘ)` with `m ≠ n`. -/
 theorem locallyClosedExampleIdeal_overlap_agreement
@@ -156,13 +180,19 @@ noncomputable def locallyClosedExampleIdealSheaf
     (locallyClosedExampleOpen k).toScheme.IdealSheafData :=
   Classical.choose (exists_locallyClosedExampleIdealSheaf k)
 
+/-- The ideal-sheaf component on the chart `D(xₙ)`. -/
+noncomputable def locallyClosedExampleChartIdeal
+    (k : Type u) [Field k] (n : ℕ+) :
+    Ideal (locallyClosedExampleChartSections k n) :=
+  (locallyClosedExampleIdealSheaf k).ideal
+    (locallyClosedExampleChartAffineOpen k n)
+
 /-- The chosen ideal sheaf has the displayed local components. -/
 theorem locallyClosedExampleIdealSheaf_local_component
     (k : Type u) [Field k] (n : ℕ+) :
     ∃ e : locallyClosedExampleChartSections k n ≃+*
         locallyClosedExampleLocalization k n,
-      (locallyClosedExampleIdealSheaf k).ideal
-          (locallyClosedExampleChartAffineOpen k n) =
+      locallyClosedExampleChartIdeal k n =
         (locallyClosedExampleIdeal k n).comap e.toRingHom := by
   exact (Classical.choose_spec (exists_locallyClosedExampleIdealSheaf k)) n
 
@@ -226,6 +256,24 @@ theorem locallyClosedExampleGlobalIdealCandidate_eq_bot
     locallyClosedExampleGlobalIdealCandidate k = ⊥ := by
   sorry
 
+/-- An element belongs to every contracted local ideal exactly when it is zero. -/
+theorem locallyClosedExample_mem_all_localIdeals_iff_eq_zero
+    (k : Type u) [Field k] (f : locallyClosedExampleRing k) :
+    (∀ n : ℕ+,
+        algebraMap (locallyClosedExampleRing k)
+            (locallyClosedExampleLocalization k n) f ∈
+          locallyClosedExampleIdeal k n) ↔ f = 0 := by
+  constructor
+  · intro hf
+    have hf' : f ∈ locallyClosedExampleGlobalIdealCandidate k :=
+      (locallyClosedExample_mem_globalIdealCandidate_iff k f).2 hf
+    rw [locallyClosedExampleGlobalIdealCandidate_eq_bot k] at hf'
+    exact Ideal.mem_bot.mp hf'
+  · intro hf
+    subst f
+    intro n
+    simp
+
 /-- A base ideal realizes the displayed local ideals if all its localizations agree with them. -/
 def locallyClosedExampleGlobalIdealRealizesComponents
     (k : Type u) [Field k] (I : Ideal (locallyClosedExampleRing k)) : Prop :=
@@ -284,6 +332,12 @@ theorem locallyClosedExample_preimage_open_eq_top
     (locallyClosedExampleImmersion k ⁻¹ᵁ locallyClosedExampleOpen k) = ⊤ := by
   sorry
 
+/-- The restriction is the closed immersion `Z ⟶ U` from the source. -/
+instance locallyClosedExampleRestrictedImmersion_isClosedImmersion
+    (k : Type u) [Field k] :
+    IsClosedImmersion (locallyClosedExampleRestrictedImmersion k) := by
+  sorry
+
 /-- The source of the restricted morphism is canonically the original `Z`. -/
 noncomputable def locallyClosedExampleRestrictedSourceIso
     (k : Type u) [Field k] :
@@ -297,7 +351,7 @@ noncomputable def locallyClosedExampleRestrictedSourceIso
 theorem locallyClosedExample_restricted_toImage_isIso
     (k : Type u) [Field k] :
     IsIso (locallyClosedExampleRestrictedImmersion k).toImage := by
-  sorry
+  infer_instance
 
 /-- The restricted scheme-theoretic image is isomorphic to the original `Z`. -/
 theorem locallyClosedExample_restricted_image_is_original

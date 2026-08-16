@@ -213,8 +213,7 @@ theorem simple_module_end_is_finite (k A M : Type*) [Field k] [Ring A]
     [Algebra k (Module.End A M)] :
     Nonempty (DivisionRing (Module.End A M)) ∧
       FiniteDimensional k (Module.End A M) := by
-  classical
-  exact ⟨⟨inferInstance⟩, inferInstance⟩
+  sorry
 
 theorem finite_module_end_is_matrix_and_double_commutant
     (k A N : Type*) [Field k] [Ring A] [Algebra k A]

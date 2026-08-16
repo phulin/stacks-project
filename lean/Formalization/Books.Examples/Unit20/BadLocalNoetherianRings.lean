@@ -146,7 +146,7 @@ def CompletionsAgree (R S : Type*) [CommRing R] [CommRing S] : Prop :=
         AdicCompletion (IsLocalRing.maximalIdeal S) S)
 
 def IsHenselianNormalDomain (R : Type*) [CommRing R] : Prop :=
-  IsNoetherianRing R ∧ HenselianLocalRing R ∧ IsNormalDomain R
+  IsNoetherianRing R ∧ IsLocalRing R ∧ HenselianLocalRing R ∧ IsNormalDomain R
 
 theorem henselization_of_normal_domain_is_normal
     (R Rh : Type*) [CommRing R] [CommRing Rh] [IsLocalRing R] [IsLocalRing Rh]
@@ -226,7 +226,8 @@ theorem heitmann_two_component_completion_example :
       IsNoetherianRing R ∧ IsLocalRing R ∧ IsDomain R ∧
         UniqueFactorizationMonoid R ∧
           IsCompletionOf ComplexPowerSeries4TwoComponentQuotient R ∧
-            ringKrullDim R = 3 ∧ ¬ IsUniversallyCatenary R := by
+            ringKrullDim R = 3 ∧ IsCatenaryRing R ∧
+              ¬ IsUniversallyCatenary R := by
   sorry
 
 theorem three_dimensional_local_noetherian_ufd_is_catenary
@@ -259,18 +260,26 @@ def HasIsolatedSingularity (R : Type*) [CommRing R] : Prop :=
       ∀ (p : Ideal R) (hp : p.IsPrime),
         p ≠ IsLocalRing.maximalIdeal R → IsRegularAtPrime p hp
 
-def IsIntegerRegularInProperLocalizations
+/- An element is a nonzero zero divisor when it is nonzero and multiplication
+   by it is not injective.  `IsSMulRegular` is Mathlib's canonical predicate
+   for the complementary regularity condition. -/
+def IsNonzeroZeroDivisor (R : Type*) [CommRing R] (r : R) : Prop :=
+  r ≠ 0 ∧ ¬ IsSMulRegular R r
+
+/- The source allows the image of `p` to be zero; it excludes only a nonzero
+   zero divisor in a proper localization. -/
+def IsIntegerNotNonzeroZeroDivisorInProperLocalizations
     (A : Type*) [CommRing A] [IsLocalRing A] (p : ℕ) : Prop :=
   ∀ (q : Ideal A) (hq : q.IsPrime), q ≠ IsLocalRing.maximalIdeal A →
     letI : q.IsPrime := hq
-    IsSMulRegular (Localization.AtPrime q)
+    ¬ IsNonzeroZeroDivisor (Localization.AtPrime q)
       (algebraMap A (Localization.AtPrime q) (p : A))
 
 def HeitmannIsolatedSingularityHypotheses
     (A : Type*) [CommRing A] [IsLocalRing A] : Prop :=
   ContainsRationalsOrPrimeField A ∨
     ∃ p : ℕ, 0 < p ∧ CharP (IsLocalRing.ResidueField A) p ∧
-      IsIntegerRegularInProperLocalizations A p
+      IsIntegerNotNonzeroZeroDivisorInProperLocalizations A p
 
 theorem heitmann_isolated_singularity_completion_exists
     {A : Type*} [CommRing A] [IsNoetherianRing A] [IsLocalRing A]

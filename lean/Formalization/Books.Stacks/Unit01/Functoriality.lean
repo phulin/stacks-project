@@ -1,5 +1,6 @@
 import Formalization.«Books.Stacks».Unit01.StackificationGroupoids
 import Mathlib.CategoryTheory.Bicategory.Functor.LocallyDiscrete
+import Mathlib.CategoryTheory.Localization.CalculusOfFractions
 import Mathlib.CategoryTheory.Sites.Over
 
 /-!
@@ -20,7 +21,7 @@ open Opposite
 
 open scoped CategoryTheory.Pseudofunctor.StrongTrans
 
-universe v' v u' u w' w
+universe t v' v u' u w' w
 
 abbrev FixedFiberedCategory (C : Type u) [Category.{v} C] :=
   Pseudofunctor (LocallyDiscrete Cᵒᵖ) Cat.{w, w}
@@ -29,6 +30,18 @@ def pushforwardFiberedCategory {C : Type u} [Category.{v} C]
     {D : Type u'} [Category.{v'} D] (u : C ⥤ D)
     (S : FixedFiberedCategory D) : FixedFiberedCategory C :=
   Pseudofunctor.comp u.op.toPseudofunctor S
+
+theorem pushforward_fibered_morphism_exists {C : Type u} [Category.{v} C]
+    {D : Type u'} [Category.{v'} D] (u : C ⥤ D)
+    {S T : FixedFiberedCategory D} (η : S ⟶ T) :
+    Nonempty (pushforwardFiberedCategory u S ⟶ pushforwardFiberedCategory u T) := by
+  sorry
+
+noncomputable def pushforwardFiberedMorphism {C : Type u} [Category.{v} C]
+    {D : Type u'} [Category.{v'} D] (u : C ⥤ D)
+    {S T : FixedFiberedCategory D} (η : S ⟶ T) :
+    pushforwardFiberedCategory u S ⟶ pushforwardFiberedCategory u T :=
+  Classical.choice (pushforward_fibered_morphism_exists u η)
 
 theorem pushforward_fibre {C : Type u} [Category.{v} C]
     {D : Type u'} [Category.{v'} D] (u : C ⥤ D)
@@ -45,7 +58,9 @@ theorem stack_pushforward {C : Type u} [Category.{v} C]
     {D : Type u'} [Category.{v'} D] {J : GrothendieckTopology C}
     {K : GrothendieckTopology D} (u : C ⥤ D)
     (S : FixedFiberedCategory D) (hS : Stack S K)
-    (hu : u.IsContinuous J K) :
+    (hu : u.IsContinuous J K)
+    [PreservesFiniteProducts u]
+    [PreservesLimitsOfShape WalkingParallelPair u] :
     PushforwardStack u S J := by
   sorry
 
@@ -53,7 +68,9 @@ theorem stack_in_groupoids_pushforward {C : Type u} [Category.{v} C]
     {D : Type u'} [Category.{v'} D] {J : GrothendieckTopology C}
     {K : GrothendieckTopology D} (u : C ⥤ D)
     (S : FixedFiberedCategory D) (hS : StackInGroupoids S K)
-    (hu : u.IsContinuous J K) :
+    (hu : u.IsContinuous J K)
+    [PreservesFiniteProducts u]
+    [PreservesLimitsOfShape WalkingParallelPair u] :
     StackInGroupoids (pushforwardFiberedCategory u S) J := by
   sorry
 
@@ -71,6 +88,58 @@ structure PullbackPrecategoryMorphism {C : Type u} [Category.{v} C]
   object : x.object ⟶ y.object
   commutes : x.anchor ≫ u.map object.base = base ≫ y.anchor
 
+def pullbackPrecategoryIdentity {C : Type u} [Category.{v} C]
+    {D : Type u'} [Category.{v'} D] (u : C ⥤ D)
+    (S : FixedFiberedCategory C) (x : PullbackPrecategoryObject u S) :
+    PullbackPrecategoryMorphism u S x x where
+  base := 𝟙 x.base
+  object := 𝟙 x.object
+  commutes := by simp
+
+def pullbackPrecategoryComp {C : Type u} [Category.{v} C]
+    {D : Type u'} [Category.{v'} D] (u : C ⥤ D)
+    (S : FixedFiberedCategory C) {x y z : PullbackPrecategoryObject u S}
+    (f : PullbackPrecategoryMorphism u S x y)
+    (g : PullbackPrecategoryMorphism u S y z) :
+    PullbackPrecategoryMorphism u S x z where
+  base := f.base ≫ g.base
+  object := f.object ≫ g.object
+  commutes := by
+    change x.anchor ≫ u.map (f.object.base ≫ g.object.base) =
+      (f.base ≫ g.base) ≫ z.anchor
+    rw [u.map_comp, ← Category.assoc, f.commutes]
+    simp only [Category.assoc]
+    rw [g.commutes]
+
+instance pullbackPrecategoryCategory {C : Type u} [Category.{v} C]
+    {D : Type u'} [Category.{v'} D] (u : C ⥤ D)
+    (S : FixedFiberedCategory C) :
+    Category (PullbackPrecategoryObject u S) where
+  Hom := PullbackPrecategoryMorphism u S
+  id := pullbackPrecategoryIdentity u S
+  comp := @pullbackPrecategoryComp C _ D _ u S
+  id_comp := by
+    intro x y f
+    cases f
+    simp [pullbackPrecategoryIdentity, pullbackPrecategoryComp]
+  comp_id := by
+    intro x y f
+    cases f
+    simp [pullbackPrecategoryIdentity, pullbackPrecategoryComp]
+  assoc := by
+    intro w x y z f g h
+    cases f
+    cases g
+    cases h
+    simp [pullbackPrecategoryComp]
+
+def pullbackPrecategoryForget {C : Type u} [Category.{v} C]
+    {D : Type u'} [Category.{v'} D] (u : C ⥤ D)
+    (S : FixedFiberedCategory C) :
+    PullbackPrecategoryObject u S ⥤ D where
+  obj x := x.base
+  map f := f.base
+
 def rightCartesianSystem {C : Type u} [Category.{v} C]
     {D : Type u'} [Category.{v'} D] (u : C ⥤ D)
     (S : FixedFiberedCategory C) {x y : PullbackPrecategoryObject u S}
@@ -79,18 +148,17 @@ def rightCartesianSystem {C : Type u} [Category.{v} C]
     IsStronglyCartesian (Pseudofunctor.CoGrothendieck.forget S)
       f.object.base f.object
 
+def rightCartesianMorphismProperty {C : Type u} [Category.{v} C]
+    {D : Type u'} [Category.{v'} D] (u : C ⥤ D)
+    (S : FixedFiberedCategory C) :
+    MorphismProperty (PullbackPrecategoryObject u S) :=
+  fun _ _ f => rightCartesianSystem u S f
+
 structure RightMultiplicativeSystem {C : Type u} [Category.{v} C]
     {D : Type u'} [Category.{v'} D] (u : C ⥤ D)
     (S : FixedFiberedCategory C) where
-  member : ∀ {x y : PullbackPrecategoryObject u S},
-    PullbackPrecategoryMorphism u S x y → Prop
-  member_iff : ∀ {x y : PullbackPrecategoryObject u S}
-    (f : PullbackPrecategoryMorphism u S x y),
-    member f ↔ rightCartesianSystem u S f
-  identities : Prop
-  composition : Prop
-  rightOre : Prop
-  rightCancellation : Prop
+  hasRightCalculusOfFractions :
+    (rightCartesianMorphismProperty u S).HasRightCalculusOfFractions
 
 theorem right_multiplicative_system {C : Type u} [Category.{v} C]
     {D : Type u'} [Category.{v'} D] (u : C ⥤ D)
@@ -103,9 +171,15 @@ theorem right_multiplicative_system {C : Type u} [Category.{v} C]
 structure PullbackFiberedData {C : Type u} [Category.{v} C]
     {D : Type u'} [Category.{v'} D] (u : C ⥤ D)
     (S : FixedFiberedCategory C) where
-  value : Pseudofunctor (LocallyDiscrete Dᵒᵖ) Cat.{w, w}
-  projection : Prop
-  isLocalization : Prop
+  value : FixedFiberedCategory.{v', u', w} D
+  projection : PullbackPrecategoryObject u S ⥤
+    Pseudofunctor.CoGrothendieck value
+  projection_over :
+    projection ⋙ Pseudofunctor.CoGrothendieck.forget value =
+      pullbackPrecategoryForget u S
+  unit : S ⟶ pushforwardFiberedCategory u value
+  isLocalization :
+    projection.IsLocalization (rightCartesianMorphismProperty u S)
 
 theorem fibred_category_pullback {C : Type u} [Category.{v} C]
     {D : Type u'} [Category.{v'} D] (u : C ⥤ D)
@@ -126,15 +200,33 @@ theorem fibred_groupoids_category_pullback
 structure PullbackStackData {C : Type u} [Category.{v} C]
     {D : Type u'} [Category.{v'} D] (u : C ⥤ D)
     (S : FixedFiberedCategory C) (K : GrothendieckTopology D) where
-  value : Pseudofunctor (LocallyDiscrete Dᵒᵖ) Cat.{w, w}
-  isStack : Stack value K
-  isStackification : Prop
+  fibered : PullbackFiberedData u S
+  stackification : Stackification.{t, v', u', w} fibered.value K
+
+structure PullbackStackificationComparison {C : Type u} [Category.{v} C]
+    {D : Type u'} [Category.{v'} D] (u : C ⥤ D)
+    {J : GrothendieckTopology C} (K : GrothendieckTopology D)
+    {S : FixedFiberedCategory C}
+    (A : Stackification.{t, v, u, w} S J) where
+  source : PullbackStackData.{t, v', v, u', u, w} u S K
+  target : PullbackStackData.{t, v', v, u', u, w} u A.value K
+  induced : source.fibered.value ⟶ target.fibered.value
+  compatibility : Nonempty
+    (A.map ≫ target.fibered.unit ≅
+      source.fibered.unit ≫ pushforwardFiberedMorphism u induced)
+  rawStackification :
+    Stackification.{t, v', u', w} source.fibered.value K
+  comparison : rawStackification.value ⟶ target.stackification.value
+  comparisonCompatibility : Nonempty
+    (rawStackification.map ≫ comparison ≅
+      induced ≫ target.stackification.map)
+  comparisonIsEquivalence : FiberwiseEquivalence comparison
 
 noncomputable def pullbackStackification {C : Type u} [Category.{v} C]
     {D : Type u'} [Category.{v'} D] (u : C ⥤ D)
     (S : FixedFiberedCategory C) (K : GrothendieckTopology D)
     (h : Nonempty (PullbackStackData u S K)) : FixedFiberedCategory D :=
-  (Classical.choice h).value
+  (Classical.choice h).stackification.value
 
 theorem adjunction_pullback_pushforward
     {C : Type u} [Category.{v} C] {D : Type u'} [Category.{v'} D]
@@ -143,7 +235,7 @@ theorem adjunction_pullback_pushforward
     [PreservesLimitsOfShape WalkingParallelPair u]
     (h : Nonempty (PullbackFiberedData u S)) :
     Nonempty
-      ((S ⟶ pushforwardFiberedCategory u T) ≃
+      ((S ⟶ pushforwardFiberedCategory u T) ≌
         ((Classical.choice h).value ⟶ T)) := by
   sorry
 
@@ -162,17 +254,16 @@ theorem adjunction_pullback_pushforward_stacks
     (hS : Stack S J) (hT : Stack T K) (hu : u.IsContinuous J K)
     [HasFiniteProducts C] [HasEqualizers C] [PreservesFiniteProducts u]
     [PreservesLimitsOfShape WalkingParallelPair u] :
-    Nonempty (PullbackStackData u S K) := by
+    Nonempty ((S ⟶ pushforwardFiberedCategory u T) ≌
+      ((Classical.choice (pullback_stack_exists u S K)).stackification.value ⟶ T)) := by
   sorry
 
 theorem technical_pullback_stackification
     {C : Type u} [Category.{v} C] {D : Type u'} [Category.{v'} D]
     {J : GrothendieckTopology C} {K : GrothendieckTopology D}
-    (u : C ⥤ D) (S S' : FixedFiberedCategory C)
-    (hS : Stack S J) (hS' : Stack S' J)
-    (η : S ⟶ S') :
-    Nonempty (PullbackStackData u S' K) →
-      Nonempty (PullbackStackData u S K) := by
+    (u : C ⥤ D) (S : FixedFiberedCategory C)
+    (A : Stackification.{t, v, u, w} S J) :
+    Nonempty (PullbackStackificationComparison.{t, v', v, u', u, w} u K A) := by
   sorry
 
 structure BiggerSiteAssumptions {C : Type u} [Category.{v} C]
@@ -186,10 +277,15 @@ structure BiggerSiteResult {C : Type u} [Category.{v} C]
     {D : Type u'} [Category.{v'} D] (u : C ⥤ D)
     (S : FixedFiberedCategory C) (J : GrothendieckTopology C)
     (K : GrothendieckTopology D) where
-  pullback : PullbackStackData u S K
-  canonical : S ⟶ pushforwardFiberedCategory u pullback.value
+  isStack : Stack S J
+  pullback : PullbackStackData.{t, v', v, u', u, w} u S K
+  canonical : S ⟶ pushforwardFiberedCategory u pullback.stackification.value
   equivalence : FiberwiseEquivalence canonical
-  fullOnMorphisms : Prop
+  fullOnMorphisms : ∀ (T : FixedFiberedCategory.{v, u, w} C)
+    (_hT : Stack T J)
+    (pullbackT : PullbackStackData.{t, v', v, u', u, w} u T K),
+    Nonempty ((S ⟶ T) ≌
+      (pullback.stackification.value ⟶ pullbackT.stackification.value))
 
 theorem bigger_site {C : Type u} [Category.{v} C]
     {D : Type u'} [Category.{v'} D] (u : C ⥤ D)
@@ -198,7 +294,7 @@ theorem bigger_site {C : Type u} [Category.{v} C]
     (hS : Stack S J) [HasFiniteProducts C] [HasEqualizers C]
     [PreservesFiniteProducts u]
     [PreservesLimitsOfShape WalkingParallelPair u] :
-    Nonempty (BiggerSiteResult u S J K) := by
+    Nonempty (BiggerSiteResult.{t, v', v, u', u, w} u S J K) := by
   sorry
 
 end Formalization.«Books.Stacks».Unit01

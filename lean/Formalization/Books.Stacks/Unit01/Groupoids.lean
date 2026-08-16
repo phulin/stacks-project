@@ -8,7 +8,9 @@ namespace Formalization.«Books.Stacks».Unit01
 
 open CategoryTheory
 
-universe t v' v u' u
+open scoped CategoryTheory.Pseudofunctor.StrongTrans
+
+universe t w v' v u' u
 
 def StackInGroupoids {C : Type u} [Category.{v} C]
     (F : FiberedCategory C) (J : GrothendieckTopology C) : Prop :=
@@ -19,10 +21,11 @@ structure GroupoidificationData {C : Type u} [Category.{v} C]
   value : FiberedCategory C
   map : FiberedMorphism F value
   isStackInGroupoids : StackInGroupoids value J
+  equivalentToOriginal : FiberwiseEquivalence map
 
 structure StackInGroupoidsObject (C : Type u) [Category.{v} C]
     (J : GrothendieckTopology C) where
-  value : Pseudofunctor (LocallyDiscrete Cᵒᵖ) Cat.{v, u}
+  value : Pseudofunctor (LocallyDiscrete Cᵒᵖ) Cat.{w, w}
   isStackInGroupoids : StackInGroupoids value J
 
 theorem stack_in_groupoids_iff {C : Type u} [Category.{v} C]
@@ -44,8 +47,7 @@ theorem equivalent_stacks_in_groupoids_preserve
 def IsGroupoidTwoMorphism {C : Type u} [Category.{v} C]
     {J : GrothendieckTopology C} {X Y : StackInGroupoidsObject C J}
     (f g : FiberedMorphism X.value Y.value) : Prop :=
-  ∀ U : C, Nonempty ((f.app (.mk (Opposite.op U))).toFunctor ⟶
-    (g.app (.mk (Opposite.op U))).toFunctor)
+  Nonempty (f ⟶ g)
 
 theorem two_fibre_product_of_stacks_in_groupoids
     {C : Type u} [Category.{v} C] (J : GrothendieckTopology C)
@@ -53,7 +55,7 @@ theorem two_fibre_product_of_stacks_in_groupoids
     (hF : StackInGroupoids F J) (hG : StackInGroupoids G J)
     (hH : StackInGroupoids H J) (f : FiberedMorphism F H)
     (g : FiberedMorphism G H) :
-    ∃ P : TwoFiberProductCone F G H, StackInGroupoids P.apex J := by
+    ∃ P : TwoFiberProductCone F G H f g, StackInGroupoids P.apex J := by
   sorry
 
 end Formalization.«Books.Stacks».Unit01

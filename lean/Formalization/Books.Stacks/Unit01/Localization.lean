@@ -18,9 +18,14 @@ def RepresentableIsSheaf {C : Type u} [Category.{v} C]
 
 structure LocalizationStackData {C : Type u} [Category.{v} C]
     (J : GrothendieckTopology C) (U : C) where
-  value : FixedFiberedCategory C
+  value : FixedFiberedCategory.{v, u, w} C
   isStack : Stack value J
-  localizationProjection : Prop
+  localizationProjection :
+    Pseudofunctor.CoGrothendieck value ⥤ Over C U
+  localizationProjection_over :
+    localizationProjection ⋙ Over.forget U =
+      Pseudofunctor.CoGrothendieck.forget value
+  localizationProjection_isEquivalence : localizationProjection.IsEquivalence
 
 theorem when_localization_stack {C : Type u} [Category.{v} C]
     (J : GrothendieckTopology C) (U : C) :
@@ -29,44 +34,62 @@ theorem when_localization_stack {C : Type u} [Category.{v} C]
 
 structure ConstructionAData {C : Type u} [Category.{v} C]
     (J : GrothendieckTopology C) (U : C)
-    (S : FixedFiberedCategory (Over C U)) where
-  value : FixedFiberedCategory C
+    (S : FixedFiberedCategory.{v, max u v, w} (Over C U)) where
+  isStackOverLocalization : Stack S (J.over U)
+  value : FixedFiberedCategory.{v, u, w} C
   isStack : Stack value J
-  underlyingCategory : Prop
-  mapToLocalization : Prop
+  underlyingEquivalence :
+    Pseudofunctor.CoGrothendieck value ≌ Pseudofunctor.CoGrothendieck S
+  mapToLocalization :
+    Pseudofunctor.CoGrothendieck value ⥤ Over C U
+  mapToLocalization_eq :
+    mapToLocalization =
+      underlyingEquivalence.functor ⋙ Pseudofunctor.CoGrothendieck.forget S
+  mapOver :
+    mapToLocalization ⋙ Over.forget U =
+      Pseudofunctor.CoGrothendieck.forget value
 
 structure ConstructionBData {C : Type u} [Category.{v} C]
     (J : GrothendieckTopology C) (U : C)
-    (T : FixedFiberedCategory C) where
+    (T : FixedFiberedCategory.{v, u, w} C) where
   isStack : Stack T J
-  mapToLocalization : Prop
+  mapToLocalization :
+    Pseudofunctor.CoGrothendieck T ⥤ Over C U
+  mapOver :
+    mapToLocalization ⋙ Over.forget U =
+      Pseudofunctor.CoGrothendieck.forget T
+  localizedValue : FixedFiberedCategory.{v, max u v, w} (Over C U)
+  localizedStack : Stack localizedValue (J.over U)
+  localizedEquivalence :
+    Pseudofunctor.CoGrothendieck localizedValue ≌
+      Pseudofunctor.CoGrothendieck T
+  localizedIdentification :
+    Pseudofunctor.CoGrothendieck.forget localizedValue =
+      localizedEquivalence.functor ⋙ mapToLocalization
 
 def IsStackOverLocalization {C : Type u} [Category.{v} C]
     (J : GrothendieckTopology C) (U : C)
-    {T : FixedFiberedCategory C} (B : ConstructionBData J U T) : Prop :=
-  B.isStack ∧ B.mapToLocalization
+    {T : FixedFiberedCategory C} (_B : ConstructionBData J U T) : Prop :=
+  Stack _B.localizedValue (J.over U)
 
 theorem construction_b_is_stack_over_localization
     {C : Type u} [Category.{v} C] {J : GrothendieckTopology C}
     {U : C} {T : FixedFiberedCategory C}
     (B : ConstructionBData J U T) :
     IsStackOverLocalization J U B := by
-  exact ⟨B.isStack, B.mapToLocalization⟩
+  exact B.localizedStack
 
 structure LocalizationConstructionsEquivalence
     {C : Type u} [Category.{v} C] (J : GrothendieckTopology C) (U : C)
-    (S : FixedFiberedCategory (Over C U)) where
-  fromA : ConstructionAData J U S →
-    Σ T : FixedFiberedCategory C, ConstructionBData J U T
-  fromB : (Σ T : FixedFiberedCategory C, ConstructionBData J U T) →
-    ConstructionAData J U S
-  leftInverse : Prop
-  rightInverse : Prop
+    (S : FixedFiberedCategory.{v, max u v, w} (Over C U)) where
+  equivalence :
+    ConstructionAData J U S ≃
+      (Σ T : FixedFiberedCategory.{v, u, w} C, ConstructionBData J U T)
 
 theorem localize_stacks {C : Type u} [Category.{v} C]
     (J : GrothendieckTopology C) (U : C)
     (hU : RepresentableIsSheaf J U)
-    (S : FixedFiberedCategory (Over C U))
+    (S : FixedFiberedCategory.{v, max u v, w} (Over C U))
     (hS : Stack S (J.over U)) :
     Nonempty (LocalizationConstructionsEquivalence J U S) := by
   sorry

@@ -11,7 +11,7 @@ open CategoryTheory
 open CategoryTheory.Functor
 open CategoryTheory.Pseudofunctor
 
-universe t v' v u' u
+universe t w w' v u
 
 def InheritedCoveringFamily {C : Type u} [Category.{v} C]
     (F : FiberedCategory C) (J : GrothendieckTopology C)
@@ -34,9 +34,41 @@ noncomputable def inheritedTopology {C : Type u} [Category.{v} C]
     GrothendieckTopology (Pseudofunctor.CoGrothendieck F) :=
   (Classical.choice h).topology
 
-structure SiteEquivalence (A B : Type*) [Category* A] [Category* B] where
-  equivalence : Nonempty (A ≌ B)
-  continuous : Prop
+structure SiteEquivalence (A B : Type*) [Category* A] [Category* B]
+    (JA : GrothendieckTopology A) (JB : GrothendieckTopology B) where
+  equivalence : A ≌ B
+  continuous : equivalence.functor.IsContinuous JA JB
+  cocontinuous : equivalence.functor.IsCocontinuous JA JB
+
+structure TotalCategoryOverEquivalence
+    {C A B : Type*} [Category* C] [Category* A] [Category* B]
+    (p : A ⥤ C) (q : B ⥤ C) where
+  equivalence : A ≌ B
+  over : equivalence.functor ⋙ q ≅ p
+
+structure StackOverGroupoidsData {C : Type u} [Category.{v} C]
+    (J : GrothendieckTopology C) (F : FiberedCategory.{w, v, u} C)
+    (S : InheritedSite F J)
+    (X : Pseudofunctor
+      (LocallyDiscrete (Pseudofunctor.CoGrothendieck F)ᵒᵖ) Cat.{w', w'}) where
+  value : FiberedCategory.{w, v, u} C
+  isStackInGroupoids : StackInGroupoids value J
+  totalEquivalence : TotalCategoryOverEquivalence
+    (Pseudofunctor.CoGrothendieck.forget value)
+    (Pseudofunctor.CoGrothendieck.forget X ⋙
+      Pseudofunctor.CoGrothendieck.forget F)
+
+structure StackOverStackData {C : Type u} [Category.{v} C]
+    (J : GrothendieckTopology C) (F : FiberedCategory.{w, v, u} C)
+    (S : InheritedSite F J)
+    (X : Pseudofunctor
+      (LocallyDiscrete (Pseudofunctor.CoGrothendieck F)ᵒᵖ) Cat.{w', w'}) where
+  value : FiberedCategory.{w, v, u} C
+  isStack : Stack value J
+  totalEquivalence : TotalCategoryOverEquivalence
+    (Pseudofunctor.CoGrothendieck.forget value)
+    (Pseudofunctor.CoGrothendieck.forget X ⋙
+      Pseudofunctor.CoGrothendieck.forget F)
 
 theorem inherited_topology_exists {C : Type u} [Category.{v} C]
     (F : FiberedCategory C) (J : GrothendieckTopology C) :
@@ -47,7 +79,7 @@ theorem all_morphisms_cartesian_in_groupoid_fibred_category
     {C : Type u} [Category.{v} C] {F : FiberedCategory C}
     (hF : FiberwiseGroupoid F) :
     ∀ {X Y : Pseudofunctor.CoGrothendieck F} (f : X ⟶ Y),
-      IsCartesian (Pseudofunctor.CoGrothendieck.forget F) f.base f := by
+      IsStronglyCartesian (Pseudofunctor.CoGrothendieck.forget F) f.base f := by
   sorry
 
 theorem inherited_topology_functorial_underlying
@@ -66,29 +98,60 @@ theorem inherited_topology_functorial
       (Pseudofunctor.CoGrothendieck.map η).IsCocontinuous SF.topology SG.topology := by
   sorry
 
+noncomputable def inherited_topology_induced_sheaf_adjunction
+    {C : Type u} [Category.{v} C] {J : GrothendieckTopology C}
+    {F G : FiberedCategory.{w, v, u} C} (η : FiberedMorphism F G)
+    (SF : InheritedSite F J) (SG : InheritedSite G J)
+    (hcontinuous :
+      (Pseudofunctor.CoGrothendieck.map η).IsContinuous
+        SF.topology SG.topology)
+    (hcocontinuous :
+      (Pseudofunctor.CoGrothendieck.map η).IsCocontinuous
+        SF.topology SG.topology)
+    (hKan : ∀ (P : (Pseudofunctor.CoGrothendieck F)ᵒᵖ ⥤ Type w),
+      (Pseudofunctor.CoGrothendieck.map η).op.HasPointwiseRightKanExtension P) :
+    letI := hcontinuous
+    letI := hcocontinuous
+    letI := hKan
+    (Pseudofunctor.CoGrothendieck.map η).sheafPushforwardContinuous
+        (Type w) SF.topology SG.topology ⊣
+    (Pseudofunctor.CoGrothendieck.map η).sheafPushforwardCocontinuous
+        (Type w) SF.topology SG.topology := by
+  letI := hcontinuous
+  letI := hcocontinuous
+  letI : ∀ (P : (Pseudofunctor.CoGrothendieck F)ᵒᵖ ⥤ Type w),
+      (Pseudofunctor.CoGrothendieck.map η).op.HasPointwiseRightKanExtension P := hKan
+  exact (Pseudofunctor.CoGrothendieck.map η).sheafAdjunctionCocontinuous
+    (Type w) SF.topology SG.topology
+
 theorem localizing_site_over_an_object
     {C : Type u} [Category.{v} C] {F : FiberedCategory C}
-    {U : C} (x : Fiber F U) (hF : FiberwiseGroupoid F) :
+    {J : GrothendieckTopology C} {U : C} (x : Fiber F U)
+    (hF : FiberwiseGroupoid F) (S : InheritedSite F J) :
     Nonempty (SiteEquivalence
       (CategoryTheory.Over (⟨U, x⟩ : Pseudofunctor.CoGrothendieck F))
-      (CategoryTheory.Over U)) := by
+      (CategoryTheory.Over U)
+      (S.topology.over (⟨U, x⟩ : Pseudofunctor.CoGrothendieck F))
+      (J.over U)) := by
   sorry
 
 theorem stack_in_groupoids_over_stack
     {C : Type u} [Category.{v} C] {J : GrothendieckTopology C}
     (F : FiberedCategory C) (hF : StackInGroupoids F J)
     (S : InheritedSite F J)
-    (X : FiberedCategory (Pseudofunctor.CoGrothendieck F))
+    (X : Pseudofunctor
+      (LocallyDiscrete (Pseudofunctor.CoGrothendieck F)ᵒᵖ) Cat.{w', w'})
     (hX : Stack X S.topology) :
-    ∃ Z : FiberedCategory C, Stack Z J := by
+    Nonempty (StackOverGroupoidsData J F S X) := by
   sorry
 
 theorem stack_over_stack_composition
     {C : Type u} [Category.{v} C] {J : GrothendieckTopology C}
     (F : FiberedCategory C) (hF : Stack F J) (S : InheritedSite F J)
-    (X : FiberedCategory (Pseudofunctor.CoGrothendieck F))
+    (X : Pseudofunctor
+      (LocallyDiscrete (Pseudofunctor.CoGrothendieck F)ᵒᵖ) Cat.{w', w'})
     (hX : Stack X S.topology) :
-    ∃ Z : FiberedCategory C, Stack Z J := by
+    Nonempty (StackOverStackData J F S X) := by
   sorry
 
 end Formalization.«Books.Stacks».Unit01

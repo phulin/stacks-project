@@ -1,4 +1,5 @@
 import Formalization.«Books.Stacks».Unit01.Foundation
+import Mathlib.CategoryTheory.Limits.Shapes.Pullback.ChosenPullback
 
 /-!
 # Stacks, Chapter 1, Section 3: descent data
@@ -11,18 +12,11 @@ the isomorphism and cocycle identities used in the book.
 namespace Formalization.«Books.Stacks».Unit01
 
 open CategoryTheory
+open CategoryTheory.Limits
 open CategoryTheory.Pseudofunctor
 open Opposite
 
 universe t t' v' v u' u
-
-structure DescentCover (C : Type u) [Category.{v} C]
-    (J : GrothendieckTopology C) where
-  index : Type t
-  base : C
-  object : index → C
-  arrow : ∀ i, object i ⟶ base
-  covering : CoveringFamily J arrow
 
 structure DescentFamilyMorphism {C : Type u} [Category.{v} C]
     {ι κ : Type*} {U V : C} {X : ι → C} {Y : κ → C}
@@ -72,13 +66,30 @@ theorem descent_data_diagonal {C : Type u} [Category.{v} C]
     D.hom q g g hg hg = 𝟙 _ :=
   D.hom_self q g hg
 
+theorem descent_data_hom_is_iso {C : Type u} [Category.{v} C]
+    {F : FiberedCategory C} {ι : Type t} {U : C} {X : ι → C}
+    {f : ∀ i, X i ⟶ U} (D : F.DescentData f) {Y : C} (q : Y ⟶ U)
+    {i₁ i₂ : ι} (g₁ : Y ⟶ X i₁) (g₂ : Y ⟶ X i₂)
+    (hg₁ : g₁ ≫ f i₁ = q) (hg₂ : g₂ ≫ f i₂ = q) :
+    IsIso (D.hom q g₁ g₂ hg₁ hg₂) := by
+  infer_instance
+
+theorem descent_data_cocycle {C : Type u} [Category.{v} C]
+    {F : FiberedCategory C} {ι : Type t} {U : C} {X : ι → C}
+    {f : ∀ i, X i ⟶ U} (D : F.DescentData f) {Y : C} (q : Y ⟶ U)
+    {i₁ i₂ i₃ : ι} (g₁ : Y ⟶ X i₁) (g₂ : Y ⟶ X i₂) (g₃ : Y ⟶ X i₃)
+    (hg₁ : g₁ ≫ f i₁ = q) (hg₂ : g₂ ≫ f i₂ = q) (hg₃ : g₃ ≫ f i₃ = q) :
+    D.hom q g₁ g₂ hg₁ hg₂ ≫ D.hom q g₂ g₃ hg₂ hg₃ =
+      D.hom q g₁ g₃ hg₁ hg₃ :=
+  D.hom_comp q g₁ g₂ g₃ hg₁ hg₂ hg₃
+
 theorem descent_data_inverse {C : Type u} [Category.{v} C]
     {F : FiberedCategory C} {ι : Type t} {U : C} {X : ι → C}
     {f : ∀ i, X i ⟶ U} (D : F.DescentData f) {Y : C} (q : Y ⟶ U)
     {i₁ i₂ : ι} (g₁ : Y ⟶ X i₁) (g₂ : Y ⟶ X i₂)
     (hg₁ : g₁ ≫ f i₁ = q) (hg₂ : g₂ ≫ f i₂ = q) :
     D.hom q g₁ g₂ hg₁ hg₂ ≫ D.hom q g₂ g₁ hg₂ hg₁ = 𝟙 _ := by
-  sorry
+  rw [D.hom_comp q g₁ g₂ g₁ hg₁ hg₂ hg₁, D.hom_self q g₁ hg₁]
 
 theorem canonical_descent_data_components {C : Type u} [Category.{v} C]
     (F : FiberedCategory C) {ι : Type t} {U : C} {X : ι → C}
@@ -86,6 +97,16 @@ theorem canonical_descent_data_components {C : Type u} [Category.{v} C]
     (canonicalDescentData F f M).obj i =
       (F.map (f i).op.toLoc).toFunctor.obj M := by
   rfl
+
+theorem canonical_descent_data_cocycle {C : Type u} [Category.{v} C]
+    (F : FiberedCategory C) {ι : Type t} {U : C} {X : ι → C}
+    (f : ∀ i, X i ⟶ U) (M : Fiber F U) {Y : C} (q : Y ⟶ U)
+    {i₁ i₂ i₃ : ι} (g₁ : Y ⟶ X i₁) (g₂ : Y ⟶ X i₂) (g₃ : Y ⟶ X i₃)
+    (hg₁ : g₁ ≫ f i₁ = q) (hg₂ : g₂ ≫ f i₂ = q) (hg₃ : g₃ ≫ f i₃ = q) :
+    (canonicalDescentData F f M).hom q g₁ g₂ hg₁ hg₂ ≫
+        (canonicalDescentData F f M).hom q g₂ g₃ hg₂ hg₃ =
+      (canonicalDescentData F f M).hom q g₁ g₃ hg₁ hg₃ :=
+  (canonicalDescentData F f M).hom_comp q g₁ g₂ g₃ hg₁ hg₂ hg₃
 
 theorem canonical_descent_data_is_effective {C : Type u} [Category.{v} C]
     (F : FiberedCategory C) {ι : Type t} {U : C} {X : ι → C}
@@ -107,12 +128,21 @@ theorem pullback_descent_data_independent {C : Type u} [Category.{v} C]
 
 structure DescentComparisonHypotheses {C : Type u} [Category.{v} C]
     (F : FiberedCategory C) {ι κ : Type*} {U : C}
-    {X : ι → C} {Y : κ → C} (f : ∀ i, X i ⟶ U) (g : ∀ j, Y j ⟶ U) where
-  refinement : DescentFamilyMorphism f g
-  fibreProductsExist : Prop
+  {X : ι → C} {Y : κ → C} (f : ∀ i, X i ⟶ U) (g : ∀ j, Y j ⟶ U) where
+  refinement : DescentFamilyMorphism g f
+  refinementOverIdentity : refinement.base = 𝟙 U
+  fibreProductsExist : HasPullbacks C
   baseDescentIsEquivalence : (F.toDescentData g).IsEquivalence
-  localDescentIsFullyFaithful : Prop
-  overlapDescentIsFaithful : Prop
+  localPullbacks : ∀ i j, ChosenPullback (f i) (g j)
+  overlapPullbacks : ∀ i i', ChosenPullback (f i) (f i')
+  overlapLocalPullbacks : ∀ i i' j,
+    ChosenPullback ((overlapPullbacks i i').p) (g j)
+  localDescentIsFullyFaithful : ∀ i,
+    Nonempty ((F.toDescentData
+      (fun j => (localPullbacks i j).p₁)).FullyFaithful)
+  overlapDescentIsFaithful : ∀ i i',
+    (F.toDescentData
+      (fun j => (overlapLocalPullbacks i i' j).p₁)).Faithful
 
 theorem descent_comparison_of_refinement
     {C : Type u} [Category.{v} C] {F : FiberedCategory C}

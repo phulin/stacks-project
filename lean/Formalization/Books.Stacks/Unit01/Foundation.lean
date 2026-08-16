@@ -1,4 +1,6 @@
 import Mathlib.CategoryTheory.FiberedCategory.Grothendieck
+import Mathlib.CategoryTheory.Bicategory.FunctorBicategory.Pseudo
+import Mathlib.CategoryTheory.Bicategory.Modification.Pseudo
 import Mathlib.CategoryTheory.Sites.Descent.IsStack
 import Mathlib.CategoryTheory.Sites.Sheafification
 import Mathlib.CategoryTheory.Groupoid.Discrete
@@ -45,13 +47,13 @@ def IsomPresheaf (F : FiberedCategory C) {U : C} (x y : Fiber F U) :
         rcases f.property.out with ⟨g, h₁, h₂⟩
         let g' : (F.presheafHom y x).obj T₁ := by
           simpa [Pseudofunctor.presheafHom] using g
-        have h₁' : f.1 ≫ g' = 𝟙 _ := by
-          simpa [g', Pseudofunctor.presheafHom] using h₁
-        have h₂' : g' ≫ f.1 = 𝟙 _ := by
-          simpa [g', Pseudofunctor.presheafHom] using h₂
         refine ⟨(F.presheafHom y x).map q g', ?_, ?_⟩
-        · sorry
-        · sorry⟩ :
+        · simpa [g', Pseudofunctor.presheafHom,
+            Pseudofunctor.LocallyDiscreteOpToCat.pullHom] using
+            congrArg (fun h => (F.presheafHom x x).map q h) h₁
+        · simpa [g', Pseudofunctor.presheafHom,
+            Pseudofunctor.LocallyDiscreteOpToCat.pullHom] using
+            congrArg (fun h => (F.presheafHom y y).map q h) h₂⟩ :
         { f : (F.presheafHom x y).obj T₂ // IsIso f })
 
 abbrev DescentData (F : FiberedCategory C) {ι : Type t} {U : C}
@@ -96,28 +98,74 @@ def FiberwiseEquivalence {F G : FiberedCategory C}
   FiberwiseFullyFaithful η ∧ FiberwiseEssentiallySurjective η
 
 structure Substack (F : FiberedCategory C) (J : GrothendieckTopology C) where
-  carrier : ∀ U : C, Set (Fiber F U)
-  stableUnderPullback : Prop
-  full : Prop
-  locallyEssentiallyInCarrier : Prop
+  value : FiberedCategory C
+  inclusion : FiberedMorphism value F
+  fullyFaithful : FiberwiseFullyFaithful inclusion
+  stableUnderPullback : ∀ {U V : C} (f : V ⟶ U) (x : Fiber value U),
+    ∃ y : Fiber value V,
+      Nonempty (y ≅ (value.map f.op.toLoc).toFunctor.obj x)
+  locallyEssentiallyInImage : ∀ (U : C) (x : Fiber F U),
+    ∃ (ι : Type t) (X : ι → C) (f : ∀ i, X i ⟶ U),
+      CoveringFamily J f ∧
+        ∀ i, ∃ y : Fiber value (X i),
+          Nonempty ((F.map (f i).op.toLoc).toFunctor.obj x ≅
+            (inclusion.app (.mk (op (X i)))).toFunctor.obj y)
 
-structure TwoFiberProductCone (F G H : FiberedCategory C) where
+def IsTwoPullbackCone {F G H A : FiberedCategory C}
+    (f : FiberedMorphism F H) (g : FiberedMorphism G H)
+    (left : FiberedMorphism A F) (right : FiberedMorphism A G)
+    (commutes : left ≫ f ≅ right ≫ g) : Prop :=
+  ∀ (Q : FiberedCategory C) (a : FiberedMorphism Q F)
+      (b : FiberedMorphism Q G) (α : a ≫ f ≅ b ≫ g),
+    ∃ (u : FiberedMorphism Q A) (lam : u ≫ left ≅ a)
+      (rho : u ≫ right ≅ b),
+      (Bicategory.whiskerRight lam.hom f) ≫ α.hom =
+          (Bicategory.associator u left f).hom ≫
+            Bicategory.whiskerLeft u commutes.hom ≫
+              (Bicategory.associator u right g).inv ≫
+                (Bicategory.whiskerRight rho.hom g) ∧
+        ∀ (v : FiberedMorphism Q A) (lam' : v ≫ left ≅ a)
+          (rho' : v ≫ right ≅ b),
+          (Bicategory.whiskerRight lam'.hom f) ≫ α.hom =
+              (Bicategory.associator v left f).hom ≫
+                Bicategory.whiskerLeft v commutes.hom ≫
+                  (Bicategory.associator v right g).inv ≫
+                    (Bicategory.whiskerRight rho'.hom g) →
+            ∃! β : u ⟶ v,
+              (Bicategory.whiskerRight β left) ≫ lam'.hom = lam.hom ∧
+                (Bicategory.whiskerRight β right) ≫ rho'.hom = rho.hom
+
+structure TwoFiberProductCone (F G H : FiberedCategory C)
+    (f : FiberedMorphism F H) (g : FiberedMorphism G H) where
   apex : FiberedCategory C
   left : FiberedMorphism apex F
   right : FiberedMorphism apex G
-  comparison : Prop
+  commutes : left ≫ f ≅ right ≫ g
+  isTwoPullback : IsTwoPullbackCone f g left right commutes
+
+def IsSheafification {C : Type u} [Category.{v} C]
+    (J : GrothendieckTopology C)
+    {P Q : Cᵒᵖ ⥤ Type w} (η : P ⟶ Q) : Prop :=
+  Presheaf.IsSheaf J Q ∧
+    ∀ (R : Cᵒᵖ ⥤ Type w), Presheaf.IsSheaf J R →
+      ∀ f : P ⟶ R, ∃! g : Q ⟶ R, η ≫ g = f
 
 structure Stackification (F : FiberedCategory C) (J : GrothendieckTopology C) where
   value : FiberedCategory C
   map : FiberedMorphism F value
   isStack : Stack value J
-  locallyFromMap : Prop
-  morphismSheafification : Prop
-
-structure SiteMorphismData (C D : Type*) [Category* C] [Category* D]
-    (J : GrothendieckTopology C) (K : GrothendieckTopology D) where
-  functor : C ⥤ D
-  continuous : Prop
+  locallyFromMap : ∀ (U : C) (x' : Fiber value U),
+    ∃ (ι : Type t) (X : ι → C) (f : ∀ i, X i ⟶ U),
+      CoveringFamily J f ∧
+        ∀ i, ∃ x : Fiber F (X i), Nonempty
+          ((value.map (f i).op.toLoc).toFunctor.obj x' ≅
+            (map.app (.mk (op (X i)))).toFunctor.obj x)
+  morphismPresheafMap : ∀ (U : C) (x y : Fiber F U),
+    F.presheafHom x y ⟶
+      value.presheafHom ((map.app (.mk (op U))).toFunctor.obj x)
+        ((map.app (.mk (op U))).toFunctor.obj y)
+  morphismSheafification : ∀ (U : C) (x y : Fiber F U),
+    IsSheafification (J.over U) (morphismPresheafMap U x y)
 
 structure RelativeInertiaObject {F G : FiberedCategory C}
     (η : FiberedMorphism F G) (U : C) where
@@ -125,7 +173,8 @@ structure RelativeInertiaObject {F G : FiberedCategory C}
   automorphism : object ⟶ object
   fixed : (η.app (.mk (op U))).toFunctor.map automorphism = 𝟙 _
 
-def AbsoluteInertiaObject (F : FiberedCategory C) (U : C) :=
-  RelativeInertiaObject (η := (𝟙 F : F ⟶ F)) U
+structure AbsoluteInertiaObject (F : FiberedCategory C) (U : C) where
+  object : Fiber F U
+  automorphism : object ⟶ object
 
 end Formalization.«Books.Stacks».Unit01

@@ -10,11 +10,13 @@ open CategoryTheory
 open CategoryTheory.Pseudofunctor
 open Opposite
 
-universe t v u
+open scoped CategoryTheory.Pseudofunctor.StrongTrans
+
+universe t w v u
 
 structure StackObject (C : Type u) [Category.{v} C]
     (J : GrothendieckTopology C) where
-  value : Pseudofunctor (LocallyDiscrete Cᵒᵖ) Cat.{v, u}
+  value : Pseudofunctor (LocallyDiscrete Cᵒᵖ) Cat.{w, w}
   isStack : Stack value J
 
 structure StackMorphism {C : Type u} [Category.{v} C]
@@ -24,13 +26,32 @@ structure StackMorphism {C : Type u} [Category.{v} C]
 def IsStack2Morphism {C : Type u} [Category.{v} C]
     {J : GrothendieckTopology C} {X Y : StackObject C J}
     (f g : StackMorphism X Y) : Prop :=
-  ∀ U : C, Nonempty ((f.map.app (.mk (op U))).toFunctor ⟶
-    (g.map.app (.mk (op U))).toFunctor)
+  Nonempty (f.map ⟶ g.map)
 
 def HasFibrewiseRepresentatives {C : Type u} [Category.{v} C]
     (F : FiberedCategory C) : Prop :=
-  ∀ U : C, ∃ representatives : Set (Fiber F U),
+    ∀ U : C, ∃ representatives : Set (Fiber F U),
     ∀ X : Fiber F U, ∃ Y, Y ∈ representatives ∧ Nonempty (X ≅ Y)
+
+structure SmallSubstackData {C : Type u} [Category.{v} C]
+    (F : FiberedCategory C) (J : GrothendieckTopology C) where
+  value : FiberedCategory C
+  inclusion : FiberedMorphism value F
+  isStack : Stack value J
+  fullyFaithful : FiberwiseFullyFaithful inclusion
+  essentiallySurjective : FiberwiseEssentiallySurjective inclusion
+
+theorem small_stack_substack_exists {C : Type u} [Category.{v} C]
+    (F : FiberedCategory C) (J : GrothendieckTopology C)
+    (hF : Stack F J) (hrepresentatives : HasFibrewiseRepresentatives F) :
+    Nonempty (SmallSubstackData F J) := by
+  sorry
+
+theorem stack_morphism_presheaves_are_sheaves {C : Type u} [Category.{v} C]
+    {F : FiberedCategory C} {J : GrothendieckTopology C} [F.IsStack J]
+    {U : C} (x y : Fiber F U) :
+    Presheaf.IsSheaf (J.over U) (F.presheafHom x y) := by
+  exact IsPrestack.isSheaf J x y
 
 theorem stack_iff_effective_descent {C : Type u} [Category.{v} C]
     (F : FiberedCategory C) (J : GrothendieckTopology C) :
@@ -42,7 +63,7 @@ theorem stack_iff_effective_descent {C : Type u} [Category.{v} C]
 theorem substack_is_stack {C : Type u} [Category.{v} C]
     (F : FiberedCategory C) (J : GrothendieckTopology C)
     [F.IsStack J] (S : Substack F J) :
-    ∃ G : FiberedCategory C, Stack G J := by
+    Stack S.value J := by
   sorry
 
 theorem equivalent_fibred_categories_preserve_stack
@@ -56,7 +77,7 @@ theorem two_fibre_product_of_stacks {C : Type u} [Category.{v} C]
     (J : GrothendieckTopology C) {F G H : FiberedCategory C}
     (hF : Stack F J) (hG : Stack G J) (hH : Stack H J)
     (f : FiberedMorphism F H) (g : FiberedMorphism G H) :
-    ∃ P : TwoFiberProductCone F G H, Stack P.apex J := by
+    ∃ P : TwoFiberProductCone F G H f g, Stack P.apex J := by
   sorry
 
 theorem characterize_fully_faithful {C : Type u} [Category.{v} C]

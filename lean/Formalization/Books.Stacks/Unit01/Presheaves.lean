@@ -21,6 +21,16 @@ abbrev IsomorphismPresheaf {C : Type u} [Category.{v} C]
     (F : FiberedCategory C) {U : C} (x y : Fiber F U) :=
   IsomPresheaf F x y
 
+/- The inclusion of the presheaf of isomorphisms into the presheaf of
+  morphisms.  The subtype is taken objectwise, so this is the canonical
+  subpresheaf occurring in the book. -/
+def isomorphismPresheafInclusion {C : Type u} [Category.{v} C]
+    (F : FiberedCategory C) {U : C} (x y : Fiber F U) :
+    IsomorphismPresheaf F x y ⟶ MorphismPresheaf F x y where
+  app T := ↾(fun f : (IsomorphismPresheaf F x y).obj T => f.1)
+  naturality _ _ q := by
+    rfl
+
 theorem mor_presheaf_is_presheaf {C : Type u} [Category.{v} C]
     (F : FiberedCategory C) {U : C} (x y : Fiber F U) :
     MorPresheaf F x y = F.presheafHom x y := rfl
@@ -37,6 +47,13 @@ theorem presheaf_mor_map_fibred_categories {C : Type u} [Category.{v} C]
 theorem isom_presheaf_is_subpresheaf {C : Type u} [Category.{v} C]
     (F : FiberedCategory C) {U : C} (x y : Fiber F U) (T : (Over C U)ᵒᵖ)
     (f : { f : (F.presheafHom x y).obj T // IsIso f }) : IsIso f.1 := f.2
+
+theorem isomorphism_presheaf_inclusion_app {C : Type u} [Category.{v} C]
+    (F : FiberedCategory C) {U : C} (x y : Fiber F U)
+    (T : (Over C U)ᵒᵖ)
+    (f : (IsomorphismPresheaf F x y).obj T) :
+    (isomorphismPresheafInclusion F x y).app T f = f.1 := by
+  simp [isomorphismPresheafInclusion]
 
 structure TwoFiberProductPresentation {C : Type u} [Category.{v} C]
     (F : FiberedCategory C) {U : C} (x y : Fiber F U) where

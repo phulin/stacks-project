@@ -64,6 +64,17 @@ def noetherianInfiniteDimensionMultiplicativeSet (k : Type u) [Field k] :
     Submonoid (NoetherianInfiniteDimensionPolynomialRing k) :=
   ⨅ i : ℕ+, (noetherianInfiniteDimensionBlockIdeal k i).primeCompl
 
+/-- The carrier of the chosen submonoid is the displayed intersection of
+complements of the block ideals. -/
+theorem noetherianInfiniteDimensionMultiplicativeSet_coe
+    (k : Type u) [Field k] :
+    (noetherianInfiniteDimensionMultiplicativeSet k :
+      Set (NoetherianInfiniteDimensionPolynomialRing k)) =
+      ⋂ i : ℕ+, (noetherianInfiniteDimensionBlockIdeal k i :
+      Set (NoetherianInfiniteDimensionPolynomialRing k))ᶜ := by
+  ext x
+  simp [noetherianInfiniteDimensionMultiplicativeSet]
+
 /-- The localization `A = S⁻¹R` in the source construction. -/
 abbrev NoetherianInfiniteDimensionLocalization (k : Type u) [Field k] :=
   Localization (noetherianInfiniteDimensionMultiplicativeSet k)

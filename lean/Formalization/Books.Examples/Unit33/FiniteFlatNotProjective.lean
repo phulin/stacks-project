@@ -125,7 +125,7 @@ theorem exampleLocalization_equiv_module :
 
 /-- The module in the example is finite over `R`. -/
 theorem exampleModule_finite : Module.Finite SmoothRing ExampleModule := by
-  sorry
+  infer_instance
 
 /-- The module in the example is flat over `R`. -/
 theorem exampleModule_flat : Module.Flat SmoothRing ExampleModule := by
@@ -167,7 +167,10 @@ instance exampleSpecMap_isClosedImmersion : IsClosedImmersion exampleSpecMap := 
 
 /-- The displayed affine morphism is flat. -/
 instance exampleSpecMap_isFlat : AlgebraicGeometry.Flat exampleSpecMap := by
-  sorry
+  change AlgebraicGeometry.Flat
+    (Spec.map (CommRingCat.ofHom (Ideal.Quotient.mk exampleGermIdeal)))
+  rw [AlgebraicGeometry.Flat.SpecMap_iff]
+  exact exampleModule_flat
 
 /-- The displayed affine morphism is not an open immersion. -/
 theorem exampleSpecMap_not_isOpenImmersion :

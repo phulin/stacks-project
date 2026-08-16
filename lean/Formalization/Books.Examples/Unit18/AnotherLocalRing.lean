@@ -18,6 +18,7 @@ import Mathlib.RingTheory.Localization.FractionRing
 import Mathlib.RingTheory.LocalRing.Pullback
 import Mathlib.RingTheory.MvPowerSeries.Rename
 import Mathlib.RingTheory.PowerSeries.Basic
+import Formalization.«Books.Examples».Unit12.NonflatCompletions
 
 /-!
 # Another local ring with nonreduced completion
@@ -387,7 +388,9 @@ theorem a_krull_dimension_from_integral_subring :
 
 theorem aXYIdeal_is_principal :
     Submodule.IsPrincipal (aXYIdeal k p : Submodule (aRing k p) (aRing k p)) := by
-  sorry
+  change Submodule.IsPrincipal
+    (Ideal.span {aX k p * aY k p} : Submodule (aRing k p) (aRing k p))
+  infer_instance
 
 end TheRingA
 
@@ -448,6 +451,11 @@ def bY (f : PowerSeries k) : bRing k p f :=
 def bXYIdeal (f : PowerSeries k) : Ideal (bRing k p f) :=
   Ideal.span {bX k p f * bY k p f}
 
+theorem bXYIdeal_is_principal (f : PowerSeries k) :
+    (bXYIdeal k p f).IsPrincipal := by
+  change (Ideal.span {bX k p f * bY k p f}).IsPrincipal
+  infer_instance
+
 abbrev bCompletion (f : PowerSeries k) : Type u :=
   AdicCompletion (bXYIdeal k p f) (bRing k p f)
 
@@ -489,7 +497,7 @@ variable (f : PowerSeries k)
 
 abbrev aLocalizedRing : Type u := Localization.Away (aY k p)
 abbrev bLocalizedRing : Type u :=
-  Localization.Away (aToB k p f (aY k p))
+  Localization.Away (bY k p f)
 
 def aLocalizedX : aLocalizedRing k p :=
   algebraMap (aRing k p) (aLocalizedRing k p) (aX k p)
@@ -501,7 +509,8 @@ def aLocalizedIdeal : Ideal (aLocalizedRing k p) :=
   Ideal.span {aLocalizedX k p}
 
 abbrev aLocalizedCompletion : Type u :=
-  AdicCompletion (aLocalizedXYIdeal k p) (aLocalizedRing k p)
+  Formalization.«Books.Examples».Unit12.localizedAdicCompletion
+    (aRing k p) (aXYIdeal k p) (aY k p)
 
 def bLocalizedXYIdeal : Ideal (bLocalizedRing k p f) :=
   Ideal.map (algebraMap (bRing k p f) (bLocalizedRing k p f)) (bXYIdeal k p f)
@@ -510,7 +519,8 @@ def bLocalizedIdeal : Ideal (bLocalizedRing k p f) :=
   Ideal.span {algebraMap (bRing k p f) (bLocalizedRing k p f) (bX k p f)}
 
 abbrev bLocalizedCompletion : Type u :=
-  AdicCompletion (bLocalizedXYIdeal k p f) (bLocalizedRing k p f)
+  Formalization.«Books.Examples».Unit12.localizedAdicCompletion
+    (bRing k p f) (bXYIdeal k p f) (bY k p f)
 
 theorem aLocalizedXYIdeal_eq_x :
     aLocalizedXYIdeal k p = aLocalizedIdeal k p := by
@@ -648,9 +658,8 @@ section FinalExistence
 /-- The `I`-adic completion of the localization of a ring at `f`. -/
 abbrev principalLocalizationCompletion (B : CommRingCat.{u})
     (I : Ideal (B : Type u)) (f : (B : Type u)) : Type u :=
-  AdicCompletion
-    (Ideal.map (algebraMap (B : Type u) (Localization.Away f)) I)
-    (Localization.Away f)
+  Formalization.«Books.Examples».Unit12.localizedAdicCompletion
+    (B : Type u) I f
 
 /-- The localization of the preceding completion at the image of `b`. -/
 abbrev principalLocalizationCompletionAt (B : CommRingCat.{u})

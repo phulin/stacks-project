@@ -83,6 +83,13 @@ theorem stageInclusion_comp_stageMap (n : ℕ) :
     (fun x ↦ stageInclusion (n + 1) (stageMap n x)) = stageInclusion n := by
   sorry
 
+/- The finitely supported model really is the increasing union of the finite
+   stages, which is the carrier-level part of the source's notation
+   `G = colim G_n`. -/
+theorem stageInclusions_cover :
+    ⋃ n : ℕ, Set.range (stageInclusion n) = (Set.univ : Set ColimitGroup) := by
+  sorry
+
 /-! ### The colimit topology -/
 
 /-- The final topology for the stage inclusions. -/

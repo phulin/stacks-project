@@ -1,20 +1,26 @@
 import Mathlib.Algebra.Category.ModuleCat.Abelian
 import Mathlib.CategoryTheory.Functor.OfSequence
 import Mathlib.CategoryTheory.ObjectProperty.FullSubcategory
+import Mathlib.CategoryTheory.Sites.Limits
+import Mathlib.CategoryTheory.Sites.SubcanonicalOver
 import Mathlib.LinearAlgebra.Quotient.Basic
 import Mathlib.NumberTheory.Padics.PadicIntegers
 import Mathlib.RingTheory.AdicCompletion.Basic
 import Mathlib.RingTheory.Noetherian.Basic
+import Formalization.«Books.Examples».Unit10.CompleteModules
 import Formalization.«Books.Stacks».Unit01.Setoids
 import Formalization.«Books.SpacesGroupoids».Unit20.QuotientStacks
 
 /-!
 # Examples, Chapter 13: Nonabelian category of quasi-coherent modules
 
-The geometric formal-spectrum construction is not yet part of Mathlib.  The
-presentation interface below records its fppf sheaf and associated stack
-using the project's existing algebraic-space-to-stack interface, while the
-module calculation uses Mathlib's adic-completion and module-category APIs.
+The finite affine level diagram and its fppf sheaf-valued form are recorded
+explicitly below.  The formal-spectrum object is packaged by an explicit
+colimit-cocone interface because the current algebraic-space API does not
+provide a generic small-universe `HasColimit` instance for this large-site
+diagram.  The associated stack uses the existing algebraic-space-to-stack
+interface, while the module calculation uses Mathlib's adic-completion and
+module-category APIs.
 -/
 
 noncomputable section
@@ -44,61 +50,118 @@ abbrev SchemesOverIntegers := Over BaseScheme
 abbrev FppfTopologyOverIntegers : GrothendieckTopology SchemesOverIntegers :=
   AlgebraicGeometry.Scheme.fppfTopology.over BaseScheme
 
-/-- The fppf sheaf of points in a formal-spectrum presentation.
+/-! ## The finite level schemes -/
 
-The parameter `R` records the coordinate ring of the formal spectrum.  The
-formal-spectrum construction itself is not currently available in Mathlib;
-the sheaf is therefore supplied by the presentation interface below. -/
-structure FormalSpectrumPresentation (R : CommRingCat) where
-  points : Formalization.«Books.SpacesGroupoids».Unit20.AlgebraicSpace BaseScheme
+/- The source numbers its levels by positive integers.  The Lean index `n`
+denotes the source level `n + 1`. -/
+def pAdicLevelExponent (n : ℕ) : ℕ :=
+  n + 1
 
-/-- The stack in sets associated to the sheaf of points of a presentation. -/
-noncomputable abbrev FormalSpectrumPresentation.stack
-    (P : FormalSpectrumPresentation R) :
-    Formalization.«Books.Stacks».Unit01.FiberedCategory SchemesOverIntegers :=
-  Formalization.«Books.SpacesGroupoids».Unit20.spaceStack P.points
-
-/-- The associated stack is, in particular, a stack in setoids.  We retain the
-stronger stack-in-sets interface supplied by the sheaf construction. -/
-def FormalSpectrumPresentation.isStackInSetoids
-    (P : FormalSpectrumPresentation R) : Prop :=
-  Formalization.«Books.Stacks».Unit01.StackInSetoids P.stack
-    FppfTopologyOverIntegers
-
-/-- The declaration-level object representing `X = Spf(ℤ_[p])`. -/
-structure PAdicFormalSpectrum (p : ℕ) [Fact p.Prime] where
-  presentation : FormalSpectrumPresentation (CommRingCat.of (pAdicIntegers p))
-
-/-- Existence of the fppf sheaf represented by `Spf(ℤ_[p])`. -/
-theorem pAdicFormalSpectrum_exists (p : ℕ) [Fact p.Prime] :
-    Nonempty (PAdicFormalSpectrum p) := by
-  sorry
-
-/-- A chosen formal spectrum `Spf(ℤ_[p])`. -/
-noncomputable def pAdicFormalSpectrum (p : ℕ) [Fact p.Prime] :
-    PAdicFormalSpectrum p :=
-  Classical.choice (pAdicFormalSpectrum_exists p)
-
-theorem pAdicFormalSpectrum_isSheafInSets (p : ℕ) [Fact p.Prime] :
-    Presheaf.IsSheaf FppfTopologyOverIntegers
-      (pAdicFormalSpectrum p).presentation.points.obj :=
-  (pAdicFormalSpectrum p).presentation.points.property
-
-theorem pAdicFormalSpectrum_isStackInSetoids (p : ℕ) [Fact p.Prime] :
-    (pAdicFormalSpectrum p).presentation.isStackInSetoids :=
-  by
-    sorry
-
-/-- The coordinate ring of `Spf(ℤ_[p])` is Noetherian. -/
-theorem pAdicFormalSpectrum_isNoetherian (p : ℕ) [Fact p.Prime] :
-    IsNoetherianRing (pAdicIntegers p) := by
-  sorry
+theorem pAdicLevelExponent_succ (n : ℕ) :
+    pAdicLevelExponent (n + 1) = pAdicLevelExponent n + 1 := by
+  simp [pAdicLevelExponent]
 
 /-! ## Compatible systems of modules -/
 
 /-- The ideal defining the `p`-adic filtration on abelian groups. -/
 def pAdicIdeal (p : ℕ) : Ideal ℤ :=
   Ideal.span ({(p : ℤ)} : Set ℤ)
+
+/-- The ring of functions on the source's `n`-th finite level. -/
+def pAdicLevelRing (p n : ℕ) : CommRingCat :=
+  CommRingCat.of (ℤ ⧸ pAdicIdeal p ^ pAdicLevelExponent n)
+
+/-- The affine scheme `Spec (ℤ / p^(n+1)ℤ)`. -/
+abbrev pAdicLevelScheme (p n : ℕ) : Scheme :=
+  Spec (pAdicLevelRing p n)
+
+/-- The `n`-th finite level, regarded as a scheme over `Spec ℤ`. -/
+def pAdicLevelSchemeOverIntegers (p n : ℕ) : SchemesOverIntegers :=
+  Over.mk <|
+    Spec.map (CommRingCat.ofHom
+      (Ideal.Quotient.mk (pAdicIdeal p ^ pAdicLevelExponent n)))
+
+/-- The closed immersion from one finite level to the next. -/
+def pAdicLevelSchemeTransition (p n : ℕ) :
+    pAdicLevelSchemeOverIntegers p n ⟶
+      pAdicLevelSchemeOverIntegers p (n + 1) :=
+  Over.homMk
+    (Spec.map (CommRingCat.ofHom
+      (Ideal.Quotient.factorPow (pAdicIdeal p)
+        (show pAdicLevelExponent n ≤ pAdicLevelExponent (n + 1) by
+          rw [pAdicLevelExponent_succ]
+          exact Nat.le_succ _))))
+    (by
+      change Spec.map _ ≫ Spec.map _ = Spec.map _
+      rw [← AlgebraicGeometry.Spec.map_comp, ← CommRingCat.ofHom_comp]
+      rfl)
+
+/-- The directed system of finite schemes in the source's colimit description. -/
+def pAdicLevelSchemeDiagram (p : ℕ) : ℕ ⥤ SchemesOverIntegers :=
+  Functor.ofSequence (X := fun n => pAdicLevelSchemeOverIntegers p n)
+    (fun n => pAdicLevelSchemeTransition p n)
+
+/-- The same finite levels viewed as fppf sheaves of points. -/
+def pAdicLevelSheafDiagram (p : ℕ) :
+    ℕ ⥤ Formalization.«Books.SpacesGroupoids».Unit20.AlgebraicSpace BaseScheme :=
+  pAdicLevelSchemeDiagram p ⋙ FppfTopologyOverIntegers.yoneda
+
+/-- A formal-spectrum presentation records the fppf sheaf colimit of the
+finite-level diagram.  Stating the colimit through `IsColimit` avoids requiring
+a global `HasColimit` instance for the large fppf site. -/
+structure FormalSpectrumPresentation (p : ℕ) (R : CommRingCat) where
+  colimitCocone : Cocone (pAdicLevelSheafDiagram p)
+  isColimit : IsColimit colimitCocone
+
+/-- The fppf sheaf of points in a formal-spectrum presentation. -/
+abbrev FormalSpectrumPresentation.points
+    (P : FormalSpectrumPresentation p R) :
+    Formalization.«Books.SpacesGroupoids».Unit20.AlgebraicSpace BaseScheme :=
+  P.colimitCocone.pt
+
+/-- The stack in sets associated to the sheaf of points of a presentation. -/
+noncomputable abbrev FormalSpectrumPresentation.stack
+    (P : FormalSpectrumPresentation p R) :
+    Formalization.«Books.Stacks».Unit01.FiberedCategory SchemesOverIntegers :=
+  Formalization.«Books.SpacesGroupoids».Unit20.spaceStack P.points
+
+/-- The associated stack is, in particular, a stack in setoids.  We retain the
+stronger stack-in-sets interface supplied by the sheaf construction. -/
+def FormalSpectrumPresentation.isStackInSetoids
+    (P : FormalSpectrumPresentation p R) : Prop :=
+  Formalization.«Books.Stacks».Unit01.StackInSetoids P.stack
+    FppfTopologyOverIntegers
+
+/-- The declaration-level presentation of `X = Spf(ℤ_[p])`. -/
+abbrev PAdicFormalSpectrum (p : ℕ) [Fact p.Prime] :=
+  FormalSpectrumPresentation p (CommRingCat.of (pAdicIntegers p))
+
+/-- Existence of the fppf sheaf represented by `Spf(ℤ_[p])` as the colimit of
+the finite-level fppf sheaves. -/
+theorem pAdicFormalSpectrum_exists (p : ℕ) [Fact p.Prime] :
+    Nonempty (PAdicFormalSpectrum p) :=
+  by
+    sorry
+
+/-- A chosen colimit presentation of `Spf(ℤ_[p])`. -/
+noncomputable def pAdicFormalSpectrum (p : ℕ) [Fact p.Prime] :
+    PAdicFormalSpectrum p :=
+  Classical.choice (pAdicFormalSpectrum_exists p)
+
+theorem pAdicFormalSpectrum_isSheafInSets (p : ℕ) [Fact p.Prime] :
+    Presheaf.IsSheaf FppfTopologyOverIntegers
+      (pAdicFormalSpectrum p).points.obj :=
+  (pAdicFormalSpectrum p).points.property
+
+theorem pAdicFormalSpectrum_isStackInSetoids (p : ℕ) [Fact p.Prime] :
+    (pAdicFormalSpectrum p).isStackInSetoids :=
+  by
+    sorry
+
+/-- The coordinate ring of `Spf(ℤ_[p])` is Noetherian. -/
+theorem pAdicFormalSpectrum_isNoetherian (p : ℕ) [Fact p.Prime] :
+    IsNoetherianRing (pAdicIntegers p) := by
+  exact Examples.Unit10.padicIntegers_isNoetherianRing p
 
 /-- A `ℤ`-module is p-adically complete in the sense of Mathlib. -/
 def IsPAdicallyComplete (p : ℕ) (M : ModuleCat.{u} ℤ) : Prop :=
@@ -121,12 +184,6 @@ def pAdicQuotientProjection (p n : ℕ) (M : ModuleCat.{u} ℤ) :
 def pAdicTransition {F : ℕᵒᵖ ⥤ ModuleCat.{u} ℤ} {m n : ℕ} (h : m ≤ n) :
     F.obj (op n) ⟶ F.obj (op m) :=
   F.map (homOfLE h).op
-
-/- The source indexes its levels by positive integers.  We use `n : ℕ` for
-the source level `n + 1`, so that the inverse-system API can use the standard
-`ℕᵒᵖ` index category without introducing a parallel positive-number category. -/
-def pAdicLevelExponent (n : ℕ) : ℕ :=
-  n + 1
 
 /-- The exact data carried by the modules `(M_n)` in the source.
 
@@ -157,13 +214,11 @@ def pAdicModuleSystemProperty (p : ℕ)
 abbrev PAdicModuleSystems (p : ℕ) :=
   (pAdicModuleSystemProperty p).FullSubcategory
 
-/-- The category of p-adically complete abelian groups, represented as
-`ℤ`-modules. -/
-def pAdicCompleteProperty (p : ℕ) : ObjectProperty (ModuleCat.{u} ℤ) :=
-  fun M => IsPAdicallyComplete p M
-
+/- The category of p-adically complete abelian groups, represented as
+`ℤ`-modules.  This reuses the generic complete-module subcategory from the
+earlier complete-modules chapter. -/
 abbrev PAdicCompleteAbelianGroups (p : ℕ) :=
-  (pAdicCompleteProperty p).FullSubcategory
+  Examples.Unit10.CompleteModuleCat ℤ (pAdicIdeal p)
 
 /-! ## The inverse limit and its level quotients -/
 

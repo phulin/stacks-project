@@ -976,6 +976,22 @@ noncomputable def examplePointSeparationData (k : Type u) [Field k]
     (hchar : (1 : k) ≠ (-1 : k)) : ExamplePointSeparationData k :=
   Classical.choice (examplePointSeparationData_exists k hchar)
 
+theorem exampleMorphism_point_images_distinct (k : Type u) [Field k]
+    (hchar : (1 : k) ≠ (-1 : k)) :
+    exampleMorphism k (examplePointOneInY k) ≠
+      exampleMorphism k (examplePointNegOneInY k) := by
+  let d := examplePointSeparationData k hchar
+  rw [← d.pointOne_is_image, ← d.pointNegOne_is_image]
+  exact d.distinct
+
+theorem exampleMorphism_global_sections_agree_on_point_images (k : Type u) [Field k]
+    (hchar : (1 : k) ≠ (-1 : k)) :
+    (exampleGluedScheme k).toSpecΓ (exampleMorphism k (examplePointOneInY k)) =
+      (exampleGluedScheme k).toSpecΓ (exampleMorphism k (examplePointNegOneInY k)) := by
+  let d := examplePointSeparationData k hchar
+  rw [← d.pointOne_is_image, ← d.pointNegOne_is_image]
+  exact d.global_sections_agree
+
 def IsSeparatedByGlobalSections (X : Scheme.{u}) : Prop :=
   Function.Injective (fun x : X => (X.toSpecΓ) x)
 
@@ -983,8 +999,8 @@ theorem exampleGlobalSections_do_not_separate (k : Type u) [Field k]
     (hchar : (1 : k) ≠ (-1 : k)) :
     ¬ IsSeparatedByGlobalSections (exampleGluedScheme k) := by
   intro hinj
-  let d := examplePointSeparationData k hchar
-  exact d.distinct (hinj d.global_sections_agree)
+  exact exampleMorphism_point_images_distinct k hchar
+    (hinj (exampleMorphism_global_sections_agree_on_point_images k hchar))
 
 /-! ## The chapter's final existence statement -/
 

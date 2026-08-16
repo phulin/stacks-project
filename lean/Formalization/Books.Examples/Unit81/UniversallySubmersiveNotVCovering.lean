@@ -172,12 +172,6 @@ theorem baseChangedDisjointUnionSchemeMap_surjective (A B : Type u) [CommRing A]
     Surjective (baseChangedDisjointUnionSchemeMap A B p) := by
   sorry
 
-/-- The base-changed morphism is submersive. -/
-theorem baseChangedDisjointUnionSchemeMap_submersive (A B : Type u) [CommRing A] [CommRing B]
-    [Algebra A B] (p : PrimeSpectrum A) :
-    Submersive (baseChangedDisjointUnionSchemeMap A B p) := by
-  sorry
-
 /-- The two closed pieces in the source proof are images of spectra of `B`-algebras. -/
 theorem baseChanged_components_are_spectrum_images (A B : Type u) [CommRing A] [CommRing B]
     [Algebra A B] (p : PrimeSpectrum A) :
@@ -317,6 +311,21 @@ theorem specialization_middle_prime_component_bridge
       d.map r ∈ quotientComponent A B p ∧ y ∈ quotientComponent A B p := by
   sorry
 
+/-! ## The universal submersiveness claim -/
+
+/-- The base-changed morphism is submersive. -/
+theorem baseChangedDisjointUnionSchemeMap_submersive (A B : Type u) [CommRing A] [CommRing B]
+    [Algebra A B] (p : PrimeSpectrum A) :
+    Submersive (baseChangedDisjointUnionSchemeMap A B p) := by
+  sorry
+
+/-- The affine morphism in the source is universally submersive. -/
+theorem disjointUnionAffineSchemeMap_universallySubmersive
+    (A : Type u) [CommRing A] [IsDomain A] [ValuationRing A]
+    (p : PrimeSpectrum A) (hp : IsIntermediatePrime A p) :
+    UniversallySubmersive (disjointUnionAffineSchemeMap A p) := by
+  sorry
+
 /-! ## The V-covering obstruction -/
 
 /-- The affine singleton V-covering condition used in this chapter. -/
@@ -379,8 +388,10 @@ theorem exists_affine_universallySubmersive_not_isVCovering :
     ∃ (A : Type u) (_ : CommRing A) (_ : IsDomain A) (_ : ValuationRing A)
       (p : PrimeSpectrum A),
       IsIntermediatePrime A p ∧
-        UniversallySubmersive (disjointUnionAffineSchemeMap A p) ∧
-          ¬IsVCovering (disjointUnionAffineSchemeMap A p) := by
+        IsAffine (disjointUnionAffineScheme A p) ∧
+          IsAffine (Spec (CommRingCat.of A)) ∧
+            UniversallySubmersive (disjointUnionAffineSchemeMap A p) ∧
+              ¬IsVCovering (disjointUnionAffineSchemeMap A p) := by
   sorry
 
 end Formalization.«Books.Examples».Unit81

@@ -333,7 +333,7 @@ abbrev firstChartModule (k : Type u) [Field k] (n : positiveIndex) :
 abbrev secondChartModule (k : Type u) [Field k] (n : positiveIndex) :
     ModuleCat (thickenedChartRing k n) :=
   ModuleCat.of (thickenedChartRing k n)
-    (⊥ : Submodule (thickenedChartRing k n) (thickenedChartRing k n))
+    PUnit
 
 /-- The displayed first-chart module is the finite `A_n`-module `A_n`. -/
 theorem firstChartModule_equiv_base (k : Type u) [Field k] (n : positiveIndex) :
@@ -386,16 +386,42 @@ noncomputable def tGeneratedIdealSheaf (k : Type u) [Field k] :
     (counterexampleScheme k).IdealSheafData :=
   (baseTGeneratedIdealSheaf k).comap (counterexampleStructureMap k)
 
+/-! The transition maps form an inverse system.  We expose the two-step
+coherence explicitly; the usual higher coherences follow from this chosen
+system of transition isomorphisms. -/
+def CoherentSupportProperSystemTransitionCompatibility (k : Type u) [Field k]
+    (sheaves : ∀ n : positiveIndex, CoherentThickeningSheaf k n)
+    (transition : ∀ n : positiveIndex,
+      (Scheme.Modules.pullback (thickeningInclusion k n)).obj
+          (sheaves (n + 1)).sheaf ≅ (sheaves n).sheaf) : Prop :=
+  ∀ n : positiveIndex,
+    ∃ (comparison :
+        (Scheme.Modules.pullback
+          (thickeningInclusion k n ≫ thickeningInclusion k (n + 1))).obj
+            (sheaves (n + 2)).sheaf ≅
+          (Scheme.Modules.pullback (thickeningInclusion k n)).obj
+            ((Scheme.Modules.pullback (thickeningInclusion k (n + 1))).obj
+              (sheaves (n + 2)).sheaf)),
+      ∃ (direct :
+        (Scheme.Modules.pullback
+          (thickeningInclusion k n ≫ thickeningInclusion k (n + 1))).obj
+            (sheaves (n + 2)).sheaf ≅ (sheaves n).sheaf),
+        comparison.hom ≫
+              (Scheme.Modules.pullback (thickeningInclusion k n)).map
+                (transition (n + 1)).hom ≫ (transition n).hom =
+          direct.hom
+
 /-- A coherent system with support proper over the base. -/
 structure CoherentSupportProperSystem (k : Type u) [Field k] where
   idealSheaf : (counterexampleScheme k).IdealSheafData
   idealSheaf_is_tGenerated : idealSheaf = tGeneratedIdealSheaf k
   sheaves : ∀ n : positiveIndex, CoherentThickeningSheaf k n
   sheaves_are_displayed : ∀ n : positiveIndex, sheaves n = coherentThickeningSheaf k n
-  transition : ∀ n : positiveIndex, Nonempty (
+  transition : ∀ n : positiveIndex,
     (Scheme.Modules.pullback (thickeningInclusion k n)).obj
-        (sheaves (n + 1)).sheaf ≅ (sheaves n).sheaf)
-  transition_compatible : Prop
+        (sheaves (n + 1)).sheaf ≅ (sheaves n).sheaf
+  transition_compatible :
+    CoherentSupportProperSystemTransitionCompatibility k sheaves transition
   supportProperOverBase : Prop
 
 /-- The displayed system is an object of the source's category
@@ -413,6 +439,26 @@ theorem coherentSupportProperSystem_sheaves_are_displayed
     (coherentSupportProperSystem k).sheaves n = coherentThickeningSheaf k n :=
   (coherentSupportProperSystem k).sheaves_are_displayed n
 
+/-- Compatibility of the maps `𝒪_{X_n} ⟶ 𝓕_n` after pulling back from the
+next thickening.  The two displayed isomorphisms express the canonical
+identifications of the pulled-back structure sheaf and of the sheaf system. -/
+def StructureSheafSurjectionCompatibility (k : Type u) [Field k]
+    (maps : ∀ n : positiveIndex,
+      SheafOfModules.unit ((thickening k n).ringCatSheaf) ⟶
+        (coherentThickeningSheaf k n).sheaf) : Prop :=
+  ∀ n : positiveIndex,
+    ∃ (unitIso :
+        (Scheme.Modules.pullback (thickeningInclusion k n)).obj
+            (SheafOfModules.unit ((thickening k (n + 1)).ringCatSheaf)) ≅
+          SheafOfModules.unit ((thickening k n).ringCatSheaf))
+      (sheafIso :
+        (Scheme.Modules.pullback (thickeningInclusion k n)).obj
+            (coherentThickeningSheaf k (n + 1)).sheaf ≅
+          (coherentThickeningSheaf k n).sheaf),
+      (Scheme.Modules.pullback (thickeningInclusion k n)).map (maps (n + 1)) ≫
+            sheafIso.hom =
+        unitIso.hom ≫ maps n
+
 /-- Data of the compatible epimorphisms `𝒪_{X_n} ⟶ 𝓕_n` used in the Quot
 argument.  The final field is the compatibility condition in the source's
 category of systems. -/
@@ -421,7 +467,7 @@ structure StructureSheafSurjectionSystem (k : Type u) [Field k] where
     SheafOfModules.unit ((thickening k n).ringCatSheaf) ⟶
       (coherentThickeningSheaf k n).sheaf
   maps_are_epimorphisms : ∀ n : positiveIndex, Epi (maps n)
-  compatible : Prop
+  compatible : StructureSheafSurjectionCompatibility k maps
 
 theorem exists_structureSheafSurjectionSystem (k : Type u) [Field k] :
     Nonempty (StructureSheafSurjectionSystem k) := by
@@ -521,50 +567,56 @@ theorem grothendieck_existence_false_without_separatedness (k : Type u) [Field k
 /-- The part of an algebraicity witness for the coherent-sheaf stack supplied
 by Artin's effectivity axiom.  Mathlib has no stack-of-coherent-sheaves object,
 so this is the chapter-facing algebraicity interface. -/
-structure CoherentSheafStackAlgebraicityData (k : Type u) [Field k] : Prop where
-  effectivity : InCompletionFunctorImage k (coherentSupportProperSystem k)
+structure CoherentSheafStackAlgebraicityData (k : Type u) [Field k] where
+  isAlgebraic : Prop
+  effectivity : isAlgebraic →
+    InCompletionFunctorImage k (coherentSupportProperSystem k)
 
 def CoherentSheafStackIsAlgebraic (k : Type u) [Field k] : Prop :=
-  CoherentSheafStackAlgebraicityData k
+  ∃ D : CoherentSheafStackAlgebraicityData k, D.isAlgebraic
 
 theorem coherentSheafStack_not_algebraic_without_separatedness
     (k : Type u) [Field k] :
     ¬ CoherentSheafStackIsAlgebraic k := by
-  intro h
-  exact coherentSupportProperSystem_not_in_completionFunctor_image k h.effectivity
+  rintro ⟨D, hD⟩
+  exact coherentSupportProperSystem_not_in_completionFunctor_image k
+    (D.effectivity hD)
 
 /-- The failure of Artin's effectivity axiom for the coherent-sheaf stack in
 this counterexample. -/
 def CoherentSheafStackArtinAxiomFourFails (k : Type u) [Field k] : Prop :=
-  ¬ CoherentSheafStackIsAlgebraic k
+  ¬ InCompletionFunctorImage k (coherentSupportProperSystem k)
 
 theorem coherentSheafStack_artinAxiomFour_fails (k : Type u) [Field k] :
     CoherentSheafStackArtinAxiomFourFails k :=
-  coherentSheafStack_not_algebraic_without_separatedness k
+  coherentSupportProperSystem_not_in_completionFunctor_image k
 
 /-- The part of an algebraic-space witness for the Quot functor that Artin's
 effectivity argument uses. -/
-structure QuotFunctorAlgebraicityData (k : Type u) [Field k] : Prop where
-  effectivity : InCompletionFunctorImage k (coherentSupportProperSystem k)
+structure QuotFunctorAlgebraicityData (k : Type u) [Field k] where
+  isAlgebraicSpace : Prop
+  effectivity : isAlgebraicSpace →
+    InCompletionFunctorImage k (coherentSupportProperSystem k)
   compatibleSurjections : Nonempty (StructureSheafSurjectionSystem k)
 
 def QuotFunctorIsAlgebraicSpace (k : Type u) [Field k] : Prop :=
-  QuotFunctorAlgebraicityData k
+  ∃ D : QuotFunctorAlgebraicityData k, D.isAlgebraicSpace
 
 theorem quotFunctor_not_algebraicSpace_without_separatedness
     (k : Type u) [Field k] :
     ¬ QuotFunctorIsAlgebraicSpace k := by
-  intro h
-  exact coherentSupportProperSystem_not_in_completionFunctor_image k h.effectivity
+  rintro ⟨D, hD⟩
+  exact coherentSupportProperSystem_not_in_completionFunctor_image k
+    (D.effectivity hD)
 
 /-- The failure of the corresponding effectivity axiom for the Quot functor.
 -/
 def QuotFunctorArtinAxiomFourFails (k : Type u) [Field k] : Prop :=
-  ¬ QuotFunctorIsAlgebraicSpace k
+  ¬ InCompletionFunctorImage k (coherentSupportProperSystem k)
 
 theorem quotFunctor_artinAxiomFour_fails (k : Type u) [Field k] :
     QuotFunctorArtinAxiomFourFails k :=
-  quotFunctor_not_algebraicSpace_without_separatedness k
+  coherentSupportProperSystem_not_in_completionFunctor_image k
 
 theorem counterexamples_to_algebraization (k : Type u) [Field k] :
     ¬ IsSeparated (counterexampleStructureMap k) ∧

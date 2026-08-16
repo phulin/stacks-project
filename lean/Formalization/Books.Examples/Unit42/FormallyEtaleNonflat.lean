@@ -134,7 +134,7 @@ that the valuation is nontrivial.
 theorem valuationInteger_maximalIdeal_nonzeroProperIdempotentIdeal
     (K : Type u) [Field K] [IsAlgClosed K]
     (Γ₀ : Type v) [LinearOrderedCommGroupWithZero Γ₀]
-    (v : Valuation K Γ₀) [v.IsNontrivial] [Nontrivial v.integer] :
+    (v : Valuation K Γ₀) [v.IsNontrivial] :
     (IsLocalRing.maximalIdeal v.integer ≠ ⊥) ∧
       (IsLocalRing.maximalIdeal v.integer ≠ ⊤) ∧
         (IsLocalRing.maximalIdeal v.integer) ^ 2 = IsLocalRing.maximalIdeal v.integer := by

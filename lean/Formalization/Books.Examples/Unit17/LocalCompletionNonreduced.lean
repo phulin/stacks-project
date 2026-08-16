@@ -1,7 +1,7 @@
-import Mathlib.Algebra.DualNumber
 import Mathlib.Analysis.Analytic.OfScalars
 import Mathlib.Analysis.Complex.Basic
 import Mathlib.Data.Complex.Basic
+import Mathlib.Data.PNat.Notation
 import Mathlib.LinearAlgebra.Basis.Basic
 import Mathlib.RingTheory.AdicCompletion.Algebra
 import Mathlib.RingTheory.AdicCompletion.Completeness
@@ -41,7 +41,7 @@ def IsConvergentPowerSeries (f : PowerSeries ℂ) : Prop :=
   0 < (FormalMultilinearSeries.ofScalars ℂ (fun n => PowerSeries.coeff n f)).radius
 
 /-- Positive natural numbers, used for the sequence `f₁, f₂, ...`. -/
-abbrev PositiveNat := {n : ℕ // 0 < n}
+abbrev PositiveNat := ℕ+
 
 /--
 The analytic ring `ℂ\{x\}` together with the facts about it used in the
@@ -146,6 +146,18 @@ attribute [instance] FerrandRaynaudDifferentialData.fieldK
   FerrandRaynaudDifferentialData.algebraCK
   FerrandRaynaudDifferentialData.algebraComplexK
   FerrandRaynaudDifferentialData.towerK
+
+/-- The differential module in the source is infinite-dimensional over `K`.
+
+The chosen basis in `FerrandRaynaudDifferentialData.differential_basis` is the
+source-facing witness; this theorem records the assertion in its usual
+Mathlib form as well.
+-/
+theorem ferrandRaynaudDifferential_infinite_dimensional
+    (C : ConvergentPowerSeriesRing)
+    (Δ : FerrandRaynaudDifferentialData C) :
+    ¬ Module.Finite Δ.K (Ω[Δ.K⁄ℂ]) := by
+  sorry
 
 /-! ## The local ring `A` -/
 
@@ -529,6 +541,17 @@ theorem completion_map_isEquiv
     Nonempty (localCompletionCompletion C Δ ≃+* DualNumber FormalPowerSeries) := by
   rcases completion_map_isRingEquiv C Δ Γ with ⟨e, _⟩
   exact ⟨e⟩
+
+/-- The source's sixth claim: the completion is the ring of dual numbers over
+`ℂ[[x]]`.
+-/
+theorem localCompletion_completion_is_dualNumber
+    (C : ConvergentPowerSeriesRing)
+    (Δ : FerrandRaynaudDifferentialData C)
+    (Γ : LocalCompletionCompletionData C Δ) :
+    Nonempty (localCompletionCompletion C Δ ≃+*
+      DualNumber FormalPowerSeries) := by
+  exact completion_map_isEquiv C Δ Γ
 
 theorem localCompletion_completion_is_nonreduced
     (C : ConvergentPowerSeriesRing)

@@ -76,6 +76,10 @@ theorem originPoint_is_closed (k : Type u) [Field k] :
     IsClosed ({originPoint k} : Set (chartU k)) := by
   sorry
 
+theorem originPointV_is_closed (k : Type u) [Field k] :
+    IsClosed ({originPointV k} : Set (chartV k)) := by
+  exact originPoint_is_closed k
+
 /-- The punctured affine chart `U \ {0_U}`. -/
 def puncturedOpen (k : Type u) [Field k] : (chartU k).Opens := by
   refine ⟨{p | p ≠ originPoint k}, ?_⟩
@@ -135,15 +139,34 @@ noncomputable def counterexampleGlueData (k : Type u) [Field k] :
   V := fun ij => glueIntersection k ij.1.down ij.2.down
   f := fun i j => glueIntersectionMap k i.down j.down
   f_mono := by
-    sorry
+    intro i j
+    rcases i with ⟨i⟩
+    rcases j with ⟨j⟩
+    cases i <;> cases j
+    · change Mono (𝟙 (chartU k))
+      infer_instance
+    · change Mono ((puncturedOpen k).ι)
+      infer_instance
+    · change Mono ((puncturedOpen k).ι)
+      infer_instance
+    · change Mono (𝟙 (chartU k))
+      infer_instance
   f_hasPullback := by
     intro _ _ _
     infer_instance
   f_id := by
-    sorry
+    intro i
+    rcases i with ⟨i⟩
+    cases i
+    · change IsIso (𝟙 (chartU k))
+      infer_instance
+    · change IsIso (𝟙 (chartU k))
+      infer_instance
   t := fun i j => glueTransition k i.down j.down
   t_id := by
-    sorry
+    intro i
+    rcases i with ⟨i⟩
+    cases i <;> rfl
   t' := by
     intro i j l
     sorry
@@ -154,7 +177,18 @@ noncomputable def counterexampleGlueData (k : Type u) [Field k] :
     intro i j l
     sorry
   f_open := by
-    sorry
+    intro i j
+    rcases i with ⟨i⟩
+    rcases j with ⟨j⟩
+    cases i <;> cases j
+    · change IsOpenImmersion (𝟙 (chartU k))
+      infer_instance
+    · change IsOpenImmersion ((puncturedOpen k).ι)
+      infer_instance
+    · change IsOpenImmersion ((puncturedOpen k).ι)
+      infer_instance
+    · change IsOpenImmersion (𝟙 (chartU k))
+      infer_instance
 
 /-- The glued scheme `X`. -/
 noncomputable def counterexampleScheme (k : Type u) [Field k] : Scheme.{u} :=
@@ -194,7 +228,9 @@ theorem chartInclusion_comp_structureMap (k : Type u) [Field k] (i : Bool) :
 def truncationIdeal (k : Type u) [Field k] (n : ℕ) : Ideal (baseRing k) :=
   Ideal.span ({(baseParameter k) ^ n} : Set (baseRing k))
 
-/-- The quotient ring `A_n = A/(t^n)`. -/
+/-- The quotient ring `A_n = A/(t^n)`.  The source uses the usual positive
+indexing; the Lean family also includes the harmless zero quotient at `n = 0`.
+-/
 abbrev truncatedBaseRing (k : Type u) [Field k] (n : ℕ) :=
   baseRing k ⧸ truncationIdeal k n
 
@@ -354,6 +390,7 @@ structure CoherentSupportProperSystem (k : Type u) [Field k] where
   idealSheaf : (counterexampleScheme k).IdealSheafData
   idealSheaf_is_tGenerated : idealSheaf = tGeneratedIdealSheaf k
   sheaves : ∀ n : ℕ, CoherentThickeningSheaf k n
+  sheaves_are_displayed : ∀ n : ℕ, sheaves n = coherentThickeningSheaf k n
   transition : ∀ n : ℕ, Nonempty (
     (Scheme.Modules.pullback (thickeningInclusion k n)).obj
         (sheaves (n + 1)).sheaf ≅ (sheaves n).sheaf)
@@ -370,13 +407,18 @@ noncomputable def coherentSupportProperSystem (k : Type u) [Field k] :
     CoherentSupportProperSystem k :=
   Classical.choice (exists_coherentSupportProperSystem k)
 
+theorem coherentSupportProperSystem_sheaves_are_displayed
+    (k : Type u) [Field k] (n : ℕ) :
+    (coherentSupportProperSystem k).sheaves n = coherentThickeningSheaf k n :=
+  (coherentSupportProperSystem k).sheaves_are_displayed n
+
 /-- Data of the compatible epimorphisms `𝒪_{X_n} ⟶ 𝓕_n` used in the Quot
 argument.  The final field is the compatibility condition in the source's
 category of systems. -/
 structure StructureSheafSurjectionSystem (k : Type u) [Field k] where
   maps : ∀ n : ℕ,
     SheafOfModules.unit ((thickening k n).ringCatSheaf) ⟶
-      (coherentSupportProperSystem k).sheaves n |>.sheaf
+      (coherentThickeningSheaf k n).sheaf
   maps_are_epimorphisms : ∀ n : ℕ, Epi (maps n)
   compatible : Prop
 
@@ -440,6 +482,16 @@ theorem coherentSupportProperSystem_not_in_completionFunctor_image
   sorry
 
 /-! ## The three consequences recorded in the source -/
+
+/-- The completion-functor assertion whose failure is the first consequence
+of the displayed non-algebraizable system. -/
+def GrothendieckExistenceWithoutSeparatedness (k : Type u) [Field k] : Prop :=
+  InCompletionFunctorImage k (coherentSupportProperSystem k)
+
+theorem grothendieck_existence_theorem_without_separatedness_fails
+    (k : Type u) [Field k] :
+    ¬ GrothendieckExistenceWithoutSeparatedness k := by
+  exact coherentSupportProperSystem_not_in_completionFunctor_image k
 
 /-- The separatedness hypothesis is essential in the cited form of
 Grothendieck's existence theorem. -/

@@ -10,7 +10,8 @@ import Mathlib.RingTheory.Valuation.ValuationRing
 
 This file records the quotient construction, the square-zero lifting
 interface, and the existence statement from the source section.  The
-proposition proofs belong to the proving stage.
+proposition proofs belong to the proving stage.  Quotients and image ideals
+use Mathlib's canonical `Ideal.Quotient.mk` and `Ideal.map` constructions.
 -/
 
 namespace Formalization.«Books.Examples».Unit42
@@ -19,94 +20,85 @@ universe u v
 
 /-! ## The local-ring quotient setup -/
 
-/-- A nonzero proper ideal whose square is itself. -/
-def NonzeroProperIdempotentIdeal (A : Type u) [CommRing A] (J : Ideal A) : Prop :=
-  J ≠ ⊥ ∧ J ≠ ⊤ ∧ J ^ 2 = J
-
 /-- A nonzero proper idempotent ideal in a local ring is not finitely generated. -/
 theorem nonzeroProperIdempotentIdeal_not_finitelyGenerated
     (A : Type u) [CommRing A] [IsLocalRing A] (J : Ideal A)
-    (hJ : NonzeroProperIdempotentIdeal A J) :
+    (hJ0 : J ≠ ⊥) (hJtop : J ≠ ⊤) (hJid : J ^ 2 = J) :
     ¬ J.FG := by
   sorry
 
 /-! ## The quotient map -/
 
-/-- The quotient map associated to the ideal in the example. -/
-def quotientByIdealMap {A : Type u} [CommRing A] (J : Ideal A) :
-    A →+* A ⧸ J :=
-  Ideal.Quotient.mk J
-
 /-- A quotient map is of finite type because it is surjective. -/
 theorem quotientByIdealMap_finiteType
     (A : Type u) [CommRing A] (J : Ideal A) :
-    RingHom.FiniteType (quotientByIdealMap J) := by
+    RingHom.FiniteType (Ideal.Quotient.mk J) := by
   exact RingHom.FiniteType.of_surjective _ Ideal.Quotient.mk_surjective
 
 /-- A quotient by a non-finitely-generated ideal is not finitely presented. -/
 theorem quotientByIdealMap_not_finitePresentation_of_not_finitelyGenerated
     (A : Type u) [CommRing A] (J : Ideal A) (hJ : ¬ J.FG) :
-    ¬ RingHom.FinitePresentation (quotientByIdealMap J) := by
+    ¬ RingHom.FinitePresentation (Ideal.Quotient.mk J) := by
   sorry
 
 /-- The quotient in the example is finite type but not finitely presented. -/
 theorem quotientByIdealMap_finiteType_not_finitePresentation_of_nonzeroProperIdempotentIdeal
     (A : Type u) [CommRing A] [IsLocalRing A] (J : Ideal A)
-    (hJ : NonzeroProperIdempotentIdeal A J) :
-    RingHom.FiniteType (quotientByIdealMap J) ∧
-      ¬ RingHom.FinitePresentation (quotientByIdealMap J) := by
+    (hJ0 : J ≠ ⊥) (hJtop : J ≠ ⊤) (hJid : J ^ 2 = J) :
+    RingHom.FiniteType (Ideal.Quotient.mk J) ∧
+      ¬ RingHom.FinitePresentation (Ideal.Quotient.mk J) := by
   exact ⟨quotientByIdealMap_finiteType A J,
     quotientByIdealMap_not_finitePresentation_of_not_finitelyGenerated A J
-      (nonzeroProperIdempotentIdeal_not_finitelyGenerated A J hJ)⟩
+      (nonzeroProperIdempotentIdeal_not_finitelyGenerated A J hJ0 hJtop hJid)⟩
 
 /-- The quotient map by an idempotent ideal is formally étale. -/
 theorem quotientByIdealMap_formallyEtale_of_idempotent
     (A : Type u) [CommRing A] (J : Ideal A) (hJ : J ^ 2 = J) :
-    RingHom.FormallyEtale (quotientByIdealMap J) := by
+    RingHom.FormallyEtale (Ideal.Quotient.mk J) := by
   sorry
 
 /-- The quotient map by a nonzero proper idempotent ideal in a local ring is not flat. -/
 theorem quotientByIdealMap_not_flat_of_nonzeroProperIdempotentIdeal
     (A : Type u) [CommRing A] [IsLocalRing A] (J : Ideal A)
-    (hJ : NonzeroProperIdempotentIdeal A J) :
-    ¬ RingHom.Flat (quotientByIdealMap J) := by
+    (hJ0 : J ≠ ⊥) (hJtop : J ≠ ⊤) (hJid : J ^ 2 = J) :
+    ¬ RingHom.Flat (Ideal.Quotient.mk J) := by
   sorry
 
 /-- The displayed quotient map is formally étale but non-flat. -/
 theorem quotientByIdealMap_formallyEtale_not_flat
     (A : Type u) [CommRing A] [IsLocalRing A] (J : Ideal A)
-    (hJ : NonzeroProperIdempotentIdeal A J) :
-    RingHom.FormallyEtale (quotientByIdealMap J) ∧
-      ¬ RingHom.Flat (quotientByIdealMap J) := by
-  exact ⟨quotientByIdealMap_formallyEtale_of_idempotent A J hJ.2.2,
-    quotientByIdealMap_not_flat_of_nonzeroProperIdempotentIdeal A J hJ⟩
+    (hJ0 : J ≠ ⊥) (hJtop : J ≠ ⊤) (hJid : J ^ 2 = J) :
+    RingHom.FormallyEtale (Ideal.Quotient.mk J) ∧
+      ¬ RingHom.Flat (Ideal.Quotient.mk J) := by
+  exact ⟨quotientByIdealMap_formallyEtale_of_idempotent A J hJid,
+    quotientByIdealMap_not_flat_of_nonzeroProperIdempotentIdeal A J
+      hJ0 hJtop hJid⟩
+
+/-!
+The existence result below is the mathematical counterexample asserted in
+the source discussion: the quotient is finite type and formally étale but
+not flat (and, because `J` is not finitely generated, not finitely
+presented).  The source's references to the two EGA statements and to the
+error in the proof of the first are bibliographic commentary, so they are
+recorded here as context rather than as additional Lean propositions.
+-/
 
 /-! ## Factoring through the quotient in a square-zero diagram -/
-
-/-- The unique map induced by a ring homomorphism annihilating an ideal. -/
-def quotientFactor {A R : Type*} [CommRing A] [CommRing R] (J : Ideal A)
-    (φ : A →+* R) (hφ : J ≤ RingHom.ker φ) : A ⧸ J →+* R :=
-  Ideal.Quotient.lift J φ (fun _a ha => hφ ha)
-
-@[simp]
-theorem quotientFactor_comp_quotientByIdealMap
-    {A R : Type*} [CommRing A] [CommRing R] (J : Ideal A)
-    (φ : A →+* R) (hφ : J ≤ RingHom.ker φ) :
-    (quotientFactor J φ hφ).comp (quotientByIdealMap J) = φ := by
-  rfl
 
 /-- The ideal-theoretic form of the displayed chain in the source diagram:
 `φ(J) = φ(J²) ⊆ (φ(J)R)² ⊆ I² = 0`.
 
-Here `Ideal.map φ J` is the ideal generated by the image of `J` in `R`.
-The middle inclusion records the consequence of commutativity of the
-square, while the final equality is the square-zero hypothesis.
+Here `Ideal.map φ J` is the ideal generated by the image of `J` in `R`;
+this is the canonical interpretation of the source's `(φ(J)A)²`, whose
+ambient ring must be `R` because `φ(J) ⊆ R`.  The middle inclusion records
+the consequence of commutativity of the square, while the final equality is
+the square-zero hypothesis.
 -/
 theorem quotientDiagram_mapIdeal_chain
     {A R : Type*} [CommRing A] [CommRing R] (J : Ideal A)
     (hJ : J ^ 2 = J) (I : Ideal R) (hI : I ^ 2 = ⊥)
     (φ : A →+* R) (ψ : A ⧸ J →+* R ⧸ I)
-    (hcomm : ψ.comp (quotientByIdealMap J) = (Ideal.Quotient.mk I).comp φ) :
+    (hcomm : ψ.comp (Ideal.Quotient.mk J) = (Ideal.Quotient.mk I).comp φ) :
     Ideal.map φ J = Ideal.map φ (J ^ 2) ∧
       Ideal.map φ (J ^ 2) ≤ (Ideal.map φ J) ^ 2 ∧
         (Ideal.map φ J) ^ 2 ≤ I ^ 2 ∧ I ^ 2 = ⊥ := by
@@ -117,7 +109,7 @@ theorem quotientDiagram_mapIdeal_eq_bot
     {A R : Type*} [CommRing A] [CommRing R] (J : Ideal A)
     (hJ : J ^ 2 = J) (I : Ideal R) (hI : I ^ 2 = ⊥)
     (φ : A →+* R) (ψ : A ⧸ J →+* R ⧸ I)
-    (hcomm : ψ.comp (quotientByIdealMap J) = (Ideal.Quotient.mk I).comp φ) :
+    (hcomm : ψ.comp (Ideal.Quotient.mk J) = (Ideal.Quotient.mk I).comp φ) :
     Ideal.map φ J = ⊥ := by
   sorry
 
@@ -126,8 +118,8 @@ theorem quotientDiagram_factorization_unique
     {A R : Type*} [CommRing A] [CommRing R] (J : Ideal A)
     (hJ : J ^ 2 = J) (I : Ideal R) (hI : I ^ 2 = ⊥)
     (φ : A →+* R) (ψ : A ⧸ J →+* R ⧸ I)
-    (hcomm : ψ.comp (quotientByIdealMap J) = (Ideal.Quotient.mk I).comp φ) :
-    ∃! f : A ⧸ J →+* R, f.comp (quotientByIdealMap J) = φ := by
+    (hcomm : ψ.comp (Ideal.Quotient.mk J) = (Ideal.Quotient.mk I).comp φ) :
+    ∃! f : A ⧸ J →+* R, f.comp (Ideal.Quotient.mk J) = φ := by
   sorry
 
 /-! ## The existence statement -/
@@ -143,24 +135,25 @@ theorem valuationInteger_maximalIdeal_nonzeroProperIdempotentIdeal
     (K : Type u) [Field K] [IsAlgClosed K]
     (Γ₀ : Type v) [LinearOrderedCommGroupWithZero Γ₀]
     (v : Valuation K Γ₀) [v.IsNontrivial] [Nontrivial v.integer] :
-    NonzeroProperIdempotentIdeal v.integer
-      (IsLocalRing.maximalIdeal v.integer) := by
+    (IsLocalRing.maximalIdeal v.integer ≠ ⊥) ∧
+      (IsLocalRing.maximalIdeal v.integer ≠ ⊤) ∧
+        (IsLocalRing.maximalIdeal v.integer) ^ 2 = IsLocalRing.maximalIdeal v.integer := by
   sorry
 
 /-- There is a local ring with a nonzero proper idempotent ideal. -/
 theorem exists_localRing_nonzeroProperIdempotentIdeal :
     ∃ (A : Type) (_ : CommRing A) (_ : IsLocalRing A) (J : Ideal A),
-      NonzeroProperIdempotentIdeal A J := by
+      J ≠ ⊥ ∧ J ≠ ⊤ ∧ J ^ 2 = J := by
   sorry
 
 /-- There exist formally étale non-flat quotient ring maps. -/
 theorem exists_formallyEtale_nonflat_quotient_map :
     ∃ (A : Type) (_ : CommRing A) (_ : IsLocalRing A) (J : Ideal A),
-      NonzeroProperIdempotentIdeal A J ∧
-        RingHom.FiniteType (quotientByIdealMap J) ∧
-          ¬ RingHom.FinitePresentation (quotientByIdealMap J) ∧
-            RingHom.FormallyEtale (quotientByIdealMap J) ∧
-              ¬ RingHom.Flat (quotientByIdealMap J) := by
+      J ≠ ⊥ ∧ J ≠ ⊤ ∧ J ^ 2 = J ∧
+        RingHom.FiniteType (Ideal.Quotient.mk J) ∧
+          ¬ RingHom.FinitePresentation (Ideal.Quotient.mk J) ∧
+            RingHom.FormallyEtale (Ideal.Quotient.mk J) ∧
+              ¬ RingHom.Flat (Ideal.Quotient.mk J) := by
   sorry
 
 /-- There exist formally étale non-flat ring maps. -/

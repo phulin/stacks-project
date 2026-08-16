@@ -141,6 +141,13 @@ theorem mixedVector_eq (x₀ : ℚ) (j : ℕ) (xⱼ : ℝ) :
     mixedVector x₀ j xⱼ = (x₀, Finsupp.single (j - 1) xⱼ) := by
   simp [mixedVector, rationalAxis, realAxis]
 
+/-- The cosine factor in the definition of `U` never vanishes at a rational
+multiple of a positive integer.  This is the precise nonvanishing fact used
+to prove slice-openness. -/
+theorem rational_cosine_ne_zero (j : ℕ) (x₀ : ℚ) (hj : 0 < j) :
+    Real.cos ((j : ℝ) * (x₀ : ℝ)) ≠ 0 := by
+  sorry
+
 /-- Every finite-dimensional slice of `U` is open. -/
 theorem badSet_slice_isOpen (n : ℕ) :
     IsOpen (stageInclusion n ⁻¹' badSet) := by
@@ -148,13 +155,6 @@ theorem badSet_slice_isOpen (n : ℕ) :
 
 /-- The origin belongs to `U`. -/
 theorem zero_mem_badSet : (0 : ColimitGroup) ∈ badSet := by
-  sorry
-
-/-- The cosine factor in the definition of `U` never vanishes at a rational
-multiple of a positive integer.  This is the precise nonvanishing fact used
-to prove slice-openness. -/
-theorem rational_cosine_ne_zero (j : ℕ) (x₀ : ℚ) (hj : 0 < j) :
-    Real.cos ((j : ℝ) * (x₀ : ℝ)) ≠ 0 := by
   sorry
 
 /-! ### The neighbourhood contradiction -/

@@ -1,7 +1,7 @@
 import Mathlib.RingTheory.AdicCompletion.Algebra
 import Mathlib.RingTheory.AdicCompletion.Completeness
 import Mathlib.RingTheory.Ideal.IsPrincipal
-import Mathlib.RingTheory.MvPolynomial
+import Mathlib.Algebra.MvPolynomial.Basic
 import Mathlib.Data.PNat.Notation
 
 /-!
@@ -10,7 +10,9 @@ import Mathlib.Data.PNat.Notation
 This file formalizes the explicit example in the source section
 “Noncomplete quotient”.  The normal-form and non-completeness arguments are
 recorded as theorem interfaces; the ring, ideals, completion, and the
-distinguished Cauchy element use Mathlib's concrete constructions.
+distinguished Cauchy element use Mathlib's concrete constructions.  The
+completion is kept as Mathlib's `AdicCompletion`, so the final quotient
+statement uses the canonical image of `(x)` in the completed ring.
 -/
 
 noncomputable section
@@ -88,12 +90,17 @@ theorem zElement_mul_zElement_mul_tElement (k : Type u) [Field k] (i j : ℕ+) :
     zElement k i * zElement k j * tElement k = 0 := by
   sorry
 
-/-- A monomial has no `x`, `zᵢt`, or `zᵢwⱼ` factor. -/
+/-- A reduced coefficient monomial has no `x`, `zᵢt`, `zᵢwⱼ`, or `wᵢwⱼ` factor.
+
+The last condition records the relation forced by multiplying
+`zᵢt = xⁱwᵢ` by `wⱼ` and using `zᵢwⱼ = 0`, together with the
+nonzerodivisor property of `x`. -/
 def IsReducedNoncompleteQuotientMonomial
     (m : NoncompleteQuotientVariable →₀ ℕ) : Prop :=
   m .x = 0 ∧
     (m .t = 0 ∨ ∀ i, m (.z i) = 0) ∧
-    ∀ i, m (.z i) = 0 ∨ ∀ j, m (.w j) = 0
+    (∀ i, m (.z i) = 0 ∨ ∀ j, m (.w j) = 0) ∧
+      ∀ i, m (.w i) = 0 ∨ ∀ j, m (.w j) = 0
 
 /-- A coefficient polynomial in the source's canonical normal form. -/
 def IsReducedNoncompleteQuotientCoefficient
@@ -319,7 +326,10 @@ structure PrincipalNoncompleteQuotientExample (R : Type u) [CommRing R] where
   complete : IsAdicComplete ideal R
   quotient_not_complete : ¬ IsAdicComplete ideal (R ⧸ quotientIdeal)
 
-/-- There is a complete ring with principal `I` and `J` whose quotient is not complete. -/
+/-- There is a complete ring with principal `I` and `J` whose quotient is not complete.
+
+This is the source's final existential statement, with the completed ring from
+the construction above retained as an explicit reusable witness. -/
 theorem exists_principal_noncomplete_quotient_example
     (k : Type u) [Field k] :
     Nonempty (PrincipalNoncompleteQuotientExample (NoncompleteQuotientCompletion k)) := by

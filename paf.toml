@@ -1,0 +1,11 @@
+[swarm]
+repo = "."
+
+[sources]
+roots = ["books"]
+
+[sources.manifest]
+path = "chapters.tex"
+pattern = '\\hyperref\[(?P<name>.+?)-section-phantom\]'
+template = "books/{name}.tex"
+allow_missing = true

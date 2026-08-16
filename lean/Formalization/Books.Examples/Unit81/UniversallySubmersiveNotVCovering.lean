@@ -79,7 +79,7 @@ def baseChangedIdeal (A B : Type u) [CommRing A] [CommRing B] [Algebra A B]
     (p : PrimeSpectrum A) : Ideal B :=
   p.asIdeal.map (algebraMap A B)
 
-/-- The localization of `B` at the extended prime ideal. -/
+/-- The localization of `B` at the image of the complement of `p`. -/
 abbrev baseChangedLocalization (A B : Type u) [CommRing A] [CommRing B] [Algebra A B]
     (p : PrimeSpectrum A) : Type u :=
   Localization (Algebra.algebraMapSubmonoid B p.asIdeal.primeCompl)
@@ -117,8 +117,8 @@ noncomputable def quotientComponent (A B : Type u) [CommRing A] [CommRing B]
   Set.range <| Spec.map (CommRingCat.ofHom (Ideal.Quotient.mk (baseChangedIdeal A B p)))
 
 /-- The two components cover the base-changed affine scheme. -/
-theorem baseChanged_components_cover (A B : Type u) [CommRing A] [CommRing B]
-    [Algebra A B] (p : PrimeSpectrum A) :
+theorem baseChanged_components_cover (A B : Type u) [CommRing A] [IsDomain A]
+    [ValuationRing A] [CommRing B] [Algebra A B] (p : PrimeSpectrum A) :
     localizationComponent A B p ∪ quotientComponent A B p = Set.univ := by
   sorry
 
@@ -167,8 +167,8 @@ theorem universallySubmersive_iff {X Y : Scheme.{u}} (f : X ⟶ Y) :
   Iff.rfl
 
 /-- The base-changed morphism is surjective on points. -/
-theorem baseChangedDisjointUnionSchemeMap_surjective (A B : Type u) [CommRing A] [CommRing B]
-    [Algebra A B] (p : PrimeSpectrum A) :
+theorem baseChangedDisjointUnionSchemeMap_surjective (A B : Type u) [CommRing A] [IsDomain A]
+    [ValuationRing A] [CommRing B] [Algebra A B] (p : PrimeSpectrum A) :
     Surjective (baseChangedDisjointUnionSchemeMap A B p) := by
   sorry
 
@@ -181,7 +181,7 @@ theorem baseChanged_components_are_spectrum_images (A B : Type u) [CommRing A] [
 
 /-- The union of the two closed component intersections is again a spectrum image. -/
 theorem baseChanged_subset_isSpectrumImage_of_component_closed
-    (A B : Type u) [CommRing A] [CommRing B] [Algebra A B]
+    (A B : Type u) [CommRing A] [IsDomain A] [ValuationRing A] [CommRing B] [Algebra A B]
     (p : PrimeSpectrum A) (T : Set (Spec (CommRingCat.of B)))
     (h₁ : IsClosed (localizationComponent A B p ∩ T))
     (h₂ : IsClosed (quotientComponent A B p ∩ T)) :
@@ -197,7 +197,7 @@ theorem isClosed_of_spectrumImage_and_stableUnderSpecialization
 
 /-- The closedness criterion used after splitting a subset into the two components. -/
 theorem baseChanged_subset_isClosed_of_component_closed
-    (A B : Type u) [CommRing A] [CommRing B] [Algebra A B]
+    (A B : Type u) [CommRing A] [IsDomain A] [ValuationRing A] [CommRing B] [Algebra A B]
     (p : PrimeSpectrum A) (T : Set (Spec (CommRingCat.of B)))
     (h₁ : IsClosed (localizationComponent A B p ∩ T))
     (h₂ : IsClosed (quotientComponent A B p ∩ T))
@@ -248,14 +248,6 @@ theorem exists_valuationRing_specialization {B : Type u} [CommRing B]
     Nonempty (ValuationRingSpecializationData B x y) := by
   sorry
 
-/-- The image of a valuation-ring spectrum is the interval between its endpoint images. -/
-theorem valuationRingSpecializationData_image
-    {B : Type u} [CommRing B] {x y : Spec (CommRingCat.of B)}
-    (d : ValuationRingSpecializationData B x y) :
-    Set.range d.map =
-      {z | d.map d.eta ⤳ z ∧ z ⤳ d.map d.closed} := by
-  sorry
-
 /-- The composition of a valuation-ring specialization with `Spec(B) ⟶ Spec(A)`. -/
 noncomputable def specializationToBaseMap
     (A B : Type u) [CommRing A] [CommRing B] [Algebra A B]
@@ -264,9 +256,20 @@ noncomputable def specializationToBaseMap
     Spec (CommRingCat.of d.source.carrier) ⟶ Spec (CommRingCat.of A) :=
   d.map ≫ Spec.map (CommRingCat.ofHom (algebraMap A B))
 
+/-- The chosen valuation-ring witness has image the interval between its endpoint images on
+`Spec(A)`, as used in the source's specialization argument. -/
+theorem exists_valuationRing_specialization_with_base_image
+    (A B : Type u) [CommRing A] [IsDomain A] [ValuationRing A] [CommRing B] [Algebra A B]
+    {x y : Spec (CommRingCat.of B)} (hxy : x ⤳ y) :
+    ∃ d : ValuationRingSpecializationData B x y,
+      Set.range (specializationToBaseMap A B d) =
+        {z | specializationToBaseMap A B d d.eta ⤳ z ∧
+          z ⤳ specializationToBaseMap A B d d.closed} := by
+  sorry
+
 /-- If the middle prime is not in the valuation-ring image, both endpoints stay in one component. -/
 theorem specialization_stays_in_one_component
-    (A B : Type u) [CommRing A] [CommRing B] [Algebra A B]
+    (A B : Type u) [CommRing A] [IsDomain A] [ValuationRing A] [CommRing B] [Algebra A B]
     (p : PrimeSpectrum A) {x y : Spec (CommRingCat.of B)}
     (d : ValuationRingSpecializationData B x y)
     (hnot : (p : Spec (CommRingCat.of A)) ∉ Set.range (specializationToBaseMap A B d)) :
@@ -276,7 +279,7 @@ theorem specialization_stays_in_one_component
 
 /-- Closedness of the two component intersections handles the case without the middle prime. -/
 theorem specialization_mem_of_not_in_base_image
-    (A B : Type u) [CommRing A] [CommRing B] [Algebra A B]
+    (A B : Type u) [CommRing A] [IsDomain A] [ValuationRing A] [CommRing B] [Algebra A B]
     (p : PrimeSpectrum A) {x y : Spec (CommRingCat.of B)}
     (d : ValuationRingSpecializationData B x y) (T : Set (Spec (CommRingCat.of B)))
     (hx : x ∈ T)
@@ -288,7 +291,7 @@ theorem specialization_mem_of_not_in_base_image
 
 /-- Closedness of the two component intersections handles the case through the middle prime. -/
 theorem specialization_mem_of_middle_prime_in_base_image
-    (A B : Type u) [CommRing A] [CommRing B] [Algebra A B]
+    (A B : Type u) [CommRing A] [IsDomain A] [ValuationRing A] [CommRing B] [Algebra A B]
     (p : PrimeSpectrum A) {x y : Spec (CommRingCat.of B)}
     (d : ValuationRingSpecializationData B x y) (T : Set (Spec (CommRingCat.of B)))
     (hx : x ∈ T)
@@ -301,7 +304,7 @@ theorem specialization_mem_of_middle_prime_in_base_image
 /-- In the middle-prime case, the valuation witness supplies the intermediate point and both
 component memberships used in the source's specialization argument. -/
 theorem specialization_middle_prime_component_bridge
-    (A B : Type u) [CommRing A] [CommRing B] [Algebra A B]
+    (A B : Type u) [CommRing A] [IsDomain A] [ValuationRing A] [CommRing B] [Algebra A B]
     (p : PrimeSpectrum A) {x y : Spec (CommRingCat.of B)}
     (d : ValuationRingSpecializationData B x y)
     (hmiddle : ∃ r, specializationToBaseMap A B d r = (p : Spec (CommRingCat.of A))) :
@@ -314,8 +317,8 @@ theorem specialization_middle_prime_component_bridge
 /-! ## The universal submersiveness claim -/
 
 /-- The base-changed morphism is submersive. -/
-theorem baseChangedDisjointUnionSchemeMap_submersive (A B : Type u) [CommRing A] [CommRing B]
-    [Algebra A B] (p : PrimeSpectrum A) :
+theorem baseChangedDisjointUnionSchemeMap_submersive (A B : Type u) [CommRing A] [IsDomain A]
+    [ValuationRing A] [CommRing B] [Algebra A B] (p : PrimeSpectrum A) :
     Submersive (baseChangedDisjointUnionSchemeMap A B p) := by
   sorry
 

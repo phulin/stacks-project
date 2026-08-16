@@ -2,9 +2,8 @@ import Mathlib.AlgebraicGeometry.IdealSheaf.Subscheme
 import Mathlib.AlgebraicGeometry.Morphisms.ClosedImmersion
 import Mathlib.AlgebraicGeometry.Morphisms.Immersion
 import Mathlib.AlgebraicGeometry.Restrict
-import Mathlib.Data.PNat.Notation
 import Mathlib.RingTheory.Localization.Away.Basic
-import Mathlib.RingTheory.MvPolynomial.Basic
+import Formalization.«Books.Examples».Unit16.NoetherianInfiniteDimension
 
 /-!
 # Examples, Chapter 26: A locally closed subscheme which is not open in closed
@@ -28,13 +27,15 @@ namespace Formalization.«Books.Examples».Unit26
 
 /-! ## The countable affine scheme and its open cover -/
 
-/-- The polynomial ring `k[x₁, x₂, ...]`, indexed by positive naturals. -/
-abbrev locallyClosedExampleRing (k : Type u) [Field k] := MvPolynomial ℕ+ k
+/- The ring and variables are reused from the earlier countable-polynomial
+construction in Chapter 16. -/
+abbrev locallyClosedExampleRing (k : Type u) [Field k] :=
+  Formalization.«Books.Examples».Unit16.NoetherianInfiniteDimensionPolynomialRing k
 
 /-- The variable `xₙ` in the countable polynomial ring. -/
-def locallyClosedExampleVariable (k : Type u) [Field k] (n : ℕ+) :
+abbrev locallyClosedExampleVariable (k : Type u) [Field k] (n : ℕ+) :
     locallyClosedExampleRing k :=
-  MvPolynomial.X n
+  Formalization.«Books.Examples».Unit16.noetherianInfiniteDimensionVariable k n
 
 /-- The affine scheme `X = Spec(k[x₁, x₂, ...])`. -/
 abbrev locallyClosedExampleScheme (k : Type u) [Field k] : Scheme :=

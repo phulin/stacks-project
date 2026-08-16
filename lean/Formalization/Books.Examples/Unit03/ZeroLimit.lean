@@ -237,6 +237,13 @@ theorem coordinateSum_lof {I : Type u} {S : I → Type v}
   classical
   simp [basisVector, coordinateSum]
 
+/-- The coordinate-sum map is uniquely determined by its values on basis vectors. -/
+theorem coordinateSum_unique {I : Type u} {S : I → Type v}
+    (K : Type w) [Field K] (i : I) (φ : V K S i →ₗ[K] K)
+    (hφ : ∀ s : S i, φ (basisVector K i s 1) = 1) :
+    φ = coordinateSum (S := S) K i := by
+  sorry
+
 /-- The subspace `W_i` in the source. -/
 noncomputable def W {I : Type u} {S : I → Type v} (K : Type w) [Field K] (i : I) :
     Submodule K (V K S i) := LinearMap.ker (coordinateSum (S := S) K i)

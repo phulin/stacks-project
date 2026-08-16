@@ -138,6 +138,13 @@ noncomputable abbrev R (d : PowerSeriesData k) := generatedRing d
 noncomputable def generatedRingInclusion (d : PowerSeriesData k) : R d →+* PowerSeries k :=
   (generatedRing d).val.toRingHom
 
+/- The generated ring is a domain because it is a subalgebra of the domain
+   `k⟦X⟧`.  This instance records the ambient-domain fact used by the
+   localization and fraction-field interfaces below. -/
+instance r_isDomain (d : PowerSeriesData k) : IsDomain (R d) := by
+  dsimp [R]
+  infer_instance
+
 /- The scalar structure used to state the transcendence degree of the
    fraction field of `R`.  Mathlib deliberately does not make this tower
    algebra an unconditional instance because of possible instance diamonds. -/
@@ -420,6 +427,9 @@ theorem jacobsonRadical_eq_inf (d : PowerSeriesData k) :
 noncomputable def A (d : PowerSeriesData k) : Subalgebra k (B d) :=
   Algebra.adjoin k (jacobsonRadical d : Set (B d))
 
+noncomputable instance a_commRing_instance (d : PowerSeriesData k) : CommRing (A d) :=
+  inferInstance
+
 /- The source's scalar-plus-Jacobson-radical carrier description. -/
 def scalarPlusJacobianSet (d : PowerSeriesData k) : Set (B d) :=
   {b | ∃ c : k, ∃ r : B d, r ∈ jacobsonRadical d ∧
@@ -428,9 +438,6 @@ def scalarPlusJacobianSet (d : PowerSeriesData k) : Set (B d) :=
 theorem a_carrier_eq_scalarPlusJacobianSet (d : PowerSeriesData k) :
     (A d : Set (B d)) = scalarPlusJacobianSet d := by
   sorry
-
-noncomputable instance a_commRing_instance (d : PowerSeriesData k) : CommRing (A d) :=
-  inferInstance
 
 /- The maximal ideal of `A`, obtained by pulling back the Jacobson radical. -/
 noncomputable def aMaximalIdeal (d : PowerSeriesData k) : Ideal (A d) :=

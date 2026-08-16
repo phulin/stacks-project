@@ -1,7 +1,7 @@
 import Mathlib.Data.Complex.Basic
 import Mathlib.Data.ZMod.Basic
+import Formalization.«Books.Examples».Unit19.NonCatenary
 import Mathlib.LinearAlgebra.FiniteDimensional.Basic
-import Mathlib.Order.RelSeries
 import Mathlib.RingTheory.AdicCompletion.LocalRing
 import Mathlib.RingTheory.FiniteType
 import Mathlib.RingTheory.Henselian
@@ -65,13 +65,6 @@ def IsCompletionOf (A R : Type*) [CommRing A] [CommRing R] : Prop :=
 
 def IsNormalDomain (R : Type*) [CommRing R] : Prop :=
   IsDomain R ∧ IsIntegrallyClosed R
-
-theorem complete_local_noetherian_ring_setup
-    (A : Type*) [CommRing A] [IsNoetherianRing A] [IsLocalRing A]
-    [IsAdicComplete (IsLocalRing.maximalIdeal A) A] :
-    IsNoetherianRing A ∧ IsLocalRing A ∧
-      IsAdicComplete (IsLocalRing.maximalIdeal A) A := by
-  exact ⟨inferInstance, inferInstance, inferInstance⟩
 
 theorem lech_completion_exists
     {A : Type*} [CommRing A] [IsNoetherianRing A] [IsLocalRing A]
@@ -153,9 +146,7 @@ def CompletionsAgree (R S : Type*) [CommRing R] [CommRing S] : Prop :=
         AdicCompletion (IsLocalRing.maximalIdeal S) S)
 
 def IsHenselianNormalDomain (R : Type*) [CommRing R] : Prop :=
-  ∃ hR : IsLocalRing R,
-    letI : IsLocalRing R := hR
-    IsNoetherianRing R ∧ HenselianLocalRing R ∧ IsNormalDomain R
+  IsNoetherianRing R ∧ HenselianLocalRing R ∧ IsNormalDomain R
 
 theorem henselization_of_normal_domain_is_normal
     (R Rh : Type*) [CommRing R] [CommRing Rh] [IsLocalRing R] [IsLocalRing Rh]
@@ -193,26 +184,12 @@ formulation of catenarity.  `IsUniversallyCatenary` quantifies over finite-type
 algebras, which is the ring-map formulation used in the source.
 -/
 
-def IsMaximalPrimeChain {R : Type*} [CommRing R]
-    (p q : Ideal R) (s : LTSeries (Ideal R)) : Prop :=
-  s.head = p ∧ s.last = q ∧
-    (∀ i : Fin (s.length + 1), (s i).IsPrime) ∧
-      (∀ i : Fin s.length,
-        ¬ ∃ r : Ideal R, r.IsPrime ∧
-          s i.castSucc < r ∧ r < s i.succ)
-
-def IsCatenaryRing (R : Type*) [CommRing R] : Prop :=
-  IsNoetherianRing R ∧
-    ∀ p q : Ideal R, p.IsPrime → q.IsPrime → p ≤ q →
-      (∃ s : LTSeries (Ideal R), IsMaximalPrimeChain p q s) ∧
-        ∀ s t : LTSeries (Ideal R),
-          IsMaximalPrimeChain p q s → IsMaximalPrimeChain p q t →
-            s.length = t.length
+abbrev IsCatenaryRing (R : Type*) [CommRing R] : Prop :=
+  Formalization.«Books.Examples».Unit19.IsCatenaryRing R
 
 def IsUniversallyCatenary (R : Type u) [CommRing R] : Prop :=
-  IsNoetherianRing R ∧
-    ∀ (S : Type u) [CommRing S] [Algebra R S] [Algebra.FiniteType R S],
-      IsCatenaryRing S
+  ∀ (S : Type u) [CommRing S] [Algebra R S] [Algebra.FiniteType R S],
+    IsCatenaryRing S
 
 /- The displayed blow-up morphism and the strict-transform point in the
    source are proof-level witnesses for the non-universal-catenarity result;

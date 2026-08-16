@@ -246,6 +246,15 @@ theorem integerLocalization_family_hasNoFiniteSubfamily (U : Ultrafilter primeNu
     HasNoFiniteJointlySurjectiveSubfamily U := by
   sorry
 
+theorem integerLocalization_family_flat_jointlySurjective_not_finite
+    (U : Ultrafilter primeNumber) (hU : IsNonprincipalUltrafilter U) :
+    IsFlatRingLocalizationFamily U ∧
+      IsJointlySurjectiveIntegerLocalizationFamily U ∧
+        HasNoFiniteJointlySurjectiveSubfamily U := by
+  exact ⟨integerLocalization_family_isFlat U,
+    integerLocalization_family_isJointlySurjective U hU,
+    integerLocalization_family_hasNoFiniteSubfamily U⟩
+
 /-! ## Claim I: the module equalizer -/
 
 abbrev integerLocalizedModule (M : Type u) [AddCommGroup M] [Module ℤ M]

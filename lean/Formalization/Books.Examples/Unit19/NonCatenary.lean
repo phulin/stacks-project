@@ -1,4 +1,5 @@
 import Mathlib.RingTheory.Algebraic.Basic
+import Mathlib.RingTheory.AlgebraicIndependent.Basic
 import Mathlib.RingTheory.DiscreteValuationRing.TFAE
 import Mathlib.RingTheory.FiniteType
 import Mathlib.RingTheory.Ideal.Quotient.Operations
@@ -119,6 +120,20 @@ noncomputable abbrev R (d : PowerSeriesData k) := generatedRing d
 noncomputable def generatedRingInclusion (d : PowerSeriesData k) : R d →+* PowerSeries k :=
   (generatedRing d).val.toRingHom
 
+/- The scalar structure used to state the transcendence degree of the
+   fraction field of `R`.  Mathlib deliberately does not make this tower
+   algebra an unconditional instance because of possible instance diamonds. -/
+@[instance_reducible] noncomputable def fractionFieldRAlgebra (d : PowerSeriesData k) :
+    Algebra k (FractionRing (R d)) :=
+  RingHom.toAlgebra
+    ((algebraMap (R d) (FractionRing (R d))).comp (algebraMap k (R d)))
+
+/- The source's assertion that the fraction field of `R` has transcendence
+   degree two over `k`. -/
+theorem fractionField_R_transcendence_degree_two (d : PowerSeriesData k) :
+    @Algebra.trdeg k (FractionRing (R d)) _ _ (fractionFieldRAlgebra d) = 2 := by
+  sorry
+
 /-- The coefficient sum `a₁ + ⋯ + a_j` occurring in the generators of `𝔫`. -/
 def initialCoefficientSum (d : PowerSeriesData k) (j : ℕ) : k :=
   Finset.sum (Finset.range j) (fun i ↦ d.coefficients (i + 1))
@@ -186,6 +201,11 @@ theorem localization_m_is_dvr (d : PowerSeriesData k) :
     IsDiscreteValuationRing (Localization.AtPrime (mIdeal d)) := by
   sorry
 
+theorem localization_m_is_noetherian_regular (d : PowerSeriesData k) :
+    IsNoetherianRing (Localization.AtPrime (mIdeal d)) ∧
+      IsRegularLocalRing (Localization.AtPrime (mIdeal d)) := by
+  sorry
+
 theorem localization_m_has_residue_field_k (d : PowerSeriesData k) :
     Nonempty (IsLocalRing.ResidueField (Localization.AtPrime (mIdeal d)) ≃+* k) := by
   sorry
@@ -237,7 +257,8 @@ theorem localization_n_presentation (d : PowerSeriesData k) :
 
 /-- `R_𝔫` is a regular local ring of dimension `2` and residue field `k`. -/
 theorem localization_n_is_regular_local_dim_two (d : PowerSeriesData k) :
-    IsRegularLocalRing (Localization.AtPrime (nIdeal d)) ∧
+    IsNoetherianRing (Localization.AtPrime (nIdeal d)) ∧
+      IsRegularLocalRing (Localization.AtPrime (nIdeal d)) ∧
       ringKrullDim (Localization.AtPrime (nIdeal d)) = 2 ∧
       Nonempty (IsLocalRing.ResidueField (Localization.AtPrime (nIdeal d)) ≃+* k) := by
   sorry
@@ -335,13 +356,16 @@ theorem b_localization_n_equiv (d : PowerSeriesData k) :
   sorry
 
 theorem b_localization_m_properties (d : PowerSeriesData k) :
-    IsDiscreteValuationRing (Localization.AtPrime (mBIdeal d)) ∧
+    IsNoetherianRing (Localization.AtPrime (mBIdeal d)) ∧
+      IsRegularLocalRing (Localization.AtPrime (mBIdeal d)) ∧
+      IsDiscreteValuationRing (Localization.AtPrime (mBIdeal d)) ∧
       ringKrullDim (Localization.AtPrime (mBIdeal d)) = 1 ∧
       Nonempty (IsLocalRing.ResidueField (Localization.AtPrime (mBIdeal d)) ≃+* k) := by
   sorry
 
 theorem b_localization_n_properties (d : PowerSeriesData k) :
-    IsRegularLocalRing (Localization.AtPrime (nBIdeal d)) ∧
+    IsNoetherianRing (Localization.AtPrime (nBIdeal d)) ∧
+      IsRegularLocalRing (Localization.AtPrime (nBIdeal d)) ∧
       ringKrullDim (Localization.AtPrime (nBIdeal d)) = 2 ∧
       Nonempty (IsLocalRing.ResidueField (Localization.AtPrime (nBIdeal d)) ≃+* k) := by
   sorry

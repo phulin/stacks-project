@@ -1,4 +1,7 @@
-import Mathlib.AlgebraicGeometry.Morphisms.Immersion
+import Mathlib.AlgebraicGeometry.Morphisms.ClosedImmersion
+import Mathlib.AlgebraicGeometry.Morphisms.Flat
+import Mathlib.AlgebraicGeometry.Morphisms.FinitePresentation
+import Mathlib.AlgebraicGeometry.Morphisms.Proper
 import Mathlib.AlgebraicGeometry.Morphisms.Smooth
 import Mathlib.AlgebraicGeometry.Modules.Sheaf
 import Mathlib.AlgebraicGeometry.ProjectiveSpectrum.Basic
@@ -6,6 +9,7 @@ import Mathlib.Algebra.Category.ModuleCat.Basic
 import Mathlib.Data.Complex.Basic
 import Mathlib.LinearAlgebra.FiniteDimensional.Basic
 import Mathlib.LinearAlgebra.TensorProduct.Basic
+import Mathlib.RingTheory.AdicCompletion.Basic
 import Mathlib.RingTheory.MvPolynomial.Homogeneous
 import Mathlib.RingTheory.MvPowerSeries.Basic
 import Formalization.«Books.SpacesGroupoids».Unit20.Core
@@ -13,18 +17,20 @@ import Formalization.«Books.SpacesGroupoids».Unit20.Core
 /-!
 # Examples, Chapter 73: the stack of proper algebraic spaces is not algebraic
 
-The project has a canonical fppf-sheaf model for algebraic spaces over a fixed
-scheme, but it does not yet expose the full big stack of algebraic spaces or
-the deformation theory of K3 surfaces.  This file therefore uses those
-canonical sheaf and categorical objects wherever they are available and gives
-explicit source-facing interfaces for the missing deformation, cohomology,
-Picard, and formal-effectiveness constructions.
+The source introduces the stack of flat, proper, finitely presented algebraic
+spaces and then gives a K3-surface formal-effectiveness obstruction. Mathlib
+and earlier project chapters provide the fppf-sheaf model, fibred-category
+interfaces, scheme morphism properties, and the algebraic constructions.
+Cohomology, Picard groups of schemes, and deformation theory are recorded
+below as explicit source-facing data because this snapshot does not provide
+those moduli objects.
 -/
 
 noncomputable section
 
 open CategoryTheory
 open AlgebraicGeometry
+open Formalization.«Books.Stacks».Unit01
 open scoped TensorProduct
 
 universe u
@@ -33,20 +39,20 @@ namespace Formalization.«Books.Examples».Unit73
 
 /-! ## The stack of finitely presented flat proper algebraic spaces -/
 
-/-- The objects in the fibre over `S` of the stack from the source. -/
+/-- The objects in the fibre over S of the stack from the source. -/
 structure FlatProperFinitelyPresentedAlgebraicSpace (S : Scheme.{u}) where
   /-- The fppf sheaf of points of the algebraic space. -/
   space : Formalization.«Books.SpacesGroupoids».Unit20.AlgebraicSpace S
-  /-- The assertion that the structure morphism is flat. -/
+  /-- Flatness of the structure morphism. -/
   flat : Prop
-  /-- The assertion that the structure morphism is proper. -/
+  /-- Properness of the structure morphism. -/
   proper : Prop
-  /-- The assertion that the structure morphism is finitely presented. -/
+  /-- Finite presentation of the structure morphism. -/
   finitelyPresented : Prop
 
 namespace FlatProperFinitelyPresentedAlgebraicSpace
 
-/-- A morphism in the fibre category over `S`. -/
+/-- A morphism in the fibre category over S. -/
 structure Hom {S : Scheme.{u}}
     (X Y : FlatProperFinitelyPresentedAlgebraicSpace S) where
   map : X.space ⟶ Y.space
@@ -67,82 +73,90 @@ instance (S : Scheme.{u}) : Category (FlatProperFinitelyPresentedAlgebraicSpace 
   id X := ⟨𝟙 X.space⟩
   comp f g := ⟨f.map ≫ g.map⟩
 
-/-- The category of flat, proper, finitely presented algebraic spaces over `S`.
+/-- The category of flat, proper, finitely presented algebraic spaces over S.
 
-The underlying sheaf and its morphisms use the fppf-sheaf model from the
-earlier algebraic-spaces chapter; the three geometric properties remain the
-source-facing predicates carried by each object. -/
+The underlying algebraic space is the canonical fppf-sheaf model from the
+earlier algebraic-spaces chapter. The geometric properties are carried as the
+source predicates because that model does not expose morphism properties for
+algebraic spaces. -/
 abbrev ProperAlgebraicSpaceSectionCategory (S : Scheme.{u}) :=
   FlatProperFinitelyPresentedAlgebraicSpace S
 
-/-- The section family of the stack `p'_{fp, flat, proper}`. -/
+/-- The section category of p'_{fp, flat, proper}. -/
 abbrev properAlgebraicSpaceStackSections (S : Scheme.{u}) :=
   ProperAlgebraicSpaceSectionCategory S
 
-/-- The stack's fppf-sheaf model of algebraic spaces over a fixed base. -/
-def properAlgebraicSpaceStack (S : Scheme.{u}) : Type _ :=
-  properAlgebraicSpaceStackSections S
-
-/-- The missing big pseudofunctor interface for the stack in groupoids from the
-source.  Its fibre equivalences tie the pseudofunctor to the explicit section
-categories above, while the stack field records the fppf descent assertion. -/
+/-- The global fppf fibred-category interface for the stack in the source. -/
 structure ProperAlgebraicSpaceStackData where
-  fibre : Formalization.«Books.Stacks».Unit01.FiberedCategory.{u, u, u + 1}
-    AlgebraicGeometry.Scheme
+  fibre : FiberedCategory (Scheme.{u})
   fibre_equivalence : ∀ S : Scheme.{u}, Nonempty
-    (Formalization.«Books.Stacks».Unit01.Fiber fibre S ≌
-      ProperAlgebraicSpaceSectionCategory S)
-  is_fppf_stack : Formalization.«Books.SpacesGroupoids».Unit20.StackInGroupoids
-    fibre AlgebraicGeometry.Scheme.fppfTopology
+    (Fiber fibre S ≌ ProperAlgebraicSpaceSectionCategory S)
+  is_fppf_stack :
+    Formalization.«Books.SpacesGroupoids».Unit20.StackInGroupoids fibre
+      AlgebraicGeometry.Scheme.fppfTopology
 
-/-- The source stack exists with the stated fppf-stack structure. -/
+/-- Existence of the stack whose sections are flat, proper, finitely presented
+algebraic spaces. -/
 def ProperAlgebraicSpaceStackIsFppfStack : Prop :=
   Nonempty (ProperAlgebraicSpaceStackData.{u})
 
-theorem proper_algebraic_space_stack_is_fppf_stack :
+theorem proper_algebraic_space_stack_exists :
     ProperAlgebraicSpaceStackIsFppfStack := by
   sorry
 
+/-- A chosen presentation of the stack from the source. -/
+noncomputable def properAlgebraicSpaceStack : ProperAlgebraicSpaceStackData.{u} :=
+  Classical.choice proper_algebraic_space_stack_exists
+
+theorem proper_algebraic_space_stack_is_fppf_stack :
+    Formalization.«Books.SpacesGroupoids».Unit20.StackInGroupoids
+      properAlgebraicSpaceStack.fibre
+      AlgebraicGeometry.Scheme.fppfTopology :=
+  properAlgebraicSpaceStack.is_fppf_stack
+
 /-! ## The numerical deformation setup -/
 
-/-- The formal parameter count `g²` for a dimension-`g` abelian variety. -/
+/-- The formal parameter count g squared for a dimension-g abelian variety. -/
 def abelianVarietyFormalParameterCount (g : ℕ) : ℕ := g ^ 2
 
-/-- The dimension bound `g(g + 1)/2` for an effective formal deformation. -/
+/-- The dimension bound g(g + 1)/2 for an effective formal deformation. -/
 def effectiveFormalDeformationDimensionBound (g : ℕ) : ℕ := g * (g + 1) / 2
 
+/-- For dimension at least two, the universal parameter count is larger than
+the bound for an effective formal deformation. -/
 theorem abelianVarietyFormalParameterCount_exceeds_effectiveBound
     {g : ℕ} (hg : 2 ≤ g) :
     effectiveFormalDeformationDimensionBound g <
       abelianVarietyFormalParameterCount g := by
   sorry
 
-/-- Mathlib's projective spectrum model of `\mathbf P^3_k`. -/
+/-! ## The quartic K3 surface -/
+
+/-- Mathlib's projective spectrum model of projective 3-space over k. -/
 noncomputable def projectiveThreeSpace (k : Type u) [Field k] : Scheme.{u} :=
-  letI := MvPolynomial.gradedAlgebra (σ := Fin 4) (R := k)
-  AlgebraicGeometry.Proj (MvPolynomial.homogeneousSubmodule (Fin 4) k)
+  let 𝒜 : ℕ → Submodule k (MvPolynomial (Fin 4) k) :=
+    fun n => MvPolynomial.homogeneousSubmodule (Fin 4) k n
+  letI : GradedAlgebra 𝒜 := MvPolynomial.gradedAlgebra
+  AlgebraicGeometry.«Proj» 𝒜
 
 /-- A smooth degree-four surface embedded in projective three-space. -/
 structure SmoothQuarticSurface (k : Type u) [Field k] where
   surface : Scheme.{u}
-  ambient : Scheme.{u}
-  ambient_identification : Nonempty (ambient ≅ projectiveThreeSpace k)
-  embedding : surface ⟶ ambient
-  embedding_is_closed : AlgebraicGeometry.IsClosedImmersion embedding
+  embedding : surface ⟶ projectiveThreeSpace k
+  embedding_is_closed : IsClosedImmersion embedding
   structureMap : surface ⟶ Spec (CommRingCat.of k)
-  smooth_over_k : AlgebraicGeometry.Smooth structureMap
+  smooth_over_k : Smooth structureMap
   degree : ℕ
   degree_eq_four : degree = 4
 
-/-! The generic Picard-rank-one hypothesis used later in the argument. -/
-
-/-- A smooth quartic surface satisfying the source's ``general enough''
-Picard-group condition.  The Picard group is represented by the project
-Picard-group object interface because Mathlib has no scheme Picard functor. -/
+/-- A general-enough smooth quartic whose Picard group is generated by the
+hyperplane class. -/
 structure GeneralSmoothQuarticSurface (k : Type u) [Field k]
     extends SmoothQuarticSurface k where
   picardGroup : AddCommGrpCat.{0}
-  picard_is_integer : Nonempty ((picardGroup : Type) ≃+ ℤ)
+  hyperplaneClass : (picardGroup : Type)
+  picardEquiv : (picardGroup : Type) ≃+ ℤ
+  picardEquiv_hyperplaneClass : picardEquiv hyperplaneClass = 1
 
 /-! ## Cohomology and Picard interfaces for the complex quartic K3 -/
 
@@ -155,11 +169,13 @@ def IsNondegeneratePairing {k M N P : Type*} [Field k]
   (∀ m : M, (∀ n : N, pairing (TensorProduct.tmul k m n) = 0) → m = 0) ∧
     (∀ n : N, (∀ m : M, pairing (TensorProduct.tmul k m n) = 0) → n = 0)
 
-/-- The cohomological and Picard data used by the K3 obstruction argument.
+/-- Cohomological data used by the K3 obstruction argument.
 
-The sheaves are genuine objects of Mathlib's scheme-module category.  The
-cohomology groups, Ext groups, cup product, and Picard group are the explicit
-interfaces required by this source section. -/
+The module-category objects model the sheaves, while the cohomology and Ext
+groups are explicit vector-space interfaces. The fields record the source
+identities for the canonical, two-form, structure, cotangent, and tangent
+sheaves; the Ext/tangent comparison; the three tangent dimensions; H1 of the
+structure sheaf; coherent-duality nondegeneracy; and first-Chern injectivity. -/
 structure ComplexQuarticK3Data (X : GeneralSmoothQuarticSurface ℂ) where
   canonicalSheaf : X.surface.Modules
   twoFormsSheaf : X.surface.Modules
@@ -189,17 +205,24 @@ structure ComplexQuarticK3Data (X : GeneralSmoothQuarticSurface ℂ) where
       (h2_structureSheaf : Type)
   cupProduct_nondegenerate : IsNondegeneratePairing cupProduct
   firstChern : (X.picardGroup : Type) →+ (h1_cotangent : Type)
+  /-- The injectivity hypothesis singled out in the source footnote; the
+  complex quartic instance used here supplies it as part of its data. -/
   firstChern_injective : Function.Injective firstChern
-  twist : ℕ → (X.picardGroup : Type)
-  twist_c1_nonzero : ∀ n : ℕ, 0 < n → firstChern (twist n) ≠ 0
+  twist_c1_nonzero : ∀ n : ℕ, 0 < n →
+    firstChern (n • X.hyperplaneClass) ≠ 0
   liftsToFirstOrder :
-    ∀ _ : (X.picardGroup : Type), (tangentCohomology 1 : Type) → Prop
+    ∀ (_c : (X.picardGroup : Type)),
+      (tangentCohomology 1 : Type) → Prop
 
 abbrev tangentCohomologyGroup (D : ComplexQuarticK3Data X) (i : ℕ) :=
   D.tangentCohomology i
 
 abbrev extCohomologyGroup (D : ComplexQuarticK3Data X) (i : ℕ) :=
   D.extCohomology i
+
+/-- The class of O_X(n) represented by the hyperplane class. -/
+def twist (X : GeneralSmoothQuarticSurface ℂ) (n : ℕ) :
+    (X.picardGroup : Type) := n • X.hyperplaneClass
 
 theorem complex_quartic_k3_data_exists (X : GeneralSmoothQuarticSurface ℂ) :
     Nonempty (ComplexQuarticK3Data X) := by
@@ -211,19 +234,27 @@ theorem exists_general_smooth_quartic_surface_over_complex :
 
 /-! ## The universal formal deformation -/
 
-/-- The complete local ring `\mathbf C[[x₁, ..., x₂₀]]`. -/
+/-- The complete local ring of formal power series in twenty variables. -/
 abbrev ComplexFormalDeformationRing := MvPowerSeries (Fin 20) ℂ
 
 /-- The ideal generated by the twenty formal parameters. -/
 def complexFormalDeformationIdeal : Ideal ComplexFormalDeformationRing :=
   Ideal.span (Set.range (fun i : Fin 20 => MvPowerSeries.X i))
 
-/-- The base `\operatorname{Spec}(\mathbf C[[x₁, ..., x₂₀]])`. -/
+/-- The complete-local-ring assertion for the formal power-series base. -/
+def ComplexFormalDeformationRingIsCompleteLocal : Prop :=
+  IsLocalRing ComplexFormalDeformationRing ∧
+    IsAdicComplete complexFormalDeformationIdeal ComplexFormalDeformationRing
+
+theorem complexFormalDeformationRing_is_complete_local :
+    ComplexFormalDeformationRingIsCompleteLocal := by
+  sorry
+
+/-- The base scheme of the formal power-series ring. -/
 noncomputable def complexFormalDeformationBase : Scheme :=
   Spec (CommRingCat.of ComplexFormalDeformationRing)
 
-/-- The ring of the `(n + 1)`st infinitesimal neighbourhood of the closed
-point of the formal deformation base. -/
+/-- The ring of the (n + 1)st infinitesimal neighbourhood of the closed point. -/
 abbrev complexFormalDeformationLevelRing (n : ℕ) :=
   ComplexFormalDeformationRing ⧸ complexFormalDeformationIdeal ^ (n + 1)
 
@@ -232,40 +263,35 @@ noncomputable def complexFormalDeformationLevel (n : ℕ) : Scheme :=
   Spec (CommRingCat.of (complexFormalDeformationLevelRing n))
 
 /-- A compatible formal object of the proper-algebraic-space stack with
-special fibre `X`. -/
+special fibre X. -/
 structure ProperFormalObject (X : Scheme) where
   level : ∀ n : ℕ,
     FlatProperFinitelyPresentedAlgebraicSpace (complexFormalDeformationLevel n)
   compatible : Prop
   special_fibre_is_X : Prop
 
-/-- An algebraization of a formal object.  The comparison fields express that
-the algebraic family recovers every infinitesimal level. -/
+/-- An algebraization of a formal object. -/
 structure EffectiveRealization {X : Scheme} (ξ : ProperFormalObject X) where
   totalSpace :
     FlatProperFinitelyPresentedAlgebraicSpace complexFormalDeformationBase
   inducedLevel : ∀ n : ℕ,
     FlatProperFinitelyPresentedAlgebraicSpace (complexFormalDeformationLevel n)
   comparison : ∀ n : ℕ, Nonempty (inducedLevel n ≅ ξ.level n)
-  separated : Prop
-  affineOpen : Prop
-  special_fibre_smooth : Prop
-  smooth : Prop
-  regular : Prop
-  complement_effective_cartier : Prop
-  generic_fibre_proper_smooth : Prop
-  grothendieck_existence : Prop
-  picardGroup : AddCommGrpCat.{0}
-  complementDivisorClass : (picardGroup : Type)
 
 /-- Formal effectiveness for the stack in this chapter. -/
 def IsEffectiveFormalObject {X : Scheme} (ξ : ProperFormalObject X) : Prop :=
   Nonempty (EffectiveRealization ξ)
 
-/-- The Artin-axiom necessary condition used to test algebraicity here. -/
-def IsAlgebraicStack : Prop :=
-  ∀ (X : GeneralSmoothQuarticSurface ℂ) (ξ : ProperFormalObject X.surface),
-    IsEffectiveFormalObject ξ
+/-- The formal-effectiveness consequence of algebraicity used in the chapter.
+The actual algebraic-stack object is represented by properAlgebraicSpaceStack;
+this predicate records the necessary Artin axiom for the K3 formal objects. -/
+structure IsAlgebraicStack (stack : ProperAlgebraicSpaceStackData.{u}) : Prop where
+  fppf_stack :
+    Formalization.«Books.SpacesGroupoids».Unit20.StackInGroupoids stack.fibre
+      AlgebraicGeometry.Scheme.fppfTopology
+  formal_effective :
+    ∀ (X : GeneralSmoothQuarticSurface ℂ) (ξ : ProperFormalObject X.surface),
+      IsEffectiveFormalObject ξ
 
 /-- The universal formal deformation supplied by the K3 deformation theory. -/
 structure UniversalK3Deformation {X : GeneralSmoothQuarticSurface ℂ}
@@ -280,87 +306,121 @@ theorem universal_k3_deformation_exists {X : GeneralSmoothQuarticSurface ℂ}
 
 /-! ## The Picard obstruction in the informal proof -/
 
+/-- The geometric consequences extracted from an effective realization in the
+source argument. -/
+structure EffectiveRealizationGeometry {X : GeneralSmoothQuarticSurface ℂ}
+    {ξ : ProperFormalObject X.surface} (r : EffectiveRealization ξ) where
+  separated : Prop
+  separated_holds : separated
+  affineOpen : Prop
+  affineOpen_holds : affineOpen
+  special_fibre_smooth : Prop
+  special_fibre_smooth_holds : special_fibre_smooth
+  smooth : Prop
+  smooth_holds : smooth
+  regular : Prop
+  regular_holds : regular
+  complement_effective_cartier : Prop
+  complement_effective_cartier_holds : complement_effective_cartier
+  generic_fibre_proper_smooth : Prop
+  generic_fibre_proper_smooth_holds : generic_fibre_proper_smooth
+  grothendieck_existence : Prop
+  grothendieck_existence_holds : grothendieck_existence
+  picardGroup : AddCommGrpCat.{0}
+  complementDivisorClass : (picardGroup : Type)
+
 def IsSeparatedTotalSpace {X : GeneralSmoothQuarticSurface ℂ}
-    {ξ : ProperFormalObject X.surface} (r : EffectiveRealization ξ) : Prop :=
-  r.separated
+    {ξ : ProperFormalObject X.surface} {r : EffectiveRealization ξ}
+    (G : EffectiveRealizationGeometry r) : Prop :=
+  G.separated
 
 def HasAffineOpenTotalSpace {X : GeneralSmoothQuarticSurface ℂ}
-    {ξ : ProperFormalObject X.surface} (r : EffectiveRealization ξ) : Prop :=
-  r.affineOpen
+    {ξ : ProperFormalObject X.surface} {r : EffectiveRealization ξ}
+    (G : EffectiveRealizationGeometry r) : Prop :=
+  G.affineOpen
 
 def IsSmoothTotalSpace {X : GeneralSmoothQuarticSurface ℂ}
-    {ξ : ProperFormalObject X.surface} (r : EffectiveRealization ξ) : Prop :=
-  r.smooth
+    {ξ : ProperFormalObject X.surface} {r : EffectiveRealization ξ}
+    (G : EffectiveRealizationGeometry r) : Prop :=
+  G.smooth
 
 def IsRegularTotalSpace {X : GeneralSmoothQuarticSurface ℂ}
-    {ξ : ProperFormalObject X.surface} (r : EffectiveRealization ξ) : Prop :=
-  r.regular
+    {ξ : ProperFormalObject X.surface} {r : EffectiveRealization ξ}
+    (G : EffectiveRealizationGeometry r) : Prop :=
+  G.regular
 
 def ComplementIsEffectiveCartier {X : GeneralSmoothQuarticSurface ℂ}
-    {ξ : ProperFormalObject X.surface} (r : EffectiveRealization ξ) : Prop :=
-  r.complement_effective_cartier
+    {ξ : ProperFormalObject X.surface} {r : EffectiveRealization ξ}
+    (G : EffectiveRealizationGeometry r) : Prop :=
+  G.complement_effective_cartier
 
 def GenericFibreIsProperSmooth {X : GeneralSmoothQuarticSurface ℂ}
-    {ξ : ProperFormalObject X.surface} (r : EffectiveRealization ξ) : Prop :=
-  r.generic_fibre_proper_smooth
+    {ξ : ProperFormalObject X.surface} {r : EffectiveRealization ξ}
+    (G : EffectiveRealizationGeometry r) : Prop :=
+  G.generic_fibre_proper_smooth
 
 def GrothendieckExistenceForPicard {X : GeneralSmoothQuarticSurface ℂ}
-    {ξ : ProperFormalObject X.surface} (r : EffectiveRealization ξ) : Prop :=
-  r.grothendieck_existence
+    {ξ : ProperFormalObject X.surface} {r : EffectiveRealization ξ}
+    (G : EffectiveRealizationGeometry r) : Prop :=
+  G.grothendieck_existence
 
 theorem effective_universal_deformation_has_geometry
     {X : GeneralSmoothQuarticSurface ℂ} (D : ComplexQuarticK3Data X)
     (𝒟 : UniversalK3Deformation D)
     (r : EffectiveRealization 𝒟.formalObject) :
-    IsSeparatedTotalSpace r ∧
-      HasAffineOpenTotalSpace r ∧
-      IsSmoothTotalSpace r ∧
-      IsRegularTotalSpace r ∧
-      ComplementIsEffectiveCartier r ∧
-      GenericFibreIsProperSmooth r ∧
-      GrothendieckExistenceForPicard r := by
+    Nonempty (EffectiveRealizationGeometry r) := by
   sorry
 
-def PicardGroupTrivial (P : AddCommGrpCat.{0}) : Prop :=
-  Subsingleton (P : Type)
-
+/-- A nonempty affine complement in a proper smooth generic fibre produces a
+nonzero divisor line-bundle class. -/
 theorem affine_complement_line_bundle_nontrivial
     {X : GeneralSmoothQuarticSurface ℂ} {D : ComplexQuarticK3Data X}
-    {ξ : ProperFormalObject X.surface} (r : EffectiveRealization ξ)
-    (hsep : IsSeparatedTotalSpace r)
-    (haff : HasAffineOpenTotalSpace r)
-    (hsmooth : IsSmoothTotalSpace r)
-    (hregular : IsRegularTotalSpace r)
-    (hcartier : ComplementIsEffectiveCartier r)
-    (hgeneric : GenericFibreIsProperSmooth r) :
-    r.complementDivisorClass ≠ 0 := by
+    {ξ : ProperFormalObject X.surface} {r : EffectiveRealization ξ}
+    (G : EffectiveRealizationGeometry r)
+    (hsep : IsSeparatedTotalSpace G)
+    (haff : HasAffineOpenTotalSpace G)
+    (hsmooth : IsSmoothTotalSpace G)
+    (hregular : IsRegularTotalSpace G)
+    (hcartier : ComplementIsEffectiveCartier G)
+    (hgeneric : GenericFibreIsProperSmooth G) :
+    G.complementDivisorClass ≠ 0 := by
   sorry
 
 /-- The restriction map from the Picard group of an algebraization to that of
-the special fibre. -/
+the special fibre. The last field records that a line bundle on the total
+space lifts along every first-order direction of the universal deformation. -/
 structure PicardRestrictionData {X : GeneralSmoothQuarticSurface ℂ}
     (D : ComplexQuarticK3Data X)
-    {ξ : ProperFormalObject X.surface} (r : EffectiveRealization ξ) where
-  restriction : (r.picardGroup : Type) →+ (X.picardGroup : Type)
+    {ξ : ProperFormalObject X.surface} {r : EffectiveRealization ξ}
+    (G : EffectiveRealizationGeometry r) where
+  restriction : (G.picardGroup : Type) →+ (X.picardGroup : Type)
   injective : Function.Injective restriction
+  restriction_lifts : ∀ (c : (G.picardGroup : Type))
+    (v : (D.tangentCohomology 1 : Type)),
+      D.liftsToFirstOrder (restriction c) v
 
 theorem picard_restriction_injective_of_h1_zero
     {X : GeneralSmoothQuarticSurface ℂ} (D : ComplexQuarticK3Data X)
-    {ξ : ProperFormalObject X.surface} (r : EffectiveRealization ξ)
+    {ξ : ProperFormalObject X.surface} {r : EffectiveRealization ξ}
+    (G : EffectiveRealizationGeometry r)
     (hH1 : Module.finrank ℂ (D.h1_structureSheaf : Type) = 0)
-    (hGE : GrothendieckExistenceForPicard r) :
-    Nonempty (PicardRestrictionData D r) := by
+    (hGE : GrothendieckExistenceForPicard G) :
+    Nonempty (PicardRestrictionData D G) := by
   sorry
 
+/-- The cup product with the first Chern class at a first-order deformation. -/
 def CupProductAt {X : GeneralSmoothQuarticSurface ℂ}
     (D : ComplexQuarticK3Data X) (c : (X.picardGroup : Type))
     (v : (D.tangentCohomology 1 : Type)) :
     (D.h2_structureSheaf : Type) :=
   D.cupProduct (TensorProduct.tmul ℂ (D.firstChern c) v)
 
+/-- A line bundle class does not lift along the specified first-order
+deformation. -/
 def NoFirstOrderLineBundleLift {X : GeneralSmoothQuarticSurface ℂ}
-    (D : ComplexQuarticK3Data X) (c : (X.picardGroup : Type)) : Prop :=
-  ∀ v : (D.tangentCohomology 1 : Type), ¬ D.liftsToFirstOrder c v
+    (D : ComplexQuarticK3Data X) (c : (X.picardGroup : Type))
+    (v : (D.tangentCohomology 1 : Type)) : Prop :=
+  ¬ D.liftsToFirstOrder c v
 
 theorem exists_first_order_deformation_with_nonzero_cup_product
     {X : GeneralSmoothQuarticSurface ℂ} (D : ComplexQuarticK3Data X)
@@ -377,15 +437,19 @@ theorem line_bundle_lifts_iff_cup_product_eq_zero
 theorem positive_twist_has_no_first_order_lift
     {X : GeneralSmoothQuarticSurface ℂ} (D : ComplexQuarticK3Data X)
     {n : ℕ} (hn : 0 < n) :
-    NoFirstOrderLineBundleLift D (D.twist n) := by
+    ∃ v : (D.tangentCohomology 1 : Type),
+      NoFirstOrderLineBundleLift D (twist X n) v := by
   sorry
 
 theorem effective_picard_group_is_trivial
     {X : GeneralSmoothQuarticSurface ℂ} (D : ComplexQuarticK3Data X)
-    {ξ : ProperFormalObject X.surface} (r : EffectiveRealization ξ)
-    (ρ : PicardRestrictionData D r)
-    (hNoLift : ∀ n : ℕ, 0 < n → NoFirstOrderLineBundleLift D (D.twist n)) :
-    PicardGroupTrivial r.picardGroup := by
+    {ξ : ProperFormalObject X.surface} {r : EffectiveRealization ξ}
+    (G : EffectiveRealizationGeometry r)
+    (ρ : PicardRestrictionData D G)
+    (hNoLift : ∀ n : ℕ, 0 < n →
+      ∃ v : (D.tangentCohomology 1 : Type),
+        NoFirstOrderLineBundleLift D (twist X n) v) :
+    Subsingleton (G.picardGroup : Type) := by
   sorry
 
 /-! ## Non-effectivity and the chapter theorem -/
@@ -394,18 +458,41 @@ theorem universal_k3_deformation_not_effective
     {X : GeneralSmoothQuarticSurface ℂ} (D : ComplexQuarticK3Data X)
     (𝒟 : UniversalK3Deformation D) :
     ¬ IsEffectiveFormalObject 𝒟.formalObject := by
-  sorry
+  intro hξ
+  obtain ⟨r⟩ := hξ
+  obtain ⟨G⟩ := effective_universal_deformation_has_geometry D 𝒟 r
+  obtain ⟨ρ⟩ := picard_restriction_injective_of_h1_zero D G
+    D.h1_structureSheaf_dimension
+      (show GrothendieckExistenceForPicard G from
+        G.grothendieck_existence_holds)
+  have hNoLift : ∀ n : ℕ, 0 < n →
+      ∃ v : (D.tangentCohomology 1 : Type),
+        NoFirstOrderLineBundleLift D (twist X n) v := by
+    intro n hn
+    exact positive_twist_has_no_first_order_lift D hn
+  have htrivial : Subsingleton (G.picardGroup : Type) :=
+    effective_picard_group_is_trivial D G ρ hNoLift
+  have hnonzero := affine_complement_line_bundle_nontrivial (D := D) G
+    (show IsSeparatedTotalSpace G from G.separated_holds)
+    (show HasAffineOpenTotalSpace G from G.affineOpen_holds)
+    (show IsSmoothTotalSpace G from G.smooth_holds)
+    (show IsRegularTotalSpace G from G.regular_holds)
+    (show ComplementIsEffectiveCartier G from
+      G.complement_effective_cartier_holds)
+    (show GenericFibreIsProperSmooth G from
+      G.generic_fibre_proper_smooth_holds)
+  exact hnonzero (htrivial.allEq _ _)
 
 /-- The stack of finitely presented flat proper algebraic spaces is not an
-algebraic stack.  Algebraicity is tested by the formal-effectiveness
-condition supplied by Artin's axioms. -/
+algebraic stack. Algebraicity would force formal effectiveness by Artin's
+axioms, while the universal quartic K3 deformation is not effective. -/
 theorem proper_algebraic_space_stack_not_algebraic :
-    ¬ IsAlgebraicStack := by
+    ¬ IsAlgebraicStack properAlgebraicSpaceStack := by
   intro hAlgebraic
   obtain ⟨X⟩ := exists_general_smooth_quartic_surface_over_complex
   obtain ⟨D⟩ := complex_quartic_k3_data_exists X
   obtain ⟨𝒟⟩ := universal_k3_deformation_exists D
   exact universal_k3_deformation_not_effective D 𝒟
-    (hAlgebraic X 𝒟.formalObject)
+    (hAlgebraic.formal_effective X 𝒟.formalObject)
 
 end Formalization.«Books.Examples».Unit73

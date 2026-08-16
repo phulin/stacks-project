@@ -338,17 +338,6 @@ theorem localCompletion_nonunits_eq_x_multiple
         (a : C.carrier) ∈ Ideal.span ({C.x} : Set C.carrier)} := by
   sorry
 
-theorem localCompletion_ideal_membership_calculation
-    (C : ConvergentPowerSeriesRing)
-    (Δ : FerrandRaynaudDifferentialData C)
-    {f : C.carrier}
-    (hf : f ∈ Ideal.span ({C.x} : Set C.carrier))
-    (hfA : Δ.derivation f ∈ formalPowerSeriesSubmodule C) :
-    ∃ c : ℂ, ∃ g : C.carrier,
-      f = c • (C.x * Δ.f ⟨1, Nat.zero_lt_succ 0⟩) + C.x * g ∧
-        Δ.derivation g ∈ formalPowerSeriesSubmodule C := by
-  sorry
-
 theorem localCompletion_ideal_membership_steps
     (C : ConvergentPowerSeriesRing)
     (Δ : FerrandRaynaudDifferentialData C)
@@ -365,6 +354,19 @@ theorem localCompletion_ideal_membership_steps
         Δ.derivation g = formalPowerSeriesToLaurent h' ∧
         Δ.derivation g ∈ formalPowerSeriesSubmodule C := by
   sorry
+
+theorem localCompletion_ideal_membership_calculation
+    (C : ConvergentPowerSeriesRing)
+    (Δ : FerrandRaynaudDifferentialData C)
+    {f : C.carrier}
+    (hf : f ∈ Ideal.span ({C.x} : Set C.carrier))
+    (hfA : Δ.derivation f ∈ formalPowerSeriesSubmodule C) :
+    ∃ c : ℂ, ∃ g : C.carrier,
+      f = c • (C.x * Δ.f ⟨1, Nat.zero_lt_succ 0⟩) + C.x * g ∧
+        Δ.derivation g ∈ formalPowerSeriesSubmodule C := by
+  rcases localCompletion_ideal_membership_steps C Δ hf hfA with
+    ⟨h, h', c, g, _, _, hfg, _, hg, hA⟩
+  exact ⟨c, g, by rw [← sub_eq_iff_eq_add'.mp hfg], hA⟩
 
 /-! ## Completion, continuity, and the dual-number map -/
 
@@ -587,7 +589,8 @@ theorem completion_map_x_pow_f_explicit
           (C.expansion
             (C.x ^ (n : ℕ) * Δ.f n)) +
         TrivSqZeroExt.inr 1 := by
-  sorry
+  rw [completion_map_x_pow_f C Δ Γ n, Γ.psi_on_localCompletion]
+  simp [localCompletionXPowF]
 
 /-- All data and all six claims of the characteristic-zero example. -/
 theorem exists_local_ring_with_nonreduced_completion :

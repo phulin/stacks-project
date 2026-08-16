@@ -1,6 +1,7 @@
 import Mathlib.Algebra.Field.Rat
 import Mathlib.Algebra.Module.LocalizedModule.Submodule
 import Mathlib.Data.Nat.Squarefree
+import Mathlib.Data.PNat.Notation
 import Mathlib.RingTheory.Ideal.Prime
 import Mathlib.RingTheory.Localization.FractionRing
 import Mathlib.RingTheory.Polynomial.Basic
@@ -25,11 +26,11 @@ abbrev exampleBaseRing := Polynomial ℚ
 abbrev exampleFractionRing := FractionRing exampleBaseRing
 
 /-- The denominator `x - n` in `ℚ[x]`. -/
-def exampleDenominator (n : ℕ) : exampleBaseRing :=
-  Polynomial.X - Polynomial.C (n : ℚ)
+def exampleDenominator (n : ℕ+) : exampleBaseRing :=
+  Polynomial.X - Polynomial.C ((n : ℕ) : ℚ)
 
 /-- The element `1 / (x - n)` in the fraction ring of `ℚ[x]`. -/
-def exampleFractionalGenerator (n : ℕ) : exampleFractionRing :=
+def exampleFractionalGenerator (n : ℕ+) : exampleFractionRing :=
   (algebraMap exampleBaseRing exampleFractionRing (exampleDenominator n))⁻¹
 
 /-- The `ℚ[x]`-submodule `M = ∑ₙ (1 / (x - n)) R` in the fraction ring. -/

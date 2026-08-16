@@ -78,12 +78,21 @@ theorem moduleLocalizationFunctor_isExact (A : Type u) [CommRing A]
   exact ⟨inferInstance, inferInstance⟩
 
 /- The source identifies the localized module with the tensor-product model.
-   The orientation below follows Mathlib's canonical base-change API. -/
+   Mathlib's `LocalizedModule.equivTensorProduct` supplies the canonical
+   equivalence; the first factor only transports across `ModuleCat`'s
+   universe-small `Shrink` model. -/
+noncomputable def localizedModuleTensorProductEquiv (A : Type u) [CommRing A]
+    (S : Submonoid A) (M : moduleCategory A) :
+    (M.localizedModule S : Type u) ≃ₗ[Localization S]
+      (Localization S ⊗[A] (M : Type u)) :=
+  (Shrink.linearEquiv (Localization S) (LocalizedModule S (M : Type u))) ≪≫ₗ
+    LocalizedModule.equivTensorProduct S (M : Type u)
+
 theorem localizedModule_tensorProduct_model (A : Type u) [CommRing A]
     (S : Submonoid A) (M : moduleCategory A) :
     Nonempty ((M.localizedModule S : Type u) ≃ₗ[Localization S]
-      (Localization S ⊗[A] (M : Type u))) := by
-  sorry
+      (Localization S ⊗[A] (M : Type u))) :=
+  ⟨localizedModuleTensorProductEquiv A S M⟩
 
 /- This is the source's kernel calculation: the localized module vanishes
    exactly for modules in the torsion class. -/

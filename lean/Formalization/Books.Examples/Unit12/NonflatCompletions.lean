@@ -23,6 +23,7 @@ section.  The mathematical proofs belong to the proof stage.
 noncomputable section
 
 open scoped TensorProduct
+open scoped BigOperators
 
 namespace Formalization.«Books.Examples».Unit12
 
@@ -205,9 +206,11 @@ def IsCompletelyNormal (R K : Type*) [CommRing R] [Field K]
 
 /-
 The series used in the almost-integral argument is represented by its
-coefficient data.  The coefficient at degree `n` is `r * α^n`; thus the
-constant term is `r`, which is the indexing convention needed for the
-factorization displayed in the source.
+coefficient data.  The source writes the coefficient at degree `n` as
+`r * α ^ (n - 1)` while also displays the identity
+`(a x - b) f = -r b`.  The latter identity uses the shifted coefficients
+`r * α ^ n`, including the constant term `r`, so that is the convention
+used here.
 -/
 structure AlmostIntegralSeriesData (R : Type u) (K : Type v)
     [CommRing R] [Field K] [Algebra R K] [IsFractionRing R K]
@@ -401,6 +404,31 @@ def nonflatLocalizationSourceKernel (k : Type u) [CommRing k] :
     Ideal (PowerSeries (nonflatLocalizationRing k)) :=
   powerSeriesMulKernel (nonflatLocalizationRing k)
     (nonflatLocalizationY k)
+
+/-!
+The source describes elements of the kernel coefficientwise as finite sums
+of the `a_m` with coefficients in `k[z]`.  `Polynomial k` is the canonical
+Lean model for `k[z]`, and a finitely supported family records the finite
+support required separately at each power of `x`.
+-/
+
+def nonflatLocalizationZPolynomialMap (k : Type u) [CommRing k] :
+    Polynomial k →+* nonflatLocalizationRing k :=
+  Polynomial.eval₂RingHom (algebraMap k (nonflatLocalizationRing k))
+    (nonflatLocalizationF k)
+
+def NonflatLocalizationKernelExpansion (k : Type u) [CommRing k]
+    (g : PowerSeries (nonflatLocalizationRing k)) : Prop :=
+  ∃ c : ℕ → (ℕ →₀ Polynomial k),
+    ∀ n, PowerSeries.coeff n g =
+      ∑ m ∈ (c n).support,
+        nonflatLocalizationZPolynomialMap k (c n m) * nonflatLocalizationA k m
+
+theorem nonflatLocalizationSourceKernel_iff_expansion
+    (k : Type u) [CommRing k] (g : PowerSeries (nonflatLocalizationRing k)) :
+    g ∈ nonflatLocalizationSourceKernel k ↔
+      NonflatLocalizationKernelExpansion k g := by
+  sorry
 
 def nonflatLocalizationTargetMultiplication (k : Type u) [CommRing k] :
     nonflatLocalizationPowerSeries k →ₗ[nonflatLocalizationPowerSeries k]

@@ -223,9 +223,35 @@ power-series ring. -/
 def pPowerSeriesSubring : Subring (TwoVariablePowerSeries k) :=
   (MvPowerSeries.map (σ := Fin 2) (pPowerSubfield k p).subtype).range
 
+/-- The coefficient ring `k^p[[x, y]]`, viewed as a type. -/
+abbrev pPowerSeriesRing := ↥(pPowerSeriesSubring k p)
+
+/-- The canonical scalar structure of the ambient power-series ring over
+`k^p[[x, y]]`. -/
+noncomputable instance pPowerSeriesRingAlgebra :
+    Algebra (pPowerSeriesRing k p) (TwoVariablePowerSeries k) :=
+  (pPowerSeriesSubring k p).subtype.toAlgebra
+
 theorem pPowerSeriesSubring_le_aSubring :
     pPowerSeriesSubring k p ≤ aSubring k p := by
   sorry
+
+/-- The ring `A` is a `k^p[[x, y]]`-subalgebra of `k[[x, y]]`. -/
+def aSubalgebra : Subalgebra (pPowerSeriesRing k p) (TwoVariablePowerSeries k) where
+  carrier := {f | ACondition k p f}
+  zero_mem' := by
+    exact aCondition_zero k p
+  add_mem' := by
+    intro f g hf hg
+    exact aCondition_add k p hf hg
+  one_mem' := by
+    exact aCondition_one k p
+  mul_mem' := by
+    intro f g hf hg
+    exact aCondition_mul k p hf hg
+  algebraMap_mem' := by
+    intro r
+    exact pPowerSeriesSubring_le_aSubring k p r.property
 
 theorem aSubring_le_ambient :
     aSubring k p ≤ ⊤ := by
@@ -475,7 +501,7 @@ def aLocalizedIdeal : Ideal (aLocalizedRing k p) :=
   Ideal.span {aLocalizedX k p}
 
 abbrev aLocalizedCompletion : Type u :=
-  AdicCompletion (aLocalizedIdeal k p) (aLocalizedRing k p)
+  AdicCompletion (aLocalizedXYIdeal k p) (aLocalizedRing k p)
 
 def bLocalizedXYIdeal : Ideal (bLocalizedRing k p f) :=
   Ideal.map (algebraMap (bRing k p f) (bLocalizedRing k p f)) (bXYIdeal k p f)
@@ -484,7 +510,7 @@ def bLocalizedIdeal : Ideal (bLocalizedRing k p f) :=
   Ideal.span {algebraMap (bRing k p f) (bLocalizedRing k p f) (bX k p f)}
 
 abbrev bLocalizedCompletion : Type u :=
-  AdicCompletion (bLocalizedIdeal k p f) (bLocalizedRing k p f)
+  AdicCompletion (bLocalizedXYIdeal k p f) (bLocalizedRing k p f)
 
 theorem aLocalizedXYIdeal_eq_x :
     aLocalizedXYIdeal k p = aLocalizedIdeal k p := by
@@ -505,12 +531,12 @@ theorem localized_b_power_quotient_formula (n : ℕ) :
 theorem a_localized_completion_inverse_limit_description :
     Nonempty (aLocalizedCompletion k p ≃+*
       AdicCompletion (aLocalizedIdeal k p) (aLocalizedRing k p)) := by
-  exact ⟨RingEquiv.refl _⟩
+  sorry
 
 theorem b_localized_completion_inverse_limit_description :
     Nonempty (bLocalizedCompletion k p f ≃+*
       AdicCompletion (bLocalizedIdeal k p f) (bLocalizedRing k p f)) := by
-  exact ⟨RingEquiv.refl _⟩
+  sorry
 
 noncomputable def aLocalizedToBLocalized :
     aLocalizedRing k p →+* bLocalizedRing k p f :=
@@ -529,6 +555,10 @@ noncomputable def localizedCompletionMap :
     aLocalizedCompletion k p →+* bLocalizedCompletion k p f :=
   Classical.choose (exists_localized_completion_map k p f)
 
+/-- The image of the adjoined series `f` in the completed localization. -/
+def localizedCompletionF : bLocalizedCompletion k p f :=
+  algebraMap (bRing k p f) (bLocalizedCompletion k p f) (bF k p f)
+
 theorem localizedCompletionMap_spec (z : aLocalizedRing k p) :
     localizedCompletionMap k p f
         (algebraMap (aLocalizedRing k p) (aLocalizedCompletion k p) z) =
@@ -540,10 +570,9 @@ theorem exists_localized_completion_power_basis
     (hf : InfiniteCoefficientDegree k p f) :
     letI : Algebra (aLocalizedCompletion k p) (bLocalizedCompletion k p f) :=
       (localizedCompletionMap k p f).toAlgebra
-    ∃ e : Module.Basis (Fin p) (aLocalizedCompletion k p)
+      ∃ e : Module.Basis (Fin p) (aLocalizedCompletion k p)
         (bLocalizedCompletion k p f),
-      ∀ i, e i =
-        (algebraMap (bRing k p f) (bLocalizedCompletion k p f) (bF k p f)) ^ (i : ℕ) := by
+      ∀ i, e i = localizedCompletionF k p f ^ (i : ℕ) := by
   sorry
 
 abbrev truncatedPolynomial (R : Type u) [CommRing R] (p : ℕ) : Type u :=
@@ -557,7 +586,7 @@ theorem exists_g_in_localized_completion
     (hf : InfiniteCoefficientDegree k p f) :
     ∃ g : aLocalizedCompletion k p,
       localizedCompletionMap k p f g ^ p =
-        (algebraMap (bRing k p f) (bLocalizedCompletion k p f) (bF k p f)) ^ p := by
+        localizedCompletionF k p f ^ p := by
   sorry
 
 theorem localized_completion_is_truncated_polynomial

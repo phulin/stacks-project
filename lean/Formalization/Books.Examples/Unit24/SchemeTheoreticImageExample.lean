@@ -1,4 +1,5 @@
 import Mathlib.AlgebraicGeometry.Morphisms.ClosedImmersion
+import Mathlib.AlgebraicGeometry.IdealSheaf.Subscheme
 import Mathlib.AlgebraicGeometry.Restrict
 import Mathlib.Data.PNat.Notation
 import Mathlib.RingTheory.Polynomial.Basic
@@ -128,6 +129,12 @@ noncomputable def schemeTheoreticImageRestrictedMorphism (k : Type u) [Field k] 
 theorem schemeTheoreticImageRestrictedMorphism_image_is_empty
     (k : Type u) [Field k] :
     IsEmpty (schemeTheoreticImageRestrictedMorphism k).image := by
+  sorry
+
+/-- The restricted scheme-theoretic image is isomorphic to the empty scheme. -/
+theorem schemeTheoreticImageRestrictedMorphism_image_iso_empty
+    (k : Type u) [Field k] :
+    Nonempty ((schemeTheoreticImageRestrictedMorphism k).image ≅ (∅ : Scheme)) := by
   sorry
 
 /-- Restriction to `D(t)` does not preserve the scheme-theoretic image. -/

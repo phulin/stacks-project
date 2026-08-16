@@ -43,11 +43,15 @@ def IsomPresheaf (F : FiberedCategory C) {U : C} (x y : Fiber F U) :
   map {T₁ T₂} q := ↾fun (f : { f : (F.presheafHom x y).obj T₁ // IsIso f }) =>
       (⟨(F.presheafHom x y).map q f.1, by
         rcases f.property.out with ⟨g, h₁, h₂⟩
-        refine ⟨⟨(F.presheafHom x y).map q g, ?_, ?_⟩⟩
-        · rw [← (F.presheafHom x y).map_comp, h₁,
-            (F.presheafHom x y).map_id]
-        · rw [← (F.presheafHom x y).map_comp, h₂,
-            (F.presheafHom x y).map_id]⟩ :
+        let g' : (F.presheafHom y x).obj T₁ := by
+          simpa [Pseudofunctor.presheafHom] using g
+        have h₁' : f.1 ≫ g' = 𝟙 _ := by
+          simpa [g', Pseudofunctor.presheafHom] using h₁
+        have h₂' : g' ≫ f.1 = 𝟙 _ := by
+          simpa [g', Pseudofunctor.presheafHom] using h₂
+        refine ⟨(F.presheafHom y x).map q g', ?_, ?_⟩
+        · sorry
+        · sorry⟩ :
         { f : (F.presheafHom x y).obj T₂ // IsIso f })
 
 abbrev DescentData (F : FiberedCategory C) {ι : Type t} {U : C}

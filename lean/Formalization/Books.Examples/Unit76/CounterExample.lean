@@ -3,6 +3,7 @@ import Mathlib.AlgebraicGeometry.IdealSheaf.Functorial
 import Mathlib.AlgebraicGeometry.Modules.Tilde
 import Mathlib.AlgebraicGeometry.Morphisms.Separated
 import Mathlib.AlgebraicGeometry.Pullbacks
+import Mathlib.Data.PNat.Notation
 import Mathlib.RingTheory.PowerSeries.Basic
 import Mathlib.RingTheory.Polynomial.Basic
 
@@ -130,65 +131,59 @@ noncomputable def glueTransition (k : Type u) [Field k] (i j : Bool) :
     simp [glueIntersection, h, h']
     exact 𝟙 _
 
-/-- The two-chart gluing datum.  The diagonal intersection is a whole chart,
-while the off-diagonal intersection is `U \ {0_U}`. -/
-noncomputable def counterexampleGlueData (k : Type u) [Field k] :
-    Scheme.GlueData.{u} where
+/-- Three pairwise distinct indices cannot occur in the two-chart gluing. -/
+private theorem no_three_distinct_ulift_bool
+    (i j l : ULift.{u} Bool) (hij : i ≠ j) (hil : i ≠ l) (hjl : j ≠ l) : False := by
+  rcases i with ⟨i⟩
+  rcases j with ⟨j⟩
+  rcases l with ⟨l⟩
+  cases i <;> cases j <;> cases l
+  all_goals first | exact hij rfl | exact hil rfl | exact hjl rfl
+
+/-- The off-diagonal part of the two-chart gluing datum. -/
+noncomputable def counterexampleGlueData' (k : Type u) [Field k] :
+    CategoryTheory.GlueData' Scheme.{u} where
   J := ULift.{u} Bool
   U := fun _ => chartU k
-  V := fun ij => glueIntersection k ij.1.down ij.2.down
-  f := fun i j => glueIntersectionMap k i.down j.down
+  V := fun _ _ _ => (puncturedOpen k).toScheme
+  f := fun _ _ _ => (puncturedOpen k).ι
   f_mono := by
-    intro i j
-    rcases i with ⟨i⟩
-    rcases j with ⟨j⟩
-    cases i <;> cases j
-    · change Mono (𝟙 (chartU k))
-      infer_instance
-    · change Mono ((puncturedOpen k).ι)
-      infer_instance
-    · change Mono ((puncturedOpen k).ι)
-      infer_instance
-    · change Mono (𝟙 (chartU k))
-      infer_instance
-  f_hasPullback := by
-    intro _ _ _
+    intro i j h
     infer_instance
-  f_id := by
-    intro i
-    rcases i with ⟨i⟩
-    cases i
-    · change IsIso (𝟙 (chartU k))
-      infer_instance
-    · change IsIso (𝟙 (chartU k))
-      infer_instance
-  t := fun i j => glueTransition k i.down j.down
-  t_id := by
-    intro i
-    rcases i with ⟨i⟩
-    cases i <;> rfl
+  f_hasPullback := by
+    intro i j l hij hil
+    infer_instance
+  t := fun _ _ _ => 𝟙 (puncturedOpen k).toScheme
   t' := by
-    intro i j l
-    sorry
+    intro i j l hij hil hjl
+    exact (no_three_distinct_ulift_bool i j l hij hil hjl).elim
   t_fac := by
-    intro i j l
-    sorry
+    intro i j l hij hil hjl
+    exact (no_three_distinct_ulift_bool i j l hij hil hjl).elim
+  t_inv := by
+    intro i j hij
+    simp
   cocycle := by
-    intro i j l
-    sorry
-  f_open := by
-    intro i j
-    rcases i with ⟨i⟩
-    rcases j with ⟨j⟩
-    cases i <;> cases j
-    · change IsOpenImmersion (𝟙 (chartU k))
-      infer_instance
-    · change IsOpenImmersion ((puncturedOpen k).ι)
-      infer_instance
-    · change IsOpenImmersion ((puncturedOpen k).ι)
-      infer_instance
-    · change IsOpenImmersion (𝟙 (chartU k))
-      infer_instance
+    intro i j l hij hil hjl
+    exact (no_three_distinct_ulift_bool i j l hij hil hjl).elim
+
+/-- The two-chart gluing datum.  The diagonal intersection is a whole chart,
+while the off-diagonal intersection is `U \ {0_U}`. -/
+noncomputable abbrev counterexampleGlueData (k : Type u) [Field k] : Scheme.GlueData.{u} :=
+  { toGlueData := CategoryTheory.GlueData.ofGlueData' (counterexampleGlueData' k)
+    f_open := by
+      intro i j
+      classical
+      change IsOpenImmersion ((counterexampleGlueData' k).f' i j)
+      dsimp [CategoryTheory.GlueData'.f']
+      split_ifs with h
+      · infer_instance
+      · exact @IsOpenImmersion.comp _ _ _
+          (eqToHom (dif_neg h)) ((counterexampleGlueData' k).f i j h)
+          (by infer_instance)
+          (by
+            change IsOpenImmersion ((puncturedOpen k).ι)
+            infer_instance) }
 
 /-- The glued scheme `X`. -/
 noncomputable def counterexampleScheme (k : Type u) [Field k] : Scheme.{u} :=
@@ -206,55 +201,61 @@ instance chartInclusion_isOpenImmersion (k : Type u) [Field k] (i : Bool) :
 /-- The structure morphism `X ⟶ Spec(A)` obtained by gluing the two chart maps. -/
 noncomputable def counterexampleStructureMap (k : Type u) [Field k] :
     counterexampleScheme k ⟶ baseScheme k := by
+  letI : HasMulticoequalizer (counterexampleGlueData k).diagram :=
+    Scheme.GlueData.instHasMulticoequalizerDiagram (counterexampleGlueData k)
   fapply Multicoequalizer.desc
   · exact fun _ => chartToBase k
   rintro ⟨i, j⟩
   rcases i with ⟨i⟩
   rcases j with ⟨j⟩
   cases i <;> cases j <;>
-    simp [CategoryTheory.GlueData.diagram, counterexampleGlueData, glueTransition,
-      glueIntersectionMap, glueIntersection, Category.assoc] <;>
-    rfl
+    simp [CategoryTheory.GlueData.diagram, counterexampleGlueData,
+      CategoryTheory.GlueData.ofGlueData', CategoryTheory.GlueData'.f',
+      counterexampleGlueData', Category.assoc]
 
 @[simp]
 theorem chartInclusion_comp_structureMap (k : Type u) [Field k] (i : Bool) :
     chartInclusion k i ≫ counterexampleStructureMap k = chartToBase k := by
+  have hD : HasMulticoequalizer (counterexampleGlueData k).diagram :=
+    Scheme.GlueData.instHasMulticoequalizerDiagram (counterexampleGlueData k)
   unfold chartInclusion counterexampleStructureMap
-  exact Multicoequalizer.π_desc _ _ _ _ _
+  exact @Multicoequalizer.π_desc _ _ _ (counterexampleGlueData k).diagram hD _ _ _ _
 
 /-! ## Infinitesimal thickenings -/
 
-/-- The ideal `(t^n)` defining the `n`-th thickening of the base. -/
-def truncationIdeal (k : Type u) [Field k] (n : ℕ) : Ideal (baseRing k) :=
-  Ideal.span ({(baseParameter k) ^ n} : Set (baseRing k))
+/-- Positive indices for the thickenings `A_n = A/(t^n)`. -/
+abbrev positiveIndex := ℕ+
 
-/-- The quotient ring `A_n = A/(t^n)`.  The source uses the usual positive
-indexing; the Lean family also includes the harmless zero quotient at `n = 0`.
--/
-abbrev truncatedBaseRing (k : Type u) [Field k] (n : ℕ) :=
+/-- The ideal `(t^n)` defining the `n`-th thickening of the base. -/
+def truncationIdeal (k : Type u) [Field k] (n : positiveIndex) : Ideal (baseRing k) :=
+  Ideal.span ({(baseParameter k) ^ (n : ℕ)} : Set (baseRing k))
+
+/-- The quotient ring `A_n = A/(t^n)`. -/
+abbrev truncatedBaseRing (k : Type u) [Field k] (n : positiveIndex) :=
   baseRing k ⧸ truncationIdeal k n
 
 /-- The quotient map `A ⟶ A_n`. -/
-def truncationMap (k : Type u) [Field k] (n : ℕ) :
+def truncationMap (k : Type u) [Field k] (n : positiveIndex) :
     baseRing k →+* truncatedBaseRing k n :=
   Ideal.Quotient.mk (truncationIdeal k n)
 
-theorem truncationIdeal_succ_le (k : Type u) [Field k] (n : ℕ) :
+theorem truncationIdeal_succ_le (k : Type u) [Field k] (n : positiveIndex) :
     truncationIdeal k (n + 1) ≤ truncationIdeal k n := by
   refine Ideal.span_le.2 (Set.singleton_subset_iff.2 ?_)
+  change (baseParameter k) ^ ((n : ℕ) + 1) ∈ truncationIdeal k n
   exact Ideal.mem_span_singleton'.2 ⟨baseParameter k, by rw [pow_succ, mul_comm]⟩
 
 /-- The quotient map `A_{n+1} ⟶ A_n`. -/
-def truncationTransitionMap (k : Type u) [Field k] (n : ℕ) :
+def truncationTransitionMap (k : Type u) [Field k] (n : positiveIndex) :
     truncatedBaseRing k (n + 1) →+* truncatedBaseRing k n :=
   Ideal.Quotient.factor (truncationIdeal_succ_le k n)
 
 /-- The thickening `X_n = X ×_{Spec(A)} Spec(A_n)`. -/
-noncomputable def thickening (k : Type u) [Field k] (n : ℕ) : Scheme.{u} :=
+noncomputable def thickening (k : Type u) [Field k] (n : positiveIndex) : Scheme.{u} :=
   pullback (counterexampleStructureMap k)
     (Spec.map (CommRingCat.ofHom (truncationMap k n)))
 
-theorem thickeningInclusion_compat (k : Type u) [Field k] (n : ℕ) :
+theorem thickeningInclusion_compat (k : Type u) [Field k] (n : positiveIndex) :
     pullback.fst (counterexampleStructureMap k)
         (Spec.map (CommRingCat.ofHom (truncationMap k n))) ≫
         counterexampleStructureMap k =
@@ -265,7 +266,7 @@ theorem thickeningInclusion_compat (k : Type u) [Field k] (n : ℕ) :
   sorry
 
 /-- The closed immersion `X_n ⟶ X_{n+1}` induced by `A_{n+1} ⟶ A_n`. -/
-noncomputable def thickeningInclusion (k : Type u) [Field k] (n : ℕ) :
+noncomputable def thickeningInclusion (k : Type u) [Field k] (n : positiveIndex) :
     thickening k n ⟶ thickening k (n + 1) :=
   pullback.lift
     (pullback.fst (counterexampleStructureMap k)
@@ -275,47 +276,47 @@ noncomputable def thickeningInclusion (k : Type u) [Field k] (n : ℕ) :
       Spec.map (CommRingCat.ofHom (truncationTransitionMap k n)))
     (thickeningInclusion_compat k n)
 
-theorem thickeningInclusion_isClosedImmersion (k : Type u) [Field k] (n : ℕ) :
+theorem thickeningInclusion_isClosedImmersion (k : Type u) [Field k] (n : positiveIndex) :
     IsClosedImmersion (thickeningInclusion k n) := by
   sorry
 
 /-- The ring of either affine chart after base change to `A_n`. -/
-abbrev thickenedChartRing (k : Type u) [Field k] (n : ℕ) :=
+abbrev thickenedChartRing (k : Type u) [Field k] (n : positiveIndex) :=
   Polynomial (truncatedBaseRing k n)
 
 /-- The first thickened chart `Spec(A_n[x])`. -/
-abbrev thickenedChartScheme (k : Type u) [Field k] (n : ℕ) : Scheme.{u} :=
+abbrev thickenedChartScheme (k : Type u) [Field k] (n : positiveIndex) : Scheme.{u} :=
   Spec (CommRingCat.of (thickenedChartRing k n))
 
 /-- The base-changed map `A[x] ⟶ A_n[x]`. -/
-def chartReductionMap (k : Type u) [Field k] (n : ℕ) :
+def chartReductionMap (k : Type u) [Field k] (n : positiveIndex) :
     chartRing k →+* thickenedChartRing k n :=
   Polynomial.mapRingHom (truncationMap k n)
 
 /-- The map from the thickened affine chart to the original chart. -/
-noncomputable def thickenedChartToX (k : Type u) [Field k] (n : ℕ) (i : Bool) :
+noncomputable def thickenedChartToX (k : Type u) [Field k] (n : positiveIndex) (i : Bool) :
     thickenedChartScheme k n ⟶ counterexampleScheme k :=
   Spec.map (CommRingCat.ofHom (chartReductionMap k n)) ≫ chartInclusion k i
 
 /-- The structure map of the thickened affine chart to `Spec(A_n)`. -/
-noncomputable def thickenedChartToTruncatedBase (k : Type u) [Field k] (n : ℕ) :
+noncomputable def thickenedChartToTruncatedBase (k : Type u) [Field k] (n : positiveIndex) :
     thickenedChartScheme k n ⟶ Spec (CommRingCat.of (truncatedBaseRing k n)) :=
   Spec.map (CommRingCat.ofHom (algebraMap (truncatedBaseRing k n)
     (thickenedChartRing k n)))
 
-theorem thickenedChart_maps_compat (k : Type u) [Field k] (n : ℕ) (i : Bool) :
+theorem thickenedChart_maps_compat (k : Type u) [Field k] (n : positiveIndex) (i : Bool) :
     thickenedChartToX k n i ≫ counterexampleStructureMap k =
       thickenedChartToTruncatedBase k n ≫
         Spec.map (CommRingCat.ofHom (truncationMap k n)) := by
   sorry
 
 /-- The canonical chart map into the fiber product `X_n`. -/
-noncomputable def thickenedChartToThickening (k : Type u) [Field k] (n : ℕ) (i : Bool) :
+noncomputable def thickenedChartToThickening (k : Type u) [Field k] (n : positiveIndex) (i : Bool) :
     thickenedChartScheme k n ⟶ thickening k n :=
   pullback.lift (thickenedChartToX k n i) (thickenedChartToTruncatedBase k n)
     (thickenedChart_maps_compat k n i)
 
-instance thickenedChartToThickening_isOpenImmersion (k : Type u) [Field k] (n : ℕ)
+instance thickenedChartToThickening_isOpenImmersion (k : Type u) [Field k] (n : positiveIndex)
     (i : Bool) :
     IsOpenImmersion (thickenedChartToThickening k n i) := by
   sorry
@@ -323,31 +324,31 @@ instance thickenedChartToThickening_isOpenImmersion (k : Type u) [Field k] (n : 
 /-! ## The coherent sheaves on the thickenings -/
 
 /-- The quotient module `A_n[x]/(x)` on the first chart. -/
-abbrev firstChartModule (k : Type u) [Field k] (n : ℕ) :
+abbrev firstChartModule (k : Type u) [Field k] (n : positiveIndex) :
     ModuleCat (thickenedChartRing k n) :=
   ModuleCat.of (thickenedChartRing k n)
     (thickenedChartRing k n ⧸ Ideal.span ({Polynomial.X} : Set (thickenedChartRing k n)))
 
 /-- The zero module on the second chart. -/
-abbrev secondChartModule (k : Type u) [Field k] (n : ℕ) :
+abbrev secondChartModule (k : Type u) [Field k] (n : positiveIndex) :
     ModuleCat (thickenedChartRing k n) :=
   ModuleCat.of (thickenedChartRing k n)
     (⊥ : Submodule (thickenedChartRing k n) (thickenedChartRing k n))
 
 /-- The displayed first-chart module is the finite `A_n`-module `A_n`. -/
-theorem firstChartModule_equiv_base (k : Type u) [Field k] (n : ℕ) :
+theorem firstChartModule_equiv_base (k : Type u) [Field k] (n : positiveIndex) :
     Nonempty ((firstChartModule k n : Type u) ≃ₗ[truncatedBaseRing k n]
       truncatedBaseRing k n) := by
   sorry
 
 /-- The second chart carries the zero module. -/
-theorem secondChartModule_is_zero (k : Type u) [Field k] (n : ℕ) :
+theorem secondChartModule_is_zero (k : Type u) [Field k] (n : positiveIndex) :
     IsZero (secondChartModule k n) := by
   sorry
 
 /-- A coherent sheaf on a thickening with the two chart restrictions displayed
 in the source. -/
-structure CoherentThickeningSheaf (k : Type u) [Field k] (n : ℕ) where
+structure CoherentThickeningSheaf (k : Type u) [Field k] (n : positiveIndex) where
   sheaf : (thickening k n).Modules
   coherent : sheaf.IsFinitePresentation
   firstChartRestriction : Nonempty (
@@ -359,12 +360,12 @@ structure CoherentThickeningSheaf (k : Type u) [Field k] (n : ℕ) where
 
 /-- Existence of the coherent sheaf obtained by gluing the quotient module on
 the first chart to the zero module on the second chart. -/
-theorem exists_coherentThickeningSheaf (k : Type u) [Field k] (n : ℕ) :
+theorem exists_coherentThickeningSheaf (k : Type u) [Field k] (n : positiveIndex) :
     Nonempty (CoherentThickeningSheaf k n) := by
   sorry
 
 /-- The sheaf `𝓕_n` in the source. -/
-noncomputable def coherentThickeningSheaf (k : Type u) [Field k] (n : ℕ) :
+noncomputable def coherentThickeningSheaf (k : Type u) [Field k] (n : positiveIndex) :
     CoherentThickeningSheaf k n :=
   Classical.choice (exists_coherentThickeningSheaf k n)
 
@@ -389,9 +390,9 @@ noncomputable def tGeneratedIdealSheaf (k : Type u) [Field k] :
 structure CoherentSupportProperSystem (k : Type u) [Field k] where
   idealSheaf : (counterexampleScheme k).IdealSheafData
   idealSheaf_is_tGenerated : idealSheaf = tGeneratedIdealSheaf k
-  sheaves : ∀ n : ℕ, CoherentThickeningSheaf k n
-  sheaves_are_displayed : ∀ n : ℕ, sheaves n = coherentThickeningSheaf k n
-  transition : ∀ n : ℕ, Nonempty (
+  sheaves : ∀ n : positiveIndex, CoherentThickeningSheaf k n
+  sheaves_are_displayed : ∀ n : positiveIndex, sheaves n = coherentThickeningSheaf k n
+  transition : ∀ n : positiveIndex, Nonempty (
     (Scheme.Modules.pullback (thickeningInclusion k n)).obj
         (sheaves (n + 1)).sheaf ≅ (sheaves n).sheaf)
   transition_compatible : Prop
@@ -408,7 +409,7 @@ noncomputable def coherentSupportProperSystem (k : Type u) [Field k] :
   Classical.choice (exists_coherentSupportProperSystem k)
 
 theorem coherentSupportProperSystem_sheaves_are_displayed
-    (k : Type u) [Field k] (n : ℕ) :
+    (k : Type u) [Field k] (n : positiveIndex) :
     (coherentSupportProperSystem k).sheaves n = coherentThickeningSheaf k n :=
   (coherentSupportProperSystem k).sheaves_are_displayed n
 
@@ -416,10 +417,10 @@ theorem coherentSupportProperSystem_sheaves_are_displayed
 argument.  The final field is the compatibility condition in the source's
 category of systems. -/
 structure StructureSheafSurjectionSystem (k : Type u) [Field k] where
-  maps : ∀ n : ℕ,
+  maps : ∀ n : positiveIndex,
     SheafOfModules.unit ((thickening k n).ringCatSheaf) ⟶
       (coherentThickeningSheaf k n).sheaf
-  maps_are_epimorphisms : ∀ n : ℕ, Epi (maps n)
+  maps_are_epimorphisms : ∀ n : positiveIndex, Epi (maps n)
   compatible : Prop
 
 theorem exists_structureSheafSurjectionSystem (k : Type u) [Field k] :
@@ -444,17 +445,17 @@ abbrev localizedChartModule (k : Type u) [Field k]
 
 /-- The `t^n`-adic quotient of a chart module. -/
 noncomputable def chartModuleQuotient (k : Type u) [Field k]
-    (M : ModuleCat (chartRing k)) (n : ℕ) : ModuleCat (chartRing k) := by
-  let P := (Ideal.span ({(Polynomial.C (baseParameter k)) ^ n} : Set (chartRing k))) •
+    (M : ModuleCat (chartRing k)) (n : positiveIndex) : ModuleCat (chartRing k) := by
+  let P := (Ideal.span ({(Polynomial.C (baseParameter k)) ^ (n : ℕ)} : Set (chartRing k))) •
     (⊤ : Submodule (chartRing k) (M : Type u))
   letI : Module (chartRing k) ((M : Type u) ⧸ P) := Submodule.Quotient.module P
   exact ModuleCat.of (chartRing k) ((M : Type u) ⧸ P)
 
 /-- `A_n[x]/(x)`, written as an `A[x]`-module for comparison with reductions. -/
-abbrev firstChartReduction (k : Type u) [Field k] (n : ℕ) : ModuleCat (chartRing k) :=
+abbrev firstChartReduction (k : Type u) [Field k] (n : positiveIndex) : ModuleCat (chartRing k) :=
   ModuleCat.of (chartRing k)
     (chartRing k ⧸ Ideal.span ({Polynomial.X,
-      (Polynomial.C (baseParameter k)) ^ n} : Set (chartRing k)))
+      (Polynomial.C (baseParameter k)) ^ (n : ℕ)} : Set (chartRing k)))
 
 /-- A finite algebraization candidate consists of the two finite chart modules,
 their generic-fiber identification, and the prescribed reductions. -/
@@ -465,14 +466,32 @@ structure FiniteAlgebraizationCandidate (k : Type u) [Field k] where
   M_finite : Module.Finite (chartRing k) (M : Type u)
   N_finite : Module.Finite (chartRing k) (N : Type u)
   genericFiberIso : Nonempty (localizedChartModule k M ≅ localizedChartModule k N)
-  M_reduction : ∀ n : ℕ, Nonempty (chartModuleQuotient k M n ≅ firstChartReduction k n)
-  N_reduction : ∀ n : ℕ, IsZero (chartModuleQuotient k N n)
+  M_reduction : ∀ n : positiveIndex,
+    Nonempty (chartModuleQuotient k M n ≅ firstChartReduction k n)
+  N_reduction : ∀ n : positiveIndex, IsZero (chartModuleQuotient k N n)
 
 /-- The source's completion-functor image condition for a specified coherent
 system. -/
 def InCompletionFunctorImage (k : Type u) [Field k]
     (𝓕 : CoherentSupportProperSystem k) : Prop :=
   ∃ C : FiniteAlgebraizationCandidate k, C.system = 𝓕
+
+/-- Unpacking an image under the completion functor produces exactly the
+finite chart modules and comparison data displayed in the source. -/
+theorem completionFunctorImage_gives_finite_algebraization
+    (k : Type u) [Field k] (𝓕 : CoherentSupportProperSystem k)
+    (h𝓕 : InCompletionFunctorImage k 𝓕) :
+    ∃ M N : ModuleCat (chartRing k),
+      Module.Finite (chartRing k) (M : Type u) ∧
+        Module.Finite (chartRing k) (N : Type u) ∧
+          Nonempty (localizedChartModule k M ≅ localizedChartModule k N) ∧
+            (∀ n : positiveIndex,
+              Nonempty (chartModuleQuotient k M n ≅ firstChartReduction k n)) ∧
+              (∀ n : positiveIndex, IsZero (chartModuleQuotient k N n)) := by
+  rcases h𝓕 with ⟨C, hC⟩
+  subst hC
+  exact ⟨C.M, C.N, C.M_finite, C.N_finite, C.genericFiberIso,
+    C.M_reduction, C.N_reduction⟩
 
 /-- The displayed compatible system is not in the image of the completion
 functor from coherent sheaves with proper support. -/

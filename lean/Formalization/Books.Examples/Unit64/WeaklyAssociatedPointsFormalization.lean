@@ -34,22 +34,10 @@ universe u v
 
 namespace Formalization.«Books.Examples».Unit64
 
-/-! ## The weak-association interfaces used by the source -/
-
-/-- The textbook's weakly associated prime, exposed as Mathlib's canonical API. -/
-abbrev IsWeaklyAssociatedPrime {R : Type*} [CommSemiring R]
-    (p : Ideal R) (M : Type*) [AddCommMonoid M] [Module R M] : Prop :=
-  IsAssociatedPrime p M
-
-/-- The set of weakly associated primes, exposed as Mathlib's canonical set. -/
-abbrev weaklyAssociatedPrimes (R M : Type*) [CommSemiring R]
-    [AddCommMonoid M] [Module R M] : Set (Ideal R) :=
-  associatedPrimes R M
-
 /-- A scheme point is weakly associated to its structure sheaf when its stalk
 maximal ideal is weakly associated to the stalk as a module over itself. -/
 def IsWeaklyAssociatedPoint (X : Scheme) (x : X) : Prop :=
-  IsWeaklyAssociatedPrime
+  IsAssociatedPrime
     (IsLocalRing.maximalIdeal (X.presheaf.stalk x)) (X.presheaf.stalk x)
 
 /-! ## The first ring example -/
@@ -124,6 +112,33 @@ def firstExampleM0Ideal (k : Type u) [Field k] : Ideal (firstExampleR0 k) :=
 abbrev firstExampleM0 (k : Type u) [Field k] :=
   firstExampleR0 k ⧸ firstExampleM0Ideal k
 
+/-- The localization of `M₀` away from the image of `g`. -/
+abbrev firstExampleM0AwayLocalization (k : Type u) [Field k]
+    (g : firstExampleR0 k) :=
+  Localization.Away (Ideal.Quotient.mk (firstExampleM0Ideal k) g)
+
+/-- The ideal `(xᵢ yᵢ, yₙ)` occurring as the coordinate localization kernel. -/
+def firstExampleM0CoordinateKernelIdeal (k : Type u) [Field k] (n : ℕ) :
+    Ideal (firstExampleR0 k) :=
+  firstExampleM0Ideal k ⊔
+    Ideal.span ({firstExampleR0Y k n} : Set (firstExampleR0 k))
+
+/-- The coefficient ideal is radical. -/
+theorem firstExampleM0Ideal_isRadical (k : Type u) [Field k] :
+    (firstExampleM0Ideal k).IsRadical := by
+  sorry
+
+/-- Each coordinate kernel ideal `(xᵢ yᵢ, yₙ)` is radical. -/
+theorem firstExampleM0CoordinateKernelIdeal_isRadical
+    (k : Type u) [Field k] (n : ℕ) :
+    (firstExampleM0CoordinateKernelIdeal k n).IsRadical := by
+  sorry
+
+/-- The polynomial ring `R₀` is a domain. -/
+theorem firstExampleR0_isDomain (k : Type u) [Field k] :
+    IsDomain (firstExampleR0 k) := by
+  sorry
+
 /-- The map of polynomial rings sending `xᵢ` and `yᵢ` to their copies in `R`. -/
 def firstExampleR0ToPolynomial (k : Type u) [Field k] :
     firstExampleR0 k →+* firstExamplePolynomialRing k :=
@@ -137,6 +152,16 @@ def firstExampleR0ToR (k : Type u) [Field k] :
   (Ideal.Quotient.mk (firstExampleRelationIdeal k)).comp
     (firstExampleR0ToPolynomial k)
 
+/-- The copy of `R₀` inside `R` obtained from the displayed inclusion. -/
+def firstExampleR0Subring (k : Type u) [Field k] :
+    Subring (firstExampleRing k) :=
+  RingHom.range (firstExampleR0ToR k)
+
+/-- The displayed copy of `R₀` is genuinely a subring of `R`. -/
+theorem firstExampleR0ToR_injective (k : Type u) [Field k] :
+    Function.Injective (firstExampleR0ToR k) := by
+  sorry
+
 /-- The `R₀`-algebra structure on `R` induced by the preceding map. -/
 @[instance_reducible] noncomputable def firstExampleR0Algebra (k : Type u) [Field k] :
     Algebra (firstExampleR0 k) (firstExampleRing k) :=
@@ -146,6 +171,48 @@ noncomputable instance firstExampleR0Algebra_inst (k : Type u) [Field k] :
     Algebra (firstExampleR0 k) (firstExampleRing k) :=
   firstExampleR0Algebra k
 
+/-- The map `R₀ → M₀ → (M₀)_{g}` used in the localization calculation. -/
+noncomputable def firstExampleM0LocalizationMap
+    (k : Type u) [Field k] (g : firstExampleR0 k) :
+    firstExampleR0 k →+* firstExampleM0AwayLocalization k g :=
+  (algebraMap (firstExampleM0 k) (firstExampleM0AwayLocalization k g)).comp
+    (Ideal.Quotient.mk (firstExampleM0Ideal k))
+
+/-- A localization of `M₀` in which both `g` and `h` are inverted. -/
+abbrev firstExampleM0AwayProductLocalization (k : Type u) [Field k]
+    (g h : firstExampleR0 k) :=
+  Localization.Away
+    (Ideal.Quotient.mk (firstExampleM0Ideal k) g *
+      Ideal.Quotient.mk (firstExampleM0Ideal k) h)
+
+/-- The canonical map `(M₀)_g → (M₀)_{gh}`. -/
+noncomputable def firstExampleM0AwayComponentMap
+    (k : Type u) [Field k] (g h : firstExampleR0 k) :
+    firstExampleM0AwayLocalization k g →+*
+      firstExampleM0AwayProductLocalization k g h :=
+  IsLocalization.Away.awayToAwayRight
+    (Ideal.Quotient.mk (firstExampleM0Ideal k) g)
+    (Ideal.Quotient.mk (firstExampleM0Ideal k) h)
+
+/-- The map `(M₀)_g → ∏ᵢ (M₀)_{g xᵢ}`. -/
+noncomputable def firstExampleM0AwayProductMap
+    (k : Type u) [Field k] (g : firstExampleR0 k) :
+    firstExampleM0AwayLocalization k g →+*
+      (∀ i : ℕ, firstExampleM0AwayProductLocalization k g
+        (firstExampleR0X k i)) :=
+  RingHom.pi (fun i => firstExampleM0AwayComponentMap k g
+    (firstExampleR0X k i))
+
+/-- The unlocalized coefficient map `M₀ → ∏ᵢ (M₀)_{g xᵢ}`. -/
+noncomputable def firstExampleM0ToAwayProductMap
+    (k : Type u) [Field k] (g : firstExampleR0 k) :
+    firstExampleM0 k →+*
+      (∀ i : ℕ, firstExampleM0AwayProductLocalization k g
+        (firstExampleR0X k i)) :=
+  RingHom.pi (fun i =>
+    algebraMap (firstExampleM0 k)
+      (firstExampleM0AwayProductLocalization k g (firstExampleR0X k i)))
+
 /-- The ideal generated by `z`, which is the square-zero summand in `R`. -/
 def firstExampleSquareZeroIdeal (k : Type u) [Field k] : Ideal (firstExampleRing k) :=
   Ideal.span ({firstExampleZ k} : Set (firstExampleRing k))
@@ -153,6 +220,25 @@ def firstExampleSquareZeroIdeal (k : Type u) [Field k] : Ideal (firstExampleRing
 /-- The square-zero assertion for the ideal generated by `z`. -/
 theorem firstExampleSquareZeroIdeal_sq_eq_bot (k : Type u) [Field k] :
     firstExampleSquareZeroIdeal k * firstExampleSquareZeroIdeal k = ⊥ := by
+  sorry
+
+/-- Every element of `R` is a sum of an element from the displayed copy of
+`R₀` and an element of the square-zero summand. -/
+theorem firstExampleRing_element_decomposition (k : Type u) [Field k]
+    (g : firstExampleRing k) :
+    ∃ g₀ : firstExampleR0 k, ∃ m₀ : firstExampleRing k,
+      m₀ ∈ firstExampleSquareZeroIdeal k ∧
+        g = firstExampleR0ToR k g₀ + m₀ := by
+  sorry
+
+/-- Localizing at an element and at its square-zero perturbation give
+isomorphic rings. -/
+theorem firstExampleLocalization_away_square_zero_perturbation
+    (k : Type u) [Field k] (g₀ : firstExampleR0 k) (m₀ : firstExampleRing k)
+    (hm₀ : m₀ ∈ firstExampleSquareZeroIdeal k) :
+    Nonempty
+      (Localization.Away (firstExampleR0ToR k g₀ + m₀) ≃+*
+        Localization.Away (firstExampleR0ToR k g₀)) := by
   sorry
 
 /-- The square-zero ideal viewed as an `R₀`-submodule. -/
@@ -169,6 +255,64 @@ theorem firstExampleSquareZeroIdeal_equiv_M0 (k : Type u) [Field k] :
 theorem firstExampleRing_decomposition (k : Type u) [Field k] :
     Nonempty (firstExampleRing k ≃ₗ[firstExampleR0 k]
       firstExampleR0 k × firstExampleM0 k) := by
+  sorry
+
+/-- If `g ∈ (xᵢ yᵢ)`, then the localization of `M₀` away from `g` is zero. -/
+theorem firstExampleM0AwayLocalization_subsingleton_of_mem
+    (k : Type u) [Field k] (g : firstExampleR0 k)
+    (hg : g ∈ firstExampleM0Ideal k) :
+    Subsingleton (firstExampleM0AwayLocalization k g) := by
+  sorry
+
+/-- If `g ∉ (xᵢ yᵢ)`, the localized coefficient map is injective. -/
+theorem firstExampleM0AwayProductMap_injective
+    (k : Type u) [Field k] (g : firstExampleR0 k)
+    (hg : g ∉ firstExampleM0Ideal k) :
+    Function.Injective (firstExampleM0AwayProductMap k g) := by
+  sorry
+
+/-- The unlocalized coefficient map is injective when `g ∉ (xᵢ yᵢ)`. -/
+theorem firstExampleM0ToAwayProductMap_injective
+    (k : Type u) [Field k] (g : firstExampleR0 k)
+    (hg : g ∉ firstExampleM0Ideal k) :
+    Function.Injective (firstExampleM0ToAwayProductMap k g) := by
+  sorry
+
+/-- The kernel of `R₀ → M₀ → (M₀)_{xₙ}` is `(xᵢ yᵢ, yₙ)`. -/
+theorem firstExampleM0LocalizationMap_ker_coordinate
+    (k : Type u) [Field k] (n : ℕ) :
+    RingHom.ker (firstExampleM0LocalizationMap k (firstExampleR0X k n)) =
+      firstExampleM0CoordinateKernelIdeal k n := by
+  sorry
+
+/-- The corrected localization-kernel statement: nonzerodivisors modulo
+`(xᵢ yᵢ, yₙ)` do not enlarge the coordinate kernel. -/
+theorem firstExampleM0LocalizationMap_ker_mul_eq_coordinate
+    (k : Type u) [Field k] (g : firstExampleR0 k) (n : ℕ)
+    (hg : ∀ r : firstExampleR0 k,
+      firstExampleR0X k n * g * r ∈ firstExampleM0CoordinateKernelIdeal k n →
+        r ∈ firstExampleM0CoordinateKernelIdeal k n) :
+    RingHom.ker (firstExampleM0LocalizationMap k
+      (firstExampleR0X k n * g)) = firstExampleM0CoordinateKernelIdeal k n := by
+  sorry
+
+/-- For `g ∉ (xᵢ yᵢ)`, the element `g` avoids `(xᵢ yᵢ, yₙ)` for all large `n`. -/
+theorem firstExampleM0CoordinateKernel_eventually_not_mem
+    (k : Type u) [Field k] (g : firstExampleR0 k)
+    (hg : g ∉ firstExampleM0Ideal k) :
+    ∀ᶠ n : ℕ in atTop,
+      g ∉ firstExampleM0CoordinateKernelIdeal k n := by
+  sorry
+
+/-- The eventual intersection of the coordinate kernels is `(xᵢ yᵢ)`. -/
+def firstExampleM0EventualKernelIntersection (k : Type u) [Field k] :
+    Set (firstExampleR0 k) :=
+  {g | ∀ᶠ n : ℕ in atTop,
+    g ∈ firstExampleM0CoordinateKernelIdeal k n}
+
+theorem firstExampleM0EventualKernelIntersection_eq (k : Type u) [Field k] :
+    firstExampleM0EventualKernelIntersection k =
+      (firstExampleM0Ideal k : Set (firstExampleR0 k)) := by
   sorry
 
 /-! ## The weakly associated prime in the first example -/
@@ -193,7 +337,7 @@ def firstExamplePrimePoint (k : Type u) [Field k] :
 
 /-- The prime `(z, xᵢ)` is weakly associated to `R`. -/
 theorem firstExamplePrime_isWeaklyAssociated (k : Type u) [Field k] :
-    IsWeaklyAssociatedPrime (firstExamplePrime k) (firstExampleRing k) := by
+    IsAssociatedPrime (firstExamplePrime k) (firstExampleRing k) := by
   sorry
 
 /-- The localization of `R` at the displayed prime. -/
@@ -218,6 +362,15 @@ theorem firstExampleLocalizedZ_annihilated_by_prime (k : Type u) [Field k] :
           firstExampleLocalizedZ k = 0 := by
   sorry
 
+/-- Equivalently, the extended prime ideal `pRₚ` annihilates `z`. -/
+theorem firstExampleLocalizedZ_annihilated_by_localized_prime
+    (k : Type u) [Field k] :
+    ∀ a : firstExamplePrimeLocalization k,
+      a ∈ Ideal.map (algebraMap (firstExampleRing k)
+        (firstExamplePrimeLocalization k)) (firstExamplePrime k) →
+        a * firstExampleLocalizedZ k = 0 := by
+  sorry
+
 /-! ## The open union and the localization calculation -/
 
 /-- The open `U = ⋃ D(xᵢ) ⊆ Spec(R)`. -/
@@ -237,6 +390,33 @@ theorem firstExampleOpenInclusion_isOpenImmersion (k : Type u) [Field k] :
 /-- The open union is scheme-theoretically dense. -/
 theorem firstExampleOpen_isSchemeTheoreticallyDense (k : Type u) [Field k] :
     IsSchemeTheoreticallyDominant (firstExampleOpenInclusion k) := by
+  sorry
+
+/-- The component maps `R₀_g → (R₀)_{xᵢg}` in the source calculation. -/
+noncomputable def firstExampleR0LocalizationComponentMap
+    (k : Type u) [Field k] (g : firstExampleR0 k) (i : ℕ) :
+    Localization.Away g →+* Localization.Away (firstExampleR0X k i * g) :=
+  IsLocalization.Away.awayToAwayLeft g (firstExampleR0X k i)
+
+/-- The map `(R₀)_g → ∏ᵢ (R₀)_{xᵢg}`. -/
+noncomputable def firstExampleR0LocalizationMap
+    (k : Type u) [Field k] (g : firstExampleR0 k) :
+    Localization.Away g →+* (∀ i : ℕ,
+      Localization.Away (firstExampleR0X k i * g)) :=
+  RingHom.pi (fun i => firstExampleR0LocalizationComponentMap k g i)
+
+/-- The domain part of the localization map is injective. -/
+theorem firstExampleR0LocalizationMap_injective (k : Type u) [Field k] :
+    ∀ g : firstExampleR0 k, Function.Injective (firstExampleR0LocalizationMap k g) := by
+  sorry
+
+/-- The localized direct-sum decomposition used after replacing `g` by its
+`R₀`-component. -/
+theorem firstExampleLocalizedRing_decomposition (k : Type u) [Field k]
+    (g : firstExampleR0 k) :
+    Nonempty
+      (Localization.Away (firstExampleR0ToR k g) ≃ₗ[firstExampleR0 k]
+        Localization.Away g × firstExampleM0AwayLocalization k g) := by
   sorry
 
 /-- The canonical map `R_g → R_{xᵢg}`. -/
@@ -305,6 +485,12 @@ def gabberEventuallyConstantRingInclusion (k : Type u) [Field k] :
     gabberEventuallyConstantRing k →+* gabberFunctionRing k :=
   (gabberEventuallyConstantSubring k).subtype
 
+/-- The inclusion of eventually constant functions is injective. -/
+theorem gabberEventuallyConstantRingInclusion_injective
+    (k : Type u) [Field k] :
+    Function.Injective (gabberEventuallyConstantRingInclusion k) := by
+  sorry
+
 /-- Every function in `R` is a unit times an idempotent. -/
 theorem gabberFunctionRing_unit_mul_idempotent (k : Type u) [Field k] :
     ∀ f : gabberFunctionRing k, ∃ u e : gabberFunctionRing k,
@@ -327,6 +513,11 @@ def gabberFunctionRingNaturalPoints (k : Type u) [Field k] :
     Set (gabberFunctionRingSpectrum k) :=
   Set.range (gabberFunctionRingPoint k)
 
+/-- Distinct natural numbers give distinct evaluation points. -/
+theorem gabberFunctionRingPoint_injective (k : Type u) [Field k] :
+    Function.Injective (gabberFunctionRingPoint k) := by
+  sorry
+
 /-- The open union of the coordinate basic opens. -/
 def gabberFunctionRingNaturalOpen (k : Type u) [Field k] :
     (Spec (.of (gabberFunctionRing k))).Opens :=
@@ -346,16 +537,27 @@ theorem gabberFunctionRingNaturalPoints_isOpen_and_dense
       Dense (gabberFunctionRingNaturalPoints k) := by
   sorry
 
+theorem gabberFunctionRingPoint_denseRange (k : Type u) [Field k] :
+    DenseRange (gabberFunctionRingPoint k) := by
+  sorry
+
 /-- The spectrum of the full function ring is Hausdorff. -/
 theorem gabberFunctionRing_primeSpectrum_isHausdorff
     (k : Type u) [Field k] :
     T2Space (gabberFunctionRingSpectrum k) := by
   sorry
 
+/-- The spectrum of the full function ring is compact. -/
+theorem gabberFunctionRing_primeSpectrum_isCompact
+    (k : Type u) [Field k] :
+    CompactSpace (gabberFunctionRingSpectrum k) := by
+  sorry
+
 /-- The spectrum of the full function ring is the Stone–Čech compactification of `ℕ`. -/
 theorem gabberFunctionRing_primeSpectrum_homeomorph_stoneCech
     (k : Type u) [Field k] :
-    Nonempty (gabberFunctionRingSpectrum k ≃ₜ StoneCech ℕ) := by
+    ∃ e : gabberFunctionRingSpectrum k ≃ₜ StoneCech ℕ,
+      ∀ n : ℕ, e (gabberFunctionRingPoint k n) = stoneCechUnit n := by
   sorry
 
 /-! ## The locally constant-function map from the Stone–Čech footnote -/
@@ -399,6 +601,12 @@ def gabberEventuallyConstantNaturalPoints (k : Type u) [Field k] :
     Set (PrimeSpectrum (CommRingCat.of (gabberEventuallyConstantRing k))) :=
   Set.range (gabberEventuallyConstantPoint k)
 
+/-- Distinct natural numbers give distinct points of `Spec(R')`. -/
+theorem gabberEventuallyConstantPoint_injective
+    (k : Type u) [Field k] :
+    Function.Injective (gabberEventuallyConstantPoint k) := by
+  sorry
+
 /-- The spectrum of `R'` is the one-point compactification of `ℕ`. -/
 theorem gabberEventuallyConstant_primeSpectrum_homeomorph_onePoint
     (k : Type u) [Field k] :
@@ -411,6 +619,21 @@ theorem gabberEventuallyConstant_primeSpectrum_unique_extra_point
     (k : Type u) [Field k] :
     ∃! p : PrimeSpectrum (CommRingCat.of (gabberEventuallyConstantRing k)),
       p ∉ gabberEventuallyConstantNaturalPoints k := by
+  sorry
+
+/-- The unique extra point is represented by a maximal ideal. -/
+theorem gabberEventuallyConstant_primeSpectrum_unique_extra_maximal_point
+    (k : Type u) [Field k] :
+    ∃! p : PrimeSpectrum (CommRingCat.of (gabberEventuallyConstantRing k)),
+      p ∉ gabberEventuallyConstantNaturalPoints k ∧ p.asIdeal.IsMaximal := by
+  sorry
+
+/-- The natural points are the dense open part of the one-point
+compactification model. -/
+theorem gabberEventuallyConstantNaturalPoints_dense
+    (k : Type u) [Field k] :
+    IsOpen (gabberEventuallyConstantNaturalPoints k) ∧
+      Dense (gabberEventuallyConstantNaturalPoints k) := by
   sorry
 
 /-! ## Minimal primes and weak association in Gabber's examples -/
@@ -426,7 +649,14 @@ theorem gabberFunctionRing_all_primes_are_minimal
 theorem gabberFunctionRing_all_primes_are_weaklyAssociated
     (k : Type u) [Field k] :
     ∀ p : Ideal (gabberFunctionRing k), p.IsPrime →
-      IsWeaklyAssociatedPrime p (gabberFunctionRing k) := by
+      IsAssociatedPrime p (gabberFunctionRing k) := by
+  sorry
+
+/-- Every point of `Spec(R)` is weakly associated to its structure sheaf. -/
+theorem gabberFunctionRing_all_points_are_weaklyAssociated
+    (k : Type u) [Field k] :
+    ∀ p : gabberFunctionRingSpectrum k,
+      IsAssociatedPrime p.asIdeal (gabberFunctionRing k) := by
   sorry
 
 /-- Every prime of the eventually constant ring is minimal. -/
@@ -440,7 +670,14 @@ theorem gabberEventuallyConstant_all_primes_are_minimal
 theorem gabberEventuallyConstant_all_primes_are_weaklyAssociated
     (k : Type u) [Field k] :
     ∀ p : Ideal (gabberEventuallyConstantRing k), p.IsPrime →
-      IsWeaklyAssociatedPrime p (gabberEventuallyConstantRing k) := by
+      IsAssociatedPrime p (gabberEventuallyConstantRing k) := by
+  sorry
+
+/-- Every point of `Spec(R')` is weakly associated to its structure sheaf. -/
+theorem gabberEventuallyConstant_all_points_are_weaklyAssociated
+    (k : Type u) [Field k] :
+    ∀ p : PrimeSpectrum (CommRingCat.of (gabberEventuallyConstantRing k)),
+      IsAssociatedPrime p.asIdeal (gabberEventuallyConstantRing k) := by
   sorry
 
 /-- The two Gabber rings are reduced. -/
@@ -450,6 +687,16 @@ theorem gabberFunctionRing_isReduced (k : Type u) [Field k] :
 
 theorem gabberEventuallyConstantRing_isReduced (k : Type u) [Field k] :
     _root_.IsReduced (gabberEventuallyConstantRing k) := by
+  sorry
+
+/-- The affine schemes in Gabber's examples are reduced. -/
+theorem gabberFunctionRing_spec_isReduced (k : Type u) [Field k] :
+    IsReduced (Spec (.of (gabberFunctionRing k))) := by
+  sorry
+
+theorem gabberEventuallyConstantRing_spec_isReduced
+    (k : Type u) [Field k] :
+    IsReduced (Spec (.of (gabberEventuallyConstantRing k))) := by
   sorry
 
 /-- The reduced Gabber example has a weakly associated point outside its

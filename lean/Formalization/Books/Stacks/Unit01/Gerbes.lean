@@ -64,7 +64,7 @@ def GerbeOver {C : Type u} [Category.{v} C]
     {F G : FiberedCategory.{w, v, u} C} (η : FiberedMorphism F G)
     (J : GrothendieckTopology C) : Prop :=
   StackInGroupoids F J ∧ StackInGroupoids G J ∧
-    LocallyEssentiallyInImage η J ∧
+    LocallyEssentiallyInImage.{t, v, u, w} η J ∧
       LocallyLiftsMorphisms.{t, w, v, u} η J
 
 structure GerbeFactorizationData {C : Type u} [Category.{v} C]
@@ -76,7 +76,7 @@ structure GerbeFactorizationData {C : Type u} [Category.{v} C]
   isGerbe : IsGerbe.{t, w, v, u} value J
   equivalentToOriginal : FiberwiseEquivalence fromOriginal
   fibredInGroupoidsOverBase : FiberedInGroupoidsOver toBase
-  locallyEssentiallyInImage : LocallyEssentiallyInImage toBase J
+  locallyEssentiallyInImage : LocallyEssentiallyInImage.{t, v, u, w} toBase J
   locallyLiftsMorphisms : LocallyLiftsMorphisms.{t, w, v, u} toBase J
 
 def AutomorphismGroupsAbelian {C : Type u} [Category.{v} C]

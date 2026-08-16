@@ -11,9 +11,22 @@ variable {R : Type u} [CommRing R]
 def gradedShiftFamily {S : RingedSite.{u,v} R}
     (M : GradedFamily S) (k : ℤ) : GradedFamily S := shiftFamily M k
 
+def gradedShift {S : RingedSite.{u,v} R} {A : GradedAlgebra S}
+    (M : GradedModule S A) (k : ℤ) : GradedModule S A where
+  component := gradedShiftFamily M.component k
+  action n m U x a := cast
+    (congrArg (fun q : ℤ => M.component q U)
+      (by
+        calc
+          (n + k) + m = n + (k + m) := Int.add_assoc n k m
+          _ = n + (m + k) := congrArg (fun q : ℤ => n + q) (Int.add_comm k m)
+          _ = (n + m) + k := (Int.add_assoc n m k).symm))
+    (M.action (n + k) m U x a)
+  laws := M.laws
+
 structure GradedShiftData {S : RingedSite.{u,v} R}
     (A : GradedAlgebra S) where
-  shift : ℤ → GradedModule S A → GradedFamily S
+  shift : ℤ → GradedModule S A → GradedModule S A
   component_formula : Prop
   composition : Prop
   hom_shift : Prop
@@ -25,7 +38,7 @@ theorem graded_shift_composition
 
 theorem lemma_gm_grothendieck_abelian (S : RingedSite.{u,v} R)
     (A : GradedAlgebra S) :
-    GrothendieckCategoryStatement (GradedModuleCategory S A) := by
+    Nonempty (GrothendieckCategoryStatement (GradedModuleCategory S A)) := by
   sorry
 
 end Sdga

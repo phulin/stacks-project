@@ -12,6 +12,15 @@ def gradedInternalHomObject {S : RingedSite.{u,v} R} {A : GradedAlgebra S}
     {M N : GradedModule S A} (H : InternalHomModel M N) : GradedFamily S :=
   internalHom H
 
+def gradedInternalHomComponent {S : RingedSite.{u,v} R} {A : GradedAlgebra S}
+    {M N : GradedModule S A} (H : InternalHomModel M N)
+    (n : ℤ) (U : S.Obj) : Type u := H.component n U
+
+def gradedInternalHomComposition {S : RingedSite.{u,v} R}
+    {A : GradedAlgebra S} {M N P : GradedModule S A}
+    (H₁ : InternalHomModel N P) (H₂ : InternalHomModel M N) : Prop :=
+  H₁.composition_property ∧ H₂.composition_property
+
 structure GradedInternalHomProperties {S : RingedSite.{u,v} R}
     {A : GradedAlgebra S} {M N : GradedModule S A}
     (H : InternalHomModel M N) where

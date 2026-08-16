@@ -21,9 +21,17 @@ def dgPull {S T : RingedSite.{u,v} R} {A : DGAlgebra S} {B : DGAlgebra T}
 def dgPush {S T : RingedSite.{u,v} R} {A : DGAlgebra S} {B : DGAlgebra T}
     (F : DGPullPushData A B) := F.functors.push
 
+def dgPullPreservesHomogeneousMaps {S T : RingedSite.{u,v} R}
+    {A : DGAlgebra S} {B : DGAlgebra T}
+    (F : DGPullPushData A B) : Prop := F.homogeneous_functoriality
+
+def dgPushAdjunction {S T : RingedSite.{u,v} R}
+    {A : DGAlgebra S} {B : DGAlgebra T}
+    (F : DGPullPushData A B) : Prop := F.functors.adjunction
+
 theorem lemma_adjunction_push_pull_dg_functorial
     {S T : RingedSite.{u,v} R} {A : DGAlgebra S} {B : DGAlgebra T}
     (F : DGPullPushData A B) : F.functors.adjunction := by
-  exact F.functors.adjunction
+  sorry
 
 end Sdga

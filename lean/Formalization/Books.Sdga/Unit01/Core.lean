@@ -94,14 +94,21 @@ structure GradedModuleHom {S : RingedSite.{u,v} R} {A : GradedAlgebra S}
   app : ∀ (n : ℤ) (U : S.Obj), M.component n U → N.component n U
   commutes : Prop
 
+def GradedModuleHom.IsInjective {S : RingedSite.{u,v} R} {A : GradedAlgebra S}
+    {M N : GradedModule S A} (f : GradedModuleHom M N) : Prop :=
+  ∀ (n : ℤ) (U : S.Obj), Function.Injective (f.app n U)
+
 /-- A degree-`k` map between graded modules. -/
 structure HomogeneousMap {S : RingedSite.{u,v} R} {A : GradedAlgebra S}
     (M N : GradedModule S A) (k : ℤ) where
   app : ∀ (n : ℤ) (U : S.Obj), M.component n U → N.component (n + k) U
 
 def HomogeneousMap.isModuleMap {S : RingedSite.{u,v} R} {A : GradedAlgebra S}
-    {M N : GradedModule S A} {k : ℤ} (_f : HomogeneousMap M N k) : Prop :=
-  True
+    {M N : GradedModule S A} {k : ℤ} (f : HomogeneousMap M N k) : Prop :=
+  ∀ (n m : ℤ) (U : S.Obj) (x : M.component n U)
+    (a : A.component m U),
+    HEq (f.app (n + m) U (M.action n m U x a))
+      (N.action (n + k) m U (f.app n U x) a)
 
 /-- Composition of homogeneous maps.  The dependent degree equality is
 recorded by transporting along associativity of addition. -/
@@ -143,8 +150,12 @@ structure DGModule (S : RingedSite.{u,v} R) (A : DGAlgebra S) where
   action : ∀ (n m : ℤ) (U : S.Obj),
     component n U → A.component m U → component (n + m) U
   graded_laws : Prop
+  zero : ∀ (n : ℤ) (U : S.Obj), component n U
+  neg : ∀ (n : ℤ) (U : S.Obj), component n U → component n U
   differential : ∀ (n : ℤ) (U : S.Obj),
     component n U → component (n + 1) U
+  differential_zero : ∀ (n : ℤ) (U : S.Obj),
+    differential n U (zero n U) = zero (n + 1) U
   differential_squared : Prop
   leibniz : Prop
 
@@ -160,12 +171,29 @@ structure DGModuleHom {S : RingedSite.{u,v} R} {A : DGAlgebra S}
   commutes_with_action : Prop
   commutes_with_differential : Prop
 
+def DGModuleHom.IsInjective {S : RingedSite.{u,v} R} {A : DGAlgebra S}
+    {M N : DGModule S A} (f : DGModuleHom M N) : Prop :=
+  ∀ (n : ℤ) (U : S.Obj), Function.Injective (f.app n U)
+
 /-- The commutator differential on a homogeneous map, expressed as the
 property used by the later differential graded category statements. -/
 def homogeneousDifferential {S : RingedSite.{u,v} R} {A : DGAlgebra S}
     {M N : DGModule S A} {k : ℤ}
-    (_f : ∀ (n : ℤ) (U : S.Obj), M.component n U → N.component (n + k) U) : Prop :=
-  ∀ (_n : ℤ) (_U : S.Obj) (_x : M.component _n _U), True
+    (f : ∀ (n : ℤ) (U : S.Obj), M.component n U → N.component (n + k) U) : Prop :=
+  ∀ (n : ℤ) (U : S.Obj) (x : M.component n U),
+    HEq (N.differential (n + k) U (f n U x))
+      (cast
+        (congrArg (fun q : ℤ => N.component q U)
+          (by
+            calc
+              (n + 1) + k = n + (1 + k) := Int.add_assoc n 1 k
+              _ = n + (k + 1) :=
+                congrArg (fun q => n + q) (Int.add_comm 1 k)
+              _ = (n + k) + 1 := (Int.add_assoc n k 1).symm))
+        (if k % 2 = 0 then
+          f (n + 1) U (M.differential n U x)
+        else
+          N.neg ((n + 1) + k) U (f (n + 1) U (M.differential n U x))))
 
 /-- A differential graded bimodule. -/
 structure DGBimodule (S : RingedSite.{u,v} R) (A B : DGAlgebra S) where
@@ -178,7 +206,8 @@ structure DGBimodule (S : RingedSite.{u,v} R) (A B : DGAlgebra S) where
   differential : ∀ (n : ℤ) (U : S.Obj),
     component n U → component (n + 1) U
   differential_squared : Prop
-  leibniz : Prop
+  left_leibniz : Prop
+  right_leibniz : Prop
 
 abbrev GradedModuleCategory (S : RingedSite.{u,v} R) (A : GradedAlgebra S) :=
   GradedModule S A
@@ -200,7 +229,7 @@ structure GrothendieckCategoryStatement (C : Type*) where
   has_generator : Prop
 
 structure TriangulatedCategoryStatement (C : Type*) where
-  shift : C → C
+  shift : ℤ → C → C
   distinguished_triangles : Prop
   axioms : Prop
 
@@ -218,12 +247,16 @@ structure EquivalenceStatement (A B : Type*) where
   backward : B → A
   inverse_laws : Prop
 
-/-- The chapter's acyclicity predicate, with the boundary condition exposed at
-the level of graded fibres. -/
+/-- The cycle condition and acyclicity predicate used by the chapter. -/
+def IsCycle {S : RingedSite.{u,v} R} {A : DGAlgebra S}
+    (M : DGModule S A) (n : ℤ) (U : S.Obj) (x : M.component n U) : Prop :=
+  M.differential n U x = M.zero (n + 1) U
+
 def IsAcyclic {S : RingedSite.{u,v} R} {A : DGAlgebra S} (M : DGModule S A) : Prop :=
   ∀ (n : ℤ) (U : S.Obj) (x : M.component n U),
-    ∃ y : M.component (n - 1) U,
-      HEq (M.differential (n - 1) U y) x
+    IsCycle M n U x →
+      ∃ y : M.component (n - 1) U,
+        HEq (M.differential (n - 1) U y) x
 
 structure QuasiIsomorphismWitness {S : RingedSite.{u,v} R} {A : DGAlgebra S}
     {M N : DGModule S A} (_f : DGModuleHom M N) where
@@ -242,19 +275,15 @@ structure GoodnessWitness {S : RingedSite.{u,v} R} (A : DGAlgebra S)
 def IsGood {S : RingedSite.{u,v} R} (A : DGAlgebra S) (P : DGModule S A) : Prop :=
   Nonempty (GoodnessWitness A P)
 
-structure GradedInjectiveWitness {S : RingedSite.{u,v} R} {A : DGAlgebra S}
-    (_I : DGModule S A) where
-  extension_property : Prop
-
 def IsGradedInjective {S : RingedSite.{u,v} R} {A : DGAlgebra S}
-    (I : DGModule S A) : Prop := Nonempty (GradedInjectiveWitness I)
-
-structure KInjectiveWitness {S : RingedSite.{u,v} R} {A : DGAlgebra S}
-    (_I : DGModule S A) where
-  acyclic_orthogonality : Prop
-
-def IsKInjective {S : RingedSite.{u,v} R} {A : DGAlgebra S}
-    (I : DGModule S A) : Prop := Nonempty (KInjectiveWitness I)
+    (I : DGModule S A) : Prop :=
+  ∀ {M N : GradedModule S (dgAlgebraToGradedAlgebra A)}
+    (b : GradedModuleHom M N),
+    GradedModuleHom.IsInjective b →
+    ∀ (a : GradedModuleHom M (dgModuleToGradedModule I)),
+      ∃ h : GradedModuleHom N (dgModuleToGradedModule I),
+        ∀ (n : ℤ) (U : S.Obj) (x : M.component n U),
+          h.app n U (b.app n U x) = a.app n U x
 
 structure FlatWitness {S : RingedSite.{u,v} R} {A : DGAlgebra S}
     (_P : DGModule S A) where
@@ -292,6 +321,21 @@ structure HomotopyData {S : RingedSite.{u,v} R} {A : DGAlgebra S}
     {M N : DGModule S A} (_f _g : DGModuleHom M N) where
   homotopy : ∀ (n : ℤ) (U : S.Obj), M.component n U → N.component (n - 1) U
   equation : Prop
+
+def IsZeroDGModuleHom {S : RingedSite.{u,v} R} {A : DGAlgebra S}
+    {M N : DGModule S A} (f : DGModuleHom M N) : Prop :=
+  ∀ (n : ℤ) (U : S.Obj) (x : M.component n U),
+    f.app n U x = N.zero n U
+
+structure KInjectiveWitness {S : RingedSite.{u,v} R} {A : DGAlgebra S}
+    (_I : DGModule S A) where
+  acyclic_orthogonality : ∀ {M : DGModule S A},
+    IsAcyclic M → ∀ (f : DGModuleHom M _I),
+      ∃ z : DGModuleHom M _I,
+        IsZeroDGModuleHom z ∧ Nonempty (HomotopyData f z)
+
+def IsKInjective {S : RingedSite.{u,v} R} {A : DGAlgebra S}
+    (I : DGModule S A) : Prop := Nonempty (KInjectiveWitness I)
 
 def Homotopic {S : RingedSite.{u,v} R} {A : DGAlgebra S}
     {M N : DGModule S A} (f g : DGModuleHom M N) : Prop :=

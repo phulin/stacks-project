@@ -12,32 +12,50 @@ abbrev DGBimoduleSheaf {S : RingedSite.{u,v} R}
     (A B : DGAlgebra S) := DGBimodule S A B
 
 structure DGTensorHomAdjunction {S : RingedSite.{u,v} R}
-    (A B : DGAlgebra S) where
+    (A B : DGAlgebra S) (N : DGBimoduleSheaf A B) where
   tensor : DGModule S A → DGModule S B
   internal_hom : DGModule S B → DGModule S A
   hom_isomorphism : Prop
   internal_hom_isomorphism : Prop
 
+def dgTensorByBimodule {S : RingedSite.{u,v} R}
+    {A B : DGAlgebra S} {N : DGBimoduleSheaf A B}
+    (F : DGTensorHomAdjunction A B N) := F.tensor
+
+def dgInternalHomByBimodule {S : RingedSite.{u,v} R}
+    {A B : DGAlgebra S} {N : DGBimoduleSheaf A B}
+    (F : DGTensorHomAdjunction A B N) := F.internal_hom
+
 structure DGRestrictionExtensionAdjunction {S : RingedSite.{u,v} R}
-    (A B : DGAlgebra S) where
+    (A B : DGAlgebra S) (φ : DGAlgebraHom A B) where
   extension : DGModule S A → DGModule S B
   restriction : DGModule S B → DGModule S A
   hom_isomorphism : Prop
 
+structure DGBimoduleStructureCorrespondence {S : RingedSite.{u,v} R}
+    {A B : DGAlgebra S} (N : DGModule S B) where
+  left_action : ∀ (n m : ℤ) (U : S.Obj),
+    A.component n U → N.component m U → N.component (n + m) U
+  left_action_laws : Prop
+  algebra_homomorphism : Prop
+  correspondence : Prop
+
 theorem lemma_what_makes_a_bimodule_dg
     {S : RingedSite.{u,v} R} {A B : DGAlgebra S}
-    (M : DGBimoduleSheaf A B) : M.leibniz ∧ M.differential_squared := by
+    (N : DGModule S B) :
+    Nonempty (DGBimoduleStructureCorrespondence (A := A) N) := by
   sorry
 
 theorem lemma_tensor_hom_adjunction_dg
     {S : RingedSite.{u,v} R} (A B : DGAlgebra S)
-    (F : DGTensorHomAdjunction A B) :
-    F.hom_isomorphism ∧ F.internal_hom_isomorphism := by
+    (N : DGBimoduleSheaf A B) :
+    Nonempty (DGTensorHomAdjunction A B N) := by
   sorry
 
 theorem lemma_adjunction_push_pull_dg
     {S : RingedSite.{u,v} R} (A B : DGAlgebra S)
-    (F : DGRestrictionExtensionAdjunction A B) : F.hom_isomorphism := by
+    (φ : DGAlgebraHom A B) :
+    Nonempty (DGRestrictionExtensionAdjunction A B φ) := by
   sorry
 
 end Sdga

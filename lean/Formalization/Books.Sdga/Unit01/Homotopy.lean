@@ -9,10 +9,15 @@ universe u v
 variable {R : Type u} [CommRing R]
 
 abbrev DGHomotopy {S : RingedSite.{u,v} R} {A : DGAlgebra S}
-    {M N : DGModule S A} := HomotopyData
+    {M N : DGModule S A} := HomotopyData (M := M) (N := N)
 
 def homotopicMaps {S : RingedSite.{u,v} R} {A : DGAlgebra S}
     {M N : DGModule S A} (f g : DGModuleHom M N) : Prop := Homotopic f g
+
+def homotopyOperator {S : RingedSite.{u,v} R} {A : DGAlgebra S}
+    {M N : DGModule S A} {f g : DGModuleHom M N}
+    (H : HomotopyData f g) :
+    ∀ n U, M.component n U → N.component (n - 1) U := H.homotopy
 
 abbrev ComplexesNotation (S : RingedSite.{u,v} R) (A : DGAlgebra S) :=
   DGModule S A
@@ -32,8 +37,8 @@ theorem definition_complexes_notation (S : RingedSite.{u,v} R) (A : DGAlgebra S)
   rfl
 
 theorem lemma_homotopy_direct_sums
-    {S : RingedSite.{u,v} R} (A : DGAlgebra S)
-    (D : HomotopyDirectSumStatement A) : D.direct_sum_compatibility := by
-  exact D.direct_sum_compatibility
+    {S : RingedSite.{u,v} R} (A : DGAlgebra S) :
+    Nonempty (HomotopyDirectSumStatement A) := by
+  sorry
 
 end Sdga

@@ -26,15 +26,21 @@ structure GradedAlgebraFunctoriality {S T : RingedSite.{u,v} R}
   pullback_preserves_multiplication : Prop
   adjunction : Prop
 
-theorem definition_ga (S : RingedSite.{u,v} R) (A : GradedAlgebraSheaf S) :
-    A.laws := by
-  exact A.laws
+def gradedAlgebraSections {S : RingedSite.{u,v} R}
+    (A : GradedAlgebraSheaf S) (U : S.Obj) : ℤ → Type u :=
+  fun n => A.component n U
+
+def gradedAlgebraPushforward {S T : RingedSite.{u,v} R}
+    {f : RingedSiteMorphism S T} (F : GradedAlgebraFunctoriality f) :
+    GradedAlgebra S → GradedAlgebra T := F.pushforward
+
+def gradedAlgebraPullback {S T : RingedSite.{u,v} R}
+    {f : RingedSiteMorphism S T} (F : GradedAlgebraFunctoriality f) :
+    GradedAlgebra T → GradedAlgebra S := F.pullback
 
 theorem remark_functoriality_ga
     {S T : RingedSite.{u,v} R} {f : RingedSiteMorphism S T}
-    (F : GradedAlgebraFunctoriality f) :
-    F.pushforward_preserves_multiplication ∧
-      F.pullback_preserves_multiplication ∧ F.adjunction := by
+    : Nonempty (GradedAlgebraFunctoriality f) := by
   sorry
 
 end Sdga

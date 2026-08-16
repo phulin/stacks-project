@@ -10,6 +10,10 @@ variable {R : Type u} [CommRing R]
 
 abbrev DGModuleSheaf (S : RingedSite.{u,v} R) (A : DGAlgebra S) := DGModule S A
 
+def dgModuleSections {S : RingedSite.{u,v} R} {A : DGAlgebra S}
+    (M : DGModuleSheaf S A) (U : S.Obj) : ℤ → Type u :=
+  fun n => M.component n U
+
 structure DGModuleCategoryProperties {S : RingedSite.{u,v} R}
     (A : DGAlgebra S) where
   abelian : AbelianCategoryStatement (DGModuleCategory S A)
@@ -22,8 +26,9 @@ structure DGModuleCategoryProperties {S : RingedSite.{u,v} R}
   forgetful_preserves_colimits : Prop
 
 structure LongExactCohomologyStatement {S : RingedSite.{u,v} R}
-    {A : DGAlgebra S} (E : ShortExactSequence) where
+    {A : DGAlgebra S} (E : ShortExactSequence (A := A)) where
   degree : ℤ
+  connecting_map : Prop
   exact_fragment : Prop
 
 theorem definition_dgm (S : RingedSite.{u,v} R) (A : DGAlgebra S)

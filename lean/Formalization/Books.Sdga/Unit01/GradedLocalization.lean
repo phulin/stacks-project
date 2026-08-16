@@ -29,6 +29,6 @@ theorem lemma_extension_by_zero_graded
 theorem lemma_tensor_with_extension_by_zero
     {S T : RingedSite.{u,v} R} {A : GradedAlgebra S} {B : GradedAlgebra T}
     (j : GradedLocalizationData A B) : j.tensor_compatibility := by
-  exact j.tensor_compatibility
+  sorry
 
 end Sdga

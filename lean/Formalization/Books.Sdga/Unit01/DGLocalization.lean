@@ -21,6 +21,18 @@ def extensionByZeroDG {S T : RingedSite.{u,v} R}
     {A : DGAlgebra S} {B : DGAlgebra T}
     (j : DGLocalizationData A B) := j.extension_by_zero
 
+def restrictionDG {S T : RingedSite.{u,v} R}
+    {A : DGAlgebra S} {B : DGAlgebra T}
+    (j : DGLocalizationData A B) := j.restriction
+
+def dgExtensionByZeroExact {S T : RingedSite.{u,v} R}
+    {A : DGAlgebra S} {B : DGAlgebra T}
+    (j : DGLocalizationData A B) : Prop := j.exact_extension
+
+def dgExtensionByZeroTensorCompatibility {S T : RingedSite.{u,v} R}
+    {A : DGAlgebra S} {B : DGAlgebra T}
+    (j : DGLocalizationData A B) : Prop := j.tensor_compatibility
+
 theorem lemma_extension_by_zero_dg
     {S T : RingedSite.{u,v} R} {A : DGAlgebra S} {B : DGAlgebra T}
     (j : DGLocalizationData A B) : j.extension_adjunction ∧ j.exact_extension := by
@@ -29,6 +41,6 @@ theorem lemma_extension_by_zero_dg
 theorem lemma_tensor_with_extension_by_zero_dg
     {S T : RingedSite.{u,v} R} {A : DGAlgebra S} {B : DGAlgebra T}
     (j : DGLocalizationData A B) : j.tensor_compatibility := by
-  exact j.tensor_compatibility
+  sorry
 
 end Sdga

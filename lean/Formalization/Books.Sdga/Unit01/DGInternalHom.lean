@@ -12,6 +12,10 @@ def dgInternalHomObject {S : RingedSite.{u,v} R} {A : DGAlgebra S}
     {M N : DGModule S A} (H : DGInternalHomModel M N) : GradedFamily S :=
   dgInternalHom H
 
+def dgInternalHomDifferential {S : RingedSite.{u,v} R} {A : DGAlgebra S}
+    {M N : DGModule S A} (H : DGInternalHomModel M N) :
+    ∀ n U, H.component n U → H.component (n + 1) U := H.differential
+
 structure DGInternalHomProperties {S : RingedSite.{u,v} R}
     {A : DGAlgebra S} {M N : DGModule S A}
     (H : DGInternalHomModel M N) where

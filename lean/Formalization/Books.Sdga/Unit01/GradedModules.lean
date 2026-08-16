@@ -30,9 +30,12 @@ structure GradedModuleCategoryProperties {S : RingedSite.{u,v} R}
   term_functor_preserves_limits : Prop
   term_functor_preserves_colimits : Prop
 
-theorem definition_gm (S : RingedSite.{u,v} R) (A : GradedAlgebra S)
-    (M : GradedModuleSheaf S A) : M.laws := by
-  exact M.laws
+def gradedModuleSections {S : RingedSite.{u,v} R} {A : GradedAlgebra S}
+    (M : GradedModuleSheaf S A) (U : S.Obj) : ℤ → Type u :=
+  fun n => M.component n U
+
+def gradedModuleUnderlyingFamily {S : RingedSite.{u,v} R} {A : GradedAlgebra S}
+    (M : GradedModuleSheaf S A) : GradedFamily S := M.component
 
 theorem lemma_gm_abelian (S : RingedSite.{u,v} R) (A : GradedAlgebra S) :
     Nonempty (GradedModuleCategoryProperties A) := by

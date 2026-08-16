@@ -12,6 +12,10 @@ def dgTensorObject {S : RingedSite.{u,v} R} {A : DGAlgebra S}
     {M N : DGModule S A} (T : DGTensorModel M N) : GradedFamily S :=
   dgTensorProduct T
 
+def dgTensorDifferential {S : RingedSite.{u,v} R} {A : DGAlgebra S}
+    {M N : DGModule S A} (T : DGTensorModel M N) :
+    ∀ n U, T.component n U → T.component (n + 1) U := T.differential
+
 structure DGTensorDifferentialStatement {S : RingedSite.{u,v} R}
     {A : DGAlgebra S} {M N : DGModule S A} (T : DGTensorModel M N) where
   graded_tensor : T.balanced

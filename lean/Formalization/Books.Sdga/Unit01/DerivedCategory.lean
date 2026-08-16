@@ -13,6 +13,25 @@ structure CohomologyFunctorData {S : RingedSite.{u,v} R} (A : DGAlgebra S) where
   homological : Prop
   acyclic_kernel : Prop
 
+structure DerivedLocalizationStatement {S : RingedSite.{u,v} R}
+    (A : DGAlgebra S) where
+  localized : DerivedCategoryData S A
+  quasi_isomorphisms_inverted : Prop
+  acyclic_kernel : Prop
+  kernel_identification : Prop
+
+structure DerivedHomData {S : RingedSite.{u,v} R} {A : DGAlgebra S}
+    (M N : DGModule S A) where
+  injective_resolution : DGModule S A
+  resolution_map : DGModuleHom N injective_resolution
+  resolution_is_quasi_isomorphism : IsQuasiIsomorphism resolution_map
+  hom_comparison : Prop
+
+structure DerivedProductsData {S : RingedSite.{u,v} R} (A : DGAlgebra S) where
+  direct_sums : Prop
+  products : Prop
+  products_of_K_injectives : Prop
+
 def derivedCategory {S : RingedSite.{u,v} R} (A : DGAlgebra S) :=
   DerivedCategoryData S A
 
@@ -25,12 +44,12 @@ structure DerivedCategoryProperties {S : RingedSite.{u,v} R}
   products : Prop
 
 theorem lemma_cohomology_homological {S : RingedSite.{u,v} R}
-    (A : DGAlgebra S) (H : CohomologyFunctorData A) : H.homological := by
-  exact H.homological
+    (A : DGAlgebra S) : Nonempty (CohomologyFunctorData A) := by
+  sorry
 
-theorem lemma_acyclics {S : RingedSite.{u,v} R} (A : DGAlgebra S)
-    (H : CohomologyFunctorData A) : H.acyclic_kernel := by
-  exact H.acyclic_kernel
+theorem lemma_acyclics {S : RingedSite.{u,v} R} (A : DGAlgebra S) :
+    Nonempty (DerivedLocalizationStatement A) := by
+  sorry
 
 theorem lemma_qis {S : RingedSite.{u,v} R} {A : DGAlgebra S}
     {M N : DGModule S A} (f : DGModuleHom M N) :
@@ -38,20 +57,20 @@ theorem lemma_qis {S : RingedSite.{u,v} R} {A : DGAlgebra S}
   rfl
 
 theorem lemma_kernel_localization {S : RingedSite.{u,v} R}
-    {A : DGAlgebra S} (D : DerivedCategoryData S A) : D.localization_property := by
-  exact D.localization_property
+    (A : DGAlgebra S) : Nonempty (DerivedLocalizationStatement A) := by
+  sorry
 
-theorem lemma_H0_over_D {S : RingedSite.{u,v} R} (A : DGAlgebra S)
-    (P : DerivedCategoryProperties A) : P.H0_description := by
-  exact P.H0_description
+theorem lemma_H0_over_D {S : RingedSite.{u,v} R} (A : DGAlgebra S) :
+    Nonempty (DerivedCategoryProperties A) := by
+  sorry
 
-theorem lemma_hom_derived {S : RingedSite.{u,v} R} (A : DGAlgebra S)
-    (P : DerivedCategoryProperties A) : P.derived_hom := by
-  exact P.derived_hom
+theorem lemma_hom_derived {S : RingedSite.{u,v} R} (A : DGAlgebra S) :
+    Nonempty (DerivedCategoryProperties A) := by
+  sorry
 
-theorem lemma_derived_products {S : RingedSite.{u,v} R} (A : DGAlgebra S)
-    (P : DerivedCategoryProperties A) : P.products := by
-  exact P.products
+theorem lemma_derived_products {S : RingedSite.{u,v} R} (A : DGAlgebra S) :
+    Nonempty (DerivedProductsData A) := by
+  sorry
 
 theorem definition_derived_category {S : RingedSite.{u,v} R} (A : DGAlgebra S) :
     derivedCategory A = DerivedCategoryData S A := by

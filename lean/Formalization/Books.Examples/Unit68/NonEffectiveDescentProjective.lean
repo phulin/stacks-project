@@ -15,6 +15,7 @@ import Mathlib.Data.ZMod.Basic
 import Mathlib.LinearAlgebra.Projectivization.Basic
 import Mathlib.RingTheory.Ideal.Quotient.Operations
 import Mathlib.RingTheory.MvPolynomial.Homogeneous
+import Formalization.«Books.Examples».Unit38.FiniteTypeFlatNotFinitePresentation
 import Formalization.«Books.SpacesGroupoids».Unit19.QuotientSheaves
 
 /-!
@@ -50,21 +51,16 @@ abbrev ComplexProjectiveThreeCoordinates := Fin 4 → ℂ
 abbrev ComplexProjectiveThreePoint := ℙ ℂ ComplexProjectiveThreeCoordinates
 
 /-- The base scheme over which the chapter's schemes are defined. -/
-def complexSpectrum : Scheme := Spec (CommRingCat.of ℂ)
+abbrev complexSpectrum : Scheme :=
+  Formalization.«Books.Examples».Unit38.baseScheme ℂ
 
-/-- The actual projective 3-space scheme from the standard graded polynomial ring. -/
-def complexProjectiveThreeSpace : Scheme := by
-  let 𝒜 : ℕ → Submodule ℂ (MvPolynomial (Fin 4) ℂ) :=
-    fun n => MvPolynomial.homogeneousSubmodule (Fin 4) ℂ n
-  letI : GradedAlgebra 𝒜 := MvPolynomial.gradedAlgebra
-  exact AlgebraicGeometry.«Proj» 𝒜
+/-- The actual projective 3-space scheme from the earlier canonical model. -/
+abbrev complexProjectiveThreeSpace : Scheme :=
+  Formalization.«Books.Examples».Unit38.projectiveSpace ℂ 3
 
-/-- The standard complex projective line, used for the exceptional fibres. -/
-def complexProjectiveLine : Scheme := by
-  let 𝒜 : ℕ → Submodule ℂ (MvPolynomial (Fin 2) ℂ) :=
-    fun n => MvPolynomial.homogeneousSubmodule (Fin 2) ℂ n
-  letI : GradedAlgebra 𝒜 := MvPolynomial.gradedAlgebra
-  exact AlgebraicGeometry.«Proj» 𝒜
+/-- The standard complex projective line, reused for the exceptional fibres. -/
+abbrev complexProjectiveLine : Scheme :=
+  Formalization.«Books.Examples».Unit38.projectiveLine ℂ
 
 /-- The permutation `(x, y, z, w) ↦ (y, x, w, z)`. -/
 def coordinateSwap : Fin 4 ≃ Fin 4 :=
@@ -405,18 +401,40 @@ theorem invariant_ring_presentation :
     Nonempty InvariantRingPresentationData := by
   sorry
 
-/-! The remaining `Proj` statement is kept as a small source-facing interface:
-the quotient grading is explicit above, while Mathlib does not yet construct a
-graded ideal quotient together with its relative `Proj`. -/
+/-! The remaining graded-quotient construction uses the relative-`Proj`
+interface introduced in the earlier projective-family chapter.  The missing
+graded-ideal calculation is isolated in its existence theorem. -/
+
+abbrev InvariantRelativeProjPresentation :=
+  Formalization.«Books.Examples».Unit38.RelativeProjPresentation
+    ℂ InvariantPresentationRing
+
+theorem invariant_relative_proj_presentation_exists :
+    Nonempty InvariantRelativeProjPresentation := by
+  sorry
+
+noncomputable def invariantRelativeProjPresentation :
+    InvariantRelativeProjPresentation :=
+  Classical.choice invariant_relative_proj_presentation_exists
+
+noncomputable def invariantProjectiveQuotient : Scheme :=
+  Formalization.«Books.Examples».Unit38.relativeProjScheme
+    invariantRelativeProjPresentation
+
+noncomputable def invariantProjectiveQuotientToComplex :
+    invariantProjectiveQuotient ⟶ complexSpectrum :=
+  Formalization.«Books.Examples».Unit38.relativeProjMap
+    invariantRelativeProjPresentation
 
 structure InvariantProjectiveQuotientData where
   presentation : InvariantRingPresentationData
-  ring : CommRingCat
-  ring_identification : ring = CommRingCat.of InvariantPresentationRing
+  relativePresentation : InvariantRelativeProjPresentation
   degree : Fin 5 → ℕ
   degree_identification : degree = invariantDegree
   projectiveScheme : Scheme
-  projectiveScheme_is_Proj_of_ring : Prop
+  projectiveScheme_to_complex : projectiveScheme ⟶ complexSpectrum
+  projectiveScheme_is_Proj_of_ring :
+    Nonempty (projectiveScheme ≅ invariantProjectiveQuotient)
   is_projective_spectrum_of_invariants : Prop
 
 theorem invariant_projective_quotient_presentation :
@@ -448,9 +466,6 @@ descent statement. -/
 def IsQuasiAffineMorphism {X Y : Scheme} (f : X ⟶ Y) : Prop :=
   ∃ (Z : Scheme) (i : X ⟶ Z) (p : Z ⟶ Y),
     IsOpenImmersion i ∧ IsAffineHom p ∧ i ≫ p = f
-
-def IsAffineOrQuasiAffineMorphism {X Y : Scheme} (f : X ⟶ Y) : Prop :=
-  IsAffineHom f ∨ IsQuasiAffineMorphism f
 
 /-- The usual flat, quasi-compact, surjective class of fpqc morphisms. -/
 def IsFpqcMorphism {X Y : Scheme} (f : X ⟶ Y) : Prop :=
@@ -492,7 +507,7 @@ def FpqcDescentEffectiveFor
     ∀ D : SchemeDescentDatum cover, P D.object.hom → D.IsEffective
 
 theorem affine_and_quasi_affine_fpqc_descent :
-    FpqcDescentEffectiveFor IsAffineOrQuasiAffineMorphism := by
+    FpqcDescentEffectiveFor IsQuasiAffineMorphism := by
   sorry
 
 theorem projective_descent_is_not_always_effective :
@@ -538,6 +553,7 @@ structure HironakaLocalCharts (Y : Scheme) where
   awayFromQ_open_description : Prop
   first_chart_blows_up_D_then_C : Prop
   second_chart_blows_up_C_then_D : Prop
+  charts_agree_over_the_common_open : Prop
 
 /-- A lifted involution on the glued local construction. -/
 structure LiftedSchemeInvolution (V : Scheme) where
@@ -582,6 +598,7 @@ structure ExceptionalCurveCycleArgument (V_Y : Scheme) where
   /-- The proper surface sitting inside the glued threefold. -/
   E : Scheme
   E_to_VY : E ⟶ V_Y
+  E_to_VY_closed : IsClosedImmersion E_to_VY
   baseCurveUnion : Scheme
   toBase : E ⟶ baseCurveUnion
   proper : IsProper toBase
@@ -618,6 +635,7 @@ structure QuotientDivisorObstruction {V_Y : Scheme}
     (A : ExceptionalCurveCycleArgument V_Y) where
   divisor : AlgebraicCycle V_Y ℤ
   line_bundle : Prop
+  restriction_to_E_is_a_line_bundle : Prop
   regular_local_ring_is_a_UFD : Prop
   inverse_image_is_effective_divisor : Prop
   contains_a_point_of_the_descended_curve : Prop
@@ -695,16 +713,27 @@ theorem exists_non_effective_projective_descent_datum :
     ∃ D : HironakaNonEffectiveDescentData, ¬ D.descent.IsEffective := by
   sorry
 
+/-- The chapter's opening lemma, with the cover, projective object, and
+descent datum exposed instead of hidden in the construction record. -/
+theorem lemma_non_effective_descent_projective :
+    ∃ (X S V : Scheme) (cover : X ⟶ S) (v : V ⟶ X)
+      (D : SchemeDescentDatum cover),
+      Etale cover ∧ Surjective cover ∧ IsProjectiveMorphism v ∧
+        Nonempty (Over.mk v ≅ D.object) ∧ ¬ D.IsEffective := by
+  sorry
+
 /-- The curve and divisor obtained from a hypothetical scheme quotient. -/
 structure DescentCurveAndDivisor {V_Y : Scheme}
     (A : ExceptionalCurveCycleArgument V_Y) where
   U : Scheme
   L₁ : Scheme
   L₁_to_quotient : L₁ ⟶ U
+  L₁_to_quotient_closed : IsClosedImmersion L₁_to_quotient
   obtained_by_closed_subscheme_descent : Prop
   L₁_is_projective_line : Nonempty (L₁ ≅ complexProjectiveLine)
   inverse_image_in_VY : Scheme
   inverse_image_to_VY : inverse_image_in_VY ⟶ V_Y
+  inverse_image_to_VY_closed : IsClosedImmersion inverse_image_to_VY
   inverse_image_is_L₀_union_gL₀ : Prop
   R : U
   R_is_a_complex_point : Prop
@@ -722,9 +751,14 @@ structure EffectiveSchemeQuotient (D : HironakaNonEffectiveDescentData) where
   descent_effective : D.descent.IsEffective
   VY_to_U : D.localConstruction.scheme ⟶ U
   V_to_U : D.V ⟶ U
+  V_to_VY : D.V ⟶ D.localConstruction.scheme
+  V_to_VY_commutes :
+    V_to_VY ≫ D.localConstruction.toY = D.vToX ≫ D.refinement.xToY
+  V_to_U_commutes : V_to_U ≫ U_to_S = D.vToX ≫ D.refinement.xToS
+  VY_to_U_commutes :
+    VY_to_U ≫ U_to_S = D.localConstruction.toY ≫ D.refinement.yToS
   pullback_is_V : Prop
   pullback_is_V_with_descent_datum : Prop
-  quotient_diagram : Prop
   curve_and_divisor : DescentCurveAndDivisor D.exceptionalCycle
   curve_and_divisor_is_over_U : Prop
 
@@ -756,23 +790,27 @@ theorem descent_datum_not_effective_in_schemes
 
 /-! ## Effectivity in algebraic spaces -/
 
+/-- Schemes equipped with their structure morphism to `Spec ℂ`. -/
+abbrev ComplexSchemeOver := Over complexSpectrum
+
 /-- The functor-of-points model of algebraic spaces over `Spec ℂ`. -/
 abbrev ComplexAlgebraicSpace :=
   Formalization.«Books.SpacesGroupoids».Unit19.AlgebraicSpace
     AlgebraicGeometry.Scheme.fppfTopology
 
 /-- The representable sheaf attached to a scheme over `Spec ℂ`. -/
-noncomputable def representableComplexScheme (T : Scheme) :
+noncomputable def representableComplexScheme (T : ComplexSchemeOver) :
     ComplexAlgebraicSpace :=
   Formalization.«Books.SpacesGroupoids».Unit19.PreRelation.representableSheaf
-    AlgebraicGeometry.Scheme.fppfTopology T
+    AlgebraicGeometry.Scheme.fppfTopology T.left
 
 /-- Representability by a scheme in the chapter-local algebraic-space model. -/
 def IsSchemeAlgebraicSpace (U : ComplexAlgebraicSpace) : Prop :=
-  ∃ T : Scheme, Nonempty (U ≅ representableComplexScheme T)
+  ∃ T : ComplexSchemeOver, Nonempty (U ≅ representableComplexScheme T)
 
 /-- Smoothness, separatedness, and dimension-three data for the quotient space. -/
 structure SmoothSeparatedThreefold (U : ComplexAlgebraicSpace) where
+  structureMap : U ⟶ representableComplexScheme (Over.mk (𝟙 complexSpectrum))
   smooth : Prop
   separated : Prop
   dimension : ℕ

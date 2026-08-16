@@ -1,5 +1,6 @@
 import Mathlib.Algebra.Module.LocalizedModule.Basic
 import Mathlib.Algebra.Module.Torsion.PrimaryComponent
+import Mathlib.Algebra.Homology.ShortComplex.ModuleCat
 import Mathlib.AlgebraicGeometry.EffectiveEpi
 import Mathlib.AlgebraicGeometry.Limits
 import Mathlib.AlgebraicGeometry.Scheme
@@ -235,7 +236,8 @@ theorem integerLocalization_family_isFlat (U : Ultrafilter primeNumber) :
   intro A
   exact integerLocalization_ringHom_isFlat A.1
 
-theorem integerLocalization_family_isJointlySurjective (U : Ultrafilter primeNumber) :
+theorem integerLocalization_family_isJointlySurjective
+    (U : Ultrafilter primeNumber) (hU : IsNonprincipalUltrafilter U) :
     IsJointlySurjectiveIntegerLocalizationFamily U := by
   sorry
 
@@ -252,6 +254,12 @@ abbrev integerLocalizedModule (M : Type u) [AddCommGroup M] [Module ℤ M]
 noncomputable def integerLocalizedModuleTensorEquiv
     (M : Type u) [AddCommGroup M] [Module ℤ M] (A : Set primeNumber) :=
   LocalizedModule.equivTensorProduct (generatedPrimeSubmonoid A) M
+
+theorem integerLocalizedModule_localizationTensor_model
+    (M : Type u) [AddCommGroup M] [Module ℤ M] (A : Set primeNumber) :
+    Nonempty (integerLocalizedModule M A ≃ₗ[integerLocalization A]
+      integerLocalization A ⊗[ℤ] M) := by
+  sorry
 
 theorem integerLocalizedModule_tensorProduct_model
     (M : Type u) [AddCommGroup M] [Module ℤ M] (A : Set primeNumber) :
@@ -278,12 +286,41 @@ def integerModuleEqualizerSet (U : Ultrafilter primeNumber)
         integerLocalizedModuleMap (Set.subset_union_right : B.1 ⊆ A.1 ∪ B.1) (x B)}
 
 theorem claimI_module_equalizer (U : Ultrafilter primeNumber)
+    (hU : IsNonprincipalUltrafilter U)
     (M : Type u) [AddCommGroup M] [Module ℤ M] :
     Set.range (integerModuleLocalizationDiagonal U M) = integerModuleEqualizerSet U M := by
   sorry
 
-def integerModuleFractionLocalization (M : Type u) [AddCommGroup M] [Module ℤ M] :=
+abbrev integerModuleFractionLocalization (M : Type u) [AddCommGroup M] [Module ℤ M] :=
   integerLocalizedModule M Set.univ
+
+theorem integerLocalization_univ_fractionRing_model :
+    Nonempty (integerLocalization Set.univ ≃+* FractionRing ℤ) := by
+  sorry
+
+theorem integerLocalization_univ_rational_model :
+    Nonempty (integerLocalization Set.univ ≃+* ℚ) := by
+  sorry
+
+theorem integerModuleFractionLocalization_rational_model
+    (M : Type u) [AddCommGroup M] [Module ℤ M] :
+    Nonempty (integerModuleFractionLocalization M ≃+
+      M ⊗[ℤ] ℚ) := by
+  sorry
+
+instance integerPrimeIdeal_isPrime (p : primeNumber) :
+    (Ideal.span {(p.1 : ℤ)}).IsPrime := by
+  simpa using Ideal.isPrime_span_singleton_of_prime (Nat.prime_iff_prime_int.mp p.2)
+
+abbrev integerAtPrimeModule (M : Type u) [AddCommGroup M] [Module ℤ M]
+    (p : primeNumber) : Type _ :=
+  LocalizedModule (Ideal.span {(p.1 : ℤ)}).primeCompl M
+
+theorem integerLocalizedModule_complement_singleton_atPrime_model
+    (M : Type u) [AddCommGroup M] [Module ℤ M] (p : primeNumber) :
+    Nonempty (integerLocalizedModule M ({q : primeNumber | q ≠ p}) ≃+
+      integerAtPrimeModule M p) := by
+  sorry
 
 def integerModuleIntersection (U : Ultrafilter primeNumber)
     (M : Type u) [AddCommGroup M] [Module ℤ M] :
@@ -297,13 +334,16 @@ noncomputable def integerModuleFractionDiagonal
   LocalizedModule.mkLinearMap (generatedPrimeSubmonoid Set.univ) M m
 
 theorem claimI_torsionFree_intersection
-    (U : Ultrafilter primeNumber) (M : Type u) [AddCommGroup M] [Module ℤ M]
+    (U : Ultrafilter primeNumber) (hU : IsNonprincipalUltrafilter U)
+    (M : Type u) [AddCommGroup M] [Module ℤ M]
     [Module.IsTorsionFree ℤ M] :
     Set.range (integerModuleFractionDiagonal M) = integerModuleIntersection U M := by
   sorry
 
+/-- The two-prime shortcut is valid after the natural finite-generation
+assumption; the unrestricted shortcut in the source is false. -/
 theorem claimI_two_three_intersection (M : Type u) [AddCommGroup M] [Module ℤ M]
-    [Module.IsTorsionFree ℤ M] :
+    [Module.IsTorsionFree ℤ M] [Module.Finite ℤ M] :
     Set.range (integerModuleFractionDiagonal M) =
       {x | ∃ y₂ : integerLocalizedModule M ({p : primeNumber | p ≠ ⟨2, by decide⟩}),
         ∃ y₃ : integerLocalizedModule M ({p : primeNumber | p ≠ ⟨3, by decide⟩}),
@@ -311,23 +351,30 @@ theorem claimI_two_three_intersection (M : Type u) [AddCommGroup M] [Module ℤ 
           integerLocalizedModuleMap (subset_univ _) y₃ = x} := by
   sorry
 
-def IsIntegerTorsionModule (M : Type u) [AddCommGroup M] [Module ℤ M] : Prop :=
-  ∀ x : M, ∃ n : ℕ, n ≠ 0 ∧ (n : ℤ) • x = 0
+abbrev IsIntegerTorsionModule (M : Type u) [AddCommGroup M] : Prop :=
+  Module.IsTorsion ℤ M
 
-def integerTorsionSubmodule (M : Type u) [AddCommGroup M] [Module ℤ M] : Submodule ℤ M :=
+def integerTorsionSubmodule (M : Type u) [AddCommGroup M] : Submodule ℤ M :=
   Submodule.torsion ℤ M
 
 def integerPrimaryComponent (M : Type u) [AddCommGroup M] [Module ℤ M]
     (p : primeNumber) : Submodule ℤ M :=
   Ideal.primaryComponent M (Ideal.span {(p.1 : ℤ)})
 
+theorem integerPrimaryComponent_mem_iff
+    (M : Type u) [AddCommGroup M] [Module ℤ M] (p : primeNumber) (x : M) :
+    x ∈ integerPrimaryComponent M p ↔
+      ∃ n : ℕ, x ∈ Submodule.torsionBySet ℤ M
+        (↑((Ideal.span {(p.1 : ℤ)}) ^ n) : Set ℤ) := by
+  sorry
+
 theorem integerTorsion_eq_iSup_primaryComponents
-    (M : Type u) [AddCommGroup M] [Module ℤ M] (hM : IsIntegerTorsionModule M) :
+    (M : Type u) [AddCommGroup M] (hM : IsIntegerTorsionModule M) :
     ⨆ p : primeNumber, integerPrimaryComponent M p = integerTorsionSubmodule M := by
   sorry
 
 theorem integerTorsion_directSum_decomposition
-    (M : Type u) [AddCommGroup M] [Module ℤ M] (hM : IsIntegerTorsionModule M) :
+    (M : Type u) [AddCommGroup M] (hM : IsIntegerTorsionModule M) :
     Nonempty ((Π₀ p : primeNumber, integerPrimaryComponent M p) ≃ₗ[ℤ] M) := by
   sorry
 
@@ -370,25 +417,37 @@ theorem ultrafilter_partition_support_obstruction
     T ∉ U ∨ T' ∉ U := by
   sorry
 
-def integerTorsionInclusion (M : Type u) [AddCommGroup M] [Module ℤ M] :
-    integerTorsionSubmodule M → M :=
-  fun x => x.1
+def integerTorsionInclusion (M : Type u) [AddCommGroup M] :
+    integerTorsionSubmodule M →ₗ[ℤ] M :=
+  (integerTorsionSubmodule M).subtype
 
-def integerTorsionQuotientMap (M : Type u) [AddCommGroup M] [Module ℤ M] :
-    M → M ⧸ integerTorsionSubmodule M :=
-  fun x => (integerTorsionSubmodule M).mkQ x
+def integerTorsionQuotientMap (M : Type u) [AddCommGroup M] :
+    M →ₗ[ℤ] M ⧸ integerTorsionSubmodule M :=
+  (integerTorsionSubmodule M).mkQ
 
-theorem integerTorsion_short_exact (M : Type u) [AddCommGroup M] [Module ℤ M] :
-    Function.Injective (integerTorsionInclusion M) ∧
-      (∀ x : M, integerTorsionQuotientMap M x = 0 ↔
-        ∃ y, integerTorsionInclusion M y = x) ∧
-      Function.Surjective (integerTorsionQuotientMap M) := by
+noncomputable def integerTorsionShortComplex
+    (M : Type u) [AddCommGroup M] :
+    CategoryTheory.ShortComplex (ModuleCat.{u} ℤ) :=
+  CategoryTheory.ShortComplex.moduleCatMk
+    (R := ℤ)
+    (X₁ := integerTorsionSubmodule M)
+    (X₂ := M)
+    (X₃ := M ⧸ integerTorsionSubmodule M)
+    (integerTorsionInclusion M)
+    (integerTorsionQuotientMap M)
+    (by
+      ext x
+      simp [integerTorsionInclusion, integerTorsionQuotientMap])
+
+theorem integerTorsion_short_exact (M : Type u) [AddCommGroup M] :
+    (integerTorsionShortComplex M).ShortExact := by
   sorry
 
 theorem claimI_general_module (U : Ultrafilter primeNumber)
+    (hU : IsNonprincipalUltrafilter U)
     (M : Type u) [AddCommGroup M] [Module ℤ M] :
     Set.range (integerModuleLocalizationDiagonal U M) = integerModuleEqualizerSet U M := by
-  exact claimI_module_equalizer U M
+  exact claimI_module_equalizer U hU M
 
 /-! ## The module descent lemma -/
 
@@ -468,6 +527,11 @@ def ringLocalizationSubmonoid (R : Type u) [CommRing R]
 abbrev ringLocalization (R : Type u) [CommRing R] (A : Set primeNumber) :=
   Localization (ringLocalizationSubmonoid R A)
 
+theorem ringLocalization_tensorProduct_model
+    (R : Type u) [CommRing R] (A : Set primeNumber) :
+    Nonempty (ringLocalization R A ≃+* R ⊗[ℤ] integerLocalization A) := by
+  sorry
+
 noncomputable def ringLocalizationMap {R : Type u} [CommRing R]
     {A B : Set primeNumber} (hAB : A ⊆ B) :
     ringLocalization R A →+* ringLocalization R B :=
@@ -489,13 +553,20 @@ abbrev ringLocalizedModule (R : Type u) [CommRing R] (M : Type u)
     [AddCommGroup M] [Module R M] (A : Set primeNumber) :=
   LocalizedModule (ringLocalizationSubmonoid R A) M
 
-def IsIntegerTorsionRingModule (R : Type u) [CommRing R] (M : Type u)
+abbrev IsIntegerTorsionRingModule (R : Type u) [CommRing R] (M : Type u)
     [AddCommGroup M] [Module R M] : Prop :=
-  ∀ x : M, ∃ n : ℕ, n ≠ 0 ∧ (n : ℤ) • x = 0
+  Module.IsTorsion ℤ M
 
 def ringPrimaryComponent (R : Type u) [CommRing R] (M : Type u)
     [AddCommGroup M] [Module R M] (p : primeNumber) : Submodule R M :=
   ⨆ n : ℕ, Submodule.torsionBy R M ((p.1 : R) ^ n)
+
+theorem ringPrimaryComponent_mem_iff
+    (R : Type u) [CommRing R] (M : Type u) [AddCommGroup M] [Module R M]
+    (p : primeNumber) (x : M) :
+    x ∈ ringPrimaryComponent R M p ↔
+      ∃ n : ℕ, ((p.1 : R) ^ n) • x = 0 := by
+  sorry
 
 theorem ringPrimaryComponents_decompose
     (R : Type u) [CommRing R] (M : Type u) [AddCommGroup M] [Module R M]
@@ -548,6 +619,12 @@ theorem closedSubsetIdeal_baseChange_compatible
         (ringLocalizationMap (R := R)
           (show B.1 ⊆ A.1 ∪ B.1 from subset_union_right))
         (closedSubsetIdeal R U d B) := by
+  sorry
+
+theorem closedSubsetIdealAfterBaseChange_isRadical
+    (R : Type u) [CommRing R] (U : Ultrafilter primeNumber)
+    (d : ClosedSubsetGlueData R U) (A B : primeUltrafilterMember U) :
+    (closedSubsetIdealAfterBaseChange R U d A B).IsRadical := by
   sorry
 
 def radicalIdealOfClosedSubset {R : Type u} [CommRing R]
@@ -654,13 +731,13 @@ def integerLocalizationFiniteFamilyMaps (U : Ultrafilter primeNumber)
   fun i => integerLocalizationToIntegerSpectrum (j i).1
 
 theorem integerLocalization_family_isUniversallyEffectiveEpi
-    (U : Ultrafilter primeNumber) :
+    (U : Ultrafilter primeNumber) (hU : IsNonprincipalUltrafilter U) :
     UniversallyEffectiveEpiFamily
       (integerLocalizationCoverFamily U) (integerLocalizationCoverMaps U) := by
   sorry
 
 theorem integerLocalization_family_isCanonicalCover
-    (U : Ultrafilter primeNumber) :
+    (U : Ultrafilter primeNumber) (hU : IsNonprincipalUltrafilter U) :
     CanonicalCoverFamily (integerLocalizationCoverFamily U)
       (integerLocalizationCoverMaps U) := by
   sorry

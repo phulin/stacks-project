@@ -3,7 +3,6 @@ import Mathlib.RingTheory.Ideal.KrullsHeightTheorem
 import Mathlib.RingTheory.KrullDimension.Basic
 import Mathlib.RingTheory.MvPolynomial.Ideal
 import Mathlib.RingTheory.Localization.LocalizationLocalization
-import Mathlib.RingTheory.Localization.Submodule
 
 /-!
 # Examples, Chapter 16: A Noetherian ring of infinite dimension
@@ -21,6 +20,16 @@ universe u
 open scoped BigOperators
 
 namespace Formalization.«Books.Examples».Unit16
+
+/-- The opening observation: a Noetherian local ring has finite Krull dimension.
+
+This is the canonical `FiniteRingKrullDim` instance supplied by Mathlib's
+Noetherian local-ring theory.
+-/
+theorem noetherian_local_ring_has_finite_krull_dimension
+    (R : Type u) [CommRing R] [IsNoetherianRing R] [IsLocalRing R] :
+    FiniteRingKrullDim R :=
+  inferInstance
 
 /-- The countable polynomial ring `k[x₁, x₂, x₃, ...]`, indexed by positive
 naturals as in the source. -/

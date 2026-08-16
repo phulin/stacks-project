@@ -175,6 +175,26 @@ def noncompleteQuotientCompletionTIdeal (k : Type u) [Field k] :
   (noncompleteQuotientTIdeal k).map
     (algebraMap (NoncompleteQuotientRing k) (NoncompleteQuotientCompletion k))
 
+/-- The completion is complete for the image of `(x)`. -/
+theorem noncompleteQuotientCompletion_isAdicComplete
+    (k : Type u) [Field k] :
+    IsAdicComplete (noncompleteQuotientCompletionXIdeal k)
+      (NoncompleteQuotientCompletion k) := by
+  change IsAdicComplete
+    ((noncompleteQuotientXIdeal k).map
+      (algebraMap (NoncompleteQuotientRing k) (NoncompleteQuotientCompletion k)))
+    (NoncompleteQuotientCompletion k)
+  exact (IsAdicComplete.map_algebraMap_iff
+      (I := noncompleteQuotientXIdeal k)
+      (M := NoncompleteQuotientCompletion k)).mpr
+    (AdicCompletion.isAdicComplete
+      (I := noncompleteQuotientXIdeal k)
+      (M := NoncompleteQuotientRing k)
+      (show Submodule.IsPrincipal
+          (noncompleteQuotientXIdeal k :
+            Submodule (NoncompleteQuotientRing k) (NoncompleteQuotientRing k)) from
+        ⟨xElement k, rfl⟩).fg)
+
 /-- A finite partial sum of the source's infinite expansion. -/
 def noncompleteQuotientFinitePartialSum
     {k : Type u} [Field k] (coeff : ℕ → NoncompleteQuotientPolynomial k)
@@ -257,26 +277,6 @@ theorem noncompleteQuotientBadElement_not_mem_completionTIdeal
     (k : Type u) [Field k] :
     noncompleteQuotientBadElement k ∉ noncompleteQuotientCompletionTIdeal k := by
   sorry
-
-/-- The completion is complete for the image of `(x)`. -/
-theorem noncompleteQuotientCompletion_isAdicComplete
-    (k : Type u) [Field k] :
-    IsAdicComplete (noncompleteQuotientCompletionXIdeal k)
-      (NoncompleteQuotientCompletion k) := by
-  change IsAdicComplete
-    ((noncompleteQuotientXIdeal k).map
-      (algebraMap (NoncompleteQuotientRing k) (NoncompleteQuotientCompletion k)))
-    (NoncompleteQuotientCompletion k)
-  exact (IsAdicComplete.map_algebraMap_iff
-      (I := noncompleteQuotientXIdeal k)
-      (M := NoncompleteQuotientCompletion k)).mpr
-    (AdicCompletion.isAdicComplete
-      (I := noncompleteQuotientXIdeal k)
-      (M := NoncompleteQuotientRing k)
-      (show Submodule.IsPrincipal
-          (noncompleteQuotientXIdeal k :
-            Submodule (NoncompleteQuotientRing k) (NoncompleteQuotientRing k)) from
-        ⟨xElement k, rfl⟩).fg)
 
 /-- The quotient by `(t)` is not complete for the image of `(x)`. -/
 theorem noncompleteQuotientCompletion_quotient_not_isAdicComplete

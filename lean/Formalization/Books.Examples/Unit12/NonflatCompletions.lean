@@ -220,6 +220,13 @@ theorem valuationRing_powerSeries_flat (R : Type u) [CommRing R] [IsDomain R]
     Module.Flat R (PowerSeries R) := by
   sorry
 
+theorem exists_valuationRing_dimension_gt_one_not_flat_over_polynomial :
+    ∃ (R : Type u) (_ : CommRing R) (_ : IsDomain R) (_ : ValuationRing R),
+      ¬ Ring.KrullDimLE 1 R ∧
+        Module.Flat R (PowerSeries R) ∧
+          ¬ Module.Flat (Polynomial R) (PowerSeries R) := by
+  sorry
+
 def IsCompletelyNormal (R K : Type*) [CommRing R] [IsDomain R] [Field K]
     [Algebra R K] [IsFractionRing R K] : Prop :=
   ∀ {x : K}, IsAlmostIntegral R x → ∃ r : R, algebraMap R K r = x
@@ -352,8 +359,8 @@ theorem valuationRing_dimension_gt_one_not_flat_over_polynomial
 /-! ## The nonflat localized completion
 
 The source leaves the coefficient ring `k` implicit.  The Noetherian step in
-the argument uses that `k[z][[x]]` is Noetherian, so the interfaces below
-make the standard smallest correction and assume `[Field k]`.
+the argument uses that `k[z][[x]]` is Noetherian, so the field hypothesis is
+attached to the kernel characterization and the nonflatness conclusions below.
 -/
 
 abbrev NonflatLocalizationVariables := Fin 2 ⊕ ℕ
@@ -449,7 +456,7 @@ def NonflatLocalizationKernelExpansion (k : Type u) [CommRing k]
         nonflatLocalizationZPolynomialMap k (c n m) * nonflatLocalizationA k m
 
 theorem nonflatLocalizationSourceKernel_iff_expansion
-    (k : Type u) [CommRing k] (g : PowerSeries (nonflatLocalizationRing k)) :
+    (k : Type u) [Field k] (g : PowerSeries (nonflatLocalizationRing k)) :
     g ∈ nonflatLocalizationSourceKernel k ↔
       NonflatLocalizationKernelExpansion k g := by
   sorry
@@ -520,7 +527,7 @@ theorem nonflatLocalizationKernel_ne_mapped_kernel
     (h ▸ nonflatLocalizationWitness_mem_kernel k)
 
 theorem nonflatLocalizationCompletionMap_flat_implies_kernel_eq
-    (k : Type u) [Field k]
+    (k : Type u) [CommRing k]
     (hflat : RingHom.Flat (nonflatLocalizationCompletionMap k)) :
     nonflatLocalizationKernel k =
       Ideal.map (algebraMap (PowerSeries (nonflatLocalizationRing k))

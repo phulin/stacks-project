@@ -5,7 +5,6 @@ import Mathlib.Algebra.Category.ModuleCat.Localization
 import Mathlib.Algebra.Module.Torsion.Basic
 import Mathlib.CategoryTheory.Abelian.SerreClass.Localization
 import Mathlib.CategoryTheory.ObjectProperty.FullSubcategory
-import Mathlib.LinearAlgebra.FiniteDimensional.Basic
 import Mathlib.RingTheory.Localization.BaseChange
 import Mathlib.RingTheory.Localization.FractionRing
 import Mathlib.RingTheory.Noetherian.Defs
@@ -210,13 +209,10 @@ abbrev finitelyGeneratedTorsionSerreQuotient
     (A : Type u) [CommRing A] [IsNoetherianRing A] :=
   (finitelyGeneratedTorsionModuleProperty A).isoModSerre.Localization
 
-/-- The finite-dimensional `K`-vector spaces as a full subcategory of `Mod_K`. -/
-def finiteDimensionalVectorSpaceProperty (K : Type u) [Field K] :
-    ObjectProperty (ModuleCat.{u} K) :=
-  fun M => FiniteDimensional K (M : Type u)
-
+/- Mathlib's `FGModuleCat K` is the canonical category of finite-dimensional
+   vector spaces when `K` is a field. -/
 abbrev finiteDimensionalVectorSpaceCategory (K : Type u) [Field K] :=
-  (finiteDimensionalVectorSpaceProperty K).FullSubcategory
+  FGModuleCat.{u} K
 
 theorem finitelyGeneratedQuotientFunctor_isInvertedBy
     (A : Type u) [CommRing A] [IsNoetherianRing A] :

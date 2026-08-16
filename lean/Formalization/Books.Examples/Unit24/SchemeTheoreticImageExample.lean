@@ -22,13 +22,17 @@ open AlgebraicGeometry
 
 namespace Formalization.«Books.Examples».Unit24
 
+/-- The polynomial variable `t` in the target ring `k[t]`. -/
+def schemeTheoreticImageVariable (k : Type u) [Field k] : Polynomial k :=
+  Polynomial.X
+
 /-- The target affine scheme `Y = Spec(k[t])`, with `k[t]` represented by `Polynomial k`. -/
 abbrev schemeTheoreticImageTarget (k : Type u) [Field k] : Scheme :=
   Spec (CommRingCat.of (Polynomial k))
 
 /-- The ideal `(tⁿ)` defining the `n`-th infinitesimal neighbourhood of `t = 0`. -/
 def schemeTheoreticImageComponentIdeal (k : Type u) [Field k] (n : ℕ+) : Ideal (Polynomial k) :=
-  Ideal.span {Polynomial.X ^ (n : ℕ)}
+  Ideal.span {schemeTheoreticImageVariable k ^ (n : ℕ)}
 
 /-- The coordinate ring `k[t]/(tⁿ)` of the `n`-th component. -/
 abbrev schemeTheoreticImageComponentRing (k : Type u) [Field k] (n : ℕ+) :=
@@ -72,7 +76,7 @@ def schemeTheoreticImageCarrier (k : Type u) [Field k] :
 def schemeTheoreticImageClosedPoint (k : Type u) [Field k] :
     Set (schemeTheoreticImageTarget k) :=
   PrimeSpectrum.zeroLocus
-    ({(Polynomial.X : ↑(CommRingCat.of (Polynomial k)))} :
+    ({(schemeTheoreticImageVariable k : ↑(CommRingCat.of (Polynomial k)))} :
       Set (↑(CommRingCat.of (Polynomial k))))
 
 /-- In this example the scheme-theoretic image is the whole target scheme. -/
@@ -96,14 +100,14 @@ def schemeTheoreticImageOpen (k : Type u) [Field k] :
     (schemeTheoreticImageTarget k).Opens :=
   PrimeSpectrum.basicOpen
     (R := ↑(CommRingCat.of (Polynomial k)))
-    (Polynomial.X : ↑(CommRingCat.of (Polynomial k)))
+    (schemeTheoreticImageVariable k : ↑(CommRingCat.of (Polynomial k)))
 
 /-- The open `D(t)` is the affine scheme `Spec(k[t, 1/t])`. -/
 noncomputable def schemeTheoreticImageOpenIsoSpecLocalization (k : Type u) [Field k] :
     (schemeTheoreticImageOpen k).toScheme ≅
-      Spec (.of (Localization.Away (Polynomial.X : Polynomial k))) :=
+      Spec (.of (Localization.Away (schemeTheoreticImageVariable k))) :=
   basicOpenIsoSpecAway (R := CommRingCat.of (Polynomial k))
-    (Polynomial.X : ↑(CommRingCat.of (Polynomial k)))
+    (schemeTheoreticImageVariable k : ↑(CommRingCat.of (Polynomial k)))
 
 /-- The restriction of the example morphism to `D(t)`. -/
 noncomputable def schemeTheoreticImageRestrictedMorphism (k : Type u) [Field k] :

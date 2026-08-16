@@ -263,7 +263,20 @@ theorem noncompleteQuotientCompletion_isAdicComplete
     (k : Type u) [Field k] :
     IsAdicComplete (noncompleteQuotientCompletionXIdeal k)
       (NoncompleteQuotientCompletion k) := by
-  sorry
+  change IsAdicComplete
+    ((noncompleteQuotientXIdeal k).map
+      (algebraMap (NoncompleteQuotientRing k) (NoncompleteQuotientCompletion k)))
+    (NoncompleteQuotientCompletion k)
+  exact (IsAdicComplete.map_algebraMap_iff
+      (I := noncompleteQuotientXIdeal k)
+      (M := NoncompleteQuotientCompletion k)).mpr
+    (AdicCompletion.isAdicComplete
+      (I := noncompleteQuotientXIdeal k)
+      (M := NoncompleteQuotientRing k)
+      (show Submodule.IsPrincipal
+          (noncompleteQuotientXIdeal k :
+            Submodule (NoncompleteQuotientRing k) (NoncompleteQuotientRing k)) from
+        ⟨xElement k, rfl⟩).fg)
 
 /-- The quotient by `(t)` is not complete for the image of `(x)`. -/
 theorem noncompleteQuotientCompletion_quotient_not_isAdicComplete

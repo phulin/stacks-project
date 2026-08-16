@@ -5,6 +5,9 @@ import Mathlib.Algebra.DirectSum.Module
 import Mathlib.Algebra.Field.ZMod
 import Mathlib.Algebra.MvPolynomial.Basic
 import Mathlib.AlgebraicGeometry.Scheme
+import Mathlib.AlgebraicGeometry.Morphisms.Finite
+import Mathlib.AlgebraicGeometry.Morphisms.OpenImmersion
+import Mathlib.AlgebraicGeometry.Morphisms.UnderlyingMap
 import Mathlib.CategoryTheory.Filtered.Basic
 import Mathlib.Data.ZMod.Basic
 import Mathlib.FieldTheory.AlgebraicClosure
@@ -228,18 +231,31 @@ theorem finite_flat_module_free_over_local
 
 structure FiniteFlatFactorOver {R S P : Type u} [CommRing R] [CommRing S] [CommRing P]
     (rToS : R →+* S) (sToP : S →+* P) where
-  target : Type u
-  [targetCommRing : CommRing target]
+  target : CommRingCat.{u}
   rToTarget : R →+* target
   sToTarget : S →+* target
   compatibility : sToTarget.comp rToS = rToTarget
   finite : RingHom.Finite rToTarget
   flat : RingHom.Flat rToTarget
-  /- In the source construction `R → S` is finite, so this is the finiteness
-     needed to apply assertion (2) to the sliced target. -/
-  finiteOverS : RingHom.Finite sToTarget
   targetToP : target →+* P
   targetToP_comp : targetToP.comp sToTarget = sToP
+
+/- A finite `R`-algebra equipped with an `S`-algebra structure is finite over
+   `S` as well.  This is the finiteness needed when assertion (2) is applied
+   to the sliced target. -/
+theorem FiniteFlatFactorOver.finiteOverS
+    {R S P : Type u} [CommRing R] [CommRing S] [CommRing P]
+    {rToS : R →+* S} {sToP : S →+* P}
+    (F : FiniteFlatFactorOver rToS sToP) : RingHom.Finite F.sToTarget := by
+  apply RingHom.Finite.of_comp_finite (f := rToS) (g := F.sToTarget)
+  rw [F.compatibility]
+  exact F.finite
+
+theorem FiniteFlatFactorOver.target_nontrivial
+    {R S P : Type u} [CommRing R] [CommRing S] [CommRing P] [Nontrivial P]
+    {rToS : R →+* S} {sToP : S →+* P}
+    (F : FiniteFlatFactorOver rToS sToP) : Nontrivial F.target :=
+  RingHom.domain_nontrivial F.targetToP
 
 /-- The first assertion in the source's two-step obstruction. -/
 def SlicingAssertion {R S : Type u} [CommRing R] [CommRing S]
@@ -259,7 +275,9 @@ theorem henselian_slicing_assertion
 /-- The second assertion in the source's two-step obstruction. -/
 def NoFiniteMapFromSFlatOverR {R S : Type u} [CommRing R] [CommRing S]
     (rToS : R →+* S) : Prop :=
-  ∀ (T : Type u) [CommRing T] (sToT : S →+* T),
+  /- The source's blanket wording has to exclude the zero ring: the zero
+     algebra is finite and flat over every base. -/
+  ∀ (T : Type u) [CommRing T] [Nontrivial T] (sToT : S →+* T),
     RingHom.Finite sToT → ¬ RingHom.Flat (sToT.comp rToS)
 
 /-- Finite presentation gives the required stage factorization in a filtered colimit. -/
@@ -274,7 +292,7 @@ theorem finitePresentation_factors_through_filtered_stage
 
 /-- The two obstruction assertions rule out the filtered-colimit presentation. -/
 theorem no_filtered_colimit_of_slicing_and_nonflat
-    {A S B : Type u} [CommRing A] [CommRing S] [CommRing B]
+    {A S B : Type u} [CommRing A] [CommRing S] [CommRing B] [Nontrivial B]
     {f : A →+* B} (D : FilteredFinitelyPresentedFlatColimit f)
     (rToS : A →+* S) (sToB : S →+* B)
     (hfp : RingHom.FinitePresentation rToS)
@@ -284,7 +302,7 @@ theorem no_filtered_colimit_of_slicing_and_nonflat
   sorry
 
 theorem not_filteredColimit_of_slicing_and_nonflat
-    {A S B : Type u} [CommRing A] [CommRing S] [CommRing B]
+    {A S B : Type u} [CommRing A] [CommRing S] [CommRing B] [Nontrivial B]
     {f : A →+* B} (rToS : A →+* S) (sToB : S →+* B)
     (hfp : RingHom.FinitePresentation rToS)
     (hcompat : sToB.comp rToS = f)
@@ -305,6 +323,7 @@ structure StrictHenselizationAtPolynomialOrigin (p n : ℕ) [Fact p.Prime] where
   [ringHenselian : HenselianLocalRing ring]
   [ringDomain : IsDomain ring]
   [ringRegular : IsRegularLocalRing ring]
+  [ringCharacteristic : CharP ring p]
   point : polynomialOriginScheme p n
   point_is_origin : point.asIdeal = polynomialOriginIdeal p n
   map : (polynomialOriginScheme p n).presheaf.stalk point →+* ring
@@ -380,6 +399,12 @@ structure HenselizationAtConeVertex {k : Type u} [Field k]
   isHenselization :
     IsHenselization (Localization.AtPrime vertex) (ring : Type u) map
 
+theorem exists_henselization_at_cone_vertex
+    {k : Type u} [Field k] {X : OrdinaryAbelianSurfaceOver k}
+    (L : VeryAmpleLineBundle X) (hL : L.sufficientlyPositive) :
+    Nonempty (HenselizationAtConeVertex L) := by
+  sorry
+
 /-- The map from the section ring to its henselization at the cone vertex. -/
 noncomputable def sectionRingToConeHenselization
     {k : Type u} [Field k] {X : OrdinaryAbelianSurfaceOver k}
@@ -435,10 +460,8 @@ structure EtaleTraceData (G₁ G₂ : Type u) [AddCommGroup G₁] [AddCommGroup 
 
 /-- The no-`R¹ lim` comparison and reduction to mod `p` in the source. -/
 structure EtaleInverseLimitData (G : Type u) [AddCommGroup G] where
-  modP : Type u
-  [modPAddCommGroup : AddCommGroup modP]
-  inverseLimit : Type u
-  [inverseLimitAddCommGroup : AddCommGroup inverseLimit]
+  modP : AddCommGrpCat.{u}
+  inverseLimit : AddCommGrpCat.{u}
   comparison : Nonempty (G ≃+ inverseLimit)
   reduction : G →+ modP
   modP_nontrivial : Nontrivial modP
@@ -449,7 +472,7 @@ structure FinitePuncturedCoverCohomologyData
     [AddCommGroup G_U] [AddCommGroup G_V] where
   V : Scheme.{u}
   mapToU : V ⟶ U
-  finite_surjective : Prop
+  finite_surjective : IsFinite mapToU ∧ Surjective mapToU
   H1EtaleZp_V_nontrivial : Nontrivial G_V
   traceData : EtaleTraceData G_U G_V
   inverseLimitData : EtaleInverseLimitData G_V
@@ -457,6 +480,8 @@ structure FinitePuncturedCoverCohomologyData
   [H1O_V_addCommGroup : AddCommGroup H1O_V]
   H1EtaleModP_V : Type u
   [H1EtaleModP_V_addCommGroup : AddCommGroup H1EtaleModP_V]
+  H1EtaleModP_V_is_inverse_limit_reduction :
+    Nonempty (H1EtaleModP_V ≃+ inverseLimitData.modP)
   H1EtaleModP_V_nontrivial : Nontrivial H1EtaleModP_V
   H1O_V_nontrivial : Nontrivial H1O_V
   artinSchreierOnH1_V : H1O_V →+ H1O_V
@@ -509,6 +534,7 @@ structure PuncturedSpectrumData (p : ℕ) (S : Type u) [CommRing S] [Fact p.Prim
     [CharP S p] [HenselianLocalRing S] where
   U : Scheme.{u}
   inclusion : U ⟶ Spec (CommRingCat.of S)
+  inclusion_isOpenImmersion : IsOpenImmersion inclusion
   isPuncturedSpectrum : Prop
   isNormal : IsDomain S ∧ IsIntegrallyClosed S
   globalSections : Type u
@@ -564,7 +590,7 @@ theorem cone_no_finite_map_flat_over_henselian_base
     (rToS : R →+* S)
     (hcohomology : EveryFiniteMapHasConeCohomologicalObstruction rToS) :
     NoFiniteMapFromSFlatOverR rToS := by
-  intro T instT sToT hfinite hflat
+  intro T instT _ sToT hfinite hflat
   obtain ⟨hcoh⟩ := hcohomology T sToT hfinite
   exact (finite_map_from_cone_not_flat_of_cohomology rToS sToT hfinite hcoh) hflat
 
@@ -579,10 +605,12 @@ structure FiniteTypeFpCounterexample where
   n_at_least_three : 3 ≤ n
   A : Type u
   [commRingA : CommRing A]
+  [algebraFpA : Algebra (ZMod p) A]
+  finiteTypeOverFp : Algebra.FiniteType (ZMod p) A
   B : Type u
   [commRingB : CommRing B]
   f : A →+* B
-  base_equivalence : Nonempty (A ≃+* polynomialRing p n)
+  base_equivalence : Nonempty (A ≃ₐ[ZMod p] polynomialRing p n)
   flat : RingHom.Flat f
   not_filtered_colimit : ¬ IsFilteredColimitOfFinitelyPresentedFlat f
 

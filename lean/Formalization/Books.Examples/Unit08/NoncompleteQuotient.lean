@@ -175,6 +175,19 @@ def noncompleteQuotientCompletionTIdeal (k : Type u) [Field k] :
   (noncompleteQuotientTIdeal k).map
     (algebraMap (NoncompleteQuotientRing k) (NoncompleteQuotientCompletion k))
 
+/-- The completion is complete as a module over the original quotient ring. -/
+theorem noncompleteQuotientCompletion_isAdicComplete_over_base
+    (k : Type u) [Field k] :
+    IsAdicComplete (noncompleteQuotientXIdeal k)
+      (NoncompleteQuotientCompletion k) := by
+  exact AdicCompletion.isAdicComplete
+    (I := noncompleteQuotientXIdeal k)
+    (M := NoncompleteQuotientRing k)
+    (show Submodule.IsPrincipal
+        (noncompleteQuotientXIdeal k :
+          Submodule (NoncompleteQuotientRing k) (NoncompleteQuotientRing k)) from
+      ⟨xElement k, rfl⟩).fg
+
 /-- The completion is complete for the image of `(x)`. -/
 theorem noncompleteQuotientCompletion_isAdicComplete
     (k : Type u) [Field k] :
@@ -187,13 +200,7 @@ theorem noncompleteQuotientCompletion_isAdicComplete
   exact (IsAdicComplete.map_algebraMap_iff
       (I := noncompleteQuotientXIdeal k)
       (M := NoncompleteQuotientCompletion k)).mpr
-    (AdicCompletion.isAdicComplete
-      (I := noncompleteQuotientXIdeal k)
-      (M := NoncompleteQuotientRing k)
-      (show Submodule.IsPrincipal
-          (noncompleteQuotientXIdeal k :
-            Submodule (NoncompleteQuotientRing k) (NoncompleteQuotientRing k)) from
-        ⟨xElement k, rfl⟩).fg)
+    (noncompleteQuotientCompletion_isAdicComplete_over_base k)
 
 /-- A finite partial sum of the source's infinite expansion. -/
 def noncompleteQuotientFinitePartialSum

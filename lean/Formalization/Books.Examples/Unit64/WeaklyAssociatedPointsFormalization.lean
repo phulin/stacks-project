@@ -3,7 +3,6 @@ import Mathlib.AlgebraicGeometry.Morphisms.SchemeTheoreticallyDominant
 import Mathlib.AlgebraicGeometry.Properties
 import Mathlib.AlgebraicGeometry.Restrict
 import Mathlib.Order.Filter.AtTopBot.Basic
-import Mathlib.RingTheory.Ideal.AssociatedPrime.Basic
 import Mathlib.RingTheory.Ideal.MinimalPrime.Basic
 import Mathlib.RingTheory.Ideal.Quotient.Operations
 import Mathlib.RingTheory.Localization.AtPrime.Basic
@@ -18,10 +17,10 @@ import Mathlib.Topology.LocallyConstant.Algebra
 # Examples, Chapter 64: Weakly associated points and scheme theoretic density
 
 This file records the two examples in the source section.  Mathlib's
-`IsAssociatedPrime` is the canonical algebraic API for weakly associated
-primes, and `IsSchemeTheoreticallyDominant` is the canonical API for
-scheme-theoretic density.  The definitions follow the source order so that
-the displayed rings and open subsets remain available to the theorem
+`minimalPrimes` API supplies the minimal-prime condition in the definition
+of weak association, while `IsSchemeTheoreticallyDominant` is the canonical
+API for scheme-theoretic density.  The definitions follow the source order
+so that the displayed rings and open subsets remain available to the theorem
 interfaces below.
 -/
 
@@ -34,10 +33,18 @@ universe u v
 
 namespace Formalization.«Books.Examples».Unit64
 
+/-- A prime ideal is weakly associated to a module when it is minimal over
+the annihilator of one of its elements.  This is the book's weak-association
+notion; Mathlib's `IsAssociatedPrime` additionally asks for the radical of
+that annihilator to equal the prime itself. -/
+def IsWeaklyAssociatedPrime {R : Type*} [CommRing R] (I : Ideal R) (M : Type*)
+    [AddCommGroup M] [Module R M] : Prop :=
+  ∃ m : M, I ∈ ((⊥ : Submodule R M).colon {m}).minimalPrimes
+
 /-- A scheme point is weakly associated to its structure sheaf when its stalk
 maximal ideal is weakly associated to the stalk as a module over itself. -/
 def IsWeaklyAssociatedPoint (X : Scheme) (x : X) : Prop :=
-  IsAssociatedPrime
+  IsWeaklyAssociatedPrime
     (IsLocalRing.maximalIdeal (X.presheaf.stalk x)) (X.presheaf.stalk x)
 
 /-! ## The first ring example -/
@@ -264,18 +271,12 @@ theorem firstExampleM0AwayLocalization_subsingleton_of_mem
     Subsingleton (firstExampleM0AwayLocalization k g) := by
   sorry
 
-/-- If `g ∉ (xᵢ yᵢ)`, the localized coefficient map is injective. -/
+/-- The correctly localized coefficient map is injective when `g ∉ (xᵢ yᵢ)`.
+This is the form needed for the density calculation. -/
 theorem firstExampleM0AwayProductMap_injective
     (k : Type u) [Field k] (g : firstExampleR0 k)
     (hg : g ∉ firstExampleM0Ideal k) :
     Function.Injective (firstExampleM0AwayProductMap k g) := by
-  sorry
-
-/-- The unlocalized coefficient map is injective when `g ∉ (xᵢ yᵢ)`. -/
-theorem firstExampleM0ToAwayProductMap_injective
-    (k : Type u) [Field k] (g : firstExampleR0 k)
-    (hg : g ∉ firstExampleM0Ideal k) :
-    Function.Injective (firstExampleM0ToAwayProductMap k g) := by
   sorry
 
 /-- The kernel of `R₀ → M₀ → (M₀)_{xₙ}` is `(xᵢ yᵢ, yₙ)`. -/
@@ -337,7 +338,7 @@ def firstExamplePrimePoint (k : Type u) [Field k] :
 
 /-- The prime `(z, xᵢ)` is weakly associated to `R`. -/
 theorem firstExamplePrime_isWeaklyAssociated (k : Type u) [Field k] :
-    IsAssociatedPrime (firstExamplePrime k) (firstExampleRing k) := by
+    IsWeaklyAssociatedPrime (firstExamplePrime k) (firstExampleRing k) := by
   sorry
 
 /-- The localization of `R` at the displayed prime. -/
@@ -371,11 +372,23 @@ theorem firstExampleLocalizedZ_annihilated_by_localized_prime
         a * firstExampleLocalizedZ k = 0 := by
   sorry
 
+/-- The corresponding point of the affine scheme is weakly associated to its
+structure sheaf. -/
+theorem firstExamplePrimePoint_isWeaklyAssociated (k : Type u) [Field k] :
+    IsWeaklyAssociatedPoint (firstExampleScheme k) (firstExamplePrimePoint k) := by
+  sorry
+
 /-! ## The open union and the localization calculation -/
 
 /-- The open `U = ⋃ D(xᵢ) ⊆ Spec(R)`. -/
 def firstExampleOpen (k : Type u) [Field k] : (firstExampleScheme k).Opens :=
   ⨆ i : ℕ, PrimeSpectrum.basicOpen (firstExampleX k i)
+
+/-- The displayed weakly associated point is omitted from every coordinate
+basic open, hence from their union. -/
+theorem firstExamplePrimePoint_not_mem_open (k : Type u) [Field k] :
+    firstExamplePrimePoint k ∉ firstExampleOpen k := by
+  sorry
 
 /-- The inclusion of the open union into `Spec(R)`. -/
 def firstExampleOpenInclusion (k : Type u) [Field k] :
@@ -649,14 +662,14 @@ theorem gabberFunctionRing_all_primes_are_minimal
 theorem gabberFunctionRing_all_primes_are_weaklyAssociated
     (k : Type u) [Field k] :
     ∀ p : Ideal (gabberFunctionRing k), p.IsPrime →
-      IsAssociatedPrime p (gabberFunctionRing k) := by
+      IsWeaklyAssociatedPrime p (gabberFunctionRing k) := by
   sorry
 
 /-- Every point of `Spec(R)` is weakly associated to its structure sheaf. -/
 theorem gabberFunctionRing_all_points_are_weaklyAssociated
     (k : Type u) [Field k] :
     ∀ p : gabberFunctionRingSpectrum k,
-      IsAssociatedPrime p.asIdeal (gabberFunctionRing k) := by
+      IsWeaklyAssociatedPoint (Spec (.of (gabberFunctionRing k))) p := by
   sorry
 
 /-- Every prime of the eventually constant ring is minimal. -/
@@ -670,14 +683,15 @@ theorem gabberEventuallyConstant_all_primes_are_minimal
 theorem gabberEventuallyConstant_all_primes_are_weaklyAssociated
     (k : Type u) [Field k] :
     ∀ p : Ideal (gabberEventuallyConstantRing k), p.IsPrime →
-      IsAssociatedPrime p (gabberEventuallyConstantRing k) := by
+      IsWeaklyAssociatedPrime p (gabberEventuallyConstantRing k) := by
   sorry
 
 /-- Every point of `Spec(R')` is weakly associated to its structure sheaf. -/
 theorem gabberEventuallyConstant_all_points_are_weaklyAssociated
     (k : Type u) [Field k] :
     ∀ p : PrimeSpectrum (CommRingCat.of (gabberEventuallyConstantRing k)),
-      IsAssociatedPrime p.asIdeal (gabberEventuallyConstantRing k) := by
+      IsWeaklyAssociatedPoint
+        (Spec (.of (gabberEventuallyConstantRing k))) p := by
   sorry
 
 /-- The two Gabber rings are reduced. -/

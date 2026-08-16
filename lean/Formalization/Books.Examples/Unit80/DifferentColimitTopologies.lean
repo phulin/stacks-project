@@ -92,37 +92,20 @@ theorem stageInclusions_cover :
 
 /-! ### The colimit topology -/
 
-/-- The final topology for the stage inclusions. -/
-def IsColimitOpen (U : Set ColimitGroup) : Prop :=
-  ∀ n : ℕ, IsOpen (stageInclusion n ⁻¹' U)
-
 /-- The topology used for the colimit in topological spaces. -/
 @[instance_reducible]
-def colimitTopology : TopologicalSpace ColimitGroup where
-  IsOpen := IsColimitOpen
-  isOpen_univ := by
-    intro n
-    exact isOpen_univ
-  isOpen_inter := by
-    intro U V hU hV n
-    exact (hU n).inter (hV n)
-  isOpen_sUnion := by
-    intro s hs n
-    rw [preimage_sUnion]
-    exact isOpen_biUnion (fun U hU ↦ hs U hU n)
+def colimitTopology : TopologicalSpace ColimitGroup :=
+  ⨆ n : ℕ, (inferInstance : TopologicalSpace (Stage n)).coinduced (stageInclusion n)
 
 instance colimitTopologicalSpace : TopologicalSpace ColimitGroup := colimitTopology
-
-/-- The stage inclusions into the union are closed embeddings. -/
-theorem stageInclusion_isClosedEmbedding (n : ℕ) :
-    IsClosedEmbedding (stageInclusion n) := by
-  sorry
 
 /-- The source's displayed criterion for openness is definitionally the
 colimit-topology criterion. -/
 theorem isOpen_colimit_iff (U : Set ColimitGroup) :
     IsOpen U ↔ ∀ n : ℕ, IsOpen (stageInclusion n ⁻¹' U) :=
-  Iff.rfl
+  by
+    change IsOpen[colimitTopology] U ↔ _
+    simp only [isOpen_iSup_iff, isOpen_coinduced]
 
 /-! ### The bad open set -/
 
@@ -249,7 +232,7 @@ theorem colimitTopology_not_topologicalAddGroup :
 
 /-- The displayed final-topology condition and the failure of topological-group
 compatibility together record that the two colimit topologies differ. -/
-theorem exists_different_colimit_topology :
+theorem lemma_colimit_topology :
     ∃ t : TopologicalSpace ColimitGroup,
       (∀ U : Set ColimitGroup,
         @IsOpen ColimitGroup t U ↔
@@ -257,7 +240,7 @@ theorem exists_different_colimit_topology :
         ¬ @IsTopologicalAddGroup ColimitGroup t inferInstance := by
   refine ⟨colimitTopology, ?_, ?_⟩
   · intro U
-    rfl
+    exact isOpen_colimit_iff U
   · exact colimitTopology_not_topologicalAddGroup
 
 end Formalization.«Books.Examples».Unit80

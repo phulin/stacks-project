@@ -1,6 +1,7 @@
 import Mathlib.Algebra.Module.LocalizedModule.Basic
 import Mathlib.Algebra.Module.Torsion.PrimaryComponent
 import Mathlib.Algebra.Homology.ShortComplex.ModuleCat
+import Mathlib.Algebra.Category.ModuleCat.Localization
 import Mathlib.AlgebraicGeometry.EffectiveEpi
 import Mathlib.AlgebraicGeometry.Limits
 import Mathlib.AlgebraicGeometry.Scheme
@@ -337,7 +338,11 @@ theorem claimI_torsionFree_intersection
     (U : Ultrafilter primeNumber) (hU : IsNonprincipalUltrafilter U)
     (M : Type u) [AddCommGroup M] [Module ℤ M]
     [Module.IsTorsionFree ℤ M] :
-    Set.range (integerModuleFractionDiagonal M) = integerModuleIntersection U M := by
+    (∀ A : primeUltrafilterMember U,
+      Function.Injective
+        (integerLocalizedModuleMap (M := M)
+          (show A.1 ⊆ Set.univ from subset_univ _))) ∧
+      Set.range (integerModuleFractionDiagonal M) = integerModuleIntersection U M := by
   sorry
 
 /-- The two-prime shortcut is valid after the natural finite-generation
@@ -442,6 +447,20 @@ noncomputable def integerTorsionShortComplex
 theorem integerTorsion_short_exact (M : Type u) [AddCommGroup M] :
     (integerTorsionShortComplex M).ShortExact := by
   sorry
+
+/-- Localizing the torsion/free short exact sequence gives each exact column in
+the source's diagram. -/
+noncomputable def integerTorsionLocalizedShortComplex
+    (M : Type u) [AddCommGroup M] (A : Set primeNumber) :
+  CategoryTheory.ShortComplex (ModuleCat.{u} (integerLocalization A)) :=
+  (integerTorsionShortComplex M).map
+    (ModuleCat.localizedModuleFunctor.{u} (generatedPrimeSubmonoid A))
+
+theorem integerTorsionLocalizedShortComplex_short_exact
+    (M : Type u) [AddCommGroup M] (A : Set primeNumber) :
+    (integerTorsionLocalizedShortComplex M A).ShortExact := by
+  exact integerTorsion_short_exact M |>.map_of_exact
+    (ModuleCat.localizedModuleFunctor.{u} (generatedPrimeSubmonoid A))
 
 theorem claimI_general_module (U : Ultrafilter primeNumber)
     (hU : IsNonprincipalUltrafilter U)
@@ -602,6 +621,12 @@ def closedSubsetIdeal (R : Type u) [CommRing R] (U : Ultrafilter primeNumber)
     (A : primeUltrafilterMember U) : Ideal (ringLocalization R A.1) :=
   PrimeSpectrum.vanishingIdeal (d.carrier A)
 
+theorem closedSubsetIdeal_isRadical (R : Type u) [CommRing R]
+    (U : Ultrafilter primeNumber) (d : ClosedSubsetGlueData R U)
+    (A : primeUltrafilterMember U) :
+    (closedSubsetIdeal R U d A).IsRadical := by
+  exact PrimeSpectrum.isRadical_vanishingIdeal (d.carrier A)
+
 def closedSubsetIdealAfterBaseChange (R : Type u) [CommRing R]
     (U : Ultrafilter primeNumber) (d : ClosedSubsetGlueData R U)
     (A B : primeUltrafilterMember U) :
@@ -630,12 +655,6 @@ theorem closedSubsetIdealAfterBaseChange_isRadical
 def radicalIdealOfClosedSubset {R : Type u} [CommRing R]
     (T : Set (PrimeSpectrum R)) : Ideal R :=
   PrimeSpectrum.vanishingIdeal T
-
-theorem closedSubsetIdeal_isRadical (R : Type u) [CommRing R]
-    (U : Ultrafilter primeNumber) (d : ClosedSubsetGlueData R U)
-    (A : primeUltrafilterMember U) :
-    (closedSubsetIdeal R U d A).IsRadical := by
-  exact PrimeSpectrum.isRadical_vanishingIdeal (d.carrier A)
 
 theorem radicalIdealOfClosedSubset_isRadical {R : Type u} [CommRing R]
     (T : Set (PrimeSpectrum R)) :
@@ -699,8 +718,8 @@ def UniversallyEffectiveEpiFamily {B : Scheme} {ι : Type v}
 
 def RefinesFamily {B : Scheme} {ι : Type*} {κ : Type*}
     (X : ι → Scheme) (f : ∀ i, X i ⟶ B)
-    (Y : κ → Scheme) (g : ∀ j, Y j ⟶ B) : Prop :=
-  ∀ j, ∃ i, ∃ h : Y j ⟶ X i, h ≫ f i = g j
+    (Y : κ → Scheme) (g : ∀ j, Y j ⟶ B) (α : κ → ι) : Prop :=
+  ∀ j, ∃ h : Y j ⟶ X (α j), h ≫ f (α j) = g j
 
 def CanonicalCoverFamily {B : Scheme} {ι : Type v}
     (X : ι → Scheme) (f : ∀ i, X i ⟶ B) : Prop :=
@@ -709,8 +728,9 @@ def CanonicalCoverFamily {B : Scheme} {ι : Type v}
 def IsQuasiCompactCanonicalObject (B : Scheme) : Prop :=
   ∀ {ι : Type v} (X : ι → Scheme) (f : ∀ i, X i ⟶ B),
     CanonicalCoverFamily X f →
-      ∃ (κ : Type v) (_ : Fintype κ) (Y : κ → Scheme) (g : ∀ j, Y j ⟶ B),
-        CanonicalCoverFamily Y g ∧ RefinesFamily X f Y g
+      ∃ (κ : Type v) (Y : κ → Scheme) (g : ∀ j, Y j ⟶ B) (α : κ → ι),
+        CanonicalCoverFamily Y g ∧ Set.Finite (Set.range α) ∧
+          RefinesFamily X f Y g α
 
 def integerLocalizationCoverFamily (U : Ultrafilter primeNumber) :
     primeUltrafilterMember U → Scheme :=
@@ -730,6 +750,12 @@ def integerLocalizationFiniteFamilyMaps (U : Ultrafilter primeNumber)
     ∀ i, integerLocalizationFiniteFamily U j i ⟶ integerSpectrumScheme :=
   fun i => integerLocalizationToIntegerSpectrum (j i).1
 
+theorem universallyEffectiveEpiFamily_isCanonicalCover
+    {B : Scheme} {ι : Type v} (X : ι → Scheme)
+    (f : ∀ i, X i ⟶ B) (h : UniversallyEffectiveEpiFamily X f) :
+    CanonicalCoverFamily X f := by
+  sorry
+
 theorem integerLocalization_family_isUniversallyEffectiveEpi
     (U : Ultrafilter primeNumber) (hU : IsNonprincipalUltrafilter U) :
     UniversallyEffectiveEpiFamily
@@ -740,16 +766,18 @@ theorem integerLocalization_family_isCanonicalCover
     (U : Ultrafilter primeNumber) (hU : IsNonprincipalUltrafilter U) :
     CanonicalCoverFamily (integerLocalizationCoverFamily U)
       (integerLocalizationCoverMaps U) := by
-  sorry
+  exact universallyEffectiveEpiFamily_isCanonicalCover _ _
+    (integerLocalization_family_isUniversallyEffectiveEpi U hU)
 
 theorem integerLocalization_family_has_no_finite_refinement
     (U : Ultrafilter primeNumber) :
     ¬∃ (κ : Type v) (_ : Fintype κ) (j : κ → primeUltrafilterMember U)
-      (ι : Type v) (Y : ι → Scheme) (g : ∀ i, Y i ⟶ integerSpectrumScheme),
+      (ι : Type v) (Y : ι → Scheme) (g : ∀ i, Y i ⟶ integerSpectrumScheme)
+      (α : ι → κ),
       UniversallyEffectiveEpiFamily Y g ∧
         @RefinesFamily integerSpectrumScheme κ ι
           (integerLocalizationFiniteFamily U j)
-          (integerLocalizationFiniteFamilyMaps U j) Y g := by
+          (integerLocalizationFiniteFamilyMaps U j) Y g α := by
   sorry
 
 theorem lemma_Z_not_quasi_compact :

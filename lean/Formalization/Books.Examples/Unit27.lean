@@ -1,4 +1,4 @@
-import Formalization.«Books.Examples».Unit27.NonexistenceSuitableOpensStatements
+import Formalization.«Books.Examples».Unit27.NonexistenceSuitableOpens
 
 /-!
 # Examples, Chapter 27: Nonexistence of suitable opens

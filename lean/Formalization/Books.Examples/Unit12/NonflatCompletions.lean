@@ -2,13 +2,16 @@ import Mathlib.Algebra.Module.FinitePresentation
 import Mathlib.RingTheory.AdicCompletion.Algebra
 import Mathlib.RingTheory.AdicCompletion.Completeness
 import Mathlib.RingTheory.Flat.Basic
+import Mathlib.RingTheory.Flat.FaithfullyFlat.Basic
 import Mathlib.RingTheory.IntegralClosure.IntegrallyClosed
 import Mathlib.RingTheory.IntegralClosure.IsIntegral.AlmostIntegral
 import Mathlib.RingTheory.KrullDimension.Basic
 import Mathlib.RingTheory.Localization.Away.Basic
 import Mathlib.RingTheory.MvPolynomial.Basic
 import Mathlib.RingTheory.PowerSeries.Basic
+import Mathlib.RingTheory.PowerSeries.Inverse
 import Mathlib.RingTheory.Valuation.ValuationRing
+import Mathlib.LinearAlgebra.TensorProduct.Pi
 
 /-!
 # Examples, Chapter 12: Nonflat completions
@@ -28,56 +31,30 @@ universe u v
 /-! ## The tensor-product criterion -/
 
 /-
-The source uses the canonical map
-`M ⊗[R] (ℕ → R) → (ℕ → M)`, sending `m ⊗ a` to the sequence
-`n ↦ a n • m`.  Mathlib supplies the tensor-product universal property, so
-we define this map directly from `TensorProduct.lift`.
+The source's canonical map is Mathlib's `TensorProduct.piScalarRightHom` with
+the coefficient ring used as both scalar rings.  Its codomain is the product
+`ℕ → M`, and on a pure tensor it sends `m ⊗ a` to `n ↦ a n • m`.
 -/
-def countableTensorToPi (R : Type u) (M : Type v)
-    [CommSemiring R] [AddCommMonoid M] [Module R M] :
-    M ⊗[R] (ℕ → R) →ₗ[R] (ℕ → M) :=
-  TensorProduct.lift
-    { toFun := fun m =>
-        { toFun := fun a n => a n • m
-          map_add' := by
-            intro a b
-            funext n
-            change (a n + b n) • m = a n • m + b n • m
-            exact add_smul (a n) (b n) m
-          map_smul' := by
-            intro r a
-            funext n
-            rw [Pi.smul_apply, Pi.smul_apply]
-            exact mul_smul r (a n) m }
-      map_add' := by
-        intro m₁ m₂
-        ext a n
-        change a n • (m₁ + m₂) = a n • m₁ + a n • m₂
-        exact smul_add (a n) m₁ m₂
-      map_smul' := by
-        intro r m
-        ext a n
-        change a n • (r • m) = r • (a n • m)
-        exact smul_comm _ _ _ }
 
 @[simp]
 theorem countableTensorToPi_tmul (R : Type u) (M : Type v)
     [CommSemiring R] [AddCommMonoid M] [Module R M]
     (m : M) (a : ℕ → R) :
-    countableTensorToPi R M (m ⊗ₜ[R] a) = fun n => a n • m :=
-  rfl
+    TensorProduct.piScalarRightHom R R M ℕ (m ⊗ₜ[R] a) = fun n => a n • m := by
+  exact TensorProduct.piScalarRightHom_tmul R R M ℕ m a
 
 theorem countable_finite_iff_tensor_surjective
     (R : Type u) (M : Type v) [CommRing R] [AddCommGroup M] [Module R M]
     [Countable M] :
-    Module.Finite R M ↔ Function.Surjective (countableTensorToPi R M) := by
+    Module.Finite R M ↔
+      Function.Surjective (TensorProduct.piScalarRightHom R R M ℕ) := by
   sorry
 
 theorem countable_finitePresentation_iff_tensor_bijective
     (R : Type u) (M : Type v) [CommRing R] [AddCommGroup M] [Module R M]
     [Countable R] [Countable M] :
     Module.FinitePresentation R M ↔
-      Function.Bijective (countableTensorToPi R M) := by
+      Function.Bijective (TensorProduct.piScalarRightHom R R M ℕ) := by
   sorry
 
 /-! ## Coherence and power series -/
@@ -116,6 +93,11 @@ def powerSeriesCoeffEquiv (R : Type u) [Semiring R] :
   map_smul' r p := by
     funext n
     simp
+
+theorem powerSeriesCoeffEquiv_apply (R : Type u) [Semiring R]
+    (p : PowerSeries R) (n : ℕ) :
+    powerSeriesCoeffEquiv R p n = PowerSeries.coeff n p :=
+  rfl
 
 theorem powerSeries_flat_iff_isCoherent
     (R : Type u) [CommRing R] [Countable R] :
@@ -160,6 +142,11 @@ def noncoherentExampleIdeal (k : Type u) [CommRing k] :
     Ideal (noncoherentExampleRing k) :=
   Ideal.span {noncoherentExampleY k, noncoherentExampleZ k}
 
+theorem noncoherentExample_countable
+    (k : Type u) [Field k] [Countable k] :
+    Countable (noncoherentExampleRing k) := by
+  sorry
+
 theorem noncoherentExample_ideal_not_finitePresented
     (k : Type u) [Field k] [Countable k] :
     ¬ Module.FinitePresentation (noncoherentExampleRing k)
@@ -173,10 +160,16 @@ theorem noncoherentExample_not_coherent
 
 /-! ## Completion of a polynomial ring -/
 
+def polynomialXIdeal (R : Type u) [CommRing R] : Ideal (Polynomial R) :=
+  Ideal.span {(Polynomial.X : Polynomial R)}
+
+abbrev polynomialRingCompletion (R : Type u) [CommRing R] :=
+  AdicCompletion (polynomialXIdeal R) (Polynomial R)
+
 def IsPowerSeriesCompletion (R : Type u) [CommRing R] : Prop :=
   Nonempty
     (PowerSeries R ≃ₐ[Polynomial R]
-      AdicCompletion (Ideal.span {(Polynomial.X : Polynomial R)}) (Polynomial R))
+      polynomialRingCompletion R)
 
 theorem powerSeries_is_completion (R : Type u) [CommRing R] :
     IsPowerSeriesCompletion R := by
@@ -206,15 +199,125 @@ theorem valuationRing_powerSeries_flat (R : Type u) [CommRing R] [IsDomain R]
     Module.Flat R (PowerSeries R) := by
   sorry
 
-def IsCompletelyNormal (R K : Type*) [CommRing R] [CommRing K]
-    [Algebra R K] : Prop :=
+def IsCompletelyNormal (R K : Type*) [CommRing R] [Field K]
+    [Algebra R K] [IsFractionRing R K] : Prop :=
   ∀ {x : K}, IsAlmostIntegral R x → ∃ r : R, algebraMap R K r = x
+
+/-
+The series used in the almost-integral argument is represented by its
+coefficient data.  The coefficient at degree `n` is `r * α^n`; thus the
+constant term is `r`, which is the indexing convention needed for the
+factorization displayed in the source.
+-/
+structure AlmostIntegralSeriesData (R : Type u) (K : Type v)
+    [CommRing R] [Field K] [Algebra R K] [IsFractionRing R K]
+    (α : K) (r : R) where
+  coefficient : ℕ → R
+  coefficient_spec :
+    ∀ n, algebraMap R K (coefficient n) = algebraMap R K r * α ^ n
+
+def almostIntegralSeries {R : Type u} {K : Type v}
+    [CommRing R] [Field K] [Algebra R K] [IsFractionRing R K]
+    {α : K} {r : R} (d : AlmostIntegralSeriesData R K α r) : PowerSeries R :=
+  PowerSeries.mk d.coefficient
+
+theorem exists_almostIntegralSeriesData
+    (R : Type u) (K : Type v) [CommRing R] [IsDomain R] [Field K]
+    [Algebra R K] [IsFractionRing R K] (α : K) (r : R) (hr : r ≠ 0)
+    (hpow : ∀ n : ℕ, 1 ≤ n →
+      ∃ c : R, algebraMap R K c = algebraMap R K r * α ^ n) :
+    Nonempty (AlmostIntegralSeriesData R K α r) := by
+  sorry
+
+theorem almostIntegralSeries_factorization
+    (R : Type u) (K : Type v) [CommRing R] [IsDomain R] [Field K]
+    [Algebra R K] [IsFractionRing R K] (α : K) (r a b : R)
+    (d : AlmostIntegralSeriesData R K α r) (hb : b ≠ 0)
+    (hα : algebraMap R K a = α * algebraMap R K b) :
+    (PowerSeries.C a * PowerSeries.X - PowerSeries.C b) *
+        almostIntegralSeries d = PowerSeries.C (-r * b) := by
+  sorry
+
+/-
+The multiplicative subset used in the proof consists of polynomials whose
+constant coefficient is one.  It is represented by the canonical preimage
+construction for submonoids.
+-/
+def almostIntegralDenominatorSubmonoid (R : Type u) [CommRing R] :
+    Submonoid (Polynomial R) :=
+  Submonoid.comap Polynomial.constantCoeff (Submonoid.powers (1 : R))
+
+abbrev almostIntegralPolynomialLocalization (R : Type u) [CommRing R] :=
+  Localization (almostIntegralDenominatorSubmonoid R)
+
+noncomputable def almostIntegralPolynomialLocalizationMap
+    (R : Type u) [CommRing R] :
+    almostIntegralPolynomialLocalization R →+* PowerSeries R :=
+  IsLocalization.lift (M := almostIntegralDenominatorSubmonoid R)
+    (S := almostIntegralPolynomialLocalization R)
+    (g := Polynomial.coeToPowerSeries.ringHom) (by
+      intro h
+      rw [PowerSeries.isUnit_iff_constantCoeff]
+      change IsUnit (Polynomial.constantCoeff (h : Polynomial R))
+      rcases (Submonoid.mem_powers_iff _ _).mp h.property with ⟨n, hn⟩
+      rw [← hn]
+      simp)
+
+noncomputable instance almostIntegralPolynomialLocalizationPowerSeriesAlgebra
+    (R : Type u) [CommRing R] :
+    Algebra (almostIntegralPolynomialLocalization R) (PowerSeries R) :=
+  RingHom.toAlgebra (almostIntegralPolynomialLocalizationMap R)
+
+theorem almostIntegralPolynomialLocalization_faithfullyFlat
+    (R : Type u) [CommRing R] [IsDomain R]
+    (hflat : Module.Flat (Polynomial R) (PowerSeries R)) :
+    Module.FaithfullyFlat (almostIntegralPolynomialLocalization R) (PowerSeries R) := by
+  sorry
+
+def almostIntegralPrincipalPolynomial (R : Type u) [CommRing R]
+    (a b : R) : Ideal (Polynomial R) :=
+  Ideal.span {Polynomial.C a * Polynomial.X - Polynomial.C b}
+
+abbrev almostIntegralLocalizedPrincipalIdeal
+    (R : Type u) [CommRing R] (a b : R) :
+    Ideal (almostIntegralPolynomialLocalization R) :=
+  Ideal.map (algebraMap (Polynomial R)
+    (almostIntegralPolynomialLocalization R))
+    (almostIntegralPrincipalPolynomial R a b)
+
+abbrev almostIntegralPowerSeriesPrincipalIdeal
+    (R : Type u) [CommRing R] (a b : R) : Ideal (PowerSeries R) :=
+  Ideal.map (almostIntegralPolynomialLocalizationMap R)
+    (almostIntegralLocalizedPrincipalIdeal R a b)
+
+noncomputable def almostIntegralPrincipalQuotientMap
+    (R : Type u) [CommRing R] (a b : R) :
+    (almostIntegralPolynomialLocalization R ⧸
+        almostIntegralLocalizedPrincipalIdeal R a b) →+*
+      (PowerSeries R ⧸ almostIntegralPowerSeriesPrincipalIdeal R a b) :=
+  Ideal.Quotient.lift (almostIntegralLocalizedPrincipalIdeal R a b)
+    ((Ideal.Quotient.mk (almostIntegralPowerSeriesPrincipalIdeal R a b)).comp
+      (almostIntegralPolynomialLocalizationMap R))
+    (fun _ hh => Ideal.Quotient.eq_zero_iff_mem.mpr
+      (Ideal.mem_map_of_mem (almostIntegralPolynomialLocalizationMap R) hh))
+
+theorem almostIntegralPrincipalQuotientMap_injective
+    (R : Type u) [CommRing R] [IsDomain R]
+    (hflat : Module.Flat (Polynomial R) (PowerSeries R)) (a b : R) :
+    Function.Injective (almostIntegralPrincipalQuotientMap R a b) := by
+  sorry
 
 theorem flat_powerSeries_normal_iff_completelyNormal
     (R K : Type u) [CommRing R] [IsDomain R] [Field K]
     [Algebra R K] [IsFractionRing R K]
     (hflat : Module.Flat (Polynomial R) (PowerSeries R)) :
     IsIntegrallyClosed R ↔ IsCompletelyNormal R K := by
+  sorry
+
+theorem valuationRing_dimension_gt_one_not_completelyNormal
+    (R : Type u) [CommRing R] [IsDomain R] [ValuationRing R]
+    (hdim : ¬ Ring.KrullDimLE 1 R) :
+    ¬ IsCompletelyNormal R (FractionRing R) := by
   sorry
 
 theorem valuationRing_dimension_gt_one_not_flat_over_polynomial
@@ -260,6 +363,10 @@ def nonflatLocalizationA (k : Type u) [CommRing k] (n : ℕ) : nonflatLocalizati
   Ideal.Quotient.mk (nonflatLocalizationRelationsIdeal k)
     (MvPolynomial.X (nonflatLocalizationAVar n))
 
+def nonflatLocalizationY (k : Type u) [CommRing k] : nonflatLocalizationRing k :=
+  Ideal.Quotient.mk (nonflatLocalizationRelationsIdeal k)
+    (MvPolynomial.X nonflatLocalizationYVar)
+
 abbrev nonflatLocalizationPowerSeries (k : Type u) [CommRing k] :=
   PowerSeries (Localization.Away (nonflatLocalizationF k))
 
@@ -270,22 +377,54 @@ noncomputable def nonflatLocalizationCompletionMap
   PowerSeries.map (algebraMap (nonflatLocalizationRing k)
     (Localization.Away (nonflatLocalizationF k)))
 
+def powerSeriesMultiplication (R : Type u) [CommRing R] (r : R) :
+    PowerSeries R →ₗ[PowerSeries R] PowerSeries R :=
+  LinearMap.mulLeft (PowerSeries R) (PowerSeries.C r)
+
 def powerSeriesMulKernel (R : Type u) [CommRing R] (r : R) : Ideal (PowerSeries R) :=
-  LinearMap.ker (LinearMap.mulLeft (PowerSeries R) (PowerSeries.C r))
+  (LinearMap.ker (powerSeriesMultiplication R r) : Ideal (PowerSeries R))
+
+theorem powerSeriesMulKernel_exact (R : Type u) [CommRing R] (r : R) :
+    Function.Exact (powerSeriesMulKernel R r).subtype
+      (powerSeriesMultiplication R r) :=
+  by
+  sorry
 
 def nonflatLocalizationKernel (k : Type u) [CommRing k] :
     Ideal (nonflatLocalizationPowerSeries k) :=
   powerSeriesMulKernel (Localization.Away (nonflatLocalizationF k))
     (algebraMap (nonflatLocalizationRing k)
       (Localization.Away (nonflatLocalizationF k))
-      (Ideal.Quotient.mk (nonflatLocalizationRelationsIdeal k)
-        (MvPolynomial.X nonflatLocalizationYVar)))
+      (nonflatLocalizationY k))
 
 def nonflatLocalizationSourceKernel (k : Type u) [CommRing k] :
     Ideal (PowerSeries (nonflatLocalizationRing k)) :=
   powerSeriesMulKernel (nonflatLocalizationRing k)
-    (Ideal.Quotient.mk (nonflatLocalizationRelationsIdeal k)
-      (MvPolynomial.X nonflatLocalizationYVar))
+    (nonflatLocalizationY k)
+
+def nonflatLocalizationTargetMultiplication (k : Type u) [CommRing k] :
+    nonflatLocalizationPowerSeries k →ₗ[nonflatLocalizationPowerSeries k]
+      nonflatLocalizationPowerSeries k :=
+  powerSeriesMultiplication (Localization.Away (nonflatLocalizationF k))
+    (algebraMap (nonflatLocalizationRing k)
+      (Localization.Away (nonflatLocalizationF k)) (nonflatLocalizationY k))
+
+def nonflatLocalizationSourceMultiplication (k : Type u) [CommRing k] :
+    PowerSeries (nonflatLocalizationRing k) →ₗ[PowerSeries (nonflatLocalizationRing k)]
+      PowerSeries (nonflatLocalizationRing k) :=
+  powerSeriesMultiplication (nonflatLocalizationRing k) (nonflatLocalizationY k)
+
+theorem nonflatLocalizationSource_exact (k : Type u) [CommRing k] :
+    Function.Exact (nonflatLocalizationSourceKernel k).subtype
+      (nonflatLocalizationSourceMultiplication k) :=
+  by
+  sorry
+
+theorem nonflatLocalizationTarget_exact (k : Type u) [CommRing k] :
+    Function.Exact (nonflatLocalizationKernel k).subtype
+      (nonflatLocalizationTargetMultiplication k) :=
+  by
+  sorry
 
 def nonflatLocalizationWitness (k : Type u) [CommRing k] :
     nonflatLocalizationPowerSeries k :=
@@ -294,6 +433,16 @@ def nonflatLocalizationWitness (k : Type u) [CommRing k] :
       algebraMap (nonflatLocalizationRing k)
         (Localization.Away (nonflatLocalizationF k))
         (nonflatLocalizationA k n)
+
+@[simp]
+theorem nonflatLocalizationWitness_coeff
+    (k : Type u) [CommRing k] (n : ℕ) :
+    PowerSeries.coeff n (nonflatLocalizationWitness k) =
+      (Localization.Away.invSelf (nonflatLocalizationF k)) ^ n *
+        algebraMap (nonflatLocalizationRing k)
+          (Localization.Away (nonflatLocalizationF k))
+          (nonflatLocalizationA k n) := by
+  simp [nonflatLocalizationWitness]
 
 theorem nonflatLocalizationWitness_mem_kernel
     (k : Type u) [Field k] [Countable k] :
@@ -330,6 +479,34 @@ abbrev localizedAdicCompletion
     (A : Type u) [CommRing A] (I : Ideal A) (f : A) : Type u :=
   AdicCompletion (Ideal.map (algebraMap A (Localization.Away f)) I)
     (Localization.Away f)
+
+def nonflatLocalizationAdicIdeal (k : Type u) [CommRing k] :
+    Ideal (PowerSeries (nonflatLocalizationRing k)) :=
+  Ideal.span {(PowerSeries.X : PowerSeries (nonflatLocalizationRing k))}
+
+abbrev nonflatLocalizationAdicCompletion (k : Type u) [CommRing k] :=
+  localizedAdicCompletion (PowerSeries (nonflatLocalizationRing k))
+    (nonflatLocalizationAdicIdeal k)
+    (algebraMap (nonflatLocalizationRing k)
+      (PowerSeries (nonflatLocalizationRing k)) (nonflatLocalizationF k))
+
+theorem nonflatLocalizationAdicIdeal_isPrincipal
+    (k : Type u) [CommRing k] :
+    (nonflatLocalizationAdicIdeal k).IsPrincipal := by
+  sorry
+
+theorem nonflatLocalizationPowerSeries_completion_equiv
+    (k : Type u) [CommRing k] :
+    Nonempty
+      (nonflatLocalizationPowerSeries k ≃+*
+        nonflatLocalizationAdicCompletion k) := by
+  sorry
+
+theorem nonflatLocalizationAdicCompletion_not_flat
+    (k : Type u) [Field k] [Countable k] :
+    ¬ Module.Flat (PowerSeries (nonflatLocalizationRing k))
+      (nonflatLocalizationAdicCompletion k) := by
+  sorry
 
 theorem exists_nonflat_localized_adic_completion :
     ∃ (A : Type u) (_ : CommRing A) (I : Ideal A) (f : A),

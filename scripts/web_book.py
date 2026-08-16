@@ -61,7 +61,7 @@ for name in lijstje:
 		print("\\part{" + parts[name][0] + "}")
 		print("\\label{" + parts[name][1] + "}")
 
-	filename = path + name + ext
+	filename = tex_path(path, name)
 	tex_file = open(filename, 'r')
 	verbatim = 0
 	for line in tex_file:

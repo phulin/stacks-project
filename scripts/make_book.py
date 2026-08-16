@@ -77,7 +77,7 @@ for name in lijstje:
 	if name == "index":
 		filename = path + "tmp/index.tex"
 	else:
-		filename = path + name + ext
+		filename = tex_path(path, name)
 	tex_file = open(filename, 'r')
 	verbatim = 0
 	for line in tex_file:

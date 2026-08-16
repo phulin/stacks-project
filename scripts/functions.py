@@ -56,10 +56,15 @@ def contains_ref(line):
 		return 0
 	return 1
 
+def tex_path(path, name):
+	if name == "fdl":
+		return path + name + ".tex"
+	return path + "books/" + name + ".tex"
+
 # returns all long labels for a given name
 def get_all_labels(path, name):
 	labels = []
-	tex_file = open(path + name + ".tex", 'r')
+	tex_file = open(tex_path(path, name), 'r')
 	verbatim = 0
 	for line in tex_file:
 		# Check for verbatim, because we do not add labels from
@@ -329,7 +334,7 @@ def print_version(path):
 
 # Print license blurp
 def print_license_blurp(path):
-	filename = path + 'introduction.tex'
+	filename = path + 'books/introduction.tex'
 	introduction = open(filename, 'r')
 	inside = 0
 	for line in introduction:

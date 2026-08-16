@@ -4,6 +4,8 @@
 
 # Master list of stems of tex files in the project.
 # This should be in order.
+TEXDIR = books
+
 LIJST = introduction conventions sets categories \
 	topology sheaves sites stacks \
 	fields algebra brauer \
@@ -43,7 +45,8 @@ LIJST_FDL = $(LIJST) fdl index
 LIJST_TAGS = $(LIJST_FDL) book
 
 # Different extensions
-SOURCES = $(patsubst %,%.tex,$(LIJST))
+SOURCES = $(patsubst %,$(TEXDIR)/%.tex,$(LIJST))
+ALL_TEX_SOURCES = $(SOURCES) bibliography.tex chapters.tex fdl.tex preamble.tex
 TAGS = $(patsubst %,tags/tmp/%.tex,$(LIJST_TAGS))
 TAG_EXTRAS = tags/tmp/my.bib tags/tmp/hyperref.cfg \
 	tags/tmp/stacks-project.cls tags/tmp/stacks-project-book.cls \
@@ -92,10 +95,10 @@ pdfs: $(FOOS) $(BARS) $(PDFS)
 %.dvi : %.tex
 
 # Automatically generated tex files
-tmp/index.tex: *.tex
+tmp/index.tex: $(ALL_TEX_SOURCES)
 	python3 ./scripts/make_index.py "$(CURDIR)" > tmp/index.tex
 
-tmp/book.tex: *.tex tmp/index.tex
+tmp/book.tex: $(ALL_TEX_SOURCES) CONTRIBUTORS tmp/index.tex
 	python3 ./scripts/make_book.py "$(CURDIR)" > tmp/book.tex
 
 # Creating aux files
@@ -107,9 +110,13 @@ book.foo: tmp/book.tex
 	$(FOO_LATEX) tmp/book
 	touch book.foo
 
-%.foo: %.tex
-	$(FOO_LATEX) $*
+%.foo: $(TEXDIR)/%.tex
+	$(FOO_LATEX) $(TEXDIR)/$*
 	touch $*.foo
+
+fdl.foo: fdl.tex
+	$(FOO_LATEX) fdl
+	touch fdl.foo
 
 # Creating bbl files
 index.bar: tmp/index.tex index.foo
@@ -124,7 +131,7 @@ book.bar: tmp/book.tex book.foo
 	bibtex book
 	touch book.bar
 
-%.bar: %.tex %.foo
+%.bar: $(TEXDIR)/%.tex %.foo
 	bibtex $*
 	touch $*.bar
 
@@ -137,9 +144,13 @@ book.pdf: tmp/book.tex book.bar
 	$(PDFLATEX) tmp/book
 	$(PDFLATEX) tmp/book
 
-%.pdf: %.tex %.bar $(FOOS)
-	$(PDFLATEX) $*
-	$(PDFLATEX) $*
+%.pdf: $(TEXDIR)/%.tex %.bar $(FOOS)
+	$(PDFLATEX) $(TEXDIR)/$*
+	$(PDFLATEX) $(TEXDIR)/$*
+
+fdl.pdf: fdl.tex fdl.bar $(FOOS)
+	$(PDFLATEX) fdl
+	$(PDFLATEX) fdl
 
 # Creating dvi files
 index.dvi: tmp/index.tex index.bar $(FOOS)
@@ -150,9 +161,13 @@ book.dvi: tmp/book.tex book.bar
 	$(LATEX) tmp/book
 	$(LATEX) tmp/book
 
-%.dvi : %.tex %.bar $(FOOS)
-	$(LATEX) $*
-	$(LATEX) $*
+%.dvi : $(TEXDIR)/%.tex %.bar $(FOOS)
+	$(LATEX) $(TEXDIR)/$*
+	$(LATEX) $(TEXDIR)/$*
+
+fdl.dvi: fdl.tex fdl.bar $(FOOS)
+	$(LATEX) fdl
+	$(LATEX) fdl
 
 #
 #
@@ -171,8 +186,14 @@ tags/tmp/preamble.tex: preamble.tex tags/tags
 tags/tmp/chapters.tex: chapters.tex
 	cp chapters.tex tags/tmp/chapters.tex
 
-tags/tmp/%.tex: %.tex tags/tags
+tags/tmp/%.tex: $(TEXDIR)/%.tex tags/tags
 	python3 ./scripts/tag_up.py "$(CURDIR)" $* > tags/tmp/$*.tex
+
+tags/tmp/bibliography.tex: bibliography.tex tags/tags
+	python3 ./scripts/tag_up.py "$(CURDIR)" bibliography > tags/tmp/bibliography.tex
+
+tags/tmp/fdl.tex: fdl.tex tags/tags
+	python3 ./scripts/tag_up.py "$(CURDIR)" fdl > tags/tmp/fdl.tex
 
 tags/tmp/stacks-project.cls: stacks-project.cls
 	cp stacks-project.cls tags/tmp/stacks-project.cls

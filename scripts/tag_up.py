@@ -57,8 +57,10 @@ label_tags = dict((tags[n][1], tags[n][0]) for n in range(0, len(tags)))
 
 if name == "book":
 	tex_file = open(path + "tmp/" + name + ".tex", 'r')
-else:
+elif name == "bibliography" or name == "fdl":
 	tex_file = open(path + name + ".tex", 'r')
+else:
+	tex_file = open(path + "books/" + name + ".tex", 'r')
 
 document = 0
 verbatim = 0

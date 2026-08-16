@@ -16,16 +16,23 @@ STEM=$3
 # Temporary directory
 TMPD=`mktemp -d --tmpdir=$SPD/tmp`
 
-# Symbolically link files that are hopefully not modified during process
-ln -s $SPD/preamble.tex $SPD/chapters.tex $SPD/hyperref.cfg \
-	$SPD/stacks-project.cls $SPD/$STEM.tex $TMPD
-
 # Exceptional cases
-if [ "$STEM" == "tmp/index" ]; then STEM="index"; fi
+SOURCE=$SPD/books/$STEM.tex
+if [ "$STEM" == "fdl" ]; then SOURCE=$SPD/fdl.tex; fi
+if [ "$STEM" == "tmp/index" ]; then
+	SOURCE=$SPD/tmp/index.tex
+	STEM="index"
+fi
 if [ "$STEM" == "tmp/book" ]; then
+	SOURCE=$SPD/tmp/book.tex
 	STEM="book";
 	ln -s $SPD/stacks-project-book.cls $TMPD;
 fi
+
+# Symbolically link files that are hopefully not modified during process
+ln -s $SPD/preamble.tex $SPD/chapters.tex $SPD/hyperref.cfg \
+	$SPD/stacks-project.cls $TMPD
+ln -s $SOURCE $TMPD/$STEM.tex
 
 # Link to bibliography file
 ln -s $SPD/$STEM.bbl $TMPD

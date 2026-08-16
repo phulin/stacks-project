@@ -6,8 +6,15 @@ algebraic geometry that is needed to define them. Location on the web:
 
 	https://stacks.math.columbia.edu/
 
-You can simply latex the files in the current directory read them, edit them,
-and submit your changes by email back into the project.
+The individual LaTeX books live in the `books` directory; shared TeX support
+and the FDL license remain at the repository root. You can latex books from the
+repository root, read them, edit them, and submit your changes by email back
+into the project.
+
+PAF can discover the complete LaTeX corpus recursively from that directory:
+
+	uv run --project ../paf paf plan books/
+	uv run --project ../paf paf corpus books/
 
 
 Here is are some pointers to documentation:

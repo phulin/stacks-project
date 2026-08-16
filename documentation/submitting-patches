@@ -7,16 +7,16 @@ new version.
 (2) It is sometimes convenient to send only the difference between the new
 version and the old one. Please use "diff -u" in this case to produce the
 patch. It will help if you follow the suggestions below, or do something with
-equivalent endproduct. To create a patch for a single file, say stacks.tex,
-you can do the following. First download stacks.tex. Make a copy:
+equivalent endproduct. To create a patch for a single file, say books/stacks.tex,
+you can do the following. First download books/stacks.tex. Make a copy:
 
-	cp stacks.tex stacks.tex.orig
+	cp books/stacks.tex books/stacks.tex.orig
 
-and then edit stacks.tex as you like. (Or, if you've already edited the file,
-you download and save the version from the web directly as stacks.tex.orig.) To
-make the patch use
+and then edit books/stacks.tex as you like. (Or, if you've already edited the
+file, you download and save the version from the web directly as
+books/stacks.tex.orig.) To make the patch use
 
-	diff -u stacks.tex.orig stacks.tex > stacks.tex.patch
+	diff -u books/stacks.tex.orig books/stacks.tex > stacks.tex.patch
 
 Email the patchfile. Please include PATCH in the subject line.
 

@@ -10,7 +10,7 @@ Chapters and titles of chapters
 To each chapter there are associated 3 names: the file name, the title of
 the chapter, and the short title
 
-Rules for these: the file name is of the form <name>.tex where <name> is a
+Rules for these: the path is of the form books/<name>.tex where <name> is a
 string of characters from a...z and - which we think of as a separator.
 
 Lists of chapters occur in the following files
@@ -33,7 +33,7 @@ variable LIJST in the Makefile. Extra chapters which are added by scripts are
 	index		auto generated index of definitions
 
 The titles of the chapters can be found by looking for the \title{} macro
-in the tex files.
+in the tex files under books/.
 
 The short titles of the chapters can be found in scripts/fix_titles_refs.py
 

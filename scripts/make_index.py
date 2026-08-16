@@ -47,7 +47,7 @@ terms = []
 defs = []
 titles = []
 for name in lijstje:
-	filename = path + name + ext
+	filename = tex_path(path, name)
 	tex_file = open(filename, 'r')
 	in_definition = 0
 	nr_lines_def = 0

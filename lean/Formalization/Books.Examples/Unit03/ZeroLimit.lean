@@ -373,10 +373,37 @@ noncomputable def wModuleFunctor {I : Type u} [Preorder I] {S : I → Type v}
   inverseSystemModuleFunctor (W := fun i => W (S := S) K i) K
     (fun {_i _j} h => wMap f K h)
 
-/-- The constant `K`-module diagram in the same universe as `V` and `W`. -/
-def constantKModuleFunctor {I : Type u} [Preorder I] (K : Type w) [Field K] :
-    Iᵒᵖ ⥤ ModuleCat.{max v w} K :=
-  (Functor.const Iᵒᵖ).obj (ModuleCat.of K (ULift.{max v w} K))
+/-- The universe-lifted categorical inverse limit of the direct-sum module diagram. -/
+noncomputable def vModuleLimit {I : Type u} [Preorder I] {S : I → Type v}
+    (f : ∀ ⦃i j : I⦄, i ≤ j → S j → S i) (K : Type w) [Field K]
+    [InverseSystem f] : ModuleCat.{max (max v w) u} K :=
+  limit (vModuleFunctor f K ⋙ ModuleCat.uliftFunctor.{u} K)
+
+/-- The universe-lifted categorical inverse limit of the direct-sum diagram is the zero module. -/
+theorem v_module_limit_is_zero {I : Type u} [Preorder I] [IsDirectedOrder I]
+    {S : I → Type v}
+    (f : ∀ ⦃i j : I⦄, i ≤ j → S j → S i) (K : Type w) [Field K]
+    [InverseSystem f] (hS : ∀ i, Nonempty (S i))
+    (hf : ∀ ⦃i j⦄ (h : i ≤ j), Function.Surjective (f h))
+    (hlim : IsEmpty (inverseLimit f)) :
+    IsZero (vModuleLimit f K) := by
+  sorry
+
+/-- The universe-lifted categorical inverse limit of the kernel module diagram. -/
+noncomputable def wModuleLimit {I : Type u} [Preorder I] {S : I → Type v}
+    (f : ∀ ⦃i j : I⦄, i ≤ j → S j → S i) (K : Type w) [Field K]
+    [InverseSystem f] : ModuleCat.{max (max v w) u} K :=
+  limit (wModuleFunctor f K ⋙ ModuleCat.uliftFunctor.{u} K)
+
+/-- The universe-lifted categorical inverse limit of the kernel diagram is the zero module. -/
+theorem w_module_limit_is_zero {I : Type u} [Preorder I] [IsDirectedOrder I]
+    {S : I → Type v}
+    (f : ∀ ⦃i j : I⦄, i ≤ j → S j → S i) (K : Type w) [Field K]
+    [InverseSystem f] (hS : ∀ i, Nonempty (S i))
+    (hf : ∀ ⦃i j⦄ (h : i ≤ j), Function.Surjective (f h))
+    (hlim : IsEmpty (inverseLimit f)) :
+    IsZero (wModuleLimit f K) := by
+  sorry
 
 /-- The inclusion of the kernel diagram into the direct-sum diagram. -/
 noncomputable def wToVModuleNatTrans {I : Type u} [Preorder I] {S : I → Type v}
@@ -390,15 +417,15 @@ noncomputable def wToVModuleNatTrans {I : Type u} [Preorder I] {S : I → Type v
 /-! The universe-lifted form of the coordinate map used by `wShortComplex`. -/
 noncomputable def coordinateSumLift {I : Type u} {S : I → Type v}
     (K : Type w) [Field K] (i : I) :
-    V K S i →ₗ[K] ULift.{max v w} K :=
-  (ULift.moduleEquiv : ULift.{max v w} K ≃ₗ[K] K).symm.toLinearMap.comp
+    V K S i →ₗ[K] ULift.{v} K :=
+  (ULift.moduleEquiv : ULift.{v} K ≃ₗ[K] K).symm.toLinearMap.comp
     (coordinateSum (S := S) K i)
 
 /-- The coordinate-sum morphism from the direct-sum diagram to the constant diagram. -/
 noncomputable def vToConstantKModuleNatTrans {I : Type u} [Preorder I]
     {S : I → Type v} (f : ∀ ⦃i j : I⦄, i ≤ j → S j → S i) (K : Type w) [Field K]
     [InverseSystem f] :
-    vModuleFunctor f K ⟶ constantKModuleFunctor K where
+    vModuleFunctor f K ⟶ constantModuleFunctor K where
   app i := ModuleCat.ofHom (coordinateSumLift (S := S) K i.unop)
   naturality i j p := by
     apply ModuleCat.hom_ext
@@ -417,7 +444,7 @@ noncomputable def wShortComplex {I : Type u} {S : I → Type v}
     (ModuleCat.ofHom (W (S := S) K i).subtype :
       ModuleCat.of K (W (S := S) K i) ⟶ ModuleCat.of K (V K S i))
     (ModuleCat.ofHom (coordinateSumLift (S := S) K i) :
-      ModuleCat.of K (V K S i) ⟶ ModuleCat.of K (ULift.{max v w} K))
+      ModuleCat.of K (V K S i) ⟶ ModuleCat.of K (ULift.{v} K))
     (by
       apply ModuleCat.hom_ext
       simpa only [ModuleCat.hom_comp, ModuleCat.hom_ofHom, ModuleCat.hom_zero] using
@@ -425,6 +452,12 @@ noncomputable def wShortComplex {I : Type u} {S : I → Type v}
           apply ULift.ext
           exact x.2) :
           (coordinateSumLift (S := S) K i).comp (W (S := S) K i).subtype = 0))
+
+/-- Each level is the short exact sequence of vector spaces from the source. -/
+theorem wShortComplex_shortExact {I : Type u} {S : I → Type v}
+    (K : Type w) [Field K] (i : I) (hS : Nonempty (S i)) :
+    (wShortComplex (S := S) K i).ShortExact := by
+  sorry
 
 /-! The short complex of inverse-system valued modules in the source. -/
 noncomputable def inverseSystemShortComplex {I : Type u} [Preorder I]

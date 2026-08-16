@@ -109,20 +109,20 @@ noncomputable def schemeTheoreticImageOpenIsoSpecLocalization (k : Type u) [Fiel
   basicOpenIsoSpecAway (R := CommRingCat.of (Polynomial k))
     (schemeTheoreticImageVariable k : ↑(CommRingCat.of (Polynomial k)))
 
-/-- The restriction of the example morphism to `D(t)`. -/
-noncomputable def schemeTheoreticImageRestrictedMorphism (k : Type u) [Field k] :
-    (schemeTheoreticImageMorphism k ⁻¹ᵁ schemeTheoreticImageOpen k).toScheme ⟶
-      (schemeTheoreticImageOpen k).toScheme :=
-  schemeTheoreticImageMorphism k ∣_ schemeTheoreticImageOpen k
-
 /-- The source has empty preimage over `D(t)`. -/
 def schemeTheoreticImageSourcePreimageOfOpen (k : Type u) [Field k] :
-    Set (schemeTheoreticImageSource k) :=
+    (schemeTheoreticImageSource k).Opens :=
   schemeTheoreticImageMorphism k ⁻¹ᵁ schemeTheoreticImageOpen k
 
 theorem schemeTheoreticImageSourcePreimageOfOpen_eq_empty (k : Type u) [Field k] :
-    schemeTheoreticImageSourcePreimageOfOpen k = ∅ := by
+    schemeTheoreticImageSourcePreimageOfOpen k = ⊥ := by
   sorry
+
+/-- The restriction of the example morphism to `D(t)`. -/
+noncomputable def schemeTheoreticImageRestrictedMorphism (k : Type u) [Field k] :
+    (schemeTheoreticImageSourcePreimageOfOpen k).toScheme ⟶
+      (schemeTheoreticImageOpen k).toScheme :=
+  schemeTheoreticImageMorphism k ∣_ schemeTheoreticImageOpen k
 
 /-- The restricted morphism has the empty scheme as its scheme-theoretic image. -/
 theorem schemeTheoreticImageRestrictedMorphism_image_is_empty

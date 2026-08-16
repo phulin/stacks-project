@@ -1,1 +1,0 @@
-import Formalization.«Books.Examples».Unit23.NonQuasiAffineNormalization

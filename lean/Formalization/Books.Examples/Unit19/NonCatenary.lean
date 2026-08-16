@@ -42,6 +42,12 @@ noncomputable def zPowerSeries (a : ℕ → k) : PowerSeries k :=
 noncomputable def zTail (a : ℕ → k) (j : ℕ) : PowerSeries k :=
   PowerSeries.mk (fun n ↦ a (n + j))
 
+/- The finite initial part subtracted in the source's Laurent-series formula
+   for `z_j`.  The range `j - 1` indexes `a₁, ..., a_{j-1}`. -/
+def zPrefix (a : ℕ → k) (j : ℕ) : PowerSeries k :=
+  Finset.sum (Finset.range (j - 1))
+    (fun i ↦ PowerSeries.C (a (i + 1)) * PowerSeries.X ^ (i + 1))
+
 /-- The fraction field of `k⟦X⟧`, used for the source's Laurent series field
 `k((x)) = k⟦x⟧[1/x]`. -/
 abbrev LaurentSeriesField := FractionRing (PowerSeries k)
@@ -71,6 +77,18 @@ structure PowerSeriesData where
         (zPowerSeries (k := k) coefficients))
 
 variable {k}
+
+/- The displayed definition of `z_j` as a Laurent-series quotient. -/
+theorem zTail_eq_inv_X_pow_mul_sub_prefix
+    (d : PowerSeriesData k) {j : ℕ} (hj : 1 ≤ j) :
+    algebraMap (PowerSeries k) (LaurentSeriesField k)
+        (zTail (k := k) d.coefficients j) =
+      (algebraMap (PowerSeries k) (LaurentSeriesField k) PowerSeries.X)⁻¹ ^ j *
+        (algebraMap (PowerSeries k) (LaurentSeriesField k)
+            (zPowerSeries (k := k) d.coefficients) -
+          algebraMap (PowerSeries k) (LaurentSeriesField k)
+            (zPrefix (k := k) d.coefficients j)) := by
+  sorry
 
 /-- The source identity `z = x z₁`. -/
 theorem z_eq_X_mul_zTail_one (d : PowerSeriesData k) :
@@ -165,6 +183,15 @@ theorem mIdeal_isMaximal (d : PowerSeriesData k) :
     (mIdeal d).IsMaximal := by
   sorry
 
+/-- The quotient by `(x - 1)` is the polynomial ring `k[z]`. -/
+theorem quotient_xSubOneIdeal_equiv (d : PowerSeriesData k) :
+    Nonempty (R d ⧸ xSubOneIdeal d ≃+* Polynomial k) := by
+  sorry
+
+theorem nIdeal_eq_span_xSubOne_z (d : PowerSeriesData k) :
+    nIdeal d = Ideal.span {xInGeneratedRing d - 1, zInGeneratedRing d} := by
+  sorry
+
 /-- The ideal `𝔫` is maximal. -/
 theorem nIdeal_isMaximal (d : PowerSeriesData k) :
     (nIdeal d).IsMaximal := by
@@ -206,6 +233,10 @@ theorem localization_m_is_noetherian_regular (d : PowerSeriesData k) :
       IsRegularLocalRing (Localization.AtPrime (mIdeal d)) := by
   sorry
 
+theorem localization_m_has_dimension_one (d : PowerSeriesData k) :
+    ringKrullDim (Localization.AtPrime (mIdeal d)) = 1 := by
+  sorry
+
 theorem localization_m_has_residue_field_k (d : PowerSeriesData k) :
     Nonempty (IsLocalRing.ResidueField (Localization.AtPrime (mIdeal d)) ≃+* k) := by
   sorry
@@ -213,14 +244,6 @@ theorem localization_m_has_residue_field_k (d : PowerSeriesData k) :
 /-- The residue field at `𝔫` is also `k`. -/
 theorem quotient_nIdeal_equiv (d : PowerSeriesData k) :
     Nonempty (R d ⧸ nIdeal d ≃+* k) := by
-  sorry
-
-theorem quotient_xSubOneIdeal_equiv (d : PowerSeriesData k) :
-    Nonempty (R d ⧸ xSubOneIdeal d ≃+* Polynomial k) := by
-  sorry
-
-theorem nIdeal_eq_span_xSubOne_z (d : PowerSeriesData k) :
-    nIdeal d = Ideal.span {xInGeneratedRing d - 1, zInGeneratedRing d} := by
   sorry
 
 /-- The Laurent polynomial ring `k[x, x⁻¹]`. -/
@@ -337,7 +360,8 @@ instance nBIdeal_isPrime_instance (d : PowerSeriesData k) :
     (nBIdeal d).IsPrime := nBIdeal_isPrime d
 
 theorem b_maximal_ideals (d : PowerSeriesData k) :
-    ∀ I : Ideal (B d), I.IsMaximal ↔ I = mBIdeal d ∨ I = nBIdeal d := by
+    mBIdeal d ≠ nBIdeal d ∧
+      ∀ I : Ideal (B d), I.IsMaximal ↔ I = mBIdeal d ∨ I = nBIdeal d := by
   sorry
 
 theorem b_residue_fields (d : PowerSeriesData k) :
@@ -395,6 +419,15 @@ theorem jacobsonRadical_eq_inf (d : PowerSeriesData k) :
 /- The canonical subalgebra implementation of `A = k + rad(B)`. -/
 noncomputable def A (d : PowerSeriesData k) : Subalgebra k (B d) :=
   Algebra.adjoin k (jacobsonRadical d : Set (B d))
+
+/- The source's scalar-plus-Jacobson-radical carrier description. -/
+def scalarPlusJacobianSet (d : PowerSeriesData k) : Set (B d) :=
+  {b | ∃ c : k, ∃ r : B d, r ∈ jacobsonRadical d ∧
+    b = algebraMap k (B d) c + r}
+
+theorem a_carrier_eq_scalarPlusJacobianSet (d : PowerSeriesData k) :
+    (A d : Set (B d)) = scalarPlusJacobianSet d := by
+  sorry
 
 noncomputable instance a_commRing_instance (d : PowerSeriesData k) : CommRing (A d) :=
   inferInstance
@@ -541,7 +574,7 @@ namespace PrimeChainBetween
 
 def length {R : Type*} [CommRing R] {p q : Ideal R}
     (c : PrimeChainBetween R p q) : ℕ :=
-  c.ideals.ncard
+  c.ideals.ncard - 1
 
 /-- No prime ideal can be inserted between two members of a saturated chain. -/
 def IsSaturated {R : Type*} [CommRing R] {p q : Ideal R}
@@ -551,16 +584,20 @@ def IsSaturated {R : Type*} [CommRing R] {p q : Ideal R}
 
 end PrimeChainBetween
 
-/-- Catenarity expressed by equality of the lengths of finite saturated prime chains. -/
+/-- Catenarity expressed by bounded finite chains and equal lengths of finite
+    saturated prime chains. -/
 def IsCatenaryRing (R : Type*) [CommRing R] : Prop :=
   ∀ (p q : Ideal R), p.IsPrime → q.IsPrime → p ≤ q →
-    ∀ c d : PrimeChainBetween R p q,
-      c.IsSaturated → d.IsSaturated → c.length = d.length
+    ∃ n : ℕ, (∀ c : PrimeChainBetween R p q, c.length ≤ n) ∧
+      ∀ c d : PrimeChainBetween R p q,
+        c.IsSaturated → d.IsSaturated → c.length = d.length
 
-/-- Universal catenarity for finite-type algebras. -/
+/-- Universal catenarity for a Noetherian ring and all its finite-type
+    algebras. -/
 def IsUniversallyCatenary (R : Type*) [CommRing R] : Prop :=
-  ∀ (S : Type*) [CommRing S] [Algebra R S] [Algebra.FiniteType R S],
-    IsCatenaryRing S
+  IsNoetherianRing R ∧
+    ∀ (S : Type*) [CommRing S] [Algebra R S] [Algebra.FiniteType R S],
+      IsCatenaryRing S
 
 def IsNonCatenaryRing (R : Type*) [CommRing R] : Prop :=
   ¬ IsCatenaryRing R
@@ -589,7 +626,7 @@ noncomputable def displayedPrimeChainIdeals (d : PowerSeriesData k) :
 theorem exists_displayed_maximal_prime_chain (d : PowerSeriesData k) :
     ∃ c : PrimeChainBetween (mPrimeLocalization d) ⊥ (mPrimeLocalizedIdeal d),
       c.ideals = displayedPrimeChainIdeals d ∧
-        c.IsSaturated ∧ c.length = 3 := by
+        c.IsSaturated ∧ c.length = 2 := by
   sorry
 
 theorem polynomial_localization_is_nonCatenary_noetherian_local

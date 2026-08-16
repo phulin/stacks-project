@@ -120,6 +120,8 @@ structure FerrandRaynaudDifferentialData (C : ConvergentPowerSeriesRing) where
   f_mem : ∀ n, f n ∈ Ideal.span ({C.x} : Set C.carrier)
   derivation : Derivation ℂ C.carrier FormalLaurentSeries
   derivation_x : derivation C.x = 0
+  /- The source writes `D(f_i) = x⁻ⁿ`; the later calculation and indexing
+     make the intended statement `D(f_n) = x⁻ⁿ` for every positive `n`. -/
   derivation_f : ∀ n,
     derivation (f n) = (convergentToLaurent C C.x)⁻¹ ^ (n : ℕ)
   K : Type u
@@ -305,6 +307,22 @@ theorem differential_power_mem_formalPowerSeriesSubmodule
       f ^ (n + 2) ∈ localCompletionSubalgebra C Δ := by
   sorry
 
+theorem differential_power_derivative_identities
+    (C : ConvergentPowerSeriesRing)
+    (Δ : FerrandRaynaudDifferentialData C)
+    {f : C.carrier} (hf : f ∈ Ideal.span ({C.x} : Set C.carrier))
+    (hf0 : f ≠ 0) :
+      ∃ n : ℕ, ∃ h : FormalPowerSeries,
+      Δ.derivation f =
+          formalPowerSeriesToLaurent h / (convergentToLaurent C f) ^ n ∧
+        Δ.derivation
+            (((n + 1 : ℕ) : ℂ)⁻¹ • f ^ (n + 1)) =
+          formalPowerSeriesToLaurent h ∧
+        Δ.derivation
+            (((n + 2 : ℕ) : ℂ)⁻¹ • f ^ (n + 2)) =
+          convergentToLaurent C f * formalPowerSeriesToLaurent h := by
+  sorry
+
 theorem localCompletion_fractionField_eq_convergent_fractionField
     (C : ConvergentPowerSeriesRing)
     (Δ : FerrandRaynaudDifferentialData C) :
@@ -372,6 +390,28 @@ abbrev localCompletionCompletion (C : ConvergentPowerSeriesRing)
   AdicCompletion (localCompletionCandidateMaximalIdeal C Δ)
     (localCompletionRing C Δ)
 
+def localCompletionCompletionIdeal
+    (C : ConvergentPowerSeriesRing)
+    (Δ : FerrandRaynaudDifferentialData C) :
+    Ideal (localCompletionCompletion C Δ) :=
+  (localCompletionCandidateMaximalIdeal C Δ).map
+    (algebraMap (localCompletionRing C Δ)
+      (localCompletionCompletion C Δ))
+
+theorem localCompletion_candidateMaximalIdeal_fg
+    (C : ConvergentPowerSeriesRing)
+    (Δ : FerrandRaynaudDifferentialData C) :
+    (localCompletionCandidateMaximalIdeal C Δ).FG := by
+  exact Submodule.fg_span (by simp)
+
+theorem localCompletion_completion_isAdicComplete
+    (C : ConvergentPowerSeriesRing)
+    (Δ : FerrandRaynaudDifferentialData C) :
+    IsAdicComplete (localCompletionCompletionIdeal C Δ)
+      (localCompletionCompletion C Δ) := by
+  exact AdicCompletion.isAdicComplete_self _
+    (localCompletion_candidateMaximalIdeal_fg C Δ)
+
 /-- A derivation relative to a ring map, used for `ψ + ε D`. -/
 structure RelativeDerivation {A P : Type*} [CommRing A] [CommRing P]
     (ψ : A →+* P) where
@@ -420,15 +460,28 @@ def dualNumberMap {A P : Type*} [CommRing A] [CommRing P]
   map_add' a b := by
     ext <;> simp [map_add]
 
-/-- The source's completion data, including the split map from formal series. -/
+/-- The source's completion data, including the split map from formal series.
+
+The `sectionMap` fields encode the map induced by the inclusion
+`ℂ[x]_(x) ⊂ A`; `psi_on_localCompletion` identifies `ψ` with the Taylor
+expansion on the dense subring `A`. -/
 structure LocalCompletionCompletionData
     (C : ConvergentPowerSeriesRing)
     (Δ : FerrandRaynaudDifferentialData C) where
   psi : localCompletionCompletion C Δ →+* FormalPowerSeries
   psi_surjective : Function.Surjective psi
+  psi_on_localCompletion :
+    ∀ a : localCompletionRing C Δ,
+      psi (algebraMap (localCompletionRing C Δ)
+        (localCompletionCompletion C Δ) a) = C.expansion (a : C.carrier)
   sectionMap : FormalPowerSeries →+* localCompletionCompletion C Δ
   section_psi : sectionMap.comp psi = RingHom.id _
   induced_derivation : RelativeDerivation psi
+  induced_derivation_continuous :
+    @Continuous (localCompletionCompletion C Δ) FormalPowerSeries
+      (localCompletionCompletionIdeal C Δ).adicTopology
+      (Ideal.span ({PowerSeries.X} : Set FormalPowerSeries)).adicTopology
+      induced_derivation
   induced_derivation_on_section :
     ∀ f, induced_derivation (sectionMap f) = 0
   induced_derivation_on_localCompletion :
@@ -459,12 +512,21 @@ theorem completion_map_surjective
     Function.Surjective Γ.completionMap := by
   sorry
 
+theorem completion_map_isRingEquiv
+    (C : ConvergentPowerSeriesRing)
+    (Δ : FerrandRaynaudDifferentialData C)
+    (Γ : LocalCompletionCompletionData C Δ) :
+    ∃ e : localCompletionCompletion C Δ ≃+* DualNumber FormalPowerSeries,
+      e.toRingHom = Γ.completionMap := by
+  sorry
+
 theorem completion_map_isEquiv
     (C : ConvergentPowerSeriesRing)
     (Δ : FerrandRaynaudDifferentialData C)
     (Γ : LocalCompletionCompletionData C Δ) :
     Nonempty (localCompletionCompletion C Δ ≃+* DualNumber FormalPowerSeries) := by
-  sorry
+  rcases completion_map_isRingEquiv C Δ Γ with ⟨e, _⟩
+  exact ⟨e⟩
 
 theorem localCompletion_completion_is_nonreduced
     (C : ConvergentPowerSeriesRing)
@@ -512,6 +574,21 @@ theorem completion_map_x_pow_f
         TrivSqZeroExt.inr 1 := by
   sorry
 
+theorem completion_map_x_pow_f_explicit
+    (C : ConvergentPowerSeriesRing)
+    (Δ : FerrandRaynaudDifferentialData C)
+    (Γ : LocalCompletionCompletionData C Δ)
+    (n : PositiveNat) :
+    Γ.completionMap
+        (algebraMap (localCompletionRing C Δ)
+          (localCompletionCompletion C Δ)
+          (localCompletionXPowF C Δ n)) =
+      TrivSqZeroExt.inl
+          (C.expansion
+            (C.x ^ (n : ℕ) * Δ.f n)) +
+        TrivSqZeroExt.inr 1 := by
+  sorry
+
 /-- All data and all six claims of the characteristic-zero example. -/
 theorem exists_local_ring_with_nonreduced_completion :
     ∃ (C : ConvergentPowerSeriesRing)
@@ -525,6 +602,11 @@ theorem exists_local_ring_with_nonreduced_completion :
             IsLocalRing.maximalIdeal (localCompletionRing C Δ) =
               localCompletionCandidateMaximalIdeal C Δ ∧
             IsNoetherianRing (localCompletionRing C Δ) ∧
+            IsLocalRing (localCompletionCompletion C Δ) ∧
+            IsNoetherianRing (localCompletionCompletion C Δ) ∧
+            ringKrullDim (localCompletionCompletion C Δ) = 1 ∧
+            IsAdicComplete (localCompletionCompletionIdeal C Δ)
+              (localCompletionCompletion C Δ) ∧
             Nonempty (localCompletionCompletion C Δ ≃+*
               DualNumber FormalPowerSeries) ∧
             ¬ IsReduced (localCompletionCompletion C Δ) := by

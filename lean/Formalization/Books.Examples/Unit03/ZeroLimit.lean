@@ -43,17 +43,6 @@ def inverseSystemFunctor {I : Type u} [Preorder I] {X : I → Type v}
     ext x
     simpa using (InverseSystem.map_map (f := f) q.unop.le p.unop.le x).symm
 
-/-- The constant inverse system of copies of a semiring. -/
-instance constantLinearInverseSystem {I : Type u} [Preorder I]
-    (K : Type w) [Semiring K] :
-    InverseSystem (fun {_i _j : I} _ => (LinearMap.id : K →ₗ[K] K)) where
-  map_self := by
-    intro i x
-    rfl
-  map_map := by
-    intro k j i hkj hji x
-    simp
-
 /-- The inverse limit of a type-valued inverse system, as a type of sections. -/
 def inverseLimit {I : Type u} [Preorder I] {X : I → Type v}
     (f : ∀ ⦃i j : I⦄, i ≤ j → X j → X i) [InverseSystem f] : Type (max u v) :=
@@ -342,12 +331,83 @@ noncomputable def wZeroLimit {I : Type u} [Preorder I] {S : I → Type v}
     (0 : W (S := S) K j.unop)
   simp
 
+/-! ## Inverse-system valued module diagrams -/
+
+/-- The inverse system of modules associated with linear transition maps. -/
+def inverseSystemModuleFunctor {I : Type u} [Preorder I] {W : I → Type z}
+    (K : Type w) [Field K]
+    [∀ i, AddCommGroup (W i)] [∀ i, Module K (W i)]
+    (g : ∀ ⦃i j : I⦄, i ≤ j → W j →ₗ[K] W i)
+    [InverseSystem (fun {_i _j} h => g h)] :
+    Iᵒᵖ ⥤ ModuleCat.{z} K where
+  obj i := ModuleCat.of K (W i.unop)
+  map {i j} p := ModuleCat.ofHom (g p.unop.le)
+  map_id := by
+    intro i
+    apply ModuleCat.hom_ext
+    ext x
+    simpa using (InverseSystem.map_self (f := fun {_i _j} h => g h) x)
+  map_comp := by
+    intro i j k p q
+    apply ModuleCat.hom_ext
+    ext x
+    simpa using
+      (InverseSystem.map_map (f := fun {_i _j} h => g h) q.unop.le p.unop.le x).symm
+
+/-- The constant inverse system of rank-one `K`-modules, lifted to a chosen universe. -/
+def constantModuleFunctor {I : Type u} [Preorder I] (K : Type w) [Field K] :
+    Iᵒᵖ ⥤ ModuleCat.{max z w} K :=
+  (Functor.const Iᵒᵖ).obj (ModuleCat.of K (ULift.{z} K))
+
+/-- The `V_i` module diagram in the source. -/
+noncomputable def vModuleFunctor {I : Type u} [Preorder I] {S : I → Type v}
+    (f : ∀ ⦃i j : I⦄, i ≤ j → S j → S i) (K : Type w) [Field K]
+    [InverseSystem f] : Iᵒᵖ ⥤ ModuleCat.{max v w} K :=
+  inverseSystemModuleFunctor (W := fun i => V K S i) K
+    (fun {_i _j} h => vMap f K h)
+
+/-- The `W_i` module diagram in the source. -/
+noncomputable def wModuleFunctor {I : Type u} [Preorder I] {S : I → Type v}
+    (f : ∀ ⦃i j : I⦄, i ≤ j → S j → S i) (K : Type w) [Field K]
+    [InverseSystem f] : Iᵒᵖ ⥤ ModuleCat.{max v w} K :=
+  inverseSystemModuleFunctor (W := fun i => W (S := S) K i) K
+    (fun {_i _j} h => wMap f K h)
+
+/-- The constant `K`-module diagram in the same universe as `V` and `W`. -/
+def constantKModuleFunctor {I : Type u} [Preorder I] (K : Type w) [Field K] :
+    Iᵒᵖ ⥤ ModuleCat.{max v w} K :=
+  (Functor.const Iᵒᵖ).obj (ModuleCat.of K (ULift.{max v w} K))
+
+/-- The inclusion of the kernel diagram into the direct-sum diagram. -/
+noncomputable def wToVModuleNatTrans {I : Type u} [Preorder I] {S : I → Type v}
+    (f : ∀ ⦃i j : I⦄, i ≤ j → S j → S i) (K : Type w) [Field K]
+    [InverseSystem f] : wModuleFunctor f K ⟶ vModuleFunctor f K where
+  app i := ModuleCat.ofHom ((W (S := S) K i.unop).subtype)
+  naturality i j p := by
+    apply ModuleCat.hom_ext
+    rfl
+
 /-! The universe-lifted form of the coordinate map used by `wShortComplex`. -/
 noncomputable def coordinateSumLift {I : Type u} {S : I → Type v}
     (K : Type w) [Field K] (i : I) :
     V K S i →ₗ[K] ULift.{max v w} K :=
   (ULift.moduleEquiv : ULift.{max v w} K ≃ₗ[K] K).symm.toLinearMap.comp
     (coordinateSum (S := S) K i)
+
+/-- The coordinate-sum morphism from the direct-sum diagram to the constant diagram. -/
+noncomputable def vToConstantKModuleNatTrans {I : Type u} [Preorder I]
+    {S : I → Type v} (f : ∀ ⦃i j : I⦄, i ≤ j → S j → S i) (K : Type w) [Field K]
+    [InverseSystem f] :
+    vModuleFunctor f K ⟶ constantKModuleFunctor K where
+  app i := ModuleCat.ofHom (coordinateSumLift (S := S) K i.unop)
+  naturality i j p := by
+    apply ModuleCat.hom_ext
+    ext x
+    apply ULift.ext
+    change coordinateSum (S := S) K j.unop (vMap f K p.unop.le x) =
+      coordinateSum (S := S) K i.unop x
+    exact congrArg (fun g : V K S i.unop →ₗ[K] K => g x)
+      (coordinateSum_comp_vMap f K p.unop.le)
 
 /-- The levelwise short complex `0 → W_i → V_i → K → 0`. -/
 noncomputable def wShortComplex {I : Type u} {S : I → Type v}
@@ -366,27 +426,33 @@ noncomputable def wShortComplex {I : Type u} {S : I → Type v}
           exact x.2) :
           (coordinateSumLift (S := S) K i).comp (W (S := S) K i).subtype = 0))
 
-/-- A compatible family of right inverses would split the short exact sequence. -/
-def InverseSystemSplits {I : Type u} [Preorder I] {S : I → Type v}
+/-! The short complex of inverse-system valued modules in the source. -/
+noncomputable def inverseSystemShortComplex {I : Type u} [Preorder I]
+    {S : I → Type v}
+    (f : ∀ ⦃i j : I⦄, i ≤ j → S j → S i) (K : Type w) [Field K]
+    [InverseSystem f] :
+    ShortComplex (Iᵒᵖ ⥤ ModuleCat.{max v w} K) :=
+  ShortComplex.mk (wToVModuleNatTrans f K) (vToConstantKModuleNatTrans f K) (by
+    apply NatTrans.ext
+    funext i
+    apply ModuleCat.hom_ext
+    ext x
+    apply ULift.ext
+    exact x.2)
+
+/-- A split for the inverse-system short complex is a splitting in the functor category. -/
+def IsSplitInverseSystemShortComplex {I : Type u} [Preorder I] {S : I → Type v}
     (f : ∀ ⦃i j : I⦄, i ≤ j → S j → S i) (K : Type w) [Field K]
     [InverseSystem f] : Prop :=
-  ∃ s : ∀ i, K →ₗ[K] V K S i,
-    (∀ i, (coordinateSum (S := S) K i).comp (s i) = LinearMap.id) ∧
-      (∀ ⦃i j⦄ (h : i ≤ j), (vMap f K h).comp (s j) = s i)
+  Nonempty (inverseSystemShortComplex f K).Splitting
 
 /-- The source's nonsplit short exact sequence of inverse systems. -/
 def IsNonsplitShortExactInverseSystem {I : Type u} [Preorder I]
     {S : I → Type v}
     (f : ∀ ⦃i j : I⦄, i ≤ j → S j → S i) (K : Type w) [Field K]
     [InverseSystem f] : Prop :=
-  (∀ i, (wShortComplex (S := S) K i).ShortExact) ∧
-    (∀ ⦃i j⦄ (h : i ≤ j),
-      (vMap f K h).comp (W (S := S) K j).subtype =
-        (W (S := S) K i).subtype.comp (wMap f K h)) ∧
-    (∀ ⦃i j⦄ (h : i ≤ j),
-      (coordinateSum (S := S) K i).comp (vMap f K h) =
-        coordinateSum (S := S) K j) ∧
-    ¬ InverseSystemSplits f K
+  (inverseSystemShortComplex f K).ShortExact ∧
+    ¬ IsSplitInverseSystemShortComplex f K
 
 /-- The kernel sequence is nonsplit and short exact as an inverse-system sequence. -/
 theorem w_sequence_is_nonsplit_short_exact {I : Type u} [Preorder I] [IsDirectedOrder I]
@@ -408,33 +474,7 @@ theorem w_limit_is_zero {I : Type u} [Preorder I] [IsDirectedOrder I] {S : I →
   refine ⟨⟨wZeroLimit f K⟩, ?_⟩
   sorry
 
-/-! ## The levelwise short complex and the first derived inverse limit -/
-
-/-- The inverse system of modules associated with the linear transition maps. -/
-def inverseSystemModuleFunctor {I : Type u} [Preorder I] {W : I → Type z}
-    (K : Type w) [Field K]
-    [∀ i, AddCommGroup (W i)] [∀ i, Module K (W i)]
-    (g : ∀ ⦃i j : I⦄, i ≤ j → W j →ₗ[K] W i)
-    [InverseSystem (fun {_i _j} h => g h)] :
-    Iᵒᵖ ⥤ ModuleCat.{z} K where
-  obj i := ModuleCat.of K (W i.unop)
-  map {i j} p := ModuleCat.ofHom (g p.unop.le)
-  map_id := by
-    intro i
-    apply ModuleCat.hom_ext
-    ext x
-    simpa using (InverseSystem.map_self (f := fun {_i _j} h => g h) x)
-  map_comp := by
-    intro i j k p q
-    apply ModuleCat.hom_ext
-    ext x
-    simpa using
-      (InverseSystem.map_map (f := fun {_i _j} h => g h) q.unop.le p.unop.le x).symm
-
-/-- The constant rank-one module diagram used to model the inverse-limit functor. -/
-def constantModuleFunctor {I : Type u} [Preorder I] (K : Type w) [Field K] :
-    Iᵒᵖ ⥤ ModuleCat.{max z w} K :=
-  (Functor.const Iᵒᵖ).obj (ModuleCat.of K (ULift.{z} K))
+/-! ## The first derived inverse limit -/
 
 /-- The module diagram, lifted to the common universe needed for `Ext`. -/
 noncomputable def liftedInverseSystemModuleFunctor

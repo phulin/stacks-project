@@ -1,7 +1,7 @@
-import Formalization.«Books.Examples».Unit78.FlatMapNotColimit
+import Formalization.«Books.Examples».Unit78.FlatMapNotColimit -- chapter section
 
 /-!
 # Examples, Chapter 78
 
-The chapter declarations live in the focused section file above.
+The chapter's sole source section is formalized in the focused file above.
 -/

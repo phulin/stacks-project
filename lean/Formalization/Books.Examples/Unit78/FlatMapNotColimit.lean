@@ -1,4 +1,3 @@
-import Formalization.«Books.MoreMorphisms».Unit19.Normalization
 import Mathlib.Algebra.Category.Ring.FilteredColimits
 import Mathlib.Algebra.Category.Ring.FinitePresentation
 import Mathlib.Algebra.CharP.Frobenius
@@ -9,7 +8,9 @@ import Mathlib.AlgebraicGeometry.Scheme
 import Mathlib.CategoryTheory.Filtered.Basic
 import Mathlib.Data.ZMod.Basic
 import Mathlib.FieldTheory.AlgebraicClosure
+import Mathlib.FieldTheory.IsAlgClosed.AlgebraicClosure
 import Mathlib.FieldTheory.IsAlgClosed.Basic
+import Mathlib.FieldTheory.IsSepClosed
 import Mathlib.LinearAlgebra.Basis.Basic
 import Mathlib.NumberTheory.Padics.PadicIntegers
 import Mathlib.RingTheory.FiniteType
@@ -31,7 +32,8 @@ This chapter records the absolute-integral-closure example and the obstruction u
 to rule out a filtered colimit presentation.  The standard algebraic constructions
 come from Mathlib.  The strict henselization, abelian-surface, and étale/local-
 cohomology parts are exposed as source-facing structures because those particular
-geometric constructions are not available in the imported Mathlib API.
+geometric constructions are not available in the imported Mathlib API; declarations
+below follow the order of the source argument.
 -/
 
 noncomputable section
@@ -216,17 +218,6 @@ def FactorsThroughFilteredStage {A S B : Type u} [CommRing A] [CommRing S] [Comm
     g.comp rToS = (D.diagram.obj i).hom.hom ∧
       (filteredColimitStageMap D i).comp g = sToB
 
-/- A finite flat stage supplied by the slicing argument. -/
-structure FiniteFlatFactor {R S : Type u} [CommRing R] [CommRing S]
-    (rToS : R →+* S) where
-  target : Type u
-  [targetCommRing : CommRing target]
-  rToTarget : R →+* target
-  sToTarget : S →+* target
-  compatibility : sToTarget.comp rToS = rToTarget
-  finite : RingHom.Finite rToTarget
-  flat : RingHom.Flat rToTarget
-
 /- Finite flat modules over the henselian local base are free; this is the
    module-theoretic parenthetical used in the source's contradiction. -/
 theorem finite_flat_module_free_over_local
@@ -244,6 +235,9 @@ structure FiniteFlatFactorOver {R S P : Type u} [CommRing R] [CommRing S] [CommR
   compatibility : sToTarget.comp rToS = rToTarget
   finite : RingHom.Finite rToTarget
   flat : RingHom.Flat rToTarget
+  /- In the source construction `R → S` is finite, so this is the finiteness
+     needed to apply assertion (2) to the sliced target. -/
+  finiteOverS : RingHom.Finite sToTarget
   targetToP : target →+* P
   targetToP_comp : targetToP.comp sToTarget = sToP
 
@@ -259,7 +253,7 @@ def SlicingAssertion {R S : Type u} [CommRing R] [CommRing S]
 /-- More Morphisms' henselian slicing lemma, in the form used by the source. -/
 theorem henselian_slicing_assertion
     {R S : Type u} [CommRing R] [CommRing S] [HenselianLocalRing R]
-    (rToS : R →+* S) : SlicingAssertion rToS := by
+    (rToS : R →+* S) (hfinite : RingHom.Finite rToS) : SlicingAssertion rToS := by
   sorry
 
 /-- The second assertion in the source's two-step obstruction. -/
@@ -411,6 +405,7 @@ structure AbsoluteIntegralClosureEmbeddingData
   sToPlus : S →+* Rplus
   injective : Function.Injective sToPlus
   compatibility : sToPlus.comp rToS = rToPlus
+  rPlus_isAbsoluteIntegralClosure : IsAbsoluteIntegralClosureOf R Rplus rToPlus
   isAbsoluteIntegralClosure : IsAbsoluteIntegralClosureOf S Rplus sToPlus
 
 theorem exists_absoluteIntegralClosureEmbedding_of_noether_normalization
@@ -462,8 +457,11 @@ structure FinitePuncturedCoverCohomologyData
   [H1O_V_addCommGroup : AddCommGroup H1O_V]
   H1EtaleModP_V : Type u
   [H1EtaleModP_V_addCommGroup : AddCommGroup H1EtaleModP_V]
+  H1EtaleModP_V_nontrivial : Nontrivial H1EtaleModP_V
   H1O_V_nontrivial : Nontrivial H1O_V
-  H1O_V_to_H1EtaleModP_V : Nonempty (H1O_V ≃+ H1EtaleModP_V)
+  artinSchreierOnH1_V : H1O_V →+ H1O_V
+  H1EtaleModP_V_kernel_comparison :
+    Nonempty (H1EtaleModP_V ≃+ AddMonoidHom.ker artinSchreierOnH1_V)
 
 /- The geometric package records exactly the displayed comparisons for `U` and
    the ordinary abelian surface `X`. -/
@@ -518,29 +516,38 @@ structure PuncturedSpectrumData (p : ℕ) (S : Type u) [CommRing S] [Fact p.Prim
   globalSections_identification : Nonempty (globalSections ≃+* S)
   artinSchreier_surjective : Function.Surjective (artinSchreierMap S p)
 
-/-- The local-cohomology groups used at the end of the non-flatness argument. -/
-structure LocalCohomologyObstruction (H1OV H2T H2R : Type u)
+/-- The local-cohomology groups used at the end of the non-flatness argument.
+The maps are parameters here so that this package cannot be supplied by
+unrelated groups for an unrelated finite algebra. -/
+structure LocalCohomologyObstruction
+    {R S T : Type u} [CommRing R] [CommRing S] [CommRing T]
+    (rToS : R →+* S) (sToT : S →+* T)
+    (H1OV H2T H2R : Type u)
     [AddCommGroup H1OV] [AddCommGroup H2T] [AddCommGroup H2R] where
   H1OV_nontrivial : Nontrivial H1OV
   H1OV_to_H2T : Nonempty (H1OV ≃+ H2T)
   H2T_nontrivial : Nontrivial H2T
   H2R_subsingleton : Subsingleton H2R
+  finite_flat_implies_H2T_subsingleton :
+    RingHom.Finite sToT → RingHom.Flat (sToT.comp rToS) → Subsingleton H2T
 
-structure LocalCohomologyObstructionData where
+structure LocalCohomologyObstructionData
+    {R S T : Type u} [CommRing R] [CommRing S] [CommRing T]
+    (rToS : R →+* S) (sToT : S →+* T) where
   H1OV : Type u
   [H1OV_addCommGroup : AddCommGroup H1OV]
   H2T : Type u
   [H2T_addCommGroup : AddCommGroup H2T]
   H2R : Type u
   [H2R_addCommGroup : AddCommGroup H2R]
-  obstruction : LocalCohomologyObstruction H1OV H2T H2R
+  obstruction : LocalCohomologyObstruction rToS sToT H1OV H2T H2R
 
 /-- Finite maps from the cone ring acquire the cohomological obstruction. -/
 theorem finite_map_from_cone_not_flat_of_cohomology
     {R S T : Type u} [CommRing R] [CommRing S] [CommRing T]
     (rToS : R →+* S) (sToT : S →+* T)
     (hfinite : RingHom.Finite sToT)
-    (hcoh : LocalCohomologyObstructionData.{u}) :
+    (hcoh : LocalCohomologyObstructionData rToS sToT) :
     ¬ RingHom.Flat (sToT.comp rToS) := by
   sorry
 
@@ -548,14 +555,14 @@ theorem finite_map_from_cone_not_flat_of_cohomology
    interface.  It packages the trace, inverse-limit, Artin--Schreier, and
    local-cohomology steps above. -/
 def EveryFiniteMapHasConeCohomologicalObstruction
-    (S : Type u) [CommRing S] : Prop :=
+    {R S : Type u} [CommRing R] [CommRing S] (rToS : R →+* S) : Prop :=
   ∀ (T : Type u) [CommRing T] (sToT : S →+* T),
-    RingHom.Finite sToT → Nonempty (LocalCohomologyObstructionData.{u})
+    RingHom.Finite sToT → Nonempty (LocalCohomologyObstructionData rToS sToT)
 
 theorem cone_no_finite_map_flat_over_henselian_base
     {R S : Type u} [CommRing R] [CommRing S]
     (rToS : R →+* S)
-    (hcohomology : EveryFiniteMapHasConeCohomologicalObstruction S) :
+    (hcohomology : EveryFiniteMapHasConeCohomologicalObstruction rToS) :
     NoFiniteMapFromSFlatOverR rToS := by
   intro T instT sToT hfinite hflat
   obtain ⟨hcoh⟩ := hcohomology T sToT hfinite

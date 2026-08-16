@@ -1,7 +1,11 @@
 import Mathlib.Algebra.Category.ModuleCat.EpiMono
+import Mathlib.Algebra.Category.ModuleCat.Abelian
+import Mathlib.Algebra.Category.ModuleCat.Ulift
+import Mathlib.Algebra.Homology.DerivedCategory.Ext.Basic
 import Mathlib.Algebra.DirectSum.Module
 import Mathlib.Algebra.Homology.ShortComplex.ShortExact
 import Mathlib.Algebra.Module.ULift
+import Mathlib.CategoryTheory.Abelian.FunctorCategory
 import Mathlib.CategoryTheory.Limits.Types.Limits
 import Mathlib.Order.DirectedInverseSystem
 
@@ -38,6 +42,17 @@ def inverseSystemFunctor {I : Type u} [Preorder I] {X : I → Type v}
     intro i j k p q
     ext x
     simpa using (InverseSystem.map_map (f := f) q.unop.le p.unop.le x).symm
+
+/-- The constant inverse system of copies of a semiring. -/
+instance constantLinearInverseSystem {I : Type u} [Preorder I]
+    (K : Type w) [Semiring K] :
+    InverseSystem (fun {_i _j : I} _ => (LinearMap.id : K →ₗ[K] K)) where
+  map_self := by
+    intro i x
+    rfl
+  map_map := by
+    intro k j i hkj hji x
+    simp
 
 /-- The inverse limit of a type-valued inverse system, as a type of sections. -/
 def inverseLimit {I : Type u} [Preorder I] {X : I → Type v}
@@ -187,6 +202,12 @@ def FiniteSubsystem.limitToParent {I : Type u} [Preorder I] {S : I → Type v}
 /-! A finite subsystem containing the supports of a compatible direct-sum family. -/
 def supportSet {I : Type u} {S : I → Type v} (K : Type w) [Field K]
     (i : I) (x : V K S i) : Set (S i) := {s | x s ≠ 0}
+
+/-- Every direct-sum vector has finite support. -/
+theorem supportSet_finite {I : Type u} {S : I → Type v}
+    (K : Type w) [Field K] (i : I) (x : V K S i) :
+    (supportSet K i x).Finite := by
+  exact DFinsupp.finite_support x
 
 structure FiniteSupportSubsystem {I : Type u} [Preorder I] {S : I → Type v}
     (f : ∀ ⦃i j : I⦄, i ≤ j → S j → S i) (K : Type w) [Field K]
@@ -389,26 +410,54 @@ theorem w_limit_is_zero {I : Type u} [Preorder I] [IsDirectedOrder I] {S : I →
 
 /-! ## The levelwise short complex and the first derived inverse limit -/
 
-/--
-Mathlib's current API has no canonical `R¹ lim` construction for arbitrary
-inverse systems.  This small named interface records the carrier and its
-module structure so the source's nonvanishing assertion remains a usable
-statement without inventing a parallel derived-limit definition.
--/
-class FirstDerivedLimit {I : Type u} [Preorder I] (K : Type w) [Field K]
-    {W : I → Type z} [∀ i, AddCommGroup (W i)] [∀ i, Module K (W i)]
+/-- The inverse system of modules associated with the linear transition maps. -/
+def inverseSystemModuleFunctor {I : Type u} [Preorder I] {W : I → Type z}
+    (K : Type w) [Field K]
+    [∀ i, AddCommGroup (W i)] [∀ i, Module K (W i)]
     (g : ∀ ⦃i j : I⦄, i ≤ j → W j →ₗ[K] W i)
-    [InverseSystem (fun {_i _j} h => g h)] where
-  carrier : Type z
-  [addCommGroup : AddCommGroup carrier]
-  [module : Module K carrier]
+    [InverseSystem (fun {_i _j} h => g h)] :
+    Iᵒᵖ ⥤ ModuleCat.{z} K where
+  obj i := ModuleCat.of K (W i.unop)
+  map {i j} p := ModuleCat.ofHom (g p.unop.le)
+  map_id := by
+    intro i
+    apply ModuleCat.hom_ext
+    ext x
+    simpa using (InverseSystem.map_self (f := fun {_i _j} h => g h) x)
+  map_comp := by
+    intro i j k p q
+    apply ModuleCat.hom_ext
+    ext x
+    simpa using
+      (InverseSystem.map_map (f := fun {_i _j} h => g h) q.unop.le p.unop.le x).symm
 
-/-- The carrier denoted by `R¹ lim W_i` once a derived-limit implementation is supplied. -/
-abbrev ROneLimit {I : Type u} [Preorder I] (K : Type w) [Field K]
+/-- The constant rank-one module diagram used to model the inverse-limit functor. -/
+def constantModuleFunctor {I : Type u} [Preorder I] (K : Type w) [Field K] :
+    Iᵒᵖ ⥤ ModuleCat.{max z w} K :=
+  (Functor.const Iᵒᵖ).obj (ModuleCat.of K (ULift.{z} K))
+
+/-- The module diagram, lifted to the common universe needed for `Ext`. -/
+noncomputable def liftedInverseSystemModuleFunctor
+    {I : Type u} [Preorder I] {W : I → Type z}
+    (K : Type w) [Field K]
+    [∀ i, AddCommGroup (W i)] [∀ i, Module K (W i)]
+    (g : ∀ ⦃i j : I⦄, i ≤ j → W j →ₗ[K] W i)
+    [InverseSystem (fun {_i _j} h => g h)] :
+    Iᵒᵖ ⥤ ModuleCat.{max z w} K :=
+  inverseSystemModuleFunctor K g ⋙ ModuleCat.uliftFunctor.{w} K
+
+/-- `R¹ lim W_i`, modeled by the standard `Ext¹` description of derived limits.
+
+The limit of a module diagram is the Hom functor from the constant rank-one
+diagram, so its first right-derived functor is represented by this `Ext¹`. -/
+noncomputable abbrev ROneLimit {I : Type u} [Preorder I] (K : Type w) [Field K]
     {W : I → Type z} [∀ i, AddCommGroup (W i)] [∀ i, Module K (W i)]
     (g : ∀ ⦃i j : I⦄, i ≤ j → W j →ₗ[K] W i)
-    [InverseSystem (fun {_i _j} h => g h)] [FirstDerivedLimit (W := W) K g] : Type z :=
-  FirstDerivedLimit.carrier (K := K) (g := g)
+    [InverseSystem (fun {_i _j} h => g h)] :=
+  let C := Iᵒᵖ ⥤ ModuleCat.{max z w} K
+  letI := CategoryTheory.HasExt.standard C
+  CategoryTheory.Abelian.Ext (constantModuleFunctor (I := I) K)
+    (liftedInverseSystemModuleFunctor K g) 1
 
 /-- The final nonvanishing assertion in the source section. -/
 theorem w_first_derived_limit_nontrivial {I : Type u} [Preorder I] [IsDirectedOrder I]
@@ -417,9 +466,7 @@ theorem w_first_derived_limit_nontrivial {I : Type u} [Preorder I] [IsDirectedOr
     [InverseSystem f]
     (hS : ∀ i, Nonempty (S i))
     (hf : ∀ ⦃i j⦄ (h : i ≤ j), Function.Surjective (f h))
-    (hlim : IsEmpty (inverseLimit f))
-    [FirstDerivedLimit (W := fun i => W (S := S) K i) K
-      (fun {i j} h => wMap f K h)] :
+    (hlim : IsEmpty (inverseLimit f)) :
     Nontrivial (ROneLimit (W := fun i => W (S := S) K i) K
       (fun {i j} h => wMap f K h)) := by
   sorry

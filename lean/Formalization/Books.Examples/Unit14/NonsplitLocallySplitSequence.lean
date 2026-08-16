@@ -85,18 +85,12 @@ def primeLocalizedIntegerKernelInclusion :
 /-- The displayed sequence, as a short complex of `ℤ`-modules. -/
 noncomputable def primeLocalizedIntegerShortComplex :
     CategoryTheory.ShortComplex (ModuleCat.{0} ℤ) :=
-  CategoryTheory.ShortComplex.moduleCatMk
-    (R := ℤ)
-    (X₁ := primeLocalizedIntegerKernel)
-    (X₂ := primeLocalizedIntegerDirectSum)
-    (X₃ := ℚ)
-    primeLocalizedIntegerKernelInclusion
-    primeLocalizedIntegerSumToRat
-    (LinearMap.comp_ker_subtype primeLocalizedIntegerSumToRat)
+  primeLocalizedIntegerSumToRat.shortComplexKer
 
 /-- The source's short-exactness assertion for the displayed sequence. -/
 theorem primeLocalizedIntegerShortComplex_shortExact :
     (primeLocalizedIntegerShortComplex).ShortExact := by
+  apply LinearMap.shortExact_shortComplexKer
   sorry
 
 /-! ## Nonsplitting and localization -/
@@ -128,7 +122,8 @@ def primeLocalizedIntegerShortComplexAt (p : PrimeIndex) :
 /-- Localization preserves the short-exactness of the displayed sequence. -/
 theorem primeLocalizedIntegerShortComplexAt_shortExact (p : PrimeIndex) :
     (primeLocalizedIntegerShortComplexAt p).ShortExact := by
-  sorry
+  exact primeLocalizedIntegerShortComplex_shortExact.map_of_exact
+    (ModuleCat.localizedModuleFunctor (primeIdeal p).primeCompl)
 
 /-- At every prime ideal `(p)`, the localized sequence is split. -/
 theorem primeLocalizedIntegerShortComplexAt_split (p : PrimeIndex) :

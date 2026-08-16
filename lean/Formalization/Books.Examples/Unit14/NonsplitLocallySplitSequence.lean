@@ -25,13 +25,6 @@ namespace Formalization.«Books.Examples».Unit14
 
 universe u
 
--- Keep the concrete `ℤ`-module structures aligned with the ring structure used
--- by `ModuleCat` and the short-complex API.
-local instance intRing : Ring ℤ :=
-  { Int.instRing with
-    toSemiring := Int.instSemiring }
-local instance intSemiring : Semiring ℤ := intRing.toSemiring
-
 /-! ## The prime-indexed sequence -/
 
 /-- The type of positive prime integers indexing the direct sum. -/
@@ -88,10 +81,6 @@ abbrev primeLocalizedIntegerKernel : Type :=
 def primeLocalizedIntegerKernelInclusion :
     primeLocalizedIntegerKernel →ₗ[ℤ] primeLocalizedIntegerDirectSum :=
   (LinearMap.ker primeLocalizedIntegerSumToRat).subtype
-
-local instance primeLocalizedIntegerKernelAddCommGroup :
-    AddCommGroup primeLocalizedIntegerKernel :=
-  Module.addCommMonoidToAddCommGroup ℤ
 
 /-- The displayed sequence, as a short complex of `ℤ`-modules. -/
 noncomputable def primeLocalizedIntegerShortComplex :

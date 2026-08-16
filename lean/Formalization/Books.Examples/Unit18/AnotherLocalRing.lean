@@ -12,6 +12,7 @@ import Mathlib.LinearAlgebra.FiniteDimensional.Basic
 import Mathlib.RingTheory.AdicCompletion.Algebra
 import Mathlib.RingTheory.AdicCompletion.Completeness
 import Mathlib.RingTheory.DiscreteValuationRing.Basic
+import Mathlib.RingTheory.IntegralClosure.Algebra.Defs
 import Mathlib.RingTheory.KrullDimension.Basic
 import Mathlib.RingTheory.Localization.Away.Basic
 import Mathlib.RingTheory.Localization.FractionRing
@@ -318,6 +319,14 @@ section TheRingA
 
 variable (k : Type u) (p : ℕ) [Field k] [Fact p.Prime] [CharP k p]
 
+/-! The ambient bivariate power-series ring is viewed as an algebra over the
+subring `A`.  This is the scalar structure used by the integral-extension
+form of the dimension argument below. -/
+
+noncomputable instance aRingAlgebraAmbient :
+    Algebra (aRing k p) (TwoVariablePowerSeries k) :=
+  (aSubring k p).subtype.toAlgebra
+
 theorem x_mem_aSubring :
     (MvPowerSeries.X 0 : TwoVariablePowerSeries k) ∈ aSubring k p := by
   sorry
@@ -372,6 +381,14 @@ theorem aMaximalIdeal_is_maximal :
 
 theorem a_is_domain :
     IsDomain (aRing k p) := by
+  sorry
+
+theorem ambient_power_mem_aSubring (g : TwoVariablePowerSeries k) :
+    g ^ p ∈ aSubring k p := by
+  sorry
+
+theorem ambient_is_integral_over_a :
+    Algebra.IsIntegral (aRing k p) (TwoVariablePowerSeries k) := by
   sorry
 
 theorem a_krull_dimension :
@@ -552,6 +569,18 @@ noncomputable def aLocalizedToBLocalized :
     aLocalizedRing k p →+* bLocalizedRing k p f :=
   IsLocalization.Away.map (Localization.Away (aY k p))
     (Localization.Away (aToB k p f (aY k p))) (aToB k p f) (aY k p)
+
+/-- The adjoined series after localizing `B` at `y`. -/
+def localizedRingF : bLocalizedRing k p f :=
+  algebraMap (bRing k p f) (bLocalizedRing k p f) (bF k p f)
+
+theorem exists_localized_ring_power_basis
+    (hf : InfiniteCoefficientDegree k p f) :
+    letI : Algebra (aLocalizedRing k p) (bLocalizedRing k p f) :=
+      (aLocalizedToBLocalized k p f).toAlgebra
+    ∃ e : Module.Basis (Fin p) (aLocalizedRing k p) (bLocalizedRing k p f),
+      ∀ i, e i = localizedRingF k p f ^ (i : ℕ) := by
+  sorry
 
 theorem exists_localized_completion_map :
     ∃ φ : aLocalizedCompletion k p →+* bLocalizedCompletion k p f,

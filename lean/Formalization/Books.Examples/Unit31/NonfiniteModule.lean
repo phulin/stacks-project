@@ -3,7 +3,6 @@ import Mathlib.Algebra.Module.LocalizedModule.Submodule
 import Mathlib.Data.Nat.Squarefree
 import Mathlib.RingTheory.Ideal.Prime
 import Mathlib.RingTheory.Localization.FractionRing
-import Mathlib.RingTheory.Noetherian.Basic
 import Mathlib.RingTheory.Polynomial.Basic
 
 /-!

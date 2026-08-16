@@ -143,6 +143,10 @@ theorem badSet_slice_isOpen (n : ℕ) :
     IsOpen (stageInclusion n ⁻¹' badSet) := by
   sorry
 
+/-- The set `U` is open for the final topology, by the slice criterion. -/
+theorem badSet_isOpen : IsOpen badSet := by
+  exact (isOpen_colimit_iff badSet).2 (fun n ↦ badSet_slice_isOpen n)
+
 /-- The origin belongs to `U`. -/
 theorem zero_mem_badSet : (0 : ColimitGroup) ∈ badSet := by
   sorry
@@ -158,7 +162,10 @@ in the source's contradiction. -/
 theorem exists_addNeighborhoodWithSumSubset_of_topologicalAddGroup
     (hG : IsTopologicalAddGroup ColimitGroup) :
     ∃ V : Set ColimitGroup, AddNeighborhoodWithSumSubset V badSet := by
-  sorry
+  let _ : IsTopologicalAddGroup ColimitGroup := hG
+  obtain ⟨V, hV, h0, hVV⟩ :=
+    exists_open_nhds_zero_add_subset (badSet_isOpen.mem_nhds zero_mem_badSet)
+  exact ⟨V, hV, h0, hVV⟩
 
 /-- A radius for the rational coordinate axis. -/
 def IsRationalCoordinateRadius (V : Set ColimitGroup) (ε : ℝ) : Prop :=

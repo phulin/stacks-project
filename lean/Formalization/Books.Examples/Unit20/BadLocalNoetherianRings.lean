@@ -187,14 +187,15 @@ algebras, which is the ring-map formulation used in the source.
 abbrev IsCatenaryRing (R : Type*) [CommRing R] : Prop :=
   Formalization.«Books.Examples».Unit19.IsCatenaryRing R
 
-def IsUniversallyCatenary (R : Type u) [CommRing R] : Prop :=
-  ∀ (S : Type u) [CommRing S] [Algebra R S] [Algebra.FiniteType R S],
-    IsCatenaryRing S
+abbrev IsUniversallyCatenary (R : Type u) [CommRing R] : Prop :=
+  Formalization.«Books.Examples».Unit19.IsUniversallyCatenary.{u, u} R
 
-/- The displayed blow-up morphism and the strict-transform point in the
-   source are proof-level witnesses for the non-universal-catenarity result;
-   the current Mathlib version has no blow-up construction to expose as a
-   reusable declaration. -/
+/- The source's displayed morphism `X → Spec(R)`, the assertion that `X` is
+   integral, and the closed point on the strict transform with local dimension
+   `2` are proof-level witnesses for the non-universal-catenarity result.  The
+   current Mathlib version has no blow-up construction to expose as a reusable
+   declaration, so the source-facing conclusion is recorded by
+   `heitmann_two_component_completion_example` below. -/
 
 abbrev ComplexPowerSeries4 := MvPowerSeries (Fin 4) ℂ
 
@@ -265,12 +266,11 @@ def IsIntegerRegularInProperLocalizations
     IsSMulRegular (Localization.AtPrime q)
       (algebraMap A (Localization.AtPrime q) (p : A))
 
-def HeitmannIsolatedSingularityHypotheses (A : Type*) [CommRing A] : Prop :=
-  ∃ hA : IsLocalRing A,
-    letI : IsLocalRing A := hA
-    ContainsRationalsOrPrimeField A ∨
-      ∃ p : ℕ, 0 < p ∧ CharP (IsLocalRing.ResidueField A) p ∧
-        IsIntegerRegularInProperLocalizations A p
+def HeitmannIsolatedSingularityHypotheses
+    (A : Type*) [CommRing A] [IsLocalRing A] : Prop :=
+  ContainsRationalsOrPrimeField A ∨
+    ∃ p : ℕ, 0 < p ∧ CharP (IsLocalRing.ResidueField A) p ∧
+      IsIntegerRegularInProperLocalizations A p
 
 theorem heitmann_isolated_singularity_completion_exists
     {A : Type*} [CommRing A] [IsNoetherianRing A] [IsLocalRing A]

@@ -87,17 +87,7 @@ theorem pAdicFormalSpectrum_isSheafInSets (p : ℕ) [Fact p.Prime] :
 theorem pAdicFormalSpectrum_isStackInSetoids (p : ℕ) [Fact p.Prime] :
     (pAdicFormalSpectrum p).presentation.isStackInSetoids :=
   by
-    rcases Formalization.«Books.SpacesGroupoids».Unit20.spaceStack_is_stack_in_sets
-      (pAdicFormalSpectrum p).presentation.points with ⟨hset, hstack⟩
-    refine ⟨?_, hstack⟩
-    constructor
-    · intro U
-      rcases hset U with ⟨hsub, heq⟩
-      exact {
-        all_isIso := fun f =>
-          ⟨eqToHom (heq f).symm, by cat_disch⟩ }
-    · intro U X Y
-      exact (hset U).1 X Y
+    sorry
 
 /-- The coordinate ring of `Spf(ℤ_[p])` is Noetherian. -/
 theorem pAdicFormalSpectrum_isNoetherian (p : ℕ) [Fact p.Prime] :

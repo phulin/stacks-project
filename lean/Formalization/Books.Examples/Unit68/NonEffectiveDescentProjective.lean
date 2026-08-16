@@ -3,6 +3,7 @@ import Mathlib.AlgebraicGeometry.Limits
 import Mathlib.AlgebraicGeometry.Morphisms.ClosedImmersion
 import Mathlib.AlgebraicGeometry.Morphisms.Etale
 import Mathlib.AlgebraicGeometry.Morphisms.Flat
+import Mathlib.AlgebraicGeometry.Morphisms.Affine
 import Mathlib.AlgebraicGeometry.Morphisms.OpenImmersion
 import Mathlib.AlgebraicGeometry.Morphisms.Proper
 import Mathlib.AlgebraicGeometry.Morphisms.QuasiCompact
@@ -133,11 +134,18 @@ theorem projectivePointAction_nontrivial (p : ComplexProjectiveThreePoint) :
 
 /-- The line fixed by the involution with equal coordinates in each pair. -/
 def fixedLinePlus : Set ComplexProjectiveThreePoint :=
-  {p | p.rep 0 = p.rep 1 ∧ p.rep 2 = p.rep 3}
+  {p | ∀ v : ComplexProjectiveThreeCoordinates, v ∈ p.submodule →
+    v 0 = v 1 ∧ v 2 = v 3}
 
 /-- The second fixed line, with opposite coordinates in each pair. -/
 def fixedLineMinus : Set ComplexProjectiveThreePoint :=
-  {p | p.rep 0 = -p.rep 1 ∧ p.rep 2 = -p.rep 3}
+  {p | ∀ v : ComplexProjectiveThreeCoordinates, v ∈ p.submodule →
+    v 0 = -v 1 ∧ v 2 = -v 3}
+
+/- The source calls these lines `L₁` and `L₂`; the predicates above are the
+scale-invariant projective-subspace versions of the displayed coordinates. -/
+abbrev fixedLineL₁ := fixedLinePlus
+abbrev fixedLineL₂ := fixedLineMinus
 
 /-- The open set on which the involution acts freely. -/
 def freeProjectiveLocus : Set ComplexProjectiveThreePoint :=
@@ -154,6 +162,12 @@ theorem projectiveInvolution_free_on_freeProjectiveLocus {p : ComplexProjectiveT
     (hp : p ∈ freeProjectiveLocus) : projectiveInvolution p ≠ p := by
   intro h
   exact hp (by rw [← fixed_locus_of_projectiveInvolution]; exact h)
+
+theorem projectivePointAction_free_on_freeProjectiveLocus
+    {p : ComplexProjectiveThreePoint} (hp : p ∈ freeProjectiveLocus)
+    {a : HironakaInvolutionGroup} (ha : a ≠ 0) :
+    projectivePointAction a p ≠ p := by
+  sorry
 
 /-! ## The two conics and the invariant quotient presentation -/
 
@@ -455,6 +469,9 @@ structure RelativeProjectiveSpace (Y : Scheme) where
   projection : space ⟶ Y
   standard : Prop
 
+/-- The canonical affine-morphism property used in the earlier descent result. -/
+abbrev IsAffineMorphism {X Y : Scheme} (f : X ⟶ Y) : Prop := IsAffineHom f
+
 /-- The closed-immersion presentation of a projective scheme morphism. -/
 def IsProjectiveMorphism {X Y : Scheme} (f : X ⟶ Y) : Prop :=
   ∃ (P : RelativeProjectiveSpace Y) (i : X ⟶ P.space),
@@ -507,7 +524,8 @@ def FpqcDescentEffectiveFor
     ∀ D : SchemeDescentDatum cover, P D.object.hom → D.IsEffective
 
 theorem affine_and_quasi_affine_fpqc_descent :
-    FpqcDescentEffectiveFor IsQuasiAffineMorphism := by
+    FpqcDescentEffectiveFor IsAffineMorphism ∧
+      FpqcDescentEffectiveFor IsQuasiAffineMorphism := by
   sorry
 
 theorem projective_descent_is_not_always_effective :
@@ -630,10 +648,25 @@ structure ExceptionalCurveCycleArgument (V_Y : Scheme) where
   positive_degree_on_L₀_plus_gL₀ :
     0 < cycleData.degree (cycle_L₀ + cycle_gL₀)
 
+theorem exceptional_cycle_relation_with_M₀'
+    {V_Y : Scheme} (A : ExceptionalCurveCycleArgument V_Y) :
+    A.cycleData.equivalent (A.cycle_L₀ + A.cycle_M₀') 0 := by
+  rw [A.cycle_M₀'_is_cycle_gL₀]
+  exact A.cycle_relation
+
+/-- An algebraic cycle with nonnegative coefficients. -/
+def IsEffectiveAlgebraicDivisor {X : Scheme} (D : AlgebraicCycle X ℤ) : Prop :=
+  ∀ x, 0 ≤ D x
+
+/-! Mathlib supplies the underlying algebraic-cycle type, while the current
+snapshot has no bundled Cartier-divisor or line-bundle API for this argument;
+those geometric refinements remain explicit fields of the obstruction below. -/
+
 /-- The divisor produced from a hypothetical scheme quotient. -/
 structure QuotientDivisorObstruction {V_Y : Scheme}
     (A : ExceptionalCurveCycleArgument V_Y) where
   divisor : AlgebraicCycle V_Y ℤ
+  effective : IsEffectiveAlgebraicDivisor divisor
   line_bundle : Prop
   restriction_to_E_is_a_line_bundle : Prop
   regular_local_ring_is_a_UFD : Prop
@@ -684,9 +717,12 @@ structure TwoChartEtaleRefinement where
   Y_quasi_projective : Prop
   S_smooth : Smooth S_to_complex
   S_quasi_projective : Prop
-  S_is_the_invariant_projective_quotient : Prop
+  S_to_invariant_projective_quotient : S ⟶ invariantProjectiveQuotient
+  S_open_in_invariant_projective_quotient :
+    IsOpenImmersion S_to_invariant_projective_quotient
+  S_is_the_image_of_Y_in_the_invariant_quotient : Prop
   Y_is_the_free_projective_locus : Prop
-  quotient_map_is_the_image_of_the_free_locus : Prop
+  quotient_map_is_the_quotient_of_the_free_locus : Prop
   x_is_disjoint_union_of_deleted_points : Prop
   y_is_the_free_involution_quotient : Prop
 
@@ -696,17 +732,27 @@ structure HironakaNonEffectiveDescentData where
   localConstruction :
     NonProjectiveProperThreefold refinement.Y refinement.S refinement.yToS
       refinement.Y_to_complex
-  V : Scheme
-  vToX : V ⟶ refinement.X
-  v_projective_over_X : IsProjectiveMorphism vToX
+  v_projective_over_X :
+    IsProjectiveMorphism
+      (pullback.snd localConstruction.toY refinement.xToY)
   v_projective_from_the_two_blowup_charts : Prop
-  v_is_pullback_of_local_construction : Prop
   descent : SchemeDescentDatum refinement.xToS
   descent_object_identification :
-    Nonempty (Over.mk vToX ≅ descent.object)
+    Nonempty
+      (Over.mk (pullback.snd localConstruction.toY refinement.xToY) ≅ descent.object)
   descent_is_the_pullback_of_the_local_datum : Prop
   descent_is_the_glued_involution_datum : Prop
   exceptionalCycle : ExceptionalCurveCycleArgument localConstruction.scheme
+
+/-- The pullback scheme `V` in the source construction. -/
+abbrev HironakaNonEffectiveDescentData.V
+    (D : HironakaNonEffectiveDescentData) : Scheme :=
+  pullback D.localConstruction.toY D.refinement.xToY
+
+/-- The projective morphism `V → X` obtained from the pullback. -/
+abbrev HironakaNonEffectiveDescentData.vToX
+    (D : HironakaNonEffectiveDescentData) : D.V ⟶ D.refinement.X :=
+  pullback.snd D.localConstruction.toY D.refinement.xToY
 
 /-- Hironaka's non-effective descent datum for projective schemes. -/
 theorem exists_non_effective_projective_descent_datum :
@@ -740,6 +786,16 @@ structure DescentCurveAndDivisor {V_Y : Scheme}
   local_ring_function_f : U.presheaf.stalk R
   local_function_vanishes_at_R : Prop
   local_function_not_zero_on_L₁ : Prop
+  D_loc : Scheme
+  D_loc_to_local_spec : D_loc ⟶ Spec (U.presheaf.stalk R)
+  D_loc_closed : IsClosedImmersion D_loc_to_local_spec
+  D_loc_is_an_irreducible_component_of_the_zero_locus : Prop
+  D_loc_has_codimension_one : Prop
+  D_U : Scheme
+  D_U_to_U : D_U ⟶ U
+  D_U_closed : IsClosedImmersion D_U_to_U
+  D_U_is_the_closure_of_D_loc : Prop
+  D_U_contains_R_but_not_L₁ : Prop
   local_codimension_one_component : Prop
   divisor_is_closure_of_local_component : Prop
   divisor : QuotientDivisorObstruction A
@@ -757,8 +813,10 @@ structure EffectiveSchemeQuotient (D : HironakaNonEffectiveDescentData) where
   V_to_U_commutes : V_to_U ≫ U_to_S = D.vToX ≫ D.refinement.xToS
   VY_to_U_commutes :
     VY_to_U ≫ U_to_S = D.localConstruction.toY ≫ D.refinement.yToS
+  V_to_U_factorization : V_to_VY ≫ VY_to_U = V_to_U
   pullback_is_V : Prop
   pullback_is_V_with_descent_datum : Prop
+  VY_to_U_is_the_quotient_by_the_lifted_action : Prop
   curve_and_divisor : DescentCurveAndDivisor D.exceptionalCycle
   curve_and_divisor_is_over_U : Prop
 

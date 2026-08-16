@@ -258,7 +258,8 @@ theorem convergentPowerSeries_integral_over_localCompletion
 theorem localCompletion_isLocalDomain
     (C : ConvergentPowerSeriesRing)
     (Δ : FerrandRaynaudDifferentialData C) :
-    IsLocalRing (localCompletionRing C Δ) := by
+    IsLocalRing (localCompletionRing C Δ) ∧
+      IsDomain (localCompletionRing C Δ) := by
   sorry
 
 theorem localCompletion_isDomain
@@ -267,12 +268,11 @@ theorem localCompletion_isDomain
     IsDomain (localCompletionRing C Δ) := by
   infer_instance
 
-/-- The dimension assertion `dim(A) = 1`, expressed by Mathlib's API. -/
+/-- The dimension assertion `dim(A) = 1`. -/
 theorem localCompletion_dimension_one
     (C : ConvergentPowerSeriesRing)
     (Δ : FerrandRaynaudDifferentialData C) :
-    Ring.KrullDimLE 1 (localCompletionRing C Δ) ∧
-      ¬ Ring.KrullDimLE 0 (localCompletionRing C Δ) := by
+    ringKrullDim (localCompletionRing C Δ) = 1 := by
   sorry
 
 /-- The claimed presentation of the maximal ideal. -/
@@ -473,6 +473,19 @@ theorem localCompletion_completion_is_nonreduced
     ¬ IsReduced (localCompletionCompletion C Δ) := by
   sorry
 
+/-- The dual numbers over the formal power-series ring are nonreduced. -/
+theorem formalPowerSeries_dualNumber_not_reduced :
+    ¬ IsReduced (DualNumber FormalPowerSeries) := by
+  intro hR
+  have hε :
+      (TrivSqZeroExt.inr (1 : FormalPowerSeries) :
+        DualNumber FormalPowerSeries) ≠ 0 := by
+    intro h
+    have h' : (1 : FormalPowerSeries) = 0 :=
+      TrivSqZeroExt.inr_injective h
+    exact one_ne_zero h'
+  exact hε (hR.eq_zero _ DualNumber.isNilpotent_eps)
+
 /-! ## The displayed calculation and the chapter-level existence theorem -/
 
 theorem localCompletionDerivation_x_pow_f
@@ -505,13 +518,16 @@ theorem exists_local_ring_with_nonreduced_completion :
       (Δ : FerrandRaynaudDifferentialData C)
       (Γ : LocalCompletionCompletionData C Δ),
       (∀ c : C.carrier, IsIntegral (localCompletionRing C Δ) c) ∧
-        IsLocalRing (localCompletionRing C Δ) ∧
-        Ring.KrullDimLE 1 (localCompletionRing C Δ) ∧
-        ¬ Ring.KrullDimLE 0 (localCompletionRing C Δ) ∧
-        IsNoetherianRing (localCompletionRing C Δ) ∧
-        Nonempty (localCompletionCompletion C Δ ≃+*
-          DualNumber FormalPowerSeries) ∧
-        ¬ IsReduced (localCompletionCompletion C Δ) := by
+        ∃ hA : IsLocalRing (localCompletionRing C Δ),
+          letI : IsLocalRing (localCompletionRing C Δ) := hA
+          IsDomain (localCompletionRing C Δ) ∧
+            ringKrullDim (localCompletionRing C Δ) = 1 ∧
+            IsLocalRing.maximalIdeal (localCompletionRing C Δ) =
+              localCompletionCandidateMaximalIdeal C Δ ∧
+            IsNoetherianRing (localCompletionRing C Δ) ∧
+            Nonempty (localCompletionCompletion C Δ ≃+*
+              DualNumber FormalPowerSeries) ∧
+            ¬ IsReduced (localCompletionCompletion C Δ) := by
   sorry
 
 end Formalization.«Books.Examples».Unit17

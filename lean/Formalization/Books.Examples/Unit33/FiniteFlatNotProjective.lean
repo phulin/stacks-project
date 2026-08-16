@@ -112,8 +112,8 @@ theorem mem_exampleGermIdeal_iff (f : SmoothRing) :
 
 /-! ## The finite flat module -/
 
-/-- The localization `R_𝔪` at the complement of the origin ideal. -/
-abbrev exampleLocalization := Localization exampleMaximalIdeal.primeCompl
+/-- The localization `R_𝔪` at the maximal ideal of functions vanishing at the origin. -/
+abbrev exampleLocalization := Localization.AtPrime exampleMaximalIdeal
 
 /-- The module `M = R/I` from the source example. -/
 abbrev ExampleModule := SmoothRing ⧸ exampleGermIdeal

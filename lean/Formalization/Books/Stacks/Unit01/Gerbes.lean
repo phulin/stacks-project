@@ -73,6 +73,7 @@ structure GerbeFactorizationData {C : Type u} [Category.{v} C]
   value : FiberedCategory.{w, v, u} C
   fromOriginal : FiberedMorphism F value
   toBase : FiberedMorphism value G
+  factorization : Nonempty (fromOriginal ≫ toBase ≅ η)
   isGerbe : IsGerbe.{t, w, v, u} value J
   equivalentToOriginal : FiberwiseEquivalence fromOriginal
   fibredInGroupoidsOverBase : FiberedInGroupoidsOver toBase
@@ -131,10 +132,10 @@ theorem gerbe_characterization_by_factorization
 
 theorem base_change_of_gerbe
     {C : Type u} [Category.{v} C] {J : GrothendieckTopology C}
-    {F G : FiberedCategory.{w, v, u} C} {H K : FiberedCategory.{w, v, u} C}
-    (η : FiberedMorphism F G) (θ : FiberedMorphism H K)
-    (hη : GerbeOver η J) (hθ : FiberwiseEquivalence θ) :
-    GerbeOver η J := by
+    {A B C' D : FiberedCategory.{w, v, u} C}
+    (sq : TwoCartesianSquare A B C' D)
+    (hgerbe : GerbeOver sq.top J) :
+    GerbeOver sq.right J := by
   sorry
 
 theorem composition_of_gerbes

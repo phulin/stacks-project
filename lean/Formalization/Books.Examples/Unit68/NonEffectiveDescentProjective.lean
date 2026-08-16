@@ -6,6 +6,7 @@ import Mathlib.AlgebraicGeometry.Morphisms.Flat
 import Mathlib.AlgebraicGeometry.Morphisms.OpenImmersion
 import Mathlib.AlgebraicGeometry.Morphisms.Proper
 import Mathlib.AlgebraicGeometry.Morphisms.QuasiCompact
+import Mathlib.AlgebraicGeometry.Morphisms.Smooth
 import Mathlib.AlgebraicGeometry.ProjectiveSpectrum.Basic
 import Mathlib.CategoryTheory.Comma.Over.Pullback
 import Mathlib.Data.Complex.Basic
@@ -14,7 +15,7 @@ import Mathlib.Data.ZMod.Basic
 import Mathlib.LinearAlgebra.Projectivization.Basic
 import Mathlib.RingTheory.Ideal.Quotient.Operations
 import Mathlib.RingTheory.MvPolynomial.Homogeneous
-import Mathlib.Topology.Category.TopCat.Basic
+import Formalization.«Books.SpacesGroupoids».Unit19.QuotientSheaves
 
 /-!
 # Examples, Chapter 68: non-effective descent data for projective schemes
@@ -22,10 +23,11 @@ import Mathlib.Topology.Category.TopCat.Basic
 This file records the precise geometric data in the Hironaka example.  The
 coordinate calculations are made with Mathlib's projectivization and
 multivariable-polynomial APIs.  Mathlib does not currently provide blowups,
-rational equivalence of cycles, relative projective space, or algebraic
-spaces, so those parts are exposed as source-facing interfaces below.  This
-keeps the hypotheses and conclusions of the example available to the proof
-stage without replacing them by tautological propositions.
+rational equivalence of cycles, or relative projective space, so those parts
+are exposed as source-facing interfaces below.  Algebraic spaces use the
+earlier functor-of-points model from the groupoids chapters.  This keeps the
+hypotheses and conclusions of the example available to the proof stage
+without replacing them by tautological propositions.
 -/
 
 noncomputable section
@@ -113,6 +115,24 @@ theorem projectiveInvolution_mk (v : ComplexProjectiveThreeCoordinates) (hv : v 
 
 theorem projectiveInvolution_involutive :
     Function.Involutive projectiveInvolution := by
+  sorry
+
+/-- The additive `ℤ/2ℤ` action whose nonzero element is the involution. -/
+def projectivePointAction (a : HironakaInvolutionGroup)
+    (p : ComplexProjectiveThreePoint) : ComplexProjectiveThreePoint :=
+  if a = 0 then p else projectiveInvolution p
+
+noncomputable instance projectivePointAddAction :
+    AddAction HironakaInvolutionGroup ComplexProjectiveThreePoint where
+  vadd := projectivePointAction
+  zero_vadd p := by
+    change (if (0 : HironakaInvolutionGroup) = 0 then p else projectiveInvolution p) = p
+    rw [if_pos rfl]
+  add_vadd a b p := by
+    sorry
+
+theorem projectivePointAction_nontrivial (p : ComplexProjectiveThreePoint) :
+    projectivePointAction nontrivialElementOfZModTwo p = projectiveInvolution p := by
   sorry
 
 /-- The line fixed by the involution with equal coordinates in each pair. -/
@@ -239,6 +259,14 @@ theorem projectiveInvolution_maps_conicD_to_conicC :
     MapsTo projectiveInvolution conicD conicC := by
   sorry
 
+theorem projectiveInvolution_image_conicC :
+    projectiveInvolution '' conicC = conicD := by
+  sorry
+
+theorem projectiveInvolution_image_conicD :
+    projectiveInvolution '' conicD = conicC := by
+  sorry
+
 theorem projectiveInvolution_swaps_intersection_points :
     projectiveInvolution intersectionPointP = intersectionPointQ ∧
       projectiveInvolution intersectionPointQ = intersectionPointP := by
@@ -298,6 +326,26 @@ def coordinateInvariantSubalgebra : Subalgebra ℂ CoordinatePolynomialRing wher
     intro r
     exact coordinatePolynomialInvolution.commutes r
 
+lemma sourceInvariantU₀_mem_coordinateInvariantSubalgebra :
+    sourceInvariantU₀ ∈ coordinateInvariantSubalgebra := by
+  exact sourceInvariantGenerators_are_fixed.1
+
+lemma sourceInvariantU₁_mem_coordinateInvariantSubalgebra :
+    sourceInvariantU₁ ∈ coordinateInvariantSubalgebra := by
+  exact sourceInvariantGenerators_are_fixed.2.1
+
+lemma sourceInvariantV₀_mem_coordinateInvariantSubalgebra :
+    sourceInvariantV₀ ∈ coordinateInvariantSubalgebra := by
+  exact sourceInvariantGenerators_are_fixed.2.2.1
+
+lemma sourceInvariantV₁_mem_coordinateInvariantSubalgebra :
+    sourceInvariantV₁ ∈ coordinateInvariantSubalgebra := by
+  exact sourceInvariantGenerators_are_fixed.2.2.2.1
+
+lemma sourceInvariantV₂_mem_coordinateInvariantSubalgebra :
+    sourceInvariantV₂ ∈ coordinateInvariantSubalgebra := by
+  exact sourceInvariantGenerators_are_fixed.2.2.2.2
+
 /-- The five generators in the invariant presentation. -/
 abbrev InvariantPresentationPolynomialRing := MvPolynomial (Fin 5) ℂ
 
@@ -326,8 +374,35 @@ abbrev InvariantPresentationRing :=
 def invariantDegree (i : Fin 5) : ℕ :=
   if i.val < 2 then 1 else 2
 
+def invariantQuotientMk (f : InvariantPresentationPolynomialRing) :
+    InvariantPresentationRing :=
+  Ideal.Quotient.mk invariantRelationIdeal f
+
+structure InvariantRingPresentationData where
+  equivalence : coordinateInvariantSubalgebra ≃ₐ[ℂ] InvariantPresentationRing
+  equivalence_u₀ :
+    equivalence ⟨sourceInvariantU₀,
+      sourceInvariantU₀_mem_coordinateInvariantSubalgebra⟩ =
+      invariantQuotientMk invariantU₀
+  equivalence_u₁ :
+    equivalence ⟨sourceInvariantU₁,
+      sourceInvariantU₁_mem_coordinateInvariantSubalgebra⟩ =
+      invariantQuotientMk invariantU₁
+  equivalence_v₀ :
+    equivalence ⟨sourceInvariantV₀,
+      sourceInvariantV₀_mem_coordinateInvariantSubalgebra⟩ =
+      invariantQuotientMk invariantV₀
+  equivalence_v₁ :
+    equivalence ⟨sourceInvariantV₁,
+      sourceInvariantV₁_mem_coordinateInvariantSubalgebra⟩ =
+      invariantQuotientMk invariantV₁
+  equivalence_v₂ :
+    equivalence ⟨sourceInvariantV₂,
+      sourceInvariantV₂_mem_coordinateInvariantSubalgebra⟩ =
+      invariantQuotientMk invariantV₂
+
 theorem invariant_ring_presentation :
-    Nonempty (coordinateInvariantSubalgebra ≃ₐ[ℂ] InvariantPresentationRing) := by
+    Nonempty InvariantRingPresentationData := by
   sorry
 
 /-! The remaining `Proj` statement is kept as a small source-facing interface:
@@ -335,9 +410,9 @@ the quotient grading is explicit above, while Mathlib does not yet construct a
 graded ideal quotient together with its relative `Proj`. -/
 
 structure InvariantProjectiveQuotientData where
-  ring : Type
-  commRing : CommRing ring
-  ring_identification : ring = InvariantPresentationRing
+  presentation : InvariantRingPresentationData
+  ring : CommRingCat
+  ring_identification : ring = CommRingCat.of InvariantPresentationRing
   degree : Fin 5 → ℕ
   degree_identification : degree = invariantDegree
   projectiveScheme : Scheme
@@ -426,6 +501,9 @@ theorem projective_descent_is_not_always_effective :
 
 /-- The quotient map `Y → S` is a free torsor for the two-element group. -/
 structure ZModTwoTorsor {Y S : Scheme} (f : Y ⟶ S) where
+  action : Y ⟶ Y
+  action_square : action ≫ action = 𝟙 Y
+  action_over_base : action ≫ f = f
   free_action : Prop
   transitive_on_geometric_fibres : Prop
   quotient_map : Prop
@@ -468,12 +546,13 @@ structure LiftedSchemeInvolution (V : Scheme) where
   exchanges_the_two_charts : Prop
 
 /-- The proper non-projective scheme obtained by gluing the two charts. -/
-structure NonProjectiveProperThreefold (Y S : Scheme) (yToS : Y ⟶ S) where
+structure NonProjectiveProperThreefold (Y S : Scheme) (yToS : Y ⟶ S)
+    (Y_to_complex : Y ⟶ complexSpectrum) where
   scheme : Scheme
   toY : scheme ⟶ Y
   proper : IsProper toY
   not_projective : ¬ IsProjectiveMorphism toY
-  smooth : Prop
+  smooth : Smooth (toY ≫ Y_to_complex)
   dimension_three : Prop
   charts : HironakaLocalCharts Y
   liftedInvolution : LiftedSchemeInvolution scheme
@@ -492,13 +571,17 @@ packaged as data here.
 -/
 structure CycleRationalEquivalenceData (E : Scheme) where
   equivalent : AlgebraicCycle E ℤ → AlgebraicCycle E ℤ → Prop
+  equivalent_is_equivalence : Equivalence equivalent
   degree : AlgebraicCycle E ℤ → ℤ
+  degree_zero : degree 0 = 0
   degree_respects_equivalence :
     ∀ c d, equivalent c d → degree c = degree d
 
 /-- The exceptional fibres and the cycle relation used in Hironaka's argument. -/
-structure ExceptionalCurveCycleArgument where
+structure ExceptionalCurveCycleArgument (V_Y : Scheme) where
+  /-- The proper surface sitting inside the glued threefold. -/
   E : Scheme
+  E_to_VY : E ⟶ V_Y
   baseCurveUnion : Scheme
   toBase : E ⟶ baseCurveUnion
   proper : IsProper toBase
@@ -524,26 +607,36 @@ structure ExceptionalCurveCycleArgument where
   cycle_L₀ : AlgebraicCycle E ℤ
   cycle_M₀' : AlgebraicCycle E ℤ
   cycle_gL₀ : AlgebraicCycle E ℤ
-  cycle_M₀'_is_cycle_gL₀ : Prop
+  cycle_M₀'_is_cycle_gL₀ : cycle_M₀' = cycle_gL₀
   cycle_relation : cycleData.equivalent (cycle_L₀ + cycle_gL₀) 0
   surface : Prop
-  positive_degree_on_L₀_plus_gL₀ : Prop
+  positive_degree_on_L₀_plus_gL₀ :
+    0 < cycleData.degree (cycle_L₀ + cycle_gL₀)
 
 /-- The divisor produced from a hypothetical scheme quotient. -/
-structure QuotientDivisorObstruction (A : ExceptionalCurveCycleArgument) where
-  divisor : Prop
+structure QuotientDivisorObstruction {V_Y : Scheme}
+    (A : ExceptionalCurveCycleArgument V_Y) where
+  divisor : AlgebraicCycle V_Y ℤ
   line_bundle : Prop
   regular_local_ring_is_a_UFD : Prop
   inverse_image_is_effective_divisor : Prop
   contains_a_point_of_the_descended_curve : Prop
   intersects_the_exceptional_cycle : Prop
   contains_neither_component : Prop
-  positive_restriction_degree : Prop
+  positive_restriction_degree :
+    0 < A.cycleData.degree (A.cycle_L₀ + A.cycle_gL₀)
 
 theorem exceptional_cycle_forbids_quotient_divisor
-    (A : ExceptionalCurveCycleArgument) :
+    {V_Y : Scheme} (A : ExceptionalCurveCycleArgument V_Y) :
     ¬ Nonempty (QuotientDivisorObstruction A) := by
-  sorry
+  rintro ⟨D⟩
+  have hzero : A.cycleData.degree (A.cycle_L₀ + A.cycle_gL₀) = 0 := by
+    rw [A.cycleData.degree_respects_equivalence
+      (A.cycle_L₀ + A.cycle_gL₀) 0 A.cycle_relation,
+      A.cycleData.degree_zero]
+  have hpos := D.positive_restriction_degree
+  rw [hzero] at hpos
+  exact (lt_irrefl 0) hpos
 
 /-! ## The complete descent datum -/
 
@@ -555,19 +648,26 @@ structure TwoChartEtaleRefinement where
   yToS : Y ⟶ S
   xToY : X ⟶ Y
   xToS : X ⟶ S
+  Y_to_projective_three_space : Y ⟶ complexProjectiveThreeSpace
+  Y_open_in_projective_three_space : IsOpenImmersion Y_to_projective_three_space
   Y_to_complex : Y ⟶ complexSpectrum
   S_to_complex : S ⟶ complexSpectrum
   quotient_over_complex : yToS ≫ S_to_complex = Y_to_complex
   factorization : xToY ≫ yToS = xToS
   y_torsor : ZModTwoTorsor yToS
+  y_action_is_the_restriction_of_the_projective_involution : Prop
   yToS_etale : Etale yToS
   yToS_surjective : Surjective yToS
   xToY_etale : Etale xToY
   xToY_surjective : Surjective xToY
-  Y_smooth : Prop
+  xToS_etale : Etale xToS
+  xToS_surjective : Surjective xToS
+  Y_smooth : Smooth Y_to_complex
   Y_quasi_projective : Prop
-  S_smooth_quasi_projective : Prop
+  S_smooth : Smooth S_to_complex
+  S_quasi_projective : Prop
   S_is_the_invariant_projective_quotient : Prop
+  Y_is_the_free_projective_locus : Prop
   quotient_map_is_the_image_of_the_free_locus : Prop
   x_is_disjoint_union_of_deleted_points : Prop
   y_is_the_free_involution_quotient : Prop
@@ -577,6 +677,7 @@ structure HironakaNonEffectiveDescentData where
   refinement : TwoChartEtaleRefinement
   localConstruction :
     NonProjectiveProperThreefold refinement.Y refinement.S refinement.yToS
+      refinement.Y_to_complex
   V : Scheme
   vToX : V ⟶ refinement.X
   v_projective_over_X : IsProjectiveMorphism vToX
@@ -587,27 +688,27 @@ structure HironakaNonEffectiveDescentData where
     Nonempty (Over.mk vToX ≅ descent.object)
   descent_is_the_pullback_of_the_local_datum : Prop
   descent_is_the_glued_involution_datum : Prop
-  descent_not_effective_in_schemes : ¬ descent.IsEffective
-  exceptionalCycle : ExceptionalCurveCycleArgument
-  quotient_divisor_obstruction :
-    ∀ _D : QuotientDivisorObstruction exceptionalCycle, False
+  exceptionalCycle : ExceptionalCurveCycleArgument localConstruction.scheme
 
 /-- Hironaka's non-effective descent datum for projective schemes. -/
 theorem exists_non_effective_projective_descent_datum :
-    Nonempty HironakaNonEffectiveDescentData := by
+    ∃ D : HironakaNonEffectiveDescentData, ¬ D.descent.IsEffective := by
   sorry
 
 /-- The curve and divisor obtained from a hypothetical scheme quotient. -/
-structure DescentCurveAndDivisor (A : ExceptionalCurveCycleArgument) where
+structure DescentCurveAndDivisor {V_Y : Scheme}
+    (A : ExceptionalCurveCycleArgument V_Y) where
   U : Scheme
   L₁ : Scheme
   L₁_to_quotient : L₁ ⟶ U
   obtained_by_closed_subscheme_descent : Prop
   L₁_is_projective_line : Nonempty (L₁ ≅ complexProjectiveLine)
   inverse_image_in_VY : Scheme
+  inverse_image_to_VY : inverse_image_in_VY ⟶ V_Y
   inverse_image_is_L₀_union_gL₀ : Prop
-  complex_point_R : Prop
-  local_ring_function_f : Prop
+  R : U
+  R_is_a_complex_point : Prop
+  local_ring_function_f : U.presheaf.stalk R
   local_function_vanishes_at_R : Prop
   local_function_not_zero_on_L₁ : Prop
   local_codimension_one_component : Prop
@@ -619,11 +720,20 @@ structure EffectiveSchemeQuotient (D : HironakaNonEffectiveDescentData) where
   U : Scheme
   U_to_S : U ⟶ D.refinement.S
   descent_effective : D.descent.IsEffective
+  VY_to_U : D.localConstruction.scheme ⟶ U
+  V_to_U : D.V ⟶ U
   pullback_is_V : Prop
   pullback_is_V_with_descent_datum : Prop
   quotient_diagram : Prop
   curve_and_divisor : DescentCurveAndDivisor D.exceptionalCycle
   curve_and_divisor_is_over_U : Prop
+
+/-- If the pulled-back descent datum were effective by a scheme, the quotient
+construction in the source proof would supply its scheme quotient data. -/
+theorem effective_descent_produces_scheme_quotient
+    (D : HironakaNonEffectiveDescentData) (hD : D.descent.IsEffective) :
+    Nonempty (EffectiveSchemeQuotient D) := by
+  sorry
 
 theorem effective_scheme_quotient_produces_curve_and_divisor
     (D : HironakaNonEffectiveDescentData) (Q : EffectiveSchemeQuotient D) :
@@ -634,19 +744,35 @@ theorem no_effective_scheme_quotient
     (D : HironakaNonEffectiveDescentData) :
     ¬ Nonempty (EffectiveSchemeQuotient D) := by
   rintro ⟨Q⟩
-  exact D.quotient_divisor_obstruction Q.curve_and_divisor.divisor
+  exact exceptional_cycle_forbids_quotient_divisor D.exceptionalCycle
+    ⟨Q.curve_and_divisor.divisor⟩
+
+theorem descent_datum_not_effective_in_schemes
+    (D : HironakaNonEffectiveDescentData) :
+    ¬ D.descent.IsEffective := by
+  intro hD
+  exact no_effective_scheme_quotient D
+    (effective_descent_produces_scheme_quotient D hD)
 
 /-! ## Effectivity in algebraic spaces -/
 
-/-- The topological presentation used for algebraic spaces in the examples. -/
-abbrev AlgebraicSpace := TopCat.{u}
+/-- The functor-of-points model of algebraic spaces over `Spec ℂ`. -/
+abbrev ComplexAlgebraicSpace :=
+  Formalization.«Books.SpacesGroupoids».Unit19.AlgebraicSpace
+    AlgebraicGeometry.Scheme.fppfTopology
+
+/-- The representable sheaf attached to a scheme over `Spec ℂ`. -/
+noncomputable def representableComplexScheme (T : Scheme) :
+    ComplexAlgebraicSpace :=
+  Formalization.«Books.SpacesGroupoids».Unit19.PreRelation.representableSheaf
+    AlgebraicGeometry.Scheme.fppfTopology T
 
 /-- Representability by a scheme in the chapter-local algebraic-space model. -/
-def IsSchemeAlgebraicSpace (U : AlgebraicSpace) : Prop :=
-  ∃ T : Scheme, Nonempty (U ≅ (T : TopCat))
+def IsSchemeAlgebraicSpace (U : ComplexAlgebraicSpace) : Prop :=
+  ∃ T : Scheme, Nonempty (U ≅ representableComplexScheme T)
 
 /-- Smoothness, separatedness, and dimension-three data for the quotient space. -/
-structure SmoothSeparatedThreefold (U : AlgebraicSpace) where
+structure SmoothSeparatedThreefold (U : ComplexAlgebraicSpace) where
   smooth : Prop
   separated : Prop
   dimension : ℕ
@@ -655,7 +781,7 @@ structure SmoothSeparatedThreefold (U : AlgebraicSpace) where
 /-- Effectivity of a scheme descent datum after allowing algebraic spaces. -/
 structure AlgebraicSpaceEffectivity
     {X S : Scheme} {cover : X ⟶ S} (D : SchemeDescentDatum cover) where
-  quotient : AlgebraicSpace
+  quotient : ComplexAlgebraicSpace
   descent_pullback_equivalence : Prop
   smooth_separated_threefold : SmoothSeparatedThreefold quotient
   quotient_is_not_a_scheme : ¬ IsSchemeAlgebraicSpace quotient
@@ -668,7 +794,8 @@ structure AlgebraicSpaceEffectivity
 
 theorem descent_datum_effective_in_algebraic_spaces :
     ∃ (D : HironakaNonEffectiveDescentData),
-      Nonempty (AlgebraicSpaceEffectivity D.descent) := by
+      ¬ D.descent.IsEffective ∧
+        Nonempty (AlgebraicSpaceEffectivity D.descent) := by
   sorry
 
 end Formalization.«Books.Examples».Unit68

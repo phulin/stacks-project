@@ -19,33 +19,36 @@ open Opposite
 
 open scoped CategoryTheory.Pseudofunctor.StrongTrans
 
-universe t v' v u' u
+universe t w v u
 
 variable {C : Type u} [Category.{v} C]
 
 abbrev FiberedCategory (C : Type u) [Category.{v} C] :=
-  Pseudofunctor (LocallyDiscrete Cᵒᵖ) Cat.{v', u'}
+  Pseudofunctor (LocallyDiscrete Cᵒᵖ) Cat.{w, w}
 
 abbrev Fiber (F : FiberedCategory C) (U : C) := F.obj (.mk (op U))
 
 abbrev Over (C : Type u) [Category.{v} C] (U : C) := CategoryTheory.Over U
 
 abbrev MorPresheaf (F : FiberedCategory C) {U : C}
-    (x y : Fiber F U) : (Over C U)ᵒᵖ ⥤ Type v' :=
+    (x y : Fiber F U) : (Over C U)ᵒᵖ ⥤ Type w :=
   F.presheafHom x y
 
 abbrev IsomSection (F : FiberedCategory C) {U : C} (x y : Fiber F U)
     (T : (Over C U)ᵒᵖ) := { f : (F.presheafHom x y).obj T // IsIso f }
 
 def IsomPresheaf (F : FiberedCategory C) {U : C} (x y : Fiber F U) :
-    (Over C U)ᵒᵖ ⥤ Type v' where
+    (Over C U)ᵒᵖ ⥤ Type w where
   obj T := IsomSection F x y T
   map {T₁ T₂} q := ↾fun (f : { f : (F.presheafHom x y).obj T₁ // IsIso f }) =>
       (⟨(F.presheafHom x y).map q f.1, by
-        letI := f.property
-        dsimp [Pseudofunctor.presheafHom,
-          Pseudofunctor.LocallyDiscreteOpToCat.pullHom]
-        infer_instance⟩ : { f : (F.presheafHom x y).obj T₂ // IsIso f })
+        rcases f.property.out with ⟨g, h₁, h₂⟩
+        refine ⟨⟨(F.presheafHom x y).map q g, ?_, ?_⟩⟩
+        · rw [← (F.presheafHom x y).map_comp, h₁,
+            (F.presheafHom x y).map_id]
+        · rw [← (F.presheafHom x y).map_comp, h₂,
+            (F.presheafHom x y).map_id]⟩ :
+        { f : (F.presheafHom x y).obj T₂ // IsIso f })
 
 abbrev DescentData (F : FiberedCategory C) {ι : Type t} {U : C}
     {X : ι → C} (f : ∀ i, X i ⟶ U) := F.DescentData f

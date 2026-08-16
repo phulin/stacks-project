@@ -11,7 +11,15 @@ namespace Formalization.«Books.Stacks».Unit01
 open CategoryTheory
 open Opposite
 
-universe v' v u' u
+universe w v u
+
+abbrev MorphismPresheaf {C : Type u} [Category.{v} C]
+    (F : FiberedCategory C) {U : C} (x y : Fiber F U) :=
+  MorPresheaf F x y
+
+abbrev IsomorphismPresheaf {C : Type u} [Category.{v} C]
+    (F : FiberedCategory C) {U : C} (x y : Fiber F U) :=
+  IsomPresheaf F x y
 
 theorem mor_presheaf_is_presheaf {C : Type u} [Category.{v} C]
     (F : FiberedCategory C) {U : C} (x y : Fiber F U) :
@@ -32,14 +40,20 @@ theorem isom_presheaf_is_subpresheaf {C : Type u} [Category.{v} C]
 
 structure TwoFiberProductPresentation {C : Type u} [Category.{v} C]
     (F : FiberedCategory C) {U : C} (x y : Fiber F U) where
-  apex : FiberedCategory (Over C U)
+  apex : Pseudofunctor (LocallyDiscrete (Over C U)ᵒᵖ) Cat.{w, w}
   isSetoid : FiberwiseSetoid apex
-  presheaf : (Over C U)ᵒᵖ ⥤ Type v'
+  presheaf : (Over C U)ᵒᵖ ⥤ Type w
   presheafIso : presheaf ≅ IsomPresheaf F x y
 
 theorem isom_as_two_fibre_product {C : Type u} [Category.{v} C]
     (F : FiberedCategory C) {U : C} (x y : Fiber F U) :
     Nonempty (TwoFiberProductPresentation F x y) := by
+  sorry
+
+theorem isom_presheaf_is_morphism_presheaf_of_groupoid
+    {C : Type u} [Category.{v} C] {F : FiberedCategory C}
+    (hF : FiberwiseGroupoid F) {U : C} (x y : Fiber F U) :
+    Nonempty (IsomPresheaf F x y ≅ F.presheafHom x y) := by
   sorry
 
 end Formalization.«Books.Stacks».Unit01

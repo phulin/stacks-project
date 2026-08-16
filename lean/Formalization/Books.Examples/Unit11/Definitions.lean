@@ -63,31 +63,27 @@ def derivedCompleteModuleInclusion (I : Ideal A) :
 
 /-! ### Derived completion and the direct-sum counterexample -/
 
-/-- The missing derived-category construction used by the source section.
+/-- The derived-completion/H⁰ interface used by the source section.
 
-The fields record the module-level `H⁰` of derived completion, its unit, and
-the left-adjoint Hom equivalence into the full subcategory of derived
-complete modules.  Mathlib has the abelian and adic-completion APIs used
-below, but it does not provide this specific derived-completion construction. -/
+The completion functor is the left adjoint to the inclusion of derived-complete
+modules.  Its value on a module is the source's `H⁰(M^∧)`.  Mathlib supplies
+the adjunction API, while the derived-category construction itself is deferred
+to the proof stage. -/
 structure DerivedCompletionData (I : Ideal A) where
-  h0 : ModuleCat.{u} A → DerivedCompleteModuleCategory I
-  unit : ∀ M : ModuleCat.{u} A,
-    M ⟶ (derivedCompleteModuleInclusion I).obj (h0 M)
-  homEquiv : ∀ (M : ModuleCat.{u} A) (N : DerivedCompleteModuleCategory I),
-    (h0 M ⟶ N) ≃
-      (M ⟶ (derivedCompleteModuleInclusion I).obj N)
+  completion : ModuleCat.{u} A ⥤ DerivedCompleteModuleCategory I
+  adjunction : completion ⊣ derivedCompleteModuleInclusion I
 
 /-- The module underlying `H⁰(M^∧)` for a chosen derived-completion theory. -/
 def derivedCompletionH0 {I : Ideal A} (D : DerivedCompletionData I)
     (M : ModuleCat.{u} A) :
     ModuleCat.{u} A :=
-  (derivedCompleteModuleInclusion I).obj (D.h0 M)
+  (derivedCompleteModuleInclusion I).obj (D.completion.obj M)
 
 /-- The derived-completion unit on modules. -/
 def derivedCompletionUnit {I : Ideal A} (D : DerivedCompletionData I)
     (M : ModuleCat.{u} A) :
     M ⟶ derivedCompletionH0 D M :=
-  D.unit M
+  D.adjunction.unit.app M
 
 /-- The source formula for a colimit in `C`: apply module colimit and then
 take the module underlying `H⁰` of derived completion. -/
@@ -96,7 +92,18 @@ noncomputable def derivedCompleteColimit {I : Ideal A} (D : DerivedCompletionDat
     (F : J ⥤ DerivedCompleteModuleCategory I)
     [HasColimit (F ⋙ derivedCompleteModuleInclusion I)] :
     DerivedCompleteModuleCategory I :=
-  D.h0 (colimit (F ⋙ derivedCompleteModuleInclusion I))
+  D.completion.obj (colimit (F ⋙ derivedCompleteModuleInclusion I))
+
+/-- The canonical cocone map into the completed colimit attached to a diagram in
+the derived-complete category. -/
+noncomputable def derivedCompleteColimitMap {I : Ideal A}
+    (D : DerivedCompletionData I) {J : Type v} [Category.{v} J]
+    (F : J ⥤ DerivedCompleteModuleCategory I)
+    [HasColimit (F ⋙ derivedCompleteModuleInclusion I)] (j : J) :
+    F.obj j ⟶ derivedCompleteColimit D F :=
+  ObjectProperty.homMk <|
+    colimit.ι (F ⋙ derivedCompleteModuleInclusion I) j ≫
+      D.adjunction.unit.app (colimit (F ⋙ derivedCompleteModuleInclusion I))
 
 /-- The ordinary module adic completion used in the direct-sum obstruction. -/
 noncomputable def adicCompletionObject (I : Ideal A) (M : ModuleCat.{u} A) :
@@ -138,15 +145,6 @@ noncomputable def padicPowerQuotientMap (p m n : ℕ) [Fact p.Prime] (hmn : m �
       refine ⟨1, ?_⟩
       rw [one_mul, ← pow_add, Nat.sub_add_cancel hmn]
 
-/-! ### Source-facing exactness predicates -/
-
-/-- A functor preserves exact short complexes in the sense used by the source
-lemma. -/
-def PreservesExactShortComplexes {C D : Type*} [Category C] [Category D]
-    [HasZeroMorphisms C] [HasZeroMorphisms D]
-    (F : C ⥤ D) [F.PreservesZeroMorphisms] : Prop :=
-  ∀ ⦃S : ShortComplex C⦄, S.Exact → (S.map F).Exact
-
 /-- All existing filtered colimits in `C` are exact.  This is the
 typeclass-free form of the `AB5` condition used to state its failure without
 assuming the very colimit instances whose failure is being exhibited. -/
@@ -155,4 +153,3 @@ def FilteredColimitsExact (C : Type u) [Category.{v} C] : Prop :=
     HasExactColimitsOfShape J C
 
 end Formalization.«Books.Examples».Unit11
-

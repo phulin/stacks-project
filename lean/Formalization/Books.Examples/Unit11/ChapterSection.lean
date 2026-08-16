@@ -106,16 +106,6 @@ noncomputable def padicQuotientInclusion (p : ℕ) [Fact p.Prime] :
     exact (padicPowerQuotientMap_comp p 1 (m + 1) (n + 1)
       (Nat.succ_pos m) (Nat.succ_le_succ (leOfHom h))).symm
 
-/- The map on module-category colimits induced by the displayed inclusions. -/
-noncomputable def padicModuleColimitMap (p : ℕ) [Fact p.Prime] :
-    colimit (padicConstantQuotientDiagram p) ⟶ colimit (padicQuotientDiagram p) :=
-  colim.map (padicQuotientInclusion p)
-
-/- In the module category, the map induced by the `f_n` is zero. -/
-theorem padicModuleColimitMap_eq_zero (p : ℕ) [Fact p.Prime] :
-    padicModuleColimitMap p = 0 := by
-  sorry
-
 /- The commutative square from the source, with the right-hand map given by
 multiplication by `p`. -/
 theorem padicQuotientSquare_commutes (p n : ℕ) [Fact p.Prime] (hn : 0 < n) :
@@ -134,6 +124,52 @@ theorem padicQuotient_isDerivedComplete (p n : ℕ) [Fact p.Prime] :
 theorem padicQuotient_isAdicComplete (p n : ℕ) [Fact p.Prime] :
     IsAdicComplete (padicIdeal p) (padicQuotient p n : Type) := by
   sorry
+
+/- The displayed filtered system, now regarded as a diagram in the category
+of derived-complete modules. -/
+noncomputable def padicCompleteQuotientObject (p n : ℕ) [Fact p.Prime] :
+    DerivedCompleteModuleCategory (padicIdeal p) :=
+  ⟨padicQuotient p n, padicQuotient_isDerivedComplete p n⟩
+
+noncomputable def padicDerivedQuotientDiagram (p : ℕ) [Fact p.Prime] :
+    ℕ ⥤ DerivedCompleteModuleCategory (padicIdeal p) where
+  obj n := padicCompleteQuotientObject p (n + 1)
+  map {m n} h :=
+    ObjectProperty.homMk
+      (padicPowerQuotientMap p (m + 1) (n + 1)
+        (Nat.succ_le_succ (leOfHom h)))
+  map_id := by
+    intro n
+    apply ObjectProperty.hom_ext
+    exact padicPowerQuotientMap_id p (n + 1) (Nat.le_refl _)
+  map_comp := by
+    intro m n k hmn hnk
+    apply ObjectProperty.hom_ext
+    exact (padicPowerQuotientMap_comp p (m + 1) (n + 1) (k + 1)
+      (Nat.succ_le_succ (leOfHom hmn)) (Nat.succ_le_succ (leOfHom hnk))).symm
+
+noncomputable def padicDerivedConstantQuotientDiagram (p : ℕ) [Fact p.Prime] :
+    ℕ ⥤ DerivedCompleteModuleCategory (padicIdeal p) where
+  obj _ := padicCompleteQuotientObject p 1
+  map _ := 𝟙 _
+  map_id := by intros; rfl
+  map_comp := by intros; simp
+
+/- The displayed maps as a natural transformation of derived-complete
+diagrams. -/
+noncomputable def padicDerivedQuotientInclusion (p : ℕ) [Fact p.Prime] :
+    padicDerivedConstantQuotientDiagram p ⟶ padicDerivedQuotientDiagram p where
+  app n :=
+    ObjectProperty.homMk (padicPowerQuotientMap p 1 (n + 1) (Nat.succ_pos n))
+  naturality := by
+    intro m n h
+    apply ObjectProperty.hom_ext
+    change padicPowerQuotientMap p 1 (n + 1) (Nat.succ_pos n) =
+      padicPowerQuotientMap p 1 (m + 1) (Nat.succ_pos m) ≫
+        padicPowerQuotientMap p (m + 1) (n + 1)
+          (Nat.succ_le_succ (leOfHom h))
+    exact (padicPowerQuotientMap_comp p 1 (m + 1) (n + 1)
+      (Nat.succ_pos m) (Nat.succ_le_succ (leOfHom h))).symm
 
 /-! ### The colimit computation -/
 
@@ -164,17 +200,6 @@ theorem padicTorsionQuotient_derivedCompletionH0_iso_zero (p : ℕ) [Fact p.Prim
       (ModuleCat.of ℤ_[p] PUnit)) := by
   sorry
 
-/- The canonical map from the first quotient into the module-category colimit. -/
-noncomputable def padicInitialQuotientToModuleColimit (p : ℕ) [Fact p.Prime] :
-    padicQuotient p 1 ⟶ colimit (padicQuotientDiagram p) :=
-  colimit.ι (padicQuotientDiagram p) 0
-
-/- The initial-quotient map becomes zero in the completed/derived-complete
-colimit calculation. -/
-theorem padicInitialQuotientToModuleColimit_eq_zero (p : ℕ) [Fact p.Prime] :
-    padicInitialQuotientToModuleColimit p = 0 := by
-  sorry
-
 /- The completed colimit used for the colimit in the derived-complete
 category is zero in the `p`-adic example. -/
 theorem padicDerivedCompleteColimit_iso_zero (p : ℕ) [Fact p.Prime]
@@ -182,6 +207,19 @@ theorem padicDerivedCompleteColimit_iso_zero (p : ℕ) [Fact p.Prime]
     Nonempty
       (derivedCompletionH0 D (colimit (padicQuotientDiagram p)) ≅
         (ModuleCat.of ℤ_[p] PUnit)) := by
+  sorry
+
+/- The map from the first quotient to the completed colimit in the derived-
+complete category is zero, as in the source's displayed colimit map. -/
+noncomputable def padicDerivedCompleteColimitMap (p : ℕ) [Fact p.Prime]
+    (D : DerivedCompletionData (padicIdeal p)) :
+    (padicDerivedQuotientDiagram p).obj 0 ⟶
+      derivedCompleteColimit D (padicDerivedQuotientDiagram p) :=
+  derivedCompleteColimitMap D (padicDerivedQuotientDiagram p) 0
+
+theorem padicDerivedCompleteColimitMap_eq_zero (p : ℕ) [Fact p.Prime]
+    (D : DerivedCompletionData (padicIdeal p)) :
+    padicDerivedCompleteColimitMap p D = 0 := by
   sorry
 
 /-! ### Structural properties of the category `C` -/
@@ -235,18 +273,23 @@ theorem padicDerivedCompleteInclusion_not_preserves_filteredColimits (p : ℕ)
 
 /- The inclusion preserves exact short complexes. -/
 theorem derivedCompleteModuleInclusion_preserves_exact (I : Ideal A) :
-    PreservesExactShortComplexes (derivedCompleteModuleInclusion I) := by
+    ∀ ⦃S : ShortComplex (DerivedCompleteModuleCategory I)⦄,
+      S.Exact →
+        (S.map (derivedCompleteModuleInclusion I)).Exact := by
   sorry
 
-/- Filtered colimits in `C` are not exact when `I` is finitely generated. -/
-theorem derivedCompleteModuleCategory_filteredColimits_not_exact (I : Ideal A)
-    (hI : I.FG) :
-    ¬ FilteredColimitsExact (DerivedCompleteModuleCategory I) := by
+/- Filtered colimits in the `p`-adic derived-complete category are not exact. -/
+theorem padicDerivedCompleteModuleCategory_filteredColimits_not_exact
+    (p : ℕ) [Fact p.Prime] :
+    ¬ FilteredColimitsExact
+      (DerivedCompleteModuleCategory (padicIdeal p)) := by
   sorry
 
-/- Consequently, `C` is not Grothendieck abelian. -/
-theorem derivedCompleteModuleCategory_not_grothendieck (I : Ideal A) (hI : I.FG) :
-    ¬ IsGrothendieckAbelian (DerivedCompleteModuleCategory I) := by
+/- Consequently, this `p`-adic category is not Grothendieck abelian. -/
+theorem padicDerivedCompleteModuleCategory_not_grothendieck
+    (p : ℕ) [Fact p.Prime] :
+    ¬ IsGrothendieckAbelian
+      (DerivedCompleteModuleCategory (padicIdeal p)) := by
   sorry
 
 end Formalization.«Books.Examples».Unit11

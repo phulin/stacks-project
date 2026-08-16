@@ -1,10 +1,10 @@
 /-!
 # Introduction
 
-Chapter 1 introduces the Hilbert scheme of points on a curve, the Picard
-functor, and the representability theorem for the Picard scheme.  The
-introduction is motivational prose; its mathematical declarations are made in
-the section files that follow.
+The corresponding source section states the chapter's purpose and points to
+future discussions of Hilbert and Quot functors.  It contains no precise
+mathematical definition, theorem, identity, diagram, exact sequence, example,
+hypothesis, or mathematically meaningful warning requiring a Lean declaration.
 -/
 
 namespace Formalization.Books.Pic

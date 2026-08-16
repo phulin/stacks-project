@@ -195,12 +195,32 @@ theorem exampleCurveTwoToSumOpen_exists (k : Type u) [Field k] :
       f ≫ (exampleSumOpen k).ι = exampleCurveTwoToAffinePlane k := by
   sorry
 
+noncomputable def exampleCurveOneToSumOpen (k : Type u) [Field k] :
+    exampleCurveOne k ⟶ exampleSumOpenScheme k :=
+  Classical.choose (exampleCurveOneToSumOpen_exists k)
+
+theorem exampleCurveOneToSumOpen_fac (k : Type u) [Field k] :
+    exampleCurveOneToSumOpen k ≫ (exampleSumOpen k).ι =
+      exampleCurveOneToAffinePlane k :=
+  Classical.choose_spec (exampleCurveOneToSumOpen_exists k)
+
+noncomputable def exampleCurveTwoToSumOpen (k : Type u) [Field k] :
+    exampleCurveTwo k ⟶ exampleSumOpenScheme k :=
+  Classical.choose (exampleCurveTwoToSumOpen_exists k)
+
+theorem exampleCurveTwoToSumOpen_fac (k : Type u) [Field k] :
+    exampleCurveTwoToSumOpen k ≫ (exampleSumOpen k).ι =
+      exampleCurveTwoToAffinePlane k :=
+  Classical.choose_spec (exampleCurveTwoToSumOpen_exists k)
+
 abbrev exampleCurveDisjointUnion (k : Type u) [Field k] : Scheme.{u} :=
   exampleCurveOne k ⨿ exampleCurveTwo k
 
 theorem exampleCurves_closedImmersion_into_sumOpen_exists (k : Type u) [Field k] :
     ∃ f : exampleCurveDisjointUnion k ⟶ exampleSumOpenScheme k,
-      IsClosedImmersion f := by
+      IsClosedImmersion f ∧
+        coprod.inl ≫ f = exampleCurveOneToSumOpen k ∧
+        coprod.inr ≫ f = exampleCurveTwoToSumOpen k := by
   sorry
 
 noncomputable def exampleCurves_closedImmersion_into_sumOpen (k : Type u) [Field k] :
@@ -210,7 +230,17 @@ noncomputable def exampleCurves_closedImmersion_into_sumOpen (k : Type u) [Field
 instance exampleCurves_closedImmersion_into_sumOpen_isClosedImmersion
     (k : Type u) [Field k] :
     IsClosedImmersion (exampleCurves_closedImmersion_into_sumOpen k) := by
-  exact Classical.choose_spec (exampleCurves_closedImmersion_into_sumOpen_exists k)
+  exact (Classical.choose_spec (exampleCurves_closedImmersion_into_sumOpen_exists k)).1
+
+theorem exampleCurves_closedImmersion_into_sumOpen_inl (k : Type u) [Field k] :
+    coprod.inl ≫ exampleCurves_closedImmersion_into_sumOpen k =
+      exampleCurveOneToSumOpen k :=
+  (Classical.choose_spec (exampleCurves_closedImmersion_into_sumOpen_exists k)).2.1
+
+theorem exampleCurves_closedImmersion_into_sumOpen_inr (k : Type u) [Field k] :
+    coprod.inr ≫ exampleCurves_closedImmersion_into_sumOpen k =
+      exampleCurveTwoToSumOpen k :=
+  (Classical.choose_spec (exampleCurves_closedImmersion_into_sumOpen_exists k)).2.2
 
 theorem exampleSumOpen_toPuncturedAffinePlane_exists (k : Type u) [Field k] :
     ∃ f : exampleSumOpenScheme k ⟶ examplePuncturedAffinePlane k,
@@ -373,11 +403,11 @@ abbrev exampleRingBOverlap (k : Type u) [Field k] :=
   Localization.Away (exampleSum_in_ringB k)
 
 theorem example_overlap_ring_equiv_exists (k : Type u) [Field k] :
-    Nonempty (exampleRingAOverlap k ≃+* exampleRingBOverlap k) := by
+    Nonempty (exampleRingAOverlap k ≃ₐ[k] exampleRingBOverlap k) := by
   sorry
 
 noncomputable def example_overlap_ring_equiv (k : Type u) [Field k] :
-    exampleRingAOverlap k ≃+* exampleRingBOverlap k :=
+    exampleRingAOverlap k ≃ₐ[k] exampleRingBOverlap k :=
   Classical.choice (example_overlap_ring_equiv_exists k)
 
 /-- The element `1/(xy)` in the `xy`-localization of the `B` chart. -/
@@ -389,27 +419,33 @@ def exampleTensorElement (k : Type u) [Field k] :
     exampleRingA k ⊗[k] exampleRingB k :=
   exampleXY_div_sum_in_ringA k ⊗ₜ[k] exampleInverseXYInRingB k
 
-theorem exampleTensorMap_exists (k : Type u) [Field k] :
-    ∃ f : (exampleRingA k ⊗[k] exampleRingB k) →+* exampleRingBOverlap k,
-      Function.Surjective f ∧
-        f (exampleTensorElement k) =
-          IsLocalization.Away.invSelf (S := exampleRingBOverlap k)
-            (exampleSum_in_ringB k) := by
-  sorry
+def exampleA_to_BOverlapAlgHom (k : Type u) [Field k] :
+    exampleRingA k →ₐ[k] exampleRingBOverlap k :=
+  (example_overlap_ring_equiv k).toAlgHom.comp
+    (IsScalarTower.toAlgHom k (exampleRingA k) (exampleRingAOverlap k))
 
-noncomputable def exampleTensorMap (k : Type u) [Field k] :
+def exampleB_to_BOverlapAlgHom (k : Type u) [Field k] :
+    exampleRingB k →ₐ[k] exampleRingBOverlap k :=
+  IsScalarTower.toAlgHom k (exampleRingB k) (exampleRingBOverlap k)
+
+def exampleTensorMapAlgHom (k : Type u) [Field k] :
+    (exampleRingA k ⊗[k] exampleRingB k) →ₐ[k] exampleRingBOverlap k :=
+  Algebra.TensorProduct.lift (exampleA_to_BOverlapAlgHom k)
+    (exampleB_to_BOverlapAlgHom k) (fun _ _ => Commute.all _ _)
+
+def exampleTensorMap (k : Type u) [Field k] :
     (exampleRingA k ⊗[k] exampleRingB k) →+* exampleRingBOverlap k :=
-  Classical.choose (exampleTensorMap_exists k)
+  (exampleTensorMapAlgHom k).toRingHom
 
 theorem exampleTensorMap_surjective (k : Type u) [Field k] :
-    Function.Surjective (exampleTensorMap k) :=
-  (Classical.choose_spec (exampleTensorMap_exists k)).1
+    Function.Surjective (exampleTensorMap k) := by
+  sorry
 
 theorem exampleTensorMap_on_displayed_element (k : Type u) [Field k] :
     exampleTensorMap k (exampleTensorElement k) =
       IsLocalization.Away.invSelf (S := exampleRingBOverlap k)
-        (exampleSum_in_ringB k) :=
-  (Classical.choose_spec (exampleTensorMap_exists k)).2
+        (exampleSum_in_ringB k) := by
+  sorry
 
 /-! ## The gluing scheme and its source-facing properties -/
 
@@ -663,6 +699,14 @@ def exampleXYOpenToBChart (k : Type u) [Field k] :
     exampleXYOpenScheme k ⟶ exampleBChart k :=
   (exampleXYOpenIsoSpecLocalization k).hom
 
+theorem exampleSumOpenToAChart_is_finite (k : Type u) [Field k] :
+    IsFinite (exampleSumOpenToAChart k) := by
+  sorry
+
+theorem exampleXYOpenToBChart_is_finite (k : Type u) [Field k] :
+    IsFinite (exampleXYOpenToBChart k) := by
+  sorry
+
 /-- The chart map from the `D(x+y)` open of `Y` to the glued scheme. -/
 def exampleSumOpenInYToGlued (k : Type u) [Field k] :
     (exampleY_two_chart_cover k).X false ⟶ exampleGluedScheme k :=
@@ -737,13 +781,17 @@ def exampleCurveInversion (k : Type u) [Field k] :
     exampleCurveOne k ⟶ exampleCurveTwo k :=
   Spec.map (CommRingCat.ofHom (exampleCurveInversionRingHom k))
 
-theorem exampleCurveInversion_isIso (k : Type u) [Field k] :
+instance exampleCurveInversion_isIso (k : Type u) [Field k] :
     IsIso (exampleCurveInversion k) := by
   sorry
 
+noncomputable def exampleCurveInversionIso (k : Type u) [Field k] :
+    exampleCurveOne k ≅ exampleCurveTwo k :=
+  asIso (exampleCurveInversion k)
+
 def exampleCurveOneViaInversionToY (k : Type u) [Field k] :
     exampleCurveOne k ⟶ examplePuncturedAffinePlane k :=
-  exampleCurveInversion k ≫ exampleCurveTwoToPuncturedAffinePlane k
+  (exampleCurveInversionIso k).hom ≫ exampleCurveTwoToPuncturedAffinePlane k
 
 /-- The source property that the glued scheme is a variety over `k`. -/
 def IsVarietyOver (k : Type u) [Field k] (X : Scheme.{u}) : Prop :=
@@ -809,13 +857,12 @@ theorem exampleMorphism_is_example_quotient_morphism (k : Type u) [Field k] :
     exampleMorphism_is_birational k, exampleMorphism_is_coequalizer k⟩
 
 theorem exampleMorphism_is_given_by_chart_maps (k : Type u) [Field k] :
-    ∃ fA : exampleSumOpenScheme k ⟶ exampleAChart k,
-      ∃ fB : exampleXYOpenScheme k ⟶ exampleBChart k,
-        IsFinite fA ∧ IsFinite fB ∧
-          fA ≫ exampleAChartIntoGlued k =
-            exampleSumOpen_toPuncturedAffinePlane k ≫ exampleMorphism k ∧
-          fB ≫ exampleBChartIntoGlued k =
-            exampleXYOpen_toPuncturedAffinePlane k ≫ exampleMorphism k := by
+    IsFinite (exampleSumOpenToAChart k) ∧
+      IsFinite (exampleXYOpenToBChart k) ∧
+        exampleSumOpenToAChart k ≫ exampleAChartIntoGlued k =
+          exampleSumOpen_toPuncturedAffinePlane k ≫ exampleMorphism k ∧
+        exampleXYOpenToBChart k ≫ exampleBChartIntoGlued k =
+          exampleXYOpen_toPuncturedAffinePlane k ≫ exampleMorphism k := by
   sorry
 
 theorem exampleMorphism_unique_up_to_unique_isomorphism (k : Type u) [Field k]
@@ -886,6 +933,10 @@ theorem exampleGlobalSections_equiv_constant_plus_xy (k : Type u) [Field k] :
     Nonempty (Γ(exampleGluedScheme k, ⊤) ≃+*
       (↥(exampleConstantPlusXYSubalgebra k))) := by
   sorry
+
+noncomputable def exampleGlobalSectionsEquiv_constant_plus_xy (k : Type u) [Field k] :
+    Γ(exampleGluedScheme k, ⊤) ≃+* (↥(exampleConstantPlusXYSubalgebra k)) :=
+  Classical.choice (exampleGlobalSections_equiv_constant_plus_xy k)
 
 /-- The rational function `(x+y³)/(x+y)²` used to distinguish two points. -/
 def exampleSeparatingFunctionValue (k : Type u) [Field k] (a b : k) : k :=

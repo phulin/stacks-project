@@ -36,6 +36,10 @@ namespace Formalization.«Books.Examples».Unit79
    `ModuleCat` is Mathlib's canonical bundled version of this category. -/
 abbrev moduleCategory (A : Type u) [CommRing A] := ModuleCat.{u} A
 
+/- A `ModuleCat` over a field is the category of vector spaces over that
+   field. -/
+abbrev vectorSpaceCategory (K : Type u) [Field K] := ModuleCat.{u} K
+
 /-! The source's multiplicative subset is represented by a `Submonoid`. -/
 
 /-- The property of modules whose elements are killed by elements of `S`. -/
@@ -167,7 +171,7 @@ theorem quotientByTorsionModules_equiv_fractionField
     (A : Type u) [CommRing A] [IsDomain A] :
     Nonempty
       ((torsionModuleProperty A).isoModSerre.Localization ≌
-        ModuleCat.{u} (FractionRing A)) :=
+        vectorSpaceCategory (FractionRing A)) :=
   quotientByTorsionModules_equiv_totalQuotientRing A
 
 /-! ## Finitely generated modules over a Noetherian domain -/
@@ -250,6 +254,16 @@ theorem quotientByFinitelyGeneratedTorsionModules_equiv_finiteDimensional
       (finitelyGeneratedTorsionSerreQuotient A ≌
         finiteDimensionalVectorSpaceCategory K) := by
   sorry
+
+/- The source's canonical choice of the field of fractions is Mathlib's
+   `FractionRing`; the preceding theorem also permits any equivalent model. -/
+theorem quotientByFinitelyGeneratedTorsionModules_equiv_fractionField
+    (A : Type u) [CommRing A] [IsDomain A] [IsNoetherianRing A] :
+    Nonempty
+      (finitelyGeneratedTorsionSerreQuotient A ≌
+        finiteDimensionalVectorSpaceCategory (FractionRing A)) := by
+  exact quotientByFinitelyGeneratedTorsionModules_equiv_finiteDimensional
+    A (FractionRing A)
 
 /-! ## Abelian groups modulo torsion groups -/
 

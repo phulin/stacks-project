@@ -8,6 +8,7 @@ import Mathlib.RingTheory.Ideal.Quotient.Operations
 import Mathlib.RingTheory.Localization.AtPrime.Basic
 import Mathlib.RingTheory.Localization.Away.Basic
 import Mathlib.RingTheory.MvPolynomial.Basic
+import Mathlib.RingTheory.Regular.IsSMulRegular
 import Mathlib.Topology.Compactification.OnePoint.Basic
 import Mathlib.Topology.Compactification.StoneCech
 import Mathlib.Topology.Connected.TotallyDisconnected
@@ -290,9 +291,10 @@ theorem firstExampleM0LocalizationMap_ker_coordinate
 `(xᵢ yᵢ, yₙ)` do not enlarge the coordinate kernel. -/
 theorem firstExampleM0LocalizationMap_ker_mul_eq_coordinate
     (k : Type u) [Field k] (g : firstExampleR0 k) (n : ℕ)
-    (hg : ∀ r : firstExampleR0 k,
-      firstExampleR0X k n * g * r ∈ firstExampleM0CoordinateKernelIdeal k n →
-        r ∈ firstExampleM0CoordinateKernelIdeal k n) :
+    (hg : IsSMulRegular
+      (firstExampleR0 k ⧸ firstExampleM0CoordinateKernelIdeal k n)
+      (Ideal.Quotient.mk (firstExampleM0CoordinateKernelIdeal k n)
+        (firstExampleR0X k n * g))) :
     RingHom.ker (firstExampleM0LocalizationMap k
       (firstExampleR0X k n * g)) = firstExampleM0CoordinateKernelIdeal k n := by
   sorry

@@ -128,4 +128,9 @@ theorem hasFiniteCoproducts_hasInitial (C : Type u) [Category.{v} C]
     [HasFiniteCoproducts C] : HasInitial C := by
   infer_instance
 
+theorem hasCoproducts_hasInitial (C : Type u) [Category.{v} C]
+    [HasCoproducts.{v} C] : HasInitial C := by
+  let h : HasFiniteCoproducts C := hasFiniteCoproducts_of_hasCoproducts C
+  exact @hasFiniteCoproducts_hasInitial C _ h
+
 end Formalization.Books.Categories.Unit05

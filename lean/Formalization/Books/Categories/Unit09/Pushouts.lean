@@ -21,13 +21,21 @@ universe v u
 
 /-! ## Pushouts -/
 
-/- A cocartesian square is exactly a pushout square.  The canonical
-`IsPushout` structure already includes both the commutativity condition and
-the universal property, so no parallel square structure is needed. -/
-abbrev IsCocartesianSquare {C : Type u} [Category.{v} C]
-    {Y X Z W : C} (f : Y ⟶ X) (g : Y ⟶ Z)
-    (p : X ⟶ W) (q : Z ⟶ W) : Prop :=
-  IsPushout f g p q
+/- The source's factorization property, written with the two named pushout
+   legs instead of Mathlib's general colimit cocone interface. -/
+theorem pushout_universal_property
+    {C : Type u} [Category.{v} C]
+    {Y X Z P : C} {f : Y ⟶ X} {g : Y ⟶ Z}
+    {p : X ⟶ P} {q : Z ⟶ P}
+    (h : IsPushout f g p q) {W : C}
+    (α : X ⟶ W) (β : Z ⟶ W) (hαβ : f ≫ α = g ≫ β) :
+    ∃! γ : P ⟶ W, p ≫ γ = α ∧ q ≫ γ = β := by
+  refine ⟨h.desc α β hαβ, ?_, ?_⟩
+  · exact ⟨h.inl_desc α β hαβ, h.inr_desc α β hαβ⟩
+  · intro γ hγ
+    apply h.hom_ext
+    · exact hγ.1.trans (h.inl_desc α β hαβ).symm
+    · exact hγ.2.trans (h.inr_desc α β hαβ).symm
 
 /- The source's uniqueness assertion is the standard uniqueness of a
 colimit cocone, expressed with the two pushout legs fixed. -/
@@ -59,5 +67,13 @@ theorem pushout_iff_fibre_product_op
     exact h.op
   · intro h
     exact h.unop
+
+/- A cocartesian square is exactly a pushout square.  The canonical
+`IsPushout` structure already includes both the commutativity condition and
+the universal property, so no parallel square structure is needed. -/
+abbrev IsCocartesianSquare {C : Type u} [Category.{v} C]
+    {Y X Z W : C} (f : Y ⟶ X) (g : Y ⟶ Z)
+    (p : X ⟶ W) (q : Z ⟶ W) : Prop :=
+  IsPushout f g p q
 
 end Formalization.Books.Categories.Unit09

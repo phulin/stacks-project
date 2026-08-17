@@ -112,6 +112,117 @@ abbrev twoYonedaFibredMorphismCategory
     (p : S ⥤ C) (U : C) :=
   twoYonedaFibredMorphismCategoryGeneral (Over.forget U) p
 
+/-! ## The pullback construction in the proof -/
+
+/- The source constructs a functor from the fibre over `U` back to the
+   category of fibred morphisms.  These declarations retain the actual
+   object and arrow formulas, using the chosen pullback data from Unit 33. -/
+def twoYonedaPullbackFunctorObj
+    {C : Type uC} [Category.{vC} C]
+    {S : Type uS} [Category.{vS} S]
+    (p : S ⥤ C) [p.IsFibered] (P : PullbackChoice p) (U : C)
+    (x : Functor.Fiber p U) (f : Over U) : S :=
+  Functor.Fiber.fiberInclusion.obj (P.pullback f.hom x)
+
+def twoYonedaPullbackFunctorMap
+    {C : Type uC} [Category.{vC} C]
+    {S : Type uS} [Category.{vS} S]
+    (p : S ⥤ C) [p.IsFibered] (P : PullbackChoice p) (U : C)
+    (x : Functor.Fiber p U) {f g : Over U} (k : f ⟶ g) :
+    twoYonedaPullbackFunctorObj p P U x f ⟶
+      twoYonedaPullbackFunctorObj p P U x g :=
+  ((Functor.Fiber.fiberInclusion : Functor.Fiber p f.left ⥤ S).map
+      (eqToHom (congrArg (fun h => P.pullback h x) (Over.w k).symm))) ≫
+    ((Functor.Fiber.fiberInclusion : Functor.Fiber p f.left ⥤ S).map
+      ((pullback_composition_iso p P k.left g.hom).hom.app x)) ≫
+    P.pullbackMap k.left (P.pullback g.hom x)
+
+def twoYonedaPullbackFunctor
+    {C : Type uC} [Category.{vC} C]
+    {S : Type uS} [Category.{vS} S]
+    (p : S ⥤ C) [p.IsFibered] (P : PullbackChoice p) (U : C)
+    (x : Functor.Fiber p U) : Over U ⥤ S where
+  obj f := twoYonedaPullbackFunctorObj p P U x f
+  map k := twoYonedaPullbackFunctorMap p P U x k
+  map_id := by
+    sorry
+  map_comp := by
+    sorry
+
+theorem twoYonedaPullbackFunctor_isOver
+    {C : Type uC} [Category.{vC} C]
+    {S : Type uS} [Category.{vS} S]
+    (p : S ⥤ C) [p.IsFibered] (P : PullbackChoice p) (U : C)
+    (x : Functor.Fiber p U) :
+    twoYonedaPullbackFunctor p P U x ⋙ p = Over.forget U := by
+  sorry
+
+theorem twoYonedaPullbackFunctor_mapsStronglyCartesian
+    {C : Type uC} [Category.{vC} C]
+    {S : Type uS} [Category.{vS} S]
+    (p : S ⥤ C) [p.IsFibered] (P : PullbackChoice p) (U : C)
+    (x : Functor.Fiber p U) :
+    MapsStronglyCartesian (Over.forget U) p
+      (twoYonedaPullbackFunctor p P U x) := by
+  sorry
+
+def twoYonedaPullbackMorphism
+    {C : Type uC} [Category.{vC} C]
+    {S : Type uS} [Category.{vS} S]
+    (p : S ⥤ C) [p.IsFibered] (P : PullbackChoice p) (U : C)
+    (x : Functor.Fiber p U) : twoYonedaFibredMorphismCategory p U :=
+  ⟨⟨twoYonedaPullbackFunctor p P U x,
+      twoYonedaPullbackFunctor_isOver p P U x⟩,
+    twoYonedaPullbackFunctor_mapsStronglyCartesian p P U x⟩
+
+def twoYonedaPullbackNatTrans
+    {C : Type uC} [Category.{vC} C]
+    {S : Type uS} [Category.{vS} S]
+    (p : S ⥤ C) [p.IsFibered] (P : PullbackChoice p) (U : C)
+    {x y : Functor.Fiber p U} (η : x ⟶ y) :
+    twoYonedaPullbackFunctor p P U x ⟶
+      twoYonedaPullbackFunctor p P U y where
+  app f :=
+    (Functor.Fiber.fiberInclusion : Functor.Fiber p f.left ⥤ S).map
+      ((P.pullbackFunctor f.hom).map η)
+  naturality := by
+    sorry
+
+theorem twoYonedaPullbackNatTrans_isOver
+    {C : Type uC} [Category.{vC} C]
+    {S : Type uS} [Category.{vS} S]
+    (p : S ⥤ C) [p.IsFibered] (P : PullbackChoice p) (U : C)
+    {x y : Functor.Fiber p U} (η : x ⟶ y) :
+    (twoYonedaPostcomposition p U).IsHomLift (𝟙 (Over.forget U))
+      (twoYonedaPullbackNatTrans p P U η) := by
+  sorry
+
+def twoYonedaPullbackMorphismMap
+    {C : Type uC} [Category.{vC} C]
+    {S : Type uS} [Category.{vS} S]
+    (p : S ⥤ C) [p.IsFibered] (P : PullbackChoice p) (U : C)
+    {x y : Functor.Fiber p U} (η : x ⟶ y) :
+    twoYonedaPullbackMorphism p P U x ⟶
+      twoYonedaPullbackMorphism p P U y :=
+  ObjectProperty.homMk
+    ⟨twoYonedaPullbackNatTrans p P U η,
+      twoYonedaPullbackNatTrans_isOver p P U η⟩
+
+/- The functor below is the inverse constructed in the source after choosing
+   pullbacks.  Its functoriality is exactly the omitted verification in the
+   textbook proof. -/
+def twoYonedaPullback
+    {C : Type uC} [Category.{vC} C]
+    {S : Type uS} [Category.{vS} S]
+    (p : S ⥤ C) [p.IsFibered] (P : PullbackChoice p) (U : C) :
+    Functor.Fiber p U ⥤ twoYonedaFibredMorphismCategory p U where
+  obj x := twoYonedaPullbackMorphism p P U x
+  map η := twoYonedaPullbackMorphismMap p P U η
+  map_id := by
+    sorry
+  map_comp := by
+    sorry
+
 /-! ## Evaluation at the identity -/
 
 /- The following two interfaces isolate the only non-definitional parts of
@@ -192,6 +303,38 @@ abbrev twoYonedaGroupoidMorphismCategory
     {S : Type uS} [Category.{vS} S]
     (p : S ⥤ C) (U : C) :=
   twoYonedaOverCategory p U
+
+/- The same chosen-pullback formulas land in the whole strict morphism
+   category in the groupoid case; preservation is automatic there. -/
+def twoYonedaGroupoidPullbackMorphism
+    {C : Type uC} [Category.{vC} C]
+    {S : Type uS} [Category.{vS} S]
+    (p : S ⥤ C) [p.IsFibered] (P : PullbackChoice p) (U : C)
+    (x : Functor.Fiber p U) : twoYonedaGroupoidMorphismCategory p U :=
+  ⟨twoYonedaPullbackFunctor p P U x,
+    twoYonedaPullbackFunctor_isOver p P U x⟩
+
+def twoYonedaGroupoidPullbackMap
+    {C : Type uC} [Category.{vC} C]
+    {S : Type uS} [Category.{vS} S]
+    (p : S ⥤ C) [p.IsFibered] (P : PullbackChoice p) (U : C)
+    {x y : Functor.Fiber p U} (η : x ⟶ y) :
+    twoYonedaGroupoidPullbackMorphism p P U x ⟶
+      twoYonedaGroupoidPullbackMorphism p P U y :=
+  ⟨twoYonedaPullbackNatTrans p P U η,
+    twoYonedaPullbackNatTrans_isOver p P U η⟩
+
+def twoYonedaGroupoidPullback
+    {C : Type uC} [Category.{vC} C]
+    {S : Type uS} [Category.{vS} S]
+    (p : S ⥤ C) [p.IsFibered] (P : PullbackChoice p) (U : C) :
+    Functor.Fiber p U ⥤ twoYonedaGroupoidMorphismCategory p U where
+  obj x := twoYonedaGroupoidPullbackMorphism p P U x
+  map η := twoYonedaGroupoidPullbackMap p P U η
+  map_id := by
+    sorry
+  map_comp := by
+    sorry
 
 /-- The morphism category in the groupoid version is a groupoid. -/
 theorem twoYonedaGroupoidMorphismCategory_isGroupoid
@@ -439,6 +582,16 @@ theorem twoYonedaAssociatedFunctor_isEquivalence
     {S : Type uS} [Category.{vS} S]
     (p : S ⥤ C) [p.IsFibredInGroupoids] :
     (twoYonedaAssociatedFunctor p).IsEquivalence := by
+  sorry
+
+/- The source's final appeal to the equivalence lemma is an equivalence in
+   the 2-category of categories fibred in groupoids, not only an equivalence
+   of the underlying categories. -/
+theorem twoYonedaAssociatedFunctor_isFibredEquivalenceOver
+    {C : Type uC} [Category.{vC} C]
+    {S : Type uS} [Category.{vS} S]
+    (p : S ⥤ C) [p.IsFibredInGroupoids] :
+    IsFibredEquivalenceOver p (twoYonedaAssociatedProjection p) := by
   sorry
 
 end

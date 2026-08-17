@@ -39,7 +39,13 @@ theorem weightedComplexMatrix_det {n : ℕ} (A : Matrix (Fin n) (Fin n) ℂ)
     (m : Fin n → ℝ) :
     Matrix.det (weightedComplexMatrix A m) =
       (Finset.univ : Finset (Fin n)).prod (fun i => (m i : ℂ)) * Matrix.det A := by
-  sorry
+  classical
+  rw [show weightedComplexMatrix A m = A * Matrix.diagonal (fun j => (m j : ℂ)) by
+    ext i j
+    simp [weightedComplexMatrix, Matrix.mul_apply, Matrix.diagonal]]
+  rw [Matrix.det_mul, Matrix.det_diagonal]
+  exact (mul_comm (Matrix.det A)
+    ((Finset.univ : Finset (Fin n)).prod (fun i => (m i : ℂ))))
 
 /-! The weighted strict diagonal-dominance criterion. -/
 theorem recurring_weighted_diagonal_dominance {n : ℕ}
@@ -235,7 +241,16 @@ theorem weightedIntegerMatrix_comp {n : ℕ}
     (Matrix.toLin' (Matrix.diagonal m)).comp
         ((Matrix.toLin' A).comp (Matrix.toLin' (Matrix.diagonal m))) =
       Matrix.toLin' (weightedIntegerMatrix A m) := by
-  sorry
+  apply LinearMap.ext
+  intro x
+  funext i
+  change (Matrix.diagonal m).mulVec (A.mulVec ((Matrix.diagonal m).mulVec x)) i =
+    (weightedIntegerMatrix A m).mulVec x i
+  simp [weightedIntegerMatrix, Matrix.mulVec_apply_eq_sum, Matrix.mul_apply,
+    Matrix.diagonal, Finset.mul_sum]
+  apply Finset.sum_congr rfl
+  intro j hj
+  ac_rfl
 
 theorem diagonal_matrix_primary_torsion_finrank_zero {n : ℕ}
     (m : Fin n → ℤ) (ell : ℕ) (hell : Nat.Prime ell)
@@ -301,7 +316,28 @@ def graphEdgePairing {n : ℕ} (A : Matrix (Fin n) (Fin n) ℤ) :
 theorem graphBoundary_apply {n : ℕ} (A : Matrix (Fin n) (Fin n) ℤ)
     (x : vertexLattice n) (e : positiveEdge A) :
     graphBoundary A x e = x (edgeSource e) - x (edgeTarget e) := by
-  sorry
+  classical
+  simp [graphBoundary, graphIncidenceMatrix, edgeSource, edgeTarget,
+    Matrix.mulVecLin, Matrix.transpose, Matrix.mulVec_apply_eq_sum]
+  have hsum (a : Fin n) (f : Fin n → ℤ) :
+      ∑ j, (if a = j then f j else 0) = f a := by
+    simp
+  have hne : edgeSource e ≠ edgeTarget e := by
+    exact ne_of_lt e.2.1
+  calc
+    ∑ j, (if edgeSource e = j then 1
+      else if edgeTarget e = j then -1 else 0) * x j =
+        ∑ j, ((if edgeSource e = j then x j else 0) -
+          (if edgeTarget e = j then x j else 0)) := by
+      apply Finset.sum_congr rfl
+      intro j hj
+      by_cases h₁ : edgeSource e = j
+      · by_cases h₂ : edgeTarget e = j
+        · exact (hne (h₁.trans h₂.symm)).elim
+        · simp [h₁, h₂]
+      · by_cases h₂ : edgeTarget e = j <;> simp [h₁, h₂]
+    _ = x (edgeSource e) - x (edgeTarget e) := by
+      rw [Finset.sum_sub_distrib, hsum, hsum]
 
 theorem graphCoboundary_apply {n : ℕ} (A : Matrix (Fin n) (Fin n) ℤ)
     (y : edgeLattice A) (i : Fin n) :
@@ -309,21 +345,118 @@ theorem graphCoboundary_apply {n : ℕ} (A : Matrix (Fin n) (Fin n) ℤ)
       (Finset.univ : Finset (positiveEdge A)).sum
         (fun e => if edgeSource e = i then edgeWeight e * y e
           else if edgeTarget e = i then -(edgeWeight e * y e) else 0) := by
-  sorry
+  classical
+  simp [graphCoboundary, graphWeightedIncidenceMatrix, Matrix.mulVecLin,
+    Matrix.mulVec_apply_eq_sum]
 
 theorem graphVertexPairing_positive_definite (n : ℕ) :
     IsPositiveDefiniteIntegralForm (graphVertexPairing n) := by
-  sorry
+  classical
+  unfold IsPositiveDefiniteIntegralForm graphVertexPairing weightedCoordinateForm
+  constructor
+  · exact ⟨fun x y => by
+      simp [dotProductBilin, Matrix.diagonal, Matrix.mulVecLin,
+        Matrix.mulVec_apply_eq_sum, dotProduct]
+      ac_rfl⟩
+  · intro x hx
+    simp [dotProductBilin, Matrix.diagonal, Matrix.mulVecLin,
+      Matrix.mulVec_apply_eq_sum, dotProduct]
+    change 0 < ∑ i : Fin n, x i * x i
+    obtain ⟨i, hi⟩ : ∃ i, x i ≠ 0 := by
+      by_contra h
+      apply hx
+      funext i
+      by_contra hi'
+      exact h ⟨i, hi'⟩
+    have hpos : 0 < x i * x i := mul_self_pos.mpr hi
+    have hle : x i * x i ≤ ∑ j : Fin n, x j * x j := by
+      exact Finset.single_le_sum (fun j hj => mul_self_nonneg (x j))
+        (Finset.mem_univ i)
+    exact lt_of_lt_of_le hpos hle
 
 theorem graphEdgePairing_positive_definite {n : ℕ}
     (A : Matrix (Fin n) (Fin n) ℤ) :
     IsPositiveDefiniteIntegralForm (graphEdgePairing A) := by
-  sorry
+  classical
+  unfold IsPositiveDefiniteIntegralForm graphEdgePairing weightedCoordinateForm
+  constructor
+  · refine ⟨fun x y => ?_⟩
+    simp [dotProductBilin, Matrix.diagonal, Matrix.mulVecLin,
+      Matrix.mulVec_apply_eq_sum, dotProduct]
+    apply Finset.sum_congr rfl
+    intro e he
+    ac_rfl
+  · intro x hx
+    simp [dotProductBilin, Matrix.diagonal, Matrix.mulVecLin,
+      Matrix.mulVec_apply_eq_sum, dotProduct]
+    obtain ⟨e, he⟩ : ∃ e : positiveEdge A, x e ≠ 0 := by
+      by_contra h
+      apply hx
+      funext e
+      by_contra he'
+      exact h ⟨e, he'⟩
+    have hpos : 0 < x e * (edgeWeight e * x e) := by
+      rw [show x e * (edgeWeight e * x e) = edgeWeight e * (x e * x e) by ac_rfl]
+      exact mul_pos e.2.2 (mul_self_pos.mpr he)
+    have hnonneg (f : positiveEdge A) :
+        0 ≤ x f * (edgeWeight f * x f) := by
+      rw [show x f * (edgeWeight f * x f) = edgeWeight f * (x f * x f) by ac_rfl]
+      exact mul_nonneg (le_of_lt f.2.2) (mul_self_nonneg (x f))
+    have hle : x e * (edgeWeight e * x e) ≤
+        ∑ f : positiveEdge A, x f * (edgeWeight f * x f) := by
+      exact Finset.single_le_sum (fun f hf => hnonneg f) (Finset.mem_univ e)
+    exact lt_of_lt_of_le hpos hle
 
 theorem graphBoundary_adjoint {n : ℕ} (A : Matrix (Fin n) (Fin n) ℤ) :
     LinearMap.IsAdjointPair (graphVertexPairing n) (graphEdgePairing A)
       (graphBoundary A) (graphCoboundary A) := by
-  sorry
+  intro x y
+  simp [graphVertexPairing, graphEdgePairing, weightedCoordinateForm,
+    graphBoundary_apply, graphCoboundary_apply, dotProductBilin,
+    Matrix.diagonal, Matrix.mulVecLin, Matrix.mulVec_apply_eq_sum, dotProduct]
+  calc
+    ∑ e : positiveEdge A, (x (edgeSource e) - x (edgeTarget e)) *
+        (edgeWeight e * y e) =
+        ∑ e : positiveEdge A, ∑ i : Fin n,
+          x i * (if edgeSource e = i then edgeWeight e * y e
+            else if edgeTarget e = i then -(edgeWeight e * y e) else 0) := by
+      apply Finset.sum_congr rfl
+      intro e he
+      have hsum (a : Fin n) (f : Fin n → ℤ) :
+          ∑ i, (if a = i then f i else 0) = f a := by
+        simp
+      have hne : edgeSource e ≠ edgeTarget e := ne_of_lt e.2.1
+      symm
+      calc
+        ∑ i : Fin n, x i * (if edgeSource e = i then edgeWeight e * y e
+            else if edgeTarget e = i then -(edgeWeight e * y e) else 0) =
+            ∑ i : Fin n, ((if edgeSource e = i then
+              x i * (edgeWeight e * y e) else 0) -
+                (if edgeTarget e = i then
+                  x i * (edgeWeight e * y e) else 0)) := by
+            apply Finset.sum_congr rfl
+            intro i hi
+            by_cases h₁ : edgeSource e = i
+            · by_cases h₂ : edgeTarget e = i
+              · exact (hne (h₁.trans h₂.symm)).elim
+              · simp [h₁, h₂]
+            · by_cases h₂ : edgeTarget e = i <;> simp [h₁, h₂]
+        _ = x (edgeSource e) * (edgeWeight e * y e) -
+            x (edgeTarget e) * (edgeWeight e * y e) := by
+          rw [Finset.sum_sub_distrib, hsum, hsum]
+        _ = (x (edgeSource e) - x (edgeTarget e)) *
+            (edgeWeight e * y e) := by
+          simp [sub_mul, mul_sub, mul_assoc, mul_comm, mul_left_comm]
+    _ = ∑ i : Fin n, ∑ e : positiveEdge A,
+        x i * (if edgeSource e = i then edgeWeight e * y e
+          else if edgeTarget e = i then -(edgeWeight e * y e) else 0) := by
+      rw [Finset.sum_comm]
+    _ = ∑ i : Fin n, x i *
+        ∑ e : positiveEdge A, (if edgeSource e = i then edgeWeight e * y e
+          else if edgeTarget e = i then -(edgeWeight e * y e) else 0) := by
+      apply Finset.sum_congr rfl
+      intro i hi
+      rw [Finset.mul_sum]
 
 /-! The positive off-diagonal edge count of the graph attached to a symmetric matrix. -/
 def positiveOffDiagonalEdgeCount {n : ℕ} (A : Matrix (Fin n) (Fin n) ℤ) : ℕ :=
@@ -336,7 +469,28 @@ theorem graph_coboundary_ker_eq_orthogonal {n : ℕ}
     (A : Matrix (Fin n) (Fin n) ℤ) :
     LinearMap.ker (graphCoboundary A) =
       (graphEdgePairing A).orthogonal (LinearMap.range (graphBoundary A)) := by
-  sorry
+  ext z
+  rw [LinearMap.mem_ker, LinearMap.BilinForm.mem_orthogonal_iff]
+  constructor
+  · intro hz
+    rintro y ⟨y, rfl⟩
+    simpa [hz] using (graphBoundary_adjoint A y z)
+  · intro hz
+    apply funext
+    intro i
+    have horth := hz (graphBoundary A (Pi.single i (1 : ℤ)))
+      ⟨Pi.single i (1 : ℤ), rfl⟩
+    have hadj := graphBoundary_adjoint A (Pi.single i (1 : ℤ)) z
+    have hcoord :
+        graphVertexPairing n (Pi.single i (1 : ℤ)) (graphCoboundary A z) = 0 := by
+      calc
+        graphVertexPairing n (Pi.single i (1 : ℤ)) (graphCoboundary A z) =
+            graphEdgePairing A (graphBoundary A (Pi.single i (1 : ℤ))) z :=
+          hadj.symm
+        _ = 0 := horth
+    simpa [graphVertexPairing, weightedCoordinateForm, dotProductBilin,
+      Matrix.diagonal, Matrix.mulVecLin, Matrix.mulVec_apply_eq_sum, dotProduct,
+      Pi.single_apply] using hcoord
 
 theorem graph_discriminant_product_annihilates {n : ℕ}
     (A : Matrix (Fin n) (Fin n) ℤ) :
@@ -351,7 +505,9 @@ theorem graph_cokernel_product_annihilated {n : ℕ}
     (q : latticeDiscriminantQuotient (graphEdgePairing A) →ₗ[ℤ]
       moduleCokernel f) (hq : Function.Surjective q) :
     ∀ x : moduleCokernel f, graphEdgeWeightProduct A • x = 0 := by
-  sorry
+  intro x
+  obtain ⟨y, rfl⟩ := hq x
+  simpa using congrArg q (graph_discriminant_product_annihilates A y)
 
 /-! The graph identities used to compare the matrix and incidence cokernels. -/
 theorem graph_laplacian_eq_neg_matrix {n : ℕ} (A : Matrix (Fin n) (Fin n) ℤ)
@@ -374,7 +530,15 @@ theorem graph_kernel_quotient_torsion_free {n : ℕ}
     (A : Matrix (Fin n) (Fin n) ℤ) :
     Module.IsTorsionFree ℤ
       (edgeLattice A ⧸ LinearMap.ker (graphCoboundary A)) := by
-  sorry
+  letI : Module.IsTorsionFree ℤ (vertexLattice n) := inferInstance
+  letI : Module.IsTorsionFree ℤ (LinearMap.range (graphCoboundary A)) :=
+    Subtype.coe_injective.moduleIsTorsionFree _ (by simp)
+  refine Function.Injective.moduleIsTorsionFree
+    (fun x : edgeLattice A ⧸ LinearMap.ker (graphCoboundary A) =>
+      (graphCoboundary A).quotKerEquivRange x)
+    (graphCoboundary A).quotKerEquivRange.injective ?_
+  intro r x
+  simp
 
 /-! The image of an oriented graph incidence map is saturated. -/
 theorem graph_image_quotient_torsion_free {n : ℕ}

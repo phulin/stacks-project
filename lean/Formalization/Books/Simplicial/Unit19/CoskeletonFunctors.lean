@@ -270,14 +270,14 @@ def compatibleBoundaryFunctor {C : Type u} [Category.{v} C] (n : ℕ)
     simp only [Category.assoc]
 
 /-- The two-face map used in the face relation. -/
-def twoFace {n : ℕ} (i j : Fin (n + 2)) (_hij : i ≤ j) :
+def twoFace {n : ℕ} (i j : Fin (n + 2)) (_hij : i < j) :
     SimplexCategory.mk n ⟶ SimplexCategory.mk (n + 2) :=
   SimplexCategory.δ i ≫ SimplexCategory.δ j.succ
 
-theorem twoFace_eq {n : ℕ} (i j : Fin (n + 2)) (hij : i ≤ j) :
+theorem twoFace_eq {n : ℕ} (i j : Fin (n + 2)) (hij : i < j) :
     twoFace i j hij =
       SimplexCategory.δ j ≫ SimplexCategory.δ i.castSucc := by
-  simpa [twoFace] using (SimplexCategory.δ_comp_δ hij)
+  simpa [twoFace] using (SimplexCategory.δ_comp_δ (Nat.le_of_lt hij))
 
 theorem formula_limit_of_representable {C : Type u} [Category.{v} C]
     (n : ℕ) (U : SimplicialObject.Truncated C (n + 1)) (Uplus : C)
@@ -349,13 +349,31 @@ noncomputable def representedDegeneracy {C : Type u} [Category.{v} C]
   hRep.homEquiv.symm
     ⟨degeneracyTuple n U j, degeneracyTuple_is_compatible n U j⟩
 
+/-- The universal compatible boundary supplied by a representing object. -/
+noncomputable def representedBoundary {C : Type u} [Category.{v} C]
+    (n : ℕ) (U : SimplicialObject.Truncated C (n + 1)) (Uplus : C)
+    (hRep : (compatibleBoundaryFunctor n U).RepresentableBy Uplus) :
+    CompatibleBoundary n U Uplus :=
+  hRep.homEquiv (𝟙 Uplus)
+
+/-- The new face maps are the coordinates of the universal boundary.
+
+The indexing is shifted by one relative to the source: `Uplus` is the new
+top degree of the extension of `U`. -/
+noncomputable def representedFace {C : Type u} [Category.{v} C]
+    (n : ℕ) (U : SimplicialObject.Truncated C (n + 1)) (Uplus : C)
+    (hRep : (compatibleBoundaryFunctor n U).RepresentableBy Uplus)
+    (i : Fin (n + 3)) :
+    Uplus ⟶ U.obj (op ⟨SimplexCategory.mk (n + 1), by simp⟩) :=
+  (representedBoundary n U Uplus hRep).1 i
+
 theorem extension_face_is_coordinate_projection {C : Type u} [Category.{v} C]
     (n : ℕ) (U : SimplicialObject.Truncated C (n + 1)) (Uplus : C)
     (hRep : (compatibleBoundaryFunctor n U).RepresentableBy Uplus)
     {T : C} (f : T ⟶ Uplus) (i : Fin (n + 3)) :
     (hRep.homEquiv f).1 i =
       ((compatibleBoundaryFunctor n U).map f.op
-        (hRep.homEquiv (𝟙 Uplus))).1 i := by
+        (representedBoundary n U Uplus hRep)).1 i := by
   exact congrArg (fun q : CompatibleBoundary n U T => q.1 i)
     (hRep.homEquiv_eq f)
 
@@ -428,11 +446,20 @@ structure InductiveCoskeletonTower {C : Type u} [Category.{v} C]
   next_restrict : ∀ k : ℕ,
     (SimplicialObject.Truncated.trunc C (m + k + 1) (m + k)).obj
         (level (k + 1)) = level k
+  mapping_property : ∀ k : ℕ, ∀ V : SimplicialObject.Truncated C (m + k),
+    (V ⟶ level k) ≃
+      ((SimplicialObject.Truncated.trunc C (m + k) m).obj V ⟶ U)
 
 noncomputable def inductiveCoskeletonLevel {C : Type u} [Category.{v} C]
     {m : ℕ} {U : SimplicialObject.Truncated C m}
     (T : InductiveCoskeletonTower m U) (k : ℕ) : C :=
   (T.level k).obj (op ⟨SimplexCategory.mk (m + k), by simp⟩)
+
+noncomputable def inductiveCoskeletonComponent {C : Type u} [Category.{v} C]
+    {m : ℕ} {U : SimplicialObject.Truncated C m}
+    (T : InductiveCoskeletonTower m U) (r k : ℕ) (h : r ≤ k) : C :=
+  (T.level k).obj
+    (op ⟨SimplexCategory.mk (m + r), by exact Nat.add_le_add_left h m⟩)
 
 theorem exists_inductive_coskeleton_tower {C : Type u} [Category.{v} C]
     [HasFiniteLimits C] (m : ℕ) (U : SimplicialObject.Truncated C m) :
@@ -445,12 +472,14 @@ theorem inductive_tower_mapping_property {C : Type u} [Category.{v} C]
     (V : SimplicialObject.Truncated C (m + k)) :
     Nonempty ((V ⟶ T.level k) ≃
       ((SimplicialObject.Truncated.trunc C (m + k) m).obj V ⟶ U)) := by
-  sorry
+  exact ⟨T.mapping_property k V⟩
 
-theorem inductive_tower_stabilizes {C : Type u} [Category.{v} C]
+theorem inductive_tower_component_stabilizes {C : Type u} [Category.{v} C]
     {m : ℕ} {U : SimplicialObject.Truncated C m}
-    (T : InductiveCoskeletonTower m U) (k : ℕ) :
-    inductiveCoskeletonLevel T k = inductiveCoskeletonLevel T (k + 1) := by
+    (T : InductiveCoskeletonTower m U) (r k : ℕ)
+    (h : r ≤ k) (h' : r ≤ k + 1) :
+    inductiveCoskeletonComponent T r k h =
+      inductiveCoskeletonComponent T r (k + 1) h' := by
   sorry
 
 /-! ## Consequences usually packaged as the cosk-up lemma -/
@@ -560,7 +589,7 @@ theorem coskeleton_fibre_product_iso {C : Type u} [Category.{v} C] (n : ℕ)
 /-! ## Coskeletons over an object -/
 
 theorem coskeleton_over_forget_commutes {C : Type u} [Category.{v} C]
-    (X : C) (k : ℕ) (hk : 1 ≤ k)
+    [HasFiniteLimits C] (X : C) (k : ℕ) (hk : 1 ≤ k)
     [∀ U : SimplicialObject.Truncated (Over X) k,
       (SimplexCategory.Truncated.inclusion k).op.HasRightKanExtension U]
     [∀ U : SimplicialObject.Truncated C k,

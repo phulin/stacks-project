@@ -53,7 +53,7 @@ theorem codimension_eq_iSup_length (Y : IrreducibleCloseds X) :
 -/
 theorem exists_maximal_chain_extension
     (Y : IrreducibleCloseds X) (p : LTSeries (Set.Ici Y))
-    (hp : p.head = (⟨Y, Set.mem_Ici.mpr le_rfl⟩ : Set.Ici Y))
+    (_hp : p.head = (⟨Y, Set.mem_Ici.mpr le_rfl⟩ : Set.Ici Y))
     (_hfinite : codimension Y < ⊤) :
     ∃ F : Flag (Set.Ici Y), Set.range p ⊆ F := by
   exact p.strictMono.monotone.isChain_range.exists_subset_flag
@@ -284,14 +284,14 @@ theorem noetherianExample_isOpen_iff {U : Set NoetherianInfiniteCodimensionSpace
     rcases hshape hV with hVempty | hVuniv | ⟨n, hVtail⟩
     · left
       apply (Set.preimage_eq_preimage e.symm.surjective).mp
-      simpa [hVempty]
+      simp [hVempty]
     · right; left
       apply (Set.preimage_eq_preimage e.symm.surjective).mp
-      simpa [hVuniv]
+      simp [hVuniv]
     · right; right
       apply Exists.intro n
       apply (Set.preimage_eq_preimage e.symm.surjective).mp
-      simpa [noetherianExampleTail, e, hVtail]
+      simp [noetherianExampleTail, e, hVtail]
   · rintro (rfl | rfl | ⟨n, rfl⟩)
     · exact isOpen_empty
     · exact isOpen_univ
@@ -433,7 +433,7 @@ theorem noetherianExample_isNoetherian :
         rcases noetherianExample_isOpen_iff.mp (hUo i) with hi0 | hi1 | ⟨n, hin⟩
         · rw [hi0] at hi
           exfalso
-          simpa using hi
+          simp at hi
         · exact (hUniv ⟨i, hi1⟩).elim
         · rw [hin] at hi
           exfalso
@@ -452,7 +452,7 @@ theorem noetherianExample_isNoetherian :
       rcases noetherianExample_isOpen_iff.mp (hUo i) with hi0 | hi1 | ⟨n, hin⟩
       · rw [hi0] at hi
         exfalso
-        simpa using hi
+        simp at hi
       · refine ⟨{i}, ?_⟩
         intro y hy
         simp only [Set.mem_iUnion, Finset.mem_singleton]
@@ -480,7 +480,7 @@ theorem noetherianExample_zero_isClosed :
   exact noetherianExample_isClosed_iff.mpr (Or.inr (Or.inl rfl))
 
 theorem noetherianExample_initialSegment_isIrreducible
-    (n : ℕ+) (hn : 1 < n) :
+    (n : ℕ+) (_hn : 1 < n) :
     IsIrreducible (noetherianExampleInitialSegment n) := by
   let e := WithTopology.equiv UnitInterval unitIntervalTopology
   have htailUnit : ∀ {m k : ℕ+}, m ≤ k → unitIntervalTail k ⊆ unitIntervalTail m := by

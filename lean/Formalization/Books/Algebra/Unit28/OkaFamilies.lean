@@ -46,7 +46,25 @@ theorem mem_idealColonByIdeal {R : Type u} [CommRing R] {I J : Ideal R} {x : R} 
 theorem ideal_eq_principal_mul_colon {R : Type u} [CommRing R]
     {I J : Ideal R} (hIJ : I ≤ J) (hJ : J.IsPrincipal) :
     I = J * idealColonByIdeal I J := by
-  sorry
+  obtain ⟨a, ha⟩ := hJ.principal
+  rw [ha]
+  ext x
+  constructor
+  · intro hx
+    have hxJ : x ∈ R ∙ a := by
+      rw [← ha]
+      exact hIJ hx
+    obtain ⟨c, hcx⟩ := (Ideal.mem_span_singleton').mp hxJ
+    apply Ideal.mem_span_singleton_mul.mpr
+    refine ⟨c, ?_, ?_⟩
+    · exact (mem_idealColonByElement (I := I) (a := a) (x := c)).mpr
+        (hcx ▸ hx)
+    · simpa [mul_comm] using hcx
+  · intro hx
+    obtain ⟨c, hc, hcx⟩ := (Ideal.mem_span_singleton_mul).mp hx
+    rw [← hcx]
+    simpa [mul_comm] using
+      (mem_idealColonByElement (I := I) (a := a) (x := c)).mp hc
 
 /-- A set of ideals satisfying the Oka-family condition. -/
 abbrev OkaFamily {R : Type u} [CommRing R] (F : Set (Ideal R)) : Prop :=
@@ -59,7 +77,21 @@ def idealsMeeting {R : Type u} [CommRing R] (S : Submonoid R) : Set (Ideal R) :=
 
 theorem idealsMeeting_isOka {R : Type u} [CommRing R] (S : Submonoid R) :
     OkaFamily (idealsMeeting S) := by
-  sorry
+  change Ideal.IsOka (fun I : Ideal R => ((I : Set R) ∩ (S : Set R)).Nonempty)
+  refine { top := ?_, oka := ?_ }
+  · exact ⟨1, by simp, S.one_mem⟩
+  · intro I a hsup hcolon
+    obtain ⟨s, hsI, hsS⟩ := hsup
+    obtain ⟨t, htI, htS⟩ := hcolon
+    obtain ⟨i, hi, j, hj, hs⟩ := Submodule.mem_sup.mp hsI
+    obtain ⟨r, hr⟩ := (Ideal.mem_span_singleton').mp hj
+    refine ⟨s * t, ?_, S.mul_mem hsS htS⟩
+    rw [← hs, add_mul]
+    apply I.add_mem
+    · exact I.mul_mem_right t hi
+    · rw [← hr, mul_assoc, mul_comm a t]
+      exact I.mul_mem_left r
+        ((mem_idealColonByElement (I := I) (a := a) (x := t)).mp htI)
 
 theorem ideal_eq_span_mul_colon_generators {R : Type u} [CommRing R]
     {I : Ideal R} {a : R} {n m : ℕ} (a₁ : Fin n → R) (b₁ : Fin m → R)
@@ -68,7 +100,49 @@ theorem ideal_eq_span_mul_colon_generators {R : Type u} [CommRing R]
       I ⊔ Ideal.span ({a} : Set R))
     (hb : ∀ i, b₁ i ∈ I) :
     I = Ideal.span (Set.range (fun i => a * a₁ i) ∪ Set.range b₁) := by
-  sorry
+  apply le_antisymm
+  · intro x hx
+    have hx' : x ∈ Ideal.span (insert a (Set.range b₁)) := by
+      rw [hsup]
+      exact (show I ≤ I ⊔ Ideal.span ({a} : Set R) from le_sup_left) hx
+    obtain ⟨r, z, hz, hzx⟩ := Ideal.mem_span_insert.mp hx'
+    have hzI : z ∈ I := by
+      apply (Ideal.span_le.2 ?_) hz
+      rintro _ ⟨i, rfl⟩
+      exact hb i
+    have hra : r * a ∈ I := by
+      have hsub := I.sub_mem hx hzI
+      rw [hzx] at hsub
+      simpa using hsub
+    have hrspan : r ∈ Ideal.span (Set.range a₁) := by
+      rw [hcolon]
+      exact (mem_idealColonByElement (I := I) (a := a) (x := r)).mpr hra
+    obtain ⟨c, hc⟩ := (Ideal.mem_span_range_iff_exists_fun).mp hrspan
+    let K : Ideal R := Ideal.span (Set.range (fun i => a * a₁ i) ∪ Set.range b₁)
+    have hraK : r * a ∈ K := by
+      rw [← hc, Finset.sum_mul]
+      exact K.sum_mem fun i hi => by
+        simpa [mul_assoc, mul_comm, mul_left_comm] using
+          K.mul_mem_left (c i)
+            (Ideal.subset_span (Or.inl (Set.mem_range_self i)))
+    have hzK : z ∈ K := by
+      apply (Ideal.span_le.2 ?_) hz
+      rintro _ ⟨i, rfl⟩
+      exact Ideal.subset_span (Or.inr (Set.mem_range_self i))
+    rw [hzx]
+    exact K.add_mem hraK hzK
+  · rw [Ideal.span_union]
+    apply sup_le
+    · refine Ideal.span_le.2 ?_
+      rintro _ ⟨i, rfl⟩
+      have hai : a₁ i ∈ idealColonByElement I a := by
+        rw [← hcolon]
+        exact Ideal.mem_span_range_self
+      simpa [mul_comm] using
+        (mem_idealColonByElement (I := I) (a := a) (x := a₁ i)).mp hai
+    · refine Ideal.span_le.2 ?_
+      rintro _ ⟨i, rfl⟩
+      exact hb i
 
 def finitelyGeneratedIdeals {R : Type u} [CommRing R] : Set (Ideal R) :=
   {I : Ideal R | I.FG}
@@ -82,7 +156,26 @@ theorem idealColonByElement_eq_adjoin_colon {R : Type u} [CommRing R]
     (I : Ideal R) (a : R) :
     idealColonByElement I a =
       idealColonByIdeal I (I ⊔ Ideal.span ({a} : Set R)) := by
-  sorry
+  ext x
+  constructor
+  · intro hx
+    apply (mem_idealColonByIdeal (I := I)
+      (J := I ⊔ Ideal.span ({a} : Set R)) (x := x)).mpr
+    intro y hy
+    obtain ⟨i, hi, z, hz, hyz⟩ := Submodule.mem_sup.mp hy
+    obtain ⟨r, hr⟩ := (Ideal.mem_span_singleton').mp hz
+    rw [← hyz, mul_add]
+    apply I.add_mem
+    · exact I.mul_mem_left x hi
+    · rw [← hr, ← mul_assoc, mul_comm x r, mul_assoc]
+      exact I.mul_mem_left r
+        ((mem_idealColonByElement (I := I) (a := a) (x := x)).mp hx)
+  · intro hx
+    apply (mem_idealColonByElement (I := I) (a := a) (x := x)).mpr
+    apply (mem_idealColonByIdeal (I := I)
+      (J := I ⊔ Ideal.span ({a} : Set R)) (x := x)).mp hx
+    exact (show Ideal.span ({a} : Set R) ≤ I ⊔ Ideal.span ({a} : Set R) from
+      le_sup_right) (Ideal.mem_span_singleton_self a)
 
 def principalIdeals {R : Type u} [CommRing R] : Set (Ideal R) :=
   {I : Ideal R | I.IsPrincipal}
@@ -163,14 +256,71 @@ def idealColonShortComplex {A : Type u} [CommRing A]
 theorem idealColonShortComplex_shortExact {A : Type u} [CommRing A]
     (I : Ideal A) (a : A) :
     (idealColonShortComplex I a).ShortExact := by
-  sorry
+  refine ModuleCat.shortComplex_shortExact (idealColonShortComplex I a) ?_ ?_ ?_
+  · change Function.Exact (quotientColonMultiplicationMap I a)
+      (quotientAdjoinMap I a)
+    apply Function.Exact.of_comp_of_mem_range
+    · funext x
+      induction x using Submodule.Quotient.induction_on with
+      | _ x =>
+        rw [Function.comp_apply, quotientColonMultiplicationMap_mk,
+          quotientAdjoinMap_mk]
+        change Ideal.Quotient.mk (I ⊔ Ideal.span ({a} : Set A)) (a * x) = 0
+        rw [Ideal.Quotient.eq_zero_iff_mem]
+        simpa [mul_comm, smul_eq_mul] using
+          (I ⊔ Ideal.span ({a} : Set A)).smul_mem x
+            (Submodule.mem_sup_right (Ideal.mem_span_singleton_self a))
+    · intro y hy
+      induction y using Submodule.Quotient.induction_on with
+      | _ x =>
+        rw [quotientAdjoinMap_mk] at hy
+        change Ideal.Quotient.mk (I ⊔ Ideal.span ({a} : Set A)) x = 0 at hy
+        have hx := (Ideal.Quotient.eq_zero_iff_mem).mp hy
+        obtain ⟨i, hi, z, hz, hzx⟩ := Submodule.mem_sup.mp hx
+        obtain ⟨r, hr⟩ := (Ideal.mem_span_singleton').mp hz
+        refine ⟨Submodule.Quotient.mk r, ?_⟩
+        rw [quotientColonMultiplicationMap_mk]
+        apply Ideal.Quotient.eq.mpr
+        rw [← hzx, ← hr]
+        simpa [mul_comm, sub_eq_add_neg, add_assoc, add_comm, add_left_comm] using
+          I.neg_mem hi
+  · change Function.Injective (quotientColonMultiplicationMap I a)
+    intro x y hxy
+    induction x using Submodule.Quotient.induction_on with
+    | _ x =>
+      induction y using Submodule.Quotient.induction_on with
+      | _ y =>
+        change Submodule.Quotient.mk (a * x) = Submodule.Quotient.mk (a * y) at hxy
+        apply (Submodule.Quotient.eq (idealColonByElement I a)).mpr
+        apply (mem_idealColonByElement (I := I) (a := a) (x := x - y)).mpr
+        simpa [mul_sub, mul_comm] using (Submodule.Quotient.eq I).mp hxy
+  · change Function.Surjective (quotientAdjoinMap I a)
+    intro y
+    induction y using Submodule.Quotient.induction_on with
+    | _ x =>
+      exact ⟨Submodule.Quotient.mk x, quotientAdjoinMap_mk I a x⟩
 
 theorem moduleQuotientIdeals_isOka {A : Type u} [CommRing A]
     (P : ModuleProperty A)
     [ObjectProperty.IsClosedUnderExtensions P]
     (hP0 : P (0 : ModuleCat.{u} A)) :
     OkaFamily (moduleQuotientIdeals (A := A) P) := by
-  sorry
+  change Ideal.IsOka (fun I : Ideal A => P (ModuleCat.of A (A ⧸ I)))
+  refine { top := ?_, oka := ?_ }
+  · let Q : ModuleCat.{u} A := ModuleCat.of A (A ⧸ (⊤ : Ideal A))
+    let S : ShortComplex (ModuleCat.{u} A) :=
+      ShortComplex.mk (0 : (0 : ModuleCat.{u} A) ⟶ Q)
+        (0 : Q ⟶ (0 : ModuleCat.{u} A)) (by simp)
+    have hS : S.ShortExact :=
+      { exact := ShortComplex.exact_of_isZero_X₂ S
+          (ModuleCat.isZero_of_subsingleton Q)
+        mono_f := (isZero_zero _).mono S.f
+        epi_g := (isZero_zero _).epi S.g }
+    change P Q
+    exact P.prop_X₂_of_shortExact hS hP0 hP0
+  · intro I a hsup hcolon
+    exact P.prop_X₂_of_shortExact
+      (idealColonShortComplex_shortExact I a) hcolon hsup
 
 /-! ## Maximal ideals and the converse constructions -/
 
@@ -236,7 +386,21 @@ theorem isDomain_of_nontrivial_of_nonzero_prime_contains_nonZeroDivisor
     (h : ∀ P : Ideal R, P.IsPrime → P ≠ ⊥ →
       ∃ x : R, x ∈ P ∧ x ∈ nonZeroDivisors R) :
     IsDomain R := by
-  sorry
+  have hdis : Disjoint ((⊥ : Ideal R) : Set R) (nonZeroDivisors R) := by
+    refine Set.disjoint_left.2 ?_
+    intro x hxbot hxreg
+    have hxzero : x = 0 := by simpa using hxbot
+    exact (nonZeroDivisors.ne_zero hxreg) hxzero
+  obtain ⟨P, hP, _, hPdis⟩ :=
+    Ideal.exists_le_prime_disjoint (I := (⊥ : Ideal R))
+      (nonZeroDivisors R) hdis
+  have hPbot : P = ⊥ := by
+    by_contra hPbot
+    obtain ⟨x, hxP, hxreg⟩ := h P hP hPbot
+    exact Set.disjoint_left.mp hPdis hxP hxreg
+  subst P
+  letI : (⊥ : Ideal R).IsPrime := hP
+  exact IsDomain.of_bot_isPrime R
 
 /-! ## The cardinality variant and its example -/
 
@@ -319,11 +483,49 @@ theorem radical_eq_radical_adjoin_mul_colon {R : Type u} [CommRing R]
     (I : Ideal R) (a : R) :
     I.radical =
       ((I ⊔ Ideal.span ({a} : Set R)) * idealColonByElement I a).radical := by
-  sorry
+  apply le_antisymm
+  · intro x hx
+    rw [Ideal.mem_radical_iff] at hx ⊢
+    obtain ⟨n, hn⟩ := hx
+    refine ⟨n * 2, ?_⟩
+    rw [pow_mul]
+    simpa [pow_two] using Ideal.mul_mem_mul
+      ((show I ≤ I ⊔ Ideal.span ({a} : Set R) from le_sup_left) hn)
+      ((mem_idealColonByElement (I := I) (a := a) (x := x ^ n)).mpr
+        (I.mul_mem_right a hn))
+  · apply Ideal.radical_mono
+    apply Ideal.mul_le.mpr
+    intro x hx y hy
+    obtain ⟨i, hi, z, hz, hxz⟩ := Submodule.mem_sup.mp hx
+    obtain ⟨r, hr⟩ := (Ideal.mem_span_singleton').mp hz
+    rw [← hxz, add_mul]
+    apply I.add_mem
+    · exact I.mul_mem_right y hi
+    · rw [← hr, mul_assoc, mul_comm a y]
+      exact I.mul_mem_left r
+        ((mem_idealColonByElement (I := I) (a := a) (x := y)).mp hy)
 
 theorem radicalOfFiniteGeneratedIdeals_isOka {R : Type u} [CommRing R] :
     OkaFamily (radicalOfFiniteGeneratedIdeals (R := R)) := by
-  sorry
+  change Ideal.IsOka (fun I : Ideal R => ∃ n : ℕ, ∃ f : Fin n → R,
+    I.radical = (Ideal.span (Set.range f)).radical)
+  refine { top := ?_, oka := ?_ }
+  · exact ⟨1, fun _ => 1, by simp⟩
+  · intro I a hsup hcolon
+    obtain ⟨n, f, hf⟩ := hsup
+    obtain ⟨m, g, hg⟩ := hcolon
+    refine ⟨n * m, fun p => f p.1 * g p.2, ?_⟩
+    rw [radical_eq_radical_adjoin_mul_colon, Ideal.radical_mul, hf, hg,
+      ← Ideal.radical_mul, Ideal.span_mul_span']
+    congr 1
+    ext x
+    constructor
+    · rintro ⟨y, hy, z, hz, rfl⟩
+      rcases hy with ⟨i, rfl⟩
+      rcases hz with ⟨j, rfl⟩
+      exact ⟨⟨i, j⟩, rfl⟩
+    · rintro ⟨⟨i, j⟩, rfl⟩
+      exact ⟨f i, ⟨i, rfl⟩, g j, ⟨j, rfl⟩, rfl⟩
 
 theorem sSup_not_radicalOfFiniteGeneratedIdeals {R : Type u} [CommRing R]
     (C : Set (Ideal R)) (hC : C.Nonempty) (hchain : IsChain (· ≤ ·) C)

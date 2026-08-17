@@ -1,6 +1,7 @@
 import Formalization.Books.Sheaves.Unit05.PresheavesOfAlgebraicStructures
 import Mathlib.Algebra.Category.ModuleCat.Presheaf.ChangeOfRings
 import Mathlib.Algebra.Category.ModuleCat.Presheaf.Pullback
+import Mathlib.CategoryTheory.Adjunction.Unique
 
 /-!
 # Sheaves on Spaces, Chapter 6: Presheaves of modules
@@ -21,6 +22,7 @@ pointwise tensor-product presheaf in the source.
 namespace Formalization.Books.Sheaves.Unit06
 
 open CategoryTheory Opposite TopologicalSpace
+open scoped ChangeOfRings
 
 universe w v
 
@@ -186,7 +188,420 @@ theorem tensorProductPresheaf_section_iso
       ((tensorProductPresheaf (commRingPresheafMorphismToRingPresheaf α) G).obj
           (op U) ≅
         sectionwiseExtensionOfScalars α G U) := by
-  sorry
+  let R := O₁ ⋙ (forget₂ CommRingCat RingCat)
+  let R' := O₂ ⋙ (forget₂ CommRingCat RingCat)
+  let α_R := commRingPresheafMorphismToRingPresheaf α
+  let baseMapAux {M : PMod R} {U V : (Opens X)ᵒᵖ} (f : U ⟶ V) :
+      M.obj U ⟶
+        (ModuleCat.restrictScalars (α.app U).hom).obj
+          ((ModuleCat.restrictScalars (O₂.map f).hom).obj
+            ((ModuleCat.extendScalars (α.app V).hom).obj (M.obj V))) := by
+    have hα :
+        (α.app V).hom.comp ((O₁.map f).hom) =
+          ((O₂.map f).hom).comp (α.app U).hom := by
+      have h := α.naturality f
+      exact congrArg CommRingCat.Hom.hom h
+    let e₁ :=
+      ModuleCat.restrictScalarsComp' ((O₁.map f).hom) (α.app V).hom
+        ((α.app V).hom.comp (O₁.map f).hom) rfl
+    let e₂ :=
+      ModuleCat.restrictScalarsComp' (α.app U).hom (O₂.map f).hom
+        ((O₂.map f).hom.comp (α.app U).hom) rfl
+    let ec := ModuleCat.restrictScalarsCongr hα
+    let u := (ModuleCat.extendRestrictScalarsAdj (α.app V).hom).unit.app (M.obj V)
+    exact
+      M.map f ≫
+        (ModuleCat.restrictScalars (O₁.map f).hom).map u ≫
+        e₁.inv.app ((ModuleCat.extendScalars (α.app V).hom).obj (M.obj V)) ≫
+        ec.hom.app ((ModuleCat.extendScalars (α.app V).hom).obj (M.obj V)) ≫
+        e₂.hom.app ((ModuleCat.extendScalars (α.app V).hom).obj (M.obj V))
+
+  let baseMap {M : PMod R} {U V : (Opens X)ᵒᵖ} (f : U ⟶ V) :
+      (ModuleCat.extendScalars (α.app U).hom).obj (M.obj U) ⟶
+        (ModuleCat.restrictScalars (O₂.map f).hom).obj
+          ((ModuleCat.extendScalars (α.app V).hom).obj (M.obj V)) :=
+    ModuleCat.ExtendRestrictScalarsAdj.HomEquiv.fromExtendScalars
+      (α.app U).hom (baseMapAux f)
+
+  have h_base {M : PMod R} {U V : (Opens X)ᵒᵖ} (f : U ⟶ V) (m : M.obj U) :
+      baseMap f ((1 : O₂.obj U) ⊗ₜ[O₁.obj U,(α.app U).hom] m) =
+        baseMapAux f m := by
+    change
+      ((ModuleCat.ExtendRestrictScalarsAdj.homEquiv (α.app U).hom)
+        (ModuleCat.ExtendRestrictScalarsAdj.HomEquiv.fromExtendScalars
+          (α.app U).hom (baseMapAux f))) m = baseMapAux f m
+    exact congrArg (fun k => k m)
+      ((ModuleCat.ExtendRestrictScalarsAdj.homEquiv (α.app U).hom).apply_symm_apply
+        (baseMapAux f))
+
+  have h_aux_apply {M : PMod R} {U V : (Opens X)ᵒᵖ} (f : U ⟶ V)
+      (m : M.obj U) :
+      (show (ModuleCat.extendScalars (α.app V).hom).obj (M.obj V) from baseMapAux f m) =
+        (1 : O₂.obj V) ⊗ₜ[O₁.obj V,(α.app V).hom]
+          (show M.obj V from M.map f m) := by
+    have h_unit :
+        (ModuleCat.extendRestrictScalarsAdj (α.app V).hom).unit.app (M.obj V)
+            (show M.obj V from M.map f m) =
+          (1 : O₂.obj V) ⊗ₜ[O₁.obj V,(α.app V).hom] (show M.obj V from M.map f m) := by
+      exact ModuleCat.extendRestrictScalarsAdj_unit_app_apply
+        (α.app V).hom (M.obj V) (show M.obj V from M.map f m)
+    dsimp [baseMapAux]
+    rw [h_unit]
+    simp only [Category.assoc, ModuleCat.restrictScalars.map_apply,
+      ModuleCat.restrictScalarsComp'App_inv_apply,
+      ModuleCat.restrictScalarsCongr_hom_app]
+    rfl
+
+  have h_aux_apply' {M : PMod R} {U V : (Opens X)ᵒᵖ} (f : U ⟶ V)
+      (m : M.obj U) :
+      (show (ModuleCat.restrictScalars (O₂.map f).hom).obj
+          ((ModuleCat.extendScalars (α.app V).hom).obj (M.obj V)) from baseMapAux f m) =
+        (show (ModuleCat.restrictScalars (O₂.map f).hom).obj
+          ((ModuleCat.extendScalars (α.app V).hom).obj (M.obj V)) from
+          (1 : O₂.obj V) ⊗ₜ[O₁.obj V,(α.app V).hom]
+            (show M.obj V from M.map f m)) := by
+    exact h_aux_apply f m
+
+  have h_ext_test {R S : Type w} [CommRing R] [CommRing S]
+      (f : R →+* S) {M : ModuleCat R} {N : ModuleCat S}
+      {p q : (ModuleCat.extendScalars f).obj M ⟶ N}
+      (h : ∀ m : M,
+        p ((1 : S) ⊗ₜ[R,f] m) = q ((1 : S) ⊗ₜ[R,f] m)) : p = q := by
+    apply ModuleCat.ExtendScalars.hom_ext
+    intro m
+    let one : (ModuleCat.restrictScalars f).obj (ModuleCat.of S S) := by
+      change S
+      exact 1
+    change p (one ⊗ₜ[R] m) = q (one ⊗ₜ[R] m)
+    exact h m
+
+  have h_id (M : PMod R) (U : (Opens X)ᵒᵖ) :
+      baseMap (M := M) (𝟙 U) =
+        (ModuleCat.restrictScalarsId' (O₂.map (𝟙 U)).hom
+          (congrArg CommRingCat.Hom.hom (O₂.map_id U))).inv.app
+          ((ModuleCat.extendScalars (α.app U).hom).obj (M.obj U)) := by
+    apply h_ext_test
+    intro m
+    rw [h_base]
+    simp only [baseMapAux, M.map_id, O₁.map_id, O₂.map_id,
+      ModuleCat.restrictScalarsId'App_inv_apply]
+    rfl
+
+  have h_comp {M : PMod R}
+      {U V W : (Opens X)ᵒᵖ} (f : U ⟶ V) (g : V ⟶ W) :
+      baseMap (M := M) (f ≫ g) =
+        baseMap f ≫
+          (ModuleCat.restrictScalars (O₂.map f).hom).map (baseMap g) ≫
+          (ModuleCat.restrictScalarsComp' (O₂.map f).hom (O₂.map g).hom
+            (O₂.map (f ≫ g)).hom
+            (congrArg CommRingCat.Hom.hom (O₂.map_comp f g))).inv.app
+            ((ModuleCat.extendScalars (α.app W).hom).obj (M.obj W)) := by
+    apply h_ext_test
+    intro m
+    change
+      baseMap (M := M) (f ≫ g)
+          ((1 : O₂.obj U) ⊗ₜ[O₁.obj U,(α.app U).hom] m) =
+        (ModuleCat.restrictScalarsComp' (O₂.map f).hom (O₂.map g).hom
+            (O₂.map (f ≫ g)).hom
+            (congrArg CommRingCat.Hom.hom (O₂.map_comp f g))).inv.app
+          ((ModuleCat.extendScalars (α.app W).hom).obj (M.obj W))
+          ((ModuleCat.restrictScalars (O₂.map f).hom).map (baseMap g)
+            ((show (ModuleCat.extendScalars (α.app V).hom).obj (M.obj V) from
+              baseMap (M := M) f
+                ((1 : O₂.obj U) ⊗ₜ[O₁.obj U,(α.app U).hom] m))))
+    rw [h_base (f := f ≫ g)]
+    rw [h_base (f := f)]
+    change
+      (show (ModuleCat.extendScalars (α.app W).hom).obj (M.obj W) from
+        baseMapAux (f ≫ g) m) =
+        (show (ModuleCat.extendScalars (α.app W).hom).obj (M.obj W) from
+          (ModuleCat.restrictScalarsComp' (O₂.map f).hom (O₂.map g).hom
+            (O₂.map (f ≫ g)).hom
+            (congrArg CommRingCat.Hom.hom (O₂.map_comp f g))).inv.app
+            ((ModuleCat.extendScalars (α.app W).hom).obj (M.obj W))
+            ((ModuleCat.restrictScalars (O₂.map f).hom).map
+              (baseMap g)
+              (show (ModuleCat.restrictScalars (O₂.map f).hom).obj
+                  ((ModuleCat.extendScalars (α.app V).hom).obj (M.obj V)) from
+                baseMapAux f m)))
+    rw [h_aux_apply' (f := f ≫ g) (m := m)]
+    rw [h_aux_apply' (f := f)]
+    change
+      _ =
+        (ModuleCat.restrictScalarsComp' (O₂.map f).hom (O₂.map g).hom
+            (O₂.map (f ≫ g)).hom
+            (congrArg CommRingCat.Hom.hom (O₂.map_comp f g))).inv.app
+          ((ModuleCat.extendScalars (α.app W).hom).obj (M.obj W))
+          (show ((ModuleCat.restrictScalars (O₂.map g).hom) ⋙
+              (ModuleCat.restrictScalars (O₂.map f).hom)).obj
+               ((ModuleCat.extendScalars (α.app W).hom).obj (M.obj W)) from
+            (show (ModuleCat.restrictScalars (O₂.map g).hom).obj
+                ((ModuleCat.extendScalars (α.app W).hom).obj (M.obj W)) from
+              baseMap g
+                ((1 : O₂.obj V) ⊗ₜ[O₁.obj V,(α.app V).hom]
+                  (show M.obj V from M.map f m))))
+    rw [h_base (f := g) (m := show M.obj V from M.map f m)]
+    rw [h_aux_apply' (f := g) (m := show M.obj V from M.map f m)]
+    simp only [ModuleCat.restrictScalarsComp'App_inv_apply]
+    rw [M.map_comp_apply]
+    rfl
+
+  let pointwiseChange : PMod R ⥤ PMod R' := {
+    obj M :=
+      { obj := fun U =>
+          (ModuleCat.extendScalars (α.app U).hom).obj (M.obj U)
+        map := fun f => baseMap f
+        map_id := h_id M
+        map_comp := fun f g => h_comp f g }
+    map := fun {M N} φ =>
+      { app := fun U => (ModuleCat.extendScalars (α.app U).hom).map (φ.app U)
+        naturality := by
+          intro U V f
+          apply h_ext_test
+          intro m
+          change
+            (show ((ModuleCat.restrictScalars (O₂.map f).hom).obj
+                ((ModuleCat.extendScalars (α.app V).hom).obj (N.obj V))) from
+              ((ModuleCat.restrictScalars (O₂.map f).hom).map
+                ((ModuleCat.extendScalars (α.app V).hom).map (φ.app V)))
+                (baseMap (M := M) f
+                  ((1 : O₂.obj U) ⊗ₜ[O₁.obj U,(α.app U).hom] m))) =
+            (show ((ModuleCat.restrictScalars (O₂.map f).hom).obj
+                ((ModuleCat.extendScalars (α.app V).hom).obj (N.obj V))) from
+              baseMap (M := N) f
+                ((ModuleCat.extendScalars (α.app U).hom).map (φ.app U)
+                  ((1 : O₂.obj U) ⊗ₜ[O₁.obj U,(α.app U).hom] m)))
+          rw [h_base (M := M) (f := f) (m := m)]
+          have hleft := congrArg
+            (fun z => (ModuleCat.restrictScalars (O₂.map f).hom).map
+              ((ModuleCat.extendScalars (α.app V).hom).map (φ.app V)) z)
+            (h_aux_apply' (M := M) (f := f) (m := m))
+          rw [hleft]
+          simp only [ModuleCat.ExtendScalars.map_tmul,
+            ModuleCat.restrictScalars.map_apply]
+          change
+            _ =
+              (show ((ModuleCat.restrictScalars (O₂.map f).hom).obj
+                  ((ModuleCat.extendScalars (α.app V).hom).obj (N.obj V))) from
+                baseMap (M := N) f
+                  ((1 : O₂.obj U) ⊗ₜ[O₁.obj U,(α.app U).hom] (φ.app U m)))
+          rw [h_base (M := N) (f := f) (m := (φ.app U) m)]
+          rw [h_aux_apply (M := N) (f := f) (m := (φ.app U) m)]
+          change
+            (show ((ModuleCat.restrictScalars (O₂.map f).hom).obj
+                ((ModuleCat.extendScalars (α.app V).hom).obj (N.obj V))) from
+              ((ModuleCat.restrictScalars (O₂.map f).hom).map
+                ((ModuleCat.extendScalars (α.app V).hom).map (φ.app V)))
+                ((1 : O₂.obj V) ⊗ₜ[O₁.obj V,(α.app V).hom]
+                  (show M.obj V from M.map f m))) =
+            (1 : O₂.obj V) ⊗ₜ[O₁.obj V,(α.app V).hom]
+              (show N.obj V from N.map f (φ.app U m))
+          change
+            (show ((ModuleCat.restrictScalars (O₂.map f).hom).obj
+                ((ModuleCat.extendScalars (α.app V).hom).obj (N.obj V))) from
+              ((ModuleCat.extendScalars (α.app V).hom).map (φ.app V))
+                ((1 : O₂.obj V) ⊗ₜ[O₁.obj V,(α.app V).hom]
+                  (show M.obj V from M.map f m))) =
+              (1 : O₂.obj V) ⊗ₜ[O₁.obj V,(α.app V).hom]
+                (show N.obj V from N.map f (φ.app U m))
+          rw [ModuleCat.ExtendScalars.map_tmul]
+          rw [PresheafOfModules.naturality_apply φ f m] }
+    map_id := by
+      intro M
+      apply PresheafOfModules.hom_ext
+      intro U
+      ext m
+      simp
+    map_comp := by
+      intro M N P φ ψ
+      apply PresheafOfModules.hom_ext
+      intro U
+      ext m
+      simp }
+
+  let restriction := restrictionOfScalars α_R
+
+  let unit : 𝟭 (PMod R) ⟶
+      pointwiseChange ⋙ restriction := {
+    app := fun M =>
+      { app := fun U => by
+          dsimp [restriction, pointwiseChange, restrictionOfScalars,
+            PresheafOfModules.pushforward, PresheafOfModules.pushforward₀,
+            PresheafOfModules.pushforward₀Obj,
+            PresheafOfModules.restrictScalars,
+            PresheafOfModules.restrictScalarsObj]
+          let hαU : (α.app U).hom =
+              ((asIdentityRingPresheafMorphism α_R).app U).hom := by
+            ext r
+            simp [asIdentityRingPresheafMorphism, α_R,
+              commRingPresheafMorphismToRingPresheaf]
+          convert
+            ((ModuleCat.extendRestrictScalarsAdj (α.app U).hom).unit.app (M.obj U) ≫
+              (ModuleCat.restrictScalarsCongr hαU).hom.app
+                ((ModuleCat.extendScalars (α.app U).hom).obj (M.obj U))) using 1
+          all_goals
+            simpa [R]
+        naturality := by
+          intro U V f
+          dsimp [pointwiseChange, restriction, restrictionOfScalars,
+            PresheafOfModules.pushforward, PresheafOfModules.pushforward₀,
+            PresheafOfModules.pushforward₀Obj,
+            PresheafOfModules.restrictScalars,
+            PresheafOfModules.restrictScalarsObj]
+          apply ModuleCat.hom_ext
+          ext m
+          change
+            (ModuleCat.extendRestrictScalarsAdj (α.app V).hom).unit.app (M.obj V)
+                (show M.obj V from M.map f m) =
+              baseMap f
+                ((ModuleCat.extendRestrictScalarsAdj (α.app U).hom).unit.app
+                  (M.obj U) m)
+          rw [ModuleCat.extendRestrictScalarsAdj_unit_app_apply,
+            ModuleCat.extendRestrictScalarsAdj_unit_app_apply]
+          change
+            (show (ModuleCat.extendScalars (α.app V).hom).obj (M.obj V) from
+              (1 : O₂.obj V) ⊗ₜ[O₁.obj V,(α.app V).hom]
+                (show M.obj V from M.map f m)) =
+              (show (ModuleCat.extendScalars (α.app V).hom).obj (M.obj V) from
+                baseMap f
+                  ((1 : O₂.obj U) ⊗ₜ[O₁.obj U,(α.app U).hom]
+                    (show M.obj U from m)))
+          rw [h_base (M := M) (f := f) (m := m)]
+          rw [h_aux_apply (M := M) (f := f) (m := m)]
+          rfl }
+    naturality := by
+      intro M N φ
+      dsimp [pointwiseChange, restriction, restrictionOfScalars,
+        PresheafOfModules.pushforward, PresheafOfModules.pushforward₀,
+        PresheafOfModules.pushforward₀Obj,
+        PresheafOfModules.restrictScalars,
+        PresheafOfModules.restrictScalarsObj]
+      apply PresheafOfModules.hom_ext
+      intro U
+      ext m
+      change
+        (ModuleCat.extendRestrictScalarsAdj (α.app U).hom).unit.app (N.obj U)
+            (φ.app U m) =
+          (ModuleCat.extendScalars (α.app U).hom).map (φ.app U)
+            ((ModuleCat.extendRestrictScalarsAdj (α.app U).hom).unit.app
+              (M.obj U) m)
+      rw [ModuleCat.extendRestrictScalarsAdj_unit_app_apply,
+        ModuleCat.extendRestrictScalarsAdj_unit_app_apply]
+      change
+        (show (ModuleCat.extendScalars (α.app U).hom).obj (N.obj U) from
+          (1 : O₂.obj U) ⊗ₜ[O₁.obj U,(α.app U).hom] (φ.app U m)) =
+        (ModuleCat.extendScalars (α.app U).hom).map (φ.app U)
+          ((1 : O₂.obj U) ⊗ₜ[O₁.obj U,(α.app U).hom] m)
+      symm
+      exact ModuleCat.ExtendScalars.map_tmul (α.app U).hom (φ.app U) 1 m }
+
+  let counit : restriction ⋙ pointwiseChange ⟶
+      𝟭 (PMod R') := {
+    app := fun G' =>
+      { app := fun U => by
+          dsimp [restriction, pointwiseChange, restrictionOfScalars,
+            PresheafOfModules.pushforward, PresheafOfModules.pushforward₀,
+            PresheafOfModules.pushforward₀Obj,
+            PresheafOfModules.restrictScalars,
+            PresheafOfModules.restrictScalarsObj]
+          let hαU : ((asIdentityRingPresheafMorphism α_R).app U).hom =
+              (α.app U).hom := by
+            ext r
+            simp [asIdentityRingPresheafMorphism, α_R,
+              commRingPresheafMorphismToRingPresheaf]
+          convert
+            ((ModuleCat.extendScalars (α.app U).hom).map
+                ((ModuleCat.restrictScalarsCongr hαU).hom.app (G'.obj U)) ≫
+              (ModuleCat.extendRestrictScalarsAdj (α.app U).hom).counit.app (G'.obj U)) using 1
+          all_goals
+            simpa [R']
+        naturality := by
+          intro U V f
+          dsimp [restriction, restrictionOfScalars,
+            PresheafOfModules.pushforward, PresheafOfModules.pushforward₀,
+            PresheafOfModules.pushforward₀Obj,
+            PresheafOfModules.restrictScalars,
+            PresheafOfModules.restrictScalarsObj]
+          apply h_ext_test
+          intro m
+          change (restriction.obj G').obj U at m
+          let hαU : ((asIdentityRingPresheafMorphism α_R).app U).hom =
+              (α.app U).hom := by
+            ext r
+            simp [asIdentityRingPresheafMorphism, α_R,
+              commRingPresheafMorphismToRingPresheaf]
+          let hαV : ((asIdentityRingPresheafMorphism α_R).app V).hom =
+              (α.app V).hom := by
+            ext r
+            simp [asIdentityRingPresheafMorphism, α_R,
+              commRingPresheafMorphismToRingPresheaf]
+          change
+            (ModuleCat.restrictScalars (O₂.map f).hom).map
+                (((ModuleCat.extendScalars (α.app V).hom).map
+                    ((ModuleCat.restrictScalarsCongr hαV).hom.app (G'.obj V)) ≫
+                  (ModuleCat.extendRestrictScalarsAdj (α.app V).hom).counit.app
+                    (G'.obj V)))
+                (baseMap (M := restriction.obj G') f
+                  ((1 : O₂.obj U) ⊗ₜ[O₁.obj U,(α.app U).hom] m)) =
+            G'.map f
+              (((ModuleCat.extendScalars (α.app U).hom).map
+                  ((ModuleCat.restrictScalarsCongr hαU).hom.app (G'.obj U)) ≫
+                (ModuleCat.extendRestrictScalarsAdj (α.app U).hom).counit.app
+                  (G'.obj U))
+                ((1 : O₂.obj U) ⊗ₜ[O₁.obj U,(α.app U).hom] m))
+          simp only [Functor.map_comp, ModuleCat.restrictScalars.map_apply]
+          rw [h_base (M := restriction.obj G') (f := f)
+            (m := show (restriction.obj G').obj U from m)]
+          let m' :
+              ((ModuleCat.restrictScalars (O₂.map f).hom).obj
+                ((ModuleCat.extendScalars (α.app V).hom).obj
+                  ((restriction.obj G').obj V))) :=
+            (ConcreteCategory.hom (baseMapAux f)) m
+          let k :=
+            (ModuleCat.restrictScalars (O₂.map f).hom).map
+              ((ModuleCat.extendScalars (α.app V).hom).map
+                  ((ModuleCat.restrictScalarsCongr hαV).hom.app (G'.obj V)) ≫
+                (ModuleCat.extendRestrictScalarsAdj (α.app V).hom).counit.app
+                  (G'.obj V))
+          change (ConcreteCategory.hom k) m' = _
+          have hm' : m' =
+              (1 : O₂.obj V) ⊗ₜ[O₁.obj V,(α.app V).hom]
+                (ConcreteCategory.hom ((restriction.obj G').map f)) m := by
+            exact h_aux_apply' (M := restriction.obj G') (f := f)
+              (m := show (restriction.obj G').obj U from m)
+          rw [hm']
+          dsimp [k]
+          simp only [Category.assoc, ModuleCat.restrictScalars.map_apply,
+            ModuleCat.restrictScalarsCongr_hom_app,
+            ModuleCat.ExtendScalars.map_tmul,
+            ModuleCat.extendRestrictScalarsAdj_counit_app_apply_one_tmul] }
+    naturality := by
+      intro G' H φ
+      apply PresheafOfModules.hom_ext
+      intro U
+      exact (ModuleCat.extendRestrictScalarsAdj (α.app U).hom).counit.naturality
+        (φ.app U) }
+
+  let pointwiseAdj : pointwiseChange ⊣ restriction :=
+    Adjunction.mkOfUnitCounit {
+      unit := unit
+      counit := counit
+      left_triangle := by
+        ext M U m
+        simp [unit, counit, pointwiseChange,
+          ModuleCat.extendRestrictScalarsAdj_unit_app_apply,
+          ModuleCat.extendRestrictScalarsAdj_counit_app_apply_one_tmul]
+      right_triangle := by
+        ext G' U m
+        simp [unit, counit,
+          ModuleCat.extendRestrictScalarsAdj_unit_app_apply,
+          ModuleCat.extendRestrictScalarsAdj_counit_app_apply_one_tmul] }
+
+  let pullbackAdj : changeOfRingsCore α_R ⊣ restriction :=
+    _root_.PresheafOfModules.pullbackPushforwardAdjunction
+      (F := 𝟭 (Opens X)) (asIdentityRingPresheafMorphism α_R)
+  let e := Adjunction.leftAdjointUniq pullbackAdj pointwiseAdj
+  exact ⟨(PresheafOfModules.evaluation R' (op U)).mapIso (e.app G)⟩
 
 /-- A chosen sectionwise comparison isomorphism for the tensor-product
 presheaf. -/

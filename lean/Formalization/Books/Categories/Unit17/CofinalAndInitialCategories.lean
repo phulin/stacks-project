@@ -171,7 +171,72 @@ theorem isCofinal_of_connected_fibers
     (hF : ∀ y : J, IsConnected (Functor.Fiber F y))
     (hmap : LiftsMorphisms F) :
     Functor.Final F := by
-  sorry
+  refine ⟨fun y => ?_⟩
+  let fiberToStructured (y z : J) (f : y ⟶ z) :
+      Functor.Fiber F z ⥤ StructuredArrow y F :=
+    { obj := fun x => StructuredArrow.mk (f ≫ eqToHom x.2.symm)
+      map := fun {x x'} φ => by
+        exact StructuredArrow.homMk φ.1 (by
+          change (f ≫ eqToHom x.2.symm) ≫ F.map φ.1 =
+            f ≫ eqToHom x'.2.symm
+          rw [Category.assoc,
+            @IsHomLift.fac' _ _ _ _ F _ _ _ _ (𝟙 z) φ.1 φ.2]
+          simp) }
+  let source := fiberToStructured y y (𝟙 y)
+  obtain ⟨x₀, x₁, g, hg⟩ := hmap (𝟙 y)
+  have hnonempty : Nonempty (StructuredArrow y F) :=
+    ⟨StructuredArrow.mk
+      (eqToHom (@IsHomLift.domain_eq _ _ _ _ F _ _ _ _ (𝟙 y) g hg).symm)⟩
+  apply @zigzag_isConnected (StructuredArrow y F) _ hnonempty
+  intro a b
+  obtain ⟨x₀, x₁, g, hg⟩ := hmap a.hom
+  let p₁ : Functor.Fiber F y :=
+    ⟨x₀, @IsHomLift.domain_eq _ _ _ _ F _ _ _ _ a.hom g hg⟩
+  let q₁ : Functor.Fiber F (F.obj a.right) :=
+    ⟨x₁, @IsHomLift.codomain_eq _ _ _ _ F _ _ _ _ a.hom g hg⟩
+  let r₁ : Functor.Fiber F (F.obj a.right) := ⟨a.right, rfl⟩
+  have h₁ : (fiberToStructured y (F.obj a.right) a.hom).obj r₁ = a := by
+    calc
+      (fiberToStructured y (F.obj a.right) a.hom).obj r₁ =
+          StructuredArrow.mk a.hom := by simp [fiberToStructured, r₁]
+      _ = a := (StructuredArrow.eq_mk a).symm
+  have hz₁ :
+    Zigzag ((fiberToStructured y (F.obj a.right) a.hom).obj q₁) a :=
+    (zigzag_obj_of_zigzag (fiberToStructured y (F.obj a.right) a.hom)
+      (@isPreconnected_zigzag _ _ (hF (F.obj a.right)).toIsPreconnected q₁ r₁)).trans
+        (by rw [h₁])
+  have hg₁ :
+      (source.obj p₁ ⟶
+        (fiberToStructured y (F.obj a.right) a.hom).obj q₁) := by
+    exact StructuredArrow.homMk g (by
+      rw [@IsHomLift.fac _ _ _ _ F _ _ _ _ a.hom g hg]
+      simp [source, fiberToStructured, p₁, q₁])
+  obtain ⟨x₂, x₃, g', hg'⟩ := hmap b.hom
+  let p₂ : Functor.Fiber F y :=
+    ⟨x₂, @IsHomLift.domain_eq _ _ _ _ F _ _ _ _ b.hom g' hg'⟩
+  let q₂ : Functor.Fiber F (F.obj b.right) :=
+    ⟨x₃, @IsHomLift.codomain_eq _ _ _ _ F _ _ _ _ b.hom g' hg'⟩
+  let r₂ : Functor.Fiber F (F.obj b.right) := ⟨b.right, rfl⟩
+  have h₂ : (fiberToStructured y (F.obj b.right) b.hom).obj r₂ = b := by
+    calc
+      (fiberToStructured y (F.obj b.right) b.hom).obj r₂ =
+          StructuredArrow.mk b.hom := by simp [fiberToStructured, r₂]
+      _ = b := (StructuredArrow.eq_mk b).symm
+  have hz₂ :
+    Zigzag ((fiberToStructured y (F.obj b.right) b.hom).obj q₂) b :=
+    (zigzag_obj_of_zigzag (fiberToStructured y (F.obj b.right) b.hom)
+      (@isPreconnected_zigzag _ _ (hF (F.obj b.right)).toIsPreconnected q₂ r₂)).trans
+        (by rw [h₂])
+  have hg₂ :
+      (source.obj p₂ ⟶
+        (fiberToStructured y (F.obj b.right) b.hom).obj q₂) := by
+    exact StructuredArrow.homMk g' (by
+      rw [@IsHomLift.fac _ _ _ _ F _ _ _ _ b.hom g' hg']
+      simp [source, fiberToStructured, p₂, q₂])
+  exact hz₁.symm.trans (Zigzag.of_inv hg₁) |>.trans
+    ((zigzag_obj_of_zigzag source
+      (@isPreconnected_zigzag _ _ (hF y).toIsPreconnected p₁ p₂)).trans
+      ((Zigzag.of_hom hg₂).trans hz₂))
 
 /-- Connected fibres and lifting of all target morphisms preserve colimits. -/
 theorem hasColimit_comp_iff_of_connected_fibers

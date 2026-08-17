@@ -163,7 +163,12 @@ theorem representable_comp
     {X Y Z : C} (f : X ⟶ Y) (g : Y ⟶ Z)
     (hf : IsRepresentable f) (hg : IsRepresentable g) :
     IsRepresentable (f ≫ g) := by
-  sorry
+  intro W h
+  let _ : HasPullback h g := hg h
+  let _ : HasPullback (pullback.snd h g) f := hf (pullback.snd h g)
+  exact (IsPullback.paste_horiz
+    (IsPullback.of_hasPullback (pullback.snd h g) f)
+    (IsPullback.of_hasPullback h g)).hasPullback
 
 /-- Base change preserves representability.  The statement is phrased for an
 arbitrary chosen pullback square, so it does not identify isomorphic choices
@@ -175,7 +180,10 @@ theorem representable_base_change
     {p : P ⟶ X} {q : P ⟶ Y'}
     (h : IsFibreProduct p q f g) :
     IsRepresentable q := by
-  sorry
+  intro W r
+  let _ : HasPullback (r ≫ g) f := hf (r ≫ g)
+  exact (IsPullback.of_bot'
+    (IsPullback.of_hasPullback (r ≫ g) f) h.flip).hasPullback
 
 /-- In particular, a representable morphism admits a representable base
 change for every morphism into its codomain. -/

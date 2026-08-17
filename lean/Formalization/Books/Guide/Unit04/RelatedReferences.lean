@@ -213,7 +213,95 @@ def nonabelianBandedGerbeSetoid {C : Type u} [Category.{v} C]
     Setoid (NonabelianBandedGerbe.{t, w, v, u} J G X) where
   r P Q := Nonempty (NonabelianBandedGerbeEquivalence P Q)
   iseqv := by
-    sorry
+    refine ⟨?_, ?_, ?_⟩
+    · intro P
+      exact ⟨{
+        forward := 𝟙 _
+        forward_is_equivalence := by
+          constructor
+          · intro U
+            exact ⟨Functor.FullyFaithful.id _⟩
+          · intro U
+            change Functor.EssSurj (𝟭 _)
+            exact inferInstance
+        forward_band_compatible := by
+          intro U x g
+          change P.band U x g = (𝟭 _).mapIso (P.band U x g)
+          rfl
+        backward := 𝟙 _
+        backward_is_equivalence := by
+          constructor
+          · intro U
+            exact ⟨Functor.FullyFaithful.id _⟩
+          · intro U
+            change Functor.EssSurj (𝟭 _)
+            exact inferInstance
+        backward_band_compatible := by
+          intro U x g
+          change P.band U x g = (𝟭 _).mapIso (P.band U x g)
+          rfl
+      }⟩
+    · intro P Q h
+      rcases h with ⟨e⟩
+      exact ⟨{
+        forward := e.backward
+        forward_is_equivalence := e.backward_is_equivalence
+        forward_band_compatible := e.backward_band_compatible
+        backward := e.forward
+        backward_is_equivalence := e.forward_is_equivalence
+        backward_band_compatible := e.forward_band_compatible
+      }⟩
+    · intro P Q R hPQ hQR
+      rcases hPQ with ⟨e⟩
+      rcases hQR with ⟨f⟩
+      refine ⟨{
+        forward := e.forward ≫ f.forward
+        forward_is_equivalence := by
+          constructor
+          · intro U
+            rcases e.forward_is_equivalence.1 U with ⟨he⟩
+            rcases f.forward_is_equivalence.1 U with ⟨hf⟩
+            exact ⟨he.comp hf⟩
+          · intro U
+            let hE := e.forward_is_equivalence.2 U
+            let hF := f.forward_is_equivalence.2 U
+            change Functor.EssSurj
+              ((e.forward.app (.mk (op U))).toFunctor ⋙
+                (f.forward.app (.mk (op U))).toFunctor)
+            exact inferInstance
+        forward_band_compatible := by
+          intro U x g
+          change R.band U
+              ((f.forward.app (.mk (op U))).toFunctor.obj
+                ((e.forward.app (.mk (op U))).toFunctor.obj x)) g =
+            ((e.forward.app (.mk (op U))).toFunctor ⋙
+              (f.forward.app (.mk (op U))).toFunctor).mapIso (P.band U x g)
+          rw [f.forward_band_compatible, e.forward_band_compatible]
+          rfl
+        backward := f.backward ≫ e.backward
+        backward_is_equivalence := by
+          constructor
+          · intro U
+            rcases f.backward_is_equivalence.1 U with ⟨hf⟩
+            rcases e.backward_is_equivalence.1 U with ⟨he⟩
+            exact ⟨hf.comp he⟩
+          · intro U
+            let hF := f.backward_is_equivalence.2 U
+            let hE := e.backward_is_equivalence.2 U
+            change Functor.EssSurj
+              ((f.backward.app (.mk (op U))).toFunctor ⋙
+                (e.backward.app (.mk (op U))).toFunctor)
+            exact inferInstance
+        backward_band_compatible := by
+          intro U y g
+          change P.band U
+              ((e.backward.app (.mk (op U))).toFunctor.obj
+                ((f.backward.app (.mk (op U))).toFunctor.obj y)) g =
+            ((f.backward.app (.mk (op U))).toFunctor ⋙
+              (e.backward.app (.mk (op U))).toFunctor).mapIso (R.band U y g)
+          rw [e.backward_band_compatible, f.backward_band_compatible]
+          rfl
+      }⟩
 
 /-- Isomorphism classes of nonabelian-banded gerbes over `X`. -/
 def NonabelianBandedGerbeClass {C : Type u} [Category.{v} C]
@@ -244,7 +332,77 @@ def abelianBandedGerbeSetoid {C : Type u} [Category.{v} C]
     Setoid (AbelianBandedGerbe.{t, w, v, u} J G X) where
   r P Q := Nonempty (AbelianBandedGerbeEquivalence P Q)
   iseqv := by
-    sorry
+    refine ⟨?_, ?_, ?_⟩
+    · intro P
+      exact ⟨{
+        forward := 𝟙 _
+        forward_is_equivalence := by
+          constructor
+          · intro U
+            exact ⟨Functor.FullyFaithful.id _⟩
+          · intro U
+            change Functor.EssSurj (𝟭 _)
+            exact inferInstance
+        backward := 𝟙 _
+        backward_is_equivalence := by
+          constructor
+          · intro U
+            exact ⟨Functor.FullyFaithful.id _⟩
+          · intro U
+            change Functor.EssSurj (𝟭 _)
+            exact inferInstance
+        band := Iso.refl _
+        band_compatible := by simp
+      }⟩
+    · intro P Q h
+      rcases h with ⟨e⟩
+      exact ⟨{
+        forward := e.backward
+        forward_is_equivalence := e.backward_is_equivalence
+        backward := e.forward
+        backward_is_equivalence := e.forward_is_equivalence
+        band := e.band.symm
+        band_compatible := by
+          rw [← e.band_compatible]
+          simp
+      }⟩
+    · intro P Q R hPQ hQR
+      rcases hPQ with ⟨e⟩
+      rcases hQR with ⟨f⟩
+      refine ⟨{
+        forward := e.forward ≫ f.forward
+        forward_is_equivalence := by
+          constructor
+          · intro U
+            rcases e.forward_is_equivalence.1 U with ⟨he⟩
+            rcases f.forward_is_equivalence.1 U with ⟨hf⟩
+            exact ⟨he.comp hf⟩
+          · intro U
+            let hE := e.forward_is_equivalence.2 U
+            let hF := f.forward_is_equivalence.2 U
+            change Functor.EssSurj
+              ((e.forward.app (.mk (op U))).toFunctor ⋙
+                (f.forward.app (.mk (op U))).toFunctor)
+            exact inferInstance
+        backward := f.backward ≫ e.backward
+        backward_is_equivalence := by
+          constructor
+          · intro U
+            rcases f.backward_is_equivalence.1 U with ⟨hf⟩
+            rcases e.backward_is_equivalence.1 U with ⟨he⟩
+            exact ⟨hf.comp he⟩
+          · intro U
+            let hF := f.backward_is_equivalence.2 U
+            let hE := e.backward_is_equivalence.2 U
+            change Functor.EssSurj
+              ((f.backward.app (.mk (op U))).toFunctor ⋙
+                (e.backward.app (.mk (op U))).toFunctor)
+            exact inferInstance
+        band := e.band.trans f.band
+        band_compatible := by
+          rw [Iso.trans_hom, Category.assoc, f.band_compatible,
+            e.band_compatible]
+      }⟩
 
 /-- Isomorphism classes of abelian-banded gerbes over `X`. -/
 def AbelianBandedGerbeClass {C : Type u} [Category.{v} C]

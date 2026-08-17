@@ -1,4 +1,5 @@
 import Formalization.Books.Simplicial.Unit11.SimplicialSets
+import Formalization.Books.Simplicial.Unit13.ProductsWithSimplicialSets
 import Mathlib.CategoryTheory.Limits.Shapes.FiniteProducts
 
 /-!
@@ -65,15 +66,11 @@ theorem cosimplicialHomSet_map
 
 /-! ## The finite-product Hom construction -/
 
-/-- Every degree of `U` is finite and nonempty, as required in the source. -/
-abbrev FiniteNonemptyDegrees (U : SSet.{u}) : Prop :=
-  ∀ n : ℕ, Finite (U _⦋n⦌) ∧ Nonempty (U _⦋n⦌)
-
 /-- The chosen product defining the Hom object at an arbitrary object of `Δ`. -/
 noncomputable def homObjectAt
     {C : Type w} [Category.{v} C] [HasFiniteProducts C]
     (U : SSet.{u}) (V : CosimplicialObject C)
-    (hU : FiniteNonemptyDegrees U) (X : SimplexCategory) : C :=
+    (hU : Unit13.FiniteNonemptySimplicialSet U) (X : SimplexCategory) : C :=
   letI : Finite (U.obj (op X)) := by
     simpa only [SimplexCategory.mk_len] using (hU X.len).1
   ∏ᶜ fun _ : U.obj (op X) => V.obj X
@@ -82,14 +79,14 @@ noncomputable def homObjectAt
 noncomputable def homObject
     {C : Type w} [Category.{v} C] [HasFiniteProducts C]
     (U : SSet.{u}) (V : CosimplicialObject C)
-    (hU : FiniteNonemptyDegrees U) (n : ℕ) : C :=
+    (hU : Unit13.FiniteNonemptySimplicialSet U) (n : ℕ) : C :=
   homObjectAt U V hU (SimplexCategory.mk n)
 
 /-- The map between the chosen products associated to a map in `Δ`. -/
 noncomputable def homMapAt
     {C : Type w} [Category.{v} C] [HasFiniteProducts C]
     (U : SSet.{u}) (V : CosimplicialObject C)
-    (hU : FiniteNonemptyDegrees U) {X Y : SimplexCategory}
+    (hU : Unit13.FiniteNonemptySimplicialSet U) {X Y : SimplexCategory}
     (φ : X ⟶ Y) : homObjectAt U V hU X ⟶ homObjectAt U V hU Y := by
   letI : Finite (U.obj (op X)) := by
     simpa only [SimplexCategory.mk_len] using (hU X.len).1
@@ -104,7 +101,7 @@ noncomputable def homMapAt
 noncomputable def hom
     {C : Type w} [Category.{v} C] [HasFiniteProducts C]
     (U : SSet.{u}) (V : CosimplicialObject C)
-    (hU : FiniteNonemptyDegrees U) : CosimplicialObject C where
+    (hU : Unit13.FiniteNonemptySimplicialSet U) : CosimplicialObject C where
   obj := homObjectAt U V hU
   map := fun {X Y} φ => homMapAt U V hU φ
   map_id := by
@@ -132,13 +129,13 @@ noncomputable def hom
 theorem hom_obj
     {C : Type w} [Category.{v} C] [HasFiniteProducts C]
     (U : SSet.{u}) (V : CosimplicialObject C)
-    (hU : FiniteNonemptyDegrees U) (n : ℕ) :
+    (hU : Unit13.FiniteNonemptySimplicialSet U) (n : ℕ) :
     (hom U V hU).obj (SimplexCategory.mk n) = homObject U V hU n := rfl
 
 theorem hom_map
     {C : Type w} [Category.{v} C] [HasFiniteProducts C]
     (U : SSet.{u}) (V : CosimplicialObject C)
-    (hU : FiniteNonemptyDegrees U) {m n : ℕ}
+    (hU : Unit13.FiniteNonemptySimplicialSet U) {m n : ℕ}
     (φ : SimplexCategory.mk m ⟶ SimplexCategory.mk n) :
     (hom U V hU).map φ = homMapAt U V hU φ := rfl
 
@@ -151,7 +148,7 @@ into the product is sent to its family of composites with the projections.
 noncomputable def homObjectHomEquiv
     {C : Type w} [Category.{v} C] [HasFiniteProducts C]
     (U : SSet.{u}) (V : CosimplicialObject C)
-    (hU : FiniteNonemptyDegrees U) (X : C) (n : ℕ) :
+    (hU : Unit13.FiniteNonemptySimplicialSet U) (X : C) (n : ℕ) :
     (X ⟶ homObject U V hU n) ≃
       (U _⦋n⦌ → (X ⟶ V ^⦋n⦌)) := by
   letI : Finite (U _⦋n⦌) := (hU n).1
@@ -177,7 +174,8 @@ noncomputable def homObjectHomEquiv
 noncomputable def homPrecompApp
     {C : Type w} [Category.{v} C] [HasFiniteProducts C]
     {U U' : SSet.{u}} (f : U' ⟶ U) (V : CosimplicialObject C)
-    (hU : FiniteNonemptyDegrees U) (hU' : FiniteNonemptyDegrees U')
+    (hU : Unit13.FiniteNonemptySimplicialSet U)
+    (hU' : Unit13.FiniteNonemptySimplicialSet U')
     (X : SimplexCategory) :
     (hom U V hU).obj X ⟶ (hom U' V hU').obj X := by
   letI : Finite (U.obj (op X)) := by
@@ -193,7 +191,8 @@ noncomputable def homPrecompApp
 noncomputable def homPrecomp
     {C : Type w} [Category.{v} C] [HasFiniteProducts C]
     {U U' : SSet.{u}} (f : U' ⟶ U) (V : CosimplicialObject C)
-    (hU : FiniteNonemptyDegrees U) (hU' : FiniteNonemptyDegrees U') :
+    (hU : Unit13.FiniteNonemptySimplicialSet U)
+    (hU' : Unit13.FiniteNonemptySimplicialSet U') :
     hom U V hU ⟶ hom U' V hU' where
   app X := homPrecompApp f V hU hU' X
   naturality := by
@@ -231,7 +230,7 @@ noncomputable def homPrecomp
 noncomputable def homPostcompApp
     {C : Type w} [Category.{v} C] [HasFiniteProducts C]
     (U : SSet.{u}) {V V' : CosimplicialObject C} (f : V ⟶ V')
-    (hU : FiniteNonemptyDegrees U)
+    (hU : Unit13.FiniteNonemptySimplicialSet U)
     (X : SimplexCategory) :
     (hom U V hU).obj X ⟶ (hom U V' hU).obj X := by
   letI : Finite (U.obj (op X)) := by
@@ -245,7 +244,7 @@ noncomputable def homPostcompApp
 noncomputable def homPostcomp
     {C : Type w} [Category.{v} C] [HasFiniteProducts C]
     (U : SSet.{u}) {V V' : CosimplicialObject C} (f : V ⟶ V')
-    (hU : FiniteNonemptyDegrees U) :
+    (hU : Unit13.FiniteNonemptySimplicialSet U) :
     hom U V hU ⟶ hom U V' hU where
   app X := homPostcompApp U f hU X
   naturality := by
@@ -273,7 +272,7 @@ proof stage.
 theorem homPrecomp_id
     {C : Type w} [Category.{v} C] [HasFiniteProducts C]
     {U : SSet.{u}} (V : CosimplicialObject C)
-    (hU : FiniteNonemptyDegrees U) :
+    (hU : Unit13.FiniteNonemptySimplicialSet U) :
     homPrecomp (𝟙 U) V hU hU = 𝟙 (hom U V hU) := by
   sorry
 
@@ -281,9 +280,9 @@ theorem homPrecomp_comp
     {C : Type w} [Category.{v} C] [HasFiniteProducts C]
     {U₁ U₂ U₃ : SSet.{u}}
     (f : U₁ ⟶ U₂) (g : U₂ ⟶ U₃) (V : CosimplicialObject C)
-    (h₁ : FiniteNonemptyDegrees U₁)
-    (h₂ : FiniteNonemptyDegrees U₂)
-    (h₃ : FiniteNonemptyDegrees U₃) :
+    (h₁ : Unit13.FiniteNonemptySimplicialSet U₁)
+    (h₂ : Unit13.FiniteNonemptySimplicialSet U₂)
+    (h₃ : Unit13.FiniteNonemptySimplicialSet U₃) :
     homPrecomp g V h₃ h₂ ≫ homPrecomp f V h₂ h₁ =
       homPrecomp (f ≫ g) V h₃ h₁ := by
   sorry
@@ -291,7 +290,7 @@ theorem homPrecomp_comp
 theorem homPostcomp_id
     {C : Type w} [Category.{v} C] [HasFiniteProducts C]
     (U : SSet.{u}) {V : CosimplicialObject C}
-    (hU : FiniteNonemptyDegrees U) :
+    (hU : Unit13.FiniteNonemptySimplicialSet U) :
     homPostcomp U (𝟙 V) hU = 𝟙 (hom U V hU) := by
   sorry
 
@@ -299,7 +298,7 @@ theorem homPostcomp_comp
     {C : Type w} [Category.{v} C] [HasFiniteProducts C]
     (U : SSet.{u}) {V V' V'' : CosimplicialObject C}
     (f : V ⟶ V') (g : V' ⟶ V'')
-    (hU : FiniteNonemptyDegrees U) :
+    (hU : Unit13.FiniteNonemptySimplicialSet U) :
     homPostcomp U f hU ≫ homPostcomp U g hU =
       homPostcomp U (f ≫ g) hU := by
   sorry
@@ -308,8 +307,8 @@ theorem homPrecomp_postcomp
     {C : Type w} [Category.{v} C] [HasFiniteProducts C]
     {U U' : SSet.{u}} {V V' : CosimplicialObject C}
     (f : U' ⟶ U) (g : V ⟶ V')
-    (hU : FiniteNonemptyDegrees U)
-    (hU' : FiniteNonemptyDegrees U') :
+    (hU : Unit13.FiniteNonemptySimplicialSet U)
+    (hU' : Unit13.FiniteNonemptySimplicialSet U') :
     homPrecomp f V hU hU' ≫ homPostcomp U' g hU' =
       homPostcomp U g hU ≫ homPrecomp f V' hU hU' := by
   sorry

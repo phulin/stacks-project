@@ -32,11 +32,9 @@ noncomputable section
 
 variable {C : Type u} [Category.{v} C] [MonoidalCategory C]
 
-/- The tensor bifunctor and the natural associator are already part of
-   Mathlib's canonical monoidal interface.  These aliases make the source's
-   notation available without introducing another tensor-product structure. -/
-abbrev tensorFunctor : C × C ⥤ C := MonoidalCategory.tensor C
-
+/- The tensor bifunctor is already `MonoidalCategory.tensor`.  The source
+   chooses the opposite orientation for its associator, so only that
+   orientation bridge is named here. -/
 abbrev associativityConstraint :
     MonoidalCategory.rightAssocTensor C ≅ MonoidalCategory.leftAssocTensor C :=
   (MonoidalCategory.associatorNatIso C).symm
@@ -144,13 +142,6 @@ theorem unitors_tensor_right (X Y : C) :
 
 /-! ## Monoidal functors and invertible objects -/
 
-/- `Functor.Monoidal` is exactly the source's functor together with its
-   tensor isomorphisms and unit compatibility. -/
-abbrev MonoidalFunctor
-    {C : Type u} [Category.{v} C] [MonoidalCategory C]
-    {D : Type u'} [Category.{v'} D] [MonoidalCategory D]
-    (F : C ⥤ D) := F.Monoidal
-
 @[instance_reducible]
 def extension_of_scalars_is_monoidal
     {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S) :
@@ -201,10 +192,6 @@ def leftDualHomEquiv' (X Y Z Z' : C) [ExactPairing X Y] :
     (Y ⊗ Z' ⟶ Z) ≃ (Z' ⟶ X ⊗ Z) :=
   tensorLeftHomEquiv Z' X Y Z
 
-def leftDualAdjunction (X Y : C) [ExactPairing X Y] :
-    tensorRight X ⊣ tensorRight Y :=
-  tensorRightAdjunction X Y
-
 theorem leftDual_homEquiv_tensor_compatibility
     (X Y A B P Q : C) [ExactPairing X Y]
     (f : A ⟶ B ⊗ Y) (g : P ⟶ Q) :
@@ -222,13 +209,8 @@ theorem leftDual_unique_up_to_iso
           leftDualHomEquiv X Y₂ Z Z' f := by
   sorry
 
-@[instance_reducible]
-def tensor_leftDual
-    (X₁ X₂ Y₁ Y₂ : C) [ExactPairing X₁ Y₁] [ExactPairing X₂ Y₂] :
-    ExactPairing (X₁ ⊗ X₂) (Y₂ ⊗ Y₁) :=
-  inferInstance
-
-/- The source's converse characterization of left duals by an adjunction is
+/- The tensor-dual result is already the canonical `ExactPairing.tensor`
+   instance from Mathlib.  The source's converse characterization of left duals by an adjunction is
    the parametrized right-tensor adjunction above.  Its unit/counit triangle
    calculations and the extra tensor-compatibility square are represented by
    the following source-facing structure and by `ParametrizedAdjunction`. -/
@@ -247,8 +229,6 @@ theorem leftDual_iff_compatible_right_tensor_adjunction (X Y : C) :
 
 /-! ## Braiding and symmetric monoidal categories -/
 
-abbrev CommutativityConstraint (X Y : C) [SymmetricCategory C] : X ⊗ Y ≅ Y ⊗ X := β_ X Y
-
 theorem commutativity_constraint_hexagon (X Y Z : C) [SymmetricCategory C] :
     (α_ X Y Z).inv ≫ (β_ (X ⊗ Y) Z).hom ≫ (α_ Z X Y).inv =
       (X ◁ (β_ Y Z).hom) ≫ (α_ X Z Y).inv ≫
@@ -265,16 +245,6 @@ theorem symmetric_unit_multiplication [SymmetricCategory C] :
     (β_ (𝟙_ C) (𝟙_ C)).hom ≫ (ρ_ (𝟙_ C)).hom = (ρ_ (𝟙_ C)).hom := by
   sorry
 
-/- `SymmetricCategory` is Mathlib's canonical source-faithful structure:
-   it extends `BraidedCategory`, whose natural braiding and two hexagons are
-   the source's commutativity constraint and compatibility condition. -/
-abbrev SymmetricMonoidalFunctor
-    {C : Type u} [Category.{v} C] [MonoidalCategory C]
-    [SymmetricCategory C]
-    {D : Type u'} [Category.{v'} D] [MonoidalCategory D]
-    [SymmetricCategory D]
-    (F : C ⥤ D) := F.Braided
-
 theorem symmetric_unit_braiding (X : C) [SymmetricCategory C] :
     (β_ X (𝟙_ C)).hom ≫ (λ_ X).hom = (ρ_ X).hom := by
   sorry
@@ -285,10 +255,6 @@ theorem symmetric_unit_coherence (X Y : C) [SymmetricCategory C] :
         ((β_ X (𝟙_ C)).hom ▷ Y) ≫
         ((λ_ X).hom ⊗ₘ 𝟙 Y) := by
   sorry
-
-abbrev symmetric_dual_swap (X Y : C) [SymmetricCategory C] [ExactPairing X Y] :
-  ExactPairing Y X :=
-  BraidedCategory.exactPairing_swap X Y
 
 /- The source's all-permutation coherence theorem is the symmetric version
    of the imported monoidal coherence theorem; Mathlib's `monoidal` tactic

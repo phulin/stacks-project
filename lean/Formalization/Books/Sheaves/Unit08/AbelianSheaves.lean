@@ -1,6 +1,8 @@
 import Formalization.Books.Sheaves.Unit04.AbelianPresheaves
 import Formalization.Books.Sheaves.Unit07.Sheaves
+import Mathlib.Algebra.Category.Grp.EpiMono
 import Mathlib.Algebra.Category.Grp.Limits
+import Mathlib.Algebra.Homology.ShortComplex.Ab
 import Mathlib.Algebra.Homology.ShortComplex.Exact
 import Mathlib.Topology.Sheaves.Forget
 import Mathlib.Topology.Sheaves.SheafCondition.EqualizerProducts
@@ -127,6 +129,87 @@ theorem abelianSheaf_iff_cover_exact
     {X : TopCat.{u}} (F : AbelianPresheaf.{u, u} X) :
     AbelianSheaf F ↔
       ∀ ⦃ι : Type u⦄ (U : ι → Opens X), AbelianSheafCoverExact F U := by
-  sorry
+  rw [abelianSheaf_iff_categoryValuedSheaf,
+    TopCat.Presheaf.isSheaf_iff_isSheafEqualizerProducts]
+  constructor
+  · intro h ι U
+    obtain ⟨hU⟩ := h U
+    have hU' := isLimitForkMapOfIsLimit (CategoryTheory.forget AddCommGrpCat.{u})
+      (TopCat.Presheaf.SheafConditionEqualizerProducts.w F U) hU
+    have huniq := (Types.type_equalizer_iff_unique _ _).1 ⟨hU'⟩
+    change Mono (abelianSheafCoverRestriction F U) ∧
+      (abelianSheafCoverShortComplex F U).Exact
+    constructor
+    · rw [AddCommGrpCat.mono_iff_injective]
+      intro x y hxy
+      have hcond :
+          (ConcreteCategory.hom (abelianSheafCoverLeftRestriction F U))
+              (ConcreteCategory.hom (abelianSheafCoverRestriction F U) x) =
+            (ConcreteCategory.hom (abelianSheafCoverRightRestriction F U))
+              (ConcreteCategory.hom (abelianSheafCoverRestriction F U) x) := by
+        simpa only [ConcreteCategory.comp_apply] using
+          ConcreteCategory.congr_hom
+            (TopCat.Presheaf.SheafConditionEqualizerProducts.w F U) x
+      exact (huniq _ hcond).unique rfl hxy.symm
+    · rw [ShortComplex.ab_exact_iff]
+      intro x₂ hx₂
+      have hcond :
+          (ConcreteCategory.hom (abelianSheafCoverLeftRestriction F U)) x₂ =
+            (ConcreteCategory.hom (abelianSheafCoverRightRestriction F U)) x₂ := by
+        change (ConcreteCategory.hom (abelianSheafCoverLeftRestriction F U)) x₂ -
+            (ConcreteCategory.hom (abelianSheafCoverRightRestriction F U)) x₂ = 0 at hx₂
+        exact sub_eq_zero.mp hx₂
+      obtain ⟨x₁, hx₁, _⟩ := huniq x₂ hcond
+      refine ⟨x₁, ?_⟩
+      change (ConcreteCategory.hom (abelianSheafCoverRestriction F U)) x₁ = x₂
+      change (ConcreteCategory.hom
+        (TopCat.Presheaf.SheafConditionEqualizerProducts.res F U)) x₁ = x₂ at hx₁
+      exact hx₁
+  · intro h ι U
+    have hS := h U
+    obtain ⟨hmono, hexact⟩ := hS
+    have hinj : Function.Injective
+        (ConcreteCategory.hom (abelianSheafCoverRestriction F U)) :=
+      (AddCommGrpCat.mono_iff_injective _).1 hmono
+    have hex :
+        ∀ x₂, (ConcreteCategory.hom (abelianSheafCoverDifference F U)) x₂ = 0 →
+          ∃ x₁, (ConcreteCategory.hom
+            (abelianSheafCoverRestriction F U)) x₁ = x₂ :=
+      (ShortComplex.ab_exact_iff _).1 hexact
+    have huniq' :
+        ∀ y, (ConcreteCategory.hom
+            ((CategoryTheory.forget AddCommGrpCat.{u}).map
+              (abelianSheafCoverLeftRestriction F U))) y =
+            (ConcreteCategory.hom
+              ((CategoryTheory.forget AddCommGrpCat.{u}).map
+                (abelianSheafCoverRightRestriction F U))) y →
+          ∃! x, (ConcreteCategory.hom
+            ((CategoryTheory.forget AddCommGrpCat.{u}).map
+              (abelianSheafCoverRestriction F U))) x = y := by
+      intro y hy
+      have hy' :
+          (ConcreteCategory.hom (abelianSheafCoverLeftRestriction F U)) y =
+            (ConcreteCategory.hom (abelianSheafCoverRightRestriction F U)) y := by
+        exact hy
+      have hy0 :
+          (ConcreteCategory.hom (abelianSheafCoverDifference F U)) y = 0 := by
+        change (ConcreteCategory.hom (abelianSheafCoverLeftRestriction F U)) y -
+            (ConcreteCategory.hom (abelianSheafCoverRightRestriction F U)) y = 0
+        exact sub_eq_zero.mpr hy'
+      obtain ⟨x, hx⟩ := hex y hy0
+      refine ⟨x, ?_, ?_⟩
+      · exact hx
+      · intro y' hy'
+        apply hinj
+        exact hy'.trans hx.symm
+    have htype := Types.typeEqualizerOfUnique
+      ((CategoryTheory.forget AddCommGrpCat.{u}).map
+        (abelianSheafCoverRestriction F U))
+      (by
+        rw [← Functor.map_comp, ← Functor.map_comp,
+          TopCat.Presheaf.SheafConditionEqualizerProducts.w])
+      huniq'
+    exact ⟨isLimitOfIsLimitForkMap (CategoryTheory.forget AddCommGrpCat.{u})
+      (TopCat.Presheaf.SheafConditionEqualizerProducts.w F U) htype⟩
 
 end Formalization.Books.Sheaves.Unit08

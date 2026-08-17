@@ -1,4 +1,4 @@
-import Formalization.Books.Stacks.Unit01.Groupoids
+import Formalization.Books.Stacks.Unit01.Gerbes
 import Mathlib.CategoryTheory.Sites.SheafCohomology.Basic
 
 /-!
@@ -21,113 +21,6 @@ open Opposite
 open scoped CategoryTheory.Pseudofunctor.StrongTrans
 
 namespace Formalization.Books.Guide.Unit04
-
-/-! ### The gerbe interfaces needed below -/
-
-/-
-The stable earlier chapter exposes the groupoid and descent interfaces.  The
-broader older gerbe file depends on an unresolved presheaf proof, so the two
-elementary gerbe predicates needed by this source section are kept explicit
-here.
--/
-
-def GuideLocallyNonempty {C : Type u} [Category.{v} C]
-    (F : FiberedCategory.{w, v, u} C) (J : GrothendieckTopology C) : Prop :=
-  ∀ U : C, ∃ (ι : Type t) (X : ι → C) (f : ∀ i, X i ⟶ U),
-    CoveringFamily J f ∧ ∀ i, Nonempty (Fiber F (X i))
-
-def GuideLocallyIsomorphic {C : Type u} [Category.{v} C]
-    (F : FiberedCategory.{w, v, u} C) (J : GrothendieckTopology C) : Prop :=
-  ∀ (U : C) (x y : Fiber F U),
-    ∃ (ι : Type t) (X : ι → C) (f : ∀ i, X i ⟶ U),
-      CoveringFamily J f ∧
-        ∀ i, Nonempty
-          ((F.map (f i).op.toLoc).toFunctor.obj x ≅
-            (F.map (f i).op.toLoc).toFunctor.obj y)
-
-def GuideIsGerbe {C : Type u} [Category.{v} C]
-    (F : FiberedCategory.{w, v, u} C) (J : GrothendieckTopology C) : Prop :=
-  StackInGroupoids F J ∧
-    GuideLocallyNonempty.{t, w, v, u} F J ∧
-      GuideLocallyIsomorphic.{t, w, v, u} F J
-
-def guideAutomorphismSheafPresheaf {C : Type u} [Category.{v} C]
-    (J : GrothendieckTopology C) (A : Sheaf J AddCommGrpCat.{w}) (U : C) :
-    (Over C U)ᵒᵖ ⥤ Type w :=
-  (A.over U).obj ⋙ (forget AddCommGrpCat)
-
-noncomputable def guideConjugateAutomorphism {C : Type u} [Category.{v} C]
-    {F : FiberedCategory.{w, v, u} C} (hF : FiberwiseGroupoid F) {U : C}
-    {x y : Fiber F U} (φ : x ⟶ y) (a : Aut x) : Aut y := by
-  letI := hF U
-  exact (asIso φ).symm.trans (a.trans (asIso φ))
-
-theorem guide_conjugation_presheaf_map_exists {C : Type u} [Category.{v} C]
-    {F : FiberedCategory.{w, v, u} C} (hF : FiberwiseGroupoid F) {U : C}
-    {x y : Fiber F U} (φ : x ⟶ y) :
-    Nonempty (IsomPresheaf F x x ⟶ IsomPresheaf F y y) := by
-  refine ⟨{ app := fun T => ?_, naturality := ?_ }⟩
-  · exact ↾(fun a =>
-      letI := hF T.unop.left
-      ⟨(guideConjugateAutomorphism hF
-        ((F.map T.unop.hom.op.toLoc).toFunctor.map φ) (asIso a.1)).hom,
-        by infer_instance⟩)
-  · intro T₁ T₂ q
-    ext a
-    apply Subtype.ext
-    let : IsGroupoid (Fiber F T₁.unop.left) := hF _
-    let : IsGroupoid (Fiber F T₂.unop.left) := hF _
-    let : IsIso a.1 := a.2
-    let aq : (IsomPresheaf F x x).obj T₂ := (IsomPresheaf F x x).map q a
-    let : IsIso aq.1 := aq.2
-    change
-      (guideConjugateAutomorphism hF
-        ((F.map T₂.unop.hom.op.toLoc).toFunctor.map φ) (asIso aq.1)).hom =
-        (Pseudofunctor.LocallyDiscreteOpToCat.pullHom
-          (guideConjugateAutomorphism hF
-            ((F.map T₁.unop.hom.op.toLoc).toFunctor.map φ) (asIso a.1)).hom
-          q.unop.left T₂.unop.hom T₂.unop.hom)
-    have hq : T₁.unop.hom.op.toLoc ≫ q.unop.left.op.toLoc =
-        T₂.unop.hom.op.toLoc := by
-      rw [← Quiver.Hom.comp_toLoc, ← op_comp, q.unop.w]
-    have hφ :
-        (F.map T₂.unop.hom.op.toLoc).toFunctor.map φ =
-          Pseudofunctor.LocallyDiscreteOpToCat.pullHom
-            ((F.map T₁.unop.hom.op.toLoc).toFunctor.map φ)
-            q.unop.left T₂.unop.hom T₂.unop.hom := by
-      simp [Pseudofunctor.LocallyDiscreteOpToCat.pullHom]
-    rw [hφ]
-    change
-      inv (Pseudofunctor.LocallyDiscreteOpToCat.pullHom
-        ((F.map T₁.unop.hom.op.toLoc).toFunctor.map φ)
-        q.unop.left T₂.unop.hom T₂.unop.hom) ≫
-        Pseudofunctor.LocallyDiscreteOpToCat.pullHom a.1
-          q.unop.left T₂.unop.hom T₂.unop.hom ≫
-        Pseudofunctor.LocallyDiscreteOpToCat.pullHom
-          ((F.map T₁.unop.hom.op.toLoc).toFunctor.map φ)
-          q.unop.left T₂.unop.hom T₂.unop.hom =
-        Pseudofunctor.LocallyDiscreteOpToCat.pullHom
-          (inv ((F.map T₁.unop.hom.op.toLoc).toFunctor.map φ) ≫
-            a.1 ≫ (F.map T₁.unop.hom.op.toLoc).toFunctor.map φ)
-          q.unop.left T₂.unop.hom T₂.unop.hom
-    simp [Pseudofunctor.LocallyDiscreteOpToCat.pullHom, Functor.map_comp,
-      Category.assoc]
-
-noncomputable def guideConjugationPresheafMap {C : Type u} [Category.{v} C]
-    {F : FiberedCategory.{w, v, u} C} (hF : FiberwiseGroupoid F) {U : C}
-    {x y : Fiber F U} (φ : x ⟶ y) :
-    IsomPresheaf F x x ⟶ IsomPresheaf F y y :=
-  Classical.choice (guide_conjugation_presheaf_map_exists hF φ)
-
-structure GuideGerbeAutomorphismSheafData {C : Type u} [Category.{v} C]
-    (F : FiberedCategory.{w, v, u} C) (J : GrothendieckTopology C)
-    (hF : FiberwiseGroupoid F) where
-  sheaf : Sheaf J AddCommGrpCat.{w}
-  localIdentifications : ∀ (U : C) (x : Fiber F U),
-    guideAutomorphismSheafPresheaf J sheaf U ≅ IsomPresheaf F x x
-  conjugationCompatible : ∀ (U : C) (x y : Fiber F U) (φ : x ⟶ y),
-    (localIdentifications U x).hom ≫ guideConjugationPresheafMap hF φ =
-      (localIdentifications U y).hom
 
 /-! ### Cohomology on an object of a site -/
 
@@ -262,14 +155,15 @@ def SiteTorsorClass {C : Type u} [Category.{v} C]
 
 /-! ### Banded gerbes -/
 
-/-- An abelian-banded gerbe over `X`, using the compatible automorphism-sheaf data above. -/
+/-- An abelian-banded gerbe over `X`, using the established compatible
+automorphism-sheaf data. -/
 structure AbelianBandedGerbe {C : Type u} [Category.{v} C]
     (J : GrothendieckTopology C)
     (G : Sheaf J AddCommGrpCat.{w}) (X : C) where
   value : FiberedCategory.{w, v, max u v} (Over C X)
-  isGerbe : GuideIsGerbe.{t, w, v, max u v} value (J.over X)
+  isGerbe : IsGerbe.{t, w, v, max u v} value (J.over X)
   automorphisms :
-    GuideGerbeAutomorphismSheafData value (J.over X) isGerbe.1.1
+    GerbeAutomorphismSheafData value (J.over X) isGerbe.1.1
   band : automorphisms.sheaf ≅ G.over X
 
 /-- The type of data used for a nonabelian `G`-gerbe over `X`.
@@ -282,7 +176,7 @@ structure NonabelianBandedGerbe {C : Type u} [Category.{v} C]
     (J : GrothendieckTopology C)
     (G : Sheaf J GrpCat.{w}) (X : C) where
   value : FiberedCategory.{w, v, max u v} (Over C X)
-  isGerbe : GuideIsGerbe.{t, w, v, max u v} value (J.over X)
+  isGerbe : IsGerbe.{t, w, v, max u v} value (J.over X)
   band : ∀ (U : Over C X)
     (x : Fiber value U), (G.over X).obj.obj (op U) ≃* Aut x
   pullback_compatible : ∀ {U V : Over C X}
@@ -292,9 +186,71 @@ structure NonabelianBandedGerbe {C : Type u} [Category.{v} C]
       (value.map f.op.toLoc).toFunctor.mapIso (band U x g)
   conjugation_compatible : ∀ (U : Over C X)
     (x y : Fiber value U) (φ : x ⟶ y) (g : (G.over X).obj.obj (op U)),
-    band U y g = guideConjugateAutomorphism isGerbe.1.1 φ (band U x g)
+    band U y g = conjugateAutomorphism isGerbe.1.1 φ (band U x g)
+
+/-! ### Equivalence classes of nonabelian gerbes -/
+
+/-- A band-preserving equivalence datum for nonabelian-banded gerbes. -/
+structure NonabelianBandedGerbeEquivalence {C : Type u} [Category.{v} C]
+    {J : GrothendieckTopology C} {G : Sheaf J GrpCat.{w}} {X : C}
+    (P Q : NonabelianBandedGerbe.{t, w, v, u} J G X) where
+  forward : FiberedMorphism P.value Q.value
+  forward_is_equivalence : FiberwiseEquivalence forward
+  forward_band_compatible : ∀ (U : Over C X) (x : Fiber P.value U)
+    (g : (G.over X).obj.obj (op U)),
+    Q.band U ((forward.app (.mk (op U))).toFunctor.obj x) g =
+      (forward.app (.mk (op U))).toFunctor.mapIso (P.band U x g)
+  backward : FiberedMorphism Q.value P.value
+  backward_is_equivalence : FiberwiseEquivalence backward
+  backward_band_compatible : ∀ (U : Over C X) (y : Fiber Q.value U)
+    (g : (G.over X).obj.obj (op U)),
+    P.band U ((backward.app (.mk (op U))).toFunctor.obj y) g =
+      (backward.app (.mk (op U))).toFunctor.mapIso (Q.band U y g)
+
+/-- The setoid of nonabelian-banded gerbes modulo band-preserving equivalence. -/
+def nonabelianBandedGerbeSetoid {C : Type u} [Category.{v} C]
+    (J : GrothendieckTopology C) (G : Sheaf J GrpCat.{w}) (X : C) :
+    Setoid (NonabelianBandedGerbe.{t, w, v, u} J G X) where
+  r P Q := Nonempty (NonabelianBandedGerbeEquivalence P Q)
+  iseqv := by
+    sorry
+
+/-- Isomorphism classes of nonabelian-banded gerbes over `X`. -/
+def NonabelianBandedGerbeClass {C : Type u} [Category.{v} C]
+    (J : GrothendieckTopology C) (G : Sheaf J GrpCat.{w}) (X : C) :
+    Type _ :=
+  Quotient (nonabelianBandedGerbeSetoid.{t, w, v, u} J G X)
 
 /-! ### Giraud's identifications -/
+
+/-- A band-preserving equivalence datum for abelian-banded gerbes.
+
+The two fibrewise equivalences record equivalence of the underlying gerbes,
+while `band` identifies their chosen automorphism sheaves over the fixed band
+`G`.  The setoid below records the resulting equivalence classes. -/
+structure AbelianBandedGerbeEquivalence {C : Type u} [Category.{v} C]
+    {J : GrothendieckTopology C} {G : Sheaf J AddCommGrpCat.{w}} {X : C}
+    (P Q : AbelianBandedGerbe.{t, w, v, u} J G X) where
+  forward : FiberedMorphism P.value Q.value
+  forward_is_equivalence : FiberwiseEquivalence forward
+  backward : FiberedMorphism Q.value P.value
+  backward_is_equivalence : FiberwiseEquivalence backward
+  band : P.automorphisms.sheaf ≅ Q.automorphisms.sheaf
+  band_compatible : band.hom ≫ Q.band.hom = P.band.hom
+
+/-- The setoid of abelian-banded gerbes modulo band-preserving equivalence. -/
+def abelianBandedGerbeSetoid {C : Type u} [Category.{v} C]
+    (J : GrothendieckTopology C) (G : Sheaf J AddCommGrpCat.{w}) (X : C) :
+    Setoid (AbelianBandedGerbe.{t, w, v, u} J G X) where
+  r P Q := Nonempty (AbelianBandedGerbeEquivalence P Q)
+  iseqv := by
+    sorry
+
+/-- Isomorphism classes of abelian-banded gerbes over `X`. -/
+def AbelianBandedGerbeClass {C : Type u} [Category.{v} C]
+    (J : GrothendieckTopology C) (G : Sheaf J AddCommGrpCat.{w}) (X : C) :
+    Type _ :=
+  Quotient (abelianBandedGerbeSetoid.{t, w, v, u} J G X)
 
 /-- Giraud's degree-one identification, stated as a bijection of types. -/
 /- TODO(proof agents): first define contracted product/Baer sum for
@@ -310,24 +266,20 @@ theorem siteH1_equiv_siteTorsorClass
   sorry
 
 /-- Giraud's degree-two identification for an abelian band. -/
-/- TODO(proof agents): `siteH2` classifies equivalence classes of banded
-gerbes, not raw `AbelianBandedGerbe` structures.  Before proving this theorem,
-define band-preserving gerbe equivalence, prove it is a setoid, and introduce
-an `AbelianBandedGerbeClass` quotient; the target here should then be changed
-to that quotient.  Construct the cocycle-to-gerbe and gerbe-to-cocycle maps and
-prove them inverse only after this target correction. -/
+/- TODO(proof agents): construct the cocycle-to-gerbe and gerbe-to-cocycle maps
+and prove them inverse on `AbelianBandedGerbeClass` representatives. -/
 theorem siteH2_equiv_abelianBandedGerbe
     {C : Type u} [Category.{v} C] {J : GrothendieckTopology C}
     (G : Sheaf J AddCommGrpCat.{w}) (X : C)
     [HasSheafify (J.over X) AddCommGrpCat.{w}]
     [HasExt.{w'} (Sheaf (J.over X) AddCommGrpCat.{w})] :
-    Nonempty (siteH2 G X ≃ AbelianBandedGerbe J G X) := by
+    Nonempty (siteH2 G X ≃ AbelianBandedGerbeClass J G X) := by
   sorry
 
 /-- In the nonabelian case, degree-two cohomology is defined by `G`-gerbes. -/
 abbrev nonabelianSiteH2 {C : Type u} [Category.{v} C]
     (J : GrothendieckTopology C) (G : Sheaf J GrpCat.{w}) (X : C) : Type _ :=
-  NonabelianBandedGerbe.{t, w, v, u} J G X
+  NonabelianBandedGerbeClass.{t, w, v, u} J G X
 
 /-! ### The 2-categorical remark -/
 

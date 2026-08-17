@@ -28,7 +28,7 @@ universe w v u w' v' u'
 
 The explicit local-groupoid argument records the source's ambient
 `(2, 1)`-category hypothesis without introducing a second typeclass. -/
-def IsFinalObject {C : Type u} [Bicategory.{w, v} C]
+def IsFinalObject {C : Type u} [Bicategory.{w, v} C] [Bicategory.Strict C]
     (_hC : Bicategory.IsLocallyGroupoid C) (x : C) : Prop :=
   ∀ y : C, Nonempty (y ⟶ x) ∧
     ∀ (f g : y ⟶ x), ∃! η : f ⟶ g, IsIso η
@@ -65,6 +65,10 @@ namespace TwoCommutativeDiagram
 
 variable {C : Type u} [Bicategory.{w, v} C] [Bicategory.Strict C]
 variable {X Y Z : C} {f : X ⟶ Z} {g : Y ⟶ Z}
+
+theorem isTwoCommutative (D : TwoCommutativeDiagram f g) :
+    IsTwoCommutative D.left D.right f g :=
+  ⟨D.comparison, inferInstance⟩
 
 /-- The strict associativity transport used by the source's formulas. -/
 def strictAssocHom {A B D : C} (a : A ⟶ B) (b : B ⟶ D) (c : D ⟶ Z) :
@@ -234,23 +238,63 @@ abbrev IsIsoTwoHom {D E : TwoCommutativeDiagram f g}
   @IsIso (D ⟶₂ E) (TwoCommutativeDiagram.homCategory D E) h k η
 
 /- The source's horizontal-composition formulas above are the data of the
-   2-category.  The coherence laws are recorded as the following proof-stage
-   interface, and the chosen structure is installed as the usable bicategory
-   instance below. -/
+   2-category.  The coherence laws are the usual bicategory laws for these
+   operations. -/
+noncomputable instance twoCommutativeDiagramBicategory :
+    Bicategory (TwoCommutativeDiagram f g) where
+  Hom D E := D ⟶₂ E
+  id D := Hom.id D
+  comp h k := Hom.comp h k
+  homCategory := homCategory
+  whiskerLeft := TwoHom.whiskerLeft
+  whiskerRight := TwoHom.whiskerRight
+  associator h k l :=
+    { hom := TwoHom.associator h k l
+      inv := TwoHom.associatorInv h k l
+      hom_inv_id := by sorry
+      inv_hom_id := by sorry }
+  leftUnitor h :=
+    { hom := TwoHom.leftUnitor h
+      inv := TwoHom.leftUnitorInv h
+      hom_inv_id := by sorry
+      inv_hom_id := by sorry }
+  rightUnitor h :=
+    { hom := TwoHom.rightUnitor h
+      inv := TwoHom.rightUnitorInv h
+      hom_inv_id := by sorry
+      inv_hom_id := by sorry }
+  whiskerLeft_id := by sorry
+  whiskerLeft_comp := by sorry
+  id_whiskerLeft := by sorry
+  comp_whiskerLeft := by sorry
+  id_whiskerRight := by sorry
+  comp_whiskerRight := by sorry
+  whiskerRight_id := by sorry
+  whiskerRight_comp := by sorry
+  whisker_assoc := by sorry
+  whisker_exchange := by sorry
+  pentagon := by sorry
+  triangle := by sorry
+
 theorem twoCommutativeDiagram_bicategory_exists :
-    Nonempty (Bicategory (TwoCommutativeDiagram f g)) := by
+    Nonempty (Bicategory (TwoCommutativeDiagram f g)) :=
+  by sorry
+
+/-- The displayed 2-category is strict when the ambient 2-category is strict. -/
+noncomputable instance twoCommutativeDiagramStrict :
+    Bicategory.Strict (TwoCommutativeDiagram f g) := by
   sorry
 
-/-- A chosen bicategory structure on the displayed diagram data. -/
-noncomputable instance twoCommutativeDiagramBicategory :
-    Bicategory (TwoCommutativeDiagram f g) :=
-  Classical.choice twoCommutativeDiagram_bicategory_exists
+/-- The displayed 2-category is locally groupoidal when the ambient one is. -/
+theorem twoCommutativeDiagram_is_two_one
+    (hC : Bicategory.IsLocallyGroupoid C) :
+    Bicategory.IsLocallyGroupoid (TwoCommutativeDiagram f g) := by
+  sorry
 
 abbrev IsFinalTwoCommutativeDiagram
-    (_hC : Bicategory.IsLocallyGroupoid C)
+    (hC : Bicategory.IsLocallyGroupoid C)
     (x : TwoCommutativeDiagram f g) : Prop :=
-  ∀ y : TwoCommutativeDiagram f g, Nonempty (y ⟶₂ x) ∧
-    ∀ (h k : y ⟶₂ x), ∃! η : TwoHom h k, IsIsoTwoHom η
+  IsFinalObject (twoCommutativeDiagram_is_two_one hC) x
 
 /-- In a locally groupoidal ambient bicategory, the leg 2-morphisms in a
 diagram morphism are invertible. -/
@@ -264,16 +308,6 @@ theorem hom_right_isIso
     (hC : Bicategory.IsLocallyGroupoid C)
     {D E : TwoCommutativeDiagram f g} (h : D ⟶₂ E) : IsIso h.right := by
   have := hC D.vertex Y
-  sorry
-
-/-- The explicitly displayed diagram 2-category is locally groupoidal when
-its ambient bicategory is a `(2,1)`-category. -/
-theorem twoCommutativeDiagram_is_two_one
-    (hC : Bicategory.IsLocallyGroupoid C) :
-    ∀ (D E : TwoCommutativeDiagram f g) (h k : D ⟶₂ E)
-      (η : TwoHom h k), IsIsoTwoHom η := by
-  intro D E h k η
-  have := hC D.vertex E.vertex
   sorry
 
 end TwoCommutativeDiagram
@@ -418,6 +452,33 @@ def isoCommaComparison
     isoCommaLeft F G ⋙ F ⟶ isoCommaRight F G ⋙ G :=
   Functor.whiskerLeft (IsoCommaProperty F G).ι (Comma.natTrans F G)
 
+@[simp]
+theorem isoCommaLeft_obj
+    {A : Type*} [Category* A]
+    {B : Type*} [Category* B]
+    {C : Type*} [Category* C]
+    (F : A ⥤ C) (G : B ⥤ C) (ξ : IsoComma F G) :
+    (isoCommaLeft F G).obj ξ = ξ.obj.left :=
+  rfl
+
+@[simp]
+theorem isoCommaRight_obj
+    {A : Type*} [Category* A]
+    {B : Type*} [Category* B]
+    {C : Type*} [Category* C]
+    (F : A ⥤ C) (G : B ⥤ C) (ξ : IsoComma F G) :
+    (isoCommaRight F G).obj ξ = ξ.obj.right :=
+  rfl
+
+@[simp]
+theorem isoCommaComparison_app
+    {A : Type*} [Category* A]
+    {B : Type*} [Category* B]
+    {C : Type*} [Category* C]
+    (F : A ⥤ C) (G : B ⥤ C) (ξ : IsoComma F G) :
+    (isoCommaComparison F G).app ξ = ξ.obj.hom :=
+  rfl
+
 theorem isoCommaComparison_isIso
     {A : Type*} [Category* A]
     {B : Type*} [Category* B]
@@ -452,6 +513,22 @@ def CategoryTwoFibreProductConeCommutes
         (Functor.isoWhiskerRight β G).hom ≫
         (Functor.associator γ q G).hom
 
+/-- The unique comparison 2-isomorphism required between two lifts of the
+same category-valued cone. -/
+def CategoryTwoFibreProductConeUniqueIso
+    {A : Type*} [Category* A]
+    {B : Type*} [Category* B]
+    {P : Type*} [Category* P]
+    (p : P ⥤ A) (q : P ⥤ B)
+    {W : Type u'} [Category.{v'} W]
+    (a : W ⥤ A) (b : W ⥤ B)
+    (γ₁ γ₂ : W ⥤ P)
+    (α₁ : a ≅ γ₁ ⋙ p) (β₁ : b ≅ γ₁ ⋙ q)
+    (α₂ : a ≅ γ₂ ⋙ p) (β₂ : b ≅ γ₂ ⋙ q) : Prop :=
+  ∃! δ : γ₁ ≅ γ₂,
+    α₁.hom ≫ Functor.whiskerRight δ.hom p = α₂.hom ∧
+      β₁.hom ≫ Functor.whiskerRight δ.hom q = β₂.hom
+
 /-- The category-valued form of a 2-fibre-product universal property. -/
 def IsCategoryTwoFibreProduct
     {A : Type*} [Category* A]
@@ -472,7 +549,7 @@ def IsCategoryTwoFibreProduct
       (α₂ : a ≅ γ₂ ⋙ p) (β₂ : b ≅ γ₂ ⋙ q),
       CategoryTwoFibreProductConeCommutes F G p q ψ a b φ γ₁ α₁ β₁ →
       CategoryTwoFibreProductConeCommutes F G p q ψ a b φ γ₂ α₂ β₂ →
-      Nonempty (γ₁ ≅ γ₂))
+      CategoryTwoFibreProductConeUniqueIso p q a b γ₁ γ₂ α₁ β₁ α₂ β₂)
 
 /-- A square of categories is 2-cartesian when its upper-left corner is the
 2-fibre product of the two maps out of the other corners. -/
@@ -498,7 +575,7 @@ def IsTwoCartesianSquare
           a b φ γ₁ α₁ β₁ →
       CategoryTwoFibreProductConeCommutes bottom right left top comm
           a b φ γ₂ α₂ β₂ →
-      Nonempty (γ₁ ≅ γ₂))
+      CategoryTwoFibreProductConeUniqueIso left top a b γ₁ γ₂ α₁ β₁ α₂ β₂)
 
 /-- The canonical comparison isomorphism of the iso-comma construction. -/
 noncomputable def isoCommaComparisonIso

@@ -1,5 +1,9 @@
 import Mathlib.Algebra.Algebra.Opposite
+import Mathlib.Algebra.Algebra.Rat
+import Mathlib.Algebra.Algebra.ZMod
 import Mathlib.Algebra.Central.Basic
+import Mathlib.Algebra.CharP.Defs
+import Mathlib.Algebra.Field.ZMod
 import Mathlib.Algebra.Module.Opposite
 import Mathlib.LinearAlgebra.Dimension.DivisionRing
 import Mathlib.LinearAlgebra.FiniteDimensional.Basic
@@ -93,7 +97,14 @@ structure FieldAlgebraWitness (D : Type*) [SkewField D] where
 theorem skewField_is_algebra_over_some_field
     (D : Type*) [SkewField D] :
     Nonempty (FieldAlgebraWitness D) := by
-  sorry
+  rcases CharP.char_is_prime_or_zero D (ringChar D) with hp | hp
+  · let hprime : Fact (ringChar D).Prime := ⟨hp⟩
+    exact ⟨@FieldAlgebraWitness.mk D _ (ZMod (ringChar D))
+      (@ZMod.instField (ringChar D) hprime)
+      (@ZMod.algebra D _ (ringChar D) (ringChar.charP D))⟩
+  · let hchar : CharZero D := (CharP.ringChar_zero_iff_CharZero D).mp hp
+    exact ⟨@FieldAlgebraWitness.mk D _ ℚ inferInstance
+      (@DivisionRing.toRatAlgebra D _ hchar)⟩
 
 /- The basis theorem for vector spaces over a division ring is already a
    Mathlib instance, so the source's Zorn-lemma assertion is available

@@ -63,13 +63,16 @@ theorem stack_morphism_presheaves_are_sheaves {C : Type u} [Category.{v} C]
 theorem stack_iff_effective_descent {C : Type u} [Category.{v} C]
     (F : FiberedCategory C) (J : GrothendieckTopology C) :
     Stack F J ↔
-      ∀ (ι : Type t) (U : C) (X : ι → C) (f : ∀ i, X i ⟶ U),
-        CoveringFamily J f → (F.toDescentData f).IsEquivalence := by
+      ∀ (U : C) (R : Sieve U), R ∈ J U →
+        (F.toDescentData (fun f : R.arrows.category ↦ f.obj.hom)).IsEquivalence := by
   constructor
-  · intro h ι U X f hf
+  · intro h U R hR
     let : F.IsStack J := h
-    exact F.isEquivalence_toDescentData f hf
+    exact (F.isStackFor' R hR).isEquivalence
   · intro h
+    -- TODO: apply `Pseudofunctor.IsStack.of_isStackFor`; this sieve-indexed
+    -- formulation deliberately matches its universe, unlike the former fixed
+    -- `Type t` family quantifier.
     sorry
 
 theorem substack_is_stack {C : Type u} [Category.{v} C]

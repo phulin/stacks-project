@@ -15,6 +15,16 @@ topological stand-in for an algebraic space is the one already introduced by
 the earlier Spaces Morphisms chapter; the sheaf and cohomology operations are
 kept as explicit model data rather than being silently replaced by unrelated
 scheme constructions.
+
+TODO(proof agents): keep the data interfaces below lightweight and add
+separate, reusable law classes as results need them. The useful boundaries
+are: geometry laws (property implications and stability under composition or
+base change), sheaf-operation laws (restriction, stalks, tensor,
+extension-by-zero, and pushforward), cohomology laws (affine vanishing, base
+change, projection formula, and filtered colimits), coherence laws (closure
+and support), and valuative/existence laws. A theorem should depend only on
+the narrow law class containing its actual input; the independent `Prop`
+fields below cannot prove these relationships by themselves.
 -/
 
 namespace Formalization.Books.SpacesCohomology.Unit01

@@ -136,6 +136,12 @@ def AugmentedCechExactness {Y : Scheme.{u}} {hY : IsAffine Y}
 
 /-- Standard affine covers have exact augmented Čech complexes for
 quasi-coherent sheaves. -/
+/- TODO(proof agents): do this after `Algebra.Unit24.cover_module_exact`.
+Add an isomorphism from the sections of `M` on each finite intersection of
+standard opens to the corresponding iterated localized module, and prove that
+it intertwines the augmentation and alternating Čech differentials.  Transport
+the module-cover exactness across this complex isomorphism; use the localized
+contracting-homotopy data below for positive degrees. -/
 theorem standard_open_cover_augmented_cech_exact {Y : Scheme.{u}} {hY : IsAffine Y}
     (𝒰 : StandardOpenCover Y hY) (M : Y.Modules)
     [SheafOfModules.IsQuasicoherent (R := Y.ringCatSheaf) M] :
@@ -152,6 +158,11 @@ theorem affine_open_augmented_cech_exact {X : Scheme.{u}}
 /-! ### Cohomology on affine opens -/
 
 /-- Quasi-coherent sheaves have no positive cohomology on affine opens. -/
+/- TODO(proof agents): derive this only after augmented Čech exactness.  The
+missing bridge should identify derived global sections on an affine scheme with
+the cohomology of a finite standard-open Čech complex (or invoke the existing
+Mathlib affine quasi-coherent vanishing theorem, if an exact matching API is
+available), then use `standard_open_cover_augmented_cech_exact`. -/
 theorem quasi_coherent_affine_cohomology_zero {X : Scheme.{u}}
     (M : X.Modules)
     [SheafOfModules.IsQuasicoherent (R := X.ringCatSheaf) M]
@@ -214,6 +225,10 @@ noncomputable def higherDirectImage {X S : Scheme.{u}} (f : X ⟶ S)
   (Scheme.Modules.pushforward f).rightDerived i
 
 /-- Higher direct images of quasi-coherent sheaves vanish for affine morphisms. -/
+/- TODO(proof agents): first add the restriction/stalk formula identifying the
+value of `higherDirectImage f i` on an affine open of `S` with cohomology of its
+affine inverse image.  Apply `quasi_coherent_affine_cohomology_zero`, then use
+vanishing on an affine basis (or stalkwise zero) to conclude the sheaf is zero. -/
 theorem relative_affine_higher_direct_image_vanishes {X S : Scheme.{u}}
     (f : X ⟶ S) [IsAffineHom f]
     [CategoryTheory.HasInjectiveResolutions X.Modules]
@@ -223,6 +238,11 @@ theorem relative_affine_higher_direct_image_vanishes {X S : Scheme.{u}}
   sorry
 
 /-- Cohomology is unchanged by an affine relative pushforward. -/
+/- TODO(proof agents): prove this after higher-direct-image vanishing.  Package
+the Leray/Grothendieck spectral-sequence comparison map for global sections
+composed with pushforward; its positive rows vanish by
+`relative_affine_higher_direct_image_vanishes`, so the edge map is an
+isomorphism in every degree. -/
 theorem relative_affine_cohomology_comparison {X S : Scheme.{u}}
     (f : X ⟶ S) [IsAffineHom f]
     (M : X.Modules) [SheafOfModules.IsQuasicoherent (R := X.ringCatSheaf) M]
@@ -323,6 +343,11 @@ theorem has_affine_diagonal_of_separated (X : Scheme.{u}) [X.IsSeparated] :
 
 /-- Čech cohomology agrees with sheaf cohomology on an affine-intersection
 cover for quasi-coherent coefficients. -/
+/- TODO(proof agents): build the Čech-to-derived-cohomology comparison (double
+complex or spectral sequence) for a cover.  Apply
+`quasi_coherent_affine_cohomology_zero` to every finite intersection supplied
+by `𝒰.intersections_affine`; collapse the positive vertical rows and identify
+the remaining edge complex with `cechCohomologyObject`. -/
 theorem cech_cohomology_eq_sheaf_cohomology {X : Scheme.{u}}
     (𝒰 : AffineIntersectionCover X) (M : X.Modules)
     [SheafOfModules.IsQuasicoherent (R := X.ringCatSheaf) M]

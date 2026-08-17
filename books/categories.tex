@@ -6584,8 +6584,18 @@ $f^*\phi : F(f^*x) \to G(f^*y)$ such that
 $G(b) \circ f^*\phi = \phi \circ F(a)$. In other words
 $(a, b) : (V, f^*x, f^*y, f^*\phi) \to (U, x, y, \phi)$
 is a morphism in $\mathcal{X} \times_\mathcal{S} \mathcal{Y}$.
-We omit the verification that this is a strongly cartesian morphism
-(and that these are in fact the only strongly cartesian morphisms).
+It is strongly cartesian: given a morphism into $(U, x, y, \phi)$
+whose image in $\mathcal{C}$ factors through $f$, the strongly cartesian
+properties of $a$ and $b$ give unique lifts of its two components.  These
+lifts are compatible with $f^*\phi$, since this can be checked after
+composition with $G(b)$ and then follows from the defining equation above
+and uniqueness for the strongly cartesian morphism $G(b)$.
+
+Finally, any strongly cartesian morphism with this target and lying over
+$f$ is uniquely isomorphic, over the identity of $V$, to the one just
+constructed.  Its two components are therefore composites of $a$ and $b$
+with vertical isomorphisms, and hence are strongly cartesian.  Thus the two
+projections preserve strongly cartesian morphisms, as required.
 \end{proof}
 
 \begin{lemma}

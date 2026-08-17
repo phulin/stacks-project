@@ -223,6 +223,20 @@ def derivedInverseImage {𝒮 : Type u} [Category.{u} 𝒮] (X : 𝒮)
     SiteDerivedCategory X (coarseSite c) κ ⥤ SiteDerivedCategory X (fineSite c) κ :=
   (SiteComparisonData.derivedInverseImageData (X := X) c κ).functor
 
+/-!
+TODO(proof agents): comparison results need a small law/data layer in addition
+to the bare functors above. Reuse `LeftDerivedFunctorData` for a selected
+derived shriek and package its adjunction to `derivedInverseImage` together
+with the unit isomorphism. For functorial squares, add the underived
+Beck--Chevalley comparison and a helper identifying its derived mate. The
+module-coefficient results also need a law saying derived shriek has
+quasi-coherent homology, while the cohomology statements need natural
+comparisons for constant objects and for global and local sections on the
+fine and coarse sites. Put these in focused structures and have each theorem
+consume only the relevant structure; do not add them as unrelated fields to
+`StackSiteData`.
+-/
+
 /-- The source assertion for one coefficient category and one site
 comparison.  The orientation of `unitIso` records the source identity
 `g^* Lg_! = id` as a natural isomorphism rather than a definitional equality. -/

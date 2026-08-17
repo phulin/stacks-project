@@ -297,6 +297,10 @@ structure NonabelianBandedGerbe {C : Type u} [Category.{v} C]
 /-! ### Giraud's identifications -/
 
 /-- Giraud's degree-one identification, stated as a bijection of types. -/
+/- TODO(proof agents): first define contracted product/Baer sum for
+`SiteTorsor`, show it respects `siteTorsorSetoid`, and construct the two
+classification maps `siteH1 G X -> SiteTorsorClass J G X` and back.  Prove the
+maps inverse on representatives before packaging the resulting `Equiv`. -/
 theorem siteH1_equiv_siteTorsorClass
     {C : Type u} [Category.{v} C] {J : GrothendieckTopology C}
     (G : Sheaf J AddCommGrpCat.{w}) (X : C)
@@ -306,6 +310,12 @@ theorem siteH1_equiv_siteTorsorClass
   sorry
 
 /-- Giraud's degree-two identification for an abelian band. -/
+/- TODO(proof agents): `siteH2` classifies equivalence classes of banded
+gerbes, not raw `AbelianBandedGerbe` structures.  Before proving this theorem,
+define band-preserving gerbe equivalence, prove it is a setoid, and introduce
+an `AbelianBandedGerbeClass` quotient; the target here should then be changed
+to that quotient.  Construct the cocycle-to-gerbe and gerbe-to-cocycle maps and
+prove them inverse only after this target correction. -/
 theorem siteH2_equiv_abelianBandedGerbe
     {C : Type u} [Category.{v} C] {J : GrothendieckTopology C}
     (G : Sheaf J AddCommGrpCat.{w}) (X : C)

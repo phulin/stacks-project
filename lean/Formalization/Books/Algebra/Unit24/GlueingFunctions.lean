@@ -110,6 +110,12 @@ theorem standardCoverModuleBeta_apply {R : Type u} [CommRing R] {n : ℕ}
 
 /-- The localization sequence for a finite standard-open cover of a module is
 exact. -/
+/- TODO(proof agents): prove this algebraic lemma before the geometric Čech theorem.
+First add a denominator-clearing lemma for equality in `LocalizedModule`, then a
+finite uniform-exponent lemma using `Ideal.span (Set.range f) = ⊤`.  Use those
+to prove injectivity, and to glue a compatible family after multiplying its
+components to a common denominator.  The resulting numerator, expressed using
+a power of the cover relation, gives exactness at the middle term. -/
 theorem cover_module_exact {R : Type u} [CommRing R] {n : ℕ}
     (f : Fin n → R) (hf : Ideal.span (Set.range f) = ⊤)
     (M : Type v) [AddCommGroup M] [Module R M] :

@@ -54,6 +54,13 @@ abbrev perturbedNodeRing (k : Type u) [Field k]
   twoVariablePowerSeries k ⧸ Ideal.span {perturbedNodeEquation k δ}
 
 /-- A cubic perturbation of the node has the same quotient ring up to isomorphism. -/
+/- TODO(proof agents): first formalize the two-variable formal Morse step.  A
+term in `twoVariableMaximalIdeal ^ n` (`n >= 3`) should be killed modulo the
+next power by a substitution `x |-> x + a`, `y |-> y + b`, with `a,b` of order
+`n - 1`.  Compose these substitutions using adic completeness to obtain a
+continuous `MvPowerSeries` automorphism tangent to the identity and prove that
+it sends `xy` to `xy + δ`.  Finally add a helper transporting `Ideal.span {f}`
+and the induced quotient-ring equivalence along a ring automorphism. -/
 theorem nodeRing_equiv_perturbedNodeRing
     {k : Type u} [Field k] (δ : twoVariablePowerSeries k)
     (hδ : δ ∈ twoVariableMaximalIdeal k ^ 3) :
@@ -224,6 +231,11 @@ def IsOrdinaryDoublePoint
 
 /-- The defining series of an ordinary double point can be replaced by its
 nondegenerate quadratic initial term. -/
+/- TODO(proof agents): prove in this order: (1) a linear coordinate-change
+automorphism of `MvPowerSeries` attached to a `LinearEquiv`; (2) transport of a
+principal quotient along that automorphism and multiplication by a unit; (3)
+the formal Morse/coordinate-change lemma removing all terms of order at least
+three.  Compose those quotient equivalences with `D.ringEquiv`. -/
 theorem ordinaryDoublePoint_isomorphic_to_normalForm
     {k : Type u} [Field k] {A : Type w} [CommRing A] [Algebra k A]
     (D : OrdinaryDoublePointPresentation k A) :
@@ -232,6 +244,14 @@ theorem ordinaryDoublePoint_isomorphic_to_normalForm
 
 /-- The normal forms are classified by the isomorphism classes of their
 finite separable coefficient fields and nondegenerate quadratic forms. -/
+/- TODO(proof agents): the forward implication cannot extract linear tangent
+data from an arbitrary algebra equivalence without a lifting/locality theorem.
+First prove that an equivalence of these complete local quotients preserves the
+maximal ideal and induces an equivalence on `m / m^2`, then lift its coefficient
+field map and compare the degree-two principal relations.  The reverse
+implication should be done first: lift the supplied field and linear
+equivalences to a power-series automorphism, transport the principal ideal, and
+descend it to quotients. -/
 theorem ordinaryDoublePoint_normalForm_isomorphic_iff
     {k : Type u} [Field k] (P Q : BinaryQuadraticPair k) :
     Nonempty

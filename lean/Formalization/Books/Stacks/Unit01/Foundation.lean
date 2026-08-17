@@ -97,6 +97,14 @@ def FiberwiseEquivalence {F G : FiberedCategory C}
     (η : FiberedMorphism F G) : Prop :=
   FiberwiseFullyFaithful η ∧ FiberwiseEssentiallySurjective η
 
+/- TODO(stacks-foundation): Before retrying the stack-preservation results, prove a
+single transport lemma saying that a `FiberwiseEquivalence` induces an
+equivalence between the two descent-data categories for every family.  Build
+the functor from the strong transformation `η`; use fibrewise full faithfulness
+for morphisms and fibrewise essential surjectivity, together with the
+pseudonaturality isomorphisms, to descend the gluing data.  The later
+`equivalent_*_preserve` theorems should be short consequences of this lemma. -/
+
 structure Substack (F : FiberedCategory C) (J : GrothendieckTopology C) where
   value : FiberedCategory C
   inclusion : FiberedMorphism value F
@@ -143,6 +151,13 @@ structure TwoFiberProductCone (F G H : FiberedCategory C)
   commutes : left ≫ f ≅ right ≫ g
   isTwoPullback : IsTwoPullbackCone f g left right commutes
 
+/- TODO(stacks-foundation): Construct the reusable cone above pointwise as the
+iso-comma category of `f.app U` and `g.app U`.  Reindexing is componentwise,
+with the strong-transformation coherence isomorphisms supplying the comparison
+arrow.  First prove the pointwise universal property, then package it as
+`IsTwoPullbackCone`; stack/groupoid/setoid closure should depend on that one
+construction instead of rebuilding a cone in each downstream theorem. -/
+
 def IsSheafification {C : Type u} [Category.{v} C]
     (J : GrothendieckTopology C)
     {P Q : Cᵒᵖ ⥤ Type w} (η : P ⟶ Q) : Prop :=
@@ -166,6 +181,13 @@ structure Stackification (F : FiberedCategory C) (J : GrothendieckTopology C) wh
         ((map.app (.mk (op U))).toFunctor.obj y)
   morphismSheafification : ∀ (U : C) (x y : Fiber F U),
     IsSheafification (J.over U) (morphismPresheafMap U x y)
+
+/- TODO(stacks-foundation): Treat `Stackification` as a foundational
+construction, not as data to synthesize independently in every theorem.  The
+proof order is: sheafify each morphism presheaf, construct objects by effective
+descent, assemble reindexing/coherence, and finally prove the hom-category
+universal property.  Groupoid stackification, inertia comparisons, and
+pullback/localization results should only be attempted after that API exists. -/
 
 structure RelativeInertiaObject {F G : FiberedCategory C}
     (η : FiberedMorphism F G) (U : C) where

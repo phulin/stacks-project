@@ -69,6 +69,16 @@ class StackCategory (C : Type u) [Category.{v} C]
   vectorBundleHasTrivialClosedPointRepresentations :
     ∀ {X : C}, vectorBundle X → Prop
 
+/-!
+TODO(proof agents): the fields of `StackCategory` deliberately record only
+predicates and data; they do not imply the comparison theorems surveyed in
+this chapter. Add a separate `StackCategoryLaws`/`Unit05Results` typeclass for
+the required implications and constructions instead of enlarging this data
+interface. Keep those law bundles small (for example, coarse-moduli,
+quotient, or approximation laws), and make each theorem request only the
+narrow bundle that supplies its mathematical input.
+-/
+
 abbrev StackObject (C : Type u) := C
 
 abbrev StackMorphism {C : Type u} [Category.{v} C]

@@ -151,6 +151,11 @@ theorem descent_comparison_of_refinement
     {f : ∀ i, X i ⟶ U} {g : ∀ j, Y j ⟶ U}
     (h : DescentComparisonHypotheses F f g) :
     (F.toDescentData f).IsEquivalence := by
+  -- TODO: prove full faithfulness first using `localDescentIsFullyFaithful`
+  -- and `overlapDescentIsFaithful`.  For essential surjectivity, lift along
+  -- `baseDescentIsEquivalence`, then use `refinementOverIdentity` to identify
+  -- the resulting descent datum over `f`.  This theorem intentionally has no
+  -- topology argument, so do not route it through the covering-family API.
   sorry
 
 theorem descent_comparison_of_stack {C : Type u} [Category.{v} C]

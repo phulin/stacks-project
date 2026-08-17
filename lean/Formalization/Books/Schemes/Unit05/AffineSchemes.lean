@@ -1,6 +1,5 @@
 import Formalization.Books.Schemes.Unit02.LocallyRingedSpaces
 import Mathlib.Algebra.Homology.ShortComplex.ExactFunctor
-import Mathlib.AlgebraicGeometry.AffineScheme
 import Mathlib.AlgebraicGeometry.Modules.Tilde
 import Mathlib.RingTheory.Localization.Module
 
@@ -90,7 +89,26 @@ theorem exists_standardOpenSemilinearModuleMap {R M : Type u} [CommRing R]
           LocalizedModule.mkLinearMap (Submonoid.powers g) M m := by
   sorry
 
-/-! The module-map assertion is recorded by its universal-property interface. -/
+/-- The canonical semilinear map `M_f → M_g` attached to `D(g) ⊆ D(f)`. -/
+noncomputable def standardOpenSemilinearModuleLocalizationMap {R M : Type u}
+    [CommRing R] [AddCommGroup M] [Module R M] (f g : R)
+    (h : standardOpen g ≤ standardOpen f) :
+    LocalizedModule.Away f M →ₛₗ[standardOpenLocalizationMap f g h]
+      LocalizedModule.Away g M :=
+  Classical.choose (exists_standardOpenSemilinearModuleMap f g h)
+
+@[simp]
+theorem standardOpenSemilinearModuleLocalizationMap_mk {R M : Type u}
+    [CommRing R] [AddCommGroup M] [Module R M] (f g : R)
+    (h : standardOpen g ≤ standardOpen f) (m : M) :
+    standardOpenSemilinearModuleLocalizationMap f g h
+        (LocalizedModule.mkLinearMap (Submonoid.powers f) M m) =
+      LocalizedModule.mkLinearMap (Submonoid.powers g) M m :=
+  Classical.choose_spec (exists_standardOpenSemilinearModuleMap f g h) m
+
+/-! The underlying `R`-linear interface is useful when the source is read in the
+category of `R`-modules.  The semilinear map above is the source-faithful
+localization map. -/
 theorem exists_standardOpenModuleMap {R M : Type u} [CommRing R]
     [AddCommGroup M] [Module R M] (f g : R)
     (h : standardOpen g ≤ standardOpen f) :
@@ -166,10 +184,23 @@ abbrev ringLocalizationPresheaf (R : Type u) [CommRing R] :
     TopCat.Presheaf CommRingCat (spectrumTop R) :=
   AlgebraicGeometry.structurePresheafInCommRingCat R
 
+/-- Sections of the basis presheaf on the standard open `D(f)`. -/
+abbrev standardOpenModuleSections (R M : Type u) [CommRing R]
+    [AddCommGroup M] [Module R M] (f : R) : Type u :=
+  LocalizedModule.Away f M
+
+/-- Ring-valued sections of the basis presheaf on the standard open `D(f)`. -/
+abbrev standardOpenRingSections (R : Type u) [CommRing R] (f : R) : Type u :=
+  Localization.Away f
+
 /-- The canonical structure sheaf on `Spec(R)`. -/
 abbrev affineStructureSheaf (R : Type u) [CommRing R] :
     TopCat.Sheaf CommRingCat (spectrumTop R) :=
   AlgebraicGeometry.Spec.structureSheaf (CommRingCat.of R)
+
+theorem affineStructureSheaf_presheaf_eq (R : Type u) [CommRing R] :
+    (affineStructureSheaf R).presheaf = ringLocalizationPresheaf R :=
+  rfl
 
 /-- The canonical locally ringed space associated to the spectrum. -/
 abbrev affineLocallyRingedSpace (R : Type u) [CommRing R] :
@@ -252,6 +283,28 @@ noncomputable def associatedModuleStalkIso {R M : Type u} [CommRing R]
   IsLocalizedModule.linearEquiv p.asIdeal.primeCompl
     (LocalizedModule.mkLinearMap p.asIdeal.primeCompl M)
     (AlgebraicGeometry.StructureSheaf.toStalkₗ R M p)
+
+noncomputable instance associatedModuleStalkAtPrimeModule {R M : Type u} [CommRing R]
+    [AddCommGroup M] [Module R M] (p : PrimeSpectrum R) :
+    Module (Localization.AtPrime p.asIdeal)
+      (↑(TopCat.Presheaf.stalk
+        (AlgebraicGeometry.moduleStructurePresheaf R M).presheaf p)) :=
+  (associatedModuleStalkIso p).symm.toAddEquiv.module _
+
+noncomputable instance associatedModuleStalkAtPrimeScalarTower {R M : Type u} [CommRing R]
+    [AddCommGroup M] [Module R M] (p : PrimeSpectrum R) :
+    IsScalarTower R (Localization.AtPrime p.asIdeal)
+      (↑(TopCat.Presheaf.stalk
+        (AlgebraicGeometry.moduleStructurePresheaf R M).presheaf p)) :=
+  (associatedModuleStalkIso p).symm.isScalarTower (Localization.AtPrime p.asIdeal)
+
+/-- The module-stalk identification with its natural `Rₚ`-linear structure. -/
+noncomputable def associatedModuleStalkIsoAtPrime {R M : Type u} [CommRing R]
+    [AddCommGroup M] [Module R M] (p : PrimeSpectrum R) :
+    LocalizedModule p.asIdeal.primeCompl M ≃ₗ[Localization.AtPrime p.asIdeal]
+      ↑(TopCat.Presheaf.stalk (AlgebraicGeometry.moduleStructurePresheaf R M).presheaf p) := by
+  exact LinearEquiv.extendScalarsOfIsLocalization p.asIdeal.primeCompl
+    (Localization.AtPrime p.asIdeal) (associatedModuleStalkIso p)
 
 /-! The canonical restriction maps are recorded through their localization
 interfaces. The module statement uses the universal-property map from above,
@@ -384,12 +437,27 @@ theorem associatedModule_section_map_natural {R : CommRingCat.{u}}
 
 /-! ## Affine schemes and their morphisms -/
 
-/-- The canonical category of affine schemes. -/
-abbrev affineScheme := AlgebraicGeometry.AffineScheme
+/- The source defines an affine scheme before introducing the later category of
+schemes: it is a locally ringed space isomorphic to the spectrum of a ring. -/
+def IsAffineScheme
+    (X : Formalization.Books.Schemes.Unit02.LocallyRingedSpace.{u}) : Prop :=
+  ∃ (R : Type u) (hR : CommRing R),
+    Nonempty (X ≅ @affineLocallyRingedSpace R hR)
+
+theorem affineLocallyRingedSpace_isAffineScheme {R : Type u} [CommRing R] :
+    IsAffineScheme (affineLocallyRingedSpace R) :=
+  ⟨R, inferInstance, ⟨Iso.refl _⟩⟩
+
+/-- Source-facing predicate for being an affine scheme. -/
+abbrev affineScheme
+    (X : Formalization.Books.Schemes.Unit02.LocallyRingedSpace.{u}) : Prop :=
+  IsAffineScheme X
 
 /-- A morphism of locally ringed spaces, hence a morphism of affine schemes. -/
 abbrev locallyRingedSpaceMorphism
     (X Y : Formalization.Books.Schemes.Unit02.LocallyRingedSpace.{u}) := X ⟶ Y
 
-/-- A morphism in the category of affine schemes. -/
-abbrev affineSchemeMorphism (X Y : AlgebraicGeometry.AffineScheme.{u}) := X ⟶ Y
+/-- A morphism between affine schemes is a morphism of locally ringed spaces. -/
+abbrev affineSchemeMorphism
+    (X Y : Formalization.Books.Schemes.Unit02.LocallyRingedSpace.{u}) :=
+  locallyRingedSpaceMorphism X Y

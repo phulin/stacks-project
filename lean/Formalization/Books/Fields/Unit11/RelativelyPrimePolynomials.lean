@@ -100,10 +100,9 @@ theorem relatively_prime_iff_no_common_root
         Polynomial.aeval α P ≠ 0 ∨ Polynomial.aeval α Q ≠ 0 :=
   Polynomial.isCoprime_iff_aeval_ne_zero_of_isAlgClosed K K P Q
 
-/- The source's algebraic-closure lemma uses roots of the coefficient-mapped
-   polynomials.  `Polynomial.isCoprime_map` expresses the linear-algebra base
-   change step, and the preceding Mathlib criterion handles the algebraically
-   closed target. -/
+/- The source's algebraic-closure lemma is exactly Mathlib's criterion for
+   evaluating base-field polynomials in an algebraically closed extension.
+   The `IsAlgClosure` hypothesis supplies the target's algebraic closedness. -/
 /-- Over an arbitrary field, two polynomials are relatively prime exactly when
     they have no common root in an algebraic closure. -/
 theorem relatively_prime_iff_no_common_root_in_algebraic_closure
@@ -111,20 +110,10 @@ theorem relatively_prime_iff_no_common_root_in_algebraic_closure
     (P Q : Polynomial k) :
     IsCoprime P Q ↔
       ∀ α : L,
-        Polynomial.aeval α (P.map (algebraMap k L)) ≠ 0 ∨
-          Polynomial.aeval α (Q.map (algebraMap k L)) ≠ 0 := by
+        Polynomial.aeval α P ≠ 0 ∨ Polynomial.aeval α Q ≠ 0 := by
   let hAlgClosed : IsAlgClosed L := IsAlgClosure.isAlgClosed k
-  calc
-    IsCoprime P Q ↔
-        IsCoprime (P.map (algebraMap k L)) (Q.map (algebraMap k L)) :=
-      (Polynomial.isCoprime_map (p := P) (q := Q)
-        (algebraMap k L)).symm
-    _ ↔ ∀ α : L,
-      Polynomial.aeval α (P.map (algebraMap k L)) ≠ 0 ∨
-          Polynomial.aeval α (Q.map (algebraMap k L)) ≠ 0 :=
-      @Polynomial.isCoprime_iff_aeval_ne_zero_of_isAlgClosed
-        L inferInstance L inferInstance hAlgClosed inferInstance
-        (P.map (algebraMap k L)) (Q.map (algebraMap k L))
+  exact @Polynomial.isCoprime_iff_aeval_ne_zero_of_isAlgClosed
+    k inferInstance L inferInstance hAlgClosed inferInstance P Q
 
 end
 

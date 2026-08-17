@@ -57,9 +57,9 @@ structure IrreducibleSupportInjection (X : AlgebraicSpace.{u})
 theorem prepare_filter_irreducible
     [AlgebraicSpaceTheory.{u}] [AlgebraicSpaceCohomology.{u}]
     (X : AlgebraicSpace.{u}) (F : SheafObj X)
-    (hX : IsNoetherian X) (hF : IsCoherentModule X F)
+    (_hX : IsNoetherian X) (_hF : IsCoherentModule X F)
     (Z : IrreducibleClosedSubspace X)
-    (hsupport : Prop) :
+    (_hsupport : Prop) :
     Nonempty (IrreducibleSupportInjection X) := by
   let J : ClosedSubspace Z.subspace.carrier := { carrier := Z.subspace.carrier, inclusion := TopCat.ofHom (ContinuousMap.id _), closed := True }
   let I : IdealSheaf Z.subspace.carrier := { object := zeroSheaf _, ideal := True, closedSubspace := J, cuts_out := True }
@@ -83,7 +83,7 @@ structure CoherentFiltration (X : AlgebraicSpace.{u})
 theorem coherent_filter
     [AlgebraicSpaceTheory.{u}] [AlgebraicSpaceCohomology.{u}]
     (X : AlgebraicSpace.{u}) (F : SheafObj X)
-    (hX : IsNoetherian X) (hF : IsCoherentModule X F) :
+    (_hX : IsNoetherian X) (hF : IsCoherentModule X F) :
     Nonempty (CoherentFiltration X F) := by
   let J : ClosedSubspace X := { carrier := X, inclusion := TopCat.ofHom (ContinuousMap.id _), closed := True }
   let Z0 : IrreducibleClosedSubspace X := { subspace := J, reduced := True, irreducible := True }

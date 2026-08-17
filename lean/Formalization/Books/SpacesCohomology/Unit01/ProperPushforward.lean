@@ -7,6 +7,8 @@ import Mathlib.Algebra.Ring.Basic
 
 namespace Formalization.Books.SpacesCohomology.Unit01
 
+open CategoryTheory
+
 universe u
 
 structure ProjectiveTwistingData (X Y : AlgebraicSpace.{u})
@@ -15,7 +17,7 @@ structure ProjectiveTwistingData (X Y : AlgebraicSpace.{u})
   projective_space : AlgebraicSpace.{u}
   embedding : SpaceHom X projective_space
   projective_map : SpaceHom projective_space Y
-  commutative : Prop
+  commutative : embedding ≫ projective_map = f
   closed_embedding : IsClosedImmersion embedding
   projective : IsProjective projective_map
   proper : IsProper f
@@ -26,8 +28,7 @@ structure ProjectiveTwistingData (X Y : AlgebraicSpace.{u})
 def HigherDirectImageVanishes (X Y : AlgebraicSpace.{u})
     [AlgebraicSpaceCohomology.{u}] (f : SpaceHom X Y) (F : SheafObj X)
     (L : SheafObj X) (d p : ℕ) : Prop :=
-  Subsingleton (Sections Y
-    (higherDirectImage p f (tensorSheaf X F (tensorPowerSheaf X L d))))
+  higherDirectImage p f (tensorSheaf X F (tensorPowerSheaf X L d)) = zeroSheaf Y
 
 theorem kill_by_twisting
     [AlgebraicSpaceTheory.{u}] [AlgebraicSpaceCohomology.{u}]

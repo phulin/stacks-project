@@ -46,8 +46,8 @@ structure ExtensionByZeroFormula {U X : AlgebraicSpace.{u}}
   module_structure : Prop
 
 theorem extension_by_zero_formula
-    (S U X : AlgebraicSpace.{u}) (hS : IsScheme S)
-    (f : SpaceHom U X) (hf : IsEtale f) (G : SheafObj U) :
+    (S U X : AlgebraicSpace.{u}) (_hS : IsScheme S)
+    (f : SpaceHom U X) (_hf : IsEtale f) (G : SheafObj U) :
     Nonempty (ExtensionByZeroFormula f G) := by
   exact ⟨{ presheaf_formula := True, sheafification := True, module_structure := True }⟩
 
@@ -99,8 +99,8 @@ structure TraceStatement {U X : AlgebraicSpace.{u}} (f : SpaceHom U X) where
   surjective_when_surjective : IsSurjective f → Prop
 
 theorem trace_map
-    (S U X : AlgebraicSpace.{u}) (hS : IsScheme S)
-    (f : SpaceHom U X) (hf : IsEtale f) :
+    (S U X : AlgebraicSpace.{u}) (_hS : IsScheme S)
+    (f : SpaceHom U X) (_hf : IsEtale f) :
     Nonempty (TraceStatement f) := by
   exact ⟨{ trace := zeroSheafHom _ _, stalk_sum_property := True, surjective_when_surjective := fun _ => True }⟩
 
@@ -126,9 +126,9 @@ structure KoszulQuasiIsomorphism {U X : AlgebraicSpace.{u}}
   quasi_isomorphism : Prop
 
 theorem koszul_complex_quasi_isomorphism
-    (S U X : AlgebraicSpace.{u}) (hS : IsScheme S)
-    (f : SpaceHom U X) (hf : IsEtale f) (hsurj : IsSurjective f)
-    (K : KoszulComplexData f) :
+    (S U X : AlgebraicSpace.{u}) (_hS : IsScheme S)
+    (f : SpaceHom U X) (_hf : IsEtale f) (_hsurj : IsSurjective f)
+    (_K : KoszulComplexData f) :
     Nonempty (KoszulQuasiIsomorphism f) := by
   exact ⟨{ augmentation := koszulAugmentation f, quasi_isomorphism := True }⟩
 
@@ -151,10 +151,10 @@ structure AlternatingCechToCohomologyStatement
     (fun n => CohomologyGroup X F n)
 
 theorem alternating_cech_to_cohomology
-    (S U X : AlgebraicSpace.{u}) (hS : IsScheme S)
-    (f : SpaceHom U X) (hf : IsEtale f) (hsurj : IsSurjective f)
+    (S U X : AlgebraicSpace.{u}) (_hS : IsScheme S)
+    (f : SpaceHom U X) (_hf : IsEtale f) (_hsurj : IsSurjective f)
     (F : SheafObj X) (K : KoszulComplexData f)
-    (C : AlternatingCechComplexData f F K) :
+    (_C : AlternatingCechComplexData f F K) :
     Nonempty (AlternatingCechToCohomologyStatement f F K) := by
   exact ⟨{ map_to_derived_global_sections := True, spectral_sequence := { e₁_page := True, convergence := True } }⟩
 
@@ -184,11 +184,11 @@ structure AntiInvariantIdentification (A G : Type u) [AddCommGroup A] where
   identification : Prop
 
 theorem alternating_cech_hom_anti_invariants
-    (S U X : AlgebraicSpace.{u}) (hS : IsScheme S)
-    (f : SpaceHom U X) (hf : IsEtale f) (hsurj : IsSurjective f)
-    (hsep : IsSeparated f) (F : SheafObj X) (p q : ℕ)
+    (S U X : AlgebraicSpace.{u}) (_hS : IsScheme S)
+    (f : SpaceHom U X) (_hf : IsEtale f) (_hsurj : IsSurjective f)
+    (_hsep : IsSeparated f) (F : SheafObj X) (p q : ℕ)
     (W : OffDiagonalPower f p) (A : PermutationAction W.space)
-    (χ : A.group → ℤ) (K : KoszulComplexData f) :
+    (_χ : A.group → ℤ) (_K : KoszulComplexData f) :
     Nonempty (AntiInvariantIdentification
       (ExtGroup X (koszulTerm f p) F q) A.group) := by
   exact ⟨{ action := fun _ a => a, character := fun _ => 1, action_laws := True, identification := True }⟩
@@ -219,7 +219,7 @@ structure TwistComparisonStatement (Q : AlgebraicSpace.{u}) (G : Type u)
   sections_comparison : Prop
 
 theorem quotient_character_twist
-    (S W Q : AlgebraicSpace.{u}) (hS : IsScheme S)
+    (S W _Q : AlgebraicSpace.{u}) (_hS : IsScheme S)
     (H : FiniteGroupQuotient W) (χ : SignCharacter H.group)
     (T : TwistSheafData H.quotient H.group χ) :
     Nonempty (TwistComparisonStatement H.quotient H.group χ) := by
@@ -234,10 +234,10 @@ structure AlternatingCoverData {U X : AlgebraicSpace.{u}}
   twist : ∀ p, TwistSheafData (quotient p).quotient (quotient p).group (sign p)
 
 theorem alternating_spectral_sequence
-    (S U X : AlgebraicSpace.{u}) (hS : IsScheme S)
-    (f : SpaceHom U X) (hf : IsEtale f) (hsurj : IsSurjective f)
-    (hsep : IsSeparated f) (F : SheafObj X)
-    (K : KoszulComplexData f) (A : AlternatingCoverData f F) :
+    (S U X : AlgebraicSpace.{u}) (_hS : IsScheme S)
+    (f : SpaceHom U X) (_hf : IsEtale f) (_hsurj : IsSurjective f)
+    (_hsep : IsSeparated f) (F : SheafObj X)
+    (_K : KoszulComplexData f) (A : AlternatingCoverData f F) :
     Nonempty (SpectralSequenceStatement
       (fun p q =>
         CohomologyGroup (A.quotient p.natAbs).quotient

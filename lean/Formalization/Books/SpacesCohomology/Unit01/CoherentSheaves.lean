@@ -66,8 +66,8 @@ theorem artin_rees
     [AlgebraicSpaceTheory.{u}] [AlgebraicSpaceCohomology.{u}]
     (X : AlgebraicSpace.{u}) (F G : SheafObj X) (I : IdealSheaf X)
     (J : SheafIntersectionData X)
-    (hX : IsNoetherian X) (hF : IsCoherentModule X F)
-    (hG : IsQuasiCoherent G) :
+    (_hX : IsNoetherian X) (_hF : IsCoherentModule X F)
+    (_hG : IsQuasiCoherent G) :
     ∃ c : ℕ, ∀ n : ℕ, c ≤ n → ArtinReesEquality X I F G J c n := by
   sorry
 
@@ -99,8 +99,8 @@ theorem homs_over_open
     [AlgebraicSpaceTheory.{u}] [AlgebraicSpaceCohomology.{u}]
     (X : AlgebraicSpace.{u}) (F G : SheafObj X) (I : IdealSheaf X)
     (C : OpenComplementData X I)
-    (hX : IsNoetherian X) (hF : IsCoherentModule X F)
-    (hG : IsCoherentModule X G) :
+    (_hX : IsNoetherian X) (_hF : IsCoherentModule X F)
+    (_hG : IsCoherentModule X G) :
     Nonempty (FilteredHomColimit X C.open_subspace I F G) := by
   exact ⟨{ carrier := Sections X (zeroSheaf X), carrierGroup := inferInstance, comparison := True, transition := True, filtered := True }⟩
 
@@ -108,7 +108,7 @@ theorem homs_over_open_sections
     [AlgebraicSpaceTheory.{u}] [AlgebraicSpaceCohomology.{u}]
     (X : AlgebraicSpace.{u}) (F : SheafObj X) (I : IdealSheaf X)
     (C : OpenComplementData X I)
-    (hX : IsNoetherian X) :
+    (_hX : IsNoetherian X) :
     Nonempty (OpenSectionsColimitStatement X C.open_subspace F) := by
   exact ⟨{ carrier := Sections X (zeroSheaf X), carrierGroup := inferInstance, comparison := True }⟩
 

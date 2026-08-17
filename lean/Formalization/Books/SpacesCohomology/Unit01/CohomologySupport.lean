@@ -55,15 +55,15 @@ structure SectionsWithSupportLeftExactStatement (X : AlgebraicSpace.{u})
   left_exact : Prop
 
 theorem sections_with_support_left_exact
-    (S X : AlgebraicSpace.{u}) (hS : IsScheme S)
+    (S X : AlgebraicSpace.{u}) (_hS : IsScheme S)
     (Z : ClosedSubspace X) :
     Nonempty (SectionsWithSupportLeftExactStatement X Z) := by
   exact ⟨{ sections := fun F => sectionsWithSupport X (Set.range Z.inclusion) F, identified := fun F => rfl, left_exact := True }⟩
 
 theorem support_distinguished_triangle
-    (S X : AlgebraicSpace.{u}) (hS : IsScheme S)
-    (Z : ClosedSubspace X) (U : OpenSubspace X) (hU_complement : Prop)
-    (T : SupportTheory X Z) (K : DerivedObj X) :
+    (S X : AlgebraicSpace.{u}) (_hS : IsScheme S)
+    (Z : ClosedSubspace X) (U : OpenSubspace X) (_hU_complement : Prop)
+    (T : SupportTheory X Z) (_K : DerivedObj X) :
     Nonempty (SupportTriangleStatement Z
       { carrier := U.carrier, inclusion := U.inclusion, closed := U.is_open } T) := by
   exact ⟨{ triangle := True, long_exact := True }⟩
@@ -72,18 +72,18 @@ structure InjectiveSheaf (X : AlgebraicSpace.{u}) (I : SheafObj X) where
   injective_property : Prop
 
 theorem sections_with_support_preserves_injectives
-    (S X Z : AlgebraicSpace.{u}) (hS : IsScheme S)
-    (i : SpaceHom Z X) (hi : IsClosedImmersion i)
-    (I : SheafObj X) (hI : InjectiveSheaf X I)
+    (S X Z : AlgebraicSpace.{u}) (_hS : IsScheme S)
+    (i : SpaceHom Z X) (_hi : IsClosedImmersion i)
+    (I : SheafObj X) (_hI : InjectiveSheaf X I)
     (T : SupportTheory X ⟨Z, i, IsClosedImmersion i⟩) :
     Nonempty (InjectiveSheaf Z (T.supportSheaf I)) := by
   exact ⟨{ injective_property := True }⟩
 
 theorem cohomology_with_support_grothendieck_spectral_sequence
-    (S X : AlgebraicSpace.{u}) (hS : IsScheme S)
+    (S X : AlgebraicSpace.{u}) (_hS : IsScheme S)
     (Z : ClosedSubspace X) (T : SupportTheory X Z) (F : SheafObj X) :
     Nonempty (SpectralSequenceStatement
-      (fun p q => supportCohomologyGroup T F q.natAbs)
+      (fun _p q => supportCohomologyGroup T F q.natAbs)
       (fun n => supportCohomologyGroup T F n.natAbs)) := by
   exact ⟨{ e₁_page := True, convergence := True }⟩
 
@@ -118,9 +118,10 @@ structure SupportedDerivedEquivalence (X Z : AlgebraicSpace.{u}) where
   essentially_surjective : Prop
   supported_objects : Prop
 
+omit [AlgebraicSpaceCohomology] in
 theorem closed_immersion_derived_support_equivalence
-    (S X Z : AlgebraicSpace.{u}) (hS : IsScheme S)
-    (i : SpaceHom Z X) (hi : IsClosedImmersion i) :
+    (S X Z : AlgebraicSpace.{u}) (_hS : IsScheme S)
+    (i : SpaceHom Z X) (_hi : IsClosedImmersion i) :
     Nonempty (SupportedDerivedEquivalence X Z) := by
   exact ⟨{ forward := id, backward := id, fully_faithful := True, essentially_surjective := True, supported_objects := True }⟩
 

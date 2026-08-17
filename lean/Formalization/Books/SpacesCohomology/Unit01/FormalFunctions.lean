@@ -39,7 +39,7 @@ structure FiniteGradedCohomologyPowers (A : Type u)
 theorem cohomology_powers_ideal_times_F
     {A : Type u} {X Y : AlgebraicSpace.{u}} [CommRing A]
     [AlgebraicSpaceTheory.{u}] [AlgebraicSpaceCohomology.{u}]
-    (V : FormalFunctionsSituation A X Y) (p : ℕ) :
+    (_V : FormalFunctionsSituation A X Y) (_p : ℕ) :
     Nonempty (FiniteGradedCohomologyPowers A) := by
   exact ⟨{ graded_algebra := A, graded_module := A, graded_algebra_property := True, module_property := True, finite := True }⟩
 
@@ -51,7 +51,7 @@ structure FormalFunctionsPowerApplication where
 theorem cohomology_powers_ideal_application
     {A : Type u} {X Y : AlgebraicSpace.{u}} [CommRing A]
     [AlgebraicSpaceTheory.{u}] [AlgebraicSpaceCohomology.{u}]
-    (V : FormalFunctionsSituation A X Y) (p : ℕ) :
+    (_V : FormalFunctionsSituation A X Y) (_p : ℕ) :
     Nonempty (FormalFunctionsPowerApplication) := by
   exact ⟨{ c := 0, multiplication_surjective := True, image_containment := True }⟩
 
@@ -66,7 +66,7 @@ structure MittagLefflerFormalFunctionsStatement where
 theorem ML_cohomology_powers_ideal
     {A : Type u} {X Y : AlgebraicSpace.{u}} [CommRing A]
     [AlgebraicSpaceTheory.{u}] [AlgebraicSpaceCohomology.{u}]
-    (V : FormalFunctionsSituation A X Y) (p : ℕ) :
+    (_V : FormalFunctionsSituation A X Y) (_p : ℕ) :
     Nonempty (MittagLefflerFormalFunctionsStatement) := by
   exact ⟨{ c₁ := 0, kernel_bound := True, mittag_leffler := True, c₂ := fun n => n, c₂_bound := fun n => le_rfl, stable_image := True }⟩
 
@@ -81,7 +81,7 @@ structure FormalFunctionsLimitStatement where
 theorem theorem_formal_functions
     {A : Type u} {X Y : AlgebraicSpace.{u}} [CommRing A]
     [AlgebraicSpaceTheory.{u}] [AlgebraicSpaceCohomology.{u}]
-    (V : FormalFunctionsSituation A X Y) (p : ℕ) :
+    (_V : FormalFunctionsSituation A X Y) (_p : ℕ) :
     Nonempty (FormalFunctionsLimitStatement) := by
   exact ⟨{ completion := ULift.{_} ℤ, inverse_limit := ULift.{_} ℤ, completion_group := inferInstance, inverse_limit_group := inferInstance, comparison := True, topological_statement := True }⟩
 
@@ -92,7 +92,7 @@ structure CompleteFormalFunctionsStatement where
 theorem spell_out_theorem_formal_functions
     {A : Type u} {X Y : AlgebraicSpace.{u}} [CommRing A]
     [AlgebraicSpaceTheory.{u}] [AlgebraicSpaceCohomology.{u}]
-    (V : FormalFunctionsSituation A X Y) (hcomplete : Prop) (p : ℕ) :
+    (_V : FormalFunctionsSituation A X Y) (_hcomplete : Prop) (_p : ℕ) :
     Nonempty (CompleteFormalFunctionsStatement) := by
   exact ⟨{ complete_base := True, identification := True }⟩
 
@@ -108,8 +108,8 @@ structure StalkFormalFunctionsStatement (Y : AlgebraicSpace.{u})
 theorem formal_functions_stalk
     [AlgebraicSpaceTheory.{u}] [AlgebraicSpaceCohomology.{u}]
     (X Y : AlgebraicSpace.{u}) (f : SpaceHom X Y) (F : SheafObj X) (y : Y)
-    (hY : IsLocallyNoetherian Y) (hf : IsProper f)
-    (hF : IsCoherentModule X F) (p : ℕ) :
+    (_hY : IsLocallyNoetherian Y) (_hf : IsProper f)
+    (_hF : IsCoherentModule X F) (_p : ℕ) :
     Nonempty (StalkFormalFunctionsStatement Y y) := by
   exact ⟨{ completed_stalk := Sections Y (zeroSheaf Y), inverse_limit := Sections Y (zeroSheaf Y), completed_stalk_group := inferInstance, inverse_limit_group := inferInstance, identification := True, module_structure := True }⟩
 

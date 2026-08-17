@@ -8,13 +8,15 @@ namespace Formalization.Books.SpacesCohomology.Unit01
 
 universe u
 
+open CategoryTheory CategoryTheory.Limits
+
 structure FiniteClosedBaseChangeData (X Y Z Z' : AlgebraicSpace.{u})
     (f : SpaceHom Y X) (i : SpaceHom Z X) (i' : SpaceHom Z' Y)
     (f' : SpaceHom Z' Z) [AlgebraicSpaceTheory.{u}] where
   finite : IsFinite f
   surjective : IsSurjective f
   closed_immersion : IsClosedImmersion i
-  cartesian : Prop
+  cartesian : IsPullback f' i' i f
   base_change_map : Prop
   induced_finite_surjective : IsFinite f' ∧ IsSurjective f'
   Z'_locally_noetherian : IsLocallyNoetherian Z'
@@ -51,9 +53,7 @@ theorem affine_morphism_projection_ideal
 structure AffineSpaceWitness (X : AlgebraicSpace.{u})
     [AlgebraicSpaceTheory.{u}] where
   scheme : IsScheme X
-  target : AlgebraicSpace.{u}
-  map : SpaceHom X target
-  affine : IsAffine map
+  affine : IsAffine (𝟙 X : SpaceHom X X)
 
 def IsAffineSchemeSpace (X : AlgebraicSpace.{u})
     [AlgebraicSpaceTheory.{u}] : Prop :=

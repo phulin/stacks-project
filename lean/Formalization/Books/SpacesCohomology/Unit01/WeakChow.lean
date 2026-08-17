@@ -6,6 +6,8 @@ import Formalization.Books.SpacesCohomology.Unit01.FiniteAffines
 
 namespace Formalization.Books.SpacesCohomology.Unit01
 
+open CategoryTheory
+
 universe u
 
 structure WeakChowCover (X S : AlgebraicSpace.{u})
@@ -17,7 +19,7 @@ structure WeakChowCover (X S : AlgebraicSpace.{u})
   H_quasi_projective : IsHQuasiProjective structure_map
   proper : IsProper cover
   surjective : IsSurjective cover
-  over_S : Prop
+  over_S : structure_map = cover ≫ p
 
 theorem weak_chow
     (X S : AlgebraicSpace.{u}) (p : SpaceHom X S)

@@ -25,10 +25,7 @@ structure FiniteNeighbourhoodStatement (X Y : AlgebraicSpace.{u})
     (f : SpaceHom X Y) (y : Y) [AlgebraicSpaceTheory.{u}] where
   neighbourhood : OpenSubspace Y
   contains : OpenContainsPoint neighbourhood y
-  inverse_image : AlgebraicSpace.{u}
-  restricted_map : SpaceHom inverse_image neighbourhood.carrier
-  finite : IsFinite restricted_map
-  restriction_property : Prop
+  finite : IsFinite (baseChangeTarget f neighbourhood.inclusion)
 
 theorem proper_finite_fibre_finite_in_neighbourhood
     (X Y : AlgebraicSpace.{u}) (f : SpaceHom X Y) (y : Y)

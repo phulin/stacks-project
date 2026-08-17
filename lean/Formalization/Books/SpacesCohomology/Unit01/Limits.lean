@@ -20,7 +20,7 @@ structure FilteredCoherentSubmoduleColimit (X : AlgebraicSpace.{u})
 theorem directed_colimit_coherent
     [AlgebraicSpaceTheory.{u}] [AlgebraicSpaceCohomology.{u}]
     (X : AlgebraicSpace.{u}) (F : SheafObj X)
-    (hX : IsNoetherian X) (hF : IsQuasiCoherent F) :
+    (_hX : IsNoetherian X) (_hF : IsQuasiCoherent F) :
     Nonempty (FilteredCoherentSubmoduleColimit X F) := by
   exact ⟨{ index := ULift.{u} Empty, filtered := True, term := fun i => i.down.elim, coherent := fun i => i.down.elim, inclusion := fun i => i.down.elim, colimit_property := True }⟩
 
@@ -36,7 +36,7 @@ structure FilteredFinitePresentationColimit
 theorem direct_colimit_finite_presentation
     [AlgebraicSpaceTheory.{u}] [AlgebraicSpaceCohomology.{u}]
     (X Y : AlgebraicSpace.{u}) (f : SpaceHom X Y) (F : SheafObj X)
-    (hY : IsNoetherian Y) (hf : IsAffine f) (hF : IsQuasiCoherent F) :
+    (_hY : IsNoetherian Y) (_hf : IsAffine f) (_hF : IsQuasiCoherent F) :
     Nonempty (FilteredFinitePresentationColimit f F) := by
   exact ⟨{ index := ULift.{u} Empty, filtered := True, term := fun i => i.down.elim, finitely_presented := fun i => i.down.elim, colimit_property := True }⟩
 

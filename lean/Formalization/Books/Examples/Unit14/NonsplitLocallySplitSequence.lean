@@ -13,7 +13,7 @@ import Mathlib.RingTheory.Localization.AtPrime.Basic
 This file formalizes the sequence
 `0 → M → ⨁ p, ℤ_(p) → ℚ → 0`, where `p` ranges over the prime
 integers and `M` is the kernel of the map induced by the inclusions into
-`ℚ`.  The sequence, its localization at a prime ideal, and the general
+`ℚ`.  The sequence, its localization on a principal open, and the general
 Zariski-local splitting interface are recorded as theorem statements.
 -/
 
@@ -106,21 +106,22 @@ theorem primeLocalizedIntegerShortComplex_not_split :
     ¬ Nonempty primeLocalizedIntegerShortComplex.Splitting := by
   sorry
 
-/- The localization of the displayed sequence at the prime ideal `(p)`. -/
+/- The localization of the displayed sequence on the principal open `D(p)`,
+   obtained by inverting `p`. -/
 def primeLocalizedIntegerShortComplexAt (p : PrimeIndex) :
     CategoryTheory.ShortComplex
-      (ModuleCat.{0} (Localization.AtPrime (primeIdeal p))) :=
+      (ModuleCat.{0} (Localization (Submonoid.powers (p.1 : ℤ)))) :=
   primeLocalizedIntegerShortComplex.map
     (ModuleCat.localizedModuleFunctor
-      (primeIdeal p).primeCompl)
+      (Submonoid.powers (p.1 : ℤ)))
 
 /-- Localization preserves the short-exactness of the displayed sequence. -/
 theorem primeLocalizedIntegerShortComplexAt_shortExact (p : PrimeIndex) :
-    (primeLocalizedIntegerShortComplexAt p).ShortExact := by
+  (primeLocalizedIntegerShortComplexAt p).ShortExact := by
   exact primeLocalizedIntegerShortComplex_shortExact.map_of_exact
-    (ModuleCat.localizedModuleFunctor (primeIdeal p).primeCompl)
+    (ModuleCat.localizedModuleFunctor (Submonoid.powers (p.1 : ℤ)))
 
-/-- At every prime ideal `(p)`, the localized sequence is split. -/
+/-- After inverting every prime `p`, the localized sequence is split. -/
 theorem primeLocalizedIntegerShortComplexAt_split (p : PrimeIndex) :
     Nonempty (primeLocalizedIntegerShortComplexAt p).Splitting := by
   sorry

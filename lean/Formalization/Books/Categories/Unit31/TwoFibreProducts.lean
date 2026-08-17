@@ -2122,7 +2122,7 @@ theorem isoComma_diagonal_two
                 G₂.map (inv (𝟙 z.obj.left)) =
               z.obj.hom.2 ≫ inv z.obj.hom.2
             rw [G₂.map_id, Category.id_comp, hInv₂]
-            simp))) (by
+            try simp))) (by
             intro z z' f
             apply ObjectProperty.hom_ext
             apply Comma.hom_ext
@@ -2657,7 +2657,453 @@ theorem isoComma_after_map
           isoCommaLeft, γ, k, kAnd, Comma.isoMk, ObjectProperty.isoMk]
         dsimp [asIso]
         exact eq_of_heq (hk X)
-  · sorry
+  · intro W _ a b φ γ₁ γ₂ α₁ β₁ α₂ β₂ h₁ h₂
+    unfold CategoryTwoFibreProductConeUniqueIso
+    let δ : γ₁ ≅ γ₂ :=
+      NatIso.ofComponents (fun X => by
+        let l₁ : (b.obj X).obj.left ≅
+            (isoCommaLeft F G).obj (γ₁.obj X) := by
+          exact
+            { hom := (β₁.hom.app X).hom.left
+              inv := (β₁.inv.app X).hom.left
+              hom_inv_id := by
+                have h := congrArg (fun t => t.app X) β₁.hom_inv_id
+                have h' := congrArg (fun t => t.hom.left) h
+                exact h'
+              inv_hom_id := by
+                have h := congrArg (fun t => t.app X) β₁.inv_hom_id
+                have h' := congrArg (fun t => t.hom.left) h
+                exact h' }
+        let l₂ : (b.obj X).obj.left ≅
+            (isoCommaLeft F G).obj (γ₂.obj X) := by
+          exact
+            { hom := (β₂.hom.app X).hom.left
+              inv := (β₂.inv.app X).hom.left
+              hom_inv_id := by
+                have h := congrArg (fun t => t.app X) β₂.hom_inv_id
+                have h' := congrArg (fun t => t.hom.left) h
+                exact h'
+              inv_hom_id := by
+                have h := congrArg (fun t => t.app X) β₂.inv_hom_id
+                have h' := congrArg (fun t => t.hom.left) h
+                exact h' }
+        let r₁ : (b.obj X).obj.right ≅
+            (isoCommaRight F G).obj (γ₁.obj X) := by
+          exact
+            { hom := (β₁.hom.app X).hom.right
+              inv := (β₁.inv.app X).hom.right
+              hom_inv_id := by
+                have h := congrArg (fun t => t.app X) β₁.hom_inv_id
+                have h' := congrArg (fun t => t.hom.right) h
+                exact h'
+              inv_hom_id := by
+                have h := congrArg (fun t => t.app X) β₁.inv_hom_id
+                have h' := congrArg (fun t => t.hom.right) h
+                exact h' }
+        let r₂ : (b.obj X).obj.right ≅
+            (isoCommaRight F G).obj (γ₂.obj X) := by
+          exact
+            { hom := (β₂.hom.app X).hom.right
+              inv := (β₂.inv.app X).hom.right
+              hom_inv_id := by
+                have h := congrArg (fun t => t.app X) β₂.hom_inv_id
+                have h' := congrArg (fun t => t.hom.right) h
+                exact h'
+              inv_hom_id := by
+                have h := congrArg (fun t => t.app X) β₂.inv_hom_id
+                have h' := congrArg (fun t => t.hom.right) h
+                exact h' }
+        let l : (isoCommaLeft F G).obj (γ₁.obj X) ≅
+            (isoCommaLeft F G).obj (γ₂.obj X) := l₁.symm ≪≫ l₂
+        let r : (isoCommaRight F G).obj (γ₁.obj X) ≅
+            (isoCommaRight F G).obj (γ₂.obj X) := r₁.symm ≪≫ r₂
+        exact ObjectProperty.isoMk _
+          (Comma.isoMk l r (by
+            unfold CategoryTwoFibreProductConeCommutes at h₁ h₂
+            have h₁X := congrArg (fun t => t.app X) h₁
+            have h₂X := congrArg (fun t => t.app X) h₂
+            simp only [NatTrans.comp_app, Functor.isoWhiskerRight_hom,
+              Functor.whiskerRight_app, Functor.associator_hom_app,
+              Functor.whiskerLeft_app] at h₁X h₂X
+            have h₁L := congrArg (fun t => t.hom.left) h₁X
+            have h₂L := congrArg (fun t => t.hom.left) h₂X
+            have h₁R := congrArg (fun t => t.hom.right) h₁X
+            have h₂R := congrArg (fun t => t.hom.right) h₂X
+            let φR : a.obj X ⟶
+                G.obj (b.obj X).obj.right := by
+              change ((a ⋙ isoCommaDiagonal H).obj X).obj.right ⟶
+                G.obj (b.obj X).obj.right
+              exact (φ.hom.app X).hom.right
+            let φL : a.obj X ⟶
+                F.obj (b.obj X).obj.left := by
+              change ((a ⋙ isoCommaDiagonal H).obj X).obj.left ⟶
+                F.obj (b.obj X).obj.left
+              exact (φ.hom.app X).hom.left
+            let γ₁hom : F.obj ((γ₁ ⋙ isoCommaLeft F G).obj X) ⟶
+                G.obj ((γ₁ ⋙ isoCommaRight F G).obj X) :=
+              (γ₁.obj X).obj.hom
+            let γ₂hom : F.obj ((γ₂ ⋙ isoCommaLeft F G).obj X) ⟶
+                G.obj ((γ₂ ⋙ isoCommaRight F G).obj X) :=
+              (γ₂.obj X).obj.hom
+            have h₁L' : φL ≫ F.map l₁.hom = α₁.hom.app X := by
+              simpa [l₁, φL, Functor.comp, isoCommaDiagonal,
+                isoCommaAfterMapToDiagonal, isoCommaAfterMapComparison,
+                isoCommaAfterMap, isoCommaMap, isoCommaLeft, isoCommaRight,
+                ObjectProperty.isoMk, Comma.isoMk] using h₁L.symm
+            have h₂L' : φL ≫ F.map l₂.hom = α₂.hom.app X := by
+              simpa [l₂, φL, Functor.comp, isoCommaDiagonal,
+                isoCommaAfterMapToDiagonal, isoCommaAfterMapComparison,
+                isoCommaAfterMap, isoCommaMap, isoCommaLeft, isoCommaRight,
+                ObjectProperty.isoMk, Comma.isoMk] using h₂L.symm
+            have h₁R' : α₁.hom.app X ≫ (γ₁.obj X).obj.hom =
+                φR ≫ G.map r₁.hom := by
+              have hi : (asIso (γ₁.obj X).obj.hom).hom =
+                  (γ₁.obj X).obj.hom := by
+                exact asIso_hom _
+              convert h₁R using 1 <;>
+                simp [r₁, φR, Functor.comp, isoCommaDiagonal, Comma.snd,
+                  isoCommaAfterMapToDiagonal, isoCommaAfterMapComparison,
+                  isoCommaAfterMap, isoCommaMap, isoCommaLeft, isoCommaRight,
+                  ObjectProperty.isoMk, Comma.isoMk]
+              · constructor
+                · intro h
+                  simpa only [hi] using h
+                · intro h
+                  simpa only [hi] using h
+            have h₁R'' : (α₁.app X).hom ≫ γ₁hom =
+                φR ≫ G.map r₁.hom := by
+              simpa [γ₁hom] using h₁R'
+            have h₂R' : α₂.hom.app X ≫ (γ₂.obj X).obj.hom =
+                φR ≫ G.map r₂.hom := by
+              have hi : (asIso (γ₂.obj X).obj.hom).hom =
+                  (γ₂.obj X).obj.hom := by
+                exact asIso_hom _
+              convert h₂R using 1 <;>
+                simp [r₂, φR, Functor.comp, isoCommaDiagonal, Comma.snd,
+                  isoCommaAfterMapToDiagonal, isoCommaAfterMapComparison,
+                  isoCommaAfterMap, isoCommaMap, isoCommaLeft, isoCommaRight,
+                  ObjectProperty.isoMk, Comma.isoMk]
+              · constructor
+                · intro h
+                  simpa only [hi] using h
+                · intro h
+                  simpa only [hi] using h
+            have h₂R'' : (α₂.app X).hom ≫ γ₂hom =
+                φR ≫ G.map r₂.hom := by
+              simpa [γ₂hom] using h₂R'
+            have h₂R''' : α₂.hom.app X ≫ γ₂hom =
+                φR ≫ G.map r₂.hom := by
+              simpa [γ₂hom] using h₂R'
+            have h₁Linv : α₁.hom.app X ≫ F.map l₁.inv =
+                φL := by
+              calc
+                α₁.hom.app X ≫ F.map l₁.inv =
+                    (φL ≫ F.map l₁.hom) ≫ F.map l₁.inv := by
+                      rw [h₁L']
+                _ = φL := by
+                  rw [Category.assoc, ← F.map_comp, l₁.hom_inv_id, F.map_id]
+                  simp
+            have hL :
+                F.map l₁.inv ≫ F.map l₂.hom =
+                  (α₁.app X).inv ≫ α₂.hom.app X := by
+              have hα : α₁.hom.app X ≫ (α₁.app X).inv = 𝟙 _ := by
+                change (α₁.app X).hom ≫ (α₁.app X).inv = 𝟙 _
+                exact (α₁.app X).hom_inv_id
+              apply (cancel_epi (α₁.hom.app X)).1
+              rw [← Category.assoc, h₁Linv]
+              rw [← Category.assoc, hα, Category.id_comp, h₂L']
+            have hR : γ₁hom ≫ G.map r₁.inv =
+                (α₁.app X).inv ≫ φR := by
+              calc
+                γ₁hom ≫ G.map r₁.inv =
+                    (α₁.app X).inv ≫
+                      ((α₁.app X).hom ≫ γ₁hom) ≫ G.map r₁.inv := by
+                        have hi := congrArg
+                          (fun t => t ≫ γ₁hom ≫ G.map r₁.inv)
+                          (α₁.app X).inv_hom_id
+                        simpa only [Category.assoc, Category.id_comp] using hi.symm
+                _ = (α₁.app X).inv ≫
+                      (φR ≫ G.map r₁.hom) ≫ G.map r₁.inv := by
+                        rw [h₁R'']
+                _ = (α₁.app X).inv ≫ φR := by
+                  simp only [Category.assoc]
+                  rw [← G.map_comp, r₁.hom_inv_id, G.map_id]
+                  simp
+            have hcompat : F.map l.hom ≫ γ₂hom = γ₁hom ≫ G.map r.hom := by
+              calc
+                F.map l.hom ≫ γ₂hom =
+                    F.map l₁.inv ≫ F.map l₂.hom ≫
+                      γ₂hom := by
+                      simp only [l, Iso.trans_hom, Iso.symm_hom, Functor.map_comp,
+                        Category.assoc]
+                _ = ((α₁.app X).inv ≫ α₂.hom.app X) ≫
+                      γ₂hom := by
+                        rw [← Category.assoc, hL]
+                _ = (α₁.app X).inv ≫
+                      (α₂.hom.app X ≫
+                        γ₂hom) := by
+                          simp only [Category.assoc]
+                _ = (α₁.app X).inv ≫
+                      (φR ≫ G.map r₂.hom) := by
+                          rw [h₂R''']
+                _ = ((α₁.app X).inv ≫ φR) ≫
+                      G.map r₂.hom := by simp only [Category.assoc]
+                _ = (γ₁hom ≫ G.map r₁.inv) ≫
+                      G.map r₂.hom := by rw [hR]
+                _ = γ₁hom ≫ G.map r.hom := by
+                  simp only [r, Iso.trans_hom, Iso.symm_hom, Functor.map_comp,
+                    Category.assoc]
+            simpa [γ₁hom, γ₂hom, asIso_hom, isoCommaLeft, isoCommaRight] using hcompat))) (by
+        intro X Y f
+        apply ObjectProperty.hom_ext
+        apply Comma.hom_ext
+        · have hβ₁L := congrArg (fun t => t.hom.left) (β₁.inv.naturality f)
+          have hβ₂L := congrArg (fun t => t.hom.left) (β₂.hom.naturality f)
+          have hβ₁L' :
+              ((γ₁ ⋙ isoCommaAfterMap F G H).map f).hom.left ≫
+                  (β₁.inv.app Y).hom.left =
+                (β₁.inv.app X).hom.left ≫ (b.map f).hom.left := by
+            change ((γ₁ ⋙ isoCommaAfterMap F G H).map f).hom.left ≫
+                (β₁.inv.app Y).hom.left =
+              (β₁.inv.app X).hom.left ≫ (b.map f).hom.left at hβ₁L
+            exact hβ₁L
+          have hβ₂L' : (b.map f).hom.left ≫ (β₂.hom.app Y).hom.left =
+              (β₂.hom.app X).hom.left ≫
+                ((γ₂ ⋙ isoCommaAfterMap F G H).map f).hom.left := by
+            change (b.map f).hom.left ≫ (β₂.hom.app Y).hom.left =
+              (β₂.hom.app X).hom.left ≫
+                ((γ₂ ⋙ isoCommaAfterMap F G H).map f).hom.left at hβ₂L
+            exact hβ₂L
+          dsimp [ObjectProperty.isoMk, Comma.isoMk]
+          change ((γ₁ ⋙ isoCommaAfterMap F G H).map f).hom.left ≫
+              (β₁.inv.app Y).hom.left ≫
+              (β₂.hom.app Y).hom.left =
+            ((β₁.inv.app X).hom.left ≫ (β₂.hom.app X).hom.left) ≫
+              ((γ₂ ⋙ isoCommaAfterMap F G H).map f).hom.left
+          calc
+            ((γ₁ ⋙ isoCommaAfterMap F G H).map f).hom.left ≫
+                ((β₁.inv.app Y).hom.left ≫ (β₂.hom.app Y).hom.left) =
+                ((β₁.inv.app X).hom.left ≫ (b.map f).hom.left) ≫
+                  (β₂.hom.app Y).hom.left := by
+                    rw [← Category.assoc]
+                    exact congrArg
+                      (fun t => t ≫ (β₂.hom.app Y).hom.left) hβ₁L'
+            _ = (β₁.inv.app X).hom.left ≫
+                ((b.map f).hom.left ≫ (β₂.hom.app Y).hom.left) := by
+                  simp only [Category.assoc]
+            _ = (β₁.inv.app X).hom.left ≫
+                ((β₂.hom.app X).hom.left ≫
+                  ((γ₂ ⋙ isoCommaAfterMap F G H).map f).hom.left) := by
+                  rw [hβ₂L']
+            _ = ((β₁.inv.app X).hom.left ≫ (β₂.hom.app X).hom.left) ≫
+                ((γ₂ ⋙ isoCommaAfterMap F G H).map f).hom.left := by
+                  rw [Category.assoc]
+        · have hβ₁R := congrArg (fun t => t.hom.right) (β₁.inv.naturality f)
+          have hβ₂R := congrArg (fun t => t.hom.right) (β₂.hom.naturality f)
+          have hβ₁R' :
+              ((γ₁ ⋙ isoCommaAfterMap F G H).map f).hom.right ≫
+                  (β₁.inv.app Y).hom.right =
+                (β₁.inv.app X).hom.right ≫ (b.map f).hom.right := by
+            change ((γ₁ ⋙ isoCommaAfterMap F G H).map f).hom.right ≫
+                (β₁.inv.app Y).hom.right =
+              (β₁.inv.app X).hom.right ≫ (b.map f).hom.right at hβ₁R
+            exact hβ₁R
+          have hβ₂R' : (b.map f).hom.right ≫ (β₂.hom.app Y).hom.right =
+              (β₂.hom.app X).hom.right ≫
+                ((γ₂ ⋙ isoCommaAfterMap F G H).map f).hom.right := by
+            change (b.map f).hom.right ≫ (β₂.hom.app Y).hom.right =
+              (β₂.hom.app X).hom.right ≫
+                ((γ₂ ⋙ isoCommaAfterMap F G H).map f).hom.right at hβ₂R
+            exact hβ₂R
+          dsimp [ObjectProperty.isoMk, Comma.isoMk]
+          change ((γ₁ ⋙ isoCommaAfterMap F G H).map f).hom.right ≫
+              (β₁.inv.app Y).hom.right ≫
+              (β₂.hom.app Y).hom.right =
+            ((β₁.inv.app X).hom.right ≫ (β₂.hom.app X).hom.right) ≫
+              ((γ₂ ⋙ isoCommaAfterMap F G H).map f).hom.right
+          calc
+            ((γ₁ ⋙ isoCommaAfterMap F G H).map f).hom.right ≫
+                ((β₁.inv.app Y).hom.right ≫ (β₂.hom.app Y).hom.right) =
+                ((β₁.inv.app X).hom.right ≫ (b.map f).hom.right) ≫
+                  (β₂.hom.app Y).hom.right := by
+                    rw [← Category.assoc]
+                    exact congrArg
+                      (fun t => t ≫ (β₂.hom.app Y).hom.right) hβ₁R'
+            _ = (β₁.inv.app X).hom.right ≫
+                ((b.map f).hom.right ≫ (β₂.hom.app Y).hom.right) := by
+                  rw [Category.assoc]
+            _ = (β₁.inv.app X).hom.right ≫
+                ((β₂.hom.app X).hom.right ≫
+                  ((γ₂ ⋙ isoCommaAfterMap F G H).map f).hom.right) := by
+                  rw [hβ₂R']
+            _ = ((β₁.inv.app X).hom.right ≫ (β₂.hom.app X).hom.right) ≫
+                ((γ₂ ⋙ isoCommaAfterMap F G H).map f).hom.right := by
+                  rw [Category.assoc])
+    refine ⟨δ, ?_, ?_⟩
+    · constructor
+      · ext X
+        let l₁ : (b.obj X).obj.left ≅
+            (isoCommaLeft F G).obj (γ₁.obj X) := by
+          exact
+            { hom := (β₁.hom.app X).hom.left
+              inv := (β₁.inv.app X).hom.left
+              hom_inv_id := by
+                have h := congrArg (fun t => t.app X) β₁.hom_inv_id
+                exact congrArg (fun t => t.hom.left) h
+              inv_hom_id := by
+                have h := congrArg (fun t => t.app X) β₁.inv_hom_id
+                exact congrArg (fun t => t.hom.left) h }
+        let l₂ : (b.obj X).obj.left ≅
+            (isoCommaLeft F G).obj (γ₂.obj X) := by
+          exact
+            { hom := (β₂.hom.app X).hom.left
+              inv := (β₂.inv.app X).hom.left
+              hom_inv_id := by
+                have h := congrArg (fun t => t.app X) β₂.hom_inv_id
+                exact congrArg (fun t => t.hom.left) h
+              inv_hom_id := by
+                have h := congrArg (fun t => t.app X) β₂.inv_hom_id
+                exact congrArg (fun t => t.hom.left) h }
+        dsimp [δ]
+        change α₁.hom.app X ≫
+          F.map (l₁.inv ≫ l₂.hom) =
+            α₂.hom.app X
+        unfold CategoryTwoFibreProductConeCommutes at h₁ h₂
+        have h₁X := congrArg (fun t => t.app X) h₁
+        have h₂X := congrArg (fun t => t.app X) h₂
+        simp only [NatTrans.comp_app, Functor.isoWhiskerRight_hom,
+          Functor.whiskerRight_app, Functor.associator_hom_app,
+          Functor.whiskerLeft_app] at h₁X h₂X
+        have h₁L := congrArg (fun t => t.hom.left) h₁X
+        have h₂L := congrArg (fun t => t.hom.left) h₂X
+        let φL : a.obj X ⟶ F.obj (b.obj X).obj.left := by
+          change ((a ⋙ isoCommaDiagonal H).obj X).obj.left ⟶
+            F.obj (b.obj X).obj.left
+          exact (φ.hom.app X).hom.left
+        have h₁L' :
+            φL ≫ F.map l₁.hom =
+              α₁.hom.app X := by
+          simpa [l₁, φL, Functor.comp, isoCommaDiagonal,
+            isoCommaAfterMapToDiagonal, isoCommaAfterMapComparison,
+            isoCommaAfterMap, isoCommaMap, isoCommaLeft, isoCommaRight,
+            ObjectProperty.isoMk, Comma.isoMk] using h₁L.symm
+        have h₂L' :
+            φL ≫ F.map l₂.hom =
+              α₂.hom.app X := by
+          simpa [l₂, φL, Functor.comp, isoCommaDiagonal,
+            isoCommaAfterMapToDiagonal, isoCommaAfterMapComparison,
+            isoCommaAfterMap, isoCommaMap, isoCommaLeft, isoCommaRight,
+            ObjectProperty.isoMk, Comma.isoMk] using h₂L.symm
+        have h₁Linv :
+            α₁.hom.app X ≫ F.map l₁.inv =
+              φL := by
+          calc
+            α₁.hom.app X ≫ F.map l₁.inv =
+                ((φL ≫ F.map l₁.hom) ≫ F.map l₁.inv) := by
+                  rw [h₁L'.symm]
+            _ = φL := by
+              rw [Category.assoc, ← F.map_comp, l₁.hom_inv_id, F.map_id]
+              simp
+        calc
+          α₁.hom.app X ≫ F.map (l₁.inv ≫ l₂.hom) =
+              (α₁.hom.app X ≫ F.map l₁.inv) ≫ F.map l₂.hom := by
+                simp only [Functor.map_comp, Category.assoc]
+          _ = φL ≫ F.map l₂.hom := by rw [h₁Linv]
+          _ = α₂.hom.app X := h₂L'
+      · apply NatTrans.ext
+        funext X
+        apply ObjectProperty.hom_ext
+        apply Comma.hom_ext
+        · simp only [NatTrans.comp_app, Functor.whiskerRight_app]
+          change (β₁.hom.app X).hom.left ≫
+              (δ.hom.app X).hom.left = (β₂.hom.app X).hom.left
+          change (β₁.hom.app X).hom.left ≫
+              ((β₁.inv.app X).hom.left ≫ (β₂.hom.app X).hom.left) =
+            (β₂.hom.app X).hom.left
+          have h := congrArg (fun t => t.app X) β₁.hom_inv_id
+          have h' := congrArg (fun t => t.hom.left) h
+          have h'' : (β₁.hom.app X).hom.left ≫ (β₁.inv.app X).hom.left =
+              𝟙 _ := by
+            change (β₁.hom.app X).hom.left ≫ (β₁.inv.app X).hom.left =
+              𝟙 _ at h'
+            exact h'
+          rw [← Category.assoc, h'', Category.id_comp]
+        · simp only [NatTrans.comp_app, Functor.whiskerRight_app]
+          change (β₁.hom.app X).hom.right ≫
+              (δ.hom.app X).hom.right = (β₂.hom.app X).hom.right
+          change (β₁.hom.app X).hom.right ≫
+              ((β₁.inv.app X).hom.right ≫ (β₂.hom.app X).hom.right) =
+            (β₂.hom.app X).hom.right
+          have h := congrArg (fun t => t.app X) β₁.hom_inv_id
+          have h' := congrArg (fun t => t.hom.right) h
+          have h'' : (β₁.hom.app X).hom.right ≫ (β₁.inv.app X).hom.right =
+              𝟙 _ := by
+            change (β₁.hom.app X).hom.right ≫ (β₁.inv.app X).hom.right =
+              𝟙 _ at h'
+            exact h'
+          rw [← Category.assoc, h'', Category.id_comp]
+    · intro δ' hδ'
+      ext X
+      · let l₁ : (b.obj X).obj.left ≅
+            (isoCommaLeft F G).obj (γ₁.obj X) := by
+          exact
+            { hom := (β₁.hom.app X).hom.left
+              inv := (β₁.inv.app X).hom.left
+              hom_inv_id := by
+                have h := congrArg (fun t => t.app X) β₁.hom_inv_id
+                exact congrArg (fun t => t.hom.left) h
+              inv_hom_id := by
+                have h := congrArg (fun t => t.app X) β₁.inv_hom_id
+                exact congrArg (fun t => t.hom.left) h }
+        letI : IsIso l₁.hom := by exact Iso.isIso_hom l₁
+        have hx := congrArg (fun t => t.app X) hδ'.2
+        have hxL := congrArg (fun t => t.hom.left) hx
+        simp only [NatTrans.comp_app, Functor.whiskerRight_app] at hxL
+        change (β₁.hom.app X).hom.left ≫ (δ'.hom.app X).hom.left =
+          (β₂.hom.app X).hom.left at hxL
+        apply (cancel_epi l₁.hom).1
+        change (β₁.hom.app X).hom.left ≫ (δ'.hom.app X).hom.left =
+          (β₁.hom.app X).hom.left ≫
+            ((β₁.inv.app X).hom.left ≫ (β₂.hom.app X).hom.left)
+        rw [hxL]
+        have h := congrArg (fun t => t.app X) β₁.hom_inv_id
+        have h' := congrArg (fun t => t.hom.left) h
+        have h'' : (β₁.hom.app X).hom.left ≫
+            (β₁.inv.app X).hom.left = 𝟙 _ := by
+          change (β₁.hom.app X).hom.left ≫
+            (β₁.inv.app X).hom.left = 𝟙 _ at h'
+          exact h'
+        rw [← Category.assoc, h'', Category.id_comp]
+      · let r₁ : (b.obj X).obj.right ≅
+            (isoCommaRight F G).obj (γ₁.obj X) := by
+          exact
+            { hom := (β₁.hom.app X).hom.right
+              inv := (β₁.inv.app X).hom.right
+              hom_inv_id := by
+                have h := congrArg (fun t => t.app X) β₁.hom_inv_id
+                exact congrArg (fun t => t.hom.right) h
+              inv_hom_id := by
+                have h := congrArg (fun t => t.app X) β₁.inv_hom_id
+                exact congrArg (fun t => t.hom.right) h }
+        letI : IsIso r₁.hom := by exact Iso.isIso_hom r₁
+        have hx := congrArg (fun t => t.app X) hδ'.2
+        have hxR := congrArg (fun t => t.hom.right) hx
+        simp only [NatTrans.comp_app, Functor.whiskerRight_app] at hxR
+        change (β₁.hom.app X).hom.right ≫ (δ'.hom.app X).hom.right =
+          (β₂.hom.app X).hom.right at hxR
+        apply (cancel_epi r₁.hom).1
+        change (β₁.hom.app X).hom.right ≫ (δ'.hom.app X).hom.right =
+          (β₁.hom.app X).hom.right ≫
+            ((β₁.inv.app X).hom.right ≫ (β₂.hom.app X).hom.right)
+        rw [hxR]
+        have h := congrArg (fun t => t.app X) β₁.hom_inv_id
+        have h' := congrArg (fun t => t.hom.right) h
+        have h'' : (β₁.hom.app X).hom.right ≫
+            (β₁.inv.app X).hom.right = 𝟙 _ := by
+          change (β₁.hom.app X).hom.right ≫
+            (β₁.inv.app X).hom.right = 𝟙 _ at h'
+          exact h'
+        rw [← Category.assoc, h'', Category.id_comp]
 
 /-- The induced functor between the two diagonal iso-comma categories. -/
 noncomputable def isoCommaBaseChangeMap
@@ -2721,6 +3167,392 @@ theorem isoComma_base_change_diagonal
       (isoCommaBaseChangeMap top left right bottom comm)
       (isoCommaDiagonal bottom)
       (isoCommaBaseChangeComparison top left right bottom comm) := by
-  sorry
+  unfold IsTwoCartesianSquare
+  constructor
+  · intro W _ a b φ
+    let bL : W ⥤ U := b ⋙ isoCommaLeft top top
+    let bR : W ⥤ U := b ⋙ isoCommaRight top top
+    let tL : W ⥤ V := bL ⋙ top
+    let tR : W ⥤ V := bR ⋙ top
+    let φL : a ≅ bL ⋙ left := by
+      exact NatIso.ofComponents (fun X =>
+        (isoCommaLeft bottom bottom).mapIso (φ.app X)) (by
+          intro X Y f
+          have hφ := congrArg (fun t => t.hom) (φ.hom.naturality f)
+          have hL := congrArg (fun t => t.left) hφ
+          change a.map f ≫ (φ.hom.app Y).hom.left =
+            (φ.hom.app X).hom.left ≫ left.map (bL.map f)
+          change ((a ⋙ isoCommaDiagonal bottom).map f ≫ φ.hom.app Y).hom.left =
+            (φ.hom.app X ≫
+              (b ⋙ isoCommaBaseChangeMap top left right bottom comm).map f).hom.left at hL
+          simpa [bL, isoCommaBaseChangeMap, isoCommaMap, isoCommaDiagonal,
+            Functor.comp, isoCommaLeft] using hL)
+    let φR : a ≅ bR ⋙ left := by
+      exact NatIso.ofComponents (fun X =>
+        (isoCommaRight bottom bottom).mapIso (φ.app X)) (by
+          intro X Y f
+          have hφ := congrArg (fun t => t.hom) (φ.hom.naturality f)
+          have hR := congrArg (fun t => t.right) hφ
+          change a.map f ≫ (φ.hom.app Y).hom.right =
+            (φ.hom.app X).hom.right ≫ left.map (bR.map f)
+          change ((a ⋙ isoCommaDiagonal bottom).map f ≫ φ.hom.app Y).hom.right =
+            (φ.hom.app X ≫
+              (b ⋙ isoCommaBaseChangeMap top left right bottom comm).map f).hom.right at hR
+          simpa [bR, isoCommaBaseChangeMap, isoCommaMap, isoCommaDiagonal,
+            Functor.comp, isoCommaRight] using hR)
+    let ι : tL ≅ tR := by
+      exact Functor.isoWhiskerLeft b (isoCommaComparisonIso top top)
+    let φBase : a ⋙ bottom ≅ tL ⋙ right :=
+      Functor.isoWhiskerRight φL bottom ≪≫
+        Functor.associator bL left bottom ≪≫
+          Functor.isoWhiskerLeft bL comm ≪≫
+            (Functor.associator bL top right).symm
+    have hcanL :
+        CategoryTwoFibreProductConeCommutes bottom right left top comm
+          a tL φBase bL φL (Iso.refl _) := by
+      unfold CategoryTwoFibreProductConeCommutes
+      simp [φBase]
+    have hcanR :
+        CategoryTwoFibreProductConeCommutes bottom right left top comm
+          a tL φBase bR φR ι := by
+      unfold CategoryTwoFibreProductConeCommutes
+      apply NatTrans.ext
+      funext X
+      simp only [NatTrans.comp_app, Functor.isoWhiskerRight_hom,
+        Functor.whiskerRight_app, Functor.associator_hom_app,
+        Functor.whiskerLeft_app]
+      simp only [Category.comp_id, Category.id_comp]
+      change bottom.map (φR.hom.app X) ≫ comm.hom.app (bR.obj X) =
+        φBase.hom.app X ≫ right.map (ι.hom.app X)
+      have hφL : φL.hom.app X = (φ.hom.app X).hom.left := by
+        rfl
+      have hφR : φR.hom.app X = (φ.hom.app X).hom.right := by
+        rfl
+      have hι : ι.hom.app X = (b.obj X).obj.hom := by
+        rfl
+      have hbaseL : φBase.hom.app X =
+          bottom.map (φL.hom.app X) ≫ comm.hom.app (bL.obj X) := by
+        simp [φBase, Category.assoc]
+      rw [hbaseL, hφR, hφL, hι]
+      dsimp [bL, bR]
+      have hw := (φ.hom.app X).hom.w
+      change bottom.map (φ.hom.app X).hom.right ≫
+          comm.hom.app (b.obj X).obj.right =
+        (bottom.map (φ.hom.app X).hom.left ≫
+          comm.hom.app (b.obj X).obj.left) ≫
+            right.map (b.obj X).obj.hom
+      have hw' :
+          bottom.map (φ.hom.app X).hom.left ≫
+              comm.hom.app (b.obj X).obj.left ≫
+                right.map (b.obj X).obj.hom ≫
+                  comm.inv.app (b.obj X).obj.right =
+            bottom.map (φ.hom.app X).hom.right := by
+        simpa [isoCommaBaseChangeMap, isoCommaMap, Functor.comp,
+          Comma.isoMk, ObjectProperty.isoMk, isoCommaLeft, isoCommaRight,
+          isoCommaDiagonal,
+          Category.assoc] using hw
+      let f := bottom.map (φ.hom.app X).hom.left
+      let cL := comm.hom.app (b.obj X).obj.left
+      let rmap := right.map (b.obj X).obj.hom
+      let cI := comm.inv.app (b.obj X).obj.right
+      let cR := comm.hom.app (b.obj X).obj.right
+      have hci : cI ≫ cR = 𝟙 _ := by
+        dsimp [cI, cR]
+        exact comm.inv_hom_id_app _
+      have hcancel :
+          (f ≫ cL ≫ rmap ≫ cI) ≫ cR = (f ≫ cL) ≫ rmap := by
+        dsimp [f, cL, rmap, cI, cR, isoCommaBaseChangeMap,
+          isoCommaMap, isoCommaDiagonal, isoCommaLeft, isoCommaRight,
+          Comma.isoMk, ObjectProperty.isoMk, Functor.comp]
+        let F' :
+            bottom.obj ((a ⋙ isoCommaDiagonal bottom).obj X).obj.left ⟶
+              (left ⋙ bottom).obj (b.obj X).obj.left := by
+          exact bottom.map (φ.hom.app X).hom.left
+        change
+          (bottom.map (φ.hom.app X).hom.left ≫
+              comm.hom.app (b.obj X).obj.left ≫
+                right.map (b.obj X).obj.hom ≫
+                  comm.inv.app (b.obj X).obj.right) ≫
+              comm.hom.app (b.obj X).obj.right =
+            (bottom.map (φ.hom.app X).hom.left ≫
+              comm.hom.app (b.obj X).obj.left) ≫
+                right.map (b.obj X).obj.hom
+        have hassoc :
+            (comm.hom.app (b.obj X).obj.left ≫
+                right.map (b.obj X).obj.hom ≫
+                  comm.inv.app (b.obj X).obj.right) ≫
+                comm.hom.app (b.obj X).obj.right =
+              (comm.hom.app (b.obj X).obj.left ≫
+                right.map (b.obj X).obj.hom) ≫
+                  (comm.inv.app (b.obj X).obj.right ≫
+                    comm.hom.app (b.obj X).obj.right) := by
+          simp only [Category.assoc]
+        calc
+          (bottom.map (φ.hom.app X).hom.left ≫
+              comm.hom.app (b.obj X).obj.left ≫
+                right.map (b.obj X).obj.hom ≫
+                  comm.inv.app (b.obj X).obj.right) ≫
+              comm.hom.app (b.obj X).obj.right =
+            bottom.map (φ.hom.app X).hom.left ≫
+              ((comm.hom.app (b.obj X).obj.left ≫
+                right.map (b.obj X).obj.hom ≫
+                  comm.inv.app (b.obj X).obj.right) ≫
+                    comm.hom.app (b.obj X).obj.right) := by
+              rw [Category.assoc]
+          _ = bottom.map (φ.hom.app X).hom.left ≫
+              ((comm.hom.app (b.obj X).obj.left ≫
+              right.map (b.obj X).obj.hom) ≫
+                  (comm.inv.app (b.obj X).obj.right ≫
+                    comm.hom.app (b.obj X).obj.right)) := by
+            exact congrArg
+              (fun q => bottom.map (φ.hom.app X).hom.left ≫ q) hassoc
+          _ = bottom.map (φ.hom.app X).hom.left ≫
+              ((comm.hom.app (b.obj X).obj.left ≫
+                right.map (b.obj X).obj.hom) ≫ 𝟙 _) := by
+            rw [comm.inv_hom_id_app]
+            rfl
+          _ = bottom.map (φ.hom.app X).hom.left ≫
+              (comm.hom.app (b.obj X).obj.left ≫
+                right.map (b.obj X).obj.hom) := by
+            rw [Category.comp_id]
+          _ = F' ≫ (comm.hom.app (b.obj X).obj.left ≫
+                right.map (b.obj X).obj.hom) := by
+            rfl
+          _ = (F' ≫ comm.hom.app (b.obj X).obj.left) ≫
+                right.map (b.obj X).obj.hom := by
+            exact (Category.assoc F' (comm.hom.app (b.obj X).obj.left)
+              (right.map (b.obj X).obj.hom)).symm
+      have hw'' : f ≫ cL ≫ rmap ≫ cI = bottom.map (φ.hom.app X).hom.right := by
+        simpa [f, cL, rmap, cI] using hw'
+      have hcomp := congrArg (fun q => q ≫ cR) hw''
+      change bottom.map (φ.hom.app X).hom.right ≫ cR = (f ≫ cL) ≫ rmap
+      exact hcomp.symm.trans hcancel
+    obtain ⟨γ, α, βBase, hγ⟩ := h.1 a tL φBase
+    obtain ⟨δL, hδL, hδLuniq⟩ :=
+      h.2 a tL φBase bL γ φL (Iso.refl _) α βBase hcanL hγ
+    obtain ⟨δR, hδR, hδRuniq⟩ :=
+      h.2 a tL φBase bR γ φR ι α βBase hcanR hγ
+    let β : b ≅ γ ⋙ isoCommaDiagonal top :=
+      NatIso.ofComponents (fun X => by
+        let l : (b.obj X).obj.left ≅ γ.obj X := by
+          exact
+            { hom := δL.hom.app X
+              inv := δL.inv.app X
+              hom_inv_id := by
+                have h := congrArg (fun t => t.app X) δL.hom_inv_id
+                change δL.hom.app X ≫ δL.inv.app X = 𝟙 _ at h
+                exact h
+              inv_hom_id := by
+                have h := congrArg (fun t => t.app X) δL.inv_hom_id
+                change δL.inv.app X ≫ δL.hom.app X = 𝟙 _ at h
+                exact h }
+        let r : (b.obj X).obj.right ≅ γ.obj X := by
+          exact
+            { hom := δR.hom.app X
+              inv := δR.inv.app X
+              hom_inv_id := by
+                have h := congrArg (fun t => t.app X) δR.hom_inv_id
+                change δR.hom.app X ≫ δR.inv.app X = 𝟙 _ at h
+                exact h
+              inv_hom_id := by
+                have h := congrArg (fun t => t.app X) δR.inv_hom_id
+                change δR.inv.app X ≫ δR.hom.app X = 𝟙 _ at h
+                exact h }
+        exact ObjectProperty.isoMk _
+          (Comma.isoMk l r (by
+            have hδLtop := congrArg (fun t => t.app X) hδL.2
+            have hδRtop := congrArg (fun t => t.app X) hδR.2
+            have hι : ι.hom.app X = (b.obj X).obj.hom := by
+              rfl
+            have hδLtop' : top.map (δL.hom.app X) = βBase.hom.app X := by
+              simpa only [NatTrans.comp_app, Iso.refl_hom,
+                Functor.whiskerRight_app, Category.id_comp] using hδLtop
+            simp only [NatTrans.comp_app, Functor.whiskerRight_app] at hδRtop
+            rw [hι] at hδRtop
+            change (b.obj X).obj.hom ≫ top.map (δR.hom.app X) =
+              βBase.hom.app X at hδRtop
+            simpa [l, r, bL, isoCommaLeft, isoCommaDiagonal, Functor.comp] using
+              hδLtop'.trans hδRtop.symm))) (by
+            intro X Y f
+            apply ObjectProperty.hom_ext
+            apply Comma.hom_ext
+            · dsimp [ObjectProperty.isoMk, Comma.isoMk]
+              change (b.map f).hom.left ≫ δL.hom.app Y =
+                δL.hom.app X ≫ γ.map f
+              simpa [bL, isoCommaLeft, Functor.comp] using δL.hom.naturality f
+            · dsimp [ObjectProperty.isoMk, Comma.isoMk]
+              change (b.map f).hom.right ≫ δR.hom.app Y =
+                δR.hom.app X ≫ γ.map f
+              simpa [bR, isoCommaRight, Functor.comp] using δR.hom.naturality f)
+    refine ⟨γ, α, β, ?_⟩
+    unfold CategoryTwoFibreProductConeCommutes
+    apply NatTrans.ext
+    funext X
+    simp only [NatTrans.comp_app, Functor.isoWhiskerRight_hom,
+      Functor.whiskerRight_app, Functor.associator_hom_app,
+      Functor.whiskerLeft_app]
+    apply ObjectProperty.hom_ext
+    apply Comma.hom_ext
+    · simp [isoCommaBaseChangeComparison, isoCommaBaseChangeMap, isoCommaMap,
+        isoCommaDiagonal, Functor.comp, β, ObjectProperty.isoMk, Comma.isoMk]
+      have hδLleft := congrArg (fun t => t.app X) hδL.1
+      simp only [NatTrans.comp_app, Functor.whiskerRight_app] at hδLleft
+      change (φ.hom.app X).hom.left ≫ left.map (δL.hom.app X) =
+        α.hom.app X at hδLleft
+      exact hδLleft.symm
+    · simp [isoCommaBaseChangeComparison, isoCommaBaseChangeMap, isoCommaMap,
+        isoCommaDiagonal, Functor.comp, β, ObjectProperty.isoMk, Comma.isoMk]
+      have hδRleft := congrArg (fun t => t.app X) hδR.1
+      simp only [NatTrans.comp_app, Functor.whiskerRight_app] at hδRleft
+      change (φ.hom.app X).hom.right ≫ left.map (δR.hom.app X) =
+        α.hom.app X at hδRleft
+      exact hδRleft.symm
+  · intro W _ a b φ γ₁ γ₂ α₁ β₁ α₂ β₂ h₁ h₂
+    unfold CategoryTwoFibreProductConeUniqueIso
+    let δ : γ₁ ≅ γ₂ :=
+      NatIso.ofComponents (fun X => by
+        let l₁ : (b.obj X).obj.left ≅
+            ((γ₁ ⋙ isoCommaDiagonal top).obj X).obj.left := by
+          exact
+            { hom := (β₁.hom.app X).hom.left
+              inv := (β₁.inv.app X).hom.left
+              hom_inv_id := by
+                have h := congrArg (fun t => t.app X) β₁.hom_inv_id
+                exact congrArg (fun t => t.hom.left) h
+              inv_hom_id := by
+                have h := congrArg (fun t => t.app X) β₁.inv_hom_id
+                exact congrArg (fun t => t.hom.left) h }
+        let l₂ : (b.obj X).obj.left ≅
+            ((γ₂ ⋙ isoCommaDiagonal top).obj X).obj.left := by
+          exact
+            { hom := (β₂.hom.app X).hom.left
+              inv := (β₂.inv.app X).hom.left
+              hom_inv_id := by
+                have h := congrArg (fun t => t.app X) β₂.hom_inv_id
+                exact congrArg (fun t => t.hom.left) h
+              inv_hom_id := by
+                have h := congrArg (fun t => t.app X) β₂.inv_hom_id
+                exact congrArg (fun t => t.hom.left) h }
+        exact l₁.symm ≪≫ l₂) (by
+          intro X Y f
+          have hβ₁ := congrArg (fun t => t.hom.left) (β₁.inv.naturality f)
+          have hβ₂ := congrArg (fun t => t.hom.left) (β₂.hom.naturality f)
+          have hβ₁' :
+              ((γ₁ ⋙ isoCommaDiagonal top).map f).hom.left ≫
+                  (β₁.inv.app Y).hom.left =
+              (β₁.inv.app X).hom.left ≫ (b.map f).hom.left := by
+            change ((γ₁ ⋙ isoCommaDiagonal top).map f).hom.left ≫
+                (β₁.inv.app Y).hom.left =
+              (β₁.inv.app X).hom.left ≫ (b.map f).hom.left at hβ₁
+            exact hβ₁
+          have hβ₂' : (b.map f).hom.left ≫ (β₂.hom.app Y).hom.left =
+              (β₂.hom.app X).hom.left ≫
+                ((γ₂ ⋙ isoCommaDiagonal top).map f).hom.left := by
+            change (b.map f).hom.left ≫ (β₂.hom.app Y).hom.left =
+              (β₂.hom.app X).hom.left ≫
+                ((γ₂ ⋙ isoCommaDiagonal top).map f).hom.left at hβ₂
+            exact hβ₂
+          dsimp [isoCommaDiagonal]
+          change ((γ₁ ⋙ isoCommaDiagonal top).map f).hom.left ≫
+              ((β₁.inv.app Y).hom.left ≫ (β₂.hom.app Y).hom.left) =
+            ((β₁.inv.app X).hom.left ≫ (β₂.hom.app X).hom.left) ≫
+              ((γ₂ ⋙ isoCommaDiagonal top).map f).hom.left
+          rw [← Category.assoc, hβ₁', Category.assoc, hβ₂',
+            ← Category.assoc])
+    refine ⟨δ, ?_, ?_⟩
+    · constructor
+      · ext X
+        dsimp [δ]
+        change α₁.hom.app X ≫
+            left.map ((β₁.inv.app X).hom.left ≫
+              (β₂.hom.app X).hom.left) = α₂.hom.app X
+        unfold CategoryTwoFibreProductConeCommutes at h₁ h₂
+        have h₁X := congrArg (fun t => t.app X) h₁
+        have h₂X := congrArg (fun t => t.app X) h₂
+        simp only [NatTrans.comp_app, Functor.isoWhiskerRight_hom,
+          Functor.whiskerRight_app, Functor.associator_hom_app,
+          Functor.whiskerLeft_app] at h₁X h₂X
+        have h₁L := congrArg (fun t => t.hom.left) h₁X
+        have h₂L := congrArg (fun t => t.hom.left) h₂X
+        let β₁L : (b.obj X).obj.left ⟶ γ₁.obj X := by
+          change (b.obj X).obj.left ⟶
+            ((γ₁ ⋙ isoCommaDiagonal top).obj X).obj.left
+          exact (β₁.hom.app X).hom.left
+        let β₁Li : γ₁.obj X ⟶ (b.obj X).obj.left := by
+          change ((γ₁ ⋙ isoCommaDiagonal top).obj X).obj.left ⟶
+            (b.obj X).obj.left
+          exact (β₁.inv.app X).hom.left
+        let β₂L : (b.obj X).obj.left ⟶ γ₂.obj X := by
+          change (b.obj X).obj.left ⟶
+            ((γ₂ ⋙ isoCommaDiagonal top).obj X).obj.left
+          exact (β₂.hom.app X).hom.left
+        let φL : a.obj X ⟶ left.obj (b.obj X).obj.left := by
+          change ((a ⋙ isoCommaDiagonal bottom).obj X).obj.left ⟶
+            left.obj (b.obj X).obj.left
+          exact (φ.hom.app X).hom.left
+        have h₁L' : φL ≫
+            left.map β₁L = α₁.hom.app X := by
+          simpa [isoCommaBaseChangeComparison, isoCommaBaseChangeMap,
+            isoCommaMap, isoCommaDiagonal, Functor.comp,
+            ObjectProperty.isoMk, Comma.isoMk, φL, β₁L] using h₁L.symm
+        have h₂L' : φL ≫
+            left.map β₂L = α₂.hom.app X := by
+          simpa [isoCommaBaseChangeComparison, isoCommaBaseChangeMap,
+            isoCommaMap, isoCommaDiagonal, Functor.comp,
+            ObjectProperty.isoMk, Comma.isoMk, φL, β₂L] using h₂L.symm
+        have h₁Linv : α₁.hom.app X ≫
+            left.map β₁Li = φL := by
+          calc
+            α₁.hom.app X ≫ left.map β₁Li =
+                (φL ≫
+                  left.map β₁L) ≫ left.map β₁Li := by
+              rw [h₁L']
+            _ = φL := by
+              rw [Category.assoc, ← left.map_comp]
+              have h := congrArg (fun t => t.app X) β₁.hom_inv_id
+              have h' := congrArg (fun t => t.hom.left) h
+              change β₁L ≫ β₁Li = 𝟙 _ at h'
+              rw [h', left.map_id, Category.comp_id]
+        calc
+          α₁.hom.app X ≫
+              left.map (β₁Li ≫ β₂L) =
+              (α₁.hom.app X ≫ left.map β₁Li) ≫
+                left.map β₂L := by
+                  rw [left.map_comp]
+                  simp only [Category.assoc]
+          _ = φL ≫
+              left.map β₂L := by rw [h₁Linv]
+          _ = α₂.hom.app X := h₂L'
+      · apply NatTrans.ext
+        funext X
+        apply ObjectProperty.hom_ext
+        apply Comma.hom_ext
+        · simp only [NatTrans.comp_app, Functor.whiskerRight_app]
+          change (β₁.hom.app X).hom.left ≫ δ.hom.app X =
+            (β₂.hom.app X).hom.left
+          change (β₁.hom.app X).hom.left ≫
+              ((β₁.inv.app X).hom.left ≫ (β₂.hom.app X).hom.left) =
+            (β₂.hom.app X).hom.left
+          have h := congrArg (fun t => t.app X) β₁.hom_inv_id
+          have h' := congrArg (fun t => t.hom.left) h
+          have h'' : (β₁.hom.app X).hom.left ≫
+              (β₁.inv.app X).hom.left = 𝟙 _ := by
+            change (β₁.hom.app X).hom.left ≫
+              (β₁.inv.app X).hom.left = 𝟙 _ at h'
+            exact h'
+          rw [← Category.assoc, h'', Category.id_comp]
+        · simp only [NatTrans.comp_app, Functor.whiskerRight_app]
+          unfold CategoryTwoFibreProductConeCommutes at h₁ h₂
+          have h₁X := congrArg (fun t => t.app X) h₁
+          have h₂X := congrArg (fun t => t.app X) h₂
+          simp only [NatTrans.comp_app, Functor.isoWhiskerRight_hom,
+            Functor.whiskerRight_app, Functor.associator_hom_app,
+            Functor.whiskerLeft_app] at h₁X h₂X
+          have h₁R := congrArg (fun t => t.hom.right) h₁X
+          have h₂R := congrArg (fun t => t.hom.right) h₂X
+          trace_state
+          sorry
+    · intro δ' hδ'
+      sorry
 
 end Formalization.Books.Categories.Unit31

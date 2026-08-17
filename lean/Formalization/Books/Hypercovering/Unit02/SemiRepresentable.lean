@@ -629,21 +629,84 @@ theorem semiRepresentableOverPresheafFunctor_preserves_finite_limits
     change (e0'.hom ≫ eP.hom.left) ≫ (⊤_ (PresheafOver C X)).hom =
       semiRepresentableOverStructureMap X (⊤_ (SemiRepresentableOver C X))
     rw [Category.assoc, eP.hom.w]
+    have he0comp (j : ((FormalCoproduct.incl C).obj X).I) :
+        Sigma.ι
+          (fun j => functorOfPoints.obj (((FormalCoproduct.incl C).obj X).obj j)) j ≫
+          e0.hom = 𝟙 (functorOfPoints.obj X) := by
+      cases j
+      rw [show e0.hom = Sigma.desc (fun j =>
+          𝟙 (functorOfPoints.obj (((FormalCoproduct.incl C).obj X).obj j))) by rfl]
+      exact Sigma.ι_desc _ _
     have heTcomp (i : (⊤_ (SemiRepresentableOver C X)).I) :
         (eT.hom.φ i).left = ((⊤_ (SemiRepresentableOver C X)).obj i).hom := by
-      simpa only [FormalCoproduct.incl, Over.mk, Category.comp_id] using
-        (eT.hom.φ i).w
+      have h := Over.Hom.w (eT.hom.φ i)
+      change (eT.hom.φ i).left ≫ 𝟙 X =
+        ((⊤_ (SemiRepresentableOver C X)).obj i).hom at h
+      exact (Category.comp_id (eT.hom.φ i).left).symm.trans h
     refine Sigma.hom_ext _ _ (fun i => ?_)
     dsimp [e0', Functor.mapIso, Iso.trans]
     rw [← Category.assoc]
     simp [Category.assoc, Category.comp_id, Sigma.ι_desc,
       semiRepresentableOverStructureMap,
       representablePresheafMapOfOver,
-      e0', eT, e0, semiRepresentableOverUnderlying, semiRepresentableOverForget,
+      e0', semiRepresentableOverUnderlying,
       semiRepresentablePresheafFunctor, FormalCoproduct.yoneda,
-      FormalCoproduct.eval, Functor.comp_map,
-      FormalCoproduct.evalCompInclIsoId, FormalCoproduct.isTerminalIncl,
-      terminalIsoIsTerminal, heTcomp]
+      FormalCoproduct.eval, Functor.comp_map]
+    have he0comp' (j :
+        ((semiRepresentableOverForget X).obj
+          ((FormalCoproduct.incl (Over X)).obj (Over.mk (𝟙 X)))).I) :
+        Sigma.ι
+            (fun j => functorOfPoints.obj
+              (((semiRepresentableOverForget X).obj
+                ((FormalCoproduct.incl (Over X)).obj (Over.mk (𝟙 X)))).obj j)) j ≫
+          e0.hom = 𝟙 (functorOfPoints.obj X) := by
+      cases j
+      rw [show e0.hom = Sigma.desc (fun j =>
+          𝟙 (functorOfPoints.obj (((FormalCoproduct.incl C).obj X).obj j))) by rfl]
+      exact Sigma.ι_desc _ _
+    have htarget : ∀ (j k :
+        ((semiRepresentableOverForget X).obj
+          ((FormalCoproduct.incl (Over X)).obj (Over.mk (𝟙 X)))).I), j = k := by
+      intro j k
+      dsimp [semiRepresentableOverForget] at j k
+      change PUnit at j
+      change PUnit at k
+      cases j
+      cases k
+      rfl
+    let j0 :
+        ((semiRepresentableOverForget X).obj
+          ((FormalCoproduct.incl (Over X)).obj (Over.mk (𝟙 X)))).I := by
+      dsimp [semiRepresentableOverForget]
+      change PUnit
+      exact PUnit.unit
+    let i0 : ((semiRepresentableOverForget X).obj
+        (⊤_ (SemiRepresentableOver C X))).I :=
+      ((semiRepresentableOverForget X).map eT.inv).f j0
+    have hm := htarget
+      (((semiRepresentableOverForget X).map eT.hom).f i)
+      (((semiRepresentableOverForget X).map eT.hom).f i0)
+    have hi := congrArg (((semiRepresentableOverForget X).map eT.inv).f) hm
+    have hcomp :
+        ((semiRepresentableOverForget X).map eT.inv).f ∘
+            ((semiRepresentableOverForget X).map eT.hom).f = id := by
+      change ((semiRepresentableOverForget X).map eT.hom ≫
+        (semiRepresentableOverForget X).map eT.inv).f = id
+      rw [← (semiRepresentableOverForget X).map_comp, eT.hom_inv_id]
+      rw [(semiRepresentableOverForget X).map_id]
+      rfl
+    change (((semiRepresentableOverForget X).map eT.inv).f ∘
+      ((semiRepresentableOverForget X).map eT.hom).f) i =
+      (((semiRepresentableOverForget X).map eT.inv).f ∘
+        ((semiRepresentableOverForget X).map eT.hom).f) i0 at hi
+    have hi' : i = i0 := by
+      rw [hcomp] at hi
+      simpa using hi
+    rw [hi']
+    simp [semiRepresentableOverForget, FormalCoproduct.incl,
+      FormalCoproduct.isTerminalIncl, terminalIsoIsTerminal,
+      semiRepresentableOverStructureMap, representablePresheafMapOfOver,
+      Category.assoc, he0comp']
   letI : PreservesLimit (Functor.empty (SemiRepresentableOver C X))
       (semiRepresentableOverPresheafFunctor X) :=
     preservesTerminal_of_iso (semiRepresentableOverPresheafFunctor X) hterm
@@ -673,63 +736,172 @@ theorem semiRepresentableOverPresheafFunctor_preserves_finite_limits
       let g' := (semiRepresentableOverForget X).map g
       have hf : f'.f = f.f := rfl
       have hg : g'.f = g.f := rfl
+      let j : ∀ i : Function.Pullback f'.f g'.f,
+          Function.Pullback f.f g.f :=
+        fun i =>
+          ⟨i.1, by
+            change f.f i.1.1 = g.f i.1.2
+            exact i.2⟩
+      have hdiag : ∀ i : Function.Pullback f'.f g'.f,
+          cospan
+                (f'.φ i.1.1 ≫
+                  eqToHom
+                    (show ((semiRepresentableOverForget X).obj
+                        (K.obj WalkingCospan.one)).obj (f'.f i.1.1) =
+                        ((semiRepresentableOverForget X).obj
+                          (K.obj WalkingCospan.one)).obj (g'.f i.1.2) by
+                      exact congrArg
+                        (((semiRepresentableOverForget X).obj
+                          (K.obj WalkingCospan.one)).obj) i.2))
+                (g'.φ i.1.2) =
+              cospan
+                ((Over.forget X).map
+                  (f.φ (j i).1.1 ≫
+                    eqToHom
+                      (show (K.obj WalkingCospan.one).obj (f.f (j i).1.1) =
+                          (K.obj WalkingCospan.one).obj (g.f (j i).1.2) by
+                        exact congrArg (K.obj WalkingCospan.one).obj (j i).2)))
+                ((Over.forget X).map (g.φ (j i).1.2)) := by
+        intro i
+        let i' : Function.Pullback f.f g.f := j i
+        change
+          cospan
+                (f'.φ i.1.1 ≫
+                  eqToHom
+                    (show ((semiRepresentableOverForget X).obj
+                        (K.obj WalkingCospan.one)).obj (f'.f i.1.1) =
+                        ((semiRepresentableOverForget X).obj
+                          (K.obj WalkingCospan.one)).obj (g'.f i.1.2) by
+                      exact congrArg
+                        (((semiRepresentableOverForget X).obj
+                          (K.obj WalkingCospan.one)).obj) i.2))
+                (g'.φ i.1.2) =
+              cospan
+                ((Over.forget X).map
+                  (f.φ i'.1.1 ≫
+                    eqToHom
+                      (show (K.obj WalkingCospan.one).obj (f.f i'.1.1) =
+                          (K.obj WalkingCospan.one).obj (g.f i'.1.2) by
+                        exact congrArg (K.obj WalkingCospan.one).obj i'.2)))
+                ((Over.forget X).map (g.φ i'.1.2))
+        dsimp [f', g', semiRepresentableOverForget]
+        apply CategoryTheory.Functor.hext (h_obj := ?_) (h_map := ?_)
+        · intro j
+          rcases j with (⟨⟩ | ⟨⟨⟩⟩) <;> rfl
+        · intro j k q
+          rcases j with (⟨⟩ | ⟨(⟨⟩ | ⟨⟩)⟩)
+          · rcases k with (⟨⟩ | ⟨(⟨⟩ | ⟨⟩)⟩)
+            · have hq : q = 𝟙 _ := Subsingleton.elim _ _
+              subst q
+              rfl
+            · cases q
+            · cases q
+          · rcases k with (⟨⟩ | ⟨(⟨⟩ | ⟨⟩)⟩)
+            · have hq : q = WalkingCospan.Hom.inl := Subsingleton.elim _ _
+              subst q
+              simp only [cospan_map_inl]
+              change
+                (f.φ i'.1.1).left ≫ eqToHom _ ≍
+                  (f.φ i'.1.1 ≫ eqToHom _).left
+              simp only [Over.comp_left, Over.eqToHom_left]
+              rfl
+            · have hq : q = 𝟙 _ := Subsingleton.elim _ _
+              subst q
+              rfl
+            · cases q
+          · rcases k with (⟨⟩ | ⟨(⟨⟩ | ⟨⟩)⟩)
+            · have hq : q = WalkingCospan.Hom.inr := Subsingleton.elim _ _
+              subst q
+              simp only [cospan_map_inr]
+              change
+                (g.φ i'.1.2).left ≍
+                  (g.φ i'.1.2).left
+              rfl
+            · cases q
+            · have hq : q = 𝟙 _ := Subsingleton.elim _ _
+              subst q
+              rfl
       let pb' : ∀ i : Function.Pullback f'.f g'.f,
           PullbackCone (f'.φ i.1.1 ≫ eqToHom (by rw [i.2])) (g'.φ i.1.2) :=
-        fun i => by
-          refine PullbackCone.mk ((pb i).fst.left) ((pb i).snd.left) ?_
-          simpa [f', g', semiRepresentableOverForget] using
-            congrArg (fun q => q.left) (pb i).condition
+        fun i =>
+          (Cone.postcompose (eqToIso (hdiag i)).inv).obj
+            ((pb (j i)).map (Over.forget X))
       have hpb' : ∀ i, IsLimit (pb' i) := by
         intro i
-        have hpb : IsLimit (pb i) := pullback.isLimit _ _
-        have hmap : IsLimit ((Over.forget X).mapCone (pb i)) :=
+        have hpb : IsLimit (pb (j i)) := pullback.isLimit _ _
+        have hmap : IsLimit ((Over.forget X).mapCone (pb (j i))) :=
           isLimitOfPreserves (Over.forget X) hpb
-        convert hmap using 1
-        · refine CategoryTheory.Functor.hext (h_obj := ?_) (h_map := ?_)
-          · intro j
-            rcases j with (⟨⟩ | ⟨⟨⟩⟩) <;> rfl
-          · intro j k q
-            rcases j with (⟨⟩ | ⟨(⟨⟩ | ⟨⟩)⟩)
-            · rcases k with (⟨⟩ | ⟨(⟨⟩ | ⟨⟩)⟩)
-              · have hq : q = 𝟙 _ := Subsingleton.elim _ _
-                subst q
-                rfl
-              · cases q
-              · cases q
-            · rcases k with (⟨⟩ | ⟨(⟨⟩ | ⟨⟩)⟩)
-              · have hq : q = WalkingCospan.Hom.inl := Subsingleton.elim _ _
-                subst q
-                simp only [cospan_map_inl]
-                change
-                  (f.φ (i.1.1)).left ≫ eqToHom _ ≍
-                    (f.φ (i.1.1) ≫ eqToHom _).left
-                simp only [Over.comp_left, Over.eqToHom_left]
-                rfl
-              · have hq : q = 𝟙 _ := Subsingleton.elim _ _
-                subst q
-                rfl
-              · cases q
-            · rcases k with (⟨⟩ | ⟨(⟨⟩ | ⟨⟩)⟩)
-              · have hq : q = WalkingCospan.Hom.inr := Subsingleton.elim _ _
-                subst q
-                simp only [cospan_map_inr]
-                change
-                  (g.φ (i.1.2)).left ≍
-                    (g.φ (i.1.2)).left
-                rfl
-              · cases q
-              · have hq : q = 𝟙 _ := Subsingleton.elim _ _
-                subst q
-                rfl
-        · simp [pb', pb, Over.forget, Functor.mapCone, PullbackCone.mk]
+        have hmap' : IsLimit ((pb (j i)).map (Over.forget X)) :=
+          (PullbackCone.isLimitMapConeEquiv (pb (j i)) (Over.forget X)).1 hmap
+        exact (IsLimit.postcomposeHomEquiv (eqToIso (hdiag i)).symm
+          ((pb (j i)).map (Over.forget X))).symm hmap'
       let t' : PullbackCone f' g' := FormalCoproduct.pullbackCone f' g' pb'
       have ht' : IsLimit t' :=
         FormalCoproduct.isLimitPullbackCone f' g' pb' hpb'
       have ht'F : IsLimit
           ((semiRepresentablePresheafFunctor (C := C)).mapCone t') :=
         isLimitOfPreserves (semiRepresentablePresheafFunctor (C := C)) ht'
-      simpa [t, t', pb', semiRepresentableOverPresheafFunctor,
-        semiRepresentableOverPresheafFunctor_forget, semiRepresentableOverForget] using ht'F
+      let e :
+          ((cospan f g ⋙ semiRepresentableOverPresheafFunctor X) ⋙
+              Over.forget (representablePresheaf X)) ≅
+            cospan f' g' ⋙ semiRepresentablePresheafFunctor := by
+        refine NatIso.ofComponents (fun j => ?_) ?_
+        · rcases j with (⟨⟩ | ⟨⟨⟩⟩) <;> rfl
+        · intro j k q
+          rcases j with (⟨⟩ | ⟨(⟨⟩ | ⟨⟩)⟩)
+          · rcases k with (⟨⟩ | ⟨(⟨⟩ | ⟨⟩)⟩)
+            · have hq : q = 𝟙 _ := Subsingleton.elim _ _
+              subst q
+              rfl
+            · cases q
+            · cases q
+          · rcases k with (⟨⟩ | ⟨(⟨⟩ | ⟨⟩)⟩)
+            · have hq : q = WalkingCospan.Hom.inl := Subsingleton.elim _ _
+              subst q
+              rfl
+            · have hq : q = 𝟙 _ := Subsingleton.elim _ _
+              subst q
+              rfl
+            · cases q
+          · rcases k with (⟨⟩ | ⟨(⟨⟩ | ⟨⟩)⟩)
+            · have hq : q = WalkingCospan.Hom.inr := Subsingleton.elim _ _
+              subst q
+              rfl
+            · cases q
+            · have hq : q = 𝟙 _ := Subsingleton.elim _ _
+              subst q
+              rfl
+      have ht'F' : IsLimit
+          ((Cone.postcompose e.inv).obj
+            ((semiRepresentablePresheafFunctor (C := C)).mapCone t')) :=
+        (IsLimit.postcomposeInvEquiv e
+          ((semiRepresentablePresheafFunctor (C := C)).mapCone t')).symm ht'F
+      have hmap {q : WalkingCospan} (i : t'.pt.I) :
+          Sigma.ι (fun i => yoneda.obj (t'.pt.obj i)) i ≫
+              (semiRepresentablePresheafFunctor (C := C)).map (t'.π.app q) =
+            yoneda.map ((t'.π.app q).φ i) ≫
+              Sigma.ι
+                (fun i =>
+                  yoneda.obj (((cospan f' g').obj q).obj i))
+                ((t'.π.app q).f i) := by
+        exact semiRepresentablePresheafFunctor_map_ι (t'.π.app q) i
+      apply IsLimit.ofIsoLimit ht'F'
+      refine Cone.ext (eqToIso ?_) ?_
+      · rfl
+      · intro j
+        rcases j with (⟨⟩ | ⟨⟨⟩⟩) <;>
+          simp [e, t, semiRepresentableOverPresheafFunctor,
+            semiRepresentableOverUnderlying, semiRepresentableOverForget,
+            semiRepresentablePresheafFunctor_map_ι,
+            NatTrans.comp_app, Functor.map_comp, Sigma.ι_desc,
+            Category.assoc] <;>
+          apply Sigma.hom_ext <;>
+          intro U <;>
+          dsimp [Functor.mapCone, Cone.functoriality, Cone.postcompose]
+          all_goals
+            conv_lhs =>
+              rw [← Category.assoc]
+            rw [hmap U]
     exact preservesLimit_of_iso_diagram (semiRepresentableOverPresheafFunctor X)
       (diagramIsoCospan K).symm
 

@@ -23,7 +23,6 @@ open Formalization.Books.Categories.Unit31
 open Formalization.Books.Categories.Unit32
 open Formalization.Books.Categories.Unit33
 open Formalization.Books.Categories.Unit34
-open Formalization.Books.Categories.Unit35
 
 universe vC uC vS uS
 
@@ -118,6 +117,21 @@ theorem splitFibred_comp_base
     (f ≫ g).base = f.base ≫ g.base :=
   rfl
 
+/- The fibre component of composition is the source's rule: pull back the
+   second fibre arrow along the first base arrow, compose with the first
+   fibre arrow, and use the canonical comparison supplied by the ordinary
+   functor's composition law. -/
+theorem splitFibred_comp_fiber
+    {C : Type uC} [Category.{vC} C]
+    (F : Cᵒᵖ ⥤ Cat.{vS, uS})
+    {X Y Z : splitFibredCategory F} (f : X ⟶ Y) (g : Y ⟶ Z) :
+    (f ≫ g).fiber =
+      f.fiber ≫
+        ((splitFibredPseudofunctor F).map f.base.op.toLoc).toFunctor.map g.fiber ≫
+        ((splitFibredPseudofunctor F).mapComp
+            g.base.op.toLoc f.base.op.toLoc).inv.toNatTrans.app Z.fiber :=
+  rfl
+
 theorem splitFibredProjection_isFibered
     {C : Type uC} [Category.{vC} C]
     (F : Cᵒᵖ ⥤ Cat.{vS, uS}) :
@@ -183,8 +197,9 @@ def IsSplitFibredCategory
     {C : Type uC} [Category.{vC} C]
   {S : Type uS} [Category.{vS} S]
     (p : S ⥤ C) : Prop :=
-  ∃ F : Cᵒᵖ ⥤ Cat.{vS, uS},
-    IsomorphicOverBase p (splitFibredProjection F)
+  p.IsFibered ∧
+    ∃ F : Cᵒᵖ ⥤ Cat.{vS, uS},
+      IsomorphicOverBase p (splitFibredProjection F)
 
 theorem splitFibredCategory_isSplit
     {C : Type uC} [Category.{vC} C]
@@ -395,13 +410,15 @@ def IsFibredEquivalenceOver
         Formalization.Books.Categories.Unit34.IsOverNaturalIso q over e)
 
 /-- The source's comparison data for the strictification construction.  The
-first two fields are the natural functor `\mathcal S \to \mathcal S'` and its
-strict triangle over `\mathcal C`; the remaining fields record preservation
-of strongly cartesian arrows and equivalence over the base. -/
+first fields are the natural functor `\mathcal S \to \mathcal S'`, its
+source-prescribed object map, and its strict triangle over `\mathcal C`;
+the remaining fields record preservation of strongly cartesian arrows and
+equivalence over the base. -/
 structure StrictificationComparison
     {S C : Type*} [Category* S] [Category* C]
     (p : S ⥤ C) [p.IsFibered] (P : PullbackChoice p) where
   functor : S ⥤ StrictificationCategory p P
+  functor_obj : ∀ x : S, functor.obj x = strictificationObjectOf P x
   over : functor ⋙ strictificationProjection P = p
   preserves : MapsStronglyCartesian p (strictificationProjection P) functor
   inverse : StrictificationCategory p P ⥤ S

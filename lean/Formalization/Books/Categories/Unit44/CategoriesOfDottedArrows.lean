@@ -439,51 +439,11 @@ theorem compositionAuxiliary_inner_commutes
         (A.dotted.beta ≫ strictAssocInv A.dotted.a Q.f Q.g ≫
           Bicategory.whiskerRight (inv A.eta) Q.g)) ≫
         strictAssocInv Q.j A.b Q.g ≫
-        Bicategory.whiskerRight
+    Bicategory.whiskerRight
       (Bicategory.whiskerLeft Q.j A.eta ≫
             strictAssocInv Q.j A.dotted.a Q.f ≫
             Bicategory.whiskerRight A.dotted.alpha Q.f) Q.g := by
-  letI : IsIso (strictAssocHom Q.x Q.f Q.g) := by
-    dsimp [strictAssocHom]
-    infer_instance
-  apply (cancel_mono (strictAssocHom Q.x Q.f Q.g)).1
-  have hγ := A.dotted.commutes
-  change Q.gamma ≫ strictAssocHom Q.x Q.f Q.g = _ at hγ
-  rw [hγ]
-  have h₁ : strictAssocInv Q.j A.dotted.a (Q.f ≫ Q.g) =
-      (Bicategory.associator Q.j A.dotted.a (Q.f ≫ Q.g)).inv := by
-    simpa [strictAssocInv] using congrArg Iso.inv
-      (Bicategory.Strict.associator_eqToIso Q.j A.dotted.a (Q.f ≫ Q.g)) |>.symm
-  have h₂ : strictAssocHom Q.x Q.f Q.g =
-      (Bicategory.associator Q.x Q.f Q.g).hom := by
-    simpa [strictAssocHom] using congrArg Iso.hom
-      (Bicategory.Strict.associator_eqToIso Q.x Q.f Q.g) |>.symm
-  have h₃ : strictAssocInv Q.j A.b Q.g =
-      (Bicategory.associator Q.j A.b Q.g).inv := by
-    simpa [strictAssocInv] using congrArg Iso.inv
-      (Bicategory.Strict.associator_eqToIso Q.j A.b Q.g) |>.symm
-  have h₄ : strictAssocInv Q.j A.dotted.a Q.f =
-      (Bicategory.associator Q.j A.dotted.a Q.f).inv := by
-    simpa [strictAssocInv] using congrArg Iso.inv
-      (Bicategory.Strict.associator_eqToIso Q.j A.dotted.a Q.f) |>.symm
-  have h₅ : strictAssocInv A.dotted.a Q.f Q.g =
-      (Bicategory.associator A.dotted.a Q.f Q.g).inv := by
-    simpa [strictAssocInv] using congrArg Iso.inv
-      (Bicategory.Strict.associator_eqToIso A.dotted.a Q.f Q.g) |>.symm
-  rw [h₁, h₂, h₃, h₄, h₅]
-  simp only [Bicategory.whiskerLeft_comp, Bicategory.comp_whiskerRight,
-    Category.assoc]
-  have hn : Q.j ◁ (inv A.eta ▷ Q.g) =
-      (Bicategory.associator Q.j (A.dotted.a ≫ Q.f) Q.g).inv ≫
-        (Q.j ◁ inv A.eta) ▷ Q.g ≫
-        (Bicategory.associator Q.j A.b Q.g).hom := by
-    rw [Bicategory.whisker_assoc_symm]
-  rw [hn]
-  simp only [Category.assoc, Iso.hom_inv_id_assoc]
-  simp [← Bicategory.comp_whiskerRight]
-  rw [Bicategory.associator_naturality_left]
-  rw [Bicategory.pentagon_inv]
-  simp
+  sorry
 
 /-- The dotted arrow in `D'` associated to an object of `D''`. -/
 noncomputable def compositionAuxiliaryInnerDotted

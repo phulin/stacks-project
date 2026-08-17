@@ -22,7 +22,7 @@ namespace Formalization.Books.Topology.Unit17
 
 open Set Function
 
-universe u v
+universe u v w
 
 section CharacterizingProperMaps
 
@@ -59,7 +59,6 @@ def IsQuasiProper {Y : Type v} [TopologicalSpace Y] (f : X → Y) : Prop :=
    `IsProperMap`. -/
 theorem isProperMap_iff_isQuasiProper_of_locallyCompact_Hausdorff
     {Y : Type v} [TopologicalSpace Y]
-    [LocallyCompactSpace X] [T2Space X]
     [LocallyCompactSpace Y] [T2Space Y] {f : X → Y} :
     IsProperMap f ↔ Continuous f ∧ IsQuasiProper f := by
   exact isProperMap_iff_isCompact_preimage
@@ -69,7 +68,7 @@ theorem isProperMap_iff_isQuasiProper_of_locallyCompact_Hausdorff
    `X ×_Y Z` to `Z`, with the factors ordered so that the source factor is
    first. -/
 def IsUniversallyClosed {Y : Type v} [TopologicalSpace Y] (f : X → Y) : Prop :=
-  ∀ (Z : Type u) [TopologicalSpace Z] (g : Z → Y), Continuous g →
+  ∀ (Z : Type w) [TopologicalSpace Z] (g : Z → Y), Continuous g →
     IsClosedMap (@Function.Pullback.snd X Y Z f g)
 
 /- The source's proper map includes the standing continuity requirement, and
@@ -77,7 +76,7 @@ def IsUniversallyClosed {Y : Type v} [TopologicalSpace Y] (f : X → Y) : Prop :
    distinguishes it from Mathlib's `IsProperMap`, which intentionally denotes
    Bourbaki properness without the extra separatedness condition. -/
 def IsProperTopologicalMap {Y : Type v} [TopologicalSpace Y] (f : X → Y) : Prop :=
-  Continuous f ∧ IsSeparatedMap f ∧ IsUniversallyClosed f
+  Continuous f ∧ IsSeparatedMap f ∧ IsUniversallyClosed.{u, v, w} f
 
 /-! ### Characterization of quasi-compact spaces -/
 
@@ -94,7 +93,7 @@ theorem proper_map_characterization_TFAE {Y : Type v} [TopologicalSpace Y]
     List.TFAE
       [IsQuasiProper f ∧ IsClosedMap f,
         IsProperMap f,
-        IsUniversallyClosed f,
+        IsUniversallyClosed.{u, v, w} f,
         IsClosedMap f ∧ ∀ y, IsCompact (f ⁻¹' {y})] := by
   sorry
 
@@ -103,7 +102,7 @@ theorem proper_map_characterization_TFAE {Y : Type v} [TopologicalSpace Y]
 theorem isUniversallyClosed_of_compactSpace_of_t2Space
     {Y : Type v} [TopologicalSpace Y] {f : X → Y}
     (hf : Continuous f) [CompactSpace X] [T2Space Y] :
-    IsUniversallyClosed f := by
+    IsUniversallyClosed.{u, v, w} f := by
   sorry
 
 theorem isHomeomorph_of_continuous_bijective_of_compactSpace_of_t2Space

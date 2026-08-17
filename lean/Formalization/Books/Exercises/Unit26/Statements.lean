@@ -115,16 +115,6 @@ theorem kernel_of_graded_map_is_locally_finite
 /-- The weights `2` and `3` on the two polynomial variables. -/
 def twoThreeWeights : Fin 2 → ℕ := fun i => if i = 0 then 2 else 3
 
-/-! Mathlib supplies the multiplication-compatible grading used by the
-weighted polynomial example. -/
-
-/-- The canonical weighted graded-algebra structure on `k[x,y]`. -/
-@[instance_reducible]
-def weightedPolynomialGradedAlgebra (k : Type u) [Field k] :
-    GradedAlgebra
-      (MvPolynomial.weightedHomogeneousSubmodule k twoThreeWeights) :=
-  MvPolynomial.weightedGradedAlgebra k twoThreeWeights
-
 /-- The canonical weighted decomposition of `k[x,y]` with weights `2` and `3`. -/
 def weightedPolynomialGradedModule (k : Type u) [Field k] :
     GradedModuleData k (MvPolynomial (Fin 2) k) ℕ :=
@@ -175,11 +165,15 @@ abbrev truncatedPolynomialRing (k : Type u) [Field k] : Type u :=
 def truncatedPolynomialHilbertFunction (n : ℕ) : ℕ :=
   if n = 0 ∨ n = 2 ∨ (0 < n ∧ 3 ∣ n) then 1 else 0
 
-/-- The quotient has a locally finite graded structure whose Hilbert function
-is the displayed formula. -/
+/-- The quotient has the grading induced from the weighted homogeneous pieces,
+and its Hilbert function is the displayed formula. -/
 theorem truncated_polynomial_graded_quotient_exists (k : Type u) [Field k] :
     ∃ G : GradedModuleData k (truncatedPolynomialRing k) ℕ,
       G.LocallyFinite ∧
+        (∀ n : ℕ,
+          G.component n =
+            (MvPolynomial.weightedHomogeneousSubmodule k twoThreeWeights n).map
+              (Ideal.Quotient.mkₐ k (truncatedPolynomialIdeal k)).toLinearMap) ∧
         ∀ n : ℕ,
           fieldDimensionHilbertFunction G n = truncatedPolynomialHilbertFunction n := by
   sorry
@@ -208,12 +202,16 @@ def hypersurfaceHilbertPolynomial (d : ℕ) : Polynomial ℚ :=
   Polynomial.C (d : ℚ) * Polynomial.X +
     Polynomial.C ((d : ℚ) * (3 - (d : ℚ)) / 2)
 
-/-- The hypersurface quotient has the displayed locally finite grading and
-Hilbert-function formula. -/
+/-- The hypersurface quotient has the grading induced from the homogeneous
+pieces and the displayed Hilbert-function formula. -/
 theorem hypersurface_graded_quotient_exists (k : Type u) [Field k]
     (d : ℕ) (hd : 0 < d) :
     ∃ G : GradedModuleData k (hypersurfaceRing k d) ℕ,
       G.LocallyFinite ∧
+        (∀ n : ℕ,
+          G.component n =
+            (MvPolynomial.homogeneousSubmodule (Fin 3) k n).map
+              (Ideal.Quotient.mkₐ k (Ideal.span {hypersurfacePolynomial k d})).toLinearMap) ∧
         ∀ n : ℕ,
           fieldDimensionHilbertFunction G n = hypersurfaceHilbertFunction d n := by
   sorry

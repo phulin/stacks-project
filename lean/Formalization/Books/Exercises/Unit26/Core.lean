@@ -49,11 +49,10 @@ end GradedModuleData
 /-! ## Euler–Poincaré functions and Hilbert polynomials -/
 
 /-- An Euler–Poincaré function on finitely generated modules over a Noetherian
-ring.  The explicit isomorphism field records that the function depends only
-on the module up to isomorphism. -/
+ring.  Invariance under isomorphism follows from additivity on short exact
+sequences, so it is not repeated as a separate field. -/
 structure EulerPoincareFunction (A : Type u) [CommRing A] [IsNoetherianRing A] where
   toFun : FGModuleCat.{u} A → ℤ
-  map_iso' : ∀ {M N : FGModuleCat.{u} A}, (M ≅ N) → toFun M = toFun N
   map_shortExact' :
     ∀ (S : ShortComplex (FGModuleCat.{u} A)), S.ShortExact →
       toFun S.X₂ = toFun S.X₁ + toFun S.X₃
@@ -130,4 +129,3 @@ def kernelComponent
 end GradedLinearMap
 
 end Formalization.Books.Exercises.Unit26
-

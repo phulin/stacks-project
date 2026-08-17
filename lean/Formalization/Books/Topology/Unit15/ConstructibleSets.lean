@@ -92,7 +92,7 @@ theorem isConstructible_iff_finite_union_open_retrocompact_sdiff {E : Set X} :
 
 theorem isLocallyConstructible_iff_exists_isOpenCover {E : Set X} :
     IsLocallyConstructible E ↔
-      ∃ (ι : Type v) (V : ι → Opens X),
+      ∃ (ι : Type u) (V : ι → Opens X),
         IsOpenCover V ∧
           ∀ i, IsConstructible ((Subtype.val : ↥(V i) → X) ⁻¹' E) := by
   sorry
@@ -173,7 +173,7 @@ theorem isConstructible_preimage_of_retrocompact
   intro V hVopen hVretro
   have hspectral : IsSpectralMap (Subtype.val : T → X) :=
     IsRetrocompact_iff_isSpectralMap_subtypeVal.mp hT
-  letI : PrespectralSpace T :=
+  let : PrespectralSpace T :=
     PrespectralSpace.of_isInducing (Subtype.val : T → X) IsInducing.subtypeVal hspectral
   intro K hKcompact hKopen
   let B : Set (Set T) :=
@@ -270,7 +270,7 @@ theorem isConstructible_image_of_constructible_subspace
     intro i x hx
     rw [hEeq']
     exact mem_iUnion.mpr ⟨i, hx⟩
-  letI : PrespectralSpace E :=
+  let : PrespectralSpace E :=
     PrespectralSpace.of_isInducing (Subtype.val : E → X) IsInducing.subtypeVal
       (IsRetrocompact_iff_isSpectralMap_subtypeVal.mp
         (isRetrocompact_of_isConstructible hE))
@@ -497,7 +497,7 @@ theorem dense_preimage_of_finite_locallyClosed_union_iff
   · rintro ⟨U, hUopen, hUdense, hUsub⟩
     exact Dense.mono hUsub hUdense
   · intro hAdense
-    letI : IrreducibleSpace Z := Subtype.irreducibleSpace hZ
+    let : IrreducibleSpace Z := Subtype.irreducibleSpace hZ
     have hZ' : IsIrreducible (Set.univ : Set Z) :=
       IrreducibleSpace.isIrreducible_univ Z
     have hAcl : closure A = (Set.univ : Set Z) := hAdense.closure_eq
@@ -555,7 +555,7 @@ theorem dense_preimage_of_finite_locallyClosed_union_iff_mem_genericPoint
   · intro hA
     obtain ⟨U, hUopen, hUdense, hUsub⟩ :=
       (dense_preimage_of_finite_locallyClosed_union_iff hZ hE).mpr hA
-    letI : Nonempty Z := hZ.nonempty.to_subtype
+    let : Nonempty Z := hZ.nonempty.to_subtype
     obtain ⟨O, hOopen, hOpre⟩ := IsInducing.subtypeVal.isOpen_iff.mp hUopen
     obtain ⟨z, hzU⟩ := hUdense.nonempty
     have hzpre : z ∈ (Subtype.val ⁻¹' O : Set Z) := hOpre.symm ▸ hzU
@@ -580,7 +580,7 @@ theorem dense_preimage_of_finite_locallyClosed_union_iff_mem_genericPoint
     have hξOC : ξ ∈ O ∩ C := hTC ▸ hξT
     have hξO : ξ ∈ O := hξOC.1
     have hξC : ξ ∈ C := hξOC.2
-    letI : IrreducibleSpace Z := Subtype.irreducibleSpace hZ
+    let : IrreducibleSpace Z := Subtype.irreducibleSpace hZ
     let U : Set Z := (Subtype.val : Z → X) ⁻¹' O
     have hUopen : IsOpen U := hOopen.preimage continuous_subtype_val
     have hUnonempty : U.Nonempty := ⟨⟨ξ, hξ.mem⟩, hξO⟩

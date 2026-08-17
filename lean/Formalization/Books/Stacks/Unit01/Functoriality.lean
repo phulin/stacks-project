@@ -141,7 +141,11 @@ theorem stack_in_groupoids_pushforward {C : Type u} [Category.{v} C]
     [PreservesFiniteProducts u]
     [PreservesLimitsOfShape WalkingParallelPair u] :
     StackInGroupoids (pushforwardFiberedCategory u S) J := by
-  sorry
+  refine ⟨?_, ?_⟩
+  · intro U
+    rw [pushforward_fibre u S U]
+    exact hS.1 (u.obj U)
+  · exact stack_pushforward u S hS.2 hu
 
 structure PullbackPrecategoryObject {C : Type u} [Category.{v} C]
     {D : Type u'} [Category.{v'} D] (u : C ⥤ D)
@@ -314,7 +318,9 @@ theorem pullback_stack_exists {C : Type u} [Category.{v} C]
     [HasFiniteProducts C] [HasEqualizers C] [PreservesFiniteProducts u]
     [PreservesLimitsOfShape WalkingParallelPair u] :
     Nonempty (PullbackStackData u S K) := by
-  sorry
+  rcases fibred_category_pullback u S with ⟨fibered⟩
+  rcases stackification_exists fibered.value K with ⟨stackification⟩
+  exact ⟨⟨fibered, stackification⟩⟩
 
 theorem adjunction_pullback_pushforward_stacks
     {C : Type u} [Category.{v} C] {D : Type u'} [Category.{v'} D]

@@ -128,9 +128,25 @@ def relativePairClassesPresheaf {C : Type u} [Category.{v} C]
               (Over.Hom.left q.unop).op.toLoc T₂.unop.hom.op.toLoc hcomp).inv.toNatTrans.app y⟩)
       (by
         intro a b hab
-        sorry))
+        rcases hab with ⟨e, he⟩
+        refine ⟨(F.map (Over.Hom.left q.unop).op.toLoc).toFunctor.mapIso e, ?_⟩
+        rw [← he]
+        simp only [Functor.mapIso_hom, Functor.map_comp, ← Category.assoc]
+        have hnat := (η.naturality (Over.Hom.left q.unop).op.toLoc).hom.toNatTrans.naturality e.hom
+        simp only [Cat.Hom.comp_toFunctor, Functor.comp_map] at hnat
+        rw [hnat]))
   map_id := by
-    sorry
+    intro X
+    ext z
+    refine Quotient.inductionOn z ?_
+    intro a
+    apply Quotient.sound
+    refine ⟨(Cat.Hom.toNatIso (F.mapId (.mk (op X.unop.left)))).app a.1, ?_⟩
+    simp [Cat.Hom.comp_toFunctor,
+      CategoryTheory.Pseudofunctor.StrongTrans.naturality_id_hom_app,
+      CategoryTheory.Pseudofunctor.mapComp'_comp_id_inv_app,
+      Cat.Hom.id_toFunctor,
+      Category.assoc]
   map_comp := by
     sorry
 
@@ -196,7 +212,51 @@ theorem equivalent_stacks_in_setoids_preserve
     {F G : FiberedCategory C} (η : FiberedMorphism F G)
     (hη : FiberwiseEquivalence η) :
     StackInSetoids F J ↔ StackInSetoids G J := by
-  sorry
+  constructor
+  · rintro ⟨hFsetoid, hFstack⟩
+    have hGgroupstack :=
+      (equivalent_stacks_in_groupoids_preserve η hη).mp
+        ⟨hFsetoid.1, hFstack⟩
+    refine ⟨⟨hGgroupstack.1, ?_⟩, hGgroupstack.2⟩
+    intro U Y Z
+    letI := hη.2 U
+    rcases hη.1 U with ⟨hηff⟩
+    let x := (η.app (.mk (op U))).toFunctor.objPreimage Y
+    let y := (η.app (.mk (op U))).toFunctor.objPreimage Z
+    let eY := (η.app (.mk (op U))).toFunctor.objObjPreimageIso Y
+    let eZ := (η.app (.mk (op U))).toFunctor.objObjPreimageIso Z
+    letI := hFsetoid.2 U x y
+    constructor
+    intro a b
+    let a' := hηff.preimage (eY.hom ≫ a ≫ eZ.inv)
+    let b' := hηff.preimage (eY.hom ≫ b ≫ eZ.inv)
+    have ha : (η.app (.mk (op U))).toFunctor.map a' =
+        eY.hom ≫ a ≫ eZ.inv := hηff.map_preimage _
+    have hb : (η.app (.mk (op U))).toFunctor.map b' =
+        eY.hom ≫ b ≫ eZ.inv := hηff.map_preimage _
+    have hab' : a' = b' := Subsingleton.elim _ _
+    apply (cancel_epi eY.hom).1
+    apply (cancel_mono eZ.inv).1
+    calc
+      (eY.hom ≫ a) ≫ eZ.inv = eY.hom ≫ a ≫ eZ.inv := by simp
+      _ = (η.app (.mk (op U))).toFunctor.map a' := ha.symm
+      _ = (η.app (.mk (op U))).toFunctor.map b' := by rw [hab']
+      _ = eY.hom ≫ b ≫ eZ.inv := hb
+      _ = (eY.hom ≫ b) ≫ eZ.inv := by simp
+  · rintro ⟨hGsetoid, hGstack⟩
+    have hFgroupstack :=
+      (equivalent_stacks_in_groupoids_preserve η hη).mpr
+        ⟨hGsetoid.1, hGstack⟩
+    refine ⟨⟨hFgroupstack.1, ?_⟩, hFgroupstack.2⟩
+    intro U X Y
+    rcases hη.1 U with ⟨hηff⟩
+    letI := hGsetoid.2 U
+      ((η.app (.mk (op U))).toFunctor.obj X)
+      ((η.app (.mk (op U))).toFunctor.obj Y)
+    constructor
+    intro a b
+    apply hηff.map_injective
+    exact Subsingleton.elim _ _
 
 theorem two_fibre_product_of_stacks_in_setoids
     {C : Type u} [Category.{v} C] (J : GrothendieckTopology C)

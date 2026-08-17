@@ -7,6 +7,7 @@ import Formalization.Books.Stacks.Unit01.Stacks
 namespace Formalization.Books.Stacks.Unit01
 
 open CategoryTheory
+open Opposite
 
 open scoped CategoryTheory.Pseudofunctor.StrongTrans
 
@@ -41,7 +42,34 @@ theorem equivalent_stacks_in_groupoids_preserve
     {F G : FiberedCategory C} (η : FiberedMorphism F G)
     (hη : FiberwiseEquivalence η) :
     StackInGroupoids F J ↔ StackInGroupoids G J := by
-  sorry
+  constructor
+  · rintro ⟨hFgroup, hFstack⟩
+    refine ⟨?_, (equivalent_fibred_categories_preserve_stack η hη).mp hFstack⟩
+    intro U
+    letI := hFgroup U
+    rcases hη.1 U with ⟨hηff⟩
+    letI := hη.2 U
+    constructor
+    intro X Y f
+    let eX := (η.app (.mk (op U))).toFunctor.objObjPreimageIso X
+    let eY := (η.app (.mk (op U))).toFunctor.objObjPreimageIso Y
+    let a := hηff.preimage (eX.hom ≫ f ≫ eY.inv)
+    have ha : (η.app (.mk (op U))).toFunctor.map a =
+        eX.hom ≫ f ≫ eY.inv := hηff.map_preimage _
+    have hf : f = eX.inv ≫
+        (η.app (.mk (op U))).toFunctor.map a ≫ eY.hom := by
+      rw [ha]
+      simp
+    rw [hf]
+    infer_instance
+  · rintro ⟨hGgroup, hGstack⟩
+    refine ⟨?_, (equivalent_fibred_categories_preserve_stack η hη).mpr hGstack⟩
+    intro U
+    letI := hGgroup U
+    rcases hη.1 U with ⟨hηff⟩
+    constructor
+    intro X Y f
+    exact hηff.isIso_of_isIso_map f
 
 def IsGroupoidTwoMorphism {C : Type u} [Category.{v} C]
     {J : GrothendieckTopology C} {X Y : StackInGroupoidsObject C J}

@@ -1,8 +1,12 @@
 import Formalization.Books.Exercises.Unit20.Core
 
 import Mathlib.RingTheory.AlgebraicIndependent.TranscendenceBasis
+import Mathlib.RingTheory.AlgebraicIndependent.Adjoin
+import Mathlib.RingTheory.AlgebraicIndependent.AlgebraicClosure
 import Mathlib.RingTheory.EssentialFiniteness
 import Mathlib.RingTheory.Finiteness.Bilinear
+import Mathlib.Algebra.MvPolynomial.Degrees
+import Mathlib.Algebra.Order.Archimedean.Real.Basic
 
 /-!
 # Exercises, Chapter 20: Transcendence degree
@@ -14,6 +18,7 @@ Proofs are deferred to the proving stage.
 namespace Formalization.Books.Exercises.Unit20
 
 open scoped Pointwise
+open scoped IntermediateField.algebraAdjoinAdjoin
 
 universe u v w
 
@@ -48,6 +53,489 @@ theorem finiteDimensional_subvectorSpace_product
   exact Module.Finite.of_fg
     (Submodule.FG.map₂ (f := LinearMap.mul k K) (p := V) (q := W)
       (Submodule.FG.of_finite (N := V)) (Submodule.FG.of_finite (N := W)))
+
+private theorem finrank_subvectorSpace_product_le
+    {k : Type u} {K : Type v} [Field k] [Field K] [Algebra k K]
+    (A B : Submodule k K) [FiniteDimensional k A] [FiniteDimensional k B] :
+    Module.finrank k (A * B) ≤ Module.finrank k A * Module.finrank k B := by
+  let a := Module.finBasis k A
+  let b := Module.finBasis k B
+  have hAspan : Submodule.span k (Set.range (fun i => (a i : K))) = A := by
+    have himage : A.subtype '' Set.range a = Set.range (fun i => (a i : K)) := by
+      ext x
+      constructor
+      · rintro ⟨y, ⟨i, rfl⟩, rfl⟩
+        exact ⟨i, rfl⟩
+      · rintro ⟨i, rfl⟩
+        exact ⟨a i, ⟨i, rfl⟩, rfl⟩
+    calc
+      Submodule.span k (Set.range (fun i => (a i : K))) =
+          Submodule.map A.subtype (Submodule.span k (Set.range a)) := by
+            rw [Submodule.map_span, himage]
+      _ = Submodule.map A.subtype ⊤ := by rw [a.span_eq]
+      _ = A := by rw [Submodule.map_top, Submodule.range_subtype]
+  have hBspan : Submodule.span k (Set.range (fun i => (b i : K))) = B := by
+    have himage : B.subtype '' Set.range b = Set.range (fun i => (b i : K)) := by
+      ext x
+      constructor
+      · rintro ⟨y, ⟨i, rfl⟩, rfl⟩
+        exact ⟨i, rfl⟩
+      · rintro ⟨i, rfl⟩
+        exact ⟨b i, ⟨i, rfl⟩, rfl⟩
+    calc
+      Submodule.span k (Set.range (fun i => (b i : K))) =
+          Submodule.map B.subtype (Submodule.span k (Set.range b)) := by
+            rw [Submodule.map_span, himage]
+      _ = Submodule.map B.subtype ⊤ := by rw [b.span_eq]
+      _ = B := by rw [Submodule.map_top, Submodule.range_subtype]
+  let c : Fin (Module.finrank k A) × Fin (Module.finrank k B) → K :=
+    fun ij => (a ij.1 : K) * (b ij.2 : K)
+  have hset :
+      (Set.range (fun i => (a i : K))) * (Set.range (fun j => (b j : K))) =
+        Set.range c := by
+    ext z
+    constructor
+    · rintro ⟨x, ⟨i, rfl⟩, y, ⟨j, rfl⟩, rfl⟩
+      exact ⟨(i, j), rfl⟩
+    · rintro ⟨⟨i, j⟩, rfl⟩
+      exact ⟨a i, ⟨i, rfl⟩, b j, ⟨j, rfl⟩, rfl⟩
+  have heq : A * B = Submodule.span k (Set.range c) := by
+    calc
+      A * B = Submodule.span k (Set.range (fun i => (a i : K))) *
+          Submodule.span k (Set.range (fun j => (b j : K))) := by rw [hAspan, hBspan]
+      _ = Submodule.span k
+          ((Set.range (fun i => (a i : K))) * (Set.range (fun j => (b j : K)))) := by
+        rw [Submodule.span_mul_span]
+      _ = Submodule.span k (Set.range c) := by rw [hset]
+  rw [heq]
+  calc
+    Module.finrank k (Submodule.span k (Set.range c)) ≤
+        Fintype.card (Fin (Module.finrank k A) × Fin (Module.finrank k B)) :=
+      finrank_range_le_card c
+    _ = Module.finrank k A * Module.finrank k B := by simp
+
+private theorem finrank_submodule_map_eq_of_injective
+    {k : Type u} {M : Type v} {N : Type w} [Field k]
+    [AddCommGroup M] [AddCommGroup N] [Module k M] [Module k N]
+    (f : M →ₗ[k] N) (hf : Function.Injective f) (P : Submodule k M)
+    [FiniteDimensional k P] :
+    Module.finrank k (P.map f) = Module.finrank k P := by
+  let g : P →ₗ[k] P.map f :=
+    (f.domRestrict P).codRestrict (P.map f) (fun x => ⟨x, x.property, rfl⟩)
+  have hg : Function.Injective g := by
+    intro x y hxy
+    apply Subtype.ext
+    apply hf
+    exact congrArg Subtype.val hxy
+  have h₁ : Module.finrank k P ≤ Module.finrank k (P.map f) := by
+    exact LinearMap.finrank_le_finrank_of_injective (f := g) hg
+  exact (Submodule.finrank_map_le f P).antisymm h₁
+
+private theorem finrank_mvPolynomial_restrictTotalDegree_le
+    {k : Type u} [Field k] (d N : ℕ) :
+    Module.finrank k
+        ((MvPolynomial.restrictTotalDegree (Fin d) k N :
+          Submodule k (MvPolynomial (Fin d) k)) : Type (max u 0)) ≤
+      (N + 1) ^ d := by
+  classical
+  let S : Set (Fin d →₀ ℕ) := {m | m.sum (fun _ e => e) ≤ N}
+  let f : S → (Fin d → Fin (N + 1)) := fun m i =>
+    ⟨m.1 i, (Finsupp.single_eval_le_sum m.1 (g := id) (by simp)
+        (by intro e; exact Nat.zero_le e) i).trans m.2 |> Nat.lt_succ_of_le⟩
+  have hf : Function.Injective f := by
+    intro a b hab
+    apply Subtype.ext
+    apply Finsupp.ext
+    intro i
+    exact congrArg Fin.val (congr_fun hab i)
+  letI : Finite S := Finite.of_injective f hf
+  letI : Fintype S := Fintype.ofFinite S
+  let g : S → MvPolynomial (Fin d) k := fun m => MvPolynomial.monomial m.1 1
+  have heq : MvPolynomial.restrictTotalDegree (Fin d) k N =
+      Submodule.span k (Set.range g) := by
+    rw [MvPolynomial.restrictTotalDegree, MvPolynomial.restrictSupport_eq_span]
+    congr 1
+    ext p
+    constructor
+    · rintro ⟨m, hm, rfl⟩
+      exact ⟨⟨m, hm⟩, rfl⟩
+    · rintro ⟨m, rfl⟩
+      exact ⟨m.1, m.2, rfl⟩
+  rw [heq]
+  calc
+    Module.finrank k (Submodule.span k (Set.range g)) ≤ Fintype.card S :=
+      finrank_range_le_card g
+    _ ≤ Fintype.card (Fin d → Fin (N + 1)) := Fintype.card_le_of_injective f hf
+    _ = (N + 1) ^ d := by simp
+
+private theorem fractionRing_power_growth_upper_bound
+    {k : Type u} [Field k] (d : ℕ)
+    (W : Submodule k (FractionRing (MvPolynomial (Fin d) k)))
+    [FiniteDimensional k W] :
+    ∃ C : ℝ, 0 < C ∧ ∀ n : ℕ, 1 ≤ n →
+      (Module.finrank k ((W ^ n : Submodule k (FractionRing (MvPolynomial (Fin d) k))) : Type u) : ℝ) ≤
+        C * (n : ℝ) ^ d := by
+  classical
+  let P := MvPolynomial (Fin d) k
+  let L := FractionRing P
+  let m := Module.finrank k W
+  let a := Module.finBasis k W
+  let w : Fin m → L := fun i => (a i : L)
+  have hWspan : Submodule.span k (Set.range w) = W := by
+    have himage : W.subtype '' Set.range a = Set.range w := by
+      ext x
+      constructor
+      · rintro ⟨y, ⟨i, rfl⟩, rfl⟩
+        exact ⟨i, rfl⟩
+      · rintro ⟨i, rfl⟩
+        exact ⟨a i, ⟨i, rfl⟩, rfl⟩
+    calc
+      Submodule.span k (Set.range w) =
+          Submodule.map W.subtype (Submodule.span k (Set.range a)) := by
+            rw [Submodule.map_span, himage]
+      _ = Submodule.map W.subtype ⊤ := by rw [a.span_eq]
+      _ = W := by rw [Submodule.map_top, Submodule.range_subtype]
+  have hcommon (z : Fin m → L) :
+      ∃ D : P, D ≠ 0 ∧ ∀ i, ∃ r : P,
+        algebraMap P L D * z i = algebraMap P L r := by
+    choose p q hq hz using fun i => IsFractionRing.div_surjective P (z i)
+    let D : P := ∏ i : Fin m, q i
+    have hprod (i : Fin m) :
+        D = (∏ j ∈ Finset.univ.erase i, q j) * q i := by
+      dsimp [D]
+      simpa using (Finset.prod_erase_mul (s := (Finset.univ : Finset (Fin m)))
+        q (Finset.mem_univ i)).symm
+    refine ⟨D, ?_, fun i => ⟨(∏ j ∈ Finset.univ.erase i, q j) * p i, ?_⟩⟩
+    · dsimp [D]
+      exact Finset.prod_ne_zero_iff.mpr (fun i hi =>
+        mem_nonZeroDivisors_iff_ne_zero.mp (hq i))
+    · rw [← hz i, ← mul_div_assoc]
+      apply (div_eq_iff (IsFractionRing.to_map_ne_zero_of_mem_nonZeroDivisors (hq i))).2
+      simp only [hprod i, RingHom.map_mul, mul_left_comm, mul_comm]
+  obtain ⟨D, hD, hDmap⟩ := hcommon w
+  choose r hr using hDmap
+  let DL : L := algebraMap P L D
+  let rL : Fin m → L := fun i => algebraMap P L (r i)
+  let Dsub : Submodule k L := Submodule.span k ({DL} : Set L)
+  let Q : Submodule k L := Submodule.span k (Set.range rL)
+  have hDL : DL ∈ Dsub := Submodule.subset_span (Set.mem_singleton DL)
+  have hDW : Dsub * W ≤ Q := by
+    change Submodule.span k ({DL} : Set L) * W ≤
+      Submodule.span k (Set.range rL)
+    rw [← hWspan, Submodule.span_mul_span]
+    apply Submodule.span_le.2
+    rintro z ⟨x, hx, y, hy, rfl⟩
+    rcases hx with rfl
+    rcases hy with ⟨i, rfl⟩
+    exact Submodule.subset_span ⟨i, by simpa [DL, rL] using (hr i).symm⟩
+  have hpow (n : ℕ) : Dsub ^ n * W ^ n ≤ Q ^ n := by
+    induction n with
+    | zero => simp
+    | succ n ih =>
+        rw [Submodule.pow_succ, Submodule.pow_succ, Submodule.pow_succ]
+        calc
+          (Dsub ^ n * Dsub) * (W ^ n * W) =
+              (Dsub ^ n * W ^ n) * (Dsub * W) := by ac_rfl
+          _ ≤ Q ^ n * Q := Submodule.smul_mono ih hDW
+  let s : Multiset (Fin d) := ∑ i : Fin m, (r i).degrees
+  have hdeg (i : Fin m) : (r i).degrees ≤ s := by
+    dsimp [s]
+    exact Finset.single_le_sum (s := (Finset.univ : Finset (Fin m)))
+      (f := fun j => (r j).degrees) (fun _ _ => Multiset.zero_le _) (Finset.mem_univ i)
+  have hrmem (i : Fin m) : r i ∈ MvPolynomial.degreesLE k (Fin d) s :=
+    (MvPolynomial.mem_degreesLE).2 (hdeg i)
+  let R : Submodule k P := MvPolynomial.degreesLE k (Fin d) s
+  let f : P →ₗ[k] L := (IsScalarTower.toAlgHom k P L).toLinearMap
+  have hQ : Q ≤ Submodule.map f R := by
+    change Submodule.span k (Set.range rL) ≤ Submodule.map f R
+    apply Submodule.span_le.2
+    rintro x ⟨i, rfl⟩
+    exact Submodule.mem_map.2 ⟨r i, hrmem i, by rfl⟩
+  have hQpow (n : ℕ) : Q ^ n ≤ Submodule.map f (R ^ n) := by
+    calc
+      Q ^ n ≤ (Submodule.map f R) ^ n := pow_le_pow_left' hQ n
+      _ = Submodule.map f (R ^ n) := by
+        symm
+        exact Submodule.map_pow (M := R) (IsScalarTower.toAlgHom k P L) n
+  have hWpowfd (n : ℕ) :
+      FiniteDimensional k ((W ^ n : Submodule k L) : Type u) := by
+    induction n with
+    | zero =>
+        rw [Submodule.pow_zero]
+        rw [Submodule.one_eq_span_one_set]
+        exact FiniteDimensional.span_of_finite k (Set.finite_singleton 1)
+    | succ n ihn =>
+        rw [Submodule.pow_succ]
+        exact finiteDimensional_subvectorSpace_product (W ^ n) W
+  have hQfd : FiniteDimensional k Q :=
+    FiniteDimensional.span_of_finite k (Set.finite_range rL)
+  have hQpowfd (n : ℕ) :
+      FiniteDimensional k ((Q ^ n : Submodule k L) : Type u) := by
+    induction n with
+    | zero =>
+        rw [Submodule.pow_zero]
+        rw [Submodule.one_eq_span_one_set]
+        exact FiniteDimensional.span_of_finite k (Set.finite_singleton 1)
+    | succ n ihn =>
+        rw [Submodule.pow_succ]
+        exact finiteDimensional_subvectorSpace_product (Q ^ n) Q
+  have hDL0 : DL ≠ 0 := by
+    intro h
+    apply hD
+    apply IsFractionRing.injective P L
+    simpa [DL] using h
+  have hmul_mem (n : ℕ) {x : L} (hx : x ∈ W ^ n) :
+      DL ^ n * x ∈ Q ^ n := by
+    apply hpow n
+    exact Submodule.mul_mem_mul (Submodule.pow_mem_pow Dsub hDL n) hx
+  have hfin (n : ℕ) :
+      Module.finrank k (W ^ n : Submodule k L) ≤
+        Module.finrank k (Q ^ n : Submodule k L) := by
+    let g : L →ₗ[k] L := LinearMap.mulLeft k (DL ^ n)
+    let gn : (W ^ n : Submodule k L) →ₗ[k] (Q ^ n : Submodule k L) :=
+      (g.domRestrict (W ^ n)).codRestrict (Q ^ n) (fun x => hmul_mem n x.property)
+    letI := hWpowfd n
+    letI := hQpowfd n
+    refine LinearMap.finrank_le_finrank_of_injective (f := gn) ?_
+    intro x y hxy
+    apply Subtype.ext
+    apply mul_left_cancel₀ (pow_ne_zero n hDL0)
+    exact congrArg Subtype.val hxy
+  have hRpow_le (n : ℕ) :
+      R ^ n ≤ MvPolynomial.restrictTotalDegree (Fin d) k (n * s.card) := by
+    change (MvPolynomial.degreesLE k (Fin d) s) ^ n ≤ _
+    rw [← MvPolynomial.degreesLE_nsmul]
+    intro p hp
+    rw [MvPolynomial.mem_restrictTotalDegree]
+    calc
+      p.totalDegree ≤ Multiset.card p.degrees :=
+        MvPolynomial.totalDegree_le_degrees_card p
+      _ ≤ Multiset.card (n • s) := Multiset.card_le_card ((MvPolynomial.mem_degreesLE).1 hp)
+      _ = n * s.card := by simp
+  have hRpowfd (n : ℕ) :
+      FiniteDimensional k ((R ^ n : Submodule k P) : Type u) := by
+    apply Submodule.finiteDimensional_of_le (hRpow_le n)
+  have hWbound (n : ℕ) :
+      Module.finrank k (W ^ n : Submodule k L) ≤ (n * s.card + 1) ^ d := by
+    letI := hRpowfd n
+    have hmap := Submodule.finrank_map_le f (R ^ n)
+    have hmono := Submodule.finrank_mono (hQpow n)
+    have hRfin : Module.finrank k (R ^ n : Submodule k P) ≤
+        (n * s.card + 1) ^ d := by
+      exact (Submodule.finrank_mono (hRpow_le n)).trans
+        (finrank_mvPolynomial_restrictTotalDegree_le d (n * s.card))
+    exact (hfin n).trans (hmono.trans (hmap.trans hRfin))
+  refine ⟨(s.card + 1 : ℝ) ^ d, by positivity, ?_⟩
+  intro n hn
+  have hnat : n * s.card + 1 ≤ (s.card + 1) * n := by
+    nlinarith
+  have hnatpow : (n * s.card + 1) ^ d ≤ ((s.card + 1) * n) ^ d :=
+    Nat.pow_le_pow_left hnat d
+  have hrealpow : ((n * s.card + 1 : ℕ) : ℝ) ^ d ≤
+      ((s.card + 1 : ℕ) : ℝ) ^ d * (n : ℝ) ^ d := by
+    calc
+      ((n * s.card + 1 : ℕ) : ℝ) ^ d ≤
+          (((s.card + 1) * n : ℕ) : ℝ) ^ d := by exact_mod_cast hnatpow
+      _ = ((s.card + 1 : ℕ) : ℝ) ^ d * (n : ℝ) ^ d := by
+        push_cast
+        rw [mul_pow]
+    
+  calc
+    (Module.finrank k (W ^ n : Submodule k L) : ℝ) ≤
+        ((n * s.card + 1 : ℕ) : ℝ) ^ d := by
+      exact_mod_cast hWbound n
+    _ ≤ ((s.card + 1 : ℝ) ^ d) * (n : ℝ) ^ d := by
+      simpa [Nat.cast_add, Nat.cast_one] using hrealpow
+
+private theorem finite_extension_subvectorSpace_power_growth_upper_bound
+    {k : Type u} {F : Type w} {K : Type v} [Field k] [Field F] [Field K]
+    [Algebra k F] [Algebra F K] [Algebra k K] [IsScalarTower k F K]
+    [Module.Finite F K] (d : ℕ)
+    (hbase : ∀ U : Submodule k F, FiniteDimensional k U →
+      ∃ C : ℝ, 0 < C ∧ ∀ n : ℕ, 1 ≤ n →
+        (Module.finrank k ((U ^ n : Submodule k F) : Type w) : ℝ) ≤
+          C * (n : ℝ) ^ d) :
+    ∀ V : Submodule k K, FiniteDimensional k V →
+      ∃ C : ℝ, 0 < C ∧ ∀ n : ℕ, 1 ≤ n →
+        (Module.finrank k ((V ^ n : Submodule k K) : Type v) : ℝ) ≤
+          C * (n : ℝ) ^ d := by
+  classical
+  intro V hV
+  let f : F →ₐ[k] K := IsScalarTower.toAlgHom k F K
+  let a := Module.finBasis k V
+  let b := Module.finBasis F K
+  let coeff : Fin (Module.finrank k V) × Fin (Module.finrank F K) → F :=
+    fun ij => (b.repr (a ij.1 : K)) ij.2
+  let structureCoeffs :
+      (Fin (Module.finrank F K) × Fin (Module.finrank F K)) ×
+        Fin (Module.finrank F K) → F :=
+    fun ij =>
+      (b.repr ((b ij.1.1 : K) * (b ij.1.2 : K))) ij.2
+  let S : Set F := Set.range coeff ∪ Set.range structureCoeffs ∪ ({1} : Set F)
+  let U : Submodule k F := Submodule.span k S
+  let B : Submodule k K :=
+    Submodule.span k (Set.range (fun j => (b j : K)))
+  let UK : Submodule k K := Submodule.map f.toLinearMap U
+  have hSfinite : S.Finite := by
+    dsimp [S]
+    exact ((Set.finite_range coeff).union (Set.finite_range structureCoeffs)).union
+      (Set.finite_singleton 1)
+  have hUfd : FiniteDimensional k U := by
+    exact FiniteDimensional.span_of_finite k hSfinite
+  have hBfd : FiniteDimensional k B := by
+    exact FiniteDimensional.span_of_finite k (Set.finite_range fun j => (b j : K))
+  have hmapU (z : F) (hz : z ∈ U) : (f z : K) ∈ UK := by
+    exact Submodule.mem_map.2 ⟨z, hz, rfl⟩
+  have hBgen (j : Fin (Module.finrank F K)) : (b j : K) ∈ B := by
+    exact Submodule.subset_span ⟨j, rfl⟩
+  have hcoeff (i : Fin (Module.finrank k V))
+      (j : Fin (Module.finrank F K)) : coeff (i, j) ∈ U := by
+    apply Submodule.subset_span
+    exact Or.inl (Or.inl ⟨(i, j), rfl⟩)
+  have hstructure (i j l : Fin (Module.finrank F K)) : structureCoeffs ((i, j), l) ∈ U := by
+    apply Submodule.subset_span
+    exact Or.inl (Or.inr ⟨((i, j), l), rfl⟩)
+  have hVspan :
+      Submodule.span k (Set.range (fun i => (a i : K))) = V := by
+    have himage : V.subtype '' Set.range a = Set.range (fun i => (a i : K)) := by
+      ext x
+      constructor
+      · rintro ⟨y, ⟨i, rfl⟩, rfl⟩
+        exact ⟨i, rfl⟩
+      · rintro ⟨i, rfl⟩
+        exact ⟨a i, ⟨i, rfl⟩, rfl⟩
+    calc
+      Submodule.span k (Set.range (fun i => (a i : K))) =
+          Submodule.map V.subtype (Submodule.span k (Set.range a)) := by
+            rw [Submodule.map_span, himage]
+      _ = Submodule.map V.subtype ⊤ := by rw [a.span_eq]
+      _ = V := by rw [Submodule.map_top, Submodule.range_subtype]
+  have hVgen (i : Fin (Module.finrank k V)) : (a i : K) ∈ UK * B := by
+    rw [← b.sum_repr (a i : K)]
+    apply Submodule.sum_mem
+    intro j hj
+    have hm := Submodule.mul_mem_mul
+      (hmapU _ (by simpa [coeff] using hcoeff i j)) (hBgen j)
+    simpa [Algebra.smul_def, f] using hm
+  have hVle : V ≤ UK * B := by
+    rw [← hVspan]
+    exact Submodule.span_le.2 (fun z hz => by
+      rcases hz with ⟨i, rfl⟩
+      exact hVgen i)
+  have hBB : B * B ≤ UK * B := by
+    change Submodule.span k (Set.range (fun i => (b i : K))) *
+        Submodule.span k (Set.range (fun j => (b j : K))) ≤ UK * B
+    rw [Submodule.span_mul_span]
+    apply Submodule.span_le.2
+    rintro z ⟨x, ⟨i, rfl⟩, y, ⟨j, rfl⟩, rfl⟩
+    change (b i : K) * (b j : K) ∈ UK * B
+    rw [← b.sum_repr ((b i : K) * (b j : K))]
+    apply Submodule.sum_mem
+    intro l hl
+    have hm := Submodule.mul_mem_mul
+      (hmapU _ (by simpa [structureCoeffs] using hstructure i j l)) (hBgen l)
+    simpa [Algebra.smul_def, f] using hm
+  letI : FiniteDimensional k U := hUfd
+  have hUKfd : FiniteDimensional k UK := inferInstance
+  have hpow (n : ℕ) : V ^ (n + 1) ≤ UK ^ (2 * n + 1) * B := by
+    induction n with
+    | zero =>
+        simpa using hVle
+    | succ n ih =>
+        rw [Submodule.pow_succ]
+        calc
+          V ^ (n + 1) * V ≤ (UK ^ (2 * n + 1) * B) * (UK * B) :=
+            Submodule.smul_mono ih hVle
+          _ = (UK ^ (2 * n + 1) * UK) * (B * B) := by ac_rfl
+          _ ≤ (UK ^ (2 * n + 1) * UK) * (UK * B) :=
+            Submodule.smul_mono le_rfl hBB
+          _ = UK ^ (2 * (n + 1) + 1) * B := by
+            have he : 2 * (n + 1) + 1 = (2 * n + 1) + 1 + 1 := by omega
+            have hepow : UK ^ ((2 * n + 1) + 1 + 1) =
+                (UK ^ (2 * n + 1) * UK) * UK := by
+              rw [Submodule.pow_succ, Submodule.pow_succ]
+            rw [he, hepow]
+            ac_rfl
+  have hUpowfd (n : ℕ) :
+      FiniteDimensional k ((U ^ n : Submodule k F) : Type w) := by
+    induction n with
+    | zero =>
+        rw [Submodule.pow_zero, Submodule.one_eq_span_one_set]
+        exact FiniteDimensional.span_of_finite k (Set.finite_singleton 1)
+    | succ n ih =>
+        rw [Submodule.pow_succ]
+        exact finiteDimensional_subvectorSpace_product (U ^ n) U
+  have hUKpowfd (n : ℕ) :
+      FiniteDimensional k ((UK ^ n : Submodule k K) : Type v) := by
+    induction n with
+    | zero =>
+        rw [Submodule.pow_zero, Submodule.one_eq_span_one_set]
+        exact FiniteDimensional.span_of_finite k (Set.finite_singleton 1)
+    | succ n ih =>
+        rw [Submodule.pow_succ]
+        exact finiteDimensional_subvectorSpace_product (UK ^ n) UK
+  obtain ⟨C₀, hC₀, hUbound⟩ := hbase U hUfd
+  letI : FiniteDimensional k B := hBfd
+  refine ⟨C₀ * (2 : ℝ) ^ d * ((Module.finrank k B : ℝ) + 1), by positivity, ?_⟩
+  intro n hn
+  obtain ⟨m, rfl⟩ := Nat.exists_eq_succ_of_ne_zero (Nat.ne_of_gt hn)
+  let q := 2 * m + 1
+  letI : FiniteDimensional k (U ^ q : Submodule k F) := hUpowfd q
+  letI : FiniteDimensional k (UK ^ q : Submodule k K) := hUKpowfd q
+  have hprod_fd : FiniteDimensional k (UK ^ q * B : Submodule k K) :=
+    finiteDimensional_subvectorSpace_product (UK ^ q) B
+  letI : FiniteDimensional k (UK ^ q * B : Submodule k K) := hprod_fd
+  have hdim : Module.finrank k (V ^ (m + 1) : Submodule k K) ≤
+      Module.finrank k (UK ^ q * B : Submodule k K) := by
+    exact Submodule.finrank_mono (by simpa [q] using hpow m)
+  have hprod := finrank_subvectorSpace_product_le (UK ^ q) B
+  have hdimR : (Module.finrank k (V ^ (m + 1) : Submodule k K) : ℝ) ≤
+      (Module.finrank k (UK ^ q * B : Submodule k K) : ℝ) := by
+    exact_mod_cast hdim
+  have hprodR : (Module.finrank k (UK ^ q * B : Submodule k K) : ℝ) ≤
+      (Module.finrank k (UK ^ q : Submodule k K) : ℝ) *
+        (Module.finrank k B : ℝ) := by
+    exact_mod_cast hprod
+  have hf : Function.Injective f := by
+    intro x y hxy
+    apply (FaithfulSMul.algebraMap_injective F K)
+    exact hxy
+  have hUKrank : Module.finrank k (UK ^ q : Submodule k K) =
+      Module.finrank k (U ^ q : Submodule k F) := by
+    rw [← Submodule.map_pow (M := U) f q]
+    exact finrank_submodule_map_eq_of_injective f.toLinearMap hf (U ^ q)
+  have hUboundR : (Module.finrank k (U ^ q : Submodule k F) : ℝ) ≤
+      C₀ * (q : ℝ) ^ d := by
+    exact hUbound q (by simp [q])
+  have hq : q ≤ 2 * (m + 1) := by
+    simp [q]
+  have hqpow : (q : ℝ) ^ d ≤ (2 * (m + 1) : ℝ) ^ d := by
+    gcongr
+    exact_mod_cast hq
+  have hmain :
+      (Module.finrank k (V ^ (m + 1) : Submodule k K) : ℝ) ≤
+        C₀ * (q : ℝ) ^ d * (Module.finrank k B : ℝ) := by
+    calc
+      (Module.finrank k (V ^ (m + 1) : Submodule k K) : ℝ) ≤
+          (Module.finrank k (UK ^ q * B : Submodule k K) : ℝ) := hdimR
+      _ ≤ (Module.finrank k (UK ^ q : Submodule k K) : ℝ) *
+          (Module.finrank k B : ℝ) := hprodR
+      _ = (Module.finrank k (U ^ q : Submodule k F) : ℝ) *
+          (Module.finrank k B : ℝ) := by rw [hUKrank]
+      _ ≤ (C₀ * (q : ℝ) ^ d) * (Module.finrank k B : ℝ) := by
+        gcongr
+      _ = C₀ * (q : ℝ) ^ d * (Module.finrank k B : ℝ) := by ring
+  calc
+    (Module.finrank k (V ^ (m + 1) : Submodule k K) : ℝ) ≤
+        C₀ * (q : ℝ) ^ d * (Module.finrank k B : ℝ) := hmain
+    _ ≤ C₀ * (2 * (m + 1) : ℝ) ^ d *
+        ((Module.finrank k B : ℝ) + 1) := by
+      gcongr
+      exact_mod_cast Nat.le_succ (Module.finrank k B)
+    _ = (C₀ * (2 : ℝ) ^ d * ((Module.finrank k B : ℝ) + 1)) *
+        (m.succ : ℝ) ^ d := by
+      rw [Nat.cast_succ, mul_pow]
+      ring
 
 /-- The lower polynomial-growth bound for a finitely generated field extension
 of transcendence degree `d`. -/
@@ -214,7 +702,87 @@ theorem subvectorSpace_power_growth_upper_bound
         ∀ n : ℕ, 1 ≤ n →
           (Module.finrank k ((V ^ n : Submodule k K) : Type v) : ℝ) ≤
             C * (n : ℝ) ^ d := by
-  sorry
+  classical
+  letI : Algebra.EssFiniteType k K := hK
+  let : FaithfulSMul k K := inferInstance
+  obtain ⟨ι, x, hx⟩ := exists_isTranscendenceBasis' k K
+  have hcard : Cardinal.mk ι = d := by
+    rw [hx.cardinalMk_eq_trdeg, htrdeg]
+  let e : ι ≃ Fin d := Classical.choice (Cardinal.mk_eq_nat_iff.mp hcard)
+  let y : Fin d → K := x ∘ e.symm
+  have hy : IsTranscendenceBasis k y := by
+    simpa [y] using hx.comp_equiv e.symm
+  let F : IntermediateField k K := IntermediateField.adjoin k (Set.range y)
+  letI : Algebra.IsAlgebraic F K := by
+    dsimp [F]
+    exact hy.isAlgebraic_field
+  letI : Algebra.EssFiniteType F K := Algebra.EssFiniteType.of_comp k F K
+  letI : Module.Finite F K := Algebra.finite_of_essFiniteType_of_isAlgebraic
+  have hbase : ∀ U : Submodule k F, FiniteDimensional k U →
+      ∃ C : ℝ, 0 < C ∧ ∀ n : ℕ, 1 ≤ n →
+        (Module.finrank k ((U ^ n : Submodule k F) : Type v) : ℝ) ≤
+          C * (n : ℝ) ^ d := by
+    intro U hU
+    letI : FiniteDimensional k U := hU
+    let UL : Submodule k (FractionRing (MvPolynomial (Fin d) k)) :=
+      U.map hy.1.aevalEquivField.symm.toAlgHom.toLinearMap
+    letI : FiniteDimensional k UL := inferInstance
+    obtain ⟨C, hC, hULbound⟩ := fractionRing_power_growth_upper_bound d UL
+    refine ⟨C, hC, ?_⟩
+    intro n hn
+    have hrank : Module.finrank k
+          ((UL ^ n : Submodule k (FractionRing (MvPolynomial (Fin d) k))) :
+            Type (max u 0)) =
+        Module.finrank k ((U ^ n : Submodule k F) : Type v) := by
+      change Module.finrank k
+          (((U.map hy.1.aevalEquivField.symm.toAlgHom.toLinearMap) ^ n :
+            Submodule k (FractionRing (MvPolynomial (Fin d) k))) : Type (max u 0)) =
+        Module.finrank k ((U ^ n : Submodule k F) : Type v)
+      rw [← Submodule.map_pow (M := U) hy.1.aevalEquivField.symm.toAlgHom n]
+      exact LinearEquiv.finrank_map_eq hy.1.aevalEquivField.symm.toLinearEquiv (U ^ n)
+    have h := hULbound n hn
+    rw [hrank] at h
+    exact h
+  exact finite_extension_subvectorSpace_power_growth_upper_bound d hbase
+
+private theorem nat_exponents_le_of_real_power_bound
+    {a b : ℕ} {ε C : ℝ} (hε : 0 < ε) (hC : 0 < C)
+    (h : ∀ n : ℕ, 1 ≤ n → ε * (n : ℝ) ^ a ≤ C * (n : ℝ) ^ b) :
+    a ≤ b := by
+  by_contra hab
+  have hba : b < a := Nat.lt_of_not_ge hab
+  have hratio : 0 < C / ε := div_pos hC hε
+  obtain ⟨n, hn⟩ := exists_nat_gt (C / ε)
+  have hnposR : 0 < (n : ℝ) := hratio.trans hn
+  have hnpos : 0 < n := by exact_mod_cast hnposR
+  have hnone : 1 ≤ n := (Nat.succ_le_iff).2 hnpos
+  have hineq := h n hnone
+  have hpow : (n : ℝ) ^ a = (n : ℝ) ^ b * (n : ℝ) ^ (a - b) := by
+    calc
+      (n : ℝ) ^ a = (n : ℝ) ^ (b + (a - b)) := by
+        rw [Nat.add_sub_of_le hba.le]
+      _ = (n : ℝ) ^ b * (n : ℝ) ^ (a - b) := by rw [pow_add]
+  rw [hpow] at hineq
+  have hineq' :
+      (ε * (n : ℝ) ^ (a - b)) * (n : ℝ) ^ b ≤
+        C * (n : ℝ) ^ b := by
+    calc
+      (ε * (n : ℝ) ^ (a - b)) * (n : ℝ) ^ b =
+          ε * ((n : ℝ) ^ b * (n : ℝ) ^ (a - b)) := by ring
+      _ ≤ C * (n : ℝ) ^ b := hineq
+  have hnbpos : 0 < (n : ℝ) ^ b := pow_pos hnposR b
+  have hdiv : ε * (n : ℝ) ^ (a - b) ≤ C :=
+    le_of_mul_le_mul_right hineq' hnbpos
+  have hCn : C < ε * (n : ℝ) := by
+    have hCn' := (div_lt_iff₀ hε).mp hn
+    simpa [mul_comm] using hCn'
+  have hpowlower : (n : ℝ) ≤ (n : ℝ) ^ (a - b) := by
+    have hbase : (1 : ℝ) ≤ n := by exact_mod_cast hnone
+    have hexp : 1 ≤ a - b := Nat.succ_le_iff.2 (Nat.sub_pos_of_lt hba)
+    simpa only [pow_one] using (pow_right_mono₀ hbase hexp)
+  have hCpow : C < ε * (n : ℝ) ^ (a - b) :=
+    hCn.trans_le (mul_le_mul_of_nonneg_left hpowlower hε.le)
+  exact (not_lt_of_ge hdiv) hCpow
 
 /-- The preceding lower and upper bounds characterize the transcendence
 degree among finitely generated field extensions. -/
@@ -222,7 +790,43 @@ theorem power_growth_characterizes_transcendence_degree
     {k : Type u} {K : Type v} [Field k] [Field K] [Algebra k K]
     (hK : Algebra.EssFiniteType k K) (d : ℕ) :
     HasSubvectorSpacePowerGrowth k K d ↔ Algebra.trdeg k K = d := by
-  sorry
+  classical
+  constructor
+  · intro hg
+    letI : Algebra.EssFiniteType k K := hK
+    let : FaithfulSMul k K := inferInstance
+    obtain ⟨s, hs⟩ := IntermediateField.fg_top k K
+    letI : Algebra.IsAlgebraic (Algebra.adjoin k (s : Set K)) K := by
+      rw [← IntermediateField.isAlgebraic_adjoin_iff_top, hs,
+        Algebra.isAlgebraic_iff_isIntegral]
+      exact Algebra.isIntegral_of_surjective IntermediateField.topEquiv.surjective
+    obtain ⟨t, ht, htb⟩ :=
+      exists_isTranscendenceBasis_subset (R := k) (A := K) (s : Set K)
+    have htfinite : Set.Finite t := s.finite_toSet.subset ht
+    letI : Fintype t := htfinite.fintype
+    have htrdeg_e : Algebra.trdeg k K = Fintype.card t := by
+      simpa using htb.cardinalMk_eq_trdeg.symm
+    rcases hg with ⟨⟨V, hV, ε, hε, hVlower⟩, hupper⟩
+    obtain ⟨W, hW, δ, hδ, hWlower⟩ :=
+      exists_subvectorSpace_power_growth_lower_bound hK (Fintype.card t) htrdeg_e
+    obtain ⟨C, hC, hWupper⟩ := hupper W hW
+    have hcard_le : Fintype.card t ≤ d := by
+      apply nat_exponents_le_of_real_power_bound hδ hC
+      intro n hn
+      exact (hWlower n hn).trans (hWupper n hn)
+    obtain ⟨C', hC', hVupper⟩ :=
+      subvectorSpace_power_growth_upper_bound hK (Fintype.card t) htrdeg_e V hV
+    have hdegree_le : d ≤ Fintype.card t := by
+      apply nat_exponents_le_of_real_power_bound hε hC'
+      intro n hn
+      exact (hVlower n hn).trans (hVupper n hn)
+    have hcard : Fintype.card t = d := Nat.le_antisymm hcard_le hdegree_le
+    rw [htrdeg_e]
+    exact_mod_cast hcard
+  · intro htrdeg
+    exact ⟨
+      exists_subvectorSpace_power_growth_lower_bound hK d htrdeg,
+      subvectorSpace_power_growth_upper_bound hK d htrdeg⟩
 
 end
 

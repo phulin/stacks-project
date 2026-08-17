@@ -190,7 +190,7 @@ structure WeierstrassLocalChartStatement {S : Scheme.{u}}
   coefficients : ∀ i, WeierstrassCurve (cover.X i)
   coefficients_is_elliptic : ∀ i, IsUnit (coefficients i).Δ
   /-- Mathlib has no scheme-level Weierstrass model for `E` in this interface. -/
-  family_identification : ∀ i : cover.I₀, Prop
+  family_identification : ∀ _i : cover.I₀, Prop
   /-- On each affine overlap, the two coefficient tuples differ by an admissible change of variables. -/
   transition_by_coordinate_change : ∀ (i j : cover.I₀),
     ∃ C : WeierstrassCurve.VariableChange Γ(

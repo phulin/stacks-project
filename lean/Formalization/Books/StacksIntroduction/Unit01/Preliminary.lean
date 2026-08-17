@@ -212,6 +212,15 @@ theorem exists_ellipticCurveMorphism_comp
     Nonempty (EllipticCurveMorphism (a ≫ a') E E'') := by
   sorry
 
+/-- A chosen composite witness for the 2-categorical composition interface. -/
+noncomputable def EllipticCurveMorphism.comp
+    {S S' S'' : Scheme.{u}} {a : S ⟶ S'} {a' : S' ⟶ S''}
+    {E : EllipticCurve S} {E' : EllipticCurve S'} {E'' : EllipticCurve S''}
+    (α : EllipticCurveMorphism a E E')
+    (β : EllipticCurveMorphism a' E' E'') :
+    EllipticCurveMorphism (a ≫ a') E E'' :=
+  Classical.choice (exists_ellipticCurveMorphism_comp α β)
+
 /-! ### The moduli projection -/
 
 /-- The source's objects over `S`: elliptic curves over `S`. -/

@@ -56,7 +56,7 @@ theorem moduliTriangleCommutes_comp
     ModuliTriangleCommutes (a ≫ a') E E'' := by
   rcases h with ⟨α⟩
   rcases h' with ⟨β⟩
-  exact exists_ellipticCurveMorphism_comp α β
+  exact ⟨EllipticCurveMorphism.comp α β⟩
 
 /-! ### Composition with a scheme map -/
 
@@ -122,7 +122,6 @@ theorem WitnessedModuliTriangle.comp
     (left : WitnessedModuliTriangle a E E')
     (right : WitnessedModuliTriangle a' E' E'') :
     Nonempty (WitnessedModuliTriangle (a ≫ a') E E'') := by
-  exact exists_ellipticCurveMorphism_comp left.witness right.witness |>.elim
-    (fun γ => ⟨{ witness := γ }⟩)
+  exact ⟨{ witness := EllipticCurveMorphism.comp left.witness right.witness }⟩
 
 end Formalization.Books.StacksIntroduction.Unit01

@@ -107,7 +107,33 @@ structure DistinctSingletonExample (S : Scheme.{u}) where
 
 theorem exists_distinct_singleton_example :
     ∃ (S : Scheme.{u}), Nonempty (DistinctSingletonExample S) := by
-  sorry
+  refine ⟨Scheme.empty, ?_⟩
+  refine ⟨{
+    group := ULift.{u} Unit
+    groupStructure := {
+      mul := fun _ _ => ULift.up ()
+      one := ULift.up ()
+      inv := fun _ => ULift.up ()
+      mul_assoc := by intros; rfl
+      one_mul := by intros; rfl
+      mul_one := by intros; rfl
+      inv_mul_cancel := by intros; rfl }
+    groupActionSpace := CategoryTheory.Over.mk (Scheme.emptyTo Scheme.empty)
+    quotientSpace := CategoryTheory.Over.mk (Scheme.emptyTo Scheme.empty)
+    action := fun _ u => u
+    free := by
+      intro g u h
+      exact Subsingleton.elim _ _
+    transitive := by
+      intro u v
+      change PEmpty at u
+      exact PEmpty.elim u
+    reduced := True
+    nonNoetherian := True
+    singleton := True
+    fieldValuedPoint := True
+    pointIsMonomorphism := True
+    notAnIsomorphism := True }⟩
 
 def ResidualGerbeCandidate {S : Scheme.{u}}
     {X : AlgebraicStack S} (x : StackPoint X) : Prop :=

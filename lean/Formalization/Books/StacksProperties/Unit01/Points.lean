@@ -140,7 +140,7 @@ def PresentationRelation {S : Scheme.{u}}
 theorem presentation_relation_is_equivalence {S : Scheme.{u}}
     {X : AlgebraicStack S} (p : StackPresentation X) :
     Equivalence (PresentationRelation p) := by
-  sorry
+  exact p.relationIsEquivalence
 
 def presentationRelationSetoid {S : Scheme.{u}}
     {X : AlgebraicStack S} (p : StackPresentation X) : Setoid p.source where
@@ -154,7 +154,25 @@ def presentationPointsQuotient {S : Scheme.{u}}
 theorem points_presentation_quotient {S : Scheme.{u}}
     {X : AlgebraicStack S} (p : StackPresentation X) :
     Nonempty (presentationPointsQuotient p ≃ pointSet X) := by
-  sorry
+  let qmap : presentationPointsQuotient p → pointSet X :=
+    Quotient.lift p.map (by
+      intro u v huv
+      exact (p.mapRelation u v).mp huv)
+  let qinv : pointSet X → presentationPointsQuotient p :=
+    fun x => Quotient.mk _ (Classical.choose (p.surjective x))
+  have hqinv_qmap : ∀ q, qinv (qmap q) = q := by
+    intro q
+    refine Quotient.inductionOn q ?_
+    intro u
+    dsimp [qinv, qmap]
+    apply Quotient.sound
+    exact (p.mapRelation _ _).mpr
+      (Classical.choose_spec (p.surjective (p.map u)))
+  have hqmap_qinv : ∀ x, qmap (qinv x) = x := by
+    intro x
+    dsimp [qinv, qmap]
+    exact Classical.choose_spec (p.surjective x)
+  exact ⟨Equiv.mk qmap qinv hqinv_qmap hqmap_qinv⟩
 
 structure GeneralPresentationData {S : Scheme.{u}}
     (X : AlgebraicStack S) where
@@ -183,7 +201,25 @@ theorem general_presentation_quotient {S : Scheme.{u}}
     (hrel : Equivalence (GeneralPresentationRelation p)) :
     Nonempty
       (Quotient ⟨GeneralPresentationRelation p, hrel⟩ ≃ pointSet X) := by
-  sorry
+  let qmap : Quotient ⟨GeneralPresentationRelation p, hrel⟩ → pointSet X :=
+    Quotient.lift p.map (by
+      intro u v huv
+      exact (p.mapRelation u v).mp huv)
+  let qinv : pointSet X → Quotient ⟨GeneralPresentationRelation p, hrel⟩ :=
+    fun x => Quotient.mk _ (Classical.choose (p.surjective x))
+  have hqinv_qmap : ∀ q, qinv (qmap q) = q := by
+    intro q
+    refine Quotient.inductionOn q ?_
+    intro u
+    dsimp [qinv, qmap]
+    apply Quotient.sound
+    exact (p.mapRelation _ _).mpr
+      (Classical.choose_spec (p.surjective (p.map u)))
+  have hqmap_qinv : ∀ x, qmap (qinv x) = x := by
+    intro x
+    dsimp [qinv, qmap]
+    exact Classical.choose_spec (p.surjective x)
+  exact ⟨Equiv.mk qmap qinv hqinv_qmap hqmap_qinv⟩
 
 abbrev StackTopology (S : Scheme.{u}) :=
   ∀ X : AlgebraicStack S, TopologicalSpace (pointSet X)

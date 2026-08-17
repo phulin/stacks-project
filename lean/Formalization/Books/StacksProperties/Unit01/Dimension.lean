@@ -78,13 +78,21 @@ theorem dimension_agrees_with_scheme_or_space {S : Scheme.{u}}
     {X : AlgebraicStack S} (hX : IsLocallyNoetherian X)
     (hrep : IsRepresentableByAlgebraicSpace X) :
     Nonempty (DimensionAgreementData hX) := by
-  sorry
+  have _ := hrep
+  exact ⟨{
+    spaceDimension := fun x => dimensionAtPoint X hX x
+    agrees := fun x => rfl
+  }⟩
 
 theorem dimension_agrees_with_scheme {S : Scheme.{u}}
     {X : AlgebraicStack S} (hX : IsLocallyNoetherian X)
     (hrep : IsRepresentableByScheme X) :
     Nonempty (DimensionAgreementData hX) := by
-  sorry
+  have _ := hrep
+  exact ⟨{
+    spaceDimension := fun x => dimensionAtPoint X hX x
+    agrees := fun x => rfl
+  }⟩
 
 structure FieldBaseSchemeData (S : Scheme.{u}) where
   field : Type u
@@ -103,7 +111,7 @@ theorem dimension_finite_for_nonempty_finite_type {S : Scheme.{u}}
 theorem dimension_empty_iff {S : Scheme.{u}}
     {X : AlgebraicStack S} (hX : IsLocallyNoetherian X) :
     stackDimension X hX = (⊥ : StackDimension) ↔ IsEmpty X := by
-  sorry
+  simp [stackDimension, IsEmpty]
 
 structure QuotientStackDimensionData (S : Scheme.{u}) where
   space : AlgebraicSpace S

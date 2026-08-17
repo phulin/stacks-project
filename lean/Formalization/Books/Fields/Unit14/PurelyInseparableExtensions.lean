@@ -3,7 +3,9 @@ import Formalization.Books.Fields.Unit12.SeparableAlgebraicExtensions
 import Mathlib.Algebra.Field.ZMod
 import Mathlib.FieldTheory.KummerPolynomial
 import Mathlib.FieldTheory.PurelyInseparable.Tower
+import Mathlib.FieldTheory.PurelyInseparable.Exponent
 import Mathlib.FieldTheory.RatFunc.AsPolynomial
+import Mathlib.FieldTheory.RatFunc.Degree
 
 /-!
 # Fields, Chapter 14: Purely inseparable extensions
@@ -112,9 +114,44 @@ theorem pth_root_extension_element_expansion
       z = ∑ i : Fin p,
           algebraMap F (AdjoinRoot (X ^ p - C t)) (a i) *
             (AdjoinRoot.root (X ^ p - C t)) ^ (i : ℕ) ∧
-        z ^ p = algebraMap F (AdjoinRoot (X ^ p - C t))
+      z ^ p = algebraMap F (AdjoinRoot (X ^ p - C t))
           (∑ i : Fin p, (a i) ^ p * t ^ (i : ℕ)) := by
-  sorry
+  let pb : PowerBasis F (AdjoinRoot (X ^ p - C t)) :=
+    AdjoinRoot.powerBasis (f := X ^ p - C t) (X_pow_sub_C_ne_zero hp.pos t)
+  have hdim : pb.dim = p := by
+    simp [pb]
+  letI : Fact p.Prime := ⟨hp⟩
+  letI : ExpChar (AdjoinRoot (X ^ p - C t)) p :=
+    expChar_of_injective_algebraMap
+      (by
+        rw [AdjoinRoot.algebraMap_eq]
+        exact AdjoinRoot.of.injective_of_degree_ne_zero (by
+          rw [degree_X_pow_sub_C hp.pos]
+          exact_mod_cast hp.ne_zero)) p
+  let B : Module.Basis (Fin p) F (AdjoinRoot (X ^ p - C t)) :=
+    pb.basis.reindex (finCongr hdim)
+  let a : Fin p → F := B.repr z
+  refine ⟨a, ?_, ?_⟩
+  · simpa [a, B, pb, Module.Basis.reindex_apply, Algebra.smul_def, pb.basis_eq_pow] using
+      (B.sum_repr z).symm
+  · have hroot : ∀ i : Fin p,
+        (AdjoinRoot.root (X ^ p - C t) ^ (i : ℕ)) ^ p =
+          AdjoinRoot.of (X ^ p - C t) (t ^ (i : ℕ)) := by
+      intro i
+      rw [← pow_mul, Nat.mul_comm, pow_mul, root_X_pow_sub_C_pow p t, map_pow]
+    have hB : ∀ i : Fin p,
+        B i = AdjoinRoot.root (X ^ p - C t) ^ (i : ℕ) := by
+      intro i
+      simp [B, Module.Basis.reindex_apply, pb, pb.basis_eq_pow]
+    rw [← B.sum_repr z, sum_pow_char]
+    simp only [Algebra.smul_def]
+    simp_rw [mul_pow]
+    simp_rw [← map_pow]
+    simp_rw [hB]
+    simp_rw [hroot]
+    rw [AdjoinRoot.algebraMap_eq]
+    simp_rw [← map_mul]
+    rw [← map_sum]
 
 /-- Adjoining a p-th root of an element without a p-th root gives a field and
     a purely inseparable extension. -/
@@ -123,9 +160,17 @@ theorem pth_root_adjoinRoot_field_and_purely_inseparable
     (t : F) (ht : ∀ b : F, b ^ p ≠ t) :
     IsField (AdjoinRoot (X ^ p - C t)) ∧
       IsPurelyInseparable F (AdjoinRoot (X ^ p - C t)) := by
-  refine ⟨Formalization.Books.Fields.Unit06.adjoinRoot_isField_of_irreducible
-    (take_pth_root_polynomial_irreducible p hp t ht), ?_⟩
-  sorry
+  let hfield : IsField (AdjoinRoot (X ^ p - C t)) :=
+    Formalization.Books.Fields.Unit06.adjoinRoot_isField_of_irreducible
+      (take_pth_root_polynomial_irreducible p hp t ht)
+  letI : Field (AdjoinRoot (X ^ p - C t)) := hfield.toField
+  refine ⟨hfield, ?_⟩
+  letI : Fact p.Prime := ⟨hp⟩
+  rw [isPurelyInseparable_iff_pow_mem F p]
+  intro z
+  obtain ⟨a, _, hz⟩ := pth_root_extension_element_expansion p hp t z
+  refine ⟨1, ∑ i : Fin p, (a i) ^ p * t ^ (i : ℕ), ?_⟩
+  simpa using hz.symm
 
 /- The rational-function sentence in the source is made explicit using
    `RatFunc.X` over the prime field `ZMod p`. -/
@@ -133,7 +178,25 @@ theorem pth_root_adjoinRoot_field_and_purely_inseparable
 theorem rational_function_indeterminate_not_pth_power
     (p : ℕ) [Fact p.Prime] :
     ∀ b : RatFunc (ZMod p), b ^ p ≠ (RatFunc.X : RatFunc (ZMod p)) := by
-  sorry
+  intro b h
+  have hp : p.Prime := Fact.out
+  have hb : b ≠ 0 := by
+    intro hb
+    exact (RatFunc.X_ne_zero (K := ZMod p))
+      (by simpa [hb, zero_pow hp.ne_zero] using h.symm)
+  have hpow : ∀ n : ℕ,
+      RatFunc.intDegree (b ^ n) = (n : ℤ) * RatFunc.intDegree b := by
+    intro n
+    induction n with
+    | zero => simp
+    | succ n ih =>
+        rw [pow_succ, RatFunc.intDegree_mul (pow_ne_zero _ hb) hb, ih]
+        push_cast
+        ring
+  have hdeg : (p : ℤ) * RatFunc.intDegree b = 1 := by
+    rw [← hpow p, h, RatFunc.intDegree_X]
+  have hdiv : (p : ℤ) ∣ (1 : ℤ) := ⟨RatFunc.intDegree b, hdeg.symm⟩
+  exact hp.not_dvd_one (Int.natCast_dvd_natCast.mp hdiv)
 
 /-- The rational-function field supplies the source's p-th-root example. -/
 theorem rational_function_pth_root_extension
@@ -145,7 +208,13 @@ theorem rational_function_pth_root_extension
       IsPurelyInseparable
         (RatFunc (ZMod p))
         (AdjoinRoot (X ^ p - C (RatFunc.X : RatFunc (ZMod p)))) := by
-  sorry
+  have hp : p.Prime := Fact.out
+  have ht : ∀ b : RatFunc (ZMod p),
+      b ^ p ≠ (RatFunc.X : RatFunc (ZMod p)) :=
+    rational_function_indeterminate_not_pth_power p
+  have h := pth_root_adjoinRoot_field_and_purely_inseparable p hp
+    (RatFunc.X : RatFunc (ZMod p)) ht
+  exact ⟨take_pth_root_polynomial_irreducible p hp _ ht, h.1, h.2⟩
 
 /-! ## Permanence and the purely inseparable subextension -/
 
@@ -175,6 +244,375 @@ theorem purely_inseparable_elements_form_subextension
 /- The finite tower is expressed with Unit 12's ordered generator family and
    its canonical prefix intermediate fields.  This retains the source's
    successive fields while reusing the established field-extension interface. -/
+private theorem purely_inseparable_pth_root_step
+    {F E : Type*} [Field F] [Field E] [Algebra F E]
+    {p : ℕ} (hp : p.Prime) [CharP F p]
+    [FiniteDimensional F E] [IsPurelyInseparable F E]
+    (x : E) (hx : x ∉ (algebraMap F E).range) :
+    ∃ w : E, ∃ y : F,
+      w ^ p = algebraMap F E y ∧
+        (∀ z : F, z ^ p ≠ y) ∧
+          Module.finrank F (IntermediateField.adjoin F ({w} : Set E)) = p := by
+  letI : Fact p.Prime := ⟨hp⟩
+  letI : ExpChar E p :=
+    expChar_of_injective_algebraMap (algebraMap F E).injective p
+  letI : Algebra.IsAlgebraic F E := Algebra.IsAlgebraic.of_finite F E
+  let e := IsPurelyInseparable.elemExponent F x
+  let w := x ^ p ^ (e - 1)
+  let y := IsPurelyInseparable.elemReduct F x
+  have he_mem : x ^ p ^ e ∈ (algebraMap F E).range := by
+    exact IsPurelyInseparable.elemExponent_def' F p x
+  have he_ne : e ≠ 0 := by
+    intro he
+    apply hx
+    simpa [e, he] using he_mem
+  have he_pos : 0 < e := Nat.pos_of_ne_zero he_ne
+  have he_sub_lt : e - 1 < e := by omega
+  have hw_not : w ∉ (algebraMap F E).range := by
+    dsimp [w, e]
+    exact IsPurelyInseparable.elemExponent_min' F p he_sub_lt
+  have hw_pow : w ^ p = algebraMap F E y := by
+    change (x ^ p ^ (e - 1)) ^ p = algebraMap F E y
+    calc
+      (x ^ p ^ (e - 1)) ^ p = x ^ (p ^ (e - 1) * p) := by rw [← pow_mul]
+      _ = x ^ p ^ e := by
+        rw [← pow_succ,
+          Nat.sub_add_cancel (Nat.one_le_iff_ne_zero.mpr he_ne)]
+      _ = algebraMap F E y :=
+        (IsPurelyInseparable.algebraMap_elemReduct_eq' F p x).symm
+  have hy : ∀ z : F, z ^ p ≠ y := by
+    intro z hz
+    apply hw_not
+    refine ⟨z, ?_⟩
+    apply sub_eq_zero.mp
+    apply eq_zero_of_pow_eq_zero (n := p)
+    rw [sub_pow_expChar, hw_pow, ← map_pow, hz, sub_self]
+  have hw_exp_le : IsPurelyInseparable.elemExponent F w ≤ 1 := by
+    apply IsPurelyInseparable.elemExponent_le_of_pow_mem' p
+    exact ⟨y, by simpa using hw_pow.symm⟩
+  have hw_exp_ne : IsPurelyInseparable.elemExponent F w ≠ 0 := by
+    intro hw_exp
+    apply hw_not
+    simpa [hw_exp] using
+      (IsPurelyInseparable.elemExponent_def' F p w)
+  have hw_exp : IsPurelyInseparable.elemExponent F w = 1 := by
+    omega
+  refine ⟨w, y, hw_pow, hy, ?_⟩
+  rw [IntermediateField.adjoin.finrank (Algebra.IsIntegral.isIntegral w),
+    IsPurelyInseparable.minpoly_natDegree_eq' F p w, hw_exp, pow_one]
+
+private theorem range_fin_cases
+    {E : Type*} (w : E) {n : ℕ} (alpha : Fin n → E) :
+    Set.range (Fin.cases w alpha) = ({w} : Set E) ∪ Set.range alpha := by
+  ext z
+  constructor
+  · rintro ⟨i, rfl⟩
+    refine Fin.cases (Or.inl rfl) (fun j => Or.inr ⟨j, rfl⟩) i
+  · intro hz
+    rcases hz with (rfl | ⟨j, rfl⟩)
+    · exact ⟨0, rfl⟩
+    · exact ⟨j.succ, rfl⟩
+
+private theorem prepend_generated
+    {F E : Type*} [Field F] [Field E] [Algebra F E]
+    (w : E)
+    (S : Formalization.Books.Fields.Unit12.FinitelyGeneratedFieldExtension
+      (IntermediateField.adjoin F ({w} : Set E)) E) :
+    IntermediateField.adjoin F (Set.range (Fin.cases w S.alpha)) = ⊤ := by
+  have hgen :
+      IntermediateField.adjoin F
+          ((IntermediateField.adjoin F ({w} : Set E) : Set E) ∪ Set.range S.alpha) = ⊤ := by
+    rw [← IntermediateField.restrictScalars_adjoin F
+      (IntermediateField.adjoin F ({w} : Set E)) (Set.range S.alpha),
+      S.generated, IntermediateField.restrictScalars_top]
+  rw [range_fin_cases]
+  calc
+    IntermediateField.adjoin F ({w} ∪ Set.range S.alpha) =
+        (IntermediateField.adjoin (IntermediateField.adjoin F ({w} : Set E))
+          (Set.range S.alpha)).restrictScalars F := by
+      symm
+      exact IntermediateField.adjoin_adjoin_left (F := F) ({w} : Set E)
+        (Set.range S.alpha)
+    _ = IntermediateField.adjoin F
+          ((IntermediateField.adjoin F ({w} : Set E) : Set E) ∪ Set.range S.alpha) :=
+      IntermediateField.restrictScalars_adjoin F
+        (IntermediateField.adjoin F ({w} : Set E)) (Set.range S.alpha)
+    _ = ⊤ := hgen
+
+private theorem generated_prefix_fin_cases
+    {F E : Type*} [Field F] [Field E] [Algebra F E]
+    (w : E) {n : ℕ} (alpha : Fin n → E) (i : Fin (n + 1)) :
+    IntermediateField.adjoin F
+        (Set.range (fun j : Fin i.succ =>
+          Fin.cases w alpha
+            (Formalization.Books.Fields.Unit12.prefixGeneratorIndex i.succ j))) =
+      (IntermediateField.adjoin (IntermediateField.adjoin F ({w} : Set E))
+        (Set.range (fun j : Fin i =>
+          alpha (Formalization.Books.Fields.Unit12.prefixGeneratorIndex i j)))).restrictScalars F := by
+  let T : Set E := Set.range (fun j : Fin i =>
+    alpha (Formalization.Books.Fields.Unit12.prefixGeneratorIndex i j))
+  let j0 : Fin i.succ := ⟨0, Nat.zero_lt_succ _⟩
+  have hsucc (j : Fin i) :
+      Formalization.Books.Fields.Unit12.prefixGeneratorIndex i.succ j.succ =
+        (Formalization.Books.Fields.Unit12.prefixGeneratorIndex i j).succ := by
+    rfl
+  have hrange :
+      Set.range (fun j : Fin i.succ =>
+        Fin.cases w alpha
+          (Formalization.Books.Fields.Unit12.prefixGeneratorIndex i.succ j)) =
+        ({w} : Set E) ∪ T := by
+    ext z
+    constructor
+    · rintro ⟨j, rfl⟩
+      refine Fin.cases ?_ (fun k => ?_) j
+      · simp [Formalization.Books.Fields.Unit12.prefixGeneratorIndex, T]
+      · simp [hsucc, T]
+    · intro hz
+      rcases hz with (rfl | ⟨k, rfl⟩)
+      · refine ⟨j0, ?_⟩
+        simp [j0, Formalization.Books.Fields.Unit12.prefixGeneratorIndex]
+      · refine ⟨k.succ, ?_⟩
+        simp [hsucc]
+  rw [hrange]
+  calc
+    IntermediateField.adjoin F ({w} ∪ T) =
+        (IntermediateField.adjoin (IntermediateField.adjoin F ({w} : Set E)) T).restrictScalars F := by
+      symm
+      exact IntermediateField.adjoin_adjoin_left (F := F) ({w} : Set E) T
+    _ = (IntermediateField.adjoin (IntermediateField.adjoin F ({w} : Set E))
+        (Set.range (fun j : Fin i =>
+          alpha (Formalization.Books.Fields.Unit12.prefixGeneratorIndex i j)))).restrictScalars F := by
+      rfl
+
+private theorem prepend_pth_root_tower
+    {F E : Type*} [Field F] [Field E] [Algebra F E]
+    {p : ℕ} (_hp : p.Prime) [CharP F p]
+    [FiniteDimensional F E]
+    (w : E)
+    (S' : Formalization.Books.Fields.Unit12.FinitelyGeneratedFieldExtension
+      (IntermediateField.adjoin F ({w} : Set E)) E)
+    (hbase : ∃ y : F,
+      algebraMap F E y = w ^ p ∧
+        (∀ z : F, z ^ p ≠ y) ∧
+          Module.finrank F (IntermediateField.adjoin F ({w} : Set E)) = p)
+    (hnext : ∀ i : Fin S'.n,
+      ∃ y : Formalization.Books.Fields.Unit12.generatedIntermediateField
+          S' i.castSucc,
+        algebraMap
+            (Formalization.Books.Fields.Unit12.generatedIntermediateField S' i.castSucc)
+            (Formalization.Books.Fields.Unit12.generatedIntermediateField S' i.succ) y =
+          (Formalization.Books.Fields.Unit12.generatorInNextField S' i) ^ p ∧
+        (∀ z : Formalization.Books.Fields.Unit12.generatedIntermediateField S' i.castSucc,
+          z ^ p ≠ y) ∧
+        Module.finrank
+            (Formalization.Books.Fields.Unit12.generatedIntermediateField S' i.castSucc)
+            (Formalization.Books.Fields.Unit12.generatedIntermediateField S' i.succ) = p) :
+    ∃ S : Formalization.Books.Fields.Unit12.FinitelyGeneratedFieldExtension F E,
+      ∀ i : Fin S.n,
+        ∃ y : Formalization.Books.Fields.Unit12.generatedIntermediateField
+            S i.castSucc,
+          algebraMap
+              (Formalization.Books.Fields.Unit12.generatedIntermediateField S i.castSucc)
+              (Formalization.Books.Fields.Unit12.generatedIntermediateField S i.succ) y =
+            (Formalization.Books.Fields.Unit12.generatorInNextField S i) ^ p ∧
+          (∀ z : Formalization.Books.Fields.Unit12.generatedIntermediateField S i.castSucc,
+            z ^ p ≠ y) ∧
+          Module.finrank
+              (Formalization.Books.Fields.Unit12.generatedIntermediateField S i.castSucc)
+              (Formalization.Books.Fields.Unit12.generatedIntermediateField S i.succ) = p := by
+  let S : Formalization.Books.Fields.Unit12.FinitelyGeneratedFieldExtension F E :=
+    { n := S'.n + 1
+      alpha := Fin.cases w S'.alpha
+      finite := inferInstance
+      generated := by
+        exact prepend_generated (F := F) (E := E) w S' }
+  have hprefix (i : Fin (S'.n + 1)) :
+      Formalization.Books.Fields.Unit12.generatedIntermediateField S i.succ =
+        (Formalization.Books.Fields.Unit12.generatedIntermediateField S' i).restrictScalars F := by
+    simpa [S, Formalization.Books.Fields.Unit12.generatedIntermediateField] using
+      (generated_prefix_fin_cases (F := F) w S'.alpha i)
+  refine ⟨S, ?_⟩
+  change ∀ i : Fin (S'.n + 1), _
+  intro i
+  refine Fin.cases ?_ (fun j => ?_) i
+  · obtain ⟨y, hy, hyn, hyr⟩ := hbase
+    let y0 : Formalization.Books.Fields.Unit12.generatedIntermediateField S
+        ⟨0, Nat.zero_lt_succ _⟩ :=
+      ⟨algebraMap F E y, by
+        simp [Formalization.Books.Fields.Unit12.generatedIntermediateField]⟩
+    refine ⟨y0, ?_, ?_, ?_⟩
+    · apply Subtype.ext
+      change algebraMap F E y = w ^ p
+      exact hy
+    · intro z hz
+      have hzbot : (z : E) ∈ (⊥ : IntermediateField F E) := by
+        rw [← Formalization.Books.Fields.Unit12.generatedIntermediateField_zero_eq_bot S]
+        exact z.property
+      obtain ⟨z0, hz0⟩ := (IntermediateField.mem_bot).1 hzbot
+      apply hyn z0
+      apply (algebraMap F E).injective
+      have hzval := congrArg Subtype.val hz
+      change (z : E) ^ p = algebraMap F E y at hzval
+      simpa [hz0] using hzval
+    · have h0field :
+          Formalization.Books.Fields.Unit12.generatedIntermediateField S
+              (Fin.castSucc (0 : Fin (S'.n + 1))) = ⊥ := by
+        simpa using
+          (Formalization.Books.Fields.Unit12.generatedIntermediateField_zero_eq_bot S)
+      have h1field :
+          Formalization.Books.Fields.Unit12.generatedIntermediateField S
+              (Fin.succ (0 : Fin (S'.n + 1))) =
+            IntermediateField.adjoin F ({w} : Set E) := by
+        rw [hprefix (0 : Fin (S'.n + 1)),
+          Formalization.Books.Fields.Unit12.generatedIntermediateField_zero_eq_bot S',
+          IntermediateField.restrictScalars_bot_eq_self]
+      letI : IsScalarTower F
+          (Formalization.Books.Fields.Unit12.generatedIntermediateField S
+            (Fin.castSucc (0 : Fin (S'.n + 1))))
+          (Formalization.Books.Fields.Unit12.generatedIntermediateField S
+            (Fin.succ (0 : Fin (S'.n + 1)))) :=
+        IsScalarTower.of_algebraMap_eq' (by rfl)
+      have hmul := Module.finrank_mul_finrank F
+        (Formalization.Books.Fields.Unit12.generatedIntermediateField S
+          (Fin.castSucc (0 : Fin (S'.n + 1))))
+        (Formalization.Books.Fields.Unit12.generatedIntermediateField S
+          (Fin.succ (0 : Fin (S'.n + 1))))
+      have hrank0 : Module.finrank F
+          (Formalization.Books.Fields.Unit12.generatedIntermediateField S
+            (Fin.castSucc (0 : Fin (S'.n + 1)))) = 1 := by
+        rw [h0field, IntermediateField.finrank_bot]
+      have hrank1 : Module.finrank F
+          (Formalization.Books.Fields.Unit12.generatedIntermediateField S
+            (Fin.succ (0 : Fin (S'.n + 1)))) = p := by
+        exact h1field.symm ▸ hyr
+      rw [hrank0, one_mul, hrank1] at hmul
+      exact hmul
+  · obtain ⟨y', hy', hyn', hyr'⟩ := hnext j
+    have hprev :
+        Formalization.Books.Fields.Unit12.generatedIntermediateField S j.succ.castSucc =
+          (Formalization.Books.Fields.Unit12.generatedIntermediateField S' j.castSucc).restrictScalars F := by
+      simpa using hprefix j.castSucc
+    have hnext' :
+        Formalization.Books.Fields.Unit12.generatedIntermediateField S j.succ.succ =
+          (Formalization.Books.Fields.Unit12.generatedIntermediateField S' j.succ).restrictScalars F := by
+      exact hprefix j.succ
+    let y : Formalization.Books.Fields.Unit12.generatedIntermediateField S j.succ.castSucc :=
+      ⟨(y' : E), by
+        rw [hprev]
+        exact y'.property⟩
+    refine ⟨y, ?_, ?_, ?_⟩
+    · apply Subtype.ext
+      change (y' : E) = (S'.alpha j) ^ p
+      have hval := congrArg Subtype.val hy'
+      change (y' : E) = (S'.alpha j) ^ p at hval
+      exact hval
+    · intro z hz
+      have hzmem : (z : E) ∈
+          Formalization.Books.Fields.Unit12.generatedIntermediateField S' j.castSucc := by
+        have hset :
+            (Formalization.Books.Fields.Unit12.generatedIntermediateField S j.succ.castSucc : Set E) =
+              (Formalization.Books.Fields.Unit12.generatedIntermediateField S' j.castSucc : Set E) := by
+          rw [hprev]
+          rfl
+        have hzold : (z : E) ∈
+            (Formalization.Books.Fields.Unit12.generatedIntermediateField S j.succ.castSucc : Set E) :=
+          z.property
+        rw [hset] at hzold
+        exact hzold
+      let z' : Formalization.Books.Fields.Unit12.generatedIntermediateField S' j.castSucc :=
+        ⟨(z : E), hzmem⟩
+      apply hyn' z'
+      apply Subtype.ext
+      simpa [y, z'] using congrArg Subtype.val hz
+    · let eP :
+          Formalization.Books.Fields.Unit12.generatedIntermediateField S j.succ.castSucc ≃+*
+            Formalization.Books.Fields.Unit12.generatedIntermediateField S' j.castSucc :=
+        (IntermediateField.equivOfEq hprev).toRingEquiv
+      let eQ :
+          Formalization.Books.Fields.Unit12.generatedIntermediateField S j.succ.succ ≃+*
+            Formalization.Books.Fields.Unit12.generatedIntermediateField S' j.succ :=
+        (IntermediateField.equivOfEq hnext').toRingEquiv
+      have hcomm :
+          (algebraMap
+              (Formalization.Books.Fields.Unit12.generatedIntermediateField S' j.castSucc)
+              (Formalization.Books.Fields.Unit12.generatedIntermediateField S' j.succ)).comp
+              eP.toRingHom =
+            eQ.toRingHom.comp
+              (algebraMap
+                (Formalization.Books.Fields.Unit12.generatedIntermediateField S j.succ.castSucc)
+                (Formalization.Books.Fields.Unit12.generatedIntermediateField S j.succ.succ)) := by
+        ext z
+        rfl
+      exact (Algebra.finrank_eq_of_equiv_equiv eP eQ hcomm).trans hyr'
+
+private theorem finite_purely_inseparable_has_pth_root_tower_aux
+    {F E : Type v} [Field F] [Field E] [Algebra F E]
+    {p : ℕ} (hp : p.Prime) [CharP F p]
+    [FiniteDimensional F E] [IsPurelyInseparable F E]
+    (d : ℕ) (hd : Module.finrank F E = d) :
+    ∃ S : Formalization.Books.Fields.Unit12.FinitelyGeneratedFieldExtension F E,
+      ∀ i : Fin S.n,
+        ∃ y : Formalization.Books.Fields.Unit12.generatedIntermediateField
+            S i.castSucc,
+          algebraMap
+              (Formalization.Books.Fields.Unit12.generatedIntermediateField S i.castSucc)
+              (Formalization.Books.Fields.Unit12.generatedIntermediateField S i.succ) y =
+            (Formalization.Books.Fields.Unit12.generatorInNextField S i) ^ p ∧
+          (∀ z : Formalization.Books.Fields.Unit12.generatedIntermediateField S i.castSucc,
+            z ^ p ≠ y) ∧
+          Module.finrank
+              (Formalization.Books.Fields.Unit12.generatedIntermediateField S i.castSucc)
+              (Formalization.Books.Fields.Unit12.generatedIntermediateField S i.succ) = p := by
+  classical
+  by_cases htriv : (⊥ : IntermediateField F E) = ⊤
+  · let S : Formalization.Books.Fields.Unit12.FinitelyGeneratedFieldExtension F E :=
+      { n := 0
+        alpha := Fin.elim0
+        finite := inferInstance
+        generated := by
+          simp [htriv] }
+    refine ⟨S, ?_⟩
+    intro i
+    exact Fin.elim0 i
+  · obtain ⟨x, -, hxbot⟩ :=
+      SetLike.exists_of_lt (lt_of_le_of_ne bot_le htriv)
+    have hx : x ∉ (algebraMap F E).range := by
+      intro hxrange
+      exact hxbot ((IntermediateField.mem_bot).2 hxrange)
+    obtain ⟨w, y, hwpow, hyn, hwrank⟩ :=
+      purely_inseparable_pth_root_step hp x hx
+    letI : Algebra.IsAlgebraic F E := Algebra.IsAlgebraic.of_finite F E
+    let L : IntermediateField F E := IntermediateField.adjoin F ({w} : Set E)
+    letI : CharP L p := IntermediateField.charP L p
+    letI : FiniteDimensional F L := by
+      dsimp [L]
+      exact IntermediateField.adjoin.finiteDimensional
+        (Algebra.IsIntegral.isIntegral w)
+    letI : FiniteDimensional L E :=
+      Module.Finite.of_restrictScalars_finite F L E
+    have hLrank : Module.finrank F L = p := by
+      simpa [L] using hwrank
+    have hmul : p * Module.finrank L E = d := by
+      calc
+        p * Module.finrank L E = Module.finrank F L * Module.finrank L E := by
+          rw [hLrank]
+        _ = Module.finrank F E := Module.finrank_mul_finrank F L E
+        _ = d := hd
+    have hltmul : Module.finrank L E < p * Module.finrank L E := by
+      exact (Nat.lt_mul_iff_one_lt_left Module.finrank_pos).2 hp.one_lt
+    have hLd : Module.finrank L E < d := by
+      rw [← hmul]
+      exact hltmul
+    obtain ⟨S', hS'⟩ :=
+      finite_purely_inseparable_has_pth_root_tower_aux
+        (F := L) (E := E) hp (d := Module.finrank L E) rfl
+    apply prepend_pth_root_tower hp w S'
+    · refine ⟨y, hwpow.symm, hyn, ?_⟩
+      exact hLrank
+    · exact hS'
+termination_by d
+decreasing_by exact hLd
+
 /-- A finite purely inseparable extension admits a tower whose successive steps
     adjoin p-th roots and have degree `p`. -/
 theorem finite_purely_inseparable_has_pth_root_tower
@@ -194,7 +632,52 @@ theorem finite_purely_inseparable_has_pth_root_tower
           Module.finrank
               (Formalization.Books.Fields.Unit12.generatedIntermediateField S i.castSucc)
               (Formalization.Books.Fields.Unit12.generatedIntermediateField S i.succ) = p := by
-  sorry
+  classical
+  by_cases htriv : (⊥ : IntermediateField F E) = ⊤
+  · let S : Formalization.Books.Fields.Unit12.FinitelyGeneratedFieldExtension F E :=
+      { n := 0
+        alpha := Fin.elim0
+        finite := inferInstance
+        generated := by
+          simp [htriv] }
+    refine ⟨S, ?_⟩
+    intro i
+    exact Fin.elim0 i
+  · obtain ⟨x, -, hxbot⟩ :=
+      SetLike.exists_of_lt (lt_of_le_of_ne bot_le htriv)
+    have hx : x ∉ (algebraMap F E).range := by
+      intro hxrange
+      exact hxbot ((IntermediateField.mem_bot).2 hxrange)
+    obtain ⟨w, y, hwpow, hyn, hwrank⟩ :=
+      purely_inseparable_pth_root_step hp x hx
+    letI : Algebra.IsAlgebraic F E := Algebra.IsAlgebraic.of_finite F E
+    let L : IntermediateField F E := IntermediateField.adjoin F ({w} : Set E)
+    letI : CharP L p := IntermediateField.charP L p
+    letI : FiniteDimensional F L := by
+      dsimp [L]
+      exact IntermediateField.adjoin.finiteDimensional
+        (Algebra.IsIntegral.isIntegral w)
+    letI : FiniteDimensional L E :=
+      Module.Finite.of_restrictScalars_finite F L E
+    have hLrank : Module.finrank F L = p := by
+      simpa [L] using hwrank
+    have hmul : p * Module.finrank L E = Module.finrank F E := by
+      calc
+        p * Module.finrank L E = Module.finrank F L * Module.finrank L E := by
+          rw [hLrank]
+        _ = Module.finrank F E := Module.finrank_mul_finrank F L E
+    have hltmul : Module.finrank L E < p * Module.finrank L E := by
+      exact (Nat.lt_mul_iff_one_lt_left Module.finrank_pos).2 hp.one_lt
+    have hLd : Module.finrank L E < Module.finrank F E := by
+      rw [← hmul]
+      exact hltmul
+    obtain ⟨S', hS'⟩ :=
+      finite_purely_inseparable_has_pth_root_tower_aux
+        (F := L) (E := E) hp (d := Module.finrank L E) rfl
+    apply prepend_pth_root_tower hp w S'
+    · refine ⟨y, hwpow.symm, hyn, ?_⟩
+      exact hLrank
+    · exact hS'
 
 /-! ## Separable first and degrees -/
 

@@ -41,6 +41,13 @@ def IsBaseChangeRepresentative (k k' : Type*) [Field k] [Field k']
     Algebra.TensorProduct.rightAlgebra
   Nonempty ((A.carrier ⊗[k] k') ≃ₐ[k'] B.carrier)
 
+/-- The ring structure stored by a CSA is a division ring.
+
+`Nonempty (DivisionRing A.carrier)` is not sufficient for this purpose: it
+can provide a second, incompatible ring structure on the same carrier. -/
+def IsDivisionCSA (k : Type*) [Field k] (A : CSA k) : Prop :=
+  ∀ x : A.carrier, x ≠ 0 → IsUnit x
+
 theorem similarity_is_equivalence (k : Type*) [Field k] :
     Equivalence (@IsBrauerEquivalent k _) :=
   IsBrauerEquivalent.is_eqv
@@ -48,9 +55,9 @@ theorem similarity_is_equivalence (k : Type*) [Field k] :
 theorem similarity_has_unique_division_representative (k : Type u_k) [Field k]
     (A : CSA.{u_k, u_A} k) :
       ∃ D : CSA.{u_k, u_A} k,
-        Nonempty (DivisionRing D.carrier) ∧
+        IsDivisionCSA k D ∧
           IsBrauerEquivalent A D ∧
-            ∀ E : CSA.{u_k, u_E} k, Nonempty (DivisionRing E.carrier) →
+            ∀ E : CSA.{u_k, u_E} k, IsDivisionCSA k E →
             IsBrauerEquivalent A E →
                 Nonempty (D.carrier ≃ₐ[k] E.carrier) := by
   sorry
@@ -103,8 +110,7 @@ private theorem matrix_standard_module_end_alg (k K : Type*) [Field k]
     intro r
     ext v i
     change (e.functor.map (ModuleCat.ofHom (algebraMap k (Module.End K K) r))).hom v i = _
-    simp [e, ModuleCat.matrixEquivalence, ModuleCat.toMatrixModCat,
-      ModuleCat.toMatrixModCat_map]
+    simp [e, ModuleCat.matrixEquivalence, ModuleCat.toMatrixModCat]
     change (r • (1 : Module.End K K)) (v i) = _
     simp [Algebra.smul_def]
   refine ⟨((AlgEquiv.moduleEndSelf k : Kᵐᵒᵖ ≃ₐ[k] Module.End K K).trans
@@ -122,17 +128,17 @@ theorem matrix_division_similarity_iff (k K K' : Type*) [Field k]
   · rintro ⟨n, m, hn, hm, ⟨E⟩⟩
     let R := Matrix (Fin n) (Fin n) K
     let R' := Matrix (Fin m) (Fin m) K'
-    letI : NeZero n := ⟨hn⟩
-    letI : NeZero m := ⟨hm⟩
-    letI : IsSimpleRing R := inferInstance
-    letI : RingHomInvPair E.toRingEquiv.toRingHom E.toRingEquiv.symm.toRingHom :=
+    let _ : NeZero n := ⟨hn⟩
+    let _ : NeZero m := ⟨hm⟩
+    let _ : IsSimpleRing R := inferInstance
+    let _ : RingHomInvPair E.toRingEquiv.toRingHom E.toRingEquiv.symm.toRingHom :=
       RingHomInvPair.of_ringEquiv E.toRingEquiv
-    letI : RingHomInvPair E.toRingEquiv.symm.toRingHom E.toRingEquiv.toRingHom :=
+    let _ : RingHomInvPair E.toRingEquiv.symm.toRingHom E.toRingEquiv.toRingHom :=
       RingHomInvPair.symm E.toRingEquiv.toRingHom E.toRingEquiv.symm.toRingHom
     let V := Fin n → K
     let W := Fin m → K'
-    letI : Module R W := Module.compHom W E.toRingEquiv.toRingHom
-    letI : IsScalarTower k R W :=
+    let _ : Module R W := Module.compHom W E.toRingEquiv.toRingHom
+    let _ : IsScalarTower k R W :=
       IsScalarTower.of_algebraMap_smul fun r w => by
         change E (algebraMap k R r) • w = r • w
         rw [E.commutes]
@@ -146,8 +152,8 @@ theorem matrix_division_similarity_iff (k K K' : Type*) [Field k]
         (R := R) (S := R') (M := W) (N := W)
         (σ := E.toRingEquiv.toRingHom) l.toLinearMap l.bijective).mpr
         (matrix_standard_module_is_simple K' m)
-    letI : IsSimpleModule R V := matrix_standard_module_is_simple K n
-    letI : IsSimpleModule R W := hsimpleW
+    let _ : IsSimpleModule R V := matrix_standard_module_is_simple K n
+    let _ : IsSimpleModule R W := hsimpleW
     obtain ⟨v⟩ := finite_simple_algebra_unique_simple_modules k R V W
     obtain ⟨eK⟩ := matrix_standard_module_end_alg k K n
     obtain ⟨eK'⟩ := matrix_standard_module_end_alg k K' m
@@ -196,9 +202,9 @@ theorem brauer_group_base_change_interface (k k' : Type*) [Field k] [Field k']
           IsBaseChangeRepresentative k k' A B := by
   sorry
 
-theorem brauer_group_zero_iff (k : Type*) [Field k] :
+theorem brauer_group_zero_iff (k : Type u_k) [Field k] :
     (∀ x : BrauerGroup k, x = 1) ↔
-      (∀ (K : Type*) [DivisionRing K] [Algebra k K]
+      (∀ (K : Type u_k) [DivisionRing K] [Algebra k K]
         [FiniteDimensional k K] [Algebra.IsCentral k K],
         Nonempty (K ≃ₐ[k] k)) := by
   sorry
@@ -234,11 +240,11 @@ theorem finite_central_simple_dimension_square (k A : Type*) [Field k]
     [Algebra.IsCentral k A] [IsSimpleRing A] :
     ∃ d : ℕ, Module.finrank k A = d ^ 2 := by
   let K := AlgebraicClosure k
-  letI : Algebra K (A ⊗[k] K) := Algebra.TensorProduct.rightAlgebra
+  let _ : Algebra K (A ⊗[k] K) := Algebra.TensorProduct.rightAlgebra
   have hbase := base_change_finite_central_simple k A K
-  letI : FiniteDimensional K (A ⊗[k] K) := hbase.1
-  letI : Algebra.IsCentral K (A ⊗[k] K) := hbase.2.1
-  letI : IsSimpleRing (A ⊗[k] K) := hbase.2.2
+  let _ : FiniteDimensional K (A ⊗[k] K) := hbase.1
+  let _ : Algebra.IsCentral K (A ⊗[k] K) := hbase.2.1
+  let _ : IsSimpleRing (A ⊗[k] K) := hbase.2.2
   obtain ⟨d, hd, ⟨e⟩⟩ :=
     IsSimpleRing.exists_algEquiv_matrix_of_isAlgClosed K (A ⊗[k] K)
   refine ⟨d, ?_⟩

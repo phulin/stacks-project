@@ -43,7 +43,7 @@ theorem splits_iff_base_change_class_eq_one (k k' : Type*) [Field k]
         IsBaseChangeRepresentative k k' A B ∧ brauerClass k' B = 1 := by
   constructor
   · rintro ⟨d, hsplit⟩
-    letI : Algebra k' (A.carrier ⊗[k] k') :=
+    let _ : Algebra k' (A.carrier ⊗[k] k') :=
       Algebra.TensorProduct.rightAlgebra
     dsimp [SplitsInDegree] at hsplit
     obtain ⟨e⟩ := hsplit
@@ -53,7 +53,7 @@ theorem splits_iff_base_change_class_eq_one (k k' : Type*) [Field k]
       have hzero : (0 : A.carrier ⊗[k] k') = 1 := by
         exact e.injective (Subsingleton.elim _ _)
       exact zero_ne_one hzero
-    letI : NeZero d := ⟨hd0⟩
+    let _ : NeZero d := ⟨hd0⟩
     let B : CSA k' := { AlgCat.of k' (Matrix (Fin d) (Fin d) k') with }
     have hbase : IsBaseChangeRepresentative k k' A B := by
       dsimp [IsBaseChangeRepresentative, B]
@@ -79,7 +79,7 @@ theorem splits_iff_base_change_class_eq_one (k k' : Type*) [Field k]
             apply Matrix.ext
             intro i j
             rw [Matrix.algebraMap_matrix_apply, Matrix.algebraMap_matrix_apply]
-            simp only [if_pos rfl, if_true]
+            simp only [if_true]
             rw [Matrix.algebraMap_matrix_apply] }
       have hf : Function.Bijective f := by
         constructor
@@ -100,7 +100,7 @@ theorem splits_iff_base_change_class_eq_one (k k' : Type*) [Field k]
         simpa only [brauerGroupCommGroup] using
           (Classical.choose_spec (brauer_group_is_abelian k')).1
   · rintro ⟨B, hbase, hclass⟩
-    letI : Algebra k' (A.carrier ⊗[k] k') :=
+    let _ : Algebra k' (A.carrier ⊗[k] k') :=
       Algebra.TensorProduct.rightAlgebra
     have hscalar : brauerClass k' (scalarCSA k') = 1 := by
       simpa only [brauerGroupCommGroup] using
@@ -112,9 +112,9 @@ theorem splits_iff_base_change_class_eq_one (k k' : Type*) [Field k]
     obtain ⟨eBase⟩ := hbase
     obtain ⟨n, hn, D, hD, hDalg, hDfinite, ⟨eB⟩⟩ :=
       wedderburn_artin_finite k' B.carrier
-    letI : NeZero n := hn
-    letI : Algebra.IsCentral k' B.carrier := B.isCentral
-    letI : Algebra.IsCentral k' D :=
+    let _ : NeZero n := hn
+    let _ : Algebra.IsCentral k' B.carrier := B.isCentral
+    let _ : Algebra.IsCentral k' D :=
       { out := by
           intro x hx
           have hxcomm : ∀ y : D, Commute x y := by
@@ -210,9 +210,9 @@ theorem splitting_field_degree_dvd (k K k' : Type*) [Field k]
   obtain ⟨p, q, hp, hq, ⟨hE⟩⟩ := hAB
   obtain ⟨n, hn, D, hD, hDalg, hDfinite, ⟨eB⟩⟩ :=
     @wedderburn_artin_finite k B.carrier _ _ _ _ _
-  letI : NeZero n := hn
-  letI : Algebra.IsCentral k B.carrier := B.isCentral
-  letI : Algebra.IsCentral k D :=
+  let _ : NeZero n := hn
+  let _ : Algebra.IsCentral k B.carrier := B.isCentral
+  let _ : Algebra.IsCentral k D :=
     { out := by
         intro x hx
         have hxcomm : ∀ y : D, Commute x y := by
@@ -272,7 +272,7 @@ theorem splitting_field_degree_dvd (k K k' : Type*) [Field k]
       _ = n ^ 2 * Module.finrank k K := hdimB
       _ = n ^ 2 * d ^ 2 := by rw [hd]
       _ = (n * d) ^ 2 := by
-        simp [pow_two, Nat.mul_assoc, Nat.mul_left_comm, Nat.mul_comm]
+        simp [pow_two, Nat.mul_left_comm, Nat.mul_comm]
   have hdegree : Module.finrank k k' = n * d :=
     Nat.pow_left_injective (n := 2) (by decide) hsq
   refine ⟨n, ?_⟩
@@ -356,11 +356,11 @@ theorem finite_central_simple_degree_is_unique (k A : Type*) [Field k]
     [Algebra.IsCentral k A] [IsSimpleRing A] :
     ∃! d : ℕ, 0 < d ∧ SplitsInDegree k A (AlgebraicClosure k) d := by
   let K := AlgebraicClosure k
-  letI : Algebra K (A ⊗[k] K) := Algebra.TensorProduct.rightAlgebra
+  let _ : Algebra K (A ⊗[k] K) := Algebra.TensorProduct.rightAlgebra
   have hbase := base_change_finite_central_simple k A K
-  letI : FiniteDimensional K (A ⊗[k] K) := hbase.1
-  letI : Algebra.IsCentral K (A ⊗[k] K) := hbase.2.1
-  letI : IsSimpleRing (A ⊗[k] K) := hbase.2.2
+  let _ : FiniteDimensional K (A ⊗[k] K) := hbase.1
+  let _ : Algebra.IsCentral K (A ⊗[k] K) := hbase.2.1
+  let _ : IsSimpleRing (A ⊗[k] K) := hbase.2.2
   obtain ⟨d, hd, ⟨e⟩⟩ :=
     IsSimpleRing.exists_algEquiv_matrix_of_isAlgClosed K (A ⊗[k] K)
   have hbase_finrank : Module.finrank K (A ⊗[k] K) = Module.finrank k A := by

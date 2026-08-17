@@ -194,7 +194,7 @@ private theorem exists_unit_pure_tensor_of_nonzero_two_sided
     induction z using TensorProduct.induction_on with
     | zero => simp
     | tmul v d =>
-        simp [E, tensorLeftMultiply, mul_smul_comm]
+        simp [E, tensorLeftMultiply]
     | add z₁ z₂ ih₁ ih₂ =>
         simp [ih₁, ih₂, mul_add]
   have hE_right (a : K) (z : V ⊗[k] K) :
@@ -221,7 +221,7 @@ private theorem exists_unit_pure_tensor_of_nonzero_two_sided
         exact h ⟨x, hx, hx0⟩
       · intro hx
         have hx' : x = 0 := by simpa using hx
-        simpa [hx'] using W.zero_mem
+        simp [hx']
     obtain ⟨x, hxW, hx0⟩ := hWmem
     refine ⟨(E x).support.card, x, hxW, hx0, rfl⟩
   let n := Nat.find hP
@@ -245,7 +245,7 @@ private theorem exists_unit_pure_tensor_of_nonzero_two_sided
   have hc0 : c ≠ 0 := by
     intro h
     have hi' := congrArg (fun f => f i) h
-    simpa [hci] using hi'
+    simp [hci] at hi'
   let y := tensorLeftMultiply k V K a x
   have hcy : E y = c := by
     exact hE_left a x
@@ -364,7 +364,7 @@ theorem two_sided_subspace_generated (k V K : Type*) [Field k]
         refine ⟨c, (u : V) ⊗ₜ[k] (1 : K), ?_, ?_⟩
         · refine ⟨u, rfl, ?_⟩
           exact u.property
-        · simp [Q, tensorLeftMultiply]
+        · simp [tensorLeftMultiply]
     | add y₁ y₂ ih₁ ih₂ => simpa using R.add_mem ih₁ ih₂
   let e : (V ⧸ U) ⊗[k] K ≃ₗ[k] (V ⊗[k] K) ⧸ Q :=
     TensorProduct.quotientTensorEquiv K U
@@ -553,7 +553,7 @@ theorem two_sided_ideal_tensor (k A K : Type*) [Field k] [Ring A]
 theorem tensor_product_simple_of_simple (k A K : Type*) [Field k] [Ring A]
     [Algebra k A] [IsSimpleRing A] [DivisionRing K] [Algebra k K]
     [Algebra.IsCentral k K] : IsSimpleRing (A ⊗[k] K) := by
-  letI : Nontrivial (A ⊗[k] K) :=
+  let _ : Nontrivial (A ⊗[k] K) :=
     Algebra.TensorProduct.nontrivial_of_algebraMap_injective_of_flat_left k A K
       (FaithfulSMul.algebraMap_injective k K)
   refine IsSimpleRing.of_eq_bot_or_eq_top ?_
@@ -587,9 +587,9 @@ theorem tensor_product_simple_of_simple_algebras (k A A' : Type*) [Field k]
     IsSimpleRing (A ⊗[k] A') := by
   obtain ⟨n, hn, D, hD, hDalg, hDfinite, ⟨e⟩⟩ :=
     wedderburn_artin_finite k A'
-  letI : NeZero n := hn
-  letI : Nonempty (Fin n) := ⟨⟨0, Nat.pos_of_ne_zero hn.out⟩⟩
-  letI : Algebra.IsCentral k D :=
+  let _ : NeZero n := hn
+  let _ : Nonempty (Fin n) := ⟨⟨0, Nat.pos_of_ne_zero hn.out⟩⟩
+  let _ : Algebra.IsCentral k D :=
     { out := by
         intro x hx
         have hxcomm : ∀ y : D, Commute x y := by
@@ -618,7 +618,7 @@ theorem tensor_product_simple_of_simple_algebras (k A A' : Type*) [Field k]
           _ = e (algebraMap k A' r) := by simp
           _ = e a := by rw [hr]
           _ = Matrix.scalar (Fin n) x := ha }
-  letI : IsSimpleRing (A ⊗[k] D) :=
+  let _ : IsSimpleRing (A ⊗[k] D) :=
     tensor_product_simple_of_simple k A D
   let f : A ⊗[k] A' →ₐ[k] A ⊗[k] Matrix (Fin n) (Fin n) D :=
     Algebra.TensorProduct.map (AlgHom.id k A) e.toAlgHom
@@ -639,7 +639,7 @@ theorem tensor_product_simple_of_simple_algebras_left (k A A' : Type*)
     [FiniteDimensional k A] [Algebra.IsCentral k A]
     [Ring A'] [Algebra k A'] [IsSimpleRing A'] :
     IsSimpleRing (A ⊗[k] A') := by
-  letI : IsSimpleRing (A' ⊗[k] A) :=
+  let _ : IsSimpleRing (A' ⊗[k] A) :=
     tensor_product_simple_of_simple_algebras k A' A
   exact IsSimpleRing.of_ringEquiv
     (Algebra.TensorProduct.comm k A A').symm.toRingEquiv inferInstance
@@ -1041,7 +1041,7 @@ theorem finite_module_end_is_matrix_and_double_commutant
         Nonempty (Module.End (Module.End A N) N ≃ₐ[k] A) := by
   classical
   obtain ⟨S, hS⟩ := finite_algebra_nonzero_module_has_simple_submodule k A N
-  letI : IsSimpleModule A S := hS
+  let _ : IsSimpleModule A S := hS
   obtain ⟨n, ⟨e⟩⟩ := finite_module_is_direct_sum_of_simple k A N S
   have hn0 : n ≠ 0 := by
     intro hn
@@ -1049,15 +1049,15 @@ theorem finite_module_end_is_matrix_and_double_commutant
     have hnontriv : Nontrivial (Fin 0 → S) :=
       e.injective.nontrivial
     exact (not_nontrivial (Fin 0 → S)) hnontriv
-  letI : NeZero n := ⟨hn0⟩
+  let _ : NeZero n := ⟨hn0⟩
   let L0 := Module.End A S
-  letI : DivisionRing L0 := inferInstance
-  letI : Algebra k L0 := inferInstance
-  letI : FiniteDimensional k L0 := (simple_module_end_is_finite k A S).2
+  let _ : DivisionRing L0 := inferInstance
+  let _ : Algebra k L0 := inferInstance
+  let _ : FiniteDimensional k L0 := (simple_module_end_is_finite k A S).2
   let L : Type (max u_A u_N) := ULift.{u_A} L0
-  letI : DivisionRing L := inferInstance
-  letI : Algebra k L := inferInstance
-  letI : Module.Finite k L :=
+  let _ : DivisionRing L := inferInstance
+  let _ : Algebra k L := inferInstance
+  let _ : Module.Finite k L :=
     Module.Finite.equiv (ULift.moduleEquiv (R := k) (M := L0)).symm
   have hEnd : Nonempty (Module.End A N ≃ₐ[k] Matrix (Fin n) (Fin n) L) := by
     exact ⟨(e.conjAlgEquiv k).trans
@@ -1088,7 +1088,7 @@ theorem finite_module_end_is_matrix_and_double_commutant
     exact h.resolve_right (by
       intro htop
       exact (not_subsingleton N) (Module.annihilator_eq_top_iff.mp htop))
-  letI : FaithfulSMul A N := Module.annihilator_eq_bot.mp hAnn
+  let _ : FaithfulSMul A N := Module.annihilator_eq_bot.mp hAnn
   have hbij : Function.Bijective f := by
     constructor
     · exact (Module.toModuleEnd (Module.End A N) (S := A) N).injective
@@ -1170,8 +1170,8 @@ theorem base_change_finite_central_simple (k A k' : Type*) [Field k]
       Algebra.TensorProduct.rightAlgebra
     FiniteDimensional k' (A ⊗[k] k') ∧
       Algebra.IsCentral k' (A ⊗[k] k') ∧ IsSimpleRing (A ⊗[k] k') := by
-  letI : Algebra k' (A ⊗[k] k') := Algebra.TensorProduct.rightAlgebra
-  letI : Algebra k' (k' ⊗[k] A) := Algebra.TensorProduct.leftAlgebra
+  let _ : Algebra k' (A ⊗[k] k') := Algebra.TensorProduct.rightAlgebra
+  let _ : Algebra k' (k' ⊗[k] A) := Algebra.TensorProduct.leftAlgebra
   have hfin : Module.Finite k' (k' ⊗[k] A) :=
     Module.Finite.base_change (R := k) (A := k') (M := A)
   let f : (k' ⊗[k] A) →ₗ[k'] (A ⊗[k] k') :=
@@ -1195,8 +1195,8 @@ theorem base_change_finite_central_simple (k A k' : Type*) [Field k]
     LinearEquiv.ofBijective f
       ⟨(Algebra.TensorProduct.comm k k' A).injective,
         (Algebra.TensorProduct.comm k k' A).surjective⟩
-  letI : Module.Finite k' (k' ⊗[k] A) := hfin
-  letI : Module.Finite k' (A ⊗[k] k') := Module.Finite.equiv e
+  let _ : Module.Finite k' (k' ⊗[k] A) := hfin
+  let _ : Module.Finite k' (A ⊗[k] k') := Module.Finite.equiv e
   refine ⟨inferInstance, ?_, ?_⟩
   · refine { out := ?_ }
     intro z hz
@@ -1253,7 +1253,7 @@ theorem inverse_of_finite_central_simple (k A : Type*) [Field k] [Ring A]
     Nonempty
       ((A ⊗[k] Aᵐᵒᵖ) ≃ₐ[k]
         Matrix (Fin (Module.finrank k A)) (Fin (Module.finrank k A)) k) := by
-  letI : IsSimpleRing (A ⊗[k] Aᵐᵒᵖ) :=
+  let _ : IsSimpleRing (A ⊗[k] Aᵐᵒᵖ) :=
     (tensor_product_finite_central_simple k A Aᵐᵒᵖ).2.2
   let f : (A ⊗[k] Aᵐᵒᵖ) →ₐ[k] Module.End k A :=
     AlgHom.mulLeftRight k A

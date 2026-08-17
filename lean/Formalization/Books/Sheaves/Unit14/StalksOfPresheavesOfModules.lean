@@ -1,6 +1,5 @@
 import Formalization.Books.Sheaves.Unit06.PresheavesOfModules
 import Mathlib.Algebra.Category.ModuleCat.ChangeOfRings
-import Mathlib.Algebra.Category.ModuleCat.Presheaf.ColimitFunctor
 import Mathlib.Algebra.Category.ModuleCat.Stalk
 
 /-!
@@ -11,37 +10,19 @@ first is implemented by Mathlib's canonical module structure on the stalk of
 a presheaf of modules, together with its germ compatibility lemma.  The
 second uses the change-of-rings presheaf from Chapter 6.  Its tensor notation
 is represented by extension of scalars at the stalk and by a canonical module
-isomorphism.  The commutative-ring presheaf aliases below make the book's
-global convention on rings explicit while reusing the earlier `RingCat`-based
-presheaf-of-modules API.
+isomorphism.  The commutative-ring presheaf aliases from Chapter 6 make the
+book's global convention on rings explicit while reusing the earlier
+`RingCat`-based presheaf-of-modules API.
 -/
 
 namespace Formalization.Books.Sheaves.Unit14
 
-open CategoryTheory CategoryTheory.Limits Opposite TopologicalSpace
+open CategoryTheory Opposite TopologicalSpace
 open Formalization.Books.Sheaves.Unit06
-open scoped ChangeOfRings
 
 universe u
 
 noncomputable section
-
-/-! ## Source-facing commutative ring aliases -/
-
-/-- A presheaf of rings, with the book's convention that rings are commutative. -/
-abbrev CommRingPresheaf (X : TopCat.{u}) :=
-  TopCat.Presheaf (CommRingCat.{u}) X
-
-/-- A presheaf of modules over a commutative-ring presheaf. -/
-abbrev CommRingPresheafModule {X : TopCat.{u}} (O : CommRingPresheaf X) :=
-  PMod (O ⋙ (forget₂ CommRingCat RingCat))
-
-/-- The underlying `RingCat` morphism of a commutative-ring-presheaf morphism. -/
-abbrev commRingPresheafMorphismToRingPresheaf
-    {X : TopCat.{u}} {O O' : CommRingPresheaf X} (α : O ⟶ O') :
-    (O ⋙ (forget₂ CommRingCat RingCat)) ⟶
-      (O' ⋙ (forget₂ CommRingCat RingCat)) :=
-  Functor.whiskerRight α (forget₂ CommRingCat RingCat)
 
 /-! ## The module structure on a stalk -/
 

@@ -2,8 +2,6 @@ import Mathlib.Algebra.Category.ModuleCat.Localization
 import Mathlib.Algebra.Colimit.Module
 import Mathlib.Algebra.Group.Submonoid.Pointwise
 import Mathlib.Algebra.Module.LocalizedModule.AtPrime
-import Mathlib.Algebra.Module.LocalizedModule.Away
-import Mathlib.Algebra.Module.LocalizedModule.Exact
 import Mathlib.Algebra.Module.LocalizedModule.Submodule
 import Mathlib.CategoryTheory.ObjectProperty.FullSubcategory
 import Mathlib.RingTheory.Localization.LocalizationLocalization
@@ -215,27 +213,22 @@ abbrev localizedModuleAtPrime {R : Type u} [CommRing R] (p : Ideal R) [p.IsPrime
   LocalizedModule.AtPrime p M
 
 abbrev localizationAway {R : Type u} [CommRing R] (f : R) :=
-  localization (Submonoid.powers f)
+  Localization.Away f
 
 abbrev localizedModuleAway {R : Type u} [CommRing R] (f : R)
     (M : Type v) [AddCommGroup M] [Module R M] :=
-  localizedModule (Submonoid.powers f) M
+  LocalizedModule.Away f M
 
 theorem localizationAway_subsingleton_iff {R : Type u} [CommRing R] (f : R) :
     Subsingleton (localizationAway f) ↔ IsNilpotent f := by
   sorry
 
 /-- The total quotient ring, localized at all non-zero-divisors. -/
-abbrev totalQuotientRing (R : Type u) [CommRing R] := Localization (nonZeroDivisors R)
+abbrev totalQuotientRing (R : Type u) [CommRing R] := FractionRing R
 
 theorem totalQuotient_is_fraction_ring {R : Type u} [CommRing R] :
     IsFractionRing R (totalQuotientRing R) := by
   infer_instance
-
-@[instance_reducible] noncomputable def totalQuotientFieldStructure
-    {R : Type u} [CommRing R] [IsDomain R] :
-    Field (totalQuotientRing R) :=
-  IsFractionRing.toField R
 
 /-! ## The filtered-colimit description -/
 
@@ -285,11 +278,40 @@ theorem localizationStage_transition_formula {R : Type u} [CommRing R]
             localizationStageFraction S g ((c ^ e) • m) e := by
   sorry
 
+noncomputable def localizationStageTransitionCoefficient {R : Type u} [CommRing R]
+    (S : Submonoid R) {M : Type v} [AddCommGroup M] [Module R M]
+    (f g : LocalizationIndex S) (hfg : f ≤ g) : R :=
+  (localizationStage_transition_formula (M := M) S f g hfg).choose
+
+noncomputable def localizationStageTransitionMap {R : Type u} [CommRing R]
+    (S : Submonoid R) {M : Type v} [AddCommGroup M] [Module R M]
+    (f g : LocalizationIndex S) (hfg : f ≤ g) :
+    localizationStage S M f →ₗ[R] localizationStage S M g :=
+  (localizationStage_transition_formula (M := M) S f g hfg).choose_spec.2.choose
+
+theorem localizationStageTransitionMap_formula {R : Type u} [CommRing R]
+    (S : Submonoid R) {M : Type v} [AddCommGroup M] [Module R M]
+    (f g : LocalizationIndex S) (hfg : f ≤ g) (m : M) (e : ℕ) :
+    localizationStageTransitionMap S f g hfg (localizationStageFraction S f m e) =
+      localizationStageFraction S g
+        ((localizationStageTransitionCoefficient (M := M) S f g hfg ^ e) • m) e := by
+  exact (localizationStage_transition_formula (M := M) S f g hfg).choose_spec.2.choose_spec m e
+
+noncomputable def localizationStageFunctor {R : Type u} [CommRing R]
+    (S : Submonoid R) (M : Type v) [AddCommGroup M] [Module R M] :
+    LocalizationIndex S ⥤ ModuleCat.{max u v} R where
+  obj f := ModuleCat.of R (localizationStage S M f)
+  map := fun {f g} h =>
+    ModuleCat.ofHom (localizationStageTransitionMap S f g (leOfHom h))
+  map_id := by
+    sorry
+  map_comp := by
+    sorry
+
 theorem localizedModule_is_colimit_of_stages {R : Type u} [CommRing R]
     (S : Submonoid R) (M : Type v) [AddCommGroup M] [Module R M] :
-    ∃ F : LocalizationIndex S ⥤ ModuleCat.{max u v} R,
-      (∀ f, Nonempty (F.obj f ≅ ModuleCat.of R (localizationStage S M f))) ∧
-        Nonempty (colimit F ≅ ModuleCat.of R (localizedModule S M)) := by
+    Nonempty (colimit (localizationStageFunctor S M) ≅
+      ModuleCat.of R (localizedModule S M)) := by
   sorry
 
 /-! ## Products and iterated localization -/
@@ -426,9 +448,12 @@ theorem localizedQuotientModuleEquiv_exists {R : Type u} [CommRing R]
 theorem localizedQuotientModule_equiv_formula {R : Type u} [CommRing R]
     (S : Submonoid R) {M : Type v} [AddCommGroup M] [Module R M]
     (N : Submodule R M) :
-    Nonempty (localizedModule S (M ⧸ N) ≃ₗ[localization S]
-      localizedModule S M ⧸ localizedSubmodule S N) := by
-  exact localizedQuotientModuleEquiv_exists S N
+    ∃ e : localizedModule S (M ⧸ N) ≃ₗ[localization S]
+        localizedModule S M ⧸ localizedSubmodule S N,
+      ∀ (m : M) (s : S),
+        e (localizedModuleFraction S (Submodule.Quotient.mk m) s) =
+          Submodule.Quotient.mk (localizedModuleFraction S m s) := by
+  sorry
 
 /-! ## Ideals and quotient rings -/
 

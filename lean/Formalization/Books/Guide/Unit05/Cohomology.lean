@@ -195,7 +195,7 @@ structure TameDMProperBaseChangeConclusion {C : Type u}
 theorem proper_base_change_for_etale_cohomology_of_tame_dm_stacks
     {C : Type u} [Category.{v} C] [StackCategory C]
     [StackCohomologyTheory C] (D : TameDMProperBaseChangeData (C := C))
-    (hproper : D.proper) :
+    :
     Nonempty (TameDMProperBaseChangeConclusion D) := by
   sorry
 

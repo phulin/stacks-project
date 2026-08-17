@@ -148,7 +148,7 @@ structure RydhNoetherianApproximationHypotheses {C : Type u}
   quasiCompactSeparatedDiagonalAlternative : Prop
   hasApplicableAlternative :
     quasiFiniteSeparatedDiagonal ∨
-      (deligneMumfordAlternative ∧ quasiCompactSeparatedDiagonalAlternative)
+      (IsDeligneMumfordStack X ∧ quasiCompactSeparatedDiagonalAlternative)
 
 theorem rydh_noetherian_approximation_theorem_B
     {C : Type u} [Category.{v} C] [StackCategory C] {X : C}

@@ -32,7 +32,7 @@ structure FormalDeformationSituation (C : Type u) [Category.{v} C] where
   formalObject : C
   formalObjectIsCompletionAtMarkedPoint : Prop
   truncation : ℕ → C
-  truncationIsInfinitesimalNeighborhood : ∀ n : ℕ, Prop
+  truncationIsInfinitesimalNeighborhood : ∀ _n : ℕ, Prop
   formalElement : functor.obj (op formalObject)
   restriction : ∀ n, functor.obj (op formalObject) → functor.obj (op (truncation n))
   effective : Prop

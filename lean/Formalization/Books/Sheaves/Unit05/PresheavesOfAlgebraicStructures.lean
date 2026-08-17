@@ -1,4 +1,5 @@
-import Formalization.Books.Sheaves.Unit04.AbelianPresheaves
+import Formalization.Books.Sheaves.Unit03.Presheaves
+import Mathlib.Algebra.Category.Grp.Basic
 import Mathlib.Algebra.Category.ModuleCat.Basic
 import Mathlib.Algebra.Category.Ring.Basic
 import Mathlib.CategoryTheory.Whiskering
@@ -65,12 +66,6 @@ theorem existsUnique_algebraicStructureMorphism {C : Type u} [Category.{c} C]
 contravariant functor on the category of opens. -/
 abbrev PresheafWithValues (X : TopCat.{v}) (C : Type u) [Category.{c} C] :=
   TopCat.Presheaf C X
-
-/-- The category of `C`-valued presheaves on `X`; its category structure is
-the standard functor-category structure. -/
-abbrev PresheafWithValuesCategory (X : TopCat.{v}) (C : Type u)
-    [Category.{c} C] :=
-  PresheafWithValues X C
 
 /-- A morphism of `C`-valued presheaves, represented by a natural
 transformation. -/

@@ -1,6 +1,6 @@
 import Mathlib.Algebra.Category.ModuleCat.Monoidal.Closed
-import Mathlib.Algebra.Exact.Basic
 import Mathlib.Algebra.Module.FinitePresentation
+import Mathlib.LinearAlgebra.LeftExact
 import Mathlib.RingTheory.Localization.Module
 import Formalization.Books.Algebra.Unit09.Localization
 
@@ -52,35 +52,25 @@ theorem internalHom_smul_apply_eq {R M N : Type*} [CommRing R]
 
 /-! ## Pre- and post-composition -/
 
-/-- Pre-composition by an `R`-linear map, viewed as an `R`-linear map of
-internal hom modules. -/
-def internalHomPrecomp {R M M' N : Type*} [CommRing R]
+/- Mathlib's `LinearMap.lcomp` and `LinearMap.llcomp` are the canonical
+pre- and post-composition maps on internal hom modules. -/
+
+/-- The source-facing name for Mathlib's canonical pre-composition map. -/
+abbrev internalHomPrecomp {R M M' N : Type*} [CommRing R]
     [AddCommGroup M] [Module R M] [AddCommGroup M'] [Module R M']
     [AddCommGroup N] [Module R N] (a : M →ₗ[R] M') :
     internalHomModule (R := R) (M := M') (N := N) →ₗ[R]
-      internalHomModule (R := R) (M := M) (N := N) where
-  toFun φ := φ.comp a
-  map_add' φ ψ := by
-    ext m
-    simp
-  map_smul' r φ := by
-    ext m
-    simp
+      internalHomModule (R := R) (M := M) (N := N) :=
+  LinearMap.lcomp R N a
 
-/-- Post-composition by an `R`-linear map, viewed as an `R`-linear map of
-internal hom modules. -/
-def internalHomPostcomp {R M N N' : Type*} [CommRing R]
+/-- The source-facing name for Mathlib's canonical post-composition map. -/
+abbrev internalHomPostcomp {R M N N' : Type*} [CommRing R]
     [AddCommGroup M] [Module R M] [AddCommGroup N] [Module R N]
     [AddCommGroup N'] [Module R N'] (b : N →ₗ[R] N') :
     internalHomModule (R := R) (M := M) (N := N) →ₗ[R]
-      internalHomModule (R := R) (M := M) (N := N') where
-  toFun φ := b.comp φ
-  map_add' φ ψ := by
-    ext m
-    simp
-  map_smul' r φ := by
-    ext m
-    simp
+      internalHomModule (R := R) (M := M) (N := N') :=
+  LinearMap.llcomp (R := R) R M N N'
+    (σ₁₂ := RingHom.id R) (σ₁₃ := RingHom.id R) (σ₂₃ := RingHom.id R) b
 
 @[simp]
 theorem internalHomPrecomp_apply {R M M' N : Type*} [CommRing R]

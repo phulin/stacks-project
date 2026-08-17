@@ -33,12 +33,27 @@ theorem jacobson_radical_eq_maximalIdeal (R : Type u) [CommRing R]
 theorem ideal_le_jacobson_iff_one_add_isUnit {R : Type u} [CommRing R]
     (I : Ideal R) :
     I ≤ Ring.jacobson R ↔ ∀ x ∈ I, IsUnit (1 + x) := by
-  sorry
+  rw [← Ideal.jacobson_bot]
+  constructor
+  · intro h x hx
+    have hunit := (Ideal.mem_jacobson_bot.mp (h hx)) 1
+    simpa [add_comm] using hunit
+  · intro h x hx
+    apply Ideal.mem_jacobson_bot.mpr
+    intro y
+    simpa [add_comm] using h (x * y) (I.mul_mem_right y hx)
 
 theorem isUnit_of_isUnit_quotient_of_le_jacobson {R : Type u} [CommRing R]
     (I : Ideal R) (hI : I ≤ Ring.jacobson R) {x : R}
     (hx : IsUnit (Ideal.Quotient.mk I x)) : IsUnit x := by
-  sorry
+  obtain ⟨y, hy⟩ := isUnit_iff_exists_inv.mp hx
+  obtain ⟨y, rfl⟩ := Ideal.Quotient.mk_surjective y
+  have hmem : x * y - 1 ∈ I := by
+    rw [← Ideal.Quotient.mk_eq_one_iff_sub_mem]
+    simpa only [map_mul] using hy
+  apply isUnit_of_mul_isUnit_left
+  simpa using
+    (ideal_le_jacobson_iff_one_add_isUnit I).mp hI (x * y - 1) hmem
 
 /-! The second lemma in the source section. -/
 
@@ -46,7 +61,20 @@ theorem isUnit_iff_isUnit_map_of_spec_surjective {R : Type u} {S : Type v}
     [CommRing R] [CommRing S] (φ : R →+* S)
     (hφ : Function.Surjective (PrimeSpectrum.comap φ)) (x : R) :
     IsUnit x ↔ IsUnit (φ x) := by
-  sorry
+  constructor
+  · intro hx
+    exact hx.map φ
+  · intro hx
+    by_contra hnx
+    obtain ⟨M, hM, hMx⟩ := exists_max_ideal_of_mem_nonunits hnx
+    let p : PrimeSpectrum R := ⟨M, hM.isPrime⟩
+    obtain ⟨q, hq⟩ := hφ p
+    have hxp : x ∈ (PrimeSpectrum.comap φ q).asIdeal := by
+      rw [hq]
+      exact hMx
+    have hxq : φ x ∈ q.asIdeal := by
+      simpa [PrimeSpectrum.comap_asIdeal] using hxp
+    exact (Ideal.notMem_of_isUnit q.asIdeal hx) hxq
 
 end
 

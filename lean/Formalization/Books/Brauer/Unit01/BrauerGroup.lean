@@ -54,7 +54,75 @@ theorem similarity_has_unique_division_representative (k : Type u_k) [Field k]
             (∀ x : E.carrier, IsUnit x ∨ x = 0) →
             IsBrauerEquivalent A E →
                 Nonempty (D.carrier ≃ₐ[k] E.carrier) := by
-  sorry
+  classical
+  obtain ⟨n, hn, D, hD, hDalg, hDfinite, ⟨e⟩⟩ :=
+    wedderburn_artin_finite k A.carrier
+  let _ : NeZero n := hn
+  let _ : Algebra.IsCentral k A.carrier := A.isCentral
+  let _ : Algebra.IsCentral k D :=
+    { out := by
+        intro x hx
+        have hxcomm : ∀ y : D, Commute x y := by
+          intro y
+          exact (Subalgebra.mem_center_iff.mp hx y).symm
+        have hxmat : Matrix.scalar (Fin n) x ∈ Set.center
+            (Matrix (Fin n) (Fin n) D) := by
+          rw [Semigroup.mem_center_iff]
+          intro M
+          exact (Matrix.scalar_commute x hxcomm M).eq.symm
+        obtain ⟨a, ha⟩ := e.surjective (Matrix.scalar (Fin n) x)
+        have hacenter : a ∈ Subalgebra.center k A.carrier := by
+          rw [Subalgebra.mem_center_iff]
+          intro b
+          have h := (Semigroup.mem_center_iff.mp hxmat) (e b)
+          have h' := congrArg e.symm h
+          rw [← ha] at h'
+          simpa using h'
+        obtain ⟨r, hr⟩ :=
+          Algebra.mem_bot.mp (‹Algebra.IsCentral k A.carrier›.out hacenter)
+        apply Algebra.mem_bot.mpr
+        refine ⟨r, ?_⟩
+        apply (Matrix.scalar_inj (n := Fin n)).mp
+        calc
+          Matrix.scalar (Fin n) (algebraMap k D r) =
+              algebraMap k (Matrix (Fin n) (Fin n) D) r := by rfl
+          _ = e (algebraMap k A.carrier r) := by simp
+          _ = e a := by rw [hr]
+          _ = Matrix.scalar (Fin n) x := ha }
+  let D' : CSA.{u_k, u_A} k := { AlgCat.of k D with }
+  refine ⟨D', ?_, ?_, ?_⟩
+  · intro x
+    by_cases hx : (x : D) = 0
+    · exact Or.inr hx
+    · exact Or.inl (isUnit_iff_ne_zero.mpr hx)
+  · refine ⟨1, n, one_ne_zero, hn.out, ?_⟩
+    let f : Matrix (Fin 1) (Fin 1) A.carrier →ₐ[k] A.carrier :=
+      { toFun := fun M => M 0 0
+        map_one' := by simp
+        map_mul' := by
+          intro M N
+          simp [Matrix.mul_apply]
+        map_zero' := by simp
+        map_add' := by
+          intro M N
+          rfl
+        commutes' := by
+          intro r
+          rw [Matrix.algebraMap_matrix_apply]
+          simp }
+    have hf : Function.Bijective f := by
+      constructor
+      · intro M N h
+        change M 0 0 = N 0 0 at h
+        apply Matrix.ext
+        intro i j
+        simpa [Subsingleton.elim i (0 : Fin 1),
+          Subsingleton.elim j (0 : Fin 1)] using h
+      · intro M
+        refine ⟨fun _ _ => M, ?_⟩
+        rfl
+    exact ⟨(AlgEquiv.ofBijective f hf).trans e⟩
+  · sorry
 
 private theorem matrix_standard_module_end_alg (k K : Type*) [Field k]
     [DivisionRing K] [Algebra k K] (n : ℕ) [NeZero n] :

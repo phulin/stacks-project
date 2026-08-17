@@ -22,7 +22,97 @@ abbrev Bicommutant (A : Type u) [Ring A] (M : Submodule Aᵐᵒᵖ A) : Type u :
 theorem rieffel_bicommutant (A : Type u) [Ring A] [IsSimpleRing A]
     (M : Submodule Aᵐᵒᵖ A) (hM : M ≠ ⊥) :
     Nonempty (A ≃+* Bicommutant A M) := by
-  sorry
+  classical
+  let E := Module.End Aᵐᵒᵖ M
+  let T := Module.End E M
+  letI : Nontrivial M := Submodule.nontrivial_iff_ne_bot.mpr hM
+  let r : Aᵐᵒᵖ →+* T := Module.toModuleEnd E (S := Aᵐᵒᵖ) M
+  have hr : Function.Bijective r := by
+    constructor
+    · intro a b hab
+      have hAnn : Module.annihilator Aᵐᵒᵖ M = ⊥ := by
+        have h := (isSimpleRing_iff_isTwoSided_imp.mp
+          (inferInstance : IsSimpleRing Aᵐᵒᵖ)).2
+          (Module.annihilator Aᵐᵒᵖ M) inferInstance
+        exact h.resolve_right (by
+          intro htop
+          exact (not_subsingleton M)
+            (Module.annihilator_eq_top_iff.mp htop))
+      letI : FaithfulSMul Aᵐᵒᵖ M := Module.annihilator_eq_bot.mp hAnn
+      apply FaithfulSMul.eq_of_smul_eq_smul (α := M)
+      intro m
+      exact DFunLike.congr_fun hab m
+    · intro f
+      let leftMul : M → E := fun n =>
+        ((LinearMap.mulLeft Aᵐᵒᵖ (n : A)).domRestrict M).codRestrict M
+          (fun z => M.smul_mem (MulOpposite.op (z : A)) n.property)
+      let I : Ideal A := Submodule.span A (M : Set A)
+      letI : I.IsTwoSided := ⟨fun b ha => by
+        induction ha using Submodule.span_induction with
+        | mem x hx =>
+            exact Submodule.subset_span (by simpa using M.smul_mem (MulOpposite.op b) hx)
+        | zero => simp
+        | add x y _ _ hx hy => simpa [add_mul] using I.add_mem hx hy
+        | smul a x _ hx =>
+            simpa [smul_eq_mul, mul_assoc] using I.mul_mem_left a hx⟩
+      have hI : I ≠ ⊥ := by
+        intro hbot
+        obtain ⟨m, hm⟩ := exists_ne (0 : M)
+        have hmI : (m : A) ∈ I := Submodule.subset_span m.property
+        rw [hbot] at hmI
+        exact hm (by simpa using hmI)
+      have hItop : I = ⊤ :=
+        ((isSimpleRing_iff_isTwoSided_imp.mp (inferInstance : IsSimpleRing A)).2 I inferInstance)
+          |>.resolve_left hI
+      have h1 : (1 : A) ∈ I := hItop ▸ Submodule.mem_top
+      change (1 : A) ∈ Submodule.span A (M : Set A) at h1
+      obtain ⟨c, t, ht, hc, hct⟩ :=
+        (Submodule.mem_span_iff_exists_finset_subset).mp h1
+      let xM : t → M := fun x => ⟨x.1, ht x.2⟩
+      let nM (m : M) (x : t) : M :=
+        ⟨(m : A) * c x.1, M.smul_mem (MulOpposite.op (c x.1)) m.property⟩
+      let a0 : A := (∑ x ∈ t.attach, c x.1 * (f (xM x) : A))
+      have hct' : (∑ x ∈ t.attach, c x.1 * x.1) = 1 := by
+        have hs := Finset.sum_attach t (fun x : A => c x * x)
+        calc
+          (∑ x ∈ t.attach, c x.1 * x.1) = ∑ x ∈ t, c x * x := hs
+          _ = 1 := by simpa [smul_eq_mul] using hct
+      refine ⟨MulOpposite.op a0, ?_⟩
+      apply LinearMap.ext
+      intro m
+      have hm : m = ∑ x ∈ t.attach, leftMul (nM m x) • xM x := by
+        apply Subtype.ext
+        calc
+          (m : A) = (m : A) * 1 := by simp
+          _ = (m : A) * (∑ x ∈ t.attach, c x.1 * x.1) := by rw [hct']
+          _ = ∑ x ∈ t.attach, ((m : A) * c x.1) * x.1 := by
+            rw [Finset.mul_sum]
+            apply Finset.sum_congr rfl
+            intro x hx
+            rw [mul_assoc]
+          _ = (∑ x ∈ t.attach, leftMul (nM m x) • xM x : M) := by
+            rw [Submodule.coe_sum]
+            apply Finset.sum_congr rfl
+            intro x hx
+            rfl
+      have hf : f m = ∑ x ∈ t.attach, leftMul (nM m x) • f (xM x) := by
+        calc
+          f m = f (∑ x ∈ t.attach, leftMul (nM m x) • xM x) := congrArg f hm
+          _ = ∑ x ∈ t.attach, leftMul (nM m x) • f (xM x) := by
+            simp only [map_sum, map_smul]
+      apply Subtype.ext
+      calc
+        ((r (MulOpposite.op a0)) m : A) = (m : A) * a0 := by rfl
+        _ = ∑ x ∈ t.attach, ((m : A) * c x.1) * (f (xM x) : A) := by
+          simp [a0, Finset.mul_sum, mul_assoc]
+        _ = (f m : A) := by
+          rw [hf]
+          rw [Submodule.coe_sum]
+          apply Finset.sum_congr rfl
+          intro x hx
+          rfl
+  let e : Aᵐᵒᵖ ≃+* T := RingEquiv.ofBijective r hr
+  exact ⟨(RingEquiv.opOp A).trans e.op⟩
 
 private theorem exists_simple_submodule_of_finite_algebra (k A M : Type*)
     [Field k] [Ring A] [Algebra k A] [FiniteDimensional k A]

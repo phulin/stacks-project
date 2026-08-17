@@ -217,9 +217,21 @@ theorem prewhisker_associativity
     (F : A ⥤ B) (G : B ⥤ C) {H H' : C ⥤ D} (s : H ⟶ H') :
     Functor.whiskerLeft F (Functor.whiskerLeft G s) =
       (Functor.associator F G H).inv ≫
-        Functor.whiskerLeft (F ⋙ G) s ≫
+    Functor.whiskerLeft (F ⋙ G) s ≫
           (Functor.associator F G H').hom :=
   Functor.whiskerLeft_twice F G s
+
+theorem postwhisker_prewhisker_associativity
+    {A : Type u₁} [Category.{v₁} A]
+    {B : Type u₂} [Category.{v₂} B]
+    {C : Type u₃} [Category.{v₃} C]
+    {D : Type u₄} [Category.{v₄} D]
+    (F : A ⥤ B) {G G' : B ⥤ C} (s : G ⟶ G') (H : C ⥤ D) :
+    Functor.whiskerRight (Functor.whiskerLeft F s) H =
+      (Functor.associator F G H).hom ≫
+        Functor.whiskerLeft F (Functor.whiskerRight s H) ≫
+          (Functor.associator F G' H).inv :=
+  Functor.whiskerRight_left F s H
 
 theorem whiskering_interchange
     {A : Type u₁} [Category.{v₁} A]

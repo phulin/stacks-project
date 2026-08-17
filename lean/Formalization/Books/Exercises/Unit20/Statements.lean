@@ -13,6 +13,8 @@ Proofs are deferred to the proving stage.
 
 namespace Formalization.Books.Exercises.Unit20
 
+open scoped Pointwise
+
 universe u v w
 
 noncomputable section
@@ -58,7 +60,148 @@ theorem exists_subvectorSpace_power_growth_lower_bound
         ∀ n : ℕ, 1 ≤ n →
           (Module.finrank k ((V ^ n : Submodule k K) : Type v) : ℝ) ≥
             ε * (n : ℝ) ^ d := by
-  sorry
+  classical
+  letI : FaithfulSMul k K := inferInstance
+  obtain ⟨ι, x, hx⟩ := exists_isTranscendenceBasis' k K
+  have hcard : Cardinal.mk ι = d := by
+    rw [hx.cardinalMk_eq_trdeg, htrdeg]
+  let e : ι ≃ Fin d := Classical.choice (Cardinal.mk_eq_nat_iff.mp hcard)
+  let y : Fin d → K := x ∘ e.symm
+  have hy : IsTranscendenceBasis k y := by
+    simpa [y] using hx.comp_equiv e.symm
+  let V : Submodule k K := Submodule.span k ((Set.range y).union (Set.singleton 1))
+  have hV : FiniteDimensional k V := by
+    exact FiniteDimensional.span_of_finite k
+      ((Set.finite_range y).union (Set.finite_singleton 1))
+  have hyV (i : Fin d) : y i ∈ V :=
+    Submodule.subset_span (Or.inl (Set.mem_range_self i))
+  have honeV : (1 : K) ∈ V :=
+    Submodule.subset_span (Or.inr (Set.mem_singleton 1))
+  have hpow_mono {m n : ℕ} (hmn : m ≤ n) : V ^ m ≤ V ^ n := by
+    rw [Submodule.pow_eq_span_pow_set, Submodule.pow_eq_span_pow_set]
+    exact Submodule.span_mono (Set.pow_subset_pow_right honeV hmn)
+  have hprod_set (a : Fin d →₀ ℕ) :
+      (∏ i : Fin d, (V : Set K) ^ a i) ⊆
+        (V : Set K) ^ (∑ i : Fin d, a i) := by
+    induction (Finset.univ : Finset (Fin d)) using Finset.induction_on with
+    | empty =>
+        simp
+    | @insert i s hi ih =>
+        rw [Finset.prod_insert hi, Finset.sum_insert hi]
+        intro z hz
+        obtain ⟨z₁, hz₁, z₂, hz₂, rfl⟩ := Set.mem_mul.mp hz
+        simpa [pow_add] using Set.mul_mem_mul hz₁ (ih hz₂)
+  have hprod_mem (a : Fin d →₀ ℕ) :
+      (∏ i : Fin d, y i ^ a i) ∈ V ^ a.sum (fun _ n => n) := by
+    apply Submodule.pow_subset_pow V
+    have hp : (∏ i : Fin d, y i ^ a i) ∈
+        ∏ i : Fin d, (V : Set K) ^ a i := by
+      apply (Set.mem_fintype_prod _ _).2
+      refine ⟨fun i => y i ^ a i, ?_, rfl⟩
+      intro i
+      exact Set.pow_mem_pow (n := a i) (hyV i)
+    simpa [Finsupp.sum_fintype] using hprod_set a hp
+  let evalMon : (Fin d →₀ ℕ) → K :=
+    fun p => MvPolynomial.aeval y (MvPolynomial.monomial p (1 : k))
+  have hmon : LinearIndependent k evalMon := by
+    have h := (MvPolynomial.basisMonomials (Fin d) k).linearIndependent.map'
+      (MvPolynomial.aeval y).toLinearMap
+      (LinearMap.ker_eq_bot_of_injective
+        (algebraicIndependent_iff_injective_aeval.mp hy.1))
+    change LinearIndependent k (fun p : Fin d →₀ ℕ =>
+      MvPolynomial.aeval y (MvPolynomial.monomial p (1 : k))) at h
+    simpa [evalMon] using h
+  let I (n : ℕ) := Fin d → Fin (n / d + 1)
+  let p (n : ℕ) (a : I n) : Fin d →₀ ℕ :=
+    Finsupp.equivFunOnFinite.symm (fun i => (a i : ℕ))
+  have hp_inj (n : ℕ) : Function.Injective (p n) := by
+    intro a b hab
+    have hfun : (fun i => (a i : ℕ)) = (fun i => (b i : ℕ)) :=
+      Finsupp.equivFunOnFinite.symm.injective hab
+    funext i
+    apply Fin.ext
+    exact congr_fun hfun i
+  have hpsum (n : ℕ) (a : I n) :
+      (p n a).sum (fun _ m => m) = ∑ i : Fin d, (a i : ℕ) := by
+    simpa [p] using
+      (Finsupp.equivFunOnFinite_symm_sum (fun i : Fin d => (a i : ℕ)))
+  have hsum_le (n : ℕ) (a : I n) : (∑ i : Fin d, (a i : ℕ)) ≤ n := by
+    calc
+      (∑ i : Fin d, (a i : ℕ)) ≤ ∑ i : Fin d, n / d := by
+        apply Finset.sum_le_sum
+        intro i hi
+        exact Nat.lt_succ_iff.mp (a i).isLt
+      _ = d * (n / d) := by simp
+      _ ≤ n := Nat.mul_div_le n d
+  have hmem (n : ℕ) (a : I n) :
+      evalMon (p n a) ∈ V ^ n := by
+    dsimp [evalMon]
+    rw [MvPolynomial.aeval_monomial]
+    simp only [map_one, one_mul]
+    have hpmem : (∏ i : Fin d, y i ^ (p n a) i) ∈
+        V ^ (p n a).sum (fun _ m => m) := hprod_mem (p n a)
+    have hle : (p n a).sum (fun _ m => m) ≤ n := by
+      rw [hpsum]
+      exact hsum_le n a
+    have hq := hpow_mono hle hpmem
+    simpa [Finsupp.prod_fintype] using hq
+  have hlin (n : ℕ) : LinearIndependent k (evalMon ∘ p n) :=
+    hmon.comp (p n) (hp_inj n)
+  have hlin_sub (n : ℕ) :
+      LinearIndependent k (fun a : I n =>
+        (⟨evalMon (p n a), hmem n a⟩ : (V ^ n : Submodule k K))) := by
+    apply LinearIndependent.of_comp (V ^ n).subtype
+    simpa [Function.comp_def] using hlin n
+  have hcardfin (n : ℕ) :
+      Fintype.card (I n) ≤ Module.finrank k ((V ^ n : Submodule k K) : Type v) := by
+    haveI : FiniteDimensional k V := hV
+    have hpow_fin (m : ℕ) :
+        FiniteDimensional k ((V ^ m : Submodule k K) : Type v) := by
+      have hone : FiniteDimensional k ((1 : Submodule k K) : Type v) := by
+        rw [Submodule.one_eq_span_one_set]
+        exact FiniteDimensional.span_of_finite k (Set.finite_singleton 1)
+      induction m with
+      | zero =>
+          rw [Submodule.pow_zero]
+          exact hone
+      | succ m ihm =>
+          rw [Submodule.pow_succ]
+          haveI : FiniteDimensional k ((V ^ m : Submodule k K) : Type v) := ihm
+          exact finiteDimensional_subvectorSpace_product (V ^ m) V
+    haveI : FiniteDimensional k ((V ^ n : Submodule k K) : Type v) := hpow_fin n
+    exact (hlin_sub n).fintype_card_le_finrank
+  exact ⟨V, hV, ((d + 1 : ℝ)⁻¹) ^ d, by positivity, by
+    intro n hn
+    have hcardpow :
+        (n / d + 1) ^ d ≤ Module.finrank k ((V ^ n : Submodule k K) : Type v) := by
+      simpa [I] using hcardfin n
+    have hcardpowR :
+        ((n / d + 1 : ℕ) ^ d : ℝ) ≤
+          (Module.finrank k ((V ^ n : Submodule k K) : Type v) : ℝ) := by
+      exact_mod_cast hcardpow
+    by_cases hd : d = 0
+    · subst d
+      simpa [Nat.div_zero] using hcardpowR
+    · have hdpos : 0 < d := Nat.pos_of_ne_zero hd
+      have hdiv := Nat.div_add_mod n d
+      have hmod : n % d < d := Nat.mod_lt n hdpos
+      have hnq : n ≤ (d + 1) * (n / d + 1) := by
+        nlinarith [hdiv, hmod]
+      have hnqR : (n : ℝ) ≤ (d + 1 : ℝ) * ((n / d + 1 : ℕ) : ℝ) := by
+        exact_mod_cast hnq
+      have hd1 : (0 : ℝ) < (d + 1 : ℝ) := by positivity
+      have hbase : (n : ℝ) / (d + 1 : ℝ) ≤ ((n / d + 1 : ℕ) : ℝ) := by
+        exact (div_le_iff₀ hd1).2 (by simpa [mul_comm] using hnqR)
+      have hpowR : ((n : ℝ) / (d + 1 : ℝ)) ^ d ≤
+          ((n / d + 1 : ℕ) : ℝ) ^ d := by
+        gcongr
+      calc
+        ((d + 1 : ℝ)⁻¹) ^ d * (n : ℝ) ^ d =
+            ((n : ℝ) / (d + 1 : ℝ)) ^ d := by
+              rw [div_eq_mul_inv, ← mul_pow]
+              ring
+        _ ≤ ((n / d + 1 : ℕ) : ℝ) ^ d := hpowR
+        _ ≤ (Module.finrank k ((V ^ n : Submodule k K) : Type v) : ℝ) := hcardpowR⟩
 
 /-- The upper polynomial-growth bound for every finite-dimensional subvector
 space in a finitely generated field extension of transcendence degree `d`. -/

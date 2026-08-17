@@ -1,7 +1,6 @@
 import Mathlib.Algebra.Category.Grp.Adjunctions
 import Mathlib.Algebra.Category.Grp.Limits
 import Mathlib.CategoryTheory.Adjunction.AdjointFunctorTheorems
-import Mathlib.CategoryTheory.Elements
 import Mathlib.CategoryTheory.Limits.FunctorCategory.Basic
 import Mathlib.CategoryTheory.Limits.IndYoneda
 import Mathlib.CategoryTheory.Limits.Shapes.WideEqualizers
@@ -243,7 +242,6 @@ theorem brown_final_equalizer_argument
     {C : Type u} [Category.{v} C] [HasLimits C]
     (F : C ⥤ Type v) [PreservesLimits F]
     {I : Type v} (X : I → C) (x : ∀ i, F.obj (X i))
-    (hgen : IsGeneratingFamily F X x)
     (hξ : ∀ Y : C, Function.Surjective
       ((brownUniversalTransformation F X x).app Y))
     {Z : C} (y' : F.obj (brownEqualizerObject F (brownUniversalElement F X x)))

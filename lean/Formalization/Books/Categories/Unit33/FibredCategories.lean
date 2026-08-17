@@ -80,7 +80,7 @@ theorem stronglyCartesian_over_composition
     Functor.IsStronglyCartesian (F ⋙ G) ((F ⋙ G).map φ) φ := by
   constructor
   intro c g τ hτ
-  letI : (F ⋙ G).IsHomLift (g ≫ (F ⋙ G).map φ) τ := hτ
+  let : (F ⋙ G).IsHomLift (g ≫ (F ⋙ G).map φ) τ := hτ
   have hcomp : G.map (F.map τ) = g ≫ G.map (F.map φ) := by
     symm
     simpa only [Functor.comp_map] using
@@ -101,20 +101,20 @@ theorem stronglyCartesian_over_composition
       g = G.map χ := hχmap
       _ = G.map (F.map δ) := congrArg G.map hδmap
       _ = (F ⋙ G).map δ := by simp only [Functor.comp_map]
-  haveI : (F ⋙ G).IsHomLift g δ := by
+  have : (F ⋙ G).IsHomLift g δ := by
     rw [hmap]
     infer_instance
   refine ⟨δ, ⟨inferInstance, hδeq⟩, ?_⟩
   intro δ' ⟨hδ'base, hδ'eq⟩
   have hδ'comp : g = G.map (F.map δ') :=
     CategoryTheory.IsHomLift.eq_of_isHomLift (F ⋙ G) g δ'
-  letI : G.IsHomLift g (F.map δ') := by
+  let : G.IsHomLift g (F.map δ') := by
     rw [hδ'comp]
     infer_instance
   have hFδ' : F.map δ' = χ :=
     hχuniq (F.map δ') ⟨inferInstance, by
       simpa [Functor.comp_map] using congrArg F.map hδ'eq⟩
-  letI : F.IsHomLift χ δ' := by
+  let : F.IsHomLift χ δ' := by
     rw [← hFδ']
     infer_instance
   exact hδuniq δ' ⟨inferInstance, hδ'eq⟩
@@ -130,7 +130,7 @@ theorem stronglyCartesian_fibre_product
     ∃ b : w ⟶ x, IsPullback b a f g := by
   have h₀ : p.obj w = P := IsHomLift.domain_eq p π₂ a
   cases h₀
-  letI : p.IsHomLift (π₁ ≫ p.map f) (a ≫ g) := by
+  let : p.IsHomLift (π₁ ≫ p.map f) (a ≫ g) := by
     rw [hP.w]
     infer_instance
   let b : w ⟶ x :=
@@ -139,7 +139,7 @@ theorem stronglyCartesian_fibre_product
   have hb : b ≫ f = a ≫ g := by
     dsimp [b]
     simp
-  haveI : p.IsHomLift π₁ b := by
+  have : p.IsHomLift π₁ b := by
     dsimp [b]
     infer_instance
   have hbbase : π₁ = p.map b :=
@@ -154,7 +154,7 @@ theorem stronglyCartesian_fibre_product
     have h₂ : p.map u ≫ π₂ = p.map v ≫ π₂ := by
       simpa only [Functor.map_comp, habase.symm] using congrArg p.map hv
     have huv : p.map u = p.map v := hP.hom_ext h₁ h₂
-    letI : p.IsHomLift (p.map u) v := by
+    let : p.IsHomLift (p.map u) v := by
       rw [huv]
       infer_instance
     exact Functor.IsStronglyCartesian.ext p π₂ a (p.map u) hv
@@ -168,13 +168,13 @@ theorem stronglyCartesian_fibre_product
     have hk₂ : k ≫ π₂ = p.map s := by
       dsimp [k]
       simp
-    letI : p.IsHomLift (k ≫ π₂) s := by
+    let : p.IsHomLift (k ≫ π₂) s := by
       rw [hk₂]
       infer_instance
     obtain ⟨t, ⟨ht, hta⟩, _⟩ :=
       Functor.IsStronglyCartesian.universal_property p π₂ a k
         (p.map s) hk₂.symm s
-    letI := ht
+    let := ht
     have htb : t ≫ b = r := by
       have hcomp : (t ≫ b) ≫ f = r ≫ f := by
         calc
@@ -183,9 +183,9 @@ theorem stronglyCartesian_fibre_product
           _ = (t ≫ a) ≫ g := by simp [Category.assoc]
           _ = s ≫ g := by rw [hta]
           _ = r ≫ f := hrs.symm
-      haveI : p.IsHomLift (k ≫ π₁) (t ≫ b) := by
+      have : p.IsHomLift (k ≫ π₁) (t ≫ b) := by
         infer_instance
-      letI : p.IsHomLift (k ≫ π₁) r := by
+      let : p.IsHomLift (k ≫ π₁) r := by
         rw [hk₁]
         infer_instance
       exact Functor.IsStronglyCartesian.ext p (p.map f) f (k ≫ π₁) hcomp
@@ -249,10 +249,10 @@ def pullbackFunctor (P : PullbackChoice p) {R S : C} (f : R ⟶ S) :
   map_id := by
     intro x
     apply Functor.Fiber.hom_ext
-    haveI : p.IsHomLift (𝟙 S) (𝟙 x.1) := IsHomLift.id x.2
+    have : p.IsHomLift (𝟙 S) (𝟙 x.1) := IsHomLift.id x.2
     have hφ' : p.IsHomLift f (P.pullbackMap f x ≫ (𝟙 x.1)) :=
       IsHomLift.comp_lift_id_right' p f (P.pullbackMap f x) S (𝟙 x.1)
-    letI : p.IsHomLift f (P.pullbackMap f x ≫ (𝟙 x.1)) := hφ'
+    let : p.IsHomLift f (P.pullbackMap f x ≫ (𝟙 x.1)) := hφ'
     have hpull : p.obj (Functor.Fiber.fiberInclusion.obj (P.pullback f x)) = R :=
       (P.pullback f x).2
     change
@@ -260,7 +260,7 @@ def pullbackFunctor (P : PullbackChoice p) {R S : C} (f : R ⟶ S) :
           (f' := f) (g := 𝟙 R) (by simp)
           (P.pullbackMap f x ≫ (𝟙 x.1)) =
         𝟙 ((P.pullback f x).1)
-    letI : p.IsHomLift (𝟙 R) (𝟙 ((P.pullback f x).1)) :=
+    let : p.IsHomLift (𝟙 R) (𝟙 ((P.pullback f x).1)) :=
       IsHomLift.id hpull
     symm
     exact @Functor.IsStronglyCartesian.map_uniq _ _ _ _ p R S
@@ -273,13 +273,13 @@ def pullbackFunctor (P : PullbackChoice p) {R S : C} (f : R ⟶ S) :
   map_comp := by
     intro x y z φ ψ
     apply Functor.Fiber.hom_ext
-    letI : Functor.IsStronglyCartesian p f (P.pullbackMap f y) :=
+    let : Functor.IsStronglyCartesian p f (P.pullbackMap f y) :=
       P.pullbackMap_isStronglyCartesian f y
-    letI : Functor.IsStronglyCartesian p f (P.pullbackMap f z) :=
+    let : Functor.IsStronglyCartesian p f (P.pullbackMap f z) :=
       P.pullbackMap_isStronglyCartesian f z
-    haveI : p.IsHomLift (𝟙 S) φ.1 := φ.2
-    haveI : p.IsHomLift (𝟙 S) ψ.1 := ψ.2
-    haveI : p.IsHomLift (𝟙 S) (φ ≫ ψ).1 := (φ ≫ ψ).2
+    have : p.IsHomLift (𝟙 S) φ.1 := φ.2
+    have : p.IsHomLift (𝟙 S) ψ.1 := ψ.2
+    have : p.IsHomLift (𝟙 S) (φ ≫ ψ).1 := (φ ≫ ψ).2
     have hφ' : p.IsHomLift f (P.pullbackMap f x ≫ φ.1) :=
       IsHomLift.comp_lift_id_right' p f (P.pullbackMap f x) S φ.1
     have hψ' : p.IsHomLift f (P.pullbackMap f y ≫ ψ.1) :=
@@ -308,11 +308,11 @@ def pullbackFunctor (P : PullbackChoice p) {R S : C} (f : R ⟶ S) :
       exact @Functor.IsStronglyCartesian.map_isHomLift _ _ _ _ p _ _ _ _ f
         (P.pullbackMap f z) _ _ _ (𝟙 R) f (by simp)
         (P.pullbackMap f y ≫ ψ.1) hψ'
-    letI : p.IsHomLift (𝟙 R) mφ := hmφ
-    letI : p.IsHomLift (𝟙 R) mψ := hmψ
+    let : p.IsHomLift (𝟙 R) mφ := hmφ
+    let : p.IsHomLift (𝟙 R) mψ := hmψ
     have hmcomp : p.IsHomLift (𝟙 R) (mφ ≫ mψ) := by infer_instance
     change mcomp = mφ ≫ mψ
-    letI : p.IsHomLift (𝟙 R) (mφ ≫ mψ) := hmcomp
+    let : p.IsHomLift (𝟙 R) (mφ ≫ mψ) := hmcomp
     symm
     exact (@Functor.IsStronglyCartesian.map_uniq _ _ _ _ p R S
       (P.pullback f z).1 z.1 f (P.pullbackMap f z)
@@ -384,7 +384,7 @@ theorem exists_unital (p : X ⥤ C) [p.IsFibered] :
     intro U a b h
     let e : a ≅ b := eqToIso h
     let eX := (Functor.Fiber.fiberInclusion : Functor.Fiber p U ⥤ X).mapIso e
-    letI : p.IsHomLift (𝟙 U) eX.hom := by
+    let : p.IsHomLift (𝟙 U) eX.hom := by
       dsimp [eX, e]
       infer_instance
     simpa [eX, e] using iso_is_stronglyCartesian p (𝟙 U) eX
@@ -401,7 +401,7 @@ theorem exists_unital (p : X ⥤ C) [p.IsFibered] :
                 Functor.Fiber.fiberInclusion.map (eqToHom (hpb S x)) := by
               have hx := hpb S x
               dsimp [pbm]
-              simp [hx]
+              simp
               congr 1
             rw [hpbm]
             exact hfiberIsoStrong (hpb S x)
@@ -412,12 +412,12 @@ theorem exists_unital (p : X ⥤ C) [p.IsFibered] :
                 Functor.Fiber.fiberInclusion.map (eqToHom hpb₀) ≫
                   P₀.pullbackMap f x := by
               dsimp [pbm]
-              simp [hpb₀, pb, hf]
+              simp [pb, hf]
             rw [hpbm]
-            letI : p.IsStronglyCartesian (𝟙 S)
+            let : p.IsStronglyCartesian (𝟙 S)
                 (Functor.Fiber.fiberInclusion.map (eqToHom hpb₀)) :=
               hfiberIsoStrong hpb₀
-            letI : p.IsStronglyCartesian f (P₀.pullbackMap f x) :=
+            let : p.IsStronglyCartesian f (P₀.pullbackMap f x) :=
               P₀.pullbackMap_isStronglyCartesian f x
             simpa using
               (show p.IsStronglyCartesian (𝟙 S ≫ f)
@@ -430,12 +430,12 @@ theorem exists_unital (p : X ⥤ C) [p.IsFibered] :
               Functor.Fiber.fiberInclusion.map (eqToHom hpb₀) ≫
                 P₀.pullbackMap f x := by
             dsimp [pbm]
-            simp [hpb₀, pb, hRS]
+            simp [pb, hRS]
           rw [hpbm]
-          letI : p.IsStronglyCartesian (𝟙 R)
+          let : p.IsStronglyCartesian (𝟙 R)
               (Functor.Fiber.fiberInclusion.map (eqToHom hpb₀)) :=
             hfiberIsoStrong hpb₀
-          letI : p.IsStronglyCartesian f (P₀.pullbackMap f x) :=
+          let : p.IsStronglyCartesian f (P₀.pullbackMap f x) :=
             P₀.pullbackMap_isStronglyCartesian f x
           simpa using
             (show p.IsStronglyCartesian (𝟙 R ≫ f)
@@ -461,10 +461,10 @@ theorem pullback_composition_iso
       {x y : Functor.Fiber p B} (φ : x ⟶ y) :
       ((P.pullbackFunctor h).map φ).1 ≫ P.pullbackMap h y =
         P.pullbackMap h x ≫ φ.1 := by
-    letI : p.IsHomLift (𝟙 B) φ.1 := φ.2
-    letI : p.IsStronglyCartesian h (P.pullbackMap h y) :=
+    let : p.IsHomLift (𝟙 B) φ.1 := φ.2
+    let : p.IsStronglyCartesian h (P.pullbackMap h y) :=
       P.pullbackMap_isStronglyCartesian h y
-    letI : p.IsStronglyCartesian h (P.pullbackMap h x) :=
+    let : p.IsStronglyCartesian h (P.pullbackMap h x) :=
       P.pullbackMap_isStronglyCartesian h x
     have hφ' : p.IsHomLift h (P.pullbackMap h x ≫ φ.1) := by
       exact IsHomLift.comp_lift_id_right' p h (P.pullbackMap h x) B φ.1
@@ -525,8 +525,8 @@ theorem pullback_composition_iso
     refine { hom := homF, inv := invF, hom_inv_id := ?_, inv_hom_id := ?_ }
     · apply Functor.Fiber.hom_ext
       change hom ≫ inv = 𝟙 _
-      letI : p.IsHomLift (𝟙 R) (hom ≫ inv) := by infer_instance
-      letI : p.IsHomLift (𝟙 R)
+      let : p.IsHomLift (𝟙 R) (hom ≫ inv) := by infer_instance
+      let : p.IsHomLift (𝟙 R)
           (𝟙 (Functor.Fiber.fiberInclusion.obj (P.pullback (f ≫ g) x))) := by
         have hx : p.obj (Functor.Fiber.fiberInclusion.obj (P.pullback (f ≫ g) x)) = R :=
           (P.pullback (f ≫ g) x).2
@@ -542,8 +542,8 @@ theorem pullback_composition_iso
         _ = (𝟙 _ : _ ⟶ _) ≫ P.pullbackMap (f ≫ g) x := by simp
     · apply Functor.Fiber.hom_ext
       change inv ≫ hom = 𝟙 _
-      letI : p.IsHomLift (𝟙 R) (inv ≫ hom) := by infer_instance
-      letI : p.IsHomLift (𝟙 R)
+      let : p.IsHomLift (𝟙 R) (inv ≫ hom) := by infer_instance
+      let : p.IsHomLift (𝟙 R)
           (𝟙 (Functor.Fiber.fiberInclusion.obj
             (P.pullback f (P.pullback g x)))) := by
         have hx : p.obj (Functor.Fiber.fiberInclusion.obj
@@ -565,11 +565,11 @@ theorem pullback_composition_iso
   have component_fac (z : Functor.Fiber p T) :
       (component z).hom.1 ≫ P.pullbackMap f (P.pullback g z) ≫
           P.pullbackMap g z = P.pullbackMap (f ≫ g) z := by
-    letI : p.IsStronglyCartesian f (P.pullbackMap f (P.pullback g z)) :=
+    let : p.IsStronglyCartesian f (P.pullbackMap f (P.pullback g z)) :=
       P.pullbackMap_isStronglyCartesian f (P.pullback g z)
-    letI : p.IsStronglyCartesian g (P.pullbackMap g z) :=
+    let : p.IsStronglyCartesian g (P.pullbackMap g z) :=
       P.pullbackMap_isStronglyCartesian g z
-    letI : p.IsStronglyCartesian (f ≫ g)
+    let : p.IsStronglyCartesian (f ≫ g)
         (P.pullbackMap f (P.pullback g z) ≫ P.pullbackMap g z) := by
       exact @Functor.IsStronglyCartesian.comp _ _ _ _ p R S T _ _ _ f g _ _
         (P.pullbackMap_isStronglyCartesian f (P.pullback g z))
@@ -590,11 +590,11 @@ theorem pullback_composition_iso
       let lhs := mfg ≫ (component y).hom
       let rhs := (component x).hom ≫ mfx
       change lhs.1 = rhs.1
-      letI : p.IsStronglyCartesian f (P.pullbackMap f (P.pullback g y)) :=
+      let : p.IsStronglyCartesian f (P.pullbackMap f (P.pullback g y)) :=
         P.pullbackMap_isStronglyCartesian f (P.pullback g y)
-      letI : p.IsStronglyCartesian g (P.pullbackMap g y) :=
+      let : p.IsStronglyCartesian g (P.pullbackMap g y) :=
         P.pullbackMap_isStronglyCartesian g y
-      letI : p.IsStronglyCartesian (f ≫ g)
+      let : p.IsStronglyCartesian (f ≫ g)
           (P.pullbackMap f (P.pullback g y) ≫ P.pullbackMap g y) := by
         exact @Functor.IsStronglyCartesian.comp _ _ _ _ p R S T _ _ _ f g _ _
           (P.pullbackMap_isStronglyCartesian f (P.pullback g y))
@@ -610,9 +610,9 @@ theorem pullback_composition_iso
         exact pullbackMap_fac g φ
       have hL : p.IsHomLift (𝟙 R)
           (Functor.Fiber.fiberInclusion.map lhs) := by
-        letI : p.IsHomLift (𝟙 R)
+        let : p.IsHomLift (𝟙 R)
             (Functor.Fiber.fiberInclusion.map mfg) := mfg.2
-        letI : p.IsHomLift (𝟙 R)
+        let : p.IsHomLift (𝟙 R)
             (Functor.Fiber.fiberInclusion.map (component y).hom) :=
           by
             change p.IsHomLift (𝟙 R) (component y).hom.1
@@ -620,12 +620,12 @@ theorem pullback_composition_iso
         infer_instance
       have hR : p.IsHomLift (𝟙 R)
           (Functor.Fiber.fiberInclusion.map rhs) := by
-        letI : p.IsHomLift (𝟙 R)
+        let : p.IsHomLift (𝟙 R)
             (Functor.Fiber.fiberInclusion.map (component x).hom) :=
           by
             change p.IsHomLift (𝟙 R) (component x).hom.1
             exact (component x).hom.2
-        letI : p.IsHomLift (𝟙 R)
+        let : p.IsHomLift (𝟙 R)
             (Functor.Fiber.fiberInclusion.map mfx) := by
           change p.IsHomLift (𝟙 R) mfx.1
           exact mfx.2
@@ -636,10 +636,10 @@ theorem pullback_composition_iso
       have hR' : p.IsHomLift (𝟙 R) rhs.1 := by
         change p.IsHomLift (𝟙 R) (Functor.Fiber.fiberInclusion.map rhs)
         exact hR
-      letI : p.IsHomLift (𝟙 R) lhs.1 := hL'
-      letI : p.IsHomLift (𝟙 R) rhs.1 := hR'
-      letI : p.IsHomLift (𝟙 R) (Functor.Fiber.fiberInclusion.map lhs) := hL
-      letI : p.IsHomLift (𝟙 R) (Functor.Fiber.fiberInclusion.map rhs) := hR
+      let : p.IsHomLift (𝟙 R) lhs.1 := hL'
+      let : p.IsHomLift (𝟙 R) rhs.1 := hR'
+      let : p.IsHomLift (𝟙 R) (Functor.Fiber.fiberInclusion.map lhs) := hL
+      let : p.IsHomLift (𝟙 R) (Functor.Fiber.fiberInclusion.map rhs) := hR
       have hEq : lhs.1 ≫ P.pullbackMap f (P.pullback g y) ≫
             P.pullbackMap g y = rhs.1 ≫ P.pullbackMap f (P.pullback g y) ≫
             P.pullbackMap g y := by
@@ -659,7 +659,7 @@ theorem pullback_composition_iso
     funext x
     apply Functor.Fiber.hom_ext
     change (β.hom.app x).1 = (α.hom.app x).1
-    letI : p.IsStronglyCartesian (f ≫ g)
+    let : p.IsStronglyCartesian (f ≫ g)
         (P.pullbackMap f (P.pullback g x) ≫ P.pullbackMap g x) := by
       exact @Functor.IsStronglyCartesian.comp _ _ _ _ p R S T _ _ _ f g _ _
         (P.pullbackMap_isStronglyCartesian f (P.pullback g x))
@@ -682,11 +682,11 @@ theorem pullback_composition_iso
       change p.IsHomLift (𝟙 R)
         (Functor.Fiber.fiberInclusion.map (α.hom.app x))
       exact hαlift
-    letI : p.IsHomLift (𝟙 R) (β.hom.app x).1 := hβlift'
-    letI : p.IsHomLift (𝟙 R) (α.hom.app x).1 := hαlift'
-    letI : p.IsHomLift (𝟙 R)
+    let : p.IsHomLift (𝟙 R) (β.hom.app x).1 := hβlift'
+    let : p.IsHomLift (𝟙 R) (α.hom.app x).1 := hαlift'
+    let : p.IsHomLift (𝟙 R)
         (Functor.Fiber.fiberInclusion.map (β.hom.app x)) := hβlift
-    letI : p.IsHomLift (𝟙 R)
+    let : p.IsHomLift (𝟙 R)
         (Functor.Fiber.fiberInclusion.map (α.hom.app x)) := hαlift
     have hEq : (β.hom.app x).1 ≫ P.pullbackMap f (P.pullback g x) ≫
           P.pullbackMap g x = (α.hom.app x).1 ≫
@@ -1130,25 +1130,25 @@ theorem equivalence_over_preserves_stronglyCartesian
           congrArg
             (fun η : OverNatTrans (CategoryOver.id Y) (CategoryOver.id Y) =>
               η.toNatTrans) eGF.inv_hom_id)
-  letI : (structureFunctor X).IsStronglyCartesian
+  let : (structureFunctor X).IsStronglyCartesian
       ((structureFunctor X).map φ) φ := hφ
   let αa := eFG'.hom.app a
   let αb := eFG'.hom.app b
-  letI : IsIso αa := by
+  let : IsIso αa := by
     change IsIso (eFG'.hom.app a)
     exact NatIso.hom_app_isIso eFG' a
-  letI : IsIso αb := by
+  let : IsIso αb := by
     change IsIso (eFG'.hom.app b)
     exact NatIso.hom_app_isIso eFG' b
-  letI : (structureFunctor X).IsStronglyCartesian
+  let : (structureFunctor X).IsStronglyCartesian
       ((structureFunctor X).map αa) αa := by infer_instance
-  letI : (structureFunctor X).IsStronglyCartesian
+  let : (structureFunctor X).IsStronglyCartesian
       ((structureFunctor X).map αb) αb := by infer_instance
   let αbinv := inv αb
-  letI : IsIso αbinv := by
+  let : IsIso αbinv := by
     dsimp [αbinv]
     infer_instance
-  letI : (structureFunctor X).IsStronglyCartesian
+  let : (structureFunctor X).IsStronglyCartesian
       ((structureFunctor X).map αbinv) αbinv := by infer_instance
   have hnat : (overFunctor F ⋙ overFunctor G).map φ ≫ αb = αa ≫ φ := by
     exact eFG'.hom.naturality φ
@@ -1189,7 +1189,7 @@ theorem equivalence_over_preserves_stronglyCartesian
       eqToHom hGFa ≫ (structureFunctor Y).map ((overFunctor F).map φ) ≫
         eqToHom hGFb.symm := by
     exact Functor.congr_hom (overFunctor_comm G) ((overFunctor F).map φ)
-  letI : (structureFunctor Y).IsHomLift
+  let : (structureFunctor Y).IsHomLift
       (g ≫ (structureFunctor Y).map ((overFunctor F).map φ)) τ := hτ
   have hτmap : g ≫ (structureFunctor Y).map ((overFunctor F).map φ) =
       (structureFunctor Y).map τ :=
@@ -1209,11 +1209,11 @@ theorem equivalence_over_preserves_stronglyCartesian
         ((overFunctor G).map τ) := inferInstance
     rw [hGτfactor] at hmap
     exact hmap
-  letI : (structureFunctor X).IsHomLift
+  let : (structureFunctor X).IsHomLift
       (gX ≫ (structureFunctor X).map
         ((overFunctor G).map ((overFunctor F).map φ)))
       ((overFunctor G).map τ) := hGτ
-  letI : (structureFunctor X).IsStronglyCartesian
+  let : (structureFunctor X).IsStronglyCartesian
       ((structureFunctor X).map
         ((overFunctor G).map ((overFunctor F).map φ)))
       ((overFunctor G).map ((overFunctor F).map φ)) := by
@@ -1242,7 +1242,7 @@ theorem equivalence_over_preserves_stronglyCartesian
       CategoryOver.Hom.leftHom, Over.comp_left, Cat.Hom.comp_toFunctor,
       Cat.Hom.id_toFunctor, Cat.Hom.id_obj, overIdentityComponent] using
       eGF.hom.over ((overFunctor F).obj a)
-  letI : (structureFunctor X).IsHomLift gX δ := hδ
+  let : (structureFunctor X).IsHomLift gX δ := hδ
   have hδmap : gX = (structureFunctor X).map δ :=
     CategoryTheory.IsHomLift.eq_of_isHomLift (structureFunctor X) gX δ
   let χ := εc ≫ (overFunctor F).map δ ≫ εa
@@ -1282,11 +1282,11 @@ theorem equivalence_over_preserves_stronglyCartesian
         have hn := eGF'.hom.naturality τ
         simp only [Functor.comp_map] at hn
         rw [hn]
-        simp [εc, Category.assoc]
+        simp [εc]
   refine ⟨χ, ⟨hχlift, hχfac⟩, ?_⟩
   intro χ' hχ'
   rcases hχ' with ⟨hχ'lift, hχ'fac⟩
-  letI : (structureFunctor Y).IsHomLift g χ' := hχ'lift
+  let : (structureFunctor Y).IsHomLift g χ' := hχ'lift
   have hχ'map : g = (structureFunctor Y).map χ' :=
     CategoryTheory.IsHomLift.eq_of_isHomLift (structureFunctor Y) g χ'
   let δ' := (overFunctor G).map χ'
@@ -1315,7 +1315,7 @@ theorem equivalence_over_preserves_stronglyCartesian
       χ' = 𝟙 _ ≫ χ' := by simp
       _ = (eGF'.inv.app _ ≫ eGF'.hom.app _) ≫ χ' := by simp
       _ = eGF'.inv.app _ ≫ (eGF'.hom.app _ ≫ χ') := by
-        simp [Category.assoc]
+        simp
       _ = eGF'.inv.app _ ≫
           ((overFunctor G ⋙ overFunctor F).map χ' ≫
             eGF'.hom.app ((overFunctor F).obj a)) := by
@@ -1383,15 +1383,15 @@ theorem fibred_iff_equivalent_over
               η.toNatTrans) eGF.inv_hom_id)
   constructor
   · intro hX
-    letI : (structureFunctor X).IsFibered := hX
+    let : (structureFunctor X).IsFibered := hX
     refine Functor.IsFibered.of_exists_isStronglyCartesian ?_
     intro y R f
     let hGy := congrArg (fun K : Y.left ⥤ C => K.obj y) (overFunctor_comm G)
     let fX := f ≫ eqToHom hGy.symm
     obtain ⟨x, φ, hφ⟩ :=
       hX.toIsPreFibered.exists_isCartesian' fX
-    letI : (structureFunctor X).IsCartesian fX φ := hφ
-    letI : (structureFunctor X).IsStronglyCartesian fX φ := inferInstance
+    let : (structureFunctor X).IsCartesian fX φ := hφ
+    let : (structureFunctor X).IsStronglyCartesian fX φ := inferInstance
     have hdom : (structureFunctor X).obj x = R :=
       CategoryTheory.IsHomLift.domain_eq (structureFunctor X) fX φ
     subst R
@@ -1403,13 +1403,13 @@ theorem fibred_iff_equivalent_over
         (inferInstance : (structureFunctor X).IsStronglyCartesian fX φ)
     have hFφ := equivalence_over_preserves_stronglyCartesian F
       ⟨G, ⟨eFG⟩, ⟨eGF⟩⟩ φ hφ'
-    letI : (structureFunctor Y).IsStronglyCartesian
+    let : (structureFunctor Y).IsStronglyCartesian
         ((structureFunctor Y).map ((overFunctor F).map φ)) ((overFunctor F).map φ) := hFφ
     let e := eGF'.hom.app y
-    letI : IsIso e := by
+    let : IsIso e := by
       change IsIso (eGF'.hom.app y)
       exact NatIso.hom_app_isIso eGF' y
-    letI : (structureFunctor Y).IsStronglyCartesian
+    let : (structureFunctor Y).IsStronglyCartesian
         ((structureFunctor Y).map e) e := by infer_instance
     have hcomp : (structureFunctor Y).IsStronglyCartesian
         ((structureFunctor Y).map ((overFunctor F).map φ) ≫
@@ -1450,16 +1450,16 @@ theorem fibred_iff_equivalent_over
     have hψlift : (structureFunctor Y).IsHomLift f ψ := by
       apply CategoryTheory.IsHomLift.of_fac (structureFunctor Y) f ψ hFGx rfl
       simpa [ψ, Functor.map_comp, Category.assoc] using hfcomp
-    letI : (structureFunctor Y).IsHomLift f ψ := hψlift
+    let : (structureFunctor Y).IsHomLift f ψ := hψlift
     have hψstrong : (structureFunctor Y).IsStronglyCartesian f ψ := by
       let u := eqToHom hFGx.symm
       let q := (structureFunctor Y).map ((overFunctor F).map φ) ≫
         (structureFunctor Y).map e
-      letI : (structureFunctor Y).IsStronglyCartesian q ψ := by
+      let : (structureFunctor Y).IsStronglyCartesian q ψ := by
         simpa [q, ψ] using hcomp
       constructor
       intro c g τ hτ
-      letI : (structureFunctor Y).IsHomLift (g ≫ f) τ := hτ
+      let : (structureFunctor Y).IsHomLift (g ≫ f) τ := hτ
       have hfactor : g ≫ f = (g ≫ u) ≫ q := by
         rw [hfcomp]
         simp [u, q, Category.assoc]
@@ -1476,7 +1476,7 @@ theorem fibred_iff_equivalent_over
       refine ⟨χ, ⟨hχbase, hχeq⟩, ?_⟩
       intro χ' hχ'
       rcases hχ' with ⟨hχ'base, hχ'fac⟩
-      letI : (structureFunctor Y).IsHomLift g χ' := hχ'base
+      let : (structureFunctor Y).IsHomLift g χ' := hχ'base
       have hχ'map : g = (structureFunctor Y).map χ' ≫ eqToHom hFGx := by
         simpa [Category.assoc] using
           (CategoryTheory.IsHomLift.fac (structureFunctor Y) g χ')
@@ -1488,14 +1488,14 @@ theorem fibred_iff_equivalent_over
       exact hχuniq χ' ⟨hχ'comp, hχ'fac⟩
     exact ⟨(overFunctor F).obj x, ψ, hψstrong⟩
   · intro hY
-    letI : (structureFunctor Y).IsFibered := hY
+    let : (structureFunctor Y).IsFibered := hY
     refine Functor.IsFibered.of_exists_isStronglyCartesian ?_
     intro x R f
     let hFx := congrArg (fun K : X.left ⥤ C => K.obj x) (overFunctor_comm F)
     let fY := f ≫ eqToHom hFx.symm
     obtain ⟨y, φ, hφ⟩ := hY.toIsPreFibered.exists_isCartesian' fY
-    letI : (structureFunctor Y).IsCartesian fY φ := hφ
-    letI : (structureFunctor Y).IsStronglyCartesian fY φ := inferInstance
+    let : (structureFunctor Y).IsCartesian fY φ := hφ
+    let : (structureFunctor Y).IsStronglyCartesian fY φ := inferInstance
     have hdom : (structureFunctor Y).obj y = R :=
       CategoryTheory.IsHomLift.domain_eq (structureFunctor Y) fY φ
     subst R
@@ -1507,13 +1507,13 @@ theorem fibred_iff_equivalent_over
         (inferInstance : (structureFunctor Y).IsStronglyCartesian fY φ)
     have hGφ := equivalence_over_preserves_stronglyCartesian G
       ⟨F, ⟨eGF⟩, ⟨eFG⟩⟩ φ hφ'
-    letI : (structureFunctor X).IsStronglyCartesian
+    let : (structureFunctor X).IsStronglyCartesian
         ((structureFunctor X).map ((overFunctor G).map φ)) ((overFunctor G).map φ) := hGφ
     let e := eFG'.hom.app x
-    letI : IsIso e := by
+    let : IsIso e := by
       change IsIso (eFG'.hom.app x)
       exact NatIso.hom_app_isIso eFG' x
-    letI : (structureFunctor X).IsStronglyCartesian
+    let : (structureFunctor X).IsStronglyCartesian
         ((structureFunctor X).map e) e := by infer_instance
     have hcomp : (structureFunctor X).IsStronglyCartesian
         ((structureFunctor X).map ((overFunctor G).map φ) ≫
@@ -1554,16 +1554,16 @@ theorem fibred_iff_equivalent_over
     have hψlift : (structureFunctor X).IsHomLift f ψ := by
       apply CategoryTheory.IsHomLift.of_fac (structureFunctor X) f ψ hGFy rfl
       simpa [ψ, Functor.map_comp, Category.assoc] using hfcomp
-    letI : (structureFunctor X).IsHomLift f ψ := hψlift
+    let : (structureFunctor X).IsHomLift f ψ := hψlift
     have hψstrong : (structureFunctor X).IsStronglyCartesian f ψ := by
       let u := eqToHom hGFy.symm
       let q := (structureFunctor X).map ((overFunctor G).map φ) ≫
         (structureFunctor X).map e
-      letI : (structureFunctor X).IsStronglyCartesian q ψ := by
+      let : (structureFunctor X).IsStronglyCartesian q ψ := by
         simpa [q, ψ] using hcomp
       constructor
       intro c g τ hτ
-      letI : (structureFunctor X).IsHomLift (g ≫ f) τ := hτ
+      let : (structureFunctor X).IsHomLift (g ≫ f) τ := hτ
       have hfactor : g ≫ f = (g ≫ u) ≫ q := by
         rw [hfcomp]
         simp [u, q, Category.assoc]
@@ -1580,7 +1580,7 @@ theorem fibred_iff_equivalent_over
       refine ⟨χ, ⟨hχbase, hχeq⟩, ?_⟩
       intro χ' hχ'
       rcases hχ' with ⟨hχ'base, hχ'fac⟩
-      letI : (structureFunctor X).IsHomLift g χ' := hχ'base
+      let : (structureFunctor X).IsHomLift g χ' := hχ'base
       have hχ'map : g = (structureFunctor X).map χ' ≫ eqToHom hGFy := by
         simpa [Category.assoc] using
           (CategoryTheory.IsHomLift.fac (structureFunctor X) g χ')
@@ -1595,14 +1595,18 @@ theorem fibred_iff_equivalent_over
 /-! ## The 2-fibre product statement -/
 
 /- The iso-comma construction gives a fibre product whose apex is fibred.
-   The source's stronger claim that both projections preserve every strongly
-   cartesian arrow is not valid for arbitrary fibred morphisms: the product
-   tests only the compatibility data visible in the iso-comma. -/
+   Its projections are fibred morphisms: the componentwise cartesian lift is
+   strongly cartesian in the iso-comma, and uniqueness up to a vertical
+   isomorphism transfers this to every strongly cartesian product arrow. -/
 structure FibredTwoFibreProduct {C : Cat.{v, u}}
     {X Y S : FibredCategoryOver C}
     (F : FibredCategoryOverHom X S) (G : FibredCategoryOverHom Y S) where
   diagram : TwoFibreProductOverDiagram F.underlying G.underlying
   apex_fibred : (diagram.base).IsFibered
+  left_preserves : MapsStronglyCartesian
+    diagram.base (structureFunctor X.underlying) diagram.left
+  right_preserves : MapsStronglyCartesian
+    diagram.base (structureFunctor Y.underlying) diagram.right
   is_two_fibre_product :
     IsTwoFibreProductOverDiagram.{v, u, u₁, v₁}
       (F := F.underlying) (G := G.underlying) diagram
@@ -1627,8 +1631,8 @@ theorem fibred_over_slice
   obtain ⟨y, ψ, hψ⟩ :=
     (fibred_category_iff_exists_stronglyCartesian q).mp (inferInstance)
       x R.left f.left
-  letI : q.IsStronglyCartesian f.left ψ := hψ
-  letI : q.IsHomLift f.left ψ := by infer_instance
+  let : q.IsStronglyCartesian f.left ψ := hψ
+  let : q.IsHomLift f.left ψ := by infer_instance
   have hdom : (p'.obj y).left = R.left :=
     CategoryTheory.IsHomLift.domain_eq q f.left ψ
   have hfac' : (p'.map ψ).left = eqToHom hdom ≫ f.left := by
@@ -1650,13 +1654,13 @@ theorem fibred_over_slice
   have hf : f = p'.map ψ := by
     apply Over.OverMorphism.ext
     exact hmap
-  letI : p'.IsHomLift f ψ := by
+  let : p'.IsHomLift f ψ := by
     rw [hf]
     infer_instance
   have hψ' : p'.IsStronglyCartesian f ψ := by
     constructor
     intro z g τ hτ
-    letI : p'.IsHomLift (g ≫ f) τ := hτ
+    let : p'.IsHomLift (g ≫ f) τ := hτ
     have hτmap : g ≫ f = p'.map τ :=
       CategoryTheory.IsHomLift.eq_of_isHomLift p' (g ≫ f) τ
     have hτmap_left : (g ≫ f).left = (p'.map τ).left :=
@@ -1669,7 +1673,7 @@ theorem fibred_over_slice
     obtain ⟨χ, ⟨hχ, hχfac⟩, hχuniq⟩ :=
       Functor.IsStronglyCartesian.universal_property q f.left ψ
         g.left (g.left ≫ f.left) rfl τ
-    letI : (p' ⋙ Over.forget U).IsHomLift g.left χ := hχ
+    let : (p' ⋙ Over.forget U).IsHomLift g.left χ := hχ
     have hχmap : g.left = (p'.map χ).left := by
       change g.left = (p' ⋙ Over.forget U).map χ
       exact @CategoryTheory.IsHomLift.eq_of_isHomLift _ _ _ _
@@ -1677,13 +1681,13 @@ theorem fibred_over_slice
     have hg : g = p'.map χ := by
       apply Over.OverMorphism.ext
       exact hχmap
-    letI : p'.IsHomLift g χ := by
+    let : p'.IsHomLift g χ := by
       rw [hg]
       infer_instance
     refine ⟨χ, ⟨inferInstance, hχfac⟩, ?_⟩
     intro χ' hχ'
     rcases hχ' with ⟨hχ'base, hχ'fac⟩
-    letI : p'.IsHomLift g χ' := hχ'base
+    let : p'.IsHomLift g χ' := hχ'base
     have hχ'map : g = p'.map χ' :=
       CategoryTheory.IsHomLift.eq_of_isHomLift p' g χ'
     have hχ'map_left : g.left = (p'.map χ').left :=
@@ -1708,13 +1712,13 @@ theorem fibred_over_fibred
   obtain ⟨a', φ, hφ⟩ :=
     (fibred_category_iff_exists_stronglyCartesian p).mp (inferInstance)
       a b ψ
-  letI : p.IsStronglyCartesian ψ φ := hφ
+  let : p.IsStronglyCartesian ψ φ := hφ
   have hdomP : p.obj a' = b :=
     CategoryTheory.IsHomLift.domain_eq p ψ φ
   subst b
   have hψmap : ψ = p.map φ :=
     CategoryTheory.IsHomLift.eq_of_isHomLift p ψ φ
-  letI : q.IsStronglyCartesian f ψ := hψ
+  let : q.IsStronglyCartesian f ψ := hψ
   have hdomQ : q.obj (p.obj a') = R :=
     CategoryTheory.IsHomLift.domain_eq q f ψ
   subst R
@@ -1726,8 +1730,8 @@ theorem fibred_over_fibred
   have hψ' : q.IsStronglyCartesian (q.map (p.map φ)) (p.map φ) := by
     simpa [hfmap, hψmap] using
       (inferInstance : q.IsStronglyCartesian f ψ)
-  letI : p.IsStronglyCartesian (p.map φ) φ := hφ'
-  letI : q.IsStronglyCartesian (q.map (p.map φ)) (p.map φ) := hψ'
+  let : p.IsStronglyCartesian (p.map φ) φ := hφ'
+  let : q.IsStronglyCartesian (q.map (p.map φ)) (p.map φ) := hψ'
   have hcomp : (p ⋙ q).IsStronglyCartesian ((p ⋙ q).map φ) φ :=
     stronglyCartesian_over_composition p q φ
   have hfcomp : f = (p ⋙ q).map φ := by
@@ -1750,7 +1754,7 @@ theorem fibred_fibre_product_goes_up
   obtain ⟨w, a, ha⟩ :=
     (fibred_category_iff_exists_stronglyCartesian p).mp (inferInstance)
       z (pullback (p.map f) (p.map g)) (pullback.snd (p.map f) (p.map g))
-  letI : Functor.IsStronglyCartesian p
+  let : Functor.IsStronglyCartesian p
       (pullback.snd (p.map f) (p.map g)) a := ha
   obtain ⟨b, hb⟩ := stronglyCartesian_fibre_product p f g
     (CategoryTheory.IsPullback.of_hasPullback (p.map f) (p.map g)) w a

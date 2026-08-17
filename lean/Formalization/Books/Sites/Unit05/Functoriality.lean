@@ -181,7 +181,7 @@ theorem indexCategory_op_almostDirected (u : C ⥤ D) (V : D)
     let f := a.unop.right
     let g := b.unop.right
     let p := pullback f g
-    letI : HasPullback (u.map f) (u.map g) :=
+    let : HasPullback (u.map f) (u.map g) :=
       hasPullback_of_preservesPullback u f g
     let e := PreservesPullback.iso u f g
     let q : V ⟶ pullback (u.map f) (u.map g) :=
@@ -212,7 +212,7 @@ theorem indexCategory_op_almostDirected (u : C ⥤ D) (V : D)
     let f := a.unop.right
     let g := b.unop.right
     let e := equalizer f g
-    letI : HasEqualizer (u.map f) (u.map g) :=
+    let : HasEqualizer (u.map f) (u.map g) :=
       HasLimit.mk ⟨_, isLimitForkMapOfIsLimit u _ (equalizerIsEqualizer f g)⟩
     let q : V ⟶ equalizer (u.map f) (u.map g) :=
       equalizer.lift Y.unop.hom (by
@@ -238,14 +238,14 @@ theorem indexCategory_op_isFiltered (u : C ⥤ D) (V : D) (X : C)
     (hX : IsTerminal X) (huX : IsTerminal (u.obj X))
     [HasPullbacks C] [PreservesLimitsOfShape WalkingCospan u] :
     IsFiltered (indexCategory u V)ᵒᵖ := by
-  letI : HasTerminal C := hX.hasTerminal
-  letI : HasFiniteLimits C := hasFiniteLimits_of_hasTerminal_and_pullbacks
-  letI : PreservesLimit (Functor.empty.{0} C) u :=
+  let : HasTerminal C := hX.hasTerminal
+  let : HasFiniteLimits C := hasFiniteLimits_of_hasTerminal_and_pullbacks
+  let : PreservesLimit (Functor.empty.{0} C) u :=
     preservesLimit_of_preserves_limit_cone hX
       ((isLimitMapConeEmptyConeEquiv u X).symm huX)
-  letI : PreservesLimitsOfShape (Discrete PEmpty.{1}) u :=
+  let : PreservesLimitsOfShape (Discrete PEmpty.{1}) u :=
     preservesLimitsOfShape_pempty_of_preservesTerminal u
-  letI : PreservesFiniteLimits u :=
+  let : PreservesFiniteLimits u :=
     preservesFiniteLimits_of_preservesTerminal_and_pullbacks u
   let t : indexCategory u V := indexObject u V X (huX.from V)
   let hAD := indexCategory_op_almostDirected u V
@@ -262,10 +262,10 @@ theorem indexCategory_op_isFiltered (u : C ⥤ D) (V : D) (X : C)
         apply huX.hom_ext)
     obtain ⟨z, c, d, _⟩ := hAD.1 cX.op cY.op
     exact ⟨z, ⟨c⟩, ⟨d⟩⟩
-  letI : IsFilteredOrEmpty (indexCategory u V)ᵒᵖ :=
+  let : IsFilteredOrEmpty (indexCategory u V)ᵒᵖ :=
     Formalization.Books.Categories.Unit19.isFilteredOrEmpty_of_common_upper_bounds_and_parallel
       hupper hAD.2
-  letI : Nonempty (indexCategory u V)ᵒᵖ := ⟨op t⟩
+  let : Nonempty (indexCategory u V)ᵒᵖ := ⟨op t⟩
   exact IsFiltered.mk
 
 /-! ## The pushforward -/
@@ -287,7 +287,7 @@ theorem hasPointwisePushforward_of_indexColimits (u : C ⥤ D)
   intro F V
   change HasColimit (kanIndexDiagram u F V.unop)
   let e := indexCostructuredEquivalence u V.unop
-  letI : HasColimit (e.functor ⋙ kanIndexDiagram u F V.unop) := by
+  let : HasColimit (e.functor ⋙ kanIndexDiagram u F V.unop) := by
     rw [indexPresheaf_under_equivalence]
     exact inferInstance
   exact hasColimit_of_equivalence_comp e
@@ -341,9 +341,9 @@ theorem recoverMap_eq_pushforwardCoprojection (u : C ⥤ D) (F : Presheaf C) (U 
     [HasLeftPushforward u] [HasPointwisePushforward u] :
     recoverMap u F U =
       pushforwardCoprojection u F (u.obj U) U (𝟙 (u.obj U)) := by
-  letI : Functor.HasLeftKanExtension u.op F :=
+  let : Functor.HasLeftKanExtension u.op F :=
     (inferInstance : HasLeftPushforward u) F
-  letI : Functor.HasPointwiseLeftKanExtension u.op F :=
+  let : Functor.HasPointwiseLeftKanExtension u.op F :=
     (inferInstance : HasPointwisePushforward u) F
   have hbase :
       (u.op.leftKanExtensionUnit F).app (op U) =
@@ -365,13 +365,12 @@ theorem recoverMap_naturality (u : C ⥤ D) (F : Presheaf C)
     F.map f.op ≫ recoverMap u F V =
       recoverMap u F U ≫
         (pushforwardPresheaf u F).map (u.map f).op := by
-  letI : Functor.HasLeftKanExtension u.op F :=
+  let : Functor.HasLeftKanExtension u.op F :=
     (inferInstance : HasLeftPushforward u) F
   change F.map f.op ≫ (u.op.lanUnit.app F).app (op V) =
     (u.op.lanUnit.app F).app (op U) ≫
       (u.op ⋙ (pushforwardPresheafFunctor u).obj F).map f.op
-  simpa [pushforwardPresheaf, pushforwardPresheafFunctor] using
-    ((u.op.lanUnit.app F).naturality f.op)
+  simp [pushforwardPresheafFunctor]
 
 /-- The restriction map on the pushforward induced by `g : V' ⟶ V`. -/
 noncomputable def pushforwardRestrictionMap (u : C ⥤ D) (F : Presheaf C)
@@ -388,9 +387,9 @@ theorem pushforwardCoprojection_naturality (u : C ⥤ D) (F : Presheaf C)
     pushforwardCoprojection u F V U φ ≫
         pushforwardRestrictionMap u F g =
       pushforwardCoprojection u F V' U (g ≫ φ) := by
-  letI : Functor.HasLeftKanExtension u.op F :=
+  let : Functor.HasLeftKanExtension u.op F :=
     (inferInstance : HasLeftPushforward u) F
-  letI : Functor.HasPointwiseLeftKanExtension u.op F :=
+  let : Functor.HasPointwiseLeftKanExtension u.op F :=
     (inferInstance : HasPointwisePushforward u) F
   let kV : CostructuredArrow u.op (op V) := CostructuredArrow.mk φ.op
   let kV' : CostructuredArrow u.op (op V') :=
@@ -433,9 +432,9 @@ theorem pushforwardRestrictionMap_unique (u : C ⥤ D) (F : Presheaf C)
       pushforwardCoprojection u F V U φ ≫ m =
         pushforwardCoprojection u F V' U (g ≫ φ)) :
     m = pushforwardRestrictionMap u F g := by
-  letI : Functor.HasLeftKanExtension u.op F :=
+  let : Functor.HasLeftKanExtension u.op F :=
     (inferInstance : HasLeftPushforward u) F
-  letI : Functor.HasPointwiseLeftKanExtension u.op F :=
+  let : Functor.HasPointwiseLeftKanExtension u.op F :=
     (inferInstance : HasPointwisePushforward u) F
   apply (cancel_epi (pushforwardValueColimitIso u F V).inv).1
   apply colimit.hom_ext
@@ -528,7 +527,7 @@ theorem hasPointwisePushforwardWithValues_of_indexColimits
   intro F V
   change HasColimit (kanIndexDiagramWithValues u A F V.unop)
   let e := indexCostructuredEquivalence u V.unop
-  letI : HasColimit (e.functor ⋙ kanIndexDiagramWithValues u A F V.unop) := by
+  let : HasColimit (e.functor ⋙ kanIndexDiagramWithValues u A F V.unop) := by
     rw [indexPresheafWithValues_under_equivalence]
     exact inferInstance
   exact hasColimit_of_equivalence_comp e

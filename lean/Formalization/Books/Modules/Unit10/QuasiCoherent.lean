@@ -175,7 +175,7 @@ noncomputable abbrev globalSectionsPresheafMap
     {X : RingedSpace.{v}} {R : Type v} [Ring R]
     (α : R →+* globalSectionsRing X) :
     constantRingPresheaf X R ⟶ X.structureSheaf.obj := by
-  Formalization.Books.Modules.Unit06.globalSectionsPresheafMap α
+  exact Formalization.Books.Modules.Unit06.globalSectionsPresheafMap α
 
 /-- The presheaf `U ↦ O_X(U) ⊗_R M` in the source's third construction. -/
 noncomputable abbrev associatedSheafPresheaf
@@ -251,10 +251,10 @@ noncomputable abbrev ModulePresentation.matrixSection
     (P : ModulePresentation M)
     (entries : P.relations → P.generators → globalSectionsRing X)
     (j : P.relations) :
-    sheafModuleSections X.structureSheaf
+      sheafModuleSections X.structureSheaf
       (SheafOfModules.free P.generators : Mod X.structureSheaf)
       (⊤ : Opens X.carrier) := by
-  Formalization.Books.Modules.Unit06.ModulePresentation.matrixSection P entries j
+  exact Formalization.Books.Modules.Unit06.ModulePresentation.matrixSection P entries j
 
 /-- The one-point ringed space with ring `R`. -/
 noncomputable abbrev onePointRingedSpace (R : Type v) [Ring R] : RingedSpace.{v} :=
@@ -408,15 +408,6 @@ theorem associatedSheaf_stalk_iso
     Nonempty ((sheafModuleStalkFunctor X.structureSheaf x).obj
         (associatedSheaf α M) ≅ StalkTensorProduct α M x) := by
   exact Formalization.Books.Modules.Unit06.associatedSheaf_stalk_iso α M x
-
-theorem associatedSheaf_stalk_tensor_formula
-    {X : RingedSpace.{v}} {R : Type v} [Ring R]
-    (α : R →+* globalSectionsRing X) (M : Type v)
-    [AddCommGroup M] [Module R M] (x : X) :
-    ∃ T : StalkTensorProduct α M x,
-      Nonempty ((sheafModuleStalkFunctor X.structureSheaf x).obj
-        (associatedSheaf α M) ≅ T) := by
-  exact ⟨StalkTensorProduct α M x, associatedSheaf_stalk_iso α M x⟩
 
 /-- The `R`-module of global sections induced by `α`. -/
 noncomputable abbrev globalSectionsModule

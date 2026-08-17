@@ -249,80 +249,45 @@ theorem cokernel_morphism_is_epi
     Epi (cokernel.π f) := by
   infer_instance
 
-/- Mathlib's general image API is deliberately independent of cokernels.  The
-   book's image/coimage definitions are therefore exposed by these small
-   abbreviations, which use exactly the displayed kernel/cokernel composites. -/
+/- Mathlib's `CategoryTheory.Abelian` namespace already provides the source's
+   kernel/cokernel definitions of image and coimage, together with their
+   canonical maps and comparison morphism.  Use those interfaces directly
+   instead of introducing chapter-local aliases that would shadow the general
+   image API. -/
 
 /- The source's uniqueness-up-to-unique-isomorphism note is already part of
    the `IsLimit`/`IsColimit` APIs (`conePointUniqueUpToIso` and
    `coconePointUniqueUpToIso`), so no parallel kernel or cokernel uniqueness
    construction is needed here. -/
 
-abbrev coimage
-    {C : Type u} [Category.{v} C] [Preadditive C]
-    {X Y : C} (f : X ⟶ Y) [HasKernel f] [HasCokernel (kernel.ι f)] : C :=
-  cokernel (kernel.ι f)
-
-abbrev coimageMap
-    {C : Type u} [Category.{v} C] [Preadditive C]
-    {X Y : C} (f : X ⟶ Y) [HasKernel f] [HasCokernel (kernel.ι f)] :
-    X ⟶ coimage f :=
-  cokernel.π (kernel.ι f)
-
-abbrev image
-    {C : Type u} [Category.{v} C] [Preadditive C]
-    {X Y : C} (f : X ⟶ Y) [HasCokernel f] [HasKernel (cokernel.π f)] : C :=
-  kernel (cokernel.π f)
-
-abbrev imageMap
-    {C : Type u} [Category.{v} C] [Preadditive C]
-    {X Y : C} (f : X ⟶ Y) [HasCokernel f] [HasKernel (cokernel.π f)] :
-    image f ⟶ Y :=
-  kernel.ι (cokernel.π f)
-
 theorem coimage_map_is_epi
     {C : Type u} [Category.{v} C] [Preadditive C]
     {X Y : C} (f : X ⟶ Y) [HasKernel f] [HasCokernel (kernel.ι f)] :
-    Epi (coimageMap f) := by
+    Epi (Abelian.coimage.π f) := by
   infer_instance
 
 theorem image_map_is_mono
     {C : Type u} [Category.{v} C] [Preadditive C]
     {X Y : C} (f : X ⟶ Y) [HasCokernel f] [HasKernel (cokernel.π f)] :
-    Mono (imageMap f) := by
+    Mono (Abelian.image.ι f) := by
   infer_instance
-
-/- The canonical comparison map is the unique map from the coimage into the
-   kernel of the cokernel.  Its body is the universal-property construction;
-   the cancellation proof uses that a cokernel map is epi. -/
-
-def coimageImageComparison
-    {C : Type u} [Category.{v} C] [Preadditive C]
-    {X Y : C} (f : X ⟶ Y)
-    [HasKernel f] [HasCokernel f]
-    [HasCokernel (kernel.ι f)] [HasKernel (cokernel.π f)] :
-    coimage f ⟶ image f :=
-  kernel.lift (cokernel.π f)
-    (cokernel.desc (kernel.ι f) f (kernel.condition f)) (by
-      rw [← cancel_epi (cokernel.π (kernel.ι f))]
-      simp)
 
 theorem coimage_image_factorization
     {C : Type u} [Category.{v} C] [Preadditive C]
     {X Y : C} (f : X ⟶ Y)
     [HasKernel f] [HasCokernel f]
     [HasCokernel (kernel.ι f)] [HasKernel (cokernel.π f)] :
-    coimageMap f ≫ coimageImageComparison f ≫ imageMap f = f := by
-  simp [coimageImageComparison]
+    Abelian.coimage.π f ≫ Abelian.coimageImageComparison f ≫ Abelian.image.ι f = f :=
+  Abelian.coimage_image_factorisation f
 
 theorem coimage_image_factorization_unique
     {C : Type u} [Category.{v} C] [Preadditive C]
     {X Y : C} (f : X ⟶ Y)
     [HasKernel f] [HasCokernel f]
     [HasCokernel (kernel.ι f)] [HasKernel (cokernel.π f)]
-    (g : coimage f ⟶ image f)
-    (hg : coimageMap f ≫ g ≫ imageMap f = f) :
-    g = coimageImageComparison f := by
+    (g : Abelian.coimage f ⟶ Abelian.image f)
+    (hg : Abelian.coimage.π f ≫ g ≫ Abelian.image.ι f = f) :
+    g = Abelian.coimageImageComparison f := by
   sorry
 
 /- The binary biproduct kernel assertion is already present in Mathlib's
@@ -473,8 +438,8 @@ theorem filtered_vector_space_counterexample
     IsZero (kernel (filteredLineIdentity k)) ∧
       IsZero (cokernel (filteredLineIdentity k)) ∧
       ¬ IsIso (filteredLineIdentity k) ∧
-      Nonempty (coimage (filteredLineIdentity k) ≅ filteredLineV k) ∧
-      Nonempty (image (filteredLineIdentity k) ≅ filteredLineW k) ∧
+      Nonempty (Abelian.coimage (filteredLineIdentity k) ≅ filteredLineV k) ∧
+      Nonempty (Abelian.image (filteredLineIdentity k) ≅ filteredLineW k) ∧
       ¬ Nonempty (Abelian (FilteredVectorSpace k)) := by
   sorry
 

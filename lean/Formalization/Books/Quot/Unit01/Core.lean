@@ -1,11 +1,14 @@
 import Mathlib.AlgebraicGeometry.Modules.Sheaf
 import Mathlib.Algebra.Category.ModuleCat.Sheaf.Quasicoherent
+import Mathlib.Algebra.Homology.HomotopyCategory.HomComplex
+import Mathlib.AlgebraicGeometry.Morphisms.ClosedImmersion
 import Mathlib.AlgebraicGeometry.Morphisms.FinitePresentation
 import Mathlib.AlgebraicGeometry.Morphisms.Flat
 import Mathlib.AlgebraicGeometry.Morphisms.Proper
+import Mathlib.AlgebraicGeometry.Morphisms.QuasiSeparated
 import Mathlib.AlgebraicGeometry.Morphisms.Separated
-import Mathlib.CategoryTheory.Yoneda
 import Mathlib.RingTheory.Grassmannian
+import Formalization.Books.MoreMorphisms.Unit15.OpennessOfFlatLocus
 import Formalization.Books.Stacks.Unit01.Groupoids
 import Formalization.Books.SpacesGroupoids.Unit22.TwoCartesianSquare
 
@@ -77,6 +80,16 @@ def baseChangeModule {X B : Scheme.{u}} (f : X ⟶ B)
     (baseChangeScheme f T).Modules :=
   (Scheme.Modules.pullback (baseChangeToX f T)).obj F
 
+/-! The scheme-theoretic predicates used repeatedly below. -/
+
+def IsFinitePresentationMorphism {X Y : Scheme.{u}} (f : X ⟶ Y) : Prop :=
+  AlgebraicGeometry.LocallyOfFinitePresentation f ∧
+    AlgebraicGeometry.QuasiCompact f ∧
+      AlgebraicGeometry.QuasiSeparated f
+
+def ModuleFlatOver {X Y : Scheme.{u}} (f : X ⟶ Y) (M : X.Modules) : Prop :=
+  ∀ x : X, M.FlatAt f x
+
 /-!
 `RelativeSetClassification` records the data that makes a relative
 set-valued functor classify a specified family of objects.  The restriction
@@ -85,7 +98,7 @@ fibrewise equivalences is not enough to describe a functor.
 -/
 structure RelativeSetClassification {B : Scheme.{u}}
     (value : RelativeSetFunctor B)
-    (Objects : RelativeTestCategory B → Type u) where
+    (Objects : RelativeTestCategory B → Type v) where
   restrict : ∀ {T₁ T₂ : RelativeTestCategory B},
     (T₁ ⟶ T₂) → Objects T₂ → Objects T₁
   restrict_id : ∀ (T : RelativeTestCategory B) (x : Objects T),
@@ -99,6 +112,8 @@ structure RelativeSetClassification {B : Scheme.{u}}
     (q : T₁ ⟶ T₂) (x : value.obj (op T₂)),
     fiberDescription T₁ (value.map q.op x) =
       restrict q (fiberDescription T₂ x)
+  isSheaf : Presieve.IsSheaf
+    (Formalization.Books.SpacesGroupoids.Unit22.FppfTopology B) value
 
 /-! The object-level interfaces used by the named moduli functors. -/
 
@@ -106,10 +121,45 @@ structure RelativeQuotientObject {X B : Scheme.{u}} (f : X ⟶ B)
     (F : X.Modules) (T : RelativeTestCategory B) where
   target : (baseChangeScheme f T).Modules
   quotient : baseChangeModule f T F ⟶ target
-  targetQuasiCoherent : Prop
-  targetFinitePresentation : Prop
-  targetFlatOverTest : Prop
+  quotientEpi : Epi quotient
+  targetQuasiCoherent : target.IsQuasicoherent
+  targetFinitePresentation : target.IsFinitePresentation
+  targetFlatOverTest : ModuleFlatOver (baseChangeToTest f T) target
   supportProperOverTest : Prop
+
+def relativeQuotientEquivalent {X B : Scheme.{u}} {f : X ⟶ B}
+    {F : X.Modules} {T : RelativeTestCategory B}
+    (Q Q' : RelativeQuotientObject f F T) : Prop :=
+  ∃ e : Q.target ≅ Q'.target, Q.quotient ≫ e.hom = Q'.quotient
+
+def relativeQuotientSetoid {X B : Scheme.{u}} (f : X ⟶ B)
+    (F : X.Modules) (T : RelativeTestCategory B) :
+    Setoid (RelativeQuotientObject f F T) where
+  r := relativeQuotientEquivalent
+  iseqv := {
+    refl := fun Q => ⟨Iso.refl _, by simp⟩
+    symm := by
+      intro Q Q' h
+      rcases h with ⟨e, h⟩
+      refine ⟨e.symm, ?_⟩
+      simpa [Category.assoc] using
+        (congrArg (fun k => k ≫ e.inv) h).symm
+    trans := by
+      intro Q Q' Q'' h h'
+      rcases h with ⟨e, h⟩
+      rcases h' with ⟨e', h'⟩
+      refine ⟨e.trans e', ?_⟩
+      calc
+        Q.quotient ≫ (e.trans e').hom =
+            (Q.quotient ≫ e.hom) ≫ e'.hom := by
+          rw [Iso.trans_hom, Category.assoc]
+        _ = Q'.quotient ≫ e'.hom := by rw [h]
+        _ = Q''.quotient := h'
+  }
+
+abbrev RelativeQuotientClass {X B : Scheme.{u}} (f : X ⟶ B)
+    (F : X.Modules) (T : RelativeTestCategory B) :=
+  Quotient (relativeQuotientSetoid f F T)
 
 structure RelativeHilbertObject {X B : Scheme.{u}} (f : X ⟶ B)
     (T : RelativeTestCategory B) where
@@ -117,14 +167,49 @@ structure RelativeHilbertObject {X B : Scheme.{u}} (f : X ⟶ B)
   inclusion : carrier ⟶ baseChangeScheme f T
   structureMap : carrier ⟶ T.left
   overTest : inclusion ≫ baseChangeToTest f T = structureMap
-  closed : Prop
-  finitePresentationOverTest : Prop
-  flatOverTest : Prop
-  properOverTest : Prop
+  closed : IsClosedImmersion inclusion
+  finitePresentationOverTest : IsFinitePresentationMorphism structureMap
+  flatOverTest : AlgebraicGeometry.Flat structureMap
+  properOverTest : AlgebraicGeometry.IsProper structureMap
+
+def relativeHilbertEquivalent {X B : Scheme.{u}} {f : X ⟶ B}
+    {T : RelativeTestCategory B}
+    (Z Z' : RelativeHilbertObject f T) : Prop :=
+  ∃ e : Z.carrier ≅ Z'.carrier, e.hom ≫ Z'.inclusion = Z.inclusion
+
+def relativeHilbertSetoid {X B : Scheme.{u}} (f : X ⟶ B)
+    (T : RelativeTestCategory B) : Setoid (RelativeHilbertObject f T) where
+  r := relativeHilbertEquivalent
+  iseqv := {
+    refl := fun Z => ⟨Iso.refl _, by simp⟩
+    symm := by
+      intro Z Z' h
+      rcases h with ⟨e, h⟩
+      refine ⟨e.symm, ?_⟩
+      simpa [Category.assoc] using
+        (congrArg (fun k => e.inv ≫ k) h).symm
+    trans := by
+      intro Z Z' Z'' h h'
+      rcases h with ⟨e, h⟩
+      rcases h' with ⟨e', h'⟩
+      refine ⟨e.trans e', ?_⟩
+      calc
+        (e.trans e').hom ≫ Z''.inclusion =
+            e.hom ≫ (e'.hom ≫ Z''.inclusion) := by
+          rw [Iso.trans_hom, Category.assoc]
+        _ = e.hom ≫ Z'.inclusion := by rw [h']
+        _ = Z.inclusion := h
+  }
+
+abbrev RelativeHilbertClass {X B : Scheme.{u}} (f : X ⟶ B)
+    (T : RelativeTestCategory B) :=
+  Quotient (relativeHilbertSetoid f T)
 
 structure RelativeInvertibleSheafRepresentative {X B : Scheme.{u}}
     (f : X ⟶ B) (T : RelativeTestCategory B) where
   module : (baseChangeScheme f T).Modules
+  quasiCoherent : module.IsQuasicoherent
+  finitePresentation : module.IsFinitePresentation
   invertible : Prop
 
 def relativeInvertibleSheafSetoid {X B : Scheme.{u}} (f : X ⟶ B)
@@ -155,36 +240,51 @@ structure RelativeMorphismObject {Z X B : Scheme.{u}}
 structure RelativeCoherentSheafObject {X B : Scheme.{u}} (f : X ⟶ B)
     (T : RelativeTestCategory B) where
   module : (baseChangeScheme f T).Modules
-  quasiCoherent : Prop
-  finitePresentation : Prop
-  flatOverTest : Prop
+  quasiCoherent : module.IsQuasicoherent
+  finitePresentation : module.IsFinitePresentation
+  flatOverTest : ModuleFlatOver (baseChangeToTest f T) module
   supportProperOverTest : Prop
 
 structure RelativeFlatProperFamily (B : Scheme.{u})
     (T : RelativeTestCategory B) where
   totalSpace : Scheme.{u}
   structureMap : totalSpace ⟶ T.left
-  finitePresentation : Prop
-  flat : Prop
-  proper : Prop
+  finitePresentation : IsFinitePresentationMorphism structureMap
+  flat : AlgebraicGeometry.Flat structureMap
+  proper : AlgebraicGeometry.IsProper structureMap
+
+structure RelativePolarization {B : Scheme.{u}}
+    {T : RelativeTestCategory B} (A : RelativeFlatProperFamily B T) where
+  module : A.totalSpace.Modules
+  invertible : Prop
+  relativelyAmple : Prop
 
 structure RelativePolarizedFamily (B : Scheme.{u})
     (T : RelativeTestCategory B) extends RelativeFlatProperFamily B T where
-  polarization : Prop
+  polarization : RelativePolarization toRelativeFlatProperFamily
 
 structure RelativeCurveFamily (B : Scheme.{u})
     (T : RelativeTestCategory B) extends RelativeFlatProperFamily B T where
-  isCurve : Prop
+  relativeDimensionAtMostOne : Prop
 
 structure RelativePerfectComplexFamily {X B : Scheme.{u}} (f : X ⟶ B)
     (T : RelativeTestCategory B) where
-  perfect : Prop
+  complex : CochainComplex (baseChangeScheme f T).Modules ℤ
+  relativelyPerfect : Prop
   negativeSelfExtVanishing : Prop
 
 def RelativeFamilyIso {B : Scheme.{u}} {T : RelativeTestCategory B}
     (A C : RelativeFlatProperFamily B T) : Type u :=
   { φ : A.totalSpace ⟶ C.totalSpace //
       IsIso φ ∧ φ ≫ C.structureMap = A.structureMap }
+
+structure RelativePolarizedFamilyIso {B : Scheme.{u}}
+    {T : RelativeTestCategory B}
+    (A C : RelativePolarizedFamily B T) where
+  underlying : RelativeFamilyIso
+    A.toRelativeFlatProperFamily C.toRelativeFlatProperFamily
+  polarization : Nonempty ((Scheme.Modules.pullback underlying.1).obj
+    C.polarization.module ≅ A.polarization.module)
 
 structure RelativeHomFunctorData {X B : Scheme.{u}} (f : X ⟶ B)
     (F G : X.Modules) where
@@ -242,62 +342,49 @@ structure RelativeIsomFunctorData {X B : Scheme.{u}} (f : X ⟶ B)
 
 structure HomRepresentabilityHypotheses {X B : Scheme.{u}} (f : X ⟶ B)
     (F G : X.Modules) where
-  finitePresentation :
-    AlgebraicGeometry.LocallyOfFinitePresentation f ∧
-      AlgebraicGeometry.QuasiCompact f
+  finitePresentation : IsFinitePresentationMorphism f
   F_quasiCoherent : F.IsQuasicoherent
   G_quasiCoherent : G.IsQuasicoherent
   G_finitelyPresented : G.IsFinitePresentation
-  G_flatOverBase : Prop
+  G_flatOverBase : ModuleFlatOver f G
   G_supportProperOverBase : Prop
 
 structure IsomRepresentabilityHypotheses {X B : Scheme.{u}} (f : X ⟶ B)
     (F G : X.Modules) where
-  finitePresentation :
-    AlgebraicGeometry.LocallyOfFinitePresentation f ∧
-      AlgebraicGeometry.QuasiCompact f
+  finitePresentation : IsFinitePresentationMorphism f
   F_finitelyPresented : F.IsFinitePresentation
   G_finitelyPresented : G.IsFinitePresentation
-  F_flatOverBase : Prop
-  G_flatOverBase : Prop
+  F_flatOverBase : ModuleFlatOver f F
+  G_flatOverBase : ModuleFlatOver f G
   F_supportProperOverBase : Prop
   G_supportProperOverBase : Prop
 
 structure QuotRepresentabilityHypotheses {X B : Scheme.{u}} (f : X ⟶ B)
     (F : X.Modules) where
-  finitePresentation :
-    AlgebraicGeometry.LocallyOfFinitePresentation f ∧
-      AlgebraicGeometry.QuasiCompact f
+  finitePresentation : IsFinitePresentationMorphism f
   separated : AlgebraicGeometry.IsSeparated f
   F_quasiCoherent : F.IsQuasicoherent
 
 structure HilbertRepresentabilityHypotheses {X B : Scheme.{u}} (f : X ⟶ B) where
-  finitePresentation :
-    AlgebraicGeometry.LocallyOfFinitePresentation f ∧
-      AlgebraicGeometry.QuasiCompact f
+  finitePresentation : IsFinitePresentationMorphism f
   separated : AlgebraicGeometry.IsSeparated f
 
 structure PicardFunctorHypotheses {X B : Scheme.{u}} (f : X ⟶ B) where
   flat : AlgebraicGeometry.Flat f
-  finitePresentation :
-    AlgebraicGeometry.LocallyOfFinitePresentation f ∧
-      AlgebraicGeometry.QuasiCompact f
+  finitePresentation : IsFinitePresentationMorphism f
   proper : AlgebraicGeometry.IsProper f
-  structureSheafPushforwardIso : ∀ T : RelativeTestCategory B, Prop
+  structureSheafPushforwardIso : ∀ _T : RelativeTestCategory B, Prop
 
 structure PicardStackHypotheses {X B : Scheme.{u}} (f : X ⟶ B) where
   flat : AlgebraicGeometry.Flat f
-  finitePresentation :
-    AlgebraicGeometry.LocallyOfFinitePresentation f ∧
-      AlgebraicGeometry.QuasiCompact f
+  finitePresentation : IsFinitePresentationMorphism f
   proper : AlgebraicGeometry.IsProper f
 
 structure RelativeMorphismHypotheses
     {Z X B : Scheme.{u}} (z : Z ⟶ B) (f : X ⟶ B) where
   targetSeparated : AlgebraicGeometry.IsSeparated f
-  sourceFinitePresentation :
-    AlgebraicGeometry.LocallyOfFinitePresentation z ∧
-      AlgebraicGeometry.QuasiCompact z
+  targetFinitePresentation : IsFinitePresentationMorphism f
+  sourceFinitePresentation : IsFinitePresentationMorphism z
   sourceFlat : AlgebraicGeometry.Flat z
   sourceProper : AlgebraicGeometry.IsProper z
 
@@ -330,12 +417,12 @@ structure QuotFunctorData {X B : Scheme.{u}} (f : X ⟶ B)
     (F : X.Modules) where
   value : RelativeSetFunctor B
   classifiesQuotients :
-    RelativeSetClassification value (fun T => RelativeQuotientObject f F T)
+    RelativeSetClassification value (fun T => RelativeQuotientClass f F T)
 
 structure HilbertFunctorData {X B : Scheme.{u}} (f : X ⟶ B) where
   value : RelativeSetFunctor B
   classifiesClosedSubspaces :
-    RelativeSetClassification value (fun T => RelativeHilbertObject f T)
+    RelativeSetClassification value (fun T => RelativeHilbertClass f T)
 
 structure PicardFunctorData {X B : Scheme.{u}} (f : X ⟶ B) where
   value : RelativeSetFunctor B
@@ -397,15 +484,11 @@ structure PolarizedStackData (B : Scheme.{u}) where
   essentiallySurjective : ∀ (T : RelativeTestCategory B)
     (X : RelativePolarizedFamily B T),
     ∃ x : RelativeFiber stack.value T,
-      Nonempty (RelativeFamilyIso
-        (objectDescription T x).toRelativeFlatProperFamily
-        X.toRelativeFlatProperFamily)
+      Nonempty (RelativePolarizedFamilyIso (objectDescription T x) X)
   homDescription : ∀ (T : RelativeTestCategory B)
     (x y : RelativeFiber stack.value T),
     Nonempty ((x ⟶ y) ≃
-      RelativeFamilyIso
-        (objectDescription T x).toRelativeFlatProperFamily
-        (objectDescription T y).toRelativeFlatProperFamily)
+      RelativePolarizedFamilyIso (objectDescription T x) (objectDescription T y))
 
 structure CurvesStackData (B : Scheme.{u}) where
   stack : RelativeStack B
@@ -430,7 +513,14 @@ structure ComplexesStackData {X B : Scheme.{u}} (f : X ⟶ B) where
     RelativeFiber stack.value T → RelativePerfectComplexFamily f T
   essentiallySurjective : ∀ (T : RelativeTestCategory B)
     (C : RelativePerfectComplexFamily f T),
-    ∃ x : RelativeFiber stack.value T, objectDescription T x = C
+    ∃ x : RelativeFiber stack.value T,
+      Nonempty ((objectDescription T x).complex ≅ C.complex)
+
+structure ComplexesRepresentabilityHypotheses
+    {X B : Scheme.{u}} (f : X ⟶ B) where
+  finitePresentation : IsFinitePresentationMorphism f
+  flat : AlgebraicGeometry.Flat f
+  proper : AlgebraicGeometry.IsProper f
 
 def RelativeDiagonalRepresentable {B : Scheme.{u}}
     (S : RelativeStack B) : Prop :=
@@ -467,6 +557,8 @@ structure AlgebraicStackPresentation (B : Scheme.{u}) where
 
 def IsAlgebraicRelativeStack {B : Scheme.{u}} (F : RelativeStack B) : Prop :=
   ∃ A : AlgebraicStackPresentation B,
-    Nonempty (A.stack.value ≅ F.value)
+    ∃ η : Formalization.Books.Stacks.Unit01.FiberedMorphism
+        A.stack.value F.value,
+      Formalization.Books.Stacks.Unit01.FiberwiseEquivalence η
 
 end Formalization.Books.Quot.Unit01

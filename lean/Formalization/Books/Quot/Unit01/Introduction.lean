@@ -17,13 +17,13 @@ namespace Formalization.Books.Quot.Unit01
 universe u v
 
 structure CoherentStackFlatHypotheses {X B : Scheme.{u}} (f : X ⟶ B) where
-  finitePresentation : Prop
-  separated : Prop
-  flat : Prop
+  finitePresentation : IsFinitePresentationMorphism f
+  separated : AlgebraicGeometry.IsSeparated f
+  flat : AlgebraicGeometry.Flat f
 
 structure CoherentStackGeneralHypotheses {X B : Scheme.{u}} (f : X ⟶ B) where
-  finitePresentation : Prop
-  separated : Prop
+  finitePresentation : IsFinitePresentationMorphism f
+  separated : AlgebraicGeometry.IsSeparated f
 
 def homFunctor {X B : Scheme.{u}} {f : X ⟶ B} {F G : X.Modules}
     (H : RelativeHomFunctorData f F G) : RelativeSetFunctor B :=
@@ -173,7 +173,7 @@ theorem polarized_stack_is_algebraic
 
 theorem polarized_schemes_are_formally_effective
     {B : Scheme.{u}} (P : PolarizedStackData B) :
-    Nonempty (PolarizedFormalEffectivenessData B) := by
+    Nonempty (PolarizedFormalEffectivenessData P) := by
   sorry
 
 theorem curves_stack_is_algebraic
@@ -183,7 +183,8 @@ theorem curves_stack_is_algebraic
 
 theorem complexes_stack_is_algebraic
     {X B : Scheme.{u}} (f : X ⟶ B)
-    (C : ComplexesStackData f) :
+    (C : ComplexesStackData f)
+    (h : ComplexesRepresentabilityHypotheses f) :
     IsAlgebraicRelativeStack (complexesStack C) := by
   sorry
 

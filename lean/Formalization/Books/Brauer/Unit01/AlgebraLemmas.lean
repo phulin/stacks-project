@@ -749,8 +749,7 @@ theorem finite_simple_algebra_unique_simple_modules (k A M N : Type*)
 
 theorem finite_simple_algebra_module_isotypic (k A M : Type*) [Field k]
     [Ring A] [Algebra k A] [FiniteDimensional k A] [IsSimpleRing A]
-    [AddCommGroup M] [Module A M] [Module k M] [IsScalarTower k A M]
-    [Module.Finite A M] :
+    [AddCommGroup M] [Module A M] [Module.Finite A M] :
     IsSemisimpleModule A M ∧ IsIsotypic A M := by
   let : IsArtinianRing A := IsArtinianRing.of_finite k A
   exact ⟨inferInstance, IsSimpleRing.isIsotypic A M⟩

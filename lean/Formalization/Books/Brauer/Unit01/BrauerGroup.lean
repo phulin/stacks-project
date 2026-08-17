@@ -45,13 +45,17 @@ theorem similarity_is_equivalence (k : Type*) [Field k] :
     Equivalence (@IsBrauerEquivalent k _) :=
   IsBrauerEquivalent.is_eqv
 
+/- A division-ring witness must extend the ring already stored by the CSA;
+   an unrelated `DivisionRing` instance on the same carrier is not enough. -/
 theorem similarity_has_unique_division_representative (k : Type u_k) [Field k]
     (A : CSA.{u_k, u_A} k) :
       ∃ D : CSA.{u_k, u_A} k,
-        Nonempty (DivisionRing D.carrier) ∧
+        (∃ hD : DivisionRing D.carrier,
+          hD.toRing = D.toAlgCat.isRing) ∧
           IsBrauerEquivalent A D ∧
             ∀ E : CSA.{u_k, u_E} k,
-            Nonempty (DivisionRing E.carrier) →
+            (∃ hE : DivisionRing E.carrier,
+              hE.toRing = E.toAlgCat.isRing) →
             IsBrauerEquivalent A E →
                 Nonempty (D.carrier ≃ₐ[k] E.carrier) := by
   sorry
@@ -196,9 +200,9 @@ theorem brauer_group_base_change_interface (k k' : Type*) [Field k] [Field k']
           IsBaseChangeRepresentative k k' A B := by
   sorry
 
-theorem brauer_group_zero_iff (k : Type*) [Field k] :
-    (∀ x : BrauerGroup k, x = 1) ↔
-      (∀ (K : Type*) [DivisionRing K] [Algebra k K]
+theorem brauer_group_zero_iff (k : Type u_k) [Field k] :
+    (∀ x : BrauerGroup.{u_k, u_k} k, x = 1) ↔
+      (∀ (K : Type u_k) [DivisionRing K] [Algebra k K]
         [FiniteDimensional k K] [Algebra.IsCentral k K],
         Nonempty (K ≃ₐ[k] k)) := by
   sorry

@@ -270,14 +270,13 @@ theorem finiteExample_not_fibredInGroupoids :
     ¬ finiteExampleFunctor.IsFibredInGroupoids := by
   sorry
 
-/-- Two distinct lifts of one base arrow with the same source and target are
-already incompatible with the uniqueness clause in the definition.  This is
-the abstract form of the second finite example, where `g' ≫ f'_1` and
-`g' ≫ f'_2` are identified. -/
-theorem two_distinct_lifts_not_fibredInGroupoids
+/-- The second finite example is detected when distinct lifts become equal
+after a common postcomposition. -/
+theorem two_distinct_lifts_with_equal_postcomposition_not_fibredInGroupoids
     {S C : Type*} [Category* S] [Category* C]
-    (p : S ⥤ C) {x y : S} (f : p.obj x ⟶ p.obj y)
+    (p : S ⥤ C) {x y z : S} (f : p.obj x ⟶ p.obj y)
     (φ ψ : x ⟶ y) (hφ : p.IsHomLift f φ) (hψ : p.IsHomLift f ψ)
+    (k : y ⟶ z) (hcomp : φ ≫ k = ψ ≫ k)
     (hne : φ ≠ ψ) :
     ¬ p.IsFibredInGroupoids := by
   sorry
@@ -308,7 +307,7 @@ theorem fibredInGroupoids_two_morphism_isIso
 theorem categoriesFibredInGroupoidsOver_is_two_one_category
     (C : Cat.{v, u}) :
     IsTwoOneCategory
-      (AssociatedTwoOneCategory (CategoriesFibredInGroupoidsOver C)) := by
+      (CategoriesFibredInGroupoidsOver C) := by
   sorry
 
 /-! ## 2-fibre products over a fixed base -/
@@ -330,14 +329,18 @@ theorem categoriesFibredInGroupoids_have_twoFibreProducts
   sorry
 
 /-- The two descriptions of the category-valued 2-fibre product in the
-source are canonically equivalent: the fixed-base presentation remembers a
-base object, while `IsoComma` remembers only the isomorphism. -/
+source are canonically equivalent for categories fibred in groupoids: the
+fixed-base presentation remembers a base object, while `IsoComma` remembers
+only the isomorphism. -/
 theorem twoFibreProductOverCategory_canonically_equivalent
-    {C : Cat.{v, u}} {X Y S : CategoryOver C}
-    (F : CategoryOverHom X S) (G : CategoryOverHom Y S) :
+    {C : Cat.{v, u}} {X Y S : FibredCategoryOver C}
+    (hX : IsGroupoidFibredCategoryOver X)
+    (hY : IsGroupoidFibredCategoryOver Y)
+    (hS : IsGroupoidFibredCategoryOver S)
+    (F : FibredCategoryOverHom X S) (G : FibredCategoryOverHom Y S) :
     Nonempty
-      (TwoFibreProductOverCategory F G ≌
-        IsoComma (overFunctor F) (overFunctor G)) := by
+      (TwoFibreProductOverCategory F.underlying G.underlying ≌
+        IsoComma (overFunctor F.underlying) (overFunctor G.underlying)) := by
   sorry
 
 /-! ## Fibrewise functors and equivalences -/
@@ -562,6 +565,8 @@ lemma.  The two triangle fields are the two 2-commutativity assumptions. -/
 structure AmeliorationUniquenessData
     {C : Cat.{v, u}} {X X' X'' Y : FibredCategoryOver C}
     (F : FibredCategoryOverHom X Y) where
+  x_groupoid_fibred_over_C : IsGroupoidFibredCategoryOver X
+  y_groupoid_fibred_over_C : IsGroupoidFibredCategoryOver Y
   f : FibredCategoryOverHom X' Y
   g : FibredCategoryOverHom X'' Y
   a : FibredCategoryOverHom X X'
@@ -579,14 +584,6 @@ structure AmeliorationUniquenessData
     Formalization.Books.Categories.Unit31.IsTwoCommutative
       (C := FibredCategoryOver C) b (FibredCategoryOverHom.id X) g F
 
-/-- Equivalences over a target functor, with the chosen functor displayed. -/
-def IsEquivalenceOverFunctor
-    {A B D : Type*} [Category* A] [Category* B] [Category* D]
-    (p : A ⥤ D) (q : B ⥤ D) (h : A ⥤ B) : Prop :=
-  ∃ k : B ⥤ A,
-    h ⋙ q = p ∧ k ⋙ p = q ∧
-      Nonempty (h ⋙ k ≅ 𝟭 A) ∧ Nonempty (k ⋙ h ≅ 𝟭 B)
-
 /-- A natural isomorphism is over a target functor when its components map
 to the transported identity in that target. -/
 def IsNatIsoOver
@@ -595,6 +592,20 @@ def IsNatIsoOver
     (over : H ⋙ q = K ⋙ q) : Prop :=
   ∀ Z : A, q.map (e.hom.app Z) =
     eqToHom (congrArg (fun L : A ⥤ D => L.obj Z) over)
+
+/-- An equivalence over a target functor, with the chosen functor displayed.
+The quasi-inverse isomorphisms are required to be over the same target. -/
+def IsEquivalenceOverFunctor
+    {A B D : Type*} [Category* A] [Category* B] [Category* D]
+    (p : A ⥤ D) (q : B ⥤ D) (h : A ⥤ B) : Prop :=
+  ∃ k : B ⥤ A,
+    h ⋙ q = p ∧ k ⋙ p = q ∧
+      (∃ e : h ⋙ k ≅ 𝟭 A,
+        ∃ over : (h ⋙ k) ⋙ p = (𝟭 A) ⋙ p,
+          IsNatIsoOver p e over) ∧
+      (∃ e : k ⋙ h ≅ 𝟭 B,
+        ∃ over : (k ⋙ h) ⋙ q = (𝟭 B) ⋙ q,
+          IsNatIsoOver q e over)
 
 def underlyingIsoOfFibredHomIso
     {C : Cat.{v, u}} {X Y : FibredCategoryOver C}

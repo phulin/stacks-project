@@ -1,4 +1,3 @@
-import Formalization.Books.Algebra.Unit02.Conventions
 import Formalization.Books.Categories.Unit19.FilteredColimits
 import Formalization.Books.Categories.Unit21.LimitsAndColimitsOverPreorderedSets
 import Mathlib.Algebra.Category.ModuleCat.Abelian
@@ -110,12 +109,27 @@ theorem moduleColimitQuotientInclusion_compatibility
       moduleColimitQuotientInclusion M i := by
   sorry
 
-/-- The direct-sum quotient is canonically the categorical colimit. -/
-theorem moduleColimitQuotient_is_colimit
+/- The quotient maps form the cocone displayed in the source. -/
+def moduleColimitQuotientCocone (M : ModuleSystem R I) : Cocone M where
+  pt := ModuleCat.of R (moduleColimitQuotient M)
+  ι :=
+    { app := fun i => ModuleCat.ofHom (moduleColimitQuotientInclusion M i)
+      naturality := by
+        intro i j h
+        ext x
+        exact congrArg (fun f => f x)
+          (moduleColimitQuotientInclusion_compatibility M h.le) }
+
+/- The direct-sum quotient is canonically the categorical colimit. -/
+theorem moduleColimitQuotient_is_colimit_exists
     (M : ModuleSystem R I) :
-    Nonempty
-      (ModuleCat.of R (moduleColimitQuotient M) ≅ moduleSystemColimit M) := by
+    Nonempty (IsColimit (moduleColimitQuotientCocone M)) := by
   sorry
+
+noncomputable def moduleColimitQuotient_is_colimit
+    (M : ModuleSystem R I) :
+    IsColimit (moduleColimitQuotientCocone M) :=
+  (moduleColimitQuotient_is_colimit_exists M).some
 
 /-! ## Directed colimits -/
 
@@ -207,12 +221,28 @@ theorem directedModuleColimitMap_compatibility (M : ModuleSystem R I)
       directedModuleColimitMap M hI i := by
   sorry
 
-/-- The directed-colimit quotient is canonically a colimit of the system. -/
-theorem directedModuleColimit_is_colimit (M : ModuleSystem R I)
+/- The canonical quotient maps form the directed colimit cocone. -/
+def directedModuleColimitCocone (M : ModuleSystem R I)
+    (hI : IsDirectedSet I) : Cocone M where
+  pt := ModuleCat.of R (directedModuleColimit M hI)
+  ι :=
+    { app := fun i => ModuleCat.ofHom (directedModuleColimitMap M hI i)
+      naturality := by
+        intro i j h
+        ext x
+        exact congrArg (fun f => f x)
+          (directedModuleColimitMap_compatibility M hI h.le) }
+
+/- The directed-colimit quotient is canonically a colimit of the system. -/
+theorem directedModuleColimit_is_colimit_exists (M : ModuleSystem R I)
     (hI : IsDirectedSet I) :
-    Nonempty
-      (ModuleCat.of R (directedModuleColimit M hI) ≅ moduleSystemColimit M) := by
+    Nonempty (IsColimit (directedModuleColimitCocone M hI)) := by
   sorry
+
+noncomputable def directedModuleColimit_is_colimit (M : ModuleSystem R I)
+    (hI : IsDirectedSet I) :
+    IsColimit (directedModuleColimitCocone M hI) :=
+  (directedModuleColimit_is_colimit_exists M hI).some
 
 /-- The zero criterion for an element in a directed module colimit. -/
 theorem moduleSystemColimit_ι_eq_zero_iff

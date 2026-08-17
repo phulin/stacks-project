@@ -701,44 +701,48 @@ def relativeInertiaToTarget {C : Cat.{v, u}}
     RelativeInertiaCategory F.underlying ⥤ S.underlying.left :=
   relativeInertiaStructureMap F.underlying ⋙ overFunctor F.underlying
 
+private noncomputable def relativeInertia_fibreProduct_square_commutes_canonical
+    {C : Cat.{v, u}} {X S : FibredCategoryOver C}
+    (F : FibredCategoryOverHom X S) :
+    relativeInertiaToTarget F ⋙ inertiaNeutralSection S ≅
+      relativeInertiaComparison F ⋙ inertiaFunctoriality F :=
+  NatIso.ofComponents (fun x =>
+    { hom :=
+        { hom := 𝟙 ((overFunctor F.underlying).obj x.carrier)
+          comm := by
+            change 𝟙 _ ≫ 𝟙 _ = 𝟙 _ ≫
+              (overFunctor F.underlying).map x.automorphism.hom
+            simpa using x.map_eq_id.symm }
+      inv :=
+        { hom := 𝟙 ((overFunctor F.underlying).obj x.carrier)
+          comm := by
+            change (overFunctor F.underlying).map x.automorphism.hom ≫ 𝟙 _ =
+              𝟙 _ ≫ 𝟙 _
+            simpa using x.map_eq_id }
+      hom_inv_id := by
+        apply RelativeInertiaHom.ext
+        simp
+      inv_hom_id := by
+        apply RelativeInertiaHom.ext
+        simp }) (by
+          intro x y f
+          apply RelativeInertiaHom.ext
+          rfl)
+
 theorem relativeInertia_fibreProduct_square_commutes_exists {C : Cat.{v, u}}
     {X S : FibredCategoryOver C}
     (F : FibredCategoryOverHom X S) :
     Nonempty
       (relativeInertiaToTarget F ⋙ inertiaNeutralSection S ≅
         relativeInertiaComparison F ⋙ inertiaFunctoriality F) := by
-  let e : relativeInertiaToTarget F ⋙ inertiaNeutralSection S ≅
-      relativeInertiaComparison F ⋙ inertiaFunctoriality F :=
-    NatIso.ofComponents (fun x =>
-      { hom :=
-          { hom := 𝟙 ((overFunctor F.underlying).obj x.carrier)
-            comm := by
-              change 𝟙 _ ≫ 𝟙 _ = 𝟙 _ ≫
-                (overFunctor F.underlying).map x.automorphism.hom
-              simpa using x.map_eq_id.symm }
-        inv :=
-          { hom := 𝟙 ((overFunctor F.underlying).obj x.carrier)
-            comm := by
-              change (overFunctor F.underlying).map x.automorphism.hom ≫ 𝟙 _ =
-                𝟙 _ ≫ 𝟙 _
-              simpa using x.map_eq_id }
-        hom_inv_id := by
-          apply RelativeInertiaHom.ext
-          simp
-        inv_hom_id := by
-          apply RelativeInertiaHom.ext
-          simp }) (by
-            intro x y f
-            apply RelativeInertiaHom.ext
-            rfl)
-  exact ⟨e⟩
+  exact ⟨relativeInertia_fibreProduct_square_commutes_canonical F⟩
 
 noncomputable def relativeInertia_fibreProduct_square_commutes
     {C : Cat.{v, u}} {X S : FibredCategoryOver C}
     (F : FibredCategoryOverHom X S) :
     relativeInertiaToTarget F ⋙ inertiaNeutralSection S ≅
       relativeInertiaComparison F ⋙ inertiaFunctoriality F :=
-  Classical.choice (relativeInertia_fibreProduct_square_commutes_exists F)
+  relativeInertia_fibreProduct_square_commutes_canonical F
 
 theorem relativeInertia_is_twoFibreProduct {C : Cat.{v, u}}
     {X S : FibredCategoryOver C}

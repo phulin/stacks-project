@@ -53,10 +53,10 @@ theorem irreducible_polynomial_derivative_zero_factorization
       0 < p ∧ CharP F p ∧ Q.Separable ∧ Irreducible Q ∧
         Polynomial.expand F (p ^ n) Q = P := by
   rcases CharP.exists' F with hzero | ⟨p, hp, hchar⟩
-  · letI : CharZero F := hzero
+  · let : CharZero F := hzero
     exact False.elim <| (separable_iff_derivative_ne_zero hP).1 hP.separable hderiv
-  · letI : Fact p.Prime := hp
-    letI : CharP F p := hchar
+  · let : Fact p.Prime := hp
+    let : CharP F p := hchar
     rcases hP.hasSeparableContraction p with ⟨Q, hQ, n, hQP⟩
     refine ⟨p, n, Q, hp.out.pos, hchar, hQ, ?_, hQP⟩
     apply Polynomial.of_irreducible_expand_pow hp.out.ne_zero
@@ -71,7 +71,7 @@ theorem irreducible_polynomial_separable_contraction
       ExpChar F q ∧ Q.Separable ∧ Irreducible Q ∧
         Polynomial.expand F (q ^ n) Q = P := by
   let q := ringExpChar F
-  letI : ExpChar F q := ringExpChar.expChar F
+  let : ExpChar F q := ringExpChar.expChar F
   rcases hP.hasSeparableContraction q with ⟨Q, hQ, n, hQP⟩
   refine ⟨q, n, Q, inferInstance, hQ, ?_, hQP⟩
   apply Polynomial.of_irreducible_expand_pow (expChar_ne_zero F q)
@@ -145,8 +145,8 @@ theorem irreducible_polynomial_separable_iff_distinct_algebraic_closure_roots
 theorem separable_degree_unchanged_under_frobenius_substitution
     {F : Type u} [Field F] (p : ℕ) [CharP F p] (hp : 0 < p) (P : F[X]) :
     P.natSepDegree = (P.comp (X ^ p)).natSepDegree := by
-  letI : Fact p.Prime := ⟨(CharP.char_is_prime_or_zero F p).resolve_right hp.ne'⟩
-  letI : ExpChar F p := ExpChar.prime Fact.out
+  let : Fact p.Prime := ⟨(CharP.char_is_prime_or_zero F p).resolve_right hp.ne'⟩
+  let : ExpChar F p := ExpChar.prime Fact.out
   rw [← expand_eq_comp_X_pow]
   simpa [pow_one] using (natSepDegree_expand P p (n := 1)).symm
 
@@ -175,7 +175,7 @@ theorem irreducible_degree_eq_separable_degree_mul_expChar_power
     {F : Type u} [Field F] {P : F[X]} (hP : Irreducible P) :
     ∃ (q m : ℕ), ExpChar F q ∧ P.natSepDegree * q ^ m = P.natDegree := by
   let q := ringExpChar F
-  letI : ExpChar F q := ringExpChar.expChar F
+  let : ExpChar F q := ringExpChar.expChar F
   let hcontraction := hP.hasSeparableContraction q
   obtain ⟨m, hm⟩ := hcontraction.dvd_degree'
   refine ⟨q, m, inferInstance, ?_⟩
@@ -287,7 +287,7 @@ theorem generatedIntermediateField_finite
     {F K : Type*} [Field F] [Field K] [Algebra F K]
     (S : FinitelyGeneratedFieldExtension F K) (i : Fin (S.n + 1)) :
     FiniteDimensional F (generatedIntermediateField S i) := by
-  letI : FiniteDimensional F K := S.finite
+  let : FiniteDimensional F K := S.finite
   infer_instance
 
 /-- Each successive prefix field is finite over its predecessor. -/
@@ -296,10 +296,10 @@ theorem generatedIntermediateField_step_finite
     (S : FinitelyGeneratedFieldExtension F K) (i : Fin S.n) :
     FiniteDimensional (generatedIntermediateField S i.castSucc)
       (generatedIntermediateField S i.succ) := by
-  letI : FiniteDimensional F K := S.finite
-  letI : FiniteDimensional F (generatedIntermediateField S i.succ) :=
+  let : FiniteDimensional F K := S.finite
+  let : FiniteDimensional F (generatedIntermediateField S i.succ) :=
     generatedIntermediateField_finite S i.succ
-  letI : IsScalarTower F (generatedIntermediateField S i.castSucc)
+  let : IsScalarTower F (generatedIntermediateField S i.castSucc)
       (generatedIntermediateField S i.succ) :=
     IsScalarTower.of_algebraMap_eq' (by rfl)
   exact Module.Finite.of_restrictScalars_finite F
@@ -320,7 +320,7 @@ theorem generatedMinpoly_irreducible
     {F K : Type*} [Field F] [Field K] [Algebra F K]
     (S : FinitelyGeneratedFieldExtension F K) (i : Fin S.n) :
     Irreducible (generatedMinpoly S i) := by
-  letI : FiniteDimensional F K := S.finite
+  let : FiniteDimensional F K := S.finite
   exact minpoly.irreducible
     (IsIntegral.of_finite (generatedIntermediateField S i.castSucc) (S.alpha i))
 
@@ -333,9 +333,9 @@ theorem generated_step_finrank_eq_minpoly_natDegree
         (generatedIntermediateField S i.succ) =
       (generatedMinpoly S i).natDegree := by
   let A := generatedIntermediateField S i.castSucc
-  letI : FiniteDimensional F K := S.finite
-  letI : IsScalarTower F A K := IsScalarTower.of_algebraMap_eq' (by rfl)
-  letI : Module.Finite A K := Module.Finite.of_restrictScalars_finite F A K
+  let : FiniteDimensional F K := S.finite
+  let : IsScalarTower F A K := IsScalarTower.of_algebraMap_eq' (by rfl)
+  let : Module.Finite A K := Module.Finite.of_restrictScalars_finite F A K
   have hfunc :
       (fun j : Fin i.succ => S.alpha (prefixGeneratorIndex i.succ j)) =
         Fin.snoc
@@ -376,9 +376,9 @@ theorem generatedIntermediateField_step_quotient
         generatedIntermediateField S i.castSucc]
         AdjoinRoot (generatedMinpoly S i)) := by
   let A := generatedIntermediateField S i.castSucc
-  letI : FiniteDimensional F K := S.finite
-  letI : IsScalarTower F A K := IsScalarTower.of_algebraMap_eq' (by rfl)
-  letI : Module.Finite A K := Module.Finite.of_restrictScalars_finite F A K
+  let : FiniteDimensional F K := S.finite
+  let : IsScalarTower F A K := IsScalarTower.of_algebraMap_eq' (by rfl)
+  let : Module.Finite A K := Module.Finite.of_restrictScalars_finite F A K
   have hfunc :
       (fun j : Fin i.succ => S.alpha (prefixGeneratorIndex i.succ j)) =
         Fin.snoc
@@ -500,10 +500,10 @@ theorem generated_step_extension_exists_of_root
       ψ.comp (generatedIntermediateFieldInclusion S i) = φ ∧
         ψ (generatorInNextField S i) = β := by
   let A := generatedIntermediateField S i.castSucc
-  letI : FiniteDimensional F K := S.finite
-  letI : IsScalarTower F A K := IsScalarTower.of_algebraMap_eq' (by rfl)
-  letI : Module.Finite A K := Module.Finite.of_restrictScalars_finite F A K
-  letI : IsScalarTower F A (generatedIntermediateField S i.succ) :=
+  let : FiniteDimensional F K := S.finite
+  let : IsScalarTower F A K := IsScalarTower.of_algebraMap_eq' (by rfl)
+  let : Module.Finite A K := Module.Finite.of_restrictScalars_finite F A K
+  let : IsScalarTower F A (generatedIntermediateField S i.succ) :=
     IsScalarTower.of_algebraMap_eq' (by rfl)
   have hfunc :
       (fun j : Fin i.succ => S.alpha (prefixGeneratorIndex i.succ j)) =
@@ -790,9 +790,9 @@ theorem count_embeddings_explicitly
     (S : FinitelyGeneratedFieldExtension F K) :
     Nat.card (K →ₐ[F] L) =
       ∏ i : Fin S.n, (generatedMinpoly S i).natSepDegree := by
-  letI : FiniteDimensional F K := S.finite
-  letI : Algebra.IsAlgebraic F K := Algebra.IsAlgebraic.of_finite F K
-  letI : IsAlgClosed L := IsAlgClosure.isAlgClosed F
+  let : FiniteDimensional F K := S.finite
+  let : Algebra.IsAlgebraic F K := Algebra.IsAlgebraic.of_finite F K
+  let : IsAlgClosed L := IsAlgClosure.isAlgClosed F
   have hprod :
       ∀ (m : ℕ) (hm : m ≤ S.n),
         Field.finSepDegree F
@@ -817,15 +817,15 @@ theorem count_embeddings_explicitly
         let j : Fin S.n := ⟨m, hmlt⟩
         let A := generatedIntermediateField S j.castSucc
         let B := generatedIntermediateField S j.succ
-        letI : IsScalarTower F A K :=
+        let : IsScalarTower F A K :=
           IsScalarTower.of_algebraMap_eq' (by rfl)
-        letI : Module.Finite A K :=
+        let : Module.Finite A K :=
           Module.Finite.of_restrictScalars_finite F A K
-        letI : FiniteDimensional A B :=
+        let : FiniteDimensional A B :=
           generatedIntermediateField_step_finite S j
-        letI : IsScalarTower F A B :=
+        let : IsScalarTower F A B :=
           IsScalarTower.of_algebraMap_eq' (by rfl)
-        letI : Algebra.IsAlgebraic A B :=
+        let : Algebra.IsAlgebraic A B :=
           Algebra.IsAlgebraic.of_finite A B
         have hmul :
             Field.finSepDegree F A * Field.finSepDegree A B =
@@ -839,7 +839,7 @@ theorem count_embeddings_explicitly
             generatedMinpoly_irreducible S j
           have hp_monic : (generatedMinpoly S j).Monic :=
             minpoly.monic (IsIntegral.of_finite A (S.alpha j))
-          letI : Fact (Irreducible (generatedMinpoly S j)) := ⟨hp⟩
+          let : Fact (Irreducible (generatedMinpoly S j)) := ⟨hp⟩
           have htop :
               IntermediateField.adjoin A
                   ({AdjoinRoot.root (generatedMinpoly S j)} :
@@ -935,8 +935,8 @@ theorem finitely_generated_separable_of_step_separable
     (hsep : ∀ i : Fin S.n, (generatedMinpoly S i).Separable) :
     Nat.card (K →ₐ[F] L) = Module.finrank F K ∧
       Algebra.IsSeparable F K := by
-  letI : FiniteDimensional F K := S.finite
-  letI : IsAlgClosed L := IsAlgClosure.isAlgClosed F
+  let : FiniteDimensional F K := S.finite
+  let : IsAlgClosed L := IsAlgClosure.isAlgClosed F
   have hprod_degree :
       ∀ (m : ℕ) (hm : m ≤ S.n),
         Module.finrank F
@@ -961,13 +961,13 @@ theorem finitely_generated_separable_of_step_separable
         let j : Fin S.n := ⟨m, hmlt⟩
         let A := generatedIntermediateField S j.castSucc
         let B := generatedIntermediateField S j.succ
-        letI : IsScalarTower F A K :=
+        let : IsScalarTower F A K :=
           IsScalarTower.of_algebraMap_eq' (by rfl)
-        letI : Module.Finite A K :=
+        let : Module.Finite A K :=
           Module.Finite.of_restrictScalars_finite F A K
-        letI : FiniteDimensional A B :=
+        let : FiniteDimensional A B :=
           generatedIntermediateField_step_finite S j
-        letI : IsScalarTower F A B :=
+        let : IsScalarTower F A B :=
           IsScalarTower.of_algebraMap_eq' (by rfl)
         have hmul :
             Module.finrank F A * Module.finrank A B =
@@ -1042,15 +1042,15 @@ theorem finitely_generated_embedding_count_lt_of_step_not_separable
     (S : FinitelyGeneratedFieldExtension F K)
     (hnot : ∃ i : Fin S.n, ¬(generatedMinpoly S i).Separable) :
     Nat.card (K →ₐ[F] L) < Module.finrank F K := by
-  letI : FiniteDimensional F K := S.finite
-  letI : Algebra.IsAlgebraic F K := Algebra.IsAlgebraic.of_finite F K
-  letI : IsAlgClosed L := IsAlgClosure.isAlgClosed F
+  let : FiniteDimensional F K := S.finite
+  let : Algebra.IsAlgebraic F K := Algebra.IsAlgebraic.of_finite F K
+  let : IsAlgClosed L := IsAlgClosure.isAlgClosed F
   have hnot_sep_ext : ¬ Algebra.IsSeparable F K := by
     intro hK
-    letI : Algebra.IsSeparable F K := hK
+    let : Algebra.IsSeparable F K := hK
     rcases hnot with ⟨i, hi⟩
     let A := generatedIntermediateField S i.castSucc
-    letI : IsScalarTower F A K :=
+    let : IsScalarTower F A K :=
       IsScalarTower.of_algebraMap_eq' (by rfl)
     have hαF : IsSeparable F (S.alpha i) :=
       Algebra.IsSeparable.isSeparable F (S.alpha i)
@@ -1087,8 +1087,8 @@ theorem finite_extension_embedding_count_le_and_eq_iff
     Nat.card (K →ₐ[F] L) ≤ Module.finrank F K ∧
       (Nat.card (K →ₐ[F] L) = Module.finrank F K ↔
         Algebra.IsSeparable F K) := by
-  letI : Algebra.IsAlgebraic F K := Algebra.IsAlgebraic.of_finite F K
-  letI : IsAlgClosed L := IsAlgClosure.isAlgClosed F
+  let : Algebra.IsAlgebraic F K := Algebra.IsAlgebraic.of_finite F K
+  let : IsAlgClosed L := IsAlgClosure.isAlgClosed F
   have hcard :
       Nat.card (K →ₐ[F] L) = Field.finSepDegree F K :=
     (Field.finSepDegree_eq_of_isAlgClosed F K L).symm
@@ -1105,7 +1105,7 @@ theorem finite_extension_embedding_count_le_and_eq_iff
       apply (Field.finSepDegree_eq_finrank_iff F K).mp
       exact (Field.finSepDegree_eq_of_isAlgClosed F K L).trans heq
     · intro hsep
-      letI : Algebra.IsSeparable F K := hsep
+      let : Algebra.IsSeparable F K := hsep
       calc
         Nat.card (K →ₐ[F] L) = Field.finSepDegree F K := hcard
         _ = Module.finrank F K :=

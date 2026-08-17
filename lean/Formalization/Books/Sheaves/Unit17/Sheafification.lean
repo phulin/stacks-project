@@ -62,7 +62,7 @@ theorem sheafificationCondition_iff {X : TopCat.{v}}
       ∀ x : U, ∃ (V : Opens X) (hxV : x.1 ∈ V) (i : V ⟶ U)
         (σ : F.obj (op V)),
         ∀ y : V, s (i y) = F.germ V y.1 y.2 σ := by
-  sorry
+  rfl
 
 /-! ## The canonical sheafification and its maps -/
 
@@ -112,14 +112,230 @@ theorem presheafToStalkProduct_app_apply {X : TopCat.{v}}
     (s : F.obj (op U)) (x : U) :
     (presheafToStalkProduct F).app (op U) s x =
       F.germ U x.1 x.2 s := by
-  sorry
+  rfl
+
+private theorem existsUnique_sheafificationLift_aux {X : TopCat.{v}}
+    (F : TopCat.Presheaf (Type v) X) (G : TopCat.Sheaf (Type v) X)
+    (φ : F ⟶ G.presheaf) :
+    ∃! ψ : sheafificationPresheaf F ⟶ G.presheaf,
+      sheafificationUnit F ≫ ψ = φ := by
+  classical
+  let LiftProperty : ∀ (U : Opens X),
+      (s : (sheafificationPresheaf F).obj (op U)) →
+        (t : G.presheaf.obj (op U)) → Prop := fun U s t =>
+    ∀ x : U,
+      ((TopCat.Presheaf.stalkFunctor (Type v) x.1).map φ) (s.1 x) =
+        G.presheaf.germ U x.1 x.2 t
+  have lift_exists (U : Opens X) (s : (sheafificationPresheaf F).obj (op U)) :
+      ∃ t : G.presheaf.obj (op U), LiftProperty U s t := by
+    choose V hxV i σ hs using
+      fun x : U => (sheafificationCondition_iff F s.1).mp s.2 x
+    let sf : ∀ x : U, G.presheaf.obj (op (V x)) :=
+      fun x => (φ.app (op (V x))) (σ x)
+    have hcover : U ≤ iSup V := by
+      intro x hx
+      simp only [Opens.mem_iSup]
+      exact ⟨⟨x, hx⟩, hxV ⟨x, hx⟩⟩
+    have hcompat : TopCat.Presheaf.IsCompatible G.presheaf V sf := by
+      intro x y
+      apply TopCat.Presheaf.section_ext G (V x ⊓ V y)
+      intro z hz
+      have hz' : z ∈ V x ∧ z ∈ V y := by simpa using hz
+      have hF : F.germ (V x) z hz'.1 (σ x) = F.germ (V y) z hz'.2 (σ y) := by
+        calc
+          F.germ (V x) z hz'.1 (σ x) = s.1 (i x ⟨z, hz'.1⟩) :=
+            (hs x ⟨z, hz'.1⟩).symm
+          _ = s.1 (i y ⟨z, hz'.2⟩) := by
+            have hp : (i x) ⟨z, hz'.1⟩ = (i y) ⟨z, hz'.2⟩ := by
+              apply Subtype.ext
+              rfl
+            cases hp
+            rfl
+          _ = F.germ (V y) z hz'.2 (σ y) := hs y ⟨z, hz'.2⟩
+      have hG : G.presheaf.germ (V x) z hz'.1 (sf x) =
+          G.presheaf.germ (V y) z hz'.2 (sf y) := by
+        dsimp [sf]
+        rw [← TopCat.Presheaf.stalkFunctor_map_germ_apply,
+          ← TopCat.Presheaf.stalkFunctor_map_germ_apply]
+        exact congrArg
+          ((TopCat.Presheaf.stalkFunctor (Type v) z).map φ) hF
+      rw [G.presheaf.germ_res_apply, G.presheaf.germ_res_apply]
+      exact hG
+    obtain ⟨t, ht, -⟩ := G.existsUnique_gluing' V U i hcover sf hcompat
+    refine ⟨t, ?_⟩
+    dsimp [LiftProperty]
+    intro x
+    have hxs : s.1 x = F.germ (V x) x.1 (hxV x) (σ x) := by
+      calc
+        s.1 x = s.1 (i x ⟨x.1, hxV x⟩) := by
+          congr 1
+        _ = F.germ (V x) x.1 (hxV x) (σ x) := hs x ⟨x.1, hxV x⟩
+    rw [hxs]
+    have h1 :
+        ((TopCat.Presheaf.stalkFunctor (Type v) x.1).map φ)
+            (F.germ (V x) x.1 (hxV x) (σ x)) =
+          G.presheaf.germ (V x) x.1 (hxV x) (sf x) := by
+      simpa [sf] using TopCat.Presheaf.stalkFunctor_map_germ_apply
+        (V x) x.1 (hxV x) φ (σ x)
+    have h2 :
+        G.presheaf.germ (V x) x.1 (hxV x) (sf x) =
+          G.presheaf.germ (V x) x.1 (hxV x)
+            (G.presheaf.map (i x).op t) :=
+      congrArg (G.presheaf.germ (V x) x.1 (hxV x)) (ht x).symm
+    have h3 :
+        G.presheaf.germ (V x) x.1 (hxV x)
+            (G.presheaf.map (i x).op t) =
+          G.presheaf.germ U x.1 x.2 t := by
+      simpa using G.presheaf.germ_res_apply (i x) x.1 (hxV x) t
+    exact h1.trans (h2.trans h3)
+  let liftApp : ∀ (U : Opens X),
+      (sheafificationPresheaf F).obj (op U) → G.presheaf.obj (op U) :=
+    fun U s => Classical.choose (lift_exists U s)
+  have liftApp_property (U : Opens X)
+      (s : (sheafificationPresheaf F).obj (op U)) :
+      LiftProperty U s (liftApp U s) :=
+    Classical.choose_spec (lift_exists U s)
+  have section_ext_of_germ {U : Opens X}
+      {a b : G.presheaf.obj (op U)}
+      (h : ∀ x : U, G.presheaf.germ U x.1 x.2 a =
+        G.presheaf.germ U x.1 x.2 b) : a = b := by
+    apply TopCat.Presheaf.section_ext G U
+    intro x hx
+    exact h ⟨x, hx⟩
+  let ψ : sheafificationPresheaf F ⟶ G.presheaf := {
+    app U := TypeCat.ofHom (liftApp U.unop)
+    naturality := by
+      intro U V i
+      induction U with
+      | op U =>
+        induction V with
+        | op V =>
+          apply ConcreteCategory.hom_ext
+          intro s
+          apply section_ext_of_germ
+          intro x
+          have hleft := liftApp_property V
+            ((sheafificationPresheaf F).map i s) x
+          have hright := liftApp_property U s
+            ⟨x.1, (i.unop.le x.2)⟩
+          have hsmap : ((sheafificationPresheaf F).map i s).1 x =
+              s.1 (i.unop x) := rfl
+          have h1 :
+              G.presheaf.germ V x.1 x.2
+                  (liftApp V ((sheafificationPresheaf F).map i s)) =
+                ((TopCat.Presheaf.stalkFunctor (Type v) x).map φ)
+                  (((sheafificationPresheaf F).map i s).1 x) := hleft.symm
+          have h2 :
+              ((TopCat.Presheaf.stalkFunctor (Type v) x).map φ)
+                  (((sheafificationPresheaf F).map i s).1 x) =
+                ((TopCat.Presheaf.stalkFunctor (Type v) x).map φ)
+                  (s.1 (i.unop x)) := congrArg _ hsmap
+          have h3 :
+              ((TopCat.Presheaf.stalkFunctor (Type v) x).map φ)
+                  (s.1 (i.unop x)) =
+                G.presheaf.germ U x.1 (i.unop.le x.2) (liftApp U s) := hright
+          have h4 :
+              G.presheaf.germ U x.1 (i.unop.le x.2) (liftApp U s) =
+                G.presheaf.germ V x.1 x.2
+                  (G.presheaf.map i.unop.op (liftApp U s)) := by
+            simpa using (G.presheaf.germ_res_apply i.unop x.1 x.2 (liftApp U s)).symm
+          exact h1.trans (h2.trans (h3.trans h4))
+  }
+  have hψ : sheafificationUnit F ≫ ψ = φ := by
+    ext U s
+    apply section_ext_of_germ
+    intro x
+    change G.presheaf.germ U x.1 x.2
+        (liftApp U ((sheafificationUnit F).app (op U) s)) =
+      G.presheaf.germ U x.1 x.2 (φ.app (op U) s)
+    have h := liftApp_property U
+      ((sheafificationUnit F).app (op U) s) x
+    have h1 :
+        G.presheaf.germ U x.1 x.2
+            (liftApp U ((sheafificationUnit F).app (op U) s)) =
+          ((TopCat.Presheaf.stalkFunctor (Type v) x.1).map φ)
+            (((sheafificationUnit F).app (op U) s).1 x) := h.symm
+    have h2 :
+        ((TopCat.Presheaf.stalkFunctor (Type v) x.1).map φ)
+            (((sheafificationUnit F).app (op U) s).1 x) =
+          ((TopCat.Presheaf.stalkFunctor (Type v) x.1).map φ)
+            (F.germ U x.1 x.2 s) := by rfl
+    have h3 :
+        ((TopCat.Presheaf.stalkFunctor (Type v) x.1).map φ)
+            (F.germ U x.1 x.2 s) =
+          G.presheaf.germ U x.1 x.2 (φ.app (op U) s) :=
+      TopCat.Presheaf.stalkFunctor_map_germ_apply U x.1 x.2 φ s
+    exact h1.trans (h2.trans h3)
+  refine ⟨ψ, hψ, ?_⟩
+  intro ψ' hψ'
+  ext U s
+  apply section_ext_of_germ
+  intro x
+  change G.presheaf.germ U x.1 x.2 (ψ'.app (op U) s) =
+    G.presheaf.germ U x.1 x.2 (liftApp U s)
+  have hL := liftApp_property U s x
+  obtain ⟨V, hxV, i, σ, hs⟩ :=
+    (sheafificationCondition_iff F s.1).mp s.2 x
+  have hs_eq : (sheafificationPresheaf F).map i.op s =
+      (sheafificationUnit F).app (op V) σ := by
+    apply Subtype.ext
+    funext y
+    change s.1 (i y) = F.germ V y.1 y.2 σ
+    exact hs y
+  have hfactor : (ψ'.app (op V))
+      ((sheafificationUnit F).app (op V) σ) = (φ.app (op V)) σ := by
+    have h := congrArg (fun q => q σ) (congr_app hψ' (op V))
+    rw [NatTrans.comp_app, ConcreteCategory.comp_apply] at h
+    exact h
+  have hnat : G.presheaf.map i.op (ψ'.app (op U) s) =
+      (ψ'.app (op V)) ((sheafificationPresheaf F).map i.op s) := by
+    have h := congrArg (fun q => q s) (ψ'.naturality i.op)
+    rw [ConcreteCategory.comp_apply, ConcreteCategory.comp_apply] at h
+    exact h.symm
+  have hxs : s.1 x = F.germ V x.1 hxV σ := by
+    simpa [show i = i from rfl] using (hs ⟨x.1, hxV⟩)
+  have h5 : G.presheaf.germ V x.1 hxV ((φ.app (op V)) σ) =
+      ((TopCat.Presheaf.stalkFunctor (Type v) x.1).map φ)
+        (F.germ V x.1 hxV σ) := by
+    exact (TopCat.Presheaf.stalkFunctor_map_germ_apply V x.1 hxV φ σ).symm
+  have h6 :
+      ((TopCat.Presheaf.stalkFunctor (Type v) x.1).map φ)
+          (F.germ V x.1 hxV σ) =
+        ((TopCat.Presheaf.stalkFunctor (Type v) x.1).map φ) (s.1 x) :=
+    congrArg (fun z => ((TopCat.Presheaf.stalkFunctor (Type v) x.1).map φ) z)
+      hxs.symm
+  have h7 :
+      ((TopCat.Presheaf.stalkFunctor (Type v) x.1).map φ) (s.1 x) =
+        G.presheaf.germ U x.1 x.2 (liftApp U s) := hL
+  have k1 :
+      G.presheaf.germ U x.1 x.2 (ψ'.app (op U) s) =
+        G.presheaf.germ V x.1 hxV (G.presheaf.map i.op (ψ'.app (op U) s)) := by
+    simpa using (G.presheaf.germ_res_apply i x.1 hxV (ψ'.app (op U) s)).symm
+  have k2 :
+      G.presheaf.germ V x.1 hxV (G.presheaf.map i.op (ψ'.app (op U) s)) =
+        G.presheaf.germ V x.1 hxV
+          ((ψ'.app (op V)) ((sheafificationPresheaf F).map i.op s)) :=
+    congrArg (G.presheaf.germ V x.1 hxV) hnat
+  have k3 :
+      G.presheaf.germ V x.1 hxV
+          ((ψ'.app (op V)) ((sheafificationPresheaf F).map i.op s)) =
+        G.presheaf.germ V x.1 hxV
+          ((ψ'.app (op V)) ((sheafificationUnit F).app (op V) σ)) :=
+    congrArg (fun q => G.presheaf.germ V x.1 hxV ((ψ'.app (op V)) q)) hs_eq
+  have k4 :
+      G.presheaf.germ V x.1 hxV
+          ((ψ'.app (op V)) ((sheafificationUnit F).app (op V) σ)) =
+        G.presheaf.germ V x.1 hxV ((φ.app (op V)) σ) :=
+    congrArg (G.presheaf.germ V x.1 hxV) hfactor
+  exact k1.trans (k2.trans (k3.trans (k4.trans (h5.trans (h6.trans h7)))))
 
 /-- The construction `F ↦ (F → F# → Π(F))` is functorial in `F`. -/
 theorem sheafification_maps_are_functorial {X : TopCat.{v}}
     {F G : TopCat.Presheaf (Type v) X} (φ : F ⟶ G) :
     ∃ ψ : sheafificationPresheaf F ⟶ sheafificationPresheaf G,
       sheafificationUnit F ≫ ψ = φ ≫ sheafificationUnit G := by
-  sorry
+  exact (existsUnique_sheafificationLift_aux F (sheafification G)
+    (φ ≫ sheafificationUnit G)).exists
 
 /-! ## Sheaf property, stalks, and the universal property -/
 
@@ -146,7 +362,45 @@ theorem sheafificationUnit_stalk_bijective {X : TopCat.{v}}
     (F : TopCat.Presheaf (Type v) X) (x : X) :
     Function.Bijective
       ((TopCat.Presheaf.stalkFunctor (Type v) x).map (sheafificationUnit F)) := by
-  sorry
+  let u := (TopCat.Presheaf.stalkFunctor (Type v) x).map (sheafificationUnit F)
+  let p := TopCat.Presheaf.stalkToFiber F x
+  have hcomp : u ≫ p = 𝟙 _ := by
+    apply TopCat.Presheaf.stalk_hom_ext F
+    intro U hx
+    apply ConcreteCategory.hom_ext
+    intro s
+    change p (u (F.germ U x hx s)) = F.germ U x hx s
+    rw [show u (F.germ U x hx s) =
+      (sheafificationPresheaf F).germ U x hx ((sheafificationUnit F).app (op U) s) by
+        exact TopCat.Presheaf.stalkFunctor_map_germ_apply U x hx (sheafificationUnit F) s]
+    exact TopCat.stalkToFiber_germ _ _ _ _ _
+  constructor
+  · intro a b hab
+    have ha : p (u a) = a := by
+      have h := congrArg
+        (fun f : (TopCat.Presheaf.stalkFunctor (Type v) x).obj F ⟶
+          (TopCat.Presheaf.stalkFunctor (Type v) x).obj F => f a) hcomp
+      change p (u a) = a at h
+      exact h
+    have hb : p (u b) = b := by
+      have h := congrArg
+        (fun f : (TopCat.Presheaf.stalkFunctor (Type v) x).obj F ⟶
+          (TopCat.Presheaf.stalkFunctor (Type v) x).obj F => f b) hcomp
+      change p (u b) = b at h
+      exact h
+    rw [← ha, ← hb]
+    exact congrArg (fun z => p z) hab
+  · intro b
+    let b' : F.sheafify.presheaf.stalk x := b
+    refine ⟨p b', ?_⟩
+    change u (p b') = b'
+    apply (TopCat.Presheaf.stalkToFiber_injective F x)
+    change p (u (p b')) = p b'
+    have h := congrArg
+      (fun f : (TopCat.Presheaf.stalkFunctor (Type v) x).obj F ⟶
+        (TopCat.Presheaf.stalkFunctor (Type v) x).obj F => f (p b')) hcomp
+    change p (u (p b')) = p b' at h
+    exact h
 
 /-- Every map from `F` to a sheaf factors through `F#`. -/
 theorem existsUnique_sheafificationLift {X : TopCat.{v}}
@@ -154,7 +408,7 @@ theorem existsUnique_sheafificationLift {X : TopCat.{v}}
     (φ : F ⟶ G.presheaf) :
     ∃! ψ : sheafificationPresheaf F ⟶ G.presheaf,
       sheafificationUnit F ≫ ψ = φ := by
-  sorry
+  exact existsUnique_sheafificationLift_aux F G φ
 
 /-- The chosen factorization through `F#`. -/
 noncomputable def sheafificationLift {X : TopCat.{v}}
@@ -211,7 +465,47 @@ noncomputable def constantPresheafSheafificationMap {X : TopCat.{v}} (A : Type v
 /-- The sheafification of the constant presheaf is the constant sheaf. -/
 theorem constantPresheafSheafificationMap_isIso {X : TopCat.{v}} (A : Type v) :
     IsIso (constantPresheafSheafificationMap (X := X) A) := by
-  sorry
+  let P := constantPresheaf (X := X) A
+  let Q := constantSheaf X A
+  let f : sheafification P ⟶ Q := ⟨constantPresheafSheafificationMap (X := X) A⟩
+  letI : IsIso f := (TopCat.Presheaf.isIso_iff_stalkFunctor_map_iso f).2 (by
+    intro x
+    rw [isIso_iff_bijective]
+    let u := (TopCat.Presheaf.stalkFunctor (Type v) x).map (sheafificationUnit P)
+    let v := (TopCat.Presheaf.stalkFunctor (Type v) x).map f.hom
+    let w := (TopCat.Presheaf.stalkFunctor (Type v) x).map
+      (constantPresheafToConstantSheaf A)
+    have hu := sheafificationUnit_stalk_bijective P x
+    have hw := constantSheafStalkMap_bijective A x
+    have huv : u ≫ v = w := by
+      dsimp [u, v, w]
+      rw [← Functor.map_comp]
+      exact sheafificationUnit_comp_lift P Q (constantPresheafToConstantSheaf A)
+    constructor
+    · intro a b hab
+      obtain ⟨a₀, ha₀⟩ := hu.2 a
+      obtain ⟨b₀, hb₀⟩ := hu.2 b
+      have hwab : w a₀ = w b₀ := by
+        have h := congrArg (fun q => q a₀) huv
+        have h' := congrArg (fun q => q b₀) huv
+        change v (u a₀) = w a₀ at h
+        change v (u b₀) = w b₀ at h'
+        rw [ha₀, hb₀] at h h'
+        rw [h, h']
+        exact hab
+      have hab₀ : a₀ = b₀ := hw.1 hwab
+      calc
+        a = u a₀ := ha₀.symm
+        _ = u b₀ := congrArg (fun z => u z) hab₀
+        _ = b := hb₀
+    · intro b
+      obtain ⟨a, ha⟩ := hw.2 b
+      refine ⟨u a, ?_⟩
+      have h := congrArg (fun q => q a) huv
+      change v (u a) = w a at h
+      rw [h, ha])
+  change IsIso f.hom
+  exact (TopCat.Sheaf.forget (Type v) X).map_isIso f
 
 /-- A canonical isomorphism in the constant-presheaf example. -/
 noncomputable def constantPresheafSheafificationIso {X : TopCat.{v}} (A : Type v) :
@@ -227,7 +521,16 @@ theorem separatedPresheaf_iff_sheafificationUnit_injective
     {X : TopCat.{v}} (F : TopCat.Presheaf (Type v) X) :
     SeparatedPresheaf F ↔
       PresheafInjective (sheafificationUnit F) := by
-  sorry
+  constructor
+  · intro h U
+    intro s t hst
+    apply h U
+    exact congrArg Subtype.val hst
+  · intro h U
+    intro s t hst
+    apply h U
+    apply Subtype.ext
+    exact hst
 
 /-- The induced map on sheafifications of a presheaf morphism. -/
 noncomputable def sheafificationMap {X : TopCat.{v}}
@@ -245,12 +548,20 @@ theorem sheafificationUnit_comp_map {X : TopCat.{v}}
 theorem sheafificationMap_id {X : TopCat.{v}}
     (F : TopCat.Presheaf (Type v) X) :
     sheafificationMap (𝟙 F) = 𝟙 _ := by
-  sorry
+  apply (existsUnique_sheafificationLift F (sheafification F)
+    (𝟙 F ≫ sheafificationUnit F)).unique
+  · exact sheafificationUnit_comp_map (𝟙 F)
+  · simp
 
 theorem sheafificationMap_comp {X : TopCat.{v}}
     {F G H : TopCat.Presheaf (Type v) X} (φ : F ⟶ G) (ψ : G ⟶ H) :
     sheafificationMap (φ ≫ ψ) = sheafificationMap φ ≫ sheafificationMap ψ := by
-  sorry
+  apply (existsUnique_sheafificationLift F (sheafification H)
+    ((φ ≫ ψ) ≫ sheafificationUnit H)).unique
+  · exact sheafificationUnit_comp_map (φ ≫ ψ)
+  · rw [← Category.assoc, sheafificationUnit_comp_map φ, Category.assoc,
+      sheafificationUnit_comp_map ψ]
+    exact (Category.assoc φ ψ (sheafificationUnit H)).symm
 
 /-- Sectionwise injectivity is preserved by sheafification. -/
 theorem sheafificationMap_preserves_injective {X : TopCat.{v}}

@@ -428,7 +428,7 @@ def filteredLineIdentity (k : Type u) [Field k] :
 
 theorem filtered_vector_space_has_kernels
     (k : Type u) [Field k] : HasKernels (FilteredVectorSpace k) := by
-  letI : HasKernels (ModuleCat k) := ModuleCat.hasKernels_moduleCat
+  let : HasKernels (ModuleCat k) := ModuleCat.hasKernels_moduleCat
   refine ⟨fun {V W} f => ?_⟩
   let K : FilteredVectorSpace k :=
     { underlying := kernel f.1
@@ -477,7 +477,7 @@ theorem filtered_vector_space_has_kernels
 
 theorem filtered_vector_space_has_cokernels
     (k : Type u) [Field k] : HasCokernels (FilteredVectorSpace k) := by
-  letI : HasCokernels (ModuleCat k) := ModuleCat.hasCokernels_moduleCat
+  let : HasCokernels (ModuleCat k) := ModuleCat.hasCokernels_moduleCat
   refine ⟨fun {V W} f => ?_⟩
   let Q : FilteredVectorSpace k :=
     { underlying := cokernel f.1
@@ -533,16 +533,16 @@ theorem filtered_vector_space_counterexample
       Nonempty (Abelian.coimage (filteredLineIdentity k) ≅ filteredLineV k) ∧
       Nonempty (Abelian.image (filteredLineIdentity k) ≅ filteredLineW k) ∧
       ¬ Nonempty (Abelian (FilteredVectorSpace k)) := by
-  letI : HasKernels (FilteredVectorSpace k) := filtered_vector_space_has_kernels k
-  letI : HasCokernels (FilteredVectorSpace k) := filtered_vector_space_has_cokernels k
+  let : HasKernels (FilteredVectorSpace k) := filtered_vector_space_has_kernels k
+  let : HasCokernels (FilteredVectorSpace k) := filtered_vector_space_has_cokernels k
   let F : filteredLineV k ⟶ filteredLineW k := filteredLineIdentity k
-  haveI : Mono F :=
+  have : Mono F :=
     ⟨fun g h eq => by
       apply Subtype.ext
       have eq' : g.1 ≫ F.1 = h.1 ≫ F.1 := congrArg (fun t => t.1) eq
       simpa only [F, filteredLineIdentity, filteredLineV, filteredLineW,
         Category.comp_id] using eq'⟩
-  haveI : Epi F :=
+  have : Epi F :=
     ⟨fun g h eq => by
       apply Subtype.ext
       have eq' : F.1 ≫ g.1 = F.1 ≫ h.1 := congrArg (fun t => t.1) eq
@@ -552,7 +552,7 @@ theorem filtered_vector_space_counterexample
   have hczero : IsZero (cokernel F) := isZero_cokernel_of_epi F
   have hnotiso : ¬ IsIso F := by
     intro hIso
-    letI : IsIso F := hIso
+    let : IsIso F := hIso
     let invF : filteredLineW k ⟶ filteredLineV k := inv F
     have hinv : invF.1.hom = LinearMap.id := by
       have h' : invF.1 ≫ F.1 = 𝟙 (filteredLineW k).underlying :=
@@ -595,10 +595,10 @@ theorem filtered_vector_space_counterexample
     exact ⟨(kernelIsKernel (cokernel.π F)).conePointUniqueUpToIso himlim⟩
   have hnab : ¬ Nonempty (Abelian (FilteredVectorSpace k)) := by
     rintro ⟨hAb⟩
-    letI : Abelian (FilteredVectorSpace k) := hAb
-    letI : Preadditive (FilteredVectorSpace k) := hAb.toPreadditive
-    letI : IsNormalMonoCategory (FilteredVectorSpace k) := hAb.toIsNormalMonoCategory
-    letI : NormalMono F := normalMonoOfMono F
+    let : Abelian (FilteredVectorSpace k) := hAb
+    let : Preadditive (FilteredVectorSpace k) := hAb.toPreadditive
+    let : IsNormalMonoCategory (FilteredVectorSpace k) := hAb.toIsNormalMonoCategory
+    let : NormalMono F := normalMonoOfMono F
     have hnormal : IsIso F :=
       KernelFork.IsLimit.isIso_ι
         (KernelFork.ofι F (NormalMono.w (f := F)))
@@ -1110,9 +1110,9 @@ theorem split_morphism_splitting
             e₂.hom ≫ b₂.bicone.snd = q := by
   have hb := split_morphism_has_both_kernels_and_cokernels j q h hc
   refine ⟨hb.1, hb.2, ?_⟩
-  letI : HasKernel (q ≫ j) := hb.1
-  letI : HasCokernel (q ≫ j) := hb.2
-  haveI : Mono j :=
+  let : HasKernel (q ≫ j) := hb.1
+  let : HasCokernel (q ≫ j) := hb.2
+  have : Mono j :=
     ⟨fun a b hab => by
       rw [← Category.comp_id a, ← Category.comp_id b, ← h,
         ← Category.assoc, ← Category.assoc, hab]⟩

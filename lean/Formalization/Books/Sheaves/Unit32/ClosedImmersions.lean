@@ -528,107 +528,281 @@ theorem closedSubsetSetPushforward_mem_essImage_iff
         let F' : TopCat.Sheaf (Type w) (TopCat.of Z) :=
           (Functor.sheafPullbackConstruction.sheafPullback
             f₀ (Type w) J K).obj G
-        let eS' := closedSubsetPushforward_stalkIso (C := Type w) hZ F' z
-        have hpush :
-            (TopCat.Presheaf.stalkFunctor (Type w) x).map
-                (((TopCat.Sheaf.pushforward (Type w) (closedSubsetInclusion Z)).map
-                  e₀.hom).hom) ≫ eS'.hom =
-              eS.hom ≫ eMapIso.hom := by
+        have hcomp : m ≫ eS.hom = eP.hom := by
           apply TopCat.Presheaf.stalk_hom_ext _
           intro U hU
-          dsimp [eS', eS, eMapIso, closedSubsetPushforward_stalkIso]
-          change
-            ((TopCat.Sheaf.pushforward (Type w) (closedSubsetInclusion Z)).obj
-                ((TopCat.Sheaf.pullback (Type w) (closedSubsetInclusion Z)).obj G)).presheaf.germ
-                U x hU ≫
-              (TopCat.Presheaf.stalkFunctor (Type w) x).map
-                (((TopCat.Sheaf.pushforward (Type w) (closedSubsetInclusion Z)).map
-                  e₀.hom).hom) ≫
-              TopCat.Presheaf.stalkPushforward (Type w)
-                (closedSubsetInclusion Z) F'.presheaf z =
-            ((TopCat.Sheaf.pushforward (Type w) (closedSubsetInclusion Z)).obj
-                ((TopCat.Sheaf.pullback (Type w) (closedSubsetInclusion Z)).obj G)).presheaf.germ
-                U x hU ≫
-              TopCat.Presheaf.stalkPushforward (Type w)
-                (closedSubsetInclusion Z) F.presheaf z ≫
-              (TopCat.Presheaf.stalkFunctor (Type w) z).map
-                ((sheafToPresheaf K (Type w)).mapIso e₀).hom
-          let P : TopCat.Presheaf (Type w) X :=
-            ((TopCat.Sheaf.pushforward (Type w) (closedSubsetInclusion Z)).obj
-              ((TopCat.Sheaf.pullback (Type w) (closedSubsetInclusion Z)).obj G)).presheaf
-          let Q : TopCat.Presheaf (Type w) X :=
-            ((TopCat.Sheaf.pushforward (Type w) (closedSubsetInclusion Z)).obj F').presheaf
-          let α : P ⟶ Q :=
-            ((TopCat.Sheaf.pushforward (Type w) (closedSubsetInclusion Z)).map e₀.hom).hom
-          let β : Q.stalk x ⟶ F'.presheaf.stalk z :=
-            TopCat.Presheaf.stalkPushforward (Type w)
-              (closedSubsetInclusion Z) F'.presheaf z
-          let β₀ : P.stalk x ⟶ F.presheaf.stalk z :=
-            TopCat.Presheaf.stalkPushforward (Type w)
-              (closedSubsetInclusion Z) F.presheaf z
-          let δ : F.presheaf.stalk z ⟶ F'.presheaf.stalk z :=
-            (TopCat.Presheaf.stalkFunctor (Type w) z).map
-              ((sheafToPresheaf K (Type w)).map e₀.hom)
+          dsimp [m]
+          change G.presheaf.germ U x hU ≫ _ = G.presheaf.germ U x hU ≫ _
           have hmap :
-              P.germ U x hU ≫
-                  (TopCat.Presheaf.stalkFunctor (Type w) x).map α =
-                α.app (op U) ≫ Q.germ U x hU := by
-            exact TopCat.Presheaf.stalkFunctor_map_germ U x hU α
-          have hpush' : Q.germ U x hU ≫ β =
-              F'.presheaf.germ ((Opens.map (closedSubsetInclusion Z)).obj U)
-                z hU := by
-            exact TopCat.Presheaf.stalkPushforward_germ (Type w)
-              (closedSubsetInclusion Z) F'.presheaf U z hU
-          have hpush₀ : P.germ U x hU ≫ β₀ =
-              F.presheaf.germ ((Opens.map (closedSubsetInclusion Z)).obj U)
-                z hU := by
+              G.presheaf.germ U x hU ≫
+                  (TopCat.Presheaf.stalkFunctor (Type w) x).map
+                    ((closedSubsetSetAdjunction Z).unit.app G).hom =
+                ((closedSubsetSetAdjunction Z).unit.app G).hom.app (op U) ≫
+                  ((closedSubsetSetPullback Z ⋙ closedSubsetSetPushforward Z).obj G).presheaf.germ
+                    U x hU := by
+            simpa only [Functor.id_obj] using
+              (TopCat.Presheaf.stalkFunctor_map_germ U x hU
+                ((closedSubsetSetAdjunction Z).unit.app G).hom)
+          have hpush :
+              ((TopCat.Presheaf.pushforward (Type w) (closedSubsetInclusion Z)).obj
+                  F.presheaf).germ U x hU ≫
+                TopCat.Presheaf.stalkPushforward (Type w) (closedSubsetInclusion Z)
+                  F.presheaf z =
+              F.presheaf.germ ((Opens.map (closedSubsetInclusion Z)).obj U) z hU := by
             exact TopCat.Presheaf.stalkPushforward_germ (Type w)
               (closedSubsetInclusion Z) F.presheaf U z hU
-          have hmap' :
-              F.presheaf.germ ((Opens.map (closedSubsetInclusion Z)).obj U)
-                  z hU ≫ δ =
-                ((sheafToPresheaf K (Type w)).map e₀.hom).app
-                    (op ((Opens.map (closedSubsetInclusion Z)).obj U)) ≫
-                  F'.presheaf.germ ((Opens.map (closedSubsetInclusion Z)).obj U)
-                    z hU := by
-            exact TopCat.Presheaf.stalkFunctor_map_germ
-              ((Opens.map (closedSubsetInclusion Z)).obj U) z hU
-              ((sheafToPresheaf K (Type w)).map e₀.hom)
-          change P.germ U x hU ≫
-                (TopCat.Presheaf.stalkFunctor (Type w) x).map α ≫ β =
-              P.germ U x hU ≫ β₀ ≫ δ
+          have he :
+              ((TopCat.Sheaf.pullbackPushforwardAdjunction (Type w)
+                (closedSubsetInclusion Z)).leftAdjointUniq
+                  (Functor.sheafPullbackConstruction.sheafAdjunctionContinuous
+                    f₀ (Type w) J K)).hom.app G = e₀.hom := by
+            rfl
           calc
-            P.germ U x hU ≫
-                  (TopCat.Presheaf.stalkFunctor (Type w) x).map α ≫ β =
-                (P.germ U x hU ≫
-                  (TopCat.Presheaf.stalkFunctor (Type w) x).map α) ≫ β := by
-                    rw [Category.assoc]
-            _ = (α.app (op U) ≫ Q.germ U x hU) ≫ β :=
-              congrArg (fun q => q ≫ β) hmap
-            _ = α.app (op U) ≫
-                  F'.presheaf.germ ((Opens.map (closedSubsetInclusion Z)).obj U)
-                    z hU := by
-              rw [Category.assoc, hpush']
-            _ = ((sheafToPresheaf K (Type w)).map e₀.hom).app
-                  (op ((Opens.map (closedSubsetInclusion Z)).obj U)) ≫
-                  F'.presheaf.germ ((Opens.map (closedSubsetInclusion Z)).obj U)
-                    z hU := by
-              rfl
-            _ = F.presheaf.germ ((Opens.map (closedSubsetInclusion Z)).obj U)
-                  z hU ≫ δ := hmap'.symm
-            _ = (P.germ U x hU ≫ β₀) ≫ δ := by
-              rw [hpush₀]
-        have hcomp : m ≫ eS.hom = eP.hom := by
-          apply (cancel_mono eMapIso.hom).1
-          apply TopCat.Presheaf.stalk_hom_ext _
-          intro U hU
-          simp [m, eP, eS, F, pullbackSheafStalkIso,
-            pullbackSheaf_sheafificationIso,
-            pullbackPresheafStalkIso, TopCat.Presheaf.germ_stalkPullbackHom,
-            e₀, eMapIso, hu]
+            _ = (((closedSubsetSetAdjunction Z).unit.app G).hom.app (op U) ≫
+                ((closedSubsetSetPullback Z ⋙ closedSubsetSetPushforward Z).obj G).presheaf.germ
+                  U x hU) ≫ eS.hom := by
+              change
+                ((G.presheaf.germ U x hU ≫
+                    (TopCat.Presheaf.stalkFunctor (Type w) x).map
+                      ((closedSubsetSetAdjunction Z).unit.app G).hom) ≫ eS.hom) = _
+              exact congrArg (fun q => q ≫ eS.hom) hmap
+            _ = _ := by
+              dsimp [eS, F, closedSubsetPushforward_stalkIso]
+              calc
+                _ = ((closedSubsetSetAdjunction Z).unit.app G).hom.app (op U) ≫
+                    (((TopCat.Presheaf.pushforward (Type w)
+                      (closedSubsetInclusion Z)).obj F.presheaf).germ U x hU ≫
+                      TopCat.Presheaf.stalkPushforward (Type w)
+                        (closedSubsetInclusion Z) F.presheaf z) := by
+                  exact Category.assoc _ _ _
+                _ = _ := by
+                  exact congrArg
+                    (fun q => ((closedSubsetSetAdjunction Z).unit.app G).hom.app
+                      (op U) ≫ q) hpush
+                _ = _ := by
+                  have hu_hom :
+                      (((TopCat.Sheaf.pullbackPushforwardAdjunction (Type w)
+                          (closedSubsetInclusion Z)).unit.app G ≫
+                        (TopCat.Sheaf.pushforward (Type w)
+                          (closedSubsetInclusion Z)).map (e₀.hom)).hom) =
+                      ((Functor.sheafPullbackConstruction.sheafAdjunctionContinuous
+                        f₀ (Type w) J K).unit.app G).hom := by
+                    rw [← he]
+                    exact congrArg (fun q => q.hom) hu
+                  have huU := congrArg (fun q => q.app (op U)) hu_hom
+                  apply (cancel_mono eMapIso.hom).1
+                  have heMap :
+                      eMapIso.hom =
+                        (TopCat.Presheaf.stalkFunctor (Type w) z).map
+                          ((sheafToPresheaf K (Type w)).map e₀.hom) := by
+                    rfl
+                  have hF :
+                      F.presheaf = (sheafToPresheaf K (Type w)).obj F := by
+                    rfl
+                  have hnat :=
+                    TopCat.Presheaf.stalkFunctor_map_germ (f₀.obj U) z hU
+                      ((sheafToPresheaf K (Type w)).map e₀.hom)
+                  dsimp [eMapIso, F', f₀] at hnat
+                  have hnat' :
+                      TopCat.Presheaf.germ ((sheafToPresheaf K (Type w)).obj F)
+                          (f₀.obj U) z hU ≫
+                        (TopCat.Presheaf.stalkFunctor (Type w) z).map
+                          ((sheafToPresheaf K (Type w)).map e₀.hom) =
+                        ((sheafToPresheaf K (Type w)).map e₀.hom).app
+                          (op (f₀.obj U)) ≫
+                          TopCat.Presheaf.germ
+                            ((sheafToPresheaf K (Type w)).obj F')
+                            (f₀.obj U) z hU := by
+                    dsimp [F', f₀] at hnat ⊢
+                    exact hnat
+                  have hleft :
+                      (((closedSubsetSetAdjunction Z).unit.app G).hom.app (op U) ≫
+                        F.presheaf.germ (f₀.obj U) z hU) ≫ eMapIso.hom =
+                        ((closedSubsetSetAdjunction Z).unit.app G).hom.app (op U) ≫
+                          (((sheafToPresheaf K (Type w)).map e₀.hom).app
+                              (op (f₀.obj U)) ≫
+                          TopCat.Presheaf.germ
+                            ((sheafToPresheaf K (Type w)).obj F')
+                            (f₀.obj U) z hU) := by
+                    change
+                      (((closedSubsetSetAdjunction Z).unit.app G).hom.app (op U) ≫
+                          TopCat.Presheaf.germ
+                            ((sheafToPresheaf K (Type w)).obj F)
+                            (f₀.obj U) z hU) ≫
+                        (TopCat.Presheaf.stalkFunctor (Type w) z).map
+                          ((sheafToPresheaf K (Type w)).map e₀.hom) = _
+                    exact (Category.assoc _ _ _).trans
+                      (congrArg
+                        (fun q => ((closedSubsetSetAdjunction Z).unit.app G).hom.app
+                          (op U) ≫ q) hnat')
+                  have hleft' :
+                      (((closedSubsetSetAdjunction Z).unit.app G).hom.app (op U) ≫
+                          F.presheaf.germ
+                            ((Opens.map (closedSubsetInclusion Z)).obj U) z hU) ≫
+                        eMapIso.hom =
+                        ((closedSubsetSetAdjunction Z).unit.app G).hom.app (op U) ≫
+                          (((sheafToPresheaf K (Type w)).map e₀.hom).app
+                              (op ((Opens.map (closedSubsetInclusion Z)).obj U)) ≫
+                            TopCat.Presheaf.germ
+                              ((sheafToPresheaf K (Type w)).obj F')
+                              ((Opens.map (closedSubsetInclusion Z)).obj U) z hU) := by
+                    simpa [f₀] using hleft
+                  apply hleft'.trans
+                  have huU' :
+                      ((closedSubsetSetAdjunction Z).unit.app G).hom.app (op U) ≫
+                          ((sheafToPresheaf K (Type w)).map e₀.hom).app
+                            (op ((Opens.map (closedSubsetInclusion Z)).obj U)) =
+                        ((Functor.sheafPullbackConstruction.sheafAdjunctionContinuous
+                            f₀ (Type w) J K).unit.app G).hom.app (op U) := by
+                    dsimp [closedSubsetSetAdjunction,
+                      pullbackSheafPushforwardAdjunction,
+                      TopCat.Sheaf.pullbackPushforwardAdjunction,
+                      TopCat.Sheaf.pushforward,
+                      TopCat.Presheaf.pushforward] at huU ⊢
+                    exact huU
+                  have huUg :
+                      ((closedSubsetSetAdjunction Z).unit.app G).hom.app (op U) ≫
+                          (((sheafToPresheaf K (Type w)).map e₀.hom).app
+                              (op ((Opens.map (closedSubsetInclusion Z)).obj U)) ≫
+                            TopCat.Presheaf.germ
+                              ((sheafToPresheaf K (Type w)).obj F')
+                              ((Opens.map (closedSubsetInclusion Z)).obj U) z hU) =
+                        ((Functor.sheafPullbackConstruction.sheafAdjunctionContinuous
+                            f₀ (Type w) J K).unit.app G).hom.app (op U) ≫
+                          TopCat.Presheaf.germ
+                            ((sheafToPresheaf K (Type w)).obj F')
+                            ((Opens.map (closedSubsetInclusion Z)).obj U) z hU := by
+                    exact (Category.assoc _ _ _).symm.trans
+                      (congrArg
+                        (fun q => q ≫
+                          TopCat.Presheaf.germ
+                            ((sheafToPresheaf K (Type w)).obj F')
+                            ((Opens.map (closedSubsetInclusion Z)).obj U) z hU) huU')
+                  apply huUg.trans
+                  let G₀ : CategoryTheory.Sheaf
+                      (Opens.grothendieckTopology X) (Type w) := G
+                  let F₀ : CategoryTheory.Sheaf
+                      (Opens.grothendieckTopology (TopCat.of Z)) (Type w) :=
+                    (presheafToSheaf
+                      (Opens.grothendieckTopology (TopCat.of Z)) (Type w)).obj
+                      (f₀.op.lan.obj G₀.obj)
+                  have hU' : z ∈ (Opens.map (closedSubsetInclusion Z)).obj U := by
+                    change (z : X) ∈ U
+                    exact hU
+                  have hunit := Adjunction.map_restrictFullyFaithful_unit_app
+                    ((f₀.op.lanAdjunction (Type w)).comp
+                      (sheafificationAdjunction K (Type w)))
+                    (fullyFaithfulSheafToPresheaf J (Type w))
+                    (Functor.FullyFaithful.id (Sheaf K (Type w)))
+                    (L := Functor.sheafPullbackConstruction.sheafPullback
+                      f₀ (Type w) J K)
+                    (R := Functor.sheafPushforwardContinuous f₀ (Type w) J K)
+                    (Iso.refl
+                      (sheafToPresheaf J (Type w) ⋙ f₀.op.lan ⋙
+                        presheafToSheaf K (Type w)))
+                    (Iso.refl
+                      (𝟭 (Sheaf K (Type w)) ⋙ sheafToPresheaf K (Type w) ⋙
+                        (Functor.whiskeringLeft (Opens X)ᵒᵖ (Opens (TopCat.of Z))ᵒᵖ
+                          (Type w)).obj f₀.op)) G₀
+                  have hunitU := congrArg (fun q => q.app (op U)) hunit
+                  have hunitUg := congrArg
+                    (fun q => q ≫
+                      TopCat.Presheaf.germ
+                        ((sheafToPresheaf
+                          (Opens.grothendieckTopology (TopCat.of Z)) (Type w)).obj F₀)
+                        ((Opens.map (closedSubsetInclusion Z)).obj U) z hU') hunitU
+                  dsimp [Functor.sheafPullbackConstruction.sheafAdjunctionContinuous]
+                  dsimp [fullyFaithfulSheafToPresheaf, sheafToPresheaf] at hunitUg
+                  apply hunitUg.trans
+                  have hcompunit := Adjunction.comp_unit_app
+                    (f₀.op.lanAdjunction (Type w))
+                    (sheafificationAdjunction
+                      (Opens.grothendieckTopology (TopCat.of Z)) (Type w))
+                    ((sheafToPresheaf
+                      (Opens.grothendieckTopology X) (Type w)).obj G₀)
+                  have hcompunitU := congrArg (fun q => q.app (op U)) hcompunit
+                  have hcompunitUg := congrArg
+                    (fun q => q ≫
+                      TopCat.Presheaf.germ
+                        ((sheafToPresheaf
+                          (Opens.grothendieckTopology (TopCat.of Z)) (Type w)).obj F₀)
+                        ((Opens.map (closedSubsetInclusion Z)).obj U) z hU') hcompunitU
+                  apply hcompunitUg.trans
+                  dsimp [eP, pullbackSheafStalkIso]
+                  dsimp [pullbackPresheafStalkIso, pullbackSheaf_sheafificationIso]
+                  dsimp [TopCat.Presheaf.stalkPullbackIso]
+                  let u := (TopCat.Presheaf.stalkFunctor (Type w) z).map
+                    (toSheafify (Opens.grothendieckTopology ↑Z)
+                      ((pullbackPresheaf (closedSubsetInclusion Z)).obj
+                        (TopCat.Sheaf.presheaf G)))
+                  letI : IsIso u :=
+                    TopCat.Presheaf.stalkFunctor_map_unit_toSheafify_isIso
+                      (X := TopCat.of Z) (p₀ := z) (C := Type w)
+                      ((pullbackPresheaf (closedSubsetInclusion Z)).obj G.presheaf)
+                  have hAssoc :
+                      (((TopCat.Sheaf.presheaf G).germ U x hU ≫
+                          TopCat.Presheaf.stalkPullbackHom (Type w)
+                            (closedSubsetInclusion Z) (TopCat.Sheaf.presheaf G) z ≫
+                          (asIso u).hom) ≫ eMapIso.inv) ≫ eMapIso.hom =
+                        ((TopCat.Sheaf.presheaf G).germ U x hU ≫
+                            TopCat.Presheaf.stalkPullbackHom (Type w)
+                              (closedSubsetInclusion Z) (TopCat.Sheaf.presheaf G) z ≫
+                            (asIso u).hom) ≫ (eMapIso.inv ≫ eMapIso.hom) := by
+                    exact Category.assoc _ _ _
+                  have hInv :
+                      ((TopCat.Sheaf.presheaf G).germ U x hU ≫
+                          TopCat.Presheaf.stalkPullbackHom (Type w)
+                            (closedSubsetInclusion Z) (TopCat.Sheaf.presheaf G) z ≫
+                          (asIso u).hom) ≫ (eMapIso.inv ≫ eMapIso.hom) =
+                        (TopCat.Sheaf.presheaf G).germ U x hU ≫
+                          TopCat.Presheaf.stalkPullbackHom (Type w)
+                            (closedSubsetInclusion Z) (TopCat.Sheaf.presheaf G) z ≫
+                          (asIso u).hom := by
+                    exact (congrArg
+                      (fun q =>
+                        ((TopCat.Sheaf.presheaf G).germ U x hU ≫
+                            TopCat.Presheaf.stalkPullbackHom (Type w)
+                              (closedSubsetInclusion Z) (TopCat.Sheaf.presheaf G) z ≫
+                            (asIso u).hom) ≫ q)
+                      eMapIso.inv_hom_id).trans (Category.comp_id _)
+                  have hR := hAssoc.trans hInv
+                  change _ =
+                    (((TopCat.Sheaf.presheaf G).germ U x hU ≫
+                        TopCat.Presheaf.stalkPullbackHom (Type w)
+                          (closedSubsetInclusion Z) (TopCat.Sheaf.presheaf G) z ≫
+                        (asIso u).hom) ≫ eMapIso.inv) ≫ eMapIso.hom
+                  rw [hR]
+                  change _ =
+                    (TopCat.Sheaf.presheaf G).germ U ((closedSubsetInclusion Z) z) hU ≫
+                      TopCat.Presheaf.stalkPullbackHom (Type w)
+                        (closedSubsetInclusion Z) (TopCat.Sheaf.presheaf G) z ≫ u
+                  have hg := TopCat.Presheaf.germ_stalkPullbackHom_assoc
+                    (C := Type w) (closedSubsetInclusion Z) G.presheaf z U hU u
+                  rw [hg]
+                  change _ =
+                    ((TopCat.Presheaf.pullbackPushforwardAdjunction (Type w)
+                        (closedSubsetInclusion Z)).unit.app G.presheaf).app (op U) ≫
+                      ((pullbackPresheaf (closedSubsetInclusion Z)).obj G.presheaf).germ
+                        ((Opens.map (closedSubsetInclusion Z)).obj U) z hU ≫
+                      (TopCat.Presheaf.stalkFunctor (Type w) z).map
+                        (toSheafify (Opens.grothendieckTopology ↑Z)
+                          ((pullbackPresheaf (closedSubsetInclusion Z)).obj G.presheaf))
+                  have hmap := TopCat.Presheaf.stalkFunctor_map_germ
+                    ((Opens.map (closedSubsetInclusion Z)).obj U) z hU
+                    (toSheafify (Opens.grothendieckTopology ↑Z)
+                      ((pullbackPresheaf (closedSubsetInclusion Z)).obj G.presheaf))
+                  have hmap' := congrArg
+                    (fun q =>
+                      ((TopCat.Presheaf.pullbackPushforwardAdjunction (Type w)
+                          (closedSubsetInclusion Z)).unit.app G.presheaf).app (op U) ≫ q) hmap
+                  exact hmap'.symm
         change IsIso m
-        rw [← hcomp]
-        infer_instance
+        have hS : IsIso eS.hom := eS.isIso_hom
+        have hP : IsIso eP.hom := eP.isIso_hom
+        have hC : IsIso (m ≫ eS.hom) := by
+          rw [hcomp]
+          exact hP
+        exact @IsIso.of_isIso_comp_right _ _ _ _ _ m eS.hom hS hC
       · rcases h x hx with ⟨eG⟩
         rcases closedSubsetSetPushforward_stalk_equiv_punit_of_not_mem hZ
             ((closedSubsetSetPullback Z).obj G) hx with ⟨eT⟩
@@ -791,7 +965,9 @@ theorem closedSubsetPushforward_fullyFaithful
     {C : Type u} [Category.{w} C]
     {X : TopCat.{w}} {Z : Set X} (hZ : IsClosed Z) :
     Nonempty (closedSubsetPushforward (C := C) Z).FullyFaithful := by
-  sorry
+  letI : IsIso ((closedSubsetStructureAdjunction (C := C) Z).counit) :=
+    closedSubsetPushforward_inverseImage_counit_isIso hZ
+  exact ⟨(closedSubsetStructureAdjunction (C := C) Z).fullyFaithfulROfIsIsoCounit⟩
 
 /-- Generic form of the essential-image characterization. -/
 theorem closedSubsetPushforward_mem_essImage_iff

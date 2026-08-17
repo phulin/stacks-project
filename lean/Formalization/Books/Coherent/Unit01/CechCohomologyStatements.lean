@@ -72,28 +72,15 @@ theorem StandardOpenCover.iSup_basicOpen {Y : Scheme.{u}} {hY : IsAffine Y}
 
 /-! ### Sheaf and Čech cohomology objects -/
 
-/-- The smallness datum needed to instantiate the derived Ext construction
-for sheaves of modules on a scheme.  Mathlib exposes `HasExt` as an explicit
-infrastructure assumption, but does not currently choose it for `Y.Modules`.
--/
-class SchemeCohomologyData (Y : Scheme.{u}) : Prop where
-  hasExt : CategoryTheory.HasExt.{u} Y.Modules
-
-attribute [instance] SchemeCohomologyData.hasExt
-
 /-- Cohomology of a sheaf of modules, as an object of `AddCommGrpCat`. -/
 noncomputable def schemeCohomologyObject {Y : Scheme.{u}} (M : Y.Modules) (n : ℕ)
-    [hY : SchemeCohomologyData Y] : AddCommGrpCat.{u} :=
-  let E := @CategoryTheory.Abelian.Ext.{u} _ _ _ hY.hasExt
-    (SheafOfModules.unit Y.ringCatSheaf) M n
-  letI : AddCommGroup E :=
-    @CategoryTheory.Abelian.Ext.instAddCommGroup.{u} _ _ _ hY.hasExt
-      (SheafOfModules.unit Y.ringCatSheaf) M n
-  AddCommGrpCat.of E
+    [hY : CategoryTheory.HasExt.{u} Y.Modules] : AddCommGrpCat.{u} :=
+  (CategoryTheory.Abelian.extFunctorObj
+    (SheafOfModules.unit Y.ringCatSheaf) n).obj M
 
 /-- Cohomology of a sheaf of modules on an open subscheme. -/
 noncomputable def schemeCohomologyOn {X : Scheme.{u}} (M : X.Modules)
-    (U : X.Opens) (n : ℕ) [SchemeCohomologyData (U : Scheme)] : AddCommGrpCat.{u} :=
+    (U : X.Opens) (n : ℕ) [CategoryTheory.HasExt.{u} (U : Scheme).Modules] :
   schemeCohomologyObject (M.restrict U.ι) n
 
 /-- The additive group of global sections used to augment a Čech complex. -/
@@ -133,7 +120,7 @@ noncomputable def cechAugmentation {Y : Scheme.{u}} {ι : Type u} (M : Y.Modules
       M.presheaf.map (homOfLE (show (∏ᶜ U ∘ i) ≤ ⊤ by simp)).op))
 
 /-- Data expressing exactness of the augmented Čech complex. -/
-structure AugmentedCechExactnessData {Y : Scheme.{u}} {ι : Type u}
+structure AugmentedCechExactnessData {Y : Scheme.{u}} {ι : Type u} : Prop
     (M : Y.Modules) (U : ι → Y.Opens) where
   augmentation_is_cycle :
     cechAugmentation M U ≫ (cechComplex M U).d 0 1 = 0
@@ -142,15 +129,10 @@ structure AugmentedCechExactnessData {Y : Scheme.{u}} {ι : Type u}
       augmentation_is_cycle).Exact
   positive_exact : ∀ n : ℕ, 0 < n → (cechComplex M U).ExactAt n
 
-/-- The exactness assertion for the augmented Čech complex.
-
-It records the canonical degree-zero augmentation, exactness at degree zero
-and in every positive degree, together with positive Čech cohomology
-vanishing. -/
+/-- The exactness assertion for the augmented Čech complex. -/
 def AugmentedCechExactness {Y : Scheme.{u}} {hY : IsAffine Y}
     (𝒰 : StandardOpenCover Y hY) (M : Y.Modules) : Prop :=
-  Nonempty (AugmentedCechExactnessData M 𝒰.basicOpenFamily) ∧
-    PositiveCechExactness M 𝒰.basicOpenFamily
+  AugmentedCechExactnessData M 𝒰.basicOpenFamily
 
 /-- Standard affine covers have exact augmented Čech complexes for
 quasi-coherent sheaves. -/
@@ -174,7 +156,7 @@ theorem quasi_coherent_affine_cohomology_zero {X : Scheme.{u}}
     (M : X.Modules)
     [SheafOfModules.IsQuasicoherent (R := X.ringCatSheaf) M]
     (U : X.Opens) (hU : IsAffineOpen U)
-    [SchemeCohomologyData (U : Scheme)] {n : ℕ} (hn : 0 < n) :
+    [CategoryTheory.HasExt.{u} (U : Scheme).Modules] {n : ℕ} (hn : 0 < n) :
     IsZero (schemeCohomologyOn M U n) := by
   sorry
 
@@ -231,29 +213,29 @@ theorem localized_cech_homotopy_data_nonempty {Y : Scheme.{u}} {hY : IsAffine Y}
 Mathlib provides `Functor.rightDerived` for any additive functor once the
 source category has chosen injective resolutions.  The scheme-module API does
 not currently provide that instance. -/
-class RightDerivedPushforward {X S : Scheme.{u}} (f : X ⟶ S) where
-  hasInjectiveResolutions : CategoryTheory.HasInjectiveResolutions X.Modules
-
-attribute [instance] RightDerivedPushforward.hasInjectiveResolutions
+-- `Functor.rightDerived` uses Mathlib's `HasInjectiveResolutions` assumption
+-- directly; the scheme-module API does not provide that instance automatically.
 
 /-- The `i`th right-derived pushforward. -/
 noncomputable def higherDirectImage {X S : Scheme.{u}} (f : X ⟶ S)
-    (R : RightDerivedPushforward f) (i : ℕ) : X.Modules ⥤ S.Modules :=
+    [CategoryTheory.HasInjectiveResolutions X.Modules] (i : ℕ) : X.Modules ⥤ S.Modules :=
   (Scheme.Modules.pushforward f).rightDerived i
 
 /-- Higher direct images of quasi-coherent sheaves vanish for affine morphisms. -/
 theorem relative_affine_higher_direct_image_vanishes {X S : Scheme.{u}}
-    (f : X ⟶ S) [IsAffineHom f] (R : RightDerivedPushforward f)
+    (f : X ⟶ S) [IsAffineHom f]
+    [CategoryTheory.HasInjectiveResolutions X.Modules]
     (M : X.Modules) [SheafOfModules.IsQuasicoherent (R := X.ringCatSheaf) M]
     {i : ℕ} (hi : 0 < i) :
-    IsZero ((higherDirectImage f R i).obj M) := by
+    IsZero ((higherDirectImage f i).obj M) := by
   sorry
 
 /-- Cohomology is unchanged by an affine relative pushforward. -/
 theorem relative_affine_cohomology_comparison {X S : Scheme.{u}}
     (f : X ⟶ S) [IsAffineHom f]
     (M : X.Modules) [SheafOfModules.IsQuasicoherent (R := X.ringCatSheaf) M]
-    [SchemeCohomologyData X] [SchemeCohomologyData S] (i : ℕ) :
+    [CategoryTheory.HasExt.{u} X.Modules] [CategoryTheory.HasExt.{u} S.Modules]
+    (i : ℕ) :
     Nonempty
       (schemeCohomologyObject M i ≅
         schemeCohomologyObject ((Scheme.Modules.pushforward f).obj M) i) := by
@@ -351,7 +333,8 @@ theorem has_affine_diagonal_of_separated (X : Scheme.{u}) [X.IsSeparated] :
 cover for quasi-coherent coefficients. -/
 theorem cech_cohomology_eq_sheaf_cohomology {X : Scheme.{u}}
     (𝒰 : AffineIntersectionCover X) (M : X.Modules)
-    [SheafOfModules.IsQuasicoherent (R := X.ringCatSheaf) M] [SchemeCohomologyData X]
+    [SheafOfModules.IsQuasicoherent (R := X.ringCatSheaf) M]
+    [CategoryTheory.HasExt.{u} X.Modules]
     (n : ℕ) :
     Nonempty
       (cechCohomologyObject M (fun i => (𝒰.cover.f i).opensRange) n ≅

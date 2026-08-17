@@ -89,7 +89,47 @@ theorem m_nonempty (S : Type u) (T : Finset S) : Nonempty (MType S T) := by
 /-- Restriction maps are surjective for inclusions of finite subsets. -/
 theorem restriction_surjective {S : Type u} {T T' : Finset S} (h : T ≤ T') :
     Function.Surjective (restriction (S := S) h) := by
-  sorry
+  intro f
+  classical
+  obtain ⟨n, hn⟩ := Finset.exists_nat_subset_range (Finset.univ.image f.1)
+  let e : T' ≃ Fin (Fintype.card T') := Fintype.equivFin T'
+  let gfun : T' → ℕ := fun z =>
+    if hz : z.1 ∈ T then f.1 ⟨z.1, hz⟩ else n + (e z).val
+  have hg : Function.Injective gfun := by
+    intro a b hab
+    by_cases ha : a.1 ∈ T
+    · by_cases hb : b.1 ∈ T
+      · have hab' : f.1 ⟨a.1, ha⟩ = f.1 ⟨b.1, hb⟩ := by
+          simpa [gfun, ha, hb] using hab
+        exact Subtype.ext (congrArg (fun z : T => z.1) (f.2 hab'))
+      · have hfa : f.1 ⟨a.1, ha⟩ < n := by
+          apply Finset.mem_range.1
+          apply hn
+          exact Finset.mem_image.2 ⟨⟨a.1, ha⟩, Finset.mem_univ _, rfl⟩
+        have hab' : f.1 ⟨a.1, ha⟩ = n + (e b).val := by
+          simpa [gfun, ha, hb] using hab
+        have hge : n ≤ n + (e b).val := Nat.le_add_right n _
+        exfalso
+        exact (Nat.not_lt_of_ge hge) (hab' ▸ hfa)
+    · by_cases hb : b.1 ∈ T
+      · have hfb : f.1 ⟨b.1, hb⟩ < n := by
+          apply Finset.mem_range.1
+          apply hn
+          exact Finset.mem_image.2 ⟨⟨b.1, hb⟩, Finset.mem_univ _, rfl⟩
+        have hab' : n + (e a).val = f.1 ⟨b.1, hb⟩ := by
+          simpa [gfun, ha, hb] using hab
+        have hge : n ≤ n + (e a).val := Nat.le_add_right n _
+        exfalso
+        exact (Nat.not_lt_of_ge hge) (hab'.symm ▸ hfb)
+      · have hab' : n + (e a).val = n + (e b).val := by
+          simpa [gfun, ha, hb] using hab
+        have heq : (e a).val = (e b).val := Nat.add_left_cancel hab'
+        exact Subtype.ext (congrArg (fun z : T' => z.1) (e.injective (Fin.ext heq)))
+  refine ⟨⟨gfun, hg⟩, ?_⟩
+  apply Subtype.ext
+  funext y
+  change gfun (finiteSubsetInclusion h y) = f.1 y
+  simp [gfun, finiteSubsetInclusion, y.2]
 
 /-! ## The inverse system and its limit -/
 
@@ -122,7 +162,37 @@ def inducedMap {S : Type u} (x : mLimit S) : S → ℕ :=
 /-- Compatibility of a family forces its singleton evaluations to be injective. -/
 theorem inducedMap_injective {S : Type u} (x : mLimit S) :
     Function.Injective (inducedMap x) := by
-  sorry
+  intro a b hab
+  classical
+  let T : Finset S := {a, b}
+  have haT : ({a} : Finset S) ≤ T := by simp [T]
+  have hbT : ({b} : Finset S) ≤ T := by simp [T]
+  have hxa := x.property (CategoryTheory.opHomOfLE haT :
+    Opposite.op T ⟶ Opposite.op ({a} : Finset S))
+  change restriction haT (mLimitComponent x T) = mLimitComponent x {a} at hxa
+  have hxb := x.property (CategoryTheory.opHomOfLE hbT :
+    Opposite.op T ⟶ Opposite.op ({b} : Finset S))
+  change restriction hbT (mLimitComponent x T) = mLimitComponent x {b} at hxb
+  let za : T := ⟨a, by simp [T]⟩
+  let zb : T := ⟨b, by simp [T]⟩
+  have hxa_val :
+      (mLimitComponent x T).1 za =
+        (mLimitComponent x {a}).1 ⟨a, by simp⟩ := by
+    have h := congrArg (fun g : MType S {a} => g.1 ⟨a, by simp⟩) hxa
+    simpa [restriction, finiteSubsetInclusion, za, T] using h
+  have hxb_val :
+      (mLimitComponent x T).1 zb =
+        (mLimitComponent x {b}).1 ⟨b, by simp⟩ := by
+    have h := congrArg (fun g : MType S {b} => g.1 ⟨b, by simp⟩) hxb
+    simpa [restriction, finiteSubsetInclusion, zb, T] using h
+  have hab_val :
+      (mLimitComponent x {a}).1 ⟨a, by simp⟩ =
+        (mLimitComponent x {b}).1 ⟨b, by simp⟩ := by
+    simpa [inducedMap] using hab
+  have hpair : (mLimitComponent x T).1 za = (mLimitComponent x T).1 zb :=
+    hxa_val.trans (hab_val.trans hxb_val.symm)
+  have hz : za = zb := (mLimitComponent x T).2 hpair
+  exact congrArg (fun z : T => z.1) hz
 
 /-- The inverse limit is empty when the underlying set `S` is uncountable. -/
 theorem mLimit_isEmpty (S : Type u) [Uncountable S] : IsEmpty (mLimit S) := by

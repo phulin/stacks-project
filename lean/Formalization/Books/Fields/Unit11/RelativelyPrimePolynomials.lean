@@ -1,6 +1,6 @@
-import Formalization.Books.Fields.Unit10.AlgebraicClosure
 import Mathlib.Algebra.Polynomial.Splits
 import Mathlib.FieldTheory.IsAlgClosed.Basic
+import Mathlib.RingTheory.Ideal.Operations
 
 /-!
 # Fields, Chapter 11: Relatively prime polynomials
@@ -11,8 +11,8 @@ formulation is recorded below as an equivalent source-facing statement.
 Polynomial factorization is represented by `Polynomial.Splits`, and roots in
 an extension are represented by `Polynomial.aeval` (or, equivalently, roots of
    the mapped polynomial).  The final theorem uses Mathlib's `IsAlgClosure`
-   interface; the canonical `AlgebraicClosure` from the preceding chapter is
-   one standard instance.
+   interface; any algebraic closure equipped with that interface can
+   instantiate it.
 -/
 
 namespace Formalization.Books.Fields.Unit11

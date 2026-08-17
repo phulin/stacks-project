@@ -89,7 +89,76 @@ mixed coefficient is nonzero. -/
 theorem binaryQuadraticForm_nondegenerate_iff_charTwo
     {K : Type v} [Field K] [CharP K 2] {a b c : K} :
     (binaryQuadraticFormOfCoefficients a b c).Nondegenerate ↔ b ≠ 0 := by
-  sorry
+  constructor
+  · intro h
+    have hp := h.rank_rad_polar_le
+    by_cases hb : b = 0
+    · subst b
+      have hzero :
+          QuadraticMap.polarBilin (binaryQuadraticFormOfCoefficients a 0 c) = 0 := by
+        apply LinearMap.ext
+        intro x
+        apply LinearMap.ext
+        intro y
+        simp [binaryQuadraticFormOfCoefficients, QuadraticMap.polarBilin,
+          QuadraticMap.polar, QuadraticMap.proj_apply]
+        linear_combination
+          (a * x 0 * y 0 + c * x 1 * y 1) * CharP.cast_eq_zero K 2
+      rw [hzero] at hp
+      rw [show LinearMap.ker
+        (0 : (Fin 2 → K) →ₗ[K] (Fin 2 → K) →ₗ[K] K) = ⊤ by simp,
+        rank_top, rank_fin_fun] at hp
+      simp at hp
+    · exact hb
+  · intro hb
+    refine ⟨?_, ?_⟩
+    · ext x
+      rw [QuadraticMap.mem_radical_iff']
+      simp only [Submodule.mem_bot]
+      constructor
+      · rintro ⟨hx, htrans⟩
+        have h0 := htrans (Pi.single (0 : Fin 2) 1)
+        have h1 := htrans (Pi.single (1 : Fin 2) 1)
+        simp [binaryQuadraticFormOfCoefficients, QuadraticMap.proj_apply] at hx h0 h1
+        ring_nf at hx h0 h1
+        have hx1 : b * x 1 = 0 := by
+          linear_combination h0 - hx - a * x 0 * CharP.cast_eq_zero K 2
+        have hx0 : b * x 0 = 0 := by
+          linear_combination h1 - hx - x 1 * c * CharP.cast_eq_zero K 2
+        have hx1' : x 1 = 0 := (mul_eq_zero.mp hx1).resolve_left hb
+        have hx0' : x 0 = 0 := (mul_eq_zero.mp hx0).resolve_left hb
+        funext i
+        fin_cases i <;> assumption
+      · intro hx
+        subst x
+        simp
+    · have hker :
+          LinearMap.ker (QuadraticMap.polarBilin
+            (binaryQuadraticFormOfCoefficients a b c)) = ⊥ := by
+        apply le_antisymm
+        · intro x hx
+          rw [Submodule.mem_bot]
+          change QuadraticMap.polarBilin
+              (binaryQuadraticFormOfCoefficients a b c) x = 0 at hx
+          funext i
+          fin_cases i
+          · have h1 := DFunLike.congr_fun hx (Pi.single (1 : Fin 2) 1)
+            simp [binaryQuadraticFormOfCoefficients, QuadraticMap.polarBilin,
+              QuadraticMap.polar, QuadraticMap.proj_apply] at h1
+            have hx0 : b * x 0 = 0 := by
+              linear_combination h1 - x 1 * c * CharP.cast_eq_zero K 2
+            have hx0' : x 0 = 0 := (mul_eq_zero.mp hx0).resolve_left hb
+            simpa using hx0'
+          · have h0 := DFunLike.congr_fun hx (Pi.single (0 : Fin 2) 1)
+            simp [binaryQuadraticFormOfCoefficients, QuadraticMap.polarBilin,
+              QuadraticMap.polar, QuadraticMap.proj_apply] at h0
+            have hx1 : b * x 1 = 0 := by
+              linear_combination h0 - a * x 0 * CharP.cast_eq_zero K 2
+            have hx1' : x 1 = 0 := (mul_eq_zero.mp hx1).resolve_left hb
+            simpa using hx1'
+        · exact bot_le
+      rw [hker]
+      simp
 
 /-- A finite separable coefficient-field extension together with a
 nondegenerate binary quadratic form. -/
@@ -206,7 +275,99 @@ theorem periodicMatrixResolution_exact
     (hAB : A * B = f • (1 : Matrix (Fin n) (Fin n) R))
     (hf : IsRegular f) :
     periodicResolutionExact (quotientMatrix f A) (quotientMatrix f B) := by
-  sorry
+  have hdet : A.det * B.det = f ^ n := by
+    rw [← Matrix.det_mul, hAB]
+    simp
+  have hdetreg : IsRegular (A.det * B.det) := hdet.symm ▸ hf.pow n
+  have hAdet : IsRegular A.det := hdetreg.of_mul_left
+  have hdetB : A.det • B = f • A.adjugate := by
+    calc
+      A.det • B = (A.adjugate * A) * B := by rw [Matrix.adjugate_mul]; simp
+      _ = A.adjugate * (A * B) := by rw [Matrix.mul_assoc]
+      _ = A.adjugate * (f • (1 : Matrix (Fin n) (Fin n) R)) := by rw [hAB]
+      _ = f • A.adjugate := by simp [Matrix.mul_smul]
+  have hBA : B * A = f • (1 : Matrix (Fin n) (Fin n) R) := by
+    have hcancel : A.det • (B * A) = A.det • (f • (1 : Matrix (Fin n) (Fin n) R)) := by
+      calc
+        A.det • (B * A) = (A.det • B) * A := by simp [Matrix.smul_mul]
+        _ = (f • A.adjugate) * A := by rw [hdetB]
+        _ = f • (A.adjugate * A) := by simp [Matrix.smul_mul]
+        _ = f • (A.det • (1 : Matrix (Fin n) (Fin n) R)) := by
+          rw [Matrix.adjugate_mul]
+        _ = A.det • (f • (1 : Matrix (Fin n) (Fin n) R)) := by
+          rw [smul_smul, smul_smul, mul_comm]
+    ext i j
+    apply hAdet.left
+    simpa [smul_eq_mul] using congrArg (fun M => M i j) hcancel
+  have h_exact :
+      ∀ (M N : Matrix (Fin n) (Fin n) R),
+        M * N = f • (1 : Matrix (Fin n) (Fin n) R) →
+        N * M = f • (1 : Matrix (Fin n) (Fin n) R) →
+        Function.Exact (quotientMatrix f N).mulVecLin
+          (quotientMatrix f M).mulVecLin := by
+    intro M N hMN hNM
+    let q : R →+* principalQuotient R f :=
+      Ideal.Quotient.mk (Ideal.span {f})
+    have hMNq : quotientMatrix f M * quotientMatrix f N = 0 := by
+      change M.map q * N.map q = 0
+      rw [← Matrix.map_mul, hMN]
+      ext i j
+      simp [q]
+    have hNMq : quotientMatrix f N * quotientMatrix f M = 0 := by
+      change N.map q * M.map q = 0
+      rw [← Matrix.map_mul, hNM]
+      ext i j
+      simp [q]
+    apply LinearMap.exact_of_comp_eq_zero_of_ker_le_range
+    · rw [← Matrix.mulVecLin_mul, hMNq]
+      simp
+    · intro x hx
+      change (quotientMatrix f M).mulVecLin x = 0 at hx
+      have hMkernel : ∀ i, (M.map q *ᵥ x) i = 0 := by
+        intro i
+        simpa [quotientMatrix, q, Matrix.mulVecLin_apply] using
+          congrArg (fun v => v i) hx
+      choose y hy using fun i => Ideal.Quotient.mk_surjective (x i)
+      have hyq : q ∘ y = x := by
+        funext i
+        simpa [q] using hy i
+      have hMdiv : ∀ i, f ∣ (M *ᵥ y) i := by
+        intro i
+        have hzero : q ((M *ᵥ y) i) = 0 := by
+          rw [RingHom.map_mulVec q M y i, hyq]
+          exact hMkernel i
+        exact (Ideal.Quotient.eq_zero_iff_dvd f ((M *ᵥ y) i)).mp (by
+          simpa [q] using hzero)
+      choose z hz using hMdiv
+      have hMzy : M *ᵥ y = f • z := by
+        funext i
+        simpa [Pi.smul_apply, smul_eq_mul] using hz i
+      have hNMvec : N *ᵥ (M *ᵥ y) = f • y := by
+        calc
+          N *ᵥ (M *ᵥ y) = (N * M) *ᵥ y :=
+            (Matrix.mulVec_mulVec N M y).symm
+          _ = (f • (1 : Matrix (Fin n) (Fin n) R)) *ᵥ y := by rw [hNM]
+          _ = f • y := by rw [Matrix.smul_mulVec]; simp
+      have hcancel : f • (N *ᵥ z) = f • y := by
+        calc
+          f • (N *ᵥ z) = N *ᵥ (f • z) := (Matrix.mulVec_smul N f z).symm
+          _ = N *ᵥ (M *ᵥ y) := by rw [← hMzy]
+          _ = f • y := hNMvec
+      have hyz : N *ᵥ z = y := by
+        funext i
+        apply hf.left
+        simpa [Pi.smul_apply, smul_eq_mul] using
+          congrArg (fun v => v i) hcancel
+      refine ⟨q ∘ z, ?_⟩
+      ext i
+      calc
+        (quotientMatrix f N).mulVecLin (q ∘ z) i = q ((N *ᵥ z) i) := by
+          symm
+          simpa [quotientMatrix, q, Matrix.mulVecLin_apply] using
+            RingHom.map_mulVec q N z i
+        _ = q (y i) := by rw [hyz]
+        _ = x i := by simpa only [Function.comp_apply] using hyq i
+  exact ⟨h_exact B A hBA hAB, h_exact A B hAB hBA⟩
 
 end
 

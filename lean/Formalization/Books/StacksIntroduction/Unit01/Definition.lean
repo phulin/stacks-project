@@ -188,8 +188,9 @@ structure WeierstrassGaloisDescentData {K L : Type u}
 /-- Descent of a Weierstrass curve to the ground field, up to a coordinate change. -/
 def WeierstrassCurveDescends {K L : Type u} [Field K] [Field L] [Algebra K L]
     (W : WeierstrassCurve L) : Prop :=
-  ∃ W₀ : WeierstrassCurve K, ∃ C : WeierstrassCurve.VariableChange L,
-    C • W₀.baseChange L = W
+  ∃ W₀ : WeierstrassCurve K, W₀.IsElliptic ∧
+    ∃ C : WeierstrassCurve.VariableChange L,
+      C • W₀.baseChange L = W
 
 /-- The finite Galois descent conclusion in the Weierstrass presentation. -/
 theorem weierstrass_galois_descent

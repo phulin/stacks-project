@@ -365,55 +365,14 @@ theorem every_ellipticCurve_has_local_weierstrass_chart
     Nonempty (WeierstrassLocalChartStatement E) := by
   sorry
 
-/-- The source's torsor statement for the smooth cover. -/
-structure WeierstrassCoverTorsorStatement where
-  local_equations : ∀ {S : Scheme.{u}} (E : ModuliPoint S),
-    Nonempty (WeierstrassLocalChartStatement E)
-  coordinate_transitions : Prop
-  torsor : Prop
-
-theorem universalWeierstrass_is_H_torsor :
-    Nonempty WeierstrassCoverTorsorStatement := by
-  refine ⟨{
-    local_equations := by
-      intro S E
-      exact every_ellipticCurve_has_local_weierstrass_chart E
-    coordinate_transitions := True
-    torsor := True }⟩
-
 /-- The smooth and surjective cover lemma in the source. -/
 theorem universalWeierstrass_smooth_surjective :
     IsSmoothModuliMorphism universalWeierstrassMorphism ∧
       IsSurjectiveModuliMorphism universalWeierstrassMorphism := by
   sorry
 
-/-- The quotient-stack presentation described by the source proof.
-
-The available Mathlib group is the group of coordinate-change points over
-`UniversalBaseRing`; it is not itself the group scheme `H` over `ℤ`.  The
-quotient-stack assertion is therefore retained as an explicit presentation
-field instead of identifying these two objects. -/
-structure GlobalQuotientPresentation where
-  source : Scheme.{0}
-  source_eq : source = universalBaseScheme
-  coordinateGroupPoints : Type
-  coordinateGroupPoints_group : Group coordinateGroupPoints
-  coordinateGroupPoints_eq :
-    coordinateGroupPoints = WeierstrassCoordinateGroup UniversalBaseRing
-  /-- The available scheme-side evidence for the quotient presentation. -/
-  presentation :
-    WeierstrassEquationEquivalent universalCoefficientsOverBase
-      universalCoefficientsOverBase
-
-theorem ellipticModuli_is_global_quotient :
-    Nonempty GlobalQuotientPresentation := by
-  refine ⟨{
-    source := universalBaseScheme
-    source_eq := rfl
-    coordinateGroupPoints := WeierstrassCoordinateGroup UniversalBaseRing
-    coordinateGroupPoints_group := inferInstance
-    coordinateGroupPoints_eq := rfl
-    presentation := ?_ }⟩
-  exact ⟨1, by simp [coordinateChangeAction]⟩
+/- The quotient-stack remark in the source is not represented here: the
+group scheme `H` and its action on the universal family are not available in
+the imported project API. -/
 
 end Formalization.Books.StacksIntroduction.Unit01

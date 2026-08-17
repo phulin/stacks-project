@@ -81,8 +81,11 @@ abbrev ModuliRule (T : Scheme.{u}) := ModuliMorphismToScheme T
 def affineLineOverIntegers : Scheme.{1} :=
   Scheme.Spec.obj (Opposite.op (CommRingCat.of (Polynomial (ULift ℤ))))
 
-/-- The existence interface for the usual `j`-invariant rule. -/
-theorem exists_jInvariantRule :
+/-- A constant natural rule into the affine line.
+
+This witnesses the general rule interface only; it is not the source's
+`j`-invariant, whose construction needs a Weierstrass-model interface. -/
+theorem exists_constantModuliRule :
     Nonempty (ModuliRule affineLineOverIntegers) := by
   let zeroEvaluation : Polynomial (ULift ℤ) →+* ULift ℤ :=
     Polynomial.eval₂RingHom (RingHom.id _) 0
@@ -97,9 +100,9 @@ theorem exists_jInvariantRule :
     congr 1
     apply specULiftZIsTerminal.hom_ext
 
-/-- The source's `j : M₁,₁ ⟶ A¹_ℤ`, obtained from its naturality interface. -/
-noncomputable def jInvariant : ModuliRule affineLineOverIntegers :=
-  Classical.choice exists_jInvariantRule
+/-- The chosen constant rule into `A¹_ℤ`. -/
+noncomputable def constantModuliRule : ModuliRule affineLineOverIntegers :=
+  Classical.choice exists_constantModuliRule
 
 /-! ### Endomorphisms and the source's identity-only convention -/
 

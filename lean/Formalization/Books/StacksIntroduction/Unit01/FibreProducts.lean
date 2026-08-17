@@ -101,10 +101,14 @@ def ellipticFiberProductPresheaf {S S' : Scheme.{u}}
 structure FiberProductPresentation {S S' : Scheme.{u}}
     (E : ModuliPoint S) (E' : ModuliPoint S') where
   scheme : Scheme.{u}
-  representing : ellipticFiberProductPresheaf E E' ≅ uliftYoneda.{u}.obj scheme
-  universalPoint : EllipticFiberProductPoint E E' scheme
-  representing_identity :
-    representing.inv.app (Opposite.op scheme) (ULift.up (𝟙 scheme)) = universalPoint
+  representing : (ellipticFiberProductPresheaf E E').RepresentableBy scheme
+
+/-- The universal point supplied by a representation, evaluated at the identity. -/
+noncomputable def FiberProductPresentation.universalPoint
+    {S S' : Scheme.{u}} {E : ModuliPoint S} {E' : ModuliPoint S'}
+    (P : FiberProductPresentation E E') :
+    EllipticFiberProductPoint E E' P.scheme :=
+  P.representing.homEquiv (𝟙 P.scheme)
 
 /-- The key fact: the triple-valued presheaf is represented by a scheme. -/
 theorem exists_fiberProductPresentation {S S' : Scheme.{u}}

@@ -79,7 +79,7 @@ theorem higher_direct_image_is_quasi_coherent_of_representable
     (hqc : IsQuasiCompact f) (hqs : IsQuasiSeparated f)
     (F : SheafObj X) (hF : IsQuasiCoherent F) (i : ℕ) :
     IsQuasiCoherent (higherDirectImage i f F) := by
-  sorry
+  exact representable_higher_direct_image_identification S X Y hS f hf hX hY hqc hqs F hF i
 
 theorem quasi_coherence_higher_direct_images_application
     (S X Y V : AlgebraicSpace.{u}) (hS : IsScheme S)

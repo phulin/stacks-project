@@ -256,6 +256,26 @@ noncomputable abbrev moduleSheafHomEquiv {X Y : TopCat.{v}}
         (moduleSheafPullbackUnit f O)).obj F) :=
   (moduleSheafPullbackPushforwardAdjunction f).homEquiv G F
 
+/-- The sheaf-level tensor object
+`O_X ⊗_{f⁻¹ f_* O_X} f⁻¹ G`, represented by the canonical module pullback
+along the identity map on the pushed-forward scalar sheaf. -/
+noncomputable def moduleSheafTensorOverPushforward {X Y : TopCat.{v}}
+    {O : RingSheaf X} (f : X ⟶ Y)
+    (G : Mod ((moduleRingSheafPushforward f).obj O))
+    [((SheafOfModules.pushforward (F := Opens.map f) (𝟙 _)).IsRightAdjoint)] :
+    Mod O :=
+  (moduleSheafPullbackAlong f (𝟙 _)).obj G
+
+/-- The sheaf tensor/pushforward Hom correspondence. -/
+noncomputable abbrev moduleSheafTensorHomEquiv {X Y : TopCat.{v}}
+    {O : RingSheaf X} (f : X ⟶ Y)
+    (G : Mod ((moduleRingSheafPushforward f).obj O)) (F : Mod O)
+    [((SheafOfModules.pushforward (F := Opens.map f) (𝟙 _)).IsRightAdjoint)] :
+    (moduleSheafTensorOverPushforward f G ⟶ F) ≃
+      (G ⟶ (moduleSheafPushforward f).obj F) :=
+  (SheafOfModules.pullbackPushforwardAdjunction
+    (F := Opens.map f) (𝟙 _)).homEquiv G F
+
 /-- The stalk-level tensor formula for module sheaf pullback. -/
 theorem moduleSheafPullback_stalk_formula {X Y : TopCat.{v}}
     {O : RingSheaf Y} (f : X ⟶ Y) (G : Mod O) (x : X)

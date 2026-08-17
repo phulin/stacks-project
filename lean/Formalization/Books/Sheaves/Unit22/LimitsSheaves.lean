@@ -232,6 +232,21 @@ theorem directedColimitSectionsMap_bijective_of_cofinal_cover
 
 /-! ## The tail example -/
 
+/-! The tail products occurring in the global-section computation. -/
+
+/-- The directed system `∏_{m ≥ n} ℤ` with transition maps given by
+restriction to a later tail.  `ULift` only adjusts the universe to the one
+used by the sheaf counterexample. -/
+def tailProductDiagram : ℕ ⥤ Type v where
+  obj n := ∀ m : ℕ, n ≤ m → ULift.{v} ℤ
+  map f s := fun m hm => s m (le_trans (leOfHom f) hm)
+  map_id := by
+    intro n
+    rfl
+  map_comp := by
+    intro n m k f g
+    rfl
+
 /-- Data expressing the tail-space counterexample to unrestricted sectionwise
 directed colimits.  The fields deliberately retain the source's stalk and
 global-section conclusions. -/
@@ -258,6 +273,9 @@ structure DirectedColimitSectionsCounterexample where
     Nonempty ((F.obj n).presheaf.stalk (xi m) ≃ PEmpty.{v})
   M : Type v
   M_nontrivial : Nontrivial M
+  M_is_tail_colimit : Nonempty (M ≃ colimit tailProductDiagram)
+  stalk_s1 : Nonempty (F_colimit_cocone.pt.presheaf.stalk s1 ≃ M)
+  stalk_s2 : Nonempty (F_colimit_cocone.pt.presheaf.stalk s2 ≃ M)
   stalk_colimit_tail_zero : ∀ n,
     Nonempty (F_colimit_cocone.pt.presheaf.stalk (xi n) ≃ PEmpty.{v})
   two_skyscraper_sum : TopCat.Sheaf (Type v) X
@@ -272,6 +290,11 @@ structure DirectedColimitSectionsCounterexample where
   colimit_global_sections :
     Nonempty (colimit (F ⋙ TopCat.Sheaf.forget (Type v) X ⋙
       (evaluation (Opens X)ᵒᵖ (Type v)).obj (op (⊤ : Opens X))) ≃ M)
+
+/-- The tail-space data described in the source exists. -/
+theorem exists_directedColimitSectionsCounterexample :
+    Nonempty (DirectedColimitSectionsCounterexample (v := v)) := by
+  sorry
 
 /-! ## Inverse limits of spectral spaces -/
 

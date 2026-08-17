@@ -69,6 +69,12 @@ noncomputable def abelianPresheafPullback_obj_colimitIso {X Y : TopCat.{v}}
         (CostructuredArrow.proj (Opens.map f).op (op U) ⋙ G) :=
   Functor.leftKanExtensionObjIsoColimit (Opens.map f).op G (op U)
 
+/-- The neighbourhood index in the abelian pullback formula is filtered. -/
+theorem abelianPresheafPullback_index_isFiltered {X Y : TopCat.{v}}
+    (f : X ⟶ Y) (U : Opens X) :
+    IsFiltered (CostructuredArrow (Opens.map f).op (op U)) := by
+  exact pullbackIndex_isFiltered f U
+
 theorem abelianSheafPushforward_obj_presheaf {X Y : TopCat.{v}} (f : X ⟶ Y)
     (F : Ab X) :
     ((abelianSheafPushforward f).obj F).presheaf =

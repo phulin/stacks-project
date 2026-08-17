@@ -59,6 +59,12 @@ abbrev algebraicSheafPushforward (C : Type u) [Category.{v} C]
     AlgebraicSheaf C X ⥤ AlgebraicSheaf C Y :=
   TopCat.Sheaf.pushforward C f
 
+@[simp]
+theorem algebraicSheafPushforward_obj_presheaf {C : Type u} [Category.{v} C]
+    {X Y : TopCat.{v}} (f : X ⟶ Y) (F : AlgebraicSheaf C X) :
+    ((algebraicSheafPushforward C f).obj F).presheaf =
+      (algebraicPresheafPushforward C f).obj F.presheaf := rfl
+
 /-- Pushforward of algebraic sheaves commutes with composition. -/
 noncomputable def algebraicSheafPushforwardCompIso
     (C : Type u) [Category.{v} C] {X Y Z : TopCat.{v}}
@@ -187,14 +193,27 @@ theorem algebraicPresheafPushforward_underlying_formula
 
 theorem algebraicPresheafPullback_underlying_formula
     {C : Type u} [Category.{v} C] [HasColimits C]
-    (F : C ⥤ Type v) {X Y : TopCat.{v}} (f : X ⟶ Y)
+    (F : C ⥤ Type v) [PreservesFilteredColimitsOfSize.{v, v} F]
+    {X Y : TopCat.{v}} (f : X ⟶ Y)
     (G : AlgebraicPresheaf C Y) :
     Nonempty
       (algebraicUnderlyingPresheaf F
           ((algebraicPresheafPullback C f).obj G) ≅
-        (algebraicPresheafPullback (Type v) f).obj
+          (algebraicPresheafPullback (Type v) f).obj
           (algebraicUnderlyingPresheaf F G)) := by
   sorry
+
+/-- The underlying-set formula for the pushforward of algebraic sheaves. -/
+theorem algebraicSheafPushforward_underlying_formula
+    {C : Type u} [Category.{v} C] (F : C ⥤ Type v)
+    {X Y : TopCat.{v}} (f : X ⟶ Y) (G : AlgebraicSheaf C X) :
+    Nonempty
+      (algebraicUnderlyingPresheaf F
+          ((algebraicSheafPushforward C f).obj G).presheaf ≅
+        (TopCat.Presheaf.pushforward (Type v) f).obj
+          (algebraicUnderlyingPresheaf F G.presheaf)) := by
+  simpa only [algebraicSheafPushforward_obj_presheaf] using
+    (algebraicPresheafPushforward_underlying_formula F f G.presheaf)
 
 /-! ## Algebraic `f`-maps -/
 
@@ -243,6 +262,7 @@ algebraic category determine a unique algebraic `f`-map. -/
 theorem existsUnique_algebraicFMap_of_underlying_components
     {C : Type u} [Category.{v} C] {FC : C → C → Type*} {CC : C → Type v}
     [∀ X Y, FunLike (FC X Y) (CC X) (CC Y)] [ConcreteCategory C FC]
+    [(CategoryTheory.forget C).Faithful]
     {X Y : TopCat.{v}} {f : X ⟶ Y}
     {G : AlgebraicSheaf C Y} {F : AlgebraicSheaf C X}
     (φ : algebraicUnderlyingPresheaf (CategoryTheory.forget C) G.presheaf ⟶

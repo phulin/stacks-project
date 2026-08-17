@@ -172,6 +172,25 @@ noncomputable def openSheafExtensionAdjunction (C : Type u) [Category.{v} C]
     openSheafExtensionByInitial C U ⊣ openSheafRestriction C U := by
   sorry
 
+/-- Restricting the presheaf extension by the initial object recovers the
+original presheaf on the open subspace. -/
+theorem openPresheafExtension_restrict_iso (C : Type u) [Category.{v} C]
+    [HasInitial C] [HasColimits C] {X : TopCat.{v}} (U : Opens X)
+    (F : TopCat.Presheaf C (openSubspace U)) :
+    Nonempty ((openPresheafRestriction C U).obj
+      ((openPresheafExtensionByInitial C U).obj F) ≅ F) := by
+  sorry
+
+/-- Restricting the sheaf extension by the initial object recovers the
+original sheaf on the open subspace. -/
+theorem openAlgebraicSheafExtension_restrict_iso (C : Type u) [Category.{v} C]
+    [HasInitial C] {X : TopCat.{v}} (U : Opens X)
+    [HasWeakSheafify (Opens.grothendieckTopology X) C]
+    (F : TopCat.Sheaf C (openSubspace U)) :
+    Nonempty ((openSheafRestriction C U).obj
+      ((openSheafExtensionByInitial C U).obj F) ≅ F) := by
+  sorry
+
 /-- The set-valued Hom correspondence for extension by the empty set. -/
 noncomputable abbrev openSetSheafExtensionHomEquiv {X : TopCat.{v}} (U : Opens X)
     [HasWeakSheafify (Opens.grothendieckTopology X) (Type v)]
@@ -242,6 +261,14 @@ noncomputable abbrev openAbelianSheafExtensionFunctor {X : TopCat.{v}} (U : Open
     [HasWeakSheafify (Opens.grothendieckTopology X) AddCommGrpCat] :=
   openAlgebraicSheafExtensionFunctor AddCommGrpCat U
 
+/-- The abelian sheaf extension/restriction adjunction. -/
+noncomputable abbrev openAbelianSheafExtensionAdjunction
+    {X : TopCat.{v}} (U : Opens X)
+    [HasWeakSheafify (Opens.grothendieckTopology X) AddCommGrpCat] :
+    openAbelianSheafExtensionFunctor U ⊣
+      openSheafRestriction AddCommGrpCat U :=
+  openAlgebraicSheafExtensionAdjunction AddCommGrpCat U
+
 /-- The module-valued open subspace of a ringed space. -/
 def ringedOpenSubspace (X : RingedSpace.{v}) (U : Opens X.carrier) : RingedSpace.{v} where
   carrier := openSubspace U
@@ -279,7 +306,7 @@ theorem openModuleExtension_stalk_zero (X : RingedSpace.{v}) (U : Opens X.carrie
     (F : Mod (ringedOpenSubspace X U).structureSheaf) (x : X.carrier) (hx : x ∉ U) :
     Nonempty (TopCat.Presheaf.stalk (C := Type v)
       (((openModuleExtensionFunctor X U).obj F).val.presheaf ⋙
-        (CategoryTheory.forget AddCommGrpCat)) x ≃ PEmpty.{v}) := by
+        (CategoryTheory.forget AddCommGrpCat)) x ≃ PUnit.{v}) := by
   sorry
 
 /-- Module stalks of extension by zero agree with the original stalk on the open. -/
@@ -326,9 +353,57 @@ theorem openAbelianSheafExtension_fullFaithful {X : TopCat.{v}} (U : Opens X)
     (openAbelianSheafExtensionFunctor U).Full := by
   sorry
 
+/-- The abelian essential image of extension by zero is characterized by
+zero stalks outside the open. -/
+def OpenAbelianZeroStalkCondition {X : TopCat.{v}} (U : Opens X)
+    (G : Ab X) : Prop :=
+  ∀ x : X, x ∉ U → Nonempty (G.presheaf.stalk x ≅ (0 : AddCommGrpCat.{v}))
+
+theorem openAbelianSheafExtension_essentialImage {X : TopCat.{v}} (U : Opens X)
+    [HasWeakSheafify (Opens.grothendieckTopology X) AddCommGrpCat]
+    (G : Ab X) :
+    (∃ F, Nonempty ((openAbelianSheafExtensionFunctor U).obj F ≅ G)) ↔
+      OpenAbelianZeroStalkCondition U G := by
+  sorry
+
+/-- The generic algebraic essential image of extension by the initial object
+is characterized by initial stalks outside the open. -/
+def OpenInitialStalkCondition (C : Type u) [Category.{v} C]
+    [HasInitial C] {X : TopCat.{v}} (U : Opens X) [HasColimits C]
+    (G : TopCat.Sheaf C X) : Prop :=
+  ∀ x : X, x ∉ U → Nonempty (G.presheaf.stalk x ≅ (⊥_ C))
+
+theorem openAlgebraicSheafExtension_fullFaithful (C : Type u) [Category.{v} C]
+    [HasInitial C] {X : TopCat.{v}} (U : Opens X)
+    [HasWeakSheafify (Opens.grothendieckTopology X) C] :
+    (openAlgebraicSheafExtensionFunctor C U).Full := by
+  sorry
+
+theorem openAlgebraicSheafExtension_essentialImage (C : Type u)
+    [Category.{v} C] [HasInitial C] [HasColimits C]
+    {X : TopCat.{v}} (U : Opens X)
+    [HasWeakSheafify (Opens.grothendieckTopology X) C]
+    (G : TopCat.Sheaf C X) :
+    (∃ F, Nonempty ((openAlgebraicSheafExtensionFunctor C U).obj F ≅ G)) ↔
+      OpenInitialStalkCondition C U G := by
+  sorry
+
 /-- Extension by zero for modules is fully faithful. -/
 theorem openModuleExtension_fullFaithful (X : RingedSpace.{v}) (U : Opens X.carrier) :
     (openModuleExtensionFunctor X U).Full := by
+  sorry
+
+/-- The module essential image of extension by zero is characterized by zero
+stalk modules outside the open. -/
+def OpenModuleZeroStalkCondition (X : RingedSpace.{v})
+    (U : Opens X.carrier) (G : Mod X.structureSheaf) : Prop :=
+  ∀ x : X.carrier, x ∉ U →
+    Nonempty ((moduleStalkFunctor X.structureSheaf x).obj G ≅ 0)
+
+theorem openModuleExtension_essentialImage (X : RingedSpace.{v})
+    (U : Opens X.carrier) (G : Mod X.structureSheaf) :
+    (∃ F, Nonempty ((openModuleExtensionFunctor X U).obj F ≅ G)) ↔
+      OpenModuleZeroStalkCondition X U G := by
   sorry
 
 /-- The set-valued `j_!` warning: a nontrivial open complement prevents left exactness. -/

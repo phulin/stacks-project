@@ -152,9 +152,13 @@ noncomputable def moduleStalkFunctor {X : TopCat.{v}}
       (↑(TopCat.Presheaf.stalk (C := AddCommGrpCat.{v}) F.val.presheaf x))
   map φ := ModuleCat.homMk (moduleStalkAddMap φ x) (moduleStalkAddMap_smul φ x)
   map_id := by
-    sorry
+    intro F
+    apply ModuleCat.hom_ext
+    simp [moduleStalkAddMap]
   map_comp := by
-    sorry
+    intro F G H φ ψ
+    apply ModuleCat.hom_ext
+    simp [moduleStalkAddMap, Category.assoc]
 
 /-- Functoriality of the module skyscraper construction in its stalk-module
 value. -/
@@ -238,6 +242,16 @@ theorem moduleSkyscraperStalkAtSupport
     (A : ModuleCat.{v} (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x)) :
     Nonempty ((moduleStalkFunctor O x).obj
         (moduleSkyscraperSheaf O x A) ≅ A) := by
+  sorry
+
+/-- Away from the closure of the support, a module skyscraper has the zero
+stalk module. -/
+theorem moduleSkyscraperStalkAwayFromSupport
+    {X : TopCat.{v}} (O : RingSheaf X) (x : X)
+    (A : ModuleCat.{v} (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x))
+    {x' : X} (h : ¬x ⤳ x') :
+    Nonempty ((moduleStalkFunctor O x').obj
+      (moduleSkyscraperSheaf O x A) ≅ 0) := by
   sorry
 
 /-! ## Stalk/skyscraper adjunctions -/

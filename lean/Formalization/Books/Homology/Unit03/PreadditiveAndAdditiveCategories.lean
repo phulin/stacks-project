@@ -74,7 +74,7 @@ theorem finite_products_give_finite_biproducts
   HasFiniteBiproducts.of_hasFiniteProducts
 
 theorem finite_biproducts_give_finite_products
-    {C : Type u} [Category.{v} C] [Preadditive C] [HasFiniteBiproducts C] :
+    {C : Type u} [Category.{v} C] [HasZeroMorphisms C] [HasFiniteBiproducts C] :
     HasFiniteProducts C := by
   infer_instance
 
@@ -213,6 +213,11 @@ theorem additive_functor_maps_chosen_zero
 class AdditiveCategory (C : Type u) [Category.{v} C]
     extends Preadditive C, HasFiniteProducts C
 
+instance additiveCategory_hasFiniteBiproducts
+    (C : Type u) [Category.{v} C] [AdditiveCategory C] :
+    HasFiniteBiproducts C :=
+  HasFiniteBiproducts.of_hasFiniteProducts
+
 /-! ## Kernels, cokernels, images, and coimages -/
 
 /- `KernelFork`/`CokernelCofork` and `HasKernel`/`HasCokernel` are Mathlib's
@@ -313,146 +318,14 @@ theorem coimage_image_factorization_unique
 theorem direct_sum_inl_is_kernel_of_inr
     {C : Type u} [Category.{v} C] [Preadditive C]
     {X Y : C} [HasBinaryBiproduct X Y] :
-    Nonempty (IsLimit (BinaryBicone.sndKernelFork (BinaryBiproduct.bicone X Y))) := by
-  sorry
+    Nonempty (IsLimit (BinaryBicone.sndKernelFork (BinaryBiproduct.bicone X Y))) :=
+  ⟨BinaryBicone.isLimitSndKernelFork (BinaryBiproduct.isLimit X Y)⟩
 
 theorem direct_sum_fst_is_cokernel_of_inr
     {C : Type u} [Category.{v} C] [Preadditive C]
     {X Y : C} [HasBinaryBiproduct X Y] :
-    Nonempty (IsColimit (BinaryBicone.inrCokernelCofork (BinaryBiproduct.bicone X Y))) := by
-  sorry
-
-/-! ## Idempotents and split morphisms -/
-
-def idempotentComplement
-    {C : Type u} [Category.{v} C] [Preadditive C]
-    {X : C} (f : X ⟶ X) : X ⟶ X :=
-  𝟙 X - f
-
-theorem idempotent_complement_relations
-    {C : Type u} [Category.{v} C] [Preadditive C]
-    {X : C} (f : X ⟶ X) (hf : f ≫ f = f) :
-    f ≫ idempotentComplement f = 0 ∧
-      idempotentComplement f ≫ f = 0 ∧
-      idempotentComplement f ≫ idempotentComplement f = idempotentComplement f := by
-  sorry
-
-/- The four clauses below are source-faithful universal-property interfaces
-   for Lemma `lemma-idempotent-kernel-cokernel`.  The existential proof of the
-   zero composite keeps the derived condition out of the hypotheses. -/
-
-theorem idempotent_kernel_gives_cokernel
-    {C : Type u} [Category.{v} C] [Preadditive C]
-    {X K : C} (f : X ⟶ X) (hf : f ≫ f = f)
-    (i : K ⟶ X) (hi : i ≫ f = 0)
-    (hker : IsLimit (KernelFork.ofι i hi))
-    (p : X ⟶ K)
-    (hp : idempotentComplement f = p ≫ i) :
-    ∃ hfp : f ≫ p = 0,
-      i ≫ p = 𝟙 K ∧
-        Nonempty (IsColimit (CokernelCofork.ofπ p hfp)) := by
-  sorry
-
-theorem idempotent_cokernel_gives_kernel
-    {C : Type u} [Category.{v} C] [Preadditive C]
-    {X Q : C} (f : X ⟶ X) (hf : f ≫ f = f)
-    (p : X ⟶ Q) (hp : f ≫ p = 0)
-    (hcoker : IsColimit (CokernelCofork.ofπ p hp))
-    (i : Q ⟶ X)
-    (hi : idempotentComplement f = p ≫ i) :
-    ∃ hif : i ≫ f = 0,
-      i ≫ p = 𝟙 Q ∧ Nonempty (IsLimit (KernelFork.ofι i hif)) := by
-  sorry
-
-theorem complement_kernel_gives_cokernel
-    {C : Type u} [Category.{v} C] [Preadditive C]
-    {X K : C} (f : X ⟶ X) (hf : f ≫ f = f)
-    (j : K ⟶ X) (hj : j ≫ idempotentComplement f = 0)
-    (hker : IsLimit (KernelFork.ofι j hj))
-    (q : X ⟶ K)
-    (hq : f = q ≫ j) :
-    ∃ hqg : idempotentComplement f ≫ q = 0,
-      j ≫ q = 𝟙 K ∧
-        Nonempty (IsColimit (CokernelCofork.ofπ q hqg)) := by
-  sorry
-
-theorem complement_cokernel_gives_kernel
-    {C : Type u} [Category.{v} C] [Preadditive C]
-    {X Q : C} (f : X ⟶ X) (hf : f ≫ f = f)
-    (q : X ⟶ Q) (hq : idempotentComplement f ≫ q = 0)
-    (hcoker : IsColimit (CokernelCofork.ofπ q hq))
-    (j : Q ⟶ X)
-    (hj : f = q ≫ j) :
-    ∃ hjf : j ≫ idempotentComplement f = 0,
-      j ≫ q = 𝟙 Q ∧ Nonempty (IsLimit (KernelFork.ofι j hjf)) := by
-  sorry
-
-theorem idempotent_splitting_has_all_kernels_and_cokernels
-    {C : Type u} [Category.{v} C] [Preadditive C]
-    {X : C} (f : X ⟶ X) (hf : f ≫ f = f)
-    (h : (HasKernel f ∨ HasCokernel f) ∧
-      (HasKernel (idempotentComplement f) ∨
-        HasCokernel (idempotentComplement f))) :
-    HasKernel f ∧ HasCokernel f ∧
-      HasKernel (idempotentComplement f) ∧
-      HasCokernel (idempotentComplement f) := by
-  sorry
-
-theorem idempotent_splitting_decompositions
-    {C : Type u} [Category.{v} C] [Preadditive C]
-    {X : C} (f : X ⟶ X) (hf : f ≫ f = f)
-    [HasKernel f] [HasCokernel f]
-    [HasKernel (idempotentComplement f)]
-    [HasCokernel (idempotentComplement f)] :
-    ∃ (b₁ : BinaryBiproductData (kernel f) (kernel (idempotentComplement f)))
-      (b₂ : BinaryBiproductData (cokernel f) (kernel (idempotentComplement f)))
-      (b₃ : BinaryBiproductData (kernel f) (cokernel (idempotentComplement f)))
-      (b₄ : BinaryBiproductData (cokernel f) (cokernel (idempotentComplement f))),
-      Nonempty (X ≅ b₁.bicone.pt) ∧
-        Nonempty (X ≅ b₂.bicone.pt) ∧
-        Nonempty (X ≅ b₃.bicone.pt) ∧
-        Nonempty (X ≅ b₄.bicone.pt) := by
-  sorry
-
-def splitComplement
-    {C : Type u} [Category.{v} C] [Preadditive C]
-    {X Y : C} (j : Y ⟶ X) (q : X ⟶ Y) : X ⟶ X :=
-  𝟙 X - q ≫ j
-
-theorem split_morphism_complement_has_kernel
-    {C : Type u} [Category.{v} C] [Preadditive C]
-    {X Y : C} (j : Y ⟶ X) (q : X ⟶ Y) (h : j ≫ q = 𝟙 Y) :
-    Nonempty (IsLimit (KernelFork.ofι j (by
-      simp only [splitComplement, comp_sub, Category.comp_id, ← Category.assoc, h,
-        Category.id_comp, sub_self]) :
-      KernelFork (splitComplement j q))) := by
-  sorry
-
-theorem split_morphism_complement_has_cokernel
-    {C : Type u} [Category.{v} C] [Preadditive C]
-    {X Y : C} (j : Y ⟶ X) (q : X ⟶ Y) (h : j ≫ q = 𝟙 Y) :
-    Nonempty (IsColimit (CokernelCofork.ofπ q (by
-      simp [splitComplement, Category.assoc, h]) : CokernelCofork (splitComplement j q))) := by
-  sorry
-
-theorem split_morphism_has_both_kernels_and_cokernels
-    {C : Type u} [Category.{v} C] [Preadditive C]
-    {X Y : C} (j : Y ⟶ X) (q : X ⟶ Y) (h : j ≫ q = 𝟙 Y)
-    (hc : HasKernel (splitComplement j q) ∨
-      HasCokernel (splitComplement j q)) :
-    HasKernel (splitComplement j q) ∧
-      HasCokernel (splitComplement j q) := by
-  sorry
-
-theorem split_morphism_splitting
-    {C : Type u} [Category.{v} C] [Preadditive C]
-    {X Y : C} (j : Y ⟶ X) (q : X ⟶ Y) (h : j ≫ q = 𝟙 Y)
-    [HasKernel (splitComplement j q)]
-    [HasCokernel (splitComplement j q)] :
-    ∃ (b₁ : BinaryBiproductData (kernel (splitComplement j q)) Y)
-      (b₂ : BinaryBiproductData (cokernel (splitComplement j q)) Y),
-      Nonempty (X ≅ b₁.bicone.pt) ∧ Nonempty (X ≅ b₂.bicone.pt) := by
-  sorry
+    Nonempty (IsColimit (BinaryBicone.inrCokernelCofork (BinaryBiproduct.bicone X Y))) :=
+  ⟨BinaryBicone.isColimitInrCokernelCofork (BinaryBiproduct.isColimit X Y)⟩
 
 /-! ## The filtered-vector-space counterexample -/
 
@@ -589,6 +462,138 @@ theorem filtered_vector_space_counterexample
       Nonempty (coimage (filteredLineIdentity k) ≅ filteredLineV k) ∧
       Nonempty (image (filteredLineIdentity k) ≅ filteredLineW k) ∧
       ¬ Nonempty (Abelian (FilteredVectorSpace k)) := by
+  sorry
+
+/-! ## Idempotents and split morphisms -/
+
+def idempotentComplement
+    {C : Type u} [Category.{v} C] [Preadditive C]
+    {X : C} (f : X ⟶ X) : X ⟶ X :=
+  𝟙 X - f
+
+theorem idempotent_complement_relations
+    {C : Type u} [Category.{v} C] [Preadditive C]
+    {X : C} (f : X ⟶ X) (hf : f ≫ f = f) :
+    f ≫ idempotentComplement f = 0 ∧
+      idempotentComplement f ≫ f = 0 ∧
+      idempotentComplement f ≫ idempotentComplement f = idempotentComplement f := by
+  sorry
+
+/- The four clauses below are source-faithful universal-property interfaces
+   for Lemma `lemma-idempotent-kernel-cokernel`.  The existential proof of the
+   zero composite keeps the derived condition out of the hypotheses. -/
+
+theorem idempotent_kernel_gives_cokernel
+    {C : Type u} [Category.{v} C] [Preadditive C]
+    {X K : C} (f : X ⟶ X) (hf : f ≫ f = f)
+    (i : K ⟶ X) (hi : i ≫ f = 0)
+    (hker : IsLimit (KernelFork.ofι i hi))
+    (p : X ⟶ K)
+    (hp : idempotentComplement f = p ≫ i) :
+    ∃ hfp : f ≫ p = 0,
+      i ≫ p = 𝟙 K ∧
+        Nonempty (IsColimit (CokernelCofork.ofπ p hfp)) := by
+  sorry
+
+theorem idempotent_cokernel_gives_kernel
+    {C : Type u} [Category.{v} C] [Preadditive C]
+    {X Q : C} (f : X ⟶ X) (hf : f ≫ f = f)
+    (p : X ⟶ Q) (hp : f ≫ p = 0)
+    (hcoker : IsColimit (CokernelCofork.ofπ p hp))
+    (i : Q ⟶ X)
+    (hi : idempotentComplement f = p ≫ i) :
+    ∃ hif : i ≫ f = 0,
+      i ≫ p = 𝟙 Q ∧ Nonempty (IsLimit (KernelFork.ofι i hif)) := by
+  sorry
+
+theorem complement_kernel_gives_cokernel
+    {C : Type u} [Category.{v} C] [Preadditive C]
+    {X K : C} (f : X ⟶ X) (hf : f ≫ f = f)
+    (j : K ⟶ X) (hj : j ≫ idempotentComplement f = 0)
+    (hker : IsLimit (KernelFork.ofι j hj))
+    (q : X ⟶ K)
+    (hq : f = q ≫ j) :
+    ∃ hqg : idempotentComplement f ≫ q = 0,
+      j ≫ q = 𝟙 K ∧
+        Nonempty (IsColimit (CokernelCofork.ofπ q hqg)) := by
+  sorry
+
+theorem complement_cokernel_gives_kernel
+    {C : Type u} [Category.{v} C] [Preadditive C]
+    {X Q : C} (f : X ⟶ X) (hf : f ≫ f = f)
+    (q : X ⟶ Q) (hq : idempotentComplement f ≫ q = 0)
+    (hcoker : IsColimit (CokernelCofork.ofπ q hq))
+    (j : Q ⟶ X)
+    (hj : f = q ≫ j) :
+    ∃ hjf : j ≫ idempotentComplement f = 0,
+      j ≫ q = 𝟙 Q ∧ Nonempty (IsLimit (KernelFork.ofι j hjf)) := by
+  sorry
+
+theorem idempotent_splitting_has_all_kernels_and_cokernels
+    {C : Type u} [Category.{v} C] [Preadditive C]
+    {X : C} (f : X ⟶ X) (hf : f ≫ f = f)
+    (h : (HasKernel f ∨ HasCokernel f) ∧
+      (HasKernel (idempotentComplement f) ∨
+        HasCokernel (idempotentComplement f))) :
+    HasKernel f ∧ HasCokernel f ∧
+      HasKernel (idempotentComplement f) ∧
+      HasCokernel (idempotentComplement f) := by
+  sorry
+
+theorem idempotent_splitting_decompositions
+    {C : Type u} [Category.{v} C] [Preadditive C]
+    {X : C} (f : X ⟶ X) (hf : f ≫ f = f)
+    [HasKernel f] [HasCokernel f]
+    [HasKernel (idempotentComplement f)]
+    [HasCokernel (idempotentComplement f)] :
+    ∃ (b₁ : BinaryBiproductData (kernel f) (kernel (idempotentComplement f)))
+      (b₂ : BinaryBiproductData (cokernel f) (kernel (idempotentComplement f)))
+      (b₃ : BinaryBiproductData (kernel f) (cokernel (idempotentComplement f)))
+      (b₄ : BinaryBiproductData (cokernel f) (cokernel (idempotentComplement f))),
+      Nonempty (X ≅ b₁.bicone.pt) ∧
+        Nonempty (X ≅ b₂.bicone.pt) ∧
+        Nonempty (X ≅ b₃.bicone.pt) ∧
+        Nonempty (X ≅ b₄.bicone.pt) := by
+  sorry
+
+def splitComplement
+    {C : Type u} [Category.{v} C] [Preadditive C]
+    {X Y : C} (j : Y ⟶ X) (q : X ⟶ Y) : X ⟶ X :=
+  𝟙 X - q ≫ j
+
+theorem split_morphism_complement_has_kernel
+    {C : Type u} [Category.{v} C] [Preadditive C]
+    {X Y : C} (j : Y ⟶ X) (q : X ⟶ Y) (h : j ≫ q = 𝟙 Y) :
+    Nonempty (IsLimit (KernelFork.ofι j (by
+      simp only [splitComplement, comp_sub, Category.comp_id, ← Category.assoc, h,
+        Category.id_comp, sub_self]) :
+      KernelFork (splitComplement j q))) := by
+  sorry
+
+theorem split_morphism_complement_has_cokernel
+    {C : Type u} [Category.{v} C] [Preadditive C]
+    {X Y : C} (j : Y ⟶ X) (q : X ⟶ Y) (h : j ≫ q = 𝟙 Y) :
+    Nonempty (IsColimit (CokernelCofork.ofπ q (by
+      simp [splitComplement, Category.assoc, h]) : CokernelCofork (splitComplement j q))) := by
+  sorry
+
+theorem split_morphism_has_both_kernels_and_cokernels
+    {C : Type u} [Category.{v} C] [Preadditive C]
+    {X Y : C} (j : Y ⟶ X) (q : X ⟶ Y) (h : j ≫ q = 𝟙 Y)
+    (hc : HasKernel (j ≫ q) ∨ HasCokernel (j ≫ q)) :
+    HasKernel (j ≫ q) ∧ HasCokernel (j ≫ q) := by
+  sorry
+
+theorem split_morphism_splitting
+    {C : Type u} [Category.{v} C] [Preadditive C]
+    {X Y : C} (j : Y ⟶ X) (q : X ⟶ Y) (h : j ≫ q = 𝟙 Y)
+    (hc : HasKernel (j ≫ q) ∨ HasCokernel (j ≫ q)) :
+    ∃ (hk : HasKernel (j ≫ q)) (hck : HasCokernel (j ≫ q)),
+      letI : HasKernel (j ≫ q) := hk
+      letI : HasCokernel (j ≫ q) := hck
+      ∃ (b₁ : BinaryBiproductData (kernel (j ≫ q)) Y)
+        (b₂ : BinaryBiproductData (cokernel (j ≫ q)) Y),
+        Nonempty (X ≅ b₁.bicone.pt) ∧ Nonempty (X ≅ b₂.bicone.pt) := by
   sorry
 
 end Formalization.Books.Homology.Unit03

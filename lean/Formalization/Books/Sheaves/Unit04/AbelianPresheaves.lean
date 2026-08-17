@@ -60,7 +60,7 @@ theorem terminalPresheafIso_unique {X : TopCat.{v}} (F : Presheaf X)
     (terminalPresheafIso F hF).hom
 
 /-!
-The functor-category instances are not inferred through the universe-polymorphic
+The functor-category instance is not inferred through the universe-polymorphic
 `Presheaf` abbreviation at this point, so this explicit bridge exposes the
 canonical pointwise cartesian structure at the source-facing type.
 -/

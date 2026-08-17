@@ -870,7 +870,91 @@ theorem twoFibreProductOverCategory_canonically_equivalent
     Nonempty
       (TwoFibreProductOverCategory F.underlying G.underlying ≌
         IsoComma (overFunctor F.underlying) (overFunctor G.underlying)) := by
-  sorry
+  let inclusion :=
+    (TwoFibreProductOverProperty F.underlying G.underlying).ι
+  have hess : inclusion.EssSurj := by
+    constructor
+    intro z
+    let pX := structureFunctor X.underlying
+    let pY := structureFunctor Y.underlying
+    let pS := structureFunctor S.underlying
+    let hFx :
+        pS.obj ((overFunctor F.underlying).obj z.obj.left) =
+          pX.obj z.obj.left :=
+      congrArg (fun K : X.underlying.left ⥤ C => K.obj z.obj.left)
+        (overFunctor_comm F.underlying)
+    let hGy :
+        pS.obj ((overFunctor G.underlying).obj z.obj.right) =
+          pY.obj z.obj.right :=
+      congrArg (fun K : Y.underlying.left ⥤ C => K.obj z.obj.right)
+        (overFunctor_comm G.underlying)
+    let r : pX.obj z.obj.left ⟶ pY.obj z.obj.right :=
+      eqToHom hFx.symm ≫ pS.map z.obj.hom ≫ eqToHom hGy
+    letI : IsIso z.obj.hom := z.property
+    letI : IsIso r := by
+      dsimp [r]
+      infer_instance
+    obtain ⟨y', φ, hφ⟩ :=
+      (fibred_category_iff_exists_stronglyCartesian pY).mp inferInstance
+        z.obj.right (pX.obj z.obj.left) r
+    let _ : pY.IsStronglyCartesian r φ := hφ
+    have hdom : pY.obj y' = pX.obj z.obj.left :=
+      CategoryTheory.IsHomLift.domain_eq pY r φ
+    have hφmap : pY.map φ = eqToHom hdom ≫ r := by
+      simpa using CategoryTheory.IsHomLift.fac' pY r φ
+    letI : IsIso φ :=
+      Functor.IsStronglyCartesian.isIso_of_base_isIso pY r φ
+    let hGy' :
+        pS.obj ((overFunctor G.underlying).obj y') = pY.obj y' :=
+      congrArg (fun K : Y.underlying.left ⥤ C => K.obj y')
+        (overFunctor_comm G.underlying)
+    let e :
+        (overFunctor F.underlying).obj z.obj.left ⟶
+          (overFunctor G.underlying).obj y' :=
+      z.obj.hom ≫ inv ((overFunctor G.underlying).map φ)
+    have hGφ :
+        pS.map ((overFunctor G.underlying).map φ) =
+          eqToHom hGy' ≫ pY.map φ ≫ eqToHom hGy.symm :=
+      Functor.congr_hom (overFunctor_comm G.underlying) φ
+    let hright :
+        pS.obj ((overFunctor G.underlying).obj y') =
+          pX.obj z.obj.left := hGy'.trans hdom
+    have he : pS.IsHomLift (𝟙 (pX.obj z.obj.left)) e := by
+      apply CategoryTheory.IsHomLift.of_fac' pS
+        (𝟙 (pX.obj z.obj.left)) e hFx hright
+      dsimp [e]
+      simp only [Functor.map_comp, Functor.map_inv, hGφ, hφmap]
+      simp [r, hright, Category.assoc, eqToHom_trans]
+    let eFiber :
+        (⟨(overFunctor F.underlying).obj z.obj.left, hFx⟩ :
+          Functor.Fiber pS (pX.obj z.obj.left)) ⟶
+        (⟨(overFunctor G.underlying).obj y', hright⟩ :
+          Functor.Fiber pS (pX.obj z.obj.left)) :=
+      ⟨e, he⟩
+    letI : IsGroupoid (Functor.Fiber pS (pX.obj z.obj.left)) :=
+      hS (pX.obj z.obj.left)
+    letI : IsIso eFiber :=
+      (hS (pX.obj z.obj.left)).all_isIso eFiber
+    letI : IsIso e := by
+      change IsIso (Functor.Fiber.fiberInclusion.map eFiber)
+      infer_instance
+    let qz : TwoFibreProductOverCategory F.underlying G.underlying :=
+      { obj :=
+          { obj :=
+              { left := z.obj.left
+                right := y'
+                hom := e }
+            property := inferInstance }
+        property := ⟨pX.obj z.obj.left, rfl, hdom, he⟩ }
+    refine ⟨qz, ?_⟩
+    refine ⟨Comma.isoMk (Iso.refl _) (asIso φ) ?_⟩
+    dsimp [qz, e]
+    simp [Category.assoc]
+  letI : inclusion.IsEquivalence :=
+    { faithful := inferInstance
+      full := inferInstance
+      essSurj := hess }
+  exact ⟨inclusion.asEquivalence⟩
 
 /-! ## Fibrewise functors and equivalences -/
 
@@ -1154,7 +1238,94 @@ theorem fibredInGroupoids_equivalence_iff_fibrewise
     (hp : p.IsFibredInGroupoids) (hp' : p'.IsFibredInGroupoids) :
     G.IsEquivalence ↔
       ∀ U : C, (fibreFunctor p p' G over U).IsEquivalence := by
-  sorry
+  classical
+  have hp'group : ∀ U : C, IsGroupoid (Functor.Fiber p' U) :=
+    (fibredInGroupoids_iff_fibred_groupoid_fibres p').mp hp' |>.1
+  constructor
+  · intro hG U
+    letI : G.IsEquivalence := hG
+    letI : G.Full := hG.full
+    letI : G.Faithful := hG.faithful
+    have hGff : Nonempty G.FullyFaithful :=
+      ⟨Functor.FullyFaithful.ofFullyFaithful G⟩
+    let hFiberFF : (fibreFunctor p p' G over U).FullyFaithful :=
+      Classical.choice
+        ((fibredInGroupoids_fullyFaithful_iff_fibrewise
+          p p' G over hp hp').mp hGff U)
+    letI : (fibreFunctor p p' G over U).FullyFaithful := hFiberFF
+    letI : (fibreFunctor p p' G over U).Full := hFiberFF.full
+    letI : (fibreFunctor p p' G over U).Faithful := hFiberFF.faithful
+    letI : G.EssSurj := hG.essSurj
+    letI : (fibreFunctor p p' G over U).EssSurj := by
+      constructor
+      intro y
+      obtain ⟨x, ⟨e⟩⟩ := Functor.EssSurj.mem_essImage G y.1
+      let hx : p'.obj (G.obj x) = p.obj x :=
+        congrArg (fun K : S ⥤ C => K.obj x) over
+      let f : U ⟶ p.obj x :=
+        eqToHom y.2.symm ≫ p'.map e.inv ≫ eqToHom hx
+      letI : IsIso f := by
+        dsimp [f]
+        infer_instance
+      obtain ⟨x', φ, hφ⟩ := hp.exists_lift f rfl
+      let _ : p.IsHomLift f φ := hφ
+      have hdom : p.obj x' = U :=
+        CategoryTheory.IsHomLift.domain_eq p f φ
+      have hφmap : p.map φ = eqToHom hdom ≫ f := by
+        simpa using CategoryTheory.IsHomLift.fac' p f φ
+      letI : IsIso (p.map φ) := by
+        rw [hφmap]
+        infer_instance
+      letI : p.IsStronglyCartesian (p.map φ) φ :=
+        fibredInGroupoids_all_morphisms_stronglyCartesian p hp φ
+      letI : IsIso φ :=
+        Functor.IsStronglyCartesian.isIso_of_base_isIso p (p.map φ) φ
+      let hx' : p'.obj (G.obj x') = p.obj x' :=
+        congrArg (fun K : S ⥤ C => K.obj x') over
+      let hxU : p'.obj (G.obj x') = U := hx'.trans hdom
+      let xU : Functor.Fiber p U := ⟨x', hdom⟩
+      letI : IsGroupoid (Functor.Fiber p' U) := hp'group U
+      let k : (fibreFunctor p p' G over U).obj xU ⟶ y := by
+        refine ⟨G.map φ ≫ e.hom, ?_⟩
+        apply CategoryTheory.IsHomLift.of_fac' p' (𝟙 U)
+          (G.map φ ≫ e.hom) hxU y.2
+        have hGφ : p'.map (G.map φ) =
+            eqToHom hx' ≫ p.map φ ≫ eqToHom hx.symm :=
+          Functor.congr_hom over φ
+        rw [Functor.map_comp, hGφ, hφmap]
+        dsimp [f, hxU]
+        simp [Category.assoc]
+      letI : IsIso k := by
+        exact (hp'group U).all_isIso k
+      exact ⟨xU, ⟨asIso k⟩⟩
+    exact {
+      faithful := hFiberFF.faithful
+      full := hFiberFF.full
+      essSurj := inferInstance
+    }
+  · intro hG
+    have hGff : Nonempty G.FullyFaithful :=
+      (fibredInGroupoids_fullyFaithful_iff_fibrewise
+        p p' G over hp hp').mpr (by
+          intro U
+          letI : (fibreFunctor p p' G over U).IsEquivalence := hG U
+          exact ⟨Functor.FullyFaithful.ofFullyFaithful _⟩)
+    let hGff' : G.FullyFaithful := Classical.choice hGff
+    have hGess : G.EssSurj := by
+      constructor
+      intro y
+      let U := p'.obj y
+      letI : (fibreFunctor p p' G over U).IsEquivalence := hG U
+      obtain ⟨x, ⟨e⟩⟩ := Functor.EssSurj.mem_essImage
+        (fibreFunctor p p' G over U) ⟨y, rfl⟩
+      refine ⟨x.1, ?_⟩
+      exact ⟨(Functor.Fiber.fiberInclusion
+        (p := p') (S := U)).mapIso e⟩
+    exact {
+      faithful := hGff'.faithful
+      full := hGff'.full
+      essSurj := hGess
+    }
 
 /-- Equivalence over the fixed base, expressed in the category of fibred
 category morphisms.  Its isomorphisms are precisely the vertical natural

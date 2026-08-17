@@ -1,0 +1,1 @@
+import Formalization.Books.Derived.Unit12.CanonicalDeltaFunctor

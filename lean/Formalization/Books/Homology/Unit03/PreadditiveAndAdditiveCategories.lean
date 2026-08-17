@@ -479,6 +479,41 @@ theorem idempotent_complement_relations
       idempotentComplement f ≫ idempotentComplement f = idempotentComplement f := by
   sorry
 
+/- The maps obtained from the four canonical (co)kernels in the source's
+   splitting lemma.  Naming them makes the direct-sum structure in the
+   decomposition statement explicit rather than merely asserting an
+   isomorphism of the underlying objects. -/
+
+def idempotent_kernel_projection
+    {C : Type u} [Category.{v} C] [Preadditive C]
+    {X : C} (f : X ⟶ X) (hf : f ≫ f = f) [HasKernel f] :
+    X ⟶ kernel f :=
+  kernel.lift f (idempotentComplement f)
+    (idempotent_complement_relations f hf).2.1
+
+def idempotent_cokernel_inclusion
+    {C : Type u} [Category.{v} C] [Preadditive C]
+    {X : C} (f : X ⟶ X) (hf : f ≫ f = f) [HasCokernel f] :
+    cokernel f ⟶ X :=
+  cokernel.desc f (idempotentComplement f)
+    (idempotent_complement_relations f hf).1
+
+def idempotent_complement_kernel_projection
+    {C : Type u} [Category.{v} C] [Preadditive C]
+    {X : C} (f : X ⟶ X) (hf : f ≫ f = f)
+    [HasKernel (idempotentComplement f)] :
+    X ⟶ kernel (idempotentComplement f) :=
+  kernel.lift (idempotentComplement f) f
+    (idempotent_complement_relations f hf).1
+
+def idempotent_complement_cokernel_inclusion
+    {C : Type u} [Category.{v} C] [Preadditive C]
+    {X : C} (f : X ⟶ X) (hf : f ≫ f = f)
+    [HasCokernel (idempotentComplement f)] :
+    cokernel (idempotentComplement f) ⟶ X :=
+  cokernel.desc (idempotentComplement f) f
+    (idempotent_complement_relations f hf).2.1
+
 /- The four clauses below are source-faithful universal-property interfaces
    for Lemma `lemma-idempotent-kernel-cokernel`.  The existential proof of the
    zero composite keeps the derived condition out of the hypotheses. -/
@@ -550,10 +585,28 @@ theorem idempotent_splitting_decompositions
       (b₂ : BinaryBiproductData (cokernel f) (kernel (idempotentComplement f)))
       (b₃ : BinaryBiproductData (kernel f) (cokernel (idempotentComplement f)))
       (b₄ : BinaryBiproductData (cokernel f) (cokernel (idempotentComplement f))),
-      Nonempty (X ≅ b₁.bicone.pt) ∧
-        Nonempty (X ≅ b₂.bicone.pt) ∧
-        Nonempty (X ≅ b₃.bicone.pt) ∧
-        Nonempty (X ≅ b₄.bicone.pt) := by
+      ∃ (e₁ : X ≅ b₁.bicone.pt) (e₂ : X ≅ b₂.bicone.pt)
+        (e₃ : X ≅ b₃.bicone.pt) (e₄ : X ≅ b₄.bicone.pt),
+        kernel.ι f ≫ e₁.hom = b₁.bicone.inl ∧
+          kernel.ι (idempotentComplement f) ≫ e₁.hom = b₁.bicone.inr ∧
+          e₁.hom ≫ b₁.bicone.fst = idempotent_kernel_projection f hf ∧
+          e₁.hom ≫ b₁.bicone.snd =
+            idempotent_complement_kernel_projection f hf ∧
+          idempotent_cokernel_inclusion f hf ≫ e₂.hom = b₂.bicone.inl ∧
+          kernel.ι (idempotentComplement f) ≫ e₂.hom = b₂.bicone.inr ∧
+          e₂.hom ≫ b₂.bicone.fst = cokernel.π f ∧
+          e₂.hom ≫ b₂.bicone.snd =
+            idempotent_complement_kernel_projection f hf ∧
+          kernel.ι f ≫ e₃.hom = b₃.bicone.inl ∧
+          idempotent_complement_cokernel_inclusion f hf ≫ e₃.hom =
+            b₃.bicone.inr ∧
+          e₃.hom ≫ b₃.bicone.fst = idempotent_kernel_projection f hf ∧
+          e₃.hom ≫ b₃.bicone.snd = cokernel.π (idempotentComplement f) ∧
+          idempotent_cokernel_inclusion f hf ≫ e₄.hom = b₄.bicone.inl ∧
+          idempotent_complement_cokernel_inclusion f hf ≫ e₄.hom =
+            b₄.bicone.inr ∧
+          e₄.hom ≫ b₄.bicone.fst = cokernel.π f ∧
+          e₄.hom ≫ b₄.bicone.snd = cokernel.π (idempotentComplement f) := by
   sorry
 
 def splitComplement
@@ -580,20 +633,26 @@ theorem split_morphism_complement_has_cokernel
 theorem split_morphism_has_both_kernels_and_cokernels
     {C : Type u} [Category.{v} C] [Preadditive C]
     {X Y : C} (j : Y ⟶ X) (q : X ⟶ Y) (h : j ≫ q = 𝟙 Y)
-    (hc : HasKernel (j ≫ q) ∨ HasCokernel (j ≫ q)) :
-    HasKernel (j ≫ q) ∧ HasCokernel (j ≫ q) := by
+    (hc : HasKernel (q ≫ j) ∨ HasCokernel (q ≫ j)) :
+    HasKernel (q ≫ j) ∧ HasCokernel (q ≫ j) := by
   sorry
 
 theorem split_morphism_splitting
     {C : Type u} [Category.{v} C] [Preadditive C]
     {X Y : C} (j : Y ⟶ X) (q : X ⟶ Y) (h : j ≫ q = 𝟙 Y)
-    (hc : HasKernel (j ≫ q) ∨ HasCokernel (j ≫ q)) :
-    ∃ (hk : HasKernel (j ≫ q)) (hck : HasCokernel (j ≫ q)),
-      letI : HasKernel (j ≫ q) := hk
-      letI : HasCokernel (j ≫ q) := hck
-      ∃ (b₁ : BinaryBiproductData (kernel (j ≫ q)) Y)
-        (b₂ : BinaryBiproductData (cokernel (j ≫ q)) Y),
-        Nonempty (X ≅ b₁.bicone.pt) ∧ Nonempty (X ≅ b₂.bicone.pt) := by
+    (hc : HasKernel (q ≫ j) ∨ HasCokernel (q ≫ j)) :
+    ∃ (hk : HasKernel (q ≫ j)) (hck : HasCokernel (q ≫ j)),
+      letI : HasKernel (q ≫ j) := hk
+      letI : HasCokernel (q ≫ j) := hck
+      ∃ (b₁ : BinaryBiproductData (kernel (q ≫ j)) Y)
+        (b₂ : BinaryBiproductData (cokernel (q ≫ j)) Y),
+        ∃ (e₁ : X ≅ b₁.bicone.pt) (e₂ : X ≅ b₂.bicone.pt),
+          kernel.ι (q ≫ j) ≫ e₁.hom = b₁.bicone.inl ∧
+            b₁.bicone.inr ≫ e₁.inv = j ∧
+            e₁.hom ≫ b₁.bicone.snd = q ∧
+            e₂.hom ≫ b₂.bicone.fst = cokernel.π (q ≫ j) ∧
+            b₂.bicone.inr ≫ e₂.inv = j ∧
+            e₂.hom ≫ b₂.bicone.snd = q := by
   sorry
 
 end Formalization.Books.Homology.Unit03

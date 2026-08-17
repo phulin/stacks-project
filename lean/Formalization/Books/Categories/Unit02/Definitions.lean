@@ -100,7 +100,43 @@ theorem oneObjectCategoryOfGroup_composition (G : Type u) [Group G]
 theorem one_object_groupoid_is_equivalent_to_single_object
     (C : Type u) [Category.{v} C] [IsGroupoid C] [Unique C] :
     Nonempty (C ≌ SingleObj (End (default : C))) := by
-  sorry
+  let M := End (default : C)
+  let F : C ⥤ SingleObj M :=
+    { obj := fun _ => SingleObj.star M
+      map := fun {X Y} f =>
+        (eqToHom (Unique.eq_default X).symm ≫ f ≫ eqToHom (Unique.eq_default Y) :
+          End (default : C))
+      map_id := by
+        intro X
+        simp [M, SingleObj.id_as_one]
+        exact (End.one_def (X := (default : C))).symm
+      map_comp := by
+        intro X Y Z f g
+        cases Unique.eq_default X
+        cases Unique.eq_default Y
+        cases Unique.eq_default Z
+        simp only [eqToHom_refl, Category.id_comp, Category.comp_id]
+        rfl }
+  let G : SingleObj M ⥤ C :=
+    SingleObj.functor (X := (default : C)) (MonoidHom.id M)
+  let unitIso : 𝟭 C ≅ F ⋙ G :=
+    NatIso.ofComponents (fun X => eqToIso (Unique.eq_default X)) (by
+      intro X Y f
+      change f ≫ eqToHom (Unique.eq_default Y) =
+        eqToHom (Unique.eq_default X) ≫
+          (eqToHom (Unique.eq_default X).symm ≫ f ≫ eqToHom (Unique.eq_default Y))
+      simp)
+  let counitIso : G ⋙ F ≅ 𝟭 (SingleObj M) :=
+    NatIso.ofComponents (fun _ => Iso.refl _) (by
+      intro X Y f
+      cases X
+      cases Y
+      simp [F, G, SingleObj.functor])
+  exact ⟨Equivalence.mk' F G unitIso counitIso (by
+    intro X
+    cases Unique.eq_default X
+    simp [M, F, G, unitIso, counitIso, SingleObj.functor, SingleObj.id_as_one]
+    exact Category.id_comp (1 : End (default : C)))⟩
 
 theorem discreteCategoryOn_is_groupoid (C : Type u) :
     IsGroupoid (Discrete C) := by
@@ -189,12 +225,16 @@ theorem essentially_surjective_iff_isomorphic_preimages
 theorem groupHomomorphismFunctor_faithful_iff_injective
     {G : Type u} {H : Type v} [Group G] [Group H] (p : G →* H) :
     (MonoidHom.toFunctor p).Faithful ↔ Function.Injective p := by
-  sorry
+  rw [faithful_iff_injective_maps]
+  change (∀ (X Y : SingleObj G), Function.Injective p) ↔ Function.Injective p
+  exact ⟨fun h => h (SingleObj.star G) (SingleObj.star G), fun h _ _ => h⟩
 
 theorem groupHomomorphismFunctor_fully_faithful_iff_bijective
     {G : Type u} {H : Type v} [Group G] [Group H] (p : G →* H) :
     Nonempty (MonoidHom.toFunctor p).FullyFaithful ↔ Function.Bijective p := by
-  sorry
+  rw [fully_faithful_iff_bijective_maps]
+  change (∀ (X Y : SingleObj G), Function.Bijective p) ↔ Function.Bijective p
+  exact ⟨fun h => h (SingleObj.star G) (SingleObj.star G), fun h _ _ => h⟩
 
 /-! ## Subcategories -/
 
@@ -296,7 +336,58 @@ theorem construct_quasi_inverse
       (∀ X : D, j.obj X = jObj X) ∧
       (∃ t : 𝟭 D ≅ j ⋙ F, ∀ X : D, HEq (t.app X) (i X)) ∧
       ∃ e : C ≌ D, e.functor = F ∧ e.inverse = j := by
-  sorry
+  let j : D ⥤ C :=
+    { obj := jObj
+      map := fun {X Y} f => F.preimage ((i X).inv ≫ f ≫ (i Y).hom)
+      map_id := by
+        intro X
+        apply F.map_injective
+        simp
+      map_comp := by
+        intro X Y Z f g
+        apply F.map_injective
+        simp }
+  let t : 𝟭 D ≅ j ⋙ F :=
+    NatIso.ofComponents i (by
+      intro X Y f
+      simp [j])
+  let u : 𝟭 C ≅ F ⋙ j :=
+    NatIso.ofComponents (fun X => F.preimageIso (i (F.obj X))) (by
+      intro X Y f
+      apply F.map_injective
+      simp [j, Functor.preimageIso])
+  let e : C ≌ D :=
+    Equivalence.mk' F j u t.symm (by
+      intro X
+      simp [u, t, j, Functor.preimageIso])
+  refine ⟨j, ?_, ?_⟩
+  · refine ⟨fun X => rfl, ⟨t, ?_⟩, ⟨e, rfl, rfl⟩⟩
+    intro X
+    rfl
+  · rintro j' ⟨hObj, ⟨t', ht'⟩, e', hFunctor, hInverse⟩
+    have hObjFun : j'.obj = jObj := funext hObj
+    cases j' with
+    | mk obj' map' map_id' map_comp' =>
+      dsimp at hObjFun
+      cases hObjFun
+      dsimp [j]
+      refine Functor.hext
+        (F := { obj := jObj, map := map', map_id := map_id', map_comp := map_comp' })
+        (G := j) (fun _ => rfl) ?_
+      intro X Y f
+      apply heq_of_eq
+      apply F.map_injective
+      have hnat' := t'.hom.naturality f
+      have hnat := t.hom.naturality f
+      have hX : t'.hom.app X = (i X).hom := by
+        change (t'.app X).hom = (i X).hom
+        exact congrArg Iso.hom (eq_of_heq (ht' X))
+      have hY : t'.hom.app Y = (i Y).hom := by
+        change (t'.app Y).hom = (i Y).hom
+        exact congrArg Iso.hom (eq_of_heq (ht' Y))
+      rw [hX, hY] at hnat'
+      apply (cancel_epi (i X).hom).1
+      exact hnat'.symm.trans hnat
 
 theorem equivalence_iff_full_faithful_essentially_surjective
     {C : Type u₁} [Category.{v₁} C] {D : Type u₂} [Category.{v₂} D]

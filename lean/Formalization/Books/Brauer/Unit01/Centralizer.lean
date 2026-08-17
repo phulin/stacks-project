@@ -54,6 +54,6 @@ theorem maximal_subfield_dimension_square (k A K : Type*) [Field k]
     [FiniteDimensional k K] (f : K →ₐ[k] A) (hf : Function.Injective f)
     (hmax : IsMaximalCommutativeSubalgebra k A (AlgHom.range f)) :
     Module.finrank k A = Module.finrank k K ^ 2 := by
-  sorry
+  exact ((self_centralizing_subfield_tfae k A K f hf).out 2 0).mp hmax
 
 end Formalization.Books.Brauer

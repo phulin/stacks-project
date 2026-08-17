@@ -25,7 +25,7 @@ theorem finite_central_simple_automorphism_inner (k A : Type*) [Field k]
     [Algebra.IsCentral k A] [IsSimpleRing A] (f : A ≃ₐ[k] A) :
     ∃ x : Aˣ, ∀ a : A,
       f a = (x : A) * a * (x⁻¹ : Aˣ) := by
-  sorry
+  simpa using (skolem_noether k A A f (AlgEquiv.refl : A ≃ₐ[k] A))
 
 theorem matrix_automorphism_inner (k : Type*) (n : ℕ) [Field k] [NeZero n]
     (f : Matrix (Fin n) (Fin n) k ≃ₐ[k] Matrix (Fin n) (Fin n) k) :

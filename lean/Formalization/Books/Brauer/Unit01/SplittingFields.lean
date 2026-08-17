@@ -144,6 +144,38 @@ theorem finite_central_simple_degree_is_unique (k A : Type*) [Field k]
     [Ring A] [Algebra k A] [FiniteDimensional k A]
     [Algebra.IsCentral k A] [IsSimpleRing A] :
     ∃! d : ℕ, 0 < d ∧ SplitsInDegree k A (AlgebraicClosure k) d := by
-  sorry
+  let K := AlgebraicClosure k
+  letI : Algebra K (A ⊗[k] K) := Algebra.TensorProduct.rightAlgebra
+  have hbase := base_change_finite_central_simple k A K
+  letI : FiniteDimensional K (A ⊗[k] K) := hbase.1
+  letI : Algebra.IsCentral K (A ⊗[k] K) := hbase.2.1
+  letI : IsSimpleRing (A ⊗[k] K) := hbase.2.2
+  obtain ⟨d, hd, ⟨e⟩⟩ :=
+    IsSimpleRing.exists_algEquiv_matrix_of_isAlgClosed K (A ⊗[k] K)
+  have hbase_finrank : Module.finrank K (A ⊗[k] K) = Module.finrank k A := by
+    calc
+      Module.finrank K (A ⊗[k] K) = Module.finrank K (K ⊗[k] A) :=
+        (Algebra.TensorProduct.commRight k K A).toLinearEquiv.finrank_eq.symm
+      _ = Module.finrank k A := by rw [Module.finrank_baseChange]
+  have hdegree : 0 < d := Nat.pos_iff_ne_zero.mpr hd.out
+  refine ⟨d, ⟨hdegree, ?_⟩, ?_⟩
+  · exact ⟨e⟩
+  · intro d' hd'
+    rcases hd' with ⟨hdegree', hsplit⟩
+    dsimp [SplitsInDegree] at hsplit
+    obtain ⟨e'⟩ := hsplit
+    have hdsq : d' ^ 2 = Module.finrank k A := by
+      calc
+        d' ^ 2 = Module.finrank K (Matrix (Fin d') (Fin d') K) := by
+          simp [Module.finrank_matrix, pow_two]
+        _ = Module.finrank K (A ⊗[k] K) := e'.toLinearEquiv.finrank_eq.symm
+        _ = Module.finrank k A := hbase_finrank
+    have hdsq0 : d ^ 2 = Module.finrank k A := by
+      calc
+        d ^ 2 = Module.finrank K (Matrix (Fin d) (Fin d) K) := by
+          simp [Module.finrank_matrix, pow_two]
+        _ = Module.finrank K (A ⊗[k] K) := e.toLinearEquiv.finrank_eq.symm
+        _ = Module.finrank k A := hbase_finrank
+    exact Nat.pow_left_injective (n := 2) (by decide) (hdsq.trans hdsq0.symm)
 
 end Formalization.Books.Brauer

@@ -1,5 +1,7 @@
 import Formalization.Books.Brauer.Unit01.Wedderburn
 import Mathlib.Algebra.Field.IsField
+import Mathlib.Algebra.Field.ULift
+import Mathlib.Algebra.Azumaya.Defs
 import Mathlib.Algebra.Algebra.Subalgebra.Centralizer
 import Mathlib.Algebra.Central.Matrix
 import Mathlib.Algebra.Central.End
@@ -9,14 +11,19 @@ import Mathlib.Data.Matrix.Basis
 import Mathlib.LinearAlgebra.Matrix.Ideal
 import Mathlib.LinearAlgebra.Matrix.Action
 import Mathlib.LinearAlgebra.Matrix.FiniteDimensional
+import Mathlib.LinearAlgebra.FiniteDimensional.Lemmas
+import Mathlib.LinearAlgebra.Dimension.Free
 import Mathlib.LinearAlgebra.TensorProduct.Basic
+import Mathlib.LinearAlgebra.TensorProduct.Quotient
 import Mathlib.LinearAlgebra.TensorProduct.RightExactness
 import Mathlib.RingTheory.Morita.Matrix
+import Mathlib.RingTheory.MatrixAlgebra
 import Mathlib.RingTheory.Artinian.Instances
 import Mathlib.RingTheory.HopkinsLevitzki
 import Mathlib.RingTheory.SimpleRing.Field
 import Mathlib.RingTheory.SimpleModule.Isotypic
 import Mathlib.RingTheory.TensorProduct.Basic
+import Mathlib.RingTheory.TensorProduct.Nontrivial
 import Mathlib.RingTheory.TwoSidedIdeal.Operations
 
 /-!
@@ -28,7 +35,7 @@ endomorphism-ring interfaces used in Section 4 of the source.
 
 namespace Formalization.Books.Brauer
 
-universe u_k u_A u_N
+universe u_k u_A u_N u_V u_K
 
 open scoped TensorProduct Matrix.Module
 
@@ -168,38 +175,474 @@ end Centralizers
 
 section GeneratedSubspaces
 
+private theorem exists_unit_pure_tensor_of_nonzero_two_sided
+    (k : Type u_k) (V : Type u_V) (K : Type u_K) [Field k]
+    [AddCommGroup V] [Module k V] [DivisionRing K] [Algebra k K]
+    [Algebra.IsCentral k K] (W : Submodule k (V ⊗[k] K))
+    (hW : TwoSidedKSubspace k V K W) (hW0 : W ≠ ⊥) :
+    ∃ v : V, v ≠ 0 ∧ v ⊗ₜ[k] (1 : K) ∈ W := by
+  classical
+  let b := Module.Free.chooseBasis k V
+  let E : V ⊗[k] K ≃ₗ[k]
+      (Module.Free.ChooseBasisIndex k V →₀ K) :=
+    TensorProduct.equivFinsuppOfBasisLeft b
+  have hE_left (a : K) (z : V ⊗[k] K) :
+      E (tensorLeftMultiply k V K a z) =
+        (E z).mapRange (fun d => a * d) (by simp) := by
+    apply Finsupp.ext
+    intro i
+    induction z using TensorProduct.induction_on with
+    | zero => simp
+    | tmul v d =>
+        simp [E, tensorLeftMultiply, mul_smul_comm]
+    | add z₁ z₂ ih₁ ih₂ =>
+        simp [ih₁, ih₂, mul_add]
+  have hE_right (a : K) (z : V ⊗[k] K) :
+      E (tensorRightMultiply k V K a z) =
+        (E z).mapRange (fun d => d * a) (by simp) := by
+    apply Finsupp.ext
+    intro i
+    induction z using TensorProduct.induction_on with
+    | zero => simp
+    | tmul v d =>
+        simp [E, tensorRightMultiply]
+    | add z₁ z₂ ih₁ ih₂ =>
+        simp [ih₁, ih₂, add_mul]
+  let P : ℕ → Prop := fun n =>
+    ∃ x, x ∈ W ∧ x ≠ 0 ∧ (E x).support.card = n
+  have hP : ∃ n, P n := by
+    have hWmem : ∃ x, x ∈ W ∧ x ≠ 0 := by
+      by_contra h
+      apply hW0
+      ext x
+      constructor
+      · intro hx
+        by_contra hx0
+        exact h ⟨x, hx, hx0⟩
+      · intro hx
+        have hx' : x = 0 := by simpa using hx
+        simpa [hx'] using W.zero_mem
+    obtain ⟨x, hxW, hx0⟩ := hWmem
+    refine ⟨(E x).support.card, x, hxW, hx0, rfl⟩
+  let n := Nat.find hP
+  obtain ⟨x, hxW, hx0, hxcard⟩ := Nat.find_spec hP
+  have hcx : E x ≠ 0 := by
+    intro h
+    apply hx0
+    apply E.injective
+    simpa using h
+  obtain ⟨i, hi⟩ := Finsupp.support_nonempty_iff.mpr hcx
+  have hic : E x i ≠ 0 := Finsupp.mem_support_iff.mp hi
+  let a := (E x i)⁻¹
+  let c := (E x).mapRange (fun d => a * d) (by simp)
+  have hainj : Function.Injective (fun d : K => a * d) := by
+    intro p q hpq
+    exact mul_left_cancel₀ (inv_ne_zero hic) hpq
+  have hcsupp : c.support = (E x).support := by
+    exact Finsupp.support_mapRange_of_injective (by simp) _ hainj
+  have hci : c i = 1 := by
+    simp [c, a, hic]
+  have hc0 : c ≠ 0 := by
+    intro h
+    have hi' := congrArg (fun f => f i) h
+    simpa [hci] using hi'
+  let y := tensorLeftMultiply k V K a x
+  have hcy : E y = c := by
+    exact hE_left a x
+  have hy0 : y ≠ 0 := by
+    intro h
+    apply hc0
+    rw [← hcy, h]
+    simp
+  have hyW : y ∈ W := hW.1 a x hxW
+  have hycard : (E y).support.card = n := by
+    rw [hcy, hcsupp]
+    exact hxcard
+  have hiy : i ∈ (E y).support := by
+    rw [hcy, hcsupp]
+    exact hi
+  have hcomm (d : K) :
+      tensorLeftMultiply k V K d y =
+        tensorRightMultiply k V K d y := by
+    by_contra hne
+    let z := tensorLeftMultiply k V K d y -
+      tensorRightMultiply k V K d y
+    have hzW : z ∈ W :=
+      W.sub_mem (hW.1 d y hyW) (hW.2 d y hyW)
+    have hEz :
+        E z =
+          (E y).mapRange (fun q => d * q) (by simp) -
+            (E y).mapRange (fun q => q * d) (by simp) := by
+      have hEz' := congrArg₂ (fun p q => p - q)
+        (hE_left d y) (hE_right d y)
+      simpa [z] using hEz'
+    have hsubset : (E z).support ⊆ (E y).support.erase i := by
+      intro j hj
+      have hjbase : j ∈ (E y).support := by
+        by_contra hjnot
+        have hyj : E y j = 0 := Finsupp.notMem_support_iff.mp hjnot
+        have hzj : E z j = 0 := by
+          rw [hEz]
+          simp [hyj]
+        exact (Finsupp.mem_support_iff.mp hj) hzj
+      have hji : j ≠ i := by
+        intro hji
+        subst j
+        have hzj : E z i = 0 := by
+          rw [hEz]
+          simp [hcy, hci]
+        exact (Finsupp.mem_support_iff.mp hj) hzj
+      exact Finset.mem_erase.mpr ⟨hji, hjbase⟩
+    have hcardle := Finset.card_le_card hsubset
+    rw [Finset.card_erase_of_mem hiy] at hcardle
+    have hpos : 0 < (E y).support.card := Finset.card_pos.mpr ⟨i, hiy⟩
+    have hlt_y : (E z).support.card < (E y).support.card := by omega
+    have hlt : (E z).support.card < n := by simpa [hycard] using hlt_y
+    exact (Nat.find_min hP (by simpa [n] using hlt))
+      ⟨z, hzW, sub_ne_zero.mpr hne, rfl⟩
+  have hscalar (j : Module.Free.ChooseBasisIndex k V) :
+      ∃ r : k, E y j = algebraMap k K r := by
+    have hjcenter : E y j ∈ Subalgebra.center k K := by
+      rw [Subalgebra.mem_center_iff]
+      intro d
+      have hh := congrArg (fun q => E q j) (hcomm d)
+      rw [hE_left, hE_right] at hh
+      simpa using hh
+    exact (Algebra.IsCentral.mem_center_iff (K := k) (D := K)).mp hjcenter
+  choose r hr using hscalar
+  let d : Module.Free.ChooseBasisIndex k V →₀ k :=
+    Finsupp.onFinset (E y).support r (by
+      intro j hj
+      apply Finsupp.mem_support_iff.mpr
+      intro hyj
+      apply hj
+      apply FaithfulSMul.algebraMap_injective k K
+      rw [← hr j, hyj]
+      simp)
+  have hdr (j : Module.Free.ChooseBasisIndex k V) :
+      algebraMap k K (d j) = E y j := by
+    by_cases hj : j ∈ (E y).support
+    · simpa [d, hj] using (hr j).symm
+    · have hyj : E y j = 0 := Finsupp.notMem_support_iff.mp hj
+      have hr0 : r j = 0 := by
+        apply FaithfulSMul.algebraMap_injective k K
+        rw [← hr j, hyj]
+        simp
+      simp [d, hr0, hyj]
+  let v : V := b.repr.symm d
+  have hvy : v ⊗ₜ[k] (1 : K) = y := by
+    apply E.injective
+    apply Finsupp.ext
+    intro j
+    simpa [E, v, Algebra.smul_def] using hdr j
+  have hv0 : v ≠ 0 := by
+    intro hv
+    apply hy0
+    rw [← hvy, hv]
+    simp
+  exact ⟨v, hv0, hvy ▸ hyW⟩
+
 theorem two_sided_subspace_generated (k V K : Type*) [Field k]
     [AddCommGroup V] [Module k V] [DivisionRing K] [Algebra k K]
     [Algebra.IsCentral k K] (W : Submodule k (V ⊗[k] K))
     (hW : TwoSidedKSubspace k V K W) :
     W = leftKSpan k V K
       {z | ∃ v : V, z = v ⊗ₜ[k] (1 : K) ∧ z ∈ W} := by
-  sorry
+  classical
+  let tmulOne : V →ₗ[k] V ⊗[k] K := (TensorProduct.mk k V K).flip 1
+  let U : Submodule k V := W.comap tmulOne
+  let Q : Submodule k (V ⊗[k] K) :=
+    LinearMap.range (TensorProduct.map U.subtype (LinearMap.id : K →ₗ[k] K))
+  let R : Submodule k (V ⊗[k] K) := leftKSpan k V K
+    {z | ∃ v : V, z = v ⊗ₜ[k] (1 : K) ∧ z ∈ W}
+  have hQR : Q ≤ R := by
+    rintro z ⟨y, rfl⟩
+    induction y using TensorProduct.induction_on with
+    | zero => exact R.zero_mem
+    | tmul u c =>
+        apply Submodule.subset_span
+        refine ⟨c, (u : V) ⊗ₜ[k] (1 : K), ?_, ?_⟩
+        · refine ⟨u, rfl, ?_⟩
+          exact u.property
+        · simp [Q, tensorLeftMultiply]
+    | add y₁ y₂ ih₁ ih₂ => simpa using R.add_mem ih₁ ih₂
+  let e : (V ⧸ U) ⊗[k] K ≃ₗ[k] (V ⊗[k] K) ⧸ Q :=
+    TensorProduct.quotientTensorEquiv K U
+  have e_left (c : K) (x : V ⊗[k] K) :
+      e (tensorLeftMultiply k (V ⧸ U) K c (e.symm (Q.mkQ x))) =
+        Q.mkQ (tensorLeftMultiply k V K c x) := by
+    induction x using TensorProduct.induction_on with
+    | zero => simp
+    | tmul v d =>
+        simp [e, Q, tensorLeftMultiply,
+          TensorProduct.quotientTensorEquiv_symm_apply_mk_tmul]
+    | add x y ihx ihy =>
+        simp only [e.symm.map_add, map_add]
+        rw [ihx, ihy]
+  have e_right (c : K) (x : V ⊗[k] K) :
+      e (tensorRightMultiply k (V ⧸ U) K c (e.symm (Q.mkQ x))) =
+        Q.mkQ (tensorRightMultiply k V K c x) := by
+    induction x using TensorProduct.induction_on with
+    | zero => simp
+    | tmul v d =>
+        simp [e, Q, tensorRightMultiply,
+          TensorProduct.quotientTensorEquiv_symm_apply_mk_tmul]
+    | add x y ihx ihy =>
+        simp only [e.symm.map_add, map_add]
+        rw [ihx, ihy]
+  let Wq0 : Submodule k ((V ⊗[k] K) ⧸ Q) := Submodule.map Q.mkQ W
+  let Wq : Submodule k ((V ⧸ U) ⊗[k] K) := Wq0.comap e.toLinearMap
+  have hWq : TwoSidedKSubspace k (V ⧸ U) K Wq := by
+    constructor
+    · intro c z hz
+      change e z ∈ Wq0 at hz
+      change e (tensorLeftMultiply k (V ⧸ U) K c z) ∈ Wq0
+      rcases Submodule.mem_map.mp hz with ⟨x, hx, hxeq⟩
+      refine ⟨tensorLeftMultiply k V K c x, hW.1 c x hx, ?_⟩
+      have hz' : z = e.symm (Q.mkQ x) := by
+        apply e.injective
+        simpa using hxeq.symm
+      rw [hz']
+      exact (e_left c x).symm
+    · intro c z hz
+      change e z ∈ Wq0 at hz
+      change e (tensorRightMultiply k (V ⧸ U) K c z) ∈ Wq0
+      rcases Submodule.mem_map.mp hz with ⟨x, hx, hxeq⟩
+      refine ⟨tensorRightMultiply k V K c x, hW.2 c x hx, ?_⟩
+      have hz' : z = e.symm (Q.mkQ x) := by
+        apply e.injective
+        simpa using hxeq.symm
+      rw [hz']
+      exact (e_right c x).symm
+  have hRW : R ≤ W := by
+    unfold R leftKSpan
+    intro z hz
+    refine Submodule.span_induction ?_ ?_ ?_ ?_ hz
+    · rintro z ⟨c, x, hx, rfl⟩
+      obtain ⟨v, rfl, hv⟩ := hx
+      exact hW.1 c _ hv
+    · exact W.zero_mem
+    · intro x y hx hy hpx hpy
+      exact W.add_mem hpx hpy
+    · intro a x hx hpx
+      exact W.smul_mem a hpx
+  have hQW : Q ≤ W := hQR.trans hRW
+  have hWleQ : W ≤ Q := by
+    by_contra hnot
+    have hWqne : Wq ≠ ⊥ := by
+      intro hbot
+      apply hnot
+      intro x hx
+      have hz : e.symm (Q.mkQ x) ∈ Wq := by
+        change e (e.symm (Q.mkQ x)) ∈ Wq0
+        have hm : Q.mkQ x ∈
+            Submodule.map
+              (Q.mkQ : (V ⊗[k] K) →ₗ[k] (V ⊗[k] K) ⧸ Q) W :=
+          Submodule.mem_map_of_mem hx
+        simpa [Wq0] using hm
+      rw [hbot] at hz
+      have hz0 : e.symm (Q.mkQ x) = 0 := by simpa using hz
+      have hq0 : Q.mkQ x = 0 := by
+        calc
+          Q.mkQ x = e (e.symm (Q.mkQ x)) := (e.apply_symm_apply _).symm
+          _ = e 0 := by rw [hz0]
+          _ = 0 := e.map_zero
+      exact (Submodule.Quotient.mk_eq_zero Q).mp hq0
+    obtain ⟨v, hv0, hvWq⟩ :=
+      exists_unit_pure_tensor_of_nonzero_two_sided k (V ⧸ U) K Wq hWq hWqne
+    obtain ⟨w, hwv⟩ := Submodule.mkQ_surjective U v
+    change e (v ⊗ₜ[k] (1 : K)) ∈ Wq0 at hvWq
+    rcases Submodule.mem_map.mp hvWq with ⟨x, hx, hxeq⟩
+    have hepure : e (v ⊗ₜ[k] (1 : K)) = Q.mkQ (w ⊗ₜ[k] (1 : K)) := by
+      rw [← hwv]
+      simp [e, Q]
+    have hqeq : Q.mkQ x = Q.mkQ (w ⊗ₜ[k] (1 : K)) := hxeq.trans hepure
+    have hdiffQ : x - w ⊗ₜ[k] (1 : K) ∈ Q := by
+      apply (Submodule.Quotient.mk_eq_zero Q).mp
+      change Q.mkQ (x - w ⊗ₜ[k] (1 : K)) = 0
+      rw [map_sub, hqeq, sub_self]
+    have hdiffW : x - w ⊗ₜ[k] (1 : K) ∈ W := hQW hdiffQ
+    have hpureW : w ⊗ₜ[k] (1 : K) ∈ W := by
+      have h := W.sub_mem hx hdiffW
+      simpa [sub_sub_cancel] using h
+    have hwU : w ∈ U := by
+      change tmulOne w ∈ W
+      simpa [tmulOne] using hpureW
+    apply hv0
+    rw [← hwv]
+    exact (Submodule.Quotient.mk_eq_zero U).mpr hwU
+  change W = R
+  exact le_antisymm (hWleQ.trans hQR) hRW
 
 theorem two_sided_ideal_tensor (k A K : Type*) [Field k] [Ring A]
     [Algebra k A] [DivisionRing K] [Algebra k K] [Algebra.IsCentral k K] :
     ∀ I : TwoSidedIdeal (A ⊗[k] K),
       ∃ J : TwoSidedIdeal A, I = tensorTwoSidedIdeal k A K J := by
-  sorry
+  intro I
+  let iL : A →+* A ⊗[k] K :=
+    Algebra.TensorProduct.includeLeftRingHom (R := k) (A := A) (B := K)
+  let J : TwoSidedIdeal A := I.comap iL
+  let T : TwoSidedIdeal (A ⊗[k] K) := tensorTwoSidedIdeal k A K J
+  let W : Submodule k (A ⊗[k] K) :=
+    { carrier := I
+      zero_mem' := I.zero_mem
+      add_mem' := I.add_mem
+      smul_mem' := by
+        intro r x hx
+        rw [Algebra.smul_def]
+        exact I.mul_mem_left _ _ hx }
+  have hleft (c : K) (x : A ⊗[k] K) :
+      tensorLeftMultiply k A K c x =
+        (Algebra.TensorProduct.includeRight (R := k) (A := A) (B := K) c) * x := by
+    induction x using TensorProduct.induction_on with
+    | zero => simp
+    | tmul a d => simp [tensorLeftMultiply]
+    | add x y ihx ihy =>
+        rw [map_add, ihx, ihy, mul_add]
+  have hright (c : K) (x : A ⊗[k] K) :
+      tensorRightMultiply k A K c x =
+        x * (Algebra.TensorProduct.includeRight (R := k) (A := A) (B := K) c) := by
+    induction x using TensorProduct.induction_on with
+    | zero => simp
+    | tmul a d => simp [tensorRightMultiply]
+    | add x y ihx ihy =>
+        rw [map_add, ihx, ihy, add_mul]
+  have hW : TwoSidedKSubspace k A K W := by
+    constructor
+    · intro c x hx
+      change tensorLeftMultiply k A K c x ∈ I
+      rw [hleft]
+      exact I.mul_mem_left _ _ hx
+    · intro c x hx
+      change tensorRightMultiply k A K c x ∈ I
+      rw [hright]
+      exact I.mul_mem_right _ _ hx
+  have hgen := two_sided_subspace_generated k A K W hW
+  refine ⟨J, ?_⟩
+  apply le_antisymm
+  · intro x hx
+    have hx' : x ∈ leftKSpan k A K
+        {z | ∃ v : A, z = v ⊗ₜ[k] (1 : K) ∧ z ∈ W} := by
+      rw [← hgen]
+      exact hx
+    unfold leftKSpan at hx'
+    refine Submodule.span_induction ?_ ?_ ?_ ?_ hx'
+    · rintro z ⟨c, y, hy, rfl⟩
+      obtain ⟨a, rfl, ha⟩ := hy
+      apply TwoSidedIdeal.subset_span
+      refine ⟨a, ?_, c, ?_⟩
+      · simpa [J, TwoSidedIdeal.mem_comap, iL, W] using ha
+      · simp [tensorLeftMultiply]
+    · exact T.zero_mem
+    · intro x y hx hy htx hty
+      exact T.add_mem htx hty
+    · intro r x hx htx
+      rw [Algebra.smul_def]
+      exact T.mul_mem_left _ _ htx
+  · apply TwoSidedIdeal.span_le.mpr
+    rintro z ⟨a, ha, c, rfl⟩
+    have haI : a ⊗ₜ[k] (1 : K) ∈ I := by
+      have ha' : iL a ∈ I := by
+        simpa [J, TwoSidedIdeal.mem_comap] using ha
+      simpa [iL] using ha'
+    have hmul : (a ⊗ₜ[k] (1 : K)) *
+        (Algebra.TensorProduct.includeRight (R := k) (A := A) (B := K) c) ∈ I :=
+      I.mul_mem_right _ _ haI
+    simpa using hmul
 
 theorem tensor_product_simple_of_simple (k A K : Type*) [Field k] [Ring A]
     [Algebra k A] [IsSimpleRing A] [DivisionRing K] [Algebra k K]
     [Algebra.IsCentral k K] : IsSimpleRing (A ⊗[k] K) := by
-  sorry
+  letI : Nontrivial (A ⊗[k] K) :=
+    Algebra.TensorProduct.nontrivial_of_algebraMap_injective_of_flat_left k A K
+      (FaithfulSMul.algebraMap_injective k K)
+  refine IsSimpleRing.of_eq_bot_or_eq_top ?_
+  intro I
+  obtain ⟨J, hJ⟩ := two_sided_ideal_tensor k A K I
+  rw [hJ]
+  rcases eq_bot_or_eq_top J with hJbot | hJtop
+  · left
+    apply le_antisymm
+    · apply TwoSidedIdeal.span_le.mpr
+      rintro z ⟨a, ha, c, rfl⟩
+      have ha0 : a = 0 := by simpa [hJbot] using ha
+      subst a
+      simp
+    · exact bot_le
+  · right
+    apply le_antisymm le_top
+    intro x hx
+    induction x using TensorProduct.induction_on with
+    | zero => exact (tensorTwoSidedIdeal k A K J).zero_mem
+    | tmul a c =>
+        apply TwoSidedIdeal.subset_span
+        exact ⟨a, by simp [hJtop], c, rfl⟩
+    | add x y ihx ihy =>
+        exact (tensorTwoSidedIdeal k A K J).add_mem (ihx trivial) (ihy trivial)
 
 theorem tensor_product_simple_of_simple_algebras (k A A' : Type*) [Field k]
     [Ring A] [Algebra k A] [IsSimpleRing A]
     [Ring A'] [Algebra k A'] [IsSimpleRing A']
     [FiniteDimensional k A'] [Algebra.IsCentral k A'] :
     IsSimpleRing (A ⊗[k] A') := by
-  sorry
+  obtain ⟨n, hn, D, hD, hDalg, hDfinite, ⟨e⟩⟩ :=
+    wedderburn_artin_finite k A'
+  letI : NeZero n := hn
+  letI : Nonempty (Fin n) := ⟨⟨0, Nat.pos_of_ne_zero hn.out⟩⟩
+  letI : Algebra.IsCentral k D :=
+    { out := by
+        intro x hx
+        have hxcomm : ∀ y : D, Commute x y := by
+          intro y
+          exact (Subalgebra.mem_center_iff.mp hx y).symm
+        have hxmat : Matrix.scalar (Fin n) x ∈ Set.center
+            (Matrix (Fin n) (Fin n) D) := by
+          rw [Semigroup.mem_center_iff]
+          intro M
+          exact (Matrix.scalar_commute x hxcomm M).eq.symm
+        obtain ⟨a, ha⟩ := e.surjective (Matrix.scalar (Fin n) x)
+        have hacenter : a ∈ Subalgebra.center k A' := by
+          rw [Subalgebra.mem_center_iff]
+          intro b
+          have h := (Semigroup.mem_center_iff.mp hxmat) (e b)
+          have h' := congrArg e.symm h
+          rw [← ha] at h'
+          simpa using h'
+        obtain ⟨r, hr⟩ := Algebra.mem_bot.mp (‹Algebra.IsCentral k A'›.out hacenter)
+        apply Algebra.mem_bot.mpr
+        refine ⟨r, ?_⟩
+        apply (Matrix.scalar_inj (n := Fin n)).mp
+        calc
+          Matrix.scalar (Fin n) (algebraMap k D r) =
+              algebraMap k (Matrix (Fin n) (Fin n) D) r := by rfl
+          _ = e (algebraMap k A' r) := by simp
+          _ = e a := by rw [hr]
+          _ = Matrix.scalar (Fin n) x := ha }
+  letI : IsSimpleRing (A ⊗[k] D) :=
+    tensor_product_simple_of_simple k A D
+  let f : A ⊗[k] A' →ₐ[k] A ⊗[k] Matrix (Fin n) (Fin n) D :=
+    Algebra.TensorProduct.map (AlgHom.id k A) e.toAlgHom
+  let fe : A ⊗[k] A' ≃ₐ[k] A ⊗[k] Matrix (Fin n) (Fin n) D :=
+    AlgEquiv.ofBijective f
+      (Algebra.TensorProduct.map_bijective Function.bijective_id e.bijective)
+  let me : A ⊗[k] Matrix (Fin n) (Fin n) D ≃ₐ[k]
+      Matrix (Fin n) (Fin n) (A ⊗[k] D) :=
+    (Algebra.TensorProduct.congr (AlgEquiv.refl : A ≃ₐ[k] A)
+        (matrixEquivTensor (Fin n) k D)).trans
+      ((Algebra.TensorProduct.assoc k k k A D
+          (Matrix (Fin n) (Fin n) k)).symm.trans
+        (matrixEquivTensor (Fin n) k (A ⊗[k] D)).symm)
+  exact IsSimpleRing.of_ringEquiv (fe.trans me).symm.toRingEquiv inferInstance
 
 theorem tensor_product_simple_of_simple_algebras_left (k A A' : Type*)
     [Field k] [Ring A] [Algebra k A] [IsSimpleRing A]
     [FiniteDimensional k A] [Algebra.IsCentral k A]
     [Ring A'] [Algebra k A'] [IsSimpleRing A'] :
     IsSimpleRing (A ⊗[k] A') := by
-  sorry
+  letI : IsSimpleRing (A' ⊗[k] A) :=
+    tensor_product_simple_of_simple_algebras k A' A
+  exact IsSimpleRing.of_ringEquiv
+    (Algebra.TensorProduct.comm k A A').symm.toRingEquiv inferInstance
 
 end GeneratedSubspaces
 
@@ -596,7 +1039,62 @@ theorem finite_module_end_is_matrix_and_double_commutant
       (_ : FiniteDimensional k L),
       Nonempty (Module.End A N ≃ₐ[k] Matrix (Fin n) (Fin n) L) ∧
         Nonempty (Module.End (Module.End A N) N ≃ₐ[k] A) := by
-  sorry
+  classical
+  obtain ⟨S, hS⟩ := finite_algebra_nonzero_module_has_simple_submodule k A N
+  letI : IsSimpleModule A S := hS
+  obtain ⟨n, ⟨e⟩⟩ := finite_module_is_direct_sum_of_simple k A N S
+  have hn0 : n ≠ 0 := by
+    intro hn
+    subst n
+    have hnontriv : Nontrivial (Fin 0 → S) :=
+      e.injective.nontrivial
+    exact (not_nontrivial (Fin 0 → S)) hnontriv
+  letI : NeZero n := ⟨hn0⟩
+  let L0 := Module.End A S
+  letI : DivisionRing L0 := inferInstance
+  letI : Algebra k L0 := inferInstance
+  letI : FiniteDimensional k L0 := (simple_module_end_is_finite k A S).2
+  let L : Type (max u_A u_N) := ULift.{u_A} L0
+  letI : DivisionRing L := inferInstance
+  letI : Algebra k L := inferInstance
+  letI : Module.Finite k L :=
+    Module.Finite.equiv (ULift.moduleEquiv (R := k) (M := L0)).symm
+  have hEnd : Nonempty (Module.End A N ≃ₐ[k] Matrix (Fin n) (Fin n) L) := by
+    exact ⟨(e.conjAlgEquiv k).trans
+      ((endVecAlgEquivMatrixEnd (R := k) (A := A) (ι := Fin n) (M := S)).trans
+        (ULift.algEquiv (R := k)).symm.mapMatrix)⟩
+  let : Module (Module.End A N) N :=
+    { smul := fun f m => f m
+      smul_zero := by intro f; exact f.map_zero
+      smul_add := by intro f x y; exact f.map_add x y
+      one_smul := by intro m; rfl
+      mul_smul := by intro f g m; rfl
+      zero_smul := by intro m; rfl
+      add_smul := by intro f g m; rfl }
+  let : Module.Finite k N := Module.Finite.trans A N
+  let : Module.Finite (Module.End A N) N :=
+    Module.Finite.of_restrictScalars_finite k (Module.End A N) N
+  let : IsSemisimpleModule A N := (finite_simple_algebra_module_isotypic k A N).1
+  let f : A →ₐ[k] Module.End (Module.End A N) N :=
+    { toRingHom := Module.toModuleEnd (Module.End A N) (S := A) N
+      commutes' := by
+        intro r
+        ext x
+        change (algebraMap k A r) • x = r • x
+        exact IsScalarTower.algebraMap_smul A r x }
+  have hAnn : Module.annihilator A N = ⊥ := by
+    have h := (isSimpleRing_iff_isTwoSided_imp.mp (inferInstance : IsSimpleRing A)).2
+      (Module.annihilator A N) inferInstance
+    exact h.resolve_right (by
+      intro htop
+      exact (not_subsingleton N) (Module.annihilator_eq_top_iff.mp htop))
+  letI : FaithfulSMul A N := Module.annihilator_eq_bot.mp hAnn
+  have hbij : Function.Bijective f := by
+    constructor
+    · exact (Module.toModuleEnd (Module.End A N) (S := A) N).injective
+    · exact Module.Finite.toModuleEnd_moduleEnd_surjective
+  refine ⟨n, inferInstance, L, inferInstance, inferInstance, inferInstance, hEnd, ?_⟩
+  exact ⟨(AlgEquiv.ofBijective f hbij).symm⟩
 
 end SimpleModules
 
@@ -608,7 +1106,62 @@ theorem tensor_product_finite_central_simple (k A B : Type*) [Field k]
     [Algebra.IsCentral k B] [IsSimpleRing B] :
     FiniteDimensional k (A ⊗[k] B) ∧
       Algebra.IsCentral k (A ⊗[k] B) ∧ IsSimpleRing (A ⊗[k] B) := by
-  sorry
+  refine ⟨inferInstance, ?_, ?_⟩
+  · refine { out := ?_ }
+    intro z hz
+    let e : (⊥ : Subalgebra k A) ⊗[k] B ≃ₐ[k] B :=
+      (Algebra.TensorProduct.congr (Algebra.botEquiv k A)
+        (AlgEquiv.refl : B ≃ₐ[k] B)).trans
+        (Algebra.TensorProduct.lid k B)
+    have he :
+        Algebra.TensorProduct.map (⊥ : Subalgebra k A).val (AlgHom.id k B) =
+          (Algebra.TensorProduct.includeRight : B →ₐ[k] A ⊗[k] B).comp e.toAlgHom := by
+      apply AlgHom.ext
+      intro x
+      induction x using TensorProduct.induction_on with
+      | zero => simp
+      | add x y hx hy => rw [map_add, hx, hy, map_add]
+      | tmul a b =>
+        obtain ⟨r, hr⟩ := Algebra.mem_bot.mp a.property
+        have ha : (Algebra.botEquiv k A).symm r = a := by
+          apply Subtype.ext
+          simpa using hr
+        have har : Algebra.botEquiv k A a = r := by
+          rw [← ha]
+          simp
+        simp only [Algebra.TensorProduct.map_tmul, AlgHom.id_apply, AlgHom.comp_apply,
+          AlgEquiv.coe_toAlgHom, Algebra.TensorProduct.includeRight_apply]
+        change (a : A) ⊗ₜ[k] b =
+          1 ⊗ₜ[k] ((Algebra.botEquiv k A) a • b)
+        rw [← hr, Algebra.algebraMap_eq_smul_one, TensorProduct.smul_tmul, har]
+    have hzL : z ∈ Subalgebra.centralizer k
+        (Algebra.TensorProduct.includeLeft : A →ₐ[k] A ⊗[k] B).range := by
+      rw [Subalgebra.mem_centralizer_iff]
+      intro x hx
+      exact (Subalgebra.mem_center_iff.mp hz) x
+    rw [Subalgebra.centralizer_coe_range_includeLeft_eq_center_tensorProduct] at hzL
+    rw [Algebra.IsCentral.center_eq_bot k A] at hzL
+    obtain ⟨x, hx⟩ := hzL
+    have hz_eq : z = Algebra.TensorProduct.map (⊥ : Subalgebra k A).val
+        (AlgHom.id k B) x := hx.symm
+    have hz_eq' : z =
+        (Algebra.TensorProduct.includeRight : B →ₐ[k] A ⊗[k] B) (e x) := by
+      rw [hz_eq, he]
+      change (Algebra.TensorProduct.includeRight : B →ₐ[k] A ⊗[k] B) (e x) =
+        (Algebra.TensorProduct.includeRight : B →ₐ[k] A ⊗[k] B) (e x)
+      rfl
+    rw [hz_eq'] at hz
+    have hxb : e x ∈ Subalgebra.center k B := by
+      rw [Subalgebra.mem_center_iff]
+      intro c
+      apply (Algebra.TensorProduct.includeRight : B →ₐ[k] A ⊗[k] B).injective
+      simpa using (Subalgebra.mem_center_iff.mp hz)
+        ((Algebra.TensorProduct.includeRight : B →ₐ[k] A ⊗[k] B) c)
+    have hxb0 : e x ∈ (⊥ : Subalgebra k B) := Algebra.IsCentral.out hxb
+    obtain ⟨r, hr⟩ := Algebra.mem_bot.mp hxb0
+    rw [hz_eq', ← hr]
+    simpa using (Subalgebra.algebraMap_mem (⊥ : Subalgebra k (A ⊗[k] B)) r)
+  · exact tensor_product_simple_of_simple_algebras k A B
 
 theorem base_change_finite_central_simple (k A k' : Type*) [Field k]
     [Ring A] [Algebra k A] [FiniteDimensional k A] [Algebra.IsCentral k A]
@@ -617,7 +1170,82 @@ theorem base_change_finite_central_simple (k A k' : Type*) [Field k]
       Algebra.TensorProduct.rightAlgebra
     FiniteDimensional k' (A ⊗[k] k') ∧
       Algebra.IsCentral k' (A ⊗[k] k') ∧ IsSimpleRing (A ⊗[k] k') := by
-  sorry
+  letI : Algebra k' (A ⊗[k] k') := Algebra.TensorProduct.rightAlgebra
+  letI : Algebra k' (k' ⊗[k] A) := Algebra.TensorProduct.leftAlgebra
+  have hfin : Module.Finite k' (k' ⊗[k] A) :=
+    Module.Finite.base_change (R := k) (A := k') (M := A)
+  let f : (k' ⊗[k] A) →ₗ[k'] (A ⊗[k] k') :=
+    { toFun := Algebra.TensorProduct.comm k k' A
+      map_add' := by simp
+      map_smul' := by
+        intro r x
+        rw [Algebra.smul_def, Algebra.smul_def]
+        calc
+          (Algebra.TensorProduct.comm k k' A)
+                (algebraMap k' (k' ⊗[k] A) r * x) =
+              (Algebra.TensorProduct.comm k k' A)
+                  (algebraMap k' (k' ⊗[k] A) r) *
+                (Algebra.TensorProduct.comm k k' A) x :=
+            (Algebra.TensorProduct.comm k k' A).map_mul _ _
+          _ = algebraMap k' (A ⊗[k] k') r *
+                (Algebra.TensorProduct.comm k k' A) x := by
+            simp [Algebra.TensorProduct.algebraMap_def,
+              Algebra.TensorProduct.right_algebraMap_apply] }
+  let e : (k' ⊗[k] A) ≃ₗ[k'] (A ⊗[k] k') :=
+    LinearEquiv.ofBijective f
+      ⟨(Algebra.TensorProduct.comm k k' A).injective,
+        (Algebra.TensorProduct.comm k k' A).surjective⟩
+  letI : Module.Finite k' (k' ⊗[k] A) := hfin
+  letI : Module.Finite k' (A ⊗[k] k') := Module.Finite.equiv e
+  refine ⟨inferInstance, ?_, ?_⟩
+  · refine { out := ?_ }
+    intro z hz
+    let eBot : (⊥ : Subalgebra k A) ⊗[k] k' ≃ₐ[k] k' :=
+      (Algebra.TensorProduct.congr (Algebra.botEquiv k A)
+        (AlgEquiv.refl : k' ≃ₐ[k] k')).trans
+        (Algebra.TensorProduct.lid k k')
+    have he :
+        Algebra.TensorProduct.map (⊥ : Subalgebra k A).val (AlgHom.id k k') =
+          (Algebra.TensorProduct.includeRight : k' →ₐ[k] A ⊗[k] k').comp
+            eBot.toAlgHom := by
+      apply AlgHom.ext
+      intro x
+      induction x using TensorProduct.induction_on with
+      | zero => simp
+      | add x y hx hy => rw [map_add, hx, hy, map_add]
+      | tmul a b =>
+        obtain ⟨r, hr⟩ := Algebra.mem_bot.mp a.property
+        have ha : (Algebra.botEquiv k A).symm r = a := by
+          apply Subtype.ext
+          simpa using hr
+        have har : Algebra.botEquiv k A a = r := by
+          rw [← ha]
+          simp
+        simp only [Algebra.TensorProduct.map_tmul, AlgHom.id_apply, AlgHom.comp_apply,
+          AlgEquiv.coe_toAlgHom, Algebra.TensorProduct.includeRight_apply]
+        change (a : A) ⊗ₜ[k] b =
+          1 ⊗ₜ[k] ((Algebra.botEquiv k A) a • b)
+        rw [← hr, Algebra.algebraMap_eq_smul_one, TensorProduct.smul_tmul, har]
+    have hzL : z ∈ Subalgebra.centralizer k
+        (Algebra.TensorProduct.includeLeft : A →ₐ[k] A ⊗[k] k').range := by
+      rw [Subalgebra.mem_centralizer_iff]
+      intro x hx
+      exact (Subalgebra.mem_center_iff.mp hz) x
+    rw [Subalgebra.centralizer_coe_range_includeLeft_eq_center_tensorProduct] at hzL
+    rw [Algebra.IsCentral.center_eq_bot k A] at hzL
+    obtain ⟨x, hx⟩ := hzL
+    have hz_eq : z = Algebra.TensorProduct.map (⊥ : Subalgebra k A).val
+        (AlgHom.id k k') x := hx.symm
+    have hz_eq' : z =
+        (Algebra.TensorProduct.includeRight : k' →ₐ[k] A ⊗[k] k') (eBot x) := by
+      rw [hz_eq, he]
+      change (Algebra.TensorProduct.includeRight : k' →ₐ[k] A ⊗[k] k') (eBot x) =
+        (Algebra.TensorProduct.includeRight : k' →ₐ[k] A ⊗[k] k') (eBot x)
+      rfl
+    rw [hz_eq']
+    simpa [Algebra.TensorProduct.algebraMap_eq_includeRight] using
+      (Subalgebra.algebraMap_mem (⊥ : Subalgebra k' (A ⊗[k] k')) (eBot x))
+  · exact tensor_product_simple_of_simple_algebras_left k A k'
 
 theorem inverse_of_finite_central_simple (k A : Type*) [Field k] [Ring A]
     [Algebra k A] [FiniteDimensional k A] [Algebra.IsCentral k A]
@@ -625,7 +1253,22 @@ theorem inverse_of_finite_central_simple (k A : Type*) [Field k] [Ring A]
     Nonempty
       ((A ⊗[k] Aᵐᵒᵖ) ≃ₐ[k]
         Matrix (Fin (Module.finrank k A)) (Fin (Module.finrank k A)) k) := by
-  sorry
+  letI : IsSimpleRing (A ⊗[k] Aᵐᵒᵖ) :=
+    (tensor_product_finite_central_simple k A Aᵐᵒᵖ).2.2
+  let f : (A ⊗[k] Aᵐᵒᵖ) →ₐ[k] Module.End k A :=
+    AlgHom.mulLeftRight k A
+  have hf : Function.Injective f := RingHom.injective f.toRingHom
+  have hdim : Module.finrank k (A ⊗[k] Aᵐᵒᵖ) =
+      Module.finrank k (Module.End k A) := by
+    rw [Module.finrank_tensorProduct, Module.finrank_linearMap]
+    have hop : Module.finrank k A = Module.finrank k (Aᵐᵒᵖ) :=
+      (MulOpposite.opLinearEquiv k : A ≃ₗ[k] Aᵐᵒᵖ).finrank_eq
+    rw [← hop]
+  have hsurj : Function.Surjective f.toLinearMap :=
+    (LinearMap.injective_iff_surjective_of_finrank_eq_finrank hdim).mp hf
+  have hbij : Function.Bijective f := ⟨hf, hsurj⟩
+  exact ⟨(AlgEquiv.ofBijective f hbij).trans
+    (algEquivMatrix (Module.finBasis k A))⟩
 
 end TensorProducts
 

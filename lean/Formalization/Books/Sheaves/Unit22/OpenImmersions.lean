@@ -348,17 +348,24 @@ presheaf identification. -/
     (U : Opens X.carrier) where
   functor : PMod (ringedOpenSubspace X U).structureSheaf.obj ⥤
     PMod X.structureSheaf.obj
+  restriction : PMod X.structureSheaf.obj ⥤
+    PMod (ringedOpenSubspace X U).structureSheaf.obj
   underlying_functor_iso :
     Nonempty
       (functor ⋙ PresheafOfModules.toPresheaf X.structureSheaf.obj ≅
         PresheafOfModules.toPresheaf (ringedOpenSubspace X U).structureSheaf.obj ⋙
           openPresheafExtensionByInitial AddCommGrpCat U)
+  adjunction : functor ⊣ restriction
 
  /-- Extension by zero for modules on an open subspace. -/
- theorem exists_openModulePresheafExtensionByZero (X : RingedSpace.{v})
+theorem exists_openModulePresheafExtensionByZero (X : RingedSpace.{v})
     (U : Opens X.carrier) :
     Nonempty (OpenModulePresheafExtensionData X U) := by
   sorry
+
+noncomputable def openModulePresheafExtensionData (X : RingedSpace.{v})
+    (U : Opens X.carrier) : OpenModulePresheafExtensionData X U :=
+  Classical.choice (exists_openModulePresheafExtensionByZero X U)
 
 /-! The module-valued presheaf construction is the initial-object extension
 on the underlying additive presheaf, equipped with the ambient structure-sheaf
@@ -367,7 +374,27 @@ noncomputable def openModulePresheafExtensionByZero (X : RingedSpace.{v})
     (U : Opens X.carrier) :
     PMod (ringedOpenSubspace X U).structureSheaf.obj ⥤
       PMod X.structureSheaf.obj :=
-  (Classical.choice (exists_openModulePresheafExtensionByZero X U)).functor
+  (openModulePresheafExtensionData X U).functor
+
+/-- Restriction of presheaves of modules to an open subspace. -/
+noncomputable def openModulePresheafRestrictionFunctor (X : RingedSpace.{v})
+    (U : Opens X.carrier) :
+    PMod X.structureSheaf.obj ⥤
+      PMod (ringedOpenSubspace X U).structureSheaf.obj :=
+  (openModulePresheafExtensionData X U).restriction
+
+/-- The presheaf-module extension by zero is left adjoint to restriction. -/
+theorem exists_openModulePresheafExtensionAdjunction (X : RingedSpace.{v})
+    (U : Opens X.carrier) :
+    Nonempty (openModulePresheafExtensionByZero X U ⊣
+      openModulePresheafRestrictionFunctor X U) := by
+  exact ⟨(openModulePresheafExtensionData X U).adjunction⟩
+
+noncomputable def openModulePresheafExtensionAdjunction (X : RingedSpace.{v})
+    (U : Opens X.carrier) :
+    openModulePresheafExtensionByZero X U ⊣
+      openModulePresheafRestrictionFunctor X U :=
+  (openModulePresheafExtensionData X U).adjunction
 
 /-- Extension by zero for modules on an open subspace. -/
 noncomputable def openModuleExtensionFunctor (X : RingedSpace.{v}) (U : Opens X.carrier) :

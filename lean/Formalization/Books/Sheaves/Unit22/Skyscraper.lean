@@ -241,6 +241,25 @@ noncomputable def algebraicSkyscraperStalkOfNotSpecializes
   classical
   exact skyscraperPresheafStalkOfNotSpecializes x A h
 
+/- The stalk of a generic skyscraper is prescribed exactly on the closure of
+the support and terminal away from it. -/
+noncomputable def algebraicSkyscraperStalkOfMemClosure
+    {C : Type (v + 1)} [Category.{v} C] [HasTerminal C] [HasColimits C]
+    {X : TopCat.{v}} (x : X) (A : C) {x' : X}
+    (h : x' ∈ closure ({x} : Set X)) :
+    (algebraicSkyscraperSheaf x A).presheaf.stalk x' ≅ A := by
+  exact algebraicSkyscraperStalkOfSpecializes x A
+    ((skyscraper_specializes_iff_mem_closure x x').2 h)
+
+noncomputable def algebraicSkyscraperStalkOfNotMemClosure
+    {C : Type (v + 1)} [Category.{v} C] [HasTerminal C] [HasColimits C]
+    {X : TopCat.{v}} (x : X) (A : C) {x' : X}
+    (h : x' ∉ closure ({x} : Set X)) :
+    (algebraicSkyscraperSheaf x A).presheaf.stalk x' ≅ terminal C := by
+  apply algebraicSkyscraperStalkOfNotSpecializes x A
+  intro hs
+  exact h ((skyscraper_specializes_iff_mem_closure x x').1 hs)
+
 /-- The set-valued form of the stalk calculation at a specialization. -/
 noncomputable def setSkyscraperStalkOfSpecializes
     {X : TopCat.{v}} (x : X) (A : Type v) {x' : X} (h : x ⤳ x') :
@@ -267,6 +286,36 @@ noncomputable def abelianSkyscraperStalkOfNotSpecializes
     (abelianSkyscraperPresheaf x A).stalk x' ≅ terminal AddCommGrpCat := by
   exact algebraicSkyscraperStalkOfNotSpecializes x A h
 
+noncomputable def setSkyscraperStalkOfMemClosure
+    {X : TopCat.{v}} (x : X) (A : Type v) {x' : X}
+    (h : x' ∈ closure ({x} : Set X)) :
+    (setSkyscraperSheaf x A).presheaf.stalk x' ≅ A := by
+  exact setSkyscraperStalkOfSpecializes x A
+    ((skyscraper_specializes_iff_mem_closure x x').2 h)
+
+noncomputable def setSkyscraperStalkOfNotMemClosure
+    {X : TopCat.{v}} (x : X) (A : Type v) {x' : X}
+    (h : x' ∉ closure ({x} : Set X)) :
+    (setSkyscraperSheaf x A).presheaf.stalk x' ≅ terminal (Type v) := by
+  apply setSkyscraperStalkOfNotSpecializes x A
+  intro hs
+  exact h ((skyscraper_specializes_iff_mem_closure x x').1 hs)
+
+noncomputable def abelianSkyscraperStalkOfMemClosure
+    {X : TopCat.{v}} (x : X) (A : AddCommGrpCat.{v}) {x' : X}
+    (h : x' ∈ closure ({x} : Set X)) :
+    (abelianSkyscraperSheaf x A).presheaf.stalk x' ≅ A := by
+  exact abelianSkyscraperStalkOfSpecializes x A
+    ((skyscraper_specializes_iff_mem_closure x x').2 h)
+
+noncomputable def abelianSkyscraperStalkOfNotMemClosure
+    {X : TopCat.{v}} (x : X) (A : AddCommGrpCat.{v}) {x' : X}
+    (h : x' ∉ closure ({x} : Set X)) :
+    (abelianSkyscraperSheaf x A).presheaf.stalk x' ≅ terminal AddCommGrpCat := by
+  apply abelianSkyscraperStalkOfNotSpecializes x A
+  intro hs
+  exact h ((skyscraper_specializes_iff_mem_closure x x').1 hs)
+
 /-- The module stalk at the support is the prescribed stalk module. -/
 theorem moduleSkyscraperStalkAtSupport
     {X : TopCat.{v}} (O : RingSheaf X) (x : X)
@@ -274,6 +323,30 @@ theorem moduleSkyscraperStalkAtSupport
     Nonempty ((moduleStalkFunctor O x).obj
         (moduleSkyscraperSheaf O x A) ≅ A) := by
   sorry
+
+/- At a specialization, the module stalk is the prescribed module with
+scalars restricted along the canonical specialization map. -/
+theorem moduleSkyscraperStalkAtSpecialization
+    {X : TopCat.{v}} (O : RingSheaf X) (x : X)
+    (A : ModuleCat.{v} (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x))
+    {x' : X} (h : x ⤳ x') :
+    Nonempty ((moduleStalkFunctor O x').obj
+      (moduleSkyscraperSheaf O x A) ≅
+      (ModuleCat.restrictScalars
+        (TopCat.Presheaf.stalkSpecializes O.obj h).hom).obj A) := by
+  sorry
+
+theorem moduleSkyscraperStalkOfMemClosure
+    {X : TopCat.{v}} (O : RingSheaf X) (x : X)
+    (A : ModuleCat.{v} (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x))
+    {x' : X} (h : x' ∈ closure ({x} : Set X)) :
+    Nonempty ((moduleStalkFunctor O x').obj
+      (moduleSkyscraperSheaf O x A) ≅
+      (ModuleCat.restrictScalars
+        (TopCat.Presheaf.stalkSpecializes O.obj
+          ((skyscraper_specializes_iff_mem_closure x x').2 h)).hom).obj A) := by
+  exact moduleSkyscraperStalkAtSpecialization O x A
+    ((skyscraper_specializes_iff_mem_closure x x').2 h)
 
 /-- Away from the closure of the support, a module skyscraper has the zero
 stalk module. -/
@@ -284,6 +357,17 @@ theorem moduleSkyscraperStalkAwayFromSupport
     Nonempty ((moduleStalkFunctor O x').obj
       (moduleSkyscraperSheaf O x A) ≅ 0) := by
   sorry
+
+theorem moduleSkyscraperStalkAwayFromClosure
+    {X : TopCat.{v}} (O : RingSheaf X) (x : X)
+    (A : ModuleCat.{v} (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x))
+    {x' : X} (h : x' ∉ closure ({x} : Set X)) :
+    Nonempty ((moduleStalkFunctor O x').obj
+      (moduleSkyscraperSheaf O x A) ≅ 0) := by
+  exact moduleSkyscraperStalkAwayFromSupport O x A
+    (by
+      intro hs
+      exact h ((skyscraper_specializes_iff_mem_closure x x').1 hs))
 
 /-! ## Stalk/skyscraper adjunctions -/
 
@@ -296,6 +380,11 @@ noncomputable def setStalkSkyscraperAdjunction {X : TopCat.{v}} (x : X) :
     letI : ∀ U : Opens X, Decidable (x ∈ U) := fun _ => Classical.dec _
     exact stalkSkyscraperSheafAdjunction x
 
+noncomputable abbrev setStalkSkyscraperHomEquiv {X : TopCat.{v}} (x : X)
+    (F : TopCat.Sheaf (Type v) X) (A : Type v) :
+    (F.presheaf.stalk x ⟶ A) ≃ (F ⟶ setSkyscraperSheaf x A) :=
+  (setStalkSkyscraperAdjunction x).homEquiv F A
+
 /-- The abelian-group stalk/skyscraper adjunction. -/
 noncomputable def abelianStalkSkyscraperAdjunction {X : TopCat.{v}}
     (x : X) :
@@ -306,6 +395,12 @@ noncomputable def abelianStalkSkyscraperAdjunction {X : TopCat.{v}}
     letI : ∀ U : Opens X, Decidable (x ∈ U) := fun _ => Classical.dec _
     exact stalkSkyscraperSheafAdjunction x
 
+noncomputable abbrev abelianStalkSkyscraperHomEquiv {X : TopCat.{v}}
+    (x : X) (F : Ab X) (A : AddCommGrpCat.{v}) :
+    (F.presheaf.stalk x ⟶ A) ≃
+      (F ⟶ abelianSkyscraperSheaf x A) :=
+  (abelianStalkSkyscraperAdjunction x).homEquiv F A
+
 /-- The generic algebraic-structure stalk/skyscraper adjunction. -/
 noncomputable def algebraicStalkSkyscraperAdjunction
     {C : Type (v + 1)} [Category.{v} C] [HasTerminal C] [HasColimits C]
@@ -315,6 +410,13 @@ noncomputable def algebraicStalkSkyscraperAdjunction
   by
     letI : ∀ U : Opens X, Decidable (x ∈ U) := fun _ => Classical.dec _
     exact stalkSkyscraperSheafAdjunction x
+
+noncomputable abbrev algebraicStalkSkyscraperHomEquiv
+    {C : Type (v + 1)} [Category.{v} C] [HasTerminal C] [HasColimits C]
+    {X : TopCat.{v}} (x : X) (F : TopCat.Sheaf C X) (A : C) :
+    (F.presheaf.stalk x ⟶ A) ≃
+      (F ⟶ algebraicSkyscraperSheaf x A) :=
+  (algebraicStalkSkyscraperAdjunction x).homEquiv F A
 
 /-- The source-facing module stalk/skyscraper adjunction. -/
 theorem exists_moduleStalkSkyscraperAdjunction {X : TopCat.{v}}
@@ -327,6 +429,13 @@ noncomputable def moduleStalkSkyscraperAdjunction {X : TopCat.{v}}
     (O : RingSheaf X) (x : X) :
     moduleStalkFunctor O x ⊣ moduleSkyscraperSheafFunctor O x := by
   exact Classical.choice (exists_moduleStalkSkyscraperAdjunction O x)
+
+noncomputable abbrev moduleStalkSkyscraperHomEquiv {X : TopCat.{v}}
+    (O : RingSheaf X) (x : X) (F : Mod O)
+    (A : ModuleCat.{v} (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x)) :
+    ((moduleStalkFunctor O x).obj F ⟶ A) ≃
+      (F ⟶ (moduleSkyscraperSheafFunctor O x).obj A) :=
+  (moduleStalkSkyscraperAdjunction O x).homEquiv F A
 
 end
 

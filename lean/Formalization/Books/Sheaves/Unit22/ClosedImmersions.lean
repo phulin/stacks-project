@@ -107,6 +107,32 @@ theorem closedSetSheafDirectImage_stalk_inside {X : TopCat.{v}} (Z : Set X)
       F.presheaf.stalk ⟨x, hx⟩) := by
   sorry
 
+/-- The additive direct image has a zero stalk off the closed subset. -/
+theorem closedAbelianSheafDirectImage_stalk_outside {X : TopCat.{v}} (Z : Set X)
+    (hZ : IsClosed Z) (F : TopCat.Sheaf (AddCommGrpCat.{v}) (closedSubspace Z))
+    (x : X) (hx : x ∉ Z) :
+    Nonempty (((closedSheafDirectImage AddCommGrpCat Z hZ).obj F).presheaf.stalk x ≅
+      (0 : AddCommGrpCat.{v})) := by
+  sorry
+
+/-- On the closed subset, the additive direct-image stalk is the original
+stalk. -/
+theorem closedAbelianSheafDirectImage_stalk_inside {X : TopCat.{v}} (Z : Set X)
+    (hZ : IsClosed Z) (F : TopCat.Sheaf (AddCommGrpCat.{v}) (closedSubspace Z))
+    (x : X) (hx : x ∈ Z) :
+    Nonempty (((closedSheafDirectImage AddCommGrpCat Z hZ).obj F).presheaf.stalk x ≅
+      F.presheaf.stalk ⟨x, hx⟩) := by
+  sorry
+
+/-- The generic direct-image stalk is the original stalk on the closed subset. -/
+theorem closedAlgebraicSheafDirectImage_stalk_inside
+    (C : Type u) [Category.{v} C] [HasColimits C] [HasTerminal C]
+    {X : TopCat.{v}} (Z : Set X) (hZ : IsClosed Z)
+    (F : TopCat.Sheaf C (closedSubspace Z)) (x : X) (hx : x ∈ Z) :
+    Nonempty (((closedAlgebraicSheafDirectImage C Z hZ).obj F).presheaf.stalk x ≅
+      F.presheaf.stalk ⟨x, hx⟩) := by
+  sorry
+
 /-- Inverse image followed by direct image is the identity for set-valued sheaves. -/
 theorem closedSetSheafRestriction_directImage_iso {X : TopCat.{v}} (Z : Set X)
     (hZ : IsClosed Z) (F : TopCat.Sheaf (Type v) (closedSubspace Z)) :

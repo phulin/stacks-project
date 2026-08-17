@@ -445,6 +445,15 @@ noncomputable def basisModuleStalkModule {X : TopCat.{v}} {ι : Type v}
     (CategoryTheory.Limits.colimit.isColimit _)
     (CategoryTheory.Limits.colimit.isColimit _)
 
+/-- The basis-module stalk as a bundled module over the basis ring stalk. -/
+noncomputable def basisModuleStalkObject {X : TopCat.{v}} {ι : Type v}
+    (B : ι → Opens X) (hB : Opens.IsBasis (Set.range B))
+    {O : BasisRingPresheaf B} (F : BasisModulePresheaf B O) (x : X) :
+    ModuleCat (basisAlgebraicStalk (C := RingCat.{v}) B O x) := by
+  letI := basisModuleStalkModule B hB F x
+  exact ModuleCat.of (basisAlgebraicStalk (C := RingCat.{v}) B O x)
+    (basisModuleStalk B F x)
+
 /-- Restriction of a presheaf of modules to an induced basis category. -/
 def basisModuleRestriction {X : TopCat.{v}} {κ : Type v}
     (B : κ → Opens X) {O : RingSheaf.{v, v} X}
@@ -493,6 +502,21 @@ theorem basisModuleExtension_stalk_eq {X : TopCat.{v}} {ι : Type v}
       ((basisModuleExtension B hB O F hF).val.presheaf ⋙
         (CategoryTheory.forget AddCommGrpCat)) x ≃
       basisModuleStalk B F x) := by
+  sorry
+
+/-- Extension preserves the stalk as a module, after transporting scalars
+along the canonical comparison between the ordinary and basis ring stalks. -/
+theorem basisModuleExtension_stalk_module_iso {X : TopCat.{v}} {ι : Type v}
+    (B : ι → Opens X) (hB : Opens.IsBasis (Set.range B))
+    (O : RingSheaf.{v, v} X)
+    (F : BasisModulePresheaf B ((inducedFunctor B).op ⋙ O.1))
+    (hF : BasisModuleSheaf B F) (x : X) :
+    ∃ e : basisAlgebraicStalk (C := RingCat.{v}) B
+        ((inducedFunctor B).op ⋙ O.1) x ≅
+        TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x,
+      Nonempty ((ModuleCat.restrictScalars e.hom.hom).obj
+          ((moduleStalkFunctor O x).obj (basisModuleExtension B hB O F hF)) ≅
+        basisModuleStalkObject B hB F x) := by
   sorry
 
 /-- Restriction is an equivalence for module sheaves on a basis. -/
@@ -626,6 +650,17 @@ def basisFMap_above_below_stalk_colimit {X Y : TopCat.{v}} {ι : Type v} {κ : T
       (hx : x ∈ Bₓ i) (hy : f x ∈ Bᵧ j),
       G.presheaf.germ (Bᵧ j) (f x) hy ≫ ξ =
         d.app i j hij ≫ F.presheaf.germ (Bₓ i) x hx
+
+/-- The stalk-colimit description holds for the map determined by the two
+bases. -/
+theorem basisFMap_above_below_stalk_colimit_holds
+    {X Y : TopCat.{v}} {ι : Type v} {κ : Type v}
+    (f : X ⟶ Y) {C : Type v} [Category.{v} C] [HasColimits C]
+    (F : TopCat.Sheaf C X) (G : TopCat.Sheaf C Y)
+    (Bₓ : ι → Opens X) (Bᵧ : κ → Opens Y)
+    (d : BasisFMapAboveBelowData f Bₓ Bᵧ G F) (x : X) :
+    basisFMap_above_below_stalk_colimit f F G Bₓ Bᵧ d x := by
+  sorry
 
 /-- The module version of the two-basis `f`-map theorem. -/
 theorem basisFMapModule_above_below_unique {X Y : RingedSpace} {ι : Type v} {κ : Type v}

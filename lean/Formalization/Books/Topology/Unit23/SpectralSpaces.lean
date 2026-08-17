@@ -978,27 +978,441 @@ theorem spectralSpace_of_directed_inverse_limit_finite_sober
     (hsober : ∀ j, QuasiSober (F.obj j))
     (hT0 : ∀ j, T0Space (F.obj j)) :
     SpectralSpace ((limit F : TopCat.{max v u}) : Type (max v u)) := by
-  sorry
+  classical
+  let L := ((limit F : TopCat.{max v u}) : Type (max v u))
+  let P := ∀ j : Jᵒᵖ, (F.obj j : Type (max v u))
+  let tP : TopologicalSpace P :=
+    @Pi.topologicalSpace (Jᵒᵖ) (fun j => (F.obj j : Type (max v u)))
+      (fun j => (F.obj j).str)
+  let _ : TopologicalSpace P := tP
+  let g : L → P := fun x j => (limit.π F j) x
+  have hgind : @Topology.IsInducing L P (inferInstance : TopologicalSpace L) tP g := by
+    rw [TopCat.limit_topology F]
+    exact inducing_iInf_to_pi (fun j => limit.π F j)
+  have hginj : Function.Injective g := by
+    intro x y hxy
+    apply Concrete.limit_ext F x y
+    intro j
+    exact congrFun hxy j
+  let C : Set P :=
+    ⋂ (i : Jᵒᵖ) (j : Jᵒᵖ) (f : i ⟶ j), {x | F.map f (x i) = x j}
+  have hgrange : Set.range g = C := by
+    apply le_antisymm
+    · rintro y ⟨x, rfl⟩
+      dsimp [C]
+      simp only [mem_iInter]
+      intro i j f
+      exact ConcreteCategory.congr_hom (limit.w F f) x
+    · intro y hy
+      have hy' : ∀ (i j : Jᵒᵖ) (f : i ⟶ j), F.map f (y i) = y j := by
+        simpa [C] using hy
+      let S : Cone F :=
+        { pt := TopCat.of PUnit
+          π :=
+            { app := fun j => TopCat.ofHom
+                { toFun := fun _ : PUnit => y j
+                  continuous_toFun := continuous_const }
+              naturality := by
+                intro i j f
+                ext x
+                simpa using (hy' i j f).symm } }
+      refine ⟨(limit.isLimit F).lift S PUnit.unit, ?_⟩
+      funext j
+      exact ConcreteCategory.congr_hom ((limit.isLimit F).fac S j) PUnit.unit
+  let tD : TopologicalSpace P :=
+    @Pi.topologicalSpace (Jᵒᵖ) (fun j => (F.obj j : Type (max v u))) (fun _ => ⊥)
+  let _ : TopologicalSpace P := tP
+  have hDcompact : @CompactSpace P tD := by
+    let _ : ∀ j : Jᵒᵖ, TopologicalSpace (F.obj j) := fun _ => ⊥
+    let _ : ∀ j : Jᵒᵖ, DiscreteTopology (F.obj j) := fun j => discreteTopology_bot _
+    let _ : ∀ j : Jᵒᵖ, Finite (F.obj j) := hfinite
+    let _ : TopologicalSpace P := tD
+    infer_instance
+  have hCcompact : @IsCompact P tD C := by
+    let _ : ∀ j : Jᵒᵖ, TopologicalSpace (F.obj j) := fun _ => ⊥
+    let _ : ∀ j : Jᵒᵖ, DiscreteTopology (F.obj j) := fun j => discreteTopology_bot _
+    let _ : TopologicalSpace P := tD
+    have hCclosed : @IsClosed P tD C := by
+      dsimp [C]
+      apply isClosed_iInter
+      intro i
+      apply isClosed_iInter
+      intro j
+      apply isClosed_iInter
+      intro f
+      exact isClosed_eq
+        ((continuous_of_discreteTopology : @Continuous (F.obj i) (F.obj j) ⊥ ⊥
+          (F.map f)).comp (continuous_apply i))
+        (continuous_apply j)
+    exact @IsClosed.isCompact P tD C hDcompact hCclosed
+  have hCcompact_cylinder (j : Jᵒᵖ) (V : Set (F.obj j)) :
+      @IsCompact P tD (C ∩ {x | x j ∈ V}) := by
+    let _ : ∀ j : Jᵒᵖ, TopologicalSpace (F.obj j) := fun _ => ⊥
+    let _ : ∀ j : Jᵒᵖ, DiscreteTopology (F.obj j) := fun j => discreteTopology_bot _
+    let _ : TopologicalSpace P := tD
+    have hCclosed : @IsClosed P tD C := by
+      dsimp [C]
+      apply isClosed_iInter
+      intro i
+      apply isClosed_iInter
+      intro j'
+      apply isClosed_iInter
+      intro f
+      exact isClosed_eq
+        ((continuous_of_discreteTopology : @Continuous (F.obj i) (F.obj j') ⊥ ⊥
+          (F.map f)).comp (continuous_apply i))
+        (continuous_apply j')
+    have hVclosed : @IsClosed P tD {x | x j ∈ V} := by
+      exact (isClosed_discrete V).preimage (continuous_apply j)
+    exact @IsClosed.isCompact P tD (C ∩ {x | x j ∈ V}) hDcompact
+      (hCclosed.inter hVclosed)
+  have hId : @Continuous P P tD tP id := by
+    apply continuous_iff_le_induced.mpr
+    change
+      @Pi.topologicalSpace (Jᵒᵖ) (fun j => (F.obj j : Type (max v u))) (fun _ => ⊥) ≤
+        TopologicalSpace.induced id
+          (@Pi.topologicalSpace (Jᵒᵖ) (fun j => (F.obj j : Type (max v u)))
+            (fun j => (F.obj j).str))
+    simp only [induced_id, Pi.topologicalSpace]
+    exact iInf_mono fun j => induced_mono bot_le
+  have hcompact_cylinder (j : Jᵒᵖ) (V : Set (F.obj j)) :
+      IsCompact ((limit.π F j) ⁻¹' V) := by
+    have himage : g '' ((limit.π F j) ⁻¹' V) = C ∩ {x | x j ∈ V} := by
+      ext x
+      constructor
+      · rintro ⟨y, hy, rfl⟩
+        refine ⟨hgrange ▸ ⟨y, rfl⟩, ?_⟩
+        change (limit.π F j) y ∈ V at hy
+        simpa [g] using hy
+      · rintro ⟨hxC, hxV⟩
+        have hxrange : x ∈ Set.range g := by
+          rw [hgrange]
+          exact hxC
+        rcases hxrange with ⟨y, rfl⟩
+        refine ⟨y, ?_, rfl⟩
+        change (limit.π F j) y ∈ V
+        change (g y) j ∈ V at hxV
+        simpa [g] using hxV
+    apply (@Topology.IsInducing.isCompact_iff L P
+      (inferInstance : TopologicalSpace L) tP ((limit.π F j) ⁻¹' V) g hgind).mpr
+    rw [himage]
+    have hcompactC' : @IsCompact P tP (C ∩ {x | x j ∈ V}) := by
+      simpa only [image_id] using
+        (@IsCompact.image P P tD tP (C ∩ {x | x j ∈ V}) id
+          (hCcompact_cylinder j V) hId)
+    simpa only [image_id] using hcompactC'
+  have hcompactL : CompactSpace L := by
+    have huniv : IsCompact (Set.univ : Set L) := by
+      apply (@Topology.IsInducing.isCompact_iff L P
+        (inferInstance : TopologicalSpace L) tP Set.univ g hgind).mpr
+      rw [image_univ, hgrange]
+      have hcompactC' : @IsCompact P tP C := by
+        simpa only [image_id] using
+          (@IsCompact.image P P tD tP C id hCcompact hId)
+      simpa only [image_id] using hcompactC'
+    exact ⟨huniv⟩
+  let B : Set (Set L) :=
+    {U | ∃ (j : Jᵒᵖ) (V : Set (F.obj j)), IsOpen V ∧ U = (limit.π F j) ⁻¹' V}
+  have hB : IsTopologicalBasis B := by
+    let T : ∀ j : Jᵒᵖ, Set (Set (F.obj j)) := fun _ => {V | IsOpen V}
+    have hT : ∀ j, IsTopologicalBasis (T j) := by
+      intro j
+      simpa [T] using
+        (isTopologicalBasis_opens : IsTopologicalBasis {V : Set (F.obj j) | IsOpen V})
+    have huniv : ∀ i : Jᵒᵖ, Set.univ ∈ T i := by
+      intro i
+      exact isOpen_univ
+    have hinter : ∀ (i : Jᵒᵖ) (U₁ U₂ : Set (F.obj i)), U₁ ∈ T i → U₂ ∈ T i →
+        U₁ ∩ U₂ ∈ T i := by
+      intro i U₁ U₂ hU₁ hU₂
+      exact hU₁.inter hU₂
+    have hcompat : ∀ (i j : Jᵒᵖ) (f : i ⟶ j) (V : Set (F.obj j)) (_hV : V ∈ T j),
+        F.map f ⁻¹' V ∈ T i := by
+      intro i j f V hV
+      exact hV.preimage (F.map f).hom.2
+    simpa [B, T] using
+      (TopCat.isTopologicalBasis_cofiltered_limit.{u, v, v}
+        (F := F) (C := limit.cone F) (limit.isLimit F) T hT huniv hinter hcompat)
+  have hcompactB : ∀ U ∈ B, IsCompact U := by
+    rintro U ⟨j, V, hV, rfl⟩
+    exact hcompact_cylinder j V
+  have hprespectral : PrespectralSpace L :=
+    PrespectralSpace.of_isTopologicalBasis hB hcompactB
+  let b : (Σ j : Jᵒᵖ, {V : Set (F.obj j) // IsOpen V}) → Set L :=
+    fun p => (limit.π F p.1) ⁻¹' p.2.1
+  have hbasis : IsTopologicalBasis (Set.range b) := by
+    have hrange : Set.range b = B := by
+      ext U
+      constructor
+      · rintro ⟨p, rfl⟩
+        exact ⟨p.1, p.2.1, p.2.2, rfl⟩
+      · rintro ⟨j, V, hV, rfl⟩
+        exact ⟨⟨j, ⟨V, hV⟩⟩, rfl⟩
+    rw [hrange]
+    exact hB
+  have hcompact_inter (p q : Σ j : Jᵒᵖ, {V : Set (F.obj j) // IsOpen V}) :
+      IsCompact (b p ∩ b q) := by
+    let G : Finset (Jᵒᵖ) := {p.1, q.1}
+    obtain ⟨k, hk⟩ := IsCofiltered.inf_objs_exists G
+    have hpG : p.1 ∈ G := by
+      change p.1 ∈ ({p.1, q.1} : Finset (Jᵒᵖ))
+      exact Finset.mem_insert_self _ _
+    have hqG : q.1 ∈ G := by
+      change q.1 ∈ ({p.1, q.1} : Finset (Jᵒᵖ))
+      exact Finset.mem_insert_of_mem (Finset.mem_singleton_self _)
+    let a : k ⟶ p.1 := (hk hpG).some
+    let c : k ⟶ q.1 := (hk hqG).some
+    let V : Set (F.obj k) := (F.map a) ⁻¹' p.2.1 ∩ (F.map c) ⁻¹' q.2.1
+    have hV : IsOpen V := by
+      dsimp [V]
+      exact (p.2.2.preimage (F.map a).hom.2).inter (q.2.2.preimage (F.map c).hom.2)
+    have heq : b p ∩ b q = (limit.π F k) ⁻¹' V := by
+      ext x
+      constructor
+      · intro hx
+        refine ⟨?_, ?_⟩
+        · change F.map a ((limit.π F k) x) ∈ p.2.1
+          rw [← ConcreteCategory.comp_apply, limit.w F a]
+          exact hx.1
+        · change F.map c ((limit.π F k) x) ∈ q.2.1
+          rw [← ConcreteCategory.comp_apply, limit.w F c]
+          exact hx.2
+      · intro hx
+        change (F.map a ((limit.π F k) x) ∈ p.2.1 ∧
+          F.map c ((limit.π F k) x) ∈ q.2.1) at hx
+        refine ⟨?_, ?_⟩
+        · change (limit.π F p.1) x ∈ p.2.1
+          have hxa := hx.1
+          rw [← ConcreteCategory.comp_apply, limit.w F a] at hxa
+          exact hxa
+        · change (limit.π F q.1) x ∈ q.2.1
+          have hxc := hx.2
+          rw [← ConcreteCategory.comp_apply, limit.w F c] at hxc
+          exact hxc
+    rw [heq]
+    exact hcompact_cylinder k V
+  have hquasiSeparated : QuasiSeparatedSpace L :=
+    QuasiSeparatedSpace.of_isTopologicalBasis hbasis hcompact_inter
+  have hcont : @Continuous L P (inferInstance : TopologicalSpace L) tP g := by
+    exact @Topology.IsInducing.continuous L P g
+      tP (inferInstance : TopologicalSpace L) hgind
+  have hT0L : T0Space L := by
+    let _ : ∀ j : Jᵒᵖ, T0Space (F.obj j) := hT0
+    have hT0P : @T0Space P
+        tP := by
+      exact @Pi.instT0Space (Jᵒᵖ) (fun j => (F.obj j : Type (max v u)))
+        (fun j => (F.obj j).str) hT0
+    exact @t0Space_of_injective_of_continuous L P (inferInstance : TopologicalSpace L)
+      tP g hginj hcont hT0P
+  have hquasiSober : QuasiSober L := by
+    constructor
+    intro Z hZ hZclosed
+    let Zj : ∀ j : Jᵒᵖ, Set (F.obj j) := fun j => (limit.π F j) '' Z
+    have hZj : ∀ j, IsIrreducible (Zj j) := by
+      intro j
+      exact hZ.image _ (limit.π F j).hom.2.continuousOn
+    let xj : ∀ j : Jᵒᵖ, F.obj j := fun j =>
+      Classical.choose ((hsober j).sober (hZj j).closure isClosed_closure)
+    have hxj : ∀ j, IsGenericPoint (xj j) (closure (Zj j)) := by
+      intro j
+      exact Classical.choose_spec ((hsober j).sober (hZj j).closure isClosed_closure)
+    have hxcompat : ∀ (i j : Jᵒᵖ) (f : i ⟶ j), F.map f (xj i) = xj j := by
+      intro i j f
+      let _ : T0Space (F.obj j) := hT0 j
+      apply Inseparable.eq
+      rw [inseparable_iff_forall_isOpen]
+      intro V hV
+      have hleft : F.map f (xj i) ∈ V ↔
+          (Zj i ∩ (F.map f) ⁻¹' V).Nonempty := by
+        change xj i ∈ (F.map f).hom ⁻¹' V ↔
+          (Zj i ∩ (F.map f).hom ⁻¹' V).Nonempty
+        exact (hxj i).mem_open_set_iff (hV.preimage (F.map f).hom.2) |>.trans
+          (closure_inter_open_nonempty_iff (hV.preimage (F.map f).hom.2))
+      have hright : xj j ∈ V ↔ (Zj j ∩ V).Nonempty := by
+        rw [hxj j |>.mem_open_set_iff hV, closure_inter_open_nonempty_iff hV]
+      have himage : (Zj i ∩ (F.map f) ⁻¹' V).Nonempty ↔ (Zj j ∩ V).Nonempty := by
+        constructor
+        · rintro ⟨_, ⟨z, hz, rfl⟩, hzV⟩
+          refine ⟨(limit.π F j) z, ⟨z, hz, rfl⟩, ?_⟩
+          change F.map f ((limit.π F i) z) ∈ V at hzV
+          rw [← ConcreteCategory.comp_apply, limit.w F f] at hzV
+          exact hzV
+        · rintro ⟨_, ⟨z, hz, rfl⟩, hzV⟩
+          refine ⟨(limit.π F i) z, ⟨z, hz, rfl⟩, ?_⟩
+          change F.map f ((limit.π F i) z) ∈ V
+          rw [← ConcreteCategory.comp_apply, limit.w F f]
+          exact hzV
+      exact hleft.trans (himage.trans hright.symm)
+    let x : P := xj
+    have hxC : x ∈ C := by
+      dsimp [C, x]
+      simp only [mem_iInter]
+      intro i j f
+      exact hxcompat i j f
+    have hxrange : x ∈ Set.range g := by
+      rw [hgrange]
+      exact hxC
+    obtain ⟨y, hy⟩ := hxrange
+    have hbasic : ∀ (j : Jᵒᵖ) (V : Set (F.obj j)), IsOpen V →
+        (y ∈ (limit.π F j) ⁻¹' V ↔ (Z ∩ (limit.π F j) ⁻¹' V).Nonempty) := by
+      intro j V hV
+      have hleft : xj j ∈ V ↔ (Zj j ∩ V).Nonempty := by
+        rw [hxj j |>.mem_open_set_iff hV, closure_inter_open_nonempty_iff hV]
+      have hright : (Zj j ∩ V).Nonempty ↔
+          (Z ∩ (limit.π F j) ⁻¹' V).Nonempty := by
+        constructor
+        · rintro ⟨_, ⟨z, hz, rfl⟩, hzV⟩
+          exact ⟨z, hz, hzV⟩
+        · rintro ⟨z, hz, hzV⟩
+          exact ⟨(limit.π F j) z, ⟨z, hz, rfl⟩, hzV⟩
+      have hyj : (limit.π F j) y = xj j := by
+        simpa [g, x] using congrFun hy j
+      rw [show y ∈ (limit.π F j) ⁻¹' V ↔ xj j ∈ V by simp [hyj]]
+      exact hleft.trans hright
+    have hyZ : y ∈ Z := by
+      by_contra hyZ
+      obtain ⟨U, hU, hyU, hUZ⟩ := hB.isOpen_iff.mp hZclosed.isOpen_compl y hyZ
+      change ∃ (j : Jᵒᵖ) (V : Set (F.obj j)), IsOpen V ∧
+        U = (limit.π F j) ⁻¹' V at hU
+      obtain ⟨j, V, hV, rfl⟩ := hU
+      have hnonempty := (hbasic j V hV).mp hyU
+      rcases hnonempty with ⟨z, hz, hzV⟩
+      exact (hUZ hzV) hz
+    refine ⟨y, ?_⟩
+    rw [isGenericPoint_def]
+    apply subset_antisymm
+    · exact closure_minimal (singleton_subset_iff.mpr hyZ) hZclosed
+    · intro z hz
+      rw [mem_closure_iff]
+      intro U hU hzU
+      obtain ⟨B', hB', hzB', hB'U⟩ := hB.isOpen_iff.mp hU z hzU
+      rcases hB' with ⟨j, V, hV, rfl⟩
+      exact ⟨y, hB'U ((hbasic j V hV).mpr ⟨z, hz, hzB'⟩), rfl⟩
+  exact { __ := hT0L, __ := hcompactL, __ := hquasiSober, __ := hquasiSeparated, __ := hprespectral }
 
-/-- A bundled source-facing interface for a directed inverse system of finite
-sober topological spaces. -/
-structure DirectedFiniteSoberPresentation (X : Type u) [TopologicalSpace X] where
-  index : Type u
-  [preorder : Preorder index]
-  [directed : IsDirectedOrder index]
-  [nonempty : Nonempty index]
-  diagram : indexᵒᵖ ⥤ TopCat.{u}
-  finite : ∀ i, Finite (diagram.obj i)
-  sober : ∀ i, QuasiSober (diagram.obj i)
-  t0 : ∀ i, T0Space (diagram.obj i)
-  homeomorph : X ≃ₜ ((limit diagram : TopCat.{u}) : Type u)
+private theorem quasiSober_of_finite {Y : Type u} [TopologicalSpace Y] [Finite Y] :
+    QuasiSober Y := by
+  classical
+  constructor
+  intro Z hZ hZclosed
+  let t : Finset (Set Y) := (Set.toFinite Z).toFinset.image
+    (fun z : Y => closure ({z} : Set Y))
+  have htclosed : ∀ S ∈ t, IsClosed S := by
+    intro S hS
+    rcases Finset.mem_image.mp hS with ⟨z, -, rfl⟩
+    exact isClosed_closure
+  have hZsub : Z ⊆ ⋃₀ (t : Set (Set Y)) := by
+    intro z hz
+    refine mem_sUnion.mpr ⟨closure ({z} : Set Y), ?_, subset_closure (by simp)⟩
+    exact Finset.mem_image.mpr ⟨z, (Set.toFinite Z).mem_toFinset.mpr hz, rfl⟩
+  obtain ⟨S, hSt, hZS⟩ :=
+    (isIrreducible_iff_sUnion_isClosed.mp hZ) t htclosed hZsub
+  rcases Finset.mem_image.mp hSt with ⟨z, hzZ, rfl⟩
+  have hzZ' : z ∈ Z := (Set.toFinite Z).mem_toFinset.mp hzZ
+  refine ⟨z, ?_⟩
+  rw [isGenericPoint_def]
+  apply subset_antisymm
+  · exact closure_minimal (singleton_subset_iff.mpr hzZ') hZclosed
+  · exact hZS
 
-/-- A topological space is spectral exactly when it is homeomorphic to a
-directed inverse limit of finite sober spaces. -/
-theorem spectralSpace_iff_directed_inverse_limit_finite_sober :
-    SpectralSpace X ↔
-      Nonempty (DirectedFiniteSoberPresentation X) := by
-  sorry
+private theorem constructibleOpen_contains_finite_coordinate_cylinder
+    {I : Type u} {U : Set (I → KrullTwoPointSpace)}
+    (hU : IsOpen[constructibleTopology (I → KrullTwoPointSpace)] U) {x : I → KrullTwoPointSpace}
+    (hx : x ∈ U) :
+    ∃ F : Finset I,
+      x ∈ (F : Set I).pi (fun i => ({x i} : Set KrullTwoPointSpace)) ∧
+        (F : Set I).pi (fun i => ({x i} : Set KrullTwoPointSpace)) ⊆ U := by
+  classical
+  change TopologicalSpace.GenerateOpen
+      (constructibleTopologySubbasis (I → KrullTwoPointSpace)) U at hU
+  induction hU generalizing x with
+  | basic S hS =>
+      rcases hS with ⟨hSopen, hScompact⟩ | ⟨hSclosed, hScompact⟩
+      · obtain ⟨T, hT, hxT, hTS⟩ :=
+          (isTopologicalBasis_pi (fun _ => isTopologicalBasis_opens)).isOpen_iff.mp
+            hSopen x hx
+        rcases hT with ⟨W, F, hW, rfl⟩
+        refine ⟨F, ?_, ?_⟩
+        · intro i hi
+          simp
+        · intro y hy
+          apply hTS
+          intro i hi
+          have hyx : y i = x i := by simpa using hy i hi
+          rw [hyx]
+          exact hxT i hi
+      · have hScompl : IsOpen Sᶜ := hSclosed.isOpen_compl
+        let ι : Type u := {p : (I → Set KrullTwoPointSpace) × Finset I //
+          (∀ i, i ∈ p.2 → IsOpen (p.1 i)) ∧
+            (p.2 : Set I).pi p.1 ⊆ Sᶜ}
+        let b : ι → Set (I → KrullTwoPointSpace) :=
+          fun p => (p.1.2 : Set I).pi p.1.1
+        have hbopen : ∀ p : ι, IsOpen (b p) := by
+          intro p
+          rcases p with ⟨⟨W, F⟩, hW, hWF⟩
+          change IsOpen ((F : Set I).pi W)
+          exact isOpen_set_pi F.finite_toSet (fun i hi => hW i hi)
+        have hcover : Sᶜ ⊆ ⋃ p : ι, b p := by
+          intro y hy
+          obtain ⟨T, hT, hyT, hTS⟩ :=
+            (isTopologicalBasis_pi (fun _ => isTopologicalBasis_opens)).isOpen_iff.mp
+              hScompl y hy
+          rcases hT with ⟨W, F, hW, rfl⟩
+          let p : ι := ⟨(W, F), ⟨by
+            intro i hi
+            simpa using hW i hi, hTS⟩⟩
+          refine mem_iUnion.mpr ⟨p, ?_⟩
+          change y ∈ (F : Set I).pi W
+          exact hyT
+        obtain ⟨s, hs⟩ := hScompact.elim_finite_subcover b hbopen hcover
+        let F : Finset I := s.biUnion (fun p => p.1.2)
+        have hcoord : ∀ p : ι, p ∈ s →
+            ∃ i, i ∈ p.1.2 ∧ x i ∉ p.1.1 i := by
+          intro p hp
+          have hxp : x ∉ b p := by
+            intro hxpS
+            exact (p.2.2 hxpS) hx
+          by_contra h
+          push Not at h
+          exact hxp (by
+            intro i hi
+            exact h i hi)
+        choose ip hipF hipout using hcoord
+        refine ⟨F, ?_, ?_⟩
+        · intro i hi
+          simp
+        · intro y hy
+          by_contra hyS
+          have hySc : y ∈ Sᶜ := hyS
+          obtain ⟨p, hp, hyp⟩ := mem_iUnion₂.mp (hs hySc)
+          have hip : ip p hp ∈ F := by
+            exact Finset.mem_biUnion.mpr ⟨p, hp, hipF p hp⟩
+          have hxy : y (ip p hp) = x (ip p hp) := by
+            simpa using hy (ip p hp) hip
+          have hyW : y (ip p hp) ∈ p.1.1 (ip p hp) := hyp (ip p hp) (hipF p hp)
+          exact (hipout p hp) (by simpa [hxy] using hyW)
+  | univ =>
+      refine ⟨∅, by simp, ?_⟩
+      intro y hy
+      simp
+  | inter s t hs ht ihs iht =>
+      rcases ihs hx.1 with ⟨F, hxF, hFs⟩
+      rcases iht hx.2 with ⟨G, hxG, hGt⟩
+      refine ⟨F ∪ G, ?_, ?_⟩
+      · intro i hi
+        simp
+      · intro y hy
+        constructor
+        · apply hFs
+          intro i hi
+          exact hy i (Finset.mem_union_left G hi)
+        · apply hGt
+          intro i hi
+          exact hy i (Finset.mem_union_right F hi)
+  | sUnion S hS ih =>
+      rcases mem_sUnion.mp hx with ⟨T, hTS, hxT⟩
+      rcases ih T hTS hxT with ⟨F, hxF, hFU⟩
+      exact ⟨F, hxF, fun y hy => mem_sUnion.mpr ⟨T, hTS, hFU hy⟩⟩
 
 /-! ### The two-point product presentation -/
 
@@ -1075,6 +1489,190 @@ theorem krullTwoPointSpace_is_finite_sober :
         | generic => exact (hab rfl).elim
   exact ⟨hfinite, hquasi, hT0⟩
 
+private theorem spectralSpace_pi_krullTwoPoint {I : Type u} :
+    SpectralSpace (I → KrullTwoPointSpace) := by
+  classical
+  have hK := krullTwoPointSpace_is_finite_sober
+  let _ : Finite KrullTwoPointSpace := hK.1
+  let _ : QuasiSober KrullTwoPointSpace := hK.2.1
+  let _ : T0Space KrullTwoPointSpace := hK.2.2
+  have hKcompact : ∀ S : Set KrullTwoPointSpace, IsCompact S := by
+    intro S
+    exact (Set.toFinite S).isCompact
+  have hcompactCylinder : ∀ (U : I → Set KrullTwoPointSpace) (F : Finset I),
+      IsCompact ((F : Set I).pi U) := by
+    intro U F
+    let W : I → Set KrullTwoPointSpace := fun i => if i ∈ F then U i else Set.univ
+    have hW : ∀ i, IsCompact (W i) := by
+      intro i
+      dsimp [W]
+      split_ifs <;> exact hKcompact _
+    rw [← Set.pi_univ_ite (F : Set I) U]
+    exact isCompact_univ_pi hW
+  have hcompact : CompactSpace (I → KrullTwoPointSpace) := by
+    refine ⟨?_⟩
+    simpa only [Set.pi_univ] using
+      (isCompact_univ_pi (fun _ => hKcompact Set.univ))
+  have hquasiSober : QuasiSober (I → KrullTwoPointSpace) := by
+    constructor
+    intro Z hZ hZclosed
+    let Zi : ∀ i : I, Set KrullTwoPointSpace := fun i => Function.eval i '' Z
+    have hZi : ∀ i, IsIrreducible (Zi i) := by
+      intro i
+      exact hZ.image _ (continuous_apply i).continuousOn
+    let xi : ∀ i : I, KrullTwoPointSpace := fun i =>
+      Classical.choose ((inferInstance : QuasiSober KrullTwoPointSpace).sober
+        (hZi i).closure isClosed_closure)
+    have hxi : ∀ i, IsGenericPoint (xi i) (closure (Zi i)) := by
+      intro i
+      exact Classical.choose_spec ((inferInstance : QuasiSober KrullTwoPointSpace).sober
+        (hZi i).closure isClosed_closure)
+    let x : I → KrullTwoPointSpace := xi
+    have hxZ : x ∈ Z := by
+      by_contra hx
+      obtain ⟨S, hS, hxS, hSZ⟩ :=
+        (isTopologicalBasis_pi (fun _ => isTopologicalBasis_opens)).isOpen_iff.mp
+          hZclosed.isOpen_compl x hx
+      rcases hS with ⟨U, F, hU, rfl⟩
+      have hZiU : ∀ i ∈ F, (Z ∩ (Function.eval i ⁻¹' U i)).Nonempty := by
+        intro i hi
+        have hUiopen : IsOpen (U i) := by simpa using hU i hi
+        have hxiU : xi i ∈ U i := hxS i hi
+        have hZU : (closure (Zi i) ∩ U i).Nonempty :=
+          (hxi i).mem_open_set_iff hUiopen |>.mp hxiU
+        rw [closure_inter_open_nonempty_iff hUiopen] at hZU
+        rcases hZU with ⟨_, ⟨z, hz, rfl⟩, hzU⟩
+        exact ⟨z, hz, hzU⟩
+      have hfinite : ∀ s : Finset I, s ⊆ F →
+          (Z ∩ (s : Set I).pi U).Nonempty := by
+        intro s
+        induction s using Finset.induction_on with
+        | empty =>
+            intro hsF
+            simpa using hZ.nonempty
+        | @insert i s hi ih =>
+            intro hsF
+            have hiF : i ∈ F := hsF (Finset.mem_insert_self _ _)
+            have hsF' : s ⊆ F := fun j hj => hsF (Finset.mem_insert_of_mem hj)
+            have hA := hZiU i hiF
+            have hB := ih hsF'
+            have hUiopen : IsOpen (U i) := by simpa using hU i hiF
+            have hAopen : IsOpen
+                ((Function.eval i : (I → KrullTwoPointSpace) → KrullTwoPointSpace) ⁻¹' U i) :=
+              @IsOpen.preimage (I → KrullTwoPointSpace) KrullTwoPointSpace
+                _ _ (Function.eval i) (continuous_apply i) (U i) hUiopen
+            have hBopen : IsOpen ((s : Set I).pi U) :=
+              isOpen_set_pi s.finite_toSet (fun j hj => by simpa using hU j (hsF' hj))
+            obtain ⟨z, hzZ, hzAB⟩ :=
+              hZ.isPreirreducible _ _ hAopen hBopen hA hB
+            refine ⟨z, hzZ, ?_⟩
+            change ∀ j, j ∈ (insert i s : Finset I) → z j ∈ U j
+            intro j hj'
+            simp only [Finset.mem_insert] at hj'
+            rcases hj' with rfl | hj'
+            · exact hzAB.1
+            · exact hzAB.2 j hj'
+      obtain ⟨z, hzZ, hzS⟩ := hfinite F subset_rfl
+      exact (hSZ hzS) hzZ
+    refine ⟨x, ?_⟩
+    rw [isGenericPoint_def]
+    apply subset_antisymm
+    · exact closure_minimal (singleton_subset_iff.mpr hxZ) hZclosed
+    · intro z hzZ
+      rw [mem_closure_iff]
+      intro U hUopen hzU
+      obtain ⟨S, hS, hzS, hSU⟩ :=
+        (isTopologicalBasis_pi (fun _ => isTopologicalBasis_opens)).isOpen_iff.mp
+          hUopen z hzU
+      rcases hS with ⟨V, F, hV, rfl⟩
+      have hxS : x ∈ (F : Set I).pi V := by
+        intro i hi
+        have hViopen : IsOpen (V i) := by simpa using hV i hi
+        apply (hxi i).mem_open_set_iff hViopen |>.mpr
+        exact ⟨z i, subset_closure ⟨z, hzZ, rfl⟩, hzS i hi⟩
+      exact ⟨x, hSU hxS, rfl⟩
+  have hprespectral : PrespectralSpace (I → KrullTwoPointSpace) := by
+    let B : Set (Set (I → KrullTwoPointSpace)) :=
+      {S | ∃ (U : I → Set KrullTwoPointSpace) (F : Finset I),
+        (∀ i, i ∈ F → IsOpen (U i)) ∧ S = (F : Set I).pi U}
+    have hB : IsTopologicalBasis B := by
+      simpa [B] using (isTopologicalBasis_pi (fun _ => isTopologicalBasis_opens))
+    exact PrespectralSpace.of_isTopologicalBasis hB
+      (by
+        intro S hS
+        rcases hS with ⟨U, F, hU, rfl⟩
+        exact hcompactCylinder U F)
+  have hquasiSeparated : QuasiSeparatedSpace (I → KrullTwoPointSpace) := by
+    let B : Set (Set (I → KrullTwoPointSpace)) :=
+      {S | ∃ (U : I → Set KrullTwoPointSpace) (F : Finset I),
+        (∀ i, i ∈ F → IsOpen (U i)) ∧ S = (F : Set I).pi U}
+    have hB : IsTopologicalBasis B := by
+      simpa [B] using (isTopologicalBasis_pi (fun _ => isTopologicalBasis_opens))
+    let ιB := {p : (I → Set KrullTwoPointSpace) × Finset I //
+      ∀ i, i ∈ p.2 → IsOpen (p.1 i)}
+    let b : ιB → Set (I → KrullTwoPointSpace) :=
+      fun p => (p.1.2 : Set I).pi p.1.1
+    have hbasis : IsTopologicalBasis (Set.range b) := by
+      have hrange : Set.range b = B := by
+        ext S
+        constructor
+        · rintro ⟨p, rfl⟩
+          exact ⟨p.1.1, p.1.2, p.2, rfl⟩
+        · rintro ⟨U, F, hU, rfl⟩
+          exact ⟨⟨(U, F), hU⟩, rfl⟩
+      rw [hrange]
+      exact hB
+    refine QuasiSeparatedSpace.of_isTopologicalBasis hbasis (by
+      intro p q
+      rcases p with ⟨⟨U, F⟩, hU⟩
+      rcases q with ⟨⟨V, G⟩, hV⟩
+      change IsCompact ((F : Set I).pi U ∩ (G : Set I).pi V)
+      let H : I → Set KrullTwoPointSpace := fun i =>
+        if i ∈ F then if i ∈ G then U i ∩ V i else U i
+        else if i ∈ G then V i else Set.univ
+      rw [show (F : Set I).pi U ∩ (G : Set I).pi V =
+          ((F ∪ G : Finset I) : Set I).pi H by
+        ext x
+        constructor
+        · intro hx
+          change ∀ i, i ∈ F ∪ G → x i ∈ H i
+          intro i hi
+          change i ∈ F ∪ G at hi
+          rcases Finset.mem_union.mp hi with hiF | hiG
+          · by_cases hiG' : i ∈ G
+            · simpa [H, hiF, hiG'] using
+                (show x i ∈ U i ∩ V i from ⟨hx.1 i hiF, hx.2 i hiG'⟩)
+            · simpa [H, hiF, hiG'] using hx.1 i hiF
+          · by_cases hiF' : i ∈ F
+            · simpa [H, hiF', hiG] using
+                (show x i ∈ U i ∩ V i from ⟨hx.1 i hiF', hx.2 i hiG⟩)
+            · simpa [H, hiF', hiG] using hx.2 i hiG
+        · intro hx
+          change ∀ i, i ∈ F ∪ G → x i ∈ H i at hx
+          refine ⟨?_, ?_⟩
+          · intro i hi
+            change i ∈ F at hi
+            have hxi := hx i (Finset.mem_union_left G hi)
+            by_cases hiG : i ∈ G
+            · have hxi' : x i ∈ U i ∩ V i := by simpa [H, hi, hiG] using hxi
+              exact hxi'.1
+            · have hxi' : x i ∈ U i := by simpa [H, hi, hiG] using hxi
+              exact hxi'
+          · intro i hi
+            change i ∈ G at hi
+            have hxi := hx i (Finset.mem_union_right F hi)
+            by_cases hiF : i ∈ F
+            · by_cases hiG : i ∈ G
+              · have hxi' : x i ∈ U i ∩ V i := by simpa [H, hiF, hiG] using hxi
+                exact hxi'.2
+              · exact (hiG hi).elim
+            · have hxi' : x i ∈ V i := by simpa [H, hiF, hi] using hxi
+              exact hxi'
+      ]
+      exact hcompactCylinder H (F ∪ G))
+  have hT0 : T0Space (I → KrullTwoPointSpace) := inferInstance
+  exact { __ := hT0, __ := hcompact, __ := hquasiSober, __ := hquasiSeparated, __ := hprespectral }
+
 /-- Spectral spaces are precisely the constructibly closed subspaces of
 products of copies of the two-point space, up to homeomorphism. -/
 theorem spectralSpace_iff_constructibleClosed_subspace_of_product_twoPoint :
@@ -1082,7 +1680,409 @@ theorem spectralSpace_iff_constructibleClosed_subspace_of_product_twoPoint :
       ∃ (I : Type u) (E : Set (I → KrullTwoPointSpace)),
         IsClosed[constructibleTopology (I → KrullTwoPointSpace)] E ∧
           Nonempty (X ≃ₜ E) := by
-  sorry
+  constructor
+  · intro hX
+    classical
+    let _ : SpectralSpace X := hX
+    have hK := krullTwoPointSpace_is_finite_sober
+    let _ : Finite KrullTwoPointSpace := hK.1
+    let I : Type u := {U : Set X // IsOpen U ∧ IsCompact U}
+    let fU : ∀ i : I, X → KrullTwoPointSpace := fun i x =>
+      if x ∈ (i : Set X) then KrullTwoPointSpace.generic else KrullTwoPointSpace.special
+    have hfU : ∀ i : I, IsSpectralMap (fU i) := by
+      intro i
+      have hcont : Continuous (fU i) := by
+        rw [continuous_generateFrom_iff]
+        intro V hV
+        have hV' : V = ({KrullTwoPointSpace.generic} : Set KrullTwoPointSpace) := by
+          simpa [krullTwoPointOpenGenerators] using hV
+        rw [hV']
+        rw [show fU i ⁻¹' ({KrullTwoPointSpace.generic} : Set KrullTwoPointSpace) =
+            (i : Set X) by
+          ext x
+          simp [fU]]
+        exact i.property.1
+      refine ⟨hcont, ?_⟩
+      intro V hVopen hVcompact
+      rcases krullTwoPointSpace_isOpen_iff.mp hVopen with hV0 | hVg | hVu
+      · subst V
+        simp
+      · subst V
+        rw [show fU i ⁻¹' ({KrullTwoPointSpace.generic} : Set KrullTwoPointSpace) =
+            (i : Set X) by
+          ext x
+          simp [fU]]
+        exact i.property.2
+      · subst V
+        exact isCompact_univ
+    let f : X → (I → KrullTwoPointSpace) := fun x i => fU i x
+    have hfcont : Continuous f := by
+      apply continuous_pi
+      intro i
+      exact (hfU i).continuous
+    have hfSpectral : IsSpectralMap f := by
+      refine ⟨hfcont, ?_⟩
+      intro V hVopen hVcompact
+      let ιB : Type u := {p : (I → Set KrullTwoPointSpace) × Finset I //
+        ∀ i, i ∈ p.2 → IsOpen (p.1 i)}
+      let b : ιB → Set (I → KrullTwoPointSpace) :=
+        fun p => (p.1.2 : Set I).pi p.1.1
+      have hbopen : ∀ p : ιB, IsOpen (b p) := by
+        intro p
+        rcases p with ⟨⟨W, F⟩, hW⟩
+        change IsOpen ((F : Set I).pi W)
+        exact isOpen_set_pi F.finite_toSet (fun i hi => hW i hi)
+      let ιV : Type u := {p : ιB // b p ⊆ V}
+      let bV : ιV → Set (I → KrullTwoPointSpace) := fun p => b p
+      have hcover : V ⊆ ⋃ p : ιV, bV p := by
+        intro y hy
+        obtain ⟨S, hS, hyS, hSV⟩ :=
+          (isTopologicalBasis_pi (fun _ => isTopologicalBasis_opens)).isOpen_iff.mp
+            hVopen y hy
+        rcases hS with ⟨W, F, hW, rfl⟩
+        let p : ιB := ⟨(W, F), by
+          intro i hi
+          simpa using hW i hi⟩
+        have hp : b p ⊆ V := hSV
+        refine mem_iUnion.mpr ⟨⟨p, hp⟩, ?_⟩
+        exact hyS
+      obtain ⟨s, hs⟩ := hVcompact.elim_finite_subcover bV
+        (fun p => hbopen p.1) hcover
+      have hVe : V = ⋃ p ∈ s, bV p := by
+        apply subset_antisymm
+        · intro y hy
+          exact hs hy
+        · exact iUnion₂_subset (fun p hp => p.property)
+      have hpre : ∀ p : ιB, IsCompact (f ⁻¹' b p) := by
+        intro p
+        rcases p with ⟨⟨W, F⟩, hW⟩
+        change IsCompact ((fun x i => fU i x) ⁻¹' ((F : Set I).pi W))
+        rw [show (fun x i => fU i x) ⁻¹' ((F : Set I).pi W) =
+            ⋂ i : I, ⋂ (_ : i ∈ (F : Set I)), (fU i) ⁻¹' W i by
+          ext x
+          simp only [Set.mem_preimage, Set.mem_pi, Set.mem_iInter]]
+        rw [← Set.sInter_image]
+        apply QuasiSeparatedSpace.isCompact_sInter
+          (F.finite_toSet.image (fun i : I => (fU i) ⁻¹' W i))
+        · rintro S ⟨i, hi, rfl⟩
+          exact Or.inl (IsOpen.preimage (hfU i).continuous (hW i hi))
+        · rintro S ⟨i, hi, rfl⟩
+          exact (hfU i).isCompact_preimage_of_isOpen (hW i hi)
+            (Set.toFinite (W i)).isCompact
+      rw [hVe]
+      simp only [Set.preimage_iUnion]
+      exact s.isCompact_biUnion (fun p hp => hpre p.1)
+    have hinj : Function.Injective f := by
+      intro x y hxy
+      by_contra hne
+      obtain ⟨U, hUopen, hxor⟩ := exists_isOpen_xor_mem hne
+      rcases hxor with hxyU | hyxU
+      · obtain ⟨K, hK, hxK, hKU⟩ :=
+          PrespectralSpace.isTopologicalBasis.exists_subset_of_mem_open hxyU.1 hUopen
+        let i : I := ⟨K, hK.1, hK.2⟩
+        have hyK : y ∉ (i : Set X) := by
+          intro hy
+          exact hxyU.2 (hKU hy)
+        have hcoord : f x i ≠ f y i := by
+          simp [f, fU, i, hxK, hyK]
+        exact hcoord (congrFun hxy i)
+      · obtain ⟨K, hK, hyK, hKU⟩ :=
+          PrespectralSpace.isTopologicalBasis.exists_subset_of_mem_open hyxU.1 hUopen
+        let i : I := ⟨K, hK.1, hK.2⟩
+        have hxK : x ∉ (i : Set X) := by
+          intro hx
+          exact hyxU.2 (hKU hx)
+        have hcoord : f x i ≠ f y i := by
+          simp [f, fU, i, hxK, hyK]
+        exact hcoord (congrFun hxy i)
+    let _ : SpectralSpace (I → KrullTwoPointSpace) := spectralSpace_pi_krullTwoPoint
+    have hEclosed : IsClosed[constructibleTopology (I → KrullTwoPointSpace)] (Set.range f) :=
+      (spectralMap_constructibleTopology_properties f hfSpectral).2.2
+    have hebij : Function.Bijective (fun x : X =>
+        (⟨f x, ⟨x, rfl⟩⟩ : Set.range f)) := by
+      constructor
+      · intro x y hxy
+        exact hinj (congrArg Subtype.val hxy)
+      · intro y
+        rcases y.property with ⟨x, hx⟩
+        refine ⟨x, ?_⟩
+        apply Subtype.ext
+        exact hx
+    let e : X ≃ Set.range f := Equiv.ofBijective _ hebij
+    have hecont : Continuous e := by
+      change Continuous (fun x : X => (⟨f x, ⟨x, rfl⟩⟩ : Set.range f))
+      exact hfcont.subtype_mk (fun x => ⟨x, rfl⟩)
+    have heopen : IsOpenMap e := by
+      intro U hU
+      obtain ⟨ι, V, hV, hVmem⟩ :=
+        PrespectralSpace.isTopologicalBasis.open_eq_iUnion hU
+      let i : ι → I := fun j => ⟨V j, (hVmem j).1, (hVmem j).2⟩
+      let C : ι → Set (I → KrullTwoPointSpace) := fun j =>
+        (Function.eval (i j) ⁻¹' ({KrullTwoPointSpace.generic} : Set KrullTwoPointSpace))
+      have hCopen : ∀ j, IsOpen (C j) := by
+        intro j
+        exact IsOpen.preimage (continuous_apply (i j))
+          (krullTwoPointSpace_isOpen_iff.mpr (Or.inr (Or.inl rfl)))
+      apply isOpen_induced_iff.mpr
+      refine ⟨⋃ j, C j, isOpen_iUnion hCopen, ?_⟩
+      ext y
+      constructor
+      · intro hy
+        change y.1 ∈ ⋃ j, C j at hy
+        obtain ⟨j, hyj⟩ := mem_iUnion.mp hy
+        rcases y.property with ⟨x, hx⟩
+        have hy_eq : y = e x := by
+          apply Subtype.ext
+          exact hx.symm
+        rw [← hx] at hyj
+        have hxV : x ∈ V j := by
+          simpa [C, i, f, fU] using hyj
+        exact ⟨x, hV ▸ mem_iUnion.mpr ⟨j, hxV⟩, hy_eq.symm⟩
+      · rintro ⟨x, hxU, rfl⟩
+        rw [hV] at hxU
+        obtain ⟨j, hxj⟩ := mem_iUnion.mp hxU
+        change (e x).1 ∈ ⋃ j, C j
+        refine mem_iUnion.mpr ⟨j, ?_⟩
+        change f x (i j) ∈ ({KrullTwoPointSpace.generic} : Set KrullTwoPointSpace)
+        simp [i, f, fU, hxj]
+    refine ⟨I, Set.range f, hEclosed, ?_⟩
+    exact ⟨e.toHomeomorphOfContinuousOpen hecont heopen⟩
+  · rintro ⟨I, E, hE, ⟨e⟩⟩
+    let _ : SpectralSpace (I → KrullTwoPointSpace) := spectralSpace_pi_krullTwoPoint
+    have hEspace : SpectralSpace E :=
+      spectralSpace_subtype_of_constructible_closed hE
+    let _ : SpectralSpace E := hEspace
+    have hT0 : T0Space X := e.isEmbedding.t0Space
+    have hcompact : CompactSpace X := e.symm.compactSpace
+    have hquasiSober : QuasiSober X := e.isOpenEmbedding.quasiSober
+    have hquasiSeparated : QuasiSeparatedSpace X :=
+      (quasiSeparatedSpace_congr e).mpr inferInstance
+    have hprespectral : PrespectralSpace X :=
+      PrespectralSpace.of_isInducing e e.isInducing e.isProperMap.isSpectralMap
+    exact spectralSpace_iff_source_conditions.mpr
+      ⟨hT0, hcompact, hquasiSober, hquasiSeparated, hprespectral⟩
+
+/-! ### Directed finite inverse-limit presentation -/
+
+/-- A bundled source-facing interface for a directed inverse system of finite
+sober topological spaces. -/
+structure DirectedFiniteSoberPresentation (X : Type u) [TopologicalSpace X] where
+  index : Type u
+  [preorder : Preorder index]
+  [directed : IsDirectedOrder index]
+  [nonempty : Nonempty index]
+  diagram : indexᵒᵖ ⥤ TopCat.{u}
+  finite : ∀ i, Finite (diagram.obj i)
+  sober : ∀ i, QuasiSober (diagram.obj i)
+  t0 : ∀ i, T0Space (diagram.obj i)
+  homeomorph : X ≃ₜ ((limit diagram : TopCat.{u}) : Type u)
+
+/-- A topological space is spectral exactly when it is homeomorphic to a
+directed inverse limit of finite sober spaces. -/
+theorem spectralSpace_iff_directed_inverse_limit_finite_sober :
+    SpectralSpace X ↔
+      Nonempty (DirectedFiniteSoberPresentation X) := by
+  constructor
+  · intro hX
+    classical
+    obtain ⟨I, E, hE, ⟨e⟩⟩ :=
+      (spectralSpace_iff_constructibleClosed_subspace_of_product_twoPoint (X := X)).mp hX
+    have hK := krullTwoPointSpace_is_finite_sober
+    let _ : Finite KrullTwoPointSpace := hK.1
+    let _ : T0Space KrullTwoPointSpace := hK.2.2
+    let p : ∀ J : Finset I, (I → KrullTwoPointSpace) → (J → KrullTwoPointSpace) :=
+      fun J x j => x j.1
+    let A : ∀ J : Finset I, Set (J → KrullTwoPointSpace) :=
+      fun J => p J '' E
+    let restrict : ∀ {J K : Finset I}, K ⊆ J →
+        (J → KrullTwoPointSpace) → (K → KrullTwoPointSpace) :=
+      fun {J K} h x k => x ⟨k.1, h k.2⟩
+    let mapObj : ∀ {J K : Finset I}, K ⊆ J →
+        TopCat.Hom (TopCat.of (A J)) (TopCat.of (A K)) := fun {J K} (h : K ⊆ J) =>
+      TopCat.ofHom
+        { toFun := fun y : A J =>
+            (⟨restrict h y.1, by
+              rcases y.property with ⟨x, hx, hxy⟩
+              exact ⟨x, hx, by
+                ext k
+                change x k.1 = y.1 ⟨k.1, h k.2⟩
+                exact congrFun hxy ⟨k.1, h k.2⟩⟩⟩ : A K)
+          continuous_toFun := by
+            apply Continuous.subtype_mk
+            · apply continuous_pi
+              intro k
+              let j : J := ⟨k.1, h k.2⟩
+              change Continuous (fun y : A J => y.1 j)
+              exact (continuous_apply j).comp continuous_subtype_val }
+    let D : (Finset I)ᵒᵖ ⥤ TopCat.{u} := {
+      obj := fun J => TopCat.of (A J.unop)
+      map := fun {J K} f =>
+        mapObj (J := J.unop) (K := K.unop) (leOfHom f.unop)
+      map_id := by
+        intro J
+        ext y k
+        rfl
+      map_comp := by
+        intro J K L f g
+        ext y k
+        rfl }
+    have hfinite : ∀ j, Finite (D.obj j) := by
+      intro j
+      exact Finite.of_injective (fun y : D.obj j => y.1) Subtype.val_injective
+    have hsober : ∀ j, QuasiSober (D.obj j) := by
+      intro j
+      let _ : Finite (D.obj j) := hfinite j
+      exact quasiSober_of_finite
+    have ht0 : ∀ j, T0Space (D.obj j) := by
+      intro j
+      exact inferInstance
+    let cπ : ∀ j : (Finset I)ᵒᵖ, TopCat.Hom (TopCat.of E) (D.obj j) := fun j =>
+      TopCat.ofHom
+        { toFun := fun x : E =>
+            (⟨p j.unop x.1, ⟨x.1, x.2, rfl⟩⟩ : A j.unop)
+          continuous_toFun := by
+            apply Continuous.subtype_mk
+            apply continuous_pi
+            intro k
+            let i : I := k.1
+            have hc : Continuous (fun z : (I → KrullTwoPointSpace) => z i) :=
+              continuous_apply i
+            change Continuous ((fun z : (I → KrullTwoPointSpace) => z i) ∘
+              (fun x : E => x.1))
+            exact hc.comp continuous_subtype_val }
+    let C : Cone D :=
+      { pt := TopCat.of E
+        π :=
+          { app := cπ
+            naturality := by
+              intro j k f
+              apply TopCat.ext
+              intro x
+              apply Subtype.ext
+              ext l
+              rfl } }
+    have hset : IsLimit ((CategoryTheory.forget (TopCat.{u})).mapCone C) := by
+      exact Classical.choice ((Types.isLimit_iff _).mpr (by
+        intro s hs
+        let y : I → KrullTwoPointSpace := fun i =>
+          (s (Opposite.op ({i} : Finset I))).1 ⟨i, by simp⟩
+        have hyE : y ∈ E := by
+          by_contra hy
+          obtain ⟨F, hF, hFU⟩ :=
+            constructibleOpen_contains_finite_coordinate_cylinder hE.isOpen_compl hy
+          rcases (s (Opposite.op F)).property with ⟨z, hz, hzy⟩
+          have hzy' : ∀ i, i ∈ F → z i = y i := by
+            intro i hi
+            let f : (Opposite.op F) ⟶ (Opposite.op ({i} : Finset I)) :=
+              (homOfLE (show ({i} : Finset I) ⊆ F by
+                intro j hj
+                rcases Finset.mem_singleton.mp hj with rfl
+                exact hi)).op
+            have hn := hs f
+            have hn' := congrArg (fun q => q.1 ⟨i, by simp⟩) hn
+            calc
+              z i = (p F z) ⟨i, hi⟩ := by rfl
+              _ = (s (Opposite.op F)).1 ⟨i, hi⟩ := congrFun hzy ⟨i, hi⟩
+              _ = (s (Opposite.op ({i} : Finset I))).1 ⟨i, by simp⟩ := by
+                simpa [D, mapObj, restrict] using hn'
+              _ = y i := by rfl
+          have hzcyl : z ∈ (F : Set I).pi (fun i => ({y i} : Set KrullTwoPointSpace)) := by
+            intro i hi
+            simpa only [Set.mem_singleton_iff] using hzy' i hi
+          exact (hFU hzcyl) hz
+        refine ⟨⟨y, hyE⟩, ?_, ?_⟩
+        · intro j
+          apply Subtype.ext
+          funext k
+          let i : I := k.1
+          let f : (Opposite.op j.unop) ⟶ (Opposite.op ({i} : Finset I)) :=
+            (homOfLE (show ({i} : Finset I) ⊆ j.unop by
+              intro l hl
+              rcases Finset.mem_singleton.mp hl with rfl
+              exact k.2)).op
+          have hn := hs f
+          have hn' := congrArg (fun q => q.1 ⟨i, by simp⟩) hn
+          simpa [C, D, cπ, p, mapObj, restrict, y] using hn'.symm
+        · intro w hw
+          apply Subtype.ext
+          funext i
+          have hi := congrArg (fun q => q.1 ⟨i, by simp⟩)
+            (hw (Opposite.op ({i} : Finset I)))
+          simpa [C, cπ, p, y] using hi
+        ))
+    have hbasis : IsTopologicalBasis
+        {U : Set E | ∃ (j : (Finset I)ᵒᵖ) (V : Set (D.obj j)),
+          IsOpen V ∧ U = (cπ j).hom ⁻¹' V} := by
+      apply isTopologicalBasis_of_isOpen_of_nhds
+      · rintro U ⟨j, V, hV, rfl⟩
+        exact hV.preimage (cπ j).hom.2
+      · intro x U hx hUopen
+        obtain ⟨T, hT, hxT, hTU⟩ :=
+          (isTopologicalBasis_subtype
+            (isTopologicalBasis_pi (fun _ => isTopologicalBasis_opens))
+            (fun z : I → KrullTwoPointSpace => z ∈ E)).isOpen_iff.mp
+            hUopen x hx
+        rcases hT with ⟨T, ⟨W, F, hW, rfl⟩, rfl⟩
+        let W' : F → Set KrullTwoPointSpace := fun i => W i.1
+        let T' : Set (F → KrullTwoPointSpace) :=
+          (Set.univ : Set F).pi W'
+        let V : Set (A F) := {z | z.1 ∈ T'}
+        have hVopen : IsOpen V := by
+          apply isOpen_induced_iff.mpr
+          refine ⟨T', isOpen_set_pi (Set.toFinite (Set.univ : Set F)) (fun i hi => ?_), ?_⟩
+          · simpa [W'] using hW i.1 i.2
+          rfl
+        refine ⟨(cπ (Opposite.op F)).hom ⁻¹' V,
+          ⟨Opposite.op F, V, hVopen, rfl⟩, ?_, ?_⟩
+        · change (⟨p F x.1, ⟨x.1, x.2, rfl⟩⟩ : A F) ∈ V
+          change p F x.1 ∈ T'
+          intro i hi
+          simpa [T', W', p] using hxT i.1 i.2
+        · intro y hy
+          apply hTU
+          change y.1 ∈ (F : Set I).pi W
+          intro i hi
+          have hy' : p F y.1 ∈ T' := by
+            change (⟨p F y.1, ⟨y.1, y.2, rfl⟩⟩ : A F) ∈ V at hy
+            change p F y.1 ∈ T' at hy
+            exact hy
+          simpa [W', p] using hy' ⟨i, hi⟩ (by simp)
+    have hlim : IsLimit C :=
+      Formalization.Books.Topology.Unit14.isLimit_of_set_limit_of_open_preimage_basis
+        C hset hbasis
+    let _ : Preorder (Finset I) := inferInstance
+    let _ : IsDirectedOrder (Finset I) := inferInstance
+    let _ : Nonempty (Finset I) := ⟨∅⟩
+    let eE : E ≃ₜ ((limit D : TopCat.{u}) : Type u) :=
+      TopCat.homeoOfIso (hlim.conePointUniqueUpToIso (limit.isLimit D))
+    exact ⟨{
+      index := Finset I
+      preorder := inferInstance
+      directed := inferInstance
+      nonempty := inferInstance
+      diagram := D
+      finite := hfinite
+      sober := hsober
+      t0 := ht0
+      homeomorph := e.trans eE }⟩
+  · rintro ⟨P⟩
+    let _ : Preorder P.index := P.preorder
+    let _ : IsDirectedOrder P.index := P.directed
+    let _ : Nonempty P.index := P.nonempty
+    have hL : SpectralSpace ((limit P.diagram : TopCat.{u}) : Type u) :=
+      spectralSpace_of_directed_inverse_limit_finite_sober
+        P.diagram P.finite P.sober P.t0
+    let _ : SpectralSpace ((limit P.diagram : TopCat.{u}) : Type u) := hL
+    have hT0 : T0Space X := P.homeomorph.isEmbedding.t0Space
+    have hcompact : CompactSpace X := P.homeomorph.symm.compactSpace
+    have hquasiSober : QuasiSober X := P.homeomorph.isOpenEmbedding.quasiSober
+    have hquasiSeparated : QuasiSeparatedSpace X :=
+      (quasiSeparatedSpace_congr P.homeomorph).mpr inferInstance
+    have hprespectral : PrespectralSpace X :=
+      PrespectralSpace.of_isInducing P.homeomorph P.homeomorph.isInducing
+        P.homeomorph.isProperMap.isSpectralMap
+    exact spectralSpace_iff_source_conditions.mpr
+      ⟨hT0, hcompact, hquasiSober, hquasiSeparated, hprespectral⟩
 
 /-! ### Soberification and Noetherian spaces -/
 

@@ -543,8 +543,17 @@ abbrev QCoh {X : RingedSpace.{v}} :=
 def allQuasiCoherentCategoriesAbelian : Prop :=
   ∀ X : RingedSpace.{v}, Nonempty (Abelian (QCoh (X := X)))
 
+/-- A witness that quasi-coherent modules fail to form an abelian category on
+some ringed space. -/
+def hasNonabelianQuasiCoherentCategory : Prop :=
+  ∃ X : RingedSpace.{v}, ¬ Nonempty (Abelian (QCoh (X := X)))
+
 theorem not_allQuasiCoherentCategoriesAbelian :
     ¬ allQuasiCoherentCategoriesAbelian := by
+  sorry
+
+theorem exists_nonabelianQuasiCoherentCategory :
+    hasNonabelianQuasiCoherentCategory := by
   sorry
 
 theorem quasiCoherent_iff_local_presentation {X : RingedSpace.{v}}
@@ -563,8 +572,20 @@ def infiniteDirectSumsPreserveQuasiCoherent : Prop :=
     (∀ i, quasiCoherent (F i)) →
       quasiCoherent (colimit (Discrete.functor F))
 
+/-- A witness that an infinite direct sum of quasi-coherent modules need not
+be quasi-coherent. -/
+def hasInfiniteDirectSumQuasiCoherentFailure : Prop :=
+  ∃ (X : RingedSpace.{v}) (I : Type v), Infinite I ∧
+    ∃ F : I → Mod X.structureSheaf,
+      (∀ i, quasiCoherent (F i)) ∧
+        ¬ quasiCoherent (colimit (Discrete.functor F))
+
 theorem not_infiniteDirectSumsPreserveQuasiCoherent :
     ¬ infiniteDirectSumsPreserveQuasiCoherent := by
+  sorry
+
+theorem exists_infiniteDirectSumQuasiCoherentFailure :
+    hasInfiniteDirectSumQuasiCoherentFailure := by
   sorry
 
 theorem quasiCoherent_pullback

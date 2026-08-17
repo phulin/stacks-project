@@ -114,6 +114,40 @@ abbrev twoYonedaFibredMorphismCategory
 
 /-! ## Evaluation at the identity -/
 
+/- The following two interfaces isolate the only non-definitional parts of
+   evaluation.  They are the pointwise form of the equality witnessing that
+   a functor is over `C`; the proof of the 2-Yoneda lemma is allowed to supply
+   these proposition-valued facts later. -/
+theorem twoYonedaEvaluationCore_obj_isFiber
+    {C : Type uC} [Category.{vC} C]
+    {S : Type uS} [Category.{vS} S]
+    (p : S ⥤ C) (U : C) (G : twoYonedaOverCategory p U) :
+    p.obj (G.1.obj (Over.mk (𝟙 U))) = U := by
+  sorry
+
+theorem twoYonedaEvaluationCore_map_isHomLift
+    {C : Type uC} [Category.{vC} C]
+    {S : Type uS} [Category.{vS} S]
+    (p : S ⥤ C) (U : C)
+    {G H : twoYonedaOverCategory p U} (η : G ⟶ H) :
+    p.IsHomLift (𝟙 U) (η.1.app (Over.mk (𝟙 U))) := by
+  sorry
+
+def twoYonedaEvaluationCoreObj
+    {C : Type uC} [Category.{vC} C]
+    {S : Type uS} [Category.{vS} S]
+    (p : S ⥤ C) (U : C) (G : twoYonedaOverCategory p U) :
+    Functor.Fiber p U :=
+  ⟨G.1.obj (Over.mk (𝟙 U)), twoYonedaEvaluationCore_obj_isFiber p U G⟩
+
+def twoYonedaEvaluationCoreMap
+    {C : Type uC} [Category.{vC} C]
+    {S : Type uS} [Category.{vS} S]
+    (p : S ⥤ C) (U : C)
+    {G H : twoYonedaOverCategory p U} (η : G ⟶ H) :
+    twoYonedaEvaluationCoreObj p U G ⟶ twoYonedaEvaluationCoreObj p U H :=
+  ⟨η.1.app (Over.mk (𝟙 U)), twoYonedaEvaluationCore_map_isHomLift p U η⟩
+
 /- Evaluation is first defined on all strict functors over the base.  The
    preservation condition is then imposed by restricting the source to the
    full subcategory above. -/
@@ -122,12 +156,8 @@ def twoYonedaEvaluationCore
     {S : Type uS} [Category.{vS} S]
     (p : S ⥤ C) (U : C) :
     twoYonedaOverCategory p U ⥤ Functor.Fiber p U where
-  obj G :=
-    ⟨G.1.obj (Over.mk (𝟙 U)), by
-      sorry⟩
-  map {G H} η :=
-    ⟨η.1.app (Over.mk (𝟙 U)), by
-      sorry⟩
+  obj G := twoYonedaEvaluationCoreObj p U G
+  map η := twoYonedaEvaluationCoreMap p U η
   map_id := by
     intro G
     apply Functor.Fiber.hom_ext
@@ -181,6 +211,63 @@ theorem twoYoneda_groupoid_equivalence
 
 /-! ## The alternative presheaf construction -/
 
+/- These proposition-valued interfaces express that precomposition with the
+   canonical map of over-categories remains a strict functor over `C`. -/
+theorem twoYonedaGroupoidRestriction_obj_isOver
+    {C : Type uC} [Category.{vC} C]
+    {S : Type uS} [Category.{vS} S]
+    (p : S ⥤ C) {U V : C} (f : U ⟶ V)
+    (G : twoYonedaGroupoidMorphismCategory p V) :
+    (Over.map f ⋙ G.1) ⋙ p = Over.forget U := by
+  sorry
+
+theorem twoYonedaGroupoidRestriction_map_isOver
+    {C : Type uC} [Category.{vC} C]
+    {S : Type uS} [Category.{vS} S]
+    (p : S ⥤ C) {U V : C} (f : U ⟶ V)
+    {G H : twoYonedaGroupoidMorphismCategory p V} (η : G ⟶ H) :
+    (twoYonedaPostcomposition p U).IsHomLift (𝟙 (Over.forget U))
+      (Functor.whiskerLeft (Over.map f) η.1) := by
+  sorry
+
+def twoYonedaGroupoidRestrictionObj
+    {C : Type uC} [Category.{vC} C]
+    {S : Type uS} [Category.{vS} S]
+    (p : S ⥤ C) {U V : C} (f : U ⟶ V)
+    (G : twoYonedaGroupoidMorphismCategory p V) :
+    twoYonedaGroupoidMorphismCategory p U :=
+  ⟨Over.map f ⋙ G.1, twoYonedaGroupoidRestriction_obj_isOver p f G⟩
+
+def twoYonedaGroupoidRestrictionMap
+    {C : Type uC} [Category.{vC} C]
+    {S : Type uS} [Category.{vS} S]
+    (p : S ⥤ C) {U V : C} (f : U ⟶ V)
+    {G H : twoYonedaGroupoidMorphismCategory p V} (η : G ⟶ H) :
+    twoYonedaGroupoidRestrictionObj p f G ⟶
+      twoYonedaGroupoidRestrictionObj p f H :=
+  ⟨Functor.whiskerLeft (Over.map f) η.1,
+    twoYonedaGroupoidRestriction_map_isOver p f η⟩
+
+theorem twoYonedaGroupoidRestrictionMap_map_id
+    {C : Type uC} [Category.{vC} C]
+    {S : Type uS} [Category.{vS} S]
+    (p : S ⥤ C) {U V : C} (f : U ⟶ V)
+    (G : twoYonedaGroupoidMorphismCategory p V) :
+    twoYonedaGroupoidRestrictionMap p f (𝟙 G) =
+      𝟙 (twoYonedaGroupoidRestrictionObj p f G) := by
+  sorry
+
+theorem twoYonedaGroupoidRestrictionMap_map_comp
+    {C : Type uC} [Category.{vC} C]
+    {S : Type uS} [Category.{vS} S]
+    (p : S ⥤ C) {U V : C} (f : U ⟶ V)
+    {G H K : twoYonedaGroupoidMorphismCategory p V}
+    (η : G ⟶ H) (θ : H ⟶ K) :
+    twoYonedaGroupoidRestrictionMap p f (η ≫ θ) =
+      twoYonedaGroupoidRestrictionMap p f η ≫
+        twoYonedaGroupoidRestrictionMap p f θ := by
+  sorry
+
 /- For `f : U ⟶ V`, precomposition with `Over.map f` gives the restriction
    from the morphism category over `V` to the one over `U`. -/
 def twoYonedaGroupoidRestriction
@@ -189,20 +276,31 @@ def twoYonedaGroupoidRestriction
     (p : S ⥤ C) {U V : C} (f : U ⟶ V) :
     twoYonedaGroupoidMorphismCategory p V ⥤
       twoYonedaGroupoidMorphismCategory p U where
-  obj G :=
-    ⟨Over.map f ⋙ G.1, by
-      sorry⟩
-  map {G H} η :=
-    ⟨Functor.whiskerLeft (Over.map f) η.1, by
-      sorry⟩
+  obj G := twoYonedaGroupoidRestrictionObj p f G
+  map η := twoYonedaGroupoidRestrictionMap p f η
   map_id := by
     intro G
-    apply Functor.Fiber.hom_ext
-    rfl
+    exact twoYonedaGroupoidRestrictionMap_map_id p f G
   map_comp := by
     intro G H K η θ
-    apply Functor.Fiber.hom_ext
-    rfl
+    exact twoYonedaGroupoidRestrictionMap_map_comp p f η θ
+
+theorem twoYonedaHomPresheaf_map_id
+    {C : Type uC} [Category.{vC} C]
+    {S : Type uS} [Category.{vS} S]
+    (p : S ⥤ C) (U : C) :
+    (twoYonedaGroupoidRestriction p (𝟙 U)).toCatHom =
+      𝟙 (Cat.of (twoYonedaGroupoidMorphismCategory p U)) := by
+  sorry
+
+theorem twoYonedaHomPresheaf_map_comp
+    {C : Type uC} [Category.{vC} C]
+    {S : Type uS} [Category.{vS} S]
+    (p : S ⥤ C) {X Y Z : Cᵒᵖ} (f : X ⟶ Y) (g : Y ⟶ Z) :
+    (twoYonedaGroupoidRestriction p (f ≫ g).unop).toCatHom =
+      (twoYonedaGroupoidRestriction p f.unop).toCatHom ≫
+        (twoYonedaGroupoidRestriction p g.unop).toCatHom := by
+  sorry
 
 /-- The contravariant functor of categories of slice morphisms appearing in
 the alternative proof. -/
@@ -215,9 +313,11 @@ def twoYonedaHomPresheaf
   obj U := Cat.of (twoYonedaGroupoidMorphismCategory p U.unop)
   map f := (twoYonedaGroupoidRestriction p f.unop).toCatHom
   map_id := by
-    sorry
+    intro U
+    exact twoYonedaHomPresheaf_map_id p U.unop
   map_comp := by
-    sorry
+    intro X Y Z f g
+    exact twoYonedaHomPresheaf_map_comp p f g
 
 /- The CoGrothendieck construction is Mathlib's associated fibred category
    from the preceding presheaf formalization. -/
@@ -248,25 +348,60 @@ theorem twoYonedaAssociatedProjection_isFibredInGroupoids
 /- The functor `G` of the source evaluates the fiber component at the
    identity object and then uses the arrow in the slice to reach the target
    identity. -/
-def twoYonedaAssociatedFunctor
+def twoYonedaAssociatedFunctorObj
     {C : Type uC} [Category.{vC} C]
     {S : Type uS} [Category.{vS} S]
     (p : S ⥤ C) [p.IsFibredInGroupoids] :
-    twoYonedaAssociatedCategory p ⥤ S where
-  obj X :=
+    twoYonedaAssociatedCategory p → S :=
+  fun X =>
     Functor.Fiber.fiberInclusion.obj
       ((twoYonedaEvaluationCore p X.base).obj X.fiber)
-  map {X Y} f :=
+
+def twoYonedaAssociatedFunctorMap
+    {C : Type uC} [Category.{vC} C]
+    {S : Type uS} [Category.{vS} S]
+    (p : S ⥤ C) [p.IsFibredInGroupoids]
+    {X Y : twoYonedaAssociatedCategory p} (f : X ⟶ Y) :
+    twoYonedaAssociatedFunctorObj p X ⟶ twoYonedaAssociatedFunctorObj p Y :=
     ((Functor.Fiber.fiberInclusion.map
         ((twoYonedaEvaluationCore p X.base).map f.fiber)) ≫
         (show twoYonedaGroupoidMorphismCategory p Y.base from Y.fiber).1.map
         (Over.homMk (X := Y.base)
           (U := (Over.map f.base).obj (Over.mk (𝟙 X.base)))
           (V := Over.mk (𝟙 Y.base)) f.base (by simp)))
+
+theorem twoYonedaAssociatedFunctorMap_map_id
+    {C : Type uC} [Category.{vC} C]
+    {S : Type uS} [Category.{vS} S]
+    (p : S ⥤ C) [p.IsFibredInGroupoids]
+    (X : twoYonedaAssociatedCategory p) :
+    twoYonedaAssociatedFunctorMap p (𝟙 X) =
+      𝟙 (twoYonedaAssociatedFunctorObj p X) := by
+  sorry
+
+theorem twoYonedaAssociatedFunctorMap_map_comp
+    {C : Type uC} [Category.{vC} C]
+    {S : Type uS} [Category.{vS} S]
+    (p : S ⥤ C) [p.IsFibredInGroupoids]
+    {X Y Z : twoYonedaAssociatedCategory p} (f : X ⟶ Y) (g : Y ⟶ Z) :
+    twoYonedaAssociatedFunctorMap p (f ≫ g) =
+      twoYonedaAssociatedFunctorMap p f ≫
+        twoYonedaAssociatedFunctorMap p g := by
+  sorry
+
+def twoYonedaAssociatedFunctor
+    {C : Type uC} [Category.{vC} C]
+    {S : Type uS} [Category.{vS} S]
+    (p : S ⥤ C) [p.IsFibredInGroupoids] :
+    twoYonedaAssociatedCategory p ⥤ S where
+  obj X := twoYonedaAssociatedFunctorObj p X
+  map f := twoYonedaAssociatedFunctorMap p f
   map_id := by
-    sorry
+    intro X
+    exact twoYonedaAssociatedFunctorMap_map_id p X
   map_comp := by
-    sorry
+    intro X Y Z f g
+    exact twoYonedaAssociatedFunctorMap_map_comp p f g
 
 /-- The associated evaluation functor is over the base. -/
 theorem twoYonedaAssociatedFunctor_over

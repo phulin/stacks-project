@@ -37,9 +37,11 @@ def HasSubvectorSpacePowerGrowth
           (Module.finrank k ((V ^ n : Submodule k K) : Type v) : ℝ) ≤
             C * (n : ℝ) ^ d)
 
-/- The displayed identities `V² = VV`, `V³ = VV²`, and so on are already
-   the canonical `Submodule` power operation and its `Submodule.pow_succ`
-   recursion; no parallel power definition is introduced. -/
+/- The displayed identities `V² = VV`, `V³ = VV²`, and so on use the canonical
+   `Submodule` power operation.  Mathlib's `Submodule.pow_succ` recurses as
+   `V ^ (n + 1) = V ^ n * V`; commutativity of the field identifies this with
+   the source's `V * V ^ n` presentation, so no parallel power definition is
+   introduced. -/
 
 end
 

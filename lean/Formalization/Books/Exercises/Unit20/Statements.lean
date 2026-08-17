@@ -1,5 +1,7 @@
 import Formalization.Books.Exercises.Unit20.Core
 
+import Mathlib.RingTheory.Finiteness.Bilinear
+
 /-!
 # Exercises, Chapter 20: Transcendence degree
 

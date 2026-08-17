@@ -35,7 +35,76 @@ theorem pushforward_fibered_morphism_exists {C : Type u} [Category.{v} C]
     {D : Type u'} [Category.{v'} D] (u : C ⥤ D)
     {S T : FixedFiberedCategory D} (η : S ⟶ T) :
     Nonempty (pushforwardFiberedCategory u S ⟶ pushforwardFiberedCategory u T) := by
-  sorry
+  change Nonempty (Pseudofunctor.comp u.op.toPseudofunctor S ⟶
+    Pseudofunctor.comp u.op.toPseudofunctor T)
+  let app := fun a => η.app (u.op.toPseudofunctor.obj a)
+  let naturality := fun {a b : LocallyDiscrete Cᵒᵖ} (f : a ⟶ b) =>
+    η.naturality (u.op.toPseudofunctor.map f)
+  refine ⟨Pseudofunctor.StrongTrans.mk app naturality ?_ ?_ ?_⟩
+  · intro a b f g h
+    change
+      Bicategory.whiskerRight (S.map₂ (u.op.toPseudofunctor.map₂ h))
+          (η.app (u.op.toPseudofunctor.obj b)) ≫
+          (η.naturality (u.op.toPseudofunctor.map g)).hom =
+        (η.naturality (u.op.toPseudofunctor.map f)).hom ≫
+          Bicategory.whiskerLeft (η.app (u.op.toPseudofunctor.obj a))
+            (T.map₂ (u.op.toPseudofunctor.map₂ h))
+    exact η.naturality_naturality (u.op.toPseudofunctor.map₂ h)
+  · intro a
+    change
+      (η.naturality (u.op.toPseudofunctor.map (𝟙 a))).hom ≫
+          Bicategory.whiskerLeft (η.app (u.op.toPseudofunctor.obj a))
+            (T.map₂ (u.op.toPseudofunctor.mapId a).hom ≫
+              (T.mapId (u.op.toPseudofunctor.obj a)).hom) =
+        Bicategory.whiskerRight
+            (S.map₂ (u.op.toPseudofunctor.mapId a).hom ≫
+              (S.mapId (u.op.toPseudofunctor.obj a)).hom)
+            (η.app (u.op.toPseudofunctor.obj a)) ≫
+          (Bicategory.leftUnitor (η.app (u.op.toPseudofunctor.obj a))).hom ≫
+            (Bicategory.rightUnitor (η.app (u.op.toPseudofunctor.obj a))).inv
+    simp only [Bicategory.whiskerLeft_comp, Bicategory.comp_whiskerRight]
+    rw [← Category.assoc]
+    rw [← η.naturality_naturality (u.op.toPseudofunctor.mapId a).hom]
+    rw [Category.assoc]
+    rw [Category.assoc]
+    have hη := η.naturality_id (u.op.toPseudofunctor.obj a)
+    simpa only [Category.assoc] using congrArg (fun k =>
+      Bicategory.whiskerRight (S.map₂ (u.op.toPseudofunctor.mapId a).hom)
+        (η.app (u.op.toPseudofunctor.obj a)) ≫ k) hη
+  · intro a b c f g
+    change
+      (η.naturality (u.op.toPseudofunctor.map (f ≫ g))).hom ≫
+          Bicategory.whiskerLeft (η.app (u.op.toPseudofunctor.obj a))
+            (T.map₂ (u.op.toPseudofunctor.mapComp f g).hom ≫
+              (T.mapComp (u.op.toPseudofunctor.map f)
+                (u.op.toPseudofunctor.map g)).hom) =
+        Bicategory.whiskerRight
+            (S.map₂ (u.op.toPseudofunctor.mapComp f g).hom ≫
+              (S.mapComp (u.op.toPseudofunctor.map f)
+                (u.op.toPseudofunctor.map g)).hom)
+            (η.app (u.op.toPseudofunctor.obj c)) ≫
+          (Bicategory.associator (S.map (u.op.toPseudofunctor.map f))
+            (S.map (u.op.toPseudofunctor.map g))
+            (η.app (u.op.toPseudofunctor.obj c))).hom ≫
+          Bicategory.whiskerLeft (S.map (u.op.toPseudofunctor.map f))
+            (η.naturality (u.op.toPseudofunctor.map g)).hom ≫
+          (Bicategory.associator (S.map (u.op.toPseudofunctor.map f))
+            (η.app (u.op.toPseudofunctor.obj b))
+            (T.map (u.op.toPseudofunctor.map g))).inv ≫
+          Bicategory.whiskerRight
+            (η.naturality (u.op.toPseudofunctor.map f)).hom
+            (T.map (u.op.toPseudofunctor.map g)) ≫
+          (Bicategory.associator (η.app (u.op.toPseudofunctor.obj a))
+            (T.map (u.op.toPseudofunctor.map f))
+            (T.map (u.op.toPseudofunctor.map g))).hom
+    rw [Bicategory.whiskerLeft_comp, Bicategory.comp_whiskerRight]
+    simp only [← Category.assoc]
+    rw [← η.naturality_naturality (u.op.toPseudofunctor.mapComp f g).hom]
+    have hη := η.naturality_comp
+      (u.op.toPseudofunctor.map f) (u.op.toPseudofunctor.map g)
+    simpa only [Category.assoc] using congrArg (fun k =>
+      Bicategory.whiskerRight (S.map₂ (u.op.toPseudofunctor.mapComp f g).hom)
+        (η.app (u.op.toPseudofunctor.obj c)) ≫ k) hη
 
 noncomputable def pushforwardFiberedMorphism {C : Type u} [Category.{v} C]
     {D : Type u'} [Category.{v'} D] (u : C ⥤ D)

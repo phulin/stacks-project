@@ -99,7 +99,52 @@ theorem conjugation_presheaf_map_exists {C : Type u} [Category.{v} C]
     {F : FiberedCategory.{w, v, u} C} (hF : FiberwiseGroupoid F) {U : C}
     {x y : Fiber F U} (φ : x ⟶ y) :
     Nonempty (IsomPresheaf F x x ⟶ IsomPresheaf F y y) := by
-  sorry
+  refine ⟨{ app := fun T => ?_, naturality := ?_ }⟩
+  · exact ↾(fun a =>
+      letI := hF T.unop.left
+      ⟨(conjugateAutomorphism hF
+        ((F.map T.unop.hom.op.toLoc).toFunctor.map φ) (asIso a.1)).hom,
+        by infer_instance⟩)
+  · intro T₁ T₂ q
+    ext a
+    apply Subtype.ext
+    let : IsGroupoid (Fiber F T₁.unop.left) := hF _
+    let : IsGroupoid (Fiber F T₂.unop.left) := hF _
+    let : IsIso a.1 := a.2
+    let aq : (IsomPresheaf F x x).obj T₂ := (IsomPresheaf F x x).map q a
+    let : IsIso aq.1 := aq.2
+    change
+      (conjugateAutomorphism hF
+        ((F.map T₂.unop.hom.op.toLoc).toFunctor.map φ) (asIso aq.1)).hom =
+        (Pseudofunctor.LocallyDiscreteOpToCat.pullHom
+          (conjugateAutomorphism hF
+            ((F.map T₁.unop.hom.op.toLoc).toFunctor.map φ) (asIso a.1)).hom
+          q.unop.left T₂.unop.hom T₂.unop.hom)
+    have hq : T₁.unop.hom.op.toLoc ≫ q.unop.left.op.toLoc =
+        T₂.unop.hom.op.toLoc := by
+      rw [← Quiver.Hom.comp_toLoc, ← op_comp, q.unop.w]
+    have hφ :
+        (F.map T₂.unop.hom.op.toLoc).toFunctor.map φ =
+          Pseudofunctor.LocallyDiscreteOpToCat.pullHom
+            ((F.map T₁.unop.hom.op.toLoc).toFunctor.map φ)
+            q.unop.left T₂.unop.hom T₂.unop.hom := by
+      simp [Pseudofunctor.LocallyDiscreteOpToCat.pullHom]
+    rw [hφ]
+    change
+      inv (Pseudofunctor.LocallyDiscreteOpToCat.pullHom
+        ((F.map T₁.unop.hom.op.toLoc).toFunctor.map φ)
+        q.unop.left T₂.unop.hom T₂.unop.hom) ≫
+        Pseudofunctor.LocallyDiscreteOpToCat.pullHom a.1
+          q.unop.left T₂.unop.hom T₂.unop.hom ≫
+        Pseudofunctor.LocallyDiscreteOpToCat.pullHom
+          ((F.map T₁.unop.hom.op.toLoc).toFunctor.map φ)
+          q.unop.left T₂.unop.hom T₂.unop.hom =
+        Pseudofunctor.LocallyDiscreteOpToCat.pullHom
+          (inv ((F.map T₁.unop.hom.op.toLoc).toFunctor.map φ) ≫
+            a.1 ≫ (F.map T₁.unop.hom.op.toLoc).toFunctor.map φ)
+          q.unop.left T₂.unop.hom T₂.unop.hom
+    simp [Pseudofunctor.LocallyDiscreteOpToCat.pullHom, Functor.map_comp,
+      Category.assoc]
 
 noncomputable def conjugationPresheafMap {C : Type u} [Category.{v} C]
     {F : FiberedCategory.{w, v, u} C} (hF : FiberwiseGroupoid F) {U : C}

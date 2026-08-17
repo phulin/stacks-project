@@ -80,7 +80,46 @@ theorem all_morphisms_cartesian_in_groupoid_fibred_category
     (hF : FiberwiseGroupoid F) :
     ∀ {X Y : Pseudofunctor.CoGrothendieck F} (f : X ⟶ Y),
       IsStronglyCartesian (Pseudofunctor.CoGrothendieck.forget F) f.base f := by
-  sorry
+  let : HasFibers (Pseudofunctor.CoGrothendieck.forget F) :=
+    { Fib := fun S => F.obj ⟨Opposite.op S⟩
+      ι := Pseudofunctor.CoGrothendieck.ι F
+      comp_const := Pseudofunctor.CoGrothendieck.comp_const F }
+  intro X Y f
+  let := hF X.base
+  let φ : (Pseudofunctor.CoGrothendieck.ι F X.base).obj X.fiber ⟶ Y := f
+  have : IsHomLift (Pseudofunctor.CoGrothendieck.forget F) f.base φ := by
+    exact IsHomLift.map φ
+  obtain ⟨b, τ, ψ, hψ, hfactor⟩ :=
+    HasFibers.fiber_factorization (p := Pseudofunctor.CoGrothendieck.forget F)
+      (R := X.base) (S := Y.base) (a := Y) (b := X.fiber) (ha := rfl) f.base φ
+  let : IsStronglyCartesian (Pseudofunctor.CoGrothendieck.forget F) f.base ψ := hψ
+  have : IsIso τ := by infer_instance
+  have : IsIso ((HasFibers.ι (p := Pseudofunctor.CoGrothendieck.forget F) X.base).map τ) :=
+    Functor.map_isIso (HasFibers.ι (p := Pseudofunctor.CoGrothendieck.forget F) X.base) τ
+  have hcomp :
+      (HasFibers.ι (p := Pseudofunctor.CoGrothendieck.forget F) X.base).map τ ≫ ψ = f := by
+    simpa [φ] using hfactor
+  have hstrong :
+      IsStronglyCartesian (Pseudofunctor.CoGrothendieck.forget F)
+        (𝟙 X.base ≫ f.base)
+        ((HasFibers.ι (p := Pseudofunctor.CoGrothendieck.forget F) X.base).map τ ≫ ψ) :=
+    inferInstance
+  rw [← hcomp]
+  have hbase :
+      (((HasFibers.ι (p := Pseudofunctor.CoGrothendieck.forget F) X.base).map τ ≫ ψ).base) =
+        f.base := congrArg (fun k => k.base) hcomp
+  rw [hbase]
+  change IsStronglyCartesian (Pseudofunctor.CoGrothendieck.forget F) f.base
+    ((Pseudofunctor.CoGrothendieck.ι F X.base).map τ ≫ ψ)
+  have hstrong' :
+      IsStronglyCartesian (Pseudofunctor.CoGrothendieck.forget F)
+        (𝟙 X.base ≫ f.base)
+        ((Pseudofunctor.CoGrothendieck.ι F X.base).map τ ≫ ψ) := by
+    change IsStronglyCartesian (Pseudofunctor.CoGrothendieck.forget F)
+      (𝟙 X.base ≫ f.base)
+      ((HasFibers.ι (p := Pseudofunctor.CoGrothendieck.forget F) X.base).map τ ≫ ψ)
+    exact hstrong
+  simpa only [Category.id_comp] using hstrong'
 
 theorem inherited_topology_functorial_underlying
     {C : Type u} [Category.{v} C] {F G : FiberedCategory C}

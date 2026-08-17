@@ -6,6 +6,7 @@ import Mathlib.CategoryTheory.Limits.Constructions.Pullbacks
 import Mathlib.CategoryTheory.Limits.Constructions.FiniteProductsOfBinaryProducts
 import Mathlib.CategoryTheory.Limits.Constructions.LimitsOfProductsAndEqualizers
 import Mathlib.CategoryTheory.Limits.Final
+import Mathlib.CategoryTheory.Limits.Connected
 import Mathlib.CategoryTheory.Limits.Shapes.FiniteLimits
 import Mathlib.CategoryTheory.Limits.Shapes.FiniteProducts
 import Mathlib.CategoryTheory.Limits.Shapes.Pullback.HasPullback
@@ -1026,12 +1027,102 @@ private theorem hasCoproduct_of_finite_nonempty [HasBinaryCoproducts C]
    fibre products. -/
 theorem has_connected_finite_limits_iff :
     HasConnectedFiniteLimits (C := C) ↔ HasEqualizers C ∧ HasPullbacks C := by
-  sorry
+  constructor
+  · intro h
+    let _ : Category (ULift WalkingParallelPair) :=
+      CategoryTheory.uliftCategory WalkingParallelPair
+    let _ : Category (ULift WalkingCospan) :=
+      CategoryTheory.uliftCategory WalkingCospan
+    let _ : IsConnected (ULiftHom (ULift WalkingParallelPair)) :=
+      isConnected_of_equivalent (ULiftHomULiftCategory.equiv WalkingParallelPair)
+    let _ : IsConnected (ULiftHom (ULift WalkingCospan)) :=
+      isConnected_of_equivalent (ULiftHomULiftCategory.equiv WalkingCospan)
+    let _ : ∀ {X Y : C} (f g : X ⟶ Y), HasLimit (parallelPair f g) := by
+      intro X Y f g
+      let _ : HasLimit (ULiftHom.down ⋙ ULift.downFunctor ⋙ parallelPair f g) :=
+        h (ULiftHom.down ⋙ ULift.downFunctor ⋙ parallelPair f g)
+      let e := (ULiftHomULiftCategory.equiv WalkingParallelPair).symm
+      let _ : HasLimit (e.functor ⋙ parallelPair f g) := by
+        change HasLimit (ULiftHom.down ⋙ ULift.downFunctor ⋙ parallelPair f g)
+        exact h (ULiftHom.down ⋙ ULift.downFunctor ⋙ parallelPair f g)
+      exact hasLimit_of_equivalence_comp e
+    let _ : ∀ {X Y Z : C} (f : X ⟶ Z) (g : Y ⟶ Z),
+        HasLimit (cospan f g) := by
+      intro X Y Z f g
+      let _ : HasLimit (ULiftHom.down ⋙ ULift.downFunctor ⋙ cospan f g) :=
+        h (ULiftHom.down ⋙ ULift.downFunctor ⋙ cospan f g)
+      let e := (ULiftHomULiftCategory.equiv WalkingCospan).symm
+      let _ : HasLimit (e.functor ⋙ cospan f g) := by
+        change HasLimit (ULiftHom.down ⋙ ULift.downFunctor ⋙ cospan f g)
+        exact h (ULiftHom.down ⋙ ULift.downFunctor ⋙ cospan f g)
+      exact hasLimit_of_equivalence_comp e
+    exact ⟨hasEqualizers_of_hasLimit_parallelPair (C := C),
+      hasPullbacks_of_hasLimit_cospan C⟩
+  · rintro ⟨hEqualizers, hPullbacks⟩
+    intro J _ _ _ F
+    let _ : HasEqualizers C := hEqualizers
+    let _ : HasPullbacks C := hPullbacks
+    have hgen : HasFiniteGeneratingMorphisms (I := J) := by
+      refine ⟨Set.univ, Set.finite_univ, ?_⟩
+      intro X Y f
+      refine ⟨f.toPath, ?_, ?_⟩
+      · simpa [MorphismProperty.paths, Quiver.Hom.toPath] using
+          (MorphismProperty.toPath_mem_paths (W := fun _ _ g : X ⟶ Y =>
+            Arrow.mk g ∈ (Set.univ : Set (Arrow J))) (Set.mem_univ _))
+      · exact CategoryTheory.composePath_toPath f
+    obtain ⟨R⟩ := finite_diagram_category hgen
+    rw [finite_diagram_replacement_has_limit_iff R F]
+    sorry
 
 /- The dual connected-colimit statement. -/
 theorem has_connected_finite_colimits_iff :
     HasConnectedFiniteColimits (C := C) ↔ HasCoequalizers C ∧ HasPushouts C := by
-  sorry
+  constructor
+  · intro h
+    let _ : Category (ULift WalkingParallelPair) :=
+      CategoryTheory.uliftCategory WalkingParallelPair
+    let _ : Category (ULift WalkingSpan) :=
+      CategoryTheory.uliftCategory WalkingSpan
+    let _ : IsConnected (ULiftHom (ULift WalkingParallelPair)) :=
+      isConnected_of_equivalent (ULiftHomULiftCategory.equiv WalkingParallelPair)
+    let _ : IsConnected (ULiftHom (ULift WalkingSpan)) :=
+      isConnected_of_equivalent (ULiftHomULiftCategory.equiv WalkingSpan)
+    let _ : ∀ {X Y : C} (f g : X ⟶ Y), HasColimit (parallelPair f g) := by
+      intro X Y f g
+      let _ : HasColimit (ULiftHom.down ⋙ ULift.downFunctor ⋙ parallelPair f g) :=
+        h (ULiftHom.down ⋙ ULift.downFunctor ⋙ parallelPair f g)
+      let e := (ULiftHomULiftCategory.equiv WalkingParallelPair).symm
+      let _ : HasColimit (e.functor ⋙ parallelPair f g) := by
+        change HasColimit (ULiftHom.down ⋙ ULift.downFunctor ⋙ parallelPair f g)
+        exact h (ULiftHom.down ⋙ ULift.downFunctor ⋙ parallelPair f g)
+      exact hasColimit_of_equivalence_comp e
+    let _ : ∀ {X Y Z : C} (f : X ⟶ Y) (g : X ⟶ Z),
+        HasColimit (span f g) := by
+      intro X Y Z f g
+      let _ : HasColimit (ULiftHom.down ⋙ ULift.downFunctor ⋙ span f g) :=
+        h (ULiftHom.down ⋙ ULift.downFunctor ⋙ span f g)
+      let e := (ULiftHomULiftCategory.equiv WalkingSpan).symm
+      let _ : HasColimit (e.functor ⋙ span f g) := by
+        change HasColimit (ULiftHom.down ⋙ ULift.downFunctor ⋙ span f g)
+        exact h (ULiftHom.down ⋙ ULift.downFunctor ⋙ span f g)
+      exact hasColimit_of_equivalence_comp e
+    exact ⟨hasCoequalizers_of_hasColimit_parallelPair (C := C),
+      hasPushouts_of_hasColimit_span C⟩
+  · rintro ⟨hCoequalizers, hPushouts⟩
+    intro J _ _ _ F
+    let _ : HasCoequalizers C := hCoequalizers
+    let _ : HasPushouts C := hPushouts
+    have hgen : HasFiniteGeneratingMorphisms (I := J) := by
+      refine ⟨Set.univ, Set.finite_univ, ?_⟩
+      intro X Y f
+      refine ⟨f.toPath, ?_, ?_⟩
+      · simpa [MorphismProperty.paths, Quiver.Hom.toPath] using
+          (MorphismProperty.toPath_mem_paths (W := fun _ _ g : X ⟶ Y =>
+            Arrow.mk g ∈ (Set.univ : Set (Arrow J))) (Set.mem_univ _))
+      · exact CategoryTheory.composePath_toPath f
+    obtain ⟨R⟩ := finite_diagram_category hgen
+    rw [finite_diagram_replacement_has_colimit_iff R F]
+    sorry
 
 /- The first presentation of nonempty finite limits from the source. -/
 theorem has_nonempty_finite_limits_iff :

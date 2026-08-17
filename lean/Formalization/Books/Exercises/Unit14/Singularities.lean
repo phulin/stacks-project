@@ -284,7 +284,7 @@ def periodicResolutionExact
 /-- A matrix factorization by a nonzerodivisor gives the exact alternating
 resolution over the quotient by that nonzerodivisor. -/
 theorem periodicMatrixResolution_exact
-    {R : Type u} [CommRing R] {n : ℕ} (_hn : 1 ≤ n)
+    {R : Type u} [CommRing R] {n : ℕ}
     (A B : Matrix (Fin n) (Fin n) R) (f : R)
     (hAB : A * B = f • (1 : Matrix (Fin n) (Fin n) R))
     (hf : IsRegular f) :

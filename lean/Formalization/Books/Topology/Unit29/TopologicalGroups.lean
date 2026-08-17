@@ -109,9 +109,10 @@ theorem selfMap_evaluation_continuous :
   exact isOpen_iUnion fun e =>
     (hU.preimage (continuous_apply e)).prod (isOpen_discrete _)
 
+omit [DiscreteTopology E] in
 /-- A continuous family of maps into a discrete set gives a continuous map into the self-map
 space. -/
-theorem selfMap_curry_continuous {X : Type v} [TopologicalSpace X]
+lemma selfMap_curry_continuous {X : Type v} [TopologicalSpace X]
     (g : X × E → E) (hg : Continuous g) :
     Continuous (fun x : X => fun e : E => g (x, e)) := by
   exact continuous_pi fun e => hg.comp (continuous_id.prodMk continuous_const)
@@ -121,7 +122,7 @@ theorem selfMapTopology_is_coarsest_action_continuous (t : TopologicalSpace (E �
     @Continuous ((E → E) × E) E
         (@instTopologicalSpaceProd (E → E) E t inferInstance)
         inferInstance (fun p => p.1 p.2) →
-      selfMapTopology E ≤ t := by
+      t ≤ selfMapTopology E := by
   sorry
 
 /-- Composition of self-maps is continuous for the compact-open topology. -/
@@ -159,8 +160,9 @@ theorem automorphism_inverse_continuous :
   ext g
   exact (Equiv.symm_apply_eq g).trans eq_comm
 
+omit [TopologicalSpace E] [DiscreteTopology E] in
 /-- The neighborhood formula for inversion on `Aut(E)`. -/
-theorem automorphism_inverse_preimage_neighborhood (f : Equiv.Perm E) (S : Set E) :
+lemma automorphism_inverse_preimage_neighborhood (f : Equiv.Perm E) (S : Set E) :
     (fun g : Equiv.Perm E => g.symm) ⁻¹' automorphismNeighborhood E f.symm S =
       automorphismNeighborhood E f (f ⁻¹' S) := by
   ext g

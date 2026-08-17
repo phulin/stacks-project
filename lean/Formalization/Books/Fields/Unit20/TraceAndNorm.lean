@@ -181,7 +181,37 @@ theorem separable_iff_trace_nonzero_iff_trace_pairing_nondegenerate
     [FiniteDimensional K L] :
     (Algebra.IsSeparable K L ↔ Algebra.trace K L ≠ 0) ∧
       (Algebra.trace K L ≠ 0 ↔ (Algebra.traceForm K L).Nondegenerate) := by
-  sorry
+  classical
+  constructor
+  · constructor
+    · intro h
+      exact @Algebra.trace_ne_zero K L _ _ _ _ h
+    · intro h
+      by_contra hs
+      exact h (Algebra.trace_eq_zero_of_not_isSeparable hs)
+  · constructor
+    · intro h
+      apply LinearMap.BilinForm.Nondegenerate.ofSeparatingLeft
+      intro x hx
+      by_contra hxn
+      obtain ⟨z, hz⟩ : ∃ z : L, Algebra.trace K L z ≠ 0 := by
+        by_contra hz'
+        apply h
+        ext z
+        by_contra hz
+        exact hz' ⟨z, hz⟩
+      have hxz := hx (x⁻¹ * z)
+      rw [Algebra.traceForm_apply] at hxz
+      exact (hz (by simpa [mul_assoc, hxn] using hxz)).elim
+    · intro h
+      rw [LinearMap.BilinForm.nondegenerate_iff_ker_eq_bot] at h
+      intro ht
+      have h1 : (1 : L) ∈ LinearMap.ker (Algebra.traceForm K L) := by
+        change (Algebra.traceForm K L) 1 = 0
+        ext y
+        simp [Algebra.traceForm_apply, ht]
+      have h2 : (1 : L) ∈ (⊥ : Submodule K L) := h ▸ h1
+      simp at h2
 
 /-- A nonseparable finite extension has identically zero trace. -/
 theorem field_trace_eq_zero_of_not_separable
@@ -259,7 +289,36 @@ theorem bilinearFormDiscriminant_eq_of_basis
     [FiniteDimensional K V] (Q : LinearMap.BilinForm K V)
     {n : ℕ} (b : Module.Basis (Fin n) K V) :
     bilinearFormDiscriminant K V Q = squareClassMk ((Q.toMatrix b).det) := by
-  sorry
+  classical
+  let hcard : Fintype.card (Fin n) = Module.finrank K V := by
+    simpa using (Module.finrank_eq_card_basis b).symm
+  let e : Fin n ≃ Fin (Module.finrank K V) := Fintype.equivFinOfCardEq hcard
+  let b' := b.reindex e
+  have hmatrix : Q.toMatrix b' =
+      (Q.toMatrix b).submatrix e.symm e.symm := by
+    ext i j
+    simp [LinearMap.BilinForm.toMatrix_apply, b', Module.Basis.reindex_apply]
+  have hreindex : (Q.toMatrix b').det = (Q.toMatrix b).det := by
+    rw [hmatrix]
+    exact Matrix.det_submatrix_equiv_self e.symm (Q.toMatrix b)
+  have hmat := LinearMap.BilinForm.toMatrix_mul_basis_toMatrix
+    (Module.finBasis K V) b' Q
+  have hdet := congrArg Matrix.det hmat
+  have hu : IsUnit ((Module.finBasis K V).toMatrix b').det := by
+    rw [← LinearMap.toMatrix_id_eq_basis_toMatrix b' (Module.finBasis K V)]
+    exact LinearEquiv.isUnit_det (LinearEquiv.refl K V) b' (Module.finBasis K V)
+  let u : Kˣ := hu.unit
+  have hchange :
+      (Q.toMatrix b').det =
+        (u : K) ^ 2 * (Q.toMatrix (Module.finBasis K V)).det := by
+    simpa [Matrix.det_mul, Matrix.det_transpose, pow_two, mul_assoc, mul_comm,
+      mul_left_comm, hu.unit_spec, u] using hdet.symm
+  rw [bilinearFormDiscriminant]
+  apply Quotient.sound
+  refine ⟨u, ?_⟩
+  calc
+    (Q.toMatrix b).det = (Q.toMatrix b').det := hreindex.symm
+    _ = (u : K) ^ 2 * (Q.toMatrix (Module.finBasis K V)).det := hchange
 
 /-- A change of basis changes a bilinear-form discriminant representative by
     a square unit. -/
@@ -285,7 +344,21 @@ theorem bilinearFormDiscriminant_ne_zero_iff_nondegenerate
     {K V : Type*} [Field K] [AddCommGroup V] [Module K V]
     [FiniteDimensional K V] (Q : LinearMap.BilinForm K V) :
     bilinearFormDiscriminant K V Q ≠ squareClassMk (0 : K) ↔ Q.Nondegenerate := by
-  sorry
+  classical
+  have hzero : ∀ x : K, squareClassMk x = squareClassMk (0 : K) ↔ x = 0 := by
+    intro x
+    constructor
+    · intro h
+      rcases Quotient.exact h with ⟨u, hu⟩
+      have hu' : (u : K) ^ 2 ≠ 0 := pow_ne_zero _ (Units.ne_zero u)
+      exact (mul_eq_zero.mp hu.symm).resolve_left hu'
+    · intro hx
+      subst x
+      rfl
+  have hzero' : ∀ x : K, squareClassMk x ≠ squareClassMk (0 : K) ↔ x ≠ 0 :=
+    fun x => not_congr (hzero x)
+  rw [bilinearFormDiscriminant_eq_of_basis (Q := Q) (Module.finBasis K V), hzero']
+  exact (LinearMap.BilinForm.nondegenerate_iff_det_ne_zero (Module.finBasis K V)).symm
 
 /- The finite basis representative in `fieldDiscriminant` is independent of
    the basis after passing to `SquareClass`. -/
@@ -295,7 +368,15 @@ theorem discriminant_basis_change_is_square
     {n : ℕ} (b b' : Module.Basis (Fin n) K L) :
     ∃ u : Kˣ,
       Algebra.discr K b' = (u : K) ^ 2 * Algebra.discr K b := by
-  sorry
+  classical
+  have h := Algebra.discr_of_matrix_vecMul (A := K) (B := L) (b : Fin n → L)
+    (b.toMatrix b')
+  rw [Module.Basis.toMatrix_map_vecMul] at h
+  have hu : IsUnit (b.toMatrix b').det := by
+    rw [← LinearMap.toMatrix_id_eq_basis_toMatrix b' b]
+    exact LinearEquiv.isUnit_det (LinearEquiv.refl K L) b' b
+  refine ⟨hu.unit, ?_⟩
+  simpa [hu.unit_spec] using h
 
 /-- The discriminant of a finite extension as a square class of its base
     field. -/
@@ -311,7 +392,10 @@ theorem fieldDiscriminant_eq_of_fin_basis
     [FiniteDimensional K L]
     (b : Module.Basis (Fin (Module.finrank K L)) K L) :
     fieldDiscriminant K L = squareClassMk (Algebra.discr K b) := by
-  sorry
+  rw [fieldDiscriminant]
+  rcases discriminant_basis_change_is_square
+      (K := K) (L := L) (Module.finBasis K L) b with ⟨u, hu⟩
+  exact Quotient.sound ⟨u, hu⟩
 
 /-- The field discriminant is the bilinear-form discriminant of the trace
     pairing. -/
@@ -320,7 +404,9 @@ theorem fieldDiscriminant_eq_traceForm_discriminant
     [FiniteDimensional K L] :
     fieldDiscriminant K L =
       bilinearFormDiscriminant K L (Algebra.traceForm K L) := by
-  sorry
+  rw [fieldDiscriminant, bilinearFormDiscriminant]
+  congr 1
+  rw [Algebra.discr_def, Algebra.traceMatrix_of_basis]
 
 /-- The discriminant of a basis is the determinant of its trace matrix. -/
 theorem discriminant_eq_det_trace_matrix
@@ -342,7 +428,12 @@ theorem field_discriminant_representative_ne_zero_iff_separable
     {K L : Type*} [Field K] [Field L] [Algebra K L]
     [FiniteDimensional K L] :
     Algebra.discr K (Module.finBasis K L) ≠ 0 ↔ Algebra.IsSeparable K L := by
-  sorry
+  rw [Algebra.discr_def, Algebra.traceMatrix_of_basis]
+  rw [← LinearMap.BilinForm.nondegenerate_iff_det_ne_zero]
+  exact ((separable_iff_trace_nonzero_iff_trace_pairing_nondegenerate
+    (K := K) (L := L)).1.trans
+      (separable_iff_trace_nonzero_iff_trace_pairing_nondegenerate
+        (K := K) (L := L)).2).symm
 
 /-- The square-class discriminant is nonzero exactly for separable finite
     extensions. -/
@@ -350,7 +441,11 @@ theorem fieldDiscriminant_ne_zero_iff_separable
     {K L : Type*} [Field K] [Field L] [Algebra K L]
     [FiniteDimensional K L] :
     fieldDiscriminant K L ≠ squareClassMk (0 : K) ↔ Algebra.IsSeparable K L := by
-  sorry
+  have hsep := separable_iff_trace_nonzero_iff_trace_pairing_nondegenerate
+    (K := K) (L := L)
+  rw [fieldDiscriminant_eq_traceForm_discriminant,
+    bilinearFormDiscriminant_ne_zero_iff_nondegenerate]
+  exact (hsep.1.trans hsep.2).symm
 
 /-! ## The quadratic discriminant exercise -/
 

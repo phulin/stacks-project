@@ -1,10 +1,10 @@
-import Formalization.Books.Sheaves.Unit03.Presheaves
+import Formalization.Books.Sheaves.Unit05.PresheavesOfAlgebraicStructures
 import Mathlib.Algebra.Category.AlgCat.Limits
-import Mathlib.CategoryTheory.ConcreteCategory.EpiMono
 import Mathlib.CategoryTheory.Functor.ReflectsIso.Basic
+import Mathlib.CategoryTheory.Types.Basic
 import Mathlib.Data.Real.Basic
-import Mathlib.Topology.Category.TopCat.Adjunctions
 import Mathlib.Topology.Algebra.Ring.Real
+import Mathlib.Topology.Category.TopCat.Limits.Basic
 import Mathlib.Topology.Sheaves.CommRingCat
 import Mathlib.Topology.Sheaves.Forget
 import Mathlib.Topology.Sheaves.LocalPredicate
@@ -23,7 +23,6 @@ is the stronger, general statement already provided by
 namespace Formalization.Books.Sheaves.Unit09
 
 open CategoryTheory CategoryTheory.Limits Opposite TopologicalSpace Topology
-open Formalization.Books.Sheaves.Unit03
 
 universe w v u
 
@@ -97,14 +96,6 @@ theorem categoryValuedSheaf_iff_isSheaf
 
 /-! ## Passing to the underlying presheaf of sets -/
 
-/-- The presheaf of sets obtained by composing a `C`-valued presheaf with a
-functor to types. -/
-def underlyingPresheaf
-    {C : Type u} [Category.{v} C] {X : TopCat.{w}}
-    (F : TopCat.Presheaf C X) (G : C ⥤ Type w) :
-    TopCat.Presheaf (Type w) X :=
-  F ⋙ G
-
 /-- The source's faithful-limit-reflecting criterion for sheaves of structures.
 
 The explicit faithfulness assumption is retained because it is part of the
@@ -113,11 +104,12 @@ needs preservation of limits and reflection of isomorphisms.
 -/
 theorem categoryValuedSheaf_iff_underlying_isSheaf
     {C : Type u} [Category.{v} C]
-    (G : C ⥤ Type v) [G.Faithful] [HasLimits C] [HasProducts.{v} C]
+    (G : C ⥤ Type v) [G.Faithful] [HasLimits C]
     [PreservesLimits G]
     [G.ReflectsIsomorphisms] {X : TopCat.{v}} (F : TopCat.Presheaf C X) :
     CategoryValuedSheaf F ↔
-      TopCat.Presheaf.IsSheaf (underlyingPresheaf F G) := by
+      TopCat.Presheaf.IsSheaf
+        (Formalization.Books.Sheaves.Unit05.underlyingPresheaf G F) := by
   rw [categoryValuedSheaf_iff_isSheaf]
   exact TopCat.Presheaf.isSheaf_iff_isSheaf_comp G F
 
@@ -125,10 +117,11 @@ theorem categoryValuedSheaf_iff_underlying_isSheaf
 objects in the original category. -/
 theorem categoryValuedSheaf_of_underlying_isSheaf
     {C : Type u} [Category.{v} C]
-    (G : C ⥤ Type v) [G.Faithful] [HasLimits C] [HasProducts.{v} C]
+    (G : C ⥤ Type v) [G.Faithful] [HasLimits C]
     [PreservesLimits G]
     [G.ReflectsIsomorphisms] {X : TopCat.{v}} (F : TopCat.Presheaf C X)
-    (hF : TopCat.Presheaf.IsSheaf (underlyingPresheaf F G)) :
+    (hF : TopCat.Presheaf.IsSheaf
+      (Formalization.Books.Sheaves.Unit05.underlyingPresheaf G F)) :
     CategoryValuedSheaf F :=
   (categoryValuedSheaf_iff_underlying_isSheaf G F).2 hF
 
@@ -226,14 +219,14 @@ def realContinuousFunctionAlgebraPresheaf (X : TopCat) :
 sheaf of sets. -/
 theorem realContinuousFunctionPresheaf_underlying_isSheaf (X : TopCat) :
     TopCat.Presheaf.IsSheaf
-      (underlyingPresheaf (realContinuousFunctionPresheaf X)
-        (CategoryTheory.forget CommRingCat)) := by
+      (Formalization.Books.Sheaves.Unit05.underlyingPresheaf
+        (CategoryTheory.forget CommRingCat) (realContinuousFunctionPresheaf X)) := by
   change (TopCat.presheafToTop X
     ((CategoryTheory.forget₂ TopCommRingCat TopCat).obj (TopCommRingCat.of ℝ))).IsSheaf
   exact (TopCat.sheafToTop
     ((CategoryTheory.forget₂ TopCommRingCat TopCat).obj (TopCommRingCat.of ℝ))).property
 
-/-- The real continuous-function presheaf is a sheaf of real algebras. -/
+/-- The real continuous-function presheaf is a sheaf of commutative rings. -/
 theorem realContinuousFunctionPresheaf_isSheaf (X : TopCat) :
     CategoryValuedSheaf (realContinuousFunctionPresheaf X) := by
   exact categoryValuedSheaf_of_underlying_isSheaf
@@ -269,9 +262,9 @@ def HasAtLeastTwoElements {X : TopCat.{w}} (A : X → Type w) : Prop :=
 /-- The underlying pointwise presheaf is a sheaf of sets. -/
 theorem pointwiseDiscretePresheaf_underlying_isSheaf
     {X : TopCat.{w}} (A : X → Type w) :
-    TopCat.Presheaf.IsSheaf
-      (underlyingPresheaf (pointwiseDiscretePresheaf A)
-        (CategoryTheory.forget TopCat)) := by
+      TopCat.Presheaf.IsSheaf
+      (Formalization.Books.Sheaves.Unit05.underlyingPresheaf
+        (CategoryTheory.forget TopCat) (pointwiseDiscretePresheaf A)) := by
   change (TopCat.presheafToTypes X A).IsSheaf
   exact TopCat.Presheaf.toTypes_isSheaf X A
 

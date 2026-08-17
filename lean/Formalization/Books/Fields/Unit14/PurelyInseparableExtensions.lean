@@ -120,8 +120,8 @@ theorem pth_root_extension_element_expansion
     AdjoinRoot.powerBasis (f := X ^ p - C t) (X_pow_sub_C_ne_zero hp.pos t)
   have hdim : pb.dim = p := by
     simp [pb]
-  letI : Fact p.Prime := ⟨hp⟩
-  letI : ExpChar (AdjoinRoot (X ^ p - C t)) p :=
+  let : Fact p.Prime := ⟨hp⟩
+  let : ExpChar (AdjoinRoot (X ^ p - C t)) p :=
     expChar_of_injective_algebraMap
       (by
         rw [AdjoinRoot.algebraMap_eq]
@@ -163,9 +163,9 @@ theorem pth_root_adjoinRoot_field_and_purely_inseparable
   let hfield : IsField (AdjoinRoot (X ^ p - C t)) :=
     Formalization.Books.Fields.Unit06.adjoinRoot_isField_of_irreducible
       (take_pth_root_polynomial_irreducible p hp t ht)
-  letI : Field (AdjoinRoot (X ^ p - C t)) := hfield.toField
+  let : Field (AdjoinRoot (X ^ p - C t)) := hfield.toField
   refine ⟨hfield, ?_⟩
-  letI : Fact p.Prime := ⟨hp⟩
+  let : Fact p.Prime := ⟨hp⟩
   rw [isPurelyInseparable_iff_pow_mem F p]
   intro z
   obtain ⟨a, _, hz⟩ := pth_root_extension_element_expansion p hp t z
@@ -253,10 +253,10 @@ private theorem purely_inseparable_pth_root_step
       w ^ p = algebraMap F E y ∧
         (∀ z : F, z ^ p ≠ y) ∧
           Module.finrank F (IntermediateField.adjoin F ({w} : Set E)) = p := by
-  letI : Fact p.Prime := ⟨hp⟩
-  letI : ExpChar E p :=
+  let : Fact p.Prime := ⟨hp⟩
+  let : ExpChar E p :=
     expChar_of_injective_algebraMap (algebraMap F E).injective p
-  letI : Algebra.IsAlgebraic F E := Algebra.IsAlgebraic.of_finite F E
+  let : Algebra.IsAlgebraic F E := Algebra.IsAlgebraic.of_finite F E
   let e := IsPurelyInseparable.elemExponent F x
   let w := x ^ p ^ (e - 1)
   let y := IsPurelyInseparable.elemReduct F x
@@ -466,7 +466,7 @@ private theorem prepend_pth_root_tower
         rw [hprefix (0 : Fin (S'.n + 1)),
           Formalization.Books.Fields.Unit12.generatedIntermediateField_zero_eq_bot S',
           IntermediateField.restrictScalars_bot_eq_self]
-      letI : IsScalarTower F
+      let : IsScalarTower F
           (Formalization.Books.Fields.Unit12.generatedIntermediateField S
             (Fin.castSucc (0 : Fin (S'.n + 1))))
           (Formalization.Books.Fields.Unit12.generatedIntermediateField S
@@ -581,14 +581,14 @@ private theorem finite_purely_inseparable_has_pth_root_tower_aux
       exact hxbot ((IntermediateField.mem_bot).2 hxrange)
     obtain ⟨w, y, hwpow, hyn, hwrank⟩ :=
       purely_inseparable_pth_root_step hp x hx
-    letI : Algebra.IsAlgebraic F E := Algebra.IsAlgebraic.of_finite F E
+    let : Algebra.IsAlgebraic F E := Algebra.IsAlgebraic.of_finite F E
     let L : IntermediateField F E := IntermediateField.adjoin F ({w} : Set E)
-    letI : CharP L p := IntermediateField.charP L p
-    letI : FiniteDimensional F L := by
+    let : CharP L p := IntermediateField.charP L p
+    let : FiniteDimensional F L := by
       dsimp [L]
       exact IntermediateField.adjoin.finiteDimensional
         (Algebra.IsIntegral.isIntegral w)
-    letI : FiniteDimensional L E :=
+    let : FiniteDimensional L E :=
       Module.Finite.of_restrictScalars_finite F L E
     have hLrank : Module.finrank F L = p := by
       simpa [L] using hwrank
@@ -650,14 +650,14 @@ theorem finite_purely_inseparable_has_pth_root_tower
       exact hxbot ((IntermediateField.mem_bot).2 hxrange)
     obtain ⟨w, y, hwpow, hyn, hwrank⟩ :=
       purely_inseparable_pth_root_step hp x hx
-    letI : Algebra.IsAlgebraic F E := Algebra.IsAlgebraic.of_finite F E
+    let : Algebra.IsAlgebraic F E := Algebra.IsAlgebraic.of_finite F E
     let L : IntermediateField F E := IntermediateField.adjoin F ({w} : Set E)
-    letI : CharP L p := IntermediateField.charP L p
-    letI : FiniteDimensional F L := by
+    let : CharP L p := IntermediateField.charP L p
+    let : FiniteDimensional F L := by
       dsimp [L]
       exact IntermediateField.adjoin.finiteDimensional
         (Algebra.IsIntegral.isIntegral w)
-    letI : FiniteDimensional L E :=
+    let : FiniteDimensional L E :=
       Module.Finite.of_restrictScalars_finite F L E
     have hLrank : Module.finrank F L = p := by
       simpa [L] using hwrank

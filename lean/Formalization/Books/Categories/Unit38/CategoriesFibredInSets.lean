@@ -289,6 +289,15 @@ theorem setPresheafRestriction_comp
   exact groupoidPresheafRestriction_comp (setPresheafToCat F) g f
 
 @[simp]
+theorem setPresheafRestriction_id_obj
+    {C : Type uC} [Category.{vC} C]
+    (F : Cᵒᵖ ⥤ Type uS) (U : C)
+    (x : F.obj (Opposite.op U)) :
+    (setPresheafRestriction F (𝟙 U)).obj (Discrete.mk x) = Discrete.mk x := by
+  change Discrete.mk (F.map (𝟙 U).op x) = Discrete.mk x
+  simp
+
+@[simp]
 theorem setPresheafProjection_obj
     {C : Type uC} [Category.{vC} C]
     (F : Cᵒᵖ ⥤ Type uS) (X : setPresheafCategory F) :

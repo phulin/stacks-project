@@ -1648,59 +1648,462 @@ private noncomputable def decomposedShortComplexIso {R : Type u} [CommRing R]
       (decomposedEquiv (J := I)).counitIso (S ⋙ ShortComplex.π₃)
   refine ShortComplex.isoMk
     (by
-      let s₁ : (moduleShortComplexColimit S).X₁ ≅
-          colimit (S ⋙ ShortComplex.π₁) := by
-        dsimp [moduleShortComplexColimit]
-        rfl
-      let t₁ : colimit ((Discrete.functor D) ⋙ ShortComplex.π₁) ≅
-          (arbitraryModuleShortComplexColimit (Discrete.functor D)).X₁ := by
-        dsimp [arbitraryModuleShortComplexColimit]
-        rfl
-      exact s₁ ≪≫ e₁ ≪≫ d₁ ≪≫ c₁ ≪≫ t₁)
+      dsimp [moduleShortComplexColimit, arbitraryModuleShortComplexColimit]
+      exact e₁ ≪≫ d₁ ≪≫ c₁ ≪≫ Iso.refl _)
     (by
-      let s₂ : (moduleShortComplexColimit S).X₂ ≅
-          colimit (S ⋙ ShortComplex.π₂) := by
-        dsimp [moduleShortComplexColimit]
-        rfl
-      let t₂ : colimit ((Discrete.functor D) ⋙ ShortComplex.π₂) ≅
-          (arbitraryModuleShortComplexColimit (Discrete.functor D)).X₂ := by
-        dsimp [arbitraryModuleShortComplexColimit]
-        rfl
-      exact s₂ ≪≫ e₂ ≪≫ d₂ ≪≫ c₂ ≪≫ t₂)
+      dsimp [moduleShortComplexColimit, arbitraryModuleShortComplexColimit]
+      exact e₂ ≪≫ d₂ ≪≫ c₂ ≪≫ Iso.refl _)
     (by
-      let s₃ : (moduleShortComplexColimit S).X₃ ≅
-          colimit (S ⋙ ShortComplex.π₃) := by
-        dsimp [moduleShortComplexColimit]
-        rfl
-      let t₃ : colimit ((Discrete.functor D) ⋙ ShortComplex.π₃) ≅
-          (arbitraryModuleShortComplexColimit (Discrete.functor D)).X₃ := by
-        dsimp [arbitraryModuleShortComplexColimit]
-        rfl
-      exact s₃ ≪≫ e₃ ≪≫ d₃ ≪≫ c₃ ≪≫ t₃) ?_ ?_
+      dsimp [moduleShortComplexColimit, arbitraryModuleShortComplexColimit]
+      exact e₃ ≪≫ d₃ ≪≫ c₃ ≪≫ Iso.refl _) ?_ ?_
   · apply colimit.hom_ext
     intro i
     have hι₁ := decomposedColimitIso_ι_hom_aux
       (S ⋙ ShortComplex.π₁) H₁ i₁ i
     have hι₂ := decomposedColimitIso_ι_hom_aux
       (S ⋙ ShortComplex.π₂) H₂ i₂ i
-    rw [Category.assoc, hι₁, Category.assoc, colimit.ι_map,
-      Category.assoc, hι₂]
-    simp [e₁, e₂, b₁, b₂, c₁, c₂, D, H₁, H₂, i₁, i₂,
-      arbitraryModuleShortComplexColimit,
-      arbitraryModuleShortComplexFirstMap, arbitraryModuleShortComplexSecondMap,
-      moduleShortComplexColimit, decomposedColimitCocone]
+    have hι₁' :
+        colimit.ι (S ⋙ ShortComplex.π₁) i ≫ e₁.hom =
+          i₁.inv.app i ≫ (decomposedColimitCocone H₁).ι.app
+            ((decomposedEquiv (J := I)).inverse.obj i) := by
+      change colimit.ι (S ⋙ ShortComplex.π₁) i ≫
+          ((HasColimit.isoOfNatIso i₁).symm ≪≫
+            Functor.Final.colimitIso (decomposedEquiv (J := I)).inverse
+              (CategoryTheory.Sigma.desc H₁) ≪≫
+            (colimit.isColimit (CategoryTheory.Sigma.desc H₁)).coconePointUniqueUpToIso
+              (decomposedColimitIsColimit H₁)).hom = _
+      exact hι₁
+    have hι₂' :
+        colimit.ι (S ⋙ ShortComplex.π₂) i ≫ e₂.hom =
+          i₂.inv.app i ≫ (decomposedColimitCocone H₂).ι.app
+            ((decomposedEquiv (J := I)).inverse.obj i) := by
+      change colimit.ι (S ⋙ ShortComplex.π₂) i ≫
+          ((HasColimit.isoOfNatIso i₂).symm ≪≫
+            Functor.Final.colimitIso (decomposedEquiv (J := I)).inverse
+              (CategoryTheory.Sigma.desc H₂) ≪≫
+            (colimit.isColimit (CategoryTheory.Sigma.desc H₂)).coconePointUniqueUpToIso
+              (decomposedColimitIsColimit H₂)).hom = _
+      exact hι₂
+    have hι₁'' :
+        (colimit.ι (S ⋙ ShortComplex.π₁) i :
+          (S.obj i).X₁ ⟶ colimit (S ⋙ ShortComplex.π₁)) ≫ e₁.hom =
+          i₁.inv.app i ≫ (decomposedColimitCocone H₁).ι.app
+            ((decomposedEquiv (J := I)).inverse.obj i) := by
+      exact hι₁'
+    have hι₂'' :
+        (colimit.ι (S ⋙ ShortComplex.π₂) i :
+          (S.obj i).X₂ ⟶ colimit (S ⋙ ShortComplex.π₂)) ≫ e₂.hom =
+          i₂.inv.app i ≫ (decomposedColimitCocone H₂).ι.app
+            ((decomposedEquiv (J := I)).inverse.obj i) := by
+      exact hι₂'
+    have hmap₁ :
+        (colimit.ι (S ⋙ ShortComplex.π₁) i :
+          (S.obj i).X₁ ⟶ colimit (S ⋙ ShortComplex.π₁)) ≫
+            (moduleShortComplexColimit S).f =
+          (moduleShortComplexFirstMap S).app i ≫
+            colimit.ι (S ⋙ ShortComplex.π₂) i := by
+      simpa [moduleShortComplexColimit] using
+        (colimit.ι_map (moduleShortComplexFirstMap S) i)
+    have hq₁ := congrArg
+      (fun k => k ≫ (HasColimit.isoOfNatIso a₁).hom ≫
+        (HasColimit.isoOfNatIso b₁.symm).hom ≫
+          𝟙 (colimit (Discrete.functor D ⋙ ShortComplex.π₁)) ≫
+        (arbitraryModuleShortComplexColimit
+          (Discrete.functor (decomposedShortComplexFamily S))).f) hι₁''
+    have hq₂ := congrArg
+      (fun k => k ≫ (HasColimit.isoOfNatIso a₂).hom ≫
+        (HasColimit.isoOfNatIso b₂.symm).hom ≫
+          𝟙 (colimit (Discrete.functor D ⋙ ShortComplex.π₂))) hι₂''
+    have hq₂p := congrArg
+      (fun k => (moduleShortComplexFirstMap S).app i ≫ k) hq₂
+    have hright := congrArg
+      (fun k => k ≫ e₂.hom ≫ (HasColimit.isoOfNatIso a₂).hom ≫
+        (HasColimit.isoOfNatIso b₂.symm).hom ≫
+          𝟙 (colimit (Discrete.functor D ⋙ ShortComplex.π₂))) hmap₁
+    have hi₀₁ : i₀₁.hom.app i = 𝟙 _ := by
+      dsimp [i₀₁]
+      rw [show (decomposedEquiv (J := I)).inverse.obj i =
+        ⟨((decomposedEquiv (J := I)).inverse.obj i).1,
+          ((decomposedEquiv (J := I)).inverse.obj i).2⟩ by rfl]
+      simpa [Sigma.descUniq_hom_app]
+    have hi₀₂ : i₀₂.hom.app i = 𝟙 _ := by
+      dsimp [i₀₂]
+      rw [show (decomposedEquiv (J := I)).inverse.obj i =
+        ⟨((decomposedEquiv (J := I)).inverse.obj i).1,
+          ((decomposedEquiv (J := I)).inverse.obj i).2⟩ by rfl]
+      simpa [Sigma.descUniq_hom_app]
+    have hc₁ :
+        (decomposedColimitCocone H₁).ι.app
+            ((decomposedEquiv (J := I)).inverse.obj i) =
+          (Sigma.inclDesc H₁
+              ((decomposedEquiv (J := I)).inverse.obj i).1).hom.app
+              ((decomposedEquiv (J := I)).inverse.obj i).2 ≫
+            colimit.ι (H₁ ((decomposedEquiv (J := I)).inverse.obj i).1)
+              ((decomposedEquiv (J := I)).inverse.obj i).2 ≫
+            colimit.ι
+              (Discrete.functor
+                (fun j : ConnectedComponents I => colimit (H₁ j)))
+              (Discrete.mk ((decomposedEquiv (J := I)).inverse.obj i).1) := by
+      dsimp [decomposedColimitCocone]
+      rw [show (decomposedEquiv (J := I)).inverse.obj i =
+        ⟨((decomposedEquiv (J := I)).inverse.obj i).1,
+          ((decomposedEquiv (J := I)).inverse.obj i).2⟩ by rfl]
+      rfl
+    have hc₂ :
+        (decomposedColimitCocone H₂).ι.app
+            ((decomposedEquiv (J := I)).inverse.obj i) =
+          (Sigma.inclDesc H₂
+              ((decomposedEquiv (J := I)).inverse.obj i).1).hom.app
+              ((decomposedEquiv (J := I)).inverse.obj i).2 ≫
+            colimit.ι (H₂ ((decomposedEquiv (J := I)).inverse.obj i).1)
+              ((decomposedEquiv (J := I)).inverse.obj i).2 ≫
+            colimit.ι
+              (Discrete.functor
+                (fun j : ConnectedComponents I => colimit (H₂ j)))
+              (Discrete.mk ((decomposedEquiv (J := I)).inverse.obj i).1) := by
+      dsimp [decomposedColimitCocone]
+      rw [show (decomposedEquiv (J := I)).inverse.obj i =
+        ⟨((decomposedEquiv (J := I)).inverse.obj i).1,
+          ((decomposedEquiv (J := I)).inverse.obj i).2⟩ by rfl]
+      rfl
+    dsimp [d₁, d₂, c₁, c₂]
+    simp only [Category.assoc, Iso.refl_hom, Category.id_comp, Category.comp_id]
+    calc
+      _ = i₁.inv.app i ≫ (decomposedColimitCocone H₁).ι.app
+          ((decomposedEquiv (J := I)).inverse.obj i) ≫
+            (HasColimit.isoOfNatIso a₁).hom ≫
+              (HasColimit.isoOfNatIso b₁.symm).hom ≫
+                (arbitraryModuleShortComplexColimit
+                  (Discrete.functor (decomposedShortComplexFamily S))).f := by
+        simpa only [Category.assoc, Category.id_comp, Category.comp_id] using hq₁
+      _ = (moduleShortComplexFirstMap S).app i ≫
+          i₂.inv.app i ≫ (decomposedColimitCocone H₂).ι.app
+            ((decomposedEquiv (J := I)).inverse.obj i) ≫
+              (HasColimit.isoOfNatIso a₂).hom ≫
+              (HasColimit.isoOfNatIso b₂.symm).hom := by
+        rw [hc₁, hc₂]
+        simp [a₁, a₂, e₁, e₂, b₁, b₂, c₁, c₂, D, H₁, H₂, hi₀₁, hi₀₂, i₁, i₂,
+          arbitraryModuleShortComplexColimit,
+          arbitraryModuleShortComplexFirstMap, arbitraryModuleShortComplexSecondMap,
+          moduleShortComplexColimit, decomposedColimitCocone]
+        have hlocal0 :
+            colimit.ι
+                (inclusion ((decomposedEquiv (J := I)).inverse.obj i).1 ⋙
+                  decomposedTo I ⋙ S ⋙ ShortComplex.π₁)
+                ((decomposedEquiv (J := I)).inverse.obj i).2 ≫
+              (decomposedShortComplexFamily S
+                ((decomposedEquiv (J := I)).inverse.obj i).1).f =
+            ((inclusion ((decomposedEquiv (J := I)).inverse.obj i).1 ⋙
+              (decomposedEquiv (J := I)).functor ⋙ S).obj
+                ((decomposedEquiv (J := I)).inverse.obj i).2).f ≫
+              colimit.ι
+                (inclusion ((decomposedEquiv (J := I)).inverse.obj i).1 ⋙
+                  (decomposedEquiv (J := I)).functor ⋙ S ⋙ ShortComplex.π₂)
+                ((decomposedEquiv (J := I)).inverse.obj i).2 := by
+          dsimp [decomposedShortComplexFamily, moduleShortComplexColimit,
+            moduleShortComplexFirstMap]
+          exact colimit.ι_map
+            (moduleShortComplexFirstMap
+              (inclusion ((decomposedEquiv (J := I)).inverse.obj i).1 ⋙
+                (decomposedEquiv (J := I)).functor ⋙ S))
+            ((decomposedEquiv (J := I)).inverse.obj i).2
+        have hlocal0p := congrArg
+          (fun k => (S.map (decomposedEquiv.counitIso.inv.app i)).τ₁ ≫ k ≫
+            colimit.ι
+              (Discrete.functor (decomposedShortComplexFamily S) ⋙ ShortComplex.π₂)
+              (Discrete.mk ((decomposedEquiv (J := I)).inverse.obj i).1)) hlocal0
+        have hcomm := (S.map (decomposedEquiv.counitIso.inv.app i)).comm₁₂
+        have heq :
+            (inclusion ((decomposedEquiv (J := I)).inverse.obj i).1).obj
+                ((decomposedEquiv (J := I)).inverse.obj i).2 =
+              (decomposedEquiv (J := I)).inverse.obj i := by
+          rfl
+        have hobj :
+            ((inclusion ((decomposedEquiv (J := I)).inverse.obj i).1 ⋙
+              (decomposedEquiv (J := I)).functor ⋙ S).obj
+                ((decomposedEquiv (J := I)).inverse.obj i).2).f =
+              (S.obj ((decomposedEquiv (J := I)).functor.obj
+                ((decomposedEquiv (J := I)).inverse.obj i))).f := by
+          rfl
+        have hobj' :
+            (S.obj ((decomposedEquiv (J := I)).functor.obj
+              ((inclusion ((decomposedEquiv (J := I)).inverse.obj i).1).obj
+                ((decomposedEquiv (J := I)).inverse.obj i).2))).f =
+              (S.obj ((decomposedEquiv (J := I)).functor.obj
+                ((decomposedEquiv (J := I)).inverse.obj i))).f := by
+          rfl
+        calc
+          _ = (S.map (decomposedEquiv.counitIso.inv.app i)).τ₁ ≫
+              ((inclusion ((decomposedEquiv (J := I)).inverse.obj i).1 ⋙
+                (decomposedEquiv (J := I)).functor ⋙ S).obj
+                  ((decomposedEquiv (J := I)).inverse.obj i).2).f ≫
+              colimit.ι
+                (inclusion ((decomposedEquiv (J := I)).inverse.obj i).1 ⋙
+                  (decomposedEquiv (J := I)).functor ⋙ S ⋙ ShortComplex.π₂)
+                ((decomposedEquiv (J := I)).inverse.obj i).2 ≫
+              colimit.ι
+                (Discrete.functor (decomposedShortComplexFamily S) ⋙
+                  ShortComplex.π₂)
+                (Discrete.mk ((decomposedEquiv (J := I)).inverse.obj i).1) := by
+            simpa only [decomposedShortComplexFamily,
+              moduleShortComplexColimit, moduleShortComplexFirstMap, Category.assoc] using hlocal0p
+          _ = (moduleShortComplexFirstMap S).app i ≫
+              (S.map (decomposedEquiv.counitIso.inv.app i)).τ₂ ≫
+              colimit.ι
+                (inclusion ((decomposedEquiv (J := I)).inverse.obj i).1 ⋙
+                  (decomposedEquiv (J := I)).functor ⋙ S ⋙ ShortComplex.π₂)
+                ((decomposedEquiv (J := I)).inverse.obj i).2 ≫
+              colimit.ι
+                (Discrete.functor (decomposedShortComplexFamily S) ⋙
+                  ShortComplex.π₂)
+                (Discrete.mk ((decomposedEquiv (J := I)).inverse.obj i).1) := by
+            have hcomm' := congrArg
+              (fun k => k ≫
+                colimit.ι
+                  (inclusion ((decomposedEquiv (J := I)).inverse.obj i).1 ⋙
+                    (decomposedEquiv (J := I)).functor ⋙ S ⋙ ShortComplex.π₂)
+                  ((decomposedEquiv (J := I)).inverse.obj i).2 ≫
+                colimit.ι
+                  (Discrete.functor (decomposedShortComplexFamily S) ⋙
+                    ShortComplex.π₂)
+                  (Discrete.mk ((decomposedEquiv (J := I)).inverse.obj i).1)) hcomm
+            simp only [Category.assoc] at hcomm'
+            simpa only [moduleShortComplexFirstMap, Functor.comp_obj, Functor.id_obj, heq,
+              hobj, hobj'] using hcomm'
+      _ = (moduleShortComplexFirstMap S).app i ≫
+          colimit.ι (S ⋙ ShortComplex.π₂) i ≫ e₂.hom ≫
+            (HasColimit.isoOfNatIso a₂).hom ≫
+              (HasColimit.isoOfNatIso b₂.symm).hom := by
+        simpa only [Category.assoc, Category.id_comp, Category.comp_id] using hq₂p.symm
+      _ = colimit.ι (S ⋙ ShortComplex.π₁) i ≫
+          (moduleShortComplexColimit S).f ≫ e₂.hom ≫
+            (HasColimit.isoOfNatIso a₂).hom ≫
+              (HasColimit.isoOfNatIso b₂.symm).hom := by
+        simpa only [Category.assoc, Category.id_comp, Category.comp_id] using hright.symm
   · apply colimit.hom_ext
     intro i
     have hι₂ := decomposedColimitIso_ι_hom_aux
       (S ⋙ ShortComplex.π₂) H₂ i₂ i
     have hι₃ := decomposedColimitIso_ι_hom_aux
       (S ⋙ ShortComplex.π₃) H₃ i₃ i
-    rw [Category.assoc, hι₂, Category.assoc, colimit.ι_map,
-      Category.assoc, hι₃]
-    simp [e₂, e₃, b₂, b₃, c₂, c₃, D, H₂, H₃, i₂, i₃,
-      arbitraryModuleShortComplexColimit,
-      arbitraryModuleShortComplexFirstMap, arbitraryModuleShortComplexSecondMap,
-      moduleShortComplexColimit, decomposedColimitCocone]
+    have hι₂' :
+        colimit.ι (S ⋙ ShortComplex.π₂) i ≫ e₂.hom =
+          i₂.inv.app i ≫ (decomposedColimitCocone H₂).ι.app
+            ((decomposedEquiv (J := I)).inverse.obj i) := by
+      change colimit.ι (S ⋙ ShortComplex.π₂) i ≫
+          ((HasColimit.isoOfNatIso i₂).symm ≪≫
+            Functor.Final.colimitIso (decomposedEquiv (J := I)).inverse
+              (CategoryTheory.Sigma.desc H₂) ≪≫
+            (colimit.isColimit (CategoryTheory.Sigma.desc H₂)).coconePointUniqueUpToIso
+              (decomposedColimitIsColimit H₂)).hom = _
+      exact hι₂
+    have hι₃' :
+        colimit.ι (S ⋙ ShortComplex.π₃) i ≫ e₃.hom =
+          i₃.inv.app i ≫ (decomposedColimitCocone H₃).ι.app
+            ((decomposedEquiv (J := I)).inverse.obj i) := by
+      change colimit.ι (S ⋙ ShortComplex.π₃) i ≫
+          ((HasColimit.isoOfNatIso i₃).symm ≪≫
+            Functor.Final.colimitIso (decomposedEquiv (J := I)).inverse
+              (CategoryTheory.Sigma.desc H₃) ≪≫
+            (colimit.isColimit (CategoryTheory.Sigma.desc H₃)).coconePointUniqueUpToIso
+              (decomposedColimitIsColimit H₃)).hom = _
+      exact hι₃
+    have hι₂'' :
+        (colimit.ι (S ⋙ ShortComplex.π₂) i :
+          (S.obj i).X₂ ⟶ colimit (S ⋙ ShortComplex.π₂)) ≫ e₂.hom =
+          i₂.inv.app i ≫ (decomposedColimitCocone H₂).ι.app
+            ((decomposedEquiv (J := I)).inverse.obj i) := by
+      exact hι₂'
+    have hι₃'' :
+        (colimit.ι (S ⋙ ShortComplex.π₃) i :
+          (S.obj i).X₃ ⟶ colimit (S ⋙ ShortComplex.π₃)) ≫ e₃.hom =
+          i₃.inv.app i ≫ (decomposedColimitCocone H₃).ι.app
+            ((decomposedEquiv (J := I)).inverse.obj i) := by
+      exact hι₃'
+    have hmap₂ :
+        (colimit.ι (S ⋙ ShortComplex.π₂) i :
+          (S.obj i).X₂ ⟶ colimit (S ⋙ ShortComplex.π₂)) ≫
+            (moduleShortComplexColimit S).g =
+          (moduleShortComplexSecondMap S).app i ≫
+            colimit.ι (S ⋙ ShortComplex.π₃) i := by
+      simpa [moduleShortComplexColimit] using
+        (colimit.ι_map (moduleShortComplexSecondMap S) i)
+    have hq₂ := congrArg
+      (fun k => k ≫ (HasColimit.isoOfNatIso a₂).hom ≫
+        (HasColimit.isoOfNatIso b₂.symm).hom ≫
+          𝟙 (colimit (Discrete.functor D ⋙ ShortComplex.π₂)) ≫
+        (arbitraryModuleShortComplexColimit
+          (Discrete.functor (decomposedShortComplexFamily S))).g) hι₂''
+    have hq₃ := congrArg
+      (fun k => k ≫ (HasColimit.isoOfNatIso a₃).hom ≫
+        (HasColimit.isoOfNatIso b₃.symm).hom ≫
+          𝟙 (colimit (Discrete.functor D ⋙ ShortComplex.π₃))) hι₃''
+    have hq₃p := congrArg
+      (fun k => (moduleShortComplexSecondMap S).app i ≫ k) hq₃
+    have hright₂ := congrArg
+      (fun k => k ≫ e₃.hom ≫ (HasColimit.isoOfNatIso a₃).hom ≫
+        (HasColimit.isoOfNatIso b₃.symm).hom ≫
+          𝟙 (colimit (Discrete.functor D ⋙ ShortComplex.π₃))) hmap₂
+    have hi₀₂ : i₀₂.hom.app i = 𝟙 _ := by
+      dsimp [i₀₂]
+      rw [show (decomposedEquiv (J := I)).inverse.obj i =
+        ⟨((decomposedEquiv (J := I)).inverse.obj i).1,
+          ((decomposedEquiv (J := I)).inverse.obj i).2⟩ by rfl]
+      simpa [Sigma.descUniq_hom_app]
+    have hi₀₃ : i₀₃.hom.app i = 𝟙 _ := by
+      dsimp [i₀₃]
+      rw [show (decomposedEquiv (J := I)).inverse.obj i =
+        ⟨((decomposedEquiv (J := I)).inverse.obj i).1,
+          ((decomposedEquiv (J := I)).inverse.obj i).2⟩ by rfl]
+      simpa [Sigma.descUniq_hom_app]
+    have hc₂ :
+        (decomposedColimitCocone H₂).ι.app
+            ((decomposedEquiv (J := I)).inverse.obj i) =
+          (Sigma.inclDesc H₂
+              ((decomposedEquiv (J := I)).inverse.obj i).1).hom.app
+              ((decomposedEquiv (J := I)).inverse.obj i).2 ≫
+            colimit.ι (H₂ ((decomposedEquiv (J := I)).inverse.obj i).1)
+              ((decomposedEquiv (J := I)).inverse.obj i).2 ≫
+            colimit.ι
+              (Discrete.functor
+                (fun j : ConnectedComponents I => colimit (H₂ j)))
+              (Discrete.mk ((decomposedEquiv (J := I)).inverse.obj i).1) := by
+      dsimp [decomposedColimitCocone]
+      rw [show (decomposedEquiv (J := I)).inverse.obj i =
+        ⟨((decomposedEquiv (J := I)).inverse.obj i).1,
+          ((decomposedEquiv (J := I)).inverse.obj i).2⟩ by rfl]
+      rfl
+    have hc₃ :
+        (decomposedColimitCocone H₃).ι.app
+            ((decomposedEquiv (J := I)).inverse.obj i) =
+          (Sigma.inclDesc H₃
+              ((decomposedEquiv (J := I)).inverse.obj i).1).hom.app
+              ((decomposedEquiv (J := I)).inverse.obj i).2 ≫
+            colimit.ι (H₃ ((decomposedEquiv (J := I)).inverse.obj i).1)
+              ((decomposedEquiv (J := I)).inverse.obj i).2 ≫
+            colimit.ι
+              (Discrete.functor
+                (fun j : ConnectedComponents I => colimit (H₃ j)))
+              (Discrete.mk ((decomposedEquiv (J := I)).inverse.obj i).1) := by
+      dsimp [decomposedColimitCocone]
+      rw [show (decomposedEquiv (J := I)).inverse.obj i =
+        ⟨((decomposedEquiv (J := I)).inverse.obj i).1,
+          ((decomposedEquiv (J := I)).inverse.obj i).2⟩ by rfl]
+      rfl
+    dsimp [d₂, d₃, c₂, c₃]
+    simp only [Category.assoc, Iso.refl_hom, Category.id_comp, Category.comp_id]
+    calc
+      _ = i₂.inv.app i ≫ (decomposedColimitCocone H₂).ι.app
+          ((decomposedEquiv (J := I)).inverse.obj i) ≫
+            (HasColimit.isoOfNatIso a₂).hom ≫
+              (HasColimit.isoOfNatIso b₂.symm).hom ≫
+                (arbitraryModuleShortComplexColimit
+                  (Discrete.functor (decomposedShortComplexFamily S))).g := by
+        simpa only [Category.assoc, Category.id_comp, Category.comp_id] using hq₂
+      _ = (moduleShortComplexSecondMap S).app i ≫
+          i₃.inv.app i ≫ (decomposedColimitCocone H₃).ι.app
+            ((decomposedEquiv (J := I)).inverse.obj i) ≫
+              (HasColimit.isoOfNatIso a₃).hom ≫
+              (HasColimit.isoOfNatIso b₃.symm).hom := by
+        rw [hc₂, hc₃]
+        simp [a₂, a₃, e₂, e₃, b₂, b₃, c₂, c₃, D, H₂, H₃, hi₀₂, hi₀₃, i₂, i₃,
+          arbitraryModuleShortComplexColimit,
+          arbitraryModuleShortComplexFirstMap, arbitraryModuleShortComplexSecondMap,
+          moduleShortComplexColimit, decomposedColimitCocone]
+        have hlocal0 :
+            colimit.ι
+                (inclusion ((decomposedEquiv (J := I)).inverse.obj i).1 ⋙
+                  decomposedTo I ⋙ S ⋙ ShortComplex.π₂)
+                ((decomposedEquiv (J := I)).inverse.obj i).2 ≫
+              (decomposedShortComplexFamily S
+                ((decomposedEquiv (J := I)).inverse.obj i).1).g =
+            ((inclusion ((decomposedEquiv (J := I)).inverse.obj i).1 ⋙
+              (decomposedEquiv (J := I)).functor ⋙ S).obj
+                ((decomposedEquiv (J := I)).inverse.obj i).2).g ≫
+              colimit.ι
+                (inclusion ((decomposedEquiv (J := I)).inverse.obj i).1 ⋙
+                  (decomposedEquiv (J := I)).functor ⋙ S ⋙ ShortComplex.π₃)
+                ((decomposedEquiv (J := I)).inverse.obj i).2 := by
+          dsimp [decomposedShortComplexFamily, moduleShortComplexColimit,
+            moduleShortComplexSecondMap]
+          exact colimit.ι_map
+            (moduleShortComplexSecondMap
+              (inclusion ((decomposedEquiv (J := I)).inverse.obj i).1 ⋙
+                (decomposedEquiv (J := I)).functor ⋙ S))
+            ((decomposedEquiv (J := I)).inverse.obj i).2
+        have hlocal0p := congrArg
+          (fun k => (S.map (decomposedEquiv.counitIso.inv.app i)).τ₂ ≫ k ≫
+            colimit.ι
+              (Discrete.functor (decomposedShortComplexFamily S) ⋙ ShortComplex.π₃)
+              (Discrete.mk ((decomposedEquiv (J := I)).inverse.obj i).1)) hlocal0
+        have hcomm := (S.map (decomposedEquiv.counitIso.inv.app i)).comm₂₃
+        have heq :
+            (inclusion ((decomposedEquiv (J := I)).inverse.obj i).1).obj
+                ((decomposedEquiv (J := I)).inverse.obj i).2 =
+              (decomposedEquiv (J := I)).inverse.obj i := by
+          rfl
+        have hobj :
+            ((inclusion ((decomposedEquiv (J := I)).inverse.obj i).1 ⋙
+              (decomposedEquiv (J := I)).functor ⋙ S).obj
+                ((decomposedEquiv (J := I)).inverse.obj i).2).g =
+              (S.obj ((decomposedEquiv (J := I)).functor.obj
+                ((decomposedEquiv (J := I)).inverse.obj i))).g := by
+          rfl
+        have hobj' :
+            (S.obj ((decomposedEquiv (J := I)).functor.obj
+              ((inclusion ((decomposedEquiv (J := I)).inverse.obj i).1).obj
+                ((decomposedEquiv (J := I)).inverse.obj i).2))).g =
+              (S.obj ((decomposedEquiv (J := I)).functor.obj
+                ((decomposedEquiv (J := I)).inverse.obj i))).g := by
+          rfl
+        calc
+          _ = (S.map (decomposedEquiv.counitIso.inv.app i)).τ₂ ≫
+              ((inclusion ((decomposedEquiv (J := I)).inverse.obj i).1 ⋙
+                (decomposedEquiv (J := I)).functor ⋙ S).obj
+                  ((decomposedEquiv (J := I)).inverse.obj i).2).g ≫
+              colimit.ι
+                (inclusion ((decomposedEquiv (J := I)).inverse.obj i).1 ⋙
+                  (decomposedEquiv (J := I)).functor ⋙ S ⋙ ShortComplex.π₃)
+                ((decomposedEquiv (J := I)).inverse.obj i).2 ≫
+              colimit.ι
+                (Discrete.functor (decomposedShortComplexFamily S) ⋙
+                  ShortComplex.π₃)
+                (Discrete.mk ((decomposedEquiv (J := I)).inverse.obj i).1) := by
+            simpa only [decomposedShortComplexFamily,
+              moduleShortComplexColimit, moduleShortComplexSecondMap, Category.assoc] using hlocal0p
+          _ = (moduleShortComplexSecondMap S).app i ≫
+              (S.map (decomposedEquiv.counitIso.inv.app i)).τ₃ ≫
+              colimit.ι
+                (inclusion ((decomposedEquiv (J := I)).inverse.obj i).1 ⋙
+                  (decomposedEquiv (J := I)).functor ⋙ S ⋙ ShortComplex.π₃)
+                ((decomposedEquiv (J := I)).inverse.obj i).2 ≫
+              colimit.ι
+                (Discrete.functor (decomposedShortComplexFamily S) ⋙
+                  ShortComplex.π₃)
+                (Discrete.mk ((decomposedEquiv (J := I)).inverse.obj i).1) := by
+            have hcomm' := congrArg
+              (fun k => k ≫
+                colimit.ι
+                  (inclusion ((decomposedEquiv (J := I)).inverse.obj i).1 ⋙
+                    (decomposedEquiv (J := I)).functor ⋙ S ⋙ ShortComplex.π₃)
+                  ((decomposedEquiv (J := I)).inverse.obj i).2 ≫
+                colimit.ι
+                  (Discrete.functor (decomposedShortComplexFamily S) ⋙
+                    ShortComplex.π₃)
+                  (Discrete.mk ((decomposedEquiv (J := I)).inverse.obj i).1)) hcomm
+            simp only [Category.assoc] at hcomm'
+            simpa only [moduleShortComplexSecondMap, Functor.comp_obj, Functor.id_obj, heq,
+              hobj, hobj'] using hcomm'
+      _ = (moduleShortComplexSecondMap S).app i ≫
+          colimit.ι (S ⋙ ShortComplex.π₃) i ≫ e₃.hom ≫
+            (HasColimit.isoOfNatIso a₃).hom ≫
+              (HasColimit.isoOfNatIso b₃.symm).hom := by
+        simpa only [Category.assoc, Category.id_comp, Category.comp_id] using hq₃p.symm
+      _ = colimit.ι (S ⋙ ShortComplex.π₂) i ≫
+          (moduleShortComplexColimit S).g ≫ e₃.hom ≫
+            (HasColimit.isoOfNatIso a₃).hom ≫
+              (HasColimit.isoOfNatIso b₃.symm).hom := by
+        simpa only [Category.assoc, Category.id_comp, Category.comp_id] using hright₂.symm
 
 private def colimit_homology {R : Type u} [CommRing R]
     {K : Type v} [Category.{v'} K]
@@ -1870,7 +2273,71 @@ theorem almost_directed_colimit_homology {R : Type u} [CommRing R]
       ((moduleShortComplexColimit S).homology ≅
         colimit (S ⋙ ShortComplex.homologyFunctor
           (ModuleCat.{max v v' w} R))) := by
-  sorry
+  let D : ConnectedComponents I →
+      ShortComplex (ModuleCat.{max v v' w} R) := decomposedShortComplexFamily S
+  let A : Discrete (ConnectedComponents I) ⥤
+      ShortComplex (ModuleCat.{max v v' w} R) := Discrete.functor D
+  letI : AB5OfSize.{v, v} (AddCommGrpCat.{max v v' w}) :=
+    AB5OfSize_of_univLE (AddCommGrpCat.{max v v' w})
+  letI : AB4OfSize.{max v v' w} (AddCommGrpCat.{max v v' w}) :=
+    AB4.of_AB5 (AddCommGrpCat.{max v v' w})
+  letI : AB4OfSize.{v} (AddCommGrpCat.{max v v' w}) :=
+    AB4OfSize_shrink (AddCommGrpCat.{max v v' w})
+  letI : HasExactColimitsOfShape (Discrete (ConnectedComponents I))
+      (ModuleCat.{max v v' w} R) :=
+    HasExactColimitsOfShape.domain_of_functor (Discrete (ConnectedComponents I))
+      (forget₂ (ModuleCat.{max v v' w} R) AddCommGrpCat)
+  let M_A : ShortComplex (ModuleCat.{max v v' w} R) :=
+    @moduleShortComplexColimit.{u, v, max v' w, v} R _
+      (Discrete (ConnectedComponents I)) _ A
+  let Q_A : ShortComplex (ModuleCat.{max v v' w} R) :=
+    @arbitraryModuleShortComplexColimit.{u, v, v, max v v' w} R _
+      (Discrete (ConnectedComponents I)) _ _ _ A
+  let q : M_A ≅ Q_A :=
+    ShortComplex.isoMk
+      (by dsimp [M_A, Q_A, moduleShortComplexColimit,
+        arbitraryModuleShortComplexColimit]; exact Iso.refl _)
+      (by dsimp [M_A, Q_A, moduleShortComplexColimit,
+        arbitraryModuleShortComplexColimit]; exact Iso.refl _)
+      (by dsimp [M_A, Q_A, moduleShortComplexColimit,
+        arbitraryModuleShortComplexColimit]; exact Iso.refl _)
+      (by
+        simp [M_A, Q_A, A, moduleShortComplexColimit, arbitraryModuleShortComplexColimit,
+          moduleShortComplexFirstMap, arbitraryModuleShortComplexFirstMap])
+      (by
+        simp [M_A, Q_A, A, moduleShortComplexColimit, arbitraryModuleShortComplexColimit,
+          moduleShortComplexSecondMap, arbitraryModuleShortComplexSecondMap])
+  rcases (@colimit_homology.{u, v, max v' w, v} R _
+    (Discrete (ConnectedComponents I)) _ _ _ A) with ⟨hA⟩
+  have hfiltered : ∀ j : ConnectedComponents I, IsFiltered j.Component :=
+    Formalization.Books.Categories.Unit19.filtered_connected_component_decomposition hspan heq
+  let H : ∀ j : ConnectedComponents I,
+      j.Component ⥤ ModuleCat.{max v v' w} R :=
+    fun j => (inclusion j ⋙ (decomposedEquiv (J := I)).functor ⋙ S) ⋙
+      ShortComplex.homologyFunctor (ModuleCat.{max v v' w} R)
+  let pcomp : ∀ j : ConnectedComponents I,
+      (D j).homology ≅ colimit (H j) :=
+    fun j => by
+      letI : IsFiltered j.Component := hfiltered j
+      simpa [D, H, decomposedShortComplexFamily] using
+        (filtered_colimit_homology
+          (inclusion j ⋙ (decomposedEquiv (J := I)).functor ⋙ S)).some
+  let pNat :
+      Discrete.functor (fun j : ConnectedComponents I => (D j).homology) ≅
+        Discrete.functor (fun j : ConnectedComponents I => colimit (H j)) :=
+    Discrete.natIso (fun j => pcomp j.as)
+  let pCol := HasColimit.isoOfNatIso pNat
+  let bH := Discrete.compNatIsoDiscrete D
+    (ShortComplex.homologyFunctor (ModuleCat.{max v v' w} R))
+  let cH := HasColimit.isoOfNatIso bH.symm
+  let eH := decomposedColimitIso
+    (S ⋙ ShortComplex.homologyFunctor (ModuleCat.{max v v' w} R))
+  let hdecomp :=
+    (ShortComplex.homologyFunctor (ModuleCat.{max v v' w} R)).mapIso
+      (decomposedShortComplexIso S)
+  let hq :=
+    (ShortComplex.homologyFunctor (ModuleCat.{max v v' w} R)).mapIso q
+  refine ⟨hdecomp ≪≫ hq.symm ≪≫ hA ≪≫ cH.symm ≪≫ pCol ≪≫ eH.symm⟩
 
 theorem almost_directed_colimit_exact {R : Type u} [CommRing R]
     {I : Type v} [Category.{v'} I]
@@ -1879,7 +2346,46 @@ theorem almost_directed_colimit_exact {R : Type u} [CommRing R]
     (S : I ⥤ ShortComplex (ModuleCat.{max v v' w} R))
     (hS : ∀ i : I, (S.obj i).Exact) :
     (moduleShortComplexColimit S).Exact := by
-  sorry
+  let D : ConnectedComponents I →
+      ShortComplex (ModuleCat.{max v v' w} R) := decomposedShortComplexFamily S
+  let A : Discrete (ConnectedComponents I) ⥤
+      ShortComplex (ModuleCat.{max v v' w} R) := Discrete.functor D
+  let M_A : ShortComplex (ModuleCat.{max v v' w} R) :=
+    @moduleShortComplexColimit.{u, v, max v' w, v} R _
+      (Discrete (ConnectedComponents I)) _ A
+  let Q_A : ShortComplex (ModuleCat.{max v v' w} R) :=
+    @arbitraryModuleShortComplexColimit.{u, v, v, max v v' w} R _
+      (Discrete (ConnectedComponents I)) _ _ _ A
+  let q : M_A ≅ Q_A :=
+    ShortComplex.isoMk
+      (by dsimp [M_A, Q_A, moduleShortComplexColimit,
+        arbitraryModuleShortComplexColimit]; exact Iso.refl _)
+      (by dsimp [M_A, Q_A, moduleShortComplexColimit,
+        arbitraryModuleShortComplexColimit]; exact Iso.refl _)
+      (by dsimp [M_A, Q_A, moduleShortComplexColimit,
+        arbitraryModuleShortComplexColimit]; exact Iso.refl _)
+      (by
+        simp [M_A, Q_A, A, moduleShortComplexColimit, arbitraryModuleShortComplexColimit,
+          moduleShortComplexFirstMap, arbitraryModuleShortComplexFirstMap])
+      (by
+        simp [M_A, Q_A, A, moduleShortComplexColimit, arbitraryModuleShortComplexColimit,
+          moduleShortComplexSecondMap, arbitraryModuleShortComplexSecondMap])
+  have hfiltered : ∀ j : ConnectedComponents I, IsFiltered j.Component :=
+    Formalization.Books.Categories.Unit19.filtered_connected_component_decomposition hspan heq
+  have hD : ∀ j : ConnectedComponents I, (D j).Exact := by
+    intro j
+    letI : IsFiltered j.Component := hfiltered j
+    simpa [D, decomposedShortComplexFamily] using
+      (filtered_colimit_exact
+        (inclusion j ⋙ (decomposedEquiv (J := I)).functor ⋙ S)
+        (fun i => hS _))
+  have hM : M_A.Exact := by
+    simpa [M_A, A, D, directSumShortComplex, discreteShortComplexSystem] using
+      (@direct_sum_of_exact_short_complexes.{u, v, max v' w} R _
+        (ConnectedComponents I) D hD)
+  have hQ : Q_A.Exact := by
+    exact ShortComplex.exact_of_iso q hM
+  exact ShortComplex.exact_of_iso (decomposedShortComplexIso S).symm hQ
 
 end
 

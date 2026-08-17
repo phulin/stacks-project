@@ -61,7 +61,22 @@ theorem algebraically_closed_irreducible_polynomial_iff_linear_factor
     (K : Type u) [Field K] [IsAlgClosed K] (P : Polynomial K) :
     Irreducible P ↔
       ∃ c α : K, c ≠ 0 ∧ P = C c * (X - C α) := by
-  sorry
+  constructor
+  · intro hP
+    have hdeg : P.degree = 1 := algebraically_closed_irreducible_polynomial_is_linear K hP
+    have hc : P.leadingCoeff ≠ 0 := leadingCoeff_ne_zero.mpr hP.ne_zero
+    refine ⟨P.leadingCoeff, -P.leadingCoeff⁻¹ * P.coeff 0, hc, ?_⟩
+    calc
+      P = C P.leadingCoeff * X + C (P.coeff 0) :=
+        eq_X_add_C_of_degree_eq_one hdeg
+      _ = C P.leadingCoeff * (X - C (-P.leadingCoeff⁻¹ * P.coeff 0)) := by
+        rw [mul_sub, C_mul]
+        congr 1
+        rw [← C_mul, ← C_mul, ← C_neg]
+        field_simp
+  · rintro ⟨c, α, hc, rfl⟩
+    exact (irreducible_isUnit_mul (isUnit_C.mpr (isUnit_iff_ne_zero.mpr hc))).2
+      (irreducible_X_sub_C α)
 
 /- The source explains the root criterion using the maximal ideals of K[X].
    This is the corresponding ideal classification, stated independently of
@@ -72,7 +87,26 @@ theorem algebraically_closed_polynomial_maximal_ideal_iff
     (K : Type u) [Field K] [IsAlgClosed K] (I : Ideal (Polynomial K)) :
     I.IsMaximal ↔
       ∃ α : K, I = Ideal.span ({X - C α} : Set (Polynomial K)) := by
-  sorry
+  constructor
+  · intro hI
+    have hnotfield : ¬IsField (Polynomial K) := by
+      intro hfield
+      apply (Polynomial.not_isUnit_X (R := K))
+      rw [isUnit_iff_exists]
+      obtain ⟨q, hq⟩ := hfield.mul_inv_cancel Polynomial.X_ne_zero
+      exact ⟨q, hq, by simpa [hfield.mul_comm] using hq⟩
+    have hI0 : I ≠ (⊥ : Ideal (Polynomial K)) :=
+      Ring.ne_bot_of_isMaximal_of_not_isField hI hnotfield
+    obtain ⟨p, hp, hIp⟩ :=
+      (Ideal.isPrime_iff_of_isPrincipalIdealRing hI0).mp hI.isPrime
+    obtain ⟨c, α, hc, hpc⟩ :=
+      (algebraically_closed_irreducible_polynomial_iff_linear_factor K p).mp hp.irreducible
+    refine ⟨α, ?_⟩
+    rw [hIp, hpc]
+    exact Ideal.span_singleton_mul_left_unit
+      (isUnit_C.mpr (isUnit_iff_ne_zero.mpr hc)) _
+  · rintro ⟨α, rfl⟩
+    exact PrincipalIdealRing.isMaximal_of_irreducible (irreducible_X_sub_C α)
 
 /-! ## Relative primeness and common roots -/
 

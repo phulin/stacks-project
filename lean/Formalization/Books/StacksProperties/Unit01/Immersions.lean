@@ -198,10 +198,23 @@ structure PresentationSubspace {S : Scheme.{u}}
     {X : AlgebraicStack S} (p : StackPresentation X) where
   carrier : Scheme.{u}
   inclusion : carrier ⟶ p.source
-  locallyClosed : Prop
-  openCondition : Prop
-  closedCondition : Prop
-  invariant : Prop
+  locallyClosed : IsImmersion inclusion
+
+def PresentationSubspace.openCondition {S : Scheme.{u}}
+    {X : AlgebraicStack S} {p : StackPresentation X}
+    (z : PresentationSubspace p) : Prop :=
+  IsOpenImmersion z.inclusion
+
+def PresentationSubspace.closedCondition {S : Scheme.{u}}
+    {X : AlgebraicStack S} {p : StackPresentation X}
+    (z : PresentationSubspace p) : Prop :=
+  IsClosedImmersion z.inclusion
+
+def PresentationSubspace.invariant {S : Scheme.{u}}
+    {X : AlgebraicStack S} {p : StackPresentation X}
+    (z : PresentationSubspace p) : Prop :=
+  ∀ (u v : p.source), PresentationRelation p u v →
+    (u ∈ Set.range z.inclusion ↔ v ∈ Set.range z.inclusion)
 
 structure PresentationImmersionData {S : Scheme.{u}}
     {X Z : AlgebraicStack S} (p : StackPresentation X)
@@ -376,6 +389,8 @@ structure OpenImageSubstackData {S : Scheme.{u}}
   surjective : Function.Surjective mapToSubstack.map
   smooth : mapToSubstack.smooth
   openImmersion : SpaceOpenImmersion i
+  commutes : ∀ v : V.left,
+    f.map (i.left v) = inducedPointMap substack.inclusion (mapToSubstack.map v)
 
 theorem open_image_substack {S : Scheme.{u}}
     {X : AlgebraicStack S} (U : AlgebraicSpace S)
@@ -451,8 +466,13 @@ structure LocalSourceHypotheses {S : Scheme.{u}}
         R.fppfLocalOnTarget ∧ R.stableUnderArbitraryBaseChange
   smoothImpliesR : ∀ {X Y : AlgebraicSpace S}
     (f : SpaceMorphism X Y), SpaceMorphismSmooth f → R.property f
-  largestOpenLocus : Prop
-  locusCommutesWithRBaseChange : Prop
+  largestOpenLocus :
+    ∀ {X Y : AlgebraicSpace S} (f : SpaceMorphism X Y),
+      Q.property f → Prop
+  locusCommutesWithRBaseChange :
+    ∀ {X Y Y' : AlgebraicSpace S}
+      (f : SpaceMorphism X Y) (_hf : Q.property f)
+      (g : SpaceMorphism Y' Y) (_hg : R.property g), Prop
 
 structure LargestOpenStackLocus {S : Scheme.{u}}
     (P : RelativeSpaceProperty S)
@@ -460,15 +480,22 @@ structure LargestOpenStackLocus {S : Scheme.{u}}
   substack : OpenSubstack X
   hasProperty : HasRelativeProperty P
     (StackMorphism.comp substack.inclusion f)
-  largest : Prop
+  largest : ∀ (U : OpenSubstack X),
+    HasRelativeProperty P (StackMorphism.comp U.inclusion f) →
+      Set.range (inducedPointMap U.inclusion) ⊆
+        Set.range (inducedPointMap substack.inclusion)
 
 structure LocalSourceBaseChangeData {S : Scheme.{u}}
     (P : RelativeSpaceProperty S)
     {X Y Z : AlgebraicStack S} (f : StackMorphism X Y)
     (g : StackMorphism Z Y) where
   locus : LargestOpenStackLocus P f
-  baseChangedLocus : Prop
-  largestAfterBaseChange : Prop
+  baseChangedLocus : LargestOpenStackLocus P (fibreProductSnd f g)
+  largestAfterBaseChange :
+    Set.range (inducedPointMap baseChangedLocus.substack.inclusion) =
+      {x : StackPoint (fibreProduct f g) |
+        inducedPointMap (fibreProductFst f g) x ∈
+          Set.range (inducedPointMap locus.substack.inclusion)}
 
 theorem local_source_locus {S : Scheme.{u}}
     (P Q R : RelativeSpaceProperty S)
@@ -482,7 +509,8 @@ theorem local_source_locus_base_change {S : Scheme.{u}}
     (P Q R : RelativeSpaceProperty S)
     (H : LocalSourceHypotheses P Q R)
     {X Y Z : AlgebraicStack S} (f : StackMorphism X Y)
-    (g : StackMorphism Z Y) (hf : HasRelativeProperty Q f) :
+    (g : StackMorphism Z Y) (hf : HasRelativeProperty Q f)
+    (hg : HasRelativeProperty R g) :
     Nonempty (LocalSourceBaseChangeData P f g) := by
   sorry
 

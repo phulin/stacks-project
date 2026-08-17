@@ -92,48 +92,33 @@ structure DistinctSingletonExample (S : Scheme.{u}) where
   group : Type u
   groupStructure : Group group
   groupActionSpace : AlgebraicSpace S
-  quotientSpace : AlgebraicSpace S
   action : group → groupActionSpace.left → groupActionSpace.left
   free : ∀ (g : group) (u : groupActionSpace.left),
     action g u = u → g = 1
   transitive : ∀ (u v : groupActionSpace.left),
     ∃ g : group, action g u = v
-  reduced : Prop
-  nonNoetherian : Prop
-  singleton : Prop
-  fieldValuedPoint : Prop
-  pointIsMonomorphism : Prop
-  notAnIsomorphism : Prop
+  quotient : AlgebraicStack S
+  quotientIsAlgebraicSpace : IsRepresentableByAlgebraicSpace quotient
+  quotientMap : groupActionSpace.left → StackPoint quotient
+  quotientMapInvariant : ∀ (g : group) (u : groupActionSpace.left),
+    quotientMap (action g u) = quotientMap u
+  quotientMapFibres : ∀ (u v : groupActionSpace.left),
+    quotientMap u = quotientMap v ↔ ∃ g : group, action g u = v
+  reduced : IsReduced quotient
+  nonNoetherian : ¬ IsLocallyNoetherian quotient
+  singleton : IsSingletonPointStack quotient
+  pointSource : AlgebraicStack S
+  pointInclusion : StackMorphism pointSource quotient
+  fieldValuedPoint : ∃ p : FieldValuedMorphism pointSource,
+    ∃ x : StackPoint quotient,
+      inducedPointMap pointInclusion
+          (stackPointOfFieldValuedMorphism p) = x
+  pointIsMonomorphism : IsMonomorphism pointInclusion
+  notAnIsomorphism : ¬ IsStackEquivalence pointInclusion
 
 theorem exists_distinct_singleton_example :
     ∃ (S : Scheme.{u}), Nonempty (DistinctSingletonExample S) := by
-  refine ⟨Scheme.empty, ?_⟩
-  refine ⟨{
-    group := ULift.{u} Unit
-    groupStructure := {
-      mul := fun _ _ => ULift.up ()
-      one := ULift.up ()
-      inv := fun _ => ULift.up ()
-      mul_assoc := by intros; rfl
-      one_mul := by intros; rfl
-      mul_one := by intros; rfl
-      inv_mul_cancel := by intros; rfl }
-    groupActionSpace := CategoryTheory.Over.mk (Scheme.emptyTo Scheme.empty)
-    quotientSpace := CategoryTheory.Over.mk (Scheme.emptyTo Scheme.empty)
-    action := fun _ u => u
-    free := by
-      intro g u h
-      exact Subsingleton.elim _ _
-    transitive := by
-      intro u v
-      change PEmpty at u
-      exact PEmpty.elim u
-    reduced := True
-    nonNoetherian := True
-    singleton := True
-    fieldValuedPoint := True
-    pointIsMonomorphism := True
-    notAnIsomorphism := True }⟩
+  sorry
 
 def ResidualGerbeCandidate {S : Scheme.{u}}
     {X : AlgebraicStack S} (x : StackPoint X) : Prop :=
@@ -289,7 +274,9 @@ structure FieldDiagonalComparison {S : Scheme.{u}}
     (x : StackPoint X) where
   point : FieldValuedMorphism X
   represents : stackPointOfFieldValuedMorphism point = x
-  diagonalComparison : Prop
+  diagonalComparison : ∀ q : RawPoint X,
+    X.points.equivalent point.point q ↔
+      Y.points.equivalent (f.rawMap point.point) (f.rawMap q)
 
 theorem residual_gerbe_isomorphic {S : Scheme.{u}}
     {X Y : AlgebraicStack S} (f : StackMorphism X Y)
@@ -301,65 +288,7 @@ theorem residual_gerbe_isomorphic {S : Scheme.{u}}
       IsStackEquivalence e ∧
         StackTwoMorphism (StackMorphism.comp Gx.inclusion f)
           (StackMorphism.comp e Gy.inclusion) := by
-  cases hdiag
-  let px : FieldValuedMorphism Gx.source := Classical.choose Gx.fieldCover
-  let py : FieldValuedMorphism Gy.source := Classical.choose Gy.fieldCover
-  let m : StackMorphism Gx.source Gy.source :=
-    { rawMap := fun _ => py.point
-      map_respects := by
-        intro a b hab
-        exact Gy.source.points.isEquivalence.refl _ }
-  let n : StackMorphism Gy.source Gx.source :=
-    { rawMap := fun _ => px.point
-      map_respects := by
-        intro a b hab
-        exact Gx.source.points.isEquivalence.refl _ }
-  have hleft : StackTwoMorphism
-      (StackMorphism.comp m n) (StackMorphism.id Gx.source) := by
-    intro p
-    change Gx.source.points.equivalent px.point p
-    have hsub : Subsingleton (StackPoint Gx.source) := Gx.singleton.2
-    exact @Quotient.exact _ Gx.source.points.setoid px.point p
-      (hsub.elim _ _)
-  have hright : StackTwoMorphism
-      (StackMorphism.comp n m) (StackMorphism.id Gy.source) := by
-    intro p
-    change Gy.source.points.equivalent py.point p
-    have hsub : Subsingleton (StackPoint Gy.source) := Gy.singleton.2
-    exact @Quotient.exact _ Gy.source.points.setoid py.point p
-      (hsub.elim _ _)
-  have hm : IsStackEquivalence m := by
-    let E : StackEquivalence Gx.source Gy.source :=
-      { forward := m
-        inverse := n
-        leftInverse := hleft
-        rightInverse := hright }
-    exact ⟨E, rfl⟩
-  have hGx : ∀ p : RawPoint Gx.source,
-      inducedPointMap Gx.inclusion
-        (Quotient.mk Gx.source.points.setoid p) = x := by
-    intro p
-    have hp : inducedPointMap Gx.inclusion
-        (Quotient.mk Gx.source.points.setoid p) ∈
-        Set.range (inducedPointMap Gx.inclusion) := ⟨_, rfl⟩
-    rw [Gx.pointSet] at hp
-    exact Set.mem_singleton_iff.mp hp
-  have hGy : inducedPointMap Gy.inclusion
-      (Quotient.mk Gy.source.points.setoid py.point) = y := by
-    have hp : inducedPointMap Gy.inclusion
-        (Quotient.mk Gy.source.points.setoid py.point) ∈
-        Set.range (inducedPointMap Gy.inclusion) := ⟨_, rfl⟩
-    rw [Gy.pointSet] at hp
-    exact Set.mem_singleton_iff.mp hp
-  refine ⟨m, hm, ?_⟩
-  intro p
-  have hpoint : inducedPointMap f
-        (inducedPointMap Gx.inclusion
-          (Quotient.mk Gx.source.points.setoid p)) =
-      inducedPointMap Gy.inclusion
-        (Quotient.mk Gy.source.points.setoid py.point) := by
-    rw [hGx p, hxy, hGy]
-  exact Quotient.exact hpoint
+  sorry
 
 theorem scheme_residual_gerbe {S : Scheme.{u}}
     {X : AlgebraicStack S} (hX : IsRepresentableByScheme X)

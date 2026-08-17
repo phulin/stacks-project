@@ -189,7 +189,7 @@ theorem check_property_covering {S : Scheme.{u}}
 structure StackCoveringMorphism {S : Scheme.{u}}
     {Z Y : AlgebraicStack S} where
   map : StackMorphism Z Y
-  representableByAlgebraicSpaces : Prop
+  representableByAlgebraicSpaces : RepresentableByAlgebraicSpaces map
   surjective : Function.Surjective (inducedPointMap map)
   flat : Prop
   locallyOfFinitePresentation : Prop
@@ -213,7 +213,7 @@ theorem check_property_weak_covering {S : Scheme.{u}}
     (f : StackMorphism X Y)
     (z : StackCoveringMorphism (Z := Z) (Y := Y))
     (hP : P.fppfLocalOnTarget ∧ P.stableUnderArbitraryBaseChange)
-    (hz : z.representableByAlgebraicSpaces ∧
+    (hz : RepresentableByAlgebraicSpaces z.map ∧
       Function.Surjective (inducedPointMap z.map) ∧ z.flat ∧
       z.locallyOfFinitePresentation) :
     HasRelativeProperty P f ↔ HasRelativePropertyAfterStackBaseChange P f z := by

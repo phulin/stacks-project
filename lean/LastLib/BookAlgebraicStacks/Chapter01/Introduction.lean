@@ -1,8 +1,0 @@
-/-!
-# Introduction
-
-The corresponding source section announces the subject of *Algebraic Stacks*
-and gives bibliographic and navigational remarks. It contains no precise
-mathematical definition, theorem, identity, diagram, exact sequence, example,
-hypothesis, or mathematically meaningful warning requiring a Lean declaration.
--/

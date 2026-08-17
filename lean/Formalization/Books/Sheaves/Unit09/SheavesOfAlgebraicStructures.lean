@@ -155,15 +155,15 @@ theorem topologicalSpaceForgetful_not_reflectsIsomorphisms :
     @TopCat.ofHom Bool Bool ⊥ ⊤
       (@ContinuousMap.mk Bool Bool ⊥ ⊤ id (by
         exact continuous_bot))
-  letI : topologicalSpaceForgetful.ReflectsIsomorphisms := h
-  haveI : IsIso (topologicalSpaceForgetful.map f) := by
+  let : topologicalSpaceForgetful.ReflectsIsomorphisms := h
+  have : IsIso (topologicalSpaceForgetful.map f) := by
     rw [isIso_iff_bijective]
     constructor
     · intro x y hxy
       exact hxy
     · intro y
       exact ⟨y, rfl⟩
-  haveI : IsIso f :=
+  have : IsIso f :=
     Functor.ReflectsIsomorphisms.reflects topologicalSpaceForgetful f
   let e : TopCat.trivial.obj Bool ≃ₜ TopCat.discrete.obj Bool :=
     (TopCat.homeoOfIso (asIso f)).symm
@@ -349,16 +349,16 @@ theorem pointwiseDiscretePresheaf_not_isSheaf
     have hfin_set : (V.obj : Set (TopCat.discrete.obj ℕ)).Finite := by
       apply (Set.finite_singleton i).subset
       exact hVi
-    letI : Finite V.obj := hfin_set.to_subtype
-    letI : ∀ y : V.obj, TopologicalSpace (A y.1) := fun _ => ⊥
-    letI : ∀ y : V.obj, DiscreteTopology (A y.1) :=
+    let : Finite V.obj := hfin_set.to_subtype
+    let : ∀ y : V.obj, TopologicalSpace (A y.1) := fun _ => ⊥
+    let : ∀ y : V.obj, DiscreteTopology (A y.1) :=
       fun _ => discreteTopology_bot _
     have hPiDisc :
         @Pi.topologicalSpace V.obj (fun y : V.obj => A y.1) (fun _ => ⊥) = ⊥ := by
       exact @DiscreteTopology.eq_bot (∀ y : V.obj, A y.1)
         (@Pi.topologicalSpace V.obj (fun y : V.obj => A y.1) (fun _ => ⊥))
         inferInstance
-    letI : ∀ x : (↑(iSup U)), TopologicalSpace (A x.1) := fun _ => ⊥
+    let : ∀ x : (↑(iSup U)), TopologicalSpace (A x.1) := fun _ => ⊥
     apply (continuous_iff_le_induced).1
     change @Continuous (∀ x : (↑(iSup U)), A x.1)
       (∀ y : V.obj, A y.1)
@@ -373,7 +373,7 @@ theorem pointwiseDiscretePresheaf_not_isSheaf
     rw [htop]
     exact hPiRHS
   classical
-  letI : ∀ x : (↑(iSup U)), TopologicalSpace (A x.1) := fun _ => ⊥
+  let : ∀ x : (↑(iSup U)), TopologicalSpace (A x.1) := fun _ => ⊥
   have hPiEq :
       @Pi.topologicalSpace (↑(iSup U)) (fun x : ↑(iSup U) => A x.1) (fun _ => ⊥) =
         (⊥ : TopologicalSpace (↑K.pt)) :=
@@ -503,7 +503,7 @@ theorem pointwiseProductTopologyPresheaf_isSheaf (A : ℕ → Type) :
       (X := TopCat.discrete.obj ℕ) A hVU)
     exact (pointwiseProductTopologyRestriction
       (X := TopCat.discrete.obj ℕ) A hVU).hom.continuous
-  · letI : ∀ x : (↑(iSup U)), TopologicalSpace (A x.1) := fun _ => ⊥
+  · let : ∀ x : (↑(iSup U)), TopologicalSpace (A x.1) := fun _ => ⊥
     have hpi :
         Pi.topologicalSpace = ⨅ x : (↑(iSup U)),
           TopologicalSpace.induced
@@ -530,7 +530,7 @@ theorem pointwiseProductTopologyPresheaf_isSheaf (A : ℕ → Type) :
         have hxV : x.1 ∈ V.obj := by
           change x.1 ∈ U i
           exact hi
-        letI : ∀ y : V.obj, TopologicalSpace (A y.1) := fun _ => ⊥
+        let : ∀ y : V.obj, TopologicalSpace (A y.1) := fun _ => ⊥
         have hevaltop :
             (((ObjectProperty.ι (fun V => ∃ i, V ≤ U i)).op ⋙ F).obj
               (Opposite.op V)).str ≤

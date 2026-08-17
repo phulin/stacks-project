@@ -1,6 +1,7 @@
 import Formalization.Books.Homology.Unit06.Extensions
 import Mathlib.CategoryTheory.Abelian.Basic
 import Mathlib.SetTheory.Ordinal.Basic
+import Mathlib.SetTheory.Ordinal.Family
 
 /-!
 # Examples, Chapter 63: A big abelian category
@@ -383,17 +384,33 @@ theorem bigAbelianOrdinalExtensionClass_injective :
 
 /-! ## The proper-class conclusion -/
 
-/-- A type in `Type (u + 1)` is universe-large when it is not equivalent to a
-`Type u`.  This is the fixed-universe Lean formulation of “proper class”. -/
+/-- A fixed-universe formulation of the source's “proper class” conclusion.
+
+Mathlib's `Small` predicate is the canonical statement that a type can be
+represented in a lower universe, so its negation is used here rather than a
+parallel equivalence predicate. -/
 def IsUniverseLarge (X : Type (u + 1)) : Prop :=
-  ∀ Y : Type u, ¬ Nonempty (X ≃ Y)
+  ¬ Small.{u} X
+
+theorem isUniverseLarge_of_injective_ordinal
+    {X : Type (u + 1)} (f : Ordinal.{u} → X)
+    (hf : Function.Injective f) : IsUniverseLarge X := by
+  intro hX
+  rcases hX.equiv_small with ⟨Y, ⟨e⟩⟩
+  exact (not_injective_of_ordinal.{u, u} (e ∘ f)) (by
+    intro α β hαβ
+    apply hf
+    exact e.injective hαβ)
 
 /-- The extension classes of `Z` by `Z` are not a set at the small universe. -/
 theorem bigAbelianExt_is_universe_large :
     IsUniverseLarge
       (Formalization.Books.Homology.Unit06.Ext
-        bigAbelianZeroObject bigAbelianZeroObject) := by
-  sorry
+        bigAbelianZeroObject.{u} bigAbelianZeroObject.{u}) :=
+  isUniverseLarge_of_injective_ordinal
+    (X := Formalization.Books.Homology.Unit06.Ext
+      bigAbelianZeroObject.{u} bigAbelianZeroObject.{u})
+    bigAbelianOrdinalExtensionClass bigAbelianOrdinalExtensionClass_injective
 
 /-- In any derived-category model identifying the degree-one morphism
 collection with the Yoneda `Ext` collection, the derived morphisms are
@@ -402,9 +419,12 @@ theorem bigAbelianDerivedHom_is_universe_large
     (H : Type (u + 1))
     (hH : Nonempty (H ≃
     Formalization.Books.Homology.Unit06.Ext
-        bigAbelianZeroObject bigAbelianZeroObject)) :
+        bigAbelianZeroObject.{u} bigAbelianZeroObject.{u})) :
     IsUniverseLarge H := by
-  sorry
+  rcases hH with ⟨eH⟩
+  intro hHsmall
+  rcases hHsmall.equiv_small with ⟨Y, ⟨eY⟩⟩
+  exact bigAbelianExt_is_universe_large (Small.mk' (eH.symm.trans eY))
 
 /-- The chapter's final existence statement. -/
 theorem exists_big_abelian_category_with_proper_class_ext :

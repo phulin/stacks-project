@@ -46,7 +46,7 @@ theorem sheaf_mono_iff_stalk_injective
       ∀ x : X,
         Function.Injective
           ((TopCat.Presheaf.stalkFunctor (Type v) x).map φ.hom) := by
-  sorry
+  simpa only [mono_iff_injective] using (TopCat.Presheaf.mono_iff_stalk_mono φ)
 
 /-- A morphism of sheaves of sets is epic exactly when all stalk maps are surjective. -/
 theorem sheaf_epi_iff_stalk_surjective
@@ -55,7 +55,8 @@ theorem sheaf_epi_iff_stalk_surjective
       ∀ x : X,
         Function.Surjective
           ((TopCat.Presheaf.stalkFunctor (Type v) x).map φ.hom) := by
-  sorry
+  exact (TopCat.Sheaf.isLocallySurjective_iff_epi φ).symm.trans
+    (TopCat.Presheaf.locally_surjective_iff_surjective_on_stalks φ.hom)
 
 /-- A morphism of sheaves of sets is an isomorphism exactly when all stalk maps are bijective. -/
 theorem sheaf_isIso_iff_stalk_bijective
@@ -64,7 +65,7 @@ theorem sheaf_isIso_iff_stalk_bijective
       ∀ x : X,
         Function.Bijective
           ((TopCat.Presheaf.stalkFunctor (Type v) x).map φ.hom) := by
-  sorry
+  simpa only [isIso_iff_bijective] using (TopCat.Presheaf.isIso_iff_stalkFunctor_map_iso φ)
 
 /-! ## Injective, surjective, and subobject terminology -/
 
@@ -127,25 +128,40 @@ theorem sheafSurjective_iff_local_preimages
 theorem presheaf_epi_iff_surjective
     {X : TopCat.{v}} {F G : TopCat.Presheaf (Type v) X} (φ : F ⟶ G) :
     Epi φ ↔ PresheafSurjective φ := by
-  sorry
+  constructor
+  · intro h U
+    exact (epi_iff_surjective _).1 ((NatTrans.epi_iff_epi_app φ).1 h (op U))
+  · intro h
+    apply (NatTrans.epi_iff_epi_app φ).2
+    intro U
+    rw [epi_iff_surjective]
+    exact h U.unop
 
 /-- In the category of set-valued presheaves, monomorphisms are sectionwise injective. -/
 theorem presheaf_mono_iff_injective
     {X : TopCat.{v}} {F G : TopCat.Presheaf (Type v) X} (φ : F ⟶ G) :
     Mono φ ↔ PresheafInjective φ := by
-  sorry
+  constructor
+  · intro h U
+    exact (mono_iff_injective _).1 ((NatTrans.mono_iff_mono_app φ).1 h (op U))
+  · intro h
+    apply (NatTrans.mono_iff_mono_app φ).2
+    intro U
+    rw [mono_iff_injective]
+    exact h U.unop
 
 /-- In the category of sheaves of sets, epimorphisms are exactly the locally surjective maps. -/
 theorem sheaf_epi_iff_surjective
     {X : TopCat.{v}} {F G : TopCat.Sheaf (Type v) X} (φ : F ⟶ G) :
     Epi φ ↔ SheafSurjective φ := by
-  sorry
+  exact (TopCat.Sheaf.isLocallySurjective_iff_epi φ).symm
 
 /-- In the category of sheaves of sets, monomorphisms are exactly the sectionwise injective maps. -/
 theorem sheaf_mono_iff_injective
     {X : TopCat.{v}} {F G : TopCat.Sheaf (Type v) X} (φ : F ⟶ G) :
     Mono φ ↔ SheafInjective φ := by
-  sorry
+  exact (Sheaf.Hom.mono_iff_presheaf_mono (Opens.grothendieckTopology X) (Type v) φ).trans
+    (presheaf_mono_iff_injective φ.hom)
 
 /-- Sectionwise injectivity of a sheaf map is equivalent to injectivity on all stalks. -/
 theorem sheaf_injective_iff_stalk_injective
@@ -154,7 +170,7 @@ theorem sheaf_injective_iff_stalk_injective
       ∀ x : X,
         Function.Injective
           ((TopCat.Presheaf.stalkFunctor (Type v) x).map φ.hom) := by
-  sorry
+  exact (TopCat.Presheaf.app_injective_iff_stalkFunctor_map_injective φ.hom).symm
 
 /-- Local surjectivity of a sheaf map is equivalent to surjectivity on all stalks. -/
 theorem sheaf_surjective_iff_stalk_surjective
@@ -163,7 +179,7 @@ theorem sheaf_surjective_iff_stalk_surjective
       ∀ x : X,
         Function.Surjective
           ((TopCat.Presheaf.stalkFunctor (Type v) x).map φ.hom) := by
-  sorry
+  exact TopCat.Presheaf.locally_surjective_iff_surjective_on_stalks φ.hom
 
 /-! ## Stalkwise algebraic-structure morphisms -/
 
@@ -223,7 +239,19 @@ theorem algebraicSectionToStalks_injective
     [AlgebraicStructureType C A] {X : TopCat.{v}}
     (F : TopCat.Sheaf C X) (U : Opens X) :
     Function.Injective (algebraicSectionToStalks A F U) := by
-  sorry
+  intro s t h
+  apply TopCat.Presheaf.section_ext (underlyingSheaf A F) U s t
+  intro x hx
+  have hx' := congrFun h ⟨x, hx⟩
+  change A.map (algebraicStalkGerm F.presheaf U x hx) s =
+    A.map (algebraicStalkGerm F.presheaf U x hx) t at hx'
+  have hx'' := congrArg (fun z =>
+    (algebraicStalkUnderlyingIso A F.presheaf x).hom z) hx'
+  change (underlyingPresheaf A F.presheaf).germ U x hx s =
+    (underlyingPresheaf A F.presheaf).germ U x hx t
+  rw [← ConcreteCategory.comp_apply, ← ConcreteCategory.comp_apply] at hx''
+  simp only [algebraicStalkGerm_underlying] at hx''
+  exact hx''
 
 /-- Naturality of the displayed section-to-stalks square. -/
 theorem algebraicSectionToStalks_naturality
@@ -236,7 +264,48 @@ theorem algebraicSectionToStalks_naturality
       underlyingStalkMap A φ x.1
           (algebraicSectionToStalks A F U s x) =
         algebraicSectionToStalks A G U (φ.hom.app (op U) s) x := by
-  sorry
+  intro x
+  apply (algebraicStalkUnderlyingIso A G.presheaf x.1).toEquiv.injective
+  change (algebraicStalkUnderlyingIso A G.presheaf x.1).toEquiv
+      ((algebraicStalkUnderlyingIso A G.presheaf x.1).toEquiv.symm
+        ((TopCat.Presheaf.stalkFunctor (Type v) x.1).map φ.hom
+          ((algebraicStalkUnderlyingIso A F.presheaf x.1).toEquiv
+            (A.map (algebraicStalkGerm F.presheaf U x.1 x.2) s)))) =
+    (algebraicStalkUnderlyingIso A G.presheaf x.1).toEquiv
+      (A.map (algebraicStalkGerm G.presheaf U x.1 x.2)
+        (φ.hom.app (op U) s))
+  simp only [Iso.toEquiv_apply, Iso.toEquiv_symm_fun]
+  change (ConcreteCategory.hom
+      ((algebraicStalkUnderlyingIso A G.presheaf x.1).inv ≫
+        (algebraicStalkUnderlyingIso A G.presheaf x.1).hom))
+      ((ConcreteCategory.hom ((TopCat.Presheaf.stalkFunctor (Type v) x.1).map φ.hom))
+        ((ConcreteCategory.hom (algebraicStalkUnderlyingIso A F.presheaf x.1).hom)
+          ((ConcreteCategory.hom (A.map (algebraicStalkGerm F.presheaf U x.1 x.2))) s))) =
+    (ConcreteCategory.hom (algebraicStalkUnderlyingIso A G.presheaf x.1).hom)
+      ((ConcreteCategory.hom (A.map (algebraicStalkGerm G.presheaf U x.1 x.2)))
+        ((ConcreteCategory.hom (φ.hom.app (op U))) s))
+  rw [Iso.inv_hom_id]
+  change (ConcreteCategory.hom ((TopCat.Presheaf.stalkFunctor (Type v) x.1).map φ.hom))
+      ((ConcreteCategory.hom (algebraicStalkUnderlyingIso A F.presheaf x.1).hom)
+        ((ConcreteCategory.hom (A.map (algebraicStalkGerm F.presheaf U x.1 x.2))) s)) =
+    (ConcreteCategory.hom (algebraicStalkUnderlyingIso A G.presheaf x.1).hom)
+      ((ConcreteCategory.hom (A.map (algebraicStalkGerm G.presheaf U x.1 x.2)))
+        ((ConcreteCategory.hom (φ.hom.app (op U))) s))
+  have hF := congrArg (fun f => (ConcreteCategory.hom f) s)
+    (algebraicStalkGerm_underlying A F.presheaf U x.1 x.2)
+  rw [CategoryTheory.comp_apply] at hF
+  rw [hF]
+  change (ConcreteCategory.hom ((TopCat.Presheaf.stalkFunctor (Type v) x.1).map φ.hom))
+      ((ConcreteCategory.hom ((underlyingPresheaf A F.presheaf).germ U x.1 x.2)) s) =
+    (ConcreteCategory.hom
+      (A.map (algebraicStalkGerm G.presheaf U x.1 x.2) ≫
+        (algebraicStalkUnderlyingIso A G.presheaf x.1).hom))
+      ((ConcreteCategory.hom (φ.hom.app (op U))) s)
+  rw [algebraicStalkGerm_underlying]
+  change (TopCat.Presheaf.stalkFunctor (Type v) x.1).map φ.hom
+      ((underlyingSheaf A F).presheaf.germ U x.1 x.2 s) =
+    (underlyingSheaf A G).presheaf.germ U x.1 x.2 (φ.hom.app (op U) s)
+  exact TopCat.Presheaf.stalkFunctor_map_germ_apply U x.1 x.2 φ.hom s
 
 /-- An underlying map is a morphism of sheaves of algebraic structures when it lifts to `C`. -/
 def IsAlgebraicStructureSheafMorphism
@@ -254,7 +323,113 @@ theorem isAlgebraicStructureSheafMorphism_of_stalkwise
     (φ : underlyingSheaf A F ⟶ underlyingSheaf A G)
     (hφ : ∀ x : X, IsAlgebraicStructureMorphism A (underlyingStalkMap A φ x)) :
     IsAlgebraicStructureSheafMorphism A φ := by
-  sorry
+  unfold IsAlgebraicStructureSheafMorphism
+  choose q hq using hφ
+  have hU : ∀ U : Opens X,
+      ∃ t : F.presheaf.obj (op U) ⟶ G.presheaf.obj (op U),
+        A.map t = φ.hom.app (op U) := by
+    intro U
+    let D_G : Discrete U ⥤ C :=
+      Discrete.functor (fun x : U => algebraicStalk G.presheaf x.1)
+    let g : G.presheaf.obj (op U) ⟶
+        pointwiseProductObject (F := A)
+          (fun x : X => algebraicStalk G.presheaf x) U :=
+      limit.lift D_G (Fan.mk _ fun x =>
+        algebraicStalkGerm G.presheaf U x.1 x.2)
+    let h : F.presheaf.obj (op U) ⟶
+        pointwiseProductObject (F := A)
+          (fun x : X => algebraicStalk G.presheaf x) U :=
+      limit.lift D_G (Fan.mk _ fun x =>
+        algebraicStalkGerm F.presheaf U x.1 x.2 ≫ q x.1)
+    have hg : Function.Injective (A.map g) := by
+      intro s t hst
+      apply algebraicSectionToStalks_injective A G U
+      apply funext
+      intro x
+      have hx := congrArg
+        (fun z => A.map (limit.π D_G (Discrete.mk x)) z) hst
+      change A.map (algebraicStalkGerm G.presheaf U x.1 x.2) s =
+        A.map (algebraicStalkGerm G.presheaf U x.1 x.2) t
+      simpa [g, ← ConcreteCategory.comp_apply, ← A.map_comp] using hx
+    let eG := preservesLimitIso A D_G
+    have hcoord : ∀ s : A.obj (F.presheaf.obj (op U)),
+        A.map h s = A.map g (φ.hom.app (op U) s) := by
+      intro s
+      apply eG.toEquiv.injective
+      apply Types.limit_ext
+      intro j
+      have hj₁ := congrArg (fun f => f (A.map h s))
+        (preservesLimitIso_hom_π A D_G j)
+      have hj₂ := congrArg (fun f => f (A.map g (φ.hom.app (op U) s)))
+        (preservesLimitIso_hom_π A D_G j)
+      calc
+        limit.π (D_G ⋙ A) j (eG.hom (A.map h s)) =
+            A.map (limit.π D_G j) (A.map h s) := by
+              simpa only [ConcreteCategory.comp_apply] using hj₁
+        _ = A.map (algebraicStalkGerm F.presheaf U j.as.1 j.as.2 ≫ q j.as.1) s := by
+              rw [← ConcreteCategory.comp_apply, ← A.map_comp]
+              dsimp [h]
+              rw [limit.lift_π]
+              rfl
+        _ = underlyingStalkMap A φ j.as.1
+              (algebraicSectionToStalks A F U s ⟨j.as.1, j.as.2⟩) := by
+              rw [A.map_comp]
+              change underlyingMap A (q j.as.1)
+                  (underlyingMap A
+                    (algebraicStalkGerm F.presheaf U j.as.1 j.as.2) s) = _
+              rw [hq]
+              rfl
+        _ = algebraicSectionToStalks A G U
+              (φ.hom.app (op U) s) ⟨j.as.1, j.as.2⟩ :=
+              algebraicSectionToStalks_naturality A φ U s ⟨j.as.1, j.as.2⟩
+        _ = A.map (limit.π D_G j)
+              (A.map g (φ.hom.app (op U) s)) := by
+              change A.map (algebraicStalkGerm G.presheaf U j.as.1 j.as.2)
+                  (φ.hom.app (op U) s) = _
+              symm
+              change (ConcreteCategory.hom
+                  (A.map g ≫ A.map (limit.π D_G j)))
+                  (φ.hom.app (op U) s) = _
+              rw [← A.map_comp]
+              dsimp [g]
+              rw [limit.lift_π]
+              rfl
+        _ = limit.π (D_G ⋙ A) j
+              (eG.hom (A.map g (φ.hom.app (op U) s))) := by
+              simpa only [ConcreteCategory.comp_apply] using hj₂.symm
+    have himage : Set.range (A.map h) ⊆ Set.range (A.map g) := by
+      rintro _ ⟨s, rfl⟩
+      exact ⟨φ.hom.app (op U) s, (hcoord s).symm⟩
+    obtain ⟨t, ht⟩ := factor_through_of_image_subset h g hg himage
+    refine ⟨t, ?_⟩
+    apply ConcreteCategory.hom_ext
+    intro s
+    apply hg
+    calc
+      A.map g (A.map t s) = A.map (t ≫ g) s := by
+        rw [A.map_comp]
+        rfl
+      _ = A.map h s := by rw [ht]
+      _ = A.map g (φ.hom.app (op U) s) := hcoord s
+  choose ψapp hψapp using hU
+  let ψhom : F.presheaf ⟶ G.presheaf :=
+    { app := fun U => ψapp U.unop
+      naturality := by
+        intro U V f
+        apply A.map_injective
+        apply ConcreteCategory.hom_ext
+        intro s
+        have hn := congrArg (fun f => (ConcreteCategory.hom f) s)
+          (φ.hom.naturality f)
+        change A.map (F.presheaf.map f ≫ ψapp V.unop) s =
+          A.map (ψapp U.unop ≫ G.presheaf.map f) s
+        rw [A.map_comp, A.map_comp, hψapp, hψapp]
+        exact hn }
+  refine ⟨ObjectProperty.homMk ψhom, ?_⟩
+  apply CategoryTheory.Sheaf.hom_ext
+  change underlyingPresheafMorphism A ψhom = φ.hom
+  apply NatTrans.ext
+  exact funext (fun U => hψapp U.unop)
 
 end
 

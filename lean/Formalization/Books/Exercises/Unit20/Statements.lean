@@ -1,5 +1,7 @@
 import Formalization.Books.Exercises.Unit20.Core
 
+import Mathlib.RingTheory.AlgebraicIndependent.TranscendenceBasis
+import Mathlib.RingTheory.EssentialFiniteness
 import Mathlib.RingTheory.Finiteness.Bilinear
 
 /-!

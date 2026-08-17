@@ -1,8 +1,6 @@
 import Mathlib.Algebra.Algebra.Operations
 import Mathlib.Data.Real.Basic
 import Mathlib.LinearAlgebra.FiniteDimensional.Basic
-import Mathlib.RingTheory.AlgebraicIndependent.TranscendenceBasis
-import Mathlib.RingTheory.EssentialFiniteness
 
 /-!
 # Exercises, Chapter 20: Transcendence degree

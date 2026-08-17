@@ -122,7 +122,7 @@ theorem automorphism_inverse_continuous :
 /-- The neighborhood formula for inversion on `Aut(E)`. -/
 theorem automorphism_inverse_preimage_neighborhood (f : Equiv.Perm E) (S : Set E) :
     (fun g : Equiv.Perm E => g.symm) ⁻¹' automorphismNeighborhood E f.symm S =
-      automorphismNeighborhood E f (f.symm ⁻¹' S) := by
+      automorphismNeighborhood E f (f ⁻¹' S) := by
   sorry
 
 /-- `Aut(E)` with the induced compact-open topology is a topological group. -/
@@ -220,34 +220,40 @@ end Category
 
 section Profinite
 
-variable {G : Type u} [Group G] [TopologicalSpace G] [IsTopologicalGroup G]
-
 /-- The source's profinite-group predicate, using the canonical profinite-space predicate from
 Chapter 22. -/
-def IsProfiniteGroup : Prop :=
+def IsProfiniteGroup {G : Type u} [Group G] [TopologicalSpace G]
+    [hG : IsTopologicalGroup G] : Prop :=
+  let _ := hG
   Formalization.Books.Topology.Unit22.IsProfiniteSpace G
 
 /-- A source-facing presentation of a topological group as a limit of finite discrete topological
 groups. -/
-structure FiniteDiscreteTopologicalGroupLimitPresentation where
+structure FiniteDiscreteTopologicalGroupLimitPresentation
+    {G : Type u} [Group G] [TopologicalSpace G]
+    [hG : IsTopologicalGroup G] where
   index : Type u
   [category : SmallCategory index]
   diagram : index ⥤ TopGroupCat.{u}
   cone : Cone diagram
   finite_discrete : ∀ j, Finite (diagram.obj j) ∧ DiscreteTopology (diagram.obj j)
-  comparison : Nonempty (G ≃ₜ* (cone.pt : Type u))
+  comparison : Nonempty (let _ := hG; G ≃ₜ* (cone.pt : Type u))
   is_limit : IsLimit cone
 
 /-- A source-facing cofiltered finite-discrete limit presentation. -/
-structure CofilteredFiniteDiscreteTopologicalGroupLimitPresentation where
+structure CofilteredFiniteDiscreteTopologicalGroupLimitPresentation
+    {G : Type u} [Group G] [TopologicalSpace G]
+    [hG : IsTopologicalGroup G] where
   index : Type u
   [category : SmallCategory index]
   [cofiltered : IsCofiltered index]
   diagram : index ⥤ TopGroupCat.{u}
   cone : Cone diagram
   finite_discrete : ∀ j, Finite (diagram.obj j) ∧ DiscreteTopology (diagram.obj j)
-  comparison : Nonempty (G ≃ₜ* (cone.pt : Type u))
+  comparison : Nonempty (let _ := hG; G ≃ₜ* (cone.pt : Type u))
   is_limit : IsLimit cone
+
+variable {G : Type u} [Group G] [TopologicalSpace G] [IsTopologicalGroup G]
 
 def IsLimitOfFiniteDiscreteTopologicalGroups : Prop :=
   Nonempty (FiniteDiscreteTopologicalGroupLimitPresentation (G := G))

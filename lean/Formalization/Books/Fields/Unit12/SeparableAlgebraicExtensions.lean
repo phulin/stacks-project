@@ -52,7 +52,15 @@ theorem irreducible_polynomial_derivative_zero_factorization
     ∃ (p n : ℕ) (Q : F[X]),
       0 < p ∧ CharP F p ∧ Q.Separable ∧ Irreducible Q ∧
         Polynomial.expand F (p ^ n) Q = P := by
-  sorry
+  rcases CharP.exists' F with hzero | ⟨p, hp, hchar⟩
+  · letI : CharZero F := hzero
+    exact False.elim <| (separable_iff_derivative_ne_zero hP).1 hP.separable hderiv
+  · letI : Fact p.Prime := hp
+    letI : CharP F p := hchar
+    rcases hP.hasSeparableContraction p with ⟨Q, hQ, n, hQP⟩
+    refine ⟨p, n, Q, hp.out.pos, hchar, hQ, ?_, hQP⟩
+    apply Polynomial.of_irreducible_expand_pow hp.out.ne_zero
+    rwa [hQP]
 
 /-- Every irreducible polynomial has a separable Frobenius contraction; in
     characteristic zero this contraction can be chosen to be the polynomial
@@ -62,7 +70,12 @@ theorem irreducible_polynomial_separable_contraction
     ∃ (q n : ℕ) (Q : F[X]),
       ExpChar F q ∧ Q.Separable ∧ Irreducible Q ∧
         Polynomial.expand F (q ^ n) Q = P := by
-  sorry
+  let q := ringExpChar F
+  letI : ExpChar F q := ringExpChar.expChar F
+  rcases hP.hasSeparableContraction q with ⟨Q, hQ, n, hQP⟩
+  refine ⟨q, n, Q, inferInstance, hQ, ?_, hQP⟩
+  apply Polynomial.of_irreducible_expand_pow (expChar_ne_zero F q)
+  rwa [hQP]
 
 /- `IsSeparable` and `Algebra.IsSeparable` are Mathlib's definitions of the
    source's separable element and separable algebraic extension. -/
@@ -132,7 +145,10 @@ theorem irreducible_polynomial_separable_iff_distinct_algebraic_closure_roots
 theorem separable_degree_unchanged_under_frobenius_substitution
     {F : Type u} [Field F] (p : ℕ) [CharP F p] (hp : 0 < p) (P : F[X]) :
     P.natSepDegree = (P.comp (X ^ p)).natSepDegree := by
-  sorry
+  letI : Fact p.Prime := ⟨(CharP.char_is_prime_or_zero F p).resolve_right hp.ne'⟩
+  letI : ExpChar F p := ExpChar.prime Fact.out
+  rw [← expand_eq_comp_X_pow]
+  simpa [pow_one] using (natSepDegree_expand P p (n := 1)).symm
 
 /-! ## Separable degree -/
 
@@ -143,7 +159,9 @@ theorem separable_degree_unchanged_under_frobenius_substitution
 theorem separable_degree_eq_card_distinct_roots
     {F : Type u} [Field F] (P : F[X]) :
     P.natSepDegree = Nat.card (P.rootSet (AlgebraicClosure F)) := by
-  sorry
+  classical
+  rw [rootSet_def, Nat.card_coe_set_eq, Set.ncard_coe_finset]
+  exact natSepDegree_eq_of_isAlgClosed (AlgebraicClosure F) P
 
 /-- The separable degree of an irreducible polynomial divides its degree. -/
 theorem irreducible_separable_degree_dvd_degree
@@ -156,7 +174,15 @@ theorem irreducible_separable_degree_dvd_degree
 theorem irreducible_degree_eq_separable_degree_mul_expChar_power
     {F : Type u} [Field F] {P : F[X]} (hP : Irreducible P) :
     ∃ (q m : ℕ), ExpChar F q ∧ P.natSepDegree * q ^ m = P.natDegree := by
-  sorry
+  let q := ringExpChar F
+  letI : ExpChar F q := ringExpChar.expChar F
+  let hcontraction := hP.hasSeparableContraction q
+  obtain ⟨m, hm⟩ := hcontraction.dvd_degree'
+  refine ⟨q, m, inferInstance, ?_⟩
+  calc
+    P.natSepDegree * q ^ m = hcontraction.degree * q ^ m := by
+      rw [hcontraction.natSepDegree_eq]
+    _ = P.natDegree := hm
 
 /-- In characteristic zero, the separable degree equals the polynomial degree. -/
 theorem irreducible_separable_degree_eq_degree_of_char_zero
@@ -210,7 +236,11 @@ theorem generatedIntermediateField_le
     (S : FinitelyGeneratedFieldExtension F K)
     {i j : Fin (S.n + 1)} (hij : i.1 ≤ j.1) :
     generatedIntermediateField S i ≤ generatedIntermediateField S j := by
-  sorry
+  unfold generatedIntermediateField
+  apply IntermediateField.adjoin.mono F
+  rintro _ ⟨k, rfl⟩
+  refine ⟨⟨k.1, lt_of_lt_of_le k.2 hij⟩, ?_⟩
+  rfl
 
 /-- The canonical inclusion from one prefix field to the next. -/
 def generatedIntermediateFieldInclusion
@@ -236,21 +266,29 @@ theorem generatedIntermediateField_zero_eq_bot
     {F K : Type*} [Field F] [Field K] [Algebra F K]
     (S : FinitelyGeneratedFieldExtension F K) :
     generatedIntermediateField S 0 = ⊥ := by
-  sorry
+  simp [generatedIntermediateField]
 
 /-- The final prefix field is the whole extension. -/
 theorem generatedIntermediateField_last_eq_top
     {F K : Type*} [Field F] [Field K] [Algebra F K]
     (S : FinitelyGeneratedFieldExtension F K) :
     generatedIntermediateField S (Fin.last S.n) = ⊤ := by
-  sorry
+  rw [generatedIntermediateField, ← S.generated]
+  apply le_antisymm
+  · apply IntermediateField.adjoin.mono F
+    rintro _ ⟨j, rfl⟩
+    exact ⟨prefixGeneratorIndex (Fin.last S.n) j, rfl⟩
+  · apply IntermediateField.adjoin.mono F
+    rintro _ ⟨j, rfl⟩
+    exact ⟨⟨j, j.isLt⟩, rfl⟩
 
 /-- Every prefix field is finite over the base field. -/
 theorem generatedIntermediateField_finite
     {F K : Type*} [Field F] [Field K] [Algebra F K]
     (S : FinitelyGeneratedFieldExtension F K) (i : Fin (S.n + 1)) :
     FiniteDimensional F (generatedIntermediateField S i) := by
-  sorry
+  letI : FiniteDimensional F K := S.finite
+  infer_instance
 
 /-- Each successive prefix field is finite over its predecessor. -/
 theorem generatedIntermediateField_step_finite
@@ -258,7 +296,15 @@ theorem generatedIntermediateField_step_finite
     (S : FinitelyGeneratedFieldExtension F K) (i : Fin S.n) :
     FiniteDimensional (generatedIntermediateField S i.castSucc)
       (generatedIntermediateField S i.succ) := by
-  sorry
+  letI : FiniteDimensional F K := S.finite
+  letI : FiniteDimensional F (generatedIntermediateField S i.succ) :=
+    generatedIntermediateField_finite S i.succ
+  letI : IsScalarTower F (generatedIntermediateField S i.castSucc)
+      (generatedIntermediateField S i.succ) :=
+    IsScalarTower.of_algebraMap_eq' (by rfl)
+  exact Module.Finite.of_restrictScalars_finite F
+    (generatedIntermediateField S i.castSucc)
+    (generatedIntermediateField S i.succ)
 
 /- The source's `P_i` is the canonical minimal polynomial over the preceding
    prefix field. -/
@@ -274,7 +320,9 @@ theorem generatedMinpoly_irreducible
     {F K : Type*} [Field F] [Field K] [Algebra F K]
     (S : FinitelyGeneratedFieldExtension F K) (i : Fin S.n) :
     Irreducible (generatedMinpoly S i) := by
-  sorry
+  letI : FiniteDimensional F K := S.finite
+  exact minpoly.irreducible
+    (IsIntegral.of_finite (generatedIntermediateField S i.castSucc) (S.alpha i))
 
 /-- The degree of a successive minimal polynomial is the degree of the
     corresponding simple extension. -/

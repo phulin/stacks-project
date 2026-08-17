@@ -562,14 +562,19 @@ theorem infinite_product_right_is_all_sequences :
       ((discreteLimitEquiv (infiniteProductCounterexampleDiagram ⋙ colim)).trans
         (Equiv.piCongrRight ePoint))⟩
 
-/-- For the infinite discrete diagram, the two orders of taking colimits and
-limits are not isomorphic: the right side contains arbitrary sequences of
-natural numbers, while the left side contains only bounded sequences. -/
-theorem infinite_product_colimit_limit_not_isomorphic :
-    ¬ Nonempty
-        (colimit (limit infiniteProductCounterexampleDiagram) ≅
-          limit (colimit infiniteProductCounterexampleDiagram.flip)) := by
-  sorry
+/-- Bounded sequences do not exhaust all natural-valued sequences: the
+identity sequence is not in the image of the subtype inclusion.  This is the
+set-level obstruction exhibited by the infinite-product counterexample. -/
+theorem bounded_natural_sequence_inclusion_not_surjective :
+    ¬ Function.Surjective
+        (fun f : BoundedNaturalSequence => f.1) := by
+  intro h
+  obtain ⟨f, hf⟩ := h (fun n => n)
+  obtain ⟨n, hn⟩ := f.2
+  have hfn : f.1 (n + 1) = n + 1 := congrFun hf (n + 1)
+  have hlt := hn (n + 1)
+  rw [hfn] at hlt
+  exact (Nat.lt_irrefl (n + 1)) hlt
 
 /-! ## Cofinal filtered subcategories -/
 

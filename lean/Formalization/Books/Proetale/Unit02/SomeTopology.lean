@@ -109,7 +109,8 @@ splitting lemma, but its closed-point set is not closed. -/
 theorem notWLocalExample_properties
     {T : Type u} [TopologicalSpace T] (hT : IsProfiniteSpace T) (t : T)
     (hnotcompact : ¬ IsCompact (({t} : Set T)ᶜ)) :
-    closedPoints (NotWLocalExamplePoint T t) =
+    SpectralSpace (NotWLocalExamplePoint T t) ∧
+      closedPoints (NotWLocalExamplePoint T t) =
         notWLocalExampleClosedPointSet t ∧
       notWLocalExampleDistinguishedPoint t ∈
         closure (notWLocalExampleClosedPointSet t) ∧

@@ -17,7 +17,7 @@ structure AscendingSubmoduleChain (X : AlgebraicSpace.{u})
   term : ℕ → SheafObj X
   inclusion : ∀ n, SheafHom (term n) F
   ascending : Prop
-  submodule : ∀ _n : ℕ, Prop
+  submodule : ∀ n, IsQuasiCoherent (term n)
 
 def Stabilizes {X : AlgebraicSpace.{u}} [AlgebraicSpaceCohomology.{u}]
     {F : SheafObj X} (C : AscendingSubmoduleChain X F) : Prop :=
@@ -46,7 +46,8 @@ def IdealPowerKills (X : AlgebraicSpace.{u}) [AlgebraicSpaceCohomology.{u}]
 theorem power_ideal_kills_iff_support
     [AlgebraicSpaceTheory.{u}] [AlgebraicSpaceCohomology.{u}]
     (X : AlgebraicSpace.{u}) (F : SheafObj X) (I : IdealSheaf X)
-    (hX : IsNoetherian X) (hI : I.cuts_out) :
+    (hX : IsNoetherian X) (hF : IsCoherentModule X F)
+    (hI : IsQuasiCoherent I.object) (hI_cuts_out : I.cuts_out) :
     IdealPowerKills X I F ↔
       SupportContainedIn X F (Set.range I.closedSubspace.inclusion) := by
   sorry
@@ -67,7 +68,7 @@ theorem artin_rees
     (X : AlgebraicSpace.{u}) (F G : SheafObj X) (I : IdealSheaf X)
     (J : SheafIntersectionData X)
     (_hX : IsNoetherian X) (_hF : IsCoherentModule X F)
-    (_hG : IsQuasiCoherent G) :
+    (_hG : IsQuasiCoherent G) (_hI : IsQuasiCoherent I.object) :
     ∃ c : ℕ, ∀ n : ℕ, c ≤ n → ArtinReesEquality X I F G J c n := by
   sorry
 
@@ -99,8 +100,8 @@ theorem homs_over_open
     [AlgebraicSpaceTheory.{u}] [AlgebraicSpaceCohomology.{u}]
     (X : AlgebraicSpace.{u}) (F G : SheafObj X) (I : IdealSheaf X)
     (C : OpenComplementData X I)
-    (_hX : IsNoetherian X) (_hF : IsCoherentModule X F)
-    (_hG : IsCoherentModule X G) :
+    (_hX : IsNoetherian X) (_hF : IsQuasiCoherent F)
+    (_hG : IsCoherentModule X G) (_hI : IsQuasiCoherent I.object) :
     Nonempty (FilteredHomColimit X C.open_subspace I F G) := by
   exact ⟨{ carrier := Sections X (zeroSheaf X), carrierGroup := inferInstance, comparison := True, transition := True, filtered := True }⟩
 

@@ -83,7 +83,8 @@ theorem cohomology_with_support_grothendieck_spectral_sequence
     (S X : AlgebraicSpace.{u}) (_hS : IsScheme S)
     (Z : ClosedSubspace X) (T : SupportTheory X Z) (F : SheafObj X) :
     Nonempty (SpectralSequenceStatement
-      (fun _p q => supportCohomologyGroup T F q.natAbs)
+      (fun p q => CohomologyGroup Z.carrier
+        (T.higherSupportSheaf q.natAbs F) p.natAbs)
       (fun n => supportCohomologyGroup T F n.natAbs)) := by
   exact ⟨{ e₁_page := True, convergence := True }⟩
 
@@ -92,7 +93,7 @@ theorem cohomology_with_support_sheaf_on_support
     (i : SpaceHom Z X) (hi : IsClosedImmersion i)
     (G : SheafObj Z) (hG : InjectiveSheaf Z G)
     (T : SupportTheory X ⟨Z, i, IsClosedImmersion i⟩) (p : ℕ) (hp : 0 < p) :
-    Subsingleton (supportCohomologyGroup T (pushforwardSheaf i G) p) := by
+    T.higherSupportSheaf p (pushforwardSheaf i G) = zeroSheaf Z := by
   sorry
 
 theorem etale_localization_sheaf_with_support

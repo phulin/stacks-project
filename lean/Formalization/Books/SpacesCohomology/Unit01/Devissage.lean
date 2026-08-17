@@ -47,7 +47,8 @@ structure IrreducibleSupportInjection (X : AlgebraicSpace.{u})
   r : ℕ
   positive : 0 < r
   I : IdealSheaf Z.subspace.carrier
-  nonzero : Prop
+  nonzero : I.object ≠ zeroSheaf Z.subspace.carrier
+  quasi_coherent : IsQuasiCoherent I.object
   map : SheafHom (pushforwardSheaf Z.subspace.inclusion
       (directSumSheaf Z.subspace.carrier r I.object)) F
   injective : Prop
@@ -58,7 +59,7 @@ theorem prepare_filter_irreducible
     (X : AlgebraicSpace.{u}) (F : SheafObj X)
     (_hX : IsNoetherian X) (_hF : IsCoherentModule X F)
     (Z : IrreducibleClosedSubspace X)
-    (_hsupport : Prop) :
+    (_hsupport : schemeTheoreticSupport F = Z.subspace) :
     Nonempty (IrreducibleSupportInjection X F Z) := by
   sorry
 
@@ -74,6 +75,7 @@ structure CoherentFiltration (X : AlgebraicSpace.{u})
   quotient_identification : ∀ _j : Fin length, Prop
   graded_support : ∀ j : Fin length, ∃ Z : IrreducibleClosedSubspace X,
     ∃ I : IdealSheaf Z.subspace.carrier,
+      IsQuasiCoherent I.object ∧
       Nonempty (SheafIso X (quotient j)
         (pushforwardSheaf Z.subspace.inclusion I.object))
 
@@ -87,6 +89,18 @@ theorem coherent_filter
 abbrev CoherentProperty (X : AlgebraicSpace.{u})
     [AlgebraicSpaceCohomology.{u}] := SheafObj X → Prop
 
+structure HigherRankGenericIdealReduction (X : AlgebraicSpace.{u})
+    [AlgebraicSpaceTheory.{u}] [AlgebraicSpaceCohomology.{u}]
+    (P : CoherentProperty X) (Z : IrreducibleClosedSubspace X)
+    (G : SheafObj X) (I : IdealSheaf Z.subspace.carrier) where
+  G' : SheafObj Z.subspace.carrier
+  quasi_coherent : IsQuasiCoherent G'
+  inclusion : Nonempty (SheafHom G'
+    (idealTimes Z.subspace.carrier I.object
+      (pullbackSheaf Z.subspace.inclusion G)))
+  cokernel_support_proper : Prop
+  property : P (pushforwardSheaf Z.subspace.inclusion G')
+
 structure InitialPropertyHypotheses (X : AlgebraicSpace.{u})
     [AlgebraicSpaceTheory.{u}] [AlgebraicSpaceCohomology.{u}]
     (P : CoherentProperty X) where
@@ -94,6 +108,7 @@ structure InitialPropertyHypotheses (X : AlgebraicSpace.{u})
     P E.F₁ → P E.F₃ → P E.F₂
   ideal_case : ∀ (Z : IrreducibleClosedSubspace X)
     (I : IdealSheaf Z.subspace.carrier),
+    IsQuasiCoherent I.object →
     P (pushforwardSheaf Z.subspace.inclusion I.object)
 
 theorem property_initial
@@ -113,7 +128,11 @@ structure HigherRankPropertyHypotheses (X : AlgebraicSpace.{u})
   generic_ideal_case : ∀ (Z : IrreducibleClosedSubspace X),
     ∃ G : SheafObj X,
       IsCoherentModule X G ∧
-        schemeTheoreticSupport G = Z.subspace ∧ P G
+        schemeTheoreticSupport G = Z.subspace ∧
+        ∀ (I : IdealSheaf Z.subspace.carrier),
+          I.ideal → IsQuasiCoherent I.object →
+            I.object ≠ zeroSheaf Z.subspace.carrier →
+              Nonempty (HigherRankGenericIdealReduction X P Z G I)
 
 theorem property_higher_rank_cohomological
     [AlgebraicSpaceTheory.{u}] [AlgebraicSpaceCohomology.{u}]

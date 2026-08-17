@@ -24,6 +24,7 @@ theorem quasi_coherent_twist
 structure AffineEtaleCoverData (X : AlgebraicSpace.{u}) where
   U : AlgebraicSpace.{u}
   map : SpaceHom U X
+  scheme : IsScheme U
   affine : IsAffine (𝟙 U : SpaceHom U U)
   etale : IsEtale map
   surjective : IsSurjective map
@@ -48,6 +49,7 @@ theorem affine_etale_cover_vanishing
 structure HigherVanishingChoices (X : AlgebraicSpace.{u}) where
   U : AlgebraicSpace.{u}
   f : SpaceHom U X
+  U_scheme : IsScheme U
   U_affine : IsAffine (𝟙 U : SpaceHom U U)
   f_etale : IsEtale f
   f_surjective : IsSurjective f
@@ -57,6 +59,7 @@ structure HigherVanishingChoices (X : AlgebraicSpace.{u}) where
   U_p : ℕ → AlgebraicSpace.{u}
   V_p : ℕ → AlgebraicSpace.{u}
   V_to_U : ∀ p, SpaceHom (V_p p) (U_p p)
+  V_scheme : ∀ p, IsScheme (V_p p)
   V_affine : ∀ p, IsAffine (𝟙 (V_p p) : SpaceHom (V_p p) (V_p p))
   V_etale : ∀ p, IsEtale (V_to_U p)
   V_surjective : ∀ p, IsSurjective (V_to_U p)
@@ -64,6 +67,8 @@ structure HigherVanishingChoices (X : AlgebraicSpace.{u}) where
   d_p_bounds_fibres : ∀ p (x : U_p p),
     IsFinitePointSet (FibrePoints (V_to_U p) x) ∧
       Set.ncard (FibrePoints (V_to_U p) x) ≤ d_p p
+  U_p_to_X : ∀ p, SpaceHom (U_p p) X
+  U_p_etale : ∀ p, IsEtale (U_p_to_X p)
   bound : ℕ
   bound_spec : ∀ p, p ≤ d → p + d_p p ≤ bound
 

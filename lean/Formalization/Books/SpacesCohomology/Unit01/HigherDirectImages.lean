@@ -33,6 +33,7 @@ theorem representable_higher_direct_image_identification
     (S X Y : AlgebraicSpace.{u}) (hS : IsScheme S)
     (f : SpaceHom X Y) (hf : IsRepresentable f)
     (hX : IsScheme X) (hY : IsScheme Y)
+    (hqc : IsQuasiCompact f) (hqs : IsQuasiSeparated f)
     (F : SheafObj X) (hF : IsQuasiCoherent F) (i : ℕ) :
     IsQuasiCoherent (higherDirectImage i f F) := by
   sorry
@@ -54,6 +55,7 @@ noncomputable def representableBaseChangeSheaf {X Y V : AlgebraicSpace.{u}}
 theorem representable_higher_direct_image_base_change
     (S X Y V : AlgebraicSpace.{u}) (hS : IsScheme S)
     (f : SpaceHom X Y) (v : SpaceHom V Y)
+    (hV : IsScheme V)
     (hf : IsRepresentable f) (hqc : IsQuasiCompact f)
     (hqs : IsQuasiSeparated f) (hv : IsEtale v) (hv_surj : IsSurjective v)
     (F : SheafObj X) (hF : IsQuasiCoherent F) (i : ℕ) :
@@ -73,6 +75,7 @@ theorem higher_direct_image_is_quasi_coherent
 theorem higher_direct_image_is_quasi_coherent_of_representable
     (S X Y : AlgebraicSpace.{u}) (hS : IsScheme S)
     (f : SpaceHom X Y) (hf : IsRepresentable f)
+    (hX : IsScheme X) (hY : IsScheme Y)
     (hqc : IsQuasiCompact f) (hqs : IsQuasiSeparated f)
     (F : SheafObj X) (hF : IsQuasiCoherent F) (i : ℕ) :
     IsQuasiCoherent (higherDirectImage i f F) := by
@@ -82,6 +85,7 @@ theorem quasi_coherence_higher_direct_images_application
     (S X Y V : AlgebraicSpace.{u}) (hS : IsScheme S)
     (f : SpaceHom X Y) (v : SpaceHom V Y)
     (hqc : IsQuasiCompact f) (hqs : IsQuasiSeparated f)
+    (hV_scheme : IsScheme V) (hv : IsEtale v)
     (hV : IsAffine (𝟙 V : SpaceHom V V))
     (F : SheafObj X) (hF : IsQuasiCoherent F) (q : ℕ) :
     CohomologyComparison (baseChange f v) V

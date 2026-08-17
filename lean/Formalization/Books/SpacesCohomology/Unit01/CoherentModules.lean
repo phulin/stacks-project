@@ -90,11 +90,13 @@ theorem coherent_modules_abelian
 structure CoherentSubmoduleWitness (X : AlgebraicSpace.{u})
     [AlgebraicSpaceCohomology.{u}] (F G : SheafObj X) where
   inclusion : SheafHom G F
+  quasi_coherent : IsQuasiCoherent G
   is_submodule : Prop
 
 structure CoherentQuotientWitness (X : AlgebraicSpace.{u})
     [AlgebraicSpaceCohomology.{u}] (F G : SheafObj X) where
   projection : SheafHom F G
+  quasi_coherent : IsQuasiCoherent G
   is_quotient : Prop
 
 theorem coherent_submodule
@@ -167,7 +169,6 @@ structure CoherentSupportStatement (X : AlgebraicSpace.{u})
   coherent_F : IsCoherentModule X F
   support : ClosedSubspace X
   support_identification : support = schemeTheoreticSupport F
-  support_is_scheme : IsScheme support.carrier
   descended : SheafObj support.carrier
   pushforward_identification :
     Nonempty (SheafIso X (pushforwardSheaf support.inclusion descended) F)

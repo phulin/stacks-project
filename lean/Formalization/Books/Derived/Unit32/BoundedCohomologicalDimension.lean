@@ -55,6 +55,15 @@ def DegreeFunctionNegativeTail
   ∀ b : ℤ, ∃ N : ℤ, ∀ n : ℤ, n ≤ N →
     ∃ m : ℕ, d (K.X n) = (m : WithTop ℕ) ∧ n + (m : ℤ) ≤ b
 
+/- The source's tail condition does not exclude an isolated value `∞`.  The
+   replacement conclusion and the proof's maximum argument require all terms
+   to have finite degree, so this is kept as a separate explicit hypothesis. -/
+
+def DegreeFunctionFinite
+    {A : Type u} [Category.{v} A] [Abelian A]
+    (d : A → WithTop ℕ) (K : BookComplex A) : Prop :=
+  ∀ n : ℤ, ∃ m : ℕ, d (K.X n) = (m : WithTop ℕ)
+
 /- The source's proof first replaces the positive-degree tail by degree-zero
    terms.  This predicate records the resulting eventual vanishing of the
    degree function. -/
@@ -67,7 +76,7 @@ def DegreeFunctionEventuallyZero
 /- The termination measure lives in the extended integers: a finite degree
    contributes an ordinary integer and the value `∞` contributes `+∞`. -/
 
-abbrev ReplacementDegreeValue := WithBot (WithTop ℤ)
+abbrev ReplacementDegreeValue := EInt
 
 def degreeToReplacementValue (d : WithTop ℕ) : ReplacementDegreeValue :=
   WithTop.recTopCoe (⊤ : ReplacementDegreeValue)
@@ -160,7 +169,8 @@ theorem exists_elementaryDegreeZeroReplacement
 theorem exists_quasiIso_degreeZero_complex
     {A : Type u} [Category.{v} A] [Abelian A]
     (d : A → WithTop ℕ) (hd : IsAdmissibleDegreeFunction d)
-    (K : BookComplex A) (hK : DegreeFunctionNegativeTail d K) :
+    (K : BookComplex A) (hK : DegreeFunctionNegativeTail d K)
+    (hFinite : DegreeFunctionFinite d K) :
     ∃ (L : BookComplex A) (f : K ⟶ L),
       QuasiIsomorphism f ∧ ∀ n : ℤ, d (L.X n) = 0 := by
   sorry
@@ -171,7 +181,8 @@ theorem replacementScore_lt_top
     {A : Type u} [Category.{v} A] [Abelian A]
     (d : A → WithTop ℕ) (K : BookComplex A)
     (hK : DegreeFunctionNegativeTail d K)
-    (hAbove : DegreeFunctionEventuallyZero d K) :
+    (hAbove : DegreeFunctionEventuallyZero d K)
+    (hFinite : DegreeFunctionFinite d K) :
     replacementScore d K < (⊤ : ReplacementDegreeValue) := by
   sorry
 
@@ -181,7 +192,8 @@ theorem replacementMaximizers_finite
     {A : Type u} [Category.{v} A] [Abelian A]
     (d : A → WithTop ℕ) (K : BookComplex A)
     (hK : DegreeFunctionNegativeTail d K)
-    (hAbove : DegreeFunctionEventuallyZero d K) :
+    (hAbove : DegreeFunctionEventuallyZero d K)
+    (hFinite : DegreeFunctionFinite d K) :
     (replacementMaximizers d K).Finite := by
   sorry
 

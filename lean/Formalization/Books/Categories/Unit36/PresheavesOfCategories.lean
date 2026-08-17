@@ -379,7 +379,7 @@ theorem strictification_morphism_description
 
 /-- Equivalence in the 2-category of fibred categories over a fixed base:
 the comparison functors commute strictly with the base, preserve strongly
-cartesian arrows, and are inverse up to natural isomorphism. -/
+cartesian arrows, and are inverse up to vertical natural isomorphism. -/
 def IsFibredEquivalenceOver
     {S T C : Type*} [Category* S] [Category* T] [Category* C]
     (p : S ⥤ C) (q : T ⥤ C) : Prop :=
@@ -387,7 +387,12 @@ def IsFibredEquivalenceOver
     F ⋙ q = p ∧ G ⋙ p = q ∧
       MapsStronglyCartesian p q F ∧
       MapsStronglyCartesian q p G ∧
-      Nonempty (F ⋙ G ≅ 𝟭 S) ∧ Nonempty (G ⋙ F ≅ 𝟭 T)
+      (∃ (e : F ⋙ G ≅ 𝟭 S)
+        (over : (F ⋙ G) ⋙ p = (𝟭 S) ⋙ p),
+        Formalization.Books.Categories.Unit34.IsOverNaturalIso p over e) ∧
+      (∃ (e : G ⋙ F ≅ 𝟭 T)
+        (over : (G ⋙ F) ⋙ q = (𝟭 T) ⋙ q),
+        Formalization.Books.Categories.Unit34.IsOverNaturalIso q over e)
 
 /-- The source's comparison data for the strictification construction.  The
 first two fields are the natural functor `\mathcal S \to \mathcal S'` and its
@@ -403,9 +408,16 @@ structure StrictificationComparison
   inverse_over : inverse ⋙ p = strictificationProjection P
   inverse_preserves :
     MapsStronglyCartesian (strictificationProjection P) p inverse
-  functor_inverse : Nonempty (functor ⋙ inverse ≅ 𝟭 S)
+  functor_inverse :
+    ∃ (e : functor ⋙ inverse ≅ 𝟭 S)
+      (over : (functor ⋙ inverse) ⋙ p = (𝟭 S) ⋙ p),
+      Formalization.Books.Categories.Unit34.IsOverNaturalIso p over e
   inverse_functor :
-    Nonempty (inverse ⋙ functor ≅ 𝟭 (StrictificationCategory p P))
+    ∃ (e : inverse ⋙ functor ≅ 𝟭 (StrictificationCategory p P))
+      (over : (inverse ⋙ functor) ⋙ strictificationProjection P =
+        (𝟭 (StrictificationCategory p P)) ⋙ strictificationProjection P),
+      Formalization.Books.Categories.Unit34.IsOverNaturalIso
+        (strictificationProjection P) over e
 
 theorem strictificationComparison_isFibredEquivalence
     {S C : Type*} [Category* S] [Category* C]

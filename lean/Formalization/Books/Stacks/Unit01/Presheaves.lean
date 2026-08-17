@@ -1,4 +1,5 @@
 import Formalization.Books.Stacks.Unit01.Foundation
+import Mathlib.CategoryTheory.Bicategory.Functor.LocallyDiscrete
 
 /-!
 # Stacks, Chapter 1, Section 2: presheaves of morphisms
@@ -65,12 +66,57 @@ structure TwoFiberProductPresentation {C : Type u} [Category.{v} C]
 theorem isom_as_two_fibre_product {C : Type u} [Category.{v} C]
     (F : FiberedCategory C) {U : C} (x y : Fiber F U) :
     Nonempty (TwoFiberProductPresentation F x y) := by
-  sorry
+  let P := IsomPresheaf F x y
+  let A : FiberedCategory (Over C U) :=
+    LocallyDiscrete.mkPseudofunctor
+      (fun T => Cat.of (Discrete (P.obj T)))
+      (fun {T₁ T₂} f =>
+        (Discrete.functor (fun z => Discrete.mk (P.map f z))).toCatHom)
+      (fun T => by
+        apply eqToIso
+        apply Cat.Hom.ext
+        apply Discrete.functor_ext
+        intro Z
+        have hZ : P.map (𝟙 T) Z = Z :=
+          congrArg (fun h : P.obj T ⟶ P.obj T => h Z) (P.map_id T)
+        exact congrArg Discrete.mk hZ)
+      (fun {T₀ T₁ T₂} f g => by
+        apply eqToIso
+        apply Cat.Hom.ext
+        refine CategoryTheory.Functor.ext ?_ ?_
+        · intro Z
+          have hZ : P.map (f ≫ g) Z.as = P.map g (P.map f Z.as) :=
+            congrArg (fun h : P.obj T₀ ⟶ P.obj T₂ => h Z.as) (P.map_comp f g)
+          change Discrete.mk (P.map (f ≫ g) Z.as) =
+            Discrete.mk (P.map g (P.map f Z.as))
+          exact congrArg Discrete.mk hZ
+        · intro Z Z' q
+          rcases Z with ⟨Z⟩
+          rcases Z' with ⟨Z'⟩
+          rcases q with ⟨⟨h⟩⟩
+          change Z = Z' at h
+          subst Z'
+          rfl)
+  refine ⟨{ apex := A, isSetoid := ?_, presheaf := P, presheafIso := Iso.refl P }⟩
+  constructor <;> intro T
+  · change IsGroupoid (Discrete (P.obj (op T)))
+    infer_instance
+  · change ∀ (X Y : Discrete (P.obj (op T))), Subsingleton (X ⟶ Y)
+    infer_instance
 
 theorem isom_presheaf_is_morphism_presheaf_of_groupoid
     {C : Type u} [Category.{v} C] {F : FiberedCategory C}
     (hF : FiberwiseGroupoid F) {U : C} (x y : Fiber F U) :
     Nonempty (IsomPresheaf F x y ≅ F.presheafHom x y) := by
-  sorry
+  refine ⟨NatIso.ofComponents (fun T => ?_) ?_⟩
+  · letI : IsGroupoid (Fiber F T.unop.left) := hF _
+    refine
+      { hom := ↾(fun f : (IsomPresheaf F x y).obj T => f.1)
+        inv := ↾(fun f : (F.presheafHom x y).obj T => ⟨f, by infer_instance⟩)
+        hom_inv_id := by ext f; rfl
+        inv_hom_id := by ext f; rfl }
+  · intro T₁ T₂ q
+    ext f
+    rfl
 
 end Formalization.Books.Stacks.Unit01

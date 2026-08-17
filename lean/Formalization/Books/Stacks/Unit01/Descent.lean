@@ -124,7 +124,9 @@ theorem pullback_descent_data_independent {C : Type u} [Category.{v} C]
     Nonempty
       (Pseudofunctor.DescentData.pullFunctor (F := F) w ≅
         Pseudofunctor.DescentData.pullFunctor (F := F) w') := by
-  sorry
+  have h : w = w' := Subsingleton.elim _ _
+  subst w'
+  exact ⟨Iso.refl _⟩
 
 structure DescentComparisonHypotheses {C : Type u} [Category.{v} C]
     (F : FiberedCategory C) {ι κ : Type*} {U : C}

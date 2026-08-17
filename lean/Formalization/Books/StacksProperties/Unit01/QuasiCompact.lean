@@ -52,21 +52,21 @@ def HasQuasiCompactStackCover {S : Scheme.{u}}
   ∃ (U : AlgebraicStack S) (f : StackMorphism U X),
     IsSurjective f ∧ IsQuasiCompactStack U
 
-theorem quasiCompact_stack_iff {S : Scheme.{u}} (X : AlgebraicStack S) :
-    (IsQuasiCompactStack X →
+theorem quasiCompact_stack_iff {S : Scheme.{u}} (X : AlgebraicStack S)
+    (hcompactToChart : IsQuasiCompactStack X →
       ∃ c : QuasiCompactStackChart (X := X),
         Function.Surjective c.map ∧ c.smooth ∧ c.affineSource ∧
           c.quasiCompactSchemeSource ∧ c.quasiCompactAlgebraicSpaceSource) →
-    ((HasAffineSmoothCover X ∧
+    (hcoverToChart : (HasAffineSmoothCover X ∧
         HasQuasiCompactSchemeSmoothCover X ∧
       HasQuasiCompactSpaceSmoothCover X ∧ HasQuasiCompactStackCover X) →
       ∃ c : QuasiCompactStackChart (X := X),
         Function.Surjective c.map ∧ c.smooth ∧ c.affineSource ∧
           c.quasiCompactSchemeSource ∧ c.quasiCompactAlgebraicSpaceSource) →
-    (∀ (c : QuasiCompactStackChart (X := X)),
+    (hchartToCompact : ∀ (c : QuasiCompactStackChart (X := X)),
       Function.Surjective c.map → c.smooth → c.affineSource →
         c.quasiCompactSchemeSource → c.quasiCompactAlgebraicSpaceSource →
-        IsQuasiCompactStack X) →
+        IsQuasiCompactStack X) :
     IsQuasiCompactStack X ↔
       HasAffineSmoothCover X ∧
         HasQuasiCompactSchemeSmoothCover X ∧

@@ -224,11 +224,11 @@ theorem check_property_covering {S : Scheme.{u}}
     (w : SpaceToStackMorphism W Y)
     (hP : P.fppfLocalOnTarget ∧ P.stableUnderArbitraryBaseChange)
     (hcover : Function.Surjective w.map ∧ w.flat ∧
-      w.locallyOfFinitePresentation) :
-    (∀ (W' : AlgebraicSpace S) (w' : SpaceToStackMorphism W' Y)
+      w.locallyOfFinitePresentation)
+    (htransfer : ∀ (W' : AlgebraicSpace S) (w' : SpaceToStackMorphism W' Y)
       (bc' : BaseChangeData f W' w'),
       ∃ bc : BaseChangeData f W w,
-        P.property bc.projection → P.property bc'.projection) →
+        P.property bc.projection → P.property bc'.projection) :
       HasRelativeProperty P f ↔
       (RepresentableByAlgebraicSpaces f ∧
       ∀ (bc : BaseChangeData f W w), P.property bc.projection) := by

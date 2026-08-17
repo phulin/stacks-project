@@ -310,6 +310,8 @@ theorem immersion_points_locally_closed {S : Scheme.{u}}
     (T : StackTopology S) (hT : IsCompatibleStackTopology T)
     {X Y : AlgebraicStack S} (f : StackMorphism X Y)
     (hf : IsImmersionStack f)
+    (hbase : ∃ (W : AlgebraicSpace S) (w : SpaceToStackMorphism W Y),
+      baseChangeIsAlgebraicSpace f W w)
     (hpoint : ∀ (W : AlgebraicSpace S)
       (w : SpaceToStackMorphism W Y)
       (bc : BaseChangeData f W w), SpaceImmersion bc.projection →
@@ -324,6 +326,8 @@ theorem closed_immersion_points_closed {S : Scheme.{u}}
     (T : StackTopology S) (hT : IsCompatibleStackTopology T)
     {X Y : AlgebraicStack S} (f : StackMorphism X Y)
     (hf : IsClosedImmersionStack f)
+    (hbase : ∃ (W : AlgebraicSpace S) (w : SpaceToStackMorphism W Y),
+      baseChangeIsAlgebraicSpace f W w)
     (hpoint : ∀ (W : AlgebraicSpace S)
       (w : SpaceToStackMorphism W Y)
       (bc : BaseChangeData f W w), SpaceClosedImmersion bc.projection →
@@ -336,6 +340,8 @@ theorem open_immersion_points_open {S : Scheme.{u}}
     (T : StackTopology S) (hT : IsCompatibleStackTopology T)
     {X Y : AlgebraicStack S} (f : StackMorphism X Y)
     (hf : IsOpenImmersionStack f)
+    (hbase : ∃ (W : AlgebraicSpace S) (w : SpaceToStackMorphism W Y),
+      baseChangeIsAlgebraicSpace f W w)
     (hpoint : ∀ (W : AlgebraicSpace S)
       (w : SpaceToStackMorphism W Y)
       (bc : BaseChangeData f W w), SpaceOpenImmersion bc.projection →
@@ -705,8 +711,8 @@ def FactorsThrough {S : Scheme.{u}}
 theorem factors_through_substack_iff {S : Scheme.{u}}
     {Y X : AlgebraicStack S} (f : StackMorphism Y X)
     {p : StackPresentation X} (D : SubstackPresentationData p) :
-    (FactorsThrough f D.substack → D.subspace.invariant) →
-    (D.subspace.invariant → FactorsThrough f D.substack) →
+    (hforward : FactorsThrough f D.substack → D.subspace.invariant)
+    (hbackward : D.subspace.invariant → FactorsThrough f D.substack) :
     FactorsThrough f D.substack ↔ D.subspace.invariant := by
   sorry
 

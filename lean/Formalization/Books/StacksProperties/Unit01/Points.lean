@@ -127,15 +127,15 @@ theorem points_cartesian_surjective {S : Scheme.{u}}
 
 theorem characterize_surjective {S : Scheme.{u}}
     {X Y : AlgebraicStack S} (f : StackMorphism X Y)
-    (hf : RepresentableByAlgebraicSpaces f) :
-    (Function.Surjective (inducedPointMap f) →
+    (hf : RepresentableByAlgebraicSpaces f)
+    (hforward : Function.Surjective (inducedPointMap f) →
       ∀ (W : AlgebraicSpace S) (w : SpaceToStackMorphism W Y)
         (bc : BaseChangeData f W w),
-        Function.Surjective bc.projection.left) →
-    ((∀ (W : AlgebraicSpace S) (w : SpaceToStackMorphism W Y)
+        Function.Surjective bc.projection.left)
+    (hbackward : (∀ (W : AlgebraicSpace S) (w : SpaceToStackMorphism W Y)
         (bc : BaseChangeData f W w),
         Function.Surjective bc.projection.left) →
-      Function.Surjective (inducedPointMap f)) →
+      Function.Surjective (inducedPointMap f)) :
     Function.Surjective (inducedPointMap f) ↔
       HasRelativeProperty (RelativeSurjectiveProperty S) f := by
   sorry

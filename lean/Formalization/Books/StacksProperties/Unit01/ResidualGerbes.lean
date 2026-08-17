@@ -55,10 +55,10 @@ theorem flat_field_cover_permanence {S : Scheme.{u}}
   refine ⟨fun x => (hp.1 x).trans heq, hflat.mp hp.2⟩
 
 theorem unique_point_iff_flat_field_cover {S : Scheme.{u}}
-    (X : AlgebraicStack S) :
-    IsReduced X →
-    (∃ p : FieldValuedMorphism X,
-      IsLocallyFiniteTypeFlatFieldCover p) →
+    (X : AlgebraicStack S)
+    (hred : IsReduced X)
+    (hcover : ∃ p : FieldValuedMorphism X,
+      IsLocallyFiniteTypeFlatFieldCover p) :
     IsReducedSingletonPointStack X ↔
       (∃ p : FieldValuedMorphism X, IsFlatFieldCover p) ∧
         (∃ p : FieldValuedMorphism X,
@@ -66,13 +66,13 @@ theorem unique_point_iff_flat_field_cover {S : Scheme.{u}}
   sorry
 
 theorem unique_point_better_iff {S : Scheme.{u}}
-    (X : AlgebraicStack S) :
-    (IsLocallyNoetherian X → IsReduced X →
+    (X : AlgebraicStack S)
+    (hforward : IsLocallyNoetherian X → IsReduced X →
       ∃ p : FieldValuedMorphism X,
+        IsLocallyFinitePresentationFlatFieldCover p)
+    (hbackward : (∃ p : FieldValuedMorphism X,
         IsLocallyFinitePresentationFlatFieldCover p) →
-    ((∃ p : FieldValuedMorphism X,
-        IsLocallyFinitePresentationFlatFieldCover p) →
-      IsLocallyNoetherian X ∧ IsReduced X) →
+      IsLocallyNoetherian X ∧ IsReduced X) :
     IsLocallyNoetherianReducedSingletonPointStack X ↔
       ∃ p : FieldValuedMorphism X,
         IsLocallyFinitePresentationFlatFieldCover p := by
@@ -368,9 +368,9 @@ def ResidualGerbeFactorization {S : Scheme.{u}}
     StackTwoMorphism f (StackMorphism.comp g G.inclusion)
 
 theorem residual_gerbe_characterization {S : Scheme.{u}}
-    {X : AlgebraicStack S} (x : StackPoint X) :
-    (ResidualGerbeCandidate x → ReducedResidualGerbeCandidate x) →
-    (ResidualGerbeCandidate x → FieldResidualGerbeCandidate x) →
+    {X : AlgebraicStack S} (x : StackPoint X)
+    (hred : ResidualGerbeCandidate x → ReducedResidualGerbeCandidate x)
+    (hfield : ResidualGerbeCandidate x → FieldResidualGerbeCandidate x) :
     ResidualGerbeCandidate x ↔
       ReducedResidualGerbeCandidate x ∧
         FieldResidualGerbeCandidate x := by

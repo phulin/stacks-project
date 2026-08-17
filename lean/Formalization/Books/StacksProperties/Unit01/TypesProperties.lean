@@ -50,11 +50,11 @@ def EverySpaceSmoothProperty {S : Scheme.{u}}
     w.smooth → P.spaceProperty W
 
 theorem type_property_characterization {S : Scheme.{u}}
-    (P : SmoothLocalSchemeProperty S) (X : AlgebraicStack S) :
-    (∀ (W : AlgebraicSpace S) (w : SpaceToStackMorphism W X),
+    (P : SmoothLocalSchemeProperty S) (X : AlgebraicStack S)
+    (hlocal : ∀ (W : AlgebraicSpace S) (w : SpaceToStackMorphism W X),
       IsSmoothCover W w → P.schemeProperty W.left →
       ∀ (W' : AlgebraicSpace S) (w' : SpaceToStackMorphism W' X),
-        w'.smooth → P.schemeProperty W'.left) →
+        w'.smooth → P.schemeProperty W'.left) :
     SomeSchemeSmoothProperty P X ↔
       EverySchemeSmoothProperty P X ∧
         SomeSpaceSmoothProperty P X ∧ EverySpaceSmoothProperty P X := by
@@ -151,14 +151,14 @@ def EverySpaceGermPropertyAt {S : Scheme.{u}}
 
 theorem local_source_target_at_point {S : Scheme.{u}}
     (P : SmoothLocalGermProperty S) {X : AlgebraicStack S}
-    (x : StackPoint X) :
-    (∀ (W : AlgebraicSpace S) (w : SpaceToStackMorphism W X)
+    (x : StackPoint X)
+    (hlocal : ∀ (W : AlgebraicSpace S) (w : SpaceToStackMorphism W X)
       (u : W.left),
       w.smooth → w.map u = x → P.schemeProperty.property W.left u →
       ∀ (W' : AlgebraicSpace S) (w' : SpaceToStackMorphism W' X)
         (u' : W'.left),
         w'.smooth → w'.map u' = x →
-          P.schemeProperty.property W'.left u') →
+          P.schemeProperty.property W'.left u') :
     SomeSchemeGermPropertyAt P x ↔
       EverySchemeGermPropertyAt P x ∧
         SomeSpaceGermPropertyAt P x ∧ EverySpaceGermPropertyAt P x := by

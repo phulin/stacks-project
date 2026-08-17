@@ -165,6 +165,20 @@ def IsSheafification {C : Type u} [Category.{v} C]
     ∀ (R : Cᵒᵖ ⥤ Type w), Presheaf.IsSheaf J R →
       ∀ f : P ⟶ R, ∃! g : Q ⟶ R, η ≫ g = f
 
+def IsInducedMorphismPresheafMap {C : Type u} [Category.{v} C]
+    {F G : FiberedCategory C} (η : FiberedMorphism F G) {U : C}
+    (x y : Fiber F U)
+    (φ : F.presheafHom x y ⟶
+      G.presheafHom ((η.app (.mk (op U))).toFunctor.obj x)
+        ((η.app (.mk (op U))).toFunctor.obj y)) : Prop :=
+  ∀ (T : (Over C U)ᵒᵖ)
+    (f : (F.map T.unop.hom.op.toLoc).toFunctor.obj x ⟶
+      (F.map T.unop.hom.op.toLoc).toFunctor.obj y),
+    (φ.app T) f =
+      (η.naturality T.unop.hom.op.toLoc).inv.toNatTrans.app x ≫
+        (η.app (.mk (op T.unop.left))).toFunctor.map f ≫
+          (η.naturality T.unop.hom.op.toLoc).hom.toNatTrans.app y
+
 structure Stackification (F : FiberedCategory C) (J : GrothendieckTopology C) where
   value : FiberedCategory C
   map : FiberedMorphism F value
@@ -179,6 +193,8 @@ structure Stackification (F : FiberedCategory C) (J : GrothendieckTopology C) wh
     F.presheafHom x y ⟶
       value.presheafHom ((map.app (.mk (op U))).toFunctor.obj x)
         ((map.app (.mk (op U))).toFunctor.obj y)
+  morphismPresheafMap_is_induced : ∀ (U : C) (x y : Fiber F U),
+    IsInducedMorphismPresheafMap map x y (morphismPresheafMap U x y)
   morphismSheafification : ∀ (U : C) (x y : Fiber F U),
     IsSheafification (J.over U) (morphismPresheafMap U x y)
 
@@ -192,11 +208,11 @@ pullback/localization results should only be attempted after that API exists. -/
 structure RelativeInertiaObject {F G : FiberedCategory C}
     (η : FiberedMorphism F G) (U : C) where
   object : Fiber F U
-  automorphism : object ⟶ object
-  fixed : (η.app (.mk (op U))).toFunctor.map automorphism = 𝟙 _
+  automorphism : object ≅ object
+  fixed : (η.app (.mk (op U))).toFunctor.map automorphism.hom = 𝟙 _
 
 structure AbsoluteInertiaObject (F : FiberedCategory C) (U : C) where
   object : Fiber F U
-  automorphism : object ⟶ object
+  automorphism : object ≅ object
 
 end Formalization.Books.Stacks.Unit01

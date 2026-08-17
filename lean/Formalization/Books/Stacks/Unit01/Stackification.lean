@@ -24,7 +24,7 @@ noncomputable def morphismPresheafMap {C : Type u} [Category.{v} C]
     F.presheafHom x y ⟶
       G.presheafHom ((η.app (.mk (Opposite.op U))).toFunctor.obj x)
         ((η.app (.mk (Opposite.op U))).toFunctor.obj y) :=
-  Classical.choice (presheaf_mor_map_fibred_categories η x y)
+  presheaf_mor_map_fibred_categories η x y
 
 theorem stackification_exists {C : Type u} [Category.{v} C]
     (F : FiberedCategory C) (J : GrothendieckTopology C) :
@@ -53,8 +53,10 @@ theorem stackification_unique {C : Type u} [Category.{v} C]
     (S T : Stackification.{t, v, u, w} F J) :
     ∃ η : FiberedMorphism S.value T.value,
       FiberwiseEquivalence η ∧
+        Nonempty (S.map ≫ η ≅ T.map) ∧
         ∀ θ : FiberedMorphism S.value T.value,
-          FiberwiseEquivalence θ → Unique2Isomorphism η θ := by
+          FiberwiseEquivalence θ →
+            Nonempty (S.map ≫ θ ≅ T.map) → Unique2Isomorphism η θ := by
   sorry
 
 theorem stackification_universal_property

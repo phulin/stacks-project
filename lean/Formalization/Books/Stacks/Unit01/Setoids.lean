@@ -107,6 +107,33 @@ def RelativePairClasses {C : Type u} [Category.{v} C]
     {F G : FiberedCategory C} (η : FiberedMorphism F G) (U : C)
     (y : Fiber G U) := Quotient (RelativePairSetoid η U y)
 
+def relativePairClassesPresheaf {C : Type u} [Category.{v} C]
+    {F G : FiberedCategory C} (η : FiberedMorphism F G) (U : C)
+    (y : Fiber G U) : (Over C U)ᵒᵖ ⥤ Type w where
+  obj T := RelativePairClasses η T.unop.left
+    ((G.map T.unop.hom.op.toLoc).toFunctor.obj y)
+  map {T₁ T₂} q := by
+    exact ↾(Quotient.map
+      (fun a : RelativePair η T₁.unop.left
+        ((G.map T₁.unop.hom.op.toLoc).toFunctor.obj y) => by
+        have hcomp :
+            T₁.unop.hom.op.toLoc ≫ (Over.Hom.left q.unop).op.toLoc =
+              T₂.unop.hom.op.toLoc := by
+          rw [← Quiver.Hom.comp_toLoc, ← op_comp, q.unop.w]
+        exact ⟨
+          (F.map (Over.Hom.left q.unop).op.toLoc).toFunctor.obj a.1,
+          (η.naturality (Over.Hom.left q.unop).op.toLoc).hom.toNatTrans.app a.1 ≫
+            (G.map (Over.Hom.left q.unop).op.toLoc).toFunctor.map a.2 ≫
+            (G.mapComp' T₁.unop.hom.op.toLoc
+              (Over.Hom.left q.unop).op.toLoc T₂.unop.hom.op.toLoc hcomp).inv.toNatTrans.app y⟩)
+      (by
+        intro a b hab
+        sorry))
+  map_id := by
+    sorry
+  map_comp := by
+    sorry
+
 structure TwoCartesianSquare {C : Type u} [Category.{v} C]
     (A B C' D : FiberedCategory C) where
   left : FiberedMorphism A B
@@ -137,11 +164,8 @@ structure RelativeSheafCondition {C : Type u} [Category.{v} C]
   targetIsGroupoidStack : StackInGroupoids G J
   fibresFaithful : FiberwiseFaithful map
   pairPresheaf : ∀ (U : C) (_y : Fiber G U), (Over C U)ᵒᵖ ⥤ Type w
-  pairPresheafPresentation : ∀ (U : C) (y : Fiber G U)
-    (T : (Over C U)ᵒᵖ),
-    Nonempty ((pairPresheaf U y).obj T ≃
-      RelativePairClasses map T.unop.left
-        ((G.map T.unop.hom.op.toLoc).toFunctor.obj y))
+  pairPresheafPresentation : ∀ (U : C) (y : Fiber G U),
+    Nonempty ((pairPresheaf U y) ≅ relativePairClassesPresheaf map U y)
   pairPresheavesAreSheaves : ∀ (U : C) (y : Fiber G U),
     Presheaf.IsSheaf (J.over U) (pairPresheaf U y)
 
@@ -193,7 +217,7 @@ theorem two_fibre_product_setoids_over_groupoid_stack
 theorem faithful_descent_for_stacks_in_groupoids
     {C : Type u} [Category.{v} C] {J : GrothendieckTopology C}
     {A B C' D : FiberedCategory C} (sq : TwoCartesianSquare A B C' D)
-    (hlocal : FiberwiseEssentiallySurjective sq.bottom)
+    (hlocal : LocallyEssentiallyInImage sq.bottom J)
     (hfaithful : FiberwiseFaithful sq.right)
     (hA : StackInGroupoids A J) (hB : StackInGroupoids B J)
     (hC' : StackInGroupoids C' J) (hD : StackInGroupoids D J) :

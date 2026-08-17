@@ -36,14 +36,13 @@ theorem mor_presheaf_is_presheaf {C : Type u} [Category.{v} C]
     (F : FiberedCategory C) {U : C} (x y : Fiber F U) :
     MorPresheaf F x y = F.presheafHom x y := rfl
 
-theorem presheaf_mor_map_fibred_categories {C : Type u} [Category.{v} C]
+def presheaf_mor_map_fibred_categories {C : Type u} [Category.{v} C]
     {F G : FiberedCategory C} (η : FiberedMorphism F G) {U : C}
     (x y : Fiber F U) :
-    Nonempty
-      (F.presheafHom x y ⟶
-        G.presheafHom ((η.app (.mk (op U))).toFunctor.obj x)
-          ((η.app (.mk (op U))).toFunctor.obj y)) := by
-  refine ⟨{ app := fun T => ?_, naturality := ?_ }⟩
+    F.presheafHom x y ⟶
+      G.presheafHom ((η.app (.mk (op U))).toFunctor.obj x)
+        ((η.app (.mk (op U))).toFunctor.obj y) := by
+  refine { app := fun T => ?_, naturality := ?_ }
   · simpa [Pseudofunctor.presheafHom] using
       (↾(fun f : (F.map T.unop.hom.op.toLoc).toFunctor.obj x ⟶
           (F.map T.unop.hom.op.toLoc).toFunctor.obj y =>
@@ -149,6 +148,15 @@ theorem presheaf_mor_map_fibred_categories {C : Type u} [Category.{v} C]
           simp
     simp only [reassoc_of% hmid]
     simp
+
+theorem presheaf_mor_map_fibred_categories_exists {C : Type u} [Category.{v} C]
+    {F G : FiberedCategory C} (η : FiberedMorphism F G) {U : C}
+    (x y : Fiber F U) :
+    Nonempty
+      (F.presheafHom x y ⟶
+        G.presheafHom ((η.app (.mk (op U))).toFunctor.obj x)
+          ((η.app (.mk (op U))).toFunctor.obj y)) :=
+  ⟨presheaf_mor_map_fibred_categories η x y⟩
 
 theorem isom_presheaf_is_subpresheaf {C : Type u} [Category.{v} C]
     (F : FiberedCategory C) {U : C} (x y : Fiber F U) (T : (Over C U)ᵒᵖ)

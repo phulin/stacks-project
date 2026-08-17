@@ -7,6 +7,7 @@ import Formalization.Books.Stacks.Unit01.Setoids
 namespace Formalization.Books.Stacks.Unit01
 
 open CategoryTheory
+open Opposite
 
 universe t v' v u' u
 
@@ -14,7 +15,7 @@ structure RelativeInertiaMorphism {C : Type u} [Category.{v} C]
     {F G : FiberedCategory C} {η : FiberedMorphism F G} {U : C}
     (x y : RelativeInertiaObject η U) where
   hom : x.object ⟶ y.object
-  commutes : x.automorphism ≫ hom = hom ≫ y.automorphism
+  commutes : x.automorphism.hom ≫ hom = hom ≫ y.automorphism.hom
 
 instance relativeInertiaCategory {C : Type u} [Category.{v} C]
     {F G : FiberedCategory C} {η : FiberedMorphism F G} {U : C} :
@@ -28,6 +29,40 @@ instance relativeInertiaCategory {C : Type u} [Category.{v} C]
     commutes := by
       rw [← Category.assoc, f.commutes, Category.assoc, g.commutes, ← Category.assoc] }
 
+structure AbsoluteInertiaMorphism {C : Type u} [Category.{v} C]
+    {F : FiberedCategory C} {U : C}
+    (x y : AbsoluteInertiaObject F U) where
+  hom : x.object ⟶ y.object
+  commutes : x.automorphism.hom ≫ hom = hom ≫ y.automorphism.hom
+
+instance absoluteInertiaCategory {C : Type u} [Category.{v} C]
+    {F : FiberedCategory C} {U : C} :
+    Category (AbsoluteInertiaObject F U) where
+  Hom x y := AbsoluteInertiaMorphism x y
+  id x := {
+    hom := 𝟙 x.object
+    commutes := by simp }
+  comp f g := {
+    hom := f.hom ≫ g.hom
+    commutes := by
+      rw [← Category.assoc, f.commutes, Category.assoc, g.commutes, ← Category.assoc] }
+
+def relativeInertiaProjection {C : Type u} [Category.{v} C]
+    {F G : FiberedCategory C} {η : FiberedMorphism F G} {U : C} :
+    RelativeInertiaObject η U ⥤ Fiber F U where
+  obj x := x.object
+  map f := f.hom
+  map_id := by intro X; rfl
+  map_comp := by intro X Y Z f g; rfl
+
+def absoluteInertiaProjection {C : Type u} [Category.{v} C]
+    {F : FiberedCategory C} {U : C} :
+    AbsoluteInertiaObject F U ⥤ Fiber F U where
+  obj x := x.object
+  map f := f.hom
+  map_id := by intro X; rfl
+  map_comp := by intro X Y Z f g; rfl
+
 structure RelativeInertiaStackData {C : Type u} [Category.{v} C]
     {F G : FiberedCategory C} (η : FiberedMorphism F G)
     (J : GrothendieckTopology C) where
@@ -35,14 +70,20 @@ structure RelativeInertiaStackData {C : Type u} [Category.{v} C]
   projection : FiberedMorphism value F
   isStack : Stack value J
   fibreEquivalence : ∀ U : C,
-    Nonempty (Fiber value U ≃ RelativeInertiaObject η U)
+    ∃ e : Fiber value U ≌ RelativeInertiaObject η U,
+      Nonempty
+        (e.functor ⋙ relativeInertiaProjection ≅
+          (projection.app (.mk (op U))).toFunctor)
 
 structure AbsoluteInertiaPresentation {C : Type u} [Category.{v} C]
     (F : FiberedCategory C) where
   value : FiberedCategory C
   projection : FiberedMorphism value F
   fibreEquivalence : ∀ U : C,
-    Nonempty (Fiber value U ≃ AbsoluteInertiaObject F U)
+    ∃ e : Fiber value U ≌ AbsoluteInertiaObject F U,
+      Nonempty
+        (e.functor ⋙ absoluteInertiaProjection ≅
+          (projection.app (.mk (op U))).toFunctor)
 
 structure AbsoluteInertiaStackData {C : Type u} [Category.{v} C]
     (F : FiberedCategory C) (J : GrothendieckTopology C)
@@ -88,11 +129,8 @@ theorem inertia_characterizes_stack_in_setoids
     {C : Type u} [Category.{v} C] {J : GrothendieckTopology C}
     {F : FiberedCategory C} (hF : StackInGroupoids F J) :
     StackInSetoids F J ↔
-      ∃ (I : FiberedCategory C) (π : FiberedMorphism I F),
-        StackInGroupoids I J ∧
-        (∀ U : C, Nonempty
-          (Fiber I U ≃ AbsoluteInertiaObject F U)) ∧
-        FiberwiseEquivalence π := by
+      ∃ (A : AbsoluteInertiaPresentation F),
+        StackInGroupoids A.value J ∧ FiberwiseEquivalence A.projection := by
   sorry
 
 end Formalization.Books.Stacks.Unit01

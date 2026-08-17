@@ -1,3 +1,4 @@
+import Formalization.Books.Stacks.Unit01.Presheaves
 import Formalization.Books.Stacks.Unit01.Descent
 
 /-!
@@ -100,10 +101,7 @@ theorem characterize_fully_faithful {C : Type u} [Category.{v} C]
     (η : FiberedMorphism F G) [F.IsStack J] [G.IsStack J] :
     FiberwiseFullyFaithful η ↔
       ∀ (U : C) (x y : Fiber F U),
-        Nonempty
-          (F.presheafHom x y ≅
-            G.presheafHom ((η.app (.mk (op U))).toFunctor.obj x)
-              ((η.app (.mk (op U))).toFunctor.obj y)) := by
+        IsIso (presheaf_mor_map_fibred_categories η x y) := by
   sorry
 
 theorem characterize_essentially_surjective_when_fully_faithful

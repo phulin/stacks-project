@@ -1,4 +1,5 @@
 import Formalization.Books.Stacks.Unit01.InheritedTopology
+import Mathlib.CategoryTheory.FiberedCategory.Fiber
 import Mathlib.Algebra.Category.Grp.Basic
 
 /-!
@@ -36,14 +37,9 @@ def IsGerbe {C : Type u} [Category.{v} C]
 
 def FiberedInGroupoidsOver {C : Type u} [Category.{v} C]
     {F G : FiberedCategory.{w, v, u} C} (η : FiberedMorphism F G) : Prop :=
-  ∀ (U : C) (y : Fiber G U) (x x' : Fiber F U)
-    (a : (η.app (.mk (op U))).toFunctor.obj x ⟶ y)
-    (a' : (η.app (.mk (op U))).toFunctor.obj x' ⟶ y)
-    (f : x ⟶ x'),
-    (η.app (.mk (op U))).toFunctor.map f ≫ a' = a →
-      ∃ g : x' ⟶ x,
-        (η.app (.mk (op U))).toFunctor.map g ≫ a = a' ∧
-          f ≫ g = 𝟙 _ ∧ g ≫ f = 𝟙 _
+  (Pseudofunctor.CoGrothendieck.map η).IsFibered ∧
+    ∀ y : Pseudofunctor.CoGrothendieck G,
+      IsGroupoid (Functor.Fiber (Pseudofunctor.CoGrothendieck.map η) y)
 
 def LocallyLiftsMorphisms {C : Type u} [Category.{v} C]
     {F G : FiberedCategory.{w, v, u} C} (η : FiberedMorphism F G)
@@ -74,11 +70,9 @@ structure GerbeFactorizationData {C : Type u} [Category.{v} C]
   fromOriginal : FiberedMorphism F value
   toBase : FiberedMorphism value G
   factorization : Nonempty (fromOriginal ≫ toBase ≅ η)
-  isGerbe : IsGerbe.{t, w, v, u} value J
+  gerbeOver : GerbeOver.{t, w, v, u} toBase J
   equivalentToOriginal : FiberwiseEquivalence fromOriginal
   fibredInGroupoidsOverBase : FiberedInGroupoidsOver toBase
-  locallyEssentiallyInImage : LocallyEssentiallyInImage.{t, v, u, w} toBase J
-  locallyLiftsMorphisms : LocallyLiftsMorphisms.{t, w, v, u} toBase J
 
 def AutomorphismGroupsAbelian {C : Type u} [Category.{v} C]
     (F : FiberedCategory.{w, v, u} C) : Prop :=
@@ -197,9 +191,9 @@ theorem gerbe_descent
     {C : Type u} [Category.{v} C] {J : GrothendieckTopology C}
     {A B C' D : FiberedCategory.{w, v, u} C} (sq : TwoCartesianSquare A B C' D)
     (hlocal : LocallyEssentiallyInImage sq.bottom J)
-    (hgerbe : GerbeOver sq.bottom J)
-    (hA : StackInGroupoids A J) (hB : StackInGroupoids B J) :
-    GerbeOver sq.left J := by
+    (hgerbe : GerbeOver sq.right J)
+    (hB : StackInGroupoids B J) (hD : StackInGroupoids D J) :
+    GerbeOver sq.top J := by
   sorry
 
 theorem gerbe_abelian_automorphisms

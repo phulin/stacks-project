@@ -19,9 +19,8 @@ def StackInGroupoids {C : Type u} [Category.{v} C]
 structure GroupoidificationData {C : Type u} [Category.{v} C]
     (F : FiberedCategory C) (J : GrothendieckTopology C) where
   value : FiberedCategory C
-  map : FiberedMorphism F value
+  map : FiberedMorphism value F
   isStackInGroupoids : StackInGroupoids value J
-  equivalentToOriginal : FiberwiseEquivalence map
 
 structure StackInGroupoidsObject (C : Type u) [Category.{v} C]
     (J : GrothendieckTopology C) where

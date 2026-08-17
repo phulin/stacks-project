@@ -22,6 +22,7 @@ structure LocalizationStackData {C : Type u} [Category.{v} C]
   isStack : Stack value J
   localizationProjection :
     Pseudofunctor.CoGrothendieck value ⥤ Over C U
+  localizationProjection_isFibred : localizationProjection.IsFibered
   localizationProjection_over :
     localizationProjection ⋙ Over.forget U =
       Pseudofunctor.CoGrothendieck.forget value
@@ -42,6 +43,7 @@ structure ConstructionAData {C : Type u} [Category.{v} C]
     Pseudofunctor.CoGrothendieck value ≌ Pseudofunctor.CoGrothendieck S
   mapToLocalization :
     Pseudofunctor.CoGrothendieck value ⥤ Over C U
+  mapToLocalization_isFibred : mapToLocalization.IsFibered
   mapToLocalization_eq :
     mapToLocalization =
       underlyingEquivalence.functor ⋙ Pseudofunctor.CoGrothendieck.forget S
@@ -55,6 +57,7 @@ structure ConstructionBData {C : Type u} [Category.{v} C]
   isStack : Stack T J
   mapToLocalization :
     Pseudofunctor.CoGrothendieck T ⥤ Over C U
+  mapToLocalization_isFibred : mapToLocalization.IsFibered
   mapOver :
     mapToLocalization ⋙ Over.forget U =
       Pseudofunctor.CoGrothendieck.forget T

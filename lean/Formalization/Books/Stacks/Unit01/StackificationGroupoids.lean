@@ -27,6 +27,8 @@ structure GroupoidStackification {C : Type u} [Category.{v} C]
     F.presheafHom x y ⟶
       value.presheafHom ((map.app (.mk (Opposite.op U))).toFunctor.obj x)
         ((map.app (.mk (Opposite.op U))).toFunctor.obj y)
+  morphismPresheafMap_is_induced : ∀ (U : C) (x y : Fiber F U),
+    IsInducedMorphismPresheafMap map x y (morphismPresheafMap U x y)
   morphismSheafification : ∀ (U : C) (x y : Fiber F U),
     IsSheafification (J.over U) (morphismPresheafMap U x y)
 
@@ -41,8 +43,10 @@ theorem groupoid_stackification_unique {C : Type u} [Category.{v} C]
     (S T : GroupoidStackification.{t, v, u, w} F J) :
     ∃ η : FiberedMorphism S.value T.value,
       FiberwiseEquivalence η ∧
+        Nonempty (S.map ≫ η ≅ T.map) ∧
         ∀ θ : FiberedMorphism S.value T.value,
-          FiberwiseEquivalence θ → Unique2Isomorphism η θ := by
+          FiberwiseEquivalence θ →
+            Nonempty (S.map ≫ θ ≅ T.map) → Unique2Isomorphism η θ := by
   sorry
 
 theorem groupoid_stackification_universal_property

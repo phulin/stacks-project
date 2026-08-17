@@ -1,4 +1,3 @@
-import Formalization.Books.Fields.Unit19.PrimitiveElements
 import Mathlib.Algebra.Exact.Basic
 import Mathlib.FieldTheory.Galois.Basic
 

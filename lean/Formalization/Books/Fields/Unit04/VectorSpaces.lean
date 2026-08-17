@@ -9,7 +9,8 @@ import Mathlib.LinearAlgebra.Basis.VectorSpace
 The source identifies modules over a field with vector spaces.  We use
 Mathlib's `Module` and `Module.Free` interfaces directly.  The source's
 statement about exact sequences is represented by Mathlib's categorical
-`ShortExact` and `ShortComplex.Splitting` interfaces.
+`ShortExact` and `ShortComplex.Splitting` interfaces; the abelian-category
+context is supplied by Mathlib's `ModuleCat.abelian` instance.
 -/
 
 namespace Formalization.Books.Fields.Unit04
@@ -36,15 +37,5 @@ theorem field_module_short_exact_splits (k : Type u) [Field k]
     (hS : S.ShortExact) :
     Nonempty S.Splitting := by
   exact ⟨hS.splittingOfProjective⟩
-
-/-! ## The categorical formulation -/
-
-/- Exactness is arrow-theoretic in the source.  The category of modules over a
-   field is Mathlib's abelian category of modules. -/
-/-- The category of modules over a field is abelian. -/
-@[instance_reducible]
-def field_module_category_is_abelian (k : Type u) [Field k] :
-    CategoryTheory.Abelian (ModuleCat.{v} k) :=
-  inferInstance
 
 end Formalization.Books.Fields.Unit04

@@ -90,12 +90,35 @@ def preorderQuotientProjection (I : Type u) [Preorder I] :
 theorem preorderQuotient_is_directed
     (I : Type u) [Preorder I] (hI : IsDirectedSet I) :
     IsDirectedSet (PreorderQuotient I) := by
-  sorry
+  refine ⟨Nonempty.map (toAntisymmetrization (α := I) (· ≤ ·)) hI.1, ?_⟩
+  let _ : IsDirectedOrder I := hI.2
+  exact ⟨fun a b =>
+    Antisymmetrization.induction_on (· ≤ ·) a (fun a =>
+      Antisymmetrization.induction_on (· ≤ ·) b (fun b =>
+        let ⟨c, hac, hbc⟩ := directed_of (· ≤ ·) a b
+        ⟨toAntisymmetrization (· ≤ ·) c, hac, hbc⟩))⟩
 
 theorem preorderQuotientProjection_is_final
     (I : Type u) [Preorder I] :
     Functor.Final (preorderQuotientProjection I) := by
-  sorry
+  refine { out := fun d => ?_ }
+  let i : I := ofAntisymmetrization (· ≤ ·) d
+  let u : StructuredArrow d (preorderQuotientProjection I) :=
+    StructuredArrow.mk (homOfLE (show d ≤ toAntisymmetrization (· ≤ ·) i by
+      simp [i]))
+  apply isConnected_of_isInitial
+  let h : ∀ x : StructuredArrow d (preorderQuotientProjection I), u ⟶ x := fun x => by
+    have hix : i ≤ x.right := by
+      have h : toAntisymmetrization (· ≤ ·) (ofAntisymmetrization (· ≤ ·) d) ≤
+          toAntisymmetrization (· ≤ ·) x.right := by
+        simpa [preorderQuotientProjection] using x.hom.le
+      exact (toAntisymmetrization_le_toAntisymmetrization_iff).mp h
+    have hux : u.right ≤ x.right := by simpa [u] using hix
+    exact StructuredArrow.homMk (f := u) (f' := x) (homOfLE hux)
+      (by apply Subsingleton.elim)
+  exact IsInitial.ofUniqueHom h (fun x m => by
+    apply StructuredArrow.hom_ext
+    exact Subsingleton.elim _ _)
 
 theorem preorderQuotientProjection_op_is_initial
     (I : Type u) [Preorder I] :
@@ -206,14 +229,68 @@ theorem systemPullback_section_iso
     Nonempty (𝟭 (System (PreorderQuotient I) C) ≅
       systemPullbackFunctor (I := I) (C := C) ⋙
         systemSectionFunctor (I := I) (C := C)) := by
-  sorry
+  let e : ∀ q : PreorderQuotient I,
+      q = (preorderQuotientSection I ⋙ preorderQuotientProjection I).obj q :=
+    fun q => by
+      simp [preorderQuotientProjection, preorderQuotientSection]
+  refine ⟨NatIso.ofComponents (fun N => ?_) ?_⟩
+  · refine NatIso.ofComponents (fun q => ?_) ?_
+    change N.obj q ≅ N.obj ((preorderQuotientSection I ⋙ preorderQuotientProjection I).obj q)
+    exact eqToIso (congrArg N.obj (e q))
+    intro q q' f
+    change N.map f ≫ (eqToIso (congrArg N.obj (e q'))).hom =
+      (eqToIso (congrArg N.obj (e q))).hom ≫
+        N.map ((preorderQuotientSection I ⋙ preorderQuotientProjection I).map f)
+    rw [eqToIso.hom, eqToIso.hom, ← eqToHom_map N (e q'),
+      ← eqToHom_map N (e q), ← N.map_comp, ← N.map_comp]
+    congr 1
+  · intro N N' α
+    ext q
+    change α.app q ≫ (eqToIso (congrArg N'.obj (e q))).hom =
+      (eqToIso (congrArg N.obj (e q))).hom ≫
+        α.app ((preorderQuotientSection I ⋙ preorderQuotientProjection I).obj q)
+    simpa [eqToIso.hom, eqToHom_map] using
+      (α.naturality (eqToHom (e q))).symm
 
 theorem systemSection_pullback_iso
     {I : Type u} [Preorder I] {C : Type v} [Category.{w} C] :
     Nonempty (systemSectionFunctor (I := I) (C := C) ⋙
         systemPullbackFunctor (I := I) (C := C) ≅
       𝟭 (System I C)) := by
-  sorry
+  let r : I → I := (preorderQuotientProjection I ⋙ preorderQuotientSection I).obj
+  have hir : ∀ i : I, i ≤ r i := by
+    intro i
+    change i ≤ ofAntisymmetrization (· ≤ ·) (toAntisymmetrization (· ≤ ·) i)
+    apply (toAntisymmetrization_le_toAntisymmetrization_iff).mp
+    simp
+  have hri : ∀ i : I, r i ≤ i := by
+    intro i
+    change ofAntisymmetrization (· ≤ ·) (toAntisymmetrization (· ≤ ·) i) ≤ i
+    apply (toAntisymmetrization_le_toAntisymmetrization_iff).mp
+    simp
+  refine ⟨NatIso.ofComponents (fun M => ?_) ?_⟩
+  · refine NatIso.ofComponents (fun i => ?_) ?_
+    · change M.obj (r i) ≅ M.obj i
+      exact
+        { hom := M.map (homOfLE (hri i))
+          inv := M.map (homOfLE (hir i))
+          hom_inv_id := by
+            rw [← M.map_comp, ← M.map_id]
+            congr 1
+          inv_hom_id := by
+            rw [← M.map_comp, ← M.map_id]
+            congr 1 }
+    · intro i j f
+      change M.map ((preorderQuotientProjection I ⋙ preorderQuotientSection I).map f) ≫
+          M.map (homOfLE (hri j)) =
+        M.map (homOfLE (hri i)) ≫ M.map f
+      rw [← M.map_comp, ← M.map_comp]
+      congr 1
+  · intro M M' α
+    ext i
+    change α.app (r i) ≫ M'.map (homOfLE (hri i)) =
+      M.map (homOfLE (hri i)) ≫ α.app i
+    exact (α.naturality (homOfLE (hri i))).symm
 
 theorem systemPullbackFunctor_is_equivalence
     {I : Type u} [Preorder I] {C : Type v} [Category.{w} C] :
@@ -239,14 +316,75 @@ theorem inverseSystemPullback_section_iso
     Nonempty (𝟭 (InverseSystem (PreorderQuotient I) C) ≅
       inverseSystemPullbackFunctor (I := I) (C := C) ⋙
         inverseSystemSectionFunctor (I := I) (C := C)) := by
-  sorry
+  let e : ∀ q : (PreorderQuotient I)ᵒᵖ,
+      q = ((preorderQuotientSection I).op ⋙
+        (preorderQuotientProjection I).op).obj q :=
+    fun q => by
+      simp [preorderQuotientProjection, preorderQuotientSection]
+  refine ⟨NatIso.ofComponents (fun N => ?_) ?_⟩
+  · refine NatIso.ofComponents (fun q => ?_) ?_
+    change N.obj q ≅ N.obj (((preorderQuotientSection I).op ⋙
+      (preorderQuotientProjection I).op).obj q)
+    exact eqToIso (congrArg N.obj (e q))
+    intro q q' f
+    change N.map f ≫ (eqToIso (congrArg N.obj (e q'))).hom =
+      (eqToIso (congrArg N.obj (e q))).hom ≫
+        N.map (((preorderQuotientSection I).op ⋙
+          (preorderQuotientProjection I).op).map f)
+    rw [eqToIso.hom, eqToIso.hom, ← eqToHom_map N (e q'),
+      ← eqToHom_map N (e q), ← N.map_comp, ← N.map_comp]
+    congr 1
+  · intro N N' α
+    ext q
+    change α.app q ≫ (eqToIso (congrArg N'.obj (e q))).hom =
+      (eqToIso (congrArg N.obj (e q))).hom ≫
+        α.app (((preorderQuotientSection I).op ⋙
+          (preorderQuotientProjection I).op).obj q)
+    simpa [eqToIso.hom, eqToHom_map] using
+      (α.naturality (eqToHom (e q))).symm
 
 theorem inverseSystemSection_pullback_iso
     {I : Type u} [Preorder I] {C : Type v} [Category.{w} C] :
     Nonempty (inverseSystemSectionFunctor (I := I) (C := C) ⋙
         inverseSystemPullbackFunctor (I := I) (C := C) ≅
       𝟭 (InverseSystem I C)) := by
-  sorry
+  let r : I → I := (preorderQuotientProjection I ⋙ preorderQuotientSection I).obj
+  have hir : ∀ i : I, i ≤ r i := by
+    intro i
+    change i ≤ ofAntisymmetrization (· ≤ ·) (toAntisymmetrization (· ≤ ·) i)
+    apply (toAntisymmetrization_le_toAntisymmetrization_iff).mp
+    simp
+  have hri : ∀ i : I, r i ≤ i := by
+    intro i
+    change ofAntisymmetrization (· ≤ ·) (toAntisymmetrization (· ≤ ·) i) ≤ i
+    apply (toAntisymmetrization_le_toAntisymmetrization_iff).mp
+    simp
+  refine ⟨NatIso.ofComponents (fun M => ?_) ?_⟩
+  · refine NatIso.ofComponents (fun i => ?_) ?_
+    · change M.obj (Opposite.op (r i.unop)) ≅ M.obj i
+      exact
+        { hom := M.map (homOfLE (hir i.unop)).op
+          inv := M.map (homOfLE (hri i.unop)).op
+          hom_inv_id := by
+            rw [← M.map_comp, ← M.map_id]
+            congr 1
+          inv_hom_id := by
+            rw [← M.map_comp, ← M.map_id]
+            congr 1 }
+    · intro i j f
+      change M.map (((preorderQuotientProjection I).op ⋙
+        (preorderQuotientSection I).op).map f) ≫
+          M.map (homOfLE (hir j.unop)).op =
+        M.map (homOfLE (hir i.unop)).op ≫ M.map f
+      rw [← M.map_comp, ← M.map_comp]
+      congr 1
+  · intro M M' α
+    ext i
+    change α.app (((preorderQuotientProjection I).op ⋙
+        (preorderQuotientSection I).op).obj i) ≫
+      M'.map (homOfLE (hir i.unop)).op =
+      M.map (homOfLE (hir i.unop)).op ≫ α.app i
+    exact (α.naturality (homOfLE (hir i.unop)).op).symm
 
 theorem inverseSystemPullbackFunctor_is_equivalence
     {I : Type u} [Preorder I] {C : Type v} [Category.{w} C] :
@@ -304,7 +442,9 @@ theorem finite_directed_preorder_has_greatest
 theorem hasColimit_of_finite_directed_system
     {I : Type u} [Finite I] [Preorder I] [Nonempty I] [IsDirectedOrder I]
     {C : Type v} [Category.{w} C] (M : System I C) : HasColimit M := by
-  sorry
+  obtain ⟨i, hi⟩ := finite_directed_preorder_has_greatest I
+  let _ : OrderTop I := { top := i, le_top := hi }
+  infer_instance
 
 theorem finite_directed_system_colimit_iso_stage
     {I : Type u} [Finite I] [Preorder I] [Nonempty I] [IsDirectedOrder I]
@@ -312,7 +452,12 @@ theorem finite_directed_system_colimit_iso_stage
     (i : I) (hi : ∀ j : I, j ≤ i) :
     letI : HasColimit M := hasColimit_of_finite_directed_system M
     Nonempty (colimit M ≅ M.obj i) := by
-  sorry
+  let _ : HasColimit M := hasColimit_of_finite_directed_system M
+  let hterm : IsTerminal i :=
+    IsTerminal.ofUniqueHom (fun j => homOfLE (hi j))
+      (fun j f => Subsingleton.elim _ _)
+  exact ⟨IsColimit.coconePointUniqueUpToIso (colimit.isColimit M)
+    (colimitOfDiagramTerminal hterm M)⟩
 
 /- The source's finite filtered example is the one-object category of the
    two-element monoid with an absorbing idempotent. -/
@@ -379,7 +524,53 @@ theorem idempotentCategory_is_filtered : IsFiltered IdempotentCategory := by
 theorem idempotentCategory_colimit_is_image
     (M : IdempotentCategory ⥤ Type u') :
     Nonempty (colimit M ≃ Types.Image (M.map idempotentMorphism)) := by
-  sorry
+  let c : M.CoconeTypes :=
+    { pt := Types.Image (M.map idempotentMorphism)
+      ι := fun _ => Set.rangeFactorization (M.map idempotentMorphism)
+      ι_naturality := by
+        intro j j' f
+        have hj : j = SingleObj.star IdempotentArrow := Subsingleton.elim _ _
+        have hj' : j' = SingleObj.star IdempotentArrow := Subsingleton.elim _ _
+        subst j
+        subst j'
+        change
+          (Set.rangeFactorization (ConcreteCategory.hom (M.map idempotentMorphism)) ∘
+              ConcreteCategory.hom (M.map f)) =
+            Set.rangeFactorization (ConcreteCategory.hom (M.map idempotentMorphism))
+        cases f with
+        | identity =>
+            funext x
+            simp only [Function.comp_apply]
+            have h : (IdempotentArrow.identity :
+                SingleObj.star IdempotentArrow ⟶ SingleObj.star IdempotentArrow) =
+                (1 : IdempotentArrow) := by
+              rfl
+            rw [h, ← SingleObj.id_as_one IdempotentArrow (SingleObj.star IdempotentArrow),
+              M.map_id]
+            simp
+        | idempotent =>
+            funext x
+            apply Subtype.ext
+            change (M.map idempotentMorphism ≫ M.map idempotentMorphism) x =
+              M.map idempotentMorphism x
+            rw [← M.map_comp, idempotentMorphism_squared] }
+  have hc : c.IsColimit := by
+    refine ⟨?_, ?_⟩
+    · intro x y hxy
+      obtain ⟨i, xi, rfl⟩ := M.ιColimitType_jointly_surjective x
+      obtain ⟨j, yj, rfl⟩ := M.ιColimitType_jointly_surjective y
+      cases i
+      cases j
+      apply M.ιColimitType_eq_of_map_eq_map xi yj
+        (k := SingleObj.star IdempotentArrow) idempotentMorphism idempotentMorphism
+      exact congrArg Subtype.val hxy
+    · intro z
+      obtain ⟨x, hx⟩ := z.property
+      refine ⟨M.ιColimitType (SingleObj.star IdempotentArrow) x, ?_⟩
+      change Set.rangeFactorization (M.map idempotentMorphism) x = z
+      apply Subtype.ext
+      exact hx
+  exact ⟨(Types.colimitEquivColimitType M).trans hc.equiv⟩
 
 /-! ### Finite nonempty inverse systems -/
 

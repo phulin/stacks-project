@@ -81,7 +81,7 @@ theorem inverseLimitSet_isCompact_of_constructibleClosed
     (hZmap : CompatibleSetFamily F Z) :
     IsCompact (inverseLimitSet F Z) := by
   classical
-  letI (j : J) : SpectralSpace (F.obj j) := hF.1 j
+  let (j : J) : SpectralSpace (F.obj j) := hF.1 j
   let hK (j : J) : @CompactSpace (F.obj j) (constructibleTopology (F.obj j)) :=
     (constructibleTopology_is_hausdorff_totallyDisconnected_quasiCompact (X := F.obj j)).2.2
   let hT (j : J) : @T2Space (F.obj j) (constructibleTopology (F.obj j)) :=
@@ -191,15 +191,15 @@ theorem inverseLimitSet_isCompact_of_constructibleClosed
         apply WithTopology.ext
         apply Subtype.ext
         have hcomp := congrArg (fun r => r x.ofTopology) (F.map_comp f g)
-        simpa [CategoryTheory.comp_apply] using hcomp }
-  letI : ∀ j, CompactSpace (FZ.obj j) := fun j => by
+        convert hcomp using 1 <;> simp }
+  let : ∀ j, CompactSpace (FZ.obj j) := fun j => by
     change CompactSpace (Z' j)
     exact @Function.Surjective.compactSpace (Z j) (Z' j) (tZ j)
       (WithTopology.instTopologicalSpace (Z j) (tZ j))
       (WithTopology.toTopology (tZ j))
       (WithTopology.continuous_toTopology (X := Z j) (t := tZ j))
       (hKsub j) (WithTopology.toTopology_surjective (tZ j))
-  letI : ∀ j, T2Space (FZ.obj j) := fun j => by
+  let : ∀ j, T2Space (FZ.obj j) := fun j => by
     change T2Space (Z' j)
     constructor
     intro x y hxy
@@ -221,7 +221,7 @@ theorem inverseLimitSet_isCompact_of_constructibleClosed
     · rw [Set.disjoint_left]
       intro z hzu hzv
       exact (Set.disjoint_left.1 hd) hzu hzv
-  letI : CompactSpace ((limit FZ : TopCat.{max v u}) : Type (max v u)) :=
+  let : CompactSpace ((limit FZ : TopCat.{max v u}) : Type (max v u)) :=
     Formalization.Books.Topology.Unit14.compactSpace_limit_of_compact_Hausdorff FZ
   have hval (j : J) : @Continuous (Z j) (F.obj j) (tZ j) _ Subtype.val := by
     have hid : @Continuous (F.obj j) (F.obj j)
@@ -289,8 +289,8 @@ theorem inverseLimitSet_isCompact_of_constructibleClosed
               intro z
               apply WithTopology.ext
               apply Subtype.ext
-              simpa [FZ, Z', CategoryTheory.comp_apply] using
-                congrArg (fun q => q y) (limit.w F f) } }
+              convert congrArg (fun q => q y) (limit.w F f) using 1 <;>
+                simp [FZ, Z'] } }
     let x := (limit.isLimit FZ).lift S PUnit.unit
     refine ⟨x, ?_⟩
     apply Concrete.limit_ext F
@@ -320,7 +320,7 @@ quasi-compact. -/
 theorem inverseLimit_spectralDiagram_isCompact
     (F : J ⥤ TopCat.{max v u}) (hF : IsSpectralDiagram F) :
     CompactSpace ((limit F : TopCat.{max v u}) : Type (max v u)) := by
-  letI (j : J) : SpectralSpace (F.obj j) := hF.1 j
+  let (j : J) : SpectralSpace (F.obj j) := hF.1 j
   let F' : J ⥤ TopCat.{max v u} :=
     { obj := fun j => TopCat.of (WithConstructibleTopology (F.obj j))
       map := fun {j i} f => TopCat.ofHom
@@ -374,7 +374,7 @@ theorem inverseLimit_spectralDiagram_isCompact
     (constructibleTopology_is_hausdorff_totallyDisconnected_quasiCompact (X := F.obj j)).2.2
   let hT (j : J) : @T2Space (F.obj j) (constructibleTopology (F.obj j)) :=
     (constructibleTopology_is_hausdorff_totallyDisconnected_quasiCompact (X := F.obj j)).1
-  letI : ∀ j, CompactSpace (F'.obj j) := fun j => by
+  let : ∀ j, CompactSpace (F'.obj j) := fun j => by
     change CompactSpace (WithConstructibleTopology (F.obj j))
     exact @Function.Surjective.compactSpace (F.obj j)
       (WithConstructibleTopology (F.obj j))
@@ -385,7 +385,7 @@ theorem inverseLimit_spectralDiagram_isCompact
         (t := constructibleTopology (F.obj j)))
       (hK j)
       (WithTopology.toTopology_surjective (constructibleTopology (F.obj j)))
-  letI : ∀ j, T2Space (F'.obj j) := fun j => by
+  let : ∀ j, T2Space (F'.obj j) := fun j => by
     change T2Space (WithConstructibleTopology (F.obj j))
     constructor
     intro x y hxy
@@ -407,7 +407,7 @@ theorem inverseLimit_spectralDiagram_isCompact
     · rw [Set.disjoint_left]
       intro z hzu hzv
       exact (Set.disjoint_left.1 hd) hzu hzv
-  letI : CompactSpace ((limit F' : TopCat.{max v u}) : Type (max v u)) :=
+  let : CompactSpace ((limit F' : TopCat.{max v u}) : Type (max v u)) :=
     Formalization.Books.Topology.Unit14.compactSpace_limit_of_compact_Hausdorff F'
   have hsource (j : J) : @Continuous (WithConstructibleTopology (F.obj j)) (F.obj j)
       (WithTopology.instTopologicalSpace (F.obj j) (constructibleTopology (F.obj j)))
@@ -475,7 +475,7 @@ theorem inverseLimit_spectralDiagram_isCompact
       exact hfacg
     rw [hfacg']
     change WithTopology.ofTopology ((limit.π F' j) y') = (limit.π F j) y
-    simpa [CategoryTheory.comp_apply, S, y'] using hfac
+    convert hfac using 1; simp [S, y']
   exact Function.Surjective.compactSpace hg hgsurj
 
 end QuasiCompactness
@@ -494,7 +494,7 @@ theorem inverseLimitSet_isNonempty_of_constructibleClosed
     (hZmap : CompatibleSetFamily F Z) :
     (inverseLimitSet F Z).Nonempty := by
   classical
-  letI (j : J) : SpectralSpace (F.obj j) := hF.1 j
+  let (j : J) : SpectralSpace (F.obj j) := hF.1 j
   let hK (j : J) : @CompactSpace (F.obj j) (constructibleTopology (F.obj j)) :=
     (constructibleTopology_is_hausdorff_totallyDisconnected_quasiCompact (X := F.obj j)).2.2
   let hT (j : J) : @T2Space (F.obj j) (constructibleTopology (F.obj j)) :=
@@ -605,18 +605,18 @@ theorem inverseLimitSet_isNonempty_of_constructibleClosed
         apply WithTopology.ext
         apply Subtype.ext
         simp }
-  letI : ∀ j, Nonempty (FZ.obj j) := fun j => by
+  let : ∀ j, Nonempty (FZ.obj j) := fun j => by
     change Nonempty (WithTopology (Z j) (tZ j))
     rcases hZnonempty j with ⟨x, hx⟩
     exact ⟨WithTopology.toTopology (tZ j) ⟨x, hx⟩⟩
-  letI : ∀ j, CompactSpace (FZ.obj j) := fun j => by
+  let : ∀ j, CompactSpace (FZ.obj j) := fun j => by
     change CompactSpace (Z' j)
     exact @Function.Surjective.compactSpace (Z j) (Z' j) (tZ j)
       (WithTopology.instTopologicalSpace (Z j) (tZ j))
       (WithTopology.toTopology (tZ j))
       (WithTopology.continuous_toTopology (X := Z j) (t := tZ j))
       (hKsub j) (WithTopology.toTopology_surjective (tZ j))
-  letI : ∀ j, T2Space (FZ.obj j) := fun j => by
+  let : ∀ j, T2Space (FZ.obj j) := fun j => by
     change T2Space (Z' j)
     constructor
     intro x y hxy
@@ -690,7 +690,7 @@ theorem inverseLimit_spectralDiagram_isNonempty
     (F : J ⥤ TopCat.{max v u}) (hF : IsSpectralDiagram F)
     (hXnonempty : ∀ j, Nonempty (F.obj j)) :
     Nonempty ((limit F : TopCat.{max v u}) : Type (max v u)) := by
-  letI (j : J) : SpectralSpace (F.obj j) := hF.1 j
+  let (j : J) : SpectralSpace (F.obj j) := hF.1 j
   let F' : J ⥤ TopCat.{max v u} :=
     { obj := fun j => TopCat.of (WithConstructibleTopology (F.obj j))
       map := fun {j i} f => TopCat.ofHom
@@ -744,11 +744,11 @@ theorem inverseLimit_spectralDiagram_isNonempty
     (constructibleTopology_is_hausdorff_totallyDisconnected_quasiCompact (X := F.obj j)).2.2
   let hT (j : J) : @T2Space (F.obj j) (constructibleTopology (F.obj j)) :=
     (constructibleTopology_is_hausdorff_totallyDisconnected_quasiCompact (X := F.obj j)).1
-  letI : ∀ j, Nonempty (F'.obj j) := fun j => by
+  let : ∀ j, Nonempty (F'.obj j) := fun j => by
     change Nonempty (WithConstructibleTopology (F.obj j))
     rcases hXnonempty j with ⟨x⟩
     exact ⟨WithTopology.toTopology _ x⟩
-  letI : ∀ j, CompactSpace (F'.obj j) := fun j => by
+  let : ∀ j, CompactSpace (F'.obj j) := fun j => by
     change CompactSpace (WithConstructibleTopology (F.obj j))
     exact @Function.Surjective.compactSpace (F.obj j)
       (WithConstructibleTopology (F.obj j))
@@ -759,7 +759,7 @@ theorem inverseLimit_spectralDiagram_isNonempty
         (t := constructibleTopology (F.obj j)))
       (hK j)
       (WithTopology.toTopology_surjective (constructibleTopology (F.obj j)))
-  letI : ∀ j, T2Space (F'.obj j) := fun j => by
+  let : ∀ j, T2Space (F'.obj j) := fun j => by
     change T2Space (WithConstructibleTopology (F.obj j))
     constructor
     intro x y hxy
@@ -830,9 +830,9 @@ theorem inverseLimit_preimage_subset_iff
     (limit.π F i) ⁻¹' E ⊆ (limit.π F i) ⁻¹' G ↔
       ∃ (j : J) (f : j ⟶ i), (F.map f) ⁻¹' E ⊆ (F.map f) ⁻¹' G := by
   classical
-  letI (j : J) : SpectralSpace (F.obj j) := hF.1 j
+  let (j : J) : SpectralSpace (F.obj j) := hF.1 j
   let K := CategoryTheory.Over i
-  letI : IsCofiltered K := inferInstance
+  let : IsCofiltered K := inferInstance
   let bad (a : K) : Set (F.obj a.left) :=
     (F.map a.hom) ⁻¹' E \ (F.map a.hom) ⁻¹' G
   have hbadclosed (a : K) :
@@ -944,7 +944,7 @@ theorem inverseLimit_preimage_subset_iff
         change F.map (f.left ≫ g.left) x.ofTopology =
           F.map g.left (F.map f.left x.ofTopology)
         have hcomp := congrArg (fun r => r x.ofTopology) (F.map_comp f.left g.left)
-        simpa [CategoryTheory.comp_apply] using hcomp }
+        convert hcomp using 1; simp }
   let hK (a : K) : @CompactSpace (F.obj a.left)
       (constructibleTopology (F.obj a.left)) :=
     (constructibleTopology_is_hausdorff_totallyDisconnected_quasiCompact
@@ -981,14 +981,14 @@ theorem inverseLimit_preimage_subset_iff
     · rw [Set.disjoint_left]
       intro z hzu hzv
       exact (Set.disjoint_left.1 hd) hzu hzv
-  letI : ∀ a, CompactSpace (H.obj a) := fun a => by
+  let : ∀ a, CompactSpace (H.obj a) := fun a => by
     change CompactSpace (HObj a)
     exact @Function.Surjective.compactSpace (bad a) (HObj a) (tbad a)
       (WithTopology.instTopologicalSpace (bad a) (tbad a))
       (WithTopology.toTopology (tbad a))
       (WithTopology.continuous_toTopology (X := bad a) (t := tbad a))
       (hKsub a) (WithTopology.toTopology_surjective (tbad a))
-  letI : ∀ a, T2Space (H.obj a) := fun a => by
+  let : ∀ a, T2Space (H.obj a) := fun a => by
     change T2Space (HObj a)
     constructor
     intro x y hxy
@@ -1020,7 +1020,7 @@ theorem inverseLimit_preimage_subset_iff
         exact hno ⟨a.left, a.hom, hsub⟩
       obtain ⟨x, hxE, hxG⟩ := Set.not_subset.mp hnot
       exact ⟨x, ⟨hxE, hxG⟩⟩
-    letI : ∀ a, Nonempty (H.obj a) := fun a => by
+    let : ∀ a, Nonempty (H.obj a) := fun a => by
       change Nonempty (HObj a)
       obtain ⟨x, hx⟩ := hbadnonempty a
       exact ⟨WithTopology.toTopology (tbad a) ⟨x, hx⟩⟩
@@ -1092,7 +1092,7 @@ theorem inverseLimit_preimage_subset_iff
                   (WithTopology.ofTopology (t := tbad b)
                     ((H.map q) ((limit.π H a) x))).val =
                     (WithTopology.ofTopology (t := tbad b) ((limit.π H b) x)).val := by
-                simpa [CategoryTheory.comp_apply] using hw
+                convert hw using 1; simp
               change (F.map q.left)
                   ((WithTopology.ofTopology (t := tbad a) ((limit.π H a) x)).val) =
                 (WithTopology.ofTopology (t := tbad b) ((limit.π H b) x)).val at hw'
@@ -1153,8 +1153,8 @@ theorem inverseLimit_constructibleSet_descends
         ((IsOpen E → IsOpen E_i) ∧ (IsClosed E → IsClosed E_i)) ∧
           (limit.π F i) ⁻¹' E_i = E := by
   classical
-  letI (j : J) : SpectralSpace (F.obj j) := hF.1 j
-  letI : CompactSpace ((limit F : TopCat.{max v u}) : Type (max v u)) :=
+  let (j : J) : SpectralSpace (F.obj j) := hF.1 j
+  let : CompactSpace ((limit F : TopCat.{max v u}) : Type (max v u)) :=
     inverseLimit_spectralDiagram_isCompact F hF
   have hdesc_open {U : Set ((limit F : TopCat.{max v u}) : Type (max v u))}
       (hUopen : IsOpen U) (hUconstructible : IsConstructible U) :
@@ -1464,7 +1464,7 @@ theorem spectralSpace_of_inverseLimit_spectralDiagram
       SpectralSpace ((limit F : TopCat.{max v u}) : Type (max v u)) ∧
       ∀ i : J, IsSpectralMap (limit.π F i) := by
   classical
-  letI (j : J) : SpectralSpace (F.obj j) := hF.1 j
+  let (j : J) : SpectralSpace (F.obj j) := hF.1 j
   have hpreimagecompact : ∀ (i : J) (U : Set (F.obj i)), IsOpen U → IsCompact U →
       IsCompact ((limit.π F i) ⁻¹' U) := by
     intro i U hUopen hUcompact
@@ -1490,7 +1490,6 @@ theorem spectralSpace_of_inverseLimit_spectralDiagram
     have hZmap : CompatibleSetFamily F Z := by
       intro j k g
       rintro x ⟨y, hy, rfl⟩
-      change (F.map g y) ∈ Z k
       dsimp [Z]
       have hy' : ∀ f : (j ⟶ i), F.map f y ∈ U := by
         intro f
@@ -1617,8 +1616,106 @@ theorem spectralSpace_of_inverseLimit_spectralDiagram
   have hQuasiSeparated : QuasiSeparatedSpace
       ((limit F : TopCat.{max v u}) : Type (max v u)) :=
     QuasiSeparatedSpace.of_isTopologicalBasis hb hintercompact
+  have hQuasiSober : QuasiSober
+      ((limit F : TopCat.{max v u}) : Type (max v u)) := by
+    let hBasis : IsTopologicalBasis
+        {U : Set ((limit F : TopCat.{max v u}) : Type (max v u)) |
+          IsOpen U ∧ IsCompact U} :=
+      @PrespectralSpace.isTopologicalBasis
+        ((limit F : TopCat.{max v u}) : Type (max v u)) _ hPrespectral
+    refine { sober := ?_ }
+    intro Z hZ hZclosed
+    let Zi : ∀ i : J, Set (F.obj i) := fun i =>
+      closure ((limit.π F i) '' Z)
+    have hZi : ∀ i : J, IsIrreducible (Zi i) := by
+      intro i
+      dsimp [Zi]
+      exact (hZ.image (limit.π F i) (limit.π F i).hom.2.continuousOn).closure
+    let ξ : ∀ i : J, F.obj i := fun i =>
+      Classical.choose (QuasiSober.sober (hZi i) isClosed_closure)
+    have hξ : ∀ i : J, IsGenericPoint (ξ i) (Zi i) := by
+      intro i
+      exact Classical.choose_spec (QuasiSober.sober (hZi i) isClosed_closure)
+    have hcoord (j i : J) (f : j ⟶ i)
+        (z : ((limit F : TopCat.{max v u}) : Type (max v u))) :
+        F.map f ((limit.π F j) z) = (limit.π F i) z := by
+      have hfac := congrArg (fun q => q z) (limit.w F f)
+      change F.map f ((limit.π F j) z) = (limit.π F i) z at hfac
+      exact hfac
+    have himage (j i : J) (f : j ⟶ i) :
+        (F.map f) '' ((limit.π F j) '' Z) = (limit.π F i) '' Z := by
+      ext y
+      constructor
+      · rintro ⟨y', ⟨z, hz, rfl⟩, rfl⟩
+        exact ⟨z, hz, (hcoord j i f z).symm⟩
+      · rintro ⟨z, hz, rfl⟩
+        exact ⟨(limit.π F j) z, ⟨z, hz, rfl⟩, hcoord j i f z⟩
+    have hclosure (j i : J) (f : j ⟶ i) :
+        closure ((F.map f) '' Zi j) = Zi i := by
+      dsimp [Zi]
+      rw [closure_image_closure (hF.2 j i f).continuous, himage j i f]
+    have hξmap (j i : J) (f : j ⟶ i) : F.map f (ξ j) = ξ i := by
+      have hgen := (hξ j).image (hF.2 j i f).continuous
+      rw [hclosure j i f] at hgen
+      exact ((hξ i).eq hgen).symm
+    let cone : Cone F :=
+      { pt := TopCat.of PUnit
+        π :=
+          { app := fun i => TopCat.ofHom
+              { toFun := fun _ => ξ i
+                continuous_toFun := continuous_const }
+            naturality := by
+              intro j i f
+              apply TopCat.ext
+              intro z
+              change ξ i = F.map f (ξ j)
+              exact (hξmap j i f).symm } }
+    let x := (limit.isLimit F).lift cone PUnit.unit
+    have hxZ : x ∈ Z := by
+      by_contra hx
+      have hxopen : x ∈ Zᶜ := by simpa only [mem_compl_iff] using hx
+      obtain ⟨B, hB, hxB, hBZ⟩ :=
+        hb.exists_subset_of_mem_open hxopen hZclosed.isOpen_compl
+      rcases hB with ⟨⟨i, U⟩, rfl⟩
+      change (limit.π F i) x ∈ (U : Set (F.obj i)) at hxB
+      have hfac := congrArg (fun q => q PUnit.unit)
+        ((limit.isLimit F).fac cone i)
+      change (limit.π F i) x = ξ i at hfac
+      have hξU : ξ i ∈ (U : Set (F.obj i)) := by
+        rw [← hfac]
+        exact hxB
+      obtain ⟨y, hyZi, hyU⟩ :=
+        (hξ i).mem_open_set_iff U.property.1 |>.mp hξU
+      change y ∈ closure ((limit.π F i) '' Z) at hyZi
+      obtain ⟨z, hzU, hzimage⟩ :=
+        mem_closure_iff.mp hyZi (U : Set (F.obj i)) U.property.1 hyU
+      rcases hzimage with ⟨z', hzZ, rfl⟩
+      exact (hBZ hzU) hzZ
+    refine ⟨x, ?_⟩
+    apply Set.Subset.antisymm
+    · exact closure_minimal (singleton_subset_iff.mpr hxZ) hZclosed
+    · intro z hz
+      apply hBasis.mem_closure_iff.mpr
+      intro U hU hzU
+      obtain ⟨B, hB, hzB, hBU⟩ := hb.exists_subset_of_mem_open hzU hU.1
+      rcases hB with ⟨⟨i, V⟩, rfl⟩
+      change (limit.π F i) z ∈ (V : Set (F.obj i)) at hzB
+      have hξV : ξ i ∈ (V : Set (F.obj i)) := by
+        apply (hξ i).mem_open_set_iff V.property.1 |>.mpr
+        refine ⟨(limit.π F i) z, ?_, hzB⟩
+        change (limit.π F i) z ∈ closure ((limit.π F i) '' Z)
+        exact subset_closure ⟨z, hz, rfl⟩
+      refine ⟨x, hBU ?_, by simp⟩
+      change (limit.π F i) x ∈ (V : Set (F.obj i))
+      have hfac := congrArg (fun q => q PUnit.unit)
+        ((limit.isLimit F).fac cone i)
+      change (limit.π F i) x = ξ i at hfac
+      rw [hfac]
+      exact hξV
   refine ⟨?_, ?_⟩
-  · sorry
+  · exact spectralSpace_iff_source_conditions.mpr
+      ⟨hT0, inverseLimit_spectralDiagram_isCompact F hF, hQuasiSober,
+        hQuasiSeparated, hPrespectral⟩
   · intro i
     refine ⟨(limit.π F i).hom.2, ?_⟩
     intro U hUopen hUcompact
@@ -1639,7 +1736,7 @@ theorem inverseLimit_quasiCompactOpen_descends
     ∃ (i : J) (U_i : Set (F.obj i)),
       IsOpen U_i ∧ IsCompact U_i ∧ (limit.π F i) ⁻¹' U_i = U := by
   classical
-  letI (j : J) : SpectralSpace (F.obj j) := hF.1 j
+  let (j : J) : SpectralSpace (F.obj j) := hF.1 j
   obtain ⟨j, V, hVopen, hUV⟩ :=
     Formalization.Books.Topology.Unit14.cofiltered_limit_quasiCompact_open_eq_preimage
       F hUopen hUcompact
@@ -1692,7 +1789,7 @@ theorem inverseLimit_quasiCompactOpen_subset_descends
     ∃ (k : J) (a : k ⟶ i) (b : k ⟶ j),
       (F.map a) ⁻¹' U_i ⊆ (F.map b) ⁻¹' U_j := by
   classical
-  letI (r : J) : SpectralSpace (F.obj r) := hF.1 r
+  let (r : J) : SpectralSpace (F.obj r) := hF.1 r
   have hcommon (i j : J) :
       ∃ (k : J) (a : k ⟶ i) (b : k ⟶ j), True := by
     let s : Finset J := {i, j}
@@ -1759,7 +1856,7 @@ theorem inverseLimit_quasiCompactOpen_union_descends
     ∃ (j : J) (a : j ⟶ i),
       (F.map a) ⁻¹' U_i = ⋃ l, (F.map a) ⁻¹' (U_ι l) := by
   classical
-  letI (r : J) : SpectralSpace (F.obj r) := hF.1 r
+  let (r : J) : SpectralSpace (F.obj r) := hF.1 r
   let C : Set (F.obj i) := ⋃ l, U_ι l
   have hCopen : IsOpen C := by
     dsimp [C]
@@ -1855,7 +1952,7 @@ theorem inverseLimit_quasiCompactOpen_inter_descends
     ∃ (j : J) (a : j ⟶ i),
       (F.map a) ⁻¹' U_i = ⋂ l, (F.map a) ⁻¹' (U_ι l) := by
   classical
-  letI (r : J) : SpectralSpace (F.obj r) := hF.1 r
+  let (r : J) : SpectralSpace (F.obj r) := hF.1 r
   let C : Set (F.obj i) := ⋂ l, U_ι l
   have hCopen : IsOpen C := by
     dsimp [C]
@@ -2000,7 +2097,146 @@ theorem isIntersectionOfConstructibleSets_iff_isCompact_iff_pointsSpecializingTo
           IsIntersectionOfQuasiCompactOpens W) ∧
           (IsIntersectionOfQuasiCompactOpens W ↔
             IsDirectedIntersectionOfQuasiCompactOpens W) := by
-  sorry
+  have hAtoB (hA : IsIntersectionOfConstructibleSets W) : IsCompact W := by
+    rcases hA with ⟨S, hWS, hS⟩
+    have hWclosed : IsClosed[constructibleTopology X] W := by
+      rw [hWS]
+      exact @isClosed_sInter X (constructibleTopology X) S (fun E hE =>
+        (isConstructible_isOpen_isClosed_constructibleTopology (hS E hE)).2)
+    have hWcompactCT : @IsCompact X (constructibleTopology X) W :=
+      @IsClosed.isCompact X (constructibleTopology X) W
+        (constructibleTopology_is_hausdorff_totallyDisconnected_quasiCompact (X := X)).2.2
+        hWclosed
+    apply isCompact_iff_finite_subcover.mpr
+    intro ι U hUopen hWcover
+    obtain ⟨s, hs⟩ :=
+      (@isCompact_iff_finite_subcover X (constructibleTopology X) W).mp hWcompactCT U
+        (fun i => isOpen_constructibleTopology_of_isOpen (hUopen i)) hWcover
+    exact ⟨s, hs⟩
+  have hpointsStable (E : Set X) :
+      StableUnderGeneralization (pointsSpecializingTo E) := by
+    intro x y hyx hx
+    rcases hx with ⟨z, hz, hxz⟩
+    exact ⟨z, hz, hyx.trans hxz⟩
+  have hpointsCompact (E : Set X) (hEcompact : IsCompact E) :
+      IsCompact (pointsSpecializingTo E) := by
+    apply isCompact_iff_finite_subcover.mpr
+    intro ι U hUopen hcover
+    have hEcover : E ⊆ ⋃ i, U i := by
+      intro x hx
+      exact hcover ⟨x, hx, specializes_rfl⟩
+    obtain ⟨s, hs⟩ := hEcompact.elim_finite_subcover U hUopen hEcover
+    refine ⟨s, ?_⟩
+    intro x hx
+    rcases hx with ⟨y, hy, hxy⟩
+    rcases mem_iUnion₂.mp (hs hy) with ⟨i, hi, hyi⟩
+    exact mem_iUnion₂.mpr ⟨i, hi, (hUopen i).stableUnderGeneralization hxy hyi⟩
+  have hBC :
+      (IsCompact W ∧ StableUnderGeneralization W ↔
+        ∃ E : Set X, IsCompact E ∧ W = pointsSpecializingTo E) := by
+    constructor
+    · rintro ⟨hWcompact, hWstable⟩
+      refine ⟨W, hWcompact, ?_⟩
+      ext x
+      constructor
+      · intro hx
+        exact ⟨x, hx, specializes_rfl⟩
+      · rintro ⟨y, hy, hxy⟩
+        exact hWstable hxy hy
+    · rintro ⟨E, hEcompact, hWE⟩
+      refine ⟨?_, ?_⟩
+      · rw [hWE]
+        exact hpointsCompact E hEcompact
+      · rw [hWE]
+        exact hpointsStable E
+  have hCtoQ :
+      (∃ E : Set X, IsCompact E ∧ W = pointsSpecializingTo E) →
+        IsIntersectionOfQuasiCompactOpens W := by
+    rintro ⟨E, hEcompact, hWE⟩
+    have hWcompact : IsCompact W := by
+      rw [hWE]
+      exact hpointsCompact E hEcompact
+    let I : Set (Set X) :=
+      {U | IsOpen U ∧ IsCompact U ∧ W ⊆ U}
+    have hWI : W = ⋂₀ I := by
+      apply Set.Subset.antisymm
+      · intro x hx
+        exact Set.mem_sInter.2 (fun U hU => hU.2.2 hx)
+      · intro x hx
+        by_contra hxW
+        have hdisjoint : W ⊆ (closure ({x} : Set X))ᶜ := by
+          intro y hyW hycl
+          have hxy : x ⤳ y := specializes_iff_mem_closure.mpr hycl
+          rw [hWE] at hyW
+          rcases hyW with ⟨z, hz, hyz⟩
+          apply hxW
+          rw [hWE]
+          exact ⟨z, hz, hxy.trans hyz⟩
+        obtain ⟨U, hUcompact, hUopen, hWU, hUZ⟩ :=
+          PrespectralSpace.exists_isCompact_and_isOpen_between hWcompact
+            isClosed_closure.isOpen_compl hdisjoint
+        have hUmem : U ∈ I := ⟨hUopen, hUcompact, hWU⟩
+        have hxU := Set.mem_sInter.1 hx U hUmem
+        exact (hUZ hxU) (subset_closure (by simp))
+    refine ⟨I, hWI, ?_⟩
+    intro U hU
+    exact ⟨hU.1, hU.2.1⟩
+  have hQtoD :
+      IsIntersectionOfQuasiCompactOpens W →
+        IsDirectedIntersectionOfQuasiCompactOpens W := by
+    rintro ⟨S, hWS, hS⟩
+    let I : Set (Set X) :=
+      {U | IsOpen U ∧ IsCompact U ∧ W ⊆ U}
+    have hI : IsDirectedFamilyOfQuasiCompactOpens I := by
+      refine ⟨?_, ?_, ?_⟩
+      · exact ⟨Set.univ, ⟨isOpen_univ, isCompact_univ, subset_univ _⟩⟩
+      · intro U hU
+        exact ⟨hU.1, hU.2.1⟩
+      · intro U hU V hV
+        refine ⟨U ∩ V, ?_, ?_⟩
+        · exact ⟨hU.1.inter hV.1,
+            QuasiSeparatedSpace.inter_isCompact _ _ hU.1 hU.2.1 hV.1 hV.2.1,
+            fun x hx => ⟨hU.2.2 hx, hV.2.2 hx⟩⟩
+        · exact subset_rfl
+    have hWI : W = ⋂₀ I := by
+      apply Set.Subset.antisymm
+      · intro x hx
+        exact Set.mem_sInter.2 (fun U hU => hU.2.2 hx)
+      · intro x hx
+        rw [hWS]
+        exact Set.mem_sInter.2 (fun U hU =>
+          Set.mem_sInter.1 hx U
+            ⟨(hS U hU).1, (hS U hU).2, by
+              rw [hWS]
+              exact Set.sInter_subset_of_mem hU⟩)
+    exact ⟨I, hI, hWI⟩
+  have hDtoA :
+      IsDirectedIntersectionOfQuasiCompactOpens W →
+        IsIntersectionOfConstructibleSets W ∧ StableUnderGeneralization W := by
+    rintro ⟨I, hI, hWI⟩
+    refine ⟨⟨I, hWI, ?_⟩, ?_⟩
+    · intro U hU
+      exact (hI.2.1 U hU).2.isConstructible (hI.2.1 U hU).1
+    · rw [hWI]
+      exact stableUnderGeneralization_sInter I
+        (fun U hU => (hI.2.1 U hU).1.stableUnderGeneralization)
+  have hfirst :
+      (IsIntersectionOfConstructibleSets W ∧ StableUnderGeneralization W ↔
+        IsCompact W ∧ StableUnderGeneralization W) := by
+    constructor
+    · rintro ⟨hA, hstable⟩
+      exact ⟨hAtoB hA, hstable⟩
+    · intro hB
+      exact hDtoA (hQtoD (hCtoQ (hBC.mp hB)))
+  refine ⟨hfirst, hBC, ?_, ?_⟩
+  · constructor
+    · exact hCtoQ
+    · intro hQ
+      exact hBC.mp (hfirst.mp (hDtoA (hQtoD hQ)))
+  · constructor
+    · exact hQtoD
+    · intro hD
+      exact hCtoQ (hBC.mp (hfirst.mp (hDtoA hD)))
 
 /-- A directed intersection of quasi-compact opens in a spectral space is
 spectral for its induced topology. -/
@@ -2167,7 +2403,7 @@ theorem exists_member_of_isDirectedFamilyOfQuasiCompactOpens_subset_of_open
     | empty =>
         refine ⟨U₀, ?_⟩
         intro T hT
-        exact (by simpa using hT : False).elim
+        simp at hT
     | @insert T s hTs ih =>
         obtain ⟨V, hVs⟩ := ih
         obtain ⟨R, hR, hRT⟩ := hI.2.2 T T.property V V.property
@@ -2228,7 +2464,48 @@ that subset leaves a spectral space. -/
 theorem spectralSpace_pointsSpecializingTo_diff_constructible
     [SpectralSpace X] {E : Set X} (hE : IsConstructible E) :
     SpectralSpace (Set.diff (pointsSpecializingTo E) E) := by
-  sorry
+  have hEclosed : IsClosed[constructibleTopology X] E :=
+    (isConstructible_isOpen_isClosed_constructibleTopology hE).2
+  have hEcompactCT : @IsCompact X (constructibleTopology X) E :=
+    @IsClosed.isCompact X (constructibleTopology X) E
+      (constructibleTopology_is_hausdorff_totallyDisconnected_quasiCompact (X := X)).2.2
+      hEclosed
+  have hEcompact : IsCompact E := by
+    apply isCompact_iff_finite_subcover.mpr
+    intro ι U hUopen hEcover
+    obtain ⟨s, hs⟩ :=
+      (@isCompact_iff_finite_subcover X (constructibleTopology X) E).mp hEcompactCT U
+        (fun i => isOpen_constructibleTopology_of_isOpen (hUopen i)) hEcover
+    exact ⟨s, hs⟩
+  have hchar :=
+    isIntersectionOfConstructibleSets_iff_isCompact_iff_pointsSpecializingTo
+      (X := X) (W := pointsSpecializingTo E)
+  have hQ : IsIntersectionOfQuasiCompactOpens (pointsSpecializingTo E) :=
+    hchar.2.2.1.mp ⟨E, hEcompact, rfl⟩
+  have hD : IsDirectedIntersectionOfQuasiCompactOpens (pointsSpecializingTo E) :=
+    hchar.2.2.2.mp hQ
+  rcases hD with ⟨I, hI, hWI⟩
+  apply spectralSpace_subtype_of_constructible_closed
+  rw [hWI]
+  have hEopen : IsOpen[constructibleTopology X] E :=
+    (isConstructible_isOpen_isClosed_constructibleTopology hE).1
+  have hEcompclosed : IsClosed[constructibleTopology X] Eᶜ :=
+    (@isClosed_compl_iff X (constructibleTopology X) E).mpr hEopen
+  have hWclosed : IsClosed[constructibleTopology X] (⋂₀ I) :=
+    @isClosed_sInter X (constructibleTopology X) I (fun U hU =>
+      (isConstructible_isOpen_isClosed_constructibleTopology
+        ((hI.2.1 U hU).2.isConstructible (hI.2.1 U hU).1)).2)
+  have hinter : IsClosed[constructibleTopology X] ((⋂₀ I) ∩ Eᶜ) :=
+    @IsClosed.inter X (⋂₀ I) Eᶜ (constructibleTopology X) hWclosed hEcompclosed
+  have hdiff : (⋂₀ I).diff E = (⋂₀ I) ∩ Eᶜ := by
+    ext x
+    constructor
+    · intro hx
+      exact ⟨Set.mem_sInter.1 hx.1, hx.2⟩
+    · rintro ⟨hxI, hxE⟩
+      exact ⟨hxI, hxE⟩
+  rw [hdiff]
+  exact hinter
 
 /-- The difference of the points specializing to a constructible subset
 is the limit of the corresponding differences of a directed quasi-compact-open

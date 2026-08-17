@@ -1,6 +1,7 @@
 import Mathlib.CategoryTheory.Bicategory.FunctorBicategory.Pseudo
 import Mathlib.CategoryTheory.Sites.Descent.IsStack
 import Mathlib.CategoryTheory.Groupoid.Discrete
+import Formalization.Books.Categories.Unit31.TwoFibreProducts
 
 /-!
 # Stacks, Chapter 1: shared interfaces
@@ -14,6 +15,7 @@ namespace Formalization.Books.Stacks.Unit01
 open CategoryTheory
 open CategoryTheory.Limits
 open CategoryTheory.Pseudofunctor
+open Formalization.Books.Categories.Unit31
 open Opposite
 
 open scoped CategoryTheory.Pseudofunctor.StrongTrans
@@ -210,12 +212,144 @@ structure TwoFiberProductCone (F G H : FiberedCategory C)
   commutes : left ≫ f ≅ right ≫ g
   isTwoPullback : IsTwoPullbackCone f g left right commutes
 
-/- TODO(stacks-foundation): Construct the reusable cone above pointwise as the
-iso-comma category of `f.app U` and `g.app U`.  Reindexing is componentwise,
-with the strong-transformation coherence isomorphisms supplying the comparison
-arrow.  First prove the pointwise universal property, then package it as
-`IsTwoPullbackCone`; stack/groupoid/setoid closure should depend on that one
-construction instead of rebuilding a cone in each downstream theorem. -/
+/-! ### The canonical pointwise two-fibre product
+
+The value of the two-fibre product over `U` is the iso-comma category of the
+two component functors `f.app U` and `g.app U`.  The map on a morphism `q` of
+the base is the iso-comma map induced by the three reindexing functors and the
+two strong-transformation coherence isomorphisms.  The coherence fields of
+the resulting pseudofunctor, and its bicategorical universal property, are
+recorded below so that later stack arguments use one canonical cone.
+-/
+
+noncomputable def pointwiseTwoFiberProductReindex
+    {C : Type u} [Category.{v} C]
+    {F G H : FiberedCategory C} (f : FiberedMorphism F H)
+    (g : FiberedMorphism G H) {U V : LocallyDiscrete Cᵒᵖ} (q : U ⟶ V) :
+    IsoComma ((f.app U).toFunctor) ((g.app U).toFunctor) ⥤
+      IsoComma ((f.app V).toFunctor) ((g.app V).toFunctor) :=
+  isoCommaMap
+    ((f.app V).toFunctor) ((g.app V).toFunctor)
+    ((f.app U).toFunctor) ((g.app U).toFunctor)
+    ((F.map q).toFunctor) ((G.map q).toFunctor) ((H.map q).toFunctor)
+    (Cat.Hom.toNatIso (g.naturality q))
+    (Cat.Hom.toNatIso (f.naturality q).symm)
+
+noncomputable def pointwiseTwoFiberProductApex
+    {C : Type u} [Category.{v} C]
+    {F G H : FiberedCategory C} (f : FiberedMorphism F H)
+    (g : FiberedMorphism G H) : FiberedCategory C :=
+  LocallyDiscrete.mkPseudofunctor
+    (fun U : Cᵒᵖ =>
+      Cat.of (IsoComma ((f.app (.mk U)).toFunctor) ((g.app (.mk U)).toFunctor)))
+    (fun {U V : Cᵒᵖ} q =>
+      (pointwiseTwoFiberProductReindex f g (Discrete.mk q)).toCatHom)
+    (fun U => by
+      sorry)
+    (fun {U V W : Cᵒᵖ} q r => by
+      sorry)
+    (fun {U V W X : Cᵒᵖ} q r s => by
+      sorry)
+    (fun {U V : Cᵒᵖ} q => by
+      sorry)
+    (fun {U V : Cᵒᵖ} q => by
+      sorry)
+
+noncomputable def pointwiseTwoFiberProductLeft
+    {C : Type u} [Category.{v} C]
+    {F G H : FiberedCategory C} (f : FiberedMorphism F H)
+    (g : FiberedMorphism G H) :
+    FiberedMorphism (pointwiseTwoFiberProductApex f g) F := by
+  exact
+    { app := fun U => by
+        change Cat.of (IsoComma ((f.app U).toFunctor) ((g.app U).toFunctor)) ⟶ F.obj U
+        exact (isoCommaLeft ((f.app U).toFunctor) ((g.app U).toFunctor)).toCatHom
+      naturality := by
+        intro U V q
+        sorry
+      naturality_naturality := by
+        intro U V q r h
+        sorry
+      naturality_id := by
+        intro U
+        sorry
+      naturality_comp := by
+        intro U V W q r
+        sorry }
+
+noncomputable def pointwiseTwoFiberProductRight
+    {C : Type u} [Category.{v} C]
+    {F G H : FiberedCategory C} (f : FiberedMorphism F H)
+    (g : FiberedMorphism G H) :
+    FiberedMorphism (pointwiseTwoFiberProductApex f g) G := by
+  exact
+    { app := fun U => by
+        change Cat.of (IsoComma ((f.app U).toFunctor) ((g.app U).toFunctor)) ⟶ G.obj U
+        exact (isoCommaRight ((f.app U).toFunctor) ((g.app U).toFunctor)).toCatHom
+      naturality := by
+        intro U V q
+        sorry
+      naturality_naturality := by
+        intro U V q r h
+        sorry
+      naturality_id := by
+        intro U
+        sorry
+      naturality_comp := by
+        intro U V W q r
+        sorry }
+
+noncomputable def pointwiseTwoFiberProductCommutes
+    {C : Type u} [Category.{v} C]
+    {F G H : FiberedCategory C} (f : FiberedMorphism F H)
+    (g : FiberedMorphism G H) :
+    pointwiseTwoFiberProductLeft f g ≫ f ≅
+      pointwiseTwoFiberProductRight f g ≫ g := by
+  refine Pseudofunctor.StrongTrans.isoMk (fun U => ?_) ?_
+  · dsimp [pointwiseTwoFiberProductLeft, pointwiseTwoFiberProductRight,
+      Pseudofunctor.StrongTrans.vcomp]
+    exact Cat.Hom.isoMk
+      (isoCommaComparisonIso ((f.app U).toFunctor) ((g.app U).toFunctor))
+  · intro U V q
+    sorry
+
+noncomputable def pointwiseTwoFiberProductCone
+    {C : Type u} [Category.{v} C]
+    {F G H : FiberedCategory C} (f : FiberedMorphism F H)
+    (g : FiberedMorphism G H) : TwoFiberProductCone F G H f g :=
+  { apex := pointwiseTwoFiberProductApex f g
+    left := pointwiseTwoFiberProductLeft f g
+    right := pointwiseTwoFiberProductRight f g
+    commutes := pointwiseTwoFiberProductCommutes f g
+    isTwoPullback := by
+      sorry }
+
+theorem pointwiseTwoFiberProductCone_isTwoPullback
+    {C : Type u} [Category.{v} C]
+    {F G H : FiberedCategory C} (f : FiberedMorphism F H)
+    (g : FiberedMorphism G H) :
+    IsTwoPullbackCone f g
+      (pointwiseTwoFiberProductCone f g).left
+      (pointwiseTwoFiberProductCone f g).right
+      (pointwiseTwoFiberProductCone f g).commutes :=
+  (pointwiseTwoFiberProductCone f g).isTwoPullback
+
+theorem pointwiseTwoFiberProductCone_apex_is_stack
+    {C : Type u} [Category.{v} C]
+    (J : GrothendieckTopology C) {F G H : FiberedCategory C}
+    (hF : Stack F J) (hG : Stack G J) (hH : Stack H J)
+    (f : FiberedMorphism F H) (g : FiberedMorphism G H) :
+    Stack (pointwiseTwoFiberProductCone f g).apex J := by
+  sorry
+
+theorem pointwise_two_fibre_product_of_stacks
+    {C : Type u} [Category.{v} C]
+    (J : GrothendieckTopology C) {F G H : FiberedCategory C}
+    (hF : Stack F J) (hG : Stack G J) (hH : Stack H J)
+    (f : FiberedMorphism F H) (g : FiberedMorphism G H) :
+    ∃ P : TwoFiberProductCone F G H f g, Stack P.apex J := by
+  refine ⟨pointwiseTwoFiberProductCone f g, ?_⟩
+  exact pointwiseTwoFiberProductCone_apex_is_stack J hF hG hH f g
 
 def IsSheafification {C : Type u} [Category.{v} C]
     (J : GrothendieckTopology C)

@@ -91,7 +91,7 @@ theorem two_fibre_product_of_stacks {C : Type u} [Category.{v} C]
     (hF : Stack F J) (hG : Stack G J) (hH : Stack H J)
     (f : FiberedMorphism F H) (g : FiberedMorphism G H) :
     ∃ P : TwoFiberProductCone F G H f g, Stack P.apex J := by
-  sorry
+  exact pointwise_two_fibre_product_of_stacks J hF hG hH f g
 
 theorem characterize_fully_faithful {C : Type u} [Category.{v} C]
     {J : GrothendieckTopology C} {F G : FiberedCategory C}

@@ -65,7 +65,7 @@ structure StandardOpenCoverOfAffineOpen (X : Scheme.{u}) where
 theorem StandardOpenCover.iSup_basicOpen {Y : Scheme.{u}} {hY : IsAffine Y}
     (𝒰 : StandardOpenCover Y hY) :
     ⨆ i, 𝒰.basicOpen i = ⊤ := by
-  letI := hY
+  let := hY
   change (⨆ i, Y.basicOpen (𝒰.function i)) = ⊤
   rw [← iSup_range]
   exact iSup_basicOpen_of_span_eq_top (⊤ : Y.Opens) (Set.range 𝒰.function) 𝒰.span_eq_top
@@ -75,12 +75,13 @@ theorem StandardOpenCover.iSup_basicOpen {Y : Scheme.{u}} {hY : IsAffine Y}
 /-- Cohomology of a sheaf of modules, as an object of `AddCommGrpCat`. -/
 noncomputable def schemeCohomologyObject {Y : Scheme.{u}} (M : Y.Modules) (n : ℕ)
     [hY : CategoryTheory.HasExt.{u} Y.Modules] : AddCommGrpCat.{u} :=
-  (CategoryTheory.Abelian.extFunctorObj
+  (CategoryTheory.Abelian.extFunctorObj.{u, u, u + 1}
     (SheafOfModules.unit Y.ringCatSheaf) n).obj M
 
 /-- Cohomology of a sheaf of modules on an open subscheme. -/
 noncomputable def schemeCohomologyOn {X : Scheme.{u}} (M : X.Modules)
     (U : X.Opens) (n : ℕ) [CategoryTheory.HasExt.{u} (U : Scheme).Modules] :
+  AddCommGrpCat.{u} :=
   schemeCohomologyObject (M.restrict U.ι) n
 
 /-- The additive group of global sections used to augment a Čech complex. -/
@@ -120,8 +121,8 @@ noncomputable def cechAugmentation {Y : Scheme.{u}} {ι : Type u} (M : Y.Modules
       M.presheaf.map (homOfLE (show (∏ᶜ U ∘ i) ≤ ⊤ by simp)).op))
 
 /-- Data expressing exactness of the augmented Čech complex. -/
-structure AugmentedCechExactnessData {Y : Scheme.{u}} {ι : Type u} : Prop
-    (M : Y.Modules) (U : ι → Y.Opens) where
+structure AugmentedCechExactnessData {Y : Scheme.{u}} {ι : Type u}
+    (M : Y.Modules) (U : ι → Y.Opens) : Prop where
   augmentation_is_cycle :
     cechAugmentation M U ≫ (cechComplex M U).d 0 1 = 0
   exact_at_zero :
@@ -208,14 +209,6 @@ theorem localized_cech_homotopy_data_nonempty {Y : Scheme.{u}} {hY : IsAffine Y}
 
 /-! ### Affine morphisms and higher direct images -/
 
-/-- The missing infrastructure needed to form the right-derived pushforward.
-
-Mathlib provides `Functor.rightDerived` for any additive functor once the
-source category has chosen injective resolutions.  The scheme-module API does
-not currently provide that instance. -/
--- `Functor.rightDerived` uses Mathlib's `HasInjectiveResolutions` assumption
--- directly; the scheme-module API does not provide that instance automatically.
-
 /-- The `i`th right-derived pushforward. -/
 noncomputable def higherDirectImage {X S : Scheme.{u}} (f : X ⟶ S)
     [CategoryTheory.HasInjectiveResolutions X.Modules] (i : ℕ) : X.Modules ⥤ S.Modules :=
@@ -275,28 +268,28 @@ theorem affine_diagonal_iff {X : Scheme.{u}} :
   rw [AffineOpenIntersections]
   constructor
   · intro h
-    letI : IsAffineHom (pullback.diagonal (terminal.from X)) := hleft.mpr h
+    let : IsAffineHom (pullback.diagonal (terminal.from X)) := hleft.mpr h
     refine ⟨{ cover := X.affineOpenCover.openCover, intersections_affine := ?_ }⟩
     intro n i
     apply IsAffineOpen.iInf
     intro j
     have hAff : IsAffine (X.affineOpenCover.openCover.X (i j)) :=
       Scheme.isAffine_affineOpenCover X X.affineOpenCover (i j)
-    letI := hAff
+    let := hAff
     exact isAffineOpen_opensRange (X.affineOpenCover.openCover.f (i j))
   · rintro ⟨𝒰⟩
     have hAff (i : 𝒰.cover.I₀) : IsAffine (𝒰.cover.X i) := by
       have htop : IsAffineOpen (⊤ : (𝒰.cover.X i).Opens) := by
         apply (𝒰.cover.f i).isAffineOpen_iff_of_isOpenImmersion (U := ⊤) |>.mp
         simpa using 𝒰.intersections_affine 0 (fun _ : Fin 1 => i)
-      letI : IsAffine (↑(⊤ : (𝒰.cover.X i).Opens)) := htop
+      let : IsAffine (↑(⊤ : (𝒰.cover.X i).Opens)) := htop
       exact IsAffine.of_isIso (𝒰.cover.X i).topIso.inv
-    letI : ∀ i, IsAffine (𝒰.cover.X i) := hAff
+    let : ∀ i, IsAffine (𝒰.cover.X i) := hAff
     let Q : AffineTargetMorphismProperty := fun X _ _ _ => IsAffine X
-    letI : HasAffineProperty (@IsAffineHom) Q := by
+    let : HasAffineProperty (@IsAffineHom) Q := by
       simpa [Q] using instHasAffinePropertyIsAffineHomIsAffine
     have hQ : Q.diagonal (terminal.from X) := by
-      letI : Q.IsLocal :=
+      let : Q.IsLocal :=
         HasAffineProperty.isLocal_affineProperty (P := @IsAffineHom) (Q := Q)
       apply AffineTargetMorphismProperty.diagonal_of_openCover_source
         (Q := Q) (terminal.from X) 𝒰.cover

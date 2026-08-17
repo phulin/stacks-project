@@ -95,7 +95,22 @@ theorem isLocallyConstructible_iff_exists_isOpenCover {E : Set X} :
       ∃ (ι : Type u) (V : ι → Opens X),
         IsOpenCover V ∧
           ∀ i, IsConstructible ((Subtype.val : ↥(V i) → X) ⁻¹' E) := by
-  sorry
+  classical
+  constructor
+  · intro hE
+    choose U hUmem hUopen hUE using hE
+    refine ⟨X, (fun x : X => ⟨U x, hUopen x⟩), ?_, ?_⟩
+    · apply IsOpenCover.of_sets
+      ext x
+      simp only [Set.mem_iUnion, mem_univ, iff_true]
+      exact ⟨x, mem_of_mem_nhds (hUmem x)⟩
+    · intro i
+      change IsConstructible ((Subtype.val : U i → X) ⁻¹' E)
+      exact hUE i
+  · rintro ⟨ι, V, hV, hE⟩
+    intro x
+    obtain ⟨i, hxi⟩ := TopologicalSpace.IsOpenCover.exists_mem hV x
+    exact ⟨(V i : Set X), (V i).2.mem_nhds hxi, (V i).2, hE i⟩
 
 /-! ### Boolean operations and inverse images -/
 

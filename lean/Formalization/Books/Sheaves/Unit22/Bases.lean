@@ -424,17 +424,19 @@ theorem basisModuleStalk_underlying_iso {X : TopCat.{v}} {ι : Type v}
 
 /-- The canonical module structure on a basis module stalk, obtained from the
 filtered colimits of the ring and module diagrams. -/
+@[instance_reducible]
 noncomputable def basisModuleStalkModule {X : TopCat.{v}} {ι : Type v}
     (B : ι → Opens X) (hB : Opens.IsBasis (Set.range B))
     {O : BasisRingPresheaf B} (F : BasisModulePresheaf B O) (x : X) :
-    Module (basisAlgebraicStalk B O x) (basisModuleStalk B F x) := by
+    Module (basisAlgebraicStalk (C := RingCat.{v}) B O x) (basisModuleStalk B F x) := by
   letI : IsFiltered ((basisNeighborhoodIndex B x)ᵒᵖ) :=
     basisNeighborhoodIndex_isFiltered B hB x
   letI (i : (basisNeighborhoodIndex B x)ᵒᵖ) :
       Module (((ObjectProperty.ι (fun i : basisIndex B => x ∈ B i)).op ⋙ O).obj i)
         (((ObjectProperty.ι (fun i : basisIndex B => x ∈ B i)).op ⋙ F.presheaf).obj i) := by
-    dsimp
-    infer_instance
+    change Module (O.obj ((ObjectProperty.ι (fun i : basisIndex B => x ∈ B i)).op.obj i))
+      (F.obj ((ObjectProperty.ι (fun i : basisIndex B => x ∈ B i)).op.obj i))
+    exact (F.obj ((ObjectProperty.ι (fun i : basisIndex B => x ∈ B i)).op.obj i)).isModule
   exact CategoryTheory.Limits.IsColimit.module
     ((ObjectProperty.ι (fun i : basisIndex B => x ∈ B i)).op ⋙ O)
     ((ObjectProperty.ι (fun i : basisIndex B => x ∈ B i)).op ⋙ F.presheaf)

@@ -349,8 +349,10 @@ presheaf identification. -/
   functor : PMod (ringedOpenSubspace X U).structureSheaf.obj ⥤
     PMod X.structureSheaf.obj
   underlying_functor_iso :
-    Nonempty (functor ⋙ PresheafOfModules.toPresheaf X.structureSheaf.obj ≅
-      openPresheafExtensionByInitial AddCommGrpCat U)
+    Nonempty
+      (functor ⋙ PresheafOfModules.toPresheaf X.structureSheaf.obj ≅
+        PresheafOfModules.toPresheaf (ringedOpenSubspace X U).structureSheaf.obj ⋙
+          openPresheafExtensionByInitial AddCommGrpCat U)
 
  /-- Extension by zero for modules on an open subspace. -/
  theorem exists_openModulePresheafExtensionByZero (X : RingedSpace.{v})

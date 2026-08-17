@@ -348,7 +348,7 @@ abbrev HasIndexColimitsWithValues (u : C ⥤ D)
     (A : Type a) [Category.{v'} A] :=
   ∀ (V : D) (K : (indexCategory u V)ᵒᵖ ⥤ A), HasColimit K
 
-/-- The pointwise-colimit hypothesis for `A`-valued presheaves. -/
+/-- The existence hypothesis for the `A`-valued functorial left Kan extension. -/
 abbrev HasLeftPushforwardWithValues (u : C ⥤ D)
     (A : Type a) [Category.{v'} A] :=
   ∀ F : PresheafWithValues C A, Functor.HasLeftKanExtension u.op F

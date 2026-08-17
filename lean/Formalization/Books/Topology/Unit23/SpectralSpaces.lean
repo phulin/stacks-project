@@ -3,6 +3,7 @@ import Formalization.Books.Topology.Unit10.KrullDimension
 import Formalization.Books.Topology.Unit14.LimitsOfSpaces
 import Formalization.Books.Topology.Unit19.Specialization
 import Formalization.Books.Topology.Unit22.ProfiniteSpaces
+import Mathlib.CategoryTheory.Category.Preorder
 import Mathlib.Topology.Connected.TotallyDisconnected
 import Mathlib.Topology.Homeomorph.Lemmas
 import Mathlib.Topology.Spectral.ConstructibleTopology
@@ -213,11 +214,11 @@ theorem isHomeomorph_of_bijective_spectralMap_of_lift
 
 /-! ### Inverse limits -/
 
-/-- The inverse limit of a cofiltered diagram of finite sober spaces is
+/-- The inverse limit of a directed inverse system of finite sober spaces is
 spectral.  Sobriety is expressed canonically as `QuasiSober` plus `T0Space`. -/
 theorem spectralSpace_of_directed_inverse_limit_finite_sober
-    {J : Type v} [SmallCategory J] [IsCofiltered J]
-    (F : J ⥤ TopCat.{max v u})
+    {J : Type v} [Preorder J] [IsDirectedOrder J] [Nonempty J]
+    (F : Jᵒᵖ ⥤ TopCat.{max v u})
     (hfinite : ∀ j, Finite (F.obj j))
     (hsober : ∀ j, QuasiSober (F.obj j))
     (hT0 : ∀ j, T0Space (F.obj j)) :
@@ -228,9 +229,10 @@ theorem spectralSpace_of_directed_inverse_limit_finite_sober
 sober topological spaces. -/
 structure DirectedFiniteSoberPresentation (X : Type u) [TopologicalSpace X] where
   index : Type u
-  [category : SmallCategory index]
-  [cofiltered : IsCofiltered index]
-  diagram : index ⥤ TopCat.{u}
+  [preorder : Preorder index]
+  [directed : IsDirectedOrder index]
+  [nonempty : Nonempty index]
+  diagram : indexᵒᵖ ⥤ TopCat.{u}
   finite : ∀ i, Finite (diagram.obj i)
   sober : ∀ i, QuasiSober (diagram.obj i)
   t0 : ∀ i, T0Space (diagram.obj i)

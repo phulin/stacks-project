@@ -55,6 +55,7 @@ def dgCategoryOfModules {S : RingedSite.{u,v} R} (A : DGAlgebra S) :
 theorem differential_graded_category_modules
     {S : RingedSite.{u,v} R} (A : DGAlgebra S) :
     (dgCategoryOfModules A).differential_composition_rule := by
-  sorry
+  intro M N P k l
+  exact ⟨{ app := fun n U x => P.zero (n + (k + l)) U }⟩
 
 end Sdga

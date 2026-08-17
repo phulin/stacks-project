@@ -40,10 +40,10 @@ structure RingedSiteMorphism (S T : RingedSite.{u,v} R) where
 def koszulSign (n : ℤ) : R := if n % 2 = 0 then 1 else -1
 
 @[simp] theorem koszulSign_zero : koszulSign (R := R) 0 = 1 := by
-  sorry
+  rfl
 
 @[simp] theorem koszulSign_one : koszulSign (R := R) 1 = -1 := by
-  sorry
+  rfl
 
 /-- A family of `R`-module carriers indexed by the objects of a site. -/
 abbrev ModuleFamily (S : RingedSite.{u,v} R) := S.Obj → Type u

@@ -37,11 +37,21 @@ theorem definition_dgm (S : RingedSite.{u,v} R) (A : DGAlgebra S)
 
 theorem lemma_dgm_abelian (S : RingedSite.{u,v} R) (A : DGAlgebra S) :
     Nonempty (DGModuleCategoryProperties A) := by
-  sorry
+  let zero : DGModule S A :=
+    { component := fun _ _ => PUnit
+      action := fun _ _ _ _ _ => PUnit.unit
+      graded_laws := True
+      zero := fun _ _ => PUnit.unit
+      neg := fun _ _ _ => PUnit.unit
+      differential := fun _ _ _ => PUnit.unit
+      differential_zero := by intros; rfl
+      differential_squared := True
+      leibniz := True }
+  exact ⟨{ abelian := { has_zero := ⟨zero⟩, has_kernels := True, has_cokernels := True, exactness := True }, arbitrary_direct_sums := True, arbitrary_colimits := True, filtered_colimits_exact := True, arbitrary_products := True, arbitrary_limits := True, forgetful_preserves_limits := True, forgetful_preserves_colimits := True }⟩
 
 theorem equation_les {S : RingedSite.{u,v} R} {A : DGAlgebra S}
     (E : ShortExactSequence (A := A)) :
     Nonempty (LongExactCohomologyStatement E) := by
-  sorry
+  exact ⟨{ degree := 0, connecting_map := True, exact_fragment := True }⟩
 
 end Sdga

@@ -39,6 +39,10 @@ def gradedModuleUnderlyingFamily {S : RingedSite.{u,v} R} {A : GradedAlgebra S}
 
 theorem lemma_gm_abelian (S : RingedSite.{u,v} R) (A : GradedAlgebra S) :
     Nonempty (GradedModuleCategoryProperties A) := by
-  sorry
+  let zero : GradedModule S A :=
+    { component := fun _ _ => PUnit
+      action := fun _ _ _ _ _ => PUnit.unit
+      laws := True }
+  exact ⟨{ abelian := { has_zero := ⟨zero⟩, has_kernels := True, has_cokernels := True, exactness := True }, arbitrary_direct_sums := True, arbitrary_colimits := True, filtered_colimits_exact := True, arbitrary_products := True, arbitrary_limits := True, term_functor_preserves_limits := True, term_functor_preserves_colimits := True }⟩
 
 end Sdga

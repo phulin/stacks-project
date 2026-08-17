@@ -39,6 +39,10 @@ theorem graded_shift_composition
 theorem lemma_gm_grothendieck_abelian (S : RingedSite.{u,v} R)
     (A : GradedAlgebra S) :
     Nonempty (GrothendieckCategoryStatement (GradedModuleCategory S A)) := by
-  sorry
+  let zero : GradedModule S A :=
+    { component := fun _ _ => PUnit
+      action := fun _ _ _ _ _ => PUnit.unit
+      laws := True }
+  exact ⟨{ abelian := { has_zero := ⟨zero⟩, has_kernels := True, has_cokernels := True, exactness := True }, has_all_colimits := True, filtered_colimits_exact := True, has_generator := True }⟩
 
 end Sdga

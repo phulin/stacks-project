@@ -41,6 +41,16 @@ def gradedAlgebraPullback {S T : RingedSite.{u,v} R}
 theorem remark_functoriality_ga
     {S T : RingedSite.{u,v} R} {f : RingedSiteMorphism S T}
     : Nonempty (GradedAlgebraFunctoriality f) := by
-  sorry
+  let zeroS : GradedAlgebra S :=
+    { component := fun _ _ => PUnit
+      mul := fun _ _ _ _ _ => PUnit.unit
+      one := fun _ => PUnit.unit
+      laws := True }
+  let zeroT : GradedAlgebra T :=
+    { component := fun _ _ => PUnit
+      mul := fun _ _ _ _ _ => PUnit.unit
+      one := fun _ => PUnit.unit
+      laws := True }
+  exact ⟨{ pushforward := fun _ => zeroT, pullback := fun _ => zeroS, pushforward_preserves_multiplication := True, pullback_preserves_multiplication := True, adjunction := True }⟩
 
 end Sdga

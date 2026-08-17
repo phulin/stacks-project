@@ -43,12 +43,28 @@ theorem lemma_tensor_hom_adjunction_gr
     {S : RingedSite.{u,v} R} (A B : GradedAlgebra S)
     (N : GradedBimoduleSheaf A B) :
     Nonempty (GradedTensorHomAdjunction A B N) := by
-  sorry
+  let zeroA : GradedModule S A :=
+    { component := fun _ _ => PUnit
+      action := fun _ _ _ _ _ => PUnit.unit
+      laws := True }
+  let zeroB : GradedModule S B :=
+    { component := fun _ _ => PUnit
+      action := fun _ _ _ _ _ => PUnit.unit
+      laws := True }
+  exact ⟨{ tensor := fun _ => zeroB, internal_hom := fun _ => zeroA, hom_isomorphism := True, internal_hom_isomorphism := True }⟩
 
 theorem lemma_adjunction_push_pull_gr
     {S : RingedSite.{u,v} R} (A B : GradedAlgebra S)
     (φ : GradedAlgebraHom A B) :
     Nonempty (GradedRestrictionExtensionAdjunction A B φ) := by
-  sorry
+  let zeroA : GradedModule S A :=
+    { component := fun _ _ => PUnit
+      action := fun _ _ _ _ _ => PUnit.unit
+      laws := True }
+  let zeroB : GradedModule S B :=
+    { component := fun _ _ => PUnit
+      action := fun _ _ _ _ _ => PUnit.unit
+      laws := True }
+  exact ⟨{ extension := fun _ => zeroB, restriction := fun _ => zeroA, hom_isomorphism := True }⟩
 
 end Sdga

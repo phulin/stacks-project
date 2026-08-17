@@ -26,7 +26,7 @@ namespace Formalization.Books.Guide.Unit04
 
 /-
 The stable earlier chapter exposes the groupoid and descent interfaces.  The
-broader older gerbe file has unresolved universe parameters, so the two
+broader older gerbe file depends on an unresolved presheaf proof, so the two
 elementary gerbe predicates needed by this source section are kept explicit
 here.
 -/
@@ -75,11 +75,11 @@ theorem guide_conjugation_presheaf_map_exists {C : Type u} [Category.{v} C]
   · intro T₁ T₂ q
     ext a
     apply Subtype.ext
-    letI : IsGroupoid (Fiber F T₁.unop.left) := hF _
-    letI : IsGroupoid (Fiber F T₂.unop.left) := hF _
-    letI : IsIso a.1 := a.2
+    let : IsGroupoid (Fiber F T₁.unop.left) := hF _
+    let : IsGroupoid (Fiber F T₂.unop.left) := hF _
+    let : IsIso a.1 := a.2
     let aq : (IsomPresheaf F x x).obj T₂ := (IsomPresheaf F x x).map q a
-    letI : IsIso aq.1 := aq.2
+    let : IsIso aq.1 := aq.2
     change
       (guideConjugateAutomorphism hF
         ((F.map T₂.unop.hom.op.toLoc).toFunctor.map φ) (asIso aq.1)).hom =
@@ -363,10 +363,10 @@ theorem stackInGroupoids_two_morphisms_are_invertible
   have hα : e.hom = α := by
     apply Pseudofunctor.StrongTrans.homCategory.ext
     intro a
-    letI : IsGroupoid (Y.value.obj a) := by
+    let : IsGroupoid (Y.value.obj a) := by
       change IsGroupoid (Fiber Y.value a.as.unop)
       exact Y.isStackInGroupoids.1 a.as.unop
-    letI : IsIso (α.as.app a).toNatTrans :=
+    let : IsIso (α.as.app a).toNatTrans :=
       NatIso.isIso_of_isIso_app _
     apply Cat.Hom₂.ext
     dsimp [e, Pseudofunctor.StrongTrans.isoMk, Cat.Hom.isoMk]

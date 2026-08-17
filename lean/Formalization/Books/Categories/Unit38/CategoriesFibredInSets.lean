@@ -85,15 +85,15 @@ theorem isCategoryFibredInSets_iff_isFibered_and_discreteFibres
 
 /-! ## The fixed-base 2-category -/
 
-/-- The object property selecting discrete fibres in the fixed-base
+/-- The object property selecting categories fibred in sets in the fixed-base
 fibred-category interface from Unit 33. -/
 def IsDiscreteFibredCategoryOver {C : Cat.{v, u}}
     (X : FibredCategoryOver C) : Prop :=
   ∀ U : C, IsDiscrete (Functor.Fiber (structureFunctor X.underlying) U)
 
-def discreteFibredCategoryObjectProperty {C : Cat.{v, u}} :
+def categoriesFibredInSetsObjectProperty {C : Cat.{v, u}} :
     ObjectProperty (FibredCategoryOver C) :=
-  IsDiscreteFibredCategoryOver
+  fun X => IsCategoryFibredInSets (structureFunctor X.underlying)
 
 theorem discreteFibredCategoryOver_isCategoryFibredInSets
     {C : Cat.{v, u}} (X : FibredCategoryOver C)
@@ -105,7 +105,7 @@ theorem discreteFibredCategoryOver_isCategoryFibredInSets
 /-- The source's 2-category of categories fibred in sets over a fixed base. -/
 abbrev CategoriesFibredInSetsOver (C : Cat.{v, u}) :=
   FullSubTwoCategory (FibredCategoryOver C)
-    (discreteFibredCategoryObjectProperty (C := C))
+    (categoriesFibredInSetsObjectProperty (C := C))
 
 /- A functor over the base automatically preserves strongly cartesian arrows
 when its target has discrete fibres: all arrows in a category fibred in

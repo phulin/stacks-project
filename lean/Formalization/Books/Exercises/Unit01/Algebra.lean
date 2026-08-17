@@ -45,7 +45,7 @@ universe u v
 open CategoryTheory
 open CategoryTheory.ShortComplex
 open IsLocalRing
-open scoped TensorProduct
+open scoped TensorProduct ModuleCat.Algebra
 
 namespace Formalization.Books.Exercises.Unit01
 
@@ -1257,7 +1257,7 @@ theorem exists_nonsplit_sequence_split_after_faithfullyFlat_baseChange :
   have hS₀ : S₀.ShortExact := ModuleCat.shortComplex_shortExact S₀ hexact hi hqsurj
   have hnonsplit₀ : ¬ Nonempty S₀.Splitting := by
     rintro ⟨s⟩
-    dsimp [S₀] at s
+    dsimp [S₀, ShortComplex.moduleCatMk] at s
     have hret := ModuleCat.hom_ext_iff.mp s.f_r
     have hret1 := LinearMap.congr_fun hret (1 : A₀)
     change s.r.hom (i 1) = (1 : A₀) at hret1
@@ -1300,6 +1300,7 @@ theorem exists_nonsplit_sequence_split_after_faithfullyFlat_baseChange :
       refine ⟨s.r.hom z, ?_⟩
       dsimp [a]
       rw [← hz, s.r.hom.map_smul, Algebra.smul_def]
+      simp [A]
     have hb_div (n : ℕ) : (3 : A₀) ^ n ∣ b := by
       letI : SMul A₀ B₀ := (inferInstance : Module A₀ B₀).toSMul
       letI : SMul A₀ A₀ := (inferInstance : Module A₀ A₀).toSMul
@@ -1320,6 +1321,7 @@ theorem exists_nonsplit_sequence_split_after_faithfullyFlat_baseChange :
       refine ⟨s.r.hom z, ?_⟩
       dsimp [b]
       rw [← hz, s.r.hom.map_smul, Algebra.smul_def]
+      simp [A]
     have ha_zero : a = 0 := by
       let I : Ideal A₀ := Ideal.span {(2 : A₀)}
       have hI : I ≠ ⊤ := by
@@ -1358,10 +1360,29 @@ theorem exists_nonsplit_sequence_split_after_faithfullyFlat_baseChange :
   let S : ShortComplex (ModuleCat.{max u u_1} A) := S₀.map U_A
   have hS : S.ShortExact := hS₀.map_of_exact U_A
   have hmap : (S.map (ModuleCat.extendScalars f.hom)).ShortExact := by
-    letI : Limits.PreservesFiniteLimits (ModuleCat.extendScalars f₀) :=
-      ModuleCat.preservesFiniteLimits_extendScalars_of_flat hflat₀
-    dsimp [f, A, B]
-    exact hS.map_of_exact (ModuleCat.extendScalars f₀)
+    letI : Algebra A₀ B₀ := f₀.toAlgebra
+    letI : Module A₀ B₀ := Module.compHom B₀ f₀
+    letI : Module.Flat A₀ B₀ := hflat₀
+    have hexact' : Function.Exact S.f.hom S.g.hom :=
+      (ShortComplex.ShortExact.moduleCat_exact_iff_function_exact S).mp hS.exact
+    have hinj' : Function.Injective S.f.hom :=
+      (ModuleCat.mono_iff_injective S.f).mp hS.mono_f
+    have hsurj' : Function.Surjective S.g.hom :=
+      (ModuleCat.epi_iff_surjective S.g).mp hS.epi_g
+    apply ModuleCat.shortComplex_shortExact _
+    · dsimp [S, f, A, B, ShortComplex.map, ModuleCat.extendScalars,
+        ModuleCat.ExtendScalars.map', ModuleCat.ExtendScalars.obj']
+      change Function.Exact (LinearMap.baseChange B₀ S.f.hom)
+        (LinearMap.baseChange B₀ S.g.hom)
+      exact Module.Flat.lTensor_exact B₀ hexact'
+    · dsimp [S, f, A, B, ShortComplex.map, ModuleCat.extendScalars,
+        ModuleCat.ExtendScalars.map', ModuleCat.ExtendScalars.obj']
+      change Function.Injective (LinearMap.baseChange B₀ S.f.hom)
+      exact Module.Flat.lTensor_preserves_injective_linearMap S.f.hom hinj'
+    · dsimp [S, f, A, B, ShortComplex.map, ModuleCat.extendScalars,
+        ModuleCat.ExtendScalars.map', ModuleCat.ExtendScalars.obj']
+      change Function.Surjective (LinearMap.baseChange B₀ S.g.hom)
+      exact LinearMap.baseChange_surjective B₀ hsurj'
   have hnonsplit : ¬ Nonempty S.Splitting := by
     rintro ⟨s⟩
     apply hnonsplit₀
@@ -1390,17 +1411,65 @@ theorem exists_nonsplit_sequence_split_after_faithfullyFlat_baseChange :
       exact s.id
   let T := S.map (ModuleCat.extendScalars f.hom)
   let r₁ : T.X₂ →ₗ[B] T.X₁ := by
-    letI : Algebra A₀ B₀ := f₀.toAlgebra
-    letI : Module A₀ B₀ := Algebra.toModule
-    letI : IsScalarTower A₀ B₀ B₀ := by
-      apply IsScalarTower.of_algebraMap_smul
-      intro a b
-      rfl
     dsimp [T, S, U_A, f, A, B, ShortComplex.map, ModuleCat.extendScalars,
       ModuleCat.ExtendScalars.map', ModuleCat.ExtendScalars.obj']
+    letI : Algebra A₀ B₀ := f₀.toAlgebra
+    let M := (ModuleCat.restrictScalars f₀).obj (ModuleCat.of B₀ B₀)
+    let N := (ModuleCat.uliftFunctor.{u_1, u, u} A₀).obj S₀.X₂
+    let P := (ModuleCat.uliftFunctor.{u_1, u, u} A₀).obj S₀.X₁
+    letI : Module B₀ M := (inferInstance : Module B₀ B₀)
+    letI : Module A₀ M := M.isModule
+    letI : SMul A₀ M := M.isModule.toSMul
+    let htower : @IsScalarTower A₀ B₀ M
+        (inferInstance : SMul A₀ B₀)
+        (inferInstance : Module B₀ M).toSMul M.isModule.toSMul := {
+      smul_assoc := by
+        intro a b x
+        rw [Algebra.smul_def, ModuleCat.restrictScalars.smul_def, ← hf₀]
+        exact mul_smul _ _ _ }
+    letI : @IsScalarTower A₀ B₀ M
+        (inferInstance : SMul A₀ B₀)
+        (inferInstance : Module B₀ M).toSMul M.isModule.toSMul := htower
+    let hcomm : @SMulCommClass A₀ B₀ M
+        M.isModule.toSMul (inferInstance : Module B₀ M).toSMul :=
+      ModuleCat.sMulCommClass_mk f₀ (ModuleCat.of B₀ B₀)
+    letI : Module B₀ (M ⊗[A₀] N) :=
+      @TensorProduct.leftModule A₀ B₀ _ _ M N _ _ _ _ _ hcomm
+    letI : Module B₀ (M ⊗[A₀] P) :=
+      @TensorProduct.leftModule A₀ B₀ _ _ M P _ _ _ _ _ hcomm
+    let hcommP : @SMulCommClass A₀ B₀ (M ⊗[A₀] P)
+        (inferInstance : Module A₀ (M ⊗[A₀] P)).toSMul
+        (inferInstance : Module B₀ (M ⊗[A₀] P)).toSMul := {
+      smul_comm := by
+        intro a b z
+        refine TensorProduct.induction_on z ?_ (fun m p => ?_) (fun x y hx hy => ?_)
+        · simp
+        · change (a • (b • m)) ⊗ₜ[A₀] p = (b • (a • m)) ⊗ₜ[A₀] p
+          exact congrArg (fun t => t ⊗ₜ[A₀] p) (hcomm.smul_comm a b m)
+        · rw [TensorProduct.smul_add, TensorProduct.smul_add]
+          simp only [hx, hy, smul_add] }
+    letI : @SMulCommClass A₀ B₀ (M ⊗[A₀] P)
+        (inferInstance : Module A₀ (M ⊗[A₀] P)).toSMul
+        (inferInstance : Module B₀ (M ⊗[A₀] P)).toSMul := hcommP
+    let htowerP : @IsScalarTower A₀ B₀ (M ⊗[A₀] P)
+        (inferInstance : SMul A₀ B₀)
+        (inferInstance : Module B₀ (M ⊗[A₀] P)).toSMul
+        (inferInstance : Module A₀ (M ⊗[A₀] P)).toSMul := by
+      constructor
+      intro a b z
+      refine TensorProduct.induction_on z ?_ (fun m p => ?_) (fun x y hx hy => ?_)
+      · simp
+      · change ((a • b) • m) ⊗ₜ[A₀] p = (a • (b • m)) ⊗ₜ[A₀] p
+        rw [IsScalarTower.smul_assoc]
+      · rw [TensorProduct.smul_add, TensorProduct.smul_add, hx, hy, smul_add]
+    letI : @IsScalarTower A₀ B₀ (M ⊗[A₀] P)
+        (inferInstance : SMul A₀ B₀)
+        (inferInstance : Module B₀ (M ⊗[A₀] P)).toSMul
+        (inferInstance : Module A₀ (M ⊗[A₀] P)).toSMul := htowerP
+    change (M ⊗[A₀] N) →ₗ[B₀] (M ⊗[A₀] P)
     exact TensorProduct.AlgebraTensorModule.lift
       { toFun := fun b =>
-          { toFun := fun x => (b * x.down) ⊗ₜ[A₀] ULift.up (1 : A₀)
+          { toFun := fun x => ((b : B₀) * x.down) ⊗ₜ[A₀] ULift.up (1 : A₀)
             map_add' := by
               intro x y
               change (b * (x.down + y.down)) ⊗ₜ[A₀] ULift.up (1 : A₀) = _

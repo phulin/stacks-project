@@ -62,3 +62,26 @@ example {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S) :
     apply (TensorProduct.AlgebraTensorModule.rid R S S).injective
     simp [Algebra.smul_def, mul_comm]
   · simp only [map_add, hx, hy]
+
+open scoped ModuleCat.Algebra
+
+example {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S) : True := by
+  letI : Algebra R S := f.toAlgebra
+  let M := (ModuleCat.restrictScalars f).obj (ModuleCat.of S S)
+  let N := ModuleCat.of R (ULift.{w} R)
+  letI : Module S M := inferInstanceAs (Module S S)
+  letI : Module R M := Module.compHom S f
+  letI : SMulCommClass R S M := by
+    constructor
+    intro r s x
+    change r • (s * (show S from x)) =
+      s * (r • (show S from x))
+    simpa [← Int.cast_smul_eq_zsmul S, smul_eq_mul, mul_comm,
+      mul_left_comm, mul_assoc]
+  letI : Module S (M ⊗[R] N) := TensorProduct.leftModule
+  trivial
+
+example {S : Type u} [CommRing S] (n : ℤ) (b x : S) :
+    b * x * (n : S) = b * (n • x) := by
+  rw [← Int.cast_smul_eq_zsmul S n x]
+  simp [smul_eq_mul, mul_comm, mul_assoc]

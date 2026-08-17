@@ -78,11 +78,12 @@ noncomputable def reducedInducedStackStructure {S : Scheme.{u}}
 
 noncomputable def reduction {S : Scheme.{u}} (X : AlgebraicStack S) :
     ReducedInducedStackStructure X Set.univ :=
-  reducedInducedStackStructure X Set.univ isClosed_univ
+  reducedInducedStackStructure X Set.univ
+    (@isClosed_univ (StackPoint X) (canonicalStackTopology (S := S) X))
 
 def IsReduction {S : Scheme.{u}} {X : AlgebraicStack S}
     (R : ReducedInducedStackStructure X Set.univ) : Prop :=
-  R.reduced ∧ ClosedSubstackHasPoints R.substack Set.univ
+  IsReducedClosedSubstack R.substack ∧ ClosedSubstackHasPoints R.substack Set.univ
 
 structure ReducedLocallyClosedSubstackData {S : Scheme.{u}}
     (T : StackTopology S) (X : AlgebraicStack S)

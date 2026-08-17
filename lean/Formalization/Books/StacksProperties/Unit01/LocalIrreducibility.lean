@@ -23,18 +23,22 @@ structure GeometricBranchTheory where
   smoothInvariant : ∀ {G H : SchemeGerm.{u}} (f : SchemeGerm.Hom G H),
     Smooth f.map → count G = count H
 
+def SmoothBranchInvariant (B : GeometricBranchTheory) : Prop :=
+  ∀ {G H : SchemeGerm.{u}} (f : SchemeGerm.Hom G H),
+    Smooth f.map → B.count G = B.count H
+
 def BranchCountProperty (B : GeometricBranchTheory) (n : ℕ) :
     LocalPropertyOfGerms where
   property := fun X x => B.count ⟨X, x⟩ = n
-  smoothLocal := B.smoothInvariant
+  smoothLocal := SmoothBranchInvariant B
 
 def geometricBranchProperty {S : Scheme.{u}}
     (B : GeometricBranchTheory) (n : ℕ) :
     SmoothLocalGermProperty S where
   schemeProperty := BranchCountProperty B n
   spaceProperty := fun W u => B.count ⟨W.left, u⟩ = n
-  comparison := B.smoothInvariant
-  smoothLocal := B.smoothInvariant
+  comparison := SmoothBranchInvariant B
+  smoothLocal := SmoothBranchInvariant B
 
 theorem geometric_branch_smooth_invariant (B : GeometricBranchTheory)
     (n : ℕ) {G H : SchemeGerm.{u}} (f : SchemeGerm.Hom G H)
@@ -45,10 +49,12 @@ theorem geometric_branch_smooth_invariant (B : GeometricBranchTheory)
 def numberOfGeometricBranches {S : Scheme.{u}}
     (B : GeometricBranchTheory) (X : AlgebraicStack S)
     (x : StackPoint X) : WithTop ℕ :=
-  if h : ∃ n : ℕ, HasGermPropertyAt (geometricBranchProperty B n) x then
-    Nat.find h
-  else
-    ⊤
+  by
+    classical
+    exact if h : ∃ n : ℕ, HasGermPropertyAt (geometricBranchProperty B n) x then
+      Nat.find h
+    else
+      ⊤
 
 def IsGeometricallyUnibranch {S : Scheme.{u}}
     (B : GeometricBranchTheory) (X : AlgebraicStack S)

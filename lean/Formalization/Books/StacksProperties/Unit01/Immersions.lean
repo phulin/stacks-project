@@ -17,6 +17,7 @@ noncomputable section
 
 open CategoryTheory
 open AlgebraicGeometry
+open Topology
 
 universe u
 
@@ -184,8 +185,8 @@ structure PresentationSubspace {S : Scheme.{u}}
   carrier : Scheme.{u}
   inclusion : carrier ⟶ p.source
   locallyClosed : Prop
-  open : Prop
-  closed : Prop
+  openCondition : Prop
+  closedCondition : Prop
   invariant : Prop
 
 structure PresentationImmersionData {S : Scheme.{u}}
@@ -208,8 +209,8 @@ theorem immersion_from_invariant_presentation {S : Scheme.{u}}
     (z : PresentationSubspace p) :
     ∃ (Z : AlgebraicStack S) (i : StackMorphism Z X),
       IsImmersionStack i ∧
-        (z.open → IsOpenImmersionStack i) ∧
-        (z.closed → IsClosedImmersionStack i) := by
+        (z.openCondition → IsOpenImmersionStack i) ∧
+        (z.closedCondition → IsClosedImmersionStack i) := by
   sorry
 
 structure OpenSubstack {S : Scheme.{u}} (X : AlgebraicStack S) where
@@ -231,13 +232,13 @@ structure LocallyClosedSubstack {S : Scheme.{u}} (X : AlgebraicStack S) where
   immersion : IsImmersionStack inclusion
 
 def IsOpenSubstack {S : Scheme.{u}} {X : AlgebraicStack S}
-    (U : OpenSubstack X) : Prop := U.openImmersion
+    (U : OpenSubstack X) : Prop := IsOpenImmersionStack U.inclusion
 
 def IsClosedSubstack {S : Scheme.{u}} {X : AlgebraicStack S}
-    (U : ClosedSubstack X) : Prop := U.closedImmersion
+    (U : ClosedSubstack X) : Prop := IsClosedImmersionStack U.inclusion
 
 def IsLocallyClosedSubstack {S : Scheme.{u}} {X : AlgebraicStack S}
-    (U : LocallyClosedSubstack X) : Prop := U.immersion
+    (U : LocallyClosedSubstack X) : Prop := IsImmersionStack U.inclusion
 
 def IsImageFactorization {S : Scheme.{u}}
     {Z X : AlgebraicStack S} (i : StackMorphism Z X)
@@ -324,7 +325,7 @@ structure UnionOpenSubstackData {S : Scheme.{u}}
 theorem union_open_substacks {S : Scheme.{u}}
     {X : AlgebraicStack S} (I : Type u)
     (members : I → OpenSubstack X) :
-    Nonempty (UnionOpenSubstackData I) := by
+    Nonempty (UnionOpenSubstackData (S := S) (X := X) I) := by
   sorry
 
 def CoversOpenSubstacks {S : Scheme.{u}}
@@ -360,13 +361,13 @@ structure OpenCoverData {S : Scheme.{u}} (X : AlgebraicStack S) where
 
 theorem open_cover_by_algebraic_spaces_is_space {S : Scheme.{u}}
     {X : AlgebraicStack S} (D : OpenCoverData X)
-    (h : D.covers ∧ D.eachAlgebraicSpace) :
+    (h : D.eachAlgebraicSpace) :
     IsRepresentableByAlgebraicSpace X := by
   sorry
 
 theorem open_cover_by_schemes_is_scheme {S : Scheme.{u}}
     {X : AlgebraicStack S} (D : OpenCoverData X)
-    (h : D.covers ∧ D.eachScheme) :
+    (h : D.eachScheme) :
     IsRepresentableByScheme X := by
   sorry
 
@@ -421,7 +422,7 @@ structure FlatLocusWarningData {S : Scheme.{u}} where
   strictDifference : largestOpen ≠ pointwiseFlatLocus
 
 theorem exists_flat_locus_warning {S : Scheme.{u}} :
-    Nonempty (FlatLocusWarningData S) := by
+    Nonempty (FlatLocusWarningData (S := S)) := by
   sorry
 
 /- The source warning is intentional: the largest open subspace on which a

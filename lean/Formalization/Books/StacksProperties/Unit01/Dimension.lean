@@ -1,4 +1,6 @@
 import Formalization.Books.StacksProperties.Unit01.ResidualGerbes
+import Mathlib.Data.Int.ConditionallyCompleteOrder
+import Mathlib.Order.ConditionallyCompleteLattice.Basic
 import Mathlib.Order.WithBotTop
 
 /-!

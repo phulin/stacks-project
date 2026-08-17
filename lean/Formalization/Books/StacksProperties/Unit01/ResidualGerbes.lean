@@ -13,6 +13,8 @@ noncomputable section
 
 universe u
 
+open AlgebraicGeometry
+
 namespace Formalization.Books.StacksProperties.Unit01
 
 def IsFlatFieldCover {S : Scheme.{u}}
@@ -79,7 +81,10 @@ theorem improve_unique_point {S : Scheme.{u}} (Z : AlgebraicStack S)
     (hZ : IsReducedSingletonPointStack Z) :
     ∃ D : ImprovedUniquePointData Z,
       ∀ E : ImprovedUniquePointData Z,
-        D.source = E.source ∧ D.inclusion = E.inclusion := by
+        ∃ e : StackMorphism D.source E.source,
+          IsStackEquivalence e ∧
+            StackTwoMorphism D.inclusion
+              (StackMorphism.comp e E.inclusion) := by
   sorry
 
 structure DistinctSingletonExample (S : Scheme.{u}) where
@@ -153,7 +158,10 @@ theorem residual_gerbe_exists_unique {S : Scheme.{u}}
     (h : ResidualGerbeExists x) :
     ∃ G : ResidualGerbe X x,
       ∀ H : ResidualGerbe X x,
-        G.source = H.source ∧ G.inclusion = H.inclusion := by
+        ∃ e : StackMorphism G.source H.source,
+          IsStackEquivalence e ∧
+            StackTwoMorphism G.inclusion
+              (StackMorphism.comp e H.inclusion) := by
   sorry
 
 noncomputable def residualGerbe {S : Scheme.{u}}

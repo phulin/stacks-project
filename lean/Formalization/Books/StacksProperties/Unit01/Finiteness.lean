@@ -12,6 +12,8 @@ noncomputable section
 
 universe u
 
+open AlgebraicGeometry
+
 namespace Formalization.Books.StacksProperties.Unit01
 
 def IsQuasiCompactFieldValuedMorphism {S : Scheme.{u}}

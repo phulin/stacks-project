@@ -1,14 +1,14 @@
-import Formalization.Books.Sheaves.Unit17.Sheafification
-import Mathlib.CategoryTheory.Filtered.Flat
+import Formalization.Books.Sheaves.Unit11.Stalks
 import Mathlib.CategoryTheory.Sites.Sheafification
 import Mathlib.Topology.Sheaves.Functors
 import Mathlib.Topology.Sheaves.Presheaf
+import Mathlib.Topology.Sheaves.Sheafify
 import Mathlib.Topology.Sheaves.Stalks
 
 /-!
 # Sheaves on Spaces, Chapter 21: Continuous maps and sheaves
 
-The source section is `books/sheaves.tex:1984-2544`.  Pushforward and
+The source section is `books/sheaves.tex:1984-2399`.  Pushforward and
 pullback are Mathlib's canonical functors on presheaves and sheaves.  In
 particular, the pullback presheaf is the pointwise left Kan extension along
 the functor on open sets, so its value is presented by the colimit over the
@@ -23,7 +23,6 @@ open CategoryTheory CategoryTheory.Limits Opposite TopologicalSpace
 open Formalization.Books.Sheaves.Unit03
 open Formalization.Books.Sheaves.Unit07
 open Formalization.Books.Sheaves.Unit11
-open Formalization.Books.Sheaves.Unit17
 
 universe v
 

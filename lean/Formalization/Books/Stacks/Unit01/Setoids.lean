@@ -133,6 +133,7 @@ def LocallyEssentiallyInImage {C : Type u} [Category.{v} C]
 structure RelativeSheafCondition {C : Type u} [Category.{v} C]
     (F G : FiberedCategory C) (J : GrothendieckTopology C) where
   map : FiberedMorphism F G
+  sourceIsGroupoid : FiberwiseGroupoid F
   targetIsGroupoidStack : StackInGroupoids G J
   fibresFaithful : FiberwiseFaithful map
   pairPresheaf : ∀ (U : C) (_y : Fiber G U), (Over C U)ᵒᵖ ⥤ Type w
@@ -202,7 +203,8 @@ theorem setoid_stack_descent
     {A B C' D : FiberedCategory C} (sq : TwoCartesianSquare A B C' D)
     (hfullyFaithful : FiberwiseFullyFaithful sq.bottom)
     (hlocal : LocallyEssentiallyInImage sq.bottom J)
-    (hA : StackInSetoids A J) :
+    (hA : StackInSetoids A J) (hB : StackInGroupoids B J)
+    (hC' : StackInGroupoids C' J) (hD : StackInGroupoids D J) :
     StackInSetoids B J := by
   sorry
 

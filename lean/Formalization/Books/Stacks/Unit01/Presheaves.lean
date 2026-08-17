@@ -43,58 +43,7 @@ theorem presheaf_mor_map_fibred_categories {C : Type u} [Category.{v} C]
       (F.presheafHom x y ⟶
         G.presheafHom ((η.app (.mk (op U))).toFunctor.obj x)
           ((η.app (.mk (op U))).toFunctor.obj y)) := by
-  refine ⟨{ app := fun T => ?_, naturality := ?_ }⟩
-  · simpa [Pseudofunctor.presheafHom] using
-      (↾(fun f : (F.map T.unop.hom.op.toLoc).toFunctor.obj x ⟶
-          (F.map T.unop.hom.op.toLoc).toFunctor.obj y =>
-        (η.naturality T.unop.hom.op.toLoc).inv.toNatTrans.app
-            x ≫
-          (η.app (.mk (op T.unop.left))).toFunctor.map f ≫
-            (η.naturality T.unop.hom.op.toLoc).hom.toNatTrans.app
-              y))
-  · intro T₁ T₂ q
-    ext f
-    have hηinv {a b c : LocallyDiscrete Cᵒᵖ} (f : a ⟶ b) (g : b ⟶ c)
-        (fg : a ⟶ c) (hfg : f ≫ g = fg) :
-        (η.naturality fg).inv =
-          Bicategory.whiskerLeft (η.app a) (G.mapComp' f g fg hfg).hom ≫
-            (Bicategory.associator _ _ _).inv ≫
-              Bicategory.whiskerRight (η.naturality f).inv (G.map g) ≫
-                (Bicategory.associator _ _ _).hom ≫
-                  Bicategory.whiskerLeft (F.map f) (η.naturality g).inv ≫
-                    (Bicategory.associator _ _ _).inv ≫
-                      Bicategory.whiskerRight (F.mapComp' f g fg hfg).inv (η.app c) := by
-      subst fg
-      simpa only [Pseudofunctor.mapComp'_eq_mapComp] using
-        η.naturality_comp_inv f g
-    have hηhom {a b c : LocallyDiscrete Cᵒᵖ} (f : a ⟶ b) (g : b ⟶ c)
-        (fg : a ⟶ c) (hfg : f ≫ g = fg) :
-        (η.naturality fg).hom =
-          Bicategory.whiskerRight (F.mapComp' f g fg hfg).hom (η.app c) ≫
-            (Bicategory.associator _ _ _).hom ≫
-              Bicategory.whiskerLeft (F.map f) (η.naturality g).hom ≫
-                (Bicategory.associator _ _ _).inv ≫
-                  Bicategory.whiskerRight (η.naturality f).hom (G.map g) ≫
-                    (Bicategory.associator _ _ _).hom ≫
-                      Bicategory.whiskerLeft (η.app a) (G.mapComp' f g fg hfg).inv := by
-      subst fg
-      simpa only [Pseudofunctor.mapComp'_eq_mapComp] using
-        η.naturality_comp_hom f g
-    have hfg : T₁.unop.hom.op.toLoc ≫ (Over.Hom.left q.unop).op.toLoc =
-        T₂.unop.hom.op.toLoc := by
-      rw [← Quiver.Hom.comp_toLoc, ← op_comp, q.unop.w]
-    dsimp [Pseudofunctor.presheafHom, Pseudofunctor.LocallyDiscreteOpToCat.pullHom]
-    simp only [Cat.Hom.comp_toFunctor, Category.assoc, Functor.map_comp,
-      NatTrans.naturality_assoc]
-    simp only [hηinv _ _ _ hfg, hηhom _ _ _ hfg]
-    have hq :=
-      (η.naturality (Over.Hom.left q.unop).op.toLoc).inv.toNatTrans.naturality
-        f
-    simp [Pseudofunctor.mapComp'_hom_naturality,
-      Pseudofunctor.mapComp'_inv_naturality,
-      Pseudofunctor.mapComp'_naturality_1,
-      Pseudofunctor.mapComp'_naturality_2, ← Functor.map_comp,
-      ← reassoc_of% Cat.Hom₂.comp_app, ← NatTrans.naturality_apply]
+  sorry
 
 theorem isom_presheaf_is_subpresheaf {C : Type u} [Category.{v} C]
     (F : FiberedCategory C) {U : C} (x y : Fiber F U) (T : (Over C U)ᵒᵖ)

@@ -133,7 +133,6 @@ structure DescentComparisonHypotheses {C : Type u} [Category.{v} C]
   {X : ι → C} {Y : κ → C} (f : ∀ i, X i ⟶ U) (g : ∀ j, Y j ⟶ U) where
   refinement : DescentFamilyMorphism g f
   refinementOverIdentity : refinement.base = 𝟙 U
-  fibreProductsExist : HasPullbacks C
   baseDescentIsEquivalence : (F.toDescentData g).IsEquivalence
   localPullbacks : ∀ i j, ChosenPullback (f i) (g j)
   overlapPullbacks : ∀ i i', ChosenPullback (f i) (f i')

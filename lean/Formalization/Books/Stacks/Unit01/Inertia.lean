@@ -69,7 +69,9 @@ theorem inertia_variants_are_stacks {C : Type u} [Category.{v} C]
     (J : GrothendieckTopology C) {F G : FiberedCategory C}
     (η : FiberedMorphism F G) (hF : StackInGroupoids F J)
     (hG : StackInGroupoids G J) :
-    ∃ I : FiberedCategory C, StackInGroupoids I J := by
+    ∃ (R : RelativeInertiaStackData η J)
+      (A : AbsoluteInertiaStackData F J),
+      StackInGroupoids R.value J ∧ StackInGroupoids A.value J := by
   sorry
 
 theorem inertia_variants_of_setoid_stacks_are_setoid_stacks
@@ -77,7 +79,9 @@ theorem inertia_variants_of_setoid_stacks_are_setoid_stacks
     (J : GrothendieckTopology C) {F G : FiberedCategory C}
     (η : FiberedMorphism F G) (hF : StackInSetoids F J)
     (hG : StackInSetoids G J) :
-    ∃ I : FiberedCategory C, StackInSetoids I J := by
+    ∃ (R : RelativeInertiaStackData η J)
+      (A : AbsoluteInertiaStackData F J),
+      StackInSetoids R.value J ∧ StackInSetoids A.value J := by
   sorry
 
 theorem inertia_characterizes_stack_in_setoids

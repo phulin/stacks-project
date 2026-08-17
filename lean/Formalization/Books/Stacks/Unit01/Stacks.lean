@@ -40,12 +40,13 @@ structure SmallSubstackData {C : Type u} [Category.{v} C]
   isStack : Stack value J
   fullyFaithful : FiberwiseFullyFaithful inclusion
   essentiallySurjective : FiberwiseEssentiallySurjective inclusion
+  hasFibrewiseRepresentatives : HasFibrewiseRepresentatives value
 
 theorem small_stack_substack_exists {C : Type u} [Category.{v} C]
     (F : FiberedCategory C) (J : GrothendieckTopology C)
     (hF : Stack F J) (hrepresentatives : HasFibrewiseRepresentatives F) :
     Nonempty (SmallSubstackData F J) := by
-  refine ⟨⟨F, 𝟙 F, hF, ?_, ?_⟩⟩
+  refine ⟨⟨F, 𝟙 F, hF, ?_, ?_, hrepresentatives⟩⟩
   · intro U
     change Nonempty ((𝟭 _).FullyFaithful)
     exact ⟨Functor.FullyFaithful.id _⟩
@@ -66,7 +67,7 @@ theorem stack_iff_effective_descent {C : Type u} [Category.{v} C]
         CoveringFamily J f → (F.toDescentData f).IsEquivalence := by
   constructor
   · intro h ι U X f hf
-    letI : F.IsStack J := h
+    let : F.IsStack J := h
     exact F.isEquivalence_toDescentData f hf
   · intro h
     sorry
@@ -105,6 +106,7 @@ theorem characterize_fully_faithful {C : Type u} [Category.{v} C]
 theorem characterize_essentially_surjective_when_fully_faithful
     {C : Type u} [Category.{v} C] {J : GrothendieckTopology C}
     {F G : FiberedCategory C} (η : FiberedMorphism F G)
+    [F.IsStack J] [G.IsStack J]
     (hη : FiberwiseFullyFaithful η) :
     FiberwiseEssentiallySurjective η ↔
       ∀ (U : C) (y : Fiber G U),

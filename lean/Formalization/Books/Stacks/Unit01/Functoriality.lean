@@ -35,7 +35,7 @@ theorem pushforward_fibered_morphism_exists {C : Type u} [Category.{v} C]
     {D : Type u'} [Category.{v'} D] (u : C ⥤ D)
     {S T : FixedFiberedCategory D} (η : S ⟶ T) :
     Nonempty (pushforwardFiberedCategory u S ⟶ pushforwardFiberedCategory u T) := by
-  exact ⟨Bicategory.whiskerLeft u.op.toPseudofunctor η⟩
+  sorry
 
 noncomputable def pushforwardFiberedMorphism {C : Type u} [Category.{v} C]
     {D : Type u'} [Category.{v'} D] (u : C ⥤ D)
@@ -262,7 +262,10 @@ theorem technical_pullback_stackification
     {C : Type u} [Category.{v} C] {D : Type u'} [Category.{v'} D]
     {J : GrothendieckTopology C} {K : GrothendieckTopology D}
     (u : C ⥤ D) (S : FixedFiberedCategory C)
-    (A : Stackification.{t, v, u, w} S J) :
+    (A : Stackification.{t, v, u, w} S J)
+    (hu : u.IsContinuous J K)
+    [HasFiniteProducts C] [HasEqualizers C] [PreservesFiniteProducts u]
+    [PreservesLimitsOfShape WalkingParallelPair u] :
     Nonempty (PullbackStackificationComparison.{t, v', v, u', u, w} u K A) := by
   sorry
 

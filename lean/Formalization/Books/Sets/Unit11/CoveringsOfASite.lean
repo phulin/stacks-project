@@ -504,7 +504,7 @@ theorem boundedCoverings_at_closureStage_isSite {C : Type u}
     [Category.{v} C] (K : SiteCoveringClass C)
     (H : CoveringCoding C) (κ : Cardinal.{max u v})
     {β₁ β₂ : Ordinal.{max u v}}
-    (hβ₁ : initialCoveringStage K H ≤ β₁)
+    (hArrows : ∀ a : Arrow C, H.arrowInV a β₁)
     (hκ : Cardinal.aleph0 ≤ κ)
     (hβ₂ : β₁ < β₂ ∧ κ < Ordinal.cof β₂) :
     Order.IsSuccLimit (closureFunction K H κ β₂) ∧
@@ -546,7 +546,12 @@ the warning into an unproved theorem. -/
 def limitLevelAlreadyWorks {C : Type u} [Category.{v} C]
     (K : SiteCoveringClass C) (H : CoveringCoding C) : Prop :=
   ∃ α : Ordinal.{max u v},
-    Order.IsSuccLimit α ∧ IsSiteCoveringCollection (K.coveringsAt H α)
+    Order.IsSuccLimit α ∧
+      IsSiteCoveringCollection (K.coveringsAt H α) ∧
+        ∀ F ∈ K.allCoverings,
+          ∃ G : CoveringFamily C F.1,
+            G.asAny ∈ K.coveringsAt H α ∧
+              CoveringFamily.combinatoriallyEquivalent F.2 G
 
 end
 

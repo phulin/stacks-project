@@ -177,16 +177,15 @@ theorem splitFibredCartesianLift_isStronglyCartesian
 
 /-! ## Split fibred categories -/
 
-/-- Source-facing name for equivalence of categories over a fixed base.
-
-The source's ``isomorphic over `C`'' is equivalence in the 2-category of
-categories over `C`, so reuse the established Unit 34 interface with strict
-triangles and vertical natural isomorphisms rather than requiring strict
-inverse functors. -/
-abbrev IsomorphicOverBase
+/-- The source's ``isomorphic over `C`'' relation.  The strict inverse
+functors are important here: the source distinguishes a split fibred category
+from one which is merely equivalent to a split one. -/
+def IsomorphicOverBase
     {S T C : Type*} [Category* S] [Category* T] [Category* C]
     (p : S ⥤ C) (q : T ⥤ C) : Prop :=
-  Formalization.Books.Categories.Unit34.IsEquivalentOverBase p q
+  ∃ (F : S ⥤ T) (G : T ⥤ S),
+    F ⋙ q = p ∧ G ⋙ p = q ∧
+      F ⋙ G = 𝟭 S ∧ G ⋙ F = 𝟭 T
 
 /-- The source's notion of being split, expressed as isomorphism over the
 base category. -/
@@ -325,13 +324,8 @@ theorem splitFibredCategory_isSplit
   constructor
   · exact splitFibredProjection_isFibered F
   · refine ⟨F, ?_⟩
-    refine ⟨𝟭 _, 𝟭 _, Functor.id_comp _, Functor.id_comp _, ?_, ?_⟩
-    · refine ⟨Iso.refl _, rfl, ?_⟩
-      intro X
-      simp
-    · refine ⟨Iso.refl _, rfl, ?_⟩
-      intro X
-      simp
+    exact ⟨𝟭 _, 𝟭 _, Functor.id_comp _, Functor.id_comp _,
+      Functor.id_comp _, Functor.id_comp _⟩
 
 /-! ## The splitting criterion -/
 

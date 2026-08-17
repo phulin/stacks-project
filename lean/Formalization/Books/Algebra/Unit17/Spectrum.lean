@@ -50,9 +50,7 @@ theorem exists_minimal_prime (R : Type u) [CommRing R] [Nontrivial R] :
 theorem exists_minimal_prime_between {R : Type u} [CommRing R]
     (I : Ideal R) (p : PrimeSpectrum R) (hIp : I ≤ p.asIdeal) :
     ∃ q : PrimeSpectrum R, q.asIdeal ∈ I.minimalPrimes ∧ q.asIdeal ≤ p.asIdeal := by
-  letI : p.asIdeal.IsPrime := p.2
-  obtain ⟨q, hq, hqle⟩ := Ideal.exists_minimalPrimes_le
-    (I := I) (J := p.asIdeal) hIp
+  obtain ⟨q, hq, hqle⟩ := @Ideal.exists_minimalPrimes_le _ _ I p.asIdeal p.2 hIp
   exact ⟨⟨q, hq.isPrime⟩, hq, hqle⟩
 
 theorem zeroLocus_span {R : Type u} [CommRing R] (T : Set R) :

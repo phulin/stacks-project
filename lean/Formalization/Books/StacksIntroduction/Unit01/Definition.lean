@@ -139,11 +139,18 @@ theorem ellipticModuli_isAlgebraicStack : IsAlgebraicEllipticModuli := by
 abbrev GaloisGroup (K L : Type u) [Field K] [Field L] [Algebra K L] :=
   L ≃ₐ[K] L
 
-/-- The étale map `Spec L ⟶ Spec K` attached to a field extension. -/
-def galoisCover {K L : Type u} [Field K] [Field L] [Algebra K L] :
+/-- The map `Spec L ⟶ Spec K` attached to a finite Galois extension. -/
+def galoisCover {K L : Type u} [Field K] [Field L] [Algebra K L]
+    [FiniteDimensional K L] [IsGalois K L] :
     Scheme.Spec.obj (Opposite.op (CommRingCat.of L)) ⟶
       Scheme.Spec.obj (Opposite.op (CommRingCat.of K)) :=
   Scheme.Spec.map (CommRingCat.ofHom (algebraMap K L)).op
+
+/-- A finite Galois field extension gives an étale cover of schemes. -/
+theorem galoisCover_is_etale {K L : Type u} [Field K] [Field L] [Algebra K L]
+    [FiniteDimensional K L] [IsGalois K L] :
+    Etale (galoisCover (K := K) (L := L)) := by
+  sorry
 
 /-- Applying a field automorphism to the coefficients of a Weierstrass curve. -/
 def galoisTwist {K L : Type u} [Field K] [Field L] [Algebra K L]

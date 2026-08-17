@@ -27,17 +27,20 @@ namespace Formalization.Books.StacksIntroduction.Unit01
 
 /-! ### The fibrewise cohomology data -/
 
-/-- The assertion that a vector space is one-dimensional, packaged as a basis. -/
+/-- A vector space together with the one-dimensionality assertion used below. -/
 structure OneDimensionalVectorSpace (K : Type u) [Field K] where
   carrier : ModuleCat K
   basis : Nonempty ((carrier : Type u) ≃ₗ[K] K)
 
-/-- The `H^0` and `H^1` data required in the source definition of a fibre. -/
+/-- The `H^0` and `H^1` data required in the source definition of a fibre.
+
+Mathlib does not currently provide the cohomology of an arbitrary scheme
+fibre in this interface, so the two fields retain the actual vector spaces
+and their one-dimensionality witnesses instead of replacing them by bare
+propositions. -/
 structure FiberCohomologyData (K : Type u) [Field K] where
-  H0 : ModuleCat K
-  H1 : ModuleCat K
-  H0_one_dimensional : Nonempty ((H0 : Type u) ≃ₗ[K] K)
-  H1_one_dimensional : Nonempty ((H1 : Type u) ≃ₗ[K] K)
+  H0 : OneDimensionalVectorSpace K
+  H1 : OneDimensionalVectorSpace K
 
 /-! ### Elliptic curves over a scheme -/
 
@@ -117,6 +120,14 @@ structure EllipticCurveMorphism {S S' : Scheme.{u}} (a : S ⟶ S')
   projection_comm : hom ≫ E'.projection = E.projection ≫ a
   section_comm : E.zero ≫ hom = a ≫ E'.zero
   cartesian : IsPullback hom E.projection E'.projection a
+
+/-- The identity morphism of a family. -/
+def EllipticCurveMorphism.refl {S : Scheme.{u}} (E : EllipticCurve S) :
+    EllipticCurveMorphism (𝟙 S) E E :=
+  { hom := 𝟙 E.total
+    projection_comm := by simp
+    section_comm := by simp
+    cartesian := IsPullback.of_id_fst }
 
 /-- A witness over a fixed base, with its inverse retained as an isomorphism. -/
 structure EllipticCurveIso {S : Scheme.{u}} (E E' : EllipticCurve S) where

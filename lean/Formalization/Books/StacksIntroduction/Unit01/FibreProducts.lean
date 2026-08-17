@@ -29,34 +29,35 @@ structure EllipticFiberProductPoint {S S' : Scheme.{u}}
   toS' : T ⟶ S'
   identification : EllipticCurveIso (E.baseChange toS) (E'.baseChange toS')
 
-/-- A restricted triple exists after pulling it back along a test-scheme map. -/
-theorem exists_ellipticFiberProductPoint_restrict
-    {S S' T T' : Scheme.{u}} {E : ModuliPoint S} {E' : ModuliPoint S'}
-    (u : T' ⟶ T) (x : EllipticFiberProductPoint E E' T) :
-    ∃ y : EllipticFiberProductPoint E E' T',
-      y.toS = u ≫ x.toS ∧ y.toS' = u ≫ x.toS' := by
-  sorry
+/-- Pull a triple back along a test-scheme map.
 
-/-- The chosen restriction map on triples. -/
+The identification is transported through the chosen base-change
+presentations, including the associativity isomorphisms that compare an
+iterated pullback with the pullback along a composite. -/
 noncomputable def EllipticFiberProductPoint.restrict
     {S S' T T' : Scheme.{u}} {E : ModuliPoint S} {E' : ModuliPoint S'}
     (u : T' ⟶ T) (x : EllipticFiberProductPoint E E' T) :
     EllipticFiberProductPoint E E' T' :=
-  Classical.choose (exists_ellipticFiberProductPoint_restrict u x)
+  { toS := u ≫ x.toS
+    toS' := u ≫ x.toS'
+    identification :=
+      (EllipticCurveIso.baseChange_assoc E x.toS u).trans
+        ((x.identification.baseChange u).trans
+          (EllipticCurveIso.baseChange_assoc E' x.toS' u).symm) }
 
 /-- The chosen restriction has the expected map to `S`. -/
 theorem EllipticFiberProductPoint.restrict_toS
     {S S' T T' : Scheme.{u}} {E : ModuliPoint S} {E' : ModuliPoint S'}
     (u : T' ⟶ T) (x : EllipticFiberProductPoint E E' T) :
     (x.restrict u).toS = u ≫ x.toS :=
-  (Classical.choose_spec (exists_ellipticFiberProductPoint_restrict u x)).1
+  rfl
 
 /-- The chosen restriction has the expected map to `S'`. -/
 theorem EllipticFiberProductPoint.restrict_toS'
     {S S' T T' : Scheme.{u}} {E : ModuliPoint S} {E' : ModuliPoint S'}
     (u : T' ⟶ T) (x : EllipticFiberProductPoint E E' T) :
     (x.restrict u).toS' = u ≫ x.toS' :=
-  (Classical.choose_spec (exists_ellipticFiberProductPoint_restrict u x)).2
+  rfl
 
 /-- The chosen restrictions can be made coherently with identities. -/
 theorem EllipticFiberProductPoint.restrict_id
@@ -100,10 +101,10 @@ def ellipticFiberProductPresheaf {S S' : Scheme.{u}}
 structure FiberProductPresentation {S S' : Scheme.{u}}
     (E : ModuliPoint S) (E' : ModuliPoint S') where
   scheme : Scheme.{u}
-  toS : scheme ⟶ S
-  toS' : scheme ⟶ S'
-  representing : Nonempty
-    (ellipticFiberProductPresheaf E E' ≅ uliftYoneda.{u}.obj scheme)
+  representing : ellipticFiberProductPresheaf E E' ≅ uliftYoneda.{u}.obj scheme
+  universalPoint : EllipticFiberProductPoint E E' scheme
+  representing_identity :
+    representing.inv.app (Opposite.op scheme) (ULift.up (𝟙 scheme)) = universalPoint
 
 /-- The key fact: the triple-valued presheaf is represented by a scheme. -/
 theorem exists_fiberProductPresentation {S S' : Scheme.{u}}
@@ -125,13 +126,13 @@ noncomputable def moduliFiberProductScheme {S S' : Scheme.{u}}
 noncomputable def moduliFiberProductProjection {S S' : Scheme.{u}}
     (E : ModuliPoint S) (E' : ModuliPoint S') :
     moduliFiberProductScheme E E' ⟶ S' :=
-  (fiberProductPresentation E E').toS'
+  (fiberProductPresentation E E').universalPoint.toS'
 
 /-- Its projection to the first scheme. -/
 noncomputable def moduliFiberProductFirstProjection {S S' : Scheme.{u}}
     (E : ModuliPoint S) (E' : ModuliPoint S') :
     moduliFiberProductScheme E E' ⟶ S :=
-  (fiberProductPresentation E E').toS
+  (fiberProductPresentation E E').universalPoint.toS
 
 /-! ### The diagonal description -/
 

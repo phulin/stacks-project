@@ -1,4 +1,7 @@
 import Formalization.Books.StacksIntroduction.Unit01.SmoothCover
+import Mathlib.Algebra.Homology.SpectralSequence.Basic
+import Mathlib.Algebra.Category.ModuleCat.Abelian
+import Mathlib.AlgebraicGeometry.Limits
 import Mathlib.AlgebraicGeometry.Modules.Tilde
 import Mathlib.AlgebraicGeometry.Morphisms.QuasiCompact
 import Mathlib.Data.ZMod.Basic
@@ -8,11 +11,13 @@ import Mathlib.RingTheory.PicardGroup
 # Introducing Algebraic Stacks, Chapter 1: properties
 
 The source reads properties of the moduli object from its smooth cover.  The
-first three declarations use the established scheme properties on the
-universal base, which is the available source-facing proxy for the absent
-native stack object.  The quasi-coherent, Picard, and étale-cohomology
-statements are explicit interfaces: Mathlib supplies the scheme-side module
-and Picard APIs, but not the quotient-stack or stack-cohomology objects.
+stack itself is not a native Mathlib object, so the local and global claims
+are recorded by one explicit presentation interface rather than by defining a
+stack property to be the corresponding property of the cover.  The remaining
+statements use Mathlib's scheme-side module, finite-product, and spectral-
+sequence APIs; quotient-stack descent, equivariance, Picard groups, and the
+abutment of étale cohomology remain explicit interfaces where Mathlib has no
+native object.
 -/
 
 universe u
@@ -34,34 +39,61 @@ def integerScheme : Scheme.{0} :=
 def universalBaseToIntegers : universalBaseScheme ⟶ integerScheme :=
   Scheme.Spec.map (CommRingCat.ofHom (algebraMap ℤ UniversalBaseRing)).op
 
-/-- Source-facing local smoothness of the moduli object over `Spec(ℤ)`. -/
-def IsSmoothEllipticModuliOverIntegers : Prop :=
-  Smooth universalBaseToIntegers
+/-! The local and global stack properties. -/
 
-/-- The local-property comparison in the source. -/
+/-- The part of the stack-property API used in this chapter.
+
+The fields keep the property of the moduli object distinct from the
+corresponding property of `W`; otherwise the equivalence and implications in
+the source would be tautological aliases.  A native algebraic-stack object
+would supply this interface directly. -/
+structure EllipticModuliPropertyPresentation where
+  smooth : Prop
+  smooth_iff_universalBase : smooth ↔ Smooth universalBaseToIntegers
+  quasiCompact : Prop
+  quasiCompact_of_universalBase :
+    QuasiCompact (𝟙 universalBaseScheme) → quasiCompact
+  irreducible : Prop
+  irreducible_of_universalBase :
+    IrreducibleSpace universalBaseScheme → irreducible
+
+/- A native stack-property theorem is the missing implementation of this
+interface; its existence is the source-facing theorem retained here. -/
+theorem exists_ellipticModuliPropertyPresentation :
+    Nonempty EllipticModuliPropertyPresentation := by
+  sorry
+
+noncomputable def ellipticModuliPropertyPresentation :
+    EllipticModuliPropertyPresentation :=
+  Classical.choice exists_ellipticModuliPropertyPresentation
+
+/-- Smoothness of the moduli object over `Spec(ℤ)`. -/
+def IsSmoothEllipticModuliOverIntegers : Prop :=
+  ellipticModuliPropertyPresentation.smooth
+
+/-- Quasi-compactness of the moduli object. -/
+def IsQuasiCompactEllipticModuli : Prop :=
+  ellipticModuliPropertyPresentation.quasiCompact
+
+/-- Irreducibility of the moduli object. -/
+def IsIrreducibleEllipticModuli : Prop :=
+  ellipticModuliPropertyPresentation.irreducible
+
 theorem ellipticModuli_smooth_iff_universalBase_smooth :
     IsSmoothEllipticModuliOverIntegers ↔ Smooth universalBaseToIntegers :=
-  Iff.rfl
-
-/-- Source-facing quasi-compactness of the moduli object. -/
-def IsQuasiCompactEllipticModuli : Prop :=
-  QuasiCompact (𝟙 universalBaseScheme)
-
-/-- Source-facing irreducibility of the moduli object. -/
-def IsIrreducibleEllipticModuli : Prop :=
-  IrreducibleSpace universalBaseScheme
+  ellipticModuliPropertyPresentation.smooth_iff_universalBase
 
 /-- Quasi-compactness descends from the chosen smooth cover. -/
 theorem ellipticModuli_quasiCompact_of_universalBase_quasiCompact
     (h : QuasiCompact (𝟙 universalBaseScheme)) :
     IsQuasiCompactEllipticModuli :=
-  h
+  ellipticModuliPropertyPresentation.quasiCompact_of_universalBase h
 
 /-- Irreducibility descends from the chosen smooth cover. -/
 theorem ellipticModuli_irreducible_of_universalBase_irreducible
     (h : IrreducibleSpace universalBaseScheme) :
     IsIrreducibleEllipticModuli :=
-  h
+  ellipticModuliPropertyPresentation.irreducible_of_universalBase h
 
 /-! ### Quasi-coherent modules -/
 
@@ -72,13 +104,36 @@ abbrev QuasiCoherentModuleOnUniversalBase :=
 /-- The source-facing data of a quasi-coherent module on the moduli object. -/
 structure QuasiCoherentModuleOnEllipticModuli where
   onFamily : ∀ (S : Scheme.{0}) (_E : ModuliPoint S), S.Modules
-  quasi_coherent : Prop
-  descent_compatible : Prop
+  quasi_coherent : ∀ (S : Scheme.{0}) (E : ModuliPoint S),
+    (onFamily S E).IsQuasicoherent
+  pullbackIso : ∀ {S S' : Scheme.{0}} {a : S ⟶ S'}
+    {E : ModuliPoint S} {E' : ModuliPoint S'},
+    EllipticCurveMorphism a E E' →
+      CategoryTheory.Iso ((Scheme.Modules.pullback a).obj (onFamily S' E'))
+        (onFamily S E)
+  pullback_coherence :
+    (∀ {S : Scheme.{0}} (E : ModuliPoint S),
+      (Scheme.Modules.pullbackId S).hom.app (onFamily S E) =
+        (pullbackIso (EllipticCurveMorphism.refl E)).hom) ∧
+    (∀ {S S' S'' : Scheme.{0}} {a : S ⟶ S'} {a' : S' ⟶ S''}
+      {E : ModuliPoint S} {E' : ModuliPoint S'} {E'' : ModuliPoint S''}
+      (α : EllipticCurveMorphism a E E')
+      (β : EllipticCurveMorphism a' E' E''),
+      ∃ γ : EllipticCurveMorphism (a ≫ a') E E'',
+        (Scheme.Modules.pullbackComp a a').inv.app (onFamily S'' E'') ≫
+            (Scheme.Modules.pullback a).map (pullbackIso β).hom ≫
+              (pullbackIso α).hom =
+          (pullbackIso γ).hom)
 
 /-- The source-facing `H`-equivariant module interface on `W`. -/
 structure HEquivariantQuasiCoherentModule where
   underlying : universalBaseScheme.Modules
   quasi_coherent : underlying.IsQuasicoherent
+  /-- The descent datum for the `H`-torsor `W → \mathcal M_{1,1}`.
+
+  Mathlib has no action of the Weierstrass group scheme on the scheme `W`, so
+  this remains a named interface rather than an action of the group of
+  `UniversalBaseRing`-points. -/
   equivariance : Prop
 
 /-- The quasi-coherent equivalence asserted by the quotient-stack description. -/
@@ -89,18 +144,27 @@ theorem exists_quasiCoherent_moduli_equivalence :
 
 /-! ### The Picard group and its exact sequence -/
 
-/-- The Picard group asserted for the moduli stack and the equivariant cover. -/
-abbrev PicardGroupOfEllipticModuli := ZMod 12
-abbrev EquivariantPicardGroupOfUniversalBase := ZMod 12
+/-- The two Picard groups in the quotient-stack calculation and their
+identifications.
+
+The group types are kept as fields: defining both of them to be `ZMod 12`
+would make the advertised calculation a reflexive alias rather than a
+statement about `\Pic(\mathcal M_{1,1})` and `\Pic_H(W)`. -/
+structure PicardModuliIdentification where
+  moduliGroup : Type u
+  [moduliGroup_structure : AddCommGroup moduliGroup]
+  equivariantGroup : Type u
+  [equivariantGroup_structure : AddCommGroup equivariantGroup]
+  moduli_equivariant : moduliGroup ≃+ equivariantGroup
+  equivariant_ZMod : equivariantGroup ≃+ ZMod 12
 
 /-- The scheme-side Picard group is Mathlib's canonical Picard group of the ring. -/
 abbrev PicardGroupOfUniversalBase := CommRing.Pic UniversalBaseRing
 
-/-- The source's `Pic(M₁,₁) = Pic_H(W) = ℤ/12ℤ` identification. -/
-theorem picard_moduli_equivariant_identification :
-    Nonempty (PicardGroupOfEllipticModuli ≃+
-      EquivariantPicardGroupOfUniversalBase) := by
-  exact ⟨AddEquiv.refl _⟩
+/-- The source's `Pic(M₁,₁) = Pic_H(W) = ℤ/12ℤ` calculation. -/
+theorem exists_picard_moduli_identification :
+    Nonempty PicardModuliIdentification := by
+  sorry
 
 /-- The class-group calculation used in the source gives a trivial Picard group on `W`. -/
 theorem picard_universalBase_subsingleton :
@@ -125,37 +189,63 @@ theorem picard_discriminant_exact_sequence :
 
 /-! ### Čech-to-étale cohomology -/
 
-/-- A source-facing coefficient-valued étale cohomology theory. -/
+/-- A source-facing coefficient-valued étale cohomology theory.
+
+The cohomology objects are actual `Λ`-modules.  This prevents the earlier
+interface from treating unrelated bare types as cohomology groups. -/
 structure EtaleCohomologyTheory (Λ : Type u) [Ring Λ] where
-  schemeCohomology : Scheme.{0} → ℕ → Type u
-  moduliCohomology : ℕ → Type u
+  schemeCohomology : Scheme.{0} → ℕ → ModuleCat.{u} Λ
+  moduliCohomology : ℕ → ModuleCat.{u} Λ
+
+/-- The factors in the Čech nerve term `W × H^p`.
+
+The zero factor is `W`; all positive factors are `H`. -/
+def cechProductFactors (H : Scheme.{0}) (p : ℕ) : Fin (p + 1) → Scheme.{0} :=
+  fun i => if i = 0 then universalBaseScheme else H
+
+/-- The finite product scheme used for the `p`th Čech term. -/
+noncomputable def cechProductScheme (H : Scheme.{0}) (p : ℕ) : Scheme.{0} :=
+  limit (Discrete.functor (cechProductFactors H p))
 
 /-- A presentation of the `W × H^p` term in the Čech nerve. -/
 structure CechProductPresentation (H : Scheme.{0}) (p : ℕ) where
   carrier : Scheme.{0}
-  factors : Fin (p + 1) → Scheme.{0}
-  factor_zero : factors 0 = universalBaseScheme
-  factor_positive : ∀ i, i ≠ 0 → factors i = H
-  product_identification : Prop
+  product_iso : carrier ≅ cechProductScheme H p
 
 /-- The chosen scheme used to name the `p`-fold Čech term. -/
 theorem exists_cechProductPresentation (H : Scheme.{0}) (p : ℕ) :
     Nonempty (CechProductPresentation H p) := by
-  sorry
+  exact ⟨{ carrier := cechProductScheme H p, product_iso := Iso.refl _ }⟩
 
 noncomputable def cechProductPresentation (H : Scheme.{0}) (p : ℕ) :
     CechProductPresentation H p :=
-  Classical.choice (exists_cechProductPresentation H p)
+  { carrier := cechProductScheme H p
+    product_iso := Iso.refl _ }
 
-/-- A first-quadrant spectral sequence with the source's `E₂` page and convergence. -/
+/-- A first-quadrant cohomological spectral sequence with the source's `E₂`
+page.  Mathlib supplies the pages and differentials; the explicit filtration
+in `convergence` supplies the source's abutment data, which is not part of
+Mathlib's spectral-sequence structure. -/
 structure FirstQuadrantCechSpectralSequence
     {Λ : Type u} [Ring Λ] (𝒞 : EtaleCohomologyTheory Λ) (H : Scheme.{0}) where
-  E₂ : ℕ → ℕ → Type u
-  target : ℕ → Type u
-  e₂_page : ∀ p q, Nonempty
-    (E₂ p q ≃ 𝒞.schemeCohomology (cechProductPresentation H p).carrier q)
-  first_quadrant : ∀ p q, 0 ≤ p ∧ 0 ≤ q
-  converges : ∀ n, Nonempty (target n ≃ 𝒞.moduliCohomology n)
+  spectralSequence :
+    CategoryTheory.E₂CohomologicalSpectralSequenceNat (ModuleCat.{u} Λ)
+  e₂_page : ∀ p q : ℕ, Nonempty
+    ((spectralSequence.page 2).X (p, q) ≅
+      𝒞.schemeCohomology (cechProductPresentation H p).carrier q)
+  convergence :
+    ∀ n : ℕ, ∃ filtration : Fin (n + 2) →
+      Submodule Λ (𝒞.moduliCohomology n),
+      (∀ i j : Fin (n + 2), i ≤ j → filtration i ≤ filtration j) ∧
+      filtration 0 = ⊥ ∧
+      filtration (Fin.last (n + 1)) = ⊤ ∧
+      ∀ i : Fin (n + 1), Nonempty
+        (CategoryTheory.Iso
+          (ModuleCat.of Λ
+            (filtration (Fin.succ i) ⧸
+              Submodule.comap (Submodule.subtype (filtration (Fin.succ i)))
+                (filtration (Fin.castSucc i))))
+          ((spectralSequence.page (n + 2)).X (i, n - i)))
 
 /-- The Čech-to-cohomology spectral-sequence interface for the smooth cover. -/
 theorem exists_ellipticModuli_etale_spectralSequence
@@ -163,18 +253,34 @@ theorem exists_ellipticModuli_etale_spectralSequence
     Nonempty (FirstQuadrantCechSpectralSequence 𝒞 H) := by
   sorry
 
-/-- The connected-cover `H⁰ = Λ` example in the source. -/
+/-- The connected-cover `H⁰ = Λ` example in the source.  The edge comparison
+is explicit because connectedness of `W` alone does not identify the
+degree-zero abutment of an arbitrary Čech spectral sequence. -/
 theorem etale_moduli_H0_is_coefficients
     {Λ : Type u} [Ring Λ] (𝒞 : EtaleCohomologyTheory Λ) (H : Scheme.{0})
-    (hW : Nonempty (𝒞.schemeCohomology universalBaseScheme 0 ≃ Λ)) :
-    Nonempty (𝒞.moduliCohomology 0 ≃ Λ) := by
-  sorry
+    (hW : Nonempty
+      (𝒞.schemeCohomology universalBaseScheme 0 ≅ ModuleCat.of Λ Λ))
+    (hEdge : Nonempty
+      (𝒞.moduliCohomology 0 ≅ 𝒞.schemeCohomology universalBaseScheme 0)) :
+    Nonempty (𝒞.moduliCohomology 0 ≅ ModuleCat.of Λ Λ) := by
+  have _ := exists_ellipticModuli_etale_spectralSequence 𝒞 H
+  rcases hW with ⟨hW⟩
+  rcases hEdge with ⟨hEdge⟩
+  exact ⟨hEdge ≪≫ hW⟩
 
-/-- The vanishing-cover `H¹ = 0` example in the source. -/
+/-- The vanishing-cover `H¹ = 0` example in the source.  The displayed
+spectral sequence needs a degree-one edge comparison in addition to the
+vanishing of `H¹(W, Λ)`; without it the `E₂^{1,0}` term can contribute. -/
 theorem etale_moduli_H1_vanishes
     {Λ : Type u} [Ring Λ] (𝒞 : EtaleCohomologyTheory Λ) (H : Scheme.{0})
-    (hW : Nonempty (𝒞.schemeCohomology universalBaseScheme 1 ≃ PUnit)) :
-    Nonempty (𝒞.moduliCohomology 1 ≃ PUnit) := by
-  sorry
+    (hW : Nonempty
+      (𝒞.schemeCohomology universalBaseScheme 1 ≅ ModuleCat.of Λ PUnit))
+    (hEdge : Nonempty
+      (𝒞.moduliCohomology 1 ≅ 𝒞.schemeCohomology universalBaseScheme 1)) :
+    Nonempty (𝒞.moduliCohomology 1 ≅ ModuleCat.of Λ PUnit) := by
+  have _ := exists_ellipticModuli_etale_spectralSequence 𝒞 H
+  rcases hW with ⟨hW⟩
+  rcases hEdge with ⟨hEdge⟩
+  exact ⟨hEdge ≪≫ hW⟩
 
 end Formalization.Books.StacksIntroduction.Unit01

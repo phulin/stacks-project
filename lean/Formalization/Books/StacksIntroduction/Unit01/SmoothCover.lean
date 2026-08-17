@@ -1,6 +1,7 @@
 import Formalization.Books.StacksIntroduction.Unit01.Definition
 import Mathlib.Algebra.MvPolynomial.Basic
 import Mathlib.AlgebraicGeometry.EllipticCurve.Projective.Basic
+import Mathlib.AlgebraicGeometry.Cover.Open
 import Mathlib.AlgebraicGeometry.GammaSpecAdjunction
 import Mathlib.RingTheory.Localization.Away.Basic
 
@@ -129,7 +130,10 @@ structure UniversalWeierstrassFamily where
   pointAtInfinity : Fin 3 → UniversalBaseRing
   coefficients_eq : coefficients = universalCoefficientsOverBase
   equation_eq : homogeneousEquation = WeierstrassCurve.Projective.polynomial coefficients
+  pointAtInfinity_eq : pointAtInfinity = universalPointAtInfinity
   point_on_equation : WeierstrassCurve.Projective.Equation coefficients pointAtInfinity
+  /-- The missing scheme-level identification with the projective equation. -/
+  family_identification : Prop
 
 /-- Existence of the universal elliptic-curve family over `W`. -/
 theorem exists_universalWeierstrassFamily :
@@ -164,7 +168,7 @@ def coordinateChangeAction {R : Type u} [CommRing R]
 /-- The four parameters occurring in the coordinate-change matrix in the source. -/
 def coordinateChangeParameters {R : Type u} [CommRing R]
     (C : WeierstrassCoordinateGroup R) : Rˣ × R × R × R :=
-  (C.u, C.s, C.r, C.t)
+  (C.u, C.r, C.s, C.t)
 
 /-- Two Weierstrass equations lie in the same `H`-orbit. -/
 def WeierstrassEquationEquivalent {R : Type u} [CommRing R]
@@ -180,7 +184,12 @@ theorem coordinateChangeAction_equivalent {R : Type u} [CommRing R]
 /-- The source-level local-chart and transition assertion for a family. -/
 structure WeierstrassLocalChartStatement {S : Scheme.{u}}
     (E : ModuliPoint S) where
-  local_chart : Prop
+  cover : S.AffineOpenCover
+  coefficients : ∀ i, WeierstrassCurve (cover.X i)
+  coefficients_is_elliptic : ∀ i, IsUnit (coefficients i).Δ
+  /-- Mathlib has no scheme-level Weierstrass model for `E` in this interface. -/
+  family_identification : Prop
+  /-- The overlap coordinate changes require that same missing model. -/
   transition_by_coordinate_change : Prop
 
 /-- The source's local Weierstrass-chart assertion. -/
@@ -191,7 +200,8 @@ theorem every_ellipticCurve_has_local_weierstrass_chart
 
 /-- The source's torsor statement for the smooth cover. -/
 structure WeierstrassCoverTorsorStatement where
-  local_equations : Prop
+  local_equations : ∀ {S : Scheme.{u}} (E : ModuliPoint S),
+    Nonempty (WeierstrassLocalChartStatement E)
   coordinate_transitions : Prop
   torsor : Prop
 
@@ -205,10 +215,19 @@ theorem universalWeierstrass_smooth_surjective :
       IsSurjectiveModuliMorphism universalWeierstrassMorphism := by
   sorry
 
-/-- The quotient-stack presentation described by the source proof. -/
+/-- The quotient-stack presentation described by the source proof.
+
+The available Mathlib group is the group of coordinate-change points over
+`UniversalBaseRing`; it is not itself the group scheme `H` over `ℤ`.  The
+quotient-stack assertion is therefore retained as an explicit presentation
+field instead of identifying these two objects. -/
 structure GlobalQuotientPresentation where
   source : Scheme.{0}
-  coordinateGroup : WeierstrassCoordinateGroup UniversalBaseRing
+  source_eq : source = universalBaseScheme
+  coordinateGroupPoints : Type
+  coordinateGroupPoints_group : Group coordinateGroupPoints
+  coordinateGroupPoints_eq :
+    coordinateGroupPoints = WeierstrassCoordinateGroup UniversalBaseRing
   presentation : Prop
 
 theorem ellipticModuli_is_global_quotient :

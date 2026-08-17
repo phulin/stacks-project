@@ -3,7 +3,10 @@ import Formalization.Books.Categories.Unit19.FilteredColimits
 import Mathlib.CategoryTheory.Comma.StructuredArrow.Basic
 import Mathlib.CategoryTheory.Filtered.Basic
 import Mathlib.CategoryTheory.Functor.KanExtension.Adjunction
+import Mathlib.CategoryTheory.Limits.Constructions.LimitsOfProductsAndEqualizers
 import Mathlib.CategoryTheory.Limits.Preserves.FunctorCategory
+import Mathlib.CategoryTheory.Limits.Preserves.Shapes.Equalizers
+import Mathlib.CategoryTheory.Limits.Preserves.Shapes.Terminal
 import Mathlib.CategoryTheory.Limits.Shapes.Equalizers
 import Mathlib.CategoryTheory.Limits.Shapes.Pullback.HasPullback
 import Mathlib.CategoryTheory.Limits.Shapes.Terminal
@@ -99,13 +102,16 @@ theorem indexRestriction_obj (u : C ⥤ D) {V' V : D} (g : V' ⟶ V)
 @[simp]
 theorem indexRestriction_id (u : C ⥤ D) (V : D) :
     indexRestriction u (𝟙 V) = 𝟭 (indexCategory u V) := by
-  sorry
+  change StructuredArrow.map (𝟙 V) = 𝟭 (indexCategory u V)
+  exact CategoryTheory.Functor.ext (fun ⟨_, _, _⟩ => by simp)
 
 theorem indexRestriction_comp (u : C ⥤ D) {V₀ V₁ V₂ : D}
     (g : V₀ ⟶ V₁) (h : V₁ ⟶ V₂) :
     indexRestriction u (g ≫ h) =
       indexRestriction u h ⋙ indexRestriction u g := by
-  sorry
+  change StructuredArrow.map (g ≫ h) =
+    StructuredArrow.map h ⋙ StructuredArrow.map g
+  exact CategoryTheory.Functor.ext (fun ⟨_, _, _⟩ => by simp)
 
 /-! ## The diagrams indexed by `I_V` -/
 
@@ -125,7 +131,7 @@ gives `F_V`. -/
 theorem indexPresheaf_restrict {V' V : D} (u : C ⥤ D) (F : Presheaf C)
     (g : V' ⟶ V) :
     (indexRestriction u g).op ⋙ indexPresheaf u F V' = indexPresheaf u F V := by
-  sorry
+  rfl
 
 /-! ## The pointwise colimit presentation -/
 
@@ -149,7 +155,7 @@ index equivalence. -/
 theorem indexPresheaf_under_equivalence (u : C ⥤ D) (F : Presheaf C) (V : D) :
     (indexCostructuredEquivalence u V).functor ⋙ kanIndexDiagram u F V =
       indexPresheaf u F V := by
-  sorry
+  rfl
 
 /-- The source's size/existence condition that every diagram on an index
 category `I_Vᵒᵖ` has a colimit in `Sets`. -/
@@ -170,7 +176,61 @@ theorem indexCategory_op_almostDirected (u : C ⥤ D) (V : D)
         ((indexCategory u V)ᵒᵖ) ∧
       Formalization.Books.Categories.Unit19.HasParallelEqualizers
         ((indexCategory u V)ᵒᵖ) := by
-  sorry
+  constructor
+  · intro X Y Z a b
+    let f := a.unop.right
+    let g := b.unop.right
+    let p := pullback f g
+    letI : HasPullback (u.map f) (u.map g) :=
+      hasPullback_of_preservesPullback u f g
+    let e := PreservesPullback.iso u f g
+    let q : V ⟶ pullback (u.map f) (u.map g) :=
+      pullback.lift Y.unop.hom Z.unop.hom (by
+        rw [indexMorphism_condition u V a.unop,
+          indexMorphism_condition u V b.unop])
+    let φ : V ⟶ u.obj p := q ≫ e.inv
+    let c : indexObject u V p φ ⟶ Y.unop :=
+      StructuredArrow.homMk (pullback.fst f g) (by
+        change φ ≫ u.map (pullback.fst f g) = Y.unop.hom
+        dsimp [φ]
+        rw [Category.assoc, PreservesPullback.iso_inv_fst]
+        simpa [q] using
+          (pullback.lift_fst Y.unop.hom Z.unop.hom _))
+    let d : indexObject u V p φ ⟶ Z.unop :=
+      StructuredArrow.homMk (pullback.snd f g) (by
+        change φ ≫ u.map (pullback.snd f g) = Z.unop.hom
+        dsimp [φ]
+        rw [Category.assoc, PreservesPullback.iso_inv_snd]
+        simpa [q] using
+          (pullback.lift_snd Y.unop.hom Z.unop.hom _))
+    refine ⟨op (indexObject u V p φ), c.op, d.op, ?_⟩
+    apply Quiver.Hom.unop_inj
+    apply StructuredArrow.hom_ext
+    change pullback.fst f g ≫ f = pullback.snd f g ≫ g
+    exact pullback.condition
+  · intro X Y a b
+    let f := a.unop.right
+    let g := b.unop.right
+    let e := equalizer f g
+    letI : HasEqualizer (u.map f) (u.map g) :=
+      HasLimit.mk ⟨_, isLimitForkMapOfIsLimit u _ (equalizerIsEqualizer f g)⟩
+    let q : V ⟶ equalizer (u.map f) (u.map g) :=
+      equalizer.lift Y.unop.hom (by
+        rw [indexMorphism_condition u V a.unop,
+          indexMorphism_condition u V b.unop])
+    let eIso := PreservesEqualizer.iso u f g
+    let φ : V ⟶ u.obj e := q ≫ eIso.inv
+    let c : indexObject u V e φ ⟶ Y.unop :=
+      StructuredArrow.homMk (equalizer.ι f g) (by
+        change φ ≫ u.map (equalizer.ι f g) = Y.unop.hom
+        dsimp [φ]
+        rw [Category.assoc, PreservesEqualizer.iso_inv_ι]
+        simp [q])
+    refine ⟨op (indexObject u V e φ), c.op, ?_⟩
+    apply Quiver.Hom.unop_inj
+    apply StructuredArrow.ext
+    change equalizer.ι f g ≫ f = equalizer.ι f g ≫ g
+    exact equalizer.condition f g
 
 /-- If `C` has a final object carried by `u` to a final object of `D`, then
 the same index category is filtered. -/
@@ -178,7 +238,35 @@ theorem indexCategory_op_isFiltered (u : C ⥤ D) (V : D) (X : C)
     (hX : IsTerminal X) (huX : IsTerminal (u.obj X))
     [HasPullbacks C] [PreservesLimitsOfShape WalkingCospan u] :
     IsFiltered (indexCategory u V)ᵒᵖ := by
-  sorry
+  letI : HasTerminal C := hX.hasTerminal
+  letI : HasFiniteLimits C := hasFiniteLimits_of_hasTerminal_and_pullbacks
+  letI : PreservesLimit (Functor.empty.{0} C) u :=
+    preservesLimit_of_preserves_limit_cone hX
+      ((isLimitMapConeEmptyConeEquiv u X).symm huX)
+  letI : PreservesLimitsOfShape (Discrete PEmpty.{1}) u :=
+    preservesLimitsOfShape_pempty_of_preservesTerminal u
+  letI : PreservesFiniteLimits u :=
+    preservesFiniteLimits_of_preservesTerminal_and_pullbacks u
+  let t : indexCategory u V := indexObject u V X (huX.from V)
+  let hAD := indexCategory_op_almostDirected u V
+  let hupper : Formalization.Books.Categories.Unit19.HasCommonUpperBounds
+      ((indexCategory u V)ᵒᵖ) := by
+    intro x y
+    let cX : x.unop ⟶ t :=
+      StructuredArrow.homMk (hX.from x.unop.right) (by
+        dsimp [t]
+        apply huX.hom_ext)
+    let cY : y.unop ⟶ t :=
+      StructuredArrow.homMk (hX.from y.unop.right) (by
+        dsimp [t]
+        apply huX.hom_ext)
+    obtain ⟨z, c, d, _⟩ := hAD.1 cX.op cY.op
+    exact ⟨z, ⟨c⟩, ⟨d⟩⟩
+  letI : IsFilteredOrEmpty (indexCategory u V)ᵒᵖ :=
+    Formalization.Books.Categories.Unit19.isFilteredOrEmpty_of_common_upper_bounds_and_parallel
+      hupper hAD.2
+  letI : Nonempty (indexCategory u V)ᵒᵖ := ⟨op t⟩
+  exact IsFiltered.mk
 
 /-! ## The pushforward -/
 
@@ -196,7 +284,13 @@ abbrev HasPointwisePushforward (u : C ⥤ D) :=
 pointwise colimits used by the Kan-extension construction. -/
 theorem hasPointwisePushforward_of_indexColimits (u : C ⥤ D)
     [HasIndexColimits u] : HasPointwisePushforward u := by
-  sorry
+  intro F V
+  change HasColimit (kanIndexDiagram u F V.unop)
+  let e := indexCostructuredEquivalence u V.unop
+  letI : HasColimit (e.functor ⋙ kanIndexDiagram u F V.unop) := by
+    rw [indexPresheaf_under_equivalence]
+    exact inferInstance
+  exact hasColimit_of_equivalence_comp e
 
 /-- Pointwise left Kan extensions supply the left Kan extensions needed by
 the functorial construction. -/
@@ -247,7 +341,23 @@ theorem recoverMap_eq_pushforwardCoprojection (u : C ⥤ D) (F : Presheaf C) (U 
     [HasLeftPushforward u] [HasPointwisePushforward u] :
     recoverMap u F U =
       pushforwardCoprojection u F (u.obj U) U (𝟙 (u.obj U)) := by
-  sorry
+  letI : Functor.HasLeftKanExtension u.op F :=
+    (inferInstance : HasLeftPushforward u) F
+  letI : Functor.HasPointwiseLeftKanExtension u.op F :=
+    (inferInstance : HasPointwisePushforward u) F
+  have hbase :
+      (u.op.leftKanExtensionUnit F).app (op U) =
+        colimit.ι (CostructuredArrow.proj u.op (op (u.obj U)) ⋙ F)
+            (CostructuredArrow.mk (𝟙 (op (u.obj U)))) ≫
+          (u.op.leftKanExtensionObjIsoColimit F (op (u.obj U))).inv := by
+    dsimp only [Functor.comp_obj, Functor.op]
+    exact (Iso.eq_comp_inv (u.op.leftKanExtensionObjIsoColimit F (op (u.obj U)))).2
+      (u.op.leftKanExtensionUnit_leftKanExtensionObjIsoColimit_hom F (op U))
+  change (u.op.leftKanExtensionUnit F).app (op U) =
+    colimit.ι (CostructuredArrow.proj u.op (op (u.obj U)) ⋙ F)
+        (CostructuredArrow.mk (𝟙 (op (u.obj U)))) ≫
+      (u.op.leftKanExtensionObjIsoColimit F (op (u.obj U))).inv
+  exact hbase
 
 /-- The recovery maps are compatible with restriction in `F`. -/
 theorem recoverMap_naturality (u : C ⥤ D) (F : Presheaf C)
@@ -255,7 +365,13 @@ theorem recoverMap_naturality (u : C ⥤ D) (F : Presheaf C)
     F.map f.op ≫ recoverMap u F V =
       recoverMap u F U ≫
         (pushforwardPresheaf u F).map (u.map f).op := by
-  sorry
+  letI : Functor.HasLeftKanExtension u.op F :=
+    (inferInstance : HasLeftPushforward u) F
+  change F.map f.op ≫ (u.op.lanUnit.app F).app (op V) =
+    (u.op.lanUnit.app F).app (op U) ≫
+      (u.op ⋙ (pushforwardPresheafFunctor u).obj F).map f.op
+  simpa [pushforwardPresheaf, pushforwardPresheafFunctor] using
+    ((u.op.lanUnit.app F).naturality f.op)
 
 /-- The restriction map on the pushforward induced by `g : V' ⟶ V`. -/
 noncomputable def pushforwardRestrictionMap (u : C ⥤ D) (F : Presheaf C)
@@ -272,7 +388,39 @@ theorem pushforwardCoprojection_naturality (u : C ⥤ D) (F : Presheaf C)
     pushforwardCoprojection u F V U φ ≫
         pushforwardRestrictionMap u F g =
       pushforwardCoprojection u F V' U (g ≫ φ) := by
-  sorry
+  letI : Functor.HasLeftKanExtension u.op F :=
+    (inferInstance : HasLeftPushforward u) F
+  letI : Functor.HasPointwiseLeftKanExtension u.op F :=
+    (inferInstance : HasPointwisePushforward u) F
+  let kV : CostructuredArrow u.op (op V) := CostructuredArrow.mk φ.op
+  let kV' : CostructuredArrow u.op (op V') :=
+    CostructuredArrow.mk (g ≫ φ).op
+  change
+    ((colimit.ι (CostructuredArrow.proj u.op (op V) ⋙ F)
+          kV : F.obj (op U) ⟶ _) ≫
+        (u.op.leftKanExtensionObjIsoColimit F (op V)).inv) ≫
+      (u.op.leftKanExtension F).map g.op =
+    (colimit.ι (CostructuredArrow.proj u.op (op V') ⋙ F)
+        kV' : F.obj (op U) ⟶ _) ≫
+      (u.op.leftKanExtensionObjIsoColimit F (op V')).inv
+  have hV :
+      colimit.ι (kanIndexDiagram u F V) kV ≫
+          (u.op.leftKanExtensionObjIsoColimit F (op V)).inv =
+        (u.op.leftKanExtensionUnit F).app (op U) ≫
+          (u.op.leftKanExtension F).map φ.op := by
+    simpa [kanIndexDiagram, kV] using
+      (u.op.ι_leftKanExtensionObjIsoColimit_inv F (op V) kV)
+  have hV' :
+      colimit.ι (kanIndexDiagram u F V') kV' ≫
+          (u.op.leftKanExtensionObjIsoColimit F (op V')).inv =
+        (u.op.leftKanExtensionUnit F).app (op U) ≫
+          (u.op.leftKanExtension F).map (g ≫ φ).op := by
+    simpa [kanIndexDiagram, kV'] using
+      (u.op.ι_leftKanExtensionObjIsoColimit_inv F (op V') kV')
+  dsimp only [kanIndexDiagram, Functor.comp_obj, CostructuredArrow.proj,
+    Comma.fst, kV, kV'] at hV hV' ⊢
+  rw [hV, hV']
+  rw [Category.assoc, ← Functor.map_comp, ← op_comp]
 
 /-- The restriction map is uniquely characterized by its composites with
 the canonical maps from all the components of the colimit. -/
@@ -285,7 +433,20 @@ theorem pushforwardRestrictionMap_unique (u : C ⥤ D) (F : Presheaf C)
       pushforwardCoprojection u F V U φ ≫ m =
         pushforwardCoprojection u F V' U (g ≫ φ)) :
     m = pushforwardRestrictionMap u F g := by
-  sorry
+  letI : Functor.HasLeftKanExtension u.op F :=
+    (inferInstance : HasLeftPushforward u) F
+  letI : Functor.HasPointwiseLeftKanExtension u.op F :=
+    (inferInstance : HasPointwisePushforward u) F
+  apply (cancel_epi (pushforwardValueColimitIso u F V).inv).1
+  apply colimit.hom_ext
+  intro j
+  obtain ⟨W, ψ, rfl⟩ := CostructuredArrow.mk_surjective j
+  dsimp only [kanIndexDiagram, Functor.comp_obj, CostructuredArrow.proj,
+    Comma.fst] at ⊢
+  have hnat := pushforwardCoprojection_naturality u F g W.unop ψ.unop
+  simpa [pushforwardCoprojection, pushforwardRestrictionMap, kanIndexDiagram,
+    Functor.comp_obj, CostructuredArrow.proj, Comma.fst, Category.assoc] using
+    (hm W.unop ψ.unop).trans hnat.symm
 
 /-- A natural transformation of presheaves is sent to the corresponding
 natural transformation of pushforwards. -/
@@ -340,7 +501,7 @@ theorem indexPresheafWithValues_under_equivalence (u : C ⥤ D)
     (A : Type a) [Category.{v'} A] (F : PresheafWithValues C A) (V : D) :
     (indexCostructuredEquivalence u V).functor ⋙ kanIndexDiagramWithValues u A F V =
       indexPresheafWithValues u A F V := by
-  sorry
+  rfl
 
 /-- The source's arbitrary-value-category hypothesis that every diagram on
 `I_Vᵒᵖ` has a colimit in `A`. -/
@@ -364,7 +525,13 @@ theorem hasPointwisePushforwardWithValues_of_indexColimits
     (u : C ⥤ D) (A : Type a) [Category.{v'} A]
     [HasIndexColimitsWithValues u A] :
     HasPointwisePushforwardWithValues u A := by
-  sorry
+  intro F V
+  change HasColimit (kanIndexDiagramWithValues u A F V.unop)
+  let e := indexCostructuredEquivalence u V.unop
+  letI : HasColimit (e.functor ⋙ kanIndexDiagramWithValues u A F V.unop) := by
+    rw [indexPresheafWithValues_under_equivalence]
+    exact inferInstance
+  exact hasColimit_of_equivalence_comp e
 
 /-- Pointwise `A`-valued colimits supply the existence hypothesis for the
 functorial `A`-valued left Kan extension. -/

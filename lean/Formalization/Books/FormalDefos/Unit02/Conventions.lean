@@ -3,6 +3,7 @@ import Mathlib.Data.PNat.Notation
 import Mathlib.RingTheory.Finiteness.Defs
 import Mathlib.RingTheory.Ideal.Quotient.Basic
 import Mathlib.RingTheory.Ideal.Quotient.Operations
+import Mathlib.RingTheory.LocalRing.MaximalIdeal.Defs
 import Mathlib.RingTheory.Noetherian.Defs
 
 /-!

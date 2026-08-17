@@ -1,5 +1,5 @@
 import Formalization.Books.MoreAlgebra.Unit17.FlatteningArtinian
-import Formalization.Books.Algebra.Unit39.FlatModules
+import Formalization.Books.Algebra.Unit14.BaseChange
 import Formalization.Books.Algebra.Unit99.CriteriaForFlatness
 import Formalization.Books.Algebra.Unit127.ColimitsAndFinitePresentation
 
@@ -14,6 +14,7 @@ model from Chapter 14, and directed colimits use the established
 
 namespace Formalization.Books.MoreAlgebra.Unit18
 
+open CategoryTheory
 open scoped TensorProduct
 
 universe u
@@ -139,7 +140,7 @@ def DirectedIdealColimit
   letI : Preorder D.index := D.indexPreorder
   exact
     (∀ {i j : D.index} (hij : D.indexPreorder.le i j),
-      (I i).map (D.transitionMap hij) ≤ I j) ∧
+      (I i).map ((D.diagram.map (homOfLE hij)).right.hom) ≤ I j) ∧
       (∀ x : R', x ∈ I' ↔
         ∃ i : D.index,
           ∃ y : Formalization.Books.Algebra.Unit127.directedAlgebraStageRing D i,

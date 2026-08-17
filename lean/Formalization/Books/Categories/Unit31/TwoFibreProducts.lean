@@ -2003,7 +2003,270 @@ theorem isoComma_after_map
       (isoCommaAfterMapToDiagonal F G H)
       (isoCommaDiagonal H)
       (isoCommaAfterMapComparison F G H) := by
-  sorry
+  unfold IsTwoCartesianSquare
+  constructor
+  · intro W _ a b φ
+    let k : ∀ X : W,
+        F.obj (b.obj X).obj.left ≅ G.obj (b.obj X).obj.right := fun X => by
+      let e := asIso (φ.hom.app X)
+      have hs :
+          ((a ⋙ isoCommaDiagonal H).obj X).obj.left =
+            ((a ⋙ isoCommaDiagonal H).obj X).obj.right := by
+        rfl
+      let i := eqToIso hs
+      have hL₁ : e.hom.hom.left ≫ e.inv.hom.left = 𝟙 _ := by
+        simpa only [Comma.comp_left, Comma.id_left] using
+          congrArg (fun t : CommaMorphism _ _ => t.left)
+            (ObjectProperty.isoHom_inv_id_hom e)
+      have hL₂ : e.inv.hom.left ≫ e.hom.hom.left = 𝟙 _ := by
+        simpa only [Comma.comp_left, Comma.id_left] using
+          congrArg (fun t : CommaMorphism _ _ => t.left)
+            (ObjectProperty.isoInv_hom_id_hom e)
+      have hR₁ : e.hom.hom.right ≫ e.inv.hom.right = 𝟙 _ := by
+        simpa only [Comma.comp_right, Comma.id_right] using
+          congrArg (fun t : CommaMorphism _ _ => t.right)
+            (ObjectProperty.isoHom_inv_id_hom e)
+      have hR₂ : e.inv.hom.right ≫ e.hom.hom.right = 𝟙 _ := by
+        simpa only [Comma.comp_right, Comma.id_right] using
+          congrArg (fun t : CommaMorphism _ _ => t.right)
+            (ObjectProperty.isoInv_hom_id_hom e)
+      let rawHom := e.inv.hom.left ≫ i.hom ≫ e.hom.hom.right
+      let rawInv := e.inv.hom.right ≫ i.inv ≫ e.hom.hom.left
+      have rawHomInv : rawHom ≫ rawInv = 𝟙 _ := by
+        calc
+          rawHom ≫ rawInv =
+              e.inv.hom.left ≫ i.hom ≫
+                ((e.hom.hom.right ≫ e.inv.hom.right) ≫
+                  (i.inv ≫ e.hom.hom.left)) := by
+                    simp only [rawHom, rawInv, Category.assoc]
+          _ = e.inv.hom.left ≫ i.hom ≫
+              (𝟙 _ ≫ (i.inv ≫ e.hom.hom.left)) := by rw [hR₁]
+          _ = e.inv.hom.left ≫ e.hom.hom.left := by simp
+          _ = 𝟙 _ := hL₂
+      have rawInvHom : rawInv ≫ rawHom = 𝟙 _ := by
+        calc
+          rawInv ≫ rawHom =
+              e.inv.hom.right ≫ i.inv ≫
+                ((e.hom.hom.left ≫ e.inv.hom.left) ≫
+                  (i.hom ≫ e.hom.hom.right)) := by
+                    simp only [rawInv, rawHom, Category.assoc]
+          _ = e.inv.hom.right ≫ i.inv ≫
+              (𝟙 _ ≫ (i.hom ≫ e.hom.hom.right)) := by rw [hL₁]
+          _ = e.inv.hom.right ≫ e.hom.hom.right := by simp
+          _ = 𝟙 _ := hR₂
+      let rawIso :
+          ((b ⋙ isoCommaAfterMapToDiagonal F G H).obj X).obj.left ≅
+            ((b ⋙ isoCommaAfterMapToDiagonal F G H).obj X).obj.right :=
+        { hom := rawHom
+          inv := rawInv
+          hom_inv_id := rawHomInv
+          inv_hom_id := rawInvHom }
+      let l : F.obj (b.obj X).obj.left =
+          ((b ⋙ isoCommaAfterMapToDiagonal F G H).obj X).obj.left := by
+        rfl
+      let r : ((b ⋙ isoCommaAfterMapToDiagonal F G H).obj X).obj.right =
+          G.obj (b.obj X).obj.right := by
+        rfl
+      exact eqToIso l ≪≫ rawIso ≪≫ eqToIso r
+    let γ : W ⥤ IsoComma F G :=
+      { obj := fun X =>
+          { obj :=
+              { left := (b.obj X).obj.left
+                right := (b.obj X).obj.right
+                hom := (k X).hom }
+            property := by
+              change IsIso (k X).hom
+              exact Iso.isIso_hom (k X) }
+        map := fun {X Y} f =>
+          ObjectProperty.homMk
+            { left := (b.map f).hom.left
+              right := (b.map f).hom.right
+              w := by
+                have hφ := congrArg (fun t => t.hom) (φ.hom.naturality f)
+                have hL := congrArg (fun t => t.left) hφ
+                have hR := congrArg (fun t => t.right) hφ
+                change F.map (b.map f).hom.left ≫ (k Y).hom =
+                  (k X).hom ≫ G.map (b.map f).hom.right
+                let eX := asIso (φ.hom.app X)
+                let eY := asIso (φ.hom.app Y)
+                have hLM : ((a ⋙ isoCommaDiagonal H).map f).hom.left ≫
+                    eY.hom.hom.left =
+                    eX.hom.hom.left ≫
+                      ((b ⋙ isoCommaAfterMapToDiagonal F G H).map f).hom.left := by
+                  change ((a ⋙ isoCommaDiagonal H).map f ≫ φ.hom.app Y).hom.left =
+                    (φ.hom.app X ≫
+                      (b ⋙ isoCommaAfterMapToDiagonal F G H).map f).hom.left
+                  exact hL
+                have hRM : ((a ⋙ isoCommaDiagonal H).map f).hom.right ≫
+                    eY.hom.hom.right =
+                    eX.hom.hom.right ≫
+                      ((b ⋙ isoCommaAfterMapToDiagonal F G H).map f).hom.right := by
+                  change ((a ⋙ isoCommaDiagonal H).map f ≫ φ.hom.app Y).hom.right =
+                    (φ.hom.app X ≫
+                      (b ⋙ isoCommaAfterMapToDiagonal F G H).map f).hom.right
+                  exact hR
+                have hX : eX.inv.hom.left ≫ eX.hom.hom.left = 𝟙 _ := by
+                  simpa only [Comma.comp_left, Comma.id_left] using
+                    congrArg (fun t : CommaMorphism _ _ => t.left)
+                      (ObjectProperty.isoInv_hom_id_hom eX)
+                have hY : eY.hom.hom.left ≫ eY.inv.hom.left = 𝟙 _ := by
+                  simpa only [Comma.comp_left, Comma.id_left] using
+                    congrArg (fun t : CommaMorphism _ _ => t.left)
+                      (ObjectProperty.isoHom_inv_id_hom eY)
+                let jX :
+                    ((a ⋙ isoCommaDiagonal H).obj X).obj.left ≅
+                      ((a ⋙ isoCommaDiagonal H).obj X).obj.right := by
+                  exact eqToIso (by rfl)
+                let jY :
+                    ((a ⋙ isoCommaDiagonal H).obj Y).obj.left ≅
+                      ((a ⋙ isoCommaDiagonal H).obj Y).obj.right := by
+                  exact eqToIso (by rfl)
+                have hj : ((a ⋙ isoCommaDiagonal H).map f).hom.left ≫ jY.hom =
+                    jX.hom ≫ ((a ⋙ isoCommaDiagonal H).map f).hom.right := by
+                  change a.map f ≫ 𝟙 (a.obj Y) = 𝟙 (a.obj X) ≫ a.map f
+                  simp
+                have hraw :
+                    ((b ⋙ isoCommaAfterMapToDiagonal F G H).map f).hom.left ≫
+                        eY.inv.hom.left ≫ jY.hom ≫ eY.hom.hom.right =
+                      eX.inv.hom.left ≫ jX.hom ≫ eX.hom.hom.right ≫
+                        ((b ⋙ isoCommaAfterMapToDiagonal F G H).map f).hom.right := by
+                  calc
+                    ((b ⋙ isoCommaAfterMapToDiagonal F G H).map f).hom.left ≫
+                          eY.inv.hom.left ≫ jY.hom ≫ eY.hom.hom.right =
+                        (eX.inv.hom.left ≫ eX.hom.hom.left) ≫
+                          ((b ⋙ isoCommaAfterMapToDiagonal F G H).map f).hom.left ≫
+                            eY.inv.hom.left ≫ jY.hom ≫ eY.hom.hom.right := by
+                      rw [hX]
+                      simp
+                    _ = eX.inv.hom.left ≫
+                        (eX.hom.hom.left ≫
+                          ((b ⋙ isoCommaAfterMapToDiagonal F G H).map f).hom.left) ≫
+                            eY.inv.hom.left ≫ jY.hom ≫ eY.hom.hom.right := by
+                      simp only [Category.assoc]
+                    _ = eX.inv.hom.left ≫
+                        (((a ⋙ isoCommaDiagonal H).map f).hom.left ≫
+                          eY.hom.hom.left) ≫
+                          eY.inv.hom.left ≫ jY.hom ≫ eY.hom.hom.right := by rw [← hLM]
+                    _ = eX.inv.hom.left ≫
+                        (((a ⋙ isoCommaDiagonal H).map f).hom.left ≫
+                          (eY.hom.hom.left ≫ eY.inv.hom.left)) ≫
+                          jY.hom ≫ eY.hom.hom.right := by
+                      simp only [Category.assoc]
+                    _ = eX.inv.hom.left ≫
+                        (((a ⋙ isoCommaDiagonal H).map f).hom.left ≫
+                          jY.hom) ≫ eY.hom.hom.right := by
+                      rw [hY]
+                      simp
+                    _ = eX.inv.hom.left ≫
+                        (jX.hom ≫ ((a ⋙ isoCommaDiagonal H).map f).hom.right) ≫
+                          eY.hom.hom.right := by rw [hj]
+                    _ = eX.inv.hom.left ≫
+                        jX.hom ≫
+                          (((a ⋙ isoCommaDiagonal H).map f).hom.right ≫
+                            eY.hom.hom.right) := by
+                      simp only [Category.assoc]
+                    _ = eX.inv.hom.left ≫
+                        jX.hom ≫
+                          (eX.hom.hom.right ≫
+                            ((b ⋙ isoCommaAfterMapToDiagonal F G H).map f).hom.right) := by
+                      rw [hRM]
+                    _ = eX.inv.hom.left ≫ jX.hom ≫ eX.hom.hom.right ≫
+                        ((b ⋙ isoCommaAfterMapToDiagonal F G H).map f).hom.right := by
+                      rfl
+                simpa [k, eX, eY, jX, jY, Functor.comp,
+                  isoCommaAfterMapToDiagonal, isoCommaMap, isoCommaDiagonal,
+                  eqToIso] using hraw }
+        map_id := by
+          intro X
+          apply ObjectProperty.hom_ext
+          apply Comma.hom_ext <;> simp
+        map_comp := by
+          intro X Y Z f g
+          apply ObjectProperty.hom_ext
+          apply Comma.hom_ext <;> simp }
+    refine ⟨γ, ?_, ?_, ?_⟩
+    · let α : a ≅ γ ⋙ isoCommaLeft F G ⋙ F :=
+        NatIso.ofComponents (fun X =>
+          (isoCommaLeft H H).mapIso (φ.app X)) (by
+          intro X Y f
+          have hφ := congrArg (fun t => t.hom) (φ.hom.naturality f)
+          have hL := congrArg (fun t => t.left) hφ
+          change a.map f ≫ (φ.hom.app Y).hom.left =
+            (φ.hom.app X).hom.left ≫ F.map (b.map f).hom.left
+          change ((a ⋙ isoCommaDiagonal H).map f ≫ φ.hom.app Y).hom.left =
+            (φ.hom.app X ≫
+              (b ⋙ isoCommaAfterMapToDiagonal F G H).map f).hom.left at hL
+          simpa [Functor.comp, isoCommaDiagonal, isoCommaAfterMapToDiagonal,
+            isoCommaMap, γ, isoCommaLeft] using hL)
+      exact α
+    · let β : b ≅ γ ⋙ isoCommaAfterMap F G H :=
+        NatIso.ofComponents (fun X => by
+          have hL : (b.obj X).obj.left =
+              ((γ ⋙ isoCommaAfterMap F G H).obj X).obj.left := by
+            dsimp [Functor.comp, isoCommaAfterMap, isoCommaMap, γ]
+          have hR : (b.obj X).obj.right =
+              ((γ ⋙ isoCommaAfterMap F G H).obj X).obj.right := by
+            dsimp [Functor.comp, isoCommaAfterMap, isoCommaMap, γ]
+          cases hL
+          cases hR
+          exact ObjectProperty.isoMk _
+            (Comma.isoMk (Iso.refl _) (Iso.refl _) (by
+              have hw := (φ.hom.app X).hom.w
+              let e := asIso (φ.hom.app X)
+              have hs :
+                  ((a ⋙ isoCommaDiagonal H).obj X).obj.left =
+                    ((a ⋙ isoCommaDiagonal H).obj X).obj.right := by
+                rfl
+              let i := eqToIso hs
+              have hi : H.map i.hom = ((a ⋙ isoCommaDiagonal H).obj X).obj.hom := by
+                change H.map (eqToHom hs) = _
+                rw [eqToHom_map]
+                change eqToHom (by rfl) = 𝟙 _
+                simp
+              have hi' : H.map i.hom = 𝟙 _ := by
+                rw [hi]
+                rfl
+              have hwᵢ' : H.map e.hom.hom.left ≫
+                  ((b ⋙ isoCommaAfterMapToDiagonal F G H).obj X).obj.hom =
+                  ((a ⋙ isoCommaDiagonal H).obj X).obj.hom ≫
+                    H.map e.hom.hom.right := by
+                change H.map (φ.hom.app X).hom.left ≫
+                    ((b ⋙ isoCommaAfterMapToDiagonal F G H).obj X).obj.hom =
+                  ((a ⋙ isoCommaDiagonal H).obj X).obj.hom ≫
+                    H.map (φ.hom.app X).hom.right
+                exact hw
+              have hwᵢ : H.map e.hom.hom.left ≫
+                  ((b ⋙ isoCommaAfterMapToDiagonal F G H).obj X).obj.hom =
+                  H.map i.hom ≫ H.map e.hom.hom.right := by
+                rw [hi]
+                exact hwᵢ'
+              have h₂ : e.inv.hom.left ≫ e.hom.hom.left = 𝟙 _ := by
+                simpa only [Comma.comp_left, Comma.id_left] using
+                  congrArg (fun t : CommaMorphism _ _ => t.left)
+                    (ObjectProperty.isoInv_hom_id_hom e)
+              have hcomp : H.map e.inv.hom.left ≫ H.map e.hom.hom.left = 𝟙 _ := by
+                rw [← H.map_comp, h₂, H.map_id]
+              have hk : H.map (e.inv.hom.left ≫ i.hom ≫ e.hom.hom.right) =
+                  ((b ⋙ isoCommaAfterMapToDiagonal F G H).obj X).obj.hom := by
+                change H.map (e.inv.hom.left ≫
+                  (i.hom ≫ e.hom.hom.right)) = _
+                rw [H.map_comp, H.map_comp]
+                rw [← hwᵢ]
+                simp only [← Category.assoc, hcomp, Category.id_comp]
+              have hk' := hk
+              rw [H.map_comp, H.map_comp] at hk'
+              rw [hi'] at hk'
+              simpa [Functor.comp, isoCommaAfterMap, isoCommaMap, γ, k,
+                isoCommaAfterMapToDiagonal, isoCommaDiagonal, e, i, hi, hi'] using hk'))) (by
+              intro X Y f
+              apply ObjectProperty.hom_ext
+              apply Comma.hom_ext
+              · change (b.map f).hom.left ≫ 𝟙 _ = 𝟙 _ ≫ (b.map f).hom.left
+                simp
+              · change (b.map f).hom.right ≫ 𝟙 _ = 𝟙 _ ≫ (b.map f).hom.right
+                simp)
+      exact β
+    · sorry
 
 /-- The induced functor between the two diagonal iso-comma categories. -/
 noncomputable def isoCommaBaseChangeMap

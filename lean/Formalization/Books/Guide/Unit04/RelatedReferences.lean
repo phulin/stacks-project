@@ -388,7 +388,35 @@ def abelianBandedGerbeSetoid {C : Type u} [Category.{v} C]
             change Functor.EssSurj (𝟭 _)
             exact inferInstance
         forward_band_compatible := by
-          sorry
+          change abelianBandPreservedBy P P (Pseudofunctor.StrongTrans.id P.value)
+          intro U x a
+          let q : (IsomPresheaf P.value x x).obj (op (.mk (𝟙 U))) :=
+            ⟨P.value.presheafHomObjHomEquiv
+                (P.value.presheafHomObjHomEquiv.symm
+                  ((P.automorphisms.localIdentifications U x).hom.app
+                    (op (.mk (𝟙 U))) a).1),
+              @IsGroupoid.all_isIso
+                (P.value.obj (.mk (op (Over.mk (𝟙 U)).left))) _
+                (P.isGerbe.1.1 (Over.mk (𝟙 U)).left) _ _ _⟩
+          change P.band.hom.hom.app (op U)
+              ((P.automorphisms.localIdentifications U x).inv.app
+                (op (.mk (𝟙 U))) q) = P.band.hom.hom.app (op U) a
+          have hq : q =
+              (P.automorphisms.localIdentifications U x).hom.app
+                (op (.mk (𝟙 U))) a := by
+            apply Subtype.ext
+            exact P.value.presheafHomObjHomEquiv.apply_symm_apply _
+          rw [hq]
+          apply congrArg (fun z => P.band.hom.hom.app (op U) z)
+          change (ConcreteCategory.hom
+              ((P.automorphisms.localIdentifications U x).inv.app
+                (op (.mk (𝟙 U)))))
+              ((ConcreteCategory.hom
+                ((P.automorphisms.localIdentifications U x).hom.app
+                  (op (.mk (𝟙 U))))) a) = a
+          exact congrArg (fun z => (ConcreteCategory.hom z) a)
+            ((P.automorphisms.localIdentifications U x).hom_inv_id_app
+              (op (.mk (𝟙 U))))
         backward := 𝟙 _
         backward_is_equivalence := by
           constructor
@@ -398,7 +426,35 @@ def abelianBandedGerbeSetoid {C : Type u} [Category.{v} C]
             change Functor.EssSurj (𝟭 _)
             exact inferInstance
         backward_band_compatible := by
-          sorry
+          change abelianBandPreservedBy P P (Pseudofunctor.StrongTrans.id P.value)
+          intro U x a
+          let q : (IsomPresheaf P.value x x).obj (op (.mk (𝟙 U))) :=
+            ⟨P.value.presheafHomObjHomEquiv
+                (P.value.presheafHomObjHomEquiv.symm
+                  ((P.automorphisms.localIdentifications U x).hom.app
+                    (op (.mk (𝟙 U))) a).1),
+              @IsGroupoid.all_isIso
+                (P.value.obj (.mk (op (Over.mk (𝟙 U)).left))) _
+                (P.isGerbe.1.1 (Over.mk (𝟙 U)).left) _ _ _⟩
+          change P.band.hom.hom.app (op U)
+              ((P.automorphisms.localIdentifications U x).inv.app
+                (op (.mk (𝟙 U))) q) = P.band.hom.hom.app (op U) a
+          have hq : q =
+              (P.automorphisms.localIdentifications U x).hom.app
+                (op (.mk (𝟙 U))) a := by
+            apply Subtype.ext
+            exact P.value.presheafHomObjHomEquiv.apply_symm_apply _
+          rw [hq]
+          apply congrArg (fun z => P.band.hom.hom.app (op U) z)
+          change (ConcreteCategory.hom
+              ((P.automorphisms.localIdentifications U x).inv.app
+                (op (.mk (𝟙 U)))))
+              ((ConcreteCategory.hom
+                ((P.automorphisms.localIdentifications U x).hom.app
+                  (op (.mk (𝟙 U))))) a) = a
+          exact congrArg (fun z => (ConcreteCategory.hom z) a)
+            ((P.automorphisms.localIdentifications U x).hom_inv_id_app
+              (op (.mk (𝟙 U))))
         band := Iso.refl _
         band_compatible := by simp
       }⟩
@@ -435,7 +491,79 @@ def abelianBandedGerbeSetoid {C : Type u} [Category.{v} C]
                 (f.forward.app (.mk (op U))).toFunctor)
             exact inferInstance
         forward_band_compatible := by
-          sorry
+          intro U x a
+          let E := (e.forward.app (.mk (op U))).toFunctor
+          let F := (f.forward.app (.mk (op U))).toFunctor
+          change (R.band.hom.hom.app (op U))
+              ((R.automorphisms.localIdentifications U (F.obj (E.obj x))).inv.app
+                (op (.mk (𝟙 U)))
+                ⟨R.value.presheafHomObjHomEquiv
+                    (F.map (E.map
+                      (P.value.presheafHomObjHomEquiv.symm
+                        ((P.automorphisms.localIdentifications U x).hom.app
+                          (op (.mk (𝟙 U))) a).1))), _⟩) =
+            (P.band.hom.hom.app (op U)) a
+          let p : x ⟶ x :=
+            P.value.presheafHomObjHomEquiv.symm
+              ((P.automorphisms.localIdentifications U x).hom.app
+                (op (.mk (𝟙 U))) a).1
+          let qE : (IsomPresheaf Q.value (E.obj x) (E.obj x)).obj
+              (op (.mk (𝟙 U))) :=
+            ⟨Q.value.presheafHomObjHomEquiv (E.map p),
+              @IsGroupoid.all_isIso
+                (Q.value.obj (.mk (op (Over.mk (𝟙 U)).left))) _
+                (Q.isGerbe.1.1 (Over.mk (𝟙 U)).left) _ _ _⟩
+          let b : Q.automorphisms.sheaf.obj.obj (op U) :=
+            (Q.automorphisms.localIdentifications U (E.obj x)).inv.app
+              (op (.mk (𝟙 U))) qE
+          let qT : (IsomPresheaf R.value (F.obj (E.obj x))
+              (F.obj (E.obj x))).obj (op (.mk (𝟙 U))) :=
+            ⟨R.value.presheafHomObjHomEquiv (F.map (E.map p)),
+              @IsGroupoid.all_isIso
+                (R.value.obj (.mk (op (Over.mk (𝟙 U)).left))) _
+                (R.isGerbe.1.1 (Over.mk (𝟙 U)).left) _ _ _⟩
+          let qF : (IsomPresheaf R.value (F.obj (E.obj x))
+              (F.obj (E.obj x))).obj (op (.mk (𝟙 U))) :=
+            ⟨R.value.presheafHomObjHomEquiv
+                (F.map
+                  (Q.value.presheafHomObjHomEquiv.symm
+                    ((Q.automorphisms.localIdentifications U (E.obj x)).hom.app
+                      (op (.mk (𝟙 U))) b).1)),
+              @IsGroupoid.all_isIso
+                (R.value.obj (.mk (op (Over.mk (𝟙 U)).left))) _
+                (R.isGerbe.1.1 (Over.mk (𝟙 U)).left) _ _ _⟩
+          change (R.band.hom.hom.app (op U))
+              ((R.automorphisms.localIdentifications U (F.obj (E.obj x))).inv.app
+                (op (.mk (𝟙 U))) qT) = (P.band.hom.hom.app (op U)) a
+          have hlocal :
+              (Q.automorphisms.localIdentifications U (E.obj x)).hom.app
+                  (op (.mk (𝟙 U))) b = qE := by
+            exact congrArg (fun z => (ConcreteCategory.hom z) qE)
+              ((Q.automorphisms.localIdentifications U (E.obj x)).inv_hom_id_app
+                (op (.mk (𝟙 U))))
+          have hq : qT = qF := by
+            apply Subtype.ext
+            change R.value.presheafHomObjHomEquiv (F.map (E.map p)) =
+              R.value.presheafHomObjHomEquiv
+                (F.map
+                  (Q.value.presheafHomObjHomEquiv.symm
+                    ((Q.automorphisms.localIdentifications U (E.obj x)).hom.app
+                      (op (.mk (𝟙 U))) b).1))
+            have hv := congrArg Subtype.val hlocal
+            rw [hv]
+            change R.value.presheafHomObjHomEquiv (F.map (E.map p)) =
+              R.value.presheafHomObjHomEquiv
+                (F.map
+                  (Q.value.presheafHomObjHomEquiv.symm
+                    (Q.value.presheafHomObjHomEquiv (E.map p))))
+            exact congrArg (fun z => R.value.presheafHomObjHomEquiv (F.map z))
+              (Q.value.presheafHomObjHomEquiv.symm_apply_apply (E.map p)).symm
+          have hf := f.forward_band_compatible U (E.obj x) b
+          have hb : (Q.band.hom.hom.app (op U)) b =
+              (P.band.hom.hom.app (op U)) a := by
+            simpa [b, qE, p, E] using (e.forward_band_compatible U x a)
+          rw [hq]
+          exact hf.trans hb
         backward := f.backward ≫ e.backward
         backward_is_equivalence := by
           constructor
@@ -451,7 +579,79 @@ def abelianBandedGerbeSetoid {C : Type u} [Category.{v} C]
                 (e.backward.app (.mk (op U))).toFunctor)
             exact inferInstance
         backward_band_compatible := by
-          sorry
+          intro U y a
+          let E := (f.backward.app (.mk (op U))).toFunctor
+          let F := (e.backward.app (.mk (op U))).toFunctor
+          change (P.band.hom.hom.app (op U))
+              ((P.automorphisms.localIdentifications U (F.obj (E.obj y))).inv.app
+                (op (.mk (𝟙 U)))
+                ⟨P.value.presheafHomObjHomEquiv
+                    (F.map (E.map
+                      (R.value.presheafHomObjHomEquiv.symm
+                        ((R.automorphisms.localIdentifications U y).hom.app
+                          (op (.mk (𝟙 U))) a).1))), _⟩) =
+            (R.band.hom.hom.app (op U)) a
+          let p : y ⟶ y :=
+            R.value.presheafHomObjHomEquiv.symm
+              ((R.automorphisms.localIdentifications U y).hom.app
+                (op (.mk (𝟙 U))) a).1
+          let qE : (IsomPresheaf Q.value (E.obj y) (E.obj y)).obj
+              (op (.mk (𝟙 U))) :=
+            ⟨Q.value.presheafHomObjHomEquiv (E.map p),
+              @IsGroupoid.all_isIso
+                (Q.value.obj (.mk (op (Over.mk (𝟙 U)).left))) _
+                (Q.isGerbe.1.1 (Over.mk (𝟙 U)).left) _ _ _⟩
+          let b : Q.automorphisms.sheaf.obj.obj (op U) :=
+            (Q.automorphisms.localIdentifications U (E.obj y)).inv.app
+              (op (.mk (𝟙 U))) qE
+          let qT : (IsomPresheaf P.value (F.obj (E.obj y))
+              (F.obj (E.obj y))).obj (op (.mk (𝟙 U))) :=
+            ⟨P.value.presheafHomObjHomEquiv (F.map (E.map p)),
+              @IsGroupoid.all_isIso
+                (P.value.obj (.mk (op (Over.mk (𝟙 U)).left))) _
+                (P.isGerbe.1.1 (Over.mk (𝟙 U)).left) _ _ _⟩
+          let qF : (IsomPresheaf P.value (F.obj (E.obj y))
+              (F.obj (E.obj y))).obj (op (.mk (𝟙 U))) :=
+            ⟨P.value.presheafHomObjHomEquiv
+                (F.map
+                  (Q.value.presheafHomObjHomEquiv.symm
+                    ((Q.automorphisms.localIdentifications U (E.obj y)).hom.app
+                      (op (.mk (𝟙 U))) b).1)),
+              @IsGroupoid.all_isIso
+                (P.value.obj (.mk (op (Over.mk (𝟙 U)).left))) _
+                (P.isGerbe.1.1 (Over.mk (𝟙 U)).left) _ _ _⟩
+          change (P.band.hom.hom.app (op U))
+              ((P.automorphisms.localIdentifications U (F.obj (E.obj y))).inv.app
+                (op (.mk (𝟙 U))) qT) = (R.band.hom.hom.app (op U)) a
+          have hlocal :
+              (Q.automorphisms.localIdentifications U (E.obj y)).hom.app
+                  (op (.mk (𝟙 U))) b = qE := by
+            exact congrArg (fun z => (ConcreteCategory.hom z) qE)
+              ((Q.automorphisms.localIdentifications U (E.obj y)).inv_hom_id_app
+                (op (.mk (𝟙 U))))
+          have hq : qT = qF := by
+            apply Subtype.ext
+            change P.value.presheafHomObjHomEquiv (F.map (E.map p)) =
+              P.value.presheafHomObjHomEquiv
+                (F.map
+                  (Q.value.presheafHomObjHomEquiv.symm
+                    ((Q.automorphisms.localIdentifications U (E.obj y)).hom.app
+                      (op (.mk (𝟙 U))) b).1))
+            have hv := congrArg Subtype.val hlocal
+            rw [hv]
+            change P.value.presheafHomObjHomEquiv (F.map (E.map p)) =
+              P.value.presheafHomObjHomEquiv
+                (F.map
+                  (Q.value.presheafHomObjHomEquiv.symm
+                    (Q.value.presheafHomObjHomEquiv (E.map p))))
+            exact congrArg (fun z => P.value.presheafHomObjHomEquiv (F.map z))
+              (Q.value.presheafHomObjHomEquiv.symm_apply_apply (E.map p)).symm
+          have hf := e.backward_band_compatible U (E.obj y) b
+          have hb : (Q.band.hom.hom.app (op U)) b =
+              (R.band.hom.hom.app (op U)) a := by
+            simpa [b, qE, p, E] using (f.backward_band_compatible U y a)
+          rw [hq]
+          exact hf.trans hb
         band := e.band.trans f.band
         band_compatible := by
           rw [Iso.trans_hom, Category.assoc, f.band_compatible,

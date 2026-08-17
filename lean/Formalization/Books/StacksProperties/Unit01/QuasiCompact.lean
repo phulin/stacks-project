@@ -74,6 +74,37 @@ theorem finite_disjoint_union_quasi_compact {S : Scheme.{u}} {n : ℕ}
     (X : Fin n → AlgebraicStack S) (D : FiniteDisjointUnionData X)
     (hX : ∀ i, IsQuasiCompactStack (X i)) :
     IsQuasiCompactStack D.carrier := by
-  sorry
+  change @IsCompact (StackPoint D.carrier)
+    (canonicalStackTopology (S := S) D.carrier) Set.univ
+  change ∀ i : Fin n,
+    @IsCompact (StackPoint (X i))
+      (canonicalStackTopology (S := S) (X i)) Set.univ at hX
+  have hcompat := canonicalStackTopology_is_compatible (S := S)
+  have hcompact : ∀ i : Fin n,
+      @IsCompact (StackPoint D.carrier)
+        (canonicalStackTopology (S := S) D.carrier)
+        (Set.range (inducedPointMap (D.inclusion i))) := by
+    intro i
+    have hXi : @IsCompact (StackPoint (X i))
+        (canonicalStackTopology (S := S) (X i)) Set.univ := hX i
+    rw [← Set.image_univ]
+    exact @IsCompact.image
+      (StackPoint (X i)) (StackPoint D.carrier)
+      (canonicalStackTopology (S := S) (X i))
+      (canonicalStackTopology (S := S) D.carrier)
+      Set.univ (inducedPointMap (D.inclusion i)) hXi
+      (hcompat.1 (D.inclusion i))
+  have hunion :
+      (⋃ i : Fin n, Set.range (inducedPointMap (D.inclusion i))) =
+        (Set.univ : Set (StackPoint D.carrier)) := by
+    apply Set.eq_univ_of_forall
+    intro x
+    rcases D.pointCover x with ⟨i, y, hy⟩
+    exact Set.mem_iUnion.2 ⟨i, ⟨y, hy⟩⟩
+  rw [← hunion]
+  exact @isCompact_iUnion
+    (StackPoint D.carrier) (canonicalStackTopology (S := S) D.carrier)
+    (Fin n) (fun i => Set.range (inducedPointMap (D.inclusion i)))
+    inferInstance hcompact
 
 end Formalization.Books.StacksProperties.Unit01

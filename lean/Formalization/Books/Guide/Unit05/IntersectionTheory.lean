@@ -168,7 +168,7 @@ theorem Kresch_chow_groups_for_artin_stacks
     {C : Type u} [Category.{v} C] [StackCategory C] [ChowTheory C]
     (D : ArtinStackChowData C) :
     Nonempty (ArtinStackChowConclusion D) := by
-  exact ⟨{ agreesWithQuotientStackDefinition := D.artin = D.artin, usualFunctorialProperties := D.artin = D.artin }⟩
+  sorry
 
 structure VirtualFundamentalClassData (C : Type u) [Category.{v} C]
     [StackCategory C] [ChowTheory C] where
@@ -188,6 +188,6 @@ theorem intrinsic_normal_cone_gives_virtual_fundamental_class
     {C : Type u} [Category.{v} C] [StackCategory C] [ChowTheory C]
     (D : VirtualFundamentalClassData C) :
     Nonempty (VirtualFundamentalClass D) := by
-  exact ⟨{ virtualClass := 0, satisfiesVirtualClassAxioms := D.perfectObstructionTheory = D.perfectObstructionTheory }⟩
+  sorry
 
 end Formalization.Books.Guide.Unit05

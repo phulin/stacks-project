@@ -61,7 +61,15 @@ theorem normal_closure_is_galois
     [IsScalarTower K L M] [FiniteDimensional K L]
     [Algebra.IsSeparable K L] [IsNormalClosure K L M] :
     IsGalois K M := by
-  sorry
+  let h : IsNormalClosure K L M := inferInstance
+  have hsep : Algebra.IsSeparable K M := by
+    rw [← IntermediateField.isSeparable_top K M, ← h.adjoin_rootSet]
+    exact @IntermediateField.isSeparable_iSup K M _ _ _ L _ (fun x => by
+      rw [IntermediateField.isSeparable_adjoin_iff_isSeparable]
+      intro y hy
+      exact (Algebra.IsSeparable.isSeparable K x).of_dvd
+        (minpoly.dvd K y (Polynomial.aeval_eq_zero_of_mem_rootSet hy)))
+  exact { to_isSeparable := hsep, to_normal := h.normal }
 
 /-! ## Fixed fields -/
 
@@ -114,7 +122,39 @@ theorem fundamental_theorem_galois_correspondence
         Subgroup.Normal H ↔ IsGalois K (IntermediateField.fixedField H)) ∧
       (∀ M : IntermediateField K L,
         M.fixingSubgroup.Normal ↔ IsGalois K M) := by
-  sorry
+  refine ⟨IsGalois.fixedField_top, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · constructor
+    · intro H₁ H₂ h
+      have h' := congrArg IntermediateField.fixingSubgroup h
+      rw [IntermediateField.fixingSubgroup_fixedField,
+        IntermediateField.fixingSubgroup_fixedField] at h'
+      exact h'
+    · intro M
+      exact ⟨M.fixingSubgroup, IsGalois.fixedField_fixingSubgroup M⟩
+  · intro H
+    exact IntermediateField.fixingSubgroup_fixedField H
+  · intro M
+    exact IsGalois.fixedField_fixingSubgroup M
+  · intro M
+    exact ⟨IntermediateField.fixingSubgroupEquiv M⟩
+  · intro H
+    constructor
+    · intro h
+      exact @IsGalois.of_fixedField_normal_subgroup K L _ _ _ _ H h
+    · intro h
+      have h' := @IsGalois.fixingSubgroup_normal_of_isGalois K L _ _ _
+        (IntermediateField.fixedField H) inferInstance h
+      simpa only [IntermediateField.fixingSubgroup_fixedField] using h'
+  · intro M
+    constructor
+    · intro h
+      have h' := @IsGalois.of_fixedField_normal_subgroup K L _ _ _ _
+        M.fixingSubgroup h
+      rw [IsGalois.fixedField_fixingSubgroup M] at h'
+      exact h'
+    · intro h
+      exact @IsGalois.fixingSubgroup_normal_of_isGalois K L _ _ _ M
+        inferInstance h
 
 /-! ## The restriction exact sequence -/
 
@@ -136,7 +176,36 @@ theorem galois_short_exact
       AlgEquiv.restrictNormalHom (F := K) (K₁ := L) M
     Finite (Gal(L / M)) ∧ Finite (Gal(L / K)) ∧ Finite (Gal(M / K)) ∧
       Function.Injective i ∧ Function.MulExact i p ∧ Function.Surjective p := by
-  sorry
+  dsimp
+  let _ : FiniteDimensional M L := FiniteDimensional.right K M L
+  refine ⟨inferInstance, inferInstance, inferInstance, ?_, ?_, ?_⟩
+  · exact AlgEquiv.restrictScalarsHom_injective K
+  · apply MonoidHom.mulExact_of_comp_of_mem_range
+    · ext σ x
+      simp only [MonoidHom.comp_apply, AlgEquiv.restrictScalarsHom_apply]
+      apply (algebraMap M L).injective
+      change (algebraMap M L) ((AlgEquiv.restrictScalars K σ).restrictNormal M x) =
+        algebraMap M L x
+      rw [AlgEquiv.restrictNormal_commutes]
+      exact σ.commutes x
+    · intro τ hp
+      let σ : Gal(L / M) :=
+        { τ with
+          commutes' := by
+            intro x
+            have hp' : τ.restrictNormal M = (1 : Gal(M / K)) := by
+              simpa only [AlgEquiv.restrictNormalHom, MonoidHom.mk'_apply,
+                MonoidHom.mem_ker] using hp
+            calc
+              τ (algebraMap M L x) =
+                  algebraMap M L ((τ.restrictNormal M) x) :=
+                (AlgEquiv.restrictNormal_commutes τ M x).symm
+              _ = algebraMap M L ((1 : Gal(M / K)) x) := by rw [hp']
+              _ = algebraMap M L x := rfl }
+      refine ⟨σ, ?_⟩
+      ext x
+      rfl
+  · exact AlgEquiv.restrictNormalHom_surjective (F := K) (K₁ := M) L
 
 end
 

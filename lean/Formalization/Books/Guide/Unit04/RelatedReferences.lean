@@ -66,7 +66,52 @@ theorem guide_conjugation_presheaf_map_exists {C : Type u} [Category.{v} C]
     {F : FiberedCategory.{w, v, u} C} (hF : FiberwiseGroupoid F) {U : C}
     {x y : Fiber F U} (φ : x ⟶ y) :
     Nonempty (IsomPresheaf F x x ⟶ IsomPresheaf F y y) := by
-  sorry
+  refine ⟨{ app := fun T => ?_, naturality := ?_ }⟩
+  · exact ↾(fun a =>
+      letI := hF T.unop.left
+      ⟨(guideConjugateAutomorphism hF
+        ((F.map T.unop.hom.op.toLoc).toFunctor.map φ) (asIso a.1)).hom,
+        by infer_instance⟩)
+  · intro T₁ T₂ q
+    ext a
+    apply Subtype.ext
+    letI : IsGroupoid (Fiber F T₁.unop.left) := hF _
+    letI : IsGroupoid (Fiber F T₂.unop.left) := hF _
+    letI : IsIso a.1 := a.2
+    let aq : (IsomPresheaf F x x).obj T₂ := (IsomPresheaf F x x).map q a
+    letI : IsIso aq.1 := aq.2
+    change
+      (guideConjugateAutomorphism hF
+        ((F.map T₂.unop.hom.op.toLoc).toFunctor.map φ) (asIso aq.1)).hom =
+        (Pseudofunctor.LocallyDiscreteOpToCat.pullHom
+          (guideConjugateAutomorphism hF
+            ((F.map T₁.unop.hom.op.toLoc).toFunctor.map φ) (asIso a.1)).hom
+          q.unop.left T₂.unop.hom T₂.unop.hom)
+    have hq : T₁.unop.hom.op.toLoc ≫ q.unop.left.op.toLoc =
+        T₂.unop.hom.op.toLoc := by
+      rw [← Quiver.Hom.comp_toLoc, ← op_comp, q.unop.w]
+    have hφ :
+        (F.map T₂.unop.hom.op.toLoc).toFunctor.map φ =
+          Pseudofunctor.LocallyDiscreteOpToCat.pullHom
+            ((F.map T₁.unop.hom.op.toLoc).toFunctor.map φ)
+            q.unop.left T₂.unop.hom T₂.unop.hom := by
+      simp [Pseudofunctor.LocallyDiscreteOpToCat.pullHom]
+    rw [hφ]
+    change
+      inv (Pseudofunctor.LocallyDiscreteOpToCat.pullHom
+        ((F.map T₁.unop.hom.op.toLoc).toFunctor.map φ)
+        q.unop.left T₂.unop.hom T₂.unop.hom) ≫
+        Pseudofunctor.LocallyDiscreteOpToCat.pullHom a.1
+          q.unop.left T₂.unop.hom T₂.unop.hom ≫
+        Pseudofunctor.LocallyDiscreteOpToCat.pullHom
+          ((F.map T₁.unop.hom.op.toLoc).toFunctor.map φ)
+          q.unop.left T₂.unop.hom T₂.unop.hom =
+        Pseudofunctor.LocallyDiscreteOpToCat.pullHom
+          (inv ((F.map T₁.unop.hom.op.toLoc).toFunctor.map φ) ≫
+            a.1 ≫ (F.map T₁.unop.hom.op.toLoc).toFunctor.map φ)
+          q.unop.left T₂.unop.hom T₂.unop.hom
+    simp [Pseudofunctor.LocallyDiscreteOpToCat.pullHom, Functor.map_comp,
+      Category.assoc]
 
 noncomputable def guideConjugationPresheafMap {C : Type u} [Category.{v} C]
     {F : FiberedCategory.{w, v, u} C} (hF : FiberwiseGroupoid F) {U : C}
@@ -296,7 +341,38 @@ theorem stackInGroupoids_two_morphisms_are_invertible
     (f g : FiberedMorphism X.value Y.value)
     (α : StackInGroupoidsTwoMorphism f g) :
     IsInvertibleStackInGroupoidsTwoMorphism α := by
-  sorry
+  change IsIso α
+  let e : f ≅ g :=
+    Pseudofunctor.StrongTrans.isoMk (η := f) (θ := g)
+      (fun a => by
+        letI : IsGroupoid (Y.value.obj a) := by
+          change IsGroupoid (Fiber Y.value a.as.unop)
+          exact Y.isStackInGroupoids.1 a.as.unop
+        letI : IsIso (α.as.app a).toNatTrans :=
+          NatIso.isIso_of_isIso_app _
+        exact Cat.Hom.isoMk (asIso (α.as.app a).toNatTrans))
+      (naturality := by
+        intro a b k
+        have ha : NatTrans.toCatHom₂ (α.as.app a).toNatTrans = α.as.app a := by
+          apply Cat.Hom₂.ext
+          rfl
+        have hb : NatTrans.toCatHom₂ (α.as.app b).toNatTrans = α.as.app b := by
+          apply Cat.Hom₂.ext
+          rfl
+        simpa only [Cat.Hom.isoMk, asIso_hom, ha, hb] using α.as.naturality k)
+  have hα : e.hom = α := by
+    apply Pseudofunctor.StrongTrans.homCategory.ext
+    intro a
+    letI : IsGroupoid (Y.value.obj a) := by
+      change IsGroupoid (Fiber Y.value a.as.unop)
+      exact Y.isStackInGroupoids.1 a.as.unop
+    letI : IsIso (α.as.app a).toNatTrans :=
+      NatIso.isIso_of_isIso_app _
+    apply Cat.Hom₂.ext
+    dsimp [e, Pseudofunctor.StrongTrans.isoMk, Cat.Hom.isoMk]
+    exact asIso_hom _
+  rw [← hα]
+  infer_instance
 
 /-!
 The Vistoli, Knutson, SGA 4, and Kelly--Street entries in the source are

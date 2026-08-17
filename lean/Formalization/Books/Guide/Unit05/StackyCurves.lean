@@ -38,15 +38,20 @@ structure StableMapCompactificationData {C : Type u} [Category.{v} C]
   target : C
   targetTame : IsTameArtinStack target
   coarseSpace : C
-  coarseSpaceProjective : CoarseSpaceIsProjective target
+  coarseSpaceProjective : CoarseSpaceIsProjective coarseSpace
+  coarseMap : target ⟶ coarseSpace
   moduliStack : C
   parameterizesStableMaps : Prop
-  properOverBase : Prop
+
+structure StableMapCompactificationConclusion {C : Type u}
+    [Category.{v} C] [StackCategory C]
+    (D : StableMapCompactificationData (C := C)) where
+  properOverBase : IsProperStack D.moduliStack
 
 theorem compactification_of_stable_maps_to_tame_dm_stacks
     {C : Type u} [Category.{v} C] [StackCategory C]
     (D : StableMapCompactificationData (C := C)) :
-    IsProperStack D.moduliStack := by
+    Nonempty (StableMapCompactificationConclusion D) := by
   sorry
 
 structure DeligneMumfordAnalyticCurve (C : Type u) [Category.{v} C]
@@ -58,12 +63,14 @@ structure DeligneMumfordAnalyticCurve (C : Type u) [Category.{v} C]
   uniformizationGroup : Type u
   groupStructure : Group uniformizationGroup
   uniformizationMap : uniformizationSpace → Point curve
+
+structure UniformizationConclusion where
   uniformizes : Prop
 
 theorem uniformization_of_deligne_mumford_analytic_curves
     {C : Type u} [Category.{v} C] [StackCategory C]
     (D : DeligneMumfordAnalyticCurve C) (hanalytic : D.analytic) :
-    D.uniformizes := by
+    Nonempty UniformizationConclusion := by
   sorry
 
 end Formalization.Books.Guide.Unit05

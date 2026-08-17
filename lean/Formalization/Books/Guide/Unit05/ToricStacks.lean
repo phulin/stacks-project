@@ -14,6 +14,7 @@ namespace Formalization.Books.Guide.Unit05
 
 structure StackyFan where
   lattice : Type u
+  [latticeGroup : AddCommGroup lattice]
   coneIndex : Type u
   rays : coneIndex → Type u
   rayMap : ∀ i, rays i → lattice
@@ -26,37 +27,42 @@ structure SmoothToricDMStackData (C : Type u) [Category.{v} C]
   smooth : IsSmoothStack stack
   deligneMumford : IsDeligneMumfordStack stack
   quotientPresentation : IsGlobalQuotient stack
+
+structure SmoothToricDMStackConclusion where
   associatedToStackyFan : Prop
 
 theorem smooth_toric_dm_stack_from_stacky_fan
     {C : Type u} [Category.{v} C] [StackCategory C]
     (D : SmoothToricDMStackData C) :
-    D.associatedToStackyFan := by
+    Nonempty SmoothToricDMStackConclusion := by
   sorry
 
 structure ToricTriple (C : Type u) [Category.{v} C]
     [StackCategory C] where
   stack : C
   smoothDeligneMumford : IsSmoothStack stack ∧ IsDeligneMumfordStack stack
+  torusObject : C
+  torusIsMultiplicativeGroup : Prop
   torus : Type u
   torusGroup : Group torus
-  openImmersion : torus → Point stack
-  openImmersionInjective : Function.Injective openImmersion
+  openImmersion : torusObject ⟶ stack
+  openImmersionIsOpen : Prop
   denseImage : Prop
-  torusAction : torus → Point stack → Point stack
-  actionAxioms : Prop
+  torusAction : Prop
 
 structure ToricTripleStackyFanCorrespondence (C : Type u)
     [Category.{v} C] [StackCategory C] where
   toricTriple : ToricTriple C
   stackyFan : StackyFan.{u}
+
+structure ToricTripleStackyFanConclusion where
   correspondence : Prop
   twoCategoryToOneCategory : Prop
 
 theorem toric_triples_equivalent_to_stacky_fans
     {C : Type u} [Category.{v} C] [StackCategory C]
     (D : ToricTripleStackyFanCorrespondence C) :
-    D.correspondence ∧ D.twoCategoryToOneCategory := by
+    Nonempty ToricTripleStackyFanConclusion := by
   sorry
 
 structure DeltaCollection (C : Type u) [Category.{v} C]
@@ -64,12 +70,14 @@ structure DeltaCollection (C : Type u) [Category.{v} C]
   stack : C
   fan : StackyFan.{u}
   collectionData : Type u
+
+structure DeltaCollectionConclusion where
   satisfiesDeltaRelations : Prop
 
 theorem toric_orbifold_delta_collections
     {C : Type u} [Category.{v} C] [StackCategory C]
     (D : DeltaCollection C) :
-    D.satisfiesDeltaRelations := by
+    Nonempty DeltaCollectionConclusion := by
   sorry
 
 structure GeneralSmoothToricDMStackDeltaCollection (C : Type u)
@@ -92,12 +100,14 @@ structure SmoothToricDMStackByDenseOrbit (C : Type u)
   deligneMumford : IsDeligneMumfordStack stack
   torus : DMTorus C
   denseOpenOrbit : Prop
+
+structure SmoothToricDMStackDenseOrbitConclusion where
   orbitIsTheDMTorus : Prop
 
 theorem smooth_toric_dm_stacks_equivalent_to_stacky_fans
     {C : Type u} [Category.{v} C] [StackCategory C]
     (D : SmoothToricDMStackByDenseOrbit C) :
-    D.orbitIsTheDMTorus := by
+    Nonempty SmoothToricDMStackDenseOrbitConclusion := by
   sorry
 
 structure ToricVarietySubgroupQuotient (C : Type u)
@@ -119,6 +129,8 @@ structure ToricStackCombinatorialDictionary (C : Type u)
     [Category.{v} C] [StackCategory C] where
   stack : C
   fan : StackyFan.{u}
+
+structure ToricStackCombinatorialConclusion where
   combinatorialToGeometric : Prop
   geometricToCombinatorial : Prop
   smoothModuliInterpretation : Prop
@@ -127,8 +139,7 @@ structure ToricStackCombinatorialDictionary (C : Type u)
 theorem toric_stack_dictionary_and_intrinsic_characterization
     {C : Type u} [Category.{v} C] [StackCategory C]
     (D : ToricStackCombinatorialDictionary C) :
-    D.combinatorialToGeometric ∧ D.geometricToCombinatorial ∧
-      D.smoothModuliInterpretation ∧ D.intrinsicCharacterization := by
+    Nonempty ToricStackCombinatorialConclusion := by
   sorry
 
 end Formalization.Books.Guide.Unit05

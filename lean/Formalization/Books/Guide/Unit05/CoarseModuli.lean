@@ -16,8 +16,10 @@ structure KeelMoriHypotheses {C : Type u} [Category.{v} C]
     [StackCategory C] where
   stack : C
   base : C
+  structureMap : stack ⟶ base
   artin : IsArtinStack stack
-  locallyFiniteType : IsLocallyFiniteTypeMorphism (𝟙 stack)
+  baseScheme : IsScheme base
+  locallyFiniteType : IsLocallyFiniteTypeMorphism structureMap
   baseNoetherian : Prop
   finiteInertia : HasFiniteInertia stack
 
@@ -40,9 +42,11 @@ theorem separated_coarse_moduli_space_iff_finite_inertia
 structure ConradCoarseModuliHypotheses {C : Type u} [Category.{v} C]
     [StackCategory C] where
   stack : C
+  base : C
+  structureMap : stack ⟶ base
   artin : IsArtinStack stack
   finiteInertia : HasFiniteInertia stack
-  locallyOfFiniteType : Prop
+  locallyOfFiniteType : IsLocallyFiniteTypeMorphism structureMap
 
 theorem conrad_coarse_moduli_space_without_noetherian_hypothesis
     {C : Type u} [Category.{v} C] [StackCategory C]
@@ -53,9 +57,11 @@ theorem conrad_coarse_moduli_space_without_noetherian_hypothesis
 structure RydhCoarseModuliHypotheses {C : Type u} [Category.{v} C]
     [StackCategory C] where
   stack : C
+  base : C
+  structureMap : stack ⟶ base
   artin : IsArtinStack stack
   finiteInertia : HasFiniteInertia stack
-  quasiCompact : Prop
+  quasiCompact : IsQuasiCompactMorphism structureMap
 
 theorem rydh_coarse_moduli_space_without_finite_presentation
     {C : Type u} [Category.{v} C] [StackCategory C]
@@ -63,17 +69,15 @@ theorem rydh_coarse_moduli_space_without_finite_presentation
     HasCoarseModuliSpace D.stack := by
   sorry
 
-def TameByExactPushforward {C : Type u} [Category.{v} C]
-    [StackCategory C] {X Y : C} (q : X ⟶ Y) : Prop :=
-  IsCoarseModuliSpaceMap q ∧ ExactOnQuasiCoherent q
-
 theorem tame_iff_linearly_reductive_stabilizers
-    {C : Type u} [Category.{v} C] [StackCategory C] (X : C) :
+    {C : Type u} [Category.{v} C] [StackCategory C] (X : C)
+    (hartin : IsArtinStack X) (hfiniteInertia : HasFiniteInertia X) :
     IsTameArtinStack X ↔ HasLinearlyReductiveStabilizers X := by
   sorry
 
 theorem tame_iff_etale_local_linearly_reductive_quotient
-    {C : Type u} [Category.{v} C] [StackCategory C] (X : C) :
+    {C : Type u} [Category.{v} C] [StackCategory C] (X : C)
+    (hartin : IsArtinStack X) (hfiniteInertia : HasFiniteInertia X) :
     IsTameArtinStack X ↔ IsEtaleLocalQuotient X := by
   sorry
 
@@ -121,10 +125,12 @@ theorem good_moduli_space_properties
 structure AffineLineByMultiplicativeGroupExample
     {C : Type u} [Category.{v} C] [StackCategory C] where
   stack : C
+  affineLine : Type u
+  affineLineIsAffineLine : Prop
   multiplicativeGroup : Type u
   [groupStructure : Group multiplicativeGroup]
-  affineLineAction : GroupActionData multiplicativeGroup (Point stack)
-  noSeparatedCoarseSpace : ¬ HasSeparatedCoarseModuliSpace stack
+  affineLineAction : GroupActionData multiplicativeGroup affineLine
+  quotientStackPresentation : Prop
 
 theorem affine_line_by_multiplicative_group_has_no_coarse_moduli_space
     {C : Type u} [Category.{v} C] [StackCategory C]
@@ -140,14 +146,15 @@ structure GITGoodModuliSpaceData {C : Type u} [Category.{v} C]
   quotientStack : C
   gitQuotient : C
   quotientMap : quotientStack ⟶ gitQuotient
-  quotientStackIsSemistableQuotient : Prop
+  quotientStackIsTheSemistableQuotient : Prop
   reductive : Prop
   linearAction : Prop
 
 theorem git_quotient_is_a_good_moduli_space
     {C : Type u} [Category.{v} C] [StackCategory C]
-    (D : GITGoodModuliSpaceData (C := C)) (hlinear : D.linearAction)
-    (hreductive : D.reductive) :
+    (D : GITGoodModuliSpaceData (C := C))
+    (hquotient : D.quotientStackIsTheSemistableQuotient)
+    (hlinear : D.linearAction) (hreductive : D.reductive) :
     IsGoodModuliSpace D.quotientMap := by
   sorry
 

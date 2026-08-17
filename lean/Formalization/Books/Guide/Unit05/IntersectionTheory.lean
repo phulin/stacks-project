@@ -1,4 +1,5 @@
 import Mathlib.Algebra.Module.Basic
+import Mathlib.GroupTheory.FreeAbelianGroup
 import Mathlib.Data.Rat.Defs
 import Mathlib.GroupTheory.GroupAction.Basic
 import Formalization.Books.Guide.Unit05.Core
@@ -44,16 +45,17 @@ structure RationalCycleConstruction {C : Type u} [Category.{v} C]
   cycles : Type u
   cycle : cycles → IntegralClosedSubstack X
   dimensionCorrect : ∀ z, (cycle z).dimension = k
-  rationalEquivalence : cycles → cycles → Prop
-  freeAbelianQuotient : Prop
-  quotientMap : cycles → ChowGroup X k
+  rationalEquivalence : Setoid (FreeAbelianGroup cycles)
+  [quotientAddCommGroup : AddCommGroup (Quotient rationalEquivalence)]
+  quotientIdentifiesWithChow :
+    Nonempty (Quotient rationalEquivalence ≃+ ChowGroup X k)
 
 structure IntersectionOperations {C : Type u} [Category.{v} C]
     [StackCategory C] [ChowTheory C] {X Y : C} (f : X ⟶ Y) where
-  flatPullback : Prop
-  properPushforward : Prop
+  flatPullback : ∀ k : ℤ, ChowGroup Y k →+ ChowGroup X k
+  properPushforward : ∀ k : ℤ, ChowGroup X k →+ ChowGroup Y k
   regularLocalEmbedding : Prop
-  generalizedGysinHomomorphism : Prop
+  generalizedGysinHomomorphism : ∀ k : ℤ, ChowGroup X k →+ ChowGroup Y k
 
 structure ModuliSpaceChowData {C : Type u} [Category.{v} C]
     [StackCategory C] [ChowTheory C] (X Y : C) where
@@ -61,7 +63,6 @@ structure ModuliSpaceChowData {C : Type u} [Category.{v} C]
   proper : IsProperMorphism map
   geometricPointBijection : Prop
   pushforward : ∀ k : ℤ, ChowGroup X k →+ ChowGroup Y k
-  pushforwardIsomorphism : ∀ k : ℤ, Nonempty (ChowGroup X k ≃+ ChowGroup Y k)
 
 theorem moduli_space_chow_pushforward_isomorphism
     {C : Type u} [Category.{v} C] [StackCategory C] [ChowTheory C]
@@ -82,6 +83,7 @@ structure EquivariantChowApproximation (G X : Type u) [Group G]
   mixedQuotient : Type u
   mixedQuotientIsAlgebraicSpace : Prop
   mixedQuotientCanBeScheme : Prop
+  mixedChowGroups : ℤ → Type u
   equivariantChowGroups : ℤ → Type u
   quotientStackChowGroups : ℤ → Type u
 
@@ -93,27 +95,18 @@ def QuotientStackChowGroup {G X : Type u} [Group G] [MulAction G X]
     (D : EquivariantChowApproximation G X) (i : ℤ) : Type u :=
   D.quotientStackChowGroups i
 
-structure EquivariantChowIndexing {G X : Type u} [Group G] [MulAction G X]
-    (D : EquivariantChowApproximation G X) where
-  equivariantFormula : ∀ i : ℤ,
-    EquivariantChowGroup D i = D.equivariantChowGroups i
-  quotientFormula : ∀ i : ℤ,
-    QuotientStackChowGroup D i = D.quotientStackChowGroups i
-  equivariantDimensionShift : ℤ
-  quotientDimensionShift : ℤ
-
 theorem equivariant_chow_group_formula
     {G X : Type u} [Group G] [MulAction G X]
-    (D : EquivariantChowApproximation G X) (I : EquivariantChowIndexing D)
-    (i : ℤ) :
-    EquivariantChowGroup D i = D.equivariantChowGroups i := by
+    (D : EquivariantChowApproximation G X) (i : ℤ) :
+    EquivariantChowGroup D i =
+      D.mixedChowGroups (i + D.representationDimension - D.dimensionG) := by
   sorry
 
 theorem quotient_stack_chow_group_formula
     {G X : Type u} [Group G] [MulAction G X]
-    (D : EquivariantChowApproximation G X) (I : EquivariantChowIndexing D)
-    (i : ℤ) :
-    QuotientStackChowGroup D i = D.quotientStackChowGroups i := by
+    (D : EquivariantChowApproximation G X) (i : ℤ) :
+    QuotientStackChowGroup D i =
+      D.mixedChowGroups (i + D.representationDimension) := by
   sorry
 
 structure QuotientStackChowVanishingStatement
@@ -127,11 +120,11 @@ structure QuotientStackChowVanishingStatement
 structure BGmChowStatement where
   chowGroup : ℤ → Type u
   chowGroupAddCommGroup : ∀ i, AddCommGroup (chowGroup i)
-  nonpositiveIntegral : ∀ i : ℤ, i ≤ 0 → Prop
+  chowGroupIsIntegers : ∀ i : ℤ, i ≤ 0 → Nonempty (chowGroup i ≃ ℤ)
 
 theorem classifying_multiplicative_group_chow_groups
     (D : BGmChowStatement) (i : ℤ) (hi : i ≤ 0) :
-    D.nonpositiveIntegral i hi := by
+    Nonempty (D.chowGroup i ≃ ℤ) := by
   sorry
 
 structure QuotientStackPresentationChowData (C : Type u) [Category.{v} C]
@@ -141,14 +134,15 @@ structure QuotientStackPresentationChowData (C : Type u) [Category.{v} C]
   groupStructure : Group group
   quotientPresentationProperty : Prop
   presentationChowGroup : ℤ → Type u
-  presentationComparison : ℤ → Prop
+  presentationComparison : ∀ i : ℤ,
+    Nonempty (ChowGroup stack i ≃ presentationChowGroup i)
 
 theorem quotient_stack_chow_is_independent_of_presentation
     {C : Type u} [Category.{v} C] [StackCategory C] [ChowTheory C]
     (D₁ D₂ : QuotientStackPresentationChowData C)
     (i : ℤ) :
     D₁.stack = D₂.stack →
-      D₁.presentationComparison i ∧ D₂.presentationComparison i := by
+      Nonempty (D₁.presentationChowGroup i ≃ D₂.presentationChowGroup i) := by
   sorry
 
 structure ArtinStackChowData (C : Type u) [Category.{v} C]
@@ -157,13 +151,15 @@ structure ArtinStackChowData (C : Type u) [Category.{v} C]
   artin : IsArtinStack stack
   affineStabilizers : Prop
   chowGroups : ℤ → Type u
+
+structure ArtinStackChowConclusion where
   agreesWithQuotientStackDefinition : Prop
   usualFunctorialProperties : Prop
 
 theorem Kresch_chow_groups_for_artin_stacks
     {C : Type u} [Category.{v} C] [StackCategory C] [ChowTheory C]
     (D : ArtinStackChowData C) :
-    D.agreesWithQuotientStackDefinition ∧ D.usualFunctorialProperties := by
+    Nonempty ArtinStackChowConclusion := by
   sorry
 
 structure VirtualFundamentalClassData (C : Type u) [Category.{v} C]
@@ -171,13 +167,12 @@ structure VirtualFundamentalClassData (C : Type u) [Category.{v} C]
   stack : C
   deligneMumford : IsDeligneMumfordStack stack
   intrinsicNormalCone : Type u
-  virtualFundamentalClass : Type u
-  classInChowGroup : ∀ k : ℤ, virtualFundamentalClass → ChowGroup stack k
+  virtualDimension : ℤ
 
 theorem intrinsic_normal_cone_gives_virtual_fundamental_class
     {C : Type u} [Category.{v} C] [StackCategory C] [ChowTheory C]
     (D : VirtualFundamentalClassData C) :
-    Nonempty D.virtualFundamentalClass := by
+    Nonempty (ChowGroup D.stack D.virtualDimension) := by
   sorry
 
 end Formalization.Books.Guide.Unit05

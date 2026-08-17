@@ -49,9 +49,10 @@ structure FormalApproximationWitness {C : Type u} [Category.{v} C]
   residuallyTrivial : Prop
   markedPointCompatibility : Prop
   element : D.functor.obj (op neighborhood)
-  restrictionToTruncation :
-    D.functor.obj (op neighborhood) → D.functor.obj (op (D.truncation n))
-  agrees : restrictionToTruncation element = D.restriction n D.formalElement
+  restrictionToTruncation : D.truncation n ⟶ neighborhood
+  agrees :
+    D.functor.map (op restrictionToTruncation) element =
+      D.restriction n D.formalElement
 
 theorem algebraic_approximation_of_effective_formal_deformation
     {C : Type u} [Category.{v} C] (D : FormalDeformationSituation C)
@@ -77,9 +78,16 @@ structure AlgebraizationWitness {C : Type u} [Category.{v} C]
   finiteTypeOverBase : Prop
   closedPoint : Prop
   residueFieldIdentified : Prop
-  formalCompletionIso : Prop
+  formalCompletion : C
+  formalCompletionIso : formalCompletion ≅ D.deformation.formalObject
   element : D.deformation.functor.obj (op scheme)
   agreesAtEveryOrder : ℕ → Prop
+
+structure AlgebraizationComparison {C : Type u} [Category.{v} C]
+    [StackCategory C] {D : FormalVersalSituation C}
+    (W₁ W₂ : AlgebraizationWitness D) where
+  completionIso : W₁.formalCompletion ≅ W₂.formalCompletion
+  identifiesFormalElements : Prop
 
 theorem algebraization_of_effective_formal_versal_deformation
     {C : Type u} [Category.{v} C] [StackCategory C]
@@ -92,23 +100,28 @@ theorem algebraization_unique_for_universal_deformation
     {C : Type u} [Category.{v} C] [StackCategory C]
     (D : FormalVersalSituation C)
     (huniversal : D.universal) (W₁ W₂ : AlgebraizationWitness D) :
-    W₁.formalCompletionIso = W₂.formalCompletionIso := by
+    Nonempty (AlgebraizationComparison W₁ W₂) := by
   sorry
 
-structure FormalContractionSituation (C : Type u) [Category.{v} C] where
+structure FormalContractionSituation (C : Type u) [Category.{v} C]
+    [StackCategory C] where
   source : C
+  closedSubspace : C
+  closedEmbedding : closedSubspace ⟶ source
   closedSubset : Prop
   formallyLocallyContractible : Prop
 
 structure GlobalContractionWitness {C : Type u} [Category.{v} C]
+    [StackCategory C]
     (D : FormalContractionSituation C) where
   target : C
   morphism : D.source ⟶ target
-  targetIsAlgebraicSpace : Prop
+  targetIsAlgebraicSpace : IsAlgebraicSpace target
   contractsClosedSubset : Prop
 
 theorem global_contraction_from_formal_contraction
-    {C : Type u} [Category.{v} C] (D : FormalContractionSituation C)
+    {C : Type u} [Category.{v} C] [StackCategory C]
+    (D : FormalContractionSituation C)
     (hformal : D.formallyLocallyContractible) :
     ∃ W : GlobalContractionWitness D, W.contractsClosedSubset := by
   sorry
@@ -150,7 +163,7 @@ structure FppfPresentation {C : Type u} [Category.{v} C]
   source : C
   map : source ⟶ X
   sourceIsScheme : IsScheme source
-  isFppfPresentation : Prop
+  isFppfPresentation : IsFppfMorphism map
 
 structure SmoothPresentation {C : Type u} [Category.{v} C]
     [StackCategory C] (X : C) where
@@ -194,6 +207,8 @@ structure PopescuSituation where
   [commRingA : CommRing A]
   [commRingB : CommRing B]
   map : A →+* B
+  noetherianA : Prop
+  noetherianB : Prop
   regularMorphism : Prop
   filteredColimitOfSmoothAlgebras : Prop
 

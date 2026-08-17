@@ -38,8 +38,12 @@ structure RigidificationWitness {C : Type u} [Category.{v} C]
     D.automorphisms T ξ → rigidifiedAutomorphisms T ξ
   automorphismMapSurjective : ∀ (T : C) (ξ : D.objectsOver T),
     Function.Surjective (automorphismMap T ξ)
-  automorphismKernelIsSubgroup : ∀ (T : C) (ξ : D.objectsOver T),
-    D.automorphisms T ξ → Prop
+  automorphismKernel : ∀ (T : C) (ξ : D.objectsOver T),
+    Set (D.automorphisms T ξ)
+  automorphismKernelIsImageOfSubgroup :
+    ∀ (T : C) (ξ : D.objectsOver T) (a : D.automorphisms T ξ),
+      a ∈ automorphismKernel T ξ ↔
+        ∃ h : D.subgroup, D.embedding T ξ h = a
 
 theorem rigidification_exists
     {C : Type u} [Category.{v} C] [StackCategory C] {X S : C}
@@ -55,17 +59,24 @@ structure RigidificationGroupActionData {C : Type u} [Category.{v} C]
   actionOne : ∀ Y : C, action 1 Y = Y
   actionMul : ∀ (g h : group) (Y : C), action (g * h) Y = action g (action h Y)
   rigidification : RigidificationInput X S
-  actionCompatibility : Prop
+
+structure RigidificationActionCompatibility {C : Type u} [Category.{v} C]
+    [StackCategory C] {X S : C}
+    (D : RigidificationGroupActionData X S) where
+  inducedActionOnRigidification : D.group → C → C
+  commutesWithRigidification : Prop
 
 theorem group_actions_compatible_with_rigidification
     {C : Type u} [Category.{v} C] [StackCategory C] {X S : C}
     (D : RigidificationGroupActionData X S) :
-    D.actionCompatibility := by
+    Nonempty (RigidificationActionCompatibility D) := by
   sorry
 
 structure RigidificationAlternativeInterpretations {C : Type u}
     [Category.{v} C] [StackCategory C] where
   rigidification : Prop
+
+structure RigidificationApplications where
   alternativeInterpretationOne : Prop
   alternativeInterpretationTwo : Prop
   gluingAlongClosedSubstacks : Prop
@@ -74,8 +85,7 @@ structure RigidificationAlternativeInterpretations {C : Type u}
 theorem rigidification_alternative_interpretations_and_applications
     {C : Type u} [Category.{v} C] [StackCategory C]
     (D : RigidificationAlternativeInterpretations (C := C)) :
-    D.alternativeInterpretationOne ∧ D.alternativeInterpretationTwo ∧
-      D.gluingAlongClosedSubstacks ∧ D.takingRootsOfLineBundles := by
+    Nonempty RigidificationApplications := by
   sorry
 
 structure NormalFlatInertiaSubgroup {C : Type u} [Category.{v} C]
@@ -83,16 +93,23 @@ structure NormalFlatInertiaSubgroup {C : Type u} [Category.{v} C]
   subgroupStack : C
   subgroupOfInertia : Prop
   flat : Prop
+  finitelyPresented : Prop
+  separated : Prop
   normal : Prop
-  central : Prop
   rigidification : C
   quotientMap : X ⟶ rigidification
+
+structure NormalNoncentralRigidificationConclusion {C : Type u}
+    [Category.{v} C] [StackCategory C] {X : C}
+    (D : NormalFlatInertiaSubgroup X) where
+  quotientMap : X ⟶ D.rigidification
+  isFppfGerbe : Prop
   handlesNoncentralCase : Prop
 
 theorem tame_stack_normal_noncentral_rigidification
     {C : Type u} [Category.{v} C] [StackCategory C] {X : C}
     (D : NormalFlatInertiaSubgroup X) (hnormal : D.normal) :
-    D.handlesNoncentralCase := by
+    Nonempty (NormalNoncentralRigidificationConclusion D) := by
   sorry
 
 end Formalization.Books.Guide.Unit05

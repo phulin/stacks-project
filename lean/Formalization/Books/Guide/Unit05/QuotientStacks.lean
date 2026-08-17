@@ -29,10 +29,15 @@ structure FiniteGroupQuotientData {C : Type u} [Category.{v} C]
   quotientMap : quotientSpace ⟶ X
   quotientSpaceIsScheme : IsScheme quotientSpace
   quotientSpaceIsAlgebraicSpace : IsAlgebraicSpace quotientSpace
+  quotientPresentation : Prop
+
+def HasFiniteGroupQuotient {C : Type u} [Category.{v} C]
+    [StackCategory C] (X : C) : Prop :=
+  Nonempty (FiniteGroupQuotientData X)
 
 theorem finite_group_quotient_iff_finite_etale_cover
     {C : Type u} [Category.{v} C] [StackCategory C] (X : C) :
-    IsGlobalQuotient X ↔ HasFiniteEtaleCoverByScheme X := by
+    HasFiniteGroupQuotient X ↔ HasFiniteEtaleCoverByScheme X := by
   sorry
 
 structure EtaleSeparatedFiniteGroupChart {C : Type u} [Category.{v} C]
@@ -49,6 +54,7 @@ structure EtaleSeparatedFiniteGroupChart {C : Type u} [Category.{v} C]
   representable : Prop
   etale : IsEtaleMorphism chartMap
   separated : IsSeparatedMorphism chartMap
+  chartIsFiniteGroupQuotient : Prop
   fiberIsTheSpecifiedPoint : Prop
 
 theorem deligne_mumford_local_finite_group_chart
@@ -74,12 +80,14 @@ def HasRepresentableSurjectiveVectorBundleLocus {C : Type u} [Category.{v} C]
     D.locallyClosedRepresentableLocus ∧ D.locusSurjects
 
 theorem quotient_stack_iff_faithful_vector_bundle
-    {C : Type u} [Category.{v} C] [StackCategory C] (X : C) :
+    {C : Type u} [Category.{v} C] [StackCategory C] (X : C)
+    (hfiniteType : Prop) (hnoetherian : Prop) :
     IsGlobalQuotient X ↔ HasFaithfulVectorBundle X := by
   sorry
 
 theorem quotient_stack_iff_representable_vector_bundle_locus
-    {C : Type u} [Category.{v} C] [StackCategory C] (X : C) :
+    {C : Type u} [Category.{v} C] [StackCategory C] (X : C)
+    (hfiniteType : Prop) (hnoetherian : Prop) :
     IsGlobalQuotient X ↔ HasRepresentableSurjectiveVectorBundleLocus X := by
   sorry
 
@@ -123,12 +131,14 @@ theorem exists_nonseparated_deligne_mumford_stack_not_quotient
 
 def HasResolutionPropertyViaGLnQuasiAffineQuotient
     {C : Type u} [Category.{v} C] [StackCategory C] (X : C) : Prop :=
-  ∃ Y : C, IsQuasiProjectiveStack Y ∧ ∃ f : Y ⟶ X,
-    f ≫ 𝟙 X = f ∧ IsGlobalQuotient X
+  ∃ Y : C, IsQuasiAffineStack Y ∧
+    (∃ _f : Y ⟶ X, IsGlobalQuotient X) ∧
+      (∃ gln : Type u, Nonempty (Group gln))
 
 def HasAffineFiniteTypeGroupQuotient {C : Type u} [Category.{v} C]
     [StackCategory C] (X : C) : Prop :=
-  ∃ G : Type u, Nonempty (Group G) ∧ IsGlobalQuotient X
+  ∃ G : Type u, Nonempty (Group G) ∧
+    ∃ Y : C, IsScheme Y ∧ (∃ _f : Y ⟶ X, IsGlobalQuotient X)
 
 theorem totaro_resolution_property_iff_gl_n_quasi_affine_quotient
     {C : Type u} [Category.{v} C] [StackCategory C] (X : C)
@@ -161,11 +171,11 @@ theorem smooth_deligne_mumford_resolution_property
 
 structure ClosedPointStabilizerData {C : Type u} [Category.{v} C]
     [StackCategory C] (X : C) where
-  affineAtEveryClosedPoint : Prop
+  affineAtEveryClosedPoint : ∀ _x : Point X, Prop
 
 def ClosedPointsHaveAffineStabilizer {C : Type u} [Category.{v} C]
     [StackCategory C] (X : C) : Prop :=
-  ∃ D : ClosedPointStabilizerData X, D.affineAtEveryClosedPoint
+  ∃ D : ClosedPointStabilizerData X, ∀ x : Point X, D.affineAtEveryClosedPoint x
 
 theorem affine_diagonal_iff_affine_closed_stabilizers
     {C : Type u} [Category.{v} C] [StackCategory C] (X : C)
@@ -181,10 +191,18 @@ theorem smooth_separated_generically_tame_quasi_projective_is_quotient
     IsGlobalQuotient X := by
   sorry
 
+structure OpenFiniteGroupQuotientChart {C : Type u} [Category.{v} C]
+    [StackCategory C] (X : C) where
+  openSubstack : C
+  inclusion : openSubstack ⟶ X
+  openImmersion : Prop
+  quotientByFiniteGroup : Prop
+  covers : Prop
+
 def HasOpenCoverByFiniteGroupSchemeQuotients {C : Type u} [Category.{v} C]
     [StackCategory C] (X : C) : Prop :=
-  ∃ n : ℕ, ∃ U : Fin n → C,
-    ∀ i, ∃ f : U i ⟶ X, f ≫ 𝟙 X = f ∧ IsGlobalQuotient (U i)
+  ∃ ι : Type u, Nonempty ι ∧ ∃ U : ι → OpenFiniteGroupQuotientChart X,
+    ∀ i, (U i).covers
 
 theorem zariski_local_quotient_iff_open_finite_group_quotient_cover
     {C : Type u} [Category.{v} C] [StackCategory C] (X : C)
@@ -196,6 +214,7 @@ structure SmoothProperProjectiveEmbedding {C : Type u} [Category.{v} C]
     [StackCategory C] (X : C) where
   ambient : C
   smooth : IsSmoothStack ambient
+  ambientDeligneMumford : IsDeligneMumfordStack ambient
   proper : IsProperStack ambient
   projectiveCoarse : CoarseSpaceIsProjective ambient
   embedding : X ⟶ ambient
@@ -228,13 +247,25 @@ def EverySmoothDMStackOfDimensionIsQuotient {C : Type u} [Category.{v} C]
   ∀ X : C, IsSmoothStack X → IsDeligneMumfordStack X →
     StackDimension X = n → IsGlobalQuotient X
 
+structure QuotientStratum {C : Type u} [Category.{v} C]
+    [StackCategory C] (X : C) where
+  stratum : C
+  inclusion : stratum ⟶ X
+  locallyClosed : Prop
+  quotient : IsGlobalQuotient stratum
+
 structure AzumayaCohomologicalBrauerComparison (C : Type u)
     [Category.{v} C] [StackCategory C] (n : ℕ) where
-  comparison : Prop
+  azumayaBrauerGroup : Type u
+  [azumayaGroupStructure : AddCommGroup azumayaBrauerGroup]
+  cohomologicalBrauerGroup : Type u
+  [cohomologicalGroupStructure : AddCommGroup cohomologicalBrauerGroup]
+  comparison : azumayaBrauerGroup ≃ cohomologicalBrauerGroup
 
 def AzumayaEqualsCohomologicalBrauerInDimension {C : Type u}
     [Category.{v} C] [StackCategory C] (n : ℕ) : Prop :=
-  ∃ D : AzumayaCohomologicalBrauerComparison C n, D.comparison
+  ∃ D : AzumayaCohomologicalBrauerComparison C n,
+    Nonempty (D.azumayaBrauerGroup ≃ D.cohomologicalBrauerGroup)
 
 theorem Kresch_Vistoli_dimension_equivalence
     {C : Type u} [Category.{v} C] [StackCategory C] (n : ℕ)
@@ -245,8 +276,9 @@ theorem Kresch_Vistoli_dimension_equivalence
 
 def StratifiedByQuotientStacks {C : Type u} [Category.{v} C]
     [StackCategory C] (X : C) : Prop :=
-  ∃ n : ℕ, ∃ strata : Fin n → C,
-    ∀ i, ∃ f : strata i ⟶ X, f ≫ 𝟙 X = f ∧ IsGlobalQuotient (strata i)
+  ∃ n : ℕ, ∃ strata : Fin n → QuotientStratum X,
+    ∀ i, (strata i).locallyClosed ∧
+      IsGlobalQuotient (strata i).stratum
 
 theorem reduced_artin_stack_stratified_by_quotients
     {C : Type u} [Category.{v} C] [StackCategory C] (X : C)
@@ -257,11 +289,13 @@ theorem reduced_artin_stack_stratified_by_quotients
 
 structure EtaleLocallyAffineFiniteStabilizerQuotientData
     {C : Type u} [Category.{v} C] [StackCategory C] (X : C) where
-  chart : C
-  chartMap : chart ⟶ X
-  affine : Prop
-  finiteStabilizerGroup : Prop
-  etale : IsEtaleMorphism chartMap
+  chartForPoint : ∀ _x : Point X, C
+  chartMapForPoint : ∀ (_x : Point X), chartForPoint _x ⟶ X
+  affineForPoint : ∀ _x : Point X, Prop
+  finiteStabilizerGroupForPoint : ∀ _x : Point X, Prop
+  quotientByFiniteStabilizerForPoint : ∀ _x : Point X, Prop
+  etaleForPoint : ∀ _x : Point X,
+    IsEtaleMorphism (chartMapForPoint _x)
 
 def EtaleLocallyAffineFiniteStabilizerQuotient {C : Type u}
     [Category.{v} C] [StackCategory C] (X : C) : Prop :=
@@ -289,6 +323,7 @@ structure LocalQuotientSliceData {C : Type u} [Category.{v} C]
   chart : C
   chartMap : chart ⟶ X
   etale : IsEtaleMorphism chartMap
+  quotientByStabilizer : Prop
   formallyLocal : Prop
 
 theorem local_quotient_slice_formal_statement

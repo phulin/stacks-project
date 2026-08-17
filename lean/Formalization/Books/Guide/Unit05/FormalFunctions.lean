@@ -30,7 +30,7 @@ def HasFormalFunctionsAndGrothendieckExistence {C : Type u} [Category.{v} C]
 
 def IsTameDeligneMumfordStack {C : Type u} [Category.{v} C]
     [StackCategory C] (X : C) : Prop :=
-  IsDeligneMumfordStack X ∧ HasLinearlyReductiveStabilizers X
+  IsDeligneMumfordStack X ∧ IsTameArtinStack X
 
 structure FormalGAGAData {C : Type u} [Category.{v} C]
     [StackCategory C] {X Y : C} (f : X ⟶ Y) where

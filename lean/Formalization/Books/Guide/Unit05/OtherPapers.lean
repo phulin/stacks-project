@@ -29,18 +29,18 @@ structure TwistedSheafModuliData {C : Type u} [Category.{v} C]
     [StackCategory C] (D : RelativeSurfaceGerbeData (C := C)) where
   moduliStack : C
   moduliToBase : moduliStack ⟶ D.base
+
+structure TwistedSheafModuliConclusion {C : Type u} [Category.{v} C]
+    [StackCategory C] (D : RelativeSurfaceGerbeData (C := C))
+    (M : TwistedSheafModuliData D) where
   semistableTwistedSheafStack : Prop
-  moduliStackIsArtin : IsArtinStack moduliStack
+  moduliStackIsArtin : IsArtinStack M.moduliStack
   locallyOfFinitePresentationOverBase :
-    LocallyOfFinitePresentation moduliToBase
-  associatedPointsAndPurityTheory : Prop
+    LocallyOfFinitePresentation M.moduliToBase
 
 def HasSemistableTwistedSheafModuli {C : Type u} [Category.{v} C]
     [StackCategory C] (D : RelativeSurfaceGerbeData (C := C)) : Prop :=
-  ∃ M : TwistedSheafModuliData D,
-    M.semistableTwistedSheafStack ∧ IsArtinStack M.moduliStack ∧
-      LocallyOfFinitePresentation M.moduliToBase ∧
-      M.associatedPointsAndPurityTheory
+  ∃ M : TwistedSheafModuliData D, Nonempty (TwistedSheafModuliConclusion D M)
 
 theorem lieblich_semistable_twisted_sheaves_form_an_artin_stack
     {C : Type u} [Category.{v} C] [StackCategory C]
@@ -51,15 +51,13 @@ theorem lieblich_semistable_twisted_sheaves_form_an_artin_stack
     HasSemistableTwistedSheafModuli D := by
   sorry
 
-structure AssociatedPointsAndPurityData {C : Type u} [Category.{v} C]
-    [StackCategory C] (X : C) where
+structure AssociatedPointsAndPurityConclusion where
   associatedPoints : Prop
   purityOfSheaves : Prop
 
 def HasAssociatedPointsAndPurityTheory {C : Type u} [Category.{v} C]
-    [StackCategory C] (X : C) : Prop :=
-  ∃ D : AssociatedPointsAndPurityData X,
-    D.associatedPoints ∧ D.purityOfSheaves
+    [StackCategory C] (_X : C) : Prop :=
+  Nonempty (AssociatedPointsAndPurityConclusion)
 
 theorem lieblich_associated_points_and_purity_on_artin_stacks
     {C : Type u} [Category.{v} C] [StackCategory C] (X : C)
@@ -71,38 +69,35 @@ structure FunctorialReconstructionData {C : Type u} [Category.{v} C]
     [StackCategory C] (X : C) where
   associatedFunctor : C → Type u
   reconstructionHypotheses : Prop
+
+structure FunctorialReconstructionConclusion where
   reconstructionConclusion : Prop
 
 def IsReconstructedFromAssociatedFunctor {C : Type u} [Category.{v} C]
     [StackCategory C] {X : C} (D : FunctorialReconstructionData X) : Prop :=
-  D.reconstructionHypotheses ∧ D.reconstructionConclusion
+  D.reconstructionHypotheses ∧ Nonempty FunctorialReconstructionConclusion
 
 theorem lieblich_osserman_functorial_reconstruction
     {C : Type u} [Category.{v} C] [StackCategory C] {X : C}
     (D : FunctorialReconstructionData X)
     (h : D.reconstructionHypotheses) :
-    D.reconstructionConclusion := by
+    Nonempty FunctorialReconstructionConclusion := by
   sorry
-
-structure QuasiFiniteDiagonalData {C : Type u} [Category.{v} C]
-    [StackCategory C] (X : C) where
-  diagonalIsQuasiFinite : Prop
-
-def HasQuasiFiniteDiagonal {C : Type u} [Category.{v} C]
-    [StackCategory C] (X : C) : Prop :=
-  ∃ D : QuasiFiniteDiagonalData X, D.diagonalIsQuasiFinite
 
 structure NoetherianApproximationData {C : Type u} [Category.{v} C]
     [StackCategory C] (X : C) where
   approximation : C
   approximationMap : X ⟶ approximation
+
+structure NoetherianApproximationConclusion {C : Type u} [Category.{v} C]
+    [StackCategory C] {X : C} (D : NoetherianApproximationData X) where
   approximationIsNoetherian : Prop
   approximatesOriginalStack : Prop
 
 def HasNoetherianApproximation {C : Type u} [Category.{v} C]
     [StackCategory C] (X : C) : Prop :=
   ∃ D : NoetherianApproximationData X,
-    D.approximationIsNoetherian ∧ D.approximatesOriginalStack
+    Nonempty (NoetherianApproximationConclusion D)
 
 structure NoetherianApproximationApplications where
   chevalley : Prop

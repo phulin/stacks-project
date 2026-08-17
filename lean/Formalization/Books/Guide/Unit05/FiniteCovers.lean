@@ -52,11 +52,16 @@ theorem laumon_moret_bailly_finite_generically_etale_cover
     Nonempty (FiniteGenericallyEtaleSchemeCover X) := by
   sorry
 
-structure NormalAlgebraicSpaceFiniteGroupQuotient {C : Type u}
+structure NormalNoetherianAlgebraicSpaceData {C : Type u}
     [Category.{v} C] [StackCategory C] where
   algebraicSpace : C
+  algebraicSpaceIsAlgebraicSpace : IsAlgebraicSpace algebraicSpace
   normal : Prop
   noetherian : Prop
+
+structure NormalAlgebraicSpaceFiniteGroupQuotient {C : Type u}
+    [Category.{v} C] [StackCategory C]
+    (D : NormalNoetherianAlgebraicSpaceData (C := C)) where
   coverScheme : C
   coverSchemeIsScheme : IsScheme coverScheme
   finiteGroup : Type u
@@ -65,30 +70,16 @@ structure NormalAlgebraicSpaceFiniteGroupQuotient {C : Type u}
 
 theorem normal_noetherian_algebraic_space_is_finite_group_quotient
     {C : Type u} [Category.{v} C] [StackCategory C]
-    (D : NormalAlgebraicSpaceFiniteGroupQuotient (C := C)) :
-    D.quotientPresentation := by
+    (D : NormalNoetherianAlgebraicSpaceData (C := C)) :
+    Nonempty (NormalAlgebraicSpaceFiniteGroupQuotient D) := by
   sorry
 
-structure DiagonalPropertyData {C : Type u} [Category.{v} C]
-    [StackCategory C] (X : C) where
-  base : C
-  quasiFiniteDiagonal : Prop
-
-def HasQuasiFiniteDiagonal {C : Type u} [Category.{v} C]
-    [StackCategory C] (X : C) : Prop :=
-  ∃ D : DiagonalPropertyData X, D.quasiFiniteDiagonal
-
-structure FiniteSurjectiveSchemeCover {C : Type u} [Category.{v} C]
-    [StackCategory C] (X : C) where
-  scheme : C
-  schemeStructure : IsScheme scheme
-  map : scheme ⟶ X
-  finite : IsFiniteMorphism map
-  surjective : Surjective map
+abbrev FiniteSurjectiveSchemeCover {C : Type u} [Category.{v} C]
+    [StackCategory C] (X : C) := SchemeFiniteCover X
 
 def HasFiniteSurjectiveSchemeCover {C : Type u} [Category.{v} C]
     [StackCategory C] (X : C) : Prop :=
-  Nonempty (FiniteSurjectiveSchemeCover X)
+  HasFiniteSchemeCover X
 
 theorem quasi_finite_diagonal_iff_finite_surjective_scheme_cover
     {C : Type u} [Category.{v} C] [StackCategory C] (X : C)
@@ -105,6 +96,7 @@ structure SmoothQuasiProjectiveFiniteFlatCover {C : Type u}
   quasiProjective : IsQuasiProjectiveStack scheme
   finite : IsFiniteMorphism map
   flat : Flat map
+  surjective : Surjective map
 
 theorem kresch_vistoli_smooth_finite_flat_cover
     {C : Type u} [Category.{v} C] [StackCategory C] (X : C)
@@ -160,7 +152,8 @@ structure RydhNoetherianApproximationHypotheses {C : Type u}
 theorem rydh_noetherian_approximation_theorem_B
     {C : Type u} [Category.{v} C] [StackCategory C] {X : C}
     (H : RydhNoetherianApproximationHypotheses X) :
-    Nonempty (RydhApproximationCover X) := by
+    ∃ W : RydhApproximationCover X,
+      W.flatOverDenseOpen ∨ W.etaleOverDenseOpen := by
   sorry
 
 end Formalization.Books.Guide.Unit05

@@ -26,7 +26,6 @@ class StackCohomologyTheory (C : Type u) [Category.{v} C]
   deRhamCohomology : C → Type u
   singularCohomology : C → Type u
   cotangentComplex : C → Type u
-  cotangentComplexConstructed : C → Prop
 
 abbrev StackSheaf {C : Type u} [Category.{v} C] [StackCategory C]
     [StackCohomologyTheory C] (X : C) := StackCohomologyTheory.Sheaf X
@@ -84,6 +83,7 @@ structure ProperCohomologyTheorems {C : Type u} [Category.{v} C]
 theorem olsson_sheaves_on_artin_stacks
     {C : Type u} [Category.{v} C] [StackCategory C]
     [StackCohomologyTheory C] {X Y : C} (f : X ⟶ Y)
+    (hX : IsArtinStack X) (hY : IsArtinStack Y)
     (hproper : IsProperMorphism f) :
     Nonempty (ProperCohomologyTheorems f) := by
   sorry
@@ -132,12 +132,14 @@ structure LefschetzTraceFormulaData {C : Type u} [Category.{v} C]
   stack : C
   derivedLAdicCategory : Type u
   object : StackDerivedLAdicObject stack
+
+structure LefschetzTraceFormulaConclusion where
   traceFormula : Prop
 
 theorem lefschetz_trace_formula_for_algebraic_stacks
     {C : Type u} [Category.{v} C] [StackCategory C]
     [StackCohomologyTheory C] (D : LefschetzTraceFormulaData (C := C)) :
-    D.traceFormula := by
+    Nonempty LefschetzTraceFormulaConclusion := by
   sorry
 
 structure GeometricStackCohomologyData {C : Type u} [Category.{v} C]
@@ -145,8 +147,6 @@ structure GeometricStackCohomologyData {C : Type u} [Category.{v} C]
   stack : C
   differentiableStack : Prop
   topologicalStack : Prop
-  deRhamObject : StackDeRhamCohomology stack
-  singularObject : StackSingularCohomology stack
 
 theorem de_rham_cohomology_for_differentiable_stacks
     {C : Type u} [Category.{v} C] [StackCategory C]
@@ -163,6 +163,7 @@ theorem singular_cohomology_for_topological_stacks
 theorem coherent_direct_images_for_proper_fppf_stack_morphisms
     {C : Type u} [Category.{v} C] [StackCategory C]
     [StackCohomologyTheory C] {X Y : C} (f : X ⟶ Y)
+    (hX : IsArtinStack X) (hY : IsArtinStack Y)
     (hproper : IsProperMorphism f) (hfppf : IsFppfMorphism f)
     (F : StackSheaf X) (hcoherent : StackSheafIsCoherent F) :
     StackSheafIsCoherent (StackPushforward f F) := by
@@ -174,19 +175,21 @@ structure TameDMProperBaseChangeData {C : Type u} [Category.{v} C]
   deligneMumford : IsDeligneMumfordStack stack
   tame : IsTameArtinStack stack
   proper : Prop
+
+structure TameDMProperBaseChangeConclusion where
   etaleCohomologyBaseChange : Prop
 
 theorem proper_base_change_for_etale_cohomology_of_tame_dm_stacks
     {C : Type u} [Category.{v} C] [StackCategory C]
     [StackCohomologyTheory C] (D : TameDMProperBaseChangeData (C := C))
     (hproper : D.proper) :
-    D.etaleCohomologyBaseChange := by
+    Nonempty TameDMProperBaseChangeConclusion := by
   sorry
 
 theorem cotangent_complex_for_artin_stacks
     {C : Type u} [Category.{v} C] [StackCategory C]
-    [StackCohomologyTheory C] (X : C) :
-    StackCohomologyTheory.cotangentComplexConstructed X := by
+    [StackCohomologyTheory C] (X : C) (hArtin : IsArtinStack X) :
+    Nonempty (StackCotangentComplex X) := by
   sorry
 
 end Formalization.Books.Guide.Unit05

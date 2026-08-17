@@ -32,7 +32,9 @@ class StackCategory (C : Type u) [Category.{v} C]
   isProper : C → Prop
   isSeparated : C → Prop
   isFiniteType : C → Prop
+  isQuasiAffine : C → Prop
   isQuasiProjective : C → Prop
+  hasQuasiFiniteDiagonal : C → Prop
   isProjective : C → Prop
   finiteInertia : C → Prop
   finiteStabilizer : C → Prop
@@ -100,6 +102,14 @@ def IsSeparatedStack {C : Type u} [Category.{v} C] [StackCategory C] (X : C) : P
 
 def IsFiniteTypeStack {C : Type u} [Category.{v} C] [StackCategory C] (X : C) : Prop :=
   StackCategory.isFiniteType X
+
+def IsQuasiAffineStack {C : Type u} [Category.{v} C] [StackCategory C]
+    (X : C) : Prop :=
+  StackCategory.isQuasiAffine X
+
+def HasQuasiFiniteDiagonal {C : Type u} [Category.{v} C] [StackCategory C]
+    (X : C) : Prop :=
+  StackCategory.hasQuasiFiniteDiagonal X
 
 def IsQuasiProjectiveStack {C : Type u} [Category.{v} C] [StackCategory C]
     (X : C) : Prop :=
@@ -266,11 +276,15 @@ def HasCoarseModuliSpace {C : Type u} [Category.{v} C] [StackCategory C]
     (X : C) : Prop :=
   Nonempty (CoarseModuliSpaceData X)
 
+def TameByExactPushforward {C : Type u} [Category.{v} C]
+    [StackCategory C] {X Y : C} (q : X ⟶ Y) : Prop :=
+  IsCoarseModuliSpaceMap q ∧ ExactOnQuasiCoherent q
+
 /-! ## Tame and good moduli spaces -/
 
 def IsTameArtinStack {C : Type u} [Category.{v} C] [StackCategory C] (X : C) : Prop :=
   IsArtinStack X ∧ HasFiniteInertia X ∧
-    ∃ (Y : C) (q : X ⟶ Y), IsCoarseModuliSpaceMap q ∧ ExactOnQuasiCoherent q
+    ∃ (Y : C) (q : X ⟶ Y), TameByExactPushforward q
 
 def IsGoodModuliSpace {C : Type u} [Category.{v} C] [StackCategory C]
     {X Y : C} (q : X ⟶ Y) : Prop :=

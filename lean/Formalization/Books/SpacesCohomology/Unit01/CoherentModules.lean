@@ -184,7 +184,7 @@ theorem coherent_scheme_theoretic_support
 structure CoherentClosedImmersionEquivalence (X Z : AlgebraicSpace.{u})
     (i : SpaceHom Z X) [AlgebraicSpaceTheory.{u}] [AlgebraicSpaceCohomology.{u}] where
   closed_immersion : IsClosedImmersion i
-  ideal : SheafObj X
+  ideal : IdealSheaf X
   ideal_property : Prop
   pushforward : SheafObj Z → SheafObj X
   pullback : SheafObj X → SheafObj Z
@@ -198,7 +198,7 @@ theorem coherent_closed_immersion_equivalence
     (_hX : IsLocallyNoetherian X) (_hZ : IsLocallyNoetherian Z)
     (hi : IsClosedImmersion i) :
     Nonempty (CoherentClosedImmersionEquivalence X Z i) := by
-  exact ⟨{ closed_immersion := hi, ideal := zeroSheaf X, ideal_property := True, pushforward := pushforwardSheaf i, pullback := pullbackSheaf i, fully_faithful := True, essential_surjectivity := True, annihilated_objects := True }⟩
+  sorry
 
 theorem finite_pushforward_coherent
     [AlgebraicSpaceTheory.{u}] [AlgebraicSpaceCohomology.{u}]

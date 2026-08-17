@@ -56,21 +56,21 @@ structure HigherVanishingChoices (X : AlgebraicSpace.{u}) where
   d : ℕ
   d_bounds_fibres : ∀ x : X,
     IsFinitePointSet (FibrePoints f x) ∧ Set.ncard (FibrePoints f x) ≤ d
-  U_p : ℕ → AlgebraicSpace.{u}
-  V_p : ℕ → AlgebraicSpace.{u}
+  U_p : Fin (d + 1) → AlgebraicSpace.{u}
+  V_p : Fin (d + 1) → AlgebraicSpace.{u}
   V_to_U : ∀ p, SpaceHom (V_p p) (U_p p)
   V_scheme : ∀ p, IsScheme (V_p p)
   V_affine : ∀ p, IsAffine (𝟙 (V_p p) : SpaceHom (V_p p) (V_p p))
   V_etale : ∀ p, IsEtale (V_to_U p)
   V_surjective : ∀ p, IsSurjective (V_to_U p)
-  d_p : ℕ → ℕ
+  d_p : Fin (d + 1) → ℕ
   d_p_bounds_fibres : ∀ p (x : U_p p),
     IsFinitePointSet (FibrePoints (V_to_U p) x) ∧
       Set.ncard (FibrePoints (V_to_U p) x) ≤ d_p p
   U_p_to_X : ∀ p, SpaceHom (U_p p) X
   U_p_etale : ∀ p, IsEtale (U_p_to_X p)
   bound : ℕ
-  bound_spec : ∀ p, p ≤ d → p + d_p p ≤ bound
+  bound_spec : ∀ p : Fin (d + 1), (p : ℕ) + d_p p ≤ bound
 
 theorem higher_vanishing_choices_exist
     (S X : AlgebraicSpace.{u}) (hS : IsScheme S)

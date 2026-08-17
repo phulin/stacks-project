@@ -112,18 +112,18 @@ theorem etale_localization_sheaf_with_support
         (pullbackSheaf (baseChangeTarget i f) F) q)) := by
   sorry
 
-structure SupportedDerivedEquivalence (X Z : AlgebraicSpace.{u}) where
-  forward : Type u → Type u
-  backward : Type u → Type u
+structure SupportedDerivedEquivalence (X Z : AlgebraicSpace.{u})
+    [AlgebraicSpaceCohomology.{u}] where
+  forward : DerivedObj Z → DerivedObj X
+  backward : DerivedObj X → DerivedObj Z
   fully_faithful : Prop
   essentially_surjective : Prop
   supported_objects : Prop
 
-omit [AlgebraicSpaceCohomology] in
 theorem closed_immersion_derived_support_equivalence
     (S X Z : AlgebraicSpace.{u}) (_hS : IsScheme S)
     (i : SpaceHom Z X) (_hi : IsClosedImmersion i) :
     Nonempty (SupportedDerivedEquivalence X Z) := by
-  exact ⟨{ forward := id, backward := id, fully_faithful := True, essentially_surjective := True, supported_objects := True }⟩
+  sorry
 
 end Formalization.Books.SpacesCohomology.Unit01

@@ -180,7 +180,7 @@ theorem stack_in_groupoids_over_stack
     (S : InheritedSite F J)
     (X : Pseudofunctor
       (LocallyDiscrete (Pseudofunctor.CoGrothendieck F)ᵒᵖ) Cat.{w', w'})
-    (hX : Stack X S.topology) :
+    (hX : StackInGroupoids X S.topology) :
     Nonempty (StackOverGroupoidsData J F S X) := by
   sorry
 

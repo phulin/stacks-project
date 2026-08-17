@@ -171,7 +171,8 @@ theorem equivalent_gerbes_preserve
 
 theorem gerbe_characterization_by_factorization
     {C : Type u} [Category.{v} C] {J : GrothendieckTopology C}
-    {F G : FiberedCategory.{w, v, u} C} (η : FiberedMorphism F G) :
+    {F G : FiberedCategory.{w, v, u} C} (η : FiberedMorphism F G)
+    (hF : StackInGroupoids F J) (hG : StackInGroupoids G J) :
     GerbeOver η J ↔ Nonempty (GerbeFactorizationData η J) := by
   sorry
 
@@ -179,7 +180,8 @@ theorem base_change_of_gerbe
     {C : Type u} [Category.{v} C] {J : GrothendieckTopology C}
     {A B C' D : FiberedCategory.{w, v, u} C}
     (sq : TwoCartesianSquare A B C' D)
-    (hgerbe : GerbeOver sq.top J) :
+    (hgerbe : GerbeOver sq.top J)
+    (hA : StackInGroupoids A J) (hC' : StackInGroupoids C' J) :
     GerbeOver sq.right J := by
   sorry
 
@@ -195,7 +197,8 @@ theorem gerbe_descent
     {C : Type u} [Category.{v} C] {J : GrothendieckTopology C}
     {A B C' D : FiberedCategory.{w, v, u} C} (sq : TwoCartesianSquare A B C' D)
     (hlocal : LocallyEssentiallyInImage sq.bottom J)
-    (hgerbe : GerbeOver sq.bottom J) :
+    (hgerbe : GerbeOver sq.bottom J)
+    (hA : StackInGroupoids A J) (hB : StackInGroupoids B J) :
     GerbeOver sq.left J := by
   sorry
 

@@ -194,7 +194,9 @@ theorem faithful_descent_for_stacks_in_groupoids
     {C : Type u} [Category.{v} C] {J : GrothendieckTopology C}
     {A B C' D : FiberedCategory C} (sq : TwoCartesianSquare A B C' D)
     (hlocal : FiberwiseEssentiallySurjective sq.bottom)
-    (hfaithful : FiberwiseFaithful sq.right) :
+    (hfaithful : FiberwiseFaithful sq.right)
+    (hA : StackInGroupoids A J) (hB : StackInGroupoids B J)
+    (hC' : StackInGroupoids C' J) (hD : StackInGroupoids D J) :
     FiberwiseFaithful sq.top := by
   sorry
 

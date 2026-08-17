@@ -37,7 +37,27 @@ def topologyAt (n : ℕ) : TopologicalSpace ℕ :=
 /-- The source's assertion that the displayed family is a topological basis. -/
 theorem topologyAt_has_basis (n : ℕ) :
     @TopologicalSpace.IsTopologicalBasis ℕ (topologyAt n) (basicOpen n) := by
-  sorry
+  refine @TopologicalSpace.IsTopologicalBasis.mk ℕ (topologyAt n) (basicOpen n) ?_ ?_ ?_
+  · intro s hs t ht x hx
+    rcases hs with (⟨k, hk, rfl⟩ | rfl)
+    · rcases ht with (⟨l, hl, rfl⟩ | rfl)
+      · simp only [mem_inter_iff, mem_singleton_iff] at hx
+        have hkl : k = l := hx.1.symm.trans hx.2
+        subst l
+        exact ⟨{k}, Or.inl ⟨k, hk, rfl⟩, by simp [hx.1], by simp⟩
+      · simp only [mem_inter_iff, mem_singleton_iff] at hx
+        exact False.elim ((Nat.not_lt_of_ge hk) (by simpa [tailSet, hx.1] using hx.2))
+    · rcases ht with (⟨l, hl, rfl⟩ | rfl)
+      · simp only [mem_inter_iff, mem_singleton_iff] at hx
+        exact False.elim ((Nat.not_lt_of_ge hl) (by simpa [tailSet, hx.2] using hx.1))
+      · exact ⟨tailSet n, Or.inr rfl, hx.2, by simp⟩
+  · rw [eq_univ_iff_forall]
+    intro x
+    by_cases h : x ≤ n
+    · exact mem_sUnion.2 ⟨{x}, Or.inl ⟨x, h, rfl⟩, by simp⟩
+    · exact mem_sUnion.2 ⟨tailSet n, Or.inr rfl,
+        by simpa [tailSet] using Nat.lt_of_not_ge h⟩
+  · rfl
 
 /-- The displayed basis determines `topologyAt n` uniquely. -/
 theorem topologyAt_unique (n : ℕ) {t : TopologicalSpace ℕ}
@@ -61,7 +81,21 @@ theorem tailSet_open (n : ℕ) :
 `TopologicalSpace` is the reverse of inclusion of open sets. -/
 theorem topologyAt_antitone {m n : ℕ} (h : m ≤ n) :
     topologyAt n ≤ topologyAt m := by
-  sorry
+  rw [topologyAt, topologyAt]
+  apply le_generateFrom
+  intro s hs
+  rcases hs with (⟨k, hk, rfl⟩ | rfl)
+  · exact basic_singleton_open n k (hk.trans h)
+  · change @IsOpen ℕ (topologyAt n) (tailSet m)
+    apply (@TopologicalSpace.IsTopologicalBasis.isOpen_iff ℕ (topologyAt n)
+      (tailSet m) (basicOpen n) (topologyAt_has_basis n)).2
+    intro a ha
+    simp only [tailSet, mem_Ioi] at ha
+    by_cases han : n < a
+    · exact ⟨tailSet n, Or.inr rfl, by simpa [tailSet] using han,
+        by intro x hx; exact lt_of_le_of_lt h hx⟩
+    · exact ⟨{a}, Or.inl ⟨a, Nat.le_of_not_gt han, rfl⟩, by simp,
+        by simpa [tailSet] using ha⟩
 
 /-- The identity map from a later stage to an earlier stage is continuous. -/
 theorem identity_continuous {m n : ℕ} (h : m ≤ n) :
@@ -129,7 +163,50 @@ def inverseSystem : ℕᵒᵖ ⥤ TopCat where
 
 /-- Each stage is quasi-compact in the sense of Mathlib's `CompactSpace`. -/
 theorem X_is_quasiCompact (n : ℕ) : CompactSpace (X n : Type) := by
-  sorry
+  change @CompactSpace ℕ (topologyAt n)
+  apply compactSpace_generateFrom (T := topologyAt n) (S := basicOpen n) rfl
+  intro P hP hcover
+  have htail : tailSet n ∈ P := by
+    have hn1 : n + 1 ∈ ⋃₀ P := by
+      rw [hcover]
+      exact mem_univ _
+    rcases mem_sUnion.1 hn1 with ⟨s, hsP, hs⟩
+    rcases hP hsP with (⟨k, hk, hsk⟩ | hsk)
+    · have hnk : n + 1 = k := by simpa [hsk] using hs
+      have hkn : n + 1 ≤ n := by simpa [hnk] using hk
+      exact False.elim ((Nat.not_succ_le_self n) hkn)
+    · have hsk' : s = tailSet n := by simpa using hsk
+      rw [hsk'] at hsP
+      exact hsP
+  have hsingleton : ∀ k ≤ n, ({k} : Set ℕ) ∈ P := by
+    intro k hk
+    have hkcover : k ∈ ⋃₀ P := by
+      rw [hcover]
+      exact mem_univ _
+    rcases mem_sUnion.1 hkcover with ⟨s, hsP, hs⟩
+    rcases hP hsP with (⟨l, hl, hsl⟩ | hsl)
+    · have hkl : k = l := by simpa [hsl] using hs
+      have hsl' : s = ({l} : Set ℕ) := by simpa using hsl
+      rw [hsl'] at hsP
+      simpa [hkl] using hsP
+    · have hsl' : s = tailSet n := by simpa using hsl
+      rw [hsl'] at hs
+      have hnk : n < k := by simpa [tailSet] using hs
+      exact False.elim ((Nat.not_lt_of_ge hk) hnk)
+  let Q : Set (Set ℕ) :=
+    {tailSet n} ∪ (fun k : ℕ => ({k} : Set ℕ)) '' Set.Iic n
+  refine ⟨Q, ?_, ?_, ?_⟩
+  · intro s hs
+    rcases hs with (rfl | ⟨k, hk, rfl⟩)
+    · exact htail
+    · exact hsingleton k hk
+  · exact (Set.finite_singleton (tailSet n)).union ((Set.finite_Iic n).image _)
+  · rw [eq_univ_iff_forall]
+    intro k
+    by_cases hk : k ≤ n
+    · exact mem_sUnion.2 ⟨{k}, Or.inr ⟨k, hk, rfl⟩, by simp⟩
+    · exact mem_sUnion.2 ⟨tailSet n, Or.inl rfl,
+        by simpa [tailSet] using Nat.lt_of_not_ge hk⟩
 
 /-- The index order is directed, and every object of `inverseSystem` is quasi-compact. -/
 theorem inverseSystem_is_directed_quasiCompact :
@@ -146,7 +223,8 @@ abbrev limitSpace : TopCat := TopCat.discrete.obj ℕ
 /-- Every map from the discrete topology to a stage is continuous. -/
 theorem discrete_to_stage_continuous (n : ℕ) :
     @Continuous ℕ ℕ (⊥ : TopologicalSpace ℕ) (topologyAt n) id := by
-  sorry
+  exact @continuous_of_discreteTopology ℕ (⊥ : TopologicalSpace ℕ) inferInstance
+    ℕ (topologyAt n) id
 
 /-- The identity map from the discrete space to the `n`-th stage. -/
 def limitProjection (n : ℕ) : limitSpace ⟶ X n :=
@@ -176,7 +254,41 @@ def limitCone : Cone inverseSystem where
 
 /-- The discrete space is a categorical inverse limit of the system. -/
 theorem limitCone_isLimit_exists : Nonempty (IsLimit limitCone) := by
-  sorry
+  let hc : IsLimit ((forget TopCat).mapCone limitCone) :=
+    Classical.choice ((Types.isLimit_iff _).2 (by
+      intro s hs
+      refine ⟨s (op 0), ?_, ?_⟩
+      · intro j
+        let p : j ⟶ op 0 := (homOfLE (Nat.zero_le j.unop)).op
+        have hp := hs p
+        change s (op 0) = s j
+        change s j = s (op 0) at hp
+        exact hp.symm
+      · intro y hy
+        have hy0 := hy (op 0)
+        change y = s (op 0) at hy0
+        exact hy0))
+  have hInf : (⨅ i : ℕᵒᵖ, topologyAt i.unop) = (⊥ : TopologicalSpace ℕ) := by
+    apply le_antisymm
+    · rw [TopologicalSpace.le_def]
+      intro U _
+      rw [← biUnion_of_singleton U]
+      exact @isOpen_biUnion ℕ ℕ (⨅ i : ℕᵒᵖ, topologyAt i.unop) U
+        (fun x => ({x} : Set ℕ)) (fun x _ => by
+        have hi : (⨅ i : ℕᵒᵖ, topologyAt i.unop) ≤ topologyAt x :=
+          iInf_le (fun i : ℕᵒᵖ => topologyAt i.unop) (op x)
+        have hsx : @IsOpen ℕ (topologyAt x) ({x} : Set ℕ) :=
+          basic_singleton_open x x le_rfl
+        exact hi ({x} : Set ℕ) hsx)
+    · exact bot_le
+  have htop :
+      (⊥ : TopologicalSpace ℕ) =
+        ⨅ i : ℕᵒᵖ, (inverseSystem.obj i).str.induced
+          (limitCone.π.app i) := by
+    change (⊥ : TopologicalSpace ℕ) =
+      ⨅ i : ℕᵒᵖ, (topologyAt i.unop).induced (id : ℕ → ℕ)
+    simpa only [induced_id] using hInf.symm
+  exact (TopCat.nonempty_isLimit_iff_eq_induced limitCone hc).2 htop
 
 /-- A chosen limit proof for `limitCone`. -/
 noncomputable def limitCone_isLimit : IsLimit limitCone :=
@@ -194,7 +306,14 @@ def commonMap {Y : TopCat} (g : ∀ n : ℕ, Y ⟶ X n) : Y → ℕ :=
 theorem compatible_commonMap {Y : TopCat} (g : ∀ n : ℕ, Y ⟶ X n)
     (hg : StrictlyCompatible g) (n : ℕ) :
     (g n : Y → ℕ) = commonMap g := by
-  sorry
+  funext y
+  by_cases hn : n = 0
+  · subst n
+    rfl
+  · have hcompat := hg (Nat.pos_of_ne_zero hn)
+    have hvalue := congrArg (fun q : Y ⟶ X 0 => q y) hcompat
+    change (g n : Y → ℕ) y = commonMap g y at hvalue
+    exact hvalue
 
 /-- In particular, the singleton `{n}` is open in `Xₙ`. -/
 theorem singleton_open_in_X (n : ℕ) :
@@ -206,7 +325,8 @@ theorem commonMap_preimage_singleton {Y : TopCat}
     (g : ∀ n : ℕ, Y ⟶ X n) (hg : StrictlyCompatible g) (n : ℕ) :
     commonMap g ⁻¹' ({n} : Set ℕ) =
       (g n : Y → ℕ) ⁻¹' ({n} : Set ℕ) := by
-  sorry
+  rw [compatible_commonMap g hg n]
+  rfl
 
 /-- Each singleton preimage of the common map is open in `Y`. -/
 theorem commonMap_preimage_singleton_isOpen {Y : TopCat}
@@ -219,7 +339,9 @@ theorem commonMap_preimage_singleton_isOpen {Y : TopCat}
 theorem commonMap_continuous {Y : TopCat}
     (g : ∀ n : ℕ, Y ⟶ X n) (hg : StrictlyCompatible g) :
     @Continuous Y ℕ Y.str (⊥ : TopologicalSpace ℕ) (commonMap g) := by
-  sorry
+  exact (@continuous_discrete_rng ℕ Y Y.str (⊥ : TopologicalSpace ℕ)
+    (discreteTopology_bot ℕ) (commonMap g)).2
+      (fun n => commonMap_preimage_singleton_isOpen g hg n)
 
 /-- The continuous map to the discrete limit induced by a compatible family. -/
 def commonMapHom {Y : TopCat} (g : ∀ n : ℕ, Y ⟶ X n)
@@ -230,7 +352,10 @@ def commonMapHom {Y : TopCat} (g : ∀ n : ℕ, Y ⟶ X n)
 theorem commonMapHom_comp_projection {Y : TopCat}
     (g : ∀ n : ℕ, Y ⟶ X n) (hg : StrictlyCompatible g) (n : ℕ) :
     commonMapHom g hg ≫ limitProjection n = g n := by
-  sorry
+  apply TopCat.ext
+  intro y
+  change commonMap g y = (g n : Y → ℕ) y
+  exact (congrFun (compatible_commonMap g hg n) y).symm
 
 /-- The induced map is the unique map with those prescribed components. -/
 theorem commonMapHom_unique {Y : TopCat}
@@ -238,7 +363,11 @@ theorem commonMapHom_unique {Y : TopCat}
     (l : Y ⟶ limitSpace)
     (hl : ∀ n : ℕ, l ≫ limitProjection n = g n) :
     l = commonMapHom g hg := by
-  sorry
+  apply TopCat.ext
+  intro y
+  have hzero := congrArg (fun q : Y ⟶ X 0 => q y) (hl 0)
+  change (l : Y → ℕ) y = commonMap g y at hzero
+  exact hzero
 
 /-! ## The singleton cover and non-quasi-compactness -/
 
@@ -248,7 +377,8 @@ def singletonCover (n : ℕ) : Set ℕ := {n}
 /-- Every member of the singleton cover is open in the discrete limit. -/
 theorem singletonCover_isOpen (n : ℕ) :
     @IsOpen ℕ (⊥ : TopologicalSpace ℕ) (singletonCover n) := by
-  sorry
+  change @IsOpen ℕ (⊥ : TopologicalSpace ℕ) ({n} : Set ℕ)
+  exact isOpen_discrete _
 
 /-- The singleton family covers the whole underlying set. -/
 theorem singletonCover_covers :
@@ -259,11 +389,30 @@ theorem singletonCover_covers :
 /-- No finite subfamily of the singleton cover covers `ℕ`. -/
 theorem singletonCover_no_finite_subcover :
     ¬ ∃ t : Finset ℕ, (Set.univ : Set ℕ) ⊆ ⋃ n ∈ t, singletonCover n := by
-  sorry
+  rintro ⟨t, ht⟩
+  rcases Finset.bddAbove t with ⟨N, hN⟩
+  let n := N + 1
+  have hncover : n ∈ ⋃ k ∈ t, singletonCover k := ht (mem_univ n)
+  rcases mem_iUnion.1 hncover with ⟨k, hkcover⟩
+  rcases mem_iUnion.1 hkcover with ⟨hk, hmem⟩
+  have hnk : n = k := by simpa [singletonCover] using hmem
+  have hle : k ≤ N := hN hk
+  have hnle : n ≤ N := by
+    rw [hnk]
+    exact hle
+  exact (Nat.not_succ_le_self N) (by simpa [n] using hnle)
 
 /-- The discrete inverse-limit space is not quasi-compact. -/
 theorem limitSpace_not_quasiCompact : ¬ CompactSpace (limitSpace : Type) := by
-  sorry
+  change ¬ @CompactSpace ℕ (⊥ : TopologicalSpace ℕ)
+  intro hcompact
+  have hfinite :
+      ∃ t : Finset ℕ, (Set.univ : Set ℕ) ⊆ ⋃ n ∈ t, singletonCover n := by
+    exact
+      (@isCompact_univ ℕ (⊥ : TopologicalSpace ℕ) hcompact).elim_finite_subcover
+        singletonCover
+        (fun n => singletonCover_isOpen n) singletonCover_covers
+  exact singletonCover_no_finite_subcover hfinite
 
 /-! ## The chapter lemma -/
 

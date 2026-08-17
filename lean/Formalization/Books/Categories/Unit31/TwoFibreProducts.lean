@@ -1982,14 +1982,12 @@ theorem isoComma_after_map
   unfold IsTwoCartesianSquare
   constructor
   · intro W _ a b φ
-    let k : ∀ X : W,
-        F.obj (b.obj X).obj.left ≅ G.obj (b.obj X).obj.right := fun X => by
+    let kAnd : ∀ X : W,
+        { e : F.obj (b.obj X).obj.left ≅ G.obj (b.obj X).obj.right //
+          (φ.hom.app X).hom.left ≫ e.hom ≍ (φ.hom.app X).hom.right } := fun X => by
       let e := asIso (φ.hom.app X)
-      have hs :
-          ((a ⋙ isoCommaDiagonal H).obj X).obj.left =
-            ((a ⋙ isoCommaDiagonal H).obj X).obj.right := by
-        rfl
-      let i := eqToIso hs
+      dsimp [Functor.comp, isoCommaDiagonal, isoCommaAfterMapToDiagonal,
+        isoCommaMap] at e
       have hL₁ : e.hom.hom.left ≫ e.inv.hom.left = 𝟙 _ := by
         simpa only [Comma.comp_left, Comma.id_left] using
           congrArg (fun t : CommaMorphism _ _ => t.left)
@@ -2006,44 +2004,46 @@ theorem isoComma_after_map
         simpa only [Comma.comp_right, Comma.id_right] using
           congrArg (fun t : CommaMorphism _ _ => t.right)
             (ObjectProperty.isoInv_hom_id_hom e)
-      let rawHom := e.inv.hom.left ≫ i.hom ≫ e.hom.hom.right
-      let rawInv := e.inv.hom.right ≫ i.inv ≫ e.hom.hom.left
+      let rawHom := e.inv.hom.left ≫ e.hom.hom.right
+      let rawInv := e.inv.hom.right ≫ e.hom.hom.left
       have rawHomInv : rawHom ≫ rawInv = 𝟙 _ := by
         calc
           rawHom ≫ rawInv =
-              e.inv.hom.left ≫ i.hom ≫
+              e.inv.hom.left ≫
                 ((e.hom.hom.right ≫ e.inv.hom.right) ≫
-                  (i.inv ≫ e.hom.hom.left)) := by
+                  e.hom.hom.left) := by
                     simp only [rawHom, rawInv, Category.assoc]
-          _ = e.inv.hom.left ≫ i.hom ≫
-              (𝟙 _ ≫ (i.inv ≫ e.hom.hom.left)) := by rw [hR₁]
+          _ = e.inv.hom.left ≫ (𝟙 _ ≫ e.hom.hom.left) := by rw [hR₁]
           _ = e.inv.hom.left ≫ e.hom.hom.left := by simp
           _ = 𝟙 _ := hL₂
       have rawInvHom : rawInv ≫ rawHom = 𝟙 _ := by
         calc
           rawInv ≫ rawHom =
-              e.inv.hom.right ≫ i.inv ≫
+              e.inv.hom.right ≫
                 ((e.hom.hom.left ≫ e.inv.hom.left) ≫
-                  (i.hom ≫ e.hom.hom.right)) := by
+                  e.hom.hom.right) := by
                     simp only [rawInv, rawHom, Category.assoc]
-          _ = e.inv.hom.right ≫ i.inv ≫
-              (𝟙 _ ≫ (i.hom ≫ e.hom.hom.right)) := by rw [hL₁]
+          _ = e.inv.hom.right ≫ (𝟙 _ ≫ e.hom.hom.right) := by rw [hL₁]
           _ = e.inv.hom.right ≫ e.hom.hom.right := by simp
           _ = 𝟙 _ := hR₂
-      let rawIso :
-          ((b ⋙ isoCommaAfterMapToDiagonal F G H).obj X).obj.left ≅
-            ((b ⋙ isoCommaAfterMapToDiagonal F G H).obj X).obj.right :=
-        { hom := rawHom
-          inv := rawInv
-          hom_inv_id := rawHomInv
-          inv_hom_id := rawInvHom }
-      let l : F.obj (b.obj X).obj.left =
-          ((b ⋙ isoCommaAfterMapToDiagonal F G H).obj X).obj.left := by
-        rfl
-      let r : ((b ⋙ isoCommaAfterMapToDiagonal F G H).obj X).obj.right =
-          G.obj (b.obj X).obj.right := by
-        rfl
-      exact eqToIso l ≪≫ rawIso ≪≫ eqToIso r
+      let rawIso : F.obj (b.obj X).obj.left ≅ G.obj (b.obj X).obj.right := by
+        exact
+          { hom := rawHom
+            inv := rawInv
+            hom_inv_id := rawHomInv
+            inv_hom_id := rawInvHom }
+      refine ⟨rawIso, ?_⟩
+      change e.hom.hom.left ≫ rawIso.hom ≍ e.hom.hom.right
+      apply heq_of_eq
+      dsimp [rawIso, rawHom]
+      rw [← Category.assoc, hL₁]
+      change 𝟙 (a.obj X) ≫ e.hom.hom.right = e.hom.hom.right
+      simp
+    let k : ∀ X : W,
+        F.obj (b.obj X).obj.left ≅ G.obj (b.obj X).obj.right := fun X => (kAnd X).1
+    have hk : ∀ X : W,
+        (φ.hom.app X).hom.left ≫ (k X).hom ≍ (φ.hom.app X).hom.right :=
+      fun X => (kAnd X).2
     let γ : W ⥤ IsoComma F G :=
       { obj := fun X =>
           { obj :=
@@ -2149,7 +2149,7 @@ theorem isoComma_after_map
                     _ = eX.inv.hom.left ≫ jX.hom ≫ eX.hom.hom.right ≫
                         ((b ⋙ isoCommaAfterMapToDiagonal F G H).map f).hom.right := by
                       rfl
-                simpa [k, eX, eY, jX, jY, Functor.comp,
+                simpa [k, kAnd, eX, eY, jX, jY, Functor.comp,
                   isoCommaAfterMapToDiagonal, isoCommaMap, isoCommaDiagonal,
                   eqToIso] using hraw }
         map_id := by
@@ -2230,7 +2230,7 @@ theorem isoComma_after_map
               have hk' := hk
               rw [H.map_comp, H.map_comp] at hk'
               rw [hi'] at hk'
-              simpa [Functor.comp, isoCommaAfterMap, isoCommaMap, γ, k,
+              simpa [Functor.comp, isoCommaAfterMap, isoCommaMap, γ, k, kAnd,
                 isoCommaAfterMapToDiagonal, isoCommaDiagonal, e, i, hi, hi'] using hk'))) (by
               intro X Y f
               apply ObjectProperty.hom_ext
@@ -2240,7 +2240,25 @@ theorem isoComma_after_map
               · change (b.map f).hom.right ≫ 𝟙 _ = 𝟙 _ ≫ (b.map f).hom.right
                 simp)
       exact β
-    · sorry
+    · unfold CategoryTwoFibreProductConeCommutes
+      apply NatTrans.ext
+      funext X
+      simp only [NatTrans.comp_app, Functor.isoWhiskerRight_hom,
+        Functor.whiskerRight_app, Functor.associator_hom_app,
+        Functor.whiskerLeft_app]
+      apply ObjectProperty.hom_ext
+      apply Comma.hom_ext
+      · simp [Functor.comp, isoCommaDiagonal, isoCommaAfterMapToDiagonal,
+          isoCommaAfterMapComparison, isoCommaAfterMap, isoCommaMap,
+          isoCommaLeft, isoCommaRight, γ, Comma.isoMk, ObjectProperty.isoMk,
+          Category.assoc, asIso_hom]
+        rfl
+      · simp [Functor.comp, isoCommaDiagonal, isoCommaAfterMapToDiagonal,
+          isoCommaAfterMapComparison, isoCommaAfterMap, isoCommaMap,
+          isoCommaLeft, isoCommaRight, γ, k, kAnd, Comma.isoMk,
+          ObjectProperty.isoMk, Category.assoc]
+        dsimp [asIso]
+        exact eq_of_heq (hk X)
   · sorry
 
 /-- The induced functor between the two diagonal iso-comma categories. -/

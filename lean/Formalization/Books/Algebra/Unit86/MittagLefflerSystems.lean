@@ -125,12 +125,12 @@ private theorem nonempty_sections_of_countable_surjective
     (hne : ∀ i : Iᵒᵖ, Nonempty (F.obj i))
     (hF : ∀ ⦃i j : Iᵒᵖ⦄ (f : i ⟶ j), Function.Surjective (F.map f)) :
     F.sections.Nonempty := by
-  letI : Nonempty I := hI.1
-  letI : IsDirectedOrder I := hI.2
-  letI : IsFiltered I := isFiltered_of_directed_le_nonempty I
+  let : Nonempty I := hI.1
+  let : IsDirectedOrder I := hI.2
+  let : IsFiltered I := isFiltered_of_directed_le_nonempty I
   let Q₀ : ℕ ⥤ I := IsFiltered.sequentialFunctor I
   let Q : ℕᵒᵖ ⥤ Iᵒᵖ := Q₀.op
-  letI : Q.Initial := by
+  let : Q.Initial := by
     dsimp [Q]
     infer_instance
   let H : ℕᵒᵖ ⥤ Type v := Q ⋙ F
@@ -156,11 +156,11 @@ theorem nonempty_limit_of_countable_mittagLeffler
     (hF : F.IsMittagLeffler)
     (hne : ∀ i : Iᵒᵖ, Nonempty (F.obj i)) :
     F.sections.Nonempty := by
-  letI : Nonempty I := hI.1
-  letI : IsDirectedOrder I := hI.2
-  letI : IsFiltered I := isFiltered_of_directed_le_nonempty I
-  letI : IsCofiltered Iᵒᵖ := isCofiltered_op_of_isFiltered I
-  letI : ∀ i : Iᵒᵖ, Nonempty (F.obj i) := hne
+  let : Nonempty I := hI.1
+  let : IsDirectedOrder I := hI.2
+  let : IsFiltered I := isFiltered_of_directed_le_nonempty I
+  let : IsCofiltered Iᵒᵖ := isCofiltered_op_of_isFiltered I
+  let : ∀ i : Iᵒᵖ, Nonempty (F.obj i) := hne
   let G := F.toEventualRanges
   have hGne : ∀ i : Iᵒᵖ, Nonempty (G.obj i) := by
     intro i
@@ -209,10 +209,10 @@ theorem inverse_limit_shortExact_of_countable_mittagLeffler
     (hML : (S.X₁ ⋙ CategoryTheory.forget AddCommGrpCat).IsMittagLeffler)
     [HasLimit S.X₁] [HasLimit S.X₂] [HasLimit S.X₃] :
     (inverseLimitShortComplex S).ShortExact := by
-  letI : Nonempty I := hI.1
-  letI : IsDirectedOrder I := hI.2
-  letI : IsFiltered I := isFiltered_of_directed_le_nonempty I
-  letI : IsCofiltered Iᵒᵖ := isCofiltered_op_of_isFiltered I
+  let : Nonempty I := hI.1
+  let : IsDirectedOrder I := hI.2
+  let : IsFiltered I := isFiltered_of_directed_le_nonempty I
+  let : IsCofiltered Iᵒᵖ := isCofiltered_op_of_isFiltered I
   let hA : IsLimit ((CategoryTheory.forget AddCommGrpCat).mapCone
       (limit.cone S.X₁)) :=
     isLimitOfPreserves (CategoryTheory.forget AddCommGrpCat) (limit.isLimit S.X₁)
@@ -376,8 +376,7 @@ theorem inverse_limit_shortExact_of_countable_mittagLeffler
       simpa [x₂, Types.isLimitEquivSections, Types.sectionOfCone] using
         (Types.isLimitEquivSections_symm_apply hB sB i)
     have hπC : sC.val i = (limit.π S.X₃ i) x₃ := by
-      simpa [sC, eC, Types.isLimitEquivSections, Types.sectionOfCone] using
-        (Types.isLimitEquivSections_apply hC i x₃)
+      simp [sC, eC, Types.isLimitEquivSections, Types.sectionOfCone]
     have hfiber : (S.g.app i) (sB.val i) = sC.val i := by
       change (S.g.app i) ((sE i).1) = sC.val i
       exact (sE i).2

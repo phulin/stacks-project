@@ -65,17 +65,6 @@ abbrev twoYonedaFibredMorphismCategoryGeneral
     (p : A ⥤ C) (q : B ⥤ C) :=
   (twoYonedaMorphismPreservesCartesian p q).FullSubcategory
 
-/-- If both source and target are fibred in groupoids, the category of
-1-morphisms over the base is a groupoid. -/
-theorem twoYonedaMorphismCategory_isGroupoid
-    {A : Type uS} [Category.{vS} A]
-    {B : Type uT} [Category.{vT} B]
-    {C : Type uC} [Category.{vC} C]
-    (p : A ⥤ C) (q : B ⥤ C)
-    (hp : p.IsFibredInGroupoids) (hq : q.IsFibredInGroupoids) :
-    IsGroupoid (twoYonedaMorphismCategory p q) := by
-  sorry
-
 /-! ## The two categories of slice morphisms -/
 
 /- Postcomposition by `p` records the strict triangle over `C`.  Its fiber at
@@ -124,6 +113,18 @@ def twoYonedaPullbackFunctorObj
     (x : Functor.Fiber p U) (f : Over U) : S :=
   Functor.Fiber.fiberInclusion.obj (P.pullback f.hom x)
 
+/- The earlier chapter states the comparison as a unique existence result;
+   choose that canonical comparison here so the displayed arrow formula below
+   has an actual isomorphism to use. -/
+noncomputable def twoYonedaPullbackCompositionIso
+    {C : Type uC} [Category.{vC} C]
+    {S : Type uS} [Category.{vS} S]
+    (p : S ⥤ C) [p.IsFibered] (P : PullbackChoice p)
+    {R T V : C} (f : R ⟶ T) (g : T ⟶ V) :
+    P.pullbackFunctor (f ≫ g) ≅
+      P.pullbackFunctor g ⋙ P.pullbackFunctor f :=
+  Classical.choose (ExistsUnique.exists (pullback_composition_iso p P f g))
+
 def twoYonedaPullbackFunctorMap
     {C : Type uC} [Category.{vC} C]
     {S : Type uS} [Category.{vS} S]
@@ -134,7 +135,7 @@ def twoYonedaPullbackFunctorMap
   ((Functor.Fiber.fiberInclusion : Functor.Fiber p f.left ⥤ S).map
       (eqToHom (congrArg (fun h => P.pullback h x) (Over.w k).symm))) ≫
     ((Functor.Fiber.fiberInclusion : Functor.Fiber p f.left ⥤ S).map
-      ((pullback_composition_iso p P k.left g.hom).hom.app x)) ≫
+      ((twoYonedaPullbackCompositionIso p P k.left g.hom).hom.app x)) ≫
     P.pullbackMap k.left (P.pullback g.hom x)
 
 def twoYonedaPullbackFunctor
@@ -292,6 +293,18 @@ theorem twoYoneda_fibred_equivalence
     {S : Type uS} [Category.{vS} S]
     (p : S ⥤ C) [p.IsFibered] (U : C) :
     (twoYonedaEvaluation p U).IsEquivalence := by
+  sorry
+
+/- The source's `Cat / C` morphism categories are groupoids when both
+   projections are fibred in groupoids.  This is the general form of the
+   assertion used by the second 2-Yoneda lemma below. -/
+theorem twoYonedaMorphismCategory_isGroupoid
+    {A : Type uS} [Category.{vS} A]
+    {B : Type uT} [Category.{vT} B]
+    {C : Type uC} [Category.{vC} C]
+    (p : A ⥤ C) (q : B ⥤ C)
+    (hp : p.IsFibredInGroupoids) (hq : q.IsFibredInGroupoids) :
+    IsGroupoid (twoYonedaMorphismCategory p q) := by
   sorry
 
 /-! ## The groupoid case -/

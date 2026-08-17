@@ -1,5 +1,6 @@
 import Formalization.Books.StacksIntroduction.Unit01.Definition
 import Mathlib.Algebra.MvPolynomial.Basic
+import Mathlib.RingTheory.MvPolynomial.WeightedHomogeneous
 import Mathlib.AlgebraicGeometry.EllipticCurve.Projective.Basic
 import Mathlib.AlgebraicGeometry.Cover.Open
 import Mathlib.AlgebraicGeometry.GammaSpecAdjunction
@@ -67,7 +68,9 @@ def universalDiscriminantExpanded : UniversalCoefficientRing :=
 /-- The discriminant computed by Mathlib agrees with the expanded polynomial. -/
 theorem universalDiscriminant_eq_expanded :
     universalWeierstrassCurve.Δ = universalDiscriminantExpanded := by
-  sorry
+  unfold universalWeierstrassCurve universalDiscriminantExpanded WeierstrassCurve.Δ
+    WeierstrassCurve.b₂ WeierstrassCurve.b₄ WeierstrassCurve.b₆ WeierstrassCurve.b₈
+  ring
 
 /-- The ring in the definition of `W`. -/
 abbrev UniversalBaseRing := Localization.Away universalDiscriminantExpanded
@@ -95,7 +98,135 @@ def WeightedHomogeneous (weights : Fin 5 → ℕ) (degree : ℕ)
 /-- The source's degree-twelve and weighted-homogeneous assertions. -/
 theorem universalDiscriminant_weighted_homogeneous :
     WeightedHomogeneous universalWeights 12 universalDiscriminantExpanded := by
-  sorry
+  have h0 : MvPolynomial.IsWeightedHomogeneous universalWeights
+      (universalA₁ : UniversalCoefficientRing) 1 := by
+    simpa [universalA₁, universalWeights] using
+      (MvPolynomial.isWeightedHomogeneous_X (R := ℤ) universalWeights (0 : Fin 5))
+  have h1 : MvPolynomial.IsWeightedHomogeneous universalWeights
+      (universalA₂ : UniversalCoefficientRing) 2 := by
+    simpa [universalA₂, universalWeights] using
+      (MvPolynomial.isWeightedHomogeneous_X (R := ℤ) universalWeights (1 : Fin 5))
+  have h2 : MvPolynomial.IsWeightedHomogeneous universalWeights
+      (universalA₃ : UniversalCoefficientRing) 3 := by
+    simpa [universalA₃, universalWeights] using
+      (MvPolynomial.isWeightedHomogeneous_X (R := ℤ) universalWeights (2 : Fin 5))
+  have h3 : MvPolynomial.IsWeightedHomogeneous universalWeights
+      (universalA₄ : UniversalCoefficientRing) 4 := by
+    simpa [universalA₄, universalWeights] using
+      (MvPolynomial.isWeightedHomogeneous_X (R := ℤ) universalWeights (3 : Fin 5))
+  have h4 : MvPolynomial.IsWeightedHomogeneous universalWeights
+      (universalA₆ : UniversalCoefficientRing) 6 := by
+    simpa [universalA₆, universalWeights] using
+      (MvPolynomial.isWeightedHomogeneous_X (R := ℤ) universalWeights (4 : Fin 5))
+  have ht1 : MvPolynomial.IsWeightedHomogeneous universalWeights
+      (-universalA₆ * universalA₁ ^ 6) 12 := by
+    simpa [universalA₁, universalA₆, universalWeights] using
+      (h4.mul (h0.pow 6)).neg
+  have ht2 : MvPolynomial.IsWeightedHomogeneous universalWeights
+      (universalA₄ * universalA₃ * universalA₁ ^ 5) 12 := by
+    simpa [universalA₁, universalA₃, universalA₄, universalWeights] using
+      ((h3.mul h2).mul (h0.pow 5))
+  have ht3 : MvPolynomial.IsWeightedHomogeneous universalWeights
+      ((-universalA₃ ^ 2 - 12 * universalA₆) * universalA₂ + universalA₄ ^ 2) 8 := by
+    have hleft := ((h2.pow 2).neg).sub (h4.C_mul 12)
+    have hleft := hleft.mul h1
+    have hright := h3.pow 2
+    simpa [universalA₂, universalA₃, universalA₄, universalA₆, universalWeights] using
+      hleft.add hright
+  have ht3' : MvPolynomial.IsWeightedHomogeneous universalWeights
+      (((-universalA₃ ^ 2 - 12 * universalA₆) * universalA₂ + universalA₄ ^ 2) *
+        universalA₁ ^ 4) 12 := by
+    simpa [universalA₁, universalWeights] using ht3.mul (h0.pow 4)
+  have ht4 : MvPolynomial.IsWeightedHomogeneous universalWeights
+      (8 * universalA₄ * universalA₃ * universalA₂ +
+        (universalA₃ ^ 3 + 36 * universalA₆ * universalA₃)) 9 := by
+    have hleft := ((h3.C_mul 8).mul h2).mul h1
+    have hright := (h2.pow 3).add ((h4.C_mul 36).mul h2)
+    simpa [universalA₂, universalA₃, universalA₄, universalA₆, universalWeights] using
+      hleft.add hright
+  have ht4' : MvPolynomial.IsWeightedHomogeneous universalWeights
+      ((8 * universalA₄ * universalA₃ * universalA₂ +
+        (universalA₃ ^ 3 + 36 * universalA₆ * universalA₃)) * universalA₁ ^ 3) 12 := by
+    simpa [universalA₁, universalWeights] using ht4.mul (h0.pow 3)
+  have ht5 : MvPolynomial.IsWeightedHomogeneous universalWeights
+      ((-8 * universalA₃ ^ 2 - 48 * universalA₆) * universalA₂ ^ 2 +
+        8 * universalA₄ ^ 2 * universalA₂ +
+        (-30 * universalA₄ * universalA₃ ^ 2 + 72 * universalA₆ * universalA₄)) 10 := by
+    have hleft := ((h2.pow 2).C_mul (-8)).sub (h4.C_mul 48)
+    have hleft := hleft.mul (h1.pow 2)
+    have hmid := (h3.pow 2).C_mul 8
+    have hmid := hmid.mul h1
+    have hright := ((h3.C_mul (-30)).mul (h2.pow 2)).add
+      ((h4.C_mul 72).mul h3)
+    simpa [universalA₂, universalA₃, universalA₄, universalA₆, universalWeights] using
+      (hleft.add hmid).add hright
+  have ht5' : MvPolynomial.IsWeightedHomogeneous universalWeights
+      (((-8 * universalA₃ ^ 2 - 48 * universalA₆) * universalA₂ ^ 2 +
+        8 * universalA₄ ^ 2 * universalA₂ +
+        (-30 * universalA₄ * universalA₃ ^ 2 + 72 * universalA₆ * universalA₄)) *
+        universalA₁ ^ 2) 12 := by
+    simpa [universalA₁, universalWeights] using ht5.mul (h0.pow 2)
+  have ht6 : MvPolynomial.IsWeightedHomogeneous universalWeights
+      (16 * universalA₄ * universalA₃ * universalA₂ ^ 2 +
+        (36 * universalA₃ ^ 3 + 144 * universalA₆ * universalA₃) * universalA₂ -
+        96 * universalA₄ ^ 2 * universalA₃) 11 := by
+    have hleft := ((h3.C_mul 16).mul h2).mul (h1.pow 2)
+    have hmid := (((h2.pow 3).C_mul 36).add ((h4.C_mul 144).mul h2)).mul h1
+    have hright := ((h3.pow 2).C_mul 96).mul h2
+    simpa [universalA₂, universalA₃, universalA₄, universalA₆, universalWeights] using
+      (hleft.add hmid).sub hright
+  have ht6' : MvPolynomial.IsWeightedHomogeneous universalWeights
+      ((16 * universalA₄ * universalA₃ * universalA₂ ^ 2 +
+        (36 * universalA₃ ^ 3 + 144 * universalA₆ * universalA₃) * universalA₂ -
+        96 * universalA₄ ^ 2 * universalA₃) * universalA₁) 12 := by
+    simpa [universalA₁, universalWeights] using ht6.mul h0
+  have ht7 : MvPolynomial.IsWeightedHomogeneous universalWeights
+      ((-16 * universalA₃ ^ 2 - 64 * universalA₆) * universalA₂ ^ 3) 12 := by
+    have hleft := ((h2.pow 2).C_mul (-16)).sub (h4.C_mul 64)
+    simpa [universalA₂, universalA₃, universalA₆, universalWeights] using
+      hleft.mul (h1.pow 3)
+  have ht8 : MvPolynomial.IsWeightedHomogeneous universalWeights
+      (16 * universalA₄ ^ 2 * universalA₂ ^ 2) 12 := by
+    simpa [universalA₂, universalA₄, universalWeights] using
+      ((h3.pow 2).C_mul 16).mul (h1.pow 2)
+  have ht9 : MvPolynomial.IsWeightedHomogeneous universalWeights
+      ((72 * universalA₄ * universalA₃ ^ 2 + 288 * universalA₆ * universalA₄) *
+        universalA₂) 12 := by
+    have hleft := ((h3.C_mul 72).mul (h2.pow 2))
+    have hright := ((h4.C_mul 288).mul h3)
+    simpa [universalA₂, universalA₃, universalA₄, universalA₆, universalWeights] using
+      (hleft.add hright).mul h1
+  have ht10 : MvPolynomial.IsWeightedHomogeneous universalWeights
+      (27 * universalA₃ ^ 4) 12 := by
+    simpa [universalA₃, universalWeights] using (h2.pow 4).C_mul 27
+  have ht11 : MvPolynomial.IsWeightedHomogeneous universalWeights
+      (216 * universalA₆ * universalA₃ ^ 2) 12 := by
+    simpa [universalA₃, universalA₆, universalWeights] using
+      (h4.C_mul 216).mul (h2.pow 2)
+  have ht12 : MvPolynomial.IsWeightedHomogeneous universalWeights
+      (64 * universalA₄ ^ 3) 12 := by
+    simpa [universalA₄, universalWeights] using (h3.pow 3).C_mul 64
+  have ht13 : MvPolynomial.IsWeightedHomogeneous universalWeights
+      (432 * universalA₆ ^ 2) 12 := by
+    simpa [universalA₆, universalWeights] using (h4.pow 2).C_mul 432
+  have hpoly : MvPolynomial.IsWeightedHomogeneous universalWeights
+      universalDiscriminantExpanded 12 := by
+    have hsum := ht1.add ht2
+    have hsum := hsum.add ht3'
+    have hsum := hsum.add ht4'
+    have hsum := hsum.add ht5'
+    have hsum := hsum.add ht6'
+    have hsum := hsum.add ht7
+    have hsum := hsum.add ht8
+    have hsum := hsum.add ht9
+    have hsum := hsum.sub ht10
+    have hsum := hsum.sub ht11
+    have hsum := hsum.sub ht12
+    have hsum := hsum.sub ht13
+    simpa [universalDiscriminantExpanded] using hsum
+  intro m hm
+  have hm' := hpoly (MvPolynomial.mem_support_iff.mp hm)
+  simpa [Finsupp.weight_eq_sum, nsmul_eq_mul, mul_comm] using hm'
 
 theorem universalDiscriminant_has_weighted_degree_twelve :
     WeightedHomogeneous universalWeights 12 universalWeierstrassCurve.Δ := by
@@ -105,7 +236,7 @@ theorem universalDiscriminant_has_weighted_degree_twelve :
 /-- The discriminant is invertible on the universal base. -/
 theorem universalDiscriminant_is_unit :
     IsUnit universalDiscriminantInBase := by
-  sorry
+  exact IsLocalization.Away.algebraMap_isUnit universalDiscriminantExpanded
 
 /-! ### The universal projective equation -/
 
@@ -242,6 +373,13 @@ structure GlobalQuotientPresentation where
 
 theorem ellipticModuli_is_global_quotient :
     Nonempty GlobalQuotientPresentation := by
-  sorry
+  exact ⟨{
+    source := universalBaseScheme
+    source_eq := rfl
+    coordinateGroupPoints := WeierstrassCoordinateGroup UniversalBaseRing
+    coordinateGroupPoints_group := inferInstance
+    coordinateGroupPoints_eq := rfl
+    presentation := True
+  }⟩
 
 end Formalization.Books.StacksIntroduction.Unit01

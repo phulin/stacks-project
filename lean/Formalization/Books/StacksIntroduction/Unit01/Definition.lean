@@ -2,6 +2,7 @@ import Formalization.Books.StacksIntroduction.Unit01.FibreProducts
 import Mathlib.AlgebraicGeometry.EllipticCurve.VariableChange
 import Mathlib.AlgebraicGeometry.Sites.Etale
 import Mathlib.FieldTheory.Galois.Basic
+import Mathlib.RingTheory.Etale.Field
 
 /-!
 # Introducing Algebraic Stacks, Chapter 1: the definition
@@ -147,7 +148,18 @@ theorem galoisCover_is_etale {K L : Type u} [Field K] [Field L] [Algebra K L]
     [FiniteDimensional K L] [IsGalois K L] :
     Etale (galoisCover (K := K) (L := L)) ∧
       Surjective (galoisCover (K := K) (L := L)) := by
-  sorry
+  dsimp [galoisCover]
+  rw [HasRingHomProperty.Spec_iff (P := @Etale)]
+  constructor
+  · rw [CommRingCat.hom_ofHom]
+    rw [RingHom.etale_algebraMap]
+    exact ⟨Algebra.FormallyEtale.of_isSeparable K L,
+      (Algebra.FinitePresentation.of_finiteType (R := K) (A := L)).mp inferInstance⟩
+  · rw [surjective_iff]
+    change ∀ x : PrimeSpectrum K, ∃ y : PrimeSpectrum L,
+      PrimeSpectrum.comap (algebraMap K L) y = x
+    exact (RingHom.FaithfullyFlat.iff_flat_and_comap_surjective.mp
+      ((RingHom.faithfullyFlat_algebraMap_iff).2 inferInstance)).2
 
 /-- Applying a field automorphism to the coefficients of a Weierstrass curve. -/
 def galoisTwist {K L : Type u} [Field K] [Field L] [Algebra K L]

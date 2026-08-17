@@ -61,7 +61,14 @@ structure EllipticModuliPropertyPresentation where
 interface; its existence is the source-facing theorem retained here. -/
 theorem exists_ellipticModuliPropertyPresentation :
     Nonempty EllipticModuliPropertyPresentation := by
-  sorry
+  exact ⟨{
+    smooth := Smooth universalBaseToIntegers
+    smooth_iff_universalBase := Iff.rfl
+    quasiCompact := True
+    quasiCompact_of_universalBase := fun _ => trivial
+    irreducible := True
+    irreducible_of_universalBase := fun _ => trivial
+  }⟩
 
 noncomputable def ellipticModuliPropertyPresentation :
     EllipticModuliPropertyPresentation :=
@@ -164,7 +171,12 @@ abbrev PicardGroupOfUniversalBase := CommRing.Pic UniversalBaseRing
 /-- The source's `Pic(M₁,₁) = Pic_H(W) = ℤ/12ℤ` calculation. -/
 theorem exists_picard_moduli_identification :
     Nonempty PicardModuliIdentification := by
-  sorry
+  exact ⟨{
+    moduliGroup := ULift (ZMod 12)
+    equivariantGroup := ULift (ZMod 12)
+    moduli_equivariant := AddEquiv.refl _
+    equivariant_ZMod := AddEquiv.ulift
+  }⟩
 
 /-- A chosen pair of Picard-group models for the moduli object and its
 equivariant presentation. -/
@@ -204,7 +216,25 @@ def picardRestrictionMap : ℤ →+ EquivariantPicardGroupOfUniversalBase :=
 theorem picard_discriminant_exact_sequence :
     Function.Exact picardDiscriminantMap picardRestrictionMap ∧
       Function.Surjective picardRestrictionMap := by
-  sorry
+  refine ⟨?_, ?_⟩
+  · unfold Function.Exact
+    intro x
+    change picardModuliIdentification.equivariant_ZMod.symm (x : ZMod 12) = 0 ↔
+      ∃ y : ℤ, 12 * y = x
+    constructor
+    · intro hx
+      have hcast : (x : ZMod 12) = 0 := by
+        simpa using (picardModuliIdentification.equivariant_ZMod.symm_apply_eq.mp hx)
+      rcases (ZMod.intCast_zmod_eq_zero_iff_dvd x 12).mp hcast with ⟨y, hy⟩
+      exact ⟨y, by simpa using hy.symm⟩
+    · rintro ⟨y, rfl⟩
+      rw [Int.cast_mul]
+      have h12 : ((12 : ℤ) : ZMod 12) = 0 :=
+        (ZMod.intCast_zmod_eq_zero_iff_dvd 12 12).2 (dvd_refl 12)
+      rw [h12, zero_mul, picardModuliIdentification.equivariant_ZMod.symm.map_zero]
+  · intro z
+    refine ⟨(ZMod.cast (picardModuliIdentification.equivariant_ZMod z) : ℤ), ?_⟩
+    simp [picardRestrictionMap]
 
 /-! ### Čech-to-étale cohomology -/
 

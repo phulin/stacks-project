@@ -1,9 +1,7 @@
 import Formalization.Books.Categories.Unit17.CofinalAndInitialCategories
 import Mathlib.Algebra.Category.Grp.Colimits
-import Mathlib.Algebra.Category.Grp.FilteredColimits
 import Mathlib.CategoryTheory.ConnectedComponents
 import Mathlib.CategoryTheory.Filtered.Basic
-import Mathlib.CategoryTheory.Filtered.Connected
 import Mathlib.CategoryTheory.Filtered.Final
 import Mathlib.CategoryTheory.Limits.FilteredColimitCommutesFiniteLimit
 import Mathlib.CategoryTheory.Limits.Shapes.FunctorToTypes
@@ -364,21 +362,19 @@ noncomputable def colimitTypeToAbelianColimit
     colimit (M ⋙ (forget Ab)) → (colimit M).carrier :=
   colimit.desc _ ((forget Ab).mapCocone (colimit.cocone M))
 
-/-- Common upper bounds make this underlying-set map surjective. -/
+/-- Common upper bounds and a nonempty index make this underlying-set map
+surjective. -/
 theorem colimitTypeToAbelianColimit_surjective
     {I : Type v} [Category.{w} I] [Small.{u} I]
-    (hI : HasCommonUpperBounds I) (M : I ⥤ Ab) :
+    (hI : HasCommonUpperBounds I) (hI_nonempty : Nonempty I) (M : I ⥤ Ab) :
     Function.Surjective (colimitTypeToAbelianColimit M) := by
   sorry
 
 /-! ## Connected-component decompositions -/
 
-/-- The canonical disjoint-union decomposition of an index category into its
-connected full subcategories. -/
-def connectedComponentDecomposition
-    {I : Type u} [Category.{v} I] :
-  Decomposed I ≌ I :=
-  decomposedEquiv
+/- The canonical decomposition into connected full subcategories is already
+   provided by Mathlib's `decomposedEquiv`; the results below add the source's
+   hypotheses on that established decomposition. -/
 
 /-- Span completion restricts to every connected component. -/
 theorem span_completion_on_connected_components
@@ -455,11 +451,10 @@ structure AbelianColimitInjectionCounterexample where
     eN.inv ≫ Ndiagram.map (Multiplicative.ofAdd (1 : ZMod 2)) ≫ eN.hom =
       zmodTwoShear
   pointwise_injective : ∀ i, Function.Injective (α.app i)
+  /-- The induced map on colimits in `Ab` is not injective (indeed, it is zero). -/
   colimit_map_not_injective :
-    ¬ Function.Injective
-      (colimitMapOfTypes
-        (M := Mdiagram ⋙ forget Ab) (N := Ndiagram ⋙ forget Ab)
-        (Functor.whiskerRight α (forget Ab)))
+    ¬ Function.Injective (colim.map α)
+  colimit_map_is_zero : colim.map α = 0
 
 /-- The source's explicit order-two abelian-group counterexample exists. -/
 theorem exists_abelian_colimit_injective_counterexample :
@@ -468,16 +463,11 @@ theorem exists_abelian_colimit_injective_counterexample :
 
 /-! ## Splitting into filtered components -/
 
-/-- The two hypotheses in the source's filtered-component lemma. -/
-def HasCommonCoconesForMorphisms (I : Type u) [Category.{v} I] : Prop :=
-  ∀ {w x y : I} (a : w ⟶ x) (b : w ⟶ y),
-    ∃ (z : I) (c : x ⟶ z) (d : y ⟶ z), a ≫ c = b ≫ d
-
 /-- Under the two source hypotheses, every connected component is a filtered
 index category; the canonical decomposition is the required disjoint union. -/
 theorem filtered_connected_component_decomposition
     {I : Type u} [Category.{v} I]
-    (hspan : HasCommonCoconesForMorphisms I)
+    (hspan : HasCoconesForSpans I)
     (heq : HasParallelEqualizers I) :
     ∀ j : ConnectedComponents I, IsFiltered j.Component := by
   sorry
@@ -488,7 +478,7 @@ theorem filtered_connected_component_decomposition
 commute with finite connected limits of sets. -/
 theorem almost_directed_colimit_commutes_finite_connected_limits
     {I : Type v} [Category.{w} I] [Small.{u} I]
-    (hspan : HasCommonCoconesForMorphisms I)
+    (hspan : HasCoconesForSpans I)
     (heq : HasParallelEqualizers I)
     {J : Type v'} [SmallCategory J] [FinCategory J]
     [IsConnected J] (M : J ⥤ I ⥤ Type u) :
@@ -504,15 +494,11 @@ def SetFiberProduct {X Y Z : Type u} (f : X → Y) (g : Z → Y) : Type u :=
 def SetEqualizer {X Y : Type u} (f g : X → Y) : Type u :=
   {x : X // f x = g x}
 
-def CoproductMap {J : Type v'} {A B : J → Type u}
-    (f : ∀ j, A j → B j) : (Σ j, A j) → (Σ j, B j) :=
-  fun x => ⟨x.1, f x.1 x.2⟩
-
 theorem coproduct_fibreProduct_equiv
     {J : Type v'} {A B C : J → Type u}
     (f : ∀ j, A j → B j) (g : ∀ j, C j → B j) :
     Nonempty
-      (SetFiberProduct (CoproductMap f) (CoproductMap g) ≃
+      (SetFiberProduct (Sigma.map id f) (Sigma.map id g) ≃
         (Σ j, SetFiberProduct (f j) (g j))) := by
   sorry
 
@@ -520,7 +506,7 @@ theorem coproduct_equalizer_equiv
     {J : Type v'} {A B : J → Type u}
     (f g : ∀ j, A j → B j) :
     Nonempty
-      (SetEqualizer (CoproductMap f) (CoproductMap g) ≃
+      (SetEqualizer (Sigma.map id f) (Sigma.map id g) ≃
         (Σ j, SetEqualizer (f j) (g j))) := by
   sorry
 
@@ -529,11 +515,11 @@ theorem almost_directed_colimit_commutes_fibre_products_and_equalizers
     ∀ {A B C : J → Type u}
       (f : ∀ j, A j → B j) (g : ∀ j, C j → B j),
       Nonempty
-        (SetFiberProduct (CoproductMap f) (CoproductMap g) ≃
+        (SetFiberProduct (Sigma.map id f) (Sigma.map id g) ≃
           (Σ j, SetFiberProduct (f j) (g j))) ∧
       ∀ {A B : J → Type u} (f g : ∀ j, A j → B j),
         Nonempty
-          (SetEqualizer (CoproductMap f) (CoproductMap g) ≃
+          (SetEqualizer (Sigma.map id f) (Sigma.map id g) ≃
             (Σ j, SetEqualizer (f j) (g j))) := by
   intro A B C f g
   exact ⟨coproduct_fibreProduct_equiv f g, by

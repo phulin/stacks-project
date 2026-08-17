@@ -8,6 +8,7 @@ import Mathlib.CategoryTheory.Limits.IndYoneda
 import Mathlib.CategoryTheory.Limits.ConcreteCategory.WithAlgebraicStructures
 import Mathlib.CategoryTheory.Limits.Constructions.EventuallyConstant
 import Mathlib.CategoryTheory.Limits.Indization.Category
+import Mathlib.CategoryTheory.Limits.Types.ColimitTypeFiltered
 
 namespace Formalization.Books.Categories.Unit22
 
@@ -620,6 +621,29 @@ theorem essentiallyConstantPro_hasLimit
   }
   exact ⟨c, ⟨P⟩, ⟨i, r, hr, hfactor⟩⟩
 
+private theorem isColimit_of_essentiallyConstantInd
+    {I : Type u} [Category.{v} I] [IsFiltered I]
+    {C : Type u'} [Category.{v'} C]
+    {M : I ⥤ C} (c : Cocone M) (hM : IsEssentiallyConstantInd M c) :
+    Nonempty (IsColimit c) := by
+  rcases hM with ⟨i, s, hs, hfactor⟩
+  let P : IsColimit c := {
+    desc := fun t => s ≫ t.ι.app i
+    fac := by
+      intro t j
+      rcases hfactor j with ⟨k, f, g, hfg⟩
+      have h := congrArg (fun u => u ≫ t.ι.app k) hfg
+      simpa only [Category.assoc, t.w f, t.w g] using h.symm
+    uniq := by
+      intro t m hm
+      calc
+        m = 𝟙 c.pt ≫ m := by simp
+        _ = (s ≫ c.ι.app i) ≫ m := by rw [hs]
+        _ = s ≫ (c.ι.app i ≫ m) := by rw [Category.assoc]
+        _ = s ≫ t.ι.app i := by rw [hm i]
+  }
+  exact ⟨P⟩
+
 /-- The canonical ind-category attached to a category. -/
 abbrev IndCategory (C : Type u) [Category.{v} C] := CategoryTheory.Ind C
 
@@ -677,7 +701,301 @@ theorem essentiallyConstantInd_iff_indLim_isomorphic_to_constant
     (M : I ⥤ C) :
     IsEssentiallyConstantIndDiagram M ↔
       ∃ X : C, Nonempty ((indLim I).obj M ≅ (indEmbedding (C := C)).obj X) := by
-  sorry
+  change IsEssentiallyConstantIndDiagram M ↔
+    ∃ X : C, Nonempty (colimit (M ⋙ indEmbedding) ≅ (indEmbedding (C := C)).obj X)
+  constructor
+  · rintro ⟨c, ⟨i, s, hs, hfactor⟩⟩
+    let d : Cocone (M ⋙ indEmbedding) :=
+      { pt := indEmbedding.obj c.pt
+        ι :=
+          { app := fun j => indEmbedding.map (c.ι.app j)
+            naturality := by
+              intro j k f
+              change indEmbedding.map (M.map f) ≫ indEmbedding.map (c.ι.app k) =
+                indEmbedding.map (c.ι.app j) ≫
+                  ((Functor.const I).obj (indEmbedding.obj c.pt)).map f
+              calc
+                indEmbedding.map (M.map f) ≫ indEmbedding.map (c.ι.app k) =
+                    indEmbedding.map (M.map f ≫ c.ι.app k) := by
+                  rw [indEmbedding.map_comp]
+                _ = indEmbedding.map (c.ι.app j ≫ 𝟙 c.pt) :=
+                  congrArg indEmbedding.map (c.ι.naturality f)
+                _ = indEmbedding.map (c.ι.app j) ≫ indEmbedding.map (𝟙 c.pt) := by
+                  rw [indEmbedding.map_comp]
+                _ = indEmbedding.map (c.ι.app j) ≫
+                    ((Functor.const I).obj (indEmbedding.obj c.pt)).map f := by
+                  simp [Functor.const_obj_map] } }
+    let f : colimit (M ⋙ indEmbedding) ⟶ indEmbedding.obj c.pt :=
+      colimit.desc (M ⋙ indEmbedding) d
+    let g : indEmbedding.obj c.pt ⟶ colimit (M ⋙ indEmbedding) :=
+      indEmbedding.map s ≫ colimit.ι (M ⋙ indEmbedding) i
+    have hdesc (j : I) :
+        colimit.ι (M ⋙ indEmbedding) j ≫ f = indEmbedding.map (c.ι.app j) := by
+      exact colimit.ι_desc d j
+    have hfg : f ≫ g = 𝟙 _ := by
+      apply colimit.hom_ext
+      intro j
+      rcases hfactor j with ⟨k, a, b, hab⟩
+      have hmap_a : (M ⋙ indEmbedding).map a = indEmbedding.map (M.map a) := by
+        rfl
+      calc
+        colimit.ι (M ⋙ indEmbedding) j ≫ (f ≫ g) =
+            indEmbedding.map (c.ι.app j) ≫ g := by
+              simpa only [Category.assoc] using
+                congrArg (fun q => q ≫ g) (hdesc j)
+        _ = indEmbedding.map (c.ι.app j ≫ s) ≫
+              colimit.ι (M ⋙ indEmbedding) i := by
+              dsimp [g]
+              simpa only [Category.assoc] using
+                congrArg (fun q => q ≫ colimit.ι (M ⋙ indEmbedding) i)
+                  (indEmbedding.map_comp (c.ι.app j) s).symm
+        _ = indEmbedding.map (c.ι.app j ≫ s) ≫
+              (indEmbedding.map (M.map a) ≫
+                colimit.ι (M ⋙ indEmbedding) k) := by
+              change indEmbedding.map (c.ι.app j ≫ s) ≫
+                  colimit.ι (M ⋙ indEmbedding) i =
+                indEmbedding.map (c.ι.app j ≫ s) ≫
+                  indEmbedding.map (M.map a) ≫ colimit.ι (M ⋙ indEmbedding) k
+              rw [← hmap_a]
+              rw [← colimit.w (M ⋙ indEmbedding) a]
+        _ = indEmbedding.map (c.ι.app j ≫ s ≫ M.map a) ≫
+              colimit.ι (M ⋙ indEmbedding) k := by
+              simpa only [Category.assoc] using
+                congrArg (fun q => q ≫ colimit.ι (M ⋙ indEmbedding) k)
+                  (indEmbedding.map_comp (c.ι.app j ≫ s) (M.map a)).symm
+        _ = indEmbedding.map (M.map b) ≫
+              colimit.ι (M ⋙ indEmbedding) k := by rw [hab]
+        _ = colimit.ι (M ⋙ indEmbedding) j := colimit.w (M ⋙ indEmbedding) b
+        _ = colimit.ι (M ⋙ indEmbedding) j ≫ 𝟙 _ := by simp
+    have hgf : g ≫ f = 𝟙 _ := by
+      dsimp [g]
+      calc
+        (indEmbedding.map s ≫ colimit.ι (M ⋙ indEmbedding) i) ≫ f =
+            indEmbedding.map s ≫
+              (colimit.ι (M ⋙ indEmbedding) i ≫ f) := by rw [Category.assoc]
+        _ = indEmbedding.map s ≫ indEmbedding.map (c.ι.app i) := by rw [hdesc]
+        _ = indEmbedding.map (s ≫ c.ι.app i) := by
+              rw [indEmbedding.map_comp]
+        _ = 𝟙 _ := by rw [hs, indEmbedding.map_id]
+    exact ⟨c.pt, ⟨{ hom := f, inv := g, hom_inv_id := hfg, inv_hom_id := hgf }⟩⟩
+  · change (∃ X : C, Nonempty ((Ind.lim I).obj M ≅ Ind.yoneda.obj X)) →
+      IsEssentiallyConstantIndDiagram M
+    rintro ⟨X, ⟨e⟩⟩
+    change colimit (M ⋙ Ind.yoneda) ≅ Ind.yoneda.obj X at e
+    let c : Cocone M :=
+      { pt := X
+        ι :=
+          { app := fun j =>
+              (Ind.yoneda.fullyFaithful (C := C)).preimage
+                (colimit.ι (M ⋙ Ind.yoneda) j ≫ e.hom)
+            naturality := by
+              intro j k f
+              apply (Ind.yoneda.fullyFaithful (C := C)).map_injective
+              simp [Functor.map_comp, Functor.FullyFaithful.map_preimage,
+                Functor.const_obj_map]
+              simpa only [Functor.comp_map, Category.assoc] using
+                congrArg (fun z => z ≫ e.hom)
+                  (colimit.w (M ⋙ Ind.yoneda) f) } }
+    let α := (Ind.yonedaCompInclusion (C := C)).app X
+    let β := (Ind.limCompInclusion (C := C) (I := I)).app M
+    change (Ind.inclusion C).obj (colimit (M ⋙ Ind.yoneda)) ≅
+      colimit (M ⋙ yoneda) at β
+    let q : yoneda.obj X ⟶ colimit (M ⋙ yoneda) :=
+      α.inv ≫ (Ind.inclusion C).map e.inv ≫ β.hom
+    let x := (colimitObjIsoColimitCompEvaluation (M ⋙ yoneda) (Opposite.op X)).hom
+      (yonedaEquiv q)
+    obtain ⟨i, s, hsrep⟩ := Concrete.colimit_exists_rep
+      ((M ⋙ yoneda) ⋙ (evaluation Cᵒᵖ (Type v)).obj (Opposite.op X)) x
+    change X ⟶ M.obj i at s
+    have hq : q = yoneda.map s ≫ colimit.ι (M ⋙ yoneda) i := by
+      have hsrep' := congrArg
+        (ConcreteCategory.hom
+          (colimitObjIsoColimitCompEvaluation (M ⋙ yoneda) (Opposite.op X)).inv)
+        hsrep
+      have hleft :
+          (ConcreteCategory.hom
+            (colimitObjIsoColimitCompEvaluation (M ⋙ yoneda) (Opposite.op X)).inv)
+              ((ConcreteCategory.hom
+                (colimitObjIsoColimitCompEvaluation (M ⋙ yoneda) (Opposite.op X)).hom)
+                (yonedaEquiv q)) = yonedaEquiv q := by
+        simpa only [ConcreteCategory.comp_apply, ConcreteCategory.id_apply] using
+          ConcreteCategory.congr_hom
+            (colimitObjIsoColimitCompEvaluation (M ⋙ yoneda) (Opposite.op X)).hom_inv_id
+            (yonedaEquiv q)
+      have hright :
+          (ConcreteCategory.hom
+            (colimitObjIsoColimitCompEvaluation (M ⋙ yoneda) (Opposite.op X)).inv)
+              ((ConcreteCategory.hom
+                (colimit.ι ((M ⋙ yoneda) ⋙ (evaluation Cᵒᵖ (Type v)).obj
+                  (Opposite.op X)) i)) s) =
+            (ConcreteCategory.hom ((colimit.ι (M ⋙ yoneda) i).app
+              (Opposite.op X))) s := by
+        simpa only [ConcreteCategory.comp_apply] using
+          ConcreteCategory.congr_hom
+            (colimitObjIsoColimitCompEvaluation_ι_inv
+              (M ⋙ yoneda) i (Opposite.op X)) s
+      apply yonedaEquiv.injective
+      rw [yonedaEquiv_apply]
+      calc
+        (ConcreteCategory.hom (q.app (Opposite.op X))) (𝟙 X) = yonedaEquiv q :=
+          (yonedaEquiv_apply q).symm
+        _ = ConcreteCategory.hom
+              (colimitObjIsoColimitCompEvaluation (M ⋙ yoneda) (Opposite.op X)).inv
+              x := by
+                dsimp [x]
+                exact hleft.symm
+        _ = ConcreteCategory.hom
+              (colimitObjIsoColimitCompEvaluation (M ⋙ yoneda) (Opposite.op X)).inv
+              ((ConcreteCategory.hom
+                (colimit.ι ((M ⋙ yoneda) ⋙ (evaluation Cᵒᵖ (Type v)).obj
+                  (Opposite.op X)) i)) s) := by rw [hsrep]
+        _ = (ConcreteCategory.hom ((colimit.ι (M ⋙ yoneda) i).app
+              (Opposite.op X))) s := by simpa using hright
+        _ = (ConcreteCategory.hom
+              ((yoneda.map s ≫ colimit.ι (M ⋙ yoneda) i).app
+                (Opposite.op X))) (𝟙 X) := by simp
+    have heinv : e.inv = Ind.yoneda.map s ≫ colimit.ι (M ⋙ Ind.yoneda) i := by
+      apply (Ind.inclusion C).map_injective
+      change (Ind.inclusion C).map e.inv =
+        (Ind.inclusion C).map (Ind.yoneda.map s ≫
+          colimit.ι (M ⋙ Ind.yoneda) i)
+      have hinc :
+          (Ind.inclusion C).map e.inv =
+            α.hom ≫ (yoneda.map s ≫ colimit.ι (M ⋙ yoneda) i) ≫ β.inv := by
+        rw [← hq]
+        dsimp [q]
+        simp only [Category.assoc, Iso.hom_inv_id_assoc]
+        simp
+      have hβ (j : I) :
+          (Ind.inclusion C).map (colimit.ι (M ⋙ Ind.yoneda) j) ≫ β.hom =
+            (Ind.yonedaCompInclusion (C := C)).hom.app (M.obj j) ≫
+              colimit.ι (M ⋙ yoneda) j := by
+        change (Ind.inclusion C).map (colimit.ι (M ⋙ Ind.yoneda) j) ≫ β.hom =
+          (Ind.yonedaCompInclusion (C := C)).hom.app (M.obj j) ≫
+            colimit.ι (M ⋙ yoneda) j
+        dsimp [β, Ind.limCompInclusion, Ind.lim, indEmbedding]
+        simp [Trans.trans, Iso.trans, Functor.isoWhiskerLeft,
+          Functor.whiskeringRightObjCompIso, Category.assoc]
+      have hstep :
+          α.hom ≫ (yoneda.map s ≫ colimit.ι (M ⋙ yoneda) i) ≫ β.inv =
+              (Ind.inclusion C).map (Ind.yoneda.map s) ≫
+              (Ind.inclusion C).map (colimit.ι (M ⋙ Ind.yoneda) i) := by
+        dsimp [α]
+        rw [← Category.assoc, ← Category.assoc]
+        rw [← (Ind.yonedaCompInclusion (C := C)).hom.naturality s]
+        have h := congrArg
+          (fun z => (Ind.yoneda ⋙ Ind.inclusion C).map s ≫ z ≫ β.inv)
+          (hβ i)
+        simpa [Category.assoc, Functor.comp_map, β.hom_inv_id] using h.symm
+      simpa [Functor.map_comp] using hinc.trans hstep
+    have hs : s ≫ c.ι.app i = 𝟙 X := by
+      apply (Ind.yoneda.fullyFaithful (C := C)).map_injective
+      dsimp [c]
+      rw [Functor.map_comp, Functor.FullyFaithful.map_preimage]
+      rw [← Category.assoc, ← heinv]
+      simp
+    have hβ (j : I) :
+        (Ind.inclusion C).map (colimit.ι (M ⋙ Ind.yoneda) j) ≫ β.hom =
+          (Ind.yonedaCompInclusion (C := C)).hom.app (M.obj j) ≫
+            colimit.ι (M ⋙ yoneda) j := by
+      change (Ind.inclusion C).map (colimit.ι (M ⋙ Ind.yoneda) j) ≫ β.hom =
+        (Ind.yonedaCompInclusion (C := C)).hom.app (M.obj j) ≫
+          colimit.ι (M ⋙ yoneda) j
+      dsimp [β, Ind.limCompInclusion, Ind.lim, indEmbedding]
+      simp [Trans.trans, Iso.trans, Functor.isoWhiskerLeft,
+        Functor.whiskeringRightObjCompIso, Category.assoc]
+    refine ⟨c, ⟨i, s, hs, ?_⟩⟩
+    intro j
+    have hcj (j : I) :
+        Ind.yoneda.map (c.ι.app j) =
+          colimit.ι (M ⋙ Ind.yoneda) j ≫ e.hom := by
+      dsimp [c]
+      simp
+    have hstagej (j : I) :
+        colimit.ι (M ⋙ Ind.yoneda) j =
+          Ind.yoneda.map (c.ι.app j ≫ s) ≫
+            colimit.ι (M ⋙ Ind.yoneda) i := by
+      calc
+        colimit.ι (M ⋙ Ind.yoneda) j =
+            colimit.ι (M ⋙ Ind.yoneda) j ≫ e.hom ≫ e.inv := by
+              rw [e.hom_inv_id, Category.comp_id]
+        _ = Ind.yoneda.map (c.ι.app j) ≫ e.inv := by
+              rw [hcj]
+              simp only [Category.assoc]
+        _ = Ind.yoneda.map (c.ι.app j) ≫
+              (Ind.yoneda.map s ≫ colimit.ι (M ⋙ Ind.yoneda) i) := by
+              rw [heinv]
+        _ = Ind.yoneda.map (c.ι.app j ≫ s) ≫
+              colimit.ι (M ⋙ Ind.yoneda) i := by
+              simp [Category.assoc]
+    have hp (j : I) :
+        colimit.ι (M ⋙ yoneda) j =
+          yoneda.map (c.ι.app j ≫ s) ≫ colimit.ι (M ⋙ yoneda) i := by
+      apply (cancel_epi
+        ((Ind.yonedaCompInclusion (C := C)).hom.app (M.obj j))).1
+      have hmap := congrArg
+        (fun z => (Ind.inclusion C).map z ≫ β.hom) (hstagej j)
+      have hmap' :
+          (Ind.inclusion C).map (colimit.ι (M ⋙ Ind.yoneda) j) ≫ β.hom =
+            (Ind.inclusion C).map (Ind.yoneda.map (c.ι.app j ≫ s)) ≫
+              ((Ind.inclusion C).map (colimit.ι (M ⋙ Ind.yoneda) i) ≫ β.hom) := by
+        simpa only [Functor.map_comp, Category.assoc] using hmap
+      calc
+        (Ind.yonedaCompInclusion (C := C)).hom.app (M.obj j) ≫
+              colimit.ι (M ⋙ yoneda) j =
+            (Ind.inclusion C).map (colimit.ι (M ⋙ Ind.yoneda) j) ≫ β.hom :=
+          (hβ j).symm
+        _ = (Ind.inclusion C).map (Ind.yoneda.map (c.ι.app j ≫ s)) ≫
+              ((Ind.inclusion C).map (colimit.ι (M ⋙ Ind.yoneda) i) ≫ β.hom) := hmap'
+        _ = (Ind.inclusion C).map (Ind.yoneda.map (c.ι.app j ≫ s)) ≫
+              ((Ind.yonedaCompInclusion (C := C)).hom.app (M.obj i) ≫
+                colimit.ι (M ⋙ yoneda) i) := by rw [hβ i]
+        _ = (Ind.yonedaCompInclusion (C := C)).hom.app (M.obj j) ≫
+              (yoneda.map (c.ι.app j ≫ s) ≫ colimit.ι (M ⋙ yoneda) i) := by
+          simpa only [Functor.comp_map, Category.assoc] using
+            congrArg (fun z => z ≫ colimit.ι (M ⋙ yoneda) i)
+              ((Ind.yonedaCompInclusion (C := C)).hom.naturality
+                (c.ι.app j ≫ s))
+    have heq :
+        colimit.ι ((M ⋙ yoneda) ⋙ (evaluation Cᵒᵖ (Type v)).obj
+          (Opposite.op (M.obj j))) j (𝟙 (M.obj j)) =
+          colimit.ι ((M ⋙ yoneda) ⋙ (evaluation Cᵒᵖ (Type v)).obj
+            (Opposite.op (M.obj j))) i (c.ι.app j ≫ s) := by
+      have hp' := congrArg
+        (fun z => ConcreteCategory.hom
+          (z.app (Opposite.op (M.obj j)) ≫
+            (colimitObjIsoColimitCompEvaluation
+              (M ⋙ yoneda) (Opposite.op (M.obj j))).hom)
+          (𝟙 (M.obj j))) (hp j)
+      simpa [Functor.comp_map, Category.assoc] using hp'
+    obtain ⟨k, f, g, hfg⟩ :=
+      (Types.FilteredColimit.colimit_eq_iff
+        ((M ⋙ yoneda) ⋙ (evaluation Cᵒᵖ (Type v)).obj
+          (Opposite.op (M.obj j)))).1 heq
+    refine ⟨k, g, f, ?_⟩
+    simpa [Category.assoc] using hfg
+
+private theorem isEssentiallyConstantPro_iff_op
+    {C : Type u} [Category.{v} C]
+    {I : Type v} [SmallCategory I] [IsCofiltered I]
+    {M : I ⥤ C} (c : Cone M) :
+    IsEssentiallyConstantPro M c ↔
+      IsEssentiallyConstantInd M.op c.op := by
+  constructor
+  · rintro ⟨i, r, hr, hfactor⟩
+    refine ⟨Opposite.op i, r.op, ?_, ?_⟩
+    · simpa using congrArg Quiver.Hom.op hr
+    · intro j
+      rcases hfactor j.unop with ⟨k, f, g, hfg⟩
+      refine ⟨Opposite.op k, f.op, g.op, ?_⟩
+      simpa using congrArg Quiver.Hom.op hfg
+  · rintro ⟨i, s, hs, hfactor⟩
+    refine ⟨i.unop, s.unop, ?_, ?_⟩
+    · simpa using congrArg Quiver.Hom.unop hs
+    · intro j
+      rcases hfactor (Opposite.op j) with ⟨k, f, g, hfg⟩
+      refine ⟨k.unop, f.unop, g.unop, ?_⟩
+      simpa using congrArg Quiver.Hom.unop hfg
 
 /-- The pro characterization in the pro-category. -/
 theorem essentiallyConstantPro_iff_proLim_isomorphic_to_constant
@@ -686,7 +1004,24 @@ theorem essentiallyConstantPro_iff_proLim_isomorphic_to_constant
     (M : I ⥤ C) :
     IsEssentiallyConstantProDiagram M ↔
       ∃ X : C, Nonempty ((proLim I).obj M ≅ (proEmbedding (C := C)).obj X) := by
-  sorry
+  change IsEssentiallyConstantProDiagram M ↔
+    ∃ X : C, Nonempty
+      (Opposite.op ((Ind.lim (C := Cᵒᵖ) Iᵒᵖ).obj M.op) ≅
+        Opposite.op ((Ind.yoneda (C := Cᵒᵖ)).obj (Opposite.op X)))
+  constructor
+  · rintro ⟨c, hc⟩
+    have hInd : IsEssentiallyConstantIndDiagram M.op :=
+      ⟨c.op, (isEssentiallyConstantPro_iff_op c).mp hc⟩
+    obtain ⟨X, ⟨e⟩⟩ :=
+      (essentiallyConstantInd_iff_indLim_isomorphic_to_constant M.op).mp hInd
+    refine ⟨X.unop, ⟨?_⟩⟩
+    simpa [indLim, indEmbedding] using (Iso.op e.symm)
+  · rintro ⟨X, ⟨e⟩⟩
+    have hInd : IsEssentiallyConstantIndDiagram M.op :=
+      (essentiallyConstantInd_iff_indLim_isomorphic_to_constant M.op).mpr
+        ⟨Opposite.op X, ⟨(e.unop).symm⟩⟩
+    obtain ⟨c, hc⟩ := hInd
+    exact ⟨c.unop, (isEssentiallyConstantPro_iff_op c.unop).mpr hc⟩
 
 /-! The following structure records the standard representative of a pro
 morphism between inverse sequences.  `refines` is the common-refinement
@@ -920,6 +1255,36 @@ noncomputable def proCopresheaf
     intro i
     simp [Functor.map_comp]
 
+private noncomputable def proCopresheafToFunctorColimit
+    {J : Type v} [SmallCategory J]
+    {C : Type u} [Category.{v} C]
+    [HasColimitsOfShape Jᵒᵖ (Type v)]
+    (G : J ⥤ C) :
+    proCopresheaf G ≅ colimit (G.op ⋙ coyoneda) := by
+  refine NatIso.ofComponents
+    (fun X => (colimitObjIsoColimitCompEvaluation (G.op ⋙ coyoneda) X).symm) ?_
+  intro X Y f
+  dsimp [proCopresheaf]
+  apply colimit.hom_ext
+  intro i
+  simp only [Functor.whiskerLeft, ι_colimMap_assoc,
+    colimitObjIsoColimitCompEvaluation_inv_colimit_map, Category.assoc]
+  rfl
+
+private noncomputable def proIndColimitToCopresheafIso
+    {J : Type v} [SmallCategory J]
+    {C : Type u} [Category.{v} C]
+    [HasColimitsOfShape Jᵒᵖ (Type v)]
+    (G : J ⥤ C) :
+    ((Functor.whiskeringLeft C Cᵒᵖᵒᵖ (Type v)).obj (opOp C)).obj
+        (colimit (G.op ⋙ yoneda (C := Cᵒᵖ))) ≅
+      proCopresheaf G := by
+  let w := Coyoneda.opIso (C := C)
+  let k := colimitCompWhiskeringLeftIsoCompColimit
+    (G.op ⋙ yoneda (C := Cᵒᵖ)) (opOp C)
+  let z := HasColimit.isoOfNatIso (Functor.isoWhiskerLeft G.op w)
+  exact k.symm.trans (z.trans (proCopresheafToFunctorColimit G).symm)
+
 /-- The pro-morphism formula in terms of copresheaf transformations. -/
 theorem proCategory_hom_as_copresheaf_natTrans
     {I J : Type v} [SmallCategory I] [SmallCategory J]
@@ -931,7 +1296,18 @@ theorem proCategory_hom_as_copresheaf_natTrans
     Nonempty
       (((proLim I).obj F ⟶ (proLim J).obj G) ≃
         (proCopresheaf G ⟶ proCopresheaf F)) := by
-  sorry
+  let o := opEquiv
+    (Opposite.op ((Ind.lim Iᵒᵖ).obj F.op))
+      (Opposite.op ((Ind.lim Jᵒᵖ).obj G.op))
+  refine ⟨o.trans ?_⟩
+  refine (Ind.inclusion.fullyFaithful (C := Cᵒᵖ)).homEquiv.trans ?_
+  refine (Iso.homCongr (Ind.limCompInclusion.app G.op)
+      (Ind.limCompInclusion.app F.op)).trans ?_
+  let L := (Functor.whiskeringLeft C Cᵒᵖᵒᵖ (Type v)).obj (opOp C)
+  let qG := proIndColimitToCopresheafIso G
+  let qF := proIndColimitToCopresheafIso F
+  exact (Functor.FullyFaithful.ofFullyFaithful L).homEquiv.trans
+    (qG.homCongr qF)
 
 /-- A functor carries ind-essentially constant diagrams to ind-essentially
 constant diagrams. -/
@@ -1215,6 +1591,56 @@ def IndHomSectionCondition
         (fun f : W ⟶ X =>
           colimit.ι (homIntoDiagram M W) i (f ≫ s))
 
+private theorem essentiallyConstantInd_of_homIntoCoconeMap
+    {I : Type u} [Category.{v} I] [IsFiltered I]
+    {C : Type u'} [Category.{v'} C]
+    {M : I ⥤ C} (c : Cocone M)
+    (hc : ∀ W : C, ∃ hW : HasColimit (homIntoDiagram M W),
+      letI : HasColimit (homIntoDiagram M W) := hW
+      Function.Bijective (homIntoCoconeMap c W)) :
+    IsEssentiallyConstantInd M c := by
+  obtain ⟨hW, hbij⟩ := hc c.pt
+  letI := hW
+  have hmap (j : I) (f : c.pt ⟶ M.obj j) :
+      homIntoCoconeMap c c.pt (colimit.ι (homIntoDiagram M c.pt) j f) =
+        f ≫ c.ι.app j := by
+    change
+      (colimit.desc (homIntoDiagram M c.pt) (homIntoCocone c c.pt))
+          (colimit.ι (homIntoDiagram M c.pt) j f) =
+        f ≫ c.ι.app j
+    exact congrArg (fun q => q f) (colimit.ι_desc (homIntoCocone c c.pt) j)
+  obtain ⟨x, hx⟩ := hbij.2 (𝟙 c.pt)
+  obtain ⟨i, s, rfl⟩ := Concrete.colimit_exists_rep (homIntoDiagram M c.pt) x
+  change c.pt ⟶ M.obj i at s
+  have hs : s ≫ c.ι.app i = 𝟙 c.pt := by
+    simpa only [hmap] using hx
+  refine ⟨i, s, hs, ?_⟩
+  intro j
+  obtain ⟨hWj, hbijj⟩ := hc (M.obj j)
+  letI := hWj
+  have hmapj (j' : I) (f : M.obj j ⟶ M.obj j') :
+      homIntoCoconeMap c (M.obj j)
+          (colimit.ι (homIntoDiagram M (M.obj j)) j' f) =
+        f ≫ c.ι.app j' := by
+    change
+      (colimit.desc (homIntoDiagram M (M.obj j))
+          (homIntoCocone c (M.obj j)))
+          (colimit.ι (homIntoDiagram M (M.obj j)) j' f) =
+        f ≫ c.ι.app j'
+    exact congrArg (fun q => q f)
+      (colimit.ι_desc (homIntoCocone c (M.obj j)) j')
+  have heq :
+      colimit.ι (homIntoDiagram M (M.obj j)) j (𝟙 (M.obj j)) =
+        colimit.ι (homIntoDiagram M (M.obj j)) i (c.ι.app j ≫ s) := by
+    apply hbijj.1
+    rw [hmapj, hmapj]
+    simpa [Category.assoc] using
+      (congrArg (fun q => c.ι.app j ≫ q) hs).symm
+  obtain ⟨k, f, g, hfg⟩ :=
+    (Types.FilteredColimit.colimit_eq_iff (homIntoDiagram M (M.obj j))).1 heq
+  refine ⟨k, g, f, ?_⟩
+  simpa [homIntoDiagram, Category.assoc] using hfg
+
 private theorem indHomColimitCondition_iff_essentiallyConstant
     {I : Type u} [Category.{v} I] [IsFiltered I]
     {C : Type u'} [Category.{v'} C]
@@ -1224,7 +1650,54 @@ private theorem indHomColimitCondition_iff_essentiallyConstant
   · rintro ⟨c, ⟨i, s, hs, hfactor⟩⟩
     refine ⟨c, ?_⟩
     intro W
-    let hW : HasColimit (homIntoDiagram M W) := inferInstance
+    let tc : Functor.CoconeTypes (homIntoDiagram M W) :=
+      { pt := W ⟶ c.pt
+        ι := fun j f => f ≫ c.ι.app j
+        ι_naturality := by
+          intro j j' f
+          funext g
+          simp [Category.assoc] }
+    have htc : tc.IsColimit := by
+      constructor
+      constructor
+      · intro x y hxy
+        obtain ⟨j, xj, rfl⟩ :=
+          (homIntoDiagram M W).ιColimitType_jointly_surjective x
+        obtain ⟨j', yj, rfl⟩ :=
+          (homIntoDiagram M W).ιColimitType_jointly_surjective y
+        change xj ≫ c.ι.app j = yj ≫ c.ι.app j' at hxy
+        rcases hfactor j with ⟨k, f, g, hfg⟩
+        rcases hfactor j' with ⟨k', f', g', hfg'⟩
+        let u := IsFiltered.leftToMax k k'
+        let v := IsFiltered.rightToMax k k'
+        let t := IsFiltered.coeqHom (f ≫ u) (f' ≫ v)
+        apply (Functor.ιColimitType_eq_iff_of_isFiltered (homIntoDiagram M W) xj yj).mpr
+        refine ⟨IsFiltered.coeq (f ≫ u) (f' ≫ v), g ≫ u ≫ t, g' ≫ v ≫ t, ?_⟩
+        change xj ≫ M.map (g ≫ u ≫ t) = yj ≫ M.map (g' ≫ v ≫ t)
+        have hpaths : f ≫ u ≫ t = f' ≫ v ≫ t := by
+          simpa [t, Category.assoc] using
+            IsFiltered.coeq_condition (f ≫ u) (f' ≫ v)
+        calc
+          xj ≫ M.map (g ≫ u ≫ t) = xj ≫ M.map g ≫ M.map u ≫ M.map t := by
+            rw [M.map_comp, M.map_comp]
+          _ = xj ≫ (c.ι.app j ≫ s ≫ M.map f) ≫ M.map u ≫ M.map t := by
+            rw [hfg]
+          _ = (xj ≫ c.ι.app j) ≫ s ≫ M.map (f ≫ u ≫ t) := by
+            simp only [Category.assoc, M.map_comp]
+          _ = (yj ≫ c.ι.app j') ≫ s ≫ M.map (f' ≫ v ≫ t) := by
+            rw [hxy, hpaths]
+          _ = yj ≫ (c.ι.app j' ≫ s ≫ M.map f') ≫ M.map v ≫ M.map t := by
+            simp only [M.map_comp, Category.assoc]
+          _ = yj ≫ M.map (g' ≫ v ≫ t) := by
+            rw [← hfg']
+            simp only [M.map_comp, Category.assoc]
+      · intro z
+        refine ⟨(homIntoDiagram M W).ιColimitType i (z ≫ s), ?_⟩
+        simp [tc, Category.assoc, hs]
+    have hcol : Nonempty (IsColimit (homIntoCocone c W)) := by
+      exact (Functor.CoconeTypes.isColimit_iff (c := tc)).mp htc
+    let hW : HasColimit (homIntoDiagram M W) :=
+      ⟨⟨homIntoCocone c W, hcol.some⟩⟩
     refine ⟨hW, ?_⟩
     letI := hW
     have hmap (j : I) (f : W ⟶ M.obj j) :
@@ -1274,47 +1747,7 @@ private theorem indHomColimitCondition_iff_essentiallyConstant
       rw [hmap]
       rw [Category.assoc, hs, Category.comp_id]
   · rintro ⟨c, hc⟩
-    obtain ⟨hW, hbij⟩ := hc c.pt
-    letI := hW
-    have hmap (j : I) (f : c.pt ⟶ M.obj j) :
-        homIntoCoconeMap c c.pt (colimit.ι (homIntoDiagram M c.pt) j f) =
-          f ≫ c.ι.app j := by
-      change
-        (colimit.desc (homIntoDiagram M c.pt) (homIntoCocone c c.pt))
-            (colimit.ι (homIntoDiagram M c.pt) j f) =
-          f ≫ c.ι.app j
-      exact congrArg (fun q => q f) (colimit.ι_desc (homIntoCocone c c.pt) j)
-    obtain ⟨x, hx⟩ := hbij.2 (𝟙 c.pt)
-    obtain ⟨i, s, rfl⟩ := Concrete.colimit_exists_rep (homIntoDiagram M c.pt) x
-    change c.pt ⟶ M.obj i at s
-    have hs : s ≫ c.ι.app i = 𝟙 c.pt := by
-      simpa only [hmap] using hx
-    refine ⟨c, i, s, hs, ?_⟩
-    intro j
-    obtain ⟨hWj, hbijj⟩ := hc (M.obj j)
-    letI := hWj
-    have hmapj (j' : I) (f : M.obj j ⟶ M.obj j') :
-        homIntoCoconeMap c (M.obj j)
-            (colimit.ι (homIntoDiagram M (M.obj j)) j' f) =
-          f ≫ c.ι.app j' := by
-      change
-        (colimit.desc (homIntoDiagram M (M.obj j))
-            (homIntoCocone c (M.obj j)))
-            (colimit.ι (homIntoDiagram M (M.obj j)) j' f) =
-          f ≫ c.ι.app j'
-      exact congrArg (fun q => q f)
-        (colimit.ι_desc (homIntoCocone c (M.obj j)) j')
-    have heq :
-        colimit.ι (homIntoDiagram M (M.obj j)) j (𝟙 (M.obj j)) =
-          colimit.ι (homIntoDiagram M (M.obj j)) i (c.ι.app j ≫ s) := by
-      apply hbijj.1
-      rw [hmapj, hmapj]
-      simpa [Category.assoc] using
-        (congrArg (fun q => c.ι.app j ≫ q) hs).symm
-    obtain ⟨k, f, g, hfg⟩ :=
-      (Types.FilteredColimit.colimit_eq_iff (homIntoDiagram M (M.obj j))).1 heq
-    refine ⟨k, g, f, ?_⟩
-    simpa [homIntoDiagram, Category.assoc] using hfg
+    exact ⟨c, essentiallyConstantInd_of_homIntoCoconeMap c hc⟩
 
 private theorem indHomColimitCondition_iff_isColimitCondition
     {I : Type u} [Category.{v} I] [IsFiltered I]
@@ -1323,13 +1756,220 @@ private theorem indHomColimitCondition_iff_isColimitCondition
     IndHomColimitCondition M ↔ IndHomColimitAndIsColimitCondition M := by
   constructor
   · intro h
-    have hessential : IsEssentiallyConstantIndDiagram M :=
-      indHomColimitCondition_iff_essentiallyConstant M |>.mpr h
-    obtain ⟨c, hc, hce⟩ := essentiallyConstantInd_hasColimit hessential
-    refine ⟨c, hc, ?_⟩
-    exact (indHomColimitCondition_iff_essentiallyConstant M).mp ⟨c, hce⟩ |>.2
+    rcases h with ⟨c, hc⟩
+    have hce : IsEssentiallyConstantInd M c :=
+      essentiallyConstantInd_of_homIntoCoconeMap c hc
+    exact ⟨c, isColimit_of_essentiallyConstantInd c hce, hc⟩
   · rintro ⟨c, _, hc⟩
     exact ⟨c, hc⟩
+
+private theorem homInto_colimit_precompose_eq
+    {I : Type u} [Category.{v} I] [IsFiltered I]
+    {C : Type u'} [Category.{v'} C]
+    (M : I ⥤ C) {W W' : C}
+    [HasColimit (homIntoDiagram M W)]
+    [HasColimit (homIntoDiagram M W')]
+    (f : W' ⟶ W) {i j : I} (x : W ⟶ M.obj i) (y : W ⟶ M.obj j)
+    (h : colimit.ι (homIntoDiagram M W) i x =
+      colimit.ι (homIntoDiagram M W) j y) :
+    colimit.ι (homIntoDiagram M W') i (f ≫ x) =
+      colimit.ι (homIntoDiagram M W') j (f ≫ y) := by
+  apply (Types.FilteredColimit.colimit_eq_iff
+    (homIntoDiagram M W')).2
+  obtain ⟨k, p, q, hpq⟩ :=
+    (Types.FilteredColimit.colimit_eq_iff (homIntoDiagram M W)).1 h
+  refine ⟨k, p, q, ?_⟩
+  simpa [homIntoDiagram, Category.assoc] using congrArg (fun z => f ≫ z) hpq
+
+private theorem indHomColimitAndIsColimitCondition_iff_section
+    {I : Type u} [Category.{v} I] [IsFiltered I]
+    {C : Type u'} [Category.{v'} C]
+    (M : I ⥤ C) :
+    IndHomColimitAndIsColimitCondition M ↔ IndHomSectionCondition M := by
+  constructor
+  · rintro ⟨c, _, hall⟩
+    obtain ⟨hX, hbijX⟩ := hall c.pt
+    letI := hX
+    have hmapX (j : I) (f : c.pt ⟶ M.obj j) :
+        homIntoCoconeMap c c.pt (colimit.ι (homIntoDiagram M c.pt) j f) =
+          f ≫ c.ι.app j := by
+      change
+        (colimit.desc (homIntoDiagram M c.pt) (homIntoCocone c c.pt))
+            (colimit.ι (homIntoDiagram M c.pt) j f) =
+          f ≫ c.ι.app j
+      exact congrArg (fun q => q f) (colimit.ι_desc (homIntoCocone c c.pt) j)
+    obtain ⟨x, hx⟩ := hbijX.2 (𝟙 c.pt)
+    obtain ⟨i, s, rfl⟩ := Concrete.colimit_exists_rep (homIntoDiagram M c.pt) x
+    change c.pt ⟶ M.obj i at s
+    have hs : s ≫ c.ι.app i = 𝟙 c.pt := by
+      simpa only [hmapX] using hx
+    refine ⟨c.pt, i, s, ?_⟩
+    intro W
+    obtain ⟨hW, hbij⟩ := hall W
+    letI := hW
+    have hmap (j : I) (f : W ⟶ M.obj j) :
+        homIntoCoconeMap c W (colimit.ι (homIntoDiagram M W) j f) =
+          f ≫ c.ι.app j := by
+      change
+        (colimit.desc (homIntoDiagram M W) (homIntoCocone c W))
+            (colimit.ι (homIntoDiagram M W) j f) =
+          f ≫ c.ι.app j
+      exact congrArg (fun q => q f) (colimit.ι_desc (homIntoCocone c W) j)
+    refine ⟨hW, ?_⟩
+    constructor
+    · intro f g hfg
+      have hq := congrArg (homIntoCoconeMap c W) hfg
+      simpa only [hmap, Category.assoc, hs, Category.comp_id] using hq
+    · intro x
+      refine ⟨homIntoCoconeMap c W x, ?_⟩
+      apply hbij.1
+      change
+        homIntoCoconeMap c W
+            (colimit.ι (homIntoDiagram M W) i
+              (homIntoCoconeMap c W x ≫ s)) =
+          homIntoCoconeMap c W x
+      rw [hmap]
+      simp [Category.assoc, hs]
+  · rintro ⟨X, i, s, hsec⟩
+    let hW : ∀ W : C, HasColimit (homIntoDiagram M W) :=
+      fun W => (hsec W).choose
+    have hbij (W : C) :
+        letI : HasColimit (homIntoDiagram M W) := hW W
+        Function.Bijective
+          (fun f : W ⟶ X =>
+            colimit.ι (homIntoDiagram M W) i (f ≫ s)) := by
+      exact (hsec W).choose_spec
+    let cι : ∀ j : I, M.obj j ⟶ X := fun j =>
+      let hWj := hW (M.obj j)
+      letI := hWj
+      Classical.choose ((hbij (M.obj j)).2
+        (colimit.ι (homIntoDiagram M (M.obj j)) j (𝟙 (M.obj j)))
+        )
+    let c : Cocone M :=
+      { pt := X
+        ι :=
+          { app := cι
+            naturality := by
+              intro j k f
+              let hWj := hW (M.obj j)
+              let hWk := hW (M.obj k)
+              letI := hWj
+              letI := hWk
+              have hj :
+                  colimit.ι (homIntoDiagram M (M.obj j)) i (cι j ≫ s) =
+                    colimit.ι (homIntoDiagram M (M.obj j)) j (𝟙 (M.obj j)) := by
+                dsimp [cι]
+                exact Classical.choose_spec ((hbij (M.obj j)).2
+                  (colimit.ι (homIntoDiagram M (M.obj j)) j (𝟙 (M.obj j))))
+              have hk :
+                  colimit.ι (homIntoDiagram M (M.obj k)) i (cι k ≫ s) =
+                    colimit.ι (homIntoDiagram M (M.obj k)) k (𝟙 (M.obj k)) := by
+                dsimp [cι]
+                exact Classical.choose_spec ((hbij (M.obj k)).2
+                  (colimit.ι (homIntoDiagram M (M.obj k)) k (𝟙 (M.obj k))))
+              have ht := homInto_colimit_precompose_eq M (M.map f)
+                (cι k ≫ s) (𝟙 (M.obj k)) hk
+              have hfj :
+                  colimit.ι (homIntoDiagram M (M.obj j)) k (M.map f) =
+                    colimit.ι (homIntoDiagram M (M.obj j)) j (𝟙 (M.obj j)) := by
+                apply (Types.FilteredColimit.colimit_eq_iff
+                  (homIntoDiagram M (M.obj j))).2
+                refine ⟨k, 𝟙 k, f, ?_⟩
+                simp [homIntoDiagram]
+              have ht' :
+                  colimit.ι (homIntoDiagram M (M.obj j)) i
+                      ((M.map f ≫ cι k) ≫ s) =
+                    colimit.ι (homIntoDiagram M (M.obj j)) j (𝟙 (M.obj j)) := by
+                have ht' :
+                    colimit.ι (homIntoDiagram M (M.obj j)) i
+                        ((M.map f ≫ cι k) ≫ s) =
+                      colimit.ι (homIntoDiagram M (M.obj j)) k (M.map f) := by
+                  simpa [Category.assoc] using ht
+                exact ht'.trans hfj
+              apply (hbij (M.obj j)).1
+              simpa [Functor.const_obj_map, Category.assoc] using
+                ht'.trans hj.symm } }
+    have hs : s ≫ cι i = 𝟙 X := by
+      let hWi := hW (M.obj i)
+      let hWX := hW X
+      letI := hWi
+      have hi :
+          colimit.ι (homIntoDiagram M (M.obj i)) i (cι i ≫ s) =
+            colimit.ι (homIntoDiagram M (M.obj i)) i (𝟙 (M.obj i)) := by
+        dsimp [cι]
+        exact Classical.choose_spec ((hbij (M.obj i)).2
+          (colimit.ι (homIntoDiagram M (M.obj i)) i (𝟙 (M.obj i))))
+      letI := hWX
+      have ht := homInto_colimit_precompose_eq M s (cι i ≫ s) (𝟙 (M.obj i)) hi
+      apply (hbij X).1
+      change
+        colimit.ι (homIntoDiagram M X) i ((s ≫ cι i) ≫ s) =
+          colimit.ι (homIntoDiagram M X) i (𝟙 X ≫ s)
+      simpa [Category.assoc] using ht
+    have hce : IsEssentiallyConstantInd M c := by
+      refine ⟨i, s, ?_, ?_⟩
+      · simpa [c, hs]
+      · intro j
+        let hWj := hW (M.obj j)
+        letI := hWj
+        have hj :
+            colimit.ι (homIntoDiagram M (M.obj j)) i (cι j ≫ s) =
+              colimit.ι (homIntoDiagram M (M.obj j)) j (𝟙 (M.obj j)) := by
+          dsimp [cι]
+          exact Classical.choose_spec ((hbij (M.obj j)).2
+            (colimit.ι (homIntoDiagram M (M.obj j)) j (𝟙 (M.obj j))))
+        obtain ⟨k, f, g, hfg⟩ :=
+          (Types.FilteredColimit.colimit_eq_iff
+            (homIntoDiagram M (M.obj j))).1 hj
+        refine ⟨k, f, g, ?_⟩
+        simpa [c, homIntoDiagram, Category.assoc] using hfg.symm
+    have hc : ∀ W : C, ∃ hW' : HasColimit (homIntoDiagram M W),
+        letI : HasColimit (homIntoDiagram M W) := hW'
+        Function.Bijective (homIntoCoconeMap c W) := by
+      intro W
+      let hWW := hW W
+      letI := hWW
+      have hmap (j : I) (f : W ⟶ M.obj j) :
+          homIntoCoconeMap c W (colimit.ι (homIntoDiagram M W) j f) =
+            f ≫ cι j := by
+        change
+          (colimit.desc (homIntoDiagram M W) (homIntoCocone c W))
+              (colimit.ι (homIntoDiagram M W) j f) =
+            f ≫ cι j
+        exact congrArg (fun q => q f) (colimit.ι_desc (homIntoCocone c W) j)
+      have hleft (f : W ⟶ X) :
+          homIntoCoconeMap c W
+              (colimit.ι (homIntoDiagram M W) i (f ≫ s)) = f := by
+        rw [hmap]
+        simp [c, Category.assoc, hs]
+      have hright (x : colimit (homIntoDiagram M W)) :
+          colimit.ι (homIntoDiagram M W) i
+              (homIntoCoconeMap c W x ≫ s) = x := by
+        obtain ⟨j, f, rfl⟩ := Concrete.colimit_exists_rep (homIntoDiagram M W) x
+        let hWj := hW (M.obj j)
+        letI := hWj
+        have hj :
+            colimit.ι (homIntoDiagram M (M.obj j)) i (cι j ≫ s) =
+              colimit.ι (homIntoDiagram M (M.obj j)) j (𝟙 (M.obj j)) := by
+          dsimp [cι]
+          exact Classical.choose_spec ((hbij (M.obj j)).2
+            (colimit.ι (homIntoDiagram M (M.obj j)) j (𝟙 (M.obj j))))
+        have ht := homInto_colimit_precompose_eq M f (cι j ≫ s) (𝟙 (M.obj j)) hj
+        rw [hmap]
+        simpa [Category.assoc] using ht
+      refine ⟨hWW, ?_⟩
+      constructor
+      · intro x y hxy
+        calc
+          x = colimit.ι (homIntoDiagram M W) i
+              (homIntoCoconeMap c W x ≫ s) := (hright x).symm
+          _ = colimit.ι (homIntoDiagram M W) i
+              (homIntoCoconeMap c W y ≫ s) :=
+            congrArg (fun z => colimit.ι (homIntoDiagram M W) i (z ≫ s)) hxy
+          _ = y := hright y
+      · intro f
+        exact ⟨colimit.ι (homIntoDiagram M W) i (f ≫ s), hleft f⟩
+    exact ⟨c, isColimit_of_essentiallyConstantInd c hce, hc⟩
 
 def ProHomLimitCondition
     {I : Type u} [Category.{v} I] [IsCofiltered I]
@@ -1364,20 +2004,346 @@ theorem characterizeEssentiallyConstantInd
     {I : Type u} [Category.{v} I] [IsFiltered I]
     {C : Type u'} [Category.{v'} C]
     (M : I ⥤ C) :
-    (IsEssentiallyConstantIndDiagram M ↔ IndHomColimitCondition M) ∧
+      (IsEssentiallyConstantIndDiagram M ↔ IndHomColimitCondition M) ∧
       (IndHomColimitCondition M ↔ IndHomColimitAndIsColimitCondition M) ∧
       (IndHomColimitAndIsColimitCondition M ↔ IndHomSectionCondition M) := by
-  sorry
+  exact ⟨indHomColimitCondition_iff_essentiallyConstant M,
+    indHomColimitCondition_iff_isColimitCondition M,
+    indHomColimitAndIsColimitCondition_iff_section M⟩
 
 /-- The pro dual characterization by the three equivalent hom-set formulations. -/
+private noncomputable def homIntoDiagram_op_iso
+    {I : Type u} [Category.{v} I] [IsCofiltered I]
+    {C : Type u'} [Category.{v'} C]
+    (M : I ⥤ C) (W : C) :
+    homIntoDiagram M.op (Opposite.op W) ≅ homFromDiagram M W := by
+  refine NatIso.ofComponents
+    (fun i => (opEquiv (Opposite.op W) (Opposite.op (M.obj i.unop))).toIso) ?_
+  intro i j f
+  ext g
+  simp [homIntoDiagram, homFromDiagram, opEquiv]
+
+private noncomputable def homIntoCocone_op_iso_precompose
+    {I : Type u} [Category.{v} I] [IsCofiltered I]
+    {C : Type u'} [Category.{v'} C]
+    {M : I ⥤ C} (c : Cone M) (W : C) :
+    homIntoCocone c.op (Opposite.op W) ≅
+      (Cocone.precompose (homIntoDiagram_op_iso M W).hom).obj
+        (homFromCocone c W) := by
+  refine Cocone.ext (opEquiv (Opposite.op W) (Opposite.op c.pt)).toIso ?_
+  intro i
+  ext f
+  change c.π.app i.unop ≫ f.unop = c.π.app i.unop ≫ f.unop
+  rfl
+
+private theorem function_bijective_iff_postcomp_equiv
+    {X Y Z : Type*} (e : Y ≃ Z) (f : X → Y) :
+    Function.Bijective f ↔ Function.Bijective (e ∘ f) := by
+  constructor
+  · intro hf
+    exact e.bijective.comp hf
+  · intro hf
+    constructor
+    · intro x y hxy
+      apply hf.1
+      exact congrArg e hxy
+    · intro z
+      obtain ⟨x, hx⟩ := hf.2 (e z)
+      exact ⟨x, e.injective hx⟩
+
+private theorem function_bijective_iff_precomp_equiv
+    {X Y Z : Type*} (e : X ≃ Y) (f : Y → Z) :
+    Function.Bijective f ↔ Function.Bijective (f ∘ e) := by
+  constructor
+  · intro hf
+    exact hf.comp e.bijective
+  · intro hf
+    constructor
+    · intro x y hxy
+      have h' : (f ∘ e) (e.symm x) = (f ∘ e) (e.symm y) := by
+        simpa only [Function.comp_apply, e.apply_symm_apply] using hxy
+      exact e.symm.injective (hf.1 h')
+    · intro z
+      obtain ⟨x, hx⟩ := hf.2 z
+      exact ⟨e x, hx⟩
+
+private theorem homFromCoconeMap_bijective_iff_op
+    {I : Type u} [Category.{v} I] [IsCofiltered I]
+    {C : Type u'} [Category.{v'} C]
+    {M : I ⥤ C} (c : Cone M) (W : C)
+    [HasColimit (homIntoDiagram M.op (Opposite.op W))]
+    [HasColimit (homFromDiagram M W)] :
+    Function.Bijective (homFromCoconeMap c W) ↔
+      Function.Bijective (homIntoCoconeMap c.op (Opposite.op W)) := by
+  let α := homIntoDiagram_op_iso M W
+  let β := (opEquiv (Opposite.op W) (Opposite.op c.pt)).toIso
+  let s := homIntoCocone c.op (Opposite.op W)
+  let t := (Cocone.precompose α.hom).obj (homFromCocone c W)
+  let p : colimit (homIntoDiagram M.op (Opposite.op W)) ⟶
+      (Opposite.op W ⟶ Opposite.op c.pt) :=
+    TypeCat.ofHom (homIntoCoconeMap c.op (Opposite.op W))
+  let q : colimit (homFromDiagram M W) ⟶ (c.pt ⟶ W) :=
+    TypeCat.ofHom (homFromCoconeMap c W)
+  have hleg (i : Iᵒᵖ) : s.ι.app i ≫ β.hom = t.ι.app i := by
+    exact (homIntoCocone_op_iso_precompose c W).hom.w i
+  have hpost :
+      p ≫ β.hom = (HasColimit.isoOfNatIso α).hom ≫ q := by
+    apply colimit.hom_ext
+    intro i
+    change
+      (colimit.ι (homIntoDiagram M.op (Opposite.op W)) i ≫
+          colimit.desc (homIntoDiagram M.op (Opposite.op W)) s) ≫ β.hom =
+        (colimit.ι (homIntoDiagram M.op (Opposite.op W)) i ≫
+          (HasColimit.isoOfNatIso α).hom) ≫ q
+    rw [colimit.ι_desc, HasColimit.isoOfNatIso_ι_hom]
+    dsimp [q, homFromCoconeMap, t]
+    change
+      (homIntoCocone c.op (Opposite.op W)).ι.app i ≫ β.hom =
+        (α.hom.app i ≫ colimit.ι (homFromDiagram M W) i) ≫
+          colimit.desc (homFromDiagram M W) (homFromCocone c W)
+    simpa only [s, t, NatTrans.comp_app, Category.assoc, colimit.ι_desc,
+      Cocone.precompose_obj_ι] using hleg i
+  have hfun :
+      (β.toEquiv ∘ homIntoCoconeMap c.op (Opposite.op W)) =
+        (homFromCoconeMap c W) ∘ (HasColimit.isoOfNatIso α).toEquiv := by
+    funext x
+    have hx := congrArg (fun f => f x) hpost
+    change β.hom (homIntoCoconeMap c.op (Opposite.op W) x) =
+      homFromCoconeMap c W ((HasColimit.isoOfNatIso α).hom x) at hx
+    change β.toEquiv (homIntoCoconeMap c.op (Opposite.op W) x) =
+      homFromCoconeMap c W ((HasColimit.isoOfNatIso α).toEquiv x)
+    exact hx
+  constructor
+  · intro h
+    apply (function_bijective_iff_postcomp_equiv β.toEquiv _).mpr
+    rw [hfun]
+    exact (function_bijective_iff_precomp_equiv
+      (HasColimit.isoOfNatIso α).toEquiv _).mp h
+  · intro h
+    apply (function_bijective_iff_precomp_equiv
+      (HasColimit.isoOfNatIso α).toEquiv _).mpr
+    rw [← hfun]
+    exact (function_bijective_iff_postcomp_equiv β.toEquiv _).mp h
+
+private theorem proDiagram_iff_indDiagram_op
+    {I : Type u} [Category.{v} I] [IsCofiltered I]
+    {C : Type u'} [Category.{v'} C]
+    (M : I ⥤ C) :
+    IsEssentiallyConstantProDiagram M ↔
+      IsEssentiallyConstantIndDiagram M.op := by
+  constructor
+  · rintro ⟨c, hc⟩
+    rcases hc with ⟨i, r, hr, hfactor⟩
+    refine ⟨c.op, ?_⟩
+    refine ⟨Opposite.op i, r.op, ?_, ?_⟩
+    · simpa using congrArg Quiver.Hom.op hr
+    · intro j
+      rcases hfactor j.unop with ⟨k, f, g, hfg⟩
+      refine ⟨Opposite.op k, f.op, g.op, ?_⟩
+      simpa using congrArg Quiver.Hom.op hfg
+  · rintro ⟨d, hd⟩
+    let c := d.unop
+    refine ⟨c, ?_⟩
+    rcases hd with ⟨i, s, hs, hfactor⟩
+    refine ⟨i.unop, s.unop, ?_, ?_⟩
+    · dsimp [c]
+      simpa using congrArg Quiver.Hom.unop hs
+    · intro j
+      rcases hfactor (Opposite.op j) with ⟨k, f, g, hfg⟩
+      refine ⟨k.unop, f.unop, g.unop, ?_⟩
+      dsimp [c]
+      simpa using congrArg Quiver.Hom.unop hfg
+
+private theorem proHomLimitCondition_iff_indHomColimitCondition_op
+    {I : Type u} [Category.{v} I] [IsCofiltered I]
+    {C : Type u'} [Category.{v'} C]
+    (M : I ⥤ C) :
+    ProHomLimitCondition M ↔ IndHomColimitCondition M.op := by
+  constructor
+  · rintro ⟨c, hc⟩
+    refine ⟨c.op, ?_⟩
+    intro W'
+    let W := W'.unop
+    obtain ⟨hW, hbij⟩ := hc W
+    letI : HasColimit (homFromDiagram M W) := hW
+    let α := homIntoDiagram_op_iso M W
+    let hA : HasColimit (homIntoDiagram M.op (Opposite.op W)) :=
+      hasColimit_of_iso α
+    letI : HasColimit (homIntoDiagram M.op (Opposite.op W)) := hA
+    refine ⟨hA, ?_⟩
+    simpa [W] using (homFromCoconeMap_bijective_iff_op c W).mp hbij
+  · rintro ⟨d, hd⟩
+    let c := d.unop
+    refine ⟨c, ?_⟩
+    intro W
+    obtain ⟨hW, hbij⟩ := hd (Opposite.op W)
+    letI : HasColimit (homIntoDiagram M.op (Opposite.op W)) := hW
+    let α := homIntoDiagram_op_iso M W
+    let hB : HasColimit (homFromDiagram M W) :=
+      hasColimit_of_iso α.symm
+    letI : HasColimit (homFromDiagram M W) := hB
+    refine ⟨hB, ?_⟩
+    simpa [c] using (homFromCoconeMap_bijective_iff_op c W).mpr hbij
+
+private theorem proMapCondition_iff_indMapCondition_op
+    {I : Type u} [Category.{v} I] [IsCofiltered I]
+    {C : Type u'} [Category.{v'} C]
+    {M : I ⥤ C} (c : Cone M) :
+    (∀ W : C, ∃ hW : HasColimit (homFromDiagram M W),
+      letI : HasColimit (homFromDiagram M W) := hW
+      Function.Bijective (homFromCoconeMap c W)) ↔
+    (∀ W' : Cᵒᵖ, ∃ hW : HasColimit (homIntoDiagram M.op W'),
+      letI : HasColimit (homIntoDiagram M.op W') := hW
+      Function.Bijective (homIntoCoconeMap c.op W')) := by
+  constructor
+  · intro hc W'
+    let W := W'.unop
+    obtain ⟨hW, hbij⟩ := hc W
+    letI : HasColimit (homFromDiagram M W) := hW
+    let α := homIntoDiagram_op_iso M W
+    let hA : HasColimit (homIntoDiagram M.op (Opposite.op W)) :=
+      hasColimit_of_iso α
+    letI : HasColimit (homIntoDiagram M.op (Opposite.op W)) := hA
+    refine ⟨hA, ?_⟩
+    simpa [W] using (homFromCoconeMap_bijective_iff_op c W).mp hbij
+  · intro hc W
+    obtain ⟨hW, hbij⟩ := hc (Opposite.op W)
+    letI : HasColimit (homIntoDiagram M.op (Opposite.op W)) := hW
+    let α := homIntoDiagram_op_iso M W
+    let hB : HasColimit (homFromDiagram M W) :=
+      hasColimit_of_iso α.symm
+    letI : HasColimit (homFromDiagram M W) := hB
+    refine ⟨hB, ?_⟩
+    simpa using (homFromCoconeMap_bijective_iff_op c W).mpr hbij
+
+private theorem homFrom_colimit_postcompose_eq
+    {I : Type u} [Category.{v} I] [IsCofiltered I]
+    {C : Type u'} [Category.{v'} C]
+    (M : I ⥤ C) {W W' : C}
+    [HasColimit (homFromDiagram M W)]
+    [HasColimit (homFromDiagram M W')]
+    (f : W ⟶ W') {i j : I} (x : M.obj i ⟶ W) (y : M.obj j ⟶ W)
+    (h : colimit.ι (homFromDiagram M W) (Opposite.op i) x =
+      colimit.ι (homFromDiagram M W) (Opposite.op j) y) :
+    colimit.ι (homFromDiagram M W') (Opposite.op i) (x ≫ f) =
+      colimit.ι (homFromDiagram M W') (Opposite.op j) (y ≫ f) := by
+  apply (Types.FilteredColimit.colimit_eq_iff (homFromDiagram M W')).2
+  obtain ⟨k, p, q, hpq⟩ :=
+    (Types.FilteredColimit.colimit_eq_iff (homFromDiagram M W)).1 h
+  refine ⟨k, p, q, ?_⟩
+  simpa [homFromDiagram, Category.assoc] using congrArg (fun z => z ≫ f) hpq
+
+private theorem proSectionMap_bijective_iff_indSectionMap_op
+    {I : Type u} [Category.{v} I] [IsCofiltered I]
+    {C : Type u'} [Category.{v'} C]
+    {M : I ⥤ C} (X : C) (i : I) (r : M.obj i ⟶ X) (W : C)
+    [HasColimit (homIntoDiagram M.op (Opposite.op W))]
+    [HasColimit (homFromDiagram M W)] :
+    Function.Bijective
+        (fun f : X ⟶ W =>
+          colimit.ι (homFromDiagram M W) (Opposite.op i) (r ≫ f)) ↔
+      Function.Bijective
+        (fun g : Opposite.op W ⟶ Opposite.op X =>
+          colimit.ι (homIntoDiagram M.op (Opposite.op W)) (Opposite.op i)
+            (g ≫ r.op)) := by
+  let α := homIntoDiagram_op_iso M W
+  let e := (HasColimit.isoOfNatIso α).toEquiv
+  let input := (opEquiv (Opposite.op W) (Opposite.op X)).symm
+  let p : (X ⟶ W) → colimit (homFromDiagram M W) := fun f =>
+    colimit.ι (homFromDiagram M W) (Opposite.op i) (r ≫ f)
+  let g : (Opposite.op W ⟶ Opposite.op X) →
+      colimit (homIntoDiagram M.op (Opposite.op W)) := fun f =>
+    colimit.ι (homIntoDiagram M.op (Opposite.op W)) (Opposite.op i) (f ≫ r.op)
+  have hfun : p = (e ∘ g) ∘ input := by
+    funext f
+    have hι := HasColimit.isoOfNatIso_ι_hom α (Opposite.op i)
+    have hx := congrArg
+      (fun h => h ((input f) ≫ r.op)) hι
+    change e (g (input f)) = p f at hx
+    exact hx.symm
+  constructor
+  · intro hp
+    have hmid : Function.Bijective (e ∘ g) := by
+      apply (function_bijective_iff_precomp_equiv input _).mpr
+      rw [← hfun]
+      exact hp
+    exact (function_bijective_iff_postcomp_equiv e _).mpr hmid
+  · intro hg
+    have hmid : Function.Bijective (e ∘ g) :=
+      (function_bijective_iff_postcomp_equiv e _).mp hg
+    have hcomp := (function_bijective_iff_precomp_equiv input _).mp hmid
+    rw [← hfun] at hcomp
+    exact hcomp
+
+private theorem proHomSectionCondition_iff_indHomSectionCondition_op
+    {I : Type u} [Category.{v} I] [IsCofiltered I]
+    {C : Type u'} [Category.{v'} C]
+    (M : I ⥤ C) :
+    ProHomSectionCondition M ↔ IndHomSectionCondition M.op := by
+  constructor
+  · rintro ⟨X, i, r, hsec⟩
+    refine ⟨Opposite.op X, Opposite.op i, r.op, ?_⟩
+    intro W'
+    let W := W'.unop
+    obtain ⟨hW, hbij⟩ := hsec W
+    letI : HasColimit (homFromDiagram M W) := hW
+    let α := homIntoDiagram_op_iso M W
+    let hW' : HasColimit (homIntoDiagram M.op (Opposite.op W)) :=
+      hasColimit_of_iso α
+    letI : HasColimit (homIntoDiagram M.op (Opposite.op W)) := hW'
+    refine ⟨hW', ?_⟩
+    simpa [W] using
+      (proSectionMap_bijective_iff_indSectionMap_op X i r W).mp hbij
+  · rintro ⟨X, i, s, hsec⟩
+    refine ⟨X.unop, i.unop, s.unop, ?_⟩
+    intro W
+    obtain ⟨hW, hbij⟩ := hsec (Opposite.op W)
+    letI : HasColimit (homIntoDiagram M.op (Opposite.op W)) := hW
+    let α := homIntoDiagram_op_iso M W
+    let hW' : HasColimit (homFromDiagram M W) :=
+      hasColimit_of_iso α.symm
+    letI : HasColimit (homFromDiagram M W) := hW'
+    refine ⟨hW', ?_⟩
+    simpa using
+      (proSectionMap_bijective_iff_indSectionMap_op
+        X.unop i.unop s.unop W).mpr hbij
+
+private theorem proHomLimitAndIsLimitCondition_iff_indHomColimitAndIsColimitCondition_op
+    {I : Type u} [Category.{v} I] [IsCofiltered I]
+    {C : Type u'} [Category.{v'} C]
+    (M : I ⥤ C) :
+    ProHomLimitAndIsLimitCondition M ↔
+      IndHomColimitAndIsColimitCondition M.op := by
+  constructor
+  · rintro ⟨c, ⟨hc⟩, hmap⟩
+    refine ⟨c.op, ⟨hc.op⟩, ?_⟩
+    exact (proMapCondition_iff_indMapCondition_op c).mp hmap
+  · rintro ⟨d, ⟨hd⟩, hmap⟩
+    let c := d.unop
+    refine ⟨c, ⟨?_⟩, ?_⟩
+    · dsimp [c]
+      exact hd.unop
+    · dsimp [c]
+      exact (proMapCondition_iff_indMapCondition_op c).mpr hmap
+
 theorem characterizeEssentiallyConstantPro
     {I : Type u} [Category.{v} I] [IsCofiltered I]
     {C : Type u'} [Category.{v'} C]
     (M : I ⥤ C) :
-    (IsEssentiallyConstantProDiagram M ↔ ProHomLimitCondition M) ∧
+      (IsEssentiallyConstantProDiagram M ↔ ProHomLimitCondition M) ∧
       (ProHomLimitCondition M ↔ ProHomLimitAndIsLimitCondition M) ∧
       (ProHomLimitAndIsLimitCondition M ↔ ProHomSectionCondition M) := by
-  sorry
+  have hInd := characterizeEssentiallyConstantInd (M := M.op)
+  refine ⟨?_, ?_, ?_⟩
+  · exact (proDiagram_iff_indDiagram_op M).trans
+      (hInd.1.trans
+        (proHomLimitCondition_iff_indHomColimitCondition_op M).symm)
+  · exact (proHomLimitCondition_iff_indHomColimitCondition_op M).trans
+      (hInd.2.1.trans
+        (proHomLimitAndIsLimitCondition_iff_indHomColimitAndIsColimitCondition_op M).symm)
+  · exact (proHomLimitAndIsLimitCondition_iff_indHomColimitAndIsColimitCondition_op M).trans
+      (hInd.2.2.trans
+        (proHomSectionCondition_iff_indHomSectionCondition_op M).symm)
 
 /-! ## Cofinality, products, and initial functors -/
 

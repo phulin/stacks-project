@@ -60,7 +60,8 @@ noncomputable instance finiteFiltered_additiveCategory
     (C : Type u) [Category.{v} C] [Abelian C] :
     AdditiveCategory (FiniteFilteredObject C) :=
   { toPreadditive := inferInstance
-    toHasFiniteProducts := by sorry }
+    toHasFiniteProducts :=
+      (Classical.choice (finiteFiltered_additiveCategory_exists C)).toHasFiniteProducts }
 
 /-- Forget the filtration and retain the underlying object of `𝒜`. -/
 def filteredForgetful
@@ -137,11 +138,17 @@ abbrev FilteredHomotopyCategory
     (C : Type u) [Category.{v} C] [Abelian C] :=
   HomotopyCategory (FiniteFilteredObject C) (ComplexShape.up ℤ)
 
+theorem filteredHomotopyCategory_additiveCategory_exists
+    (C : Type u) [Category.{v} C] [Abelian C] :
+    Nonempty (AdditiveCategory (FilteredHomotopyCategory C)) := by
+  sorry
+
 noncomputable instance filteredHomotopyCategory_additiveCategory
     (C : Type u) [Category.{v} C] [Abelian C] :
     AdditiveCategory (FilteredHomotopyCategory C) :=
   { toPreadditive := inferInstance
-    toHasFiniteProducts := by sorry }
+    toHasFiniteProducts :=
+      (Classical.choice (filteredHomotopyCategory_additiveCategory_exists C)).toHasFiniteProducts }
 
 /-- The homotopy functor induced by the `p`th graded piece. -/
 noncomputable abbrev filteredGradedPieceHomotopyFunctor
@@ -163,6 +170,24 @@ noncomputable abbrev filteredForgetfulHomotopyFunctor
     FilteredHomotopyCategory C ⥤
       HomotopyCategory C (ComplexShape.up ℤ) :=
   (finiteForgetful C).mapHomotopyCategory (ComplexShape.up ℤ)
+
+theorem filteredGradedPieceHomotopyFunctor_is_exact
+    (C : Type u) [Category.{v} C] [Abelian C] (p : ℤ) :
+    (filteredGradedPieceHomotopyFunctor C p).IsTriangulated := by
+  exact HomotopyCategory.instIsTriangulatedIntUpMapHomotopyCategory
+    (finiteGradedPieceFunctor C p)
+
+theorem filteredAssociatedGradedHomotopyFunctor_is_exact
+    (C : Type u) [Category.{v} C] [Abelian C] :
+    (filteredAssociatedGradedHomotopyFunctor C).IsTriangulated := by
+  exact HomotopyCategory.instIsTriangulatedIntUpMapHomotopyCategory
+    (finiteAssociatedGraded C)
+
+theorem filteredForgetfulHomotopyFunctor_is_exact
+    (C : Type u) [Category.{v} C] [Abelian C] :
+    (filteredForgetfulHomotopyFunctor C).IsTriangulated := by
+  exact HomotopyCategory.instIsTriangulatedIntUpMapHomotopyCategory
+    (finiteForgetful C)
 
 /-- The degree-`n` homology of the associated graded complex. -/
 noncomputable abbrev filteredGradedHomologyFunctor
@@ -290,17 +315,6 @@ noncomputable instance filteredQuasiIso_compatible
 abbrev FilteredDerivedCategory
     (C : Type u) [Category.{v} C] [Abelian C] :=
   (filteredQuasiIso C).Localization
-
-noncomputable instance filteredDerivedCategory_hasShift
-    (C : Type u) [Category.{v} C] [Abelian C] :
-    HasShift (FilteredDerivedCategory C) ℤ := by
-  sorry
-
-noncomputable instance filteredDerivedCategory_all_shift_additive
-    (C : Type u) [Category.{v} C] [Abelian C] :
-    ∀ n : ℤ, (shiftFunctor (FilteredDerivedCategory C) n).Additive := by
-  intro n
-  sorry
 
 /-- The localization functor `K(Fil^f(𝒜)) ⥤ DF(𝒜)`. -/
 abbrev filteredLocalizationFunctor
@@ -590,7 +604,8 @@ noncomputable instance filteredKPlus_additiveCategory
     (C : Type u) [Category.{v} C] [Abelian C] :
     AdditiveCategory (FilteredKPlus C) :=
   { toPreadditive := inferInstance
-    toHasFiniteProducts := by sorry }
+    toHasFiniteProducts :=
+      (Classical.choice (filteredKPlus_additiveCategory_exists C)).toHasFiniteProducts }
 
 theorem filteredKMinus_additiveCategory_exists
     (C : Type u) [Category.{v} C] [Abelian C] :
@@ -601,7 +616,8 @@ noncomputable instance filteredKMinus_additiveCategory
     (C : Type u) [Category.{v} C] [Abelian C] :
     AdditiveCategory (FilteredKMinus C) :=
   { toPreadditive := inferInstance
-    toHasFiniteProducts := by sorry }
+    toHasFiniteProducts :=
+      (Classical.choice (filteredKMinus_additiveCategory_exists C)).toHasFiniteProducts }
 
 theorem filteredKBounded_additiveCategory_exists
     (C : Type u) [Category.{v} C] [Abelian C] :
@@ -612,22 +628,23 @@ noncomputable instance filteredKBounded_additiveCategory
     (C : Type u) [Category.{v} C] [Abelian C] :
     AdditiveCategory (FilteredKBounded C) :=
   { toPreadditive := inferInstance
-    toHasFiniteProducts := by sorry }
+    toHasFiniteProducts :=
+      (Classical.choice (filteredKBounded_additiveCategory_exists C)).toHasFiniteProducts }
 
 noncomputable instance filteredKPlus_shift_additive
     (C : Type u) [Category.{v} C] [Abelian C] (n : ℤ) :
     (shiftFunctor (FilteredKPlus C) n).Additive := by
-  sorry
+  infer_instance
 
 noncomputable instance filteredKMinus_shift_additive
     (C : Type u) [Category.{v} C] [Abelian C] (n : ℤ) :
     (shiftFunctor (FilteredKMinus C) n).Additive := by
-  sorry
+  infer_instance
 
 noncomputable instance filteredKBounded_shift_additive
     (C : Type u) [Category.{v} C] [Abelian C] (n : ℤ) :
     (shiftFunctor (FilteredKBounded C) n).Additive := by
-  sorry
+  infer_instance
 
 abbrev filteredKPlusInclusion
     (C : Type u) [Category.{v} C] [Abelian C] :

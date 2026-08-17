@@ -133,7 +133,7 @@ propositional input needed by the canonical pullback implementation.
 noncomputable instance presheafOfModules_pushforward_isRightAdjoint
     {X : TopCat.{v}} {O₁ O₂ : RingPresheaf.{w, v} X}
     (α : O₁ ⟶ O₂) :
-    (_root_.PresheafOfModules.pushforward
+    (_root_.PresheafOfModules.pushforward.{w}
       (F := 𝟭 (Opens X)) (asIdentityRingPresheafMorphism α)).IsRightAdjoint := by
   sorry
 

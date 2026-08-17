@@ -1,5 +1,7 @@
 [swarm]
 repo = "."
+sandbox = "workspace-write"
+bypass_approvals_and_sandbox = false
 
 [sources]
 roots = ["books"]

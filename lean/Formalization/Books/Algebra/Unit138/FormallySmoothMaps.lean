@@ -181,7 +181,7 @@ theorem differential_seq_formallySmooth
     [Algebra A B] [Algebra A C] [Algebra B C] [IsScalarTower A B C]
     (hAC : Algebra.FormallySmooth A C)
     (hBC : Function.Surjective (algebraMap B C)) :
-    extensionDifferentialSplitExact (surjectiveExtensionOver hBC) := by
+    extensionDifferentialSplitExact (surjectiveExtensionOver (A := A) hBC) := by
   sorry
 
 theorem surjective_of_composite_algebraMap
@@ -198,12 +198,12 @@ theorem application_NL_formallySmooth
     (hAB : Algebra.FormallySmooth A B) :
     ∃ d :
         (Formalization.Books.Algebra.Unit134.surjectiveExtension
-            (surjective_of_composite_algebraMap hAC)).Cotangent →ₗ[C]
+            (surjective_of_composite_algebraMap (B := B) hAC)).Cotangent →ₗ[C]
           C ⊗[B] Formalization.Books.Algebra.Unit131.ModuleOfDifferentials A B,
       IsSplitExactLinearSequence
         (Algebra.Extension.Cotangent.map
           (Formalization.Books.Algebra.Unit134.surjectiveExtensionHom hAC
-            (surjective_of_composite_algebraMap hAC))) d := by
+            (surjective_of_composite_algebraMap (B := B) hAC))) d := by
   sorry
 
 /-! ## Square-zero lifting and smoothness -/
@@ -230,9 +230,10 @@ theorem smooth_finite_type_descent
       Function.Injective (algebraMap R₀ R) ∧
         Algebra.FiniteType ℤ R₀ ∧ Algebra.Smooth R₀ S₀ ∧
           Nonempty (S ≃ₐ[R] R ⊗[R₀] S₀) := by
-  letI : Algebra R S := f.toAlgebra
-  letI : Algebra.Smooth R S := hf.toAlgebra
-  exact Algebra.Smooth.exists_finiteType ℤ R S
+  exact
+    letI : Algebra R S := f.toAlgebra
+    letI : Algebra.Smooth R S := hf.toAlgebra
+    Algebra.Smooth.exists_finiteType ℤ R S
 
 theorem smooth_descends_through_colimit
     {A B : Type u} [CommRing A] [CommRing B] (f : A →+* B)

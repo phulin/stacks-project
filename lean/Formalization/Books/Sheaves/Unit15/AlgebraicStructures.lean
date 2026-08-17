@@ -124,14 +124,16 @@ instances (and the corresponding Lie-algebra constructions).
 
 /-- Pointed sets, abelian groups, groups, monoids, rings, modules, and Lie
 algebras are types of algebraic structures in the sense above. -/
-theorem standardAlgebraicStructureTypes (R K : Type u) [Ring R] [Field K] :
+theorem standardAlgebraicStructureTypes :
     AlgebraicStructureType (Pointed.{u}) (forget Pointed) ∧
       AlgebraicStructureType (AddCommGrpCat.{u}) (forget AddCommGrpCat) ∧
       AlgebraicStructureType (GrpCat.{u}) (forget GrpCat) ∧
       AlgebraicStructureType (MonCat.{u}) (forget MonCat) ∧
       AlgebraicStructureType (RingCat.{u}) (forget RingCat) ∧
-      AlgebraicStructureType (ModuleCat.{u} R) (forget (ModuleCat.{u} R)) ∧
-      AlgebraicStructureType (LieAlgebraCat K) (forget (LieAlgebraCat K)) := by
+      (∀ (R : Type u) [Ring R],
+        AlgebraicStructureType (ModuleCat.{u} R) (forget (ModuleCat.{u} R))) ∧
+      (∀ (K : Type u) [Field K],
+        AlgebraicStructureType (LieAlgebraCat K) (forget (LieAlgebraCat K))) := by
   sorry
 
 /-! ## Consequences of the definition -/
@@ -159,8 +161,7 @@ structure AlgebraicStructureProperties
   /-- Equalizers are computed by equalizers of underlying sets. -/
   equalizers :
     ∀ {A B : C} (f g : A ⟶ B),
-      Nonempty
-        (F.obj (equalizer f g) ≅ equalizer (F.map f) (F.map g))
+      Nonempty (IsLimit (F.mapCone (limit.cone (parallelPair f g))))
   /-- Monomorphisms are exactly the morphisms injective on underlying sets. -/
   monomorphisms :
     ∀ {A B : C} (f : A ⟶ B),

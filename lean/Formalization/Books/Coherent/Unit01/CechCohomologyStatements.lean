@@ -65,7 +65,6 @@ structure StandardOpenCoverOfAffineOpen (X : Scheme.{u}) where
 theorem StandardOpenCover.iSup_basicOpen {Y : Scheme.{u}} {hY : IsAffine Y}
     (𝒰 : StandardOpenCover Y hY) :
     ⨆ i, 𝒰.basicOpen i = ⊤ := by
-  let := hY
   change (⨆ i, Y.basicOpen (𝒰.function i)) = ⊤
   rw [← iSup_range]
   exact iSup_basicOpen_of_span_eq_top (⊤ : Y.Opens) (Set.range 𝒰.function) 𝒰.span_eq_top
@@ -75,7 +74,7 @@ theorem StandardOpenCover.iSup_basicOpen {Y : Scheme.{u}} {hY : IsAffine Y}
 /-- Cohomology of a sheaf of modules, as an object of `AddCommGrpCat`. -/
 noncomputable def schemeCohomologyObject {Y : Scheme.{u}} (M : Y.Modules) (n : ℕ)
     [hY : CategoryTheory.HasExt.{u} Y.Modules] : AddCommGrpCat.{u} :=
-  (CategoryTheory.Abelian.extFunctorObj.{u, u, u + 1}
+  (@CategoryTheory.Abelian.extFunctorObj.{u, u, u + 1} Y.Modules _ _ hY
     (SheafOfModules.unit Y.ringCatSheaf) n).obj M
 
 /-- Cohomology of a sheaf of modules on an open subscheme. -/

@@ -77,7 +77,7 @@ theorem isCategoryFibredInSets_iff_isFibered_and_discreteFibres
   · rintro ⟨hfibred, hdiscrete⟩
     refine ⟨(fibredInGroupoids_iff_fibred_groupoid_fibres p).mpr ?_, hdiscrete⟩
     exact ⟨fun U => by
-      refine ⟨fun X Y f => ?_⟩
+      refine ⟨fun {X Y} f => ?_⟩
       have hf : f = eqToHom ((hdiscrete U).eq_of_hom f) :=
         @Subsingleton.elim _ ((hdiscrete U).subsingleton X Y) _ _
       rw [hf]
@@ -374,6 +374,7 @@ theorem setPresheaf_category_isFibredInGroupoids
     (setPresheafProjection F).IsFibredInGroupoids := by
   apply groupoidPresheafProjection_isFibredInGroupoids
   intro U
+  change IsGroupoid (Discrete (F.obj (Opposite.op U)))
   infer_instance
 
 /- The source's final conclusion combines the preceding groupoid and

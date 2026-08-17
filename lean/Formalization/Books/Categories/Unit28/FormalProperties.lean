@@ -184,14 +184,14 @@ theorem postwhisker_identity_functor
     {B : Type u₂} [Category.{v₂} B]
     {F G : A ⥤ B} (t : F ⟶ G) :
     Functor.whiskerRight t (𝟭 B) = t := by
-  sorry
+  rfl
 
 theorem prewhisker_identity_functor
     {A : Type u₁} [Category.{v₁} A]
     {B : Type u₂} [Category.{v₂} B]
     {F G : A ⥤ B} (t : F ⟶ G) :
     Functor.whiskerLeft (𝟭 A) t = t := by
-  sorry
+  rfl
 
 /- Iterated whiskering is stated with Mathlib's explicit associators.  This is
    the source's strict equality after using the canonical associativity of
@@ -310,7 +310,8 @@ theorem horizontalComposition_associative
     (r : H ⟶ H') (s : G ⟶ G') (t : F ⟶ F') :
     horizontalComposition r (horizontalComposition s t) =
       horizontalComposition (horizontalComposition r s) t := by
-  sorry
+  ext X
+  simp [horizontalComposition]
 
 theorem horizontalComposition_left_identity
     {A : Type u₁} [Category.{v₁} A]

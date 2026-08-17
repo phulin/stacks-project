@@ -63,9 +63,15 @@ alias tensor_product_simple_of_simple_algebras_left :=
 
 /-! ## Matrix algebras -/
 
-/-- The Morita equivalence between modules over `R` and over `R_n`. -/
-alias matrix_module_category_equivalence :=
-  Formalization.Books.Brauer.matrix_module_category_equivalence
+/-- The Morita equivalence between modules over `R` and over `R_n`.
+
+The source assumes `n ≥ 1`; the typeclass hypothesis supplies the canonical
+index needed by Mathlib's equivalence. -/
+def matrix_module_category_equivalence (R : Type*) (n : ℕ) [Ring R]
+    [NeZero n] :
+    ModuleCat R ≌ ModuleCat (Matrix (Fin n) (Fin n) R) :=
+  Formalization.Books.Brauer.matrix_module_category_equivalence R n
+    ⟨0, Nat.pos_of_ne_zero (NeZero.ne n)⟩
 
 /-- The order isomorphism between two-sided ideals of `R` and `R_n`. -/
 alias matrix_two_sided_ideal_order_iso :=
@@ -125,7 +131,7 @@ theorem finite_module_end_is_matrix_over_simple_module
     [AddCommGroup N] [Nontrivial N] [Module A N] [Module k N]
     [IsScalarTower k A N]
     [Module.Finite A N] :
-    ∃ n : ℕ,
+    ∃ (n : ℕ) (_ : NeZero n),
       Nonempty
           (Module.End A N ≃ₐ[k]
             Matrix (Fin n) (Fin n) (Module.End A M)) ∧

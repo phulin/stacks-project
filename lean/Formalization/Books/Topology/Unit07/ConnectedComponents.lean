@@ -1,5 +1,6 @@
 import Mathlib.Topology.Connected.LocallyConnected
 import Mathlib.Topology.Connected.TotallyDisconnected
+import Mathlib.Topology.Connected.CardComponents
 import Mathlib.Topology.Instances.RatLemmas
 
 /-!
@@ -100,20 +101,24 @@ theorem connectedComponent_subset_quasiComponent (x : X) :
   exact connectedComponent_subset_iInter_isClopen
 
 /- The following concrete carrier and basis encode the example in the
-   source.  `Sum.inl false`, `Sum.inl true`, and `Sum.inr n` play the roles of
-   `x`, `y`, and `z_n`, respectively. -/
-abbrev QuasiComponentExample := Bool ⊕ ℕ
+   source.  The named constructors play the roles of `x`, `y`, and `z_n`.
+   A separate carrier is used so this example's topology does not replace the
+   canonical topology on `Bool ⊕ ℕ`. -/
+inductive QuasiComponentExample where
+  | x
+  | y
+  | z (n : ℕ)
 
-def quasiComponentExampleX : QuasiComponentExample := Sum.inl false
+def quasiComponentExampleX : QuasiComponentExample := .x
 
-def quasiComponentExampleY : QuasiComponentExample := Sum.inl true
+def quasiComponentExampleY : QuasiComponentExample := .y
 
 def quasiComponentExampleTail (n : ℕ) : Set QuasiComponentExample :=
-  Set.range (fun k : ℕ => (Sum.inr (n + k) : QuasiComponentExample))
+  Set.range (fun k : ℕ => QuasiComponentExample.z (n + k))
 
 def quasiComponentExampleBasis : Set (Set QuasiComponentExample) :=
   Set.range (fun n : ℕ =>
-    ({(Sum.inr n : QuasiComponentExample)} : Set QuasiComponentExample)) ∪
+    ({QuasiComponentExample.z n} : Set QuasiComponentExample)) ∪
     Set.range (fun n : ℕ => insert quasiComponentExampleX (quasiComponentExampleTail n)) ∪
     Set.range (fun n : ℕ => insert quasiComponentExampleY (quasiComponentExampleTail n))
 
@@ -158,7 +163,7 @@ theorem finite_fibre_connectedComponents_at_most
     {f : X → Y} (hf : Continuous f) (hopen : IsOpenMap f)
     (hclosed : IsClosedMap f) {y : Y}
     (hy : (f ⁻¹' ({y} : Set Y)).Finite) :
-    Nonempty (ConnectedComponents X ↪ (f ⁻¹' ({y} : Set Y))) := by
+    ENat.card (ConnectedComponents X) ≤ (f ⁻¹' ({y} : Set Y)).encard := by
   sorry
 
 theorem finite_fibre_connectedComponent_properties
@@ -218,7 +223,7 @@ theorem locallyConnectedSpace_iff_connected_neighborhood_basis :
     LocallyConnectedSpace X ↔
       ∀ x : X,
         (𝓝 x).HasBasis
-          (fun s : Set X => x ∈ s ∧ IsConnected s) (fun s => s) := by
+          (fun s : Set X => s ∈ 𝓝 x ∧ IsConnected s) (fun s => s) := by
   sorry
 
 theorem isLocallyConnected_open [LocallyConnectedSpace X]
@@ -236,10 +241,9 @@ theorem isClopen_connectedComponent_of_locallyConnected
   exact isClopen_connectedComponent
 
 theorem isOpen_connectedComponent_of_open_subset
-    [LocallyConnectedSpace X] {U : Set X} (hU : IsOpen U) (x : U) :
-    IsOpen (connectedComponent x) := by
-  let _ : LocallyConnectedSpace U := hU.locallyConnectedSpace
-  exact isOpen_connectedComponent
+    [LocallyConnectedSpace X] {U : Set X} (hU : IsOpen U) (x : X) :
+    IsOpen (connectedComponentIn U x) := by
+  exact hU.connectedComponentIn
 
 theorem locallyConnected_open_connected_neighborhood_basis
     [LocallyConnectedSpace X] (x : X) :

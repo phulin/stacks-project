@@ -1,4 +1,3 @@
-import Formalization.Books.Fields.Unit18.FiniteFields
 import Mathlib.FieldTheory.PrimitiveElement
 
 /-!

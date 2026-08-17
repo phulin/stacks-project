@@ -108,7 +108,24 @@ theorem constructibleTopology_is_coarsest_for_constructible_clopen
     (∀ E : Set X, @IsConstructible X topologyX E →
       @IsOpen X t E ∧ @IsClosed X t E) →
           t ≤ @constructibleTopology X topologyX := by
-  sorry
+  constructor
+  · intro E hE
+    exact isConstructible_isOpen_isClosed_constructibleTopology hE
+  · intro t ht
+    change t ≤ @TopologicalSpace.generateFrom X (@constructibleTopologySubbasis X topologyX)
+    apply le_generateFrom
+    rintro s (hs | hs)
+    · have hsc : @IsConstructible X topologyX s :=
+        @IsCompact.isConstructible X topologyX s
+          (inferInstance : @QuasiSeparatedSpace X topologyX) hs.2 hs.1
+      exact show @IsOpen X t s from (ht s hsc).1
+    · have hopen : @IsOpen X topologyX sᶜ :=
+        @IsClosed.isOpen_compl X topologyX s hs.1
+      have hsc : @IsConstructible X topologyX sᶜ :=
+        @IsCompact.isConstructible X topologyX sᶜ
+          (inferInstance : @QuasiSeparatedSpace X topologyX) hs.2 hopen
+      exact show @IsOpen X t s from
+        (ht s (@IsConstructible.of_compl X topologyX s hsc)).1
 
 /-- Open subsets of the constructible topology are unions of constructible
 subsets, as in the source. -/

@@ -201,7 +201,9 @@ theorem splitFibredCategory_isSplit
     {C : Type uC} [Category.{vC} C]
     (F : Cᵒᵖ ⥤ Cat.{vS, uS}) :
     IsSplitFibredCategory (splitFibredProjection F) := by
-  sorry
+  refine ⟨splitFibredProjection_isFibered F, F, 𝟭 _, 𝟭 _, rfl, rfl, ?_, ?_⟩
+  · exact ⟨Iso.refl _, rfl, by intro x; simp⟩
+  · exact ⟨Iso.refl _, rfl, by intro x; simp⟩
 
 /-! ## The splitting criterion -/
 
@@ -286,7 +288,8 @@ theorem strictificationReindexObject_comp
     strictificationReindexObject
         (strictificationReindexObject A g) h =
       strictificationReindexObject A (h ≫ g) := by
-  sorry
+  cases A
+  simp [strictificationReindexObject, Category.assoc]
 
 /-- The chosen pullback object occurring in a strictification object. -/
 def strictificationPullback
@@ -361,10 +364,14 @@ def strictificationProjection
   map f := StrictificationHom.base f
   map_id := by
     intro A
-    sorry
+    change eqToHom _ ≫ p.map (𝟙 _) ≫ eqToHom _ = _
+    simp
   map_comp := by
     intro A B D f g
-    sorry
+    change eqToHom _ ≫ p.map (f.hom ≫ g.hom) ≫ eqToHom _ =
+      (eqToHom _ ≫ p.map f.hom ≫ eqToHom _) ≫
+        (eqToHom _ ≫ p.map g.hom ≫ eqToHom _)
+    simp [Functor.map_comp, Category.assoc]
 
 theorem strictificationProjection_isFibered
     {S C : Type*} [Category* S] [Category* C]

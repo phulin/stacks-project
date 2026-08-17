@@ -58,13 +58,44 @@ theorem rightIndexRestriction_obj {V' V : D} (u : C ⥤ D) (g : V' ⟶ V)
 @[simp]
 theorem rightIndexRestriction_id (u : C ⥤ D) (V : D) :
     rightIndexRestriction u (𝟙 V) = 𝟭 (rightIndexCategory u V) := by
-  sorry
+  exact CategoryTheory.Functor.ext_of_iso (Comma.mapRightId _ _)
+    (by intro X; simp [rightIndexRestriction])
 
 theorem rightIndexRestriction_comp {V₀ V₁ V₂ : D} (u : C ⥤ D)
     (g : V₀ ⟶ V₁) (h : V₁ ⟶ V₂) :
     rightIndexRestriction u (g ≫ h) =
       rightIndexRestriction u g ⋙ rightIndexRestriction u h := by
-  sorry
+  let e : rightIndexRestriction u (g ≫ h) ≅
+      rightIndexRestriction u g ⋙ rightIndexRestriction u h :=
+    NatIso.ofComponents
+      (fun X => CostructuredArrow.isoMk (Iso.refl X.left) (by
+        dsimp [rightIndexRestriction, CostructuredArrow.map, Comma.mapRight]
+        change u.map (𝟙 X.left) ≫ ((X.hom ≫ g) ≫ h) =
+          X.hom ≫ (g ≫ h)
+        simp [Category.assoc]))
+      (by
+        intro X Y k
+        apply CostructuredArrow.hom_ext
+        simp [CostructuredArrow.isoMk, rightIndexRestriction,
+          CostructuredArrow.map, Comma.mapRight])
+  let hobj : ∀ X : rightIndexCategory u V₀,
+      (rightIndexRestriction u (g ≫ h)).obj X =
+        (rightIndexRestriction u g ⋙ rightIndexRestriction u h).obj X := by
+    intro X
+    exact CostructuredArrow.map_comp
+  refine CategoryTheory.Functor.ext_of_iso e hobj (happ := fun X => ?_)
+  apply CostructuredArrow.ext
+  change (e.hom.app X).left = (eqToHom (hobj X)).left
+  rw [CostructuredArrow.eqToHom_left]
+  dsimp [e, NatIso.ofComponents, CostructuredArrow.isoMk, Comma.isoMk]
+  have hleft :
+      ((rightIndexRestriction u (g ≫ h)).obj X).left =
+        ((rightIndexRestriction u g ⋙ rightIndexRestriction u h).obj X).left := rfl
+  change (𝟙 X.left) = eqToHom hleft
+  have hh := eqToHom_heq_id_dom
+    (((rightIndexRestriction u (g ≫ h)).obj X).left)
+    (((rightIndexRestriction u g ⋙ rightIndexRestriction u h).obj X).left) hleft
+  exact (eq_of_heq hh).symm
 
 /-! ## The diagrams and the right pushforward -/
 
@@ -84,7 +115,7 @@ theorem rightIndexPresheaf_restrict {V' V : D} (u : C ⥤ D) (F : Presheaf C)
     (g : V' ⟶ V) :
     (rightIndexRestriction u g).op ⋙ rightIndexPresheaf u F V =
       rightIndexPresheaf u F V' := by
-  sorry
+  rfl
 
 /-- The structured-arrow index used by Mathlib's pointwise right Kan extension. -/
 abbrev rightKanIndexCategory (u : C ⥤ D) (V : D) :=
@@ -104,7 +135,7 @@ theorem rightIndexPresheaf_under_equivalence (u : C ⥤ D) (F : Presheaf C)
     (V : D) :
     (rightIndexEquivalence u V).functor ⋙ rightKanIndexDiagram u F V =
       rightIndexPresheaf u F V := by
-  sorry
+  rfl
 
 /- The source suppresses the size conditions ensuring these right Kan
    extensions.  They are explicit here, as in the preceding chapter's left
@@ -166,7 +197,28 @@ theorem rightPushforwardProjection_compatible (u : C ⥤ D) (F : Presheaf C)
     F.map β.left.op
         (rightPushforwardProjection u F V Y.left Y.hom s) =
       rightPushforwardProjection u F V X.left X.hom s := by
-  sorry
+  let Y' : rightKanIndexCategory u V :=
+    StructuredArrow.mk (Y := op Y.left) Y.hom.op
+  let X' : rightKanIndexCategory u V :=
+    StructuredArrow.mk (Y := op X.left) X.hom.op
+  let β' : Y' ⟶ X' := StructuredArrow.homMk β.left.op (by
+    change Y.hom.op ≫ (u.map β.left).op = X.hom.op
+    exact congrArg Quiver.Hom.op (rightIndexMorphism_condition u V β))
+  have hπ := (limit.cone (rightKanIndexDiagram u F V)).π.naturality β'
+  simp [Functor.const_obj_map] at hπ
+  have hπ' := congrArg
+    (fun k => (rightPushforwardValueLimitIso u F V).hom ≫ k) hπ
+  convert (ConcreteCategory.congr_hom hπ'.symm s) using 1
+  · rfl
+  · simp only [rightPushforwardProjection, rightKanIndexDiagram, β', X', Y']
+    exact heq_of_eq (congrArg (ConcreteCategory.hom (F.map β.left.op))
+      (ConcreteCategory.comp_apply (rightPushforwardValueLimitIso u F V).hom
+        (limit.π (rightKanIndexDiagram u F V) Y') s))
+  · change ((rightPushforwardValueLimitIso u F V).hom ≫
+        limit.π (rightKanIndexDiagram u F V) X') s ≍
+      (limit.π (rightKanIndexDiagram u F V) X')
+        ((rightPushforwardValueLimitIso u F V).hom s)
+    exact heq_of_eq (ConcreteCategory.comp_apply _ _ _)
 
 /- The following map is the source's correspondence
    `s ↦ (c(ψ)(s))_(U,ψ)`. -/
@@ -184,7 +236,8 @@ theorem rightPushforwardProjectionFamily_compatible (u : C ⥤ D)
       F.map β.left.op
           (rightPushforwardProjectionFamily u F V s Y) =
         rightPushforwardProjectionFamily u F V s X := by
-  sorry
+  intro X Y β
+  exact rightPushforwardProjection_compatible u F V s β
 
 /- The map is made into the subtype of compatible families using the
    preceding compatibility theorem; the underlying construction is real. -/
@@ -200,7 +253,59 @@ theorem rightPushforwardProjectionFamilyMap_bijective (u : C ⥤ D)
     (F : Presheaf C) (V : D) [HasRightPushforward u]
     [HasPointwiseRightPushforward u] :
     Function.Bijective (rightPushforwardProjectionFamilyMap u F V) := by
-  sorry
+  let eSec :=
+    Types.isLimitEquivSections (limit.isLimit (rightKanIndexDiagram u F V))
+  let eFam :
+      (rightKanIndexDiagram u F V).sections ≃
+        rightPushforwardCompatibleFamily u F V :=
+    { toFun := fun s =>
+        ⟨fun X => s.1 (StructuredArrow.mk (Y := op X.left) X.hom.op), by
+          intro X Y β
+          let X' : rightKanIndexCategory u V :=
+            StructuredArrow.mk (Y := op X.left) X.hom.op
+          let Y' : rightKanIndexCategory u V :=
+            StructuredArrow.mk (Y := op Y.left) Y.hom.op
+          let β' : Y' ⟶ X' := StructuredArrow.homMk β.left.op (by
+            change Y.hom.op ≫ (u.map β.left).op = X.hom.op
+            exact congrArg Quiver.Hom.op (rightIndexMorphism_condition u V β))
+          change F.map β'.right (s.1 Y') = s.1 X'
+          exact s.2 β'
+      ⟩
+      invFun := fun t =>
+        ⟨fun Q => t.1 (((rightIndexEquivalence u V).inverse.obj Q).unop), by
+          intro Q R β
+          let A_Q : rightIndexCategory u V :=
+            ((rightIndexEquivalence u V).inverse.obj Q).unop
+          let A_R : rightIndexCategory u V :=
+            ((rightIndexEquivalence u V).inverse.obj R).unop
+          let β' : A_R ⟶ A_Q :=
+            ((rightIndexEquivalence u V).inverse.map β).unop
+          change F.map β'.left.op (t.1 A_Q) = t.1 A_R
+          exact t.2 β'
+      ⟩
+      left_inv := by
+        intro s
+        apply Subtype.ext
+        funext Q
+        rfl
+      right_inv := by
+        intro t
+        apply Subtype.ext
+        funext X
+        rfl }
+  let e :
+      (rightPushforwardPresheaf u F).obj (op V) ≃
+        rightPushforwardCompatibleFamily u F V :=
+    (Iso.toEquiv (rightPushforwardValueLimitIso u F V)).trans
+      (eSec.trans eFam)
+  have hmap :
+      rightPushforwardProjectionFamilyMap u F V = e := by
+    funext s
+    apply Subtype.ext
+    funext X
+    rfl
+  rw [hmap]
+  exact ⟨e.injective, e.surjective⟩
 
 /-- The limit value is canonically the set of compatible collections. -/
 noncomputable def rightPushforwardValue_compatibleFamily_equiv (u : C ⥤ D)
@@ -245,7 +350,14 @@ theorem rightPushforwardRecoverMap_eq_projection (u : C ⥤ D) (F : Presheaf C)
     (U : C) [HasRightPushforward u] [HasPointwiseRightPushforward u] :
     rightPushforwardRecoverMap u F U =
       rightPushforwardProjection u F (u.obj U) U (𝟙 (u.obj U)) := by
-  sorry
+  change ((Functor.ranCounit u.op).app F).app (op U) =
+    (rightPushforwardValueLimitIso u F (u.obj U)).hom ≫
+      limit.π (rightKanIndexDiagram u F (u.obj U))
+        (StructuredArrow.mk (𝟙 (u.obj U)).op)
+  let : Functor.HasPointwiseRightKanExtension u.op F :=
+    (inferInstance : HasPointwiseRightPushforward u) F
+  simp [rightPushforwardValueLimitIso, rightPushforwardPresheaf,
+    rightPushforwardPresheafFunctor]
 
 /-- Recovery maps commute with restriction in the source presheaf. -/
 theorem rightPushforwardRecoverMap_naturality (u : C ⥤ D) (F : Presheaf C)
@@ -253,7 +365,7 @@ theorem rightPushforwardRecoverMap_naturality (u : C ⥤ D) (F : Presheaf C)
     rightPushforwardRestrictionMap u F (u.map f) ≫
         rightPushforwardRecoverMap u F V =
       rightPushforwardRecoverMap u F U ≫ F.map f.op := by
-  sorry
+  exact ((Functor.ranCounit u.op).app F).naturality f.op
 
 /-- A map of presheaves is sent to the corresponding map of right pushforwards. -/
 noncomputable def rightPushforwardPresheafMap (u : C ⥤ D)
@@ -302,7 +414,25 @@ def adjunctionIndexInitialObject {u : C ⥤ D} {v : D ⥤ C} (h : u ⊣ v)
 theorem adjunctionIndexInitialObject_isInitial
     {u : C ⥤ D} {v : D ⥤ C} (h : u ⊣ v) (U : C) :
     Nonempty (IsInitial (adjunctionIndexInitialObject h U)) := by
-  sorry
+  refine ⟨IsInitial.ofUniqueHom (fun X =>
+    StructuredArrow.homMk ((h.homEquiv U X.right).symm X.hom) (by
+      change h.unit.app U ≫ v.map ((h.homEquiv U X.right).symm X.hom) = X.hom
+      calc
+        h.unit.app U ≫ v.map ((h.homEquiv U X.right).symm X.hom) =
+            (h.homEquiv U X.right) ((h.homEquiv U X.right).symm X.hom) :=
+          (h.homEquiv_unit U X.right
+            ((h.homEquiv U X.right).symm X.hom)).symm
+        _ = X.hom := (h.homEquiv U X.right).apply_symm_apply X.hom)) ?_⟩
+  intro X f
+  apply StructuredArrow.hom_ext
+  change f.right = (h.homEquiv U X.right).symm X.hom
+  apply (h.homEquiv U X.right).injective
+  calc
+    (h.homEquiv U X.right) f.right =
+        h.unit.app U ≫ v.map f.right :=
+      h.homEquiv_unit U X.right f.right
+    _ = X.hom := by simpa [adjunctionIndexInitialObject] using f.w
+    _ = (h.homEquiv U X.right) ((h.homEquiv U X.right).symm X.hom) := by simp
 
 /-- The final object of `_V^u I` supplied by the counit of `u ⊣ v`. -/
 def adjunctionRightIndexFinalObject {u : C ⥤ D} {v : D ⥤ C} (h : u ⊣ v)
@@ -312,7 +442,22 @@ def adjunctionRightIndexFinalObject {u : C ⥤ D} {v : D ⥤ C} (h : u ⊣ v)
 theorem adjunctionRightIndexFinalObject_isTerminal
     {u : C ⥤ D} {v : D ⥤ C} (h : u ⊣ v) (V : D) :
     Nonempty (IsTerminal (adjunctionRightIndexFinalObject h V)) := by
-  sorry
+  refine ⟨IsTerminal.ofUniqueHom (fun X =>
+    CostructuredArrow.homMk (h.homEquiv X.left V X.hom) (by
+      change u.map (h.homEquiv X.left V X.hom) ≫ h.counit.app V = X.hom
+      exact (h.homEquiv_counit X.left V
+        (h.homEquiv X.left V X.hom)).symm.trans
+        ((h.homEquiv X.left V).symm_apply_apply X.hom))) ?_⟩
+  intro X f
+  apply CostructuredArrow.hom_ext
+  change f.left = h.homEquiv X.left V X.hom
+  apply (h.homEquiv X.left V).symm.injective
+  calc
+    (h.homEquiv X.left V).symm f.left =
+        u.map f.left ≫ h.counit.app V :=
+      h.homEquiv_counit X.left V f.left
+    _ = X.hom := by simpa [adjunctionRightIndexFinalObject] using f.w
+    _ = (h.homEquiv X.left V).symm (h.homEquiv X.left V X.hom) := by simp
 
 /-- The right pushforward is canonically the restriction along `v`. -/
 noncomputable def rightPushforwardIsoPullbackOfAdjunction

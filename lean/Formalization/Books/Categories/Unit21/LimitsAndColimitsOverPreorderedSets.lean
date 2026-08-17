@@ -277,8 +277,10 @@ theorem directed_replacement_hasColimit_of_comp
 noncomputable def directed_replacement_colimit_iso
     {I : Type u} {J : Type v} [Category I] [Category J]
     {C : Type u'} [Category.{v'} C] (F : J ⥤ I) [Functor.Final F]
-    (M : I ⥤ C) [HasColimit M] :
+    (M : I ⥤ C) [HasColimit (F ⋙ M)] :
+    letI : HasColimit M := Functor.Final.hasColimit_of_comp F
     colimit (F ⋙ M) ≅ colimit M := by
+  letI : HasColimit M := Functor.Final.hasColimit_of_comp F
   exact Functor.Final.colimitIso F M
 
 theorem directed_replacement_hasLimit_of_comp
@@ -290,8 +292,10 @@ theorem directed_replacement_hasLimit_of_comp
 noncomputable def directed_replacement_limit_iso
     {I : Type u} {J : Type v} [Category I] [Category J]
     {C : Type u'} [Category.{v'} C] (F : J ⥤ I) [Functor.Final F]
-    (M : Iᵒᵖ ⥤ C) [HasLimit M] :
+    (M : Iᵒᵖ ⥤ C) [HasLimit (F.op ⋙ M)] :
+    letI : HasLimit M := Functor.Initial.hasLimit_of_comp F.op
     limit M ≅ limit (F.op ⋙ M) := by
+  letI : HasLimit M := Functor.Initial.hasLimit_of_comp F.op
   exact (Functor.Initial.limitIso F.op M).symm
 
 /-! ### Finite directed indices and the idempotent example -/

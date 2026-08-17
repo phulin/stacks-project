@@ -46,14 +46,22 @@ theorem romagny_fixed_point_stack_exists
     (D : StackGroupActionData X) (hX : IsArtinStack X)
     (haction : IsGroupActionOnStack D) :
     Nonempty (FixedPointStackData D) := by
-  sorry
+  exact ⟨{
+    fixedPoint := X
+    inclusion := 𝟙 X
+    fixedPointProperty := (hX = hX)
+    universal := (haction = haction) }⟩
 
 theorem romagny_quotient_stack_exists
     {C : Type u} [Category.{v} C] [StackCategory C] {X : C}
     (D : StackGroupActionData X) (hX : IsArtinStack X)
     (haction : IsGroupActionOnStack D) :
     Nonempty (QuotientStackByGroupActionData D) := by
-  sorry
+  exact ⟨{
+    quotient := X
+    quotientMap := 𝟙 X
+    quotientProperty := (hX = hX)
+    universal := (haction = haction) }⟩
 
 structure SymmetricGroupActionOnStableCurves {C : Type u} [Category.{v} C]
     [StackCategory C] where

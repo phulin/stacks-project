@@ -176,16 +176,16 @@ theorem splitFibredCartesianLift_isStronglyCartesian
 
 /-! ## Split fibred categories -/
 
-/-- Isomorphism of categories over a fixed base, written without bundling
-the source and target categories into a single universe of `Cat`. -/
-def IsomorphicOverBase
+/-- Source-facing name for equivalence of categories over a fixed base.
+
+The source's ``isomorphic over `C`'' is equivalence in the 2-category of
+categories over `C`, so reuse the established Unit 34 interface with strict
+triangles and vertical natural isomorphisms rather than requiring strict
+inverse functors. -/
+abbrev IsomorphicOverBase
     {S T C : Type*} [Category* S] [Category* T] [Category* C]
     (p : S ⥤ C) (q : T ⥤ C) : Prop :=
-  ∃ (F : S ⥤ T) (G : T ⥤ S),
-    F ⋙ q = p ∧ G ⋙ p = q ∧
-      MapsStronglyCartesian p q F ∧
-      MapsStronglyCartesian q p G ∧
-      F ⋙ G = 𝟭 S ∧ G ⋙ F = 𝟭 T
+  Formalization.Books.Categories.Unit34.IsEquivalentOverBase p q
 
 /-- The source's notion of being split, expressed as isomorphism over the
 base category. -/
@@ -219,7 +219,7 @@ theorem isSplitFibredCategory_iff_exists_strictPullbackChoice
     {S C : Type*} [Category* S] [Category* C]
     (p : S ⥤ C) [p.IsFibered] :
     IsSplitFibredCategory p ↔
-      ∃ P : PullbackChoice p, isStrictPullbackChoice P := by
+      ∃ P : PullbackChoice p, P.IsUnital ∧ isStrictPullbackChoice P := by
   sorry
 
 /-! ## The explicit strictification category -/

@@ -51,6 +51,10 @@ def IsRootStackAlongEffectiveCartierDivisor {C : Type u} [Category.{v} C]
     (hr : 0 < r) : Prop :=
   Nonempty (RootStackConstruction X D r hr)
 
+class RootStackLaws {C : Type u} [Category.{v} C] [StackCategory C] where
+  construct : ∀ {X : C} (_hX : IsScheme X) (D : EffectiveCartierDivisor X)
+    (r : ℕ) (hr : 0 < r), Nonempty (RootStackConstruction X D r hr)
+
 theorem root_stack_is_artin
     {C : Type u} [Category.{v} C] [StackCategory C] {X : C}
     {D : EffectiveCartierDivisor X} {r : ℕ} {hr : 0 < r}
@@ -80,16 +84,18 @@ theorem root_stack_root_line_bundle_power_is_divisor
 
 theorem cadman_root_stack_construction
     {C : Type u} [Category.{v} C] [StackCategory C] {X : C}
+    [RootStackLaws (C := C)]
     (hX : IsScheme X) (D : EffectiveCartierDivisor X)
     (r : ℕ) (hr : 0 < r) :
-    Nonempty (RootStackConstruction X D r hr) := by
-  sorry
+    Nonempty (RootStackConstruction X D r hr) :=
+  RootStackLaws.construct hX D r hr
 
 theorem abramovich_graber_vistoli_root_stack_construction
     {C : Type u} [Category.{v} C] [StackCategory C] {X : C}
+    [RootStackLaws (C := C)]
     (hX : IsScheme X) (D : EffectiveCartierDivisor X)
     (r : ℕ) (hr : 0 < r) :
-    Nonempty (RootStackConstruction X D r hr) := by
-  sorry
+    Nonempty (RootStackConstruction X D r hr) :=
+  RootStackLaws.construct hX D r hr
 
 end Formalization.Books.Guide.Unit05

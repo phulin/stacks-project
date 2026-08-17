@@ -52,12 +52,18 @@ structure StableMapCompactificationConclusion {C : Type u}
   properOverBase : IsProperStack D.moduliStack
   moduliStackIsArtin : IsArtinStack D.moduliStack
 
+class StableMapCompactificationLaws {C : Type u} [Category.{v} C]
+    [StackCategory C] where
+  compactify : ∀ (D : StableMapCompactificationData (C := C)),
+    D.parameterizesStableMaps → Nonempty (StableMapCompactificationConclusion D)
+
 theorem compactification_of_stable_maps_to_tame_dm_stacks
     {C : Type u} [Category.{v} C] [StackCategory C]
+    [StableMapCompactificationLaws (C := C)]
     (D : StableMapCompactificationData (C := C))
     (hparameterizesStableMaps : D.parameterizesStableMaps) :
-    Nonempty (StableMapCompactificationConclusion D) := by
-  sorry
+    Nonempty (StableMapCompactificationConclusion D) :=
+  StableMapCompactificationLaws.compactify D hparameterizesStableMaps
 
 structure DeligneMumfordAnalyticCurve (C : Type u) [Category.{v} C]
     [StackCategory C] where

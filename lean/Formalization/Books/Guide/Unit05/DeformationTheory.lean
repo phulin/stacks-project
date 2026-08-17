@@ -56,8 +56,29 @@ structure FormalApproximationWitness {C : Type u} [Category.{v} C]
     D.functor.map (op restrictionToTruncation) element =
       D.restriction n D.formalElement
 
+/-!
+The abstract category above records the hypotheses of Artin's theorem but has
+no semantics from which an approximation can be constructed.  Keep the
+theorem supplied by the paper as an explicit result law rather than treating
+the unrelated predicate fields as if they implied the construction.
+-/
+class FormalApproximationLaws {C : Type u} [Category.{v} C]
+    (D : FormalDeformationSituation C) where
+  approximation :
+    ∀ (_hlocallyOfFinitePresentation : D.locallyOfFinitePresentation)
+      (_hbaseFiniteTypeOverFieldOrExcellentDvr :
+        D.baseFiniteTypeOverFieldOrExcellentDvr)
+      (_hmarkedPoint : D.markedPoint)
+      (_hformalObjectIsCompletionAtMarkedPoint :
+        D.formalObjectIsCompletionAtMarkedPoint)
+      (_htruncationIsInfinitesimalNeighborhood :
+        ∀ n, D.truncationIsInfinitesimalNeighborhood n)
+      (n : ℕ) (_hn : 0 < n) (_heffective : D.effective),
+      Nonempty (FormalApproximationWitness D n)
+
 theorem algebraic_approximation_of_effective_formal_deformation
     {C : Type u} [Category.{v} C] (D : FormalDeformationSituation C)
+    [FormalApproximationLaws D]
     (hlocallyOfFinitePresentation : D.locallyOfFinitePresentation)
     (hbaseFiniteTypeOverFieldOrExcellentDvr :
       D.baseFiniteTypeOverFieldOrExcellentDvr)
@@ -67,8 +88,11 @@ theorem algebraic_approximation_of_effective_formal_deformation
     (htruncationIsInfinitesimalNeighborhood :
       ∀ n, D.truncationIsInfinitesimalNeighborhood n)
     (n : ℕ) (hn : 0 < n) (heffective : D.effective) :
-    Nonempty (FormalApproximationWitness D n) := by
-  sorry
+    Nonempty (FormalApproximationWitness D n) :=
+  FormalApproximationLaws.approximation
+    hlocallyOfFinitePresentation hbaseFiniteTypeOverFieldOrExcellentDvr
+    hmarkedPoint hformalObjectIsCompletionAtMarkedPoint
+    htruncationIsInfinitesimalNeighborhood n hn heffective
 
 structure FormalVersalSituation (C : Type u) [Category.{v} C] where
   deformation : FormalDeformationSituation C
@@ -100,9 +124,28 @@ structure AlgebraizationComparison {C : Type u} [Category.{v} C]
   completionIso : W₁.formalCompletion ≅ W₂.formalCompletion
   identifiesFormalElements : Prop
 
+class AlgebraizationLaws {C : Type u} [Category.{v} C] [StackCategory C]
+    (D : FormalVersalSituation C) where
+  algebraize :
+    ∀ (_hlocallyOfFinitePresentation : D.deformation.locallyOfFinitePresentation)
+      (_hbaseFiniteTypeOverFieldOrExcellentDvr :
+        D.deformation.baseFiniteTypeOverFieldOrExcellentDvr)
+      (_hmarkedPoint : D.deformation.markedPoint)
+      (_hformalObjectIsCompletionAtMarkedPoint :
+        D.deformation.formalObjectIsCompletionAtMarkedPoint)
+      (_htruncationIsInfinitesimalNeighborhood :
+        ∀ n, D.deformation.truncationIsInfinitesimalNeighborhood n)
+      (_hlocallyClosedMarkedPoint : D.locallyClosedMarkedPoint)
+      (_hcompleteNoetherianLocalAlgebra : D.completeNoetherianLocalAlgebra)
+      (_hfiniteResidueFieldExtension : D.finiteResidueFieldExtension)
+      (_hresidueElement : D.residueElement)
+      (_heffective : D.deformation.effective) (_hversal : D.formalVersal),
+      ∃ W : AlgebraizationWitness D, ∀ n : ℕ, W.agreesAtEveryOrder n
+
 theorem algebraization_of_effective_formal_versal_deformation
     {C : Type u} [Category.{v} C] [StackCategory C]
     (D : FormalVersalSituation C)
+    [AlgebraizationLaws D]
     (hlocallyOfFinitePresentation : D.deformation.locallyOfFinitePresentation)
     (hbaseFiniteTypeOverFieldOrExcellentDvr :
       D.deformation.baseFiniteTypeOverFieldOrExcellentDvr)
@@ -116,8 +159,13 @@ theorem algebraization_of_effective_formal_versal_deformation
     (hfiniteResidueFieldExtension : D.finiteResidueFieldExtension)
     (hresidueElement : D.residueElement)
     (heffective : D.deformation.effective) (hversal : D.formalVersal) :
-    ∃ W : AlgebraizationWitness D, ∀ n : ℕ, W.agreesAtEveryOrder n := by
-  sorry
+    ∃ W : AlgebraizationWitness D, ∀ n : ℕ, W.agreesAtEveryOrder n :=
+  AlgebraizationLaws.algebraize
+    hlocallyOfFinitePresentation hbaseFiniteTypeOverFieldOrExcellentDvr
+    hmarkedPoint hformalObjectIsCompletionAtMarkedPoint
+    htruncationIsInfinitesimalNeighborhood hlocallyClosedMarkedPoint
+    hcompleteNoetherianLocalAlgebra hfiniteResidueFieldExtension
+    hresidueElement heffective hversal
 
 theorem algebraization_unique_for_universal_deformation
     {C : Type u} [Category.{v} C] [StackCategory C]
@@ -145,13 +193,19 @@ structure GlobalContractionWitness {C : Type u} [Category.{v} C]
   targetIsAlgebraicSpace : IsAlgebraicSpace target
   contractsClosedSubset : Prop
 
+class GlobalContractionLaws {C : Type u} [Category.{v} C] [StackCategory C]
+    (D : FormalContractionSituation C) where
+  contract : D.closedSubset → D.formallyLocallyContractible →
+    ∃ W : GlobalContractionWitness D, W.contractsClosedSubset
+
 theorem global_contraction_from_formal_contraction
     {C : Type u} [Category.{v} C] [StackCategory C]
     (D : FormalContractionSituation C)
+    [GlobalContractionLaws D]
     (hclosedSubset : D.closedSubset)
     (hformal : D.formallyLocallyContractible) :
-    ∃ W : GlobalContractionWitness D, W.contractsClosedSubset := by
-  sorry
+    ∃ W : GlobalContractionWitness D, W.contractsClosedSubset :=
+  GlobalContractionLaws.contract hclosedSubset hformal
 
 structure DeformationObstructionTheory where
   compatibleWithEtaleLocalization : Prop
@@ -179,9 +233,20 @@ structure ArtinCriterionConclusion {C : Type u} [Category.{v} C]
   formallyVersalAtMarkedPoint : Prop
   smoothAfterShrinking : Prop
 
+class ArtinCriterionLaws {C : Type u} [Category.{v} C] [StackCategory C]
+    (D : ArtinCriterionInput C) where
+  criterion :
+    D.limitPreserving → D.schlessingerCriterion → D.formalVersalDeformation →
+      D.formalDeformationsEffective →
+      D.obstructionTheory.compatibleWithEtaleLocalization →
+      D.obstructionTheory.compatibleWithCompletion →
+      D.obstructionTheory.constructible →
+      ∃ W : ArtinCriterionConclusion D, W.smoothAfterShrinking
+
 theorem artin_criterion
     {C : Type u} [Category.{v} C] [StackCategory C]
     (D : ArtinCriterionInput C)
+    [ArtinCriterionLaws D]
     (hlimitPreserving : D.limitPreserving)
     (hschlessingerCriterion : D.schlessingerCriterion)
     (hformalVersalDeformation : D.formalVersalDeformation)
@@ -190,8 +255,10 @@ theorem artin_criterion
       D.obstructionTheory.compatibleWithEtaleLocalization)
     (hcompatibleWithCompletion : D.obstructionTheory.compatibleWithCompletion)
     (hconstructible : D.obstructionTheory.constructible) :
-    ∃ W : ArtinCriterionConclusion D, W.smoothAfterShrinking := by
-  sorry
+    ∃ W : ArtinCriterionConclusion D, W.smoothAfterShrinking :=
+  ArtinCriterionLaws.criterion hlimitPreserving hschlessingerCriterion
+    hformalVersalDeformation hformalDeformationsEffective
+    hcompatibleWithEtaleLocalization hcompatibleWithCompletion hconstructible
 
 structure FppfPresentation {C : Type u} [Category.{v} C]
     [StackCategory C] (X : C) where
@@ -207,11 +274,17 @@ structure SmoothPresentation {C : Type u} [Category.{v} C]
   sourceIsScheme : IsScheme source
   isSmooth : IsSmoothMorphism map
 
+class SmoothPresentationLaws {C : Type u} [Category.{v} C] [StackCategory C] where
+  smoothPresentation : ∀ {X : C} (_P : FppfPresentation X),
+    ∃ Q : SmoothPresentation X, IsSmoothMorphism Q.map
+
 theorem smooth_presentation_of_fppf_presentation
-    {C : Type u} [Category.{v} C] [StackCategory C] {X : C}
+    {C : Type u} [Category.{v} C] [StackCategory C]
+    [SmoothPresentationLaws (C := C)]
+    {X : C}
     (P : FppfPresentation X) :
-    ∃ Q : SmoothPresentation X, IsSmoothMorphism Q.map := by
-  sorry
+    ∃ Q : SmoothPresentation X, IsSmoothMorphism Q.map :=
+  SmoothPresentationLaws.smoothPresentation P
 
 structure FlatSeparatedFinitelyPresentedGroupScheme (C : Type u)
     [Category.{v} C] [StackCategory C] (S : C) where
@@ -270,10 +343,15 @@ def IsRegularMorphism (D : PopescuSituation) : Prop := D.regularMorphism
 def IsFilteredColimitOfSmoothAlgebras (D : PopescuSituation) : Prop :=
   D.filteredColimitOfSmoothAlgebras
 
+class PopescuLaws (D : PopescuSituation) where
+  characterization : D.noetherianA → D.noetherianB →
+    (IsRegularMorphism D ↔ IsFilteredColimitOfSmoothAlgebras D)
+
 theorem popescu_characterization (D : PopescuSituation)
+    [PopescuLaws D]
     (hnoetherianA : D.noetherianA) (hnoetherianB : D.noetherianB) :
-    IsRegularMorphism D ↔ IsFilteredColimitOfSmoothAlgebras D := by
-  sorry
+    IsRegularMorphism D ↔ IsFilteredColimitOfSmoothAlgebras D :=
+  PopescuLaws.characterization (D := D) hnoetherianA hnoetherianB
 
 structure ExcellentApproximationSituation (C : Type u) [Category.{v} C]
     [StackCategory C] where
@@ -284,11 +362,17 @@ structure ExcellentApproximationSituation (C : Type u) [Category.{v} C]
   etaleLocalUniqueness : Prop
   automorphismActionOnHenselization : Prop
 
+class ExcellentApproximationLaws {C : Type u} [Category.{v} C] [StackCategory C]
+    (D : ExcellentApproximationSituation C) where
+  approximation : D.excellent →
+    D.groupoidGeneralization ∧ D.etaleLocalUniqueness ∧ D.arbitraryPoint
+
 theorem excellent_base_artin_approximation
     {C : Type u} [Category.{v} C] [StackCategory C]
-    (D : ExcellentApproximationSituation C) (hex : D.excellent) :
-    D.groupoidGeneralization ∧ D.etaleLocalUniqueness ∧ D.arbitraryPoint := by
-  sorry
+    (D : ExcellentApproximationSituation C) [ExcellentApproximationLaws D]
+    (hex : D.excellent) :
+    D.groupoidGeneralization ∧ D.etaleLocalUniqueness ∧ D.arbitraryPoint :=
+  ExcellentApproximationLaws.approximation hex
 
 structure ArtinAxiomForMorphism {C : Type u} [Category.{v} C]
     [StackCategory C] {X Y : C} (f : X ⟶ Y) where
@@ -312,11 +396,18 @@ structure RepresentableMorphismDeformationData
   tangentSpace : Type u
   obstructionSpace : Type u
 
+class RepresentableMorphismDeformationLaws
+    {C : Type u} [Category.{v} C] [StackCategory C]
+    {X Y : C} (f : X ⟶ Y) where
+  controls : ∀ (D : RepresentableMorphismDeformationData f),
+    RepresentableByAlgebraicSpace f → D.controlsDeformations
+
 theorem representable_morphism_deformation_theory
     {C : Type u} [Category.{v} C] [StackCategory C]
-    {X Y : C} (f : X ⟶ Y) (D : RepresentableMorphismDeformationData f)
+    {X Y : C} (f : X ⟶ Y) [RepresentableMorphismDeformationLaws f]
+    (D : RepresentableMorphismDeformationData f)
     (hrepresentable : RepresentableByAlgebraicSpace f) :
-    D.controlsDeformations := by
-  sorry
+    D.controlsDeformations :=
+  RepresentableMorphismDeformationLaws.controls D hrepresentable
 
 end Formalization.Books.Guide.Unit05

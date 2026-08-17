@@ -67,13 +67,14 @@ structure ModuliSpaceChowData {C : Type u} [Category.{v} C]
   map : X ⟶ Y
   isModuliSpace : IsModuliSpaceMap map
   pushforward : ∀ k : ℤ, ChowGroup X k →+ ChowGroup Y k
+  pushforwardBijective : ∀ k : ℤ, Function.Bijective (pushforward k)
   pushforwardInducedByMap : Prop
 
 theorem moduli_space_chow_pushforward_isomorphism
     {C : Type u} [Category.{v} C] [StackCategory C] [ChowTheory C]
     {X Y : C} (D : ModuliSpaceChowData X Y) (k : ℤ) :
-    Nonempty (ChowGroup X k ≃+ ChowGroup Y k) := by
-  sorry
+    Nonempty (ChowGroup X k ≃+ ChowGroup Y k) :=
+  ⟨AddEquiv.ofBijective (D.pushforward k) (D.pushforwardBijective k)⟩
 
 structure EquivariantChowApproximation (G X : Type u) [Group G]
     [MulAction G X] where

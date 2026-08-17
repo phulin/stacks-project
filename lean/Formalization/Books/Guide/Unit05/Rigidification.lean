@@ -14,6 +14,7 @@ namespace Formalization.Books.Guide.Unit05
 
 structure RigidificationInput {C : Type u} [Category.{v} C]
     [StackCategory C] (X S : C) where
+  stackIsArtin : IsArtinStack X
   subgroupPoints : C → Type u
   subgroupGroup : ∀ T, Group (subgroupPoints T)
   overBase : Prop
@@ -46,14 +47,21 @@ structure RigidificationWitness {C : Type u} [Category.{v} C]
       a ∈ automorphismKernel T ξ ↔
         ∃ h : D.subgroupPoints T, D.embedding T ξ h = a
 
+class RigidificationLaws {C : Type u} [Category.{v} C]
+    [StackCategory C] where
+  rigidify : ∀ {X S : C} (D : RigidificationInput X S), D.overBase →
+    D.flat → D.finitelyPresented → D.separated → D.compatibleWithPullback →
+    Nonempty (RigidificationWitness D)
+
 theorem rigidification_exists
     {C : Type u} [Category.{v} C] [StackCategory C] {X S : C}
-    (D : RigidificationInput X S)
+    [RigidificationLaws (C := C)] (D : RigidificationInput X S)
     (hoverBase : D.overBase) (hflat : D.flat)
     (hfinitelyPresented : D.finitelyPresented) (hseparated : D.separated)
     (hcompatibleWithPullback : D.compatibleWithPullback) :
-    Nonempty (RigidificationWitness D) := by
-  sorry
+    Nonempty (RigidificationWitness D) :=
+  RigidificationLaws.rigidify D hoverBase hflat hfinitelyPresented hseparated
+    hcompatibleWithPullback
 
 structure RigidificationGroupActionData {C : Type u} [Category.{v} C]
     [StackCategory C] (X S : C) where

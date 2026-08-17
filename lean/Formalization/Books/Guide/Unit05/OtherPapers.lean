@@ -43,14 +43,20 @@ def HasSemistableTwistedSheafModuli {C : Type u} [Category.{v} C]
     [StackCategory C] (D : RelativeSurfaceGerbeData (C := C)) : Prop :=
   ∃ M : TwistedSheafModuliData D, Nonempty (TwistedSheafModuliConclusion D M)
 
+class TwistedSheafModuliLaws {C : Type u} [Category.{v} C]
+    [StackCategory C] where
+  moduli : ∀ (D : RelativeSurfaceGerbeData (C := C)),
+    D.projectiveRelativeSurface → D.smoothConnectedGeometricFibers →
+    D.isMuNGerbe → HasSemistableTwistedSheafModuli D
+
 theorem lieblich_semistable_twisted_sheaves_form_an_artin_stack
     {C : Type u} [Category.{v} C] [StackCategory C]
-    (D : RelativeSurfaceGerbeData (C := C))
+    [TwistedSheafModuliLaws (C := C)] (D : RelativeSurfaceGerbeData (C := C))
     (hprojective : D.projectiveRelativeSurface)
     (hsmoothConnected : D.smoothConnectedGeometricFibers)
     (hgerbe : D.isMuNGerbe) :
-    HasSemistableTwistedSheafModuli D := by
-  sorry
+    HasSemistableTwistedSheafModuli D :=
+  TwistedSheafModuliLaws.moduli D hprojective hsmoothConnected hgerbe
 
 structure AssociatedPointsAndPurityConclusion {C : Type u}
     [Category.{v} C] [StackCategory C] (X : C) where

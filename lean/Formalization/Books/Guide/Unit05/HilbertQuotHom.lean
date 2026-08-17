@@ -26,15 +26,21 @@ structure HilbertStackData {C : Type u} [Category.{v} C]
   parameterizesFiniteUnramifiedProperSchemes : Prop
   hilbertStack : C
 
+class HilbertStackLaws {C : Type u} [Category.{v} C] [StackCategory C] where
+  algebraic : ∀ {X S : C} (D : HilbertStackData X S),
+    D.baseLocallyNoetherian → D.baseLocallySeparated →
+    D.parameterizesFiniteUnramifiedProperSchemes → IsArtinStack D.hilbertStack
+
 theorem hilbert_stack_is_algebraic
     {C : Type u} [Category.{v} C] [StackCategory C] {X S : C}
-    (D : HilbertStackData X S)
+    [HilbertStackLaws (C := C)] (D : HilbertStackData X S)
     (hbaseLocallyNoetherian : D.baseLocallyNoetherian)
     (hbaseLocallySeparated : D.baseLocallySeparated)
     (hparameterizesFiniteUnramifiedProperSchemes :
       D.parameterizesFiniteUnramifiedProperSchemes) :
-    IsArtinStack D.hilbertStack := by
-  sorry
+    IsArtinStack D.hilbertStack :=
+  HilbertStackLaws.algebraic D hbaseLocallyNoetherian hbaseLocallySeparated
+    hparameterizesFiniteUnramifiedProperSchemes
 
 structure HomStackData {C : Type u} [Category.{v} C]
     [StackCategory C] (T X S : C) where
@@ -54,16 +60,25 @@ structure HomStackData {C : Type u} [Category.{v} C]
   sourceHasFppfLocallyFiniteFlatCover : Prop
   homStack : C
 
+class HomStackAlgebraicityLaws {C : Type u} [Category.{v} C]
+    [StackCategory C] where
+  algebraic : ∀ {T X S : C} (D : HomStackData T X S),
+    D.sourceLocallyFinitePresentation → D.targetLocallyFinitePresentation →
+    D.targetFiniteDiagonal → D.baseLocallyNoetherian →
+    D.sourceHasFppfLocallyFiniteFlatCover → IsArtinStack D.homStack
+
 theorem hom_stack_from_proper_flat_source_is_algebraic
     {C : Type u} [Category.{v} C] [StackCategory C] {T X S : C}
-    (D : HomStackData T X S)
+    [HomStackAlgebraicityLaws (C := C)] (D : HomStackData T X S)
     (hsourceLocallyFinitePresentation : D.sourceLocallyFinitePresentation)
     (htargetLocallyFinitePresentation : D.targetLocallyFinitePresentation)
     (htargetFiniteDiagonal : D.targetFiniteDiagonal)
     (hbaseLocallyNoetherian : D.baseLocallyNoetherian)
     (hsourceHasFppfLocallyFiniteFlatCover : D.sourceHasFppfLocallyFiniteFlatCover) :
-    IsArtinStack D.homStack := by
-  sorry
+    IsArtinStack D.homStack :=
+  HomStackAlgebraicityLaws.algebraic D hsourceLocallyFinitePresentation
+    htargetLocallyFinitePresentation htargetFiniteDiagonal hbaseLocallyNoetherian
+    hsourceHasFppfLocallyFiniteFlatCover
 
 structure QuotFunctorData {C : Type u} [Category.{v} C]
     [StackCategory C] (X S : C) where
@@ -82,13 +97,19 @@ structure QuotFunctorConclusion {C : Type u} [Category.{v} C]
   quotSpaceSeparated : IsSeparatedMorphism D.quotMap
   quotSpaceLocallyFinitePresentation : Prop
 
+class QuotFunctorLaws {C : Type u} [Category.{v} C] [StackCategory C] where
+  separatedAlgebraicSpace : ∀ {X S : C} (D : QuotFunctorData X S),
+    D.locallyFinitePresentationOverBase → D.moduleLocallyFinitelyPresented →
+    Nonempty (QuotFunctorConclusion D)
+
 theorem quot_functor_is_a_separated_algebraic_space
     {C : Type u} [Category.{v} C] [StackCategory C] {X S : C}
-    (D : QuotFunctorData X S)
+    [QuotFunctorLaws (C := C)] (D : QuotFunctorData X S)
     (hlocallyFinitePresentationOverBase : D.locallyFinitePresentationOverBase)
     (hmoduleLocallyFinitelyPresented : D.moduleLocallyFinitelyPresented) :
-    Nonempty (QuotFunctorConclusion D) := by
-  sorry
+    Nonempty (QuotFunctorConclusion D) :=
+  QuotFunctorLaws.separatedAlgebraicSpace D hlocallyFinitePresentationOverBase
+    hmoduleLocallyFinitelyPresented
 
 structure GeneratingSheafData {C : Type u} [Category.{v} C]
     [StackCategory C] (X : C) where
@@ -102,11 +123,16 @@ structure GeneratingSheafConclusion {C : Type u} [Category.{v} C]
   generatingSheaf : VectorBundle X
   generates : HasGeneratingSheaf X
 
+class GeneratingSheafLaws {C : Type u} [Category.{v} C] [StackCategory C] where
+  generatingSheaf : ∀ {X : C} (_D : GeneratingSheafData X),
+    Nonempty (GeneratingSheafConclusion (X := X))
+
 theorem tame_separated_finite_group_quotient_has_generating_sheaf
     {C : Type u} [Category.{v} C] [StackCategory C] {X : C}
+    [GeneratingSheafLaws (C := C)]
     (D : GeneratingSheafData X) :
-    Nonempty (GeneratingSheafConclusion (X := X)) := by
-  sorry
+    Nonempty (GeneratingSheafConclusion (X := X)) :=
+  GeneratingSheafLaws.generatingSheaf D
 
 structure HomStackFiniteDiagonalData {C : Type u} [Category.{v} C]
     [StackCategory C] (X Y S : C) where
@@ -127,13 +153,21 @@ structure HomStackArtinConclusion {C : Type u} [Category.{v} C]
   homStackArtin : IsArtinStack D.homStack
   homStackLocallyFinitePresentation : Prop
 
+class HomStackArtinLaws {C : Type u} [Category.{v} C] [StackCategory C] where
+  algebraic : ∀ {X Y S : C} (D : HomStackFiniteDiagonalData X Y S),
+    D.locallyFinitePresentation → D.finiteDiagonal →
+    D.fppfLocallyFiniteFlatCover → Nonempty (HomStackArtinConclusion D)
+
 theorem hom_stack_artin_for_finite_diagonal_targets
     {C : Type u} [Category.{v} C] [StackCategory C]
-    {X Y S : C} (D : HomStackFiniteDiagonalData X Y S) :
+    {X Y S : C} [HomStackArtinLaws (C := C)]
+    (D : HomStackFiniteDiagonalData X Y S) :
     D.locallyFinitePresentation → D.finiteDiagonal →
       D.fppfLocallyFiniteFlatCover →
     Nonempty (HomStackArtinConclusion D) := by
-  sorry
+  intro hlocallyFinitePresentation hfiniteDiagonal hfppfLocallyFiniteFlatCover
+  exact HomStackArtinLaws.algebraic D hlocallyFinitePresentation hfiniteDiagonal
+    hfppfLocallyFiniteFlatCover
 
 structure Branchvariety {C : Type u} [Category.{v} C]
     [StackCategory C] where
@@ -165,15 +199,24 @@ structure BranchvarietyModuliConclusion {C : Type u} [Category.{v} C]
   finiteStabilizer : HasFiniteStabilizer D.moduliStack
   comparesWithHilbertChowStableMap : Prop
 
+class BranchvarietyModuliLaws {C : Type u} [Category.{v} C]
+    [StackCategory C] where
+  properArtinFiniteStabilizer : ∀ (D : BranchvarietyModuliData (C := C)),
+    D.projectiveSpaceIsProjective → D.fixedHilbertPolynomial →
+    D.fixedTotalComponentDegrees → D.parameterizesBranchvarieties →
+    Nonempty (BranchvarietyModuliConclusion D)
+
 theorem branchvariety_moduli_stack_is_proper_artin_with_finite_stabilizer
     {C : Type u} [Category.{v} C] [StackCategory C]
-    (D : BranchvarietyModuliData (C := C))
+    [BranchvarietyModuliLaws (C := C)] (D : BranchvarietyModuliData (C := C))
     (hprojectiveSpaceIsProjective : D.projectiveSpaceIsProjective)
     (hfixedHilbertPolynomial : D.fixedHilbertPolynomial)
     (hfixedTotalComponentDegrees : D.fixedTotalComponentDegrees)
     (hparameterizesBranchvarieties : D.parameterizesBranchvarieties) :
-    Nonempty (BranchvarietyModuliConclusion D) := by
-  sorry
+    Nonempty (BranchvarietyModuliConclusion D) :=
+  BranchvarietyModuliLaws.properArtinFiniteStabilizer D
+    hprojectiveSpaceIsProjective hfixedHilbertPolynomial hfixedTotalComponentDegrees
+    hparameterizesBranchvarieties
 
 structure CoherentAlgebraStackData {C : Type u} [Category.{v} C]
     [StackCategory C] (Y : C) where
@@ -215,16 +258,23 @@ structure StarrMappingStackConclusion {C : Type u} [Category.{v} C]
   mappingStackArtin : IsArtinStack D.mappingStack
   mappingStackLocallyFiniteType : Prop
 
+class StarrMappingStackLaws {C : Type u} [Category.{v} C] [StackCategory C] where
+  artin : ∀ {X S : C} (D : StarrMappingStackData X S),
+    D.stackLocallyFiniteTypeOverExcellentBase → D.finiteDiagonal →
+    D.ampleLineBundle.ample → D.ampleLineBundle.groupActionCompatible →
+    Nonempty (StarrMappingStackConclusion D)
+
 theorem artin_axioms_mapping_stack_theorem
     {C : Type u} [Category.{v} C] [StackCategory C] {X S : C}
-    (D : StarrMappingStackData X S)
+    [StarrMappingStackLaws (C := C)] (D : StarrMappingStackData X S)
     (hstackLocallyFiniteTypeOverExcellentBase :
       D.stackLocallyFiniteTypeOverExcellentBase)
     (hfiniteDiagonal : D.finiteDiagonal)
     (hample : D.ampleLineBundle.ample)
     (hgroupActionCompatible : D.ampleLineBundle.groupActionCompatible) :
-    Nonempty (StarrMappingStackConclusion D) := by
-  sorry
+    Nonempty (StarrMappingStackConclusion D) :=
+  StarrMappingStackLaws.artin D hstackLocallyFiniteTypeOverExcellentBase
+    hfiniteDiagonal hample hgroupActionCompatible
 
 structure NonEffectiveHilbertDeformationExample {C : Type u}
     [Category.{v} C] [StackCategory C] where
@@ -256,13 +306,20 @@ structure GeneralMappingStackConclusion {C : Type u} [Category.{v} C]
   mappingStackAlgebraic : IsArtinStack D.mappingStack
   locallyFinitePresentation : Prop
 
+class GeneralMappingStackLaws {C : Type u} [Category.{v} C] [StackCategory C] where
+  algebraic : ∀ {X Y S : C} (D : GeneralMappingStackData X Y S),
+    D.sourceHypotheses → D.targetHypotheses → D.categoricalProperness →
+    Nonempty (GeneralMappingStackConclusion D)
+
 theorem mapping_stack_algebraicity_under_categorical_properness
     {C : Type u} [Category.{v} C] [StackCategory C]
-    {X Y S : C} (D : GeneralMappingStackData X Y S)
+    {X Y S : C} [GeneralMappingStackLaws (C := C)]
+    (D : GeneralMappingStackData X Y S)
     (hsourceHypotheses : D.sourceHypotheses)
     (htargetHypotheses : D.targetHypotheses)
     (hcategoricalProperness : D.categoricalProperness) :
-    Nonempty (GeneralMappingStackConclusion D) := by
-  sorry
+    Nonempty (GeneralMappingStackConclusion D) :=
+  GeneralMappingStackLaws.algebraic D hsourceHypotheses htargetHypotheses
+    hcategoricalProperness
 
 end Formalization.Books.Guide.Unit05

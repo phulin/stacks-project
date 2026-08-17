@@ -43,10 +43,8 @@ theorem isDiscrete_iff_every_morphism_is_eqToHom
     IsDiscrete C ↔
       ∀ {X Y : C} (f : X ⟶ Y), ∃ h : X = Y, f = eqToHom h := by
   constructor
-  · intro h
-    letI : IsDiscrete C := h
-    intro X Y f
-    exact ⟨IsDiscrete.eq_of_hom f, Subsingleton.elim _ _⟩
+  · intro h X Y f
+    exact ⟨h.eq_of_hom f, @Subsingleton.elim _ (h.subsingleton X Y) _ _⟩
   · intro h
     refine ⟨?_, ?_⟩
     · intro X Y
@@ -55,9 +53,6 @@ theorem isDiscrete_iff_every_morphism_is_eqToHom
       rcases h f with ⟨hf, hff⟩
       rcases h g with ⟨hg, hgg⟩
       rw [hff, hgg]
-      cases hf
-      cases hg
-      rfl
     · intro X Y f
       exact (h f).choose
 

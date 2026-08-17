@@ -44,12 +44,16 @@ theorem exists_maximal_ideal (R : Type u) [CommRing R] [Nontrivial R] :
 
 theorem exists_minimal_prime (R : Type u) [CommRing R] [Nontrivial R] :
     ∃ p : PrimeSpectrum R, p.asIdeal ∈ minimalPrimes R := by
-  sorry
+  obtain ⟨p, hp⟩ := Ideal.nonempty_minimalPrimes (I := (⊥ : Ideal R)) bot_ne_top
+  exact ⟨⟨p, hp.isPrime⟩, hp⟩
 
 theorem exists_minimal_prime_between {R : Type u} [CommRing R]
     (I : Ideal R) (p : PrimeSpectrum R) (hIp : I ≤ p.asIdeal) :
     ∃ q : PrimeSpectrum R, q.asIdeal ∈ I.minimalPrimes ∧ q.asIdeal ≤ p.asIdeal := by
-  sorry
+  letI : p.asIdeal.IsPrime := p.2
+  obtain ⟨q, hq, hqle⟩ := Ideal.exists_minimalPrimes_le
+    (I := I) (J := p.asIdeal) hIp
+  exact ⟨⟨q, hq.isPrime⟩, hq, hqle⟩
 
 theorem zeroLocus_span {R : Type u} [CommRing R] (T : Set R) :
     PrimeSpectrum.zeroLocus (Ideal.span T : Set R) = PrimeSpectrum.zeroLocus T := by
@@ -82,17 +86,32 @@ theorem standard_open_and_zeroLocus_partition {R : Type u} [CommRing R] (f : R) 
         (PrimeSpectrum.zeroLocus ({f} : Set R)) ∧
       (PrimeSpectrum.basicOpen f : Set (PrimeSpectrum R)) ∪
           PrimeSpectrum.zeroLocus ({f} : Set R) = Set.univ := by
-  sorry
+  constructor <;> simp [PrimeSpectrum.basicOpen_eq_zeroLocus_compl, Set.disjoint_left]
 
 theorem standard_open_eq_empty_iff_nilpotent {R : Type u} [CommRing R] (f : R) :
     (PrimeSpectrum.basicOpen f : Set (PrimeSpectrum R)) = ∅ ↔ IsNilpotent f := by
-  sorry
+  rw [PrimeSpectrum.basicOpen_eq_zeroLocus_compl]
+  simp only [Set.eq_univ_iff_forall, Set.singleton_subset_iff, nilpotent_iff_mem_prime,
+    Set.compl_empty_iff, PrimeSpectrum.mem_zeroLocus, SetLike.mem_coe]
+  constructor
+  · intro h I hI
+    exact h ⟨I, hI⟩
+  · intro h p
+    exact h p.asIdeal p.2
 
 theorem standard_open_unit_mul {R : Type u} [CommRing R] (f f' : R)
     (h : ∃ u : R, IsUnit u ∧ f = u * f') :
     (PrimeSpectrum.basicOpen f : Set (PrimeSpectrum R)) =
       (PrimeSpectrum.basicOpen f' : Set (PrimeSpectrum R)) := by
-  sorry
+  rcases h with ⟨u, hu, rfl⟩
+  ext p
+  change u * f' ∉ p.asIdeal ↔ f' ∉ p.asIdeal
+  constructor
+  · intro h hf'
+    exact h (p.asIdeal.mul_mem_left u hf')
+  · intro hf' hmul
+    exact hf' ((p.2.mul_mem_iff_mem_or_mem.mp hmul).resolve_left
+      (Ideal.notMem_of_isUnit p.asIdeal hu))
 
 theorem exists_standard_open_separating_ideal {R : Type u} [CommRing R]
     (I : Ideal R) (p : PrimeSpectrum R)
@@ -101,7 +120,13 @@ theorem exists_standard_open_separating_ideal {R : Type u} [CommRing R]
       p ∈ (PrimeSpectrum.basicOpen f : Set (PrimeSpectrum R)) ∧
         (PrimeSpectrum.basicOpen f : Set (PrimeSpectrum R)) ∩
             PrimeSpectrum.zeroLocus (I : Set R) = ∅ := by
-  sorry
+  rw [PrimeSpectrum.mem_zeroLocus] at hp
+  obtain ⟨f, hfI, hfp⟩ := not_subset.mp hp
+  refine ⟨f, hfI, (PrimeSpectrum.mem_basicOpen f p).2 hfp, ?_⟩
+  apply Set.eq_empty_iff_forall_notMem.2
+  intro q hq
+  exact (PrimeSpectrum.mem_basicOpen f q).mp hq.1
+    ((PrimeSpectrum.mem_zeroLocus q (I : Set R)).mp hq.2 hfI)
 
 theorem standard_open_mul {R : Type u} [CommRing R] (f g : R) :
     PrimeSpectrum.basicOpen (f * g) =
@@ -112,12 +137,29 @@ theorem standard_open_iUnion_eq_compl_zeroLocus {R : Type u} [CommRing R]
     {ι : Type v} (f : ι → R) :
     (⋃ i, (PrimeSpectrum.basicOpen (f i) : Set (PrimeSpectrum R))) =
       (PrimeSpectrum.zeroLocus (Set.range f))ᶜ := by
-  sorry
+  ext p
+  simp only [Set.mem_iUnion, PrimeSpectrum.mem_basicOpen, Set.mem_compl_iff,
+    PrimeSpectrum.mem_zeroLocus, Set.mem_iUnion, SetLike.mem_coe]
+  constructor
+  · rintro ⟨i, hi⟩ h
+    exact hi (h ⟨i, rfl⟩)
+  · intro hp
+    by_contra hnot
+    apply hp
+    rintro x ⟨i, rfl⟩
+    by_contra hi
+    exact hnot ⟨i, hi⟩
 
 theorem standard_open_eq_univ_implies_isUnit {R : Type u} [CommRing R] (f : R)
     (hf : (PrimeSpectrum.basicOpen f : Set (PrimeSpectrum R)) = Set.univ) :
     IsUnit f := by
-  sorry
+  have hV : PrimeSpectrum.zeroLocus ({f} : Set R) = ∅ := by
+    rw [PrimeSpectrum.basicOpen_eq_zeroLocus_compl] at hf
+    have h := congrArg (fun s : Set (PrimeSpectrum R) => sᶜ) hf
+    simpa only [compl_compl, compl_univ] using h
+  apply Ideal.span_singleton_eq_top.mp
+  apply PrimeSpectrum.zeroLocus_empty_iff_eq_top.mp
+  simpa only [PrimeSpectrum.zeroLocus_span] using hV
 
 theorem zariski_isClosed_iff_zeroLocus {R : Type u} [CommRing R]
     (Z : Set (PrimeSpectrum R)) :
@@ -143,7 +185,8 @@ theorem spectrum_map_preimage_standard_open {R S : Type*} [CommRing R] [CommRing
     (φ : R →+* S) (f : R) :
     PrimeSpectrum.comap φ ⁻¹' (PrimeSpectrum.basicOpen f : Set (PrimeSpectrum R)) =
       (PrimeSpectrum.basicOpen (φ f) : Set (PrimeSpectrum S)) := by
-  sorry
+  ext p
+  simp
 
 theorem spectrum_map_comp {R S T : Type*} [CommRing R] [CommRing S] [CommRing T]
     (φ : R →+* S) (ψ : S →+* T) :
@@ -186,13 +229,20 @@ noncomputable def localizationSpectrumHomeomorph {R : Type u} [CommRing R]
 theorem localizationSpectrumHomeomorph_apply {R : Type u} [CommRing R]
     (S : Submonoid R) (p : PrimeSpectrum (Localization S)) :
     localizationSpectrumHomeomorph S p = localizationSpectrumMap S p := by
-  sorry
+  rfl
 
 theorem localizationSpectrumHomeomorph_symm_apply {R : Type u} [CommRing R]
     (S : Submonoid R)
     (p : {p : PrimeSpectrum R // Disjoint (S : Set R) p.asIdeal}) :
     (localizationSpectrumHomeomorph S).symm p = localizationSpectrumInverse S p := by
-  sorry
+  apply (localizationSpectrumHomeomorph S).injective
+  rw [(localizationSpectrumHomeomorph S).apply_symm_apply]
+  rw [localizationSpectrumHomeomorph_apply]
+  apply Subtype.ext
+  apply PrimeSpectrum.ext
+  simpa [localizationSpectrumMap, localizationSpectrumInverse,
+    PrimeSpectrum.comap_asIdeal, Ideal.under_def] using
+    (IsLocalization.under_map_of_isPrime_disjoint S (Localization S) p.1.2 p.2).symm
 
 /-! ## Standard opens and closed subsets -/
 
@@ -227,12 +277,25 @@ theorem standardOpenSpectrumHomeomorph_apply {R : Type u} [CommRing R] (f : R)
       ⟨PrimeSpectrum.comap (algebraMap R (Localization.Away f)) p, by
         rw [← PrimeSpectrum.localization_away_comap_range (Localization.Away f) f]
         exact ⟨p, rfl⟩⟩ := by
-  sorry
+  rfl
 
 theorem standardOpenSpectrumHomeomorph_symm_apply {R : Type u} [CommRing R] (f : R)
     (p : {p : PrimeSpectrum R // p ∈ (PrimeSpectrum.basicOpen f : Set (PrimeSpectrum R))}) :
     (standardOpenSpectrumHomeomorph f).symm p = standardOpenSpectrumInverse f p := by
-  sorry
+  apply (standardOpenSpectrumHomeomorph f).injective
+  rw [(standardOpenSpectrumHomeomorph f).apply_symm_apply]
+  rw [standardOpenSpectrumHomeomorph_apply]
+  apply Subtype.ext
+  apply PrimeSpectrum.ext
+  have hdisj : Disjoint (Submonoid.powers f : Set R) p.1.asIdeal := by
+    apply Set.disjoint_left.2
+    intro x hxS hxP
+    rcases hxS with ⟨n, rfl⟩
+    exact (PrimeSpectrum.mem_basicOpen f p.1).mp p.2
+      (p.1.2.mem_of_pow_mem _ hxP)
+  simpa [standardOpenSpectrumInverse, PrimeSpectrum.comap_asIdeal, Ideal.under_def] using
+    (IsLocalization.under_map_of_isPrime_disjoint
+      (Submonoid.powers f) (Localization.Away f) p.1.2 hdisj).symm
 
 /-- The spectrum of a quotient is homeomorphic to the corresponding closed subset. -/
 noncomputable def quotientSpectrumHomeomorph {R : Type u} [CommRing R] (I : Ideal R) :
@@ -268,12 +331,24 @@ theorem quotientSpectrumHomeomorph_apply {R : Type u} [CommRing R] (I : Ideal R)
             Quotient.mk_surjective]
           exact ⟨p, rfl⟩
         simpa only [I.mk_ker] using hp⟩ := by
-  sorry
+  rfl
 
 theorem quotientSpectrumHomeomorph_symm_apply {R : Type u} [CommRing R] (I : Ideal R)
     (p : {p : PrimeSpectrum R // p ∈ PrimeSpectrum.zeroLocus (I : Set R)}) :
     (quotientSpectrumHomeomorph I).symm p = quotientSpectrumInverse I p := by
-  sorry
+  apply (quotientSpectrumHomeomorph I).injective
+  rw [(quotientSpectrumHomeomorph I).apply_symm_apply]
+  rw [quotientSpectrumHomeomorph_apply]
+  apply Subtype.ext
+  apply PrimeSpectrum.ext
+  change p.1.asIdeal =
+    Ideal.comap (Ideal.Quotient.mk I)
+      (Ideal.map (Ideal.Quotient.mk I) p.1.asIdeal)
+  rw [p.1.asIdeal.comap_map_of_surjective (Ideal.Quotient.mk I)
+    Ideal.Quotient.mk_surjective]
+  rw [← RingHom.ker_eq_comap_bot, I.mk_ker]
+  exact Eq.symm (sup_eq_left.mpr
+    ((PrimeSpectrum.mem_zeroLocus p.1 (I : Set R)).mp p.2))
 
 /-! ## Quasi-compactness -/
 
@@ -290,14 +365,17 @@ theorem spectrum_has_quasi_compact_basis {R : Type u} [CommRing R] :
         (Set.range fun f : R => (PrimeSpectrum.basicOpen f : Set (PrimeSpectrum R))) ∧
       ∀ U ∈ Set.range (fun f : R => (PrimeSpectrum.basicOpen f : Set (PrimeSpectrum R))),
         IsCompact U := by
-  sorry
+  constructor
+  · exact standard_opens_form_basis
+  · rintro U ⟨f, rfl⟩
+    exact PrimeSpectrum.isCompact_basicOpen f
 
 theorem quasi_compact_open_intersection {R : Type u} [CommRing R]
     (U V : Set (PrimeSpectrum R))
     (hU_open : IsOpen U) (hU_compact : IsCompact U)
     (hV_open : IsOpen V) (hV_compact : IsCompact V) :
     IsCompact (U ∩ V) := by
-  sorry
+  exact IsCompact.inter_of_isOpen hU_compact hV_compact hU_open hV_open
 
 /-
 The source warns that not every affine open of a spectrum is standard and

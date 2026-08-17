@@ -252,13 +252,20 @@ abbrev dgmCohomology {R : Type u} [CommRing R]
     (M : DifferentialGradedModule A) (n : ℤ) : ModuleCat.{u} R :=
   M.complex.homology n
 
+/-- The degree-`n` cohomology functor on differential graded modules. -/
+noncomputable def dgmCohomologyFunctor {R : Type u} [CommRing R]
+    {A : DifferentialGradedAlgebra R} (n : ℤ) :
+    DifferentialGradedModuleCategory A ⥤ ModuleCat.{u} R :=
+  dgmForgetful (A := A) ⋙
+    HomologicalComplex.homologyFunctor (ModuleCat.{u} R) (ComplexShape.up ℤ) n
+
 /-- The map on cohomology induced by a differential graded module morphism. -/
 noncomputable def dgmCohomologyMap {R : Type u} [CommRing R]
     {A : DifferentialGradedAlgebra R}
     {M N : DifferentialGradedModule A}
     (f : DifferentialGradedModuleHom M N) (n : ℤ) :
     dgmCohomology M n ⟶ dgmCohomology N n :=
-  HomologicalComplex.homologyMap f.underlying n
+  (dgmCohomologyFunctor (A := A) n).map f
 
 /-- A differential graded module is acyclic when all its cohomology modules
 are zero. -/

@@ -386,14 +386,94 @@ theorem stronglyCartesianSubcategory_isFibredInGroupoids
     {S C : Type*} [Category* S] [Category* C]
     (p : S ⥤ C) [p.IsFibered] :
     (stronglyCartesianSubcategoryProjection p).IsFibredInGroupoids := by
-  sorry
+  constructor
+  · intro V U f x hx
+    change p.obj x.obj = U at hx
+    subst U
+    obtain ⟨y, φ, hφ⟩ :=
+      (fibred_category_iff_exists_stronglyCartesian p).mp (inferInstance)
+        x.obj V f
+    let _ : p.IsStronglyCartesian f φ := hφ
+    have hdom : p.obj y = V :=
+      CategoryTheory.IsHomLift.domain_eq p f φ
+    have hmap : f = p.map φ :=
+      CategoryTheory.IsHomLift.eq_of_isHomLift p f φ
+    have hφ' : p.IsStronglyCartesian (p.map φ) φ := by
+      simpa [hmap] using (inferInstance : p.IsStronglyCartesian f φ)
+    refine ⟨⟨y, hdom⟩, ⟨φ, hφ'⟩, ?_⟩
+    change p.IsHomLift f φ
+    infer_instance
+  · intro x y z φ ψ f hcomp
+    change f ≫ p.map φ.hom = p.map ψ.hom at hcomp
+    let _ : p.IsStronglyCartesian (p.map φ.hom) φ.hom :=
+      stronglyCartesianSubcategory_hom_property p φ
+    obtain ⟨χ, ⟨hχ, hχfac⟩, hχuniq⟩ :=
+      Functor.IsStronglyCartesian.universal_property p (p.map φ.hom) φ.hom
+        f (p.map ψ.hom) hcomp.symm ψ.hom
+    let _ : p.IsHomLift f χ := hχ
+    have hcompStrong :
+        p.IsStronglyCartesian (p.map (χ ≫ φ.hom)) (χ ≫ φ.hom) := by
+      simpa [hχfac] using stronglyCartesianSubcategory_hom_property p ψ
+    have hcompStrong' :
+        p.IsStronglyCartesian (p.map χ ≫ p.map φ.hom) (χ ≫ φ.hom) := by
+      simpa using hcompStrong
+    let _ : p.IsStronglyCartesian
+        (p.map χ ≫ p.map φ.hom) (χ ≫ φ.hom) := hcompStrong'
+    have hχstrong : p.IsStronglyCartesian (p.map χ) χ := by
+      exact Functor.IsStronglyCartesian.of_comp p
+    refine ⟨⟨χ, hχstrong⟩, ?_, ?_⟩
+    · change p.IsHomLift f χ
+      exact hχ
+    · change χ ≫ φ.hom = ψ.hom
+      exact hχfac
+    · intro χ' hχ'
+      apply WideSubcategory.hom_ext
+      apply hχuniq χ'.hom
+      rcases hχ' with ⟨hχ', hχ'fac⟩
+      constructor
+      · change p.IsHomLift f χ'.hom
+        exact hχ'
+      · change χ'.hom ≫ φ.hom = ψ.hom
+        exact hχ'fac
 
 /-! ## Examples -/
 
 theorem groupHomomorphism_fibredInGroupoids_iff_surjective
     {G H : Type*} [Group G] [Group H] (p : G →* H) :
     (MonoidHom.toFunctor p).IsFibredInGroupoids ↔ Function.Surjective p := by
-  sorry
+  constructor
+  · intro hp b
+    obtain ⟨y, φ, hφ⟩ := hp.exists_lift
+      (V := SingleObj.star H) (U := SingleObj.star H) b
+      (x := SingleObj.star G) rfl
+    change p φ = b
+    exact (CategoryTheory.IsHomLift.eq_of_isHomLift
+      (MonoidHom.toFunctor p) b φ).symm
+  · intro hs
+    constructor
+    · intro V U f x hx
+      obtain ⟨g, hg⟩ := hs f
+      refine ⟨SingleObj.star G, g, ?_⟩
+      change p g = f
+      exact hg
+    · intro x y z φ ψ f hcomp
+      change p φ * f = p ψ at hcomp
+      have hχ : f = p ((φ : G)⁻¹ * (ψ : G)) := by
+        change f = p ((φ : G)⁻¹ * (ψ : G))
+        rw [map_mul, ← hcomp]
+        simp [mul_assoc]
+      refine ⟨(φ : G)⁻¹ * (ψ : G), ?_, ?_⟩
+      · constructor
+        · rw [hχ]
+          infer_instance
+        · change (φ : G) * ((φ : G)⁻¹ * (ψ : G)) = (ψ : G)
+          simp [mul_assoc]
+      · intro χ hχ'
+        rcases hχ' with ⟨_, hχ'⟩
+        change (χ : G) = (φ : G)⁻¹ * (ψ : G)
+        change (φ : G) * (χ : G) = (ψ : G) at hχ'
+        rw [← hχ']
+        simp [mul_assoc]
 
 theorem groupHomomorphism_fibre_is_kernel_groupoid
     {G H : Type*} [Group G] [Group H] (p : G →* H) :
@@ -590,13 +670,39 @@ theorem fibredInGroupoids_two_morphism_isIso
     {C : Cat.{v, u}} {X Y : FibredCategoryOver C}
     (hY : IsGroupoidFibredCategoryOver Y)
     {F G : FibredCategoryOverHom X Y} (η : F ⟶ G) : IsIso η := by
-  sorry
+  have hη : IsIso η.toNatTrans := by
+    rw [NatTrans.isIso_iff_isIso_app]
+    intro Z
+    let U := (structureFunctor X.underlying).obj Z
+    let z : Functor.Fiber (structureFunctor X.underlying) U := ⟨Z, rfl⟩
+    letI : IsGroupoid (Functor.Fiber (structureFunctor Y.underlying) U) := hY U
+    change IsIso (Functor.Fiber.fiberInclusion.map
+      ((overMorphismFiberNatTrans η U).app z))
+    infer_instance
+  let e : overFunctor F.underlying ≅ overFunctor G.underlying :=
+    { hom := η.toNatTrans
+      inv := inv η.toNatTrans
+      hom_inv_id := by simp
+      inv_hom_id := by simp }
+  let E : F.underlying ≅ G.underlying :=
+    overNatIsoOfUnderlying e (by
+      intro Z
+      exact η.over Z)
+  let E' : F ≅ G := fibredHomIsoOfUnderlying E
+  have hE : E'.hom = η := by
+    apply OverNatTrans.ext
+    rfl
+  rw [← hE]
+  infer_instance
 
 theorem categoriesFibredInGroupoidsOver_is_two_one_category
     (C : Cat.{v, u}) :
     IsTwoOneCategory
       (CategoriesFibredInGroupoidsOver C) := by
-  sorry
+  intro X Y
+  refine ⟨fun {F G} η => ?_⟩
+  exact fibredInGroupoids_two_morphism_isIso
+    (X := X.obj) (Y := Y.obj) Y.property η.hom
 
 /-! ## 2-fibre products over a fixed base -/
 
@@ -749,7 +855,19 @@ def prePostcompositionFunctor
     exact @Bicategory.whiskerLeft_id (FibredCategoryOver C) _
       X₁ X₂ X₄ φ (FibredCategoryOverHom.comp α ψ)
   map_comp := by
-    sorry
+    intro α β γ η θ
+    apply OverNatTrans.ext
+    change
+      (fibredWhiskerLeft φ (fibredWhiskerRight (η ≫ θ) ψ)).toNatTrans =
+        (fibredWhiskerLeft φ (fibredWhiskerRight η ψ)).toNatTrans ≫
+          (fibredWhiskerLeft φ (fibredWhiskerRight θ ψ)).toNatTrans
+    rw [show fibredWhiskerRight (η ≫ θ) ψ =
+        fibredWhiskerRight η ψ ≫ fibredWhiskerRight θ ψ by
+      exact @Bicategory.comp_whiskerRight (FibredCategoryOver C) _
+        X₂ X₃ X₄ η θ ψ]
+    exact congrArg (fun q => q.toNatTrans)
+      (@Bicategory.whiskerLeft_comp (FibredCategoryOver C) _
+        X₁ X₂ X₄ φ (fibredWhiskerRight η ψ) (fibredWhiskerRight θ ψ))
 
 theorem morphisms_equivalent_fibred_groupoids
     {C : Cat.{v, u}} {X₁ X₂ X₃ X₄ : FibredCategoryOver C}
@@ -778,14 +896,99 @@ theorem fibredInGroupoids_over_slice
     (factor : p' ⋙ Over.forget U = p)
     (hp : p.IsFibredInGroupoids) :
     p'.IsFibredInGroupoids := by
-  sorry
+  cases factor
+  let q := p' ⋙ Over.forget U
+  let hq : q.IsFibredInGroupoids := hp
+  let _ : q.IsFibered :=
+    (fibredInGroupoids_iff_fibred_groupoid_fibres q).mp hq |>.2
+  let _ : p'.IsFibered := fibred_over_slice U q p' rfl
+  constructor
+  · intro V R f x hx
+    subst R
+    obtain ⟨y, ψ, hψ⟩ :=
+      (inferInstance : p'.IsFibered).toIsPreFibered.exists_isCartesian' f
+    let _ : p'.IsCartesian f ψ := hψ
+    exact ⟨y, ψ, inferInstance⟩
+  · intro x y z φ ψ f hcomp
+    have hcomp' : f.left ≫ q.map φ = q.map ψ := by
+      have h := congrArg (fun k => k.left) hcomp
+      simpa [q] using h
+    obtain ⟨χ, ⟨hχ, hχfac⟩, hχuniq⟩ :=
+      hq.unique_lift φ ψ hcomp'
+    let _ : q.IsHomLift f.left χ := hχ
+    have hmap : f.left = q.map χ :=
+      CategoryTheory.IsHomLift.eq_of_isHomLift q f.left χ
+    have hf : f = p'.map χ := by
+      apply Over.OverMorphism.ext
+      simpa [q] using hmap
+    have hχ' : p'.IsHomLift f χ := by
+      rw [hf]
+      infer_instance
+    refine ⟨χ, ⟨hχ', hχfac⟩, ?_⟩
+    intro χ' hχ'
+    rcases hχ' with ⟨hχ', hχ'fac⟩
+    have hf' : f = p'.map χ' :=
+      CategoryTheory.IsHomLift.eq_of_isHomLift p' f χ'
+    have hqχ' : q.IsHomLift f.left χ' := by
+      have hmap' : f.left = q.map χ' := by
+        have h := congrArg (fun k => k.left) hf'
+        simpa [q] using h
+      rw [hmap']
+      infer_instance
+    exact hχuniq χ' ⟨hqχ', hχ'fac⟩
 
 theorem fibredInGroupoids_over_fibred
     {A B C : Type*} [Category* A] [Category* B] [Category* C]
     (p : A ⥤ B) (q : B ⥤ C)
     (hp : p.IsFibredInGroupoids) (hq : q.IsFibredInGroupoids) :
     (p ⋙ q).IsFibredInGroupoids := by
-  sorry
+  constructor
+  · intro V U f a ha
+    change q.obj (p.obj a) = U at ha
+    subst U
+    obtain ⟨b, ψ, hψ⟩ := hq.exists_lift f rfl
+    obtain ⟨a', φ, hφ⟩ := hp.exists_lift ψ rfl
+    let _ : q.IsHomLift f ψ := hψ
+    let _ : p.IsHomLift ψ φ := hφ
+    have hdomP : p.obj a' = b :=
+      CategoryTheory.IsHomLift.domain_eq p ψ φ
+    subst b
+    have hdomQ : q.obj (p.obj a') = V :=
+      CategoryTheory.IsHomLift.domain_eq q f ψ
+    subst V
+    have hmapQ : f = q.map ψ :=
+      CategoryTheory.IsHomLift.eq_of_isHomLift q f ψ
+    have hmapP : ψ = p.map φ :=
+      CategoryTheory.IsHomLift.eq_of_isHomLift p ψ φ
+    refine ⟨a', φ, ?_⟩
+    rw [hmapQ, hmapP]
+    infer_instance
+  · intro x y z φ ψ f hcomp
+    change f ≫ q.map (p.map φ) = q.map (p.map ψ) at hcomp
+    obtain ⟨k, ⟨hk, hkfac⟩, hkuniq⟩ :=
+      hq.unique_lift (p.map φ) (p.map ψ) hcomp
+    obtain ⟨χ, ⟨hχ, hχfac⟩, hχuniq⟩ :=
+      hp.unique_lift φ ψ hkfac
+    let _ : q.IsHomLift f k := hk
+    let _ : p.IsHomLift k χ := hχ
+    have hmapQ : f = q.map k :=
+      CategoryTheory.IsHomLift.eq_of_isHomLift q f k
+    have hmapP : k = p.map χ :=
+      CategoryTheory.IsHomLift.eq_of_isHomLift p k χ
+    refine ⟨χ, ?_, ?_⟩
+    · rw [hmapQ, hmapP]
+      infer_instance
+    · intro χ' hχ'
+      rcases hχ' with ⟨hχ', hχ'fac⟩
+      have hχ'q : q.IsHomLift f (p.map χ') := hχ'
+      have hχ'fac : p.map χ' ≫ p.map φ = p.map ψ := by
+        simpa using congrArg p.map hχ'fac
+      have hkχ' : p.map χ' = k :=
+        hkuniq (p.map χ') ⟨hχ'q, hχ'fac⟩
+      have hχ'base : p.IsHomLift k χ' := by
+        rw [← hkχ']
+        infer_instance
+      exact hχuniq χ' ⟨hχ'base, hχ'fac⟩
 
 theorem fibredInGroupoids_fibre_product_goes_up
     {S C : Type*} [Category* S] [Category* C]
@@ -793,11 +996,15 @@ theorem fibredInGroupoids_fibre_product_goes_up
     {x y z : S} (f : x ⟶ y) (g : z ⟶ y)
     [HasPullback (p.map f) (p.map g)] :
     ∃ (w : S) (a : w ⟶ z) (b : w ⟶ x),
-      p.obj w = pullback (p.map f) (p.map g) ∧
+    p.obj w = pullback (p.map f) (p.map g) ∧
         Functor.IsStronglyCartesian p
           (pullback.snd (p.map f) (p.map g)) a ∧
         IsPullback b a f g := by
-  sorry
+  let _ : p.IsFibered :=
+    (fibredInGroupoids_iff_fibred_groupoid_fibres p).mp hp |>.2
+  let _ : p.IsStronglyCartesian (p.map f) f :=
+    fibredInGroupoids_all_morphisms_stronglyCartesian p hp f
+  exact fibred_fibre_product_goes_up p f g
 
 /- A natural isomorphism is over a target functor when its components map
 to the transported identity in that target. -/

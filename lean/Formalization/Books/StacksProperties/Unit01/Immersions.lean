@@ -391,6 +391,9 @@ private def emptyStack (S : Scheme.{u}) : AlgebraicStack S where
   points :=
     { raw := PEmpty
       fieldValued := fun _ => False
+      allFieldValued := by
+        intro p
+        exact PEmpty.elim p
       equivalent := fun _ _ => True
       isEquivalence := by
         constructor

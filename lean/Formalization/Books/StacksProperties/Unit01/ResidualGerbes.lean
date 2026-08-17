@@ -217,6 +217,7 @@ theorem exists_distinct_singleton_example :
     { points :=
         { raw := PUnit
           fieldValued := fun _ => True
+          allFieldValued := by intro _; trivial
           equivalent := fun _ _ => True
           isEquivalence := by
             constructor
@@ -237,6 +238,7 @@ theorem exists_distinct_singleton_example :
     { points :=
         { raw := ULift.{u} Bool
           fieldValued := fun _ => True
+          allFieldValued := by intro _; trivial
           equivalent := (· = ·)
           isEquivalence := by
             constructor

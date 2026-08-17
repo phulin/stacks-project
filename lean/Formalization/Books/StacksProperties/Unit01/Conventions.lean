@@ -36,6 +36,7 @@ structure Convention where
 structure PointData where
   raw : Type u
   fieldValued : raw → Prop
+  allFieldValued : ∀ p, fieldValued p
   equivalent : raw → raw → Prop
   isEquivalence : Equivalence equivalent
 
@@ -150,6 +151,8 @@ def fibreProductPointData {S : Scheme.{u}}
   raw := {p : RawPoint X × RawPoint Z //
     Y.points.equivalent (f.rawMap p.1) (g.rawMap p.2)}
   fieldValued := fun p => X.points.fieldValued p.1.1 ∧ Z.points.fieldValued p.1.2
+  allFieldValued := fun p =>
+    ⟨X.points.allFieldValued p.1.1, Z.points.allFieldValued p.1.2⟩
   equivalent := fun p q =>
     X.points.equivalent p.1.1 q.1.1 ∧ Z.points.equivalent p.1.2 q.1.2
   isEquivalence := by
@@ -210,6 +213,8 @@ def stackProductPointData {S : Scheme.{u}}
   raw := RawPoint X × RawPoint Y
   fieldValued := fun p =>
     X.points.fieldValued p.1 ∧ Y.points.fieldValued p.2
+  allFieldValued := fun p =>
+    ⟨X.points.allFieldValued p.1, Y.points.allFieldValued p.2⟩
   equivalent := fun p q =>
     X.points.equivalent p.1 q.1 ∧ Y.points.equivalent p.2 q.2
   isEquivalence := by
@@ -260,7 +265,6 @@ def underlyingSpaceMorphism {S : Scheme.{u}}
 structure SpaceToStackMorphism {S : Scheme.{u}}
     (W : AlgebraicSpace S) (X : AlgebraicStack S) where
   map : W.left → StackPoint X
-  surjective : Function.Surjective map
   flat : Prop
   locallyOfFinitePresentation : Prop
   smooth : Prop

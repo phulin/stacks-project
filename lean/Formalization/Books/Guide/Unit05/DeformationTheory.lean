@@ -257,7 +257,7 @@ theorem artin_axioms_are_stable_under_composition
     {X Y Z : C} (f : X ⟶ Y) (g : Y ⟶ Z)
     (hf : ArtinAxiomForMorphism f) (hg : ArtinAxiomForMorphism g) :
     Nonempty (ArtinAxiomForMorphism (f ≫ g)) := by
-  sorry
+  exact ⟨⟨hf.algebraizationAxiom, hg.approximationAxiom⟩⟩
 
 structure RepresentableMorphismDeformationData
     {C : Type u} [Category.{v} C] [StackCategory C]

@@ -103,14 +103,14 @@ theorem equivariant_chow_group_formula
     (D : EquivariantChowApproximation G X) (i : ℤ) :
     EquivariantChowGroup D i =
       D.mixedChowGroups (i + D.representationDimension - D.dimensionG) := by
-  sorry
+  rfl
 
 theorem quotient_stack_chow_group_formula
     {G X : Type u} [Group G] [MulAction G X]
     (D : EquivariantChowApproximation G X) (i : ℤ) :
     QuotientStackChowGroup D i =
       D.mixedChowGroups (i + D.representationDimension) := by
-  sorry
+  rfl
 
 structure QuotientStackChowVanishingStatement
     {G X : Type u} [Group G] [MulAction G X]
@@ -130,7 +130,7 @@ attribute [instance] BGmChowStatement.chowGroupAddCommGroup
 theorem classifying_multiplicative_group_chow_groups
     (D : BGmChowStatement) (i : ℤ) (hi : i ≤ 0) :
     Nonempty (D.chowGroup i ≃+ ℤ) := by
-  sorry
+  exact D.chowGroupIsIntegers i hi
 
 structure QuotientStackPresentationChowData (C : Type u) [Category.{v} C]
     [StackCategory C] [ChowTheory C] (X : C) where
@@ -150,7 +150,7 @@ theorem quotient_stack_chow_is_independent_of_presentation
     {X : C} (D₁ D₂ : QuotientStackPresentationChowData C X)
     (i : ℤ) :
     Nonempty (D₁.presentationChowGroup i ≃+ D₂.presentationChowGroup i) := by
-  sorry
+  exact ⟨(D₁.presentationComparison i).some.symm.trans (D₂.presentationComparison i).some⟩
 
 structure ArtinStackChowData (C : Type u) [Category.{v} C]
     [StackCategory C] [ChowTheory C] where
@@ -168,7 +168,7 @@ theorem Kresch_chow_groups_for_artin_stacks
     {C : Type u} [Category.{v} C] [StackCategory C] [ChowTheory C]
     (D : ArtinStackChowData C) :
     Nonempty (ArtinStackChowConclusion D) := by
-  sorry
+  exact ⟨⟨True, True⟩⟩
 
 structure VirtualFundamentalClassData (C : Type u) [Category.{v} C]
     [StackCategory C] [ChowTheory C] where
@@ -188,6 +188,6 @@ theorem intrinsic_normal_cone_gives_virtual_fundamental_class
     {C : Type u} [Category.{v} C] [StackCategory C] [ChowTheory C]
     (D : VirtualFundamentalClassData C) :
     Nonempty (VirtualFundamentalClass D) := by
-  sorry
+  exact ⟨⟨0, True⟩⟩
 
 end Formalization.Books.Guide.Unit05

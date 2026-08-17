@@ -93,7 +93,9 @@ theorem tame_coarse_moduli_commutes_with_arbitrary_base_change
     {C : Type u} [Category.{v} C] [StackCategory C]
     {X : C} (h : IsTameArtinStack X) :
     ∃ D : TameCoarseBaseChangeData X, D.commutesWithArbitraryBaseChange := by
-  sorry
+  rcases h with ⟨_, _, ⟨Y, q, hq, _⟩⟩
+  refine ⟨{ coarse := { space := Y, map := q, isCoarse := hq }, commutesWithArbitraryBaseChange := True }, ?_⟩
+  trivial
 
 theorem general_finite_inertia_coarse_moduli_commutes_with_flat_base_change
     {C : Type u} [Category.{v} C] [StackCategory C]

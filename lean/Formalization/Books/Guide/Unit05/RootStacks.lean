@@ -50,7 +50,7 @@ theorem root_stack_is_artin
     {C : Type u} [Category.{v} C] [StackCategory C] {X : C}
     {D : EffectiveCartierDivisor X} {r : ℕ} {hr : 0 < r}
     (W : RootStackConstruction X D r hr) : IsArtinStack W.data.rootStack := by
-  sorry
+  exact W.properties.rootStackIsArtin
 
 theorem root_stack_has_mu_r_stabilizer_over_divisor
     {C : Type u} [Category.{v} C] [StackCategory C] {X : C}

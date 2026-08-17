@@ -40,19 +40,17 @@ theorem standardOpen_inter (R : Type u) [CommRing R] (f g : R) :
     standardOpen (f * g) = standardOpen f ⊓ standardOpen g :=
   PrimeSpectrum.basicOpen_mul f g
 
-/-! ## Standard-open localization maps and coverings -/
+theorem standardOpen_mul_le_left {R : Type u} [CommRing R] (f g : R) :
+    standardOpen (f * g) ≤ standardOpen f := by
+  rw [standardOpen_inter]
+  exact inf_le_left
 
-/-- A finite standard-open covering of an open `U`. -/
-def StandardOpenCovering {R : Type u} [CommRing R] (U : Opens (spectrumTop R)) : Prop :=
-  ∃ n : ℕ, ∃ f : Fin n → R, (⨆ i, standardOpen (f i)) = U
+theorem standardOpen_mul_le_right {R : Type u} [CommRing R] (f g : R) :
+    standardOpen (f * g) ≤ standardOpen g := by
+  rw [standardOpen_inter]
+  exact inf_le_right
 
-/-- A finite standard-open covering of the whole spectrum. -/
-abbrev standardOpenCoveringSpectrum (R : Type u) [CommRing R] : Prop :=
-  StandardOpenCovering (⊤ : Opens (spectrumTop R))
-
-/-- A finite standard-open covering of the standard open `D(f)`. -/
-abbrev standardOpenCoveringOf {R : Type u} [CommRing R] (f : R) : Prop :=
-  StandardOpenCovering (standardOpen f)
+/-! ## Standard-open localization maps -/
 
 theorem standardOpen_isUnit_of_subset {R : Type u} [CommRing R] (f g : R)
     (h : standardOpen g ≤ standardOpen f) :
@@ -106,15 +104,16 @@ theorem standardOpenSemilinearModuleLocalizationMap_mk {R M : Type u}
       LocalizedModule.mkLinearMap (Submonoid.powers g) M m :=
   Classical.choose_spec (exists_standardOpenSemilinearModuleMap f g h) m
 
-/-! The underlying `R`-linear interface is useful when the source is read in the
-category of `R`-modules.  The semilinear map above is the source-faithful
-localization map. -/
-theorem exists_standardOpenModuleMap {R M : Type u} [CommRing R]
-    [AddCommGroup M] [Module R M] (f g : R)
-    (h : standardOpen g ≤ standardOpen f) :
-    ∃ φ : LocalizedModule.Away f M →ₗ[R] LocalizedModule.Away g M,
-      φ.comp (LocalizedModule.mkLinearMap (Submonoid.powers f) M) =
-        LocalizedModule.mkLinearMap (Submonoid.powers g) M := by
+/- The restriction maps satisfy the identity and composition laws required of
+the presheaf described in the source.  The proof stage can establish these
+from the universal properties of localization. -/
+
+theorem standardOpenLocalizationMap_comp_of_subset {R : Type u} [CommRing R]
+    (f g k : R) (hfg : standardOpen g ≤ standardOpen f)
+    (hgk : standardOpen k ≤ standardOpen g) :
+    standardOpenLocalizationMap f k (hgk.trans hfg) =
+      (standardOpenLocalizationMap g k hgk).comp
+        (standardOpenLocalizationMap f g hfg) := by
   sorry
 
 /-- The canonical localized-module map attached to a standard-open inclusion. -/
@@ -122,7 +121,29 @@ noncomputable def standardOpenModuleLocalizationMap {R M : Type u} [CommRing R]
     [AddCommGroup M] [Module R M] (f g : R)
     (h : standardOpen g ≤ standardOpen f) :
     LocalizedModule.Away f M →ₗ[R] LocalizedModule.Away g M :=
-  Classical.choose (exists_standardOpenModuleMap f g h)
+  let hunit : IsUnit
+      (algebraMap R (Module.End R (LocalizedModule.Away g M)) f) := by
+    rw [Module.End.isUnit_iff]
+    let A := Localization.Away g
+    let N := LocalizedModule.Away g M
+    have hfA : IsUnit (algebraMap A (Module.End A N)
+        (algebraMap R A f)) :=
+      (standardOpen_isUnit_of_subset f g h).map
+        (algebraMap A (Module.End A N))
+    have hfun : (algebraMap R (Module.End R N) f : N → N) =
+        (algebraMap A (Module.End A N) (algebraMap R A f) : N → N) := by
+      funext x
+      simp [Module.algebraMap_end_apply]
+    rw [hfun]
+    exact (Module.End.isUnit_iff _).mp hfA
+  let hunitPowers : ∀ s : Submonoid.powers f,
+      IsUnit (algebraMap R (Module.End R (LocalizedModule.Away g M)) s) := by
+    rintro ⟨_, n, rfl⟩
+    change IsUnit
+      (algebraMap R (Module.End R (LocalizedModule.Away g M)) (f ^ n))
+    simpa only [map_pow] using hunit.pow n
+  LocalizedModule.lift (Submonoid.powers f)
+    (LocalizedModule.mkLinearMap (Submonoid.powers g) M) hunitPowers
 
 theorem standardOpenModuleLocalizationMap_comp {R M : Type u} [CommRing R]
     [AddCommGroup M] [Module R M] (f g : R)
@@ -130,7 +151,17 @@ theorem standardOpenModuleLocalizationMap_comp {R M : Type u} [CommRing R]
     (standardOpenModuleLocalizationMap f g h).comp
         (LocalizedModule.mkLinearMap (Submonoid.powers f) M) =
       LocalizedModule.mkLinearMap (Submonoid.powers g) M :=
-  Classical.choose_spec (exists_standardOpenModuleMap f g h)
+  by
+    apply LocalizedModule.lift_comp
+
+theorem standardOpenModuleLocalizationMap_comp_of_subset {R M : Type u}
+    [CommRing R] [AddCommGroup M] [Module R M]
+    (f g k : R) (hfg : standardOpen g ≤ standardOpen f)
+    (hgk : standardOpen k ≤ standardOpen g) :
+    standardOpenModuleLocalizationMap (R := R) (M := M) f k (hgk.trans hfg) =
+      (standardOpenModuleLocalizationMap (R := R) (M := M) g k hgk).comp
+        (standardOpenModuleLocalizationMap (R := R) (M := M) f g hfg) := by
+  sorry
 
 theorem standardOpenLocalizationMap_inverse_of_open_eq {R : Type u} [CommRing R]
     (f g : R) (h : standardOpen f = standardOpen g) :
@@ -171,6 +202,24 @@ theorem standardOpen_cover_iff_unitIdeal {R : Type u} [CommRing R] (f : R)
         algebraMap R (Localization.Away f) (g i))) = ⊤ := by
   sorry
 
+/-! ## Standard-open coverings -/
+
+/- The source introduces this terminology after the standard-open lemma.  The
+definition uses a finite family indexed by `Fin n`, which is the direct Lean
+counterpart of the displayed finite union. -/
+
+/-- A finite standard-open covering of an open `U`. -/
+def StandardOpenCovering {R : Type u} [CommRing R] (U : Opens (spectrumTop R)) : Prop :=
+  ∃ n : ℕ, ∃ f : Fin n → R, (⨆ i, standardOpen (f i)) = U
+
+/-- A finite standard-open covering of the whole spectrum. -/
+abbrev standardOpenCoveringSpectrum (R : Type u) [CommRing R] : Prop :=
+  StandardOpenCovering (⊤ : Opens (spectrumTop R))
+
+/-- A finite standard-open covering of the standard open `D(f)`. -/
+abbrev standardOpenCoveringOf {R : Type u} [CommRing R] (f : R) : Prop :=
+  StandardOpenCovering (standardOpen f)
+
 /-! ## The canonical presheaves and sheaves -/
 
 /-- The module-valued presheaf whose sections are local fractions. -/
@@ -192,6 +241,22 @@ abbrev standardOpenModuleSections (R M : Type u) [CommRing R]
 /-- Ring-valued sections of the basis presheaf on the standard open `D(f)`. -/
 abbrev standardOpenRingSections (R : Type u) [CommRing R] (f : R) : Type u :=
   Localization.Away f
+
+/- The two inverse-map statements above are the basis-presheaf
+independence-of-presentation assertion: if `D(f) = D(g)`, either element may
+be used to present the same standard-open section object. -/
+
+theorem standardOpenModuleSections_independent_of_eq {R M : Type u}
+    [CommRing R] [AddCommGroup M] [Module R M] (f g : R)
+    (h : standardOpen f = standardOpen g) :
+    Nonempty (standardOpenModuleSections R M f ≃ₗ[R]
+      standardOpenModuleSections R M g) := by
+  sorry
+
+theorem standardOpenRingSections_independent_of_eq {R : Type u} [CommRing R]
+    (f g : R) (h : standardOpen f = standardOpen g) :
+    Nonempty (standardOpenRingSections R f ≃+* standardOpenRingSections R g) := by
+  sorry
 
 /-- The canonical structure sheaf on `Spec(R)`. -/
 abbrev affineStructureSheaf (R : Type u) [CommRing R] :
@@ -254,6 +319,16 @@ noncomputable def associatedModuleToStandardOpenSections (R M : Type u)
         (op (PrimeSpectrum.basicOpen (R := R) f)) :=
   AlgebraicGeometry.tilde.toOpen (R := CommRingCat.of R) (ModuleCat.of R M)
     (PrimeSpectrum.basicOpen f)
+
+/-- The associated module sheaf has localized sections on every standard open.
+The displayed target is the categorical sheaf packaging of the source's
+basis-presheaf section object. -/
+theorem exists_associatedModuleStandardOpenSectionsIso {R M : Type u}
+    [CommRing R] [AddCommGroup M] [Module R M] (f : R) :
+    Nonempty (LocalizedModule.Away f M ≃ₗ[R]
+      (associatedModuleUnderlyingSheaf R M).presheaf.obj
+        (op (PrimeSpectrum.basicOpen (R := R) f))) := by
+  sorry
 
 /-! ## Stalks, sections, and the sheaf condition -/
 
@@ -342,50 +417,46 @@ noncomputable def associatedModuleGlobalSectionsIso {R M : Type u} [CommRing R]
         (op (⊤ : Opens (AlgebraicGeometry.Spec (CommRingCat.of R)))) :=
   AlgebraicGeometry.tilde.isoTop (R := CommRingCat.of R) (ModuleCat.of R M)
 
-/-- The first map in the finite-cover Čech sequence.
+/- The source's direct sums are represented by finite products indexed by
+`Fin n` (and by `Fin n × Fin n` for the pairwise intersections). -/
 
-The finite-index products below are the finite-product model for the direct
-sums in the source sequence. -/
+/-- The first map in the finite-cover Čech sequence
+`0 → M_f → ⨁ M_{g_i}`. -/
 noncomputable def standardOpenCechZero {R M : Type u} [CommRing R]
-    [AddCommGroup M] [Module R M] (U : Opens (spectrumTop R))
-    (n : ℕ) (g : Fin n → R)
-    (hU : (⨆ i, standardOpen (g i)) = U) :
-    (moduleLocalizationPresheaf R M).obj (op U) →ₗ[R]
-      (∀ i, (moduleLocalizationPresheaf R M).obj (op (standardOpen (g i)))) := by
-  let F := moduleLocalizationPresheaf R M
-  have hle : ∀ i, standardOpen (g i) ≤ U := by
+    [AddCommGroup M] [Module R M] (f : R) (n : ℕ) (g : Fin n → R)
+    (hcover : standardOpen f = ⨆ i, standardOpen (g i)) :
+    LocalizedModule.Away f M →ₗ[R]
+      (∀ i, LocalizedModule.Away (g i) M) := by
+  have hle : ∀ i, standardOpen (g i) ≤ standardOpen f := by
     intro i
-    rw [← hU]
+    rw [hcover]
     exact le_iSup (fun i => standardOpen (g i)) i
   exact
-    { toFun := fun s i => (F.map (homOfLE (hle i)).op).hom s
+    { toFun := fun s i => standardOpenModuleLocalizationMap f (g i) (hle i) s
       map_add' := by
         intro s t
         funext i
-        exact (F.map (homOfLE (hle i)).op).hom.map_add s t
+        exact (standardOpenModuleLocalizationMap f (g i) (hle i)).map_add s t
       map_smul' := by
         intro a s
         funext i
-        exact (F.map (homOfLE (hle i)).op).hom.map_smul a s }
+        exact (standardOpenModuleLocalizationMap f (g i) (hle i)).map_smul a s }
 
-/-- The second map in the finite-cover Čech sequence. -/
+/-- The second map in the finite-cover Čech sequence
+`⨁ M_{g_i} → ⨁ M_{g_i g_j}`. -/
 noncomputable def standardOpenCechOne {R M : Type u} [CommRing R]
-    [AddCommGroup M] [Module R M] (U : Opens (spectrumTop R))
-    (n : ℕ) (g : Fin n → R)
-    (_hU : (⨆ i, standardOpen (g i)) = U) :
-    (∀ i, (moduleLocalizationPresheaf R M).obj (op (standardOpen (g i)))) →ₗ[R]
-      (∀ ij : Fin n × Fin n,
-        (moduleLocalizationPresheaf R M).obj
-          (op (standardOpen (g ij.1) ⊓ standardOpen (g ij.2)))) := by
-  let F := moduleLocalizationPresheaf R M
+    [AddCommGroup M] [Module R M] (f : R) (n : ℕ) (g : Fin n → R)
+    (_hcover : standardOpen f = ⨆ i, standardOpen (g i)) :
+    (∀ i, LocalizedModule.Away (g i) M) →ₗ[R]
+      (∀ ij : Fin n × Fin n, LocalizedModule.Away (g ij.1 * g ij.2) M) := by
   exact
     { toFun := fun s ij =>
-        (F.map (homOfLE (inf_le_left :
-          standardOpen (g ij.1) ⊓ standardOpen (g ij.2) ≤ standardOpen (g ij.1))).op).hom
-            (s ij.1) -
-          (F.map (homOfLE (inf_le_right :
-            standardOpen (g ij.1) ⊓ standardOpen (g ij.2) ≤ standardOpen (g ij.2))).op).hom
-            (s ij.2)
+        let hleft : standardOpen (g ij.1 * g ij.2) ≤ standardOpen (g ij.1) := by
+          exact standardOpen_mul_le_left _ _
+        let hright : standardOpen (g ij.1 * g ij.2) ≤ standardOpen (g ij.2) := by
+          exact standardOpen_mul_le_right _ _
+        standardOpenModuleLocalizationMap (g ij.1) (g ij.1 * g ij.2) hleft (s ij.1) -
+          standardOpenModuleLocalizationMap (g ij.2) (g ij.1 * g ij.2) hright (s ij.2)
       map_add' := by
         intro s t
         funext ij
@@ -395,16 +466,16 @@ noncomputable def standardOpenCechOne {R M : Type u} [CommRing R]
       map_smul' := by
         intro a s
         funext ij
-        simp only [Pi.smul_apply, map_smul, smul_sub, RingHom.id_apply] }
+        simp only [Pi.smul_apply]
+        simp only [map_smul, RingHom.id_apply, smul_sub] }
 
-/-- Exactness of the Čech sequence for a finite standard-open covering. -/
+/-- Exactness of the finite-cover Čech sequence for a standard-open covering. -/
 theorem standardOpenCech_exact {R M : Type u} [CommRing R]
-    [AddCommGroup M] [Module R M] (U : Opens (spectrumTop R))
-    (n : ℕ) (g : Fin n → R)
-    (hU : (⨆ i, standardOpen (g i)) = U) :
-    Function.Injective (standardOpenCechZero (R := R) (M := M) U n g hU) ∧
-      Function.Exact (standardOpenCechZero (R := R) (M := M) U n g hU)
-        (standardOpenCechOne (R := R) (M := M) U n g hU) := by
+    [AddCommGroup M] [Module R M] (f : R) (n : ℕ) (g : Fin n → R)
+    (hcover : standardOpen f = ⨆ i, standardOpen (g i)) :
+    Function.Injective (standardOpenCechZero (R := R) (M := M) f n g hcover) ∧
+      Function.Exact (standardOpenCechZero (R := R) (M := M) f n g hcover)
+        (standardOpenCechOne (R := R) (M := M) f n g hcover) := by
   sorry
 
 /-! ## Functoriality and exactness of associated module sheaves -/

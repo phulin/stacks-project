@@ -165,7 +165,48 @@ theorem standard_open_cech_augmentation_is_cycle {Y : Scheme.{u}}
     {hY : IsAffine Y} (𝒰 : StandardOpenCover Y hY) (M : Y.Modules) :
     cechAugmentation M 𝒰.basicOpenFamily ≫
       (cechComplex M 𝒰.basicOpenFamily).d 0 1 = 0 := by
-  sorry
+  simp [globalSectionsObject, cechAugmentation, cechComplex,
+    CategoryTheory.cechComplexFunctor,
+    CategoryTheory.Limits.FormalCoproduct.cochainComplexFunctor,
+    CategoryTheory.Limits.FormalCoproduct.cosimplicialObjectFunctor,
+    AlgebraicTopology.alternatingCofaceMapComplex,
+    AlgebraicTopology.AlternatingCofaceMapComplex.obj,
+    CategoryTheory.Limits.FormalCoproduct.cech,
+    CategoryTheory.Limits.FormalCoproduct.power,
+    CategoryTheory.Limits.FormalCoproduct.evalOp,
+    Functor.comp, Functor.whiskeringLeft, Functor.rightOp,
+    CochainComplex.of.d, CosimplicialObject.δ]
+  apply Pi.hom_ext
+  intro i
+  have h0 :
+      (∏ᶜ 𝒰.basicOpenFamily ∘ i ∘
+        ⇑(SimplexCategory.Hom.toOrderHom (SimplexCategory.δ 0))) ≤
+        (⊤ : Y.Opens) := by simp
+  have h1 :
+      (∏ᶜ 𝒰.basicOpenFamily ∘ i ∘
+        ⇑(SimplexCategory.Hom.toOrderHom (SimplexCategory.δ 1))) ≤
+        (⊤ : Y.Opens) := by simp
+  let f0 :=
+    ((FormalCoproduct.mapPower
+        ({ I := ULift (Fin 𝒰.n), obj := 𝒰.basicOpenFamily } :
+          FormalCoproduct Y.Opens)
+        ⇑(SimplexCategory.Hom.toOrderHom (SimplexCategory.δ 0))).op.unop.φ i ≫
+      homOfLE h0).op
+  let f1 :=
+    ((FormalCoproduct.mapPower
+        ({ I := ULift (Fin 𝒰.n), obj := 𝒰.basicOpenFamily } :
+          FormalCoproduct Y.Opens)
+        ⇑(SimplexCategory.Hom.toOrderHom (SimplexCategory.δ 1))).op.unop.φ i ≫
+      homOfLE h1).op
+  have hmap : M.presheaf.map f0 = M.presheaf.map f1 := by
+    congr 1
+  simp [Category.assoc, Preadditive.add_comp, Preadditive.neg_comp,
+    ← Functor.map_comp, ← op_comp]
+  change M.presheaf.map f0 + -M.presheaf.map f1 = _
+  rw [hmap]
+  rw [add_neg_cancel]
+  symm
+  exact CategoryTheory.Limits.zero_comp
 
 /-- The precise algebraic truncation supplied by Algebra Unit24 for the module
 of global sections.  This deliberately says nothing about Čech degrees above

@@ -1,6 +1,8 @@
 import Mathlib.CategoryTheory.Filtered.Basic
 import Mathlib.CategoryTheory.Localization.CalculusOfFractions
+import Mathlib.CategoryTheory.Limits.FilteredColimitCommutesFiniteLimit
 import Mathlib.CategoryTheory.Limits.Preserves.Finite
+import Mathlib.CategoryTheory.Limits.Preserves.Opposites
 import Mathlib.CategoryTheory.Limits.Types.Colimits
 import Mathlib.CategoryTheory.MorphismProperty.Comma
 

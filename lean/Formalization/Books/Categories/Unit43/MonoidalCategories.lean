@@ -1,9 +1,7 @@
-import Formalization.Books.Categories.Unit24.AdjointFunctors
 import Mathlib.Algebra.Category.ModuleCat.Monoidal.Adjunction
 import Mathlib.CategoryTheory.Adjunction.Parametrized
 import Mathlib.CategoryTheory.Monoidal.Braided.Basic
 import Mathlib.CategoryTheory.Monoidal.CoherenceLemmas
-import Mathlib.CategoryTheory.Monoidal.NaturalTransformation
 import Mathlib.CategoryTheory.Monoidal.Rigid.Basic
 import Mathlib.CategoryTheory.Monoidal.Rigid.Braided
 
@@ -48,10 +46,10 @@ abbrev associativityConstraintComponent (X Y Z : C) :
   (α_ X Y Z).symm
 
 theorem associativity_constraint_pentagon (W X Y Z : C) :
-    (α_ W X Y).hom ▷ Z ≫ (α_ W (X ⊗ Y) Z).hom ≫
-        W ◁ (α_ X Y Z).hom =
-      (α_ (W ⊗ X) Y Z).hom ≫ (α_ W X (Y ⊗ Z)).hom :=
-  MonoidalCategory.pentagon W X Y Z
+    W ◁ (α_ X Y Z).inv ≫ (α_ W (X ⊗ Y) Z).inv ≫
+        (α_ W X Y).inv ▷ Z =
+      (α_ W X (Y ⊗ Z)).inv ≫ (α_ (W ⊗ X) Y Z).inv := by
+  monoidal_coherence
 
 /- The source's n-ary parenthesization statements, including the displayed
    fourteen parenthesizations for five objects, are precisely the monoidal
@@ -65,11 +63,11 @@ theorem associativity_constraint_pentagon (W X Y Z : C) :
 right-to-left associator convention. -/
 structure UnitData where
   unit : C
-  leftUnitor : ∀ X : C, unit ⊗ X ≅ X
-  rightUnitor : ∀ X : C, X ⊗ unit ≅ X
+  leftUnitor : tensorLeft unit ≅ 𝟭 C
+  rightUnitor : tensorRight unit ≅ 𝟭 C
   triangle : ∀ X Y : C,
-    (α_ X unit Y).inv ≫ (rightUnitor X).hom ▷ Y =
-      X ◁ (leftUnitor Y).hom
+    (α_ X unit Y).inv ≫ (rightUnitor.app X).hom ▷ Y =
+      X ◁ (leftUnitor.app Y).hom
 
 /-- A source-style unit pair: multiplication on the unit together with the
 two tensoring equivalences. -/
@@ -82,11 +80,11 @@ structure UnitPair where
 /-- The chosen unit in a Mathlib monoidal category, viewed as source data. -/
 def chosenUnitData : UnitData (C := C) where
   unit := 𝟙_ C
-  leftUnitor := λ_
-  rightUnitor := ρ_
+  leftUnitor := MonoidalCategory.leftUnitorNatIso C
+  rightUnitor := MonoidalCategory.rightUnitorNatIso C
   triangle := by
     intro X Y
-    monoidal_coherence
+    exact MonoidalCategory.triangle_assoc_comp_right X Y
 
 theorem monoidal_category_has_unit : Nonempty (UnitData (C := C)) :=
   ⟨chosenUnitData⟩
@@ -123,9 +121,9 @@ theorem unit_end_tensor_conjugation (a : 𝟙_ C ⟶ 𝟙_ C) :
 structure UnitDataIso (u v : UnitData (C := C)) where
   hom : u.unit ≅ v.unit
   left_naturality : ∀ X : C,
-    (hom.hom ⊗ₘ 𝟙 X) ≫ (v.leftUnitor X).hom = (u.leftUnitor X).hom
+    (hom.hom ⊗ₘ 𝟙 X) ≫ (v.leftUnitor.app X).hom = (u.leftUnitor.app X).hom
   right_naturality : ∀ X : C,
-    (𝟙 X ⊗ₘ hom.hom) ≫ (v.rightUnitor X).hom = (u.rightUnitor X).hom
+    (𝟙 X ⊗ₘ hom.hom) ≫ (v.rightUnitor.app X).hom = (u.rightUnitor.app X).hom
 
 theorem unit_data_unique_iso (u : UnitData (C := C)) :
     Nonempty (UnitDataIso u (chosenUnitData (C := C))) ∧
@@ -249,9 +247,9 @@ theorem leftDual_iff_compatible_right_tensor_adjunction (X Y : C) :
 
 /-! ## Braiding and symmetric monoidal categories -/
 
-abbrev CommutativityConstraint (X Y : C) [BraidedCategory C] : X ⊗ Y ≅ Y ⊗ X := β_ X Y
+abbrev CommutativityConstraint (X Y : C) [SymmetricCategory C] : X ⊗ Y ≅ Y ⊗ X := β_ X Y
 
-theorem commutativity_constraint_hexagon (X Y Z : C) [BraidedCategory C] :
+theorem commutativity_constraint_hexagon (X Y Z : C) [SymmetricCategory C] :
     (α_ X Y Z).inv ≫ (β_ (X ⊗ Y) Z).hom ≫ (α_ Z X Y).inv =
       (X ◁ (β_ Y Z).hom) ≫ (α_ X Z Y).inv ≫
         ((β_ X Z).hom ▷ Y) := by
@@ -288,8 +286,8 @@ theorem symmetric_unit_coherence (X Y : C) [SymmetricCategory C] :
         ((λ_ X).hom ⊗ₘ 𝟙 Y) := by
   sorry
 
-abbrev symmetric_dual_swap (X Y : C) [BraidedCategory C] [ExactPairing X Y] :
-    ExactPairing Y X :=
+abbrev symmetric_dual_swap (X Y : C) [SymmetricCategory C] [ExactPairing X Y] :
+  ExactPairing Y X :=
   BraidedCategory.exactPairing_swap X Y
 
 /- The source's all-permutation coherence theorem is the symmetric version

@@ -87,9 +87,9 @@ uses Mathlib's canonical dual universal-property API, so no parallel opposite
 category definition is needed here. -/
 
 /- The source also notes the straightforward extension from two parallel
-morphisms to more than two.  Mathlib's `Multicofork`/`HasMulticoequalizer`
-interfaces provide that generalization; because the source gives no indexing
-family or further assertion, no additional chapter-specific declaration is
-needed. -/
+morphisms to more than two.  Mathlib's `Cotrident`, `wideCoequalizer`, and
+`HasWideCoequalizer` interfaces in `WideEqualizers` provide that family-indexed
+generalization; because the source gives no indexing family or further
+assertion, no additional chapter-specific declaration is needed. -/
 
 end Formalization.Books.Categories.Unit11

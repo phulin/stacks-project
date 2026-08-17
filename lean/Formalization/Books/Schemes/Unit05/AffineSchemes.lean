@@ -117,6 +117,28 @@ theorem standardOpenSemilinearModuleLocalizationMap_mk {R M : Type u}
       LocalizedModule.mkLinearMap (Submonoid.powers g) M m :=
   Classical.choose_spec (exists_standardOpenSemilinearModuleMap f g h) m
 
+/-- The restriction map on localized modules, viewed as a map of
+`R_f`-modules after restricting scalars along `R_f → R_g`. -/
+noncomputable def standardOpenModuleLocalizationMapOverSource {R M : Type u}
+    [CommRing R] [AddCommGroup M] [Module R M] (f g : R)
+    (h : standardOpen g ≤ standardOpen f) :
+    ModuleCat.of (Localization.Away f) (LocalizedModule.Away f M) ⟶
+      (ModuleCat.restrictScalars (standardOpenLocalizationMap f g h)).obj
+        (ModuleCat.of (Localization.Away g) (LocalizedModule.Away g M)) :=
+  letI : Module (Localization.Away f) (LocalizedModule.Away g M) :=
+    Module.compHom (LocalizedModule.Away g M) (standardOpenLocalizationMap f g h)
+  let φ : LocalizedModule.Away f M →ₗ[Localization.Away f]
+      ((ModuleCat.restrictScalars (standardOpenLocalizationMap f g h)).obj
+        (ModuleCat.of (Localization.Away g) (LocalizedModule.Away g M)) : Type u) :=
+    { toFun := standardOpenSemilinearModuleLocalizationMap f g h
+      map_add' := (standardOpenSemilinearModuleLocalizationMap f g h).map_add
+      map_smul' := fun a m => by
+        change _ = standardOpenLocalizationMap f g h a •
+          (standardOpenSemilinearModuleLocalizationMap f g h m :
+            LocalizedModule.Away g M)
+        exact (standardOpenSemilinearModuleLocalizationMap f g h).map_smul' a m }
+  ModuleCat.ofHom φ
+
 /- The restriction maps satisfy the identity and composition laws required of
 the presheaf described in the source.  The proof stage can establish these
 from the universal properties of localization. -/
@@ -214,6 +236,14 @@ theorem standardOpen_cover_iff_unitIdeal {R : Type u} [CommRing R] (f : R)
       Ideal.span (Set.range (fun i =>
         algebraMap R (Localization.Away f) (g i))) = ⊤ := by
   sorry
+
+theorem standardOpen_mul_eq_member_of_cover {R : Type u} [CommRing R] (f : R)
+    (n : ℕ) (g : Fin n → R)
+    (hcover : standardOpen f = ⨆ i, standardOpen (g i)) (i : Fin n) :
+    standardOpen (f * g i) = standardOpen (g i) := by
+  apply standardOpen_mul_eq_right_of_subset
+  rw [hcover]
+  exact le_iSup (fun j => standardOpen (g j)) i
 
 /-! ## Standard-open coverings -/
 

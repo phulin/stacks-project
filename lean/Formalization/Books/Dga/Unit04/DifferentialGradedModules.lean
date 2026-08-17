@@ -196,7 +196,9 @@ theorem differentialGradedModule_category_has_colimits
 /-! The source describes products degreewise and then takes the direct sum of
 the graded pieces.  These carriers record that construction explicitly; the
 `HasLimits` instance above supplies the corresponding module object and its
-universal property. -/
+universal property.  In particular, this is not the product in the category
+of all graded objects: the direct sum in the degree index is part of the
+definition of a cochain complex. -/
 
 abbrev dgmProductComponent {R : Type u} [CommRing R]
     {A : DifferentialGradedAlgebra R} {ι : Type v}
@@ -377,10 +379,10 @@ cohomology of the original module in the shifted degree.  Mathlib's
 noncomputable def dgmShiftCohomologyIso {R : Type u} [CommRing R]
     {A : DifferentialGradedAlgebra R}
     (M : DifferentialGradedModule A) (k n : ℤ) :
-    dgmCohomology M (n + k) ≅ dgmCohomology (dgmShift M k) n :=
-  (asIso (((HomologicalComplex.homologyFunctor (ModuleCat.{u} R)
-      (ComplexShape.up ℤ) 0).shiftIso k n (n + k) (by omega)).hom.app
-        M.complex)).symm
+  dgmCohomology (dgmShift M k) n ≅ dgmCohomology M (n + k) :=
+  (((HomologicalComplex.homologyFunctor (ModuleCat.{u} R)
+      (ComplexShape.up ℤ) 0).shiftIso k n (n + k) (by omega)).app
+        M.complex)
 
 @[simp]
 theorem dgmShift_actionOnHomogeneous {R : Type u} [CommRing R]
@@ -400,7 +402,7 @@ theorem dgmShift_satisfiesLeibniz {R : Type u} [CommRing R]
     {A : DifferentialGradedAlgebra R}
     (M : DifferentialGradedModule A) (k : ℤ) :
     (dgmShift M k).SatisfiesLeibniz := by
-  sorry
+  exact DifferentialGradedModule.satisfiesLeibniz (dgmShift M k)
 
 /-- The shifted map of differential graded modules. -/
 noncomputable def dgmShiftMap {R : Type u} [CommRing R]

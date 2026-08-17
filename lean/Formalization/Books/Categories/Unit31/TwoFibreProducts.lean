@@ -1698,11 +1698,11 @@ theorem isoComma_erase_factor
             intro z z' f
             apply ObjectProperty.hom_ext
             apply Comma.hom_ext
-            · dsimp [Functor.comp, Functor.id, forward, inverse,
+            · dsimp [Functor.comp, Functor.id,
                 ObjectProperty.isoMk, Comma.isoMk]
               apply ObjectProperty.hom_ext
               apply Comma.hom_ext
-              · simp [eraseFunctor, eraseInverse, Comma.isoMk, ObjectProperty.isoMk]
+              · simp [eraseFunctor, eraseInverse]
               · dsimp [Functor.comp, eraseFunctor, eraseInverse, isoCommaRight, isoCommaLeft,
                   Comma.isoMk, ObjectProperty.isoMk]
                 exact f.hom.w
@@ -1983,8 +1983,8 @@ theorem isoComma_diagonal_two
           property := by
             change IsIso e
             dsimp [e]
-            letI : IsIso (G₁.map p.inv ≫ ξ.obj.hom) := by infer_instance
-            letI : IsIso (G₂.map q.inv) := by infer_instance
+            let : IsIso (G₁.map p.inv ≫ ξ.obj.hom) := by infer_instance
+            let : IsIso (G₂.map q.inv) := by infer_instance
             apply (isIso_prod_iff (f := CategoryTheory.Prod.mkHom
               (G₁.map p.inv ≫ ξ.obj.hom) (G₂.map q.inv))).mpr
             constructor <;> infer_instance }
@@ -2061,7 +2061,7 @@ theorem isoComma_diagonal_two
                   _ = _ := by
                     rw [f.hom.left.hom.w]
                     simp only [Category.assoc]
-                    simpa [ξ, ξ', asIso_hom]
+                    simp [ξ, ξ']
               · change G₂.map f.hom.right ≫ G₂.map q'.inv =
                     G₂.map q.inv ≫ G₂.map f.hom.left.hom.right
                 have hq'map₀ := congrArg G₂.map hq'
@@ -2081,13 +2081,11 @@ theorem isoComma_diagonal_two
       forward ⋙ inverse :=
     NatIso.ofComponents (fun z => by
       have hz : IsIso z.obj.hom := by
-        change IsIso z.obj.hom
         exact z.property
       letI : IsIso z.obj.hom := hz
       letI : IsIso z.obj.hom.2 :=
         (isIso_prod_iff (f := z.obj.hom)).mp hz |>.2
       letI : IsIso (forward.obj z).obj.hom := by
-        change IsIso (forward.obj z).obj.hom
         exact (forward.obj z).property
       letI : IsIso (forward.obj z).obj.hom.1 :=
         (isIso_prod_iff (f := (forward.obj z).obj.hom)).mp
@@ -2213,15 +2211,15 @@ theorem isoComma_diagonal_two
               change (asIso z.obj.hom.2).inv ≫ (asIso z.obj.hom.2).hom = 𝟙 _
               exact (asIso z.obj.hom.2).inv_hom_id))) (by
             intro z z' f
-            letI : IsIso z.obj.hom := z.property
-            letI : IsIso z.obj.hom.1 :=
+            let : IsIso z.obj.hom := z.property
+            let : IsIso z.obj.hom.1 :=
               (isIso_prod_iff (f := z.obj.hom)).mp z.property |>.1
-            letI : IsIso z.obj.hom.2 :=
+            let : IsIso z.obj.hom.2 :=
               (isIso_prod_iff (f := z.obj.hom)).mp z.property |>.2
-            letI : IsIso z'.obj.hom := z'.property
-            letI : IsIso z'.obj.hom.1 :=
+            let : IsIso z'.obj.hom := z'.property
+            let : IsIso z'.obj.hom.1 :=
               (isIso_prod_iff (f := z'.obj.hom)).mp z'.property |>.1
-            letI : IsIso z'.obj.hom.2 :=
+            let : IsIso z'.obj.hom.2 :=
               (isIso_prod_iff (f := z'.obj.hom)).mp z'.property |>.2
             let p : z.obj.left.obj.left ≅ z.obj.right := by
               simpa [isoCommaPair, Functor.diag] using (asIso z.obj.hom.1)
@@ -2269,7 +2267,7 @@ theorem isoComma_diagonal_two
                 change f.hom.right ≫ (asIso z'.obj.hom.2).inv =
                   (asIso z.obj.hom.2).inv ≫ f.hom.left.hom.right
                 simpa [q, q', id, isoCommaPair, Functor.diag, Functor.prod'] using hq'
-            · simp only [InducedCategory.comp_hom])
+            · simp)
   exact ⟨CategoryTheory.Equivalence.mk forward inverse unitIso counitIso⟩
 
 /-! ## Base-change statements -/

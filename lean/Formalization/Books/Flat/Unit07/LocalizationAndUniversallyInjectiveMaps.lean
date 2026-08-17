@@ -35,7 +35,7 @@ def homothetyIdeal
   Ideal.map f (IsLocalRing.maximalIdeal R)
 
 /-- The special-fibre quotient of an `S`-module for the homothety ideal. -/
-def homothetyReduction
+abbrev homothetyReduction
     {R S N : Type u} [CommRing R] [CommRing S]
     [AddCommGroup N] [Module S N] [IsLocalRing R]
     (f : R →+* S) : Type u :=
@@ -46,7 +46,7 @@ def homothetySigma
     {R S N : Type u} [CommRing R] [CommRing S]
     [AddCommGroup N] [Module S N] [IsLocalRing R]
     (f : R →+* S) : Submonoid S :=
-  nonZeroSMulDivisors S (homothetyReduction f N)
+  nonZeroSMulDivisors S (homothetyReduction (N := N) f)
 
 /--
 The spectrum description attached to the homothety reduction.  The first
@@ -57,22 +57,22 @@ correspondence for maximal ideals after localization.
 theorem homothety_spectrum
     {R S N : Type u} [CommRing R] [CommRing S]
     [AddCommGroup N] [Module S N] [IsLocalRing R]
+    (f : R →+* S)
     [IsNoetherianRing (S ⧸ homothetyIdeal (R := R) f)]
     [Module.Finite (S ⧸ homothetyIdeal (R := R) f)
-      (homothetyReduction (R := R) f N)]
-    (f : R →+* S) :
+      (homothetyReduction (N := N) f)] :
     Formalization.Books.Algebra.Unit03.IsSemilocalRing
-        (Localization (homothetySigma f N)) ∧
+        (Localization (homothetySigma (N := N) f)) ∧
       (∀ (q : Ideal S) [q.IsPrime],
-        Disjoint (q : Set S) (homothetySigma f N : Set S) ↔
+        Disjoint (q : Set S) (homothetySigma (N := N) f : Set S) ↔
           ∃ p : Ideal S,
-            p ∈ _root_.associatedPrimes S (homothetyReduction f N) ∧
+            p ∈ _root_.associatedPrimes S (homothetyReduction (N := N) f) ∧
               q ≤ p) ∧
-      (∀ (P : Ideal (Localization (homothetySigma f N))) [P.IsMaximal],
+      (∀ (P : Ideal (Localization (homothetySigma (N := N) f))) [P.IsMaximal],
         ∃ p : Ideal (S ⧸ homothetyIdeal f),
           p ∈ _root_.associatedPrimes (S ⧸ homothetyIdeal f)
-              (homothetyReduction f N) ∧
-            P.comap (algebraMap S (Localization (homothetySigma f N))) =
+              (homothetyReduction (N := N) f) ∧
+            P.comap (algebraMap S (Localization (homothetySigma (N := N) f))) =
               p.comap (Ideal.Quotient.mk (homothetyIdeal f))) := by
   sorry
 
@@ -88,26 +88,33 @@ the localized module.
 theorem homothety_universally_injective
     {R S N : Type u} [CommRing R] [CommRing S]
     [AddCommGroup N] [Module S N] [IsLocalRing R] [IsLocalRing S]
+    (f : R →+* S)
     [IsNoetherianRing (S ⧸ homothetyIdeal (R := R) f)]
     [Module.Finite (S ⧸ homothetyIdeal (R := R) f)
-      (homothetyReduction (R := R) f N)]
-    (f : R →+* S) :
+      (homothetyReduction (N := N) f)] :
     letI : Algebra R S := f.toAlgebra
-    letI : Module R N := Module.compHom N f
-    letI : IsScalarTower R S N := SMul.comp.isScalarTower f
-    letI : Module R (LocalizedModule (homothetySigma f N) N) :=
-      Module.compHom _ f
-    letI : IsScalarTower R S (LocalizedModule (homothetySigma f N) N) :=
-      SMul.comp.isScalarTower f
+    letI : Module R N := Module.restrictScalars R S N
+    letI : IsScalarTower R S N := IsScalarTower.restrictScalars R S N
+    letI : SMul R (LocalizedModule (homothetySigma (N := N) f) N) :=
+      SMul.comp (LocalizedModule (homothetySigma (N := N) f) N) f
+    letI : Module R (LocalizedModule (homothetySigma (N := N) f) N) :=
+      Module.compHom (LocalizedModule (homothetySigma (N := N) f) N) f
+    letI : IsScalarTower R S (LocalizedModule (homothetySigma (N := N) f) N) :=
+      IsScalarTower.of_algebraMap_smul (R := R) (A := S)
+        (M := LocalizedModule (homothetySigma (N := N) f) N)
+        (fun r x => by
+          rw [RingHom.algebraMap_toAlgebra]
+          change f r • x = f r • x
+          rfl)
     IsLocalHom f →
-      RingHom.EssFinitePresentation f →
+      Formalization.Books.Algebra.Unit54.RingHom.EssFinitePresentation f →
         Module.FinitePresentation S N →
           Module.Flat R N →
-            (∀ s : homothetySigma f N,
+            (∀ s : homothetySigma (N := N) f,
               universallyInjectiveOver (R := R) (A := S)
                 (LinearMap.lsmul S N (s : S))) ∧
               universallyInjectiveOver (R := R) (A := S)
-                (LocalizedModule.mkLinearMap (homothetySigma f N) N) := by
+                (LocalizedModule.mkLinearMap (homothetySigma (N := N) f) N) := by
   sorry
 
 /-! ## Base change -/
@@ -122,43 +129,63 @@ def scalarBaseChangeMap
     (f : R →+* S) (g : S →+* T) :
     letI : Algebra R S := f.toAlgebra
     letI : Algebra S T := g.toAlgebra
-    letI : Module R N := Module.compHom N f
-    letI : IsScalarTower R S N := SMul.comp.isScalarTower f
+    letI : Module S T := Algebra.toModule
+    letI : Module R N := Module.restrictScalars R S N
+    letI : IsScalarTower R S N := IsScalarTower.restrictScalars R S N
     letI : Module T (T ⊗[S] N) := TensorProduct.leftModule
-    letI : Module R (T ⊗[S] N) := Module.compHom _ f
-    letI : IsScalarTower R S (T ⊗[S] N) := SMul.comp.isScalarTower f
+    letI : Module R (T ⊗[S] N) := Module.restrictScalars R S (T ⊗[S] N)
+    letI : IsScalarTower R S (T ⊗[S] N) :=
+      IsScalarTower.restrictScalars R S (T ⊗[S] N)
     N →ₗ[R] T ⊗[S] N := by
-  exact ((TensorProduct.mk S T N).flip (1 : T)).restrictScalars R
+  letI : Algebra R S := f.toAlgebra
+  letI : Algebra S T := g.toAlgebra
+  letI : Module S T := Algebra.toModule
+  letI : Module R N := Module.restrictScalars R S N
+  letI : IsScalarTower R S N := IsScalarTower.restrictScalars R S N
+  letI : Module T (T ⊗[S] N) := TensorProduct.leftModule
+  letI : Module R (T ⊗[S] N) := Module.restrictScalars R S (T ⊗[S] N)
+  letI : IsScalarTower R S (T ⊗[S] N) :=
+    IsScalarTower.restrictScalars R S (T ⊗[S] N)
+  exact ((TensorProduct.mk S T N) (1 : T)).restrictScalars R
 
 /-
 The source writes `N' = N ⊗_R S'` in the proof of the local base-change
 lemma, while the statement and the comparison diagram use `N ⊗_S S'`.
-The declaration below follows the statement and uses `scalarBaseChangeMap`.
+The source also omits the Noetherian and finite-special-fibre hypotheses from
+the displayed assumption list even though its proof invokes the preceding
+homothety-spectrum lemma.  They are retained below as the necessary inherited
+hypotheses.  The declaration follows the statement and uses
+`scalarBaseChangeMap`; the square of localization maps and the faithful-flat
+comparison in the proof are proof scaffolding rather than separate interfaces.
 -/
 theorem base_change_universally_injective_local
     {R S T N : Type u} [CommRing R] [CommRing S] [CommRing T]
     [AddCommGroup N] [Module S N] [IsLocalRing R] [IsLocalRing S]
+    (f : R →+* S)
     [IsNoetherianRing (S ⧸ homothetyIdeal (R := R) f)]
     [Module.Finite (S ⧸ homothetyIdeal (R := R) f)
-      (homothetyReduction (R := R) f N)]
-    (f : R →+* S) (g : S →+* T) :
+      (homothetyReduction (N := N) f)]
+    (g : S →+* T) :
     letI : Algebra R S := f.toAlgebra
     letI : Algebra S T := g.toAlgebra
-    letI : Module R N := Module.compHom N f
-    letI : IsScalarTower R S N := SMul.comp.isScalarTower f
+    letI : Module S T := Algebra.toModule
+    letI : Module R N := Module.restrictScalars R S N
+    letI : IsScalarTower R S N := IsScalarTower.restrictScalars R S N
     letI : Module T (T ⊗[S] N) := TensorProduct.leftModule
-    letI : Module R (T ⊗[S] N) := Module.compHom _ f
-    letI : IsScalarTower R S (T ⊗[S] N) := SMul.comp.isScalarTower f
+    letI : Module R (T ⊗[S] N) := Module.restrictScalars R S (T ⊗[S] N)
+    letI : IsScalarTower R S (T ⊗[S] N) :=
+      IsScalarTower.restrictScalars R S (T ⊗[S] N)
     IsLocalHom f →
-      RingHom.EssFinitePresentation f →
+      Formalization.Books.Algebra.Unit54.RingHom.EssFinitePresentation f →
         Module.FinitePresentation S N →
           Module.Flat R N →
             RingHom.Flat g →
               (∀ (q : PrimeSpectrum S),
+                q.asIdeal.comap f = IsLocalRing.maximalIdeal R →
                 q.asIdeal ∈ _root_.associatedPrimes S
-                    (homothetyReduction f N) →
+                    (homothetyReduction (N := N) f) →
                   q ∈ Set.range (PrimeSpectrum.comap g)) →
-                universallyInjective (scalarBaseChangeMap f g) := by
+                universallyInjective (scalarBaseChangeMap (N := N) f g) := by
   sorry
 
 theorem base_change_universally_injective
@@ -167,11 +194,13 @@ theorem base_change_universally_injective
     (f : R →+* S) (g : S →+* T) :
     letI : Algebra R S := f.toAlgebra
     letI : Algebra S T := g.toAlgebra
-    letI : Module R N := Module.compHom N f
-    letI : IsScalarTower R S N := SMul.comp.isScalarTower f
+    letI : Module S T := Algebra.toModule
+    letI : Module R N := Module.restrictScalars R S N
+    letI : IsScalarTower R S N := IsScalarTower.restrictScalars R S N
     letI : Module T (T ⊗[S] N) := TensorProduct.leftModule
-    letI : Module R (T ⊗[S] N) := Module.compHom _ f
-    letI : IsScalarTower R S (T ⊗[S] N) := SMul.comp.isScalarTower f
+    letI : Module R (T ⊗[S] N) := Module.restrictScalars R S (T ⊗[S] N)
+    letI : IsScalarTower R S (T ⊗[S] N) :=
+      IsScalarTower.restrictScalars R S (T ⊗[S] N)
     RingHom.FinitePresentation f →
       Module.FinitePresentation S N →
         Module.Flat R N →
@@ -183,7 +212,7 @@ theorem base_change_universally_injective
               q.asIdeal ∈ _root_.associatedPrimes S
                   (N ⊗[R] (q.asIdeal.comap f).ResidueField) →
                 q ∈ Set.range (PrimeSpectrum.comap g)) →
-              universallyInjective (scalarBaseChangeMap f g) := by
+              universallyInjective (scalarBaseChangeMap (N := N) f g) := by
   sorry
 
 /-! ## The local criterion -/
@@ -209,23 +238,30 @@ theorem universally_injective_local
 theorem invert_universally_injective
     {R S N : Type u} [CommRing R] [CommRing S]
     [AddCommGroup N] [Module S N] [IsLocalRing R]
+    (f : R →+* S)
     [IsNoetherianRing (S ⧸ homothetyIdeal (R := R) f)]
     [Module.Finite (S ⧸ homothetyIdeal (R := R) f)
-      (homothetyReduction (R := R) f N)]
-    (f : R →+* S) :
+      (homothetyReduction (N := N) f)] :
     letI : Algebra R S := f.toAlgebra
-    letI : Module R N := Module.compHom N f
-    letI : IsScalarTower R S N := SMul.comp.isScalarTower f
-    letI : Module R (LocalizedModule (homothetySigma f N) N) :=
-      Module.compHom _ f
-    letI : IsScalarTower R S (LocalizedModule (homothetySigma f N) N) :=
-      SMul.comp.isScalarTower f
+    letI : Module R N := Module.restrictScalars R S N
+    letI : IsScalarTower R S N := IsScalarTower.restrictScalars R S N
+    letI : SMul R (LocalizedModule (homothetySigma (N := N) f) N) :=
+      SMul.comp (LocalizedModule (homothetySigma (N := N) f) N) f
+    letI : Module R (LocalizedModule (homothetySigma (N := N) f) N) :=
+      Module.compHom (LocalizedModule (homothetySigma (N := N) f) N) f
+    letI : IsScalarTower R S (LocalizedModule (homothetySigma (N := N) f) N) :=
+      IsScalarTower.of_algebraMap_smul (R := R) (A := S)
+        (M := LocalizedModule (homothetySigma (N := N) f) N)
+        (fun r x => by
+          rw [RingHom.algebraMap_toAlgebra]
+          change f r • x = f r • x
+          rfl)
     Module.Projective R N →
-      (∀ s : homothetySigma f N,
+      (∀ s : homothetySigma (N := N) f,
         universallyInjectiveOver (R := R) (A := S)
           (LinearMap.lsmul S N (s : S))) ∧
         universallyInjectiveOver (R := R) (A := S)
-          (LocalizedModule.mkLinearMap (homothetySigma f N) N) := by
+          (LocalizedModule.mkLinearMap (homothetySigma (N := N) f) N) := by
   sorry
 
 end

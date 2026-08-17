@@ -3,13 +3,14 @@ import Mathlib.Algebra.Category.Grp.Limits
 import Mathlib.Algebra.Category.ModuleCat.Limits
 import Mathlib.Algebra.Category.Ring.Limits
 import Mathlib.CategoryTheory.Action.Limits
-import Mathlib.CategoryTheory.Limits.Types.Limits
+import Mathlib.CategoryTheory.Limits.Types.Pullbacks
 
 /-!
 # Categories, Chapter 7: Examples of fibre products
 
 The category of sets is represented by `Type u`.  Its fibre product is made
-explicit below as the subtype of pairs satisfying the equality in the base.
+explicit by Mathlib's `Types.PullbackObj`, the subtype of pairs satisfying the
+equality in the base.
 For the structured categories listed in the source, Mathlib's concrete
 category limit instances already construct the corresponding structured
 fibre products, so the declarations below record their existence without
@@ -26,74 +27,43 @@ universe u
 
 /-! ## Fibre products of sets -/
 
-/-- The set-theoretic fibre product of two maps with common codomain. -/
-def setFibreProduct {X Y Z : Type u} (f : X → Y) (g : Z → Y) : Type u :=
-  {xz : X × Z // f xz.1 = g xz.2}
+/-- The projections in the source's set-theoretic construction are the legs of
+Mathlib's explicit `Types.PullbackObj` cone. -/
+theorem types_pullback_condition {X Y Z : Type u} (f : X → Y) (g : Z → Y) :
+    (Types.pullbackCone (TypeCat.ofHom f) (TypeCat.ofHom g)).fst ≫ TypeCat.ofHom f =
+      (Types.pullbackCone (TypeCat.ofHom f) (TypeCat.ofHom g)).snd ≫ TypeCat.ofHom g := by
+  exact (Types.pullbackCone (TypeCat.ofHom f) (TypeCat.ofHom g)).condition
 
-/-- The first projection from the set-theoretic fibre product. -/
-def setFibreProduct.fst {X Y Z : Type u} (f : X → Y) (g : Z → Y) :
-    setFibreProduct f g ⟶ X :=
-  TypeCat.ofHom (fun xz => xz.1.1)
-
-/-- The second projection from the set-theoretic fibre product. -/
-def setFibreProduct.snd {X Y Z : Type u} (f : X → Y) (g : Z → Y) :
-    setFibreProduct f g ⟶ Z :=
-  TypeCat.ofHom (fun xz => xz.1.2)
-
-/-- The map into the set-theoretic fibre product induced by compatible maps. -/
-def setFibreProduct.lift {W X Y Z : Type u} (f : X → Y) (g : Z → Y)
-    (α : W ⟶ X) (β : W ⟶ Z)
-    (h : α ≫ TypeCat.ofHom f = β ≫ TypeCat.ofHom g) :
-    W ⟶ setFibreProduct f g :=
-  TypeCat.ofHom (fun w =>
-    ⟨(α w, β w), ConcreteCategory.congr_hom h w⟩)
-
-@[simp]
-theorem setFibreProduct.fst_lift {W X Y Z : Type u} (f : X → Y) (g : Z → Y)
-    (α : W ⟶ X) (β : W ⟶ Z)
-    (h : α ≫ TypeCat.ofHom f = β ≫ TypeCat.ofHom g) :
-    setFibreProduct.lift f g α β h ≫ setFibreProduct.fst f g = α := by
-  apply ConcreteCategory.hom_ext
-  intro w
-  rfl
-
-@[simp]
-theorem setFibreProduct.snd_lift {W X Y Z : Type u} (f : X → Y) (g : Z → Y)
-    (α : W ⟶ X) (β : W ⟶ Z)
-    (h : α ≫ TypeCat.ofHom f = β ≫ TypeCat.ofHom g) :
-    setFibreProduct.lift f g α β h ≫ setFibreProduct.snd f g = β := by
-  apply ConcreteCategory.hom_ext
-  intro w
-  rfl
-
-/-- The defining equality makes the square of projections commute. -/
-theorem setFibreProduct.condition {X Y Z : Type u} (f : X → Y) (g : Z → Y) :
-    setFibreProduct.fst f g ≫ TypeCat.ofHom f =
-      setFibreProduct.snd f g ≫ TypeCat.ofHom g := by
-  apply ConcreteCategory.hom_ext
-  intro xz
-  exact xz.2
-
-/-- The explicit set-theoretic construction satisfies the pullback universal property. -/
-theorem setFibreProduct.isPullback {X Y Z : Type u} (f : X → Y) (g : Z → Y) :
-    @IsPullback (Type u) _ (setFibreProduct f g) X Z Y
-      (setFibreProduct.fst f g) (setFibreProduct.snd f g)
+/-- The explicit set-theoretic construction satisfies the pullback universal
+property. -/
+theorem types_pullback_isPullback {X Y Z : Type u} (f : X → Y) (g : Z → Y) :
+    @IsPullback (Type u) _ (Types.PullbackObj (TypeCat.ofHom f) (TypeCat.ofHom g)) X Z Y
+      (Types.pullbackCone (TypeCat.ofHom f) (TypeCat.ofHom g)).fst
+      (Types.pullbackCone (TypeCat.ofHom f) (TypeCat.ofHom g)).snd
       (TypeCat.ofHom f) (TypeCat.ofHom g) := by
-  apply IsPullback.mk'
-  · exact setFibreProduct.condition f g
-  · intro W φ ψ hφ hψ
-    apply ConcreteCategory.hom_ext
-    intro w
-    apply Subtype.ext
-    apply Prod.ext
-    · change (setFibreProduct.fst f g) (φ w) = (setFibreProduct.fst f g) (ψ w)
-      exact ConcreteCategory.congr_hom hφ w
-    · change (setFibreProduct.snd f g) (φ w) = (setFibreProduct.snd f g) (ψ w)
-      exact ConcreteCategory.congr_hom hψ w
-  · intro W α β h
-    refine ⟨setFibreProduct.lift f g α β h, ?_, ?_⟩
-    · exact setFibreProduct.fst_lift f g α β h
-    · exact setFibreProduct.snd_lift f g α β h
+  exact IsPullback.of_isLimit
+    (Types.pullbackLimitCone (TypeCat.ofHom f) (TypeCat.ofHom g)).isLimit
+
+/-- Compatible maps into the two factors give the explicit map into the
+set-theoretic fibre product. -/
+theorem types_pullback_map_exists {W X Y Z : Type u} (f : X → Y) (g : Z → Y)
+    (α : W ⟶ X) (β : W ⟶ Z)
+    (h : α ≫ TypeCat.ofHom f = β ≫ TypeCat.ofHom g) :
+    ∃ γ : W ⟶ Types.PullbackObj (TypeCat.ofHom f) (TypeCat.ofHom g), ∀ w,
+      (γ w : X × Z) = (α w, β w) := by
+  refine ⟨TypeCat.ofHom (fun w => ⟨(α w, β w), ConcreteCategory.congr_hom h w⟩), ?_⟩
+  intro w
+  rfl
+
+/-- The explicit set-theoretic construction has the source's universal
+property for compatible maps. -/
+theorem types_pullback_universal_property {W X Y Z : Type u} (f : X → Y) (g : Z → Y)
+    (α : W ⟶ X) (β : W ⟶ Z)
+    (h : α ≫ TypeCat.ofHom f = β ≫ TypeCat.ofHom g) :
+    ∃! γ : W ⟶ Types.PullbackObj (TypeCat.ofHom f) (TypeCat.ofHom g),
+      γ ≫ (Types.pullbackCone (TypeCat.ofHom f) (TypeCat.ofHom g)).fst = α ∧
+        γ ≫ (Types.pullbackCone (TypeCat.ofHom f) (TypeCat.ofHom g)).snd = β := by
+  exact fibre_product_universal_property (types_pullback_isPullback f g) α β h
 
 /-- The category of sets has all fibre products. -/
 theorem types_have_fibre_products : HasPullbacks (Type u) := by

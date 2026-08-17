@@ -336,9 +336,7 @@ noncomputable abbrev commRingTensorProductSheaf {X : TopCat.{v}}
     (G : CommRingSheafModule O₁) : CommRingSheafModule O₂ :=
   tensorProductSheaf (commRingSheafMorphismToRingSheaf α) G
 
-/-- The stalk-level extension of scalars for the source's sheaf hypotheses.
-`ModuleCat.extendScalars` fixes the canonical tensor-ordering convention used
-by Mathlib. -/
+/-- The stalk module of a sheaf of modules over a commutative sheaf of rings. -/
 noncomputable def commRingSheafModuleStalk {X : TopCat.{v}}
     {O : CommRingSheaf X} (G : CommRingSheafModule O) (x : X) :
     ModuleCat (↑(TopCat.Presheaf.stalk O.obj x)) := by

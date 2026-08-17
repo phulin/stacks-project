@@ -185,8 +185,7 @@ def Hom.comp {D E K : TwoCommutativeDiagram f g}
           (Bicategory.associator h.vertex k.vertex K.right).inv ▷ g := by
             rw [hh]
       _ = _ := by
-        simp only [Category.assoc, Iso.hom_inv_id_assoc, Iso.hom_inv_id,
-          Category.comp_id]
+        simp only [Category.assoc, Iso.hom_inv_id_assoc]
 
 /-- A 2-morphism between 1-morphisms of 2-commutative diagrams. -/
 structure TwoHom {D E : TwoCommutativeDiagram f g} (h k : D ⟶₂ E) where
@@ -232,6 +231,13 @@ instance homCategory (D E : TwoCommutativeDiagram f g) : Category (D ⟶₂ E) w
   id_comp := by intros; apply TwoHom.ext; simp [TwoHom.comp, TwoHom.id]
   comp_id := by intros; apply TwoHom.ext; simp [TwoHom.comp, TwoHom.id]
   assoc := by intros; apply TwoHom.ext; simp [TwoHom.comp, Category.assoc]
+
+private lemma eqToHom_vertex {D E : TwoCommutativeDiagram f g}
+    {h k : Hom D E} (p : h = k) :
+    (eqToHom p : (TwoCommutativeDiagram.homCategory D E).Hom h k).vertex =
+      eqToHom (congrArg (fun t : Hom D E => t.vertex) p) := by
+  cases p
+  rfl
 
 instance categoryStruct : CategoryStruct (TwoCommutativeDiagram f g) where
   Hom D E := D ⟶₂ E
@@ -322,10 +328,10 @@ def TwoHom.associator {D E K L : TwoCommutativeDiagram f g}
     TwoHom (Hom.comp (Hom.comp h k) l) (Hom.comp h (Hom.comp k l)) where
   vertex := (Bicategory.associator h.vertex k.vertex l.vertex).hom
   left := by
-    simp [Hom.comp, strictAssocInv, strictAssocHom, Category.assoc,
+    simp [Hom.comp, strictAssocInv, Category.assoc,
       Bicategory.Strict.associator_eqToIso]
   right := by
-    simp [Hom.comp, strictAssocInv, strictAssocHom, Category.assoc,
+    simp [Hom.comp, strictAssocInv, Category.assoc,
       Bicategory.Strict.associator_eqToIso]
 
 /-- The inverse associator 2-morphism. -/
@@ -334,10 +340,10 @@ def TwoHom.associatorInv {D E K L : TwoCommutativeDiagram f g}
     TwoHom (Hom.comp h (Hom.comp k l)) (Hom.comp (Hom.comp h k) l) where
   vertex := (Bicategory.associator h.vertex k.vertex l.vertex).inv
   left := by
-    simp [Hom.comp, strictAssocInv, strictAssocHom, Category.assoc,
+    simp [Hom.comp, strictAssocInv, Category.assoc,
       Bicategory.Strict.associator_eqToIso]
   right := by
-    simp [Hom.comp, strictAssocInv, strictAssocHom, Category.assoc,
+    simp [Hom.comp, strictAssocInv, Category.assoc,
       Bicategory.Strict.associator_eqToIso]
 
 /-- The left unitor 2-isomorphism. -/
@@ -367,10 +373,10 @@ def TwoHom.rightUnitor {D E : TwoCommutativeDiagram f g} (h : D ⟶₂ E) :
     TwoHom (Hom.comp h (Hom.id E)) h where
   vertex := (Bicategory.rightUnitor h.vertex).hom
   left := by
-    simp [Hom.id, Hom.comp, strictAssocInv, Category.assoc,
+    simp [Hom.id, Hom.comp, strictAssocInv,
       Bicategory.Strict.rightUnitor_eqToIso]
   right := by
-    simp [Hom.id, Hom.comp, strictAssocInv, Category.assoc,
+    simp [Hom.id, Hom.comp, strictAssocInv,
       Bicategory.Strict.rightUnitor_eqToIso]
 
 /-- The inverse right unitor. -/
@@ -378,10 +384,10 @@ def TwoHom.rightUnitorInv {D E : TwoCommutativeDiagram f g} (h : D ⟶₂ E) :
     TwoHom h (Hom.comp h (Hom.id E)) where
   vertex := (Bicategory.rightUnitor h.vertex).inv
   left := by
-    simp [Hom.id, Hom.comp, strictAssocInv, Category.assoc,
+    simp [Hom.id, Hom.comp, strictAssocInv,
       Bicategory.Strict.rightUnitor_eqToIso]
   right := by
-    simp [Hom.id, Hom.comp, strictAssocInv, Category.assoc,
+    simp [Hom.id, Hom.comp, strictAssocInv,
       Bicategory.Strict.rightUnitor_eqToIso]
 
 /-- The final-object predicate for the explicitly displayed 2-category of
@@ -544,7 +550,102 @@ theorem twoCommutativeDiagram_bicategory_exists :
 /-- The displayed 2-category is strict when the ambient 2-category is strict. -/
 noncomputable instance twoCommutativeDiagramStrict :
     Bicategory.Strict (TwoCommutativeDiagram f g) := by
-  sorry
+  exact
+    { id_comp := by
+        intro D E h
+        change Hom.comp (Hom.id D) h = h
+        cases h
+        dsimp [Hom.comp, Hom.id, strictAssocInv]
+        simp only [← heq_eq_eq]
+        congr 1
+        · exact Bicategory.Strict.id_comp _
+        · simp only [Bicategory.id_whiskerLeft]
+          simp [Bicategory.Strict.leftUnitor_eqToIso, Bicategory.Strict.assoc,
+            Bicategory.Strict.id_comp, eqToHom_trans, eqToHom_refl,
+            eqToHom_comp_heq_iff, comp_eqToHom_heq_iff,
+            ← heq_eq_eq, Category.assoc]
+          congr 1
+        · simp only [Bicategory.id_whiskerLeft]
+          simp [Bicategory.Strict.leftUnitor_eqToIso, Bicategory.Strict.assoc,
+            Bicategory.Strict.id_comp, eqToHom_trans, eqToHom_refl,
+            eqToHom_comp_heq_iff, comp_eqToHom_heq_iff,
+            ← heq_eq_eq, Category.assoc]
+          congr 1
+        · exact proof_irrel_heq _ _
+      comp_id := by
+        intro D E h
+        change Hom.comp h (Hom.id E) = h
+        cases h
+        dsimp [Hom.comp, Hom.id, strictAssocInv]
+        simp only [← heq_eq_eq]
+        congr 1
+        · exact Bicategory.Strict.comp_id _
+        · simp [Bicategory.whiskerLeft_eqToHom,
+            Bicategory.Strict.rightUnitor_eqToIso,
+            Bicategory.Strict.assoc, Bicategory.Strict.id_comp,
+            Bicategory.Strict.comp_id, eqToHom_trans, eqToHom_refl,
+            eqToHom_comp_heq_iff, comp_eqToHom_heq_iff,
+            ← heq_eq_eq, Category.assoc]
+          rfl
+        · simp [Bicategory.whiskerLeft_eqToHom,
+            Bicategory.Strict.rightUnitor_eqToIso,
+            Bicategory.Strict.assoc, Bicategory.Strict.id_comp,
+            Bicategory.Strict.comp_id, eqToHom_trans, eqToHom_refl,
+            eqToHom_comp_heq_iff, comp_eqToHom_heq_iff,
+            ← heq_eq_eq, Category.assoc]
+          rfl
+        · exact proof_irrel_heq _ _
+      assoc := by
+        intro D E K L h k l
+        change Hom.comp (Hom.comp h k) l = Hom.comp h (Hom.comp k l)
+        have hl := (TwoHom.associator h k l).left
+        have hr := (TwoHom.associator h k l).right
+        cases h
+        cases k
+        cases l
+        dsimp [Hom.comp, strictAssocInv]
+        simp only [← heq_eq_eq]
+        congr 1
+        · exact Bicategory.Strict.assoc _ _ _
+        · rw [← conj_eqToHom_iff_heq]
+          · simpa [Hom.comp, strictAssocInv, strictAssocHom, Category.assoc,
+              Bicategory.Strict.associator_eqToIso] using hl
+          · rfl
+          · exact congrArg (fun t => t ≫ L.left)
+              (Bicategory.Strict.assoc _ _ _)
+        · rw [← conj_eqToHom_iff_heq]
+          · simpa [Hom.comp, strictAssocInv, strictAssocHom, Category.assoc,
+              Bicategory.Strict.associator_eqToIso] using hr
+          · rfl
+          · exact congrArg (fun t => t ≫ L.right)
+              (Bicategory.Strict.assoc _ _ _)
+        · exact proof_irrel_heq _ _
+      leftUnitor_eqToIso := by
+        intro D E h
+        cases h
+        apply Iso.ext
+        apply TwoHom.ext
+        simp [Bicategory.leftUnitor, TwoHom.leftUnitor, Hom.id, Hom.comp,
+          strictAssocInv, Bicategory.Strict.leftUnitor_eqToIso]
+        rw [eqToHom_vertex]
+        congr 1
+      rightUnitor_eqToIso := by
+        intro D E h
+        apply Iso.ext
+        apply TwoHom.ext
+        simp [Bicategory.rightUnitor, TwoHom.rightUnitor, Hom.id, Hom.comp,
+          strictAssocInv, Bicategory.Strict.rightUnitor_eqToIso]
+        rw [eqToHom_vertex]
+        congr 1
+      associator_eqToIso := by
+        intro D E K L h k l
+        apply Iso.ext
+        apply TwoHom.ext
+        simp [Bicategory.associator, TwoHom.associator, Hom.comp,
+          strictAssocInv, strictAssocHom,
+          Bicategory.Strict.associator_eqToIso]
+        rw [eqToHom_vertex]
+        congr 1 }
 
 /-- The displayed 2-category is locally groupoidal when the ambient one is. -/
 theorem twoCommutativeDiagram_is_two_one
@@ -965,49 +1066,81 @@ theorem isoComma_is_category_twoFibreProduct
             have hψ₂ : (isoCommaComparisonIso F G).hom.app (γ₂.obj X) = γ₂hom := by
               change (isoCommaComparison F G).app (γ₂.obj X) = _
               rfl
-            have h₁X' : F.map (α₁.hom.app X) ≫ γ₁hom =
-                φ.hom.app X ≫ G.map β₁hom := by
-              simpa [hψ₁, β₁hom] using h₁X
-            have h₂X' : F.map (α₂.hom.app X) ≫ γ₂hom =
-                φ.hom.app X ≫ G.map β₂hom := by
-              simpa [hψ₂, β₂hom] using h₂X
+            have h₁X' : F.map (α₁.hom.app X) ≫
+                (isoCommaComparisonIso F G).hom.app (γ₁.obj X) =
+                φ.hom.app X ≫ G.map (β₁.hom.app X) := by
+              simpa only [Category.comp_id, Category.id_comp] using h₁X
+            have h₂X' : F.map (α₂.hom.app X) ≫
+                (isoCommaComparisonIso F G).hom.app (γ₂.obj X) =
+                φ.hom.app X ≫ G.map (β₂.hom.app X) := by
+              simpa only [Category.comp_id, Category.id_comp] using h₂X
             have h₁' : F.map (α₁.inv.app X) ≫ φ.hom.app X =
-                γ₁hom ≫ G.map β₁inv := by
-              apply (cancel_mono (G.map β₁hom)).1
-              simp only [Category.assoc, ← Functor.map_comp]
-              rw [← h₁X']
-              simp
+                (isoCommaComparisonIso F G).hom.app (γ₁.obj X) ≫
+                  G.map (β₁.inv.app X) := by
+              apply (cancel_mono (G.map (β₁.hom.app X))).1
+              rw [Category.assoc, ← h₁X']
+              rw [← Category.assoc, ← Functor.map_comp, α₁.inv_hom_id_app]
+              simp only [Category.id_comp, Category.assoc]
+              rw [← G.map_comp]
+              rw [β₁.inv_hom_id_app]
+              rw [F.map_id]
+              have hG := G.map_id ((γ₁ ⋙ isoCommaRight F G).obj X)
+              rw [hG]
+              simp [Functor.comp, isoCommaLeft, isoCommaRight]
+            change F.map ((α₁.inv.app X) ≫ (α₂.hom.app X)) ≫ γ₂hom =
+              γ₁hom ≫ G.map ((β₁.inv.app X) ≫ (β₂.hom.app X))
             simp only [Functor.map_comp, Category.assoc]
+            rw [← hψ₂]
             rw [h₂X']
+            rw [← Category.assoc]
             rw [h₁']
-            simp only [← Functor.map_comp, Category.assoc]))) (by
+            rw [hψ₁]
+            simp only [Functor.map_comp, Category.assoc]))) (by
           intro X Y f
           apply ObjectProperty.hom_ext
           apply Comma.hom_ext
-          · simp only [Functor.comp_map, Category.assoc]
+          · change (γ₁ ⋙ isoCommaLeft F G).map f ≫
+                (α₁.inv.app Y ≫ α₂.hom.app Y) =
+              (α₁.inv.app X ≫ α₂.hom.app X) ≫
+                (γ₂ ⋙ isoCommaLeft F G).map f
             rw [α₁.inv.naturality_assoc, α₂.hom.naturality]
-          · simp only [Functor.comp_map, Category.assoc]
-            rw [β₁.inv.naturality_assoc, β₂.hom.naturality])
+            simp only [Category.assoc]
+          · change (γ₁ ⋙ isoCommaRight F G).map f ≫
+                (β₁.inv.app Y ≫ β₂.hom.app Y) =
+              (β₁.inv.app X ≫ β₂.hom.app X) ≫
+                (γ₂ ⋙ isoCommaRight F G).map f
+            rw [β₁.inv.naturality_assoc, β₂.hom.naturality]
+            simp only [Category.assoc])
     refine ⟨δ, ?_, ?_⟩
     · constructor
       · ext X
         dsimp [δ]
-        simp [Functor.comp_map, Category.assoc]
+        change (α₁.app X).hom ≫ ((α₁.app X).inv ≫ (α₂.app X).hom) =
+          (α₂.app X).hom
+        rw [← Category.assoc, (α₁.app X).hom_inv_id, Category.id_comp]
       · ext X
         dsimp [δ]
-        simp [Functor.comp_map, Category.assoc]
+        change (β₁.app X).hom ≫ ((β₁.app X).inv ≫ (β₂.app X).hom) =
+          (β₂.app X).hom
+        rw [← Category.assoc, (β₁.app X).hom_inv_id, Category.id_comp]
     · intro δ' hδ'
       ext X
-      apply ObjectProperty.hom_ext
-      apply Comma.hom_ext
       · have hx := congrArg (fun t => t.app X) hδ'.1
         apply (cancel_epi (α₁.hom.app X)).1
         dsimp [δ]
-        simpa [Functor.comp_map, Category.assoc] using hx
+        change α₁.hom.app X ≫ (δ'.hom.app X).hom.left =
+          α₁.hom.app X ≫ (α₁.inv.app X ≫ α₂.hom.app X)
+        rw [← Category.assoc, α₁.hom_inv_id_app, Category.id_comp]
+        change α₁.hom.app X ≫ (δ'.hom.app X).hom.left = α₂.hom.app X at hx
+        exact hx
       · have hx := congrArg (fun t => t.app X) hδ'.2
         apply (cancel_epi (β₁.hom.app X)).1
         dsimp [δ]
-        simpa [Functor.comp_map, Category.assoc] using hx
+        change β₁.hom.app X ≫ (δ'.hom.app X).hom.right =
+          β₁.hom.app X ≫ (β₁.inv.app X ≫ β₂.hom.app X)
+        rw [← Category.assoc, β₁.hom_inv_id_app, Category.id_comp]
+        change β₁.hom.app X ≫ (δ'.hom.app X).hom.right = β₂.hom.app X at hx
+        exact hx
 
 theorem category_twoFibreProduct_unique_up_to_iso
     {A : Type*} [Category* A]
@@ -1069,6 +1202,141 @@ abbrev QuintupleCategory
     (F : A ⥤ C) (G : B ⥤ C) :=
   IsoComma (F.prod G) (Functor.diag C)
 
+private theorem isoComma_diagonal_one_aux
+    {A B S : Type*} [Category* A] [Category* B] [Category* S]
+    (G₁ : A ⥤ S) (G₂ : B ⥤ S) :
+    Nonempty (IsoComma (Functor.prod G₁ G₂) (Functor.diag S) ≌ IsoComma G₁ G₂) := by
+  let forward : IsoComma (Functor.prod G₁ G₂) (Functor.diag S) ⥤
+      IsoComma G₁ G₂ :=
+    { obj := fun z =>
+        letI : IsIso z.obj.hom := z.property
+        letI : IsIso z.obj.hom.1 := (isIso_prod_iff (f := z.obj.hom)).mp z.property |>.1
+        letI : IsIso z.obj.hom.2 := (isIso_prod_iff (f := z.obj.hom)).mp z.property |>.2
+        { obj :=
+            { left := z.obj.left.1
+              right := z.obj.left.2
+              hom := z.obj.hom.1 ≫ inv z.obj.hom.2 }
+          property := by
+            change IsIso (z.obj.hom.1 ≫ inv z.obj.hom.2)
+            infer_instance }
+      map := fun {z z'} f =>
+        ObjectProperty.homMk
+          { left := f.hom.left.1
+            right := f.hom.left.2
+            w := by
+              letI : IsIso z.obj.hom := z.property
+              letI : IsIso z'.obj.hom := z'.property
+              letI : IsIso z.obj.hom.1 :=
+                (isIso_prod_iff (f := z.obj.hom)).mp z.property |>.1
+              letI : IsIso z.obj.hom.2 :=
+                (isIso_prod_iff (f := z.obj.hom)).mp z.property |>.2
+              letI : IsIso z'.obj.hom.1 :=
+                (isIso_prod_iff (f := z'.obj.hom)).mp z'.property |>.1
+              letI : IsIso z'.obj.hom.2 :=
+                (isIso_prod_iff (f := z'.obj.hom)).mp z'.property |>.2
+              have h₁ := congrArg (fun t => t.1) f.hom.w
+              have h₂ := congrArg (fun t => t.2) f.hom.w
+              dsimp [Functor.prod, Functor.diag] at h₁ h₂
+              change G₁.map f.hom.left.1 ≫
+                  (z'.obj.hom.1 ≫ inv z'.obj.hom.2) =
+                (z.obj.hom.1 ≫ inv z.obj.hom.2) ≫ G₂.map f.hom.left.2
+              have h₂' : f.hom.right ≫ inv z'.obj.hom.2 =
+                  inv z.obj.hom.2 ≫ G₂.map f.hom.left.2 := by
+                apply (cancel_mono z'.obj.hom.2).1
+                simp only [Category.assoc, Iso.inv_hom_id_assoc]
+                rw [h₂]
+                simp
+              calc
+                _ = (G₁.map f.hom.left.1 ≫ z'.obj.hom.1) ≫
+                    inv z'.obj.hom.2 := by simp only [Category.assoc]
+                _ = (z.obj.hom.1 ≫ f.hom.right) ≫
+                    inv z'.obj.hom.2 := by rw [h₁]
+                _ = z.obj.hom.1 ≫
+                    (f.hom.right ≫ inv z'.obj.hom.2) := by
+                      simp only [Category.assoc]
+                _ = _ := by rw [h₂']; simp only [Category.assoc] }
+      map_id := by
+        intro z
+        apply ObjectProperty.hom_ext
+        apply Comma.hom_ext <;> simp
+      map_comp := by
+        intro z z' z'' f g
+        apply ObjectProperty.hom_ext
+        apply Comma.hom_ext <;> simp }
+  let inverse : IsoComma G₁ G₂ ⥤
+      IsoComma (Functor.prod G₁ G₂) (Functor.diag S) :=
+    { obj := fun z =>
+        { obj :=
+            { left := (z.obj.left, z.obj.right)
+              right := G₂.obj z.obj.right
+              hom := CategoryTheory.Prod.mkHom z.obj.hom (𝟙 _) }
+          property := by
+            change IsIso (CategoryTheory.Prod.mkHom z.obj.hom
+              (𝟙 (G₂.obj z.obj.right)))
+            apply (isIso_prod_iff (f := CategoryTheory.Prod.mkHom z.obj.hom
+              (𝟙 (G₂.obj z.obj.right)))).mpr
+            constructor <;> infer_instance }
+      map := fun {z z'} f =>
+        ObjectProperty.homMk
+          { left := CategoryTheory.Prod.mkHom f.hom.left f.hom.right
+            right := G₂.map f.hom.right
+            w := by
+              apply CategoryTheory.Prod.hom_ext
+              · dsimp [Functor.prod, Functor.diag]
+                exact f.hom.w
+              · simp }
+      map_id := by
+        intro z
+        apply ObjectProperty.hom_ext
+        apply Comma.hom_ext <;> simp
+      map_comp := by
+        intro z z' z'' f g
+        apply ObjectProperty.hom_ext
+        apply Comma.hom_ext <;> simp }
+  let unitIso : 𝟭 (IsoComma (Functor.prod G₁ G₂) (Functor.diag S)) ≅
+      forward ⋙ inverse :=
+    NatIso.ofComponents (fun z => by
+      letI : IsIso z.obj.hom := z.property
+      letI : IsIso z.obj.hom.2 := (isIso_prod_iff (f := z.obj.hom)).mp z.property |>.2
+      exact ObjectProperty.isoMk _
+        (Comma.isoMk (Iso.refl _) (asIso z.obj.hom.2).symm (by
+          simp [Functor.comp, forward, inverse]))) (by
+          intro z z' f
+          apply ObjectProperty.hom_ext
+          apply Comma.hom_ext
+          · simp [Functor.comp, forward, inverse, ObjectProperty.isoMk, Comma.isoMk]
+          · letI : IsIso z.obj.hom := z.property
+            letI : IsIso z'.obj.hom := z'.property
+            letI : IsIso z.obj.hom.2 :=
+              (isIso_prod_iff (f := z.obj.hom)).mp z.property |>.2
+            letI : IsIso z'.obj.hom.2 :=
+              (isIso_prod_iff (f := z'.obj.hom)).mp z'.property |>.2
+            have h₂ := congrArg (fun t => t.2) f.hom.w
+            dsimp [Functor.prod, Functor.diag] at h₂
+            have h₂' : f.hom.right ≫ inv z'.obj.hom.2 =
+                inv z.obj.hom.2 ≫ G₂.map f.hom.left.2 := by
+              apply (cancel_mono z'.obj.hom.2).1
+              simp only [Category.assoc, Iso.inv_hom_id_assoc]
+              rw [h₂]
+              simp
+            simpa [Functor.comp, forward, inverse, ObjectProperty.isoMk, Comma.isoMk]
+              using h₂')
+  let counitIso : inverse ⋙ forward ≅
+      𝟭 (IsoComma G₁ G₂) :=
+    NatIso.ofComponents (fun z => by
+      exact ObjectProperty.isoMk _
+        (Comma.isoMk (Iso.refl _) (Iso.refl _) (by
+          simpa [Functor.comp, forward, inverse]))) (by
+          intro z z' f
+          dsimp [forward, inverse]
+          apply ObjectProperty.hom_ext
+          apply Comma.hom_ext <;> simp)
+  exact ⟨Equivalence.mk' forward inverse unitIso counitIso (by
+    intro z
+    simp [unitIso, counitIso, forward, inverse]
+    apply ObjectProperty.hom_ext
+    apply Comma.hom_ext <;> simp)⟩
+
 /-- The quintuple presentation is equivalent to the triple presentation. -/
 theorem quintupleCategory_equivalent
     {A : Type*} [Category* A]
@@ -1076,7 +1344,7 @@ theorem quintupleCategory_equivalent
     {C : Type*} [Category* C]
     (F : A ⥤ C) (G : B ⥤ C) :
     Nonempty (QuintupleCategory F G ≌ IsoComma F G) := by
-  sorry
+  exact isoComma_diagonal_one_aux F G
 
 /-! ## Functoriality and comparison results -/
 

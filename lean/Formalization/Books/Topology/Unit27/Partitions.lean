@@ -135,10 +135,7 @@ def IsGoodStratification {ι : Type v} (P : Partition X ι) : Prop :=
 /-- The closure relation of a good stratification is a partial order. -/
 theorem goodStratificationOrder_isPartialOrder
     {ι : Type v} (P : Partition X ι) (hP : IsGoodStratification P) :
-    (∀ i, goodStratificationOrder P i i) ∧
-      (∀ i j, goodStratificationOrder P i j → goodStratificationOrder P j i → i = j) ∧
-        (∀ i j k, goodStratificationOrder P i j → goodStratificationOrder P j k →
-          goodStratificationOrder P i k) := by
+    IsPartialOrder ι (goodStratificationOrder P) := by
   sorry
 
 /-- The closure relation of a good stratification can be packaged as a Mathlib partial order. -/

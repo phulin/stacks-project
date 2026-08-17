@@ -120,6 +120,14 @@ def binary_coproduct_iso_product
   letI : HasBinaryBiproduct X Y := HasBinaryBiproduct.of_hasBinaryProduct X Y
   exact (biprod.isoCoprod X Y).symm.trans (biprod.isoProd X Y)
 
+def binary_coproduct_iso_product_of_binary_coproduct
+    {C : Type u} [Category.{v} C] [Preadditive C]
+    (X Y : C) [HasBinaryCoproduct X Y] :
+    letI : HasBinaryProduct X Y := binary_product_of_binary_coproduct X Y
+    (X ⨿ Y) ≅ (X ⨯ Y) := by
+  letI : HasBinaryProduct X Y := binary_product_of_binary_coproduct X Y
+  exact binary_coproduct_iso_product X Y
+
 theorem direct_sum_total
     {C : Type u} [Category.{v} C] [Preadditive C]
     {X Y : C} [HasBinaryBiproduct X Y] :
@@ -218,6 +226,11 @@ instance additiveCategory_hasFiniteBiproducts
     (C : Type u) [Category.{v} C] [AdditiveCategory C] :
     HasFiniteBiproducts C :=
   HasFiniteBiproducts.of_hasFiniteProducts
+
+instance additiveCategory_hasZeroObject
+    (C : Type u) [Category.{v} C] [AdditiveCategory C] :
+    HasZeroObject C :=
+  finite_products_give_zero_object
 
 /-! ## Kernels, cokernels, images, and coimages -/
 

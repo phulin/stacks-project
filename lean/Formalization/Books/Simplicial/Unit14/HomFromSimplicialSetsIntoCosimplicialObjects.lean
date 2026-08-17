@@ -168,6 +168,17 @@ noncomputable def homObjectHomEquiv
         funext u
         exact Pi.lift_π _ _ }
 
+/-- The product map has the source's stated action on `X`-valued points. -/
+theorem homMapAt_pointwise
+    {C : Type w} [Category.{v} C] [HasFiniteProducts C]
+    (U : SSet.{u}) (V : CosimplicialObject C)
+    (hU : Unit13.FiniteNonemptySimplicialSet U)
+    {m n : ℕ} (φ : SimplexCategory.mk m ⟶ SimplexCategory.mk n)
+    (X : C) (f : X ⟶ homObject U V hU m) (u : U _⦋n⦌) :
+    homObjectHomEquiv U V hU X n (f ≫ homMapAt U V hU φ) u =
+      homObjectHomEquiv U V hU X m f (U.map φ.op u) ≫ V.map φ := by
+  sorry
+
 /-! ## Functoriality in the two variables -/
 
 /-- The map induced by a simplicial map in the contravariant variable. -/

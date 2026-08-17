@@ -1,4 +1,3 @@
-import Mathlib.CategoryTheory.Limits.Types.Limits
 import Mathlib.Order.Directed
 import Mathlib.Topology.Bases
 import Mathlib.Topology.Category.TopCat.Limits.Basic

@@ -2,6 +2,7 @@ import Mathlib.Algebra.Homology.DerivedCategory.HomologySequence
 import Mathlib.Algebra.Homology.HomotopyCategory.HomComplex
 import Mathlib.CategoryTheory.Abelian.Basic
 import Mathlib.CategoryTheory.Functor.Derived.LeftDerived
+import Mathlib.CategoryTheory.Functor.Derived.RightDerived
 import Formalization.Books.StacksMorphisms.Unit07.QuasiCompactMorphisms
 
 /-!
@@ -67,6 +68,10 @@ structure AbelianCategoryData where
 instance (A : AbelianCategoryData.{u}) : Category.{u} A.Carrier := A.category
 instance (A : AbelianCategoryData.{u}) : Abelian A.Carrier := A.abelian
 
+noncomputable instance (A : AbelianCategoryData.{u}) :
+    HasDerivedCategory.{u} A.Carrier :=
+  HasDerivedCategory.standard _
+
 /-- An algebraic stack has abelian categories of sheaves and modules on each
 site, the source predicates on those modules, and the target category of
 quasi-coherent modules. -/
@@ -87,25 +92,9 @@ abbrev SiteModules {𝒮 : Type u} [Category.{u} 𝒮] (X : 𝒮)
     [StackSiteData X] (τ : SiteKind) : Type u :=
   (StackSiteData.modules (X := X) τ).Carrier
 
-instance siteAbelianSheavesCategory {𝒮 : Type u} [Category.{u} 𝒮] (X : 𝒮)
-    [StackSiteData X] (τ : SiteKind) : Category.{u} (SiteAbelianSheaves X τ) :=
-  (StackSiteData.abelianSheaves (X := X) τ).category
-
-instance siteAbelianSheavesAbelian {𝒮 : Type u} [Category.{u} 𝒮] (X : 𝒮)
-    [StackSiteData X] (τ : SiteKind) : Abelian (SiteAbelianSheaves X τ) :=
-  (StackSiteData.abelianSheaves (X := X) τ).abelian
-
-instance siteModulesCategory {𝒮 : Type u} [Category.{u} 𝒮] (X : 𝒮)
-    [StackSiteData X] (τ : SiteKind) : Category.{u} (SiteModules X τ) :=
-  (StackSiteData.modules (X := X) τ).category
-
-instance siteModulesAbelian {𝒮 : Type u} [Category.{u} 𝒮] (X : 𝒮)
-    [StackSiteData X] (τ : SiteKind) : Abelian (SiteModules X τ) :=
-  (StackSiteData.modules (X := X) τ).abelian
-
 abbrev QuasiCoherentModules {𝒮 : Type u} [Category.{u} 𝒮] (X : 𝒮)
-    [StackSiteData X] :=
-  (StackSiteData.isQuasiCoherent (X := X) .fppf).FullSubcategory
+    [StackSiteData X] (τ : SiteKind) :=
+  (StackSiteData.isQuasiCoherent (X := X) τ).FullSubcategory
 
 abbrev LQCohFbcModules {𝒮 : Type u} [Category.{u} 𝒮] (X : 𝒮)
     [StackSiteData X] (τ : SiteKind) :=
@@ -159,16 +148,6 @@ instance coefficientAbelian {𝒮 : Type u} [Category.{u} 𝒮] (X : 𝒮)
     Abelian (CoefficientCarrier X τ κ) :=
   (CoefficientCategory X τ κ).abelian
 
-noncomputable instance coefficientHasDerivedCategory {𝒮 : Type u}
-    [Category.{u} 𝒮] (X : 𝒮) [StackSiteData X] (τ : SiteKind)
-    (κ : CoefficientKind) : HasDerivedCategory.{u} (CoefficientCarrier X τ κ) :=
-  HasDerivedCategory.standard _
-
-noncomputable instance siteModulesHasDerivedCategory {𝒮 : Type u}
-    [Category.{u} 𝒮] (X : 𝒮) [StackSiteData X] (τ : SiteKind) :
-    HasDerivedCategory.{u} (SiteModules X τ) :=
-  HasDerivedCategory.standard _
-
 abbrev SiteDerivedCategory {𝒮 : Type u} [Category.{u} 𝒮] (X : 𝒮)
     [StackSiteData X] (τ : SiteKind) (κ : CoefficientKind) :=
   DerivedCategory (CoefficientCarrier X τ κ)
@@ -210,6 +189,21 @@ structure LeftDerivedFunctorData {A B : Type u} [Category.{u} A] [Category.{u} B
     functor.IsLeftDerivedFunctor comparison
       (HomologicalComplex.quasiIso A (ComplexShape.up ℤ))
 
+/-- The data carried by a selected right derived functor. -/
+structure RightDerivedFunctorData {A B : Type u} [Category.{u} A] [Category.{u} B]
+    [Abelian A] [Abelian B] [HasDerivedCategory.{u} A]
+    [HasDerivedCategory.{u} B] (F : A ⥤ B) where
+  functor : DerivedCategory A ⥤ DerivedCategory B
+  additive : F.Additive
+  comparison :
+    letI := additive
+    F.mapHomologicalComplex (ComplexShape.up ℤ) ⋙ DerivedCategory.Q (C := B) ⟶
+      DerivedCategory.Q (C := A) ⋙ functor
+  isRightDerived :
+    letI := additive
+    functor.IsRightDerivedFunctor comparison
+      (HomologicalComplex.quasiIso A (ComplexShape.up ℤ))
+
 /-! ## The comparison morphisms and derived functors -/
 
 /-! The underlying inverse-image and shriek functors attached to the two
@@ -220,12 +214,14 @@ class SiteComparisonData {𝒮 : Type u} [Category.{u} 𝒮] (X : 𝒮)
     CoefficientCarrier X (fineSite c) κ ⥤ CoefficientCarrier X (coarseSite c) κ
   inverseImage : ∀ c : ComparisonKind, ∀ κ : CoefficientKind,
     CoefficientCarrier X (coarseSite c) κ ⥤ CoefficientCarrier X (fineSite c) κ
-  derivedInverseImage : ∀ c : ComparisonKind, ∀ κ : CoefficientKind,
-    SiteDerivedCategory X (coarseSite c) κ ⥤ SiteDerivedCategory X (fineSite c) κ
   derivedInverseImageData : ∀ c : ComparisonKind, ∀ κ : CoefficientKind,
     LeftDerivedFunctorData (inverseImage c κ)
-  derivedInverseImageIso : ∀ c : ComparisonKind, ∀ κ : CoefficientKind,
-    (derivedInverseImageData c κ).functor ≅ derivedInverseImage c κ
+
+def derivedInverseImage {𝒮 : Type u} [Category.{u} 𝒮] (X : 𝒮)
+    [StackSiteData X] [SiteComparisonData X] (c : ComparisonKind)
+    (κ : CoefficientKind) :
+    SiteDerivedCategory X (coarseSite c) κ ⥤ SiteDerivedCategory X (fineSite c) κ :=
+  (SiteComparisonData.derivedInverseImageData (X := X) c κ).functor
 
 /-- The source assertion for one coefficient category and one site
 comparison.  The orientation of `unitIso` records the source identity
@@ -234,9 +230,10 @@ structure DerivedComparisonStatement {𝒮 : Type u} [Category.{u} 𝒮]
     (X : 𝒮) [StackSiteData X] [SiteComparisonData X]
     (c : ComparisonKind) (κ : CoefficientKind) where
   leftDerived : LeftDerivedFunctorData (SiteComparisonData.shriek (X := X) c κ)
-  adjunction : leftDerived.functor ⊣ SiteComparisonData.derivedInverseImage (X := X) c κ
+  adjunction : leftDerived.functor ⊣ derivedInverseImage X c κ
   unitIso : 𝟭 (SiteDerivedCategory X (fineSite c) κ) ≅
-    leftDerived.functor ⋙ SiteComparisonData.derivedInverseImage (X := X) c κ
+    leftDerived.functor ⋙ derivedInverseImage X c κ
+  unitIso_hom : unitIso.hom = adjunction.unit
 
 /-- A square of stack morphisms together with the derived direct and inverse
 images used in the functoriality lemma. -/
@@ -245,17 +242,25 @@ structure FunctorialDerivedSquare {𝒮 : Type u} [Category.{u} 𝒮]
     [SiteComparisonData X] [SiteComparisonData Y] where
   f : X ⟶ Y
   coarsePushforward : ∀ c κ,
-    SiteDerivedCategory X (coarseSite c) κ ⥤
-      SiteDerivedCategory Y (coarseSite c) κ
+    CoefficientCarrier X (coarseSite c) κ ⥤
+      CoefficientCarrier Y (coarseSite c) κ
   finePushforward : ∀ c κ,
-    SiteDerivedCategory X (fineSite c) κ ⥤
-      SiteDerivedCategory Y (fineSite c) κ
+    CoefficientCarrier X (fineSite c) κ ⥤
+      CoefficientCarrier Y (fineSite c) κ
   coarsePullback : ∀ c κ,
-    SiteDerivedCategory Y (coarseSite c) κ ⥤
-      SiteDerivedCategory X (coarseSite c) κ
+    CoefficientCarrier Y (coarseSite c) κ ⥤
+      CoefficientCarrier X (coarseSite c) κ
   finePullback : ∀ c κ,
-    SiteDerivedCategory Y (fineSite c) κ ⥤
-      SiteDerivedCategory X (fineSite c) κ
+    CoefficientCarrier Y (fineSite c) κ ⥤
+      CoefficientCarrier X (fineSite c) κ
+  coarsePushforwardData : ∀ c κ,
+    RightDerivedFunctorData (coarsePushforward c κ)
+  finePushforwardData : ∀ c κ,
+    RightDerivedFunctorData (finePushforward c κ)
+  coarsePullbackData : ∀ c κ,
+    LeftDerivedFunctorData (coarsePullback c κ)
+  finePullbackData : ∀ c κ,
+    LeftDerivedFunctorData (finePullback c κ)
 
 /-! ## Cohomology values and affine objects -/
 
@@ -271,23 +276,18 @@ class StackCohomologyData {𝒮 : Type u} [Category.{u} 𝒮] (X : 𝒮)
   siteObjectIsFlat : siteObject .fppf → Prop
   siteObjectIsAffine : siteObject .fppf → Prop
   globalSections : ∀ τ κ,
-    SiteDerivedCategory X τ κ ⥤ (valueCategory κ).Carrier
+    SiteDerivedCategory X τ κ ⥤ DerivedCategory (valueCategory κ).Carrier
   localSections : ∀ τ κ, siteObject τ →
-    SiteDerivedCategory X τ κ ⥤ (valueCategory κ).Carrier
+    SiteDerivedCategory X τ κ ⥤ DerivedCategory (valueCategory κ).Carrier
 
 abbrev CohomologyValue {𝒮 : Type u} [Category.{u} 𝒮] (X : 𝒮)
     [StackSiteData X] [StackCohomologyData X] (κ : CoefficientKind) : Type u :=
-  (StackCohomologyData.valueCategory (X := X) κ).Carrier
+  DerivedCategory (StackCohomologyData.valueCategory (X := X) κ).Carrier
 
 instance cohomologyValueCategory {𝒮 : Type u} [Category.{u} 𝒮] (X : 𝒮)
     [StackSiteData X] [StackCohomologyData X] (κ : CoefficientKind) :
     Category.{u} (CohomologyValue X κ) :=
-  (StackCohomologyData.valueCategory (X := X) κ).category
-
-instance cohomologyValueAbelian {𝒮 : Type u} [Category.{u} 𝒮] (X : 𝒮)
-    [StackSiteData X] [StackCohomologyData X] (κ : CoefficientKind) :
-    Abelian (CohomologyValue X κ) :=
-  (StackCohomologyData.valueCategory (X := X) κ).abelian
+  inferInstance
 
 def DerivedGlobalSections {𝒮 : Type u} [Category.{u} 𝒮] (X : 𝒮)
     [StackSiteData X] [StackCohomologyData X] (τ : SiteKind) (κ : CoefficientKind) :
@@ -311,37 +311,48 @@ def IsAffineSiteObject {𝒮 : Type u} [Category.{u} 𝒮] (X : 𝒮)
   StackCohomologyData.siteObjectIsAffine (X := X) x
 
 /-- Affine objects and the tensor/base-change functors needed by the final
-section.  `tensorPullback` abstracts the displayed derived tensor product;
-its codomain and the `baseChangeIso` field retain the exact quasi-isomorphism
-assertion without fixing a concrete ring model for an algebraic stack. -/
+section.  `tensorPullback` abstracts the displayed derived tensor product
+without fixing a concrete ring model for an algebraic stack. -/
 class StackAffineData {𝒮 : Type u} [Category.{u} 𝒮] (X : 𝒮)
-    [StackSiteData X] where
+    [StackSiteData X] [StackCohomologyData X] where
   affineObject : Type u
-  affineHom : affineObject → affineObject → Type u
+  affineCategory : Category.{u} affineObject
+  affineSiteObject : affineObject →
+    StackCohomologyData.siteObject (X := X) .fppf
+  affineSiteObjectIsAffine : ∀ x,
+    StackCohomologyData.siteObjectIsAffine (X := X) (affineSiteObject x)
   value : CoefficientKind → affineObject → Type u
   valueCategory : ∀ κ x, Category.{u} (value κ x)
   sectionValue : ∀ κ x,
     SiteDerivedCategory X .fppf κ → value κ x
   tensorPullback : ∀ κ {x x' : affineObject},
-    affineHom x x' →
+    (x ⟶ x') →
       @CategoryTheory.Functor (value κ x') (valueCategory κ x')
         (value κ x) (valueCategory κ x)
 
+instance affineObjectCategory {𝒮 : Type u} [Category.{u} 𝒮] (X : 𝒮)
+    [StackSiteData X] [StackCohomologyData X] [StackAffineData X] :
+    Category.{u} (StackAffineData.affineObject (X := X)) :=
+  StackAffineData.affineCategory (X := X)
+
 instance affineValueCategory {𝒮 : Type u} [Category.{u} 𝒮] (X : 𝒮)
-    [StackSiteData X] [StackAffineData X] (κ : CoefficientKind)
+    [StackSiteData X] [StackCohomologyData X] [StackAffineData X]
+    (κ : CoefficientKind)
     (x : StackAffineData.affineObject (X := X)) :
     Category.{u} (StackAffineData.value (X := X) κ x) :=
   StackAffineData.valueCategory (X := X) κ x
 
-def AffineObject {𝒮 : Type u} [Category.{u} 𝒮] (X : 𝒮)
-    [StackSiteData X] [StackAffineData X] := StackAffineData.affineObject (X := X)
+abbrev AffineObject {𝒮 : Type u} [Category.{u} 𝒮] (X : 𝒮)
+    [StackSiteData X] [StackCohomologyData X] [StackAffineData X] :=
+  StackAffineData.affineObject (X := X)
 
 def AffineMorphism {𝒮 : Type u} [Category.{u} 𝒮] (X : 𝒮)
-    [StackSiteData X] [StackAffineData X]
-    {x x' : AffineObject X} : Type u := StackAffineData.affineHom (X := X) x x'
+    [StackSiteData X] [StackCohomologyData X] [StackAffineData X]
+    {x x' : AffineObject X} : Type u := x ⟶ x'
 
 def AffineSection {𝒮 : Type u} [Category.{u} 𝒮] (X : 𝒮)
-    [StackSiteData X] [StackAffineData X] (κ : CoefficientKind)
+    [StackSiteData X] [StackCohomologyData X] [StackAffineData X]
+    (κ : CoefficientKind)
     (x : AffineObject X) (K : SiteDerivedCategory X .fppf κ) :
       StackAffineData.value (X := X) κ x :=
   StackAffineData.sectionValue (X := X) κ x K

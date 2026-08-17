@@ -65,12 +65,6 @@ noncomputable def derivedShriek (X : 𝒮) [StackSiteData X]
     SiteDerivedCategory X (fineSite c) κ ⥤ SiteDerivedCategory X (coarseSite c) κ :=
   (selectedDerivedComparison X c κ).leftDerived.functor
 
-/-- The selected inverse image on the derived categories. -/
-def derivedInverseImage (X : 𝒮) [StackSiteData X]
-    [SiteComparisonData X] (c : ComparisonKind) (κ : CoefficientKind) :
-    SiteDerivedCategory X (coarseSite c) κ ⥤ SiteDerivedCategory X (fineSite c) κ :=
-  SiteComparisonData.derivedInverseImage (X := X) c κ
-
 /-- The adjunction `Lg_! ⊣ g^*` in each coefficient case. -/
 noncomputable def derivedShriekAdjunction (X : 𝒮) [StackSiteData X]
     [SiteComparisonData X] (c : ComparisonKind) (κ : CoefficientKind) :
@@ -102,18 +96,24 @@ variable {X Y : 𝒮} [StackSiteData X] [StackSiteData Y]
   [SiteComparisonData X] [SiteComparisonData Y]
 
 /-- Functoriality of derived shriek and inverse image, for both coefficients
-and both site comparisons.  The all-complexes statement subsumes the
-source's bounded, bounded-above, and arbitrary-complex restrictions; the
-truncation and direct-sum arguments in the proof do not require separate
-interfaces once this natural isomorphism is available. -/
+and both site comparisons.  The two underived base-change isomorphisms are
+the input supplied by the preceding cohomology comparison.  The all-complexes
+statement then subsumes the source's bounded, bounded-above, and arbitrary-
+complex restrictions. -/
 theorem lemma_lisse_etale_functorial_derived
     (S : FunctorialDerivedSquare X Y) (D : StackSmoothnessData 𝒮)
-    (c : ComparisonKind) (hc : IsApplicableForComparison D S.f c) :
+    (c : ComparisonKind) (hc : IsApplicableForComparison D S.f c)
+    (hpush : ∀ κ : CoefficientKind,
+      Nonempty (S.coarsePushforward c κ ⋙ inverseImage Y c κ ≅
+        inverseImage X c κ ⋙ S.finePushforward c κ))
+    (hshriek : ∀ κ : CoefficientKind,
+      Nonempty (S.finePullback c κ ⋙ shriek X c κ ≅
+        shriek Y c κ ⋙ S.coarsePullback c κ)) :
     ∀ κ : CoefficientKind,
-      Nonempty (S.coarsePushforward c κ ⋙ derivedInverseImage Y c κ ≅
-        derivedInverseImage X c κ ⋙ S.finePushforward c κ) ∧
-      Nonempty (S.finePullback c κ ⋙ derivedShriek X c κ ≅
-        derivedShriek Y c κ ⋙ S.coarsePullback c κ) := by
+      Nonempty ((S.coarsePushforwardData c κ).functor ⋙ derivedInverseImage Y c κ ≅
+        derivedInverseImage X c κ ⋙ (S.finePushforwardData c κ).functor) ∧
+      Nonempty ((S.finePullbackData c κ).functor ⋙ derivedShriek X c κ ≅
+        derivedShriek Y c κ ⋙ (S.coarsePullbackData c κ).functor) := by
   sorry
 
 /-- The first natural isomorphism in the functoriality lemma, written in the
@@ -122,10 +122,17 @@ direction of the source identity
 def FunctorialDerivedPushforwardIso
     (S : FunctorialDerivedSquare X Y) (D : StackSmoothnessData 𝒮)
     (c : ComparisonKind) (hc : IsApplicableForComparison D S.f c)
+    (hpush : ∀ κ : CoefficientKind,
+      Nonempty (S.coarsePushforward c κ ⋙ inverseImage Y c κ ≅
+        inverseImage X c κ ⋙ S.finePushforward c κ))
+    (hshriek : ∀ κ : CoefficientKind,
+      Nonempty (S.finePullback c κ ⋙ shriek X c κ ≅
+        shriek Y c κ ⋙ S.coarsePullback c κ))
     (κ : CoefficientKind) :
-    S.coarsePushforward c κ ⋙ derivedInverseImage Y c κ ≅
-      derivedInverseImage X c κ ⋙ S.finePushforward c κ :=
-  Classical.choice (lemma_lisse_etale_functorial_derived S D c hc κ).1
+    (S.coarsePushforwardData c κ).functor ⋙ derivedInverseImage Y c κ ≅
+      derivedInverseImage X c κ ⋙ (S.finePushforwardData c κ).functor :=
+  Classical.choice
+    (lemma_lisse_etale_functorial_derived S D c hc hpush hshriek κ).1
 
 /-- The second natural isomorphism in the functoriality lemma, written in the
 direction of the source identity
@@ -133,10 +140,17 @@ direction of the source identity
 def FunctorialDerivedShriekIso
     (S : FunctorialDerivedSquare X Y) (D : StackSmoothnessData 𝒮)
     (c : ComparisonKind) (hc : IsApplicableForComparison D S.f c)
+    (hpush : ∀ κ : CoefficientKind,
+      Nonempty (S.coarsePushforward c κ ⋙ inverseImage Y c κ ≅
+        inverseImage X c κ ⋙ S.finePushforward c κ))
+    (hshriek : ∀ κ : CoefficientKind,
+      Nonempty (S.finePullback c κ ⋙ shriek X c κ ≅
+        shriek Y c κ ⋙ S.coarsePullback c κ))
     (κ : CoefficientKind) :
-    S.finePullback c κ ⋙ derivedShriek X c κ ≅
-      derivedShriek Y c κ ⋙ S.coarsePullback c κ :=
-  Classical.choice (lemma_lisse_etale_functorial_derived S D c hc κ).2
+    (S.finePullbackData c κ).functor ⋙ derivedShriek X c κ ≅
+      derivedShriek Y c κ ⋙ (S.coarsePullbackData c κ).functor :=
+  Classical.choice
+    (lemma_lisse_etale_functorial_derived S D c hc hpush hshriek κ).2
 
 /-! ## Lemma 3: higher shriek of quasi-coherent modules -/
 

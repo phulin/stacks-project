@@ -70,7 +70,32 @@ compatibility condition. -/
 theorem abelianStalkAddCommGroup_isStructure
     {X : TopCat.{u}} (F : AbelianPresheaf.{u, u} X) (x : X) :
     IsAbelianStalkGroupStructure F x (abelianStalkAddCommGroup F x) := by
-  sorry
+  intro U hx
+  let e := abelianStalkUnderlyingEquiv F x
+  letI : AddCommGroup (AbelianStalkAsSet F x) := e.addCommGroup
+  let φ : AbelianSections F U →+ AbelianStalkAsSet F x :=
+    (e.addEquiv).symm.toAddMonoidHom.comp (F.germ U x hx).hom
+  refine ⟨φ, ?_⟩
+  intro s
+  let j : (OpenNhds x)ᵒᵖ := op (⟨U, hx⟩ : OpenNhds x)
+  have h := ι_preservesColimitIso_hom (forget AddCommGrpCat)
+    ((OpenNhds.inclusion x).op ⋙ F) j
+  change (ConcreteCategory.hom
+      (preservesColimitIso (forget AddCommGrpCat)
+        ((OpenNhds.inclusion x).op ⋙ F)).hom)
+      ((ConcreteCategory.hom ((forget AddCommGrpCat).map
+        (colimit.ι ((OpenNhds.inclusion x).op ⋙ F) j))) s) =
+    (ConcreteCategory.hom
+      (colimit.ι (((OpenNhds.inclusion x).op ⋙ F) ⋙ forget AddCommGrpCat) j)) s
+  have h' := congrArg (fun k => (ConcreteCategory.hom k) s) h
+  change (ConcreteCategory.hom
+      (preservesColimitIso (forget AddCommGrpCat)
+        ((OpenNhds.inclusion x).op ⋙ F)).hom)
+      ((ConcreteCategory.hom ((forget AddCommGrpCat).map
+        (colimit.ι ((OpenNhds.inclusion x).op ⋙ F) j))) s) =
+    (ConcreteCategory.hom
+      (colimit.ι (((OpenNhds.inclusion x).op ⋙ F) ⋙ forget AddCommGrpCat) j)) s at h'
+  exact h'
 
 /-- Any group structure on the stalk for which all germ maps are homomorphisms
 is the canonical transported structure. -/
@@ -79,7 +104,48 @@ theorem abelianStalkAddCommGroup_eq_canonical
     (G : AddCommGroup (AbelianStalkAsSet F x))
     (hG : IsAbelianStalkGroupStructure F x G) :
     G = abelianStalkAddCommGroup F x := by
-  sorry
+  apply AddCommGroup.ext
+  funext a b
+  obtain ⟨U, hxU, s, hs⟩ := (underlyingPresheaf F).exists_germ_eq a
+  obtain ⟨V, hxV, t, ht⟩ := (underlyingPresheaf F).exists_germ_eq b
+  let W := U ⊓ V
+  have hxW : x ∈ W := by
+    simp [W, hxU, hxV]
+  letI : AddCommGroup (AbelianSections F W) := AddCommGrpCat.str _
+  let sW : AbelianSections F W :=
+    (F.map (homOfLE (show W ≤ U from by simp [W])).op).hom s
+  let tW : AbelianSections F W :=
+    (F.map (homOfLE (show W ≤ V from by simp [W])).op).hom t
+  have hsW : germApply (F := underlyingPresheaf F) W x hxW sW = a := by
+    rw [← hs]
+    exact (underlyingPresheaf F).germ_res_apply _ x hxW s
+  have htW : germApply (F := underlyingPresheaf F) W x hxW tW = b := by
+    rw [← ht]
+    exact (underlyingPresheaf F).germ_res_apply _ x hxW t
+  obtain ⟨φG, hφG⟩ := hG W hxW
+  obtain ⟨φC, hφC⟩ := abelianStalkAddCommGroup_isStructure F x W hxW
+  have hGadd :
+      (letI := G; φG (sW + tW)) =
+        (letI := G; φG sW + φG tW) :=
+    φG.map_add sW tW
+  letI : AddCommGroup (AbelianStalkAsSet F x) := abelianStalkAddCommGroup F x
+  have hCadd :
+      (letI := abelianStalkAddCommGroup F x; φC (sW + tW)) =
+        (letI := abelianStalkAddCommGroup F x; φC sW + φC tW) :=
+    φC.map_add sW tW
+  rw [← hsW, ← htW]
+  calc
+    (letI := G; germApply (F := underlyingPresheaf F) W x hxW sW +
+        germApply (F := underlyingPresheaf F) W x hxW tW) =
+      (letI := G; φG sW + φG tW) := by rw [hφG, hφG]
+    _ = (letI := G; φG (sW + tW)) := hGadd.symm
+    _ = germApply (F := underlyingPresheaf F) W x hxW (sW + tW) := hφG _
+    _ = φC (sW + tW) := (hφC _).symm
+    _ = (letI := abelianStalkAddCommGroup F x; φC sW + φC tW) := hCadd
+    _ = (letI := abelianStalkAddCommGroup F x;
+      germApply (F := underlyingPresheaf F) W x hxW sW +
+        germApply (F := underlyingPresheaf F) W x hxW tW) := by
+      rw [hφC, hφC]
 
 /-- There is a unique abelian-group structure on the stalk making all germ maps
 from sections into additive homomorphisms. -/
@@ -138,7 +204,26 @@ theorem forget_addCommGrpCat_not_preserves_binary_coproduct :
       (pair (AddCommGrpCat.of (PUnit : Type u))
         (AddCommGrpCat.of (PUnit : Type u)))
       (forget AddCommGrpCat.{u}) := by
-  sorry
+  intro h
+  let A : AddCommGrpCat.{u} := AddCommGrpCat.of (PUnit : Type u)
+  let c : BinaryCofan A A :=
+    BinaryCofan.mk
+      (coprod.inl : A ⟶ A ⨿ A) coprod.inr
+  have hc : IsColimit ((forget AddCommGrpCat).mapCocone c) :=
+    (h.preserves (coprodIsCoprod A A)).some
+  have hc' : IsColimit (c.map (forget AddCommGrpCat)) :=
+    (BinaryCofan.isColimitMapConeEquiv (F := forget AddCommGrpCat) (s := c)) hc
+  have hiff := (Types.binaryCofan_isColimit_iff (c.map (forget AddCommGrpCat))).mp ⟨hc'⟩
+  apply Set.disjoint_left.1 hiff.2.2.disjoint
+  · exact ⟨PUnit.unit, rfl⟩
+  · refine ⟨PUnit.unit, ?_⟩
+    change c.inr.hom PUnit.unit = c.inl.hom PUnit.unit
+    have hu : (PUnit.unit : ToType A) = 0 := by rfl
+    calc
+      c.inr.hom PUnit.unit = c.inr.hom 0 := congrArg c.inr.hom hu
+      _ = 0 := c.inr.hom.map_zero
+      _ = c.inl.hom 0 := (c.inl.hom.map_zero).symm
+      _ = c.inl.hom PUnit.unit := congrArg c.inl.hom hu.symm
 
 end
 

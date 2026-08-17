@@ -72,12 +72,34 @@ theorem openPresheafRestriction_formula (C : Type u) [Category.{v} C]
       (TopCat.Presheaf.pullback C (openInclusion U)).obj F) := by
   exact ⟨Iso.refl _⟩
 
+/-- Restriction to an open subspace is computed by taking sections over the
+image open in the ambient space. -/
+noncomputable def openPresheafRestriction_obj_iso (C : Type u)
+    [Category.{v} C] [HasColimits C] {X : TopCat.{v}} (U : Opens X)
+    (F : TopCat.Presheaf C X) (V : Opens (openSubspace U)) :
+    ((openPresheafRestriction C U).obj F).obj (op V) ≅
+      F.obj (op ⟨(openInclusion U) '' V,
+        (U.isOpenEmbedding.isOpenMap V V.2)⟩) := by
+  exact TopCat.Presheaf.pullbackObjObjOfImageOpen
+    (openInclusion U) F V (U.isOpenEmbedding.isOpenMap V V.2)
+
 /-- The open-subspace sheaf restriction has the corresponding presheaf. -/
 theorem openSheafRestriction_formula (C : Type u) [Category.{v} C]
     [HasColimits C] {X : TopCat.{v}} (U : Opens X) (F : TopCat.Sheaf C X) :
     Nonempty (((openSheafRestriction C U).obj F).presheaf ≅
       (openPresheafRestriction C U).obj F.presheaf) := by
   sorry
+
+/-- Sections of a sheaf restricted to an open subspace are the ambient
+sections over the corresponding image open. -/
+theorem openSheafRestriction_obj_iso (C : Type u) [Category.{v} C]
+    [HasColimits C] {X : TopCat.{v}} (U : Opens X) (F : TopCat.Sheaf C X)
+    (V : Opens (openSubspace U)) :
+    Nonempty ((((openSheafRestriction C U).obj F).presheaf).obj (op V) ≅
+      F.presheaf.obj (op ⟨(openInclusion U) '' V,
+        (U.isOpenEmbedding.isOpenMap V V.2)⟩)) := by
+  rcases openSheafRestriction_formula C U F with ⟨e⟩
+  exact ⟨e.app (op V) ≪≫ openPresheafRestriction_obj_iso C U F.presheaf V⟩
 
 /-- Restriction preserves the stalk at a point of the open subspace. -/
 theorem openSheafRestriction_stalk_iso (C : Type u) [Category.{v} C]
@@ -157,6 +179,23 @@ noncomputable def openPresheafExtensionByInitial (C : Type u) [Category.{v} C]
       intro F G H φ ψ
       sorry
   }
+
+/-- On opens contained in `U`, extension by the initial object has the original
+sections. -/
+@[simp] theorem openPresheafExtensionByInitial_obj_of_le (C : Type u)
+    [Category.{v} C] [HasInitial C] {X : TopCat.{v}} (U : Opens X)
+    (F : TopCat.Presheaf C (openSubspace U)) (V : Opens X) (hV : V ≤ U) :
+    ((openPresheafExtensionByInitial C U).obj F).obj (op V) =
+      F.obj (op ((Opens.map (openInclusion U)).obj V)) := by
+  simp [openPresheafExtensionByInitial, hV]
+
+/-- On opens not contained in `U`, extension by the initial object has the
+initial section object. -/
+@[simp] theorem openPresheafExtensionByInitial_obj_of_not_le (C : Type u)
+    [Category.{v} C] [HasInitial C] {X : TopCat.{v}} (U : Opens X)
+    (F : TopCat.Presheaf C (openSubspace U)) (V : Opens X) (hV : ¬ V ≤ U) :
+    ((openPresheafExtensionByInitial C U).obj F).obj (op V) = (⊥_ C) := by
+  simp [openPresheafExtensionByInitial, hV]
 
 /-- Extension by the empty set for set-valued presheaves. -/
 noncomputable abbrev openPresheafExtensionByEmpty {X : TopCat.{v}} (U : Opens X) :
@@ -375,6 +414,18 @@ noncomputable def openModulePresheafExtensionByZero (X : RingedSpace.{v})
     PMod (ringedOpenSubspace X U).structureSheaf.obj ⥤
       PMod X.structureSheaf.obj :=
   (openModulePresheafExtensionData X U).functor
+
+/-- The underlying additive presheaf of module extension by zero is the
+initial-object extension. -/
+theorem openModulePresheafExtension_underlying_iso (X : RingedSpace.{v})
+    (U : Opens X.carrier) :
+    Nonempty
+      (openModulePresheafExtensionByZero X U ⋙
+          PresheafOfModules.toPresheaf X.structureSheaf.obj ≅
+        PresheafOfModules.toPresheaf
+            (ringedOpenSubspace X U).structureSheaf.obj ⋙
+          openPresheafExtensionByInitial AddCommGrpCat U) :=
+  (openModulePresheafExtensionData X U).underlying_functor_iso
 
 /-- Restriction of presheaves of modules to an open subspace. -/
 noncomputable def openModulePresheafRestrictionFunctor (X : RingedSpace.{v})

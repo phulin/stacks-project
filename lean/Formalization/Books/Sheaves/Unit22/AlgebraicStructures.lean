@@ -42,11 +42,25 @@ abbrev algebraicUnderlyingPresheaf {C : Type u} [Category.{v} C]
     (F : C ⥤ Type v) {X : TopCat.{v}} (P : AlgebraicPresheaf C X) :=
   Formalization.Books.Sheaves.Unit05.underlyingPresheaf F P
 
+/-- The underlying presheaf functor induced by a functor `C ⥤ Type v`. -/
+noncomputable abbrev algebraicUnderlyingPresheafFunctor
+    {C : Type u} [Category.{v} C] (F : C ⥤ Type v) (X : TopCat.{v}) :
+    AlgebraicPresheaf C X ⥤ TopCat.Presheaf (Type v) X :=
+  (Functor.whiskeringRight (Opens X)ᵒᵖ C (Type v)).obj F
+
 /-- The underlying set-valued sheaf of a category-valued sheaf. -/
 noncomputable abbrev algebraicUnderlyingSheaf {C : Type u} [Category.{v} C]
     (F : C ⥤ Type v) [AlgebraicStructureType C F] {X : TopCat.{v}}
     (P : AlgebraicSheaf C X) : TopCat.Sheaf (Type v) X :=
   Formalization.Books.Sheaves.Unit16.underlyingSheaf F P
+
+/-- The underlying sheaf morphism induced by a category-valued sheaf map. -/
+abbrev algebraicUnderlyingSheafMorphism
+    {C : Type u} [Category.{v} C] (F : C ⥤ Type v)
+    [AlgebraicStructureType C F] {X : TopCat.{v}}
+    {P Q : AlgebraicSheaf C X} (φ : P ⟶ Q) :
+    algebraicUnderlyingSheaf F P ⟶ algebraicUnderlyingSheaf F Q :=
+  Formalization.Books.Sheaves.Unit16.underlyingSheafMorphism F φ
 
 /-- Pushforward of category-valued presheaves. -/
 abbrev algebraicPresheafPushforward (C : Type u) [Category.{v} C]
@@ -99,6 +113,42 @@ theorem algebraicPresheafPushforward_obj_obj {C : Type u} [Category.{v} C]
     ((algebraicPresheafPushforward C f).obj F).obj (op V) =
       F.obj (op ((Opens.map f).obj V)) := rfl
 
+@[simp]
+theorem algebraicPresheafPushforward_map {C : Type u} [Category.{v} C]
+    {X Y : TopCat.{v}} (f : X ⟶ Y) (F : AlgebraicPresheaf C X)
+    {V W : Opens Y} (h : V ≤ W) :
+    ((algebraicPresheafPushforward C f).obj F).map (homOfLE h).op =
+      F.map (((Opens.map f).op).map (homOfLE h).op) := rfl
+
+/-- Pushforward acts componentwise on presheaf morphisms. -/
+@[simp]
+theorem algebraicPresheafPushforward_map_app {C : Type u} [Category.{v} C]
+    {X Y : TopCat.{v}} (f : X ⟶ Y)
+    {P Q : AlgebraicPresheaf C X} (φ : P ⟶ Q) (V : Opens Y) :
+    ((algebraicPresheafPushforward C f).map φ).app (op V) =
+      φ.app (((Opens.map f).op).obj (op V)) := rfl
+
+/-- Pushforward preserves the sheaf condition. -/
+theorem algebraicPresheafPushforward_isSheaf {C : Type u} [Category.{v} C]
+    {X Y : TopCat.{v}} (f : X ⟶ Y) {P : AlgebraicPresheaf C X}
+    (hP : TopCat.Presheaf.IsSheaf P) :
+    TopCat.Presheaf.IsSheaf ((algebraicPresheafPushforward C f).obj P) := by
+  exact TopCat.Sheaf.pushforward_sheaf_of_sheaf f hP
+
+/-- Pushforward presheaves commute with composition. -/
+theorem algebraicPresheafPushforward_comp {C : Type u} [Category.{v} C]
+    {X Y Z : TopCat.{v}} (f : X ⟶ Y) (g : Y ⟶ Z) :
+    algebraicPresheafPushforward C (f ≫ g) =
+      algebraicPresheafPushforward C f ⋙ algebraicPresheafPushforward C g := rfl
+
+/-- The canonical isomorphism expressing composition of pushforward presheaves. -/
+noncomputable def algebraicPresheafPushforwardCompIso
+    {C : Type u} [Category.{v} C] {X Y Z : TopCat.{v}}
+    (f : X ⟶ Y) (g : Y ⟶ Z) :
+    algebraicPresheafPushforward C f ⋙ algebraicPresheafPushforward C g ≅
+      algebraicPresheafPushforward C (f ≫ g) :=
+  Iso.refl _
+
 /-- The category-valued pullback is computed by the filtered neighbourhood
 colimit appearing in the source. -/
 noncomputable def algebraicPresheafPullback_obj_colimitIso
@@ -144,6 +194,34 @@ noncomputable abbrev algebraicPresheafHomEquiv
       (G ⟶ (algebraicPresheafPushforward C f).obj F) :=
   (algebraicPresheafPullbackPushforwardAdjunction f).homEquiv G F
 
+/-! The unit and counit expose the two maps used in the source's adjunction
+argument. -/
+
+noncomputable abbrev algebraicPresheafUnit {C : Type u} [Category.{v} C]
+    [HasColimits C] {X Y : TopCat.{v}} (f : X ⟶ Y)
+    (G : AlgebraicPresheaf C Y) :
+    G ⟶ (algebraicPresheafPushforward C f).obj
+      ((algebraicPresheafPullback C f).obj G) :=
+  (algebraicPresheafPullbackPushforwardAdjunction f).unit.app G
+
+noncomputable abbrev algebraicPresheafCounit {C : Type u} [Category.{v} C]
+    [HasColimits C] {X Y : TopCat.{v}} (f : X ⟶ Y)
+    (F : AlgebraicPresheaf C X) :
+    (algebraicPresheafPullback C f).obj
+      ((algebraicPresheafPushforward C f).obj F) ⟶ F :=
+  (algebraicPresheafPullbackPushforwardAdjunction f).counit.app F
+
+/-! Pullback presheaves commute with composition, canonically. -/
+noncomputable def algebraicPresheafPullbackCompIso
+    {C : Type u} [Category.{v} C] [HasColimits C]
+    {X Y Z : TopCat.{v}} (f : X ⟶ Y) (g : Y ⟶ Z) :
+    algebraicPresheafPullback C (f ≫ g) ≅
+      algebraicPresheafPullback C g ⋙ algebraicPresheafPullback C f := by
+  exact Adjunction.leftAdjointUniq
+    (algebraicPresheafPullbackPushforwardAdjunction (f ≫ g))
+    ((algebraicPresheafPullbackPushforwardAdjunction g).comp
+      (algebraicPresheafPullbackPushforwardAdjunction f))
+
 noncomputable abbrev algebraicSheafPullbackPushforwardAdjunction
     {C : Type u} [Category.{v} C] {FC : C → C → Type*} {CC : C → Type v}
     [∀ X Y, FunLike (FC X Y) (CC X) (CC Y)] [ConcreteCategory C FC] [HasColimits C]
@@ -166,12 +244,59 @@ noncomputable abbrev algebraicSheafHomEquiv
       (G ⟶ (algebraicSheafPushforward C f).obj F) :=
   (algebraicSheafPullbackPushforwardAdjunction f).homEquiv G F
 
+/-- The unit of the sheaf pullback adjunction. -/
+noncomputable abbrev algebraicSheafUnit
+    {C : Type u} [Category.{v} C] {FC : C → C → Type*} {CC : C → Type v}
+    [∀ X Y, FunLike (FC X Y) (CC X) (CC Y)] [ConcreteCategory C FC]
+    [HasColimits C] [HasLimits C]
+    [PreservesLimits (CategoryTheory.forget C)]
+    [PreservesFilteredColimits (CategoryTheory.forget C)]
+    [(CategoryTheory.forget C).ReflectsIsomorphisms]
+    {X Y : TopCat.{v}} (f : X ⟶ Y) (G : AlgebraicSheaf C Y) :
+    G ⟶ (algebraicSheafPushforward C f).obj ((algebraicSheafPullback C f).obj G) :=
+  (algebraicSheafPullbackPushforwardAdjunction f).unit.app G
+
+/-- The counit of the sheaf pullback adjunction. -/
+noncomputable abbrev algebraicSheafCounit
+    {C : Type u} [Category.{v} C] {FC : C → C → Type*} {CC : C → Type v}
+    [∀ X Y, FunLike (FC X Y) (CC X) (CC Y)] [ConcreteCategory C FC]
+    [HasColimits C] [HasLimits C]
+    [PreservesLimits (CategoryTheory.forget C)]
+    [PreservesFilteredColimits (CategoryTheory.forget C)]
+    [(CategoryTheory.forget C).ReflectsIsomorphisms]
+    {X Y : TopCat.{v}} (f : X ⟶ Y) (F : AlgebraicSheaf C X) :
+    (algebraicSheafPullback C f).obj ((algebraicSheafPushforward C f).obj F) ⟶ F :=
+  (algebraicSheafPullbackPushforwardAdjunction f).counit.app F
+
+/-- Pullback sheaves commute with composition, canonically. -/
+noncomputable def algebraicSheafPullbackCompIso
+    {C : Type u} [Category.{v} C] {FC : C → C → Type*} {CC : C → Type v}
+    [∀ X Y, FunLike (FC X Y) (CC X) (CC Y)] [ConcreteCategory C FC]
+    [HasColimits C] [HasLimits C]
+    [PreservesLimits (CategoryTheory.forget C)]
+    [PreservesFilteredColimits (CategoryTheory.forget C)]
+    [(CategoryTheory.forget C).ReflectsIsomorphisms]
+    {X Y Z : TopCat.{v}} (f : X ⟶ Y) (g : Y ⟶ Z) :
+    algebraicSheafPullback C (f ≫ g) ≅
+      algebraicSheafPullback C g ⋙ algebraicSheafPullback C f := by
+  exact Adjunction.leftAdjointUniq
+    (algebraicSheafPullbackPushforwardAdjunction (f ≫ g))
+    ((algebraicSheafPullbackPushforwardAdjunction g).comp
+      (algebraicSheafPullbackPushforwardAdjunction f))
+
 /-- The stalk formula for category-valued presheaf pullback. -/
 noncomputable def algebraicPresheafPullbackStalkIso
     {C : Type u} [Category.{v} C] [HasColimits C]
     {X Y : TopCat.{v}} (f : X ⟶ Y) (G : AlgebraicPresheaf C Y) (x : X) :
     G.stalk (f x) ≅ ((algebraicPresheafPullback C f).obj G).stalk x :=
   TopCat.Presheaf.stalkPullbackIso C f G x
+
+/-- The source-oriented stalk isomorphism `(f_p G)_x ≅ G_{f(x)}`. -/
+noncomputable def algebraicPresheafPullbackStalkIsoReverse
+    {C : Type u} [Category.{v} C] [HasColimits C]
+    {X Y : TopCat.{v}} (f : X ⟶ Y) (G : AlgebraicPresheaf C Y) (x : X) :
+    ((algebraicPresheafPullback C f).obj G).stalk x ≅ G.stalk (f x) :=
+  (algebraicPresheafPullbackStalkIso f G x).symm
 
 /-- The stalk formula for category-valued sheaf pullback. -/
 theorem algebraicSheafPullback_stalk_formula
@@ -186,6 +311,32 @@ theorem algebraicSheafPullback_stalk_formula
       (G.presheaf.stalk (f x) ≅
         ((algebraicSheafPullback C f).obj G).presheaf.stalk x) := by
   sorry
+
+/-- A chosen category-valued stalk isomorphism for sheaf pullback. -/
+noncomputable def algebraicSheafPullbackStalkIso
+    {C : Type u} [Category.{v} C] {FC : C → C → Type*} {CC : C → Type v}
+    [∀ X Y, FunLike (FC X Y) (CC X) (CC Y)] [ConcreteCategory C FC]
+    [HasColimits C] [HasLimits C]
+    [PreservesLimits (CategoryTheory.forget C)]
+    [PreservesFilteredColimits (CategoryTheory.forget C)]
+    [(CategoryTheory.forget C).ReflectsIsomorphisms]
+    {X Y : TopCat.{v}} (f : X ⟶ Y) (G : AlgebraicSheaf C Y) (x : X) :
+    G.presheaf.stalk (f x) ≅
+      ((algebraicSheafPullback C f).obj G).presheaf.stalk x :=
+  Classical.choice (algebraicSheafPullback_stalk_formula f G x)
+
+/-- The source-oriented stalk isomorphism `(f⁻¹ G)_x ≅ G_{f(x)}`. -/
+noncomputable def algebraicSheafPullbackStalkIsoReverse
+    {C : Type u} [Category.{v} C] {FC : C → C → Type*} {CC : C → Type v}
+    [∀ X Y, FunLike (FC X Y) (CC X) (CC Y)] [ConcreteCategory C FC]
+    [HasColimits C] [HasLimits C]
+    [PreservesLimits (CategoryTheory.forget C)]
+    [PreservesFilteredColimits (CategoryTheory.forget C)]
+    [(CategoryTheory.forget C).ReflectsIsomorphisms]
+    {X Y : TopCat.{v}} (f : X ⟶ Y) (G : AlgebraicSheaf C Y) (x : X) :
+    ((algebraicSheafPullback C f).obj G).presheaf.stalk x ≅
+      G.presheaf.stalk (f x) :=
+  (algebraicSheafPullbackStalkIso f G x).symm
 
 /-- Pushforward and pullback preserve the source's underlying-set formulas. -/
 theorem algebraicPresheafPushforward_underlying_formula
@@ -245,6 +396,15 @@ abbrev AlgebraicFMap {C : Type u} [Category.{v} C]
     {X Y : TopCat.{v}} (f : X ⟶ Y)
     (G : AlgebraicSheaf C Y) (F : AlgebraicSheaf C X) : Type _ :=
   G ⟶ (algebraicSheafPushforward C f).obj F
+
+/-- The component family of an algebraic `f`-map on opens of the target. -/
+abbrev algebraicFMapComponents {C : Type u} [Category.{v} C]
+    {X Y : TopCat.{v}} {f : X ⟶ Y}
+    {G : AlgebraicSheaf C Y} {F : AlgebraicSheaf C X}
+    (φ : AlgebraicFMap f G F) :
+    ∀ V : Opens Y,
+      G.presheaf.obj (op V) ⟶ F.presheaf.obj (op ((Opens.map f).obj V)) :=
+  fun V => φ.hom.app (op V)
 
 /-- The category-valued `f`-map is the corresponding morphism into the
 pushforward sheaf. -/

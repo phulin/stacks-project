@@ -197,6 +197,16 @@ noncomputable def abelianSheafPullbackStalkIso {X Y : TopCat.{v}}
     (asIso u).trans <|
       (TopCat.Presheaf.stalkFunctor (AddCommGrpCat.{v}) x).mapIso e'.symm
 
+/-- Pullback abelian sheaves commutes with composition, canonically. -/
+noncomputable def abelianSheafPullbackCompIso {X Y Z : TopCat.{v}}
+    (f : X ⟶ Y) (g : Y ⟶ Z) :
+    abelianSheafPullback (f ≫ g) ≅
+      abelianSheafPullback g ⋙ abelianSheafPullback f := by
+  exact Adjunction.leftAdjointUniq
+    (abelianSheafPullbackPushforwardAdjunction (f ≫ g))
+    ((abelianSheafPullbackPushforwardAdjunction g).comp
+      (abelianSheafPullbackPushforwardAdjunction f))
+
 /-! ## Abelian `f`-maps -/
 
 /-- An abelian `f`-map is a morphism of abelian sheaves to the pushforward. -/

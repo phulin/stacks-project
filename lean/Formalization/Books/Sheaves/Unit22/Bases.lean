@@ -689,6 +689,17 @@ structure BasisFMapData {X Y : TopCat.{v}} {κ : Type v}
     G.map (InducedCategory.homMk (homOfLE h)).op ≫ map j' =
       map j ≫ F.presheaf.map (((Opens.map f).map (homOfLE h)).op)
 
+/-- The source-facing target-basis data for an algebraic `f`-map. -/
+structure BasisFMapBelowData {X Y : TopCat.{v}} {κ : Type v}
+    (f : X ⟶ Y) (Bᵧ : κ → Opens Y)
+    {C : Type v} [Category.{v} C]
+    (G : TopCat.Sheaf C Y) (F : TopCat.Sheaf C X) where
+  map : ∀ j, G.presheaf.obj (op (Bᵧ j)) ⟶
+    F.presheaf.obj (op ((Opens.map f).obj (Bᵧ j)))
+  compatible : ∀ {j j'} (h : Bᵧ j' ≤ Bᵧ j),
+    G.presheaf.map (homOfLE h).op ≫ map j' =
+      map j ≫ F.presheaf.map (((Opens.map f).map (homOfLE h)).op)
+
 /-! The module-valued version needs the module structure to survive passage to
 the induced basis category. -/
 
@@ -710,6 +721,17 @@ theorem basisFMap_below_unique {X Y : TopCat.{v}} {κ : Type v}
     ∃! ψ : G ⟶ (TopCat.Sheaf.pushforward C f).obj F,
       ((Functor.whiskeringLeft (basisIndex Bᵧ)ᵒᵖ (Opens Y)ᵒᵖ C).obj
         (inducedFunctor Bᵧ).op).map ψ.hom = φ := by
+  sorry
+
+/-- The source's compatible target-basis family uniquely determines an
+algebraic `f`-map. -/
+theorem basisFMap_below_unique_of_data {X Y : TopCat.{v}} {κ : Type v}
+    (f : X ⟶ Y) {C : Type v} [Category.{v} C]
+    (F : TopCat.Sheaf C X) (G : TopCat.Sheaf C Y)
+    (Bᵧ : κ → Opens Y) (hBᵧ : Opens.IsBasis (Set.range Bᵧ))
+    (d : BasisFMapBelowData f Bᵧ G F) :
+    ∃! ψ : G ⟶ (TopCat.Sheaf.pushforward C f).obj F,
+      ∀ j, ψ.hom.app (op (Bᵧ j)) = d.map j := by
   sorry
 
 /-- The target-basis version for modules. -/
@@ -746,6 +768,33 @@ def ringedSpaceBasisScalarMap {X Y : RingedSpace.{v}}
     (h : U ≤ (Opens.map f.continuous).obj V) :
     Y.structureSheaf.1.obj (op V) ⟶ X.structureSheaf.1.obj (op U) :=
   f.sharp.hom.app (op V) ≫ X.structureSheaf.1.map (homOfLE h).op
+
+/-- The source-facing target-basis data for a module-valued `f`-map. -/
+structure BasisModuleFMapBelowData {X Y : RingedSpace.{v}} {κ : Type v}
+    (f : RingedSpaceHom X Y) (Bᵧ : κ → Opens Y)
+    (G : Mod Y.structureSheaf) (F : Mod X.structureSheaf) where
+  map : ∀ j, G.val.presheaf.obj (op (Bᵧ j)) →
+    F.val.presheaf.obj (op ((Opens.map f.continuous).obj (Bᵧ j)))
+  compatible : ∀ {j j'} (h : Bᵧ j' ≤ Bᵧ j),
+    map j' ∘ G.val.presheaf.map (homOfLE h).op =
+      F.val.presheaf.map (((Opens.map f.continuous).map
+        (homOfLE h)).op) ∘ map j
+  linear : ∀ (j : κ) (r : Y.structureSheaf.1.obj (op (Bᵧ j)))
+    (s : G.val.presheaf.obj (op (Bᵧ j))),
+    map j (r • s) =
+      (ringedSpaceBasisScalarMap (U := (Opens.map f.continuous).obj (Bᵧ j))
+        (V := Bᵧ j) f le_rfl).hom r • map j s
+
+/-- The source's compatible target-basis family uniquely determines a module
+`f`-map. -/
+theorem basisFMapModule_below_unique_of_data {X Y : RingedSpace} {κ : Type v}
+    (f : RingedSpaceHom X Y) (F : Mod X.structureSheaf) (G : Mod Y.structureSheaf)
+    (Bᵧ : κ → Opens Y) (hBᵧ : Opens.IsBasis (Set.range Bᵧ))
+    (d : BasisModuleFMapBelowData f Bᵧ G F) :
+    ∃! ψ : RingedSpaceModuleFMap f G F,
+      ∀ (j : κ) (s : G.val.presheaf.obj (op (Bᵧ j))),
+        (ψ.val.app (op (Bᵧ j))).hom s = d.map j s := by
+  sorry
 
 /-- A two-basis family of module maps, including restriction and scalar
 compatibility. -/

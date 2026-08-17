@@ -38,6 +38,32 @@ abbrev moduleRingPresheafPullback {X Y : TopCat.{v}} (f : X ⟶ Y) :
     RingPresheaf.{v, v} Y ⥤ RingPresheaf.{v, v} X :=
   TopCat.Presheaf.pullback RingCat f
 
+@[simp]
+theorem moduleRingPresheafPushforward_obj_obj {X Y : TopCat.{v}}
+    (f : X ⟶ Y) (O : RingPresheaf.{v, v} X) (V : Opens Y) :
+    ((moduleRingPresheafPushforward f).obj O).obj (op V) =
+      O.obj (op ((Opens.map f).obj V)) := rfl
+
+/-- The pullback/pushforward adjunction for presheaves of rings. -/
+noncomputable abbrev moduleRingPresheafPullbackPushforwardAdjunction
+    {X Y : TopCat.{v}} (f : X ⟶ Y) :
+    moduleRingPresheafPullback f ⊣ moduleRingPresheafPushforward f :=
+  TopCat.Presheaf.pullbackPushforwardAdjunction RingCat f
+
+/-- The scalar unit `i_O : O ⟶ f_* f_p O`. -/
+noncomputable abbrev moduleRingPresheafUnit {X Y : TopCat.{v}}
+    (f : X ⟶ Y) (O : RingPresheaf.{v, v} Y) :
+    O ⟶ (moduleRingPresheafPushforward f).obj
+      ((moduleRingPresheafPullback f).obj O) :=
+  (moduleRingPresheafPullbackPushforwardAdjunction f).unit.app O
+
+/- The scalar counit `c_O : f_p f_* O ⟶ O`. -/
+noncomputable abbrev moduleRingPresheafCounit {X Y : TopCat.{v}}
+    (f : X ⟶ Y) (O : RingPresheaf.{v, v} X) :
+    (moduleRingPresheafPullback f).obj
+        ((moduleRingPresheafPushforward f).obj O) ⟶ O :=
+  (moduleRingPresheafPullbackPushforwardAdjunction f).counit.app O
+
 /-- Pushforward of presheaves of modules along a specified scalar map. -/
 noncomputable def modulePresheafPushforwardAlong {X Y : TopCat.{v}}
     {O_X : RingPresheaf.{v, v} X} {O_Y : RingPresheaf.{v, v} Y}
@@ -85,6 +111,13 @@ theorem modulePresheafPushforward_underlying_formula {X Y : TopCat.{v}}
         (TopCat.Presheaf.pushforward (AddCommGrpCat.{v}) f).obj F.presheaf) := by
   sorry
 
+/-- A chosen isomorphism for the underlying presheaf pushforward formula. -/
+noncomputable def modulePresheafPushforward_underlyingIso {X Y : TopCat.{v}}
+    {O : RingPresheaf.{v, v} X} (f : X ⟶ Y) (F : PMod O) :
+    (((modulePresheafPushforward f).obj F).presheaf) ≅
+      (TopCat.Presheaf.pushforward (AddCommGrpCat.{v}) f).obj F.presheaf :=
+  Classical.choice (modulePresheafPushforward_underlying_formula f F)
+
 /-- The pullback sections are the filtered colimit sections underlying the
 presheaf left Kan extension, with the induced module structure. -/
 theorem modulePresheafPullback_sections_formula {X Y : TopCat.{v}}
@@ -94,6 +127,38 @@ theorem modulePresheafPullback_sections_formula {X Y : TopCat.{v}}
         ((TopCat.Presheaf.pullback (AddCommGrpCat.{v}) f).obj G.presheaf).obj
           (op U)) := by
   sorry
+
+/-- A chosen isomorphism for the underlying pullback-section formula. -/
+noncomputable def modulePresheafPullback_sectionsIso {X Y : TopCat.{v}}
+    {O : RingPresheaf.{v, v} Y} (f : X ⟶ Y) (G : PMod O) (U : Opens X) :
+    ((modulePresheafPullback f).obj G).presheaf.obj (op U) ≅
+      ((TopCat.Presheaf.pullback (AddCommGrpCat.{v}) f).obj G.presheaf).obj
+        (op U) :=
+  Classical.choice (modulePresheafPullback_sections_formula f G U)
+
+/-- The filtered neighbourhood category used by the presheaf pullback. -/
+abbrev modulePresheafPullbackIndex {X Y : TopCat.{v}}
+    (f : X ⟶ Y) (U : Opens X) :=
+  CostructuredArrow (Opens.map f).op (op U)
+
+/-- The additive-group diagram of sections over neighbourhoods of `f(U)`. -/
+abbrev modulePresheafPullbackDiagram {X Y : TopCat.{v}}
+    (f : X ⟶ Y) {O : RingPresheaf.{v, v} Y} (G : PMod O) (U : Opens X) :=
+  CostructuredArrow.proj (Opens.map f).op (op U) ⋙ G.presheaf
+
+/-- The neighbourhood index in the module pullback formula is filtered. -/
+theorem modulePresheafPullbackIndex_isFiltered {X Y : TopCat.{v}}
+    (f : X ⟶ Y) (U : Opens X) :
+    IsFiltered (modulePresheafPullbackIndex f U) := by
+  exact algebraicPresheafPullback_index_isFiltered f U
+
+/-- The module pullback sections are the filtered neighbourhood colimit. -/
+noncomputable def modulePresheafPullback_obj_colimitIso {X Y : TopCat.{v}}
+    {O : RingPresheaf.{v, v} Y} (f : X ⟶ Y) (G : PMod O) (U : Opens X) :
+    ((modulePresheafPullback f).obj G).presheaf.obj (op U) ≅
+      colimit (modulePresheafPullbackDiagram f G U) := by
+  exact (modulePresheafPullback_sectionsIso f G U).trans
+    (algebraicPresheafPullback_obj_colimitIso f G.presheaf U)
 
 /-- The presheaf module pushforward/pullback adjunction. -/
 noncomputable abbrev modulePresheafPullbackPushforwardAdjunction
@@ -175,6 +240,12 @@ abbrev moduleRingSheafPullback {X Y : TopCat.{v}} (f : X ⟶ Y) :
     RingSheaf Y ⥤ RingSheaf X :=
   TopCat.Sheaf.pullback RingCat f
 
+/-- The pullback/pushforward adjunction for sheaves of rings. -/
+noncomputable abbrev moduleRingSheafPullbackPushforwardAdjunction
+    {X Y : TopCat.{v}} (f : X ⟶ Y) :
+    moduleRingSheafPullback f ⊣ moduleRingSheafPushforward f :=
+  TopCat.Sheaf.pullbackPushforwardAdjunction RingCat f
+
 /-- The canonical scalar map from a sheaf to the pushforward of its sheaf
 pullback.  Naming this map removes the identity-functor presentation of the
 unit from the module interfaces below. -/
@@ -183,6 +254,12 @@ noncomputable def moduleSheafPullbackUnit {X Y : TopCat.{v}}
     O ⟶ (moduleRingSheafPushforward f).obj
       ((moduleRingSheafPullback f).obj O) := by
   exact (TopCat.Sheaf.pullbackPushforwardAdjunction RingCat f).unit.app O
+
+/-- The scalar counit `f⁻¹ f_* O ⟶ O`. -/
+noncomputable abbrev moduleSheafPullbackCounit {X Y : TopCat.{v}}
+    (f : X ⟶ Y) (O : RingSheaf X) :
+    (moduleRingSheafPullback f).obj ((moduleRingSheafPushforward f).obj O) ⟶ O :=
+  (moduleRingSheafPullbackPushforwardAdjunction f).counit.app O
 
 /-- Pushforward of sheaves of modules along a continuous map, using the
 identity map to the pushed-forward scalar ring. -/
@@ -225,6 +302,13 @@ theorem moduleSheafPushforward_underlying_formula {X Y : TopCat.{v}}
         (TopCat.Presheaf.pushforward (AddCommGrpCat.{v}) f).obj F.val.presheaf) := by
   sorry
 
+/-- A chosen isomorphism for the underlying sheaf pushforward formula. -/
+noncomputable def moduleSheafPushforward_underlyingIso {X Y : TopCat.{v}}
+    {O : RingSheaf X} (f : X ⟶ Y) (F : Mod O) :
+    (((moduleSheafPushforward f).obj F).val.presheaf) ≅
+      (TopCat.Presheaf.pushforward (AddCommGrpCat.{v}) f).obj F.val.presheaf :=
+  Classical.choice (moduleSheafPushforward_underlying_formula f F)
+
 /-- Pullback of sheaves of modules is the sheafification of the presheaf
 module pullback. -/
 noncomputable def moduleSheafPullback_sheafificationIso {X Y : TopCat.{v}}
@@ -263,6 +347,25 @@ noncomputable abbrev moduleSheafHomEquiv {X Y : TopCat.{v}}
       (G ⟶ (moduleSheafPushforwardAlong f
         (moduleSheafPullbackUnit f O)).obj F) :=
   (moduleSheafPullbackPushforwardAdjunction f).homEquiv G F
+
+/-- The unit of the sheaf-module pullback/pushforward adjunction. -/
+noncomputable abbrev moduleSheafUnit {X Y : TopCat.{v}}
+    {O : RingSheaf Y} (f : X ⟶ Y) (G : Mod O)
+    [((SheafOfModules.pushforward (F := Opens.map f)
+      (moduleSheafPullbackUnit f O)).IsRightAdjoint)] :
+    G ⟶ (moduleSheafPushforwardAlong f (moduleSheafPullbackUnit f O)).obj
+      ((moduleSheafPullback f).obj G) :=
+  (moduleSheafPullbackPushforwardAdjunction f).unit.app G
+
+/-- The counit of the sheaf-module pullback/pushforward adjunction. -/
+noncomputable abbrev moduleSheafCounit {X Y : TopCat.{v}}
+    {O : RingSheaf Y} (f : X ⟶ Y)
+    (F : Mod ((moduleRingSheafPullback f).obj O))
+    [((SheafOfModules.pushforward (F := Opens.map f)
+      (moduleSheafPullbackUnit f O)).IsRightAdjoint)] :
+    (moduleSheafPullback f).obj
+        ((moduleSheafPushforwardAlong f (moduleSheafPullbackUnit f O)).obj F) ⟶ F :=
+  (moduleSheafPullbackPushforwardAdjunction f).counit.app F
 
 /-- The sheaf-level tensor object
 `O_X ⊗_{f⁻¹ f_* O_X} f⁻¹ G`, represented by the canonical module pullback

@@ -1,4 +1,5 @@
 import Formalization.Books.Sheaves.Unit05.PresheavesOfAlgebraicStructures
+import Formalization.Books.Sheaves.Unit09.SheavesOfAlgebraicStructures
 import Mathlib.Algebra.Category.Grp.Basic
 import Mathlib.Algebra.Category.Grp.FilteredColimits
 import Mathlib.Algebra.Category.Grp.Limits
@@ -33,8 +34,9 @@ namespace Formalization.Books.Sheaves.Unit15
 
 open CategoryTheory CategoryTheory.Limits Opposite TopologicalSpace
 open Formalization.Books.Sheaves.Unit05
+open Formalization.Books.Sheaves.Unit09
 
-universe u v
+universe u v r k
 
 noncomputable section
 
@@ -61,18 +63,18 @@ that the textbook's Lie-algebra example has a precise Lean interface.
 -/
 
 /-- The structure carried by an object of the fixed-field Lie-algebra category. -/
-structure LieAlgebraObject (K : Type u) [Field K] (L : Type u) where
+structure LieAlgebraObject (K : Type k) [Field K] (L : Type u) where
   lieRing : LieRing L
   lieAlgebra : @LieAlgebra K L _ lieRing
 
 /-- The category of Lie algebras over a fixed field, with Lie homomorphisms. -/
-structure LieAlgebraCat (K : Type u) [Field K] : Type (u + 1) where
+structure LieAlgebraCat (K : Type k) [Field K] : Type (max k u + 1) where
   carrier : Type u
   structureData : LieAlgebraObject K carrier
 
 namespace LieAlgebraCat
 
-variable {K : Type u} [Field K]
+variable {K : Type k} [Field K]
 
 instance : CoeSort (LieAlgebraCat K) (Type u) := ⟨LieAlgebraCat.carrier⟩
 
@@ -130,10 +132,10 @@ theorem standardAlgebraicStructureTypes :
       AlgebraicStructureType (GrpCat.{u}) (forget GrpCat) ∧
       AlgebraicStructureType (MonCat.{u}) (forget MonCat) ∧
       AlgebraicStructureType (RingCat.{u}) (forget RingCat) ∧
-      (∀ (R : Type u) [Ring R],
+      (∀ (R : Type r) [Ring R],
         AlgebraicStructureType (ModuleCat.{u} R) (forget (ModuleCat.{u} R))) ∧
-      (∀ (K : Type u) [Field K],
-        AlgebraicStructureType (LieAlgebraCat K) (forget (LieAlgebraCat K))) := by
+      (∀ (K : Type k) [Field K],
+        AlgebraicStructureType (LieAlgebraCat.{u} K) (forget (LieAlgebraCat.{u} K))) := by
   sorry
 
 /-! ## Consequences of the definition -/
@@ -281,13 +283,33 @@ theorem pointwiseProductPresheaf_underlying_sections
         ∀ x : U, F.obj (A x)) := by
   sorry
 
-/-- A category-valued presheaf is a sheaf of algebraic structures when its
-underlying presheaf of sets is a sheaf. -/
+/-- A category-valued presheaf is a sheaf of algebraic structures in the
+category-valued equalizer-of-products sense from Chapter 9. -/
 abbrev IsSheafOfAlgebraicStructures
     {C : Type u} [Category.{v} C] {F : C ⥤ Type v}
     [AlgebraicStructureType C F] {X : TopCat.{v}}
     (𝒜 : TopCat.Presheaf C X) : Prop :=
-  TopCat.Presheaf.IsSheaf (underlyingPresheaf F 𝒜)
+  CategoryValuedSheaf 𝒜
+
+/-- For a type of algebraic structures, the category-valued sheaf condition
+is equivalent to the sheaf condition on the underlying presheaf of sets. -/
+theorem isSheafOfAlgebraicStructures_iff_underlying_isSheaf
+    {C : Type u} [Category.{v} C] {F : C ⥤ Type v}
+    [AlgebraicStructureType C F] {X : TopCat.{v}}
+    (𝒜 : TopCat.Presheaf C X) :
+    IsSheafOfAlgebraicStructures (F := F) 𝒜 ↔
+      TopCat.Presheaf.IsSheaf (underlyingPresheaf F 𝒜) := by
+  exact categoryValuedSheaf_iff_underlying_isSheaf F 𝒜
+
+/-- The underlying presheaf of the pointwise product is a sheaf of sets,
+matching the pointwise-product example from the preceding sheaf section. -/
+theorem pointwiseProductPresheaf_underlying_isSheaf
+    {C : Type u} [Category.{v} C] {F : C ⥤ Type v}
+    [AlgebraicStructureType C F] {X : TopCat.{v}}
+    (A : X → C) :
+    TopCat.Presheaf.IsSheaf
+      (underlyingPresheaf F (pointwiseProductPresheaf (F := F) A)) := by
+  sorry
 
 /-- The pointwise product presheaf is a sheaf of algebraic structures. -/
 theorem pointwiseProductPresheaf_isSheaf
@@ -296,7 +318,9 @@ theorem pointwiseProductPresheaf_isSheaf
     (A : X → C) :
     IsSheafOfAlgebraicStructures (F := F)
       (pointwiseProductPresheaf (F := F) A) := by
-  sorry
+  exact (isSheafOfAlgebraicStructures_iff_underlying_isSheaf
+    (F := F) (pointwiseProductPresheaf (F := F) A)).2
+    (pointwiseProductPresheaf_underlying_isSheaf (F := F) A)
 
 end
 

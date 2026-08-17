@@ -9,6 +9,7 @@ import Mathlib.Data.ZMod.Basic
 import Mathlib.FieldTheory.KummerExtension
 import Mathlib.RingTheory.Flat.FaithfullyFlat.Basic
 import Mathlib.RingTheory.Idempotents
+import Mathlib.RingTheory.Ideal.IdempotentFG
 import Mathlib.RingTheory.KrullDimension.Field
 import Mathlib.RingTheory.KrullDimension.Polynomial
 import Mathlib.RingTheory.Localization.AtPrime.Basic
@@ -171,7 +172,131 @@ def IsCoherentRing (R : Type*) [CommRing R] : Prop :=
 /-- There is a coherent ring which is not Noetherian. -/
 theorem exists_coherent_non_noetherian_ring :
     ∃ R : CommRingCat.{u}, IsCoherentRing R ∧ ¬ IsNoetherianRing R := by
-  sorry
+  let R : CommRingCat.{u} := CommRingCat.of (ULift.{u} ℕ → ZMod 2)
+  refine ⟨R, ?_, ?_⟩
+  · change ∀ I : Ideal (ULift.{u} ℕ → ZMod 2), I.FG →
+      Module.FinitePresentation (ULift.{u} ℕ → ZMod 2) I
+    intro I hI
+    have hpoint : ∀ x : ULift.{u} ℕ → ZMod 2, IsIdempotentElem x := by
+      intro x
+      funext n
+      let i : Fin 2 := (ZMod.finEquiv 2).symm (x n)
+      have hi : ZMod.finEquiv 2 i = x n :=
+        (ZMod.finEquiv 2).apply_symm_apply _
+      change x n * x n = x n
+      rw [← hi]
+      have hi' : i = 0 ∨ i = 1 := by omega
+      rcases hi' with h | h
+      · rw [h]
+        simp
+      · rw [h]
+        simp
+    have hIdem : IsIdempotentElem I := by
+      rw [IsIdempotentElem]
+      apply le_antisymm
+      · exact Ideal.mul_le.mpr fun x hx y hy => I.mul_mem_left x hy
+      · intro x hx
+        convert Ideal.mul_mem_mul hx hx using 1
+        exact (hpoint x).eq.symm
+    obtain ⟨e, he, hIe⟩ := (I.isIdempotentElem_iff_of_fg hI).mp hIdem
+    subst I
+    change Module.FinitePresentation (ULift.{u} ℕ → ZMod 2)
+      ((ULift.{u} ℕ → ZMod 2) ∙ e)
+    have hspan : ((ULift.{u} ℕ → ZMod 2) ∙ e).FG := by
+      exact hI
+    let i : (ULift.{u} ℕ → ZMod 2) ∙ e →ₗ[ULift.{u} ℕ → ZMod 2]
+        (ULift.{u} ℕ → ZMod 2) :=
+      ((ULift.{u} ℕ → ZMod 2) ∙ e).subtype
+    let p : (ULift.{u} ℕ → ZMod 2) →ₗ[ULift.{u} ℕ → ZMod 2]
+        (ULift.{u} ℕ → ZMod 2) ∙ e :=
+      { toFun := fun x =>
+          ⟨x * e, Ideal.mem_span_singleton'.mpr ⟨x, rfl⟩⟩
+        map_add' := by
+          intro x y
+          apply Subtype.ext
+          simp [add_mul]
+        map_smul' := by
+          intro r x
+          apply Subtype.ext
+          simp [smul_eq_mul, mul_assoc] }
+    have hp : p.comp i = LinearMap.id := by
+      apply LinearMap.ext
+      intro x
+      apply Subtype.ext
+      rcases Ideal.mem_span_singleton'.mp x.property with ⟨a, ha⟩
+      change (x : ULift.{u} ℕ → ZMod 2) * e = (x : ULift.{u} ℕ → ZMod 2)
+      rw [← ha, mul_assoc, he.eq]
+    have hfinite : Module.Finite (ULift.{u} ℕ → ZMod 2)
+        ((ULift.{u} ℕ → ZMod 2) ∙ e) :=
+      Module.Finite.of_fg_top ((Submodule.fg_top _).mpr hspan)
+    have hprojective : Module.Projective (ULift.{u} ℕ → ZMod 2)
+        ((ULift.{u} ℕ → ZMod 2) ∙ e) :=
+      Module.Projective.of_split i p hp
+    exact @Module.finitePresentation_of_projective
+      (ULift.{u} ℕ → ZMod 2) ((ULift.{u} ℕ → ZMod 2) ∙ e)
+      _ _ _ hprojective hfinite
+  · intro hN
+    let K : Ideal (ULift.{u} ℕ → ZMod 2) :=
+      { carrier := {x | (Function.support x).Finite}
+        zero_mem' := by simp
+        add_mem' := by
+          intro x y hx hy
+          apply (hx.union hy).subset
+          intro n hn
+          by_contra hzero
+          have hxzero : x n = 0 := by
+            by_contra hxzero
+            exact hzero (Or.inl hxzero)
+          have hyzero : y n = 0 := by
+            by_contra hyzero
+            exact hzero (Or.inr hyzero)
+          simp [hxzero, hyzero] at hn
+        smul_mem' := by
+          intro r x hx
+          exact hx.subset (Function.support_smul_subset_right r x) }
+    let d : ℕ → (ULift.{u} ℕ → ZMod 2) := fun n m =>
+      if m.down = n then 1 else 0
+    have hd : ∀ n : ℕ, d n ∈ K := by
+      intro n
+      apply Set.Finite.subset (Set.finite_singleton (ULift.up n))
+      intro m hm
+      have hm' : m.down = n := by
+        simpa [d, Function.mem_support] using hm
+      exact Set.mem_singleton_iff.mpr (ULift.ext m (ULift.up n) hm')
+    have hK : K.FG := (isNoetherianRing_iff_ideal_fg _).mp hN K
+    obtain ⟨s, hs⟩ := hK
+    have hsK : ∀ x ∈ s, x ∈ K := by
+      intro x hx
+      rw [← hs]
+      exact Ideal.subset_span hx
+    let T : Set (ULift.{u} ℕ) :=
+      ⋃ x ∈ (s : Set (ULift.{u} ℕ → ZMod 2)), Function.support x
+    have hT : T.Finite := by
+      dsimp [T]
+      apply Set.Finite.biUnion s.finite_toSet
+      intro x hx
+      exact hsK x hx
+    obtain ⟨m, hm⟩ := hT.exists_notMem
+    let n : ℕ := m.down
+    have hs0 : ∀ x ∈ s, x m = 0 := by
+      intro x hx
+      by_contra hzero
+      apply hm
+      exact Set.mem_iUnion.mpr ⟨x, Set.mem_iUnion.mpr ⟨hx, hzero⟩⟩
+    let ev : (ULift.{u} ℕ → ZMod 2) →+* ZMod 2 :=
+      Pi.evalRingHom (fun _ : ULift.{u} ℕ => ZMod 2) m
+    have hker : Ideal.span (s : Set (ULift.{u} ℕ → ZMod 2)) ≤ RingHom.ker ev := by
+      rw [Ideal.span_le]
+      intro x hx
+      exact RingHom.mem_ker.mpr (hs0 x hx)
+    have hds : d n ∈ Ideal.span (s : Set (ULift.{u} ℕ → ZMod 2)) := by
+      rw [hs]
+      exact hd n
+    have hz : ev (d n) = 0 := RingHom.mem_ker.mp (hker hds)
+    have hone : ev (d n) = 1 := by
+      simp [ev, d, n]
+    rw [hone] at hz
+    exact one_ne_zero hz
 
 /-! ## Minimal numbers of generators and flat ideals -/
 

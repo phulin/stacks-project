@@ -1,7 +1,5 @@
-import Formalization.Books.Algebra.Unit14.BaseChange
 import Formalization.Books.Algebra.Unit70.BlowUpAlgebras
 import Formalization.Books.MoreAlgebra.Unit08.FittingIdeals
-import Formalization.Books.MoreAlgebra.Unit22.TorsionFree
 import Mathlib.Algebra.Module.FinitePresentation
 import Mathlib.RingTheory.FiniteType
 import Mathlib.RingTheory.Localization.AtPrime.Basic
@@ -46,7 +44,9 @@ abbrev strictTransformModule
 
 /- The following ideal is the ring-theoretic version of the same construction
 for an `R`-algebra.  It is the canonical `baseChangeTorsionIdeal` of
-Algebra, Chapter 70, written with the existing `R`-algebra instance on `S`. -/
+Algebra, Chapter 70, written with the existing `R`-algebra instance on `S`.
+The explicit wrapper avoids changing the algebra instance supplied by the
+book-facing hypotheses. -/
 noncomputable def strictTransformTorsionIdeal
     {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]
     (I : Ideal R) (a : R) : Ideal (S ⊗[R] affineBlowup I a) :=
@@ -54,8 +54,8 @@ noncomputable def strictTransformTorsionIdeal
     (algebraMap S (S ⊗[R] affineBlowup I a) (algebraMap R S a))
 
 /- The quotient below is the strict transform of an algebra.  The module
-variant uses the canonical extension-of-scalars tensor model described in
-Algebra, Chapter 14, namely `(S ⊗[R] R') ⊗[S] M`. -/
+variant uses the standard extension-of-scalars tensor model
+`(S ⊗[R] R') ⊗[S] M`. -/
 abbrev strictTransformAlgebra
     {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]
     (I : Ideal R) (a : R) (_ha : a ∈ I) : Type _ :=
@@ -138,15 +138,15 @@ noncomputable def strictTransformModuleOverModule
 /-! ## Flattening on an affine blowup -/
 
 /- A valuation ring has a center on an `R`-algebra when the algebra admits a
-local map to that valuation ring extending the given map into its fraction
-field.  This is the source-facing center interface used for the affine chart
-in the flattening statement. -/
+map to that valuation ring extending the given map into its fraction field.
+The map need not be local because the affine chart itself need not be a local
+ring; its inverse image of the maximal ideal is the center on the chart. -/
 def HasValuationCenter
     {R K : Type*} [CommRing R] [Field K] [Algebra R K]
     (A : ValuationSubring K) (B : Type*)
     [CommRing B] [Algebra R B]
     : Prop :=
-  ∃ φ : B →+* A, IsLocalHom φ ∧
+  ∃ φ : B →+* A,
     ∀ r : R, ((φ (algebraMap R B r) : A) : K) = algebraMap R K r
 
 /-- A weak flattening-by-affine-blowup theorem, with the four conclusions in
@@ -244,7 +244,11 @@ principal-ideal, and local-freeness interfaces are imported from Chapter 8.
 The presentations, exact sequences, filtered-colimit calculations, and local
 relation computations displayed inside the source proofs are proof-local
 scaffolding for the five declarations above, so they do not introduce further
-public mathematical statements at this chapter boundary.
+public mathematical statements at this chapter boundary.  In particular,
+`strictTransformModuleOver` records the source's `M ⊗[R] R'` module using the
+standard tensor extension model, while the explicit quotient-module instance
+and `strictTransformModuleOver_isTorsionBySet` expose the quotient-ring action
+needed by the finite-presentation conclusion.
 -/
 
 end

@@ -1,4 +1,5 @@
 import Mathlib.Algebra.MvPolynomial.Basic
+import Mathlib.Algebra.MvPolynomial.Eval
 import Mathlib.RingTheory.Ideal.Quotient.Operations
 import Mathlib.RingTheory.Localization.Away.Basic
 import Mathlib.RingTheory.Noetherian.Basic
@@ -82,6 +83,13 @@ def liftingCorrectionRelation
         liftLiftingPolynomial (h k ℓ j) *
           MvPolynomial.X (Sum.inr (E k j)) -
     MvPolynomial.C π * liftLiftingPolynomial (g k ℓ)
+
+/-- Evaluation of the `x`-polynomial presentation at elements of an algebra. -/
+def liftingEvaluation
+    {R Λ : Type u} [CommRing R] [CommRing Λ] [Algebra R Λ]
+    {n : ℕ} (lambda : Fin n → Λ) :
+    MvPolynomial (Fin n) R →ₐ[R] Λ :=
+  MvPolynomial.aeval lambda
 
 /-- The finite presentation and coefficient data used to construct `D`. -/
 structure LiftingConstructionData (R : Type u) [CommRing R] (π : R) where
@@ -186,6 +194,42 @@ def liftingAuxiliaryElement
     (d : LiftingConstructionData R π) (k : Fin d.r) : liftingAuxiliaryRing d k :=
   Ideal.Quotient.mk _ (liftLiftingPolynomial (d.a k))
 
+/-- The values used in the proof to define the map from `D` to `Λ`. -/
+structure LiftingEvaluationData
+    {R Λ : Type u} [CommRing R] [CommRing Λ] [Algebra R Λ]
+    {π : R} (d : LiftingConstructionData R π) where
+  lambda : Fin d.n → Λ
+  mu : Fin d.m → Λ
+  relation_evaluation :
+    ∀ ℓ : Fin d.m,
+      liftingEvaluation lambda (d.relations ℓ) =
+        (algebraMap R Λ π) ^ 2 * mu ℓ
+
+/-- The polynomial evaluation sending `x_i` to `λ_i` and `z_j` to `π μ_j`. -/
+def liftingEvaluationPolynomial
+    {R Λ : Type u} [CommRing R] [CommRing Λ] [Algebra R Λ]
+    {π : R} (d : LiftingConstructionData R π)
+    (ev : LiftingEvaluationData (Λ := Λ) d) :
+    liftingPolynomial R d.n d.m →ₐ[R] Λ :=
+  MvPolynomial.aeval (fun v =>
+    match v with
+    | Sum.inl i => ev.lambda i
+    | Sum.inr j => algebraMap R Λ π * ev.mu j)
+
+/-- The evaluation descends through the defining equations of `D`. -/
+theorem liftingRing_evaluation_descends
+    {R Λ : Type u} [CommRing R] [CommRing Λ] [Algebra R Λ]
+    {π : R} (d : LiftingConstructionData R π)
+    (ev : LiftingEvaluationData (Λ := Λ) d)
+    (hAnnΛ :
+      annihilatorOf (R := Λ) (M := Λ) (algebraMap R Λ π) =
+        annihilatorOf (R := Λ) (M := Λ) ((algebraMap R Λ π) ^ 2)) :
+    ∃ φ : liftingRing d →ₐ[R] Λ,
+      ∀ v : Fin d.n ⊕ Fin d.m,
+        φ (Ideal.Quotient.mk (liftingDefiningIdeal d) (MvPolynomial.X v)) =
+          liftingEvaluationPolynomial d ev (MvPolynomial.X v) := by
+  sorry
+
 /-- The quotient map `D_k → D` supplied by inclusion of defining ideals. -/
 noncomputable def liftingAuxiliaryToLiftingRing
     {R : Type u} [CommRing R] {π : R}
@@ -231,6 +275,11 @@ abbrev liftingPresentationModel
   MvPolynomial (Fin d.n) (piQuotient R (π ^ 2)) ⧸
     liftingReducedRelationIdeal d
 
+noncomputable instance liftingPresentationModel.commRing
+    {R : Type u} [CommRing R] {π : R}
+    (d : LiftingConstructionData R π) :
+    CommRing (liftingPresentationModel d) :=
+  Ideal.Quotient.commRing (liftingReducedRelationIdeal d)
 
 noncomputable instance liftingPresentationModel.algebraR
     {R : Type u} [CommRing R] {π : R}
@@ -258,6 +307,16 @@ def liftingPresentationModPiIdeal
     {R : Type u} [CommRing R] {π : R}
     (d : LiftingConstructionData R π) : Ideal (liftingPresentationModel d) :=
   Ideal.map (liftingPresentationModelMap d) (Ideal.span ({π} : Set R))
+
+noncomputable instance liftingPresentationModPiIdeal.isTwoSided
+    {R : Type u} [CommRing R] {π : R}
+    (d : LiftingConstructionData R π) :
+    (liftingPresentationModPiIdeal d).IsTwoSided := by
+  refine ⟨fun {a} b ha => ?_⟩
+  have h := (liftingPresentationModPiIdeal d).smul_mem b ha
+  rw [smul_eq_mul] at h
+  rw [mul_comm b a] at h
+  exact h
 
 /-- The mod-`π` presentation model for `\bar C / π\bar C`. -/
 abbrev liftingPresentationModPiModel
@@ -328,6 +387,15 @@ theorem liftingRing_localization_smooth
     (d : LiftingConstructionData R π) :
     Algebra.Smooth R
       (Localization.Away (algebraMap R (liftingRing d) π)) := by
+  sorry
+
+/-- The explicit polynomial presentation of `D[1/π]` used in the proof of (b). -/
+theorem liftingRing_localization_equiv
+    {R : Type u} [CommRing R] {π : R}
+    (d : LiftingConstructionData R π) :
+    Nonempty
+      (Localization.Away (algebraMap R (liftingRing d) π) ≃+*
+        MvPolynomial (Fin d.n) (Localization.Away π)) := by
   sorry
 
 /-- The source's property (b) for the explicit construction. -/
@@ -444,8 +512,8 @@ theorem lifting_lemma
       annihilatorOf (R := R) (M := R) π =
         annihilatorOf (R := R) (M := R) (π ^ 2))
     (hAnnΛ :
-      annihilatorOf (algebraMap R Λ π) =
-        annihilatorOf ((algebraMap R Λ π) ^ 2))
+      annihilatorOf (R := Λ) (M := Λ) (algebraMap R Λ π) =
+        annihilatorOf (R := Λ) (M := Λ) ((algebraMap R Λ π) ^ 2))
     (hbar : Cbar →+* piQuotient Λ ((algebraMap R Λ π) ^ 2))
     (hbar_algebra :
       hbar.comp

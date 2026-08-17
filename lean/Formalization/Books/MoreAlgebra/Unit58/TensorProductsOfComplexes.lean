@@ -8,6 +8,7 @@ import Mathlib.Algebra.Category.ModuleCat.Colimits
 import Mathlib.CategoryTheory.Monoidal.Limits.Preserves
 import Mathlib.CategoryTheory.Monoidal.Preadditive
 import Mathlib.CategoryTheory.Triangulated.Functor
+import Formalization.Books.Derived.Unit10.DistinguishedTriangles
 
 /-!
 # More on Algebra, Chapter 58: Tensor products of complexes
@@ -99,39 +100,57 @@ theorem tensorProductComplex_differential_formula
               (.up ℤ) p (q + 1) (p + q + 1) (by dsimp; omega)) := by
   sorry
 
-/- The sign appearing in the commutativity constraint is the canonical sign
-   from `ComplexShape.TensorSigns` for integer cochain complexes. -/
+/- The sign appearing in the commutativity constraint is the Koszul sign
+   `(-1)^(pq)` on the summand in degrees `p` and `q`.  This is distinct from
+   `ComplexShape.σ`, whose role is to compare the two total-complex index
+   conventions and which is `1` for the canonical symmetric total shape. -/
 abbrev koszulSign (p q : ℤ) : ℤˣ :=
-  ComplexShape.σ (.up ℤ) (.up ℤ) (.up ℤ) p q
+  (p * q).negOnePow
 
 /-! ## Symmetry and homotopy -/
 
-/- Mathlib supplies the signed flip of a total complex through
-`HomologicalComplex₂.totalFlipIso` and `mapBifunctorFlipIso`.  The remaining
-book-facing assertion is that the base module braiding gives the displayed
-commutativity constraint on the two tensor factors.  The two displayed sign
-calculations in the source are precisely the componentwise chain-map check;
-they are subsumed here by the constraint and its summand formula. -/
-structure SignedTensorSymmetryData (R : Type u) [CommRing R]
-    (L M : Comp R) where
-  constraint : tensorProductComplex R L M ≅ tensorProductComplex R M L
-  summand_formula : ∀ (p q : ℤ),
-    ιMapBifunctor L M (MonoidalCategory.curriedTensor (ModuleCat.{u} R))
-        (.up ℤ) p q (p + q) rfl ≫ constraint.hom.f (p + q) =
-      (p * q).negOnePow •
-        ((β_ (L.X p) (M.X q)).hom ≫
-          ιMapBifunctor M L (MonoidalCategory.curriedTensor (ModuleCat.{u} R))
-            (.up ℤ) q p (p + q) (by dsimp; omega))
+/- Mathlib supplies the canonical coproduct-desc construction for maps out of
+the total tensor product, while the chain-map verification for the signed
+flip is the component calculation in the source.  The `comm'` fields below
+are the formal chain-map version of the two displayed differential/sign
+identities. -/
+noncomputable def tensorBraidingHomComponent
+    (R : Type u) [CommRing R] (L M : Comp R) (n : ℤ) :
+    (tensorProductComplex R L M).X n ⟶ (tensorProductComplex R M L).X n :=
+  HomologicalComplex.mapBifunctorDesc (fun p q h =>
+    koszulSign p q •
+      ((β_ (L.X p) (M.X q)).hom ≫
+        ιMapBifunctor M L (MonoidalCategory.curriedTensor (ModuleCat.{u} R))
+          (.up ℤ) q p n (by
+            rw [ComplexShape.π_symm (.up ℤ) (.up ℤ) (.up ℤ) p q]
+            exact h)))
 
-theorem signedTensorSymmetry_exists
-    (R : Type u) [CommRing R] (L M : Comp R) :
-    Nonempty (SignedTensorSymmetryData R L M) := by
-  sorry
+noncomputable def tensorBraidingInvComponent
+    (R : Type u) [CommRing R] (L M : Comp R) (n : ℤ) :
+    (tensorProductComplex R M L).X n ⟶ (tensorProductComplex R L M).X n :=
+  HomologicalComplex.mapBifunctorDesc (fun p q h =>
+    koszulSign p q •
+      ((β_ (M.X p) (L.X q)).hom ≫
+        ιMapBifunctor L M (MonoidalCategory.curriedTensor (ModuleCat.{u} R))
+          (.up ℤ) q p n (by
+            rw [ComplexShape.π_symm (.up ℤ) (.up ℤ) (.up ℤ) p q]
+            exact h)))
 
-/-- A chosen signed commutativity constraint for total tensor products. -/
+/-- The signed commutativity constraint for total tensor products. -/
 noncomputable def tensorBraiding (R : Type u) [CommRing R]
     (L M : Comp R) : tensorProductComplex R L M ≅ tensorProductComplex R M L :=
-  (Classical.choice (signedTensorSymmetry_exists R L M)).constraint
+  { hom :=
+      { f := tensorBraidingHomComponent R L M
+        comm' := by
+          sorry }
+    inv :=
+      { f := tensorBraidingInvComponent R L M
+        comm' := by
+          sorry }
+    hom_inv_id := by
+      sorry
+    inv_hom_id := by
+      sorry }
 
 /-- The chapter's precise signed component formula for the commutativity
 constraint.  On the summand `L^p ⊗ M^q`, the sign is `(-1)^(pq)`. -/
@@ -139,11 +158,11 @@ theorem tensorBraiding_on_summand
     (R : Type u) [CommRing R] (L M : Comp R) (p q : ℤ) :
     ιMapBifunctor L M (MonoidalCategory.curriedTensor (ModuleCat.{u} R))
         (.up ℤ) p q (p + q) rfl ≫ (tensorBraiding R L M).hom.f (p + q) =
-      (p * q).negOnePow •
+      koszulSign p q •
         ((β_ (L.X p) (M.X q)).hom ≫
           ιMapBifunctor M L (MonoidalCategory.curriedTensor (ModuleCat.{u} R))
             (.up ℤ) q p (p + q) (by dsimp; omega)) := by
-  exact (Classical.choice (signedTensorSymmetry_exists R L M)).summand_formula p q
+  sorry
 
 /- A small source-facing bundle is useful because Mathlib represents a
 symmetric monoidal structure by separate typeclasses, while the chapter
@@ -160,6 +179,9 @@ theorem cochainComplex_symmetric_monoidal
   sorry
 
 /-- Homotopic maps remain homotopic after tensoring with a fixed complex. -/
+/- The source's explicit `H^n` and the displayed identity
+`Tot(α ⊗ id) = Tot(β ⊗ id) + dH + Hd` are represented by the returned
+`Homotopy` witness and its `comm` field. -/
 theorem tensorProduct_preserves_homotopies
     (R : Type u) [CommRing R] (P : Comp R)
     {L M : Comp R} (α β : L ⟶ M) (h : Homotopy α β) :
@@ -210,37 +232,20 @@ theorem homotopyCategory_symmetric_monoidal
 
 /-! ## Exactness -/
 
-/- Mathlib's triangulated-functor interface packages the source's
-exactness assertion together with the shift-commutation data. -/
-structure ExactTriangulatedFunctorData {C D : Type*}
-    [Category* C] [Category* D]
-    [HasShift C ℤ] [HasShift D ℤ]
-    [HasZeroObject C] [HasZeroObject D]
-    [Preadditive C] [Preadditive D]
-    [∀ (n : ℤ), (shiftFunctor C n).Additive]
-    [∀ (n : ℤ), (shiftFunctor D n).Additive]
-    (F : C ⥤ D) where
-  pretriangulated_C : Pretriangulated C
-  pretriangulated_D : Pretriangulated D
-  commShift : F.CommShift ℤ
-  triangulated :
-    letI := pretriangulated_C
-    letI := pretriangulated_D
-    letI := commShift
-    F.IsTriangulated
-
 /-- Tensoring on the left by a fixed complex is an exact (triangulated)
 functor of homotopy categories. -/
 theorem tensorLeftHomotopyFunctor_is_triangulated
     (R : Type u) [CommRing R] (P : Comp R) :
-    Nonempty (ExactTriangulatedFunctorData (tensorLeftHomotopyFunctor R P)) := by
+    Nonempty (Formalization.Books.Derived.Unit10.ExactTriangulatedFunctorData
+      (tensorLeftHomotopyFunctor R P)) := by
   sorry
 
 /-- Tensoring on the right by a fixed complex is an exact (triangulated)
 functor of homotopy categories. -/
 theorem tensorRightHomotopyFunctor_is_triangulated
     (R : Type u) [CommRing R] (P : Comp R) :
-    Nonempty (ExactTriangulatedFunctorData (tensorRightHomotopyFunctor R P)) := by
+    Nonempty (Formalization.Books.Derived.Unit10.ExactTriangulatedFunctorData
+      (tensorRightHomotopyFunctor R P)) := by
   sorry
 
 end Formalization.Books.MoreAlgebra.Unit58

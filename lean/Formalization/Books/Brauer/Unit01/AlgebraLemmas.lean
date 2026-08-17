@@ -4,9 +4,13 @@ import Mathlib.Algebra.Algebra.Subalgebra.Centralizer
 import Mathlib.Algebra.Central.Matrix
 import Mathlib.Algebra.Central.TensorProduct
 import Mathlib.Algebra.Module.LinearMap.Basic
+import Mathlib.Data.Matrix.Basis
 import Mathlib.LinearAlgebra.Matrix.Ideal
+import Mathlib.LinearAlgebra.Matrix.Action
+import Mathlib.LinearAlgebra.Matrix.FiniteDimensional
 import Mathlib.LinearAlgebra.TensorProduct.Basic
 import Mathlib.RingTheory.Morita.Matrix
+import Mathlib.RingTheory.SimpleRing.Field
 import Mathlib.RingTheory.SimpleModule.Isotypic
 import Mathlib.RingTheory.TensorProduct.Basic
 import Mathlib.RingTheory.TwoSidedIdeal.Operations
@@ -83,7 +87,7 @@ theorem center_finite_simple_is_finite_field_extension (k A : Type*) [Field k]
     [Ring A] [Algebra k A] [FiniteDimensional k A] [IsSimpleRing A] :
     IsField (Subalgebra.center k A) ∧
       FiniteDimensional k (Subalgebra.center k A) := by
-  sorry
+  exact ⟨IsSimpleRing.isField_center A, inferInstance⟩
 
 end Centralizers
 
@@ -146,7 +150,20 @@ theorem matrix_center_eq_scalar_image (R : Type*) (n : ℕ) [Semiring R]
 theorem matrix_standard_module_is_simple (K : Type*) (n : ℕ) [DivisionRing K]
     [NeZero n] :
     IsSimpleModule (Matrix (Fin n) (Fin n) K) (Fin n → K) := by
-  sorry
+  classical
+  rw [isSimpleModule_iff_toSpanSingleton_surjective]
+  refine ⟨by infer_instance, ?_⟩
+  intro v hv w
+  obtain ⟨j, hj⟩ : ∃ j, v j ≠ 0 := by
+    by_contra h
+    apply hv
+    funext i
+    by_contra hi
+    exact h ⟨i, hi⟩
+  refine ⟨Matrix.vecMulVec w (Pi.single j (v j)⁻¹), ?_⟩
+  change Matrix.mulVec (Matrix.vecMulVec w (Pi.single j (v j)⁻¹)) v = w
+  rw [Matrix.vecMulVec_mulVec]
+  simp [hj]
 
 theorem matrix_standard_module_end (K : Type*) (n : ℕ) [DivisionRing K]
     [NeZero n] :
@@ -163,14 +180,24 @@ theorem finite_simple_algebra_unique_simple_modules (k A M N : Type*)
     [IsSimpleRing A] [AddCommGroup M] [Module A M] [IsSimpleModule A M]
     [AddCommGroup N] [Module A N] [IsSimpleModule A N] :
     Nonempty (M ≃ₗ[A] N) := by
-  sorry
+  classical
+  letI : IsArtinianRing A := IsArtinianRing.of_finite k A
+  obtain ⟨I, ⟨eM⟩⟩ :=
+    IsSemisimpleRing.exists_linearEquiv_ideal_of_isSimpleModule A M
+  obtain ⟨J, ⟨eN⟩⟩ :=
+    IsSemisimpleRing.exists_linearEquiv_ideal_of_isSimpleModule A N
+  letI : IsSimpleModule A I := IsSimpleModule.congr eM.symm
+  letI : IsSimpleModule A J := IsSimpleModule.congr eN.symm
+  have h := IsSimpleRing.isIsotypic A A
+  exact ⟨eM.trans (h I J).some.symm |>.trans eN.symm⟩
 
 theorem finite_simple_algebra_module_isotypic (k A M : Type*) [Field k]
     [Ring A] [Algebra k A] [FiniteDimensional k A] [IsSimpleRing A]
     [AddCommGroup M] [Module A M] [Module k M] [IsScalarTower k A M]
     [Module.Finite A M] :
     IsSemisimpleModule A M ∧ IsIsotypic A M := by
-  sorry
+  letI : IsArtinianRing A := IsArtinianRing.of_finite k A
+  exact ⟨inferInstance, IsSimpleRing.isIsotypic A M⟩
 
 theorem finite_module_is_direct_sum_of_simple (k A M S : Type*) [Field k]
     [Ring A] [Algebra k A] [FiniteDimensional k A] [IsSimpleRing A]
@@ -178,7 +205,18 @@ theorem finite_module_is_direct_sum_of_simple (k A M S : Type*) [Field k]
     [AddCommGroup S] [Module A S]
     [IsSimpleModule A S] :
     ∃ n : ℕ, Nonempty (M ≃ₗ[A] (Fin n → S)) := by
-  sorry
+  classical
+  letI : IsArtinianRing A := IsArtinianRing.of_finite k A
+  by_cases hM : Nontrivial M
+  · letI : Nontrivial M := hM
+    have h := IsSimpleRing.isIsotypic A M
+    obtain ⟨n, hn, T, hT, ⟨e⟩⟩ := h.linearEquiv_fun
+    letI : IsSimpleModule A T := hT
+    obtain ⟨eTS⟩ := finite_simple_algebra_unique_simple_modules k A T S
+    exact ⟨n, ⟨e.trans (LinearEquiv.piCongrRight fun _ => eTS)⟩⟩
+  · letI : Subsingleton M := not_nontrivial_iff_subsingleton.mp hM
+    refine ⟨0, ⟨LinearEquiv.ofBijective (0 : M →ₗ[A] (Fin 0 → S)) ?_⟩⟩
+    exact ⟨fun x y _ => Subsingleton.elim _ _, fun y => ⟨0, Subsingleton.elim _ _⟩⟩
 
 theorem finite_simple_algebra_modules_classified_by_dimension
     (k A M N : Type*) [Field k] [Ring A] [Algebra k A]
@@ -212,7 +250,12 @@ theorem simple_module_end_is_finite (k A M : Type*) [Field k] [Ring A]
     [Module k M] [IsScalarTower k A M] :
     Nonempty (DivisionRing (Module.End A M)) ∧
       FiniteDimensional k (Module.End A M) := by
-  sorry
+  classical
+  constructor
+  · exact ⟨inferInstance⟩
+  · letI : FiniteDimensional k M :=
+      simple_module_over_finite_algebra_is_finite_dimensional k A M
+    infer_instance
 
 theorem finite_module_end_is_matrix_and_double_commutant
     (k A N : Type*) [Field k] [Ring A] [Algebra k A]

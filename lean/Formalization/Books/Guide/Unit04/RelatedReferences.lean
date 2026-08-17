@@ -162,9 +162,50 @@ structure AbelianBandedGerbe {C : Type u} [Category.{v} C]
     (G : Sheaf J AddCommGrpCat.{w}) (X : C) where
   value : FiberedCategory.{w, v, max u v} (Over C X)
   isGerbe : IsGerbe.{t, w, v, max u v} value (J.over X)
+  automorphismGroupsAbelian : AutomorphismGroupsAbelian value
   automorphisms :
     GerbeAutomorphismSheafData value (J.over X) isGerbe.1.1
   band : automorphisms.sheaf ≅ G.over X
+  band_compatible_with_composition :
+    ∀ (U : Over C X) (x : Fiber value U)
+      (g h : (G.over X).obj.obj (op U)),
+      value.presheafHomObjHomEquiv.symm
+          ((automorphisms.localIdentifications U x).hom.app
+            (op (.mk (𝟙 U)))
+            (band.inv.hom.app (op U) g)).1 ≫
+        value.presheafHomObjHomEquiv.symm
+          ((automorphisms.localIdentifications U x).hom.app
+            (op (.mk (𝟙 U)))
+            (band.inv.hom.app (op U) h)).1 =
+      value.presheafHomObjHomEquiv.symm
+        ((automorphisms.localIdentifications U x).hom.app
+          (op (.mk (𝟙 U)))
+          (band.inv.hom.app (op U) (g + h))).1
+
+/-- A fibrewise equivalence preserves the chosen abelian band when the
+transport of each local automorphism through the existing automorphism-sheaf
+identifications and the equivalence agrees with the fixed `G`-band. -/
+def abelianBandPreservedBy {C : Type u} [Category.{v} C]
+    {J : GrothendieckTopology C} {G : Sheaf J AddCommGrpCat.{w}} {X : C}
+    (P Q : AbelianBandedGerbe.{t, w, v, u} J G X)
+    (η : FiberedMorphism P.value Q.value) : Prop :=
+  ∀ (U : Over C X) (x : Fiber P.value U)
+    (a : P.automorphisms.sheaf.obj.obj (op U)),
+    Q.band.hom.hom.app (op U)
+        ((Q.automorphisms.localIdentifications U
+          ((η.app (.mk (op U))).toFunctor.obj x)).inv.app
+          (op (.mk (𝟙 U)))
+          ⟨
+            Q.value.presheafHomObjHomEquiv
+              ((η.app (.mk (op U))).toFunctor.map
+                (P.value.presheafHomObjHomEquiv.symm
+                  ((P.automorphisms.localIdentifications U x).hom.app
+                    (op (.mk (𝟙 U))) a).1)),
+            @IsGroupoid.all_isIso
+              (Q.value.obj (.mk (op (Over.mk (𝟙 U)).left))) _
+              (Q.isGerbe.1.1 (Over.mk (𝟙 U)).left) _ _ _
+          ⟩) =
+      P.band.hom.hom.app (op U) a
 
 /-- The type of data used for a nonabelian `G`-gerbe over `X`.
 
@@ -314,15 +355,18 @@ def NonabelianBandedGerbeClass {C : Type u} [Category.{v} C]
 /-- A band-preserving equivalence datum for abelian-banded gerbes.
 
 The two fibrewise equivalences record equivalence of the underlying gerbes,
-while `band` identifies their chosen automorphism sheaves over the fixed band
-`G`.  The setoid below records the resulting equivalence classes. -/
+while the compatibility fields require both directions to preserve the fixed
+`G`-band.  The auxiliary `band` identifies the chosen automorphism sheaves,
+and the setoid below records the resulting equivalence classes. -/
 structure AbelianBandedGerbeEquivalence {C : Type u} [Category.{v} C]
     {J : GrothendieckTopology C} {G : Sheaf J AddCommGrpCat.{w}} {X : C}
     (P Q : AbelianBandedGerbe.{t, w, v, u} J G X) where
   forward : FiberedMorphism P.value Q.value
   forward_is_equivalence : FiberwiseEquivalence forward
+  forward_band_compatible : abelianBandPreservedBy P Q forward
   backward : FiberedMorphism Q.value P.value
   backward_is_equivalence : FiberwiseEquivalence backward
+  backward_band_compatible : abelianBandPreservedBy Q P backward
   band : P.automorphisms.sheaf ≅ Q.automorphisms.sheaf
   band_compatible : band.hom ≫ Q.band.hom = P.band.hom
 
@@ -343,6 +387,8 @@ def abelianBandedGerbeSetoid {C : Type u} [Category.{v} C]
           · intro U
             change Functor.EssSurj (𝟭 _)
             exact inferInstance
+        forward_band_compatible := by
+          sorry
         backward := 𝟙 _
         backward_is_equivalence := by
           constructor
@@ -351,6 +397,8 @@ def abelianBandedGerbeSetoid {C : Type u} [Category.{v} C]
           · intro U
             change Functor.EssSurj (𝟭 _)
             exact inferInstance
+        backward_band_compatible := by
+          sorry
         band := Iso.refl _
         band_compatible := by simp
       }⟩
@@ -359,8 +407,10 @@ def abelianBandedGerbeSetoid {C : Type u} [Category.{v} C]
       exact ⟨{
         forward := e.backward
         forward_is_equivalence := e.backward_is_equivalence
+        forward_band_compatible := e.backward_band_compatible
         backward := e.forward
         backward_is_equivalence := e.forward_is_equivalence
+        backward_band_compatible := e.forward_band_compatible
         band := e.band.symm
         band_compatible := by
           rw [← e.band_compatible]
@@ -384,6 +434,8 @@ def abelianBandedGerbeSetoid {C : Type u} [Category.{v} C]
               ((e.forward.app (.mk (op U))).toFunctor ⋙
                 (f.forward.app (.mk (op U))).toFunctor)
             exact inferInstance
+        forward_band_compatible := by
+          sorry
         backward := f.backward ≫ e.backward
         backward_is_equivalence := by
           constructor
@@ -398,6 +450,8 @@ def abelianBandedGerbeSetoid {C : Type u} [Category.{v} C]
               ((f.backward.app (.mk (op U))).toFunctor ⋙
                 (e.backward.app (.mk (op U))).toFunctor)
             exact inferInstance
+        backward_band_compatible := by
+          sorry
         band := e.band.trans f.band
         band_compatible := by
           rw [Iso.trans_hom, Category.assoc, f.band_compatible,

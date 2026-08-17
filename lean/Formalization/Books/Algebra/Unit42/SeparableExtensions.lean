@@ -1,5 +1,7 @@
 import Mathlib.FieldTheory.PurelyInseparable.Basic
 import Mathlib.FieldTheory.Separable
+import Mathlib.FieldTheory.SeparableClosure
+import Mathlib.FieldTheory.PrimitiveElement
 import Mathlib.LinearAlgebra.FiniteDimensional.Defs
 import Mathlib.RingTheory.AlgebraicIndependent.TranscendenceBasis
 import Mathlib.RingTheory.EssentialFiniteness
@@ -42,12 +44,50 @@ def IsSeparableExtension (k : Type u) (K : Type v) [Field k] [Field K] [Algebra 
   ∀ (L : IntermediateField k K),
     Algebra.EssFiniteType k L → IsSeparablyGenerated k L
 
+private theorem isSeparablyGenerated_of_algEquiv
+    {k : Type u} {A : Type v} {B : Type v} [Field k] [Field A] [Field B]
+    [Algebra k A] [Algebra k B] (e : A ≃ₐ[k] B)
+    (hA : IsSeparablyGenerated k A) : IsSeparablyGenerated k B := by
+  rcases hA with ⟨ι, x, hx, hsep⟩
+  refine ⟨ι, e ∘ x, e.isTranscendenceBasis hx, ?_⟩
+  have hmap :
+      (IntermediateField.adjoin k (range x)).map e.toAlgHom =
+        IntermediateField.adjoin k (range (e ∘ x)) := by
+    rw [IntermediateField.adjoin_map]
+    congr 1
+    ext z
+    constructor
+    · rintro ⟨_, ⟨i, rfl⟩, rfl⟩
+      exact ⟨i, rfl⟩
+    · rintro ⟨i, rfl⟩
+      exact ⟨x i, ⟨i, rfl⟩, rfl⟩
+  rw [← hmap]
+  let e₀ := IntermediateField.intermediateFieldMap e
+    (IntermediateField.adjoin k (range x))
+  have hcompat :
+      RingHom.comp
+          (algebraMap ((IntermediateField.adjoin k (range x)).map e.toAlgHom) B)
+          e₀.toRingEquiv.toRingHom =
+        RingHom.comp e.toRingEquiv.toRingHom
+          (algebraMap (IntermediateField.adjoin k (range x)) A) := by
+    ext z
+    rfl
+  exact Algebra.IsSeparable.of_equiv_equiv e₀.toRingEquiv e.toRingEquiv hcompat
+
 /-- Every intermediate field of a separable extension is separable. -/
 theorem subextension_is_separable
     {k : Type u} {K : Type v} [Field k] [Field K] [Algebra k K]
     (hK : IsSeparableExtension k K) (L : IntermediateField k K) :
     IsSeparableExtension k L := by
-  sorry
+  unfold IsSeparableExtension at hK ⊢
+  intro M hM
+  letI : Algebra.EssFiniteType k M := hM
+  have hM' : Algebra.EssFiniteType k (IntermediateField.lift M) :=
+    Algebra.EssFiniteType.of_surjective
+      (IntermediateField.liftAlgEquiv M).toAlgHom
+      (IntermediateField.liftAlgEquiv M).surjective
+  exact isSeparablyGenerated_of_algEquiv
+    (IntermediateField.liftAlgEquiv M).symm (hK (IntermediateField.lift M) hM')
 
 /-! ## A finite separably generated extension -/
 
@@ -65,7 +105,66 @@ theorem exists_finite_generators_of_separably_generated
         IsTranscendenceBasis k x ∧
           IntermediateField.adjoin k (range x ∪ {y}) = ⊤ ∧
             IsSeparable (IntermediateField.adjoin k (range x)) y := by
-  sorry
+  rcases hK with ⟨ι, z, hz, hsep⟩
+  have hsepClosure :
+      separableClosure (IntermediateField.adjoin k (range z)) K = ⊤ :=
+    (separableClosure.eq_top_iff (IntermediateField.adjoin k (range z)) K).2 hsep
+  obtain ⟨s, hs⟩ :=
+    IntermediateField.exists_finset_maximalFor_isTranscendenceBasis_separableClosure k K
+  have hz' : IsTranscendenceBasis k ((↑) : range z → K) := hz.to_subtype_range
+  have hle :
+      (separableClosure (IntermediateField.adjoin k (s : Set K)) K).restrictScalars k ≤
+        (separableClosure (IntermediateField.adjoin k (range z)) K).restrictScalars k := by
+    rw [hsepClosure]
+    exact le_top
+  have hmax := hs.2 hz' hle
+  have htop :
+      (⊤ : IntermediateField k K) ≤
+        (separableClosure (IntermediateField.adjoin k (s : Set K)) K).restrictScalars k := by
+    simpa [hsepClosure] using hmax
+  have hclosureRestrict :
+      (separableClosure (IntermediateField.adjoin k (s : Set K)) K).restrictScalars k = ⊤ :=
+    top_unique htop
+  have hclosure : separableClosure (IntermediateField.adjoin k (s : Set K)) K = ⊤ :=
+    (IntermediateField.restrictScalars_eq_top_iff (K := k)).mp hclosureRestrict
+  have hsepS : Algebra.IsSeparable (IntermediateField.adjoin k (s : Set K)) K :=
+    (separableClosure.eq_top_iff (IntermediateField.adjoin k (s : Set K)) K).mp hclosure
+  let e := s.equivFin
+  let x : Fin s.card → K := fun i => (e.symm i : K)
+  have hx : IsTranscendenceBasis k x := by
+    simpa [x, e, Function.comp_def] using hs.1.comp_equiv e.symm
+  have hxrange : range x = (s : Set K) := by
+    ext a
+    constructor
+    · rintro ⟨i, rfl⟩
+      exact (e.symm i).property
+    · intro ha
+      refine ⟨e ⟨a, ha⟩, ?_⟩
+      simp [x]
+  have hsepX : Algebra.IsSeparable (IntermediateField.adjoin k (range x)) K := by
+    rw [hxrange]
+    exact hsepS
+  letI : Algebra.IsSeparable (IntermediateField.adjoin k (range x)) K := hsepX
+  letI : Algebra.EssFiniteType (IntermediateField.adjoin k (range x)) K :=
+    Algebra.EssFiniteType.of_comp k (IntermediateField.adjoin k (range x)) K
+  letI : Algebra.IsAlgebraic (IntermediateField.adjoin k (range x)) K := inferInstance
+  letI : Module.Finite (IntermediateField.adjoin k (range x)) K :=
+    Algebra.finite_of_essFiniteType_of_isAlgebraic
+  obtain ⟨y, hy⟩ := Field.exists_primitive_element
+    (IntermediateField.adjoin k (range x)) K
+  have hgen : IntermediateField.adjoin k (range x ∪ {y}) = ⊤ := by
+    calc
+      IntermediateField.adjoin k (range x ∪ {y}) =
+          IntermediateField.adjoin k (range x) ⊔ IntermediateField.adjoin k {y} := by
+            rw [IntermediateField.adjoin_union]
+      _ = (IntermediateField.adjoin (IntermediateField.adjoin k (range x)) {y}).restrictScalars k := by
+            rw [IntermediateField.restrictScalars_adjoin_eq_sup]
+      _ = ⊤ := by rw [hy, IntermediateField.restrictScalars_top]
+  have hysep : IsSeparable (IntermediateField.adjoin k (range x)) y :=
+    Algebra.IsSeparable.isSeparable _ y
+  exact ⟨s.card, x, y, by
+    rw [← hs.1.cardinalMk_eq_trdeg]
+    simp, hx, hgen, hysep⟩
 
 /-! ## Purely inseparable base change -/
 

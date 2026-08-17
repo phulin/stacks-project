@@ -41,7 +41,47 @@ theorem isConstructible_iff_finite_union_open_retrocompact_sdiff {E : Set X} :
         (∀ i, IsOpen (U i) ∧ IsRetrocompact (U i)) ∧
           (∀ i, IsOpen (V i) ∧ IsRetrocompact (V i)) ∧
             E = ⋃ i, U i ∩ (V i)ᶜ := by
-  sorry
+  classical
+  constructor
+  · intro hE
+    let S : Set (Set X) := {U | IsOpen U ∧ IsRetrocompact U}
+    have hSublattice : IsSublattice S := by
+      constructor
+      · intro U hU V hV
+        exact ⟨hU.1.union hV.1, hU.2.union hV.2⟩
+      · intro U hU V hV
+        exact ⟨hU.1.inter hV.1, hU.2.inter_isOpen hV.2 hV.1⟩
+    have hbot : (∅ : Set X) ∈ S := ⟨isOpen_empty, IsRetrocompact.empty⟩
+    have htop : (Set.univ : Set X) ∈ S := ⟨isOpen_univ, IsRetrocompact.univ⟩
+    obtain ⟨t, ht⟩ :=
+      (BooleanSubalgebra.mem_closure_iff_sup_sdiff hSublattice hbot htop).mp hE
+    let e := t.equivFin
+    refine ⟨t.card, (fun i => (e.symm i).1.1.1), (fun i => (e.symm i).1.2.1), ?_, ?_, ?_⟩
+    · intro i
+      exact (e.symm i).1.1.2
+    · intro i
+      exact (e.symm i).1.2.2
+    · calc
+        E = t.sup (fun x => x.1.1 \ x.2.1) := ht
+        _ = ⋃ x ∈ t, x.1.1 \ x.2.1 := Finset.sup_set_eq_biUnion _ _
+        _ = ⋃ i, (e.symm i).1.1.1 ∩ ((e.symm i).1.2.1)ᶜ := by
+          ext x
+          constructor
+          · intro hx
+            simp only [mem_iUnion] at hx
+            obtain ⟨y, hy⟩ := hx
+            obtain ⟨hy_mem, hyx⟩ := hy
+            exact mem_iUnion.mpr ⟨e ⟨y, hy_mem⟩, by
+              simpa [e] using hyx⟩
+          · intro hx
+            simp only [mem_iUnion] at hx
+            obtain ⟨i, hix⟩ := hx
+            exact mem_iUnion.mpr ⟨(e.symm i).1, mem_iUnion.mpr ⟨(e.symm i).2, by
+              simpa [e] using hix⟩⟩
+  · rintro ⟨n, U, V, hU, hV, rfl⟩
+    exact IsConstructible.iUnion fun i =>
+      (hU i).2.isConstructible (hU i).1 |>.inter
+        ((hV i).2.isConstructible (hV i).1).compl
 
 /-
   `Topology.IsLocallyConstructible` is Mathlib's pointwise-neighborhood
@@ -64,7 +104,7 @@ theorem isConstructible_inter_union_compl {E F : Set X}
     IsConstructible (E ∩ F) ∧
       IsConstructible (E ∪ F) ∧
         IsConstructible Eᶜ := by
-  sorry
+  exact ⟨hE.inter hF, hE.union hF, hE.compl⟩
 
 theorem isConstructible_preimage_of_continuous
     {Y : Type v} [TopologicalSpace Y] (f : X → Y) (hf : Continuous f)
@@ -72,20 +112,20 @@ theorem isConstructible_preimage_of_continuous
     (hpre : ∀ V : Set Y, IsOpen V → IsRetrocompact V →
       IsRetrocompact (f ⁻¹' V)) :
     IsConstructible (f ⁻¹' E) := by
-  sorry
+  exact hE.preimage hf hpre
 
 /-! ### Open and closed subspaces -/
 
 theorem isConstructible_preimage_of_open_subspace {U : Set X}
     (hU : IsOpen U) {E : Set X} (hE : IsConstructible E) :
     IsConstructible ((Subtype.val : U → X) ⁻¹' E) := by
-  sorry
+  exact hE.preimage_of_isOpenEmbedding hU.isOpenEmbedding_subtypeVal
 
 theorem isConstructible_image_of_retrocompact_open {U : Set X}
     (hUopen : IsOpen U) (hUretro : IsRetrocompact U) {E : Set U}
     (hE : IsConstructible E) :
     IsConstructible (Subtype.val '' E) := by
-  sorry
+  exact hE.image_of_isOpenEmbedding hUopen.isOpenEmbedding_subtypeVal (by simpa using hUretro)
 
 theorem isConstructible_iff_preimage_of_finite_retrocompact_open_cover
     {ι : Type v} [Finite ι] (V : ι → Set X)
@@ -94,32 +134,109 @@ theorem isConstructible_iff_preimage_of_finite_retrocompact_open_cover
     (hcover : ⋃ i, V i = (Set.univ : Set X)) {E : Set X} :
     IsConstructible E ↔
       ∀ i, IsConstructible ((Subtype.val : ↥(V i) → X) ⁻¹' E) := by
-  sorry
+  constructor
+  · intro hE i
+    exact hE.preimage_of_isOpenEmbedding (hVopen i).isOpenEmbedding_subtypeVal
+  · intro hE
+    have himage : ∀ i, IsConstructible
+        (Subtype.val '' ((Subtype.val : ↥(V i) → X) ⁻¹' E)) := by
+      intro i
+      exact (hE i).image_of_isOpenEmbedding (hVopen i).isOpenEmbedding_subtypeVal
+        (by simpa using hVretro i)
+    have heq : E = ⋃ i, Subtype.val '' ((Subtype.val : ↥(V i) → X) ⁻¹' E) := by
+      ext x
+      constructor
+      · intro hx
+        have hxcover : x ∈ ⋃ i, V i := by
+          rw [hcover]
+          exact mem_univ x
+        obtain ⟨i, hxi⟩ := mem_iUnion.mp hxcover
+        exact mem_iUnion.mpr ⟨i, ⟨⟨x, hxi⟩, hx, rfl⟩⟩
+      · intro hx
+        obtain ⟨i, y, hy, rfl⟩ := mem_iUnion.mp hx
+        exact hy
+    rw [heq]
+    exact IsConstructible.iUnion himage
 
 theorem isConstructible_preimage_of_closed_subspace {Z : Set X}
     (hZclosed : IsClosed Z) (hZcomp : IsCompact Zᶜ)
     {E : Set X} (hE : IsConstructible E) :
     IsConstructible ((Subtype.val : Z → X) ⁻¹' E) := by
-  sorry
+  exact hE.preimage_of_isClosedEmbedding hZclosed.isClosedEmbedding_subtypeVal
+    (by simpa using hZcomp)
 
 theorem isConstructible_preimage_of_retrocompact
     [PrespectralSpace X] {T : Set X} (hT : IsRetrocompact T)
     {E : Set X} (hE : IsConstructible E) :
     IsConstructible ((Subtype.val : T → X) ⁻¹' E) := by
-  sorry
+  apply hE.preimage continuous_subtype_val
+  intro V hVopen hVretro
+  have hspectral : IsSpectralMap (Subtype.val : T → X) :=
+    IsRetrocompact_iff_isSpectralMap_subtypeVal.mp hT
+  letI : PrespectralSpace T :=
+    PrespectralSpace.of_isInducing (Subtype.val : T → X) IsInducing.subtypeVal hspectral
+  intro K hKcompact hKopen
+  let B : Set (Set T) :=
+    (fun Q : Set X => (Subtype.val : T → X) ⁻¹' Q) ''
+      {Q : Set X | IsOpen Q ∧ IsCompact Q}
+  have hB : IsTopologicalBasis B := by
+    dsimp [B]
+    exact (PrespectralSpace.isTopologicalBasis (X := X)).isInducing IsInducing.subtypeVal
+  let BK : Set (Set T) := {W | W ∈ B ∧ W ⊆ K}
+  have hKcover : K ⊆ ⋃ W ∈ BK, W := by
+    intro x hx
+    obtain ⟨W, hW, hxW, hWK⟩ := hB.exists_subset_of_mem_open hx hKopen
+    exact mem_iUnion.mpr ⟨W, mem_iUnion.mpr ⟨⟨hW, hWK⟩, hxW⟩⟩
+  obtain ⟨s, hsBK, hsfinite, hscover⟩ :=
+    hKcompact.elim_finite_subcover_image (b := BK) (c := fun W : Set T => W)
+      (fun W hW => hB.isOpen hW.1) hKcover
+  have hpiece : ∀ W ∈ s,
+      IsCompact ((Subtype.val : T → X) ⁻¹' V ∩ W) := by
+    intro W hWs
+    obtain ⟨Q, hQ, rfl⟩ := hsBK hWs |>.1
+    have hcompact : IsCompact ((T ∩ V) ∩ Q) :=
+      (hT.inter_isOpen hVretro hVopen) hQ.2 hQ.1
+    rw [IsEmbedding.subtypeVal.isCompact_iff]
+    have himage : (Subtype.val : T → X) ''
+        (Subtype.val ⁻¹' V ∩ (Subtype.val : T → X) ⁻¹' Q) = (T ∩ V) ∩ Q := by
+      ext x
+      constructor
+      · rintro ⟨y, ⟨hyV, hyQ⟩, rfl⟩
+        exact ⟨⟨y.2, hyV⟩, hyQ⟩
+      · rintro ⟨⟨hxT, hxV⟩, hxQ⟩
+        exact ⟨⟨x, hxT⟩, ⟨hxV, hxQ⟩, rfl⟩
+    rw [himage]
+    exact hcompact
+  have heq : (Subtype.val ⁻¹' V) ∩ K =
+      ⋃ W ∈ s, (Subtype.val ⁻¹' V) ∩ W := by
+    apply subset_antisymm
+    · intro x hx
+      obtain ⟨W, hWs, hxW⟩ := mem_iUnion₂.mp (hscover hx.2)
+      exact mem_iUnion₂.mpr ⟨W, hWs, ⟨hx.1, hxW⟩⟩
+    · intro x hx
+      obtain ⟨W, hWs, hxW⟩ := mem_iUnion₂.mp hx
+      exact ⟨hxW.1, (hsBK hWs).2 hxW.2⟩
+  rw [heq]
+  exact hsfinite.isCompact_biUnion hpiece
 
 theorem isConstructible_image_of_closed_subspace {Z : Set X}
     (hZclosed : IsClosed Z) (hZcomp : IsRetrocompact Zᶜ) {E : Set Z}
     (hE : IsConstructible E) :
     IsConstructible (Subtype.val '' E) := by
-  sorry
+  exact hE.image_of_isClosedEmbedding hZclosed.isClosedEmbedding_subtypeVal
+    (by simpa using hZcomp)
 
 /-! ### Retrocompactness and constructible subspaces -/
 
 theorem isRetrocompact_of_isConstructible {E : Set X}
     (hE : IsConstructible E) :
     IsRetrocompact E := by
-  sorry
+  obtain ⟨n, U, V, hU, hV, rfl⟩ :=
+    isConstructible_iff_finite_union_open_retrocompact_sdiff.mp hE
+  apply IsRetrocompact.iUnion
+  intro i K hKcompact hKopen
+  simpa [Set.sdiff_eq, inter_assoc, inter_left_comm, inter_comm] using
+    ((hU i).2 hKcompact hKopen).diff (hV i).1
 
 /-
   The source asks whether the preceding closed-subspace restriction lemma
@@ -131,20 +248,174 @@ theorem isConstructible_preimage_of_constructible_subspace
     [PrespectralSpace X] {E E' : Set X}
     (hE : IsConstructible E) (hE' : IsConstructible E') :
     IsConstructible ((Subtype.val : E → X) ⁻¹' E') := by
-  sorry
+  exact isConstructible_preimage_of_retrocompact
+    (isRetrocompact_of_isConstructible hE) hE'
 
 theorem isConstructible_image_of_constructible_subspace
     [PrespectralSpace X] {E : Set X} (hE : IsConstructible E)
     {F : Set E} (hF : IsConstructible F) :
     IsConstructible (Subtype.val '' F) := by
-  sorry
+  classical
+  obtain ⟨n, U, V, hU, hV, hEeq⟩ :=
+    isConstructible_iff_finite_union_open_retrocompact_sdiff.mp hE
+  let Ei : Fin n → Set X := fun i => U i ∩ (V i)ᶜ
+  have hEeq' : E = ⋃ i, Ei i := by
+    simpa [Ei] using hEeq
+  have hEi : ∀ i, IsConstructible (Ei i) := by
+    intro i
+    dsimp [Ei]
+    exact ((hU i).2.isConstructible (hU i).1).inter
+      ((hV i).2.isConstructible (hV i).1).compl
+  have hEi_sub : ∀ i, Ei i ⊆ E := by
+    intro i x hx
+    rw [hEeq']
+    exact mem_iUnion.mpr ⟨i, hx⟩
+  letI : PrespectralSpace E :=
+    PrespectralSpace.of_isInducing (Subtype.val : E → X) IsInducing.subtypeVal
+      (IsRetrocompact_iff_isSpectralMap_subtypeVal.mp
+        (isRetrocompact_of_isConstructible hE))
+  let Zi : Fin n → Set E := fun i => (Subtype.val : E → X) ⁻¹' Ei i
+  have hZi : ∀ i, IsConstructible (Zi i) := by
+    intro i
+    dsimp [Zi]
+    exact isConstructible_preimage_of_constructible_subspace hE (hEi i)
+  have hFi : ∀ i, IsConstructible ((Subtype.val : Zi i → E) ⁻¹' F) := by
+    intro i
+    exact isConstructible_preimage_of_constructible_subspace (X := E) (hZi i) hF
+  have hEi_mem : ∀ i (x : X), x ∈ Ei i ↔ x ∈ U i ∧ x ∈ (V i)ᶜ := by
+    intro i x
+    simp [Ei]
+  have hpiece : ∀ i, IsConstructible
+      ((Subtype.val : E → X) ''
+        ((Subtype.val : Zi i → E) '' ((Subtype.val : Zi i → E) ⁻¹' F))) := by
+    intro i
+    let W : Set (U i) := (Subtype.val : U i → X) ⁻¹' (V i)ᶜ
+    have hWclosed : IsClosed W := by
+      dsimp [W]
+      exact (hV i).1.isClosed_compl.preimage continuous_subtype_val
+    have hWcomp : IsRetrocompact Wᶜ := by
+      simpa [W] using
+        (IsRetrocompact.preimage_of_isOpenEmbedding
+          (hU i).1.isOpenEmbedding_subtypeVal (hV i).2)
+    let e : Zi i ≃ₜ W :=
+      { toEquiv :=
+          { toFun := fun z => by
+              have hzEi : (z.1 : X) ∈ Ei i := z.2
+              have hzUV := (hEi_mem i (z.1 : X)).mp hzEi
+              exact ⟨⟨(z.1 : X), hzUV.1⟩, hzUV.2⟩
+            invFun := fun w => by
+              have hwEi : (w.1 : X) ∈ Ei i :=
+                (hEi_mem i (w.1 : X)).mpr ⟨w.1.2, w.2⟩
+              exact ⟨⟨(w.1 : X), hEi_sub i hwEi⟩, hwEi⟩
+            left_inv := by
+              intro z
+              apply Subtype.ext
+              rfl
+            right_inv := by
+              intro w
+              apply Subtype.ext
+              rfl }
+        continuous_toFun := by
+          apply Continuous.subtype_mk
+          · apply Continuous.subtype_mk
+            exact continuous_subtype_val.comp continuous_subtype_val
+        continuous_invFun := by
+          apply Continuous.subtype_mk
+          · apply Continuous.subtype_mk
+            exact continuous_subtype_val.comp continuous_subtype_val
+          }
+    have hFiW : IsConstructible (e '' ((Subtype.val : Zi i → E) ⁻¹' F)) :=
+      (hFi i).image_of_isOpenEmbedding e.isOpenEmbedding (by simp)
+    have hFiU : IsConstructible (Subtype.val '' (e '' ((Subtype.val : Zi i → E) ⁻¹' F))) :=
+      isConstructible_image_of_closed_subspace (X := U i) hWclosed hWcomp hFiW
+    have hFiX : IsConstructible
+        ((Subtype.val : U i → X) '' (Subtype.val ''
+          (e '' ((Subtype.val : Zi i → E) ⁻¹' F)))) :=
+      isConstructible_image_of_retrocompact_open (X := X) (hU i).1 (hU i).2 hFiU
+    have himage :
+        (Subtype.val : U i → X) '' (Subtype.val ''
+          (e '' ((Subtype.val : Zi i → E) ⁻¹' F))) =
+          (Subtype.val : E → X) ''
+            ((Subtype.val : Zi i → E) '' ((Subtype.val : Zi i → E) ⁻¹' F)) := by
+      ext x
+      constructor
+      · rintro ⟨u, ⟨w, ⟨z, hz, rfl⟩, rfl⟩, rfl⟩
+        exact ⟨z.1, ⟨z, hz, rfl⟩, rfl⟩
+      · rintro ⟨y, ⟨z, hz, rfl⟩, rfl⟩
+        exact ⟨⟨(z.1 : X), z.2.1⟩,
+          ⟨e z, ⟨z, hz, rfl⟩, rfl⟩, rfl⟩
+    rw [← himage]
+    exact hFiX
+  have heq : (Subtype.val : E → X) '' F =
+      ⋃ i, (Subtype.val : E → X) ''
+        ((Subtype.val : Zi i → E) '' ((Subtype.val : Zi i → E) ⁻¹' F)) := by
+    ext x
+    constructor
+    · rintro ⟨y, hy, rfl⟩
+      have hycover : (y : X) ∈ ⋃ i, Ei i := by
+        rw [← hEeq']
+        exact y.2
+      obtain ⟨i, hyi⟩ := mem_iUnion.mp hycover
+      exact mem_iUnion.mpr ⟨i, ⟨y, ⟨⟨y, hyi⟩, hy, rfl⟩, rfl⟩⟩
+    · rintro hx
+      obtain ⟨i, y, hy, rfl⟩ := mem_iUnion.mp hx
+      obtain ⟨z, hz, rfl⟩ := hy
+      exact ⟨z.1, hz, rfl⟩
+  rw [heq]
+  exact IsConstructible.iUnion hpiece
 
 theorem isConstructible_of_isLocallyClosed_of_isCompact_of_isRetrocompact_compl
     [CompactSpace X] [PrespectralSpace X] [QuasiSeparatedSpace X]
     {T : Set X} (hTlocallyClosed : IsLocallyClosed T)
     (hTcompact : IsCompact T) (hTcomp : IsRetrocompact Tᶜ) :
     IsConstructible T := by
-  sorry
+  classical
+  have hTopen : IsOpen ((Subtype.val : closure T → X) ⁻¹' T) :=
+    hTlocallyClosed.isOpen_preimage_val_closure
+  obtain ⟨O, hOopen, hTO⟩ := hTopen.image_val
+  have hT_O : T = O ∩ closure T := by
+    simpa [Subtype.image_preimage_coe, inter_eq_right.mpr subset_closure] using hTO
+  have hTOsubset : T ⊆ O := by
+    intro x hx
+    exact (hT_O ▸ hx).1
+  obtain ⟨U, hUcompact, hUopen, hTU, hUO⟩ :=
+    PrespectralSpace.exists_isCompact_and_isOpen_between hTcompact hOopen hTOsubset
+  have hT_U : T = U ∩ closure T := by
+    apply subset_antisymm
+    · intro x hx
+      exact ⟨hTU hx, subset_closure hx⟩
+    · intro x hx
+      exact hT_O ▸ ⟨hUO hx.1, hx.2⟩
+  have hUretro : IsRetrocompact U := by
+    intro K hKcompact hKopen
+    exact QuasiSeparatedSpace.inter_isCompact U K hUopen hUcompact hKopen hKcompact
+  have hVeq : U \ T = U \ closure T := by
+    calc
+      U \ T = U \ (U ∩ closure T) := congrArg (fun S : Set X => U \ S) hT_U
+      _ = U \ closure T := by
+        ext x
+        constructor
+        · intro hx
+          exact ⟨hx.1, fun hxcl => hx.2 ⟨hx.1, hxcl⟩⟩
+        · intro hx
+          exact ⟨hx.1, fun hxT => hx.2 hxT.2⟩
+  have hVopen : IsOpen (U \ T) := by
+    rw [hVeq]
+    exact IsOpen.sdiff hUopen isClosed_closure
+  have hVretro : IsRetrocompact (U \ T) := by
+    simpa [Set.sdiff_eq] using hUretro.isOpen_inter hTcomp hUopen
+  have hT_eq : T = U ∩ (U \ T)ᶜ := by
+    ext x
+    constructor
+    · intro hx
+      exact ⟨hTU hx, by intro h; exact h.2 hx⟩
+    · intro hx
+      have hxU : x ∈ U := hx.1
+      by_contra hnotT
+      exact hx.2 ⟨hxU, hnotT⟩
+  rw [hT_eq]
+  exact hUretro.isConstructible hUopen |>.inter
+    (hVretro.isConstructible hVopen).compl
 
 theorem isConstructible_iff_preimage_of_finite_constructible_cover
     [PrespectralSpace X] {ι : Type v} [Finite ι] (V : ι → Set X)
@@ -152,7 +423,28 @@ theorem isConstructible_iff_preimage_of_finite_constructible_cover
     (hcover : ⋃ i, V i = (Set.univ : Set X)) {E : Set X} :
     IsConstructible E ↔
       ∀ i, IsConstructible ((Subtype.val : ↥(V i) → X) ⁻¹' E) := by
-  sorry
+  constructor
+  · intro hE i
+    exact isConstructible_preimage_of_constructible_subspace (hVconstructible i) hE
+  · intro hE
+    have himage : ∀ i, IsConstructible
+        (Subtype.val '' ((Subtype.val : ↥(V i) → X) ⁻¹' E)) := by
+      intro i
+      exact isConstructible_image_of_constructible_subspace (hVconstructible i) (hE i)
+    have heq : E = ⋃ i, Subtype.val '' ((Subtype.val : ↥(V i) → X) ⁻¹' E) := by
+      ext x
+      constructor
+      · intro hx
+        have hxcover : x ∈ ⋃ i, V i := by
+          rw [hcover]
+          exact mem_univ x
+        obtain ⟨i, hxi⟩ := mem_iUnion.mp hxcover
+        exact mem_iUnion.mpr ⟨i, ⟨⟨x, hxi⟩, hx, rfl⟩⟩
+      · intro hx
+        obtain ⟨i, y, hy, rfl⟩ := mem_iUnion.mp hx
+        exact hy
+    rw [heq]
+    exact IsConstructible.iUnion himage
 
 /-! ### Irreducible subsets and generic points -/
 
@@ -160,7 +452,14 @@ theorem isConstructible_isFiniteUnion_isLocallyClosed {E : Set X}
     (hE : IsConstructible E) :
     ∃ S : Set (Set X), S.Finite ∧
       (∀ T ∈ S, IsLocallyClosed T) ∧ E = ⋃₀ S := by
-  sorry
+  obtain ⟨n, U, V, hU, hV, hEeq⟩ :=
+    isConstructible_iff_finite_union_open_retrocompact_sdiff.mp hE
+  let f : Fin n → Set X := fun i => U i ∩ (V i)ᶜ
+  refine ⟨Set.range f, Set.finite_range f, ?_, ?_⟩
+  · rintro T ⟨i, rfl⟩
+    exact ⟨U i, (V i)ᶜ, (hU i).1, (hV i).1.isClosed_compl, rfl⟩
+  · rw [Set.sUnion_range]
+    simpa [f] using hEeq
 
 theorem dense_preimage_of_finite_locallyClosed_union_iff
     {Z E : Set X} (hZ : IsIrreducible Z)
@@ -170,7 +469,80 @@ theorem dense_preimage_of_finite_locallyClosed_union_iff
       IsOpen U ∧ Dense U ∧
         U ⊆ (Subtype.val : Z → X) ⁻¹' E) ↔
       Dense ((Subtype.val : Z → X) ⁻¹' E) := by
-  sorry
+  classical
+  obtain ⟨S, hSfinite, hSloc, hEeq⟩ := hE
+  let f : Set X → Set Z := fun T => (Subtype.val : Z → X) ⁻¹' T
+  let S' : Set (Set Z) := f '' S
+  let A : Set Z := (Subtype.val : Z → X) ⁻¹' E
+  have hS'finite : S'.Finite := hSfinite.image f
+  have hS'loc : ∀ T ∈ S', IsLocallyClosed T := by
+    rintro T ⟨T₀, hT₀, rfl⟩
+    exact (hSloc T₀ hT₀).preimage continuous_subtype_val
+  have hAeq : A = ⋃₀ S' := by
+    ext z
+    constructor
+    · intro hz
+      change (z : X) ∈ E at hz
+      have hzS : (z : X) ∈ ⋃₀ S := by
+        rw [← hEeq]
+        exact hz
+      obtain ⟨T, hTS, hzT⟩ := mem_sUnion.mp hzS
+      exact mem_sUnion.mpr ⟨f T, ⟨T, hTS, rfl⟩, hzT⟩
+    · intro hz
+      obtain ⟨T, ⟨T₀, hT₀, rfl⟩, hzT⟩ := mem_sUnion.mp hz
+      change (z : X) ∈ E
+      rw [hEeq]
+      exact mem_sUnion.mpr ⟨T₀, hT₀, hzT⟩
+  constructor
+  · rintro ⟨U, hUopen, hUdense, hUsub⟩
+    exact Dense.mono hUsub hUdense
+  · intro hAdense
+    letI : IrreducibleSpace Z := Subtype.irreducibleSpace hZ
+    have hZ' : IsIrreducible (Set.univ : Set Z) :=
+      IrreducibleSpace.isIrreducible_univ Z
+    have hAcl : closure A = (Set.univ : Set Z) := hAdense.closure_eq
+    have hS'cover : (Set.univ : Set Z) ⊆ ⋃₀ (closure '' S') := by
+      intro z hz
+      have hzcl : z ∈ closure A := by
+        rw [hAcl]
+        exact hz
+      rw [hAeq] at hzcl
+      rw [hS'finite.closure_sUnion] at hzcl
+      obtain ⟨T, hTS, hzT⟩ := mem_iUnion₂.mp hzcl
+      exact mem_sUnion.mpr ⟨closure T, ⟨T, hTS, rfl⟩, hzT⟩
+    let C : Set (Set Z) := closure '' S'
+    have hCfinite : C.Finite := hS'finite.image closure
+    have hCcover : (Set.univ : Set Z) ⊆
+        ⋃₀ (↑hCfinite.toFinset : Set (Set Z)) := by
+      simpa [C, hCfinite.coe_toFinset] using hS'cover
+    obtain ⟨T, hTC, hZT⟩ :=
+      (isIrreducible_iff_sUnion_isClosed.mp hZ') hCfinite.toFinset
+        (by
+          intro W hW
+          have hWC : W ∈ C := by simpa [C] using hW
+          obtain ⟨T, hT, rfl⟩ := hWC
+          exact isClosed_closure)
+        hCcover
+    have hTC' : T ∈ C := by simpa [C] using hTC
+    obtain ⟨T₀, hT₀, rfl⟩ := hTC'
+    have hTcl : closure T₀ = (Set.univ : Set Z) :=
+      subset_antisymm (fun _ _ => mem_univ _) hZT
+    have hTsubA : T₀ ⊆ A := by
+      exact hAeq ▸ subset_sUnion_of_mem hT₀
+    obtain ⟨O, K, hO, hK, rfl⟩ := hS'loc T₀ hT₀
+    have hK_univ : K = (Set.univ : Set Z) := by
+      apply subset_antisymm (fun _ _ => mem_univ _)
+      intro z hz
+      have hzcl : z ∈ closure (O ∩ K) := by
+        rw [hTcl]
+        exact mem_univ z
+      exact (closure_minimal inter_subset_right hK) hzcl
+    refine ⟨O, hO, ?_, ?_⟩
+    · have hTdense : Dense (O ∩ K) := dense_iff_closure_eq.mpr hTcl
+      simpa [hK_univ] using hTdense
+    · intro z hz
+      apply hTsubA
+      exact ⟨hz, hK_univ ▸ mem_univ z⟩
 
 theorem dense_preimage_of_finite_locallyClosed_union_iff_mem_genericPoint
     {Z E : Set X} (hZ : IsIrreducible Z)
@@ -178,7 +550,53 @@ theorem dense_preimage_of_finite_locallyClosed_union_iff_mem_genericPoint
       (∀ T ∈ S, IsLocallyClosed T) ∧ E = ⋃₀ S)
     {ξ : X} (hξ : IsGenericPoint ξ Z) :
     Dense ((Subtype.val : Z → X) ⁻¹' E) ↔ ξ ∈ E := by
-  sorry
+  classical
+  constructor
+  · intro hA
+    obtain ⟨U, hUopen, hUdense, hUsub⟩ :=
+      (dense_preimage_of_finite_locallyClosed_union_iff hZ hE).mpr hA
+    letI : Nonempty Z := hZ.nonempty.to_subtype
+    obtain ⟨O, hOopen, hOpre⟩ := IsInducing.subtypeVal.isOpen_iff.mp hUopen
+    obtain ⟨z, hzU⟩ := hUdense.nonempty
+    have hzpre : z ∈ (Subtype.val ⁻¹' O : Set Z) := hOpre.symm ▸ hzU
+    have hzO : (z : X) ∈ O := hzpre
+    have hξO : ξ ∈ O :=
+      (hξ.mem_open_set_iff hOopen).mpr ⟨z, z.property, hzO⟩
+    have hξU : (⟨ξ, hξ.mem⟩ : Z) ∈ U := by
+      have hξpre : (⟨ξ, hξ.mem⟩ : Z) ∈ (Subtype.val ⁻¹' O : Set Z) := hξO
+      exact hOpre ▸ hξpre
+    exact hUsub hξU
+  · intro hξE
+    obtain ⟨S, hSfinite, hSloc, hEeq⟩ := hE
+    have hξS : ξ ∈ ⋃₀ S := by
+      rw [← hEeq]
+      exact hξE
+    obtain ⟨T, hTS, hξT⟩ := mem_sUnion.mp hξS
+    have hTsubE : T ⊆ E := by
+      intro x hx
+      rw [hEeq]
+      exact mem_sUnion.mpr ⟨T, hTS, hx⟩
+    obtain ⟨O, C, hOopen, hCclosed, hTC⟩ := hSloc T hTS
+    have hξOC : ξ ∈ O ∩ C := hTC ▸ hξT
+    have hξO : ξ ∈ O := hξOC.1
+    have hξC : ξ ∈ C := hξOC.2
+    letI : IrreducibleSpace Z := Subtype.irreducibleSpace hZ
+    let U : Set Z := (Subtype.val : Z → X) ⁻¹' O
+    have hUopen : IsOpen U := hOopen.preimage continuous_subtype_val
+    have hUnonempty : U.Nonempty := ⟨⟨ξ, hξ.mem⟩, hξO⟩
+    have hUdense : Dense U := hUopen.dense hUnonempty
+    have hZC : Z ⊆ C := (hξ.mem_closed_set_iff hCclosed).mp hξC
+    have hUsub : U ⊆ (Subtype.val : Z → X) ⁻¹' T := by
+      intro z hz
+      change (z : X) ∈ T
+      have hzOC : (z : X) ∈ O ∩ C := ⟨hz, hZC z.property⟩
+      exact hTC ▸ hzOC
+    have hUsubE : U ⊆ (Subtype.val : Z → X) ⁻¹' E := by
+      intro z hz
+      exact hTsubE (hUsub hz)
+    apply (dense_preimage_of_finite_locallyClosed_union_iff hZ
+      ⟨S, hSfinite, hSloc, hEeq⟩).mp
+    exact ⟨U, hUopen, hUdense, hUsubE⟩
 
 end ConstructibleSets
 

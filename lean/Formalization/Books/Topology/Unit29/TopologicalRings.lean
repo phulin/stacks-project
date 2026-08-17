@@ -54,7 +54,25 @@ theorem topologicalRing_surjective_quotient [CommRing R] [CommRing S] [Topologic
     [IsTopologicalRing R] (f : R →+* S) (hf : Function.Surjective f) :
     letI : TopologicalSpace S := quotientRingTopology f
     IsTopologicalRing S := by
-  sorry
+  let _ : TopologicalSpace S := quotientRingTopology f
+  have hq : Topology.IsQuotientMap f.toAddMonoidHom := ⟨⟨rfl⟩, hf⟩
+  have hoq : IsOpenQuotientMap f.toAddMonoidHom :=
+    AddMonoidHom.isOpenQuotientMap_of_isQuotientMap hq
+  refine { toIsTopologicalSemiring := ?_, continuous_neg := ?_ }
+  · refine { continuous_add := ?_, continuous_mul := ?_ }
+    · rw [← (hoq.prodMap hoq).continuous_comp_iff]
+      convert hoq.continuous.comp continuous_add using 1
+      ext p
+      simp
+    · rw [← (hoq.prodMap hoq).continuous_comp_iff]
+      convert hoq.continuous.comp continuous_mul using 1
+      ext p
+      simp
+  · rw [← hoq.continuous_comp_iff]
+    exact (show Continuous ((fun a : S => -a) ∘ f) from by
+      convert hoq.continuous.comp continuous_neg using 1
+      ext x
+      simp)
 
 end Basic
 

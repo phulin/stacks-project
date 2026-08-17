@@ -49,21 +49,30 @@ def quotientModuleTopology [CommRing R] [TopologicalSpace R] [IsTopologicalRing 
 theorem topologicalModule_additive_group [CommRing R] [TopologicalSpace R] [IsTopologicalRing R]
     [AddCommGroup M] [Module R M] [TopologicalSpace M] [ContinuousAdd M]
     [ContinuousSMul R M] : IsTopologicalAddGroup M := by
-  sorry
+  refine { toContinuousAdd := ?_, toContinuousNeg := ?_ }
+  · exact inferInstance
+  · exact ContinuousNeg.of_continuousConstSMul R M
 
 /-- A submodule with its induced topology is a topological module. -/
 theorem topologicalModule_submodule [CommRing R] [TopologicalSpace R] [IsTopologicalRing R]
     [AddCommGroup M] [Module R M] [TopologicalSpace M] [ContinuousAdd M]
     [ContinuousSMul R M] (S : Submodule R M) :
     ContinuousAdd S ∧ ContinuousSMul R S := by
-  sorry
+  exact ⟨
+    ⟨(continuous_subtype_val.comp continuous_fst).add
+        (continuous_subtype_val.comp continuous_snd) |>.subtype_mk _⟩,
+    ⟨(continuous_fst.smul (continuous_subtype_val.comp continuous_snd)).subtype_mk
+        (fun p => S.smul_mem p.1 p.2.2)⟩
+  ⟩
 
 /-- A submodule quotient has the canonical quotient topology and is a topological module. -/
 theorem topologicalModule_submodule_quotient [CommRing R] [TopologicalSpace R]
     [IsTopologicalRing R] [AddCommGroup M] [Module R M] [TopologicalSpace M]
     [ContinuousAdd M] [ContinuousSMul R M] (S : Submodule R M) :
     ContinuousAdd (M ⧸ S) ∧ ContinuousSMul R (M ⧸ S) := by
-  sorry
+  let _ : IsTopologicalAddGroup M :=
+    topologicalModule_additive_group (R := R) (M := M)
+  exact ⟨inferInstance, inferInstance⟩
 
 /-- A surjective module quotient with its quotient topology is a topological module. -/
 theorem topologicalModule_surjective_quotient [CommRing R] [TopologicalSpace R]
@@ -72,7 +81,22 @@ theorem topologicalModule_surjective_quotient [CommRing R] [TopologicalSpace R]
     (f : M →ₗ[R] N) (hf : Function.Surjective f) :
     letI : TopologicalSpace N := quotientModuleTopology f
     ContinuousAdd N ∧ ContinuousSMul R N := by
-  sorry
+  let _ : TopologicalSpace N := quotientModuleTopology f
+  have hq : Topology.IsQuotientMap f.toAddMonoidHom := ⟨⟨rfl⟩, hf⟩
+  have hoq : IsOpenQuotientMap f.toAddMonoidHom :=
+    AddMonoidHom.isOpenQuotientMap_of_isQuotientMap hq
+  refine ⟨?_, ?_⟩
+  · apply ContinuousAdd.mk
+    rw [← (hoq.prodMap hoq).continuous_comp_iff]
+    convert hoq.continuous.comp continuous_add using 1
+    ext p
+    simp
+  · apply ContinuousSMul.mk
+    rw [← (IsOpenQuotientMap.id.prodMap hoq).continuous_comp_iff]
+    have hsmul : Continuous (fun p : R × M => p.1 • p.2) := continuous_smul
+    convert hoq.continuous.comp hsmul using 1
+    ext p
+    simp
 
 end Basic
 
@@ -89,14 +113,14 @@ theorem topological_module_limits_commute_with_topological_spaces :
 
 theorem topological_module_limits_commute_with_modules :
     PreservesLimits (forget₂ (TopModuleCat.{v} R) (ModuleCat.{v} R)) := by
-  sorry
+  infer_instance
 
 theorem topological_modules_have_colimits : HasColimits (TopModuleCat.{v} R) := by
   infer_instance
 
 theorem topological_module_colimits_commute_with_modules :
     PreservesColimits (forget₂ (TopModuleCat.{v} R) (ModuleCat.{v} R)) := by
-  sorry
+  infer_instance
 
 end Category
 

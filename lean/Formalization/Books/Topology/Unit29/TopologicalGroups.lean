@@ -57,7 +57,20 @@ theorem topologicalGroup_surjective_quotient [Group G] [Group H] [TopologicalSpa
     [IsTopologicalGroup G] (f : G →* H) (hf : Function.Surjective f) :
     letI : TopologicalSpace H := quotientGroupTopology f
     IsTopologicalGroup H := by
-  sorry
+  let _ : TopologicalSpace H := quotientGroupTopology f
+  have hq : IsQuotientMap f := ⟨⟨rfl⟩, hf⟩
+  have hoq : IsOpenQuotientMap f :=
+    MonoidHom.isOpenQuotientMap_of_isQuotientMap hq
+  refine { continuous_mul := ?_, continuous_inv := ?_ }
+  · rw [← (hoq.prodMap hoq).continuous_comp_iff]
+    convert hoq.continuous.comp continuous_mul using 1
+    ext p
+    simp
+  · rw [← hoq.continuous_comp_iff]
+    exact (show Continuous ((fun a : H => a⁻¹) ∘ f) from by
+      convert hoq.continuous.comp continuous_inv using 1
+      ext x
+      simp)
 
 end Basic
 
@@ -79,19 +92,29 @@ def selfMapNeighborhood (f : E → E) (S : Set E) : Set (E → E) :=
 /-- The finite-point neighborhoods form a neighborhood basis for the compact-open topology. -/
 theorem selfMap_nhds_hasBasis (f : E → E) :
     (𝓝 f).HasBasis (fun S : Set E => S.Finite) (selfMapNeighborhood E f) := by
-  sorry
+  change (𝓝 f).HasBasis (fun S : Set E => S.Finite)
+    (fun S => {f' | ∀ ⦃x⦄, x ∈ S → f' x = f x})
+  rw [nhds_pi, nhds_discrete]
+  exact Filter.hasBasis_pi_pure f
 
 /-- Evaluation of self-maps on a discrete set is continuous. -/
 theorem selfMap_evaluation_continuous :
     Continuous (fun p : (E → E) × E => p.1 p.2) := by
-  sorry
+  refine continuous_def.2 fun U hU => ?_
+  change IsOpen {p : (E → E) × E | p.1 p.2 ∈ U}
+  rw [show {p : (E → E) × E | p.1 p.2 ∈ U} =
+      ⋃ e : E, ((fun f : E → E => f e) ⁻¹' U) ×ˢ ({e} : Set E) by
+        ext ⟨f, e'⟩
+        simp]
+  exact isOpen_iUnion fun e =>
+    (hU.preimage (continuous_apply e)).prod (isOpen_discrete _)
 
 /-- A continuous family of maps into a discrete set gives a continuous map into the self-map
 space. -/
 theorem selfMap_curry_continuous {X : Type v} [TopologicalSpace X]
     (g : X × E → E) (hg : Continuous g) :
     Continuous (fun x : X => fun e : E => g (x, e)) := by
-  sorry
+  exact continuous_pi fun e => hg.comp (continuous_id.prodMk continuous_const)
 
 /-- The Pi/compact-open topology is the coarsest topology making evaluation continuous. -/
 theorem selfMapTopology_is_coarsest_action_continuous (t : TopologicalSpace (E → E)) :
@@ -104,7 +127,10 @@ theorem selfMapTopology_is_coarsest_action_continuous (t : TopologicalSpace (E �
 /-- Composition of self-maps is continuous for the compact-open topology. -/
 theorem selfMap_composition_continuous :
     Continuous (fun p : (E → E) × (E → E) => p.1 ∘ p.2) := by
-  sorry
+  apply continuous_pi
+  intro e
+  exact (selfMap_evaluation_continuous E).comp
+    (continuous_fst.prodMk ((continuous_apply e).comp continuous_snd))
 
 /-- The topology induced on the invertible self-maps from the self-map topology. -/
 @[instance_reducible]
@@ -119,18 +145,48 @@ def automorphismNeighborhood (f : Equiv.Perm E) (S : Set E) : Set (Equiv.Perm E)
 theorem automorphism_inverse_continuous :
     @Continuous (Equiv.Perm E) (Equiv.Perm E)
       (automorphismTopology E) (automorphismTopology E) (fun f => f.symm) := by
-  sorry
+  let _ : TopologicalSpace (Equiv.Perm E) := automorphismTopology E
+  apply continuous_induced_rng.mpr
+  apply continuous_pi
+  intro e
+  rw [continuous_discrete_rng]
+  intro a
+  have hopen : IsOpen ((fun g : Equiv.Perm E => (g : E → E) a) ⁻¹' ({e} : Set E)) :=
+    (isOpen_discrete _).preimage
+      ((continuous_apply a).comp (continuous_induced_dom :
+        Continuous (fun g : Equiv.Perm E => (g : E → E))))
+  convert hopen using 1
+  ext g
+  exact (Equiv.symm_apply_eq g).trans eq_comm
 
 /-- The neighborhood formula for inversion on `Aut(E)`. -/
 theorem automorphism_inverse_preimage_neighborhood (f : Equiv.Perm E) (S : Set E) :
     (fun g : Equiv.Perm E => g.symm) ⁻¹' automorphismNeighborhood E f.symm S =
       automorphismNeighborhood E f (f ⁻¹' S) := by
-  sorry
+  ext g
+  change (∀ ⦃x⦄, x ∈ S → g.symm x = f.symm x) ↔
+    (∀ ⦃y⦄, y ∈ f ⁻¹' S → g y = f y)
+  constructor
+  · intro h y hy
+    have h' := h (show f y ∈ S by exact hy)
+    simpa using (congrArg g h').symm
+  · intro h x hx
+    have h' := h (show f (f.symm x) ∈ S by simpa using hx)
+    simpa using (congrArg g.symm h').symm
 
 /-- `Aut(E)` with the induced compact-open topology is a topological group. -/
 theorem automorphism_is_topological_group :
     @IsTopologicalGroup (Equiv.Perm E) (automorphismTopology E) inferInstance := by
-  sorry
+  let _ : TopologicalSpace (Equiv.Perm E) := automorphismTopology E
+  refine { continuous_mul := ?_, continuous_inv := ?_ }
+  · apply (continuous_induced_rng (f := fun f : Equiv.Perm E => (f : E → E))).2
+    have hcoe : @Continuous (Equiv.Perm E) (E → E)
+        (automorphismTopology E) (selfMapTopology E)
+        (fun f => (f : E → E)) := continuous_induced_dom
+    have hmul := (selfMap_composition_continuous E).comp
+      ((hcoe.comp continuous_fst).prodMk (hcoe.comp continuous_snd))
+    simpa only [Function.comp_def, Equiv.Perm.coe_mul] using hmul
+  · exact automorphism_inverse_continuous E
 
 end Automorphisms
 
@@ -274,34 +330,63 @@ theorem profiniteGroup_iff_cofiltered_finite_discrete_limit :
 theorem profiniteGroup_exists_open_subgroup_subset_nhds_one
     (hG : IsProfiniteGroup (G := G)) {E : Set G} (hE : E ∈ 𝓝 (1 : G)) :
     ∃ H : OpenSubgroup G, (H : Set G) ⊆ E := by
-  sorry
+  have hprops :=
+    Formalization.Books.Topology.Unit22.isProfiniteSpace_iff_hausdorff_quasiCompact_totallyDisconnected.mp
+      hG
+  let _ : T2Space G := hprops.1
+  let _ : CompactSpace G := hprops.2.1
+  let _ : TotallyDisconnectedSpace G := hprops.2.2
+  rcases mem_nhds_iff.mp hE with ⟨U, hUE, hUopen, h1U⟩
+  obtain ⟨N, hN⟩ :=
+    ProfiniteGrp.exist_openNormalSubgroup_sub_open_nhds_of_one hUopen h1U
+  exact ⟨N.toOpenSubgroup, hN.trans hUE⟩
 
 theorem profiniteGroup_open_subgroup_finite_index
     (hG : IsProfiniteGroup (G := G)) (H : Subgroup G)
     (hH : IsOpen (H : Set G)) : H.FiniteIndex := by
-  sorry
+  have hprops :=
+    Formalization.Books.Topology.Unit22.isProfiniteSpace_iff_hausdorff_quasiCompact_totallyDisconnected.mp
+      hG
+  let _ : CompactSpace G := hprops.2.1
+  let _ : Finite (G ⧸ H) := H.quotient_finite_of_isOpen hH
+  exact Subgroup.finiteIndex_of_finite_quotient
 
 theorem profiniteGroup_exists_open_normal_subgroup_subset
     (hG : IsProfiniteGroup (G := G)) (H : OpenSubgroup G) :
     ∃ N : OpenNormalSubgroup G, (N : Set G) ⊆ H := by
-  sorry
+  have hprops :=
+    Formalization.Books.Topology.Unit22.isProfiniteSpace_iff_hausdorff_quasiCompact_totallyDisconnected.mp
+      hG
+  let _ : CompactSpace G := hprops.2.1
+  let _ : TotallyDisconnectedSpace G := hprops.2.2
+  exact ProfiniteGrp.exist_openNormalSubgroup_sub_open_nhds_of_one H.isOpen H.one_mem
 
 theorem profiniteGroup_open_normal_subgroup_finite_index
     (hG : IsProfiniteGroup (G := G)) (N : OpenNormalSubgroup G) :
     (N : Subgroup G).FiniteIndex := by
-  sorry
+  exact profiniteGroup_open_subgroup_finite_index hG (N : Subgroup G) N.isOpen
 
 theorem profiniteGroup_open_normal_quotient_finite_discrete
     (hG : IsProfiniteGroup (G := G)) (N : OpenNormalSubgroup G) :
     Finite (G ⧸ (N : Subgroup G)) ∧ DiscreteTopology (G ⧸ (N : Subgroup G)) := by
-  sorry
+  have hprops :=
+    Formalization.Books.Topology.Unit22.isProfiniteSpace_iff_hausdorff_quasiCompact_totallyDisconnected.mp
+      hG
+  let _ : CompactSpace G := hprops.2.1
+  have hfinite : Finite (G ⧸ (N : Subgroup G)) :=
+    (N : Subgroup G).quotient_finite_of_isOpen N.isOpen
+  let _ : DiscreteTopology (G ⧸ (N : Subgroup G)) :=
+    QuotientGroup.discreteTopology N.isOpen
+  exact ⟨hfinite, inferInstance⟩
 
 theorem profiniteGroup_open_normal_quotient_finite_discrete_topological_group
     (hG : IsProfiniteGroup (G := G)) (N : OpenNormalSubgroup G) :
     Finite (G ⧸ (N : Subgroup G)) ∧ DiscreteTopology (G ⧸ (N : Subgroup G)) ∧
       IsTopologicalGroup (G ⧸ (N : Subgroup G)) ∧
         Function.Surjective (QuotientGroup.mk : G → G ⧸ (N : Subgroup G)) := by
-  sorry
+  have hfinite_discrete := profiniteGroup_open_normal_quotient_finite_discrete hG N
+  refine ⟨hfinite_discrete.1, hfinite_discrete.2, inferInstance, ?_⟩
+  exact QuotientGroup.mk_surjective
 
 omit [IsTopologicalGroup G] in
 /- Intersections of open normal subgroups are again open normal and give lower bounds, the

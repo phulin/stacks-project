@@ -1,6 +1,7 @@
-import Formalization.Books.Categories.Unit04.Products
+import Formalization.Books.Categories.Unit03.Opposite
+import Mathlib.CategoryTheory.MorphismProperty.Representable
+import Mathlib.CategoryTheory.Limits.Shapes.BinaryProducts
 import Mathlib.CategoryTheory.Limits.FunctorCategory.Shapes.Pullbacks
-import Mathlib.CategoryTheory.Limits.Shapes.FunctorToTypes
 import Mathlib.CategoryTheory.Limits.Types.Pullbacks
 
 /-!
@@ -52,14 +53,24 @@ interface for that observation, so it does not require a second parallel
 definition of a presheaf fibre product.
 -/
 
-/-! ## The Yoneda special case -/
+/- The preceding observation is made explicit using representations of the
+   two presheaves and an object-level pullback square. -/
+theorem presheafPullback_representation_of_isPullback
+    {F G : Presheaf C} (a : F ⟶ G)
+    {X Y U P : C}
+    (sF : representablePresheaf X ≅ F)
+    (sG : representablePresheaf Y ≅ G)
+    (f : X ⟶ Y) (g : U ⟶ Y) (ξ : G.obj (op U))
+    (ha : (functorOfPoints (C := C)).map f ≫ sG.hom = sF.hom ≫ a)
+    (hξ : sG.hom.app (op U) g = ξ)
+    {p : P ⟶ X} {q : P ⟶ U}
+    (h : IsPullback p q f g) :
+    Nonempty
+      (representablePresheaf P ≅
+        pullback ((yonedaBijection U G).symm ξ) a) := by
+  sorry
 
-/-- The natural transformation induced by an element of a presheaf, as in the
-source's notation `ξ : h_U ⟶ G`. -/
-def yonedaElementMap
-    {G : Presheaf C} (U : C) (ξ : G.obj (op U)) :
-    representablePresheaf U ⟶ G :=
-  (yonedaBijection U G).symm ξ
+/-! ## The Yoneda special case -/
 
 /-- The explicit set occurring in the source's description of
 `h_U ×_{ξ,G,a} F` at an object `X`. -/
@@ -73,60 +84,51 @@ def yonedaPullbackFiber
 theorem yoneda_pullback_condition_iff
     {F G : Presheaf C} (a : F ⟶ G) {U X : C}
     (ξ : G.obj (op U)) (f : X ⟶ U) (ξ' : F.obj (op X)) :
-    (yonedaElementMap U ξ).app (op X) f = a.app (op X) ξ' ↔
+    ((yonedaBijection U G).symm ξ).app (op X) f = a.app (op X) ξ' ↔
       G.map f.op ξ = a.app (op X) ξ' := by
-  change (((yonedaBijection U G).symm ξ).app (op X)) f =
-      a.app (op X) ξ' ↔ G.map f.op ξ = a.app (op X) ξ'
   rw [yonedaBijection_inverse_app_apply ξ f]
 
 /-- The pointwise pullback in the Yoneda special case is equivalent to the
 explicit fibre displayed in the source. -/
 noncomputable def yonedaPullbackObjEquiv
     {F G : Presheaf C} (a : F ⟶ G) (U : C) (ξ : G.obj (op U)) (X : C) :
-    (pullback (yonedaElementMap U ξ) a).obj (op X) ≃
+    (pullback ((yonedaBijection U G).symm ξ) a).obj (op X) ≃
       yonedaPullbackFiber a U ξ X :=
-  (presheafPullbackObjIso (yonedaElementMap U ξ) a X).toEquiv.trans
+  (presheafPullbackObjIso ((yonedaBijection U G).symm ξ) a X).toEquiv.trans
     (Equiv.subtypeEquiv (Equiv.refl _) fun p =>
       yoneda_pullback_condition_iff a ξ p.1 p.2)
 
 /-! ## Representable morphisms of presheaves -/
 
-/-- A morphism of presheaves is representable when every pullback along a
-map from a representable presheaf is representable. -/
-def RepresentablePresheafMorphism
-    {F G : Presheaf C} (a : F ⟶ G) : Prop :=
-  ∀ (U : C) (ξ : G.obj (op U)),
-    Functor.IsRepresentable (pullback (yonedaElementMap U ξ) a)
+/- The source's relative representability condition is Mathlib's canonical
+   `yoneda.relativelyRepresentable` property.  It quantifies over maps from
+   representables and records a represented pullback square directly, which is
+   equivalent to saying that the chosen presheaf pullback is representable. -/
 
 /-- If a representable presheaf morphism has representable target, then its
 source is representable. -/
 theorem isRepresentable_of_representablePresheafMorphism
     {F G : Presheaf C} (a : F ⟶ G)
-    (ha : RepresentablePresheafMorphism a)
+    (ha : yoneda.relativelyRepresentable a)
     (hG : Functor.IsRepresentable G) :
     Functor.IsRepresentable F := by
   sorry
 
 /-! ## The diagonal criterion -/
 
-/-- The diagonal natural transformation into the explicit pointwise product
-of a presheaf with itself. -/
-def presheafDiagonal (F : Presheaf C) :
-    F ⟶ FunctorToTypes.prod F F :=
-  FunctorToTypes.prod.lift (𝟙 F) (𝟙 F)
-
 /-- The three equivalent criteria for a presheaf to have representable
 diagonal, under the source's product and fibre-product hypotheses. -/
 theorem representable_diagonal_iff
     {F : Presheaf C} [HasBinaryProducts C] [HasPullbacks C] :
-    (RepresentablePresheafMorphism (presheafDiagonal F) ↔
+    (yoneda.relativelyRepresentable (Limits.diag F) ↔
       (∀ (U : C) (ξ : F.obj (op U)),
-        RepresentablePresheafMorphism (yonedaElementMap U ξ))) ∧
+        yoneda.relativelyRepresentable ((yonedaBijection U F).symm ξ))) ∧
     ((∀ (U : C) (ξ : F.obj (op U)),
-        RepresentablePresheafMorphism (yonedaElementMap U ξ)) ↔
+        yoneda.relativelyRepresentable ((yonedaBijection U F).symm ξ)) ↔
       (∀ (U V : C) (ξ : F.obj (op U)) (ξ' : F.obj (op V)),
         Functor.IsRepresentable
-          (pullback (yonedaElementMap U ξ) (yonedaElementMap V ξ')))) := by
+          (pullback ((yonedaBijection U F).symm ξ)
+            ((yonedaBijection V F).symm ξ')))) := by
   sorry
 
 end Formalization.Books.Categories.Unit08

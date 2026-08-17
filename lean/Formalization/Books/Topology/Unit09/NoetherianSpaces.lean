@@ -2,6 +2,7 @@ import Formalization.Books.Topology.Unit08.IrreducibleComponents
 import Mathlib.AlgebraicGeometry.Noetherian
 import Mathlib.Data.PNat.Basic
 import Mathlib.Data.PNat.Interval
+import Mathlib.RingTheory.Ideal.KrullsHeightTheorem
 import Mathlib.Topology.Connected.LocallyConnected
 import Mathlib.Topology.NoetherianSpace
 import Mathlib.Topology.Separation.Basic
@@ -21,6 +22,7 @@ topology on a subset.
 namespace Formalization.Books.Topology.Unit09
 
 open Set Function _root_.Topology TopologicalSpace
+open scoped AlgebraicGeometry
 
 universe u v
 
@@ -310,6 +312,68 @@ theorem initialSegmentSpace_has_no_closed_points :
       simpa using congrArg e h2
     exact (ne_of_lt hlt2) (heq1.trans heq2.symm)
 
+private theorem finite_prime_chain_impossible
+    {R : Type*} [CommRing R] [IsNoetherianRing R] [Finite (PrimeSpectrum R)]
+    {p q r : Ideal R} (hp : p.IsPrime) (hq : q.IsPrime) (hr : r.IsPrime)
+    (hpq : p < q) (hqr : q < r)
+    (hbelow : ∀ s : Ideal R, s.IsPrime → s ≠ r → s ≤ r) : False := by
+  let _ : p.IsPrime := hp
+  let _ : q.IsPrime := hq
+  let _ : r.IsPrime := hr
+  have hprimes : {P : Ideal R | P.IsPrime}.Finite := by
+    let _ : Finite {P : Ideal R // P.IsPrime} :=
+      Finite.of_injective (PrimeSpectrum.equivSubtype R).symm
+        (PrimeSpectrum.equivSubtype R).symm.injective
+    exact Set.finite_coe_iff.mp (inferInstance : Finite {P : Ideal R // P.IsPrime})
+  let s : Set (Ideal R) := {P | P.IsPrime} \ {r}
+  have hs : s.Finite := by
+    dsimp [s]
+    exact hprimes.sdiff
+  have hnot : ¬ ((r : Set R) ⊆ ⋃ P ∈ s, (P : Set R)) := by
+    intro h
+    obtain ⟨P, hPs, hle⟩ :=
+      (Ideal.subset_union_prime_finite (f := fun P : Ideal R => P) hs
+        (⊤ : Ideal R) (⊤ : Ideal R) (fun _ hP _ _ => hP.1)).mp h
+    have hPne : P ≠ r := by simpa [s] using hPs.2
+    exact hPne (le_antisymm (hbelow P hPs.1 hPne) hle)
+  have hex : ∃ a : R, a ∈ r ∧ ∀ P ∈ s, a ∉ P := by
+    by_contra h
+    apply hnot
+    intro a ha
+    by_contra ha'
+    apply h
+    refine ⟨a, ha, ?_⟩
+    intro P hP haP
+    exact ha' (Set.mem_iUnion.2 ⟨P, Set.mem_iUnion.2 ⟨hP, haP⟩⟩)
+  obtain ⟨a, ha, haout⟩ := hex
+  have hspanle : Ideal.span ({a} : Set R) ≤ r := by
+    apply Ideal.span_le.mpr
+    rintro x rfl
+    exact ha
+  have hspan_ne_top : Ideal.span ({a} : Set R) ≠ ⊤ := by
+    intro htop
+    exact hr.ne_top (top_unique (htop ▸ hspanle))
+  obtain ⟨P, hP⟩ := (Ideal.span ({a} : Set R)).nonempty_minimalPrimes hspan_ne_top
+  have hPr : P = r := by
+    by_contra hPr
+    have hPs : P ∈ s := ⟨hP.isPrime, by simpa using hPr⟩
+    exact haout P hPs (hP.le (Ideal.subset_span (by simp)))
+  have hheight : r.height ≤ 1 := by
+    rw [← hPr]
+    exact Ideal.height_le_one_of_isPrincipal_of_mem_minimalPrimes
+      (Ideal.span ({a} : Set R)) P hP
+  have hqheight : (1 : ℕ∞) ≤ q.height := by
+    calc
+      (1 : ℕ∞) = 0 + 1 := by simp
+      _ ≤ p.height + 1 := add_le_add_left (show (0 : ℕ∞) ≤ p.height from bot_le) 1
+      _ ≤ q.height := Ideal.height_add_one_le_of_lt_of_isPrime hpq
+  have hrheight : (2 : ℕ∞) ≤ r.height := by
+    calc
+      (2 : ℕ∞) = 1 + 1 := by norm_num
+      _ ≤ q.height + 1 := add_le_add_left hqheight 1
+      _ ≤ r.height := Ideal.height_add_one_le_of_lt_of_isPrime hqr
+  exact (not_le_of_gt (by norm_num : (1 : ℕ∞) < 2)) (hrheight.trans hheight)
+
 /- The last sentence of the source refers to the later scheme-theoretic
    closed-point lemma.  Mathlib's canonical interface for that source notion
    is used here to state the cross-reference without importing a later project
@@ -318,7 +382,209 @@ theorem initialSegmentSpace_not_underlying_locallyNoetherian_scheme :
     ¬ ∃ S : AlgebraicGeometry.Scheme,
       AlgebraicGeometry.IsLocallyNoetherian S ∧
         Nonempty (S ≃ₜ InitialSegmentSpace) := by
-  sorry
+  classical
+  rintro ⟨S, hS, ⟨e⟩⟩
+  let _ : AlgebraicGeometry.IsLocallyNoetherian S := hS
+  let e₀ : InitialSegmentSpace ≃ ℕ+ :=
+    WithTopology.equiv ℕ+ initialSegmentTopology
+  let one : ℕ+ := ⟨1, by decide⟩
+  let two : ℕ+ := ⟨2, by decide⟩
+  let three : ℕ+ := ⟨3, by decide⟩
+  have hspec_of_le : ∀ {a b : ℕ+}, a ≤ b → e₀.symm a ⤳ e₀.symm b := by
+    intro a b hab
+    apply specializes_iff_forall_open.mpr
+    intro U hU hUb
+    rcases initialSegmentSpace_isOpen_iff.mp hU with h0 | hu | ⟨m, hm⟩
+    · rw [h0] at hUb
+      exact hUb.elim
+    · rw [hu]
+      exact Set.mem_univ _
+    · rw [hm] at hUb ⊢
+      exact le_trans hab hUb
+  have hInitialNotNoetherian : ¬ NoetherianSpace InitialSegmentSpace := by
+    intro hN
+    let _ : NoetherianSpace InitialSegmentSpace := hN
+    let U : ℕ+ → Set InitialSegmentSpace := fun n => e₀ ⁻¹' Set.Iic n
+    have hUopen : ∀ n : ℕ+, IsOpen (U n) := by
+      intro n
+      exact initialSegmentSpace_isOpen_iff.mpr (Or.inr (Or.inr ⟨n, rfl⟩))
+    have hUcover : (Set.univ : Set InitialSegmentSpace) ⊆ ⋃ n, U n := by
+      intro z _
+      refine Set.mem_iUnion.mpr ⟨e₀ z, ?_⟩
+      simp [U]
+    obtain ⟨t, ht⟩ :=
+      (NoetherianSpace.isCompact (Set.univ : Set InitialSegmentSpace)).elim_finite_subcover
+        U hUopen hUcover
+    let m : ℕ+ := t.sup id + 1
+    have hlt : ∀ n ∈ t, n < m := by
+      intro n hn
+      have hnle : n ≤ t.sup id := by
+        simpa using (Finset.le_sup (s := t) (f := id) hn)
+      exact lt_of_le_of_lt hnle
+        (by simpa [m, PNat.add_one] using PNat.lt_succ_self (t.sup id))
+    have hmcover : e₀.symm m ∈ ⋃ n ∈ t, U n := ht (Set.mem_univ _)
+    rcases Set.mem_iUnion₂.mp hmcover with ⟨n, hn, hmn⟩
+    have hmn' : m ≤ n := by
+      simpa [U] using hmn
+    exact (not_le_of_gt (hlt n hn)) hmn'
+  let x : S := e.symm (e₀.symm three)
+  obtain ⟨i, y, hy⟩ := S.affineCover.exists_eq x
+  let Y := S.affineCover.X i
+  let f := S.affineCover.f i
+  let _ : AlgebraicGeometry.IsOpenImmersion f := S.affineCover.map_prop i
+  let _ : AlgebraicGeometry.IsLocallyNoetherian Y :=
+    AlgebraicGeometry.isLocallyNoetherian_of_isOpenImmersion f
+  let _ : IsNoetherianRing Γ(Y, ⊤) :=
+    AlgebraicGeometry.IsLocallyNoetherian.component_noetherian
+      ⟨⊤, AlgebraicGeometry.isAffineOpen_top Y⟩
+  let _ : NoetherianSpace Y := AlgebraicGeometry.noetherianSpace_of_isAffine
+  have hy' : f.base y = x := by
+    simpa [f] using hy
+  let V : Set InitialSegmentSpace := e '' Set.range f.base
+  have hVopen : IsOpen V := by
+    dsimp [V]
+    exact e.isOpenMap _ f.isOpenEmbedding.isOpen_range
+  have hVmem : e₀.symm three ∈ V := by
+    refine ⟨x, ⟨y, hy'⟩, ?_⟩
+    simp [x]
+  rcases initialSegmentSpace_isOpen_iff.mp hVopen with hVempty | hVuniv | ⟨n, hVn⟩
+  · rw [hVempty] at hVmem
+    exact hVmem.elim
+  · have hRangeUniv : Set.range f.base = Set.univ := by
+      apply Set.eq_univ_iff_forall.mpr
+      intro z
+      have hz : e z ∈ V := by rw [hVuniv]; exact Set.mem_univ _
+      rcases hz with ⟨w, ⟨y', hy'⟩, hwy⟩
+      rw [← hy'] at hwy
+      exact ⟨y', e.injective hwy⟩
+    have hRangeNoeth : NoetherianSpace (Set.range f.base) :=
+      NoetherianSpace.range f.base f.continuous
+    have hUnivNoeth : NoetherianSpace (Set.univ : Set S) := by
+      rw [← hRangeUniv]
+      exact hRangeNoeth
+    have hSNoeth : NoetherianSpace S :=
+      TopologicalSpace.noetherian_univ_iff.mp hUnivNoeth
+    apply hInitialNotNoetherian
+    exact (TopologicalSpace.noetherianSpace_iff_of_homeomorph e).mp hSNoeth
+  · have h3n : three ≤ n := by
+      rw [hVn] at hVmem
+      simpa [e₀] using hVmem
+    have hmem : ∀ m : ℕ+, m ≤ n → ∃ y : Y, e (f.base y) = e₀.symm m := by
+      intro m hm
+      have hmV : e₀.symm m ∈ V := by
+        rw [hVn]
+        simpa [e₀] using hm
+      rcases hmV with ⟨w, ⟨y', rfl⟩, hwy⟩
+      exact ⟨y', hwy⟩
+    have h12 : one ≤ two := by norm_num [one, two]
+    have h23 : two ≤ three := by norm_num [two, three]
+    have h23lt : two < three := by norm_num [two, three]
+    have h2n : two ≤ n := le_trans h23 h3n
+    have h1n : one ≤ n := le_trans h12 h2n
+    obtain ⟨y1, hy1⟩ := hmem one h1n
+    obtain ⟨y2, hy2⟩ := hmem two h2n
+    obtain ⟨yn, hyn⟩ := hmem n le_rfl
+    let zp : PrimeSpectrum Γ(Y, ⊤) := Y.isoSpec.hom.base y1
+    let zq : PrimeSpectrum Γ(Y, ⊤) := Y.isoSpec.hom.base y2
+    let zr : PrimeSpectrum Γ(Y, ⊤) := Y.isoSpec.hom.base yn
+    let p : Ideal Γ(Y, ⊤) := zp.asIdeal
+    let q : Ideal Γ(Y, ⊤) := zq.asIdeal
+    let r : Ideal Γ(Y, ⊤) := zr.asIdeal
+    have hp : p.IsPrime := by
+      simpa [p] using zp.isPrime
+    have hq : q.IsPrime := by
+      simpa [q] using zq.isPrime
+    have hr : r.IsPrime := by
+      simpa [r] using zr.isPrime
+    have hspec12 : y1 ⤳ y2 := by
+      apply f.isOpenEmbedding.isInducing.specializes_iff.mp
+      apply e.isInducing.specializes_iff.mp
+      rw [hy1, hy2]
+      exact hspec_of_le h12
+    have hspec2n : y2 ⤳ yn := by
+      apply f.isOpenEmbedding.isInducing.specializes_iff.mp
+      apply e.isInducing.specializes_iff.mp
+      rw [hy2, hyn]
+      exact hspec_of_le h2n
+    have hpqle : p ≤ q := by
+      change zp.asIdeal ≤ zq.asIdeal
+      have hzpq : zp ⤳ zq := by
+        apply (Y.isoSpec.inv.homeomorph.isInducing.specializes_iff).mp
+        simpa [zp, zq] using hspec12
+      exact (PrimeSpectrum.asIdeal_le_asIdeal zp zq).mpr
+        ((PrimeSpectrum.le_iff_specializes zp zq).mpr hzpq)
+    have hqrle : q ≤ r := by
+      change zq.asIdeal ≤ zr.asIdeal
+      have hzqr : zq ⤳ zr := by
+        apply (Y.isoSpec.inv.homeomorph.isInducing.specializes_iff).mp
+        simpa [zq, zr] using hspec2n
+      exact (PrimeSpectrum.asIdeal_le_asIdeal zq zr).mpr
+        ((PrimeSpectrum.le_iff_specializes zq zr).mpr hzqr)
+    have hpqne : p ≠ q := by
+      intro hpq
+      have hzpq : zp = zq := by
+        apply PrimeSpectrum.ext
+        exact hpq
+      have hy12 : y1 = y2 := by
+        simpa [zp, zq] using congrArg Y.isoSpec.inv.base hzpq
+      have hone_two : one = two := by
+        apply e₀.symm.injective
+        rw [← hy1, ← hy2]
+        exact congrArg (fun y : Y => e (f.base y)) hy12
+      exact (by norm_num [one, two] : one ≠ two) hone_two
+    have h2nlt : two < n := lt_of_lt_of_le h23lt h3n
+    have hqrne : q ≠ r := by
+      intro hqr
+      have hzqr : zq = zr := by
+        apply PrimeSpectrum.ext
+        exact hqr
+      have hy2n : y2 = yn := by
+        simpa [zq, zr] using congrArg Y.isoSpec.inv.base hzqr
+      have htwo_n : two = n := by
+        apply e₀.symm.injective
+        rw [← hy2, ← hyn]
+        exact congrArg (fun y : Y => e (f.base y)) hy2n
+      exact h2nlt.ne htwo_n
+    have hpq : p < q := lt_of_le_of_ne hpqle hpqne
+    have hqr : q < r := lt_of_le_of_ne hqrle hqrne
+    have hbelow : ∀ s : Ideal Γ(Y, ⊤), s.IsPrime → s ≠ r → s ≤ r := by
+      intro s hs hsr
+      let z : PrimeSpectrum Γ(Y, ⊤) := ⟨s, hs⟩
+      let y' : Y := Y.isoSpec.inv.base z
+      let m : ℕ+ := e₀ (e (f.base y'))
+      have hm_eq : e (f.base y') = e₀.symm m := by
+        dsimp [m]
+        exact (e₀.symm_apply_apply _).symm
+      have hm : m ≤ n := by
+        have hmV : e₀.symm m ∈ V := by
+          exact ⟨f.base y', ⟨y', rfl⟩, hm_eq⟩
+        rw [hVn] at hmV
+        simpa [m, e₀] using hmV
+      have hspec' : e (f.base y') ⤳ e (f.base yn) := by
+        have h0 := hspec_of_le hm
+        rw [← hm_eq, ← hyn] at h0
+        exact h0
+      have hy' : y' ⤳ yn := by
+        apply f.isOpenEmbedding.isInducing.specializes_iff.mp
+        apply e.isInducing.specializes_iff.mp
+        exact hspec'
+      have hz : z ⤳ zr := by
+        apply (Y.isoSpec.inv.homeomorph.isInducing.specializes_iff).mp
+        change (Y.isoSpec.inv.base z) ⤳ (Y.isoSpec.inv.base zr)
+        simpa [y', zr] using hy'
+      change z.asIdeal ≤ zr.asIdeal
+      exact (PrimeSpectrum.asIdeal_le_asIdeal z zr).mpr
+        ((PrimeSpectrum.le_iff_specializes z zr).mpr hz)
+    have hVfin : V.Finite := by
+      rw [hVn]
+      exact (Set.finite_Iic n).preimage e₀.injective.injOn
+    have hRangeFin : (Set.range f.base).Finite := by
+      apply Set.Finite.of_finite_image (f := e) ?_ e.injective.injOn
+      simpa [V] using hVfin
+    let _ : Finite Y := (Set.finite_range_iff f.isOpenEmbedding.injective).mp hRangeFin
+    let _ : Finite (PrimeSpectrum Γ(Y, ⊤)) :=
+      Finite.of_injective Y.isoSpec.inv.homeomorph Y.isoSpec.inv.homeomorph.injective
+    exact finite_prime_chain_impossible hp hq hr hpq hqr hbelow
 
 /-! ## Local connectedness -/
 

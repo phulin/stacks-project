@@ -257,8 +257,8 @@ the associated graded pieces are required to agree with all sufficiently
 late pages instead. -/
 structure CechSpectralSequenceConvergence
     {Λ : Type u} [Ring Λ]
-    (spectralSequence :
-      CategoryTheory.CohomologicalSpectralSequenceNat (ModuleCat.{u} Λ) 1)
+  (spectralSequence :
+      CategoryTheory.E₂CohomologicalSpectralSequenceNat (ModuleCat.{u} Λ))
     (moduliCohomology : ℕ → ModuleCat.{u} Λ) where
   filtration : ∀ n : ℕ, Fin (n + 2) →
     Submodule Λ (moduliCohomology n)
@@ -268,13 +268,13 @@ structure CechSpectralSequenceConvergence
   filtration_top : ∀ n : ℕ,
     filtration n (Fin.last (n + 1)) = ⊤
   eventual_stability : ∀ n : ℕ, ∀ i : Fin (n + 1), ∃ r₀ : ℕ, ∀ r : ℕ,
-    r₀ ≤ r → Nonempty
+      r₀ ≤ r → Nonempty
       (CategoryTheory.Iso
         (ModuleCat.of Λ
           (filtration n (Fin.succ i) ⧸
             Submodule.comap (Submodule.subtype (filtration n (Fin.succ i)))
               (filtration n (Fin.castSucc i))))
-        ((spectralSequence.page (r + 1)).X (i, n - i)))
+        ((spectralSequence.page (r + 2)).X (i, n - i)))
 
 /-- The actual spectral-sequence data needed from an étale cohomology theory. -/
 structure CechSpectralSequenceData
@@ -282,9 +282,9 @@ structure CechSpectralSequenceData
     (schemeCohomology : Scheme.{0} → ℕ → ModuleCat.{u} Λ)
     (moduliCohomology : ℕ → ModuleCat.{u} Λ) (H : Scheme.{0}) where
   spectralSequence :
-    CategoryTheory.CohomologicalSpectralSequenceNat (ModuleCat.{u} Λ) 1
-  e₁_page : ∀ p q : ℕ, Nonempty
-    ((spectralSequence.page 1).X (p, q) ≅
+    CategoryTheory.E₂CohomologicalSpectralSequenceNat (ModuleCat.{u} Λ)
+  e₂_page : ∀ p q : ℕ, Nonempty
+    ((spectralSequence.page 2).X (p, q) ≅
       schemeCohomology (cechProductPresentation H p).carrier q)
   convergence :
     CechSpectralSequenceConvergence spectralSequence moduliCohomology

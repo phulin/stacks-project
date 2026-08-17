@@ -87,6 +87,21 @@ theorem pushforwardPresheaf_comp_obj {X Y Z : TopCat.{v}}
       (pushforwardPresheaf g).obj ((pushforwardPresheaf f).obj F) := by
   exact TopCat.Presheaf.Pushforward.comp_eq f g F
 
+/-! The preceding objectwise equality is the component form of the
+source's equality of pushforward functors. -/
+
+/-- Pushforward functors commute with composition, on presheaves. -/
+theorem pushforwardPresheaf_comp {X Y Z : TopCat.{v}}
+    (f : X ⟶ Y) (g : Y ⟶ Z) :
+    pushforwardPresheaf (f ≫ g) =
+      pushforwardPresheaf f ⋙ pushforwardPresheaf g := rfl
+
+/-- Pushforward functors commute with composition, on sheaves. -/
+theorem pushforwardSheaf_comp {X Y Z : TopCat.{v}}
+    (f : X ⟶ Y) (g : Y ⟶ Z) :
+    pushforwardSheaf (f ≫ g) =
+      pushforwardSheaf f ⋙ pushforwardSheaf g := rfl
+
 /-- Pushforward commutes with composition, on sheaves. -/
 noncomputable def pushforwardSheafCompIso {X Y Z : TopCat.{v}}
     (f : X ⟶ Y) (g : Y ⟶ Z) :

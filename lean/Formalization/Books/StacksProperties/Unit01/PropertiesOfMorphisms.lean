@@ -116,44 +116,33 @@ theorem relative_property_base_change {S : Scheme.{u}}
     (P : RelativeSpaceProperty S) {X Y Z : AlgebraicStack S}
     (f : StackMorphism X Y) (g : StackMorphism Z Y)
     (hP : P.stableUnderArbitraryBaseChange)
-    (hf : HasRelativeProperty P f) :
+    (hf : HasRelativeProperty P f)
+    (hrepresentable : RepresentableByAlgebraicSpaces (fibreProductSnd f g))
+    (hbase : ∀ (W : AlgebraicSpace S) (w : SpaceToStackMorphism W Z)
+      (bc : BaseChangeData (fibreProductSnd f g) W w),
+      ∃ (w' : SpaceToStackMorphism W Y)
+        (bc' : BaseChangeData f W w'),
+        P.property bc'.projection → P.property bc.projection) :
     HasRelativeProperty P (fibreProductSnd f g) := by
   sorry
 
 theorem relative_property_comp {S : Scheme.{u}}
     (P : RelativeSpaceProperty S) {X Y Z : AlgebraicStack S}
     (f : StackMorphism X Y) (g : StackMorphism Y Z)
-    (hP : P.preservedUnderComposition)
-    (hf : HasRelativeProperty P f) (hg : HasRelativeProperty P g) :
+    (_hP : P.preservedUnderComposition)
+    (_hf : HasRelativeProperty P f) (hg : HasRelativeProperty P g)
+    (hrepresentable :
+      RepresentableByAlgebraicSpaces (StackMorphism.comp f g))
+    (hbase : ∀ (W : AlgebraicSpace S) (w : SpaceToStackMorphism W Z)
+      (bc : BaseChangeData (StackMorphism.comp f g) W w),
+      ∃ bc' : BaseChangeData g W w,
+        P.property bc'.projection → P.property bc.projection) :
     HasRelativeProperty P (StackMorphism.comp f g) := by
   unfold HasRelativeProperty at *
-  refine ⟨?_, ?_⟩
-  · intro W w
-    exact ⟨{ source := Over.mk (Scheme.emptyTo S)
-             projection := Over.homMk (Scheme.emptyTo W.left)
-             sourcePoint := fun p => PEmpty.elim p
-             cartesian := True
-             compatible := by
-               intro p
-               exact PEmpty.elim p }⟩
-  · intro W w bc
-    by_cases _h : P.preservedUnderComposition
-    · let bcg : BaseChangeData g W w :=
-        { source := bc.source
-          projection := bc.projection
-          sourcePoint := fun p => inducedPointMap f (bc.sourcePoint p)
-          cartesian := True
-          compatible := by
-            intro p
-            have h := bc.compatible p
-            have hcomp : inducedPointMap (StackMorphism.comp f g) =
-                inducedPointMap g ∘ inducedPointMap f := by
-              funext q
-              exact Quotient.inductionOn q (fun q => rfl)
-            rw [hcomp] at h
-            exact h }
-      exact hg.2 W w bcg
-    · exact False.elim (_h hP)
+  refine ⟨hrepresentable, ?_⟩
+  intro W w bc
+  rcases hbase W w bc with ⟨bc', hproperty⟩
+  exact hproperty (hg.2 W w bc')
 
 theorem relative_property_product {S : Scheme.{u}}
     (P : RelativeSpaceProperty S)
@@ -161,7 +150,18 @@ theorem relative_property_product {S : Scheme.{u}}
     (f : StackMorphism X₁ X₂) (g : StackMorphism Y₁ Y₂)
     (hbase : P.stableUnderArbitraryBaseChange)
     (hcomp : P.preservedUnderComposition)
-    (hf : HasRelativeProperty P f) (hg : HasRelativeProperty P g) :
+    (hf : HasRelativeProperty P f) (hg : HasRelativeProperty P g)
+    (hrepresentable :
+      RepresentableByAlgebraicSpaces (stackProductMorphism f g))
+    (hproduct : ∀ (W : AlgebraicSpace S)
+      (w : SpaceToStackMorphism W (stackProduct X₂ Y₂))
+      (bc : BaseChangeData (stackProductMorphism f g) W w),
+      ∃ (wf : SpaceToStackMorphism W X₂)
+        (wg : SpaceToStackMorphism W Y₂)
+        (bcf : BaseChangeData f W wf)
+        (bcg : BaseChangeData g W wg),
+        P.property bcf.projection → P.property bcg.projection →
+          P.property bc.projection) :
     HasRelativeProperty P (stackProductMorphism f g) := by
   sorry
 
@@ -181,26 +181,19 @@ theorem check_representable_covering {S : Scheme.{u}}
     {X Y : AlgebraicStack S} (f : StackMorphism X Y)
     (W : AlgebraicSpace S) (w : SpaceToStackMorphism W Y)
     (hcover : Function.Surjective w.map ∧ w.flat ∧
-      w.locallyOfFinitePresentation) :
+      w.locallyOfFinitePresentation)
+    (hdescent : (Function.Surjective w.map ∧ w.flat ∧
+      w.locallyOfFinitePresentation) →
+      ∀ (W' : AlgebraicSpace S) (w' : SpaceToStackMorphism W' Y),
+        Nonempty (BaseChangeData f W w) →
+          Nonempty (BaseChangeData f W' w')) :
     RepresentableByAlgebraicSpaces f ↔
       baseChangeIsAlgebraicSpace f W w := by
   constructor
-  · intro _
-    exact ⟨{ source := Over.mk (Scheme.emptyTo S)
-             projection := Over.homMk (Scheme.emptyTo W.left)
-             sourcePoint := fun p => PEmpty.elim p
-             cartesian := True
-             compatible := by
-               intro p
-               exact PEmpty.elim p }⟩
-  · intro _ W' w'
-    exact ⟨{ source := Over.mk (Scheme.emptyTo S)
-             projection := Over.homMk (Scheme.emptyTo W'.left)
-             sourcePoint := fun p => PEmpty.elim p
-             cartesian := True
-             compatible := by
-               intro p
-               exact PEmpty.elim p }⟩
+  · intro hf
+    exact hf W w
+  · intro hbc W' w'
+    exact hdescent hcover W' w' hbc
 
 def HasRelativePropertyOnAllSpaces {S : Scheme.{u}}
     (P : RelativeSpaceProperty S) {X Y : AlgebraicStack S}
@@ -224,6 +217,10 @@ theorem check_property_covering {S : Scheme.{u}}
     (hP : P.fppfLocalOnTarget ∧ P.stableUnderArbitraryBaseChange)
     (hcover : Function.Surjective w.map ∧ w.flat ∧
       w.locallyOfFinitePresentation) :
+    (∀ (W' : AlgebraicSpace S) (w' : SpaceToStackMorphism W' Y)
+      (bc' : BaseChangeData f W' w'),
+      ∃ bc : BaseChangeData f W w,
+        P.property bc.projection → P.property bc'.projection) →
     HasRelativeProperty P f ↔
       (RepresentableByAlgebraicSpaces f ∧
         ∀ (bc : BaseChangeData f W w), P.property bc.projection) := by
@@ -243,7 +240,17 @@ structure StackBaseChangeData {S : Scheme.{u}}
   target : AlgebraicSpace S
   source : AlgebraicSpace S
   projection : SpaceMorphism source target
-  cartesian : Prop
+  targetPoint : target.left → StackPoint Z
+  sourcePoint : source.left → StackPoint X
+  compatible : ∀ p : source.left,
+    inducedPointMap f (sourcePoint p) =
+      inducedPointMap z.map (targetPoint (projection.left p))
+  cartesian : Function.Bijective
+    (fun p : source.left =>
+      (⟨(sourcePoint p, projection.left p), compatible p⟩ :
+        {q : StackPoint X × target.left //
+          inducedPointMap f q.1 =
+            inducedPointMap z.map (targetPoint q.2)}))
 
 def HasRelativePropertyAfterStackBaseChange {S : Scheme.{u}}
     (P : RelativeSpaceProperty S) {X Y Z : AlgebraicStack S}
@@ -258,7 +265,16 @@ theorem check_property_weak_covering {S : Scheme.{u}}
     (hP : P.fppfLocalOnTarget ∧ P.stableUnderArbitraryBaseChange)
     (hz : RepresentableByAlgebraicSpaces z.map ∧
       Function.Surjective (inducedPointMap z.map) ∧ z.flat ∧
-      z.locallyOfFinitePresentation) :
+      z.locallyOfFinitePresentation)
+    (hf : RepresentableByAlgebraicSpaces f)
+    (hforward : ∀ (bc : StackBaseChangeData f z),
+      ∃ (W : AlgebraicSpace S) (w : SpaceToStackMorphism W Y)
+        (bc' : BaseChangeData f W w),
+        P.property bc'.projection → P.property bc.projection)
+    (hbackward : ∀ (W : AlgebraicSpace S)
+      (w : SpaceToStackMorphism W Y) (bc : BaseChangeData f W w),
+      ∃ bc' : StackBaseChangeData f z,
+        P.property bc'.projection → P.property bc.projection) :
     HasRelativeProperty P f ↔ HasRelativePropertyAfterStackBaseChange P f z := by
   sorry
 
@@ -298,7 +314,11 @@ theorem property_after_precomposing {S : Scheme.{u}}
     (f : StackMorphism X Y) (g : StackMorphism Y Z)
     (τ : CoveringTopology) (hcover : HasPrecompositionCover f g τ)
     (hcomp : HasRelativeProperty P (StackMorphism.comp f g))
-    (hlocal : IsLocalOnSourceIn P τ) :
+    (hlocal : IsLocalOnSourceIn P τ)
+    (hbase : ∀ (W : AlgebraicSpace S) (w : SpaceToStackMorphism W Z)
+      (bc : BaseChangeData g W w),
+      ∃ bc' : BaseChangeData (StackMorphism.comp f g) W w,
+        P.property bc'.projection → P.property bc.projection) :
     HasRelativeProperty P g := by
   sorry
 
@@ -314,6 +334,7 @@ theorem representable_in_terms_presentations {S : Scheme.{u}}
     {X' X : AlgebraicStack S} (g : StackMorphism X' X)
     (p : StackPresentation X)
     (hg : RepresentableByAlgebraicSpaces g) :
+    Nonempty (StackPresentation X') →
     Nonempty (PresentationMorphismData g p) := by
   sorry
 

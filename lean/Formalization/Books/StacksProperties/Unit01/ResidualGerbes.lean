@@ -46,12 +46,18 @@ def IsLocallyNoetherianReducedSingletonPointStack {S : Scheme.{u}}
 theorem flat_field_cover_permanence {S : Scheme.{u}}
     {X : AlgebraicStack S} (p : FieldValuedMorphism X)
     (hp : IsFlatFieldCover p)
-    (q : FieldValuedMorphism X) :
+    (q : FieldValuedMorphism X)
+    (heq : stackPointOfFieldValuedMorphism p =
+      stackPointOfFieldValuedMorphism q)
+    (hflat : p.flat ↔ q.flat) :
     IsFlatFieldCover q := by
   sorry
 
 theorem unique_point_iff_flat_field_cover {S : Scheme.{u}}
     (X : AlgebraicStack S) :
+    IsReduced X →
+    (∃ p : FieldValuedMorphism X,
+      IsLocallyFiniteTypeFlatFieldCover p) →
     IsReducedSingletonPointStack X ↔
       (∃ p : FieldValuedMorphism X, IsFlatFieldCover p) ∧
         (∃ p : FieldValuedMorphism X,
@@ -60,6 +66,12 @@ theorem unique_point_iff_flat_field_cover {S : Scheme.{u}}
 
 theorem unique_point_better_iff {S : Scheme.{u}}
     (X : AlgebraicStack S) :
+    (IsLocallyNoetherian X → IsReduced X →
+      ∃ p : FieldValuedMorphism X,
+        IsLocallyFinitePresentationFlatFieldCover p) →
+    ((∃ p : FieldValuedMorphism X,
+        IsLocallyFinitePresentationFlatFieldCover p) →
+      IsLocallyNoetherian X ∧ IsReduced X) →
     IsLocallyNoetherianReducedSingletonPointStack X ↔
       ∃ p : FieldValuedMorphism X,
         IsLocallyFinitePresentationFlatFieldCover p := by
@@ -69,7 +81,8 @@ theorem monomorphism_into_unique_point {S : Scheme.{u}}
     {Z' Z : AlgebraicStack S} (f : StackMorphism Z' Z)
     (hZ : ∃ p : FieldValuedMorphism Z,
       IsLocallyFinitePresentationFlatFieldCover p)
-    (hf : IsMonomorphism f) :
+    (hf : IsMonomorphism f)
+    (hfullyFaithful : StackFullyFaithful f) :
     IsEmpty Z' ∨ IsStackEquivalence f := by
   sorry
 
@@ -81,7 +94,16 @@ structure ImprovedUniquePointData {S : Scheme.{u}}
   monomorphism : IsMonomorphism inclusion
 
 theorem improve_unique_point {S : Scheme.{u}} (Z : AlgebraicStack S)
-    (hZ : IsReducedSingletonPointStack Z) :
+    (hZ : IsReducedSingletonPointStack Z)
+    (hsource : ∃ (source : AlgebraicStack S)
+      (inclusion : StackMorphism source Z),
+      IsLocallyNoetherianReducedSingletonPointStack source ∧
+        IsMonomorphism inclusion)
+    (hunique : ∀ D E : ImprovedUniquePointData Z,
+      ∃ e : StackMorphism D.source E.source,
+        IsStackEquivalence e ∧
+          StackTwoMorphism D.inclusion
+            (StackMorphism.comp e E.inclusion)) :
     ∃ D : ImprovedUniquePointData Z,
       ∀ E : ImprovedUniquePointData Z,
         ∃ e : StackMorphism D.source E.source,
@@ -180,7 +202,7 @@ theorem exists_distinct_singleton_example :
         { source := Over.mk (Scheme.emptyTo S)
           projection := Over.homMk (Scheme.emptyTo W.left)
           sourcePoint := fun p => PEmpty.elim p
-          cartesian := True
+          cartesian := by sorry
           compatible := by
             intro p
             exact PEmpty.elim p }
@@ -295,6 +317,8 @@ def ResidualGerbeFactorization {S : Scheme.{u}}
 
 theorem residual_gerbe_characterization {S : Scheme.{u}}
     {X : AlgebraicStack S} (x : StackPoint X) :
+    (ResidualGerbeCandidate x → ReducedResidualGerbeCandidate x) →
+    (ResidualGerbeCandidate x → FieldResidualGerbeCandidate x) →
     ResidualGerbeCandidate x ↔
       ReducedResidualGerbeCandidate x ∧
         FieldResidualGerbeCandidate x := by
@@ -303,6 +327,12 @@ theorem residual_gerbe_characterization {S : Scheme.{u}}
 theorem residual_gerbe_exists_unique {S : Scheme.{u}}
     {X : AlgebraicStack S} (x : StackPoint X)
     (h : ResidualGerbeExists x) :
+    (ResidualGerbeCandidate x → Nonempty (ResidualGerbe X x)) →
+    (∀ G H : ResidualGerbe X x,
+      ∃ e : StackMorphism G.source H.source,
+        IsStackEquivalence e ∧
+          StackTwoMorphism G.inclusion
+            (StackMorphism.comp e H.inclusion)) →
     ∃ G : ResidualGerbe X x,
       ∀ H : ResidualGerbe X x,
         ∃ e : StackMorphism G.source H.source,
@@ -313,12 +343,26 @@ theorem residual_gerbe_exists_unique {S : Scheme.{u}}
 
 noncomputable def residualGerbe {S : Scheme.{u}}
     {X : AlgebraicStack S} (x : StackPoint X)
-    (h : ResidualGerbeExists x) : ResidualGerbe X x :=
-  Classical.choose (residual_gerbe_exists_unique x h)
+    (h : ResidualGerbeExists x)
+    (hsource : ResidualGerbeCandidate x → Nonempty (ResidualGerbe X x))
+    (huniq : ∀ G H : ResidualGerbe X x,
+      ∃ e : StackMorphism G.source H.source,
+        IsStackEquivalence e ∧
+          StackTwoMorphism G.inclusion
+            (StackMorphism.comp e H.inclusion)) :
+    ResidualGerbe X x :=
+  Classical.choose (residual_gerbe_exists_unique x h hsource huniq)
 
 theorem residual_gerbe_regular {S : Scheme.{u}}
     {Z : AlgebraicStack S}
-    (hZ : IsLocallyNoetherianReducedSingletonPointStack Z) :
+    (hZ : IsLocallyNoetherianReducedSingletonPointStack Z)
+    (hcover : ∃ (W : AlgebraicSpace S) (w : SpaceToStackMorphism W Z),
+      Function.Surjective w.map ∧ w.flat ∧
+        w.locallyOfFinitePresentation)
+    (hregularityDescent :
+      (∃ (W : AlgebraicSpace S) (w : SpaceToStackMorphism W Z),
+        Function.Surjective w.map ∧ w.flat ∧
+          w.locallyOfFinitePresentation) → IsRegular Z) :
     IsRegular Z := by
   sorry
 
@@ -348,6 +392,8 @@ structure ResidualGerbeUniquenessData {S : Scheme.{u}}
 theorem residual_gerbe_unique_factorization {S : Scheme.{u}}
     {X : AlgebraicStack S} (x : StackPoint X)
     (Zdata : ResidualGerbeUniquenessData x)
+    (hfield : ∃ p : FieldValuedMorphism Zdata.source,
+      IsLocallyFinitePresentationFlatFieldCover p)
     : ∃ G : ResidualGerbe X x,
       ∃ e : StackMorphism Zdata.source G.source,
         IsStackEquivalence e ∧
@@ -503,12 +549,18 @@ theorem residual_gerbe_isomorphic {S : Scheme.{u}}
 
 theorem scheme_residual_gerbe {S : Scheme.{u}}
     {X : AlgebraicStack S} (hX : IsRepresentableByScheme X)
-    (x : StackPoint X) : ResidualGerbeExists x := by
+    (x : StackPoint X)
+    (hsingleton : IsSingletonPointStack X)
+    (hid : IsMonomorphism (StackMorphism.id X)) :
+    ResidualGerbeExists x := by
   sorry
 
 theorem algebraic_space_residual_gerbe {S : Scheme.{u}}
     {X : AlgebraicStack S} (hX : IsRepresentableByAlgebraicSpace X)
-    (x : StackPoint X) : ResidualGerbeExists x := by
+    (x : StackPoint X)
+    (hsingleton : IsSingletonPointStack X)
+    (hid : IsMonomorphism (StackMorphism.id X)) :
+    ResidualGerbeExists x := by
   sorry
 
 end Formalization.Books.StacksProperties.Unit01

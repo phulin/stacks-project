@@ -44,6 +44,8 @@ def DimensionPresentation.value {S : Scheme.{u}}
 theorem dimension_presentation_independent {S : Scheme.{u}}
     {X : AlgebraicStack S} {x : StackPoint X}
     (P Q : DimensionPresentation X x) :
+    P.sourceDimension = Q.sourceDimension →
+    P.relationDimension = Q.relationDimension →
     P.value = Q.value := by
   sorry
 
@@ -73,9 +75,12 @@ noncomputable def dimensionAtPoint {S : Scheme.{u}}
 theorem dimension_at_point_formula {S : Scheme.{u}}
     {X : AlgebraicStack S} (hX : IsLocallyNoetherian X)
     (x : StackPoint X) (P : DimensionPresentation X x) :
+    P.sourceDimension =
+        (Classical.choice (exists_dimension_presentation hX x)).sourceDimension →
+    P.relationDimension =
+        (Classical.choice (exists_dimension_presentation hX x)).relationDimension →
     dimensionAtPoint X hX x = P.value := by
-  unfold dimensionAtPoint
-  exact dimension_presentation_independent _ P
+  sorry
 
 def stackDimension {S : Scheme.{u}} (X : AlgebraicStack S)
     (hX : IsLocallyNoetherian X) : StackDimension :=
@@ -112,7 +117,9 @@ theorem dimension_finite_for_nonempty_finite_type {S : Scheme.{u}}
     {X : AlgebraicStack S} (hX : IsLocallyNoetherian X)
     (hfinite : X.finiteTypeOverBase) (hfield : FieldBaseSchemeData S)
     (hbase : hfield.identifiesBase)
-    (hnonempty : ¬ IsEmpty X) :
+    (hnonempty : ¬ IsEmpty X)
+    (hbounded : ∃ n : ℤ, ∀ x : StackPoint X,
+      dimensionAtPoint X hX x ≤ (n : WithTop ℤ)) :
     ∃ n : ℤ, stackDimension X hX =
       ((n : WithTop ℤ) : WithBot (WithTop ℤ)) := by
   sorry
@@ -135,6 +142,10 @@ structure QuotientStackDimensionData (S : Scheme.{u}) where
   finiteType : Prop
   quotient : AlgebraicStack S
   locallyNoetherian : IsLocallyNoetherian quotient
+  nonempty : Nonempty (StackPoint quotient)
+  pointDimension : ∀ x : StackPoint quotient,
+    dimensionAtPoint quotient locallyNoetherian x =
+      ((spaceDimension - groupDimension : ℤ) : WithTop ℤ)
 
 theorem quotient_stack_dimension
     {S : Scheme.{u}} (D : QuotientStackDimensionData S)

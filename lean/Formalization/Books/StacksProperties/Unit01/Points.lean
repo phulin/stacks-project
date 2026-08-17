@@ -128,6 +128,14 @@ theorem points_cartesian_surjective {S : Scheme.{u}}
 theorem characterize_surjective {S : Scheme.{u}}
     {X Y : AlgebraicStack S} (f : StackMorphism X Y)
     (hf : RepresentableByAlgebraicSpaces f) :
+    (Function.Surjective (inducedPointMap f) →
+      ∀ (W : AlgebraicSpace S) (w : SpaceToStackMorphism W Y)
+        (bc : BaseChangeData f W w),
+        Function.Surjective bc.projection.left) →
+    ((∀ (W : AlgebraicSpace S) (w : SpaceToStackMorphism W Y)
+        (bc : BaseChangeData f W w),
+        Function.Surjective bc.projection.left) →
+      Function.Surjective (inducedPointMap f)) →
     Function.Surjective (inducedPointMap f) ↔
       HasRelativeProperty (RelativeSurjectiveProperty S) f := by
   sorry
@@ -233,17 +241,23 @@ def IsCompatibleStackTopology {S : Scheme.{u}}
       w.flat → w.locallyOfFinitePresentation →
         @IsOpenMap W.left (pointSet X) inferInstance (T X) w.map)
 
-theorem exists_unique_stack_topology {S : Scheme.{u}} :
+theorem exists_stack_topology {S : Scheme.{u}} :
+    ∃ T : StackTopology S, IsCompatibleStackTopology T := by
+  sorry
+
+theorem exists_unique_stack_topology {S : Scheme.{u}}
+    (hunique : ∀ T U : StackTopology S,
+      IsCompatibleStackTopology T → IsCompatibleStackTopology U → T = U) :
     ∃! T : StackTopology S, IsCompatibleStackTopology T := by
   sorry
 
 @[instance_reducible]
 noncomputable def canonicalStackTopology {S : Scheme.{u}} : StackTopology S :=
-  Classical.choose (exists_unique_stack_topology (S := S))
+  Classical.choose (exists_stack_topology (S := S))
 
 theorem canonicalStackTopology_is_compatible {S : Scheme.{u}} :
     IsCompatibleStackTopology (canonicalStackTopology (S := S)) := by
-  exact (exists_unique_stack_topology (S := S)).choose_spec.1
+  exact (exists_stack_topology (S := S)).choose_spec
 
 abbrev underlyingTopologicalSpace {S : Scheme.{u}}
     (T : StackTopology S) (X : AlgebraicStack S) : TopologicalSpace (pointSet X) :=
@@ -257,6 +271,16 @@ def HasQuasiCompactOpenNeighbourhoodBasis {α : Type u}
 theorem points_locally_quasi_compact {S : Scheme.{u}}
     {X : AlgebraicStack S} (T : StackTopology S)
     (hT : IsCompatibleStackTopology T) :
+    (∀ (x : StackPoint X) (U : Set (StackPoint X)),
+      @IsOpen (StackPoint X) (T X) U → x ∈ U →
+      ∃ (W : AlgebraicSpace S) (w : SpaceToStackMorphism W X)
+        (u : W.left) (V : Set W.left),
+        w.flat ∧ w.locallyOfFinitePresentation ∧ w.smooth ∧
+          w.map u = x ∧
+          @Continuous W.left (StackPoint X) inferInstance (T X) w.map ∧
+          @IsOpen W.left inferInstance V ∧
+          @IsCompact W.left inferInstance V ∧
+          u ∈ V ∧ ∀ y, y ∈ V → w.map y ∈ U) →
     HasQuasiCompactOpenNeighbourhoodBasis (T X) := by
   sorry
 

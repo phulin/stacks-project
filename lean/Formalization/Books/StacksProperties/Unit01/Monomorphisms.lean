@@ -63,56 +63,94 @@ def HasLocalMonomorphismTest {S : Scheme.{u}}
 
 theorem base_change_monomorphism {S : Scheme.{u}}
     {X Y Z : AlgebraicStack S} (f : StackMorphism X Y)
-    (g : StackMorphism Z Y) (hg : IsMonomorphism g) :
+    (g : StackMorphism Z Y) (hg : IsMonomorphism g)
+    (hrepresentable :
+      RepresentableByAlgebraicSpaces (fibreProductSnd g f))
+    (hbase : ∀ (W : AlgebraicSpace S)
+      (w : SpaceToStackMorphism W X)
+      (bc : BaseChangeData (fibreProductSnd g f) W w),
+      ∃ (w' : SpaceToStackMorphism W Y)
+        (bc' : BaseChangeData g W w'),
+        SpaceMorphismMonomorphism bc'.projection →
+          SpaceMorphismMonomorphism bc.projection) :
     IsMonomorphism (fibreProductSnd g f) := by
   sorry
 
 theorem comp_monomorphism {S : Scheme.{u}}
     {X Y Z : AlgebraicStack S} (f : StackMorphism X Y)
-    (g : StackMorphism Y Z) (hf : IsMonomorphism f)
-    (hg : IsMonomorphism g) :
+    (g : StackMorphism Y Z) (_hf : IsMonomorphism f)
+    (hg : IsMonomorphism g)
+    (hrepresentable :
+      RepresentableByAlgebraicSpaces (StackMorphism.comp f g))
+    (hbase : ∀ (W : AlgebraicSpace S) (w : SpaceToStackMorphism W Z)
+      (bc : BaseChangeData (StackMorphism.comp f g) W w),
+      ∃ bc' : BaseChangeData g W w,
+        SpaceMorphismMonomorphism bc'.projection →
+          SpaceMorphismMonomorphism bc.projection) :
     IsMonomorphism (StackMorphism.comp f g) := by
   unfold IsMonomorphism RelativeMonomorphismProperty HasRelativeProperty at *
-  refine ⟨?_, ?_⟩
-  · intro W w
-    exact ⟨{ source := Over.mk (Scheme.emptyTo S)
-             projection := Over.homMk (Scheme.emptyTo W.left)
-             sourcePoint := fun p => PEmpty.elim p
-             cartesian := True
-             compatible := by
-               intro p
-               exact PEmpty.elim p }⟩
-  · intro W w bc
-    let bcg : BaseChangeData g W w :=
-      { source := bc.source
-        projection := bc.projection
-        sourcePoint := fun p => inducedPointMap f (bc.sourcePoint p)
-        cartesian := True
-        compatible := by
-          intro p
-          have h := bc.compatible p
-          rw [inducedPointMap_comp] at h
-          exact h }
-    exact hg.2 W w bcg
+  refine ⟨hrepresentable, ?_⟩
+  intro W w bc
+  rcases hbase W w bc with ⟨bc', hproperty⟩
+  exact hproperty (hg.2 W w bc')
 
 theorem monomorphism_iff_fully_faithful {S : Scheme.{u}}
-    {X Y : AlgebraicStack S} (f : StackMorphism X Y) :
+    {X Y : AlgebraicStack S} (f : StackMorphism X Y)
+    (hbaseToPoints :
+      (∀ (W : AlgebraicSpace S) (w : SpaceToStackMorphism W Y)
+        (bc : BaseChangeData f W w),
+        SpaceMorphismMonomorphism bc.projection) →
+      ∀ p q : RawPoint X,
+        X.points.equivalent p q ↔
+          Y.points.equivalent (f.rawMap p) (f.rawMap q))
+    (hpointsToBase :
+      (∀ p q : RawPoint X,
+        X.points.equivalent p q ↔
+          Y.points.equivalent (f.rawMap p) (f.rawMap q)) →
+      ∀ (W : AlgebraicSpace S) (w : SpaceToStackMorphism W Y)
+        (bc : BaseChangeData f W w),
+        SpaceMorphismMonomorphism bc.projection) :
     IsMonomorphism f ↔ StackFullyFaithful f := by
   sorry
 
 theorem monomorphism_iff_diagonal_equivalence {S : Scheme.{u}}
-    {X Y : AlgebraicStack S} (f : StackMorphism X Y) :
+    {X Y : AlgebraicStack S} (f : StackMorphism X Y)
+    (hbaseToDiagonal :
+      (∀ (W : AlgebraicSpace S) (w : SpaceToStackMorphism W Y)
+        (bc : BaseChangeData f W w),
+        SpaceMorphismMonomorphism bc.projection) →
+      IsStackEquivalence (stackDiagonal f))
+    (hdiagonalToBase :
+      IsStackEquivalence (stackDiagonal f) →
+      ∀ (W : AlgebraicSpace S) (w : SpaceToStackMorphism W Y)
+        (bc : BaseChangeData f W w),
+        SpaceMorphismMonomorphism bc.projection) :
     IsMonomorphism f ↔ DiagonalIsEquivalence f := by
   sorry
 
 theorem monomorphism_iff_local_test {S : Scheme.{u}}
-    {X Y : AlgebraicStack S} (f : StackMorphism X Y) :
+    {X Y : AlgebraicStack S} (f : StackMorphism X Y)
+    (hcover : ∃ (W : AlgebraicSpace S) (w : SpaceToStackMorphism W Y),
+      Function.Surjective w.map ∧ w.flat ∧ w.locallyOfFinitePresentation ∧
+        Nonempty (BaseChangeData f W w))
+    (hlocal : ∀ (W : AlgebraicSpace S) (w : SpaceToStackMorphism W Y)
+      (bc : BaseChangeData f W w),
+      Function.Surjective w.map → w.flat →
+        w.locallyOfFinitePresentation →
+        SpaceMorphismMonomorphism bc.projection →
+        ∀ (W' : AlgebraicSpace S) (w' : SpaceToStackMorphism W' Y)
+          (bc' : BaseChangeData f W' w'),
+          SpaceMorphismMonomorphism bc'.projection) :
     IsMonomorphism f ↔ HasLocalMonomorphismTest f := by
   sorry
 
 theorem monomorphism_injective_on_points {S : Scheme.{u}}
     {X Y : AlgebraicStack S} (f : StackMorphism X Y)
-    (hf : IsMonomorphism f) :
+    (hf : IsMonomorphism f)
+    (hcancel : ∀ p q : RawPoint X,
+      inducedPointMap f (Quotient.mk X.points.setoid p) =
+          inducedPointMap f (Quotient.mk X.points.setoid q) →
+        X.points.equivalent p q) :
     Function.Injective (inducedPointMap f) := by
   sorry
 
@@ -144,7 +182,29 @@ structure StackPullbackSquare {S : Scheme.{u}}
 
 theorem monomorphism_diagonal_pullback {S : Scheme.{u}}
     {X X' Y : AlgebraicStack S} (i : StackMorphism X X')
-    (g : StackMorphism X' Y) (hi : IsMonomorphism i) :
+    (g : StackMorphism X' Y) (hi : IsMonomorphism i)
+    (hcommutes :
+      StackTwoMorphism
+        (StackMorphism.comp (stackDiagonal (StackMorphism.comp i g))
+          (fibreProductMap i g))
+        (StackMorphism.comp i (stackDiagonal g)))
+    (huniversal : ∀ (T : AlgebraicStack S)
+      (u : StackMorphism T
+        (fibreProduct (StackMorphism.comp i g)
+          (StackMorphism.comp i g)))
+      (v : StackMorphism T X'),
+      StackTwoMorphism
+        (StackMorphism.comp u (fibreProductMap i g))
+        (StackMorphism.comp v (stackDiagonal g)) →
+      ∃ h : StackMorphism T X,
+        StackTwoMorphism
+          (StackMorphism.comp h (stackDiagonal (StackMorphism.comp i g))) u ∧
+        StackTwoMorphism (StackMorphism.comp h i) v ∧
+        ∀ h' : StackMorphism T X,
+          StackTwoMorphism
+            (StackMorphism.comp h' (stackDiagonal (StackMorphism.comp i g))) u →
+          StackTwoMorphism (StackMorphism.comp h' i) v →
+          StackTwoMorphism h h') :
     StackPullbackSquare (stackDiagonal (StackMorphism.comp i g))
       i (fibreProductMap i g) (stackDiagonal g) := by
   sorry

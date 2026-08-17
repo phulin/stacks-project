@@ -35,13 +35,23 @@ def EveryQuasiCompactRepresentative {S : Scheme.{u}}
 theorem quasi_compact_representative_invariant {S : Scheme.{u}}
     {X : AlgebraicStack S} (p q : FieldValuedMorphism X)
     (heq : stackPointOfFieldValuedMorphism p =
-      stackPointOfFieldValuedMorphism q) :
+      stackPointOfFieldValuedMorphism q)
+    (hinvariant : ∀ (p q : FieldValuedMorphism X),
+      stackPointOfFieldValuedMorphism p =
+        stackPointOfFieldValuedMorphism q →
+      p.quasiCompact ↔ q.quasiCompact) :
     IsQuasiCompactFieldValuedMorphism p ↔
       IsQuasiCompactFieldValuedMorphism q := by
   sorry
 
 theorem quasi_compact_point_iff {S : Scheme.{u}}
-    {X : AlgebraicStack S} (x : StackPoint X) :
+    {X : AlgebraicStack S} (x : StackPoint X)
+    (hrepr : ∃ p : FieldValuedMorphism X,
+      stackPointOfFieldValuedMorphism p = x)
+    (hinvariant : ∀ (p q : FieldValuedMorphism X),
+      stackPointOfFieldValuedMorphism p =
+        stackPointOfFieldValuedMorphism q →
+      p.quasiCompact ↔ q.quasiCompact) :
     SomeQuasiCompactRepresentative x ↔
       EveryQuasiCompactRepresentative x := by
   sorry

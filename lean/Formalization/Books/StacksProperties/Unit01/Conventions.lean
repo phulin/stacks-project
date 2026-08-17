@@ -273,9 +273,13 @@ structure BaseChangeData {S : Scheme.{u}}
   source : AlgebraicSpace S
   projection : SpaceMorphism source W
   sourcePoint : source.left → StackPoint X
-  cartesian : Prop
   compatible : ∀ p : source.left,
     inducedPointMap f (sourcePoint p) = w.map (projection.left p)
+  cartesian : Function.Bijective
+    (fun p : source.left =>
+      (⟨(sourcePoint p, projection.left p), compatible p⟩ :
+        {q : StackPoint X × W.left //
+          inducedPointMap f q.1 = w.map q.2}))
 
 def RepresentableByAlgebraicSpaces {S : Scheme.{u}}
     {X Y : AlgebraicStack S} (f : StackMorphism X Y) : Prop :=

@@ -92,7 +92,7 @@ def pointwiseDirectSum
     (F G : I ⥤ A) : I ⥤ A := by
   letI : HasBinaryBiproducts A :=
     hasBinaryBiproducts_of_finite_biproducts (C := A)
-  exact (pointwiseBinaryBicone F G).pt
+  exact (pointwiseBinaryBiproductData F G).bicone.pt
 
 /-- A colimit of a pointwise binary biproduct exists exactly when the two
 component colimits exist. -/

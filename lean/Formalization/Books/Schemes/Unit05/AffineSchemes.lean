@@ -31,6 +31,14 @@ abbrev spectrumTop (R : Type u) [CommRing R] : TopCat.{u} := PrimeSpectrum.Top R
 abbrev standardOpen {R : Type u} [CommRing R] (f : R) :
     Opens (spectrumTop R) := PrimeSpectrum.basicOpen f
 
+theorem standardOpen_is_open (R : Type u) [CommRing R] (f : R) :
+    IsOpen (standardOpen f : Set (spectrumTop R)) :=
+  PrimeSpectrum.isOpen_basicOpen
+
+theorem standardOpen_is_compact (R : Type u) [CommRing R] (f : R) :
+    IsCompact (standardOpen f : Set (spectrumTop R)) :=
+  PrimeSpectrum.isCompact_basicOpen f
+
 theorem standardOpen_is_basis (R : Type u) [CommRing R] :
     IsTopologicalBasis
       (Set.range fun f : R => (standardOpen f : Set (spectrumTop R))) :=
@@ -49,6 +57,11 @@ theorem standardOpen_mul_le_right {R : Type u} [CommRing R] (f g : R) :
     standardOpen (f * g) ≤ standardOpen g := by
   rw [standardOpen_inter]
   exact inf_le_right
+
+theorem standardOpen_mul_eq_right_of_subset {R : Type u} [CommRing R] (f g : R)
+    (h : standardOpen g ≤ standardOpen f) :
+    standardOpen (f * g) = standardOpen g := by
+  rw [standardOpen_inter, inf_eq_right.mpr h]
 
 /-! ## Standard-open localization maps -/
 
@@ -246,17 +259,36 @@ abbrev standardOpenRingSections (R : Type u) [CommRing R] (f : R) : Type u :=
 independence-of-presentation assertion: if `D(f) = D(g)`, either element may
 be used to present the same standard-open section object. -/
 
+noncomputable def standardOpenModuleSectionsEquiv {R M : Type u}
+    [CommRing R] [AddCommGroup M] [Module R M] (f g : R)
+    (h : standardOpen f = standardOpen g) :
+    standardOpenModuleSections R M f ≃ₗ[R] standardOpenModuleSections R M g :=
+  LinearEquiv.ofLinear
+    (standardOpenModuleLocalizationMap f g h.ge)
+    (standardOpenModuleLocalizationMap g f h.le)
+    (standardOpenModuleLocalizationMap_inverse_of_open_eq f g h).2
+    (standardOpenModuleLocalizationMap_inverse_of_open_eq f g h).1
+
+noncomputable def standardOpenRingSectionsEquiv {R : Type u} [CommRing R]
+    (f g : R) (h : standardOpen f = standardOpen g) :
+    standardOpenRingSections R f ≃+* standardOpenRingSections R g :=
+  RingEquiv.ofRingHom
+    (standardOpenLocalizationMap f g h.ge)
+    (standardOpenLocalizationMap g f h.le)
+    (standardOpenLocalizationMap_inverse_of_open_eq f g h).2
+    (standardOpenLocalizationMap_inverse_of_open_eq f g h).1
+
 theorem standardOpenModuleSections_independent_of_eq {R M : Type u}
     [CommRing R] [AddCommGroup M] [Module R M] (f g : R)
     (h : standardOpen f = standardOpen g) :
     Nonempty (standardOpenModuleSections R M f ≃ₗ[R]
       standardOpenModuleSections R M g) := by
-  sorry
+  exact ⟨standardOpenModuleSectionsEquiv f g h⟩
 
 theorem standardOpenRingSections_independent_of_eq {R : Type u} [CommRing R]
     (f g : R) (h : standardOpen f = standardOpen g) :
     Nonempty (standardOpenRingSections R f ≃+* standardOpenRingSections R g) := by
-  sorry
+  exact ⟨standardOpenRingSectionsEquiv f g h⟩
 
 /-- The canonical structure sheaf on `Spec(R)`. -/
 abbrev affineStructureSheaf (R : Type u) [CommRing R] :
@@ -320,6 +352,22 @@ noncomputable def associatedModuleToStandardOpenSections (R M : Type u)
   AlgebraicGeometry.tilde.toOpen (R := CommRingCat.of R) (ModuleCat.of R M)
     (PrimeSpectrum.basicOpen f)
 
+/-- The associated module sheaf has localized sections on a standard open. -/
+noncomputable def associatedModuleLocalizationToStandardOpenSections (R M : Type u)
+    [CommRing R] [AddCommGroup M] [Module R M] (f : R) :
+    LocalizedModule.Away f M ≃ₗ[R]
+      (associatedModuleUnderlyingSheaf R M).presheaf.obj
+        (op (PrimeSpectrum.basicOpen (R := R) f)) :=
+  letI : IsLocalizedModule (Submonoid.powers f)
+      (AlgebraicGeometry.tilde.toOpen (R := CommRingCat.of R) (ModuleCat.of R M)
+        (PrimeSpectrum.basicOpen f)).hom :=
+    AlgebraicGeometry.tilde.instAwayCarrierCarrierObjOppositeOpensCarrierCarrierCommRingCatSpecModuleCatPresheafModulesSheafModulesSpecToSheafOpBasicOpenHomToOpen
+      (R := CommRingCat.of R) (ModuleCat.of R M) f
+  IsLocalizedModule.linearEquiv (Submonoid.powers f)
+    (LocalizedModule.mkLinearMap (Submonoid.powers f) M)
+    (AlgebraicGeometry.tilde.toOpen (R := CommRingCat.of R) (ModuleCat.of R M)
+      (PrimeSpectrum.basicOpen f)).hom
+
 /-- The associated module sheaf has localized sections on every standard open.
 The displayed target is the categorical sheaf packaging of the source's
 basis-presheaf section object. -/
@@ -328,7 +376,7 @@ theorem exists_associatedModuleStandardOpenSectionsIso {R M : Type u}
     Nonempty (LocalizedModule.Away f M ≃ₗ[R]
       (associatedModuleUnderlyingSheaf R M).presheaf.obj
         (op (PrimeSpectrum.basicOpen (R := R) f))) := by
-  sorry
+  exact ⟨associatedModuleLocalizationToStandardOpenSections R M f⟩
 
 /-! ## Stalks, sections, and the sheaf condition -/
 
@@ -487,8 +535,9 @@ abbrev associatedModuleFunctor (R : Type u) [CommRing R] :
   AlgebraicGeometry.tilde.functor (CommRingCat.of R)
 
 instance associatedModuleFunctor_preservesZeroMorphisms {R : Type u} [CommRing R] :
-    (associatedModuleFunctor R).PreservesZeroMorphisms := by
-  sorry
+    (associatedModuleFunctor R).PreservesZeroMorphisms where
+  map_zero X Y := by
+    exact AlgebraicGeometry.tilde.map_zero
 
 /-- Associated module sheaves preserve exact short complexes. -/
 theorem associatedModuleFunctor_exact {R : Type u} [CommRing R]

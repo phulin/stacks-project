@@ -29,6 +29,34 @@ universe v u
 
 attribute [local instance] CategoryTheory.Abelian.hasFiniteBiproducts
 
+/-! ## Faithfulness and reflection of the normalized functor -/
+
+theorem normalizedChainComplexFunctor_faithful
+    {C : Type u} [Category.{v} C] [Abelian C] :
+    (normalizedChainComplexFunctor C).Faithful := by
+  sorry
+
+theorem normalizedChainComplexFunctor_reflects_monomorphism
+    {C : Type u} [Category.{v} C] [Abelian C]
+    {U V : SimplicialObject C} (f : U ⟶ V)
+    (hf : Mono ((normalizedChainComplexFunctor C).map f)) :
+    Mono f := by
+  sorry
+
+theorem normalizedChainComplexFunctor_reflects_epimorphism
+    {C : Type u} [Category.{v} C] [Abelian C]
+    {U V : SimplicialObject C} (f : U ⟶ V)
+    (hf : Epi ((normalizedChainComplexFunctor C).map f)) :
+    Epi f := by
+  sorry
+
+theorem normalizedChainComplexFunctor_reflects_isomorphism
+    {C : Type u} [Category.{v} C] [Abelian C]
+    {U V : SimplicialObject C} (f : U ⟶ V)
+    (hf : IsIso ((normalizedChainComplexFunctor C).map f)) :
+    IsIso f := by
+  sorry
+
 /-! ## The abstract quasi-inverse criterion -/
 
 theorem exact_faithful_essentially_surjective_quasi_inverse
@@ -176,6 +204,14 @@ noncomputable def doldKanDegenerateDegree
     {C : Type u} [Category.{v} C] [Abelian C]
     (A : ChainComplex C ℕ) (n : ℕ) : C :=
   ∐ fun a : DoldKanDegenerateIndex n => A.X a.1.1.1
+
+/-- The inclusion of the source's degenerate summands into the full degree. -/
+noncomputable def doldKanDegenerateInclusion
+    {C : Type u} [Category.{v} C] [Abelian C]
+    (A : ChainComplex C ℕ) (n : ℕ) :
+    doldKanDegenerateDegree A n ⟶ doldKanDegree A ⦋n⦌ :=
+  Sigma.desc (fun a =>
+    Sigma.ι (fun b : DoldKanIndex ⦋n⦌ => A.X b.1.1) a.1)
 
 noncomputable def doldKanIdentitySummand
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -335,6 +371,12 @@ def doldKanExtension
     ext X
     exact doldKanChainMap_comp f g X.unop
 
+theorem doldKanExtension_exact
+    {C : Type u} [Category.{v} C] [Abelian C] :
+    exactFunctor (ChainComplex C ℕ) (SimplicialObject C)
+      (doldKanExtension C) := by
+  sorry
+
 @[simp]
 theorem doldKanExtension_obj
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -343,32 +385,6 @@ theorem doldKanExtension_obj
   rfl
 
 /-! ## The normalization functor and the Dold--Kan equivalence -/
-
-theorem normalizedChainComplexFunctor_faithful
-    {C : Type u} [Category.{v} C] [Abelian C] :
-    (normalizedChainComplexFunctor C).Faithful := by
-  sorry
-
-theorem normalizedChainComplexFunctor_reflects_monomorphism
-    {C : Type u} [Category.{v} C] [Abelian C]
-    {U V : SimplicialObject C} (f : U ⟶ V)
-    (hf : Mono ((normalizedChainComplexFunctor C).map f)) :
-    Mono f := by
-  sorry
-
-theorem normalizedChainComplexFunctor_reflects_epimorphism
-    {C : Type u} [Category.{v} C] [Abelian C]
-    {U V : SimplicialObject C} (f : U ⟶ V)
-    (hf : Epi ((normalizedChainComplexFunctor C).map f)) :
-    Epi f := by
-  sorry
-
-theorem normalizedChainComplexFunctor_reflects_isomorphism
-    {C : Type u} [Category.{v} C] [Abelian C]
-    {U V : SimplicialObject C} (f : U ⟶ V)
-    (hf : IsIso ((normalizedChainComplexFunctor C).map f)) :
-    IsIso f := by
-  sorry
 
 theorem doldKan_normalization_is_equivalence
     {C : Type u} [Category.{v} C] [Abelian C] :
@@ -391,5 +407,13 @@ theorem normalization_doldKan_extension_iso_exists
     Nonempty (normalizedChainComplexFunctor C ⋙ doldKanExtension C ≅
       𝟭 (SimplicialObject C)) := by
   sorry
+
+/-- A categorical equivalence realizing the Dold--Kan theorem. -/
+noncomputable def doldKanEquivalence
+    (C : Type u) [Category.{v} C] [Abelian C] :
+    SimplicialObject C ≌ ChainComplex C ℕ := by
+  letI : (normalizedChainComplexFunctor C).IsEquivalence :=
+    doldKan_normalization_is_equivalence
+  exact (normalizedChainComplexFunctor C).asEquivalence
 
 end Formalization.Books.Simplicial.Unit24

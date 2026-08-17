@@ -218,6 +218,18 @@ noncomputable def normalizedCochainBoundary
         (normalizedCochainRawBoundary U (n + 1))
         (normalizedCochainRawBoundary_condition U n)
 
+theorem normalizedCochainBoundary_projection
+    {C : Type u} [Category.{v} C] [Abelian C]
+    (U : CosimplicialObject C) (n : ℕ) :
+    normalizedCochainProjection U n ≫ normalizedCochainBoundary U n =
+      normalizedCochainRawBoundary U n := by
+  cases n with
+  | zero =>
+      exact Category.id_comp _
+  | succ n =>
+      simp [normalizedCochainProjection, normalizedCochainBoundary,
+        normalizedCochainRawBoundary]
+
 theorem normalizedCochainBoundary_comp
     {C : Type u} [Category.{v} C] [Abelian C]
     (U : CosimplicialObject C) (n : ℕ) :
@@ -372,5 +384,13 @@ theorem normalizedCochainFunctor_is_equivalence
     {C : Type u} [Category.{v} C] [Abelian C] :
     (normalizedCochainFunctor C).IsEquivalence := by
   sorry
+
+/-- A categorical equivalence realizing the cosimplicial Dold--Kan theorem. -/
+noncomputable def dualDoldKanEquivalence
+    (C : Type u) [Category.{v} C] [Abelian C] :
+    CosimplicialObject C ≌ CochainComplex C ℕ := by
+  letI : (normalizedCochainFunctor C).IsEquivalence :=
+    normalizedCochainFunctor_is_equivalence
+  exact (normalizedCochainFunctor C).asEquivalence
 
 end Formalization.Books.Simplicial.Unit24

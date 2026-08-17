@@ -24,22 +24,10 @@ universe v u
 `f : X ⟶ Y` and `g : Z ⟶ Y`: its `CommSq` field is the displayed commuting
 square, while `IsPullback.lift`, `lift_fst`, `lift_snd`, and `hom_ext` give the
 existence, projection equations, and uniqueness in the universal property.
-The following abbreviations only expose the source terminology; they reduce
-definitionally to Mathlib's canonical API.
+The source's fibre-product, Cartesian-square, and “has fibre products”
+definitions therefore use Mathlib's canonical `IsPullback` and `HasPullbacks`
+interfaces directly.
 -/
-
-abbrev IsFibreProduct {C : Type u} [Category.{v} C]
-    {P X Y Z : C} (p : P ⟶ X) (q : P ⟶ Z)
-    (f : X ⟶ Y) (g : Z ⟶ Y) : Prop :=
-  IsPullback p q f g
-
-abbrev IsCartesianSquare {C : Type u} [Category.{v} C]
-    {P X Y Z : C} (p : P ⟶ X) (q : P ⟶ Z)
-    (f : X ⟶ Y) (g : Z ⟶ Y) : Prop :=
-  IsFibreProduct p q f g
-
-abbrev HasFibreProducts (C : Type u) [Category.{v} C] : Prop :=
-  HasPullbacks C
 
 /-! ## Uniqueness -/
 
@@ -50,7 +38,7 @@ theorem fibre_product_unique_up_to_unique_iso
     {C : Type u} [Category.{v} C]
     {X Y Z P P' : C} {f : X ⟶ Y} {g : Z ⟶ Y}
     {p : P ⟶ X} {q : P ⟶ Z} {p' : P' ⟶ X} {q' : P' ⟶ Z}
-    (h : IsFibreProduct p q f g) (h' : IsFibreProduct p' q' f g) :
+    (h : IsPullback p q f g) (h' : IsPullback p' q' f g) :
     ∃! e : P ≅ P', e.hom ≫ p' = p ∧ e.hom ≫ q' = q := by
   refine ⟨h.isoIsPullback _ _ h', ?_, ?_⟩
   · exact ⟨h.isoIsPullback_hom_fst _ _ h', h.isoIsPullback_hom_snd _ _ h'⟩
@@ -70,20 +58,12 @@ needed.
 
 /-! ## Representable morphisms -/
 
-/-- A morphism is representable when all pullbacks along it exist.
-
-This is Mathlib's `HasPullbacksAlong`, with the source-facing name used for
-the notion in this chapter. -/
-abbrev RepresentableMorphism {C : Type u} [Category.{v} C]
-    {X Y : C} (f : X ⟶ Y) : Prop :=
-  HasPullbacksAlong f
-
 /-- A representable morphism has a pullback with every morphism into its
 codomain, in the orientation used by `pullback f g`. -/
 theorem has_pullback_of_representable
     {C : Type u} [Category.{v} C]
     {X Y Z : C} (f : X ⟶ Y) (g : Z ⟶ Y)
-    (hf : RepresentableMorphism f) :
+    (hf : HasPullbacksAlong f) :
     HasPullback f g := by
   exact @hasPullback_symmetry_of_hasPullbacksAlong C _ Y X Z f hf g
 
@@ -93,13 +73,13 @@ theorem has_pullback_of_representable
 
 The source proof constructs the pullback of a morphism into the final target
 by pasting the pullback along `g` with the pullback along `f`; Mathlib's
-`IsPullback.paste_vert` and the pullback universal-property API provide the
+`IsPullback.paste_horiz` and the pullback universal-property API provide the
 corresponding route. -/
 theorem representable_comp
     {C : Type u} [Category.{v} C]
     {X Y Z : C} (f : X ⟶ Y) (g : Y ⟶ Z)
-    (hf : RepresentableMorphism f) (hg : RepresentableMorphism g) :
-    RepresentableMorphism (f ≫ g) := by
+    (hf : HasPullbacksAlong f) (hg : HasPullbacksAlong g) :
+    HasPullbacksAlong (f ≫ g) := by
   sorry
 
 /-- Base change preserves representability.  The statement is phrased for an
@@ -108,10 +88,10 @@ of the fibre-product object by definitional equality. -/
 theorem representable_base_change
     {C : Type u} [Category.{v} C]
     {X Y Y' P : C} (f : X ⟶ Y) (g : Y' ⟶ Y)
-    (hf : RepresentableMorphism f)
+    (hf : HasPullbacksAlong f)
     {p : P ⟶ X} {q : P ⟶ Y'}
-    (h : IsFibreProduct p q f g) :
-    RepresentableMorphism q := by
+    (h : IsPullback p q f g) :
+    HasPullbacksAlong q := by
   sorry
 
 /-- In particular, a representable morphism admits a representable base
@@ -119,11 +99,11 @@ change for every morphism into its codomain. -/
 theorem exists_representable_base_change
     {C : Type u} [Category.{v} C]
     {X Y Y' : C} (f : X ⟶ Y) (g : Y' ⟶ Y)
-    (hf : RepresentableMorphism f) :
+    (hf : HasPullbacksAlong f) :
     ∃ (P : C) (p : P ⟶ X) (q : P ⟶ Y'),
-      IsFibreProduct p q f g ∧ RepresentableMorphism q := by
+      IsPullback p q f g ∧ HasPullbacksAlong q := by
   let hfg : HasPullback f g := has_pullback_of_representable f g hf
-  let h : IsFibreProduct
+  let h : IsPullback
       (@pullback.fst C _ X Y' Y f g hfg)
       (@pullback.snd C _ X Y' Y f g hfg) f g :=
     @IsPullback.of_hasPullback C _ X Y' Y f g hfg

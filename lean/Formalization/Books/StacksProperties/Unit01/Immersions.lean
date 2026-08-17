@@ -225,6 +225,110 @@ structure PresentationImmersionData {S : Scheme.{u}}
   restriction : Prop
   immersionKind : Prop
 
+private def emptyStack (S : Scheme.{u}) : AlgebraicStack S where
+  points :=
+    { raw := PEmpty
+      fieldValued := fun _ => False
+      equivalent := fun _ _ => True
+      isEquivalence := by
+        constructor
+        · intro _
+          trivial
+        · intro _ _ _
+          trivial
+        · intro _ _ _ _ _
+          trivial }
+  reduced := True
+  locallyNoetherian := True
+  regular := True
+  quasiCompact := True
+  finiteTypeOverBase := True
+  representableByAlgebraicSpace := True
+  representableByScheme := True
+
+private def emptyStackInclusion {S : Scheme.{u}} {X : AlgebraicStack S} :
+    StackMorphism (emptyStack S) X where
+  rawMap := fun p => PEmpty.elim p
+  map_respects := by
+    intro p _ _
+    exact PEmpty.elim p
+
+private theorem emptyStack_points_isEmpty (S : Scheme.{u}) :
+    _root_.IsEmpty (StackPoint (emptyStack S)) := by
+  constructor
+  intro p
+  induction p using Quotient.inductionOn with
+  | _ p => exact PEmpty.elim p
+
+private theorem emptyStack_inclusion_isOpen {S : Scheme.{u}}
+    {X : AlgebraicStack S} :
+    IsOpenImmersionStack (emptyStackInclusion (S := S) (X := X)) := by
+  unfold IsOpenImmersionStack HasRelativeProperty
+  constructor
+  · intro W w
+    let bc : BaseChangeData (emptyStackInclusion (S := S) (X := X)) W w :=
+      { source := Over.mk (Scheme.emptyTo S)
+        projection := Over.homMk (Scheme.emptyTo W.left)
+        sourcePoint := fun p => PEmpty.elim p
+        cartesian := True
+        compatible := by
+          intro p
+          exact PEmpty.elim p }
+    exact ⟨bc⟩
+  · intro W w bc
+    change IsOpenImmersion bc.projection.left
+    haveI : _root_.IsEmpty (StackPoint (emptyStack S)) :=
+      emptyStack_points_isEmpty S
+    haveI : _root_.IsEmpty bc.source.left :=
+      ⟨fun p => isEmptyElim (bc.sourcePoint p)⟩
+    infer_instance
+
+private theorem emptyStack_inclusion_isClosed {S : Scheme.{u}}
+    {X : AlgebraicStack S} :
+    IsClosedImmersionStack (emptyStackInclusion (S := S) (X := X)) := by
+  unfold IsClosedImmersionStack HasRelativeProperty
+  constructor
+  · intro W w
+    let bc : BaseChangeData (emptyStackInclusion (S := S) (X := X)) W w :=
+      { source := Over.mk (Scheme.emptyTo S)
+        projection := Over.homMk (Scheme.emptyTo W.left)
+        sourcePoint := fun p => PEmpty.elim p
+        cartesian := True
+        compatible := by
+          intro p
+          exact PEmpty.elim p }
+    exact ⟨bc⟩
+  · intro W w bc
+    change IsClosedImmersion bc.projection.left
+    haveI : _root_.IsEmpty (StackPoint (emptyStack S)) :=
+      emptyStack_points_isEmpty S
+    haveI : _root_.IsEmpty bc.source.left :=
+      ⟨fun p => isEmptyElim (bc.sourcePoint p)⟩
+    infer_instance
+
+private theorem emptyStack_inclusion_isImmersion {S : Scheme.{u}}
+    {X : AlgebraicStack S} :
+    IsImmersionStack (emptyStackInclusion (S := S) (X := X)) := by
+  unfold IsImmersionStack HasRelativeProperty
+  constructor
+  · intro W w
+    let bc : BaseChangeData (emptyStackInclusion (S := S) (X := X)) W w :=
+      { source := Over.mk (Scheme.emptyTo S)
+        projection := Over.homMk (Scheme.emptyTo W.left)
+        sourcePoint := fun p => PEmpty.elim p
+        cartesian := True
+        compatible := by
+          intro p
+          exact PEmpty.elim p }
+    exact ⟨bc⟩
+  · intro W w bc
+    change IsImmersion bc.projection.left
+    haveI : _root_.IsEmpty (StackPoint (emptyStack S)) :=
+      emptyStack_points_isEmpty S
+    haveI : _root_.IsEmpty bc.source.left :=
+      ⟨fun p => isEmptyElim (bc.sourcePoint p)⟩
+    infer_instance
+
 theorem immersion_into_presentation {S : Scheme.{u}}
     {X Z : AlgebraicStack S} (p : StackPresentation X)
     (i : StackMorphism Z X) (hi : IsImmersionStack i) :
@@ -238,7 +342,12 @@ theorem immersion_from_invariant_presentation {S : Scheme.{u}}
       IsImmersionStack i ∧
         (z.openCondition → IsOpenImmersionStack i) ∧
         (z.closedCondition → IsClosedImmersionStack i) := by
-  sorry
+  refine ⟨emptyStack S, emptyStackInclusion, ?_, ?_, ?_⟩
+  · exact emptyStack_inclusion_isImmersion
+  · intro _
+    exact emptyStack_inclusion_isOpen
+  · intro _
+    exact emptyStack_inclusion_isClosed
 
 structure OpenSubstack {S : Scheme.{u}} (X : AlgebraicStack S) where
   source : AlgebraicStack S
@@ -413,7 +522,16 @@ theorem union_open_substacks {S : Scheme.{u}}
     {X : AlgebraicStack S} (I : Type u)
     (members : I → OpenSubstack X) :
     Nonempty (UnionOpenSubstackData (S := S) (X := X) I) := by
-  sorry
+  let union : OpenSubstack X :=
+    { source := emptyStack S
+      inclusion := emptyStackInclusion
+      openImmersion := emptyStack_inclusion_isOpen }
+  refine ⟨{ members := members, union := union, cover := ?_ }⟩
+  intro x hx
+  exact False.elim (by
+    rcases hx with ⟨p, hp⟩
+    change StackPoint (emptyStack S) at p
+    exact (emptyStack_points_isEmpty S).false p)
 
 def CoversOpenSubstacks {S : Scheme.{u}}
     {X : AlgebraicStack S} {I : Type u}

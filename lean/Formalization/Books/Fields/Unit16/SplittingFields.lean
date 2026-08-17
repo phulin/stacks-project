@@ -30,20 +30,20 @@ universe u v w
    equivalence among splitting fields.  The normality assertion is the
    existing `Polynomial.SplittingField.instNormal` instance. -/
 theorem splitting_field_spec
-    {F : Type u} [Field F] {P : F[X]} (hP : P.natDegree ≠ 0) :
+    {F : Type u} [Field F] {P : F[X]} (_hP : P.natDegree ≠ 0) :
     P.IsSplittingField F P.SplittingField ∧
       Normal F P.SplittingField ∧
         (∀ {L : Type v} [Field L] [Algebra F L],
           (P.map (algebraMap F L)).Splits →
             Nonempty (P.SplittingField →ₐ[F] L)) ∧
           (∀ {L : Type v} [Field L] [Algebra F L]
-              [hL : P.IsSplittingField F L],
+              [_hL : P.IsSplittingField F L],
             Nonempty (L ≃ₐ[F] P.SplittingField)) := by
   refine ⟨inferInstance, inferInstance, ?_, ?_⟩
   · intro L _ _ hL
     exact ⟨SplittingField.lift P hL⟩
-  · intro L _ _ _
-    exact ⟨IsSplittingField.algEquiv L P⟩
+  · intro L _ _ hL
+    exact ⟨IsSplittingField.algEquiv L P (h := hL)⟩
 
 /- The source's definition introduces no new object: the canonical object
    `P.SplittingField`, together with the predicate above, is the Mathlib
@@ -67,10 +67,10 @@ theorem normal_closure_spec
             (∀ K' : IntermediateField F L,
               K ≤ K' ↔ ∀ φ : E →ₐ[F] L, φ.fieldRange ≤ K') ∧
             (∀ {T : Type*} [Field T] [Algebra F T] [Algebra E T]
-                [IsScalarTower F E T] [hT : IsNormalClosure F E T],
+                [IsScalarTower F E T] [_hT : IsNormalClosure F E T],
               Nonempty (T ≃ₐ[E] K)) := by
   dsimp only
-  letI : Nonempty (E →ₐ[F] L) := ⟨IsScalarTower.toAlgHom F E L⟩
+  let hEL : Nonempty (E →ₐ[F] L) := ⟨IsScalarTower.toAlgHom F E L⟩
   refine ⟨inferInstance, inferInstance, ?_, inferInstance, ?_, ?_⟩
   · exact Module.Finite.right F E (IntermediateField.normalClosure F E L)
   · intro K'
@@ -81,7 +81,7 @@ theorem normal_closure_spec
       IsScalarTower.toAlgHom F E (IntermediateField.normalClosure F E L)
     let g : T ≃ₐ[F] IntermediateField.normalClosure F E L :=
       IsNormalClosure.equiv (F := F) (K := E) (L := T)
-        (L' := IntermediateField.normalClosure F E L)
+        (L' := IntermediateField.normalClosure F E L) (h := hT)
     let u : E →ₐ[F] IntermediateField.normalClosure F E L := g.toAlgHom.comp iT
     let η : u.fieldRange ≃ₐ[F] iK.fieldRange :=
       u.equivFieldRange.symm.trans iK.equivFieldRange
@@ -127,14 +127,13 @@ theorem exists_normal_closure_of_finite_extension
       let K := IntermediateField.normalClosure F E (AlgebraicClosure F)
       Nonempty (E →ₐ[F] K) ∧
         Normal F K ∧ FiniteDimensional E K ∧ IsNormalClosure F E K := by
-  letI : Algebra.IsAlgebraic F E := Algebra.IsAlgebraic.of_finite F E
   let ι : E →ₐ[F] AlgebraicClosure F := IsAlgClosed.lift
   refine ⟨ι, ?_⟩
-  letI : Algebra E (AlgebraicClosure F) := ι.toRingHom.toAlgebra
-  letI : IsScalarTower F E (AlgebraicClosure F) :=
+  let hAlg : Algebra E (AlgebraicClosure F) := ι.toRingHom.toAlgebra
+  let hTower : IsScalarTower F E (AlgebraicClosure F) :=
     IsScalarTower.of_algebraMap_eq fun x => (ι.commutes x).symm
   let K := IntermediateField.normalClosure F E (AlgebraicClosure F)
-  letI : Nonempty (E →ₐ[F] AlgebraicClosure F) := ⟨ι⟩
+  let hι : Nonempty (E →ₐ[F] AlgebraicClosure F) := ⟨ι⟩
   refine ⟨⟨IsScalarTower.toAlgHom F E K⟩, inferInstance, ?_, inferInstance⟩
   exact Module.Finite.right F E K
 
@@ -172,7 +171,7 @@ theorem normal_closure_inside_normal_extension_second
   let M'' := IntermediateField.adjoin K B
   have hR : R.Finite := Set.finite_iUnion fun i =>
     (minpoly K (b i : L)).rootSet_finite L
-  letI : Finite R := Set.finite_coe_iff.mpr hR
+  let hRfin : Finite R := Set.finite_coe_iff.mpr hR
   have hM'M'' : M' ≤ M'' := by
     have hMle : M ≤ M'' := by
       intro x hx
@@ -231,7 +230,7 @@ theorem normal_closure_inside_normal_extension_second
           (map_ne_zero (minpoly.ne_zero hi))
           ((map_dvd_map' _).mpr (minpoly.dvd K x
             (aeval_eq_zero_of_mem_rootSet hx)))
-    letI : Algebra.IsAlgebraic K M'' :=
+    let hAlgM : Algebra.IsAlgebraic K M'' :=
       IntermediateField.isAlgebraic_adjoin fun x hx => (hbase x hx).1
     apply normal_iff.mpr
     intro x
@@ -317,7 +316,7 @@ theorem normal_closure_tensor_product_surjective
       Function.Surjective (normalClosureTensorProductMap e) ∧
         Field.finSepDegree K L ≤ Module.finrank K L := by
   classical
-  letI : Algebra.IsAlgebraic K L := Algebra.IsAlgebraic.of_finite K L
+  let hAlgKL : Algebra.IsAlgebraic K L := Algebra.IsAlgebraic.of_finite K L
   have hcard : Field.finSepDegree K L = Nat.card (L →ₐ[K] M) :=
     Field.finSepDegree_eq_of_adjoin_splits K L M (IntermediateField.adjoin_univ K L) <| by
       intro x _
@@ -326,8 +325,8 @@ theorem normal_closure_tensor_product_surjective
     Fintype.equivOfCardEq (by simpa [Nat.card_eq_fintype_card] using hcard)
   refine ⟨e, ?_, Field.finSepDegree_le_finrank K L⟩
   let f := normalClosureTensorProductMap e
-  letI : Module.Finite K f.range := Module.Finite.range f.toLinearMap
-  letI : Algebra.IsAlgebraic K f.range := Algebra.IsAlgebraic.of_finite K f.range
+  let hFin : Module.Finite K f.range := Module.Finite.range f.toLinearMap
+  let hAlgRange : Algebra.IsAlgebraic K f.range := Algebra.IsAlgebraic.of_finite K f.range
   let S : IntermediateField K M := Algebra.IsAlgebraic.toIntermediateField f.range
   have hclosure : IntermediateField.normalClosure K L M = (⊤ : IntermediateField K M) :=
     (Algebra.IsAlgebraic.isNormalClosure_iff (F := K) (K := L) (L := M)).1 hM |>.2

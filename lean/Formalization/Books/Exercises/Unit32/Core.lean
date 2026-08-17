@@ -36,36 +36,16 @@ universe u v w
 
 noncomputable section
 
-/-! ## Basic sheaf categories and stalk maps -/
-
-/-- The category of sheaves of sets on `X`. -/
-abbrev SetSheaves (X : TopCat.{v}) := TopCat.Sheaf (Type v) X
-
-/-- The category of sheaves of abelian groups on `X`. -/
-abbrev AbelianSheaves (X : TopCat.{v}) := Ab X
-
-/-- The map on stalks induced by a morphism of sheaves of sets. -/
-noncomputable abbrev setStalkMap {X : TopCat.{v}}
-    {F G : SetSheaves X} (φ : F ⟶ G) (x : X) :
-    F.presheaf.stalk x → G.presheaf.stalk x :=
-  (TopCat.Presheaf.stalkFunctor (Type v) x).map φ.hom
-
-/-- The map on stalks induced by a morphism of abelian sheaves. -/
-noncomputable abbrev abelianStalkMap {X : TopCat.{v}}
-    {F G : AbelianSheaves X} (φ : F ⟶ G) (x : X) :
-    F.presheaf.stalk x ⟶ G.presheaf.stalk x :=
-  (TopCat.Presheaf.stalkFunctor (AddCommGrpCat.{v}) x).map φ.hom
-
 /-! ## Pushforward, pullback, and open immersions -/
 
 /-- Pushforward of sheaves of sets along a continuous map. -/
 noncomputable abbrev sheafPushforward {X Y : TopCat.{v}} (f : X ⟶ Y) :
-    SetSheaves X ⥤ SetSheaves Y :=
+    Sh.{v, v} X ⥤ Sh.{v, v} Y :=
   TopCat.Sheaf.pushforward (Type v) f
 
 /-- Pullback of sheaves of sets along a continuous map. -/
 noncomputable abbrev sheafPullback {X Y : TopCat.{v}} (f : X ⟶ Y) :
-    SetSheaves Y ⥤ SetSheaves X :=
+    Sh.{v, v} Y ⥤ Sh.{v, v} X :=
   TopCat.Sheaf.pullback (Type v) f
 
 /-- The pullback/pushforward adjunction for sheaves of sets. -/
@@ -76,12 +56,12 @@ noncomputable def sheafPullbackPushforwardAdjunction
 
 /-- The extension-by-empty functor for sheaves of sets on an open subspace. -/
 noncomputable abbrev extensionByEmpty {X : TopCat.{v}} (U : Opens X) :
-    SetSheaves (openSubspace U) ⥤ SetSheaves X :=
+    Sh.{v, v} (openSubspace U) ⥤ Sh.{v, v} X :=
   openSetSheafExtensionByEmpty U
 
 /-- Restriction of sheaves of sets to an open subspace. -/
 noncomputable abbrev restrictionToOpen {X : TopCat.{v}} (U : Opens X) :
-    SetSheaves X ⥤ SetSheaves (openSubspace U) :=
+    Sh.{v, v} X ⥤ Sh.{v, v} (openSubspace U) :=
   openSheafRestriction (Type v) U
 
 /-- The extension-by-empty/restriction adjunction. -/
@@ -91,12 +71,14 @@ noncomputable def extensionByEmptyAdjunction {X : TopCat.{v}} (U : Opens X) :
 
 /-- The extension-by-zero functor for abelian sheaves on an open subspace. -/
 noncomputable abbrev extensionByZero {X : TopCat.{v}} (U : Opens X) :
-    AbelianSheaves (openSubspace U) ⥤ AbelianSheaves X :=
+    Formalization.Books.Sheaves.Unit08.Ab.{v, v} (openSubspace U) ⥤
+      Formalization.Books.Sheaves.Unit08.Ab.{v, v} X :=
   openAbelianSheafExtensionFunctor U
 
 /-- Restriction of abelian sheaves to an open subspace. -/
 noncomputable abbrev abelianRestrictionToOpen {X : TopCat.{v}} (U : Opens X) :
-    AbelianSheaves X ⥤ AbelianSheaves (openSubspace U) :=
+    Formalization.Books.Sheaves.Unit08.Ab.{v, v} X ⥤
+      Formalization.Books.Sheaves.Unit08.Ab.{v, v} (openSubspace U) :=
   openSheafRestriction AddCommGrpCat U
 
 /-- The extension-by-zero/restriction adjunction. -/
@@ -105,12 +87,13 @@ noncomputable def extensionByZeroAdjunction {X : TopCat.{v}} (U : Opens X) :
   openAbelianSheafExtensionAdjunction U
 
 /-- The integral constant sheaf used in the generation exercise. -/
-noncomputable abbrev integerConstantSheaf {X : TopCat.{v}} : AbelianSheaves X :=
+noncomputable abbrev integerConstantSheaf {X : TopCat.{v}} :
+    Formalization.Books.Sheaves.Unit08.Ab.{v, v} X :=
   Formalization.Books.Modules.Unit08.integralConstantSheaf
 
 /-- Extension by zero of the integral constant sheaf on an open. -/
 noncomputable def integerExtensionByZero {X : TopCat.{v}} (U : Opens X) :
-    AbelianSheaves X :=
+    Formalization.Books.Sheaves.Unit08.Ab.{v, v} X :=
   (extensionByZero U).obj
     (integerConstantSheaf (X := openSubspace U))
 
@@ -123,11 +106,19 @@ abbrev realLine : TopCat := Formalization.Books.Modules.Unit08.realLine
 abbrev realOrigin : realLine := (0 : ℝ)
 
 /-- The constant sheaf with value `ZMod 2` on the real line. -/
-def realConstantZModTwo : SetSheaves realLine :=
+def realConstantZModTwo : Sh.{0, 0} realLine :=
   Formalization.Books.Sheaves.Unit07.constantSheaf realLine (ZMod 2)
 
+/-! The same constant object with its commutative-ring structure. -/
+
+/-- The constant `ZMod 2` sheaf of commutative rings on the real line. -/
+noncomputable def realRingConstantZModTwo : TopCat.Sheaf CommRingCat realLine :=
+  (CategoryTheory.constantSheaf
+    (Opens.grothendieckTopology realLine) CommRingCat).obj
+      (CommRingCat.of (ZMod 2))
+
 /-- The skyscraper sheaf at the origin with value `ZMod 2`. -/
-noncomputable def realOriginSkyscraper : SetSheaves realLine :=
+noncomputable def realOriginSkyscraper : Sh.{0, 0} realLine :=
   Formalization.Books.Sheaves.Unit27.setSkyscraperSheaf realOrigin (ZMod 2)
 
 /-- The stalk map from the constant sheaf to its value at the origin. -/
@@ -151,7 +142,7 @@ noncomputable def realConstantToOriginSkyscraperZero :
     (TypeCat.ofHom (fun _ => 0))
 
 /-- The kernel subsheaf of the canonical constant-to-skyscraper map. -/
-noncomputable def realKernelSheaf : SetSheaves realLine :=
+noncomputable def realKernelSheaf : Sh.{0, 0} realLine :=
   limit (parallelPair realConstantToOriginSkyscraper
     realConstantToOriginSkyscraperZero)
 
@@ -162,25 +153,42 @@ noncomputable def realKernelInclusion :
     realConstantToOriginSkyscraperZero) WalkingParallelPair.zero
 
 /-- The additive constant sheaf with value `ZMod 2`. -/
-noncomputable def realAbelianConstantZModTwo : AbelianSheaves realLine :=
+noncomputable def realAbelianConstantZModTwo :
+    Formalization.Books.Sheaves.Unit08.Ab.{0, 0} realLine :=
   (CategoryTheory.constantSheaf
     (Opens.grothendieckTopology realLine) AddCommGrpCat).obj
       (AddCommGrpCat.of (ZMod 2))
 
 /-- The additive skyscraper sheaf at the origin with value `ZMod 2`. -/
-noncomputable def realAbelianOriginSkyscraper : AbelianSheaves realLine :=
+noncomputable def realAbelianOriginSkyscraper :
+    Formalization.Books.Sheaves.Unit08.Ab.{0, 0} realLine :=
   Formalization.Books.Sheaves.Unit27.abelianSkyscraperSheaf realOrigin
     (AddCommGrpCat.of (ZMod 2))
 
-/-- Existence of the canonical additive constant-to-skyscraper map. -/
-theorem exists_realAbelianConstantToOriginSkyscraper :
-    Nonempty (realAbelianConstantZModTwo ⟶ realAbelianOriginSkyscraper) := by
-  sorry
+/-- The sections on the top open of the origin skyscraper are its value. -/
+noncomputable def realOriginSkyscraperTopSectionsIso :
+    realAbelianOriginSkyscraper.presheaf.obj (op (⊤ : Opens realLine)) ≅
+      AddCommGrpCat.of (ZMod 2) := by
+  classical
+  change (if realOrigin ∈ (⊤ : Opens realLine) then AddCommGrpCat.of (ZMod 2)
+  else terminal AddCommGrpCat) ≅ AddCommGrpCat.of (ZMod 2)
+  have h : realOrigin ∈ (⊤ : Opens realLine) := by simp
+  rw [if_pos h]
 
-/-- A chosen additive constant-to-skyscraper map. -/
+/-- The canonical additive constant-to-skyscraper map, obtained from the
+constant-sheaf adjunction and the top-open section of the skyscraper. -/
 noncomputable def realAbelianConstantToOriginSkyscraper :
-    realAbelianConstantZModTwo ⟶ realAbelianOriginSkyscraper :=
-  Classical.choice exists_realAbelianConstantToOriginSkyscraper
+  realAbelianConstantZModTwo ⟶ realAbelianOriginSkyscraper :=
+  let hTop : IsTerminal (⊤ : Opens realLine) :=
+    isTerminalTop
+  ((CategoryTheory.constantSheafAdj
+      (Opens.grothendieckTopology realLine) AddCommGrpCat
+      (T := (⊤ : Opens realLine)) hTop).homEquiv
+    (AddCommGrpCat.of (ZMod 2)) realAbelianOriginSkyscraper).symm
+      (realOriginSkyscraperTopSectionsIso.inv ≫
+        (CategoryTheory.sheafSectionsNatIsoEvaluation
+          (Opens.grothendieckTopology realLine) AddCommGrpCat
+          (X := (⊤ : Opens realLine))).inv.app realAbelianOriginSkyscraper)
 
 /-- The zero map from the additive constant sheaf to the additive skyscraper. -/
 noncomputable def realAbelianConstantToOriginSkyscraperZero :
@@ -188,7 +196,8 @@ noncomputable def realAbelianConstantToOriginSkyscraperZero :
   0
 
 /-- The additive kernel sheaf in the real-line example. -/
-noncomputable def realIdealSheaf : AbelianSheaves realLine :=
+noncomputable def realIdealSheaf :
+    Formalization.Books.Sheaves.Unit08.Ab.{0, 0} realLine :=
   limit (parallelPair realAbelianConstantToOriginSkyscraper
     realAbelianConstantToOriginSkyscraperZero)
 
@@ -211,10 +220,9 @@ def commRingToAddCommGrp : CommRingCat ⥤ AddCommGrpCat where
 /-- A sheaf of abelian groups is an ideal sheaf in a specified sheaf of
 commutative rings when its presheaf inclusion has ideal image on every open. -/
 def IsIdealSheafIn {X : TopCat.{v}} (O : TopCat.Sheaf CommRingCat X)
-    (I : AbelianSheaves X) : Prop :=
-  ∃ ι : I.presheaf ⋙ (forget AddCommGrpCat) ⟶
-      O.presheaf ⋙ commRingToAddCommGrp ⋙ (forget AddCommGrpCat),
-    ∀ U : Opens X,
+    (I : Formalization.Books.Sheaves.Unit08.Ab.{v, v} X) : Prop :=
+  ∃ ι : I.presheaf ⟶ O.presheaf ⋙ commRingToAddCommGrp,
+    Mono ι ∧ ∀ U : Opens X,
       ∃ J : Ideal (O.presheaf.obj (op U)),
         Set.range (ι.app (op U)) = (J : Set (O.presheaf.obj (op U)))
 
@@ -223,7 +231,8 @@ def IsIdealSheafIn {X : TopCat.{v}} (O : TopCat.Sheaf CommRingCat X)
 /-- The restriction map on the sectionwise direct sum of a family of abelian
 sheaves. -/
 noncomputable def abelianSheafDirectSumMap
-    {X : TopCat.{v}} {I : Type v} (F : I → AbelianSheaves X)
+    {X : TopCat.{v}} {I : Type v}
+    (F : I → Formalization.Books.Sheaves.Unit08.Ab.{v, v} X)
     {U V : (Opens X)ᵒᵖ} (f : U ⟶ V) :
     (DirectSum I (fun i : I => ((F i).presheaf.obj U : Type v))) →+
       (DirectSum I (fun i : I => ((F i).presheaf.obj V : Type v))) := by
@@ -235,7 +244,8 @@ noncomputable def abelianSheafDirectSumMap
 /-- The presheaf whose sections are the direct sums of the sections of the
 given family. -/
 noncomputable def abelianSheafDirectSumPresheaf
-    {X : TopCat.{v}} {I : Type v} (F : I → AbelianSheaves X) :
+    {X : TopCat.{v}} {I : Type v}
+    (F : I → Formalization.Books.Sheaves.Unit08.Ab.{v, v} X) :
     TopCat.Presheaf AddCommGrpCat X where
   obj U := AddCommGrpCat.of
     (DirectSum I (fun i : I => ((F i).presheaf.obj U : Type v)))
@@ -253,50 +263,42 @@ noncomputable def abelianSheafDirectSumPresheaf
     intro i s
     simp [abelianSheafDirectSumMap]
 
-/-- A chosen direct sum of a family of abelian sheaves.  The colimit field is
-the universal property used by the quotient exercise; its canonical
-sheafification presentation is recorded in `Statements.lean`. -/
-structure AbelianSheafDirectSum {X : TopCat.{v}} {I : Type v}
-    (F : I → AbelianSheaves X) where
-  carrier : AbelianSheaves X
-  injection : ∀ i : I, F i ⟶ carrier
-  isColimit : IsColimit (Cofan.mk carrier injection)
+/-! The coproduct in the category of abelian sheaves is the direct sum of a
+family of abelian sheaves. -/
+noncomputable def directSumSheafOfAbelianSheaves {X : TopCat.{v}} {I : Type v}
+    (F : I → Formalization.Books.Sheaves.Unit08.Ab.{v, v} X) :
+    Formalization.Books.Sheaves.Unit08.Ab.{v, v} X :=
+  letI : HasColimitsOfShape (Discrete I) (TopCat.Sheaf AddCommGrpCat.{v} X) :=
+    CategoryTheory.Sheaf.instHasColimitsOfShape
+      (J := Opens.grothendieckTopology X) (D := AddCommGrpCat.{v}) (K := Discrete I)
+  ∐ F
 
-/-- Existence of the direct-sum sheaf, supplied by the sheafification of the
-sectionwise presheaf direct sum. -/
-theorem exists_directSumSheafOfAbelianSheaves
-    {X : TopCat.{v}} {I : Type v} (F : I → AbelianSheaves X) :
-    Nonempty (AbelianSheafDirectSum F) := by
-  sorry
-
-/-- The chosen direct-sum data for a family of abelian sheaves. -/
-noncomputable def directSumSheafData
-    {X : TopCat.{v}} {I : Type v} (F : I → AbelianSheaves X) :
-    AbelianSheafDirectSum F :=
-  Classical.choice (exists_directSumSheafOfAbelianSheaves F)
-
-/-- The sheaf underlying the chosen direct-sum data. -/
-noncomputable abbrev directSumSheafOfAbelianSheaves {X : TopCat.{v}} {I : Type v}
-    (F : I → AbelianSheaves X) : AbelianSheaves X :=
-  (directSumSheafData F).carrier
-
-/-- The injections into the chosen direct-sum sheaf. -/
-noncomputable abbrev directSumSheafInjection
-    {X : TopCat.{v}} {I : Type v} (F : I → AbelianSheaves X) (i : I) :
+/-- The injections into the direct-sum sheaf. -/
+noncomputable def directSumSheafInjection
+    {X : TopCat.{v}} {I : Type v}
+    (F : I → Formalization.Books.Sheaves.Unit08.Ab.{v, v} X) (i : I) :
     F i ⟶ directSumSheafOfAbelianSheaves F :=
-  (directSumSheafData F).injection i
+  letI : HasColimitsOfShape (Discrete I) (TopCat.Sheaf AddCommGrpCat.{v} X) :=
+    CategoryTheory.Sheaf.instHasColimitsOfShape
+      (J := Opens.grothendieckTopology X) (D := AddCommGrpCat.{v}) (K := Discrete I)
+  Sigma.ι F i
 
-/-- The colimit universal property of the chosen direct-sum sheaf. -/
+/-- The colimit universal property of the direct-sum sheaf. -/
 noncomputable def directSumSheaf_isColimit
-    {X : TopCat.{v}} {I : Type v} (F : I → AbelianSheaves X) :
+    {X : TopCat.{v}} {I : Type v}
+    (F : I → Formalization.Books.Sheaves.Unit08.Ab.{v, v} X) :
     IsColimit (Cofan.mk (directSumSheafOfAbelianSheaves F)
       (directSumSheafInjection F)) :=
-  (directSumSheafData F).isColimit
+  letI : HasColimitsOfShape (Discrete I) (TopCat.Sheaf AddCommGrpCat.{v} X) :=
+    CategoryTheory.Sheaf.instHasColimitsOfShape
+      (J := Opens.grothendieckTopology X) (D := AddCommGrpCat.{v}) (K := Discrete I)
+  coproductIsCoproduct F
 
-/-- The chosen direct-sum sheaf is the sheaf associated to the sectionwise
+/-- The direct-sum sheaf is the sheaf associated to the sectionwise
 direct-sum presheaf. -/
 theorem directSumSheaf_is_associated_to_presheaf
-    {X : TopCat.{v}} {I : Type v} (F : I → AbelianSheaves X) :
+    {X : TopCat.{v}} {I : Type v}
+    (F : I → Formalization.Books.Sheaves.Unit08.Ab.{v, v} X) :
     Nonempty (directSumSheafOfAbelianSheaves F ≅
       (CategoryTheory.presheafToSheaf
         (Opens.grothendieckTopology X) AddCommGrpCat).obj
@@ -304,18 +306,21 @@ theorem directSumSheaf_is_associated_to_presheaf
   sorry
 
 /-- The index of all integral extension-by-zero maps into an abelian sheaf. -/
-abbrev integerGeneratorIndex {X : TopCat.{v}} (F : AbelianSheaves X) :=
+abbrev integerGeneratorIndex {X : TopCat.{v}}
+    (F : Formalization.Books.Sheaves.Unit08.Ab.{v, v} X) :=
   Σ U : Opens X, integerExtensionByZero U ⟶ F
 
 /-- The direct sum of all integral extension-by-zero generators of `F`. -/
 noncomputable def integerGeneratorDirectSum {X : TopCat.{v}}
-    (F : AbelianSheaves X) : AbelianSheaves X :=
+    (F : Formalization.Books.Sheaves.Unit08.Ab.{v, v} X) :
+    Formalization.Books.Sheaves.Unit08.Ab.{v, v} X :=
   directSumSheafOfAbelianSheaves
     (fun i : integerGeneratorIndex F => integerExtensionByZero i.1)
 
 /-- The canonical map from the generator direct sum to `F`. -/
 noncomputable def integerGeneratorMap {X : TopCat.{v}}
-    (F : AbelianSheaves X) : integerGeneratorDirectSum F ⟶ F :=
+    (F : Formalization.Books.Sheaves.Unit08.Ab.{v, v} X) :
+    integerGeneratorDirectSum F ⟶ F :=
   Cofan.IsColimit.desc (directSumSheaf_isColimit
     (fun i : integerGeneratorIndex F => integerExtensionByZero i.1))
     (fun i => i.2)
@@ -344,7 +349,8 @@ noncomputable def productOverPointsPresheaf {X : TopCat.{v}}
 
 /-- The pointwise product sheaf of abelian groups. -/
 noncomputable def productOverPointsSheaf {X : TopCat.{v}}
-  (A : X → AddCommGrpCat) : AbelianSheaves X :=
+  (A : X → AddCommGrpCat) :
+    Formalization.Books.Sheaves.Unit08.Ab.{v, v} X :=
   ⟨productOverPointsPresheaf A, by
     change TopCat.Presheaf.IsSheaf
       (Formalization.Books.Sheaves.Unit15.pointwiseProductPresheaf
@@ -360,7 +366,8 @@ def realBooleanAbelianFamily : realLine → AddCommGrpCat :=
   fun _ => AddCommGrpCat.of (ZMod 2)
 
 /-- The corresponding pointwise product sheaf on the real line. -/
-noncomputable def realBooleanProductSheaf : AbelianSheaves realLine :=
+noncomputable def realBooleanProductSheaf :
+    Formalization.Books.Sheaves.Unit08.Ab.{0, 0} realLine :=
   productOverPointsSheaf realBooleanAbelianFamily
 
 /-! ## Basis-local modified products -/
@@ -382,11 +389,11 @@ The local predicate is kept as a separate interface because the source gives
 the basis-subgroup data abstractly.  Its `pred` field is exactly the displayed
 local section condition; the restriction field is the basis-refinement step.
 -/
-def modifiedProductLocalPredicate {X : TopCat.{v}}
+def modifiedProductPrelocalPredicate {X : TopCat.{v}}
     {A : X → AddCommGrpCat} (D : ModifiedProductData A) :
-    TopCat.LocalPredicate (fun x : X => A x) := by
+    TopCat.PrelocalPredicate (fun x : X => A x) := by
   classical
-  let P : TopCat.PrelocalPredicate (fun x : X => A x) := {
+  exact {
     pred := fun {U} s =>
       ∀ x : U, ∃ (V : Opens X) (hV : V ∈ D.basis)
         (hxV : x.1 ∈ V) (hVU : V ≤ U),
@@ -404,32 +411,128 @@ def modifiedProductLocalPredicate {X : TopCat.{v}}
       convert hmem using 1
       funext y
       rfl }
-  exact P.sheafify
+
+def modifiedProductLocalPredicate {X : TopCat.{v}}
+    {A : X → AddCommGrpCat} (D : ModifiedProductData A) :
+    TopCat.LocalPredicate (fun x : X => A x) :=
+  (modifiedProductPrelocalPredicate D).sheafify
+
+/-!
+The sheafified predicate is closed under the pointwise additive operations.
+These closure facts let the source's modified product be represented by the
+canonical category-valued sheaf rather than by a parallel set-only object.
+-/
+
+noncomputable def modifiedProductSectionSubgroup {X : TopCat.{v}}
+    {A : X → AddCommGrpCat} (D : ModifiedProductData A) (U : Opens X) :
+    AddSubgroup (∀ x : U, A x) where
+  carrier := fun s => (modifiedProductPrelocalPredicate D).sheafify.pred s
+  zero_mem' := by
+    apply (modifiedProductPrelocalPredicate D).sheafifyOf
+    intro x
+    rcases (Opens.isBasis_iff_nbhd.mp D.isBasis x.2) with
+      ⟨V, hV, hxV, hVU⟩
+    refine ⟨V, hV, hxV, hVU, ?_⟩
+    have hz : (0 : ∀ y : V, A y) ∈ D.subgroup V hV :=
+      (D.subgroup V hV).zero_mem
+    convert hz using 1
+    funext y
+    rfl
+  add_mem' := by
+    intro s t hs ht
+    exact (modifiedProductPrelocalPredicate D).sheafify_inductionOn₂'
+      (modifiedProductPrelocalPredicate D)
+      (modifiedProductPrelocalPredicate D)
+      (fun {x} a b => a + b)
+      (fun {U V : Opens X} {a : ∀ x : U, A x} {b : ∀ x : V, A x} hs ht => by
+        intro x
+        rcases hs ⟨x.1, x.2.1⟩ with
+          ⟨W, hW, hxW, hWU, hsW⟩
+        rcases ht ⟨x.1, x.2.2⟩ with
+          ⟨Z, hZ, hxZ, hZV, htZ⟩
+        have hxWZ : x.1 ∈ W ⊓ Z := ⟨hxW, hxZ⟩
+        rcases (Opens.isBasis_iff_nbhd.mp D.isBasis hxWZ) with
+          ⟨K, hK, hxK, hKWZ⟩
+        have hKW : K ≤ W := hKWZ.trans inf_le_left
+        have hKZ : K ≤ Z := hKWZ.trans inf_le_right
+        have hKU : K ≤ U := hKW.trans hWU
+        have hKV : K ≤ V := hKZ.trans hZV
+        have hsK := D.restriction_mem hK hW hKW
+          (fun y : W => a ⟨y, hWU y.2⟩) hsW
+        have htK := D.restriction_mem hK hZ hKZ
+          (fun y : Z => b ⟨y, hZV y.2⟩) htZ
+        refine ⟨K, hK, hxK, le_inf hKU hKV, ?_⟩
+        have hsum := (D.subgroup K hK).add_mem hsK htK
+        convert hsum using 1
+        funext y
+        rfl)
+      hs ht
+  neg_mem' := by
+    intro s hs
+    exact (modifiedProductPrelocalPredicate D).sheafify_inductionOn'
+      (fun {x} a => -a)
+      (fun hs => by
+        intro x
+        rcases hs x with ⟨V, hV, hxV, hVU, hsV⟩
+        refine ⟨V, hV, hxV, hVU, ?_⟩
+        have hneg := (D.subgroup V hV).neg_mem hsV
+        convert hneg using 1
+        funext y
+        rfl)
+      hs
+
+/-- The additive presheaf of sections satisfying the modified-product local
+condition. -/
+noncomputable def modifiedProductAbelianPresheaf {X : TopCat.{v}}
+    {A : X → AddCommGrpCat} (D : ModifiedProductData A) :
+    TopCat.Presheaf AddCommGrpCat X where
+  obj U := AddCommGrpCat.of (modifiedProductSectionSubgroup D U.unop)
+  map {U V} f := AddCommGrpCat.ofHom {
+    toFun := fun s =>
+      ⟨fun x => s.1 (f.unop x),
+        (modifiedProductPrelocalPredicate D).sheafify.res f.unop s.1 s.2⟩
+    map_zero' := by
+      ext x
+      rfl
+    map_add' := by
+      intro s t
+      ext x
+      rfl }
+  map_id U := by
+    apply AddCommGrpCat.hom_ext
+    ext s x
+    rfl
+  map_comp f g := by
+    apply AddCommGrpCat.hom_ext
+    ext s x
+    rfl
 
 /-- The set-valued sheaf of sections satisfying the modified-product local
 condition. -/
 noncomputable def modifiedProductSetSheaf
     {X : TopCat.{v}} {A : X → AddCommGrpCat}
-    (D : ModifiedProductData A) : SetSheaves X :=
+    (D : ModifiedProductData A) : Sh.{v, v} X :=
   TopCat.subsheafToTypes (modifiedProductLocalPredicate D)
+
+/-! The same construction with its canonical additive-group structure. -/
+
+/-- The modified product as a sheaf of abelian groups. -/
+noncomputable def modifiedProductAbelianSheaf {X : TopCat.{v}}
+    {A : X → AddCommGrpCat} (D : ModifiedProductData A) :
+    Formalization.Books.Sheaves.Unit08.Ab.{v, v} X :=
+  ⟨modifiedProductAbelianPresheaf D, by
+    apply (Formalization.Books.Sheaves.Unit09.categoryValuedSheaf_iff_isSheaf
+      (modifiedProductAbelianPresheaf D)).1
+    refine Formalization.Books.Sheaves.Unit09.categoryValuedSheaf_of_underlying_isSheaf
+      (forget AddCommGrpCat) (modifiedProductAbelianPresheaf D) ?_
+    change TopCat.Presheaf.IsSheaf (modifiedProductSetSheaf D).presheaf
+    exact (modifiedProductSetSheaf D).property⟩
 
 /-! ## Exact functors which are not stalks -/
 
-/-! The site-level sheaf category has the finite-colimit instance needed to
-state exactness of the constant functor on the empty space. -/
-
-noncomputable instance topCatSheaf_hasFiniteColimits
-    {C : Type u} [Category.{v} C] [HasFiniteColimits C]
-    (X : TopCat.{w})
-    [HasWeakSheafify (Opens.grothendieckTopology X) C] :
-    HasFiniteColimits (TopCat.Sheaf C X) := by
-  change HasFiniteColimits (CategoryTheory.Sheaf
-    (Opens.grothendieckTopology X) C)
-  infer_instance
-
 /-- A functor on sheaves of sets is a stalk functor up to natural isomorphism. -/
 def IsStalkFunctor {X : TopCat.{v}}
-    (F : SetSheaves X ⥤ Type v) : Prop :=
+    (F : Sh.{v, v} X ⥤ Type v) : Prop :=
   ∃ x : X, Nonempty
     (F ≅ TopCat.Sheaf.forget (Type v) X ⋙
       TopCat.Presheaf.stalkFunctor (Type v) x)
@@ -439,7 +542,7 @@ abbrev emptySpace : TopCat := TopCat.of Empty
 
 /-- The constant `PUnit` functor on sheaves over the empty space. -/
 noncomputable def emptySpaceFunctor :
-    SetSheaves emptySpace ⥤ Type 0 :=
+    Sh.{0, 0} emptySpace ⥤ Type 0 :=
   (Functor.const _).obj (PUnit : Type 0)
 
 end

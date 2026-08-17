@@ -2,6 +2,7 @@ import Formalization.Books.Categories.Unit10.Equalizers
 import Mathlib.CategoryTheory.Comma.CardinalArrow
 import Mathlib.CategoryTheory.Limits.Constructions.Equalizers
 import Mathlib.CategoryTheory.Limits.Constructions.BinaryProducts
+import Mathlib.CategoryTheory.Limits.Constructions.Pullbacks
 import Mathlib.CategoryTheory.Limits.Constructions.FiniteProductsOfBinaryProducts
 import Mathlib.CategoryTheory.Limits.Constructions.LimitsOfProductsAndEqualizers
 import Mathlib.CategoryTheory.Limits.Shapes.FiniteLimits
@@ -51,9 +52,10 @@ theorem finite_index_category_iff {J : Type u} [SmallCategory J] :
     Finite (Arrow J) ↔ Nonempty (FinCategory J) :=
   Arrow.finite_iff J
 
-/- The source's finite replacement is packaged as data so that its finiteness,
-   connectedness/nonemptiness comparison, existence equivalences, and the
-   canonical universal-property isomorphisms remain usable by later users. -/
+/- The source's finite replacement is packaged as data so that its finiteness
+   and connectedness/nonemptiness comparison remain usable by later users.
+   The preservation and comparison assertions are stated below, separately
+   polymorphic in the target category. -/
 structure FiniteDiagramReplacement (I : Type u) [Category.{v} I] where
   J : Type
   category : SmallCategory J
@@ -61,52 +63,73 @@ structure FiniteDiagramReplacement (I : Type u) [Category.{v} I] where
   F : @CategoryTheory.Functor J category I (inferInstance : Category.{v} I)
   connected_iff : @IsConnected J category ↔ IsConnected I
   nonempty_iff : Nonempty J ↔ Nonempty I
-  preserves_limits :
-    ∀ {C : Type u'} [Category.{v'} C] (M : I ⥤ C),
-      HasLimit M ↔ HasLimit (F ⋙ M)
-  preserves_colimits :
-    ∀ {C : Type u'} [Category.{v'} C] (M : I ⥤ C),
-      HasColimit M ↔ HasColimit (F ⋙ M)
-  canonical_limit_iso :
-    ∀ {C : Type u'} [Category.{v'} C] (M : I ⥤ C)
-      [HasLimit M] [HasLimit (F ⋙ M)],
-      Nonempty (limit M ≅ limit (F ⋙ M))
-  canonical_colimit_iso :
-    ∀ {C : Type u'} [Category.{v'} C] (M : I ⥤ C)
-      [HasColimit M] [HasColimit (F ⋙ M)],
-      Nonempty (colimit M ≅ colimit (F ⋙ M))
 
 attribute [instance] FiniteDiagramReplacement.category
+attribute [instance] FiniteDiagramReplacement.finite
 
 /- The first source lemma: a finite object set together with finitely many
    generating arrows admits a finite replacement with the same (co)limits. -/
 theorem finite_diagram_category [Finite I] (hI : HasFiniteGeneratingMorphisms (I := I)) :
-    Nonempty (FiniteDiagramReplacement.{u, v, u', v'} I) := by
+    Nonempty (FiniteDiagramReplacement I) := by
   sorry
 
 theorem finite_diagram_replacement_has_limit_iff
-    (R : FiniteDiagramReplacement.{u, v, u', v'} I) {C : Type u'} [Category.{v'} C]
+    (R : FiniteDiagramReplacement I) {C : Type u'} [Category.{v'} C]
     (M : I ⥤ C) :
     HasLimit M ↔ HasLimit (R.F ⋙ M) := by
-  exact R.preserves_limits M
+  sorry
 
 theorem finite_diagram_replacement_has_colimit_iff
-    (R : FiniteDiagramReplacement.{u, v, u', v'} I) {C : Type u'} [Category.{v'} C]
+    (R : FiniteDiagramReplacement I) {C : Type u'} [Category.{v'} C]
     (M : I ⥤ C) :
     HasColimit M ↔ HasColimit (R.F ⋙ M) := by
-  exact R.preserves_colimits M
+  sorry
 
-theorem finite_diagram_replacement_limit_iso
-    (R : FiniteDiagramReplacement.{u, v, u', v'} I) {C : Type u'} [Category.{v'} C]
+theorem finite_diagram_replacement_limit_iso_unique
+    (R : FiniteDiagramReplacement I) {C : Type u'} [Category.{v'} C]
     (M : I ⥤ C) [HasLimit M] [HasLimit (R.F ⋙ M)] :
-    Nonempty (limit M ≅ limit (R.F ⋙ M)) := by
-  exact R.canonical_limit_iso M
+    ∃! e : limit M ≅ limit (R.F ⋙ M),
+      ∀ j : R.J, e.hom ≫ limit.π (R.F ⋙ M) j = limit.π M (R.F.obj j) := by
+  sorry
 
-theorem finite_diagram_replacement_colimit_iso
-    (R : FiniteDiagramReplacement.{u, v, u', v'} I) {C : Type u'} [Category.{v'} C]
+noncomputable def finite_diagram_replacement_limit_iso
+    (R : FiniteDiagramReplacement I) {C : Type u'} [Category.{v'} C]
+    (M : I ⥤ C) [HasLimit M] [HasLimit (R.F ⋙ M)] :
+    limit M ≅ limit (R.F ⋙ M) :=
+  Classical.choose (ExistsUnique.exists (finite_diagram_replacement_limit_iso_unique R M))
+
+theorem finite_diagram_replacement_limit_iso_hom_comp
+    (R : FiniteDiagramReplacement I) {C : Type u'} [Category.{v'} C]
+    (M : I ⥤ C) [HasLimit M] [HasLimit (R.F ⋙ M)] (j : R.J) :
+    (finite_diagram_replacement_limit_iso R M).hom ≫ limit.π (R.F ⋙ M) j =
+      limit.π M (R.F.obj j) := by
+  simpa [finite_diagram_replacement_limit_iso] using
+    (Classical.choose_spec
+      (ExistsUnique.exists (finite_diagram_replacement_limit_iso_unique R M))) j
+
+theorem finite_diagram_replacement_colimit_iso_unique
+    (R : FiniteDiagramReplacement I) {C : Type u'} [Category.{v'} C]
     (M : I ⥤ C) [HasColimit M] [HasColimit (R.F ⋙ M)] :
-    Nonempty (colimit M ≅ colimit (R.F ⋙ M)) := by
-  exact R.canonical_colimit_iso M
+    ∃! e : colimit M ≅ colimit (R.F ⋙ M),
+      ∀ j : R.J, colimit.ι M (R.F.obj j) ≫ e.hom =
+        colimit.ι (R.F ⋙ M) j := by
+  sorry
+
+noncomputable def finite_diagram_replacement_colimit_iso
+    (R : FiniteDiagramReplacement I) {C : Type u'} [Category.{v'} C]
+    (M : I ⥤ C) [HasColimit M] [HasColimit (R.F ⋙ M)] :
+    colimit M ≅ colimit (R.F ⋙ M) :=
+  Classical.choose (ExistsUnique.exists (finite_diagram_replacement_colimit_iso_unique R M))
+
+theorem finite_diagram_replacement_colimit_iso_hom_comp
+    (R : FiniteDiagramReplacement I) {C : Type u'} [Category.{v'} C]
+    (M : I ⥤ C) [HasColimit M] [HasColimit (R.F ⋙ M)] (j : R.J) :
+    colimit.ι M (R.F.obj j) ≫
+        (finite_diagram_replacement_colimit_iso R M).hom =
+      colimit.ι (R.F ⋙ M) j := by
+  simpa [finite_diagram_replacement_colimit_iso] using
+    (Classical.choose_spec
+      (ExistsUnique.exists (finite_diagram_replacement_colimit_iso_unique R M))) j
 
 end FiniteDiagramReduction
 
@@ -144,12 +167,10 @@ theorem has_connected_finite_colimits_iff :
     HasConnectedFiniteColimits (C := C) ↔ HasCoequalizers C ∧ HasPushouts C := by
   sorry
 
-/- Nonempty finite limits admit the two equivalent presentations from the
-   source: binary products plus equalizers, or binary products plus pullbacks. -/
+/- The first presentation of nonempty finite limits from the source. -/
 theorem has_nonempty_finite_limits_iff :
     HasNonemptyFiniteLimits (C := C) ↔
-      (HasBinaryProducts C ∧ HasEqualizers C) ∧
-        (HasBinaryProducts C ∧ HasPullbacks C) := by
+      HasBinaryProducts C ∧ HasEqualizers C := by
   sorry
 
 section EqualizerFromFibreProducts
@@ -179,37 +200,44 @@ theorem equalizerViaPullbacks_isEqualizer [HasBinaryProducts C] [HasPullbacks C]
 
 end EqualizerFromFibreProducts
 
-/- The dual nonempty finite-colimit presentation. -/
+/- The second presentation of nonempty finite limits from the source. -/
+theorem has_nonempty_finite_limits_iff_of_pullbacks :
+    HasNonemptyFiniteLimits (C := C) ↔
+      HasBinaryProducts C ∧ HasPullbacks C := by
+  sorry
+
+/- The first presentation of nonempty finite colimits from the source. -/
 theorem has_nonempty_finite_colimits_iff :
     HasNonemptyFiniteColimits (C := C) ↔
-      (HasBinaryCoproducts C ∧ HasCoequalizers C) ∧
-        (HasBinaryCoproducts C ∧ HasPushouts C) := by
+      HasBinaryCoproducts C ∧ HasCoequalizers C := by
   sorry
 
-/- Finite limits are equivalent to either finite products plus equalizers, or
-   a terminal object plus fibre products. -/
+/- The second presentation of nonempty finite colimits from the source. -/
+theorem has_nonempty_finite_colimits_iff_of_pushouts :
+    HasNonemptyFiniteColimits (C := C) ↔
+      HasBinaryCoproducts C ∧ HasPushouts C := by
+  sorry
+
+/- The first presentation of finite limits from the source. -/
 theorem has_finite_limits_iff :
     HasFiniteLimits C ↔
-      (HasFiniteProducts C ∧ HasEqualizers C) ∧
-        (HasTerminal C ∧ HasPullbacks C) := by
+      HasFiniteProducts C ∧ HasEqualizers C := by
   sorry
 
-/- The product-over-the-final-object assertion used in the proof of the
-   finite-limit equivalence is Mathlib's canonical comparison isomorphism. -/
-noncomputable def binaryProductLimitConeFromTerminalAndPullbacks
-    [HasTerminal C] [HasPullbacks C] (A B : C) : LimitCone (pair A B) :=
-  limitConeOfTerminalAndPullbacks (pair A B)
+/- The second presentation of finite limits from the source. -/
+theorem has_finite_limits_iff_of_terminal_and_pullbacks :
+    HasFiniteLimits C ↔ HasTerminal C ∧ HasPullbacks C := by
+  sorry
 
-noncomputable def binaryProductIsoPullbackOverTerminal [HasTerminal C] [HasPullbacks C]
-    {A B : C} [HasBinaryProduct A B] :
-    A ⨯ B ≅ pullback (terminal.from A) (terminal.from B) :=
-  prodIsoPullback A B
-
-/- The dual finite-colimit equivalence. -/
+/- The first presentation of finite colimits from the source. -/
 theorem has_finite_colimits_iff :
     HasFiniteColimits C ↔
-      (HasFiniteCoproducts C ∧ HasCoequalizers C) ∧
-        (HasInitial C ∧ HasPushouts C) := by
+      HasFiniteCoproducts C ∧ HasCoequalizers C := by
+  sorry
+
+/- The second presentation of finite colimits from the source. -/
+theorem has_finite_colimits_iff_of_initial_and_pushouts :
+    HasFiniteColimits C ↔ HasInitial C ∧ HasPushouts C := by
   sorry
 
 end FiniteExistencePredicates

@@ -497,7 +497,48 @@ theorem standard_cover_finitePresentation_algebra
       Algebra.FinitePresentation (Localization.Away (f : R))
         (Localization.Away (f : R) ⊗[R] S)) :
     Algebra.FinitePresentation R S := by
-  sorry
+  have hs' : Ideal.span ((algebraMap R S) '' (s : Set R)) = ⊤ := by
+    rw [← Ideal.map_span, hs, Ideal.map_top]
+  apply Algebra.FinitePresentation.of_span_eq_top_target
+    ((algebraMap R S) '' (s : Set R)) hs'
+  rintro _ ⟨r, hr, rfl⟩
+  let A := Localization.Away r
+  let L := Localization.Away (algebraMap R S r)
+  let e := IsLocalization.Away.tensorRightEquiv S r A
+  letI : Algebra A L := (Localization.awayMap (algebraMap R S) r).toAlgebra
+  have hmap : algebraMap A (A ⊗[R] S) =
+      ((e.symm : L →+* (A ⊗[R] S)).comp (algebraMap A L)) := by
+    apply IsLocalization.ringHom_ext (Submonoid.powers r)
+    ext
+    simp [e, A, L, RingHom.algebraMap_toAlgebra, Localization.awayMap,
+      IsLocalization.Away.map, Algebra.TensorProduct.tmul_one_eq_one_tmul,
+      RingHom.algebraMap_toAlgebra]
+  let eA : (A ⊗[R] S) ≃ₐ[A] L :=
+    AlgEquiv.ofRingEquiv (f := e.toRingEquiv) (by
+      intro a
+      apply e.symm.injective
+      simpa [hmap])
+  have hL : RingHom.FinitePresentation (algebraMap A L) := by
+    rw [RingHom.finitePresentation_algebraMap]
+    letI : Algebra.FinitePresentation A (A ⊗[R] S) := h ⟨r, hr⟩
+    exact Algebra.FinitePresentation.equiv eA
+  have hA : RingHom.FinitePresentation (algebraMap R A) := by
+    rw [RingHom.finitePresentation_algebraMap]
+    exact IsLocalization.Away.finitePresentation r
+  have hc := RingHom.FinitePresentation.comp hL hA
+  letI : IsScalarTower R A L :=
+    IsScalarTower.of_algebraMap_eq'
+      (IsLocalization.map_comp (Submonoid.powers r).le_comap_map).symm
+  have haway :
+      (Localization.awayMap (algebraMap R S) r).comp (algebraMap R A) =
+        algebraMap R L := by
+    change (algebraMap A L).comp (algebraMap R A) = algebraMap R L
+    exact (IsScalarTower.algebraMap_eq R A L).symm
+  rw [show algebraMap A L =
+      Localization.awayMap (algebraMap R S) r by rfl] at hc
+  rw [haway] at hc
+  rw [RingHom.finitePresentation_algebraMap] at hc
+  exact hc
 
 /-! ## Finite covers in the target ring -/
 

@@ -103,10 +103,11 @@ theorem matrix_right_inverse_block_form
           (A₁.det • (1 : Matrix (Fin m) (Fin m) R)) i j) ∧
       (∀ i : Fin (n - m), ∀ j : Fin m,
         ∃ S : {s : Finset (Fin n) // s.card = m},
-        S.1 =
+          S.1 =
             insert
               (Fin.cast (Nat.add_sub_of_le hmn) (Fin.natAdd m i))
-              (Finset.univ.erase (j.castLE hmn)) ∧
+              ((Finset.univ.image (fun k : Fin m => k.castLE hmn)).erase
+                (j.castLE hmn)) ∧
           ∃ ε : R, (ε = 1 ∨ ε = -1) ∧
             (A * B)
                 (Fin.cast (Nat.add_sub_of_le hmn) (Fin.natAdd m i)) j =

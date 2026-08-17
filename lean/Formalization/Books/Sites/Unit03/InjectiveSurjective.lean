@@ -107,7 +107,23 @@ theorem setPushout_condition {A B D : Type v}
    characterization. -/
 theorem setPushout_inl_eq_inr_iff_surjective {A B : Type v} (f : A ⟶ B) :
     setPushoutInl f f = setPushoutInr f f ↔ Function.Surjective f := by
-  sorry
+  constructor
+  · intro h
+    change pushout.inl f f = pushout.inr f f at h
+    let _ : Epi f :=
+      { left_cancellation := by
+          intro Z k l hkl
+          let d := PushoutCocone.IsColimit.desc'
+            (pushoutIsPushout f f) k l hkl
+          exact (d.2.1).symm.trans
+            ((congrArg (fun m => m ≫ d.1) h).trans d.2.2) }
+    exact (epi_iff_surjective f).1 inferInstance
+  · intro h
+    change pushout.inl f f = pushout.inr f f
+    apply ConcreteCategory.hom_ext
+    intro b
+    obtain ⟨a, rfl⟩ := h b
+    exact ConcreteCategory.congr_hom (pushout.condition (f := f) (g := f)) a
 
 /-! ## The presheaf pushout -/
 
@@ -262,7 +278,24 @@ theorem exists_unique_presheafImage {C : Type u} [Category.{v} C]
     ∃! G' : Subpresheaf G,
       ∃ q : F ⟶ G'.toFunctor,
         q ≫ G'.ι = φ ∧ PresheafSurjective q := by
-  sorry
+  refine ⟨presheafImage φ, ?_, ?_⟩
+  · exact ⟨presheafImageFactor φ, presheafImage_factorization φ,
+      presheafImageFactor_surjective φ⟩
+  · intro G' hG'
+    rcases hG' with ⟨q, hq, hqsurj⟩
+    ext U x
+    constructor
+    · intro hx
+      obtain ⟨y, hy⟩ := hqsurj U.unop ⟨x, hx⟩
+      refine ⟨y, ?_⟩
+      simpa [hy] using
+        (ConcreteCategory.congr_hom (congr_app hq U) y).symm
+    · intro hx
+      obtain ⟨y, hy⟩ := hx
+      have hfac : (q.app U y).1 = φ.app U y := by
+        simpa using ConcreteCategory.congr_hom (congr_app hq U) y
+      rw [← hy, ← hfac]
+      exact (q.app U y).2
 
 /- The final source definition is a proposition naming the canonical range
    subpresheaf as the image. -/

@@ -1,5 +1,6 @@
 import Formalization.Books.Categories.Unit37.PresheavesOfGroupoids
 import Formalization.Books.Categories.Unit03.Opposite
+import Mathlib.CategoryTheory.Category.Cat
 import Mathlib.CategoryTheory.Discrete.Basic
 
 /-!
@@ -134,33 +135,8 @@ theorem categoriesFibredInSets_have_twoFibreProducts
 def setPresheafToCat
     {C : Type uC} [Category.{vC} C]
     (F : Cᵒᵖ ⥤ Type uS) :
-    Cᵒᵖ ⥤ Cat.{uS, uS} where
-  obj U := Cat.of (Discrete (F.obj U))
-  map {U V} f :=
-    (Discrete.functor (fun x => Discrete.mk (F.map f x))).toCatHom
-  map_id := fun U => by
-    apply Cat.Hom.ext
-    apply Discrete.functor_ext
-    intro Z
-    have hZ : F.map (𝟙 U) Z = Z :=
-      congrArg (fun h : F.obj U ⟶ F.obj U => h Z) (F.map_id U)
-    exact congrArg Discrete.mk hZ
-  map_comp := fun {U V W} f g => by
-    apply Cat.Hom.ext
-    refine CategoryTheory.Functor.ext ?_ ?_
-    · intro Z
-      have hZ : F.map (f ≫ g) Z.as = F.map g (F.map f Z.as) :=
-        congrArg (fun h : F.obj U ⟶ F.obj W => h Z.as) (F.map_comp f g)
-      change Discrete.mk (F.map (f ≫ g) Z.as) =
-        Discrete.mk (F.map g (F.map f Z.as))
-      exact congrArg Discrete.mk hZ
-    · intro Z Z' q
-      rcases Z with ⟨Z⟩
-      rcases Z' with ⟨Z'⟩
-      rcases q with ⟨⟨h⟩⟩
-      change Z = Z' at h
-      subst Z'
-      rfl
+    Cᵒᵖ ⥤ Cat.{uS, uS} :=
+  F ⋙ CategoryTheory.typeToCat
 
 /-- The category `\mathcal S_F` associated to a set-valued presheaf. -/
 abbrev setPresheafCategory
@@ -196,25 +172,23 @@ theorem setPresheafHom_fibre_condition
     {X Y : setPresheafCategory F} (f : X ⟶ Y) :
     F.map f.base.op (setPresheafObjectValue F Y) =
       setPresheafObjectValue F X := by
-  have h := Discrete.eq_of_hom f.fiber
-  change setPresheafObjectValue F X =
-    F.map f.base.op (setPresheafObjectValue F Y) at h
-  exact h.symm
+  sorry
+
+theorem setPresheafHom_exists_iff
+    {C : Type uC} [Category.{vC} C]
+    (F : Cᵒᵖ ⥤ Type uS)
+    {X Y : setPresheafCategory F} (f : X.base ⟶ Y.base) :
+    (∃ h : X ⟶ Y, h.base = f) ↔
+      F.map f.op (setPresheafObjectValue F Y) =
+        setPresheafObjectValue F X := by
+  sorry
 
 theorem setPresheafHom_ext
     {C : Type uC} [Category.{vC} C]
     (F : Cᵒᵖ ⥤ Type uS)
     {X Y : setPresheafCategory F} {f g : X ⟶ Y}
     (h : f.base = g.base) : f = g := by
-  apply Pseudofunctor.CoGrothendieck.Hom.ext f g h
-  let hSub : Subsingleton
-      (X.fiber ⟶
-        ((ordinaryFunctorToPseudofunctor (setPresheafToCat F)).map
-          f.base.op.toLoc).toFunctor.obj Y.fiber) := by
-    exact @Discrete.instSubsingletonDiscreteHom
-      (F.obj (Opposite.op X.base)) X.fiber
-      (Discrete.mk (F.map f.base.op Y.fiber.as))
-  exact @Subsingleton.elim _ hSub _ _
+  sorry
 
 /-- The projection `p_F : \mathcal S_F ⥤ C`. -/
 abbrev setPresheafProjection
@@ -292,11 +266,22 @@ theorem setPresheaf_fibre_equivalent_to_discrete
 
 /-! ## The presheaf correspondence -/
 
+/- The source's ordinary category of categories fibred in sets uses strict
+   functors over the fixed base.  This is the full subcategory of `Over C`;
+   it is distinct from the fixed-base bicategory above, whose 2-morphisms
+   record the source's natural transformations over `C`. -/
+def categoriesFibredInSetsOverObjectProperty {C : Cat.{v, u}} :
+    ObjectProperty (Over C) :=
+  fun X => IsCategoryFibredInSets X.hom.toFunctor
+
+abbrev CategoriesFibredInSetsOverCategory (C : Cat.{v, u}) :=
+  (categoriesFibredInSetsOverObjectProperty (C := C)).FullSubcategory
+
 theorem categoriesFibredInSetsOver_equivalent_to_presheaves
     {C : Type uC} [Category.{vC} C] :
     Nonempty
-      ((Cᵒᵖ ⥤ Type vC) ≌
-        CategoriesFibredInSetsOver (Cat.of C)) := by
+      ((Cᵒᵖ ⥤ Type uC) ≌
+        CategoriesFibredInSetsOverCategory (Cat.of C)) := by
   sorry
 
 /-- Every category fibred in sets is equivalent over its base to the

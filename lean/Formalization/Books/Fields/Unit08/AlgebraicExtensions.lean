@@ -8,6 +8,7 @@ import Mathlib.FieldTheory.IsAlgClosed.AlgebraicClosure
 import Mathlib.FieldTheory.RatFunc.IntermediateField
 import Mathlib.RingTheory.Algebraic.Cardinality
 import Mathlib.RingTheory.Algebraic.Integral
+import Mathlib.RingTheory.RootsOfUnity.AlgebraicallyClosed
 
 /-!
 # Fields, Chapter 8: Algebraic extensions
@@ -113,7 +114,8 @@ theorem complex_element_satisfies_real_quadratic (α : ℂ) :
     Polynomial.aeval α
         (Polynomial.X ^ 2 - Polynomial.C (2 * α.re) * Polynomial.X +
           Polynomial.C (α.re ^ 2 + α.im ^ 2)) = 0 := by
-  sorry
+  apply Complex.ext <;> simp [Polynomial.aeval_def, pow_two, Complex.mul_re, Complex.mul_im] <;>
+    ring
 
 /- The source's compact-Riemann-surface example needs a formal model of
    compact Riemann surfaces and their meromorphic function fields, which is
@@ -164,7 +166,18 @@ theorem monogenic_extension_finite_iff_algebraic
     {F E : Type*} [Field F] [Field E] [Algebra F E] (α : E) :
     FiniteDimensional F (IntermediateField.adjoin F ({α} : Set E)) ↔
       IsAlgebraic F α := by
-  sorry
+  constructor
+  · intro h
+    let _ : FiniteDimensional F (IntermediateField.adjoin F ({α} : Set E)) := h
+    have hα' :
+        IsAlgebraic F (⟨α, IntermediateField.mem_adjoin_simple_self F α⟩ :
+          IntermediateField.adjoin F ({α} : Set E)) :=
+      IsAlgebraic.of_finite F _
+    exact
+      (isAlgebraic_algHom_iff (IntermediateField.adjoin F ({α} : Set E)).val
+        Subtype.val_injective).mpr hα'
+  · intro hα
+    exact IntermediateField.adjoin.finiteDimensional hα.isIntegral
 
 /-- An extension is algebraic exactly when all of its simple subextensions are finite. -/
 theorem algebraic_extension_iff_all_simple_extensions_finite
@@ -172,7 +185,11 @@ theorem algebraic_extension_iff_all_simple_extensions_finite
     Algebra.IsAlgebraic F E ↔
       ∀ α : E,
         FiniteDimensional F (IntermediateField.adjoin F ({α} : Set E)) := by
-  sorry
+  constructor
+  · intro h α
+    exact (monogenic_extension_finite_iff_algebraic α).mpr (h.isAlgebraic α)
+  · intro h
+    exact ⟨fun α => (monogenic_extension_finite_iff_algebraic α).mp (h α)⟩
 
 /- The source warns that algebraic extensions need not be finite.  The
    algebraic closure of `ℚ` is a concrete standard witness. -/
@@ -180,7 +197,21 @@ theorem algebraic_extension_iff_all_simple_extensions_finite
 theorem algebraic_extension_not_necessarily_finite :
     Algebra.IsAlgebraic ℚ (AlgebraicClosure ℚ) ∧
       ¬ FiniteDimensional ℚ (AlgebraicClosure ℚ) := by
-  sorry
+  constructor
+  · exact AlgebraicClosure.isAlgebraic ℚ
+  · intro hfinite
+    let _ : FiniteDimensional ℚ (AlgebraicClosure ℚ) := hfinite
+    let d := Module.finrank ℚ (AlgebraicClosure ℚ)
+    obtain ⟨p, hp_lower, hp⟩ := Nat.exists_infinite_primes (d + 2)
+    let _ : NeZero (p : ℚ) := ⟨by exact_mod_cast hp.ne_zero⟩
+    obtain ⟨ζ, hζ⟩ := HasEnoughRootsOfUnity.exists_primitiveRoot (AlgebraicClosure ℚ) p
+    have hcycl : Polynomial.cyclotomic p ℚ = minpoly ℚ ζ :=
+      hζ.minpoly_eq_cyclotomic_of_irreducible (Polynomial.cyclotomic.irreducible_rat hp.pos)
+    have hdiv : (minpoly ℚ ζ).natDegree ∣ Module.finrank ℚ (AlgebraicClosure ℚ) :=
+      minpoly.degree_dvd (IsIntegral.of_finite ℚ ζ)
+    rw [← hcycl, Polynomial.natDegree_cyclotomic, Nat.totient_prime hp] at hdiv
+    have hle : p - 1 ≤ d := Nat.le_of_dvd Module.finrank_pos hdiv
+    omega
 
 /-- A finite list of algebraic generators gives a finite extension. -/
 theorem finitely_generated_algebraic_extension_is_finite
@@ -198,11 +229,17 @@ theorem finitely_generated_algebraic_extension_is_finite
 /-- The complex number `√2` is algebraic over `ℚ`. -/
 theorem sqrt_two_is_algebraic_number :
     IsAlgebraic ℚ ((Real.sqrt 2 : ℝ) : ℂ) := by
-  sorry
+  refine ⟨Polynomial.X ^ 2 - Polynomial.C 2, ?_, ?_⟩
+  · exact Polynomial.X_pow_sub_C_ne_zero (by norm_num) 2
+  · simp [Polynomial.aeval_def]
+    rw [← Complex.ofReal_pow, Real.sq_sqrt (show (0 : ℝ) ≤ 2 by norm_num)]
+    norm_num
 
 /-- The imaginary unit is algebraic over `ℚ`. -/
 theorem imaginary_unit_is_algebraic_number : IsAlgebraic ℚ Complex.I := by
-  sorry
+  refine ⟨Polynomial.X ^ 2 + Polynomial.C 1, ?_, ?_⟩
+  · exact Polynomial.X_pow_add_C_ne_zero (by norm_num) 1
+  · simp [Polynomial.aeval_def, Complex.I_sq]
 
 /-- The real number `π`, viewed as a complex number, is not algebraic over `ℚ`. -/
 theorem pi_is_not_algebraic_number :

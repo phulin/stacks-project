@@ -209,9 +209,12 @@ def abelianBandPreservedBy {C : Type u} [Category.{v} C]
 
 /-- The type of data used for a nonabelian `G`-gerbe over `X`.
 
-Unlike the abelian case, the automorphism sheaves are only required to be
-locally identified with the given group sheaf; conjugation compatibility is
-part of the band data.
+Unlike the abelian case, an identification of `G` with an automorphism group
+is meaningful only up to an inner automorphism of `G`. Consequently both
+pullback compatibility and change-of-object compatibility use one conjugating
+element, uniformly for all sections of `G`. Requiring strict compatibility
+under every automorphism of an object would incorrectly force `G` to be
+abelian.
 -/
 structure NonabelianBandedGerbe {C : Type u} [Category.{v} C]
     (J : GrothendieckTopology C)
@@ -221,13 +224,18 @@ structure NonabelianBandedGerbe {C : Type u} [Category.{v} C]
   band : ∀ (U : Over C X)
     (x : Fiber value U), (G.over X).obj.obj (op U) ≃* Aut x
   pullback_compatible : ∀ {U V : Over C X}
-    (f : V ⟶ U) (x : Fiber value U) (g : (G.over X).obj.obj (op U)),
-    band V ((value.map f.op.toLoc).toFunctor.obj x)
-        ((G.over X).obj.map f.op g) =
-      (value.map f.op.toLoc).toFunctor.mapIso (band U x g)
+    (f : V ⟶ U) (x : Fiber value U),
+    ∃ c : (G.over X).obj.obj (op V),
+      ∀ g : (G.over X).obj.obj (op U),
+        band V ((value.map f.op.toLoc).toFunctor.obj x)
+            (c * (G.over X).obj.map f.op g * c⁻¹) =
+          (value.map f.op.toLoc).toFunctor.mapIso (band U x g)
   conjugation_compatible : ∀ (U : Over C X)
-    (x y : Fiber value U) (φ : x ⟶ y) (g : (G.over X).obj.obj (op U)),
-    band U y g = conjugateAutomorphism isGerbe.1.1 φ (band U x g)
+    (x y : Fiber value U) (φ : x ⟶ y),
+    ∃ c : (G.over X).obj.obj (op U),
+      ∀ g : (G.over X).obj.obj (op U),
+        band U y (c * g * c⁻¹) =
+          conjugateAutomorphism isGerbe.1.1 φ (band U x g)
 
 /-! ### Equivalence classes of nonabelian gerbes -/
 
@@ -237,16 +245,20 @@ structure NonabelianBandedGerbeEquivalence {C : Type u} [Category.{v} C]
     (P Q : NonabelianBandedGerbe.{t, w, v, u} J G X) where
   forward : FiberedMorphism P.value Q.value
   forward_is_equivalence : FiberwiseEquivalence forward
-  forward_band_compatible : ∀ (U : Over C X) (x : Fiber P.value U)
-    (g : (G.over X).obj.obj (op U)),
-    Q.band U ((forward.app (.mk (op U))).toFunctor.obj x) g =
-      (forward.app (.mk (op U))).toFunctor.mapIso (P.band U x g)
+  forward_band_compatible : ∀ (U : Over C X) (x : Fiber P.value U),
+    ∃ c : (G.over X).obj.obj (op U),
+      ∀ g : (G.over X).obj.obj (op U),
+        Q.band U ((forward.app (.mk (op U))).toFunctor.obj x)
+            (c * g * c⁻¹) =
+          (forward.app (.mk (op U))).toFunctor.mapIso (P.band U x g)
   backward : FiberedMorphism Q.value P.value
   backward_is_equivalence : FiberwiseEquivalence backward
-  backward_band_compatible : ∀ (U : Over C X) (y : Fiber Q.value U)
-    (g : (G.over X).obj.obj (op U)),
-    P.band U ((backward.app (.mk (op U))).toFunctor.obj y) g =
-      (backward.app (.mk (op U))).toFunctor.mapIso (Q.band U y g)
+  backward_band_compatible : ∀ (U : Over C X) (y : Fiber Q.value U),
+    ∃ c : (G.over X).obj.obj (op U),
+      ∀ g : (G.over X).obj.obj (op U),
+        P.band U ((backward.app (.mk (op U))).toFunctor.obj y)
+            (c * g * c⁻¹) =
+          (backward.app (.mk (op U))).toFunctor.mapIso (Q.band U y g)
 
 /-- The setoid of nonabelian-banded gerbes modulo band-preserving equivalence. -/
 def nonabelianBandedGerbeSetoid {C : Type u} [Category.{v} C]
@@ -266,8 +278,10 @@ def nonabelianBandedGerbeSetoid {C : Type u} [Category.{v} C]
             change Functor.EssSurj (𝟭 _)
             exact inferInstance
         forward_band_compatible := by
-          intro U x g
-          change P.band U x g = (𝟭 _).mapIso (P.band U x g)
+          intro U x
+          refine ⟨1, fun g => ?_⟩
+          change P.band U x (1 * g * 1⁻¹) = (𝟭 _).mapIso (P.band U x g)
+          simp only [one_mul, inv_one, mul_one]
           rfl
         backward := 𝟙 _
         backward_is_equivalence := by
@@ -278,8 +292,10 @@ def nonabelianBandedGerbeSetoid {C : Type u} [Category.{v} C]
             change Functor.EssSurj (𝟭 _)
             exact inferInstance
         backward_band_compatible := by
-          intro U x g
-          change P.band U x g = (𝟭 _).mapIso (P.band U x g)
+          intro U x
+          refine ⟨1, fun g => ?_⟩
+          change P.band U x (1 * g * 1⁻¹) = (𝟭 _).mapIso (P.band U x g)
+          simp only [one_mul, inv_one, mul_one]
           rfl
       }⟩
     · intro P Q h
@@ -311,13 +327,19 @@ def nonabelianBandedGerbeSetoid {C : Type u} [Category.{v} C]
                 (f.forward.app (.mk (op U))).toFunctor)
             exact inferInstance
         forward_band_compatible := by
-          intro U x g
+          intro U x
+          let E := (e.forward.app (.mk (op U))).toFunctor
+          let F := (f.forward.app (.mk (op U))).toFunctor
+          rcases e.forward_band_compatible U x with ⟨c₁, hc₁⟩
+          rcases f.forward_band_compatible U (E.obj x) with ⟨c₂, hc₂⟩
+          refine ⟨c₂ * c₁, fun g => ?_⟩
           change R.band U
-              ((f.forward.app (.mk (op U))).toFunctor.obj
-                ((e.forward.app (.mk (op U))).toFunctor.obj x)) g =
-            ((e.forward.app (.mk (op U))).toFunctor ⋙
-              (f.forward.app (.mk (op U))).toFunctor).mapIso (P.band U x g)
-          rw [f.forward_band_compatible, e.forward_band_compatible]
+              (F.obj (E.obj x)) ((c₂ * c₁) * g * (c₂ * c₁)⁻¹) =
+            (E ⋙ F).mapIso (P.band U x g)
+          have hconj : (c₂ * c₁) * g * (c₂ * c₁)⁻¹ =
+              c₂ * (c₁ * g * c₁⁻¹) * c₂⁻¹ := by
+            simp only [mul_inv_rev, mul_assoc]
+          rw [hconj, hc₂ (c₁ * g * c₁⁻¹), hc₁ g]
           rfl
         backward := f.backward ≫ e.backward
         backward_is_equivalence := by
@@ -334,13 +356,19 @@ def nonabelianBandedGerbeSetoid {C : Type u} [Category.{v} C]
                 (e.backward.app (.mk (op U))).toFunctor)
             exact inferInstance
         backward_band_compatible := by
-          intro U y g
+          intro U y
+          let F := (f.backward.app (.mk (op U))).toFunctor
+          let E := (e.backward.app (.mk (op U))).toFunctor
+          rcases f.backward_band_compatible U y with ⟨c₁, hc₁⟩
+          rcases e.backward_band_compatible U (F.obj y) with ⟨c₂, hc₂⟩
+          refine ⟨c₂ * c₁, fun g => ?_⟩
           change P.band U
-              ((e.backward.app (.mk (op U))).toFunctor.obj
-                ((f.backward.app (.mk (op U))).toFunctor.obj y)) g =
-            ((f.backward.app (.mk (op U))).toFunctor ⋙
-              (e.backward.app (.mk (op U))).toFunctor).mapIso (R.band U y g)
-          rw [e.backward_band_compatible, f.backward_band_compatible]
+              (E.obj (F.obj y)) ((c₂ * c₁) * g * (c₂ * c₁)⁻¹) =
+            (F ⋙ E).mapIso (R.band U y g)
+          have hconj : (c₂ * c₁) * g * (c₂ * c₁)⁻¹ =
+              c₂ * (c₁ * g * c₁⁻¹) * c₂⁻¹ := by
+            simp only [mul_inv_rev, mul_assoc]
+          rw [hconj, hc₂ (c₁ * g * c₁⁻¹), hc₁ g]
           rfl
       }⟩
 

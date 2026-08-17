@@ -114,9 +114,10 @@ noncomputable def abelianStalkCocone_is_colimit
 
 /-! ## Directed neighborhoods and coproducts -/
 
-/-- The open neighborhoods of a point form a directed partially ordered set. -/
+/-- The reverse-inclusion order on the open neighborhoods of a point is
+directed, as used by the stalk colimit. -/
 theorem openNhds_is_directed (X : TopCat.{u}) (x : X) :
-    IsDirectedOrder (OpenNhds x) := by
+    IsDirectedOrder (OpenNhds x)ᵒᵈ := by
   infer_instance
 
 /-- In `AddCommGrpCat`, the binary coproduct is canonically the direct-sum
@@ -130,8 +131,8 @@ def setBinaryCoproductIsoDisjointUnion (A B : Type u) :
     Limits.coprod A B ≅ A ⊕ B :=
   Types.binaryCoproductIso A B
 
-/-- The forgetful functor from abelian groups to sets does not preserve all
-binary coproducts. -/
+/-- The forgetful functor from abelian groups to sets does not preserve the
+displayed binary coproduct. -/
 theorem forget_addCommGrpCat_not_preserves_binary_coproduct :
     ¬ PreservesColimit
       (pair (AddCommGrpCat.of (PUnit : Type u))

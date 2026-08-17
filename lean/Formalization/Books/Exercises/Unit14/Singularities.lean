@@ -285,13 +285,13 @@ theorem periodicMatrixResolution_exact
       A.det • B = (A.adjugate * A) * B := by rw [Matrix.adjugate_mul]; simp
       _ = A.adjugate * (A * B) := by rw [Matrix.mul_assoc]
       _ = A.adjugate * (f • (1 : Matrix (Fin n) (Fin n) R)) := by rw [hAB]
-      _ = f • A.adjugate := by simp [Matrix.mul_smul]
+      _ = f • A.adjugate := by simp
   have hBA : B * A = f • (1 : Matrix (Fin n) (Fin n) R) := by
     have hcancel : A.det • (B * A) = A.det • (f • (1 : Matrix (Fin n) (Fin n) R)) := by
       calc
-        A.det • (B * A) = (A.det • B) * A := by simp [Matrix.smul_mul]
+        A.det • (B * A) = (A.det • B) * A := by simp
         _ = (f • A.adjugate) * A := by rw [hdetB]
-        _ = f • (A.adjugate * A) := by simp [Matrix.smul_mul]
+        _ = f • (A.adjugate * A) := by simp
         _ = f • (A.det • (1 : Matrix (Fin n) (Fin n) R)) := by
           rw [Matrix.adjugate_mul]
         _ = A.det • (f • (1 : Matrix (Fin n) (Fin n) R)) := by
@@ -323,7 +323,7 @@ theorem periodicMatrixResolution_exact
       simp
     · intro x hx
       change (quotientMatrix f M).mulVecLin x = 0 at hx
-      have hMkernel : ∀ i, (M.map q *ᵥ x) i = 0 := by
+      have hMkernel : ∀ i, Matrix.mulVec (M.map q) x i = 0 := by
         intro i
         simpa [quotientMatrix, q, Matrix.mulVecLin_apply] using
           congrArg (fun v => v i) hx
@@ -331,29 +331,30 @@ theorem periodicMatrixResolution_exact
       have hyq : q ∘ y = x := by
         funext i
         simpa [q] using hy i
-      have hMdiv : ∀ i, f ∣ (M *ᵥ y) i := by
+      have hMdiv : ∀ i, f ∣ Matrix.mulVec M y i := by
         intro i
-        have hzero : q ((M *ᵥ y) i) = 0 := by
+        have hzero : q (Matrix.mulVec M y i) = 0 := by
           rw [RingHom.map_mulVec q M y i, hyq]
           exact hMkernel i
-        exact (Ideal.Quotient.eq_zero_iff_dvd f ((M *ᵥ y) i)).mp (by
+        exact (Ideal.Quotient.eq_zero_iff_dvd f (Matrix.mulVec M y i)).mp (by
           simpa [q] using hzero)
       choose z hz using hMdiv
-      have hMzy : M *ᵥ y = f • z := by
+      have hMzy : Matrix.mulVec M y = f • z := by
         funext i
         simpa [Pi.smul_apply, smul_eq_mul] using hz i
-      have hNMvec : N *ᵥ (M *ᵥ y) = f • y := by
+      have hNMvec : Matrix.mulVec N (Matrix.mulVec M y) = f • y := by
         calc
-          N *ᵥ (M *ᵥ y) = (N * M) *ᵥ y :=
-            (Matrix.mulVec_mulVec N M y).symm
-          _ = (f • (1 : Matrix (Fin n) (Fin n) R)) *ᵥ y := by rw [hNM]
+          Matrix.mulVec N (Matrix.mulVec M y) = Matrix.mulVec (N * M) y :=
+            Matrix.mulVec_mulVec y N M
+          _ = Matrix.mulVec (f • (1 : Matrix (Fin n) (Fin n) R)) y := by rw [hNM]
           _ = f • y := by rw [Matrix.smul_mulVec]; simp
-      have hcancel : f • (N *ᵥ z) = f • y := by
+      have hcancel : f • Matrix.mulVec N z = f • y := by
         calc
-          f • (N *ᵥ z) = N *ᵥ (f • z) := (Matrix.mulVec_smul N f z).symm
-          _ = N *ᵥ (M *ᵥ y) := by rw [← hMzy]
+          f • Matrix.mulVec N z = Matrix.mulVec N (f • z) :=
+            (Matrix.mulVec_smul N f z).symm
+          _ = Matrix.mulVec N (Matrix.mulVec M y) := by rw [← hMzy]
           _ = f • y := hNMvec
-      have hyz : N *ᵥ z = y := by
+      have hyz : Matrix.mulVec N z = y := by
         funext i
         apply hf.left
         simpa [Pi.smul_apply, smul_eq_mul] using
@@ -361,13 +362,13 @@ theorem periodicMatrixResolution_exact
       refine ⟨q ∘ z, ?_⟩
       ext i
       calc
-        (quotientMatrix f N).mulVecLin (q ∘ z) i = q ((N *ᵥ z) i) := by
+        (quotientMatrix f N).mulVecLin (q ∘ z) i = q (Matrix.mulVec N z i) := by
           symm
           simpa [quotientMatrix, q, Matrix.mulVecLin_apply] using
             RingHom.map_mulVec q N z i
         _ = q (y i) := by rw [hyz]
-        _ = x i := by simpa only [Function.comp_apply] using hyq i
-  exact ⟨h_exact B A hBA hAB, h_exact A B hAB hBA⟩
+        _ = x i := by simpa only [Function.comp_apply] using congrFun hyq i
+  exact ⟨h_exact A B hAB hBA, h_exact B A hBA hAB⟩
 
 end
 

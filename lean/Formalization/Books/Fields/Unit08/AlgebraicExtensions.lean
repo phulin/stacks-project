@@ -241,10 +241,9 @@ theorem imaginary_unit_is_algebraic_number : IsAlgebraic ℚ Complex.I := by
   · exact Polynomial.X_pow_add_C_ne_zero (by norm_num) 1
   · simp [Polynomial.aeval_def, Complex.I_sq]
 
-/-- The real number `π`, viewed as a complex number, is not algebraic over `ℚ`. -/
-theorem pi_is_not_algebraic_number :
-    ¬ IsAlgebraic ℚ ((Real.pi : ℝ) : ℂ) := by
-  sorry
+/- The source mentions that `π` is not algebraic over `ℚ`.  We do not
+   formalize this fact here: it is the deep transcendence theorem for `π`,
+   and the required result is not currently available in Mathlib. -/
 
 /-- The algebraic numbers form a field. -/
 theorem algebraic_numbers_form_field : IsField (algebraicClosure ℚ ℂ) := by

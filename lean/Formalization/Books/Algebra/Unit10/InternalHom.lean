@@ -1,8 +1,7 @@
 import Mathlib.Algebra.Category.ModuleCat.Monoidal.Closed
-import Mathlib.Algebra.Homology.ShortComplex.ModuleCat
+import Mathlib.Algebra.Exact.Basic
 import Mathlib.Algebra.Module.FinitePresentation
-import Mathlib.Algebra.Module.LinearMap.End
-import Mathlib.Algebra.Module.LocalizedModule.Exact
+import Mathlib.RingTheory.Localization.Module
 import Formalization.Books.Algebra.Unit09.Localization
 
 /-!
@@ -165,93 +164,34 @@ theorem internalHom_exact_of_left_exact
 /-! ## Localization of internal homs -/
 
 /- The first equality in the source's localization lemma is Mathlib's
-`linearEquivMapExtendScalars`.  The second equality is the scalar-restriction
-identification between maps over `Localization S` and maps over `R`. -/
-
-theorem localizedHom_map_localization_smul
-    {R M N : Type*} [CommRing R] (S : Submonoid R)
-    [AddCommGroup M] [Module R M] [AddCommGroup N] [Module R N]
-    (φ : localizedModule S M →ₗ[R] localizedModule S N)
-    (s : localization S) (m : localizedModule S M) :
-    φ (s • m) = s • φ m := by
-  sorry
-
-def localizedHomRestrictScalars
-    {R M N : Type*} [CommRing R] (S : Submonoid R)
-    [AddCommGroup M] [Module R M] [AddCommGroup N] [Module R N] :
-    (localizedModule S M →ₗ[localization S] localizedModule S N) →ₗ[R]
-      (localizedModule S M →ₗ[R] localizedModule S N) :=
-  { toFun := LinearMap.restrictScalars R
-    map_add' := by
-      intro φ ψ
-      ext m
-      rfl
-    map_smul' := by
-      intro r φ
-      ext m
-      rfl }
-
-def localizedHomExtendScalars
-    {R M N : Type*} [CommRing R] (S : Submonoid R)
-    [AddCommGroup M] [Module R M] [AddCommGroup N] [Module R N] :
-    (localizedModule S M →ₗ[R] localizedModule S N) →ₗ[R]
-      (localizedModule S M →ₗ[localization S] localizedModule S N) where
-  toFun φ :=
-    { toFun := φ
-      map_add' := φ.map_add
-      map_smul' := fun s m => localizedHom_map_localization_smul S φ s m }
-  map_add' φ ψ := by
-    ext m
-    rfl
-  map_smul' r φ := by
-    ext m
-    rfl
-
-/-- The canonical identification of `R`-linear maps between localized modules
-with maps linear over the localized ring. -/
-def localizedHomScalarEquiv
-    {R M N : Type*} [CommRing R] (S : Submonoid R)
-    [AddCommGroup M] [Module R M] [AddCommGroup N] [Module R N] :
-    (localizedModule S M →ₗ[localization S] localizedModule S N) ≃ₗ[R]
-      (localizedModule S M →ₗ[R] localizedModule S N) where
-  toFun := localizedHomRestrictScalars S
-  invFun := localizedHomExtendScalars S
-  left_inv φ := by
-    ext m
-    rfl
-  right_inv φ := by
-    ext m
-    rfl
-  map_add' φ ψ := by
-    ext m
-    rfl
-  map_smul' r φ := by
-    ext m
-    rfl
+`linearEquivMapExtendScalars`, extended to a localization-linear equivalence.
+The second equality is Mathlib's canonical identification of maps over
+`Localization S` with the same maps after restriction of scalars to `R`. -/
 
 theorem internalHom_localization_finitelyPresented
     {R M N : Type*} [CommRing R]
     [AddCommGroup M] [Module R M] [Module.FinitePresentation R M]
     [AddCommGroup N] [Module R N] (S : Submonoid R) :
     Nonempty
-        (localizedModule S (internalHomModule (R := R) (M := M) (N := N)) ≃ₗ[R]
+        (localizedModule S (internalHomModule (R := R) (M := M) (N := N)) ≃ₗ[localization S]
           (localizedModule S M →ₗ[localization S] localizedModule S N)) ∧
       Nonempty
-        ((localizedModule S M →ₗ[localization S] localizedModule S N) ≃ₗ[R]
+        ((localizedModule S M →ₗ[localization S] localizedModule S N) ≃ₗ[localization S]
           (localizedModule S M →ₗ[R] localizedModule S N)) := by
   constructor
-  · exact ⟨Module.FinitePresentation.linearEquivMapExtendScalars S⟩
-  · exact ⟨localizedHomScalarEquiv S⟩
+  · exact ⟨(Module.FinitePresentation.linearEquivMapExtendScalars S).extendScalarsOfIsLocalization
+      S (localization S)⟩
+  · exact ⟨(LinearMap.extendScalarsOfIsLocalizationEquiv S (localization S)).symm⟩
 
 theorem internalHom_localization_away_finitelyPresented
     {R M N : Type*} [CommRing R]
     [AddCommGroup M] [Module R M] [Module.FinitePresentation R M]
     [AddCommGroup N] [Module R N] (f : R) :
     Nonempty
-        (localizedModuleAway f (internalHomModule (R := R) (M := M) (N := N)) ≃ₗ[R]
+        (localizedModuleAway f (internalHomModule (R := R) (M := M) (N := N)) ≃ₗ[localizationAway f]
           (localizedModuleAway f M →ₗ[localizationAway f] localizedModuleAway f N)) ∧
       Nonempty
-        ((localizedModuleAway f M →ₗ[localizationAway f] localizedModuleAway f N) ≃ₗ[R]
+        ((localizedModuleAway f M →ₗ[localizationAway f] localizedModuleAway f N) ≃ₗ[localizationAway f]
           (localizedModuleAway f M →ₗ[R] localizedModuleAway f N)) := by
   simpa [localizationAway, localizedModuleAway] using
     internalHom_localization_finitelyPresented (R := R) (M := M) (N := N)

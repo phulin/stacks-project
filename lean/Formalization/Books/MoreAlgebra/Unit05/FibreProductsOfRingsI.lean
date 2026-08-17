@@ -3,20 +3,21 @@ import Mathlib.Algebra.Category.ModuleCat.ChangeOfRings
 import Mathlib.Algebra.Category.ModuleCat.Limits
 import Mathlib.Algebra.Category.Ring.Constructions
 import Mathlib.Algebra.Exact.Basic
+import Mathlib.CategoryTheory.Comma.Basic
+import Mathlib.CategoryTheory.ObjectProperty.FullSubcategory
 import Mathlib.RingTheory.Finiteness.Basic
 import Mathlib.RingTheory.FiniteType
 import Mathlib.RingTheory.LocalRing.Pullback
 import Mathlib.RingTheory.Localization.Away.Basic
-import Formalization.Books.Categories.Unit31.TwoFibreProducts
 
 /-!
 # More on Algebra, Chapter 5: Fibre products of rings, I
 
 This file uses Mathlib's canonical pullback subrings and subalgebras.  The
-category of triples of modules is the earlier chapter's `IsoComma`
-construction, and the module fibre product is the categorical pullback in
-`ModuleCat`; the source's compatible-pair description is recorded alongside
-that construction.
+category of triples of modules is the canonical full subcategory of a comma
+category used by the earlier chapter's `IsoComma` construction, and the
+module fibre product is the categorical pullback in `ModuleCat`; the source's
+compatible-pair description is recorded alongside that construction.
 -/
 
 namespace Formalization.Books.MoreAlgebra.Unit05
@@ -87,6 +88,39 @@ def algebraPullbackKernelToPullback
     change f (x : A) = g 0
     rw [show f (x : A) = 0 by simpa [algebraPullbackKernel] using x.property]
     simp⟩
+
+/-- The map from the fibre product to the product used in the Artin--Tate
+argument. -/
+def algebraPullbackToProduct
+    {R A B C : Type*} [CommRing R] [CommRing A] [CommRing B] [CommRing C]
+    [Algebra R A] [Algebra R B] [Algebra R C]
+    (f : A →ₐ[R] B) (g : C →ₐ[R] B) :
+    AlgHom.pullback f g →+* A × C :=
+  (AlgHom.pullbackFst f g).toRingHom.prod (AlgHom.pullbackSnd f g).toRingHom
+
+/-- The map from the fibre product to the product is injective. -/
+theorem algebraPullback_to_product_injective
+    {R A B C : Type*} [CommRing R] [CommRing A] [CommRing B] [CommRing C]
+    [Algebra R A] [Algebra R B] [Algebra R C]
+    (f : A →ₐ[R] B) (g : C →ₐ[R] B) :
+    Function.Injective (algebraPullbackToProduct f g) := by
+  intro x y hxy
+  exact Subtype.ext hxy
+
+/-- The product ring is finite as a module over the fibre product, as used
+in the Artin--Tate argument. -/
+theorem algebraPullback_product_finite
+    {R A B C : Type*} [CommRing R] [CommRing A] [CommRing B] [CommRing C]
+    [Algebra R A] [Algebra R B] [Algebra R C]
+    (f : A →ₐ[R] B) (g : C →ₐ[R] B)
+    (hR : IsNoetherianRing R)
+    (hA : Algebra.FiniteType R A)
+    (hB : Algebra.FiniteType R B)
+    (hC : Algebra.FiniteType R C)
+    (hf : Function.Surjective f)
+    (hg : RingHom.Finite g.toRingHom) :
+    (algebraPullbackToProduct f g).Finite := by
+  sorry
 
 /-- The exact rows in the proof of the finite-type fibre-product lemma,
 with `I` represented by the canonical kernel ideal. -/
@@ -271,9 +305,13 @@ theorem localized_ringPullback_exact
           localizedPullbackBaseRightCanonical s t h p.2) := by
   sorry
 
-/-! ## Modules over a cartesian square -/
+/-! ## Modules over a commutative square -/
 
-/-- A commutative square of rings together with its cartesian property. -/
+/-- A commutative square of rings.
+
+The module functor in the source only assumes commutativity of the square;
+cartesianness is needed for the preceding localization statement, but not for
+this construction. -/
 structure RingSquare (R R' B B' : Type u)
     [CommRing R] [CommRing R'] [CommRing B] [CommRing B'] where
   /-- The upper horizontal map `R' → R`. -/
@@ -286,13 +324,6 @@ structure RingSquare (R R' B B' : Type u)
   v : B' →+* R'
   /-- Commutativity of the square. -/
   comm : s.comp u = t.comp v
-  /-- The square is cartesian in commutative rings. -/
-  cartesian :
-    IsPullback
-      (CommRingCat.ofHom u)
-      (CommRingCat.ofHom v)
-      (CommRingCat.ofHom s)
-      (CommRingCat.ofHom t)
 
 @[simp]
 theorem RingSquare.comm_apply
@@ -301,13 +332,15 @@ theorem RingSquare.comm_apply
     D.s (D.u x) = D.t (D.v x) :=
   DFunLike.congr_fun D.comm x
 
-/-- The category of module triples `(N, M', φ)` over a cartesian square.
-The earlier Categories chapter supplies the iso-comma implementation. -/
+/-- The category of module triples `(N, M', φ)` over a commutative square.
+This is the canonical full subcategory of the comma category on isomorphisms,
+the underlying implementation of the earlier Categories construction. -/
 abbrev ModuleGluingCategory
     {R R' B B' : Type u} [CommRing R] [CommRing R'] [CommRing B] [CommRing B']
     (D : RingSquare R R' B B') :=
-  Formalization.Books.Categories.Unit31.TwoFibreProductCategory
-    (ModuleCat.extendScalars D.s) (ModuleCat.extendScalars D.t)
+  ObjectProperty.FullSubcategory
+    (fun ξ : Comma (ModuleCat.extendScalars D.s) (ModuleCat.extendScalars D.t) =>
+      IsIso ξ.hom)
 
 /-- The two module components of an object of `ModuleGluingCategory`.  These
 abbreviations keep projections out of binder positions, where Lean parses a
@@ -335,7 +368,56 @@ theorem moduleGluingComparison_isIso
     {R R' B B' : Type u} [CommRing R] [CommRing R'] [CommRing B] [CommRing B']
     (D : RingSquare R R' B B') (X : ModuleGluingCategory D) :
     IsIso (moduleGluingComparison D X) := by
-  infer_instance
+  change IsIso X.obj.hom
+  exact X.property
+
+/-- The canonical comparison between the two iterated extensions of scalars
+along a commutative square. -/
+noncomputable def moduleBaseChangeComparison
+    {R R' B B' : Type u} [CommRing R] [CommRing R'] [CommRing B] [CommRing B']
+    (D : RingSquare R R' B B') :
+    (ModuleCat.extendScalars D.u ⋙ ModuleCat.extendScalars D.s) ≅
+      (ModuleCat.extendScalars D.v ⋙ ModuleCat.extendScalars D.t) := by
+  let ecomm : ModuleCat.extendScalars (D.s.comp D.u) ≅
+      ModuleCat.extendScalars (D.t.comp D.v) :=
+    eqToIso (congrArg (fun f => ModuleCat.extendScalars f) D.comm)
+  exact (ModuleCat.extendScalarsComp D.u D.s).symm ≪≫ ecomm ≪≫
+    ModuleCat.extendScalarsComp D.v D.t
+
+/-- The source's functor from modules over the lower-right ring to triples of
+modules.  Its two components are extension of scalars, and its comparison is
+the canonical iterated-extension isomorphism. -/
+noncomputable def moduleBaseChangeFunctor
+    {R R' B B' : Type u} [CommRing R] [CommRing R'] [CommRing B] [CommRing B']
+    (D : RingSquare R R' B B') :
+    ModuleCat.{u} B' ⥤ ModuleGluingCategory D where
+  obj L :=
+    { obj :=
+        { left := (ModuleCat.extendScalars D.u).obj L
+          right := (ModuleCat.extendScalars D.v).obj L
+          hom := (moduleBaseChangeComparison D).hom.app L }
+      property := by
+        change IsIso ((moduleBaseChangeComparison D).hom.app L)
+        infer_instance }
+  map f :=
+    ObjectProperty.homMk
+      { left := (ModuleCat.extendScalars D.u).map f
+        right := (ModuleCat.extendScalars D.v).map f
+        w := (moduleBaseChangeComparison D).hom.naturality f }
+  map_id := by
+    intro L
+    apply ObjectProperty.hom_ext
+    apply Comma.hom_ext <;> simp
+  map_comp := by
+    intro L M N f g
+    apply ObjectProperty.hom_ext
+    apply Comma.hom_ext <;> simp
+
+noncomputable abbrev moduleBaseChange
+    {R R' B B' : Type u} [CommRing R] [CommRing R'] [CommRing B] [CommRing B']
+    (D : RingSquare R R' B B') :
+    ModuleCat.{u} B' ⥤ ModuleGluingCategory D :=
+  moduleBaseChangeFunctor D
 
 /-- The common target used to compare the two canonical maps defining the
 module pullback. -/
@@ -373,6 +455,33 @@ noncomputable def moduleFiberRightMap
       e.inv ≫
       (ModuleCat.restrictScalarsCongr D.comm).inv.app K
 
+/-- The map on the common target induced by a morphism of module triples. -/
+def moduleFiberCommonMap
+    {R R' B B' : Type u} [CommRing R] [CommRing R'] [CommRing B] [CommRing B']
+    (D : RingSquare R R' B B') {X Y : ModuleGluingCategory D}
+    (f : X ⟶ Y) :
+    moduleFiberCommonTarget D X ⟶ moduleFiberCommonTarget D Y :=
+  (ModuleCat.restrictScalars (D.s.comp D.u)).map
+    ((ModuleCat.extendScalars D.t).map f.hom.right)
+
+/-- Naturality of the first map in the categorical module pullback. -/
+theorem moduleFiberLeftMap_naturality
+    {R R' B B' : Type u} [CommRing R] [CommRing R'] [CommRing B] [CommRing B']
+    (D : RingSquare R R' B B') {X Y : ModuleGluingCategory D}
+    (f : X ⟶ Y) :
+    (ModuleCat.restrictScalars D.u).map f.hom.left ≫ moduleFiberLeftMap D Y =
+      moduleFiberLeftMap D X ≫ moduleFiberCommonMap D f := by
+  sorry
+
+/-- Naturality of the second map in the categorical module pullback. -/
+theorem moduleFiberRightMap_naturality
+    {R R' B B' : Type u} [CommRing R] [CommRing R'] [CommRing B] [CommRing B']
+    (D : RingSquare R R' B B') {X Y : ModuleGluingCategory D}
+    (f : X ⟶ Y) :
+    (ModuleCat.restrictScalars D.v).map f.hom.right ≫ moduleFiberRightMap D Y =
+      moduleFiberRightMap D X ≫ moduleFiberCommonMap D f := by
+  sorry
+
 /-- The source's compatible-pair set, written in terms of the canonical
 tensor base-change elements. -/
 def moduleFiberCompatiblePairs
@@ -386,7 +495,7 @@ def moduleFiberCompatiblePairs
 
 /-- The module fibre product is the categorical pullback of the two maps
 whose elementwise condition is `moduleFiberCompatiblePairs`. -/
-noncomputable def moduleFiberProduct
+noncomputable abbrev moduleFiberProduct
     {R R' B B' : Type u} [CommRing R] [CommRing R'] [CommRing B] [CommRing B']
     (D : RingSquare R R' B B') (X : ModuleGluingCategory D) : ModuleCat.{u} B' :=
   limit (cospan (moduleFiberLeftMap D X) (moduleFiberRightMap D X))
@@ -402,6 +511,45 @@ def moduleFiberProductPair
       WalkingCospan.left x,
     limit.π (cospan (moduleFiberLeftMap D X) (moduleFiberRightMap D X))
       WalkingCospan.right x)
+
+/-- The map between the two categorical module pullbacks induced by a morphism
+of triples. -/
+noncomputable def moduleFiberProductMap
+    {R R' B B' : Type u} [CommRing R] [CommRing R'] [CommRing B] [CommRing B']
+    (D : RingSquare R R' B B') {X Y : ModuleGluingCategory D}
+    (f : X ⟶ Y) : moduleFiberProduct D X ⟶ moduleFiberProduct D Y :=
+  pullback.lift
+    (pullback.fst (moduleFiberLeftMap D X) (moduleFiberRightMap D X) ≫
+      (ModuleCat.restrictScalars D.u).map f.hom.left)
+    (pullback.snd (moduleFiberLeftMap D X) (moduleFiberRightMap D X) ≫
+      (ModuleCat.restrictScalars D.v).map f.hom.right) (by
+        simp only [Category.assoc]
+        rw [moduleFiberLeftMap_naturality D f, moduleFiberRightMap_naturality D f]
+        exact congrArg (fun k => k ≫ moduleFiberCommonMap D f)
+          (PullbackCone.condition (limit.cone
+            (cospan (moduleFiberLeftMap D X) (moduleFiberRightMap D X)))) )
+
+/-- The compatible-pair pullback is functorial in the module triple. -/
+noncomputable def moduleFiberProductRightAdjointCanonical
+    {R R' B B' : Type u} [CommRing R] [CommRing R'] [CommRing B] [CommRing B']
+    (D : RingSquare R R' B B') :
+    ModuleGluingCategory D ⥤ ModuleCat.{u} B' where
+  obj X := moduleFiberProduct D X
+  map f := moduleFiberProductMap D f
+  map_id := by
+    intro X
+    apply pullback.hom_ext
+    · simp [moduleFiberProductMap]
+    · simp [moduleFiberProductMap]
+  map_comp := by
+    intro X Y Z f g
+    apply pullback.hom_ext
+    · simp only [moduleFiberProductMap, pullback.lift_fst, pullback.lift_fst_assoc,
+        Category.assoc]
+      simp
+    · simp only [moduleFiberProductMap, pullback.lift_snd, pullback.lift_snd_assoc,
+        Category.assoc]
+      simp
 
 /-- The categorical pullback and the source's compatible-pair presentation
 have the same underlying elements. -/
@@ -437,51 +585,15 @@ noncomputable def moduleFiberProduct_compatiblePairEquiv
 
 /-! ## Base change and the right adjoint -/
 
-/-- Data specifying the source's base-change functor, including its canonical
-objectwise identifications with the two extension-of-scalars components. -/
-structure ModuleBaseChangeData
-    {R R' B B' : Type u} [CommRing R] [CommRing R'] [CommRing B] [CommRing B']
-    (D : RingSquare R R' B B') where
-  functor : ModuleCat.{u} B' ⥤ ModuleGluingCategory D
-  left_iso : ∀ L : ModuleCat.{u} B',
-      moduleGluingLeftObj (D := D) (X := functor.obj L) ≅
-        (ModuleCat.extendScalars D.u).obj L
-  right_iso : ∀ L : ModuleCat.{u} B',
-      moduleGluingRightObj (D := D) (X := functor.obj L) ≅
-        (ModuleCat.extendScalars D.v).obj L
-  comparison : ∀ L : ModuleCat.{u} B',
-    (ModuleCat.extendScalars D.s).obj ((ModuleCat.extendScalars D.u).obj L) ≅
-      (ModuleCat.extendScalars D.t).obj ((ModuleCat.extendScalars D.v).obj L)
-
-/-- The canonical base-change functor and its objectwise comparison data. -/
-theorem moduleBaseChange_exists
-    {R R' B B' : Type u} [CommRing R] [CommRing R'] [CommRing B] [CommRing B']
-    (D : RingSquare R R' B B') : Nonempty (ModuleBaseChangeData D) := by
-  sorry
-
-noncomputable def moduleBaseChangeData
-    {R R' B B' : Type u} [CommRing R] [CommRing R'] [CommRing B] [CommRing B']
-    (D : RingSquare R R' B B') : ModuleBaseChangeData D :=
-  Classical.choice (moduleBaseChange_exists D)
-
-noncomputable abbrev moduleBaseChange
-    {R R' B B' : Type u} [CommRing R] [CommRing R'] [CommRing B] [CommRing B']
-    (D : RingSquare R R' B B') : ModuleCat.{u} B' ⥤ ModuleGluingCategory D :=
-  (moduleBaseChangeData D).functor
-
-/-- The right-adjoint data in the source lemma.  The objectwise comparison
-to `moduleFiberProduct` makes the compatible-pair functor explicit while the
-adjunction is retained in Mathlib's categorical form. -/
+/-- The adjunction data asserting that the compatible-pair fibre product is a
+right adjoint of the source's module functor. -/
 structure ModuleFiberProductAdjunctionData
     {R R' B B' : Type u} [CommRing R] [CommRing R'] [CommRing B] [CommRing B']
     (D : RingSquare R R' B B') where
-  rightAdjoint : ModuleGluingCategory D ⥤ ModuleCat.{u} B'
-  rightAdjoint_iso : ∀ X : ModuleGluingCategory D,
-    rightAdjoint.obj X ≅ moduleFiberProduct D X
-  adjunction : (moduleBaseChangeData D).functor ⊣ rightAdjoint
+  adjunction : moduleBaseChangeFunctor D ⊣ moduleFiberProductRightAdjointCanonical D
 
-/-- The module functor of the source has `moduleFiberProduct` as a right
-adjoint. -/
+/-- The source's module functor has the compatible-pair fibre product as a
+right adjoint. -/
 theorem moduleFiberProduct_rightAdjoint_exists
     {R R' B B' : Type u} [CommRing R] [CommRing R'] [CommRing B] [CommRing B']
     (D : RingSquare R R' B B') :
@@ -496,7 +608,7 @@ noncomputable def moduleFiberProductAdjunctionData
 noncomputable abbrev moduleFiberProductRightAdjoint
     {R R' B B' : Type u} [CommRing R] [CommRing R'] [CommRing B] [CommRing B']
     (D : RingSquare R R' B B') : ModuleGluingCategory D ⥤ ModuleCat.{u} B' :=
-  (moduleFiberProductAdjunctionData D).rightAdjoint
+  moduleFiberProductRightAdjointCanonical D
 
 /-- The source-facing adjunction Hom equivalence. -/
 noncomputable def moduleFiberProductHomEquiv
@@ -504,7 +616,7 @@ noncomputable def moduleFiberProductHomEquiv
     (D : RingSquare R R' B B') (L : ModuleCat.{u} B')
     (X : ModuleGluingCategory D) :
     ((moduleBaseChange D).obj L ⟶ X) ≃
-      (L ⟶ (moduleFiberProductAdjunctionData D).rightAdjoint.obj X) :=
+      (L ⟶ (moduleFiberProductRightAdjoint D).obj X) :=
   (moduleFiberProductAdjunctionData D).adjunction.homEquiv L X
 
 /-- The compatible pairs of component maps appearing on the right-hand side
@@ -518,10 +630,25 @@ def moduleCompatibleHomPairs
       ((ModuleCat.extendScalars D.v).obj L ⟶
         moduleGluingRightObj (D := D) (X := X))) :=
   {p |
-    ((moduleBaseChangeData D).comparison L).hom ≫
+    (moduleBaseChangeComparison D).hom.app L ≫
           (ModuleCat.extendScalars D.t).map p.2 =
-      (ModuleCat.extendScalars D.s).map p.1 ≫
+    (ModuleCat.extendScalars D.s).map p.1 ≫
         moduleGluingComparison (D := D) (X := X)}
+
+/- The second displayed Hom fibre product in the source, after applying the
+tensor--restriction adjunctions, is the ordinary pullback Hom description
+for the categorical module pullback. -/
+def moduleCompatibleHomPairsAdjoint
+    {R R' B B' : Type u} [CommRing R] [CommRing R'] [CommRing B] [CommRing B']
+    (D : RingSquare R R' B B') (L : ModuleCat.{u} B')
+    (X : ModuleGluingCategory D) :
+    Set (((L ⟶ (ModuleCat.restrictScalars D.u).obj
+          (moduleGluingLeftObj (D := D) (X := X))) ×
+      (L ⟶ (ModuleCat.restrictScalars D.v).obj
+        (moduleGluingRightObj (D := D) (X := X))))) :=
+  {p |
+    p.1 ≫ moduleFiberLeftMap D X =
+      p.2 ≫ moduleFiberRightMap D X}
 
 /-- The displayed Hom fibre product is equivalent to the adjunction Hom set.
 The subtype is the ordinary Lean realization of the fibre product of the two
@@ -538,6 +665,33 @@ theorem moduleFiberProductHomPairEquiv_exists
             moduleGluingRightObj (D := D) (X := X)) //
           p ∈ moduleCompatibleHomPairs D L X}) := by
   sorry
+
+/-- The second displayed Hom fibre product is equivalent to maps into the
+categorical module pullback. -/
+theorem moduleFiberProductHomAdjointPairEquiv_exists
+    {R R' B B' : Type u} [CommRing R] [CommRing R'] [CommRing B] [CommRing B']
+    (D : RingSquare R R' B B') (L : ModuleCat.{u} B')
+    (X : ModuleGluingCategory D) :
+    Nonempty
+      ((L ⟶ moduleFiberProduct D X) ≃
+        {p : ((L ⟶ (ModuleCat.restrictScalars D.u).obj
+                (moduleGluingLeftObj (D := D) (X := X))) ×
+            (L ⟶ (ModuleCat.restrictScalars D.v).obj
+              (moduleGluingRightObj (D := D) (X := X)))) //
+          p ∈ moduleCompatibleHomPairsAdjoint D L X}) := by
+  sorry
+
+noncomputable def moduleFiberProductHomAdjointPairEquiv
+    {R R' B B' : Type u} [CommRing R] [CommRing R'] [CommRing B] [CommRing B']
+    (D : RingSquare R R' B B') (L : ModuleCat.{u} B')
+    (X : ModuleGluingCategory D) :
+    (L ⟶ moduleFiberProduct D X) ≃
+      {p : ((L ⟶ (ModuleCat.restrictScalars D.u).obj
+              (moduleGluingLeftObj (D := D) (X := X))) ×
+          (L ⟶ (ModuleCat.restrictScalars D.v).obj
+            (moduleGluingRightObj (D := D) (X := X)))) //
+        p ∈ moduleCompatibleHomPairsAdjoint D L X} :=
+  Classical.choice (moduleFiberProductHomAdjointPairEquiv_exists D L X)
 
 /-- A chosen source-facing equivalence for the Hom identity. -/
 noncomputable def moduleFiberProductHomPairEquiv

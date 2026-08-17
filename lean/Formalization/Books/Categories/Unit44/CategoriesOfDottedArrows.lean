@@ -443,7 +443,33 @@ theorem compositionAuxiliary_inner_commutes
       (Bicategory.whiskerLeft Q.j A.eta ≫
             strictAssocInv Q.j A.dotted.a Q.f ≫
             Bicategory.whiskerRight A.dotted.alpha Q.f) Q.g := by
-  sorry
+  let hX : strictAssocHom Q.x Q.f Q.g =
+      (Bicategory.associator Q.x Q.f Q.g).hom := by
+    simpa [strictAssocHom] using congrArg Iso.hom
+      (Bicategory.Strict.associator_eqToIso Q.x Q.f Q.g) |>.symm
+  let hA : strictAssocInv A.dotted.a Q.f Q.g =
+      (Bicategory.associator A.dotted.a Q.f Q.g).inv := by
+    simpa [strictAssocInv] using congrArg Iso.inv
+      (Bicategory.Strict.associator_eqToIso A.dotted.a Q.f Q.g) |>.symm
+  let hJb : strictAssocInv Q.j A.b Q.g =
+      (Bicategory.associator Q.j A.b Q.g).inv := by
+    simpa [strictAssocInv] using congrArg Iso.inv
+      (Bicategory.Strict.associator_eqToIso Q.j A.b Q.g) |>.symm
+  let hJa : strictAssocInv Q.j A.dotted.a Q.f =
+      (Bicategory.associator Q.j A.dotted.a Q.f).inv := by
+    simpa [strictAssocInv] using congrArg Iso.inv
+      (Bicategory.Strict.associator_eqToIso Q.j A.dotted.a Q.f) |>.symm
+  let hJafg : strictAssocInv Q.j A.dotted.a (Q.f ≫ Q.g) =
+      (Bicategory.associator Q.j A.dotted.a (Q.f ≫ Q.g)).inv := by
+    simpa [strictAssocInv] using congrArg Iso.inv
+      (Bicategory.Strict.associator_eqToIso Q.j A.dotted.a (Q.f ≫ Q.g)) |>.symm
+  apply (cancel_mono (strictAssocHom Q.x Q.f Q.g)).1
+  rw [A.dotted.commutes]
+  rw [hX, hA, hJb, hJa, hJafg]
+  simp only [Category.assoc]
+  simp [Bicategory.associator_naturality_left,
+    Bicategory.associator_naturality_middle,
+    Bicategory.associator_naturality_right]
 
 /-- The dotted arrow in `D'` associated to an object of `D''`. -/
 noncomputable def compositionAuxiliaryInnerDotted
@@ -582,7 +608,92 @@ theorem dottedArrow_composition_equivalence
     Nonempty
       (DottedArrowCategory (CompositionData.outerSquare Q) ≌
         CompositionAuxiliaryCategory Q) := by
-  sorry
+  let forward : DottedArrowCategory (CompositionData.outerSquare Q) ⥤
+      CompositionAuxiliaryCategory Q where
+    obj := fun A =>
+      { dotted := A
+        b := A.a ≫ Q.f
+        eta := 𝟙 (A.a ≫ Q.f)
+        eta_isIso := inferInstance }
+    map := fun {A A'} H =>
+      { theta₁ := H
+        theta₂ := Bicategory.whiskerRight H.hom Q.f
+        commutes := by simp }
+    map_id := by
+      intro A
+      apply CompositionAuxiliaryObject.Hom.ext
+      · apply DottedArrow.Hom.ext
+        simp [DottedArrow.Hom.id]
+      · simp [DottedArrow.Hom.id]
+    map_comp := by
+      intro A A' A'' H K
+      apply CompositionAuxiliaryObject.Hom.ext
+      · apply DottedArrow.Hom.ext
+        rfl
+      · simp [CompositionAuxiliaryObject.Hom.comp, DottedArrow.Hom.comp]
+  let inverse : CompositionAuxiliaryCategory Q ⥤
+      DottedArrowCategory (CompositionData.outerSquare Q) where
+    obj := fun A => A.dotted
+    map := fun {A A'} H => H.theta₁
+    map_id := by
+      intro A
+      apply DottedArrow.Hom.ext
+      rfl
+    map_comp := by
+      intro A A' A'' H K
+      apply DottedArrow.Hom.ext
+      rfl
+  let unitIso : 𝟭 (DottedArrowCategory (CompositionData.outerSquare Q)) ≅
+      forward ⋙ inverse :=
+    NatIso.ofComponents (fun A => Iso.refl A) (by
+      intro A A' H
+      apply DottedArrow.Hom.ext
+      simp [DottedArrow.Hom.comp, DottedArrow.Hom.id])
+  let counitIso : inverse ⋙ forward ≅
+      𝟭 (CompositionAuxiliaryCategory Q) :=
+    NatIso.ofComponents (fun A =>
+      { hom :=
+          { theta₁ := DottedArrow.Hom.id A.dotted
+            theta₂ := inv A.eta
+            commutes := by simp [DottedArrow.Hom.id] }
+        inv :=
+          { theta₁ := DottedArrow.Hom.id A.dotted
+            theta₂ := A.eta
+            commutes := by simp [DottedArrow.Hom.id] }
+        hom_inv_id := by
+          apply CompositionAuxiliaryObject.Hom.ext
+          · apply DottedArrow.Hom.ext
+            simp [CompositionAuxiliaryObject.Hom.comp,
+              DottedArrow.Hom.comp, DottedArrow.Hom.id]
+          · simp [CompositionAuxiliaryObject.Hom.comp,
+              DottedArrow.Hom.comp, DottedArrow.Hom.id]
+        inv_hom_id := by
+          apply CompositionAuxiliaryObject.Hom.ext
+          · apply DottedArrow.Hom.ext
+            simp [CompositionAuxiliaryObject.Hom.comp,
+              DottedArrow.Hom.comp, DottedArrow.Hom.id]
+          · simp [CompositionAuxiliaryObject.Hom.comp,
+              DottedArrow.Hom.comp, DottedArrow.Hom.id] }) (by
+      intro A A' H
+      apply CompositionAuxiliaryObject.Hom.ext
+      · apply DottedArrow.Hom.ext
+        simp [Functor.comp, forward, inverse,
+          CompositionAuxiliaryObject.Hom.comp, DottedArrow.Hom.comp,
+          DottedArrow.Hom.id]
+      · dsimp [Functor.comp, forward, inverse,
+          CompositionAuxiliaryObject.Hom.comp]
+        have hη : inv A.eta ≫ H.theta₂ =
+            Bicategory.whiskerRight H.theta₁.hom Q.f ≫ inv A'.eta := by
+          apply (cancel_mono A'.eta).1
+          simp only [Category.assoc]
+          rw [H.commutes]
+          simp
+        exact hη.symm)
+  exact ⟨Equivalence.mk' forward inverse unitIso counitIso (by
+    intro A
+    simp [unitIso, counitIso, forward, inverse,
+      CompositionAuxiliaryObject.Hom.comp, DottedArrow.Hom.comp,
+      DottedArrow.Hom.id])⟩
 
 /-- The projection in the composition lemma is fibred in groupoids. -/
 theorem dottedArrow_composition_projection_isFibredInGroupoids

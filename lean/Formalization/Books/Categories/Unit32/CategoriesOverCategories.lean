@@ -871,7 +871,205 @@ theorem twoFibreProductOver_is_twoFibreProduct {C : Cat.{v, u}}
     {X Y S : CategoryOver C} (F : CategoryOverHom X S)
     (G : CategoryOverHom Y S) :
     IsTwoFibreProductOverDiagram (twoFibreProductOverDiagram F G) := by
-  sorry
+  let D := twoFibreProductOverDiagram F G
+  change IsTwoFibreProductOverDiagram D
+  intro W _ K
+  let γ : W ⥤ TwoFibreProductOverCategory F G := {
+    obj := fun Z => by
+      let q : IsoComma (overFunctor F) (overFunctor G) :=
+        { obj :=
+            { left := K.left.obj Z
+              right := K.right.obj Z
+              hom := K.comparison.hom.app Z }
+          property := by
+            change IsIso (K.comparison.hom.app Z)
+            infer_instance }
+      exact ⟨q, by
+        refine ⟨K.base.obj Z, ?_, ?_, ?_⟩
+        · change (structureFunctor X).obj (K.left.obj Z) = K.base.obj Z
+          exact congrArg (fun H : W ⥤ C => H.obj Z) K.left_over
+        · change (structureFunctor Y).obj (K.right.obj Z) = K.base.obj Z
+          exact congrArg (fun H : W ⥤ C => H.obj Z) K.right_over
+        · have hF :
+              (structureFunctor S).obj ((overFunctor F).obj (K.left.obj Z)) =
+                K.base.obj Z := by
+            change (overFunctor F ⋙ structureFunctor S).obj (K.left.obj Z) =
+              K.base.obj Z
+            rw [congrArg (fun H : X.left ⥤ C => H.obj (K.left.obj Z))
+              (overFunctor_comm F)]
+            exact congrArg (fun H : W ⥤ C => H.obj Z) K.left_over
+          have hG :
+              (structureFunctor S).obj ((overFunctor G).obj (K.right.obj Z)) =
+                K.base.obj Z := by
+            change (overFunctor G ⋙ structureFunctor S).obj (K.right.obj Z) =
+              K.base.obj Z
+            rw [congrArg (fun H : Y.left ⥤ C => H.obj (K.right.obj Z))
+              (overFunctor_comm G)]
+            exact congrArg (fun H : W ⥤ C => H.obj Z) K.right_over
+          apply IsHomLift.of_fac' (structureFunctor S) (𝟙 (K.base.obj Z))
+            (K.comparison.hom.app Z) hF hG
+          have hv := K.comparison_vertical Z
+          change (structureFunctor S).map (K.comparison.hom.app Z) =
+            eqToHom (K.comparison_base Z) at hv
+          rw [hv]
+          simp }
+    map := fun {Z Z'} f =>
+      ObjectProperty.homMk {
+        left := K.left.map f
+        right := K.right.map f
+        w := by simpa [Functor.comp] using K.comparison.hom.naturality f }
+    map_id := by
+      intro Z
+      apply ObjectProperty.hom_ext
+      apply CommaMorphism.ext <;> simp
+    map_comp := by
+      intro Z Z' Z'' f g
+      apply ObjectProperty.hom_ext
+      apply CommaMorphism.ext <;> simp }
+  let α : K.left ≅ γ ⋙ D.left :=
+    NatIso.ofComponents (fun Z => eqToIso (by rfl)) (by
+      intro Z Z' f
+      simp [γ, D, twoFibreProductOverDiagram, twoFibreProductOverLeft])
+  let β : K.right ≅ γ ⋙ D.right :=
+    NatIso.ofComponents (fun Z => eqToIso (by rfl)) (by
+      intro Z Z' f
+      simp [γ, D, twoFibreProductOverDiagram, twoFibreProductOverRight])
+  constructor
+  · refine ⟨{
+      functor := γ
+      over := by
+        apply Functor.ext
+        · intro Z
+          have h := congrArg (fun H : W ⥤ C => H.obj Z) K.left_over
+          simpa [D, twoFibreProductOverDiagram, twoFibreProductOverLeft, γ] using h
+        · intro Z Z' f
+          have h := congrArg (fun H : W ⥤ C => H.map f) K.left_over
+          simpa [D, twoFibreProductOverDiagram, twoFibreProductOverLeft, γ] using h
+      left := α.hom
+      left_isIso := by infer_instance
+      right := β.hom
+      right_isIso := by infer_instance
+      left_base := by intro Z; rfl
+      right_base := by intro Z; rfl
+      left_vertical := by
+        intro Z
+        dsimp [α]
+        simp
+      right_vertical := by
+        intro Z
+        dsimp [β]
+        simp
+      commutes := by
+        apply NatTrans.ext
+        funext Z
+        simp only [NatTrans.comp_app, Functor.isoWhiskerRight_hom,
+          Functor.whiskerRight_app, Functor.associator_hom_app,
+          Functor.whiskerLeft_app]
+        have hα : α.hom.app Z = 𝟙 (K.left.obj Z) := by
+          dsimp [α]
+          rfl
+        have hβ : β.hom.app Z = 𝟙 (K.right.obj Z) := by
+          dsimp [β]
+          rfl
+        have hcomp : D.comparison.hom.app (γ.obj Z) = K.comparison.hom.app Z := by
+          change (twoFibreProductOverComparison F G).hom.app (γ.obj Z) = _
+          exact twoFibreProductOverComparison_app _
+        rw [hα, hβ, hcomp]
+        simp }⟩
+  · intro L₁ L₂
+    let e₁ : K.left ≅ L₁.functor ⋙ D.left := asIso L₁.left
+    let e₂ : K.left ≅ L₂.functor ⋙ D.left := asIso L₂.left
+    let f₁ : K.right ≅ L₁.functor ⋙ D.right := asIso L₁.right
+    let f₂ : K.right ≅ L₂.functor ⋙ D.right := asIso L₂.right
+    let δ : L₁.functor ≅ L₂.functor :=
+      NatIso.ofComponents (fun Z => by
+        let l : (L₁.functor.obj Z).obj.obj.left ≅
+            (L₂.functor.obj Z).obj.obj.left :=
+          (e₁.app Z).symm ≪≫ e₂.app Z
+        let r : (L₁.functor.obj Z).obj.obj.right ≅
+            (L₂.functor.obj Z).obj.obj.right :=
+          (f₁.app Z).symm ≪≫ f₂.app Z
+        let γ₁hom := (L₁.functor.obj Z).obj.obj.hom
+        let γ₂hom := (L₂.functor.obj Z).obj.obj.hom
+        have h₁X := congrArg (fun t => t.app Z) L₁.commutes
+        have h₂X := congrArg (fun t => t.app Z) L₂.commutes
+        simp only [NatTrans.comp_app, Functor.isoWhiskerRight_hom,
+          Functor.whiskerRight_app, Functor.associator_hom_app,
+          Functor.whiskerLeft_app] at h₁X h₂X
+        have h₁X' :
+            (overFunctor F).map (e₁.hom.app Z) ≫ γ₁hom =
+              K.comparison.hom.app Z ≫ (overFunctor G).map (f₁.hom.app Z) := by
+          simpa [e₁, f₁, D, twoFibreProductOverDiagram,
+            twoFibreProductOverComparison, twoFibreProductOverComparison_app,
+            Functor.comp_obj, Category.assoc] using h₁X
+        have h₂X' :
+            (overFunctor F).map (e₂.hom.app Z) ≫ γ₂hom =
+              K.comparison.hom.app Z ≫ (overFunctor G).map (f₂.hom.app Z) := by
+          simpa [e₂, f₂, D, twoFibreProductOverDiagram,
+            twoFibreProductOverComparison, twoFibreProductOverComparison_app,
+            Functor.comp_obj, Category.assoc] using h₂X
+        have h₁' :
+            (overFunctor F).map (e₁.inv.app Z) ≫ K.comparison.hom.app Z =
+              γ₁hom ≫ (overFunctor G).map (f₁.inv.app Z) := by
+          apply (cancel_mono ((overFunctor G).map (f₁.hom.app Z))).1
+          rw [← h₁X']
+          rw [← Category.assoc, ← Functor.map_comp, e₁.inv_hom_id_app, Functor.map_id,
+            Category.id_comp]
+          rw [← Category.assoc, ← Functor.map_comp, f₁.inv_hom_id_app, Functor.map_id,
+            Category.comp_id]
+        exact ObjectProperty.isoMk _
+          (Comma.isoMk l r (by
+            change (overFunctor F).map l.hom ≫ γ₂hom =
+              γ₁hom ≫ (overFunctor G).map r.hom
+            dsimp [l, r]
+            simp only [Functor.map_comp, Category.assoc]
+            rw [h₂X']
+            rw [h₁']
+            simp only [← Functor.map_comp, Category.assoc]))) (by
+      intro Z Z' f
+      apply ObjectProperty.hom_ext
+      apply CommaMorphism.ext
+      · simp only [Functor.comp_map, Category.assoc]
+        rw [e₁.inv.naturality_assoc, e₂.hom.naturality]
+      · simp only [Functor.comp_map, Category.assoc]
+        rw [f₁.inv.naturality_assoc, f₂.hom.naturality])
+    refine ⟨δ.hom, ?_, ?_⟩
+    · refine ⟨inferInstance, ?_, ?_, ?_⟩
+      · intro Z
+        have h₁inv :
+            (structureFunctor X).map (e₁.inv.app Z) =
+              eqToHom (L₁.left_base Z).symm := by
+          apply (cancel_mono ((structureFunctor X).map (e₁.hom.app Z))).1
+          rw [← Functor.map_comp, e₁.inv_hom_id_app]
+          rw [L₁.left_vertical Z]
+          simp
+        change (structureFunctor X).map
+            (e₁.inv.app Z ≫ e₂.hom.app Z) = _
+        rw [Functor.map_comp, h₁inv, L₂.left_vertical Z]
+        simp [eqToHom_trans]
+      · apply NatTrans.ext
+        funext Z
+        change e₁.hom.app Z ≫
+            (e₁.inv.app Z ≫ e₂.hom.app Z) = e₂.hom.app Z
+        simp [Category.assoc]
+      · apply NatTrans.ext
+        funext Z
+        change f₁.hom.app Z ≫
+            (f₁.inv.app Z ≫ f₂.hom.app Z) = f₂.hom.app Z
+        simp [Category.assoc]
+    · intro η hη
+      apply NatTrans.ext
+      funext Z
+      apply ObjectProperty.hom_ext
+      apply CommaMorphism.ext
+      · have hx := congrArg (fun t => t.app Z) hη.2.2.1
+        apply (cancel_epi (e₁.hom.app Z)).1
+        dsimp [δ]
+        simpa [Functor.comp_map, Category.assoc] using hx
+      · have hx := congrArg (fun t => t.app Z) hη.2.2.2
+        apply (cancel_epi (f₁.hom.app Z)).1
+        dsimp [δ]
+        simpa [Functor.comp_map, Category.assoc] using hx
 
 theorem categoriesOver_have_twoFibreProducts {C : Cat.{v, u}}
     {X Y S : CategoryOver C} (F : CategoryOverHom X S)
@@ -1045,9 +1243,44 @@ theorem twoFibreProductOver_fibre_equivalent {C : Cat.{v, u}}
       · change IsMorphismLift (twoFibreProductOverBaseFunctor F G) (𝟙 U)
           f.hom.hom.left.1
         exact f.hom.hom.left.2
-    map_id := by sorry
-    map_comp := by sorry }
-  exact ⟨by sorry⟩
+    map_id := by
+      intro z
+      apply ObjectProperty.hom_ext
+      apply CommaMorphism.ext
+      · apply Functor.Fiber.hom_ext
+        change (𝟙 z : z ⟶ z).1.hom.hom.left = 𝟙 _
+        rfl
+      · apply Functor.Fiber.hom_ext
+        change (𝟙 z : z ⟶ z).1.hom.hom.right = 𝟙 _
+        rfl
+    map_comp := by
+      intro z z' z'' f g
+      apply ObjectProperty.hom_ext
+      apply CommaMorphism.ext
+      · apply Functor.Fiber.hom_ext
+        change (f ≫ g).1.hom.hom.left = f.1.hom.hom.left ≫ g.1.hom.hom.left
+        rfl
+      · apply Functor.Fiber.hom_ext
+        change (f ≫ g).1.hom.hom.right = f.1.hom.hom.right ≫ g.1.hom.hom.right
+        rfl }
+  let unitIso : 𝟭 (Functor.Fiber (twoFibreProductOverBaseFunctor F G) U) ≅
+      A ⋙ R :=
+    NatIso.ofComponents (fun z => eqToIso (by rfl)) (by
+      intro z z' f
+      apply Functor.Fiber.hom_ext
+      apply ObjectProperty.hom_ext
+      apply CommaMorphism.ext <;> rfl)
+  let counitIso : R ⋙ A ≅
+      𝟭 (twoFibreProductOverFibreCategory F G U) :=
+    NatIso.ofComponents (fun ξ => eqToIso (by rfl)) (by
+      intro ξ ξ' f
+      apply ObjectProperty.hom_ext
+      apply CommaMorphism.ext
+      · apply Functor.Fiber.hom_ext
+        rfl
+      · apply Functor.Fiber.hom_ext
+        rfl)
+  exact ⟨Equivalence.mk A R unitIso counitIso⟩
 
 /-! ## The comparison example -/
 

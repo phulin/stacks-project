@@ -56,7 +56,27 @@ theorem isLeftExact_iff_preservesFiniteProducts_and_equalizers_iff_preservesTerm
           PreservesLimitsOfShape WalkingParallelPair F) ↔
         (PreservesLimitsOfShape (Discrete.{0} PEmpty) F ∧
           PreservesLimitsOfShape WalkingCospan F)) := by
-  sorry
+  constructor <;> constructor
+  · intro h
+    let h' : PreservesFiniteLimits F := h
+    exact
+      ⟨⟨fun n => h'.preservesFiniteLimits (Discrete (Fin n))⟩,
+        h'.preservesFiniteLimits WalkingParallelPair⟩
+  · rintro ⟨h₁, h₂⟩
+    exact
+      @preservesFiniteLimits_of_preservesEqualizers_and_finiteProducts A _ B _ _ _ F h₂ h₁
+  · rintro ⟨h₁, h₂⟩
+    let h' : PreservesFiniteLimits F :=
+      @preservesFiniteLimits_of_preservesEqualizers_and_finiteProducts A _ B _ _ _ F h₂ h₁
+    exact
+      ⟨h'.preservesFiniteLimits (Discrete.{0} PEmpty),
+        h'.preservesFiniteLimits WalkingCospan⟩
+  · rintro ⟨h₁, h₂⟩
+    let h' : PreservesFiniteLimits F :=
+      @preservesFiniteLimits_of_preservesTerminal_and_pullbacks A _ B _ _ _ F h₁ h₂
+    exact
+      ⟨⟨fun n => h'.preservesFiniteLimits (Discrete (Fin n))⟩,
+        h'.preservesFiniteLimits WalkingParallelPair⟩
 
 /- The dual characterization for right exact functors. -/
 theorem isRightExact_iff_preservesFiniteCoproducts_and_coequalizers_iff_preservesInitial_and_pushouts
@@ -70,6 +90,26 @@ theorem isRightExact_iff_preservesFiniteCoproducts_and_coequalizers_iff_preserve
           PreservesColimitsOfShape WalkingParallelPair F) ↔
         (PreservesColimitsOfShape (Discrete.{0} PEmpty) F ∧
           PreservesColimitsOfShape WalkingSpan F)) := by
-  sorry
+  constructor <;> constructor
+  · intro h
+    let h' : PreservesFiniteColimits F := h
+    exact
+      ⟨⟨fun n => h'.preservesFiniteColimits (Discrete (Fin n))⟩,
+        h'.preservesFiniteColimits WalkingParallelPair⟩
+  · rintro ⟨h₁, h₂⟩
+    exact
+      @preservesFiniteColimits_of_preservesCoequalizers_and_finiteCoproducts A _ B _ _ _ F h₂ h₁
+  · rintro ⟨h₁, h₂⟩
+    let h' : PreservesFiniteColimits F :=
+      @preservesFiniteColimits_of_preservesCoequalizers_and_finiteCoproducts A _ B _ _ _ F h₂ h₁
+    exact
+      ⟨h'.preservesFiniteColimits (Discrete.{0} PEmpty),
+        h'.preservesFiniteColimits WalkingSpan⟩
+  · rintro ⟨h₁, h₂⟩
+    let h' : PreservesFiniteColimits F :=
+      @preservesFiniteColimits_of_preservesInitial_and_pushouts A _ B _ _ _ F h₁ h₂
+    exact
+      ⟨⟨fun n => h'.preservesFiniteColimits (Discrete (Fin n))⟩,
+        h'.preservesFiniteColimits WalkingParallelPair⟩
 
 end Formalization.Books.Categories.Unit23

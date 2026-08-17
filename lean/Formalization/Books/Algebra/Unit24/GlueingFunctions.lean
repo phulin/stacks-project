@@ -4,6 +4,8 @@ import Formalization.Books.Algebra.Unit23.GlueingProperties
 import Mathlib.Algebra.Module.LocalizedModule.Away
 import Mathlib.Algebra.Module.Torsion.Basic
 import Mathlib.LinearAlgebra.Pi
+import Mathlib.RingTheory.Idempotents
+import Mathlib.RingTheory.Localization.Away.Lemmas
 
 /-!
 # Commutative Algebra, Chapter 24: Glueing functions
@@ -163,8 +165,7 @@ theorem cover_module_exact {R : Type u} [CommRing R] {n : ℕ}
       ∃ m : M, ∃ s : Submonoid.powers (f i), LocalizedModule.mk m s = z := by
     induction z using LocalizedModule.induction_on with
     | _ m s => exact ⟨m, s, rfl⟩
-  · trace_state
-    intro x
+  · intro x
     constructor
     · intro hx
       choose m s hs using fun i => hrep i (x i)
@@ -246,7 +247,18 @@ theorem cover_module_exact {R : Type u} [CommRing R] {n : ℕ}
           b p.1 p.2 ≤ ∑ j, b p.1 j :=
             Finset.single_le_sum (fun _ _ => Nat.zero_le _) (Finset.mem_univ p.2)
           _ ≤ ∑ i, ∑ j, b i j :=
-            Finset.single_le_sum (fun _ _ => Finset.zero_le_sum (fun _ _ => Nat.zero_le _))
+            Finset.single_le_sum (s := (Finset.univ : Finset (Fin n)))
+              (f := fun i => ∑ j, b i j) (fun _ _ => Nat.zero_le _)
+              (Finset.mem_univ p.1)
+      let A : ℕ := ∑ i, ∑ j, a i j
+      have hale (p : Fin n × Fin n) : a p.1 p.2 ≤ A := by
+        dsimp [A]
+        calc
+          a p.1 p.2 ≤ ∑ j, a p.1 j :=
+            Finset.single_le_sum (fun _ _ => Nat.zero_le _) (Finset.mem_univ p.2)
+          _ ≤ ∑ i, ∑ j, a i j :=
+            Finset.single_le_sum (s := (Finset.univ : Finset (Fin n)))
+              (f := fun i => ∑ j, a i j) (fun _ _ => Nat.zero_le _)
               (Finset.mem_univ p.1)
       let L : ℕ := N + K
       have hspan : Ideal.span (Set.range (fun i : Fin n => (f i) ^ L)) = ⊤ := by
@@ -265,12 +277,109 @@ theorem cover_module_exact {R : Type u} [CommRing R] {n : ℕ}
         rw [hspan]
         exact Submodule.mem_top
       obtain ⟨c, hc⟩ := (Ideal.mem_span_range_iff_exists_fun).mp hone
+      let q : Fin n → M := fun j => powSub j (N - e j) • m j
       let glue : M :=
-        ∑ j, c j • (powSub j K • (powSub j (N - e j) • m j))
-      trace_state
-      trace_state
+        ∑ j, c j • (powSub j K • q j)
+      have hpair_common (i j : Fin n) :
+          (f i) ^ A • ((f i) ^ N • (c j • ((f j) ^ K • q j))) =
+            (f i) ^ A • ((c j * (f j) ^ L) • q i) := by
+        have h := congrArg
+          (fun z : M =>
+            (c j * (f i) ^ (A - a i j) * (f j) ^ (K - b i j)) • z) (hab i j)
+        have h' :
+            (c j * (f i) ^ (A - a i j) * (f j) ^ (K - b i j) *
+                ((f i) ^ a i j * (f j) ^ b i j)) •
+              ((f j) ^ N • q i - (f i) ^ N • q j) = 0 := by
+          simpa only [q, ← mul_smul, smul_zero] using h
+        rw [smul_sub] at h'
+        have h'' := sub_eq_zero.mp h'
+        have hcoeff :
+            c j * (f i) ^ (A - a i j) * (f j) ^ (K - b i j) *
+                ((f i) ^ a i j * (f j) ^ b i j) =
+              c j * (f i) ^ A * (f j) ^ K := by
+          have hAi : (f i) ^ (A - a i j) * (f i) ^ a i j = (f i) ^ A := by
+            rw [← pow_add, Nat.sub_add_cancel (hale (i, j))]
+          have hKj : (f j) ^ (K - b i j) * (f j) ^ b i j = (f j) ^ K := by
+            rw [← pow_add, Nat.sub_add_cancel (hble (i, j))]
+          calc
+            c j * (f i) ^ (A - a i j) * (f j) ^ (K - b i j) *
+                ((f i) ^ a i j * (f j) ^ b i j) =
+                c j * ((f i) ^ (A - a i j) * (f i) ^ a i j) *
+                  ((f j) ^ (K - b i j) * (f j) ^ b i j) := by ring
+            _ = c j * (f i) ^ A * (f j) ^ K := by rw [hAi, hKj]
+        rw [hcoeff] at h''
+        calc
+          (f i) ^ A • ((f i) ^ N • (c j • ((f j) ^ K • q j))) =
+              (c j * (f i) ^ A * (f j) ^ K) • ((f i) ^ N • q j) := by
+                simp only [← mul_smul]
+                congr 1
+                ring
+          _ = (c j * (f i) ^ A * (f j) ^ K) • ((f j) ^ N • q i) := h''.symm
+          _ = (f i) ^ A • ((c j * (f j) ^ L) • q i) := by
+                simp only [← mul_smul]
+                congr 1
+                simp only [L, pow_add]
+                ring
+      have hsum (i : Fin n) :
+          (f i) ^ A • ((f i) ^ N • glue) = (f i) ^ A • q i := by
+        dsimp [glue]
+        simp only [Finset.smul_sum]
+        calc
+          ∑ j, (f i) ^ A • ((f i) ^ N • (c j • ((f j) ^ K • q j))) =
+              ∑ j, (f i) ^ A • ((c j * (f j) ^ L) • q i) := by
+                apply Finset.sum_congr rfl
+                intro j hj
+                exact hpair_common i j
+          _ = (f i) ^ A • ((∑ j, c j * (f j) ^ L) • q i) := by
+            simp only [← Finset.smul_sum, ← Finset.sum_smul]
+          _ = (f i) ^ A • q i := by rw [hc, one_smul]
+      refine ⟨glue, ?_⟩
+      funext i
+      rw [standardCoverModuleAlpha_apply, hcommon i]
+      apply LocalizedModule.mk_eq.mpr
+      refine ⟨powSub i A, ?_⟩
+      simpa only [Submonoid.smul_def, powSub, q, one_smul] using hsum i
     · rintro ⟨m, rfl⟩
-      trace_state
+      apply funext
+      intro p
+      change
+        standardCoverLocalizeLeft f M p.1 p.2
+            (LocalizedModule.mk m (1 : Submonoid.powers (f p.1))) -
+          standardCoverLocalizeRight f M p.1 p.2
+            (LocalizedModule.mk m (1 : Submonoid.powers (f p.2))) = 0
+      have hleft0 :
+          standardCoverLocalizeLeft f M p.1 p.2
+              (LocalizedModule.mk m (1 : Submonoid.powers (f p.1))) =
+            LocalizedModule.mk m
+              ⟨(1 : R), (show Submonoid.powers (f p.1) ≤
+                standardCoverJointSubmonoid f p.1 p.2 from le_sup_left)
+                (Submonoid.powers (f p.1)).one_mem⟩ := by
+        change LocalizedModule.liftOfLE (Submonoid.powers (f p.1))
+          (standardCoverJointSubmonoid f p.1 p.2) (by
+            change Submonoid.powers (f p.1) ≤
+              Submonoid.powers (f p.1) ⊔ Submonoid.powers (f p.2)
+            exact le_sup_left)
+          (LocalizedModule.mk m (1 : Submonoid.powers (f p.1))) = _
+        rw [IsLocalizedModule.mk_eq_mk', IsLocalizedModule.liftOfLE_mk',
+          IsLocalizedModule.mk_eq_mk']
+        rfl
+      have hright0 :
+          standardCoverLocalizeRight f M p.1 p.2
+              (LocalizedModule.mk m (1 : Submonoid.powers (f p.2))) =
+            LocalizedModule.mk m
+              ⟨(1 : R), (show Submonoid.powers (f p.2) ≤
+                standardCoverJointSubmonoid f p.1 p.2 from le_sup_right)
+                (Submonoid.powers (f p.2)).one_mem⟩ := by
+        change LocalizedModule.liftOfLE (Submonoid.powers (f p.2))
+          (standardCoverJointSubmonoid f p.1 p.2) (by
+            change Submonoid.powers (f p.2) ≤
+              Submonoid.powers (f p.1) ⊔ Submonoid.powers (f p.2)
+            exact le_sup_right)
+          (LocalizedModule.mk m (1 : Submonoid.powers (f p.2))) = _
+        rw [IsLocalizedModule.mk_eq_mk', IsLocalizedModule.liftOfLE_mk',
+          IsLocalizedModule.mk_eq_mk']
+        rfl
+      rw [hleft0, hright0, sub_self]
 
 /-! ## The ring specialization -/
 
@@ -298,7 +407,45 @@ theorem disjoint_implies_product {R : Type u} [CommRing R]
       Nonempty ((V : Type u) ≃ₜ PrimeSpectrum (Localization.Away (1 - e))) ∧
       Nonempty (Localization.Away e ≃+* R ⧸ Ideal.span ({1 - e} : Set R)) ∧
       Nonempty (Localization.Away (1 - e) ≃+* R ⧸ Ideal.span ({e} : Set R)) := by
-  sorry
+  classical
+  have hUV : V = Uᶜ := by
+    ext x
+    constructor
+    · intro hx hxu
+      exact (Set.disjoint_left.1 hdisj hxu hx).elim
+    · intro hx
+      have hx' : x ∈ U ∪ V := by rw [hcover]; exact Set.mem_univ x
+      rcases hx' with hxu | hxv
+      · exact (hx hxu).elim
+      · exact hxv
+  have hUclosed : IsClosed U := by
+    rw [← compl_compl U, ← hUV]
+    exact hV.isClosed_compl
+  have hclopen : IsClopen U := ⟨hUclosed, hU⟩
+  obtain ⟨e, he, hUe⟩ :=
+    PrimeSpectrum.exists_idempotent_basicOpen_eq_of_isClopen hclopen
+  have hVe : V = (PrimeSpectrum.basicOpen (1 - e) : Set (PrimeSpectrum R)) := by
+    rw [hUV, hUe, PrimeSpectrum.basicOpen_eq_zeroLocus_compl,
+      PrimeSpectrum.zeroLocus_eq_basicOpen_of_isIdempotentElem e he]
+    simp only [compl_compl]
+  letI : IsLocalization.Away e (R ⧸ Ideal.span ({1 - e} : Set R)) :=
+    IsLocalization.Away.quotient_of_isIdempotentElem he
+  letI : IsLocalization.Away (1 - e) (R ⧸ Ideal.span ({e} : Set R)) :=
+    IsLocalization.Away.quotient_of_isIdempotentElem he.one_sub
+  let q₁ : (R ⧸ Ideal.span ({1 - e} : Set R)) ≃ₐ[R] Localization.Away e :=
+    (Localization.algEquiv (Submonoid.powers e) (R ⧸ Ideal.span ({1 - e} : Set R))).symm
+  let q₂ : (R ⧸ Ideal.span ({e} : Set R)) ≃ₐ[R] Localization.Away (1 - e) :=
+    (Localization.algEquiv (Submonoid.powers (1 - e))
+      (R ⧸ Ideal.span ({e} : Set R))).symm
+  let p : R ≃ₐ[R]
+      (R ⧸ Ideal.span ({1 - e} : Set R)) × (R ⧸ Ideal.span ({e} : Set R)) :=
+    AlgEquiv.prodQuotientOfIsIdempotentElem R he.one_sub he (by ring) (by
+      calc
+        (1 - e) * e = e - e * e := by ring
+        _ = 0 := by rw [he.eq]; ring)
+  let p' : R ≃ₐ[R] Localization.Away e × Localization.Away (1 - e) :=
+    p.trans (AlgEquiv.prodCongr q₁ q₂)
+  refine ⟨e, he, hUe, hVe, ⟨p'.toRingEquiv⟩, ?_⟩
 
 /-! ## Injectivity on a standard-open cover -/
 
@@ -322,7 +469,109 @@ theorem injective_covering_iff {R : Type u} [CommRing R] {n : ℕ}
     (f : Fin n → R) (M : Type v) [AddCommGroup M] [Module R M] :
     Function.Injective (standardCoverModuleAlpha f M) ↔
       Function.Injective (standardCoverMultiplicationMap f M) := by
-  sorry
+  classical
+  have hpow : ∀ (hμ : Function.Injective (standardCoverMultiplicationMap f M))
+      (k : ℕ) (e : Fin n → ℕ) (z : M),
+      (∑ i, e i = k) →
+        (∀ i, (f i) ^ e i • z = 0) → z = 0 := by
+    intro hμ k
+    induction k using Nat.strong_induction_on with
+    | h k ih =>
+        intro e z hsum he
+        by_cases hz : ∃ i, e i = 0
+        · obtain ⟨i, hi⟩ := hz
+          simpa [hi] using he i
+        · by_cases hlarge : ∃ i, 1 < e i
+          · obtain ⟨i, hi⟩ := hlarge
+            let e' : Fin n → ℕ := Function.update e i (e i - 1)
+            have hsum_erase :
+                (∑ j ∈ ((Finset.univ : Finset (Fin n)).erase i), e j) + e i = k := by
+              calc
+                (∑ j ∈ ((Finset.univ : Finset (Fin n)).erase i), e j) + e i =
+                    ∑ j, e j := Finset.sum_erase_add _ _ (Finset.mem_univ i)
+                _ = k := hsum
+            have hsum' : ∑ j, e' j = k - 1 := by
+              dsimp [e']
+              rw [Finset.sum_update_of_mem (Finset.mem_univ i)]
+              have hsum_erase' :
+                  (∑ x ∈ (Finset.univ : Finset (Fin n)) \ {i}, e x) + e i = k := by
+                have h := hsum_erase
+                rw [Finset.erase_eq] at h
+                exact h
+              omega
+            have he' : ∀ j, (f j) ^ e' j • ((f i) • z) = 0 := by
+              intro j
+              by_cases hji : j = i
+              · subst j
+                simp [e']
+                rw [← mul_smul, ← pow_succ, Nat.sub_add_cancel (Nat.one_le_iff_ne_zero.mpr
+                  (Nat.ne_of_gt (lt_trans Nat.zero_lt_one hi)))]
+                exact he i
+              · simp [e', hji]
+                rw [← mul_smul, mul_comm, mul_smul, he j, smul_zero]
+            have hzi : (f i) • z = 0 := by
+              have hkpos : 0 < k := by
+                have hle : e i ≤ ∑ j, e j :=
+                  Finset.single_le_sum (fun _ _ => Nat.zero_le _)
+                    (Finset.mem_univ i)
+                rw [hsum] at hle
+                omega
+              exact ih (k - 1) (Nat.sub_lt hkpos Nat.zero_lt_one) e' ((f i) • z)
+                hsum' he'
+            let e'' : Fin n → ℕ := Function.update e i 1
+            have hsum'' : ∑ j, e'' j < k := by
+              dsimp [e'']
+              rw [Finset.sum_update_of_mem (Finset.mem_univ i)]
+              have hsum_erase' :
+                  (∑ x ∈ (Finset.univ : Finset (Fin n)) \ {i}, e x) + e i = k := by
+                have h := hsum_erase
+                rw [Finset.erase_eq] at h
+                exact h
+              omega
+            have he'' : ∀ j, (f j) ^ e'' j • z = 0 := by
+              intro j
+              by_cases hji : j = i
+              · subst j
+                simp [e'', hzi]
+              · simpa [e'', hji] using he j
+            exact ih (∑ j, e'' j) hsum'' e'' z rfl he''
+          · have hone : ∀ i, e i = 1 := by
+              intro i
+              apply Nat.le_antisymm
+              · exact Nat.le_of_not_gt (fun hi => hlarge ⟨i, hi⟩)
+              · exact Nat.one_le_iff_ne_zero.mpr (fun hi => hz ⟨i, hi⟩)
+            apply hμ
+            funext i
+            change (f i) • z = (f i) • (0 : M)
+            simpa [hone i] using he i
+  constructor
+  · intro hα x y hxy
+    apply hα
+    funext i
+    change LocalizedModule.mk x (1 : Submonoid.powers (f i)) =
+      LocalizedModule.mk y (1 : Submonoid.powers (f i))
+    apply LocalizedModule.mk_eq.mpr
+    refine ⟨⟨f i, (Submonoid.mem_powers_iff _ _).2 ⟨1, by simp⟩⟩, ?_⟩
+    have hi := congrFun hxy i
+    change (f i) • x = (f i) • y at hi
+    simpa only [Submonoid.smul_def, one_smul] using hi
+  · intro hμ x y hxy
+    apply sub_eq_zero.mp
+    have hex : ∀ i : Fin n, ∃ e : ℕ, (f i) ^ e • (x - y) = 0 := by
+      intro i
+      have hi := congrFun hxy i
+      simp only [standardCoverModuleAlpha_apply] at hi
+      have hi' :
+          LocalizedModule.mkLinearMap (Submonoid.powers (f i)) M (x - y) = 0 := by
+        rw [map_sub, hi, sub_self]
+      rcases LocalizedModule.mem_ker_mkLinearMap_iff.mp
+        (LinearMap.mem_ker.mpr hi') with ⟨s, hs, hsz⟩
+      obtain ⟨e, he⟩ := (Submonoid.mem_powers_iff _ _).mp hs
+      refine ⟨e, ?_⟩
+      rw [he]
+      exact hsz
+    choose e he using hex
+    exact hpow hμ (∑ i, e i) e (x - y) rfl he
 
 /-! ## Glueing modules -/
 

@@ -272,7 +272,33 @@ theorem immersion_has_unique_substack_image {S : Scheme.{u}}
       IsImageFactorization i U ∧
         ∀ V : LocallyClosedSubstack X,
           IsImageFactorization i V → LocallyClosedSubstackEquivalent U V := by
-  sorry
+  have hid : IsStackEquivalence (StackMorphism.id Z) := by
+    have hleft : StackTwoMorphism
+        (StackMorphism.comp (StackMorphism.id Z) (StackMorphism.id Z))
+        (StackMorphism.id Z) := by
+      intro p
+      exact Z.points.isEquivalence.refl _
+    have hright : StackTwoMorphism
+        (StackMorphism.comp (StackMorphism.id Z) (StackMorphism.id Z))
+        (StackMorphism.id Z) := by
+      intro p
+      exact Z.points.isEquivalence.refl _
+    let E : StackEquivalence Z Z :=
+      { forward := StackMorphism.id Z
+        inverse := StackMorphism.id Z
+        leftInverse := hleft
+        rightInverse := hright }
+    exact ⟨E, rfl⟩
+  let U : LocallyClosedSubstack X :=
+    { source := Z
+      inclusion := i
+      immersion := hi }
+  refine ⟨U, ?_, ?_⟩
+  · refine ⟨StackMorphism.id Z, hid, ?_⟩
+    intro p
+    exact X.points.isEquivalence.refl _
+  · intro V hV
+    exact hV
 
 def LocallyClosedSubstacks {S : Scheme.{u}} (X : AlgebraicStack S) :=
   LocallyClosedSubstack X

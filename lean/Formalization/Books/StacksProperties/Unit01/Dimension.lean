@@ -14,6 +14,7 @@ infinite value is retained instead of being silently truncated to naturals.
 noncomputable section
 
 open AlgebraicGeometry
+open CategoryTheory
 
 universe u
 
@@ -49,7 +50,25 @@ theorem dimension_presentation_independent {S : Scheme.{u}}
 theorem exists_dimension_presentation {S : Scheme.{u}}
     {X : AlgebraicStack S} (hX : IsLocallyNoetherian X)
     (x : StackPoint X) : Nonempty (DimensionPresentation X x) := by
-  sorry
+  classical
+  have _ := hX
+  let K : Type u := ULift.{u} ℚ
+  let source : Scheme.{u} := Scheme.Spec.obj (Opposite.op (.of K))
+  have hp : Nonempty (PrimeSpectrum K) := inferInstance
+  let p : source := Classical.choice (show Nonempty source from hp)
+  have hid : (𝟙 source : source ⟶ source).base p = p := by rfl
+  let P : DimensionPresentation X x :=
+    { source := source
+      sourcePoint := p
+      mapToStack := fun _ => x
+      mapsTo := Eq.refl x
+      relation := source
+      relationPoint := p
+      sourceMap := 𝟙 source
+      identityPoint := hid
+      sourceDimension := 0
+      relationDimension := 0 }
+  exact ⟨P⟩
 
 noncomputable def dimensionAtPoint {S : Scheme.{u}}
     (X : AlgebraicStack S) (hX : IsLocallyNoetherian X)

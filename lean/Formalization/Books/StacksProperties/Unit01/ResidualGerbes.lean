@@ -301,7 +301,65 @@ theorem residual_gerbe_isomorphic {S : Scheme.{u}}
       IsStackEquivalence e ∧
         StackTwoMorphism (StackMorphism.comp Gx.inclusion f)
           (StackMorphism.comp e Gy.inclusion) := by
-  sorry
+  cases hdiag
+  let px : FieldValuedMorphism Gx.source := Classical.choose Gx.fieldCover
+  let py : FieldValuedMorphism Gy.source := Classical.choose Gy.fieldCover
+  let m : StackMorphism Gx.source Gy.source :=
+    { rawMap := fun _ => py.point
+      map_respects := by
+        intro a b hab
+        exact Gy.source.points.isEquivalence.refl _ }
+  let n : StackMorphism Gy.source Gx.source :=
+    { rawMap := fun _ => px.point
+      map_respects := by
+        intro a b hab
+        exact Gx.source.points.isEquivalence.refl _ }
+  have hleft : StackTwoMorphism
+      (StackMorphism.comp m n) (StackMorphism.id Gx.source) := by
+    intro p
+    change Gx.source.points.equivalent px.point p
+    have hsub : Subsingleton (StackPoint Gx.source) := Gx.singleton.2
+    exact @Quotient.exact _ Gx.source.points.setoid px.point p
+      (hsub.elim _ _)
+  have hright : StackTwoMorphism
+      (StackMorphism.comp n m) (StackMorphism.id Gy.source) := by
+    intro p
+    change Gy.source.points.equivalent py.point p
+    have hsub : Subsingleton (StackPoint Gy.source) := Gy.singleton.2
+    exact @Quotient.exact _ Gy.source.points.setoid py.point p
+      (hsub.elim _ _)
+  have hm : IsStackEquivalence m := by
+    let E : StackEquivalence Gx.source Gy.source :=
+      { forward := m
+        inverse := n
+        leftInverse := hleft
+        rightInverse := hright }
+    exact ⟨E, rfl⟩
+  have hGx : ∀ p : RawPoint Gx.source,
+      inducedPointMap Gx.inclusion
+        (Quotient.mk Gx.source.points.setoid p) = x := by
+    intro p
+    have hp : inducedPointMap Gx.inclusion
+        (Quotient.mk Gx.source.points.setoid p) ∈
+        Set.range (inducedPointMap Gx.inclusion) := ⟨_, rfl⟩
+    rw [Gx.pointSet] at hp
+    exact Set.mem_singleton_iff.mp hp
+  have hGy : inducedPointMap Gy.inclusion
+      (Quotient.mk Gy.source.points.setoid py.point) = y := by
+    have hp : inducedPointMap Gy.inclusion
+        (Quotient.mk Gy.source.points.setoid py.point) ∈
+        Set.range (inducedPointMap Gy.inclusion) := ⟨_, rfl⟩
+    rw [Gy.pointSet] at hp
+    exact Set.mem_singleton_iff.mp hp
+  refine ⟨m, hm, ?_⟩
+  intro p
+  have hpoint : inducedPointMap f
+        (inducedPointMap Gx.inclusion
+          (Quotient.mk Gx.source.points.setoid p)) =
+      inducedPointMap Gy.inclusion
+        (Quotient.mk Gy.source.points.setoid py.point) := by
+    rw [hGx p, hxy, hGy]
+  exact Quotient.exact hpoint
 
 theorem scheme_residual_gerbe {S : Scheme.{u}}
     {X : AlgebraicStack S} (hX : IsRepresentableByScheme X)

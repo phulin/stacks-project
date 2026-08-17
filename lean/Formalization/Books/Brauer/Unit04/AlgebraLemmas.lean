@@ -132,11 +132,59 @@ theorem finite_module_end_is_matrix_over_simple_module
     [IsScalarTower k A N]
     [Module.Finite A N] :
     ∃ (n : ℕ) (_ : NeZero n),
-      Nonempty
+        Nonempty
           (Module.End A N ≃ₐ[k]
             Matrix (Fin n) (Fin n) (Module.End A M)) ∧
         Nonempty (Module.End (Module.End A N) N ≃ₐ[k] A) := by
-  sorry
+  classical
+  obtain ⟨n, ⟨e⟩⟩ := finite_module_is_direct_sum_of_simple k A N M
+  have hn0 : n ≠ 0 := by
+    intro hn
+    subst n
+    have hnontriv : Nontrivial (Fin 0 → M) :=
+      e.injective.nontrivial
+    exact (not_nontrivial (Fin 0 → M)) hnontriv
+  let _ : NeZero n := ⟨hn0⟩
+  let _ : DivisionRing (Module.End A M) := inferInstance
+  let _ : Algebra k (Module.End A M) := inferInstance
+  let _ : FiniteDimensional k (Module.End A M) :=
+    (simple_module_end_is_finite k A M).2
+  have hEnd : Nonempty (Module.End A N ≃ₐ[k]
+      Matrix (Fin n) (Fin n) (Module.End A M)) := by
+    exact ⟨(e.conjAlgEquiv k).trans
+      (endVecAlgEquivMatrixEnd (R := k) (A := A) (ι := Fin n) (M := M))⟩
+  let : Module (Module.End A N) N :=
+    { smul := fun f m => f m
+      smul_zero := by intro f; exact f.map_zero
+      smul_add := by intro f x y; exact f.map_add x y
+      one_smul := by intro m; rfl
+      mul_smul := by intro f g m; rfl
+      zero_smul := by intro m; rfl
+      add_smul := by intro f g m; rfl }
+  let : Module.Finite k N := Module.Finite.trans A N
+  let : Module.Finite (Module.End A N) N :=
+    Module.Finite.of_restrictScalars_finite k (Module.End A N) N
+  let : IsSemisimpleModule A N := (finite_simple_algebra_module_isotypic k A N).1
+  let f : A →ₐ[k] Module.End (Module.End A N) N :=
+    { toRingHom := Module.toModuleEnd (Module.End A N) (S := A) N
+      commutes' := by
+        intro r
+        ext x
+        change (algebraMap k A r) • x = r • x
+        exact IsScalarTower.algebraMap_smul A r x }
+  have hAnn : Module.annihilator A N = ⊥ := by
+    have h := (isSimpleRing_iff_isTwoSided_imp.mp (inferInstance : IsSimpleRing A)).2
+      (Module.annihilator A N) inferInstance
+    exact h.resolve_right (by
+      intro htop
+      exact (not_subsingleton N) (Module.annihilator_eq_top_iff.mp htop))
+  let _ : FaithfulSMul A N := Module.annihilator_eq_bot.mp hAnn
+  have hbij : Function.Bijective f := by
+    constructor
+    · exact (Module.toModuleEnd (Module.End A N) (S := A) N).injective
+    · exact Module.Finite.toModuleEnd_moduleEnd_surjective
+  refine ⟨n, inferInstance, hEnd, ?_⟩
+  exact ⟨(AlgEquiv.ofBijective f hbij).symm⟩
 
 /-! ## Base change and inverse -/
 

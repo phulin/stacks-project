@@ -15,26 +15,26 @@ canonical power operation on submodules.
 
 namespace Formalization.Books.Exercises.Unit20
 
-universe u
+universe u v
 
 noncomputable section
 
 /- The source leaves the coefficient fields of the constants implicit.  The
    standard real-valued formulation makes the polynomial-growth inequalities
    precise while retaining the natural-number exponent forced by `n ^ d`. -/
-/-- A finitely generated field extension has the prescribed two-sided
-polynomial growth for powers of finite-dimensional subvector spaces. -/
+/-- The prescribed two-sided polynomial growth for powers of finite-dimensional
+subvector spaces. -/
 def HasSubvectorSpacePowerGrowth
-    (k K : Type u) [Field k] [Field K] [Algebra k K] (d : ℕ) : Prop :=
+    (k : Type u) (K : Type v) [Field k] [Field K] [Algebra k K] (d : ℕ) : Prop :=
   (∃ V : Submodule k K, FiniteDimensional k V ∧
       ∃ ε : ℝ, 0 < ε ∧
         ∀ n : ℕ, 1 ≤ n →
-          (Module.finrank k ((V ^ n : Submodule k K) : Type u) : ℝ) ≥
+          (Module.finrank k ((V ^ n : Submodule k K) : Type v) : ℝ) ≥
             ε * (n : ℝ) ^ d) ∧
     (∀ V : Submodule k K, FiniteDimensional k V →
       ∃ C : ℝ, 0 < C ∧
         ∀ n : ℕ, 1 ≤ n →
-          (Module.finrank k ((V ^ n : Submodule k K) : Type u) : ℝ) ≤
+          (Module.finrank k ((V ^ n : Submodule k K) : Type v) : ℝ) ≤
             C * (n : ℝ) ^ d)
 
 /- The displayed identities `V² = VV`, `V³ = VV²`, and so on are already

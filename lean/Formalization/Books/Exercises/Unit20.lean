@@ -1,4 +1,3 @@
-import Formalization.Books.Exercises.Unit20.Core
 import Formalization.Books.Exercises.Unit20.Statements
 
 /-!

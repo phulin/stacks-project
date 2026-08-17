@@ -20,11 +20,10 @@ closed subset is represented by the canonical subtype inclusion in `TopCat`,
 and pushforward, pullback, stalks, essential images, and exactness use the
 corresponding Mathlib and earlier-chapter interfaces.
 
-The source's later comments about abelian sheaves and ringed spaces are
-recorded by interfaces below when they make a mathematical assertion.  The
-ringed-space comment itself introduces no definition or theorem, so it is
-accounted for in this module documentation rather than by an artificial
-declaration.
+The source's later abelian-sheaf result and its ringed-space scope remark are
+recorded as documentation only.  Their constructions and results belong to
+later material, so they are not moved into this chapter by artificial
+declarations.
 -/
 
 namespace Formalization.Books.Sheaves.Unit32
@@ -357,20 +356,9 @@ theorem closedSubsetSetPushforward_no_rightAdjoint
       Nonempty (closedSubsetSetPushforward Z ⊣ R) := by
   sorry
 
-/-- The later abelian-sheaf result says that closed-subset pushforward is exact. -/
-theorem closedSubsetAbelianPushforward_isExact
-    {X : TopCat.{w}} {Z : Set X} :
-    IsExact (closedSubsetAbelianPushforward Z) := by
-  sorry
-
-/-- The later abelian-sheaf result supplies a right adjoint, namely sections
-    supported in the closed subset. -/
-theorem closedSubsetAbelianPushforward_hasRightAdjoint
-    {X : TopCat.{w}} {Z : Set X} :
-    ∃ (R : TopCat.Sheaf AddCommGrpCat.{w} X ⥤
-      TopCat.Sheaf AddCommGrpCat.{w} (TopCat.of Z)),
-      Nonempty (closedSubsetAbelianPushforward Z ⊣ R) := by
-  sorry
+/- The source defers exactness and the right adjoint for abelian sheaves to
+   the later Modules chapter; those results are intentionally not declared
+   here. -/
 
 end
 

@@ -794,7 +794,7 @@ theorem stalk_tensorProductSheaf_statement {X : TopCat.{v}}
         ext z
         exact PresheafOfModules.naturality_apply u g z }
   let f := (TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map u'
-  haveI : IsIso f := by
+  have : IsIso f := by
     dsimp [f, u, u']
     change IsIso ((TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map
       (CategoryTheory.toSheafify (Opens.grothendieckTopology X) P.presheaf))
@@ -832,7 +832,7 @@ theorem stalk_tensorProductSheaf_statement {X : TopCat.{v}}
           rw [TopCat.Presheaf.germ_res_apply]
           simpa using hm
         rw [← hrW, ← hmW]
-        letI : Module (O₂.obj.obj (op W)) (P.presheaf.obj (op W)) := by
+        let : Module (O₂.obj.obj (op W)) (P.presheaf.obj (op W)) := by
           change Module (O₂.obj.obj (op W)) (P.obj (op W))
           infer_instance
         have hsmul :
@@ -841,8 +841,8 @@ theorem stalk_tensorProductSheaf_statement {X : TopCat.{v}}
               TopCat.Presheaf.germ (C := CommRingCat) O₂.obj W x hxW rW •
                 TopCat.Presheaf.germ (C := AddCommGrpCat) P.presheaf W x hxW mW0 := by
           convert (Formalization.Books.Sheaves.Unit14.germ_smul
-            (F := P) x W hxW rW mW) using 1 <;>
-            simp [mW, PresheafOfModules.presheaf_obj_coe] <;> rfl
+            (F := P) x W hxW rW mW) using 1 ;
+            simp [mW, PresheafOfModules.presheaf_obj_coe] ; rfl
         refine (congrArg (fun z => f.hom z)
           hsmul.symm).trans ?_
         have hmap :
@@ -862,7 +862,7 @@ theorem stalk_tensorProductSheaf_statement {X : TopCat.{v}}
           simpa [f] using
             (TopCat.Presheaf.stalkFunctor_map_germ_apply
               (F := P.presheaf) (G := Q.presheaf) W x hxW u' mW0)
-        letI : Module (O₂.obj.obj (op W)) (Q.presheaf.obj (op W)) := by
+        let : Module (O₂.obj.obj (op W)) (Q.presheaf.obj (op W)) := by
           change Module (O₂.obj.obj (op W)) (Q.obj (op W))
           infer_instance
         have hu_smul :
@@ -882,7 +882,7 @@ theorem stalk_tensorProductSheaf_statement {X : TopCat.{v}}
               ((u'.app (op W)) mW0)
           convert (Formalization.Books.Sheaves.Unit14.germ_smul
             (F := Q) x W hxW rW nW) using 1 <;>
-            simp [nW, u', PresheafOfModules.presheaf_obj_coe] <;> rfl
+            simp [nW, u', PresheafOfModules.presheaf_obj_coe] ; rfl
         rw [hmap, hu_smul, hQ, hmap0]
         simp
     }

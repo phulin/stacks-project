@@ -82,13 +82,15 @@ def IsEssentiallyConstantInverseSystem
     letI : IsDirectedOrder I := hI.2
     IsEssentiallyConstantProDiagram M
 
-/-- A system is eventually isomorphically constant from a threshold. -/
-def EventuallyIsIso
+/-- A system is eventually isomorphically constant from a threshold.
+
+This is the source-specific packaging of Mathlib's established
+`Functor.IsEventuallyConstantFrom` predicate. -/
+abbrev EventuallyIsIso
     {I : Type u} [Preorder I]
     {C : Type v} [Category.{w} C]
     (M : System I C) : Prop :=
-  ∃ i₀ : I, ∀ ⦃i i' : I⦄ (_ : i₀ ≤ i) (h : i ≤ i'),
-    IsIso (M.map (homOfLE h))
+  ∃ i₀ : I, Functor.IsEventuallyConstantFrom M i₀
 
 /-- Essential constancy plus monomorphic transition maps forces eventual isomorphisms. -/
 theorem eventuallyIsIso_of_essentiallyConstantSystem_of_mono

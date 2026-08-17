@@ -1,5 +1,3 @@
-import Formalization.Books.Guide.Unit02.Core
-
 /-!
 # A Guide to the Literature, Chapter 2: Mumford
 

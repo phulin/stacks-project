@@ -44,10 +44,10 @@ def StackMorphism2Iso {C : Type u} [Category.{v} C]
     (f g : StackMorphism.{v, u, w} X Y) : Prop :=
   Nonempty (f.map ≅ g.map)
 
-/-- A categorical product of two stack objects, including its universal
-property.  The project has no ambient category of stacks, so the universal
-property is recorded directly at the level of the existing morphism
-interface. -/
+/-- A product of two stack objects up to 2-isomorphism, including the
+object-level universal property needed here.  The project has no ambient
+category of stacks, so this is recorded directly at the level of the existing
+morphism interface. -/
 structure StackProduct {C : Type u} [Category.{v} C]
     {J : GrothendieckTopology C}
     (X Y : StackObject.{w, v, u} C J) where
@@ -74,7 +74,7 @@ the source definitions. -/
 structure StackSite (C : Type u) [Category.{v} C]
     (J : GrothendieckTopology C) where
   isScheme : C → Prop
-  representable : C → StackObject.{w, v, u} C J
+  representable : ∀ (U : C), isScheme U → StackObject.{w, v, u} C J
   isRepresentableByAlgebraicSpace :
     ∀ {X Y : StackObject.{w, v, u} C J},
       StackMorphism.{v, u, w} X Y → Prop
@@ -98,18 +98,26 @@ noncomputable def stackDiagonal {C : Type u} [Category.{v} C]
   Classical.choose
     ((S.product X X).isProduct X (stackMorphismId X) (stackMorphismId X))
 
-/-- A scheme presentation of a stack object, without yet specifying whether
-the presentation map is étale or smooth. -/
+/-- A scheme presentation of a stack object, with its covering map recorded
+but without yet specifying whether that map is étale or smooth. -/
 structure StackPresentation {C : Type u} [Category.{v} C]
     {J : GrothendieckTopology C}
     (S : StackSite.{u, v, w} C J)
     (X : StackObject.{w, v, u} C J) where
   scheme : C
   scheme_isScheme : S.isScheme scheme
-  map : StackMorphism.{v, u, w} (S.representable scheme) X
-  map_isRepresentableByAlgebraicSpace :
-    S.isRepresentableByAlgebraicSpace map
+  map : StackMorphism.{v, u, w} (S.representable scheme scheme_isScheme) X
   map_isSurjective : S.isSurjective map
+
+/-- The two projection laws that characterize a diagonal map into the chosen
+self-product. -/
+def IsStackDiagonal {C : Type u} [Category.{v} C]
+    {J : GrothendieckTopology C}
+    (S : StackSite.{u, v, w} C J)
+    (X : StackObject.{w, v, u} C J)
+    (d : StackMorphism.{v, u, w} X (S.product X X).product) : Prop :=
+  StackMorphism2Iso (stackMorphismComp d (S.product X X).fst) (stackMorphismId X) ∧
+    StackMorphism2Iso (stackMorphismComp d (S.product X X).snd) (stackMorphismId X)
 
 /-- The source condition that the diagonal be representable by an algebraic
 space. -/
@@ -117,7 +125,8 @@ def HasRepresentableDiagonal {C : Type u} [Category.{v} C]
     {J : GrothendieckTopology C}
     (S : StackSite.{u, v, w} C J)
     (X : StackObject.{w, v, u} C J) : Prop :=
-  S.isRepresentableByAlgebraicSpace (stackDiagonal S X)
+  ∃ d : StackMorphism.{v, u, w} X (S.product X X).product,
+    IsStackDiagonal S X d ∧ S.isRepresentableByAlgebraicSpace d
 
 /-- Existence of a scheme presentation whose map is étale. -/
 def HasEtalePresentation {C : Type u} [Category.{v} C]

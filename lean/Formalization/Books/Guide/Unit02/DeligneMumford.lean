@@ -1,5 +1,4 @@
-import Formalization.Books.Guide.Unit02.Core
-import Mathlib.Topology.Basic
+import Mathlib.Topology.Irreducible
 
 /-!
 # A Guide to the Literature, Chapter 2: Deligne--Mumford

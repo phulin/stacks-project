@@ -3,6 +3,7 @@ import Mathlib.Algebra.Exact.Basic
 import Mathlib.Algebra.Group.Idempotent
 import Mathlib.Algebra.GroupWithZero.Basic
 import Mathlib.Algebra.Module.FinitePresentation
+import Mathlib.Algebra.Module.LocalizedModule.Exact
 import Mathlib.Data.Finset.Sort
 import Mathlib.FieldTheory.IsAlgClosed.Basic
 import Mathlib.LinearAlgebra.FreeModule.Basic
@@ -90,7 +91,7 @@ theorem exists_maximal_ideal (R : Type u) [CommRing R] [Nontrivial R] :
     ∃ I : Ideal R, I.IsMaximal := by
   exact Ideal.exists_maximal R
 
-theorem jacobson_radical_eq_iInf_maximal
+theorem jacobson_radical_eq_sInf_maximal
     (R : Type u) [CommRing R] :
     Ring.jacobson R = sInf {I : Ideal R | I.IsMaximal} := by
   exact Ring.jacobson_eq_sInf_isMaximal R
@@ -149,14 +150,7 @@ theorem free_of_short_exact
 -- For a ring homomorphism `f`, `S.map f` is the image multiplicative subset.
 
 def productSubmonoid {R : Type u} [CommMonoid R]
-    (S T : Submonoid R) : Submonoid R where
-  carrier := {x | ∃ s ∈ S, ∃ t ∈ T, s * t = x}
-  one_mem' := by
-    exact ⟨1, S.one_mem, 1, T.one_mem, by simp⟩
-  mul_mem' := by
-    rintro a b ⟨s, hs, t, ht, rfl⟩ ⟨s', hs', t', ht', rfl⟩
-    refine ⟨s * s', S.mul_mem hs hs', t * t', T.mul_mem ht ht', ?_⟩
-    simp [mul_left_comm, mul_comm]
+    (S T : Submonoid R) : Submonoid R := S ⊔ T
 
 theorem localization_isZero_iff
     {R : Type u} [CommSemiring R] (S : Submonoid R) :
@@ -198,7 +192,7 @@ theorem localizedModule_map_exact
     (S : Submonoid R) (f : M →ₗ[R] N) (g : N →ₗ[R] P)
     (h : Function.Exact f g) :
     Function.Exact (LocalizedModule.map S f) (LocalizedModule.map S g) := by
-  sorry
+  exact LocalizedModule.map_exact S f g h
 
 theorem iterated_localizedModule_equiv
     {R M : Type*} [CommSemiring R] [AddCommMonoid M] [Module R M]
@@ -277,8 +271,14 @@ theorem residueField_isFractionRing
 theorem residueField_eq_atPrime_quotient
     {R : Type u} [CommRing R] (p : Ideal R) [p.IsPrime] :
     p.ResidueField =
-      (Localization.AtPrime p ⧸ IsLocalRing.maximalIdeal (Localization.AtPrime p)) := by
-  rfl
+      (Localization.AtPrime p ⧸
+        Ideal.map (algebraMap R (Localization.AtPrime p)) p) := by
+  calc
+    p.ResidueField =
+        (Localization.AtPrime p ⧸ IsLocalRing.maximalIdeal (Localization.AtPrime p)) := rfl
+    _ = (Localization.AtPrime p ⧸
+        Ideal.map (algebraMap R (Localization.AtPrime p)) p) := by
+      rw [localization_atPrime_maximalIdeal_eq p]
 
 -- The tensor product is Mathlib's `TensorProduct R M₁ M₂`, written
 -- `M₁ ⊗[R] M₂`.

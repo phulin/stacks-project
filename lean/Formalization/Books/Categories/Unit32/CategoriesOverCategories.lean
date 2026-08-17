@@ -1,4 +1,5 @@
 import Formalization.Books.Categories.Unit31.TwoFibreProducts
+import Mathlib.Algebra.Group.TypeTags.Basic
 import Mathlib.CategoryTheory.Comma.Over.Basic
 import Mathlib.CategoryTheory.FiberedCategory.Fiber
 import Mathlib.CategoryTheory.Groupoid.Discrete
@@ -87,8 +88,6 @@ abbrev overFunctor {C : Cat.{v, u}} {X Y : CategoryOver C}
     (F : CategoryOverHom X Y) : X.left ⥤ Y.left :=
   F.leftHom.toFunctor
 
-/- The ordinary-functor form of the commuting triangle carried by a morphism
-   of `Over C`. -/
 theorem overFunctor_comm {C : Cat.{v, u}} {X Y : CategoryOver C}
     (F : CategoryOverHom X Y) :
     overFunctor F ⋙ structureFunctor Y = structureFunctor X :=
@@ -191,12 +190,12 @@ def overHorizontalComposition {C : Cat.{v, u}}
 
 def overNatIsoOfUnderlying {C : Cat.{v, u}}
     {X Y : CategoryOver C} {F G : CategoryOverHom X Y}
-    (e : overFunctor F ≅ overFunctor G) : F ≅ G where
+    (e : overFunctor F ≅ overFunctor G)
+    (h : ∀ Z, (structureFunctor Y).map (e.hom.app Z) =
+      overIdentityComponent F G Z := by sorry) : F ≅ G where
   hom :=
     { toNatTrans := e.hom
-      over := by
-        intro Z
-        sorry }
+      over := h }
   inv :=
     { toNatTrans := e.inv
       over := by
@@ -221,10 +220,17 @@ noncomputable instance categoriesOverBicategory {C : Cat.{v, u}} :
         simpa only [overFunctor, CategoryOver.comp, CategoryOver.Hom.leftHom,
           Over.comp_left, Cat.Hom.comp_toFunctor] using
           Functor.associator (overFunctor F) (overFunctor G) (overFunctor H))
+      (by
+        intro Z
+        sorry)
   leftUnitor F :=
-    overNatIsoOfUnderlying (Functor.leftUnitor (overFunctor F))
+    overNatIsoOfUnderlying (Functor.leftUnitor (overFunctor F)) (by
+      intro Z
+      sorry)
   rightUnitor F :=
-    overNatIsoOfUnderlying (Functor.rightUnitor (overFunctor F))
+    overNatIsoOfUnderlying (Functor.rightUnitor (overFunctor F)) (by
+      intro Z
+      sorry)
   whiskerLeft_id := by sorry
   whiskerLeft_comp := by sorry
   id_whiskerLeft := by sorry
@@ -437,7 +443,9 @@ structure TwoFibreProductOverLift {C : Cat.{v, u}}
   functor : W ⥤ TwoFibreProductOverCategory F G
   over : functor ⋙ D.base = K.base
   left : K.left ⟶ functor ⋙ D.left
+  left_isIso : IsIso left
   right : K.right ⟶ functor ⋙ D.right
+  right_isIso : IsIso right
   left_base : ∀ Z,
     (structureFunctor X).obj (K.left.obj Z) =
       (structureFunctor X).obj ((functor ⋙ D.left).obj Z)
@@ -452,6 +460,9 @@ structure TwoFibreProductOverLift {C : Cat.{v, u}}
         Functor.whiskerLeft functor D.comparison.hom ≫
         (Functor.associator functor D.right (overFunctor G)).inv =
       K.comparison.hom ≫ Functor.whiskerRight right (overFunctor G)
+
+attribute [instance] TwoFibreProductOverLift.left_isIso
+attribute [instance] TwoFibreProductOverLift.right_isIso
 
 /- This is the final-object/universal-property interface for the explicit
    construction.  Its cone and lift fields spell out strict base triangles,
@@ -483,7 +494,8 @@ noncomputable def twoFibreProductOverDiagram {C : Cat.{v, u}}
   comparison_base := by sorry
   comparison_vertical := by sorry
 
-/-- The explicit construction is a 2-fibre product in the 2-category over `C`. -/
+/-- The explicit construction is a 2-fibre product in the associated `(2,1)`-category
+over `C`. -/
 theorem twoFibreProductOver_is_twoFibreProduct {C : Cat.{v, u}}
     {X Y S : CategoryOver C} (F : CategoryOverHom X S)
     (G : CategoryOverHom Y S) :
@@ -520,12 +532,14 @@ theorem twoFibreProductOver_fibre_equivalent {C : Cat.{v, u}}
 
 /-! ## The comparison example -/
 
-abbrev TwoArrowCategory := SingleObj (ZMod 2)
+/- `SingleObj` uses multiplication for composition, so the additive group
+   `ZMod 2` is tagged multiplicatively to obtain a genuine two-arrow groupoid. -/
+abbrev TwoArrowCategory := SingleObj (Multiplicative (ZMod 2))
 abbrev OneObjectDiscreteCategory := Discrete Unit
 
 def oneObjectToTwoArrowCategory : OneObjectDiscreteCategory ⥤ TwoArrowCategory where
-  obj _ := SingleObj.star (ZMod 2)
-  map _ := 𝟙 (SingleObj.star (ZMod 2))
+  obj _ := SingleObj.star (Multiplicative (ZMod 2))
+  map _ := 𝟙 (SingleObj.star (Multiplicative (ZMod 2)))
   map_id := by intros; simp
   map_comp := by intros; simp
 

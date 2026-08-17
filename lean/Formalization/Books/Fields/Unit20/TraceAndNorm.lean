@@ -1,4 +1,4 @@
-import Formalization.Books.Fields.Unit14.PurelyInseparableExtensions
+import Mathlib.FieldTheory.PurelyInseparable.Basic
 import Mathlib.FieldTheory.IntermediateField.Adjoin.Basic
 import Mathlib.LinearAlgebra.Charpoly.Basic
 import Mathlib.RingTheory.Discriminant
@@ -179,7 +179,7 @@ theorem trace_pairing_symmetric
 theorem separable_iff_trace_nonzero_iff_trace_pairing_nondegenerate
     {K L : Type*} [Field K] [Field L] [Algebra K L]
     [FiniteDimensional K L] :
-    Algebra.IsSeparable K L ↔
+    (Algebra.IsSeparable K L ↔ Algebra.trace K L ≠ 0) ∧
       (Algebra.trace K L ≠ 0 ↔ (Algebra.traceForm K L).Nondegenerate) := by
   sorry
 
@@ -201,11 +201,13 @@ theorem field_trace_surjective_of_separable
     The source's condition `L = K(α)` is represented by the canonical
     intermediate field `IntermediateField.adjoin K {α}`. -/
 theorem field_trace_eq_zero_of_purely_inseparable_simple_extension
-    {K E : Type*} [Field K] [Field E] [Algebra K E]
-    (p : ℕ) [CharP K p] (hp : p.Prime) (α : E)
-    (hα : α ∉ (algebraMap K E).range)
-    (hαp : α ^ p ∈ (algebraMap K E).range) :
-    Algebra.trace K (IntermediateField.adjoin K ({α} : Set E)) = 0 := by
+    {K L : Type*} [Field K] [Field L] [Algebra K L]
+    [FiniteDimensional K L]
+    (p : ℕ) [CharP K p] (hp : p.Prime) (α : L)
+    (hα : α ∉ (algebraMap K L).range)
+    (hαp : α ^ p ∈ (algebraMap K L).range)
+    (hgen : IntermediateField.adjoin K ({α} : Set L) = ⊤) :
+    Algebra.trace K L = 0 := by
   sorry
 
 /-! ## Discriminants and square classes -/

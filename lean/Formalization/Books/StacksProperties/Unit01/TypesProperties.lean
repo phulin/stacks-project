@@ -21,7 +21,8 @@ namespace Formalization.Books.StacksProperties.Unit01
 structure SmoothLocalSchemeProperty (S : Scheme.{u}) where
   schemeProperty : Scheme.{u} → Prop
   spaceProperty : AlgebraicSpace S → Prop
-  comparison : Prop
+  comparison : ∀ W : AlgebraicSpace S,
+    schemeProperty W.left ↔ spaceProperty W
   smoothLocal : Prop
 
 def IsSmoothCover {S : Scheme.{u}} {X : AlgebraicStack S}
@@ -91,8 +92,9 @@ def smoothLocalPropertyNames : List SmoothLocalPropertyName :=
 structure SmoothLocalGermProperty (S : Scheme.{u}) where
   schemeProperty : LocalPropertyOfGerms.{u}
   spaceProperty : ∀ (W : AlgebraicSpace S), W.left → Prop
-  comparison : Prop
-  smoothLocal : Prop
+  comparison : ∀ (W : AlgebraicSpace S) (u : W.left),
+    schemeProperty.property W.left u ↔ spaceProperty W u
+  smoothLocal : schemeProperty.smoothLocal
 
 def SomeSchemeGermPropertyAt {S : Scheme.{u}}
     (P : SmoothLocalGermProperty S) {X : AlgebraicStack S}

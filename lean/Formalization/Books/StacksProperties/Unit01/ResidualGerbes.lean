@@ -19,7 +19,7 @@ namespace Formalization.Books.StacksProperties.Unit01
 
 def IsFlatFieldCover {S : Scheme.{u}}
     {X : AlgebraicStack S} (p : FieldValuedMorphism X) : Prop :=
-  (∀ x : StackPoint X, x = Quotient.mk X.points.setoid p.point) ∧ p.flat
+  IsSurjectiveFieldValuedMorphism p ∧ p.flat
 
 def IsLocallyFiniteTypeFlatFieldCover {S : Scheme.{u}}
     {X : AlgebraicStack S} (p : FieldValuedMorphism X) : Prop :=
@@ -75,7 +75,6 @@ structure ImprovedUniquePointData {S : Scheme.{u}}
     (Z : AlgebraicStack S) where
   source : AlgebraicStack S
   inclusion : StackMorphism source Z
-  strictlyFull : Prop
   improved : IsLocallyNoetherianReducedSingletonPointStack source
   monomorphism : IsMonomorphism inclusion
 
@@ -94,7 +93,11 @@ structure DistinctSingletonExample (S : Scheme.{u}) where
   groupStructure : Group group
   groupActionSpace : AlgebraicSpace S
   quotientSpace : AlgebraicSpace S
-  freeAndTransitive : Prop
+  action : group → groupActionSpace.left → groupActionSpace.left
+  free : ∀ (g : group) (u : groupActionSpace.left),
+    action g u = u → g = 1
+  transitive : ∀ (u v : groupActionSpace.left),
+    ∃ g : group, action g u = v
   reduced : Prop
   nonNoetherian : Prop
   singleton : Prop
@@ -102,22 +105,9 @@ structure DistinctSingletonExample (S : Scheme.{u}) where
   pointIsMonomorphism : Prop
   notAnIsomorphism : Prop
 
-theorem exists_distinct_singleton_example {S : Scheme.{u}} :
-    Nonempty (DistinctSingletonExample S) := by
-  let A : AlgebraicSpace S :=
-    CategoryTheory.Over.mk (CategoryTheory.CategoryStruct.id S)
-  exact ⟨{
-    group := PUnit
-    groupStructure := inferInstance
-    groupActionSpace := A
-    quotientSpace := A
-    freeAndTransitive := True
-    reduced := True
-    nonNoetherian := True
-    singleton := True
-    fieldValuedPoint := True
-    pointIsMonomorphism := True
-    notAnIsomorphism := True }⟩
+theorem exists_distinct_singleton_example :
+    ∃ (S : Scheme.{u}), Nonempty (DistinctSingletonExample S) := by
+  sorry
 
 def ResidualGerbeCandidate {S : Scheme.{u}}
     {X : AlgebraicStack S} (x : StackPoint X) : Prop :=
@@ -146,7 +136,6 @@ structure ResidualGerbe {S : Scheme.{u}}
     (X : AlgebraicStack S) (x : StackPoint X) where
   source : AlgebraicStack S
   inclusion : StackMorphism source X
-  strictlyFull : Prop
   reduced : IsReduced source
   locallyNoetherian : IsLocallyNoetherian source
   singleton : IsSingletonPointStack source
@@ -286,63 +275,7 @@ theorem residual_gerbe_isomorphic {S : Scheme.{u}}
       IsStackEquivalence e ∧
         StackTwoMorphism (StackMorphism.comp Gx.inclusion f)
           (StackMorphism.comp e Gy.inclusion) := by
-  change pointSet X at x
-  change pointSet Y at y
-  rcases Gx.fieldCover with ⟨px, hpx⟩
-  rcases Gy.fieldCover with ⟨py, hpy⟩
-  let mf : StackMorphism Gx.source Gy.source :=
-    { rawMap := fun _ => py.point
-      map_respects := by
-        intro a b hab
-        exact Gy.source.points.isEquivalence.refl _ }
-  let mi : StackMorphism Gy.source Gx.source :=
-    { rawMap := fun _ => px.point
-      map_respects := by
-        intro a b hab
-        exact Gx.source.points.isEquivalence.refl _ }
-  have hx : ∀ a : RawPoint Gx.source,
-      Gx.source.points.equivalent px.point a := by
-    intro a
-    have heq : Quotient.mk Gx.source.points.setoid px.point =
-        Quotient.mk Gx.source.points.setoid a := Gx.singleton.2.elim _ _
-    exact @Quotient.exact _ Gx.source.points.setoid _ _ heq
-  have hy' : ∀ a : RawPoint Gy.source,
-      Gy.source.points.equivalent py.point a := by
-    intro a
-    have heq : Quotient.mk Gy.source.points.setoid py.point =
-        Quotient.mk Gy.source.points.setoid a := Gy.singleton.2.elim _ _
-    exact @Quotient.exact _ Gy.source.points.setoid _ _ heq
-  have he : IsStackEquivalence mf := by
-    refine ⟨{ forward := mf, inverse := mi, leftInverse := ?_, rightInverse := ?_ }, rfl⟩
-    · intro a
-      change Gx.source.points.equivalent px.point a
-      exact hx a
-    · intro a
-      change Gy.source.points.equivalent py.point a
-      exact hy' a
-  have hpy : inducedPointMap Gy.inclusion
-      (Quotient.mk Gy.source.points.setoid py.point) = y := by
-    have hm : inducedPointMap Gy.inclusion
-        (Quotient.mk Gy.source.points.setoid py.point) ∈
-        Set.range (inducedPointMap Gy.inclusion) := ⟨_, rfl⟩
-    rw [Gy.pointSet] at hm
-    exact Set.mem_singleton_iff.mp hm
-  refine ⟨mf, he, ?_⟩
-  intro a
-  have hpx' : inducedPointMap Gx.inclusion
-      (Quotient.mk Gx.source.points.setoid a) = x := by
-    have hm : inducedPointMap Gx.inclusion
-        (Quotient.mk Gx.source.points.setoid a) ∈
-        Set.range (inducedPointMap Gx.inclusion) := ⟨_, rfl⟩
-    rw [Gx.pointSet] at hm
-    exact Set.mem_singleton_iff.mp hm
-  have hquot : inducedPointMap f
-      (inducedPointMap Gx.inclusion
-        (Quotient.mk Gx.source.points.setoid a)) =
-      inducedPointMap Gy.inclusion
-        (Quotient.mk Gy.source.points.setoid py.point) := by
-    rw [hpx', hxy, hpy]
-  exact @Quotient.exact _ Y.points.setoid _ _ hquot
+  sorry
 
 theorem scheme_residual_gerbe {S : Scheme.{u}}
     {X : AlgebraicStack S} (hX : IsRepresentableByScheme X)

@@ -31,11 +31,21 @@ def IsClosedPointSet {S : Scheme.{u}} {X : AlgebraicStack S}
     (T : Set (StackPoint X)) : Prop :=
   @IsClosed (StackPoint X) (canonicalStackTopology (S := S) X) T
 
+def ReducedClosedSubstackEquivalent {S : Scheme.{u}}
+    {X : AlgebraicStack S} (U V : ClosedSubstack X) : Prop :=
+  ∃ e : StackMorphism U.source V.source,
+    IsStackEquivalence e ∧
+      StackTwoMorphism U.inclusion
+        (StackMorphism.comp e V.inclusion)
+
 theorem reduced_closed_substack_exists_unique {S : Scheme.{u}}
     (X : AlgebraicStack S) (T : Set (StackPoint X)) :
     IsClosedPointSet T →
-    ∃! U : ClosedSubstack X,
-      IsReducedClosedSubstack U ∧ ClosedSubstackHasPoints U T := by
+    ∃ U : ClosedSubstack X,
+      IsReducedClosedSubstack U ∧ ClosedSubstackHasPoints U T ∧
+        ∀ V : ClosedSubstack X,
+          IsReducedClosedSubstack V ∧ ClosedSubstackHasPoints V T →
+            ReducedClosedSubstackEquivalent U V := by
   sorry
 
 theorem reduced_stack_determined_by_points {S : Scheme.{u}}

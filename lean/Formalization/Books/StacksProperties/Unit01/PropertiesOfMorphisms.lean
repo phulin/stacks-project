@@ -17,6 +17,33 @@ universe u
 
 namespace Formalization.Books.StacksProperties.Unit01
 
+inductive CoveringTopology
+  | etale
+  | smooth
+  | syntomic
+  | fppf
+  deriving DecidableEq, Repr
+
+structure RelativeSpaceProperty (S : Scheme.{u}) where
+  property : SpaceMorphismProperty S
+  fppfLocalOnTarget : Prop
+  stableUnderArbitraryBaseChange : Prop
+  localOnSource : CoveringTopology → Prop
+  preservedUnderComposition : Prop
+
+def HasRelativeProperty {S : Scheme.{u}}
+    (P : RelativeSpaceProperty S) {X Y : AlgebraicStack S}
+    (f : StackMorphism X Y) : Prop :=
+  RepresentableByAlgebraicSpaces f ∧
+    ∀ (W : AlgebraicSpace S) (w : SpaceToStackMorphism W Y)
+      (bc : BaseChangeData f W w), P.property bc.projection
+
+def HasRelativePropertyOnSpace {S : Scheme.{u}}
+    (P : RelativeSpaceProperty S) {X Y : AlgebraicStack S}
+    (f : StackMorphism X Y) : Prop :=
+  ∀ (W : AlgebraicSpace S) (w : SpaceToStackMorphism W Y)
+    (bc : BaseChangeData f W w), P.property bc.projection
+
 /-! ## The list of standard relative properties -/
 
 inductive StandardPropertyName
@@ -64,17 +91,18 @@ def standardPropertyNames : List StandardPropertyName :=
 
 structure StandardPropertyData (S : Scheme.{u}) where
   property : StandardPropertyName → SpaceMorphismProperty S
-  fppfLocalOnTarget : ∀ n : StandardPropertyName, n = n → Prop
-  stableUnderArbitraryBaseChange : ∀ n : StandardPropertyName, n = n → Prop
-  preservedUnderComposition : ∀ n : StandardPropertyName, n = n → Prop
+  fppfLocalOnTarget : ∀ _n : StandardPropertyName, Prop
+  stableUnderArbitraryBaseChange : ∀ _n : StandardPropertyName, Prop
+  localOnSource : ∀ _n : StandardPropertyName, CoveringTopology → Prop
+  preservedUnderComposition : ∀ _n : StandardPropertyName, Prop
 
 def standardRelativeProperty (D : StandardPropertyData S)
     (n : StandardPropertyName) : RelativeSpaceProperty S where
   property := D.property n
-  fppfLocalOnTarget := D.fppfLocalOnTarget n rfl
-  stableUnderArbitraryBaseChange := D.stableUnderArbitraryBaseChange n rfl
-  localOnSource := True
-  preservedUnderComposition := D.preservedUnderComposition n rfl
+  fppfLocalOnTarget := D.fppfLocalOnTarget n
+  stableUnderArbitraryBaseChange := D.stableUnderArbitraryBaseChange n
+  localOnSource := D.localOnSource n
+  preservedUnderComposition := D.preservedUnderComposition n
 
 def RelativePropertyImplies {S : Scheme.{u}}
     (P Q : RelativeSpaceProperty S) : Prop :=
@@ -87,6 +115,7 @@ definition of a relative property. -/
 theorem relative_property_base_change {S : Scheme.{u}}
     (P : RelativeSpaceProperty S) {X Y Z : AlgebraicStack S}
     (f : StackMorphism X Y) (g : StackMorphism Z Y)
+    (hP : P.stableUnderArbitraryBaseChange)
     (hf : HasRelativeProperty P f) :
     HasRelativeProperty P (fibreProductSnd f g) := by
   sorry
@@ -94,6 +123,7 @@ theorem relative_property_base_change {S : Scheme.{u}}
 theorem relative_property_comp {S : Scheme.{u}}
     (P : RelativeSpaceProperty S) {X Y Z : AlgebraicStack S}
     (f : StackMorphism X Y) (g : StackMorphism Y Z)
+    (hP : P.preservedUnderComposition)
     (hf : HasRelativeProperty P f) (hg : HasRelativeProperty P g) :
     HasRelativeProperty P (StackMorphism.comp f g) := by
   sorry
@@ -102,6 +132,8 @@ theorem relative_property_product {S : Scheme.{u}}
     (P : RelativeSpaceProperty S)
     {X₁ Y₁ X₂ Y₂ : AlgebraicStack S}
     (f : StackMorphism X₁ X₂) (g : StackMorphism Y₁ Y₂)
+    (hbase : P.stableUnderArbitraryBaseChange)
+    (hcomp : P.preservedUnderComposition)
     (hf : HasRelativeProperty P f) (hg : HasRelativeProperty P g) :
     HasRelativeProperty P (stackProductMorphism f g) := by
   sorry
@@ -130,20 +162,23 @@ theorem check_representable_covering {S : Scheme.{u}}
 def HasRelativePropertyOnAllSpaces {S : Scheme.{u}}
     (P : RelativeSpaceProperty S) {X Y : AlgebraicStack S}
     (f : StackMorphism X Y) : Prop :=
-  RepresentableByAlgebraicSpaces f ∧
-    ∀ (W : AlgebraicSpace S) (w : SpaceToStackMorphism W Y)
-      (bc : BaseChangeData f W w), P.property bc.projection
+  HasRelativePropertyOnSpace P f
 
 theorem property_spacelike_tests {S : Scheme.{u}}
     (P : RelativeSpaceProperty S) {X Y : AlgebraicStack S}
-    (f : StackMorphism X Y) (_hf : RepresentableByAlgebraicSpaces f) :
+    (f : StackMorphism X Y) (hf : RepresentableByAlgebraicSpaces f) :
     HasRelativeProperty P f ↔ HasRelativePropertyOnAllSpaces P f := by
-  rfl
+  constructor
+  · intro h
+    exact h.2
+  · intro h
+    exact ⟨hf, h⟩
 
 theorem check_property_covering {S : Scheme.{u}}
     (P : RelativeSpaceProperty S) {X Y : AlgebraicStack S}
     (f : StackMorphism X Y) (W : AlgebraicSpace S)
     (w : SpaceToStackMorphism W Y)
+    (hP : P.fppfLocalOnTarget ∧ P.stableUnderArbitraryBaseChange)
     (hcover : Function.Surjective w.map ∧ w.flat ∧
       w.locallyOfFinitePresentation) :
     HasRelativeProperty P f ↔
@@ -177,18 +212,12 @@ theorem check_property_weak_covering {S : Scheme.{u}}
     (P : RelativeSpaceProperty S) {X Y Z : AlgebraicStack S}
     (f : StackMorphism X Y)
     (z : StackCoveringMorphism (Z := Z) (Y := Y))
+    (hP : P.fppfLocalOnTarget ∧ P.stableUnderArbitraryBaseChange)
     (hz : z.representableByAlgebraicSpaces ∧
       Function.Surjective (inducedPointMap z.map) ∧ z.flat ∧
       z.locallyOfFinitePresentation) :
     HasRelativeProperty P f ↔ HasRelativePropertyAfterStackBaseChange P f z := by
   sorry
-
-inductive CoveringTopology
-  | etale
-  | smooth
-  | syntomic
-  | fppf
-  deriving DecidableEq, Repr
 
 structure PrecompositionCoverData {S : Scheme.{u}}
     {X Y Z : AlgebraicStack S} (f : StackMorphism X Y)
@@ -219,7 +248,7 @@ def HasPrecompositionCover {S : Scheme.{u}}
         Function.Surjective (inducedPointMap f) ∧ CoveringKindCondition τ c
 
 def IsLocalOnSourceIn (P : RelativeSpaceProperty S)
-    (_τ : CoveringTopology) : Prop := P.localOnSource
+    (τ : CoveringTopology) : Prop := P.localOnSource τ
 
 theorem property_after_precomposing {S : Scheme.{u}}
     (P : RelativeSpaceProperty S) {X Y Z : AlgebraicStack S}

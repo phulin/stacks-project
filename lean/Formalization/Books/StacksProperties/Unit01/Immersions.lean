@@ -2,6 +2,7 @@ import Formalization.Books.StacksProperties.Unit01.Monomorphisms
 import Mathlib.AlgebraicGeometry.Morphisms.ClosedImmersion
 import Mathlib.AlgebraicGeometry.Morphisms.Immersion
 import Mathlib.AlgebraicGeometry.Morphisms.OpenImmersion
+import Mathlib.AlgebraicGeometry.Morphisms.Smooth
 import Mathlib.Topology.Basic
 
 /-!
@@ -9,8 +10,8 @@ import Mathlib.Topology.Basic
 
 The source defines open immersions, closed immersions, and immersions by
 testing after representable base change.  The presentation and substack
-interfaces below keep the invariant-subspace and strict-fullness data
-explicit, which is the part of the source used by later sections.
+interfaces below keep the invariant-subspace data explicit, which is the
+part of the source used by later sections.
 -/
 
 noncomputable section
@@ -19,7 +20,7 @@ open CategoryTheory
 open AlgebraicGeometry
 open Topology
 
-universe u
+universe u v w
 
 namespace Formalization.Books.StacksProperties.Unit01
 
@@ -35,25 +36,29 @@ def SpaceImmersion {S : Scheme.{u}}
     {X Y : AlgebraicSpace S} (f : SpaceMorphism X Y) : Prop :=
   IsImmersion f.left
 
+def SpaceMorphismSmooth {S : Scheme.{u}}
+    {X Y : AlgebraicSpace S} (f : SpaceMorphism X Y) : Prop :=
+  Smooth f.left
+
 def RelativeOpenImmersionProperty (S : Scheme.{u}) : RelativeSpaceProperty S where
   property := fun _ _ f => SpaceOpenImmersion f
   fppfLocalOnTarget := True
   stableUnderArbitraryBaseChange := True
-  localOnSource := True
+  localOnSource := fun _ => True
   preservedUnderComposition := True
 
 def RelativeClosedImmersionProperty (S : Scheme.{u}) : RelativeSpaceProperty S where
   property := fun _ _ f => SpaceClosedImmersion f
   fppfLocalOnTarget := True
   stableUnderArbitraryBaseChange := True
-  localOnSource := True
+  localOnSource := fun _ => True
   preservedUnderComposition := True
 
 def RelativeImmersionProperty (S : Scheme.{u}) : RelativeSpaceProperty S where
   property := fun _ _ f => SpaceImmersion f
   fppfLocalOnTarget := True
   stableUnderArbitraryBaseChange := True
-  localOnSource := True
+  localOnSource := fun _ => True
   preservedUnderComposition := True
 
 def IsOpenImmersionStack {S : Scheme.{u}}
@@ -70,21 +75,24 @@ def IsImmersionStack {S : Scheme.{u}}
 
 def HasLocalOpenImmersionTest {S : Scheme.{u}}
     {X Y : AlgebraicStack S} (f : StackMorphism X Y) : Prop :=
-  ∃ (W : AlgebraicSpace S) (w : SpaceToStackMorphism W Y),
-    Function.Surjective w.map ∧ w.flat ∧ w.locallyOfFinitePresentation ∧
-      ∃ bc : BaseChangeData f W w, SpaceOpenImmersion bc.projection
+  RepresentableByAlgebraicSpaces f ∧
+    ∃ (W : AlgebraicSpace S) (w : SpaceToStackMorphism W Y),
+      Function.Surjective w.map ∧ w.flat ∧ w.locallyOfFinitePresentation ∧
+        ∃ bc : BaseChangeData f W w, SpaceOpenImmersion bc.projection
 
 def HasLocalClosedImmersionTest {S : Scheme.{u}}
     {X Y : AlgebraicStack S} (f : StackMorphism X Y) : Prop :=
-  ∃ (W : AlgebraicSpace S) (w : SpaceToStackMorphism W Y),
-    Function.Surjective w.map ∧ w.flat ∧ w.locallyOfFinitePresentation ∧
-      ∃ bc : BaseChangeData f W w, SpaceClosedImmersion bc.projection
+  RepresentableByAlgebraicSpaces f ∧
+    ∃ (W : AlgebraicSpace S) (w : SpaceToStackMorphism W Y),
+      Function.Surjective w.map ∧ w.flat ∧ w.locallyOfFinitePresentation ∧
+        ∃ bc : BaseChangeData f W w, SpaceClosedImmersion bc.projection
 
 def HasLocalImmersionTest {S : Scheme.{u}}
     {X Y : AlgebraicStack S} (f : StackMorphism X Y) : Prop :=
-  ∃ (W : AlgebraicSpace S) (w : SpaceToStackMorphism W Y),
-    Function.Surjective w.map ∧ w.flat ∧ w.locallyOfFinitePresentation ∧
-      ∃ bc : BaseChangeData f W w, SpaceImmersion bc.projection
+  RepresentableByAlgebraicSpaces f ∧
+    ∃ (W : AlgebraicSpace S) (w : SpaceToStackMorphism W Y),
+      Function.Surjective w.map ∧ w.flat ∧ w.locallyOfFinitePresentation ∧
+        ∃ bc : BaseChangeData f W w, SpaceImmersion bc.projection
 
 theorem base_change_open_immersion {S : Scheme.{u}}
     {X Y Z : AlgebraicStack S} (f : StackMorphism X Y)
@@ -222,19 +230,16 @@ theorem immersion_from_invariant_presentation {S : Scheme.{u}}
 structure OpenSubstack {S : Scheme.{u}} (X : AlgebraicStack S) where
   source : AlgebraicStack S
   inclusion : StackMorphism source X
-  strictlyFull : Prop
   openImmersion : IsOpenImmersionStack inclusion
 
 structure ClosedSubstack {S : Scheme.{u}} (X : AlgebraicStack S) where
   source : AlgebraicStack S
   inclusion : StackMorphism source X
-  strictlyFull : Prop
   closedImmersion : IsClosedImmersionStack inclusion
 
 structure LocallyClosedSubstack {S : Scheme.{u}} (X : AlgebraicStack S) where
   source : AlgebraicStack S
   inclusion : StackMorphism source X
-  strictlyFull : Prop
   immersion : IsImmersionStack inclusion
 
 def IsOpenSubstack {S : Scheme.{u}} {X : AlgebraicStack S}
@@ -253,10 +258,20 @@ def IsImageFactorization {S : Scheme.{u}}
     IsStackEquivalence e ∧
       StackTwoMorphism i (StackMorphism.comp e U.inclusion)
 
+def LocallyClosedSubstackEquivalent {S : Scheme.{u}}
+    {X : AlgebraicStack S} (U V : LocallyClosedSubstack X) : Prop :=
+  ∃ e : StackMorphism U.source V.source,
+    IsStackEquivalence e ∧
+      StackTwoMorphism U.inclusion
+        (StackMorphism.comp e V.inclusion)
+
 theorem immersion_has_unique_substack_image {S : Scheme.{u}}
     {Z X : AlgebraicStack S} (i : StackMorphism Z X)
     (hi : IsImmersionStack i) :
-    ∃! U : LocallyClosedSubstack X, IsImageFactorization i U := by
+    ∃ U : LocallyClosedSubstack X,
+      IsImageFactorization i U ∧
+        ∀ V : LocallyClosedSubstack X,
+          IsImageFactorization i V → LocallyClosedSubstackEquivalent U V := by
   sorry
 
 def LocallyClosedSubstacks {S : Scheme.{u}} (X : AlgebraicStack S) :=
@@ -266,17 +281,33 @@ def InvariantLocallyClosedSubspaces {S : Scheme.{u}}
     {X : AlgebraicStack S} (p : StackPresentation X) :=
   PresentationSubspace p
 
+def PresentationSubspaceEquivalent {S : Scheme.{u}}
+    {X : AlgebraicStack S} {p : StackPresentation X}
+    (U V : PresentationSubspace p) : Prop :=
+  ∃ e : U.carrier ≅ V.carrier,
+    e.hom ≫ V.inclusion = U.inclusion
+
+structure CorrespondenceUpToEquivalence (A : Type v) (B : Type w)
+    (equivalentA : A → A → Prop) (equivalentB : B → B → Prop) where
+  forward : A → B
+  backward : B → A
+  leftInverseUpTo : ∀ a, equivalentA (backward (forward a)) a
+  rightInverseUpTo : ∀ b, equivalentB (forward (backward b)) b
+
 theorem substacks_presentation_bijection {S : Scheme.{u}}
     {X : AlgebraicStack S} (p : StackPresentation X) :
-    Nonempty
-      (LocallyClosedSubstacks X ≃ InvariantLocallyClosedSubspaces p) := by
+    Nonempty (CorrespondenceUpToEquivalence
+      (LocallyClosedSubstacks X) (InvariantLocallyClosedSubspaces p)
+      LocallyClosedSubstackEquivalent PresentationSubspaceEquivalent) := by
   sorry
 
 structure SubstackPresentationData {S : Scheme.{u}}
     {X : AlgebraicStack S} (p : StackPresentation X) where
   substack : LocallyClosedSubstack X
   subspace : PresentationSubspace p
-  correspondence : Prop
+  correspondence :
+    Set.range (inducedPointMap substack.inclusion) =
+      Set.range (p.toStackChart.map ∘ subspace.inclusion)
 
 def FactorsThrough {S : Scheme.{u}}
     {Y X : AlgebraicStack S} (f : StackMorphism Y X)
@@ -300,7 +331,14 @@ def OpenSubstacks {S : Scheme.{u}} (X : AlgebraicStack S) :=
 theorem open_substacks_bijection {S : Scheme.{u}}
     (T : StackTopology S) (hT : IsCompatibleStackTopology T)
     (X : AlgebraicStack S) :
-    Nonempty (OpenSubstacks X ≃ OpenPointSubsets T X) := by
+    Nonempty (CorrespondenceUpToEquivalence
+      (OpenSubstacks X) (OpenPointSubsets T X)
+      (fun U V =>
+        ∃ e : StackMorphism U.source V.source,
+          IsStackEquivalence e ∧
+            StackTwoMorphism U.inclusion
+              (StackMorphism.comp e V.inclusion))
+      (fun U V => U = V)) := by
   sorry
 
 structure OpenImageSubstackData {S : Scheme.{u}}
@@ -308,10 +346,9 @@ structure OpenImageSubstackData {S : Scheme.{u}}
     (f : SpaceToStackMorphism U X) (V : AlgebraicSpace S)
     (i : SpaceMorphism V U) where
   substack : OpenSubstack X
-  mapToSubstack : Prop
-  surjective : Prop
-  smooth : Prop
-  baseChange : Prop
+  mapToSubstack : SpaceToStackMorphism V substack.source
+  surjective : Function.Surjective mapToSubstack.map
+  smooth : mapToSubstack.smooth
   openImmersion : SpaceOpenImmersion i
 
 theorem open_image_substack {S : Scheme.{u}}
@@ -327,7 +364,9 @@ structure UnionOpenSubstackData {S : Scheme.{u}}
     {X : AlgebraicStack S} (I : Type u) where
   members : I → OpenSubstack X
   union : OpenSubstack X
-  cover : Prop
+  cover : ∀ x : StackPoint X,
+    x ∈ Set.range (inducedPointMap union.inclusion) →
+      ∃ i, x ∈ Set.range (inducedPointMap (members i).inclusion)
 
 theorem union_open_substacks {S : Scheme.{u}}
     {X : AlgebraicStack S} (I : Type u)
@@ -363,25 +402,29 @@ structure OpenCoverData {S : Scheme.{u}} (X : AlgebraicStack S) where
   member : index → OpenSubstack X
   covers : ∀ x : StackPoint X,
     ∃ i, x ∈ Set.range (inducedPointMap (member i).inclusion)
-  eachAlgebraicSpace : Prop
-  eachScheme : Prop
+  eachAlgebraicSpace : ∀ i, IsRepresentableByAlgebraicSpace (member i).source
+  eachScheme : ∀ i, IsRepresentableByScheme (member i).source
 
 theorem open_cover_by_algebraic_spaces_is_space {S : Scheme.{u}}
     {X : AlgebraicStack S} (D : OpenCoverData X)
-    (h : D.eachAlgebraicSpace) :
+    (h : ∀ i, IsRepresentableByAlgebraicSpace (D.member i).source) :
     IsRepresentableByAlgebraicSpace X := by
   sorry
 
 theorem open_cover_by_schemes_is_scheme {S : Scheme.{u}}
     {X : AlgebraicStack S} (D : OpenCoverData X)
-    (h : D.eachScheme) :
+    (h : ∀ i, IsRepresentableByScheme (D.member i).source) :
     IsRepresentableByScheme X := by
   sorry
 
 structure LocalSourceHypotheses {S : Scheme.{u}}
-    (P Q R : SpaceMorphismProperty S) where
-  fppfLocalAndBaseChange : Prop
-  smoothImpliesR : Prop
+    (P Q R : RelativeSpaceProperty S) where
+  fppfLocalAndBaseChange :
+    P.fppfLocalOnTarget ∧ P.stableUnderArbitraryBaseChange ∧
+      Q.fppfLocalOnTarget ∧ Q.stableUnderArbitraryBaseChange ∧
+        R.fppfLocalOnTarget ∧ R.stableUnderArbitraryBaseChange
+  smoothImpliesR : ∀ {X Y : AlgebraicSpace S}
+    (f : SpaceMorphism X Y), SpaceMorphismSmooth f → R.property f
   largestOpenLocus : Prop
   locusCommutesWithRBaseChange : Prop
 
@@ -403,7 +446,7 @@ structure LocalSourceBaseChangeData {S : Scheme.{u}}
 
 theorem local_source_locus {S : Scheme.{u}}
     (P Q R : RelativeSpaceProperty S)
-    (H : LocalSourceHypotheses P.property Q.property R.property)
+    (H : LocalSourceHypotheses P Q R)
     {X Y : AlgebraicStack S} (f : StackMorphism X Y)
     (hf : HasRelativeProperty Q f) :
     Nonempty (LargestOpenStackLocus P f) := by
@@ -411,7 +454,7 @@ theorem local_source_locus {S : Scheme.{u}}
 
 theorem local_source_locus_base_change {S : Scheme.{u}}
     (P Q R : RelativeSpaceProperty S)
-    (H : LocalSourceHypotheses P.property Q.property R.property)
+    (H : LocalSourceHypotheses P Q R)
     {X Y Z : AlgebraicStack S} (f : StackMorphism X Y)
     (g : StackMorphism Z Y) (hf : HasRelativeProperty Q f) :
     Nonempty (LocalSourceBaseChangeData P f g) := by

@@ -26,11 +26,14 @@ structure DimensionPresentation {S : Scheme.{u}}
     (X : AlgebraicStack S) (x : StackPoint X) where
   source : Scheme.{u}
   sourcePoint : source
+  mapToStack : source → StackPoint X
+  mapsTo : mapToStack sourcePoint = x
   relation : Scheme.{u}
-  mapsTo : Prop
+  relationPoint : relation
+  sourceMap : relation ⟶ source
+  identityPoint : sourceMap relationPoint = sourcePoint
   sourceDimension : StackPointDimension
   relationDimension : StackPointDimension
-  identityPoint : Prop
 
 def DimensionPresentation.value {S : Scheme.{u}}
     {X : AlgebraicStack S} {x : StackPoint X}
@@ -69,19 +72,19 @@ def stackDimension {S : Scheme.{u}} (X : AlgebraicStack S)
 structure DimensionAgreementData {S : Scheme.{u}}
     {X : AlgebraicStack S} (hX : IsLocallyNoetherian X) where
   spaceDimension : StackPoint X → StackPointDimension
-  agrees : Prop
+  agrees : ∀ x : StackPoint X, spaceDimension x = dimensionAtPoint X hX x
 
 theorem dimension_agrees_with_scheme_or_space {S : Scheme.{u}}
     {X : AlgebraicStack S} (hX : IsLocallyNoetherian X)
     (hrep : IsRepresentableByAlgebraicSpace X) :
     Nonempty (DimensionAgreementData hX) := by
-  exact ⟨{ spaceDimension := fun _ => 0, agrees := Eq hrep hrep }⟩
+  sorry
 
 theorem dimension_agrees_with_scheme {S : Scheme.{u}}
     {X : AlgebraicStack S} (hX : IsLocallyNoetherian X)
     (hrep : IsRepresentableByScheme X) :
     Nonempty (DimensionAgreementData hX) := by
-  exact ⟨{ spaceDimension := fun _ => 0, agrees := Eq hrep hrep }⟩
+  sorry
 
 structure FieldBaseSchemeData (S : Scheme.{u}) where
   field : Type u
@@ -91,6 +94,7 @@ structure FieldBaseSchemeData (S : Scheme.{u}) where
 theorem dimension_finite_for_nonempty_finite_type {S : Scheme.{u}}
     {X : AlgebraicStack S} (hX : IsLocallyNoetherian X)
     (hfinite : X.finiteTypeOverBase) (hfield : FieldBaseSchemeData S)
+    (hbase : hfield.identifiesBase)
     (hnonempty : ¬ IsEmpty X) :
     ∃ n : ℤ, stackDimension X hX =
       ((n : WithTop ℤ) : WithBot (WithTop ℤ)) := by
@@ -102,18 +106,22 @@ theorem dimension_empty_iff {S : Scheme.{u}}
   sorry
 
 structure QuotientStackDimensionData (S : Scheme.{u}) where
-  space : Scheme.{u}
+  space : AlgebraicSpace S
   group : Type u
   groupStructure : Group group
   groupDimension : ℤ
   spaceDimension : ℤ
-  action : Prop
+  action : group → space.left → space.left
+  action_one : ∀ x, action 1 x = x
+  action_mul : ∀ (g h : group) (x : space.left),
+    action (g * h) x = action g (action h x)
   finiteType : Prop
   quotient : AlgebraicStack S
   locallyNoetherian : IsLocallyNoetherian quotient
 
 theorem quotient_stack_dimension
-    {S : Scheme.{u}} (D : QuotientStackDimensionData S) :
+    {S : Scheme.{u}} (D : QuotientStackDimensionData S)
+    (hfinite : D.finiteType) :
     stackDimension D.quotient D.locallyNoetherian =
       (((D.spaceDimension - D.groupDimension : ℤ) : WithTop ℤ) :
         WithBot (WithTop ℤ)) := by
@@ -121,6 +129,7 @@ theorem quotient_stack_dimension
 
 theorem classifying_stack_dimension
     {S : Scheme.{u}} (D : QuotientStackDimensionData S)
+    (hfinite : D.finiteType)
     (hspace : D.spaceDimension = 0) :
     stackDimension D.quotient D.locallyNoetherian =
       (((-D.groupDimension : ℤ) : WithTop ℤ) :

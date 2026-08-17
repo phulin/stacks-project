@@ -37,8 +37,9 @@ def geometricBranchProperty {S : Scheme.{u}}
     SmoothLocalGermProperty S where
   schemeProperty := BranchCountProperty B n
   spaceProperty := fun W u => B.count ⟨W.left, u⟩ = n
-  comparison := SmoothBranchInvariant B
-  smoothLocal := SmoothBranchInvariant B
+  comparison := fun W u => Iff.rfl
+  smoothLocal := by
+    exact B.smoothInvariant
 
 theorem geometric_branch_smooth_invariant (B : GeometricBranchTheory)
     (n : ℕ) {G H : SchemeGerm.{u}} (f : SchemeGerm.Hom G H)

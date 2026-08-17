@@ -27,7 +27,7 @@ def RelativeMonomorphismProperty (S : Scheme.{u}) : RelativeSpaceProperty S wher
   property := fun _ _ f => SpaceMorphismMonomorphism f
   fppfLocalOnTarget := True
   stableUnderArbitraryBaseChange := True
-  localOnSource := True
+  localOnSource := fun _ => True
   preservedUnderComposition := True
 
 def IsMonomorphism {S : Scheme.{u}}
@@ -36,9 +36,10 @@ def IsMonomorphism {S : Scheme.{u}}
 
 def StackFullyFaithful {S : Scheme.{u}}
     {X Y : AlgebraicStack S} (f : StackMorphism X Y) : Prop :=
-  ∀ p q : RawPoint X,
-    X.points.equivalent p q ↔
-      Y.points.equivalent (f.rawMap p) (f.rawMap q)
+  RepresentableByAlgebraicSpaces f ∧
+    ∀ p q : RawPoint X,
+      X.points.equivalent p q ↔
+        Y.points.equivalent (f.rawMap p) (f.rawMap q)
 
 def stackDiagonal {S : Scheme.{u}}
     {X Y : AlgebraicStack S} (f : StackMorphism X Y) :
@@ -51,13 +52,14 @@ def stackDiagonal {S : Scheme.{u}}
 
 def DiagonalIsEquivalence {S : Scheme.{u}}
     {X Y : AlgebraicStack S} (f : StackMorphism X Y) : Prop :=
-  IsStackEquivalence (stackDiagonal f)
+  RepresentableByAlgebraicSpaces f ∧ IsStackEquivalence (stackDiagonal f)
 
 def HasLocalMonomorphismTest {S : Scheme.{u}}
     {X Y : AlgebraicStack S} (f : StackMorphism X Y) : Prop :=
-  ∃ (W : AlgebraicSpace S) (w : SpaceToStackMorphism W Y),
-    Function.Surjective w.map ∧ w.flat ∧ w.locallyOfFinitePresentation ∧
-      ∃ bc : BaseChangeData f W w, SpaceMorphismMonomorphism bc.projection
+  RepresentableByAlgebraicSpaces f ∧
+    ∃ (W : AlgebraicSpace S) (w : SpaceToStackMorphism W Y),
+      Function.Surjective w.map ∧ w.flat ∧ w.locallyOfFinitePresentation ∧
+        ∃ bc : BaseChangeData f W w, SpaceMorphismMonomorphism bc.projection
 
 theorem base_change_monomorphism {S : Scheme.{u}}
     {X Y Z : AlgebraicStack S} (f : StackMorphism X Y)

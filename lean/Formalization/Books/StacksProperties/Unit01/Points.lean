@@ -87,7 +87,7 @@ def RelativeSurjectiveProperty (S : Scheme.{u}) : RelativeSpaceProperty S where
   property := fun _ _ f => SpaceMorphismSurjective f
   fppfLocalOnTarget := True
   stableUnderArbitraryBaseChange := True
-  localOnSource := True
+  localOnSource := fun _ => True
   preservedUnderComposition := True
 
 def PointFiberProduct {S : Scheme.{u}}
@@ -220,8 +220,7 @@ def HasQuasiCompactOpenNeighbourhoodBasis {α : Type u}
 
 theorem points_locally_quasi_compact {S : Scheme.{u}}
     {X : AlgebraicStack S} (T : StackTopology S)
-    (hT : IsCompatibleStackTopology T)
-    (chart : StackChart X) :
+    (hT : IsCompatibleStackTopology T) :
     HasQuasiCompactOpenNeighbourhoodBasis (T X) := by
   sorry
 

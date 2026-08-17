@@ -1,7 +1,7 @@
 import Formalization.Books.StacksProperties.Unit01.Introduction
-import Formalization.Books.Stacks.Unit01.Groupoids
 import Mathlib.AlgebraicGeometry.Sites.Fpqc
 import Mathlib.CategoryTheory.MorphismProperty.Basic
+import Mathlib.CategoryTheory.Sites.Over
 
 /-!
 # Properties of Algebraic Stacks, Chapter 1: common interfaces
@@ -68,12 +68,14 @@ structure FieldValuedMorphism {S : Scheme.{u}}
   fieldStructure : Field field
   point : RawPoint X
   fieldValued : X.points.fieldValued point
-  surjective : ∀ x : StackPoint X,
-    x = Quotient.mk X.points.setoid point
   flat : Prop
   locallyOfFiniteType : Prop
   locallyOfFinitePresentation : Prop
   quasiCompact : Prop
+
+def IsSurjectiveFieldValuedMorphism {S : Scheme.{u}}
+    {X : AlgebraicStack S} (p : FieldValuedMorphism X) : Prop :=
+  ∀ x : StackPoint X, x = Quotient.mk X.points.setoid p.point
 
 def stackPointOfFieldValuedMorphism {S : Scheme.{u}}
     {X : AlgebraicStack S} (p : FieldValuedMorphism X) : StackPoint X :=
@@ -279,26 +281,6 @@ def RepresentableByAlgebraicSpaces {S : Scheme.{u}}
     {X Y : AlgebraicStack S} (f : StackMorphism X Y) : Prop :=
   ∀ (W : AlgebraicSpace S) (w : SpaceToStackMorphism W Y),
     Nonempty (BaseChangeData f W w)
-
-structure RelativeSpaceProperty (S : Scheme.{u}) where
-  property : SpaceMorphismProperty S
-  fppfLocalOnTarget : Prop
-  stableUnderArbitraryBaseChange : Prop
-  localOnSource : Prop
-  preservedUnderComposition : Prop
-
-def HasRelativeProperty {S : Scheme.{u}}
-    (P : RelativeSpaceProperty S) {X Y : AlgebraicStack S}
-    (f : StackMorphism X Y) : Prop :=
-  RepresentableByAlgebraicSpaces f ∧
-    ∀ (W : AlgebraicSpace S) (w : SpaceToStackMorphism W Y)
-      (bc : BaseChangeData f W w), P.property bc.projection
-
-def HasRelativePropertyOnSpace {S : Scheme.{u}}
-    (P : RelativeSpaceProperty S) {X Y : AlgebraicStack S}
-    (f : StackMorphism X Y) : Prop :=
-  ∀ (W : AlgebraicSpace S) (w : SpaceToStackMorphism W Y)
-    (bc : BaseChangeData f W w), P.property bc.projection
 
 def IsEmptySpace {S : Scheme.{u}} (W : AlgebraicSpace S) : Prop :=
   ∀ _x : W.left, False

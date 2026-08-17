@@ -560,17 +560,11 @@ noncomputable instance twoCommutativeDiagramStrict :
         congr 1
         · exact Bicategory.Strict.id_comp _
         · simp only [Bicategory.id_whiskerLeft]
-          simp [Bicategory.Strict.leftUnitor_eqToIso, Bicategory.Strict.assoc,
-            Bicategory.Strict.id_comp, eqToHom_trans, eqToHom_refl,
-            eqToHom_comp_heq_iff, comp_eqToHom_heq_iff,
-            ← heq_eq_eq, Category.assoc]
-          congr 1
+          simp [Bicategory.Strict.leftUnitor_eqToIso, eqToHom_trans,
+            eqToHom_refl, comp_eqToHom_heq_iff, Category.assoc]
         · simp only [Bicategory.id_whiskerLeft]
-          simp [Bicategory.Strict.leftUnitor_eqToIso, Bicategory.Strict.assoc,
-            Bicategory.Strict.id_comp, eqToHom_trans, eqToHom_refl,
-            eqToHom_comp_heq_iff, comp_eqToHom_heq_iff,
-            ← heq_eq_eq, Category.assoc]
-          congr 1
+          simp [Bicategory.Strict.leftUnitor_eqToIso, eqToHom_trans,
+            eqToHom_refl, comp_eqToHom_heq_iff, Category.assoc]
         · exact proof_irrel_heq _ _
       comp_id := by
         intro D E h
@@ -580,20 +574,10 @@ noncomputable instance twoCommutativeDiagramStrict :
         simp only [← heq_eq_eq]
         congr 1
         · exact Bicategory.Strict.comp_id _
-        · simp [Bicategory.whiskerLeft_eqToHom,
-            Bicategory.Strict.rightUnitor_eqToIso,
-            Bicategory.Strict.assoc, Bicategory.Strict.id_comp,
-            Bicategory.Strict.comp_id, eqToHom_trans, eqToHom_refl,
-            eqToHom_comp_heq_iff, comp_eqToHom_heq_iff,
-            ← heq_eq_eq, Category.assoc]
-          rfl
-        · simp [Bicategory.whiskerLeft_eqToHom,
-            Bicategory.Strict.rightUnitor_eqToIso,
-            Bicategory.Strict.assoc, Bicategory.Strict.id_comp,
-            Bicategory.Strict.comp_id, eqToHom_trans, eqToHom_refl,
-            eqToHom_comp_heq_iff, comp_eqToHom_heq_iff,
-            ← heq_eq_eq, Category.assoc]
-          rfl
+        · simp [Bicategory.whiskerLeft_eqToHom, eqToHom_trans,
+            comp_eqToHom_heq_iff]
+        · simp [Bicategory.whiskerLeft_eqToHom, eqToHom_trans,
+            comp_eqToHom_heq_iff]
         · exact proof_irrel_heq _ _
       assoc := by
         intro D E K L h k l
@@ -608,14 +592,14 @@ noncomputable instance twoCommutativeDiagramStrict :
         congr 1
         · exact Bicategory.Strict.assoc _ _ _
         · rw [← conj_eqToHom_iff_heq]
-          · simpa [Hom.comp, strictAssocInv, strictAssocHom, Category.assoc,
-              Bicategory.Strict.associator_eqToIso] using hl
+          · simp [Category.assoc,
+              Bicategory.Strict.associator_eqToIso]
           · rfl
           · exact congrArg (fun t => t ≫ L.left)
               (Bicategory.Strict.assoc _ _ _)
         · rw [← conj_eqToHom_iff_heq]
-          · simpa [Hom.comp, strictAssocInv, strictAssocHom, Category.assoc,
-              Bicategory.Strict.associator_eqToIso] using hr
+          · simp [Category.assoc,
+              Bicategory.Strict.associator_eqToIso]
           · rfl
           · exact congrArg (fun t => t ≫ L.right)
               (Bicategory.Strict.assoc _ _ _)
@@ -642,7 +626,7 @@ noncomputable instance twoCommutativeDiagramStrict :
         apply Iso.ext
         apply TwoHom.ext
         simp [Bicategory.associator, TwoHom.associator, Hom.comp,
-          strictAssocInv, strictAssocHom,
+          strictAssocInv,
           Bicategory.Strict.associator_eqToIso]
         rw [eqToHom_vertex]
         congr 1 }
@@ -652,7 +636,7 @@ theorem twoCommutativeDiagram_is_two_one
     (hC : Bicategory.IsLocallyGroupoid C) :
     Bicategory.IsLocallyGroupoid (TwoCommutativeDiagram f g) := by
   intro D E
-  letI : IsGroupoid (D.vertex ⟶ E.vertex) := hC D.vertex E.vertex
+  have : IsGroupoid (D.vertex ⟶ E.vertex) := hC D.vertex E.vertex
   refine ⟨fun {h k} η => ?_⟩
   let e : h.vertex ≅ k.vertex := asIso η.vertex
   let ηinv : TwoHom k h :=
@@ -681,13 +665,13 @@ diagram morphism are invertible. -/
 theorem hom_left_isIso
     (hC : Bicategory.IsLocallyGroupoid C)
     {D E : TwoCommutativeDiagram f g} (h : D ⟶₂ E) : IsIso h.left := by
-  letI := hC D.vertex X
+  have := hC D.vertex X
   infer_instance
 
 theorem hom_right_isIso
     (hC : Bicategory.IsLocallyGroupoid C)
     {D E : TwoCommutativeDiagram f g} (h : D ⟶₂ E) : IsIso h.right := by
-  letI := hC D.vertex Y
+  have := hC D.vertex Y
   infer_instance
 
 end TwoCommutativeDiagram
@@ -1080,7 +1064,7 @@ theorem isoComma_is_category_twoFibreProduct
               apply (cancel_mono (G.map (β₁.hom.app X))).1
               rw [Category.assoc, ← h₁X']
               rw [← Category.assoc, ← Functor.map_comp, α₁.inv_hom_id_app]
-              simp only [Category.id_comp, Category.assoc]
+              simp only [Category.assoc]
               rw [← G.map_comp]
               rw [β₁.inv_hom_id_app]
               rw [F.map_id]
@@ -1095,7 +1079,7 @@ theorem isoComma_is_category_twoFibreProduct
             rw [← Category.assoc]
             rw [h₁']
             rw [hψ₁]
-            simp only [Functor.map_comp, Category.assoc]))) (by
+            simp only [Category.assoc]))) (by
           intro X Y f
           apply ObjectProperty.hom_ext
           apply Comma.hom_ext
@@ -1224,15 +1208,15 @@ private theorem isoComma_diagonal_one_aux
           { left := f.hom.left.1
             right := f.hom.left.2
             w := by
-              letI : IsIso z.obj.hom := z.property
-              letI : IsIso z'.obj.hom := z'.property
-              letI : IsIso z.obj.hom.1 :=
+              have : IsIso z.obj.hom := z.property
+              have : IsIso z'.obj.hom := z'.property
+              have : IsIso z.obj.hom.1 :=
                 (isIso_prod_iff (f := z.obj.hom)).mp z.property |>.1
-              letI : IsIso z.obj.hom.2 :=
+              have : IsIso z.obj.hom.2 :=
                 (isIso_prod_iff (f := z.obj.hom)).mp z.property |>.2
-              letI : IsIso z'.obj.hom.1 :=
+              have : IsIso z'.obj.hom.1 :=
                 (isIso_prod_iff (f := z'.obj.hom)).mp z'.property |>.1
-              letI : IsIso z'.obj.hom.2 :=
+              have : IsIso z'.obj.hom.2 :=
                 (isIso_prod_iff (f := z'.obj.hom)).mp z'.property |>.2
               have h₁ := congrArg (fun t => t.1) f.hom.w
               have h₂ := congrArg (fun t => t.2) f.hom.w
@@ -1243,7 +1227,7 @@ private theorem isoComma_diagonal_one_aux
               have h₂' : f.hom.right ≫ inv z'.obj.hom.2 =
                   inv z.obj.hom.2 ≫ G₂.map f.hom.left.2 := by
                 apply (cancel_mono z'.obj.hom.2).1
-                simp only [Category.assoc, Iso.inv_hom_id_assoc]
+                simp only [Category.assoc]
                 rw [h₂]
                 simp
               calc
@@ -1305,18 +1289,18 @@ private theorem isoComma_diagonal_one_aux
           apply ObjectProperty.hom_ext
           apply Comma.hom_ext
           · simp [Functor.comp, forward, inverse, ObjectProperty.isoMk, Comma.isoMk]
-          · letI : IsIso z.obj.hom := z.property
-            letI : IsIso z'.obj.hom := z'.property
-            letI : IsIso z.obj.hom.2 :=
+          · have : IsIso z.obj.hom := z.property
+            have : IsIso z'.obj.hom := z'.property
+            have : IsIso z.obj.hom.2 :=
               (isIso_prod_iff (f := z.obj.hom)).mp z.property |>.2
-            letI : IsIso z'.obj.hom.2 :=
+            have : IsIso z'.obj.hom.2 :=
               (isIso_prod_iff (f := z'.obj.hom)).mp z'.property |>.2
             have h₂ := congrArg (fun t => t.2) f.hom.w
             dsimp [Functor.prod, Functor.diag] at h₂
             have h₂' : f.hom.right ≫ inv z'.obj.hom.2 =
                 inv z.obj.hom.2 ≫ G₂.map f.hom.left.2 := by
               apply (cancel_mono z'.obj.hom.2).1
-              simp only [Category.assoc, Iso.inv_hom_id_assoc]
+              simp only [Category.assoc]
               rw [h₂]
               simp
             simpa [Functor.comp, forward, inverse, ObjectProperty.isoMk, Comma.isoMk]
@@ -1326,7 +1310,7 @@ private theorem isoComma_diagonal_one_aux
     NatIso.ofComponents (fun z => by
       exact ObjectProperty.isoMk _
         (Comma.isoMk (Iso.refl _) (Iso.refl _) (by
-          simpa [Functor.comp, forward, inverse]))) (by
+          simp [Functor.comp, forward, inverse]))) (by
           intro z z' f
           dsimp [forward, inverse]
           apply ObjectProperty.hom_ext
@@ -1370,16 +1354,16 @@ noncomputable def isoCommaMap
       { left := L.map h.hom.left
         right := K.map h.hom.right
         w := by
-          simp only [Functor.comp_map, Category.assoc]
+          simp only [Category.assoc]
           change (L ⋙ F).map h.hom.left ≫ β.inv.app _ ≫ M.map _ ≫ _ = _
           rw [β.inv.naturality_assoc]
-          simp only [Functor.comp_map, Category.assoc]
+          simp only [Functor.comp_map]
           rw [← M.map_comp_assoc, h.hom.w, M.map_comp]
           simp only [Category.assoc]
           change _ ≫ M.map _ ≫ (I ⋙ M).map h.hom.right ≫
             α.inv.app _ = _
           rw [α.inv.naturality]
-          simp only [Functor.comp_map, Category.assoc] }
+          simp only [Functor.comp_map] }
   map_id := by
     intro ξ
     apply ObjectProperty.hom_ext
@@ -1422,14 +1406,12 @@ theorem isoCommaMap_fullyFaithful
     Nonempty ((isoCommaMap F G H I L K M α β).FullyFaithful) := by
   let T := Comma.map β.inv α.inv
   refine ⟨Functor.FullyFaithful.mk (fun h => ObjectProperty.homMk (T.preimage h.hom)) ?_ ?_⟩
-  · intro h
-    intro Y f
+  · intro h Y f
     apply ObjectProperty.hom_ext
     apply Comma.hom_ext
     · exact congrArg CommaMorphism.left (T.map_preimage f.hom)
     · exact congrArg CommaMorphism.right (T.map_preimage f.hom)
-  · intro h
-    intro Y f
+  · intro h Y f
     apply ObjectProperty.hom_ext
     apply Comma.hom_ext
     · exact congrArg CommaMorphism.left (T.preimage_map f.hom)
@@ -1448,7 +1430,7 @@ theorem isoCommaMap_isEquivalence
   · exact isoCommaMap_faithful F G H I L K M α β
   · rcases isoCommaMap_fullyFaithful F G H I L K M α β with ⟨h⟩
     exact h.full
-  · letI : M.FullyFaithful := Functor.FullyFaithful.ofFullyFaithful M
+  · have : M.FullyFaithful := Functor.FullyFaithful.ofFullyFaithful M
     constructor
     intro ξ
     let l := L.objObjPreimageIso ξ.obj.left
@@ -1458,12 +1440,12 @@ theorem isoCommaMap_isEquivalence
         right := K.objPreimage ξ.obj.right
         hom := M.preimage
           (β.hom.app _ ≫ F.map l.hom ≫ ξ.obj.hom ≫ G.map r.inv ≫ α.hom.app _) }
-    letI : IsIso (M.map x.hom) := by
+    have : IsIso (M.map x.hom) := by
       rw [show M.map x.hom =
           β.hom.app _ ≫ F.map l.hom ≫ ξ.obj.hom ≫ G.map r.inv ≫ α.hom.app _ by
             simp [x]]
       infer_instance
-    letI : IsIso x.hom := (Functor.FullyFaithful.ofFullyFaithful M).isIso_of_isIso_map x.hom
+    have : IsIso x.hom := (Functor.FullyFaithful.ofFullyFaithful M).isIso_of_isIso_map x.hom
     let x' : IsoComma H I :=
       { obj := x, property := by change IsIso x.hom; infer_instance }
     refine ⟨x', ⟨ObjectProperty.isoMk _ (Comma.isoMk l r ?_)⟩⟩
@@ -1571,7 +1553,7 @@ theorem isoComma_associator
       · simp [assocFunctor, assocInverse]
       · dsimp [assocFunctor, assocInverse]
         apply (IsoCommaProperty H I).hom_ext
-        apply Comma.hom_ext <;> simp [assocFunctor, assocInverse])
+        apply Comma.hom_ext <;> simp)
   exact ⟨Equivalence.mk' assocFunctor assocInverse unitIso counitIso (by
     intro z
     simp [unitIso, counitIso, assocFunctor, assocInverse]
@@ -1613,9 +1595,9 @@ theorem isoComma_erase_factor
               right := z.obj.right
               hom := z.obj.left.obj.hom ≫ G.map z.obj.hom }
           property := by
-            letI : IsIso z.obj.left.obj.hom := z.obj.left.property
+            have : IsIso z.obj.left.obj.hom := z.obj.left.property
             let p : z.obj.left.obj.right ⟶ H.obj z.obj.right := z.obj.hom
-            letI : IsIso p := z.property
+            have : IsIso p := z.property
             change IsIso (z.obj.left.obj.hom ≫ G.map p)
             infer_instance }
       map := fun {z z'} f =>
@@ -1732,9 +1714,7 @@ theorem isoComma_erase_factor
     intro z
     simp [unitIso, counitIso, eraseFunctor, eraseInverse]
     apply ObjectProperty.hom_ext
-    apply Comma.hom_ext <;>
-      simp [unitIso, counitIso, eraseFunctor, eraseInverse, Comma.isoMk,
-        ObjectProperty.isoMk])⟩
+    apply Comma.hom_ext <;> simp [Comma.isoMk])⟩
 
 /-! ## Diagonal descriptions -/
 
@@ -1767,15 +1747,15 @@ theorem isoComma_diagonal_one
           { left := f.hom.left.1
             right := f.hom.left.2
             w := by
-              letI : IsIso z.obj.hom := z.property
-              letI : IsIso z'.obj.hom := z'.property
-              letI : IsIso z.obj.hom.1 :=
+              have : IsIso z.obj.hom := z.property
+              have : IsIso z'.obj.hom := z'.property
+              have : IsIso z.obj.hom.1 :=
                 (isIso_prod_iff (f := z.obj.hom)).mp z.property |>.1
-              letI : IsIso z.obj.hom.2 :=
+              have : IsIso z.obj.hom.2 :=
                 (isIso_prod_iff (f := z.obj.hom)).mp z.property |>.2
-              letI : IsIso z'.obj.hom.1 :=
+              have : IsIso z'.obj.hom.1 :=
                 (isIso_prod_iff (f := z'.obj.hom)).mp z'.property |>.1
-              letI : IsIso z'.obj.hom.2 :=
+              have : IsIso z'.obj.hom.2 :=
                 (isIso_prod_iff (f := z'.obj.hom)).mp z'.property |>.2
               have h₁ := congrArg (fun t => t.1) f.hom.w
               have h₂ := congrArg (fun t => t.2) f.hom.w
@@ -1786,7 +1766,7 @@ theorem isoComma_diagonal_one
               have h₂' : f.hom.right ≫ inv z'.obj.hom.2 =
                   inv z.obj.hom.2 ≫ G₂.map f.hom.left.2 := by
                 apply (cancel_mono z'.obj.hom.2).1
-                simp only [Category.assoc, Iso.inv_hom_id_assoc]
+                simp only [Category.assoc]
                 rw [h₂]
                 simp
               calc
@@ -1848,18 +1828,18 @@ theorem isoComma_diagonal_one
           apply ObjectProperty.hom_ext
           apply Comma.hom_ext
           · simp [Functor.comp, forward, inverse, ObjectProperty.isoMk, Comma.isoMk]
-          · letI : IsIso z.obj.hom := z.property
-            letI : IsIso z'.obj.hom := z'.property
-            letI : IsIso z.obj.hom.2 :=
+          · have : IsIso z.obj.hom := z.property
+            have : IsIso z'.obj.hom := z'.property
+            have : IsIso z.obj.hom.2 :=
               (isIso_prod_iff (f := z.obj.hom)).mp z.property |>.2
-            letI : IsIso z'.obj.hom.2 :=
+            have : IsIso z'.obj.hom.2 :=
               (isIso_prod_iff (f := z'.obj.hom)).mp z'.property |>.2
             have h₂ := congrArg (fun t => t.2) f.hom.w
             dsimp [Functor.prod, Functor.diag] at h₂
             have h₂' : f.hom.right ≫ inv z'.obj.hom.2 =
                 inv z.obj.hom.2 ≫ G₂.map f.hom.left.2 := by
               apply (cancel_mono z'.obj.hom.2).1
-              simp only [Category.assoc, Iso.inv_hom_id_assoc]
+              simp only [Category.assoc]
               rw [h₂]
               simp
             simpa [Functor.comp, forward, inverse, ObjectProperty.isoMk, Comma.isoMk]
@@ -1869,7 +1849,7 @@ theorem isoComma_diagonal_one
     NatIso.ofComponents (fun z => by
       exact ObjectProperty.isoMk _
         (Comma.isoMk (Iso.refl _) (Iso.refl _) (by
-          simpa [Functor.comp, forward, inverse]))) (by
+          simp [Functor.comp, forward, inverse]))) (by
           intro z z' f
           dsimp [forward, inverse]
           apply ObjectProperty.hom_ext
@@ -1957,9 +1937,7 @@ theorem isoComma_after_map_comparison_exists
   let α : (isoCommaLeft F G ⋙ F) ⋙ isoCommaDiagonal H ≅
       isoCommaAfterMap F G H ⋙ isoCommaAfterMapToDiagonal F G H :=
     NatIso.ofComponents (fun ξ => by
-      letI : IsIso ξ.obj.hom := by
-        change IsIso ξ.obj.hom
-        exact ξ.property
+      letI : IsIso ξ.obj.hom := ξ.property
       exact ObjectProperty.isoMk _
         (Comma.isoMk (Iso.refl _)
           (@asIso _ _ _ _ ξ.obj.hom (by exact ξ.property)) (by
@@ -2248,8 +2226,6 @@ theorem isoComma_after_map
                 rw [← H.map_comp, h₂, H.map_id]
               have hk : H.map (e.inv.hom.left ≫ i.hom ≫ e.hom.hom.right) =
                   ((b ⋙ isoCommaAfterMapToDiagonal F G H).obj X).obj.hom := by
-                change H.map (e.inv.hom.left ≫
-                  (i.hom ≫ e.hom.hom.right)) = _
                 rw [H.map_comp, H.map_comp]
                 rw [← hwᵢ]
                 simp only [← Category.assoc, hcomp, Category.id_comp]
@@ -2267,6 +2243,7 @@ theorem isoComma_after_map
                 simp)
       exact β
     · sorry
+  · sorry
 
 /-- The induced functor between the two diagonal iso-comma categories. -/
 noncomputable def isoCommaBaseChangeMap

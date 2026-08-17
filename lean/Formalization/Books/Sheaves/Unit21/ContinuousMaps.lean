@@ -283,7 +283,23 @@ def fMapFamilyOfFMap {X Y : TopCat.{v}} {f : X ⟶ Y}
     FMapFamily f G F where
   app U V h s := restriction (F := F.presheaf) h (fMapAt ξ V s)
   naturality := by
-    sorry
+    intro U U' V V' hUU' hVV' hU hU' s
+    rw [restriction_restriction (F := F.presheaf)]
+    change restriction (F := F.presheaf) _
+        (ConcreteCategory.hom (ξ.hom.app (op V)) s) =
+      restriction (F := F.presheaf) hU'
+        (ConcreteCategory.hom (ξ.hom.app (op V'))
+          (restriction (F := G.presheaf) hVV' s))
+    rw [← morphism_restriction ξ.hom hVV' s]
+    change restriction (F := F.presheaf) _
+        (fMapAt ξ V s) =
+      restriction (F := F.presheaf) hU'
+        (restriction (F := F.presheaf)
+          ((Opens.map f).map (homOfLE hVV')).le
+          (fMapAt ξ V s))
+    exact (TopCat.Presheaf.restrict_restrict hU'
+      ((Opens.map f).map (homOfLE hVV')).le
+      (fMapAt ξ V s)).symm
 
 /-- An `f`-map obtained from the source's compatible two-open family. -/
 def fMapOfFamily {X Y : TopCat.{v}} {f : X ⟶ Y}
@@ -292,7 +308,14 @@ def fMapOfFamily {X Y : TopCat.{v}} {f : X ⟶ Y}
     { app := fun V => TypeCat.ofHom (fun s =>
         ξ.app ((Opens.map f).obj V.unop) V.unop le_rfl s)
       naturality := by
-        sorry }
+        intro U V i
+        apply ConcreteCategory.hom_ext
+        intro s
+        change ξ.app ((Opens.map f).obj (unop V)) (unop V) le_rfl
+            (ConcreteCategory.hom (G.obj.map i) s) =
+          ConcreteCategory.hom (((pushforwardSheaf f).obj F).obj.map i)
+            (ξ.app ((Opens.map f).obj (unop U)) (unop U) le_rfl s)
+        exact (ξ.naturality ((Opens.map f).map i.unop).le i.unop.le le_rfl le_rfl s).symm }
 
 /-- The first and third entries in the source's four-way correspondence. -/
 noncomputable abbrev fMapSheafHomEquiv {X Y : TopCat.{v}} (f : X ⟶ Y)
@@ -313,9 +336,50 @@ noncomputable def fMapFamilyEquiv {X Y : TopCat.{v}} (f : X ⟶ Y)
   toFun := fMapFamilyOfFMap
   invFun := fMapOfFamily
   left_inv := by
-    sorry
+    intro ξ
+    let e : (G ⟶ (pushforwardSheaf f).obj F) ≃
+        (G.obj ⟶ ((pushforwardSheaf f).obj F).obj) :=
+      CategoryTheory.Sheaf.homEquiv
+    apply e.injective
+    change e (e.symm _) = e ξ
+    rw [e.apply_symm_apply]
+    ext U s
+    simp [fMapFamilyOfFMap, fMapAt, e]
+    rfl
   right_inv := by
-    sorry
+    intro ξ
+    cases ξ
+    rename_i app naturality
+    dsimp [fMapFamilyOfFMap, fMapOfFamily]
+    rw [FMapFamily.mk.injEq]
+    funext U V h s
+    let e : (G ⟶ (pushforwardSheaf f).obj F) ≃
+        (G.obj ⟶ ((pushforwardSheaf f).obj F).obj) :=
+      CategoryTheory.Sheaf.homEquiv
+    let a : G.obj ⟶ ((pushforwardSheaf f).obj F).obj :=
+      { app := fun V => TypeCat.ofHom (fun s =>
+          app ((Opens.map f).obj V.unop) V.unop le_rfl s)
+        naturality := by
+          intro U V i
+          apply ConcreteCategory.hom_ext
+          intro s
+          change app ((Opens.map f).obj (unop V)) (unop V) le_rfl
+              (ConcreteCategory.hom (G.obj.map i) s) =
+            ConcreteCategory.hom (((pushforwardSheaf f).obj F).obj.map i)
+              (app ((Opens.map f).obj (unop U)) (unop U) le_rfl s)
+          exact (naturality ((Opens.map f).map i.unop).le i.unop.le
+            le_rfl le_rfl s).symm }
+    have he : e (fMapOfFamily { app := app, naturality := naturality }) = a := by
+      change e (e.symm a) = a
+      exact e.apply_symm_apply a
+    change restriction h
+        (ConcreteCategory.hom
+          ((e (fMapOfFamily { app := app, naturality := naturality })).app (op V)) s) =
+      app U V h s
+    rw [he]
+    change restriction h
+        (app ((Opens.map f).obj V) V le_rfl s) = app U V h s
+    simpa using naturality h (le_refl V) le_rfl h s
 
 /-! ## Composition and stalks of `f`-maps -/
 
@@ -346,7 +410,33 @@ theorem fMapStalkMap_germ {X Y : TopCat.{v}}
     fMapStalkMap ξ x (germApply (F := G.presheaf) V (f x) hx s) =
       germApply (F := F.presheaf) ((Opens.map f).obj V) x hx
         (fMapAt ξ V s) := by
-  sorry
+  unfold fMapStalkMap
+  rw [TopCat.Presheaf.stalkFunctor_map_germ_apply]
+  change ConcreteCategory.hom
+      (ξ.hom.app (op V) ≫
+        (((pushforwardPresheaf f).obj F.presheaf).germ V (f x) hx ≫
+          TopCat.Presheaf.stalkPushforward (Type v) f F.presheaf x)) s =
+    germApply (F := F.presheaf) ((Opens.map f).obj V) x hx
+      (fMapAt ξ V s)
+  have h_stalk :
+      ((pushforwardPresheaf f).obj F.presheaf).germ V (f x) hx ≫
+          TopCat.Presheaf.stalkPushforward (Type v) f F.presheaf x =
+        F.presheaf.germ ((Opens.map f).obj V) x hx :=
+    TopCat.Presheaf.stalkPushforward_germ (Type v) f F.presheaf V x hx
+  have h_comp := congrArg (fun k => ξ.hom.app (op V) ≫ k) h_stalk
+  calc
+    ConcreteCategory.hom
+        (ξ.hom.app (op V) ≫
+          (((pushforwardPresheaf f).obj F.presheaf).germ V (f x) hx ≫
+            TopCat.Presheaf.stalkPushforward (Type v) f F.presheaf x)) s =
+      ConcreteCategory.hom
+        (ξ.hom.app (op V) ≫ F.presheaf.germ ((Opens.map f).obj V) x hx) s := by
+          exact congrArg
+            (fun k : G.presheaf.obj (op V) ⟶
+                F.presheaf.stalk x => ConcreteCategory.hom k s) h_comp
+    _ = germApply (F := F.presheaf) ((Opens.map f).obj V) x hx
+        (fMapAt ξ V s) := by
+          rfl
 
 /-- The representative formula uniquely characterizes the stalk map. -/
 theorem fMapStalkMap_unique {X Y : TopCat.{v}}
@@ -358,7 +448,10 @@ theorem fMapStalkMap_unique {X Y : TopCat.{v}}
         germApply (F := F.presheaf) ((Opens.map f).obj V) x hx
           (fMapAt ξ V s)) :
     φ = fMapStalkMap ξ x := by
-  sorry
+  funext z
+  rcases G.presheaf.exists_germ_eq z with ⟨V, hxV, s, hs⟩
+  rw [← hs]
+  exact (hφ V hxV s).trans (fMapStalkMap_germ ξ x V hxV s).symm
 
 /-- Stalk maps carry composition of `f`-maps to composition of functions. -/
 theorem fMapComp_stalkMap {X Y Z : TopCat.{v}}
@@ -367,7 +460,15 @@ theorem fMapComp_stalkMap {X Y Z : TopCat.{v}}
     (φ : FMap f G F) (ψ : FMap g H G) (x : X) :
     fMapStalkMap (fMapComp φ ψ) x =
       fMapStalkMap φ x ∘ fMapStalkMap ψ (f x) := by
-  sorry
+  symm
+  apply fMapStalkMap_unique (fMapComp φ ψ) x
+  intro V hxV s
+  change fMapStalkMap φ x
+      (fMapStalkMap ψ (f x)
+        (germApply (F := H.presheaf) V (g (f x)) hxV s)) = _
+  rw [fMapStalkMap_germ ψ (f x) V hxV s]
+  rw [fMapStalkMap_germ φ x ((Opens.map g).obj V) hxV (fMapAt ψ V s)]
+  rfl
 
 end
 

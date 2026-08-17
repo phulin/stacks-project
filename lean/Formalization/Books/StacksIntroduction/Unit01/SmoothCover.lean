@@ -72,8 +72,24 @@ theorem universalDiscriminant_eq_expanded :
     WeierstrassCurve.b₂ WeierstrassCurve.b₄ WeierstrassCurve.b₆ WeierstrassCurve.b₈
   ring
 
+theorem universalDiscriminantExpanded_ne_zero :
+    universalDiscriminantExpanded ≠ 0 := by
+  intro h
+  have h' := congrArg
+    (MvPolynomial.eval₂ (RingHom.id ℤ)
+      (fun i : Fin 5 => if i = 4 then 1 else 0)) h
+  have h0 : (0 : Fin 5) ≠ 4 := by decide
+  have h1 : (1 : Fin 5) ≠ 4 := by decide
+  have h2 : (2 : Fin 5) ≠ 4 := by decide
+  have h3 : (3 : Fin 5) ≠ 4 := by decide
+  norm_num [universalDiscriminantExpanded, universalA₁, universalA₂, universalA₃,
+    universalA₄, universalA₆, h0, h1, h2, h3] at h'
+
 /-- The ring in the definition of `W`. -/
 abbrev UniversalBaseRing := Localization.Away universalDiscriminantExpanded
+
+noncomputable instance universalBaseRing_isDomain : IsDomain UniversalBaseRing :=
+  IsLocalization.Away.isDomain _ universalDiscriminantExpanded_ne_zero
 
 /-- The universal base scheme `W = Spec(ℤ[a₁,a₂,a₃,a₄,a₆,1/Δ)`. -/
 def universalBaseScheme : Scheme.{0} :=
@@ -238,6 +254,16 @@ theorem universalDiscriminant_is_unit :
     IsUnit universalDiscriminantInBase := by
   exact IsLocalization.Away.algebraMap_isUnit universalDiscriminantExpanded
 
+/-- The localized universal equation is elliptic in Mathlib's sense. -/
+theorem universalCoefficientsOverBase_is_elliptic :
+    universalCoefficientsOverBase.IsElliptic := by
+  refine ⟨?_⟩
+  change IsUnit
+    (universalWeierstrassCurve.map
+      (algebraMap UniversalCoefficientRing UniversalBaseRing)).Δ
+  rw [WeierstrassCurve.map_Δ, universalDiscriminant_eq_expanded]
+  exact universalDiscriminant_is_unit
+
 /-! ### The universal projective equation -/
 
 /-- The homogeneous equation in projective coordinates. -/
@@ -373,13 +399,6 @@ structure GlobalQuotientPresentation where
 
 theorem ellipticModuli_is_global_quotient :
     Nonempty GlobalQuotientPresentation := by
-  refine ⟨{
-    source := universalBaseScheme
-    source_eq := rfl
-    coordinateGroupPoints := WeierstrassCoordinateGroup UniversalBaseRing
-    coordinateGroupPoints_group := inferInstance
-    coordinateGroupPoints_eq := rfl
-    presentation := True
-  }⟩
+  sorry
 
 end Formalization.Books.StacksIntroduction.Unit01

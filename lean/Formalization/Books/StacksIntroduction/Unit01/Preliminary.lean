@@ -1,5 +1,6 @@
 import Mathlib.Algebra.Category.ModuleCat.Basic
 import Mathlib.AlgebraicGeometry.Fiber
+import Mathlib.AlgebraicGeometry.Geometrically.Connected
 import Mathlib.AlgebraicGeometry.Morphisms.Proper
 import Mathlib.AlgebraicGeometry.Morphisms.Smooth
 import Mathlib.AlgebraicGeometry.Morphisms.UnderlyingMap
@@ -61,6 +62,8 @@ structure EllipticCurve (S : Scheme.{u}) where
   zero : S ⟶ total
   proper : IsProper projection
   smooth : SmoothOfRelativeDimension 1 projection
+  /-- The geometric connectedness needed for stability under arbitrary base change. -/
+  geometrically_connected : GeometricallyConnected projection
   connected_fiber : ∀ s : S, ConnectedFiber projection s
   fiber_cohomology : ∀ s : S,
     FiberCohomologyData (S.residueField s)

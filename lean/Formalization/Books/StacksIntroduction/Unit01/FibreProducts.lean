@@ -134,19 +134,6 @@ noncomputable def moduliFiberProductFirstProjection {S S' : Scheme.{u}}
     moduliFiberProductScheme E E' ⟶ S :=
   (fiberProductPresentation E E').universalPoint.toS
 
-/-! ### The diagonal description -/
-
-/-- The source's diagonal-pullback presentation, expressed by the same point functor. -/
-abbrev diagonalFiberProductPresheaf {S S' : Scheme.{u}}
-    (E : ModuliPoint S) (E' : ModuliPoint S') :=
-  ellipticFiberProductPresheaf E E'
-
-/-- The displayed diagonal formula is the pointwise presentation used by the key fact. -/
-theorem diagonal_fiberProduct_formula {S S' : Scheme.{u}}
-    (E : ModuliPoint S) (E' : ModuliPoint S') :
-    diagonalFiberProductPresheaf E E' = ellipticFiberProductPresheaf E E' :=
-  rfl
-
 /-! ### Relative smoothness and surjectivity -/
 
 /-- Smoothness of a map into the moduli object, tested after every moduli base change. -/

@@ -112,12 +112,14 @@ structure Substack (F : FiberedCategory C) (J : GrothendieckTopology C) where
   stableUnderPullback : ∀ {U V : C} (f : V ⟶ U) (x : Fiber value U),
     ∃ y : Fiber value V,
       Nonempty (y ≅ (value.map f.op.toLoc).toFunctor.obj x)
-  locallyEssentiallyInImage : ∀ (U : C) (x : Fiber F U),
-    ∃ (ι : Type t) (X : ι → C) (f : ∀ i, X i ⟶ U),
-      CoveringFamily J f ∧
-        ∀ i, ∃ y : Fiber value (X i),
+  descentClosed : ∀ {ι : Type t} {U : C} {X : ι → C}
+      (f : ∀ i, X i ⟶ U) (x : Fiber F U),
+      CoveringFamily J f →
+        (∀ i, ∃ y : Fiber value (X i),
           Nonempty ((F.map (f i).op.toLoc).toFunctor.obj x ≅
-            (inclusion.app (.mk (op (X i)))).toFunctor.obj y)
+            (inclusion.app (.mk (op (X i)))).toFunctor.obj y)) →
+        ∃ y : Fiber value U,
+          Nonempty (x ≅ (inclusion.app (.mk (op U))).toFunctor.obj y)
 
 def IsTwoPullbackCone {F G H A : FiberedCategory C}
     (f : FiberedMorphism F H) (g : FiberedMorphism G H)

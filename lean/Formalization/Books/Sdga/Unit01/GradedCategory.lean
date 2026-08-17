@@ -21,7 +21,18 @@ def gradedCategoryIdentity {S : RingedSite.{u,v} R} {A : GradedAlgebra S}
   app n U x := cast
     (congrArg (fun q : ℤ => M.component q U) (Int.add_zero n).symm) x
   module_map := by
-    sorry
+    intro n m U x a
+    have transport_action : ∀ (p q : ℤ) (h : p = q) (y : M.component p U), HEq
+        (M.action p m U y a)
+        (M.action q m U
+          (cast (congrArg (fun q => M.component q U) h) y) a) := by
+      intro p q h y
+      cases h
+      rfl
+    have haction := transport_action n (n + 0) (Int.add_zero n).symm x
+    exact HEq.trans
+      (cast_heq (congrArg (fun q => M.component q U)
+        (Int.add_zero (n + m)).symm) (M.action n m U x a)) haction
 
 structure GradedCategoryOfModules {S : RingedSite.{u,v} R}
     (A : GradedAlgebra S) where

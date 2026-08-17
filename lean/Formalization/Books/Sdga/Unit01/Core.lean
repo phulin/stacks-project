@@ -124,7 +124,40 @@ def HomogeneousMap.comp {S : RingedSite.{u,v} R} {A : GradedAlgebra S}
     cast (congrArg (fun q : ℤ => P.component q U) (Int.add_assoc n k l))
       (g.app (n + k) U (f.app n U x))
   module_map := by
-    sorry
+    intro n m U x a
+    have hkm : n + m + k = n + k + m := by ac_rfl
+    have hf := f.module_map n m U x a
+    have hc := cast_heq (congrArg (fun q => N.component q U) hkm)
+      (f.app (n + m) U (M.action n m U x a))
+    have ht := HEq.trans hc hf
+    have hg0 := congrArg (fun y => g.app (n + k + m) U y) (eq_of_heq ht)
+    have transport_g : ∀ (p q : ℤ) (h : p = q) (y : N.component p U), HEq
+        (cast (congrArg (fun q => P.component (q + l) U) h) (g.app p U y))
+        (g.app q U (cast (congrArg (fun q => N.component q U) h) y)) := by
+      intro p q h y
+      cases h
+      rfl
+    have hcompat := transport_g (n + m + k) (n + k + m) hkm
+      (f.app (n + m) U (M.action n m U x a))
+    have hg1 := g.module_map (n + k) m U (f.app n U x) a
+    have hmiddle := HEq.trans hcompat (heq_of_eq_of_heq hg0 hg1)
+    have transport_action : ∀ (p q : ℤ) (h : p = q) (y : P.component p U), HEq
+        (P.action p m U y a)
+        (P.action q m U
+          (cast (congrArg (fun q => P.component q U) h) y) a) := by
+      intro p q h y
+      cases h
+      rfl
+    have hkl : n + k + l = n + (k + l) := Int.add_assoc n k l
+    have hright := transport_action (n + k + l) (n + (k + l)) hkl
+      (g.app (n + k) U (f.app n U x))
+    have hleft : n + k + m + l = (n + m) + (k + l) := by ac_rfl
+    have hcast_left := cast_heq (congrArg (fun q => P.component q U) hleft)
+      (cast (congrArg (fun q => P.component (q + l) U) hkm)
+        (g.app (n + m + k) U (f.app (n + m) U (M.action n m U x a))))
+    have hmiddle_left := HEq.trans hcast_left hmiddle
+    have hfinal := HEq.trans hmiddle_left hright
+    simpa only [cast_cast] using hfinal
 
 /-- The graded part of a differential graded algebra. -/
 structure DGAlgebra (S : RingedSite.{u,v} R) where

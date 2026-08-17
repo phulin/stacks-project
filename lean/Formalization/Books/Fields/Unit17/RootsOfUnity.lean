@@ -94,7 +94,54 @@ theorem isAddCyclic_of_exponent_dvd_of_card_nsmul_eq_zero_le
     (hcard : ∀ d : ℕ, d ∣ n →
       Cardinal.mk {x : A // d • x = 0} ≤ d) :
     IsAddCyclic A ∧ Nat.card A ∣ n := by
-  sorry
+  classical
+  have hzero : ∀ x : A, n • x = 0 :=
+    (AddMonoid.exponent_dvd_iff_forall_nsmul_eq_zero.mp hexp)
+  have hgcd_zero (d : ℕ) (x : A) (hdx : d • x = 0) (hnx : n • x = 0) :
+      Nat.gcd d n • x = 0 := by
+    have hBez := Int.gcd_eq_gcd_ab (d : ℤ) (n : ℤ)
+    apply_fun (fun k : ℤ => k • x) at hBez
+    simp [add_zsmul, mul_zsmul, hdx, hnx] at hBez ⊢
+  have hfinite_sub : Finite {x : A // n • x = 0} := by
+    exact Cardinal.mk_lt_aleph0_iff.mp
+      ((hcard n dvd_rfl).trans_lt Cardinal.natCast_lt_aleph0)
+  let _ : Finite A := Finite.of_injective (fun x : A => (⟨x, hzero x⟩ :
+      {x : A // n • x = 0})) (fun x y h => Subtype.ext_iff.mp h)
+  let _ : Fintype A := Fintype.ofFinite A
+  have hbound : ∀ d : ℕ, 0 < d →
+      (Finset.univ.filter (fun x : A => d • x = 0)).card ≤ d := by
+    intro d hd
+    have hsub : {x : A | d • x = 0} ⊆ {x : A | Nat.gcd d n • x = 0} := by
+      intro x hx
+      exact hgcd_zero d x hx (hzero x)
+    have hcg : (Set.ncard {x : A | Nat.gcd d n • x = 0} : Cardinal) ≤ Nat.gcd d n := by
+      rw [Set.cast_ncard (Set.toFinite _)]
+      exact hcard (Nat.gcd d n) (Nat.gcd_dvd_right d n)
+    have hcg' : Set.ncard {x : A | Nat.gcd d n • x = 0} ≤ Nat.gcd d n := by
+      exact_mod_cast hcg
+    have hle' : Set.ncard {x : A | d • x = 0} ≤ d := by
+      have hle_min : Set.ncard {x : A | d • x = 0} ≤ min d n := by
+        apply le_min
+        · exact le_trans (Set.ncard_le_ncard hsub)
+            (le_trans hcg' (Nat.gcd_le_left n hd))
+        · exact le_trans (Set.ncard_le_ncard hsub)
+            (le_trans hcg' (Nat.gcd_le_right d hn))
+      exact le_trans hle_min (min_le_left _ _)
+    have hle'' : Fintype.card ({x : A | d • x = 0} : Set A) ≤ d := by
+      rw [Set.fintypeCard_eq_ncard]
+      exact hle'
+    have hfilter :
+        Fintype.card ({x : A | d • x = 0} : Set A) =
+          (Finset.univ.filter (fun x : A => d • x = 0)).card :=
+      Fintype.card_of_finset' (p := {x : A | d • x = 0}) _ (by
+        intro x
+        simp)
+    exact hfilter ▸ hle''
+  have hcyc : IsAddCyclic A :=
+    isAddCyclic_of_card_nsmul_eq_zero_le hbound
+  have hcard_exp : AddMonoid.exponent A = Nat.card A :=
+    @IsAddCyclic.exponent_eq_card A _ hcyc
+  exact ⟨hcyc, hcard_exp ▸ hexp⟩
 
 /-! ## Prime finite fields and positive characteristic -/
 

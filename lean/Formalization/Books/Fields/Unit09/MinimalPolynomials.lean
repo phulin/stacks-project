@@ -118,7 +118,11 @@ theorem minimal_polynomial_nonconstant_multiple_degree
     {F E : Type*} [Field F] [Field E] [Algebra F E] {α : E}
     (hα : IsAlgebraic F α) {q : Polynomial F} (hq : 0 < q.natDegree) :
     (minpoly F α).degree < (q * minpoly F α).degree := by
-  sorry
+  have hmin : minpoly F α ≠ 0 := minpoly.ne_zero hα.isIntegral
+  have hq0 : q ≠ 0 := Polynomial.ne_zero_of_natDegree_gt hq
+  rw [Polynomial.degree_mul, Polynomial.degree_eq_natDegree hmin,
+    Polynomial.degree_eq_natDegree hq0, ← Nat.cast_add]
+  exact Nat.cast_lt.mpr (Nat.lt_add_of_pos_left hq)
 
 /-! ## Irreducibility and the prime ideal -/
 
@@ -171,7 +175,16 @@ theorem minimal_polynomial_degree
     Formalization.Books.Fields.Unit07.fieldExtensionDegree
         F (IntermediateField.adjoin F ({α} : Set E)) =
       ((minpoly F α).natDegree : Cardinal) := by
-  sorry
+  have hfinite : Module.Finite F (IntermediateField.adjoin F ({α} : Set E)) :=
+    IntermediateField.adjoin.finiteDimensional hα.isIntegral
+  calc
+    Formalization.Books.Fields.Unit07.fieldExtensionDegree F
+        (IntermediateField.adjoin F ({α} : Set E)) =
+        Module.rank F (IntermediateField.adjoin F ({α} : Set E)) := rfl
+    _ = (Module.finrank F (IntermediateField.adjoin F ({α} : Set E)) : Cardinal) :=
+      (@Module.finrank_eq_rank F (IntermediateField.adjoin F ({α} : Set E)) _ _ _ _ hfinite).symm
+    _ = ((minpoly F α).natDegree : Cardinal) := by
+      rw [simple_extension_finrank_eq_minimal_polynomial_natDegree hα]
 
 /- `AdjoinRoot P` is definitionally `F[X] / (P)`, and the preceding chapter's
    equivalence is the canonical quotient presentation of `k(α)`. -/

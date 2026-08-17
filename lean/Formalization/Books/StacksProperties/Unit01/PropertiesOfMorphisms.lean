@@ -232,7 +232,15 @@ theorem check_property_covering {S : Scheme.{u}}
       HasRelativeProperty P f ↔
       (RepresentableByAlgebraicSpaces f ∧
       ∀ (bc : BaseChangeData f W w), P.property bc.projection) := by
-  sorry
+  unfold HasRelativeProperty
+  constructor
+  · intro h
+    exact ⟨h.1, h.2 W w⟩
+  · rintro ⟨hf, hprop⟩
+    refine ⟨hf, ?_⟩
+    intro W' w' bc'
+    rcases htransfer W' w' bc' with ⟨bc, hbc⟩
+    exact hbc (hprop bc)
 
 structure StackCoveringMorphism {S : Scheme.{u}}
     {Z Y : AlgebraicStack S} where

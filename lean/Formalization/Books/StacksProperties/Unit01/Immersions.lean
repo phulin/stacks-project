@@ -320,7 +320,9 @@ theorem immersion_points_locally_closed {S : Scheme.{u}}
       @IsEmbedding (StackPoint X) (StackPoint Y) (T X) (T Y)
         (inducedPointMap f)) :
     PointMapHasLocallyClosedImage T f := by
-  sorry
+  unfold PointMapHasLocallyClosedImage
+  rcases hbase with ⟨W, w, ⟨bc⟩⟩
+  exact hpoint W w bc (hf.2 W w bc)
 
 theorem closed_immersion_points_closed {S : Scheme.{u}}
     (T : StackTopology S) (hT : IsCompatibleStackTopology T)
@@ -334,7 +336,9 @@ theorem closed_immersion_points_closed {S : Scheme.{u}}
       @IsClosed (StackPoint Y) (T Y)
         (Set.range (inducedPointMap f))) :
     PointMapHasClosedImage T f := by
-  sorry
+  unfold PointMapHasClosedImage
+  rcases hbase with ⟨W, w, ⟨bc⟩⟩
+  exact hpoint W w bc (hf.2 W w bc)
 
 theorem open_immersion_points_open {S : Scheme.{u}}
     (T : StackTopology S) (hT : IsCompatibleStackTopology T)
@@ -348,7 +352,9 @@ theorem open_immersion_points_open {S : Scheme.{u}}
       @IsOpen (StackPoint Y) (T Y)
         (Set.range (inducedPointMap f))) :
     PointMapHasOpenImage T f := by
-  sorry
+  unfold PointMapHasOpenImage
+  rcases hbase with ⟨W, w, ⟨bc⟩⟩
+  exact hpoint W w bc (hf.2 W w bc)
 
 structure PresentationSubspace {S : Scheme.{u}}
     {X : AlgebraicStack S} (p : StackPresentation X) where
@@ -714,7 +720,7 @@ theorem factors_through_substack_iff {S : Scheme.{u}}
     (hforward : FactorsThrough f D.substack → D.subspace.invariant)
     (hbackward : D.subspace.invariant → FactorsThrough f D.substack) :
     FactorsThrough f D.substack ↔ D.subspace.invariant := by
-  sorry
+  exact ⟨hforward, hbackward⟩
 
 def OpenPointSubsets {S : Scheme.{u}}
     (T : StackTopology S) (X : AlgebraicStack S) :=

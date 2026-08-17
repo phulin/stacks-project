@@ -69,9 +69,24 @@ theorem quasiCompact_stack_iff {S : Scheme.{u}} (X : AlgebraicStack S)
         IsQuasiCompactStack X) :
     IsQuasiCompactStack X ↔
       HasAffineSmoothCover X ∧
-        HasQuasiCompactSchemeSmoothCover X ∧
+          HasQuasiCompactSchemeSmoothCover X ∧
           HasQuasiCompactSpaceSmoothCover X ∧ HasQuasiCompactStackCover X := by
-  sorry
+  constructor
+  · intro hcompact
+    rcases hcompactToChart hcompact with
+      ⟨c, hsurjective, hsmooth, haffine, hscheme, hspace⟩
+    have hid : IsSurjective (StackMorphism.id X) := by
+      simpa [IsSurjective, inducedPointMap_id] using
+        (Function.surjective_id :
+          Function.Surjective (id : StackPoint X → StackPoint X))
+    exact ⟨⟨c, hsurjective, hsmooth, haffine⟩,
+      ⟨c, hsurjective, hsmooth, hscheme⟩,
+      ⟨c, hsurjective, hsmooth, hspace⟩,
+      ⟨X, StackMorphism.id X, hid, hcompact⟩⟩
+  · intro hcovers
+    rcases hcoverToChart hcovers with
+      ⟨c, hsurjective, hsmooth, haffine, hscheme, hspace⟩
+    exact hchartToCompact c hsurjective hsmooth haffine hscheme hspace
 
 structure FiniteDisjointUnionData {S : Scheme.{u}} {n : ℕ}
     (X : Fin n → AlgebraicStack S) where

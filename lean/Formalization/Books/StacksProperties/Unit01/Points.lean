@@ -138,7 +138,13 @@ theorem characterize_surjective {S : Scheme.{u}}
       Function.Surjective (inducedPointMap f)) :
     Function.Surjective (inducedPointMap f) ↔
       HasRelativeProperty (RelativeSurjectiveProperty S) f := by
-  sorry
+  unfold HasRelativeProperty RelativeSurjectiveProperty
+    SpaceMorphismSurjective
+  constructor
+  · intro hsurjective
+    exact ⟨hf, fun W w bc => hforward hsurjective W w bc⟩
+  · rintro ⟨_, hproperty⟩
+    exact hbackward hproperty
 
 def PresentationRelation {S : Scheme.{u}}
     {X : AlgebraicStack S} (p : StackPresentation X)

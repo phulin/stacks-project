@@ -95,7 +95,7 @@ theorem map_into_reduction_iff {S : Scheme.{u}}
     FactorsThroughClosedSubstack f Z ↔
       Set.range (inducedPointMap f) ⊆
         Set.range (inducedPointMap Z.inclusion) := by
-  sorry
+  exact ⟨hforward, hbackward⟩
 
 structure ReducedInducedStackStructure {S : Scheme.{u}}
     (X : AlgebraicStack S) (T : Set (StackPoint X)) where

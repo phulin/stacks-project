@@ -58,7 +58,18 @@ theorem type_property_characterization {S : Scheme.{u}}
     SomeSchemeSmoothProperty P X ↔
       EverySchemeSmoothProperty P X ∧
         SomeSpaceSmoothProperty P X ∧ EverySpaceSmoothProperty P X := by
-  sorry
+  unfold SomeSchemeSmoothProperty EverySchemeSmoothProperty
+    SomeSpaceSmoothProperty EverySpaceSmoothProperty
+  constructor
+  · rintro ⟨W, w, hcover, hproperty⟩
+    refine ⟨?_, ⟨W, w, hcover, (P.comparison W).mp hproperty⟩, ?_⟩
+    · intro W' w' hsmooth
+      exact hlocal W w hcover hproperty W' w' hsmooth
+    · intro W' w' hsmooth
+      exact (P.comparison W').mp
+        (hlocal W w hcover hproperty W' w' hsmooth)
+  · rintro ⟨_, ⟨W, w, hcover, hproperty⟩, _⟩
+    exact ⟨W, w, hcover, (P.comparison W).mpr hproperty⟩
 
 def HasTypeProperty {S : Scheme.{u}}
     (P : SmoothLocalSchemeProperty S) (X : AlgebraicStack S) : Prop :=
@@ -162,7 +173,19 @@ theorem local_source_target_at_point {S : Scheme.{u}}
     SomeSchemeGermPropertyAt P x ↔
       EverySchemeGermPropertyAt P x ∧
         SomeSpaceGermPropertyAt P x ∧ EverySpaceGermPropertyAt P x := by
-  sorry
+  unfold SomeSchemeGermPropertyAt EverySchemeGermPropertyAt
+    SomeSpaceGermPropertyAt EverySpaceGermPropertyAt
+  constructor
+  · rintro ⟨W, w, u, hsmooth, hmap, hproperty⟩
+    refine ⟨?_, ⟨W, w, u, hsmooth, hmap,
+      (P.comparison W u).mp hproperty⟩, ?_⟩
+    · intro W' w' u' hsmooth' hmap'
+      exact hlocal W w u hsmooth hmap hproperty W' w' u' hsmooth' hmap'
+    · intro W' w' u' hsmooth' hmap'
+      exact (P.comparison W' u').mp
+        (hlocal W w u hsmooth hmap hproperty W' w' u' hsmooth' hmap')
+  · rintro ⟨_, ⟨W, w, u, hsmooth, hmap, hproperty⟩, _⟩
+    exact ⟨W, w, u, hsmooth, hmap, (P.comparison W u).mpr hproperty⟩
 
 def HasGermPropertyAt {S : Scheme.{u}}
     (P : SmoothLocalGermProperty S) {X : AlgebraicStack S}

@@ -63,7 +63,18 @@ theorem unique_point_iff_flat_field_cover {S : Scheme.{u}}
       (∃ p : FieldValuedMorphism X, IsFlatFieldCover p) ∧
         (∃ p : FieldValuedMorphism X,
           IsLocallyFiniteTypeFlatFieldCover p) := by
-  sorry
+  unfold IsReducedSingletonPointStack IsSingletonPointStack
+    IsFlatFieldCover IsLocallyFiniteTypeFlatFieldCover
+  constructor
+  · intro _
+    rcases hcover with ⟨p, hp⟩
+    exact ⟨⟨p, hp.1⟩, ⟨p, hp⟩⟩
+  · rintro ⟨⟨p, hsurjective, hflat⟩, _⟩
+    refine ⟨hred, ?_⟩
+    refine ⟨⟨stackPointOfFieldValuedMorphism p⟩, ?_⟩
+    constructor
+    intro x y
+    exact (hsurjective x).trans (hsurjective y).symm
 
 theorem unique_point_better_iff {S : Scheme.{u}}
     (X : AlgebraicStack S)
@@ -76,7 +87,20 @@ theorem unique_point_better_iff {S : Scheme.{u}}
     IsLocallyNoetherianReducedSingletonPointStack X ↔
       ∃ p : FieldValuedMorphism X,
         IsLocallyFinitePresentationFlatFieldCover p := by
-  sorry
+  unfold IsLocallyNoetherianReducedSingletonPointStack
+    IsReducedSingletonPointStack IsSingletonPointStack
+    IsLocallyFinitePresentationFlatFieldCover IsFlatFieldCover
+  constructor
+  · intro h
+    exact hforward h.1 h.2.1
+  · intro hp
+    rcases hbackward hp with ⟨hlocal, hred⟩
+    rcases hp with ⟨p, ⟨hsurjective, hflat⟩, hlfp⟩
+    refine ⟨hlocal, hred, ?_⟩
+    refine ⟨⟨stackPointOfFieldValuedMorphism p⟩, ?_⟩
+    constructor
+    intro x y
+    exact (hsurjective x).trans (hsurjective y).symm
 
 theorem monomorphism_into_unique_point {S : Scheme.{u}}
     {Z' Z : AlgebraicStack S} (f : StackMorphism Z' Z)
@@ -374,7 +398,13 @@ theorem residual_gerbe_characterization {S : Scheme.{u}}
     ResidualGerbeCandidate x ↔
       ReducedResidualGerbeCandidate x ∧
         FieldResidualGerbeCandidate x := by
-  sorry
+  unfold ResidualGerbeCandidate ReducedResidualGerbeCandidate
+    FieldResidualGerbeCandidate
+  constructor
+  · intro h
+    exact ⟨hred h, hfield h⟩
+  · rintro ⟨⟨Z, f, hmono, hred, hsingleton, hpoints⟩, _⟩
+    exact ⟨Z, f, hmono, hsingleton, hpoints⟩
 
 theorem residual_gerbe_exists_unique {S : Scheme.{u}}
     {X : AlgebraicStack S} (x : StackPoint X)

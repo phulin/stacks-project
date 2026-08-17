@@ -86,8 +86,9 @@ theorem inverseLimitFamilies_iff_successiveCompatibleFamilies
   sorry
 
 /- The categorical inverse limit is the preceding chapter's canonical
-`InverseSystemLimit`; `limit.isLimit` records the source's assertion that the
-compatible-family construction is a limit in `R`-modules. -/
+`InverseSystemLimit`; `limit.isLimit` records its module-level universal
+property, while the bridge below identifies its chosen object with the
+compatible-family construction. -/
 abbrev inverseLimitModule {R : Type u} [Ring R]
     (F : NaturalInverseSystem R) : ModuleCat.{w} R :=
   InverseSystemLimit F
@@ -96,6 +97,17 @@ noncomputable def inverseLimitModule_isLimit {R : Type u} [Ring R]
     (F : NaturalInverseSystem R) :
     IsLimit (limit.cone F) :=
   limit.isLimit F
+
+/- The chosen categorical limit is canonically equivalent to the displayed
+compatible-family set.  `ModuleCat` limits are preserved by the forgetful
+functor, and `Types.limitEquivSections` identifies the resulting type limit
+with `Functor.sections`. -/
+noncomputable def inverseLimitModule_equiv_families {R : Type u} [Ring R]
+    (F : NaturalInverseSystem R) :
+    (inverseLimitModule F : Type w) ≃ inverseLimitFamilies F :=
+  (preservesLimitIso (CategoryTheory.forget (ModuleCat.{w} R)) F).toEquiv.trans
+    (Types.limitEquivSections
+      (F ⋙ CategoryTheory.forget (ModuleCat.{w} R)))
 
 /-! ## Exactness of inverse limits -/
 

@@ -150,7 +150,45 @@ theorem topologicalSpaceForgetful_properties :
 isomorphisms. -/
 theorem topologicalSpaceForgetful_not_reflectsIsomorphisms :
     ¬ topologicalSpaceForgetful.ReflectsIsomorphisms := by
-  sorry
+  intro h
+  let f : TopCat.discrete.obj Bool ⟶ TopCat.trivial.obj Bool :=
+    @TopCat.ofHom Bool Bool ⊥ ⊤
+      (@ContinuousMap.mk Bool Bool ⊥ ⊤ id (by
+        exact continuous_bot))
+  letI : topologicalSpaceForgetful.ReflectsIsomorphisms := h
+  haveI : IsIso (topologicalSpaceForgetful.map f) := by
+    rw [isIso_iff_bijective]
+    constructor
+    · intro x y hxy
+      exact hxy
+    · intro y
+      exact ⟨y, rfl⟩
+  haveI : IsIso f :=
+    Functor.ReflectsIsomorphisms.reflects topologicalSpaceForgetful f
+  let e : TopCat.trivial.obj Bool ≃ₜ TopCat.discrete.obj Bool :=
+    (TopCat.homeoOfIso (asIso f)).symm
+  have he : e.toFun = id := by
+    funext x
+    have hx := e.left_inv x
+    have he_inv : e.invFun = id := by
+      funext y
+      rfl
+    rw [he_inv] at hx
+    exact hx
+  have hcont : @Continuous Bool Bool ⊤ ⊥ id := by
+    exact he ▸ e.continuous_toFun
+  have hopen : @IsOpen Bool ⊤ ({true} : Set Bool) := by
+    simpa using (@continuous_discrete_rng Bool Bool ⊤ ⊥
+      (discreteTopology_bot Bool)).mp hcont true
+  rw [TopologicalSpace.isOpen_top_iff] at hopen
+  rcases hopen with hopen | hopen
+  · have hmem : true ∈ ({true} : Set Bool) := by simp
+    rw [hopen] at hmem
+    simp at hmem
+  · have hmem : false ∈ ({true} : Set Bool) := by
+      rw [hopen]
+      simp
+    simp at hmem
 
 /-- The presheaf of real-valued continuous functions, with its canonical
 commutative-ring and hence real-algebra structure on every section. -/
@@ -275,7 +313,133 @@ theorem pointwiseDiscretePresheaf_not_isSheaf
     (hA : HasAtLeastTwoElements (X := TopCat.discrete.obj ℕ) A) :
     ¬ CategoryValuedSheaf
       (pointwiseDiscretePresheaf (X := TopCat.discrete.obj ℕ) A) := by
-  sorry
+  intro hF
+  let F := pointwiseDiscretePresheaf (X := TopCat.discrete.obj ℕ) A
+  have hsheaf : TopCat.Presheaf.IsSheaf F :=
+    (categoryValuedSheaf_iff_isSheaf F).1 hF
+  have hFcover :=
+    (TopCat.Presheaf.isSheaf_iff_isSheafOpensLeCover _).mp hsheaf
+  let U : ℕ → Opens (TopCat.discrete.obj ℕ) :=
+    fun n => ⟨({n} : Set ℕ), isOpen_discrete _⟩
+  have hU : iSup U = ⊤ := by
+    apply le_antisymm le_top
+    intro n hn
+    refine Opens.mem_iSup.mpr ⟨(n : ℕ), ?_⟩
+    change (n : ℕ) ∈ ({(n : ℕ)} : Set ℕ)
+    rfl
+  have hset := pointwiseDiscretePresheaf_underlying_isSheaf
+    (X := TopCat.discrete.obj ℕ) A
+  have hsetcover :=
+    (TopCat.Presheaf.isSheaf_iff_isSheafOpensLeCover _).mp hset
+  obtain ⟨hlim⟩ := hsetcover U
+  let K := F.mapCone (TopCat.Presheaf.SheafCondition.opensLeCoverCocone U).op
+  have htop :=
+    (TopCat.nonempty_isLimit_iff_eq_induced K (by
+      convert hlim using 1 <;> rfl)).1 (hFcover U)
+  change (⊥ : TopologicalSpace (↑K.pt)) = _ at htop
+  have hPiRHS :
+      @Pi.topologicalSpace (↑(iSup U)) (fun x : ↑(iSup U) => A x.1) (fun _ => ⊥) ≤
+        ⨅ j, TopologicalSpace.induced
+          (⇑(ConcreteCategory.hom (K.π.app j)))
+          (((ObjectProperty.ι (fun V => ∃ i, V ≤ U i)).op ⋙ F).obj j).str := by
+    apply le_iInf
+    intro j
+    let V : TopCat.Presheaf.SheafCondition.OpensLeCover U := j.unop
+    obtain ⟨i, hVi⟩ := V.property
+    have hfin_set : (V.obj : Set (TopCat.discrete.obj ℕ)).Finite := by
+      apply (Set.finite_singleton i).subset
+      exact hVi
+    letI : Finite V.obj := hfin_set.to_subtype
+    letI : ∀ y : V.obj, TopologicalSpace (A y.1) := fun _ => ⊥
+    letI : ∀ y : V.obj, DiscreteTopology (A y.1) :=
+      fun _ => discreteTopology_bot _
+    have hPiDisc :
+        @Pi.topologicalSpace V.obj (fun y : V.obj => A y.1) (fun _ => ⊥) = ⊥ := by
+      exact @DiscreteTopology.eq_bot (∀ y : V.obj, A y.1)
+        (@Pi.topologicalSpace V.obj (fun y : V.obj => A y.1) (fun _ => ⊥))
+        inferInstance
+    letI : ∀ x : (↑(iSup U)), TopologicalSpace (A x.1) := fun _ => ⊥
+    apply (continuous_iff_le_induced).1
+    change @Continuous (∀ x : (↑(iSup U)), A x.1)
+      (∀ y : V.obj, A y.1)
+      (@Pi.topologicalSpace (↑(iSup U)) (fun x : ↑(iSup U) => A x.1) (fun _ => ⊥))
+      ⊥ (fun f y => f ⟨y.1,
+        (le_iSup U V.property.choose) (V.property.choose_spec y.2)⟩)
+    rw [← hPiDisc]
+    exact continuous_pi (fun y => continuous_apply _)
+  have hPiBot :
+      @Pi.topologicalSpace (↑(iSup U)) (fun x : ↑(iSup U) => A x.1) (fun _ => ⊥) ≤
+        (⊥ : TopologicalSpace (↑K.pt)) := by
+    rw [htop]
+    exact hPiRHS
+  classical
+  letI : ∀ x : (↑(iSup U)), TopologicalSpace (A x.1) := fun _ => ⊥
+  have hPiEq :
+      @Pi.topologicalSpace (↑(iSup U)) (fun x : ↑(iSup U) => A x.1) (fun _ => ⊥) =
+        (⊥ : TopologicalSpace (↑K.pt)) :=
+    le_antisymm hPiBot bot_le
+  let f : ∀ x : (↑(iSup U)), A x.1 := fun x => (hA x.1).choose
+  have hsingle :
+      @IsOpen (∀ x : (↑(iSup U)), A x.1)
+        (@Pi.topologicalSpace (↑(iSup U)) (fun x : ↑(iSup U) => A x.1) (fun _ => ⊥))
+        ({f} : Set (∀ x : (↑(iSup U)), A x.1)) := by
+    rw [hPiEq]
+    change @IsOpen (∀ x : (↑(iSup U)), A x.1)
+      (⊥ : TopologicalSpace (∀ x : (↑(iSup U)), A x.1))
+      ({f} : Set (∀ x : (↑(iSup U)), A x.1))
+    exact @isOpen_discrete (∀ x : (↑(iSup U)), A x.1)
+      (⊥ : TopologicalSpace (∀ x : (↑(iSup U)), A x.1))
+      (discreteTopology_bot _) _
+  obtain ⟨I, u, hI, hsubset⟩ :=
+    (isOpen_pi_iff.mp hsingle) f (by simp)
+  have hIfin :
+      ((fun x : (↑(iSup U)) => x.1) '' (I : Set (↑(iSup U)))).Finite :=
+    Set.Finite.image (fun x : (↑(iSup U)) => x.1) I.finite_toSet
+  obtain ⟨n, hnmem, hnnot⟩ :=
+    (Set.infinite_univ : (Set.univ : Set ℕ).Infinite).exists_notMem_finite hIfin
+  have hnSup : ((n : ℕ) : ↑(TopCat.discrete.obj ℕ)) ∈ iSup U := by
+    rw [hU]
+    exact Set.mem_univ _
+  let x : (↑(iSup U)) := ⟨(n : ↑(TopCat.discrete.obj ℕ)), hnSup⟩
+  have hxnot : x ∉ (I : Set (↑(iSup U))) := by
+    intro hx
+    apply hnnot
+    exact ⟨x, hx, rfl⟩
+  obtain ⟨a, b, hab⟩ := hA x.1
+  by_cases hfa : f x = a
+  · let g : ∀ y : (↑(iSup U)), A y.1 := Function.update f x b
+    have hg : g ∈ (I : Set (↑(iSup U))).pi u := by
+      change ∀ y, y ∈ (I : Set (↑(iSup U))) → g y ∈ u y
+      intro y hy
+      have hyx : y ≠ x := by
+        intro hyxeq
+        apply hxnot
+        simpa [hyxeq] using hy
+      rw [show g y = f y by
+        exact Function.update_of_ne hyx _ _]
+      exact (hI y hy).2
+    have hgf : g = f := by
+      exact hsubset hg
+    have hfb : b = f x := by
+      have h := congrFun hgf x
+      simpa [g] using h
+    exact hab (hfa.symm.trans hfb.symm)
+  · let g : ∀ y : (↑(iSup U)), A y.1 := Function.update f x a
+    have hg : g ∈ (I : Set (↑(iSup U))).pi u := by
+      change ∀ y, y ∈ (I : Set (↑(iSup U))) → g y ∈ u y
+      intro y hy
+      have hyx : y ≠ x := by
+        intro hyxeq
+        apply hxnot
+        simpa [hyxeq] using hy
+      rw [show g y = f y by
+        exact Function.update_of_ne hyx _ _]
+      exact (hI y hy).2
+    have hgf : g = f := by
+      exact hsubset hg
+    apply hfa
+    have h := congrFun hgf x
+    simpa [g] using h.symm
 
 /-! ## Replacing the discrete topology by the product topology -/
 
@@ -312,6 +476,77 @@ def pointwiseProductTopologyPresheaf (A : ℕ → Type) :
 topological spaces. -/
 theorem pointwiseProductTopologyPresheaf_isSheaf (A : ℕ → Type) :
     CategoryValuedSheaf (pointwiseProductTopologyPresheaf A) := by
-  sorry
+  let F := pointwiseProductTopologyPresheaf A
+  apply (categoryValuedSheaf_iff_isSheaf F).2
+  rw [TopCat.Presheaf.isSheaf_iff_isSheafOpensLeCover]
+  intro ι U
+  have hset :
+      TopCat.Presheaf.IsSheaf
+        (Formalization.Books.Sheaves.Unit05.underlyingPresheaf
+          (CategoryTheory.forget TopCat) F) := by
+    change (TopCat.presheafToTypes (TopCat.discrete.obj ℕ) A).IsSheaf
+    exact TopCat.Presheaf.toTypes_isSheaf _ _
+  have hsetcover :=
+    (TopCat.Presheaf.isSheaf_iff_isSheafOpensLeCover _).mp hset
+  obtain ⟨hlim⟩ := hsetcover U
+  refine (TopCat.nonempty_isLimit_iff_eq_induced
+    (F.mapCone (TopCat.Presheaf.SheafCondition.opensLeCoverCocone U).op) (by
+      convert hlim using 1 <;> rfl)).2 ?_
+  change @Pi.topologicalSpace (↑(iSup U)) (fun x : ↑(iSup U) => A x.1) (fun _ => ⊥) = _
+  apply le_antisymm
+  · apply le_iInf
+    intro V
+    apply (continuous_iff_le_induced).1
+    have hVU : V.unop.obj ≤ iSup U :=
+      V.unop.2.choose_spec.trans (le_iSup U V.unop.2.choose)
+    change Continuous (pointwiseProductTopologyRestriction
+      (X := TopCat.discrete.obj ℕ) A hVU)
+    exact (pointwiseProductTopologyRestriction
+      (X := TopCat.discrete.obj ℕ) A hVU).hom.continuous
+  · letI : ∀ x : (↑(iSup U)), TopologicalSpace (A x.1) := fun _ => ⊥
+    have hpi :
+        Pi.topologicalSpace = ⨅ x : (↑(iSup U)),
+          TopologicalSpace.induced
+            (fun s : (∀ x : (↑(iSup U)), A x.1) => s x)
+            (⊥ : TopologicalSpace (A x.1)) := by
+      have h := (induced_to_pi (X := ∀ x : (↑(iSup U)), A x.1)
+        (A := fun x : (↑(iSup U)) => A x.1)
+        (id : (∀ x : (↑(iSup U)), A x.1) → ∀ x : (↑(iSup U)), A x.1))
+      simpa only [induced_id, id_eq] using h
+    calc
+      _ ≤ ⨅ x : (↑(iSup U)),
+          TopologicalSpace.induced
+            (fun s : (∀ x : (↑(iSup U)), A x.1) => s x)
+            (⊥ : TopologicalSpace (A x.1)) := by
+        apply le_iInf
+        intro x
+        obtain ⟨i, hi⟩ := Opens.mem_iSup.mp x.2
+        let V : TopCat.Presheaf.SheafCondition.OpensLeCover U :=
+          ⟨U i, ⟨i, le_rfl⟩⟩
+        refine le_trans (iInf_le _ (Opposite.op V)) ?_
+        let g :=
+          (F.mapCone (TopCat.Presheaf.SheafCondition.opensLeCoverCocone U).op).π.app
+            (Opposite.op V)
+        have hxV : x.1 ∈ V.obj := by
+          change x.1 ∈ U i
+          exact hi
+        letI : ∀ y : V.obj, TopologicalSpace (A y.1) := fun _ => ⊥
+        have hevaltop :
+            (((ObjectProperty.ι (fun V => ∃ i, V ≤ U i)).op ⋙ F).obj
+              (Opposite.op V)).str ≤
+              TopologicalSpace.induced
+                (fun s : (((ObjectProperty.ι (fun V => ∃ i, V ≤ U i)).op ⋙ F).obj
+                  (Opposite.op V)) => s ⟨x.1, hxV⟩)
+                (⊥ : TopologicalSpace (A x.1)) := by
+          apply (continuous_iff_le_induced).1
+          change @Continuous (∀ y : V.obj, A y.1) (A x.1)
+            (@Pi.topologicalSpace V.obj (fun y : V.obj => A y.1) (fun _ => ⊥))
+            ⊥ (fun s => s ⟨x.1, hxV⟩)
+          exact continuous_apply _
+        refine le_trans (induced_mono hevaltop) ?_
+        rw [induced_compose]
+        apply le_of_eq
+        congr 2
+      _ = _ := hpi.symm
 
 end Formalization.Books.Sheaves.Unit09

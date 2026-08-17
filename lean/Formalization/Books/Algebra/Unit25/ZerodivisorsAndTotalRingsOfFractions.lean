@@ -102,11 +102,13 @@ theorem totalQuotientRing_equiv_self {R : Type u} [CommRing R] :
         (Formalization.Books.Algebra.Unit09.totalQuotientRing R)) := by
   sorry
 
-/-- If the finitely many minimal primes are `q i` and their union is the set
-of zerodivisors, the total quotient ring is their product of localizations. -/
+/-- If the distinct finitely many minimal primes are `q i` and their union is
+the set of zerodivisors, the total quotient ring is their product of
+localizations. -/
 theorem totalQuotientRing_equiv_pi_minimalPrime_localizations
     {R : Type u} [CommRing R] (n : ℕ) (q : Fin n → PrimeSpectrum R)
     (hq : Set.range (fun i : Fin n => (q i).asIdeal) = minimalPrimes R)
+    (hq_injective : Function.Injective q)
     (hz : (⋃ i : Fin n, ((q i).asIdeal : Set R)) = zeroDivisors (R := R)) :
     Nonempty (Formalization.Books.Algebra.Unit09.totalQuotientRing R ≃+*
       (∀ i : Fin n, Localization.AtPrime (q i).asIdeal)) := by

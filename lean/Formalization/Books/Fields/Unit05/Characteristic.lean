@@ -1,0 +1,100 @@
+import Mathlib.Algebra.Category.Ring.Constructions
+import Mathlib.Algebra.Algebra.ZMod
+import Mathlib.FieldTheory.PrimeField
+
+/-!
+# Fields, Chapter 5: The characteristic of a field
+
+The source's characteristic is Mathlib's canonical `ringChar`.  The source's
+prime subfield is Mathlib's bottom subfield `⊥`; `Mathlib.FieldTheory.PrimeField`
+identifies that subfield with the image of `ℚ` in characteristic zero and with
+the image of `ZMod p` in characteristic `p`.
+
+The opening categorical motivation is recorded through Mathlib's
+`CommRingCat.zIsInitial`.  The source does not use a category of fields later
+in the section, so this file does not introduce a parallel category merely to
+formalize that motivation.
+-/
+
+namespace Formalization.Books.Fields.Unit05
+
+open CategoryTheory
+
+/-! ## The characteristic and the prime subfield -/
+
+/- The initial-object assertion in the opening paragraph is already supplied
+   by Mathlib. -/
+/-- The integers are initial among commutative rings. -/
+def integers_initial_commRingCat :
+    Limits.IsInitial (CommRingCat.of ℤ) :=
+  CommRingCat.zIsInitial
+
+/- `ringChar` is the canonical characteristic, and `ringChar.spec` records
+   the source's condition that precisely the multiples of the characteristic
+   map to zero. -/
+/-- The characteristic of a field is the canonical `ringChar`. -/
+theorem field_characteristic_spec (F : Type*) [Field F] :
+    ∀ n : ℕ, (n : F) = 0 ↔ ringChar F ∣ n :=
+  ringChar.spec F
+
+/-- The characteristic of a field is zero or a prime number. -/
+theorem field_characteristic_is_zero_or_prime (F : Type*) [Field F] :
+    ringChar F = 0 ∨ Nat.Prime (ringChar F) := by
+  rcases CharP.char_is_prime_or_zero F (ringChar F) with hp | hzero
+  · exact Or.inr hp
+  · exact Or.inl hzero
+
+/-- The characteristic itself maps to zero in the field. -/
+theorem field_characteristic_cast_eq_zero (F : Type*) [Field F] :
+    (ringChar F : F) = 0 :=
+  ringChar.Nat.cast_ringChar (R := F)
+
+/-- Every field has a unique smallest subfield, represented by `⊥`. -/
+theorem field_has_unique_smallest_subfield (F : Type*) [Field F] :
+    ∃! K : Subfield F, ∀ L : Subfield F, K ≤ L := by
+  refine ⟨⊥, ?_, ?_⟩
+  · intro L
+    exact bot_le
+  · intro K hK
+    exact le_antisymm (hK ⊥) bot_le
+
+/-- In characteristic zero, the prime subfield is the image of `ℚ`. -/
+theorem prime_subfield_eq_rat_of_charZero (F : Type*) [Field F] [CharZero F] :
+    (⊥ : Subfield F) = (algebraMap ℚ F).fieldRange :=
+  Subfield.bot_eq_of_charZero
+
+/-- In characteristic `p`, the prime subfield is the image of `ZMod p`. -/
+theorem prime_subfield_eq_zmod_of_charP (F : Type*) [Field F] (p : ℕ)
+    [Fact (Nat.Prime p)] [CharP F p] :
+    (⊥ : Subfield F) = (ZMod.castHom (m := p) dvd_rfl F).fieldRange := by
+  let A : Algebra (ZMod p) F := ZMod.algebra _ _
+  change (⊥ : Subfield F) = (@algebraMap (ZMod p) F _ _ A).fieldRange
+  exact @Subfield.bot_eq_of_zMod_algebra F p inferInstance inferInstance A
+
+/-- Every field has characteristic zero or prime characteristic. -/
+theorem field_characteristic_zero_or_prime (F : Type*) [Field F] :
+    CharZero F ∨ ∃ p : ℕ, Nat.Prime p ∧ CharP F p := by
+  rcases CharP.exists' F with hzero | ⟨p, hp, hchar⟩
+  · exact Or.inl hzero
+  · exact Or.inr ⟨p, hp.out, hchar⟩
+
+/- The source's claim about a subfield having the same characteristic is the
+   following equality of Mathlib's canonical characteristics. -/
+/-- A subfield has the same characteristic as its ambient field. -/
+theorem subfield_characteristic_eq (F : Type*) [Field F] (E : Subfield F) :
+    ringChar E = ringChar F := by
+  exact ringChar.eq E (ringChar F)
+
+/-! ## Examples -/
+
+/-- The characteristic of the prime field `ZMod p` is `p`. -/
+theorem zmod_prime_characteristic (p : ℕ) (_hp : Nat.Prime p) :
+    ringChar (ZMod p) = p :=
+  ZMod.ringChar_zmod_n p
+
+/-- The characteristic of the rational field is zero. -/
+theorem rational_characteristic :
+    ringChar ℚ = 0 :=
+  ringChar.eq_zero (R := ℚ)
+
+end Formalization.Books.Fields.Unit05

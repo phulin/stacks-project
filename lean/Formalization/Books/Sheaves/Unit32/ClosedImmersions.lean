@@ -6,6 +6,7 @@ import Mathlib.CategoryTheory.Sites.Limits
 import Mathlib.CategoryTheory.Limits.Types.Colimits
 import Mathlib.CategoryTheory.Limits.Types.Coproducts
 import Mathlib.Algebra.Category.Grp.Colimits
+import Mathlib.Algebra.Category.Grp.Zero
 import Mathlib.Topology.Constructions
 import Mathlib.Topology.Sheaves.Functors
 import Mathlib.Topology.Sheaves.Limits
@@ -28,6 +29,7 @@ declarations.
 namespace Formalization.Books.Sheaves.Unit32
 
 open CategoryTheory CategoryTheory.Limits Opposite TopologicalSpace Topology
+open scoped ZeroObject
 open Formalization.Books.Categories.Unit23
 open Formalization.Books.Sheaves.Unit07
 open Formalization.Books.Sheaves.Unit08
@@ -115,15 +117,15 @@ noncomputable def closedSubsetPushforward_stalkIso
 
 /- The source writes a stalk outside the closed subset as the singleton.  For
    a general category of algebraic structures, the invariant formulation is
-   that this stalk is a terminal object. -/
+   an isomorphism with the chosen terminal object. -/
 
-/-- A pushforward stalk away from the closed subset is terminal. -/
-theorem closedSubsetPushforward_stalk_isTerminal_of_not_mem
-    {C : Type u} [Category.{w} C] [HasColimits C]
+/-- A pushforward stalk away from the closed subset is isomorphic to terminal. -/
+theorem closedSubsetPushforward_stalkIso_terminal_of_not_mem
+    {C : Type u} [Category.{w} C] [HasColimits C] [HasTerminal C]
     {X : TopCat.{w}} {Z : Set X} (hZ : IsClosed Z)
     (F : TopCat.Sheaf C (TopCat.of Z)) {x : X} (hx : x ∉ Z) :
-    Nonempty (IsTerminal (TopCat.Presheaf.stalk (C := C) (X := X)
-      ((closedSubsetPushforward (C := C) Z).obj F).presheaf x)) := by
+    Nonempty (TopCat.Presheaf.stalk (C := C) (X := X)
+      ((closedSubsetPushforward (C := C) Z).obj F).presheaf x ≅ (⊤_ C)) := by
   sorry
 
 /-- Set-valued form of the outside stalk calculation, with `PUnit` as singleton. -/
@@ -199,11 +201,12 @@ noncomputable abbrev closedSubsetAbelianAdjunction {X : TopCat.{w}} (Z : Set X) 
   TopCat.Sheaf.pullbackPushforwardAdjunction AddCommGrpCat.{w}
     (closedSubsetInclusion Z)
 
-/-- The outside stalk of an abelian pushforward is a zero object. -/
-theorem closedSubsetAbelianPushforward_stalk_isZero_of_not_mem
+/-- The outside stalk of an abelian pushforward is isomorphic to zero. -/
+theorem closedSubsetAbelianPushforward_stalkIso_zero_of_not_mem
     {X : TopCat.{w}} {Z : Set X} (hZ : IsClosed Z)
     (F : TopCat.Sheaf AddCommGrpCat.{w} (TopCat.of Z)) {x : X} (hx : x ∉ Z) :
-    IsZero (((closedSubsetAbelianPushforward Z).obj F).presheaf.stalk x) := by
+    Nonempty (((closedSubsetAbelianPushforward Z).obj F).presheaf.stalk x ≅
+      (0 : AddCommGrpCat.{w})) := by
   sorry
 
 /-- The abelian stalk comparison at a point of the closed subset. -/
@@ -234,7 +237,8 @@ abbrev closedSubsetAbelian_zeroStalkCondition
     {X : TopCat.{w}} (Z : Set X)
     (G : TopCat.Sheaf AddCommGrpCat.{w} X) : Prop :=
   ∀ x : X, x ∉ Z →
-    IsZero (TopCat.Presheaf.stalk (C := AddCommGrpCat.{w}) (X := X) G.presheaf x)
+    Nonempty (TopCat.Presheaf.stalk (C := AddCommGrpCat.{w}) (X := X)
+      G.presheaf x ≅ (0 : AddCommGrpCat.{w}))
 
 /-- Pushforward along a closed subset inclusion is fully faithful for abelian sheaves. -/
 theorem closedSubsetAbelianPushforward_fullyFaithful
@@ -250,7 +254,7 @@ theorem closedSubsetAbelianPushforward_mem_essImage_iff
       closedSubsetAbelian_zeroStalkCondition Z G := by
   sorry
 
-/-- Generic terminal-stalk condition for sheaves of algebraic structures. -/
+/-- Pullback of algebraic-structure sheaves along the closed-subset inclusion. -/
 /- The source's generic inverse image is Mathlib's canonical sheaf pullback;
    the assumptions are exactly those required by that existing construction. -/
 noncomputable abbrev closedSubsetStructurePullback
@@ -280,10 +284,11 @@ noncomputable abbrev closedSubsetStructureAdjunction
 
 /-- Generic terminal-stalk condition for sheaves of algebraic structures. -/
 abbrev closedSubsetTerminalStalkCondition
-    {C : Type u} [Category.{w} C] [HasColimits C] {X : TopCat.{w}}
+    {C : Type u} [Category.{w} C] [HasColimits C] [HasTerminal C]
+    {X : TopCat.{w}}
     (Z : Set X) (G : TopCat.Sheaf C X) : Prop :=
   ∀ x : X, x ∉ Z →
-    Nonempty (IsTerminal (TopCat.Presheaf.stalk (C := C) (X := X) G.presheaf x))
+    Nonempty (TopCat.Presheaf.stalk (C := C) (X := X) G.presheaf x ≅ (⊤_ C))
 
 /-- Generic counit form of `i⁻¹ i_* ≅ id` for algebraic-structure sheaves. -/
 theorem closedSubsetPushforward_inverseImage_counit_isIso
@@ -297,6 +302,23 @@ theorem closedSubsetPushforward_inverseImage_counit_isIso
     {X : TopCat.{w}} {Z : Set X} (hZ : IsClosed Z) :
     IsIso ((closedSubsetStructureAdjunction (C := C) Z).counit) := by
   sorry
+
+/-- The source's identity `i⁻¹ i_* ≅ id` for algebraic-structure sheaves. -/
+noncomputable def closedSubsetStructure_inverseImagePushforwardIso
+    {C : Type u} [Category.{w} C]
+    {FA : C → C → Type*} {CA : C → Type w}
+    [∀ A B, FunLike (FA A B) (CA A) (CA B)]
+    [ConcreteCategory.{w} C FA] [HasColimits C] [HasLimits C]
+    [PreservesLimits (CategoryTheory.forget C)]
+    [PreservesFilteredColimits (CategoryTheory.forget C)]
+    [(CategoryTheory.forget C).ReflectsIsomorphisms]
+    {X : TopCat.{w}} {Z : Set X} (hZ : IsClosed Z) :
+    closedSubsetPushforward (C := C) Z ⋙
+        closedSubsetStructurePullback (C := C) Z ≅
+      𝟭 (TopCat.Sheaf C (TopCat.of Z)) := by
+  letI : IsIso ((closedSubsetStructureAdjunction (C := C) Z).counit) :=
+    closedSubsetPushforward_inverseImage_counit_isIso hZ
+  exact asIso (closedSubsetStructureAdjunction (C := C) Z).counit
 
 /-- Generic full faithfulness of closed-subset pushforward. -/
 theorem closedSubsetPushforward_fullyFaithful
@@ -357,7 +379,8 @@ theorem closedSubsetSetPushforward_no_rightAdjoint
 
 /- The source defers exactness and the right adjoint for abelian sheaves to
    the later Modules chapter; those results are intentionally not declared
-   here. -/
+   here.  It likewise defers the relationship with ringed-space closed
+   immersions to the later quasi-coherent-sheaves discussion. -/
 
 end
 

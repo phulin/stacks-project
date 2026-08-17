@@ -165,7 +165,7 @@ theorem affine_open_augmented_cech_exact {X : Scheme.{u}}
     (𝒰 : StandardOpenCoverOfAffineOpen X) (M : X.Modules)
     [SheafOfModules.IsQuasicoherent (R := X.ringCatSheaf) M] :
     AugmentedCechExactness 𝒰.cover (M.restrict 𝒰.U.ι) := by
-  sorry
+  exact standard_open_cover_augmented_cech_exact 𝒰.cover (M.restrict 𝒰.U.ι)
 
 /-! ### Cohomology on affine opens -/
 

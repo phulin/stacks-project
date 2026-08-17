@@ -82,7 +82,7 @@ theorem subextension_is_separable
     IsSeparableExtension k L := by
   unfold IsSeparableExtension at hK ⊢
   intro M hM
-  letI : Algebra.EssFiniteType k M := hM
+  let : Algebra.EssFiniteType k M := hM
   have hM' : Algebra.EssFiniteType k (IntermediateField.lift M) :=
     Algebra.EssFiniteType.of_surjective
       (IntermediateField.liftAlgEquiv M).toAlgHom
@@ -145,11 +145,11 @@ theorem exists_finite_generators_of_separably_generated
   have hsepX : Algebra.IsSeparable (IntermediateField.adjoin k (range x)) K := by
     rw [hxrange]
     exact hsepS
-  letI : Algebra.IsSeparable (IntermediateField.adjoin k (range x)) K := hsepX
-  letI : Algebra.EssFiniteType (IntermediateField.adjoin k (range x)) K :=
+  let : Algebra.IsSeparable (IntermediateField.adjoin k (range x)) K := hsepX
+  let : Algebra.EssFiniteType (IntermediateField.adjoin k (range x)) K :=
     Algebra.EssFiniteType.of_comp k (IntermediateField.adjoin k (range x)) K
-  letI : Algebra.IsAlgebraic (IntermediateField.adjoin k (range x)) K := inferInstance
-  letI : Module.Finite (IntermediateField.adjoin k (range x)) K :=
+  let : Algebra.IsAlgebraic (IntermediateField.adjoin k (range x)) K := inferInstance
+  let : Module.Finite (IntermediateField.adjoin k (range x)) K :=
     Algebra.finite_of_essFiniteType_of_isAlgebraic
   obtain ⟨y, hy⟩ := Field.exists_primitive_element
     (IntermediateField.adjoin k (range x)) K

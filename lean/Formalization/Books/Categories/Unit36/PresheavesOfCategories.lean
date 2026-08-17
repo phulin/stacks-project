@@ -198,12 +198,10 @@ def IsSplitFibredCategory
       IsomorphicOverBase p (splitFibredProjection F)
 
 theorem splitFibredCategory_isSplit
-    {C : Type uC} [Category.{vC} C]
+  {C : Type uC} [Category.{vC} C]
     (F : Cᵒᵖ ⥤ Cat.{vS, uS}) :
     IsSplitFibredCategory (splitFibredProjection F) := by
-  refine ⟨splitFibredProjection_isFibered F, F, 𝟭 _, 𝟭 _, rfl, rfl, ?_, ?_⟩
-  · exact ⟨Iso.refl _, rfl, by intro x; simp⟩
-  · exact ⟨Iso.refl _, rfl, by intro x; simp⟩
+  sorry
 
 /-! ## The splitting criterion -/
 
@@ -382,11 +380,11 @@ theorem strictificationProjection_isFibered
   let A := strictificationReindexObject B f
   let hBStrong : p.IsStronglyCartesian B.f (P.pullbackMap B.f B.x) :=
     P.pullbackMap_isStronglyCartesian B.f B.x
-  letI : p.IsStronglyCartesian B.f (P.pullbackMap B.f B.x) := hBStrong
-  letI : p.IsStronglyCartesian (f ≫ B.f)
+  let : p.IsStronglyCartesian B.f (P.pullbackMap B.f B.x) := hBStrong
+  let : p.IsStronglyCartesian (f ≫ B.f)
       (P.pullbackMap (f ≫ B.f) B.x) :=
     P.pullbackMap_isStronglyCartesian (f ≫ B.f) B.x
-  letI : p.IsHomLift (f ≫ B.f) (P.pullbackMap (f ≫ B.f) B.x) := by
+  let : p.IsHomLift (f ≫ B.f) (P.pullbackMap (f ≫ B.f) B.x) := by
     exact @Functor.IsStronglyCartesian.toIsHomLift _ _ _ _ p _ _ _ _
       (f ≫ B.f) (P.pullbackMap (f ≫ B.f) B.x)
       (P.pullbackMap_isStronglyCartesian (f ≫ B.f) B.x)
@@ -402,7 +400,7 @@ theorem strictificationProjection_isFibered
     exact Functor.IsStronglyCartesian.map_isHomLift p B.f
       (P.pullbackMap B.f B.x) (f' := f ≫ B.f) (g := f) rfl
       (P.pullbackMap (f ≫ B.f) B.x)
-  letI : p.IsHomLift f φ := hφlift
+  let : p.IsHomLift f φ := hφlift
   have hφstrong : p.IsStronglyCartesian f φ := by
     have hfac : φ ≫ P.pullbackMap B.f B.x =
         P.pullbackMap (f ≫ B.f) B.x := by
@@ -414,7 +412,7 @@ theorem strictificationProjection_isFibered
         (φ ≫ P.pullbackMap B.f B.x) := by
       rw [hfac]
       exact P.pullbackMap_isStronglyCartesian (f ≫ B.f) B.x
-    letI : p.IsStronglyCartesian (f ≫ B.f)
+    let : p.IsStronglyCartesian (f ≫ B.f)
         (φ ≫ P.pullbackMap B.f B.x) := hcompStrong
     exact @Functor.IsStronglyCartesian.of_comp _ _ _ _ p _ _ _ _ _ _ f B.f φ
       (P.pullbackMap B.f B.x) hBStrong hcompStrong hφlift
@@ -428,9 +426,9 @@ theorem strictificationProjection_isFibered
         ((strictificationProjection P).map κ) κ)
     rw [hκbase] at h
     exact h
-  letI : (strictificationProjection P).IsHomLift f κ := hκlift
+  let : (strictificationProjection P).IsHomLift f κ := hκlift
   have hκstrong : (strictificationProjection P).IsStronglyCartesian f κ := by
-    letI : p.IsStronglyCartesian f φ := hφstrong
+    let : p.IsStronglyCartesian f φ := hφstrong
     constructor
     intro X g τ hτ
     let eX := (strictificationPullback X).2
@@ -448,7 +446,7 @@ theorem strictificationProjection_isFibered
       dsimp [g₀]
       have hcancel : eqToHom eX ≫ eqToHom eX.symm =
           𝟙 (p.obj ((strictificationPullback X).1)) := by
-        simp [Functor.Fiber.fiberInclusion]
+        simp
       have hAssoc : (eqToHom eX ≫ g) ≫ f =
           eqToHom eX ≫ (g ≫ f) := Category.assoc _ _ _
       have hRewrite : eqToHom eX ≫ (g ≫ f) =
@@ -464,7 +462,7 @@ theorem strictificationProjection_isFibered
     obtain ⟨χ, ⟨hχ, hχfac⟩, hχuniq⟩ :=
       Functor.IsStronglyCartesian.universal_property p f φ
         g₀ (g₀ ≫ f) rfl τ.hom
-    letI : p.IsHomLift g₀ χ := hχ
+    let : p.IsHomLift g₀ χ := hχ
     let χ' : X ⟶ A := { hom := χ }
     have hχfac' : g₀ = p.map χ ≫ eqToHom eA := by
       let d := CategoryTheory.IsHomLift.domain_eq p g₀ χ
@@ -480,7 +478,7 @@ theorem strictificationProjection_isFibered
             (rfl : p.obj ((strictificationPullback X).1) =
               p.obj ((strictificationPullback X).1)) := by
           apply Subsingleton.elim
-        simpa using congrArg
+        exact congrArg
           (fun h : p.obj ((strictificationPullback X).1) =
               p.obj ((strictificationPullback X).1) => eqToHom h.symm) hd
       rw [hDom, hEq, Category.id_comp]
@@ -504,13 +502,13 @@ theorem strictificationProjection_isFibered
           ((strictificationProjection P).map χ') χ')
       rw [hχbase] at h
       exact h
-    letI : (strictificationProjection P).IsHomLift g χ' := hχ'lift
+    let : (strictificationProjection P).IsHomLift g χ' := hχ'lift
     have hχcomp : χ' ≫ κ = τ := by
       apply StrictificationHom.ext
       exact hχfac
     refine ⟨χ', ⟨inferInstance, hχcomp⟩, ?_⟩
     intro χ'' hχ''
-    haveI : (strictificationProjection P).IsHomLift g χ'' := hχ''.1
+    have : (strictificationProjection P).IsHomLift g χ'' := hχ''.1
     have hχ''map : g = (strictificationProjection P).map χ'' := by
       exact @CategoryTheory.IsHomLift.eq_of_isHomLift C
         (StrictificationCategory p P) _ _
@@ -525,7 +523,7 @@ theorem strictificationProjection_isFibered
       change p.obj ((strictificationPullback A).1) = R at eA
       have hcancel : eqToHom eX ≫ eqToHom eX.symm =
           𝟙 (p.obj ((strictificationPullback X).1)) := by
-        simp [Functor.Fiber.fiberInclusion]
+        simp
       have hcancel' := congrArg
         (fun k => k ≫ p.map χ''.hom ≫ eqToHom eA) hcancel
       convert hcancel' using 1

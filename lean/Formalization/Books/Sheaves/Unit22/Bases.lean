@@ -443,6 +443,7 @@ noncomputable def basisAlgebraicSheafEquivalence {C : Type u} [Category.{v} C]
 /-- Category-valued extensions of one basis sheaf are unique up to the unique
 isomorphism compatible with the specified restriction isomorphisms. -/
 theorem basisAlgebraicExtension_unique {C : Type u} [Category.{v} C]
+    [HasLimits C]
     {X : TopCat.{v}} {ι : Type v} (B : ι → Opens X)
     (hB : Opens.IsBasis (Set.range B))
     (P : CategoryTheory.Sheaf (basisTopology B) C)
@@ -573,13 +574,21 @@ theorem exists_basisModuleExtension {X : TopCat.{v}} {ι : Type v}
     Nonempty (BasisModuleExtensionData B hB O F hF) := by
   sorry
 
+/-- A selected module-extension datum. -/
+noncomputable def basisModuleExtensionData {X : TopCat.{v}} {ι : Type v}
+    (B : ι → Opens X) (hB : Opens.IsBasis (Set.range B))
+    (O : RingSheaf.{v, v} X)
+    (F : BasisModulePresheaf B ((inducedFunctor B).op ⋙ O.1))
+    (hF : BasisModuleSheaf B F) : BasisModuleExtensionData B hB O F hF :=
+  Classical.choice (exists_basisModuleExtension B hB O F hF)
+
 /-- The extension of a sheaf of modules from a basis. -/
 noncomputable def basisModuleExtension {X : TopCat.{v}} {ι : Type v}
     (B : ι → Opens X) (hB : Opens.IsBasis (Set.range B))
     (O : RingSheaf.{v, v} X)
     (F : BasisModulePresheaf B ((inducedFunctor B).op ⋙ O.1))
     (hF : BasisModuleSheaf B F) : Mod O := by
-  exact (Classical.choice (exists_basisModuleExtension B hB O F hF)).sheaf
+  exact (basisModuleExtensionData B hB O F hF).sheaf
 
 /-- The selected module extension restricts to the prescribed basis module. -/
 theorem basisModuleExtension_restriction_iso {X : TopCat.{v}} {ι : Type v}
@@ -587,8 +596,8 @@ theorem basisModuleExtension_restriction_iso {X : TopCat.{v}} {ι : Type v}
     (O : RingSheaf.{v, v} X)
     (F : BasisModulePresheaf B ((inducedFunctor B).op ⋙ O.1))
     (hF : BasisModuleSheaf B F) :
-    Nonempty (basisModuleRestriction B (basisModuleExtension B hB O F hF).val ≅ F) := by
-  exact (Classical.choice (exists_basisModuleExtension B hB O F hF)).restriction_iso
+    Nonempty (basisModuleRestriction B (basisModuleExtension B hB O F hF).val ≅ F) :=
+  (basisModuleExtensionData B hB O F hF).restriction_iso
 
 /-- The sectionwise action on the selected extended module sheaf. -/
 def basisModuleExtensionAction {X : TopCat.{v}} {ι : Type v}
@@ -778,9 +787,10 @@ local maps. -/
 def basisFMap_above_below_stalk_colimit {X Y : TopCat.{v}} {ι : Type v} {κ : Type v}
     (f : X ⟶ Y) {C : Type v} [Category.{v} C] [HasColimits C]
     (F : TopCat.Sheaf C X) (G : TopCat.Sheaf C Y)
-    (Bₓ : ι → Opens X) (Bᵧ : κ → Opens Y)
+    (Bₓ : ι → Opens X) (_hBₓ : Opens.IsBasis (Set.range Bₓ))
+    (Bᵧ : κ → Opens Y) (_hBᵧ : Opens.IsBasis (Set.range Bᵧ))
     (d : BasisFMapAboveBelowData f Bₓ Bᵧ G F) (x : X) : Prop :=
-    ∃ ξ : G.presheaf.stalk (f x) ⟶ F.presheaf.stalk x,
+    ∃! ξ : G.presheaf.stalk (f x) ⟶ F.presheaf.stalk x,
     ∀ (i : ι) (j : κ) (hij : Bₓ i ≤ (Opens.map f).obj (Bᵧ j))
       (hx : x ∈ Bₓ i) (hy : f x ∈ Bᵧ j),
       G.presheaf.germ (Bᵧ j) (f x) hy ≫ ξ =
@@ -792,9 +802,10 @@ theorem basisFMap_above_below_stalk_colimit_holds
     {X Y : TopCat.{v}} {ι : Type v} {κ : Type v}
     (f : X ⟶ Y) {C : Type v} [Category.{v} C] [HasColimits C]
     (F : TopCat.Sheaf C X) (G : TopCat.Sheaf C Y)
-    (Bₓ : ι → Opens X) (Bᵧ : κ → Opens Y)
+    (Bₓ : ι → Opens X) (_hBₓ : Opens.IsBasis (Set.range Bₓ))
+    (Bᵧ : κ → Opens Y) (_hBᵧ : Opens.IsBasis (Set.range Bᵧ))
     (d : BasisFMapAboveBelowData f Bₓ Bᵧ G F) (x : X) :
-    basisFMap_above_below_stalk_colimit f F G Bₓ Bᵧ d x := by
+    basisFMap_above_below_stalk_colimit f F G Bₓ _hBₓ Bᵧ _hBᵧ d x := by
   sorry
 
 /-- The module version of the two-basis `f`-map theorem. -/

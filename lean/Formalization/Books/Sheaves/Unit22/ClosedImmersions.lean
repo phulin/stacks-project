@@ -126,7 +126,7 @@ theorem closedAbelianSheafDirectImage_stalk_inside {X : TopCat.{v}} (Z : Set X)
 
 /-- The generic direct-image stalk is the original stalk on the closed subset. -/
 theorem closedAlgebraicSheafDirectImage_stalk_inside
-    (C : Type u) [Category.{v} C] [HasColimits C] [HasTerminal C]
+    (C : Type u) [Category.{v} C] [HasColimits C]
     {X : TopCat.{v}} (Z : Set X) (hZ : IsClosed Z)
     (F : TopCat.Sheaf C (closedSubspace Z)) (x : X) (hx : x ∈ Z) :
     Nonempty (((closedAlgebraicSheafDirectImage C Z hZ).obj F).presheaf.stalk x ≅

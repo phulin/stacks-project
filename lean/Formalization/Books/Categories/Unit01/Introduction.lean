@@ -48,8 +48,7 @@ abbrev StackBicategory (C : Type u) [Category.{v} C]
 
 /-- Stacks on a fixed site form a bicategory, with pseudonatural
 transformations as 1-morphisms and modifications as 2-morphisms. -/
-@[instance_reducible]
-def stacks_form_a_two_category (C : Type u) [Category.{v} C]
+instance stacks_form_a_two_category (C : Type u) [Category.{v} C]
     (J : GrothendieckTopology C) :
     CategoryTheory.Bicategory (StackBicategory C J) :=
   inferInstance

@@ -250,11 +250,11 @@ noncomputable def rationalFunctionFieldExtensionMap
     Algebra (rationalFunctionField k ι) (rationalFunctionField k' ι) :=
   RingHom.toAlgebra (rationalFunctionFieldExtensionMap k k' ι)
 
-/-- A finite coefficient extension remains finite after adjoining any family
+/-- A finite coefficient extension remains finite after adjoining any finite family
     of indeterminates and passing to fraction fields, with the same degree. -/
 theorem finite_purely_transcendental_extension_degree
     (k k' : Type u) [Field k] [Field k'] [Algebra k k']
-    [FiniteDimensional k k'] (ι : Type u) :
+    [FiniteDimensional k k'] (ι : Type u) [Finite ι] :
     letI : Algebra (rationalFunctionField k ι) (rationalFunctionField k' ι) :=
       rationalFunctionFieldExtensionAlgebra k k' ι
     Formalization.Books.Fields.Unit07.fieldExtensionDegree
@@ -269,7 +269,7 @@ theorem finite_purely_transcendental_extension_degree
     field extension is finite over the base. -/
 theorem relative_algebraic_closure_finite_of_finitely_generated
     {k : Type u} {K : Type v} [Field k] [Field K] [Algebra k K]
-    (hK : ∃ S : Set K, S.Finite ∧ IntermediateField.adjoin k S = ⊤) :
+    [Algebra.EssFiniteType k K] :
     Module.Finite k (algebraicClosure k K) := by
   sorry
 

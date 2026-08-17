@@ -57,10 +57,10 @@ factors can be used in prime-lifting statements.
 structure BinaryAlgebraProduct
     (R X : Type u) [CommRing R] [CommRing X] [Algebra R X] where
   A : CommRingCat.{u}
-  algebraA : Algebra R A
+  [algebraA : Algebra R A]
   B : CommRingCat.{u}
-  algebraB : Algebra R B
-  equiv : X ≃+* A × B
+  [algebraB : Algebra R B]
+  equiv : X ≃ₐ[R] A × B
 
 def BinaryAlgebraProduct.leftMap
     {R X : Type u} [CommRing R] [CommRing X] [Algebra R X]
@@ -79,8 +79,7 @@ theorem produce_finite
     (f : R →+* S') (g : S' →+* S) (p : PrimeSpectrum R) (s : S')
     (hintegral : f.IsIntegral)
     (hfiniteType : (g.comp f).FiniteType)
-    (hloc : Nonempty
-      (Localization.Away s ≃+* Localization.Away (g s)))
+    (hloc : Function.Bijective (Localization.awayMap g s))
     (hinvertible :
       letI : Algebra R S' := f.toAlgebra
       IsUnit (algebraMap S' (S' ⊗[R] p.asIdeal.ResidueField) s)) :
@@ -141,10 +140,10 @@ structure FiniteAlgebraProduct
     (R X : Type u) [CommRing R] [CommRing X] [Algebra R X] where
   n : ℕ
   A : Fin n → CommRingCat.{u}
-  algebraA : ∀ i, Algebra R (A i)
+  [algebraA : ∀ i, Algebra R (A i)]
   B : CommRingCat.{u}
-  algebraB : Algebra R B
-  equiv : X ≃+* (∀ i, A i) × B
+  [algebraB : Algebra R B]
+  equiv : X ≃ₐ[R] (∀ i, A i) × B
 
 def FiniteAlgebraProduct.factorMap
     {R X : Type u} [CommRing R] [CommRing X] [Algebra R X]
@@ -186,9 +185,9 @@ structure EtaleFiniteOverPrimeData
   uniquePrime : ∀ i, letI : Algebra R' (decomposition.A i) := decomposition.algebraA i
     ∃! r : PrimeSpectrum (decomposition.A i),
       PrimeSpectrum.comap (algebraMap R' (decomposition.A i)) r = p'
-  noPrimeB : letI : Algebra R' decomposition.B := decomposition.algebraB
+  noQuasiFiniteB : letI : Algebra R' decomposition.B := decomposition.algebraB
     ∀ r : PrimeSpectrum decomposition.B,
-      PrimeSpectrum.comap (algebraMap R' decomposition.B) r ≠ p'
+      ¬ RingHom.QuasiFiniteAt (algebraMap R' decomposition.B) r.asIdeal
 
 theorem etale_makes_quasiFinite_finite
     {R S : Type u} [CommRing R] [CommRing S]
@@ -219,9 +218,9 @@ structure EtaleFinitePurelyInseparableData
         (Formalization.Books.Algebra.Unit113.residueFieldMapAt
           (algebraMap R' (decomposition.A i)) p' r hr).toAlgebra
       IsPurelyInseparable p'.asIdeal.ResidueField r.asIdeal.ResidueField
-  noPrimeB : letI : Algebra R' decomposition.B := decomposition.algebraB
+  noQuasiFiniteB : letI : Algebra R' decomposition.B := decomposition.algebraB
     ∀ r : PrimeSpectrum decomposition.B,
-      PrimeSpectrum.comap (algebraMap R' decomposition.B) r ≠ p'
+      ¬ RingHom.QuasiFiniteAt (algebraMap R' decomposition.B) r.asIdeal
 
 theorem etale_makes_quasiFinite_finite_variant
     {R S : Type u} [CommRing R] [CommRing S]
@@ -751,7 +750,7 @@ def residueCotangentZeroAt
 def fiberCotangentZeroAt
     {R S : Type u} [CommRing R] [CommRing S]
     (f : R →+* S) (p : PrimeSpectrum R) (q : PrimeSpectrum S)
-    (hq : PrimeSpectrum.comap f q = p) : Prop := by
+    (_hq : PrimeSpectrum.comap f q = p) : Prop := by
   letI : Algebra R S := f.toAlgebra
   exact ∃ qf : PrimeSpectrum (p.asIdeal.Fiber S),
     PrimeSpectrum.comap Algebra.TensorProduct.includeRight.toRingHom qf = q ∧
@@ -773,7 +772,7 @@ def totalCotangentFiberZeroAt
 def fiberLocalizationCotangentZeroAt
     {R S : Type u} [CommRing R] [CommRing S]
     (f : R →+* S) (p : PrimeSpectrum R) (q : PrimeSpectrum S)
-    (hq : PrimeSpectrum.comap f q = p) : Prop := by
+    (_hq : PrimeSpectrum.comap f q = p) : Prop := by
   letI : Algebra R S := f.toAlgebra
   exact ∃ qf : PrimeSpectrum (p.asIdeal.Fiber S),
     PrimeSpectrum.comap Algebra.TensorProduct.includeRight.toRingHom qf = q ∧

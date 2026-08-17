@@ -103,13 +103,20 @@ theorem isUniversallyClosed_of_compactSpace_of_t2Space
     {Y : Type v} [TopologicalSpace Y] {f : X → Y}
     (hf : Continuous f) [CompactSpace X] [T2Space Y] :
     IsUniversallyClosed.{u, v, w} f := by
-  sorry
+  intro Z _ g hg
+  have hclosed : IsClosed {p : X × Z | f p.1 = g p.2} := by
+    apply isClosed_eq
+    · exact hf.comp continuous_fst
+    · exact hg.comp continuous_snd
+  change IsClosedMap
+    ({p : X × Z | f p.1 = g p.2}.domRestrict (Prod.snd : X × Z → Z))
+  exact (isClosedMap_snd_of_compactSpace (X := X) (Y := Z)).domRestrict hclosed
 
 theorem isHomeomorph_of_continuous_bijective_of_compactSpace_of_t2Space
     {Y : Type v} [TopologicalSpace Y] [T2Space Y] {f : X → Y}
     (hf : Continuous f) (hbij : Function.Bijective f) [CompactSpace X] :
     IsHomeomorph f := by
-  sorry
+  exact isHomeomorph_iff_continuous_bijective.mpr ⟨hf, hbij⟩
 
 end CharacterizingProperMaps
 

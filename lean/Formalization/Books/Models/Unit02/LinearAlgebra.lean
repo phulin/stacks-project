@@ -66,12 +66,8 @@ def kernelIndicatorCondition {n : ℕ} (A : Matrix (Fin n) (Fin n) ℝ)
       -A i i * m i =
         (Finset.univ : Finset (Fin n)).sum (fun j => if j ≠ i then A i j * m j else 0)
 
-/-!
-The kernel of a symmetric real recurring matrix is spanned by the equality
-indicators.
--/
+/-! The kernel of a real recurring matrix is spanned by the equality indicators. -/
 theorem recurring_real {n : ℕ} (A : Matrix (Fin n) (Fin n) ℝ) (m : Fin n → ℝ)
-    (hsymm : ∀ i j, A i j = A j i)
     (hoffdiag : ∀ ⦃i j⦄, i ≠ j → 0 ≤ A i j)
     (hm : ∀ i, 0 < m i)
     (hineq : ∀ i,

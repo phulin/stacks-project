@@ -1,0 +1,862 @@
+import Formalization.Books.Sheaves.Unit21.ContinuousMaps
+import Formalization.Books.Sheaves.Unit23.AlgebraicStructures
+import Formalization.Books.Sheaves.Unit26.RingedSpaceModules
+import Formalization.Books.Sheaves.Unit29.LimitsSheaves
+import Mathlib.CategoryTheory.InducedCategory
+import Mathlib.CategoryTheory.Sites.InducedTopology
+import Mathlib.CategoryTheory.Sites.Continuous
+import Mathlib.CategoryTheory.Sites.DenseSubsite.InducedTopology
+import Mathlib.Topology.Sheaves.SheafCondition.Sites
+import Mathlib.Algebra.Category.ModuleCat.Presheaf
+import Mathlib.Algebra.Category.ModuleCat.Stalk
+
+/-!
+# Sheaves on Spaces, Chapter 30: Bases and sheaves
+
+The basis is represented by an indexed family of opens with the induced
+category and induced Grothendieck topology.  This is the canonical Mathlib
+subsite formalism; the predicates and structures below expose the covering,
+stalk, algebraic-structure, module, and basis-checked `f`-map statements in
+the source's order.
+-/
+
+namespace Formalization.Books.Sheaves.Unit30
+
+open CategoryTheory CategoryTheory.Limits Opposite TopologicalSpace
+open Formalization.Books.Sheaves.Unit06
+open Formalization.Books.Sheaves.Unit07
+open Formalization.Books.Sheaves.Unit09
+open Formalization.Books.Sheaves.Unit10
+open Formalization.Books.Sheaves.Unit15
+open Formalization.Books.Sheaves.Unit21
+open Formalization.Books.Sheaves.Unit23
+open Formalization.Books.Sheaves.Unit26
+
+universe v u
+
+noncomputable section
+
+/-! ## Presheaves and sheaves on a basis -/
+
+/-- The category induced on the indexing type of a family of opens. -/
+abbrev basisIndex {X : TopCat.{v}} {ι : Type v} (B : ι → Opens X) :=
+  InducedCategory (Opens X) B
+
+/-- A presheaf of sets on the family `B`. -/
+abbrev BasisPresheaf {X : TopCat.{v}} {ι : Type v} (B : ι → Opens X) :=
+  (basisIndex B)ᵒᵖ ⥤ Type v
+
+/-- A morphism of presheaves on a basis. -/
+abbrev BasisPresheafMorphism {X : TopCat.{v}} {ι : Type v} (B : ι → Opens X)
+    (P Q : BasisPresheaf B) := P ⟶ Q
+
+/-- The Grothendieck topology induced on the basis. -/
+abbrev basisTopology {X : TopCat.{v}} {ι : Type v} (B : ι → Opens X) :
+    GrothendieckTopology (basisIndex B) :=
+  (inducedFunctor B).restrictedTopology (Opens.grothendieckTopology X)
+
+/-- A sheaf of sets on a basis. -/
+abbrev BasisSheaf {X : TopCat.{v}} {ι : Type v} (B : ι → Opens X) :=
+  CategoryTheory.Sheaf (basisTopology B) (Type v)
+
+/-- A morphism of sheaves on a basis. -/
+abbrev BasisSheafMorphism {X : TopCat.{v}} {ι : Type v} (B : ι → Opens X)
+    (P Q : BasisSheaf B) := P ⟶ Q
+
+/-- Restriction of an ordinary presheaf to the members of a basis. -/
+def restrictPresheafToBasis {X : TopCat.{v}} {ι : Type v} (B : ι → Opens X)
+    (F : TopCat.Presheaf (Type v) X) : BasisPresheaf B :=
+  (inducedFunctor B).op ⋙ F
+
+/-- Restriction of an ordinary sheaf to a basis. -/
+noncomputable def basisRestrictionFunctor {X : TopCat.{v}} {ι : Type v}
+    (B : ι → Opens X) (hB : Opens.IsBasis (Set.range B)) :
+    TopCat.Sheaf (Type v) X ⥤ BasisSheaf B :=
+  have : (inducedFunctor B).IsCoverDense (Opens.grothendieckTopology X) :=
+    TopCat.Opens.coverDense_inducedFunctor hB
+  (inducedFunctor B).sheafPushforwardContinuous (Type v)
+    (basisTopology B) (Opens.grothendieckTopology X)
+
+/-- The underlying-presheaf comparison for restriction to a basis. -/
+noncomputable def basisRestrictionUnderlyingIso {X : TopCat.{v}} {ι : Type v}
+    (B : ι → Opens X) (hB : Opens.IsBasis (Set.range B)) :
+    basisRestrictionFunctor B hB ⋙ CategoryTheory.sheafToPresheaf (basisTopology B) (Type v) ≅
+      TopCat.Sheaf.forget (Type v) X ⋙
+        (Functor.whiskeringLeft (basisIndex B)ᵒᵖ (Opens X)ᵒᵖ (Type v)).obj
+          (inducedFunctor B).op := by
+  have : (inducedFunctor B).IsCoverDense (Opens.grothendieckTopology X) :=
+    TopCat.Opens.coverDense_inducedFunctor hB
+  exact (inducedFunctor B).sheafPushforwardContinuousCompSheafToPresheafIso
+    (Type v) (basisTopology B) (Opens.grothendieckTopology X)
+
+/-- Restriction to a topological basis is an equivalence. -/
+theorem basisRestrictionFunctor_isEquivalence {X : TopCat.{v}} {ι : Type v}
+    (B : ι → Opens X) (hB : Opens.IsBasis (Set.range B)) :
+    (basisRestrictionFunctor B hB).IsEquivalence := by
+  have : (inducedFunctor B).IsCoverDense (Opens.grothendieckTopology X) :=
+    TopCat.Opens.coverDense_inducedFunctor hB
+  change ((inducedFunctor B).sheafPushforwardContinuous (Type v)
+    (basisTopology B) (Opens.grothendieckTopology X)).IsEquivalence
+  infer_instance
+
+/-- Identity restriction maps satisfy the presheaf identity law. -/
+@[simp] theorem basisPresheaf_map_id {X : TopCat.{v}} {ι : Type v}
+    (B : ι → Opens X) (P : BasisPresheaf B) (i : basisIndex B) :
+    P.map (𝟙 (op i)) = 𝟙 (P.obj (op i)) := P.map_id _
+
+/-- Restriction maps satisfy the presheaf composition law. -/
+theorem basisPresheaf_map_comp {X : TopCat.{v}} {ι : Type v} (B : ι → Opens X)
+    (P : BasisPresheaf B) {i j k : basisIndex B}
+    (f : i ⟶ j) (g : j ⟶ k) : P.map (g.op ≫ f.op) = P.map g.op ≫ P.map f.op :=
+  P.map_comp _ _
+
+/-- Extension of a sheaf on a basis to the whole space. -/
+noncomputable def basisSheafExtension {X : TopCat.{v}} {ι : Type v}
+    (B : ι → Opens X) (hB : Opens.IsBasis (Set.range B)) (P : BasisSheaf B) :
+    TopCat.Sheaf (Type v) X := by
+  letI : (inducedFunctor B).IsCoverDense (Opens.grothendieckTopology X) :=
+    TopCat.Opens.coverDense_inducedFunctor hB
+  letI : (basisRestrictionFunctor B hB).IsEquivalence :=
+    basisRestrictionFunctor_isEquivalence B hB
+  exact (basisRestrictionFunctor B hB).asEquivalence.inverse.obj P
+
+/-- Restriction followed by extension recovers the basis sheaf. -/
+noncomputable def basisSheafExtensionRestrictionIso {X : TopCat.{v}} {ι : Type v}
+    (B : ι → Opens X) (hB : Opens.IsBasis (Set.range B)) (P : BasisSheaf B) :
+    (basisRestrictionFunctor B hB).obj (basisSheafExtension B hB P) ≅ P := by
+  letI : (inducedFunctor B).IsCoverDense (Opens.grothendieckTopology X) :=
+    TopCat.Opens.coverDense_inducedFunctor hB
+  letI : (basisRestrictionFunctor B hB).IsEquivalence :=
+    basisRestrictionFunctor_isEquivalence B hB
+  exact (basisRestrictionFunctor B hB).asEquivalence.counitIso.app P
+
+/-- Extension followed by restriction recovers the ordinary sheaf. -/
+noncomputable def basisSheafRestrictionExtensionIso {X : TopCat.{v}} {ι : Type v}
+    (B : ι → Opens X) (hB : Opens.IsBasis (Set.range B))
+    (F : TopCat.Sheaf (Type v) X) :
+    basisSheafExtension B hB ((basisRestrictionFunctor B hB).obj F) ≅ F := by
+  letI : (inducedFunctor B).IsCoverDense (Opens.grothendieckTopology X) :=
+    TopCat.Opens.coverDense_inducedFunctor hB
+  letI : (basisRestrictionFunctor B hB).IsEquivalence :=
+    basisRestrictionFunctor_isEquivalence B hB
+  exact (basisRestrictionFunctor B hB).asEquivalence.unitIso.app F |>.symm
+
+/-- The equivalence between sheaves on a space and sheaves on its basis. -/
+noncomputable def basisSheafEquivalence {X : TopCat.{v}} {ι : Type v}
+    (B : ι → Opens X) (hB : Opens.IsBasis (Set.range B)) :
+    TopCat.Sheaf (Type v) X ≌ BasisSheaf B := by
+  letI : (inducedFunctor B).IsCoverDense (Opens.grothendieckTopology X) :=
+    TopCat.Opens.coverDense_inducedFunctor hB
+  letI : (basisRestrictionFunctor B hB).IsEquivalence :=
+    basisRestrictionFunctor_isEquivalence B hB
+  exact (basisRestrictionFunctor B hB).asEquivalence
+
+/-- Extensions of one basis sheaf are unique up to the unique isomorphism
+compatible with the specified restriction isomorphisms. -/
+theorem basisSheafExtension_unique {X : TopCat.{v}} {ι : Type v}
+    (B : ι → Opens X) (hB : Opens.IsBasis (Set.range B))
+    (P : BasisSheaf B) (F G : TopCat.Sheaf (Type v) X)
+    (eF : (basisRestrictionFunctor B hB).obj F ≅ P)
+    (eG : (basisRestrictionFunctor B hB).obj G ≅ P) :
+    ∃! e : F ≅ G,
+      (basisRestrictionFunctor B hB).mapIso e ≪≫ eG = eF := by
+  sorry
+
+/-! ## Coverings and the sheaf condition -/
+
+/-- A cover of a basis member by basis members. -/
+structure BasisCover {X : TopCat.{v}} {ι : Type v} (B : ι → Opens X) (i : ι) where
+  index : Type v
+  member : index → ι
+  covers : iSup (fun j => B (member j)) = B i
+
+/-- Refinement of basis covers. -/
+def BasisCover.refines {X : TopCat.{v}} {ι : Type v} {B : ι → Opens X}
+    {i : ι} (V U : BasisCover B i) : Prop :=
+  ∃ α : V.index → U.index, ∀ j, B (V.member j) ≤ B (U.member (α j))
+
+/-- Basis coverings are preordered by refinement. -/
+instance basisCoverPreorder {X : TopCat.{v}} {ι : Type v} (B : ι → Opens X)
+    (i : ι) : Preorder (BasisCover B i) where
+  le V U := BasisCover.refines V U
+  le_refl U := by
+    exact ⟨fun j => j, fun _ => le_rfl⟩
+  le_trans U V W hUV hVW := by
+    rcases hUV with ⟨α, hα⟩
+    rcases hVW with ⟨β, hβ⟩
+    refine ⟨β ∘ α, ?_⟩
+    intro j
+    exact le_trans (hα j) (hβ (α j))
+
+/-- A selected collection of covers for every basis member. -/
+abbrev BasisCoverSystem {X : TopCat.{v}} {ι : Type v} (B : ι → Opens X) :=
+  ∀ i, Set (BasisCover B i)
+
+/-- Cofinality of a selected system of basis covers. -/
+def IsCofinalBasisCoverSystem {X : TopCat.{v}} {ι : Type v} {B : ι → Opens X}
+    (C : BasisCoverSystem B) : Prop :=
+  ∀ i (U : BasisCover B i), ∃ V, V ∈ C i ∧ V.refines U
+
+/-- The presheaf-level formulation of the basis sheaf condition. -/
+def BasisSheafCondition {X : TopCat.{v}} {ι : Type v} (B : ι → Opens X)
+    (P : BasisPresheaf B) : Prop :=
+  Presieve.IsSheaf (basisTopology B) P
+
+/-- Compatible sections on a basis cover glue uniquely. -/
+theorem basisSheafCondition_iff_cover_gluing {X : TopCat.{v}} {ι : Type v}
+    (B : ι → Opens X) (hB : Opens.IsBasis (Set.range B))
+    (P : BasisPresheaf B) :
+    BasisSheafCondition B P ↔
+      ∀ (i : ι) (U : BasisCover B i),
+        ∀ (s : ∀ j, P.obj (op (U.member j))),
+          (∀ j j' (k : ι) (h : B k ≤ B (U.member j))
+              (h' : B k ≤ B (U.member j')),
+            P.map (InducedCategory.homMk (homOfLE h)).op (s j) =
+              P.map (InducedCategory.homMk (homOfLE h')).op (s j')) →
+          ∃! t : P.obj (op i),
+            ∀ j, ∃ h : B (U.member j) ≤ B i,
+              P.map (InducedCategory.homMk (homOfLE h)).op t = s j := by
+  sorry
+
+/-- It is enough to test the sheaf condition on a cofinal cover system. -/
+theorem basisSheafCondition_iff_cofinal_cover_system {X : TopCat.{v}} {ι : Type v}
+    (B : ι → Opens X) (hB : Opens.IsBasis (Set.range B))
+    (C : BasisCoverSystem B) (hC : IsCofinalBasisCoverSystem C)
+    (P : BasisPresheaf B) :
+    BasisSheafCondition B P ↔
+      ∀ i (U : BasisCover B i), U ∈ C i →
+        ∀ (s : ∀ j, P.obj (op (U.member j))),
+          (∀ j j' (k : ι) (h : B k ≤ B (U.member j))
+              (h' : B k ≤ B (U.member j')),
+            P.map (InducedCategory.homMk (homOfLE h)).op (s j) =
+              P.map (InducedCategory.homMk (homOfLE h')).op (s j')) →
+          ∃! t : P.obj (op i),
+            ∀ j, ∃ h : B (U.member j) ≤ B i,
+              P.map (InducedCategory.homMk (homOfLE h)).op t = s j := by
+  sorry
+
+/-- Every pair of basis members lying in a common basis member has a basis
+intersection. -/
+def BasisIntersectionsClosedUnder {X : TopCat.{v}} {ι : Type v}
+    (B : ι → Opens X) : Prop :=
+  ∀ (i j j' : ι), B j ≤ B i → B j' ≤ B i →
+    ∃ k, B k = B j ⊓ B j'
+
+/-- Compatibility of sections on the basis intersections of a cover. -/
+def BasisIntersectionCompatible {X : TopCat.{v}} {ι : Type v}
+    {B : ι → Opens X} (P : BasisPresheaf B) {i : ι}
+    (U : BasisCover B i) (s : ∀ j, P.obj (op (U.member j))) : Prop :=
+  ∀ (j j' : U.index) (k : ι)
+    (hk : B k = B (U.member j) ⊓ B (U.member j')),
+    P.map (InducedCategory.homMk (homOfLE (by
+      rw [hk]
+      exact inf_le_left))).op (s j) =
+      P.map (InducedCategory.homMk (homOfLE (by
+        rw [hk]
+        exact inf_le_right))).op (s j')
+
+/-- The usual intersection test when the basis is closed under intersections
+inside each basis member. -/
+theorem basisSheafCondition_iff_intersection_gluing
+    {X : TopCat.{v}} {ι : Type v} (B : ι → Opens X)
+    (hB : Opens.IsBasis (Set.range B))
+    (hinter : BasisIntersectionsClosedUnder B)
+    (C : BasisCoverSystem B) (hC : IsCofinalBasisCoverSystem C)
+    (P : BasisPresheaf B) :
+    BasisSheafCondition B P ↔
+      ∀ i (U : BasisCover B i), U ∈ C i →
+        ∀ (s : ∀ j, P.obj (op (U.member j))),
+          BasisIntersectionCompatible P U s →
+          ∃! t : P.obj (op i),
+            ∀ j, ∃ h : B (U.member j) ≤ B i,
+              P.map (InducedCategory.homMk (homOfLE h)).op t = s j := by
+  sorry
+
+/-! ## Stalks on a basis and condition (*) -/
+
+/-- The full subcategory of basis members containing a point. -/
+abbrev basisNeighborhoodIndex {X : TopCat.{v}} {ι : Type v} (B : ι → Opens X)
+    (x : X) := ObjectProperty.FullSubcategory (fun i : basisIndex B => x ∈ B i)
+
+/-- The directed diagram of a basis presheaf around a point. -/
+def basisStalkDiagram {X : TopCat.{v}} {ι : Type v} (B : ι → Opens X)
+    (P : BasisPresheaf B) (x : X) :
+    (basisNeighborhoodIndex B x)ᵒᵖ ⥤ Type v :=
+  (ObjectProperty.ι (fun i : basisIndex B => x ∈ B i)).op ⋙ P
+
+/-- The stalk of a basis presheaf. -/
+noncomputable abbrev basisStalk {X : TopCat.{v}} {ι : Type v} (B : ι → Opens X)
+    (P : BasisPresheaf B) (x : X) : Type v := colimit (basisStalkDiagram B P x)
+
+/-- The germ of a basis section at a point in its domain. -/
+noncomputable def basisGermAt {X : TopCat.{v}} {ι : Type v} (B : ι → Opens X)
+    (P : BasisPresheaf B) {i : ι} {x : X} (hx : x ∈ B i) (s : P.obj (op i)) :
+    basisStalk B P x :=
+  colimit.ι (basisStalkDiagram B P x) (op ⟨i, hx⟩) s
+
+/-- Basis neighborhoods form a filtered system. -/
+theorem basisNeighborhoodIndex_isFiltered {X : TopCat.{v}} {ι : Type v}
+    (B : ι → Opens X) (hB : Opens.IsBasis (Set.range B)) (x : X) :
+    IsFiltered ((basisNeighborhoodIndex B x)ᵒᵖ) := by
+  sorry
+
+/-- A family of stalk elements is locally represented by basis sections. -/
+def BasisLocallyRepresented {X : TopCat.{v}} {ι : Type v} (B : ι → Opens X)
+    (P : BasisPresheaf B) (U : Opens X)
+    (s : ∀ x : X, x ∈ U → basisStalk B P x) : Prop :=
+  ∀ (x : X) (_hx : x ∈ U), ∃ (i : ι) (_hi : x ∈ B i) (hU : B i ≤ U) (σ : P.obj (op i)),
+    ∀ y hy, s y (hU hy) = basisGermAt B P hy σ
+
+/-- The family of germs of a basis section. -/
+def basisSectionGermFamily {X : TopCat.{v}} {ι : Type v} (B : ι → Opens X)
+    (P : BasisPresheaf B) (i : ι) (σ : P.obj (op i)) :
+    ∀ x : X, x ∈ B i → basisStalk B P x :=
+  fun _x _hx => basisGermAt B P _hx σ
+
+/-- Condition (*) identifies basis sections with locally represented stalk families. -/
+theorem basisConditionStarSections {X : TopCat.{v}} {ι : Type v}
+    (B : ι → Opens X) (hB : Opens.IsBasis (Set.range B))
+    (P : BasisPresheaf B) (i : ι) :
+    BasisSheafCondition B P →
+      Nonempty (P.obj (op i) ≃
+        {s : ∀ x : X, x ∈ B i → basisStalk B P x //
+          BasisLocallyRepresented B P (B i) s}) := by
+  sorry
+
+/-- Extension off a basis in terms of families satisfying (*). -/
+noncomputable def basisSetExtensionByStalkFamilies {X : TopCat.{v}} {ι : Type v}
+    (B : ι → Opens X) (hB : Opens.IsBasis (Set.range B)) (P : BasisSheaf B) :
+    TopCat.Sheaf (Type v) X :=
+  basisSheafExtension B hB P
+
+/-- Extension preserves stalks. -/
+theorem basisExtension_stalk_eq {X : TopCat.{v}} {ι : Type v}
+    (B : ι → Opens X) (hB : Opens.IsBasis (Set.range B)) (P : BasisSheaf B) (x : X) :
+    Nonempty ((basisSheafExtension B hB P).presheaf.stalk x ≃ basisStalk B P.1 x) := by
+  sorry
+
+/-! ## Category-valued structures on a basis -/
+
+/-- A category-valued presheaf on a basis. -/
+abbrev BasisAlgebraicPresheaf {C : Type u} [Category.{v} C]
+    {X : TopCat.{v}} {ι : Type v} (B : ι → Opens X) :=
+  (basisIndex B)ᵒᵖ ⥤ C
+
+/-- A morphism of category-valued presheaves on a basis. -/
+abbrev BasisAlgebraicPresheafMorphism {C : Type u} [Category.{v} C]
+    {X : TopCat.{v}} {ι : Type v} (B : ι → Opens X)
+    (P Q : BasisAlgebraicPresheaf B (C := C)) := P ⟶ Q
+
+/-- The underlying presheaf for a category-valued basis presheaf. -/
+def basisUnderlyingPresheaf {C : Type u} [Category.{v} C]
+    {X : TopCat.{v}} {ι : Type v} (B : ι → Opens X)
+    (U : C ⥤ Type v) (P : BasisAlgebraicPresheaf B (C := C)) :
+    (basisIndex B)ᵒᵖ ⥤ Type v :=
+  P ⋙ U
+
+/-- The sheaf predicate for a category-valued basis presheaf. -/
+def BasisAlgebraicSheaf {C : Type u} [Category.{v} C]
+    {X : TopCat.{v}} {ι : Type v} (B : ι → Opens X)
+    (U : C ⥤ Type v) (P : BasisAlgebraicPresheaf B (C := C)) : Prop :=
+  CategoryTheory.Presheaf.IsSheaf (basisTopology B)
+    (basisUnderlyingPresheaf B U P)
+
+/-- The stalk colimit of a category-valued basis presheaf. -/
+noncomputable abbrev basisAlgebraicStalk {C : Type u} [Category.{v} C]
+    [HasColimits C] {X : TopCat.{v}} {ι : Type v} (B : ι → Opens X)
+    (P : BasisAlgebraicPresheaf B (C := C)) (x : X) : C :=
+  colimit ((ObjectProperty.ι (fun i : basisIndex B => x ∈ B i)).op ⋙ P)
+
+/-- The underlying stalk agrees with the stalk of the underlying presheaf. -/
+theorem basisAlgebraicStalk_underlying {C : Type u} [Category.{v} C]
+    {FC : C → C → Type*} {CC : C → Type v}
+    [∀ X Y, FunLike (FC X Y) (CC X) (CC Y)] [ConcreteCategory C FC]
+    [HasColimits C] [PreservesFilteredColimits (CategoryTheory.forget C)]
+    {X : TopCat.{v}} {ι : Type v} (B : ι → Opens X)
+    (hB : Opens.IsBasis (Set.range B))
+    (P : BasisAlgebraicPresheaf B (C := C)) (x : X) :
+    Nonempty ((CategoryTheory.forget C).obj (basisAlgebraicStalk B P x) ≃
+      colimit ((ObjectProperty.ι (fun i : basisIndex B => x ∈ B i)).op ⋙
+        P ⋙ CategoryTheory.forget C)) := by
+  sorry
+
+/-- Restriction of category-valued sheaves to a dense basis. -/
+noncomputable def basisAlgebraicRestrictionFunctor {C : Type u} [Category.{v} C]
+    {X : TopCat.{v}} {ι : Type v} (B : ι → Opens X)
+    (hB : Opens.IsBasis (Set.range B)) :
+    AlgebraicSheaf C X ⥤ CategoryTheory.Sheaf (basisTopology B) C := by
+  letI : (inducedFunctor B).IsCoverDense (Opens.grothendieckTopology X) :=
+    TopCat.Opens.coverDense_inducedFunctor hB
+  exact (inducedFunctor B).sheafPushforwardContinuous C
+    (basisTopology B) (Opens.grothendieckTopology X)
+
+/-- Restriction to a dense basis is an equivalence for category-valued sheaves. -/
+theorem basisAlgebraicRestrictionFunctor_isEquivalence {C : Type u}
+    [Category.{v} C] [HasLimits C] {X : TopCat.{v}} {ι : Type v}
+    (B : ι → Opens X)
+    (hB : Opens.IsBasis (Set.range B)) :
+    (basisAlgebraicRestrictionFunctor (C := C) B hB).IsEquivalence := by
+  have : (inducedFunctor B).IsCoverDense (Opens.grothendieckTopology X) :=
+    TopCat.Opens.coverDense_inducedFunctor hB
+  change ((inducedFunctor B).sheafPushforwardContinuous C
+    (basisTopology B) (Opens.grothendieckTopology X)).IsEquivalence
+  infer_instance
+
+/-- Extension of a structure-valued sheaf from a basis. -/
+noncomputable def basisAlgebraicExtension {C : Type u} [Category.{v} C]
+    {FC : C → C → Type*} {CC : C → Type v}
+    [∀ X Y, FunLike (FC X Y) (CC X) (CC Y)] [ConcreteCategory C FC]
+    [HasColimits C] [HasLimits C]
+    [PreservesLimits (CategoryTheory.forget C)]
+    [PreservesFilteredColimits (CategoryTheory.forget C)]
+    [(CategoryTheory.forget C).ReflectsIsomorphisms]
+    {X : TopCat.{v}} {ι : Type v} (B : ι → Opens X)
+    (hB : Opens.IsBasis (Set.range B))
+    (P : BasisAlgebraicPresheaf B (C := C))
+    (hP : BasisAlgebraicSheaf B (CategoryTheory.forget C) P) :
+    AlgebraicSheaf C X := by
+  let E := basisAlgebraicRestrictionFunctor (C := C) B hB
+  letI : E.IsEquivalence := basisAlgebraicRestrictionFunctor_isEquivalence (C := C) B hB
+  exact E.asEquivalence.inverse.obj ⟨P,
+    (CategoryTheory.Presheaf.isSheaf_iff_isSheaf_forget
+      (J := basisTopology B) (P' := P) (CategoryTheory.forget C)).2 hP⟩
+
+/-- Restriction of the selected category-valued extension recovers the basis
+sheaf. -/
+noncomputable def basisAlgebraicExtensionRestrictionIso {C : Type u}
+    [Category.{v} C] [HasLimits C] [HasColimits C]
+    {FC : C → C → Type*} {CC : C → Type v}
+    [∀ X Y, FunLike (FC X Y) (CC X) (CC Y)] [ConcreteCategory C FC]
+    [PreservesLimits (CategoryTheory.forget C)]
+    [PreservesFilteredColimits (CategoryTheory.forget C)]
+    [(CategoryTheory.forget C).ReflectsIsomorphisms]
+    {X : TopCat.{v}} {ι : Type v} (B : ι → Opens X)
+    (hB : Opens.IsBasis (Set.range B))
+    (P : BasisAlgebraicPresheaf B (C := C))
+    (hP : BasisAlgebraicSheaf B (CategoryTheory.forget C) P) :
+    (basisAlgebraicRestrictionFunctor (C := C) B hB).obj
+        (basisAlgebraicExtension B hB P hP) ≅
+      ⟨P, (CategoryTheory.Presheaf.isSheaf_iff_isSheaf_forget
+        (J := basisTopology B) (P' := P) (CategoryTheory.forget C)).2 hP⟩ := by
+  let E := basisAlgebraicRestrictionFunctor (C := C) B hB
+  letI : E.IsEquivalence := basisAlgebraicRestrictionFunctor_isEquivalence (C := C) B hB
+  exact E.asEquivalence.counitIso.app ⟨P,
+    (CategoryTheory.Presheaf.isSheaf_iff_isSheaf_forget
+      (J := basisTopology B) (P' := P) (CategoryTheory.forget C)).2 hP⟩
+
+/-- Structure-valued basis sheaves admit an equivalence with ordinary
+structure-valued sheaves. -/
+noncomputable def basisAlgebraicSheafEquivalence {C : Type u} [Category.{v} C]
+    [HasLimits C]
+    {X : TopCat.{v}} {ι : Type v} (B : ι → Opens X)
+    (hB : Opens.IsBasis (Set.range B)) :
+    AlgebraicSheaf C X ≌ CategoryTheory.Sheaf (basisTopology B) C := by
+  letI : (basisAlgebraicRestrictionFunctor (C := C) B hB).IsEquivalence :=
+    basisAlgebraicRestrictionFunctor_isEquivalence (C := C) B hB
+  exact (basisAlgebraicRestrictionFunctor (C := C) B hB).asEquivalence
+
+/-- Category-valued extensions of one basis sheaf are unique up to the unique
+isomorphism compatible with the specified restriction isomorphisms. -/
+theorem basisAlgebraicExtension_unique {C : Type u} [Category.{v} C]
+    [HasLimits C] {X : TopCat.{v}} {ι : Type v} (B : ι → Opens X)
+    (hB : Opens.IsBasis (Set.range B))
+    (P : CategoryTheory.Sheaf (basisTopology B) C)
+    (F G : AlgebraicSheaf C X)
+    (eF : (basisAlgebraicRestrictionFunctor B hB).obj F ≅ P)
+    (eG : (basisAlgebraicRestrictionFunctor B hB).obj G ≅ P) :
+    ∃! e : F ≅ G,
+      (basisAlgebraicRestrictionFunctor B hB).mapIso e ≪≫ eG = eF := by
+  sorry
+
+theorem basisAlgebraicExtension_stalk_eq {C : Type u} [Category.{v} C]
+    {FC : C → C → Type*} {CC : C → Type v}
+    [∀ X Y, FunLike (FC X Y) (CC X) (CC Y)] [ConcreteCategory C FC]
+    [HasColimits C] [HasLimits C]
+    [PreservesLimits (CategoryTheory.forget C)]
+    [PreservesFilteredColimits (CategoryTheory.forget C)]
+    [(CategoryTheory.forget C).ReflectsIsomorphisms]
+    {X : TopCat.{v}} {ι : Type v} (B : ι → Opens X)
+    (hB : Opens.IsBasis (Set.range B))
+    (P : BasisAlgebraicPresheaf B (C := C))
+    (hP : BasisAlgebraicSheaf B (CategoryTheory.forget C) P) (x : X) :
+    Nonempty ((basisAlgebraicExtension B hB P hP).presheaf.stalk x ≅
+      basisAlgebraicStalk B P x) := by
+  sorry
+
+/-! ## Modules on a basis -/
+
+/-- A presheaf of rings on a basis. -/
+abbrev BasisRingPresheaf {X : TopCat.{v}} {ι : Type v} (B : ι → Opens X) :=
+  BasisAlgebraicPresheaf B (C := RingCat.{v})
+
+/-- A presheaf of modules over a basis ring presheaf. -/
+abbrev BasisModulePresheaf {X : TopCat.{v}} {ι : Type v}
+    (B : ι → Opens X) (O : BasisRingPresheaf B) :=
+  PresheafOfModules O
+
+/-- The underlying additive presheaf of a basis-module presheaf. -/
+noncomputable abbrev basisModuleUnderlying {X : TopCat.{v}} {ι : Type v}
+    (B : ι → Opens X) {O : BasisRingPresheaf B} (F : BasisModulePresheaf B O) :=
+  F.presheaf
+
+/-- A morphism of basis-module presheaves. -/
+abbrev BasisModulePresheafHom {X : TopCat.{v}} {ι : Type v} {B : ι → Opens X}
+    {O : BasisRingPresheaf B} (F G : BasisModulePresheaf B O) := F ⟶ G
+
+/-- The sheaf predicate for a basis-module presheaf. -/
+def BasisModuleSheaf {X : TopCat.{v}} {ι : Type v} (B : ι → Opens X)
+    {O : BasisRingPresheaf B} (F : BasisModulePresheaf B O) : Prop :=
+  CategoryTheory.Presheaf.IsSheaf (basisTopology B)
+    (basisModuleUnderlying B F ⋙ (CategoryTheory.forget AddCommGrpCat))
+
+/-- The sectionwise action carried by a presheaf of modules on a basis. -/
+def basisModuleAction {X : TopCat.{v}} {ι : Type v}
+    {B : ι → Opens X} {O : BasisRingPresheaf B}
+    (F : BasisModulePresheaf B O) (i : basisIndex B) :
+    O.obj (op i) → F.obj (op i) → F.obj (op i) :=
+  fun r m => r • m
+
+/-- The basis-module action commutes with restriction maps. -/
+theorem basisModuleAction_map {X : TopCat.{v}} {ι : Type v}
+    {B : ι → Opens X} {O : BasisRingPresheaf B}
+    (F : BasisModulePresheaf B O) {i j : basisIndex B} (f : i ⟶ j)
+    (r : O.obj (op j)) (m : F.obj (op j)) :
+    F.map f.op (basisModuleAction F j r m) =
+      basisModuleAction F i (O.map f.op r) (F.map f.op m) := by
+  exact F.map_smul f.op r m
+
+/-- The underlying type of the categorical module stalk. -/
+noncomputable abbrev basisModuleStalk {X : TopCat.{v}} {ι : Type v}
+    (B : ι → Opens X) {O : BasisRingPresheaf B} (F : BasisModulePresheaf B O) (x : X) :
+    Type v :=
+  ↑(colimit ((ObjectProperty.ι (fun i : basisIndex B => x ∈ B i)).op ⋙ F.presheaf) :
+    AddCommGrpCat.{v})
+
+/-- The module stalk agrees with the stalk of the underlying additive presheaf. -/
+theorem basisModuleStalk_underlying_iso {X : TopCat.{v}} {ι : Type v}
+    (B : ι → Opens X) (hB : Opens.IsBasis (Set.range B))
+    {O : BasisRingPresheaf B} (F : BasisModulePresheaf B O) (x : X) :
+    Nonempty (basisModuleStalk B F x ≃
+      basisStalk B (F.presheaf ⋙ (CategoryTheory.forget AddCommGrpCat)) x) := by
+  sorry
+
+/-- The canonical module structure on a basis-module stalk. -/
+@[instance_reducible]
+noncomputable def basisModuleStalkModule {X : TopCat.{v}} {ι : Type v}
+    (B : ι → Opens X) (hB : Opens.IsBasis (Set.range B))
+    {O : BasisRingPresheaf B} (F : BasisModulePresheaf B O) (x : X) :
+    Module ((colimit ((ObjectProperty.ι (fun i : basisIndex B => x ∈ B i)).op ⋙ O) :
+      RingCat.{v}) : Type v)
+      (basisModuleStalk B F x) := by
+  letI : IsFiltered ((basisNeighborhoodIndex B x)ᵒᵖ) :=
+    basisNeighborhoodIndex_isFiltered B hB x
+  letI (i : (basisNeighborhoodIndex B x)ᵒᵖ) :
+      Module (((ObjectProperty.ι (fun i : basisIndex B => x ∈ B i)).op ⋙ O).obj i)
+        (((ObjectProperty.ι (fun i : basisIndex B => x ∈ B i)).op ⋙ F.presheaf).obj i) := by
+    change Module (O.obj (op (unop i).obj)) (F.presheaf.obj (op (unop i).obj))
+    infer_instance
+  exact CategoryTheory.Limits.IsColimit.module
+    ((ObjectProperty.ι (fun i : basisIndex B => x ∈ B i)).op ⋙ O)
+    ((ObjectProperty.ι (fun i : basisIndex B => x ∈ B i)).op ⋙ F.presheaf)
+    (fun f r m => F.map_smul
+      ((ObjectProperty.ι (fun i : basisIndex B => x ∈ B i)).op.map f) r m)
+    (CategoryTheory.Limits.colimit.isColimit _)
+    (CategoryTheory.Limits.colimit.isColimit _)
+
+/-- Restriction of a presheaf of modules to an induced basis category. -/
+def basisModuleRestriction {X : TopCat.{v}} {κ : Type v}
+    (B : κ → Opens X) {O : RingSheaf.{v, v} X}
+    (M : PresheafOfModules O.1) :
+    PresheafOfModules ((inducedFunctor B).op ⋙ O.1) where
+  obj U := M.obj ((inducedFunctor B).op.obj U)
+  map f := M.map ((inducedFunctor B).op.map f)
+  map_id U := by simp
+  map_comp f g := by simp
+
+/-- Data witnessing extension of a basis-module sheaf. -/
+structure BasisModuleExtensionData {X : TopCat.{v}} {ι : Type v}
+    (B : ι → Opens X) (hB : Opens.IsBasis (Set.range B))
+    (O : RingSheaf.{v, v} X)
+    (F : BasisModulePresheaf B ((inducedFunctor B).op ⋙ O.1))
+    (hF : BasisModuleSheaf B F) where
+  sheaf : Mod O
+  restriction_iso : Nonempty (basisModuleRestriction B sheaf.val ≅ F)
+  stalk_iso : ∀ x : X, Nonempty (TopCat.Presheaf.stalk (C := Type v)
+      ((sheaf.val.presheaf) ⋙ (CategoryTheory.forget AddCommGrpCat)) x ≃
+      basisModuleStalk B F x)
+
+theorem exists_basisModuleExtension {X : TopCat.{v}} {ι : Type v}
+    (B : ι → Opens X) (hB : Opens.IsBasis (Set.range B))
+    (O : RingSheaf.{v, v} X)
+    (F : BasisModulePresheaf B ((inducedFunctor B).op ⋙ O.1))
+    (hF : BasisModuleSheaf B F) :
+    Nonempty (BasisModuleExtensionData B hB O F hF) := by
+  sorry
+
+/-- A selected module-extension datum. -/
+noncomputable def basisModuleExtensionData {X : TopCat.{v}} {ι : Type v}
+    (B : ι → Opens X) (hB : Opens.IsBasis (Set.range B))
+    (O : RingSheaf.{v, v} X)
+    (F : BasisModulePresheaf B ((inducedFunctor B).op ⋙ O.1))
+    (hF : BasisModuleSheaf B F) : BasisModuleExtensionData B hB O F hF :=
+  Classical.choice (exists_basisModuleExtension B hB O F hF)
+
+/-- Extension of a sheaf of modules from a basis. -/
+noncomputable def basisModuleExtension {X : TopCat.{v}} {ι : Type v}
+    (B : ι → Opens X) (hB : Opens.IsBasis (Set.range B))
+    (O : RingSheaf.{v, v} X)
+    (F : BasisModulePresheaf B ((inducedFunctor B).op ⋙ O.1))
+    (hF : BasisModuleSheaf B F) : Mod O := by
+  exact (basisModuleExtensionData B hB O F hF).sheaf
+
+/-- The selected extension restricts to the given basis module. -/
+theorem basisModuleExtension_restriction_iso {X : TopCat.{v}} {ι : Type v}
+    (B : ι → Opens X) (hB : Opens.IsBasis (Set.range B))
+    (O : RingSheaf.{v, v} X)
+    (F : BasisModulePresheaf B ((inducedFunctor B).op ⋙ O.1))
+    (hF : BasisModuleSheaf B F) :
+    Nonempty (basisModuleRestriction B (basisModuleExtension B hB O F hF).val ≅ F) :=
+  (basisModuleExtensionData B hB O F hF).restriction_iso
+
+/-- The canonical sectionwise action on the extended module sheaf. -/
+def basisModuleExtensionAction {X : TopCat.{v}} {ι : Type v}
+    (B : ι → Opens X) (hB : Opens.IsBasis (Set.range B))
+    (O : RingSheaf.{v, v} X)
+    (F : BasisModulePresheaf B ((inducedFunctor B).op ⋙ O.1))
+    (hF : BasisModuleSheaf B F) (U : Opens X) :
+    O.1.obj (op U) →
+      (basisModuleExtension B hB O F hF).val.presheaf.obj (op U) →
+      (basisModuleExtension B hB O F hF).val.presheaf.obj (op U) :=
+  fun r m => r • m
+
+/-- The extended action commutes with restriction maps. -/
+theorem basisModuleExtensionAction_map {X : TopCat.{v}} {ι : Type v}
+    (B : ι → Opens X) (hB : Opens.IsBasis (Set.range B))
+    (O : RingSheaf.{v, v} X)
+    (F : BasisModulePresheaf B ((inducedFunctor B).op ⋙ O.1))
+    (hF : BasisModuleSheaf B F) {U V : Opens X} (f : U ⟶ V)
+    (r : O.1.obj (op V))
+    (m : (basisModuleExtension B hB O F hF).val.presheaf.obj (op V)) :
+    (basisModuleExtension B hB O F hF).val.presheaf.map f.op
+        (basisModuleExtensionAction B hB O F hF V r m) =
+      basisModuleExtensionAction B hB O F hF U (O.1.map f.op r)
+        ((basisModuleExtension B hB O F hF).val.presheaf.map f.op m) := by
+  exact (basisModuleExtension B hB O F hF).val.map_smul f.op r m
+
+/-- The extended action is the sectionwise module action. -/
+theorem basisModuleExtensionAction_isModule {X : TopCat.{v}} {ι : Type v}
+    (B : ι → Opens X) (hB : Opens.IsBasis (Set.range B))
+    (O : RingSheaf.{v, v} X)
+    (F : BasisModulePresheaf B ((inducedFunctor B).op ⋙ O.1))
+    (hF : BasisModuleSheaf B F) :
+    ∀ (U : Opens X) (r : O.1.obj (op U))
+      (m : (basisModuleExtension B hB O F hF).val.presheaf.obj (op U)),
+      basisModuleExtensionAction B hB O F hF U r m = r • m := by
+  intro U r m
+  rfl
+
+/-- Extension preserves the module stalks over the extended ring stalk. -/
+theorem basisModuleExtension_stalk_eq {X : TopCat.{v}} {ι : Type v}
+    (B : ι → Opens X) (hB : Opens.IsBasis (Set.range B))
+    (O : RingSheaf.{v, v} X)
+    (F : BasisModulePresheaf B ((inducedFunctor B).op ⋙ O.1))
+    (hF : BasisModuleSheaf B F) (x : X) :
+    Nonempty (TopCat.Presheaf.stalk (C := Type v)
+      ((basisModuleExtension B hB O F hF).val.presheaf ⋙
+        (CategoryTheory.forget AddCommGrpCat)) x ≃ basisModuleStalk B F x) := by
+  sorry
+
+/-- The category of sheaves of basis modules. -/
+abbrev BasisModuleSheafCategory {X : TopCat.{v}} {ι : Type v}
+    (B : ι → Opens X) (O : RingSheaf.{v, v} X) :=
+  ObjectProperty.FullSubcategory
+    (fun F : PresheafOfModules ((inducedFunctor B).op ⋙ O.1) => BasisModuleSheaf B F)
+
+/-- Restriction identifies sheaves of modules with module sheaves on the basis. -/
+theorem basisModuleSheafEquivalence {X : TopCat.{v}} {ι : Type v}
+    (B : ι → Opens X) (hB : Opens.IsBasis (Set.range B))
+    (O : RingSheaf.{v, v} X) :
+    Nonempty (Mod O ≌ BasisModuleSheafCategory B O) := by
+  sorry
+
+/-! ## `f`-maps checked on bases -/
+
+/-- A target-basis family of maps into inverse-image opens. -/
+structure BasisFMapData {X Y : TopCat.{v}} {κ : Type v}
+    (f : X ⟶ Y) (Bᵧ : κ → Opens Y)
+    {C : Type v} [Category.{v} C]
+    (G : BasisAlgebraicPresheaf Bᵧ (C := C))
+    (F : TopCat.Sheaf C X) where
+  map : ∀ j, G.obj (op j) ⟶ F.presheaf.obj (op ((Opens.map f).obj (Bᵧ j)))
+  compatible : ∀ {j j'} (h : Bᵧ j' ≤ Bᵧ j),
+    G.map (InducedCategory.homMk (homOfLE h)).op ≫ map j' =
+      map j ≫ F.presheaf.map (((Opens.map f).map (homOfLE h)).op)
+
+/-- The source-facing target-basis data for an algebraic `f`-map. -/
+structure BasisFMapBelowData {X Y : TopCat.{v}} {κ : Type v}
+    (f : X ⟶ Y) (Bᵧ : κ → Opens Y)
+    {C : Type v} [Category.{v} C]
+    (G : TopCat.Sheaf C Y) (F : TopCat.Sheaf C X) where
+  map : ∀ j, G.presheaf.obj (op (Bᵧ j)) ⟶
+    F.presheaf.obj (op ((Opens.map f).obj (Bᵧ j)))
+  compatible : ∀ {j j'} (h : Bᵧ j' ≤ Bᵧ j),
+    G.presheaf.map (homOfLE h).op ≫ map j' =
+      map j ≫ F.presheaf.map (((Opens.map f).map (homOfLE h)).op)
+
+/-- The induced map on restricted presheaves of modules. -/
+def basisModuleRestrictionHom {X : TopCat.{v}} {κ : Type v}
+    (B : κ → Opens X) {O : RingSheaf.{v, v} X}
+    {M N : PresheafOfModules O.1} (φ : M ⟶ N) :
+    basisModuleRestriction B M ⟶ basisModuleRestriction B N where
+  app U := φ.app ((inducedFunctor B).op.obj U)
+  naturality f := φ.naturality ((inducedFunctor B).op.map f)
+
+/-- A target-basis family uniquely determines an algebraic `f`-map. -/
+theorem basisFMap_below_unique {X Y : TopCat.{v}} {κ : Type v}
+    (f : X ⟶ Y) {C : Type v} [Category.{v} C]
+    (F : TopCat.Sheaf C X) (G : TopCat.Sheaf C Y)
+    (Bᵧ : κ → Opens Y) (hBᵧ : Opens.IsBasis (Set.range Bᵧ))
+    (φ : (inducedFunctor Bᵧ).op ⋙ G.presheaf ⟶
+      (inducedFunctor Bᵧ).op ⋙ ((TopCat.Sheaf.pushforward C f).obj F).obj) :
+    ∃! ψ : G ⟶ (TopCat.Sheaf.pushforward C f).obj F,
+      ((Functor.whiskeringLeft (basisIndex Bᵧ)ᵒᵖ (Opens Y)ᵒᵖ C).obj
+        (inducedFunctor Bᵧ).op).map ψ.hom = φ := by
+  sorry
+
+/-- The source's compatible target-basis family uniquely determines an
+algebraic `f`-map. -/
+theorem basisFMap_below_unique_of_data {X Y : TopCat.{v}} {κ : Type v}
+    (f : X ⟶ Y) {C : Type v} [Category.{v} C]
+    (F : TopCat.Sheaf C X) (G : TopCat.Sheaf C Y)
+    (Bᵧ : κ → Opens Y) (hBᵧ : Opens.IsBasis (Set.range Bᵧ))
+    (d : BasisFMapBelowData f Bᵧ G F) :
+    ∃! ψ : G ⟶ (TopCat.Sheaf.pushforward C f).obj F,
+      ∀ j, ψ.hom.app (op (Bᵧ j)) = d.map j := by
+  sorry
+
+/-- The scalar map on sections induced by a ringed-space morphism. -/
+def ringedSpaceBasisScalarMap {X Y : RingedSpace.{v}}
+    {U : Opens X} {V : Opens Y} (f : RingedSpaceHom X Y)
+    (h : U ≤ (Opens.map f.continuous).obj V) :
+    Y.structureSheaf.1.obj (op V) ⟶ X.structureSheaf.1.obj (op U) :=
+  f.sharp.hom.app (op V) ≫ X.structureSheaf.1.map (homOfLE h).op
+
+/-- The source-facing target-basis data for a module-valued `f`-map. -/
+structure BasisModuleFMapBelowData {X Y : RingedSpace.{v}} {κ : Type v}
+    (f : RingedSpaceHom X Y) (Bᵧ : κ → Opens Y)
+    (G : Mod Y.structureSheaf) (F : Mod X.structureSheaf) where
+  map : ∀ j, G.val.presheaf.obj (op (Bᵧ j)) →
+    F.val.presheaf.obj (op ((Opens.map f.continuous).obj (Bᵧ j)))
+  compatible : ∀ {j j'} (h : Bᵧ j' ≤ Bᵧ j),
+    map j' ∘ G.val.presheaf.map (homOfLE h).op =
+      F.val.presheaf.map (((Opens.map f.continuous).map
+        (homOfLE h)).op) ∘ map j
+  linear : ∀ (j : κ) (r : Y.structureSheaf.1.obj (op (Bᵧ j)))
+    (s : G.val.presheaf.obj (op (Bᵧ j))),
+    map j (r • s) =
+      (ringedSpaceBasisScalarMap (U := (Opens.map f.continuous).obj (Bᵧ j))
+        (V := Bᵧ j) f le_rfl).hom r • map j s
+
+/-- The target-basis uniqueness statement for module-valued `f`-maps. -/
+theorem basisFMapModule_below_unique {X Y : RingedSpace} {κ : Type v}
+    (f : RingedSpaceHom X Y) (F : Mod X.structureSheaf) (G : Mod Y.structureSheaf)
+    (Bᵧ : κ → Opens Y) (hBᵧ : Opens.IsBasis (Set.range Bᵧ))
+    (φ : basisModuleRestriction Bᵧ G.val ⟶
+      basisModuleRestriction Bᵧ ((ringedSpaceModulePushforward f).obj F).val) :
+    ∃! ψ : RingedSpaceModuleFMap f G F,
+      basisModuleRestrictionHom Bᵧ ψ.val = φ := by
+  sorry
+
+/-- The source's compatible target-basis family uniquely determines a module
+`f`-map. -/
+theorem basisFMapModule_below_unique_of_data {X Y : RingedSpace} {κ : Type v}
+    (f : RingedSpaceHom X Y) (F : Mod X.structureSheaf) (G : Mod Y.structureSheaf)
+    (Bᵧ : κ → Opens Y) (hBᵧ : Opens.IsBasis (Set.range Bᵧ))
+    (d : BasisModuleFMapBelowData f Bᵧ G F) :
+    ∃! ψ : RingedSpaceModuleFMap f G F,
+      ∀ (j : κ) (s : G.val.presheaf.obj (op (Bᵧ j))),
+        (ψ.val.app (op (Bᵧ j))).hom s = d.map j s := by
+  sorry
+
+/-- Sections of a category-valued sheaf over an open. -/
+abbrev categorySheafSections {X : TopCat.{v}} {C : Type v} [Category.{v} C]
+    (G : TopCat.Sheaf C X) (U : Opens X) := G.presheaf.obj (op U)
+
+/-- A two-basis family of maps for an algebraic `f`-map. -/
+structure BasisFMapAboveBelowData {X Y : TopCat.{v}} {ι : Type v} {κ : Type v}
+    (f : X ⟶ Y) (Bₓ : ι → Opens X) (Bᵧ : κ → Opens Y)
+    {C : Type v} [Category.{v} C]
+    (G : TopCat.Sheaf C Y) (F : TopCat.Sheaf C X) where
+  app : ∀ (i : ι) (j : κ), Bₓ i ≤ (Opens.map f).obj (Bᵧ j) →
+    Quiver.Hom (categorySheafSections G (Bᵧ j))
+      (categorySheafSections F (Bₓ i))
+  naturality : ∀ {i i' : ι} {j j' : κ}
+    (hii' : Bₓ i' ≤ Bₓ i) (hjj' : Bᵧ j' ≤ Bᵧ j)
+    (hij : Bₓ i ≤ (Opens.map f).obj (Bᵧ j))
+    (hi'j' : Bₓ i' ≤ (Opens.map f).obj (Bᵧ j')),
+    app i j hij ≫ F.presheaf.map (homOfLE hii').op =
+      G.presheaf.map (homOfLE hjj').op ≫ app i' j' hi'j'
+
+/-- A two-basis family of module maps with scalar compatibility. -/
+structure BasisModuleFMapAboveBelowData {X Y : RingedSpace.{v}}
+    {ι : Type v} {κ : Type v} (f : RingedSpaceHom X Y)
+    (Bₓ : ι → Opens X) (Bᵧ : κ → Opens Y)
+    (G : Mod Y.structureSheaf) (F : Mod X.structureSheaf) where
+  app : ∀ (i : ι) (j : κ), Bₓ i ≤ (Opens.map f.continuous).obj (Bᵧ j) →
+    G.val.presheaf.obj (op (Bᵧ j)) → F.val.presheaf.obj (op (Bₓ i))
+  naturality : ∀ {i i' : ι} {j j' : κ}
+    (hii' : Bₓ i' ≤ Bₓ i) (hjj' : Bᵧ j' ≤ Bᵧ j)
+    (hij : Bₓ i ≤ (Opens.map f.continuous).obj (Bᵧ j))
+    (hi'j' : Bₓ i' ≤ (Opens.map f.continuous).obj (Bᵧ j'))
+    (s : G.val.presheaf.obj (op (Bᵧ j))),
+    F.val.presheaf.map (homOfLE hii').op (app i j hij s) =
+      app i' j' hi'j' (G.val.presheaf.map (homOfLE hjj').op s)
+  linear : ∀ (i : ι) (j : κ)
+    (hij : Bₓ i ≤ (Opens.map f.continuous).obj (Bᵧ j))
+    (r : Y.structureSheaf.1.obj (op (Bᵧ j)))
+    (s : G.val.presheaf.obj (op (Bᵧ j))),
+    app i j hij (r • s) =
+      (ringedSpaceBasisScalarMap f hij).hom r • app i j hij s
+
+/-- The basis-above-and-below construction gives a unique algebraic `f`-map. -/
+theorem basisFMap_above_below_unique {X Y : TopCat.{v}} {ι : Type v} {κ : Type v}
+    (f : X ⟶ Y) {C : Type v} [Category.{v} C]
+    (F : TopCat.Sheaf C X) (G : TopCat.Sheaf C Y)
+    (Bₓ : ι → Opens X) (hBₓ : Opens.IsBasis (Set.range Bₓ))
+    (Bᵧ : κ → Opens Y) (hBᵧ : Opens.IsBasis (Set.range Bᵧ))
+    (d : BasisFMapAboveBelowData f Bₓ Bᵧ G F) :
+    ∃! ψ : G ⟶ (TopCat.Sheaf.pushforward C f).obj F,
+      ∀ (i : ι) (j : κ) (h : Bₓ i ≤ (Opens.map f).obj (Bᵧ j)),
+        ψ.hom.app (op (Bᵧ j)) ≫ F.presheaf.map (homOfLE h).op = d.app i j h := by
+  sorry
+
+/-- The stalk map obtained from two bases is the filtered colimit of local maps. -/
+def basisFMap_above_below_stalk_colimit {X Y : TopCat.{v}} {ι : Type v} {κ : Type v}
+    (f : X ⟶ Y) {C : Type v} [Category.{v} C] [HasColimits C]
+    (F : TopCat.Sheaf C X) (G : TopCat.Sheaf C Y)
+    (Bₓ : ι → Opens X) (_hBₓ : Opens.IsBasis (Set.range Bₓ))
+    (Bᵧ : κ → Opens Y) (_hBᵧ : Opens.IsBasis (Set.range Bᵧ))
+    (d : BasisFMapAboveBelowData f Bₓ Bᵧ G F) (x : X) : Prop :=
+  ∃! ξ : G.presheaf.stalk (f x) ⟶ F.presheaf.stalk x,
+    ∀ (i : ι) (j : κ) (hij : Bₓ i ≤ (Opens.map f).obj (Bᵧ j))
+      (hx : x ∈ Bₓ i) (hy : f x ∈ Bᵧ j),
+      G.presheaf.germ (Bᵧ j) (f x) hy ≫ ξ =
+        d.app i j hij ≫ F.presheaf.germ (Bₓ i) x hx
+
+/-- The module-valued basis-above-and-below uniqueness statement. -/
+theorem basisFMapModule_above_below_unique {X Y : RingedSpace} {ι : Type v} {κ : Type v}
+    (f : RingedSpaceHom X Y) (F : Mod X.structureSheaf) (G : Mod Y.structureSheaf)
+    (Bₓ : ι → Opens X) (hBₓ : Opens.IsBasis (Set.range Bₓ))
+    (Bᵧ : κ → Opens Y) (hBᵧ : Opens.IsBasis (Set.range Bᵧ))
+    (d : BasisModuleFMapAboveBelowData f Bₓ Bᵧ G F) :
+    ∃! ψ : RingedSpaceModuleFMap f G F,
+      ∀ (i : ι) (j : κ)
+        (hij : Bₓ i ≤ (Opens.map f.continuous).obj (Bᵧ j))
+        (s : G.val.presheaf.obj (op (Bᵧ j))),
+        F.val.presheaf.map (homOfLE hij).op
+            ((ψ.val.app (op (Bᵧ j))).hom s) = d.app i j hij s := by
+  sorry
+
+end
+
+end Formalization.Books.Sheaves.Unit30

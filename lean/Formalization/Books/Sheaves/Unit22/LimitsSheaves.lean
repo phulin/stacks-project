@@ -47,7 +47,7 @@ theorem sheaf_has_limits {X : TopCat.{v}} {C : Type (v + 1)}
 theorem sheaf_has_colimits {X : TopCat.{v}}
     [HasWeakSheafify (Opens.grothendieckTopology X) (Type v)] :
     HasColimitsOfSize.{v, v} (TopCat.Sheaf (Type v) X) := by
-  sorry
+  infer_instance
 
 /-- The sectionwise formula for a limit of set-valued sheaves. -/
 noncomputable def sheafLimitSectionsIso {X : TopCat.{v}} {J : Type v}
@@ -55,7 +55,11 @@ noncomputable def sheafLimitSectionsIso {X : TopCat.{v}} {J : Type v}
     (sheafLimit F).presheaf.obj (op U) ≅
       limit (F ⋙ TopCat.Sheaf.forget (Type v) X ⋙
         (evaluation (Opens X)ᵒᵖ (Type v)).obj (op U)) := by
-  sorry
+  let e₁ := preservesLimitIso (TopCat.Sheaf.forget (Type v) X) F
+  let e₂ := preservesLimitIso
+    ((evaluation (Opens X)ᵒᵖ (Type v)).obj (op U))
+    (F ⋙ TopCat.Sheaf.forget (Type v) X)
+  simpa [sheafLimit] using e₁.trans e₂
 
 /-- Sheafification identifies a sheaf colimit with the sheafification of the
 pointwise presheaf colimit. -/
@@ -64,9 +68,13 @@ noncomputable def sheafColimitSheafificationIso {X : TopCat.{v}}
     (F : J ⥤ TopCat.Sheaf (Type v) X) [HasColimit F]
     [HasColimit (F ⋙ TopCat.Sheaf.forget (Type v) X)] :
     (sheafColimit F).presheaf ≅
-      (CategoryTheory.presheafToSheaf (Opens.grothendieckTopology X) (Type v)).obj
+        (CategoryTheory.presheafToSheaf (Opens.grothendieckTopology X) (Type v)).obj
         (colimit (F ⋙ TopCat.Sheaf.forget (Type v) X)) |>.1 := by
-  sorry
+  let E := colimit.cocone (F ⋙ TopCat.Sheaf.forget (Type v) X)
+  let hE := colimit.isColimit (F ⋙ TopCat.Sheaf.forget (Type v) X)
+  let e := (colimit.isColimit F).uniqueUpToIso
+    (CategoryTheory.Sheaf.isColimitSheafifyCocone E hE)
+  simpa [E] using (TopCat.Sheaf.forget (Type v) X).mapIso e
 
 /-- The inclusion of sheaves into presheaves preserves limits. -/
 theorem sheafForgetPreservesLimits {X : TopCat.{v}} {C : Type (v + 1)}
@@ -80,22 +88,23 @@ theorem sheafificationPreservesColimits {X : TopCat.{v}}
     [HasWeakSheafify (Opens.grothendieckTopology X) C] :
     PreservesColimits
       (CategoryTheory.presheafToSheaf (Opens.grothendieckTopology X) C) := by
-  sorry
+  exact (CategoryTheory.sheafificationAdjunction
+    (Opens.grothendieckTopology X) C).leftAdjoint_preservesColimits
 
 /-- Sheafification preserves finite limits. -/
 theorem sheafificationPreservesFiniteLimits {X : TopCat.{v}}
     {C : Type (v + 1)} [Category.{v} C] [HasFiniteLimits C]
-    [HasWeakSheafify (Opens.grothendieckTopology X) C] :
+    [HasSheafify (Opens.grothendieckTopology X) C] :
     PreservesFiniteLimits
       (CategoryTheory.presheafToSheaf (Opens.grothendieckTopology X) C) := by
-  sorry
+  infer_instance
 
 /-- Sheafification does not preserve arbitrary limits in general. -/
-theorem sheafificationDoesNotPreserveAllLimits {X : TopCat.{v}}
-    {C : Type (v + 1)} [Category.{v} C] [HasLimits C]
-    [HasWeakSheafify (Opens.grothendieckTopology X) C] :
-    ¬ PreservesLimits
-      (CategoryTheory.presheafToSheaf (Opens.grothendieckTopology X) C) := by
+theorem sheafificationDoesNotPreserveAllLimits :
+    ∃ (X : TopCat.{v}),
+      ¬ PreservesLimits
+        (CategoryTheory.presheafToSheaf
+          (Opens.grothendieckTopology X) (Type v)) := by
   sorry
 
 /-! ## Stalks -/
@@ -106,7 +115,11 @@ noncomputable def sheafFiniteLimitStalkIso {X : TopCat.{v}} {J : Type v}
     (sheafLimit F).presheaf.stalk x ≅
       limit (F ⋙ TopCat.Sheaf.forget (Type v) X ⋙
         TopCat.Presheaf.stalkFunctor (Type v) x) := by
-  sorry
+  let e := preservesLimitIso (TopCat.Sheaf.forget (Type v) X) F
+  simpa [sheafLimit] using
+    ((TopCat.Presheaf.stalkFunctor (Type v) x).mapIso e).trans
+      (presheafFiniteLimitStalkIso
+        (F ⋙ TopCat.Sheaf.forget (Type v) X) x)
 
 /-- Stalks commute with arbitrary colimits of set-valued sheaves. -/
 noncomputable def sheafColimitStalkIso {X : TopCat.{v}} {J : Type v}
@@ -116,7 +129,13 @@ noncomputable def sheafColimitStalkIso {X : TopCat.{v}} {J : Type v}
     (sheafColimit F).presheaf.stalk x ≅
       colimit (F ⋙ TopCat.Sheaf.forget (Type v) X ⋙
         TopCat.Presheaf.stalkFunctor (Type v) x) := by
-  sorry
+  let P := colimit (F ⋙ TopCat.Sheaf.forget (Type v) X)
+  let e := sheafColimitSheafificationIso F
+  let e' := (TopCat.Presheaf.stalkFunctor (Type v) x).mapIso e
+  simpa [P] using e'.trans <|
+    (TopCat.Presheaf.sheafifyStalkIso P x).trans
+      (presheafColimitStalkIso
+        (F ⋙ TopCat.Sheaf.forget (Type v) X) x)
 
 /-! ## Directed colimits of sheaves -/
 
@@ -131,10 +150,20 @@ noncomputable def directedColimitSectionsMap {X : TopCat.{v}} {I : Type v}
     (F : I ⥤ TopCat.Sheaf (Type v) X) (U : Opens X) [HasColimit F]
     [HasColimit (F ⋙ TopCat.Sheaf.forget (Type v) X ⋙
       (evaluation (Opens X)ᵒᵖ (Type v)).obj (op U))] :
-    colimit (F ⋙ TopCat.Sheaf.forget (Type v) X ⋙
+      colimit (F ⋙ TopCat.Sheaf.forget (Type v) X ⋙
       (evaluation (Opens X)ᵒᵖ (Type v)).obj (op U)) →
       (sheafColimit F).presheaf.obj (op U) := by
-  sorry
+  let H := F ⋙ TopCat.Sheaf.forget (Type v) X ⋙
+    (evaluation (Opens X)ᵒᵖ (Type v)).obj (op U)
+  let c : Cocone H :=
+    { pt := (sheafColimit F).presheaf.obj (op U)
+      ι :=
+        { app := fun i => (colimit.ι F i).hom.app (op U)
+          naturality := by
+            intro i j f
+            simpa using congrArg (fun k => k.hom.app (op U))
+              ((colimit.ι F).naturality f) } }
+  exact colimit.desc H c
 
 /-- All transition maps in a directed system are injective on sections over
 an open. -/

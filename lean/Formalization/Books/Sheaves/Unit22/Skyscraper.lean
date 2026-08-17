@@ -126,10 +126,35 @@ noncomputable def moduleSkyscraperSheaf {X : TopCat.{v}}
 
 /-- The stalk functor on sheaves of `O`-modules, with its canonical stalk
 module structure. -/
+noncomputable def moduleStalkAddMap {X : TopCat.{v}} {O : RingSheaf X}
+    {F G : Mod O} (φ : F ⟶ G) (x : X) :
+    TopCat.Presheaf.stalk (C := AddCommGrpCat.{v}) F.val.presheaf x ⟶
+      TopCat.Presheaf.stalk (C := AddCommGrpCat.{v}) G.val.presheaf x :=
+  (TopCat.Presheaf.stalkFunctor (AddCommGrpCat.{v}) x).map
+    ((PresheafOfModules.toPresheaf O.obj).map φ.val)
+
+theorem moduleStalkAddMap_smul {X : TopCat.{v}} {O : RingSheaf X}
+    {F G : Mod O} (φ : F ⟶ G) (x : X)
+    (r : TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x) :
+    moduleStalkAddMap φ x ≫
+        (ModuleCat.of (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x)
+          (↑(TopCat.Presheaf.stalk (C := AddCommGrpCat.{v}) G.val.presheaf x))).smul r =
+      (ModuleCat.of (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x)
+        (↑(TopCat.Presheaf.stalk (C := AddCommGrpCat.{v}) F.val.presheaf x))).smul r ≫
+        moduleStalkAddMap φ x := by
+  sorry
+
 noncomputable def moduleStalkFunctor {X : TopCat.{v}}
     (O : RingSheaf X) (x : X) :
-    Mod O ⥤ ModuleCat.{v} (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x) := by
-  sorry
+    Mod O ⥤ ModuleCat.{v} (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x) where
+  obj F :=
+    ModuleCat.of (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x)
+      (↑(TopCat.Presheaf.stalk (C := AddCommGrpCat.{v}) F.val.presheaf x))
+  map φ := ModuleCat.homMk (moduleStalkAddMap φ x) (moduleStalkAddMap_smul φ x)
+  map_id := by
+    sorry
+  map_comp := by
+    sorry
 
 /-- Functoriality of the module skyscraper construction in its stalk-module
 value. -/

@@ -112,7 +112,12 @@ noncomputable def realContinuousFunctionRingSheaf (X : TopCat) :
     RingSheaf X :=
   { obj := realContinuousFunctionRingPresheaf X
     property := by
-      sorry }
+      exact categoryValuedSheaf_of_underlying_isSheaf
+        (CategoryTheory.forget RingCat)
+        (realContinuousFunctionRingPresheaf X)
+        (by
+          simpa [realContinuousFunctionRingPresheaf, Functor.assoc] using
+            (realContinuousFunctionPresheaf_underlying_isSheaf X)) }
 
 /-- Pullback of a real-valued continuous function along a continuous map is a
 map of sheaves of rings. -/
@@ -121,7 +126,27 @@ noncomputable def continuousFunctionRingedSharp {X Y : TopCat}
     AlgebraicFMap (C := RingCat) f
       (realContinuousFunctionRingSheaf Y)
       (realContinuousFunctionRingSheaf X) := by
-  sorry
+  let preimageMap (V : Opens Y) :
+      (Opens.toTopCat X).obj ((Opens.map f).obj V) ⟶
+        (Opens.toTopCat Y).obj V :=
+    TopCat.ofHom
+      { toFun := fun x => ⟨f.hom x.1, x.2⟩
+        continuous_toFun :=
+          Continuous.subtype_mk
+            (f.hom.continuous.comp continuous_subtype_val) (fun _ => by assumption) }
+  let α : realContinuousFunctionRingPresheaf Y ⟶
+      (TopCat.Presheaf.pushforward RingCat f).obj
+        (realContinuousFunctionRingPresheaf X) :=
+    { app := fun V =>
+        (forget₂ CommRingCat RingCat).map
+          (TopCat.continuousFunctions.pullback
+            (preimageMap V.unop).op (TopCommRingCat.of ℝ))
+      naturality := by
+        intro U V i
+        apply RingCat.hom_ext
+        ext φ
+        rfl }
+  exact ObjectProperty.homMk α
 
 /-- The continuous-function construction gives a ringed-space morphism. -/
 noncomputable def continuousFunctionRingedSpaceHom {X Y : TopCat}

@@ -38,7 +38,8 @@ noncomputable def ringedSpaceInverseImageModule {X Y : RingedSpace.{v}}
     (f : RingedSpaceHom X Y) :
     Mod Y.structureSheaf ⥤
       Mod ((moduleRingSheafPullback f.continuous).obj Y.structureSheaf) := by
-  sorry
+  exact moduleSheafPullbackAlong f.continuous
+    (moduleSheafPullbackUnit f.continuous Y.structureSheaf)
 
 /-- Pushforward of modules along a morphism of ringed spaces. -/
 noncomputable def ringedSpaceModulePushforward {X Y : RingedSpace.{v}}
@@ -49,17 +50,8 @@ noncomputable def ringedSpaceModulePushforward {X Y : RingedSpace.{v}}
 /-- Pullback of modules along a morphism of ringed spaces. -/
 noncomputable def ringedSpaceModulePullback {X Y : RingedSpace.{v}}
     (f : RingedSpaceHom X Y) :
-    Mod Y.structureSheaf ⥤ Mod X.structureSheaf where
-  obj G := tensorProductSheaf (ringedSpacePullbackRingMap f)
-    ((ringedSpaceInverseImageModule f).obj G)
-  map φ := by
-    sorry
-  map_id := by
-    intros
-    sorry
-  map_comp := by
-    intros
-    sorry
+    Mod Y.structureSheaf ⥤ Mod X.structureSheaf :=
+  moduleSheafPullbackAlong f.continuous f.sharp
 
 /-- The source's formula for the pullback module as a tensor product over the
 inverse-image structure sheaf. -/
@@ -79,7 +71,8 @@ morphism. -/
 noncomputable def ringedSpaceModuleAdjunction {X Y : RingedSpace.{v}}
     (f : RingedSpaceHom X Y) :
     ringedSpaceModulePullback f ⊣ ringedSpaceModulePushforward f := by
-  sorry
+  exact SheafOfModules.pullbackPushforwardAdjunction
+    (F := Opens.map f.continuous) f.sharp
 
 /-- The canonical module Hom correspondence for a ringed-space morphism. -/
 noncomputable abbrev ringedSpaceModuleHomEquiv {X Y : RingedSpace.{v}}
@@ -96,7 +89,10 @@ noncomputable def ringedSpaceModulePushforwardCompIso
     (g : RingedSpaceHom Y Z) :
     ringedSpaceModulePushforward f ⋙ ringedSpaceModulePushforward g ≅
       ringedSpaceModulePushforward (RingedSpaceHom.comp f g) := by
-  sorry
+  simpa [ringedSpaceModulePushforward, moduleSheafPushforwardAlong,
+    RingedSpaceHom.comp, algebraicFMapComp] using
+    (SheafOfModules.pushforwardComp (F := Opens.map g.continuous)
+      (G := Opens.map f.continuous) g.sharp f.sharp)
 
 /-- Pullback of modules is canonically compatible with composition. -/
 noncomputable def ringedSpaceModulePullbackCompIso
@@ -104,7 +100,10 @@ noncomputable def ringedSpaceModulePullbackCompIso
     (g : RingedSpaceHom Y Z) :
     ringedSpaceModulePullback (RingedSpaceHom.comp f g) ≅
       ringedSpaceModulePullback g ⋙ ringedSpaceModulePullback f := by
-  sorry
+  simpa [ringedSpaceModulePullback, moduleSheafPullbackAlong,
+    RingedSpaceHom.comp, algebraicFMapComp] using
+    (SheafOfModules.pullbackComp (F := Opens.map g.continuous)
+      (G := Opens.map f.continuous) g.sharp f.sharp).symm
 
 /-- A module `f`-map is a morphism to the module pushforward. -/
 abbrev RingedSpaceModuleFMap {X Y : RingedSpace.{v}}
@@ -127,7 +126,8 @@ noncomputable def ringedSpaceModuleFMapComp
     (φ : RingedSpaceModuleFMap f G F)
     (ψ : RingedSpaceModuleFMap g H G) :
     RingedSpaceModuleFMap (RingedSpaceHom.comp f g) H F := by
-  sorry
+  exact ψ ≫ (ringedSpaceModulePushforward g).map φ ≫
+    (ringedSpaceModulePushforwardCompIso f g).hom.app F
 
 /-! ## Stalks -/
 
@@ -137,7 +137,21 @@ noncomputable def ringedSpaceStalkPullbackModule
     (G : Mod Y.structureSheaf) (x : X) :
     ModuleCat (TopCat.Presheaf.stalk (C := RingCat.{v})
       X.structureSheaf.obj x) := by
-  sorry
+  let e : TopCat.Presheaf.stalk (C := RingCat.{v})
+        Y.structureSheaf.obj (f.continuous x) ≅
+      TopCat.Presheaf.stalk (C := RingCat.{v})
+        ((moduleRingSheafPullback f.continuous).obj Y.structureSheaf).obj x :=
+    Classical.choice (algebraicSheafPullback_stalk_formula
+      (C := RingCat.{v}) f.continuous Y.structureSheaf x)
+  let α := e.hom ≫
+    (TopCat.Presheaf.stalkFunctor (RingCat.{v}) x).map
+      (ringedSpacePullbackRingMap f).hom
+  exact (ModuleCat.extendScalars α.hom).obj
+    (ModuleCat.of
+      (TopCat.Presheaf.stalk (C := RingCat.{v})
+        Y.structureSheaf.obj (f.continuous x))
+      (↑(TopCat.Presheaf.stalk (C := AddCommGrpCat.{v})
+        G.val.presheaf (f.continuous x))))
 
 /-- The stalk map of a module `f`-map, regarded as a map of modules after
 restricting scalars along the stalk of `f^sharp`. -/

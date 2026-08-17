@@ -128,7 +128,7 @@ noncomputable abbrev modulePresheafCounit {X Y : TopCat.{v}}
     (modulePresheafPullback f).obj
         ((modulePresheafPushforwardAlong f
           ((TopCat.Presheaf.pullbackPushforwardAdjunction RingCat f).unit.app O)).obj F) ⟶ F := by
-  sorry
+  exact (modulePresheafPullbackPushforwardAdjunction f).counit.app F
 
 /-! ## Tensor and change of scalars -/
 
@@ -324,6 +324,31 @@ noncomputable abbrev moduleSheafFMapStalkTarget {X Y : TopCat.{v}}
     (ModuleCat.of (TopCat.Presheaf.stalk (C := RingCat.{v}) O_X.obj x)
       (↑(TopCat.Presheaf.stalk (C := AddCommGrpCat.{v}) F.val.presheaf x)))
 
+/-- The underlying additive morphism on stalks of a module `f`-map. -/
+noncomputable abbrev moduleSheafFMapStalkAddMap {X Y : TopCat.{v}}
+    {O_X : RingSheaf X} {O_Y : RingSheaf Y} {f : X ⟶ Y}
+    (α : O_Y ⟶ (moduleRingSheafPushforward f).obj O_X)
+    {G : Mod O_Y} {F : Mod O_X} (φ : ModuleSheafFMap f α G F) (x : X) :
+    TopCat.Presheaf.stalk (C := AddCommGrpCat.{v}) G.val.presheaf (f x) ⟶
+      TopCat.Presheaf.stalk (C := AddCommGrpCat.{v}) F.val.presheaf x :=
+  (TopCat.Presheaf.stalkFunctor (AddCommGrpCat.{v}) (f x)).map
+      ((PresheafOfModules.toPresheaf O_Y.obj).map φ.val) ≫
+    F.val.presheaf.stalkPushforward (AddCommGrpCat.{v}) f x
+
+/-- The stalk additive map of a module `f`-map is linear for the scalar map
+induced by the ring `f`-map. -/
+theorem moduleSheafFMapStalkAddMap_smul {X Y : TopCat.{v}}
+    {O_X : RingSheaf X} {O_Y : RingSheaf Y} {f : X ⟶ Y}
+    (α : O_Y ⟶ (moduleRingSheafPushforward f).obj O_X)
+    {G : Mod O_Y} {F : Mod O_X} (φ : ModuleSheafFMap f α G F) (x : X)
+    (r : TopCat.Presheaf.stalk (C := RingCat.{v}) O_Y.obj (f x)) :
+    moduleSheafFMapStalkAddMap α φ x ≫
+        (moduleSheafFMapStalkTarget α F x).smul r =
+      (ModuleCat.of (TopCat.Presheaf.stalk (C := RingCat.{v}) O_Y.obj (f x))
+        (↑(TopCat.Presheaf.stalk (C := AddCommGrpCat.{v}) G.val.presheaf (f x)))).smul r ≫
+        moduleSheafFMapStalkAddMap α φ x := by
+  sorry
+
 /-- The induced module morphism on stalks of a module `f`-map. -/
 noncomputable def moduleSheafFMapStalkMap {X Y : TopCat.{v}}
     {O_X : RingSheaf X} {O_Y : RingSheaf Y} {f : X ⟶ Y}
@@ -332,7 +357,8 @@ noncomputable def moduleSheafFMapStalkMap {X Y : TopCat.{v}}
     ModuleCat.of (TopCat.Presheaf.stalk (C := RingCat.{v}) O_Y.obj (f x))
         (↑(TopCat.Presheaf.stalk (C := AddCommGrpCat.{v}) G.val.presheaf (f x))) ⟶
       moduleSheafFMapStalkTarget α F x := by
-  sorry
+  exact ModuleCat.homMk (moduleSheafFMapStalkAddMap α φ x)
+    (moduleSheafFMapStalkAddMap_smul α φ x)
 
 theorem moduleSheafFMap_stalk_linear {X Y : TopCat.{v}}
     {O_X : RingSheaf X} {O_Y : RingSheaf Y} {f : X ⟶ Y}

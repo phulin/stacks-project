@@ -107,7 +107,37 @@ theorem openSheafRestriction_directImage_iso {C : Type u} [Category.{v} C]
 noncomputable def openPresheafExtensionByInitial (C : Type u) [Category.{v} C]
     [HasInitial C] {X : TopCat.{v}} (U : Opens X) :
     TopCat.Presheaf C (openSubspace U) ⥤ TopCat.Presheaf C X := by
-  sorry
+  classical
+  let j := Opens.map (openInclusion U)
+  exact {
+    obj := fun F => {
+      obj := fun V => if V.unop ≤ U then F.obj (j.op.obj V) else ⊥_ C
+      map := by
+        intro V W i
+        by_cases hV : V.unop ≤ U
+        · have hW : W.unop ≤ U := by
+            exact (show W.unop ≤ V.unop from i.unop).trans hV
+          exact eqToHom (by simp [hV]) ≫ F.map (j.op.map i) ≫
+            eqToHom (by simp [hW])
+        · exact eqToHom (by simp [hV]) ≫ initial.to _
+      map_id := by
+        sorry
+      map_comp := by
+        sorry
+    }
+    map := fun {F G} φ => {
+      app := fun V => if hV : V.unop ≤ U then
+          eqToHom (by simp [hV]) ≫ φ.app (j.op.obj V) ≫
+            eqToHom (by simp [hV])
+        else eqToHom (by simp [hV]) ≫ initial.to _
+      naturality := by
+        sorry
+    }
+    map_id := by
+      sorry
+    map_comp := by
+      sorry
+  }
 
 /-- Extension by the empty set for set-valued presheaves. -/
 noncomputable abbrev openPresheafExtensionByEmpty {X : TopCat.{v}} (U : Opens X) :
@@ -187,7 +217,7 @@ noncomputable def openAlgebraicSheafExtensionAdjunction (C : Type u) [Category.{
     [HasInitial C] {X : TopCat.{v}} (U : Opens X)
     [HasWeakSheafify (Opens.grothendieckTopology X) C] :
     openAlgebraicSheafExtensionFunctor C U ⊣ openSheafRestriction C U := by
-  sorry
+  exact openSheafExtensionAdjunction C U
 
 /-- Initial stalk outside the open for an algebraic-structure extension. -/
 theorem openAlgebraicSheafExtension_stalk_initial (C : Type u) [Category.{v} C]
@@ -221,7 +251,13 @@ def ringedOpenSubspace (X : RingedSpace.{v}) (U : Opens X.carrier) : RingedSpace
 noncomputable def ringedOpenInclusion (X : RingedSpace.{v}) (U : Opens X.carrier) :
     RingedSpaceHom (ringedOpenSubspace X U) X where
   continuous := openInclusion U
-  sharp := by sorry
+  sharp := by
+    let hU : IsOpenEmbedding (openInclusion U) := U.isOpenEmbedding
+    exact (TopCat.Sheaf.pullbackPushforwardAdjunction RingCat
+      (openInclusion U)).unit.app X.structureSheaf ≫
+      (TopCat.Sheaf.pushforward RingCat (openInclusion U)).map
+        ((Topology.IsOpenEmbedding.sheafPullbackIso (A := RingCat) hU).app
+          X.structureSheaf).hom
 
 /-- Extension by zero for modules on an open subspace. -/
 noncomputable def openModuleExtensionFunctor (X : RingedSpace.{v}) (U : Opens X.carrier) :

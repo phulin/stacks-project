@@ -47,115 +47,12 @@ noncomputable instance presheafModule_hasDerivedCategory
     HasDerivedCategory (PMod X.structureSheaf.obj) :=
   HasDerivedCategory.standard _
 
-/-! The inclusion `i_X : Mod(O_X) ⥤ PMod(O_X)`. -/
-
-/- The source calls this functor left exact.  The interface is kept explicit
-  because it is used both for the interpretation of `underline H` and in the
-  Daniel remark at the end of the section. -/
-noncomputable def sheafModuleUnderlyingPresheafFunctor (X : RingedSpace.{v}) :
-    Mod X.structureSheaf ⥤ PMod X.structureSheaf.obj :=
-  SheafOfModules.forget X.structureSheaf
-
-theorem sheafModuleUnderlyingPresheafFunctor_isLeftExact
-    (X : RingedSpace.{v}) :
-    IsLeftExact (sheafModuleUnderlyingPresheafFunctor X) := by
-  sorry
-
-/-! The sheaf `Hⁱ(U,F)` of the source, with its restriction maps. -/
-
-/- Defining this by the canonical higher right-derived functor makes the
-  presheaf structure and functoriality in `F` part of the type, rather than
-  introducing a parallel family of maps. -/
-noncomputable def localCohomologyPresheafFunctor
-    (X : RingedSpace.{v}) (i : ℤ) :
-    Mod X.structureSheaf ⥤ PMod X.structureSheaf.obj :=
-  higherRightDerivedFunctor
-    (sheafModuleUnderlyingPresheafFunctor X)
-    (sheafModuleUnderlyingPresheafFunctor_isLeftExact X) i
-
 /- The source's `Hⁱ(U,F)` is the derived sections object from Chapter 3. -/
 noncomputable abbrev cohomologyOnOpenModule
     (X : RingedSpace.{v}) (U : Opens X.carrier)
     (F : Mod X.structureSheaf) (i : ℤ) :
     ModuleCat.{v} (X.structureSheaf.obj.obj (op U)) :=
   ringedSpaceModuleSectionsCohomologyObject X U F i
-
-/- The object of the canonical cohomology presheaf at `U`. -/
-noncomputable abbrev localCohomologyPresheafObject
-    (X : RingedSpace.{v}) (U : Opens X.carrier)
-    (F : Mod X.structureSheaf) (i : ℤ) :
-    ModuleCat.{v} (X.structureSheaf.obj.obj (op U)) :=
-  ((localCohomologyPresheafFunctor X i).obj F).obj (op U)
-
-/-- The objectwise interpretation of `U ↦ Hⁱ(U,F)` by derived sections. -/
-theorem localCohomologyPresheafObject_iso
-    (X : RingedSpace.{v}) (U : Opens X.carrier)
-    (F : Mod X.structureSheaf) (i : ℤ) :
-    Nonempty (localCohomologyPresheafObject X U F i ≅
-      cohomologyOnOpenModule X U F i) := by
-  sorry
-
-/- A chosen comparison is useful for source-facing class and restriction
-  declarations.  Its existence is the preceding source-faithful theorem. -/
-noncomputable def localCohomologyPresheafObjectIso
-    (X : RingedSpace.{v}) (U : Opens X.carrier)
-    (F : Mod X.structureSheaf) (i : ℤ) :
-    localCohomologyPresheafObject X U F i ≅
-      cohomologyOnOpenModule X U F i :=
-  Classical.choice (localCohomologyPresheafObject_iso X U F i)
-
-/- The restriction morphism in the presheaf itself.  Its source and target
-  are the module-valued form of Equation (restriction-mapping). -/
-noncomputable abbrev localCohomologyPresheafRestriction
-    (X : RingedSpace.{v}) (F : Mod X.structureSheaf) (i : ℤ)
-    {U V : Opens X.carrier} (h : U ≤ V) :
-    localCohomologyPresheafObject X V F i ⟶
-      (ModuleCat.restrictScalars
-        (X.structureSheaf.1.map (homOfLE h).op).hom).obj
-        (localCohomologyPresheafObject X U F i) :=
-  ((localCohomologyPresheafFunctor X i).obj F).map (homOfLE h).op
-
-/- The same restriction map transported to the Chapter 3 derived-sections
- objects. -/
-noncomputable def cohomologyRestrictionMap
-    (X : RingedSpace.{v}) (F : Mod X.structureSheaf) (i : ℤ)
-    {U V : Opens X.carrier} (h : U ≤ V) :
-    cohomologyOnOpenModule X V F i ⟶
-      (ModuleCat.restrictScalars
-        (X.structureSheaf.1.map (homOfLE h).op).hom).obj
-        (cohomologyOnOpenModule X U F i) :=
-      (localCohomologyPresheafObjectIso X V F i).inv ≫
-    localCohomologyPresheafRestriction X F i h ≫
-      (ModuleCat.restrictScalars
-        (X.structureSheaf.1.map (homOfLE h).op).hom).map
-        (localCohomologyPresheafObjectIso X U F i).hom
-
-/-- The restriction map of Equation (restriction-mapping), on sections
- cohomology objects. -/
-abbrev cohomologyRestrictionMapValue
-    (X : RingedSpace.{v}) (F : Mod X.structureSheaf) (i : ℤ)
-    {U V : Opens X.carrier} (h : U ≤ V)
-    (ξ : cohomologyOnOpenModule X V F i) :
-    (ModuleCat.restrictScalars
-      (X.structureSheaf.1.map (homOfLE h).op).hom).obj
-      (cohomologyOnOpenModule X U F i) :=
-  (cohomologyRestrictionMap X F i h).hom ξ
-
-/- The presheaf laws give identity and composition of restriction maps, and
- the functoriality in `F` is the functoriality of
- `localCohomologyPresheafFunctor`.  The following theorem records the latter
- after transport to the source-facing derived-sections objects. -/
-theorem cohomologyRestrictionMap_natural
-    (X : RingedSpace.{v}) (i : ℤ)
-    {F G : Mod X.structureSheaf} (φ : F ⟶ G)
-    {U V : Opens X.carrier} (h : U ≤ V) :
-    cohomologyRestrictionMap X F i h ≫
-        (ModuleCat.restrictScalars
-          (X.structureSheaf.1.map (homOfLE h).op).hom).map
-          ((ringedSpaceModuleSectionsCohomology X U i).map φ) =
-      (ringedSpaceModuleSectionsCohomology X V i).map φ ≫
-        cohomologyRestrictionMap X G i h := by
-  sorry
 
 /-! ## Injective restriction and cohomology of an open -/
 
@@ -210,6 +107,109 @@ theorem cohomology_of_open
       cohomologyOfRestrictedSheafAdditive X U F i) := by
   sorry
 
+/-! The inclusion `i_X : Mod(O_X) ⥤ PMod(O_X)`. -/
+
+/- The source calls this functor left exact.  The interface is kept explicit
+  because it is used both for the interpretation of `underline H` and in the
+  Daniel remark at the end of the section. -/
+noncomputable def sheafModuleUnderlyingPresheafFunctor (X : RingedSpace.{v}) :
+    Mod X.structureSheaf ⥤ PMod X.structureSheaf.obj :=
+  SheafOfModules.forget X.structureSheaf
+
+theorem sheafModuleUnderlyingPresheafFunctor_isLeftExact
+    (X : RingedSpace.{v}) :
+    IsLeftExact (sheafModuleUnderlyingPresheafFunctor X) := by
+  sorry
+
+/-! The sheaf `Hⁱ(U,F)` of the source, with its restriction maps. -/
+
+/- Defining this by the canonical higher right-derived functor makes the
+  presheaf structure and functoriality in `F` part of the type, rather than
+  introducing a parallel family of maps. -/
+noncomputable def localCohomologyPresheafFunctor
+    (X : RingedSpace.{v}) (i : ℤ) :
+    Mod X.structureSheaf ⥤ PMod X.structureSheaf.obj :=
+  higherRightDerivedFunctor
+    (sheafModuleUnderlyingPresheafFunctor X)
+    (sheafModuleUnderlyingPresheafFunctor_isLeftExact X) i
+
+/- The object of the canonical cohomology presheaf at `U`. -/
+noncomputable abbrev localCohomologyPresheafObject
+    (X : RingedSpace.{v}) (U : Opens X.carrier)
+    (F : Mod X.structureSheaf) (i : ℤ) :
+    ModuleCat.{v} (X.structureSheaf.obj.obj (op U)) :=
+  ((localCohomologyPresheafFunctor X i).obj F).obj (op U)
+
+/-- The objectwise interpretation of `U ↦ Hⁱ(U,F)` by derived sections. -/
+theorem localCohomologyPresheafObject_iso
+    (X : RingedSpace.{v}) (U : Opens X.carrier)
+    (F : Mod X.structureSheaf) (i : ℤ) :
+    Nonempty (localCohomologyPresheafObject X U F i ≅
+      cohomologyOnOpenModule X U F i) := by
+  sorry
+
+/- A chosen comparison is useful for source-facing class and restriction
+  declarations.  Its existence is the preceding source-faithful theorem. -/
+noncomputable def localCohomologyPresheafObjectIso
+    (X : RingedSpace.{v}) (U : Opens X.carrier)
+    (F : Mod X.structureSheaf) (i : ℤ) :
+    localCohomologyPresheafObject X U F i ≅
+      cohomologyOnOpenModule X U F i :=
+  Classical.choice (localCohomologyPresheafObject_iso X U F i)
+
+/- The restriction morphism in the presheaf itself.  Its source and target
+  are the module-valued form of Equation (restriction-mapping). -/
+noncomputable abbrev localCohomologyPresheafRestriction
+    (X : RingedSpace.{v}) (F : Mod X.structureSheaf) (i : ℤ)
+    {U V : Opens X.carrier} (h : U ≤ V) :
+    localCohomologyPresheafObject X V F i ⟶
+      (ModuleCat.restrictScalars
+        (X.structureSheaf.1.map (homOfLE h).op).hom).obj
+        (localCohomologyPresheafObject X U F i) :=
+  ((localCohomologyPresheafFunctor X i).obj F).map (homOfLE h).op
+
+/- The same restriction map transported to the Chapter 3 derived-sections
+ objects. -/
+noncomputable def cohomologyRestrictionMap
+    (X : RingedSpace.{v}) (F : Mod X.structureSheaf) (i : ℤ)
+    {U V : Opens X.carrier} (h : U ≤ V) :
+    cohomologyOnOpenModule X V F i ⟶
+      (ModuleCat.restrictScalars
+        (X.structureSheaf.1.map (homOfLE h).op).hom).obj
+        (cohomologyOnOpenModule X U F i) :=
+      (localCohomologyPresheafObjectIso X V F i).inv ≫
+    localCohomologyPresheafRestriction X F i h ≫
+      (ModuleCat.restrictScalars
+        (X.structureSheaf.1.map (homOfLE h).op).hom).map
+        (localCohomologyPresheafObjectIso X U F i).hom
+
+/- The restriction map of Equation (restriction-mapping), on sections
+ cohomology objects. -/
+abbrev cohomologyRestrictionMapValue
+    (X : RingedSpace.{v}) (F : Mod X.structureSheaf) (i : ℤ)
+    {U V : Opens X.carrier} (h : U ≤ V)
+    (ξ : cohomologyOnOpenModule X V F i) :
+    (ModuleCat.restrictScalars
+      (X.structureSheaf.1.map (homOfLE h).op).hom).obj
+      (cohomologyOnOpenModule X U F i) :=
+  (cohomologyRestrictionMap X F i h).hom ξ
+
+/- The presheaf laws give identity and composition of restriction maps, and
+ the functoriality in `F` is the functoriality of
+ `localCohomologyPresheafFunctor`.  The following theorem records the latter
+ after transport to the source-facing derived-sections objects. -/
+theorem cohomologyRestrictionMap_natural
+    (X : RingedSpace.{v}) (i : ℤ)
+    {F G : Mod X.structureSheaf} (φ : F ⟶ G)
+    {U V : Opens X.carrier} (h : U ≤ V) :
+    cohomologyRestrictionMap X F i h ≫
+        (ModuleCat.restrictScalars
+          (X.structureSheaf.1.map (homOfLE h).op).hom).map
+          ((ringedSpaceModuleSectionsCohomology X U i).map φ) =
+      (ringedSpaceModuleSectionsCohomology X V i).map φ ≫
+        cohomologyRestrictionMap X G i h := by
+  sorry
+
 /-! ## Local vanishing of a positive-degree class -/
 
 /-- A positive-degree cohomology class becomes zero on every member of an
@@ -257,6 +257,20 @@ noncomputable abbrev presheafHigherDirectImageObject
     {X Y : RingedSpace.{v}} (f : RingedSpaceHom X Y)
     (F : Mod X.structureSheaf) (i : ℤ) : PMod Y.structureSheaf.obj :=
   (presheafHigherDirectImageFunctor f i).obj F
+
+/- The restriction maps of the presheaf in Lemma
+`describe-higher-direct-images`.  Keeping this as the canonical presheaf map
+also records the compatibility of the local cohomology description with
+restriction in the target open. -/
+noncomputable abbrev higherDirectImageRestriction
+    {X Y : RingedSpace.{v}} (f : RingedSpaceHom X Y)
+    (F : Mod X.structureSheaf) (i : ℤ)
+    {V W : Opens Y.carrier} (h : V ≤ W) :
+    (presheafHigherDirectImageObject f F i).obj (op W) ⟶
+      (ModuleCat.restrictScalars
+        (Y.structureSheaf.1.map (homOfLE h).op).hom).obj
+        ((presheafHigherDirectImageObject f F i).obj (op V)) :=
+  (presheafHigherDirectImageObject f F i).map (homOfLE h).op
 
 noncomputable abbrev higherDirectImageObject
     {X Y : RingedSpace.{v}} (f : RingedSpaceHom X Y)
@@ -395,11 +409,17 @@ noncomputable def presheafHigherDirectImageComplexFunctor
       (presheafHigherDirectImageFunctor_isLeftExact f) ⋙
     DerivedCategory.Plus.homologyFunctor (PMod Y.structureSheaf.obj) i
 
+noncomputable abbrev presheafHigherDirectImageComplexObject
+    {X Y : RingedSpace.{v}} (f : RingedSpaceHom X Y)
+    (K : CompPlus (Mod X.structureSheaf)) (i : ℤ) :
+    PMod Y.structureSheaf.obj :=
+  (presheafHigherDirectImageComplexFunctor f i).obj K
+
 theorem presheafHigherDirectImageComplexObject_obj_iso
     {X Y : RingedSpace.{v}} (f : RingedSpaceHom X Y)
     (K : CompPlus (Mod X.structureSheaf)) (i : ℤ) (V : Opens Y.carrier) :
     Nonempty (
-      ((presheafHigherDirectImageComplexFunctor f i).obj K).obj (op V) ≅
+      (presheafHigherDirectImageComplexObject f K i).obj (op V) ≅
         (ModuleCat.restrictScalars
           (higherDirectImageScalarMap f V).hom).obj
           ((ModuleCat.restrictScalars
@@ -420,7 +440,7 @@ theorem higherDirectImageComplex_is_sheafification
     Nonempty (
       (PresheafOfModules.sheafification
         (𝟙 Y.structureSheaf.obj)).obj
-        ((presheafHigherDirectImageComplexFunctor f i).obj K) ≅
+        (presheafHigherDirectImageComplexObject f K i) ≅
       higherDirectImageComplexObject f K i) := by
   sorry
 

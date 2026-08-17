@@ -1,5 +1,6 @@
 import Mathlib.Algebra.Algebra.Pi
 import Mathlib.FieldTheory.IsAlgClosed.Basic
+import Mathlib.FieldTheory.PrimitiveElement
 import Mathlib.FieldTheory.Separable
 import Mathlib.LinearAlgebra.LinearIndependent.Lemmas
 import Mathlib.RingTheory.TensorProduct.Maps

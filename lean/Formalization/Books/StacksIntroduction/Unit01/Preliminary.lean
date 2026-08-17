@@ -210,7 +210,26 @@ theorem exists_ellipticCurveMorphism_comp
     (α : EllipticCurveMorphism a E E')
     (β : EllipticCurveMorphism a' E' E'') :
     Nonempty (EllipticCurveMorphism (a ≫ a') E E'') := by
-  sorry
+  refine ⟨{
+    hom := α.hom ≫ β.hom
+    projection_comm := by
+      calc
+        (α.hom ≫ β.hom) ≫ E''.projection =
+            α.hom ≫ (β.hom ≫ E''.projection) := Category.assoc _ _ _
+        _ = α.hom ≫ (E'.projection ≫ a') := by rw [β.projection_comm]
+        _ = (α.hom ≫ E'.projection) ≫ a' := (Category.assoc _ _ _).symm
+        _ = (E.projection ≫ a) ≫ a' := by rw [α.projection_comm]
+        _ = E.projection ≫ (a ≫ a') := Category.assoc _ _ _
+    section_comm := by
+      calc
+        E.zero ≫ (α.hom ≫ β.hom) =
+            (E.zero ≫ α.hom) ≫ β.hom := (Category.assoc _ _ _).symm
+        _ = (a ≫ E'.zero) ≫ β.hom := by rw [α.section_comm]
+        _ = a ≫ (E'.zero ≫ β.hom) := Category.assoc _ _ _
+        _ = a ≫ (a' ≫ E''.zero) := by rw [β.section_comm]
+        _ = (a ≫ a') ≫ E''.zero := (Category.assoc _ _ _).symm
+    cartesian := α.cartesian.paste_horiz β.cartesian
+  }⟩
 
 /-- A chosen composite witness for the 2-categorical composition interface. -/
 noncomputable def EllipticCurveMorphism.comp

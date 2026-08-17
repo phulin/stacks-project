@@ -1,6 +1,5 @@
 import Formalization.Books.Exercises.Unit26.Core
 import Mathlib.Data.Nat.Choose.Basic
-import Mathlib.Data.Nat.Prime.Basic
 import Mathlib.FieldTheory.IsAlgClosed.Basic
 import Mathlib.RingTheory.Ideal.Quotient.Noetherian
 import Mathlib.RingTheory.Finiteness.Basic
@@ -46,19 +45,15 @@ theorem eulerPoincareFunction_field_formula (k : Type u) [Field k]
 
 /-! ## Exercise 2: Euler–Poincaré functions over the integers -/
 
-/-- The cyclic `ℤ`-module of order `p`. -/
-abbrev integerPrimeComponent (p : Nat.Primes) : Type :=
-  ℤ ⧸ Ideal.span {(p.1 : ℤ)}
+/-- The value of an Euler–Poincaré function on the rank-one free `ℤ`-module. -/
+def integerEulerParameter (φ : EulerPoincareFunction ℤ) : ℤ :=
+  φ (FGModuleCat.of ℤ ℤ)
 
-/-- The rank parameter and the parameters on the cyclic modules of prime order. -/
-def integerEulerParameters (φ : EulerPoincareFunction ℤ) : ℤ × (Nat.Primes → ℤ) :=
-  (φ (FGModuleCat.of ℤ ℤ),
-    fun p => φ (FGModuleCat.of ℤ (integerPrimeComponent p)))
-
-/-- The additive invariants of finitely generated abelian groups are exactly
-the independent integer choices on `ℤ` and on `ℤ/p` for every prime `p`. -/
+/-- Additivity forces every finite torsion module to have value zero, so an
+Euler–Poincaré function on finitely generated abelian groups is determined by
+its single value on `ℤ`. -/
 theorem eulerPoincareFunction_integer_classification :
-    Function.Bijective integerEulerParameters := by
+    Function.Bijective integerEulerParameter := by
   sorry
 
 /-! ## Exercise 3: the node `k[x,y]/(xy)` -/
@@ -119,6 +114,16 @@ theorem kernel_of_graded_map_is_locally_finite
 
 /-- The weights `2` and `3` on the two polynomial variables. -/
 def twoThreeWeights : Fin 2 → ℕ := fun i => if i = 0 then 2 else 3
+
+/-! Mathlib supplies the multiplication-compatible grading used by the
+weighted polynomial example. -/
+
+/-- The canonical weighted graded-algebra structure on `k[x,y]`. -/
+@[instance_reducible]
+def weightedPolynomialGradedAlgebra (k : Type u) [Field k] :
+    GradedAlgebra
+      (MvPolynomial.weightedHomogeneousSubmodule k twoThreeWeights) :=
+  MvPolynomial.weightedGradedAlgebra k twoThreeWeights
 
 /-- The canonical weighted decomposition of `k[x,y]` with weights `2` and `3`. -/
 def weightedPolynomialGradedModule (k : Type u) [Field k] :
@@ -223,4 +228,3 @@ theorem hypersurface_hilbert_polynomial (d : ℕ) (hd : 0 < d) :
   sorry
 
 end Formalization.Books.Exercises.Unit26
-

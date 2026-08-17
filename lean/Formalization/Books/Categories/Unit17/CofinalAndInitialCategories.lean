@@ -76,6 +76,15 @@ noncomputable def colimit_comp_iso_of_cofinal
     colimit (H ⋙ M) ≅ colimit M :=
   Functor.Final.colimitIso H M
 
+/-- The same comparison when the colimit of the restricted diagram is given. -/
+noncomputable def colimit_comp_iso_of_cofinal_of_comp
+    {I J C : Type*} [Category I] [Category J] [Category C]
+    (H : I ⥤ J) [IsCofinal H] (M : J ⥤ C) [HasColimit (H ⋙ M)] :
+    letI : HasColimit M := Functor.Final.hasColimit_of_comp H
+    colimit (H ⋙ M) ≅ colimit M := by
+  letI : HasColimit M := Functor.Final.hasColimit_of_comp H
+  exact Functor.Final.colimitIso H M
+
 /-! ## Initial functors -/
 
 /-- The source's predicate that a functor is initial. -/
@@ -139,6 +148,15 @@ noncomputable def limit_comp_iso_of_initial
     limit (H ⋙ M) ≅ limit M :=
   Functor.Initial.limitIso H M
 
+/-- The same comparison when the limit of the restricted diagram is given. -/
+noncomputable def limit_comp_iso_of_initial_of_comp
+    {I J C : Type*} [Category I] [Category J] [Category C]
+    (H : I ⥤ J) [IsInitialFunctor H] (M : J ⥤ C) [HasLimit (H ⋙ M)] :
+    letI : HasLimit M := Functor.Initial.hasLimit_of_comp H
+    limit (H ⋙ M) ≅ limit M := by
+  letI : HasLimit M := Functor.Initial.hasLimit_of_comp H
+  exact Functor.Initial.limitIso H M
+
 /-! ## Connected fibres -/
 
 /- The source states that every morphism in the target is the image of a
@@ -187,6 +205,19 @@ noncomputable def colimit_comp_iso_of_connected_fibers
   exact
     Functor.Final.colimitIso F M
 
+/-- The same comparison when the restricted diagram's colimit is given. -/
+noncomputable def colimit_comp_iso_of_connected_fibers_of_comp
+    {I J C : Type*} [Category I] [Category J] [Category C]
+    (F : I ⥤ J)
+    (hF : ∀ y : J, IsConnected (Functor.Fiber F y))
+    (hmap : LiftsMorphisms F) (M : J ⥤ C) [HasColimit (F ⋙ M)] :
+    letI : IsCofinal F := isCofinal_of_connected_fibers F hF hmap
+    letI : HasColimit M := Functor.Final.hasColimit_of_comp F
+    colimit (F ⋙ M) ≅ colimit M := by
+  letI : IsCofinal F := isCofinal_of_connected_fibers F hF hmap
+  letI : HasColimit M := Functor.Final.hasColimit_of_comp F
+  exact Functor.Final.colimitIso F M
+
 /-! ## Product with a connected category -/
 
 /-- A connected first factor does not change the existence of a colimit. -/
@@ -202,6 +233,18 @@ noncomputable def colimit_prod_snd_iso
     [IsConnected I] (M : J ⥤ C) [HasColimit M] :
     colimit ((CategoryTheory.Prod.snd I J) ⋙ M) ≅ colimit M :=
   Functor.Final.colimitIso (CategoryTheory.Prod.snd I J) M
+
+/-- The same comparison when the product diagram's colimit is given. -/
+noncomputable def colimit_prod_snd_iso_of_comp
+    {I J C : Type*} [Category I] [Category J] [Category C]
+    [IsConnected I] (M : J ⥤ C)
+    [HasColimit ((CategoryTheory.Prod.snd I J) ⋙ M)] :
+    letI : HasColimit M :=
+      Functor.Final.hasColimit_of_comp (CategoryTheory.Prod.snd I J)
+    colimit ((CategoryTheory.Prod.snd I J) ⋙ M) ≅ colimit M := by
+  letI : HasColimit M :=
+    Functor.Final.hasColimit_of_comp (CategoryTheory.Prod.snd I J)
+  exact Functor.Final.colimitIso (CategoryTheory.Prod.snd I J) M
 
 end
 

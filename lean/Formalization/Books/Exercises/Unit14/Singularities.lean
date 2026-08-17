@@ -83,7 +83,8 @@ theorem TangentToIdentitySubstitution.toAlgHom_X
     {k : Type u} [Field k]
     (s : TangentToIdentitySubstitution k) (i : Fin 2) :
     s.toAlgHom (MvPowerSeries.X i) = s.coordinates i := by
-  sorry
+  unfold TangentToIdentitySubstitution.toAlgHom powerSeriesSubstitutionAlgHom
+  exact MvPowerSeries.substAlgHom_X _ i
 
 /-- A pair of mutually inverse tangent-to-the-identity substitutions. -/
 structure TangentToIdentityAutomorphism (k : Type u) [Field k] where
@@ -158,7 +159,13 @@ theorem FormalMorseData.map_principalIdeal
     {f g : MvPowerSeries (Fin 2) K} (M : FormalMorseData k f g) :
     Ideal.map (M.coordinateChange : MvPowerSeries (Fin 2) K →+*
       MvPowerSeries (Fin 2) K) (Ideal.span {f}) = Ideal.span {g} := by
-  sorry
+  rw [Ideal.map_span, Set.image_singleton]
+  have h :
+      (M.coordinateChange : MvPowerSeries (Fin 2) K →+*
+        MvPowerSeries (Fin 2) K) f =
+        (M.unit : MvPowerSeries (Fin 2) K) * g := M.equation
+  rw [h]
+  exact principalIdeal_unitMultiple M.unit g
 
 /-- The quotient algebra equivalence attached to formal Morse data. -/
 noncomputable def FormalMorseData.quotientAlgEquiv
@@ -494,7 +501,11 @@ def quadraticRelationSpan
 theorem quadraticRelationClass_eq_zero_iff
     {R : Type v} [CommRing R] (I : Ideal R) (q : R) (hq : q ∈ I ^ 2) :
     quadraticRelationClass I q hq = 0 ↔ q ∈ I ^ 3 := by
-  sorry
+  change
+    (Submodule.Quotient.mk
+      (p := Submodule.comap (I ^ 2 : Ideal R).subtype (I ^ 3))
+      (⟨q, hq⟩ : (I ^ 2 : Ideal R)) = 0) ↔ q ∈ I ^ 3
+  simp
 
 /-- A binary quadratic power series lies in the square of the formal maximal
 ideal. -/

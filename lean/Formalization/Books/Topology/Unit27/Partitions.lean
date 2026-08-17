@@ -110,7 +110,7 @@ The subtype index omits the empty subsets among the subsets of the finite compon
 as required by the nonempty-parts convention for `Partition`. -/
 theorem irreducible_components_incidence_partition
     {ι : Type v} [Fintype ι] (Z : ι → Set X)
-    (hZinj : Function.Injective Z)
+    (_hZinj : Function.Injective Z)
     (hZrange : Set.range Z = irreducibleComponents X) :
     ∃ P : Partition X (IrreducibleComponentIncidenceIndex Z),
       (∀ I, P.parts I = irreducibleComponentIncidencePart Z I.1) ∧
@@ -220,7 +220,7 @@ theorem finite_irreducible_components_incidence_partition
             P.Refines connectedComponentPartition := by
   classical
   let ι : Type u := {C : Set X // C ∈ irreducibleComponents X}
-  letI : Fintype ι := by
+  let : Fintype ι := by
     dsimp [ι]
     exact hX.fintype
   let Z : ι → Set X := fun C => C.1
@@ -291,7 +291,7 @@ theorem exists_partialOrder_of_goodStratification
       le_trans := hrel.trans
       le_antisymm := hrel.antisymm }
   refine ⟨o, ?_⟩
-  letI : PartialOrder ι := o
+  let : PartialOrder ι := o
   intro i j
   rfl
 
@@ -385,7 +385,7 @@ theorem Stratification.lowerUnion_isClosed
     {ι : Type v} (o : PartialOrder ι) (S : Stratification X ι o)
     (hfinite : S.IsLocallyFinite) :
     ∀ i, IsClosed (belowUnion o S.parts i) := by
-  letI : PartialOrder ι := o
+  let : PartialOrder ι := o
   intro i
   have hloc : LocallyFinite (fun j : {j : ι // j ≤ i} => S.parts j.1) :=
     hfinite.comp_injective Subtype.val_injective
@@ -407,10 +407,10 @@ theorem Stratification.lowerUnion_isClosed
 /-- Lower unions of a locally finite stratification satisfy the source's intersection identity. -/
 theorem Stratification.lowerUnion_inter
     {ι : Type v} (o : PartialOrder ι) (S : Stratification X ι o)
-    (hfinite : S.IsLocallyFinite) (i j : ι) :
+    (_hfinite : S.IsLocallyFinite) (i j : ι) :
     belowUnion o S.parts i ∩ belowUnion o S.parts j =
       ⋃ k, ⋃ (_ : k ≤ i ∧ k ≤ j), belowUnion o S.parts k := by
-  letI : PartialOrder ι := o
+  let : PartialOrder ι := o
   have hmono : ∀ {a b : ι}, a ≤ b →
       belowUnion o S.parts a ⊆ belowUnion o S.parts b := by
     intro a b hab x hx
@@ -454,7 +454,7 @@ theorem closed_family_stratification
       (∀ i, S.parts i = closedFamilyStratum o Z i.1) ∧
         S.IsLocallyFinite := by
   classical
-  letI : PartialOrder ι := o
+  let : PartialOrder ι := o
   let K : X → Set ι := fun x => {i | x ∈ Z i}
   have hKfinite : ∀ x, (K x).Finite := by
     intro x
@@ -509,7 +509,7 @@ theorem closed_family_stratification
     rw [heq]
     exact LocallyFinite.isClosed_iUnion hloc (fun j => hclosed j.1)
   let κ := ClosedFamilyStratumIndex o Z
-  letI : PartialOrder κ := closedFamilyStratumIndexOrder o Z
+  let : PartialOrder κ := closedFamilyStratumIndexOrder o Z
   let Q : Partition X κ :=
     { parts := fun i => closedFamilyStratum o Z i.1
       isLocallyClosed := by
@@ -551,8 +551,7 @@ theorem closed_family_stratification
   let S : Stratification X κ (closedFamilyStratumIndexOrder o Z) :=
     { toPartition := Q
       closure_subset_below := by
-        intro i
-        intro x hx
+        intro i x hx
         have hxZi : x ∈ Z i.1 := by
           apply (hclosed i.1).closure_subset
           exact (closure_mono sdiff_subset) hx
@@ -594,7 +593,7 @@ theorem finite_partition_refined_by_finite_stratification
     rintro ⟨i, b⟩
     cases b
     · simpa [F] using hdelta_closed i
-    · simpa [F] using isClosed_closure
+    · simp [F]
   have hZclosed : ∀ s, IsClosed (Z s) := by
     intro s
     exact isClosed_biInter fun a _ => hFclosed a
@@ -605,10 +604,10 @@ theorem finite_partition_refined_by_finite_stratification
     change x ∈ ⋂ a ∈ (∅ : Set A), F a
     simp only [mem_iInter]
     intro a ha
-    exact False.elim (by simpa using ha)
+    simp at ha
   have hZfinite : LocallyFinite Z := locallyFinite_of_finite Z
   have hinter : ClosedFamilyIntersectionIdentity o Z := by
-    letI : PartialOrder κ := o
+    let : PartialOrder κ := o
     intro s t
     ext x
     constructor
@@ -655,8 +654,8 @@ theorem finite_partition_refined_by_finite_stratification
   have hstratum_subset (j : ι) (s : κ) (x : X)
       (hxS : x ∈ closedFamilyStratum o Z s) (hxj : x ∈ P.parts j) :
       closedFamilyStratum o Z s ⊆ P.parts j := by
-    letI : PartialOrder κ := o
-    letI : LT κ := o.toPreorder.toLT
+    let : PartialOrder κ := o
+    let : LT κ := o.toPreorder.toLT
     change x ∈ Z s ∧ x ∉ ⋃ k, ⋃ (_ : k < s), Z k at hxS
     have hxZ : x ∈ Z s := hxS.1
     have hxZ' : ∀ a, a ∈ s → x ∈ F a := by
@@ -719,10 +718,8 @@ theorem finite_partition_refined_by_finite_stratification
     exact hD y hyS ⟨hyT, hyj'⟩
   refine ⟨ClosedFamilyStratumIndex o Z, closedFamilyStratumIndexOrder o Z, S, ?_⟩
   constructor
-  · letI : Finite (ClosedFamilyStratumIndex o Z) :=
-      Finite.of_injective (fun i : ClosedFamilyStratumIndex o Z => i.1)
-        Subtype.val_injective
-    exact inferInstance
+  · exact Finite.of_injective (fun i : ClosedFamilyStratumIndex o Z => i.1)
+      Subtype.val_injective
   · intro j
     let J : Set (ClosedFamilyStratumIndex o Z) :=
       {i | S.parts i ⊆ P.parts j}
@@ -752,7 +749,7 @@ theorem finite_partition_refined_by_finite_stratification
 /-- A finite constructible cover admits a finite stratification by constructible strata refining it. -/
 theorem constructible_cover_refined_by_constructible_stratification
     {n : ℕ} (T : Fin n → Set X)
-    (hcover : ⋃ k, T k = (univ : Set X))
+    (_hcover : ⋃ k, T k = (univ : Set X))
     (hT : ∀ k, Topology.IsConstructible (T k)) :
     ∃ (κ : Type v) (o : PartialOrder κ) (S : Stratification X κ o),
       Finite κ ∧
@@ -819,7 +816,7 @@ theorem constructible_cover_refined_by_constructible_stratification
       lt_iff_le_not_ge := by intros; rfl
       le_antisymm := fun s t hst hts => Set.Subset.antisymm hts hst }
   have hinter : ClosedFamilyIntersectionIdentity o Z := by
-    letI : PartialOrder κ := o
+    let : PartialOrder κ := o
     intro s t
     ext x
     constructor
@@ -867,8 +864,8 @@ theorem constructible_cover_refined_by_constructible_stratification
       (hxS : x ∈ closedFamilyStratum o Z s)
       (hxU : x ∈ ((g q).1 : Set X)) :
       closedFamilyStratum o Z s ⊆ ((g q).1 : Set X) := by
-    letI : PartialOrder κ := o
-    letI : LT κ := o.toPreorder.toLT
+    let : PartialOrder κ := o
+    let : LT κ := o.toPreorder.toLT
     change x ∈ Z s ∧ x ∉ ⋃ k, ⋃ (_ : k < s), Z k at hxS
     have hxZ : x ∈ Z s := hxS.1
     have hxZ' : ∀ a, a ∈ s → x ∈ F a := by
@@ -902,8 +899,8 @@ theorem constructible_cover_refined_by_constructible_stratification
   have hstratum_subset_compl (q : Fin D.card) (s : κ) (x : X)
       (hxS : x ∈ closedFamilyStratum o Z s) (hxV : x ∈ ((g q).2 : Set X)ᶜ) :
       closedFamilyStratum o Z s ⊆ ((g q).2 : Set X)ᶜ := by
-    letI : PartialOrder κ := o
-    letI : LT κ := o.toPreorder.toLT
+    let : PartialOrder κ := o
+    let : LT κ := o.toPreorder.toLT
     change x ∈ Z s ∧ x ∉ ⋃ k, ⋃ (_ : k < s), Z k at hxS
     have hxZ : x ∈ Z s := hxS.1
     have hxZ' : ∀ a, a ∈ s → x ∈ F a := by
@@ -940,15 +937,14 @@ theorem constructible_cover_refined_by_constructible_stratification
       hstratum_subset_compl q s x hxS hxcomp.2 hyS⟩
   have hstrictConstructible (i : κ) :
       Topology.IsConstructible (strictBelowUnion o Z i) := by
-    letI : PartialOrder κ := o
-    letI : LT κ := o.toPreorder.toLT
+    let : PartialOrder κ := o
+    let : LT κ := o.toPreorder.toLT
     have hinner : ∀ k : κ,
         Topology.IsConstructible (⋃ (_ : k < i), Z k) := by
       intro k
       by_cases hki : k < i
       · simpa [hki] using hZconstructible k
-      · simpa [hki] using (Topology.IsConstructible.empty :
-          Topology.IsConstructible (∅ : Set X))
+      · simp [hki]
     simpa only [strictBelowUnion] using
       (Topology.IsConstructible.iUnion
         (f := fun k : κ => ⋃ (_ : k < i), Z k) (fun k => hinner k))
@@ -968,7 +964,7 @@ theorem constructible_cover_refined_by_constructible_stratification
     induction d using Finset.cons_induction with
     | empty => simp
     | cons a d ha ih =>
-        simp [Finset.sup_cons, ih, sup_eq_union, ha]
+        simp [ih, sup_eq_union]
   have hUnion : ∀ k, ∃ J : Set (ClosedFamilyStratumIndex o Z),
       T k = ⋃ i ∈ J, S.parts i := by
     intro k
@@ -1032,9 +1028,9 @@ theorem constructible_cover_refined_by_constructible_stratification
   let S' : Stratification X κ' o' :=
     { toPartition := Q
       closure_subset_below := by
-        letI : PartialOrder (ClosedFamilyStratumIndex o Z) :=
+        let : PartialOrder (ClosedFamilyStratumIndex o Z) :=
           closedFamilyStratumIndexOrder o Z
-        letI : PartialOrder κ' := o'
+        let : PartialOrder κ' := o'
         intro i
         change closure (S.parts i.down) ⊆
           ⋃ j, ⋃ (_ : j ≤ i), S.parts j.down
@@ -1050,10 +1046,10 @@ theorem constructible_cover_refined_by_constructible_stratification
           mem_iUnion.2 ⟨hji', hxj⟩⟩ }
   refine ⟨κ', o', S', ?_⟩
   refine ⟨?_, ?_, ?_⟩
-  · letI : Finite (ClosedFamilyStratumIndex o Z) :=
+  · let hfinite : Finite (ClosedFamilyStratumIndex o Z) :=
       Finite.of_injective (fun i : ClosedFamilyStratumIndex o Z => i.1)
         Subtype.val_injective
-    exact Finite.of_injective ULift.down ULift.down_injective
+    exact @Finite.of_injective _ _ hfinite ULift.down ULift.down_injective
   · intro i
     change Topology.IsConstructible (S.parts i.down)
     exact hstratumConstructible i.down
@@ -1100,10 +1096,9 @@ theorem noetherian_finite_partition_refined_by_finite_good_stratification
           Finite κ ∧ (∀ k, Q.parts k ⊆ H.parts (c k)) := by
     intro W
     apply wellFounded_lt.induction W
-    intro W ih
-    intro ι _ H
+    intro W ih ι _ H
     by_cases hW : (W : Set X).Nonempty
-    · letI : Fintype ι := Fintype.ofFinite ι
+    · let : Fintype ι := Fintype.ofFinite ι
       obtain ⟨x, hxW⟩ := hW
       let y : W := ⟨x, hxW⟩
       let Z : Set W := irreducibleComponent y
@@ -1132,7 +1127,7 @@ theorem noetherian_finite_partition_refined_by_finite_good_stratification
       rcases Finset.mem_image.mp hCT with ⟨i₀, -, hCi⟩
       have hZi₀ : Z ⊆ closure (E' i₀) := by
         exact hCi.symm ▸ hZC
-      letI : NoetherianSpace W := NoetherianSpace.set (W : Set X)
+      let : NoetherianSpace W := NoetherianSpace.set (W : Set X)
       obtain ⟨o, hoopen, hone, hoZ⟩ :=
         NoetherianSpace.exists_isOpen_nonempty_subset_irreducibleComponent Z hZmem
       obtain ⟨z, hzo⟩ := hone
@@ -1183,7 +1178,7 @@ theorem noetherian_finite_partition_refined_by_finite_good_stratification
       have hRclosed : IsClosed R := by
         have hReq : R = (W : Set X) ∩ O₀ᶜ := by
           ext x
-          simp [R, U, and_assoc, and_left_comm, and_comm]
+          simp [R, U, and_comm]
         rw [hReq]
         exact W.2.inter hO₀.isClosed_compl
       have hRstrict : (⟨R, hRclosed⟩ : Closeds X) < W := by
@@ -1199,7 +1194,7 @@ theorem noetherian_finite_partition_refined_by_finite_good_stratification
         (H.parts a.1 ∩ R) ∩ if a.2 then closure U else (closure U)ᶜ
       let κ₀ := {a : A // (E₀ a).Nonempty}
       let E₁ : κ₀ → Set X := fun a => E₀ a.1
-      letI : Finite κ₀ :=
+      let : Finite κ₀ :=
         Finite.of_injective (fun a : κ₀ => a.1) Subtype.val_injective
       have hE₁lc : ∀ a, IsLocallyClosed (E₁ a) := by
         intro a
@@ -1238,7 +1233,7 @@ theorem noetherian_finite_partition_refined_by_finite_good_stratification
           by_cases ha : a.1.2
           · have hb : ¬b.1.2 := by
               intro hb
-              exact hbool (by simpa [ha, hb])
+              exact hbool (by simp [ha, hb])
             have hxc : x ∈ closure U := by
               simpa [ha] using hxa0.2
             have hxn : x ∈ (closure U)ᶜ := by
@@ -1246,7 +1241,7 @@ theorem noetherian_finite_partition_refined_by_finite_good_stratification
             exact hxn hxc
           · have hb : b.1.2 := by
               by_contra hb
-              exact hbool (by simpa [ha, hb])
+              exact hbool (by simp [ha, hb])
             have hxn : x ∈ (closure U)ᶜ := by
               simpa [ha] using hxa0.2
             have hxc : x ∈ closure U := by
@@ -1390,7 +1385,6 @@ theorem noetherian_finite_partition_refined_by_finite_good_stratification
         | some a =>
             change x ∈ Q.parts a at hx
             exact (hcE₀ a hx).1.1
-      letI : Finite K := hKfinite
       exact ⟨κ, Q₀, c₀, inferInstance, hc₀subset⟩
     · have hWempty : (W : Set X) = ∅ := Set.not_nonempty_iff_eq_empty.mp hW
       let κ : Type v := ULift.{v} Empty
@@ -1401,7 +1395,7 @@ theorem noetherian_finite_partition_refined_by_finite_good_stratification
               subset := by intro a; exact nomatch a.down
               nonempty := by intro a; exact nomatch a.down
               pairwiseDisjoint := by intro a; exact nomatch a.down
-              iUnion_eq := by simpa [hWempty] }
+              iUnion_eq := by simp [hWempty] }
           good := by intro a b; exact nomatch a.down }
       exact ⟨κ, Q, (fun a => nomatch a.down),
         Finite.of_injective ULift.down ULift.down_injective,
@@ -1425,7 +1419,7 @@ theorem noetherian_finite_partition_refined_by_finite_good_stratification
     intro i j h
     exact Q.good i j h
   obtain ⟨o, ho⟩ := exists_partialOrder_of_goodStratification Rpart hgood
-  letI : PartialOrder κ := o
+  let : PartialOrder κ := o
   let S : Stratification X κ o :=
     { toPartition := Rpart
       closure_subset_below := by

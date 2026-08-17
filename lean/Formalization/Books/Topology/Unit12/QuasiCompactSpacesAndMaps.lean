@@ -48,7 +48,7 @@ theorem isSpectralMap_iff {Y : Type v} [TopologicalSpace Y] {f : X → Y} :
 
 theorem compactSpace_iff_finite_subcover :
     CompactSpace X ↔
-      ∀ {ι : Type v} (U : ι → Set X),
+      ∀ {ι : Type u} (U : ι → Set X),
         (∀ i, IsOpen (U i)) →
           (⋃ i, U i) = (Set.univ : Set X) →
             ∃ s : Finset ι, (⋃ i ∈ s, U i) = (Set.univ : Set X) := by

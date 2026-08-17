@@ -568,6 +568,12 @@ theorem exists_sheafChangeOfRingsAdjunction {X : TopCat.{v}}
     ext x
     change F.val.map f x = F.val.map f x
     rfl
+  have hR_natural {F F' : SheafOfModules.{v} O₂} (g : F ⟶ F') :
+      (restrictionOfScalars α.hom).map g.val ≫ (hR F').hom =
+        (hR F).hom ≫ (PresheafOfModules.restrictScalars α.hom).map g.val := by
+    ext U x
+    change g.val.app U x = g.val.app U x
+    rfl
   let ePost (G : SheafOfModules.{v} O₁) (F : SheafOfModules.{v} O₂) :
       (G.val ⟶ (restrictionOfScalars α.hom).obj F.val) ≃
         (G.val ⟶ ((sheafRestrictionOfScalars α).obj F).val) :=
@@ -578,10 +584,19 @@ theorem exists_sheafChangeOfRingsAdjunction {X : TopCat.{v}}
   let eFF (G : SheafOfModules.{v} O₁) (F : SheafOfModules.{v} O₂) :
       (G.val ⟶ ((sheafRestrictionOfScalars α).obj F).val) ≃
         (G ⟶ (sheafRestrictionOfScalars α).obj F) :=
-    (SheafOfModules.fullyFaithfulForget O₁).homEquiv
-      (X := G) (Y := (sheafRestrictionOfScalars α).obj F) |>.symm
+    { toFun := fun f => (SheafOfModules.forget O₁).preimage f
+      invFun := fun f => f.val
+      left_inv := by
+        intro f
+        exact (SheafOfModules.forget O₁).map_preimage
+          (X := G) (Y := (sheafRestrictionOfScalars α).obj F) f
+      right_inv := by
+        intro f
+        exact (SheafOfModules.forget O₁).preimage_map
+          (X := G) (Y := (sheafRestrictionOfScalars α).obj F) f }
   let eSh (G : SheafOfModules.{v} O₁) (F : SheafOfModules.{v} O₂) :
-      ((sheafChangeOfRings α).obj G ⟶ F) ≃
+      ((PresheafOfModules.sheafification (𝟙 O₂.obj)).obj
+          ((changeOfRings α.hom).obj G.val) ⟶ F) ≃
         ((changeOfRings α.hom).obj G.val ⟶ F.val) :=
     (PresheafOfModules.sheafificationAdjunction (𝟙 O₂.obj)).homEquiv
       ((changeOfRings α.hom).obj G.val) F
@@ -597,8 +612,88 @@ theorem exists_sheafChangeOfRingsAdjunction {X : TopCat.{v}}
   let adj : sheafChangeOfRings α ⊣ sheafRestrictionOfScalars α :=
     Adjunction.mkOfHomEquiv
       { homEquiv := eHom
-        homEquiv_naturality_left_symm := by sorry
-        homEquiv_naturality_right := by sorry }
+        homEquiv_naturality_left_symm := by
+          intro G' G F f g
+          dsimp [eHom]
+          change
+            (eSh G' F).symm
+                (((changeOfRingsAdjunction α.hom).homEquiv G'.val F.val).symm
+                  ((ePost G' F).symm (f.val ≫ g.val))) =
+              (sheafChangeOfRings α).map f ≫
+                (eSh G F).symm
+                  (((changeOfRingsAdjunction α.hom).homEquiv G.val F.val).symm
+                    ((ePost G F).symm g.val))
+          dsimp [ePost]
+          change
+            (eSh G' F).symm
+                (((changeOfRingsAdjunction α.hom).homEquiv G'.val F.val).symm
+                  (f.val ≫ g.val ≫ (hR F).inv)) =
+              (PresheafOfModules.sheafification (𝟙 O₂.obj)).map
+                  ((changeOfRings α.hom).map f.val) ≫
+                (eSh G F).symm
+                  (((changeOfRingsAdjunction α.hom).homEquiv G.val F.val).symm
+                    (g.val ≫ (hR F).inv))
+          rw [(changeOfRingsAdjunction α.hom).homEquiv_naturality_left_symm]
+          exact
+            ((PresheafOfModules.sheafificationAdjunction (𝟙 O₂.obj)).homEquiv_naturality_left_symm
+              ((changeOfRings α.hom).map f.val)
+              (((changeOfRingsAdjunction α.hom).homEquiv G.val F.val).symm
+                (g.val ≫ (hR F).inv)))
+        homEquiv_naturality_right := by
+          intro G F F' f g
+          dsimp [eHom]
+          change
+            (eFF G F')
+                ((ePost G F')
+                  ((changeOfRingsAdjunction α.hom).homEquiv G.val F'.val
+                    ((eSh G F') (f ≫ g)))) =
+              (eFF G F)
+                  ((ePost G F)
+                    ((changeOfRingsAdjunction α.hom).homEquiv G.val F.val
+                ((eSh G F) f))) ≫
+                (sheafRestrictionOfScalars α).map g
+          apply (SheafOfModules.forget O₁).map_injective
+          dsimp [eFF]
+          change
+            (SheafOfModules.forget O₁).map
+                ((SheafOfModules.forget O₁).preimage
+                  (X := G) (Y := (sheafRestrictionOfScalars α).obj F')
+                  ((ePost G F')
+                    (((changeOfRingsAdjunction α.hom).homEquiv G.val F'.val)
+                      ((eSh G F') (f ≫ g))))) =
+              (SheafOfModules.forget O₁).map
+                  ((SheafOfModules.forget O₁).preimage
+                    (X := G) (Y := (sheafRestrictionOfScalars α).obj F)
+                    ((ePost G F)
+                      (((changeOfRingsAdjunction α.hom).homEquiv G.val F.val)
+                        ((eSh G F) f)))) ≫
+                (SheafOfModules.forget O₁).map ((sheafRestrictionOfScalars α).map g)
+          have hmap' :
+              (SheafOfModules.forget O₁).map
+                  ((SheafOfModules.forget O₁).preimage
+                    (X := G) (Y := (sheafRestrictionOfScalars α).obj F')
+                    ((ePost G F')
+                      (((changeOfRingsAdjunction α.hom).homEquiv G.val F'.val)
+                        ((eSh G F') (f ≫ g))))) =
+                (ePost G F')
+                  (((changeOfRingsAdjunction α.hom).homEquiv G.val F'.val)
+                    ((eSh G F') (f ≫ g))) := by
+            exact (SheafOfModules.forget O₁).map_preimage
+              (X := G) (Y := (sheafRestrictionOfScalars α).obj F') _
+          have hmap :
+              (SheafOfModules.forget O₁).map
+                  ((SheafOfModules.forget O₁).preimage
+                    (X := G) (Y := (sheafRestrictionOfScalars α).obj F)
+                    ((ePost G F)
+                      (((changeOfRingsAdjunction α.hom).homEquiv G.val F.val)
+                        ((eSh G F) f)))) =
+                (ePost G F)
+                  (((changeOfRingsAdjunction α.hom).homEquiv G.val F.val)
+                    ((eSh G F) f)) := by
+            exact (SheafOfModules.forget O₁).map_preimage
+              (X := G) (Y := (sheafRestrictionOfScalars α).obj F) _
+          rw [hmap', hmap]
+          rfl }
   exact Nonempty.intro adj
 
 /-- A chosen adjunction between sheaf extension and restriction of scalars. -/
@@ -684,7 +779,127 @@ theorem stalk_tensorProductSheaf_statement {X : TopCat.{v}}
     (G : CommRingSheafModule O₁) (x : X) :
     Nonempty (sheafStalkTensorProduct α G x ≅
       commRingSheafModuleStalk (commRingTensorProductSheaf α G) x) := by
-  sorry
+  let R := commRingSheafToRingSheaf O₂
+  let P : CommRingPresheafModule O₂.obj :=
+    sheafTensorProductPresheaf (commRingSheafMorphismToRingSheaf α) G
+  let Q : CommRingPresheafModule O₂.obj :=
+    (PresheafOfModules.restrictScalars (𝟙 R.obj)).obj
+      ((SheafOfModules.forget R).obj (commRingTensorProductSheaf α G))
+  let u : P ⟶ Q :=
+    (PresheafOfModules.sheafificationAdjunction (𝟙 R.obj)).unit.app P
+  let u' : P.presheaf ⟶ Q.presheaf :=
+    { app := fun U => AddCommGrpCat.ofHom <| AddMonoidHom.mk' (u.app U) (by simp)
+      naturality := by
+        intro U V g
+        ext z
+        exact PresheafOfModules.naturality_apply u g z }
+  let f := (TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map u'
+  haveI : IsIso f := by
+    dsimp [f, u, u']
+    change IsIso ((TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map
+      (CategoryTheory.toSheafify (Opens.grothendieckTopology X) P.presheaf))
+    exact TopCat.Presheaf.stalkFunctor_map_unit_toSheafify_isIso
+      x AddCommGrpCat P.presheaf
+  let fLin :
+      (↑(TopCat.Presheaf.stalk P.presheaf x)) →ₗ[
+        (↑(TopCat.Presheaf.stalk (C := CommRingCat) O₂.obj x))]
+        (↑(TopCat.Presheaf.stalk Q.presheaf x)) :=
+    { toFun := f
+      map_add' := by
+        intro a b
+        exact map_add f.hom a b
+      map_smul' := by
+        intro r m
+        obtain ⟨U, hxU, rU, hr⟩ :=
+          TopCat.Presheaf.exists_germ_eq O₂.obj r
+        obtain ⟨V, hxV, mV, hm⟩ :=
+          TopCat.Presheaf.exists_germ_eq P.presheaf m
+        let W : Opens X := U ⊓ V
+        have hxW : x ∈ W := ⟨hxU, hxV⟩
+        let rW := O₂.obj.map
+          (homOfLE (show W ≤ U from inf_le_left)).op rU
+        let mW0 : P.presheaf.obj (op W) := P.presheaf.map
+          (homOfLE (show W ≤ V from inf_le_right)).op mV
+        let mW : P.obj (op W) := by
+          simpa only [PresheafOfModules.presheaf_obj_coe] using mW0
+        have hrW :
+            TopCat.Presheaf.germ (C := CommRingCat) O₂.obj W x hxW rW = r := by
+          dsimp [rW]
+          rw [TopCat.Presheaf.germ_res_apply]
+          simpa using hr
+        have hmW :
+            TopCat.Presheaf.germ (C := AddCommGrpCat) P.presheaf W x hxW mW0 = m := by
+          rw [TopCat.Presheaf.germ_res_apply]
+          simpa using hm
+        rw [← hrW, ← hmW]
+        letI : Module (O₂.obj.obj (op W)) (P.presheaf.obj (op W)) := by
+          change Module (O₂.obj.obj (op W)) (P.obj (op W))
+          infer_instance
+        have hsmul :
+            TopCat.Presheaf.germ (C := AddCommGrpCat) P.presheaf W x hxW
+                (rW • mW0) =
+              TopCat.Presheaf.germ (C := CommRingCat) O₂.obj W x hxW rW •
+                TopCat.Presheaf.germ (C := AddCommGrpCat) P.presheaf W x hxW mW0 := by
+          convert (Formalization.Books.Sheaves.Unit14.germ_smul
+            (F := P) x W hxW rW mW) using 1 <;>
+            simp [mW, PresheafOfModules.presheaf_obj_coe] <;> rfl
+        refine (congrArg (fun z => f.hom z)
+          hsmul.symm).trans ?_
+        have hmap :
+            f.hom
+                (TopCat.Presheaf.germ (C := AddCommGrpCat) P.presheaf W x hxW
+                  (rW • mW0)) =
+              TopCat.Presheaf.germ (C := AddCommGrpCat) Q.presheaf W x hxW
+                ((u'.app (op W)) (rW • mW0)) := by
+          simpa [f] using
+            (TopCat.Presheaf.stalkFunctor_map_germ_apply
+              (F := P.presheaf) (G := Q.presheaf) W x hxW u' (rW • mW0))
+        have hmap0 :
+            f.hom
+                (TopCat.Presheaf.germ (C := AddCommGrpCat) P.presheaf W x hxW mW0) =
+              TopCat.Presheaf.germ (C := AddCommGrpCat) Q.presheaf W x hxW
+                ((u'.app (op W)) mW0) := by
+          simpa [f] using
+            (TopCat.Presheaf.stalkFunctor_map_germ_apply
+              (F := P.presheaf) (G := Q.presheaf) W x hxW u' mW0)
+        letI : Module (O₂.obj.obj (op W)) (Q.presheaf.obj (op W)) := by
+          change Module (O₂.obj.obj (op W)) (Q.obj (op W))
+          infer_instance
+        have hu_smul :
+            (u'.app (op W)) (rW • mW0) =
+              rW • (u'.app (op W)) mW0 := by
+          change (u.app (op W)).hom (rW • mW) =
+            rW • (u.app (op W)).hom mW
+          exact (u.app (op W)).hom.map_smul rW mW
+        have hQ :
+            TopCat.Presheaf.germ (C := AddCommGrpCat) Q.presheaf W x hxW
+                (rW • (u'.app (op W)) mW0) =
+              TopCat.Presheaf.germ (C := CommRingCat) O₂.obj W x hxW rW •
+                TopCat.Presheaf.germ (C := AddCommGrpCat) Q.presheaf W x hxW
+                  ((u'.app (op W)) mW0) := by
+          let nW : Q.obj (op W) := by
+            simpa [u', PresheafOfModules.presheaf_obj_coe] using
+              ((u'.app (op W)) mW0)
+          convert (Formalization.Books.Sheaves.Unit14.germ_smul
+            (F := Q) x W hxW rW nW) using 1 <;>
+            simp [nW, u', PresheafOfModules.presheaf_obj_coe] <;> rfl
+        rw [hmap, hu_smul, hQ, hmap0]
+        simp
+    }
+  let eQ :
+      ModuleCat.of (TopCat.Presheaf.stalk (C := CommRingCat) O₂.obj x)
+          (↑(TopCat.Presheaf.stalk P.presheaf x)) ≅
+        ModuleCat.of (TopCat.Presheaf.stalk (C := CommRingCat) O₂.obj x)
+          (↑(TopCat.Presheaf.stalk Q.presheaf x)) :=
+    (LinearEquiv.ofBijective fLin (by
+      change Function.Bijective f.hom
+      exact ConcreteCategory.bijective_of_isIso f)).toModuleIso
+  obtain ⟨eP⟩ :=
+    sheafification_stalk_tensorProduct_iso α.hom G.val x
+  change Nonempty (sheafStalkTensorProduct α G x ≅
+    ModuleCat.of (TopCat.Presheaf.stalk (C := CommRingCat) O₂.obj x)
+      (↑(TopCat.Presheaf.stalk Q.presheaf x)))
+  exact ⟨eP ≪≫ eQ⟩
 
 end
 

@@ -1,4 +1,5 @@
 import Formalization.Books.SpacesCohomology.Unit01.AlternatingCech
+import Mathlib.Data.Set.Card
 
 /-!
 # Higher vanishing for quasi-coherent sheaves
@@ -27,7 +28,9 @@ structure AffineEtaleCoverData (X : AlgebraicSpace.{u}) where
   etale : IsEtale map
   surjective : IsSurjective map
   fibreBound : ℕ
-  fibre_bound_property : Prop
+  fibre_bound_property : ∀ x : X,
+    IsFinitePointSet (FibrePoints map x) ∧
+      Set.ncard (FibrePoints map x) ≤ fibreBound
 
 def cohomologyVanishingAtLeast (X : AlgebraicSpace.{u}) (F : SheafObj X)
     (d : ℕ) : Prop :=
@@ -49,7 +52,8 @@ structure HigherVanishingChoices (X : AlgebraicSpace.{u}) where
   f_etale : IsEtale f
   f_surjective : IsSurjective f
   d : ℕ
-  d_bounds_fibres : Prop
+  d_bounds_fibres : ∀ x : X,
+    IsFinitePointSet (FibrePoints f x) ∧ Set.ncard (FibrePoints f x) ≤ d
   U_p : ℕ → AlgebraicSpace.{u}
   V_p : ℕ → AlgebraicSpace.{u}
   V_to_U : ∀ p, SpaceHom (V_p p) (U_p p)
@@ -57,7 +61,9 @@ structure HigherVanishingChoices (X : AlgebraicSpace.{u}) where
   V_etale : ∀ p, IsEtale (V_to_U p)
   V_surjective : ∀ p, IsSurjective (V_to_U p)
   d_p : ℕ → ℕ
-  d_p_bounds_fibres : Prop
+  d_p_bounds_fibres : ∀ p (x : U_p p),
+    IsFinitePointSet (FibrePoints (V_to_U p) x) ∧
+      Set.ncard (FibrePoints (V_to_U p) x) ≤ d_p p
   bound : ℕ
   bound_spec : ∀ p, p ≤ d → p + d_p p ≤ bound
 

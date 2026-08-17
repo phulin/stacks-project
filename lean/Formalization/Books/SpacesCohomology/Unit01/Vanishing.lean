@@ -20,7 +20,7 @@ structure VanishingSituation (X : AlgebraicSpace.{u}) (A : Type u)
     Subsingleton (CohomologyGroup X F 1)
   affine_target : AlgebraicSpace.{u}
   p : SpaceHom X affine_target
-  target_is_spectrum : Prop
+  affine_target_is_scheme : IsScheme affine_target
   global_sections_identification : Prop
   zero_locus : A → Set X
 
@@ -116,8 +116,7 @@ theorem noetherian_h1_zero
     (hX : IsNoetherian X)
     (h : ∀ F : SheafObj X, IsCoherentModule X F →
       Subsingleton (CohomologyGroup X F 1)) :
-    ∃ (Y : AlgebraicSpace.{u}) (p : SpaceHom X Y),
-      IsScheme X ∧ IsAffine p := by
+    IsScheme X ∧ IsAffine (𝟙 X : SpaceHom X X) := by
   sorry
 
 theorem noetherian_h1_zero_invertible

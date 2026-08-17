@@ -162,8 +162,8 @@ theorem coherent_local_stalk_criteria
   sorry
 
 structure CoherentSupportStatement (X : AlgebraicSpace.{u})
-    [AlgebraicSpaceTheory.{u}] [AlgebraicSpaceCohomology.{u}] where
-  F : SheafObj X
+    [AlgebraicSpaceTheory.{u}] [AlgebraicSpaceCohomology.{u}]
+    (F : SheafObj X) where
   coherent_F : IsCoherentModule X F
   support : ClosedSubspace X
   support_identification : support = schemeTheoreticSupport F
@@ -177,7 +177,7 @@ theorem coherent_scheme_theoretic_support
     [AlgebraicSpaceTheory.{u}] [AlgebraicSpaceCohomology.{u}]
     (X : AlgebraicSpace.{u}) (F : SheafObj X)
     (hX : IsLocallyNoetherian X) (hF : IsCoherentModule X F) :
-    Nonempty (CoherentSupportStatement X) := by
+    Nonempty (CoherentSupportStatement X F) := by
   sorry
 
 structure CoherentClosedImmersionEquivalence (X Z : AlgebraicSpace.{u})

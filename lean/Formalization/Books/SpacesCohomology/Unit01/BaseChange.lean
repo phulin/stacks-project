@@ -58,7 +58,7 @@ structure SplitSheafHom {X Y : AlgebraicSpace.{u}}
     (f : SpaceHom X Y) (F : SheafObj X) where
   map : SheafHom (pullbackSheaf f (pushforwardSheaf f F)) F
   section_ : SheafHom F (pullbackSheaf f (pushforwardSheaf f F))
-  section_map_id : Prop
+  section_map_id : sheafComp section_ map = sheafId X F
 
 theorem etale_pull_push_split
     (S X Y : AlgebraicSpace.{u}) (_hS : IsScheme S)
@@ -66,6 +66,6 @@ theorem etale_pull_push_split
     (_hsep : IsSeparated f) (_hetale : IsEtale f)
     (F : SheafObj X) (_hF : IsQuasiCoherent F) :
     Nonempty (SplitSheafHom f F) := by
-  exact ⟨{ map := zeroSheafHom _ _, section_ := zeroSheafHom _ _, section_map_id := True }⟩
+  sorry
 
 end Formalization.Books.SpacesCohomology.Unit01

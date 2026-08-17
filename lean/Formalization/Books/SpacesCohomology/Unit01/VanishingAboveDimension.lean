@@ -24,7 +24,8 @@ theorem cohomology_vanishes_above_dimension
     (d : ℕ) (hd : SpaceDimension X ≤ d)
     (F : SheafObj X) (hF : IsQuasiCoherent F)
     (U : OpenSubspace X) (hU : IsQuasiCompact U.inclusion)
-    (Z : ClosedSubspace X) (hZ : IsQuasiCompact (𝟙 Z.carrier : SpaceHom Z.carrier Z.carrier))
+    (Z : ClosedSubspace X) (C : ClosedSubspaceComplement X Z)
+    (hZ : IsQuasiCompact C.open_subspace.inclusion)
     (TZ : SupportTheory X Z) :
     (∀ q : ℕ, d < q → CohomologyVanishes X F q) ∧
     restrictionSurjective U.inclusion F d ∧

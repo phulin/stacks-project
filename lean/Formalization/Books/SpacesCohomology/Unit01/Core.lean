@@ -174,6 +174,13 @@ structure OpenSubspace (X : AlgebraicSpace.{u}) where
   inclusion : SpaceHom carrier X
   is_open : Prop
 
+structure ClosedSubspaceComplement (X : AlgebraicSpace.{u})
+    (Z : ClosedSubspace X) where
+  open_subspace : OpenSubspace X
+  disjoint : Disjoint (Set.range open_subspace.inclusion)
+    (Set.range Z.inclusion)
+  covers : Set.range open_subspace.inclusion ∪ Set.range Z.inclusion = Set.univ
+
 noncomputable def pointMap (Y : AlgebraicSpace.{u}) (y : Y) : TopCat.of (PUnit.{u + 1}) ⟶ Y :=
   TopCat.ofHom (ContinuousMap.const (PUnit.{u + 1}) y)
 

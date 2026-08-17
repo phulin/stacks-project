@@ -34,6 +34,7 @@ theorem finite_pushforward_stalk
     (S X Y : AlgebraicSpace.{u}) (hS : IsScheme S)
     (f : SpaceHom X Y) (hf : IsFinite f) (y : Y) (n : ℕ)
     (x : Fin n → X) (hx : ∀ i, f (x i) = y)
+    (hx_injective : Function.Injective x)
     (hcomplete : ∀ z : X, f z = y ↔ ∃ i, z = x i)
     (F : SheafObj X) :
     Nonempty (Stalk Y (pushforwardSheaf f F) y ≃+

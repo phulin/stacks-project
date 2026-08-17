@@ -14,6 +14,7 @@ variable [AlgebraicSpaceTheory.{u}] [AlgebraicSpaceCohomology.{u}]
 
 structure FilteredSheafColimit (X : AlgebraicSpace.{u}) where
   index : Type u
+  nonempty_index : Nonempty index
   object : index → SheafObj X
   colimit : SheafObj X
   filtered : Prop

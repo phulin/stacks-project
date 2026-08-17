@@ -14,25 +14,25 @@ namespace Formalization.Books.SpacesCohomology.Unit01
 universe u
 
 structure SupportFiltrationStep (X : AlgebraicSpace.{u})
-    [AlgebraicSpaceTheory.{u}] [AlgebraicSpaceCohomology.{u}] where
-  F : SheafObj X
+    [AlgebraicSpaceTheory.{u}] [AlgebraicSpaceCohomology.{u}]
+    (F : SheafObj X) (Z Z' : Set X) where
   G' : SheafObj X
   G : SheafObj X
   short_exact : ShortExactSheaves X
+  left_identification : short_exact.F₁ = G'
+  middle_identification : short_exact.F₂ = F
+  right_identification : short_exact.F₃ = G
   coherent_G' : IsCoherentModule X G'
   coherent_G : IsCoherentModule X G
-  support_G' : SupportContainedIn X G' (Set.range (fun x : X => x))
-  support_G : SupportContainedIn X G (Set.range (fun x : X => x))
-  support_decomposition : Prop
+  support_G' : SupportContainedIn X G' Z'
+  support_G : SupportContainedIn X G Z
 
 theorem prepare_filter_support
     [AlgebraicSpaceTheory.{u}] [AlgebraicSpaceCohomology.{u}]
     (X : AlgebraicSpace.{u}) (F : SheafObj X) (Z Z' : Set X)
     (hX : IsNoetherian X) (hF : IsCoherentModule X F)
     (hsupport : sheafSupport X F = Z ∪ Z') :
-    ∃ G' G : SheafObj X,
-      IsCoherentModule X G' ∧ IsCoherentModule X G ∧
-      SupportContainedIn X G' Z' ∧ SupportContainedIn X G Z := by
+    Nonempty (SupportFiltrationStep X F Z Z') := by
   sorry
 
 structure IrreducibleClosedSubspace (X : AlgebraicSpace.{u})
@@ -42,9 +42,8 @@ structure IrreducibleClosedSubspace (X : AlgebraicSpace.{u})
   irreducible : Prop
 
 structure IrreducibleSupportInjection (X : AlgebraicSpace.{u})
-    [AlgebraicSpaceTheory.{u}] [AlgebraicSpaceCohomology.{u}] where
-  F : SheafObj X
-  Z : IrreducibleClosedSubspace X
+    [AlgebraicSpaceTheory.{u}] [AlgebraicSpaceCohomology.{u}]
+    (F : SheafObj X) (Z : IrreducibleClosedSubspace X) where
   r : ℕ
   positive : 0 < r
   I : IdealSheaf Z.subspace.carrier
@@ -60,22 +59,20 @@ theorem prepare_filter_irreducible
     (_hX : IsNoetherian X) (_hF : IsCoherentModule X F)
     (Z : IrreducibleClosedSubspace X)
     (_hsupport : Prop) :
-    Nonempty (IrreducibleSupportInjection X) := by
-  let J : ClosedSubspace Z.subspace.carrier := { carrier := Z.subspace.carrier, inclusion := TopCat.ofHom (ContinuousMap.id _), closed := True }
-  let I : IdealSheaf Z.subspace.carrier := { object := zeroSheaf _, ideal := True, closedSubspace := J, cuts_out := True }
-  exact ⟨{ F := F, Z := Z, r := 1, positive := by decide, I := I, nonzero := True, map := zeroSheafHom _ _, injective := True, cokernel_support_proper := True }⟩
+    Nonempty (IrreducibleSupportInjection X F Z) := by
+  sorry
 
 structure CoherentFiltration (X : AlgebraicSpace.{u})
     [AlgebraicSpaceTheory.{u}] [AlgebraicSpaceCohomology.{u}] (F : SheafObj X) where
   length : ℕ
   term : Fin (length + 1) → SheafObj X
-  initial : Prop
-  terminal : Prop
+  initial : term ⟨0, Nat.zero_lt_succ length⟩ = zeroSheaf X
+  terminal : term ⟨length, Nat.lt_succ_self length⟩ = F
   coherent : ∀ j : Fin (length + 1), IsCoherentModule X (term j)
-  subobject : ∀ _j : Fin (length + 1), Prop
-  quotient : ∀ _j : Fin (length + 1), SheafObj X
-  quotient_identification : ∀ _j : Fin (length + 1), Prop
-  graded_support : ∀ j : Fin (length + 1), ∃ Z : IrreducibleClosedSubspace X,
+  subobject : ∀ _j : Fin length, Prop
+  quotient : ∀ _j : Fin length, SheafObj X
+  quotient_identification : ∀ _j : Fin length, Prop
+  graded_support : ∀ j : Fin length, ∃ Z : IrreducibleClosedSubspace X,
     ∃ I : IdealSheaf Z.subspace.carrier,
       Nonempty (SheafIso X (quotient j)
         (pushforwardSheaf Z.subspace.inclusion I.object))
@@ -85,10 +82,7 @@ theorem coherent_filter
     (X : AlgebraicSpace.{u}) (F : SheafObj X)
     (_hX : IsNoetherian X) (hF : IsCoherentModule X F) :
     Nonempty (CoherentFiltration X F) := by
-  let J : ClosedSubspace X := { carrier := X, inclusion := TopCat.ofHom (ContinuousMap.id _), closed := True }
-  let Z0 : IrreducibleClosedSubspace X := { subspace := J, reduced := True, irreducible := True }
-  let I0 : IdealSheaf X := { object := zeroSheaf X, ideal := True, closedSubspace := J, cuts_out := True }
-  exact ⟨{ length := 0, term := fun _ => F, initial := True, terminal := True, coherent := fun _ => hF, subobject := fun _ => True, quotient := fun _ => pushforwardSheaf Z0.subspace.inclusion I0.object, quotient_identification := fun _ => True, graded_support := fun j => ⟨Z0, I0, ⟨{ hom := sheafId X _, inv := sheafId X _, hom_inv_id := AlgebraicSpaceCohomology.comp_id _, inv_hom_id := AlgebraicSpaceCohomology.comp_id _ }⟩⟩ }⟩
+  sorry
 
 abbrev CoherentProperty (X : AlgebraicSpace.{u})
     [AlgebraicSpaceCohomology.{u}] := SheafObj X → Prop
@@ -117,11 +111,9 @@ structure HigherRankPropertyHypotheses (X : AlgebraicSpace.{u})
   rank_reduction : ∀ (F : SheafObj X) (r : ℕ), 0 < r →
     P (directSumSheaf X r F) → P F
   generic_ideal_case : ∀ (Z : IrreducibleClosedSubspace X),
-    ∃ G : SheafObj Z.subspace.carrier,
-      IsCoherentModule Z.subspace.carrier G ∧
-    ∀ (_I : IdealSheaf Z.subspace.carrier), Prop →
-        ∃ G' : SheafObj Z.subspace.carrier,
-          P (pushforwardSheaf Z.subspace.inclusion G')
+    ∃ G : SheafObj X,
+      IsCoherentModule X G ∧
+        schemeTheoreticSupport G = Z.subspace ∧ P G
 
 theorem property_higher_rank_cohomological
     [AlgebraicSpaceTheory.{u}] [AlgebraicSpaceCohomology.{u}]
@@ -139,8 +131,10 @@ structure HigherRankVariantHypotheses (X : AlgebraicSpace.{u})
       (P E.F₂ ∧ P E.F₃ → P E.F₁)
   rank_reduction : ∀ (F : SheafObj X) (r : ℕ), 0 < r →
     P (directSumSheaf X r F) → P F
-  irreducible_case : ∀ (_Z : IrreducibleClosedSubspace X),
-    ∃ G : SheafObj X, P G
+  irreducible_case : ∀ (Z : IrreducibleClosedSubspace X),
+    ∃ G : SheafObj X,
+      IsCoherentModule X G ∧
+        schemeTheoreticSupport G = Z.subspace ∧ P G
 
 theorem property_higher_rank_cohomological_variant
     [AlgebraicSpaceTheory.{u}] [AlgebraicSpaceCohomology.{u}]

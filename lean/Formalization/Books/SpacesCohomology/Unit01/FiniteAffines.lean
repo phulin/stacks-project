@@ -27,8 +27,10 @@ theorem finite_morphism_noetherian
     [AlgebraicSpaceTheory.{u}] [AlgebraicSpaceCohomology.{u}]
     (D : FiniteClosedBaseChangeData X Y Z Z' f i i' f')
     (hX : IsLocallyNoetherian X) :
-    ∃ G : SheafObj Z,
-      IsCoherentModule Z G ∧ SupportContainedIn Z G (Set.range (fun z : Z => z)) := by
+    IsCoherentModule Z
+        (pushforwardSheaf f' (constantSheaf Z')) ∧
+      sheafSupport Z (pushforwardSheaf f' (constantSheaf Z')) =
+        Set.range (fun z : Z => z) := by
   sorry
 
 def affineProjectionIdealLeft (X Y : AlgebraicSpace.{u})

@@ -34,6 +34,8 @@ structure EtaleLiftData {U X : AlgebraicSpace.{u}}
   Lift : Type u
   point : Lift → U
   over : ∀ i, f (point i) = x
+  injective : Function.Injective point
+  complete : ∀ u : U, f u = x ↔ ∃ i, point i = u
 
 abbrev StalkDirectSum {U X : AlgebraicSpace.{u}} {f : SpaceHom U X} {x : X}
     (L : EtaleLiftData f x) (G : SheafObj U) : Type u :=

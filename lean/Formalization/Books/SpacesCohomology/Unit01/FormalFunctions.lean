@@ -14,7 +14,7 @@ structure FormalFunctionsSituation (A : Type u) (X Y : AlgebraicSpace.{u})
   noetherian : Prop
   I : Ideal A
   f : SpaceHom X Y
-  target_is_spectrum : Prop
+  target_is_scheme : IsScheme Y
   proper : IsProper f
   F : SheafObj X
   coherent : IsCoherentModule X F

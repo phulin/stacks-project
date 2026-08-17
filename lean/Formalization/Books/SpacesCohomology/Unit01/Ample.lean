@@ -41,12 +41,13 @@ theorem vanishing_gives_ample
     AmpleVanishingCriterion X L := by
   sorry
 
-structure FiniteSurjectiveAmpleStatement (X Y : AlgebraicSpace.{u})
-    (f : SpaceHom Y X) [AlgebraicSpaceTheory.{u}] [AlgebraicSpaceCohomology.{u}]
+structure FiniteSurjectiveAmpleStatement
+    (X Y S : AlgebraicSpace.{u}) (f : SpaceHom Y X) (pX : SpaceHom X S)
+    [AlgebraicSpaceTheory.{u}] [AlgebraicSpaceCohomology.{u}]
     (L : SheafObj X) where
   finite : IsFinite f
   surjective : IsSurjective f
-  proper_over_base : Prop
+  proper_over_base : IsProper pX
   equivalence :
     (IsScheme X ∧ IsAmple L) ↔
       (IsScheme Y ∧ IsAmple (pullbackSheaf f L))
@@ -58,7 +59,7 @@ theorem surjective_finite_morphism_ample
     (hX : IsProper pX) (hS_noetherian : Prop) (hf : IsFinite f)
     (hs : IsSurjective f)
     (hL : IsInvertible L) :
-    Nonempty (FiniteSurjectiveAmpleStatement X Y f L) := by
+    Nonempty (FiniteSurjectiveAmpleStatement X Y S f pX L) := by
   sorry
 
 end Formalization.Books.SpacesCohomology.Unit01

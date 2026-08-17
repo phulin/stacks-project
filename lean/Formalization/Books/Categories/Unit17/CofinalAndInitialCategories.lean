@@ -1,6 +1,5 @@
 import Formalization.Books.Categories.Unit16.ConnectedLimits
 import Mathlib.CategoryTheory.FiberedCategory.Fiber
-import Mathlib.CategoryTheory.Limits.Final
 import Mathlib.CategoryTheory.Limits.Final.Connected
 
 /-!

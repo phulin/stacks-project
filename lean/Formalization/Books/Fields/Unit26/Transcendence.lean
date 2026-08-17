@@ -1,5 +1,6 @@
 import Formalization.Books.Fields.Unit08.AlgebraicExtensions
 import Mathlib.Analysis.SpecialFunctions.Exp
+import Mathlib.FieldTheory.LinearDisjoint
 import Mathlib.RingTheory.AlgebraicIndependent.Adjoin
 import Mathlib.RingTheory.AlgebraicIndependent.AlgebraicClosure
 import Mathlib.RingTheory.AlgebraicIndependent.TranscendenceBasis
@@ -26,6 +27,7 @@ namespace Formalization.Books.Fields.Unit26
 noncomputable section
 
 open Set
+open scoped TensorProduct
 
 universe u v w z
 
@@ -300,7 +302,11 @@ theorem exists_purely_transcendental_intermediateField_with_algebraic_top
     ∃ K : IntermediateField F E,
       (letI : Algebra F K := K.algebra'
        IsPurelyTranscendental F K) ∧ Algebra.IsAlgebraic K E := by
-  sorry
+  obtain ⟨ι, x, hx⟩ := transcendence_basis_exists F E
+  let K : IntermediateField F E := IntermediateField.adjoin F (Set.range x)
+  refine ⟨K, ?_, ?_⟩
+  · exact ⟨ι, ⟨hx.1.aevalEquivField⟩⟩
+  · simpa [K] using hx.isAlgebraic_field
 
 /-! ## Function fields of curves -/
 
@@ -449,7 +455,168 @@ theorem relative_algebraic_closure_finite_of_finitely_generated
     {k : Type u} {K : Type v} [Field k] [Field K] [Algebra k K]
     [Algebra.EssFiniteType k K] :
     Module.Finite k (algebraicClosure k K) := by
-  sorry
+  obtain ⟨ι, x, hx⟩ := transcendence_basis_exists k K
+  let A : IntermediateField k K := algebraicClosure k K
+  let L : IntermediateField k K := IntermediateField.adjoin k (Set.range x)
+  let : Algebra.IsAlgebraic k A := by
+    dsimp [A]
+    infer_instance
+  let : FaithfulSMul k A :=
+    ⟨fun hsmul =>
+      Formalization.Books.Fields.Unit06.field_extension_algebraMap_injective
+        (k := k) (E := A) (by
+          simpa only [Algebra.algebraMap_eq_smul_one'] using hsmul 1)⟩
+  let eL : rationalFunctionField k ι ≃ₐ[k] L := hx.1.aevalEquivField
+  let : Algebra (MvPolynomial ι k) (rationalFunctionField A ι) :=
+    RingHom.toAlgebra
+      ((algebraMap (MvPolynomial ι A) (rationalFunctionField A ι)).comp
+        (MvPolynomial.map (algebraMap k A)))
+  let : FaithfulSMul (MvPolynomial ι k) (rationalFunctionField A ι) :=
+    let h : Function.Injective
+        ((algebraMap (MvPolynomial ι k) (rationalFunctionField A ι))) :=
+      (IsFractionRing.injective (MvPolynomial ι A) (rationalFunctionField A ι)).comp
+        (MvPolynomial.map_injective _
+          Formalization.Books.Fields.Unit06.field_extension_algebraMap_injective)
+    ⟨fun hsmul => h (by
+      simpa only [Algebra.algebraMap_eq_smul_one'] using hsmul 1)⟩
+  let : SMul (MvPolynomial ι k) (rationalFunctionField A ι) :=
+    (inferInstance : Algebra (MvPolynomial ι k) (rationalFunctionField A ι)).toSMul
+  let : Algebra (rationalFunctionField k ι) (rationalFunctionField A ι) :=
+    FractionRing.liftAlgebra (MvPolynomial ι k) (rationalFunctionField A ι)
+  let : IsScalarTower k (MvPolynomial ι k) (rationalFunctionField A ι) :=
+    IsScalarTower.of_algebraMap_eq' (by
+      ext p
+      simp only [RingHom.algebraMap_toAlgebra, RingHom.comp_apply, MvPolynomial.algebraMap_eq,
+        MvPolynomial.map_C]
+      rfl)
+  let : IsScalarTower k (rationalFunctionField k ι) (rationalFunctionField A ι) :=
+    inferInstance
+  let : IsScalarTower k A (rationalFunctionField A ι) := by
+    infer_instance
+  let : Algebra (MvPolynomial ι k) (MvPolynomial ι A) :=
+    MvPolynomial.algebraMvPolynomial
+  let : SMul (MvPolynomial ι A) (rationalFunctionField A ι) :=
+    (inferInstance : Algebra (MvPolynomial ι A) (rationalFunctionField A ι)).toSMul
+  let : IsScalarTower k (MvPolynomial ι k) (MvPolynomial ι A) :=
+    IsScalarTower.of_algebraMap_eq' (by
+      ext p
+      simp)
+  let : IsScalarTower (MvPolynomial ι k) (MvPolynomial ι A)
+      (rationalFunctionField A ι) :=
+    ⟨by
+      intro p q r
+      simp only [Algebra.smul_def]
+      simp only [RingHom.algebraMap_toAlgebra, RingHom.comp_apply, map_mul]
+      exact mul_assoc _ _ _⟩
+  have hpush_generic :
+      Algebra.IsPushout k (rationalFunctionField k ι) A (rationalFunctionField A ι) := by
+    exact
+      (Algebra.IsPushout.comp_iff k (MvPolynomial ι k) A (MvPolynomial ι A)).mpr
+        inferInstance
+  let : Algebra.IsPushout k A (rationalFunctionField k ι)
+      (rationalFunctionField A ι) := by
+    exact hpush_generic.symm
+  let eTensor : (↥A ⊗[k] ↥L) ≃ₐ[k] rationalFunctionField A ι :=
+    (Algebra.TensorProduct.congr (AlgEquiv.refl : A ≃ₐ[k] A) eL.symm).trans
+      ((Algebra.IsPushout.equiv k A (rationalFunctionField k ι)
+        (rationalFunctionField A ι)).restrictScalars k)
+  have hxA : AlgebraicIndependent A x := by
+    dsimp [A]
+    exact hx.1.algebraicClosure
+  have hxA' : Function.Injective
+      (MvPolynomial.aeval x : MvPolynomial ι A →ₐ[A] K) :=
+    algebraicIndependent_iff_injective_aeval.mp hxA
+  let fM : rationalFunctionField A ι →ₐ[A] K :=
+    IsFractionRing.liftAlgHom (g := MvPolynomial.aeval x) hxA'
+  have hfM_comp :
+      fM.toRingHom.comp (algebraMap (MvPolynomial ι A) (rationalFunctionField A ι)) =
+        (MvPolynomial.aeval x).toRingHom := by
+    change (IsFractionRing.lift hxA').comp
+        (algebraMap (MvPolynomial ι A) (rationalFunctionField A ι)) = _
+    exact IsLocalization.lift_comp _
+  have hrestrict :
+      fM.toRingHom.comp (algebraMap (rationalFunctionField k ι)
+        (rationalFunctionField A ι)) =
+      L.val.toRingHom.comp eL.toRingHom := by
+    apply IsFractionRing.ringHom_ext
+      (A := MvPolynomial ι k) (K := rationalFunctionField k ι)
+    intro p
+    have hbase :
+        (algebraMap (rationalFunctionField k ι) (rationalFunctionField A ι)).comp
+            (algebraMap (MvPolynomial ι k) (rationalFunctionField k ι)) =
+          (algebraMap (MvPolynomial ι A) (rationalFunctionField A ι)).comp
+            (MvPolynomial.map (algebraMap k A)) := by
+      apply RingHom.ext
+      intro p
+      simp only [RingHom.comp_apply]
+      rw [FractionRing.algebraMap_liftAlgebra]
+      simp only [IsFractionRing.lift_algebraMap]
+      rfl
+    change fM ((algebraMap (rationalFunctionField k ι) (rationalFunctionField A ι))
+      ((algebraMap (MvPolynomial ι k) (rationalFunctionField k ι)) p)) = _
+    have hp :
+        (algebraMap (rationalFunctionField k ι) (rationalFunctionField A ι))
+            ((algebraMap (MvPolynomial ι k) (rationalFunctionField k ι)) p) =
+          (algebraMap (MvPolynomial ι A) (rationalFunctionField A ι))
+            ((MvPolynomial.map (algebraMap k A)) p) := by
+      simpa only [RingHom.comp_apply] using
+        congrArg (fun f : MvPolynomial ι k →+* rationalFunctionField A ι => f p) hbase
+    rw [hp]
+    have hfp :
+        fM ((algebraMap (MvPolynomial ι A) (rationalFunctionField A ι))
+            ((MvPolynomial.map (algebraMap k A)) p)) =
+          (MvPolynomial.aeval x) ((MvPolynomial.map (algebraMap k A)) p) := by
+      change fM.toRingHom
+          ((algebraMap (MvPolynomial ι A) (rationalFunctionField A ι))
+            ((MvPolynomial.map (algebraMap k A)) p)) =
+        (MvPolynomial.aeval x).toRingHom ((MvPolynomial.map (algebraMap k A)) p)
+      exact congrArg
+        (fun f : MvPolynomial ι A →+* K =>
+          f ((MvPolynomial.map (algebraMap k A)) p)) hfM_comp
+    rw [hfp, MvPolynomial.aeval_map_algebraMap]
+    change _ = (eL ((algebraMap (MvPolynomial ι k)
+      (rationalFunctionField k ι)) p) : K)
+    rw [show eL = hx.1.aevalEquivField from rfl]
+    rw [AlgebraicIndependent.aevalEquivField_algebraMap_apply_coe]
+  have hdisj : A.LinearDisjoint L := by
+    rw [IntermediateField.linearDisjoint_iff']
+    rw [Subalgebra.linearDisjoint_iff_injective]
+    have hmul :
+        A.toSubalgebra.mulMap L.toSubalgebra =
+          (fM.restrictScalars k).comp eTensor.toAlgHom := by
+      apply Algebra.TensorProduct.ext'
+      intro a b
+      have hb :
+          fM (algebraMap (rationalFunctionField k ι)
+            (rationalFunctionField A ι) (eL.symm b)) = b.1 := by
+        change fM.toRingHom
+            (algebraMap (rationalFunctionField k ι)
+              (rationalFunctionField A ι) (eL.symm b)) = (b : K)
+        have h := congrArg
+          (fun f : rationalFunctionField k ι →+* K => f (eL.symm b)) hrestrict
+        change fM.toRingHom
+            (algebraMap (rationalFunctionField k ι)
+              (rationalFunctionField A ι) (eL.symm b)) =
+          L.val.toRingHom (eL (eL.symm b)) at h
+        rw [eL.apply_symm_apply] at h
+        exact h
+      simp [eTensor, Algebra.IsPushout.equiv_tmul, hb]
+      rfl
+    rw [hmul]
+    exact (fM.restrictScalars k).injective.comp eTensor.injective
+  let : Algebra.IsAlgebraic L K := by
+    simpa [L] using hx.isAlgebraic_field
+  let : Algebra.EssFiniteType L K := Algebra.EssFiniteType.of_comp k L K
+  have hfiniteLK : Module.Finite L K :=
+    Algebra.finite_of_essFiniteType_of_isAlgebraic
+  let : FiniteDimensional L K := hfiniteLK
+  have hfiniteAdjoin : Module.Finite L (IntermediateField.adjoin L (A : Set K)) := by
+    infer_instance
+  have hrank : Module.rank L (IntermediateField.adjoin L (A : Set K)) = Module.rank k A :=
+    hdisj.adjoin_rank_eq_rank_left_of_isAlgebraic_left
+  apply Module.rank_lt_aleph0_iff.mp
+  rw [← hrank]
+  exact Module.rank_lt_aleph0_iff.mpr hfiniteAdjoin
 
 end
 

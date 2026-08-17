@@ -65,38 +65,6 @@ abbrev exactCoupleDerivedE {C : Type u} [Category.{v} C] [Abelian C]
 abbrev exactCoupleDerivedA {C : Type u} [Category.{v} C] [Abelian C]
     {A E : C} (D : ExactCouple C A E) : C := Abelian.image D.alpha
 
-/- The induced maps are named separately so that later constructions can use
-them without replacing them by arbitrary morphisms of the same type. -/
-theorem exactCoupleDerivedAlpha_exists {C : Type u} [Category.{v} C] [Abelian C]
-    {A E : C} (D : ExactCouple C A E) :
-    Nonempty (exactCoupleDerivedA D ⟶ exactCoupleDerivedA D) := by
-  sorry
-
-noncomputable def exactCoupleDerivedAlpha {C : Type u} [Category.{v} C]
-    [Abelian C] {A E : C} (D : ExactCouple C A E) :
-    exactCoupleDerivedA D ⟶ exactCoupleDerivedA D :=
-  Classical.choice (exactCoupleDerivedAlpha_exists D)
-
-theorem exactCoupleDerivedF_exists {C : Type u} [Category.{v} C] [Abelian C]
-    {A E : C} (D : ExactCouple C A E) :
-    Nonempty (exactCoupleDerivedE D ⟶ exactCoupleDerivedA D) := by
-  sorry
-
-noncomputable def exactCoupleDerivedF {C : Type u} [Category.{v} C]
-    [Abelian C] {A E : C} (D : ExactCouple C A E) :
-    exactCoupleDerivedE D ⟶ exactCoupleDerivedA D :=
-  Classical.choice (exactCoupleDerivedF_exists D)
-
-theorem exactCoupleDerivedG_exists {C : Type u} [Category.{v} C] [Abelian C]
-    {A E : C} (D : ExactCouple C A E) :
-    Nonempty (exactCoupleDerivedA D ⟶ exactCoupleDerivedE D) := by
-  sorry
-
-noncomputable def exactCoupleDerivedG {C : Type u} [Category.{v} C]
-    [Abelian C] {A E : C} (D : ExactCouple C A E) :
-    exactCoupleDerivedA D ⟶ exactCoupleDerivedE D :=
-  Classical.choice (exactCoupleDerivedG_exists D)
-
 /-- The derived exact couple, with `A' = Im(alpha)` and
 `E' = Ker(d)/Im(d)`. -/
 theorem exactCoupleDerived_exists {C : Type u} [Category.{v} C] [Abelian C]
@@ -108,6 +76,23 @@ noncomputable def exactCoupleDerived {C : Type u} [Category.{v} C]
     [Abelian C] {A E : C} (D : ExactCouple C A E) :
     ExactCouple C (exactCoupleDerivedA D) (exactCoupleDerivedE D) :=
   Classical.choice (exactCoupleDerived_exists D)
+
+/- The induced maps are the maps of the chosen derived exact couple, so the
+three names below cannot drift apart from its exactness data. -/
+abbrev exactCoupleDerivedAlpha {C : Type u} [Category.{v} C]
+    [Abelian C] {A E : C} (D : ExactCouple C A E) :
+    exactCoupleDerivedA D ⟶ exactCoupleDerivedA D :=
+  (exactCoupleDerived D).alpha
+
+abbrev exactCoupleDerivedF {C : Type u} [Category.{v} C]
+    [Abelian C] {A E : C} (D : ExactCouple C A E) :
+    exactCoupleDerivedE D ⟶ exactCoupleDerivedA D :=
+  (exactCoupleDerived D).f
+
+abbrev exactCoupleDerivedG {C : Type u} [Category.{v} C]
+    [Abelian C] {A E : C} (D : ExactCouple C A E) :
+    exactCoupleDerivedA D ⟶ exactCoupleDerivedE D :=
+  (exactCoupleDerived D).g
 
 /-- `Ker(d) = f⁻¹(Ker(g)) = f⁻¹(Im(alpha))`. -/
 theorem exactCouple_kernel_formula {C : Type u} [Category.{v} C] [Abelian C]
@@ -186,24 +171,29 @@ noncomputable def exactCouplePageComponent {C : Type u} [Category.{v} C]
   subquotientObject (exactCoupleBoundarySubobject D n)
     (exactCoupleCycleSubobject D n) (exactCouple_boundary_le_cycle D n)
 
+noncomputable def exactCouplePageClassOfCycle {C : Type u} [Category.{v} C]
+    [Abelian C] {A E : C} (D : ExactCouple C A E) (n : ℕ)
+    {T : C} (z : T ⟶ (exactCoupleCycleSubobject D n : C)) :
+    T ⟶ exactCouplePageComponent D n :=
+  z ≫ cokernel.π (Subobject.ofLE (exactCoupleBoundarySubobject D n)
+    (exactCoupleCycleSubobject D n) (exactCouple_boundary_le_cycle D n))
+
 /-- A test-object formulation of the rule defining the next differential.
-The class maps are part of the data because categorical quotients do not
-have elements. -/
+The boundary representative is required to be the class of `g ≫ y`, so the
+interface retains the source's use of the exact-couple map `g`. -/
 structure ExactCoupleDifferentialRule {C : Type u} [Category.{v} C]
     [Abelian C] {A E : C} (D : ExactCouple C A E) (n : ℕ) where
   differential : exactCouplePageComponent (C := C) D n ⟶
     exactCouplePageComponent (C := C) D n
-  classOfCycle : ∀ {T : C},
-    (T ⟶ (exactCoupleCycleSubobject (C := C) D n : C)) →
-      (T ⟶ exactCouplePageComponent (C := C) D n)
-  classOfBoundary : ∀ {T : C},
-    (T ⟶ A) → (T ⟶ exactCouplePageComponent (C := C) D n)
   rule : ∀ {T : C}
     (x : T ⟶ (exactCoupleCycleSubobject (C := C) D n : C))
     (y : T ⟶ A),
     x ≫ (exactCoupleCycleSubobject D n).arrow ≫ D.f =
         y ≫ exactCoupleAlphaPow D (n + 1) →
-      classOfCycle x ≫ differential = classOfBoundary y
+      ∃ yCycle : T ⟶ (exactCoupleCycleSubobject (C := C) D n : C),
+        yCycle ≫ (exactCoupleCycleSubobject D n).arrow = y ≫ D.g ∧
+          exactCouplePageClassOfCycle D n x ≫ differential =
+            exactCouplePageClassOfCycle D n yCycle
 
 theorem exactCouple_differential_rule
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -243,6 +233,7 @@ structure ShiftedExactCouple (C : Type u) [Category.{v} C] [Abelian C]
   f : E ⟶ A
   g : A ⟶ S.functor.obj E
   Talpha : T.functor.obj A ⟶ A
+  Talpha_spec : Talpha = T.functor.map alpha ≫ T.counitIso.hom.app A
   exact : ExactFiveTerm (T.functor.map f) Talpha g (S.functor.map f)
 
 def shiftedExactCoupleDifferential {C : Type u} [Category.{v} C]

@@ -36,7 +36,7 @@ abbrev FilteredDifferentialObjectHom {C : Type u} [Category.{v} C] [Abelian C]
 abbrev filteredDifferentialUnderlying {C : Type u} [Category.{v} C]
     [Abelian C] (K : FilteredDifferentialObject C) :
     K.carrier.carrier ⟶ K.carrier.carrier :=
-  FilteredHom.hom (PlainDifferentialObjectHom.hom K.d)
+  FilteredHom.hom K.d
 
 /-- The hypothesis that countable direct sums are exact, expressed by the
 canonical totalization functor from the graded-object chapter. -/
@@ -50,7 +50,7 @@ def filteredStepDifferential {C : Type u} [Category.{v} C] [Abelian C]
     (K.carrier.filtration.obj p : C) ⟶ (K.carrier.filtration.obj p : C) :=
   (K.carrier.filtration.obj p).factorThru
     ((K.carrier.filtration.obj p).arrow ≫ filteredDifferentialUnderlying K)
-    (FilteredHom.map_filtration (PlainDifferentialObjectHom.hom K.d) p)
+    (FilteredHom.map_filtration K.d p)
 
 def filteredDifferentialSummands {C : Type u} [Category.{v} C] [Abelian C]
     (K : FilteredDifferentialObject C) : GradedObject ℤ C :=
@@ -120,7 +120,7 @@ def filteredDifferentialDirectSumInjectiveSelfMap {C : Type u}
 
 theorem filteredDifferentialAssociatedSpectralSequence_exists
     {C : Type u} [Category.{v} C] [Abelian C] [HasCountableCoproducts C]
-    (hExact : CountableDirectSumsExact C) (K : FilteredDifferentialObject C) :
+    (_hExact : CountableDirectSumsExact C) (K : FilteredDifferentialObject C) :
     Nonempty (PlainSpectralSequence C 0) := by
   exact differentialSelfMap_starting_at_zero_exists
     (filteredDifferentialDirectSumInjectiveSelfMap K)
@@ -137,7 +137,7 @@ def filteredGradedDifferentialObject {C : Type u} [Category.{v} C]
     [Abelian C] (K : FilteredDifferentialObject C) (p : ℤ) :
     PlainDifferentialObject C where
   carrier := gradedPiece K.carrier p
-  d := gradedPieceMap (PlainDifferentialObjectHom.hom K.d) p
+  d := gradedPieceMap K.d p
   d_squared := by
     sorry
 
@@ -148,7 +148,7 @@ abbrev filteredDifferentialE₀ {C : Type u} [Category.{v} C]
 abbrev filteredDifferentialD₀ {C : Type u} [Category.{v} C]
     [Abelian C] (K : FilteredDifferentialObject C) (p : ℤ) :
     filteredDifferentialE₀ K p ⟶ filteredDifferentialE₀ K p :=
-  gradedPieceMap (PlainDifferentialObjectHom.hom K.d) p
+  gradedPieceMap K.d p
 
 abbrev filteredDifferentialE₁ {C : Type u} [Category.{v} C]
     [Abelian C] (K : FilteredDifferentialObject C) (p : ℤ) : C :=
@@ -218,7 +218,7 @@ structure FilteredDifferentialPageDifferentials {C : Type u}
   lift_rule : ∀ (r : ℕ) (p : ℤ) {T : C}
     (z : T ⟶ (filteredDifferentialCyclePlus K p r : C))
     (zNext : T ⟶ (filteredDifferentialCyclePlus K (p + r) r : C))
-    (hz : zNext ≫ (filteredDifferentialCyclePlus K (p + r) r).arrow =
+    (_hz : zNext ≫ (filteredDifferentialCyclePlus K (p + r) r).arrow =
       z ≫ (filteredDifferentialCyclePlus K p r).arrow ≫
         filteredDifferentialUnderlying K),
     filteredDifferentialPageClass K r p z ≫ differential r p =
@@ -266,6 +266,39 @@ abbrev filteredDifferentialUnderlyingHomology {C : Type u} [Category.{v} C]
     [Abelian C] (K : FilteredDifferentialObject C) : C :=
   plainDifferentialHomology (filteredDifferentialUnderlyingObject K)
 
+noncomputable def filteredDifferentialHomologyProjection {C : Type u}
+    [Category.{v} C] [Abelian C] (K : FilteredDifferentialObject C) :
+    kernel (filteredDifferentialUnderlying K) ⟶
+      filteredDifferentialUnderlyingHomology K :=
+  cokernel.π (kernel.lift (filteredDifferentialUnderlying K)
+    (Abelian.image.ι (filteredDifferentialUnderlying K))
+    (Abelian.image_ι_comp_eq_zero
+      (filteredDifferentialUnderlyingObject K).d_squared))
+
+noncomputable def filteredDifferentialHomologyCycleObject {C : Type u}
+    [Category.{v} C] [Abelian C] (K : FilteredDifferentialObject C) (p : ℤ) :
+    C :=
+  pullback (kernel.ι (filteredDifferentialUnderlying K))
+    (K.carrier.filtration.obj p).arrow
+
+noncomputable def filteredDifferentialHomologyCycleMap {C : Type u}
+    [Category.{v} C] [Abelian C] (K : FilteredDifferentialObject C) (p : ℤ) :
+    filteredDifferentialHomologyCycleObject K p ⟶
+      filteredDifferentialUnderlyingHomology K :=
+  pullback.fst (kernel.ι (filteredDifferentialUnderlying K))
+      (K.carrier.filtration.obj p).arrow ≫
+    filteredDifferentialHomologyProjection K
+
+def filteredDifferentialHomologyTop {C : Type u} [Category.{v} C]
+    [Abelian C] (K : FilteredDifferentialObject C) (p : ℤ) :
+    Subobject (filteredDifferentialUnderlyingHomology K) :=
+  Subobject.mk (Abelian.image.ι (filteredDifferentialHomologyCycleMap K p))
+
+def filteredDifferentialHomologyBottom {C : Type u} [Category.{v} C]
+    [Abelian C] (K : FilteredDifferentialObject C) (p : ℤ) :
+    Subobject (filteredDifferentialUnderlyingHomology K) :=
+  filteredDifferentialHomologyTop K (p + 1)
+
 theorem filteredDifferentialHomologyFiltration_exists
     {C : Type u} [Category.{v} C] [Abelian C]
     (K : FilteredDifferentialObject C) :
@@ -274,28 +307,16 @@ theorem filteredDifferentialHomologyFiltration_exists
 
 noncomputable def filteredDifferentialHomologyFiltration {C : Type u}
     [Category.{v} C] [Abelian C] (K : FilteredDifferentialObject C) :
-    DecreasingFiltration C (filteredDifferentialUnderlyingHomology K) :=
-  Classical.choice (filteredDifferentialHomologyFiltration_exists K)
+    DecreasingFiltration C (filteredDifferentialUnderlyingHomology K) where
+  obj p := filteredDifferentialHomologyTop K p
+  antitone := by
+    intro p q hpq
+    sorry
 
 def filteredDifferentialHomologyFilteredObject {C : Type u}
     [Category.{v} C] [Abelian C] (K : FilteredDifferentialObject C) : FilteredObject C where
   carrier := filteredDifferentialUnderlyingHomology K
   filtration := filteredDifferentialHomologyFiltration K
-
-def filteredDifferentialHomologyTop {C : Type u} [Category.{v} C]
-    [Abelian C] (K : FilteredDifferentialObject C) (p : ℤ) :
-    Subobject K.carrier.carrier :=
-  (Subobject.mk (kernel.ι (filteredDifferentialUnderlying K)) ⊓
-      K.carrier.filtration.obj p) ⊔
-    (Subobject.«exists» (filteredDifferentialUnderlying K)).obj ⊤
-
-def filteredDifferentialHomologyBottom {C : Type u} [Category.{v} C]
-    [Abelian C] (K : FilteredDifferentialObject C) (p : ℤ) :
-    Subobject K.carrier.carrier :=
-  (Subobject.mk (kernel.ι (filteredDifferentialUnderlying K)) ⊓
-      K.carrier.filtration.obj (p + 1)) ⊔
-    (Subobject.«exists» (filteredDifferentialUnderlying K)).obj
-      (K.carrier.filtration.obj p)
 
 theorem filteredDifferentialHomology_bottom_le_top
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -306,10 +327,8 @@ theorem filteredDifferentialHomology_bottom_le_top
 theorem filteredDifferentialHomologyFiltration_formula
     {C : Type u} [Category.{v} C] [Abelian C]
     (K : FilteredDifferentialObject C) (p : ℤ) :
-    filteredDifferentialHomologyTop K p =
-      (Subobject.mk (kernel.ι (filteredDifferentialUnderlying K)) ⊓
-        K.carrier.filtration.obj p) ⊔
-      (Subobject.«exists» (filteredDifferentialUnderlying K)).obj ⊤ := rfl
+    (filteredDifferentialHomologyFilteredObject K).filtration.obj p =
+      filteredDifferentialHomologyTop K p := rfl
 
 theorem filteredDifferentialHomologyGradedPiece_formula
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -338,8 +357,8 @@ def filteredDifferentialLimitCycle {C : Type u} [Category.{v} C]
 
 structure FilteredDifferentialLimitData {C : Type u} [Category.{v} C]
     [Abelian C] (K : FilteredDifferentialObject C) where
-  Binf : ∀ p, Subobject K.carrier.carrier
-  Zinf : ∀ p, Subobject K.carrier.carrier
+  Binf : ∀ _p, Subobject K.carrier.carrier
+  Zinf : ∀ _p, Subobject K.carrier.carrier
   Binf_spec : ∀ p, ∀ r, filteredDifferentialBoundaryPlus K p r ≤ Binf p
   Zinf_spec : ∀ p, ∀ r, Zinf p ≤ filteredDifferentialCyclePlus K p r
   Binf_le_Zinf : ∀ p, Binf p ≤ Zinf p
@@ -350,11 +369,19 @@ noncomputable def filteredDifferentialLimitPage {C : Type u}
     (p : ℤ) : C :=
   subquotientObject (L.Binf p) (L.Zinf p) (L.Binf_le_Zinf p)
 
-theorem filteredDifferentialLimit_graded_subquotient
+def IsSubquotientOf {C : Type u} [Category.{v} C] [Abelian C]
+    {X Y : C} : Prop :=
+  ∃ B Z : Subobject Y, ∃ hBZ : B ≤ Z,
+    Nonempty (X ≅ subquotientObject B Z hBZ)
+
+def filteredDifferentialLimit_graded_subquotient
     {C : Type u} [Category.{v} C] [Abelian C]
     (K : FilteredDifferentialObject C) (L : FilteredDifferentialLimitData K) :
-    Prop := by
-  sorry
+    Prop :=
+  ∀ p : ℤ,
+    IsSubquotientOf
+      (X := gradedPiece (filteredDifferentialHomologyFilteredObject K) p)
+      (Y := filteredDifferentialLimitPage K L p)
 
 def filteredDifferentialWeaklyConverges
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -366,18 +393,29 @@ def filteredDifferentialAbuts
     {C : Type u} [Category.{v} C] [Abelian C]
     (K : FilteredDifferentialObject C) : Prop :=
   filteredDifferentialWeaklyConverges K ∧
-    ∃ hF : HasIntersection K.carrier.filtration,
-      ∃ hU : HasUnion K.carrier.filtration,
+    ∃ hF : HasIntersection (filteredDifferentialHomologyFilteredObject K).filtration,
+      ∃ hU : HasUnion (filteredDifferentialHomologyFilteredObject K).filtration,
         intersection hF = ⊥ ∧ union hU = ⊤
 
 theorem filteredDifferentialWeakConvergence_iff
     {C : Type u} [Category.{v} C] [Abelian C]
-    (K : FilteredDifferentialObject C) : Prop := by
-  sorry
+    (K : FilteredDifferentialObject C) :
+    filteredDifferentialWeaklyConverges K ↔
+      ∃ L : FilteredDifferentialLimitData K,
+        filteredDifferentialLimit_graded_subquotient K L := Iff.rfl
+
+def filteredDifferentialAbutmentCriterion
+    {C : Type u} [Category.{v} C] [Abelian C]
+    (K : FilteredDifferentialObject C) : Prop :=
+  ∃ hF : HasIntersection (filteredDifferentialHomologyFilteredObject K).filtration,
+    ∃ hU : HasUnion (filteredDifferentialHomologyFilteredObject K).filtration,
+      intersection hF = ⊥ ∧ union hU = ⊤
 
 theorem filteredDifferentialAbutment_iff
     {C : Type u} [Category.{v} C] [Abelian C]
-    (K : FilteredDifferentialObject C) : Prop := by
-  sorry
+    (K : FilteredDifferentialObject C) :
+    filteredDifferentialAbuts K ↔
+      filteredDifferentialWeaklyConverges K ∧
+        filteredDifferentialAbutmentCriterion K := Iff.rfl
 
 end Formalization.Books.Homology.Unit20

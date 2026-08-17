@@ -125,19 +125,34 @@ structure PlainDifferentialInjectiveEndomorphism {C : Type u} [Category.{v} C]
   hom : PlainDifferentialObjectHom A A
   injective : Mono hom.hom
 
+structure QuotientDifferentialMapData {C : Type u} [Category.{v} C]
+    [Abelian C] {A : PlainDifferentialObject C}
+    (α : PlainDifferentialInjectiveEndomorphism A) where
+  differential : cokernel α.hom.hom ⟶ cokernel α.hom.hom
+  square_zero : differential ≫ differential = 0
+  induced : cokernel.π α.hom.hom ≫ differential =
+    A.d ≫ cokernel.π α.hom.hom
+
 theorem quotientDifferentialMap_exists
     {C : Type u} [Category.{v} C] [Abelian C]
     {A : PlainDifferentialObject C}
     (α : PlainDifferentialInjectiveEndomorphism A) :
-    Nonempty (cokernel α.hom.hom ⟶ cokernel α.hom.hom) := by
+    Nonempty (QuotientDifferentialMapData α) := by
   sorry
+
+noncomputable def quotientDifferentialMapData
+    {C : Type u} [Category.{v} C] [Abelian C]
+    {A : PlainDifferentialObject C}
+    (α : PlainDifferentialInjectiveEndomorphism A) :
+    QuotientDifferentialMapData α :=
+  Classical.choice (quotientDifferentialMap_exists α)
 
 noncomputable def quotientDifferentialMap
     {C : Type u} [Category.{v} C] [Abelian C]
     {A : PlainDifferentialObject C}
     (α : PlainDifferentialInjectiveEndomorphism A) :
     cokernel α.hom.hom ⟶ cokernel α.hom.hom :=
-  Classical.choice (quotientDifferentialMap_exists α)
+  (quotientDifferentialMapData α).differential
 
 /-- The differential object `(A/alpha A,d)` from the self-map example. -/
 def quotientDifferentialObject
@@ -146,8 +161,7 @@ def quotientDifferentialObject
     (α : PlainDifferentialInjectiveEndomorphism A) : PlainDifferentialObject C where
   carrier := cokernel α.hom.hom
   d := quotientDifferentialMap α
-  d_squared := by
-    sorry
+  d_squared := (quotientDifferentialMapData α).square_zero
 
 def differentialSelfMapShortExact
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -155,7 +169,8 @@ def differentialSelfMapShortExact
     (α : PlainDifferentialInjectiveEndomorphism A) :
     PlainDifferentialShortExact A A (quotientDifferentialObject α) where
   f := α.hom
-  g := { hom := cokernel.π α.hom.hom, comm := by sorry }
+  g := { hom := cokernel.π α.hom.hom
+         comm := (quotientDifferentialMapData α).induced.symm }
   complex := cokernel.condition _
   exact := by
     sorry
@@ -461,20 +476,33 @@ structure ShiftedSelfMapData (C : Type u) [Category.{v} C]
       d := targetDifferential
       d_squared := target_d_squared }
   injective : Mono alpha.hom
-  quotient : ShiftedDifferentialObject C S
+  quotientDifferential :
+    cokernel alpha.hom ⟶ S.functor.obj (cokernel alpha.hom)
+  quotient_d_squared :
+    quotientDifferential ≫ S.functor.map quotientDifferential = 0
+  quotient_induced :
+    cokernel.π alpha.hom ≫ quotientDifferential =
+      targetDifferential ≫ S.functor.map (cokernel.π alpha.hom)
+
+def shiftedSelfMapQuotient {C : Type u} [Category.{v} C]
+    [Abelian C] {S T : C ≌ C} (D : ShiftedSelfMapData C S T) :
+    ShiftedDifferentialObject C S where
+  carrier := cokernel D.alpha.hom
+  d := D.quotientDifferential
+  d_squared := D.quotient_d_squared
 
 theorem shiftedSelfMap_exact_couple_exists {C : Type u} [Category.{v} C]
     [Abelian C] {S T : C ≌ C} (D : ShiftedSelfMapData C S T) :
     Nonempty (ShiftedExactCouple C (T.trans S) T
       (shiftedDifferentialHomology D.A)
-      (S.inverse.obj (shiftedDifferentialHomology D.quotient))) := by
+      (S.inverse.obj (shiftedDifferentialHomology (shiftedSelfMapQuotient D)))) := by
   sorry
 
 theorem shiftedSelfMap_spectral_sequence {C : Type u} [Category.{v} C]
     [Abelian C] {S T : C ≌ C} (D : ShiftedSelfMapData C S T) :
     ∃ X : TranslatedSpectralSequenceData C,
       X.r₀ = 1 ∧ Nonempty (X.page 1 ≅
-        S.inverse.obj (shiftedDifferentialHomology D.quotient)) := by
+        S.inverse.obj (shiftedDifferentialHomology (shiftedSelfMapQuotient D))) := by
   sorry
 
 end Formalization.Books.Homology.Unit20

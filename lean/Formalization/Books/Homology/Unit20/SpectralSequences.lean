@@ -161,21 +161,8 @@ theorem degeneratesAt_limit_exists {C : Type u} [Category.{v} C]
 
 /-! ### Translation/shift functors -/
 
-/-- A spectral sequence whose differential lands in a page-dependent
-translation of the page.  `Equivalence` is Mathlib's canonical API for an
-isomorphism of categories. -/
-structure TranslatedSpectralSequence (C : Type u) [Category.{v} C]
-    [HasZeroMorphisms C] where
-  r₀ : ℤ
-  translation : ℤ → (C ≌ C)
-  page : ℤ → C
-  differential : ∀ r, page r ⟶ (translation r).functor.obj (page r)
-  d_squared : ∀ r,
-    differential r ≫ (translation r).functor.map (differential r) = 0
-  next : ∀ r, r₀ ≤ r → Prop
-
-/- The following predicate is the source's page-to-page homology condition;
-the explicit homology object is given below. -/
+/-- The differential transported back through an equivalence, so that it has
+the type `T⁻¹ E ⟶ E`. -/
 def translatedPreviousDifferential {C : Type u} [Category.{v} C]
     [HasZeroMorphisms C] (T : C ≌ C) {A : C}
     (d : A ⟶ T.functor.obj A) : T.inverse.obj A ⟶ A :=
@@ -195,17 +182,29 @@ noncomputable def translatedDifferentialHomology {C : Type u} [Category.{v} C]
   cokernel (kernel.lift d (Abelian.image.ι (translatedPreviousDifferential T d))
     (by simpa using translatedPreviousDifferential_comp d hd))
 
-/-! The source's translated spectral-sequence condition is recorded as a
-separate structure so that the page-to-page isomorphisms remain explicit. -/
-structure TranslatedSpectralSequenceData (C : Type u) [Category.{v} C]
-    [Abelian C] extends TranslatedSpectralSequence C where
+/-- A spectral sequence whose differential lands in a page-dependent
+translation of the page.  `Equivalence` is Mathlib's canonical API for an
+isomorphism of categories. -/
+structure TranslatedSpectralSequence (C : Type u) [Category.{v} C]
+    [Abelian C] where
+  r₀ : ℤ
+  translation : ℤ → (C ≌ C)
+  page : ℤ → C
+  differential : ∀ r, page r ⟶ (translation r).functor.obj (page r)
+  d_squared : ∀ r,
+    differential r ≫ (translation r).functor.map (differential r) = 0
   nextIso : ∀ (r : ℤ) (_ : r₀ ≤ r),
     translatedDifferentialHomology (translation r) (differential r)
       (d_squared r) ≅ page (r + 1)
 
+/-- The same translated spectral-sequence data, retained as a source-facing
+name after the page-to-page isomorphism became part of the core structure. -/
+abbrev TranslatedSpectralSequenceData (C : Type u) [Category.{v} C]
+    [Abelian C] := TranslatedSpectralSequence C
+
 /-- The differential condition for a morphism of translated spectral sequences. -/
 structure TranslatedSpectralSequenceHom {C : Type u} [Category.{v} C]
-    [HasZeroMorphisms C] (E E' : TranslatedSpectralSequence C) where
+    [Abelian C] (E E' : TranslatedSpectralSequence C) where
   pageHom : ∀ r, E.page r ⟶ E'.page r
   translation_eq : ∀ r, E.translation r = E'.translation r
   comm : ∀ r,

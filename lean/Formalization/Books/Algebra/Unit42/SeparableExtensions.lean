@@ -2,6 +2,7 @@ import Mathlib.FieldTheory.PurelyInseparable.Basic
 import Mathlib.FieldTheory.Separable
 import Mathlib.FieldTheory.SeparableClosure
 import Mathlib.FieldTheory.PrimitiveElement
+import Mathlib.FieldTheory.SeparablyGenerated
 import Mathlib.LinearAlgebra.FiniteDimensional.Defs
 import Mathlib.RingTheory.AlgebraicIndependent.TranscendenceBasis
 import Mathlib.RingTheory.EssentialFiniteness

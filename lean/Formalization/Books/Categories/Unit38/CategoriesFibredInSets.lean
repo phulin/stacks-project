@@ -70,7 +70,18 @@ theorem isCategoryFibredInSets_iff_isFibered_and_discreteFibres
     {S C : Type*} [Category* S] [Category* C] (p : S ⥤ C) :
     IsCategoryFibredInSets p ↔
       p.IsFibered ∧ ∀ U : C, IsDiscrete (Functor.Fiber p U) := by
-  sorry
+  constructor
+  · rintro ⟨hp, hdiscrete⟩
+    have h := (fibredInGroupoids_iff_fibred_groupoid_fibres p).mp hp
+    exact ⟨h.2, hdiscrete⟩
+  · rintro ⟨hfibred, hdiscrete⟩
+    refine ⟨(fibredInGroupoids_iff_fibred_groupoid_fibres p).mpr ?_, hdiscrete⟩
+    exact ⟨fun U => by
+      refine ⟨fun X Y f => ?_⟩
+      have hf : f = eqToHom ((hdiscrete U).eq_of_hom f) :=
+        @Subsingleton.elim _ ((hdiscrete U).subsingleton X Y) _ _
+      rw [hf]
+      infer_instance, hfibred⟩
 
 /-! ## The fixed-base 2-category -/
 

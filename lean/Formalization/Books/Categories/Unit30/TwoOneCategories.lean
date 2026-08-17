@@ -71,7 +71,39 @@ theorem associatedTwoOneCategory_two_morphism_is_iso
 theorem associatedTwoOneCategory_is_strict
     (C : Type u) [Bicategory.{w, v} C] [Bicategory.Strict C] :
     Bicategory.Strict (AssociatedTwoOneCategory C) := by
-  sorry
+  have coreIsoMk_eqToIso {a b : C} {f g : a ⟶ b} (h : f = g) :
+      (Core.isoMk (eqToIso h) : (Core.mk f : Core (a ⟶ b)) ≅ Core.mk g) =
+        eqToIso (congrArg Core.mk h) := by
+    cases h
+    rfl
+  refine
+    { id_comp := ?_
+      comp_id := ?_
+      assoc := ?_
+      leftUnitor_eqToIso := ?_
+      rightUnitor_eqToIso := ?_
+      associator_eqToIso := ?_ }
+  · intro a b f
+    change Core.mk (𝟙 a.as ≫ f.of) = Core.mk f.of
+    exact congrArg Core.mk (Bicategory.Strict.id_comp f.of)
+  · intro a b f
+    change Core.mk (f.of ≫ 𝟙 b.as) = Core.mk f.of
+    exact congrArg Core.mk (Bicategory.Strict.comp_id f.of)
+  · intro a b c d f g h
+    change Core.mk ((f.of ≫ g.of) ≫ h.of) = Core.mk (f.of ≫ g.of ≫ h.of)
+    exact congrArg Core.mk (Bicategory.Strict.assoc f.of g.of h.of)
+  · intro a b f
+    change Core.isoMk (λ_ f.of) = eqToIso _
+    rw [Bicategory.Strict.leftUnitor_eqToIso]
+    exact coreIsoMk_eqToIso (Bicategory.Strict.id_comp f.of)
+  · intro a b f
+    change Core.isoMk (ρ_ f.of) = eqToIso _
+    rw [Bicategory.Strict.rightUnitor_eqToIso]
+    exact coreIsoMk_eqToIso (Bicategory.Strict.comp_id f.of)
+  · intro a b c d f g h
+    change Core.isoMk (α_ f.of g.of h.of) = eqToIso _
+    rw [Bicategory.Strict.associator_eqToIso]
+    exact coreIsoMk_eqToIso (Bicategory.Strict.assoc f.of g.of h.of)
 
 theorem associatedTwoOneCategory_is_strict_two_one_category
     (C : Type u) [Bicategory.{w, v} C] [Bicategory.Strict C] :

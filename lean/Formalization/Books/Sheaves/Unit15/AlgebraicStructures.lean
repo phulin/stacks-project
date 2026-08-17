@@ -135,7 +135,643 @@ theorem standardAlgebraicStructureTypes :
         AlgebraicStructureType (ModuleCat.{u} R) (forget (ModuleCat.{u} R))) ∧
       (∀ (K : Type k) [Field K],
         AlgebraicStructureType (LieAlgebraCat.{u} K) (forget (LieAlgebraCat.{u} K))) := by
-  sorry
+  let pointedLimits : HasLimitsOfSize.{u, u} (Pointed.{u}) := by
+    refine ⟨fun J => ?_⟩
+    refine ⟨fun F => ?_⟩
+    let G : J ⥤ Type u := F ⋙ forget Pointed
+    let pc : Cone G :=
+      { pt := PUnit
+        π :=
+          { app := fun j => ↾fun _ => (F.obj j).point
+            naturality := by
+              intro i j f
+              ext x
+              change (F.obj j).point = (F.map f).toFun (F.obj i).point
+              exact (F.map f).map_point.symm } }
+    let p : limit G := (limit.isLimit G).lift pc PUnit.unit
+    let lc : Cone F :=
+      { pt := Pointed.of p
+        π :=
+          { app := fun j =>
+              ⟨limit.π G j, by
+                change limit.π G j ((limit.isLimit G).lift pc PUnit.unit) =
+                  (F.obj j).point
+                simpa [pc] using
+                  congrArg (fun h => h PUnit.unit) ((limit.isLimit G).fac pc j)⟩
+            naturality := by
+              intro i j f
+              apply Pointed.Hom.ext
+              funext x
+              change (limit.π G j) x = (F.map f).toFun ((limit.π G i) x)
+              have h := (limit.cone G).π.naturality f
+              have hx := congrArg (fun q => q x) h
+              calc
+                (limit.π G j) x =
+                    (ConcreteCategory.hom
+                      (((Functor.const J).obj (limit.cone G).pt).map f ≫
+                        (limit.cone G).π.app j)) x := by
+                  simp [ConcreteCategory.comp_apply]
+                _ = (ConcreteCategory.hom ((limit.cone G).π.app i ≫ G.map f)) x := hx
+                _ = (F.map f).toFun ((limit.π G i) x) := by
+                  simp [G, ConcreteCategory.comp_apply,
+                    ConcreteCategory.forget_map_eq_ofHom]
+                  change (F.map f).toFun ((limit.π G i) x) =
+                    (F.map f).toFun ((limit.π G i) x)
+                  rfl } }
+    let l : ∀ s : Cone F, s.pt ⟶ lc.pt := fun s =>
+      { toFun := (limit.isLimit G).lift ((forget Pointed).mapCone s)
+        map_point := by
+          apply Types.limit_ext G
+          intro j
+          have hs := congrArg (fun h => h s.pt.point)
+            ((limit.isLimit G).fac ((forget Pointed).mapCone s) j)
+          have hp := congrArg (fun h => h PUnit.unit)
+            ((limit.isLimit G).fac pc j)
+          change limit.π G j ((limit.isLimit G).lift ((forget Pointed).mapCone s)
+              s.pt.point) = limit.π G j ((limit.isLimit G).lift pc PUnit.unit)
+          calc
+            limit.π G j ((limit.isLimit G).lift ((forget Pointed).mapCone s)
+                s.pt.point) = (s.π.app j).toFun s.pt.point := by
+                  calc
+                    _ = (ConcreteCategory.hom (((forget Pointed).mapCone s).π.app j))
+                        s.pt.point := by
+                          simpa only [limit.π, ConcreteCategory.comp_apply,
+                            Function.comp_apply] using hs
+                    _ = (s.π.app j).toFun s.pt.point := by
+                      change (s.π.app j).toFun s.pt.point = (s.π.app j).toFun s.pt.point
+                      rfl
+            _ = (F.obj j).point := (s.π.app j).map_point
+            _ = limit.π G j ((limit.isLimit G).lift pc PUnit.unit) := by
+              symm
+              simpa [pc] using hp }
+    refine ⟨⟨lc, ?_⟩⟩
+    exact
+      { lift := l
+        fac := by
+          intro s j
+          apply Pointed.Hom.ext
+          funext x
+          change ((limit.isLimit G).lift ((forget Pointed).mapCone s) ≫
+              limit.π G j) x = ((forget Pointed).mapCone s).π.app j x
+          exact congrArg (fun q => q x)
+            ((limit.isLimit G).fac ((forget Pointed).mapCone s) j)
+        uniq := by
+          intro s m hm
+          apply Pointed.Hom.ext
+          have huniq :
+              (forget Pointed).map m =
+                (limit.isLimit G).lift ((forget Pointed).mapCone s) := by
+            apply (limit.isLimit G).uniq ((forget Pointed).mapCone s)
+              ((forget Pointed).map m)
+            intro j
+            ext x
+            have hmj := congrArg (fun q => q.toFun x) (hm j)
+            change ((forget Pointed).map m ≫ limit.π G j) x =
+              ((forget Pointed).mapCone s).π.app j x
+            exact hmj
+          funext x
+          have hx := congrArg (fun q => q x) huniq
+          change m.toFun x =
+            ((limit.isLimit G).lift ((forget Pointed).mapCone s)) x at hx
+          exact hx }
+  let pointedFiltered : HasFilteredColimitsOfSize.{u, u} (Pointed.{u}) := by
+    refine ⟨fun J => ?_⟩
+    refine ⟨fun F => ?_⟩
+    let G : J ⥤ Type u := F ⋙ forget Pointed
+    let j0 : J := IsFiltered.nonempty.some
+    let p : colimit G := colimit.ι G j0 (F.obj j0).point
+    let c : Cocone F :=
+      { pt := Pointed.of p
+        ι :=
+          { app := fun j =>
+              ⟨colimit.ι G j, by
+                apply (Types.FilteredColimit.colimit_eq_iff G).2
+                obtain ⟨k, f, g, _⟩ := IsFilteredOrEmpty.cocone_objs j j0
+                refine ⟨k, f, g, ?_⟩
+                change (F.map f).toFun (F.obj j).point =
+                  (F.map g).toFun (F.obj j0).point
+                exact (F.map f).map_point.trans (F.map g).map_point.symm⟩
+            naturality := by
+              intro i j f
+              apply Pointed.Hom.ext
+              funext x
+              change (colimit.ι G j) ((F.map f).toFun x) =
+                (colimit.ι G i) x
+              have h := ConcreteCategory.congr_hom (colimit.w G f) x
+              change (colimit.ι G j) ((F.map f).toFun x) =
+                (colimit.ι G i) x at h
+              exact h } }
+    refine ⟨⟨c, ?_⟩⟩
+    exact
+      { desc := fun s =>
+          { toFun := colimit.desc G ((forget Pointed).mapCocone s)
+            map_point := by
+              change colimit.desc G ((forget Pointed).mapCocone s)
+                  (colimit.ι G j0 (F.obj j0).point) = s.pt.point
+              have h := ConcreteCategory.congr_hom
+                (colimit.ι_desc ((forget Pointed).mapCocone s) j0)
+                (F.obj j0).point
+              exact h.trans (s.ι.app j0).map_point }
+        fac := by
+          intro s j
+          apply Pointed.Hom.ext
+          funext x
+          change (colimit.ι G j ≫
+              colimit.desc G ((forget Pointed).mapCocone s)) x =
+            ((forget Pointed).mapCocone s).ι.app j x
+          exact congrArg (fun q => q x)
+            (colimit.ι_desc ((forget Pointed).mapCocone s) j)
+        uniq := by
+          intro s m hm
+          apply Pointed.Hom.ext
+          have huniq :
+              (forget Pointed).map m =
+                colimit.desc G ((forget Pointed).mapCocone s) := by
+            apply (colimit.isColimit G).uniq ((forget Pointed).mapCocone s)
+              ((forget Pointed).map m)
+            intro j
+            ext x
+            have hmj := congrArg (fun q => q.toFun x) (hm j)
+            change (colimit.ι G j ≫ (forget Pointed).map m) x =
+              ((forget Pointed).mapCocone s).ι.app j x
+            exact hmj
+          funext x
+          have hx := congrArg (fun q => q x) huniq
+          change m.toFun x =
+            (colimit.desc G ((forget Pointed).mapCocone s)) x at hx
+          exact hx }
+  let pointedPreservesFiltered :
+      PreservesFilteredColimitsOfSize.{u, u} (forget Pointed) := by
+    refine ⟨fun J => ?_⟩
+    refine ⟨?_⟩
+    intro F
+    let G : J ⥤ Type u := F ⋙ forget Pointed
+    let j0 : J := IsFiltered.nonempty.some
+    let p : colimit G := colimit.ι G j0 (F.obj j0).point
+    let c : Cocone F :=
+      { pt := Pointed.of p
+        ι :=
+          { app := fun j =>
+              ⟨colimit.ι G j, by
+                apply (Types.FilteredColimit.colimit_eq_iff G).2
+                obtain ⟨k, f, g, _⟩ := IsFilteredOrEmpty.cocone_objs j j0
+                refine ⟨k, f, g, ?_⟩
+                change (F.map f).toFun (F.obj j).point =
+                  (F.map g).toFun (F.obj j0).point
+                exact (F.map f).map_point.trans (F.map g).map_point.symm⟩
+            naturality := by
+              intro i j f
+              apply Pointed.Hom.ext
+              funext x
+              change (colimit.ι G j) ((F.map f).toFun x) =
+                (colimit.ι G i) x
+              have h := ConcreteCategory.congr_hom (colimit.w G f) x
+              change (colimit.ι G j) ((F.map f).toFun x) =
+                (colimit.ι G i) x at h
+              exact h } }
+    let hc : IsColimit c := by
+      exact
+        { desc := fun s =>
+            { toFun := colimit.desc G ((forget Pointed).mapCocone s)
+              map_point := by
+                change colimit.desc G ((forget Pointed).mapCocone s)
+                    (colimit.ι G j0 (F.obj j0).point) = s.pt.point
+                have h := ConcreteCategory.congr_hom
+                  (colimit.ι_desc ((forget Pointed).mapCocone s) j0)
+                  (F.obj j0).point
+                exact h.trans (s.ι.app j0).map_point }
+          fac := by
+            intro s j
+            apply Pointed.Hom.ext
+            funext x
+            change (colimit.ι G j ≫
+                colimit.desc G ((forget Pointed).mapCocone s)) x =
+              ((forget Pointed).mapCocone s).ι.app j x
+            exact congrArg (fun q => q x)
+              (colimit.ι_desc ((forget Pointed).mapCocone s) j)
+          uniq := by
+            intro s m hm
+            apply Pointed.Hom.ext
+            have huniq :
+                (forget Pointed).map m =
+                  colimit.desc G ((forget Pointed).mapCocone s) := by
+              apply (colimit.isColimit G).uniq ((forget Pointed).mapCocone s)
+                ((forget Pointed).map m)
+              intro j
+              ext x
+              have hmj := congrArg (fun q => q.toFun x) (hm j)
+              change (colimit.ι G j ≫ (forget Pointed).map m) x =
+                ((forget Pointed).mapCocone s).ι.app j x
+              exact hmj
+            funext x
+            have hx := congrArg (fun q => q x) huniq
+            change m.toFun x =
+              (colimit.desc G ((forget Pointed).mapCocone s)) x at hx
+            exact hx }
+    have hG : IsColimit ((forget Pointed).mapCocone c) := by
+      apply IsColimit.ofIsoColimit (colimit.isColimit G)
+      exact Cocone.ext (Iso.refl _) (by intro j; rfl)
+    exact preservesColimit_of_preserves_colimit_cocone hc hG
+  let pointedReflectsIso : (forget Pointed).ReflectsIsomorphisms := by
+    refine ⟨?_⟩
+    intro X Y f hu
+    let u := (forget Pointed).map f
+    letI : IsIso u := hu
+    let g : Y ⟶ X :=
+      { toFun := inv u
+        map_point := by
+          change inv u Y.point = X.point
+          rw [← f.map_point]
+          change inv u (u X.point) = X.point
+          have h := ConcreteCategory.congr_hom (IsIso.hom_inv_id u) X.point
+          change inv u (u X.point) = X.point at h
+          exact h }
+    refine ⟨⟨g, ?_, ?_⟩⟩
+    · apply Pointed.Hom.ext
+      funext x
+      change inv u (u x) = x
+      have h := ConcreteCategory.congr_hom (IsIso.hom_inv_id u) x
+      change inv u (u x) = x at h
+      exact h
+    · apply Pointed.Hom.ext
+      funext y
+      change u (inv u y) = y
+      have h := ConcreteCategory.congr_hom (IsIso.inv_hom_id u) y
+      change u (inv u y) = y at h
+      exact h
+  letI : HasLimitsOfSize.{u, u} (Pointed.{u}) := pointedLimits
+  letI : HasFilteredColimitsOfSize.{u, u} (Pointed.{u}) := pointedFiltered
+  letI : PreservesLimitsOfSize.{u, u} (forget Pointed) :=
+    typeToPointedForgetAdjunction.rightAdjoint_preservesLimits
+  letI : PreservesFilteredColimitsOfSize.{u, u} (forget Pointed) :=
+    pointedPreservesFiltered
+  letI : (forget Pointed).ReflectsIsomorphisms := pointedReflectsIso
+  let grpFiltered : HasFilteredColimitsOfSize.{u, u} (GrpCat.{u}) := by
+    refine ⟨fun J => ?_⟩
+    refine ⟨fun F => ?_⟩
+    exact ⟨⟨GrpCat.FilteredColimits.colimitCocone F,
+      GrpCat.FilteredColimits.colimitCoconeIsColimit F⟩⟩
+  let monFiltered : HasFilteredColimitsOfSize.{u, u} (MonCat.{u}) := by
+    refine ⟨fun J => ?_⟩
+    refine ⟨fun F => ?_⟩
+    exact ⟨⟨MonCat.FilteredColimits.colimitCocone F,
+      MonCat.FilteredColimits.colimitCoconeIsColimit F⟩⟩
+  let modulePreserves :
+      ∀ (R : Type r) [Ring R],
+        PreservesFilteredColimitsOfSize.{u, u} (forget (ModuleCat.{u} R)) := by
+    intro R _
+    refine ⟨fun J => ?_⟩
+    refine ⟨?_⟩
+    intro F
+    letI : PreservesColimitsOfShape J
+        (forget₂ (ModuleCat.{u, r} R) AddCommGrpCat.{u}) := by
+      infer_instance
+    letI : PreservesColimitsOfShape J (forget AddCommGrpCat.{u}) := by
+      infer_instance
+    change PreservesColimit F
+      ((forget₂ (ModuleCat.{u, r} R) AddCommGrpCat.{u}) ⋙
+        (forget AddCommGrpCat.{u}))
+    infer_instance
+  letI : HasFilteredColimitsOfSize.{u, u} (GrpCat.{u}) := grpFiltered
+  letI : HasFilteredColimitsOfSize.{u, u} (MonCat.{u}) := monFiltered
+  refine ⟨⟨⟩, ⟨⟩, ⟨⟩, ⟨⟩, ⟨⟩, ?_, ?_⟩
+  · intro R _
+    letI : PreservesFilteredColimitsOfSize.{u, u}
+        (forget (ModuleCat.{u} R)) := modulePreserves R
+    exact ⟨⟩
+  · intro K
+    intro _
+    let lieLimitData :
+        ∀ (J : Type u) [Category.{u} J] (F : J ⥤ LieAlgebraCat.{u} K),
+          Σ t : LimitCone F,
+            IsLimit ((forget (LieAlgebraCat.{u} K)).mapCone t.cone) := by
+      intro J _ F
+      let G := F ⋙ forget (LieAlgebraCat K)
+      let L := G.sections
+      let addL : L → L → L := fun x y =>
+        ⟨fun j => show (F.obj j : Type u) from
+            (show (F.obj j : Type u) from x.1 j) +
+              (show (F.obj j : Type u) from y.1 j), by
+          intro i j f
+          change (F.map f).hom
+              ((show (F.obj i : Type u) from x.1 i) +
+                (show (F.obj i : Type u) from y.1 i)) =
+            (show (F.obj j : Type u) from x.1 j) +
+              (show (F.obj j : Type u) from y.1 j)
+          rw [map_add]
+          have hx := x.2 f
+          have hy := y.2 f
+          change (F.map f).hom (show (F.obj i : Type u) from x.1 i) =
+            show (F.obj j : Type u) from x.1 j at hx
+          change (F.map f).hom (show (F.obj i : Type u) from y.1 i) =
+            show (F.obj j : Type u) from y.1 j at hy
+          rw [hx, hy]⟩
+      let zeroL : L :=
+        ⟨fun _ => show (F.obj _) from 0, by
+          intro i j f
+          change (F.map f).hom 0 = 0
+          exact map_zero _⟩
+      let negL : L → L := fun x =>
+        ⟨fun j => show (F.obj j : Type u) from
+            -(show (F.obj j : Type u) from x.1 j), by
+          intro i j f
+          change (F.map f).hom (-(show (F.obj i : Type u) from x.1 i)) =
+            -(show (F.obj j : Type u) from x.1 j)
+          rw [map_neg]
+          have hx := x.2 f
+          change (F.map f).hom (show (F.obj i : Type u) from x.1 i) =
+            show (F.obj j : Type u) from x.1 j at hx
+          rw [hx]⟩
+      letI : AddCommGroup L := by
+        letI : Add L := ⟨addL⟩
+        letI : Zero L := ⟨zeroL⟩
+        letI : Neg L := ⟨negL⟩
+        exact
+          { add_assoc := by
+              intro x y z
+              apply Subtype.ext
+              funext j
+              change
+                ((show (F.obj j : Type u) from x.1 j) +
+                    (show (F.obj j : Type u) from y.1 j)) +
+                  (show (F.obj j : Type u) from z.1 j) =
+                (show (F.obj j : Type u) from x.1 j) +
+                  ((show (F.obj j : Type u) from y.1 j) +
+                    (show (F.obj j : Type u) from z.1 j))
+              exact add_assoc _ _ _
+            zero_add := by
+              intro x
+              apply Subtype.ext
+              funext j
+              change (0 : (F.obj j : Type u)) +
+                  (show (F.obj j : Type u) from x.1 j) =
+                (show (F.obj j : Type u) from x.1 j)
+              exact zero_add _
+            add_zero := by
+              intro x
+              apply Subtype.ext
+              funext j
+              change (show (F.obj j : Type u) from x.1 j) +
+                  (0 : (F.obj j : Type u)) =
+                (show (F.obj j : Type u) from x.1 j)
+              exact add_zero _
+            add_comm := by
+              intro x y
+              apply Subtype.ext
+              funext j
+              change (show (F.obj j : Type u) from x.1 j) +
+                  (show (F.obj j : Type u) from y.1 j) =
+                (show (F.obj j : Type u) from y.1 j) +
+                  (show (F.obj j : Type u) from x.1 j)
+              exact add_comm _ _
+            neg_add_cancel := by
+              intro x
+              apply Subtype.ext
+              funext j
+              change -(show (F.obj j : Type u) from x.1 j) +
+                  (show (F.obj j : Type u) from x.1 j) =
+                (0 : (F.obj j : Type u))
+              exact neg_add_cancel _
+            nsmul := nsmulRec
+            zsmul := zsmulRec
+            sub_eq_add_neg := by
+              intro x y
+              rfl }
+      let smulL : K → L → L := fun a x =>
+        ⟨fun j => show (F.obj j : Type u) from
+            a • (show (F.obj j : Type u) from x.1 j), by
+          intro i j f
+          change (F.map f).hom (a • (show (F.obj i : Type u) from x.1 i)) =
+            a • (show (F.obj j : Type u) from x.1 j)
+          rw [map_smul]
+          have hx := x.2 f
+          change (F.map f).hom (show (F.obj i : Type u) from x.1 i) =
+            show (F.obj j : Type u) from x.1 j at hx
+          rw [hx]⟩
+      letI : Module K L := by
+        letI : SMul K L := ⟨smulL⟩
+        exact
+          { mul_smul := by
+              intro a b x
+              apply Subtype.ext
+              funext j
+              change (a * b) • (show (F.obj j : Type u) from x.1 j) =
+                a • b • (show (F.obj j : Type u) from x.1 j)
+              exact mul_smul _ _ _
+            one_smul := by
+              intro x
+              apply Subtype.ext
+              funext j
+              change (1 : K) • (show (F.obj j : Type u) from x.1 j) =
+                show (F.obj j : Type u) from x.1 j
+              exact one_smul _ _
+            smul_add := by
+              intro a x y
+              apply Subtype.ext
+              funext j
+              change a • ((show (F.obj j : Type u) from x.1 j) +
+                  (show (F.obj j : Type u) from y.1 j)) =
+                a • (show (F.obj j : Type u) from x.1 j) +
+                  a • (show (F.obj j : Type u) from y.1 j)
+              exact smul_add _ _ _
+            add_smul := by
+              intro a b x
+              apply Subtype.ext
+              funext j
+              change (a + b) • (show (F.obj j : Type u) from x.1 j) =
+                a • (show (F.obj j : Type u) from x.1 j) +
+                  b • (show (F.obj j : Type u) from x.1 j)
+              exact add_smul _ _ _
+            smul_zero := by
+              intro a
+              apply Subtype.ext
+              funext j
+              change a • (0 : (F.obj j : Type u)) = 0
+              exact smul_zero _
+            zero_smul := by
+              intro x
+              apply Subtype.ext
+              funext j
+              change (0 : K) • (show (F.obj j : Type u) from x.1 j) = 0
+              exact zero_smul K _ }
+      let bracketL : L → L → L := fun x y =>
+        ⟨fun j =>
+            show (F.obj j : Type u) from
+              ⁅(show (F.obj j : Type u) from x.1 j),
+                (show (F.obj j : Type u) from y.1 j)⁆, by
+          intro i j f
+          change (F.map f).hom
+              ⁅(show (F.obj i : Type u) from x.1 i),
+                (show (F.obj i : Type u) from y.1 i)⁆ =
+            ⁅(show (F.obj j : Type u) from x.1 j),
+              (show (F.obj j : Type u) from y.1 j)⁆
+          rw [LieHom.map_lie]
+          have hx := x.2 f
+          have hy := y.2 f
+          change (F.map f).hom (show (F.obj i : Type u) from x.1 i) =
+            show (F.obj j : Type u) from x.1 j at hx
+          change (F.map f).hom (show (F.obj i : Type u) from y.1 i) =
+            show (F.obj j : Type u) from y.1 j at hy
+          rw [hx, hy]⟩
+      let lieRingL : LieRing L := by
+        letI : Bracket L L := ⟨bracketL⟩
+        exact
+          { add_lie := by
+              intro x y z
+              apply Subtype.ext
+              funext j
+              change ⁅
+                  (show (F.obj j : Type u) from x.1 j) +
+                    (show (F.obj j : Type u) from y.1 j),
+                  (show (F.obj j : Type u) from z.1 j)⁆ =
+                ⁅(show (F.obj j : Type u) from x.1 j),
+                  (show (F.obj j : Type u) from z.1 j)⁆ +
+                  ⁅(show (F.obj j : Type u) from y.1 j),
+                    (show (F.obj j : Type u) from z.1 j)⁆
+              exact LieRing.add_lie _ _ _
+            lie_add := by
+              intro x y z
+              apply Subtype.ext
+              funext j
+              change ⁅(show (F.obj j : Type u) from x.1 j),
+                  (show (F.obj j : Type u) from y.1 j) +
+                    (show (F.obj j : Type u) from z.1 j)⁆ =
+                ⁅(show (F.obj j : Type u) from x.1 j),
+                  (show (F.obj j : Type u) from y.1 j)⁆ +
+                  ⁅(show (F.obj j : Type u) from x.1 j),
+                    (show (F.obj j : Type u) from z.1 j)⁆
+              exact LieRing.lie_add _ _ _
+            lie_self := by
+              intro x
+              apply Subtype.ext
+              funext j
+              change ⁅(show (F.obj j : Type u) from x.1 j),
+                  (show (F.obj j : Type u) from x.1 j)⁆ = 0
+              exact LieRing.lie_self _
+            leibniz_lie := by
+              intro x y z
+              apply Subtype.ext
+              funext j
+              change ⁅(show (F.obj j : Type u) from x.1 j),
+                    ⁅(show (F.obj j : Type u) from y.1 j),
+                      (show (F.obj j : Type u) from z.1 j)⁆⁆ =
+                ⁅⁅(show (F.obj j : Type u) from x.1 j),
+                    (show (F.obj j : Type u) from y.1 j)⁆,
+                  (show (F.obj j : Type u) from z.1 j)⁆ +
+                  ⁅(show (F.obj j : Type u) from y.1 j),
+                    ⁅(show (F.obj j : Type u) from x.1 j),
+                      (show (F.obj j : Type u) from z.1 j)⁆⁆
+              exact LieRing.leibniz_lie _ _ _ }
+      letI : LieRing L := lieRingL
+      letI : Bracket L L := ⟨bracketL⟩
+      letI : LieAlgebra K L := by
+        exact
+          { lie_smul := by
+              intro a x y
+              apply Subtype.ext
+              funext j
+              change ⁅(show (F.obj j : Type u) from x.1 j),
+                  a • (show (F.obj j : Type u) from y.1 j)⁆ =
+                a • ⁅(show (F.obj j : Type u) from x.1 j),
+                  (show (F.obj j : Type u) from y.1 j)⁆
+              exact LieAlgebra.lie_smul _ _ _ }
+      let P : LieAlgebraCat.{u} K := LieAlgebraCat.of L
+      let p : ∀ j, P ⟶ F.obj j := fun j =>
+        { hom :=
+            { toLinearMap :=
+                { toFun := fun x => x.1 j
+                  map_add' := by
+                    intro x y
+                    rfl
+                  map_smul' := by
+                    intro a x
+                    rfl }
+              map_lie' := by
+                intro x y
+                rfl } }
+      let lc : Cone F :=
+        { pt := P
+          π :=
+            { app := p
+              naturality := by
+                intro i j f
+                apply LieAlgebraCat.Hom.ext
+                apply LieHom.ext
+                intro x
+                change (p j).hom x = (F.map f).hom ((p i).hom x)
+                change x.1 j = (F.map f).hom (x.1 i)
+                exact (x.2 f).symm } }
+      let l : ∀ s : Cone F, s.pt ⟶ P := fun s =>
+        { hom :=
+            { toLinearMap :=
+                { toFun := fun x =>
+                    ⟨fun j => (s.π.app j).hom x, by
+                      intro i j f
+                      have h := ConcreteCategory.congr_hom
+                        (s.π.naturality f) x
+                      change (s.π.app j).hom x =
+                        (F.map f).hom ((s.π.app i).hom x) at h
+                      exact h.symm⟩
+                  map_add' := by
+                    intro x y
+                    apply Subtype.ext
+                    funext j
+                    change (s.π.app j).hom (x + y) =
+                      (s.π.app j).hom x + (s.π.app j).hom y
+                    exact (s.π.app j).hom.map_add x y
+                  map_smul' := by
+                    intro a x
+                    apply Subtype.ext
+                    funext j
+                    change (s.π.app j).hom (a • x) =
+                      a • (s.π.app j).hom x
+                    exact (s.π.app j).hom.map_smul a x }
+              map_lie' := by
+                intro x y
+                apply Subtype.ext
+                funext j
+                have h := (s.π.app j).hom.map_lie x y
+                dsimp [P, LieAlgebraCat.of, lieRingL, bracketL] at h ⊢
+                exact h } }
+      let hlim : IsLimit lc :=
+        { lift := l
+          fac := by
+            intro s j
+            apply LieAlgebraCat.Hom.ext
+            apply LieHom.ext
+            intro x
+            change (p j).hom ((l s).hom x) = (s.π.app j).hom x
+            rfl
+          uniq := by
+            intro s m hm
+            apply LieAlgebraCat.Hom.ext
+            apply LieHom.ext
+            intro x
+            apply Subtype.ext
+            funext j
+            have h := ConcreteCategory.congr_hom (hm j) x
+            change (m.hom x).1 j = (s.π.app j).hom x at h
+            exact h }
+      have hmap :
+          IsLimit ((forget (LieAlgebraCat.{u} K)).mapCone lc) := by
+        exact Types.limitConeIsLimit G
+      exact ⟨⟨lc, hlim⟩, hmap⟩
+    let lieLimits : HasLimitsOfSize.{u, u} (LieAlgebraCat.{u} K) := by
+      refine ⟨fun J => ?_⟩
+      refine ⟨fun F => ?_⟩
+      exact ⟨⟨(lieLimitData J F).1⟩⟩
+    letI : HasLimitsOfSize.{u, u} (LieAlgebraCat.{u} K) := lieLimits
+    let liePreserves :
+        PreservesLimitsOfSize.{u, u} (forget (LieAlgebraCat.{u} K)) := by
+      refine ⟨?_⟩
+      intro J
+      refine ⟨?_⟩
+      intro F
+      exact preservesLimit_of_preserves_limit_cone
+        (lieLimitData J F).1.isLimit (lieLimitData J F).2
+    letI : PreservesLimitsOfSize.{u, u} (forget (LieAlgebraCat.{u} K)) :=
+      liePreserves
+    sorry
 
 /-! ## Consequences of the definition -/
 
@@ -181,7 +817,49 @@ structure AlgebraicStructureProperties
 theorem algebraicStructureType_properties {C : Type u} [Category.{v} C]
     {F : C ⥤ Type v} [AlgebraicStructureType C F] :
     AlgebraicStructureProperties (C := C) (F := F) := by
-  sorry
+  exact
+    { terminal := by
+        refine ⟨limit (Functor.empty C), ?_⟩
+        refine ⟨⟨(isLimitEquivIsTerminalOfIsEmpty C (limit.cone (Functor.empty C))).toFun
+          (limit.isLimit _)⟩, ?_⟩
+        let hFz : IsTerminal (F.obj (limit (Functor.empty C))) :=
+          (isLimitEquivIsTerminalOfIsEmpty (Type v)
+            (F.mapCone (limit.cone (Functor.empty C)))).toFun
+            (isLimitOfPreserves F (limit.isLimit _))
+        let hUnique : Unique (F.obj (limit (Functor.empty C))) :=
+          (Types.isTerminalEquivUnique _).toFun hFz
+        exact ⟨⟨hUnique.default⟩,
+          ⟨fun a b => (hUnique.uniq a).trans (hUnique.uniq b).symm⟩⟩
+      products := by
+        intro ι A
+        exact ⟨(preservesLimitIso F (Discrete.functor A)).trans
+          (HasLimit.isoOfNatIso (Discrete.compNatIsoDiscrete A F))⟩
+      fibreProducts := by
+        intro A B C' f g
+        exact ⟨(preservesLimitIso F (cospan f g)).trans
+          (HasLimit.isoOfNatIso (diagramIsoCospan (cospan f g ⋙ F)))⟩
+      equalizers := by
+        intro A B f g
+        exact ⟨isLimitOfPreserves F (limit.isLimit _)⟩
+      monomorphisms := by
+        intro A B f
+        constructor
+        · intro hf
+          exact (mono_iff_injective (F.map f)).1
+            (@Functor.map_mono _ _ _ _ F _ _ _ f hf)
+        · intro hf
+          let hReflectsLimits : ReflectsLimitsOfShape WalkingCospan F :=
+            reflectsLimitsOfShape_of_reflectsIsomorphisms
+          let hReflectsMonomorphisms : F.ReflectsMonomorphisms :=
+            @reflectsMonomorphisms_of_reflectsLimitsOfShape _ _ _ _ F hReflectsLimits
+          exact @Functor.mono_of_mono_map _ _ _ _ F hReflectsMonomorphisms _ _ f
+            ((mono_iff_injective (F.map f)).2 hf)
+      epimorphisms := by
+        intro A B f hf
+        exact Functor.epi_of_epi_map F ((epi_iff_surjective (F.map f)).2 hf)
+      filteredColimits := by
+        intro J _ _ D
+        exact ⟨preservesColimitIso F D⟩ }
 
 /-! ## Image containment and factorization -/
 
@@ -194,7 +872,38 @@ theorem factor_through_of_image_subset
     (hg : Function.Injective (F.map g))
     (himage : Set.range (F.map f) ⊆ Set.range (F.map g)) :
     ∃ t : A ⟶ C', t ≫ g = f := by
-  sorry
+  let hP := Functor.map_isPullback F (IsPullback.of_hasPullback f g)
+  have hbij : Function.Bijective (F.map (pullback.fst f g)) := by
+    constructor
+    · intro x y hxy
+      apply PullbackCone.IsLimit.type_ext hP.isLimit
+      · exact hxy
+      · apply hg
+        have hx := congrArg (fun k => k x) (congrArg F.map (pullback.condition))
+        have hy := congrArg (fun k => k y) (congrArg F.map (pullback.condition))
+        change (F.map g) ((F.map (pullback.snd f g)) x) =
+          (F.map g) ((F.map (pullback.snd f g)) y)
+        calc
+          (F.map g) ((F.map (pullback.snd f g)) x) =
+              (F.map f) ((F.map (pullback.fst f g)) x) := by
+            simpa only [Functor.map_comp, ConcreteCategory.comp_apply] using hx.symm
+          _ = (F.map f) ((F.map (pullback.fst f g)) y) := congrArg (F.map f) hxy
+          _ = (F.map g) ((F.map (pullback.snd f g)) y) := by
+            simpa only [Functor.map_comp, ConcreteCategory.comp_apply] using hy
+    · intro a
+      obtain ⟨b, hb⟩ := himage ⟨a, rfl⟩
+      let z : Types.PullbackObj (F.map f) (F.map g) :=
+        ⟨⟨a, b⟩, hb.symm⟩
+      refine ⟨(PullbackCone.IsLimit.equivPullbackObj hP.isLimit).symm z, ?_⟩
+      change (F.map (pullback.fst f g))
+          ((PullbackCone.IsLimit.equivPullbackObj hP.isLimit).symm z) = z.1.1
+      exact PullbackCone.IsLimit.equivPullbackObj_symm_apply_fst hP.isLimit z
+  let hMap : IsIso (F.map (pullback.fst f g)) := (isIso_iff_bijective _).2 hbij
+  let hPullback : IsIso (pullback.fst f g) :=
+    @isIso_of_reflects_iso _ _ _ _ _ _ (pullback.fst f g) F hMap inferInstance
+  refine ⟨@inv _ _ _ _ (pullback.fst f g) hPullback ≫ pullback.snd f g, ?_⟩
+  rw [Category.assoc, ← pullback.condition, ← Category.assoc,
+    @IsIso.inv_hom_id _ _ _ _ (pullback.fst f g) hPullback, Category.id_comp]
 
 /-! ## The commutative-square application -/
 
@@ -280,7 +989,9 @@ theorem pointwiseProductPresheaf_underlying_sections
     Nonempty
       (F.obj (pointwiseProductObject (F := F) A U) ≃
         ∀ x : U, F.obj (A x)) := by
-  sorry
+  exact ⟨((preservesLimitIso F (Discrete.functor (fun x : U => A x))).trans
+    (HasLimit.isoOfNatIso (Discrete.compNatIsoDiscrete (fun x : U => A x) F))).trans
+      (Types.productIso (F.obj ∘ fun x : U => A x)) |>.toEquiv⟩
 
 /-- A category-valued presheaf is a sheaf of algebraic structures in the
 category-valued equalizer-of-products sense from Chapter 9. -/
@@ -308,7 +1019,45 @@ theorem pointwiseProductPresheaf_underlying_isSheaf
     (A : X → C) :
     TopCat.Presheaf.IsSheaf
       (underlyingPresheaf F (pointwiseProductPresheaf (F := F) A)) := by
-  sorry
+  let sectionIso (U : Opens X) :
+      F.obj (pointwiseProductObject (F := F) A U) ≅
+        ∀ x : U, F.obj (A x) :=
+    ((preservesLimitIso F (Discrete.functor (fun x : U => A x))).trans
+      (HasLimit.isoOfNatIso (Discrete.compNatIsoDiscrete (fun x : U => A x) F))).trans
+        (Types.productIso (F.obj ∘ fun x : U => A x))
+  let e : underlyingPresheaf F (pointwiseProductPresheaf (F := F) A) ≅
+      TopCat.presheafToTypes X (fun x => F.obj (A x)) := by
+    refine NatIso.ofComponents (fun U => sectionIso U.unop) ?_
+    intro U V i
+    change F.map (pointwiseProductRestriction (F := F) A i.unop.le) ≫
+        (sectionIso V.unop).hom =
+      (sectionIso U.unop).hom ≫
+        (TopCat.presheafToTypes X (fun x => F.obj (A x))).map i
+    apply ConcreteCategory.hom_ext
+    intro s
+    funext x
+    change (F.map (pointwiseProductRestriction (F := F) A i.unop.le) ≫
+        (sectionIso V.unop).hom ≫ (↾fun z => z x)) s =
+      ((sectionIso U.unop).hom ≫
+        (TopCat.presheafToTypes X (fun x => F.obj (A x))).map i ≫
+          (↾fun z => z x)) s
+    apply ConcreteCategory.congr_hom
+    simp [sectionIso, TopCat.presheafToTypes, Category.assoc,
+      Types.productIso_hom_comp_eval, ← Functor.map_comp,
+      pointwiseProductRestriction_π]
+    have htarget :
+        (↾fun g : (∀ y : U.unop, F.obj (A y)) =>
+          (fun y : V.unop => g (i.unop y))) ≫
+          (↾fun z : (∀ y : V.unop, F.obj (A y)) => z x) =
+          (↾fun g : (∀ y : U.unop, F.obj (A y)) => g (i.unop x)) := by
+      ext g
+      rfl
+    rw [htarget, Types.productIso_hom_comp_eval]
+    rw [HasLimit.isoOfNatIso_hom_π, preservesLimitIso_hom_π_assoc]
+    simp
+    congr 1
+  exact TopCat.Presheaf.isSheaf_of_iso e.symm
+    (TopCat.Presheaf.toTypes_isSheaf X (fun x => F.obj (A x)))
 
 /-- The pointwise product presheaf is a sheaf of algebraic structures. -/
 theorem pointwiseProductPresheaf_isSheaf

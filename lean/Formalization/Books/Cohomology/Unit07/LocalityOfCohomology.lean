@@ -368,20 +368,6 @@ noncomputable instance openModuleRestrictionFunctor_preservesZeroMorphisms
     (openModuleRestrictionFunctor X U).PreservesZeroMorphisms := by
   sorry
 
-/- The structure-sheaf map of the open inclusion identifies sections on the
- open with sections on the top open of the restricted ringed space. -/
-noncomputable abbrev openSubspaceTopScalarMap
-    (X : RingedSpace.{v}) (U : Opens X.carrier) :
-    X.structureSheaf.obj.obj (op U) ⟶
-      (ringedOpenSubspace X U).structureSheaf.obj.obj
-        (op (⊤ : Opens (ringedOpenSubspace X U).carrier)) :=
-  (ringedOpenInclusion X U).sharp.hom.app (op U) ≫
-    (ringedOpenSubspace X U).structureSheaf.1.map
-      (homOfLE (show (⊤ : Opens (ringedOpenSubspace X U).carrier) ≤
-        (Opens.map (openInclusion U)).obj U by
-          rw [Opens.inclusion'_map_eq_top U]
-          exact le_rfl)).op
-
 /- The derived pushforward of a bounded-below complex is treated in the same
 way as the object case, using the Chapter 3 derived-category model. -/
 noncomputable def openRestrictionOnComplexes
@@ -429,14 +415,8 @@ theorem presheafHigherDirectImageComplexObject_obj_iso
       (presheafHigherDirectImageComplexObject f K i).obj (op V) ≅
         (ModuleCat.restrictScalars
           (higherDirectImageScalarMap f V).hom).obj
-          ((ModuleCat.restrictScalars
-            (openSubspaceTopScalarMap X ((Opens.map f.continuous).obj V)).hom).obj
-            (sectionsComplexCohomology
-              (ringedOpenSubspace X ((Opens.map f.continuous).obj V))
-              (⊤ : Opens (ringedOpenSubspace X
-                ((Opens.map f.continuous).obj V)).carrier)
-              ((openRestrictionOnComplexes X
-                ((Opens.map f.continuous).obj V)).obj K) i))) := by
+          (sectionsComplexCohomology X
+            ((Opens.map f.continuous).obj V) K i))) := by
   sorry
 
 /-- The complex version of higher direct image is the associated sheaf of the

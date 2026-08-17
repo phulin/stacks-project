@@ -25,14 +25,10 @@ noncomputable section
 /- The source notes that “final” is also used for the notion called
    “cofinal” here.  Mathlib uses `Functor.Final` for this canonical notion. -/
 
-/-- The source's predicate that a functor is cofinal. -/
-abbrev IsCofinal {I J : Type*} [Category I] [Category J] (H : I ⥤ J) : Prop :=
-  Functor.Final H
-
 /-- Cofinality is connectedness of every structured-arrow category. -/
 theorem isCofinal_iff_structuredArrow_connected
     {I J : Type*} [Category I] [Category J] (H : I ⥤ J) :
-    IsCofinal H ↔ ∀ y : J, IsConnected (StructuredArrow y H) := by
+    Functor.Final H ↔ ∀ y : J, IsConnected (StructuredArrow y H) := by
   constructor
   · intro h y
     exact h.out y
@@ -45,7 +41,7 @@ theorem isCofinal_iff_structuredArrow_connected
 `Zigzag` is the generated equivalence relation on these choices. -/
 theorem isCofinal_iff_zigzag
     {I J : Type*} [Category I] [Category J] (H : I ⥤ J) :
-    IsCofinal H ↔
+    Functor.Final H ↔
       ∀ y : J,
         Nonempty (StructuredArrow y H) ∧
           ∀ a b : StructuredArrow y H, Zigzag a b := by
@@ -65,21 +61,21 @@ theorem isCofinal_iff_zigzag
 /-- A cofinal functor preserves existence of colimits, in both directions. -/
 theorem hasColimit_comp_iff_of_cofinal
     {I J C : Type*} [Category I] [Category J] [Category C]
-    (H : I ⥤ J) [IsCofinal H] (M : J ⥤ C) :
+    (H : I ⥤ J) [Functor.Final H] (M : J ⥤ C) :
     HasColimit (H ⋙ M) ↔ HasColimit M :=
   Functor.Final.hasColimit_comp_iff H
 
 /-- The canonical comparison isomorphism for a cofinal functor. -/
 noncomputable def colimit_comp_iso_of_cofinal
     {I J C : Type*} [Category I] [Category J] [Category C]
-    (H : I ⥤ J) [IsCofinal H] (M : J ⥤ C) [HasColimit M] :
+    (H : I ⥤ J) [Functor.Final H] (M : J ⥤ C) [HasColimit M] :
     colimit (H ⋙ M) ≅ colimit M :=
   Functor.Final.colimitIso H M
 
 /-- The same comparison when the colimit of the restricted diagram is given. -/
 noncomputable def colimit_comp_iso_of_cofinal_of_comp
     {I J C : Type*} [Category I] [Category J] [Category C]
-    (H : I ⥤ J) [IsCofinal H] (M : J ⥤ C) [HasColimit (H ⋙ M)] :
+    (H : I ⥤ J) [Functor.Final H] (M : J ⥤ C) [HasColimit (H ⋙ M)] :
     letI : HasColimit M := Functor.Final.hasColimit_of_comp H
     colimit (H ⋙ M) ≅ colimit M := by
   letI : HasColimit M := Functor.Final.hasColimit_of_comp H
@@ -87,14 +83,10 @@ noncomputable def colimit_comp_iso_of_cofinal_of_comp
 
 /-! ## Initial functors -/
 
-/-- The source's predicate that a functor is initial. -/
-abbrev IsInitialFunctor {I J : Type*} [Category I] [Category J] (H : I ⥤ J) : Prop :=
-  Functor.Initial H
-
 /-- Initiality is connectedness of every costructured-arrow category. -/
 theorem isInitial_iff_costructuredArrow_connected
     {I J : Type*} [Category I] [Category J] (H : I ⥤ J) :
-    IsInitialFunctor H ↔ ∀ y : J, IsConnected (CostructuredArrow H y) := by
+    Functor.Initial H ↔ ∀ y : J, IsConnected (CostructuredArrow H y) := by
   constructor
   · intro h y
     exact h.out y
@@ -104,7 +96,7 @@ theorem isInitial_iff_costructuredArrow_connected
 /-- Initiality is the dual of cofinality, via passage to opposite categories. -/
 theorem isInitial_iff_isCofinal_op
     {I J : Type*} [Category I] [Category J] (H : I ⥤ J) :
-    IsInitialFunctor H ↔ IsCofinal H.op := by
+    Functor.Initial H ↔ Functor.Final H.op := by
   constructor
   · intro h
     exact @Functor.final_op_of_initial I _ J _ H h
@@ -117,7 +109,7 @@ theorem isInitial_iff_isCofinal_op
 `Zigzag` recording the source's alternating sequence of compatible arrows. -/
 theorem isInitial_iff_zigzag
     {I J : Type*} [Category I] [Category J] (H : I ⥤ J) :
-    IsInitialFunctor H ↔
+    Functor.Initial H ↔
       ∀ y : J,
         Nonempty (CostructuredArrow H y) ∧
           ∀ a b : CostructuredArrow H y, Zigzag a b := by
@@ -137,21 +129,21 @@ theorem isInitial_iff_zigzag
 /-- An initial functor preserves existence of limits, in both directions. -/
 theorem hasLimit_comp_iff_of_initial
     {I J C : Type*} [Category I] [Category J] [Category C]
-    (H : I ⥤ J) [IsInitialFunctor H] (M : J ⥤ C) :
+    (H : I ⥤ J) [Functor.Initial H] (M : J ⥤ C) :
     HasLimit (H ⋙ M) ↔ HasLimit M :=
   Functor.Initial.hasLimit_comp_iff H
 
 /-- The canonical comparison isomorphism for an initial functor. -/
 noncomputable def limit_comp_iso_of_initial
     {I J C : Type*} [Category I] [Category J] [Category C]
-    (H : I ⥤ J) [IsInitialFunctor H] (M : J ⥤ C) [HasLimit M] :
+    (H : I ⥤ J) [Functor.Initial H] (M : J ⥤ C) [HasLimit M] :
     limit (H ⋙ M) ≅ limit M :=
   Functor.Initial.limitIso H M
 
 /-- The same comparison when the limit of the restricted diagram is given. -/
 noncomputable def limit_comp_iso_of_initial_of_comp
     {I J C : Type*} [Category I] [Category J] [Category C]
-    (H : I ⥤ J) [IsInitialFunctor H] (M : J ⥤ C) [HasLimit (H ⋙ M)] :
+    (H : I ⥤ J) [Functor.Initial H] (M : J ⥤ C) [HasLimit (H ⋙ M)] :
     letI : HasLimit M := Functor.Initial.hasLimit_of_comp H
     limit (H ⋙ M) ≅ limit M := by
   letI : HasLimit M := Functor.Initial.hasLimit_of_comp H
@@ -160,17 +152,16 @@ noncomputable def limit_comp_iso_of_initial_of_comp
 /-! ## Connected fibres -/
 
 /- The source states that every morphism in the target is the image of a
-   morphism upstairs.  Since Lean records the endpoints of a morphism in its
-   type, the endpoint equalities and their canonical transports are explicit. -/
+   morphism upstairs.  `Functor.IsHomLift` supplies the endpoint equalities
+   and their canonical transports. -/
 
 /-- Every morphism in the target of `F` is lifted from a morphism in its source.
 
-The equality uses `eqToHom` to transport the endpoints of `F.map g` to the
-specified endpoints of the target morphism. -/
+`Functor.IsHomLift` records both the endpoint equalities and the equality of
+the transported image with the target morphism. -/
 def LiftsMorphisms {I J : Type*} [Category I] [Category J] (F : I ⥤ J) : Prop :=
   ∀ {X Y : J} (f : X ⟶ Y),
-    ∃ (x y : I) (hx : F.obj x = X) (hy : F.obj y = Y) (g : x ⟶ y),
-      eqToHom hx.symm ≫ F.map g ≫ eqToHom hy = f
+    ∃ (x y : I) (g : x ⟶ y), F.IsHomLift f g
 
 /- The informal proof of the connected-fibre lemma first establishes
    cofinality and then applies the cofinal-colimit comparison. -/
@@ -179,7 +170,7 @@ theorem isCofinal_of_connected_fibers
     (F : I ⥤ J)
     (hF : ∀ y : J, IsConnected (Functor.Fiber F y))
     (hmap : LiftsMorphisms F) :
-    IsCofinal F := by
+    Functor.Final F := by
   sorry
 
 /-- Connected fibres and lifting of all target morphisms preserve colimits. -/
@@ -199,9 +190,9 @@ noncomputable def colimit_comp_iso_of_connected_fibers
     (F : I ⥤ J)
     (hF : ∀ y : J, IsConnected (Functor.Fiber F y))
     (hmap : LiftsMorphisms F) (M : J ⥤ C) [HasColimit M] :
-    letI : IsCofinal F := isCofinal_of_connected_fibers F hF hmap
+    letI : Functor.Final F := isCofinal_of_connected_fibers F hF hmap
     colimit (F ⋙ M) ≅ colimit M := by
-  letI : IsCofinal F := isCofinal_of_connected_fibers F hF hmap
+  letI : Functor.Final F := isCofinal_of_connected_fibers F hF hmap
   exact
     Functor.Final.colimitIso F M
 
@@ -211,10 +202,10 @@ noncomputable def colimit_comp_iso_of_connected_fibers_of_comp
     (F : I ⥤ J)
     (hF : ∀ y : J, IsConnected (Functor.Fiber F y))
     (hmap : LiftsMorphisms F) (M : J ⥤ C) [HasColimit (F ⋙ M)] :
-    letI : IsCofinal F := isCofinal_of_connected_fibers F hF hmap
+    letI : Functor.Final F := isCofinal_of_connected_fibers F hF hmap
     letI : HasColimit M := Functor.Final.hasColimit_of_comp F
     colimit (F ⋙ M) ≅ colimit M := by
-  letI : IsCofinal F := isCofinal_of_connected_fibers F hF hmap
+  letI : Functor.Final F := isCofinal_of_connected_fibers F hF hmap
   letI : HasColimit M := Functor.Final.hasColimit_of_comp F
   exact Functor.Final.colimitIso F M
 

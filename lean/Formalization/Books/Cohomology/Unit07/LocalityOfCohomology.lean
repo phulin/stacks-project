@@ -102,9 +102,9 @@ noncomputable abbrev cohomologyOfRestrictedSheafAdditive
  isomorphism between the underlying cohomology groups. -/
 theorem cohomology_of_open
     (X : RingedSpace.{v}) (U : Opens X.carrier)
-    (F : Mod X.structureSheaf) (i : ℤ) :
-    Nonempty (cohomologyOnOpenAdditive X U F i ≅
-      cohomologyOfRestrictedSheafAdditive X U F i) := by
+    (F : Mod X.structureSheaf) (p : ℕ) :
+    Nonempty (cohomologyOnOpenAdditive X U F (p : ℤ) ≅
+      cohomologyOfRestrictedSheafAdditive X U F (p : ℤ)) := by
   sorry
 
 /-! The inclusion `i_X : Mod(O_X) ⥤ PMod(O_X)`. -/
@@ -133,12 +133,19 @@ noncomputable def localCohomologyPresheafFunctor
     (sheafModuleUnderlyingPresheafFunctor X)
     (sheafModuleUnderlyingPresheafFunctor_isLeftExact X) i
 
+/- The presheaf customarily denoted `underline Hⁱ(F)` in the source.  Its
+  identity and composition laws are supplied by the `PMod` object itself. -/
+noncomputable abbrev localCohomologyPresheaf
+    (X : RingedSpace.{v}) (F : Mod X.structureSheaf) (i : ℤ) :
+    PMod X.structureSheaf.obj :=
+  (localCohomologyPresheafFunctor X i).obj F
+
 /- The object of the canonical cohomology presheaf at `U`. -/
 noncomputable abbrev localCohomologyPresheafObject
     (X : RingedSpace.{v}) (U : Opens X.carrier)
     (F : Mod X.structureSheaf) (i : ℤ) :
     ModuleCat.{v} (X.structureSheaf.obj.obj (op U)) :=
-  ((localCohomologyPresheafFunctor X i).obj F).obj (op U)
+  (localCohomologyPresheaf X F i).obj (op U)
 
 /-- The objectwise interpretation of `U ↦ Hⁱ(U,F)` by derived sections. -/
 theorem localCohomologyPresheafObject_iso
@@ -166,7 +173,7 @@ noncomputable abbrev localCohomologyPresheafRestriction
       (ModuleCat.restrictScalars
         (X.structureSheaf.1.map (homOfLE h).op).hom).obj
         (localCohomologyPresheafObject X U F i) :=
-  ((localCohomologyPresheafFunctor X i).obj F).map (homOfLE h).op
+  (localCohomologyPresheaf X F i).map (homOfLE h).op
 
 /- The same restriction map transported to the Chapter 3 derived-sections
  objects. -/
@@ -216,7 +223,7 @@ theorem cohomologyRestrictionMap_natural
  open cover. -/
 theorem cohomology_class_killed_on_open_cover
     (X : RingedSpace.{v}) (F : Mod X.structureSheaf)
-    (U : Opens X.carrier) (n : ℕ) (hn : 0 < n)
+    (U : Opens X.carrier) (n : ℕ) (_hn : 0 < n)
     (ξ : cohomologyOnOpenModule X U F (n : ℤ)) :
     ∃ (ι : Type u) (U_i : ι → Opens X.carrier)
       (hU : ∀ i, U_i i ≤ U),
@@ -500,10 +507,29 @@ theorem localCohomologyPresheafFunctor_is_rightDerived
         (sheafModuleUnderlyingPresheafFunctor_isLeftExact X) i :=
   rfl
 
+theorem localCohomologyPresheafFunctor_zero_iso
+    (X : RingedSpace.{v}) :
+    Nonempty (localCohomologyPresheafFunctor X 0 ≅
+      sheafModuleUnderlyingPresheafFunctor X) := by
+  exact higherRightDerivedFunctor_zero_iso
+    (sheafModuleUnderlyingPresheafFunctor X)
+    (sheafModuleUnderlyingPresheafFunctor_isLeftExact X)
+
+/- The universal delta-functor property used in the first part of the
+  derived-functor remark is inherited from the canonical construction. -/
+theorem localCohomologyPresheafFunctor_is_universal
+    (X : RingedSpace.{v}) :
+    IsUniversalHigherRightDerivedDeltaFunctor
+      (sheafModuleUnderlyingPresheafFunctor X)
+      (sheafModuleUnderlyingPresheafFunctor_isLeftExact X) := by
+  exact higherRightDerivedFunctor_universal
+    (sheafModuleUnderlyingPresheafFunctor X)
+    (sheafModuleUnderlyingPresheafFunctor_isLeftExact X)
+
 /-- Positive-degree `underline Hⁱ(F)` sheafifies to zero. -/
 theorem localCohomologySheafification_isZero
     (X : RingedSpace.{v}) (F : Mod X.structureSheaf)
-    (p : ℕ) (hp : 0 < p) :
+    (p : ℕ) (_hp : 0 < p) :
     IsZero ((modulePresheafSheafification X).obj
       ((localCohomologyPresheafFunctor X (p : ℤ)).obj F)) := by
   sorry
@@ -517,5 +543,16 @@ theorem presheafHigherDirectImageFunctor_is_the_derived_composite
           sheafModuleUnderlyingPresheafFunctor Y)
         (presheafHigherDirectImageFunctor_isLeftExact f) i :=
   rfl
+
+theorem presheafHigherDirectImageFunctor_is_universal
+    {X Y : RingedSpace.{v}} (f : RingedSpaceHom X Y) :
+    IsUniversalHigherRightDerivedDeltaFunctor
+      (sheafModuleRingedSpacePushforward f ⋙
+        sheafModuleUnderlyingPresheafFunctor Y)
+      (presheafHigherDirectImageFunctor_isLeftExact f) := by
+  exact higherRightDerivedFunctor_universal
+    (sheafModuleRingedSpacePushforward f ⋙
+      sheafModuleUnderlyingPresheafFunctor Y)
+    (presheafHigherDirectImageFunctor_isLeftExact f)
 
 end Formalization.Books.Cohomology.Unit07

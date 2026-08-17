@@ -42,6 +42,15 @@ theorem etale_iff_finitePresentation_and_cotangent_vanishing
           Subsingleton (KaehlerDifferential R S) := by
   sorry
 
+/- The introductory relative-dimension formulation is already the canonical
+   Mathlib theorem; expose it under the chapter namespace without defining a
+   parallel notion of relative dimension. -/
+theorem etale_iff_standardSmoothOfRelativeDimension_zero
+    {R S : Type u} [CommRing R] [CommRing S] [Algebra R S] :
+    Algebra.Etale R S ↔
+      Algebra.IsStandardSmoothOfRelativeDimension 0 R S :=
+  Algebra.Etale.iff_isStandardSmoothOfRelativeDimension_zero
+
 /-- An étale algebra has zero Kähler differentials. -/
 theorem etale_subsingleton_kaehlerDifferential
     {R S : Type u} [CommRing R] [CommRing S] [Algebra R S]
@@ -94,7 +103,7 @@ theorem etale_exists_standardSmoothPresentation
 theorem etale_localization_away
     {R : Type u} [CommRing R] (f : R) :
     Algebra.Etale R (Localization.Away f) := by
-  sorry
+  exact Algebra.Etale.of_isLocalizationAway f
 
 /-- Étale maps are stable under composition. -/
 theorem etale_comp
@@ -149,7 +158,7 @@ theorem etale_is_flat
     {R S : Type u} [CommRing R] [CommRing S]
     (f : R →+* S) (h : RingHom.Etale f) :
     RingHom.Flat f := by
-  sorry
+  exact (RingHom.Etale.iff_flat_and_formallyUnramified.mp h).1
 
 /-- Over a field, finite type plus vanishing differentials is equivalent to
 étaleness. -/
@@ -270,6 +279,16 @@ def EtalePrimeIdealCondition
     Ideal.map (algebraMap S (Localization.AtPrime q.asIdeal)) q.asIdeal =
       IsLocalRing.maximalIdeal (Localization.AtPrime q.asIdeal)
 
+/-- The condition used in the converse local criterion: the extension of the
+base prime to the local ring at `q` is its maximal ideal. -/
+def EtaleMaximalIdealCondition
+    {R S : Type u} [CommRing R] [CommRing S] [Algebra R S]
+    (p : PrimeSpectrum R) (q : PrimeSpectrum S) : Prop :=
+  let f : R →+* Localization.AtPrime q.asIdeal :=
+    (algebraMap S (Localization.AtPrime q.asIdeal)).comp (algebraMap R S)
+  Ideal.map f p.asIdeal =
+    IsLocalRing.maximalIdeal (Localization.AtPrime q.asIdeal)
+
 /-- The finite separable residue-field condition at a prime. -/
 def EtaleResidueFieldCondition
     {R S : Type u} [CommRing R] [CommRing S] [Algebra R S]
@@ -318,7 +337,7 @@ theorem characterize_etale_at_prime
     (hlying : PrimeSpectrum.comap (algebraMap R S) q = p)
     (hfp : RingHom.FinitePresentation (algebraMap R S))
     (hflat : EtaleFlatAtPrime p q hlying)
-    (hideal : EtalePrimeIdealCondition p q)
+    (hmaximal : EtaleMaximalIdealCondition p q)
     (hresidue : EtaleResidueFieldCondition p q hlying) :
     IsEtaleAt R S q := by
   sorry

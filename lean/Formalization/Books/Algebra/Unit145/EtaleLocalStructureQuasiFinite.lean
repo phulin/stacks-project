@@ -11,6 +11,7 @@ import Mathlib.FieldTheory.IsSepClosed
 import Mathlib.FieldTheory.PurelyInseparable.Basic
 import Mathlib.RingTheory.AdjoinRoot
 import Mathlib.RingTheory.Henselian
+import Mathlib.RingTheory.Ideal.Cotangent
 import Mathlib.RingTheory.RingHom.Flat
 import Mathlib.RingTheory.RingHom.Etale
 import Mathlib.RingTheory.RingHom.QuasiFinite
@@ -385,6 +386,19 @@ abbrev FormallyUnramified
     {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S) : Prop :=
   RingHom.FormallyUnramified f
 
+/- The source's localization-at-a-prime map is needed already for the
+   source-local form of formal unramifiedness. -/
+def localizationAtPrimeMap
+    {R S : Type u} [CommRing R] [CommRing S]
+    (f : R →+* S) (p : PrimeSpectrum R) (q : PrimeSpectrum S)
+    (hq : PrimeSpectrum.comap f q = p) :
+    Localization.AtPrime p.asIdeal →+*
+      Localization.AtPrime q.asIdeal :=
+  let hcomap : p.asIdeal = q.asIdeal.comap f := by
+    simpa [PrimeSpectrum.comap_asIdeal] using
+      (congrArg PrimeSpectrum.asIdeal hq).symm
+  Localization.localRingHom p.asIdeal q.asIdeal f hcomap
+
 theorem baseChange_formallyUnramified
     {R S R' : Type u} [CommRing R] [CommRing S] [CommRing R']
     (f : R →+* S) (g : R →+* R') (h : FormallyUnramified f) :
@@ -404,6 +418,14 @@ theorem formallyUnramified_local
     FormallyUnramified f ↔
       (∀ q : PrimeSpectrum S, FormallyUnramified
         ((algebraMap S (Localization.AtPrime q.asIdeal)).comp f)) := by
+  sorry
+
+theorem formallyUnramified_local_source_target
+    {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S) :
+    FormallyUnramified f ↔
+      (∀ q : PrimeSpectrum S,
+        FormallyUnramified
+          (localizationAtPrimeMap f (PrimeSpectrum.comap f q) q rfl)) := by
   sorry
 
 theorem formallyUnramified_localize
@@ -464,10 +486,31 @@ theorem universal_first_order_thickening
     Nonempty (UniversalFirstOrderThickening f hf) := by
   sorry
 
+theorem universal_first_order_thickening_unique
+    {R S : Type u} [CommRing R] [CommRing S]
+    (f : R →+* S) (hf : FormallyUnramified f)
+    (D E : UniversalFirstOrderThickening f hf) :
+    letI : CommRing D.S' := D.commRingS'
+    letI : CommRing E.S' := E.commRingS'
+    letI : Algebra R D.S' := D.algebraRS'
+    letI : Algebra R E.S' := E.algebraRS'
+    ∃! e : D.S' ≃+* E.S',
+      e.toRingHom.comp (algebraMap R D.S') = algebraMap R E.S' ∧
+        E.thickening.comp e.toRingHom = D.thickening := by
+  sorry
+
 theorem universal_thickening_quotient
     {R : Type u} [CommRing R] (I : Ideal R) :
     FormallyUnramified (Ideal.Quotient.mk I) ∧
       Function.Surjective (Ideal.Quotient.factorPow I (Nat.le_succ 1)) := by
+  sorry
+
+theorem universal_thickening_quotient_conormal
+    {R : Type u} [CommRing R] (I : Ideal R) :
+    Nonempty (I.Cotangent ≃ₗ[R] I.cotangentIdeal) ∧
+      RingHom.ker (Ideal.Quotient.factorPow I (Nat.le_succ 1)) =
+        I.cotangentIdeal := by
+  refine ⟨⟨Ideal.cotangentEquivIdeal I⟩, ?_⟩
   sorry
 
 theorem universal_thickening_localize_source
@@ -583,6 +626,35 @@ theorem formallyEtale_lift_infinitesimal
     Nonempty (InfinitesimalPowerEquivalence f J) := by
   sorry
 
+/- The source's `lemma-formally-etale-omega` is the diagonal/principal-parts
+   comparison for every order, together with its degree-one differential
+   consequence.  The quotient rings are recorded with the canonical
+   diagonal ideals from Chapter 133. -/
+structure FormallyEtaleOmegaComparison
+    {R S S' : Type u} [CommRing R] [CommRing S] [CommRing S']
+    [Algebra R S] [Algebra S S'] [Algebra R S']
+    [IsScalarTower R S S'] where
+  level : ∀ k : ℕ, Nonempty
+    (S' ⊗[S]
+        ((S ⊗[R] S) ⧸
+          (Formalization.Books.Algebra.Unit133.diagonalIdeal
+            (R := R) (S := S)) ^ (k + 1)) ≃+*
+      ((S' ⊗[R] S') ⧸
+        (Formalization.Books.Algebra.Unit133.diagonalIdeal
+          (R := R) (S := S')) ^ (k + 1)))
+  differential : Nonempty
+    (S' ⊗[S] ModuleOfDifferentials R S ≃ₗ[S']
+      ModuleOfDifferentials R S')
+
+theorem formallyEtale_omega
+    {R S S' : Type u} [CommRing R] [CommRing S] [CommRing S']
+    [Algebra R S] [Algebra S S'] [Algebra R S']
+    [IsScalarTower R S S']
+    (hformal : FormallyEtale (algebraMap S S')) :
+    Nonempty (FormallyEtaleOmegaComparison (R := R) (S := S)
+      (S' := S')) := by
+  sorry
+
 theorem formallyEtale_principal_parts
     {R S S' M : Type u} [CommRing R] [CommRing S] [CommRing S']
     [Algebra R S] [Algebra R S'] [Algebra S S']
@@ -679,18 +751,49 @@ def residueCotangentZeroAt
 def fiberCotangentZeroAt
     {R S : Type u} [CommRing R] [CommRing S]
     (f : R →+* S) (p : PrimeSpectrum R) (q : PrimeSpectrum S)
-    (hq : PrimeSpectrum.comap f q = p) : Prop :=
-  residueCotangentZeroAt f p q hq
+    (hq : PrimeSpectrum.comap f q = p) : Prop := by
+  letI : Algebra R S := f.toAlgebra
+  exact ∃ qf : PrimeSpectrum (p.asIdeal.Fiber S),
+    PrimeSpectrum.comap Algebra.TensorProduct.includeRight.toRingHom qf = q ∧
+      Subsingleton
+        (qf.asIdeal.ResidueField ⊗[p.asIdeal.Fiber S]
+          ModuleOfDifferentials p.asIdeal.ResidueField (p.asIdeal.Fiber S))
+
+/- The next two predicates keep the two intermediate differential criteria
+   from the source distinct: total cotangents are tensor products with the
+   target residue field, while fibre cotangents are computed on the fibre
+   ring at a prime mapping to `q`. -/
+def totalCotangentFiberZeroAt
+    {R S : Type u} [CommRing R] [CommRing S]
+    (f : R →+* S) (q : PrimeSpectrum S) : Prop := by
+  letI : Algebra R S := f.toAlgebra
+  exact Subsingleton
+    (q.asIdeal.ResidueField ⊗[S] ModuleOfDifferentials R S)
+
+def fiberLocalizationCotangentZeroAt
+    {R S : Type u} [CommRing R] [CommRing S]
+    (f : R →+* S) (p : PrimeSpectrum R) (q : PrimeSpectrum S)
+    (hq : PrimeSpectrum.comap f q = p) : Prop := by
+  letI : Algebra R S := f.toAlgebra
+  exact ∃ qf : PrimeSpectrum (p.asIdeal.Fiber S),
+    PrimeSpectrum.comap Algebra.TensorProduct.includeRight.toRingHom qf = q ∧
+      Subsingleton (ModuleOfDifferentials p.asIdeal.ResidueField
+        (Localization.AtPrime qf.asIdeal))
 
 theorem formallyUnramified_iff_unramified
     {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S) :
-    (f.FiniteType ∧ FormallyUnramified f) ↔ IsUnramified f ∧
-      f.FiniteType := by
+    (FormallyUnramified f ∧ f.FiniteType) ↔ IsUnramified f := by
   sorry
 
 theorem formallyUnramified_iff_gUnramified
     {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S) :
-    (f.FinitePresentation ∧ FormallyUnramified f) ↔ IsGUnramified f := by
+    (FormallyUnramified f ∧ f.FinitePresentation) ↔ IsGUnramified f := by
+  sorry
+
+theorem gUnramified_is_unramified
+    {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S)
+    (h : IsGUnramified f) :
+    IsUnramified f := by
   sorry
 
 theorem baseChange_unramified
@@ -771,6 +874,36 @@ theorem gUnramified_at_of_residue_cotangent
     IsGUnramifiedAt f q := by
   sorry
 
+theorem unramified_at_of_total_cotangent
+    {R S : Type u} [CommRing R] [CommRing S]
+    (f : R →+* S) (hfinite : f.FiniteType) (q : PrimeSpectrum S)
+    (hzero : totalCotangentFiberZeroAt f q) :
+    IsUnramifiedAt f q := by
+  sorry
+
+theorem gUnramified_at_of_total_cotangent
+    {R S : Type u} [CommRing R] [CommRing S]
+    (f : R →+* S) (hfinite : f.FinitePresentation) (q : PrimeSpectrum S)
+    (hzero : totalCotangentFiberZeroAt f q) :
+    IsGUnramifiedAt f q := by
+  sorry
+
+theorem unramified_at_of_fiber_localization_cotangent
+    {R S : Type u} [CommRing R] [CommRing S]
+    (f : R →+* S) (hfinite : f.FiniteType) (p : PrimeSpectrum R)
+    (q : PrimeSpectrum S) (hq : PrimeSpectrum.comap f q = p)
+    (hzero : fiberLocalizationCotangentZeroAt f p q hq) :
+    IsUnramifiedAt f q := by
+  sorry
+
+theorem gUnramified_at_of_fiber_localization_cotangent
+    {R S : Type u} [CommRing R] [CommRing S]
+    (f : R →+* S) (hfinite : f.FinitePresentation) (p : PrimeSpectrum R)
+    (q : PrimeSpectrum S) (hq : PrimeSpectrum.comap f q = p)
+    (hzero : fiberLocalizationCotangentZeroAt f p q hq) :
+    IsGUnramifiedAt f q := by
+  sorry
+
 theorem unramified_at_of_fiber_cotangent
     {R S : Type u} [CommRing R] [CommRing S]
     (f : R →+* S) (hfinite : f.FiniteType) (p : PrimeSpectrum R)
@@ -825,7 +958,11 @@ structure GUnramifiedApproximation
   map₀ : R₀ →+* S₀
   map₀_isGUnramified : IsGUnramified map₀
   R₀_finiteType : (algebraMap ℤ R₀).FiniteType
-  baseChange : Nonempty (S ≃+* (R ⊗[R₀] S₀))
+  baseChange : S ≃+* (R ⊗[R₀] S₀)
+  baseChange_commutes :
+    baseChange.toRingHom.comp f =
+      (Algebra.TensorProduct.includeLeftRingHom :
+        R →+* (R ⊗[R₀] S₀))
 
 theorem gUnramified_approximation
     {R S : Type u} [CommRing R] [CommRing S]
@@ -846,7 +983,11 @@ structure UnramifiedApproximation
   map₀_isUnramified : IsUnramified map₀
   R₀_finiteType : (algebraMap ℤ R₀).FiniteType
   quotientBaseChange : ∃ I : Ideal (R ⊗[R₀] S₀),
-    Nonempty (S ≃+* ((R ⊗[R₀] S₀) ⧸ I))
+    ∃ e : S ≃+* ((R ⊗[R₀] S₀) ⧸ I),
+      e.toRingHom.comp f =
+        (Ideal.Quotient.mk I).comp
+          (Algebra.TensorProduct.includeLeftRingHom :
+            R →+* (R ⊗[R₀] S₀))
 
 theorem unramified_approximation
     {R S : Type u} [CommRing R] [CommRing S]
@@ -859,7 +1000,9 @@ theorem diagonal_unramified
     (f : R →+* S) (h : IsUnramified f) :
     letI : Algebra R S := f.toAlgebra
     ∃ e : S ⊗[R] S, IsIdempotentElem e ∧
-      Nonempty (Localization.Away e ≃+* S) := by
+      ∃ e' : Localization.Away e ≃+* S,
+        e'.toRingHom.comp (algebraMap (S ⊗[R] S) (Localization.Away e)) =
+          (Algebra.TensorProduct.lmul' R).toRingHom := by
   sorry
 
 theorem unramified_at_prime
@@ -1257,6 +1400,92 @@ theorem mop_up_strictly_henselian
     (f : R →+* S) (hfiniteType : RingHom.FiniteType f) :
     letI : Algebra R S := f.toAlgebra
     Nonempty (StrictHenselianMopUpData R S) := by
+  sorry
+
+/- The source's finite étale/residue-field category equivalence is exposed
+   as a fully faithful and essentially surjective correspondence. -/
+structure FiniteEtaleResidueAlgebraData
+    (R S : Type u) [CommRing R] [IsLocalRing R] [CommRing S]
+    (f : R →+* S) where
+  residueMap : IsLocalRing.ResidueField R →+*
+    S ⧸ Ideal.map f (IsLocalRing.maximalIdeal R)
+  finite : RingHom.Finite residueMap
+  etale : RingHom.Etale residueMap
+  factor : ∀ r : R,
+    residueMap (algebraMap R (IsLocalRing.ResidueField R) r) =
+      Ideal.Quotient.mk (Ideal.map f (IsLocalRing.maximalIdeal R)) (f r)
+
+structure FiniteEtaleResidueLiftData
+    (R L : Type u) [CommRing R] [IsLocalRing R] [HenselianLocalRing R]
+    [CommRing L] [Algebra (IsLocalRing.ResidueField R) L]
+    (hfinite : RingHom.Finite (algebraMap
+      (IsLocalRing.ResidueField R) L))
+    (hetale : RingHom.Etale (algebraMap
+      (IsLocalRing.ResidueField R) L)) where
+  S : Type u
+  [commRingS : CommRing S]
+  map : R →+* S
+  finite : RingHom.Finite map
+  etale : RingHom.Etale map
+  residue : FiniteEtaleResidueAlgebraData R S map
+  residueEquiv : L ≃+* S ⧸ Ideal.map map (IsLocalRing.maximalIdeal R)
+  residueEquiv_compatible :
+    residueEquiv.toRingHom.comp
+        (algebraMap (IsLocalRing.ResidueField R) L) =
+      residue.residueMap
+
+theorem henselian_finite_etale_residue_lift
+    (R L : Type u) [CommRing R] [HenselianLocalRing R]
+    [CommRing L] [Algebra (IsLocalRing.ResidueField R) L]
+    (hfinite : RingHom.Finite
+      (algebraMap (IsLocalRing.ResidueField R) L))
+    (hetale : RingHom.Etale
+      (algebraMap (IsLocalRing.ResidueField R) L)) :
+    Nonempty (FiniteEtaleResidueLiftData R L hfinite hetale) := by
+  sorry
+
+structure FiniteEtaleResidueHom
+    (R S T : Type u) [CommRing R] [IsLocalRing R]
+    [CommRing S] [CommRing T]
+    (f : R →+* S) (g : R →+* T)
+    (residueS : FiniteEtaleResidueAlgebraData R S f)
+    (residueT : FiniteEtaleResidueAlgebraData R T g) where
+  map : S →+* T
+  commutes : map.comp f = g
+  residueMap :
+    (S ⧸ Ideal.map f (IsLocalRing.maximalIdeal R)) →+*
+      T ⧸ Ideal.map g (IsLocalRing.maximalIdeal R)
+  residue_commutes :
+    residueMap.comp
+        (Ideal.Quotient.mk (Ideal.map f (IsLocalRing.maximalIdeal R))) =
+      (Ideal.Quotient.mk (Ideal.map g (IsLocalRing.maximalIdeal R))).comp map
+
+structure FiniteEtaleResidueCorrespondence
+    (R : Type u) [CommRing R] [HenselianLocalRing R] where
+  residue : ∀ (S : Type u) [CommRing S] (f : R →+* S),
+    RingHom.Etale f → RingHom.Finite f →
+    FiniteEtaleResidueAlgebraData R S f
+  fullyFaithful :
+    ∀ (S T : Type u) [CommRing S] [CommRing T]
+      (f : R →+* S) (g : R →+* T)
+      (hf : RingHom.Etale f) (hfinitef : RingHom.Finite f)
+      (hg : RingHom.Etale g) (hfinteg : RingHom.Finite g),
+      Nonempty
+        (({h : S →+* T // h.comp f = g}) ≃
+          FiniteEtaleResidueHom R S T f g
+            (residue S f hf hfinitef) (residue T g hg hfinteg))
+  essentiallySurjective :
+    ∀ (L : Type u) [CommRing L]
+      [Algebra (IsLocalRing.ResidueField R) L]
+      (hfinite : RingHom.Finite
+        (algebraMap (IsLocalRing.ResidueField R) L))
+      (hetale : RingHom.Etale
+        (algebraMap (IsLocalRing.ResidueField R) L)),
+      Nonempty (FiniteEtaleResidueLiftData R L hfinite hetale)
+
+theorem henselian_finite_etale_residue_correspondence
+    (R : Type u) [CommRing R] [HenselianLocalRing R] :
+    Nonempty (FiniteEtaleResidueCorrespondence R) := by
   sorry
 
 theorem unramified_over_strictly_henselian
@@ -1734,90 +1963,6 @@ theorem henselization_strict_comparison_flat_local
           IsLocalHom D.strictHenselization.map := by
   sorry
 
-structure FiniteEtaleResidueAlgebraData
-    (R S : Type u) [CommRing R] [IsLocalRing R] [CommRing S]
-    (f : R →+* S) where
-  residueMap : IsLocalRing.ResidueField R →+*
-    S ⧸ Ideal.map f (IsLocalRing.maximalIdeal R)
-  finite : RingHom.Finite residueMap
-  etale : RingHom.Etale residueMap
-  factor : ∀ r : R,
-    residueMap (algebraMap R (IsLocalRing.ResidueField R) r) =
-      Ideal.Quotient.mk (Ideal.map f (IsLocalRing.maximalIdeal R)) (f r)
-
-structure FiniteEtaleResidueLiftData
-    (R L : Type u) [CommRing R] [IsLocalRing R] [HenselianLocalRing R]
-    [CommRing L] [Algebra (IsLocalRing.ResidueField R) L]
-    (hfinite : RingHom.Finite (algebraMap
-      (IsLocalRing.ResidueField R) L))
-    (hetale : RingHom.Etale (algebraMap
-      (IsLocalRing.ResidueField R) L)) where
-  S : Type u
-  [commRingS : CommRing S]
-  map : R →+* S
-  finite : RingHom.Finite map
-  etale : RingHom.Etale map
-  residue : FiniteEtaleResidueAlgebraData R S map
-  residueEquiv : L ≃+* S ⧸ Ideal.map map (IsLocalRing.maximalIdeal R)
-  residueEquiv_compatible :
-    residueEquiv.toRingHom.comp
-        (algebraMap (IsLocalRing.ResidueField R) L) =
-      residue.residueMap
-
-theorem henselian_finite_etale_residue_lift
-    (R L : Type u) [CommRing R] [HenselianLocalRing R]
-    [CommRing L] [Algebra (IsLocalRing.ResidueField R) L]
-    (hfinite : RingHom.Finite
-      (algebraMap (IsLocalRing.ResidueField R) L))
-    (hetale : RingHom.Etale
-      (algebraMap (IsLocalRing.ResidueField R) L)) :
-    Nonempty (FiniteEtaleResidueLiftData R L hfinite hetale) := by
-  sorry
-
-structure FiniteEtaleResidueHom
-    (R S T : Type u) [CommRing R] [IsLocalRing R]
-    [CommRing S] [CommRing T]
-    (f : R →+* S) (g : R →+* T)
-    (residueS : FiniteEtaleResidueAlgebraData R S f)
-    (residueT : FiniteEtaleResidueAlgebraData R T g) where
-  map : S →+* T
-  commutes : map.comp f = g
-  residueMap :
-    (S ⧸ Ideal.map f (IsLocalRing.maximalIdeal R)) →+*
-      T ⧸ Ideal.map g (IsLocalRing.maximalIdeal R)
-  residue_commutes :
-    residueMap.comp
-        (Ideal.Quotient.mk (Ideal.map f (IsLocalRing.maximalIdeal R))) =
-      (Ideal.Quotient.mk (Ideal.map g (IsLocalRing.maximalIdeal R))).comp map
-
-structure FiniteEtaleResidueCorrespondence
-    (R : Type u) [CommRing R] [HenselianLocalRing R] where
-  residue : ∀ (S : Type u) [CommRing S] (f : R →+* S),
-    RingHom.Etale f → RingHom.Finite f →
-    FiniteEtaleResidueAlgebraData R S f
-  fullyFaithful :
-    ∀ (S T : Type u) [CommRing S] [CommRing T]
-      (f : R →+* S) (g : R →+* T)
-      (hf : RingHom.Etale f) (hfinitef : RingHom.Finite f)
-      (hg : RingHom.Etale g) (hfinteg : RingHom.Finite g),
-      Nonempty
-        (({h : S →+* T // h.comp f = g}) ≃
-          FiniteEtaleResidueHom R S T f g
-            (residue S f hf hfinitef) (residue T g hg hfinteg))
-  essentiallySurjective :
-    ∀ (L : Type u) [CommRing L]
-      [Algebra (IsLocalRing.ResidueField R) L]
-      (hfinite : RingHom.Finite
-        (algebraMap (IsLocalRing.ResidueField R) L))
-      (hetale : RingHom.Etale
-        (algebraMap (IsLocalRing.ResidueField R) L)),
-      Nonempty (FiniteEtaleResidueLiftData R L hfinite hetale)
-
-theorem henselian_finite_etale_residue_correspondence
-    (R : Type u) [CommRing R] [HenselianLocalRing R] :
-    Nonempty (FiniteEtaleResidueCorrespondence R) := by
-  sorry
-
 structure StrictHenselizationUnionData
     (Rh Rsh : Type u) [CommRing Rh] [CommRing Rsh]
     [Algebra Rh Rsh] where
@@ -2086,26 +2231,14 @@ theorem strict_henselization_from_henselization
     (sh : Localization.AtPrime q.asIdeal →+* Sh)
     (hsh : IsHenselization sh)
     (hstrictSh : IsStrictlyHenselian Sh)
-    [Algebra Rh Sh] [Algebra Rh Rsh] :
+    [Algebra Rh Sh] [Algebra Rh Rsh]
+    (hRhSh : (algebraMap Rh Sh).comp rh =
+      sh.comp (localizationAtPrimeMap f p q hq))
+    (hRhRsh : (algebraMap Rh Rsh).comp rh = rsh) :
     Nonempty (Sh ≃ₐ[Rh] Sh ⊗[Rh] Rsh) := by
   sorry
 
 /-! ## 145.12 Henselization and quasi-finite ring maps -/
-
-/-- The canonical map between the localizations at primes lying over one
-another.  The equality of primes is derived from the corresponding equality
-in the prime spectra, so callers can use the map without repeating this
-conversion. -/
-def localizationAtPrimeMap
-    {R S : Type u} [CommRing R] [CommRing S]
-    (f : R →+* S) (p : PrimeSpectrum R) (q : PrimeSpectrum S)
-    (hq : PrimeSpectrum.comap f q = p) :
-    Localization.AtPrime p.asIdeal →+*
-      Localization.AtPrime q.asIdeal :=
-  let hcomap : p.asIdeal = q.asIdeal.comap f := by
-    simpa [PrimeSpectrum.comap_asIdeal] using
-      (congrArg PrimeSpectrum.asIdeal hq).symm
-  Localization.localRingHom p.asIdeal q.asIdeal f hcomap
 
 /-- The data in the quasi-finite henselization lemma, including the unique
 prime of the tensor product and the finite local comparison map. -/
@@ -2145,6 +2278,20 @@ structure QuasiFiniteHenselizationData
   comparison : Rh →+* Sh
   comparison_commutes :
     comparison.comp rh = sh.comp (localizationAtPrimeMap f p q hq)
+  henselization_commutes_left :
+    henselization.map.comp
+        ((algebraMap (Rh ⊗[R] Localization.AtPrime q.asIdeal)
+          (Localization.AtPrime prime.asIdeal)).comp
+          (Algebra.TensorProduct.includeLeft (R := R) (S := R)
+            (A := Rh) (B := Localization.AtPrime q.asIdeal)).toRingHom) =
+      comparison
+  henselization_commutes_right :
+    henselization.map.comp
+        ((algebraMap (Rh ⊗[R] Localization.AtPrime q.asIdeal)
+          (Localization.AtPrime prime.asIdeal)).comp
+          (Algebra.TensorProduct.includeRight (R := R)
+            (A := Rh) (B := Localization.AtPrime q.asIdeal)).toRingHom) =
+      sh
   comparison_finite : RingHom.Finite comparison
   comparison_local : IsLocalHom comparison
   localization_equiv : ∃ e : Localization.AtPrime prime.asIdeal ≃+* Sh,

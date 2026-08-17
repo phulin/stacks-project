@@ -437,6 +437,8 @@ theorem wedgeTensorPowerMap_ker_span
       Submodule.span A (wedgeKernelGenerators (A := A) (B := B) (M := M) n) := by
   sorry
 
+-/
+
 /-! ## Colimits -/
 
 /-- The algebra map induced by a linear map of modules. -/

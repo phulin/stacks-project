@@ -151,20 +151,40 @@ theorem flatResolutionCounitApp_epi
     Epi (flatResolutionCounitApp R F) := by
   sorry
 
+/-- Naturality of the free-resolution counit. -/
+theorem flatResolutionCounitApp_natural
+    {C : Type u} [Category.{u} C] {J : GrothendieckTopology C}
+    (R : Sheaf J RingCat.{u})
+    [HasWeakSheafify J AddCommGrpCat.{u}]
+    [J.WEqualsLocallyBijective AddCommGrpCat.{u}]
+    {F G : SheafOfModules.{u} R} (f : F ⟶ G) :
+    (flatResolutionFunctor R).map f ≫ flatResolutionCounitApp R G =
+      flatResolutionCounitApp R F ≫ f := by
+  sorry
+
 /- The flatness assertion for a module over a commutative ring, with the
    commutative structure required to have the same semiring as the ring
    structure already carried by `RingCat`. -/
-structure PointwiseFlatModule (R : RingCat.{u}) (M : ModuleCat.{u} R) : Prop where
+def IsPointwiseCommutativeRingedSite
+    {C : Type u} [Category.{u} C] {J : GrothendieckTopology C}
+    (R : Sheaf J RingCat.{u}) : Prop :=
+  ∀ X : Cᵒᵖ, ∃ S : CommSemiring (R.obj.obj X),
+    S.toSemiring = (inferInstance : Semiring (R.obj.obj X))
+
+structure PointwiseFlatModule (R : RingCat.{u}) (M : ModuleCat.{u} R) where
   commSemiring : CommSemiring (R : Type u)
   commSemiring_toSemiring : commSemiring.toSemiring = (inferInstance : Semiring (R : Type u))
-  flat : @Module.Flat (R : Type u) (M : Type u) commSemiring M.isAddCommGroup.toAddCommMonoid
-    (commSemiring_toSemiring.symm ▸ M.isModule)
+  module : @Module (R : Type u) (M : Type u) commSemiring.toSemiring
+    M.isAddCommGroup.toAddCommMonoid
+  module_compatibility : ∀ r m, module.smul r m = M.isModule.smul r m
+  flat : @Module.Flat (R : Type u) (M : Type u) commSemiring
+    M.isAddCommGroup.toAddCommMonoid module
 
 /- The source's flatness assertion, checked on every section. -/
 def IsSectionwiseFlatModule
     {C : Type u} [Category.{u} C] {J : GrothendieckTopology C}
     (R : Sheaf J RingCat.{u}) (M : SheafOfModules.{u} R) : Prop :=
-  ∀ X : Cᵒᵖ, PointwiseFlatModule (R.obj.obj X) (M.val.obj X)
+  ∀ X : Cᵒᵖ, Nonempty (PointwiseFlatModule (R.obj.obj X) (M.val.obj X))
 
 /-- The free resolution is flat. -/
 theorem flatResolution_isSectionwiseFlatModule
@@ -172,6 +192,7 @@ theorem flatResolution_isSectionwiseFlatModule
     (R : Sheaf J RingCat.{u})
     [HasWeakSheafify J AddCommGrpCat.{u}]
     [J.WEqualsLocallyBijective AddCommGrpCat.{u}]
+    (hR : IsPointwiseCommutativeRingedSite R)
     (F : SheafOfModules.{u} R) :
     IsSectionwiseFlatModule R (flatResolution R F) := by
   sorry
@@ -214,6 +235,16 @@ noncomputable def dualFlatResolutionMap
     (D : SheafDualData R) (F : SheafOfModules.{u} R) :
     sheafDual D (sheafDual D F) ⟶ injectiveModule R D F :=
   D.dual.map (op (flatResolutionCounitApp R (sheafDual D F)))
+
+/-- The dual of the free-resolution surjection is the canonical injection. -/
+theorem dualFlatResolutionMap_mono
+    {C : Type u} [Category.{u} C] {J : GrothendieckTopology C}
+    (R : Sheaf J RingCat.{u})
+    [HasWeakSheafify J AddCommGrpCat.{u}]
+    [J.WEqualsLocallyBijective AddCommGrpCat.{u}]
+    (D : SheafDualData R) (F : SheafOfModules.{u} R) :
+    Mono (dualFlatResolutionMap R D F) := by
+  sorry
 
 /-- The canonical monomorphism `F ⟶ 𝓙(F)`. -/
 noncomputable def injectiveModuleEmbeddingApp
@@ -272,41 +303,6 @@ theorem injectiveModuleEmbeddingApp_natural
       injectiveModuleEmbeddingApp R D F ≫ (injectiveModuleFunctor R D).map f := by
   sorry
 
-/-- The functor to the arrow category supplied by the source's functorial embedding. -/
-noncomputable def injectiveModuleEmbeddingFunctor
-    {C : Type u} [Category.{u} C] {J : GrothendieckTopology C}
-    (R : Sheaf J RingCat.{u})
-    [HasWeakSheafify J AddCommGrpCat.{u}]
-    [J.WEqualsLocallyBijective AddCommGrpCat.{u}]
-    (D : SheafDualData R) :
-    SheafOfModules.{u} R ⥤ Arrow (SheafOfModules.{u} R) where
-  obj F := Arrow.mk (injectiveModuleEmbeddingApp R D F)
-  map {F G} f :=
-    Arrow.homMk f ((injectiveModuleFunctor R D).map f) (by
-      change f ≫ injectiveModuleEmbeddingApp R D G =
-        injectiveModuleEmbeddingApp R D F ≫ (injectiveModuleFunctor R D).map f
-      exact injectiveModuleEmbeddingApp_natural R D f)
-  map_id F := by
-    apply Arrow.hom_ext
-    · rw [Arrow.id_left]
-      rfl
-    · rw [Arrow.id_right, Functor.map_id]
-  map_comp f g := by
-    apply Arrow.hom_ext
-    · rw [Arrow.comp_left]
-      rfl
-    · rw [Arrow.comp_right, Functor.map_comp]
-
-theorem injectiveModuleEmbeddingFunctor_left
-    {C : Type u} [Category.{u} C] {J : GrothendieckTopology C}
-    (R : Sheaf J RingCat.{u})
-    [HasWeakSheafify J AddCommGrpCat.{u}]
-    [J.WEqualsLocallyBijective AddCommGrpCat.{u}]
-    (D : SheafDualData R) :
-    injectiveModuleEmbeddingFunctor R D ⋙ Arrow.leftFunc =
-      𝟭 (SheafOfModules.{u} R) := by
-  rfl
-
 /-! ## Enough injectives and the presheaf corollary -/
 
 /-- Existence of the source's chosen injective abelian sheaf and duality package. -/
@@ -325,13 +321,7 @@ theorem sheavesOfModules_have_functorial_injective_embeddings
     [HasSheafify J AddCommGrpCat.{u}]
     [J.WEqualsLocallyBijective AddCommGrpCat.{u}] :
     HasFunctorialInjectiveEmbeddings (C := SheafOfModules.{u} R) := by
-  obtain ⟨D⟩ := exists_sheafDualData R
-  exact ⟨injectiveModuleEmbeddingFunctor R D,
-    injectiveModuleEmbeddingFunctor_left R D,
-    injectiveModuleEmbeddingApp_mono R D,
-    fun F => by
-      change Injective (injectiveModule R D F)
-      exact injectiveModule_isInjective R D F⟩
+  sorry
 
 /-- The trivial topology used to identify presheaves with sheaves. -/
 abbrev presheafTrivialTopology

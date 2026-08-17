@@ -4,7 +4,6 @@ import Mathlib.Algebra.Category.Grp.Basic
 import Mathlib.Algebra.DirectSum.Basic
 import Mathlib.CategoryTheory.Monoidal.Cartesian.CommGrp_
 import Mathlib.CategoryTheory.Monoidal.Cartesian.FunctorCategory
-import Mathlib.CategoryTheory.Monoidal.Types.Basic
 
 /-!
 # Sheaves on Spaces, Chapter 4: Abelian presheaves
@@ -52,18 +51,20 @@ noncomputable def terminalPresheafIso {X : TopCat.{v}} (F : Presheaf X)
     (hF : IsTerminal F) : F ≅ singletonPresheaf.{w, v} X :=
   hF.uniqueUpToIso (singletonPresheafIsTerminal.{w, v} X)
 
-/-- The isomorphism between terminal presheaves is unique. -/
+/-- Any two isomorphisms between terminal presheaves are equal. -/
 theorem terminalPresheafIso_unique {X : TopCat.{v}} (F : Presheaf X)
-    (hF : IsTerminal F) :
-    ∃! e : F ≅ singletonPresheaf.{w, v} X,
-      e = terminalPresheafIso F hF := by
-  refine ⟨terminalPresheafIso F hF, rfl, ?_⟩
-  intro e _
+    (hF : IsTerminal F) (e : F ≅ singletonPresheaf.{w, v} X) :
+    e = terminalPresheafIso F hF := by
   apply Iso.ext
   exact (singletonPresheafIsTerminal.{w, v} X).hom_ext e.hom
     (terminalPresheafIso F hF).hom
 
-/-- The chosen product of two set-valued presheaves. -/
+/-!
+The functor-category instances are not inferred through the universe-polymorphic
+`Presheaf` abbreviation at this point, so this explicit bridge exposes the
+canonical pointwise cartesian structure at the source-facing type.
+-/
+
 noncomputable instance presheafCartesianMonoidalCategory (X : TopCat.{v}) :
     CartesianMonoidalCategory (Presheaf.{w, v} X) := by
   change CartesianMonoidalCategory ((Opens X)ᵒᵖ ⥤ Type w)

@@ -281,7 +281,9 @@ This existing functor performs the required restriction of scalars from every
 noncomputable def standardOpenCechModuleComplex {Y : Scheme.{u}} {hY : IsAffine Y}
     (𝒰 : StandardOpenCover Y hY) (M : Y.Modules) :
     CochainComplex (ModuleCat.{u} Γ(Y, ⊤)) ℕ := by
-  sorry
+  exact (CategoryTheory.cechComplexFunctor 𝒰.basicOpenFamily).obj
+    ((SheafOfModules.forgetToSheafModuleCat Y.ringCatSheaf (.op ⊤)
+      (Limits.initialOpOfTerminal Limits.isTerminalTop)).obj M).1
 
 /-- Forgetting the global-section module structure recovers Mathlib's Čech
 complex, including its alternating differentials. -/
@@ -291,9 +293,9 @@ therefore with the alternating sums. -/
 noncomputable def standardOpenCechModuleComplex_forget_iso {Y : Scheme.{u}}
     {hY : IsAffine Y} (𝒰 : StandardOpenCover Y hY) (M : Y.Modules) :
     ((forget₂ (ModuleCat.{u} Γ(Y, ⊤)) AddCommGrpCat.{u}).mapHomologicalComplex
-        (ComplexShape.up ℕ)).obj (standardOpenCechModuleComplex 𝒰 M) ≅
+      (ComplexShape.up ℕ)).obj (standardOpenCechModuleComplex 𝒰 M) ≅
       cechComplex M 𝒰.basicOpenFamily := by
-  sorry
+  exact HomologicalComplex.Hom.isoOfComponents (fun _ => eqToIso (by rfl))
 
 /-- The global-linear Čech complex localized at one prime. -/
 noncomputable def primeLocalizedStandardOpenCechComplex {Y : Scheme.{u}}

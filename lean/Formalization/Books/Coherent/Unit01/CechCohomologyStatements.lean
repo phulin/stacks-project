@@ -243,8 +243,9 @@ including the comparison between Mathlib's finite-intersection sections and
 intertwine `cechAugmentation` and the degree-zero Čech differential with
 `standardCoverModuleAlpha` and `standardCoverModuleBeta`.  Only then transport
 the two conclusions of `Algebra.Unit24.cover_module_exact 𝒰.function
-𝒰.span_eq_top`.  That upstream theorem currently contains a proof placeholder,
-so this leaf must remain an explicit obligation under no-`sorry` guardrails.
+  𝒰.span_eq_top`.  That upstream theorem is already proved; this leaf remains
+  an explicit obligation because the geometric section/localization comparison
+  is not supplied by the imported APIs.
 It supplies only the three-term truncation `M → C⁰ → C¹` (injectivity of
 the first map and exactness at `C⁰`); it supplies no `ExactAt n` for positive
 complex degrees, which is deliberately the separate Coherent-local

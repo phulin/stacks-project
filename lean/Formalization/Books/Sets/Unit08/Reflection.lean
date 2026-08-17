@@ -406,9 +406,20 @@ theorem reflection_principle_meta {n : ℕ}
         M₀ ⊆ M ∧
           ∀ (ρ : Fin n → ZFSet.{u}),
             (∀ i, ρ i ∈ M) →
-              ((conjunction Φ).Realize ρ ↔
+            ((conjunction Φ).Realize ρ ↔
                 (conjunction (Φ.map (fun φ => relativize φ))).Realize
                   (Fin.cons M ρ)) := by
-  sorry
+  intro M₀
+  obtain ⟨α, hα, hM₀, hReflects⟩ := reflection_principle Φ M₀
+  refine ⟨ZFSet.vonNeumann α, hM₀, ?_⟩
+  intro ρ hρ
+  rw [realize_conjunction, realize_conjunction]
+  constructor
+  · intro h ψ hψ
+    rcases List.mem_map.mp hψ with ⟨φ, hφ, rfl⟩
+    exact (hReflects ρ hρ φ hφ).mp (h φ hφ)
+  · intro h φ hφ
+    exact (hReflects ρ hρ φ hφ).mpr
+      (h (relativize φ) (List.mem_map.mpr ⟨φ, hφ, rfl⟩))
 
 end Formalization.Books.Sets.Unit08

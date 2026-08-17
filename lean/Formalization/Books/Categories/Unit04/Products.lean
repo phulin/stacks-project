@@ -86,7 +86,12 @@ theorem representablePresheaf_product_representation
     Nonempty
       (representablePresheaf P ≅
         FunctorToTypes.prod (representablePresheaf X) (representablePresheaf Y)) := by
-  sorry
+  refine ⟨NatIso.ofComponents (fun W =>
+    (representablePresheaf_product_obj_equiv h W.unop).toIso) ?_⟩
+  intro V W f
+  ext γ <;>
+    simp [representablePresheaf_product_obj_equiv, productHomEquiv,
+      FunctorToTypes.prod, Category.assoc]
 
 /- The canonical limit-cone isomorphism has exactly the projection equations
   in the source's “unique up to unique isomorphism” assertion. -/

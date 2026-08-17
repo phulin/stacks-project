@@ -1,4 +1,5 @@
 import Mathlib.LinearAlgebra.Matrix.Charpoly.LinearMap
+import Mathlib.RingTheory.FiniteType
 
 /-!
 # Commutative Algebra, Chapter 16: Cayley–Hamilton
@@ -64,6 +65,7 @@ theorem surjective_endomorphism_isomorphism
     {R : Type u} [CommRing R] {M : Type v} [AddCommGroup M] [Module R M]
     [Module.Finite R M] (φ : Module.End R M) (hφ : Function.Surjective φ) :
     ∃ e : M ≃ₗ[R] M, e.toLinearMap = φ := by
-  sorry
+  exact ⟨LinearEquiv.ofBijective φ
+    (OrzechProperty.bijective_of_surjective_endomorphism φ hφ), rfl⟩
 
 end Formalization.Books.Algebra.Unit16

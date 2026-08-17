@@ -1,5 +1,6 @@
-import Mathlib.FieldTheory.PurelyInseparable.Tower
-import Mathlib.FieldTheory.SeparablyGenerated
+import Mathlib.FieldTheory.PurelyInseparable.Basic
+import Mathlib.FieldTheory.Separable
+import Mathlib.LinearAlgebra.FiniteDimensional.Defs
 import Mathlib.RingTheory.AlgebraicIndependent.TranscendenceBasis
 import Mathlib.RingTheory.EssentialFiniteness
 
@@ -14,7 +15,7 @@ extensions.  Mathlib's `IsTranscendenceBasis`, `IntermediateField.adjoin`,
 
 namespace Formalization.Books.Algebra.Unit42
 
-universe u
+universe u v
 
 noncomputable section
 
@@ -27,8 +28,8 @@ open Set
    by that family is `IntermediateField.adjoin`. -/
 /-- A field extension is separably generated when it has a transcendence basis
     over which the remaining algebraic extension is separable. -/
-def IsSeparablyGenerated (k K : Type u) [Field k] [Field K] [Algebra k K] : Prop :=
-  ∃ (ι : Type u) (x : ι → K),
+def IsSeparablyGenerated (k : Type u) (K : Type v) [Field k] [Field K] [Algebra k K] : Prop :=
+  ∃ (ι : Type v) (x : ι → K),
     IsTranscendenceBasis k x ∧
       Algebra.IsSeparable (IntermediateField.adjoin k (range x)) K
 
@@ -37,13 +38,13 @@ def IsSeparablyGenerated (k K : Type u) [Field k] [Field K] [Algebra k K] : Prop
    canonical finite-generation interface for field extensions. -/
 /-- A field extension is separable when every finitely generated subextension
     is separably generated. -/
-def IsSeparableExtension (k K : Type u) [Field k] [Field K] [Algebra k K] : Prop :=
+def IsSeparableExtension (k : Type u) (K : Type v) [Field k] [Field K] [Algebra k K] : Prop :=
   ∀ (L : IntermediateField k K),
     Algebra.EssFiniteType k L → IsSeparablyGenerated k L
 
 /-- Every intermediate field of a separable extension is separable. -/
 theorem subextension_is_separable
-    {k K : Type u} [Field k] [Field K] [Algebra k K]
+    {k : Type u} {K : Type v} [Field k] [Field K] [Algebra k K]
     (hK : IsSeparableExtension k K) (L : IntermediateField k K) :
     IsSeparableExtension k L := by
   sorry
@@ -57,7 +58,7 @@ theorem subextension_is_separable
     coercion from `r : ℕ`; `Set.range x ∪ {y}` represents the field generated
     by the displayed `r + 1` elements. -/
 theorem exists_finite_generators_of_separably_generated
-    {k K : Type u} [Field k] [Field K] [Algebra k K]
+    {k : Type u} {K : Type v} [Field k] [Field K] [Algebra k K]
     [Algebra.EssFiniteType k K] (hK : IsSeparablyGenerated k K) :
     ∃ (r : ℕ) (x : Fin r → K) (y : K),
       Algebra.trdeg k K = r ∧
@@ -74,9 +75,9 @@ theorem exists_finite_generators_of_separably_generated
     are finite purely inseparable and the upper extension is separably
     generated. -/
 structure PurelyInseparableBaseChange
-    (k K : Type u) [Field k] [Field K] [Algebra k K] where
+    (k : Type u) (K : Type v) [Field k] [Field K] [Algebra k K] where
   base : Type u
-  top : Type u
+  top : Type v
   [baseField : Field base]
   [topField : Field top]
   [baseAlgebra : Algebra k base]
@@ -97,7 +98,7 @@ structure PurelyInseparableBaseChange
 /-- A finitely generated field extension becomes separably generated after a
     finite purely inseparable extension of the base and the top. -/
 theorem exists_purely_inseparable_base_change
-    {k K : Type u} [Field k] [Field K] [Algebra k K]
+    {k : Type u} {K : Type v} [Field k] [Field K] [Algebra k K]
     [Algebra.EssFiniteType k K] :
     Nonempty (PurelyInseparableBaseChange k K) := by
   sorry

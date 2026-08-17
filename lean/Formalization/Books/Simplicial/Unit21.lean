@@ -1,0 +1,1 @@
+import Formalization.Books.Simplicial.Unit21.LeftAdjointsToSkeletonFunctors

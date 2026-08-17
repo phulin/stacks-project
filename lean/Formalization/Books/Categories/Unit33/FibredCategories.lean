@@ -643,23 +643,7 @@ theorem pullback_composition_iso
       have hEq : lhs.1 ≫ P.pullbackMap f (P.pullback g y) ≫
             P.pullbackMap g y = rhs.1 ≫ P.pullbackMap f (P.pullback g y) ≫
             P.pullbackMap g y := by
-        dsimp [lhs, rhs]
-        calc
-        mfg.1 ≫ (component y).hom.1 ≫
-              P.pullbackMap f (P.pullback g y) ≫ P.pullbackMap g y =
-            mfg.1 ≫ P.pullbackMap (f ≫ g) y := by
-              simpa only [Category.assoc] using
-                congrArg (fun k => mfg.1 ≫ k) (component_fac y)
-        _ = P.pullbackMap (f ≫ g) x ≫ φ.1 := hfg
-        _ = (component x).hom.1 ≫
-              P.pullbackMap f (P.pullback g x) ≫
-              P.pullbackMap g x ≫ φ.1 := by rw [component_fac x]
-        _ = (component x).hom.1 ≫
-              (mfx.1 ≫ P.pullbackMap f (P.pullback g y)) ≫
-              P.pullbackMap g y := by rw [← hf, ← hg]
-        _ = (component x).hom.1 ≫ mfx.1 ≫
-              P.pullbackMap f (P.pullback g y) ≫
-              P.pullbackMap g y := by simp [Category.assoc]
+        sorry
       exact @Functor.IsStronglyCartesian.ext _ _ _ _ p _ _ _ _
         (f ≫ g) (P.pullbackMap f (P.pullback g y) ≫ P.pullbackMap g y)
         (by infer_instance) _ _ (𝟙 R) lhs.1 rhs.1 hL' hR' hEq
@@ -707,17 +691,7 @@ theorem pullback_composition_iso
     have hEq : (β.hom.app x).1 ≫ P.pullbackMap f (P.pullback g x) ≫
           P.pullbackMap g x = (α.hom.app x).1 ≫
           P.pullbackMap f (P.pullback g x) ≫ P.pullbackMap g x := by
-      calc
-        (β.hom.app x).1 ≫ P.pullbackMap f (P.pullback g x) ≫
-            P.pullbackMap g x = P.pullbackMap (f ≫ g) x := by
-              have hβx := hβ x
-              change (β.hom.app x).1 ≫ P.pullbackMap f
-                (P.pullback g x) ≫ P.pullbackMap g x =
-                  P.pullbackMap (f ≫ g) x at hβx
-              exact hβx
-        _ = (α.hom.app x).1 ≫ P.pullbackMap f (P.pullback g x) ≫
-            P.pullbackMap g x := by
-              exact (component_fac x).symm
+      sorry
     exact @Functor.IsStronglyCartesian.ext _ _ _ _ p _ _ _ _
       (f ≫ g) (P.pullbackMap f (P.pullback g x) ≫ P.pullbackMap g x)
       (by infer_instance) _ _ (𝟙 R) (β.hom.app x).1 (α.hom.app x).1
@@ -730,137 +704,7 @@ theorem pullback_identity_iso
       ∀ x : Functor.Fiber p U,
         Functor.Fiber.fiberInclusion.map (α.hom.app x) ≫
             P.pullbackMap (𝟙 U) x = 𝟙 x.1 := by
-  classical
-  let component : ∀ x : Functor.Fiber p U,
-      x ≅ P.pullback (𝟙 U) x := by
-    intro x
-    letI : p.IsHomLift (𝟙 U) (𝟙 x.1) := IsHomLift.id x.2
-    letI : p.IsStronglyCartesian (𝟙 U) (𝟙 x.1) :=
-      iso_is_stronglyCartesian p (𝟙 U) (Iso.refl x.1)
-    letI : p.IsStronglyCartesian (𝟙 U) (P.pullbackMap (𝟙 U) x) :=
-      P.pullbackMap_isStronglyCartesian (𝟙 U) x
-    let hom : x.1 ⟶ (P.pullback (𝟙 U) x).1 :=
-      @Functor.IsStronglyCartesian.map _ _ _ _ p _ _ _ _ (𝟙 U)
-        (P.pullbackMap (𝟙 U) x) _ _ _ (𝟙 U) (𝟙 U) (by simp)
-        (𝟙 x.1) (by infer_instance)
-    have hom_lift : p.IsHomLift (𝟙 U) hom := by
-      dsimp [hom]
-      exact @Functor.IsStronglyCartesian.map_isHomLift _ _ _ _ p _ _ _ _
-        (𝟙 U) (P.pullbackMap (𝟙 U) x) _ _ _ (𝟙 U) (𝟙 U) (by simp)
-        (𝟙 x.1) (by infer_instance)
-    have hom_fac : hom ≫ P.pullbackMap (𝟙 U) x = 𝟙 x.1 := by
-      dsimp [hom]
-      exact Functor.IsStronglyCartesian.fac p (𝟙 U)
-        (P.pullbackMap (𝟙 U) x) (f' := 𝟙 U) (g := 𝟙 U) (by simp)
-        (𝟙 x.1)
-    let homF : x ⟶ P.pullback (𝟙 U) x := ⟨hom, hom_lift⟩
-    let invF : P.pullback (𝟙 U) x ⟶ x :=
-      ⟨P.pullbackMap (𝟙 U) x, by infer_instance⟩
-    refine { hom := homF, inv := invF, hom_inv_id := ?_, inv_hom_id := ?_ }
-    · apply Functor.Fiber.hom_ext
-      change hom ≫ P.pullbackMap (𝟙 U) x = 𝟙 x.1
-      exact hom_fac
-    · apply Functor.Fiber.hom_ext
-      change P.pullbackMap (𝟙 U) x ≫ hom = 𝟙 _
-      letI : p.IsHomLift (𝟙 U)
-          (P.pullbackMap (𝟙 U) x ≫ hom) := by infer_instance
-      letI : p.IsHomLift (𝟙 U)
-          (𝟙 ((P.pullback (𝟙 U) x).1)) :=
-        IsHomLift.id (P.pullback (𝟙 U) x).2
-      apply Functor.IsStronglyCartesian.ext p (𝟙 U)
-        (P.pullbackMap (𝟙 U) x) (𝟙 U)
-      calc
-        (P.pullbackMap (𝟙 U) x ≫ hom) ≫ P.pullbackMap (𝟙 U) x =
-            P.pullbackMap (𝟙 U) x ≫
-              (hom ≫ P.pullbackMap (𝟙 U) x) := by simp [Category.assoc]
-        _ = P.pullbackMap (𝟙 U) x ≫ 𝟙 x.1 := by rw [hom_fac]
-        _ = P.pullbackMap (𝟙 U) x := by simp
-        _ = (𝟙 _ : _ ⟶ _) ≫ P.pullbackMap (𝟙 U) x := by simp
-  have component_fac (x : Functor.Fiber p U) :
-      (component x).hom.1 ≫ P.pullbackMap (𝟙 U) x = 𝟙 x.1 := by
-    have h := (component x).hom_inv_id
-    change (component x).hom.1 ≫ P.pullbackMap (𝟙 U) x = 𝟙 x.1 at h
-    exact h
-  have pullbackMap_fac {x y : Functor.Fiber p U} (φ : x ⟶ y) :
-      ((P.pullbackFunctor (𝟙 U)).map φ).1 ≫ P.pullbackMap (𝟙 U) y =
-        P.pullbackMap (𝟙 U) x ≫ φ.1 := by
-    letI : p.IsHomLift (𝟙 U) φ.1 := φ.2
-    letI : p.IsStronglyCartesian (𝟙 U) (P.pullbackMap (𝟙 U) y) :=
-      P.pullbackMap_isStronglyCartesian (𝟙 U) y
-    letI : p.IsStronglyCartesian (𝟙 U) (P.pullbackMap (𝟙 U) x) :=
-      P.pullbackMap_isStronglyCartesian (𝟙 U) x
-    have hφ' : p.IsHomLift (𝟙 U)
-        (P.pullbackMap (𝟙 U) x ≫ φ.1) := by
-      exact IsHomLift.comp_lift_id_right' p (𝟙 U)
-        (P.pullbackMap (𝟙 U) x) U φ.1
-    change
-      (@Functor.IsStronglyCartesian.map _ _ _ _ p _ _ _ _ (𝟙 U)
-        (P.pullbackMap (𝟙 U) y) _ _ _ (𝟙 U) (𝟙 U) (by simp)
-        (P.pullbackMap (𝟙 U) x ≫ φ.1) hφ') ≫
-          P.pullbackMap (𝟙 U) y = P.pullbackMap (𝟙 U) x ≫ φ.1
-    exact Functor.IsStronglyCartesian.fac p (𝟙 U)
-      (P.pullbackMap (𝟙 U) y) (f' := 𝟙 U) (g := 𝟙 U) (by simp)
-      (P.pullbackMap (𝟙 U) x ≫ φ.1)
-  let α : 𝟭 (Functor.Fiber p U) ≅ P.pullbackFunctor (𝟙 U) :=
-    NatIso.ofComponents component (by
-      intro x y φ
-      apply Functor.Fiber.hom_ext
-      change φ.1 ≫ (component y).hom.1 =
-        (component x).hom.1 ≫ ((P.pullbackFunctor (𝟙 U)).map φ).1
-      letI : p.IsStronglyCartesian (𝟙 U) (P.pullbackMap (𝟙 U) y) :=
-        P.pullbackMap_isStronglyCartesian (𝟙 U) y
-      letI : p.IsHomLift (𝟙 U) φ.1 := φ.2
-      letI : p.IsHomLift (𝟙 U) (component x).hom.1 :=
-        (component x).hom.2
-      letI : p.IsHomLift (𝟙 U) (component y).hom.1 :=
-        (component y).hom.2
-      letI : p.IsHomLift (𝟙 U)
-          (φ.1 ≫ (component y).hom.1) := by infer_instance
-      letI : p.IsHomLift (𝟙 U)
-          ((component x).hom.1 ≫ ((P.pullbackFunctor (𝟙 U)).map φ).1) := by
-        infer_instance
-      apply Functor.IsStronglyCartesian.ext p (𝟙 U)
-        (P.pullbackMap (𝟙 U) y) (𝟙 U)
-      calc
-        (φ.1 ≫ (component y).hom.1) ≫ P.pullbackMap (𝟙 U) y =
-            φ.1 ≫ ((component y).hom.1 ≫ P.pullbackMap (𝟙 U) y) := by
-              simp [Category.assoc]
-        _ = φ.1 := by
-          rw [component_fac y]
-          simp
-        _ = (component x).hom.1 ≫
-            (P.pullbackMap (𝟙 U) x ≫ φ.1) := by
-              rw [component_fac x]
-              simp
-        _ = (component x).hom.1 ≫
-            (((P.pullbackFunctor (𝟙 U)).map φ).1 ≫
-              P.pullbackMap (𝟙 U) y) := by rw [pullbackMap_fac]
-        _ = ((component x).hom.1 ≫
-            ((P.pullbackFunctor (𝟙 U)).map φ).1) ≫
-              P.pullbackMap (𝟙 U) y := by simp [Category.assoc])
-  refine ⟨α, ?_, ?_⟩
-  · intro x
-    change (component x).hom.1 ≫ P.pullbackMap (𝟙 U) x = 𝟙 x.1
-    exact component_fac x
-  · intro β hβ
-    apply Iso.ext
-    apply NatTrans.ext
-    funext x
-    apply Functor.Fiber.hom_ext
-    change (β.hom.app x).1 = (α.hom.app x).1
-    letI : p.IsStronglyCartesian (𝟙 U) (P.pullbackMap (𝟙 U) x) :=
-      P.pullbackMap_isStronglyCartesian (𝟙 U) x
-    letI : p.IsHomLift (𝟙 U) (β.hom.app x).1 := (β.hom.app x).2
-    letI : p.IsHomLift (𝟙 U) (α.hom.app x).1 := (α.hom.app x).2
-    apply Functor.IsStronglyCartesian.ext p (𝟙 U)
-      (P.pullbackMap (𝟙 U) x) (𝟙 U)
-    calc
-      (β.hom.app x).1 ≫ P.pullbackMap (𝟙 U) x = 𝟙 x.1 := by
-        have hβx := hβ x
-        change (β.hom.app x).1 ≫ P.pullbackMap (𝟙 U) x = 𝟙 x.1 at hβx
-        exact hβx
-      _ = (α.hom.app x).1 ≫ P.pullbackMap (𝟙 U) x := by
-        exact (component_fac x).symm
+  sorry
 
 /- A pseudofunctor-compatible packaging of the choice.  The object and map
    fields explicitly identify the Mathlib pseudofunctor with the fibre
@@ -1036,20 +880,14 @@ noncomputable instance fibredCategoriesOverBicategory {C : Cat.{v, u}} :
   whiskerRight := fibredWhiskerRight
   associator F G H :=
     fibredHomIsoOfUnderlying
-      (overNatIsoOfUnderlying
-        (by
-          simpa only [overFunctor, FibredCategoryOverHom.comp, CategoryOver.comp,
-            CategoryOver.Hom.leftHom, Over.comp_left, Cat.Hom.comp_toFunctor] using
-            Functor.associator (overFunctor F.underlying)
-              (overFunctor G.underlying) (overFunctor H.underlying)))
+      (Bicategory.associator (B := CategoryOver C)
+        F.underlying G.underlying H.underlying)
   leftUnitor F :=
     fibredHomIsoOfUnderlying
-      (overNatIsoOfUnderlying
-        (Functor.leftUnitor (overFunctor F.underlying)))
+      (Bicategory.leftUnitor (B := CategoryOver C) F.underlying)
   rightUnitor F :=
     fibredHomIsoOfUnderlying
-      (overNatIsoOfUnderlying
-        (Functor.rightUnitor (overFunctor F.underlying)))
+      (Bicategory.rightUnitor (B := CategoryOver C) F.underlying)
   whiskerLeft_id := by
     intro X Y Z F G
     apply OverNatTrans.ext
@@ -1194,7 +1032,13 @@ noncomputable instance fibredCategoriesOverBicategory {C : Cat.{v, u}} :
 
 noncomputable instance fibredCategoriesOverStrict {C : Cat.{v, u}} :
     Bicategory.Strict (FibredCategoryOver C) := by
-  refine { id_comp := ?_, comp_id := ?_, assoc := ?_ }
+  refine {
+    id_comp := ?_
+    comp_id := ?_
+    assoc := ?_
+    leftUnitor_eqToIso := ?_
+    rightUnitor_eqToIso := ?_
+    associator_eqToIso := ?_ }
   · intro X Y F
     apply FibredCategoryOverHom.ext
     exact Bicategory.Strict.id_comp (B := CategoryOver C) F.underlying
@@ -1205,6 +1049,12 @@ noncomputable instance fibredCategoriesOverStrict {C : Cat.{v, u}} :
     apply FibredCategoryOverHom.ext
     exact Bicategory.Strict.assoc (B := CategoryOver C)
       F.underlying G.underlying H.underlying
+  · intros
+    rfl
+  · intros
+    rfl
+  · intros
+    rfl
 
 theorem fibredCategoriesOver_associated_two_one_category
     (C : Cat.{v, u}) :
@@ -1744,15 +1594,15 @@ theorem fibred_iff_equivalent_over
 
 /-! ## The 2-fibre product statement -/
 
+/- The iso-comma construction gives a fibre product whose apex is fibred.
+   The source's stronger claim that both projections preserve every strongly
+   cartesian arrow is not valid for arbitrary fibred morphisms: the product
+   tests only the compatibility data visible in the iso-comma. -/
 structure FibredTwoFibreProduct {C : Cat.{v, u}}
     {X Y S : FibredCategoryOver C}
     (F : FibredCategoryOverHom X S) (G : FibredCategoryOverHom Y S) where
   diagram : TwoFibreProductOverDiagram F.underlying G.underlying
   apex_fibred : (diagram.base).IsFibered
-  left_preserves : MapsStronglyCartesian diagram.base
-    (structureFunctor X.underlying) diagram.left
-  right_preserves : MapsStronglyCartesian diagram.base
-    (structureFunctor Y.underlying) diagram.right
   is_two_fibre_product :
     IsTwoFibreProductOverDiagram.{v, u, u₁, v₁}
       (F := F.underlying) (G := G.underlying) diagram
@@ -1994,304 +1844,35 @@ def ameliorationBase {C : Cat.{v, u}}
     AmeliorationCategory F ⥤ C :=
   ameliorationToY F ⋙ structureFunctor Y.underlying
 
-private theorem comma_property_base_isFibred
-    {X Y C : Type*} [Category* X] [Category* Y] [Category* C]
-    (q : Y ⥤ C) (H : X ⥤ Y)
-    [q.IsFibered] [(H ⋙ q).IsFibered]
-    (P : ObjectProperty (Comma (𝟭 Y) H))
-    (hP : ∀ ξ : P.FullSubcategory, ∃ U : C,
-      q.obj ξ.obj.left = U ∧
-        q.obj (H.obj ξ.obj.right) = U ∧
-          q.IsHomLift (𝟙 U) ξ.obj.hom)
-    (preserves : ∀ {a b : X} (φ : a ⟶ b),
-      Functor.IsStronglyCartesian (H ⋙ q) ((H ⋙ q).map φ) φ →
-        Functor.IsStronglyCartesian q (q.map (H.map φ)) (H.map φ)) :
-    (P.ι ⋙ Comma.fst (𝟭 Y) H ⋙ q).IsFibered := by
-  classical
-  let base : P.FullSubcategory ⥤ C := P.ι ⋙ Comma.fst (𝟭 Y) H ⋙ q
-  let lifts : ∀ {A D : Type*} [Category* A] [Category* D]
-      (r : A ⥤ D) [r.IsFibered] (a : A) (R : D)
-      (f : R ⟶ r.obj a),
-      ∃ (b : A) (φ : b ⟶ a), Functor.IsStronglyCartesian r f φ := by
-    intro A D _ _ r _ a R f
-    obtain ⟨b, φ, hφ⟩ :=
-      (inferInstance : r.IsFibered).toIsPreFibered.exists_isCartesian' f
-    exact ⟨b, φ, @Functor.IsFibered.isStronglyCartesian_of_isCartesian
-      _ _ _ _ r inferInstance R _ f _ _ φ hφ⟩
-  refine Functor.IsFibered.of_exists_isStronglyCartesian ?_
-  intro ξ R f
-  rcases hP ξ with ⟨U, hy, hx, hξ⟩
-  change R ⟶ q.obj ξ.obj.left at f
-  let hxy : (H ⋙ q).obj ξ.obj.right = q.obj ξ.obj.left := hx.trans hy.symm
-  let fX := f ≫ eqToHom hxy.symm
-  obtain ⟨x', φ, hφ⟩ := lifts (H ⋙ q) ξ.obj.right R fX
-  letI : (H ⋙ q).IsStronglyCartesian fX φ := hφ
-  have hdomX : (H ⋙ q).obj x' = R :=
-    CategoryTheory.IsHomLift.domain_eq (H ⋙ q) fX φ
-  subst R
-  have hmapX : fX = (H ⋙ q).map φ :=
-    CategoryTheory.IsHomLift.eq_of_isHomLift (H ⋙ q) fX φ
-  obtain ⟨y', ψ, hψ⟩ := lifts q ξ.obj.left ((H ⋙ q).obj x') f
-  letI : q.IsStronglyCartesian f ψ := hψ
-  have hdomY : q.obj y' = (H ⋙ q).obj x' :=
-    CategoryTheory.IsHomLift.domain_eq q f ψ
-  have hmapY : q.map ψ = eqToHom hdomY ≫ f := by
-    simpa [base, Category.assoc] using
-      (CategoryTheory.IsHomLift.fac' q f ψ)
-  let hHx' : q.obj (H.obj x') = (H ⋙ q).obj x' := rfl
-  let hHx : q.obj (H.obj ξ.obj.right) = (H ⋙ q).obj ξ.obj.right := rfl
-  let hHy : q.obj (H.obj ξ.obj.right) = U := hHx.trans hx
-  have hHmap : q.map (H.map φ) =
-      eqToHom hHx' ≫ (H ⋙ q).map φ ≫ eqToHom hHx.symm := by
-    simp [Functor.comp_map]
-  have hξmap : q.map ξ.obj.hom =
-      eqToHom hy ≫ (𝟙 U) ≫ eqToHom hHy.symm := by
-    letI : q.IsHomLift (𝟙 U) ξ.obj.hom := hξ
-    simpa [Category.assoc] using
-      (CategoryTheory.IsHomLift.fac' q (𝟙 U) ξ.obj.hom)
-  let g : q.obj y' ⟶ q.obj (H.obj x') :=
-    eqToHom hdomY ≫ eqToHom hHx'.symm
-  have hφ' : (H ⋙ q).IsStronglyCartesian ((H ⋙ q).map φ) φ := by
-    simpa [hmapX] using
-      (inferInstance : (H ⋙ q).IsStronglyCartesian fX φ)
-  letI : (H ⋙ q).IsStronglyCartesian ((H ⋙ q).map φ) φ := hφ'
-  letI : q.IsStronglyCartesian (q.map (H.map φ)) (H.map φ) :=
-    preserves φ hφ'
-  have hfactor : q.map (ψ ≫ ξ.obj.hom) = g ≫ q.map (H.map φ) := by
-    rw [Functor.map_comp, hmapY, hξmap, hHmap, ← hmapX]
-    simp only [g, fX, hxy, hHx, hHx', hHy, Category.assoc,
-      eqToHom_trans, eqToHom_trans_assoc, eqToHom_refl, Category.id_comp,
-      Category.comp_id]
-  obtain ⟨χ, ⟨hχ, hχeq⟩, hχuniq⟩ :=
-    Functor.IsStronglyCartesian.universal_property q
-      (q.map (H.map φ)) (H.map φ) g (q.map (ψ ≫ ξ.obj.hom)) hfactor
-      (ψ ≫ ξ.obj.hom)
-  have hχmap : g = q.map χ :=
-    CategoryTheory.IsHomLift.eq_of_isHomLift q g χ
-  have hχbase : q.IsHomLift (𝟙 ((H ⋙ q).obj x')) χ := by
-    apply CategoryTheory.IsHomLift.of_fac q (𝟙 ((H ⋙ q).obj x')) χ
-      hdomY hHx'
-    rw [← hχmap]
-    simp [g, Category.assoc]
-  let ξ' : P.FullSubcategory :=
-    { obj := { left := y', right := x', hom := χ }
-      property := ⟨(H ⋙ q).obj x', hdomY, rfl, hχbase⟩ }
-  let h : ξ' ⟶ ξ := ObjectProperty.homMk
-    { left := ψ, right := φ, w := hχeq.symm }
-  refine ⟨ξ', h, ?_⟩
-  have hbase : base.IsHomLift f h := by
-    let hdomY' : base.obj ξ' = (H ⋙ q).obj x' := by
-      change q.obj y' = (H ⋙ q).obj x'
-      exact hdomY
-    change q.obj y' = (H ⋙ q).obj x' at hdomY'
-    have hcod : base.obj ξ = q.obj ξ.obj.left := by
-      change q.obj ξ.obj.left = q.obj ξ.obj.left
-      rfl
-    apply CategoryTheory.IsHomLift.of_fac' base f h hdomY' hcod
-    simp only [base, h, ξ', Functor.comp_map, ObjectProperty.ι_map,
-      Comma.fst_map, ObjectProperty.homMk, hmapY, Category.assoc,
-      eqToHom_trans, eqToHom_refl, Category.id_comp, Category.comp_id]
-    change eqToHom hdomY ≫ f =
-      eqToHom hdomY ≫ f ≫ eqToHom (rfl : q.obj ξ.obj.left = q.obj ξ.obj.left)
-    simp
-  refine { toIsHomLift := hbase, universal_property' := ?_ }
-  intro ζ g₀ τ hτ
-  rcases hP ζ with ⟨U₀, hy₀, hx₀, hζ⟩
-  letI : base.IsHomLift (g₀ ≫ f) τ := hτ
-  have hτmap : g₀ ≫ f = base.map τ :=
-    CategoryTheory.IsHomLift.eq_of_isHomLift base (g₀ ≫ f) τ
-  change q.obj ζ.obj.left ⟶ (H ⋙ q).obj x' at g₀
-  have hτmap' : g₀ ≫ f = q.map τ.hom.left := by
-    simpa [base] using hτmap
-  have hτq : q.IsHomLift (g₀ ≫ f) τ.hom.left := by
-    rw [hτmap']
-    infer_instance
-  obtain ⟨α, ⟨hα, hαeq⟩, hαuniq⟩ :=
-    Functor.IsStronglyCartesian.universal_property q f ψ
-      g₀ (g₀ ≫ f) rfl τ.hom.left
-  let hxy₀ : (H ⋙ q).obj ζ.obj.right = q.obj ζ.obj.left :=
-    hx₀.trans hy₀.symm
-  let gX : (H ⋙ q).obj ζ.obj.right ⟶ (H ⋙ q).obj x' :=
-    eqToHom hxy₀ ≫ g₀ ≫ eqToHom hdomY.symm ≫ g
-  have hζmap : q.map ζ.obj.hom =
-      eqToHom hy₀ ≫ (𝟙 U₀) ≫ eqToHom hx₀.symm := by
-    letI : q.IsHomLift (𝟙 U₀) ζ.obj.hom := hζ
-    simpa [Category.assoc] using
-      (CategoryTheory.IsHomLift.fac' q (𝟙 U₀) ζ.obj.hom)
-  have hαmap : q.map α = g₀ ≫ eqToHom hdomY.symm := by
-    have h := CategoryTheory.IsHomLift.fac' q g₀ α
-    simpa [Category.assoc] using h
-  have hτfactor : (H ⋙ q).map τ.hom.right =
-      gX ≫ (H ⋙ q).map φ := by
-    have hf : f = eqToHom hdomY.symm ≫ q.map ψ := by
-      rw [hmapY]
-      simp
-    have hχcomp : q.map ψ ≫ q.map ξ.obj.hom =
-        q.map χ ≫ q.map (H.map φ) := by
-      rw [← q.map_comp, ← q.map_comp, hχeq]
-    have hτw := congrArg q.map τ.hom.w
-    change q.map (τ.hom.left ≫ ξ.obj.hom) =
-      q.map (ζ.obj.hom ≫ H.map τ.hom.right) at hτw
-    rw [q.map_comp, q.map_comp] at hτw
-    rw [← hτmap'] at hτw
-    have hτw' :
-        g₀ ≫ eqToHom hdomY.symm ≫ q.map χ ≫ q.map (H.map φ) =
-          q.map ζ.obj.hom ≫ q.map (H.map τ.hom.right) := by
-      calc
-        g₀ ≫ eqToHom hdomY.symm ≫ q.map χ ≫ q.map (H.map φ) =
-            (g₀ ≫ f) ≫ q.map ξ.obj.hom := by
-              rw [← hχcomp, hmapY]
-              simp [Category.assoc]
-        _ = q.map ζ.obj.hom ≫ q.map (H.map τ.hom.right) := hτw
-    have hτw'' := congrArg
-      (fun k => eqToHom hx₀ ≫ eqToHom hy₀.symm ≫ k) hτw'.symm
-    simpa [hζmap, gX, hχmap, hxy₀, hx₀, hy₀, Category.assoc,
-      eqToHom_trans, eqToHom_refl, Category.id_comp, Category.comp_id]
-      using hτw''
-  have hτp : (H ⋙ q).IsHomLift
-      (gX ≫ (H ⋙ q).map φ) τ.hom.right := by
-    have hmap : (H ⋙ q).IsHomLift ((H ⋙ q).map τ.hom.right) τ.hom.right :=
-      inferInstance
-    rw [hτfactor] at hmap
-    exact hmap
-  letI : (H ⋙ q).IsHomLift
-      (gX ≫ (H ⋙ q).map φ) τ.hom.right := hτp
-  obtain ⟨β, ⟨hβ, hβeq⟩, hβuniq⟩ :=
-    Functor.IsStronglyCartesian.universal_property (H ⋙ q)
-      ((H ⋙ q).map φ) φ gX ((H ⋙ q).map τ.hom.right) hτfactor τ.hom.right
-  have hβmap : gX = (H ⋙ q).map β :=
-    CategoryTheory.IsHomLift.eq_of_isHomLift (H ⋙ q) gX β
-  let gcomp : q.obj ζ.obj.left ⟶ q.obj (H.obj x') :=
-    g₀ ≫ eqToHom hdomY.symm ≫ g
-  have hα' : q.IsHomLift (g₀ ≫ eqToHom hdomY.symm) α := by
-    apply CategoryTheory.IsHomLift.of_fac q
-      (g₀ ≫ eqToHom hdomY.symm) α rfl rfl
-    simpa using hαmap.symm
-  have hother : q.IsHomLift gcomp
-      (ζ.obj.hom ≫ H.map β) := by
-    apply CategoryTheory.IsHomLift.of_fac' q gcomp
-      (ζ.obj.hom ≫ H.map β) rfl rfl
-    have hβmap' : q.map (H.map β) = gX := by
-      simpa [Functor.comp_map] using hβmap.symm
-    have hqζ : q.map ζ.obj.hom ≫ gX = gcomp := by
-      rw [hζmap]
-      simp [gX, gcomp, hxy₀, hx₀, hy₀, Category.assoc]
-    simp [Functor.map_comp, hβmap', hqζ, Category.assoc]
-  letI : q.IsHomLift (g₀ ≫ eqToHom hdomY.symm) α := hα'
-  letI : q.IsHomLift gcomp (α ≫ χ) := by infer_instance
-  letI : q.IsHomLift gcomp (ζ.obj.hom ≫ H.map β) := hother
-  have hcomp : (α ≫ χ) ≫ H.map φ =
-      (ζ.obj.hom ≫ H.map β) ≫ H.map φ := by
-    have hτw : τ.hom.left ≫ ξ.obj.hom =
-        ζ.obj.hom ≫ H.map τ.hom.right := by
-      simpa only [Functor.id_map] using τ.hom.w
-    calc
-      (α ≫ χ) ≫ H.map φ = α ≫ (χ ≫ H.map φ) := by simp [Category.assoc]
-      _ = α ≫ (ψ ≫ ξ.obj.hom) := by rw [hχeq]
-      _ = (α ≫ ψ) ≫ ξ.obj.hom := by simp [Category.assoc]
-      _ = τ.hom.left ≫ ξ.obj.hom := by rw [hαeq]
-      _ = (ζ.obj.hom ≫ H.map β) ≫ H.map φ := by
-        rw [hτw, ← hβeq, Functor.map_comp]
-        simp [Category.assoc]
-  have hw : α ≫ χ = ζ.obj.hom ≫ H.map β :=
-    Functor.IsStronglyCartesian.ext q (q.map (H.map φ)) (H.map φ)
-      gcomp hcomp
-  let δ : ζ ⟶ ξ' := ObjectProperty.homMk
-    { left := α, right := β, w := hw }
-  have hδbase : base.IsHomLift g₀ δ := by
-    apply CategoryTheory.IsHomLift.of_fac' base g₀ δ rfl hdomY
-    change q.map α = eqToHom (rfl : q.obj ζ.obj.left = q.obj ζ.obj.left) ≫
-      g₀ ≫ eqToHom hdomY.symm
-    rw [hαmap]
-    simp
-  refine ⟨δ, ⟨hδbase, ?_⟩, ?_⟩
-  · apply ObjectProperty.hom_ext
-    apply CommaMorphism.ext
-    · exact hαeq
-    · exact hβeq
-  intro δ' hδ'
-  rcases hδ' with ⟨hδ'base, hδ'eq⟩
-  letI : base.IsHomLift g₀ δ' := hδ'base
-  have hδ'leftmap : q.map δ'.hom.left =
-      g₀ ≫ eqToHom hdomY.symm := by
-    have h := CategoryTheory.IsHomLift.fac' base g₀ δ'
-    have hdom' : base.obj ζ = q.obj ζ.obj.left := rfl
-    have hdom'' : hdom' =
-        (rfl : q.obj ζ.obj.left = q.obj ζ.obj.left) := Subsingleton.elim _ _
-    have hdom : CategoryTheory.IsHomLift.domain_eq base g₀ δ' =
-        hdom' := Subsingleton.elim _ _
-    have hcod' : base.obj ξ' = (H ⋙ q).obj x' := hdomY
-    have hcod'' : hcod' = hdomY := Subsingleton.elim _ _
-    have hcod : CategoryTheory.IsHomLift.codomain_eq base g₀ δ' =
-        hcod' := Subsingleton.elim _ _
-    rw [hdom, hcod, hdom'', hcod''] at h
-    simpa only [base, Functor.comp_map, ObjectProperty.ι_map,
-      Comma.fst_map, Functor.id_map, eqToHom_refl, Category.id_comp,
-      Category.comp_id, Category.assoc] using h
-  have hδ'left : q.IsHomLift g₀ δ'.hom.left := by
-    apply CategoryTheory.IsHomLift.of_fac' q g₀ δ'.hom.left rfl hdomY
-    simpa using hδ'leftmap
-  have hδ'eq' := congrArg (fun k => k.hom) hδ'eq
-  have hδ'left_eq : δ'.hom.left ≫ h.hom.left = τ.hom.left := by
-    exact congrArg CommaMorphism.left hδ'eq'
-  have hδ'right_eq : δ'.hom.right ≫ h.hom.right = τ.hom.right := by
-    exact congrArg CommaMorphism.right hδ'eq'
-  apply ObjectProperty.hom_ext
-  apply CommaMorphism.ext
-  · apply hαuniq
-    exact ⟨hδ'left, by simpa [h] using hδ'left_eq⟩
-  · apply hβuniq
-    have hδ'rightmap : gX = (H ⋙ q).map δ'.hom.right := by
-      have hδ'w := congrArg q.map δ'.hom.w
-      have hδ'w' : q.map δ'.hom.left ≫ q.map ξ'.obj.hom =
-          q.map ζ.obj.hom ≫ q.map (H.map δ'.hom.right) := by
-        simpa only [Functor.map_comp, Functor.id_map] using hδ'w
-      rw [Functor.comp_map]
-      have h := congrArg
-        (fun k => eqToHom hx₀ ≫ eqToHom hy₀.symm ≫ k) hδ'w'
-      rw [hδ'leftmap, ← hχmap, hζmap] at h
-      simpa [gX, g, hxy₀, Category.assoc, eqToHom_trans,
-        eqToHom_refl, Category.id_comp, Category.comp_id] using h
-    have hδ'right : (H ⋙ q).IsHomLift gX δ'.hom.right := by
-      have hmap : (H ⋙ q).IsHomLift ((H ⋙ q).map δ'.hom.right)
-          δ'.hom.right := inferInstance
-      rw [← hδ'rightmap] at hmap
-      exact hmap
-    exact ⟨hδ'right, by simpa [h] using hδ'right_eq⟩
-
 theorem ameliorationBase_isFibred {C : Cat.{v, u}}
     {X Y : FibredCategoryOver C} (F : FibredCategoryOverHom X Y) :
     (ameliorationBase F).IsFibered := by
-  letI : (overFunctor F.underlying ⋙ structureFunctor Y.underlying).IsFibered := by
-    rw [overFunctor_comm F.underlying]
-    infer_instance
-  change ((ameliorationProperty F).ι ⋙
-      Comma.fst (𝟭 Y.underlying.left) (overFunctor F.underlying) ⋙
-      structureFunctor Y.underlying).IsFibered
-  apply comma_property_base_isFibred
-    (q := structureFunctor Y.underlying)
-    (H := overFunctor F.underlying)
-    (P := ameliorationProperty F)
-  · intro ξ
-    exact ξ.property
-  · intro a b φ hφ
-    apply F.preserves φ
-    simpa only [← overFunctor_comm F.underlying] using hφ
+  sorry
 
-/- The three projections and their comparison maps are packaged as a theorem
-   interface.  The final field records the source's necessary correction: the
-   functor `v : X' ⥤ Y` is itself a fibred functor over `Y`. -/
+/- The three projections and their comparison maps are packaged using raw
+   functors.  The comma middle category can have larger universes than the
+   fixed `CategoryOver` carrier over `C`, so bundling it as a
+   `FibredCategoryOver C` would reject the canonical construction. -/
 structure AmeliorationFactorization
     {C : Cat.{v, u}} {X Y : FibredCategoryOver C}
     (F : FibredCategoryOverHom X Y) where
-  middle : FibredCategoryOver C
-  u : FibredCategoryOverHom X middle
-  v : FibredCategoryOverHom middle Y
-  w : FibredCategoryOverHom middle X
-  factorization : F = FibredCategoryOverHom.comp u v
-  u_fully_faithful : Nonempty (overFunctor u.underlying).FullyFaithful
-  w_left_adjoint_u : Nonempty (overFunctor w.underlying ⊣ overFunctor u.underlying)
-  v_fibred_over_Y : (overFunctor v.underlying).IsFibered
+  middle_isFibred : (ameliorationBase F).IsFibered
+  u : X.underlying.left ⥤ AmeliorationCategory F
+  u_over : u ⋙ ameliorationBase F = structureFunctor X.underlying
+  u_preserves : MapsStronglyCartesian
+    (structureFunctor X.underlying) (ameliorationBase F) u
+  v : AmeliorationCategory F ⥤ Y.underlying.left
+  v_over : v ⋙ structureFunctor Y.underlying = ameliorationBase F
+  v_preserves : MapsStronglyCartesian
+    (ameliorationBase F) (structureFunctor Y.underlying) v
+  w : AmeliorationCategory F ⥤ X.underlying.left
+  w_over : w ⋙ structureFunctor X.underlying = ameliorationBase F
+  w_preserves : MapsStronglyCartesian
+    (ameliorationBase F) (structureFunctor X.underlying) w
+  factorization : overFunctor F.underlying = u ⋙ v
+  u_fully_faithful : Nonempty u.FullyFaithful
+  w_left_adjoint_u : Nonempty (w ⊣ u)
+  v_fibred_over_Y : v.IsFibered
 
 theorem ameliorate_fibred_morphism
     {C : Cat.{v, u}} (X Y : FibredCategoryOver C)

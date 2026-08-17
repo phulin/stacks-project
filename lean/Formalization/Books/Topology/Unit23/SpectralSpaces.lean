@@ -1,5 +1,6 @@
 import Formalization.Books.Topology.Unit08.IrreducibleComponents
 import Formalization.Books.Topology.Unit10.KrullDimension
+import Formalization.Books.Topology.Unit12.QuasiCompactSpacesAndMaps
 import Formalization.Books.Topology.Unit14.LimitsOfSpaces
 import Formalization.Books.Topology.Unit19.Specialization
 import Formalization.Books.Topology.Unit22.ProfiniteSpaces
@@ -72,7 +73,7 @@ theorem constructibleTopology_is_coarsest_for_constructible_clopen
       IsOpen[constructibleTopology X] E ∧ IsClosed[constructibleTopology X] E) ∧
       ∀ t : TopologicalSpace X,
     (∀ E : Set X, IsConstructible E → IsOpen[t] E ∧ IsClosed[t] E) →
-          t ≤ constructibleTopology X := by
+          constructibleTopology X ≤ t := by
   sorry
 
 /-- Open subsets of the constructible topology are unions of constructible

@@ -126,6 +126,7 @@ theorem universalPointAtInfinity_on_equation :
 structure UniversalWeierstrassFamily where
   curve : ModuliPoint universalBaseScheme
   coefficients : WeierstrassCurve UniversalBaseRing
+  coefficients_is_elliptic : coefficients.IsElliptic
   homogeneousEquation : MvPolynomial (Fin 3) UniversalBaseRing
   pointAtInfinity : Fin 3 → UniversalBaseRing
   coefficients_eq : coefficients = universalCoefficientsOverBase
@@ -185,12 +186,21 @@ theorem coordinateChangeAction_equivalent {R : Type u} [CommRing R]
 structure WeierstrassLocalChartStatement {S : Scheme.{u}}
     (E : ModuliPoint S) where
   cover : S.AffineOpenCover
+  /-- The coefficients live in the coordinate ring of the affine chart. -/
   coefficients : ∀ i, WeierstrassCurve (cover.X i)
   coefficients_is_elliptic : ∀ i, IsUnit (coefficients i).Δ
   /-- Mathlib has no scheme-level Weierstrass model for `E` in this interface. -/
-  family_identification : Prop
-  /-- The overlap coordinate changes require that same missing model. -/
-  transition_by_coordinate_change : Prop
+  family_identification : ∀ i : cover.I₀, Prop
+  /-- On each affine overlap, the two coefficient tuples differ by an admissible change of variables. -/
+  transition_by_coordinate_change : ∀ (i j : cover.I₀),
+    ∃ C : WeierstrassCurve.VariableChange Γ(
+      pullback (cover.f i) (cover.f j), ⊤),
+      C • (coefficients i).map
+          ((Scheme.ΓSpecIso (cover.X i)).inv ≫
+            (pullback.fst (cover.f i) (cover.f j)).appTop).hom =
+        (coefficients j).map
+          ((Scheme.ΓSpecIso (cover.X j)).inv ≫
+            (pullback.snd (cover.f i) (cover.f j)).appTop).hom
 
 /-- The source's local Weierstrass-chart assertion. -/
 theorem every_ellipticCurve_has_local_weierstrass_chart

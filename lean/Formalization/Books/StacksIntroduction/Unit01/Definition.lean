@@ -120,12 +120,8 @@ theorem ellipticModuli_keyFact : HasEllipticModuliKeyFact := by
 
 /-- The definition of an algebraic moduli object in the source. -/
 def IsAlgebraicEllipticModuli : Prop :=
-  (∀ {S : Scheme.{u}} (𝒰 : S.Cover.{u} Scheme.etalePrecoverage)
-    (D : EtaleEllipticDescentData 𝒰),
-    Nonempty (EtaleEllipticDescentRealization D) ∧
-      ∀ R R' : EtaleEllipticDescentRealization D, UniqueUpToUniqueIso R R') ∧
-    (∀ {S S' : Scheme.{u}} (E : ModuliPoint S) (E' : ModuliPoint S'),
-      Nonempty (FiberProductPresentation E E')) ∧
+  HasEtaleDescentForObjects.{u} ∧
+    HasEllipticModuliKeyFact.{u} ∧
       ∃ (S : Scheme.{u}) (E : ModuliPoint S),
         IsSmoothModuliMorphism E ∧ IsSurjectiveModuliMorphism E
 
@@ -149,7 +145,8 @@ def galoisCover {K L : Type u} [Field K] [Field L] [Algebra K L]
 /-- A finite Galois field extension gives an étale cover of schemes. -/
 theorem galoisCover_is_etale {K L : Type u} [Field K] [Field L] [Algebra K L]
     [FiniteDimensional K L] [IsGalois K L] :
-    Etale (galoisCover (K := K) (L := L)) := by
+    Etale (galoisCover (K := K) (L := L)) ∧
+      Surjective (galoisCover (K := K) (L := L)) := by
   sorry
 
 /-- Applying a field automorphism to the coefficients of a Weierstrass curve. -/

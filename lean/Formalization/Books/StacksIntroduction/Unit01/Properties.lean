@@ -52,7 +52,7 @@ structure EllipticModuliPropertyPresentation where
   smooth_iff_universalBase : smooth ↔ Smooth universalBaseToIntegers
   quasiCompact : Prop
   quasiCompact_of_universalBase :
-    QuasiCompact (𝟙 universalBaseScheme) → quasiCompact
+    CompactSpace universalBaseScheme → quasiCompact
   irreducible : Prop
   irreducible_of_universalBase :
     IrreducibleSpace universalBaseScheme → irreducible
@@ -85,7 +85,7 @@ theorem ellipticModuli_smooth_iff_universalBase_smooth :
 
 /-- Quasi-compactness descends from the chosen smooth cover. -/
 theorem ellipticModuli_quasiCompact_of_universalBase_quasiCompact
-    (h : QuasiCompact (𝟙 universalBaseScheme)) :
+    (h : CompactSpace universalBaseScheme) :
     IsQuasiCompactEllipticModuli :=
   ellipticModuliPropertyPresentation.quasiCompact_of_universalBase h
 
@@ -166,6 +166,24 @@ theorem exists_picard_moduli_identification :
     Nonempty PicardModuliIdentification := by
   sorry
 
+/-- A chosen pair of Picard-group models for the moduli object and its
+equivariant presentation. -/
+noncomputable def picardModuliIdentification : PicardModuliIdentification :=
+  Classical.choice exists_picard_moduli_identification
+
+abbrev PicardGroupOfModuli := picardModuliIdentification.moduliGroup
+
+abbrev EquivariantPicardGroupOfUniversalBase :=
+  picardModuliIdentification.equivariantGroup
+
+noncomputable instance picardGroupOfModuli_addCommGroup :
+    AddCommGroup PicardGroupOfModuli :=
+  picardModuliIdentification.moduliGroup_structure
+
+noncomputable instance equivariantPicardGroupOfUniversalBase_addCommGroup :
+    AddCommGroup EquivariantPicardGroupOfUniversalBase :=
+  picardModuliIdentification.equivariantGroup_structure
+
 /-- The class-group calculation used in the source gives a trivial Picard group on `W`. -/
 theorem picard_universalBase_subsingleton :
     Subsingleton PicardGroupOfUniversalBase := by
@@ -177,9 +195,10 @@ def picardDiscriminantMap : ℤ →+ ℤ :=
     map_zero' := by simp
     map_add' := by intro m n; ring }
 
-/-- The restriction map onto `ℤ/12ℤ`. -/
-def picardRestrictionMap : ℤ →+ ZMod 12 :=
-  Int.castAddHom (ZMod 12)
+/-- The restriction map into the chosen model of the equivariant Picard group. -/
+def picardRestrictionMap : ℤ →+ EquivariantPicardGroupOfUniversalBase :=
+  picardModuliIdentification.equivariant_ZMod.symm.toAddMonoidHom.comp
+    (Int.castAddHom (ZMod 12))
 
 /-- The exact sequence displayed in the Picard-group paragraph. -/
 theorem picard_discriminant_exact_sequence :

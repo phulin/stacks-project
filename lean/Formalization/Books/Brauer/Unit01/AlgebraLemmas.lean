@@ -28,7 +28,7 @@ endomorphism-ring interfaces used in Section 4 of the source.
 
 namespace Formalization.Books.Brauer
 
-universe u v
+universe u_k u_A u_N
 
 open scoped TensorProduct Matrix.Module
 
@@ -587,11 +587,12 @@ theorem simple_module_end_is_finite (k A M : Type*) [Field k] [Ring A]
     infer_instance
 
 theorem finite_module_end_is_matrix_and_double_commutant
-    (k A N : Type*) [Field k] [Ring A] [Algebra k A]
+    (k : Type u_k) (A : Type u_A) (N : Type u_N) [Field k] [Ring A] [Algebra k A]
     [FiniteDimensional k A] [IsSimpleRing A]
     [AddCommGroup N] [Nontrivial N] [Module A N] [Module k N] [IsScalarTower k A N]
     [Module.Finite A N] :
-    ∃ (n : ℕ) (_ : NeZero n) (L : Type*) (_ : DivisionRing L) (_ : Algebra k L)
+    ∃ (n : ℕ) (_ : NeZero n) (L : Type (max u_A u_N)) (_ : DivisionRing L)
+      (_ : Algebra k L)
       (_ : FiniteDimensional k L),
       Nonempty (Module.End A N ≃ₐ[k] Matrix (Fin n) (Fin n) L) ∧
         Nonempty (Module.End (Module.End A N) N ≃ₐ[k] A) := by

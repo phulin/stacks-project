@@ -17,6 +17,8 @@ namespace Formalization.Books.Brauer
 
 open scoped TensorProduct
 
+universe u_k u_A u_K
+
 /-- `k'` splits `A` in the specified matrix degree. -/
 def SplitsInDegree (k A k' : Type*) [Field k] [Ring A] [Algebra k A]
     [Field k'] [Algebra k k'] (d : ℕ) : Prop :=
@@ -66,9 +68,10 @@ theorem splitting_field_degree_dvd (k K k' : Type*) [Field k]
   sorry
 
 /-- A separable maximal subfield of a finite central division algebra. -/
-structure SeparableMaximalSubfield (k K : Type*) [Field k] [DivisionRing K]
+structure SeparableMaximalSubfield (k : Type u_k) (K : Type u_K)
+    [Field k] [DivisionRing K]
     [Algebra k K] where
-  carrier : Type*
+  carrier : Type u_K
   [field : Field carrier]
   [algebra : Algebra k carrier]
   [finite : FiniteDimensional k carrier]
@@ -84,9 +87,9 @@ theorem exists_separable_maximal_subfield (k K : Type*) [Field k]
   sorry
 
 /-- A finite separable extension which splits a given algebra. -/
-structure FiniteSeparableSplittingField (k A : Type*) [Field k] [Ring A]
+structure FiniteSeparableSplittingField (k : Type u_k) (A : Type u_A) [Field k] [Ring A]
     [Algebra k A] where
-  carrier : Type*
+  carrier : Type u_k
   [field : Field carrier]
   [algebra : Algebra k carrier]
   [finite : FiniteDimensional k carrier]
@@ -101,9 +104,9 @@ theorem brauer_class_has_finite_separable_splitting_field (k : Type*)
   sorry
 
 /-- A finite Galois splitting field, packaged with its typeclass data. -/
-structure FiniteGaloisSplittingField (k A : Type*) [Field k] [Ring A]
+structure FiniteGaloisSplittingField (k : Type u_k) (A : Type u_A) [Field k] [Ring A]
     [Algebra k A] where
-  carrier : Type*
+  carrier : Type u_k
   [field : Field carrier]
   [algebra : Algebra k carrier]
   [finite : FiniteDimensional k carrier]
@@ -113,11 +116,11 @@ structure FiniteGaloisSplittingField (k A : Type*) [Field k] [Ring A]
   splitting : SplitsInDegree k A carrier degree
 
 /-- A Wedderburn presentation by a matrix algebra over a finite central skew field. -/
-structure MatrixDivisionPresentation (k A : Type*) [Field k] [Ring A]
+structure MatrixDivisionPresentation (k : Type u_k) (A : Type u_A) [Field k] [Ring A]
     [Algebra k A] where
   degree : ℕ
   degree_pos : 0 < degree
-  division : Type*
+  division : Type u_A
   [divisionRing : DivisionRing division]
   [algebra : Algebra k division]
   [finite : FiniteDimensional k division]

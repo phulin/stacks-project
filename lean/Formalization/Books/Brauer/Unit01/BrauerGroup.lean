@@ -14,6 +14,8 @@ namespace Formalization.Books.Brauer
 
 open scoped TensorProduct
 
+universe u_k u_A u_E
+
 /-- The similarity class of a finite central simple algebra. -/
 def brauerClass (k : Type*) [Field k] (A : CSA k) : BrauerGroup k :=
   Quotient.mk (Brauer.CSA_Setoid k) A
@@ -41,12 +43,12 @@ theorem similarity_is_equivalence (k : Type*) [Field k] :
     Equivalence (@IsBrauerEquivalent k _) :=
   IsBrauerEquivalent.is_eqv
 
-theorem similarity_has_unique_division_representative (k : Type*) [Field k] :
-    ∀ A : CSA k,
-      ∃ D : CSA k,
-        Nonempty (DivisionRing (D : Type*)) ∧
+theorem similarity_has_unique_division_representative (k : Type u_k) [Field k]
+    (A : CSA.{u_k, u_A} k) :
+      ∃ D : CSA.{u_k, u_A} k,
+        Nonempty (DivisionRing D.carrier) ∧
           IsBrauerEquivalent A D ∧
-            ∀ E : CSA k, Nonempty (DivisionRing (E : Type*)) →
+            ∀ E : CSA.{u_k, u_E} k, Nonempty (DivisionRing E.carrier) →
               IsBrauerEquivalent A E →
                 Nonempty (D.carrier ≃ₐ[k] E.carrier) := by
   sorry

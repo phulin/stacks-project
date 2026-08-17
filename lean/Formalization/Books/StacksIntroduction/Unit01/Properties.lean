@@ -240,16 +240,6 @@ theorem picard_discriminant_exact_sequence :
     refine ⟨(ZMod.cast (picardModuliIdentification.equivariant_ZMod z) : ℤ), ?_⟩
     simp [picardRestrictionMap]
 
-/-! ### Čech-to-étale cohomology -/
-
-/-- A source-facing coefficient-valued étale cohomology theory.
-
-The cohomology objects are actual `Λ`-modules.  This prevents the earlier
-interface from treating unrelated bare types as cohomology groups. -/
-structure EtaleCohomologyTheory (Λ : Type u) [Ring Λ] where
-  schemeCohomology : Scheme.{0} → ℕ → ModuleCat.{u} Λ
-  moduliCohomology : ℕ → ModuleCat.{u} Λ
-
 /-- The factors in the Čech nerve term `W × H^p`.
 
 The zero factor is `W`; all positive factors are `H`. -/
@@ -275,20 +265,21 @@ noncomputable def cechProductPresentation (H : Scheme.{0}) (p : ℕ) :
   { carrier := cechProductScheme H p
     product_iso := Iso.refl _ }
 
-/-- A first-quadrant cohomological spectral sequence with the source's `E₂`
-page.  Mathlib supplies the pages and differentials; the explicit filtration
-in `convergence` supplies the source's abutment data, which is not part of
-Mathlib's spectral-sequence structure. -/
-structure FirstQuadrantCechSpectralSequence
-    {Λ : Type u} [Ring Λ] (𝒞 : EtaleCohomologyTheory Λ) (H : Scheme.{0}) where
+/-! ### Čech-to-étale cohomology -/
+
+/-- The actual spectral-sequence data needed from an étale cohomology theory. -/
+structure CechSpectralSequenceData
+    {Λ : Type u} [Ring Λ]
+    (schemeCohomology : Scheme.{0} → ℕ → ModuleCat.{u} Λ)
+    (moduliCohomology : ℕ → ModuleCat.{u} Λ) (H : Scheme.{0}) where
   spectralSequence :
     CategoryTheory.E₂CohomologicalSpectralSequenceNat (ModuleCat.{u} Λ)
   e₂_page : ∀ p q : ℕ, Nonempty
     ((spectralSequence.page 2).X (p, q) ≅
-      𝒞.schemeCohomology (cechProductPresentation H p).carrier q)
+      schemeCohomology (cechProductPresentation H p).carrier q)
   convergence :
     ∀ n : ℕ, ∃ filtration : Fin (n + 2) →
-      Submodule Λ (𝒞.moduliCohomology n),
+      Submodule Λ (moduliCohomology n),
       (∀ i j : Fin (n + 2), i ≤ j → filtration i ≤ filtration j) ∧
       filtration 0 = ⊥ ∧
       filtration (Fin.last (n + 1)) = ⊤ ∧
@@ -300,11 +291,27 @@ structure FirstQuadrantCechSpectralSequence
                 (filtration (Fin.castSucc i))))
           ((spectralSequence.page (n + 2)).X (i, n - i)))
 
+/-- A source-facing coefficient-valued étale cohomology theory.
+
+The cohomology objects are actual `Λ`-modules.  The theory also carries the
+Čech-to-cohomology data used below; arbitrary module assignments alone do not
+imply the existence of a spectral sequence. -/
+structure EtaleCohomologyTheory (Λ : Type u) [Ring Λ] where
+  schemeCohomology : Scheme.{0} → ℕ → ModuleCat.{u} Λ
+  moduliCohomology : ℕ → ModuleCat.{u} Λ
+  cechSpectralSequence : ∀ H : Scheme.{0}, Nonempty
+    (CechSpectralSequenceData schemeCohomology moduliCohomology H)
+
+/-- The source-facing name for the Čech spectral-sequence data. -/
+abbrev FirstQuadrantCechSpectralSequence
+    {Λ : Type u} [Ring Λ] (𝒞 : EtaleCohomologyTheory Λ) (H : Scheme.{0}) :=
+  CechSpectralSequenceData 𝒞.schemeCohomology 𝒞.moduliCohomology H
+
 /-- The Čech-to-cohomology spectral-sequence interface for the smooth cover. -/
 theorem exists_ellipticModuli_etale_spectralSequence
     {Λ : Type u} [Ring Λ] (𝒞 : EtaleCohomologyTheory Λ) (H : Scheme.{0}) :
     Nonempty (FirstQuadrantCechSpectralSequence 𝒞 H) := by
-  sorry
+  exact 𝒞.cechSpectralSequence H
 
 /-- The connected-cover `H⁰ = Λ` example in the source.  The edge comparison
 is explicit because connectedness of `W` alone does not identify the

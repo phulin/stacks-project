@@ -93,11 +93,9 @@ noncomputable def EllipticCurveData.baseChange {S T : Scheme.{u}}
       simp [Category.assoc, E.zero_section])
     zero_section := pullback.lift_snd (a ≫ E.zero) (𝟙 T) _ }
 
-/-- Base change preserves the defining family conditions. -/
-theorem exists_ellipticCurve_baseChange {S T : Scheme.{u}}
-    (E : EllipticCurve S) (a : T ⟶ S) :
-    ∃ E' : EllipticCurve T,
-      E'.toData = E.toData.baseChange a := by
+/-- A canonical pullback presentation of a base-changed family. -/
+noncomputable def EllipticCurve.baseChange {S T : Scheme.{u}}
+    (E : EllipticCurve S) (a : T ⟶ S) : EllipticCurve T := by
   letI : MorphismProperty.IsStableUnderBaseChange (@GeometricallyConnected) :=
     GeometricallyConnected.eq_geometrically ▸ inferInstance
   letI : MorphismProperty.IsStableUnderBaseChange (@IsProper) :=
@@ -130,19 +128,21 @@ theorem exists_ellipticCurve_baseChange {S T : Scheme.{u}}
               basis := ⟨LinearEquiv.refl _ _⟩ } }
       zero_section := by
         apply pullback.lift_snd }
-  refine ⟨E', ?_⟩
-  rfl
+  exact E'
 
-/-- A chosen elliptic curve obtained by base changing a family. -/
-noncomputable def EllipticCurve.baseChange {S T : Scheme.{u}}
-    (E : EllipticCurve S) (a : T ⟶ S) : EllipticCurve T :=
-  Classical.choose (exists_ellipticCurve_baseChange E a)
+/-- Base change preserves the defining family conditions. -/
+theorem exists_ellipticCurve_baseChange {S T : Scheme.{u}}
+    (E : EllipticCurve S) (a : T ⟶ S) :
+    ∃ E' : EllipticCurve T,
+      E'.toData = E.toData.baseChange a := by
+  refine ⟨E.baseChange a, ?_⟩
+  rfl
 
 /-- The chosen base change has the displayed pullback triple. -/
 theorem EllipticCurve.baseChange_toData {S T : Scheme.{u}}
     (E : EllipticCurve S) (a : T ⟶ S) :
     (E.baseChange a).toData = E.toData.baseChange a :=
-  Classical.choose_spec (exists_ellipticCurve_baseChange E a)
+  by rfl
 
 /-! ### Morphisms and witnesses -/
 
@@ -333,11 +333,36 @@ theorem exists_ellipticCurveIso_baseChange {S T : Scheme.{u}}
       simp only [eqToIso.inv]
   }⟩
 
-/-- The chosen base change of a witness. -/
+/-- Base change a witness through the canonical pullback presentations. -/
 noncomputable def EllipticCurveIso.baseChange {S T : Scheme.{u}}
     {E E' : EllipticCurve S} (α : EllipticCurveIso E E') (a : T ⟶ S) :
     EllipticCurveIso (E.baseChange a) (E'.baseChange a) :=
-  Classical.choice (exists_ellipticCurveIso_baseChange α a)
+  let i : pullback E.projection a ≅ pullback E'.projection a :=
+    asIso (pullback.map E.projection a E'.projection a α.hom.hom (𝟙 T) (𝟙 S)
+      (by simpa using α.projection_comm.symm) (by simp))
+  have hi_fst :
+      i.hom ≫ pullback.fst E'.projection a =
+        pullback.fst E.projection a ≫ α.hom.hom := by
+    dsimp [i]
+    apply pullback.lift_fst
+  have hi_snd :
+      i.hom ≫ pullback.snd E'.projection a =
+        pullback.snd E.projection a := by
+    dsimp [i]
+    apply pullback.lift_snd
+  { hom := i
+    projection_comm := by
+      simpa [EllipticCurve.baseChange] using hi_snd
+    section_comm := by
+      change
+        pullback.lift (a ≫ E.zero) (𝟙 T)
+            (by simp [Category.assoc, E.zero_section]) ≫ i.hom =
+          pullback.lift (a ≫ E'.zero) (𝟙 T)
+            (by simp [Category.assoc, E'.zero_section])
+      apply pullback.hom_ext
+      · rw [Category.assoc, hi_fst, ← Category.assoc, pullback.lift_fst]
+        rw [Category.assoc, α.section_comm, pullback.lift_fst]
+      · rw [Category.assoc, hi_snd, pullback.lift_snd, pullback.lift_snd] }
 
 /-- The two chosen ways of iterated base change are isomorphic. -/
 theorem exists_ellipticCurveIso_baseChange_assoc {S X T : Scheme.{u}}
@@ -528,12 +553,85 @@ theorem exists_ellipticCurveIso_baseChange_assoc {S X T : Scheme.{u}}
       rfl
   }⟩
 
-/-- A chosen associativity witness for the pullback presentations. -/
+/-- The canonical associativity witness for the pullback presentations. -/
 noncomputable def EllipticCurveIso.baseChange_assoc {S X T : Scheme.{u}}
     (E : EllipticCurve S) (f : X ⟶ S) (g : T ⟶ X) :
     EllipticCurveIso (E.baseChange (g ≫ f))
       ((E.baseChange f).baseChange g) :=
-  Classical.choice (exists_ellipticCurveIso_baseChange_assoc E f g)
+  let zF : X ⟶ pullback E.projection f :=
+    pullback.lift (f ≫ E.zero) (𝟙 X)
+      (by simp [Category.assoc, E.zero_section])
+  let zA : T ⟶ pullback E.projection (g ≫ f) :=
+    pullback.lift ((g ≫ f) ≫ E.zero) (𝟙 T)
+      (by simp [Category.assoc, E.zero_section])
+  let zB : T ⟶ pullback (pullback.snd E.projection f) g :=
+    pullback.lift (g ≫ zF) (𝟙 T)
+      (by simp [zF, Category.assoc, pullback.lift_snd])
+  let w : pullback E.projection (g ≫ f) ⟶ pullback E.projection f :=
+    pullback.lift (pullback.fst E.projection (g ≫ f))
+      (pullback.snd E.projection (g ≫ f) ≫ g)
+      (by
+        simpa only [Category.assoc] using
+          (pullback.condition :
+            pullback.fst E.projection (g ≫ f) ≫ E.projection =
+              pullback.snd E.projection (g ≫ f) ≫ (g ≫ f)))
+  let u : pullback E.projection (g ≫ f) ⟶
+      pullback (pullback.snd E.projection f) g :=
+    pullback.lift w (pullback.snd E.projection (g ≫ f))
+      (by
+        simpa only [w, Category.assoc] using
+          (pullback.lift_snd (pullback.fst E.projection (g ≫ f))
+            (pullback.snd E.projection (g ≫ f) ≫ g) _))
+  let v : pullback (pullback.snd E.projection f) g ⟶
+      pullback E.projection (g ≫ f) :=
+    pullback.lift
+      (pullback.fst (pullback.snd E.projection f) g ≫
+        pullback.fst E.projection f)
+      (pullback.snd (pullback.snd E.projection f) g)
+      (by
+        rw [Category.assoc, pullback.condition]
+        simpa only [Category.assoc] using
+          congrArg (fun q => q ≫ f)
+            (pullback.condition (f := pullback.snd E.projection f) (g := g)))
+  have huv : u ≫ v = 𝟙 _ := by
+    apply pullback.hom_ext <;>
+      simp [u, v, w, Category.assoc, pullback.lift_fst, pullback.lift_snd,
+        pullback.lift_fst_assoc]
+  have hvw : v ≫ w = pullback.fst (pullback.snd E.projection f) g := by
+    apply pullback.hom_ext
+    · simp [v, w, Category.assoc, pullback.lift_fst]
+    · simpa [v, w, Category.assoc, pullback.lift_snd, pullback.lift_snd_assoc] using
+        (pullback.condition (f := pullback.snd E.projection f) (g := g)).symm
+  have hvu : v ≫ u = 𝟙 _ := by
+    apply pullback.hom_ext <;>
+      simp [u, v, w, hvw, Category.assoc, pullback.lift_fst, pullback.lift_snd]
+  let j : pullback E.projection (g ≫ f) ≅
+      pullback (pullback.snd E.projection f) g :=
+    { hom := u
+      inv := v
+      hom_inv_id := huv
+      inv_hom_id := hvu }
+  have hzw : zA ≫ w = g ≫ zF := by
+    apply pullback.hom_ext <;>
+      simp [zA, w, zF, Category.assoc, pullback.lift_fst, pullback.lift_snd,
+        pullback.lift_snd_assoc]
+  have hz : zA ≫ j.hom = zB := by
+    apply pullback.hom_ext
+    · dsimp [j, u, zB]
+      rw [Category.assoc, pullback.lift_fst, pullback.lift_fst]
+      exact hzw
+    · dsimp [j, u, zB]
+      rw [Category.assoc, pullback.lift_snd, pullback.lift_snd]
+      exact (pullback.lift_snd (g ≫ zF) (𝟙 T) _).symm
+  { hom := j
+    projection_comm := by
+      simpa [EllipticCurve.baseChange] using
+        (show j.hom ≫ pullback.snd (pullback.snd E.projection f) g =
+          pullback.snd E.projection (g ≫ f) by
+          dsimp [j, u]
+          apply pullback.lift_snd)
+    section_comm := by
+      simpa [zA, zB, zF, EllipticCurve.baseChange] using hz }
 
 /-- Chosen base changes along equal maps are identified. -/
 theorem exists_ellipticCurveIso_baseChange_eq {S T : Scheme.{u}}
@@ -545,7 +643,7 @@ theorem exists_ellipticCurveIso_baseChange_eq {S T : Scheme.{u}}
 noncomputable def EllipticCurveIso.baseChange_eq {S T : Scheme.{u}}
     (E : EllipticCurve S) {a b : T ⟶ S} (h : a = b) :
     EllipticCurveIso (E.baseChange a) (E.baseChange b) :=
-  Classical.choice (exists_ellipticCurveIso_baseChange_eq E h)
+  h ▸ EllipticCurveIso.refl (E.baseChange a)
 
 /-- Composition of witnesses exists, as required by the source's 2-category discussion. -/
 theorem exists_ellipticCurveMorphism_comp

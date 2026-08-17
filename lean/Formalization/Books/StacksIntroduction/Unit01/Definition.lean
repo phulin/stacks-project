@@ -30,9 +30,18 @@ structure EtaleEllipticDescentData {S : Scheme.{u}}
   localCurve : ∀ i : 𝒰.I₀, ModuliPoint (𝒰.X i)
   witness : ∀ {T : Scheme.{u}} (i j : 𝒰.I₀)
     (p_i : T ⟶ 𝒰.X i) (p_j : T ⟶ 𝒰.X j),
-    p_i ≫ 𝒰.f i = p_j ≫ 𝒰.f j →
+      p_i ≫ 𝒰.f i = p_j ≫ 𝒰.f j →
       EllipticCurveIso ((localCurve i).baseChange p_i)
         ((localCurve j).baseChange p_j)
+  /-- Overlap witnesses are stable under pullback along test-scheme maps. -/
+  witness_natural : ∀ {T T' : Scheme.{u}} (i j : 𝒰.I₀)
+    (p_i : T ⟶ 𝒰.X i) (p_j : T ⟶ 𝒰.X j) (q : T' ⟶ T)
+    (h_ij : p_i ≫ 𝒰.f i = p_j ≫ 𝒰.f j)
+    (h_ij' : (q ≫ p_i) ≫ 𝒰.f i = (q ≫ p_j) ≫ 𝒰.f j),
+    (EllipticCurveIso.baseChange_assoc (localCurve i) p_i q).trans
+      (((witness i j p_i p_j h_ij).baseChange q).trans
+        (EllipticCurveIso.baseChange_assoc (localCurve j) p_j q).symm) =
+      witness i j (q ≫ p_i) (q ≫ p_j) h_ij'
   cocycle : ∀ {T : Scheme.{u}} (i j k : 𝒰.I₀)
     (p_i : T ⟶ 𝒰.X i) (p_j : T ⟶ 𝒰.X j) (p_k : T ⟶ 𝒰.X k)
     (h_ij : p_i ≫ 𝒰.f i = p_j ≫ 𝒰.f j)

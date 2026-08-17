@@ -395,7 +395,10 @@ structure GlobalQuotientPresentation where
   coordinateGroupPoints_group : Group coordinateGroupPoints
   coordinateGroupPoints_eq :
     coordinateGroupPoints = WeierstrassCoordinateGroup UniversalBaseRing
-  presentation : Prop
+  /-- The available scheme-side evidence for the quotient presentation. -/
+  presentation :
+    WeierstrassEquationEquivalent universalCoefficientsOverBase
+      universalCoefficientsOverBase
 
 theorem ellipticModuli_is_global_quotient :
     Nonempty GlobalQuotientPresentation := by
@@ -405,9 +408,9 @@ theorem ellipticModuli_is_global_quotient :
     coordinateGroupPoints := WeierstrassCoordinateGroup UniversalBaseRing
     coordinateGroupPoints_group := inferInstance
     coordinateGroupPoints_eq := rfl
-    presentation :=
-      WeierstrassEquationEquivalent universalCoefficientsOverBase
-        universalCoefficientsOverBase
+    presentation := by
+      refine ⟨1, ?_⟩
+      simp [coordinateChangeAction]
   }⟩
 
 end Formalization.Books.StacksIntroduction.Unit01

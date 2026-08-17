@@ -298,6 +298,13 @@ def IsGroupoidFibredCategoryOver {C : Cat.{v, u}}
     (X : FibredCategoryOver C) : Prop :=
   ∀ U : C, IsGroupoid (Functor.Fiber (structureFunctor X.underlying) U)
 
+theorem groupoidFibredCategoryOver_isFibredInGroupoids
+    {C : Cat.{v, u}} (X : FibredCategoryOver C)
+    (hX : IsGroupoidFibredCategoryOver X) :
+    (structureFunctor X.underlying).IsFibredInGroupoids := by
+  exact (fibredInGroupoids_iff_fibred_groupoid_fibres
+    (structureFunctor X.underlying)).mpr ⟨hX, inferInstance⟩
+
 def groupoidFibredObjectProperty {C : Cat.{v, u}} :
     ObjectProperty (FibredCategoryOver C) :=
   IsGroupoidFibredCategoryOver
@@ -327,6 +334,15 @@ structure FibredInGroupoidsTwoFibreProduct
   product : FibredTwoFibreProduct.{u₁, v₁, v, u} F G
   fibres_are_groupoids : ∀ U : C,
     IsGroupoid (Functor.Fiber product.diagram.base U)
+
+theorem fibredInGroupoidsTwoFibreProduct_apex_isFibredInGroupoids
+    {C : Cat.{v, u}} {X Y S : FibredCategoryOver C}
+    {F : FibredCategoryOverHom X S} {G : FibredCategoryOverHom Y S}
+    (P : FibredInGroupoidsTwoFibreProduct F G) :
+    P.product.diagram.base.IsFibredInGroupoids := by
+  exact (fibredInGroupoids_iff_fibred_groupoid_fibres
+    P.product.diagram.base).mpr
+    ⟨P.fibres_are_groupoids, P.product.apex_fibred⟩
 
 theorem categoriesFibredInGroupoids_have_twoFibreProducts
     {C : Cat.{v, u}} (X Y S : FibredCategoryOver C)

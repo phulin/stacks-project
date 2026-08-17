@@ -145,7 +145,31 @@ theorem cofiltered_limit_open_eq_iUnion
     ∃ (S : Set J) (U : ∀ j : J, Set (F.obj j)),
       (∀ j, j ∈ S → IsOpen (U j)) ∧
         W = ⋃ j ∈ S, (limit.π F j) ⁻¹' U j := by
-  sorry
+  let B : Set (Set ((limit F : TopCat.{max v u}) : Type (max v u))) :=
+    {U | ∃ (j : J) (V : Set (F.obj j)),
+      IsOpen V ∧ U = (limit.π F j) ⁻¹' V}
+  have hB : IsTopologicalBasis B := cofiltered_limit_open_preimage_basis F
+  let S : Set J :=
+    {j | ∃ V : Set (F.obj j), IsOpen V ∧ (limit.π F j) ⁻¹' V ⊆ W}
+  let U : ∀ j : J, Set (F.obj j) := fun j =>
+    ⋃ V : {V : Set (F.obj j) // IsOpen V ∧ (limit.π F j) ⁻¹' V ⊆ W},
+      (V : Set (F.obj j))
+  refine ⟨S, U, ?_, ?_⟩
+  · intro j hj
+    exact isOpen_iUnion fun V => V.property.1
+  · ext x
+    constructor
+    · intro hx
+      obtain ⟨T, ⟨j, V, hV, rfl⟩, hxT, hTW⟩ := hB.isOpen_iff.mp hW x hx
+      refine mem_iUnion.2 ⟨j, mem_iUnion.2 ⟨⟨V, hV, hTW⟩, ?_⟩⟩
+      change (limit.π F j) x ∈ U j
+      refine mem_iUnion.2 ⟨⟨V, hV, hTW⟩, ?_⟩
+      exact hxT
+    · intro hx
+      obtain ⟨j, hx⟩ := mem_iUnion.1 hx
+      obtain ⟨hj, hx⟩ := mem_iUnion.1 hx
+      obtain ⟨V, hxV⟩ := mem_iUnion.1 hx
+      exact V.property.2 hxV
 
 theorem cofiltered_limit_quasiCompact_open_eq_preimage
     (F : J ⥤ TopCat.{max v u})
@@ -153,7 +177,47 @@ theorem cofiltered_limit_quasiCompact_open_eq_preimage
     (hWopen : IsOpen W) (hWcompact : IsCompact W) :
     ∃ (j : J) (V : Set (F.obj j)),
       IsOpen V ∧ W = (limit.π F j) ⁻¹' V := by
-  sorry
+  classical
+  obtain ⟨S, U, hUopen, hW⟩ := cofiltered_limit_open_eq_iUnion F hWopen
+  let I := {j : J // j ∈ S}
+  let A : I → Set ((limit F : TopCat.{max v u}) : Type (max v u)) := fun i =>
+    (limit.π F i.1) ⁻¹' U i.1
+  have hAopen : ∀ i, IsOpen (A i) := by
+    intro i
+    exact (hUopen i.1 i.2).preimage (limit.π F i.1).hom.2
+  obtain ⟨t, ht⟩ := hWcompact.elim_finite_subcover A hAopen (by
+    rw [hW]
+    rintro x hx
+    obtain ⟨j, hx⟩ := mem_iUnion.1 hx
+    obtain ⟨hj, hx⟩ := mem_iUnion.1 hx
+    exact mem_iUnion.2 ⟨⟨j, hj⟩, hx⟩)
+  obtain ⟨j, hj⟩ := IsCofiltered.inf_objs_exists (t.image (fun i : I => i.1))
+  let f : ∀ i : I, i ∈ t → (j ⟶ i.1) := fun i hi =>
+    (hj (Finset.mem_image.2 ⟨i, hi, rfl⟩)).some
+  let V : Set (F.obj j) :=
+    ⋃ (i : I) (hi : i ∈ t), (F.map (f i hi)) ⁻¹' U i.1
+  have hV : IsOpen V := by
+    dsimp [V]
+    exact isOpen_iUnion fun i => isOpen_iUnion fun hi =>
+      (hUopen i.1 i.2).preimage (F.map (f i hi)).hom.2
+  refine ⟨j, V, hV, ?_⟩
+  ext x
+  constructor
+  · intro hx
+    obtain ⟨i, hi, hxi⟩ := mem_iUnion₂.1 (ht hx)
+    change (limit.π F i.1) x ∈ U i.1 at hxi
+    change (limit.π F j) x ∈ V
+    refine mem_iUnion.2 ⟨i, mem_iUnion.2 ⟨hi, ?_⟩⟩
+    change (F.map (f i hi)) ((limit.π F j) x) ∈ U i.1
+    rw [← ConcreteCategory.comp_apply, limit.w F (f i hi)]
+    exact hxi
+  · intro hx
+    change (limit.π F j) x ∈ V at hx
+    obtain ⟨i, hi, hxi⟩ := mem_iUnion₂.1 hx
+    change (F.map (f i hi)) ((limit.π F j) x) ∈ U i.1 at hxi
+    rw [← ConcreteCategory.comp_apply, limit.w F (f i hi)] at hxi
+    rw [hW]
+    exact mem_iUnion₂.2 ⟨i.1, i.2, hxi⟩
 
 noncomputable def isLimit_of_set_limit_of_open_preimage_basis
     {F : J ⥤ TopCat.{u}} (C : Cone F)
@@ -188,7 +252,54 @@ theorem compactSpace_limit_of_compact_Hausdorff
     {J : Type v} [Category.{w} J] (F : J ⥤ TopCat.{u}) [HasLimit F]
     [∀ j, CompactSpace (F.obj j)] [∀ j, T2Space (F.obj j)] :
     CompactSpace ((limit F : TopCat.{u}) : Type u) := by
-  sorry
+  classical
+  let g : ((limit F : TopCat.{u}) : Type u) → ∀ j : J, (F.obj j : Type u) :=
+    fun x j => (limit.π F j) x
+  have hgind : Topology.IsInducing g := by
+    rw [TopCat.limit_topology F]
+    exact inducing_iInf_to_pi (fun j => limit.π F j)
+  have hginj : Function.Injective g := by
+    intro x y hxy
+    apply Concrete.limit_ext F x y
+    intro j
+    exact congrFun hxy j
+  let C : Set (∀ j : J, (F.obj j : Type u)) :=
+    ⋂ (i : J) (j : J) (f : i ⟶ j), {x | F.map f (x i) = x j}
+  have hC : IsClosed C := by
+    dsimp [C]
+    apply isClosed_iInter
+    intro i
+    apply isClosed_iInter
+    intro j
+    apply isClosed_iInter
+    intro f
+    exact isClosed_eq ((F.map f).hom.2.comp (continuous_apply i)) (continuous_apply j)
+  have hgrange : Set.range g = C := by
+    apply le_antisymm
+    · rintro y ⟨x, rfl⟩
+      dsimp [C]
+      simp only [mem_iInter]
+      intro i j f
+      exact ConcreteCategory.congr_hom (limit.w F f) x
+    · intro y hy
+      have hy' : ∀ (i j : J) (f : i ⟶ j), F.map f (y i) = y j := by
+        simpa [C] using hy
+      let S : Cone F :=
+        { pt := TopCat.of PUnit
+          π :=
+            { app := fun j => TopCat.ofHom
+                { toFun := fun _ : PUnit => y j
+                  continuous_toFun := continuous_const }
+              naturality := by
+                intro i j f
+                ext x
+                simpa using (hy' i j f).symm } }
+      refine ⟨(limit.isLimit F).lift S PUnit.unit, ?_⟩
+      funext j
+      exact ConcreteCategory.congr_hom ((limit.isLimit F).fac S j) PUnit.unit
+  have hg : Topology.IsClosedEmbedding g :=
+    ⟨⟨hgind, hginj⟩, hgrange ▸ hC⟩
+  exact hg.compactSpace
 
 /- The source explicitly warns that the preceding compactness conclusion is
    false without the Hausdorff assumptions.  Those assumptions are therefore

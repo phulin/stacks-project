@@ -1,5 +1,6 @@
-import Formalization.Books.Fields.Unit09.MinimalPolynomials
+import Formalization.Books.Fields.Unit08.AlgebraicExtensions
 import Mathlib.Analysis.SpecialFunctions.Exp
+import Mathlib.RingTheory.AlgebraicIndependent.Adjoin
 import Mathlib.RingTheory.AlgebraicIndependent.TranscendenceBasis
 
 /-!
@@ -25,13 +26,13 @@ noncomputable section
 
 open Set
 
-universe u v w
+universe u v w z
 
 /-! ## Basic definitions -/
 
 /- The source's `k[X_i; i ∈ I]` is `MvPolynomial I k`, and its field of
    fractions is the canonical `FractionRing` construction. -/
-abbrev rationalFunctionField (k : Type u) (ι : Type u) [CommRing k] :=
+abbrev rationalFunctionField (k : Type u) (ι : Type v) [CommRing k] :=
   FractionRing (MvPolynomial ι k)
 
 /- Mathlib's `AlgebraicIndependent` is the injectivity of multivariate
@@ -40,8 +41,9 @@ abbrev rationalFunctionField (k : Type u) (ι : Type u) [CommRing k] :=
 
 /- The source's purely transcendental extension is an algebra equivalence to
    a rational function field in some family of indeterminates. -/
-def IsPurelyTranscendental (k K : Type u) [Field k] [Field K] [Algebra k K] : Prop :=
-  ∃ ι : Type u, Nonempty (rationalFunctionField k ι ≃ₐ[k] K)
+def IsPurelyTranscendental (k : Type u) (K : Type v)
+    [Field k] [Field K] [Algebra k K] : Prop :=
+  ∃ ι : Type w, Nonempty (rationalFunctionField k ι ≃ₐ[k] K)
 
 /- Mathlib's `IsTranscendenceBasis` is the canonical maximal algebraically
    independent family.  Its theorem
@@ -78,8 +80,8 @@ theorem pi_field_is_purely_transcendental :
 
 /-- A transcendence basis exists for every field extension. -/
 theorem transcendence_basis_exists
-    (F E : Type u) [Field F] [Field E] [Algebra F E] :
-    ∃ (ι : Type u) (x : ι → E), IsTranscendenceBasis F x := by
+    (F : Type u) (E : Type v) [Field F] [Field E] [Algebra F E] :
+    ∃ (ι : Type v) (x : ι → E), IsTranscendenceBasis F x := by
   let _ : FaithfulSMul F E :=
     (faithfulSMul_iff_algebraMap_injective F E).mpr
       Formalization.Books.Fields.Unit06.field_extension_algebraMap_injective
@@ -87,10 +89,10 @@ theorem transcendence_basis_exists
 
 /-- Any two transcendence bases of a field extension have the same cardinality. -/
 theorem transcendence_basis_cardinality
-    {F E : Type u} [Field F] [Field E] [Algebra F E]
-    {ι : Type v} {ι' : Type w} {x : ι → E} {y : ι' → E}
+    {F : Type u} {E : Type v} [Field F] [Field E] [Algebra F E]
+    {ι : Type w} {ι' : Type z} {x : ι → E} {y : ι' → E}
     (hx : IsTranscendenceBasis F x) (hy : IsTranscendenceBasis F y) :
-    Cardinal.lift.{w} (Cardinal.mk ι) = Cardinal.lift.{v} (Cardinal.mk ι') := by
+    Cardinal.lift.{z} (Cardinal.mk ι) = Cardinal.lift.{w} (Cardinal.mk ι') := by
   exact hx.lift_cardinalMk_eq hy
 
 /-! ## Transcendence degree -/
@@ -98,15 +100,15 @@ theorem transcendence_basis_cardinality
 /- The source's cardinality definition is Mathlib's `Algebra.trdeg`; a basis
    computes it by the canonical `cardinalMk_eq_trdeg` theorem. -/
 theorem transcendence_degree_eq_basis_cardinality_lifted
-    {F E : Type u} [Field F] [Field E] [Algebra F E]
-    {ι : Type v} {x : ι → E} (hx : IsTranscendenceBasis F x) :
-    Cardinal.lift.{u} (Cardinal.mk ι) =
-      Cardinal.lift.{v} (Algebra.trdeg F E) := by
+    {F : Type u} {E : Type v} [Field F] [Field E] [Algebra F E]
+    {ι : Type w} {x : ι → E} (hx : IsTranscendenceBasis F x) :
+    Cardinal.lift.{v} (Cardinal.mk ι) =
+      Cardinal.lift.{w} (Algebra.trdeg F E) := by
   exact hx.lift_cardinalMk_eq_trdeg
 
 theorem transcendence_degree_eq_basis_cardinality
-    {F E : Type u} [Field F] [Field E] [Algebra F E]
-    {ι : Type u} {x : ι → E} (hx : IsTranscendenceBasis F x) :
+    {F : Type u} {E : Type v} [Field F] [Field E] [Algebra F E]
+    {ι : Type v} {x : ι → E} (hx : IsTranscendenceBasis F x) :
     Algebra.trdeg F E = Cardinal.mk ι := by
   exact hx.cardinalMk_eq_trdeg.symm
 
@@ -186,7 +188,7 @@ theorem rational_function_transcendence_basis_not_unique
 /-- Every field extension has an algebraic-over-purely-transcendental
     intermediate field, after choosing a transcendence basis. -/
 theorem exists_purely_transcendental_intermediateField_with_algebraic_top
-    {F E : Type u} [Field F] [Field E] [Algebra F E] :
+    {F : Type u} {E : Type v} [Field F] [Field E] [Algebra F E] :
     ∃ K : IntermediateField F E,
       (letI : Algebra F K := K.algebra'
        IsPurelyTranscendental F K) ∧ Algebra.IsAlgebraic K E := by
@@ -204,7 +206,7 @@ theorem exists_purely_transcendental_intermediateField_with_algebraic_top
    is exactly the conjunction of finite generation and transcendence degree
    one. -/
 def IsFinitelyGeneratedTranscendenceDegreeOne
-    (k K : Type u) [Field k] [Field K] [Algebra k K] : Prop :=
+    (k : Type u) (K : Type v) [Field k] [Field K] [Algebra k K] : Prop :=
   Algebra.EssFiniteType k K ∧ Algebra.trdeg k K = 1
 
 /-! ## Algebraic closure in a field extension -/
@@ -212,20 +214,20 @@ def IsFinitelyGeneratedTranscendenceDegreeOne
 /- Mathlib's `IntermediateField.algebraicClosure` is precisely the source's
    algebraic closure of `k` in `K`. -/
 theorem mem_relative_algebraic_closure_iff
-    {k K : Type u} [Field k] [Field K] [Algebra k K] (x : K) :
+    {k : Type u} {K : Type v} [Field k] [Field K] [Algebra k K] (x : K) :
     x ∈ algebraicClosure k K ↔ IsAlgebraic k x := by
   exact mem_algebraicClosure_iff
 
 /- The elementwise condition in the source is not otherwise packaged in the
    imported API, so it is defined directly. -/
 def AlgebraicallyClosedIn
-    (k K : Type u) [Field k] [Field K] [Algebra k K] : Prop :=
+    (k : Type u) (K : Type v) [Field k] [Field K] [Algebra k K] : Prop :=
   ∀ x : K, IsAlgebraic k x → ∃ y : k, algebraMap k K y = x
 
 /-- The source's elementwise condition is equivalent to trivial relative
     algebraic closure. -/
 theorem algebraicallyClosedIn_iff_relative_algebraic_closure_eq_bot
-    {k K : Type u} [Field k] [Field K] [Algebra k K] :
+    {k : Type u} {K : Type v} [Field k] [Field K] [Algebra k K] :
     AlgebraicallyClosedIn k K ↔
       algebraicClosure k K = (⊥ : IntermediateField k K) := by
   sorry
@@ -235,7 +237,7 @@ theorem algebraicallyClosedIn_iff_relative_algebraic_closure_eq_bot
 /- The coefficient extension on multivariate polynomial rings, followed by
    localization at nonzero elements, is the induced extension in the source. -/
 noncomputable def rationalFunctionFieldExtensionMap
-    (k k' : Type u) [Field k] [Field k'] [Algebra k k'] (ι : Type u) :
+    (k : Type u) (k' : Type v) [Field k] [Field k'] [Algebra k k'] (ι : Type w) :
     rationalFunctionField k ι →+* rationalFunctionField k' ι :=
   IsFractionRing.map
     (j := (MvPolynomial.map (algebraMap k k') :
@@ -244,7 +246,7 @@ noncomputable def rationalFunctionFieldExtensionMap
       Formalization.Books.Fields.Unit06.field_extension_algebraMap_injective)
 
 @[instance_reducible] noncomputable def rationalFunctionFieldExtensionAlgebra
-    (k k' : Type u) [Field k] [Field k'] [Algebra k k'] (ι : Type u) :
+    (k : Type u) (k' : Type v) [Field k] [Field k'] [Algebra k k'] (ι : Type w) :
     Algebra (rationalFunctionField k ι) (rationalFunctionField k' ι) :=
   RingHom.toAlgebra (rationalFunctionFieldExtensionMap k k' ι)
 
@@ -266,7 +268,7 @@ theorem finite_purely_transcendental_extension_degree
 /-- The relative algebraic closure of the base field in a finitely generated
     field extension is finite over the base. -/
 theorem relative_algebraic_closure_finite_of_finitely_generated
-    {k K : Type u} [Field k] [Field K] [Algebra k K]
+    {k : Type u} {K : Type v} [Field k] [Field K] [Algebra k K]
     (hK : ∃ S : Set K, S.Finite ∧ IntermediateField.adjoin k S = ⊤) :
     Module.Finite k (algebraicClosure k K) := by
   sorry

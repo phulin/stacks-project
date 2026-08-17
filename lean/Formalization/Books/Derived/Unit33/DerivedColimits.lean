@@ -134,6 +134,18 @@ theorem derivedColimit_iso_of_presentations
       (∀ n, p.ι n ≫ e.hom = p'.ι n) ∧ e.hom ≫ p'.c = p.c := by
   sorry
 
+/-- A derived colimit object is unique up to isomorphism, without exposing a
+chosen stagewise presentation in the statement. -/
+theorem derivedColimit_unique_up_to_iso
+    {F : SequentialSystem C} {K K' : C}
+    [HasCoproduct (fun n => F.obj n)]
+    (hK : IsDerivedColimit F K) (hK' : IsDerivedColimit F K') :
+    Nonempty (K ≅ K') := by
+  obtain ⟨p⟩ := presentation_of_isDerivedColimit hK
+  obtain ⟨p'⟩ := presentation_of_isDerivedColimit hK'
+  obtain ⟨e, _, _⟩ := derivedColimit_iso_of_presentations p p'
+  exact ⟨e⟩
+
 /-- Functoriality of presented derived colimits. -/
 theorem derivedColimit_map
     {F G : SequentialSystem C}
@@ -293,6 +305,25 @@ theorem sequential_colimit_exact_sequence
       (coproductToSequentialColimit F)
       (0 : colimit F ⟶ (0 : A))).Exact := by
   sorry
+
+/-- The sequential-colimit exact sequence with only the source's exactness
+assumptions.  The witnesses package the coproduct and `AB4` instances that
+the categorical notation for the sequence needs. -/
+theorem exists_sequential_colimit_exact_sequence
+    {A : Type u} [Category.{v} A] [Abelian A]
+    [HasColimitsOfShape ℕ A] [HasExactColimitsOfShape ℕ A]
+    (F : SequentialSystem A) :
+    ∃ (hA : HasCountableCoproducts A) (hAB4 : @CountableAB4 A _ hA),
+      letI : HasCountableCoproducts A := hA
+      letI : CountableAB4 A := hAB4
+      (ComposableArrows.mk₄
+        (0 : (0 : A) ⟶ ∐ fun n => F.obj n)
+        (hocolimDifferenceMap F)
+        (coproductToSequentialColimit F)
+        (0 : colimit F ⟶ (0 : A))).Exact := by
+  obtain ⟨hA, hAB4⟩ := exact_sequential_colimits_give_countable_direct_sums A
+  refine ⟨hA, hAB4, ?_⟩
+  exact @sequential_colimit_exact_sequence A _ _ _ _ hA hAB4 F
 
 /-! ## Ordinary colimits as homotopy colimits -/
 

@@ -52,7 +52,7 @@ def horizontalComposition {C : Type u} [Bicategory.{w, v} C]
 theorem horizontalComposition_identity {C : Type u} [Bicategory.{w, v} C]
     {a b c : C} (f : a ⟶ b) (g : b ⟶ c) :
     horizontalComposition (𝟙 g) (𝟙 f) = 𝟙 (f ≫ g) := by
-  sorry
+  simp [horizontalComposition]
 
 theorem horizontalComposition_interchange {C : Type u} [Bicategory.{w, v} C]
     {a b c : C} {f₁ f₂ f₃ : a ⟶ b} {g₁ g₂ g₃ : b ⟶ c}
@@ -60,7 +60,9 @@ theorem horizontalComposition_interchange {C : Type u} [Bicategory.{w, v} C]
     (α₁ : f₁ ⟶ f₂) (α₂ : f₂ ⟶ f₃) :
     horizontalComposition (β₁ ≫ β₂) (α₁ ≫ α₂) =
       horizontalComposition β₁ α₁ ≫ horizontalComposition β₂ α₂ := by
-  sorry
+  simp only [horizontalComposition, Bicategory.comp_whiskerRight,
+    Bicategory.whiskerLeft_comp, Category.assoc]
+  rw [Bicategory.whisker_exchange_assoc α₂ β₁]
 
 theorem horizontalComposition_associative {C : Type u}
     [Bicategory.{w, v} C] [Bicategory.Strict C]
@@ -68,19 +70,25 @@ theorem horizontalComposition_associative {C : Type u}
     (γ : h ⟶ h') (β : g ⟶ g') (α : f ⟶ f') :
     HEq (horizontalComposition (horizontalComposition γ β) α)
       (horizontalComposition γ (horizontalComposition β α)) := by
-  sorry
+  simp [horizontalComposition, Bicategory.Strict.associator_eqToIso]
+  congr 1
+  · simp
+  · simp
+    simpa only [Category.assoc] using
+      (comp_eqToHom_heq (f' ◁ β ▷ h ≫ f' ◁ g' ◁ γ)
+        (Bicategory.Strict.assoc f' g' h').symm).symm
 
 theorem horizontalComposition_left_identity {C : Type u}
     [Bicategory.{w, v} C] [Bicategory.Strict C]
     {a b : C} {f f' : a ⟶ b} (α : f ⟶ f') :
     HEq (horizontalComposition (𝟙 (𝟙 b)) α) α := by
-  sorry
+  simp [horizontalComposition, Bicategory.Strict.rightUnitor_eqToIso]
 
 theorem horizontalComposition_right_identity {C : Type u}
     [Bicategory.{w, v} C] [Bicategory.Strict C]
     {a b : C} {g g' : a ⟶ b} (β : g ⟶ g') :
     HEq (horizontalComposition β (𝟙 (𝟙 a))) β := by
-  sorry
+  simp [horizontalComposition, Bicategory.Strict.leftUnitor_eqToIso]
 
 /-- The functor of 1-morphism composition from the source definition.
 
@@ -151,7 +159,16 @@ theorem fullSubTwoCategory_is_subTwoCategory {C : Type uC}
     [Bicategory.{wC, vC} C] [Bicategory.Strict C]
     (P : ObjectProperty C) :
     IsSubTwoCategory (FullSubTwoCategory C P) C := by
-  sorry
+  refine ⟨SubTwoCategory.mk (fullSubTwoCategory_inclusion P) ?_ ?_ ?_⟩
+  · intro X Y h
+    cases X
+    cases Y
+    cases h
+    rfl
+  · intro X Y f g h
+    exact Bicategory.InducedBicategory.hom_ext h
+  · intro X Y f g η θ h
+    exact Bicategory.InducedBicategory.hom₂_ext h
 
 /- The source permits large object collections.  Mathlib represents each
    universe-bounded collection by a type, and `Cat` is the standard
@@ -181,7 +198,31 @@ theorem groupoids_form_a_strict_two_category :
 theorem groupoids_form_a_two_one_category :
     Bicategory.IsLocallyGroupoid
       (FullSubTwoCategory (CategoryTheory.Cat.{v, u}) groupoidObjectProperty) := by
-  sorry
+  intro X Y
+  refine ⟨fun {f g} η => ?_⟩
+  have h : ∀ Z : X.obj, IsIso (η.hom.toNatTrans.app Z) :=
+    fun Z => Y.property.all_isIso _
+  let e : f.hom ≅ g.hom :=
+    Cat.Hom.isoMk
+      (NatIso.ofComponents
+        (fun Z => @asIso _ _ _ _ (η.hom.toNatTrans.app Z) (h Z))
+        (by
+          intro A B k
+          change f.hom.toFunctor.map k ≫ _ = _ ≫ g.hom.toFunctor.map k
+          exact η.hom.toNatTrans.naturality k))
+  have he : e.hom = η.hom := by
+    apply Cat.Hom₂.ext
+    ext Z
+    simp [e]
+  refine ⟨⟨e.inv⟩, ?_, ?_⟩
+  · apply Bicategory.InducedBicategory.hom₂_ext
+    change η.hom ≫ e.inv = 𝟙 f.hom
+    rw [← he]
+    exact e.hom_inv_id
+  · apply Bicategory.InducedBicategory.hom₂_ext
+    change e.inv ≫ η.hom = 𝟙 g.hom
+    rw [← he]
+    exact e.inv_hom_id
 
 /- The remaining entries in the source's list (fibred categories and the
    various kinds of stacks) are later constructions.  Their 2-categories fit
@@ -279,14 +320,22 @@ theorem pseudofunctor_left_unit (F : PseudofunctorFromCategory A C)
     HEq (pseudofunctorComposition F f (𝟙 Y))
       (horizontalComposition (pseudofunctorUnit F Y)
         (𝟙 (pseudofunctorMap F f))) := by
-  sorry
+  simp [pseudofunctorComposition, pseudofunctorUnit,
+    pseudofunctorCompositionIso, pseudofunctorUnitIso, horizontalComposition]
+  rw [F.mapComp_id_right_hom (Quiver.Hom.toLoc f)]
+  simp [Bicategory.Strict.rightUnitor_eqToIso, PrelaxFunctor.map₂_eqToHom]
+  exact eqToHom_comp_heq (F.map f.toLoc ◁ (F.mapId { as := Y }).inv) _
 
 theorem pseudofunctor_right_unit (F : PseudofunctorFromCategory A C)
     [Bicategory.Strict C] {X Y : A} (f : X ⟶ Y) :
     HEq (pseudofunctorComposition F (𝟙 X) f)
       (horizontalComposition (𝟙 (pseudofunctorMap F f))
         (pseudofunctorUnit F X)) := by
-  sorry
+  simp [pseudofunctorComposition, pseudofunctorUnit,
+    pseudofunctorCompositionIso, pseudofunctorUnitIso, horizontalComposition]
+  rw [F.mapComp_id_left_hom (Quiver.Hom.toLoc f)]
+  simp [Bicategory.Strict.leftUnitor_eqToIso, PrelaxFunctor.map₂_eqToHom]
+  exact eqToHom_comp_heq ((F.mapId { as := X }).inv ▷ F.map f.toLoc) _
 
 theorem pseudofunctor_associativity (F : PseudofunctorFromCategory A C)
     [Bicategory.Strict C] {W X Y Z : A}
@@ -298,7 +347,22 @@ theorem pseudofunctor_associativity (F : PseudofunctorFromCategory A C)
       (pseudofunctorComposition F f (g ≫ h) ≫
         horizontalComposition (pseudofunctorComposition F g h)
           (𝟙 (pseudofunctorMap F f))) := by
-  sorry
+  simp [pseudofunctorComposition, pseudofunctorCompositionIso,
+    horizontalComposition]
+  change
+    (F.mapComp (f.toLoc ≫ g.toLoc) h.toLoc).hom ≫
+        (F.mapComp f.toLoc g.toLoc).hom ▷ F.map h.toLoc ≍
+      (F.mapComp f.toLoc (g.toLoc ≫ h.toLoc)).hom ≫
+        F.map f.toLoc ◁ (F.mapComp g.toLoc h.toLoc).hom
+  rw [F.mapComp_assoc_left_hom (Quiver.Hom.toLoc f)
+    (Quiver.Hom.toLoc g) (Quiver.Hom.toLoc h)]
+  simp [Bicategory.Strict.associator_eqToIso, PrelaxFunctor.map₂_eqToHom]
+  simpa only [Category.assoc] using
+    (comp_eqToHom_heq
+      ((F.mapComp f.toLoc (g.toLoc ≫ h.toLoc)).hom ≫
+        F.map f.toLoc ◁ (F.mapComp g.toLoc h.toLoc).hom)
+      (Bicategory.Strict.assoc (F.map f.toLoc) (F.map g.toLoc)
+        (F.map h.toLoc)).symm)
 
 /- The source also mentions a theorem that every pseudofunctor is isomorphic
    to a functor.  It does not specify the morphisms of pseudofunctors, the

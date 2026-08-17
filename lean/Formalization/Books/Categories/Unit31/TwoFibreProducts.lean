@@ -2250,13 +2250,11 @@ theorem isoComma_after_map
       apply Comma.hom_ext
       · simp [Functor.comp, isoCommaDiagonal, isoCommaAfterMapToDiagonal,
           isoCommaAfterMapComparison, isoCommaAfterMap, isoCommaMap,
-          isoCommaLeft, isoCommaRight, γ, Comma.isoMk, ObjectProperty.isoMk,
-          Category.assoc, asIso_hom]
+          isoCommaLeft, γ, Comma.isoMk, ObjectProperty.isoMk]
         rfl
       · simp [Functor.comp, isoCommaDiagonal, isoCommaAfterMapToDiagonal,
           isoCommaAfterMapComparison, isoCommaAfterMap, isoCommaMap,
-          isoCommaLeft, isoCommaRight, γ, k, kAnd, Comma.isoMk,
-          ObjectProperty.isoMk, Category.assoc]
+          isoCommaLeft, γ, k, kAnd, Comma.isoMk, ObjectProperty.isoMk]
         dsimp [asIso]
         exact eq_of_heq (hk X)
   · sorry

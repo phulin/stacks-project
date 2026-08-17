@@ -80,7 +80,40 @@ def coequalizerQuotientCofork (a b : A ⟶ B) : Cofork a b :=
 /-- The quotient construction is a coequalizer of the two given maps. -/
 noncomputable def coequalizerQuotientCofork_isColimit :
     IsColimit (coequalizerQuotientCofork a b) := by
-  sorry
+  letI : TopologicalSpace (Function.Coequalizer a b) :=
+    TopologicalSpace.coinduced (Function.Coequalizer.mk a b) B.str
+  let desc : ∀ s : Cofork a b, coequalizerQuotient a b ⟶ s.pt := fun s =>
+    let h : s.π.hom ∘ a.hom = s.π.hom ∘ b.hom := by
+      funext x
+      exact congrArg (fun f : A ⟶ s.pt => f x) s.condition
+    TopCat.ofHom
+      { toFun := Function.Coequalizer.desc a.hom b.hom s.π.hom h
+        continuous_toFun := continuous_quot_lift
+          (fun x y hxy => by
+            cases hxy with
+            | intro x => simpa [Function.comp_def] using congrFun h x)
+          s.π.hom.continuous }
+  refine Cofork.IsColimit.mk' (coequalizerQuotientCofork a b) ?_
+  intro s
+  refine ⟨desc s, ?_, ?_⟩
+  · apply TopCat.hom_ext
+    apply ContinuousMap.ext
+    intro x
+    let h : s.π.hom ∘ a.hom = s.π.hom ∘ b.hom := by
+      funext x
+      exact congrArg (fun f : A ⟶ s.pt => f x) s.condition
+    change Function.Coequalizer.desc a.hom b.hom s.π.hom h
+        (Function.Coequalizer.mk a b x) = s.π x
+    exact Function.Coequalizer.desc_mk a.hom b.hom s.π.hom h x
+  · intro m hm
+    apply TopCat.hom_ext
+    apply ContinuousMap.ext
+    intro x
+    refine Quot.inductionOn x ?_
+    intro y
+    change m (Function.Coequalizer.mk a b y) = s.π y
+    have hm' := congrArg (fun f : B ⟶ s.pt => f y) hm
+    exact hm'
 
 /-- The concrete quotient map has the quotient-map property. -/
 theorem coequalizerQuotientMap_isQuotientMap :

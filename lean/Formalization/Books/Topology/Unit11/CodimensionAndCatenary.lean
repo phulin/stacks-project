@@ -1,9 +1,9 @@
-import Formalization.Books.Topology.Unit09.NoetherianSpaces
+import Mathlib.Data.PNat.Basic
+import Mathlib.Data.Real.Basic
 import Mathlib.Order.Preorder.Chain
 import Mathlib.Order.Zorn
-import Mathlib.Topology.Instances.Real.Lemmas
 import Mathlib.Topology.KrullDimension
-import Mathlib.Topology.Order
+import Mathlib.Topology.NoetherianSpace
 import Mathlib.Topology.WithTopology
 
 /-!

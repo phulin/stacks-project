@@ -104,7 +104,7 @@ theorem trace_map
     (S U X : AlgebraicSpace.{u}) (_hS : IsScheme S)
     (f : SpaceHom U X) (_hf : IsEtale f) :
     Nonempty (TraceStatement f) := by
-  exact ⟨{ trace := zeroSheafHom _ _, stalk_sum_property := True, surjective_when_surjective := fun _ => True }⟩
+  exact ⟨{ trace := traceMap f, stalk_sum_property := True, surjective_when_surjective := fun _ => True }⟩
 
 def koszulTerm {U X : AlgebraicSpace.{u}} (f : SpaceHom U X) (p : ℕ) : SheafObj X :=
   exteriorPower X (p + 1) (extensionByZero f (constantSheaf U))

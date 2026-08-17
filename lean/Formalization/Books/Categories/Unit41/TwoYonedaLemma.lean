@@ -127,6 +127,19 @@ noncomputable def twoYonedaPullbackCompositionIso
       P.pullbackFunctor g ⋙ P.pullbackFunctor f :=
   Classical.choose (ExistsUnique.exists (pullback_composition_iso p P f g))
 
+theorem twoYonedaPullbackCompositionIso_hom_app
+    {C : Type uC} [Category.{vC} C]
+    {S : Type uS} [Category.{vS} S]
+    (p : S ⥤ C) [p.IsFibered] (P : PullbackChoice p)
+    {R T V : C} (f : R ⟶ T) (g : T ⟶ V)
+    (x : Functor.Fiber p V) :
+    Functor.Fiber.fiberInclusion.map
+          ((twoYonedaPullbackCompositionIso p P f g).hom.app x) ≫
+        P.pullbackMap f (P.pullback g x) ≫ P.pullbackMap g x =
+      P.pullbackMap (f ≫ g) x := by
+  exact Classical.choose_spec
+    (ExistsUnique.exists (pullback_composition_iso p P f g)) x
+
 def twoYonedaPullbackFunctorMap
     {C : Type uC} [Category.{vC} C]
     {S : Type uS} [Category.{vS} S]
@@ -297,15 +310,16 @@ theorem twoYoneda_fibred_equivalence
     (twoYonedaEvaluation p U).IsEquivalence := by
   sorry
 
-/- The source's `Cat / C` morphism categories are groupoids when both
-   projections are fibred in groupoids.  This is the general form of the
-   assertion used by the second 2-Yoneda lemma below. -/
+/- The source's `Cat / C` morphism categories are groupoids when the target
+   projection is fibred in groupoids.  This is the general form of the
+   assertion used by the second 2-Yoneda lemma below; the source projection
+   need not be fibred in groupoids (and `Over.forget U` is not so in general). -/
 theorem twoYonedaMorphismCategory_isGroupoid
     {A : Type uS} [Category.{vS} A]
     {B : Type uT} [Category.{vT} B]
     {C : Type uC} [Category.{vC} C]
     (p : A ⥤ C) (q : B ⥤ C)
-    (hp : p.IsFibredInGroupoids) (hq : q.IsFibredInGroupoids) :
+    (hq : q.IsFibredInGroupoids) :
     IsGroupoid (twoYonedaMorphismCategory p q) := by
   sorry
 
@@ -377,7 +391,9 @@ theorem twoYonedaGroupoidRestriction_obj_isOver
     (p : S ⥤ C) {U V : C} (f : U ⟶ V)
     (G : twoYonedaGroupoidMorphismCategory p V) :
     (Over.map f ⋙ G.1) ⋙ p = Over.forget U := by
-  rw [Functor.assoc, G.2]
+  have hG : G.1 ⋙ p = Over.forget V := by
+    exact G.2
+  rw [Functor.assoc, hG]
   rfl
 
 theorem twoYonedaGroupoidRestriction_map_isOver
@@ -502,6 +518,7 @@ theorem twoYonedaAssociatedProjection_isFibredInGroupoids
     (twoYonedaAssociatedProjection p).IsFibredInGroupoids := by
   apply groupoidPresheafProjection_isFibredInGroupoids
   intro U
+  change IsGroupoid (twoYonedaGroupoidMorphismCategory p U)
   exact twoYonedaGroupoidMorphismCategory_isGroupoid p U
 
 /- The functor `G` of the source evaluates the fiber component at the

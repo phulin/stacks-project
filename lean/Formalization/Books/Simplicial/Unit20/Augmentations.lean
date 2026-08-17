@@ -1,4 +1,5 @@
 import Formalization.Books.Simplicial.Unit19.CoskeletonFunctors
+import Mathlib.AlgebraicTopology.CechNerve
 
 /-!
 # Simplicial Methods, Chapter 20: Augmentations
@@ -113,6 +114,17 @@ theorem cechNerve_one_simplex_compatibility {C : Type u} [Category.{v} C]
     (hg : V.δ (0 : Fin 2) ≫ g₀ ≫ f = V.δ (1 : Fin 2) ≫ g₀ ≫ f) :
     cechNerveCoordinate V g₀ 1 (0 : Fin 2) ≫ f =
       cechNerveCoordinate V g₀ 1 (1 : Fin 2) ≫ f := by
+  sorry
+
+/-- The general adjacent-coordinate equality used in the source's
+construction of a map into the iterated fibre product. -/
+theorem cechNerveCoordinate_adjacent {C : Type u} [Category.{v} C]
+    {Y X : C} (f : Y ⟶ X) (V : SimplicialObject C)
+    (g₀ : V.obj (op (SimplexCategory.mk 0)) ⟶ Y)
+    (hg : V.δ (0 : Fin 2) ≫ g₀ ≫ f = V.δ (1 : Fin 2) ≫ g₀ ≫ f)
+    {n : ℕ} (i : Fin n) :
+    cechNerveCoordinate V g₀ n (Fin.castSucc i) ≫ f =
+      cechNerveCoordinate V g₀ n i.succ ≫ f := by
   sorry
 
 /-- The degree-zero maps satisfying the relation in the source's displayed

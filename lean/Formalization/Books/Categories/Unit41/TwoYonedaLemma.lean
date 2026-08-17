@@ -1,3 +1,4 @@
+import Formalization.Books.Categories.Unit28.FormalProperties
 import Formalization.Books.Categories.Unit37.PresheavesOfGroupoids
 import Mathlib.CategoryTheory.Comma.Over.Basic
 import Mathlib.CategoryTheory.Equivalence
@@ -53,7 +54,7 @@ abbrev twoYonedaPostcompositionGeneral
     {C : Type uC} [Category.{vC} C]
     (q : B ⥤ C) :
     (A ⥤ B) ⥤ (A ⥤ C) :=
-  (Functor.whiskeringRight A B C).obj q
+  Formalization.Books.Categories.Unit28.postcompositionFunctor q
 
 /-- The category of strict functors `A ⥤ B` over `C`. -/
 abbrev twoYonedaMorphismCategory

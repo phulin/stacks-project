@@ -77,7 +77,18 @@ theorem pi_field_isomorphic_to_rational_function_field :
 theorem pi_field_is_purely_transcendental :
     letI : Algebra ℚ piField := piField.algebra'
     IsPurelyTranscendental ℚ piField := by
-  sorry
+  let _ : Algebra ℚ (RatFunc ℚ) := RatFunc.instAlgebraOfPolynomial ℚ ℚ
+  let _ : Algebra ℚ (FractionRing (MvPolynomial (ULift (Fin 1)) ℚ)) :=
+    OreLocalization.instAlgebra
+  obtain ⟨e⟩ := pi_field_isomorphic_to_rational_function_field
+  let h₁ : FractionRing (MvPolynomial (ULift (Fin 1)) ℚ) ≃ₐ[ℚ]
+      FractionRing (Polynomial ℚ) :=
+    IsFractionRing.algEquivOfAlgEquiv
+      (MvPolynomial.uniqueAlgEquiv ℚ (ULift (Fin 1)))
+  let h₂ : FractionRing (Polynomial ℚ) ≃ₐ[ℚ] RatFunc ℚ :=
+    (FractionRing.algEquiv (Polynomial ℚ) (RatFunc ℚ)).restrictScalars ℚ
+  let h₃ := h₁.trans (h₂.trans e)
+  exact ⟨ULift (Fin 1), ⟨h₃⟩⟩
 
 /-- A transcendence basis exists for every field extension. -/
 theorem transcendence_basis_exists
@@ -138,14 +149,82 @@ theorem euler_number_transcendental_over_rationals :
 theorem euler_pi_transcendence_degree_at_least_one :
     letI : Algebra ℚ eulerPiField := eulerPiField.algebra'
     1 ≤ Algebra.trdeg ℚ eulerPiField := by
-  sorry
+  let _ : Algebra ℚ eulerPiField := eulerPiField.algebra'
+  let ee : eulerPiField :=
+    ⟨eulerNumber,
+      IntermediateField.subset_adjoin ℚ _ (by simp :
+        eulerNumber ∈ ({eulerNumber, piComplex} : Set ℂ))⟩
+  have he : Transcendental ℚ ee := by
+    intro halg
+    apply euler_number_transcendental_over_rationals
+    have hcomplex : IsAlgebraic ℚ (ee : ℂ) :=
+      (isAlgebraic_algHom_iff eulerPiField.val Subtype.val_injective).mpr halg
+    simpa [ee] using hcomplex
+  have hAI : AlgebraicIndependent ℚ ![ee] :=
+    algebraicIndependent_iff_transcendental.mpr he
+  have hcard := hAI.cardinalMk_le_trdeg
+  simpa using hcard
 
 /-- Algebraic independence of `e` and `π` gives transcendence degree two. -/
 theorem euler_pi_transcendence_degree_eq_two_of_algebraically_independent
     (h : AlgebraicIndependent ℚ ![eulerNumber, piComplex]) :
     letI : Algebra ℚ eulerPiField := eulerPiField.algebra'
     Algebra.trdeg ℚ eulerPiField = 2 := by
-  sorry
+  let _ : Algebra ℚ eulerPiField := eulerPiField.algebra'
+  let ee : eulerPiField :=
+    ⟨eulerNumber,
+      IntermediateField.subset_adjoin ℚ _ (by simp :
+        eulerNumber ∈ ({eulerNumber, piComplex} : Set ℂ))⟩
+  let pp : eulerPiField :=
+    ⟨piComplex,
+      IntermediateField.subset_adjoin ℚ _ (by simp :
+        piComplex ∈ ({eulerNumber, piComplex} : Set ℂ))⟩
+  let s : Set eulerPiField := Set.range ![ee, pp]
+  have hAI : AlgebraicIndependent ℚ ![ee, pp] := by
+    apply AlgebraicIndependent.of_comp eulerPiField.val
+    have hcomp : eulerPiField.val ∘ ![ee, pp] = ![eulerNumber, piComplex] := by
+      funext i
+      fin_cases i <;> rfl
+    rw [hcomp]
+    exact h
+  have hlow := hAI.cardinalMk_le_trdeg
+  have hset : eulerPiField.val '' s = ({eulerNumber, piComplex} : Set ℂ) := by
+    ext z
+    simp [s, ee, pp]
+    constructor
+    · intro hz
+      rcases hz with hz | hz
+      · exact Or.inr hz.symm
+      · exact Or.inl hz.symm
+    · intro hz
+      rcases hz with hz | hz
+      · exact Or.inr hz.symm
+      · exact Or.inl hz.symm
+  have htop : IntermediateField.adjoin ℚ s = (⊤ : IntermediateField ℚ eulerPiField) := by
+    apply IntermediateField.lift_injective eulerPiField
+    rw [IntermediateField.lift_adjoin, IntermediateField.lift_top]
+    change IntermediateField.adjoin ℚ (eulerPiField.val '' s) = eulerPiField
+    rw [hset]
+  have halg_inter : Algebra.IsAlgebraic (IntermediateField.adjoin ℚ s) eulerPiField :=
+    ⟨fun x => by
+      have hx : x ∈ IntermediateField.adjoin ℚ s := by
+        rw [htop]
+        trivial
+      let y : IntermediateField.adjoin ℚ s := ⟨x, hx⟩
+      simpa [y] using
+        (isAlgebraic_algebraMap (R := IntermediateField.adjoin ℚ s)
+          (A := eulerPiField) y)⟩
+  let _ : Algebra.IsAlgebraic (Algebra.adjoin ℚ s) eulerPiField :=
+    (IntermediateField.isAlgebraic_adjoin_iff_top (F := ℚ) (S := eulerPiField)
+      (s := s)).mp halg_inter
+  have hupp := Algebra.IsAlgebraic.trdeg_le_cardinalMk ℚ s
+  have hupp' : Algebra.trdeg ℚ eulerPiField ≤ 2 := by
+    calc
+      Algebra.trdeg ℚ eulerPiField ≤ Cardinal.mk s := hupp
+      _ ≤ Cardinal.mk (Fin 2) := by simpa [s] using (Cardinal.mk_range_le :
+        Cardinal.mk (Set.range ![ee, pp]) ≤ Cardinal.mk (Fin 2))
+      _ = 2 := by simp
+  exact le_antisymm hupp' (by simpa using hlow)
 
 /- The source records that the algebraic independence of `e` and `π` is an
    open problem; no declaration asserting either side of that open question
@@ -334,13 +413,13 @@ theorem finite_purely_transcendental_extension_degree
   let _ : FaithfulSMul k k' :=
     (faithfulSMul_iff_algebraMap_injective k k').mpr
       Formalization.Books.Fields.Unit06.field_extension_algebraMap_injective
-  letI : Algebra (rationalFunctionField k ι) (rationalFunctionField k' ι) :=
+  let _ : Algebra (rationalFunctionField k ι) (rationalFunctionField k' ι) :=
     rationalFunctionFieldExtensionAlgebra k k' ι
-  letI : Algebra (MvPolynomial ι k) (rationalFunctionField k' ι) :=
+  let _ : Algebra (MvPolynomial ι k) (rationalFunctionField k' ι) :=
     RingHom.toAlgebra
       ((algebraMap (MvPolynomial ι k') (rationalFunctionField k' ι)).comp
         (MvPolynomial.map (algebraMap k k')))
-  letI : FaithfulSMul (MvPolynomial ι k) (rationalFunctionField k' ι) :=
+  let _ : FaithfulSMul (MvPolynomial ι k) (rationalFunctionField k' ι) :=
     (faithfulSMul_iff_algebraMap_injective _ _).mpr <|
       (IsFractionRing.injective (MvPolynomial ι k') (rationalFunctionField k' ι)).comp
         (MvPolynomial.map_injective _

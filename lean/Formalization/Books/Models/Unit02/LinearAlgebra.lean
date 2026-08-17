@@ -164,7 +164,8 @@ theorem orthogonal_projection_sequence
     (hB : IsPositiveDefiniteIntegralForm B) (A : Submodule ℤ L)
     (hquotient : Module.IsTorsionFree ℤ (L ⧸ A)) :
     ∃ p : L →ₗ[ℤ] Module.Dual ℤ (B.orthogonal A),
-      A = LinearMap.ker p ∧
+      (∀ (x : L) (y : B.orthogonal A), p x y = B x (y : L)) ∧
+        A = LinearMap.ker p ∧
         Function.Exact p (LinearMap.range p).mkQ ∧
           Function.Surjective (LinearMap.range p).mkQ := by
   sorry
@@ -386,10 +387,11 @@ theorem graph_coboundary_kernel_finrank {n : ℕ}
     (A : Matrix (Fin n) (Fin n) ℤ)
     (hsymm : ∀ i j, A i j = A j i)
     (hoffdiag : ∀ ⦃i j⦄, i ≠ j → 0 ≤ A i j)
+    (hn : 0 < n)
     (hconnected : ¬ ∃ I : Set (Fin n), I.Nonempty ∧ I ≠ Set.univ ∧
       ∀ ⦃i j⦄, i ∈ I → j ∉ I → A i j = 0) :
     Module.finrank ℤ (LinearMap.ker (graphCoboundary A)) =
-      1 - n + positiveOffDiagonalEdgeCount A := by
+      positiveOffDiagonalEdgeCount A + 1 - n := by
   sorry
 
 /-!
@@ -411,7 +413,7 @@ theorem recurring_symmetric_integer {n : ℕ} (A : Matrix (Fin n) (Fin n) ℤ)
     (ell : ℕ) (hell : Nat.Prime ell)
     (hcoprime : CoprimeToMatrixAndVector ell A m) :
     matrixPrimaryTorsionFinrank A ell hell ≤
-      1 - n + positiveOffDiagonalEdgeCount A := by
+      positiveOffDiagonalEdgeCount A + 1 - n := by
   sorry
 
 end Formalization.Books.Models.Unit02

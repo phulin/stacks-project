@@ -1,7 +1,6 @@
 import Formalization.Books.Categories.Unit37.PresheavesOfGroupoids
 import Mathlib.CategoryTheory.Comma.Over.Basic
 import Mathlib.CategoryTheory.Equivalence
-import Mathlib.CategoryTheory.FiberedCategory.HasFibers
 
 /-!
 # Categories, Chapter 41: The 2-Yoneda lemma
@@ -710,16 +709,14 @@ theorem twoYonedaAssociatedFunctor_over
   sorry
 
 /- The source identifies the fiber of the associated construction with the
-   chosen value of the presheaf.  We use Mathlib's `HasFibers` interface for
-   this canonical equivalence. -/
+   chosen value of the presheaf.  In the CoGrothendieck construction this is
+   the `HasFibers.Fib` category, namely the value of the presheaf itself. -/
 def twoYonedaAssociatedFiberFunctor
     {C : Type uC} [Category.{vC} C]
     {S : Type uS} [Category.{vS} S]
     (p : S ⥤ C) [p.IsFibredInGroupoids] (U : C) :
     twoYonedaGroupoidMorphismCategory p U ⥤ Functor.Fiber p U :=
-  HasFibers.inducedFunctor (twoYonedaAssociatedProjection p) U ⋙
-    fibreFunctor (twoYonedaAssociatedProjection p) p
-      (twoYonedaAssociatedFunctor p) (twoYonedaAssociatedFunctor_over p) U
+  twoYonedaEvaluationCore p U
 
 /-- The fiberwise functor in the alternative proof is an equivalence. -/
 theorem twoYonedaAssociatedFiberFunctor_isEquivalence
@@ -727,7 +724,7 @@ theorem twoYonedaAssociatedFiberFunctor_isEquivalence
     {S : Type uS} [Category.{vS} S]
     (p : S ⥤ C) [p.IsFibredInGroupoids] (U : C) :
     (twoYonedaAssociatedFiberFunctor p U).IsEquivalence := by
-  sorry
+  exact twoYoneda_groupoid_equivalence p U
 
 /-- The final equivalence in the alternative proof. -/
 theorem twoYonedaAssociatedFunctor_isEquivalence

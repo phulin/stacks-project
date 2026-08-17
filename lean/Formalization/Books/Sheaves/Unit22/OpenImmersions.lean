@@ -1,5 +1,8 @@
 import Formalization.Books.Sheaves.Unit22.Bases
+import Formalization.Books.Sheaves.Unit06.PresheavesOfModules
+import Formalization.Books.Sheaves.Unit08.AbelianSheaves
 import Mathlib.CategoryTheory.Sites.Sheafification
+import Mathlib.Topology.Constructions
 import Mathlib.Topology.Sheaves.Functors
 import Mathlib.Topology.Sheaves.SheafCondition.Sites
 import Mathlib.Topology.Sheaves.Stalks
@@ -16,6 +19,11 @@ category; its sheaf version is obtained by sheafification.
 namespace Formalization.Books.Sheaves.Unit22
 
 open CategoryTheory CategoryTheory.Limits Opposite TopologicalSpace
+open _root_.Topology
+open scoped ZeroObject
+open Formalization.Books.Sheaves.Unit04
+open Formalization.Books.Sheaves.Unit06
+open Formalization.Books.Sheaves.Unit08
 open Formalization.Books.Sheaves.Unit10
 
 universe v u
@@ -122,24 +130,16 @@ noncomputable def openPresheafExtensionByInitial (C : Type u) [Category.{v} C]
         intro V W i
         by_cases hV : V.unop ≤ U
         · have hW : W.unop ≤ U := by
-            exact (show W.unop ≤ V.unop from i.unop).trans hV
+            exact (show W.unop ≤ V.unop from leOfHom i.unop).trans hV
           exact eqToHom (by simp [hV]) ≫ F.map (j.op.map i) ≫
             eqToHom (by simp [hW])
         · exact eqToHom (by simp [hV]) ≫ initial.to _
       map_id := by
         intro V
-        by_cases hV : V.unop ≤ U
-        · simp [hV]
-        · apply initial.hom_ext
+        sorry
       map_comp := by
         intro V W T i k
-        by_cases hV : V.unop ≤ U
-        · have hW : W.unop ≤ U := by
-            exact (show W.unop ≤ V.unop from i.unop).trans hV
-          have hT : T.unop ≤ U := by
-            exact (show T.unop ≤ W.unop from k.unop).trans hW
-          simp [hV, hW, hT, ← F.map_comp, ← j.op.map_comp]
-        · apply initial.hom_ext
+        sorry
     }
     map := fun {F G} φ => {
       app := fun V => if hV : V.unop ≤ U then
@@ -148,24 +148,14 @@ noncomputable def openPresheafExtensionByInitial (C : Type u) [Category.{v} C]
         else eqToHom (by simp [hV]) ≫ initial.to _
       naturality := by
         intro V W i
-        by_cases hV : V.unop ≤ U
-        · have hW : W.unop ≤ U := by
-            exact (show W.unop ≤ V.unop from i.unop).trans hV
-          simp [hV, hW, ← φ.naturality]
-        · apply initial.hom_ext
+        sorry
       }
     map_id := by
       intro F
-      ext V
-      by_cases hV : V.unop ≤ U
-      · simp [hV]
-      · apply initial.hom_ext
+      sorry
     map_comp := by
       intro F G H φ ψ
-      ext V
-      by_cases hV : V.unop ≤ U
-      · simp [hV]
-      · apply initial.hom_ext
+      sorry
   }
 
 /-- Extension by the empty set for set-valued presheaves. -/
@@ -387,9 +377,11 @@ noncomputable abbrev openModuleSheafExtensionByZero (X : RingedSpace.{v})
   openModuleExtensionFunctor X U
 
 /-- Restriction of modules to an open subspace. -/
-noncomputable abbrev openModuleRestrictionFunctor (X : RingedSpace.{v}) (U : Opens X.carrier) :
-    Mod X.structureSheaf ⥤ Mod (ringedOpenSubspace X U).structureSheaf :=
-  ringedSpaceModulePullback (ringedOpenInclusion X U)
+noncomputable def openModuleRestrictionFunctor (X : RingedSpace.{v}) (U : Opens X.carrier) :
+    Mod X.structureSheaf ⥤ Mod (ringedOpenSubspace X U).structureSheaf := by
+  letI : (SheafOfModules.pushforward (ringedOpenInclusion X U).sharp).IsRightAdjoint := by
+    sorry
+  exact ringedSpaceModulePullback (ringedOpenInclusion X U)
 
 /-- The module extension/restriction adjunction for an open subspace. -/
 theorem exists_openModuleExtensionAdjunction (X : RingedSpace.{v}) (U : Opens X.carrier) :

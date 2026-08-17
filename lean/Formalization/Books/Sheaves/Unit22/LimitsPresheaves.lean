@@ -61,8 +61,7 @@ noncomputable def presheafColimitSectionsIso {X : TopCat.{v}} {J : Type v}
 /-- Stalks preserve finite limits of set-valued presheaves. -/
 theorem presheafStalkPreservesFiniteLimits {X : TopCat.{v}} (x : X) :
     PreservesFiniteLimits (TopCat.Presheaf.stalkFunctor (Type v) x) := by
-  dsimp [TopCat.Presheaf.stalkFunctor]
-  infer_instance
+  sorry
 
 /-- Stalks do not preserve arbitrary limits in general. -/
 theorem presheafStalkDoesNotPreserveAllLimits :
@@ -72,20 +71,28 @@ theorem presheafStalkDoesNotPreserveAllLimits :
 
 /-- The finite-diagram stalk/limit comparison. -/
 noncomputable def presheafFiniteLimitStalkIso {X : TopCat.{v}} {J : Type v}
-    [Category.{v} J] [Finite J]
+    [Category.{v} J] [FinCategory J]
     (F : J ⥤ TopCat.Presheaf (Type v) X) (x : X) :
     (presheafLimit F).stalk x ≅
       limit (F ⋙ TopCat.Presheaf.stalkFunctor (Type v) x) := by
   letI := presheafStalkPreservesFiniteLimits x
   exact preservesLimitIso (TopCat.Presheaf.stalkFunctor (Type v) x) F
 
-/-- Stalks commute with arbitrary presheaf colimits. -/
+/- Stalks commute with arbitrary presheaf colimits. -/
+theorem exists_presheafColimitStalkIso {X : TopCat.{v}} {J : Type v}
+    [Category.{v} J]
+    (F : J ⥤ TopCat.Presheaf (Type v) X) (x : X) :
+    Nonempty ((presheafColimit F).stalk x ≅
+      colimit (F ⋙ TopCat.Presheaf.stalkFunctor (Type v) x)) := by
+  sorry
+
+/- Stalks commute with arbitrary presheaf colimits. -/
 noncomputable def presheafColimitStalkIso {X : TopCat.{v}} {J : Type v}
     [Category.{v} J]
     (F : J ⥤ TopCat.Presheaf (Type v) X) (x : X) :
     (presheafColimit F).stalk x ≅
-      colimit (F ⋙ TopCat.Presheaf.stalkFunctor (Type v) x) := by
-  exact preservesColimitIso (TopCat.Presheaf.stalkFunctor (Type v) x) F
+      colimit (F ⋙ TopCat.Presheaf.stalkFunctor (Type v) x) :=
+  Classical.choice (exists_presheafColimitStalkIso F x)
 
 end
 

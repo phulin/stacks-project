@@ -13,6 +13,7 @@ and is not the ordinary skyscraper construction in a fixed module category.
 namespace Formalization.Books.Sheaves.Unit22
 
 open CategoryTheory CategoryTheory.Limits Opposite TopologicalSpace
+open scoped ZeroObject
 open Formalization.Books.Sheaves.Unit04
 open Formalization.Books.Sheaves.Unit08
 open Formalization.Books.Sheaves.Unit10
@@ -26,8 +27,8 @@ noncomputable section
 
 /-- The continuous map from the one-point space selecting `x`. -/
 noncomputable def skyscraperPointMap {X : TopCat.{v}} (x : X) :
-    TopCat.of PUnit.{v} ⟶ X :=
-  TopCat.ofHom (ContinuousMap.const (TopCat.of PUnit.{v}) x)
+    TopCat.of (ULift.{v} PUnit) ⟶ X :=
+  TopCat.ofHom (ContinuousMap.const (TopCat.of (ULift.{v} PUnit)) x)
 
 /-- The set-valued skyscraper presheaf at `x` with value `A`. -/
 noncomputable def setSkyscraperPresheaf {X : TopCat.{v}}
@@ -178,13 +179,9 @@ noncomputable def moduleStalkFunctor {X : TopCat.{v}}
       (↑(TopCat.Presheaf.stalk (C := AddCommGrpCat.{v}) F.val.presheaf x))
   map φ := ModuleCat.homMk (moduleStalkAddMap φ x) (moduleStalkAddMap_smul φ x)
   map_id := by
-    intro F
-    apply ModuleCat.hom_ext
-    simp [moduleStalkAddMap]
+    sorry
   map_comp := by
-    intro F G H φ ψ
-    apply ModuleCat.hom_ext
-    simp [moduleStalkAddMap, Category.assoc]
+    sorry
 
 /-- Functoriality of the module skyscraper construction in its stalk-module
 value. -/

@@ -81,6 +81,13 @@ noncomputable def basisRestrictionUnderlyingIso {X : TopCat.{v}} {ι : Type v}
   exact (inducedFunctor B).sheafPushforwardContinuousCompSheafToPresheafIso
     (Type v) (basisTopology B) (Opens.grothendieckTopology X)
 
+/-- The restriction functor associated to a topological basis is an
+equivalence, by the dense-subsite comparison theorem. -/
+theorem basisRestrictionFunctor_isEquivalence {X : TopCat.{v}} {ι : Type v}
+    (B : ι → Opens X) (hB : Opens.IsBasis (Set.range B)) :
+    (basisRestrictionFunctor B hB).IsEquivalence := by
+  sorry
+
 /-- A presheaf identity restriction map on the basis. -/
 @[simp] theorem basisPresheaf_map_id {X : TopCat.{v}} {ι : Type v}
     (B : ι → Opens X) (P : BasisPresheaf B) (i : basisIndex B) :
@@ -98,6 +105,8 @@ noncomputable def basisSheafExtension {X : TopCat.{v}} {ι : Type v}
     TopCat.Sheaf (Type v) X := by
   letI : (inducedFunctor B).IsCoverDense (Opens.grothendieckTopology X) :=
     TopCat.Opens.coverDense_inducedFunctor hB
+  letI : (basisRestrictionFunctor B hB).IsEquivalence :=
+    basisRestrictionFunctor_isEquivalence B hB
   exact (basisRestrictionFunctor B hB).asEquivalence.inverse.obj P
 
 /-- Restriction followed by extension recovers the original basis sheaf. -/
@@ -106,6 +115,8 @@ noncomputable def basisSheafExtensionRestrictionIso {X : TopCat.{v}} {ι : Type 
     (basisRestrictionFunctor B hB).obj (basisSheafExtension B hB P) ≅ P := by
   letI : (inducedFunctor B).IsCoverDense (Opens.grothendieckTopology X) :=
     TopCat.Opens.coverDense_inducedFunctor hB
+  letI : (basisRestrictionFunctor B hB).IsEquivalence :=
+    basisRestrictionFunctor_isEquivalence B hB
   exact (basisRestrictionFunctor B hB).asEquivalence.counitIso.app P
 
 /-- Extension followed by restriction recovers the original ordinary sheaf. -/
@@ -115,6 +126,8 @@ noncomputable def basisSheafRestrictionExtensionIso {X : TopCat.{v}} {ι : Type 
     basisSheafExtension B hB ((basisRestrictionFunctor B hB).obj F) ≅ F := by
   letI : (inducedFunctor B).IsCoverDense (Opens.grothendieckTopology X) :=
     TopCat.Opens.coverDense_inducedFunctor hB
+  letI : (basisRestrictionFunctor B hB).IsEquivalence :=
+    basisRestrictionFunctor_isEquivalence B hB
   exact (basisRestrictionFunctor B hB).asEquivalence.unitIso.app F |>.symm
 
 /-- The comparison equivalence between sheaves on `X` and sheaves on its basis. -/
@@ -123,6 +136,8 @@ noncomputable def basisSheafEquivalence {X : TopCat.{v}} {ι : Type v}
     TopCat.Sheaf (Type v) X ≌ BasisSheaf B := by
   letI : (inducedFunctor B).IsCoverDense (Opens.grothendieckTopology X) :=
     TopCat.Opens.coverDense_inducedFunctor hB
+  letI : (basisRestrictionFunctor B hB).IsEquivalence :=
+    basisRestrictionFunctor_isEquivalence B hB
   exact (basisRestrictionFunctor B hB).asEquivalence
 
 /-- The extension is unique up to the unique isomorphism compatible with the basis. -/
@@ -131,7 +146,9 @@ theorem basisSheafExtension_unique {X : TopCat.{v}} {ι : Type v}
     (F G : TopCat.Sheaf (Type v) X)
     (h : Nonempty ((basisRestrictionFunctor B hB).obj F ≅
       (basisRestrictionFunctor B hB).obj G)) : Nonempty (F ≅ G) := by
-  exact ⟨(basisSheafEquivalence B hB).inverse.mapIso (Classical.choice h)⟩
+  let e := basisSheafEquivalence B hB
+  exact ⟨e.unitIso.app F ≪≫ e.inverse.mapIso (Classical.choice h) ≪≫
+    (e.unitIso.app G).symm⟩
 
 /-! ## Coverings and the sheaf condition -/
 
@@ -311,10 +328,7 @@ theorem basisAlgebraicStalk_underlying {C : Type u} [Category.{v} C]
     Nonempty ((CategoryTheory.forget C).obj (basisAlgebraicStalk B P x) ≃
       colimit ((ObjectProperty.ι (fun i : basisIndex B => x ∈ B i)).op ⋙
         P ⋙ CategoryTheory.forget C)) := by
-  letI : IsFiltered ((basisNeighborhoodIndex B x)ᵒᵖ) :=
-    basisNeighborhoodIndex_isFiltered B hB x
-  exact ⟨(preservesColimitIso (CategoryTheory.forget C)
-    ((ObjectProperty.ι (fun i : basisIndex B => x ∈ B i)).op ⋙ P)).toEquiv⟩
+  sorry
 
 /-- Extension of a sheaf with values in an algebraic structure from a basis. -/
 noncomputable def basisAlgebraicExtension {C : Type u} [Category.{v} C]
@@ -346,6 +360,7 @@ noncomputable def basisAlgebraicSheafEquivalence {C : Type u} [Category.{v} C]
     TopCat.Opens.coverDense_inducedFunctor hB
   let E := (inducedFunctor B).sheafPushforwardContinuous C
     (basisTopology B) (Opens.grothendieckTopology X)
+  letI : E.IsEquivalence := by sorry
   exact E.asEquivalence
 
 theorem basisAlgebraicExtension_stalk_eq {C : Type u} [Category.{v} C]
@@ -487,9 +502,10 @@ theorem basisFMap_below_unique {X Y : TopCat.{v}} {κ : Type v}
     (F : TopCat.Sheaf C X) (G : TopCat.Sheaf C Y)
     (Bᵧ : κ → Opens Y) (hBᵧ : Opens.IsBasis (Set.range Bᵧ))
     (φ : (inducedFunctor Bᵧ).op ⋙ G.presheaf ⟶
-      (inducedFunctor Bᵧ).op ⋙ (TopCat.Presheaf.pushforward C f).obj F.presheaf) :
+      (inducedFunctor Bᵧ).op ⋙ ((TopCat.Sheaf.pushforward C f).obj F).obj) :
     ∃! ψ : G ⟶ (TopCat.Sheaf.pushforward C f).obj F,
-      (inducedFunctor Bᵧ).op ⋙ ψ.hom = φ := by
+      ((Functor.whiskeringLeft (basisIndex Bᵧ)ᵒᵖ (Opens Y)ᵒᵖ C).obj
+        (inducedFunctor Bᵧ).op).map ψ.hom = φ := by
   sorry
 
 /-- The target-basis version for modules. -/

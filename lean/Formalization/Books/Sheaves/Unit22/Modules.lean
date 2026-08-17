@@ -270,19 +270,23 @@ along the identity map on the pushed-forward scalar sheaf. -/
 noncomputable def moduleSheafTensorOverPushforward {X Y : TopCat.{v}}
     {O : RingSheaf X} (f : X ⟶ Y)
     (G : Mod ((moduleRingSheafPushforward f).obj O))
-    [((SheafOfModules.pushforward (F := Opens.map f) (𝟙 _)).IsRightAdjoint)] :
+    [((SheafOfModules.pushforward (F := Opens.map f)
+      (𝟙 ((moduleRingSheafPushforward f).obj O))).IsRightAdjoint)] :
     Mod O :=
-  (moduleSheafPullbackAlong f (𝟙 _)).obj G
+  (moduleSheafPullbackAlong f
+    (𝟙 ((moduleRingSheafPushforward f).obj O))).obj G
 
 /-- The sheaf tensor/pushforward Hom correspondence. -/
 noncomputable abbrev moduleSheafTensorHomEquiv {X Y : TopCat.{v}}
     {O : RingSheaf X} (f : X ⟶ Y)
     (G : Mod ((moduleRingSheafPushforward f).obj O)) (F : Mod O)
-    [((SheafOfModules.pushforward (F := Opens.map f) (𝟙 _)).IsRightAdjoint)] :
+    [((SheafOfModules.pushforward (F := Opens.map f)
+      (𝟙 ((moduleRingSheafPushforward f).obj O))).IsRightAdjoint)] :
     (moduleSheafTensorOverPushforward f G ⟶ F) ≃
       (G ⟶ (moduleSheafPushforward f).obj F) :=
   (SheafOfModules.pullbackPushforwardAdjunction
-    (F := Opens.map f) (𝟙 _)).homEquiv G F
+    (F := Opens.map f)
+    (𝟙 ((moduleRingSheafPushforward f).obj O))).homEquiv G F
 
 /-- The stalk-level tensor formula for module sheaf pullback. -/
 theorem moduleSheafPullback_stalk_formula {X Y : TopCat.{v}}
@@ -378,7 +382,7 @@ noncomputable abbrev moduleSheafFMapStalkAddMap {X Y : TopCat.{v}}
       TopCat.Presheaf.stalk (C := AddCommGrpCat.{v}) F.val.presheaf x :=
   (TopCat.Presheaf.stalkFunctor (AddCommGrpCat.{v}) (f x)).map
       ((PresheafOfModules.toPresheaf O_Y.obj).map φ.val) ≫
-    F.val.presheaf.stalkPushforward (AddCommGrpCat.{v}) f x
+    TopCat.Presheaf.stalkPushforward (AddCommGrpCat.{v}) f F.val.presheaf x
 
 /-- The stalk additive map of a module `f`-map is linear for the scalar map
 induced by the ring `f`-map. -/

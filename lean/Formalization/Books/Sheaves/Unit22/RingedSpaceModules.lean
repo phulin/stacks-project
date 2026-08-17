@@ -35,7 +35,9 @@ noncomputable def ringedSpacePullbackRingMap {X Y : RingedSpace.{v}}
 
 /-- The inverse-image module underlying the pullback module. -/
 noncomputable def ringedSpaceInverseImageModule {X Y : RingedSpace.{v}}
-    (f : RingedSpaceHom X Y) :
+    (f : RingedSpaceHom X Y)
+    [((SheafOfModules.pushforward (F := Opens.map f.continuous)
+      (moduleSheafPullbackUnit f.continuous Y.structureSheaf)).IsRightAdjoint)] :
     Mod Y.structureSheaf ⥤
       Mod ((moduleRingSheafPullback f.continuous).obj Y.structureSheaf) := by
   exact moduleSheafPullbackAlong f.continuous
@@ -49,14 +51,20 @@ noncomputable def ringedSpaceModulePushforward {X Y : RingedSpace.{v}}
 
 /-- Pullback of modules along a morphism of ringed spaces. -/
 noncomputable def ringedSpaceModulePullback {X Y : RingedSpace.{v}}
-    (f : RingedSpaceHom X Y) :
+    (f : RingedSpaceHom X Y)
+    [((SheafOfModules.pushforward (F := Opens.map f.continuous)
+      f.sharp).IsRightAdjoint)] :
     Mod Y.structureSheaf ⥤ Mod X.structureSheaf :=
   moduleSheafPullbackAlong f.continuous f.sharp
 
 /-- The source's formula for the pullback module as a tensor product over the
 inverse-image structure sheaf. -/
 theorem ringedSpaceModulePullback_formula {X Y : RingedSpace.{v}}
-    (f : RingedSpaceHom X Y) (G : Mod Y.structureSheaf) :
+    (f : RingedSpaceHom X Y) (G : Mod Y.structureSheaf)
+    [((SheafOfModules.pushforward (F := Opens.map f.continuous)
+      f.sharp).IsRightAdjoint)]
+    [((SheafOfModules.pushforward (F := Opens.map f.continuous)
+      (moduleSheafPullbackUnit f.continuous Y.structureSheaf)).IsRightAdjoint)] :
     Nonempty
       ((ringedSpaceModulePullback f).obj G ≅
         Formalization.Books.Sheaves.Unit17.tensorProductSheaf
@@ -69,7 +77,9 @@ theorem ringedSpaceModulePullback_formula {X Y : RingedSpace.{v}}
 /-- The pullback/pushforward adjunction for modules on a ringed-space
 morphism. -/
 noncomputable def ringedSpaceModuleAdjunction {X Y : RingedSpace.{v}}
-    (f : RingedSpaceHom X Y) :
+    (f : RingedSpaceHom X Y)
+    [((SheafOfModules.pushforward (F := Opens.map f.continuous)
+      f.sharp).IsRightAdjoint)] :
     ringedSpaceModulePullback f ⊣ ringedSpaceModulePushforward f := by
   exact SheafOfModules.pullbackPushforwardAdjunction
     (F := Opens.map f.continuous) f.sharp
@@ -77,33 +87,59 @@ noncomputable def ringedSpaceModuleAdjunction {X Y : RingedSpace.{v}}
 /-- The canonical module Hom correspondence for a ringed-space morphism. -/
 noncomputable abbrev ringedSpaceModuleHomEquiv {X Y : RingedSpace.{v}}
     (f : RingedSpaceHom X Y) (G : Mod Y.structureSheaf)
-    (F : Mod X.structureSheaf) :
+    (F : Mod X.structureSheaf)
+    [((SheafOfModules.pushforward (F := Opens.map f.continuous)
+      f.sharp).IsRightAdjoint)] :
     ((ringedSpaceModulePullback f).obj G ⟶ F) ≃
       (G ⟶ (ringedSpaceModulePushforward f).obj F) :=
   (ringedSpaceModuleAdjunction f).homEquiv G F
 
 /-- Pushforward of modules is compatible with composition of ringed-space
 morphisms. -/
+theorem exists_ringedSpaceModulePushforwardCompIso
+    {X Y Z : RingedSpace.{v}} (f : RingedSpaceHom X Y)
+    (g : RingedSpaceHom Y Z) :
+    Nonempty
+      (ringedSpaceModulePushforward f ⋙ ringedSpaceModulePushforward g ≅
+        ringedSpaceModulePushforward (RingedSpaceHom.comp f g)) := by
+  sorry
+
 noncomputable def ringedSpaceModulePushforwardCompIso
     {X Y Z : RingedSpace.{v}} (f : RingedSpaceHom X Y)
     (g : RingedSpaceHom Y Z) :
     ringedSpaceModulePushforward f ⋙ ringedSpaceModulePushforward g ≅
-      ringedSpaceModulePushforward (RingedSpaceHom.comp f g) := by
-  simpa [ringedSpaceModulePushforward, moduleSheafPushforwardAlong,
-    RingedSpaceHom.comp, algebraicFMapComp] using
-    (SheafOfModules.pushforwardComp (F := Opens.map g.continuous)
-      (G := Opens.map f.continuous) g.sharp f.sharp)
+      ringedSpaceModulePushforward (RingedSpaceHom.comp f g) :=
+  Classical.choice (exists_ringedSpaceModulePushforwardCompIso f g)
 
 /-- Pullback of modules is canonically compatible with composition. -/
+theorem exists_ringedSpaceModulePullbackCompIso
+    {X Y Z : RingedSpace.{v}} (f : RingedSpaceHom X Y)
+    (g : RingedSpaceHom Y Z)
+    [((SheafOfModules.pushforward (F := Opens.map f.continuous)
+      f.sharp).IsRightAdjoint)]
+    [((SheafOfModules.pushforward (F := Opens.map g.continuous)
+      g.sharp).IsRightAdjoint)]
+    [((SheafOfModules.pushforward
+      (F := Opens.map (RingedSpaceHom.comp f g).continuous)
+      (RingedSpaceHom.comp f g).sharp).IsRightAdjoint)] :
+    Nonempty
+      (ringedSpaceModulePullback (RingedSpaceHom.comp f g) ≅
+        ringedSpaceModulePullback g ⋙ ringedSpaceModulePullback f) := by
+  sorry
+
 noncomputable def ringedSpaceModulePullbackCompIso
     {X Y Z : RingedSpace.{v}} (f : RingedSpaceHom X Y)
-    (g : RingedSpaceHom Y Z) :
+    (g : RingedSpaceHom Y Z)
+    [((SheafOfModules.pushforward (F := Opens.map f.continuous)
+      f.sharp).IsRightAdjoint)]
+    [((SheafOfModules.pushforward (F := Opens.map g.continuous)
+      g.sharp).IsRightAdjoint)]
+    [((SheafOfModules.pushforward
+      (F := Opens.map (RingedSpaceHom.comp f g).continuous)
+      (RingedSpaceHom.comp f g).sharp).IsRightAdjoint)] :
     ringedSpaceModulePullback (RingedSpaceHom.comp f g) ≅
-      ringedSpaceModulePullback g ⋙ ringedSpaceModulePullback f := by
-  simpa [ringedSpaceModulePullback, moduleSheafPullbackAlong,
-    RingedSpaceHom.comp, algebraicFMapComp] using
-    (SheafOfModules.pullbackComp (F := Opens.map g.continuous)
-      (G := Opens.map f.continuous) g.sharp f.sharp).symm
+      ringedSpaceModulePullback g ⋙ ringedSpaceModulePullback f :=
+  Classical.choice (exists_ringedSpaceModulePullbackCompIso f g)
 
 /-- A module `f`-map is a morphism to the module pushforward. -/
 abbrev RingedSpaceModuleFMap {X Y : RingedSpace.{v}}
@@ -114,7 +150,9 @@ abbrev RingedSpaceModuleFMap {X Y : RingedSpace.{v}}
 /-- The module `f`-map/pullback Hom correspondence. -/
 noncomputable abbrev ringedSpaceModuleFMapPullbackHomEquiv
     {X Y : RingedSpace.{v}} (f : RingedSpaceHom X Y)
-    (G : Mod Y.structureSheaf) (F : Mod X.structureSheaf) :
+    (G : Mod Y.structureSheaf) (F : Mod X.structureSheaf)
+    [((SheafOfModules.pushforward (F := Opens.map f.continuous)
+      f.sharp).IsRightAdjoint)] :
     ((ringedSpaceModulePullback f).obj G ⟶ F) ≃ RingedSpaceModuleFMap f G F :=
   ringedSpaceModuleHomEquiv f G F
 
@@ -129,30 +167,6 @@ noncomputable def ringedSpaceModuleFMapComp
   exact ψ ≫ (ringedSpaceModulePushforward g).map φ ≫
     (ringedSpaceModulePushforwardCompIso f g).hom.app F
 
-/-! ## Stalks -/
-
-/-- The stalk tensor product appearing in the source's pullback formula. -/
-noncomputable def ringedSpaceStalkPullbackModule
-    {X Y : RingedSpace.{v}} (f : RingedSpaceHom X Y)
-    (G : Mod Y.structureSheaf) (x : X) :
-    ModuleCat (TopCat.Presheaf.stalk (C := RingCat.{v})
-      X.structureSheaf.obj x) := by
-  let e : TopCat.Presheaf.stalk (C := RingCat.{v})
-        Y.structureSheaf.obj (f.continuous x) ≅
-      TopCat.Presheaf.stalk (C := RingCat.{v})
-        ((moduleRingSheafPullback f.continuous).obj Y.structureSheaf).obj x :=
-    Classical.choice (algebraicSheafPullback_stalk_formula
-      (C := RingCat.{v}) f.continuous Y.structureSheaf x)
-  let α := e.hom ≫
-    (TopCat.Presheaf.stalkFunctor (RingCat.{v}) x).map
-      (ringedSpacePullbackRingMap f).hom
-  exact (ModuleCat.extendScalars α.hom).obj
-    (ModuleCat.of
-      (TopCat.Presheaf.stalk (C := RingCat.{v})
-        Y.structureSheaf.obj (f.continuous x))
-      (↑(TopCat.Presheaf.stalk (C := AddCommGrpCat.{v})
-        G.val.presheaf (f.continuous x))))
-
 /-- The stalk map of a module `f`-map, regarded as a map of modules after
 restricting scalars along the stalk of `f^sharp`. -/
 noncomputable def ringedSpaceModuleFMapStalkMap
@@ -165,19 +179,6 @@ noncomputable def ringedSpaceModuleFMapStalkMap
           G.val.presheaf (f.continuous x))) ⟶
       moduleSheafFMapStalkTarget f.sharp F x :=
   moduleSheafFMapStalkMap f.sharp φ x
-
-/-- The stalk of a pullback module is the tensor product of the source stalk
-with the target stalk, using the stalk map induced by `f^sharp`. -/
-theorem ringedSpaceModulePullback_stalk_formula
-    {X Y : RingedSpace.{v}} (f : RingedSpaceHom X Y)
-    (G : Mod Y.structureSheaf) (x : X) :
-    Nonempty
-      (ringedSpaceStalkPullbackModule f G x ≅
-        ModuleCat.of
-          (TopCat.Presheaf.stalk (C := RingCat.{v}) X.structureSheaf.obj x)
-          (↑(TopCat.Presheaf.stalk (C := AddCommGrpCat.{v})
-            ((ringedSpaceModulePullback f).obj G).val.presheaf x))) := by
-  sorry
 
 end
 

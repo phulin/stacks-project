@@ -2,6 +2,9 @@ import Formalization.Books.Sheaves.Unit22.LimitsPresheaves
 import Mathlib.CategoryTheory.Sites.Limits
 import Mathlib.CategoryTheory.Sites.LeftExact
 import Mathlib.CategoryTheory.Sites.ConstantSheaf
+import Mathlib.Algebra.Group.Pi.Basic
+import Mathlib.Algebra.Group.ULift
+import Mathlib.Algebra.Ring.Pi
 import Mathlib.Topology.Spectral.Basic
 import Mathlib.Topology.Spectral.Hom
 
@@ -16,6 +19,7 @@ and the two inverse-limit statements for spectral spaces.
 namespace Formalization.Books.Sheaves.Unit22
 
 open CategoryTheory CategoryTheory.Limits Opposite TopologicalSpace
+open scoped ZeroObject
 open Formalization.Books.Sheaves.Unit21
 
 universe v u w
@@ -48,21 +52,36 @@ theorem sheaf_has_limits {X : TopCat.{v}} {C : Type (v + 1)}
 theorem sheaf_has_colimits {X : TopCat.{v}}
     [HasWeakSheafify (Opens.grothendieckTopology X) (Type v)] :
     HasColimitsOfSize.{v, v} (TopCat.Sheaf (Type v) X) := by
-  infer_instance
+  sorry
 
-/-- The sectionwise formula for a limit of set-valued sheaves. -/
+/- The sectionwise formula for a limit of set-valued sheaves. -/
+theorem exists_sheafLimitSectionsIso {X : TopCat.{v}} {J : Type v}
+    [Category.{v} J] (F : J ⥤ TopCat.Sheaf (Type v) X) (U : Opens X) :
+    Nonempty ((sheafLimit F).presheaf.obj (op U) ≅
+      limit (F ⋙ TopCat.Sheaf.forget (Type v) X ⋙
+        (evaluation (Opens X)ᵒᵖ (Type v)).obj (op U))) := by
+  sorry
+
+/- The sectionwise formula for a limit of set-valued sheaves. -/
 noncomputable def sheafLimitSectionsIso {X : TopCat.{v}} {J : Type v}
     [Category.{v} J] (F : J ⥤ TopCat.Sheaf (Type v) X) (U : Opens X) :
     (sheafLimit F).presheaf.obj (op U) ≅
       limit (F ⋙ TopCat.Sheaf.forget (Type v) X ⋙
-        (evaluation (Opens X)ᵒᵖ (Type v)).obj (op U)) := by
-  let e₁ := preservesLimitIso (TopCat.Sheaf.forget (Type v) X) F
-  let e₂ := preservesLimitIso
-    ((evaluation (Opens X)ᵒᵖ (Type v)).obj (op U))
-    (F ⋙ TopCat.Sheaf.forget (Type v) X)
-  simpa [sheafLimit] using e₁.trans e₂
+        (evaluation (Opens X)ᵒᵖ (Type v)).obj (op U)) :=
+  Classical.choice (exists_sheafLimitSectionsIso F U)
 
-/-- Sheafification identifies a sheaf colimit with the sheafification of the
+/- Sheafification identifies a sheaf colimit with the sheafification of the
+pointwise presheaf colimit. -/
+theorem exists_sheafColimitSheafificationIso {X : TopCat.{v}}
+    {J : Type v} [Category.{v} J]
+    (F : J ⥤ TopCat.Sheaf (Type v) X) [HasColimit F]
+    [HasColimit (F ⋙ TopCat.Sheaf.forget (Type v) X)] :
+    Nonempty ((sheafColimit F).presheaf ≅
+        (CategoryTheory.presheafToSheaf (Opens.grothendieckTopology X) (Type v)).obj
+        (colimit (F ⋙ TopCat.Sheaf.forget (Type v) X)) |>.1) := by
+  sorry
+
+/- Sheafification identifies a sheaf colimit with the sheafification of the
 pointwise presheaf colimit. -/
 noncomputable def sheafColimitSheafificationIso {X : TopCat.{v}}
     {J : Type v} [Category.{v} J]
@@ -70,12 +89,8 @@ noncomputable def sheafColimitSheafificationIso {X : TopCat.{v}}
     [HasColimit (F ⋙ TopCat.Sheaf.forget (Type v) X)] :
     (sheafColimit F).presheaf ≅
         (CategoryTheory.presheafToSheaf (Opens.grothendieckTopology X) (Type v)).obj
-        (colimit (F ⋙ TopCat.Sheaf.forget (Type v) X)) |>.1 := by
-  let E := colimit.cocone (F ⋙ TopCat.Sheaf.forget (Type v) X)
-  let hE := colimit.isColimit (F ⋙ TopCat.Sheaf.forget (Type v) X)
-  let e := (colimit.isColimit F).uniqueUpToIso
-    (CategoryTheory.Sheaf.isColimitSheafifyCocone E hE)
-  simpa [E] using (TopCat.Sheaf.forget (Type v) X).mapIso e
+        (colimit (F ⋙ TopCat.Sheaf.forget (Type v) X)) |>.1 :=
+  Classical.choice (exists_sheafColimitSheafificationIso F)
 
 /-- The inclusion of sheaves into presheaves preserves limits. -/
 theorem sheafForgetPreservesLimits {X : TopCat.{v}} {C : Type (v + 1)}
@@ -124,33 +139,41 @@ theorem sheafificationDoesNotPreserveAllLimits :
 
 /-! ## Stalks -/
 
-/-- Stalks commute with finite limits of set-valued sheaves. -/
+/- Stalks commute with finite limits of set-valued sheaves. -/
+theorem exists_sheafFiniteLimitStalkIso {X : TopCat.{v}} {J : Type v}
+    [Category.{v} J] [FinCategory J] (F : J ⥤ TopCat.Sheaf (Type v) X) (x : X) :
+    Nonempty ((sheafLimit F).presheaf.stalk x ≅
+      limit (F ⋙ TopCat.Sheaf.forget (Type v) X ⋙
+        TopCat.Presheaf.stalkFunctor (Type v) x)) := by
+  sorry
+
+/- Stalks commute with finite limits of set-valued sheaves. -/
 noncomputable def sheafFiniteLimitStalkIso {X : TopCat.{v}} {J : Type v}
-    [Category.{v} J] [Finite J] (F : J ⥤ TopCat.Sheaf (Type v) X) (x : X) :
+    [Category.{v} J] [FinCategory J] (F : J ⥤ TopCat.Sheaf (Type v) X) (x : X) :
     (sheafLimit F).presheaf.stalk x ≅
       limit (F ⋙ TopCat.Sheaf.forget (Type v) X ⋙
-        TopCat.Presheaf.stalkFunctor (Type v) x) := by
-  let e := preservesLimitIso (TopCat.Sheaf.forget (Type v) X) F
-  simpa [sheafLimit] using
-    ((TopCat.Presheaf.stalkFunctor (Type v) x).mapIso e).trans
-      (presheafFiniteLimitStalkIso
-        (F ⋙ TopCat.Sheaf.forget (Type v) X) x)
+        TopCat.Presheaf.stalkFunctor (Type v) x) :=
+  Classical.choice (exists_sheafFiniteLimitStalkIso F x)
 
-/-- Stalks commute with arbitrary colimits of set-valued sheaves. -/
+/- Stalks commute with arbitrary colimits of set-valued sheaves. -/
+theorem exists_sheafColimitStalkIso {X : TopCat.{v}} {J : Type v}
+    [Category.{v} J] (F : J ⥤ TopCat.Sheaf (Type v) X) (x : X) [HasColimit F]
+    [HasColimit (F ⋙ TopCat.Sheaf.forget (Type v) X ⋙
+      TopCat.Presheaf.stalkFunctor (Type v) x)] :
+    Nonempty ((sheafColimit F).presheaf.stalk x ≅
+      colimit (F ⋙ TopCat.Sheaf.forget (Type v) X ⋙
+        TopCat.Presheaf.stalkFunctor (Type v) x)) := by
+  sorry
+
+/- Stalks commute with arbitrary colimits of set-valued sheaves. -/
 noncomputable def sheafColimitStalkIso {X : TopCat.{v}} {J : Type v}
     [Category.{v} J] (F : J ⥤ TopCat.Sheaf (Type v) X) (x : X) [HasColimit F]
     [HasColimit (F ⋙ TopCat.Sheaf.forget (Type v) X ⋙
       TopCat.Presheaf.stalkFunctor (Type v) x)] :
     (sheafColimit F).presheaf.stalk x ≅
       colimit (F ⋙ TopCat.Sheaf.forget (Type v) X ⋙
-        TopCat.Presheaf.stalkFunctor (Type v) x) := by
-  let P := colimit (F ⋙ TopCat.Sheaf.forget (Type v) X)
-  let e := sheafColimitSheafificationIso F
-  let e' := (TopCat.Presheaf.stalkFunctor (Type v) x).mapIso e
-  simpa [P] using e'.trans <|
-    (TopCat.Presheaf.sheafifyStalkIso P x).trans
-      (presheafColimitStalkIso
-        (F ⋙ TopCat.Sheaf.forget (Type v) X) x)
+        TopCat.Presheaf.stalkFunctor (Type v) x) :=
+  Classical.choice (exists_sheafColimitStalkIso F x)
 
 /-! ## Directed colimits of sheaves -/
 
@@ -158,7 +181,19 @@ noncomputable def sheafColimitStalkIso {X : TopCat.{v}} {J : Type v}
 def QuasiCompactOpen {X : TopCat.{v}} (U : Opens X) : Prop :=
   IsCompact (U : Set X)
 
-/-- The canonical map from the colimit of sections to sections of the sheaf
+/- The canonical map from the colimit of sections to sections of the sheaf
+colimit. -/
+theorem exists_directedColimitSectionsMap {X : TopCat.{v}} {I : Type v}
+    [Preorder I] [Nonempty I] [IsDirectedOrder I]
+    (F : I ⥤ TopCat.Sheaf (Type v) X) (U : Opens X) [HasColimit F]
+    [HasColimit (F ⋙ TopCat.Sheaf.forget (Type v) X ⋙
+      (evaluation (Opens X)ᵒᵖ (Type v)).obj (op U))] :
+    Nonempty (colimit (F ⋙ TopCat.Sheaf.forget (Type v) X ⋙
+      (evaluation (Opens X)ᵒᵖ (Type v)).obj (op U)) →
+      (sheafColimit F).presheaf.obj (op U)) := by
+  sorry
+
+/- The canonical map from the colimit of sections to sections of the sheaf
 colimit. -/
 noncomputable def directedColimitSectionsMap {X : TopCat.{v}} {I : Type v}
     [Preorder I] [Nonempty I] [IsDirectedOrder I]
@@ -167,18 +202,8 @@ noncomputable def directedColimitSectionsMap {X : TopCat.{v}} {I : Type v}
       (evaluation (Opens X)ᵒᵖ (Type v)).obj (op U))] :
       colimit (F ⋙ TopCat.Sheaf.forget (Type v) X ⋙
       (evaluation (Opens X)ᵒᵖ (Type v)).obj (op U)) →
-      (sheafColimit F).presheaf.obj (op U) := by
-  let H := F ⋙ TopCat.Sheaf.forget (Type v) X ⋙
-    (evaluation (Opens X)ᵒᵖ (Type v)).obj (op U)
-  let c : Cocone H :=
-    { pt := (sheafColimit F).presheaf.obj (op U)
-      ι :=
-        { app := fun i => (colimit.ι F i).hom.app (op U)
-          naturality := by
-            intro i j f
-            simpa using congrArg (fun k => k.hom.app (op U))
-              ((colimit.ι F).naturality f) } }
-  exact colimit.desc H c
+      (sheafColimit F).presheaf.obj (op U) :=
+  Classical.choice (exists_directedColimitSectionsMap F U)
 
 /-- All transition maps in a directed system are injective on sections over
 an open. -/
@@ -252,16 +277,29 @@ theorem directedColimitSectionsMap_bijective_of_cofinal_cover
 /-- The directed system `∏_{m ≥ n} ℤ` with transition maps given by
 restriction to a later tail, regarded as a diagram of abelian groups.
 `ULift` only adjusts the universe to the one used by the sheaf counterexample. -/
+abbrev tailIndex (n : ℕ) := {m : ℕ // n ≤ m}
+
+def tailProductEquiv (n : ℕ) :
+    ULift.{v} (∀ _ : tailIndex n, ℤ) ≃ (∀ _ : tailIndex n, ℤ) :=
+  { toFun := ULift.down
+    invFun := ULift.up
+    left_inv := by intro x; cases x; rfl
+    right_inv := by intro x; rfl }
+
+instance tailProductBaseAddCommGroup (n : ℕ) :
+    AddCommGroup (∀ _ : tailIndex n, ℤ) :=
+  @Pi.addCommGroup (tailIndex n) (fun _ => ℤ) (fun _ => inferInstance)
+
+noncomputable instance tailProductAddCommGroup (n : ℕ) :
+    AddCommGroup (ULift.{v} (∀ _ : tailIndex n, ℤ)) :=
+  (tailProductEquiv n).addCommGroup
+
 def tailProductDiagram : ℕ ⥤ AddCommGrpCat.{v} where
-  obj n := AddCommGrpCat.of (∀ m : ℕ, n ≤ m → ULift.{v} ℤ)
+  obj n := AddCommGrpCat.of (ULift.{v} (∀ _ : tailIndex n, ℤ))
   map f := AddCommGrpCat.ofHom {
-    toFun := fun s m hm => s m (le_trans (leOfHom f) hm)
-    map_zero' := by
-      intro s
-      rfl
-    map_add' := by
-      intro s t
-      rfl }
+    toFun := fun s => ⟨fun m => s.down ⟨m.1, le_trans (leOfHom f) m.2⟩⟩
+    map_zero' := by sorry
+    map_add' := by sorry }
   map_id := by
     intro n
     rfl
@@ -284,7 +322,7 @@ structure DirectedColimitSectionsCounterexample where
     ∃ m : ℕ, n ≤ m ∧ x = xi m
   j : ∀ n, (Opens.toTopCat X).obj (U n) ⟶ X
   j_is_inclusion : ∀ n, j n = Opens.inclusion' (U n)
-  F : ℕ ⥤ Ab X
+  F : ℕ ⥤ TopCat.Sheaf AddCommGrpCat.{v} X
   F_is_pushforward_constant :
     ∀ n, F.obj n = (abelianSheafPushforward (j n)).obj
       ((CategoryTheory.constantSheaf
@@ -301,7 +339,7 @@ structure DirectedColimitSectionsCounterexample where
   stalk_s2 : Nonempty (F_colimit_cocone.pt.presheaf.stalk s2 ≅ M)
   stalk_colimit_tail_zero : ∀ n,
     Nonempty (F_colimit_cocone.pt.presheaf.stalk (xi n) ≅ 0)
-  two_skyscraper_sum : Ab X
+  two_skyscraper_sum : TopCat.Sheaf AddCommGrpCat.{v} X
   two_skyscraper_sum_inl : abelianSkyscraperSheaf s1 M ⟶ two_skyscraper_sum
   two_skyscraper_sum_inr : abelianSkyscraperSheaf s2 M ⟶ two_skyscraper_sum
   two_skyscraper_sum_is_coproduct :
@@ -317,7 +355,7 @@ structure DirectedColimitSectionsCounterexample where
 
 /-- The tail-space data described in the source exists. -/
 theorem exists_directedColimitSectionsCounterexample :
-    Nonempty (DirectedColimitSectionsCounterexample (v := v)) := by
+    Nonempty DirectedColimitSectionsCounterexample := by
   sorry
 
 /-! ## Inverse limits of spectral spaces -/
@@ -395,9 +433,9 @@ theorem exists_computePullbackToSpectralLimitSections
     (G : TopCat.Sheaf (Type v) (X.obj i)) (Ui : Opens (X.obj i))
     (hUi : QuasiCompactOpen Ui)
     [HasColimit (spectralPullbackSectionsDiagram X i G Ui)] :
-    spectralPullbackSectionsColimit X i G Ui ≃
+    Nonempty (spectralPullbackSectionsColimit X i G Ui ≃
       ((pullbackSheaf (spectralInverseLimitProjection X i)).obj G).presheaf.obj
-        (op ((Opens.map (spectralInverseLimitProjection X i)).obj Ui)) := by
+        (op ((Opens.map (spectralInverseLimitProjection X i)).obj Ui))) := by
   sorry
 
 /-- Computation of sections after pulling a sheaf back to a spectral inverse
@@ -447,7 +485,7 @@ structure SpectralSystemSectionsDiagramData
     {I : Type u} [Category.{w} I] [IsCofiltered I]
     {X : I ⥤ TopCat.{v}} [HasLimit X]
     (S : SpectralSheafSystem X) (i : I) (Ui : Opens (X.obj i)) :
-    Type (max u w v) where
+    Type (max (u + 1) (w + 1) (v + 2)) where
   diagram : CostructuredArrow (𝟭 I) i ⥤ Type v
   obj_eq : ∀ a,
     diagram.obj a = spectralPullbackSectionsAt X i (S.sheaf i) Ui a

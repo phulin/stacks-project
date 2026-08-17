@@ -51,6 +51,12 @@ abbrev closedSheafDirectImage (C : Type u) [Category.{v} C]
     TopCat.Sheaf C (closedSubspace Z) ⥤ TopCat.Sheaf C X :=
   TopCat.Sheaf.pushforward C (closedInclusion Z)
 
+/-- Direct image of sheaves valued in a category of algebraic structures. -/
+abbrev closedAlgebraicSheafDirectImage (C : Type u) [Category.{v} C]
+    {X : TopCat.{v}} (Z : Set X) (_hZ : IsClosed Z) :
+    TopCat.Sheaf C (closedSubspace Z) ⥤ TopCat.Sheaf C X :=
+  TopCat.Sheaf.pushforward C (closedInclusion Z)
+
 /-- Inverse image of set-valued sheaves along a closed inclusion. -/
 noncomputable abbrev closedSetSheafRestriction {X : TopCat.{v}} (Z : Set X)
     (_hZ : IsClosed Z) :
@@ -170,12 +176,6 @@ theorem closedAbelianSheafDirectImage_essentialImage {X : TopCat.{v}} (Z : Set X
   sorry
 
 /-! ## Category-valued algebraic structures -/
-
-/-- Direct image of sheaves valued in a category of algebraic structures. -/
-abbrev closedAlgebraicSheafDirectImage (C : Type u) [Category.{v} C]
-    {X : TopCat.{v}} (Z : Set X) (_hZ : IsClosed Z) :
-    TopCat.Sheaf C (closedSubspace Z) ⥤ TopCat.Sheaf C X :=
-  TopCat.Sheaf.pushforward C (closedInclusion Z)
 
 /-- The generic final-stalk condition for a closed direct image. -/
 def ClosedFinalStalkCondition (C : Type u) [Category.{v} C]

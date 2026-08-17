@@ -25,6 +25,16 @@ roadmap remains usable before those later definitions are imported.
 The covariant cofibered convention is represented by Mathlib's
 `Pseudofunctor.Grothendieck` construction.  Covariant representables use
 Mathlib's `coyoneda`, rather than the contravariant Yoneda functor.
+
+The introductory remarks that a versal object need not be a hull and that a
+minimal versal object need not have a bijective tangent map are accounted for
+by keeping `HasVersalFunctorObject`, `HasHull`, and the two miniversal
+criteria separate.  The source points to examples in later sections rather
+than giving a concrete counterexample in this section, so no standalone
+existence-of-counterexample declaration is introduced here.  Likewise, the
+remarks about minimal presentations and the practical converse from (H1)--(H2)
+to (RS) are roadmap observations; the formal declarations record the precise
+forward implications stated in the introduction.
 -/
 
 namespace Formalization.Books.FormalDefos.Unit01
@@ -67,11 +77,13 @@ The underlying commutative ring is bundled by Mathlib's `CommRingCat`; the
 two ring maps record the `Λ`-algebra structure and the chosen residue map.
 Compatibility with both maps is part of the morphism interface below.
 -/
-structure LocalLambdaAlgebra (Λ k : Type u) [CommRing Λ] [Field k] where
+structure LocalLambdaAlgebra (Λ k : Type u) [CommRing Λ] [Field k]
+    (coefficientMap : Λ →+* k) where
   toCommRing : CommRingCat.{u}
   algebraMap : Λ →+* (toCommRing : Type u)
   isLocal : IsLocalRing (toCommRing : Type u)
   residueMap : (toCommRing : Type u) →+* k
+  coefficient_compatibility : residueMap.comp algebraMap = coefficientMap
   residueKernel :
     RingHom.ker residueMap =
       @IsLocalRing.maximalIdeal (toCommRing : Type u) _ isLocal
@@ -80,22 +92,23 @@ structure LocalLambdaAlgebra (Λ k : Type u) [CommRing Λ] [Field k] where
 namespace LocalLambdaAlgebra
 
 variable {Λ k : Type u} [CommRing Λ] [Field k]
+variable {coefficientMap : Λ →+* k}
 
 /-- Local `Λ`-algebra maps preserving the chosen residue identifications. -/
-structure Hom (A B : LocalLambdaAlgebra Λ k) where
+structure Hom (A B : LocalLambdaAlgebra Λ k coefficientMap) where
   hom : (A.toCommRing : Type u) →+* (B.toCommRing : Type u)
   algebra_compatibility : hom.comp A.algebraMap = B.algebraMap
   residue_compatibility : B.residueMap.comp hom = A.residueMap
 
 @[ext]
-theorem Hom.ext {A B : LocalLambdaAlgebra Λ k} {f g : Hom A B}
+theorem Hom.ext {A B : LocalLambdaAlgebra Λ k coefficientMap} {f g : Hom A B}
     (h : f.hom = g.hom) : f = g := by
   cases f
   cases g
   cases h
   rfl
 
-instance : Category (LocalLambdaAlgebra Λ k) where
+instance : Category (LocalLambdaAlgebra Λ k coefficientMap) where
   Hom := Hom
   id A :=
     { hom := RingHom.id _
@@ -126,19 +139,26 @@ instance : Category (LocalLambdaAlgebra Λ k) where
 end LocalLambdaAlgebra
 
 /- Artinian local algebras form the base category. -/
-def artinianLocalAlgebraProperty (Λ k : Type u) [CommRing Λ] [Field k] :
-    ObjectProperty (LocalLambdaAlgebra Λ k) :=
+def artinianLocalAlgebraProperty (Λ k : Type u) [CommRing Λ] [Field k]
+    (coefficientMap : Λ →+* k) :
+    ObjectProperty (LocalLambdaAlgebra Λ k coefficientMap) :=
   fun A => IsArtinianRing (A.toCommRing : Type u)
 
 /-- The base category `C_Λ` of Artinian local `Λ`-algebras with residue field
 `k`. -/
-abbrev BaseCategory (Λ k : Type u) [CommRing Λ] [Field k] :=
-  (artinianLocalAlgebraProperty (Λ := Λ) (k := k)).FullSubcategory
+abbrev BaseCategory (Λ k : Type u) [CommRing Λ] [Field k]
+    (coefficientMap : Λ →+* k) :=
+  (artinianLocalAlgebraProperty (Λ := Λ) (k := k) coefficientMap).FullSubcategory
+
+abbrev ClassicalBaseCategory {Λ k : Type u} [CommRing Λ] [Field k]
+    (data : ClassicalCoefficientData Λ k) :=
+  BaseCategory Λ k data.residueMap
 
 /- The completion has the same local-algebra objects, restricted to the
    Noetherian adically complete ones. -/
-def completeLocalAlgebraProperty (Λ k : Type u) [CommRing Λ] [Field k] :
-    ObjectProperty (LocalLambdaAlgebra Λ k) :=
+def completeLocalAlgebraProperty (Λ k : Type u) [CommRing Λ] [Field k]
+    (coefficientMap : Λ →+* k) :
+    ObjectProperty (LocalLambdaAlgebra Λ k coefficientMap) :=
   fun A =>
     IsNoetherianRing (A.toCommRing : Type u) ∧
       IsAdicComplete
@@ -146,8 +166,13 @@ def completeLocalAlgebraProperty (Λ k : Type u) [CommRing Λ] [Field k] :
         (A.toCommRing : Type u)
 
 /-- The completion category `Ĉ_Λ`. -/
-abbrev CompletionCategory (Λ k : Type u) [CommRing Λ] [Field k] :=
-  (completeLocalAlgebraProperty (Λ := Λ) (k := k)).FullSubcategory
+abbrev CompletionCategory (Λ k : Type u) [CommRing Λ] [Field k]
+    (coefficientMap : Λ →+* k) :=
+  (completeLocalAlgebraProperty (Λ := Λ) (k := k) coefficientMap).FullSubcategory
+
+abbrev ClassicalCompletionCategory {Λ k : Type u} [CommRing Λ] [Field k]
+    (data : ClassicalCoefficientData Λ k) :=
+  CompletionCategory Λ k data.residueMap
 
 /-- A convenient strict-fullness interface for the two inclusions appearing
 in the source.  Full faithfulness records the full hom sets and `replete`
@@ -162,10 +187,11 @@ def IsStrictlyFullEmbedding {C : Type u} {D : Type v}
 
 /-- The base category is strictly full in its completion category. -/
 theorem baseCategory_strictlyFull_in_completion
-    (Λ k : Type u) [CommRing Λ] [Field k] :
-    ∃ ι : BaseCategory Λ k ⥤ CompletionCategory Λ k,
-      IsStrictlyFullEmbedding (C := BaseCategory Λ k)
-        (D := CompletionCategory Λ k) ι := by
+    (Λ k : Type u) [CommRing Λ] [Field k]
+    (coefficientMap : Λ →+* k) :
+    ∃ ι : BaseCategory Λ k coefficientMap ⥤ CompletionCategory Λ k coefficientMap,
+      IsStrictlyFullEmbedding (C := BaseCategory Λ k coefficientMap)
+        (D := CompletionCategory Λ k coefficientMap) ι := by
   sorry
 
 /-- The pro-category of a category, using Mathlib's canonical ind/op
@@ -175,10 +201,12 @@ abbrev ProObjects (C : Type u) [Category.{w, u} C] :=
 
 /-- The completion is strictly full in the pro-category of the base. -/
 theorem completion_strictlyFull_in_proObjects
-    (Λ k : Type u) [CommRing Λ] [Field k] :
-    ∃ ι : CompletionCategory Λ k ⥤ ProObjects (BaseCategory Λ k),
-      IsStrictlyFullEmbedding (C := CompletionCategory Λ k)
-        (D := ProObjects (BaseCategory Λ k)) ι := by
+    (Λ k : Type u) [CommRing Λ] [Field k]
+    (coefficientMap : Λ →+* k) :
+    ∃ ι : CompletionCategory Λ k coefficientMap ⥤
+        ProObjects (BaseCategory Λ k coefficientMap),
+      IsStrictlyFullEmbedding (C := CompletionCategory Λ k coefficientMap)
+        (D := ProObjects (BaseCategory Λ k coefficientMap)) ι := by
   sorry
 
 /-! ## Representables and prorepresentability -/
@@ -228,11 +256,27 @@ morphism between any two objects. -/
 def IsTrivialGroupoid (G : Type u) [Category.{u, u} G] : Prop :=
   Nonempty G ∧ ∀ X Y : G, Subsingleton (X ⟶ Y)
 
+/- A singleton-valued set is recorded by existence together with
+   subsingletonhood.  This is the set-valued analogue of
+   `IsTrivialGroupoid`. -/
+def IsSingletonType (X : Type u) : Prop :=
+  Nonempty X ∧ Subsingleton X
+
+/- The source calls a set-valued functor with a singleton special fiber a
+   predeformation functor. -/
+def IsPredeformationFunctor {C : Type u} [Category.{u, u} C]
+    (F : C ⥤ Type u) (k : C) : Prop :=
+  IsSingletonType (F.obj k)
+
 /-- The analogue of a singleton-valued deformation functor for a cofibered
 category in groupoids. -/
 def IsPredeformationCategory {C : Type u} [Category.{u, u} C]
     (F : CofiberedCategory C) (k : C) : Prop :=
   IsCofiberedInGroupoids F ∧ IsTrivialGroupoid (F.obj (.mk k))
+
+def IsDeformationFunctor {C : Type u} [Category.{u, u} C]
+    (F : C ⥤ Type u) (k : C) (RimSchlessinger : Prop) : Prop :=
+  IsPredeformationFunctor F k ∧ RimSchlessinger
 
 /-- The isomorphism classes of objects in a category.  This is the
 set-valued fiber used for the associated functor of isomorphism classes. -/
@@ -252,6 +296,17 @@ def isomorphismClassSetoid (G : Type u) [Category.{u, u} G] : Setoid G where
 
 abbrev IsomorphismClasses (G : Type u) [Category.{u, u} G] :=
   Quotient (isomorphismClassSetoid G)
+
+/-! The source's associated functor of isomorphism classes is canonical once
+    the later cofibered-category pushforward API is in place.  This record
+    exposes the functor, its fiberwise identifications, and the naturality
+    obligation without duplicating that later construction here. -/
+structure AssociatedIsomorphismClassFunctor {C : Type u}
+    [Category.{u, u} C] (F : CofiberedCategory C) where
+  toFunctor : C ⥤ Type u
+  fiberIdentification : ∀ A,
+    Nonempty (toFunctor.obj A ≃ IsomorphismClasses (F.obj (.mk A)))
+  identificationNaturality : Prop
 
 /-! ## Smoothness and formal objects -/
 
@@ -309,6 +364,63 @@ structure VersalFormalObject {C D : Type u} [Category.{u, u} C]
   object : Fhat.obj (.mk R)
   smooth : IsSmoothCofiberedMorphism Surjective (associated object)
 
+def HasVersalFormalObject {C D : Type u} [Category.{u, u} C]
+    [Category.{u, u} D]
+    (Surjective : ∀ {B A : C}, (B ⟶ A) → Prop)
+    (F : CofiberedCategory C) (ι : C ⥤ D)
+    (Fhat : CofiberedCategory D) (Representable : CofiberedCategory C)
+    (associated : ∀ R : D, Fhat.obj (.mk R) → (Representable ⟶ F)) : Prop :=
+  ∃ R : D, Nonempty
+    (VersalFormalObject Surjective F ι Fhat R Representable (associated R))
+
+/-! The next record is the typed part of the source's later formal-object
+    theory that is needed to state minimality.  The completion source section
+    supplies the actual type of formal objects, its morphisms, the underlying
+    map of complete local rings, and its formal-object isomorphism relation. -/
+
+structure FormalObjectTheory {C D : Type u} [Category.{u, u} C]
+    [Category.{u, u} D] (F : CofiberedCategory C) (k₀ : C) where
+  object : Type u
+  baseObject : object → D
+  versal : object → Prop
+  formalMorphism : object → object → Prop
+  underlyingMap : ∀ {ξ' ξ : object},
+    formalMorphism ξ' ξ → (baseObject ξ' ⟶ baseObject ξ)
+  isomorphic : object → object → Prop
+  surjective : ∀ {R' R : D}, (R' ⟶ R) → Prop
+  predeformation : IsPredeformationCategory F k₀
+
+def IsMinimalFormalObject {C D : Type u} [Category.{u, u} C]
+    [Category.{u, u} D] {F : CofiberedCategory C} {k₀ : C}
+    (T : FormalObjectTheory (D := D) F k₀) (ξ : T.object) : Prop :=
+  ∀ (ξ' : T.object) (h : T.formalMorphism ξ' ξ),
+    T.surjective (T.underlyingMap h)
+
+def IsMinimalVersalFormalObject {C D : Type u} [Category.{u, u} C]
+    [Category.{u, u} D] {F : CofiberedCategory C} {k₀ : C}
+    (T : FormalObjectTheory (D := D) F k₀) (ξ : T.object) : Prop :=
+  T.versal ξ ∧ IsMinimalFormalObject T ξ
+
+def HasMinimalVersalFormalObject {C D : Type u} [Category.{u, u} C]
+    [Category.{u, u} D] {F : CofiberedCategory C} {k₀ : C}
+    (T : FormalObjectTheory (D := D) F k₀) : Prop :=
+  ∃ ξ : T.object, IsMinimalVersalFormalObject T ξ
+
+def MinimalVersalObjectsUniqueUpToIsomorphism {C D : Type u}
+    [Category.{u, u} C] [Category.{u, u} D]
+    {F : CofiberedCategory C} {k₀ : C}
+    (T : FormalObjectTheory (D := D) F k₀) : Prop :=
+  ∀ {ξ η : T.object}, IsMinimalVersalFormalObject T ξ →
+    IsMinimalVersalFormalObject T η → T.isomorphic ξ η
+
+theorem minimal_versal_formal_object_exists_unique {C D : Type u}
+    [Category.{u, u} C] [Category.{u, u} D]
+    {F : CofiberedCategory C} {k₀ : C}
+    (T : FormalObjectTheory (D := D) F k₀) (hversal : ∃ ξ, T.versal ξ) :
+    HasMinimalVersalFormalObject T ∧
+      MinimalVersalObjectsUniqueUpToIsomorphism T := by
+  sorry
+
 /-! ## Tangent spaces and the named conditions -/
 
 /-- A tangent-space carrier together with its `k`-vector-space structure. -/
@@ -346,6 +458,13 @@ def SatisfiesH123 {C : Type u} [Category.{u, u} C]
     {T : TangentSpace k} (S : SchlessingerConditions F k T) : Prop :=
   S.H1 ∧ S.H2 ∧ SchlessingerH3 T
 
+structure AssociatedFunctorSchlessingerData {C : Type u}
+    [Category.{u, u} C] {F : CofiberedCategory C}
+    (A : AssociatedIsomorphismClassFunctor F)
+    (k : Type u) [Field k] (T : TangentSpace k) where
+  conditions : SchlessingerConditions A.toFunctor k T
+  H4AutomorphismExtension : Prop
+
 /-! ## Groupoid conditions and presentations -/
 
 /-- The named groupoid conditions used by the introductory Rim--Schlessinger
@@ -377,6 +496,121 @@ def hasFiniteTangentSpace {k : Type u} [Field k] (T : TangentSpace k) : Prop :=
 def hasFiniteInfinitesimalAutomorphismSpace {k : Type u} [Field k]
     (Inf : TangentSpace k) : Prop :=
   tangentSpaceFiniteDimensional Inf
+
+/-! The source's existence lemma is stated for the canonical completion and
+    Yoneda construction.  Those constructions are introduced in later
+    sections, so this law record keeps their eventual interface explicit. -/
+class VersalFormalObjectExistenceLaw {C D : Type u}
+    [Category.{u, u} C] [Category.{u, u} D]
+    (Surjective : ∀ {B A : C}, (B ⟶ A) → Prop)
+    (F : CofiberedCategory C) (k₀ : C)
+    (k : Type u) [Field k] (T Inf : TangentSpace k)
+    (S : GroupoidSchlessingerConditions F k₀ k T Inf)
+    (ι : C ⥤ D) (Fhat : CofiberedCategory D)
+    (Representable : CofiberedCategory C)
+    (associated : ∀ R : D, Fhat.obj (.mk R) → (Representable ⟶ F)) : Prop where
+  exists_of_conditions :
+    IsPredeformationCategory F k₀ →
+      SatisfiesS1S2 S → SchlessingerH3 T →
+        HasVersalFormalObject Surjective F ι Fhat Representable associated
+
+theorem versal_formal_object_exists_of_S1_S2_H3 {C D : Type u}
+    [Category.{u, u} C] [Category.{u, u} D]
+    (Surjective : ∀ {B A : C}, (B ⟶ A) → Prop)
+    (F : CofiberedCategory C) (k₀ : C)
+    (k : Type u) [Field k] (T Inf : TangentSpace k)
+    (S : GroupoidSchlessingerConditions F k₀ k T Inf)
+    (ι : C ⥤ D) (Fhat : CofiberedCategory D)
+    (Representable : CofiberedCategory C)
+    (associated : ∀ R : D, Fhat.obj (.mk R) → (Representable ⟶ F))
+    [VersalFormalObjectExistenceLaw Surjective F k₀ k T Inf S ι Fhat
+      Representable associated]
+    (hpre : IsPredeformationCategory F k₀)
+    (hS : SatisfiesS1S2 S) (hH3 : SchlessingerH3 T) :
+    HasVersalFormalObject Surjective F ι Fhat Representable associated :=
+  VersalFormalObjectExistenceLaw.exists_of_conditions hpre hS hH3
+
+theorem rimSchlessinger_implies_S1_S2 {C : Type u}
+    [Category.{u, u} C] {F : CofiberedCategory C} {k₀ : C}
+    {k : Type u} [Field k] {T Inf : TangentSpace k}
+    (S : GroupoidSchlessingerConditions F k₀ k T Inf) (hRS : S.RS) :
+    SatisfiesS1S2 S := by
+  sorry
+
+theorem rimSchlessinger_implies_associated_functor_H1_H2 {C : Type u}
+    [Category.{u, u} C] {F : CofiberedCategory C} {k₀ : C}
+    {k : Type u} [Field k] {T Inf : TangentSpace k}
+    (S : GroupoidSchlessingerConditions F k₀ k T Inf)
+    (A : AssociatedIsomorphismClassFunctor F)
+    (D : AssociatedFunctorSchlessingerData A k T)
+    (hpre : IsPredeformationCategory F k₀) (hRS : S.RS) :
+    D.conditions.H1 ∧ D.conditions.H2 := by
+  sorry
+
+theorem associated_functor_H4_iff_automorphism_extension {C : Type u}
+    [Category.{u, u} C] {F : CofiberedCategory C}
+    (A : AssociatedIsomorphismClassFunctor F)
+    {k : Type u} [Field k] (T : TangentSpace k)
+    (D : AssociatedFunctorSchlessingerData A k T) :
+    D.conditions.H4 ↔ D.H4AutomorphismExtension := by
+  sorry
+
+/- The three alternatives in the miniversal theorem are recorded with
+   explicit predicates for the differential and its derivation-orbit
+   quotient.  Their concrete constructions belong to the later tangent-space
+   and completion sections. -/
+structure MiniversalCriterionData {C D : Type u}
+    [Category.{u, u} C] [Category.{u, u} D]
+    {F : CofiberedCategory C} {k₀ : C}
+    {k : Type u} [Field k] {T Inf : TangentSpace k}
+    (S : GroupoidSchlessingerConditions F k₀ k T Inf)
+    (O : FormalObjectTheory (D := D) F k₀) where
+  tangentMapBijective : O.object → Prop
+  tangentMapBijectiveOnDerivationOrbits : O.object → Prop
+  residueExtensionSeparable : Prop
+
+def HasMinimalVersalWithBijectiveTangent {C D : Type u}
+    [Category.{u, u} C] [Category.{u, u} D]
+    {F : CofiberedCategory C} {k₀ : C}
+    {k : Type u} [Field k] {T Inf : TangentSpace k}
+    {S : GroupoidSchlessingerConditions F k₀ k T Inf}
+    {O : FormalObjectTheory (D := D) F k₀}
+    (Q : MiniversalCriterionData S O) : Prop :=
+  ∃ ξ : O.object, IsMinimalVersalFormalObject O ξ ∧ Q.tangentMapBijective ξ
+
+def HasMinimalVersalWithBijectiveTangentOnOrbits {C D : Type u}
+    [Category.{u, u} C] [Category.{u, u} D]
+    {F : CofiberedCategory C} {k₀ : C}
+    {k : Type u} [Field k] {T Inf : TangentSpace k}
+    {S : GroupoidSchlessingerConditions F k₀ k T Inf}
+    {O : FormalObjectTheory (D := D) F k₀}
+    (Q : MiniversalCriterionData S O) : Prop :=
+  ∃ ξ : O.object,
+    IsMinimalVersalFormalObject O ξ ∧
+      Q.tangentMapBijectiveOnDerivationOrbits ξ
+
+def MiniversalFiniteConditions {C : Type u} [Category.{u, u} C]
+    {F : CofiberedCategory C} {k₀ : C} {k : Type u} [Field k]
+    {T Inf : TangentSpace k}
+    (S : GroupoidSchlessingerConditions F k₀ k T Inf) : Prop :=
+  SatisfiesS1S2 S ∧ hasFiniteTangentSpace T
+
+theorem miniversal_formal_object_characterization {C D : Type u}
+    [Category.{u, u} C] [Category.{u, u} D]
+    {F : CofiberedCategory C} {k₀ : C} {k : Type u} [Field k]
+    {T Inf : TangentSpace k}
+    (S : GroupoidSchlessingerConditions F k₀ k T Inf)
+    (O : FormalObjectTheory (D := D) F k₀)
+    (Q : MiniversalCriterionData S O)
+    (hpre : IsPredeformationCategory F k₀) :
+    (HasMinimalVersalWithBijectiveTangent Q → MiniversalFiniteConditions S) ∧
+      (MiniversalFiniteConditions S →
+        HasMinimalVersalWithBijectiveTangentOnOrbits Q) ∧
+      (Q.residueExtensionSeparable →
+        (HasMinimalVersalWithBijectiveTangent Q ↔
+          HasMinimalVersalWithBijectiveTangentOnOrbits Q) ∧
+        (HasMinimalVersalWithBijectiveTangent Q ↔ MiniversalFiniteConditions S)) := by
+  sorry
 
 /-- The object and arrow types of the fibers of a groupoid in functors. -/
 def groupoidFiberObjects {C : Type u} [Category.{u, u} C]
@@ -422,6 +656,17 @@ def HasSmoothProrepresentableGroupoidPresentation {C D : Type u}
     (F : CofiberedCategory C) (ι : C ⥤ D) : Prop :=
   Nonempty (SmoothProrepresentableGroupoidPresentation Surjective F ι)
 
+theorem has_smooth_prorepresentable_groupoid_presentation_iff
+    {C D : Type u} [Category.{u, u} C] [Category.{u, u} D]
+    (Surjective : ∀ {B A : C}, (B ⟶ A) → Prop)
+    (F : CofiberedCategory C) (k₀ : C) (ι : C ⥤ D)
+    {k : Type u} [Field k] (T Inf : TangentSpace k)
+    (S : GroupoidSchlessingerConditions F k₀ k T Inf) :
+    HasSmoothProrepresentableGroupoidPresentation Surjective F ι ↔
+      IsDeformationCategory S ∧ hasFiniteTangentSpace T ∧
+        hasFiniteInfinitesimalAutomorphismSpace Inf := by
+  sorry
+
 /-! The following two records make the source's hull terminology explicit for
 set-valued functors.  The derivative is supplied by the tangent-space theory
 developed later in the book. -/
@@ -459,7 +704,7 @@ theorem functor_has_hull_iff_H123
     {C D : Type u} [Category.{u, u} C] [Category.{u, u} D]
     (Surjective : ∀ {B A : C}, (B ⟶ A) → Prop)
     (F : C ⥤ Type u) (k₀ : C) {k : Type u} [Field k]
-    (hF : Nonempty (F.obj k₀) ∧ Subsingleton (F.obj k₀))
+    (hF : IsPredeformationFunctor F k₀)
     (ι : C ⥤ D) (TR TF : TangentSpace k)
     (S : SchlessingerConditions F k TF) :
     HasHull Surjective F ι TR TF ↔ SatisfiesH123 S := by
@@ -470,7 +715,7 @@ theorem functor_is_prorepresentable_iff_H1234
     (F : C ⥤ Type u) (k₀ : C) (ι : C ⥤ D)
     {k : Type u} [Field k] (TF : TangentSpace k)
     (S : SchlessingerConditions F k TF)
-    (hF : Nonempty (F.obj k₀) ∧ Subsingleton (F.obj k₀)) :
+    (hF : IsPredeformationFunctor F k₀) :
     IsProrepresentable ι F ↔
       S.H1 ∧ S.H2 ∧ SchlessingerH3 TF ∧ S.H4 := by
   sorry

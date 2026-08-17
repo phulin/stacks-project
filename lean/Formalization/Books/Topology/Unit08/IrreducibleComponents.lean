@@ -783,11 +783,159 @@ def soberificationMap : X → Soberification X :=
 
 theorem soberificationMap_continuous :
     Continuous (soberificationMap (X := X)) := by
-  sorry
+  apply continuous_generateFrom_iff.mpr
+  rintro _ ⟨U, rfl⟩
+  apply (show soberificationMap ⁻¹' soberificationOpen (U : Set X) = U from ?_) ▸ U.isOpen
+  ext x
+  change ((closure ({x} : Set X) ∩ U).Nonempty ↔ x ∈ U)
+  exact (isGenericPoint_closure.mem_open_set_iff U.isOpen).symm
 
 theorem soberification_is_sober :
     QuasiSober (Soberification X) ∧ T0Space (Soberification X) := by
-  sorry
+  classical
+  have hBasis : TopologicalSpace.IsTopologicalBasis (soberificationBasis (X := X)) := by
+    apply isTopologicalBasis_of_subbasis_of_finiteInter
+    · rfl
+    · refine { univ_mem := ?_, inter_mem := ?_ }
+      · refine ⟨⟨Set.univ, isOpen_univ⟩, ?_⟩
+        ext Z
+        change ((Z : Set X) ∩ (Set.univ : Set X)).Nonempty ↔
+          Z ∈ (Set.univ : Set (Soberification X))
+        simp only [inter_univ, mem_univ, iff_true]
+        exact Z.isIrreducible.nonempty
+      · rintro _ ⟨U, rfl⟩ _ ⟨V, rfl⟩
+        refine ⟨⟨(U : Set X) ∩ V, U.isOpen.inter V.isOpen⟩, ?_⟩
+        ext Z
+        change ((Z : Set X) ∩ ((U : Set X) ∩ V)).Nonempty ↔
+          ((Z : Set X) ∩ U).Nonempty ∧ ((Z : Set X) ∩ (V : Set X)).Nonempty
+        constructor
+        · rintro ⟨x, hxZ, hxUV⟩
+          exact ⟨⟨x, hxZ, hxUV.1⟩, ⟨x, hxZ, hxUV.2⟩⟩
+        · rintro ⟨⟨x, hxZ, hxU⟩, ⟨y, hyZ, hyV⟩⟩
+          exact Z.isIrreducible.isPreirreducible (U : Set X) (V : Set X)
+            U.isOpen V.isOpen ⟨x, hxZ, hxU⟩ ⟨y, hyZ, hyV⟩
+  refine ⟨{ sober := ?_ }, ?_⟩
+  · intro T hT hTc
+    obtain ⟨ι, V, hV, hVmem⟩ := hBasis.open_eq_iUnion hTc.isOpen_compl
+    let U : ι → Opens X := fun i => Classical.choose (hVmem i)
+    have hVU (i : ι) : soberificationOpen (U i : Set X) = V i :=
+      Classical.choose_spec (hVmem i)
+    let W : Set X := ⋃ i, (U i : Set X)
+    have hWopen : IsOpen W := isOpen_iUnion fun i => (U i).isOpen
+    have hTcomp : Tᶜ = soberificationOpen W := by
+      rw [hV]
+      ext Z
+      constructor
+      · intro hZ
+        rcases Set.mem_iUnion.mp hZ with ⟨i, hi⟩
+        have hi' : Z ∈ soberificationOpen (U i : Set X) := (hVU i).symm ▸ hi
+        change ((Z : Set X) ∩ W).Nonempty
+        rcases hi' with ⟨x, hxZ, hxUi⟩
+        exact ⟨x, hxZ, Set.mem_iUnion.mpr ⟨i, hxUi⟩⟩
+      · intro hZ
+        change ((Z : Set X) ∩ W).Nonempty at hZ
+        rcases hZ with ⟨x, hxZ, hxW⟩
+        rcases Set.mem_iUnion.mp hxW with ⟨i, hxUi⟩
+        have hi : Z ∈ soberificationOpen (U i : Set X) := ⟨x, hxZ, hxUi⟩
+        exact Set.mem_iUnion.mpr ⟨i, (hVU i) ▸ hi⟩
+    let C : Set X := Wᶜ
+    have hCclosed : IsClosed C := by
+      dsimp [C]
+      exact hWopen.isClosed_compl
+    have hCnonempty : C.Nonempty := by
+      obtain ⟨Q, hQT⟩ := hT.nonempty
+      obtain ⟨x, hxQ⟩ := Q.isIrreducible.nonempty
+      refine ⟨x, ?_⟩
+      intro hxW
+      have hQW : Q ∈ soberificationOpen W := ⟨x, hxQ, hxW⟩
+      have hQcomp : Q ∈ Tᶜ := hTcomp.symm ▸ hQW
+      exact hQcomp hQT
+    have hCirr : IsIrreducible C := by
+      refine ⟨hCnonempty, ?_⟩
+      intro A B hA hBopen hCA hCB
+      obtain ⟨x, hxC, hxA⟩ := hCA
+      obtain ⟨y, hyC, hyB⟩ := hCB
+      have hmap (x : X) (hxC : x ∈ C) : soberificationMap x ∈ T := by
+        by_contra hxT
+        have hxW : soberificationMap x ∈ soberificationOpen W := hTcomp ▸ hxT
+        change ((closure ({x} : Set X) ∩ W).Nonempty) at hxW
+        exact hxC ((isGenericPoint_closure.mem_open_set_iff hWopen).mpr hxW)
+      have hxT : soberificationMap x ∈ T := hmap x hxC
+      have hyT : soberificationMap y ∈ T := hmap y hyC
+      have hxA' : soberificationMap x ∈ soberificationOpen A := by
+        change ((closure ({x} : Set X) ∩ A).Nonempty)
+        exact (isGenericPoint_closure.mem_open_set_iff hA).mp hxA
+      have hyB' : soberificationMap y ∈ soberificationOpen B := by
+        change ((closure ({y} : Set X) ∩ B).Nonempty)
+        exact (isGenericPoint_closure.mem_open_set_iff hBopen).mp hyB
+      obtain ⟨Q, hQT, hQAB⟩ :=
+        hT.isPreirreducible (soberificationOpen A) (soberificationOpen B)
+          (hBasis.isOpen ⟨⟨A, hA⟩, rfl⟩) (hBasis.isOpen ⟨⟨B, hBopen⟩, rfl⟩)
+          ⟨soberificationMap x, hxT, hxA'⟩ ⟨soberificationMap y, hyT, hyB'⟩
+      obtain ⟨x', hx'Q, hx'A⟩ := hQAB.1
+      obtain ⟨y', hy'Q, hy'B⟩ := hQAB.2
+      obtain ⟨w, hwQ, hwAB⟩ :=
+        Q.isIrreducible.isPreirreducible A B hA hBopen
+          ⟨x', hx'Q, hx'A⟩ ⟨y', hy'Q, hy'B⟩
+      have hwC : w ∈ C := by
+        intro hwW
+        have hQW : Q ∈ soberificationOpen W := ⟨w, hwQ, hwW⟩
+        have hQcomp : Q ∈ Tᶜ := hTcomp.symm ▸ hQW
+        exact hQcomp hQT
+      exact ⟨w, hwC, hwAB⟩
+    let Z : Soberification X := ⟨C, hCirr, hCclosed⟩
+    have hZT : Z ∈ T := by
+      by_contra hZT
+      have hZB : Z ∈ soberificationOpen W := hTcomp ▸ hZT
+      change ((C ∩ W).Nonempty) at hZB
+      rcases hZB with ⟨x, hxC, hxW⟩
+      exact hxC hxW
+    refine ⟨Z, ?_⟩
+    change closure ({Z} : Set (Soberification X)) = T
+    apply Set.Subset.antisymm
+    · exact closure_minimal (singleton_subset_iff.mpr hZT) hTc
+    · intro Q hQT
+      apply hBasis.mem_closure_iff.mpr
+      intro O hO hQO
+      rcases hO with ⟨U, hUO⟩
+      refine ⟨Z, ?_, rfl⟩
+      have hQbasic : Q ∈ soberificationOpen (U : Set X) := by
+        change Q ∈ (fun U : Opens X => soberificationOpen (U : Set X)) U
+        rw [hUO]
+        exact hQO
+      have hZbasic : Z ∈ soberificationOpen (U : Set X) := by
+        by_contra hZnot
+        have hUsub : (U : Set X) ⊆ W := by
+          intro x hxU
+          by_contra hxW
+          apply hZnot
+          exact ⟨x, hxW, hxU⟩
+        change ((Q : Set X) ∩ (U : Set X)).Nonempty at hQbasic
+        rcases hQbasic with ⟨x, hxQ, hxU⟩
+        have hQW : Q ∈ soberificationOpen W := ⟨x, hxQ, hUsub hxU⟩
+        have hQcomp : Q ∈ Tᶜ := hTcomp.symm ▸ hQW
+        exact hQcomp hQT
+      exact hUO ▸ hZbasic
+  · refine ⟨fun Z Z' hZZ' => ?_⟩
+    have hmem (U : Opens X) :
+        Z ∈ soberificationOpen (U : Set X) ↔ Z' ∈ soberificationOpen (U : Set X) :=
+      (inseparable_iff_forall_isOpen.mp hZZ') _ (hBasis.isOpen ⟨U, rfl⟩)
+    apply IrreducibleCloseds.ext
+    apply Set.Subset.antisymm
+    · intro x hxZ
+      by_contra hxZ'
+      let U : Opens X := ⟨(Z' : Set X)ᶜ, Z'.isClosed.isOpen_compl⟩
+      have hxB : Z ∈ soberificationOpen (U : Set X) := ⟨x, hxZ, hxZ'⟩
+      have hxB' := (hmem U).mp hxB
+      rcases hxB' with ⟨y, hyZ', hyU⟩
+      exact hyU hyZ'
+    · intro x hxZ'
+      by_contra hxZ
+      let U : Opens X := ⟨(Z : Set X)ᶜ, Z.isClosed.isOpen_compl⟩
+      have hxB : Z' ∈ soberificationOpen (U : Set X) := ⟨x, hxZ', hxZ⟩
+      have hxB' := (hmem U).mpr hxB
+      rcases hxB' with ⟨y, hyZ, hyU⟩
+      exact hyU hyZ
 
 def soberificationOpenComap :
     FrameHom (Opens (Soberification X)) (Opens X) :=
@@ -796,7 +944,84 @@ def soberificationOpenComap :
 
 theorem soberificationOpenComap_bijective :
     Function.Bijective (soberificationOpenComap (X := X)) := by
-  sorry
+  classical
+  have hBasis : TopologicalSpace.IsTopologicalBasis (soberificationBasis (X := X)) := by
+    apply isTopologicalBasis_of_subbasis_of_finiteInter
+    · rfl
+    · refine { univ_mem := ?_, inter_mem := ?_ }
+      · refine ⟨⟨Set.univ, isOpen_univ⟩, ?_⟩
+        ext Z
+        change ((Z : Set X) ∩ (Set.univ : Set X)).Nonempty ↔
+          Z ∈ (Set.univ : Set (Soberification X))
+        simp only [inter_univ, mem_univ, iff_true]
+        exact Z.isIrreducible.nonempty
+      · rintro _ ⟨U, rfl⟩ _ ⟨V, rfl⟩
+        refine ⟨⟨(U : Set X) ∩ V, U.isOpen.inter V.isOpen⟩, ?_⟩
+        ext Z
+        change ((Z : Set X) ∩ ((U : Set X) ∩ V)).Nonempty ↔
+          ((Z : Set X) ∩ U).Nonempty ∧ ((Z : Set X) ∩ (V : Set X)).Nonempty
+        constructor
+        · rintro ⟨x, hxZ, hxUV⟩
+          exact ⟨⟨x, hxZ, hxUV.1⟩, ⟨x, hxZ, hxUV.2⟩⟩
+        · rintro ⟨⟨x, hxZ, hxU⟩, ⟨y, hyZ, hyV⟩⟩
+          exact Z.isIrreducible.isPreirreducible (U : Set X) (V : Set X)
+            U.isOpen V.isOpen ⟨x, hxZ, hxU⟩ ⟨y, hyZ, hyV⟩
+  have hmap (U : Opens X) (x : X) :
+      soberificationMap x ∈ soberificationOpen (U : Set X) ↔ x ∈ U := by
+    change ((closure ({x} : Set X) ∩ (U : Set X)).Nonempty ↔ x ∈ U)
+    exact (isGenericPoint_closure.mem_open_set_iff U.isOpen).symm
+  constructor
+  · intro A B hAB
+    apply Opens.ext
+    ext Z
+    constructor
+    · intro hZA
+      obtain ⟨U, hU, hZU, hUA⟩ :=
+        hBasis.exists_subset_of_mem_open hZA A.isOpen
+      rcases hU with ⟨U, rfl⟩
+      obtain ⟨x, hxZ, hxU⟩ := hZU
+      have hxA : x ∈ soberificationOpenComap (X := X) A := by
+        change soberificationMap x ∈ A
+        exact hUA (by
+          change ((closure ({x} : Set X) ∩ (U : Set X)).Nonempty)
+          exact (isGenericPoint_closure.mem_open_set_iff U.isOpen).mp hxU)
+      have hxB : x ∈ soberificationOpenComap (X := X) B := by
+        rw [← hAB]
+        exact hxA
+      have hmapB : soberificationMap x ∈ B := hxB
+      obtain ⟨V, hV, hmapV, hVB⟩ :=
+        hBasis.exists_subset_of_mem_open hmapB B.isOpen
+      rcases hV with ⟨V, rfl⟩
+      have hxV : x ∈ (V : Set X) := (hmap V x).mp hmapV
+      exact hVB ⟨x, hxZ, hxV⟩
+    · intro hZB
+      obtain ⟨U, hU, hZU, hUB⟩ :=
+        hBasis.exists_subset_of_mem_open hZB B.isOpen
+      rcases hU with ⟨U, rfl⟩
+      obtain ⟨x, hxZ, hxU⟩ := hZU
+      have hxB : x ∈ soberificationOpenComap (X := X) B := by
+        change soberificationMap x ∈ B
+        exact hUB (by
+          change ((closure ({x} : Set X) ∩ (U : Set X)).Nonempty)
+          exact (isGenericPoint_closure.mem_open_set_iff U.isOpen).mp hxU)
+      have hxA : x ∈ soberificationOpenComap (X := X) A := by
+        rw [hAB]
+        exact hxB
+      have hmapA : soberificationMap x ∈ A := hxA
+      obtain ⟨V, hV, hmapV, hVA⟩ :=
+        hBasis.exists_subset_of_mem_open hmapA A.isOpen
+      rcases hV with ⟨V, rfl⟩
+      have hxV : x ∈ (V : Set X) := (hmap V x).mp hmapV
+      exact hVA ⟨x, hxZ, hxV⟩
+  · intro U
+    let V : Opens (Soberification X) :=
+      ⟨soberificationOpen (U : Set X),
+        isOpen_generateFrom_of_mem ⟨U, rfl⟩⟩
+    refine ⟨V, ?_⟩
+    apply Opens.ext
+    ext x
+    change soberificationMap x ∈ soberificationOpen (U : Set X) ↔ x ∈ U
+    exact hmap U x
 
 theorem soberificationOpenComap_preserves_finite_intersections
     {ι : Type v} [Finite ι] (U : ι → Opens (Soberification X)) :
@@ -862,7 +1087,31 @@ theorem soberification_universal
   refine ⟨soberificationLift f hf,
     ⟨soberificationLift_continuous f hf, soberificationLift_comp_map f hf⟩, ?_⟩
   intro g hg
-  sorry
+  funext Z
+  by_contra hne
+  obtain ⟨V, hV, hxor⟩ := exists_isOpen_xor_mem hne
+  let U : Opens (Soberification X) :=
+    ⟨g ⁻¹' V, hV.preimage hg.1⟩
+  let U' : Opens (Soberification X) :=
+    ⟨(soberificationLift f hf) ⁻¹' V,
+      hV.preimage (soberificationLift_continuous f hf)⟩
+  have hcomap :
+      soberificationOpenComap (X := X) U =
+        soberificationOpenComap (X := X) U' := by
+    ext x
+    change g (soberificationMap x) ∈ V ↔
+      soberificationLift f hf (soberificationMap x) ∈ V
+    have hgx : g (soberificationMap x) = f x := by
+      simpa [Function.comp_apply] using congrFun hg.2 x
+    have hLx : soberificationLift f hf (soberificationMap x) = f x := by
+      simpa [Function.comp_apply] using congrFun (soberificationLift_comp_map f hf) x
+    rw [hgx, hLx]
+  have hUeq : U = U' :=
+    (soberificationOpenComap_bijective (X := X)).1 hcomap
+  have hmem : g Z ∈ V ↔ soberificationLift f hf Z ∈ V := by
+    change Z ∈ U ↔ Z ∈ U'
+    exact Iff.of_eq (congrArg (fun W : Opens (Soberification X) => Z ∈ W) hUeq)
+  exact (not_xor _ _).2 hmem hxor
 
 def soberificationRange : Set (Soberification X) :=
   Set.range (soberificationMap (X := X))

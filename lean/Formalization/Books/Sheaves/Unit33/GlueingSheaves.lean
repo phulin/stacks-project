@@ -288,6 +288,23 @@ noncomputable abbrev sheafInternalHomSections {X : TopCat.{v}}
     (F G : Sh.{v, v} X) (U : Opens X) : Type v :=
   (sheafInternalHom F G).presheaf.obj (op U)
 
+/-- On each open, the canonical internal-Hom sections identify with maps
+between the corresponding restrictions of the two sheaves. -/
+theorem exists_sheafInternalHomSectionsEquiv {X : TopCat.{v}}
+    (F G : Sh.{v, v} X) (U : Opens X) :
+    Nonempty (sheafInternalHomSections F G U ≃
+      ((sheafRestriction (Type v) U).obj F ⟶
+        (sheafRestriction (Type v) U).obj G)) := by
+  sorry
+
+/-- A chosen version of the internal-Hom identification on an open. -/
+noncomputable def sheafInternalHomSectionsEquiv {X : TopCat.{v}}
+    (F G : Sh.{v, v} X) (U : Opens X) :
+    sheafInternalHomSections F G U ≃
+      ((sheafRestriction (Type v) U).obj F ⟶
+        (sheafRestriction (Type v) U).obj G) :=
+  Classical.choice (exists_sheafInternalHomSectionsEquiv F G U)
+
 /-! ## Glueing data -/
 
 /-- The transition map of glueing data, restricted to an arbitrary smaller open. -/
@@ -639,6 +656,14 @@ noncomputable def glueingSectionSheaf
     (hU : TopologicalSpace.IsOpenCover U) (D : SetSheafGlueingData U) :
     Sh.{v, v} X :=
   ⟨glueingSectionPresheaf D, glueingSectionPresheaf_isSheaf hU D⟩
+
+/-- The explicit compatible-family sheaf carries the local isomorphisms and
+commuting intersection squares required by the abstract glueing solution. -/
+theorem glueingSectionSheaf_solution
+    (hU : TopologicalSpace.IsOpenCover U) (D : SetSheafGlueingData U) :
+    Nonempty {S : SheafGlueingSolution D //
+      S.sheaf = glueingSectionSheaf hU D} := by
+  sorry
 
 @[simp]
 theorem glueingSectionSheaf_sections

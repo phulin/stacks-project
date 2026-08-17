@@ -1,7 +1,10 @@
+import Mathlib.Topology.Compactness.Compact
 import Mathlib.Topology.Constructible
 import Mathlib.Topology.LocallyClosed
+import Mathlib.Topology.QuasiSeparated
 import Mathlib.Topology.Sets.OpenCover
 import Mathlib.Topology.Sober
+import Mathlib.Topology.Spectral.Prespectral
 
 /-!
 # Topology, Chapter 15: Constructible sets

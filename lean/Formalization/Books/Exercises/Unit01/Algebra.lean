@@ -6,8 +6,11 @@ import Mathlib.Algebra.Module.FinitePresentation
 import Mathlib.Algebra.Module.SpanRankOperations
 import Mathlib.Algebra.MvPolynomial.Basic
 import Mathlib.Data.ZMod.Basic
+import Mathlib.FieldTheory.KummerExtension
 import Mathlib.RingTheory.Flat.FaithfullyFlat.Basic
 import Mathlib.RingTheory.Idempotents
+import Mathlib.RingTheory.KrullDimension.Field
+import Mathlib.RingTheory.KrullDimension.Polynomial
 import Mathlib.RingTheory.Localization.AtPrime.Basic
 import Mathlib.RingTheory.MvPolynomial.Ideal
 import Mathlib.RingTheory.Noetherian.Defs
@@ -55,7 +58,111 @@ theorem polynomial_shifted_localizations_equiv {A : Type v} [CommRing A]
               (shiftedPolynomialIdeal m Polynomial.X) h₁ ≃+*
             @Localization.AtPrime (Polynomial A) _
               (shiftedPolynomialIdeal m (Polynomial.X - Polynomial.C 1)) h₂) := by
-  sorry
+  have hmax (x : A) :
+      (shiftedPolynomialIdeal m (Polynomial.X - Polynomial.C x)).IsMaximal := by
+    let _i : Field (A ⧸ m) := Ideal.Quotient.field m
+    let φ : Polynomial A →+* (A ⧸ m) :=
+      Polynomial.eval₂RingHom (Ideal.Quotient.mk m) (Ideal.Quotient.mk m x)
+    have hsurj : Function.Surjective φ := by
+      intro y
+      obtain ⟨a, rfl⟩ := Ideal.Quotient.mk_surjective y
+      exact ⟨Polynomial.C a, by simp [φ]⟩
+    have hker : RingHom.ker φ =
+        shiftedPolynomialIdeal m (Polynomial.X - Polynomial.C x) := by
+      apply le_antisymm
+      · intro p hp
+        have hp0 : Ideal.Quotient.mk m (p.eval x) = 0 := by
+          simpa [φ] using hp
+        have hpm : p.eval x ∈ m := Ideal.Quotient.eq_zero_iff_mem.mp hp0
+        have hdecomp :=
+          Polynomial.modByMonic_add_div p (Polynomial.X - Polynomial.C x)
+        rw [Polynomial.modByMonic_X_sub_C_eq_C_eval] at hdecomp
+        rw [shiftedPolynomialIdeal]
+        rw [← hdecomp]
+        apply add_mem
+        · exact Ideal.mem_sup_left
+            (Ideal.mem_map_of_mem (Polynomial.C : A →+* Polynomial A) hpm)
+        · exact Ideal.mem_sup_right <|
+            by
+              simpa [mul_comm] using
+                (Ideal.span {Polynomial.X - Polynomial.C x}).mul_mem_left
+                  (p /ₘ (Polynomial.X - Polynomial.C x))
+                  (Ideal.subset_span (by rfl))
+      · rw [shiftedPolynomialIdeal]
+        apply sup_le
+        · intro p hp
+          rw [RingHom.mem_ker]
+          have hcoeff := Ideal.mem_map_C_iff.mp hp
+          have heval : p.eval x ∈ m := by
+            rw [Polynomial.eval_eq_sum]
+            exact m.sum_mem fun n _ => by
+              simpa [mul_comm] using m.mul_mem_left (x ^ n) (hcoeff n)
+          simpa [φ] using Ideal.Quotient.eq_zero_iff_mem.mpr heval
+        · intro p hp
+          rw [RingHom.mem_ker]
+          obtain ⟨q, hq⟩ := Ideal.mem_span_singleton.mp hp
+          rw [hq, map_mul]
+          simp [φ]
+    rw [← hker]
+    exact RingHom.ker_isMaximal_of_surjective φ hsurj
+  have hI₁ : (shiftedPolynomialIdeal m Polynomial.X).IsMaximal := by
+    simpa using hmax 0
+  have hI₂ :
+      (shiftedPolynomialIdeal m (Polynomial.X - Polynomial.C 1)).IsMaximal := by
+    simpa using hmax 1
+  let σ : Polynomial A ≃+* Polynomial A :=
+    { __ := Polynomial.compRingHom (Polynomial.X - Polynomial.C 1)
+      invFun := Polynomial.compRingHom (Polynomial.X + Polynomial.C 1)
+      left_inv := by
+        intro p
+        change (p.comp (Polynomial.X - Polynomial.C 1)).comp
+          (Polynomial.X + Polynomial.C 1) = p
+        rw [Polynomial.comp_assoc]
+        simp
+      right_inv := by
+        intro p
+        change (p.comp (Polynomial.X + Polynomial.C 1)).comp
+          (Polynomial.X - Polynomial.C 1) = p
+        rw [Polynomial.comp_assoc]
+        simp }
+  have hσC : σ.toRingHom.comp (Polynomial.C : A →+* Polynomial A) =
+      Polynomial.C := by
+    ext a
+    simp [σ]
+  have hσX : σ.toRingHom Polynomial.X = Polynomial.X - Polynomial.C 1 := by
+    simp [σ]
+  have hmap :
+      (shiftedPolynomialIdeal m Polynomial.X).map σ =
+        shiftedPolynomialIdeal m (Polynomial.X - Polynomial.C 1) := by
+    change (shiftedPolynomialIdeal m Polynomial.X).map σ.toRingHom =
+      shiftedPolynomialIdeal m (Polynomial.X - Polynomial.C 1)
+    simp only [shiftedPolynomialIdeal, Ideal.map_sup, Ideal.map_map,
+      Ideal.map_span, Set.image_singleton]
+    rw [hσC, hσX]
+  have hIJ :
+      shiftedPolynomialIdeal m Polynomial.X =
+        (shiftedPolynomialIdeal m (Polynomial.X - Polynomial.C 1)).comap
+          σ.toRingHom := by
+    calc
+      shiftedPolynomialIdeal m Polynomial.X =
+          ((shiftedPolynomialIdeal m Polynomial.X).comap σ.symm).comap
+            σ.toRingHom :=
+        (Ideal.comap_of_equiv
+          (I := shiftedPolynomialIdeal m Polynomial.X) σ).symm
+      _ = ((shiftedPolynomialIdeal m Polynomial.X).map σ).comap
+          σ.toRingHom := by
+        rw [Ideal.comap_symm]
+      _ = (shiftedPolynomialIdeal m (Polynomial.X - Polynomial.C 1)).comap
+          σ.toRingHom := by rw [hmap]
+  refine ⟨hI₁, hI₂, ?_⟩
+  refine ⟨hI₁.isPrime, hI₂.isPrime, ?_⟩
+  let _i₁ : (shiftedPolynomialIdeal m Polynomial.X).IsPrime := hI₁.isPrime
+  let _i₂ :
+      (shiftedPolynomialIdeal m (Polynomial.X - Polynomial.C 1)).IsPrime :=
+    hI₂.isPrime
+  exact ⟨Localization.localRingEquiv
+    (shiftedPolynomialIdeal m Polynomial.X)
+    (shiftedPolynomialIdeal m (Polynomial.X - Polynomial.C 1)) σ hIJ⟩
 
 /-- A commutative ring is coherent when finitely generated ideals are finitely presented. -/
 def IsCoherentRing (R : Type*) [CommRing R] : Prop :=
@@ -104,28 +211,233 @@ theorem minimal_generators_tensorProduct_mul
     [AddCommGroup N] [Module A N] [Module.Finite A N] :
     (⊤ : Submodule A (M ⊗[A] N)).spanFinrank =
       (⊤ : Submodule A M).spanFinrank * (⊤ : Submodule A N).spanFinrank := by
-  sorry
+  calc
+    (⊤ : Submodule A (M ⊗[A] N)).spanFinrank =
+        Module.finrank (IsLocalRing.ResidueField A)
+          (IsLocalRing.ResidueField A ⊗[A] (M ⊗[A] N)) :=
+      (minimal_generators_eq_residue_field_dimension (A := A) (M := M ⊗[A] N)).2
+    _ = Module.finrank (IsLocalRing.ResidueField A)
+          ((IsLocalRing.ResidueField A ⊗[A] M) ⊗[IsLocalRing.ResidueField A]
+            (IsLocalRing.ResidueField A ⊗[A] N)) := by
+      exact (TensorProduct.AlgebraTensorModule.distribBaseChange A
+        (IsLocalRing.ResidueField A) M N).finrank_eq
+    _ = Module.finrank (IsLocalRing.ResidueField A)
+          (IsLocalRing.ResidueField A ⊗[A] M) *
+        Module.finrank (IsLocalRing.ResidueField A)
+          (IsLocalRing.ResidueField A ⊗[A] N) := by
+      rw [Module.finrank_tensorProduct]
+    _ = (⊤ : Submodule A M).spanFinrank * (⊤ : Submodule A N).spanFinrank := by
+      rw [(minimal_generators_eq_residue_field_dimension (A := A) (M := M)).2,
+        (minimal_generators_eq_residue_field_dimension (A := A) (M := N)).2]
 
 /-- A non-principal ideal has strictly fewer generators after squaring than the naive bound. -/
 theorem ideal_square_spanFinrank_lt
     {A : Type*} [CommRing A] [IsLocalRing A] [IsNoetherianRing A]
     (I : Ideal A) (hI : 1 < I.spanFinrank) :
     (I ^ 2).spanFinrank < I.spanFinrank ^ 2 := by
-  sorry
+  classical
+  have hfg : I.FG := IsNoetherian.noetherian I
+  obtain ⟨s, hs_card, hs_span⟩ :=
+    Submodule.FG.exists_span_finset_card_eq_spanFinrank hfg
+  have hr : 2 ≤ s.card := (Nat.succ_le_iff.mpr hI).trans_eq hs_card.symm
+  let i0 : Fin s.card := ⟨0, Nat.lt_of_lt_of_le (by decide) hr⟩
+  let i1 : Fin s.card := ⟨1, Nat.lt_of_lt_of_le (by decide) hr⟩
+  let e : Fin s.card ≃ s := s.equivFin.symm
+  let p : s × s := (e i1, e i0)
+  let q : Finset (s × s) := Finset.univ.product Finset.univ
+  let t : Finset (s × s) :=
+    q.filter (fun z => s.equivFin z.1 ≤ s.equivFin z.2)
+  have hpq : p ∈ q := by simp [q, p]
+  have hpt : p ∉ t := by simp [t, p, e, i0, i1]
+  have hproper : t ⊂ q := by
+    apply Finset.ssubset_iff_subset_ne.mpr
+    refine ⟨Finset.filter_subset _ _, ?_⟩
+    intro hEq
+    exact hpt (hEq ▸ hpq)
+  have ht_card : t.card < s.card ^ 2 := by
+    calc
+      t.card < q.card := Finset.card_lt_card hproper
+      _ = s.card ^ 2 := by simp [q, pow_two]
+  let all : Set A := Set.image2 (· * ·) (s : Set A) (s : Set A)
+  let u : Finset A :=
+    t.image (fun z : s × s => (z.1 : A) * (z.2 : A))
+  have hspan : Ideal.span all = Ideal.span (u : Set A) := by
+    apply le_antisymm
+    · apply Ideal.span_le.mpr
+      intro z hz
+      rcases hz with ⟨x, hx, y, hy, rfl⟩
+      let p : s × s := (⟨x, hx⟩, ⟨y, hy⟩)
+      by_cases hp : s.equivFin p.1 ≤ s.equivFin p.2
+      · have hpt' : p ∈ t := by simp [t, q, p, hp]
+        exact Ideal.subset_span (Finset.mem_image.mpr ⟨p, hpt', rfl⟩)
+      · have hp' : s.equivFin p.2 ≤ s.equivFin p.1 := le_of_not_ge hp
+        let p' : s × s := (p.2, p.1)
+        have hpt' : p' ∈ t := by simp [t, q, p', hp']
+        have hu : (p'.1 : A) * (p'.2 : A) ∈ u :=
+          Finset.mem_image.mpr ⟨p', hpt', rfl⟩
+        simpa [p', mul_comm] using (Ideal.subset_span hu)
+    · apply Ideal.span_le.mpr
+      intro z hz
+      rcases Finset.mem_coe.mp hz with hz
+      rcases Finset.mem_image.mp hz with ⟨p, hp, rfl⟩
+      exact Ideal.subset_span
+        ⟨(p.1 : A), p.1.2, (p.2 : A), p.2.2, rfl⟩
+  have hsq : I ^ 2 = Ideal.span all := by
+    rw [← hs_span, pow_two]
+    change Ideal.span (s : Set A) * Ideal.span (s : Set A) = Ideal.span all
+    rw [Ideal.span_mul_span]
+    rfl
+  have hsq' : I ^ 2 = Ideal.span (u : Set A) := hsq.trans hspan
+  calc
+    (I ^ 2).spanFinrank ≤ u.card := by
+      rw [hsq']
+      simpa using
+        (Submodule.spanFinrank_span_le_ncard_of_finite (Set.toFinite (u : Set A)))
+    _ ≤ t.card := Finset.card_image_le
+    _ < s.card ^ 2 := ht_card
+    _ = I.spanFinrank ^ 2 := by rw [hs_card]
 
 /-- If every ideal is flat, a Noetherian local ring is a PID or a field. -/
 theorem flat_ideals_imply_pid_or_field
     {A : Type*} [CommRing A] [IsLocalRing A] [IsNoetherianRing A]
     (hflat : ∀ I : Ideal A, Module.Flat A I) :
     IsField A ∨ (IsDomain A ∧ IsPrincipalIdealRing A) := by
-  sorry
+  classical
+  let m (I : Ideal A) : I ⊗[A] I →ₗ[A] I :=
+    (TensorProduct.lid A I).toLinearMap.comp (I.subtype.rTensor I)
+  have hcomp (I : Ideal A) :
+      LinearMap.range (I.subtype.comp (m I)) = (I ^ 2 : Ideal A) := by
+    rw [pow_two]
+    apply le_antisymm
+    · intro z hz
+      rcases hz with ⟨w, rfl⟩
+      refine TensorProduct.induction_on w (by simp) ?_ ?_
+      · intro x y
+        simpa [m] using
+          (Ideal.mul_mem_mul (I := I) (J := I) x.property y.property)
+      · intro x y hx hy
+        simpa only [map_add] using add_mem hx hy
+    · refine Ideal.mul_le.mpr ?_
+      intro x hx y hy
+      refine ⟨(⟨x, hx⟩ : I) ⊗ₜ[A] (⟨y, hy⟩ : I), ?_⟩
+      simp [m]
+  have hbound : ∀ I : Ideal A, I.spanFinrank ≤ 1 := by
+    intro I
+    by_contra hI
+    have hI' : 1 < I.spanFinrank := Nat.lt_of_not_ge hI
+    have hTensor : Function.Injective (I.subtype.rTensor I) :=
+      (Module.Flat.iff_rTensor_injective.mp (hflat I))
+        (IsNoetherian.noetherian I)
+    have hm : Function.Injective (m I) :=
+      (TensorProduct.lid A I).injective.comp hTensor
+    have hp : Function.Injective (I.subtype.comp (m I)) :=
+      (Submodule.injective_subtype I).comp hm
+    have hsqfin : (I ^ 2).spanFinrank = I.spanFinrank ^ 2 := by
+      calc
+        (I ^ 2).spanFinrank =
+            ((⊤ : Submodule A (I ⊗[A] I)).map
+              (I.subtype.comp (m I))).spanFinrank := by
+          rw [Submodule.map_top, hcomp]
+        _ = (⊤ : Submodule A (I ⊗[A] I)).spanFinrank :=
+          Submodule.spanFinrank_map_eq_of_injective
+            (I.subtype.comp (m I)) hp
+        _ = I.spanFinrank * I.spanFinrank := by
+          simpa only [Submodule.spanFinrank_top] using
+            (minimal_generators_tensorProduct_mul (A := A) (M := I) (N := I))
+        _ = I.spanFinrank ^ 2 := by rw [pow_two]
+    have hstrict := ideal_square_spanFinrank_lt I hI'
+    rw [hsqfin] at hstrict
+    exact (Nat.lt_irrefl _ hstrict)
+  have hprincipal (I : Ideal A) : I.IsPrincipal := by
+    by_cases hI0 : I = ⊥
+    · subst I
+      infer_instance
+    · have hpos : 0 < I.spanFinrank := by
+        by_contra hpos
+        have hz : I.spanFinrank = 0 := Nat.eq_zero_of_not_pos hpos
+        exact hI0 ((Submodule.spanFinrank_eq_zero_iff_eq_bot
+          (IsNoetherian.noetherian I)).mp hz)
+      have hone : I.spanFinrank = 1 :=
+        Nat.le_antisymm (hbound I) hpos
+      exact (Submodule.spanFinrank_eq_one_iff I).mp hone |>.1
+  have hPIR : IsPrincipalIdealRing A :=
+    { principal := hprincipal }
+  have hregular : ∀ a : A, a ≠ 0 → ∀ b : A, a * b = 0 → b = 0 := by
+    intro a ha b hab
+    let I : Ideal A := Ideal.span {a}
+    have hI0 : I ≠ ⊥ := by
+      dsimp [I]
+      exact Ideal.span_singleton_eq_bot.not.mpr ha
+    let hfree : Module.Free A I := Module.free_of_flat_of_isLocalRing
+    have hIspan : I.spanFinrank = 1 := by
+      have hpos : 0 < I.spanFinrank := by
+        by_contra hpos
+        have hz : I.spanFinrank = 0 := Nat.eq_zero_of_not_pos hpos
+        exact hI0 ((Submodule.spanFinrank_eq_zero_iff_eq_bot
+          (IsNoetherian.noetherian I)).mp hz)
+      exact Nat.le_antisymm (hbound I) hpos
+    have hIfin : Module.finrank A I = 1 := by
+      calc
+        Module.finrank A I = (⊤ : Submodule A I).spanFinrank :=
+          @Module.finrank_eq_spanFinrank_of_free A I _ _ _ _ hfree
+        _ = I.spanFinrank := Submodule.spanFinrank_top I
+        _ = 1 := hIspan
+    let y : I := ⟨a, Ideal.subset_span (by simp)⟩
+    let φ : A →ₗ[A] I :=
+      { toFun := fun x => x • y
+        map_add' := by
+          intro x z
+          simp [add_smul]
+        map_smul' := by
+          intro r x
+          simp [smul_smul] }
+    have hφ : Function.Surjective φ := by
+      intro z
+      rcases Ideal.mem_span_singleton'.mp z.property with ⟨c, hc⟩
+      refine ⟨c, ?_⟩
+      apply Subtype.ext
+      change c * a = (z : A)
+      simpa [φ, y] using hc
+    have hφbij : Function.Bijective φ :=
+      OrzechProperty.bijective_of_surjective_of_finrank_le φ hφ (by
+        rw [CommSemiring.finrank_self, hIfin])
+    apply hφbij.1
+    apply Subtype.ext
+    dsimp [φ, y]
+    simpa [mul_comm] using hab
+  have hdom : IsDomain A := by
+    refine
+      { mul_left_cancel_of_ne_zero := ?_
+        mul_right_cancel_of_ne_zero := ?_
+        exists_pair_ne := exists_pair_ne A }
+    · intro a ha b c hbc
+      change a * b = a * c at hbc
+      apply sub_eq_zero.mp
+      apply hregular a ha (b - c)
+      rw [mul_sub, hbc, sub_self]
+    · intro a ha b c hbc
+      change b * a = c * a at hbc
+      apply sub_eq_zero.mp
+      apply hregular a ha (b - c)
+      rw [mul_sub]
+      have hbc' : a * b = a * c := by simpa [mul_comm] using hbc
+      rw [hbc', sub_self]
+  exact Or.inr ⟨hdom, hPIR⟩
 
 /-! ## Non-isomorphic polynomial rings -/
 
 /-- Polynomial rings in successive positive finite numbers of variables are not isomorphic. -/
 theorem mvPolynomial_fin_not_ringEquiv {k : Type*} [Field k] (n : ℕ) (hn : 1 ≤ n) :
     ¬ Nonempty (MvPolynomial (Fin n) k ≃+* MvPolynomial (Fin (n + 1)) k) := by
-  sorry
+  rintro ⟨e⟩
+  have he := ringKrullDim_eq_of_ringEquiv e
+  rw [MvPolynomial.ringKrullDim_of_isNoetherianRing,
+    MvPolynomial.ringKrullDim_of_isNoetherianRing,
+    ringKrullDim_eq_zero_of_field] at he
+  simp only [Nat.card_fin, zero_add] at he
+  cases n with
+  | zero => exact (Nat.not_succ_le_zero 0) hn
+  | succ n => exact Nat.succ_ne_self (n + 1) (by exact_mod_cast he.symm)
 
 /-- The six-variable quadratic used in the two quotient-ring exercises. -/
 def sixVariableQuadratic (k : Type*) [CommSemiring k] : MvPolynomial (Fin 6) k :=
@@ -147,7 +459,27 @@ theorem sixVariableQuadratic_quotient_not_mvPolynomial_six
     ¬ Nonempty
       ((MvPolynomial (Fin 6) k ⧸ Ideal.span {sixVariableQuadratic k}) ≃+*
         MvPolynomial (Fin 6) k) := by
-  sorry
+  rintro ⟨e⟩
+  have hq0 : sixVariableQuadratic k ≠ 0 := by
+    rw [MvPolynomial.ne_zero_iff]
+    refine ⟨Finsupp.single (0 : Fin 6) 1 + Finsupp.single (1 : Fin 6) 1, ?_⟩
+    simp [sixVariableQuadratic, MvPolynomial.coeff_X_mul']
+  have hdimQ := ringKrullDim_quotient_succ_le_of_nonZeroDivisor
+    (R := MvPolynomial (Fin 6) k)
+    (mem_nonZeroDivisors_iff_ne_zero.mpr hq0)
+  have hdimR : ringKrullDim (MvPolynomial (Fin 6) k) = 6 := by
+    rw [MvPolynomial.ringKrullDim_of_isNoetherianRing,
+      ringKrullDim_eq_zero_of_field]
+    norm_num
+  have hdimIso :
+      ringKrullDim (MvPolynomial (Fin 6) k ⧸ Ideal.span {sixVariableQuadratic k}) = 6 := by
+    calc
+      ringKrullDim (MvPolynomial (Fin 6) k ⧸ Ideal.span {sixVariableQuadratic k}) =
+          ringKrullDim (MvPolynomial (Fin 6) k) :=
+        ringKrullDim_eq_of_ringEquiv e
+      _ = 6 := hdimR
+  rw [hdimIso, hdimR] at hdimQ
+  norm_num at hdimQ
 
 /-! ## Short exact sequences -/
 
@@ -161,7 +493,84 @@ def SplitsAfterFaithfullyFlatBaseChange {A B : CommRingCat.{u}} (f : A ⟶ B)
 /-- There is a nonsplit short exact sequence of modules over the integers. -/
 theorem exists_nonsplit_short_exact_sequence :
     ∃ S : ShortComplex (ModuleCat ℤ), S.ShortExact ∧ ¬ Nonempty S.Splitting := by
-  sorry
+  let f₀ : ℤ →ₗ[ℤ] ℤ := LinearMap.mulLeft ℤ 2
+  let g₀ : ℤ →ₗ[ℤ] ZMod 2 :=
+    (Int.castRingHom (ZMod 2)).toIntAlgHom.toLinearMap
+  let f : ULift ℤ →ₗ[ℤ] ULift ℤ :=
+    ULift.moduleEquiv.symm.toLinearMap.comp (f₀.comp ULift.moduleEquiv.toLinearMap)
+  let g : ULift ℤ →ₗ[ℤ] ULift (ZMod 2) :=
+    ULift.moduleEquiv.symm.toLinearMap.comp (g₀.comp ULift.moduleEquiv.toLinearMap)
+  have hcomp : g.comp f = 0 := by
+    apply LinearMap.ext
+    intro x
+    apply ULift.ext
+    change ((2 * x.down : ℤ) : ZMod 2) = 0
+    rw [ZMod.intCast_zmod_eq_zero_iff_dvd]
+    exact ⟨x.down, rfl⟩
+  have hexact : Function.Exact f g := by
+    intro x
+    constructor
+    · intro hx
+      have hx0 : (x.down : ZMod 2) = 0 := by
+        simpa [g, g₀] using congrArg ULift.down hx
+      obtain ⟨y, hy⟩ := (ZMod.intCast_zmod_eq_zero_iff_dvd x.down 2).mp hx0
+      refine ⟨ULift.up y, ?_⟩
+      apply ULift.ext
+      change (2 : ℤ) * y = x.down
+      exact hy.symm
+    · rintro ⟨y, rfl⟩
+      apply ULift.ext
+      change ((2 * y.down : ℤ) : ZMod 2) = 0
+      rw [ZMod.intCast_zmod_eq_zero_iff_dvd]
+      exact ⟨y.down, rfl⟩
+  have hinj : Function.Injective f := by
+    intro x y hxy
+    apply ULift.ext
+    have hxy' := congrArg ULift.down hxy
+    simpa [f, f₀] using mul_left_cancel₀ (show (2 : ℤ) ≠ 0 by norm_num) hxy'
+  have hsurj : Function.Surjective g := by
+    intro z
+    obtain ⟨y, hy⟩ := ZMod.intCast_surjective z.down
+    refine ⟨ULift.up y, ?_⟩
+    apply ULift.ext
+    simpa [g, g₀] using hy
+  let S : ShortComplex (ModuleCat ℤ) := ShortComplex.moduleCatMk f g hcomp
+  have hS : S.ShortExact := by
+    exact ModuleCat.shortComplex_shortExact S hexact hinj hsurj
+  refine ⟨S, hS, ?_⟩
+  rintro ⟨s⟩
+  have hsection := ModuleCat.hom_ext_iff.mp s.s_g
+  have hsection1 := LinearMap.congr_fun hsection (ULift.up (1 : ZMod 2))
+  change S.g.hom (s.s.hom (ULift.up (1 : ZMod 2))) =
+    (ULift.up (1 : ZMod 2) : ULift (ZMod 2)) at hsection1
+  have ht : (2 : ℤ) • ULift.up (1 : ZMod 2) = 0 := by
+    apply ULift.ext
+    exact (ZMod.intCast_zmod_eq_zero_iff_dvd 2 2).2 ⟨1, rfl⟩
+  have hzero_down : ULift.down (s.s.hom (ULift.up (1 : ZMod 2))) = 0 := by
+    have hmap' : (2 : ℤ) • s.s.hom (ULift.up (1 : ZMod 2)) = 0 := by
+      calc
+        (2 : ℤ) • s.s.hom (ULift.up (1 : ZMod 2)) =
+            s.s.hom ((2 : ℤ) • ULift.up (1 : ZMod 2)) :=
+          (s.s.hom.map_smul _ _).symm
+        _ = s.s.hom 0 := congrArg s.s.hom ht
+        _ = 0 := map_zero _
+    have hmul := congrArg ULift.down hmap'
+    change (2 : ℤ) * ULift.down (s.s.hom (ULift.up (1 : ZMod 2))) = 0 at hmul
+    rcases mul_eq_zero.mp hmul with h | h
+    · norm_num at h
+    · exact h
+  have hzero : s.s.hom (ULift.up (1 : ZMod 2)) = 0 := by
+    apply ULift.ext
+    change ULift.down (s.s.hom (ULift.up (1 : ZMod 2))) = 0
+    exact hzero_down
+  have hgzero : S.g.hom (s.s.hom (ULift.up (1 : ZMod 2))) = 0 := by
+    rw [hzero]
+    exact map_zero _
+  have hcontra : (0 : ULift (ZMod 2)) = ULift.up (1 : ZMod 2) :=
+    hgzero.symm.trans hsection1
+  have h01 : (0 : ZMod 2) = 1 := by
+    simpa using congrArg ULift.down hcontra
+  exact zero_ne_one h01
 
 /-- There is a nonsplit sequence whose tensor sequence splits after a faithfully flat extension. -/
 theorem exists_nonsplit_sequence_split_after_faithfullyFlat_baseChange :
@@ -193,7 +602,104 @@ theorem kummer_polynomial_quotient_is_field
     (hζ : IsPrimitiveRoot ζ n) (a : k)
     (ha : ∀ d : ℕ, d ∣ n → d ≤ n → 1 < d → ¬ ∃ b : k, b ^ d = a) :
     IsField (Polynomial k ⧸ Ideal.span {Polynomial.X ^ n - Polynomial.C a}) := by
-  sorry
+  classical
+  have hirr : Irreducible (Polynomial.X ^ n - Polynomial.C a) := by
+    induction n using induction_on_primes generalizing k ζ a with
+    | zero => exact (Nat.not_lt_zero _ hn).elim
+    | one => simpa using Polynomial.irreducible_X_sub_C a
+    | prime_mul p n hp IH =>
+        rw [mul_comm]
+        have hnpos : 0 < n := Nat.pos_of_ne_zero (by
+          intro hn0
+          subst n
+          simp at hn)
+        by_cases hp2 : p = 2
+        · subst p
+          apply X_pow_mul_sub_C_irreducible
+              (X_pow_sub_C_irreducible_of_prime (by decide) (by
+                intro b hb
+                exact ha 2 (dvd_mul_right _ _)
+                  (Nat.le_mul_of_pos_right 2 hnpos) (by decide) ⟨b, hb⟩))
+          intro E _ _ x hx
+          have hxint : IsIntegral k x := not_not.mp fun h ↦ by
+            simpa only [Polynomial.degree_zero,
+              Polynomial.degree_X_pow_sub_C (n := 2) (a := a) (by decide),
+              WithBot.natCast_ne_bot] using
+              congr_arg Polynomial.degree (hx.symm.trans (dif_neg h))
+          have hζp : IsPrimitiveRoot (ζ ^ 2) n := hζ.pow hn (by rfl)
+          let L := IntermediateField.adjoin k {x}
+          have hζL : IsPrimitiveRoot (algebraMap k L (ζ ^ 2)) n :=
+            hζp.map_of_injective (FaithfulSMul.algebraMap_injective k L)
+          refine IH (k := L) (ζ := algebraMap k L (ζ ^ 2))
+            (a := IntermediateField.AdjoinSimple.gen k x) hnpos hζL ?_
+          intro q hq hqn hqone hb
+          rcases hb with ⟨b, hb⟩
+          have hdiv : n = (n / q) * q := (Nat.div_mul_cancel hq).symm
+          have hζ2q : IsPrimitiveRoot (ζ ^ (n / q)) (2 * q) := by
+            apply hζ.pow hn
+            have hprod : 2 * n = (n / q) * (2 * q) := by
+              calc
+                2 * n = 2 * ((n / q) * q) := congrArg (fun t => 2 * t) hdiv
+                _ = (n / q) * (2 * q) := by
+                  simp [Nat.mul_assoc, Nat.mul_left_comm, Nat.mul_comm]
+            exact hprod
+          have hζ2 : IsPrimitiveRoot ((ζ ^ (n / q)) ^ q) 2 := by
+            apply hζ2q.pow
+            · exact Nat.mul_pos (by decide) (Nat.zero_lt_of_lt hqone)
+            · simp [Nat.mul_comm]
+          have hneg : (ζ ^ (n / q)) ^ q = (-1 : k) :=
+            hζ2.eq_neg_one_of_two_right
+          have hnorm : (Algebra.norm k b) ^ q = -a := by
+            rw [← map_pow, hb, ← IntermediateField.adjoin.powerBasis_gen hxint,
+              Algebra.PowerBasis.norm_gen_eq_coeff_zero_minpoly]
+            rw [IntermediateField.adjoin.powerBasis_gen,
+              IntermediateField.adjoin.powerBasis_dim,
+              IntermediateField.minpoly_gen, hx]
+            simp
+          apply ha q (dvd_mul_of_dvd_right hq 2)
+            (hqn.trans (Nat.le_mul_of_pos_left n (by decide))) hqone
+          refine ⟨ζ ^ (n / q) * Algebra.norm k b, ?_⟩
+          rw [mul_pow, hneg, hnorm]
+          simp
+        · apply X_pow_mul_sub_C_irreducible
+            (X_pow_sub_C_irreducible_of_prime hp (by
+              intro b hb
+              exact ha p (dvd_mul_right _ _)
+                (Nat.le_mul_of_pos_right p hnpos) hp.one_lt ⟨b, hb⟩))
+          intro E _ _ x hx
+          have hxint : IsIntegral k x := not_not.mp fun h ↦ by
+            simpa only [Polynomial.degree_zero,
+              Polynomial.degree_X_pow_sub_C hp.pos,
+              WithBot.natCast_ne_bot] using
+              congr_arg Polynomial.degree (hx.symm.trans (dif_neg h))
+          have hζp : IsPrimitiveRoot (ζ ^ p) n := hζ.pow hn (by rfl)
+          let L := IntermediateField.adjoin k {x}
+          have hζL : IsPrimitiveRoot (algebraMap k L (ζ ^ p)) n :=
+            hζp.map_of_injective (FaithfulSMul.algebraMap_injective k L)
+          refine IH (k := L) (ζ := algebraMap k L (ζ ^ p))
+            (a := IntermediateField.AdjoinSimple.gen k x) hnpos hζL ?_
+          intro q hq hqn hqone hb
+          rcases hb with ⟨b, hb⟩
+          apply ha q (dvd_mul_of_dvd_right hq p)
+            (hqn.trans (Nat.le_mul_of_pos_left n hp.pos)) hqone
+          refine ⟨Algebra.norm _ b, ?_⟩
+          rw [← map_pow, hb, ← IntermediateField.adjoin.powerBasis_gen hxint,
+            Algebra.PowerBasis.norm_gen_eq_coeff_zero_minpoly]
+          rw [IntermediateField.adjoin.powerBasis_gen,
+            IntermediateField.adjoin.powerBasis_dim,
+            IntermediateField.minpoly_gen, hx]
+          simp [(hp.odd_of_ne_two hp2).neg_one_pow]
+          exact hp.ne_zero.symm
+  let I : Ideal (Polynomial k) := Ideal.span {Polynomial.X ^ n - Polynomial.C a}
+  have hIp : I.IsPrime := by
+    apply (Ideal.span_singleton_prime hirr.ne_zero).mpr hirr.prime
+  let _i : I.IsPrime := hIp
+  have hIm : I.IsMaximal := by
+    apply IsPrime.to_maximal_ideal
+    change Ideal.span ({Polynomial.X ^ n - Polynomial.C a} : Set (Polynomial k)) ≠ ⊥
+    exact Ideal.span_singleton_eq_bot.not.mpr hirr.ne_zero
+  let _i : I.IsMaximal := hIm
+  exact (Ideal.Quotient.field I).toIsField
 
 /-! ## Integer-valued valuations on `k[x]` -/
 
@@ -732,7 +1238,131 @@ theorem polynomial_valuation_classification
       (∃ (p : Polynomial k) (n : ℕ), Irreducible p ∧ 0 < n ∧
         ∀ (f : Polynomial k) (hf : f ≠ 0),
           ν.value f hf = (n : ℤ) * (multiplicity p f : ℤ)) := by
-  sorry
+  classical
+  by_cases hneg : ∃ (f : Polynomial k) (hf : f ≠ 0), ν.value f hf < 0
+  · exact Or.inr (Or.inl (polynomial_valuation_negative_is_negative_degree ν hneg))
+  have hnonneg : ∀ (f : Polynomial k) (hf : f ≠ 0), 0 ≤ ν.value f hf := by
+    intro f hf
+    exact le_of_not_gt (fun h => hneg ⟨f, hf, h⟩)
+  by_cases hzero : ∀ (f : Polynomial k) (hf : f ≠ 0), ν.value f hf = 0
+  · exact Or.inl hzero
+  have hx : 0 ≤ ν.xValue := by
+    by_contra hx
+    have hx' : ν.xValue < 0 := lt_of_not_ge hx
+    apply hneg
+    exact ⟨Polynomial.X, Polynomial.X_ne_zero, by
+      simpa [PolynomialValuation.xValue] using hx'⟩
+  obtain ⟨I, hIset, hIprime⟩ :=
+    polynomial_valuation_positiveSet_is_prime ν hx
+  obtain ⟨f, hf, hfne⟩ : ∃ (f : Polynomial k) (hf : f ≠ 0), ν.value f hf ≠ 0 := by
+    rcases not_forall.mp hzero with ⟨f, hzero_f⟩
+    rcases not_forall.mp hzero_f with ⟨hf, hfne⟩
+    exact ⟨f, hf, hfne⟩
+  have hfpos : 0 < ν.value f hf := lt_of_le_of_ne (hnonneg f hf) hfne.symm
+  have hfI : f ∈ I := by
+    change f ∈ (I : Set (Polynomial k))
+    rw [hIset]
+    exact Or.inr ⟨hf, hfpos⟩
+  let p : Polynomial k := Submodule.IsPrincipal.generator I
+  have hpI : Ideal.span ({p} : Set (Polynomial k)) = I := by
+    change Ideal.span ({Submodule.IsPrincipal.generator I} : Set (Polynomial k)) = I
+    exact Submodule.IsPrincipal.span_singleton_generator I
+  have hIne : I ≠ (⊥ : Ideal (Polynomial k)) := by
+    intro hbot
+    apply hf
+    have hmem : f ∈ (⊥ : Ideal (Polynomial k)) := hbot ▸ hfI
+    simpa using hmem
+  have hp0 : p ≠ 0 := by
+    intro hp
+    apply hIne
+    rw [← hpI, hp]
+    simp
+  have hIp : (Ideal.span ({p} : Set (Polynomial k))).IsPrime := by
+    rw [hpI]
+    exact hIprime
+  have hpprime : Prime p := (Ideal.span_singleton_prime hp0).mp hIp
+  have hirr : Irreducible p := hpprime.irreducible
+  have hpI_mem : p ∈ I := by
+    rw [← hpI]
+    exact Ideal.mem_span_singleton_self p
+  have hpI' : p ∈ (I : Set (Polynomial k)) := hpI_mem
+  rw [hIset] at hpI'
+  change p = 0 ∨ ∃ h : p ≠ 0, 0 < ν.value p h at hpI'
+  have hpvalpos : 0 < ν.value p hp0 := by
+    rcases hpI' with hpz | ⟨hp', hpval⟩
+    · exact (hp0 hpz).elim
+    · exact hpval
+  let n : ℕ := Int.toNat (ν.value p hp0)
+  have hncast : (n : ℤ) = ν.value p hp0 := by
+    dsimp [n]
+    rw [Int.toNat_of_nonneg (hnonneg p hp0)]
+  have hnpos : 0 < n := by
+    have hncastpos : (0 : ℤ) < (n : ℤ) := by
+      rw [hncast]
+      exact hpvalpos
+    exact_mod_cast hncastpos
+  right
+  right
+  refine ⟨p, n, hirr, hnpos, ?_⟩
+  intro g hg
+  have hfin : FiniteMultiplicity p g :=
+    FiniteMultiplicity.of_prime_left hpprime hg
+  obtain ⟨q, hfactor, hpq⟩ :=
+    FiniteMultiplicity.exists_eq_pow_mul_and_not_dvd hfin
+  have hq : q ≠ 0 := by
+    intro hq
+    apply hg
+    rw [hfactor, hq]
+    simp
+  have hqnotI : q ∉ I := by
+    intro hqI
+    apply hpq
+    apply Ideal.mem_span_singleton.mp
+    rw [hpI]
+    exact hqI
+  have hqzero : ν.value q hq = 0 := by
+    apply le_antisymm
+    · apply le_of_not_gt
+      intro hqpos
+      have hqI : q ∈ I := by
+        change q ∈ (I : Set (Polynomial k))
+        rw [hIset]
+        exact Or.inr ⟨hq, hqpos⟩
+      exact hqnotI hqI
+    · exact hnonneg q hq
+  have hpow : ∀ r : ℕ,
+      ν.value (p ^ r) (pow_ne_zero r hp0) = (r : ℤ) * ν.value p hp0 := by
+    intro r
+    induction r with
+    | zero =>
+        simpa [PolynomialValuation.value] using
+          (ν.map_C' (c := (1 : k)) one_ne_zero)
+    | succ r ih =>
+        have hm := ν.map_mul' (f := p ^ r) (g := p)
+          (pow_ne_zero r hp0) hp0
+        change ν.value (p ^ r * p) _ =
+          ν.value (p ^ r) _ + ν.value p _ at hm
+        rw [ih] at hm
+        calc
+          ν.value (p ^ (r + 1)) _ =
+              ν.value (p ^ r * p) _ := by rfl
+          _ = (r : ℤ) * ν.value p hp0 + ν.value p hp0 := hm
+          _ = ((r + 1 : ℕ) : ℤ) * ν.value p hp0 := by
+            norm_num [Nat.cast_add, Nat.cast_one, add_comm, add_left_comm,
+              add_assoc, mul_add, add_mul]
+  have hmul := ν.map_mul' (f := p ^ multiplicity p g) (g := q)
+    (pow_ne_zero (multiplicity p g) hp0) hq
+  calc
+    ν.value g hg =
+        ν.value (p ^ multiplicity p g * q)
+          (mul_ne_zero (pow_ne_zero _ hp0) hq) := by
+      simpa [PolynomialValuation.value] using congrArg ν.toFun (Subtype.ext hfactor)
+    _ = ν.value (p ^ multiplicity p g) _ + ν.value q hq := hmul
+    _ = (multiplicity p g : ℤ) * ν.value p hp0 := by
+      rw [hpow, hqzero, add_zero]
+    _ = (n : ℤ) * (multiplicity p g : ℤ) := by
+      rw [hncast]
+      ring
 
 /-! ## Idempotents and products -/
 

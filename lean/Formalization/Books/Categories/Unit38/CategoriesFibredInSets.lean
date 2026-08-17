@@ -284,6 +284,15 @@ theorem categoriesFibredInSetsOver_equivalent_to_presheaves
         CategoriesFibredInSetsOverCategory (Cat.of C)) := by
   sorry
 
+/-- A chosen equivalence in the source's presheaf correspondence.  The
+existence theorem above is kept as the proposition-level interface, while
+this definition makes the equivalence directly usable by later statements. -/
+noncomputable def categoriesFibredInSetsOverEquivalence
+    {C : Type uC} [Category.{vC} C] :
+    (Cᵒᵖ ⥤ Type uC) ≌
+      CategoriesFibredInSetsOverCategory (Cat.of C) :=
+  Classical.choice (categoriesFibredInSetsOver_equivalent_to_presheaves (C := C))
+
 /-- Every category fibred in sets is equivalent over its base to the
 CoGrothendieck category of a set-valued presheaf.  This is the usable
 objectwise form of the source's equivalence of categories. -/

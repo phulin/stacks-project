@@ -36,12 +36,6 @@ noncomputable section
 
 /-! ## Strongly cartesian morphisms -/
 
-/- Mathlib's `Functor.IsStronglyCartesian` is exactly the displayed map
-   bijection in the source.  The following source-facing abbreviation records
-   the fibred-category terminology without introducing a parallel predicate. -/
-abbrev IsFibredCategory {X C : Type*} [Category* X] [Category* C]
-    (p : X ⥤ C) : Prop := p.IsFibered
-
 theorem fibred_category_iff_exists_stronglyCartesian
     {X C : Type*} [Category* X] [Category* C] (p : X ⥤ C) :
     p.IsFibered ↔
@@ -172,14 +166,17 @@ end PullbackChoice
 structure PullbackPseudofunctorData
     {X : Type u₁} [Category.{v₁} X] {C : Type u₂} [Category.{v₂} C]
     (p : X ⥤ C) [p.IsFibered] (P : PullbackChoice p) where
-  value : PseudofunctorFromCategory Cᵒᵖ (Cat.{v₁, u₁})
+  value : PseudofunctorFromCategory Cᵒᵖ
+    (AssociatedTwoOneCategory (Cat.{v₁, u₁}))
   object_fibre : ∀ (U : C),
     value.obj (LocallyDiscrete.mk (Opposite.op U)) =
-      Cat.of (Functor.Fiber p U)
+      Bicategory.Pith.mk (Cat.of (Functor.Fiber p U))
   map_pullback : ∀ {R S : C} (f : R ⟶ S),
     Nonempty
-      (eqToHom (object_fibre S).symm ≫ value.map f.op.toLoc ≫
-          eqToHom (object_fibre R) ≅ (P.pullbackFunctor f).toCatHom)
+      (eqToHom (congrArg Bicategory.Pith.as (object_fibre S).symm) ≫
+          (value.map f.op.toLoc).of ≫
+          eqToHom (congrArg Bicategory.Pith.as (object_fibre R)) ≅
+        (P.pullbackFunctor f).toCatHom)
 
 theorem pullback_pseudofunctor_exists
     {X : Type u₁} [Category.{v₁} X] {C : Type u₂} [Category.{v₂} C]
@@ -210,13 +207,10 @@ def MapsStronglyCartesian
     Functor.IsStronglyCartesian p (p.map φ) φ →
       Functor.IsStronglyCartesian q (q.map (F.map φ)) (F.map φ)
 
-abbrev IsFibredCategoryOver {C : Cat.{v, u}} (X : CategoryOver C) : Prop :=
-  (structureFunctor X).IsFibered
-
 /- The source's objects are fibred categories over `C`. -/
 structure FibredCategoryOver (C : Cat.{v, u}) where
   underlying : CategoryOver C
-  isFibred : IsFibredCategoryOver underlying
+  isFibred : (structureFunctor underlying).IsFibered
 
 /- A source 1-morphism is a functor over `C` which preserves strongly
    cartesian arrows.  The base morphism in the target is written using the
@@ -398,7 +392,7 @@ theorem equivalence_over_preserves_stronglyCartesian
 theorem fibred_iff_equivalent_over
     {C : Cat.{v, u}} {X Y : CategoryOver C}
     (h : IsEquivalentOver X Y) :
-    IsFibredCategoryOver X ↔ IsFibredCategoryOver Y := by
+    (structureFunctor X).IsFibered ↔ (structureFunctor Y).IsFibered := by
   sorry
 
 /-! ## The 2-fibre product statement -/
@@ -452,6 +446,7 @@ theorem fibred_fibre_product_goes_up
 theorem stronglyCartesian_fibre_product
     {X C : Type*} [Category* X] [Category* C]
     (p : X ⥤ C) {x y z : X} (f : x ⟶ y) (g : z ⟶ y)
+    [Functor.IsStronglyCartesian p (p.map f) f]
     {P : C} {π₁ : P ⟶ p.obj x} {π₂ : P ⟶ p.obj z}
     (hP : IsPullback π₁ π₂ (p.map f) (p.map g))
     (w : X) (a : w ⟶ z)

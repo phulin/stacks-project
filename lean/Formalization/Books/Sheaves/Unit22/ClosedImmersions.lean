@@ -194,7 +194,8 @@ theorem closedAlgebraicSheafDirectImage_stalk_outside
 
 /-- The generic closed direct image is fully faithful. -/
 theorem closedAlgebraicSheafDirectImage_fullFaithful
-    (C : Type u) [Category.{v} C] {X : TopCat.{v}} (Z : Set X) (hZ : IsClosed Z) :
+    (C : Type u) [Category.{v} C] [HasTerminal C]
+    {X : TopCat.{v}} (Z : Set X) (hZ : IsClosed Z) :
     Nonempty (closedAlgebraicSheafDirectImage C Z hZ).FullyFaithful := by
   sorry
 

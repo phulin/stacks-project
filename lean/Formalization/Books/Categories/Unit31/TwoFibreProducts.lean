@@ -22,6 +22,17 @@ open CategoryTheory.ObjectProperty
 
 universe w v u w' v' u'
 
+/-! ## Final objects -/
+
+/-- A final object in a `(2, 1)`-category in the sense used by the source.
+
+The explicit local-groupoid argument records the source's ambient
+`(2, 1)`-category hypothesis without introducing a second typeclass. -/
+def IsFinalObject {C : Type u} [Bicategory.{w, v} C]
+    (_hC : Bicategory.IsLocallyGroupoid C) (x : C) : Prop :=
+  ∀ y : C, Nonempty (y ⟶ x) ∧
+    ∀ (f g : y ⟶ x), ∃! η : f ⟶ g, IsIso η
+
 /-! ## 2-commutative diagrams -/
 
 /-- A square in a bicategory is 2-commutative when its two composites are
@@ -222,22 +233,24 @@ abbrev IsIsoTwoHom {D E : TwoCommutativeDiagram f g}
     {h k : D ⟶₂ E} (η : TwoHom h k) : Prop :=
   @IsIso (D ⟶₂ E) (TwoCommutativeDiagram.homCategory D E) h k η
 
-abbrev IsFinalTwoCommutativeDiagram (x : TwoCommutativeDiagram f g) : Prop :=
-  ∀ y : TwoCommutativeDiagram f g, Nonempty (y ⟶₂ x) ∧
-    ∀ (h k : y ⟶₂ x), ∃! η : TwoHom h k, IsIsoTwoHom η
-
 /- The source's horizontal-composition formulas above are the data of the
    2-category.  The coherence laws are recorded as the following proof-stage
-   interface rather than by introducing a parallel bicategory instance. -/
+   interface, and the chosen structure is installed as the usable bicategory
+   instance below. -/
 theorem twoCommutativeDiagram_bicategory_exists :
     Nonempty (Bicategory (TwoCommutativeDiagram f g)) := by
   sorry
 
 /-- A chosen bicategory structure on the displayed diagram data. -/
-@[instance_reducible]
-noncomputable def twoCommutativeDiagramBicategory :
+noncomputable instance twoCommutativeDiagramBicategory :
     Bicategory (TwoCommutativeDiagram f g) :=
   Classical.choice twoCommutativeDiagram_bicategory_exists
+
+abbrev IsFinalTwoCommutativeDiagram
+    (_hC : Bicategory.IsLocallyGroupoid C)
+    (x : TwoCommutativeDiagram f g) : Prop :=
+  ∀ y : TwoCommutativeDiagram f g, Nonempty (y ⟶₂ x) ∧
+    ∀ (h k : y ⟶₂ x), ∃! η : TwoHom h k, IsIsoTwoHom η
 
 /-- In a locally groupoidal ambient bicategory, the leg 2-morphisms in a
 diagram morphism are invertible. -/
@@ -265,67 +278,66 @@ theorem twoCommutativeDiagram_is_two_one
 
 end TwoCommutativeDiagram
 
-/-! ## Final objects and abstract 2-fibre products -/
-
-/-- A final object in a bicategory in the sense used by the source.
-
-The `IsIso` predicate records the source's `(2, 1)`-category hypothesis
-directly, so the declaration remains meaningful without making local
-groupoidness an additional typeclass argument. -/
-def IsFinalObject {C : Type u} [Bicategory.{w, v} C] (x : C) : Prop :=
-  ∀ y : C, Nonempty (y ⟶ x) ∧
-    ∀ (f g : y ⟶ x), ∃! η : f ⟶ g, IsIso η
+/-! ## Abstract 2-fibre products -/
 
 /-- A 2-fibre product is a final 2-commutative diagram. -/
 structure TwoFibreProduct
     {C : Type u} [Bicategory.{w, v} C] [Bicategory.Strict C]
+    (hC : Bicategory.IsLocallyGroupoid C)
     {X Y Z : C} (f : X ⟶ Z) (g : Y ⟶ Z) where
   diagram : TwoCommutativeDiagram f g
-  isFinal : TwoCommutativeDiagram.IsFinalTwoCommutativeDiagram diagram
+  isFinal : TwoCommutativeDiagram.IsFinalTwoCommutativeDiagram hC diagram
 
 abbrev twoFibreProductObject
     {C : Type u} [Bicategory.{w, v} C] [Bicategory.Strict C]
+    (hC : Bicategory.IsLocallyGroupoid C)
     {X Y Z : C} {f : X ⟶ Z} {g : Y ⟶ Z}
-    (P : TwoFibreProduct f g) : C :=
+    (P : TwoFibreProduct hC f g) : C :=
   P.diagram.vertex
 
 abbrev twoFibreProductLeft
     {C : Type u} [Bicategory.{w, v} C] [Bicategory.Strict C]
+    (hC : Bicategory.IsLocallyGroupoid C)
     {X Y Z : C} {f : X ⟶ Z} {g : Y ⟶ Z}
-    (P : TwoFibreProduct f g) : P.diagram.vertex ⟶ X :=
+    (P : TwoFibreProduct hC f g) : P.diagram.vertex ⟶ X :=
   P.diagram.left
 
 abbrev twoFibreProductRight
     {C : Type u} [Bicategory.{w, v} C] [Bicategory.Strict C]
+    (hC : Bicategory.IsLocallyGroupoid C)
     {X Y Z : C} {f : X ⟶ Z} {g : Y ⟶ Z}
-    (P : TwoFibreProduct f g) : P.diagram.vertex ⟶ Y :=
+    (P : TwoFibreProduct hC f g) : P.diagram.vertex ⟶ Y :=
   P.diagram.right
 
 abbrev twoFibreProductComparison
     {C : Type u} [Bicategory.{w, v} C] [Bicategory.Strict C]
+    (hC : Bicategory.IsLocallyGroupoid C)
     {X Y Z : C} {f : X ⟶ Z} {g : Y ⟶ Z}
-    (P : TwoFibreProduct f g) :
+    (P : TwoFibreProduct hC f g) :
     P.diagram.left ≫ f ⟶ P.diagram.right ≫ g :=
   P.diagram.comparison
 
 /-- Existence of a 2-fibre product for a fixed pair of 1-morphisms. -/
 abbrev HasTwoFibreProduct
     {C : Type u} [Bicategory.{w, v} C] [Bicategory.Strict C]
+    (hC : Bicategory.IsLocallyGroupoid C)
     {X Y Z : C} (f : X ⟶ Z) (g : Y ⟶ Z) : Prop :=
-  Nonempty (TwoFibreProduct f g)
+  Nonempty (TwoFibreProduct hC f g)
 
 /-- A chosen 2-fibre product, when one exists. -/
 noncomputable def chosenTwoFibreProduct
     {C : Type u} [Bicategory.{w, v} C] [Bicategory.Strict C]
+    (hC : Bicategory.IsLocallyGroupoid C)
     {X Y Z : C} {f : X ⟶ Z} {g : Y ⟶ Z}
-    (h : HasTwoFibreProduct f g) : TwoFibreProduct f g :=
+    (h : HasTwoFibreProduct hC f g) : TwoFibreProduct hC f g :=
   Classical.choice h
 
 /-- The universal-property map supplied by a 2-fibre product. -/
 theorem twoFibreProduct_universal_property
     {C : Type u} [Bicategory.{w, v} C] [Bicategory.Strict C]
+    (hC : Bicategory.IsLocallyGroupoid C)
     {X Y Z : C} {f : X ⟶ Z} {g : Y ⟶ Z}
-    (P : TwoFibreProduct f g)
+    (P : TwoFibreProduct hC f g)
     {W : C}
     (a : W ⟶ X) (b : W ⟶ Y)
     (φ : a ≫ f ⟶ b ≫ g) [IsIso φ] :
@@ -349,8 +361,9 @@ theorem twoFibreProduct_universal_property
 /-- The uniqueness-up-to-unique-2-isomorphism part of the universal property. -/
 theorem twoFibreProduct_unique_up_to_unique_two_iso
     {C : Type u} [Bicategory.{w, v} C] [Bicategory.Strict C]
+    (hC : Bicategory.IsLocallyGroupoid C)
     {X Y Z : C} {f : X ⟶ Z} {g : Y ⟶ Z}
-    (P : TwoFibreProduct f g)
+    (P : TwoFibreProduct hC f g)
     (D : TwoCommutativeDiagram f g) (h₁ h₂ : D ⟶₂ P.diagram) :
     ∃! η : h₁ ⟶ h₂, TwoCommutativeDiagram.IsIsoTwoHom η :=
   (P.isFinal D).2 h₁ h₂
@@ -487,6 +500,16 @@ def IsTwoCartesianSquare
           a b φ γ₂ α₂ β₂ →
       Nonempty (γ₁ ≅ γ₂))
 
+/-- The canonical comparison isomorphism of the iso-comma construction. -/
+noncomputable def isoCommaComparisonIso
+    {A : Type*} [Category* A]
+    {B : Type*} [Category* B]
+    {C : Type*} [Category* C]
+    (F : A ⥤ C) (G : B ⥤ C) :
+    isoCommaLeft F G ⋙ F ≅ isoCommaRight F G ⋙ G :=
+  letI : IsIso (isoCommaComparison F G) := isoCommaComparison_isIso F G
+  asIso (isoCommaComparison F G)
+
 /- The objectwise isomorphisms in the comma category assemble to the
    comparison isomorphism used by the category-valued universal property. -/
 theorem isoCommaComparisonIso_exists
@@ -494,16 +517,8 @@ theorem isoCommaComparisonIso_exists
     {B : Type*} [Category* B]
     {C : Type*} [Category* C]
     (F : A ⥤ C) (G : B ⥤ C) :
-    Nonempty (isoCommaLeft F G ⋙ F ≅ isoCommaRight F G ⋙ G) := by
-  sorry
-
-noncomputable def isoCommaComparisonIso
-    {A : Type*} [Category* A]
-    {B : Type*} [Category* B]
-    {C : Type*} [Category* C]
-    (F : A ⥤ C) (G : B ⥤ C) :
-    isoCommaLeft F G ⋙ F ≅ isoCommaRight F G ⋙ G :=
-  Classical.choice (isoCommaComparisonIso_exists F G)
+    Nonempty (isoCommaLeft F G ⋙ F ≅ isoCommaRight F G ⋙ G) :=
+  ⟨isoCommaComparisonIso F G⟩
 
 theorem isoComma_is_category_twoFibreProduct
     {A : Type*} [Category* A]
@@ -748,13 +763,14 @@ noncomputable def isoCommaAfterMapToDiagonal
     (F : A ⥤ C) (G : B ⥤ C) (H : C ⥤ D) :
     IsoComma (F ⋙ H) (G ⋙ H) ⥤ IsoComma H H :=
   isoCommaMap H H (F ⋙ H) (G ⋙ H) F G (𝟭 D)
-    (Functor.rightUnitor (G ⋙ H))
+    (Functor.rightUnitor (G ⋙ H)).symm
     (Functor.rightUnitor (F ⋙ H))
 
-/- The source only uses the canonical comparison between the two routes
-   around this square.  Its existence is the objectwise comma calculation;
-   keeping it as a choice leaves the square's universal-property statement
-   independent of a particular normalization of associators and unitors. -/
+/- The source only needs a comparison between the two routes around this
+   square.  Its existence is the objectwise comma calculation; keeping a
+   chosen comparison separate leaves the square's universal-property
+   statement independent of a particular normalization of associators and
+   unitors. -/
 theorem isoComma_after_map_comparison_exists
     {A : Type*} [Category* A]
     {B : Type*} [Category* B]

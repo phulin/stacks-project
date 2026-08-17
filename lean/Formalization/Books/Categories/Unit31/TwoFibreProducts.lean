@@ -1698,7 +1698,9 @@ theorem isoComma_erase_factor
             intro z z' f
             apply ObjectProperty.hom_ext
             apply Comma.hom_ext
-            · apply ObjectProperty.hom_ext
+            · dsimp [Functor.comp, Functor.id, forward, inverse,
+                ObjectProperty.isoMk, Comma.isoMk]
+              apply ObjectProperty.hom_ext
               apply Comma.hom_ext
               · simp [eraseFunctor, eraseInverse, Comma.isoMk, ObjectProperty.isoMk]
               · dsimp [Functor.comp, eraseFunctor, eraseInverse, isoCommaRight, isoCommaLeft,
@@ -2078,21 +2080,23 @@ theorem isoComma_diagonal_two
   let unitIso : 𝟭 (IsoComma (Functor.prod' G₁ G₂) (Functor.diag S)) ≅
       forward ⋙ inverse :=
     NatIso.ofComponents (fun z => by
-      letI : IsIso z.obj.hom := by
+      have hz : IsIso z.obj.hom := by
         change IsIso z.obj.hom
         exact z.property
+      letI : IsIso z.obj.hom := hz
       letI : IsIso z.obj.hom.2 :=
-        (isIso_prod_iff (f := z.obj.hom)).mp z.property |>.2
+        (isIso_prod_iff (f := z.obj.hom)).mp hz |>.2
       letI : IsIso (forward.obj z).obj.hom := by
         change IsIso (forward.obj z).obj.hom
         exact (forward.obj z).property
       letI : IsIso (forward.obj z).obj.hom.1 :=
         (isIso_prod_iff (f := (forward.obj z).obj.hom)).mp
           (forward.obj z).property |>.1
-      have hInv : (asIso (forward.obj z).obj.hom.1).inv =
+      have hInv : inv (forward.obj z).obj.hom.1 =
           𝟙 (forward.obj z).obj.left.obj.left := by
-        apply (cancel_mono (asIso (forward.obj z).obj.hom.1).hom).1
-        simp
+        apply IsIso.inv_eq_of_hom_inv_id
+        dsimp [forward, CategoryTheory.Prod.mkHom]
+        exact Category.id_comp _
       dsimp [forward] at hInv
       exact ObjectProperty.isoMk _
         (Comma.isoMk (Iso.refl _) (asIso z.obj.hom.2).symm (by
@@ -2100,18 +2104,33 @@ theorem isoComma_diagonal_two
           apply CategoryTheory.Prod.hom_ext
           · dsimp [CategoryTheory.Prod.mkHom]
             dsimp only [id] at hInv ⊢
-            rw [← Category.assoc, ← G₁.map_comp]
-            rw [Category.id_comp]
-            rw [hInv, G₁.map_id, Category.id_comp]
+            have hInv₁ : G₁.map (inv (𝟙 z.obj.left)) = 𝟙 _ := by
+              calc
+                G₁.map (inv (𝟙 z.obj.left)) = G₁.map (𝟙 z.obj.left) :=
+                  congrArg G₁.map hInv
+                _ = 𝟙 _ := G₁.map_id _
+            change G₁.map (𝟙 z.obj.left) ≫
+                G₁.map (inv (𝟙 z.obj.left)) ≫ z.obj.hom.1 ≫
+                  inv z.obj.hom.2 = z.obj.hom.1 ≫ inv z.obj.hom.2
+            rw [G₁.map_id, Category.id_comp, hInv₁, Category.id_comp]
           · dsimp [CategoryTheory.Prod.mkHom]
             dsimp only [id] at hInv ⊢
-            rw [hInv, G₂.map_id]
+            have hInv₂ : G₂.map (inv (𝟙 z.obj.left)) = 𝟙 _ := by
+              calc
+                G₂.map (inv (𝟙 z.obj.left)) = G₂.map (𝟙 z.obj.left) :=
+                  congrArg G₂.map hInv
+                _ = 𝟙 _ := G₂.map_id _
+            change G₂.map (𝟙 z.obj.left) ≫
+                G₂.map (inv (𝟙 z.obj.left)) =
+              z.obj.hom.2 ≫ inv z.obj.hom.2
+            rw [G₂.map_id, Category.id_comp, hInv₂]
             simp))) (by
             intro z z' f
             apply ObjectProperty.hom_ext
             apply Comma.hom_ext
-            · apply ObjectProperty.hom_ext
-              apply Comma.hom_ext <;> simp
+            · dsimp [Functor.comp, Functor.id, forward, inverse,
+                ObjectProperty.isoMk, Comma.isoMk]
+              rw [Category.comp_id, Category.id_comp]
             · have : IsIso z.obj.hom := z.property
               have : IsIso z'.obj.hom := z'.property
               have : IsIso z.obj.hom.2 :=
@@ -2126,10 +2145,11 @@ theorem isoComma_diagonal_two
                 simp only [Category.assoc]
                 rw [h₂]
                 simp
-              dsimp [Functor.comp, forward, inverse]
-              apply CategoryTheory.Prod.hom_ext
-              · simp
-              · simpa using h₂')
+              dsimp [Functor.comp, forward, inverse, ObjectProperty.isoMk,
+                Comma.isoMk, asIso]
+              change f.hom.right ≫ inv z'.obj.hom.2 =
+                inv z.obj.hom.2 ≫ G₂.map f.hom.left
+              exact h₂')
   let counitIso : inverse ⋙ forward ≅
       𝟭 (IsoComma (isoCommaPair G₁ G₂) (Functor.diag C)) :=
     NatIso.ofComponents (fun z => by
@@ -2144,20 +2164,22 @@ theorem isoComma_diagonal_two
         (Comma.isoMk
           (ObjectProperty.isoMk _
             (Comma.isoMk p.symm q.symm (by
-              dsimp [p, q, forward, inverse]
-              simp only [asIso_inv]
+              dsimp [forward, inverse]
+              change G₁.map p.inv ≫ z.obj.left.obj.hom =
+                (G₁.map p.inv ≫ z.obj.left.obj.hom ≫
+                  inv (G₂.map q.inv)) ≫ G₂.map q.inv
+              letI : IsIso q.inv := q.isIso_inv
+              letI : IsIso (G₂.map q.inv) := by infer_instance
               simp [Category.assoc])))
           (Iso.refl _)
           (by
             dsimp [Functor.comp, Functor.id, forward, inverse, isoCommaPair, isoCommaLeft,
               isoCommaRight, ObjectProperty.isoMk, Comma.isoMk]
             apply CategoryTheory.Prod.hom_ext
-            · simp [id, p, q, Functor.comp, Functor.id, isoCommaPair, isoCommaLeft,
-                isoCommaRight, ObjectProperty.isoMk, Comma.isoMk,
-                asIso_inv, asIso_hom, Category.assoc]
-            · simp [id, p, q, Functor.comp, Functor.id, isoCommaPair, isoCommaLeft,
-                isoCommaRight, ObjectProperty.isoMk, Comma.isoMk,
-                asIso_inv, asIso_hom, Category.assoc]))) (by
+            · change p.inv ≫ p.hom = 𝟙 _
+              exact p.inv_hom_id
+            · change q.inv ≫ q.hom = 𝟙 _
+              exact q.inv_hom_id))) (by
               intro z z' f
               dsimp [Functor.comp, Functor.id, forward, inverse, isoCommaPair, isoCommaLeft,
                 isoCommaRight, ObjectProperty.isoMk, Comma.isoMk]

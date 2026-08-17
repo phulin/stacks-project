@@ -70,8 +70,8 @@ theorem constructibleTopology_is_coarsest_for_constructible_clopen
     (∀ E : Set X, IsConstructible E →
       IsOpen[constructibleTopology X] E ∧ IsClosed[constructibleTopology X] E) ∧
       ∀ t : TopologicalSpace X,
-        (∀ E : Set X, IsConstructible E → IsOpen[t] E ∧ IsClosed[t] E) →
-          constructibleTopology X ≤ t := by
+    (∀ E : Set X, IsConstructible E → IsOpen[t] E ∧ IsClosed[t] E) →
+          t ≤ constructibleTopology X := by
   sorry
 
 /-- Open subsets of the constructible topology are unions of constructible

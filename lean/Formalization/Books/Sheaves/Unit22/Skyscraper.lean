@@ -124,6 +124,9 @@ prescribed stalk module even though the construction itself is noncomputable.
 structure ModuleSkyscraperData {X : TopCat.{v}} (O : RingSheaf X) (x : X)
     (A : ModuleCat.{v} (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x)) where
   sheaf : Mod O
+  underlying_iso :
+    Nonempty (sheaf.val.presheaf ≅
+      (abelianSkyscraperSheaf x (AddCommGrpCat.of (↑A))).presheaf)
   stalk_at_support :
     Nonempty (ModuleCat.of (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x)
       (↑(TopCat.Presheaf.stalk (C := AddCommGrpCat.{v})

@@ -112,7 +112,7 @@ theorem openSheafRestriction_directImage_iso {C : Type u} [Category.{v} C]
 /-- Direct image along an open inclusion is fully faithful. -/
 theorem openSheafDirectImage_fullFaithful (C : Type u) [Category.{v} C]
     {X : TopCat.{v}} (U : Opens X) :
-    (openSheafDirectImage C U).Full := by
+    Nonempty (openSheafDirectImage C U).FullyFaithful := by
   sorry
 
 /-! ## Extension by the initial object -/
@@ -342,11 +342,20 @@ noncomputable def ringedOpenInclusion (X : RingedSpace.{v}) (U : Opens X.carrier
         ((Topology.IsOpenEmbedding.sheafPullbackIso (A := RingCat) hU).app
           X.structureSheaf).hom
 
-/-- Extension by zero for modules on an open subspace. -/
-theorem exists_openModulePresheafExtensionByZero (X : RingedSpace.{v})
+ /-- A module extension by zero together with its underlying additive
+presheaf identification. -/
+ structure OpenModulePresheafExtensionData (X : RingedSpace.{v})
+    (U : Opens X.carrier) where
+  functor : PMod (ringedOpenSubspace X U).structureSheaf.obj ⥤
+    PMod X.structureSheaf.obj
+  underlying_obj_iso : ∀ F,
+    Nonempty ((functor.obj F).presheaf ≅
+      (openPresheafExtensionByInitial AddCommGrpCat U).obj F.presheaf)
+
+ /-- Extension by zero for modules on an open subspace. -/
+ theorem exists_openModulePresheafExtensionByZero (X : RingedSpace.{v})
     (U : Opens X.carrier) :
-    Nonempty (PMod (ringedOpenSubspace X U).structureSheaf.obj ⥤
-      PMod X.structureSheaf.obj) := by
+    Nonempty (OpenModulePresheafExtensionData X U) := by
   sorry
 
 /-! The module-valued presheaf construction is the initial-object extension
@@ -356,7 +365,7 @@ noncomputable def openModulePresheafExtensionByZero (X : RingedSpace.{v})
     (U : Opens X.carrier) :
     PMod (ringedOpenSubspace X U).structureSheaf.obj ⥤
       PMod X.structureSheaf.obj :=
-  Classical.choice (exists_openModulePresheafExtensionByZero X U)
+  (Classical.choice (exists_openModulePresheafExtensionByZero X U)).functor
 
 /-- Extension by zero for modules on an open subspace. -/
 noncomputable def openModuleExtensionFunctor (X : RingedSpace.{v}) (U : Opens X.carrier) :
@@ -396,19 +405,20 @@ noncomputable def openModuleExtensionAdjunction (X : RingedSpace.{v}) (U : Opens
 /-- Module stalks of extension by zero vanish outside the open. -/
 theorem openModuleExtension_stalk_zero (X : RingedSpace.{v}) (U : Opens X.carrier)
     (F : Mod (ringedOpenSubspace X U).structureSheaf) (x : X.carrier) (hx : x ∉ U) :
-    Nonempty (TopCat.Presheaf.stalk (C := Type v)
-      (((openModuleExtensionFunctor X U).obj F).val.presheaf ⋙
-        (CategoryTheory.forget AddCommGrpCat)) x ≃ PUnit.{v}) := by
+    Nonempty ((moduleStalkFunctor X.structureSheaf x).obj
+      ((openModuleExtensionFunctor X U).obj F) ≅ 0) := by
   sorry
 
 /-- Module stalks of extension by zero agree with the original stalk on the open. -/
 theorem openModuleExtension_stalk_iso (X : RingedSpace.{v}) (U : Opens X.carrier)
     (F : Mod (ringedOpenSubspace X U).structureSheaf) (x : X.carrier) (hx : x ∈ U) :
-    Nonempty (TopCat.Presheaf.stalk (C := Type v)
-      (((openModuleExtensionFunctor X U).obj F).val.presheaf ⋙
-        (CategoryTheory.forget AddCommGrpCat)) x ≃
-      TopCat.Presheaf.stalk (C := Type v)
-        (F.val.presheaf ⋙ (CategoryTheory.forget AddCommGrpCat)) ⟨x, hx⟩) := by
+    Nonempty ((moduleStalkFunctor X.structureSheaf x).obj
+      ((openModuleExtensionFunctor X U).obj F) ≅
+      (ModuleCat.restrictScalars
+        (moduleSheafFMapStalkScalarMap
+          (ringedOpenInclusion X U).sharp ⟨x, hx⟩).hom).obj
+        ((moduleStalkFunctor (ringedOpenSubspace X U).structureSheaf
+          ⟨x, hx⟩).obj F)) := by
   sorry
 
 /-- The module restriction of extension by zero is the identity. -/
@@ -428,7 +438,7 @@ def OpenEmptyStalkCondition {X : TopCat.{v}} (U : Opens X)
 /-- Extension by the empty set is fully faithful. -/
 theorem openSetSheafExtension_fullFaithful {X : TopCat.{v}} (U : Opens X)
     [HasWeakSheafify (Opens.grothendieckTopology X) (Type v)] :
-    (openSetSheafExtensionByEmpty U).Full := by
+    Nonempty (openSetSheafExtensionByEmpty U).FullyFaithful := by
   sorry
 
 /-- The essential image of `j_!` is characterized by empty outside stalks. -/
@@ -442,7 +452,7 @@ theorem openSetSheafExtension_essentialImage {X : TopCat.{v}} (U : Opens X)
 /-- Extension by zero for abelian sheaves is fully faithful. -/
 theorem openAbelianSheafExtension_fullFaithful {X : TopCat.{v}} (U : Opens X)
     [HasWeakSheafify (Opens.grothendieckTopology X) AddCommGrpCat] :
-    (openAbelianSheafExtensionFunctor U).Full := by
+    Nonempty (openAbelianSheafExtensionFunctor U).FullyFaithful := by
   sorry
 
 /-- The abelian essential image of extension by zero is characterized by
@@ -468,7 +478,7 @@ def OpenInitialStalkCondition (C : Type u) [Category.{v} C]
 theorem openAlgebraicSheafExtension_fullFaithful (C : Type u) [Category.{v} C]
     [HasInitial C] {X : TopCat.{v}} (U : Opens X)
     [HasWeakSheafify (Opens.grothendieckTopology X) C] :
-    (openAlgebraicSheafExtensionFunctor C U).Full := by
+    Nonempty (openAlgebraicSheafExtensionFunctor C U).FullyFaithful := by
   sorry
 
 theorem openAlgebraicSheafExtension_essentialImage (C : Type u)
@@ -482,7 +492,7 @@ theorem openAlgebraicSheafExtension_essentialImage (C : Type u)
 
 /-- Extension by zero for modules is fully faithful. -/
 theorem openModuleExtension_fullFaithful (X : RingedSpace.{v}) (U : Opens X.carrier) :
-    (openModuleExtensionFunctor X U).Full := by
+    Nonempty (openModuleExtensionFunctor X U).FullyFaithful := by
   sorry
 
 /-- The module essential image of extension by zero is characterized by zero

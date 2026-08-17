@@ -208,8 +208,8 @@ noncomputable def directedColimitSectionsMap {X : TopCat.{v}} {I : Type v}
 /-- All transition maps in a directed system are injective on sections over
 an open. -/
 def DirectedSectionTransitionsInjective {X : TopCat.{v}} {I : Type v}
-    [Preorder I] (F : I ⥤ TopCat.Sheaf (Type v) X) (U : Opens X) : Prop :=
-  ∀ {i j : I} (hij : i ≤ j),
+    [Preorder I] (F : I ⥤ TopCat.Sheaf (Type v) X) : Prop :=
+  ∀ {i j : I} (hij : i ≤ j) (U : Opens X),
     Function.Injective ((F.map (homOfLE hij)).1.app (op U))
 
 /-- A finite open cover with quasi-compact pairwise intersections, cofinal
@@ -230,7 +230,7 @@ theorem directedColimitSectionsMap_injective_of_injective
     [HasColimit F]
     [HasColimit (F ⋙ TopCat.Sheaf.forget (Type v) X ⋙
       (evaluation (Opens X)ᵒᵖ (Type v)).obj (op U))]
-    (hF : DirectedSectionTransitionsInjective F U) :
+    (hF : DirectedSectionTransitionsInjective F) :
     Function.Injective (directedColimitSectionsMap F U) := by
   sorry
 
@@ -254,7 +254,7 @@ theorem directedColimitSectionsMap_bijective_of_quasiCompact_of_injective
     [HasColimit (F ⋙ TopCat.Sheaf.forget (Type v) X ⋙
       (evaluation (Opens X)ᵒᵖ (Type v)).obj (op U))]
     (hU : QuasiCompactOpen U)
-    (hF : DirectedSectionTransitionsInjective F U) :
+    (hF : DirectedSectionTransitionsInjective F) :
     Function.Bijective (directedColimitSectionsMap F U) := by
   sorry
 
@@ -315,6 +315,11 @@ structure DirectedColimitSectionsCounterexample where
   s1 : X.carrier
   s2 : X.carrier
   xi : ℕ → X.carrier
+  points : ∀ x : X.carrier, x = s1 ∨ x = s2 ∨ ∃ n, x = xi n
+  s1_ne_s2 : s1 ≠ s2
+  xi_injective : Function.Injective xi
+  s1_ne_xi : ∀ n, s1 ≠ xi n
+  s2_ne_xi : ∀ n, s2 ≠ xi n
   open_iff : ∀ U : Set X.carrier, IsOpen U ↔
     (U s1 → ∀ n, U (xi n)) ∧ (U s2 → ∀ n, U (xi n))
   U : ℕ → Opens X
@@ -377,13 +382,49 @@ noncomputable abbrev spectralInverseLimitProjection {I : Type u} [Category.{w} I
     spectralInverseLimitSpace X ⟶ X.obj i :=
   limit.π X i
 
+
+/-! The colimit transition maps go from an arrow `a : j ⟶ i` to a
+refinement `a ≫ b : k ⟶ i`; hence the useful indexing category is the
+opposite of the costructured-arrow category. -/
+
+abbrev spectralPullbackSectionsIndex
+    {I : Type u} [Category.{w} I] (i : I) :=
+  (CostructuredArrow (𝟭 I) i)ᵒᵖ
+
 /-- The section type attached to an arrow `a : j ⟶ i` in the inverse system. -/
 noncomputable abbrev spectralPullbackSectionsAt
     {I : Type u} [Category.{w} I] (X : I ⥤ TopCat.{v}) (i : I)
     (G : TopCat.Sheaf (Type v) (X.obj i)) (Ui : Opens (X.obj i))
-    (a : CostructuredArrow (𝟭 I) i) : Type v :=
-  ((pullbackSheaf (X.map a.hom)).obj G).presheaf.obj
-    (op ((Opens.map (X.map a.hom)).obj Ui))
+    (a : spectralPullbackSectionsIndex i) : Type v :=
+  ((pullbackSheaf (X.map a.unop.hom)).obj G).presheaf.obj
+    (op ((Opens.map (X.map a.unop.hom)).obj Ui))
+
+/-- The canonical transition on sections induced by refinement of inverse-system
+arrows. -/
+noncomputable def spectralPullbackSectionsTransition
+    {I : Type u} [Category.{w} I] (X : I ⥤ TopCat.{v}) (i : I)
+    (G : TopCat.Sheaf (Type v) (X.obj i)) (Ui : Opens (X.obj i))
+    {a b : spectralPullbackSectionsIndex i} (h : a ⟶ b) :
+    spectralPullbackSectionsAt X i G Ui a →
+      spectralPullbackSectionsAt X i G Ui b := by
+  let f := X.map h.unop.left
+  let fa := X.map a.unop.hom
+  let fb := X.map b.unop.hom
+  have hcomp : f ≫ fa = fb := by
+    rw [← X.map_comp]
+    simpa using congrArg X.map (CostructuredArrow.w h.unop)
+  let ψ : (pullbackSheaf f).obj ((pullbackSheaf fa).obj G) ⟶
+      (pullbackSheaf fb).obj G := by
+    rw [← hcomp]
+    exact (pullbackSheafCompIso f fa).inv.app G
+  let ξ : FMap f ((pullbackSheaf fa).obj G) ((pullbackSheaf fb).obj G) :=
+    pullbackSheafHomEquiv f _ _ ψ
+  intro s
+  have hopen : (Opens.map f).obj ((Opens.map fa).obj Ui) =
+      (Opens.map fb).obj Ui := by
+    rw [← Opens.map_comp_obj, hcomp]
+  simpa [spectralPullbackSectionsAt, f, fa, fb, ψ, ξ, fMapAt, hopen] using
+    fMapAt ξ ((Opens.map fa).obj Ui) s
 
 /-- The diagram of pullback sections indexed by all arrows into `i`.
 Its object part is the displayed source expression; the morphism part uses
@@ -391,8 +432,11 @@ the canonical pullback comparison for a map of arrows. -/
 structure SpectralPullbackSectionsDiagramData
     {I : Type u} [Category.{w} I] (X : I ⥤ TopCat.{v}) (i : I)
     (G : TopCat.Sheaf (Type v) (X.obj i)) (Ui : Opens (X.obj i)) where
-  diagram : CostructuredArrow (𝟭 I) i ⥤ Type v
+  diagram : spectralPullbackSectionsIndex i ⥤ Type v
   obj_eq : ∀ a, diagram.obj a = spectralPullbackSectionsAt X i G Ui a
+  map_eq : ∀ {a b} (h : a ⟶ b),
+    eqToHom (obj_eq a).symm ≫ diagram.map h ≫ eqToHom (obj_eq b) =
+      spectralPullbackSectionsTransition X i G Ui h
 
 theorem exists_spectralPullbackSectionsDiagram
     {I : Type u} [Category.{w} I] (X : I ⥤ TopCat.{v}) (i : I)
@@ -406,13 +450,13 @@ the canonical pullback comparison for a map of arrows. -/
 noncomputable def spectralPullbackSectionsDiagram
     {I : Type u} [Category.{w} I] (X : I ⥤ TopCat.{v}) (i : I)
     (G : TopCat.Sheaf (Type v) (X.obj i)) (Ui : Opens (X.obj i)) :
-    CostructuredArrow (𝟭 I) i ⥤ Type v :=
+    spectralPullbackSectionsIndex i ⥤ Type v :=
   (Classical.choice (exists_spectralPullbackSectionsDiagram X i G Ui)).diagram
 
 theorem spectralPullbackSectionsDiagram_obj
     {I : Type u} [Category.{w} I] (X : I ⥤ TopCat.{v}) (i : I)
     (G : TopCat.Sheaf (Type v) (X.obj i)) (Ui : Opens (X.obj i))
-    (a : CostructuredArrow (𝟭 I) i) :
+    (a : spectralPullbackSectionsIndex i) :
     (spectralPullbackSectionsDiagram X i G Ui).obj a =
       spectralPullbackSectionsAt X i G Ui a :=
   (Classical.choice (exists_spectralPullbackSectionsDiagram X i G Ui)).obj_eq a
@@ -461,14 +505,67 @@ structure SpectralSheafSystem {I : Type u} [Category.{w} I]
   map_comp : ∀ {k j i} (b : k ⟶ j) (a : j ⟶ i),
     HEq (map (b ≫ a)) (fMapComp (map b) (map a))
 
+/-- The canonical sheaf transition associated to an arrow in the inverse
+system. -/
+noncomputable def spectralSystemSheafTransition
+    {I : Type u} [Category.{w} I] [IsCofiltered I]
+    {X : I ⥤ TopCat.{v}} [HasLimit X]
+    (S : SpectralSheafSystem X) {j i : I} (a : j ⟶ i) :
+    (pullbackSheaf (spectralInverseLimitProjection X i)).obj (S.sheaf i) ⟶
+      (pullbackSheaf (spectralInverseLimitProjection X j)).obj (S.sheaf j) := by
+  let pj := spectralInverseLimitProjection X j
+  let fa := X.map a
+  let ψ : (pullbackSheaf fa).obj (S.sheaf i) ⟶ S.sheaf j :=
+    (fMapPullbackHomEquiv fa (S.sheaf i) (S.sheaf j)).symm (S.map a)
+  have hpi : pj ≫ fa = spectralInverseLimitProjection X i := limit.w X a
+  let e :
+      (pullbackSheaf (spectralInverseLimitProjection X i)).obj (S.sheaf i) ⟶
+        (pullbackSheaf (pj ≫ fa)).obj (S.sheaf i) :=
+    eqToHom (congrArg (fun q : spectralInverseLimitSpace X ⟶ X.obj i =>
+      (pullbackSheaf q).obj (S.sheaf i)) hpi.symm)
+  exact e ≫ (pullbackSheafCompIso pj fa).hom.app (S.sheaf i) ≫
+    (pullbackSheaf pj).map ψ
+
+/-- The canonical diagram of pullbacks of a spectral sheaf system. -/
+noncomputable def spectralSystemSheafDiagram
+    {I : Type u} [Category.{w} I] [IsCofiltered I]
+    {X : I ⥤ TopCat.{v}} [HasLimit X]
+    (S : SpectralSheafSystem X) : Iᵒᵖ ⥤
+      TopCat.Sheaf (Type v) (spectralInverseLimitSpace X) where
+  obj i :=
+    (pullbackSheaf (spectralInverseLimitProjection X i.unop)).obj
+      (S.sheaf i.unop)
+  map a := spectralSystemSheafTransition S a.unop
+  map_id := by
+    intro i
+    sorry
+  map_comp := by
+    intro i j k a b
+    sorry
+
+/-- A colimit presentation of the sheaf on the inverse-limit space. -/
+structure SpectralSystemLimitSheafData
+    {I : Type u} [Category.{w} I] [IsCofiltered I]
+    {X : I ⥤ TopCat.{v}} [HasLimit X]
+    (S : SpectralSheafSystem X) where
+  cocone : Cocone (spectralSystemSheafDiagram S)
+  isColimit : IsColimit cocone
+
 /-- The sheaf on the inverse-limit space obtained as the colimit of the
 pullbacks of a spectral sheaf system. -/
 theorem exists_spectralSystemLimitSheaf
     {I : Type u} [Category.{w} I] [IsCofiltered I]
     {X : I ⥤ TopCat.{v}} [HasLimit X]
     (S : SpectralSheafSystem X) :
-    Nonempty (TopCat.Sheaf (Type v) (spectralInverseLimitSpace X)) := by
+    Nonempty (SpectralSystemLimitSheafData S) := by
   sorry
+
+noncomputable def spectralSystemLimitSheafData
+    {I : Type u} [Category.{w} I] [IsCofiltered I]
+    {X : I ⥤ TopCat.{v}} [HasLimit X]
+    (S : SpectralSheafSystem X) :
+    SpectralSystemLimitSheafData S :=
+  Classical.choice (exists_spectralSystemLimitSheaf S)
 
 /-- The sheaf on the inverse-limit space obtained as the colimit of the
 pullbacks of a spectral sheaf system. -/
@@ -477,18 +574,50 @@ noncomputable def spectralSystemLimitSheaf
     {X : I ⥤ TopCat.{v}} [HasLimit X]
     (S : SpectralSheafSystem X) :
     TopCat.Sheaf (Type v) (spectralInverseLimitSpace X) :=
-  Classical.choice (exists_spectralSystemLimitSheaf S)
+  (spectralSystemLimitSheafData S).cocone.pt
 
 /-- The source-facing colimit of the sections
 `F_j(f_a⁻¹(U_i))` over arrows `a : j ⟶ i`. -/
+noncomputable abbrev spectralSystemSectionsAt
+    {I : Type u} [Category.{w} I] [IsCofiltered I]
+    {X : I ⥤ TopCat.{v}} [HasLimit X]
+    (S : SpectralSheafSystem X) (i : I) (Ui : Opens (X.obj i))
+    (a : spectralPullbackSectionsIndex i) : Type v :=
+  (S.sheaf a.unop.left).presheaf.obj
+    (op ((Opens.map (X.map a.unop.hom)).obj Ui))
+
+/-- The transition on the source's section system induced by an `f`-map. -/
+noncomputable def spectralSystemSectionsTransition
+    {I : Type u} [Category.{w} I] [IsCofiltered I]
+    {X : I ⥤ TopCat.{v}} [HasLimit X]
+    (S : SpectralSheafSystem X) (i : I) (Ui : Opens (X.obj i))
+    {a b : spectralPullbackSectionsIndex i} (h : a ⟶ b) :
+    spectralSystemSectionsAt S i Ui a → spectralSystemSectionsAt S i Ui b := by
+  let f := X.map h.unop.left
+  let fa := X.map a.unop.hom
+  let fb := X.map b.unop.hom
+  have hcomp : f ≫ fa = fb := by
+    rw [← X.map_comp]
+    simpa using congrArg X.map (CostructuredArrow.w h.unop)
+  let ξ : FMap f (S.sheaf a.unop.left) (S.sheaf b.unop.left) :=
+    S.map h.unop.left
+  intro s
+  have hopen : (Opens.map f).obj ((Opens.map fa).obj Ui) =
+      (Opens.map fb).obj Ui := by
+    rw [← Opens.map_comp_obj, hcomp]
+  simpa [spectralSystemSectionsAt, f, fa, fb, ξ, fMapAt, hopen] using
+    fMapAt ξ ((Opens.map fa).obj Ui) s
+
 structure SpectralSystemSectionsDiagramData
     {I : Type u} [Category.{w} I] [IsCofiltered I]
     {X : I ⥤ TopCat.{v}} [HasLimit X]
     (S : SpectralSheafSystem X) (i : I) (Ui : Opens (X.obj i)) :
     Type (max (u + 1) (w + 1) (v + 2)) where
-  diagram : CostructuredArrow (𝟭 I) i ⥤ Type v
-  obj_eq : ∀ a,
-    diagram.obj a = spectralPullbackSectionsAt X i (S.sheaf i) Ui a
+  diagram : spectralPullbackSectionsIndex i ⥤ Type v
+  obj_eq : ∀ a, diagram.obj a = spectralSystemSectionsAt S i Ui a
+  map_eq : ∀ {a b} (h : a ⟶ b),
+    eqToHom (obj_eq a).symm ≫ diagram.map h ≫ eqToHom (obj_eq b) =
+      spectralSystemSectionsTransition S i Ui h
 
 theorem exists_spectralSystemSectionsDiagram
     {I : Type u} [Category.{w} I] [IsCofiltered I]
@@ -503,16 +632,16 @@ noncomputable def spectralSystemSectionsDiagram
     {I : Type u} [Category.{w} I] [IsCofiltered I]
     {X : I ⥤ TopCat.{v}} [HasLimit X]
     (S : SpectralSheafSystem X) (i : I) (Ui : Opens (X.obj i)) :
-    CostructuredArrow (𝟭 I) i ⥤ Type v :=
+    spectralPullbackSectionsIndex i ⥤ Type v :=
   (Classical.choice (exists_spectralSystemSectionsDiagram S i Ui)).diagram
 
 theorem spectralSystemSectionsDiagram_obj
     {I : Type u} [Category.{w} I] [IsCofiltered I]
     {X : I ⥤ TopCat.{v}} [HasLimit X]
     (S : SpectralSheafSystem X) (i : I) (Ui : Opens (X.obj i))
-    (a : CostructuredArrow (𝟭 I) i) :
+    (a : spectralPullbackSectionsIndex i) :
     (spectralSystemSectionsDiagram S i Ui).obj a =
-      spectralPullbackSectionsAt X i (S.sheaf i) Ui a :=
+      spectralSystemSectionsAt S i Ui a :=
   (Classical.choice (exists_spectralSystemSectionsDiagram S i Ui)).obj_eq a
 
 /-- The source-facing colimit of the sections

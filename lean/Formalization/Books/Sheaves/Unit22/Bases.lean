@@ -410,6 +410,16 @@ noncomputable def basisModuleStalk {X : TopCat.{v}} {ι : Type v}
     Type v :=
   basisStalk B (F.presheaf ⋙ (CategoryTheory.forget AddCommGrpCat)) x
 
+/-- Restriction of a presheaf of modules to an induced basis category. -/
+def basisModuleRestriction {X : TopCat.{v}} {κ : Type v}
+    (B : κ → Opens X) {O : RingSheaf.{v, v} X}
+    (M : PresheafOfModules O.1) :
+    PresheafOfModules ((inducedFunctor B).op ⋙ O.1) where
+  obj U := M.obj ((inducedFunctor B).op.obj U)
+  map f := M.map ((inducedFunctor B).op.map f)
+  map_id U := by simp
+  map_comp f g := by simp
+
 /-- The extension of a sheaf of modules from a basis. -/
 structure BasisModuleExtensionData {X : TopCat.{v}} {ι : Type v}
     (B : ι → Opens X) (hB : Opens.IsBasis (Set.range B))
@@ -417,6 +427,7 @@ structure BasisModuleExtensionData {X : TopCat.{v}} {ι : Type v}
     (F : BasisModulePresheaf B ((inducedFunctor B).op ⋙ O.1))
     (hF : BasisModuleSheaf B F) where
   sheaf : Mod O
+  restriction_iso : Nonempty (basisModuleRestriction B sheaf.val ≅ F)
   stalk_iso : ∀ x : X, Nonempty (TopCat.Presheaf.stalk (C := Type v)
       ((sheaf.val.presheaf) ⋙ (CategoryTheory.forget AddCommGrpCat)) x ≃
       basisModuleStalk B F x)
@@ -465,8 +476,8 @@ theorem basisModuleSheafEquivalence {X : TopCat.{v}} {ι : Type v}
 /-! ## `f`-maps checked on bases -/
 
 /-- A family of basis maps into inverse-image opens, with its restriction compatibility. -/
-structure BasisFMapData {X Y : TopCat.{v}} {ι : Type v} {κ : Type v}
-    (f : X ⟶ Y) (Bₓ : ι → Opens X) (Bᵧ : κ → Opens Y)
+structure BasisFMapData {X Y : TopCat.{v}} {κ : Type v}
+    (f : X ⟶ Y) (Bᵧ : κ → Opens Y)
     {C : Type v} [Category.{v} C]
     (G : BasisAlgebraicPresheaf Bᵧ (C := C))
     (F : TopCat.Sheaf C X) where
@@ -477,16 +488,6 @@ structure BasisFMapData {X Y : TopCat.{v}} {ι : Type v} {κ : Type v}
 
 /-! The module-valued version needs the module structure to survive passage to
 the induced basis category. -/
-
-/-- Restriction of a presheaf of modules to an induced basis category. -/
-def basisModuleRestriction {X : TopCat.{v}} {κ : Type v}
-    (B : κ → Opens X) {O : RingSheaf.{v, v} X}
-    (M : PresheafOfModules O.1) :
-    PresheafOfModules ((inducedFunctor B).op ⋙ O.1) where
-  obj U := M.obj ((inducedFunctor B).op.obj U)
-  map f := M.map ((inducedFunctor B).op.map f)
-  map_id U := by simp
-  map_comp f g := by simp
 
 /-- The induced map on restricted presheaves of modules. -/
 def basisModuleRestrictionHom {X : TopCat.{v}} {κ : Type v}

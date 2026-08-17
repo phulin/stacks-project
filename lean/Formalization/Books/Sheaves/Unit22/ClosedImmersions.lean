@@ -144,7 +144,7 @@ def ClosedSingletonStalkCondition {X : TopCat.{v}} (Z : Set X) (_hZ : IsClosed Z
 /-- Direct image along a closed inclusion is fully faithful on sheaves of sets. -/
 theorem closedSetSheafDirectImage_fullFaithful {X : TopCat.{v}} (Z : Set X)
     (hZ : IsClosed Z) :
-    (closedSheafDirectImage (Type v) Z hZ).Full := by
+    Nonempty (closedSheafDirectImage (Type v) Z hZ).FullyFaithful := by
   sorry
 
 /-- The essential image of a closed direct image is characterized by singleton stalks
@@ -159,7 +159,7 @@ theorem closedSetSheafDirectImage_essentialImage {X : TopCat.{v}} (Z : Set X)
 /-- Direct image along a closed inclusion is fully faithful on abelian sheaves. -/
 theorem closedAbelianSheafDirectImage_fullFaithful {X : TopCat.{v}} (Z : Set X)
     (hZ : IsClosed Z) :
-    (closedSheafDirectImage (AddCommGrpCat.{v}) Z hZ).Full := by
+    Nonempty (closedSheafDirectImage (AddCommGrpCat.{v}) Z hZ).FullyFaithful := by
   sorry
 
 /-- The abelian essential image is characterized by zero stalks off the closed subset. -/
@@ -195,7 +195,7 @@ theorem closedAlgebraicSheafDirectImage_stalk_outside
 /-- The generic closed direct image is fully faithful. -/
 theorem closedAlgebraicSheafDirectImage_fullFaithful
     (C : Type u) [Category.{v} C] {X : TopCat.{v}} (Z : Set X) (hZ : IsClosed Z) :
-    (closedAlgebraicSheafDirectImage C Z hZ).Full := by
+    Nonempty (closedAlgebraicSheafDirectImage C Z hZ).FullyFaithful := by
   sorry
 
 /-- The generic essential image is characterized by final stalks off the closed subset. -/

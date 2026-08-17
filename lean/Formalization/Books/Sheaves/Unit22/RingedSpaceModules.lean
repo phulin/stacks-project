@@ -109,7 +109,7 @@ noncomputable def ringedSpaceModulePushforwardCompIso
     (g : RingedSpaceHom Y Z) :
     ringedSpaceModulePushforward f ⋙ ringedSpaceModulePushforward g ≅
       ringedSpaceModulePushforward (RingedSpaceHom.comp f g) :=
-  Classical.choice (exists_ringedSpaceModulePushforwardCompIso f g)
+  SheafOfModules.pushforwardComp g.sharp f.sharp
 
 /-- Pullback of modules is canonically compatible with composition. -/
 theorem exists_ringedSpaceModulePullbackCompIso
@@ -139,7 +139,7 @@ noncomputable def ringedSpaceModulePullbackCompIso
       (RingedSpaceHom.comp f g).sharp).IsRightAdjoint)] :
     ringedSpaceModulePullback (RingedSpaceHom.comp f g) ≅
       ringedSpaceModulePullback g ⋙ ringedSpaceModulePullback f :=
-  Classical.choice (exists_ringedSpaceModulePullbackCompIso f g)
+  (SheafOfModules.pullbackComp g.sharp f.sharp).symm
 
 /-- A module `f`-map is a morphism to the module pushforward. -/
 abbrev RingedSpaceModuleFMap {X Y : RingedSpace.{v}}

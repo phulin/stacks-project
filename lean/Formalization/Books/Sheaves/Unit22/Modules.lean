@@ -342,17 +342,31 @@ noncomputable abbrev moduleSheafFMapPullbackHomEquiv {X Y : TopCat.{v}}
       ModuleSheafFMap f α G F :=
   (SheafOfModules.pullbackPushforwardAdjunction α).homEquiv G F
 
-/-- Composition of module `f`-maps is induced by functoriality of pushforward. -/
-theorem moduleSheafFMap_comp {X Y Z : TopCat.{v}}
+ /-- Composition of module `f`-maps is induced by the canonical pushforward
+composition isomorphism. -/
+ noncomputable def moduleSheafFMapComp {X Y Z : TopCat.{v}}
     {O_X : RingSheaf X} {O_Y : RingSheaf Y} {O_Z : RingSheaf Z}
     {f : X ⟶ Y} {g : Y ⟶ Z}
     (α : O_Y ⟶ (moduleRingSheafPushforward f).obj O_X)
     (β : O_Z ⟶ (moduleRingSheafPushforward g).obj O_Y)
     {F : Mod O_X} {G : Mod O_Y} {H : Mod O_Z}
     (φ : ModuleSheafFMap f α G F) (ψ : ModuleSheafFMap g β H G) :
-    ∃ γ : O_Z ⟶ (moduleRingSheafPushforward (f ≫ g)).obj O_X,
-      Nonempty (ModuleSheafFMap (f ≫ g) γ H F) := by
-  sorry
+    ModuleSheafFMap (f ≫ g)
+      (β ≫ (moduleRingSheafPushforward g).map α) H F := by
+  exact ψ ≫ (moduleSheafPushforwardAlong g β).map φ ≫
+    (SheafOfModules.pushforwardComp β α).hom.app F
+
+ /-- The existential source formulation of module `f`-map composition. -/
+ theorem moduleSheafFMap_comp {X Y Z : TopCat.{v}}
+    {O_X : RingSheaf X} {O_Y : RingSheaf Y} {O_Z : RingSheaf Z}
+    {f : X ⟶ Y} {g : Y ⟶ Z}
+    (α : O_Y ⟶ (moduleRingSheafPushforward f).obj O_X)
+    (β : O_Z ⟶ (moduleRingSheafPushforward g).obj O_Y)
+    {F : Mod O_X} {G : Mod O_Y} {H : Mod O_Z}
+    (φ : ModuleSheafFMap f α G F) (ψ : ModuleSheafFMap g β H G) :
+    Nonempty (ModuleSheafFMap (f ≫ g)
+      (β ≫ (moduleRingSheafPushforward g).map α) H F) :=
+  ⟨moduleSheafFMapComp α β φ ψ⟩
 
 /-- The induced map on stalks of a module `f`-map is linear over the stalk of
 the target ring. -/

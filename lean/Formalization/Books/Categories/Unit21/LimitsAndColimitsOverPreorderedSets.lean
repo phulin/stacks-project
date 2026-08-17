@@ -294,9 +294,9 @@ noncomputable def directed_replacement_limit_iso
     {C : Type u'} [Category.{v'} C] (F : J ⥤ I) [Functor.Final F]
     (M : Iᵒᵖ ⥤ C) [HasLimit (F.op ⋙ M)] :
     letI : HasLimit M := Functor.Initial.hasLimit_of_comp F.op
-    limit M ≅ limit (F.op ⋙ M) := by
+    limit (F.op ⋙ M) ≅ limit M := by
   letI : HasLimit M := Functor.Initial.hasLimit_of_comp F.op
-  exact (Functor.Initial.limitIso F.op M).symm
+  exact Functor.Initial.limitIso F.op M
 
 /-! ### Finite directed indices and the idempotent example -/
 

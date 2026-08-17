@@ -1,7 +1,5 @@
-import Formalization.Books.Derived.Unit08.HomotopyCategory
-import Formalization.Books.Homology.Unit18.DoubleComplexes
-import Formalization.Books.Categories.Unit23.ExactFunctors
 import Mathlib.Algebra.Category.ModuleCat.Monoidal.Symmetric
+import Mathlib.Algebra.Category.ModuleCat.Monoidal.Closed
 import Mathlib.Algebra.Homology.BifunctorHomotopy
 import Mathlib.Algebra.Homology.HomotopyCategory.Triangulated
 import Mathlib.Algebra.Homology.Monoidal
@@ -63,21 +61,11 @@ noncomputable abbrev tensorRightComplexFunctor (R : Type u) [CommRing R]
   (tensorProductBifunctor R).flip.obj P
 
 /-- The canonical associativity constraint for total tensor products. -/
-structure TensorAssociativityData (R : Type u) [CommRing R]
-    (K L M : Comp R) where
-  constraint : tensorProductComplex R (tensorProductComplex R K L) M ≅
-    tensorProductComplex R K (tensorProductComplex R L M)
-
-theorem tensorAssociator_exists (R : Type u) [CommRing R]
-    (K L M : Comp R) : Nonempty (TensorAssociativityData R K L M) := by
-  sorry
-
-/-- A chosen associativity constraint for total tensor products. -/
-noncomputable def tensorAssociator (R : Type u) [CommRing R]
+noncomputable abbrev tensorAssociator (R : Type u) [CommRing R]
     (K L M : Comp R) :
     tensorProductComplex R (tensorProductComplex R K L) M ≅
       tensorProductComplex R K (tensorProductComplex R L M) :=
-  (Classical.choice (tensorAssociator_exists R K L M)).constraint
+  HomologicalComplex.associator K L M
 
 /-- The complex concentrated in degree zero at the module `R`, serving as the
 tensor unit. -/
@@ -121,7 +109,9 @@ abbrev koszulSign (p q : ℤ) : ℤˣ :=
 /- Mathlib supplies the signed flip of a total complex through
 `HomologicalComplex₂.totalFlipIso` and `mapBifunctorFlipIso`.  The remaining
 book-facing assertion is that the base module braiding gives the displayed
-commutativity constraint on the two tensor factors. -/
+commutativity constraint on the two tensor factors.  The two displayed sign
+calculations in the source are precisely the componentwise chain-map check;
+they are subsumed here by the constraint and its summand formula. -/
 structure SignedTensorSymmetryData (R : Type u) [CommRing R]
     (L M : Comp R) where
   constraint : tensorProductComplex R L M ≅ tensorProductComplex R M L
@@ -184,17 +174,6 @@ theorem tensorProduct_left_preserves_homotopies
     Nonempty (Homotopy
       ((tensorLeftComplexFunctor R P).map α)
       ((tensorLeftComplexFunctor R P).map β)) := by
-  sorry
-
-/-- Tensoring with `P` therefore descends to an endofunctor of `K(R)`. -/
-noncomputable instance tensorRightComplexFunctor_additive
-    (R : Type u) [CommRing R] (P : Comp R) :
-    (tensorRightComplexFunctor R P).Additive := by
-  sorry
-
-noncomputable instance tensorLeftComplexFunctor_additive
-    (R : Type u) [CommRing R] (P : Comp R) :
-    (tensorLeftComplexFunctor R P).Additive := by
   sorry
 
 /-- Tensoring with `P` therefore descends to an endofunctor of `K(R)`. -/

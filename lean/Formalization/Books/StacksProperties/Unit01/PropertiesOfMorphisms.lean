@@ -185,15 +185,43 @@ inductive CoveringTopology
   | fppf
   deriving DecidableEq, Repr
 
+structure PrecompositionCoverData {S : Scheme.{u}}
+    {X Y Z : AlgebraicStack S} (f : StackMorphism X Y)
+    (g : StackMorphism Y Z) where
+  surjective : Prop
+  etale : Prop
+  smooth : Prop
+  syntomic : Prop
+  flat : Prop
+  locallyOfFinitePresentation : Prop
+
+def CoveringKindCondition {S : Scheme.{u}}
+    {X Y Z : AlgebraicStack S} {f : StackMorphism X Y}
+    {g : StackMorphism Y Z} (τ : CoveringTopology)
+    (c : PrecompositionCoverData f g) : Prop :=
+  match τ with
+  | .etale => c.etale
+  | .smooth => c.smooth
+  | .syntomic => c.syntomic
+  | .fppf => c.flat ∧ c.locallyOfFinitePresentation
+
+def HasPrecompositionCover {S : Scheme.{u}}
+    {X Y Z : AlgebraicStack S} (f : StackMorphism X Y)
+    (g : StackMorphism Y Z) (τ : CoveringTopology) : Prop :=
+  RepresentableByAlgebraicSpaces f ∧
+    RepresentableByAlgebraicSpaces g ∧
+      ∃ c : PrecompositionCoverData f g,
+        c.surjective ∧ CoveringKindCondition τ c
+
 def IsLocalOnSourceIn (P : RelativeSpaceProperty S)
     (_τ : CoveringTopology) : Prop := P.localOnSource
 
 theorem property_after_precomposing {S : Scheme.{u}}
     (P : RelativeSpaceProperty S) {X Y Z : AlgebraicStack S}
     (f : StackMorphism X Y) (g : StackMorphism Y Z)
-    (_hf : RepresentableByAlgebraicSpaces f) (_hcover : Prop)
+    (τ : CoveringTopology) (hcover : HasPrecompositionCover f g τ)
     (hcomp : HasRelativeProperty P (StackMorphism.comp f g))
-    (hlocal : IsLocalOnSourceIn P .fppf) :
+    (hlocal : IsLocalOnSourceIn P τ) :
     HasRelativeProperty P g := by
   sorry
 

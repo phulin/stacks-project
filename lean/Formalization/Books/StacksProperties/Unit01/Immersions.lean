@@ -265,6 +265,12 @@ theorem substacks_presentation_bijection {S : Scheme.{u}}
       (LocallyClosedSubstacks X ≃ InvariantLocallyClosedSubspaces p) := by
   sorry
 
+structure SubstackPresentationData {S : Scheme.{u}}
+    {X : AlgebraicStack S} (p : StackPresentation X) where
+  substack : LocallyClosedSubstack X
+  subspace : PresentationSubspace p
+  correspondence : Prop
+
 def FactorsThrough {S : Scheme.{u}}
     {Y X : AlgebraicStack S} (f : StackMorphism Y X)
     (U : LocallyClosedSubstack X) : Prop :=
@@ -273,9 +279,8 @@ def FactorsThrough {S : Scheme.{u}}
 
 theorem factors_through_substack_iff {S : Scheme.{u}}
     {Y X : AlgebraicStack S} (f : StackMorphism Y X)
-    (p : StackPresentation X) (U : LocallyClosedSubstack X)
-    (z : PresentationSubspace p) :
-    FactorsThrough f U ↔ z.invariant := by
+    {p : StackPresentation X} (D : SubstackPresentationData p) :
+    FactorsThrough f D.substack ↔ D.subspace.invariant := by
   sorry
 
 def OpenPointSubsets {S : Scheme.{u}}
@@ -300,11 +305,13 @@ structure OpenImageSubstackData {S : Scheme.{u}}
   surjective : Prop
   smooth : Prop
   baseChange : Prop
+  openImmersion : SpaceOpenImmersion i
 
 theorem open_image_substack {S : Scheme.{u}}
     {X : AlgebraicStack S} (U : AlgebraicSpace S)
-    (f : SpaceToStackMorphism U X) (V : AlgebraicSpace S)
-    (i : SpaceMorphism V U) :
+    (f : SpaceToStackMorphism U X) (hf : f.surjective ∧ f.smooth)
+    (V : AlgebraicSpace S)
+    (i : SpaceMorphism V U) (hi : SpaceOpenImmersion i) :
     Nonempty (OpenImageSubstackData U f V i) := by
   sorry
 
@@ -402,9 +409,24 @@ theorem local_source_locus_base_change {S : Scheme.{u}}
     Nonempty (LocalSourceBaseChangeData P f g) := by
   sorry
 
+structure FlatLocusWarningData {S : Scheme.{u}} where
+  source : AlgebraicSpace S
+  target : AlgebraicSpace S
+  morphism : SpaceMorphism source target
+  largestOpen : Set source.left
+  pointwiseFlatLocus : Set source.left
+  largestIsOpen : Prop
+  largestHasFlatRestriction : Prop
+  largestIsMaximal : Prop
+  strictDifference : largestOpen ≠ pointwiseFlatLocus
+
+theorem exists_flat_locus_warning {S : Scheme.{u}} :
+    Nonempty (FlatLocusWarningData S) := by
+  sorry
+
 /- The source warning is intentional: the largest open subspace on which a
-map is flat is not, in general, the set of points where the original map is
-flat.  It is therefore represented by the maximality field above rather
+  map is flat is not, in general, the set of points where the original map is
+  flat.  It is therefore represented by the maximality field above rather
 than by a pointwise equality.
 -/
 
@@ -420,5 +442,12 @@ inductive LocalSourceApplication
 def localSourceApplications : List LocalSourceApplication :=
   [.relativeDimensionLe, .locallyQuasiFinite, .unramified, .flat, .etale,
    .additional]
+
+structure LocalSourceApplicationData (S : Scheme.{u}) where
+  application : LocalSourceApplication
+  P : SpaceMorphismProperty S
+  Q : SpaceMorphismProperty S
+  R : SpaceMorphismProperty S
+  prescribedConditions : Prop
 
 end Formalization.Books.StacksProperties.Unit01

@@ -171,6 +171,14 @@ theorem exists_unique_stack_topology {S : Scheme.{u}} :
     ∃! T : StackTopology S, IsCompatibleStackTopology T := by
   sorry
 
+@[instance_reducible]
+noncomputable def canonicalStackTopology {S : Scheme.{u}} : StackTopology S :=
+  Classical.choose (exists_unique_stack_topology (S := S))
+
+theorem canonicalStackTopology_is_compatible {S : Scheme.{u}} :
+    IsCompatibleStackTopology (canonicalStackTopology (S := S)) := by
+  exact (exists_unique_stack_topology (S := S)).choose_spec.1
+
 abbrev underlyingTopologicalSpace {S : Scheme.{u}}
     (T : StackTopology S) (X : AlgebraicStack S) : TopologicalSpace (pointSet X) :=
   T X

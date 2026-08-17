@@ -93,13 +93,31 @@ theorem monomorphism_injective_on_points {S : Scheme.{u}}
     Function.Injective (inducedPointMap f) := by
   sorry
 
+def IsStackPullbackSquare {S : Scheme.{u}}
+    {A B C D : AlgebraicStack S}
+    (top : StackMorphism A B) (left : StackMorphism A C)
+    (right : StackMorphism B D) (bottom : StackMorphism C D) : Prop :=
+  StackTwoMorphism (StackMorphism.comp top right)
+      (StackMorphism.comp left bottom) ∧
+    ∀ (T : AlgebraicStack S) (u : StackMorphism T B)
+      (v : StackMorphism T C),
+      StackTwoMorphism (StackMorphism.comp u right)
+        (StackMorphism.comp v bottom) →
+      ∃ h : StackMorphism T A,
+        StackTwoMorphism (StackMorphism.comp h top) u ∧
+          StackTwoMorphism (StackMorphism.comp h left) v ∧
+            ∀ h' : StackMorphism T A,
+              StackTwoMorphism (StackMorphism.comp h' top) u →
+              StackTwoMorphism (StackMorphism.comp h' left) v →
+              StackTwoMorphism h h'
+
 structure StackPullbackSquare {S : Scheme.{u}}
     {A B C D : AlgebraicStack S}
     (top : StackMorphism A B) (left : StackMorphism A C)
     (right : StackMorphism B D) (bottom : StackMorphism C D) : Prop where
   commutes : StackTwoMorphism
     (StackMorphism.comp top right) (StackMorphism.comp left bottom)
-  isPullback : Prop
+  isPullback : IsStackPullbackSquare top left right bottom
 
 theorem monomorphism_diagonal_pullback {S : Scheme.{u}}
     {X X' Y : AlgebraicStack S} (i : StackMorphism X X')

@@ -20,7 +20,8 @@ namespace Formalization.Books.StacksProperties.Unit01
 
 structure GeometricBranchTheory where
   count : SchemeGerm.{u} → WithTop ℕ
-  smoothInvariant : Prop
+  smoothInvariant : ∀ {G H : SchemeGerm.{u}} (f : SchemeGerm.Hom G H),
+    Smooth f.map → count G = count H
 
 def BranchCountProperty (B : GeometricBranchTheory) (n : ℕ) :
     LocalPropertyOfGerms where
@@ -36,9 +37,10 @@ def geometricBranchProperty {S : Scheme.{u}}
   smoothLocal := B.smoothInvariant
 
 theorem geometric_branch_smooth_invariant (B : GeometricBranchTheory)
-    (n : ℕ) (G H : SchemeGerm.{u}) (hsmooth : Prop) :
+    (n : ℕ) {G H : SchemeGerm.{u}} (f : SchemeGerm.Hom G H)
+    (hsmooth : Smooth f.map) :
     B.count G = n ↔ B.count H = n := by
-  sorry
+  rw [B.smoothInvariant f hsmooth]
 
 def numberOfGeometricBranches {S : Scheme.{u}}
     (B : GeometricBranchTheory) (X : AlgebraicStack S)

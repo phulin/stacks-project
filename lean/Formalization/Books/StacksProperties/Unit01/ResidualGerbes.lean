@@ -48,8 +48,9 @@ theorem flat_field_cover_permanence {S : Scheme.{u}}
 theorem unique_point_iff_flat_field_cover {S : Scheme.{u}}
     (X : AlgebraicStack S) :
     IsReducedSingletonPointStack X ↔
-      ∃ p : FieldValuedMorphism X, IsFlatFieldCover p ↔
-      ∃ p : FieldValuedMorphism X, IsLocallyFiniteTypeFlatFieldCover p := by
+      (∃ p : FieldValuedMorphism X, IsFlatFieldCover p) ∧
+        (∃ p : FieldValuedMorphism X,
+          IsLocallyFiniteTypeFlatFieldCover p) := by
   sorry
 
 theorem unique_point_better_iff {S : Scheme.{u}}
@@ -83,6 +84,7 @@ theorem improve_unique_point {S : Scheme.{u}} (Z : AlgebraicStack S)
 
 structure DistinctSingletonExample (S : Scheme.{u}) where
   group : Type u
+  groupStructure : Group group
   groupActionSpace : AlgebraicSpace S
   quotientSpace : AlgebraicSpace S
   freeAndTransitive : Prop
@@ -124,11 +126,14 @@ structure ResidualGerbe {S : Scheme.{u}}
     (X : AlgebraicStack S) (x : StackPoint X) where
   source : AlgebraicStack S
   inclusion : StackMorphism source X
+  strictlyFull : Prop
   reduced : IsReduced source
   locallyNoetherian : IsLocallyNoetherian source
   singleton : IsSingletonPointStack source
   pointSet : Set.range (inducedPointMap inclusion) = {x}
   monomorphism : IsMonomorphism inclusion
+  fieldCover : ∃ p : FieldValuedMorphism source,
+    IsLocallyFinitePresentationFlatFieldCover p
 
 def ResidualGerbeFactorization {S : Scheme.{u}}
     {Z X : AlgebraicStack S} (f : StackMorphism Z X)
@@ -179,11 +184,13 @@ structure ResidualGerbeUniquenessData {S : Scheme.{u}}
   pointSet : Set.range (inducedPointMap inclusion) = {x}
 
 theorem residual_gerbe_unique_factorization {S : Scheme.{u}}
-    {X Z : AlgebraicStack S} (x : StackPoint X)
+    {X : AlgebraicStack S} (x : StackPoint X)
     (Zdata : ResidualGerbeUniquenessData x)
-    (f : StackMorphism Zdata.source X)
-    (hf : IsStackEquivalence f) :
-    ResidualGerbeExists x := by
+    : ∃ G : ResidualGerbe X x,
+      ∃ e : StackMorphism Zdata.source G.source,
+        IsStackEquivalence e ∧
+          StackTwoMorphism Zdata.inclusion
+            (StackMorphism.comp e G.inclusion) := by
   sorry
 
 structure ResidualGerbeFunctorialityData {S : Scheme.{u}}
@@ -216,7 +223,10 @@ theorem residual_gerbe_isomorphic {S : Scheme.{u}}
     (Gx : ResidualGerbe X x) (Gy : ResidualGerbe Y y)
     (hxy : inducedPointMap f x = y)
     (hdiag : Nonempty (FieldDiagonalComparison f x)) :
-    ∃ e : StackMorphism Gx.source Gy.source, IsStackEquivalence e := by
+    ∃ e : StackMorphism Gx.source Gy.source,
+      IsStackEquivalence e ∧
+        StackTwoMorphism (StackMorphism.comp Gx.inclusion f)
+          (StackMorphism.comp e Gy.inclusion) := by
   sorry
 
 theorem scheme_residual_gerbe {S : Scheme.{u}}

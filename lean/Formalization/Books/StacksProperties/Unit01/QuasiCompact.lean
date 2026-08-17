@@ -17,7 +17,7 @@ universe u
 namespace Formalization.Books.StacksProperties.Unit01
 
 def IsQuasiCompactStack {S : Scheme.{u}} (X : AlgebraicStack S) : Prop :=
-  X.quasiCompact
+  @IsCompact (StackPoint X) (canonicalStackTopology (S := S) X) Set.univ
 
 structure QuasiCompactStackChart {S : Scheme.{u}}
     {X : AlgebraicStack S} where

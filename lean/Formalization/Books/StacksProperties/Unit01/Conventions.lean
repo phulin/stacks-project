@@ -33,13 +33,6 @@ abbrev RelativeFppfTopology (S : Scheme.{u}) :
 structure Convention where
   base : Scheme.{u}
 
-structure FieldPointComparison (α : Type u) (p q : α) where
-  extension : Type u
-  extensionField : Field extension
-  leftExtension : Prop
-  rightExtension : Prop
-  twoCommutative : Prop
-
 structure PointData where
   raw : Type u
   fieldValued : raw → Prop

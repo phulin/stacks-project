@@ -27,8 +27,13 @@ def IsReducedClosedSubstack {S : Scheme.{u}}
     {X : AlgebraicStack S} (U : ClosedSubstack X) : Prop :=
   IsReduced U.source
 
+def IsClosedPointSet {S : Scheme.{u}} {X : AlgebraicStack S}
+    (T : Set (StackPoint X)) : Prop :=
+  @IsClosed (StackPoint X) (canonicalStackTopology (S := S) X) T
+
 theorem reduced_closed_substack_exists_unique {S : Scheme.{u}}
     (X : AlgebraicStack S) (T : Set (StackPoint X)) :
+    IsClosedPointSet T →
     ∃! U : ClosedSubstack X,
       IsReducedClosedSubstack U ∧ ClosedSubstackHasPoints U T := by
   sorry
@@ -62,17 +67,18 @@ structure ReducedInducedStackStructure {S : Scheme.{u}}
 
 theorem reduced_induced_stack_structure_exists {S : Scheme.{u}}
     (X : AlgebraicStack S) (T : Set (StackPoint X)) :
+    IsClosedPointSet T →
     Nonempty (ReducedInducedStackStructure X T) := by
   sorry
 
 noncomputable def reducedInducedStackStructure {S : Scheme.{u}}
     (X : AlgebraicStack S) (T : Set (StackPoint X)) :
-    ReducedInducedStackStructure X T :=
-  Classical.choice (reduced_induced_stack_structure_exists X T)
+    IsClosedPointSet T → ReducedInducedStackStructure X T :=
+  fun hT => Classical.choice (reduced_induced_stack_structure_exists X T hT)
 
 noncomputable def reduction {S : Scheme.{u}} (X : AlgebraicStack S) :
     ReducedInducedStackStructure X Set.univ :=
-  reducedInducedStackStructure X Set.univ
+  reducedInducedStackStructure X Set.univ isClosed_univ
 
 def IsReduction {S : Scheme.{u}} {X : AlgebraicStack S}
     (R : ReducedInducedStackStructure X Set.univ) : Prop :=
@@ -82,10 +88,14 @@ structure ReducedLocallyClosedSubstackData {S : Scheme.{u}}
     (T : StackTopology S) (X : AlgebraicStack S)
     (U : Set (StackPoint X)) where
   boundary : Set (StackPoint X)
+  boundary_eq : boundary = @closure (StackPoint X) (T X) U \ U
   openPart : OpenSubstack X
+  openPointSet : Set.range (inducedPointMap openPart.inclusion) = boundaryᶜ
   closedPart : ClosedSubstack openPart.source
   reduced : IsReducedClosedSubstack closedPart
-  pointSet : Prop
+  pointSet : Set.range
+      (inducedPointMap
+        (StackMorphism.comp closedPart.inclusion openPart.inclusion)) = U
   locallyClosed : @IsLocallyClosed (StackPoint X) (T X) U
 
 theorem reduced_locally_closed_substack_exists {S : Scheme.{u}}

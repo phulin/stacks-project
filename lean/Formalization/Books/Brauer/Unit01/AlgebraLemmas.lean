@@ -1,4 +1,5 @@
 import Formalization.Books.Brauer.Unit01.Wedderburn
+import Mathlib.Algebra.Field.IsField
 import Mathlib.Algebra.Algebra.Subalgebra.Centralizer
 import Mathlib.Algebra.Central.Matrix
 import Mathlib.Algebra.Central.TensorProduct
@@ -68,8 +69,8 @@ end TensorIdeals
 
 section Centralizers
 
-theorem centralizer_tensor_product (k A A' : Type*) [CommSemiring k]
-    [Semiring A] [Algebra k A] [Semiring A'] [Algebra k A']
+theorem centralizer_tensor_product (k A A' : Type*) [Field k]
+    [Ring A] [Algebra k A] [Ring A'] [Algebra k A']
     (B : Subalgebra k A) (B' : Subalgebra k A') :
     Subalgebra.centralizer k
         (Algebra.TensorProduct.map B.val B'.val).range =
@@ -80,7 +81,7 @@ theorem centralizer_tensor_product (k A A' : Type*) [CommSemiring k]
 
 theorem center_finite_simple_is_finite_field_extension (k A : Type*) [Field k]
     [Ring A] [Algebra k A] [FiniteDimensional k A] [IsSimpleRing A] :
-    Nonempty (Field (Subalgebra.center k A)) ∧
+    IsField (Subalgebra.center k A) ∧
       FiniteDimensional k (Subalgebra.center k A) := by
   sorry
 
@@ -173,8 +174,8 @@ theorem finite_simple_algebra_module_isotypic (k A M : Type*) [Field k]
 
 theorem finite_module_is_direct_sum_of_simple (k A M S : Type*) [Field k]
     [Ring A] [Algebra k A] [FiniteDimensional k A] [IsSimpleRing A]
-    [AddCommGroup M] [Module A M] [Module k M] [IsScalarTower k A M]
-    [Module.Finite A M] [AddCommGroup S] [Module A S]
+    [AddCommGroup M] [Module A M] [Module.Finite A M]
+    [AddCommGroup S] [Module A S]
     [IsSimpleModule A S] :
     ∃ n : ℕ, Nonempty (M ≃ₗ[A] (Fin n → S)) := by
   sorry
@@ -198,9 +199,8 @@ theorem simple_module_double_commutant (k A M : Type*) [Field k] [Ring A]
 theorem simple_module_center_and_dimension (k A M : Type*) [Field k]
     [Ring A] [Algebra k A] [FiniteDimensional k A] [IsSimpleRing A]
     [AddCommGroup M] [Module A M] [IsSimpleModule A M]
-    [Module k M] [IsScalarTower k A M]
-    [Algebra k (Module.End A M)] :
-    Nonempty (Subalgebra.center k A ≃+* Subalgebra.center k (Module.End A M)) ∧
+    [Module k M] [IsScalarTower k A M] :
+    Nonempty (Subalgebra.center k A ≃ₐ[k] Subalgebra.center k (Module.End A M)) ∧
       FiniteDimensional k (Module.End A M) ∧
       Module.finrank k A * Module.finrank k (Module.End A M) =
         Module.finrank k M ^ 2 := by
@@ -209,8 +209,7 @@ theorem simple_module_center_and_dimension (k A M : Type*) [Field k]
 theorem simple_module_end_is_finite (k A M : Type*) [Field k] [Ring A]
     [Algebra k A] [FiniteDimensional k A] [IsSimpleRing A]
     [AddCommGroup M] [Module A M] [IsSimpleModule A M]
-    [Module k M] [IsScalarTower k A M]
-    [Algebra k (Module.End A M)] :
+    [Module k M] [IsScalarTower k A M] :
     Nonempty (DivisionRing (Module.End A M)) ∧
       FiniteDimensional k (Module.End A M) := by
   sorry
@@ -218,9 +217,9 @@ theorem simple_module_end_is_finite (k A M : Type*) [Field k] [Ring A]
 theorem finite_module_end_is_matrix_and_double_commutant
     (k A N : Type*) [Field k] [Ring A] [Algebra k A]
     [FiniteDimensional k A] [IsSimpleRing A]
-    [AddCommGroup N] [Module A N] [Module k N] [IsScalarTower k A N]
+    [AddCommGroup N] [Nontrivial N] [Module A N] [Module k N] [IsScalarTower k A N]
     [FiniteDimensional k N] :
-    ∃ (n : ℕ) (L : Type*) (_ : DivisionRing L) (_ : Algebra k L)
+    ∃ (n : ℕ) (_ : NeZero n) (L : Type*) (_ : DivisionRing L) (_ : Algebra k L)
       (_ : FiniteDimensional k L),
       Nonempty (Module.End A N ≃+* Matrix (Fin n) (Fin n) L) ∧
         Nonempty (Module.End (Module.End A N) N ≃+* A) := by

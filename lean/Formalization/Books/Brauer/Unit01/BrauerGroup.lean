@@ -62,23 +62,26 @@ theorem brauer_group_is_abelian (k : Type*) [Field k] :
     Nonempty (CommGroup (BrauerGroup k)) := by
   sorry
 
+/- Make the existence result available to the later interfaces as the
+   chapter's chosen group structure on the quotient. -/
+noncomputable instance brauerGroupCommGroup (k : Type*) [Field k] :
+    CommGroup (BrauerGroup k) :=
+  Classical.choice (brauer_group_is_abelian k)
+
 theorem brauer_group_base_change_hom (k k' : Type*) [Field k] [Field k']
-    [Algebra k k'] [CommGroup (BrauerGroup k)]
-    [CommGroup (BrauerGroup k')] :
+    [Algebra k k'] :
     Nonempty (BrauerGroup k →* BrauerGroup k') := by
   sorry
 
 theorem brauer_group_base_change_interface (k k' : Type*) [Field k] [Field k']
-    [Algebra k k'] [CommGroup (BrauerGroup k)]
-    [CommGroup (BrauerGroup k')] :
+    [Algebra k k'] :
     ∃ f : BrauerGroup k →* BrauerGroup k',
       ∀ A : CSA k, ∃ B : CSA k',
         f (brauerClass k A) = brauerClass k' B ∧
           IsBaseChangeRepresentative k k' A B := by
   sorry
 
-theorem brauer_group_zero_iff (k : Type*) [Field k]
-    [CommGroup (BrauerGroup k)] :
+theorem brauer_group_zero_iff (k : Type*) [Field k] :
     (∀ x : BrauerGroup k, x = 1) ↔
       (∀ (K : Type*) [DivisionRing K] [Algebra k K]
         [FiniteDimensional k K] [Algebra.IsCentral k K],
@@ -86,7 +89,7 @@ theorem brauer_group_zero_iff (k : Type*) [Field k]
   sorry
 
 theorem brauer_group_algebraically_closed (k : Type*) [Field k]
-    [IsAlgClosed k] [CommGroup (BrauerGroup k)] :
+    [IsAlgClosed k] :
     ∀ x : BrauerGroup k, x = 1 := by
   sorry
 

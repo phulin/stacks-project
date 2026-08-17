@@ -1,7 +1,9 @@
-import Formalization.Books.Categories.Unit37.PresheavesOfGroupoids
 import Formalization.Books.Categories.Unit03.Opposite
+import Formalization.Books.Categories.Unit37.PresheavesOfGroupoids
 import Mathlib.CategoryTheory.Category.Cat
 import Mathlib.CategoryTheory.Discrete.Basic
+import Mathlib.CategoryTheory.FiberedCategory.Grothendieck
+import Mathlib.CategoryTheory.Groupoid.Discrete
 
 /-!
 # Categories, Chapter 38: Categories fibred in sets
@@ -68,7 +70,17 @@ theorem isCategoryFibredInSets_iff_isFibered_and_discreteFibres
     {S C : Type*} [Category* S] [Category* C] (p : S ⥤ C) :
     IsCategoryFibredInSets p ↔
       p.IsFibered ∧ ∀ U : C, IsDiscrete (Functor.Fiber p U) := by
-  sorry
+  constructor
+  · rintro ⟨hp, hdiscrete⟩
+    exact ⟨(fibredInGroupoids_iff_fibred_groupoid_fibres p).mp hp |>.2,
+      hdiscrete⟩
+  · rintro ⟨hp, hdiscrete⟩
+    have hgroupoid : ∀ U : C, IsGroupoid (Functor.Fiber p U) := by
+      intro U
+      letI : IsDiscrete (Functor.Fiber p U) := hdiscrete U
+      infer_instance
+    exact (fibredInGroupoids_iff_fibred_groupoid_fibres p).mpr
+      ⟨hgroupoid, hp⟩
 
 /-! ## The fixed-base 2-category -/
 
@@ -86,7 +98,8 @@ theorem discreteFibredCategoryOver_isCategoryFibredInSets
     {C : Cat.{v, u}} (X : FibredCategoryOver C)
     (hX : IsDiscreteFibredCategoryOver X) :
     IsCategoryFibredInSets (structureFunctor X.underlying) := by
-  sorry
+  exact (isCategoryFibredInSets_iff_isFibered_and_discreteFibres _).mpr
+    ⟨inferInstance, hX⟩
 
 /-- The source's 2-category of categories fibred in sets over a fixed base. -/
 abbrev CategoriesFibredInSetsOver (C : Cat.{v, u}) :=
@@ -362,7 +375,9 @@ theorem setPresheaf_fibre_equivalent_to_discrete
     Nonempty
       (Discrete (F.obj (Opposite.op U)) ≌
         Functor.Fiber (setPresheafProjection F) U) := by
-  sorry
+  exact ⟨(Functor.Fiber.inducedFunctor
+    (Pseudofunctor.CoGrothendieck.comp_const
+      (splitFibredPseudofunctor (setPresheafToCat F)) U)).asEquivalence⟩
 
 /-! ## The presheaf correspondence -/
 

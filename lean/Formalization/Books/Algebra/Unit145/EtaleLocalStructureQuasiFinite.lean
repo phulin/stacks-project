@@ -15,6 +15,7 @@ import Mathlib.RingTheory.RingHom.Flat
 import Mathlib.RingTheory.RingHom.Etale
 import Mathlib.RingTheory.RingHom.QuasiFinite
 import Mathlib.RingTheory.Localization.Away.Basic
+import Mathlib.RingTheory.Smooth.IntegralClosure
 
 /-!
 # Commutative Algebra, Chapter 145: Étale local structure of quasi-finite ring maps
@@ -97,6 +98,13 @@ structure EtaleFiniteAtPrimeData
   etale : RingHom.Etale (algebraMap R R')
   p' : PrimeSpectrum R'
   liesOver : PrimeSpectrum.comap (algebraMap R R') p' = p
+  residueEquiv :
+    letI : Algebra p.asIdeal.ResidueField p'.asIdeal.ResidueField :=
+      (Formalization.Books.Algebra.Unit113.residueFieldMapAt
+        (algebraMap R R') p p' liesOver).toAlgebra
+    Nonempty
+      (p.asIdeal.ResidueField ≃ₐ[p.asIdeal.ResidueField]
+        p'.asIdeal.ResidueField)
   decomposition : BinaryAlgebraProduct R' (R' ⊗[R] S)
   finiteA : letI : Algebra R' decomposition.A := decomposition.algebraA
     RingHom.Finite (algebraMap R' decomposition.A)
@@ -111,7 +119,10 @@ structure EtaleFiniteAtPrimeData
               Algebra.TensorProduct.includeRight.toRingHom) r = q
   noPrimeB : letI : Algebra R' decomposition.B := decomposition.algebraB
     ∀ r : PrimeSpectrum decomposition.B,
-      PrimeSpectrum.comap (algebraMap R' decomposition.B) r ≠ p'
+      PrimeSpectrum.comap (algebraMap R' decomposition.B) r = p' →
+        PrimeSpectrum.comap
+            (decomposition.rightMap.comp
+              Algebra.TensorProduct.includeRight.toRingHom) r ≠ q
 
 theorem etale_makes_quasiFinite_finite_one_prime
     {R S : Type u} [CommRing R] [CommRing S]
@@ -161,6 +172,13 @@ structure EtaleFiniteOverPrimeData
   etale : RingHom.Etale (algebraMap R R')
   p' : PrimeSpectrum R'
   liesOver : PrimeSpectrum.comap (algebraMap R R') p' = p
+  residueEquiv :
+    letI : Algebra p.asIdeal.ResidueField p'.asIdeal.ResidueField :=
+      (Formalization.Books.Algebra.Unit113.residueFieldMapAt
+        (algebraMap R R') p p' liesOver).toAlgebra
+    Nonempty
+      (p.asIdeal.ResidueField ≃ₐ[p.asIdeal.ResidueField]
+        p'.asIdeal.ResidueField)
   decomposition : FiniteAlgebraProduct R' (R' ⊗[R] S)
   finiteFactors : ∀ i, letI : Algebra R' (decomposition.A i) := decomposition.algebraA i
     RingHom.Finite (algebraMap R' (decomposition.A i))
@@ -213,6 +231,21 @@ theorem etale_makes_quasiFinite_finite_variant
 
 /-! ## 145.2 Local homomorphisms -/
 
+/-- The canonical map on quotients induced by a ring map and a principal
+power ideal.  It is the map appearing in Lindel's lemma. -/
+def powerQuotientMap
+    {R S : Type u} [CommRing R] [CommRing S]
+    (f : R →+* S) (t : R) (n : ℕ) :
+    R ⧸ Ideal.span ({t ^ n} : Set R) →+*
+      S ⧸ Ideal.map f (Ideal.span ({t ^ n} : Set R)) :=
+  Ideal.Quotient.lift (Ideal.span ({t ^ n} : Set R))
+    ((Ideal.Quotient.mk (Ideal.map f (Ideal.span ({t ^ n} : Set R)))).comp f)
+    (by
+      intro a ha
+      change Ideal.Quotient.mk (Ideal.map f (Ideal.span ({t ^ n} : Set R))) (f a) = 0
+      rw [Ideal.Quotient.eq_zero_iff_mem]
+      exact Ideal.mem_map_of_mem f ha)
+
 structure LocalEtaleCompletionData
     (R S : Type u) [CommRing R] [CommRing S]
     [IsLocalRing R] [IsLocalRing S] where
@@ -224,8 +257,10 @@ structure LocalEtaleCompletionData
       ∃ q : PrimeSpectrum T,
       ∃ g : R →+* T, RingHom.Etale g ∧
         Nonempty (Localization.AtPrime q.asIdeal ≃+* S)
-  residueEquiv : Nonempty
-    (IsLocalRing.ResidueField R ≃+* IsLocalRing.ResidueField S)
+  residueEquiv : ∃ e : IsLocalRing.ResidueField R ≃+*
+      IsLocalRing.ResidueField S,
+    e.toRingHom.comp (algebraMap R (IsLocalRing.ResidueField R)) =
+      (algebraMap S (IsLocalRing.ResidueField S)).comp map
 
 theorem lindel
     {R S : Type u} [CommRing R] [CommRing S]
@@ -236,12 +271,15 @@ theorem lindel
       ∃ q : PrimeSpectrum T,
       ∃ g : R →+* T, RingHom.Etale g ∧
         Nonempty (Localization.AtPrime q.asIdeal ≃+* S))
-    (hresidue : Nonempty
-      (IsLocalRing.ResidueField R ≃+* IsLocalRing.ResidueField S)) :
+    (hresidue : ∃ e : IsLocalRing.ResidueField R ≃+*
+        IsLocalRing.ResidueField S,
+      e.toRingHom.comp (algebraMap R (IsLocalRing.ResidueField R)) =
+        (algebraMap S (IsLocalRing.ResidueField S)).comp f) :
     ∃ t : R, t ∈ IsLocalRing.maximalIdeal R ∧
       ∀ n : ℕ, 1 ≤ n →
-        Nonempty ((R ⧸ (Ideal.span ({t ^ n} : Set R))) ≃+*
-          (S ⧸ (Ideal.span ({(f t) ^ n} : Set S)))) := by
+        ∃ e : (R ⧸ (Ideal.span ({t ^ n} : Set R))) ≃+*
+          (S ⧸ Ideal.map f (Ideal.span ({t ^ n} : Set R))),
+          e.toRingHom = powerQuotientMap f t n := by
   sorry
 
 theorem etale_under_finite_flat
@@ -268,16 +306,13 @@ theorem etale_under_finite_flat
 
 /-! ## 145.3 Integral closure and smooth base change -/
 
-def integralClosureBaseChangeMap
+abbrev integralClosureBaseChangeMap
     {R S B : Type u} [CommRing R] [CommRing S] [CommRing B]
     [Algebra R S] [Algebra R B]
     :
     S ⊗[R] (integralClosure R B) →ₐ[S]
-      S ⊗[R] B := by
-  letI : Algebra S (S ⊗[R] (integralClosure R B)) :=
-    Algebra.TensorProduct.leftAlgebra
-  letI : Algebra S (S ⊗[R] B) := Algebra.TensorProduct.leftAlgebra
-  exact Algebra.TensorProduct.map (Algebra.ofId S S) (integralClosure R B).val
+      integralClosure S (S ⊗[R] B) :=
+  TensorProduct.toIntegralClosure R S B
 
 theorem integral_closure_trick
     {R B : Type u} [CommRing R] [CommRing B]
@@ -1070,6 +1105,14 @@ structure HenselianFiniteTypeDecomposition
     ∀ q : PrimeSpectrum decomposition.B,
       ¬ RingHom.QuasiFiniteAt (algebraMap R decomposition.B) q.asIdeal
 
+structure LocalProductData
+    (R S : Type u) [CommRing R] [CommRing S] [Algebra R S] where
+  index : Type u
+  A : index → CommRingCat.{u}
+  algebraA : ∀ i, Algebra R (A i)
+  localA : ∀ i, IsLocalRing (A i)
+  equiv : S ≃+* (∀ i, A i)
+
 structure HenselianPositiveFiberDecomposition
     (R S : Type u) [CommRing R] [CommRing S] [IsLocalRing R] [Algebra R S] where
   decomposition : BinaryAlgebraProduct R S
@@ -1105,7 +1148,7 @@ structure HenselianCharacterizationData
   condition8 : HenselianEtaleRetractionUnique R
   condition9 : ∀ (S : Type u) [CommRing S] (f : R →+* S), RingHom.Finite f →
     letI : Algebra R S := f.toAlgebra
-    Nonempty (FiniteLocalProductData R S)
+    Nonempty (LocalProductData R S)
   condition10 : ∀ (S : Type u) [CommRing S] (f : R →+* S), RingHom.Finite f →
     letI : Algebra R S := f.toAlgebra
     Nonempty (FiniteLocalProductData R S)
@@ -2045,4 +2088,309 @@ theorem strict_henselization_from_henselization
     (hstrictSh : IsStrictlyHenselian Sh)
     [Algebra Rh Sh] [Algebra Rh Rsh] :
     Nonempty (Sh ≃ₐ[Rh] Sh ⊗[Rh] Rsh) := by
+  sorry
+
+/-! ## 145.12 Henselization and quasi-finite ring maps -/
+
+/-- The canonical map between the localizations at primes lying over one
+another.  The equality of primes is derived from the corresponding equality
+in the prime spectra, so callers can use the map without repeating this
+conversion. -/
+def localizationAtPrimeMap
+    {R S : Type u} [CommRing R] [CommRing S]
+    (f : R →+* S) (p : PrimeSpectrum R) (q : PrimeSpectrum S)
+    (hq : PrimeSpectrum.comap f q = p) :
+    Localization.AtPrime p.asIdeal →+*
+      Localization.AtPrime q.asIdeal :=
+  let hcomap : p.asIdeal = q.asIdeal.comap f := by
+    simpa [PrimeSpectrum.comap_asIdeal] using
+      (congrArg PrimeSpectrum.asIdeal hq).symm
+  Localization.localRingHom p.asIdeal q.asIdeal f hcomap
+
+/-- The data in the quasi-finite henselization lemma, including the unique
+prime of the tensor product and the finite local comparison map. -/
+structure QuasiFiniteHenselizationData
+    {R S Rh Sh : Type u} [CommRing R] [CommRing S]
+    [CommRing Rh] [IsLocalRing Rh] [CommRing Sh] [IsLocalRing Sh]
+    (f : R →+* S) (p : PrimeSpectrum R) (q : PrimeSpectrum S)
+    (hq : PrimeSpectrum.comap f q = p)
+    (rh : Localization.AtPrime p.asIdeal →+* Rh)
+    (sh : Localization.AtPrime q.asIdeal →+* Sh)
+    [Algebra R Rh]
+    [Algebra R (Localization.AtPrime q.asIdeal)] where
+  prime : PrimeSpectrum (Rh ⊗[R] Localization.AtPrime q.asIdeal)
+  prime_over_source :
+    PrimeSpectrum.comap
+        (Algebra.TensorProduct.includeLeft (R := R) (S := R)
+          (A := Rh) (B := Localization.AtPrime q.asIdeal)).toRingHom prime =
+      maximalPrimeSpectrum Rh
+  prime_over_target :
+    PrimeSpectrum.comap
+        (Algebra.TensorProduct.includeRight (R := R)
+          (A := Rh) (B := Localization.AtPrime q.asIdeal)).toRingHom prime =
+      maximalPrimeSpectrum (Localization.AtPrime q.asIdeal)
+  unique_prime : ∀ r : PrimeSpectrum (Rh ⊗[R] Localization.AtPrime q.asIdeal),
+    PrimeSpectrum.comap
+          (Algebra.TensorProduct.includeLeft (R := R) (S := R)
+            (A := Rh) (B := Localization.AtPrime q.asIdeal)).toRingHom r =
+        maximalPrimeSpectrum Rh →
+    PrimeSpectrum.comap
+          (Algebra.TensorProduct.includeRight (R := R)
+            (A := Rh) (B := Localization.AtPrime q.asIdeal)).toRingHom r =
+        maximalPrimeSpectrum (Localization.AtPrime q.asIdeal) →
+      r = prime
+  henselization :
+    HenselizationAtPrimeWitness
+      (Rh ⊗[R] Localization.AtPrime q.asIdeal) Sh prime
+  comparison : Rh →+* Sh
+  comparison_commutes :
+    comparison.comp rh = sh.comp (localizationAtPrimeMap f p q hq)
+  comparison_finite : RingHom.Finite comparison
+  comparison_local : IsLocalHom comparison
+  localization_equiv : ∃ e : Localization.AtPrime prime.asIdeal ≃+* Sh,
+    e.toRingHom = henselization.map
+
+theorem quasi_finite_henselization
+    {R S Rh Sh : Type u} [CommRing R] [CommRing S]
+    [CommRing Rh] [IsLocalRing Rh] [CommRing Sh] [IsLocalRing Sh]
+    (f : R →+* S) (p : PrimeSpectrum R) (q : PrimeSpectrum S)
+    (hq : PrimeSpectrum.comap f q = p)
+    (rh : Localization.AtPrime p.asIdeal →+* Rh)
+    (sh : Localization.AtPrime q.asIdeal →+* Sh)
+    (hrh : IsHenselization rh) (hsh : IsHenselization sh)
+    (hquasi : RingHom.QuasiFiniteAt f q.asIdeal) :
+    letI : Algebra R (Localization.AtPrime p.asIdeal) :=
+      (algebraMap R (Localization.AtPrime p.asIdeal)).toAlgebra
+    letI : Algebra R Rh :=
+      Algebra.compHom Rh (rh.comp
+        (algebraMap R (Localization.AtPrime p.asIdeal)))
+    letI : Algebra R S := f.toAlgebra
+    letI : Algebra R (Localization.AtPrime q.asIdeal) :=
+      (atPrimeLocalizationMap f q).toAlgebra
+    Nonempty (QuasiFiniteHenselizationData f p q hq rh sh) := by
+  sorry
+
+/-- The quotient map induced by a henselization map and an ideal. -/
+def quotientHenselizationMap
+    {R Rh : Type u} [CommRing R] [CommRing Rh]
+    (rh : R →+* Rh) (I : Ideal R) :
+    R ⧸ I →+* Rh ⧸ Ideal.map rh I :=
+  Ideal.Quotient.lift I
+    ((Ideal.Quotient.mk (Ideal.map rh I)).comp rh)
+    (by
+      intro a ha
+      change Ideal.Quotient.mk (Ideal.map rh I) (rh a) = 0
+      rw [Ideal.Quotient.eq_zero_iff_mem]
+      exact Ideal.mem_map_of_mem rh ha)
+
+structure QuotientHenselizationData
+    {R Rh : Type u} [CommRing R] [IsLocalRing R]
+    [CommRing Rh] [IsLocalRing Rh]
+    (rh : R →+* Rh) (I : Ideal R) where
+  [local_source : IsLocalRing (R ⧸ I)]
+  [local_target : IsLocalRing (Rh ⧸ Ideal.map rh I)]
+  property : IsHenselization (quotientHenselizationMap rh I)
+
+theorem quotient_henselization
+    {R Rh : Type u} [CommRing R] [IsLocalRing R]
+    [CommRing Rh] [IsLocalRing Rh]
+    (rh : R →+* Rh) (hrh : IsHenselization rh)
+    (I : Ideal R) (hI : I ≤ IsLocalRing.maximalIdeal R) :
+    Nonempty (QuotientHenselizationData rh I) := by
+  sorry
+
+structure QuotientStrictHenselizationData
+    {R Rsh K : Type u} [CommRing R] [IsLocalRing R]
+    [CommRing Rsh] [IsLocalRing Rsh] [Field K]
+    [Algebra (IsLocalRing.ResidueField R) K]
+    (rsh : R →+* Rsh) (I : Ideal R) where
+  [local_source : IsLocalRing (R ⧸ I)]
+  [local_target : IsLocalRing (Rsh ⧸ Ideal.map rsh I)]
+  quotient_residue_algebra :
+    Algebra (IsLocalRing.ResidueField (R ⧸ I)) K
+  property :
+    letI : Algebra (IsLocalRing.ResidueField (R ⧸ I)) K :=
+      quotient_residue_algebra
+    IsStrictHenselization (K := K) (quotientHenselizationMap rsh I)
+
+theorem quotient_strict_henselization
+    {R Rsh K : Type u} [CommRing R] [IsLocalRing R]
+    [CommRing Rsh] [IsLocalRing Rsh] [Field K]
+    [Algebra (IsLocalRing.ResidueField R) K]
+    [Algebra.IsAlgebraic (IsLocalRing.ResidueField R) K]
+    [IsSepClosed K]
+    (rsh : R →+* Rsh) (hrsh : IsStrictHenselization (K := K) rsh)
+    (I : Ideal R) (hI : I ≤ IsLocalRing.maximalIdeal R) :
+    Nonempty (QuotientStrictHenselizationData (K := K) rsh I) := by
+  sorry
+
+/-- The residue-field condition used in the local tensor lemma. -/
+def MaximalResidueFieldPurelyInseparable
+    {A B : Type u} [CommRing A] [IsLocalRing A]
+    [CommRing B] [IsLocalRing B]
+    (f : A →+* B)
+    (h : PrimeSpectrum.comap f (maximalPrimeSpectrum B) =
+      maximalPrimeSpectrum A) : Prop :=
+  letI : Algebra (maximalPrimeSpectrum A).asIdeal.ResidueField
+      (maximalPrimeSpectrum B).asIdeal.ResidueField :=
+    (Formalization.Books.Algebra.Unit113.residueFieldMapAt f
+      (maximalPrimeSpectrum A) (maximalPrimeSpectrum B) h).toAlgebra
+  IsPurelyInseparable (maximalPrimeSpectrum A).asIdeal.ResidueField
+    (maximalPrimeSpectrum B).asIdeal.ResidueField
+
+structure LocalTensorWithIntegralData
+    {A B C : Type u} [CommRing A] [CommRing B] [CommRing C]
+    [Algebra A B] [Algebra A C] where
+  [local_tensor : IsLocalRing (B ⊗[A] C)]
+  left_local : IsLocalHom
+    (Algebra.TensorProduct.includeLeft (R := A) (S := A)
+      (A := B) (B := C)).toRingHom
+  right_local : IsLocalHom
+    (Algebra.TensorProduct.includeRight (R := A)
+      (A := B) (B := C)).toRingHom
+
+theorem local_tensor_with_integral
+    {A B C : Type u} [CommRing A] [IsLocalRing A]
+    [CommRing B] [IsLocalRing B] [CommRing C] [IsLocalRing C]
+    (f : A →+* B) (g : A →+* C)
+    (hf : IsLocalHom f) (hg : IsLocalHom g)
+    (hintegral : g.IsIntegral)
+    (hB : PrimeSpectrum.comap f (maximalPrimeSpectrum B) =
+      maximalPrimeSpectrum A)
+    (hC : PrimeSpectrum.comap g (maximalPrimeSpectrum C) =
+      maximalPrimeSpectrum A)
+    (hpure : MaximalResidueFieldPurelyInseparable g hC ∨
+      MaximalResidueFieldPurelyInseparable f hB) :
+    letI : Algebra A B := f.toAlgebra
+    letI : Algebra A C := g.toAlgebra
+    Nonempty (LocalTensorWithIntegralData (A := A) (B := B) (C := C)) := by
+  sorry
+
+/-- A ring map whose target is presented as a filtered colimit of
+quasi-finite algebras over its source. -/
+def IsFilteredColimitOfQuasiFinite
+    {A B : Type u} [CommRing A] [CommRing B]
+    (f : A →+* B) : Prop :=
+  Nonempty (Formalization.Books.Algebra.Unit127.FilteredAlgebraColimitIn f
+    {X | RingHom.QuasiFinite X.hom.hom})
+
+/-- The localized version of `IsFilteredColimitOfQuasiFinite`. -/
+def IsFilteredColimitOfQuasiFiniteAt
+    {A B : Type u} [CommRing A] [CommRing B]
+    (f : A →+* B) (p : PrimeSpectrum A) (q : PrimeSpectrum B)
+    (hq : PrimeSpectrum.comap f q = p) : Prop :=
+  IsFilteredColimitOfQuasiFinite (localizationAtPrimeMap f p q hq)
+
+/-- The four hypotheses in the strict henselization base-change lemma. -/
+def QuasiFiniteBaseChangeCondition
+    {A B : Type u} [CommRing A] [CommRing B]
+    (f : A →+* B) (p : PrimeSpectrum A) (q : PrimeSpectrum B)
+    (hq : PrimeSpectrum.comap f q = p) : Prop :=
+  RingHom.QuasiFiniteAt f q.asIdeal ∨
+    IsFilteredColimitOfQuasiFinite f ∨
+      IsFilteredColimitOfQuasiFiniteAt f p q hq ∨ f.IsIntegral
+
+/-- The commutative diagram and tensor-product identification supplied by the
+strict henselization base-change lemma. -/
+structure StrictHenselizationBaseChangeData
+    {A B C Ash Bsh Csh Dsh K : Type u}
+    [CommRing A] [CommRing B] [CommRing C]
+    [CommRing Ash] [IsLocalRing Ash]
+    [CommRing Bsh] [IsLocalRing Bsh]
+    [CommRing Csh] [IsLocalRing Csh]
+    [CommRing Dsh] [IsLocalRing Dsh]
+    [Field K] [Algebra A B] [Algebra A C]
+    (f : A →+* B) (g : A →+* C)
+    (pA : PrimeSpectrum A) (pB : PrimeSpectrum B)
+    (pC : PrimeSpectrum C)
+    (pD : PrimeSpectrum (B ⊗[A] C))
+    (hpB : PrimeSpectrum.comap f pB = pA)
+    (hpC : PrimeSpectrum.comap g pC = pA)
+    (hpBD : PrimeSpectrum.comap
+      (Algebra.TensorProduct.includeLeft (R := A) (S := A)
+        (A := B) (B := C)).toRingHom pD = pB)
+    (hpCD : PrimeSpectrum.comap
+      (Algebra.TensorProduct.includeRight (R := A)
+        (A := B) (B := C)).toRingHom pD = pC)
+    (point : (B ⊗[A] C) →+* K)
+    (hpoint : RingHom.ker point = pD.asIdeal)
+    (ash : Localization.AtPrime pA.asIdeal →+* Ash)
+    (bsh : Localization.AtPrime pB.asIdeal →+* Bsh)
+    (csh : Localization.AtPrime pC.asIdeal →+* Csh)
+    (dsh : Localization.AtPrime pD.asIdeal →+* Dsh)
+    [Algebra Ash Bsh] [Algebra Ash Csh] where
+  base_to_B : Ash →+* Bsh
+  base_to_C : Ash →+* Csh
+  base_to_B_commutes :
+    base_to_B.comp ash = bsh.comp (localizationAtPrimeMap f pA pB hpB)
+  base_to_C_commutes :
+    base_to_C.comp ash = csh.comp (localizationAtPrimeMap g pA pC hpC)
+  B_to_D : Bsh →+* Dsh
+  C_to_D : Csh →+* Dsh
+  B_to_D_commutes :
+    B_to_D.comp bsh = dsh.comp (localizationAtPrimeMap
+      (Algebra.TensorProduct.includeLeft (R := A) (S := A)
+        (A := B) (B := C)).toRingHom pB pD hpBD)
+  C_to_D_commutes :
+    C_to_D.comp csh = dsh.comp (localizationAtPrimeMap
+      (Algebra.TensorProduct.includeRight (R := A)
+        (A := B) (B := C)).toRingHom pC pD hpCD)
+  comparison : Bsh ⊗[Ash] Csh ≃+* Dsh
+  comparison_left :
+    comparison.toRingHom.comp
+        (Algebra.TensorProduct.includeLeft (R := Ash) (S := Ash)
+          (A := Bsh) (B := Csh)).toRingHom = B_to_D
+  comparison_right :
+    comparison.toRingHom.comp
+        (Algebra.TensorProduct.includeRight (R := Ash)
+          (A := Bsh) (B := Csh)).toRingHom = C_to_D
+
+theorem base_change_strict_henselization_quasiFinite
+    {A B C Ash Bsh Csh Dsh K_A K_B K_C K_D : Type u}
+    [CommRing A] [CommRing B] [CommRing C]
+    [CommRing Ash] [IsLocalRing Ash]
+    [CommRing Bsh] [IsLocalRing Bsh]
+    [CommRing Csh] [IsLocalRing Csh]
+    [CommRing Dsh] [IsLocalRing Dsh]
+    [Field K_A] [Field K_B] [Field K_C] [Field K_D]
+    [Algebra A B] [Algebra A C] [Algebra Ash Bsh] [Algebra Ash Csh]
+    (f : A →+* B) (g : A →+* C)
+    (hf : f = algebraMap A B) (hg : g = algebraMap A C)
+    (pA : PrimeSpectrum A) (pB : PrimeSpectrum B)
+    (pC : PrimeSpectrum C)
+    (pD : PrimeSpectrum (B ⊗[A] C))
+    (hpB : PrimeSpectrum.comap f pB = pA)
+    (hpC : PrimeSpectrum.comap g pC = pA)
+    (hpBD : PrimeSpectrum.comap
+      (Algebra.TensorProduct.includeLeft (R := A) (S := A)
+        (A := B) (B := C)).toRingHom pD = pB)
+    (hpCD : PrimeSpectrum.comap
+      (Algebra.TensorProduct.includeRight (R := A)
+        (A := B) (B := C)).toRingHom pD = pC)
+    (point : (B ⊗[A] C) →+* K_D)
+    (hpoint : RingHom.ker point = pD.asIdeal)
+    [Algebra (IsLocalRing.ResidueField (Localization.AtPrime pA.asIdeal)) K_A]
+    [Algebra (IsLocalRing.ResidueField (Localization.AtPrime pB.asIdeal)) K_B]
+    [Algebra (IsLocalRing.ResidueField (Localization.AtPrime pC.asIdeal)) K_C]
+    [Algebra (IsLocalRing.ResidueField (Localization.AtPrime pD.asIdeal)) K_D]
+    [Algebra.IsAlgebraic
+      (IsLocalRing.ResidueField (Localization.AtPrime pA.asIdeal)) K_A]
+    [Algebra.IsAlgebraic
+      (IsLocalRing.ResidueField (Localization.AtPrime pB.asIdeal)) K_B]
+    [Algebra.IsAlgebraic
+      (IsLocalRing.ResidueField (Localization.AtPrime pC.asIdeal)) K_C]
+    [Algebra.IsAlgebraic
+      (IsLocalRing.ResidueField (Localization.AtPrime pD.asIdeal)) K_D]
+    [IsSepClosed K_A] [IsSepClosed K_B] [IsSepClosed K_C] [IsSepClosed K_D]
+    (ash : Localization.AtPrime pA.asIdeal →+* Ash)
+    (bsh : Localization.AtPrime pB.asIdeal →+* Bsh)
+    (csh : Localization.AtPrime pC.asIdeal →+* Csh)
+    (dsh : Localization.AtPrime pD.asIdeal →+* Dsh)
+    (hash : IsStrictHenselization (K := K_A) ash)
+    (hbsh : IsStrictHenselization (K := K_B) bsh)
+    (hcsh : IsStrictHenselization (K := K_C) csh)
+    (hdsh : IsStrictHenselization (K := K_D) dsh)
+    (hcondition : QuasiFiniteBaseChangeCondition f pA pB hpB) :
+    Nonempty (StrictHenselizationBaseChangeData f g pA pB pC pD hpB hpC
+      hpBD hpCD point hpoint ash bsh csh dsh) := by
   sorry

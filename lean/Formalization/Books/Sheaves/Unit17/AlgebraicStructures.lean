@@ -1,5 +1,5 @@
-import Formalization.Books.Sheaves.Unit17.AbelianPresheaves
 import Formalization.Books.Sheaves.Unit15.AlgebraicStructures
+import Formalization.Books.Sheaves.Unit17.Sheafification
 
 /-!
 # Sheaves on Spaces, Chapter 17, Section 3: Sheafification of presheaves of

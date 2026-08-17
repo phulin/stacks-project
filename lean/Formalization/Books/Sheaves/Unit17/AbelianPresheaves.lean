@@ -1,5 +1,5 @@
-import Formalization.Books.Sheaves.Unit17.Sheafification
 import Formalization.Books.Sheaves.Unit12.StalksOfAbelianPresheaves
+import Formalization.Books.Sheaves.Unit17.Sheafification
 import Mathlib.Algebra.Category.Grp.Colimits
 import Mathlib.Algebra.Category.Grp.Limits
 import Mathlib.CategoryTheory.Sites.LeftExact

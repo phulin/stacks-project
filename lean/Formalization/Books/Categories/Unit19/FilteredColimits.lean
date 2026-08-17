@@ -952,14 +952,15 @@ theorem exists_abelian_colimit_injective_counterexample :
     AddCommGrpCat.ofHom
       (AddMonoidHom.mk' (fun p => (p.1 + g.toAdd * p.2, p.2)) (by
         intro p q
-        ext <;> simp [add_mul, mul_add, add_assoc, add_left_comm, add_comm]))
+        ext <;> simp [mul_add, add_assoc, add_left_comm]))
   let Ndiagram : SingleObj G ⥤ Ab :=
     { obj _ := AddCommGrpCat.of (ZMod 2 × ZMod 2)
       map g := Nmap g
       map_id := by
         intro X
-        ext p <;> dsimp [Nmap, AddMonoidHom.mk'] <;>
-          simp [SingleObj.id_as_one]
+        ext p
+        all_goals dsimp [Nmap, AddMonoidHom.mk']
+        all_goals simp [SingleObj.id_as_one]
       map_comp := by
         intro X Y Z f g
         ext p <;> dsimp [Nmap, AddMonoidHom.mk']
@@ -1025,11 +1026,11 @@ theorem exists_abelian_colimit_injective_counterexample :
     have h1 : dM.hom (colimit.ι Mdiagram (SingleObj.star G) (1 : ZMod 2)) = 1 := by
       have hf := ConcreteCategory.congr_hom
         ((colimit.isColimit Mdiagram).fac cM (SingleObj.star G)) (1 : ZMod 2)
-      simpa [cM, dM] using hf
+      convert hf using 1 <;> simp [cM, dM]
     have h0 : dM.hom (colimit.ι Mdiagram (SingleObj.star G) 0) = 0 := by
       have hf := ConcreteCategory.congr_hom
         ((colimit.isColimit Mdiagram).fac cM (SingleObj.star G)) (0 : ZMod 2)
-      simpa [cM, dM] using hf
+      convert hf using 1 <;> simp [cM, dM]
     have := congrArg dM.hom h
     rw [h1, h0] at this
     exact one_ne_zero this
@@ -1050,9 +1051,9 @@ theorem exists_abelian_colimit_injective_counterexample :
         simp only [Iso.refl_inv, Iso.refl_hom]
         rw [Category.id_comp, Category.comp_id]
         change Ndiagram.map (Multiplicative.ofAdd (1 : ZMod 2)) = zmodTwoShear
-        ext p <;>
-          dsimp [Ndiagram, Nmap, zmodTwoShear, AddMonoidHom.mk'] <;>
-          simp
+        ext p
+        all_goals dsimp [Ndiagram, Nmap, zmodTwoShear, AddMonoidHom.mk']
+        all_goals simp
       pointwise_injective := by
         intro i x y hxy
         exact congrArg Prod.fst hxy
@@ -1201,8 +1202,9 @@ theorem almost_directed_colimit_commutes_finite_connected_limits
       fun j => (h' j).choose_spec.choose_spec.choose_spec
     let j₀ : J := Classical.choice (inferInstance : Nonempty J)
     let comp : ConnectedComponents I := Quotient.mk'' kx
-    letI : IsFiltered comp.Component :=
+    let hfiltered : IsFiltered comp.Component :=
       filtered_connected_component_decomposition hspan heq comp
+    let hfilteredOrEmpty : IsFilteredOrEmpty comp.Component := IsFiltered.toIsFilteredOrEmpty
     have hk (j : J) : Quotient.mk'' (k j) = comp := by
       simpa [comp] using (Quotient.sound' (Zigzag.of_hom (f j))).symm
     have hky : Quotient.mk'' ky = comp := by
@@ -1215,7 +1217,7 @@ theorem almost_directed_colimit_commutes_finite_connected_limits
     let O : Finset comp.Component := Finset.univ.image k' ∪ {kx', ky'}
     have kxO : kx' ∈ O := Finset.mem_union.mpr (Or.inr (by simp))
     have kyO : ky' ∈ O := Finset.mem_union.mpr (Or.inr (by simp))
-    have kjO : ∀ j, k' j ∈ O := fun j => Finset.mem_union.mpr (Or.inl (by simp [O]))
+    have kjO : ∀ j, k' j ∈ O := fun j => Finset.mem_union.mpr (Or.inl (by simp))
     let H : Finset
         (Σ' (X Y : comp.Component) (_ : X ∈ O) (_ : Y ∈ O), X ⟶ Y) :=
       Finset.univ.image (fun j : J =>
@@ -1291,8 +1293,9 @@ theorem almost_directed_colimit_commutes_finite_connected_limits
           rcases hbc with ⟨⟨hbc⟩⟩ | ⟨⟨hcb⟩⟩
           · exact (hcomp_hom (j := b) (j' := c) hbc).symm.trans ih
           · exact (hcomp_hom (j := c) (j' := b) hcb).trans ih
-    letI : IsFiltered comp.Component :=
+    let hfiltered : IsFiltered comp.Component :=
       filtered_connected_component_decomposition hspan heq comp
+    let hfilteredOrEmpty : IsFilteredOrEmpty comp.Component := IsFiltered.toIsFilteredOrEmpty
     let kObj (j : J) : comp.Component := ⟨k j, hk j⟩
     let O : Finset comp.Component := Finset.univ.image kObj
     let k' : comp.Component := IsFiltered.sup O ∅
@@ -1512,17 +1515,25 @@ theorem almost_directed_colimit_commutes_finite_connected_limits
       exact fun j j' f => hcoh (j := j) (j' := j') f
     · apply Types.limit_ext
       intro j
-      simp only [Functor.comp_obj, Bifunctor.map_id_comp, id_eq,
+      simp only [Functor.comp_obj,
         ← comp_apply, Category.assoc, ι_colimitLimitToLimitColimit_π,
         Functor.curry_obj_obj_obj, CategoryTheory.Prod.swap_obj]
       dsimp
       rw [← dsimp% e j]
       rw [Types.Limit.π_mk]
       dsimp only [Functor.comp_obj, ← Functor.curry_obj_obj_obj]
-      rw [colimit_eq_iff]
-      refine ⟨k'', 𝟙 k'', (g j).hom ≫ (gf (𝟙 j)) ≫ (i (𝟙 j)).hom, ?_⟩
+      rw [almost_directed_colimit_eventual_equality_iff hspan
+        ((Functor.curry.obj P).obj j)]
+      refine ⟨k''.obj, ((𝟙 k'' : k'' ⟶ k'').hom),
+        (g j).hom ≫ (gf (𝟙 j)) ≫ (i (𝟙 j)).hom, ?_⟩
       simp
-  sorry
+  let e := colimitLimitToLimitColimit P
+  have hbij : Function.Bijective e := ⟨hq_inj, hq_surj⟩
+  have hIso : IsIso e := (isIso_iff_bijective e).2 hbij
+  exact ⟨Functor.mapIso colim (limitIsoSwapCompLim M) ≪≫
+    (asIso e) ≪≫ HasLimit.isoOfNatIso
+      ((Functor.isoWhiskerRight (Functor.currying.unitIso.app M) colim).symm ≪≫
+        (colimitFlipIsoCompColim M).symm)⟩
 
 /-- The coproduct pullback and coproduct equalizer identities displayed in the
 source are the set-theoretic special cases of the preceding finite connected

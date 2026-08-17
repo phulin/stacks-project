@@ -1,17 +1,14 @@
-import Formalization.Books.Modules.Unit03.AbelianCategory
-import Formalization.Books.Topology.Unit02.BasicNotions
-import Formalization.Books.Sheaves.Unit22.OpenImmersions
-import Mathlib.Algebra.Category.ModuleCat.Presheaf.ColimitFunctor
+import Formalization.Books.Modules.Unit06.ClosedImmersions
 import Mathlib.Algebra.Category.ModuleCat.Sheaf.Quasicoherent
 
 /-!
 # Sheaves of Modules, Chapter 10: Quasi-coherent modules
 
-This file records the source definition of quasi-coherence together with the
-canonical presentation, pullback, associated-sheaf, restriction, and local
-presentation interfaces used in the section.  The ambient category of sheaves
-of modules and its free, cokernel, coproduct, and pullback constructions are
-the canonical Mathlib constructions exposed in earlier chapters.
+The preceding modules chapter already provides the canonical project
+interfaces for quasi-coherence and for the associated-sheaf construction.
+This file gives those interfaces the source-facing names used in this
+section, and records the additional presentation, point, and example data
+which is explicit in the text.
 -/
 
 namespace Formalization.Books.Modules.Unit10
@@ -30,41 +27,29 @@ local notation "Mod" => Formalization.Books.Sheaves.Unit10.Mod
 
 /-! ## The local definition -/
 
-/-
-The source uses the pointwise formulation.  Mathlib's
-`SheafOfModules.IsQuasicoherent` uses the equivalent cover-by-opens
-formulation, and is the property used for the category below.  Keeping the
-pointwise formulation here makes the source definition and its displayed
-free-cokernel presentation available without introducing a second category.
--/
+/-- The free-cokernel presentation condition on one open neighbourhood. -/
+abbrev hasPresentationOn {X : RingedSpace.{v}} (F : Mod X.structureSheaf)
+    (U : Opens X.carrier) : Prop :=
+  Formalization.Books.Modules.Unit06.hasModulePresentationOn F U
 
-/-- The source's local free-cokernel presentation condition. -/
-def LocallyPresented {X : RingedSpace.{v}} (F : Mod X.structureSheaf) : Prop :=
-  ∀ x : X, ∃ U : Opens X.carrier, x ∈ U ∧
-    ∃ (I J : Type v)
-      (φ : (SheafOfModules.free J : Mod (ringedOpenSubspace X U).structureSheaf) ⟶
-        (SheafOfModules.free I : Mod (ringedOpenSubspace X U).structureSheaf)),
-      Nonempty (((openModuleRestrictionFunctor X U).obj F) ≅ cokernel φ)
+/-- The source's pointwise definition of quasi-coherence. -/
+abbrev LocallyPresented {X : RingedSpace.{v}} (F : Mod X.structureSheaf) : Prop :=
+  Formalization.Books.Modules.Unit06.quasiCoherent F
 
-/-- The canonical Mathlib quasi-coherence property for a ringed space. -/
+/-- The canonical Mathlib/project quasi-coherence property. -/
 abbrev IsQuasiCoherent {X : RingedSpace.{v}} (F : Mod X.structureSheaf) : Prop :=
-  SheafOfModules.IsQuasicoherent F
-
-/-- The source definition agrees with Mathlib's cover formulation. -/
-theorem isQuasiCoherent_iff_locallyPresented
-    {X : RingedSpace.{v}} (F : Mod X.structureSheaf) :
-    IsQuasiCoherent F ↔ LocallyPresented F := by
-  sorry
+  Formalization.Books.Modules.Unit06.quasiCoherent F
 
 /-- The category denoted by `QCoh(O_X)` in the source. -/
 abbrev QCoh (X : RingedSpace.{v}) :=
-  (SheafOfModules.isQuasicoherent X.structureSheaf).FullSubcategory
+  Formalization.Books.Modules.Unit06.QCoh (X := X)
 
-/-! The two clauses in the displayed presentation are the generators and
-relations data of the canonical Mathlib presentation. -/
+/-- The two source-facing names describe the same property. -/
+theorem isQuasiCoherent_iff_locallyPresented
+    {X : RingedSpace.{v}} (F : Mod X.structureSheaf) :
+    IsQuasiCoherent F ↔ LocallyPresented F := Iff.rfl
 
-/-- A local free-cokernel presentation gives the source's generators and
-relations presentation data. -/
+/-- The presentation in the definition supplies generators and relations. -/
 theorem locallyPresented_has_generators_and_relations
     {X : RingedSpace.{v}} {F : Mod X.structureSheaf}
     (hF : LocallyPresented F) :
@@ -75,8 +60,7 @@ theorem locallyPresented_has_generators_and_relations
         Nonempty (((openModuleRestrictionFunctor X U).obj F) ≅ cokernel φ) := by
   exact hF
 
-/-- The cokernel presentation carries the canonical exactness/cokernel
-sequence displayed in the source. -/
+/-- The last arrow in the displayed presentation is the cokernel projection. -/
 theorem locallyPresented_has_cokernel_sequence
     {X : RingedSpace.{v}} {F : Mod X.structureSheaf}
     (hF : LocallyPresented F) :
@@ -90,10 +74,10 @@ theorem locallyPresented_has_cokernel_sequence
   intro x
   rcases hF x with ⟨U, hxU, I, J, φ, hφ⟩
   exact ⟨U, hxU, I, J, φ, hφ,
-    sheafModuleCokernel_universal (ringedOpenSubspace X U).structureSheaf φ⟩
+    Formalization.Books.Modules.Unit03.sheafModuleCokernel_universal
+      (ringedOpenSubspace X U).structureSheaf φ⟩
 
-/-- The displayed free presentation is exact at the middle term, with the
-last map identified with the cokernel projection. -/
+/-- The displayed cokernel presentation is exact. -/
 theorem locallyPresented_has_exact_presentation
     {X : RingedSpace.{v}} {F : Mod X.structureSheaf}
     (hF : LocallyPresented F) :
@@ -112,30 +96,33 @@ theorem directSum_isQuasiCoherent
     {X : RingedSpace.{v}} {F G : Mod X.structureSheaf}
     (hF : IsQuasiCoherent F) (hG : IsQuasiCoherent G) :
     IsQuasiCoherent (sheafModuleDirectSum X.structureSheaf F G) := by
-  sorry
+  exact Formalization.Books.Modules.Unit06.quasiCoherent_directSum hF hG
 
-/-! The source warns that the following statements fail for arbitrary ringed
-spaces.  They are represented as existential predicates rather than as
-universal assertions. -/
+/-- The source's warning that arbitrary infinite direct sums need not remain
+quasi-coherent, expressed using the canonical coproduct construction. -/
+def InfiniteDirectSumsPreserveQuasiCoherent : Prop :=
+  ∀ (X : RingedSpace.{v}) (I : Type v) (F : I → Mod X.structureSheaf),
+    (∀ i, IsQuasiCoherent (F i)) →
+      IsQuasiCoherent (sheafModuleCoproduct X.structureSheaf F)
 
-/-- A witness that an infinite direct sum of quasi-coherent modules fails to
-be quasi-coherent. -/
+theorem not_infiniteDirectSumsPreserveQuasiCoherent :
+    ¬ InfiniteDirectSumsPreserveQuasiCoherent := by
+  exact Formalization.Books.Modules.Unit06.not_infiniteDirectSumsPreserveQuasiCoherent
+
+/-- An existential form of the infinite-direct-sum warning. -/
 def HasInfiniteDirectSumFailure (X : RingedSpace.{v}) : Prop :=
   ∃ (I : Type v) (_ : Infinite I) (F : I → Mod X.structureSheaf),
     (∀ i, IsQuasiCoherent (F i)) ∧
       ¬ IsQuasiCoherent (sheafModuleCoproduct X.structureSheaf F)
 
-/-- A witness that the quasi-coherent full subcategory is not abelian. -/
-def HasNonabelianQuasiCoherentCategory (X : RingedSpace.{v}) : Prop :=
-  ¬ Nonempty (Abelian (QCoh X))
-
-/-- The source's warning about infinite direct sums. -/
 theorem exists_infinite_directSum_failure :
     ∃ X : RingedSpace.{v}, HasInfiniteDirectSumFailure X := by
   sorry
 
-/-- The source's warning that quasi-coherent modules need not form an abelian
-subcategory on a general ringed space. -/
+/-- A witness that the quasi-coherent full subcategory is not abelian. -/
+def HasNonabelianQuasiCoherentCategory (X : RingedSpace.{v}) : Prop :=
+  ¬ Nonempty (Abelian (QCoh X))
+
 theorem exists_nonabelian_quasiCoherentCategory :
     ∃ X : RingedSpace.{v}, HasNonabelianQuasiCoherentCategory X := by
   sorry
@@ -147,7 +134,7 @@ theorem pullback_isQuasiCoherent
     [((SheafOfModules.pushforward (F := Opens.map f.continuous)
       f.sharp).IsRightAdjoint)] :
     IsQuasiCoherent ((sheafModuleRingedSpacePullback f).obj G) := by
-  sorry
+  exact Formalization.Books.Modules.Unit06.quasiCoherent_pullback f G hG
 
 /-! ## The sheaf associated to a module -/
 
@@ -167,8 +154,8 @@ noncomputable def constantModulePresheaf
   (PresheafOfModules.constFunctor
       (Limits.constCocone (Opens X.carrier)ᵒᵖ (RingCat.of R))).obj M
 
-/-- The canonical map from the constant ring presheaf to the structure
-sheaf induced by a ring map from global sections. -/
+/-- The natural map from the constant global-sections ring to the structure
+sheaf. -/
 noncomputable def globalSectionsPresheafMap
     {X : RingedSpace.{v}} {R : Type v} [Ring R]
     (α : R →+* globalSectionsRing X) :
@@ -193,7 +180,7 @@ noncomputable def globalSectionsPresheafMap
     Subsingleton.elim _ _
   rw [h]
 
-/-- The presheaf tensor product underlying the associated sheaf. -/
+/-- The presheaf `U ↦ O_X(U) ⊗_R M` in the source's third construction. -/
 noncomputable def associatedSheafPresheaf
     {X : RingedSpace.{v}} {R : Type v} [Ring R]
     (α : R →+* globalSectionsRing X) (M : ModuleCat R) :
@@ -201,62 +188,64 @@ noncomputable def associatedSheafPresheaf
   Formalization.Books.Sheaves.Unit06.tensorProductPresheaf
     (globalSectionsPresheafMap α) (constantModulePresheaf M)
 
-/-- The sheaf associated to `M` and `α`, obtained by sheafifying the
-presheaf `U ↦ O_X(U) ⊗_R M`. -/
-noncomputable def associatedSheaf
+/-- The sheafification of the presheaf description. -/
+noncomputable def associatedSheafFromPresheaf
     {X : RingedSpace.{v}} {R : Type v} [Ring R]
     (α : R →+* globalSectionsRing X) (M : ModuleCat R) :
     Mod X.structureSheaf :=
   (PresheafOfModules.sheafification (𝟙 X.structureSheaf.obj)).obj
     (associatedSheafPresheaf α M)
 
-/-- The source's notation `F_M` for the associated sheaf. -/
-abbrev associatedSheafOfModule
+/-- The canonical project associated-sheaf construction. -/
+noncomputable abbrev associatedSheafModule
     {X : RingedSpace.{v}} {R : Type v} [Ring R]
-    (α : R →+* globalSectionsRing X) (M : ModuleCat R) :=
-  associatedSheaf α M
+    (α : R →+* globalSectionsRing X) (M : ModuleCat R) :
+    Mod X.structureSheaf :=
+  Formalization.Books.Modules.Unit06.associatedSheafModule α M
 
-/-- The shorthand associated sheaf for a module over the global-sections
-ring. -/
-abbrev associatedSheafOfGlobalSections
-    {X : RingedSpace.{v}} (M : ModuleCat (globalSectionsRing X)) :=
-  associatedSheaf (RingHom.id _) M
+/-- The source's `F_M`, for an `R`-module represented by its carrier type. -/
+noncomputable abbrev associatedSheaf
+    {X : RingedSpace.{v}} {R : Type v} [Ring R]
+    (α : R →+* globalSectionsRing X) (M : Type v)
+    [AddCommGroup M] [Module R M] : Mod X.structureSheaf :=
+  Formalization.Books.Modules.Unit06.associatedSheaf α M
+
+/-- The source's associated-sheaf terminology for a bundled module. -/
+noncomputable abbrev associatedSheafOfModule
+    {X : RingedSpace.{v}} {R : Type v} [Ring R] (α : R →+* globalSectionsRing X)
+    (M : ModuleCat R) : Mod X.structureSheaf :=
+  associatedSheafModule α M
+
+/-- The associated sheaf for a module over the global-sections ring. -/
+noncomputable abbrev associatedSheafOfGlobalSections
+    {X : RingedSpace.{v}} (M : ModuleCat (globalSectionsRing X)) :
+    Mod X.structureSheaf :=
+  associatedSheafModule (RingHom.id _) M
 
 /-- Associated sheaves are quasi-coherent. -/
 theorem associatedSheaf_isQuasiCoherent
     {X : RingedSpace.{v}} {R : Type v} [Ring R]
-    (α : R →+* globalSectionsRing X) (M : ModuleCat R) :
+    (α : R →+* globalSectionsRing X) (M : Type v)
+    [AddCommGroup M] [Module R M] :
     IsQuasiCoherent (associatedSheaf α M) := by
-  sorry
+  exact Formalization.Books.Modules.Unit06.associatedSheaf_quasiCoherent α M
 
-/-- The associated sheaf of a free module is the corresponding free sheaf. -/
-theorem associatedSheaf_freeModule_iso
-    {X : RingedSpace.{v}} {I : Type v} :
-    Nonempty (associatedSheaf (RingHom.id (globalSectionsRing X))
-        ((ModuleCat.free (globalSectionsRing X)).obj I) ≅
-      (SheafOfModules.free I : Mod X.structureSheaf)) := by
-  sorry
+/-! The three descriptions in the source. -/
 
-/-! The three constructions in the source are represented by a presentation
-interface.  Its module presentation records the matrix coefficients, while
-the two displayed sheaves are retained as objects equipped with canonical
-isomorphisms to the presheaf-sheafification construction above. -/
-
-/-- A presentation of a module over a ring, retaining its free generators and
-relations and the resulting module isomorphism. -/
+/-- A presentation of a bundled module by free modules. -/
 structure ModulePresentation {R : Type v} [Ring R] (M : ModuleCat R) where
   generators : Type v
   relations : Type v
   relationMap : (ModuleCat.free R).obj relations ⟶ (ModuleCat.free R).obj generators
   quotientIso : Nonempty (cokernel relationMap ≅ M)
 
-/-- The coefficient of a relation generator in a module presentation. -/
+/-- A matrix coefficient in a free presentation. -/
 def ModulePresentation.matrixEntry {R : Type v} [Ring R] {M : ModuleCat R}
     (P : ModulePresentation M) (j : P.relations) (i : P.generators) : R :=
   let z : P.generators →₀ R := P.relationMap.hom (ModuleCat.freeMk j)
   z i
 
-/-- The finite section obtained from one column of the matrix coefficients. -/
+/-- The finite section corresponding to one presentation column. -/
 noncomputable def ModulePresentation.matrixSection
     {X : RingedSpace.{v}} {R : Type v} [Ring R] {M : ModuleCat R}
     (P : ModulePresentation M)
@@ -271,35 +260,35 @@ noncomputable def ModulePresentation.matrixSection
       (SheafOfModules.freeSection (R := X.structureSheaf) i).eval
         (op (⊤ : Opens X.carrier))
 
-/-- The one-point ringed space whose ring is `R`. -/
+/-- The one-point ringed space with ring `R`. -/
 noncomputable def onePointRingedSpace (R : Type v) [Ring R] : RingedSpace.{v} where
   carrier := TopCat.of PUnit
   structureSheaf :=
     (CategoryTheory.constantSheaf
       (Opens.grothendieckTopology (TopCat.of PUnit)) RingCat.{v}).obj (RingCat.of R)
 
-/-- Existence of the ringed-space morphism inducing a map on global sections. -/
+/-- Existence of the one-point morphism inducing `α` on global sections. -/
 theorem exists_onePointRingedSpaceHom
     {X : RingedSpace.{v}} {R : Type v} [Ring R]
     (α : R →+* globalSectionsRing X) :
     Nonempty (RingedSpaceHom X (onePointRingedSpace R)) := by
   sorry
 
-/-- A chosen morphism to the one-point ringed space. -/
+/-- A chosen one-point morphism. -/
 noncomputable def onePointRingedSpaceHom
     {X : RingedSpace.{v}} {R : Type v} [Ring R]
     (α : R →+* globalSectionsRing X) :
     RingedSpaceHom X (onePointRingedSpace R) :=
   Classical.choice (exists_onePointRingedSpaceHom α)
 
-/-- The one-point pullback description of the associated sheaf. -/
+/-- The module on the one-point ringed space corresponding to `M`. -/
 structure PointModuleDescription {R : Type v} [Ring R] (M : ModuleCat R) where
   pointModule : Mod (onePointRingedSpace R).structureSheaf
   correspondence :
     ∃ e : (Mod (onePointRingedSpace R).structureSheaf) ≌ ModuleCat R,
       Nonempty (pointModule ≅ e.inverse.obj M)
 
-/-- A presentation of the one-point module corresponding to `M`. -/
+/-- The pullback description of the one-point construction. -/
 structure PullbackDescription
     {X : RingedSpace.{v}} {R : Type v} [Ring R]
     (α : R →+* globalSectionsRing X) (M : ModuleCat R) where
@@ -310,10 +299,9 @@ structure PullbackDescription
     ∀ [_h : ((SheafOfModules.pushforward (F := Opens.map projection.continuous)
       projection.sharp).IsRightAdjoint)],
       Nonempty ((sheafModuleRingedSpacePullback projection).obj pointModule.pointModule ≅
-        associatedSheaf α M)
+        associatedSheafModule α M)
 
-/-- The three source descriptions of the associated sheaf, with the pullback
-and presentation realizations exposed as usable objects. -/
+/-- All three source constructions, with their canonical comparison data. -/
 structure AssociatedSheafDescriptions
     {X : RingedSpace.{v}} {R : Type v} [Ring R]
     (α : R →+* globalSectionsRing X) (M : ModuleCat R) where
@@ -336,37 +324,32 @@ structure AssociatedSheafDescriptions
     (cokernel presentationMap ≅ presentationCokernel)
   pullbackDescription : PullbackDescription α M
   presentationToAssociated : Nonempty
-    (presentationCokernel ≅ associatedSheaf α M)
+    (presentationCokernel ≅ associatedSheafModule α M)
+  presheafToAssociated : Nonempty
+    (associatedSheafFromPresheaf α M ≅ associatedSheafModule α M)
 
-/-- The associated-sheaf construction has the three canonically isomorphic
-descriptions listed in the source. -/
+/-- The source's three associated-sheaf descriptions are canonically
+isomorphic. -/
 theorem exists_associatedSheafDescriptions
     {X : RingedSpace.{v}} {R : Type v} [Ring R]
     (α : R →+* globalSectionsRing X) (M : ModuleCat R) :
     Nonempty (AssociatedSheafDescriptions α M) := by
   sorry
 
-/-! ## Functorial properties of the associated construction -/
+/-! ## Functorial properties -/
 
-/-- The associated-sheaf construction is functorial in the module. -/
-noncomputable def associatedSheafFunctor
+/-- The associated-sheaf construction is functorial in `M`. -/
+noncomputable abbrev associatedSheafFunctor
     {X : RingedSpace.{v}} {R : Type v} [Ring R]
-    (α : R →+* globalSectionsRing X) :
-    ModuleCat R ⥤ Mod X.structureSheaf :=
-  (PresheafOfModules.constFunctor
-      (Limits.constCocone (Opens X.carrier)ᵒᵖ (RingCat.of R))) ⋙
-    Formalization.Books.Sheaves.Unit06.changeOfRings
-      (globalSectionsPresheafMap α) ⋙
-    PresheafOfModules.sheafification (𝟙 X.structureSheaf.obj)
+    (α : R →+* globalSectionsRing X) : ModuleCat R ⥤ Mod X.structureSheaf :=
+  Formalization.Books.Modules.Unit06.associatedSheafFunctor α
 
-/-- The object of the associated-sheaf functor is the source construction. -/
 theorem associatedSheafFunctor_obj
     {X : RingedSpace.{v}} {R : Type v} [Ring R]
     (α : R →+* globalSectionsRing X) (M : ModuleCat R) :
-    (associatedSheafFunctor α).obj M = associatedSheaf α M := rfl
+    (associatedSheafFunctor α).obj M = associatedSheafModule α M := rfl
 
-/-- Stalks retain the functoriality in the module of the associated
-construction. -/
+/-- The stalk construction is functorial in `M`. -/
 noncomputable def associatedSheafStalkFunctor
     {X : RingedSpace.{v}} {R : Type v} [Ring R]
     (α : R →+* globalSectionsRing X) (x : X) :
@@ -374,188 +357,142 @@ noncomputable def associatedSheafStalkFunctor
       (TopCat.Presheaf.stalk (C := RingCat.{v}) X.structureSheaf.obj x) :=
   associatedSheafFunctor α ⋙ sheafModuleStalkFunctor X.structureSheaf x
 
-/-- The object part of the stalk functor is the stalk of the associated
-sheaf. -/
 theorem associatedSheafStalkFunctor_obj
     {X : RingedSpace.{v}} {R : Type v} [Ring R]
     (α : R →+* globalSectionsRing X) (M : ModuleCat R) (x : X) :
     (associatedSheafStalkFunctor α x).obj M =
-      (sheafModuleStalkFunctor X.structureSheaf x).obj (associatedSheaf α M) := rfl
+      (sheafModuleStalkFunctor X.structureSheaf x).obj (associatedSheafModule α M) := rfl
 
-/-- The associated construction, with its quasi-coherence witness, as a
-functor into the source category `QCoh(O_X)`. -/
+/-- The associated-sheaf functor with codomain restricted to `QCoh(O_X)`. -/
 noncomputable def associatedSheafQCohFunctor
     {X : RingedSpace.{v}} {R : Type v} [Ring R]
-    (α : R →+* globalSectionsRing X) :
-    ModuleCat R ⥤ QCoh X where
-  obj M := ⟨associatedSheaf α M, associatedSheaf_isQuasiCoherent α M⟩
+    (α : R →+* globalSectionsRing X) : ModuleCat R ⥤ QCoh X where
+  obj M := ⟨associatedSheafModule α M,
+    (Formalization.Books.Modules.Unit06.associatedSheafConstruction α).quasiCoherent_obj M⟩
   map f := ⟨(associatedSheafFunctor α).map f⟩
   map_id := by
     intro M
     rw [(associatedSheafFunctor α).map_id M]
     rfl
   map_comp := by
-    intro X Y Z f g
+    intro M N P f g
     rw [(associatedSheafFunctor α).map_comp f g]
     rfl
 
-/-- The associated-sheaf functor commutes with arbitrary colimits. -/
+/-- The associated-sheaf functor preserves arbitrary colimits. -/
 theorem associatedSheafFunctor_preserves_colimits
     {X : RingedSpace.{v}} {R : Type v} [Ring R]
     (α : R →+* globalSectionsRing X) :
     PreservesColimitsOfSize.{v, v} (associatedSheafFunctor α) := by
-  sorry
+  exact Formalization.Books.Modules.Unit06.associatedSheaf_preserves_colimits α
 
-/-! The stalk formula is recorded with the universal property of extension of
-scalars.  This keeps the chapter at the `RingCat` generality of the ringed
-space API; in the commutative case this is the usual tensor product. -/
+/-! ## Stalks and Hom -/
 
-/-- The map from global sections to the stalk ring at a point. -/
-noncomputable def globalToStalkRing
+/-- The map from global sections to a stalk ring. -/
+noncomputable abbrev globalToStalkRing
     {X : RingedSpace.{v}} (x : X) :
     globalSectionsRing X →+*
       TopCat.Presheaf.stalk (C := RingCat.{v}) X.structureSheaf.obj x :=
-  (TopCat.Presheaf.germ (C := RingCat.{v}) X.structureSheaf.obj
-      (⊤ : Opens X.carrier) x (by simp)).hom
+  (TopCat.Presheaf.Γgerm (C := RingCat.{v}) X.structureSheaf.obj x).hom
 
-/-- A chosen module implementing `O_x ⊗_R M`. -/
-structure StalkTensorProduct
+/-- The canonical module implementing `O_{X,x} ⊗_R M`. -/
+noncomputable abbrev StalkTensorProduct
     {X : RingedSpace.{v}} {R : Type v} [Ring R]
-    (α : R →+* globalSectionsRing X) (M : ModuleCat R) (x : X) where
-  scalarMap : R →+*
-    TopCat.Presheaf.stalk (C := RingCat.{v}) X.structureSheaf.obj x
-  scalarMap_eq : scalarMap = (globalToStalkRing x).comp α
-  module : ModuleCat.{v, v} (TopCat.Presheaf.stalk (C := RingCat.{v})
-    X.structureSheaf.obj x)
-  unit : M ⟶ (ModuleCat.restrictScalars scalarMap).obj module
-  homEquiv : ∀ N : ModuleCat.{v, v}
-      (TopCat.Presheaf.stalk (C := RingCat.{v}) X.structureSheaf.obj x),
-    (module ⟶ N) ≃
-      (M ⟶ (ModuleCat.restrictScalars scalarMap).obj N)
-  homEquiv_unit : ∀ (N : ModuleCat.{v, v}
-      (TopCat.Presheaf.stalk (C := RingCat.{v}) X.structureSheaf.obj x))
-      (f : module ⟶ N),
-    homEquiv N f = unit ≫ (ModuleCat.restrictScalars scalarMap).map f
+    (α : R →+* globalSectionsRing X) (M : Type v)
+    [AddCommGroup M] [Module R M] (x : X) :
+    ModuleCat (TopCat.Presheaf.stalk (C := RingCat.{v}) X.structureSheaf.obj x) :=
+  Formalization.Books.Modules.Unit06.associatedStalkTensorModule α M x
 
-/-- The stalk of an associated sheaf is the tensor product module. -/
+/-- The stalk formula for an associated sheaf. -/
 theorem associatedSheaf_stalk_iso
     {X : RingedSpace.{v}} {R : Type v} [Ring R]
-    (α : R →+* globalSectionsRing X) (M : ModuleCat R) (x : X)
-    (T : StalkTensorProduct α M x) :
+    (α : R →+* globalSectionsRing X) (M : Type v)
+    [AddCommGroup M] [Module R M] (x : X) :
     Nonempty ((sheafModuleStalkFunctor X.structureSheaf x).obj
-        (associatedSheaf α M) ≅ T.module) := by
-  sorry
+        (associatedSheaf α M) ≅ StalkTensorProduct α M x) := by
+  exact Formalization.Books.Modules.Unit06.associatedSheaf_stalk_iso α M x
 
-/-- The tensor-product stalk interface is inhabited for every point. -/
 theorem exists_associatedSheaf_stalkTensorProduct
     {X : RingedSpace.{v}} {R : Type v} [Ring R]
-    (α : R →+* globalSectionsRing X) (M : ModuleCat R) (x : X) :
-    Nonempty (StalkTensorProduct α M x) := by
-  sorry
+    (α : R →+* globalSectionsRing X) (M : Type v)
+    [AddCommGroup M] [Module R M] (x : X) :
+    Nonempty (StalkTensorProduct α M x) :=
+  ⟨StalkTensorProduct α M x⟩
 
-/-- Source-facing form of the stalk formula. -/
 theorem associatedSheaf_stalk_tensor_formula
     {X : RingedSpace.{v}} {R : Type v} [Ring R]
-    (α : R →+* globalSectionsRing X) (M : ModuleCat R) (x : X) :
+    (α : R →+* globalSectionsRing X) (M : Type v)
+    [AddCommGroup M] [Module R M] (x : X) :
     ∃ T : StalkTensorProduct α M x,
       Nonempty ((sheafModuleStalkFunctor X.structureSheaf x).obj
-        (associatedSheaf α M) ≅ T.module) := by
-  rcases exists_associatedSheaf_stalkTensorProduct α M x with ⟨T⟩
-  exact ⟨T, associatedSheaf_stalk_iso α M x T⟩
+        (associatedSheaf α M) ≅ T) := by
+  exact ⟨StalkTensorProduct α M x, associatedSheaf_stalk_iso α M x⟩
 
-/-! The Hom formula uses the canonical `R`-action on global sections induced
-by `α`. -/
-
-/-- The `R`-module of global sections of `G` induced by `α`. -/
-noncomputable def globalSectionsModule
+/-- The `R`-module of global sections induced by `α`. -/
+noncomputable abbrev globalSectionsModule
     {X : RingedSpace.{v}} {R : Type v} [Ring R]
-    (α : R →+* globalSectionsRing X) (G : Mod X.structureSheaf) : ModuleCat R := by
-  exact (ModuleCat.restrictScalars α).obj
-    (sheafModuleSections X.structureSheaf G (⊤ : Opens X.carrier))
+    (α : R →+* globalSectionsRing X) (G : Mod X.structureSheaf) : ModuleCat R :=
+  Formalization.Books.Modules.Unit06.associatedGlobalSectionsModule α G
 
 /-- The associated-sheaf Hom formula. -/
 theorem associatedSheaf_hom_equiv
     {X : RingedSpace.{v}} {R : Type v} [Ring R]
-    (α : R →+* globalSectionsRing X) (M : ModuleCat R)
-    (G : Mod X.structureSheaf) :
+    (α : R →+* globalSectionsRing X) (M : Type v)
+    [AddCommGroup M] [Module R M] (G : Mod X.structureSheaf) :
     Nonempty ((associatedSheaf α M ⟶ G) ≃
-      (M ⟶ globalSectionsModule α G)) := by
-  sorry
+      (ModuleCat.of R M ⟶ globalSectionsModule α G)) := by
+  exact Formalization.Books.Modules.Unit06.associatedSheaf_hom_equiv α M G
 
-/-! ## Restriction and the local presentation lemma -/
+/-! ## Restriction and local presentation -/
 
-/-- The ring map on global sections induced by a morphism of ringed spaces. -/
-noncomputable def ringedSpaceGlobalSectionsMap
+/-- The map on global sections induced by a morphism of ringed spaces. -/
+noncomputable abbrev ringedSpaceGlobalSectionsMap
     {X Y : RingedSpace.{v}} (g : RingedSpaceHom Y X) :
-    globalSectionsRing X →+* globalSectionsRing Y := by
-  have htop : (Opens.map g.continuous).obj (⊤ : Opens X.carrier) =
-      (⊤ : Opens Y.carrier) := by
-    ext y
-    simp
-  have hObj :
-      Y.structureSheaf.obj.obj
-          (op ((Opens.map g.continuous).obj (⊤ : Opens X.carrier))) =
-        Y.structureSheaf.obj.obj (op (⊤ : Opens Y.carrier)) := by
-    rw [htop]
-  exact (g.sharp.hom.app (op (⊤ : Opens X.carrier)) ≫ eqToHom hObj).hom
+    globalSectionsRing X →+* globalSectionsRing Y :=
+  Formalization.Books.Modules.Unit06.ringedSpaceGlobalSectionsMap g
 
-/-- The module extension-of-scalars datum used by the restriction lemma. -/
-structure RestrictionScalarExtension
-    {X Y : RingedSpace.{v}} {R : Type v} [Ring R]
-    (α : R →+* globalSectionsRing X) (M : ModuleCat R)
-    (g : RingedSpaceHom Y X) where
-  module : ModuleCat (globalSectionsRing Y)
-  unit : M ⟶
-    (ModuleCat.restrictScalars ((ringedSpaceGlobalSectionsMap g).comp α)).obj module
-  homEquiv : ∀ N : ModuleCat (globalSectionsRing Y),
-    (module ⟶ N) ≃
-      (M ⟶
-        (ModuleCat.restrictScalars
-          ((ringedSpaceGlobalSectionsMap g).comp α)).obj N)
-  homEquiv_unit : ∀ (N : ModuleCat (globalSectionsRing Y))
-      (f : module ⟶ N),
-    homEquiv N f = unit ≫
-      (ModuleCat.restrictScalars ((ringedSpaceGlobalSectionsMap g).comp α)).map f
+/-- The chosen scalar-extension module in the restriction formula. -/
+noncomputable abbrev associatedScalarExtensionModule
+    {R S : Type v} [Ring R] [Ring S]
+    (β : R →+* S) (M : ModuleCat R) : ModuleCat S :=
+  Formalization.Books.Modules.Unit06.associatedScalarExtensionModule β M
 
-/-- Restriction of an associated sheaf is associated to the scalar-extension
-module `Γ(Y, O_Y) ⊗_R M`.  The explicit module object is existential because
-the surrounding `RingCat` API also supports noncommutative sheaves of rings. -/
+/-- Restriction of an associated sheaf is associated to the scalar extension
+of its module of sections. -/
 theorem restrict_associatedSheaf
-    {X Y : RingedSpace.{v}} {R : Type v} [Ring R]
-    (α : R →+* globalSectionsRing X) (M : ModuleCat R)
-    (g : RingedSpaceHom Y X)
+    {X Y : RingedSpace.{v}} (g : RingedSpaceHom Y X)
     [((SheafOfModules.pushforward (F := Opens.map g.continuous)
-      g.sharp).IsRightAdjoint)] :
-    ∃ E : RestrictionScalarExtension α M g,
-      Nonempty ((sheafModuleRingedSpacePullback g).obj (associatedSheaf α M) ≅
-        associatedSheaf (RingHom.id _) E.module) := by
-  sorry
+      g.sharp).IsRightAdjoint)]
+    {R : Type v} [Ring R] (α : R →+* globalSectionsRing X) (M : ModuleCat R) :
+    Nonempty ((sheafModuleRingedSpacePullback g).obj (associatedSheafModule α M) ≅
+      associatedSheafModule (RingHom.id _) 
+        (associatedScalarExtensionModule (ringedSpaceGlobalSectionsMap g).comp α M)) := by
+  exact Formalization.Books.Modules.Unit06.associatedSheaf_restrict g α M
 
-/-- A fundamental system of quasi-compact open neighbourhoods at a point. -/
-def HasQuasiCompactNeighborhoodBasis {X : RingedSpace.{v}} (x : X) : Prop :=
-  ∃ (ι : Type v) (E : ι → Set X),
-    IsFundamentalSystemOfNeighborhoods x E ∧ ∀ i, IsCompact (E i)
+/-- A fundamental system of quasi-compact neighbourhoods at a point. -/
+abbrev HasQuasiCompactNeighborhoodBasis {X : RingedSpace.{v}} (x : X) : Prop :=
+  Formalization.Books.Modules.Unit06.hasQuasiCompactNeighborhoodBasis x
 
-/-- If `x` has a fundamental system of quasi-compact neighbourhoods, a
-quasi-coherent module is locally associated to a module of sections. -/
+/-- A quasi-coherent module is locally associated to a module of sections when
+the point has such a neighbourhood basis. -/
 theorem exists_local_associatedSheaf
     {X : RingedSpace.{v}} {F : Mod X.structureSheaf} (x : X)
     (hX : HasQuasiCompactNeighborhoodBasis x) (hF : IsQuasiCoherent F) :
     ∃ U : Opens X.carrier, x ∈ U ∧
       ∃ M : ModuleCat (globalSectionsRing (ringedOpenSubspace X U)),
         Nonempty (((openModuleRestrictionFunctor X U).obj F) ≅
-          associatedSheaf (RingHom.id _) M) := by
-  sorry
+          associatedSheafModule (RingHom.id _) M) := by
+  exact Formalization.Books.Modules.Unit06.quasiCoherent_locally_associated F x hX hF
 
 /-! ## The countable wedge example -/
 
-/-- A universe-correct countable index for free sheaves of modules. -/
+/-- A countable index for the free sheaves in the example. -/
 abbrev CountableIndex : Type v := ULift.{v} ℕ
 
-/-- A universe-correct index for the matrix entries. -/
+/-- A countable paired index for the matrix entries. -/
 abbrev CountablePairIndex : Type v := ULift.{v} (ℕ × ℕ)
 
-/-- A cutoff function used in the wedge-of-lines example. -/
+/-- The cutoff function used by the wedge example. -/
 structure CutoffFunction where
   toFun : ℝ → ℝ
   continuous : Continuous toFun
@@ -565,17 +502,17 @@ structure CutoffFunction where
 instance : CoeFun CutoffFunction (fun _ ↦ ℝ → ℝ) :=
   ⟨CutoffFunction.toFun⟩
 
-/-- The scaled cutoff functions `f_n(x) = f(nx)`. -/
+/-- The scaled cutoff `f_n(x) = f(nx)`. -/
 def scaledCutoff (f : CutoffFunction) (n : ℕ) : ℝ → ℝ :=
   fun x ↦ f ((n : ℝ) * x)
 
-/-- A family of coefficients is locally finite in the branch index. -/
+/-- Local finiteness of the branch-index coefficients. -/
 def LocallyFiniteBranchCoefficients {X : RingedSpace.{v}}
     (c : ℕ → ℕ → X → ℝ) : Prop :=
   ∀ j x, ∃ U : Opens X.carrier, x ∈ U ∧
     ∃ K : Finset ℕ, ∀ z : X, z ∈ U → ∀ i, i ∉ K → c j i z = 0
 
-/-- The finite-linear-combination failure used in the wedge example. -/
+/-- Failure of finite matrix support on every indicated neighbourhood. -/
 def NotLocallyFiniteLinearCombination {X : RingedSpace.{v}}
     (φ : (SheafOfModules.free CountableIndex : Mod X.structureSheaf) ⟶
       (SheafOfModules.free CountablePairIndex : Mod X.structureSheaf))
@@ -590,7 +527,8 @@ def NotLocallyFiniteLinearCombination {X : RingedSpace.{v}}
               ((SheafOfModules.freeSection (R := X.structureSheaf)
                 (⟨(j, i)⟩ : CountablePairIndex)).eval (op (U n)))) '' (K : Set ℕ))
 
-/-- The countable wedge of real lines with its cutoff and matrix-map data. -/
+/-- The ringed-space, topology, coefficient, and matrix data of the source's
+countable wedge example. -/
 structure WedgeOfLinesExample where
   X : RingedSpace.{v}
   origin : X
@@ -611,7 +549,7 @@ structure WedgeOfLinesExample where
       (fun n ↦ (neighbourhood n : Set X))
   neighbourhood_on_branch : ∀ n i x,
     branch i x ∈ neighbourhood n ↔
-      -(1 : ℝ) / (n + 1 : ℝ) < x ∧ x < (1 : ℝ) / (n + 1 : ℝ)
+      -(1 : ℝ) / ((n : ℝ) + 1) < x ∧ x < (1 : ℝ) / ((n : ℝ) + 1)
   coefficient : ℕ → ℕ → X → ℝ
   coefficient_at_origin : ∀ j i, coefficient j i origin = 0
   coefficient_continuous : ∀ j i, Continuous (coefficient j i)
@@ -626,14 +564,14 @@ structure WedgeOfLinesExample where
   matrixMap_not_finite :
     NotLocallyFiniteLinearCombination matrixMap neighbourhood
 
-/-- The wedge example supplies the morphism whose image of the high-index
-generator is not a finite linear combination on the indicated neighbourhoods. -/
+/-- The wedge example supplies the map whose high-index generators have no
+finite local matrix expression. -/
 theorem exists_wedgeOfLinesExample : Nonempty WedgeOfLinesExample := by
   sorry
 
-/-! The final two consequences in the source are explicitly presented there
-as expectations (“there should be ...” and “similarly ...”), so they are not
-asserted as theorem declarations at this statement-only stage. -/
+/-! The source's final assertions about further examples are explicitly
+expectations, so they are recorded by the preceding interfaces and are not
+made into false universal or existential theorems. -/
 
 end
 

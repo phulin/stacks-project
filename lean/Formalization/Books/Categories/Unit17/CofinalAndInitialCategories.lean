@@ -180,12 +180,12 @@ noncomputable def colimit_comp_iso_of_connected_fibers
     {I J C : Type*} [Category I] [Category J] [Category C]
     (F : I ⥤ J)
     (hF : ∀ y : J, IsConnected (Functor.Fiber F y))
-    (hmap : LiftsMorphisms F) (M : J ⥤ C) [HasColimit M]
-    [HasColimit (F ⋙ M)] :
+    (hmap : LiftsMorphisms F) (M : J ⥤ C) [HasColimit M] :
+    letI : IsCofinal F := isCofinal_of_connected_fibers F hF hmap
     colimit (F ⋙ M) ≅ colimit M := by
+  letI : IsCofinal F := isCofinal_of_connected_fibers F hF hmap
   exact
-    @Functor.Final.colimitIso I _ J _ F
-      (isCofinal_of_connected_fibers F hF hmap) C _ M inferInstance
+    Functor.Final.colimitIso F M
 
 /-! ## Product with a connected category -/
 

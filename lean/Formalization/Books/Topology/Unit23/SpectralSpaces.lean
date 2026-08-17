@@ -103,9 +103,9 @@ theorem constructibleTopology_is_coarsest_for_constructible_clopen
     [SpectralSpace X] :
     (∀ E : Set X, IsConstructible E →
       IsOpen[constructibleTopology X] E ∧ IsClosed[constructibleTopology X] E) ∧
-      ∀ t : TopologicalSpace X,
+    ∀ t : TopologicalSpace X,
     (∀ E : Set X, IsConstructible E → IsOpen[t] E ∧ IsClosed[t] E) →
-          constructibleTopology X ≤ t := by
+          t ≤ constructibleTopology X := by
   sorry
 
 /-- Open subsets of the constructible topology are unions of constructible

@@ -52,8 +52,8 @@ abbrev abelianSheafStalk {X : TopCat.{v}}
 /-! ## Injective envelopes of the stalks -/
 
 /-- A chosen injective presentation of an abelian group.  This is the
-canonical `EnoughInjectives.presentation` interface for the source's
-functorial embedding `A ↪ J(A)`. -/
+canonical `EnoughInjectives.presentation` interface supplying the injective
+object and monomorphism used in the pointwise construction. -/
 noncomputable def abelianGroupInjectivePresentation (A : AddCommGrpCat.{v}) :
     InjectivePresentation A :=
   Classical.choice (EnoughInjectives.presentation A)
@@ -134,14 +134,26 @@ theorem abelianSheafPointwiseProduct_obj {X : TopCat.{v}}
       abelianSheafPointwiseProductObject A U :=
   rfl
 
-/-- The source's fibrewise injective product, written as the product of the
-skyscraper sheaves `iₓ,* J(Fₓ)`. -/
-noncomputable def abelianSheafInjectiveProduct {X : TopCat.{v}}
-    (F : TopCat.Sheaf AddCommGrpCat.{v} X) :
+/-- The product of skyscraper sheaves with prescribed abelian-group fibres. -/
+noncomputable def abelianSheafSkyscraperProduct {X : TopCat.{v}}
+    (A : X → AddCommGrpCat.{v}) :
     TopCat.Sheaf AddCommGrpCat.{v} X :=
   limit (Discrete.functor (fun x : X =>
-    (abelianSkyscraperSheafFunctor x).obj
-      (abelianGroupInjectiveObject (abelianSheafStalk F x))))
+    (abelianSkyscraperSheafFunctor x).obj (A x)))
+
+/- The source's fibrewise injective product, written as the product of the
+   skyscraper sheaves `iₓ,* J(Fₓ)`. -/
+noncomputable abbrev abelianSheafInjectiveProduct {X : TopCat.{v}}
+    (F : TopCat.Sheaf AddCommGrpCat.{v} X) :
+    TopCat.Sheaf AddCommGrpCat.{v} X :=
+  abelianSheafSkyscraperProduct
+    (fun x : X => abelianGroupInjectiveObject (abelianSheafStalk F x))
+
+noncomputable def abelianSheafSkyscraperProduct_isProduct
+    {X : TopCat.{v}} (A : X → AddCommGrpCat.{v}) :
+    IsLimit (limit.cone (Discrete.functor (fun x : X =>
+      (abelianSkyscraperSheafFunctor x).obj (A x)))) :=
+  limit.isLimit _
 
 /-- The product universal property of the source's injective product. -/
 noncomputable def abelianSheafInjectiveProduct_isProduct
@@ -149,9 +161,25 @@ noncomputable def abelianSheafInjectiveProduct_isProduct
     IsLimit (limit.cone (Discrete.functor (fun x : X =>
       (abelianSkyscraperSheafFunctor x).obj
         (abelianGroupInjectiveObject (abelianSheafStalk F x))))) :=
-  limit.isLimit _
+  abelianSheafSkyscraperProduct_isProduct
+    (fun x : X => abelianGroupInjectiveObject (abelianSheafStalk F x))
 
 /-- The pointwise description of the product of skyscraper sheaves. -/
+theorem abelianSheafSkyscraperProduct_pointwise_formula
+    {X : TopCat.{v}} (A : X → AddCommGrpCat.{v}) (U : Opens X) :
+    Nonempty
+      ((abelianSheafSkyscraperProduct A).presheaf.obj (op U) ≅
+        abelianSheafPointwiseProductObject A U) := by
+  sorry
+
+/-! The pointwise product sheaf is the product of the skyscraper sheaves. -/
+theorem abelianSheafPointwiseProduct_skyscraperProduct_iso
+    {X : TopCat.{v}} (A : X → AddCommGrpCat.{v}) :
+    Nonempty (abelianSheafPointwiseProduct A ≅
+      abelianSheafSkyscraperProduct A) := by
+  sorry
+
+/-! The pointwise description of the selected injective product. -/
 theorem abelianSheafInjectiveProduct_pointwise_formula
     {X : TopCat.{v}} (F : TopCat.Sheaf AddCommGrpCat.{v} X)
     (U : Opens X) :
@@ -159,7 +187,9 @@ theorem abelianSheafInjectiveProduct_pointwise_formula
       ((abelianSheafInjectiveProduct F).presheaf.obj (op U) ≅
         abelianSheafPointwiseProductObject
           (fun x : X => abelianGroupInjectiveObject (abelianSheafStalk F x)) U) := by
-  sorry
+  simpa [abelianSheafInjectiveProduct] using
+    (abelianSheafSkyscraperProduct_pointwise_formula
+      (fun x : X => abelianGroupInjectiveObject (abelianSheafStalk F x)) U)
 
 /-! ## The canonical map into the product -/
 
@@ -188,6 +218,7 @@ theorem abelianSheafInjectiveEmbedding_projection
         (abelianSkyscraperSheafFunctor x).map
           (abelianGroupInjectiveMap (abelianSheafStalk F x)) := by
   unfold abelianSheafInjectiveEmbedding abelianSheafInjectiveProduct
+    abelianSheafSkyscraperProduct
   rw [limit.lift_π]
   rfl
 
@@ -205,15 +236,38 @@ noncomputable def abelianStalkSkyscraperHomEquiv
 /-- A skyscraper sheaf with injective stalk is injective. -/
 theorem abelianSkyscraperSheaf_injective
     {X : TopCat.{v}} (x : X) (I : AddCommGrpCat.{v})
-    [Injective I] :
+    (hI : Injective I) :
     Injective ((abelianSkyscraperSheafFunctor x).obj I) := by
   sorry
+
+/-! The pointwise product of injective fibres is injective. -/
+theorem abelianSheafPointwiseProduct_injective
+    {X : TopCat.{v}} (A : X → AddCommGrpCat.{v})
+    (hA : ∀ x : X, Injective (A x)) :
+    Injective (abelianSheafPointwiseProduct A) := by
+  sorry
+
+/-! The product of skyscrapers with injective fibres is injective. -/
+theorem abelianSheafSkyscraperProduct_injective
+    {X : TopCat.{v}} (A : X → AddCommGrpCat.{v})
+    (hA : ∀ x : X, Injective (A x)) :
+    Injective (abelianSheafSkyscraperProduct A) := by
+  have hSkyscraper : ∀ x : X, Injective
+      ((abelianSkyscraperSheafFunctor x).obj (A x)) :=
+    fun x => abelianSkyscraperSheaf_injective x (A x) (hA x)
+  simpa [abelianSheafSkyscraperProduct] using
+    (@product_injective
+      (TopCat.Sheaf AddCommGrpCat.{v} X) _ _ X
+      (fun x : X => (abelianSkyscraperSheafFunctor x).obj (A x)) _
+      hSkyscraper)
 
 /-- The product of the injective skyscraper sheaves is injective. -/
 theorem abelianSheafInjectiveProduct_injective
     {X : TopCat.{v}} (F : TopCat.Sheaf AddCommGrpCat.{v} X) :
     Injective (abelianSheafInjectiveProduct F) := by
-  sorry
+  apply abelianSheafSkyscraperProduct_injective
+  intro x
+  exact abelianGroupInjectiveObject_injective (abelianSheafStalk F x)
 
 /-- The canonical map into the product is a monomorphism. -/
 theorem abelianSheafInjectiveEmbedding_mono

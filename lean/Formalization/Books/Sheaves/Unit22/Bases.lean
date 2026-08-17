@@ -5,6 +5,7 @@ import Mathlib.CategoryTheory.Sites.Continuous
 import Mathlib.CategoryTheory.Sites.DenseSubsite.InducedTopology
 import Mathlib.Topology.Sheaves.SheafCondition.Sites
 import Mathlib.Algebra.Category.ModuleCat.Presheaf
+import Mathlib.Algebra.Category.ModuleCat.Stalk
 
 /-!
 # Sheaves on Spaces, Chapter 22, Section 9: Bases and sheaves
@@ -404,11 +405,43 @@ def BasisModuleSheaf {X : TopCat.{v}} {ι : Type v} (B : ι → Opens X)
   CategoryTheory.Presheaf.IsSheaf (basisTopology B)
     (basisModuleUnderlying B F ⋙ (CategoryTheory.forget AddCommGrpCat))
 
-/-- The module stalk on a basis. -/
-noncomputable def basisModuleStalk {X : TopCat.{v}} {ι : Type v}
+/-- The module stalk on a basis, as the underlying type of the categorical
+filtered colimit of the module diagram. -/
+noncomputable abbrev basisModuleStalk {X : TopCat.{v}} {ι : Type v}
     (B : ι → Opens X) {O : BasisRingPresheaf B} (F : BasisModulePresheaf B O) (x : X) :
     Type v :=
-  basisStalk B (F.presheaf ⋙ (CategoryTheory.forget AddCommGrpCat)) x
+  ↑(colimit ((ObjectProperty.ι (fun i : basisIndex B => x ∈ B i)).op ⋙ F.presheaf) :
+    AddCommGrpCat.{v})
+
+/-- The underlying categorical basis-module stalk agrees with the stalk of
+the underlying additive presheaf. -/
+theorem basisModuleStalk_underlying_iso {X : TopCat.{v}} {ι : Type v}
+    (B : ι → Opens X) (hB : Opens.IsBasis (Set.range B))
+    {O : BasisRingPresheaf B} (F : BasisModulePresheaf B O) (x : X) :
+    Nonempty (basisModuleStalk B F x ≃
+      basisStalk B (F.presheaf ⋙ (CategoryTheory.forget AddCommGrpCat)) x) := by
+  sorry
+
+/-- The canonical module structure on a basis module stalk, obtained from the
+filtered colimits of the ring and module diagrams. -/
+noncomputable def basisModuleStalkModule {X : TopCat.{v}} {ι : Type v}
+    (B : ι → Opens X) (hB : Opens.IsBasis (Set.range B))
+    {O : BasisRingPresheaf B} (F : BasisModulePresheaf B O) (x : X) :
+    Module (basisAlgebraicStalk B O x) (basisModuleStalk B F x) := by
+  letI : IsFiltered ((basisNeighborhoodIndex B x)ᵒᵖ) :=
+    basisNeighborhoodIndex_isFiltered B hB x
+  letI (i : (basisNeighborhoodIndex B x)ᵒᵖ) :
+      Module (((ObjectProperty.ι (fun i : basisIndex B => x ∈ B i)).op ⋙ O).obj i)
+        (((ObjectProperty.ι (fun i : basisIndex B => x ∈ B i)).op ⋙ F.presheaf).obj i) := by
+    dsimp
+    infer_instance
+  exact CategoryTheory.Limits.IsColimit.module
+    ((ObjectProperty.ι (fun i : basisIndex B => x ∈ B i)).op ⋙ O)
+    ((ObjectProperty.ι (fun i : basisIndex B => x ∈ B i)).op ⋙ F.presheaf)
+    (fun f r m => F.map_smul
+      ((ObjectProperty.ι (fun i : basisIndex B => x ∈ B i)).op.map f) r m)
+    (CategoryTheory.Limits.colimit.isColimit _)
+    (CategoryTheory.Limits.colimit.isColimit _)
 
 /-- Restriction of a presheaf of modules to an induced basis category. -/
 def basisModuleRestriction {X : TopCat.{v}} {κ : Type v}

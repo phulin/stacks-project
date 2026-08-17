@@ -17,6 +17,7 @@ through explicit four-corner maps and a `Type`-valued pullback statement.
 namespace Formalization.Books.Sheaves.Unit17
 
 open CategoryTheory CategoryTheory.Limits Opposite TopologicalSpace
+open Formalization.Books.Sheaves.Unit03
 open Formalization.Books.Sheaves.Unit04
 open Formalization.Books.Sheaves.Unit05
 open Formalization.Books.Sheaves.Unit07
@@ -45,8 +46,8 @@ noncomputable def abelianSheafificationUnit {X : TopCat.{v}}
     F ⟶ abelianSheafificationPresheaf F :=
   CategoryTheory.toSheafify (Opens.grothendieckTopology X) F
 
-/-- The underlying set sheaf of the categorical construction agrees with the
-stalk-local-germ construction, up to its canonical sheaf isomorphism. -/
+/-- The underlying set sheaf of the categorical construction is isomorphic to
+the stalk-local-germ construction. -/
 theorem abelianSheafification_underlying_iso {X : TopCat.{v}}
     (F : AbelianPresheaf.{v, v} X) :
     Nonempty
@@ -95,6 +96,50 @@ def abelianFibreProduct_bottom {X : TopCat.{v}}
     (TopCat.Presheaf.stalkFunctor (Type v) x.1).map
       (presheafToStalkProduct (underlyingPresheaf F)) (s x))
 
+/-! ## The general fibre-product diagram -/
+
+/-- The stalkwise product presheaf in the source's fibre-product lemma. -/
+abbrev fibreProductStalkProduct {X : TopCat.{v}}
+    (F : TopCat.Presheaf (Type v) X) : TopCat.Presheaf (Type v) X :=
+  stalkProductPresheaf F
+
+/-- The top horizontal map in the source's general fibre-product diagram. -/
+abbrev fibreProduct_top {X : TopCat.{v}}
+    (F : TopCat.Presheaf (Type v) X) (U : Opens X) :
+    (sheafificationPresheaf F).obj (op U) ⟶
+      (fibreProductStalkProduct F).obj (op U) :=
+  (sheafificationProductMap F).app (op U)
+
+/-- The left vertical map in the source's general fibre-product diagram. -/
+def fibreProduct_left {X : TopCat.{v}}
+    (F : TopCat.Presheaf (Type v) X) (U : Opens X) :
+    (sheafificationPresheaf F).obj (op U) ⟶
+      (∀ x : U, F.stalk x) :=
+  TypeCat.ofHom (fun s => s.1)
+
+/-- The right vertical map in the source's general fibre-product diagram. -/
+abbrev fibreProduct_right {X : TopCat.{v}}
+    (F : TopCat.Presheaf (Type v) X) (U : Opens X) :
+    (fibreProductStalkProduct F).obj (op U) ⟶
+      (∀ x : U, (fibreProductStalkProduct F).stalk x) :=
+  (presheafToStalkProduct (fibreProductStalkProduct F)).app (op U)
+
+/-- The bottom horizontal map in the source's general fibre-product diagram. -/
+def fibreProduct_bottom {X : TopCat.{v}}
+    (F : TopCat.Presheaf (Type v) X) (U : Opens X) :
+    (∀ x : U, F.stalk x) ⟶
+      (∀ x : U, (fibreProductStalkProduct F).stalk x) :=
+  TypeCat.ofHom (fun s x =>
+    (TopCat.Presheaf.stalkFunctor (Type v) x.1).map
+      (presheafToStalkProduct F) (s x))
+
+/-- The source's general four-corner diagram is a pullback in `Type`. -/
+theorem sheafification_fibreProduct {X : TopCat.{v}}
+    (F : TopCat.Presheaf (Type v) X) (U : Opens X) :
+    IsPullback (fibreProduct_top F U) (fibreProduct_left F U)
+      (fibreProduct_right F U) (fibreProduct_bottom F U) := by
+  sorry
+
 /-- The source's four-corner diagram is a pullback in `Type`. -/
 theorem abelianSheafification_fibreProduct {X : TopCat.{v}}
     (F : AbelianPresheaf.{v, v} X) (U : Opens X) :
@@ -104,8 +149,8 @@ theorem abelianSheafification_fibreProduct {X : TopCat.{v}}
 
 /-! ## Additive structure, stalks, and the adjunction -/
 
-/-- The canonical additive sheafification has the source's unique structure
-property: the underlying set construction is `F#` and the unit is additive. -/
+/-- A categorical existence package for the additive sheafification and its
+underlying stalk-local set presentation. -/
 theorem abelianSheafification_structure_exists {X : TopCat.{v}}
     (F : AbelianPresheaf.{v, v} X) :
     ∃ (A : TopCat.Sheaf AddCommGrpCat.{v} X) (_η : F ⟶ A.presheaf),
@@ -115,6 +160,31 @@ theorem abelianSheafification_structure_exists {X : TopCat.{v}}
           (sheafification (underlyingPresheaf F)).presheaf) := by
   refine ⟨abelianSheafification F, abelianSheafificationUnit F, ?_⟩
   exact abelianSheafification_underlying_iso F
+
+/-! The fixed-carrier statement from the source is stronger than merely
+choosing an isomorphic categorical sheaf. -/
+
+/-- The canonical unit is additive for the unique pointwise abelian-group
+structure on the fixed set-valued sheafification. -/
+def IsAbelianSheafificationStructure {X : TopCat.{v}}
+    (F : AbelianPresheaf.{v, v} X)
+    (S : PointwiseAbelianPresheafData
+      (sheafificationPresheaf (underlyingPresheaf F))) : Prop :=
+  ∀ U : Opens X,
+    letI := S.group U
+    ∃ η : AbelianSections F U →+
+        Sections (sheafificationPresheaf (underlyingPresheaf F)) U,
+      ∀ s, η s =
+        (sheafificationUnit (underlyingPresheaf F)).app (op U) s
+
+/-- The source's existence and uniqueness assertion for the abelian structure
+on `F#` making `F → F#` a morphism of abelian presheaves. -/
+theorem existsUnique_abelianSheafificationStructure {X : TopCat.{v}}
+    (F : AbelianPresheaf.{v, v} X) :
+    ∃! S : PointwiseAbelianPresheafData
+        (sheafificationPresheaf (underlyingPresheaf F)),
+      IsAbelianSheafificationStructure F S := by
+  sorry
 
 /-- The stalk map of the abelian sheafification is an isomorphism. -/
 theorem abelianSheafification_stalk_map_isIso {X : TopCat.{v}}

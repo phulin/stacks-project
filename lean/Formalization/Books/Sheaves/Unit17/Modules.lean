@@ -96,7 +96,8 @@ abbrev moduleSheafificationSetPresheaf {X : TopCat.{v}}
     ((SheafOfModules.toSheaf (ringSheafification O)).obj
       (moduleSheafification F)).obj
 
-/-- The underlying set sheafification is unchanged by the module structure. -/
+/-- The underlying set presheaf of the module sheafification is isomorphic to
+the ordinary set-valued sheafification. -/
 theorem moduleSheafification_underlying_iso {X : TopCat.{v}}
     {O : RingPresheaf.{v, v} X} (F : PMod O) :
     Nonempty
@@ -117,6 +118,85 @@ noncomputable def moduleSheafificationHomEquiv {X : TopCat.{v}}
   letI : Presheaf.IsLocallySurjective (Opens.grothendieckTopology X)
       (ringSheafificationUnit O) := ringSheafificationUnit_isLocallySurjective O
   exact PresheafOfModules.sheafificationHomEquiv (ringSheafificationUnit O)
+
+/-! The source packages the preceding object construction as an adjoint
+functor. -/
+
+/-- The sheafification functor on presheaves of `O`-modules. -/
+noncomputable def moduleSheafificationFunctor {X : TopCat.{v}}
+    (O : RingPresheaf.{v, v} X) :
+    PMod O ⥤ SheafOfModules.{v} (ringSheafification O) := by
+  letI : Presheaf.IsLocallyInjective (Opens.grothendieckTopology X)
+      (ringSheafificationUnit O) := ringSheafificationUnit_isLocallyInjective O
+  letI : Presheaf.IsLocallySurjective (Opens.grothendieckTopology X)
+      (ringSheafificationUnit O) := ringSheafificationUnit_isLocallySurjective O
+  exact PresheafOfModules.sheafification (ringSheafificationUnit O)
+
+/-- The object part of the module sheafification functor is the source's
+`F#`. -/
+theorem moduleSheafificationFunctor_obj {X : TopCat.{v}}
+    (O : RingPresheaf.{v, v} X) (F : PMod O) :
+    (moduleSheafificationFunctor O).obj F = moduleSheafification F := by
+  rfl
+
+/-- The functor from sheaves of `O#`-modules to presheaves of `O`-modules. -/
+noncomputable def sheafModuleRestriction {X : TopCat.{v}}
+    (O : RingPresheaf.{v, v} X) :
+    SheafOfModules.{v} (ringSheafification O) ⥤ PMod O :=
+  (SheafOfModules.forget (ringSheafification O)) ⋙
+    PresheafOfModules.restrictScalars (ringSheafificationUnit O)
+
+/-- The module sheafification and restriction functors form the source's
+adjunction. -/
+noncomputable def moduleSheafificationAdjunction {X : TopCat.{v}}
+    (O : RingPresheaf.{v, v} X) :
+    moduleSheafificationFunctor O ⊣ sheafModuleRestriction O := by
+  letI : Presheaf.IsLocallyInjective (Opens.grothendieckTopology X)
+      (ringSheafificationUnit O) := ringSheafificationUnit_isLocallyInjective O
+  letI : Presheaf.IsLocallySurjective (Opens.grothendieckTopology X)
+      (ringSheafificationUnit O) := ringSheafificationUnit_isLocallySurjective O
+  exact PresheafOfModules.sheafificationAdjunction (ringSheafificationUnit O)
+
+/-- The adjunction in the source's direction, from presheaf-module maps to
+sheaf-module maps. -/
+noncomputable def moduleSheafificationAdjunctionHomEquiv {X : TopCat.{v}}
+    (O : RingPresheaf.{v, v} X) (F : PMod O)
+    (G : SheafOfModules.{v} (ringSheafification O)) :
+    (F ⟶ (sheafModuleRestriction O).obj G) ≃
+      (moduleSheafification F ⟶ G) :=
+  (moduleSheafificationHomEquiv F G).symm
+
+/-- A chosen factorization of a presheaf-module map through the module
+sheafification. -/
+noncomputable def moduleSheafificationLift {X : TopCat.{v}}
+    {O : RingPresheaf.{v, v} X} {F : PMod O}
+    (G : SheafOfModules.{v} (ringSheafification O))
+    (φ : F ⟶ (sheafModuleRestriction O).obj G) :
+    moduleSheafification F ⟶ G :=
+  (moduleSheafificationHomEquiv F G).symm φ
+
+/-- The chosen module-sheafification lift has the required universal image. -/
+theorem moduleSheafificationLift_spec {X : TopCat.{v}}
+    {O : RingPresheaf.{v, v} X} {F : PMod O}
+    (G : SheafOfModules.{v} (ringSheafification O))
+    (φ : F ⟶ (sheafModuleRestriction O).obj G) :
+    moduleSheafificationHomEquiv F G (moduleSheafificationLift G φ) = φ := by
+  exact (moduleSheafificationHomEquiv F G).apply_symm_apply φ
+
+/-! The explicit factorization form is retained in addition to the Hom
+equivalence because it is the formulation used in the source. -/
+
+/-- Every presheaf-module map into a sheaf of `O#`-modules factors uniquely
+through the module sheafification by an `O#`-linear map. -/
+theorem existsUnique_moduleSheafificationFactorization {X : TopCat.{v}}
+    {O : RingPresheaf.{v, v} X} {F : PMod O}
+    (G : SheafOfModules.{v} (ringSheafification O))
+    (φ : F ⟶ (sheafModuleRestriction O).obj G) :
+    ∃! ψ : moduleSheafification F ⟶ G,
+      moduleSheafificationUnit F ≫
+          (PresheafOfModules.restrictScalars (ringSheafificationUnit O)).map ψ.val =
+        φ := by
+  sorry
 
 /-! ## The induced action and its universal property -/
 
@@ -199,6 +279,15 @@ noncomputable abbrev sheafTensorProductPresheaf {X : TopCat.{v}}
     (α : O₁ ⟶ O₂) (G : SheafOfModules.{v} O₁) : PMod O₂.obj :=
   tensorProductPresheaf α.hom G.val
 
+/-- The presheaf tensor product need not be a sheaf. -/
+theorem tensorProductPresheaf_not_always_isSheaf :
+    ¬ ∀ {X : TopCat.{v}}
+      {O₁ O₂ : Sheaf (Opens.grothendieckTopology X) RingCat.{v}}
+      (α : O₁ ⟶ O₂) (G : SheafOfModules.{v} O₁),
+      Presheaf.IsSheaf (Opens.grothendieckTopology X)
+        (sheafTensorProductPresheaf α G).presheaf := by
+  sorry
+
 /-- The tensor product sheaf in the source is module sheafification of the
 presheaf-level extension of scalars. -/
 noncomputable def tensorProductSheaf {X : TopCat.{v}}
@@ -254,20 +343,62 @@ theorem sheafification_stalk_tensorProduct_iso {X : TopCat.{v}}
           (tensorProductPresheaf (commRingPresheafMorphismToRingPresheaf α) F).presheaf x))) := by
   exact stalk_tensorProductPresheaf_iso α F x
 
-/-- The same stalk comparison with the source's sheaf hypotheses displayed;
-the presheaf tensor has the same stalk as its sheafification. -/
+/-! ## Stalks of tensor product sheaves -/
+
+/-- A sheaf of commutative rings, matching the source's tensor notation. -/
+abbrev CommRingSheaf (X : TopCat.{v}) :=
+  Sheaf (Opens.grothendieckTopology X) CommRingCat.{v}
+
+/-- Forgetting commutativity on a sheaf of rings. -/
+noncomputable abbrev commRingSheafToRingSheaf {X : TopCat.{v}}
+    (O : CommRingSheaf X) :
+    Sheaf (Opens.grothendieckTopology X) RingCat.{v} :=
+  (sheafCompose (Opens.grothendieckTopology X)
+    (forget₂ CommRingCat RingCat)).obj O
+
+/-- The underlying sheaf of modules over a commutative-ring sheaf. -/
+abbrev CommRingSheafModule {X : TopCat.{v}} (O : CommRingSheaf X) :=
+  SheafOfModules.{v} (commRingSheafToRingSheaf O)
+
+/-- The underlying `RingCat` morphism of a commutative sheaf-ring morphism. -/
+noncomputable abbrev commRingSheafMorphismToRingSheaf {X : TopCat.{v}}
+    {O₁ O₂ : CommRingSheaf X} (α : O₁ ⟶ O₂) :
+    commRingSheafToRingSheaf O₁ ⟶ commRingSheafToRingSheaf O₂ :=
+  (sheafCompose (Opens.grothendieckTopology X)
+    (forget₂ CommRingCat RingCat)).map α
+
+/-- The stalk module of a sheaf of modules over a commutative sheaf of rings. -/
+noncomputable def commRingSheafModuleStalk {X : TopCat.{v}}
+    {O : CommRingSheaf X} (G : CommRingSheafModule O) (x : X) :
+    ModuleCat (↑(TopCat.Presheaf.stalk O.obj x)) := by
+  letI : Module (↑(TopCat.Presheaf.stalk O.obj x))
+      (↑(TopCat.Presheaf.stalk G.val.presheaf x)) :=
+    Formalization.Books.Sheaves.Unit14.stalkModule O.obj G.val x
+  exact ModuleCat.of (↑(TopCat.Presheaf.stalk O.obj x))
+    (↑(TopCat.Presheaf.stalk G.val.presheaf x))
+
+/-- The stalk-level extension of scalars in the source's tensor statement. -/
+noncomputable def sheafStalkTensorProduct {X : TopCat.{v}}
+    {O₁ O₂ : CommRingSheaf X} (α : O₁ ⟶ O₂)
+    (G : CommRingSheafModule O₁) (x : X) :
+    ModuleCat (↑(TopCat.Presheaf.stalk O₂.obj x)) := by
+  exact (ModuleCat.extendScalars
+      ((TopCat.Presheaf.stalkFunctor (CommRingCat.{v}) x).map α.hom).hom).obj
+    (commRingSheafModuleStalk G x)
+
+/-- The tensor product sheaf for commutative sheaves of rings. -/
+noncomputable abbrev commRingTensorProductSheaf {X : TopCat.{v}}
+    {O₁ O₂ : CommRingSheaf X} (α : O₁ ⟶ O₂)
+    (G : CommRingSheafModule O₁) : CommRingSheafModule O₂ :=
+  tensorProductSheaf (commRingSheafMorphismToRingSheaf α) G
+
+/-- The source's stalk comparison for the sheafified tensor product. -/
 theorem stalk_tensorProductSheaf_statement {X : TopCat.{v}}
-    {O O' : CommRingPresheaf X} (α : O ⟶ O')
-    (_hO : Presheaf.IsSheaf (Opens.grothendieckTopology X) O)
-    (_hO' : Presheaf.IsSheaf (Opens.grothendieckTopology X) O')
-    (F : CommRingPresheafModule O)
-    (_hF : Presheaf.IsSheaf (Opens.grothendieckTopology X) F.presheaf)
-    (x : X) :
-    Nonempty (stalkTensorProduct α F x ≅
-      ModuleCat.of (O'.stalk x)
-        (↑(TopCat.Presheaf.stalk
-          (tensorProductPresheaf (commRingPresheafMorphismToRingPresheaf α) F).presheaf x))) := by
-  exact stalk_tensorProductPresheaf_iso α F x
+    {O₁ O₂ : CommRingSheaf X} (α : O₁ ⟶ O₂)
+    (G : CommRingSheafModule O₁) (x : X) :
+    Nonempty (sheafStalkTensorProduct α G x ≅
+      commRingSheafModuleStalk (commRingTensorProductSheaf α G) x) := by
+  sorry
 
 end
 

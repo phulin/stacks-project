@@ -26,18 +26,21 @@ noncomputable section
 
 /-- A candidate sheafification of a presheaf valued in an algebraic category.
 
-The `underlying_iso` field is the precise meaning of the source's statement
-that the unit identifies the underlying sheaf of sets with ordinary
-sheafification. -/
+The underlying isomorphism identifies the underlying sheaf with ordinary
+sheafification, and `underlying_unit` records that this identification is
+the one induced by the algebraic unit rather than an unrelated isomorphism. -/
 structure AlgebraicSheafificationData
     {C : Type u} [Category.{v} C] (U : C ⥤ Type v)
     [AlgebraicStructureType C U] {X : TopCat.{v}}
     (F : PresheafWithValues X C) where
   sheaf : TopCat.Sheaf C X
   unit : F ⟶ sheaf.presheaf
-  underlying_iso : Nonempty
-    (underlyingPresheaf U sheaf.presheaf ≅
-      (sheafification (underlyingPresheaf U F)).presheaf)
+  underlying_iso :
+    underlyingPresheaf U sheaf.presheaf ≅
+      (sheafification (underlyingPresheaf U F)).presheaf
+  underlying_unit :
+    underlyingPresheafMorphism U unit ≫ underlying_iso.hom =
+      sheafificationUnit (underlyingPresheaf U F)
 
 /-- The chosen algebraic sheafification object. -/
 abbrev algebraicSheafification
@@ -77,7 +80,7 @@ theorem algebraicSheafification_underlying_iso
     Nonempty
       (underlyingPresheaf U D.sheaf.presheaf ≅
         (sheafification (underlyingPresheaf U F)).presheaf) := by
-  exact D.underlying_iso
+  exact ⟨D.underlying_iso⟩
 
 end
 

@@ -259,11 +259,13 @@ theorem sheafificationMap_preserves_injective {X : TopCat.{v}}
     PresheafInjective (sheafificationMap φ) := by
   sorry
 
-/-- Sectionwise surjectivity is preserved by sheafification. -/
+/-- Surjectivity in the sheaf sense (local sectionwise preimages) is
+preserved by sheafification. -/
 theorem sheafificationMap_preserves_surjective {X : TopCat.{v}}
     {F G : TopCat.Presheaf (Type v) X} (φ : F ⟶ G)
     (hφ : PresheafSurjective φ) :
-    PresheafSurjective (sheafificationMap φ) := by
+    Presheaf.IsLocallySurjective (Opens.grothendieckTopology X)
+      (sheafificationMap φ) := by
   sorry
 
 end

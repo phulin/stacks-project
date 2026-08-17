@@ -169,7 +169,133 @@ def EllipticCurveIso.symm {S : Scheme.{u}} {E E' : EllipticCurve S}
 theorem exists_ellipticCurveIso_baseChange {S T : Scheme.{u}}
     {E E' : EllipticCurve S} (α : EllipticCurveIso E E') (a : T ⟶ S) :
     Nonempty (EllipticCurveIso (E.baseChange a) (E'.baseChange a)) := by
-  sorry
+  have hE := EllipticCurve.baseChange_toData E a
+  have hE' := EllipticCurve.baseChange_toData E' a
+  have hE_projection_arrow :
+      Arrow.mk (E.baseChange a).toData.projection =
+        Arrow.mk (E.toData.baseChange a).projection :=
+    congrArg (fun d : EllipticCurveData T => Arrow.mk d.projection) hE
+  rcases (Arrow.mk_eq_mk_iff _ _).mp hE_projection_arrow with
+    ⟨hE_total_data, hE_target, hE_projection⟩
+  cases hE_target
+  simp only [eqToHom_refl, Category.comp_id] at hE_projection
+  have hE_total : (E.baseChange a).total = pullback E.projection a := by
+    simpa [EllipticCurve.toData, EllipticCurveData.baseChange] using hE_total_data
+  have hE_projection' :
+      (E.baseChange a).projection = eqToHom hE_total ≫ pullback.snd E.projection a := by
+    simpa [EllipticCurve.toData, EllipticCurveData.baseChange] using hE_projection
+  have hE'_projection_arrow :
+      Arrow.mk (E'.baseChange a).toData.projection =
+        Arrow.mk (E'.toData.baseChange a).projection :=
+    congrArg (fun d : EllipticCurveData T => Arrow.mk d.projection) hE'
+  rcases (Arrow.mk_eq_mk_iff _ _).mp hE'_projection_arrow with
+    ⟨hE'_total_data, hE'_target, hE'_projection⟩
+  cases hE'_target
+  simp only [eqToHom_refl, Category.comp_id] at hE'_projection
+  have hE'_total : (E'.baseChange a).total = pullback E'.projection a := by
+    simpa [EllipticCurve.toData, EllipticCurveData.baseChange] using hE'_total_data
+  have hE'_projection' :
+      (E'.baseChange a).projection =
+        eqToHom hE'_total ≫ pullback.snd E'.projection a := by
+    simpa [EllipticCurve.toData, EllipticCurveData.baseChange] using hE'_projection
+  have hE_zero_arrow :
+      Arrow.mk (E.baseChange a).toData.zero =
+        Arrow.mk (E.toData.baseChange a).zero :=
+    congrArg (fun d : EllipticCurveData T => Arrow.mk d.zero) hE
+  rcases (Arrow.mk_eq_mk_iff _ _).mp hE_zero_arrow with
+    ⟨hE_source, hE_zero_total_data, hE_zero⟩
+  cases hE_source
+  simp only [eqToHom_refl, Category.id_comp] at hE_zero
+  have hE_zero_total : (E.baseChange a).total = pullback E.projection a := by
+    simpa [EllipticCurve.toData, EllipticCurveData.baseChange] using hE_zero_total_data
+  have hE_zero' :
+      (E.baseChange a).zero =
+        pullback.lift (a ≫ E.zero) (𝟙 T)
+            (by simp [Category.assoc, E.zero_section]) ≫
+          eqToHom hE_zero_total.symm := by
+    simpa [EllipticCurve.toData, EllipticCurveData.baseChange] using hE_zero
+  have hE'_zero_arrow :
+      Arrow.mk (E'.baseChange a).toData.zero =
+        Arrow.mk (E'.toData.baseChange a).zero :=
+    congrArg (fun d : EllipticCurveData T => Arrow.mk d.zero) hE'
+  rcases (Arrow.mk_eq_mk_iff _ _).mp hE'_zero_arrow with
+    ⟨hE'_source, hE'_zero_total_data, hE'_zero⟩
+  cases hE'_source
+  simp only [eqToHom_refl, Category.id_comp] at hE'_zero
+  have hE'_zero_total : (E'.baseChange a).total = pullback E'.projection a := by
+    simpa [EllipticCurve.toData, EllipticCurveData.baseChange] using hE'_zero_total_data
+  have hE'_zero' :
+      (E'.baseChange a).zero =
+        pullback.lift (a ≫ E'.zero) (𝟙 T)
+            (by simp [Category.assoc, E'.zero_section]) ≫
+          eqToHom hE'_zero_total.symm := by
+    simpa [EllipticCurve.toData, EllipticCurveData.baseChange] using hE'_zero
+  have hE_total_eq : hE_zero_total = hE_total := Subsingleton.elim _ _
+  have hE'_total_eq : hE'_zero_total = hE'_total := Subsingleton.elim _ _
+  rw [hE_total_eq] at hE_zero'
+  rw [hE'_total_eq] at hE'_zero'
+  let i : pullback E.projection a ≅ pullback E'.projection a :=
+    asIso (pullback.map E.projection a E'.projection a α.hom.hom (𝟙 T) (𝟙 S)
+      (by simpa using α.projection_comm.symm) (by simp))
+  have hi_fst :
+      i.hom ≫ pullback.fst E'.projection a =
+        pullback.fst E.projection a ≫ α.hom.hom := by
+    dsimp [i]
+    apply pullback.lift_fst
+  have hi_snd :
+      i.hom ≫ pullback.snd E'.projection a = pullback.snd E.projection a := by
+    dsimp [i]
+    apply pullback.lift_snd
+  have hE_total_cancel :
+      eqToHom hE_total.symm ≫ (eqToIso hE_total).hom = 𝟙 _ := by
+    simpa only [eqToIso.hom, eqToIso.inv] using (eqToIso hE_total).inv_hom_id
+  have hE'_total_cancel :
+      (eqToIso hE'_total).inv ≫ eqToHom hE'_total = 𝟙 _ := by
+    simpa only [eqToIso.hom] using (eqToIso hE'_total).inv_hom_id
+  have hE'_total_cancel_snd :
+      (eqToIso hE'_total).inv ≫ eqToHom hE'_total ≫
+          pullback.snd E'.projection a = pullback.snd E'.projection a := by
+    simpa only [Category.assoc, Category.id_comp] using
+      congrArg (fun q => q ≫ pullback.snd E'.projection a) hE'_total_cancel
+  have hE_total_cancel_tail :
+      eqToHom hE_total.symm ≫ (eqToIso hE_total).hom ≫ i.hom ≫
+          (eqToIso hE'_total).inv = i.hom ≫ (eqToIso hE'_total).inv := by
+    simpa only [Category.assoc, Category.id_comp] using
+      congrArg (fun q => q ≫ i.hom ≫ (eqToIso hE'_total).inv) hE_total_cancel
+  let h : (E.baseChange a).total ≅ (E'.baseChange a).total :=
+    eqToIso hE_total ≪≫ i ≪≫ (eqToIso hE'_total).symm
+  refine ⟨{
+    hom := h
+    projection_comm := by
+      rw [hE'_projection', hE_projection']
+      simp only [h, Iso.trans_hom, Category.assoc, Iso.symm_hom]
+      rw [hE'_total_cancel_snd, hi_snd]
+      simp only [eqToIso.hom]
+    section_comm := by
+      rw [hE_zero', hE'_zero']
+      have hzero_map :
+          pullback.lift (a ≫ E.zero) (𝟙 T)
+              (by simp [Category.assoc, E.zero_section]) ≫ i.hom =
+            pullback.lift (a ≫ E'.zero) (𝟙 T)
+              (by simp [Category.assoc, E'.zero_section]) := by
+        apply pullback.hom_ext
+        · rw [Category.assoc, hi_fst, ← Category.assoc, pullback.lift_fst]
+          rw [Category.assoc, α.section_comm, pullback.lift_fst]
+        · rw [Category.assoc, hi_snd, pullback.lift_snd, pullback.lift_snd]
+      simp only [h, Iso.trans_hom, Category.assoc, Iso.symm_hom]
+      rw [hE_total_cancel_tail]
+      have hzero_map_assoc :
+          pullback.lift (a ≫ E.zero) (𝟙 T)
+                (by simp [Category.assoc, E.zero_section]) ≫ i.hom ≫
+              (eqToIso hE'_total).inv =
+            pullback.lift (a ≫ E'.zero) (𝟙 T)
+              (by simp [Category.assoc, E'.zero_section]) ≫
+                (eqToIso hE'_total).inv := by
+        simpa only [Category.assoc] using
+          congrArg (fun q => q ≫ (eqToIso hE'_total).inv) hzero_map
+      rw [hzero_map_assoc]
+      simp only [eqToIso.inv]
+  }⟩
 
 /-- The chosen base change of a witness. -/
 noncomputable def EllipticCurveIso.baseChange {S T : Scheme.{u}}
@@ -182,7 +308,189 @@ theorem exists_ellipticCurveIso_baseChange_assoc {S X T : Scheme.{u}}
     (E : EllipticCurve S) (f : X ⟶ S) (g : T ⟶ X) :
     Nonempty (EllipticCurveIso (E.baseChange (g ≫ f))
       ((E.baseChange f).baseChange g)) := by
-  sorry
+  have hA := EllipticCurve.baseChange_toData E (g ≫ f)
+  have hF := EllipticCurve.baseChange_toData E f
+  have hB := EllipticCurve.baseChange_toData (E.baseChange f) g
+  have hB_data :
+      ((E.baseChange f).baseChange g).toData =
+        (E.toData.baseChange f).baseChange g :=
+    hB.trans (congrArg (fun d : EllipticCurveData X => d.baseChange g) hF)
+  have hA_projection_arrow :
+      Arrow.mk (E.baseChange (g ≫ f)).toData.projection =
+        Arrow.mk (E.toData.baseChange (g ≫ f)).projection :=
+    congrArg (fun d : EllipticCurveData T => Arrow.mk d.projection) hA
+  rcases (Arrow.mk_eq_mk_iff _ _).mp hA_projection_arrow with
+    ⟨hA_total_data, hA_target, hA_projection⟩
+  cases hA_target
+  simp only [eqToHom_refl, Category.comp_id] at hA_projection
+  have hA_total :
+      (E.baseChange (g ≫ f)).total = pullback E.projection (g ≫ f) := by
+    simpa [EllipticCurve.toData, EllipticCurveData.baseChange] using hA_total_data
+  have hA_projection' :
+      (E.baseChange (g ≫ f)).projection =
+        eqToHom hA_total ≫ pullback.snd E.projection (g ≫ f) := by
+    simpa [EllipticCurve.toData, EllipticCurveData.baseChange] using hA_projection
+  have hA_zero_arrow :
+      Arrow.mk (E.baseChange (g ≫ f)).toData.zero =
+        Arrow.mk (E.toData.baseChange (g ≫ f)).zero :=
+    congrArg (fun d : EllipticCurveData T => Arrow.mk d.zero) hA
+  rcases (Arrow.mk_eq_mk_iff _ _).mp hA_zero_arrow with
+    ⟨hA_source, hA_zero_total_data, hA_zero⟩
+  cases hA_source
+  simp only [eqToHom_refl, Category.id_comp] at hA_zero
+  have hA_zero' :
+      (E.baseChange (g ≫ f)).zero =
+        pullback.lift ((g ≫ f) ≫ E.zero) (𝟙 T)
+            (by simp [EllipticCurve.toData, Category.assoc, E.zero_section]) ≫
+          eqToHom hA_zero_total_data.symm := by
+    simpa [EllipticCurve.toData, EllipticCurveData.baseChange] using hA_zero
+  have hA_zero_total_eq : hA_zero_total_data = hA_total := Subsingleton.elim _ _
+  rw [hA_zero_total_eq] at hA_zero'
+  have hB_projection_arrow :
+      Arrow.mk ((E.baseChange f).baseChange g).toData.projection =
+        Arrow.mk ((E.toData.baseChange f).baseChange g).projection :=
+    congrArg (fun d : EllipticCurveData T => Arrow.mk d.projection) hB_data
+  rcases (Arrow.mk_eq_mk_iff _ _).mp hB_projection_arrow with
+    ⟨hB_total_data, hB_target, hB_projection⟩
+  cases hB_target
+  simp only [eqToHom_refl, Category.comp_id] at hB_projection
+  have hB_total :
+      ((E.baseChange f).baseChange g).total =
+        pullback (pullback.snd E.projection f) g := by
+    simpa [EllipticCurve.toData, EllipticCurveData.baseChange] using hB_total_data
+  have hB_projection' :
+      ((E.baseChange f).baseChange g).projection =
+        eqToHom hB_total ≫
+          pullback.snd (pullback.snd E.projection f) g := by
+    simpa [EllipticCurve.toData, EllipticCurveData.baseChange] using hB_projection
+  have hB_zero_arrow :
+      Arrow.mk ((E.baseChange f).baseChange g).toData.zero =
+        Arrow.mk ((E.toData.baseChange f).baseChange g).zero :=
+    congrArg (fun d : EllipticCurveData T => Arrow.mk d.zero) hB_data
+  rcases (Arrow.mk_eq_mk_iff _ _).mp hB_zero_arrow with
+    ⟨hB_source, hB_zero_total_data, hB_zero⟩
+  cases hB_source
+  simp only [eqToHom_refl, Category.id_comp] at hB_zero
+  let zF : X ⟶ pullback E.projection f :=
+    pullback.lift (f ≫ E.zero) (𝟙 X)
+      (by simp [Category.assoc, E.zero_section])
+  let zA : T ⟶ pullback E.projection (g ≫ f) :=
+    pullback.lift ((g ≫ f) ≫ E.zero) (𝟙 T)
+      (by simp [Category.assoc, E.zero_section])
+  let zB : T ⟶ pullback (pullback.snd E.projection f) g :=
+    pullback.lift (g ≫ zF) (𝟙 T)
+      (by simp [zF, Category.assoc, pullback.lift_snd])
+  have hA_zero_zA :
+      (E.baseChange (g ≫ f)).zero = zA ≫ eqToHom hA_total.symm := by
+    exact hA_zero'
+  have hB_zero' :
+      ((E.baseChange f).baseChange g).zero =
+        zB ≫ eqToHom hB_zero_total_data.symm := by
+    simpa [zB, zF, EllipticCurve.toData, EllipticCurveData.baseChange] using hB_zero
+  have hB_zero_total_eq : hB_zero_total_data = hB_total := Subsingleton.elim _ _
+  rw [hB_zero_total_eq] at hB_zero'
+  let w : pullback E.projection (g ≫ f) ⟶ pullback E.projection f :=
+    pullback.lift (pullback.fst E.projection (g ≫ f))
+      (pullback.snd E.projection (g ≫ f) ≫ g)
+      (by
+        simpa only [Category.assoc] using
+          (pullback.condition :
+            pullback.fst E.projection (g ≫ f) ≫ E.projection =
+              pullback.snd E.projection (g ≫ f) ≫ (g ≫ f)))
+  let u : pullback E.projection (g ≫ f) ⟶
+      pullback (pullback.snd E.projection f) g :=
+    pullback.lift w (pullback.snd E.projection (g ≫ f))
+      (by
+        simpa only [w, Category.assoc] using
+          (pullback.lift_snd (pullback.fst E.projection (g ≫ f))
+            (pullback.snd E.projection (g ≫ f) ≫ g) _))
+  let v : pullback (pullback.snd E.projection f) g ⟶
+      pullback E.projection (g ≫ f) :=
+    pullback.lift
+      (pullback.fst (pullback.snd E.projection f) g ≫
+        pullback.fst E.projection f)
+      (pullback.snd (pullback.snd E.projection f) g)
+      (by
+        rw [Category.assoc, pullback.condition]
+        simpa only [Category.assoc] using
+          congrArg (fun q => q ≫ f)
+            (pullback.condition (f := pullback.snd E.projection f) (g := g)))
+  have huv : u ≫ v = 𝟙 _ := by
+    apply pullback.hom_ext <;>
+      simp [u, v, w, Category.assoc, pullback.lift_fst, pullback.lift_snd,
+        pullback.lift_fst_assoc]
+  have hvw : v ≫ w = pullback.fst (pullback.snd E.projection f) g := by
+    apply pullback.hom_ext
+    · simp [v, w, Category.assoc, pullback.lift_fst]
+    · simpa [v, w, Category.assoc, pullback.lift_snd, pullback.lift_snd_assoc] using
+        (pullback.condition (f := pullback.snd E.projection f) (g := g)).symm
+  have hvu : v ≫ u = 𝟙 _ := by
+    apply pullback.hom_ext <;>
+      simp [u, v, w, hvw, Category.assoc, pullback.lift_fst, pullback.lift_snd]
+  let j : pullback E.projection (g ≫ f) ≅
+      pullback (pullback.snd E.projection f) g :=
+    { hom := u
+      inv := v
+      hom_inv_id := huv
+      inv_hom_id := hvu }
+  have hj_snd :
+      j.hom ≫ pullback.snd (pullback.snd E.projection f) g =
+        pullback.snd E.projection (g ≫ f) := by
+    dsimp [j, u]
+    apply pullback.lift_snd
+  have hzw : zA ≫ w = g ≫ zF := by
+    apply pullback.hom_ext <;>
+      simp [zA, w, zF, Category.assoc, pullback.lift_fst, pullback.lift_snd,
+        pullback.lift_snd_assoc]
+  have hz : zA ≫ j.hom = zB := by
+    apply pullback.hom_ext
+    · dsimp [j, u, zB]
+      rw [Category.assoc, pullback.lift_fst, pullback.lift_fst]
+      exact hzw
+    · dsimp [j, u, zB]
+      rw [Category.assoc, pullback.lift_snd, pullback.lift_snd]
+      exact (pullback.lift_snd (g ≫ zF) (𝟙 T) _).symm
+  have hB_total_cancel :
+      (eqToIso hB_total).inv ≫ eqToHom hB_total = 𝟙 _ := by
+    simpa only [eqToIso.hom] using (eqToIso hB_total).inv_hom_id
+  have hB_total_cancel_snd :
+      (eqToIso hB_total).inv ≫ eqToHom hB_total ≫
+          pullback.snd (pullback.snd E.projection f) g =
+        pullback.snd (pullback.snd E.projection f) g := by
+    simpa only [Category.assoc, Category.id_comp] using
+      congrArg (fun q => q ≫ pullback.snd (pullback.snd E.projection f) g)
+        hB_total_cancel
+  have hA_total_cancel :
+      eqToHom hA_total.symm ≫ (eqToIso hA_total).hom = 𝟙 _ := by
+    simpa only [eqToIso.hom, eqToIso.inv] using (eqToIso hA_total).inv_hom_id
+  have hA_total_cancel_tail :
+      eqToHom hA_total.symm ≫ (eqToIso hA_total).hom ≫ j.hom ≫
+          (eqToIso hB_total).inv = j.hom ≫ (eqToIso hB_total).inv := by
+    simpa only [Category.assoc, Category.id_comp] using
+      congrArg (fun q => q ≫ j.hom ≫ (eqToIso hB_total).inv) hA_total_cancel
+  let h : (E.baseChange (g ≫ f)).total ≅
+      ((E.baseChange f).baseChange g).total :=
+    eqToIso hA_total ≪≫ j ≪≫ (eqToIso hB_total).symm
+  refine ⟨{
+    hom := h
+    projection_comm := by
+      rw [hB_projection', hA_projection']
+      simp only [h, Iso.trans_hom, Category.assoc, Iso.symm_hom]
+      rw [hB_total_cancel_snd, hj_snd]
+      simp only [eqToIso.hom]
+    section_comm := by
+      rw [hA_zero_zA, hB_zero']
+      simp only [h, Iso.trans_hom, Category.assoc, Iso.symm_hom]
+      rw [hA_total_cancel_tail]
+      have hz_assoc :
+          zA ≫ j.hom ≫ (eqToIso hB_total).inv =
+            zB ≫ (eqToIso hB_total).inv := by
+        simpa only [Category.assoc] using
+          congrArg (fun q => q ≫ (eqToIso hB_total).inv) hz
+      rw [hz_assoc]
+      simp only [eqToIso.inv]
+      rfl
+  }⟩
 
 /-- A chosen associativity witness for the pullback presentations. -/
 noncomputable def EllipticCurveIso.baseChange_assoc {S X T : Scheme.{u}}

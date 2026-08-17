@@ -88,6 +88,17 @@ theorem stronglyCartesian_over_composition
     Functor.IsStronglyCartesian (F ⋙ G) ((F ⋙ G).map φ) φ := by
   sorry
 
+theorem stronglyCartesian_fibre_product
+    {X C : Type*} [Category* X] [Category* C]
+    (p : X ⥤ C) {x y z : X} (f : x ⟶ y) (g : z ⟶ y)
+    [Functor.IsStronglyCartesian p (p.map f) f]
+    {P : C} {π₁ : P ⟶ p.obj x} {π₂ : P ⟶ p.obj z}
+    (hP : IsPullback π₁ π₂ (p.map f) (p.map g))
+    (w : X) (a : w ⟶ z)
+    [Functor.IsStronglyCartesian p π₂ a] :
+    ∃ b : w ⟶ x, IsPullback b a f g := by
+  sorry
+
 /-! ## Pullbacks in a fibred category -/
 
 /- A choice of pullbacks is a choice of a strongly cartesian lift for every
@@ -159,6 +170,20 @@ theorem exists_unital (p : X ⥤ C) [p.IsFibered] :
 
 end PullbackChoice
 
+theorem pullback_composition_iso
+    {X C : Type*} [Category* X] [Category* C]
+    (p : X ⥤ C) [p.IsFibered] (P : PullbackChoice p)
+    {R S T : C} (f : R ⟶ S) (g : S ⟶ T) :
+    Nonempty (P.pullbackFunctor (f ≫ g) ≅
+      P.pullbackFunctor g ⋙ P.pullbackFunctor f) := by
+  sorry
+
+theorem pullback_identity_iso
+    {X C : Type*} [Category* X] [Category* C]
+    (p : X ⥤ C) [p.IsFibered] (P : PullbackChoice p) (U : C) :
+    Nonempty (𝟭 (Functor.Fiber p U) ≅ P.pullbackFunctor (𝟙 U)) := by
+  sorry
+
 /- A pseudofunctor-compatible packaging of the choice.  The object and map
    fields explicitly identify the Mathlib pseudofunctor with the fibre
    categories and the `pullbackFunctor`s above; its unit, composition, and
@@ -182,20 +207,6 @@ theorem pullback_pseudofunctor_exists
     {X : Type u₁} [Category.{v₁} X] {C : Type u₂} [Category.{v₂} C]
     (p : X ⥤ C) [p.IsFibered] (P : PullbackChoice p) :
     Nonempty (PullbackPseudofunctorData p P) := by
-  sorry
-
-theorem pullback_composition_iso
-    {X C : Type*} [Category* X] [Category* C]
-    (p : X ⥤ C) [p.IsFibered] (P : PullbackChoice p)
-    {R S T : C} (f : R ⟶ S) (g : S ⟶ T) :
-    Nonempty (P.pullbackFunctor (f ≫ g) ≅
-      P.pullbackFunctor g ⋙ P.pullbackFunctor f) := by
-  sorry
-
-theorem pullback_identity_iso
-    {X C : Type*} [Category* X] [Category* C]
-    (p : X ⥤ C) [p.IsFibered] (P : PullbackChoice p) (U : C) :
-    Nonempty (𝟭 (Functor.Fiber p U) ≅ P.pullbackFunctor (𝟙 U)) := by
   sorry
 
 /-! ## Fibred categories over a fixed category -/
@@ -443,17 +454,6 @@ theorem fibred_fibre_product_goes_up
         IsPullback b a f g := by
   sorry
 
-theorem stronglyCartesian_fibre_product
-    {X C : Type*} [Category* X] [Category* C]
-    (p : X ⥤ C) {x y z : X} (f : x ⟶ y) (g : z ⟶ y)
-    [Functor.IsStronglyCartesian p (p.map f) f]
-    {P : C} {π₁ : P ⟶ p.obj x} {π₂ : P ⟶ p.obj z}
-    (hP : IsPullback π₁ π₂ (p.map f) (p.map g))
-    (w : X) (a : w ⟶ z)
-    [Functor.IsStronglyCartesian p π₂ a] :
-    ∃ b : w ⟶ x, IsPullback b a f g := by
-  sorry
-
 /-! ## The amelioration factorisation -/
 
 /- The explicit category in the source is the full subcategory of the comma
@@ -470,6 +470,37 @@ def ameliorationProperty {C : Cat.{v, u}}
 abbrev AmeliorationCategory {C : Cat.{v, u}}
     {X Y : FibredCategoryOver C} (F : FibredCategoryOverHom X Y) :=
   (ameliorationProperty F).FullSubcategory
+
+/- The source's fully faithful functor `u : X ⥤ X'` sends an object to the
+   identity arrow `F(x) ⟶ F(x)` in the comma presentation. -/
+def ameliorationFromX {C : Cat.{v, u}}
+    {X Y : FibredCategoryOver C} (F : FibredCategoryOverHom X Y) :
+    X.underlying.left ⥤ AmeliorationCategory F where
+  obj x :=
+    { obj :=
+        { left := (overFunctor F.underlying).obj x
+          right := x
+          hom := 𝟙 ((overFunctor F.underlying).obj x) }
+      property := by
+        refine ⟨(structureFunctor X.underlying).obj x, ?_, rfl, ?_⟩
+        · exact congrArg (fun K : X.underlying.left ⥤ C => K.obj x)
+            (overFunctor_comm F.underlying)
+        · exact IsHomLift.id
+            (congrArg (fun K : X.underlying.left ⥤ C => K.obj x)
+              (overFunctor_comm F.underlying)) }
+  map f :=
+    ObjectProperty.homMk
+      { left := (overFunctor F.underlying).map f
+        right := f
+        w := by simp }
+  map_id := by
+    intro x
+    apply ObjectProperty.hom_ext
+    apply Comma.hom_ext <;> simp
+  map_comp := by
+    intro x y z f g
+    apply ObjectProperty.hom_ext
+    apply Comma.hom_ext <;> simp
 
 theorem amelioration_object_description
     {C : Cat.{v, u}} {X Y : FibredCategoryOver C}

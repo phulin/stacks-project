@@ -36,7 +36,7 @@ theorem smooth_toric_dm_stack_from_stacky_fan
     {C : Type u} [Category.{v} C] [StackCategory C]
     (D : SmoothToricDMStackData C) :
     Nonempty (SmoothToricDMStackConclusion D) := by
-  exact ⟨{ associatedToStackyFan := D.stackyFan = D.stackyFan }⟩
+  sorry
 
 structure ToricTriple (C : Type u) [Category.{v} C]
     [StackCategory C] where
@@ -65,9 +65,7 @@ theorem toric_triples_equivalent_to_stacky_fans
     {C : Type u} [Category.{v} C] [StackCategory C]
     (D : ToricTripleStackyFanCorrespondence C) :
     Nonempty (ToricTripleStackyFanConclusion D) := by
-  exact ⟨{
-    correspondence := (D.toricTriple = D.toricTriple)
-    twoCategoryToOneCategory := (D.stackyFan = D.stackyFan) }⟩
+  sorry
 
 structure DeltaCollection (C : Type u) [Category.{v} C]
     [StackCategory C] where
@@ -83,7 +81,7 @@ theorem toric_orbifold_delta_collections
     {C : Type u} [Category.{v} C] [StackCategory C]
     (D : DeltaCollection C) :
     Nonempty (DeltaCollectionConclusion D) := by
-  exact ⟨{ satisfiesDeltaRelations := D.collectionData = D.collectionData }⟩
+  sorry
 
 structure GeneralSmoothToricDMStackDeltaCollection (C : Type u)
     [Category.{v} C] [StackCategory C] where
@@ -117,7 +115,7 @@ theorem smooth_toric_dm_stacks_equivalent_to_stacky_fans
     {C : Type u} [Category.{v} C] [StackCategory C]
     (D : SmoothToricDMStackByDenseOrbit C) :
     Nonempty (SmoothToricDMStackDenseOrbitConclusion D) := by
-  exact ⟨{ orbitIsTheDMTorus := D.torus = D.torus }⟩
+  sorry
 
 structure ToricVarietySubgroupQuotient (C : Type u)
     [Category.{v} C] [StackCategory C] where
@@ -152,10 +150,6 @@ theorem toric_stack_dictionary_and_intrinsic_characterization
     {C : Type u} [Category.{v} C] [StackCategory C]
     (D : ToricStackCombinatorialDictionary C) :
     Nonempty (ToricStackCombinatorialConclusion D) := by
-  exact ⟨{
-    combinatorialToGeometric := (D.stackDictionary = D.stackDictionary)
-    geometricToCombinatorial := (D.stackDictionary = D.stackDictionary)
-    smoothModuliInterpretation := (D.stackDictionary = D.stackDictionary)
-    intrinsicCharacterization := (D.stackDictionary = D.stackDictionary) }⟩
+  sorry
 
 end Formalization.Books.Guide.Unit05

@@ -123,7 +123,7 @@ theorem twoYonedaEvaluationCore_obj_isFiber
     {S : Type uS} [Category.{vS} S]
     (p : S ⥤ C) (U : C) (G : twoYonedaOverCategory p U) :
     p.obj (G.1.obj (Over.mk (𝟙 U))) = U := by
-  sorry
+  exact congr_obj G.2 (Over.mk (𝟙 U))
 
 theorem twoYonedaEvaluationCore_map_isHomLift
     {C : Type uC} [Category.{vC} C]
@@ -219,7 +219,8 @@ theorem twoYonedaGroupoidRestriction_obj_isOver
     (p : S ⥤ C) {U V : C} (f : U ⟶ V)
     (G : twoYonedaGroupoidMorphismCategory p V) :
     (Over.map f ⋙ G.1) ⋙ p = Over.forget U := by
-  sorry
+  rw [Functor.assoc, G.2]
+  rfl
 
 theorem twoYonedaGroupoidRestriction_map_isOver
     {C : Type uC} [Category.{vC} C]

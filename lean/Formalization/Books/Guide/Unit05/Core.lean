@@ -270,7 +270,8 @@ def IsCoarseModuliSpaceMap {C : Type u} [Category.{v} C] [StackCategory C]
 
 def IsModuliSpaceMap {C : Type u} [Category.{v} C] [StackCategory C]
     {X Y : C} (f : X ⟶ Y) : Prop :=
-  IsProperMorphism f ∧ Function.Bijective (stackPointMap f)
+  IsAlgebraicSpace Y ∧ IsProperMorphism f ∧
+    Function.Bijective (stackPointMap f)
 
 structure CoarseModuliSpaceData {C : Type u} [Category.{v} C] [StackCategory C]
     (X : C) where
@@ -298,7 +299,7 @@ def IsTameArtinStack {C : Type u} [Category.{v} C] [StackCategory C] (X : C) : P
 
 def IsGoodModuliSpace {C : Type u} [Category.{v} C] [StackCategory C]
     {X Y : C} (q : X ⟶ Y) : Prop :=
-  IsAlgebraicSpace Y ∧ IsQuasiCompactMorphism q ∧
+  IsArtinStack X ∧ IsAlgebraicSpace Y ∧ IsQuasiCompactMorphism q ∧
     StructureSheafPushforwardIsIso q ∧ ExactOnQuasiCoherent q
 
 structure GoodModuliSpaceProperties {C : Type u} [Category.{v} C]

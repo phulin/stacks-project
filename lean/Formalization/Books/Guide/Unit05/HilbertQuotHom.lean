@@ -16,6 +16,8 @@ namespace Formalization.Books.Guide.Unit05
 structure HilbertStackData {C : Type u} [Category.{v} C]
     [StackCategory C] (X S : C) where
   sheaf : Type u
+  stackIsArtin : IsArtinStack X
+  baseIsAlgebraicSpace : IsAlgebraicSpace S
   structureMap : X ⟶ S
   separated : IsSeparatedMorphism structureMap
   locallyFiniteType : IsLocallyFiniteTypeMorphism structureMap
@@ -32,12 +34,18 @@ theorem hilbert_stack_is_algebraic
 
 structure HomStackData {C : Type u} [Category.{v} C]
     [StackCategory C] (T X S : C) where
+  sourceIsArtin : IsArtinStack T
+  targetIsArtin : IsArtinStack X
+  baseIsAlgebraicSpace : IsAlgebraicSpace S
   sourceToBase : T ⟶ S
   sourceProper : IsProperMorphism sourceToBase
   sourceFlatOverBase : Flat sourceToBase
   targetToBase : X ⟶ S
   targetSeparated : IsSeparatedMorphism targetToBase
   targetLocallyFiniteType : IsLocallyFiniteTypeMorphism targetToBase
+  sourceLocallyFinitePresentation : Prop
+  targetLocallyFinitePresentation : Prop
+  targetFiniteDiagonal : Prop
   baseLocallyNoetherian : Prop
   homStack : C
 
@@ -51,6 +59,7 @@ structure QuotFunctorData {C : Type u} [Category.{v} C]
     [StackCategory C] (X S : C) where
   deligneMumford : IsDeligneMumfordStack X
   separated : IsSeparatedStack X
+  baseIsAlgebraicSpace : IsAlgebraicSpace S
   locallyFinitePresentationOverBase : Prop
   module : Type u
   moduleLocallyFinitelyPresented : Prop
@@ -91,6 +100,7 @@ structure HomStackFiniteDiagonalData {C : Type u} [Category.{v} C]
     [StackCategory C] (X Y S : C) where
   sourceArtin : IsArtinStack X
   targetArtin : IsArtinStack Y
+  baseIsAlgebraicSpace : IsAlgebraicSpace S
   sourceToBase : X ⟶ S
   targetToBase : Y ⟶ S
   locallyFinitePresentation : Prop
@@ -159,7 +169,7 @@ theorem coherent_algebra_stack_generalizes_branchvarieties
     {C : Type u} [Category.{v} C] [StackCategory C] {Y : C}
     (D : CoherentAlgebraStackData Y) :
     Nonempty CoherentAlgebraStackConclusion := by
-  exact ⟨⟨D.algebraOverStructureSheaf⟩⟩
+  sorry
 
 structure GAmpleLineBundleData {C : Type u} [Category.{v} C]
     [StackCategory C] (T S : C) where
@@ -207,7 +217,7 @@ theorem hilbert_functor_nonseparated_scheme_not_represented
     {C : Type u} [Category.{v} C] [StackCategory C]
     (D : NonEffectiveHilbertDeformationExample (C := C)) :
     Nonempty (NonEffectiveHilbertConclusion D) := by
-  exact ⟨⟨D.nonEffectiveDeformation⟩⟩
+  sorry
 
 structure GeneralMappingStackData {C : Type u} [Category.{v} C]
     [StackCategory C] (X Y S : C) where

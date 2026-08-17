@@ -93,9 +93,7 @@ theorem tame_coarse_moduli_commutes_with_arbitrary_base_change
     {C : Type u} [Category.{v} C] [StackCategory C]
     {X : C} (h : IsTameArtinStack X) :
     ∃ D : TameCoarseBaseChangeData X, D.commutesWithArbitraryBaseChange := by
-  rcases h with ⟨_, _, ⟨Y, q, hq, _⟩⟩
-  refine ⟨{ coarse := { space := Y, map := q, isCoarse := hq }, commutesWithArbitraryBaseChange := True }, ?_⟩
-  trivial
+  sorry
 
 theorem general_finite_inertia_coarse_moduli_commutes_with_flat_base_change
     {C : Type u} [Category.{v} C] [StackCategory C]
@@ -106,6 +104,7 @@ theorem general_finite_inertia_coarse_moduli_commutes_with_flat_base_change
 structure GoodModuliSpaceExample {C : Type u} [Category.{v} C]
     [StackCategory C] where
   stack : C
+  stackIsArtin : IsArtinStack stack
   coarseCandidate : C
   map : stack ⟶ coarseCandidate
   quasiCompact : IsQuasiCompactMorphism map
@@ -145,6 +144,7 @@ structure GITGoodModuliSpaceData {C : Type u} [Category.{v} C]
   groupStructure : Group group
   semistableLocus : C
   quotientStack : C
+  quotientStackIsArtin : IsArtinStack quotientStack
   gitQuotient : C
   quotientMap : quotientStack ⟶ gitQuotient
   quotientStackIsTheSemistableQuotient : Prop

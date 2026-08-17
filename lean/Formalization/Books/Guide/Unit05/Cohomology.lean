@@ -85,9 +85,7 @@ theorem olsson_sheaves_on_artin_stacks
     (hX : IsArtinStack X) (hY : IsArtinStack Y)
     (hproper : IsProperMorphism f) :
     Nonempty (ProperCohomologyTheorems f) := by
-  let _ := hX
-  let _ := hY
-  exact ⟨{ proper := hproper, fundamentalTheorem := True, grothendieckExistence := True, zariskiConnectedness := True, coherentPushforward := fun _ _ => True, constructiblePushforward := fun _ _ => True }⟩
+  sorry
 
 def HasGrothendieckFundamentalTheorem {C : Type u} [Category.{v} C]
     [StackCategory C] [StackCohomologyTheory C] {X Y : C} (f : X ⟶ Y) : Prop :=
@@ -106,30 +104,21 @@ theorem grothendieck_fundamental_theorem_for_proper_stack_morphisms
     [StackCohomologyTheory C] {X Y : C} (f : X ⟶ Y)
     (hX : IsArtinStack X) (hY : IsArtinStack Y)
     (hproper : IsProperMorphism f) : HasGrothendieckFundamentalTheorem f := by
-  let _ := hX
-  let _ := hY
-  refine ⟨{ proper := hproper, fundamentalTheorem := True, grothendieckExistence := True, zariskiConnectedness := True, coherentPushforward := fun _ _ => True, constructiblePushforward := fun _ _ => True }, ?_⟩
-  trivial
+  sorry
 
 theorem grothendieck_existence_for_proper_artin_stacks
     {C : Type u} [Category.{v} C] [StackCategory C] [StackCohomologyTheory C]
     {X Y : C} (f : X ⟶ Y) (hX : IsArtinStack X) (hY : IsArtinStack Y)
     (hproper : IsProperMorphism f) :
     HasGrothendieckExistenceTheorem f := by
-  let _ := hX
-  let _ := hY
-  refine ⟨{ proper := hproper, fundamentalTheorem := True, grothendieckExistence := True, zariskiConnectedness := True, coherentPushforward := fun _ _ => True, constructiblePushforward := fun _ _ => True }, ?_⟩
-  trivial
+  sorry
 
 theorem zariski_connectedness_for_proper_stack_morphisms
     {C : Type u} [Category.{v} C] [StackCategory C]
     [StackCohomologyTheory C] {X Y : C} (f : X ⟶ Y)
     (hX : IsArtinStack X) (hY : IsArtinStack Y)
     (hproper : IsProperMorphism f) : HasZariskiConnectednessTheorem f := by
-  let _ := hX
-  let _ := hY
-  refine ⟨{ proper := hproper, fundamentalTheorem := True, grothendieckExistence := True, zariskiConnectedness := True, coherentPushforward := fun _ _ => True, constructiblePushforward := fun _ _ => True }, ?_⟩
-  trivial
+  sorry
 
 theorem finite_direct_images_of_coherent_and_constructible_sheaves
     {C : Type u} [Category.{v} C] [StackCategory C]
@@ -144,6 +133,7 @@ theorem finite_direct_images_of_coherent_and_constructible_sheaves
 structure LefschetzTraceFormulaData {C : Type u} [Category.{v} C]
     [StackCategory C] [StackCohomologyTheory C] where
   stack : C
+  algebraicStack : IsArtinStack stack
   derivedLAdicCategory : Type u
   object : StackDerivedLAdicObject stack
 
@@ -156,7 +146,7 @@ theorem lefschetz_trace_formula_for_algebraic_stacks
     {C : Type u} [Category.{v} C] [StackCategory C]
     [StackCohomologyTheory C] (D : LefschetzTraceFormulaData (C := C)) :
     Nonempty (LefschetzTraceFormulaConclusion D) := by
-  exact ⟨⟨D.stack = D.stack⟩⟩
+  sorry
 
 structure GeometricStackCohomologyData {C : Type u} [Category.{v} C]
     [StackCategory C] [StackCohomologyTheory C] where
@@ -208,7 +198,7 @@ theorem proper_base_change_for_etale_cohomology_of_tame_dm_stacks
     [StackCohomologyTheory C] (D : TameDMProperBaseChangeData (C := C))
     :
     Nonempty (TameDMProperBaseChangeConclusion D) := by
-  exact ⟨⟨D.source = D.source⟩⟩
+  sorry
 
 theorem cotangent_complex_for_artin_stacks
     {C : Type u} [Category.{v} C] [StackCategory C]

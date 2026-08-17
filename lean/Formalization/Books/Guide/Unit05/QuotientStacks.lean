@@ -117,6 +117,8 @@ theorem smooth_deligne_mumford_generically_trivial_is_quotient
 structure GmGerbeBrauerData {C : Type u} [Category.{v} C]
     [StackCategory C] where
   base : C
+  baseIsScheme : IsScheme base
+  baseNoetherian : Prop
   gerbe : C
   gerbeToBase : gerbe ⟶ base
   cohomologicalBrauerClass : Type u
@@ -139,8 +141,10 @@ structure GLnQuasiAffineQuotientData {C : Type u} [Category.{v} C]
     [StackCategory C] (X : C) where
   quotientSpace : C
   quotientSpaceIsQuasiAffine : IsQuasiAffineStack quotientSpace
+  rank : ℕ
   gln : Type u
   glnGroup : Group gln
+  glnIsGeneralLinearGroup : Prop
   quotientMap : quotientSpace ⟶ X
   glnAction : Prop
   isTheGLnQuotient : Prop
@@ -225,6 +229,7 @@ structure OpenFiniteGroupQuotientChart {C : Type u} [Category.{v} C]
   affineScheme : C
   affineSchemeIsScheme : IsScheme affineScheme
   finiteGroup : Type u
+  groupStructure : Group finiteGroup
   finiteGroupStructure : Finite finiteGroup
   quotientMap : affineScheme ⟶ openSubstack
   quotientByFiniteGroup : Prop
@@ -276,8 +281,8 @@ theorem projective_dm_stack_definition
   sorry
 
 def EverySmoothDMStackOfDimensionIsQuotient {C : Type u} [Category.{v} C]
-    [StackCategory C] (n : ℕ) : Prop :=
-  ∀ X : C, IsSmoothStack X → IsDeligneMumfordStack X →
+    [StackCategory C] (n : ℕ) (hcharZero : Prop) : Prop :=
+  hcharZero ∧ ∀ X : C, IsSmoothStack X → IsDeligneMumfordStack X →
     StackDimension X = n → IsGlobalQuotient X
 
 structure QuotientStratum {C : Type u} [Category.{v} C]
@@ -286,6 +291,15 @@ structure QuotientStratum {C : Type u} [Category.{v} C]
   inclusion : stratum ⟶ X
   locallyClosed : Prop
   quotient : IsGlobalQuotient stratum
+
+structure QuotientStratification {C : Type u} [Category.{v} C]
+    [StackCategory C] (X : C) where
+  length : ℕ
+  positiveLength : 0 < length
+  strata : Fin length → QuotientStratum X
+  strataAreLocallyClosedQuotients : ∀ i,
+    (strata i).locallyClosed ∧ IsGlobalQuotient (strata i).stratum
+  covers : Prop
 
 structure AzumayaCohomologicalBrauerComparison (C : Type u)
     [Category.{v} C] [StackCategory C] (n : ℕ) where
@@ -306,29 +320,20 @@ def AzumayaEqualsCohomologicalBrauerInDimension {C : Type u}
 theorem Kresch_Vistoli_dimension_equivalence
     {C : Type u} [Category.{v} C] [StackCategory C] (n : ℕ)
     (hcharZero : Prop) :
-    EverySmoothDMStackOfDimensionIsQuotient (C := C) n ↔
+    EverySmoothDMStackOfDimensionIsQuotient (C := C) n hcharZero ↔
       AzumayaEqualsCohomologicalBrauerInDimension (C := C) n := by
   sorry
 
 def StratifiedByQuotientStacks {C : Type u} [Category.{v} C]
     [StackCategory C] (X : C) : Prop :=
-  ∃ n : ℕ, ∃ strata : Fin n → QuotientStratum X,
-    ∀ i, (strata i).locallyClosed ∧
-      IsGlobalQuotient (strata i).stratum
+  Nonempty (QuotientStratification X)
 
 theorem reduced_artin_stack_stratified_by_quotients
     {C : Type u} [Category.{v} C] [StackCategory C] (X : C)
     (hartin : IsArtinStack X) (hfiniteType : IsFiniteTypeStack X)
     (hreduced : Prop) (haffineStabilizers : Prop) :
     StratifiedByQuotientStacks X := by
-  let _ := hartin
-  let _ := hfiniteType
-  let _ := hreduced
-  let _ := haffineStabilizers
-  refine ⟨0, ?_⟩
-  refine ⟨fun i => Fin.elim0 i, ?_⟩
-  intro i
-  exact Fin.elim0 i
+  sorry
 
 structure EtaleLocallyAffineFiniteStabilizerQuotientData
     {C : Type u} [Category.{v} C] [StackCategory C] (X : C) where

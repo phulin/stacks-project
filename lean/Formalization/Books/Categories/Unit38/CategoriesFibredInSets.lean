@@ -63,6 +63,12 @@ def discreteFibredCategoryObjectProperty {C : Cat.{v, u}} :
     ObjectProperty (FibredCategoryOver C) :=
   IsDiscreteFibredCategoryOver
 
+theorem discreteFibredCategoryOver_isCategoryFibredInSets
+    {C : Cat.{v, u}} (X : FibredCategoryOver C)
+    (hX : IsDiscreteFibredCategoryOver X) :
+    IsCategoryFibredInSets (structureFunctor X.underlying) := by
+  sorry
+
 /-- The source's 2-category of categories fibred in sets over a fixed base. -/
 abbrev CategoriesFibredInSetsOver (C : Cat.{v, u}) :=
   FullSubTwoCategory (FibredCategoryOver C)
@@ -109,7 +115,7 @@ all fibres of its apex are discrete. -/
 structure FibredInSetsTwoFibreProduct
     {C : Cat.{v, u}} {X Y S : FibredCategoryOver C}
     (F : FibredCategoryOverHom X S) (G : FibredCategoryOverHom Y S) where
-  product : FibredTwoFibreProduct.{u, v, v, u} F G
+  product : FibredTwoFibreProduct F G
   fibres_are_discrete : ∀ U : C,
     IsDiscrete (Functor.Fiber product.diagram.base U)
 
@@ -162,6 +168,54 @@ abbrev setPresheafCategory
     (F : Cᵒᵖ ⥤ Type uS) :=
   groupoidPresheafCategory (setPresheafToCat F)
 
+/-- The value of a CoGrothendieck object in the underlying set-valued
+presheaf.  This is the source's displayed object `(U, x)`. -/
+def setPresheafObjectValue
+    {C : Type uC} [Category.{vC} C]
+    (F : Cᵒᵖ ⥤ Type uS) (X : setPresheafCategory F) :
+    F.obj (Opposite.op X.base) :=
+  X.fiber.as
+
+/-- The morphism with prescribed base arrow and the corresponding equality in
+the set-valued presheaf.  The fibre component is the unique arrow in the
+canonical discrete fibre. -/
+def setPresheafHomOf
+    {C : Type uC} [Category.{vC} C]
+    (F : Cᵒᵖ ⥤ Type uS)
+    {X Y : setPresheafCategory F} (f : X.base ⟶ Y.base)
+    (h : F.map f.op (setPresheafObjectValue F Y) =
+      setPresheafObjectValue F X) : X ⟶ Y where
+  base := f
+  fiber := by
+    change X.fiber ⟶ Discrete.mk (F.map f.op Y.fiber.as)
+    exact Discrete.eqToHom h.symm
+
+theorem setPresheafHom_fibre_condition
+    {C : Type uC} [Category.{vC} C]
+    (F : Cᵒᵖ ⥤ Type uS)
+    {X Y : setPresheafCategory F} (f : X ⟶ Y) :
+    F.map f.base.op (setPresheafObjectValue F Y) =
+      setPresheafObjectValue F X := by
+  have h := Discrete.eq_of_hom f.fiber
+  change setPresheafObjectValue F X =
+    F.map f.base.op (setPresheafObjectValue F Y) at h
+  exact h.symm
+
+theorem setPresheafHom_ext
+    {C : Type uC} [Category.{vC} C]
+    (F : Cᵒᵖ ⥤ Type uS)
+    {X Y : setPresheafCategory F} {f g : X ⟶ Y}
+    (h : f.base = g.base) : f = g := by
+  apply Pseudofunctor.CoGrothendieck.Hom.ext f g h
+  let hSub : Subsingleton
+      (X.fiber ⟶
+        ((ordinaryFunctorToPseudofunctor (setPresheafToCat F)).map
+          f.base.op.toLoc).toFunctor.obj Y.fiber) := by
+    exact @Discrete.instSubsingletonDiscreteHom
+      (F.obj (Opposite.op X.base)) X.fiber
+      (Discrete.mk (F.map f.base.op Y.fiber.as))
+  exact @Subsingleton.elim _ hSub _ _
+
 /-- The projection `p_F : \mathcal S_F ⥤ C`. -/
 abbrev setPresheafProjection
     {C : Type uC} [Category.{vC} C]
@@ -198,6 +252,21 @@ theorem setPresheafProjection_map
     (setPresheafProjection F).map f = f.base :=
   rfl
 
+@[simp]
+theorem setPresheaf_id_base
+    {C : Type uC} [Category.{vC} C]
+    (F : Cᵒᵖ ⥤ Type uS) (X : setPresheafCategory F) :
+    (𝟙 X : X ⟶ X).base = 𝟙 X.base :=
+  rfl
+
+@[simp]
+theorem setPresheaf_comp_base
+    {C : Type uC} [Category.{vC} C]
+    (F : Cᵒᵖ ⥤ Type uS)
+    {X Y Z : setPresheafCategory F} (f : X ⟶ Y) (g : Y ⟶ Z) :
+    (f ≫ g).base = f.base ≫ g.base :=
+  rfl
+
 /-- The CoGrothendieck category has the source's displayed object and
 morphism data: its objects have a base object and a value in the fibre, while
 its morphisms have a base arrow and a fibre arrow. -/
@@ -207,35 +276,21 @@ theorem setPresheaf_category_isFibredInSets
     IsCategoryFibredInSets (setPresheafProjection F) := by
   sorry
 
-/-! ## The presheaf correspondence -/
-
-/-- A discrete-valued presheaf of categories is the split model of a
-category fibred in sets. -/
-def discretePresheafObjectProperty
-    {C : Type uC} [Category.{vC} C] :
-    ObjectProperty (Cᵒᵖ ⥤ Cat.{vC, vC}) :=
-  fun F => ∀ U : C, IsDiscrete (F.obj (Opposite.op U))
-
-abbrev SplitPresheavesInSets
-    (C : Type uC) [Category.{vC} C] :=
-  (discretePresheafObjectProperty (C := C)).FullSubcategory
-
-/-- The object part of the presheaf-to-split-fibred-category correspondence. -/
-def setPresheafAsDiscretePresheaf
+theorem setPresheaf_fibre_is_discrete
     {C : Type uC} [Category.{vC} C]
-    (F : Cᵒᵖ ⥤ Type vC) : SplitPresheavesInSets C where
-  obj := setPresheafToCat F
-  property := by
-    intro U
-    change IsDiscrete (Discrete (F.obj (Opposite.op U)))
-    infer_instance
-
-theorem categoriesFibredInSets_are_presheaves
-    {C : Type uC} [Category.{vC} C] :
-    Nonempty
-      ((Cᵒᵖ ⥤ Type vC) ≌
-        SplitPresheavesInSets C) := by
+    (F : Cᵒᵖ ⥤ Type uS) (U : C) :
+    IsDiscrete (Functor.Fiber (setPresheafProjection F) U) := by
   sorry
+
+theorem setPresheaf_fibre_equivalent_to_discrete
+    {C : Type uC} [Category.{vC} C]
+    (F : Cᵒᵖ ⥤ Type uS) (U : C) :
+    Nonempty
+      (Discrete (F.obj (Opposite.op U)) ≌
+        Functor.Fiber (setPresheafProjection F) U) := by
+  sorry
+
+/-! ## The presheaf correspondence -/
 
 theorem categoriesFibredInSetsOver_equivalent_to_presheaves
     {C : Type uC} [Category.{vC} C] :
@@ -288,6 +343,12 @@ theorem sliceProjection_object_of_hom
     {C : Type uC} [Category.{vC} C] (X U : C) (h : U ⟶ X) :
     (Over.forget X).obj (Over.mk h) = U :=
   rfl
+
+theorem sliceProjection_fibre_object_description
+    {C : Type uC} [Category.{vC} C] (X U : C)
+    (x : Functor.Fiber (Over.forget X) U) :
+    ∃ h : U ⟶ X, x.1 = Over.mk h := by
+  sorry
 
 theorem sliceProjection_fibre_is_discrete
     {C : Type uC} [Category.{vC} C] (X U : C) :

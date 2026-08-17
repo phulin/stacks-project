@@ -342,14 +342,30 @@ theorem exists_least_ordinal_of_set {A : ZFSet.{u}}
     (hOrd : ∀ α : ZFSet.{u}, α ∈ A → α.IsOrdinal) :
     ∃ α : ZFSet.{u}, α ∈ A ∧
       ∀ β : ZFSet.{u}, β ∈ A → α = β ∨ α ∈ β := by
-  sorry
+  obtain ⟨α, hαA, hmin⟩ := ZFSet.mem_wf.has_min (A : Set ZFSet) hA
+  have hαord := hOrd α hαA
+  refine ⟨α, hαA, ?_⟩
+  intro β hβA
+  have hβord := hOrd β hβA
+  rcases hαord.mem_trichotomous hβord with hαβ | hαeq | hβα
+  · exact Or.inr hαβ
+  · exact Or.inl hαeq
+  · exact False.elim (hmin β hβA hβα)
 
 theorem exists_least_ordinal_of_class {C : Class.{u}}
     (hC : ∃ α : ZFSet.{u}, C α)
     (hOrd : ∀ α : ZFSet.{u}, C α → α.IsOrdinal) :
     ∃ α : ZFSet.{u}, C α ∧
       ∀ β : ZFSet.{u}, C β → α = β ∨ α ∈ β := by
-  sorry
+  obtain ⟨α, hαC, hmin⟩ := ZFSet.mem_wf.has_min (C : Set ZFSet) hC
+  have hαord := hOrd α hαC
+  refine ⟨α, hαC, ?_⟩
+  intro β hβC
+  have hβord := hOrd β hβC
+  rcases hαord.mem_trichotomous hβord with hαβ | hαeq | hβα
+  · exact Or.inr hαβ
+  · exact Or.inl hαeq
+  · exact False.elim (hmin β hβC hβα)
 
 /-! ### Suprema -/
 
@@ -366,7 +382,26 @@ theorem ordinalSupremum_spec {A : ZFSet.{u}}
       (∀ α : ZFSet.{u}, α ∈ A → α ⊆ ordinalSupremum A) ∧
       ∀ β : ZFSet.{u}, β.IsOrdinal →
         (∀ α : ZFSet.{u}, α ∈ A → α ⊆ β) → ordinalSupremum A ⊆ β := by
-  sorry
+  change (ZFSet.sUnion A).IsOrdinal ∧
+    (∀ α : ZFSet.{u}, α ∈ A → α ⊆ ZFSet.sUnion A) ∧
+      ∀ β : ZFSet.{u}, β.IsOrdinal →
+        (∀ α : ZFSet.{u}, α ∈ A → α ⊆ β) → ZFSet.sUnion A ⊆ β
+  have hOrd : (ZFSet.sUnion A).IsOrdinal := by
+    apply isOrdinal_iff_forall_mem_isOrdinal.2
+    constructor
+    · intro x hx
+      rcases mem_sUnion.1 hx with ⟨α, hαA, hxα⟩
+      intro z hz
+      exact mem_sUnion.2 ⟨α, hαA, (hA α hαA).subset_of_mem hxα hz⟩
+    · intro x hx
+      rcases mem_sUnion.1 hx with ⟨α, hαA, hxα⟩
+      exact (hA α hαA).mem hxα
+  refine ⟨hOrd, ?_, ?_⟩
+  · intro α hαA x hx
+    exact mem_sUnion.2 ⟨α, hαA, hx⟩
+  · intro β hβ hsub x hx
+    rcases mem_sUnion.1 hx with ⟨α, hαA, hxα⟩
+    exact hsub α hαA hxα
 
 end ZFSet
 
@@ -378,6 +413,12 @@ theorem exists_unique_order_type (S : Type u) (r : S → S → Prop)
     [IsWellOrder S r] :
     ∃! α : Ordinal.{u},
       Nonempty (r ≃r (· < · : α.ToType → α.ToType → Prop)) := by
-  sorry
+  refine ⟨Ordinal.type r, ?_, ?_⟩
+  · exact Ordinal.type_eq.1 (Ordinal.type_toType (Ordinal.type r)).symm
+  · intro β hβ
+    calc
+      β = Ordinal.type (· < · : β.ToType → β.ToType → Prop) :=
+        (Ordinal.type_toType β).symm
+      _ = Ordinal.type r := (Ordinal.type_eq.2 hβ).symm
 
 end Formalization.Books.Sets.Unit04

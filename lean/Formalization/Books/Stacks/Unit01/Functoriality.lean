@@ -35,7 +35,7 @@ theorem pushforward_fibered_morphism_exists {C : Type u} [Category.{v} C]
     {D : Type u'} [Category.{v'} D] (u : C ⥤ D)
     {S T : FixedFiberedCategory D} (η : S ⟶ T) :
     Nonempty (pushforwardFiberedCategory u S ⟶ pushforwardFiberedCategory u T) := by
-  sorry
+  exact ⟨Bicategory.whiskerLeft u.op.toPseudofunctor η⟩
 
 noncomputable def pushforwardFiberedMorphism {C : Type u} [Category.{v} C]
     {D : Type u'} [Category.{v'} D] (u : C ⥤ D)
@@ -47,7 +47,7 @@ theorem pushforward_fibre {C : Type u} [Category.{v} C]
     {D : Type u'} [Category.{v'} D] (u : C ⥤ D)
     (S : FixedFiberedCategory D) (U : C) :
     Fiber (pushforwardFiberedCategory u S) U = Fiber S (u.obj U) := by
-  sorry
+  rfl
 
 def PushforwardStack {C : Type u} [Category.{v} C]
     {D : Type u'} [Category.{v'} D] (u : C ⥤ D)

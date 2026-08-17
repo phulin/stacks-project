@@ -84,9 +84,17 @@ theorem presheaf_mor_map_fibred_categories {C : Type u} [Category.{v} C]
         T₂.unop.hom.op.toLoc := by
       rw [← Quiver.Hom.comp_toLoc, ← op_comp, q.unop.w]
     dsimp [Pseudofunctor.presheafHom, Pseudofunctor.LocallyDiscreteOpToCat.pullHom]
-    simp only [Category.assoc, Functor.map_comp]
-    rw [hηinv _ _ _ hfg, hηhom _ _ _ hfg]
-    simp [← reassoc_of% Cat.Hom₂.comp_app]
+    simp only [Cat.Hom.comp_toFunctor, Category.assoc, Functor.map_comp,
+      NatTrans.naturality_assoc]
+    simp only [hηinv _ _ _ hfg, hηhom _ _ _ hfg]
+    have hq :=
+      (η.naturality (Over.Hom.left q.unop).op.toLoc).inv.toNatTrans.naturality
+        f
+    simp [Pseudofunctor.mapComp'_hom_naturality,
+      Pseudofunctor.mapComp'_inv_naturality,
+      Pseudofunctor.mapComp'_naturality_1,
+      Pseudofunctor.mapComp'_naturality_2, ← Functor.map_comp,
+      ← reassoc_of% Cat.Hom₂.comp_app, ← NatTrans.naturality_apply]
 
 theorem isom_presheaf_is_subpresheaf {C : Type u} [Category.{v} C]
     (F : FiberedCategory C) {U : C} (x y : Fiber F U) (T : (Over C U)ᵒᵖ)
@@ -110,36 +118,34 @@ theorem isom_as_two_fibre_product {C : Type u} [Category.{v} C]
     (F : FiberedCategory C) {U : C} (x y : Fiber F U) :
     Nonempty (TwoFiberProductPresentation F x y) := by
   let P := IsomPresheaf F x y
-  let A : FiberedCategory (Over C U) :=
-    LocallyDiscrete.mkPseudofunctor
-      (fun T => Cat.of (Discrete (P.obj T)))
-      (fun {T₁ T₂} f =>
-        (Discrete.functor (fun z => Discrete.mk (P.map f z))).toCatHom)
-      (fun T => by
-        apply eqToIso
-        apply Cat.Hom.ext
-        apply Discrete.functor_ext
-        intro Z
-        have hZ : P.map (𝟙 T) Z = Z :=
-          congrArg (fun h : P.obj T ⟶ P.obj T => h Z) (P.map_id T)
-        exact congrArg Discrete.mk hZ)
-      (fun {T₀ T₁ T₂} f g => by
-        apply eqToIso
-        apply Cat.Hom.ext
-        refine CategoryTheory.Functor.ext ?_ ?_
-        · intro Z
-          have hZ : P.map (f ≫ g) Z.as = P.map g (P.map f Z.as) :=
-            congrArg (fun h : P.obj T₀ ⟶ P.obj T₂ => h Z.as) (P.map_comp f g)
-          change Discrete.mk (P.map (f ≫ g) Z.as) =
-            Discrete.mk (P.map g (P.map f Z.as))
-          exact congrArg Discrete.mk hZ
-        · intro Z Z' q
-          rcases Z with ⟨Z⟩
-          rcases Z' with ⟨Z'⟩
-          rcases q with ⟨⟨h⟩⟩
-          change Z = Z' at h
-          subst Z'
-          rfl)
+  let Q : (Over C U)ᵒᵖ ⥤ Cat := {
+    obj := fun T => Cat.of (Discrete (P.obj T))
+    map := fun {T₁ T₂} f =>
+      (Discrete.functor (fun z => Discrete.mk (P.map f z))).toCatHom
+    map_id := fun T => by
+      apply Cat.Hom.ext
+      apply Discrete.functor_ext
+      intro Z
+      have hZ : P.map (𝟙 T) Z = Z :=
+        congrArg (fun h : P.obj T ⟶ P.obj T => h Z) (P.map_id T)
+      exact congrArg Discrete.mk hZ
+    map_comp := fun {T₀ T₁ T₂} f g => by
+      apply Cat.Hom.ext
+      refine CategoryTheory.Functor.ext ?_ ?_
+      · intro Z
+        have hZ : P.map (f ≫ g) Z.as = P.map g (P.map f Z.as) :=
+          congrArg (fun h : P.obj T₀ ⟶ P.obj T₂ => h Z.as) (P.map_comp f g)
+        change Discrete.mk (P.map (f ≫ g) Z.as) =
+          Discrete.mk (P.map g (P.map f Z.as))
+        exact congrArg Discrete.mk hZ
+      · intro Z Z' q
+        rcases Z with ⟨Z⟩
+        rcases Z' with ⟨Z'⟩
+        rcases q with ⟨⟨h⟩⟩
+        change Z = Z' at h
+        subst Z'
+        rfl }
+  let A : FiberedCategory (Over C U) := Q.toPseudofunctor'
   refine ⟨{ apex := A, isSetoid := ?_, presheaf := P, presheafIso := Iso.refl P }⟩
   constructor <;> intro T
   · change IsGroupoid (Discrete (P.obj (op T)))

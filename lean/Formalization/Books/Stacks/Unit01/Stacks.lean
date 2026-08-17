@@ -45,7 +45,13 @@ theorem small_stack_substack_exists {C : Type u} [Category.{v} C]
     (F : FiberedCategory C) (J : GrothendieckTopology C)
     (hF : Stack F J) (hrepresentatives : HasFibrewiseRepresentatives F) :
     Nonempty (SmallSubstackData F J) := by
-  sorry
+  refine ⟨⟨F, 𝟙 F, hF, ?_, ?_⟩⟩
+  · intro U
+    change Nonempty ((𝟭 _).FullyFaithful)
+    exact ⟨Functor.FullyFaithful.id _⟩
+  · intro U
+    change Functor.EssSurj (𝟭 _)
+    infer_instance
 
 theorem stack_morphism_presheaves_are_sheaves {C : Type u} [Category.{v} C]
     {F : FiberedCategory C} {J : GrothendieckTopology C} [F.IsStack J]
@@ -58,7 +64,12 @@ theorem stack_iff_effective_descent {C : Type u} [Category.{v} C]
     Stack F J ↔
       ∀ (ι : Type t) (U : C) (X : ι → C) (f : ∀ i, X i ⟶ U),
         CoveringFamily J f → (F.toDescentData f).IsEquivalence := by
-  sorry
+  constructor
+  · intro h ι U X f hf
+    letI : F.IsStack J := h
+    exact F.isEquivalence_toDescentData f hf
+  · intro h
+    sorry
 
 theorem substack_is_stack {C : Type u} [Category.{v} C]
     (F : FiberedCategory C) (J : GrothendieckTopology C)

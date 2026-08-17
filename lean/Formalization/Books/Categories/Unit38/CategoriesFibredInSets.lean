@@ -361,7 +361,9 @@ theorem setPresheaf_category_isFibredInGroupoids
     {C : Type uC} [Category.{vC} C]
     (F : Cᵒᵖ ⥤ Type uS) :
     (setPresheafProjection F).IsFibredInGroupoids := by
-  sorry
+  apply groupoidPresheafProjection_isFibredInGroupoids
+  intro U
+  infer_instance
 
 /- The source's final conclusion combines the preceding groupoid and
    discrete-fibre assertions. -/

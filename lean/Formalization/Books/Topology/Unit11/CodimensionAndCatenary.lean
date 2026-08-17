@@ -717,7 +717,7 @@ private lemma maximal_tail
   have htail_last : (p.tail hp0).last = (⟨b, le_rfl⟩ : Set.Iic b) := by
     rw [RelSeries.last_tail, hp.2.1]
   refine ⟨?_, htail_last, ?_⟩
-  · simpa [htail_head, i]
+  · simp [htail_head, i]
   · intro q hqhead hqlast hqrange
     have hcons : p.head < q.head := by
       rw [hqhead, ← htail_head]
@@ -978,8 +978,7 @@ private theorem isCatenary_of_isClosed
   have hPB : ((B : Set X) ⊆ Z) := (e T').property
   have hP : ∀ ⦃V W : IrreducibleCloseds X⦄, V ≤ W →
       (W : Set X) ⊆ Z → (V : Set X) ⊆ Z := by
-    intro V W hVW hW
-    intro x hx
+    intro V W hVW hW x hx
     exact hW (hVW hx)
   have ha : e T = ⟨A, hPA⟩ := by
     apply Subtype.ext
@@ -1170,7 +1169,6 @@ private theorem isCatenary_of_isOpen
   let A : IrreducibleCloseds X := (e T).1
   let B : IrreducibleCloseds X := (e T').1
   have hAB : A ≤ B := by
-    change A ≤ B
     exact e.monotone hTT'.le
   have hABlt : A < B := e.strictMono hTT'
   have hP : ∀ ⦃V W : IrreducibleCloseds X⦄, V ≤ W →
@@ -1421,11 +1419,12 @@ theorem isCatenary_iff_finite_and_additive_relativeCodimension :
                       exact RelSeries.last_mem q
                   have hqp : Set.range q ⊆ Set.range p := by
                     apply hp.2.2 q
-                    · simpa [q, q₀, a] using hp.1
-                    · simpa [q, q₀, b] using hp.2.1
+                    · simp [q, q₀, a]
+                    · simp [q, q₀, b]
                     · exact hpq
                   have hlen : q.length ≤ p.length := length_le_of_range_subset hqp
-                  have : 2 ≤ 1 := by simpa [q, q₀, hpn] using hlen
+                  have : 2 ≤ 1 := by
+                    simp [q, q₀, hpn] at hlen
                   omega
                 have hco := coheight_Iic_eq_one_of_no_between hAB hno
                 calc

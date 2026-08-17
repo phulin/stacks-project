@@ -251,7 +251,139 @@ theorem abelianFMapComp_stalkMap {X Y Z : TopCat.{v}}
     (φ : AbelianFMap f G F) (ψ : AbelianFMap g H G) (x : X) :
     abelianFMapStalkMap (abelianFMapComp φ ψ) x =
       abelianFMapStalkMap ψ (f x) ≫ abelianFMapStalkMap φ x := by
-  sorry
+  unfold abelianFMapStalkMap abelianFMapComp abelianSheafPushforwardCompIso
+  change (TopCat.Presheaf.stalkFunctor AddCommGrpCat ((f ≫ g) x)).map
+      (ψ.hom ≫ ((abelianSheafPushforward g).map φ).hom) ≫ _ = _
+  rw [Functor.map_comp, TopCat.Presheaf.stalkPushforward.comp]
+  have hφ :
+      (TopCat.Presheaf.stalkFunctor AddCommGrpCat (g (f x))).map
+          ((abelianSheafPushforward g).map φ).hom ≫
+        TopCat.Presheaf.stalkPushforward AddCommGrpCat g
+          ((abelianPresheafPushforward f).obj F.presheaf) (f x) =
+      TopCat.Presheaf.stalkPushforward AddCommGrpCat g G.obj (f x) ≫
+        (TopCat.Presheaf.stalkFunctor AddCommGrpCat (f x)).map φ.hom := by
+    apply TopCat.Presheaf.stalk_hom_ext ((abelianPresheafPushforward g).obj G.obj)
+    intro V hxV
+    change _ ≫ (TopCat.Presheaf.stalkFunctor AddCommGrpCat (g (f x))).map
+        ((abelianPresheafPushforward g).map φ.hom) ≫ _ = _
+    have hmap := TopCat.Presheaf.stalkFunctor_map_germ
+      (C := AddCommGrpCat) V (g (f x)) hxV
+        ((abelianPresheafPushforward g).map φ.hom)
+    have hmap' := hmap
+    change TopCat.Presheaf.germ
+          ((abelianPresheafPushforward g).obj G.obj) V
+          (g (f x)) hxV ≫
+          (TopCat.Presheaf.stalkFunctor AddCommGrpCat (g (f x))).map
+            ((abelianPresheafPushforward g).map φ.hom) =
+        ((abelianPresheafPushforward g).map φ.hom).app (op V) ≫
+          TopCat.Presheaf.germ
+            ((abelianPresheafPushforward g).obj
+              ((abelianSheafPushforward f).obj F).presheaf) V
+            (g (f x)) hxV at hmap'
+    have hpushF := TopCat.Presheaf.stalkPushforward_germ
+      (C := AddCommGrpCat) g ((abelianPresheafPushforward f).obj F.presheaf)
+        V (f x) hxV
+    have hpushG := TopCat.Presheaf.stalkPushforward_germ
+      (C := AddCommGrpCat) g G.obj V (f x) hxV
+    have hφmap := TopCat.Presheaf.stalkFunctor_map_germ
+      (C := AddCommGrpCat) ((Opens.map g).obj V) (f x) hxV φ.hom
+    have hφmap' := hφmap
+    change TopCat.Presheaf.germ G.obj ((Opens.map g).obj V)
+        (f x) hxV ≫
+        (TopCat.Presheaf.stalkFunctor AddCommGrpCat (f x)).map φ.hom =
+      φ.hom.app (op ((Opens.map g).obj V)) ≫
+        ((abelianPresheafPushforward f).obj F.presheaf).germ
+          ((Opens.map g).obj V) (f x) hxV at hφmap'
+    have hφmap'' := hφmap'
+    change TopCat.Presheaf.germ G.obj ((Opens.map g).obj V)
+        (f x) hxV ≫
+        (TopCat.Presheaf.stalkFunctor AddCommGrpCat (f x)).map φ.hom =
+      ((abelianPresheafPushforward g).map φ.hom).app (op V) ≫
+        ((abelianPresheafPushforward f).obj F.presheaf).germ
+          ((Opens.map g).obj V) (f x) hxV at hφmap''
+    have hpushG' :
+        ((abelianPresheafPushforward g).obj G.obj).germ V
+              (g (f x)) hxV ≫
+            TopCat.Presheaf.stalkPushforward AddCommGrpCat g
+              G.obj (f x) =
+          TopCat.Presheaf.germ G.obj
+            ((Opens.map g).obj V) (f x) hxV := by
+      simpa only [abelianPresheafPushforward] using hpushG
+    have hpushF' :
+        ((abelianPresheafPushforward g).obj
+            ((abelianPresheafPushforward f).obj F.presheaf)).germ V
+              (g (f x)) hxV ≫
+            TopCat.Presheaf.stalkPushforward AddCommGrpCat g
+              ((abelianPresheafPushforward f).obj F.presheaf) (f x) =
+          ((abelianPresheafPushforward f).obj F.presheaf).germ
+            ((Opens.map g).obj V) (f x) hxV := by
+      simpa only [abelianPresheafPushforward] using hpushF
+    have hleft :
+        (TopCat.Presheaf.germ
+              ((abelianPresheafPushforward g).obj G.obj) V
+              (g (f x)) hxV ≫
+            (TopCat.Presheaf.stalkFunctor AddCommGrpCat (g (f x))).map
+              ((abelianPresheafPushforward g).map φ.hom)) ≫
+            TopCat.Presheaf.stalkPushforward AddCommGrpCat g
+              ((abelianPresheafPushforward f).obj F.presheaf) (f x) =
+          ((abelianPresheafPushforward g).map φ.hom).app (op V) ≫
+            ((abelianPresheafPushforward f).obj F.presheaf).germ
+              ((Opens.map g).obj V) (f x) hxV := by
+      calc
+        _ = (((abelianPresheafPushforward g).map φ.hom).app (op V) ≫
+            ((abelianPresheafPushforward g).obj
+                ((abelianPresheafPushforward f).obj F.presheaf)).germ V
+              (g (f x)) hxV) ≫
+            TopCat.Presheaf.stalkPushforward AddCommGrpCat g
+              ((abelianPresheafPushforward f).obj F.presheaf) (f x) := by
+              convert congrArg (fun k => k ≫
+                TopCat.Presheaf.stalkPushforward AddCommGrpCat g
+                ((abelianPresheafPushforward f).obj F.presheaf) (f x)) hmap' using 1 <;>
+                simp only [Category.assoc, abelianSheafPushforward_obj_presheaf] <;>
+                rfl
+        _ = ((abelianPresheafPushforward g).map φ.hom).app (op V) ≫
+            ((abelianPresheafPushforward f).obj F.presheaf).germ
+              ((Opens.map g).obj V) (f x) hxV := by
+              exact congrArg
+                (fun k => ((abelianPresheafPushforward g).map φ.hom).app (op V) ≫ k)
+                hpushF'
+    have hright :
+        (((abelianPresheafPushforward g).obj
+              G.obj).germ V (g (f x)) hxV ≫
+            TopCat.Presheaf.stalkPushforward AddCommGrpCat g
+                G.obj (f x)) ≫
+          (TopCat.Presheaf.stalkFunctor AddCommGrpCat (f x)).map φ.hom =
+        ((abelianPresheafPushforward g).map φ.hom).app (op V) ≫
+          ((abelianPresheafPushforward f).obj F.presheaf).germ
+            ((Opens.map g).obj V) (f x) hxV := by
+      rw [hpushG']
+      simpa only [abelianPresheafPushforward, abelianPresheafPushforward_obj_obj] using hφmap''
+    exact hleft.trans hright.symm
+  simp only [Category.assoc]
+  change (TopCat.Presheaf.stalkFunctor AddCommGrpCat (g (f x))).map ψ.hom ≫
+      ((TopCat.Presheaf.stalkFunctor AddCommGrpCat (g (f x))).map
+          ((abelianSheafPushforward g).map φ).hom ≫
+        TopCat.Presheaf.stalkPushforward AddCommGrpCat g
+          ((abelianPresheafPushforward f).obj F.presheaf) (f x) ≫
+        TopCat.Presheaf.stalkPushforward AddCommGrpCat f F.presheaf x) = _
+  have hφ_assoc := congrArg (fun k => k ≫
+      TopCat.Presheaf.stalkPushforward AddCommGrpCat f F.presheaf x) hφ
+  simp only [Category.assoc] at hφ_assoc
+  have hφ_assoc' := congrArg
+      (fun k => (TopCat.Presheaf.stalkFunctor AddCommGrpCat (g (f x))).map ψ.hom ≫ k)
+      hφ_assoc
+  simp only [Category.assoc] at hφ_assoc'
+  change (TopCat.Presheaf.stalkFunctor AddCommGrpCat (g (f x))).map ψ.hom ≫
+      ((TopCat.Presheaf.stalkFunctor AddCommGrpCat (g (f x))).map
+          ((abelianSheafPushforward g).map φ).hom ≫
+        TopCat.Presheaf.stalkPushforward AddCommGrpCat g
+          ((abelianPresheafPushforward f).obj F.presheaf) (f x) ≫
+        TopCat.Presheaf.stalkPushforward AddCommGrpCat f F.presheaf x) =
+    ((TopCat.Presheaf.stalkFunctor AddCommGrpCat (g (f x))).map ψ.hom ≫
+        TopCat.Presheaf.stalkPushforward AddCommGrpCat g G.obj (f x)) ≫
+      (TopCat.Presheaf.stalkFunctor AddCommGrpCat (f x)).map φ.hom ≫
+        TopCat.Presheaf.stalkPushforward AddCommGrpCat f F.presheaf x
+  convert hφ_assoc' using 1 <;> rfl
 
 end
 

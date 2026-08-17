@@ -310,7 +310,16 @@ theorem algebraicSheafPullback_stalk_formula
     Nonempty
       (G.presheaf.stalk (f x) ≅
         ((algebraicSheafPullback C f).obj G).presheaf.stalk x) := by
-  sorry
+  let e := algebraicSheafPullback_sheafificationIso f G
+  let e' := (CategoryTheory.sheafToPresheaf
+    (Opens.grothendieckTopology X) C).mapIso e
+  let P := (algebraicPresheafPullback C f).obj G.presheaf
+  let u := (TopCat.Presheaf.stalkFunctor C x).map
+    (CategoryTheory.toSheafify (Opens.grothendieckTopology X) P)
+  letI : IsIso u := TopCat.Presheaf.stalkFunctor_map_unit_toSheafify_isIso
+    (X := X) (p₀ := x) (C := C) P
+  exact ⟨(algebraicPresheafPullbackStalkIso f G.presheaf x).trans <|
+    (asIso u).trans <| (TopCat.Presheaf.stalkFunctor C x).mapIso e'.symm⟩
 
 /-- A chosen category-valued stalk isomorphism for sheaf pullback. -/
 noncomputable def algebraicSheafPullbackStalkIso
@@ -345,9 +354,9 @@ theorem algebraicPresheafPushforward_underlying_formula
     Nonempty
       (algebraicUnderlyingPresheaf F
           ((algebraicPresheafPushforward C f).obj G) ≅
-        (TopCat.Presheaf.pushforward (Type v) f).obj
+      (TopCat.Presheaf.pushforward (Type v) f).obj
           (algebraicUnderlyingPresheaf F G)) := by
-  sorry
+  exact ⟨Iso.refl _⟩
 
 theorem algebraicPresheafPullback_underlying_formula
     {C : Type u} [Category.{v} C] [HasColimits C]
@@ -359,7 +368,7 @@ theorem algebraicPresheafPullback_underlying_formula
           ((algebraicPresheafPullback C f).obj G) ≅
           (algebraicPresheafPullback (Type v) f).obj
           (algebraicUnderlyingPresheaf F G)) := by
-  sorry
+  exact ⟨(F.lanCompIsoOfPreserves (Opens.map f).op).app G⟩
 
 /-- The underlying-set formula for the pushforward of algebraic sheaves. -/
 theorem algebraicSheafPushforward_underlying_formula
@@ -459,7 +468,129 @@ theorem algebraicFMapComp_stalkMap
     (φ : AlgebraicFMap f G F) (ψ : AlgebraicFMap g H G) (x : X) :
     algebraicFMapStalkMap (algebraicFMapComp f g φ ψ) x =
       algebraicFMapStalkMap ψ (f x) ≫ algebraicFMapStalkMap φ x := by
-  sorry
+  unfold algebraicFMapStalkMap algebraicFMapComp
+  have hcomp :
+      (ψ ≫ (algebraicSheafPushforward C g).map φ ≫
+          (algebraicSheafPushforwardCompIso C f g).hom.app F).hom =
+        (ψ ≫ (algebraicSheafPushforward C g).map φ).hom := by
+    have hcat :
+        ψ ≫ ((algebraicSheafPushforward C g).map φ ≫ 𝟙 _) =
+          ψ ≫ (algebraicSheafPushforward C g).map φ := by
+      rw [Category.comp_id]
+    exact congrArg (fun k => k.hom) hcat
+  rw [hcomp]
+  change (TopCat.Presheaf.stalkFunctor C ((f ≫ g) x)).map
+      (ψ.hom ≫ ((algebraicSheafPushforward C g).map φ).hom) ≫ _ = _
+  rw [Functor.map_comp, TopCat.Presheaf.stalkPushforward.comp]
+  have hφ :
+      (TopCat.Presheaf.stalkFunctor C (g (f x))).map
+          ((algebraicSheafPushforward C g).map φ).hom ≫
+        TopCat.Presheaf.stalkPushforward C g
+          ((algebraicPresheafPushforward C f).obj F.presheaf) (f x) =
+      TopCat.Presheaf.stalkPushforward C g G.presheaf (f x) ≫
+        (TopCat.Presheaf.stalkFunctor C (f x)).map φ.hom := by
+    apply TopCat.Presheaf.stalk_hom_ext ((algebraicPresheafPushforward C g).obj G.presheaf)
+    intro V hxV
+    change _ ≫ (TopCat.Presheaf.stalkFunctor C (g (f x))).map
+        ((algebraicPresheafPushforward C g).map φ.hom) ≫ _ = _
+    have hmap := TopCat.Presheaf.stalkFunctor_map_germ
+      (C := C) V (g (f x)) hxV
+        ((algebraicPresheafPushforward C g).map φ.hom)
+    have hmap' := hmap
+    change TopCat.Presheaf.germ
+          ((algebraicPresheafPushforward C g).obj G.presheaf) V
+          (g (f x)) hxV ≫
+          (TopCat.Presheaf.stalkFunctor C (g (f x))).map
+            ((algebraicPresheafPushforward C g).map φ.hom) =
+        ((algebraicPresheafPushforward C g).map φ.hom).app (op V) ≫
+          TopCat.Presheaf.germ
+            ((algebraicPresheafPushforward C g).obj
+              ((algebraicSheafPushforward C f).obj F).presheaf) V
+            (g (f x)) hxV at hmap'
+    have hpushF := TopCat.Presheaf.stalkPushforward_germ
+      (C := C) g ((algebraicPresheafPushforward C f).obj F.presheaf)
+        V (f x) hxV
+    have hpushG := TopCat.Presheaf.stalkPushforward_germ
+      (C := C) g G.presheaf V (f x) hxV
+    have hφmap := TopCat.Presheaf.stalkFunctor_map_germ
+      (C := C) ((Opens.map g).obj V) (f x) hxV φ.hom
+    have hφmap' := hφmap
+    change TopCat.Presheaf.germ G.presheaf ((Opens.map g).obj V)
+        (f x) hxV ≫
+        (TopCat.Presheaf.stalkFunctor C (f x)).map φ.hom =
+      φ.hom.app (op ((Opens.map g).obj V)) ≫
+        ((algebraicPresheafPushforward C f).obj F.presheaf).germ
+          ((Opens.map g).obj V) (f x) hxV at hφmap'
+    have hφmap'' := hφmap'
+    change TopCat.Presheaf.germ G.presheaf ((Opens.map g).obj V)
+        (f x) hxV ≫
+        (TopCat.Presheaf.stalkFunctor C (f x)).map φ.hom =
+      ((algebraicPresheafPushforward C g).map φ.hom).app (op V) ≫
+        ((algebraicPresheafPushforward C f).obj F.presheaf).germ
+          ((Opens.map g).obj V) (f x) hxV at hφmap''
+    have hpushG' :
+        ((algebraicPresheafPushforward C g).obj G.presheaf).germ V
+              (g (f x)) hxV ≫
+            TopCat.Presheaf.stalkPushforward C g
+              G.presheaf (f x) =
+          TopCat.Presheaf.germ G.presheaf
+            ((Opens.map g).obj V) (f x) hxV := by
+      simpa only [algebraicPresheafPushforward] using hpushG
+    have hpushF' :
+        ((algebraicPresheafPushforward C g).obj
+            ((algebraicPresheafPushforward C f).obj F.presheaf)).germ V
+              (g (f x)) hxV ≫
+            TopCat.Presheaf.stalkPushforward C g
+              ((algebraicPresheafPushforward C f).obj F.presheaf) (f x) =
+          ((algebraicPresheafPushforward C f).obj F.presheaf).germ
+            ((Opens.map g).obj V) (f x) hxV := by
+      simpa only [algebraicPresheafPushforward] using hpushF
+    have hleft :
+        (TopCat.Presheaf.germ
+              ((algebraicPresheafPushforward C g).obj G.presheaf) V
+              (g (f x)) hxV ≫
+            (TopCat.Presheaf.stalkFunctor C (g (f x))).map
+              ((algebraicPresheafPushforward C g).map φ.hom)) ≫
+            TopCat.Presheaf.stalkPushforward C g
+              ((algebraicPresheafPushforward C f).obj F.presheaf) (f x) =
+          ((algebraicPresheafPushforward C g).map φ.hom).app (op V) ≫
+            ((algebraicPresheafPushforward C f).obj F.presheaf).germ
+              ((Opens.map g).obj V) (f x) hxV := by
+      calc
+        _ = (((algebraicPresheafPushforward C g).map φ.hom).app (op V) ≫
+            ((algebraicPresheafPushforward C g).obj
+                ((algebraicPresheafPushforward C f).obj F.presheaf)).germ V
+              (g (f x)) hxV) ≫
+            TopCat.Presheaf.stalkPushforward C g
+              ((algebraicPresheafPushforward C f).obj F.presheaf) (f x) := by
+              convert congrArg (fun k => k ≫
+                TopCat.Presheaf.stalkPushforward C g
+                ((algebraicPresheafPushforward C f).obj F.presheaf) (f x)) hmap' using 1 <;>
+                simp only [Category.assoc, algebraicSheafPushforward_obj_presheaf] <;>
+                rfl
+        _ = ((algebraicPresheafPushforward C g).map φ.hom).app (op V) ≫
+            ((algebraicPresheafPushforward C f).obj F.presheaf).germ
+              ((Opens.map g).obj V) (f x) hxV := by
+              exact (Category.assoc _ _ _).trans (congrArg
+                (fun k => ((algebraicPresheafPushforward C g).map φ.hom).app (op V) ≫ k)
+                hpushF')
+    have hright :
+        (((algebraicPresheafPushforward C g).obj
+              G.presheaf).germ V (g (f x)) hxV ≫
+            TopCat.Presheaf.stalkPushforward C g
+                G.presheaf (f x)) ≫
+          (TopCat.Presheaf.stalkFunctor C (f x)).map φ.hom =
+        ((algebraicPresheafPushforward C g).map φ.hom).app (op V) ≫
+          ((algebraicPresheafPushforward C f).obj F.presheaf).germ
+            ((Opens.map g).obj V) (f x) hxV := by
+      rw [hpushG']
+      simpa only [algebraicPresheafPushforward, algebraicPresheafPushforward_obj_obj] using hφmap''
+    exact (Category.assoc _ _ _).symm.trans
+      ((hleft.trans hright.symm).trans (Category.assoc _ _ _))
+  simp only [TopCat.comp_app, Category.assoc]
+  simpa only [algebraicPresheafPushforward, ← Category.assoc] using congrArg
+    (fun k => (TopCat.Presheaf.stalkFunctor C (g (f x))).map ψ.hom ≫ k ≫
+      TopCat.Presheaf.stalkPushforward C f F.presheaf x) hφ
 
 /-- The source's underlying-set lifting lemma: componentwise morphisms in the
 algebraic category determine a unique algebraic `f`-map. -/

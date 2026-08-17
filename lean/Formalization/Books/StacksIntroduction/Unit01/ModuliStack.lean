@@ -83,45 +83,7 @@ def affineLineOverIntegers : Scheme.{1} :=
 /-- The existence interface for the usual `j`-invariant rule. -/
 theorem exists_jInvariantRule :
     Nonempty (ModuliRule affineLineOverIntegers) := by
-  have hTarget : Spec (CommRingCat.of (Polynomial (ULift.{1, 0} ℤ))) =
-      affineLineOverIntegers := by
-    rfl
-  let phi (S : Scheme.{1}) : Polynomial (ULift ℤ) →+* Γ(S, ⊤) :=
-    Polynomial.eval₂RingHom ((algebraMap ℤ _).comp ULift.ringEquiv.toRingHom) 0
-  have hphi {S S' : Scheme.{1}} (a : S ⟶ S') :
-      CommRingCat.ofHom (phi S) =
-        CommRingCat.ofHom (phi S') ≫ a.appTop := by
-    apply CommRingCat.hom_ext
-    apply RingHom.ext
-    intro p
-    induction p using Polynomial.induction_on' with
-    | add p q hp hq =>
-        simpa only [map_add, CommRingCat.hom_comp] using congrArg₂ (· + ·) hp hq
-    | monomial n r => simp [phi]
-  let zeroMap (S : Scheme.{1}) : S ⟶ affineLineOverIntegers :=
-    S.toSpecΓ ≫ Spec.map (CommRingCat.ofHom (phi S)) ≫ eqToHom hTarget
-  let rule : ModuliRule affineLineOverIntegers := {
-    map := fun {_} _ => zeroMap _
-    natural := by
-      intro S S' a E E' h
-      dsimp [zeroMap]
-      change ((S.toSpecΓ ≫ Spec.map (CommRingCat.ofHom (phi S))) ≫ eqToHom hTarget) =
-        ((a ≫ S'.toSpecΓ ≫ Spec.map (CommRingCat.ofHom (phi S'))) ≫ eqToHom hTarget)
-      apply (cancel_mono (eqToHom hTarget)).1
-      calc
-        S.toSpecΓ ≫ Spec.map (CommRingCat.ofHom (phi S)) =
-            S.toSpecΓ ≫ Spec.map a.appTop ≫
-              Spec.map (CommRingCat.ofHom (phi S')) := by
-                rw [← Spec.map_comp, ← hphi]
-        _ = (a ≫ S'.toSpecΓ) ≫
-              Spec.map (CommRingCat.ofHom (phi S')) := by
-                simpa only [Category.assoc] using
-                  congrArg (fun z => z ≫ Spec.map (CommRingCat.ofHom (phi S')))
-                    (Scheme.toSpecΓ_naturality a).symm
-        _ = a ≫ S'.toSpecΓ ≫ Spec.map (CommRingCat.ofHom (phi S')) := by
-                simp only [Category.assoc]
-  }
-  exact ⟨rule⟩
+  sorry
 
 /-- The source's `j : M₁,₁ ⟶ A¹_ℤ`, obtained from its naturality interface. -/
 noncomputable def jInvariant : ModuliRule affineLineOverIntegers :=

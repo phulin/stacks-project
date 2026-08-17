@@ -1,8 +1,8 @@
 import Formalization.Books.Sites.Unit02.Presheaves
+import Formalization.Books.Categories.Unit19.FilteredColimits
 import Mathlib.CategoryTheory.Comma.StructuredArrow.Basic
 import Mathlib.CategoryTheory.Filtered.Basic
 import Mathlib.CategoryTheory.Functor.KanExtension.Adjunction
-import Mathlib.CategoryTheory.Limits.Presheaf
 import Mathlib.CategoryTheory.Limits.Preserves.FunctorCategory
 import Mathlib.CategoryTheory.Limits.Shapes.Equalizers
 import Mathlib.CategoryTheory.Limits.Shapes.Pullback.HasPullback
@@ -159,13 +159,17 @@ abbrev HasIndexColimits (u : C ⥤ D) :=
 /-! ## Almost-directedness and filteredness -/
 
 /-- Pullbacks and equalizers in `C`, preserved by `u`, give the two
-almost-directedness conditions for `(I_V)ᵒᵖ`.  This is Mathlib's
-empty-allowed filtered-category interface. -/
+almost-directedness conditions for `(I_V)ᵒᵖ` from the source's
+filtered-components lemma.  These conditions do not assert that the whole
+index category is filtered: different connected components are allowed. -/
 theorem indexCategory_op_almostDirected (u : C ⥤ D) (V : D)
     [HasPullbacks C] [HasEqualizers C]
     [PreservesLimitsOfShape WalkingCospan u]
     [PreservesLimitsOfShape WalkingParallelPair u] :
-    IsFilteredOrEmpty (indexCategory u V)ᵒᵖ := by
+    Formalization.Books.Categories.Unit19.HasCoconesForSpans
+        ((indexCategory u V)ᵒᵖ) ∧
+      Formalization.Books.Categories.Unit19.HasParallelEqualizers
+        ((indexCategory u V)ᵒᵖ) := by
   sorry
 
 /-- If `C` has a final object carried by `u` to a final object of `D`, then

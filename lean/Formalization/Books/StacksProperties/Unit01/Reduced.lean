@@ -85,7 +85,7 @@ def FactorsThroughClosedSubstack {S : Scheme.{u}}
 
 theorem map_into_reduction_iff {S : Scheme.{u}}
     {X Y : AlgebraicStack S} (Z : ClosedSubstack X)
-    (hY : IsReduced Y) (f : StackMorphism Y X)
+    (_hY : IsReduced Y) (f : StackMorphism Y X)
     (hforward : FactorsThroughClosedSubstack f Z →
       Set.range (inducedPointMap f) ⊆
         Set.range (inducedPointMap Z.inclusion))

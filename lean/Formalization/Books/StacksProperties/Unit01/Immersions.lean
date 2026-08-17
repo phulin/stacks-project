@@ -307,7 +307,7 @@ def PointMapHasOpenImage {S : Scheme.{u}}
   @IsOpen (StackPoint Y) (T Y) (Set.range (inducedPointMap f))
 
 theorem immersion_points_locally_closed {S : Scheme.{u}}
-    (T : StackTopology S) (hT : IsCompatibleStackTopology T)
+    (T : StackTopology S) (_hT : IsCompatibleStackTopology T)
     {X Y : AlgebraicStack S} (f : StackMorphism X Y)
     (hf : IsImmersionStack f)
     (hbase : ∃ (W : AlgebraicSpace S) (w : SpaceToStackMorphism W Y),
@@ -325,7 +325,7 @@ theorem immersion_points_locally_closed {S : Scheme.{u}}
   exact hpoint W w bc (hf.2 W w bc)
 
 theorem closed_immersion_points_closed {S : Scheme.{u}}
-    (T : StackTopology S) (hT : IsCompatibleStackTopology T)
+    (T : StackTopology S) (_hT : IsCompatibleStackTopology T)
     {X Y : AlgebraicStack S} (f : StackMorphism X Y)
     (hf : IsClosedImmersionStack f)
     (hbase : ∃ (W : AlgebraicSpace S) (w : SpaceToStackMorphism W Y),
@@ -341,7 +341,7 @@ theorem closed_immersion_points_closed {S : Scheme.{u}}
   exact hpoint W w bc (hf.2 W w bc)
 
 theorem open_immersion_points_open {S : Scheme.{u}}
-    (T : StackTopology S) (hT : IsCompatibleStackTopology T)
+    (T : StackTopology S) (_hT : IsCompatibleStackTopology T)
     {X Y : AlgebraicStack S} (f : StackMorphism X Y)
     (hf : IsOpenImmersionStack f)
     (hbase : ∃ (W : AlgebraicSpace S) (w : SpaceToStackMorphism W Y),

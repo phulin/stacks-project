@@ -1,6 +1,7 @@
 import Mathlib.CategoryTheory.Yoneda
 import Mathlib.Data.PNat.Notation
 import Mathlib.RingTheory.Finiteness.Defs
+import Mathlib.RingTheory.IntegralClosure.IsIntegralClosure.Basic
 import Mathlib.RingTheory.Ideal.Quotient.Basic
 import Mathlib.RingTheory.Ideal.Quotient.Operations
 import Mathlib.RingTheory.LocalRing.MaximalIdeal.Defs
@@ -44,7 +45,10 @@ theorem kernel_isMaximal_of_finite_to_field
     {Λ : Type u} [CommRing Λ]
     {k : Type v} [Field k] (f : Λ →+* k) (hf : f.Finite) :
     (RingHom.ker f).IsMaximal := by
-  sorry
+  let _ : Algebra Λ k := f.toAlgebra
+  let _ : Module.Finite Λ k := hf
+  simpa [RingHom.algebraMap_toAlgebra] using
+    (Algebra.ker_algebraMap_isMaximal_of_isIntegral Λ k)
 
 /-- The quotient by the kernel of a finite map to a field is a field. -/
 theorem quotient_by_kernel_isField_of_finite_to_field
@@ -60,7 +64,8 @@ theorem image_isField_of_finite_to_field
     {Λ : Type u} [CommRing Λ]
     {k : Type v} [Field k] (f : Λ →+* k) (hf : f.Finite) :
     IsField (RingHom.range f) := by
-  sorry
+  exact (RingHom.quotientKerEquivRange f).symm.toMulEquiv.isField
+    (quotient_by_kernel_isField_of_finite_to_field f hf)
 
 /-- The target field is finite over the image field.  The inclusion is the
 canonical subring homomorphism. -/
@@ -68,6 +73,11 @@ theorem target_finite_over_image_of_finite_to_field
     {Λ : Type u} [CommRing Λ]
     {k : Type v} [Field k] (f : Λ →+* k) (hf : f.Finite) :
     (RingHom.range f).subtype.Finite := by
-  sorry
+  apply RingHom.Finite.of_comp_finite (f := f.rangeRestrict)
+  have hcomp : (RingHom.range f).subtype.comp f.rangeRestrict = f := by
+    ext x
+    rfl
+  rw [hcomp]
+  exact hf
 
 end Formalization.Books.FormalDefos.Unit02

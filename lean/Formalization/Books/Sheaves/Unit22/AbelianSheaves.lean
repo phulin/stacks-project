@@ -1,6 +1,5 @@
 import Formalization.Books.Sheaves.Unit21.ContinuousMaps
 import Formalization.Books.Sheaves.Unit08.AbelianSheaves
-import Formalization.Books.Sheaves.Unit12.StalksOfAbelianPresheaves
 import Mathlib.Algebra.Category.Grp.FilteredColimits
 import Mathlib.Algebra.Category.Grp.Limits
 import Mathlib.CategoryTheory.Sites.Sheafification

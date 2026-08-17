@@ -68,6 +68,104 @@ theorem BigAbelianMorphism.ext {X Y : BigAbelianObject}
   cases h
   rfl
 
+def bigAbelianMorphismZero (X Y : BigAbelianObject) :
+    BigAbelianMorphism X Y :=
+  { hom := 0
+    commutes := by
+      intro β
+      simp }
+
+def bigAbelianMorphismAdd {X Y : BigAbelianObject}
+    (f g : BigAbelianMorphism X Y) : BigAbelianMorphism X Y :=
+    { hom := f.hom + g.hom
+      commutes := by
+        intro β
+        apply AddMonoidHom.ext
+        intro x
+        have hf : f.hom (X.operatorAt β x) =
+            (Y.operatorAt β) (f.hom x) := by
+          simpa only [AddMonoidHom.comp_apply] using
+            congrArg (fun h : X.carrier →+ Y.carrier => h x) (f.commutes β)
+        have hg : g.hom (X.operatorAt β x) =
+            (Y.operatorAt β) (g.hom x) := by
+          simpa only [AddMonoidHom.comp_apply] using
+            congrArg (fun h : X.carrier →+ Y.carrier => h x) (g.commutes β)
+        simp only [AddMonoidHom.comp_apply, AddMonoidHom.add_apply, map_add]
+        rw [hf, hg] }
+
+def bigAbelianMorphismNeg {X Y : BigAbelianObject}
+    (f : BigAbelianMorphism X Y) : BigAbelianMorphism X Y :=
+    { hom := -f.hom
+      commutes := by
+        intro β
+        apply AddMonoidHom.ext
+        intro x
+        have hf : f.hom (X.operatorAt β x) =
+            (Y.operatorAt β) (f.hom x) := by
+          simpa only [AddMonoidHom.comp_apply] using
+            congrArg (fun h : X.carrier →+ Y.carrier => h x) (f.commutes β)
+        simp only [AddMonoidHom.comp_apply, AddMonoidHom.neg_apply]
+        rw [hf]
+        simp }
+
+instance bigAbelianMorphismZeroInstance (X Y : BigAbelianObject) :
+    Zero (BigAbelianMorphism X Y) := ⟨bigAbelianMorphismZero X Y⟩
+
+instance bigAbelianMorphismAddInstance (X Y : BigAbelianObject) :
+    Add (BigAbelianMorphism X Y) := ⟨fun f g => bigAbelianMorphismAdd f g⟩
+
+instance bigAbelianMorphismNegInstance (X Y : BigAbelianObject) :
+    Neg (BigAbelianMorphism X Y) := ⟨bigAbelianMorphismNeg⟩
+
+instance bigAbelianMorphismSubInstance (X Y : BigAbelianObject) :
+    Sub (BigAbelianMorphism X Y) := ⟨fun f g => f + -g⟩
+
+@[simp]
+theorem bigAbelianMorphismZero_hom (X Y : BigAbelianObject) :
+    (0 : BigAbelianMorphism X Y).hom = 0 :=
+  rfl
+
+@[simp]
+theorem bigAbelianMorphismAdd_hom {X Y : BigAbelianObject}
+    (f g : BigAbelianMorphism X Y) :
+    (f + g).hom = f.hom + g.hom :=
+  rfl
+
+@[simp]
+theorem bigAbelianMorphismNeg_hom {X Y : BigAbelianObject}
+    (f : BigAbelianMorphism X Y) :
+    (-f).hom = -f.hom :=
+  rfl
+
+instance bigAbelianMorphismAddCommGroup (X Y : BigAbelianObject) :
+    AddCommGroup (BigAbelianMorphism X Y) where
+  add_assoc := by
+    intro f g h
+    apply BigAbelianMorphism.ext
+    exact add_assoc f.hom g.hom h.hom
+  add_zero := by
+    intro f
+    apply BigAbelianMorphism.ext
+    simp
+  zero_add := by
+    intro f
+    apply BigAbelianMorphism.ext
+    simp
+  neg_add_cancel := by
+    intro f
+    apply BigAbelianMorphism.ext
+    simp
+  add_comm := by
+    intro f g
+    apply BigAbelianMorphism.ext
+    simp [add_comm]
+  sub_eq_add_neg := by
+    intro f g
+    apply BigAbelianMorphism.ext
+    rfl
+  nsmul := nsmulRec
+  zsmul := zsmulRec
+
 instance bigAbelianCategory : Category BigAbelianObject where
   Hom := BigAbelianMorphism
   id X :=
@@ -108,11 +206,47 @@ instance bigAbelianCategory : Category BigAbelianObject where
     ext x
     simp [AddMonoidHom.comp_apply]
 
+@[simp]
+theorem bigAbelianCategory_comp_hom {X Y Z : BigAbelianObject}
+    (f : X ⟶ Y) (g : Y ⟶ Z) : (f ≫ g).hom = g.hom.comp f.hom :=
+  rfl
+
+@[instance_reducible]
+def bigAbelianCategoryPreadditive : Preadditive BigAbelianObject where
+  homGroup X Y := bigAbelianMorphismAddCommGroup X Y
+  add_comp := by
+    intro X Y Z f g h
+    apply BigAbelianMorphism.ext
+    dsimp only [CategoryStruct.comp, bigAbelianCategory]
+    ext x
+    change h.hom ((f.hom + g.hom) x) =
+      h.hom (f.hom x) + h.hom (g.hom x)
+    exact h.hom.map_add _ _
+  comp_add := by
+    intro X Y Z f g h
+    apply BigAbelianMorphism.ext
+    dsimp only [CategoryStruct.comp, bigAbelianCategory]
+    ext x
+    change (g.hom + h.hom) (f.hom x) =
+      g.hom (f.hom x) + h.hom (f.hom x)
+    rfl
+
 /- The source says that the routine verification that this category is
 abelian is omitted.  This is the exact category-level interface used below;
 its proof is intentionally deferred to the proof stage. -/
-instance bigAbelianCategory_abelian : Abelian BigAbelianObject := by
-  sorry
+@[instance_reducible]
+instance bigAbelianCategory_abelian : Abelian BigAbelianObject where
+  toPreadditive := bigAbelianCategoryPreadditive
+  has_finite_products := by
+    sorry
+  has_kernels := by
+    sorry
+  has_cokernels := by
+    sorry
+  normalMonoOfMono := by
+    sorry
+  normalEpiOfEpi := by
+    sorry
 
 /-! ## The zero-operator object and the ordinal-indexed extensions -/
 
@@ -211,6 +345,19 @@ def bigAbelianOrdinalProjection (α : Ordinal.{u}) :
         bigAbelianZeroObject_operatorAt]
       simp
 
+theorem bigAbelianOrdinalExtension_zero (α : Ordinal.{u}) :
+    bigAbelianOrdinalInclusion α ≫ bigAbelianOrdinalProjection α = 0 := by
+  apply BigAbelianMorphism.ext
+  dsimp only [CategoryStruct.comp, bigAbelianCategory]
+  apply AddMonoidHom.ext
+  intro n
+  simp [bigAbelianOrdinalInclusion, bigAbelianOrdinalProjection]
+
+theorem bigAbelianOrdinalExtension_shortExact (α : Ordinal.{u}) :
+    (ShortComplex.mk (bigAbelianOrdinalInclusion α)
+      (bigAbelianOrdinalProjection α) (bigAbelianOrdinalExtension_zero α)).ShortExact := by
+  sorry
+
 /-- The short-exact extension of `Z` by `Z` whose only nonzero operator is at
 `α`. -/
 def bigAbelianOrdinalExtension (α : Ordinal.{u}) :
@@ -219,10 +366,8 @@ def bigAbelianOrdinalExtension (α : Ordinal.{u}) :
   middle := bigAbelianOrdinalMiddle α
   inclusion := bigAbelianOrdinalInclusion α
   projection := bigAbelianOrdinalProjection α
-  zero := by
-    sorry
-  shortExact := by
-    sorry
+  zero := bigAbelianOrdinalExtension_zero α
+  shortExact := bigAbelianOrdinalExtension_shortExact α
 
 /-- The corresponding isomorphism class in the canonical `Ext` quotient. -/
 def bigAbelianOrdinalExtensionClass (α : Ordinal.{u}) :

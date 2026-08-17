@@ -44,8 +44,8 @@ noncomputable abbrev StalkMap {X : TopCat.{w}} {F G : TopCat.Presheaf (Type w) X
   (StalkFunctor x).map φ
 
 /-!
-`TopCat.Presheaf.stalk` is definitionally the colimit over `OpenNhds x`.
-The order on `OpenNhds x` is the reverse-inclusion order used in the source,
+`TopCat.Presheaf.stalk` is definitionally the colimit over the opposite of
+`OpenNhds x`; this supplies the reverse-inclusion indexing used in the source,
 and `TopCat.Presheaf.germ` is the canonical colimit coprojection.  Thus no
 parallel colimit or quotient implementation is introduced here.
 -/

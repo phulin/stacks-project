@@ -1,3 +1,5 @@
+import Mathlib.Data.Int.ConditionallyCompleteOrder
+import Mathlib.Order.ConditionallyCompleteLattice.Basic
 import Mathlib.Order.WithBotTop
 import Formalization.Books.Derived.Unit16.HigherDerivedFunctors
 
@@ -53,6 +55,47 @@ def DegreeFunctionNegativeTail
   ∀ b : ℤ, ∃ N : ℤ, ∀ n : ℤ, n ≤ N →
     ∃ m : ℕ, d (K.X n) = (m : WithTop ℕ) ∧ n + (m : ℤ) ≤ b
 
+/- The source's proof first replaces the positive-degree tail by degree-zero
+   terms.  This predicate records the resulting eventual vanishing of the
+   degree function. -/
+
+def DegreeFunctionEventuallyZero
+    {A : Type u} [Category.{v} A] [Abelian A]
+    (d : A → WithTop ℕ) (K : BookComplex A) : Prop :=
+  ∃ N : ℤ, ∀ n : ℤ, N ≤ n → d (K.X n) = 0
+
+/- The termination measure lives in the extended integers: a finite degree
+   contributes an ordinary integer and the value `∞` contributes `+∞`. -/
+
+abbrev ReplacementDegreeValue := WithBot (WithTop ℤ)
+
+def degreeToReplacementValue (d : WithTop ℕ) : ReplacementDegreeValue :=
+  WithTop.recTopCoe (⊤ : ReplacementDegreeValue)
+    (fun n => (((n : ℤ) : WithTop ℤ) : ReplacementDegreeValue)) d
+
+def indexedDegree
+    {A : Type u} [Category.{v} A] [Abelian A]
+    (d : A → WithTop ℕ) (K : BookComplex A) (n : ℤ) :
+    ReplacementDegreeValue :=
+  ((n : WithTop ℤ) : ReplacementDegreeValue) +
+    degreeToReplacementValue (d (K.X n))
+
+/-! The maximum `ξ(K)` and its set `I` of maximizing degrees from the
+source proof.  `sSup ∅ = -∞` is harmless for a complex already consisting of
+degree-zero terms, while the source's proof only uses the measures when
+`I` is nonempty. -/
+
+def replacementScore
+    {A : Type u} [Category.{v} A] [Abelian A]
+    (d : A → WithTop ℕ) (K : BookComplex A) : ReplacementDegreeValue :=
+  sSup {q : ReplacementDegreeValue |
+    ∃ n : ℤ, 0 < d (K.X n) ∧ q = indexedDegree d K n}
+
+def replacementMaximizers
+    {A : Type u} [Category.{v} A] [Abelian A]
+    (d : A → WithTop ℕ) (K : BookComplex A) : Set ℤ :=
+  {n : ℤ | 0 < d (K.X n) ∧ replacementScore d K = indexedDegree d K n}
+
 /- The elementary replacement in the proof is the cokernel of the map
    `(u, d_K^n) : K^n → M ⊕ K^(n+1)`.  The object and map are exposed because
    they are the only noncanonical construction used by the termination
@@ -87,6 +130,9 @@ structure ElementaryDegreeZeroReplacement
   degreeIso : replaced.X n ≅ M
   comparisonAt : comparison.f n ≫ degreeIso.hom = u
   degreeZero : d (replaced.X n) = 0
+  nextDegreeBoundViaCokernel :
+    d (replaced.X (n + 1)) ≤
+      max (d (K.X n) - 1) (d (M ⊞ K.X (n + 1)))
   nextDegreeBound :
     d (replaced.X (n + 1)) ≤
       max (d (K.X n) - 1) (d (K.X (n + 1)))
@@ -119,10 +165,63 @@ theorem exists_quasiIso_degreeZero_complex
       QuasiIsomorphism f ∧ ∀ n : ℤ, d (L.X n) = 0 := by
   sorry
 
+/-- Under the two hypotheses used after the preliminary replacement, the
+source's maximum `ξ(K)` is finite. -/
+theorem replacementScore_lt_top
+    {A : Type u} [Category.{v} A] [Abelian A]
+    (d : A → WithTop ℕ) (K : BookComplex A)
+    (hK : DegreeFunctionNegativeTail d K)
+    (hAbove : DegreeFunctionEventuallyZero d K) :
+    replacementScore d K < (⊤ : ReplacementDegreeValue) := by
+  sorry
+
+/-- The maximizing set `I` in the elementary-replacement termination argument
+is finite. -/
+theorem replacementMaximizers_finite
+    {A : Type u} [Category.{v} A] [Abelian A]
+    (d : A → WithTop ℕ) (K : BookComplex A)
+    (hK : DegreeFunctionNegativeTail d K)
+    (hAbove : DegreeFunctionEventuallyZero d K) :
+    (replacementMaximizers d K).Finite := by
+  sorry
+
+/-- An elementary replacement never increases the termination score. -/
+theorem elementaryReplacement_score_nonincreasing
+    {A : Type u} [Category.{v} A] [Abelian A]
+    (d : A → WithTop ℕ) (hd : IsAdmissibleDegreeFunction d)
+    (K : BookComplex A) (n : ℤ) (M : A) (u : K.X n ⟶ M)
+    (r : ElementaryDegreeZeroReplacement d K n M u) :
+    replacementScore d r.replaced ≤ replacementScore d K := by
+  sorry
+
+/-- A replacement at a maximizing degree leaves all degrees strictly above
+`ξ(K) + 1` unchanged. -/
+theorem elementaryReplacement_unchanged_above_score
+    {A : Type u} [Category.{v} A] [Abelian A]
+    (d : A → WithTop ℕ) (K : BookComplex A) (n : ℤ) (M : A)
+    (u : K.X n ⟶ M) (r : ElementaryDegreeZeroReplacement d K n M u)
+    (hn : n ∈ replacementMaximizers d K) :
+    ∀ m : ℤ, replacementScore d K + 1 <
+        ((m : WithTop ℤ) : ReplacementDegreeValue) →
+      Nonempty (r.replaced.X m ≅ K.X m) := by
+  sorry
+
+/-- Starting with the smallest member of `I` either reduces its finite size or
+pushes its least member upward, as in the source's termination argument. -/
+theorem elementaryReplacement_termination_step
+    {A : Type u} [Category.{v} A] [Abelian A]
+    (d : A → WithTop ℕ) (K : BookComplex A) (n : ℤ) (M : A)
+    (u : K.X n ⟶ M) (r : ElementaryDegreeZeroReplacement d K n M u)
+    (hn : n ∈ replacementMaximizers d K)
+    (hmin : ∀ m : ℤ, m ∈ replacementMaximizers d K → n ≤ m) :
+    Set.ncard (replacementMaximizers d r.replaced) <
+        Set.ncard (replacementMaximizers d K) ∨
+      ∀ m : ℤ, m ∈ replacementMaximizers d r.replaced → n < m := by
+  sorry
+
 /-! The source's `ξ(K)` and the finite set `I` are termination measures for
-the preceding theorem.  Their finiteness and strict decrease are proof
-infrastructure rather than additional book-level assertions; the theorem
-above records their mathematical output. -/
+the preceding theorem.  Their finiteness and progress properties are exposed
+above so the replacement argument remains available to later proofs. -/
 
 /-! ## 32.2. Unbounded derived functors -/
 
@@ -172,8 +271,21 @@ def cohomologyVanishesOutside
     {C : Type u} [Category.{v} C] [Abelian C]
     [HasDerivedCategory.{w} C] (E : DerivedCategory C)
     (a b : EInt) : Prop :=
-  ∀ i : ℤ, ¬ (a ≤ (i : EInt) ∧ (i : EInt) ≤ b) →
+    ∀ i : ℤ, ¬ (a ≤ (i : EInt) ∧ (i : EInt) ≤ b) →
     IsZero ((derivedCohomologyFunctor C i).obj E)
+
+/- The source packages the two hypotheses of the unbounded right-derived
+lemma as "enough right acyclic objects" and a vanishing higher degree. -/
+
+def HasBoundedRightCohomologicalDimension
+    {A : Type u} [Category.{v} A] [Abelian A]
+    {B : Type u'} [Category.{v'} B] [Abelian B]
+    [HasDerivedCategory.{w} A] [HasDerivedCategory.{w'} B]
+    (F : A ⥤ B) [F.Additive] : Prop :=
+  ∃ (R : RightDerivedFunctorData F) (n : ℕ),
+    InjectsIntoRightAcyclic R ∧
+      ∀ X : A,
+        IsZero ((higherRightDerivedFunctor F R.functor (n : ℤ)).obj X)
 
 /-- The degree of an object computed from the nonzero higher right-derived
   functors, with `0` included exactly as in the source. -/
@@ -208,7 +320,7 @@ theorem rightDerived_vanishes_of_ge
     {B : Type u'} [Category.{v'} B] [Abelian B]
     [HasDerivedCategory.{w} A] [HasDerivedCategory.{w'} B]
     {F : A ⥤ B} [F.Additive] (R : RightDerivedFunctorData F)
-    (n m : ℕ) (hnm : n ≤ m)
+    (hR : InjectsIntoRightAcyclic R) (n m : ℕ) (hnm : n ≤ m)
     (hn : ∀ X : A,
       IsZero ((higherRightDerivedFunctor F R.functor (n : ℤ)).obj X)) :
     ∀ X : A,
@@ -259,6 +371,19 @@ theorem exists_unboundedRightDerived
     Nonempty (UnboundedRightDerivedConclusion R n) := by
   sorry
 
+/-- Source-facing form of the right-derived lemma, with the bounded derived
+functor and its acyclic replacement system existentially packaged. -/
+theorem exists_unboundedRightDerived_of_boundedCohomologicalDimension
+    {A : Type u} [Category.{v} A] [Abelian A]
+    {B : Type u'} [Category.{v'} B] [Abelian B]
+    [HasDerivedCategory.{w} A] [HasDerivedCategory.{w'} B]
+    (F : A ⥤ B) [F.Additive] (hF : IsLeftExact F)
+    (hDim : HasBoundedRightCohomologicalDimension F) :
+    ∃ (R : RightDerivedFunctorData F) (n : ℕ),
+      Nonempty (UnboundedRightDerivedConclusion R n) := by
+  rcases hDim with ⟨R, n, hR, hn⟩
+  exact ⟨R, n, exists_unboundedRightDerived F hF R hR n hn⟩
+
 /-! ## 32.3. The dual left-derived statement -/
 
 /-- The higher left-derived functor, viewed in the unbounded derived category
@@ -297,6 +422,19 @@ def ComputesUnboundedLeftDerivedComplex
   IsIso (L.counit.app
     ((HomotopyCategory.quotient A (ComplexShape.up ℤ)).obj K))
 
+/- The dual bounded-dimension hypotheses, packaged in the same way as the
+right-derived ones above. -/
+
+def HasBoundedLeftCohomologicalDimension
+    {A : Type u} [Category.{v} A] [Abelian A]
+    {B : Type u'} [Category.{v'} B] [Abelian B]
+    [HasDerivedCategory.{w} A] [HasDerivedCategory.{w'} B]
+    (F : A ⥤ B) [F.Additive] : Prop :=
+  ∃ (L : LeftDerivedFunctorData F) (n : ℕ),
+    QuotientOfLeftAcyclic L ∧
+      ∀ X : A,
+        IsZero ((higherLeftDerivedFunctor F L.functor (n : ℤ)).obj X)
+
 /-- The degree function used in the dual proof. -/
 noncomputable def leftDerivedDegree
     {A : Type u} [Category.{v} A] [Abelian A]
@@ -316,7 +454,7 @@ theorem leftDerived_vanishes_of_ge
     {B : Type u'} [Category.{v'} B] [Abelian B]
     [HasDerivedCategory.{w} A] [HasDerivedCategory.{w'} B]
     {F : A ⥤ B} [F.Additive] (L : LeftDerivedFunctorData F)
-    (n m : ℕ) (hnm : n ≤ m)
+    (hL : QuotientOfLeftAcyclic L) (n m : ℕ) (hnm : n ≤ m)
     (hn : ∀ X : A,
       IsZero ((higherLeftDerivedFunctor F L.functor (n : ℤ)).obj X)) :
     ∀ X : A,
@@ -376,5 +514,17 @@ theorem exists_unboundedLeftDerived
       IsZero ((higherLeftDerivedFunctor F L.functor (n : ℤ)).obj X)) :
     Nonempty (UnboundedLeftDerivedConclusion L n) := by
   sorry
+
+/-- Source-facing form of the dual unbounded left-derived lemma. -/
+theorem exists_unboundedLeftDerived_of_boundedCohomologicalDimension
+    {A : Type u} [Category.{v} A] [Abelian A]
+    {B : Type u'} [Category.{v'} B] [Abelian B]
+    [HasDerivedCategory.{w} A] [HasDerivedCategory.{w'} B]
+    (F : A ⥤ B) [F.Additive] (hF : IsRightExact F)
+    (hDim : HasBoundedLeftCohomologicalDimension F) :
+    ∃ (L : LeftDerivedFunctorData F) (n : ℕ),
+      Nonempty (UnboundedLeftDerivedConclusion L n) := by
+  rcases hDim with ⟨L, n, hL, hn⟩
+  exact ⟨L, n, exists_unboundedLeftDerived F hF L hL n hn⟩
 
 end Formalization.Books.Derived.Unit32

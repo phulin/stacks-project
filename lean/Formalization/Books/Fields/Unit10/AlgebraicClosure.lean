@@ -1,4 +1,3 @@
-import Formalization.Books.Fields.Unit09.MinimalPolynomials
 import Mathlib.Analysis.Complex.Polynomial.Basic
 import Mathlib.FieldTheory.IsAlgClosed.AlgebraicClosure
 
@@ -26,10 +25,12 @@ universe u v w
 theorem complex_is_algebraically_closed : IsAlgClosed ℂ := by
   infer_instance
 
-/- The source's definition of algebraically closed is exactly the existing
-   `IsAlgClosed` class, so no parallel predicate is introduced.  In the
-   polynomial criteria below, `p.Splits` is the canonical assertion that a
-   polynomial is a scalar multiple of a product of linear factors. -/
+/- The source's extension-theoretic notion of algebraically closed is
+   represented by Mathlib's `IsAlgClosed` class.  Mathlib defines that class
+   via polynomial splitting, and the criterion theorem below records the
+   equivalent polynomial forms, so no parallel predicate is introduced.  In
+   those criteria, `p.Splits` is the canonical assertion that a polynomial is
+   a scalar multiple of a product of linear factors. -/
 /--
 The four standard characterizations of an algebraically closed field.
 
@@ -76,7 +77,7 @@ noncomputable def map_into_algebraic_closure
    warning that algebraic closures are not unique up to a unique isomorphism. -/
 /-- Any two algebraic closures of a field are isomorphic as field extensions. -/
 noncomputable def algebraic_closures_equiv
-    (F : Type u) (E E' : Type v) [Field F] [Field E] [Field E']
+    (F : Type u) (E : Type v) (E' : Type w) [Field F] [Field E] [Field E']
     [Algebra F E] [Algebra F E'] [IsAlgClosure F E] [IsAlgClosure F E'] :
     E ≃ₐ[F] E' :=
   IsAlgClosure.equiv F E E'

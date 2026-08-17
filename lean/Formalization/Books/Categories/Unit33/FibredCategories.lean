@@ -3,6 +3,7 @@ import Mathlib.CategoryTheory.Adjunction.Basic
 import Mathlib.CategoryTheory.Category.Cat
 import Mathlib.CategoryTheory.Comma.Basic
 import Mathlib.CategoryTheory.FiberedCategory.Cartesian
+import Mathlib.CategoryTheory.FiberedCategory.Fiber
 import Mathlib.CategoryTheory.FiberedCategory.Fibered
 import Mathlib.CategoryTheory.Limits.Shapes.Pullback.IsPullback.Basic
 
@@ -71,15 +72,6 @@ theorem stronglyCartesian_of_base_isIso
     IsIso φ := by
   exact Functor.IsStronglyCartesian.isIso_of_base_isIso p f φ
 
-/- The universal-property API supplies the uniqueness up to unique
-   isomorphism mentioned immediately after the definition in the source. -/
-noncomputable def stronglyCartesianDomainIso
-    {X C : Type*} [Category* X] [Category* C] (p : X ⥤ C)
-    {R S : C} {a a' b : X} (f : R ⟶ S) (φ : a ⟶ b) (φ' : a' ⟶ b)
-    [Functor.IsStronglyCartesian p f φ]
-    [Functor.IsStronglyCartesian p f φ'] : a' ≅ a :=
-  Functor.IsCartesian.domainUniqueUpToIso p f φ φ'
-
 theorem stronglyCartesian_over_composition
     {A B C : Type*} [Category* A] [Category* B] [Category* C]
     (F : A ⥤ B) (G : B ⥤ C) {a b : A} (φ : a ⟶ b)
@@ -114,6 +106,8 @@ structure PullbackChoice
   pullbackMap_isStronglyCartesian : ∀ {R S : C} (f : R ⟶ S)
     (x : Functor.Fiber p S),
     Functor.IsStronglyCartesian p f (pullbackMap f x)
+
+attribute [instance] PullbackChoice.pullbackMap_isStronglyCartesian
 
 namespace PullbackChoice
 
@@ -174,14 +168,21 @@ theorem pullback_composition_iso
     {X C : Type*} [Category* X] [Category* C]
     (p : X ⥤ C) [p.IsFibered] (P : PullbackChoice p)
     {R S T : C} (f : R ⟶ S) (g : S ⟶ T) :
-    Nonempty (P.pullbackFunctor (f ≫ g) ≅
-      P.pullbackFunctor g ⋙ P.pullbackFunctor f) := by
+    ∃! α : P.pullbackFunctor (f ≫ g) ≅
+        P.pullbackFunctor g ⋙ P.pullbackFunctor f,
+      ∀ x : Functor.Fiber p T,
+        Functor.Fiber.fiberInclusion.map (α.hom.app x) ≫
+            P.pullbackMap f (P.pullback g x) ≫ P.pullbackMap g x =
+          P.pullbackMap (f ≫ g) x := by
   sorry
 
 theorem pullback_identity_iso
     {X C : Type*} [Category* X] [Category* C]
     (p : X ⥤ C) [p.IsFibered] (P : PullbackChoice p) (U : C) :
-    Nonempty (𝟭 (Functor.Fiber p U) ≅ P.pullbackFunctor (𝟙 U)) := by
+    ∃! α : 𝟭 (Functor.Fiber p U) ≅ P.pullbackFunctor (𝟙 U),
+      ∀ x : Functor.Fiber p U,
+        Functor.Fiber.fiberInclusion.map (α.hom.app x) ≫
+            P.pullbackMap (𝟙 U) x = 𝟙 x.1 := by
   sorry
 
 /- A pseudofunctor-compatible packaging of the choice.  The object and map
@@ -194,12 +195,12 @@ structure PullbackPseudofunctorData
   value : PseudofunctorFromCategory Cᵒᵖ
     (AssociatedTwoOneCategory (Cat.{v₁, u₁}))
   object_fibre : ∀ (U : C),
-    value.obj (LocallyDiscrete.mk (Opposite.op U)) =
+    pseudofunctorObject value (Opposite.op U) =
       Bicategory.Pith.mk (Cat.of (Functor.Fiber p U))
   map_pullback : ∀ {R S : C} (f : R ⟶ S),
     Nonempty
       (eqToHom (congrArg Bicategory.Pith.as (object_fibre S).symm) ≫
-          (value.map f.op.toLoc).of ≫
+          (pseudofunctorMap value f.op).of ≫
           eqToHom (congrArg Bicategory.Pith.as (object_fibre R)) ≅
         (P.pullbackFunctor f).toCatHom)
 
@@ -222,6 +223,8 @@ def MapsStronglyCartesian
 structure FibredCategoryOver (C : Cat.{v, u}) where
   underlying : CategoryOver C
   isFibred : (structureFunctor underlying).IsFibered
+
+attribute [instance] FibredCategoryOver.isFibred
 
 /- A source 1-morphism is a functor over `C` which preserves strongly
    cartesian arrows.  The base morphism in the target is written using the
@@ -379,6 +382,12 @@ noncomputable instance fibredCategoriesOverStrict {C : Cat.{v, u}} :
     Bicategory.Strict (FibredCategoryOver C) := by
   sorry
 
+theorem fibredCategoriesOver_associated_two_one_category
+    (C : Cat.{v, u}) :
+    IsTwoOneCategory
+      (AssociatedTwoOneCategory (FibredCategoryOver C)) := by
+  infer_instance
+
 /- Equivalence over `C`: the functors and the comparison isomorphisms are all
    morphisms in the already constructed category of categories over `C`. -/
 def IsEquivalentOver {C : Cat.{v, u}}
@@ -531,6 +540,20 @@ def ameliorationToY {C : Cat.{v, u}}
   (ameliorationProperty F).ι ⋙ Comma.fst (𝟭 Y.underlying.left)
     (overFunctor F.underlying)
 
+/- The explicit comma presentation carries a canonical functor to the fixed
+   base via its `Y`-projection.  The source proof shows that this functor is
+   fibred, even though the comma category can live in a larger universe than
+   the bundled `CategoryOver` carrier. -/
+def ameliorationBase {C : Cat.{v, u}}
+    {X Y : FibredCategoryOver C} (F : FibredCategoryOverHom X Y) :
+    AmeliorationCategory F ⥤ C :=
+  ameliorationToY F ⋙ structureFunctor Y.underlying
+
+theorem ameliorationBase_isFibred {C : Cat.{v, u}}
+    {X Y : FibredCategoryOver C} (F : FibredCategoryOverHom X Y) :
+    (ameliorationBase F).IsFibered := by
+  sorry
+
 /- The three projections and their comparison maps are packaged as a theorem
    interface.  The final field records the source's necessary correction: the
    functor `v : X' ⥤ Y` is itself a fibred functor over `Y`. -/
@@ -541,7 +564,7 @@ structure AmeliorationFactorization
   u : FibredCategoryOverHom X middle
   v : FibredCategoryOverHom middle Y
   w : FibredCategoryOverHom middle X
-  factorization : F.underlying = CategoryOver.comp u.underlying v.underlying
+  factorization : F = FibredCategoryOverHom.comp u v
   u_fully_faithful : Nonempty (overFunctor u.underlying).FullyFaithful
   w_left_adjoint_u : Nonempty (overFunctor w.underlying ⊣ overFunctor u.underlying)
   v_fibred_over_Y : (overFunctor v.underlying).IsFibered

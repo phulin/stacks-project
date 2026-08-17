@@ -981,7 +981,51 @@ theorem pullback_pseudofunctor_exists
     {X : Type u₁} [Category.{v₁} X] {C : Type u₂} [Category.{v₂} C]
     (p : X ⥤ C) [p.IsFibered] (P : PullbackChoice p) :
     Nonempty (PullbackPseudofunctorData p P) := by
-  sorry
+  let obj : Cᵒᵖ → AssociatedTwoOneCategory (Cat.{v₁, u₁}) :=
+    fun U => Bicategory.Pith.mk (Cat.of (Functor.Fiber p U.unop))
+  let map : ∀ {U V : Cᵒᵖ}, (U ⟶ V) → (obj U ⟶ obj V) :=
+    fun {U V} f => Core.mk (P.pullbackFunctor f.unop).toCatHom
+  let mapId : ∀ U : Cᵒᵖ, map (𝟙 U) ≅ 𝟙 (obj U) := by
+    intro U
+    let α := Classical.choose (pullback_identity_iso p P U.unop)
+    dsimp only [obj, map]
+    letI : Category ((obj U).as ⟶ (obj U).as) := Cat.Hom.instCategory
+    let e := Cat.Hom.isoMk α.symm
+    refine { hom := ⟨e⟩, inv := ⟨e.symm⟩, hom_inv_id := ?_, inv_hom_id := ?_ }
+    · apply CoreHom.ext
+      apply Iso.ext
+      exact e.hom_inv_id
+    · apply CoreHom.ext
+      apply Iso.ext
+      exact e.inv_hom_id
+  let mapComp : ∀ {U V W : Cᵒᵖ} (f : U ⟶ V) (g : V ⟶ W),
+      map (f ≫ g) ≅ map f ≫ map g := by
+    intro U V W f g
+    let α := Classical.choose (pullback_composition_iso p P g.unop f.unop)
+    dsimp only [obj, map]
+    letI : Category ((obj U).as ⟶ (obj W).as) := Cat.Hom.instCategory
+    let e := Cat.Hom.isoMk α
+    refine { hom := ⟨e⟩, inv := ⟨e.symm⟩, hom_inv_id := ?_, inv_hom_id := ?_ }
+    · apply CoreHom.ext
+      apply Iso.ext
+      exact e.hom_inv_id
+    · apply CoreHom.ext
+      apply Iso.ext
+      exact e.inv_hom_id
+  let value : PseudofunctorFromCategory Cᵒᵖ
+      (AssociatedTwoOneCategory (Cat.{v₁, u₁})) :=
+    LocallyDiscrete.mkPseudofunctor obj map mapId mapComp
+      (map₂_associator := by
+        intro b₀ b₁ b₂ b₃ f g h)
+      (map₂_left_unitor := by
+        intro b₀ b₁ f)
+      (map₂_right_unitor := by
+        intro b₀ b₁ f)
+  refine ⟨{ value := value, object_fibre := ?_, map_pullback := ?_ }⟩
+  · intro U
+    rfl
+  · intro R S f
+    exact ⟨Iso.refl _⟩
 
 /-! ## Fibred categories over a fixed category -/
 
@@ -2575,6 +2619,14 @@ theorem ameliorate_fibred_morphism
             (ameliorationBase F).obj ((ameliorationFromX F).obj a) at g
         let hFa := congrArg (fun K : X.underlying.left ⥤ C => K.obj a)
           (overFunctor_comm F.underlying)
+        let hFaX :
+            (structureFunctor X.underlying).obj
+                ((ameliorationFromX F).obj a).obj.right =
+              (overFunctor F.underlying ⋙ structureFunctor Y.underlying).obj a := by
+          change (structureFunctor X.underlying).obj a =
+            (overFunctor F.underlying ⋙ structureFunctor Y.underlying).obj a
+          exact hFa.symm
+        dsimp [ameliorationFromX] at hFaX
         let hFb := congrArg (fun K : X.underlying.left ⥤ C => K.obj b)
           (overFunctor_comm F.underlying)
         let hFζ := congrArg (fun K : X.underlying.left ⥤ C => K.obj ζ.obj.right)
@@ -2584,6 +2636,11 @@ theorem ameliorate_fibred_morphism
               (overFunctor F.underlying).obj a := by
           rfl
         let hyaC := congrArg (structureFunctor Y.underlying).obj hya
+        have hFaX' :
+            (structureFunctor X.underlying).obj a =
+              (structureFunctor Y.underlying).obj
+                ((ameliorationToY F).obj ((ameliorationFromX F).obj a)) := by
+          exact hFa.symm.trans hyaC.symm
         let hFa' := hyaC.trans hFa
         let hFaBase : (ameliorationBase F).obj
               ((ameliorationFromX F).obj a) =
@@ -2792,6 +2849,8 @@ theorem ameliorate_fibred_morphism
         refine ⟨χ, ⟨hχbase, hχfac⟩, ?_⟩
         intro χ' hχ'
         rcases hχ' with ⟨hχ'base, hχ'fac⟩
+        let χ'right : ζ.obj.right ⟶ a := by
+          simpa [ameliorationFromX] using χ'.hom.right
         let _ : (ameliorationBase F).IsHomLift g χ' := hχ'base
         have hχ'map_base : g = (ameliorationBase F).map χ' :=
           CategoryTheory.IsHomLift.eq_of_isHomLift
@@ -2799,57 +2858,93 @@ theorem ameliorate_fibred_morphism
         have hχ'mapY : (structureFunctor Y.underlying).map χ'.hom.left = g := by
           simpa [ameliorationBase, ameliorationToY, Comma.fst,
             Category.assoc] using hχ'map_base.symm
-        have hχ'rightfac : χ'.hom.right ≫ φ = τright := by
+        have hχ'rightfac : χ'right ≫ φ = τright := by
           have hh := congrArg (fun k => k.hom.right) hχ'fac
+          change χ'.hom.right ≫ ((ameliorationFromX F).map φ).hom.right =
+            τ.hom.right at hh
           dsimp [τright]
-          simpa [ameliorationFromX, ObjectProperty.homMk] using hh
+          simpa [χ'right, ameliorationFromX, ObjectProperty.homMk] using hh
         have hχ'Wmap :
             (structureFunctor Y.underlying).map χ'.hom.left =
               (structureFunctor Y.underlying).map ζ.obj.hom ≫
                 (structureFunctor Y.underlying).map
-                  ((overFunctor F.underlying).map χ'.hom.right) := by
+                  ((overFunctor F.underlying).map χ'right) := by
           rw [← (structureFunctor Y.underlying).map_comp]
           simpa [ameliorationFromX, ObjectProperty.homMk] using
             congrArg (structureFunctor Y.underlying).map χ'.hom.w
         have hχ'Fmap :
             (structureFunctor Y.underlying).map
-                ((overFunctor F.underlying).map χ'.hom.right) =
+                ((overFunctor F.underlying).map χ'right) =
               eqToHom hFζ ≫
-                (structureFunctor X.underlying).map χ'.hom.right ≫
-                  eqToHom hFa.symm := by
+                (structureFunctor X.underlying).map χ'right ≫
+                  eqToHom hFaX' := by
           exact Functor.congr_hom (overFunctor_comm F.underlying)
-            χ'.hom.right
-        rw [hχ'mapY, hmapζ, hχ'Fmap] at hχ'Wmap
+            χ'right
         have hAB :
             eqToHom (hFζ.trans hζX).symm ≫ eqToHom hFζ =
               eqToHom hζX.symm := by
           rw [eqToHom_trans]
+        rw [hχ'mapY, hmapζ, hχ'Fmap] at hχ'Wmap
         have hχ'Eq :
             g = eqToHom hζX.symm ≫
-              (structureFunctor X.underlying).map χ'.hom.right ≫
-                eqToHom hFa.symm := by
-          calc
-            g = eqToHom (hFζ.trans hζX).symm ≫ eqToHom hFζ ≫
-                (structureFunctor X.underlying).map χ'.hom.right ≫
-                  eqToHom hFa.symm := hχ'Wmap
-            _ = eqToHom hζX.symm ≫
-                (structureFunctor X.underlying).map χ'.hom.right ≫
-                  eqToHom hFa.symm := by
-              rw [← Category.assoc, hAB]
-        have hFa_cast' : eqToHom hFa.symm ≫ eqToHom hFa = 𝟙 _ := by
+              (structureFunctor X.underlying).map χ'right ≫
+                eqToHom hFaX' := by
+          simpa [Category.assoc, hAB, ameliorationBase, ameliorationToY,
+            Comma.fst, ameliorationFromX, ObjectProperty.homMk] using hχ'Wmap
+        have hFa_cast' : eqToHom hFaX' ≫ eqToHom hFaX'.symm = 𝟙 _ := by
           rw [eqToHom_trans]
           exact eqToHom_refl _ _
         have hχ'Eq2 :
-            g ≫ eqToHom hFa =
+            g ≫ eqToHom hFaX'.symm =
               eqToHom hζX.symm ≫
-                (structureFunctor X.underlying).map χ'.hom.right := by
-          have hh := congrArg (fun k => k ≫ eqToHom hFa) hχ'Eq
-          simpa [Category.assoc, hFa_cast'] using hh
+                (structureFunctor X.underlying).map χ'right := by
+          have hh := congrArg (fun k => k ≫ eqToHom hFaX'.symm) hχ'Eq
+          calc
+            g ≫ eqToHom hFaX'.symm =
+                (eqToHom hζX.symm ≫
+                  (structureFunctor X.underlying).map χ'right ≫
+                  eqToHom hFaX') ≫ eqToHom hFaX'.symm := hh
+            _ = eqToHom hζX.symm ≫
+                (structureFunctor X.underlying).map χ'right ≫
+                  (eqToHom hFaX' ≫ eqToHom hFaX'.symm) := by
+              simp only [Category.assoc]
+            _ = eqToHom hζX.symm ≫
+                (structureFunctor X.underlying).map χ'right := by
+              rw [hFa_cast', Category.comp_id]
         have hχ'XMap :
-            (structureFunctor X.underlying).map χ'.hom.right = gX := by
+            (structureFunctor X.underlying).map χ'right = gX := by
           apply (cancel_epi (eqToHom hζX.symm)).1
-          simpa [gX, Category.assoc] using hχ'Eq2.symm
-        sorry
+          calc
+            eqToHom hζX.symm ≫
+                (structureFunctor X.underlying).map χ'right =
+                g ≫ eqToHom hFaX'.symm := hχ'Eq2.symm
+            _ = g ≫ eqToHom hFaBase := by
+              have hFaBase_eq : hFaX'.symm = hFaBase := Subsingleton.elim _ _
+              rw [hFaBase_eq]
+            _ = gY ≫ eqToHom hFa := hgX
+            _ = eqToHom hζX.symm ≫ gX := by
+              simp [gX, Category.assoc]
+        have hχ'right : (structureFunctor X.underlying).IsHomLift
+            gX χ'right := by
+          rw [← hχ'XMap]
+          exact Functor.IsHomLift.map χ'right
+        have hχ'rightEq : χ'right = χright :=
+          hχrightuniq χ'right ⟨hχ'right, hχ'rightfac⟩
+        have hχ'left : χ'.hom.left =
+            ζ.obj.hom ≫ (overFunctor F.underlying).map χ'right := by
+          have hw := χ'.hom.w
+          simpa [Functor.map_id, Category.id_comp, Category.comp_id,
+            ameliorationFromX, ObjectProperty.homMk] using hw
+        have hχleft : χ.hom.left =
+            ζ.obj.hom ≫ (overFunctor F.underlying).map χright := by
+          rfl
+        apply ObjectProperty.hom_ext
+        apply Comma.hom_ext
+        · exact hχ'left.trans ((congrArg (fun k =>
+            ζ.obj.hom ≫ (overFunctor F.underlying).map k) hχ'rightEq).trans
+              hχleft.symm)
+        · simpa [χ, χ'right, ameliorationFromX, ObjectProperty.homMk] using
+            hχ'rightEq
     v := ameliorationToY F
     v_over := by rfl
     v_preserves := by
@@ -2932,7 +3027,8 @@ theorem ameliorate_fibred_morphism
             _ = (structureFunctor X.underlying).map h.hom.right := by
               simp [Category.assoc, eqToHom_trans]
         simpa using hdesired
-    w_preserves := by simp [MapsStronglyCartesian]
+    w_preserves := by
+      simp [MapsStronglyCartesian]
     factorization := by
       refine CategoryTheory.Functor.ext (fun x => ?_) (fun x y f => ?_)
       · rfl

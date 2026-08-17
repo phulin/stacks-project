@@ -21,6 +21,7 @@ open Formalization.Books.Categories.Unit27
 open Formalization.Books.Derived.Unit05
 open Formalization.Books.Derived.Unit06
 open Formalization.Books.Derived.Unit14
+open Formalization.Books.Homology.Unit03
 open scoped CategoryTheory.Pretriangulated.Opposite ZeroObject
 
 universe v u v' u' w
@@ -418,7 +419,23 @@ end DerivedSubcategoryExact
 
 /-! ## Localization of the derived domain -/
 
-section DerivedLocalization
+section DerivedRestrictedProperties
+
+variable {D D' : Type*} [Category* D] [Category* D']
+  {S : MorphismProperty D} (hS : SaturatedMultiplicativeSystem S)
+  (F : D ⥤ D')
+
+abbrev rightDerivedRestrictedMorphismProperty :
+    MorphismProperty (rightDerivedSubcategory S hS F) :=
+  restrictedMorphismProperty S (rightDerivedProperty S hS F)
+
+abbrev leftDerivedRestrictedMorphismProperty :
+    MorphismProperty (leftDerivedSubcategory S hS F) :=
+  restrictedMorphismProperty S (leftDerivedProperty S hS F)
+
+end DerivedRestrictedProperties
+
+section RightDerivedRestrictedProperties
 
 variable {D D' : Type*} [Category* D] [Category* D']
   [Preadditive D] [Preadditive D'] [HasZeroObject D] [HasZeroObject D']
@@ -430,23 +447,38 @@ variable {D D' : Type*} [Category* D] [Category* D']
   {S : MorphismProperty D} (hS : SaturatedMultiplicativeSystem S)
   [CompatibleWithTriangulation S]
   (F : D ⥤ D') [F.CommShift ℤ] [F.IsTriangulated]
+  [(rightDerivedProperty S hS F).IsTriangulated]
 
-abbrev rightDerivedRestrictedMorphismProperty :
-    MorphismProperty (rightDerivedSubcategory S hS F) :=
-  restrictedMorphismProperty S (rightDerivedProperty S hS F)
-
-abbrev leftDerivedRestrictedMorphismProperty :
-    MorphismProperty (leftDerivedSubcategory S hS F) :=
-  restrictedMorphismProperty S (leftDerivedProperty S hS F)
-
-/-- The restricted denominator system is saturated and compatible with the
-triangulation. -/
+/-- The restricted right-derived denominator system is saturated and
+compatible with the triangulation. -/
 theorem rightDerivedRestrictedMorphismProperty_properties :
     SaturatedMultiplicativeSystem
         (rightDerivedRestrictedMorphismProperty hS F) ∧
       CompatibleWithTriangulation
         (rightDerivedRestrictedMorphismProperty hS F) := by
   sorry
+
+/-- A denominator in the right-derived domain is sent to an isomorphism. -/
+theorem rightDerivedFunctor_inverts_restricted :
+    (rightDerivedRestrictedMorphismProperty hS F).IsInvertedBy
+      (rightDerivedFunctor S hS F) := by
+  sorry
+
+end RightDerivedRestrictedProperties
+
+section LeftDerivedRestrictedProperties
+
+variable {D D' : Type*} [Category* D] [Category* D']
+  [Preadditive D] [Preadditive D'] [HasZeroObject D] [HasZeroObject D']
+  [HasShift D ℤ] [HasShift D' ℤ]
+  [∀ n : ℤ, (shiftFunctor D n).Additive]
+  [∀ n : ℤ, (shiftFunctor D' n).Additive]
+  [Pretriangulated D] [Pretriangulated D']
+  [CategoryTheory.IsTriangulated D] [CategoryTheory.IsTriangulated D']
+  {S : MorphismProperty D} (hS : SaturatedMultiplicativeSystem S)
+  [CompatibleWithTriangulation S]
+  (F : D ⥤ D') [F.CommShift ℤ] [F.IsTriangulated]
+  [(leftDerivedProperty S hS F).IsTriangulated]
 
 theorem leftDerivedRestrictedMorphismProperty_properties :
     SaturatedMultiplicativeSystem
@@ -455,17 +487,402 @@ theorem leftDerivedRestrictedMorphismProperty_properties :
         (leftDerivedRestrictedMorphismProperty hS F) := by
   sorry
 
-/-- A denominator in the derived domain is sent to an isomorphism. -/
-theorem rightDerivedFunctor_inverts_restricted :
-    (rightDerivedRestrictedMorphismProperty hS F).IsInvertedBy
-      (rightDerivedFunctor S hS F) := by
-  sorry
-
 theorem leftDerivedFunctor_inverts_restricted :
     (leftDerivedRestrictedMorphismProperty hS F).IsInvertedBy
       (leftDerivedFunctor S hS F) := by
   sorry
 
-end DerivedLocalization
+end LeftDerivedRestrictedProperties
+
+section RightDerivedLocalization
+
+variable {D D' : Type*} [Category* D] [Category* D']
+  [Preadditive D] [Preadditive D'] [HasZeroObject D] [HasZeroObject D']
+  [HasShift D ℤ] [HasShift D' ℤ]
+  [∀ n : ℤ, (shiftFunctor D n).Additive]
+  [∀ n : ℤ, (shiftFunctor D' n).Additive]
+  [Pretriangulated D] [Pretriangulated D']
+  [CategoryTheory.IsTriangulated D] [CategoryTheory.IsTriangulated D']
+  {S : MorphismProperty D} (hS : SaturatedMultiplicativeSystem S)
+  [LeftMultiplicativeSystem S] [RightMultiplicativeSystem S]
+  [CompatibleWithTriangulation S]
+  (F : D ⥤ D') [F.CommShift ℤ] [F.IsTriangulated]
+  [(rightDerivedProperty S hS F).IsTriangulated]
+  [LeftMultiplicativeSystem
+    (restrictedMorphismProperty S (rightDerivedProperty S hS F))]
+  [RightMultiplicativeSystem
+    (restrictedMorphismProperty S (rightDerivedProperty S hS F))]
+  [CompatibleWithTriangulation
+    (restrictedMorphismProperty S (rightDerivedProperty S hS F))]
+
+/-! ## The right-derived localization -/
+
+noncomputable def rightDerivedLocalizationEmbedding :
+    (rightDerivedRestrictedMorphismProperty hS F).Localization ⥤
+      S.Localization :=
+  fullSubcategoryLocalizationFunctor S (rightDerivedProperty S hS F)
+
+/-- The localization of the right-derived domain embeds fully faithfully and
+exactly into the localization of the ambient category. -/
+theorem rightDerivedLocalizationEmbedding_fullyFaithful_exact :
+    (rightDerivedLocalizationEmbedding hS F).Full ∧
+      (rightDerivedLocalizationEmbedding hS F).Faithful ∧
+        IsExactLocalizationFactor
+          (S := rightDerivedRestrictedMorphismProperty hS F)
+          (rightDerivedLocalizationEmbedding hS F) := by
+  sorry
+
+noncomputable def rightDerivedLocalizedFunctor :
+    (rightDerivedRestrictedMorphismProperty hS F).Localization ⥤ D' :=
+  localizationFactor (S := rightDerivedRestrictedMorphismProperty hS F)
+    (rightDerivedFunctor S hS F)
+    (rightDerivedFunctor_inverts_restricted hS F)
+
+theorem rightDerivedLocalizedFunctor_isExact :
+    IsExactLocalizationFactor
+      (S := rightDerivedRestrictedMorphismProperty hS F)
+      (rightDerivedLocalizedFunctor hS F) := by
+  sorry
+
+end RightDerivedLocalization
+
+section LeftDerivedLocalization
+
+variable {D D' : Type*} [Category* D] [Category* D']
+  [Preadditive D] [Preadditive D'] [HasZeroObject D] [HasZeroObject D']
+  [HasShift D ℤ] [HasShift D' ℤ]
+  [∀ n : ℤ, (shiftFunctor D n).Additive]
+  [∀ n : ℤ, (shiftFunctor D' n).Additive]
+  [Pretriangulated D] [Pretriangulated D']
+  [CategoryTheory.IsTriangulated D] [CategoryTheory.IsTriangulated D']
+  {S : MorphismProperty D} (hS : SaturatedMultiplicativeSystem S)
+  [LeftMultiplicativeSystem S] [RightMultiplicativeSystem S]
+  [CompatibleWithTriangulation S]
+  (F : D ⥤ D') [F.CommShift ℤ] [F.IsTriangulated]
+  [(leftDerivedProperty S hS F).IsTriangulated]
+  [LeftMultiplicativeSystem
+    (restrictedMorphismProperty S (leftDerivedProperty S hS F))]
+  [RightMultiplicativeSystem
+    (restrictedMorphismProperty S (leftDerivedProperty S hS F))]
+  [CompatibleWithTriangulation
+    (restrictedMorphismProperty S (leftDerivedProperty S hS F))]
+
+/-! ## The left-derived localization -/
+
+noncomputable def leftDerivedLocalizationEmbedding :
+    (leftDerivedRestrictedMorphismProperty hS F).Localization ⥤
+      S.Localization :=
+  fullSubcategoryLocalizationFunctor S (leftDerivedProperty S hS F)
+
+theorem leftDerivedLocalizationEmbedding_fullyFaithful_exact :
+    (leftDerivedLocalizationEmbedding hS F).Full ∧
+      (leftDerivedLocalizationEmbedding hS F).Faithful ∧
+        IsExactLocalizationFactor
+          (S := leftDerivedRestrictedMorphismProperty hS F)
+          (leftDerivedLocalizationEmbedding hS F) := by
+  sorry
+
+noncomputable def leftDerivedLocalizedFunctor :
+    (leftDerivedRestrictedMorphismProperty hS F).Localization ⥤ D' :=
+  localizationFactor (S := leftDerivedRestrictedMorphismProperty hS F)
+    (leftDerivedFunctor S hS F)
+    (leftDerivedFunctor_inverts_restricted hS F)
+
+theorem leftDerivedLocalizedFunctor_isExact :
+    IsExactLocalizationFactor
+      (S := leftDerivedRestrictedMorphismProperty hS F)
+      (leftDerivedLocalizedFunctor hS F) := by
+  sorry
+
+end LeftDerivedLocalization
+
+/-! ## Saturation of the derived domain -/
+
+section DerivedSaturation
+
+variable {D D' : Type*} [Category* D] [Category* D']
+  [AdditiveCategory D]
+  [Preadditive D'] [HasZeroObject D'] [HasBinaryBiproducts D']
+  [HasShift D ℤ] [HasShift D' ℤ]
+  [∀ n : ℤ, (shiftFunctor D n).Additive]
+  [∀ n : ℤ, (shiftFunctor D' n).Additive]
+  [Pretriangulated D] [Pretriangulated D']
+  [CategoryTheory.IsTriangulated D] [CategoryTheory.IsTriangulated D']
+  {S : MorphismProperty D} (hS : SaturatedMultiplicativeSystem S)
+  [CompatibleWithTriangulation S]
+  (F : D ⥤ D') [F.CommShift ℤ] [F.IsTriangulated]
+  [IsIdempotentComplete D']
+
+/-- If the target is Karoubian, the right-derived domain is saturated. -/
+theorem rightDerivedProperty_isSaturated :
+    Formalization.Books.Derived.Unit06.IsSaturated
+      (rightDerivedProperty S hS F) := by
+  sorry
+
+theorem leftDerivedProperty_isSaturated :
+    Formalization.Books.Derived.Unit06.IsSaturated
+      (leftDerivedProperty S hS F) := by
+  sorry
+
+theorem rightDerivedProperty_isStrictlyFullSaturatedPretriangulated :
+    Formalization.Books.Derived.Unit06.IsStrictlyFullSaturatedPretriangulated
+      (rightDerivedProperty S hS F) := by
+  sorry
+
+theorem leftDerivedProperty_isStrictlyFullSaturatedPretriangulated :
+    Formalization.Books.Derived.Unit06.IsStrictlyFullSaturatedPretriangulated
+      (leftDerivedProperty S hS F) := by
+  sorry
+
+end DerivedSaturation
+
+/-! ## Everywhere-defined functors and computing objects -/
+
+section EverywhereDefined
+
+variable {D D' : Type*} [Category* D] [Category* D']
+  {S : MorphismProperty D} (hS : SaturatedMultiplicativeSystem S)
+  (F : D ⥤ D')
+
+/-- The right-derived functor on all of `D`, once defined everywhere. -/
+noncomputable def rightDerivedEverywhereFunctor
+    (hF : RightDerivable S hS F) : D ⥤ D' where
+  obj X := rightDerivedValue S hS F X (hF X)
+  map {X Y} f := rightDerivedMap hS F f (hF X) (hF Y)
+  map_id := by sorry
+  map_comp := by sorry
+
+/-- The left-derived functor on all of `D`, once defined everywhere. -/
+noncomputable def leftDerivedEverywhereFunctor
+    (hF : LeftDerivable S hS F) : D ⥤ D' where
+  obj X := leftDerivedValue S hS F X (hF X)
+  map {X Y} f := leftDerivedMap hS F f (hF X) (hF Y)
+  map_id := by sorry
+  map_comp := by sorry
+
+theorem rightDerivedEverywhereFunctor_inverts
+    (hF : RightDerivable S hS F) :
+    S.IsInvertedBy (rightDerivedEverywhereFunctor hS F hF) := by
+  sorry
+
+theorem leftDerivedEverywhereFunctor_inverts
+    (hF : LeftDerivable S hS F) :
+    S.IsInvertedBy (leftDerivedEverywhereFunctor hS F hF) := by
+  sorry
+
+end EverywhereDefined
+
+section EverywhereLocalizationAndComputes
+
+variable {D D' : Type*} [Category* D] [Category* D']
+  [Preadditive D] [Preadditive D'] [HasZeroObject D] [HasZeroObject D']
+  [HasShift D ℤ] [HasShift D' ℤ]
+  [∀ n : ℤ, (shiftFunctor D n).Additive]
+  [∀ n : ℤ, (shiftFunctor D' n).Additive]
+  [Pretriangulated D] [Pretriangulated D']
+  [CategoryTheory.IsTriangulated D] [CategoryTheory.IsTriangulated D']
+  {S : MorphismProperty D} (hS : SaturatedMultiplicativeSystem S)
+  [LeftMultiplicativeSystem S] [RightMultiplicativeSystem S]
+  [CompatibleWithTriangulation S]
+  (F : D ⥤ D') [F.CommShift ℤ] [F.IsTriangulated]
+
+/-- The everywhere-defined right-derived functor on the localization. -/
+noncomputable def rightDerivedEverywhereLocalizedFunctor
+    (hF : RightDerivable S hS F) : S.Localization ⥤ D' :=
+  localizationFactor (S := S)
+    (rightDerivedEverywhereFunctor hS F hF)
+    (rightDerivedEverywhereFunctor_inverts hS F hF)
+
+/-- The everywhere-defined left-derived functor on the localization. -/
+noncomputable def leftDerivedEverywhereLocalizedFunctor
+    (hF : LeftDerivable S hS F) : S.Localization ⥤ D' :=
+  localizationFactor (S := S)
+    (leftDerivedEverywhereFunctor hS F hF)
+    (leftDerivedEverywhereFunctor_inverts hS F hF)
+
+theorem rightDerivedEverywhereLocalizedFunctor_isExact
+    (hF : RightDerivable S hS F) :
+    IsExactLocalizationFactor
+      (S := S) (rightDerivedEverywhereLocalizedFunctor hS F hF) := by
+  sorry
+
+theorem leftDerivedEverywhereLocalizedFunctor_isExact
+    (hF : LeftDerivable S hS F) :
+    IsExactLocalizationFactor
+      (S := S) (leftDerivedEverywhereLocalizedFunctor hS F hF) := by
+  sorry
+
+/-! ## Computing lemmas -/
+
+theorem rightDerived_computes_iff_shift
+    (X : D) (n : ℤ) :
+    ComputesRightDerived S hS F X ↔
+      ComputesRightDerived S hS F ((shiftFunctor D n).obj X) := by
+  sorry
+
+theorem leftDerived_computes_iff_shift
+    (X : D) (n : ℤ) :
+    ComputesLeftDerived S hS F X ↔
+      ComputesLeftDerived S hS F ((shiftFunctor D n).obj X) := by
+  sorry
+
+theorem rightDerived_two_out_of_three_computes
+    (T : Triangle D) (hT : T ∈ distTriang D)
+    (h₁ : ComputesRightDerived S hS F T.obj₁)
+    (h₂ : ComputesRightDerived S hS F T.obj₂) :
+    ComputesRightDerived S hS F T.obj₃ := by
+  sorry
+
+theorem leftDerived_two_out_of_three_computes
+    (T : Triangle D) (hT : T ∈ distTriang D)
+    (h₁ : ComputesLeftDerived S hS F T.obj₁)
+    (h₂ : ComputesLeftDerived S hS F T.obj₂) :
+    ComputesLeftDerived S hS F T.obj₃ := by
+  sorry
+
+theorem rightDerived_biproduct_computes
+    [HasBinaryBiproducts D] [HasBinaryBiproducts D']
+    (X Y : D) :
+    ComputesRightDerived S hS F (X ⊞ Y) →
+      ComputesRightDerived S hS F X ∧ ComputesRightDerived S hS F Y := by
+  sorry
+
+theorem leftDerived_biproduct_computes
+    [HasBinaryBiproducts D] [HasBinaryBiproducts D']
+    (X Y : D) :
+    ComputesLeftDerived S hS F (X ⊞ Y) →
+      ComputesLeftDerived S hS F X ∧ ComputesLeftDerived S hS F Y := by
+  sorry
+
+theorem rightDerived_everywhere_of_computing_replacements
+    (h : ∀ X : D, ∃ X' : D, ∃ s : X ⟶ X',
+      S s ∧ ComputesRightDerived S hS F X') :
+    RightDerivable S hS F := by
+  sorry
+
+theorem leftDerived_everywhere_of_computing_replacements
+    (h : ∀ X : D, ∃ X' : D, ∃ s : X' ⟶ X,
+      S s ∧ ComputesLeftDerived S hS F X') :
+    LeftDerivable S hS F := by
+  sorry
+
+end EverywhereLocalizationAndComputes
+
+section ComputingFamilies
+
+variable {D D' : Type*} [Category* D] [Category* D']
+  {S : MorphismProperty D} (F : D ⥤ D')
+
+/-- A right-computing family is cofinal for `X/S` and is stable under
+denominators after applying `F`. -/
+def RightComputingFamily (S : MorphismProperty D) (F : D ⥤ D')
+    (I : Set D) : Prop :=
+  (∀ X : D, ∃ X' : D, ∃ s : X ⟶ X', I X' ∧ S s) ∧
+    (∀ ⦃X X' : D⦄ (s : X ⟶ X'), I X → I X' → S s →
+      IsIso (F.map s))
+
+/-- A left-computing family is coinitial for `S/X` and is stable under
+denominators after applying `F`. -/
+def LeftComputingFamily (S : MorphismProperty D) (F : D ⥤ D')
+    (I : Set D) : Prop :=
+  (∀ X : D, ∃ X' : D, ∃ s : X' ⟶ X, I X' ∧ S s) ∧
+    (∀ ⦃X X' : D⦄ (s : X ⟶ X'), I X → I X' → S s →
+      IsIso (F.map s))
+
+theorem rightDerived_everywhere_and_computes_of_family
+    (hS : SaturatedMultiplicativeSystem S) (I : Set D)
+    (hI : RightComputingFamily S F I) :
+    RightDerivable S hS F ∧
+      ∀ X : D, I X → ComputesRightDerived S hS F X := by
+  sorry
+
+theorem leftDerived_everywhere_and_computes_of_family
+    (hS : SaturatedMultiplicativeSystem S) (I : Set D)
+    (hI : LeftComputingFamily S F I) :
+    LeftDerivable S hS F ∧
+      ∀ X : D, I X → ComputesLeftDerived S hS F X := by
+  sorry
+
+end ComputingFamilies
+
+/-! ## Composition of derived functors -/
+
+section Composition
+
+variable {A B C : Type*}
+  [Category* A] [Category* B] [Category* C]
+  [Preadditive A] [Preadditive B] [Preadditive C]
+  [HasZeroObject A] [HasZeroObject B] [HasZeroObject C]
+  [HasShift A ℤ] [HasShift B ℤ] [HasShift C ℤ]
+  [∀ n : ℤ, (shiftFunctor A n).Additive]
+  [∀ n : ℤ, (shiftFunctor B n).Additive]
+  [∀ n : ℤ, (shiftFunctor C n).Additive]
+  [Pretriangulated A] [Pretriangulated B] [Pretriangulated C]
+  [CategoryTheory.IsTriangulated A]
+  [CategoryTheory.IsTriangulated B]
+  [CategoryTheory.IsTriangulated C]
+  {S : MorphismProperty A} (hS : SaturatedMultiplicativeSystem S)
+  {S' : MorphismProperty B} (hS' : SaturatedMultiplicativeSystem S')
+  [LeftMultiplicativeSystem S] [RightMultiplicativeSystem S]
+  [CompatibleWithTriangulation S]
+  [LeftMultiplicativeSystem S'] [RightMultiplicativeSystem S']
+  [CompatibleWithTriangulation S']
+  (F : A ⥤ B) (G : B ⥤ C)
+  [F.CommShift ℤ] [F.IsTriangulated]
+  [G.CommShift ℤ] [G.IsTriangulated]
+
+/-- The functor called `F'` in the composition lemma. -/
+noncomputable def localizedFunctor : A ⥤ S'.Localization :=
+  F ⋙ S'.Q
+
+theorem rightDerived_composition_transformation
+    (hF' : RightDerivable S hS (localizedFunctor F))
+    (hG : RightDerivable S' hS' G)
+    (hGF : RightDerivable S hS (F ⋙ G)) :
+    Nonempty
+      (NatTrans
+        (rightDerivedEverywhereLocalizedFunctor hS (F ⋙ G) hGF)
+        ((rightDerivedEverywhereLocalizedFunctor hS
+            (localizedFunctor F) hF') ⋙
+          rightDerivedEverywhereLocalizedFunctor hS' G hG)) := by
+  sorry
+
+noncomputable def rightDerivedCompositionTransformation
+    (hF' : RightDerivable S hS (localizedFunctor F))
+    (hG : RightDerivable S' hS' G)
+    (hGF : RightDerivable S hS (F ⋙ G)) :
+    NatTrans
+      (rightDerivedEverywhereLocalizedFunctor hS (F ⋙ G) hGF)
+      ((rightDerivedEverywhereLocalizedFunctor hS
+          (localizedFunctor F) hF') ⋙
+        rightDerivedEverywhereLocalizedFunctor hS' G hG) :=
+  Classical.choice (rightDerived_composition_transformation
+    hS hS' F G hF' hG hGF)
+
+theorem leftDerived_composition_transformation
+    (hF' : LeftDerivable S hS (localizedFunctor F))
+    (hG : LeftDerivable S' hS' G)
+    (hGF : LeftDerivable S hS (F ⋙ G)) :
+    Nonempty
+      (NatTrans
+        ((leftDerivedEverywhereLocalizedFunctor hS
+            (localizedFunctor F) hF') ⋙
+          leftDerivedEverywhereLocalizedFunctor hS' G hG)
+        (leftDerivedEverywhereLocalizedFunctor hS (F ⋙ G) hGF)) := by
+  sorry
+
+noncomputable def leftDerivedCompositionTransformation
+    (hF' : LeftDerivable S hS (localizedFunctor F))
+    (hG : LeftDerivable S' hS' G)
+    (hGF : LeftDerivable S hS (F ⋙ G)) :
+    NatTrans
+      ((leftDerivedEverywhereLocalizedFunctor hS
+          (localizedFunctor F) hF') ⋙
+        leftDerivedEverywhereLocalizedFunctor hS' G hG)
+      (leftDerivedEverywhereLocalizedFunctor hS (F ⋙ G) hGF) :=
+  Classical.choice (leftDerived_composition_transformation
+    hS hS' F G hF' hG hGF)
+
+end Composition
 
 end Formalization.Books.Derived.Unit14

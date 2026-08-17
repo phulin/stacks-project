@@ -1,5 +1,3 @@
-import Mathlib.FieldTheory.IsAlgClosed.AlgebraicClosure
-import Mathlib.FieldTheory.Normal.Closure
 import Mathlib.FieldTheory.SeparableDegree
 import Mathlib.RingTheory.PiTensorProduct
 
@@ -55,8 +53,7 @@ theorem splitting_field_spec
 theorem normal_closure_spec
     {F E L : Type*} [Field F] [Field E] [Field L]
     [Algebra F E] [Algebra F L] [Algebra E L] [IsScalarTower F E L]
-    [FiniteDimensional F E] [Normal F L]
-    (hEmb : Nonempty (E →ₐ[F] L)) :
+    [FiniteDimensional F E] [Normal F L] :
     let K := IntermediateField.normalClosure F E L
     Normal F K ∧
       FiniteDimensional F K ∧
@@ -84,7 +81,7 @@ theorem normal_closure_finite_over_middle
    extension into the algebraic closure the algebra structure used on the
    normal closure. -/
 theorem exists_normal_closure_of_finite_extension
-    {F E : Type u} [Field F] [Field E] [Algebra F E]
+    {F : Type u} {E : Type v} [Field F] [Field E] [Algebra F E]
     [FiniteDimensional F E] :
     ∃ ι : E →ₐ[F] AlgebraicClosure F,
       letI : Algebra E (AlgebraicClosure F) := ι.toRingHom.toAlgebra

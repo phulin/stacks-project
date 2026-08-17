@@ -46,13 +46,14 @@ theorem equivalent_stacks_in_groupoids_preserve
   · rintro ⟨hFgroup, hFstack⟩
     refine ⟨?_, (equivalent_fibred_categories_preserve_stack η hη).mp hFstack⟩
     intro U
-    letI := hFgroup U
     rcases hη.1 U with ⟨hηff⟩
-    letI := hη.2 U
+    let hηess := hη.2 U
     constructor
     intro X Y f
-    let eX := (η.app (.mk (op U))).toFunctor.objObjPreimageIso X
-    let eY := (η.app (.mk (op U))).toFunctor.objObjPreimageIso Y
+    let eX :=
+      @Functor.objObjPreimageIso _ _ _ _ (η.app (.mk (op U))).toFunctor hηess X
+    let eY :=
+      @Functor.objObjPreimageIso _ _ _ _ (η.app (.mk (op U))).toFunctor hηess Y
     let a := hηff.preimage (eX.hom ≫ f ≫ eY.inv)
     have ha : (η.app (.mk (op U))).toFunctor.map a =
         eX.hom ≫ f ≫ eY.inv := hηff.map_preimage _
@@ -60,16 +61,21 @@ theorem equivalent_stacks_in_groupoids_preserve
         (η.app (.mk (op U))).toFunctor.map a ≫ eY.hom := by
       rw [ha]
       simp
+    let haIso : IsIso a := IsGroupoid.all_isIso (self := hFgroup U) a
+    let hmapIso : IsIso ((η.app (.mk (op U))).toFunctor.map a) :=
+      @Functor.map_isIso _ _ _ _ _ _ (η.app (.mk (op U))).toFunctor a haIso
     rw [hf]
-    infer_instance
+    exact IsIso.comp_isIso'
+      eX.isIso_inv (IsIso.comp_isIso' hmapIso eY.isIso_hom)
   · rintro ⟨hGgroup, hGstack⟩
     refine ⟨?_, (equivalent_fibred_categories_preserve_stack η hη).mpr hGstack⟩
     intro U
-    letI := hGgroup U
     rcases hη.1 U with ⟨hηff⟩
     constructor
     intro X Y f
-    exact hηff.isIso_of_isIso_map f
+    let hmap : IsIso ((η.app (.mk (op U))).toFunctor.map f) :=
+      IsGroupoid.all_isIso (self := hGgroup U) _
+    exact @Functor.FullyFaithful.isIso_of_isIso_map _ _ _ _ _ hηff _ _ f hmap
 
 def IsGroupoidTwoMorphism {C : Type u} [Category.{v} C]
     {J : GrothendieckTopology C} {X Y : StackInGroupoidsObject C J}

@@ -219,13 +219,14 @@ theorem equivalent_stacks_in_setoids_preserve
         ⟨hFsetoid.1, hFstack⟩
     refine ⟨⟨hGgroupstack.1, ?_⟩, hGgroupstack.2⟩
     intro U Y Z
-    haveI := hη.2 U
     rcases hη.1 U with ⟨hηff⟩
-    let x := (η.app (.mk (op U))).toFunctor.objPreimage Y
-    let y := (η.app (.mk (op U))).toFunctor.objPreimage Z
-    let eY := (η.app (.mk (op U))).toFunctor.objObjPreimageIso Y
-    let eZ := (η.app (.mk (op U))).toFunctor.objObjPreimageIso Z
-    haveI := hFsetoid.2 U x y
+    let hηess := hη.2 U
+    let x := @Functor.objPreimage _ _ _ _ (η.app (.mk (op U))).toFunctor hηess Y
+    let y := @Functor.objPreimage _ _ _ _ (η.app (.mk (op U))).toFunctor hηess Z
+    let eY :=
+      @Functor.objObjPreimageIso _ _ _ _ (η.app (.mk (op U))).toFunctor hηess Y
+    let eZ :=
+      @Functor.objObjPreimageIso _ _ _ _ (η.app (.mk (op U))).toFunctor hηess Z
     constructor
     intro a b
     let a' := hηff.preimage (eY.hom ≫ a ≫ eZ.inv)
@@ -234,7 +235,7 @@ theorem equivalent_stacks_in_setoids_preserve
         eY.hom ≫ a ≫ eZ.inv := hηff.map_preimage _
     have hb : (η.app (.mk (op U))).toFunctor.map b' =
         eY.hom ≫ b ≫ eZ.inv := hηff.map_preimage _
-    have hab' : a' = b' := Subsingleton.elim _ _
+    have hab' : a' = b' := @Subsingleton.elim _ (hFsetoid.2 U x y) a' b'
     apply (cancel_epi eY.hom).1
     apply (cancel_mono eZ.inv).1
     calc
@@ -250,13 +251,15 @@ theorem equivalent_stacks_in_setoids_preserve
     refine ⟨⟨hFgroupstack.1, ?_⟩, hFgroupstack.2⟩
     intro U X Y
     rcases hη.1 U with ⟨hηff⟩
-    haveI := hGsetoid.2 U
-      ((η.app (.mk (op U))).toFunctor.obj X)
-      ((η.app (.mk (op U))).toFunctor.obj Y)
     constructor
     intro a b
     apply hηff.map_injective
-    exact Subsingleton.elim _ _
+    exact @Subsingleton.elim _
+      (hGsetoid.2 U
+        ((η.app (.mk (op U))).toFunctor.obj X)
+        ((η.app (.mk (op U))).toFunctor.obj Y))
+      ((η.app (.mk (op U))).toFunctor.map a)
+      ((η.app (.mk (op U))).toFunctor.map b)
 
 theorem two_fibre_product_of_stacks_in_setoids
     {C : Type u} [Category.{v} C] (J : GrothendieckTopology C)

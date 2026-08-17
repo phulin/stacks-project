@@ -462,6 +462,11 @@ theorem fibredInSetsObjectPresheaf_obj_equiv
         Functor.Fiber p U) := by
   exact (Classical.choose_spec (fibredInSets_object_presheaf_exists p hp)) U
 
+/- The source warns that representability of the associated presheaf is not
+   invariant under equivalence of categories fibred in groupoids.  This is
+   motivation for the later equivalence-invariant treatment, rather than a
+   separate predicate; the precise correspondence is recorded above. -/
+
 /-! ## The representable example -/
 
 @[simp]

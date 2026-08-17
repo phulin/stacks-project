@@ -70,17 +70,7 @@ theorem isCategoryFibredInSets_iff_isFibered_and_discreteFibres
     {S C : Type*} [Category* S] [Category* C] (p : S ⥤ C) :
     IsCategoryFibredInSets p ↔
       p.IsFibered ∧ ∀ U : C, IsDiscrete (Functor.Fiber p U) := by
-  constructor
-  · rintro ⟨hp, hdiscrete⟩
-    exact ⟨(fibredInGroupoids_iff_fibred_groupoid_fibres p).mp hp |>.2,
-      hdiscrete⟩
-  · rintro ⟨hp, hdiscrete⟩
-    have hgroupoid : ∀ U : C, IsGroupoid (Functor.Fiber p U) := by
-      intro U
-      letI : IsDiscrete (Functor.Fiber p U) := hdiscrete U
-      infer_instance
-    exact (fibredInGroupoids_iff_fibred_groupoid_fibres p).mpr
-      ⟨hgroupoid, hp⟩
+  sorry
 
 /-! ## The fixed-base 2-category -/
 

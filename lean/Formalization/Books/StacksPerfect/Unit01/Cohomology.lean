@@ -1,0 +1,90 @@
+import Formalization.Books.StacksPerfect.Unit01.Sites
+
+/-!
+# Derived Categories of Stacks, Chapter 1: cohomology comparisons
+
+The local cohomology assertion in the source is written with `H^p(x, K)` on
+the left and a derived global-sections object on the right.  The right-hand
+side has the derived type, so the source-faithful categorical statement is
+recorded as an isomorphism of derived global-sections objects; this is the
+small correction listed in the final report.
+-/
+
+noncomputable section
+
+open CategoryTheory CategoryTheory.Limits
+open Formalization.Books.StacksMorphisms.Unit07
+
+universe u
+
+namespace Formalization.Books.StacksPerfect.Unit01
+
+variable {𝒮 : Type u} [Category.{u} 𝒮]
+  [AlgebraicStackCategory 𝒮]
+
+/-- The constant derived integer object on each of the four sites. -/
+class ConstantIntegerData (X : 𝒮) [StackSiteData X]
+    [StackCohomologyData X] where
+  object : ∀ τ : SiteKind, SiteDerivedCategory X τ .abelian
+
+def ConstantIntegerObject (X : 𝒮) [StackSiteData X]
+    [StackCohomologyData X] [ConstantIntegerData X] (τ : SiteKind) :
+    SiteDerivedCategory X τ .abelian :=
+  ConstantIntegerData.object (X := X) τ
+
+/-! ## The constant-integer comparison -/
+
+/-- `Lg_! ℤ = ℤ` for either the lisse-étale or the flat-fppf comparison. -/
+theorem lemma_higher_shriek_Z (X : 𝒮) [StackSiteData X]
+    [SiteComparisonData X] [StackCohomologyData X] [ConstantIntegerData X] :
+    ∀ c : ComparisonKind,
+      Nonempty ((derivedShriek X c .abelian).obj
+          (ConstantIntegerObject X (fineSite c)) ≅
+        ConstantIntegerObject X (coarseSite c)) := by
+  sorry
+
+/-- Derived cohomology on the coarse site agrees with derived cohomology on
+the corresponding flat site, both globally and over every object.  The
+coefficient index records the source's separate abelian-sheaf and module
+statements; in particular the module case is not identified with the
+abelian-sheaf case by fiat. -/
+theorem lemma_lisse_etale_cohomology (X : 𝒮) [StackSiteData X]
+    [SiteComparisonData X] [StackCohomologyData X] :
+    ∀ c : ComparisonKind, ∀ κ : CoefficientKind,
+      ∀ K : SiteDerivedCategory X (coarseSite c) κ,
+        Nonempty ((DerivedGlobalSections X (coarseSite c) κ).obj K ≅
+          (DerivedGlobalSections X (fineSite c) κ).obj
+            ((derivedInverseImage X c κ).obj K)) ∧
+        ∀ x : StackCohomologyData.siteObject (X := X) (fineSite c),
+          Nonempty ((DerivedSectionsAt X (coarseSite c) κ
+              (StackCohomologyData.coarseObject (X := X) c x)).obj K ≅
+            (DerivedSectionsAt X (fineSite c) κ x).obj
+              ((derivedInverseImage X c κ).obj K)) := by
+  sorry
+
+/-! ## Derived global and local sections -/
+
+/-- The global-sections comparison for one coefficient category and one site
+comparison. -/
+def globalSectionsComparisonIso (X : 𝒮) [StackSiteData X]
+    [SiteComparisonData X] [StackCohomologyData X]
+    (c : ComparisonKind) (κ : CoefficientKind)
+    (K : SiteDerivedCategory X (coarseSite c) κ) :
+    (DerivedGlobalSections X (coarseSite c) κ).obj K ≅
+      (DerivedGlobalSections X (fineSite c) κ).obj
+        ((derivedInverseImage X c κ).obj K) :=
+  Classical.choice (lemma_lisse_etale_cohomology X c κ K).1
+
+/-- The local-sections comparison for a fine-site object. -/
+def localSectionsComparisonIso (X : 𝒮) [StackSiteData X]
+    [SiteComparisonData X] [StackCohomologyData X]
+    (c : ComparisonKind) (κ : CoefficientKind)
+    (K : SiteDerivedCategory X (coarseSite c) κ)
+    (x : StackCohomologyData.siteObject (X := X) (fineSite c)) :
+    (DerivedSectionsAt X (coarseSite c) κ
+        (StackCohomologyData.coarseObject (X := X) c x)).obj K ≅
+      (DerivedSectionsAt X (fineSite c) κ x).obj
+        ((derivedInverseImage X c κ).obj K) :=
+  Classical.choice ((lemma_lisse_etale_cohomology X c κ K).2 x)
+
+end Formalization.Books.StacksPerfect.Unit01

@@ -2,6 +2,7 @@ import Formalization.Books.Sheaves.Unit22.AbelianSheaves
 import Formalization.Books.Sheaves.Unit05.PresheavesOfAlgebraicStructures
 import Formalization.Books.Sheaves.Unit09.SheavesOfAlgebraicStructures
 import Formalization.Books.Sheaves.Unit15.AlgebraicStructures
+import Formalization.Books.Sheaves.Unit16.ExactnessAndPoints
 import Mathlib.CategoryTheory.Sites.Sheafification
 import Mathlib.Topology.Sheaves.Functors
 import Mathlib.Topology.Sheaves.Stalks
@@ -40,6 +41,12 @@ abbrev AlgebraicSheaf (C : Type u) [Category.{v} C] (X : TopCat.{v}) :=
 abbrev algebraicUnderlyingPresheaf {C : Type u} [Category.{v} C]
     (F : C ⥤ Type v) {X : TopCat.{v}} (P : AlgebraicPresheaf C X) :=
   Formalization.Books.Sheaves.Unit05.underlyingPresheaf F P
+
+/-- The underlying set-valued sheaf of a category-valued sheaf. -/
+noncomputable abbrev algebraicUnderlyingSheaf {C : Type u} [Category.{v} C]
+    (F : C ⥤ Type v) [AlgebraicStructureType C F] {X : TopCat.{v}}
+    (P : AlgebraicSheaf C X) : TopCat.Sheaf (Type v) X :=
+  Formalization.Books.Sheaves.Unit16.underlyingSheaf F P
 
 /-- Pushforward of category-valued presheaves. -/
 abbrev algebraicPresheafPushforward (C : Type u) [Category.{v} C]
@@ -214,6 +221,22 @@ theorem algebraicSheafPushforward_underlying_formula
           (algebraicUnderlyingPresheaf F G.presheaf)) := by
   simpa only [algebraicSheafPushforward_obj_presheaf] using
     (algebraicPresheafPushforward_underlying_formula F f G.presheaf)
+
+/-- The underlying-set formula for the pullback of algebraic sheaves. -/
+theorem algebraicSheafPullback_underlying_formula
+    {C : Type u} [Category.{v} C] (F : C ⥤ Type v)
+    [AlgebraicStructureType C F]
+    {FC : C → C → Type*} {CC : C → Type v}
+    [∀ X Y, FunLike (FC X Y) (CC X) (CC Y)] [ConcreteCategory C FC]
+    [HasColimits C]
+    [PreservesLimits (CategoryTheory.forget C)]
+    [PreservesFilteredColimits (CategoryTheory.forget C)]
+    [(CategoryTheory.forget C).ReflectsIsomorphisms]
+    {X Y : TopCat.{v}} (f : X ⟶ Y) (G : AlgebraicSheaf C Y) :
+    Nonempty
+      (algebraicUnderlyingSheaf F ((algebraicSheafPullback C f).obj G) ≅
+        (TopCat.Sheaf.pullback (Type v) f).obj (algebraicUnderlyingSheaf F G)) := by
+  sorry
 
 /-! ## Algebraic `f`-maps -/
 

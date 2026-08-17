@@ -560,14 +560,15 @@ structure BasisFMapAboveBelowData {X Y : TopCat.{v}} {ι : Type v} {κ : Type v}
     (f : X ⟶ Y) (Bₓ : ι → Opens X) (Bᵧ : κ → Opens Y)
     {C : Type v} [Category.{v} C]
     (G : TopCat.Sheaf C Y) (F : TopCat.Sheaf C X) where
-  app : ∀ (U : Opens X) (V : Opens Y), U ≤ (Opens.map f).obj V →
-    Quiver.Hom (categorySheafSections (C := C) G V)
-      (categorySheafSections (C := C) F U)
-  naturality : ∀ {U U' : Opens X} {V V' : Opens Y}
-    (hUU' : U' ≤ U) (hVV' : V' ≤ V)
-    (hU : U ≤ (Opens.map f).obj V) (hU' : U' ≤ (Opens.map f).obj V'),
-    app U V hU ≫ F.presheaf.map (homOfLE hUU').op =
-      G.presheaf.map (homOfLE hVV').op ≫ app U' V' hU'
+  app : ∀ (i : ι) (j : κ), Bₓ i ≤ (Opens.map f).obj (Bᵧ j) →
+    Quiver.Hom (categorySheafSections (C := C) G (Bᵧ j))
+      (categorySheafSections (C := C) F (Bₓ i))
+  naturality : ∀ {i i' : ι} {j j' : κ}
+    (hii' : Bₓ i' ≤ Bₓ i) (hjj' : Bᵧ j' ≤ Bᵧ j)
+    (hij : Bₓ i ≤ (Opens.map f).obj (Bᵧ j))
+    (hi'j' : Bₓ i' ≤ (Opens.map f).obj (Bᵧ j')),
+    app i j hij ≫ F.presheaf.map (homOfLE hii').op =
+      G.presheaf.map (homOfLE hjj').op ≫ app i' j' hi'j'
 
 /-- The scalar map from a target-basis section to a source-basis section. -/
 def ringedSpaceBasisScalarMap {X Y : RingedSpace.{v}}
@@ -606,8 +607,9 @@ theorem basisFMap_above_below_unique {X Y : TopCat.{v}} {ι : Type v} {κ : Type
     (Bᵧ : κ → Opens Y) (hBᵧ : Opens.IsBasis (Set.range Bᵧ))
     (d : BasisFMapAboveBelowData f Bₓ Bᵧ G F) :
     ∃! ψ : G ⟶ (TopCat.Sheaf.pushforward C f).obj F,
-      ∀ (U : Opens X) (V : Opens Y) (h : U ≤ (Opens.map f).obj V),
-        ψ.hom.app (op V) ≫ F.presheaf.map (homOfLE h).op = d.app U V h := by
+      ∀ (i : ι) (j : κ) (h : Bₓ i ≤ (Opens.map f).obj (Bᵧ j)),
+        ψ.hom.app (op (Bᵧ j)) ≫ F.presheaf.map (homOfLE h).op =
+          d.app i j h := by
   sorry
 
 /-- On stalks the map obtained from two bases is the filtered colimit of the
@@ -617,11 +619,11 @@ def basisFMap_above_below_stalk_colimit {X Y : TopCat.{v}} {ι : Type v} {κ : T
     (F : TopCat.Sheaf C X) (G : TopCat.Sheaf C Y)
     (Bₓ : ι → Opens X) (Bᵧ : κ → Opens Y)
     (d : BasisFMapAboveBelowData f Bₓ Bᵧ G F) (x : X) : Prop :=
-  ∃ ξ : G.presheaf.stalk (f x) ⟶ F.presheaf.stalk x,
+    ∃ ξ : G.presheaf.stalk (f x) ⟶ F.presheaf.stalk x,
     ∀ (i : ι) (j : κ) (hij : Bₓ i ≤ (Opens.map f).obj (Bᵧ j))
       (hx : x ∈ Bₓ i) (hy : f x ∈ Bᵧ j),
       G.presheaf.germ (Bᵧ j) (f x) hy ≫ ξ =
-        d.app (Bₓ i) (Bᵧ j) hij ≫ F.presheaf.germ (Bₓ i) x hx
+        d.app i j hij ≫ F.presheaf.germ (Bₓ i) x hx
 
 /-- The module version of the two-basis `f`-map theorem. -/
 theorem basisFMapModule_above_below_unique {X Y : RingedSpace} {ι : Type v} {κ : Type v}

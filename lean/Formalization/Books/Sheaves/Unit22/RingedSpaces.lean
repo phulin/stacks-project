@@ -122,6 +122,28 @@ noncomputable def realContinuousFunctionRingSheaf (X : TopCat) :
           (CategoryTheory.forget₂ CommRingCat RingCat)
           (realContinuousFunctionPresheaf X)).mp hComm }
 
+/-- The real-valued continuous-function presheaf with its canonical
+real-algebra structure on sections. -/
+abbrev realContinuousFunctionAlgebraPresheaf (X : TopCat) :
+    TopCat.Presheaf (AlgCat ℝ) X :=
+  Formalization.Books.Sheaves.Unit09.realContinuousFunctionAlgebraPresheaf X
+
+/-- The real-algebra-valued continuous-function presheaf is a sheaf. -/
+theorem realContinuousFunctionAlgebraPresheaf_isSheaf (X : TopCat) :
+    Formalization.Books.Sheaves.Unit09.CategoryValuedSheaf
+      (realContinuousFunctionAlgebraPresheaf X) :=
+  Formalization.Books.Sheaves.Unit09.realContinuousFunctionAlgebraPresheaf_isSheaf X
+
+/-- The sheaf of continuous real-valued functions with its real-algebra
+structure. -/
+noncomputable def realContinuousFunctionAlgebraSheaf (X : TopCat) :
+    AlgebraicSheaf (AlgCat ℝ) X :=
+  { obj := realContinuousFunctionAlgebraPresheaf X
+    property :=
+      (Formalization.Books.Sheaves.Unit09.categoryValuedSheaf_iff_isSheaf
+        (realContinuousFunctionAlgebraPresheaf X)).mp
+        (realContinuousFunctionAlgebraPresheaf_isSheaf X) }
+
 /-- Pullback of a real-valued continuous function along a continuous map is a
 map of sheaves of rings. -/
 noncomputable def continuousFunctionRingedSharp {X Y : TopCat}
@@ -151,6 +173,14 @@ noncomputable def continuousFunctionRingedSharp {X Y : TopCat}
         ext φ
         rfl }
   exact ObjectProperty.homMk α
+
+/-- Continuous-function pullback is an `ℝ`-algebra-valued `f`-map. -/
+theorem continuousFunctionAlgebraSharp_exists {X Y : TopCat} (f : X ⟶ Y) :
+    Nonempty
+      (AlgebraicFMap (C := AlgCat ℝ) f
+        (realContinuousFunctionAlgebraSheaf Y)
+        (realContinuousFunctionAlgebraSheaf X)) := by
+  sorry
 
 /-- The continuous-function construction gives a ringed-space morphism. -/
 noncomputable def continuousFunctionRingedSpaceHom {X Y : TopCat}

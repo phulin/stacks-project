@@ -72,6 +72,41 @@ theorem ringedSpaceModulePullback_formula {X Y : RingedSpace.{v}}
           ((ringedSpaceInverseImageModule f).obj G)) := by
   sorry
 
+/-! ## Stalk tensor formula -/
+
+/-- The canonical module object representing the source's stalk tensor. -/
+noncomputable def ringedSpaceModulePullbackStalkTensor
+    {X Y : RingedSpace.{v}} (f : RingedSpaceHom X Y)
+    (G : Mod Y.structureSheaf) (x : X)
+    [((SheafOfModules.pushforward (F := Opens.map f.continuous)
+      f.sharp).IsRightAdjoint)]
+    [((SheafOfModules.pushforward (F := Opens.map f.continuous)
+      (moduleSheafPullbackUnit f.continuous Y.structureSheaf)).IsRightAdjoint)] :
+    ModuleCat (↑(TopCat.Presheaf.stalk (C := RingCat.{v})
+      X.structureSheaf.obj x)) :=
+  ModuleCat.of (TopCat.Presheaf.stalk (C := RingCat.{v})
+      X.structureSheaf.obj x)
+    (↑(TopCat.Presheaf.stalk (C := AddCommGrpCat.{v})
+      (Formalization.Books.Sheaves.Unit17.tensorProductSheaf
+        (ringedSpacePullbackRingMap f)
+        ((ringedSpaceInverseImageModule f).obj G)).val.presheaf x))
+
+/-- The stalk of the pullback module is the source's stalk tensor module. -/
+theorem ringedSpaceModulePullback_stalk_formula
+    {X Y : RingedSpace.{v}} (f : RingedSpaceHom X Y)
+    (G : Mod Y.structureSheaf) (x : X)
+    [((SheafOfModules.pushforward (F := Opens.map f.continuous)
+      f.sharp).IsRightAdjoint)]
+    [((SheafOfModules.pushforward (F := Opens.map f.continuous)
+      (moduleSheafPullbackUnit f.continuous Y.structureSheaf)).IsRightAdjoint)] :
+    Nonempty
+      (ModuleCat.of (TopCat.Presheaf.stalk (C := RingCat.{v})
+          X.structureSheaf.obj x)
+          (↑(TopCat.Presheaf.stalk (C := AddCommGrpCat.{v})
+            ((ringedSpaceModulePullback f).obj G).val.presheaf x)) ≅
+        ringedSpaceModulePullbackStalkTensor f G x) := by
+  sorry
+
 /-! ## Adjunction, composition, and `f`-maps -/
 
 /-- The pullback/pushforward adjunction for modules on a ringed-space

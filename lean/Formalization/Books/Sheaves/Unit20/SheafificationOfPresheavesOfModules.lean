@@ -159,7 +159,7 @@ theorem existsUnique_moduleSheafificationFactorization {X : TopCat.{v}}
       moduleSheafificationUnit F ≫
           (PresheafOfModules.restrictScalars (ringSheafificationUnit O)).map ψ.val =
         φ := by
-  sorry
+  exact Formalization.Books.Sheaves.Unit17.existsUnique_moduleSheafificationFactorization G φ
 
 /-! ## The induced action -/
 
@@ -253,7 +253,7 @@ theorem tensorProductPresheaf_not_always_isSheaf :
       (α : O₁ ⟶ O₂) (G : SheafOfModules.{v} O₁),
       Presheaf.IsSheaf (Opens.grothendieckTopology X)
         (sheafTensorProductPresheaf α G).presheaf := by
-  sorry
+  exact Formalization.Books.Sheaves.Unit17.tensorProductPresheaf_not_always_isSheaf
 
 /-- The tensor product sheaf, defined by sheafifying the presheaf tensor. -/
 noncomputable abbrev tensorProductSheaf {X : TopCat.{v}}
@@ -364,7 +364,7 @@ theorem stalk_tensorProductSheaf_iso {X : TopCat.{v}}
     (G : CommRingSheafModule O₁) (x : X) :
     Nonempty (sheafStalkTensorProduct α G x ≅
       commRingSheafModuleStalk (commRingTensorProductSheaf α G) x) := by
-  sorry
+  exact Formalization.Books.Sheaves.Unit17.stalk_tensorProductSheaf_statement α G x
 
 end
 

@@ -42,7 +42,14 @@ disconnected spaces. -/
 theorem isProfiniteSpace_iff_hausdorff_quasiCompact_totallyDisconnected :
     IsProfiniteSpace X ↔
       T2Space X ∧ CompactSpace X ∧ TotallyDisconnectedSpace X := by
-  sorry
+  constructor
+  · rintro ⟨P, ⟨e⟩⟩
+    exact ⟨e.symm.t2Space, e.symm.compactSpace, e.symm.totallyDisconnectedSpace⟩
+  · rintro ⟨hT2, hCompact, hTD⟩
+    let _ : T2Space X := hT2
+    let _ : CompactSpace X := hCompact
+    let _ : TotallyDisconnectedSpace X := hTD
+    exact ⟨Profinite.of X, ⟨Homeomorph.refl X⟩⟩
 
 /-- A profinite space admits a cofiltered finite-discrete limit presentation.
 
@@ -102,7 +109,32 @@ theorem connectedComponents_is_profinite
         connectedComponent x =
           ⋂ s : {s : Set X // IsClopen s ∧ x ∈ s}, (s : Set X)) :
     IsProfiniteSpace (ConnectedComponents X) := by
-  sorry
+  let _ : T2Space (ConnectedComponents X) := by
+    refine ⟨ConnectedComponents.surjective_coe.forall₂.2 fun a b ne => ?_⟩
+    rw [ConnectedComponents.coe_ne_coe] at ne
+    have h := connectedComponent_disjoint ne
+    rw [hcomponents b, disjoint_iff_inter_eq_empty] at h
+    obtain ⟨U, V, hU, ha, hb, rfl⟩ :
+        ∃ (U : Set X) (V : Set (ConnectedComponents X)),
+          IsClopen U ∧ connectedComponent a ∩ U = ∅ ∧ connectedComponent b ⊆ U ∧
+            (↑) ⁻¹' V = U := by
+      have h :=
+        (isClosed_connectedComponent (α := X)).isCompact.elim_finite_subfamily_closed
+          _ (fun s : { s : Set X // IsClopen s ∧ b ∈ s } => s.2.1.1) h
+      obtain ⟨fin_a, ha⟩ := h
+      set U : Set X := ⋂ (i : { s // IsClopen s ∧ b ∈ s }) (_ : i ∈ fin_a), i
+      have hU : IsClopen U := isClopen_biInter_finset fun i _ => i.2.1
+      exact
+        ⟨U, (↑) '' U, hU, ha,
+          subset_iInter₂ fun s _ => s.2.1.connectedComponent_subset s.2.2,
+          (connectedComponents_preimage_image U).symm ▸ hU.biUnion_connectedComponent_eq⟩
+    rw [ConnectedComponents.isQuotientMap_coe.isClopen_preimage] at hU
+    refine
+      ⟨Vᶜ, V, hU.compl.isOpen, hU.isOpen, ?_, hb mem_connectedComponent,
+        disjoint_compl_left⟩
+    exact fun h => flip Set.Nonempty.ne_empty ha ⟨a, mem_connectedComponent, h⟩
+  exact isProfiniteSpace_iff_hausdorff_quasiCompact_totallyDisconnected.mpr
+    ⟨inferInstance, inferInstance, inferInstance⟩
 
 end ProfiniteSpaces
 

@@ -223,20 +223,6 @@ def derivedInverseImage {𝒮 : Type u} [Category.{u} 𝒮] (X : 𝒮)
     SiteDerivedCategory X (coarseSite c) κ ⥤ SiteDerivedCategory X (fineSite c) κ :=
   (SiteComparisonData.derivedInverseImageData (X := X) c κ).functor
 
-/-!
-TODO(proof agents): comparison results need a small law/data layer in addition
-to the bare functors above. Reuse `LeftDerivedFunctorData` for a selected
-derived shriek and package its adjunction to `derivedInverseImage` together
-with the unit isomorphism. For functorial squares, add the underived
-Beck--Chevalley comparison and a helper identifying its derived mate. The
-module-coefficient results also need a law saying derived shriek has
-quasi-coherent homology, while the cohomology statements need natural
-comparisons for constant objects and for global and local sections on the
-fine and coarse sites. Put these in focused structures and have each theorem
-consume only the relevant structure; do not add them as unrelated fields to
-`StackSiteData`.
--/
-
 /-- The source assertion for one coefficient category and one site
 comparison.  The orientation of `unitIso` records the source identity
 `g^* Lg_! = id` as a natural isomorphism rather than a definitional equality. -/
@@ -248,6 +234,23 @@ structure DerivedComparisonStatement {𝒮 : Type u} [Category.{u} 𝒮]
   unitIso : 𝟭 (SiteDerivedCategory X (fineSite c) κ) ≅
     leftDerived.functor ⋙ derivedInverseImage X c κ
   unitIso_hom : unitIso.hom = adjunction.unit
+
+/-! The derived shriek, its adjunction, and the unit comparison are supplied
+by the preceding cohomology development.  They are kept separate from the
+underived site functors so that the source lemma can consume exactly this
+comparison data. -/
+
+class DerivedComparisonData {𝒮 : Type u} [Category.{u} 𝒮] (X : 𝒮)
+    [StackSiteData X] [SiteComparisonData X] where
+  leftDerived : ∀ (c : ComparisonKind) (κ : CoefficientKind),
+    LeftDerivedFunctorData (SiteComparisonData.shriek (X := X) c κ)
+  adjunction : ∀ (c : ComparisonKind) (κ : CoefficientKind),
+    (leftDerived c κ).functor ⊣ derivedInverseImage X c κ
+  unitIso : ∀ (c : ComparisonKind) (κ : CoefficientKind),
+    𝟭 (SiteDerivedCategory X (fineSite c) κ) ≅
+      (leftDerived c κ).functor ⋙ derivedInverseImage X c κ
+  unitIso_hom : ∀ (c : ComparisonKind) (κ : CoefficientKind),
+    (unitIso c κ).hom = (adjunction c κ).unit
 
 /-- A square of stack morphisms together with the derived direct and inverse
 images used in the functoriality lemma. -/
@@ -313,6 +316,21 @@ def DerivedSectionsAt {𝒮 : Type u} [Category.{u} 𝒮] (X : 𝒮)
     (κ : CoefficientKind) (x : StackCohomologyData.siteObject (X := X) τ) :
     SiteDerivedCategory X τ κ ⥤ CohomologyValue X κ :=
   StackCohomologyData.localSections (X := X) τ κ x
+
+/-! The cohomology comparison functors are supplied as natural isomorphisms,
+not as unrelated objectwise isomorphisms. -/
+
+class DerivedCohomologyComparisonData {𝒮 : Type u} [Category.{u} 𝒮]
+    (X : 𝒮) [StackSiteData X] [SiteComparisonData X]
+    [StackCohomologyData X] where
+  globalIso : ∀ (c : ComparisonKind) (κ : CoefficientKind),
+    DerivedGlobalSections X (coarseSite c) κ ≅
+      derivedInverseImage X c κ ⋙ DerivedGlobalSections X (fineSite c) κ
+  localIso : ∀ (c : ComparisonKind) (κ : CoefficientKind)
+      (x : StackCohomologyData.siteObject (X := X) (fineSite c)),
+    DerivedSectionsAt X (coarseSite c) κ
+        (StackCohomologyData.coarseObject (X := X) c x) ≅
+      derivedInverseImage X c κ ⋙ DerivedSectionsAt X (fineSite c) κ x
 
 def IsFlatSiteObject {𝒮 : Type u} [Category.{u} 𝒮] (X : 𝒮)
     [StackSiteData X] [StackCohomologyData X]

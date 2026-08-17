@@ -23,7 +23,6 @@ universe u
 namespace Formalization.Books.StacksPerfect.Unit01
 
 variable {𝒮 : Type u} [Category.{u} 𝒮]
-  [AlgebraicStackCategory 𝒮]
 
 /-! The earlier stack-morphism interface does not expose smoothness.  This
 small explicit interface supplies the missing predicate needed by the
@@ -48,32 +47,48 @@ def IsApplicableForComparison {𝒮 : Type u} [Category.{u} 𝒮]
 /-- The four cases of the source lemma: two coefficient categories for each
 of the lisse-étale and flat-fppf comparisons.  The existence statement is
 kept as one indexed theorem so that the four interfaces cannot drift apart. -/
-theorem lemma_shriek_derived (X : 𝒮) [StackSiteData X] [SiteComparisonData X] :
+theorem lemma_shriek_derived (X : 𝒮) [AlgebraicStackCategory 𝒮]
+    [StackSiteData X] [SiteComparisonData X]
+    [derivedComparisonData : DerivedComparisonData X] :
     ∀ c : ComparisonKind, ∀ κ : CoefficientKind,
       Nonempty (DerivedComparisonStatement X c κ) := by
-  sorry
+  intro c κ
+  exact ⟨{
+    leftDerived := DerivedComparisonData.leftDerived (X := X) c κ
+    adjunction := DerivedComparisonData.adjunction (X := X) c κ
+    unitIso := DerivedComparisonData.unitIso (X := X) c κ
+    unitIso_hom := DerivedComparisonData.unitIso_hom (X := X) c κ
+  }⟩
 
 /-- A chosen derived comparison supplied by `lemma_shriek_derived`. -/
-noncomputable def selectedDerivedComparison (X : 𝒮) [StackSiteData X]
-    [SiteComparisonData X] (c : ComparisonKind) (κ : CoefficientKind) :
+noncomputable def selectedDerivedComparison (X : 𝒮)
+    [AlgebraicStackCategory 𝒮] [StackSiteData X]
+    [SiteComparisonData X] [DerivedComparisonData X]
+    (c : ComparisonKind) (κ : CoefficientKind) :
     DerivedComparisonStatement X c κ :=
   Classical.choice (lemma_shriek_derived X c κ)
 
 /-- The selected left derived functor `Lg_!`. -/
-noncomputable def derivedShriek (X : 𝒮) [StackSiteData X]
-    [SiteComparisonData X] (c : ComparisonKind) (κ : CoefficientKind) :
+noncomputable def derivedShriek (X : 𝒮)
+    [AlgebraicStackCategory 𝒮] [StackSiteData X]
+    [SiteComparisonData X] [DerivedComparisonData X]
+    (c : ComparisonKind) (κ : CoefficientKind) :
     SiteDerivedCategory X (fineSite c) κ ⥤ SiteDerivedCategory X (coarseSite c) κ :=
   (selectedDerivedComparison X c κ).leftDerived.functor
 
 /-- The adjunction `Lg_! ⊣ g^*` in each coefficient case. -/
-noncomputable def derivedShriekAdjunction (X : 𝒮) [StackSiteData X]
-    [SiteComparisonData X] (c : ComparisonKind) (κ : CoefficientKind) :
+noncomputable def derivedShriekAdjunction (X : 𝒮)
+    [AlgebraicStackCategory 𝒮] [StackSiteData X]
+    [SiteComparisonData X] [DerivedComparisonData X]
+    (c : ComparisonKind) (κ : CoefficientKind) :
     derivedShriek X c κ ⊣ derivedInverseImage X c κ :=
   (selectedDerivedComparison X c κ).adjunction
 
 /-- The natural isomorphism expressing `g^* Lg_! = id`. -/
-noncomputable def derivedInverseImageShriekIso (X : 𝒮) [StackSiteData X]
-    [SiteComparisonData X] (c : ComparisonKind) (κ : CoefficientKind) :
+noncomputable def derivedInverseImageShriekIso (X : 𝒮)
+    [AlgebraicStackCategory 𝒮] [StackSiteData X]
+    [SiteComparisonData X] [DerivedComparisonData X]
+    (c : ComparisonKind) (κ : CoefficientKind) :
     𝟭 (SiteDerivedCategory X (fineSite c) κ) ≅
       derivedShriek X c κ ⋙ derivedInverseImage X c κ :=
   (selectedDerivedComparison X c κ).unitIso
@@ -94,6 +109,33 @@ def inverseImage (X : 𝒮) [StackSiteData X] [SiteComparisonData X]
 
 variable {X Y : 𝒮} [StackSiteData X] [StackSiteData Y]
   [SiteComparisonData X] [SiteComparisonData Y]
+  [DerivedComparisonData X] [DerivedComparisonData Y]
+
+/-! A derived mate is the extra compatibility needed to transport an
+underived Beck--Chevalley isomorphism through the independently selected
+derived functors in a functorial square. -/
+
+class FunctorialDerivedComparisonData
+    (S : FunctorialDerivedSquare X Y) [AlgebraicStackCategory 𝒮]
+    (D : StackSmoothnessData 𝒮) where
+  pushforwardMate :
+    ∀ (c : ComparisonKind) (_hc : IsApplicableForComparison D S.f c)
+      (κ : CoefficientKind),
+      Nonempty (S.coarsePushforward c κ ⋙ inverseImage Y c κ ≅
+        inverseImage X c κ ⋙ S.finePushforward c κ) →
+      Nonempty ((S.coarsePushforwardData c κ).functor ⋙
+        derivedInverseImage Y c κ ≅
+          derivedInverseImage X c κ ⋙
+            (S.finePushforwardData c κ).functor)
+  shriekMate :
+    ∀ (c : ComparisonKind) (_hc : IsApplicableForComparison D S.f c)
+      (κ : CoefficientKind),
+      Nonempty (S.finePullback c κ ⋙ shriek X c κ ≅
+        shriek Y c κ ⋙ S.coarsePullback c κ) →
+      Nonempty ((S.finePullbackData c κ).functor ⋙
+        derivedShriek X c κ ≅
+          derivedShriek Y c κ ⋙
+            (S.coarsePullbackData c κ).functor)
 
 /-- Functoriality of derived shriek and inverse image, for both coefficients
 and both site comparisons.  The two underived base-change isomorphisms are
@@ -101,7 +143,9 @@ the input supplied by the preceding cohomology comparison.  The all-complexes
 statement then subsumes the source's bounded, bounded-above, and arbitrary-
 complex restrictions. -/
 theorem lemma_lisse_etale_functorial_derived
-    (S : FunctorialDerivedSquare X Y) (D : StackSmoothnessData 𝒮)
+    (S : FunctorialDerivedSquare X Y) [AlgebraicStackCategory 𝒮]
+    (D : StackSmoothnessData 𝒮)
+    [FunctorialDerivedComparisonData S D]
     (c : ComparisonKind) (hc : IsApplicableForComparison D S.f c)
     (hpush : ∀ κ : CoefficientKind,
       Nonempty (S.coarsePushforward c κ ⋙ inverseImage Y c κ ≅
@@ -114,13 +158,21 @@ theorem lemma_lisse_etale_functorial_derived
         derivedInverseImage X c κ ⋙ (S.finePushforwardData c κ).functor) ∧
       Nonempty ((S.finePullbackData c κ).functor ⋙ derivedShriek X c κ ≅
         derivedShriek Y c κ ⋙ (S.coarsePullbackData c κ).functor) := by
-  sorry
+  intro κ
+  exact ⟨
+    FunctorialDerivedComparisonData.pushforwardMate (S := S) (D := D) c hc κ
+      (hpush κ),
+    FunctorialDerivedComparisonData.shriekMate (S := S) (D := D) c hc κ
+      (hshriek κ)
+  ⟩
 
 /-- The first natural isomorphism in the functoriality lemma, written in the
 direction of the source identity
 `g^{-1} Rf_* = Rf'_* (g')^{-1}`. -/
 def FunctorialDerivedPushforwardIso
-    (S : FunctorialDerivedSquare X Y) (D : StackSmoothnessData 𝒮)
+    (S : FunctorialDerivedSquare X Y) [AlgebraicStackCategory 𝒮]
+    (D : StackSmoothnessData 𝒮)
+    [FunctorialDerivedComparisonData S D]
     (c : ComparisonKind) (hc : IsApplicableForComparison D S.f c)
     (hpush : ∀ κ : CoefficientKind,
       Nonempty (S.coarsePushforward c κ ⋙ inverseImage Y c κ ≅
@@ -138,7 +190,9 @@ def FunctorialDerivedPushforwardIso
 direction of the source identity
 `L(g')_! (f')^{-1} = f^{-1} Lg_!`. -/
 def FunctorialDerivedShriekIso
-    (S : FunctorialDerivedSquare X Y) (D : StackSmoothnessData 𝒮)
+    (S : FunctorialDerivedSquare X Y) [AlgebraicStackCategory 𝒮]
+    (D : StackSmoothnessData 𝒮)
+    [FunctorialDerivedComparisonData S D]
     (c : ComparisonKind) (hc : IsApplicableForComparison D S.f c)
     (hpush : ∀ κ : CoefficientKind,
       Nonempty (S.coarsePushforward c κ ⋙ inverseImage Y c κ ≅
@@ -155,18 +209,37 @@ def FunctorialDerivedShriekIso
 /-! ## Lemma 3: higher shriek of quasi-coherent modules -/
 
 /-- Apply the derived shriek functor to a module in degree zero. -/
-noncomputable def derivedShriekOfModule (X : 𝒮) [StackSiteData X]
-    [SiteComparisonData X] (c : ComparisonKind)
+noncomputable def derivedShriekOfModule (X : 𝒮)
+    [AlgebraicStackCategory 𝒮] [StackSiteData X]
+    [SiteComparisonData X] [DerivedComparisonData X] (c : ComparisonKind)
     (H : SiteModules X (fineSite c)) :
     SiteDerivedCategory X (coarseSite c) .module :=
   (derivedShriek X c .module).obj
     ((DerivedCategory.singleFunctor
       (CoefficientCarrier X (fineSite c) .module) 0).obj H)
 
-/-- For a quasi-coherent module on either flat site, every cohomology module
+/-! The module calculation is supplied as a preservation law for the selected
+derived shriek. -/
+
+class DerivedShriekQuasiCoherentData (X : 𝒮)
+    [AlgebraicStackCategory 𝒮] [StackSiteData X]
+    [SiteComparisonData X] [DerivedComparisonData X] where
+  higherShriekQuasiCoherent :
+    ∀ (c : ComparisonKind)
+      (H : SiteModules X (fineSite c)),
+      IsQuasiCoherent (X := X) (fineSite c) H →
+        ∀ p : ℤ,
+          IsLQCohFbc (X := X) (coarseSite c)
+            ((DerivedCategory.homologyFunctor
+              (CoefficientCarrier X (coarseSite c) .module) p).obj
+              (derivedShriekOfModule X c H))
+
+/-! For a quasi-coherent module on either flat site, every cohomology module
 of its derived shriek is locally quasi-coherent with flat base change. -/
-theorem lemma_higher_shriek_quasi_coherent (X : 𝒮) [StackSiteData X]
-    [SiteComparisonData X] :
+theorem lemma_higher_shriek_quasi_coherent (X : 𝒮)
+    [AlgebraicStackCategory 𝒮] [StackSiteData X]
+    [SiteComparisonData X] [DerivedComparisonData X]
+    [DerivedShriekQuasiCoherentData X] :
     ∀ c : ComparisonKind,
       ∀ H : SiteModules X (fineSite c),
         IsQuasiCoherent (X := X) (fineSite c) H →
@@ -175,6 +248,6 @@ theorem lemma_higher_shriek_quasi_coherent (X : 𝒮) [StackSiteData X]
               ((DerivedCategory.homologyFunctor
                 (CoefficientCarrier X (coarseSite c) .module) p).obj
                 (derivedShriekOfModule X c H)) := by
-  sorry
+  exact DerivedShriekQuasiCoherentData.higherShriekQuasiCoherent (X := X)
 
 end Formalization.Books.StacksPerfect.Unit01

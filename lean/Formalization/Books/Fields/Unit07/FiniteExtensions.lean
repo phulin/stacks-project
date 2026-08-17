@@ -8,6 +8,7 @@ import Mathlib.LinearAlgebra.Basis.VectorSpace
 import Mathlib.LinearAlgebra.Complex.FiniteDimensional
 import Mathlib.LinearAlgebra.Dimension.Free
 import Mathlib.NumberTheory.NumberField.Basic
+import Mathlib.RingTheory.Algebraic.LinearIndependent
 
 /-!
 # Fields, Chapter 7: Finite extensions
@@ -104,29 +105,116 @@ theorem finite_extension_over_middle
 /-- The integer powers of the rational-function indeterminate are linearly independent. -/
 theorem rational_function_integer_powers_linearIndependent (k : Type u) [Field k] :
     LinearIndependent k (fun n : ℤ => (RatFunc.X : RatFunc k) ^ n) := by
-  sorry
+  have hpow (n : ℕ) (y : RatFunc k) :
+      ((Algebra.lmul k (RatFunc k) (RatFunc.X : RatFunc k)) ^ n) y =
+        (RatFunc.X : RatFunc k) ^ n * y := by
+    induction n generalizing y with
+    | zero => simp
+    | succ n ih =>
+      rw [pow_succ, Module.End.mul_apply, ih]
+      simp [Algebra.coe_lmul_eq_mul, pow_succ, mul_assoc]
+  have hlin : LinearIndependent k (fun n : ℕ =>
+      ((Algebra.lmul k (RatFunc k) (RatFunc.X : RatFunc k)) ^ n) (1 : RatFunc k)) := by
+    apply (Polynomial.linearIndependent_powers_iff_aeval
+      (Algebra.lmul k (RatFunc k) (RatFunc.X : RatFunc k)) 1).2
+    intro p hp
+    have hae (q : Polynomial k) :
+        (Polynomial.aeval
+          (Algebra.lmul k (RatFunc k) (RatFunc.X : RatFunc k)) q) 1 =
+          Polynomial.aeval (RatFunc.X : RatFunc k) q := by
+      induction q using Polynomial.induction_on' with
+      | add q r hq hr =>
+        rw [map_add]
+        simp only [LinearMap.add_apply, hq, hr]
+        exact (map_add (Polynomial.aeval (RatFunc.X : RatFunc k)) q r).symm
+      | monomial n a =>
+        rw [Polynomial.aeval_monomial, Module.End.mul_apply,
+          Module.algebraMap_end_apply, hpow n 1]
+        simp [Algebra.smul_def]
+    exact (transcendental_iff.mp (RatFunc.transcendental_X (K := k)) p)
+      (by rw [← hae p]; exact hp)
+  have hnat : LinearIndependent k (fun n : ℕ => (RatFunc.X : RatFunc k) ^ n) := by
+    convert hlin using 1
+    funext n
+    simpa using (hpow n 1).symm
+  classical
+  refine linearIndependent_iff'.2 ?_
+  intro s g hsum i hi
+  let shift : ℕ := ∑ j ∈ s, (-j).toNat
+  have hshift (j : ℤ) (hj : j ∈ s) : 0 ≤ (shift : ℤ) + j := by
+    have hle : (-j).toNat ≤ shift := by
+      change (-j).toNat ≤ ∑ x ∈ s, (-x).toNat
+      exact Finset.single_le_sum (s := s) (f := fun x : ℤ => (-x).toNat)
+        (fun _ _ => Nat.zero_le _) hj
+    cases j with
+    | ofNat n => omega
+    | negSucc n => omega
+  let f : s → ℕ := fun j => ((shift : ℤ) + (j : ℤ)).toNat
+  have hf : Function.Injective f := by
+    intro a b hab
+    apply Subtype.ext
+    have ha := hshift a.1 a.2
+    have hb := hshift b.1 b.2
+    have hab' : (f a : ℤ) = (f b : ℤ) := congrArg Int.ofNat hab
+    simpa [f, Int.toNat_of_nonneg ha, Int.toNat_of_nonneg hb] using hab'
+  have hsub : LinearIndependent k (fun j : s =>
+      (RatFunc.X : RatFunc k) ^ f j) := by
+    simpa [f, Function.comp_def] using hnat.comp f hf
+  have hX : (RatFunc.X : RatFunc k) ≠ 0 := by
+    rw [← RatFunc.algebraMap_X]
+    exact RatFunc.algebraMap_ne_zero Polynomial.X_ne_zero
+  have hsum_shift : ∑ j ∈ s.attach, g j.1 •
+      (RatFunc.X : RatFunc k) ^ ((shift : ℤ) + (j.1 : ℤ)) = 0 := by
+    rw [Finset.sum_attach s (fun j : ℤ =>
+      g j • (RatFunc.X : RatFunc k) ^ ((shift : ℤ) + j))]
+    have hmul := congrArg (fun z : RatFunc k =>
+      (RatFunc.X : RatFunc k) ^ (shift : ℕ) * z) hsum
+    have hzpow (j : ℤ) :
+        (RatFunc.X : RatFunc k) ^ (shift : ℕ) * (RatFunc.X : RatFunc k) ^ j =
+          (RatFunc.X : RatFunc k) ^ ((shift : ℤ) + j) := by
+      rw [← zpow_natCast, ← zpow_add₀ hX]
+    simpa [f, Finset.mul_sum, mul_smul_comm, hzpow] using hmul
+  have hsum_shift_nat : ∑ j ∈ s.attach, g j.1 •
+      (RatFunc.X : RatFunc k) ^ f j = 0 := by
+    calc
+      ∑ j ∈ s.attach, g j.1 • (RatFunc.X : RatFunc k) ^ f j =
+          ∑ j ∈ s.attach, g j.1 •
+            (RatFunc.X : RatFunc k) ^ ((shift : ℤ) + (j.1 : ℤ)) := by
+        apply Finset.sum_congr rfl
+        intro j hj
+        have hexp : (f j : ℤ) = (shift : ℤ) + (j.1 : ℤ) := by
+          simp [f, Int.toNat_of_nonneg (hshift j.1 j.2)]
+        rw [← zpow_natCast, hexp]
+      _ = 0 := hsum_shift
+  exact (linearIndependent_iff'.mp hsub s.attach (fun j : s => g j.1)
+    hsum_shift_nat ⟨i, hi⟩ (by simp))
 
 /-- The rational-function field is not a finite extension of its coefficient field. -/
 theorem rational_function_not_finite (k : Type u) [Field k] :
     ¬ FiniteFieldExtension k (RatFunc k) := by
-  sorry
+  intro hfinite
+  have : FiniteDimensional k (RatFunc k) := hfinite
+  exact Module.Finite.not_linearIndependent_of_infinite
+    (fun n : ℤ => (RatFunc.X : RatFunc k) ^ n)
+    (rational_function_integer_powers_linearIndependent k)
 
 /-- The reciprocal family indexed by the coefficient field is linearly independent. -/
 theorem rational_function_reciprocal_family_linearIndependent (k : Type u) [Field k] :
     LinearIndependent k (fun α : k =>
       ((RatFunc.X : RatFunc k) - algebraMap k (RatFunc k) α)⁻¹) := by
-  sorry
+  exact (RatFunc.transcendental_X (K := k)).linearIndependent_sub_inv
 
 /-- The reciprocal family gives a lower bound on the cardinal-valued dimension. -/
 theorem rational_function_rank_ge_cardinal (k : Type u) [Field k] :
     Cardinal.mk k ≤ Module.rank k (RatFunc k) := by
-  sorry
+  exact (rational_function_reciprocal_family_linearIndependent k).cardinal_le_rank
 
 /-- If the coefficient field is uncountable, so is the dimension of `RatFunc k`. -/
 theorem rational_function_uncountable_dimensional (k : Type u) [Field k]
     [Uncountable k] :
     Cardinal.aleph0 < Module.rank k (RatFunc k) := by
-  sorry
+  exact (Cardinal.aleph0_lt_mk (α := k)).trans_le
+    (rational_function_rank_ge_cardinal k)
 
 /- The source's finite nonzero relations among distinct reciprocal functions
    are exactly the finite-relation consequence of the preceding family-level
@@ -139,12 +227,13 @@ theorem finite_extension_is_finitely_generated
     {E F : Type*} [Field E] [Field F] [Algebra E F]
     [FiniteDimensional E F] :
     ∃ S : Set F, S.Finite ∧ IntermediateField.adjoin E S = ⊤ := by
-  sorry
+  rw [Formalization.Books.Fields.Unit06.finitely_generated_extension_iff]
+  infer_instance
 
 /-- The rational-function field is generated by its indeterminate. -/
 theorem rational_function_is_finitely_generated (k : Type u) [Field k] :
     IntermediateField.adjoin k ({RatFunc.X} : Set (RatFunc k)) = ⊤ := by
-  sorry
+  exact RatFunc.adjoin_X
 
 /-- The rational-function example witnesses that finite generation does not imply finiteness. -/
 theorem rational_function_finitely_generated_but_not_finite (k : Type u) [Field k] :
@@ -212,7 +301,10 @@ theorem simple_algebraic_extension_field_degree
 theorem nonsquare_quadratic_polynomial_irreducible
     {k : Type u} [Field k] {α : k} (hα : ¬ IsSquare α) :
     Irreducible (Polynomial.X ^ 2 - Polynomial.C α) := by
-  sorry
+  apply X_pow_sub_C_irreducible_of_prime (K := k) Nat.prime_two
+  intro β hβ
+  apply hα
+  exact ⟨β, by simpa [pow_two] using hβ.symm⟩
 
 /-- The quotient by a nonsquare quadratic polynomial is a field. -/
 theorem nonsquare_quadratic_extension_is_field
@@ -226,13 +318,17 @@ theorem nonsquare_quadratic_extension_degree
     {k : Type u} [Field k] {α : k} (hα : ¬ IsSquare α) :
     fieldExtensionDegree k (AdjoinRoot (Polynomial.X ^ 2 - Polynomial.C α)) =
       (2 : Cardinal) := by
-  sorry
+  simpa using (simple_algebraic_extension_field_degree
+    (nonsquare_quadratic_polynomial_irreducible hα))
 
 /-- The nonsquare quadratic construction is a Mathlib quadratic extension. -/
 theorem nonsquare_quadratic_is_quadratic_extension
     {k : Type u} [Field k] {α : k} (hα : ¬ IsSquare α) :
     Algebra.IsQuadraticExtension k (AdjoinRoot (Polynomial.X ^ 2 - Polynomial.C α)) := by
-  sorry
+  let hP := nonsquare_quadratic_polynomial_irreducible hα
+  have : Module.Free k (AdjoinRoot (Polynomial.X ^ 2 - Polynomial.C α)) :=
+    Module.Free.of_basis (AdjoinRoot.powerBasis hP.ne_zero).basis
+  exact { finrank_eq_two' := by simpa using (simple_algebraic_extension_degree hP) }
 
 /-! ## Multiplicativity and number fields -/
 

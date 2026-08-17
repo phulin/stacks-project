@@ -102,6 +102,16 @@ theorem discreteFibredCategoryOver_two_morphism_isIso
     {F G : FibredCategoryOverHom X Y} (η : F ⟶ G) : IsIso η := by
   sorry
 
+/- The stronger locally-discrete form records the source's assertion that a
+   vertical 2-morphism is an identity after identifying its source and target
+   1-morphisms. -/
+theorem discreteFibredCategoryOver_two_morphism_is_eqToHom
+    {C : Cat.{v, u}} {X Y : FibredCategoryOver C}
+    (hY : IsDiscreteFibredCategoryOver Y)
+    {F G : FibredCategoryOverHom X Y} (η : F ⟶ G) :
+    ∃ h : F = G, η = eqToHom h := by
+  sorry
+
 /-- The source-facing constructor for a 1-morphism over the base; the
 preservation field is automatic for a discrete-fibred target. -/
 def fibredCategoryOverHomOfDiscrete

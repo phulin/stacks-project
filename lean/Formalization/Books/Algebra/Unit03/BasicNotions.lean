@@ -186,8 +186,8 @@ theorem localizedModule_map_surjective
   exact LocalizedModule.map_surjective S f hf
 
 theorem localizedModule_map_exact
-    {R M N P : Type*} [CommRing R]
-    [AddCommGroup M] [AddCommGroup N] [AddCommGroup P]
+    {R M N P : Type*} [CommSemiring R]
+    [AddCommMonoid M] [AddCommMonoid N] [AddCommMonoid P]
     [Module R M] [Module R N] [Module R P]
     (S : Submonoid R) (f : M →ₗ[R] N) (g : N →ₗ[R] P)
     (h : Function.Exact f g) :
@@ -249,8 +249,8 @@ theorem isLocalRing_iff_unique_maximalIdeal
     exact @IsLocalRing.maximal_ideal_unique R _ h
   · exact IsLocalRing.of_unique_max_ideal
 
-def IsSemilocalRing (R : Type u) [CommRing R] : Prop :=
-  Set.Finite {I : Ideal R | I.IsMaximal}
+abbrev IsSemilocalRing (R : Type u) [CommRing R] : Prop :=
+  Finite (MaximalSpectrum R)
 
 theorem localization_atPrime_isLocalRing
     {R : Type u} [CommRing R] (p : Ideal R) [p.IsPrime] :

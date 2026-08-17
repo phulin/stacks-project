@@ -1,6 +1,7 @@
 import Mathlib.Topology.KrullDimension
-import Mathlib.Topology.Instances.Rat
-import Mathlib.Topology.Order
+import Mathlib.Topology.Algebra.Ring.Real
+import Mathlib.Topology.Sets.Opens
+import Mathlib.Topology.WithTopology
 
 /-!
 # Topology, Chapter 10: Krull dimension
@@ -56,31 +57,27 @@ theorem krullDimension_eq_bot_iff :
 
 /-! ### Dimension at a point -/
 
-/-- The type of open neighbourhoods of a point. -/
-abbrev KrullOpenNeighborhood (x : X) :=
-  {U : Set X // IsOpen U ∧ x ∈ U}
-
 /-- The Krull dimension of `X` at `x`, as the infimum over open neighbourhoods. -/
 noncomputable def krullDimensionAt (x : X) : WithBot ℕ∞ :=
-  ⨅ U : KrullOpenNeighborhood x, krullDimension (U : Set X)
+  ⨅ U : OpenNhdsOf x, krullDimension (U : Set X)
 
 theorem krullDimensionAt_le (x : X) {U : Set X} (hU : IsOpen U) (hx : x ∈ U) :
     krullDimensionAt x ≤ krullDimension U := by
-  change (⨅ V : KrullOpenNeighborhood x, krullDimension (V : Set X)) ≤
+  change (⨅ V : OpenNhdsOf x, krullDimension (V : Set X)) ≤
     krullDimension U
-  exact iInf_le (fun V : KrullOpenNeighborhood x => krullDimension (V : Set X))
-    (⟨U, hU, hx⟩ : KrullOpenNeighborhood x)
+  exact iInf_le (fun V : OpenNhdsOf x => krullDimension (V : Set X))
+    (⟨⟨U, hU⟩, hx⟩ : OpenNhdsOf x)
+
+theorem krullDimension_mono_of_open_subset
+    {U' U : Set X} (hU' : IsOpen U') (hU : IsOpen U) (hsub : U' ⊆ U) :
+    krullDimension U' ≤ krullDimension U := by
+  sorry
 
 theorem krullDimensionAt_isLeast (x : X) :
     IsLeast
       {d : WithBot ℕ∞ |
         ∃ U : Set X, IsOpen U ∧ x ∈ U ∧ krullDimension U = d}
       (krullDimensionAt x) := by
-  sorry
-
-theorem krullDimension_mono_of_open_subset
-    {U' U : Set X} (hU' : IsOpen U') (hU : IsOpen U) (hsub : U' ⊆ U) :
-    krullDimension U' ≤ krullDimension U := by
   sorry
 
 theorem krullDimensionAt_hasBasis (x : X) :
@@ -109,12 +106,12 @@ inductive KrullTwoPointSpace where
   | special
   | generic
 
-def krullTwoPointOpenBasis : Set (Set KrullTwoPointSpace) :=
+def krullTwoPointOpenGenerators : Set (Set KrullTwoPointSpace) :=
   {({KrullTwoPointSpace.generic} : Set KrullTwoPointSpace)}
 
 @[instance_reducible]
 def krullTwoPointTopology : TopologicalSpace KrullTwoPointSpace :=
-  TopologicalSpace.generateFrom krullTwoPointOpenBasis
+  TopologicalSpace.generateFrom krullTwoPointOpenGenerators
 
 instance krullTwoPointSpace_topologicalSpace :
     TopologicalSpace KrullTwoPointSpace :=

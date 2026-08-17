@@ -44,7 +44,7 @@ abbrev rationalFunctionField (k : Type u) (ι : Type v) [CommRing k] :=
    a rational function field in some family of indeterminates. -/
 def IsPurelyTranscendental (k : Type u) (K : Type v)
     [Field k] [Field K] [Algebra k K] : Prop :=
-  ∃ ι : Type w, Nonempty (rationalFunctionField k ι ≃ₐ[k] K)
+  ∃ ι : Type v, Nonempty (rationalFunctionField k ι ≃ₐ[k] K)
 
 /- Mathlib's `IsTranscendenceBasis` is the canonical maximal algebraically
    independent family.  Its theorem

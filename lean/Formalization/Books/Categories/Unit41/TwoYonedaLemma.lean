@@ -381,7 +381,9 @@ def twoYonedaEvaluation
     twoYonedaFibredMorphismCategory p U ⥤ Functor.Fiber p U :=
   (twoYonedaPreservesCartesian p U).ι ⋙ twoYonedaEvaluationCore p U
 
-/-- The 2-Yoneda lemma for fibred categories over a fixed base. -/
+/-- The source's first 2-Yoneda lemma: evaluation at `id_U` is an
+equivalence from fibred functors `Over U ⥤ S` over `C` to the fibre of `p`
+over `U`. -/
 theorem twoYoneda_fibred_equivalence
     {C : Type uC} [Category.{vC} C]
     {S : Type uS} [Category.{vS} S]
@@ -392,7 +394,9 @@ theorem twoYoneda_fibred_equivalence
 /- The source's `Cat / C` morphism categories are groupoids when the target
    projection is fibred in groupoids.  This is the general form of the
    assertion used by the second 2-Yoneda lemma below; the source projection
-   need not be fibred in groupoids (and `Over.forget U` is not so in general). -/
+   need not be fibred in groupoids (and `Over.forget U` is not so in general).
+   A natural transformation over `C` is pointwise vertical, hence pointwise
+   invertible in the target fibres. -/
 theorem twoYonedaMorphismCategory_isGroupoid
     {A : Type uS} [Category.{vS} A]
     {B : Type uT} [Category.{vT} B]
@@ -445,7 +449,8 @@ theorem twoYonedaGroupoidMorphismCategory_isGroupoid
   exact twoYonedaMorphismCategory_isGroupoid
     (Over.forget U) p (inferInstance : p.IsFibredInGroupoids)
 
-/-- The 2-Yoneda lemma for categories fibred in groupoids. -/
+/-- The source's second 2-Yoneda lemma for categories fibred in groupoids.
+Evaluation at `id_U` is an equivalence from `Cat/C` morphisms to the fibre. -/
 theorem twoYoneda_groupoid_equivalence
     {C : Type uC} [Category.{vC} C]
     {S : Type uS} [Category.{vS} S]

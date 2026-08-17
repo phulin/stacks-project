@@ -82,6 +82,19 @@ theorem horizontalComposition_right_identity {C : Type u}
     HEq (horizontalComposition β (𝟙 (𝟙 a))) β := by
   sorry
 
+/-- The functor of 1-morphism composition from the source definition.
+
+Its source is ordered as `(outer 1-morphism, inner 1-morphism)`, so its object
+map sends `(g, f)` to `f ≫ g` and its morphism map is
+`horizontalComposition`. -/
+def compositionFunctor {C : Type u} [Bicategory.{w, v} C]
+    {a b c : C} :
+    (b ⟶ c) × (a ⟶ b) ⥤ (a ⟶ c) where
+  obj p := p.2 ≫ p.1
+  map {_ _} k := horizontalComposition k.1 k.2
+  map_id p := horizontalComposition_identity p.2 p.1
+  map_comp k l := horizontalComposition_interchange k.1 l.1 k.2 l.2
+
 /-! ## Sub-2-categories and large examples -/
 
 /-- An embedding presentation of a sub-2-category.

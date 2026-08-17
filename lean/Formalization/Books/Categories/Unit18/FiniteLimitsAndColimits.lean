@@ -5,6 +5,7 @@ import Mathlib.CategoryTheory.Limits.Constructions.BinaryProducts
 import Mathlib.CategoryTheory.Limits.Constructions.Pullbacks
 import Mathlib.CategoryTheory.Limits.Constructions.FiniteProductsOfBinaryProducts
 import Mathlib.CategoryTheory.Limits.Constructions.LimitsOfProductsAndEqualizers
+import Mathlib.CategoryTheory.Limits.Final
 import Mathlib.CategoryTheory.Limits.Shapes.FiniteLimits
 import Mathlib.CategoryTheory.Limits.Shapes.FiniteProducts
 import Mathlib.CategoryTheory.Limits.Shapes.Pullback.HasPullback
@@ -52,20 +53,24 @@ theorem finite_index_category_iff {J : Type u} [SmallCategory J] :
     Finite (Arrow J) ↔ Nonempty (FinCategory J) :=
   Arrow.finite_iff J
 
-/- The source's finite replacement is packaged as data so that its finiteness
-   and connectedness/nonemptiness comparison remain usable by later users.
-   The preservation and comparison assertions are stated below, separately
-   polymorphic in the target category. -/
+/- The source's finite replacement is packaged as data so that its finiteness,
+   preservation, and connectedness/nonemptiness comparisons remain usable by
+   later users.  `Initial` and `Final` are Mathlib's canonical interfaces for
+   the limit and colimit preservation asserted by the source. -/
 structure FiniteDiagramReplacement (I : Type u) [Category.{v} I] where
   J : Type
   category : SmallCategory J
   finite : @FinCategory J category
   F : @CategoryTheory.Functor J category I (inferInstance : Category.{v} I)
+  initial : @Functor.Initial J category I (inferInstance : Category.{v} I) F
+  final : @Functor.Final J category I (inferInstance : Category.{v} I) F
   connected_iff : @IsConnected J category ↔ IsConnected I
   nonempty_iff : Nonempty J ↔ Nonempty I
 
 attribute [instance] FiniteDiagramReplacement.category
 attribute [instance] FiniteDiagramReplacement.finite
+attribute [instance] FiniteDiagramReplacement.initial
+attribute [instance] FiniteDiagramReplacement.final
 
 /- The first source lemma: a finite object set together with finitely many
    generating arrows admits a finite replacement with the same (co)limits. -/

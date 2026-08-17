@@ -27,10 +27,23 @@ universe v u
 
 /-! ## The splitting definition -/
 
-/-- A simplicial object is split when it admits a Mathlib splitting. -/
+/-!
+Mathlib's `Subobject` supplies the source's subobjects and their partial order.
+The canonical splitting structure records the coproduct colimits, while the
+predicate below records the additional requirement that its summand maps are
+the chosen subobjects.
+-/
+
+/-- The summand maps of a Mathlib splitting are subobjects of the simplicial object. -/
+def IsSubobjectSplitting
+    {C : Type u} [Category.{v} C]
+    {U : SimplicialObject C} (s : SimplicialObject.Splitting U) : Prop :=
+  ∀ n, Mono (s.ι n)
+
+/-- A simplicial object is split in the source's subobject sense. -/
 abbrev IsSplit {C : Type u} [Category.{v} C] [HasFiniteCoproducts C]
     (U : SimplicialObject C) : Prop :=
-  Nonempty (SimplicialObject.Splitting U)
+  Nonempty {s : SimplicialObject.Splitting U // IsSubobjectSplitting s}
 
 /-!
 For a truncated object, every epimorphism out of `⦋m⦌` with `m ≤ r` lands in
@@ -82,6 +95,8 @@ structure TruncatedSplitting
   /-- Its map into the corresponding degree of the truncated object. -/
   ι : ∀ (n : ℕ) (hn : n ≤ r),
     N n hn ⟶ U.obj (op (truncatedSplittingObject r n hn))
+  /-- Each summand map is a subobject inclusion. -/
+  mono_ι : ∀ (n : ℕ) (hn : n ≤ r), Mono (ι n hn)
   /-- Each truncated degree is the coproduct of its epi-indexed summands. -/
   isColimit' : ∀ (m : ℕ) (hm : m ≤ r),
     IsColimit (truncatedSplittingCofan r U N ι m hm)
@@ -112,7 +127,11 @@ so no separate, choice-dependent binary-coproduct notation is introduced.
 /-! ## Simplicial sets and uniqueness of nondegenerate decompositions -/
 
 theorem simplicial_set_is_split (U : SSet.{u}) : IsSplit U :=
-  ⟨SSet.splitting U⟩
+  ⟨⟨SSet.splitting U, by
+    intro n
+    dsimp [SSet.splitting]
+    apply (ofHom_mono_iff_injective _).2
+    exact Subtype.val_injective⟩⟩
 
 theorem simplicial_set_canonical_summand (U : SSet.{u}) (n : ℕ) :
     (SSet.splitting U).N n = U.nonDegenerate n :=
@@ -198,6 +217,16 @@ theorem simplicial_set_map_bijective_of_nonDegenerate
 def simplicialSetNSkeleton (U : SSet.{u}) (n : ℕ) : U.Subcomplex :=
   U.skeleton (n + 1)
 
+/-- The inclusion of the source's `n`-skeleton into the simplicial set. -/
+def simplicialSetNSkeletonInclusion (U : SSet.{u}) (n : ℕ) :
+    (simplicialSetNSkeleton U n : SSet) ⟶ U :=
+  (simplicialSetNSkeleton U n).ι
+
+theorem simplicial_set_n_skeleton_subobject (U : SSet.{u}) (n : ℕ) :
+    Mono (simplicialSetNSkeletonInclusion U n) := by
+  dsimp [simplicialSetNSkeletonInclusion]
+  infer_instance
+
 theorem simplicial_set_n_skeleton_agrees_below
     (U : SSet.{u}) (n i : ℕ) (hi : i ≤ n) :
     (simplicialSetNSkeleton U n).obj (op ⦋i⦌) = Set.univ := by
@@ -250,8 +279,9 @@ theorem normalizedSubobject_succ
 def IsNormalizedSplitting
     {C : Type u} [Category.{v} C] [Abelian C]
     {U : SimplicialObject C} (s : SimplicialObject.Splitting U) : Prop :=
-  ∀ n, ∃ e : s.N n ≅ normalizedObject U n,
-    e.hom ≫ (normalizedSubobject U n).arrow = s.ι n
+  (∀ n, ∃ e : s.N n ≅ normalizedObject U n,
+    e.hom ≫ (normalizedSubobject U n).arrow = s.ι n) ∧
+    ∀ n, Mono (s.ι n)
 
 /-! ## Splitting of simplicial abelian groups -/
 

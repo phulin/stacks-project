@@ -257,11 +257,17 @@ theorem separable_and_inseparable_degree_multiplicative
     {F E K : Type u} [Field F] [Field E] [Field K]
     [Algebra F E] [Algebra E K] [Algebra F K] [IsScalarTower F E K]
     [Algebra.IsAlgebraic F E] [Algebra.IsAlgebraic E K] :
-    Field.sepDegree E K * Field.sepDegree F E = Field.sepDegree F K ∧
-      Field.insepDegree E K * Field.insepDegree F E = Field.insepDegree F K := by
+    Field.sepDegree F K = Field.sepDegree E K * Field.sepDegree F E ∧
+      Field.insepDegree F K = Field.insepDegree E K * Field.insepDegree F E := by
   constructor
-  · simpa [mul_comm] using Field.sepDegree_mul_sepDegree_of_isAlgebraic F E K
-  · simpa [mul_comm] using Field.insepDegree_mul_insepDegree_of_isAlgebraic F E K
+  · calc
+      Field.sepDegree F K = Field.sepDegree F E * Field.sepDegree E K :=
+        (Field.sepDegree_mul_sepDegree_of_isAlgebraic F E K).symm
+      _ = Field.sepDegree E K * Field.sepDegree F E := mul_comm _ _
+  · calc
+      Field.insepDegree F K = Field.insepDegree F E * Field.insepDegree E K :=
+        (Field.insepDegree_mul_insepDegree_of_isAlgebraic F E K).symm
+      _ = Field.insepDegree E K * Field.insepDegree F E := mul_comm _ _
 
 end
 

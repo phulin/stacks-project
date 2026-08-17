@@ -63,7 +63,42 @@ theorem exists_finite_compact_open_refinement
       Formalization.Books.Topology.Unit02.IsOpenCoverRefinement U 𝒰 V ∧
         (∀ j, IsCompact (V j)) ∧
           (∀ j j', IsCompact (V j ∩ V j')) := by
-  sorry
+  classical
+  obtain ⟨κ, W, hWref, hWbasis⟩ :=
+    Formalization.Books.Topology.Unit05.exists_basis_refinement
+      (PrespectralSpace.isTopologicalBasis (X := X)) 𝒰 h𝒰
+  obtain ⟨t, ht⟩ :=
+    hUcompact.elim_finite_subcover W (fun j => (hWbasis j).1) (by
+      rw [hWref.2.1.2])
+  let e := t.equivFin
+  let V : Fin t.card → Set X := fun j => W (e.symm j)
+  have hVopen : ∀ j, IsOpen (V j) := by
+    intro j
+    exact (hWbasis (e.symm j)).1
+  have hVcompact : ∀ j, IsCompact (V j) := by
+    intro j
+    exact (hWbasis (e.symm j)).2
+  have hVcover : Formalization.Books.Topology.Unit02.IsOpenCoverOf U V := by
+    refine ⟨hVopen, ?_⟩
+    ext x
+    constructor
+    · intro hx
+      rcases mem_iUnion.mp hx with ⟨j, hxj⟩
+      have hxW : x ∈ ⋃ i, W i := mem_iUnion.mpr ⟨e.symm j, hxj⟩
+      rw [hWref.2.1.2] at hxW
+      exact hxW
+    · intro hx
+      rcases mem_iUnion.mp (ht hx) with ⟨i, hxi⟩
+      rcases mem_iUnion.mp hxi with ⟨hi, hxW⟩
+      exact mem_iUnion.mpr ⟨e ⟨i, hi⟩, by simpa [V] using hxW⟩
+  have hVref : Formalization.Books.Topology.Unit02.IsOpenCoverRefinement U 𝒰 V := by
+    refine ⟨h𝒰, hVcover, ?_⟩
+    intro j
+    exact hWref.2.2 (e.symm j)
+  refine ⟨t.card, V, hVref, hVcompact, ?_⟩
+  intro j j'
+  exact QuasiSeparatedSpace.inter_isCompact (V j) (V j') (hVopen j) (hVcompact j)
+    (hVopen j') (hVcompact j')
 
 /-! ### Isolated points -/
 

@@ -10,6 +10,7 @@ import Mathlib.CategoryTheory.Limits.Connected
 import Mathlib.CategoryTheory.Limits.Shapes.FiniteLimits
 import Mathlib.CategoryTheory.Limits.Shapes.FiniteProducts
 import Mathlib.CategoryTheory.Limits.Shapes.Pullback.HasPullback
+import Mathlib.CategoryTheory.Limits.Shapes.Opposites.Equalizers
 import Mathlib.CategoryTheory.Limits.Shapes.Terminal
 import Mathlib.CategoryTheory.IsConnected
 import Mathlib.CategoryTheory.PathCategory.MorphismProperty
@@ -1023,6 +1024,487 @@ private theorem hasCoproduct_of_finite_nonempty [HasBinaryCoproducts C]
   exact hasCoproduct_of_equiv_of_iso (fun i : Fin (k + 1) => f (e.symm i)) f e
     (fun x => by simpa using (Iso.refl (f x)))
 
+/- A finite family of objects, together with a finite list of equations between
+   its legs, can be solved using pullbacks and equalizers.  The state below
+   records the universal property needed while the family is enlarged. -/
+private structure ConnectedLimitState {J C : Type*} [Category J] [Category C]
+    (F : J ⥤ C) where
+  α : Type*
+  finite : Finite α
+  obj : α → J
+  pt : C
+  leg : ∀ i, pt ⟶ F.obj (obj i)
+  rel : ∀ (i j : α), (obj i ⟶ obj j) → Prop
+  compat : ∀ (i j : α) (f : obj i ⟶ obj j),
+    rel i j f → leg i ≫ F.map f = leg j
+  universal : ∀ {W : C} (q : ∀ i, W ⟶ F.obj (obj i)),
+    (∀ (i j : α) (f : obj i ⟶ obj j), rel i j f →
+      q i ≫ F.map f = q j) →
+    ∃! u : W ⟶ pt, ∀ i, u ≫ leg i = q i
+
+private noncomputable def connectedLimitStateInitial {J C : Type*} [Category J] [Category C]
+    (F : J ⥤ C) (r : J) : ConnectedLimitState F where
+  α := Unit
+  finite := inferInstance
+  obj := fun _ => r
+  pt := F.obj r
+  leg := fun _ => 𝟙 _
+  rel := fun _ _ _ => False
+  compat := by
+    intro i j f hf
+    exact False.elim hf
+  universal := by
+    intro W q hq
+    refine ⟨q (), ?_, ?_⟩
+    · intro i
+      simp
+    · intro m hm
+      simpa using hm ()
+
+private noncomputable def connectedLimitStateExtendForward
+    {J C : Type*} [Category J] [Category C] {F : J ⥤ C}
+    (s : ConnectedLimitState F) (i : s.α) {X : J}
+    (f : s.obj i ⟶ X) : ConnectedLimitState F := by
+  letI : Finite s.α := s.finite
+  exact
+    { α := Sum s.α Unit
+      finite := inferInstance
+      obj := Sum.elim s.obj (fun _ => X)
+      pt := s.pt
+      leg := fun k => match k with
+        | Sum.inl k => s.leg k
+        | Sum.inr _ => s.leg i ≫ F.map f
+      rel := fun a b g => match a, b with
+        | Sum.inl a, Sum.inl b => s.rel a b g
+        | Sum.inl a, Sum.inr _ => ∃ h : a = i, HEq g f
+        | _, _ => False
+      compat := by
+        intro a b g h
+        rcases a with a | a <;> rcases b with b | b
+        · exact s.compat _ _ _ h
+        · rcases h with ⟨rfl, h⟩
+          cases h
+          simp
+        · exact False.elim h
+        · exact False.elim h
+      universal := by
+        intro W q hq
+        let qo : ∀ k : s.α, W ⟶ F.obj (s.obj k) := fun k => q (Sum.inl k)
+        have hqo : ∀ (a b : s.α) (g : s.obj a ⟶ s.obj b),
+            s.rel a b g → qo a ≫ F.map g = qo b := by
+          intro a b g h
+          exact hq (Sum.inl a) (Sum.inl b) g h
+        obtain ⟨u, hu, huuniq⟩ := s.universal qo hqo
+        refine ⟨u, ?_, ?_⟩
+        · intro k
+          rcases k with k | k
+          · exact hu k
+          · have h := hq (Sum.inl i) (Sum.inr k) f (by
+              exact ⟨rfl, HEq.rfl⟩)
+            change u ≫ (s.leg i ≫ F.map f) = q (Sum.inr k)
+            rw [← Category.assoc, hu i]
+            simpa using h
+        · intro m hm
+          apply huuniq
+          intro k
+          exact hm (Sum.inl k)
+      }
+
+private noncomputable def connectedLimitStateExtendBackward
+    {J C : Type*} [Category J] [Category C] {F : J ⥤ C}
+    [HasPullbacks C]
+    (s : ConnectedLimitState F) (i : s.α) {X : J}
+    (f : X ⟶ s.obj i) : ConnectedLimitState F := by
+  letI : Finite s.α := s.finite
+  let p := pullback (s.leg i) (F.map f)
+  exact
+    { α := Sum s.α Unit
+      finite := inferInstance
+      obj := Sum.elim s.obj (fun _ => X)
+      pt := p
+      leg := fun k => match k with
+        | Sum.inl k => pullback.fst (s.leg i) (F.map f) ≫ s.leg k
+        | Sum.inr _ => pullback.snd (s.leg i) (F.map f)
+      rel := fun a b g => match a, b with
+        | Sum.inl a, Sum.inl b => s.rel a b g
+        | Sum.inr _, Sum.inl a => ∃ h : a = i, HEq g f
+        | _, _ => False
+      compat := by
+        intro a b g h
+        rcases a with a | a <;> rcases b with b | b
+        · change s.obj a ⟶ s.obj b at g
+          change s.rel a b g at h
+          change
+            (pullback.fst (s.leg i) (F.map f) ≫ s.leg a) ≫ F.map g =
+              pullback.fst (s.leg i) (F.map f) ≫ s.leg b
+          rw [Category.assoc, s.compat a b g h]
+        · exact False.elim h
+        · have hpb := (pullback.condition (f := s.leg i) (g := F.map f)).symm
+          rcases h with ⟨ha, hg⟩
+          cases ha
+          cases hg
+          exact hpb
+        · exact False.elim h
+      universal := by
+        intro W q hq
+        let qo : ∀ k : s.α, W ⟶ F.obj (s.obj k) := fun k => q (Sum.inl k)
+        have hqo : ∀ (a b : s.α) (g : s.obj a ⟶ s.obj b),
+            s.rel a b g → qo a ≫ F.map g = qo b := by
+          intro a b g h
+          exact hq (Sum.inl a) (Sum.inl b) g h
+        obtain ⟨u, hu, huuniq⟩ := s.universal qo hqo
+        have hcompat : q (Sum.inr ()) ≫ F.map f = q (Sum.inl i) := by
+          simpa only [Sum.elim_inr, Sum.elim_inl] using
+            hq (Sum.inr ()) (Sum.inl i) f (by
+              exact ⟨rfl, HEq.rfl⟩)
+        have hnew : q (Sum.inr ()) ≫ F.map f = u ≫ s.leg i := by
+          exact hcompat.trans (by simpa [qo] using (hu i).symm)
+        let v := pullback.lift u (q (Sum.inr ())) (by
+          have hui : u ≫ s.leg i = q (Sum.inl i) := by simpa [qo] using hu i
+          exact hui.trans hcompat.symm)
+        refine ⟨v, ?_, ?_⟩
+        · intro k
+          rcases k with k | k
+          · change v ≫ (pullback.fst (s.leg i) (F.map f) ≫ s.leg k) = q (Sum.inl k)
+            have hvfst : v ≫ pullback.fst (s.leg i) (F.map f) = u :=
+              pullback.lift_fst _ _ _
+            have hcomp := congrArg (fun z => z ≫ s.leg k) hvfst
+            exact hcomp.trans (by simpa [qo] using hu k) ▸
+              (Category.assoc _ _ _).symm
+          · change v ≫ pullback.snd (s.leg i) (F.map f) = q (Sum.inr k)
+            exact pullback.lift_snd _ _ _
+        · intro m hm
+          have hmfst : m ≫ pullback.fst (s.leg i) (F.map f) = u := by
+            apply huuniq
+            intro k
+            have hmk := hm (Sum.inl k)
+            simp only [Sum.elim_inl] at hmk
+            have hmk' :
+                (m ≫ pullback.fst (s.leg i) (F.map f)) ≫ s.leg k =
+                  q (Sum.inl k) := by
+              rw [Category.assoc]
+              exact hmk
+            simpa [qo] using hmk'
+          apply pullback.hom_ext
+          · calc
+              m ≫ pullback.fst (s.leg i) (F.map f) = u := hmfst
+              _ = v ≫ pullback.fst (s.leg i) (F.map f) :=
+                (pullback.lift_fst _ _ _).symm
+          · have hmsnd : m ≫ pullback.snd (s.leg i) (F.map f) = q (Sum.inr ()) := by
+              simpa only [Sum.elim_inr] using hm (Sum.inr ())
+            exact hmsnd.trans (pullback.lift_snd _ _ _).symm
+      }
+
+universe w
+
+private theorem connectedLimitStateExtendZigzag
+    {J : Type u} [Category.{v} J] {C : Type u'} [Category.{v'} C]
+    {F : J ⥤ C} [HasPullbacks C]
+    (s : ConnectedLimitState.{u, u', w, v, v'} F) {a b : J} (i : s.α)
+    (hi : s.obj i = a) (h : Zigzag a b) :
+    ∃ (t : ConnectedLimitState.{u, u', w, v, v'} F) (e : s.α → t.α) (k : t.α),
+      (∀ j, t.obj (e j) = s.obj j) ∧ t.obj k = b := by
+  induction h generalizing s i with
+  | refl =>
+      exact ⟨s, id, i, by intro j; rfl, by simpa using hi⟩
+  | @tail b c hab hbc ih =>
+      rcases hbc with ⟨⟨g⟩⟩ | ⟨⟨g⟩⟩
+      · obtain ⟨s₁, e₁, k₁, he₁, hk₁⟩ := ih s i hi
+        let f : s₁.obj k₁ ⟶ c := eqToHom hk₁ ≫ g
+        let s₂ := connectedLimitStateExtendForward s₁ k₁ f
+        refine ⟨s₂, (fun j => Sum.inl (e₁ j)), Sum.inr (), ?_, ?_⟩
+        · intro j
+          change s₁.obj (e₁ j) = s.obj j
+          exact he₁ j
+        · change c = c
+          rfl
+      · obtain ⟨s₁, e₁, k₁, he₁, hk₁⟩ := ih s i hi
+        let f : c ⟶ s₁.obj k₁ := g ≫ eqToHom hk₁.symm
+        let s₂ := connectedLimitStateExtendBackward s₁ k₁ f
+        refine ⟨s₂, (fun j => Sum.inl (e₁ j)), Sum.inr (), ?_, ?_⟩
+        · intro j
+          change s₁.obj (e₁ j) = s.obj j
+          exact he₁ j
+        · change c = c
+          rfl
+
+private theorem connectedLimitStateCoverList
+    {J : Type u} [Category.{v} J] {C : Type u'} [Category.{v'} C]
+    {F : J ⥤ C} [HasPullbacks C] [IsConnected J]
+    (s : ConnectedLimitState.{u, u', w, v, v'} F) (r : J) (i : s.α)
+    (hi : s.obj i = r) (xs : List J) :
+    ∃ (t : ConnectedLimitState.{u, u', w, v, v'} F) (e : s.α → t.α)
+        (root : t.α),
+      (∀ j, t.obj (e j) = s.obj j) ∧ t.obj root = r ∧
+        ∀ x ∈ xs, ∃ k, t.obj k = x := by
+  induction xs generalizing s i with
+  | nil =>
+      exact ⟨s, id, i, by intro j; rfl, hi, by simp⟩
+  | cons x xs ih =>
+      have hz : Zigzag r x :=
+        @isPreconnected_zigzag J _
+          (inferInstance : IsConnected J).toIsPreconnected r x
+      obtain ⟨s₁, e₁, k₁, he₁, hk₁⟩ :=
+        connectedLimitStateExtendZigzag s i hi hz
+      have hroot₁ : s₁.obj (e₁ i) = r := (he₁ i).trans hi
+      obtain ⟨t, e₂, root, he₂, hroot₂, hcover₂⟩ :=
+        ih s₁ (e₁ i) hroot₁
+      refine ⟨t, (fun j => e₂ (e₁ j)), root, ?_, hroot₂, ?_⟩
+      · intro j
+        exact (he₂ (e₁ j)).trans (he₁ j)
+      · intro y hy
+        simp only [List.mem_cons] at hy
+        rcases hy with hy | hy
+        · subst y
+          exact ⟨e₂ k₁, (he₂ k₁).trans hk₁⟩
+        · exact hcover₂ y hy
+
+private structure ConnectedLimitFixedState
+    {J : Type u} [Category.{v} J] {C : Type u'} [Category.{v'} C]
+    (F : J ⥤ C) (α : Type w) (obj : α → J) where
+  pt : C
+  leg : ∀ i, pt ⟶ F.obj (obj i)
+  rel : ∀ (i j : α), (obj i ⟶ obj j) → Prop
+  compat : ∀ (i j : α) (f : obj i ⟶ obj j),
+    rel i j f → leg i ≫ F.map f = leg j
+  universal : ∀ {W : C} (q : ∀ i, W ⟶ F.obj (obj i)),
+    (∀ (i j : α) (f : obj i ⟶ obj j), rel i j f →
+      q i ≫ F.map f = q j) →
+    ∃! u : W ⟶ pt, ∀ i, u ≫ leg i = q i
+
+private def connectedLimitFixedOfState
+    {J : Type u} [Category.{v} J] {C : Type u'} [Category.{v'} C]
+    {F : J ⥤ C} (s : ConnectedLimitState.{u, u', w, v, v'} F) :
+    ConnectedLimitFixedState F s.α s.obj where
+  pt := s.pt
+  leg := s.leg
+  rel := s.rel
+  compat := s.compat
+  universal := s.universal
+
+private noncomputable def connectedLimitFixedAdd
+    {J : Type u} [Category.{v} J] {C : Type u'} [Category.{v'} C]
+    {F : J ⥤ C} [HasEqualizers C]
+    {α : Type w} {obj : α → J} (s : ConnectedLimitFixedState F α obj)
+    (i j : α) (f : obj i ⟶ obj j) : ConnectedLimitFixedState F α obj := by
+  let a := s.leg i ≫ F.map f
+  let b := s.leg j
+  let e := equalizer.ι a b
+  exact
+    { pt := equalizer a b
+      leg := fun k => e ≫ s.leg k
+      rel := fun i' j' g => s.rel i' j' g ∨
+        (i' = i ∧ j' = j ∧ HEq g f)
+      compat := by
+        intro i' j' g h
+        rcases h with h | h
+        · simp only [Category.assoc]
+          rw [s.compat _ _ _ h]
+        · rcases h with ⟨hi, hj, hf⟩
+          have hcond := equalizer.condition (s.leg i ≫ F.map f) (s.leg j)
+          cases hi
+          cases hj
+          cases hf
+          simpa [e, a, b, Category.assoc] using hcond
+      universal := by
+        intro W q hq
+        have hqold : ∀ (i' j' : α) (g : obj i' ⟶ obj j'),
+            s.rel i' j' g → q i' ≫ F.map g = q j' := by
+          intro i' j' g h
+          exact hq _ _ _ (Or.inl h)
+        obtain ⟨u, hu, huuniq⟩ := s.universal q hqold
+        have hnew : u ≫ a = u ≫ b := by
+          dsimp [a, b]
+          rw [← Category.assoc, hu i, hu j]
+          exact hq i j f (Or.inr ⟨rfl, rfl, HEq.rfl⟩)
+        let v := equalizer.lift u hnew
+        refine ⟨v, ?_, ?_⟩
+        · intro k
+          rw [← Category.assoc, equalizer.lift_ι]
+          exact hu k
+        · intro m hm
+          apply equalizer.hom_ext
+          have hm0 : ∀ k, (m ≫ e) ≫ s.leg k = q k := by
+            intro k
+            simpa only [Category.assoc] using hm k
+          have hmeq : m ≫ e = u := huuniq (m ≫ e) hm0
+          calc
+            m ≫ e = u := hmeq
+            _ = v ≫ e := by rw [equalizer.lift_ι] }
+
+private theorem connectedLimitFixedAdd_old
+    {J : Type u} [Category.{v} J] {C : Type u'} [Category.{v'} C]
+    {F : J ⥤ C} [HasEqualizers C]
+    {α : Type w} {obj : α → J} (s : ConnectedLimitFixedState F α obj)
+    (i j : α) (f : obj i ⟶ obj j) {a b : α} {g : obj a ⟶ obj b} :
+    s.rel a b g → (connectedLimitFixedAdd s i j f).rel a b g := by
+  intro h
+  change s.rel a b g ∨ _
+  exact Or.inl h
+
+private theorem connectedLimitFixedAdd_new
+    {J : Type u} [Category.{v} J] {C : Type u'} [Category.{v'} C]
+    {F : J ⥤ C} [HasEqualizers C]
+    {α : Type w} {obj : α → J} (s : ConnectedLimitFixedState F α obj)
+    (i j : α) (f : obj i ⟶ obj j) :
+    (connectedLimitFixedAdd s i j f).rel i j f := by
+  change s.rel i j f ∨ _
+  exact Or.inr ⟨rfl, rfl, HEq.rfl⟩
+
+private noncomputable def connectedLimitFixedAddList
+    {J : Type u} [Category.{v} J] {C : Type u'} [Category.{v'} C]
+    {F : J ⥤ C} [HasEqualizers C]
+    {α : Type w} {obj : α → J} (s : ConnectedLimitFixedState F α obj) :
+    List (Σ i j : α, obj i ⟶ obj j) → ConnectedLimitFixedState F α obj
+  | [] => s
+  | c :: L => connectedLimitFixedAdd
+      (connectedLimitFixedAddList s L) c.1 c.2.1 c.2.2
+
+private theorem connectedLimitFixedAddList_preserves
+    {J : Type u} [Category.{v} J] {C : Type u'} [Category.{v'} C]
+    {F : J ⥤ C} [HasEqualizers C]
+    {α : Type w} {obj : α → J} (s : ConnectedLimitFixedState F α obj)
+    (L : List (Σ i j : α, obj i ⟶ obj j))
+    {a b : α} {g : obj a ⟶ obj b} :
+    s.rel a b g →
+      (connectedLimitFixedAddList s L).rel a b g := by
+  induction L with
+  | nil => exact id
+  | cons c L ih =>
+      intro h
+      exact connectedLimitFixedAdd_old _ _ _ _ (ih h)
+
+private theorem connectedLimitFixedAddList_mem
+    {J : Type u} [Category.{v} J] {C : Type u'} [Category.{v'} C]
+    {F : J ⥤ C} [HasEqualizers C]
+    {α : Type w} {obj : α → J} (s : ConnectedLimitFixedState F α obj)
+    (L : List (Σ i j : α, obj i ⟶ obj j)) :
+    ∀ c ∈ L, (connectedLimitFixedAddList s L).rel c.1 c.2.1 c.2.2 := by
+  induction L with
+  | nil => simp
+  | cons c L ih =>
+      intro d hd
+      simp only [List.mem_cons] at hd
+      rcases hd with rfl | hd
+      · exact connectedLimitFixedAdd_new _ _ _ _
+      · exact connectedLimitFixedAdd_old _ _ _ _ (ih _ hd)
+
+private theorem connectedLimitState_has_limit
+    {J : Type u} [SmallCategory J] [FinCategory J]
+    {C : Type u'} [Category.{v'} C] {F : J ⥤ C}
+    [IsConnected J] [HasPullbacks C] [HasEqualizers C] : HasLimit F := by
+  letI : Nonempty J := @IsConnected.is_nonempty J _ (inferInstance : IsConnected J)
+  letI : Fintype J := Fintype.ofFinite J
+  letI : Fintype (Arrow J) := Fintype.ofFinite (Arrow J)
+  let r : J := Classical.choice (inferInstance : Nonempty J)
+  let s₀ := connectedLimitStateInitial F r
+  let xs : List J := (Fintype.elems : Finset J).toList
+  obtain ⟨s, e, root, he, hroot, hcover⟩ :=
+    connectedLimitStateCoverList s₀ r () rfl xs
+  let pick : J → s.α := fun j => Classical.choose (hcover j (by
+    simpa [xs] using (Fintype.complete j)))
+  have hpick (j : J) : s.obj (pick j) = j :=
+    Classical.choose_spec (hcover j (by
+      simpa [xs] using (Fintype.complete j)))
+  letI : Finite s.α := s.finite
+  letI : Fintype s.α := Fintype.ofFinite s.α
+  let sf := connectedLimitFixedOfState s
+  let idConstraints : List (Σ i j : s.α, s.obj i ⟶ s.obj j) :=
+    (Fintype.elems : Finset s.α).toList.map (fun i =>
+      ⟨pick (s.obj i), i, eqToHom (hpick (s.obj i))⟩)
+  let arrowConstraints : List (Σ i j : s.α, s.obj i ⟶ s.obj j) :=
+    (Fintype.elems : Finset (Arrow J)).toList.map (fun a =>
+      ⟨pick a.left, pick a.right,
+        eqToHom (hpick a.left) ≫ a.hom ≫ eqToHom (hpick a.right).symm⟩)
+  let constraints := idConstraints ++ arrowConstraints
+  let t := connectedLimitFixedAddList sf constraints
+  have hid (i : s.α) :
+      t.rel (pick (s.obj i)) i (eqToHom (hpick (s.obj i))) := by
+    have hi : i ∈ (Fintype.elems : Finset s.α) := Fintype.complete i
+    have hi' : i ∈ (Fintype.elems : Finset s.α).toList := by
+      simpa using hi
+    have hm :
+        (⟨pick (s.obj i), i, eqToHom (hpick (s.obj i))⟩ :
+            Σ i j : s.α, s.obj i ⟶ s.obj j) ∈ idConstraints := by
+      refine List.mem_map.mpr ⟨i, hi', ?_⟩
+      rfl
+    exact connectedLimitFixedAddList_mem sf constraints _
+      (List.mem_append.mpr (Or.inl hm))
+  have harrow {X Y : J} (f : X ⟶ Y) :
+      t.rel (pick X) (pick Y)
+        (eqToHom (hpick X) ≫ f ≫ eqToHom (hpick Y).symm) := by
+    have ha : Arrow.mk f ∈ (Fintype.elems : Finset (Arrow J)) :=
+      Fintype.complete (Arrow.mk f)
+    have ha' : Arrow.mk f ∈ (Fintype.elems : Finset (Arrow J)).toList := by
+      simpa using ha
+    have hm :
+        (⟨pick X, pick Y,
+          eqToHom (hpick X) ≫ f ≫ eqToHom (hpick Y).symm⟩ :
+            Σ i j : s.α, s.obj i ⟶ s.obj j) ∈ arrowConstraints := by
+      refine List.mem_map.mpr ⟨Arrow.mk f, ha', ?_⟩
+      rfl
+    exact connectedLimitFixedAddList_mem sf constraints _
+      (List.mem_append.mpr (Or.inr hm))
+  let qleg : ∀ X : J, t.pt ⟶ F.obj X := fun X =>
+    t.leg (pick X) ≫ F.map (eqToHom (hpick X))
+  let q : Cone F :=
+    { pt := t.pt
+      π :=
+        { app := qleg
+          naturality := by
+            intro X Y f
+            have h := t.compat (pick X) (pick Y)
+              (eqToHom (hpick X) ≫ f ≫ eqToHom (hpick Y).symm) (harrow f)
+            have h' := congrArg (fun z => z ≫ F.map (eqToHom (hpick Y))) h
+            simpa [qleg, Functor.map_comp, Category.assoc] using h'.symm } }
+  let hc : IsLimit q := by
+    refine { lift := ?_, fac := ?_, uniq := ?_ }
+    · intro d
+      let qd : ∀ i : s.α, d.pt ⟶ F.obj (s.obj i) := fun i =>
+        d.π.app (s.obj i)
+      have hqd : ∀ (i j : s.α) (f : s.obj i ⟶ s.obj j),
+          t.rel i j f → qd i ≫ F.map f = qd j := by
+        intro i j f hf
+        simpa [qd] using (d.π.naturality f).symm
+      exact Classical.choose (t.universal qd hqd)
+    · intro d X
+      let qd : ∀ i : s.α, d.pt ⟶ F.obj (s.obj i) := fun i =>
+        d.π.app (s.obj i)
+      have hqd : ∀ (i j : s.α) (f : s.obj i ⟶ s.obj j),
+          t.rel i j f → qd i ≫ F.map f = qd j := by
+        intro i j f hf
+        simpa [qd] using (d.π.naturality f).symm
+      have hu := (Classical.choose_spec (t.universal qd hqd)).1
+      calc
+        Classical.choose (t.universal qd hqd) ≫ q.π.app X =
+            (Classical.choose (t.universal qd hqd) ≫ t.leg (pick X)) ≫
+              F.map (eqToHom (hpick X)) := by
+                change Classical.choose (t.universal qd hqd) ≫
+                    (t.leg (pick X) ≫ F.map (eqToHom (hpick X))) = _
+                simp only [Category.assoc]
+        _ = d.π.app (s.obj (pick X)) ≫ F.map (eqToHom (hpick X)) := by
+          rw [hu]
+        _ = d.π.app X := by
+          simpa using (d.π.naturality (eqToHom (hpick X))).symm
+    · intro d m hm
+      let qd : ∀ i : s.α, d.pt ⟶ F.obj (s.obj i) := fun i =>
+        d.π.app (s.obj i)
+      have hqd : ∀ (i j : s.α) (f : s.obj i ⟶ s.obj j),
+          t.rel i j f → qd i ≫ F.map f = qd j := by
+        intro i j f hf
+        simpa [qd] using (d.π.naturality f).symm
+      apply (Classical.choose_spec (t.universal qd hqd)).2 m
+      intro i
+      have hi := t.compat (pick (s.obj i)) i
+        (eqToHom (hpick (s.obj i))) (hid i)
+      calc
+        m ≫ t.leg i =
+            m ≫ (t.leg (pick (s.obj i)) ≫ F.map
+              (eqToHom (hpick (s.obj i)))) := by rw [hi]
+        _ = m ≫ q.π.app (s.obj i) := by rfl
+        _ = d.π.app (s.obj i) := hm _
+  exact ⟨q, hc⟩
+
 /- Connected finite limits are exactly the limits generated by equalizers and
    fibre products. -/
 theorem has_connected_finite_limits_iff :
@@ -1072,7 +1554,8 @@ theorem has_connected_finite_limits_iff :
       · exact CategoryTheory.composePath_toPath f
     obtain ⟨R⟩ := finite_diagram_category hgen
     rw [finite_diagram_replacement_has_limit_iff R F]
-    sorry
+    letI : IsConnected R.J := R.connected_iff.mpr inferInstance
+    exact connectedLimitState_has_limit
 
 /- The dual connected-colimit statement. -/
 theorem has_connected_finite_colimits_iff :
@@ -1122,7 +1605,10 @@ theorem has_connected_finite_colimits_iff :
       · exact CategoryTheory.composePath_toPath f
     obtain ⟨R⟩ := finite_diagram_category hgen
     rw [finite_diagram_replacement_has_colimit_iff R F]
-    sorry
+    letI : IsConnected R.J := R.connected_iff.mpr inferInstance
+    letI : HasLimit (R.F ⋙ F).op := by
+      exact connectedLimitState_has_limit
+    exact hasColimit_of_hasLimit_op (R.F ⋙ F)
 
 /- The first presentation of nonempty finite limits from the source. -/
 theorem has_nonempty_finite_limits_iff :

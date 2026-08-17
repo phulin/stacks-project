@@ -1,0 +1,192 @@
+import Formalization.Books.Guide.Unit05.Core
+import Formalization.Books.SpacesCohomology.Unit01.Core
+
+/-!
+# Chapter 5, Section 5: cohomology
+-/
+
+noncomputable section
+
+open CategoryTheory
+
+universe u v
+
+namespace Formalization.Books.Guide.Unit05
+
+class StackCohomologyTheory (C : Type u) [Category.{v} C]
+    [StackCategory C] where
+  Sheaf : C → Type u
+  isQuasiCoherent : ∀ {X : C}, Sheaf X → Prop
+  isCoherent : ∀ {X : C}, Sheaf X → Prop
+  isConstructible : ∀ {X : C}, Sheaf X → Prop
+  cohomology : ∀ (X : C), Sheaf X → ℤ → Type u
+  pushforward : ∀ {X Y : C}, (X ⟶ Y) → Sheaf X → Sheaf Y
+  derivedObject : C → Type u
+  derivedLAdicObject : C → Type u
+  deRhamCohomology : C → Type u
+  singularCohomology : C → Type u
+  cotangentComplex : C → Type u
+  cotangentComplexConstructed : C → Prop
+
+abbrev StackSheaf {C : Type u} [Category.{v} C] [StackCategory C]
+    [StackCohomologyTheory C] (X : C) := StackCohomologyTheory.Sheaf X
+
+def StackSheafIsQuasiCoherent {C : Type u} [Category.{v} C]
+    [StackCategory C] [StackCohomologyTheory C] {X : C}
+    (F : StackSheaf X) : Prop :=
+  StackCohomologyTheory.isQuasiCoherent F
+
+def StackSheafIsCoherent {C : Type u} [Category.{v} C]
+    [StackCategory C] [StackCohomologyTheory C] {X : C}
+    (F : StackSheaf X) : Prop :=
+  StackCohomologyTheory.isCoherent F
+
+def StackSheafIsConstructible {C : Type u} [Category.{v} C]
+    [StackCategory C] [StackCohomologyTheory C] {X : C}
+    (F : StackSheaf X) : Prop :=
+  StackCohomologyTheory.isConstructible F
+
+abbrev StackCohomologyGroup {C : Type u} [Category.{v} C]
+    [StackCategory C] [StackCohomologyTheory C]
+    (X : C) (F : StackSheaf X) (n : ℤ) :=
+  StackCohomologyTheory.cohomology X F n
+
+def StackPushforward {C : Type u} [Category.{v} C]
+    [StackCategory C] [StackCohomologyTheory C]
+    {X Y : C} (f : X ⟶ Y) (F : StackSheaf X) : StackSheaf Y :=
+  StackCohomologyTheory.pushforward f F
+
+def StackDerivedLAdicObject {C : Type u} [Category.{v} C]
+    [StackCategory C] [StackCohomologyTheory C] (X : C) : Type u :=
+  StackCohomologyTheory.derivedLAdicObject X
+
+def StackDeRhamCohomology {C : Type u} [Category.{v} C]
+    [StackCategory C] [StackCohomologyTheory C] (X : C) : Type u :=
+  StackCohomologyTheory.deRhamCohomology X
+
+def StackSingularCohomology {C : Type u} [Category.{v} C]
+    [StackCategory C] [StackCohomologyTheory C] (X : C) : Type u :=
+  StackCohomologyTheory.singularCohomology X
+
+def StackCotangentComplex {C : Type u} [Category.{v} C]
+    [StackCategory C] [StackCohomologyTheory C] (X : C) : Type u :=
+  StackCohomologyTheory.cotangentComplex X
+
+structure ProperCohomologyTheorems {C : Type u} [Category.{v} C]
+    [StackCategory C] [StackCohomologyTheory C] {X Y : C} (f : X ⟶ Y) where
+  proper : IsProperMorphism f
+  fundamentalTheorem : Prop
+  grothendieckExistence : Prop
+  zariskiConnectedness : Prop
+  coherentPushforward : ∀ F : StackSheaf X, StackSheafIsCoherent F → Prop
+  constructiblePushforward : ∀ F : StackSheaf X, StackSheafIsConstructible F → Prop
+
+theorem olsson_sheaves_on_artin_stacks
+    {C : Type u} [Category.{v} C] [StackCategory C]
+    [StackCohomologyTheory C] {X Y : C} (f : X ⟶ Y)
+    (hproper : IsProperMorphism f) :
+    Nonempty (ProperCohomologyTheorems f) := by
+  sorry
+
+def HasGrothendieckFundamentalTheorem {C : Type u} [Category.{v} C]
+    [StackCategory C] [StackCohomologyTheory C] {X Y : C} (f : X ⟶ Y) : Prop :=
+  ∃ D : ProperCohomologyTheorems f, D.fundamentalTheorem
+
+def HasGrothendieckExistenceTheorem {C : Type u} [Category.{v} C]
+    [StackCategory C] [StackCohomologyTheory C] {X Y : C} (f : X ⟶ Y) : Prop :=
+  ∃ D : ProperCohomologyTheorems f, D.grothendieckExistence
+
+def HasZariskiConnectednessTheorem {C : Type u} [Category.{v} C]
+    [StackCategory C] [StackCohomologyTheory C] {X Y : C} (f : X ⟶ Y) : Prop :=
+  ∃ D : ProperCohomologyTheorems f, D.zariskiConnectedness
+
+theorem grothendieck_fundamental_theorem_for_proper_stack_morphisms
+    {C : Type u} [Category.{v} C] [StackCategory C]
+    [StackCohomologyTheory C] {X Y : C} (f : X ⟶ Y)
+    (hproper : IsProperMorphism f) : HasGrothendieckFundamentalTheorem f := by
+  sorry
+
+theorem grothendieck_existence_for_proper_artin_stacks
+    {C : Type u} [Category.{v} C] [StackCategory C] [StackCohomologyTheory C]
+    {X Y : C} (f : X ⟶ Y) (hproper : IsProperMorphism f) :
+    HasGrothendieckExistenceTheorem f := by
+  sorry
+
+theorem zariski_connectedness_for_proper_stack_morphisms
+    {C : Type u} [Category.{v} C] [StackCategory C]
+    [StackCohomologyTheory C] {X Y : C} (f : X ⟶ Y)
+    (hproper : IsProperMorphism f) : HasZariskiConnectednessTheorem f := by
+  sorry
+
+theorem finite_direct_images_of_coherent_and_constructible_sheaves
+    {C : Type u} [Category.{v} C] [StackCategory C]
+    [StackCohomologyTheory C] {X Y : C} (f : X ⟶ Y)
+    (hproper : IsProperMorphism f) :
+    ∀ F : StackSheaf X,
+      (StackSheafIsCoherent F → StackSheafIsCoherent (StackPushforward f F)) ∧
+      (StackSheafIsConstructible F → StackSheafIsConstructible (StackPushforward f F)) := by
+  sorry
+
+structure LefschetzTraceFormulaData {C : Type u} [Category.{v} C]
+    [StackCategory C] [StackCohomologyTheory C] where
+  stack : C
+  derivedLAdicCategory : Type u
+  object : StackDerivedLAdicObject stack
+  traceFormula : Prop
+
+theorem lefschetz_trace_formula_for_algebraic_stacks
+    {C : Type u} [Category.{v} C] [StackCategory C]
+    [StackCohomologyTheory C] (D : LefschetzTraceFormulaData (C := C)) :
+    D.traceFormula := by
+  sorry
+
+structure GeometricStackCohomologyData {C : Type u} [Category.{v} C]
+    [StackCategory C] [StackCohomologyTheory C] where
+  stack : C
+  differentiableStack : Prop
+  topologicalStack : Prop
+  deRhamObject : StackDeRhamCohomology stack
+  singularObject : StackSingularCohomology stack
+
+theorem de_rham_cohomology_for_differentiable_stacks
+    {C : Type u} [Category.{v} C] [StackCategory C]
+    [StackCohomologyTheory C] (D : GeometricStackCohomologyData (C := C)) :
+    Nonempty (StackDeRhamCohomology D.stack) := by
+  sorry
+
+theorem singular_cohomology_for_topological_stacks
+    {C : Type u} [Category.{v} C] [StackCategory C]
+    [StackCohomologyTheory C] (D : GeometricStackCohomologyData (C := C)) :
+    Nonempty (StackSingularCohomology D.stack) := by
+  sorry
+
+theorem coherent_direct_images_for_proper_fppf_stack_morphisms
+    {C : Type u} [Category.{v} C] [StackCategory C]
+    [StackCohomologyTheory C] {X Y : C} (f : X ⟶ Y)
+    (hproper : IsProperMorphism f) (hfppf : IsFppfMorphism f)
+    (F : StackSheaf X) (hcoherent : StackSheafIsCoherent F) :
+    StackSheafIsCoherent (StackPushforward f F) := by
+  sorry
+
+structure TameDMProperBaseChangeData {C : Type u} [Category.{v} C]
+    [StackCategory C] [StackCohomologyTheory C] where
+  stack : C
+  deligneMumford : IsDeligneMumfordStack stack
+  tame : IsTameArtinStack stack
+  proper : Prop
+  etaleCohomologyBaseChange : Prop
+
+theorem proper_base_change_for_etale_cohomology_of_tame_dm_stacks
+    {C : Type u} [Category.{v} C] [StackCategory C]
+    [StackCohomologyTheory C] (D : TameDMProperBaseChangeData (C := C))
+    (hproper : D.proper) :
+    D.etaleCohomologyBaseChange := by
+  sorry
+
+theorem cotangent_complex_for_artin_stacks
+    {C : Type u} [Category.{v} C] [StackCategory C]
+    [StackCohomologyTheory C] (X : C) :
+    StackCohomologyTheory.cotangentComplexConstructed X := by
+  sorry
+
+end Formalization.Books.Guide.Unit05

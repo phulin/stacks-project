@@ -1866,7 +1866,7 @@ theorem isoComma_diagonal_one
 theorem isoComma_diagonal_two
     {C S : Type*} [Category* C] [Category* S]
     (G₁ G₂ : C ⥤ S) :
-    Nonempty (IsoComma (Functor.prod G₁ G₂) (Functor.diag S) ≌
+    Nonempty (IsoComma (Functor.prod' G₁ G₂) (Functor.diag S) ≌
       IsoComma (isoCommaPair G₁ G₂) (Functor.diag C)) := by
   sorry
 

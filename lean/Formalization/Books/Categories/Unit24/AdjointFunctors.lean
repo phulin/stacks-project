@@ -62,7 +62,8 @@ theorem hom_equiv_iff_unit_formula
     {X : C} {Y : D} (α : u.obj X ⟶ Y) (β : X ⟶ v.obj Y) :
     h.homEquiv X Y α = β ↔
       β = h.unit.app X ≫ v.map α := by
-  sorry
+  rw [Adjunction.homEquiv_unit]
+  exact eq_comm
 
 theorem hom_equiv_iff_counit_formula
     {C : Type u} [Category.{v} C]
@@ -71,7 +72,8 @@ theorem hom_equiv_iff_counit_formula
     {X : C} {Y : D} (α : u.obj X ⟶ Y) (β : X ⟶ v.obj Y) :
     h.homEquiv X Y α = β ↔
       α = u.map β ≫ h.counit.app Y := by
-  sorry
+  rw [Adjunction.homEquiv_apply_eq]
+  rfl
 
 theorem unit_formula_iff_counit_formula
     {C : Type u} [Category.{v} C]
@@ -80,7 +82,8 @@ theorem unit_formula_iff_counit_formula
     {X : C} {Y : D} (α : u.obj X ⟶ Y) (β : X ⟶ v.obj Y) :
     (β = h.unit.app X ≫ v.map α) ↔
       (α = u.map β ≫ h.counit.app Y) := by
-  sorry
+  simpa [Adjunction.homEquiv_unit, Adjunction.homEquiv_counit, eq_comm] using
+    h.unit_comp_map_eq_iff α β
 
 /-! ## Existence from representability -/
 
@@ -92,7 +95,22 @@ theorem right_adjoint_of_representable_hom
     (u : C ⥤ D)
     (h : ∀ Y : D, Functor.IsRepresentable (u.op ⋙ yoneda.obj Y)) :
     ∃ v : D ⥤ C, Nonempty (u ⊣ v) := by
-  sorry
+  classical
+  let vObj : D → C := fun Y =>
+    letI := h Y
+    (u.op ⋙ yoneda.obj Y).reprX
+  let e : ∀ X Y, (u.obj X ⟶ Y) ≃ (X ⟶ vObj Y) := fun X Y =>
+    letI := h Y
+    ((u.op ⋙ yoneda.obj Y).representableBy.homEquiv).symm
+  have he : ∀ X' X Y (f : X' ⟶ X) (g : u.obj X ⟶ Y),
+      e X' Y (u.map f ≫ g) = f ≫ e X Y g := by
+    intro X' X Y f g
+    apply ((u.op ⋙ yoneda.obj Y).representableBy.homEquiv).injective
+    simpa [e] using
+      ((u.op ⋙ yoneda.obj Y).representableBy.homEquiv_comp f
+        ((u.op ⋙ yoneda.obj Y).representableBy.homEquiv.symm g)).symm
+  exact ⟨Adjunction.rightAdjointOfEquiv e he,
+    ⟨Adjunction.adjunctionOfEquivRight e he⟩⟩
 
 /-! ## Fully faithful adjoints -/
 
@@ -102,7 +120,18 @@ theorem fully_faithful_left_of_comp
     {u : C ⥤ D} {v : D ⥤ C} (h : u ⊣ v)
     (hcomp : Nonempty (u ⋙ v).FullyFaithful) :
     Nonempty u.FullyFaithful := by
-  sorry
+  classical
+  rcases hcomp with ⟨hcomp⟩
+  let preimage {X Y : C} (f : u.obj X ⟶ u.obj Y) : X ⟶ Y :=
+    hcomp.preimage (v.map f)
+  refine ⟨{ preimage := preimage, map_preimage := ?_, preimage_map := ?_ }⟩
+  · intro X Y f
+    apply (h.homEquiv X (u.obj Y)).injective
+    rw [Adjunction.homEquiv_unit, Adjunction.homEquiv_unit]
+    simpa [preimage] using
+      congrArg (fun g => h.unit.app X ≫ g) (hcomp.map_preimage (v.map f))
+  · intro X Y f
+    apply hcomp.preimage_map
 
 theorem fully_faithful_right_of_comp
     {C : Type u} [Category.{v} C]
@@ -110,7 +139,18 @@ theorem fully_faithful_right_of_comp
     {u : C ⥤ D} {v : D ⥤ C} (h : u ⊣ v)
     (hcomp : Nonempty (v ⋙ u).FullyFaithful) :
     Nonempty v.FullyFaithful := by
-  sorry
+  classical
+  rcases hcomp with ⟨hcomp⟩
+  let preimage {X Y : D} (f : v.obj X ⟶ v.obj Y) : X ⟶ Y :=
+    hcomp.preimage (u.map f)
+  refine ⟨{ preimage := preimage, map_preimage := ?_, preimage_map := ?_ }⟩
+  · intro X Y f
+    apply (h.homEquiv (v.obj X) Y).symm.injective
+    rw [Adjunction.homEquiv_counit, Adjunction.homEquiv_counit]
+    simpa [preimage] using
+      congrArg (fun g => g ≫ h.counit.app Y) (hcomp.map_preimage (u.map f))
+  · intro X Y f
+    apply hcomp.preimage_map
 
 /- Each source chain is recorded by adjacent equivalences.  `u ⋙ v` is the
    Lean composition corresponding to `v ∘ u`, and `v ⋙ u` to `u ∘ v`. -/
@@ -122,7 +162,39 @@ theorem adjoint_fully_faithful_criteria
       (Nonempty (𝟭 C ≅ u ⋙ v) ↔ IsIso h.unit)) ∧
     ((Nonempty v.FullyFaithful ↔ Nonempty (v ⋙ u ≅ 𝟭 D)) ∧
       (Nonempty (v ⋙ u ≅ 𝟭 D) ↔ IsIso h.counit)) := by
-  sorry
+  constructor
+  · constructor
+    · constructor
+      · rintro ⟨hu⟩
+        let : u.Full := ⟨fun {_ _} => hu.map_surjective⟩
+        let : u.Faithful := ⟨fun {_ _} f g hfg => hu.map_injective hfg⟩
+        let : IsIso h.unit := Adjunction.unit_isIso_of_L_fully_faithful h
+        exact ⟨NatIso.ofComponents (fun X => asIso (h.unit.app X))⟩
+      · rintro ⟨i⟩
+        exact fully_faithful_left_of_comp h
+          ⟨(Functor.FullyFaithful.id C).ofIso i⟩
+    · constructor
+      · rintro ⟨i⟩
+        exact Adjunction.isIso_unit_of_iso h i.symm
+      · intro hi
+        let : IsIso h.unit := hi
+        exact ⟨NatIso.ofComponents (fun X => asIso (h.unit.app X))⟩
+  · constructor
+    · constructor
+      · rintro ⟨hv⟩
+        let : v.Full := ⟨fun {_ _} => hv.map_surjective⟩
+        let : v.Faithful := ⟨fun {_ _} f g hfg => hv.map_injective hfg⟩
+        let : IsIso h.counit := Adjunction.counit_isIso_of_R_fully_faithful h
+        exact ⟨NatIso.ofComponents (fun Y => asIso (h.counit.app Y))⟩
+      · rintro ⟨j⟩
+        exact fully_faithful_right_of_comp h
+          ⟨(Functor.FullyFaithful.id D).ofIso j.symm⟩
+    · constructor
+      · rintro ⟨j⟩
+        exact Adjunction.isIso_counit_of_iso h j
+      · intro hj
+        let : IsIso h.counit := hj
+        exact ⟨NatIso.ofComponents (fun Y => asIso (h.counit.app Y))⟩
 
 /-! ## Preservation of limits and colimits -/
 
@@ -134,7 +206,8 @@ theorem left_adjoint_preserves_colimit
     {u : C ⥤ D} {v : D ⥤ C} (h : u ⊣ v)
     {I : Type w} [Category.{w'} I] (M : I ⥤ C) [HasColimit M] :
     Nonempty (IsColimit (u.mapCocone (colimit.cocone M))) := by
-  sorry
+  exact h.leftAdjoint_preservesColimits.preservesColimitsOfShape.preservesColimit.preserves
+    (colimit.isColimit M)
 
 theorem right_adjoint_preserves_limit
     {C : Type u} [Category.{v} C]
@@ -142,7 +215,8 @@ theorem right_adjoint_preserves_limit
     {u : C ⥤ D} {v : D ⥤ C} (h : u ⊣ v)
     {I : Type w} [Category.{w'} I] (M : I ⥤ D) [HasLimit M] :
     Nonempty (IsLimit (v.mapCone (limit.cone M))) := by
-  sorry
+  exact h.rightAdjoint_preservesLimits.preservesLimitsOfShape.preservesLimit.preserves
+    (limit.isLimit M)
 
 theorem left_adjoint_is_right_exact
     {C : Type u} [Category.{v} C]
@@ -150,7 +224,9 @@ theorem left_adjoint_is_right_exact
     {u : C ⥤ D} {v : D ⥤ C} (h : u ⊣ v)
     [HasFiniteColimits C] :
     Formalization.Books.Categories.Unit23.IsRightExact u := by
-  sorry
+  change PreservesFiniteColimits u
+  let : PreservesColimitsOfSize.{0, 0} u := h.leftAdjoint_preservesColimits
+  exact PreservesColimitsOfSize.preservesFiniteColimits u
 
 theorem right_adjoint_is_left_exact
     {C : Type u} [Category.{v} C]
@@ -158,7 +234,9 @@ theorem right_adjoint_is_left_exact
     {u : C ⥤ D} {v : D ⥤ C} (h : u ⊣ v)
     [HasFiniteLimits D] :
     Formalization.Books.Categories.Unit23.IsLeftExact v := by
-  sorry
+  change PreservesFiniteLimits v
+  let : PreservesLimitsOfSize.{0, 0} v := h.rightAdjoint_preservesLimits
+  exact PreservesLimitsOfSize.preservesFiniteLimits v
 
 /-! ## Unit-counit (triangle) identities -/
 
@@ -188,7 +266,8 @@ theorem mate_counit_square
     (h₁ : u₁ ⊣ v₁) (h₂ : u₂ ⊣ v₂) (β : u₂ ⟶ u₁) :
     Functor.whiskerLeft v₁ β ≫ h₁.counit =
       Functor.whiskerRight (conjugateEquiv h₁ h₂ β) u₂ ≫ h₂.counit := by
-  sorry
+  ext Y
+  exact (conjugateEquiv_counit h₁ h₂ β Y).symm
 
 /-! ## Composition of adjunctions -/
 
@@ -203,7 +282,7 @@ theorem composed_counit_formula
     (h : u ⊣ v) (h' : u' ⊣ v') (X : A) :
     (h'.comp h).counit.app X =
       u.map (h'.counit.app (v.obj X)) ≫ h.counit.app X := by
-  sorry
+  exact h'.comp_counit_app h X
 
 end
 

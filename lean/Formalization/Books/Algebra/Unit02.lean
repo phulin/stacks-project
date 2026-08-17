@@ -1,0 +1,7 @@
+import Formalization.Books.Algebra.Unit02.Conventions
+
+/-!
+# Commutative Algebra, Chapter 2
+
+This file imports the formalization of the chapter's conventions.
+-/

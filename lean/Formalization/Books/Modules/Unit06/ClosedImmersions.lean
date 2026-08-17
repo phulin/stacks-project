@@ -443,7 +443,8 @@ theorem locallyGenerated_pullback
     (G : Mod Y.structureSheaf)
     [((SheafOfModules.pushforward (F := Opens.map f.continuous)
       f.sharp).IsRightAdjoint)] :
-    locallyGenerated ((sheafModuleRingedSpacePullback f).obj G) := by
+    locallyGenerated G →
+      locallyGenerated ((sheafModuleRingedSpacePullback f).obj G) := by
   sorry
 
 /-! ## Modules of finite type -/
@@ -568,7 +569,8 @@ theorem quasiCoherent_directSum {X : RingedSpace.{v}}
   sorry
 
 def infiniteDirectSumsPreserveQuasiCoherent : Prop :=
-  ∀ (X : RingedSpace.{v}) (I : Type v) (F : I → Mod X.structureSheaf),
+  ∀ (X : RingedSpace.{v}) (I : Type v) (_ : Infinite I)
+    (F : I → Mod X.structureSheaf),
     (∀ i, quasiCoherent (F i)) →
       quasiCoherent (colimit (Discrete.functor F))
 
@@ -928,7 +930,7 @@ theorem associatedSheaf_restrict
 
 def hasQuasiCompactNeighborhoodBasis {X : RingedSpace.{v}} (x : X) : Prop :=
   ∀ V : Opens X.carrier, x ∈ V →
-    ∃ K : Set X, x ∈ K ∧ IsCompact K ∧ K ⊆ (V : Set X)
+    ∃ K : Set X, K ∈ 𝓝 (x : X) ∧ IsCompact K ∧ K ⊆ (V : Set X)
 
 theorem quasiCoherent_locally_associated
     {X : RingedSpace.{v}} (F : Mod X.structureSheaf) (x : X)

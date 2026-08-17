@@ -703,10 +703,19 @@ theorem semiRepresentableOverPresheafFunctor_preserves_finite_limits
       rw [hcomp] at hi
       simpa using hi
     rw [hi']
-    simp [semiRepresentableOverForget, FormalCoproduct.incl,
-      FormalCoproduct.isTerminalIncl, terminalIsoIsTerminal,
-      semiRepresentableOverStructureMap, representablePresheafMapOfOver,
-      Category.assoc, he0comp']
+    dsimp [semiRepresentableOverForget, FormalCoproduct.cofan]
+    change (⊤_ (SemiRepresentableOver C X)).I at i0
+    rw [← heTcomp i0]
+    dsimp [FormalCoproduct.incl]
+    have hidx : eT.hom.f i0 = PUnit.unit := by
+      change (PUnit.unit : PUnit) = PUnit.unit
+      rfl
+    rw [hidx]
+    have he0comp'' := he0comp' PUnit.unit
+    change Sigma.ι (yoneda.obj ∘ fun _ : PUnit => X) PUnit.unit ≫ e0.hom =
+      𝟙 (functorOfPoints.obj X) at he0comp''
+    rw [he0comp'']
+    exact Category.comp_id _
   letI : PreservesLimit (Functor.empty (SemiRepresentableOver C X))
       (semiRepresentableOverPresheafFunctor X) :=
     preservesTerminal_of_iso (semiRepresentableOverPresheafFunctor X) hterm
@@ -838,6 +847,72 @@ theorem semiRepresentableOverPresheafFunctor_preserves_finite_limits
       let t' : PullbackCone f' g' := FormalCoproduct.pullbackCone f' g' pb'
       have ht' : IsLimit t' :=
         FormalCoproduct.isLimitPullbackCone f' g' pb' hpb'
+      have hfst : t'.fst = (semiRepresentableOverForget X).map t.fst := by
+        refine FormalCoproduct.hom_ext (h₁ := rfl) (h₂ := ?_)
+        change ∀ i : Function.Pullback f'.f g'.f, _
+        intro i
+        have hbasic :
+            (Over.forget X).map ((pb (j i)).fst) ≫
+                (eqToIso (hdiag i)).inv.app WalkingCospan.left =
+              Over.Hom.left (pb i).fst := by
+          have hji : j i = i := by
+            apply Subtype.ext
+            rfl
+          have hpb : HEq ((pb (j i)).fst) ((pb i).fst) := by
+            cases hji
+            rfl
+          have hleft : HEq (Over.Hom.left (pb (j i)).fst)
+              (Over.Hom.left (pb i).fst) := by
+            cases hpb
+            rfl
+          rw [eqToIso.inv, eqToHom_app]
+          apply eq_of_heq
+          exact (comp_eqToHom_heq _ _).trans
+            hleft
+        dsimp [t', FormalCoproduct.pullbackCone, pb']
+        apply eq_of_heq
+        exact (comp_eqToHom_heq _ _).trans (heq_of_eq hbasic)
+      have hsnd : t'.snd = (semiRepresentableOverForget X).map t.snd := by
+        refine FormalCoproduct.hom_ext (h₁ := rfl) (h₂ := ?_)
+        change ∀ i : Function.Pullback f'.f g'.f, _
+        intro i
+        have hbasic :
+            (Over.forget X).map ((pb (j i)).snd) ≫
+                (eqToIso (hdiag i)).inv.app WalkingCospan.right =
+              Over.Hom.left (pb i).snd := by
+          have hji : j i = i := by
+            apply Subtype.ext
+            rfl
+          have hpb : HEq ((pb (j i)).snd) ((pb i).snd) := by
+            cases hji
+            rfl
+          have hright : HEq (Over.Hom.left (pb (j i)).snd)
+              (Over.Hom.left (pb i).snd) := by
+            cases hpb
+            rfl
+          rw [eqToIso.inv, eqToHom_app]
+          apply eq_of_heq
+          exact (comp_eqToHom_heq _ _).trans hright
+        dsimp [t', FormalCoproduct.pullbackCone, pb']
+        apply eq_of_heq
+        exact (comp_eqToHom_heq _ _).trans (heq_of_eq hbasic)
+      have hone :
+          t'.π.app none = (semiRepresentableOverForget X).map (t.π.app none) := by
+        rw [PullbackCone.condition_one t', PullbackCone.condition_one t]
+        rw [hfst]
+        dsimp [f']
+        simp only [Functor.map_comp]
+        rfl
+      have hleftπ :
+          t'.π.app (some WalkingPair.left) =
+            (semiRepresentableOverForget X).map (t.π.app (some WalkingPair.left)) := by
+        change t'.fst = (semiRepresentableOverForget X).map t.fst
+        exact hfst
+      have hrightπ :
+          t'.π.app (some WalkingPair.right) =
+            (semiRepresentableOverForget X).map (t.π.app (some WalkingPair.right)) := by
+        change t'.snd = (semiRepresentableOverForget X).map t.snd
+        exact hsnd
       have ht'F : IsLimit
           ((semiRepresentablePresheafFunctor (C := C)).mapCone t') :=
         isLimitOfPreserves (semiRepresentablePresheafFunctor (C := C)) ht'
@@ -886,22 +961,62 @@ theorem semiRepresentableOverPresheafFunctor_preserves_finite_limits
                 ((t'.π.app q).f i) := by
         exact semiRepresentablePresheafFunctor_map_ι (t'.π.app q) i
       apply IsLimit.ofIsoLimit ht'F'
-      refine Cone.ext (eqToIso ?_) ?_
-      · rfl
+      refine Cone.ext (Iso.refl _) ?_
       · intro j
-        rcases j with (⟨⟩ | ⟨⟨⟩⟩) <;>
-          simp [e, t, semiRepresentableOverPresheafFunctor,
+        rcases j with (⟨⟩ | ⟨(⟨⟩ | ⟨⟩)⟩)
+        · simp only [e, t, f', g', semiRepresentableOverPresheafFunctor,
             semiRepresentableOverUnderlying, semiRepresentableOverForget,
-            semiRepresentablePresheafFunctor_map_ι,
-            NatTrans.comp_app, Functor.map_comp, Sigma.ι_desc,
-            Category.assoc] <;>
-          apply Sigma.hom_ext <;>
-          intro U <;>
+            NatTrans.comp_app, Functor.map_comp, Category.assoc]
+          apply Sigma.hom_ext
+          intro U
           dsimp [Functor.mapCone, Cone.functoriality, Cone.postcompose]
-          all_goals
-            conv_lhs =>
-              rw [← Category.assoc]
-            rw [hmap U]
+          have hU := congrArg (fun k => k ≫ e.inv.app none)
+            (hmap (q := none) U)
+          have hV := semiRepresentablePresheafFunctor_map_ι
+            ((semiRepresentableOverForget X).map (t.π.app none)) U
+          rw [hone] at hU ⊢
+          have he_none : e.inv.app none = 𝟙 _ := by
+            rfl
+          rw [he_none] at hU ⊢
+          simpa [e, t, f', g', semiRepresentableOverPresheafFunctor,
+            semiRepresentableOverUnderlying, semiRepresentableOverForget,
+            NatTrans.comp_app, Functor.map_comp, Category.assoc, hV] using hU
+        · simp only [e, t, f', g', semiRepresentableOverPresheafFunctor,
+            semiRepresentableOverUnderlying, semiRepresentableOverForget,
+            NatTrans.comp_app, Functor.map_comp, Category.assoc]
+          apply Sigma.hom_ext
+          intro U
+          dsimp [Functor.mapCone, Cone.functoriality, Cone.postcompose]
+          have hU := congrArg (fun k => k ≫ e.inv.app (some WalkingPair.left))
+            (hmap (q := some WalkingPair.left) U)
+          have hV := semiRepresentablePresheafFunctor_map_ι
+            ((semiRepresentableOverForget X).map (t.π.app (some WalkingPair.left))) U
+          rw [hleftπ] at hU
+          rw [hleftπ]
+          have he_left : e.inv.app (some WalkingPair.left) = 𝟙 _ := by
+            rfl
+          rw [he_left] at hU ⊢
+          simpa [e, t, f', g', semiRepresentableOverPresheafFunctor,
+            semiRepresentableOverUnderlying, semiRepresentableOverForget,
+            NatTrans.comp_app, Functor.map_comp, Category.assoc, hV] using hU
+        · simp only [e, t, f', g', semiRepresentableOverPresheafFunctor,
+            semiRepresentableOverUnderlying, semiRepresentableOverForget,
+            NatTrans.comp_app, Functor.map_comp, Category.assoc]
+          apply Sigma.hom_ext
+          intro U
+          dsimp [Functor.mapCone, Cone.functoriality, Cone.postcompose]
+          have hU := congrArg (fun k => k ≫ e.inv.app (some WalkingPair.right))
+            (hmap (q := some WalkingPair.right) U)
+          have hV := semiRepresentablePresheafFunctor_map_ι
+            ((semiRepresentableOverForget X).map (t.π.app (some WalkingPair.right))) U
+          rw [hrightπ] at hU
+          rw [hrightπ]
+          have he_right : e.inv.app (some WalkingPair.right) = 𝟙 _ := by
+            rfl
+          rw [he_right] at hU ⊢
+          simpa [e, t, f', g', semiRepresentableOverPresheafFunctor,
+            semiRepresentableOverUnderlying, semiRepresentableOverForget,
+            NatTrans.comp_app, Functor.map_comp, Category.assoc, hV] using hU
     exact preservesLimit_of_iso_diagram (semiRepresentableOverPresheafFunctor X)
       (diagramIsoCospan K).symm
 

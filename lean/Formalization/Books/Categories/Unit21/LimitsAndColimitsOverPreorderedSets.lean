@@ -6,6 +6,7 @@ import Mathlib.CategoryTheory.Presentable.Directed
 import Mathlib.CategoryTheory.Limits.Shapes.Preorder.Basic
 import Mathlib.CategoryTheory.Limits.Types.Images
 import Mathlib.CategoryTheory.SingleObj
+import Mathlib.CategoryTheory.FinCategory.Basic
 import Mathlib.Order.Antisymmetrization
 import Mathlib.Data.Fintype.Order
 import Mathlib.CategoryTheory.Whiskering
@@ -276,7 +277,7 @@ theorem directed_replacement_hasColimit_of_comp
 noncomputable def directed_replacement_colimit_iso
     {I : Type u} {J : Type v} [Category I] [Category J]
     {C : Type u'} [Category.{v'} C] (F : J ⥤ I) [Functor.Final F]
-    (M : I ⥤ C) [HasColimit (F ⋙ M)] [HasColimit M] :
+    (M : I ⥤ C) [HasColimit M] :
     colimit (F ⋙ M) ≅ colimit M := by
   exact Functor.Final.colimitIso F M
 
@@ -289,7 +290,7 @@ theorem directed_replacement_hasLimit_of_comp
 noncomputable def directed_replacement_limit_iso
     {I : Type u} {J : Type v} [Category I] [Category J]
     {C : Type u'} [Category.{v'} C] (F : J ⥤ I) [Functor.Final F]
-    (M : Iᵒᵖ ⥤ C) [HasLimit (F.op ⋙ M)] [HasLimit M] :
+    (M : Iᵒᵖ ⥤ C) [HasLimit M] :
     limit M ≅ limit (F.op ⋙ M) := by
   exact (Functor.Initial.limitIso F.op M).symm
 
@@ -359,6 +360,9 @@ theorem idempotentMorphism_ne_identity :
 
 theorem idempotentCategory_is_finite : Finite IdempotentCategory := by
   infer_instance
+
+instance idempotentCategory_finCategory : FinCategory IdempotentCategory :=
+  SingleObj.finCategoryOfFintype IdempotentArrow
 
 theorem idempotentCategory_is_filtered : IsFiltered IdempotentCategory := by
   refine { cocone_objs := ?_, cocone_maps := ?_ }

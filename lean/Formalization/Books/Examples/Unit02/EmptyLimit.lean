@@ -1,5 +1,6 @@
-import Mathlib.CategoryTheory.Limits.Types.Limits
-import Mathlib.Data.Countable.Basic
+import Mathlib.CategoryTheory.Category.Preorder
+import Mathlib.CategoryTheory.Types.Basic
+import Mathlib.Data.Countable.Defs
 import Mathlib.Data.Finset.Basic
 import Mathlib.Data.Fintype.EquivFin
 import Mathlib.Order.DirectedInverseSystem
@@ -15,7 +16,6 @@ type-valued functor.
 -/
 
 open CategoryTheory
-open CategoryTheory.Limits
 open Opposite
 
 namespace Formalization.Books.Examples.Unit02

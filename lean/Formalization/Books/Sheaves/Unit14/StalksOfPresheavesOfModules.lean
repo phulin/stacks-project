@@ -1,7 +1,6 @@
 import Formalization.Books.Sheaves.Unit06.PresheavesOfModules
 import Mathlib.Algebra.Category.ModuleCat.ChangeOfRings
 import Mathlib.Algebra.Category.ModuleCat.Stalk
-import Mathlib.Algebra.Category.ModuleCat.Presheaf.ColimitFunctor
 
 /-!
 # Sheaves on Spaces, Chapter 14: Stalks of presheaves of modules

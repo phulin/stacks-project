@@ -336,11 +336,16 @@ theorem coveringsAt_initialStage_eq_cardinal_restriction
 
 /-! ## The transfinite closure function -/
 
-/-- The ordinal condition defining the successor step of the source's `f`. -/
+/-- The ordinal condition defining the successor step of the source's `f`.
+
+The successor condition is strict at the previous closure stage so that
+values at a limit input remain cofinal below the limit value.  The
+base-change clause is likewise indexed by `fα`, which is the stage whose
+coverings are being closed. -/
 def successorClosureCondition {C : Type u} [Category.{v} C]
     (K : SiteCoveringClass C) (H : CoveringCoding C)
     (κ : Cardinal.{max u v}) (α fα β : Ordinal.{max u v}) : Prop :=
-  α + 1 ≤ β ∧ fα ≤ β ∧
+  α + 1 ≤ β ∧ fα < β ∧
     (∀ {X : C} (U : CoveringFamily C X),
       U.asAny ∈ K.coveringsAtCardinal H κ fα →
         ∀ (V : ∀ i, CoveringFamily C (U.arrow i).left),
@@ -348,7 +353,7 @@ def successorClosureCondition {C : Type u} [Category.{v} C]
             (CoveringFamily.bind U V).asAny ∈
               K.coveringsAtCardinal H κ β) ∧
     (∀ {X Y : C} (U : CoveringFamily C X),
-      U.asAny ∈ K.coveringsAtCardinal H κ α →
+      U.asAny ∈ K.coveringsAtCardinal H κ fα →
         ∀ (f : Y ⟶ X),
           ∃ h : ∀ i, HasPullback (U.arrow i).hom f,
             (CoveringFamily.baseChange U f h).asAny ∈
@@ -361,22 +366,28 @@ def successorClosureOrdinals {C : Type u} [Category.{v} C]
     Set (Ordinal.{max u v}) :=
   {β | successorClosureCondition K H κ α fα β}
 
-/-- The source's least successor-stage ordinal. -/
+/-- The source's least successor-stage ordinal (used under an infinite
+    cardinal bound). -/
 noncomputable def successorClosureStage {C : Type u} [Category.{v} C]
     (K : SiteCoveringClass C) (H : CoveringCoding C)
-    (κ : Cardinal.{max u v}) (α fα : Ordinal.{max u v}) :
+    (κ : Cardinal.{max u v})
+    (α fα : Ordinal.{max u v}) :
     Ordinal.{max u v} :=
   sInf (successorClosureOrdinals K H κ α fα)
 
 theorem successorClosureOrdinals_nonempty {C : Type u} [Category.{v} C]
     (K : SiteCoveringClass C) (H : CoveringCoding C)
-    (κ : Cardinal.{max u v}) (α fα : Ordinal.{max u v}) :
+    (κ : Cardinal.{max u v}) (hκ : Cardinal.aleph0 ≤ κ)
+    (α fα : Ordinal.{max u v}) :
     (successorClosureOrdinals K H κ α fα).Nonempty := by
   sorry
 
+/-! The infinite-cardinal witness is required because the composition of two
+    `κ`-bounded families is `κ`-bounded only in that range. -/
 theorem successorClosureStage_isLeast {C : Type u} [Category.{v} C]
     (K : SiteCoveringClass C) (H : CoveringCoding C)
-    (κ : Cardinal.{max u v}) (α fα : Ordinal.{max u v}) :
+    (κ : Cardinal.{max u v}) (hκ : Cardinal.aleph0 ≤ κ)
+    (α fα : Ordinal.{max u v}) :
     IsLeast (successorClosureOrdinals K H κ α fα)
       (successorClosureStage K H κ α fα) := by
   sorry
@@ -384,7 +395,8 @@ theorem successorClosureStage_isLeast {C : Type u} [Category.{v} C]
 /-- The function `f` defined by transfinite induction in the source. -/
 noncomputable def closureFunction {C : Type u} [Category.{v} C]
     (K : SiteCoveringClass C) (H : CoveringCoding C)
-    (κ : Cardinal.{max u v}) (α : Ordinal.{max u v}) :
+    (κ : Cardinal.{max u v})
+    (α : Ordinal.{max u v}) :
     Ordinal.{max u v} :=
   Ordinal.limitRecOn
     (motive := fun _ : Ordinal.{max u v} => Ordinal.{max u v})
@@ -415,19 +427,21 @@ theorem closureFunction_limit {C : Type u} [Category.{v} C]
 
 theorem closureFunction_monotone {C : Type u} [Category.{v} C]
     (K : SiteCoveringClass C) (H : CoveringCoding C)
-    (κ : Cardinal.{max u v}) :
+    (κ : Cardinal.{max u v}) (hκ : Cardinal.aleph0 ≤ κ) :
     Monotone (closureFunction K H κ) := by
   sorry
 
 theorem le_closureFunction {C : Type u} [Category.{v} C]
     (K : SiteCoveringClass C) (H : CoveringCoding C)
-    (κ : Cardinal.{max u v}) (α : Ordinal.{max u v}) :
+    (κ : Cardinal.{max u v}) (hκ : Cardinal.aleph0 ≤ κ)
+    (α : Ordinal.{max u v}) :
     α ≤ closureFunction K H κ α := by
   sorry
 
 theorem closureFunction_preserves_stage_bounds {C : Type u}
     [Category.{v} C] (K : SiteCoveringClass C) (H : CoveringCoding C)
-    (κ : Cardinal.{max u v}) (Cov₀ : Set (AnyCoveringFamily C))
+    (κ : Cardinal.{max u v}) (hκ : Cardinal.aleph0 ≤ κ)
+    (Cov₀ : Set (AnyCoveringFamily C))
     {β₁ β : Ordinal.{max u v}} (hβ₁ : β₁ ≤ β)
     (hArrows : ∀ a : Arrow C, H.arrowInV a β₁)
     (hCov₀ : ∀ F ∈ Cov₀, H.familyInV F β₁) :

@@ -331,13 +331,8 @@ noncomputable def integerGeneratorMap {X : TopCat.{v}}
 abelian groups. -/
 noncomputable instance addCommGrpAlgebraicStructureType :
     AlgebraicStructureType (AddCommGrpCat.{v}) (forget AddCommGrpCat) := by
-  let : (forget AddCommGrpCat).Faithful := by infer_instance
-  let : HasLimitsOfSize.{v, v} (AddCommGrpCat.{v}) := by infer_instance
-  let : PreservesLimitsOfSize.{v, v} (forget AddCommGrpCat) := by infer_instance
-  let : HasFilteredColimitsOfSize.{v, v} (AddCommGrpCat.{v}) := by infer_instance
-  let : PreservesFilteredColimitsOfSize.{v, v} (forget AddCommGrpCat) := by infer_instance
-  let : (forget AddCommGrpCat).ReflectsIsomorphisms := by infer_instance
-  exact ⟨⟩
+  exact
+    (Formalization.Books.Sheaves.Unit15.standardAlgebraicStructureTypes.{v, v, v}).2.1
 
 /-! ## Pointwise products -/
 

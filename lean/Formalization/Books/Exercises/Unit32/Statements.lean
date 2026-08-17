@@ -126,7 +126,14 @@ theorem realOriginSkyscraper_is_skyscraper :
   exact ⟨realOrigin, ZMod 2, ⟨Iso.refl _⟩⟩
 
 /-- The canonical map from the constant sheaf to the origin skyscraper is
-surjective on stalks, hence epic. -/
+surjective on every stalk. -/
+theorem realConstantToOriginSkyscraper_stalk_surjective :
+    ∀ x : realLine, Function.Surjective
+      ((TopCat.Presheaf.stalkFunctor (Type 0) x).map
+        realConstantToOriginSkyscraper.hom) := by
+  sorry
+
+/-- The canonical stalk-surjective map is an epimorphism of sheaves. -/
 theorem realConstantToOriginSkyscraper_is_epi :
     Epi realConstantToOriginSkyscraper := by
   sorry

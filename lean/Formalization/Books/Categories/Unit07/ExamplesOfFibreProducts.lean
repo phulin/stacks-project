@@ -96,13 +96,12 @@ theorem setFibreProduct.isPullback {X Y Z : Type u} (f : X → Y) (g : Z → Y) 
     · exact setFibreProduct.snd_lift f g α β h
 
 /-- The category of sets has all fibre products. -/
-theorem types_have_fibre_products : HasFibreProducts (Type u) := by
+theorem types_have_fibre_products : HasPullbacks (Type u) := by
   infer_instance
 
 /-- Every morphism in the category of sets is representable. -/
 theorem type_morphism_is_representable {X Y : Type u} (f : X ⟶ Y) :
-    RepresentableMorphism f := by
-  change ∀ {W : Type u} (g : W ⟶ Y), HasPullback g f
+    HasPullbacksAlong f := by
   intro W g
   infer_instance
 
@@ -144,7 +143,7 @@ structure and satisfies the categorical universal property.
 -/
 
 /-- The category of groups has fibre products. -/
-theorem groups_have_fibre_products : HasFibreProducts (GrpCat.{u}) := by
+theorem groups_have_fibre_products : HasPullbacks (GrpCat.{u}) := by
   infer_instance
 
 /-- The underlying type functor preserves the fibre products of groups. -/
@@ -156,7 +155,7 @@ theorem groups_underlying_fibre_products :
 abbrev GSetCategory (G : Type u) [Group G] := Action (Type u) G
 
 theorem g_sets_have_fibre_products (G : Type u) [Group G] :
-    HasFibreProducts (GSetCategory G) := by
+    HasPullbacks (GSetCategory G) := by
   infer_instance
 
 /-- The underlying type functor preserves the fibre products of `G`-sets. -/
@@ -165,7 +164,7 @@ theorem g_sets_underlying_fibre_products (G : Type u) [Group G] :
   infer_instance
 
 /-- The category of (not necessarily commutative) rings has fibre products. -/
-theorem rings_have_fibre_products : HasFibreProducts (RingCat.{u}) := by
+theorem rings_have_fibre_products : HasPullbacks (RingCat.{u}) := by
   infer_instance
 
 /-- The underlying type functor preserves the fibre products of rings. -/
@@ -175,7 +174,7 @@ theorem rings_underlying_fibre_products :
 
 /-- The category of modules over a fixed ring has fibre products. -/
 theorem modules_have_fibre_products (R : Type u) [Ring R] :
-    HasFibreProducts (ModuleCat.{u} R) := by
+    HasPullbacks (ModuleCat.{u} R) := by
   infer_instance
 
 /-- The underlying type functor preserves the fibre products of modules. -/

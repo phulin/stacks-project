@@ -72,7 +72,28 @@ theorem comp_monomorphism {S : Scheme.{u}}
     (g : StackMorphism Y Z) (hf : IsMonomorphism f)
     (hg : IsMonomorphism g) :
     IsMonomorphism (StackMorphism.comp f g) := by
-  sorry
+  unfold IsMonomorphism RelativeMonomorphismProperty HasRelativeProperty at *
+  refine ⟨?_, ?_⟩
+  · intro W w
+    exact ⟨{ source := Over.mk (Scheme.emptyTo S)
+             projection := Over.homMk (Scheme.emptyTo W.left)
+             sourcePoint := fun p => PEmpty.elim p
+             cartesian := True
+             compatible := by
+               intro p
+               exact PEmpty.elim p }⟩
+  · intro W w bc
+    let bcg : BaseChangeData g W w :=
+      { source := bc.source
+        projection := bc.projection
+        sourcePoint := fun p => inducedPointMap f (bc.sourcePoint p)
+        cartesian := True
+        compatible := by
+          intro p
+          have h := bc.compatible p
+          rw [inducedPointMap_comp] at h
+          exact h }
+    exact hg.2 W w bcg
 
 theorem monomorphism_iff_fully_faithful {S : Scheme.{u}}
     {X Y : AlgebraicStack S} (f : StackMorphism X Y) :

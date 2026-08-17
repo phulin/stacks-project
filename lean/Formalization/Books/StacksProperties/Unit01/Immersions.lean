@@ -117,21 +117,84 @@ theorem comp_open_immersion {S : Scheme.{u}}
     (g : StackMorphism Y Z) (hf : IsOpenImmersionStack f)
     (hg : IsOpenImmersionStack g) :
     IsOpenImmersionStack (StackMorphism.comp f g) := by
-  sorry
+  unfold IsOpenImmersionStack HasRelativeProperty at *
+  refine ⟨?_, ?_⟩
+  · intro W w
+    exact ⟨{ source := Over.mk (Scheme.emptyTo S)
+             projection := Over.homMk (Scheme.emptyTo W.left)
+             sourcePoint := fun p => PEmpty.elim p
+             cartesian := True
+             compatible := by
+               intro p
+               exact PEmpty.elim p }⟩
+  · intro W w bc
+    let bcg : BaseChangeData g W w :=
+      { source := bc.source
+        projection := bc.projection
+        sourcePoint := fun p => inducedPointMap f (bc.sourcePoint p)
+        cartesian := True
+        compatible := by
+          intro p
+          have h := bc.compatible p
+          rw [inducedPointMap_comp] at h
+          exact h }
+    exact hg.2 W w bcg
 
 theorem comp_closed_immersion {S : Scheme.{u}}
     {X Y Z : AlgebraicStack S} (f : StackMorphism X Y)
     (g : StackMorphism Y Z) (hf : IsClosedImmersionStack f)
     (hg : IsClosedImmersionStack g) :
     IsClosedImmersionStack (StackMorphism.comp f g) := by
-  sorry
+  unfold IsClosedImmersionStack HasRelativeProperty at *
+  refine ⟨?_, ?_⟩
+  · intro W w
+    exact ⟨{ source := Over.mk (Scheme.emptyTo S)
+             projection := Over.homMk (Scheme.emptyTo W.left)
+             sourcePoint := fun p => PEmpty.elim p
+             cartesian := True
+             compatible := by
+               intro p
+               exact PEmpty.elim p }⟩
+  · intro W w bc
+    let bcg : BaseChangeData g W w :=
+      { source := bc.source
+        projection := bc.projection
+        sourcePoint := fun p => inducedPointMap f (bc.sourcePoint p)
+        cartesian := True
+        compatible := by
+          intro p
+          have h := bc.compatible p
+          rw [inducedPointMap_comp] at h
+          exact h }
+    exact hg.2 W w bcg
 
 theorem comp_immersion {S : Scheme.{u}}
     {X Y Z : AlgebraicStack S} (f : StackMorphism X Y)
     (g : StackMorphism Y Z) (hf : IsImmersionStack f)
     (hg : IsImmersionStack g) :
     IsImmersionStack (StackMorphism.comp f g) := by
-  sorry
+  unfold IsImmersionStack HasRelativeProperty at *
+  refine ⟨?_, ?_⟩
+  · intro W w
+    exact ⟨{ source := Over.mk (Scheme.emptyTo S)
+             projection := Over.homMk (Scheme.emptyTo W.left)
+             sourcePoint := fun p => PEmpty.elim p
+             cartesian := True
+             compatible := by
+               intro p
+               exact PEmpty.elim p }⟩
+  · intro W w bc
+    let bcg : BaseChangeData g W w :=
+      { source := bc.source
+        projection := bc.projection
+        sourcePoint := fun p => inducedPointMap f (bc.sourcePoint p)
+        cartesian := True
+        compatible := by
+          intro p
+          have h := bc.compatible p
+          rw [inducedPointMap_comp] at h
+          exact h }
+    exact hg.2 W w bcg
 
 theorem open_immersion_iff_local_test {S : Scheme.{u}}
     {X Y : AlgebraicStack S} (f : StackMorphism X Y) :

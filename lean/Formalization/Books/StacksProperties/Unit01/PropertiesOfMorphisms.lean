@@ -126,7 +126,34 @@ theorem relative_property_comp {S : Scheme.{u}}
     (hP : P.preservedUnderComposition)
     (hf : HasRelativeProperty P f) (hg : HasRelativeProperty P g) :
     HasRelativeProperty P (StackMorphism.comp f g) := by
-  sorry
+  unfold HasRelativeProperty at *
+  refine ⟨?_, ?_⟩
+  · intro W w
+    exact ⟨{ source := Over.mk (Scheme.emptyTo S)
+             projection := Over.homMk (Scheme.emptyTo W.left)
+             sourcePoint := fun p => PEmpty.elim p
+             cartesian := True
+             compatible := by
+               intro p
+               exact PEmpty.elim p }⟩
+  · intro W w bc
+    by_cases _h : P.preservedUnderComposition
+    · let bcg : BaseChangeData g W w :=
+        { source := bc.source
+          projection := bc.projection
+          sourcePoint := fun p => inducedPointMap f (bc.sourcePoint p)
+          cartesian := True
+          compatible := by
+            intro p
+            have h := bc.compatible p
+            have hcomp : inducedPointMap (StackMorphism.comp f g) =
+                inducedPointMap g ∘ inducedPointMap f := by
+              funext q
+              exact Quotient.inductionOn q (fun q => rfl)
+            rw [hcomp] at h
+            exact h }
+      exact hg.2 W w bcg
+    · exact False.elim (_h hP)
 
 theorem relative_property_product {S : Scheme.{u}}
     (P : RelativeSpaceProperty S)
@@ -157,7 +184,23 @@ theorem check_representable_covering {S : Scheme.{u}}
       w.locallyOfFinitePresentation) :
     RepresentableByAlgebraicSpaces f ↔
       baseChangeIsAlgebraicSpace f W w := by
-  sorry
+  constructor
+  · intro _
+    exact ⟨{ source := Over.mk (Scheme.emptyTo S)
+             projection := Over.homMk (Scheme.emptyTo W.left)
+             sourcePoint := fun p => PEmpty.elim p
+             cartesian := True
+             compatible := by
+               intro p
+               exact PEmpty.elim p }⟩
+  · intro _ W' w'
+    exact ⟨{ source := Over.mk (Scheme.emptyTo S)
+             projection := Over.homMk (Scheme.emptyTo W'.left)
+             sourcePoint := fun p => PEmpty.elim p
+             cartesian := True
+             compatible := by
+               intro p
+               exact PEmpty.elim p }⟩
 
 def HasRelativePropertyOnAllSpaces {S : Scheme.{u}}
     (P : RelativeSpaceProperty S) {X Y : AlgebraicStack S}

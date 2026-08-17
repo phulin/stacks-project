@@ -44,7 +44,7 @@ theorem reduced_closed_substack_exists_unique {S : Scheme.{u}}
     ∃ U : ClosedSubstack X,
       IsReducedClosedSubstack U ∧ ClosedSubstackHasPoints U T ∧
         ∀ V : ClosedSubstack X,
-          IsReducedClosedSubstack V ∧ ClosedSubstackHasPoints V T →
+            IsReducedClosedSubstack V ∧ ClosedSubstackHasPoints V T →
             ReducedClosedSubstackEquivalent U V := by
   sorry
 

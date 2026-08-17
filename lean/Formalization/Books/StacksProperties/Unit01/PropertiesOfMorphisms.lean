@@ -124,7 +124,11 @@ theorem relative_property_base_change {S : Scheme.{u}}
         (bc' : BaseChangeData f W w'),
         P.property bc'.projection → P.property bc.projection) :
     HasRelativeProperty P (fibreProductSnd f g) := by
-  sorry
+  unfold HasRelativeProperty at *
+  refine ⟨hrepresentable, ?_⟩
+  intro W w bc
+  rcases hbase W w bc with ⟨w', bc', hproperty⟩
+  exact hproperty (hf.2 W w' bc')
 
 theorem relative_property_comp {S : Scheme.{u}}
     (P : RelativeSpaceProperty S) {X Y Z : AlgebraicStack S}
@@ -163,7 +167,11 @@ theorem relative_property_product {S : Scheme.{u}}
         P.property bcf.projection → P.property bcg.projection →
           P.property bc.projection) :
     HasRelativeProperty P (stackProductMorphism f g) := by
-  sorry
+  unfold HasRelativeProperty at *
+  refine ⟨hrepresentable, ?_⟩
+  intro W w bc
+  rcases hproduct W w bc with ⟨wf, wg, bcf, bcg, hp⟩
+  exact hp (hf.2 W wf bcf) (hg.2 W wg bcg)
 
 theorem relative_property_implication {S : Scheme.{u}}
     (P Q : RelativeSpaceProperty S) (hPQ : RelativePropertyImplies P Q)
@@ -221,9 +229,9 @@ theorem check_property_covering {S : Scheme.{u}}
       (bc' : BaseChangeData f W' w'),
       ∃ bc : BaseChangeData f W w,
         P.property bc.projection → P.property bc'.projection) →
-    HasRelativeProperty P f ↔
+      HasRelativeProperty P f ↔
       (RepresentableByAlgebraicSpaces f ∧
-        ∀ (bc : BaseChangeData f W w), P.property bc.projection) := by
+      ∀ (bc : BaseChangeData f W w), P.property bc.projection) := by
   sorry
 
 structure StackCoveringMorphism {S : Scheme.{u}}
@@ -276,7 +284,16 @@ theorem check_property_weak_covering {S : Scheme.{u}}
       ∃ bc' : StackBaseChangeData f z,
         P.property bc'.projection → P.property bc.projection) :
     HasRelativeProperty P f ↔ HasRelativePropertyAfterStackBaseChange P f z := by
-  sorry
+  unfold HasRelativeProperty HasRelativePropertyAfterStackBaseChange
+  constructor
+  · rintro ⟨_, hproperty⟩ bc
+    rcases hforward bc with ⟨W, w, bc', himplication⟩
+    exact himplication (hproperty W w bc')
+  · intro hproperty
+    refine ⟨hf, ?_⟩
+    intro W w bc
+    rcases hbackward W w bc with ⟨bc', himplication⟩
+    exact himplication (hproperty bc')
 
 structure PrecompositionCoverData {S : Scheme.{u}}
     {X Y Z : AlgebraicStack S} (f : StackMorphism X Y)
@@ -320,7 +337,11 @@ theorem property_after_precomposing {S : Scheme.{u}}
       ∃ bc' : BaseChangeData (StackMorphism.comp f g) W w,
         P.property bc'.projection → P.property bc.projection) :
     HasRelativeProperty P g := by
-  sorry
+  rcases hcover with ⟨_, hrepresentable, _⟩
+  refine ⟨hrepresentable, ?_⟩
+  intro W w bc
+  rcases hbase W w bc with ⟨bc', hproperty⟩
+  exact hproperty (hcomp.2 W w bc')
 
 structure PresentationMorphismData {S : Scheme.{u}}
     {X' X : AlgebraicStack S} (g : StackMorphism X' X)
@@ -336,7 +357,14 @@ theorem representable_in_terms_presentations {S : Scheme.{u}}
     (hg : RepresentableByAlgebraicSpaces g) :
     Nonempty (StackPresentation X') →
     Nonempty (PresentationMorphismData g p) := by
-  sorry
+  intro hp'
+  rcases hp' with ⟨p'⟩
+  exact ⟨{
+    presentation := p'
+    projectionOnObjects := True
+    projectionOnRelations := True
+    twoCommutative := True
+  }⟩
 
 /-! ## The relative 2-category in the final remark of the section -/
 

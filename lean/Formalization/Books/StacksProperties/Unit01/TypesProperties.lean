@@ -74,7 +74,13 @@ theorem type_property_of_representable_scheme {S : Scheme.{u}}
       ∀ (W' : AlgebraicSpace S) (w' : SpaceToStackMorphism W' X),
         w'.smooth → P.schemeProperty W'.left) :
     HasTypeProperty P X ↔ EverySchemeSmoothProperty P X := by
-  sorry
+  unfold HasTypeProperty SomeSchemeSmoothProperty EverySchemeSmoothProperty
+  constructor
+  · rintro ⟨W, w, hcover, hproperty⟩ W' w' hsmooth
+    exact hlocal W w hcover hproperty W' w' hsmooth
+  · intro hproperty
+    rcases hcover with ⟨W, w, hW⟩
+    exact ⟨W, w, hW, hproperty W w hW.2⟩
 
 theorem type_property_of_representable_space {S : Scheme.{u}}
     (P : SmoothLocalSchemeProperty S) (X : AlgebraicStack S)
@@ -86,7 +92,14 @@ theorem type_property_of_representable_space {S : Scheme.{u}}
       ∀ (W' : AlgebraicSpace S) (w' : SpaceToStackMorphism W' X),
         w'.smooth → P.spaceProperty W') :
     HasTypeProperty P X ↔ EverySpaceSmoothProperty P X := by
-  sorry
+  unfold HasTypeProperty SomeSchemeSmoothProperty EverySpaceSmoothProperty
+  constructor
+  · rintro ⟨W, w, hcover, hproperty⟩ W' w' hsmooth
+    exact hlocal W w hcover ((P.comparison W).mp hproperty) W' w' hsmooth
+  · intro hproperty
+    rcases hcover with ⟨W, w, hW⟩
+    refine ⟨W, w, hW, ?_⟩
+    exact (P.comparison W).mpr (hproperty W w hW.2)
 
 inductive SmoothLocalPropertyName
   | locallyNoetherian

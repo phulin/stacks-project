@@ -51,7 +51,8 @@ theorem flat_field_cover_permanence {S : Scheme.{u}}
       stackPointOfFieldValuedMorphism q)
     (hflat : p.flat ↔ q.flat) :
     IsFlatFieldCover q := by
-  sorry
+  unfold IsFlatFieldCover IsSurjectiveFieldValuedMorphism at *
+  refine ⟨fun x => (hp.1 x).trans heq, hflat.mp hp.2⟩
 
 theorem unique_point_iff_flat_field_cover {S : Scheme.{u}}
     (X : AlgebraicStack S) :
@@ -84,7 +85,44 @@ theorem monomorphism_into_unique_point {S : Scheme.{u}}
     (hf : IsMonomorphism f)
     (hfullyFaithful : StackFullyFaithful f) :
     IsEmpty Z' ∨ IsStackEquivalence f := by
-  sorry
+  classical
+  by_cases hraw : Nonempty (RawPoint Z')
+  · right
+    rcases hZ with ⟨p, hp⟩
+    let p₀ : RawPoint Z' := Classical.choice hraw
+    let g : StackMorphism Z Z' := {
+      rawMap := fun _ => p₀
+      map_respects := by
+        intro a b hab
+        exact Z'.points.isEquivalence.refl _ }
+    have hleft : StackTwoMorphism
+        (StackMorphism.comp f g) (StackMorphism.id Z') := by
+      intro q
+      have htarget : Z.points.equivalent (f.rawMap q) (f.rawMap p₀) := by
+        apply @Quotient.exact _ Z.points.setoid
+          (f.rawMap q) (f.rawMap p₀)
+        exact (hp.1.1 (Quotient.mk Z.points.setoid (f.rawMap q))).trans
+          (hp.1.1 (Quotient.mk Z.points.setoid (f.rawMap p₀))).symm
+      exact Z'.points.isEquivalence.symm
+        ((hfullyFaithful.2 q p₀).mpr htarget)
+    have hright : StackTwoMorphism
+        (StackMorphism.comp g f) (StackMorphism.id Z) := by
+      intro q
+      apply @Quotient.exact _ Z.points.setoid
+        (f.rawMap p₀) q
+      exact (hp.1.1 (Quotient.mk Z.points.setoid (f.rawMap p₀))).trans
+        (hp.1.1 (Quotient.mk Z.points.setoid q)).symm
+    let E : StackEquivalence Z' Z := {
+      forward := f
+      inverse := g
+      leftInverse := hleft
+      rightInverse := hright }
+    exact ⟨E, rfl⟩
+  · left
+    intro q
+    refine Quotient.inductionOn q ?_
+    intro p
+    exact hraw ⟨p⟩
 
 structure ImprovedUniquePointData {S : Scheme.{u}}
     (Z : AlgebraicStack S) where
@@ -110,7 +148,15 @@ theorem improve_unique_point {S : Scheme.{u}} (Z : AlgebraicStack S)
           IsStackEquivalence e ∧
             StackTwoMorphism D.inclusion
               (StackMorphism.comp e E.inclusion) := by
-  sorry
+  rcases hsource with ⟨source, inclusion, himproved, hmono⟩
+  let D : ImprovedUniquePointData Z := {
+    source := source
+    inclusion := inclusion
+    improved := himproved
+    monomorphism := hmono }
+  refine ⟨D, ?_⟩
+  intro E
+  exact hunique D E
 
 structure DistinctSingletonExample (S : Scheme.{u}) where
   group : Type u
@@ -202,7 +248,13 @@ theorem exists_distinct_singleton_example :
         { source := Over.mk (Scheme.emptyTo S)
           projection := Over.homMk (Scheme.emptyTo W.left)
           sourcePoint := fun p => PEmpty.elim p
-          cartesian := by sorry
+          cartesian := by
+            constructor
+            · intro p q h
+              exact PEmpty.elim p
+            · intro q
+              have hEmpty : _root_.IsEmpty W.left := W.hom.base.hom.1.isEmpty
+              exact False.elim (hEmpty.false q.1.2)
           compatible := by
             intro p
             exact PEmpty.elim p }
@@ -339,7 +391,13 @@ theorem residual_gerbe_exists_unique {S : Scheme.{u}}
           IsStackEquivalence e ∧
             StackTwoMorphism G.inclusion
               (StackMorphism.comp e H.inclusion) := by
-  sorry
+  intro hsource huniq
+  have hG : Nonempty (ResidualGerbe X x) := hsource h
+  rcases hG with ⟨G⟩
+  refine ⟨G, ?_⟩
+  intro H
+  specialize huniq G H
+  exact huniq
 
 noncomputable def residualGerbe {S : Scheme.{u}}
     {X : AlgebraicStack S} (x : StackPoint X)
@@ -364,7 +422,7 @@ theorem residual_gerbe_regular {S : Scheme.{u}}
         Function.Surjective w.map ∧ w.flat ∧
           w.locallyOfFinitePresentation) → IsRegular Z) :
     IsRegular Z := by
-  sorry
+  exact hregularityDescent hcover
 
 theorem residual_gerbe_points_factor {S : Scheme.{u}}
     {X : AlgebraicStack S} (x : StackPoint X)
@@ -399,7 +457,36 @@ theorem residual_gerbe_unique_factorization {S : Scheme.{u}}
         IsStackEquivalence e ∧
           StackTwoMorphism Zdata.inclusion
             (StackMorphism.comp e G.inclusion) := by
-  sorry
+  let G : ResidualGerbe X x := {
+    source := Zdata.source
+    inclusion := Zdata.inclusion
+    reduced := Zdata.sourceCondition.2.1
+    locallyNoetherian := Zdata.sourceCondition.1
+    singleton := Zdata.sourceCondition.2.2
+    pointSet := Zdata.pointSet
+    monomorphism := Zdata.monomorphism
+    fieldCover := hfield }
+  refine ⟨G, StackMorphism.id Zdata.source, ?_, ?_⟩
+  · have hleft : StackTwoMorphism
+        (StackMorphism.comp (StackMorphism.id Zdata.source)
+          (StackMorphism.id Zdata.source))
+        (StackMorphism.id Zdata.source) := by
+      intro p
+      exact Zdata.source.points.isEquivalence.refl _
+    have hright : StackTwoMorphism
+        (StackMorphism.comp (StackMorphism.id Zdata.source)
+          (StackMorphism.id Zdata.source))
+        (StackMorphism.id Zdata.source) := by
+      intro p
+      exact Zdata.source.points.isEquivalence.refl _
+    let E : StackEquivalence Zdata.source Zdata.source := {
+      forward := StackMorphism.id Zdata.source
+      inverse := StackMorphism.id Zdata.source
+      leftInverse := hleft
+      rightInverse := hright }
+    exact ⟨E, rfl⟩
+  · intro p
+    exact X.points.isEquivalence.refl _
 
 structure ResidualGerbeFunctorialityData {S : Scheme.{u}}
     {X Y : AlgebraicStack S} (f : StackMorphism X Y)
@@ -553,7 +640,24 @@ theorem scheme_residual_gerbe {S : Scheme.{u}}
     (hsingleton : IsSingletonPointStack X)
     (hid : IsMonomorphism (StackMorphism.id X)) :
     ResidualGerbeExists x := by
-  sorry
+  unfold ResidualGerbeExists ResidualGerbeCandidate
+  refine ⟨X, StackMorphism.id X, hid, hsingleton, ?_⟩
+  ext y
+  constructor
+  · rintro ⟨z, rfl⟩
+    have hzx : z = x := hsingleton.2.elim z x
+    apply Set.mem_singleton_iff.mpr
+    rw [← hzx]
+    refine Quotient.inductionOn z ?_
+    intro p
+    rfl
+  · intro hy
+    have hyx : y = x := Set.mem_singleton_iff.mp hy
+    subst y
+    refine ⟨x, ?_⟩
+    refine Quotient.inductionOn x ?_
+    intro p
+    rfl
 
 theorem algebraic_space_residual_gerbe {S : Scheme.{u}}
     {X : AlgebraicStack S} (hX : IsRepresentableByAlgebraicSpace X)
@@ -561,6 +665,23 @@ theorem algebraic_space_residual_gerbe {S : Scheme.{u}}
     (hsingleton : IsSingletonPointStack X)
     (hid : IsMonomorphism (StackMorphism.id X)) :
     ResidualGerbeExists x := by
-  sorry
+  unfold ResidualGerbeExists ResidualGerbeCandidate
+  refine ⟨X, StackMorphism.id X, hid, hsingleton, ?_⟩
+  ext y
+  constructor
+  · rintro ⟨z, rfl⟩
+    have hzx : z = x := hsingleton.2.elim z x
+    apply Set.mem_singleton_iff.mpr
+    rw [← hzx]
+    refine Quotient.inductionOn z ?_
+    intro p
+    rfl
+  · intro hy
+    have hyx : y = x := Set.mem_singleton_iff.mp hy
+    subst y
+    refine ⟨x, ?_⟩
+    refine Quotient.inductionOn x ?_
+    intro p
+    rfl
 
 end Formalization.Books.StacksProperties.Unit01

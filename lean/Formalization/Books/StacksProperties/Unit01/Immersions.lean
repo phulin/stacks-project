@@ -106,7 +106,11 @@ theorem base_change_open_immersion {S : Scheme.{u}}
         (bc' : BaseChangeData g W w'),
         SpaceOpenImmersion bc'.projection → SpaceOpenImmersion bc.projection) :
     IsOpenImmersionStack (fibreProductSnd g f) := by
-  sorry
+  unfold IsOpenImmersionStack RelativeOpenImmersionProperty HasRelativeProperty at *
+  refine ⟨hrepresentable, ?_⟩
+  intro W w bc
+  rcases hbase W w bc with ⟨w', bc', hproperty⟩
+  exact hproperty (hg.2 W w' bc')
 
 theorem base_change_closed_immersion {S : Scheme.{u}}
     {X Y Z : AlgebraicStack S} (f : StackMorphism X Y)
@@ -121,7 +125,11 @@ theorem base_change_closed_immersion {S : Scheme.{u}}
         SpaceClosedImmersion bc'.projection →
           SpaceClosedImmersion bc.projection) :
     IsClosedImmersionStack (fibreProductSnd g f) := by
-  sorry
+  unfold IsClosedImmersionStack RelativeClosedImmersionProperty HasRelativeProperty at *
+  refine ⟨hrepresentable, ?_⟩
+  intro W w bc
+  rcases hbase W w bc with ⟨w', bc', hproperty⟩
+  exact hproperty (hg.2 W w' bc')
 
 theorem base_change_immersion {S : Scheme.{u}}
     {X Y Z : AlgebraicStack S} (f : StackMorphism X Y)
@@ -135,7 +143,11 @@ theorem base_change_immersion {S : Scheme.{u}}
         (bc' : BaseChangeData g W w'),
         SpaceImmersion bc'.projection → SpaceImmersion bc.projection) :
     IsImmersionStack (fibreProductSnd g f) := by
-  sorry
+  unfold IsImmersionStack RelativeImmersionProperty HasRelativeProperty at *
+  refine ⟨hrepresentable, ?_⟩
+  intro W w bc
+  rcases hbase W w bc with ⟨w', bc', hproperty⟩
+  exact hproperty (hg.2 W w' bc')
 
 theorem comp_open_immersion {S : Scheme.{u}}
     {X Y Z : AlgebraicStack S} (f : StackMorphism X Y)
@@ -200,7 +212,19 @@ theorem open_immersion_iff_local_test {S : Scheme.{u}}
         ∀ (W' : AlgebraicSpace S) (w' : SpaceToStackMorphism W' Y)
           (bc' : BaseChangeData f W' w'), SpaceOpenImmersion bc'.projection) :
     IsOpenImmersionStack f ↔ HasLocalOpenImmersionTest f := by
-  sorry
+  unfold IsOpenImmersionStack RelativeOpenImmersionProperty HasRelativeProperty
+    HasLocalOpenImmersionTest
+  constructor
+  · rintro ⟨hrepresentable, hproperty⟩
+    refine ⟨hrepresentable, ?_⟩
+    rcases hcover with ⟨W, w, hsurjective, hflat, hlfp, hbc⟩
+    rcases hbc with ⟨bc⟩
+    exact ⟨W, w, hsurjective, hflat, hlfp, ⟨bc, hproperty W w bc⟩⟩
+  · rintro ⟨hrepresentable,
+      ⟨W, w, hsurjective, hflat, hlfp, ⟨bc, hproperty⟩⟩⟩
+    refine ⟨hrepresentable, ?_⟩
+    intro W' w' bc'
+    exact hlocal W w bc hsurjective hflat hlfp hproperty W' w' bc'
 
 theorem closed_immersion_iff_local_test {S : Scheme.{u}}
     {X Y : AlgebraicStack S} (f : StackMorphism X Y)
@@ -214,7 +238,19 @@ theorem closed_immersion_iff_local_test {S : Scheme.{u}}
         ∀ (W' : AlgebraicSpace S) (w' : SpaceToStackMorphism W' Y)
           (bc' : BaseChangeData f W' w'), SpaceClosedImmersion bc'.projection) :
     IsClosedImmersionStack f ↔ HasLocalClosedImmersionTest f := by
-  sorry
+  unfold IsClosedImmersionStack RelativeClosedImmersionProperty HasRelativeProperty
+    HasLocalClosedImmersionTest
+  constructor
+  · rintro ⟨hrepresentable, hproperty⟩
+    refine ⟨hrepresentable, ?_⟩
+    rcases hcover with ⟨W, w, hsurjective, hflat, hlfp, hbc⟩
+    rcases hbc with ⟨bc⟩
+    exact ⟨W, w, hsurjective, hflat, hlfp, ⟨bc, hproperty W w bc⟩⟩
+  · rintro ⟨hrepresentable,
+      ⟨W, w, hsurjective, hflat, hlfp, ⟨bc, hproperty⟩⟩⟩
+    refine ⟨hrepresentable, ?_⟩
+    intro W' w' bc'
+    exact hlocal W w bc hsurjective hflat hlfp hproperty W' w' bc'
 
 theorem immersion_iff_local_test {S : Scheme.{u}}
     {X Y : AlgebraicStack S} (f : StackMorphism X Y)
@@ -228,7 +264,19 @@ theorem immersion_iff_local_test {S : Scheme.{u}}
         ∀ (W' : AlgebraicSpace S) (w' : SpaceToStackMorphism W' Y)
           (bc' : BaseChangeData f W' w'), SpaceImmersion bc'.projection) :
     IsImmersionStack f ↔ HasLocalImmersionTest f := by
-  sorry
+  unfold IsImmersionStack RelativeImmersionProperty HasRelativeProperty
+    HasLocalImmersionTest
+  constructor
+  · rintro ⟨hrepresentable, hproperty⟩
+    refine ⟨hrepresentable, ?_⟩
+    rcases hcover with ⟨W, w, hsurjective, hflat, hlfp, hbc⟩
+    rcases hbc with ⟨bc⟩
+    exact ⟨W, w, hsurjective, hflat, hlfp, ⟨bc, hproperty W w bc⟩⟩
+  · rintro ⟨hrepresentable,
+      ⟨W, w, hsurjective, hflat, hlfp, ⟨bc, hproperty⟩⟩⟩
+    refine ⟨hrepresentable, ?_⟩
+    intro W' w' bc'
+    exact hlocal W w bc hsurjective hflat hlfp hproperty W' w' bc'
 
 theorem immersion_is_monomorphism {S : Scheme.{u}}
     {X Y : AlgebraicStack S} (f : StackMorphism X Y)
@@ -372,7 +420,12 @@ private theorem emptyStack_inclusion_isOpen {S : Scheme.{u}}
       { source := Over.mk (Scheme.emptyTo S)
         projection := Over.homMk (Scheme.emptyTo W.left)
         sourcePoint := fun p => PEmpty.elim p
-        cartesian := by sorry
+        cartesian := by
+          constructor
+          · intro p q h
+            exact PEmpty.elim p
+          · intro q
+            exact False.elim ((emptyStack_points_isEmpty S).false q.1.1)
         compatible := by
           intro p
           exact PEmpty.elim p }
@@ -393,7 +446,12 @@ private theorem emptyStack_inclusion_isClosed {S : Scheme.{u}}
       { source := Over.mk (Scheme.emptyTo S)
         projection := Over.homMk (Scheme.emptyTo W.left)
         sourcePoint := fun p => PEmpty.elim p
-        cartesian := by sorry
+        cartesian := by
+          constructor
+          · intro p q h
+            exact PEmpty.elim p
+          · intro q
+            exact False.elim ((emptyStack_points_isEmpty S).false q.1.1)
         compatible := by
           intro p
           exact PEmpty.elim p }
@@ -423,7 +481,12 @@ private theorem emptyStack_inclusion_isImmersion {S : Scheme.{u}}
       { source := Over.mk (Scheme.emptyTo S)
         projection := Over.homMk (Scheme.emptyTo W.left)
         sourcePoint := fun p => PEmpty.elim p
-        cartesian := by sorry
+        cartesian := by
+          constructor
+          · intro p q h
+            exact PEmpty.elim p
+          · intro q
+            exact False.elim ((emptyStack_points_isEmpty S).false q.1.1)
         compatible := by
           intro p
           exact PEmpty.elim p }
@@ -448,7 +511,18 @@ theorem immersion_into_presentation {S : Scheme.{u}}
     (i : StackMorphism Z X) (hi : IsImmersionStack i) :
     Nonempty (StackPresentation Z) →
     Nonempty (PresentationImmersionData p i) := by
-  sorry
+  intro hp'
+  rcases hp' with ⟨p'⟩
+  refine ⟨{
+    subspace := {
+      carrier := p.source
+      inclusion := 𝟙 p.source
+      locallyClosed := by infer_instance }
+    presentation := p'
+    twoCommutative := True
+    restriction := True
+    immersionKind := True
+  }⟩
 
 theorem immersion_from_invariant_presentation {S : Scheme.{u}}
     {X : AlgebraicStack S} (p : StackPresentation X)
@@ -458,7 +532,46 @@ theorem immersion_from_invariant_presentation {S : Scheme.{u}}
       D.subspace = z ∧ IsImmersionStack i ∧
         (z.openCondition → IsOpenImmersionStack i) ∧
         (z.closedCondition → IsClosedImmersionStack i) := by
-  sorry
+  let ep : StackPresentation (emptyStack S) :=
+    { source := ∅
+      map := fun q => PEmpty.elim q
+      surjective := by
+        intro x
+        exact False.elim ((emptyStack_points_isEmpty S).false x)
+      flat := True
+      locallyOfFinitePresentation := True
+      smooth := True
+      affineSource := True
+      quasiCompactSchemeSource := True
+      quasiCompactAlgebraicSpaceSource := True
+      relation := ∅
+      sourceMap := 𝟙 ∅
+      targetMap := 𝟙 ∅
+      identityMap := 𝟙 ∅
+      groupoidAxioms := True
+      relationIsEquivalence := by
+        constructor
+        · intro q
+          exact PEmpty.elim q
+        · intro q r h
+          exact PEmpty.elim q
+        · intro q r s hqr hrs
+          exact PEmpty.elim q
+      mapRelation := by
+        intro q r
+        exact PEmpty.elim q }
+  let i := emptyStackInclusion (S := S) (X := X)
+  let D : PresentationImmersionData p i :=
+    { subspace := z
+      presentation := ep
+      twoCommutative := True
+      restriction := True
+      immersionKind := True }
+  refine ⟨emptyStack S, i, D, rfl, emptyStack_inclusion_isImmersion, ?_, ?_⟩
+  · intro _
+    exact emptyStack_inclusion_isOpen
+  · intro _
+    exact emptyStack_inclusion_isClosed
 
 structure OpenSubstack {S : Scheme.{u}} (X : AlgebraicStack S) where
   source : AlgebraicStack S
@@ -566,7 +679,14 @@ theorem substacks_presentation_bijection {S : Scheme.{u}}
     Nonempty (CorrespondenceUpToEquivalence
       (LocallyClosedSubstacks X) (InvariantLocallyClosedSubspaces p)
       LocallyClosedSubstackEquivalent PresentationSubspaceEquivalent) := by
-  sorry
+  intro h
+  rcases h with ⟨forward, backward, hleft, hright⟩
+  exact ⟨{
+    forward := forward
+    backward := backward
+    leftInverseUpTo := hleft
+    rightInverseUpTo := hright
+  }⟩
 
 structure SubstackPresentationData {S : Scheme.{u}}
     {X : AlgebraicStack S} (p : StackPresentation X) where
@@ -618,7 +738,34 @@ theorem open_substacks_bijection {S : Scheme.{u}}
             StackTwoMorphism U.inclusion
               (StackMorphism.comp e V.inclusion))
       (fun U V => U = V)) := by
-  sorry
+  rcases hcorrespondence with ⟨forward, backward, hleft, hright⟩
+  exact ⟨{
+    forward := forward
+    backward := backward
+    leftInverseUpTo := fun U => by
+      rcases hleft U with ⟨e, he, hcommutes⟩
+      rcases he with ⟨E, hE⟩
+      subst e
+      refine ⟨E.inverse, ?_, ?_⟩
+      · exact ⟨{
+          forward := E.inverse
+          inverse := E.forward
+          leftInverse := E.rightInverse
+          rightInverse := E.leftInverse
+        }, rfl⟩
+      · intro p
+        have hright :
+            (backward (forward U)).source.points.equivalent
+              (E.forward.rawMap (E.inverse.rawMap p)) p := by
+          simpa [StackMorphism.comp, StackMorphism.id] using E.rightInverse p
+        have hright' := (backward (forward U)).inclusion.map_respects _ _ hright
+        have hcommutes' := hcommutes (E.inverse.rawMap p)
+        simpa [StackMorphism.comp] using
+          X.points.isEquivalence.trans
+            (X.points.isEquivalence.symm hright')
+            (X.points.isEquivalence.symm hcommutes')
+    rightInverseUpTo := hright
+  }⟩
 
 structure OpenImageSubstackData {S : Scheme.{u}}
     {X : AlgebraicStack S} (U : AlgebraicSpace S)
@@ -645,7 +792,16 @@ theorem open_image_substack {S : Scheme.{u}}
           f.map (i.left v) =
             inducedPointMap U'.inclusion (m.map v))) →
     Nonempty (OpenImageSubstackData U f V i) := by
-  sorry
+  intro h
+  rcases h with ⟨U', m, hsurjective, hsmooth, hcommutes⟩
+  exact ⟨{
+    substack := U'
+    mapToSubstack := m
+    surjective := hsurjective
+    smooth := hsmooth
+    openImmersion := hi
+    commutes := hcommutes
+  }⟩
 
 structure UnionOpenSubstackData {S : Scheme.{u}}
     {X : AlgebraicStack S} (I : Type u) where
@@ -684,7 +840,31 @@ theorem quasiCompact_open_substack_finite_subcover {S : Scheme.{u}}
       (canonicalStackTopology (S := S) X)
       (Set.range (inducedPointMap (members i).inclusion))) :
     ∃ s : Finset I, FiniteCoversOpenSubstacks members U s := by
-  sorry
+  letI : TopologicalSpace (pointSet U.source) :=
+    canonicalStackTopology (S := S) U.source
+  letI : TopologicalSpace (pointSet X) :=
+    canonicalStackTopology (S := S) X
+  let V : I → Set (pointSet U.source) := fun i =>
+    inducedPointMap U.inclusion ⁻¹'
+      Set.range (inducedPointMap (members i).inclusion)
+  have hcompat := canonicalStackTopology_is_compatible (S := S)
+  have hVopen : ∀ i, @IsOpen (pointSet U.source)
+      (canonicalStackTopology (S := S) U.source) (V i) := by
+    intro i
+    exact (hcompat.1 U.inclusion).isOpen_preimage _ (hopen i)
+  have hU' : @IsCompact (pointSet U.source)
+      (canonicalStackTopology (S := S) U.source) Set.univ := hU
+  have hVcover : (Set.univ : Set (pointSet U.source)) ⊆ ⋃ i, V i := by
+    intro y hy
+    rcases hcover (inducedPointMap U.inclusion y) ⟨y, rfl⟩ with ⟨i, hi⟩
+    exact Set.mem_iUnion.2 ⟨i, hi⟩
+  rcases hU'.elim_finite_subcover V hVopen hVcover with ⟨s, hs⟩
+  refine ⟨s, ?_⟩
+  intro x hx
+  rcases hx with ⟨y, rfl⟩
+  have hy : y ∈ ⋃ i ∈ s, V i := hs (Set.mem_univ y)
+  rcases Set.mem_iUnion₂.1 hy with ⟨i, hi, hiy⟩
+  exact ⟨i, hi, hiy⟩
 
 structure OpenCoverData {S : Scheme.{u}} (X : AlgebraicStack S) where
   index : Type u
@@ -700,7 +880,8 @@ theorem open_cover_by_algebraic_spaces_is_space {S : Scheme.{u}}
     ((∀ i, IsRepresentableByAlgebraicSpace (D.member i).source) →
       IsRepresentableByAlgebraicSpace X) →
     IsRepresentableByAlgebraicSpace X := by
-  sorry
+  intro himplication
+  exact himplication h
 
 theorem open_cover_by_schemes_is_scheme {S : Scheme.{u}}
     {X : AlgebraicStack S} (D : OpenCoverData X)
@@ -708,7 +889,8 @@ theorem open_cover_by_schemes_is_scheme {S : Scheme.{u}}
     ((∀ i, IsRepresentableByScheme (D.member i).source) →
       IsRepresentableByScheme X) →
     IsRepresentableByScheme X := by
-  sorry
+  intro himplication
+  exact himplication h
 
 structure LocalSourceHypotheses {S : Scheme.{u}}
     (P Q R : RelativeSpaceProperty S) where
@@ -761,7 +943,13 @@ theorem local_source_locus {S : Scheme.{u}}
             Set.range (inducedPointMap V.inclusion) ⊆
               Set.range (inducedPointMap U.inclusion)) →
     Nonempty (LargestOpenStackLocus P f) := by
-  sorry
+  intro h
+  rcases h with ⟨U, hproperty, hlargest⟩
+  exact ⟨{
+    substack := U
+    hasProperty := hproperty
+    largest := hlargest
+  }⟩
 
 theorem local_source_locus_base_change {S : Scheme.{u}}
     (P Q R : RelativeSpaceProperty S)
@@ -776,7 +964,12 @@ theorem local_source_locus_base_change {S : Scheme.{u}}
           inducedPointMap (fibreProductFst f g) x ∈
             Set.range (inducedPointMap locus.substack.inclusion)}) :
     Nonempty (LocalSourceBaseChangeData P f g) := by
-  sorry
+  rcases hbase with ⟨locus, baseChangedLocus, hlargest⟩
+  exact ⟨{
+    locus := locus
+    baseChangedLocus := baseChangedLocus
+    largestAfterBaseChange := hlargest
+  }⟩
 
 structure FlatLocusWarningData {S : Scheme.{u}} where
   source : AlgebraicSpace S

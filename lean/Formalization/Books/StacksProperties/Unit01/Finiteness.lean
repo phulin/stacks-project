@@ -42,7 +42,13 @@ theorem quasi_compact_representative_invariant {S : Scheme.{u}}
       p.quasiCompact ↔ q.quasiCompact) :
     IsQuasiCompactFieldValuedMorphism p ↔
       IsQuasiCompactFieldValuedMorphism q := by
-  sorry
+  unfold IsQuasiCompactFieldValuedMorphism
+  have hi := hinvariant p q
+  constructor
+  · intro hp
+    exact hi.mp (fun _ => hp)
+  · intro hq
+    exact (hi.mpr hq) heq
 
 theorem quasi_compact_point_iff {S : Scheme.{u}}
     {X : AlgebraicStack S} (x : StackPoint X)
@@ -54,7 +60,15 @@ theorem quasi_compact_point_iff {S : Scheme.{u}}
       p.quasiCompact ↔ q.quasiCompact) :
     SomeQuasiCompactRepresentative x ↔
       EveryQuasiCompactRepresentative x := by
-  sorry
+  unfold SomeQuasiCompactRepresentative EveryQuasiCompactRepresentative
+    IsQuasiCompactFieldValuedMorphism
+  constructor
+  · rintro ⟨p, hp, hcompact⟩ q hq
+    have hi := hinvariant p q
+    exact hi.mp (fun _ => hcompact)
+  · intro hevery
+    rcases hrepr with ⟨p, hp⟩
+    exact ⟨p, hp, hevery p hp⟩
 
 def IsQuasiCompactPoint {S : Scheme.{u}}
     {X : AlgebraicStack S} (x : StackPoint X) : Prop :=

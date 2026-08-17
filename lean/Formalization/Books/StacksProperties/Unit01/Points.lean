@@ -243,13 +243,31 @@ def IsCompatibleStackTopology {S : Scheme.{u}}
 
 theorem exists_stack_topology {S : Scheme.{u}} :
     ∃ T : StackTopology S, IsCompatibleStackTopology T := by
-  sorry
+  let T : StackTopology S := fun X => (⊥ : TopologicalSpace (pointSet X))
+  refine ⟨T, ?_⟩
+  constructor
+  · intro X Y f
+    letI : TopologicalSpace (StackPoint X) := ⊥
+    letI : TopologicalSpace (StackPoint Y) := ⊥
+    letI : DiscreteTopology (StackPoint X) := discreteTopology_bot _
+    change @Continuous (StackPoint X) (StackPoint Y)
+      (⊥ : TopologicalSpace (StackPoint X))
+      (⊥ : TopologicalSpace (StackPoint Y)) (inducedPointMap f)
+    exact continuous_of_discreteTopology
+  · intro X W w _ _
+    letI : TopologicalSpace (pointSet X) := ⊥
+    letI : DiscreteTopology (pointSet X) := discreteTopology_bot _
+    intro U _
+    exact isOpen_discrete _
 
 theorem exists_unique_stack_topology {S : Scheme.{u}}
     (hunique : ∀ T U : StackTopology S,
       IsCompatibleStackTopology T → IsCompatibleStackTopology U → T = U) :
     ∃! T : StackTopology S, IsCompatibleStackTopology T := by
-  sorry
+  rcases exists_stack_topology (S := S) with ⟨T, hT⟩
+  refine ⟨T, hT, ?_⟩
+  intro U hU
+  exact hunique U T hU hT
 
 @[instance_reducible]
 noncomputable def canonicalStackTopology {S : Scheme.{u}} : StackTopology S :=
@@ -282,6 +300,17 @@ theorem points_locally_quasi_compact {S : Scheme.{u}}
           @IsCompact W.left inferInstance V ∧
           u ∈ V ∧ ∀ y, y ∈ V → w.map y ∈ U) →
     HasQuasiCompactOpenNeighbourhoodBasis (T X) := by
-  sorry
+  unfold HasQuasiCompactOpenNeighbourhoodBasis pointSet
+  intro hexists x U hU hx
+  letI : TopologicalSpace (StackPoint X) := T X
+  rcases hexists x U hU hx with
+    ⟨W, w, u, V, hflat, hlfp, hsmooth, hmap, hcontinuous, hopen, hcompact, hu, hsubset⟩
+  refine ⟨w.map '' V, ?_, ?_, ?_, ?_⟩
+  · exact (hT.2 W w hflat hlfp) V hopen
+  · exact hcompact.image hcontinuous
+  · exact ⟨u, hu, hmap⟩
+  · intro y hy
+    rcases hy with ⟨v, hv, rfl⟩
+    exact hsubset v hv
 
 end Formalization.Books.StacksProperties.Unit01

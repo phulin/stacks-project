@@ -74,7 +74,11 @@ theorem base_change_monomorphism {S : Scheme.{u}}
         SpaceMorphismMonomorphism bc'.projection →
           SpaceMorphismMonomorphism bc.projection) :
     IsMonomorphism (fibreProductSnd g f) := by
-  sorry
+  unfold IsMonomorphism RelativeMonomorphismProperty HasRelativeProperty at *
+  refine ⟨hrepresentable, ?_⟩
+  intro W w bc
+  rcases hbase W w bc with ⟨w', bc', hproperty⟩
+  exact hproperty (hg.2 W w' bc')
 
 theorem comp_monomorphism {S : Scheme.{u}}
     {X Y Z : AlgebraicStack S} (f : StackMorphism X Y)
@@ -111,7 +115,13 @@ theorem monomorphism_iff_fully_faithful {S : Scheme.{u}}
         (bc : BaseChangeData f W w),
         SpaceMorphismMonomorphism bc.projection) :
     IsMonomorphism f ↔ StackFullyFaithful f := by
-  sorry
+  unfold IsMonomorphism RelativeMonomorphismProperty HasRelativeProperty
+    StackFullyFaithful
+  constructor
+  · rintro ⟨hrepresentable, hproperty⟩
+    exact ⟨hrepresentable, hbaseToPoints hproperty⟩
+  · rintro ⟨hrepresentable, hpoints⟩
+    exact ⟨hrepresentable, hpointsToBase hpoints⟩
 
 theorem monomorphism_iff_diagonal_equivalence {S : Scheme.{u}}
     {X Y : AlgebraicStack S} (f : StackMorphism X Y)
@@ -126,7 +136,13 @@ theorem monomorphism_iff_diagonal_equivalence {S : Scheme.{u}}
         (bc : BaseChangeData f W w),
         SpaceMorphismMonomorphism bc.projection) :
     IsMonomorphism f ↔ DiagonalIsEquivalence f := by
-  sorry
+  unfold IsMonomorphism RelativeMonomorphismProperty HasRelativeProperty
+    DiagonalIsEquivalence
+  constructor
+  · rintro ⟨hrepresentable, hproperty⟩
+    exact ⟨hrepresentable, hbaseToDiagonal hproperty⟩
+  · rintro ⟨hrepresentable, hdiagonal⟩
+    exact ⟨hrepresentable, hdiagonalToBase hdiagonal⟩
 
 theorem monomorphism_iff_local_test {S : Scheme.{u}}
     {X Y : AlgebraicStack S} (f : StackMorphism X Y)
@@ -142,7 +158,18 @@ theorem monomorphism_iff_local_test {S : Scheme.{u}}
           (bc' : BaseChangeData f W' w'),
           SpaceMorphismMonomorphism bc'.projection) :
     IsMonomorphism f ↔ HasLocalMonomorphismTest f := by
-  sorry
+  unfold IsMonomorphism RelativeMonomorphismProperty HasRelativeProperty
+    HasLocalMonomorphismTest
+  constructor
+  · rintro ⟨hrepresentable, hproperty⟩
+    refine ⟨hrepresentable, ?_⟩
+    rcases hcover with ⟨W, w, hsurjective, hflat, hlfp, hbc⟩
+    rcases hbc with ⟨bc⟩
+    exact ⟨W, w, hsurjective, hflat, hlfp, ⟨bc, hproperty W w bc⟩⟩
+  · rintro ⟨hrepresentable, ⟨W, w, hsurjective, hflat, hlfp, ⟨bc, hproperty⟩⟩⟩
+    refine ⟨hrepresentable, ?_⟩
+    intro W' w' bc'
+    exact hlocal W w bc hsurjective hflat hlfp hproperty W' w' bc'
 
 theorem monomorphism_injective_on_points {S : Scheme.{u}}
     {X Y : AlgebraicStack S} (f : StackMorphism X Y)
@@ -152,7 +179,12 @@ theorem monomorphism_injective_on_points {S : Scheme.{u}}
           inducedPointMap f (Quotient.mk X.points.setoid q) →
         X.points.equivalent p q) :
     Function.Injective (inducedPointMap f) := by
-  sorry
+  intro p
+  refine Quotient.inductionOn p ?_
+  intro p q
+  refine Quotient.inductionOn q ?_
+  intro q h
+  exact Quotient.sound (hcancel p q h)
 
 def IsStackPullbackSquare {S : Scheme.{u}}
     {A B C D : AlgebraicStack S}
@@ -207,6 +239,7 @@ theorem monomorphism_diagonal_pullback {S : Scheme.{u}}
           StackTwoMorphism h h') :
     StackPullbackSquare (stackDiagonal (StackMorphism.comp i g))
       i (fibreProductMap i g) (stackDiagonal g) := by
-  sorry
+  refine ⟨hcommutes, ?_⟩
+  exact ⟨hcommutes, huniversal⟩
 
 end Formalization.Books.StacksProperties.Unit01

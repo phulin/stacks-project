@@ -49,10 +49,14 @@ theorem reduced_closed_substack_exists_unique {S : Scheme.{u}}
         ReducedClosedSubstackEquivalent U V) →
     ∃ U : ClosedSubstack X,
       IsReducedClosedSubstack U ∧ ClosedSubstackHasPoints U T ∧
-        ∀ V : ClosedSubstack X,
+      ∀ V : ClosedSubstack X,
             IsReducedClosedSubstack V ∧ ClosedSubstackHasPoints V T →
             ReducedClosedSubstackEquivalent U V := by
-  sorry
+  intro hT hrealization hunique
+  rcases hrealization with ⟨U, hred, hpoints⟩
+  refine ⟨U, hred, hpoints, ?_⟩
+  intro V hV
+  exact hunique U V hred hpoints hV.1 hV.2
 
 theorem reduced_stack_determined_by_points {S : Scheme.{u}}
     {X : AlgebraicStack S} (U : ClosedSubstack X)
@@ -65,7 +69,13 @@ theorem reduced_stack_determined_by_points {S : Scheme.{u}}
         StackTwoMorphism
           (StackMorphism.comp e U.inclusion) (StackMorphism.id X)) :
     IsStackEquivalence U.inclusion := by
-  sorry
+  rcases hinverse with ⟨e, hleft, hright⟩
+  refine ⟨{
+    forward := U.inclusion
+    inverse := e
+    leftInverse := hleft
+    rightInverse := hright
+  }, rfl⟩
 
 def FactorsThroughClosedSubstack {S : Scheme.{u}}
     {Y X : AlgebraicStack S} (f : StackMorphism Y X)
@@ -99,7 +109,13 @@ theorem reduced_induced_stack_structure_exists {S : Scheme.{u}}
     (∃ U : ClosedSubstack X,
       IsReducedClosedSubstack U ∧ ClosedSubstackHasPoints U T) →
     Nonempty (ReducedInducedStackStructure X T) := by
-  sorry
+  intro hT hrealization
+  rcases hrealization with ⟨U, hred, hpoints⟩
+  exact ⟨{
+    substack := U
+    reduced := hred
+    points := hpoints
+  }⟩
 
 noncomputable def reducedInducedStackStructure {S : Scheme.{u}}
     (X : AlgebraicStack S) (T : Set (StackPoint X)) :
@@ -150,6 +166,17 @@ theorem reduced_locally_closed_substack_exists {S : Scheme.{u}}
       Set.range (inducedPointMap
         (StackMorphism.comp closedPart.inclusion openPart.inclusion)) = U) :
     Nonempty (ReducedLocallyClosedSubstackData T X U) := by
-  sorry
+  rcases hrealization with
+    ⟨boundary, openPart, closedPart, hboundary, hopen, hred, hpoints⟩
+  exact ⟨{
+    boundary := boundary
+    boundary_eq := hboundary
+    openPart := openPart
+    openPointSet := hopen
+    closedPart := closedPart
+    reduced := hred
+    pointSet := hpoints
+    locallyClosed := hU
+  }⟩
 
 end Formalization.Books.StacksProperties.Unit01

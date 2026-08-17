@@ -480,6 +480,26 @@ theorem exists_sheafGlueingSolution
     Nonempty (SheafGlueingSolution D) := by
   sorry
 
+/-- The existential form of the sheaf-glueing lemma.  This is the direct
+source-facing interface: it exposes the glued sheaf, its local comparison
+isomorphisms, and the commuting intersection squares separately. -/
+theorem glue_sheaves_exists
+    (hU : TopologicalSpace.IsOpenCover U) (D : SheafGlueingData C U) :
+    ∃ (F : TopCat.Sheaf C X)
+      (φ : ∀ i, (sheafRestriction C (U i)).obj F ≅ D.sheaf i),
+      ∀ i j,
+        (sheafRestrictionRestrictionIso C
+            (show U i ⊓ U j ≤ U i from inf_le_left) F).inv ≫
+            (sheafMapRestriction C
+              (show U i ⊓ U j ≤ U i from inf_le_left)).map (φ i).hom ≫
+            (D.transition i j).hom =
+          (sheafRestrictionRestrictionIso C
+            (show U i ⊓ U j ≤ U j from inf_le_right) F).inv ≫
+            (sheafMapRestriction C
+              (show U i ⊓ U j ≤ U j from inf_le_right)).map (φ j).hom := by
+  rcases exists_sheafGlueingSolution hU D with ⟨S⟩
+  exact ⟨S.sheaf, S.iso, S.comm⟩
+
 /-- A chosen realization of glueing data. -/
 noncomputable def gluedSheafGlueingSolution
     (hU : TopologicalSpace.IsOpenCover U) (D : SheafGlueingData C U) :
@@ -769,6 +789,29 @@ noncomputable def sheafGlueingEquivalence
   letI : (sheafToGlueingData (C := C) (U := U)).IsEquivalence :=
     sheafToGlueingData_isEquivalence (C := C) (U := U) hU
   exact (sheafToGlueingData (C := C) (U := U)).asEquivalence
+
+/-! The source's categorical statement for sheaves of sets. -/
+
+/-- The functor sending a sheaf of sets to its local glueing datum. -/
+noncomputable def setSheafToGlueingData {X : TopCat.{v}} {ι : Type v}
+    (U : ι → Opens X) :
+    Sh.{v, v} X ⥤ SetSheafGlueingData U :=
+  sheafToGlueingData (C := Type v) (U := U)
+
+/-- Restriction to an open cover is an equivalence with set-valued glueing
+data. -/
+theorem setSheafToGlueingData_isEquivalence {X : TopCat.{v}} {ι : Type v}
+    (U : ι → Opens X) (hU : TopologicalSpace.IsOpenCover U) :
+    (setSheafToGlueingData U).IsEquivalence := by
+  exact sheafToGlueingData_isEquivalence (C := Type v) (U := U) hU
+
+/-- A categorical equivalence between sheaves of sets and glueing data. -/
+noncomputable def setSheafGlueingEquivalence {X : TopCat.{v}} {ι : Type v}
+    (U : ι → Opens X) (hU : TopologicalSpace.IsOpenCover U) :
+    Sh.{v, v} X ≌ SetSheafGlueingData U := by
+  letI : (setSheafToGlueingData U).IsEquivalence :=
+    setSheafToGlueingData_isEquivalence U hU
+  exact (setSheafToGlueingData U).asEquivalence
 
 /-- Local descriptions of maps from a glued sheaf to an ambient sheaf. -/
 abbrev GlueingMapToAmbient (D : SheafGlueingData C U)

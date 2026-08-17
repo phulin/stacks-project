@@ -816,8 +816,8 @@ theorem open_image_substack {S : Scheme.{u}}
   }⟩
 
 structure UnionOpenSubstackData {S : Scheme.{u}}
-    {X : AlgebraicStack S} (I : Type u) where
-  members : I → OpenSubstack X
+    {X : AlgebraicStack S} (I : Type u)
+    (members : I → OpenSubstack X) where
   union : OpenSubstack X
   pointSet : Set.range (inducedPointMap union.inclusion) =
     ⋃ i, Set.range (inducedPointMap (members i).inclusion)
@@ -825,7 +825,7 @@ structure UnionOpenSubstackData {S : Scheme.{u}}
 theorem union_open_substacks {S : Scheme.{u}}
     {X : AlgebraicStack S} (I : Type u)
     (members : I → OpenSubstack X) :
-    Nonempty (UnionOpenSubstackData (S := S) (X := X) I) := by
+    Nonempty (UnionOpenSubstackData (S := S) (X := X) I members) := by
   sorry
 
 def CoversOpenSubstacks {S : Scheme.{u}}

@@ -1,9 +1,11 @@
 import Mathlib.Algebra.Category.ModuleCat.Monoidal.Adjunction
 import Mathlib.CategoryTheory.Adjunction.Parametrized
+import Mathlib.CategoryTheory.Adjunction.Unique
 import Mathlib.CategoryTheory.Monoidal.Braided.Basic
 import Mathlib.CategoryTheory.Monoidal.CoherenceLemmas
 import Mathlib.CategoryTheory.Monoidal.Rigid.Basic
 import Mathlib.CategoryTheory.Monoidal.Rigid.Braided
+import Mathlib.Tactic.CategoryTheory.Monoidal.Basic
 
 /-!
 # Categories, Chapter 43: Monoidal categories
@@ -97,7 +99,66 @@ theorem unitPair_multiplication_tensor_equal (u : UnitPair (C := C)) :
     (α_ u.unit u.unit u.unit).hom ≫
         (𝟙 u.unit ⊗ₘ u.multiplication.hom) =
       u.multiplication.hom ⊗ₘ 𝟙 u.unit := by
-  sorry
+  letI : (tensorLeft u.unit).IsEquivalence := u.leftEquivalence
+  let v : C := (tensorLeft u.unit).asEquivalence.inverse.obj (𝟙_ C)
+  let ev : u.unit ⊗ v ≅ 𝟙_ C :=
+    (tensorLeft u.unit).asEquivalence.counitIso.app (𝟙_ C)
+  let q : u.unit ≅ 𝟙_ C :=
+    (ρ_ u.unit).symm ≪≫ whiskerLeftIso u.unit ev.symm ≪≫
+      (α_ u.unit u.unit v).symm ≪≫
+      (u.multiplication ⊗ᵢ Iso.refl v) ≪≫ ev
+  let a : 𝟙_ C ⊗ 𝟙_ C ≅ 𝟙_ C :=
+    (q.symm ⊗ᵢ q.symm) ≪≫ u.multiplication ≪≫ q
+  have hm : u.multiplication.hom =
+      (q ⊗ᵢ q).hom ≫ a.hom ≫ q.inv := by
+    simp [a, Category.assoc]
+  have ha : (α_ (𝟙_ C) (𝟙_ C) (𝟙_ C)).hom ≫
+      (𝟙 (𝟙_ C) ⊗ₘ a.hom) = a.hom ⊗ₘ 𝟙 (𝟙_ C) := by
+    simp [MonoidalCategory.tensorHom_def,
+      MonoidalCategory.leftUnitor_tensor_hom,
+      MonoidalCategory.unitors_equal, MonoidalCategory.unitors_inv_equal,
+      Category.assoc]
+  let f : u.unit ⟶ 𝟙_ C := q.hom
+  let g : 𝟙_ C ⟶ u.unit := q.inv
+  let h : 𝟙_ C ⊗ 𝟙_ C ⟶ 𝟙_ C := a.hom
+  have hm' : u.multiplication.hom =
+      (f ⊗ₘ f) ≫ h ≫ g := by
+    simpa [f, g, h] using hm
+  have ha' : (α_ (𝟙_ C) (𝟙_ C) (𝟙_ C)).hom ≫
+      (𝟙 (𝟙_ C) ⊗ₘ h) = h ⊗ₘ 𝟙 (𝟙_ C) := by
+    simpa [h] using ha
+  have hfg : f ≫ g = 𝟙 u.unit := by
+    simp [f, g]
+  have hgf : g ≫ f = 𝟙 (𝟙_ C) := by
+    simp [f, g]
+  clear_value f g h
+  let k : ((u.unit ⊗ u.unit) ⊗ u.unit) ⟶ u.unit ⊗ u.unit :=
+    ((f ⊗ₘ f) ⊗ₘ f) ≫
+      (α_ (𝟙_ C) (𝟙_ C) (𝟙_ C)).hom ≫
+      (𝟙 (𝟙_ C) ⊗ₘ h) ≫
+      (g ⊗ₘ g)
+  have hleft :
+      (α_ u.unit u.unit u.unit).hom ≫
+          (𝟙 u.unit ⊗ₘ
+            ((f ⊗ₘ f) ≫ h ≫ g)) = k := by
+    simp [k, MonoidalCategory.tensorHom_def, Category.assoc, hfg, hgf]
+    monoidal
+    simp
+  let k' : ((u.unit ⊗ u.unit) ⊗ u.unit) ⟶ u.unit ⊗ u.unit :=
+    ((f ⊗ₘ f) ⊗ₘ f) ≫
+      (h ⊗ₘ 𝟙 (𝟙_ C)) ≫
+      (g ⊗ₘ g)
+  have hright :
+      ((f ⊗ₘ f) ≫ h ≫ g) ⊗ₘ 𝟙 u.unit = k' := by
+    simp [k', MonoidalCategory.tensorHom_def, Category.assoc, hfg, hgf]
+    monoidal
+    simp
+  have hmid : k = k' := by
+    simpa only [k, k', Category.assoc] using
+      congrArg (fun t => ((f ⊗ₘ f) ⊗ₘ f) ≫ t ≫
+        (g ⊗ₘ g)) ha'
+  rw [hm']
+  exact hleft.trans (hmid.trans hright.symm)
 
 theorem unitors_at_unit_equal :
     (λ_ (𝟙_ C)).hom = (ρ_ (𝟙_ C)).hom :=
@@ -105,12 +166,30 @@ theorem unitors_at_unit_equal :
 
 theorem unit_end_comp_comm (a b : 𝟙_ C ⟶ 𝟙_ C) :
     a ≫ b = b ≫ a := by
-  sorry
+  calc
+    a ≫ b = ((ρ_ (𝟙_ C)).inv ≫ a ▷ (𝟙_ C) ≫ (ρ_ (𝟙_ C)).hom) ≫
+        ((λ_ (𝟙_ C)).inv ≫ (𝟙_ C) ◁ b ≫ (λ_ (𝟙_ C)).hom) := by
+      exact congrArg₂ (fun f g => f ≫ g) (whiskerRight_id_symm a) (id_whiskerLeft_symm b)
+    _ = (ρ_ (𝟙_ C)).inv ≫ (a ▷ (𝟙_ C)) ≫ (𝟙_ C ◁ b) ≫ (ρ_ (𝟙_ C)).hom := by
+      rw [MonoidalCategory.unitors_equal, MonoidalCategory.unitors_inv_equal]
+      simp only [Category.assoc, Iso.hom_inv_id_assoc]
+    _ = (ρ_ (𝟙_ C)).inv ≫ (a ⊗ₘ b) ≫ (ρ_ (𝟙_ C)).hom := by
+      simp only [MonoidalCategory.tensorHom_def, Category.assoc]
+    _ = (ρ_ (𝟙_ C)).inv ≫ (𝟙_ C ◁ b) ≫ (a ▷ (𝟙_ C)) ≫ (ρ_ (𝟙_ C)).hom := by
+      simp only [MonoidalCategory.tensorHom_def', Category.assoc]
+    _ = ((λ_ (𝟙_ C)).inv ≫ (𝟙_ C) ◁ b ≫ (λ_ (𝟙_ C)).hom) ≫
+        ((ρ_ (𝟙_ C)).inv ≫ a ▷ (𝟙_ C) ≫ (ρ_ (𝟙_ C)).hom) := by
+      rw [MonoidalCategory.unitors_equal, MonoidalCategory.unitors_inv_equal]
+      simp only [Category.assoc, Iso.hom_inv_id_assoc]
+    _ = b ≫ a := by
+      exact (congrArg₂ (fun f g => f ≫ g) (id_whiskerLeft_symm b) (whiskerRight_id_symm a)).symm
 
 theorem unit_end_tensor_conjugation (a : 𝟙_ C ⟶ 𝟙_ C) :
     (ρ_ (𝟙_ C)).inv ≫ (a ⊗ₘ 𝟙 (𝟙_ C)) ≫ (ρ_ (𝟙_ C)).hom = a ∧
       (ρ_ (𝟙_ C)).inv ≫ (𝟙 (𝟙_ C) ⊗ₘ a) ≫ (ρ_ (𝟙_ C)).hom = a := by
-  sorry
+  constructor <;>
+    simp [MonoidalCategory.tensorHom_id, MonoidalCategory.id_tensorHom,
+      ← MonoidalCategory.unitors_equal, ← MonoidalCategory.unitors_inv_equal]
 
 /- An isomorphism of the source-facing unit presentations is required to
    intertwine both unitors.  This makes the source's phrase "unique
@@ -126,7 +205,68 @@ structure UnitDataIso (u v : UnitData (C := C)) where
 theorem unit_data_unique_iso (u : UnitData (C := C)) :
     Nonempty (UnitDataIso u (chosenUnitData (C := C))) ∧
       ∀ e₁ e₂ : UnitDataIso u (chosenUnitData (C := C)), e₁ = e₂ := by
-  sorry
+  let e : u.unit ≅ 𝟙_ C :=
+    (λ_ u.unit).symm ≪≫ u.rightUnitor.app (𝟙_ C)
+  have hl (X : C) :
+      (e.hom ⊗ₘ 𝟙 X) ≫ (λ_ X).hom = (u.leftUnitor.app X).hom := by
+    simp [e, Category.assoc]
+    change (λ_ (u.unit ⊗ X)).inv ≫ (α_ (𝟙_ C) u.unit X).inv ≫
+      (u.rightUnitor.app (𝟙_ C)).hom ▷ X ≫ (λ_ X).hom =
+      (u.leftUnitor.app X).hom
+    calc
+      _ = (λ_ (u.unit ⊗ X)).inv ≫
+          ((α_ (𝟙_ C) u.unit X).inv ≫
+            (u.rightUnitor.app (𝟙_ C)).hom ▷ X) ≫ (λ_ X).hom := by
+            simp [Category.assoc]
+      _ = (λ_ (u.unit ⊗ X)).inv ≫
+          (𝟙_ C ◁ (u.leftUnitor.app X).hom) ≫ (λ_ X).hom := by
+            rw [u.triangle (𝟙_ C) X]
+      _ = (u.leftUnitor.app X).hom := by
+            rw [MonoidalCategory.leftUnitor_naturality]
+            simp
+  let e₀ : u.unit ≅ 𝟙_ C :=
+    (ρ_ u.unit).symm ≪≫ u.leftUnitor.app (𝟙_ C)
+  have hl₀ :
+      (e₀.hom ⊗ₘ 𝟙 (𝟙_ C)) ≫ (λ_ (𝟙_ C)).hom =
+        (u.leftUnitor.app (𝟙_ C)).hom := by
+    simp [e₀, MonoidalCategory.tensorHom_def, Category.assoc]
+    rw [MonoidalCategory.unitors_equal]
+    simp
+  have e_eq : e.hom = e₀.hom := by
+    apply (MonoidalCategory.whiskerRight_iff _ _).1
+    apply (cancel_mono (λ_ (𝟙_ C)).hom).1
+    simpa [MonoidalCategory.tensorHom_def] using (hl (𝟙_ C)).trans hl₀.symm
+  have hr (X : C) :
+      (𝟙 X ⊗ₘ e.hom) ≫ (ρ_ X).hom = (u.rightUnitor.app X).hom := by
+    rw [e_eq]
+    simp [e₀, Category.assoc]
+    change (ρ_ (X ⊗ u.unit)).inv ≫ (α_ X u.unit (𝟙_ C)).hom ≫
+      X ◁ (u.leftUnitor.app (𝟙_ C)).hom ≫ (ρ_ X).hom =
+      (u.rightUnitor.app X).hom
+    rw [← u.triangle X (𝟙_ C)]
+    simp [Category.assoc]
+  let e' : UnitDataIso u (chosenUnitData (C := C)) :=
+    { hom := e
+      left_naturality := hl
+      right_naturality := hr }
+  refine ⟨⟨e'⟩, ?_⟩
+  intro e₁ e₂
+  have h₁ := e₁.left_naturality (𝟙_ C)
+  have h₂ := e₂.left_naturality (𝟙_ C)
+  have hten :
+      e₁.hom.hom ⊗ₘ 𝟙 (𝟙_ C) = e₂.hom.hom ⊗ₘ 𝟙 (𝟙_ C) := by
+    apply (cancel_mono (λ_ (𝟙_ C)).hom).1
+    exact h₁.trans h₂.symm
+  have ht :
+      e₁.hom.hom ▷ (𝟙_ C) = e₂.hom.hom ▷ (𝟙_ C) := by
+    simpa [MonoidalCategory.tensorHom_def] using hten
+  have hhom : e₁.hom = e₂.hom := by
+    apply Iso.ext
+    exact (MonoidalCategory.whiskerRight_iff _ _).1 ht
+  cases e₁
+  cases e₂
+  cases hhom
+  rfl
 
 theorem unitors_tensor_left (X Y : C) :
     (λ_ X).hom ▷ Y = (α_ (𝟙_ C) X Y).hom ≫ (λ_ (X ⊗ Y)).hom :=
@@ -157,18 +297,70 @@ abbrev IsInvertible (X : C) : Prop := (tensorLeft X).IsEquivalence
 
 theorem isInvertible_iff_tensorRight (X : C) :
     IsInvertible X ↔ (tensorRight X).IsEquivalence := by
-  sorry
+  constructor
+  · intro h
+    letI : (tensorLeft X).IsEquivalence := h
+    let Xinv : C := (tensorLeft X).asEquivalence.inverse.obj (𝟙_ C)
+    let e1 : X ⊗ Xinv ≅ 𝟙_ C := by
+      exact (tensorLeft X).asEquivalence.counitIso.app (𝟙_ C)
+    let e2image : (tensorLeft X).obj (Xinv ⊗ X) ≅ (tensorLeft X).obj (𝟙_ C) :=
+      (α_ X Xinv X).symm ≪≫ whiskerRightIso e1 X ≪≫ (λ_ X) ≪≫ (ρ_ X).symm
+    let e2 : Xinv ⊗ X ≅ 𝟙_ C := (tensorLeft X).preimageIso e2image
+    let η := (MonoidalCategory.rightUnitorNatIso C).symm ≪≫
+      (MonoidalCategory.tensoringRight C).mapIso e1.symm ≪≫
+      MonoidalCategory.tensorRightTensor X Xinv
+    let ε := (MonoidalCategory.tensorRightTensor Xinv X).symm ≪≫
+      (MonoidalCategory.tensoringRight C).mapIso e2 ≪≫
+      MonoidalCategory.rightUnitorNatIso C
+    exact Functor.IsEquivalence.mk' (tensorRight Xinv) η ε
+  · intro h
+    letI : (tensorRight X).IsEquivalence := h
+    let Xinv : C := (tensorRight X).asEquivalence.inverse.obj (𝟙_ C)
+    let e2 : Xinv ⊗ X ≅ 𝟙_ C := by
+      exact (tensorRight X).asEquivalence.counitIso.app (𝟙_ C)
+    let e1image : (tensorRight X).obj (X ⊗ Xinv) ≅ (tensorRight X).obj (𝟙_ C) :=
+      (α_ X Xinv X) ≪≫ whiskerLeftIso X e2 ≪≫ (ρ_ X) ≪≫ (λ_ X).symm
+    let e1 : X ⊗ Xinv ≅ 𝟙_ C := (tensorRight X).preimageIso e1image
+    let η := (MonoidalCategory.leftUnitorNatIso C).symm ≪≫
+      (MonoidalCategory.tensoringLeft C).mapIso e2.symm ≪≫
+      MonoidalCategory.tensorLeftTensor Xinv X
+    let ε := (MonoidalCategory.tensorLeftTensor X Xinv).symm ≪≫
+      (MonoidalCategory.tensoringLeft C).mapIso e1 ≪≫
+      MonoidalCategory.leftUnitorNatIso C
+    exact Functor.IsEquivalence.mk' (tensorLeft Xinv) η ε
 
 theorem isInvertible_iff_tensor_inverse (X : C) :
     IsInvertible X ↔
       ∃ X' : C,
         Nonempty (X ⊗ X' ≅ 𝟙_ C) ∧ Nonempty (X' ⊗ X ≅ 𝟙_ C) := by
-  sorry
+  refine ⟨(fun h => by
+    letI : (tensorLeft X).IsEquivalence := h
+    let X' : C := (tensorLeft X).asEquivalence.inverse.obj (𝟙_ C)
+    let e₁ : X ⊗ X' ≅ 𝟙_ C := by
+      exact (tensorLeft X).asEquivalence.counitIso.app (𝟙_ C)
+    let e₂image : (tensorLeft X).obj (X' ⊗ X) ≅ (tensorLeft X).obj (𝟙_ C) :=
+      (α_ X X' X).symm ≪≫ whiskerRightIso e₁ X ≪≫ (λ_ X) ≪≫ (ρ_ X).symm
+    exact ⟨X', ⟨e₁⟩, ⟨(tensorLeft X).preimageIso e₂image⟩⟩), by
+    rintro ⟨X', ⟨e₁⟩, ⟨e₂⟩⟩
+    let η := (MonoidalCategory.leftUnitorNatIso C).symm ≪≫
+      (MonoidalCategory.tensoringLeft C).mapIso e₂.symm ≪≫
+      MonoidalCategory.tensorLeftTensor X' X
+    let ε := (MonoidalCategory.tensorLeftTensor X X').symm ≪≫
+      (MonoidalCategory.tensoringLeft C).mapIso e₁ ≪≫
+      MonoidalCategory.leftUnitorNatIso C
+    exact Functor.IsEquivalence.mk' (tensorLeft X') η ε⟩
 
 theorem monoidalFunctor_preserves_invertible
     (F : C ⥤ D) [F.Monoidal] {X : C} (hX : IsInvertible X) :
     IsInvertible (C := D) (F.obj X) := by
-  sorry
+  exact ((isInvertible_iff_tensor_inverse (C := D) (F.obj X)).2 (by
+    rcases (isInvertible_iff_tensor_inverse (C := C) X).1 hX with
+      ⟨Xinv, ⟨e1⟩, ⟨e2⟩⟩
+    exact ⟨F.obj Xinv,
+      ⟨Functor.Monoidal.μIso F X Xinv ≪≫ F.mapIso e1 ≪≫
+        (Functor.Monoidal.εIso F).symm⟩,
+      ⟨Functor.Monoidal.μIso F Xinv X ≪≫ F.mapIso e2 ≪≫
+        (Functor.Monoidal.εIso F).symm⟩⟩))
 
 /-! ## Duals -/
 
@@ -182,7 +374,31 @@ abbrev IsRightDual (Y X : C) := ExactPairing X Y
 theorem monoidalFunctor_preserves_leftDual
     (F : C ⥤ D) [F.Monoidal] {X Y : C} [ExactPairing X Y] :
     Nonempty (ExactPairing (F.obj X) (F.obj Y)) := by
-  sorry
+  refine ⟨ExactPairing.mk
+    (Functor.LaxMonoidal.ε F ≫ F.map (ExactPairing.coevaluation X Y) ≫
+      Functor.OplaxMonoidal.δ F X Y)
+    (Functor.LaxMonoidal.μ F Y X ≫ F.map (ExactPairing.evaluation X Y) ≫
+      Functor.OplaxMonoidal.η F)
+    (by
+      simp [Category.assoc]
+      apply (cancel_epi (F.obj Y ◁ Functor.LaxMonoidal.ε F)).mpr
+      simp only [← Category.assoc]
+      rw [cancel_mono (Functor.OplaxMonoidal.η F ▷ F.obj Y)]
+      apply (cancel_epi (Functor.OplaxMonoidal.δ F Y (𝟙_ C))).mp
+      apply (cancel_mono (Functor.LaxMonoidal.μ F (𝟙_ C) Y)).mp
+      simp [Category.assoc]
+      rw [← F.map_comp, ← F.map_comp, ExactPairing.coevaluation_evaluation,
+        F.map_comp])
+    (by
+      simp [Category.assoc]
+      apply (cancel_epi (Functor.LaxMonoidal.ε F ▷ F.obj X)).mpr
+      simp only [← Category.assoc]
+      rw [cancel_mono (F.obj X ◁ Functor.OplaxMonoidal.η F)]
+      apply (cancel_epi (Functor.OplaxMonoidal.δ F (𝟙_ C) X)).mp
+      apply (cancel_mono (Functor.LaxMonoidal.μ F X (𝟙_ C))).mp
+      simp [Category.assoc]
+      rw [← F.map_comp, ← F.map_comp, ExactPairing.evaluation_coevaluation,
+        F.map_comp])⟩
 
 def leftDualHomEquiv (X Y Z Z' : C) [ExactPairing X Y] :
     (Z' ⊗ X ⟶ Z) ≃ (Z' ⟶ Z ⊗ Y) :=
@@ -207,7 +423,37 @@ theorem leftDual_unique_up_to_iso
       ∀ (Z Z' : C) (f : Z' ⊗ X ⟶ Z),
         leftDualHomEquiv X Y₁ Z Z' f ≫ (𝟙 Z ⊗ₘ e.hom) =
           leftDualHomEquiv X Y₂ Z Z' f := by
-  sorry
+  let e := rightDualIso (X := X) (Y₁ := Y₁) (Y₂ := Y₂)
+    (inferInstance : ExactPairing X Y₁) (inferInstance : ExactPairing X Y₂)
+  refine ⟨e, ?_, ?_⟩
+  · intro Z Z' f
+    have he : e.hom ▷ X ≫ ε_ X Y₂ =
+        (Y₁ ◁ (𝟙 X)) ≫ ε_ X Y₁ := by
+      exact @rightAdjointMate_comp_evaluation C _ _ X X ⟨Y₂⟩ ⟨Y₁⟩ (𝟙 X)
+    have heZ :
+        (α_ Z Y₁ X).hom ≫ Z ◁ (e.hom ▷ X) ≫ Z ◁ ε_ X Y₂ =
+          (α_ Z Y₁ X).hom ≫ Z ◁ ((Y₁ ◁ (𝟙 X)) ≫ ε_ X Y₁) := by
+      rw [← MonoidalCategory.whiskerLeft_comp Z (e.hom ▷ X) (ε_ X Y₂)]
+      rw [he]
+    have heZ_assoc := congrArg (fun k => k ≫ (ρ_ Z).hom) heZ
+    simp only [Category.assoc] at heZ_assoc
+    apply (tensorRightHomEquiv Z' X Y₂ Z).symm.injective
+    simp [leftDualHomEquiv, tensorRightHomEquiv,
+      MonoidalCategory.tensorHom_def]
+    rw [heZ_assoc]
+    calc
+      _ = f := by
+        simpa [leftDualHomEquiv, tensorRightHomEquiv]
+          using (tensorRightHomEquiv Z' X Y₁ Z).left_inv f
+      _ = _ := by
+        simpa [leftDualHomEquiv, tensorRightHomEquiv]
+          using ((tensorRightHomEquiv Z' X Y₂ Z).left_inv f).symm
+  · intro e' h
+    apply Iso.ext
+    have hε := h (𝟙_ C) Y₁ (ε_ X Y₁)
+    simpa [leftDualHomEquiv, tensorRightHomEquiv,
+      MonoidalCategory.tensorHom_def, e, rightDualIso, rightAdjointMate]
+      using congrArg (fun k => k ≫ (λ_ Y₂).hom) hε
 
 /- The tensor-dual result is already the canonical `ExactPairing.tensor`
    instance from Mathlib.  The source's converse characterization of left duals by an adjunction is
@@ -225,7 +471,108 @@ structure CompatibleRightTensorAdjunction (X Y : C) where
 theorem leftDual_iff_compatible_right_tensor_adjunction (X Y : C) :
     Nonempty (ExactPairing X Y) ↔
       Nonempty (CompatibleRightTensorAdjunction X Y) := by
-  sorry
+  constructor
+  · rintro ⟨p⟩
+    letI : ExactPairing X Y := p
+    refine ⟨{ adjunction := tensorRightAdjunction X Y, compatible := ?_ }⟩
+    intro W Z Z' f
+    apply (tensorRightHomEquiv (W ⊗ Z') X Y (W ⊗ Z)).symm.injective
+    simpa [tensorRightAdjunction] using (tensorRightHomEquiv_tensor
+      (X := Z') (X' := W) (Y := X) (Y' := Y) (Z := Z) (Z' := W)
+      (tensorRightHomEquiv Z' X Y Z f) (𝟙 W)).symm
+  · rintro ⟨a⟩
+    let adj := a.adjunction
+    refine ⟨ExactPairing.mk
+      (adj.unit.app (𝟙_ C) ≫ (λ_ X).hom ▷ Y)
+      ((λ_ Y).inv ▷ X ≫ adj.counit.app (𝟙_ C))
+      (by
+        have hc := a.compatible Y X (𝟙_ C) (λ_ X).hom
+        have hc' := congrArg
+          (fun k => k ≫ ((λ_ Y).inv ▷ X ≫ adj.counit.app (𝟙_ C)) ▷ Y) hc
+        have hleft :
+            (adj.homEquiv (Y ⊗ 𝟙_ C) (Y ⊗ X)) ((ρ_ Y).hom ▷ X) =
+              (ρ_ Y).hom ≫ adj.unit.app Y := by
+          calc
+            _ = (ρ_ Y).hom ≫
+                (adj.homEquiv Y (Y ⊗ X)) (𝟙 (Y ⊗ X)) := by
+              simpa [adj, Category.assoc] using
+                adj.homEquiv_naturality_left (ρ_ Y).hom (𝟙 (Y ⊗ X))
+            _ = _ := by
+              simpa [tensorRight] using
+                congrArg (fun k => (ρ_ Y).hom ≫ k)
+                  (Adjunction.homEquiv_id adj Y)
+        have htri :
+            (α_ Y (𝟙_ C) X).hom ≫ (𝟙 Y ⊗ₘ (λ_ X).hom) =
+              (ρ_ Y).hom ▷ X := by
+          simp [MonoidalCategory.tensorHom_def]
+        rw [htri] at hc
+        have hcoev :
+            (adj.homEquiv (𝟙_ C) X) (λ_ X).hom =
+              adj.unit.app (𝟙_ C) ≫ (λ_ X).hom ▷ Y := by
+          simp [Adjunction.homEquiv, adj]
+        rw [htri, hleft, hcoev] at hc'
+        have htail :
+            adj.unit.app Y ≫
+                ((λ_ Y).inv ▷ X ≫ adj.counit.app (𝟙_ C)) ▷ Y =
+              (λ_ Y).inv := by
+          change adj.unit.app Y ≫
+            (tensorRight Y).map
+              ((tensorRight X).map (λ_ Y).inv ≫ adj.counit.app (𝟙_ C)) =
+            (λ_ Y).inv
+          rw [Functor.map_comp]
+          rw [← Category.assoc, adj.unit_naturality (λ_ Y).inv]
+          simp only [Category.assoc]
+          have hright :
+              adj.unit.app (𝟙_ C ⊗ Y) ≫
+                  (tensorRight Y).map (adj.counit.app (𝟙_ C)) =
+                𝟙 (𝟙_ C ⊗ Y) := by
+            simpa [tensorRight] using adj.right_triangle_components (𝟙_ C)
+          rw [hright]
+          simp
+        have hc'' := hc'.symm
+        simp only [Category.assoc] at hc''
+        rw [htail] at hc''
+        simpa only [MonoidalCategory.tensorHom_def, MonoidalCategory.id_whiskerRight,
+          Category.id_comp, Category.assoc] using hc'')
+      (by
+        apply (adj.homEquiv (𝟙_ C) (X ⊗ 𝟙_ C)).injective
+        let eval := (λ_ Y).inv ▷ X ≫ adj.counit.app (𝟙_ C)
+        let coev := adj.unit.app (𝟙_ C) ≫ (λ_ X).hom ▷ Y
+        let K := (α_ X Y X).hom ≫ X ◁ eval
+        change (adj.homEquiv (𝟙_ C) (X ⊗ 𝟙_ C))
+              ((tensorRight X).map coev ≫ K) =
+            (adj.homEquiv (𝟙_ C) (X ⊗ 𝟙_ C))
+              ((λ_ X).hom ≫ (ρ_ X).inv)
+        have heval :
+            (adj.homEquiv Y (𝟙_ C))
+                eval =
+              (λ_ Y).inv := by
+          apply (adj.homEquiv Y (𝟙_ C)).symm.injective
+          rw [Equiv.symm_apply_apply, Adjunction.homEquiv_counit]
+          simp [eval, adj, Category.assoc]
+        have hc := a.compatible X (𝟙_ C) Y
+          eval
+        rw [heval] at hc
+        have hcK :
+            (adj.homEquiv (X ⊗ Y) (X ⊗ 𝟙_ C)) K =
+              (ρ_ X).inv ▷ Y := by
+          simpa [K, eval, adj, MonoidalCategory.tensorHom_def,
+            Category.assoc] using hc
+        have hcoev :
+            (adj.homEquiv (𝟙_ C) X) (λ_ X).hom = coev := by
+          rfl
+        have hleft := adj.homEquiv_naturality_left coev K
+        have hright := adj.homEquiv_naturality_right
+          (λ_ X).hom (ρ_ X).inv
+        calc
+          _ = coev ≫ (adj.homEquiv (X ⊗ Y) (X ⊗ 𝟙_ C)) K := by
+            simpa [adj, Category.assoc] using hleft
+          _ = coev ≫ (ρ_ X).inv ▷ Y := by rw [hcK]
+          _ = (adj.homEquiv (𝟙_ C) X) (λ_ X).hom ≫
+                (tensorRight Y).map (ρ_ X).inv := by
+            rw [hcoev]
+            simp [tensorRight]
+          _ = _ := by simpa [adj] using hright.symm)⟩
 
 /-! ## Braiding and symmetric monoidal categories -/
 
@@ -243,18 +590,19 @@ theorem symmetric_commutativity_involutive
 
 theorem symmetric_unit_multiplication [SymmetricCategory C] :
     (β_ (𝟙_ C) (𝟙_ C)).hom ≫ (ρ_ (𝟙_ C)).hom = (ρ_ (𝟙_ C)).hom := by
-  sorry
+  simpa [MonoidalCategory.unitors_inv_equal] using
+    (BraidedCategory.braiding_tensorUnit_right (𝟙_ C) ≫ (ρ_ (𝟙_ C)).hom)
 
 theorem symmetric_unit_braiding (X : C) [SymmetricCategory C] :
     (β_ X (𝟙_ C)).hom ≫ (λ_ X).hom = (ρ_ X).hom := by
-  sorry
+  simp
 
 theorem symmetric_unit_coherence (X Y : C) [SymmetricCategory C] :
     (X ◁ (λ_ Y).hom) =
       (α_ X (𝟙_ C) Y).inv ≫
         ((β_ X (𝟙_ C)).hom ▷ Y) ≫
         ((λ_ X).hom ⊗ₘ 𝟙 Y) := by
-  sorry
+  simp
 
 /- The source's all-permutation coherence theorem is the symmetric version
    of the imported monoidal coherence theorem; Mathlib's `monoidal` tactic
@@ -319,7 +667,113 @@ theorem internalHom_unique_up_to_unique_iso
       ∀ (X Y Z : C) (f : Y ⊗ X ⟶ Z),
         H₁.adjunction.homEquiv f ≫ (e.hom.app (op X)).app Z =
           H₂.adjunction.homEquiv f := by
-  sorry
+  let app := fun X : C =>
+    Adjunction.rightAdjointUniq (H₁.adjunction.adj X) (H₂.adjunction.adj X)
+  have happ (P A B : C) (g : A ⊗ P ⟶ B) :
+      (H₁.adjunction.adj P).homEquiv A B g ≫ (app P).hom.app B =
+        (H₂.adjunction.adj P).homEquiv A B g := by
+    change (H₁.adjunction.adj P).homEquiv A B g ≫
+        (Adjunction.rightAdjointUniq (H₁.adjunction.adj P)
+          (H₂.adjunction.adj P)).hom.app B =
+      (H₂.adjunction.adj P).homEquiv A B g
+    rw [Adjunction.homEquiv_unit, Adjunction.homEquiv_unit]
+    rw [Category.assoc, (Adjunction.rightAdjointUniq
+      (H₁.adjunction.adj P) (H₂.adjunction.adj P)).hom.naturality g]
+    have hu :
+        (H₁.adjunction.adj P).unit.app A ≫
+            (Adjunction.rightAdjointUniq (H₁.adjunction.adj P)
+              (H₂.adjunction.adj P)).hom.app (A ⊗ P) =
+          (H₂.adjunction.adj P).unit.app A := by
+      simpa only [Functor.comp_obj, tensorRight, Functor.flip, curriedTensor] using
+        (Adjunction.unit_rightAdjointUniq_hom_app
+          (H₁.adjunction.adj P) (H₂.adjunction.adj P) A)
+    rw [← Category.assoc, hu]
+  let e : H₁.hom ≅ H₂.hom :=
+    NatIso.ofComponents (fun X => app X.unop) (by
+      intro X Y f
+      ext Z
+      change (H₁.hom.map f).app Z ≫ (app Y.unop).hom.app Z =
+        (app X.unop).hom.app Z ≫ (H₂.hom.map f).app Z
+      let A := (H₁.hom.obj X).obj Z
+      let g₀ := (H₁.adjunction.adj X.unop).counit.app Z
+      have h₁id :
+          (H₁.adjunction.adj X.unop).homEquiv A Z g₀ = 𝟙 A := by
+        apply ((H₁.adjunction.adj X.unop).homEquiv A Z).symm.injective
+        rw [Equiv.symm_apply_apply, Adjunction.homEquiv_counit]
+        simp [g₀]
+      have h₁param := H₁.adjunction.homEquiv_naturality_one f.unop g₀
+      have h₁param' :
+          (H₁.adjunction.adj Y.unop).homEquiv A Z
+              (((tensoringRight C).map f.unop).app A ≫ g₀) =
+            (H₁.adjunction.adj X.unop).homEquiv A Z g₀ ≫
+              (H₁.hom.map f).app Z := by
+        simpa [ParametrizedAdjunction.homEquiv_eq] using h₁param
+      have h₂param := H₂.adjunction.homEquiv_naturality_one f.unop g₀
+      have h₂param' :
+          (H₂.adjunction.adj Y.unop).homEquiv A Z
+              (((tensoringRight C).map f.unop).app A ≫ g₀) =
+            (H₂.adjunction.adj X.unop).homEquiv A Z g₀ ≫
+              (H₂.hom.map f).app Z := by
+        simpa [ParametrizedAdjunction.homEquiv_eq] using h₂param
+      let g := ((tensoringRight C).map f.unop).app A ≫ g₀
+      have h₁map :
+          (H₁.adjunction.adj Y.unop).homEquiv A Z g =
+            (H₁.hom.map f).app Z := by
+        simpa [g, h₁id] using h₁param'
+      have heX :
+          (app X.unop).hom.app Z =
+            (H₂.adjunction.adj X.unop).homEquiv A Z g₀ := by
+        have hx := happ X.unop A Z g₀
+        rw [h₁id] at hx
+        simpa using hx
+      have h₂map :
+          (H₂.adjunction.adj Y.unop).homEquiv A Z g =
+            (H₂.adjunction.adj X.unop).homEquiv A Z g₀ ≫
+              (H₂.hom.map f).app Z := by
+        simpa [g] using h₂param'
+      calc
+        (H₁.hom.map f).app Z ≫ (app Y.unop).hom.app Z =
+            (H₁.adjunction.adj Y.unop).homEquiv A Z g ≫
+              (app Y.unop).hom.app Z := by rw [h₁map]
+        _ = (H₂.adjunction.adj Y.unop).homEquiv A Z g :=
+          happ Y.unop A Z g
+        _ = (H₂.adjunction.adj X.unop).homEquiv A Z g₀ ≫
+              (H₂.hom.map f).app Z := h₂map
+        _ = (app X.unop).hom.app Z ≫ (H₂.hom.map f).app Z := by
+          rw [← heX])
+  refine ⟨e, ?_, ?_⟩
+  · intro X Y Z f
+    change (H₁.adjunction.adj X).homEquiv Y Z f ≫
+        (app X).hom.app Z =
+      (H₂.adjunction.adj X).homEquiv Y Z f
+    exact happ X Y Z f
+  · intro e' h
+    apply Iso.ext
+    ext X Z
+    let A := (H₁.hom.obj X).obj Z
+    let g₀ := (H₁.adjunction.adj X.unop).counit.app Z
+    have h₁id :
+        (H₁.adjunction.adj X.unop).homEquiv A Z g₀ = 𝟙 A := by
+      apply ((H₁.adjunction.adj X.unop).homEquiv A Z).symm.injective
+      rw [Equiv.symm_apply_apply, Adjunction.homEquiv_counit]
+      simp [g₀]
+    have he' :
+        (e'.hom.app X).app Z =
+          (H₂.adjunction.adj X.unop).homEquiv A Z g₀ := by
+      have h' := h X.unop A Z g₀
+      change (H₁.adjunction.adj X.unop).homEquiv A Z g₀ ≫
+          (e'.hom.app X).app Z =
+        (H₂.adjunction.adj X.unop).homEquiv A Z g₀ at h'
+      rw [h₁id] at h'
+      simpa using h'
+    have he :
+        (app X.unop).hom.app Z =
+          (H₂.adjunction.adj X.unop).homEquiv A Z g₀ := by
+      have hx := happ X.unop A Z g₀
+      rw [h₁id] at hx
+      simpa using hx
+    change (e'.hom.app X).app Z = (app X.unop).hom.app Z
+    rw [he', he]
 
 /- The five displayed maps in the source are now the definitions
    `internalHomEvaluation`, `internalHomComposition`, `internalHomTensorMap`,

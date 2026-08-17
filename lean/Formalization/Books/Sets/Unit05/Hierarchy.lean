@@ -1,4 +1,3 @@
-import Formalization.Books.Sets.Unit04
 import Mathlib.SetTheory.ZFC.VonNeumann
 
 /-!
@@ -9,7 +8,7 @@ this section.  Its defining recursion and the source's displayed clauses are
 already exposed by `ZFSet.vonNeumann_zero`, `ZFSet.vonNeumann_add_one`, and
 `ZFSet.vonNeumann_of_isSuccPrelimit`; the latter gives the limit clause for
 the standard `IsSuccPrelimit` formulation (and hence for `IsSuccLimit`).
-The transitivity and regularity assertions are respectively
+The transitivity and coverage assertions are respectively
 `ZFSet.isTransitive_vonNeumann` and `ZFSet.exists_mem_vonNeumann`.
 
 The source's rank is Mathlib's `ZFSet.rank`: `ZFSet.mem_vonNeumann` and the

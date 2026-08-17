@@ -402,7 +402,7 @@ theorem left_localization_universal_property {C : Type u} [Category.{v} C]
 theorem left_localization_preserves_finite_colimits {C : Type u}
     [Category.{v} C] {W : MorphismProperty C} [LeftMultiplicativeSystem W] :
     PreservesFiniteColimits (leftLocalizationFunctor W) := by
-  letI : RepresentablyCoflat (leftLocalizationFunctor W) :=
+  have : RepresentablyCoflat (leftLocalizationFunctor W) :=
     { filtered := fun Z => by
         let Y : C := Z
         change IsFiltered (CostructuredArrow (leftLocalizationFunctor W)
@@ -625,7 +625,7 @@ theorem right_fraction_change_target {C : Type u} [Category.{v} C]
     (hs : W s) (ht : W t) :
       rightFractionHom f (s ≫ t) (W.comp_mem _ _ hs ht) =
       rightFractionHom (𝟙 X) t ht ≫ rightFractionHom f s hs := by
-  letI : IsIso ((rightLocalizationFunctor W).map (s ≫ t)) :=
+  have : IsIso ((rightLocalizationFunctor W).map (s ≫ t)) :=
     MorphismProperty.Q_inverts W (s ≫ t) (W.comp_mem _ _ hs ht)
   apply (cancel_epi ((rightLocalizationFunctor W).map (s ≫ t))).1
   have hst := MorphismProperty.RightFraction.map_s_comp_map
@@ -866,7 +866,7 @@ theorem right_localization_hom_is_filtered_colimit {C : Type u}
       rightDenominatorHomColimit W X Y) := by
   have hcofiltered : IsCofiltered (RightDenominatorCategory W X) :=
     right_denominator_category_is_cofiltered_aux X
-  letI : IsCofiltered (RightDenominatorCategory W X) := hcofiltered
+  have : IsCofiltered (RightDenominatorCategory W X) := hcofiltered
   have hfiltered : IsFiltered (RightDenominatorCategory W X)ᵒᵖ := inferInstance
   let c₀ := Types.TypeMax.colimitCocone (rightDenominatorHomDiagram W X Y)
   let fracCocone : Cocone (rightDenominatorHomDiagram W X Y) :=
@@ -979,7 +979,7 @@ private theorem right_fraction_factor {C : Type u} [Category.{v} C]
 theorem right_localization_preserves_finite_limits {C : Type u}
     [Category.{v} C] {W : MorphismProperty C} [RightMultiplicativeSystem W] :
     PreservesFiniteLimits (rightLocalizationFunctor W) := by
-  letI : RepresentablyFlat (rightLocalizationFunctor W) :=
+  have : RepresentablyFlat (rightLocalizationFunctor W) :=
     { cofiltered := fun Z => by
         let X : C := (rightLocalizationFunctor W).objPreimage Z
         let e : (rightLocalizationFunctor W).obj X ≅ Z :=
@@ -1095,7 +1095,7 @@ private theorem right_fraction_precompose_map {C : Type u} [Category.{v} C]
     (hψ : ψ.s ≫ f = ψ.f ≫ t) :
     (rightLocalizationFunctor W).map f ≫ rightFractionHom h t ht =
       rightFractionHom (ψ.f ≫ h) ψ.s ψ.hs := by
-  letI : IsIso ((rightLocalizationFunctor W).map ψ.s) :=
+  have : IsIso ((rightLocalizationFunctor W).map ψ.s) :=
     MorphismProperty.Q_inverts W ψ.s ψ.hs
   apply (cancel_epi ((rightLocalizationFunctor W).map ψ.s)).1
   have hψmap := MorphismProperty.RightFraction.map_s_comp_map
@@ -1212,10 +1212,10 @@ theorem saturated_contains_isomorphisms {C : Type u} [Category.{v} C]
     {W : MorphismProperty C} (hW : SaturatedMultiplicativeSystem W) :
     MorphismProperty.isomorphisms C ≤ W := by
   intro X Y f hf
-  letI : IsIso f := hf
-  letI : MultiplicativeSystem W := hW.1
-  letI : LeftMultiplicativeSystem W := hW.1.1
-  letI : RightMultiplicativeSystem W := hW.1.2
+  have : IsIso f := hf
+  have : MultiplicativeSystem W := hW.1
+  have : LeftMultiplicativeSystem W := hW.1.1
+  have : RightMultiplicativeSystem W := hW.1.2
   apply hW.2 (inv f) f (inv f)
   · simpa using W.id_mem Y
   · simpa using W.id_mem X
@@ -1261,9 +1261,9 @@ theorem invertedByLocalization_eq_saturationClosure {C : Type u}
   constructor
   · intro hf
     change IsIso ((MorphismProperty.Q W).map f) at hf
-    letI : IsIso ((MorphismProperty.Q W).map f) := hf
-    letI : LeftMultiplicativeSystem W := hW.1
-    letI : RightMultiplicativeSystem W := hW.2
+    have : IsIso ((MorphismProperty.Q W).map f) := hf
+    have : LeftMultiplicativeSystem W := hW.1
+    have : RightMultiplicativeSystem W := hW.2
     obtain ⟨φ, hφ⟩ :=
       CategoryTheory.Localization.exists_leftFraction
         (MorphismProperty.Q W) W (inv ((MorphismProperty.Q W).map f))
@@ -1321,9 +1321,9 @@ theorem invertedByLocalization_eq_saturationClosure {C : Type u}
       exact W.comp_mem _ _ φ.hs ht
   · rintro ⟨Z, g, T, h, hgf, fh⟩
     change IsIso ((MorphismProperty.Q W).map f)
-    letI : IsIso ((MorphismProperty.Q W).map (g ≫ f)) :=
+    have : IsIso ((MorphismProperty.Q W).map (g ≫ f)) :=
       MorphismProperty.Q_inverts W (g ≫ f) hgf
-    letI : IsIso ((MorphismProperty.Q W).map (f ≫ h)) :=
+    have : IsIso ((MorphismProperty.Q W).map (f ≫ h)) :=
       MorphismProperty.Q_inverts W (f ≫ h) fh
     let l : (MorphismProperty.Q W).obj Y ⟶ (MorphismProperty.Q W).obj X :=
       inv ((MorphismProperty.Q W).map (g ≫ f)) ≫ (MorphismProperty.Q W).map g
@@ -1363,7 +1363,7 @@ theorem saturationClosure_is_smallest {C : Type u} [Category.{v} C]
     rw [← hEq]
     exact hf
   have hleft : LeftMultiplicativeSystem (saturationClosure W) := by
-    letI : LeftMultiplicativeSystem W := hW.1
+    have : LeftMultiplicativeSystem W := hW.1
     refine
       { id_mem := ?_
         comp_mem := ?_
@@ -1373,8 +1373,8 @@ theorem saturationClosure_is_smallest {C : Type u} [Category.{v} C]
       exact hWle _ (W.id_mem X)
     · intro X Y Z f g hf hg
       apply hS_of_iso (f ≫ g)
-      letI : IsIso ((MorphismProperty.Q W).map f) := hIso f hf
-      letI : IsIso ((MorphismProperty.Q W).map g) := hIso g hg
+      have : IsIso ((MorphismProperty.Q W).map f) := hIso f hf
+      have : IsIso ((MorphismProperty.Q W).map g) := hIso g hg
       rw [Functor.map_comp]
       infer_instance
     · intro X Y φ
@@ -1391,7 +1391,7 @@ theorem saturationClosure_is_smallest {C : Type u} [Category.{v} C]
           simpa [Category.assoc] using congrArg (fun k => a ≫ k) h)
       exact ⟨Y', t, hWle _ ht, hfac⟩
   have hright : RightMultiplicativeSystem (saturationClosure W) := by
-    letI : RightMultiplicativeSystem W := hW.2
+    have : RightMultiplicativeSystem W := hW.2
     refine
       { id_mem := ?_
         comp_mem := ?_
@@ -1401,8 +1401,8 @@ theorem saturationClosure_is_smallest {C : Type u} [Category.{v} C]
       exact hWle _ (W.id_mem X)
     · intro X Y Z f g hf hg
       apply hS_of_iso (f ≫ g)
-      letI : IsIso ((MorphismProperty.Q W).map f) := hIso f hf
-      letI : IsIso ((MorphismProperty.Q W).map g) := hIso g hg
+      have : IsIso ((MorphismProperty.Q W).map f) := hIso f hf
+      have : IsIso ((MorphismProperty.Q W).map g) := hIso g hg
       rw [Functor.map_comp]
       infer_instance
     · intro X Y φ
@@ -1422,10 +1422,10 @@ theorem saturationClosure_is_smallest {C : Type u} [Category.{v} C]
         saturationClosure W g := by
     intro X Y Z T f g h hfg hgh
     apply hS_of_iso g
-    letI : IsIso ((MorphismProperty.Q W).map f ≫ (MorphismProperty.Q W).map g) := by
+    have : IsIso ((MorphismProperty.Q W).map f ≫ (MorphismProperty.Q W).map g) := by
       rw [← (MorphismProperty.Q W).map_comp]
       exact hIso (f ≫ g) hfg
-    letI : IsIso ((MorphismProperty.Q W).map g ≫ (MorphismProperty.Q W).map h) := by
+    have : IsIso ((MorphismProperty.Q W).map g ≫ (MorphismProperty.Q W).map h) := by
       rw [← (MorphismProperty.Q W).map_comp]
       exact hIso (g ≫ h) hgh
     exact isIso_of_adjacent_composites

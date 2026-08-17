@@ -110,7 +110,7 @@ abbrev twoYonedaFibredMorphismCategory
     {C : Type uC} [Category.{vC} C]
     {S : Type uS} [Category.{vS} S]
     (p : S ⥤ C) (U : C) :=
-  (twoYonedaPreservesCartesian p U).FullSubcategory
+  twoYonedaFibredMorphismCategoryGeneral (Over.forget U) p
 
 /-! ## Evaluation at the identity -/
 

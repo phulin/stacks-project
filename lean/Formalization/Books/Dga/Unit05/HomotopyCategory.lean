@@ -1,6 +1,5 @@
 import Formalization.Books.Dga.Unit04.DifferentialGradedModules
 import Mathlib.Algebra.Homology.HomotopyCategory
-import Mathlib.CategoryTheory.Quotient.Preadditive
 
 /-!
 # Differential Graded Algebra, Chapter 5: The homotopy category
@@ -97,7 +96,11 @@ def refl
     (f : DifferentialGradedModuleHom M N) :
     DifferentialGradedModuleHomotopy f f where
   homotopy := Homotopy.refl f.underlying
-  map_action := by sorry
+  map_action := by
+    intro n m x a
+    simp [Homotopy.refl, Homotopy.ofEq,
+      DifferentialGradedModule.actionOnHomogeneous]
+    rw [show (n + m) - 1 = (n - 1) + m by omega]
 
 /-- Symmetry of differential graded module homotopy. -/
 def symm

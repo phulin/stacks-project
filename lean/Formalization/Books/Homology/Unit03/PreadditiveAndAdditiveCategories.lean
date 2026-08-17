@@ -114,9 +114,10 @@ theorem binary_product_of_binary_coproduct
 
 def binary_coproduct_iso_product
     {C : Type u} [Category.{v} C] [Preadditive C]
-    (X Y : C) [HasBinaryProduct X Y] [HasBinaryCoproduct X Y] :
+    (X Y : C) [HasBinaryProduct X Y] :
+    letI : HasBinaryBiproduct X Y := HasBinaryBiproduct.of_hasBinaryProduct X Y
     (X ⨿ Y) ≅ (X ⨯ Y) := by
-  letI : HasBinaryBiproduct X Y := HasBinaryBiproduct.of_hasBinaryCoproduct X Y
+  letI : HasBinaryBiproduct X Y := HasBinaryBiproduct.of_hasBinaryProduct X Y
   exact (biprod.isoCoprod X Y).symm.trans (biprod.isoProd X Y)
 
 theorem direct_sum_total

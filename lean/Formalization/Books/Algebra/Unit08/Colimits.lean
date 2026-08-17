@@ -149,7 +149,7 @@ abbrev directedModuleColimit (M : ModuleSystem R I)
   moduleColimitQuotient M
 
 /-- The same directed colimit presented as the quotient of the disjoint union. -/
-noncomputable def directedModuleColimitDisjointUnion (M : ModuleSystem R I)
+noncomputable abbrev directedModuleColimitDisjointUnion (M : ModuleSystem R I)
     (hI : IsDirectedSet I) : Type (max v w) := by
   classical
   letI : IsDirectedOrder I := hI.2
@@ -157,7 +157,20 @@ noncomputable def directedModuleColimitDisjointUnion (M : ModuleSystem R I)
     (fun i => (M.obj i : Type (max v w)))
     (fun i j h => moduleSystemMap M h)
 
-/-- The class of an element of a stage in the directed-colimit quotient. -/
+/- The canonical linear map from a stage to the disjoint-union presentation. -/
+noncomputable def directedModuleColimitDisjointUnionMap (M : ModuleSystem R I)
+    (hI : IsDirectedSet I) (i : I) :
+    letI : IsDirectedOrder I := hI.2
+    letI : Nonempty I := hI.1
+    (M.obj i : Type (max v w)) →ₗ[R] directedModuleColimitDisjointUnion M hI := by
+  classical
+  letI : IsDirectedOrder I := hI.2
+  letI : Nonempty I := hI.1
+  exact _root_.DirectLimit.Module.of R I
+    (fun i => (M.obj i : Type (max v w)))
+    (fun _i _j h => moduleSystemMap M h) i
+
+/- The class of an element of a stage in the directed-colimit quotient. -/
 noncomputable def directedModuleColimitClass (M : ModuleSystem R I)
     (hI : IsDirectedSet I) (i : I) (x : (M.obj i : Type (max v w))) :
     directedModuleColimit M hI :=
@@ -166,13 +179,14 @@ noncomputable def directedModuleColimitClass (M : ModuleSystem R I)
 noncomputable def directedModuleColimitDisjointUnionClass (M : ModuleSystem R I)
     (hI : IsDirectedSet I) (i : I) (x : (M.obj i : Type (max v w))) :
     directedModuleColimitDisjointUnion M hI := by
-  classical
-  letI : IsDirectedOrder I := hI.2
-  exact ⟦⟨i, x⟩⟧
+  exact directedModuleColimitDisjointUnionMap M hI i x
 
 theorem directedModuleColimit_disjointUnion_equiv (M : ModuleSystem R I)
     (hI : IsDirectedSet I) :
-    Nonempty (directedModuleColimit M hI ≃ directedModuleColimitDisjointUnion M hI) := by
+    letI : IsDirectedOrder I := hI.2
+    letI : Nonempty I := hI.1
+    Nonempty
+      (directedModuleColimit M hI ≃ₗ[R] directedModuleColimitDisjointUnion M hI) := by
   sorry
 
 theorem directedModuleColimit_eq_iff (M : ModuleSystem R I)

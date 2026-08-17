@@ -70,6 +70,22 @@ structure AlgebraicStack (S : Scheme.{u}) where
 abbrev RawPoint (X : AlgebraicStack S) := X.points.raw
 abbrev StackPoint (X : AlgebraicStack S) := X.points.Points
 
+structure FieldValuedMorphism {S : Scheme.{u}}
+    (X : AlgebraicStack S) where
+  field : Type u
+  fieldStructure : Field field
+  point : RawPoint X
+  fieldValued : X.points.fieldValued point
+  surjective : Prop
+  flat : Prop
+  locallyOfFiniteType : Prop
+  locallyOfFinitePresentation : Prop
+  quasiCompact : Prop
+
+def stackPointOfFieldValuedMorphism {S : Scheme.{u}}
+    {X : AlgebraicStack S} (p : FieldValuedMorphism X) : StackPoint X :=
+  Quotient.mk X.points.setoid p.point
+
 def IsReduced (X : AlgebraicStack S) : Prop := X.reduced
 
 def IsLocallyNoetherian (X : AlgebraicStack S) : Prop := X.locallyNoetherian
@@ -77,6 +93,12 @@ def IsLocallyNoetherian (X : AlgebraicStack S) : Prop := X.locallyNoetherian
 def IsRegular (X : AlgebraicStack S) : Prop := X.regular
 
 def IsEmpty (X : AlgebraicStack S) : Prop := X.empty
+
+def IsRepresentableByAlgebraicSpace (X : AlgebraicStack S) : Prop :=
+  X.representableByAlgebraicSpace
+
+def IsRepresentableByScheme (X : AlgebraicStack S) : Prop :=
+  X.representableByScheme
 
 structure StackMorphism {S : Scheme.{u}}
     (X Y : AlgebraicStack S) where
@@ -104,6 +126,21 @@ end StackMorphism
 def StackTwoMorphism {X Y : AlgebraicStack S}
     (f g : StackMorphism X Y) : Prop :=
   ∀ p, Y.points.equivalent (f.rawMap p) (g.rawMap p)
+
+/-! An equivalence of the explicit stack interface used in this chapter. -/
+
+structure StackEquivalence {S : Scheme.{u}}
+    (X Y : AlgebraicStack S) where
+  forward : StackMorphism X Y
+  inverse : StackMorphism Y X
+  leftInverse : StackTwoMorphism
+    (StackMorphism.comp forward inverse) (StackMorphism.id X)
+  rightInverse : StackTwoMorphism
+    (StackMorphism.comp inverse forward) (StackMorphism.id Y)
+
+def IsStackEquivalence {S : Scheme.{u}}
+    {X Y : AlgebraicStack S} (f : StackMorphism X Y) : Prop :=
+  ∃ e : StackEquivalence X Y, e.forward = f
 
 /-! A chosen fibre product at the level of the field-valued point interface. -/
 
@@ -155,6 +192,59 @@ def fibreProductSnd {S : Scheme.{u}}
   map_respects := by
     intro p q h
     exact h.2
+
+def fibreProductMap {S : Scheme.{u}}
+    {X X' Y : AlgebraicStack S} (i : StackMorphism X X')
+    (f : StackMorphism X' Y) :
+    StackMorphism
+      (fibreProduct (StackMorphism.comp i f) (StackMorphism.comp i f))
+      (fibreProduct f f) where
+  rawMap := fun p =>
+    ⟨⟨i.rawMap p.1.1, i.rawMap p.1.2⟩,
+      by simpa [StackMorphism.comp] using p.2⟩
+  map_respects := by
+    intro p q h
+    exact ⟨i.map_respects _ _ h.1, i.map_respects _ _ h.2⟩
+
+def stackProductPointData {S : Scheme.{u}}
+    (X Y : AlgebraicStack S) : PointData.{u} where
+  raw := RawPoint X × RawPoint Y
+  fieldValued := fun p =>
+    X.points.fieldValued p.1 ∧ Y.points.fieldValued p.2
+  equivalent := fun p q =>
+    X.points.equivalent p.1 q.1 ∧ Y.points.equivalent p.2 q.2
+  isEquivalence := by
+    constructor
+    · intro p
+      exact ⟨X.points.isEquivalence.refl _, Y.points.isEquivalence.refl _⟩
+    · intro p q h
+      exact ⟨X.points.isEquivalence.symm h.1,
+        Y.points.isEquivalence.symm h.2⟩
+    · intro p q r hpq hqr
+      exact ⟨X.points.isEquivalence.trans hpq.1 hqr.1,
+        Y.points.isEquivalence.trans hpq.2 hqr.2⟩
+
+def stackProduct {S : Scheme.{u}}
+    (X Y : AlgebraicStack S) : AlgebraicStack S where
+  points := stackProductPointData X Y
+  reduced := X.reduced ∧ Y.reduced
+  locallyNoetherian := X.locallyNoetherian ∧ Y.locallyNoetherian
+  regular := X.regular ∧ Y.regular
+  quasiCompact := X.quasiCompact ∧ Y.quasiCompact
+  finiteTypeOverBase := X.finiteTypeOverBase ∧ Y.finiteTypeOverBase
+  empty := X.empty ∨ Y.empty
+  representableByAlgebraicSpace :=
+    X.representableByAlgebraicSpace ∧ Y.representableByAlgebraicSpace
+  representableByScheme := X.representableByScheme ∧ Y.representableByScheme
+
+def stackProductMorphism {S : Scheme.{u}}
+    {X₁ Y₁ X₂ Y₂ : AlgebraicStack S}
+    (f : StackMorphism X₁ X₂) (g : StackMorphism Y₁ Y₂) :
+    StackMorphism (stackProduct X₁ Y₁) (stackProduct X₂ Y₂) where
+  rawMap := fun p => ⟨f.rawMap p.1, g.rawMap p.2⟩
+  map_respects := by
+    intro p q h
+    exact ⟨f.map_respects _ _ h.1, g.map_respects _ _ h.2⟩
 
 /-! ## Algebraic spaces, morphism properties, and test base changes -/
 
@@ -213,7 +303,8 @@ def HasRelativePropertyOnSpace {S : Scheme.{u}}
   ∀ (W : AlgebraicSpace S) (w : SpaceToStackMorphism W Y)
     (bc : BaseChangeData f W w), P.property bc.projection
 
-def IsEmptySpace {S : Scheme.{u}} (_ : AlgebraicSpace S) : Prop := False
+def IsEmptySpace {S : Scheme.{u}} (W : AlgebraicSpace S) : Prop :=
+  ∀ _x : W.left, False
 
 /-! Presentations and charts used by later sections. -/
 
@@ -237,7 +328,7 @@ structure StackPresentation {S : Scheme.{u}} (X : AlgebraicStack S)
   groupoidAxioms : Prop
 
 structure LocalPropertyOfGerms where
-  property : Scheme → (X : Scheme) → X → Prop
+  property : (X : Scheme.{u}) → X → Prop
   smoothLocal : Prop
 
 end Formalization.Books.StacksProperties.Unit01

@@ -76,6 +76,43 @@ def standardRelativeProperty (D : StandardPropertyData S)
   localOnSource := True
   preservedUnderComposition := D.preservedUnderComposition n rfl
 
+def RelativePropertyImplies {S : Scheme.{u}}
+    (P Q : RelativeSpaceProperty S) : Prop :=
+  ∀ {X Y : AlgebraicSpace S} (f : SpaceMorphism X Y),
+    P.property f → Q.property f
+
+/-! The general permanence assertions stated immediately after the
+definition of a relative property. -/
+
+theorem relative_property_base_change {S : Scheme.{u}}
+    (P : RelativeSpaceProperty S) {X Y Z : AlgebraicStack S}
+    (f : StackMorphism X Y) (g : StackMorphism Z Y)
+    (hf : HasRelativeProperty P f) :
+    HasRelativeProperty P (fibreProductSnd f g) := by
+  sorry
+
+theorem relative_property_comp {S : Scheme.{u}}
+    (P : RelativeSpaceProperty S) {X Y Z : AlgebraicStack S}
+    (f : StackMorphism X Y) (g : StackMorphism Y Z)
+    (hf : HasRelativeProperty P f) (hg : HasRelativeProperty P g) :
+    HasRelativeProperty P (StackMorphism.comp f g) := by
+  sorry
+
+theorem relative_property_product {S : Scheme.{u}}
+    (P : RelativeSpaceProperty S)
+    {X₁ Y₁ X₂ Y₂ : AlgebraicStack S}
+    (f : StackMorphism X₁ X₂) (g : StackMorphism Y₁ Y₂)
+    (hf : HasRelativeProperty P f) (hg : HasRelativeProperty P g) :
+    HasRelativeProperty P (stackProductMorphism f g) := by
+  sorry
+
+theorem relative_property_implication {S : Scheme.{u}}
+    (P Q : RelativeSpaceProperty S) (hPQ : RelativePropertyImplies P Q)
+    {X Y : AlgebraicStack S} (f : StackMorphism X Y)
+    (hf : HasRelativeProperty P f) :
+    HasRelativeProperty Q f := by
+  sorry
+
 def baseChangeIsAlgebraicSpace {S : Scheme.{u}}
     {X Y : AlgebraicStack S} (f : StackMorphism X Y)
     (W : AlgebraicSpace S) (w : SpaceToStackMorphism W Y) : Prop :=

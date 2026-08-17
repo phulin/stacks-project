@@ -43,6 +43,26 @@ theorem inducedPointMap_comp {S : Scheme.{u}}
       inducedPointMap g ∘ inducedPointMap f := by
   sorry
 
+def PointSquareCommutes {S : Scheme.{u}}
+    {X Y Z W : AlgebraicStack S}
+    (f : StackMorphism X Y) (g : StackMorphism X W)
+    (h : StackMorphism Y Z) (k : StackMorphism W Z) : Prop :=
+  StackTwoMorphism (StackMorphism.comp f h) (StackMorphism.comp g k)
+
+theorem point_square_commutes {S : Scheme.{u}}
+    {X Y Z W : AlgebraicStack S}
+    (f : StackMorphism X Y) (g : StackMorphism X W)
+    (h : StackMorphism Y Z) (k : StackMorphism W Z)
+    (hsquare : PointSquareCommutes f g h k) :
+    inducedPointMap h ∘ inducedPointMap f =
+      inducedPointMap k ∘ inducedPointMap g := by
+  sorry
+
+theorem equivalence_bijective_on_points {S : Scheme.{u}}
+    {X Y : AlgebraicStack S} (e : StackEquivalence X Y) :
+    Function.Bijective (inducedPointMap e.forward) := by
+  sorry
+
 def SpaceMorphismSurjective {S : Scheme.{u}}
     {X Y : AlgebraicSpace S} (f : SpaceMorphism X Y) : Prop :=
   Function.Surjective f.left

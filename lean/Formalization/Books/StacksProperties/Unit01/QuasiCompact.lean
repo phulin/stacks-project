@@ -20,7 +20,11 @@ def IsQuasiCompactStack {S : Scheme.{u}} (X : AlgebraicStack S) : Prop :=
   X.quasiCompact
 
 structure QuasiCompactStackChart {S : Scheme.{u}}
-    {X : AlgebraicStack S} extends StackChart X where
+    {X : AlgebraicStack S} where
+  source : Scheme.{u}
+  map : source → StackPoint X
+  surjective : Prop
+  smooth : Prop
   affineSource : Prop
   quasiCompactSchemeSource : Prop
   quasiCompactAlgebraicSpaceSource : Prop

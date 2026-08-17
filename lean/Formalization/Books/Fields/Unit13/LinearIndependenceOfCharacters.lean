@@ -58,7 +58,27 @@ theorem exists_nat_sum_pow_ne_zero
     {L : Type*} [Field L] {n : ℕ} (hn : 1 ≤ n)
     (α : Fin n → L) (hα : Function.Injective α) :
     ∃ e : ℕ, ∑ i : Fin n, α i ^ e ≠ 0 := by
-  sorry
+  classical
+  let χ : Fin n → Multiplicative ℕ →* L := fun i =>
+    { toFun := fun e => α i ^ e.toAdd
+      map_one' := by simp
+      map_mul' := by
+        intro e f
+        simp [pow_add] }
+  have hχ : Function.Injective χ := by
+    intro i j hij
+    apply hα
+    have h := congrArg (fun f : Multiplicative ℕ →* L => f (Multiplicative.ofAdd 1)) hij
+    simpa [χ] using h
+  have hli : LinearIndependent L (fun i => (χ i : Multiplicative ℕ → L)) :=
+    linearIndependent_of_distinct_monoid_homs χ hχ
+  by_contra h
+  push Not at h
+  have hzero : ∑ i : Fin n, (1 : L) • (χ i : Multiplicative ℕ → L) = 0 := by
+    funext e
+    simpa [χ] using h e.toAdd
+  have hcoeff := (Fintype.linearIndependent_iff.mp hli (fun _ => (1 : L))) hzero
+  exact one_ne_zero (hcoeff ⟨0, lt_of_lt_of_le Nat.zero_lt_one hn⟩)
 
 /-! ## Independence of embeddings -/
 
@@ -120,7 +140,85 @@ theorem finite_separable_tensor_product_map_bijective
     [Algebra.IsSeparable F K] [IsAlgClosed L] :
     Function.Bijective
       (finiteSeparableTensorProductMap (F := F) (K := K) (L := L)) := by
-  sorry
+  classical
+  let f : (L ⊗[F] K) →ₐ[L] ((K →ₐ[F] L) → L) :=
+    AlgHom.liftEquiv F L K ((K →ₐ[F] L) → L)
+      (finiteSeparableEvaluation (F := F) (K := K) (L := L))
+  have hσli : LinearIndependent L
+      (fun σ : K →ₐ[F] L => σ.toLinearMap) :=
+    linearIndependent_algHom_toLinearMap F K L
+  have hcard : Fintype.card (K →ₐ[F] L) = Module.finrank L (K →ₗ[F] L) := by
+    rw [Module.finrank_linearMap_self, AlgHom.card F K L]
+  let bσ : Module.Basis (K →ₐ[F] L) L (K →ₗ[F] L) :=
+    basisOfLinearIndependentOfCardEqFinrank'
+      (fun σ : K →ₐ[F] L => σ.toLinearMap) hσli hcard
+  let evalTensor (φ : K →ₗ[F] L) : L ⊗[F] K →ₗ[L] L :=
+    TensorProduct.AlgebraTensorModule.lift
+      (LinearMap.smulRight (LinearMap.id : L →ₗ[L] L) φ)
+  let T : (K →ₗ[F] L) →ₗ[L] (L ⊗[F] K →ₗ[L] L) :=
+    { toFun := evalTensor
+      map_add' := by
+        intro φ ψ
+        apply TensorProduct.AlgebraTensorModule.ext
+        intro l k
+        simp [evalTensor]
+      map_smul' := by
+        intro c φ
+        apply TensorProduct.AlgebraTensorModule.ext
+        intro l k
+        simp [evalTensor, mul_left_comm] }
+  have hT (σ : K →ₐ[F] L) :
+      T σ.toLinearMap =
+        (LinearMap.proj (R := L) σ).comp f.toLinearMap := by
+    apply TensorProduct.AlgebraTensorModule.ext
+    intro l k
+    simp [T, evalTensor, f, finiteSeparableEvaluation]
+  let bK : Module.Basis (Fin (Module.finrank F K)) F K := Module.finBasis F K
+  let coordMap (i : Fin (Module.finrank F K)) : K →ₗ[F] L :=
+    (Algebra.linearMap F L).comp (bK.coord i)
+  let coordTensor (i : Fin (Module.finrank F K)) : L ⊗[F] K →ₗ[L] L :=
+    (TensorProduct.AlgebraTensorModule.rid F L L).toLinearMap.comp
+      (TensorProduct.AlgebraTensorModule.lTensor L L (bK.coord i))
+  have hcoord (i : Fin (Module.finrank F K)) :
+      T (coordMap i) = coordTensor i := by
+    apply TensorProduct.AlgebraTensorModule.ext
+    intro l k
+    simp [T, evalTensor, coordMap, coordTensor, Algebra.smul_def, mul_comm]
+  have hf_zero : ∀ x : L ⊗[F] K, f x = 0 → x = 0 := by
+    intro x hx
+    have hTzero (σ : K →ₐ[F] L) : T σ.toLinearMap x = 0 := by
+      rw [hT σ]
+      simp [hx]
+    have hTzero' (σ : K →ₐ[F] L) : T (bσ σ) x = 0 := by
+      simpa [bσ] using hTzero σ
+    have hcoord_zero (i : Fin (Module.finrank F K)) : T (coordMap i) x = 0 := by
+      rw [← bσ.sum_repr (coordMap i), map_sum]
+      simp only [map_smul]
+      simp only [LinearMap.coe_sum, Finset.sum_apply, LinearMap.smul_apply]
+      simp_rw [hTzero']
+      simp
+    have hxcoeff (i : Fin (Module.finrank F K)) :
+        (TensorProduct.equivFinsuppOfBasisRight bK x) i = 0 := by
+      have hi := hcoord_zero i
+      rw [hcoord i] at hi
+      simpa [coordTensor, TensorProduct.equivFinsuppOfBasisRight_apply] using hi
+    have hxzero : TensorProduct.equivFinsuppOfBasisRight bK x = 0 := by
+      ext i
+      exact hxcoeff i
+    exact (TensorProduct.equivFinsuppOfBasisRight bK).injective hxzero
+  have hf_inj : Function.Injective f := by
+    intro x y hxy
+    apply sub_eq_zero.mp
+    apply hf_zero
+    rw [map_sub, hxy, sub_self]
+  have hdim : Module.finrank L (L ⊗[F] K) =
+      Module.finrank L ((K →ₐ[F] L) → L) := by
+    rw [Module.finrank_tensorProduct, Module.finrank_self, one_mul,
+      Module.finrank_pi L, AlgHom.card F K L]
+  have hf_surj : Function.Surjective f :=
+    (LinearMap.injective_iff_surjective_of_finrank_eq_finrank hdim).mp hf_inj
+  have hf_bij : Function.Bijective f := ⟨hf_inj, hf_surj⟩
+  exact hf_bij.comp (Algebra.TensorProduct.commRight F L K).symm.bijective
 
 /- A bijective algebra homomorphism is the canonical Mathlib representation of
    the source's “isomorphism of `L`-algebras”. -/

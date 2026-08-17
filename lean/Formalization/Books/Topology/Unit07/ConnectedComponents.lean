@@ -1,6 +1,7 @@
 import Mathlib.Topology.Connected.LocallyConnected
 import Mathlib.Topology.Connected.TotallyDisconnected
 import Mathlib.Topology.Connected.CardComponents
+import Mathlib.Topology.Bases
 import Mathlib.Topology.Instances.RatLemmas
 
 /-!

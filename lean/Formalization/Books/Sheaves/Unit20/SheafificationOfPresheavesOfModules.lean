@@ -50,7 +50,7 @@ noncomputable abbrev moduleSheafificationUnit {X : TopCat.{v}}
         (moduleSheafification F)) :=
   Formalization.Books.Sheaves.Unit17.moduleSheafificationUnit F
 
-/-- The underlying abelian presheaf of a presheaf of modules. -/
+/-- The underlying set presheaf of a presheaf of modules. -/
 noncomputable abbrev moduleUnderlyingSetPresheaf {X : TopCat.{v}}
     {O : RingPresheaf.{v, v} X} (F : PMod O) :
     TopCat.Presheaf (Type v) X :=
@@ -62,8 +62,8 @@ noncomputable abbrev moduleSheafificationSetPresheaf {X : TopCat.{v}}
     TopCat.Presheaf (Type v) X :=
   Formalization.Books.Sheaves.Unit17.moduleSheafificationSetPresheaf F
 
-/-- The module sheafification has the ordinary abelian-group sheafification as
-its underlying sheaf. -/
+/-- The underlying set presheaf of the module sheafification is isomorphic to
+the ordinary set-valued sheafification. -/
 theorem moduleSheafification_underlying_iso {X : TopCat.{v}}
     {O : RingPresheaf.{v, v} X} (F : PMod O) :
     Nonempty
@@ -187,13 +187,37 @@ theorem moduleSheafificationActionAt_natural {X : TopCat.{v}}
   exact Formalization.Books.Sheaves.Unit17.moduleSheafificationActionAt_natural
     F h r m
 
-/-- The action as a morphism of sheaves of sets on the underlying presheaves. -/
+/-- The action as a morphism of presheaves of sets on the underlying sheaves. -/
 noncomputable abbrev moduleSheafificationAction {X : TopCat.{v}}
     {O : RingPresheaf.{v, v} X} (F : PMod O) :
     presheafProduct (ringSheafificationSetPresheaf O)
         (moduleSheafificationSetPresheaf F) ⟶
       moduleSheafificationSetPresheaf F :=
   Formalization.Books.Sheaves.Unit17.moduleSheafificationAction F
+
+/-- The underlying set sheaf of the sheafified module. -/
+noncomputable abbrev moduleSheafificationSetSheaf {X : TopCat.{v}}
+    {O : RingPresheaf.{v, v} X} (F : PMod O) :
+    TopCat.Sheaf (Type v) X :=
+  Formalization.Books.Sheaves.Unit17.moduleSheafificationSetSheaf F
+
+/-- The presheaf product carrying the scalar action is a sheaf. -/
+theorem moduleSheafificationActionDomain_isSheaf {X : TopCat.{v}}
+    {O : RingPresheaf.{v, v} X} (F : PMod O) :
+    TopCat.Presheaf.IsSheaf (presheafProduct
+      (ringSheafificationSetPresheaf O)
+      (moduleSheafificationSetPresheaf F)) := by
+  exact Formalization.Books.Sheaves.Unit17.moduleSheafificationActionDomain_isSheaf F
+
+/-- The scalar action as an actual morphism of sheaves of sets.  The displayed
+domain is the sheaf carried by the product of the two underlying presheaves. -/
+noncomputable abbrev moduleSheafificationActionSheaf {X : TopCat.{v}}
+    {O : RingPresheaf.{v, v} X} (F : PMod O) :
+    (⟨presheafProduct (ringSheafificationSetPresheaf O)
+        (moduleSheafificationSetPresheaf F),
+      moduleSheafificationActionDomain_isSheaf F⟩ : TopCat.Sheaf (Type v) X) ⟶
+      moduleSheafificationSetSheaf F :=
+  Formalization.Books.Sheaves.Unit17.moduleSheafificationActionSheaf F
 
 /-- The sheafification unit commutes with the induced scalar action. -/
 theorem moduleSheafificationUnit_action_compatibility {X : TopCat.{v}}
@@ -268,6 +292,19 @@ noncomputable abbrev sheafChangeOfRingsHomEquiv {X : TopCat.{v}}
     (G ⟶ (sheafRestrictionOfScalars α).obj F) ≃
       ((sheafChangeOfRings α).obj G ⟶ F) :=
   Formalization.Books.Sheaves.Unit17.sheafChangeOfRingsHomEquiv α G F
+
+/-! The presheaf stalk comparison used in the final sheaf-stalk statement. -/
+
+/-- The stalk of the presheaf change of rings is the stalk-level extension of
+scalars. -/
+theorem sheafification_stalk_tensorProduct_iso
+    {X : TopCat.{v}} {O O' : CommRingPresheaf X} (α : O ⟶ O')
+    (F : CommRingPresheafModule O) (x : X) :
+    Nonempty (stalkTensorProduct α F x ≅
+      ModuleCat.of (O'.stalk x)
+        (↑(TopCat.Presheaf.stalk
+          (tensorProductPresheaf (commRingPresheafMorphismToRingPresheaf α) F).presheaf x))) := by
+  exact Formalization.Books.Sheaves.Unit17.sheafification_stalk_tensorProduct_iso α F x
 
 /-! ## Stalks -/
 

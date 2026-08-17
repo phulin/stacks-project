@@ -74,11 +74,12 @@ theorem exists_refinement_of_compactSpace
       (⋂ j, U (a j)) = ⋃ k, W a k) :
     ∃ (J : Type w) (V : J → Set X) (α : J → I),
       (⋃ j, V j) = (Set.univ : Set X) ∧
-        (∀ j, IsOpen (V j)) ∧
+          (∀ j, IsOpen (V j)) ∧
           (∀ j, closure (V j) ⊆ U (α j)) ∧
             ∀ a : Fin (p + 1) → J,
-              ∃ k : κ (fun j => α (a j)),
-                (⋂ j, V (a j)) ⊆ W (fun j => α (a j)) k := by
+              (⋂ j, V (a j)).Nonempty →
+                ∃ k : κ (fun j => α (a j)),
+                  (⋂ j, V (a j)) ⊆ W (fun j => α (a j)) k := by
   sorry
 
 /-! ### Lifting a cover from a compact closed subset -/

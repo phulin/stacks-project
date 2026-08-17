@@ -23,7 +23,7 @@ structure QuasiCompactStackChart {S : Scheme.{u}}
     {X : AlgebraicStack S} where
   source : Scheme.{u}
   map : source → StackPoint X
-  surjective : Prop
+  surjective : Function.Surjective map
   smooth : Prop
   affineSource : Prop
   quasiCompactSchemeSource : Prop
@@ -35,17 +35,17 @@ def HasChartSourceProperty {S : Scheme.{u}} {X : AlgebraicStack S}
 
 def HasAffineSmoothCover {S : Scheme.{u}} (X : AlgebraicStack S) : Prop :=
   ∃ c : QuasiCompactStackChart (X := X),
-    c.surjective ∧ c.smooth ∧ c.affineSource
+    Function.Surjective c.map ∧ c.smooth ∧ c.affineSource
 
 def HasQuasiCompactSchemeSmoothCover {S : Scheme.{u}}
     (X : AlgebraicStack S) : Prop :=
   ∃ c : QuasiCompactStackChart (X := X),
-    c.surjective ∧ c.smooth ∧ c.quasiCompactSchemeSource
+    Function.Surjective c.map ∧ c.smooth ∧ c.quasiCompactSchemeSource
 
 def HasQuasiCompactSpaceSmoothCover {S : Scheme.{u}}
     (X : AlgebraicStack S) : Prop :=
   ∃ c : QuasiCompactStackChart (X := X),
-    c.surjective ∧ c.smooth ∧ c.quasiCompactAlgebraicSpaceSource
+    Function.Surjective c.map ∧ c.smooth ∧ c.quasiCompactAlgebraicSpaceSource
 
 def HasQuasiCompactStackCover {S : Scheme.{u}}
     (X : AlgebraicStack S) : Prop :=
@@ -63,7 +63,12 @@ structure FiniteDisjointUnionData {S : Scheme.{u}} {n : ℕ}
     (X : Fin n → AlgebraicStack S) where
   carrier : AlgebraicStack S
   inclusion : ∀ i, StackMorphism (X i) carrier
-  isDisjointUnion : Prop
+  isDisjointUnion : ∀ (i j : Fin n), i ≠ j →
+    Disjoint (Set.range (inducedPointMap (inclusion i)))
+      (Set.range (inducedPointMap (inclusion j)))
+  pointCover : ∀ x : StackPoint carrier,
+    ∃ (i : Fin n) (y : StackPoint (X i)),
+      inducedPointMap (inclusion i) y = x
 
 theorem finite_disjoint_union_quasi_compact {S : Scheme.{u}} {n : ℕ}
     (X : Fin n → AlgebraicStack S) (D : FiniteDisjointUnionData X)

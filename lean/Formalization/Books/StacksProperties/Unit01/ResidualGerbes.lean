@@ -19,7 +19,7 @@ namespace Formalization.Books.StacksProperties.Unit01
 
 def IsFlatFieldCover {S : Scheme.{u}}
     {X : AlgebraicStack S} (p : FieldValuedMorphism X) : Prop :=
-  p.surjective ∧ p.flat
+  (∀ x : StackPoint X, x = Quotient.mk X.points.setoid p.point) ∧ p.flat
 
 def IsLocallyFiniteTypeFlatFieldCover {S : Scheme.{u}}
     {X : AlgebraicStack S} (p : FieldValuedMorphism X) : Prop :=
@@ -43,7 +43,8 @@ def IsLocallyNoetherianReducedSingletonPointStack {S : Scheme.{u}}
 
 theorem flat_field_cover_permanence {S : Scheme.{u}}
     {X : AlgebraicStack S} (p : FieldValuedMorphism X)
-    (hp : IsFlatFieldCover p) (q : FieldValuedMorphism X) :
+    (hp : IsFlatFieldCover p)
+    (q : FieldValuedMorphism X) :
     IsFlatFieldCover q := by
   sorry
 
@@ -65,7 +66,8 @@ theorem unique_point_better_iff {S : Scheme.{u}}
 theorem monomorphism_into_unique_point {S : Scheme.{u}}
     {Z' Z : AlgebraicStack S} (f : StackMorphism Z' Z)
     (hZ : ∃ p : FieldValuedMorphism Z,
-      IsLocallyFinitePresentationFlatFieldCover p) :
+      IsLocallyFinitePresentationFlatFieldCover p)
+    (hf : IsMonomorphism f) :
     IsEmpty Z' ∨ IsStackEquivalence f := by
   sorry
 

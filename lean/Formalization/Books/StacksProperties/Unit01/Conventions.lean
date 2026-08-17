@@ -56,7 +56,6 @@ structure AlgebraicStack (S : Scheme.{u}) where
   regular : Prop
   quasiCompact : Prop
   finiteTypeOverBase : Prop
-  empty : Prop
   representableByAlgebraicSpace : Prop
   representableByScheme : Prop
 
@@ -69,7 +68,8 @@ structure FieldValuedMorphism {S : Scheme.{u}}
   fieldStructure : Field field
   point : RawPoint X
   fieldValued : X.points.fieldValued point
-  surjective : Prop
+  surjective : ∀ x : StackPoint X,
+    x = Quotient.mk X.points.setoid point
   flat : Prop
   locallyOfFiniteType : Prop
   locallyOfFinitePresentation : Prop
@@ -85,7 +85,8 @@ def IsLocallyNoetherian (X : AlgebraicStack S) : Prop := X.locallyNoetherian
 
 def IsRegular (X : AlgebraicStack S) : Prop := X.regular
 
-def IsEmpty (X : AlgebraicStack S) : Prop := X.empty
+def IsEmpty (X : AlgebraicStack S) : Prop :=
+  ∀ _x : StackPoint X, False
 
 def IsRepresentableByAlgebraicSpace (X : AlgebraicStack S) : Prop :=
   X.representableByAlgebraicSpace
@@ -115,6 +116,10 @@ def comp {X Y Z : AlgebraicStack S}
     exact g.map_respects _ _ (f.map_respects _ _ h)
 
 end StackMorphism
+
+def inducedPointMap {S : Scheme.{u}} {X Y : AlgebraicStack S}
+    (f : StackMorphism X Y) : StackPoint X → StackPoint Y :=
+  Quotient.map f.rawMap f.map_respects
 
 def StackTwoMorphism {X Y : AlgebraicStack S}
     (f g : StackMorphism X Y) : Prop :=
@@ -165,7 +170,6 @@ def fibreProduct {S : Scheme.{u}}
   regular := X.regular ∧ Z.regular
   quasiCompact := X.quasiCompact ∧ Z.quasiCompact
   finiteTypeOverBase := X.finiteTypeOverBase ∧ Z.finiteTypeOverBase
-  empty := X.empty ∨ Z.empty
   representableByAlgebraicSpace :=
     X.representableByAlgebraicSpace ∧ Z.representableByAlgebraicSpace
   representableByScheme := X.representableByScheme ∧ Z.representableByScheme
@@ -225,7 +229,6 @@ def stackProduct {S : Scheme.{u}}
   regular := X.regular ∧ Y.regular
   quasiCompact := X.quasiCompact ∧ Y.quasiCompact
   finiteTypeOverBase := X.finiteTypeOverBase ∧ Y.finiteTypeOverBase
-  empty := X.empty ∨ Y.empty
   representableByAlgebraicSpace :=
     X.representableByAlgebraicSpace ∧ Y.representableByAlgebraicSpace
   representableByScheme := X.representableByScheme ∧ Y.representableByScheme
@@ -255,7 +258,7 @@ def underlyingSpaceMorphism {S : Scheme.{u}}
 structure SpaceToStackMorphism {S : Scheme.{u}}
     (W : AlgebraicSpace S) (X : AlgebraicStack S) where
   map : W.left → StackPoint X
-  surjective : Prop
+  surjective : Function.Surjective map
   flat : Prop
   locallyOfFinitePresentation : Prop
   smooth : Prop
@@ -269,7 +272,8 @@ structure BaseChangeData {S : Scheme.{u}}
   projection : SpaceMorphism source W
   sourcePoint : source.left → StackPoint X
   cartesian : Prop
-  compatible : Prop
+  compatible : ∀ p : source.left,
+    inducedPointMap f (sourcePoint p) = w.map (projection.left p)
 
 def RepresentableByAlgebraicSpaces {S : Scheme.{u}}
     {X Y : AlgebraicStack S} (f : StackMorphism X Y) : Prop :=
@@ -304,7 +308,7 @@ def IsEmptySpace {S : Scheme.{u}} (W : AlgebraicSpace S) : Prop :=
 structure StackChart {S : Scheme.{u}} (X : AlgebraicStack S) where
   source : Scheme.{u}
   map : source → StackPoint X
-  surjective : Prop
+  surjective : Function.Surjective map
   flat : Prop
   locallyOfFinitePresentation : Prop
   smooth : Prop
@@ -319,6 +323,13 @@ structure StackPresentation {S : Scheme.{u}} (X : AlgebraicStack S)
   targetMap : relation ⟶ source
   identityMap : source ⟶ relation
   groupoidAxioms : Prop
+  relationIsEquivalence :
+    Equivalence (fun u v =>
+      ∃ r : relation, sourceMap r = u ∧ targetMap r = v)
+  mapRelation :
+    ∀ u v,
+      (∃ r : relation, sourceMap r = u ∧ targetMap r = v) ↔
+        toStackChart.map u = toStackChart.map v
 
 structure LocalPropertyOfGerms where
   property : (X : Scheme.{u}) → X → Prop

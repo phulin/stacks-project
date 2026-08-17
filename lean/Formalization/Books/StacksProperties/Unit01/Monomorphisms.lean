@@ -56,7 +56,7 @@ def DiagonalIsEquivalence {S : Scheme.{u}}
 def HasLocalMonomorphismTest {S : Scheme.{u}}
     {X Y : AlgebraicStack S} (f : StackMorphism X Y) : Prop :=
   ∃ (W : AlgebraicSpace S) (w : SpaceToStackMorphism W Y),
-    w.surjective ∧ w.flat ∧ w.locallyOfFinitePresentation ∧
+    Function.Surjective w.map ∧ w.flat ∧ w.locallyOfFinitePresentation ∧
       ∃ bc : BaseChangeData f W w, SpaceMorphismMonomorphism bc.projection
 
 theorem base_change_monomorphism {S : Scheme.{u}}

@@ -91,14 +91,14 @@ structure FieldBaseSchemeData (S : Scheme.{u}) where
 theorem dimension_finite_for_nonempty_finite_type {S : Scheme.{u}}
     {X : AlgebraicStack S} (hX : IsLocallyNoetherian X)
     (hfinite : X.finiteTypeOverBase) (hfield : FieldBaseSchemeData S)
-    (hnonempty : ¬ X.empty) :
+    (hnonempty : ¬ IsEmpty X) :
     ∃ n : ℤ, stackDimension X hX =
       ((n : WithTop ℤ) : WithBot (WithTop ℤ)) := by
   sorry
 
 theorem dimension_empty_iff {S : Scheme.{u}}
     {X : AlgebraicStack S} (hX : IsLocallyNoetherian X) :
-    stackDimension X hX = (⊥ : StackDimension) ↔ X.empty := by
+    stackDimension X hX = (⊥ : StackDimension) ↔ IsEmpty X := by
   sorry
 
 structure QuotientStackDimensionData (S : Scheme.{u}) where

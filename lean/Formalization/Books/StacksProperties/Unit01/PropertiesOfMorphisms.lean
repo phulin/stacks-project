@@ -121,7 +121,8 @@ def baseChangeIsAlgebraicSpace {S : Scheme.{u}}
 theorem check_representable_covering {S : Scheme.{u}}
     {X Y : AlgebraicStack S} (f : StackMorphism X Y)
     (W : AlgebraicSpace S) (w : SpaceToStackMorphism W Y)
-    (hcover : w.surjective ∧ w.flat ∧ w.locallyOfFinitePresentation) :
+    (hcover : Function.Surjective w.map ∧ w.flat ∧
+      w.locallyOfFinitePresentation) :
     RepresentableByAlgebraicSpaces f ↔
       baseChangeIsAlgebraicSpace f W w := by
   sorry
@@ -143,7 +144,8 @@ theorem check_property_covering {S : Scheme.{u}}
     (P : RelativeSpaceProperty S) {X Y : AlgebraicStack S}
     (f : StackMorphism X Y) (W : AlgebraicSpace S)
     (w : SpaceToStackMorphism W Y)
-    (hcover : w.surjective ∧ w.flat ∧ w.locallyOfFinitePresentation) :
+    (hcover : Function.Surjective w.map ∧ w.flat ∧
+      w.locallyOfFinitePresentation) :
     HasRelativeProperty P f ↔
       (RepresentableByAlgebraicSpaces f ∧
         ∀ (bc : BaseChangeData f W w), P.property bc.projection) := by
@@ -153,7 +155,7 @@ structure StackCoveringMorphism {S : Scheme.{u}}
     {Z Y : AlgebraicStack S} where
   map : StackMorphism Z Y
   representableByAlgebraicSpaces : Prop
-  surjective : Prop
+  surjective : Function.Surjective (inducedPointMap map)
   flat : Prop
   locallyOfFinitePresentation : Prop
 
@@ -174,7 +176,10 @@ def HasRelativePropertyAfterStackBaseChange {S : Scheme.{u}}
 theorem check_property_weak_covering {S : Scheme.{u}}
     (P : RelativeSpaceProperty S) {X Y Z : AlgebraicStack S}
     (f : StackMorphism X Y)
-    (z : StackCoveringMorphism (Z := Z) (Y := Y)) :
+    (z : StackCoveringMorphism (Z := Z) (Y := Y))
+    (hz : z.representableByAlgebraicSpaces ∧
+      Function.Surjective (inducedPointMap z.map) ∧ z.flat ∧
+      z.locallyOfFinitePresentation) :
     HasRelativeProperty P f ↔ HasRelativePropertyAfterStackBaseChange P f z := by
   sorry
 
@@ -188,7 +193,7 @@ inductive CoveringTopology
 structure PrecompositionCoverData {S : Scheme.{u}}
     {X Y Z : AlgebraicStack S} (f : StackMorphism X Y)
     (g : StackMorphism Y Z) where
-  surjective : Prop
+  surjective : Function.Surjective (inducedPointMap f)
   etale : Prop
   smooth : Prop
   syntomic : Prop
@@ -211,7 +216,7 @@ def HasPrecompositionCover {S : Scheme.{u}}
   RepresentableByAlgebraicSpaces f ∧
     RepresentableByAlgebraicSpaces g ∧
       ∃ c : PrecompositionCoverData f g,
-        c.surjective ∧ CoveringKindCondition τ c
+        Function.Surjective (inducedPointMap f) ∧ CoveringKindCondition τ c
 
 def IsLocalOnSourceIn (P : RelativeSpaceProperty S)
     (_τ : CoveringTopology) : Prop := P.localOnSource

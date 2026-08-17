@@ -26,7 +26,7 @@ structure SmoothLocalSchemeProperty (S : Scheme.{u}) where
 
 def IsSmoothCover {S : Scheme.{u}} {X : AlgebraicStack S}
     (W : AlgebraicSpace S) (w : SpaceToStackMorphism W X) : Prop :=
-  w.surjective ∧ w.smooth
+  Function.Surjective w.map ∧ w.smooth
 
 def SomeSchemeSmoothProperty {S : Scheme.{u}}
     (P : SmoothLocalSchemeProperty S) (X : AlgebraicStack S) : Prop :=

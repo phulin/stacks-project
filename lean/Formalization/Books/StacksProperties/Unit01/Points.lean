@@ -28,10 +28,6 @@ theorem point_equivalence_is_equivalence {S : Scheme.{u}}
 def pointSet {S : Scheme.{u}} (X : AlgebraicStack S) : Type u :=
   StackPoint X
 
-def inducedPointMap {S : Scheme.{u}} {X Y : AlgebraicStack S}
-    (f : StackMorphism X Y) : pointSet X → pointSet Y :=
-  Quotient.map f.rawMap f.map_respects
-
 theorem inducedPointMap_id {S : Scheme.{u}} (X : AlgebraicStack S) :
     inducedPointMap (StackMorphism.id X) = id := by
   funext p
@@ -167,8 +163,15 @@ structure GeneralPresentationData {S : Scheme.{u}}
   relation : Scheme.{u}
   sourceMap : relation ⟶ source
   targetMap : relation ⟶ source
-  surjective : Prop
+  surjective : Function.Surjective map
   groupoidAxioms : Prop
+  relationIsEquivalence :
+    Equivalence (fun u v =>
+      ∃ r : relation, sourceMap r = u ∧ targetMap r = v)
+  mapRelation :
+    ∀ u v,
+      (∃ r : relation, sourceMap r = u ∧ targetMap r = v) ↔
+        map u = map v
 
 def GeneralPresentationRelation {S : Scheme.{u}}
     {X : AlgebraicStack S} (p : GeneralPresentationData X)

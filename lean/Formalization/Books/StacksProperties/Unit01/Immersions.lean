@@ -71,19 +71,19 @@ def IsImmersionStack {S : Scheme.{u}}
 def HasLocalOpenImmersionTest {S : Scheme.{u}}
     {X Y : AlgebraicStack S} (f : StackMorphism X Y) : Prop :=
   ∃ (W : AlgebraicSpace S) (w : SpaceToStackMorphism W Y),
-    w.surjective ∧ w.flat ∧ w.locallyOfFinitePresentation ∧
+    Function.Surjective w.map ∧ w.flat ∧ w.locallyOfFinitePresentation ∧
       ∃ bc : BaseChangeData f W w, SpaceOpenImmersion bc.projection
 
 def HasLocalClosedImmersionTest {S : Scheme.{u}}
     {X Y : AlgebraicStack S} (f : StackMorphism X Y) : Prop :=
   ∃ (W : AlgebraicSpace S) (w : SpaceToStackMorphism W Y),
-    w.surjective ∧ w.flat ∧ w.locallyOfFinitePresentation ∧
+    Function.Surjective w.map ∧ w.flat ∧ w.locallyOfFinitePresentation ∧
       ∃ bc : BaseChangeData f W w, SpaceClosedImmersion bc.projection
 
 def HasLocalImmersionTest {S : Scheme.{u}}
     {X Y : AlgebraicStack S} (f : StackMorphism X Y) : Prop :=
   ∃ (W : AlgebraicSpace S) (w : SpaceToStackMorphism W Y),
-    w.surjective ∧ w.flat ∧ w.locallyOfFinitePresentation ∧
+    Function.Surjective w.map ∧ w.flat ∧ w.locallyOfFinitePresentation ∧
       ∃ bc : BaseChangeData f W w, SpaceImmersion bc.projection
 
 theorem base_change_open_immersion {S : Scheme.{u}}
@@ -316,7 +316,8 @@ structure OpenImageSubstackData {S : Scheme.{u}}
 
 theorem open_image_substack {S : Scheme.{u}}
     {X : AlgebraicStack S} (U : AlgebraicSpace S)
-    (f : SpaceToStackMorphism U X) (hf : f.surjective ∧ f.smooth)
+    (f : SpaceToStackMorphism U X)
+    (hf : Function.Surjective f.map ∧ f.smooth)
     (V : AlgebraicSpace S)
     (i : SpaceMorphism V U) (hi : SpaceOpenImmersion i) :
     Nonempty (OpenImageSubstackData U f V i) := by
@@ -427,14 +428,10 @@ structure FlatLocusWarningData {S : Scheme.{u}} where
   largestIsMaximal : Prop
   strictDifference : largestOpen ≠ pointwiseFlatLocus
 
-theorem exists_flat_locus_warning {S : Scheme.{u}} :
-    Nonempty (FlatLocusWarningData (S := S)) := by
-  sorry
-
 /- The source warning is intentional: the largest open subspace on which a
   map is flat is not, in general, the set of points where the original map is
-  flat.  It is therefore represented by the maximality field above rather
-than by a pointwise equality.
+  flat.  It is therefore represented by an explicit witness with a strict
+  difference rather than by an existence assertion over every base scheme.
 -/
 
 inductive LocalSourceApplication

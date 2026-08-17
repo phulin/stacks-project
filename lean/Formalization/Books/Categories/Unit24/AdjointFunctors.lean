@@ -3,7 +3,7 @@ import Mathlib.CategoryTheory.Adjunction.Basic
 import Mathlib.CategoryTheory.Adjunction.FullyFaithful
 import Mathlib.CategoryTheory.Adjunction.Limits
 import Mathlib.CategoryTheory.Adjunction.Mates
-import Mathlib.CategoryTheory.Adjunction.PartialAdjoint
+import Mathlib.CategoryTheory.Monad.Adjunction
 
 /-!
 # Categories, Chapter 24: Adjoint functors
@@ -180,12 +180,6 @@ theorem unit_counit_right_triangle
 
 /- Mathlib's `conjugateEquiv` is the mate correspondence in precisely the
    special case used by the source. -/
-def mateOfLeftTransformation
-    {C : Type u} [Category.{v} C]
-    {D : Type u'} [Category.{v'} D]
-    {u₁ u₂ : C ⥤ D} {v₁ v₂ : D ⥤ C}
-    (h₁ : u₁ ⊣ v₁) (h₂ : u₂ ⊣ v₂) (β : u₂ ⟶ u₁) : v₁ ⟶ v₂ :=
-  conjugateEquiv h₁ h₂ β
 
 theorem mate_counit_square
     {C : Type u} [Category.{v} C]
@@ -193,19 +187,13 @@ theorem mate_counit_square
     {u₁ u₂ : C ⥤ D} {v₁ v₂ : D ⥤ C}
     (h₁ : u₁ ⊣ v₁) (h₂ : u₂ ⊣ v₂) (β : u₂ ⟶ u₁) :
     Functor.whiskerLeft v₁ β ≫ h₁.counit =
-      Functor.whiskerRight (mateOfLeftTransformation h₁ h₂ β) u₂ ≫ h₂.counit := by
+      Functor.whiskerRight (conjugateEquiv h₁ h₂ β) u₂ ≫ h₂.counit := by
   sorry
 
 /-! ## Composition of adjunctions -/
 
-def composedAdjunction
-    {A : Type u} [Category.{v} A]
-    {B : Type u'} [Category.{v'} B]
-    {C : Type w} [Category.{w'} C]
-    {v : A ⥤ B} {v' : B ⥤ C} {u : B ⥤ A} {u' : C ⥤ B}
-    (h : u ⊣ v) (h' : u' ⊣ v') :
-    (u' ⋙ u) ⊣ (v ⋙ v') :=
-  h'.comp h
+/- The source's composite adjunction is Mathlib's `h'.comp h`; its left and
+   right functors are `u' ⋙ u` and `v ⋙ v'`, respectively. -/
 
 theorem composed_counit_formula
     {A : Type u} [Category.{v} A]
@@ -213,7 +201,7 @@ theorem composed_counit_formula
     {C : Type w} [Category.{w'} C]
     {v : A ⥤ B} {v' : B ⥤ C} {u : B ⥤ A} {u' : C ⥤ B}
     (h : u ⊣ v) (h' : u' ⊣ v') (X : A) :
-    (composedAdjunction h h').counit.app X =
+    (h'.comp h).counit.app X =
       u.map (h'.counit.app (v.obj X)) ≫ h.counit.app X := by
   sorry
 

@@ -1,11 +1,7 @@
-import Mathlib.Algebra.Field.Rat
-import Mathlib.Algebra.Algebra.Rat
 import Mathlib.Algebra.Category.AlgCat.Basic
-import Mathlib.CategoryTheory.ObjectProperty.FullSubcategory
-import Mathlib.Data.Complex.Basic
-import Mathlib.FieldTheory.IntermediateField.Adjoin.Algebra
+import Mathlib.Algebra.Algebra.Rat
 import Mathlib.FieldTheory.IntermediateField.Adjoin.Basic
-import Mathlib.FieldTheory.RatFunc.AsPolynomial
+import Mathlib.FieldTheory.RatFunc.Basic
 import Mathlib.LinearAlgebra.Complex.Module
 
 /-!
@@ -116,7 +112,7 @@ noncomputable def irreduciblePolynomialExtension {k : Type u} [Field k]
     {P : Polynomial k} (hP : Irreducible P) :
     FieldExtensionCat.{u, u} k := by
   letI : Fact (Irreducible P) := ⟨hP⟩
-  exact ⟨AlgCat.of k (AdjoinRoot P), Field.toIsField _⟩
+  exact fieldExtensionObject k (AdjoinRoot P)
 
 /- Mathlib and the preceding chapter do not package a Riemann-surface
    function field.  Thus `C_X` is the supplied model of `C(X)`, recording the
@@ -127,12 +123,12 @@ noncomputable def meromorphicFunctionFieldExtension
     FieldExtensionCat.{0, v} ℂ :=
   fieldExtensionObject ℂ C_X
 
-/-- The meromorphic-function extension supplies an object of the extension
-category. -/
+/-- The supplied meromorphic-function field model has an injective map of
+constant functions from `ℂ`. -/
 theorem meromorphic_function_field_is_extension
     (_X : Type u) (C_X : Type v) [Field C_X] [Algebra ℂ C_X] :
-    Nonempty (FieldExtensionCat.{0, v} ℂ) :=
-  ⟨meromorphicFunctionFieldExtension _X C_X⟩
+    Function.Injective (algebraMap ℂ C_X) :=
+  field_extension_algebraMap_injective
 
 /-! ## Generated subextensions -/
 

@@ -48,9 +48,9 @@ theorem similarity_is_equivalence (k : Type*) [Field k] :
 theorem similarity_has_unique_division_representative (k : Type u_k) [Field k]
     (A : CSA.{u_k, u_A} k) :
       ∃ D : CSA.{u_k, u_A} k,
-        Nonempty (DivisionRing D.carrier) ∧
+        IsSimpleModule D.carrier D.carrier ∧
           IsBrauerEquivalent A D ∧
-            ∀ E : CSA.{u_k, u_E} k, Nonempty (DivisionRing E.carrier) →
+            ∀ E : CSA.{u_k, u_E} k, IsSimpleModule E.carrier E.carrier →
             IsBrauerEquivalent A E →
                 Nonempty (D.carrier ≃ₐ[k] E.carrier) := by
   sorry
@@ -195,9 +195,9 @@ theorem brauer_group_base_change_interface (k k' : Type*) [Field k] [Field k']
           IsBaseChangeRepresentative k k' A B := by
   sorry
 
-theorem brauer_group_zero_iff (k : Type*) [Field k] :
+theorem brauer_group_zero_iff (k : Type u_k) [Field k] :
     (∀ x : BrauerGroup k, x = 1) ↔
-      (∀ (K : Type*) [DivisionRing K] [Algebra k K]
+      (∀ (K : Type u_k) [DivisionRing K] [Algebra k K]
         [FiniteDimensional k K] [Algebra.IsCentral k K],
         Nonempty (K ≃ₐ[k] k)) := by
   sorry

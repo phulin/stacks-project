@@ -161,6 +161,22 @@ theorem coSpecial_triangle_two_out_of_three
     (h₁ : IsIso φ.hom₁) (h₂ : IsIso φ.hom₂) : IsIso φ.hom₃ := by
   sorry
 
+/-- The middle component of a co-special-triangle morphism is an isomorphism
+when the first and third components are. -/
+theorem coSpecial_triangle_isIso₂
+    {T T' : Triangle C} (hT : CoSpecialTriangle T)
+    (hT' : CoSpecialTriangle T') (φ : T ⟶ T')
+    (h₁ : IsIso φ.hom₁) (h₃ : IsIso φ.hom₃) : IsIso φ.hom₂ := by
+  sorry
+
+/-- The first component of a co-special-triangle morphism is an isomorphism
+when the second and third components are. -/
+theorem coSpecial_triangle_isIso₁
+    {T T' : Triangle C} (hT : CoSpecialTriangle T)
+    (hT' : CoSpecialTriangle T') (φ : T ⟶ T')
+    (h₂ : IsIso φ.hom₂) (h₃ : IsIso φ.hom₃) : IsIso φ.hom₁ := by
+  sorry
+
 /-- Every distinguished triangle is special. -/
 theorem distinguished_triangle_special
     (T : Triangle C) (hT : T ∈ distTriang C) : SpecialTriangle T := by
@@ -253,14 +269,14 @@ noncomputable def shiftBiprodIso (X Y : C) :
       (shiftFunctor C (1 : ℤ)).obj X ⊞ (shiftFunctor C (1 : ℤ)).obj Y := by
   let F := shiftFunctor C (1 : ℤ)
   refine
-    { hom := biprodComparison F X Y
-      inv := biprodComparison' F X Y
+    { hom := Functor.biprodComparison F X Y
+      inv := Functor.biprodComparison' F X Y
       hom_inv_id := ?_
       inv_hom_id := ?_ }
-  · exact biprodComparison'_comp_biprodComparison F X Y
-  · dsimp [biprodComparison, biprodComparison']
+  · dsimp [Functor.biprodComparison, Functor.biprodComparison']
     rw [biprod.lift_desc, ← F.map_comp, ← F.map_comp, ← F.map_add,
       biprod.total, F.map_id]
+  · exact Functor.biprodComparison'_comp_biprodComparison F X Y
 
 def directSumTriangle (T T' : Triangle C) : Triangle C :=
   Triangle.mk
@@ -325,6 +341,19 @@ section ProductsAndIdempotents
 variable {C : Type u} [Category.{v} C] [AdditiveCategory C]
   [HasShift C ℤ] [∀ n : ℤ, (shiftFunctor C n).Additive]
   [Pretriangulated C]
+
+/-- A shift equivalence transports any existing product to the product of the
+shifted family. -/
+theorem shift_has_product
+    {J : Type w} (X : J → C) [HasProduct X] :
+    HasProduct (fun j => X j⟦(1 : ℤ)⟧) := by
+  sorry
+
+/-- The dual coproduct transport along a shift equivalence. -/
+theorem shift_has_coproduct
+    {J : Type w} (X : J → C) [HasCoproduct X] :
+    HasCoproduct (fun j => X j⟦(1 : ℤ)⟧) := by
+  sorry
 
 /-- The shift comparison for a product is an isomorphism whenever the source
 and shifted products exist. -/
@@ -417,8 +446,8 @@ theorem easier_axiom_four_iff :
     CategoryTheory.IsTriangulated C ↔
       ∀ {X Y Z : C} (f : X ⟶ Y) (g : Y ⟶ Z),
         ∃ (X' Y' Z' : C) (eX : X' ≅ X) (eY : Y' ≅ Y) (eZ : Z' ≅ Z),
-          OctahedronWitness
-            (eX.hom ≫ f ≫ eY.inv) (eY.hom ≫ g ≫ eZ.inv) := by
+          Nonempty (OctahedronWitness
+            (eX.hom ≫ f ≫ eY.inv) (eY.hom ≫ g ≫ eZ.inv)) := by
   sorry
 
 /-- The source-facing closure condition for a full triangulated subcategory:
@@ -443,21 +472,6 @@ def fullSubcategoryDistinguishedTriangles
     (P : ObjectProperty C) [P.IsTriangulated] :
     Set (Triangle P.FullSubcategory) :=
   Set.preimage P.ι.mapTriangle.obj (distTriang C)
-
-/-- A full subcategory satisfying the canonical object-property axioms is
-pretriangulated. -/
-noncomputable def full_subcategory_pretriangulated
-    (P : ObjectProperty C) [P.IsTriangulated] :
-    Pretriangulated P.FullSubcategory := by
-  infer_instance
-
-/-- A full subcategory of a triangulated category satisfying the same axioms
-is triangulated. -/
-noncomputable def full_subcategory_triangulated
-    (P : ObjectProperty C) [P.IsTriangulated]
-    [CategoryTheory.IsTriangulated C] :
-    CategoryTheory.IsTriangulated P.FullSubcategory := by
-  infer_instance
 
 end ProductsAndIdempotents
 
@@ -526,7 +540,10 @@ variable {D : Type u'} [Category.{v'} D] [AdditiveCategory D]
 
 /-- Exact postcomposition carries a δ-functor to a δ-functor. -/
 theorem exact_postcomposition_deltaFunctor
-    (F : A ⥤ D) (δ : DeltaFunctor F) (K : D ⥤ D)
+    {E : Type w} [Category.{v'} E] [AdditiveCategory E]
+    [HasShift E ℤ] [∀ n : ℤ, (shiftFunctor E n).Additive]
+    [Pretriangulated E] [CategoryTheory.IsTriangulated E]
+    (F : A ⥤ D) (δ : DeltaFunctor F) (K : D ⥤ E)
     [K.CommShift ℤ] [K.IsTriangulated] :
     Nonempty (DeltaFunctor (F ⋙ K)) := by
   sorry
@@ -554,7 +571,7 @@ theorem homological_compose_deltaFunctor
     [H.IsHomological]
     (hvanish : ∀ X : A,
       IsZero ((homologicalDegree H (-1 : ℤ)).obj (G.obj X))) :
-    CohomologicalDeltaFunctor A B := by
+    Nonempty (CohomologicalDeltaFunctor A B) := by
   sorry
 
 end DeltaFunctors
@@ -575,7 +592,11 @@ structure ThreeByThreeDiagram
     {X Y X' Y' : C} (f : X ⟶ Y) (f' : X' ⟶ Y')
     (a : X ⟶ X') (b : Y ⟶ Y')
     (comm : f ≫ b = a ≫ f') where
-  X'' Y'' Z Z' Z'' : C
+  X'' : C
+  Y'' : C
+  Z : C
+  Z' : C
+  Z'' : C
   g : Y ⟶ Z
   h : Z ⟶ X⟦(1 : ℤ)⟧
   g' : Y' ⟶ Z'
@@ -601,10 +622,10 @@ structure ThreeByThreeDiagram
   col₃ : Triangle.mk (a⟦(1 : ℤ)⟧') (a'⟦(1 : ℤ)⟧')
       (a''⟦(1 : ℤ)⟧') ∈ distTriang C
   comm₀₁ : g ≫ c = b ≫ g'
-  comm₀₂ : h ≫ a'⟦(1 : ℤ)⟧' = c ≫ h'
+  comm₀₂ : h ≫ a⟦(1 : ℤ)⟧' = c ≫ h'
   comm₁₀ : f' ≫ b' = a' ≫ f''
   comm₁₁ : g' ≫ c' = b' ≫ g''
-  comm₁₂ : h' ≫ a''⟦(1 : ℤ)⟧' = c' ≫ h''
+  comm₁₂ : h' ≫ a'⟦(1 : ℤ)⟧' = c' ≫ h''
   comm₂₀ : f'' ≫ b'' = a'' ≫ f⟦(1 : ℤ)⟧'
   comm₂₁ : g'' ≫ c'' = b'' ≫ g⟦(1 : ℤ)⟧'
   anti₂₂ : h'' ≫ a''⟦(1 : ℤ)⟧' = -(c'' ≫ h⟦(1 : ℤ)⟧')

@@ -1,8 +1,8 @@
-import Formalization.Books.Modules.Unit08.LocallyGenerated
+import Formalization.Books.Modules.Unit03.AbelianCategory
 import Formalization.Books.Topology.Unit02.BasicNotions
+import Formalization.Books.Sheaves.Unit22.OpenImmersions
 import Mathlib.Algebra.Category.ModuleCat.Presheaf.ColimitFunctor
 import Mathlib.Algebra.Category.ModuleCat.Sheaf.Quasicoherent
-import Mathlib.CategoryTheory.Limits.Connected
 
 /-!
 # Sheaves of Modules, Chapter 10: Quasi-coherent modules
@@ -18,9 +18,6 @@ namespace Formalization.Books.Modules.Unit10
 
 open CategoryTheory CategoryTheory.Limits Opposite TopologicalSpace
 open Formalization.Books.Modules.Unit03
-open Formalization.Books.Modules.Unit04
-open Formalization.Books.Modules.Unit08
-open Formalization.Books.Sheaves.Unit10
 open Formalization.Books.Sheaves.Unit22
 open Formalization.Books.Topology.Unit02
 open scoped BigOperators
@@ -28,6 +25,8 @@ open scoped BigOperators
 universe v
 
 noncomputable section
+
+local notation "Mod" => Formalization.Books.Sheaves.Unit10.Mod
 
 /-! ## The local definition -/
 

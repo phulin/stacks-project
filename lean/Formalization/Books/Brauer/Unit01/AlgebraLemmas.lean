@@ -2,6 +2,7 @@ import Formalization.Books.Brauer.Unit01.Wedderburn
 import Mathlib.Algebra.Field.IsField
 import Mathlib.Algebra.Algebra.Subalgebra.Centralizer
 import Mathlib.Algebra.Central.Matrix
+import Mathlib.Algebra.Central.End
 import Mathlib.Algebra.Central.TensorProduct
 import Mathlib.Algebra.Module.LinearMap.Basic
 import Mathlib.Data.Matrix.Basis
@@ -9,7 +10,10 @@ import Mathlib.LinearAlgebra.Matrix.Ideal
 import Mathlib.LinearAlgebra.Matrix.Action
 import Mathlib.LinearAlgebra.Matrix.FiniteDimensional
 import Mathlib.LinearAlgebra.TensorProduct.Basic
+import Mathlib.LinearAlgebra.TensorProduct.RightExactness
 import Mathlib.RingTheory.Morita.Matrix
+import Mathlib.RingTheory.Artinian.Instances
+import Mathlib.RingTheory.HopkinsLevitzki
 import Mathlib.RingTheory.SimpleRing.Field
 import Mathlib.RingTheory.SimpleModule.Isotypic
 import Mathlib.RingTheory.TensorProduct.Basic
@@ -81,7 +85,78 @@ theorem centralizer_tensor_product (k A A' : Type*) [Field k]
       (Algebra.TensorProduct.map
         (Subalgebra.centralizer k (B : Set A)).val
         (Subalgebra.centralizer k (B' : Set A')).val).range := by
-  sorry
+  classical
+  have h_inter (P : Submodule k A) (Q : Submodule k A') :
+      LinearMap.range (TensorProduct.map P.subtype (LinearMap.id : A' →ₗ[k] A')) ⊓
+          LinearMap.range (TensorProduct.map (LinearMap.id : A →ₗ[k] A) Q.subtype) =
+        LinearMap.range (TensorProduct.map P.subtype Q.subtype) := by
+    apply le_antisymm
+    · rintro x ⟨hxP, hxQ⟩
+      obtain ⟨z, hz⟩ := hxQ
+      have hx0 : (LinearMap.rTensor A' P.mkQ) x = 0 := by
+        obtain ⟨y, hy⟩ := hxP
+        rw [← hy]
+        change (LinearMap.rTensor A' P.mkQ)
+            ((LinearMap.rTensor A' P.subtype) y) = 0
+        have hzero : P.mkQ.comp P.subtype = 0 := by
+          ext y
+          simp
+        have h := congrArg (fun f => f y)
+          (LinearMap.rTensor_comp (M := A') P.mkQ P.subtype)
+        rw [LinearMap.comp_apply, hzero] at h
+        simpa using h.symm
+      have hy0 : (LinearMap.rTensor Q P.mkQ) z = 0 := by
+        have hmap := hx0
+        rw [← hz] at hmap
+        change (LinearMap.rTensor A' P.mkQ)
+            ((LinearMap.lTensor A Q.subtype) z) = 0 at hmap
+        have hmap' : (TensorProduct.map P.mkQ Q.subtype) z = 0 := by
+          have h := congrArg (fun f => f z)
+            (LinearMap.rTensor_comp_lTensor A P.mkQ Q.subtype)
+          rw [LinearMap.comp_apply, hmap] at h
+          exact h.symm
+        have hcomp :
+            (LinearMap.lTensor (A ⧸ P) Q.subtype)
+                ((LinearMap.rTensor Q P.mkQ) z) = 0 := by
+          have h := congrArg (fun f => f z)
+            (LinearMap.lTensor_comp_rTensor A P.mkQ Q.subtype)
+          rw [LinearMap.comp_apply, hmap'] at h
+          exact h
+        have hinj : Function.Injective (LinearMap.lTensor (A ⧸ P) Q.subtype) :=
+          Module.Flat.lTensor_preserves_injective_linearMap (M := A ⧸ P)
+            Q.subtype Q.subtype_injective
+        apply hinj
+        simpa using hcomp
+      have hzrange : z ∈ LinearMap.range (LinearMap.rTensor Q P.subtype) := by
+        rw [← rTensor_mkQ Q P]
+        exact hy0
+      obtain ⟨w, hw⟩ := hzrange
+      refine ⟨w, ?_⟩
+      calc
+        (TensorProduct.map P.subtype Q.subtype) w =
+            (LinearMap.lTensor A Q.subtype)
+              ((LinearMap.rTensor (↥Q) P.subtype) w) := by
+                have h := congrArg (fun f => f w)
+                  (LinearMap.lTensor_comp_rTensor (↥P) P.subtype Q.subtype)
+                exact h.symm
+        _ = (LinearMap.lTensor A Q.subtype) z := by rw [hw]
+        _ = x := hz
+    · rintro x ⟨z, rfl⟩
+      constructor
+      · refine ⟨LinearMap.lTensor (↥P) Q.subtype z, ?_⟩
+        exact congrArg (fun f => f z)
+          (LinearMap.rTensor_comp_lTensor (↥P) P.subtype Q.subtype)
+      · refine ⟨LinearMap.rTensor (↥Q) P.subtype z, ?_⟩
+        exact congrArg (fun f => f z)
+          (LinearMap.lTensor_comp_rTensor (↥P) P.subtype Q.subtype)
+  rw [Algebra.TensorProduct.map_range, Subalgebra.centralizer_coe_sup,
+    Subalgebra.range_comp_val, Subalgebra.range_comp_val,
+    Subalgebra.centralizer_coe_map_includeLeft_eq_center_tensorProduct,
+    Subalgebra.centralizer_coe_map_includeRight_eq_center_tensorProduct]
+  apply Subalgebra.toSubmodule_injective
+  exact h_inter
+    (Subalgebra.centralizer k (B : Set A)).toSubmodule
+    (Subalgebra.centralizer k (B' : Set A')).toSubmodule
 
 theorem center_finite_simple_is_finite_field_extension (k A : Type*) [Field k]
     [Ring A] [Algebra k A] [FiniteDimensional k A] [IsSimpleRing A] :
@@ -169,7 +244,45 @@ theorem matrix_standard_module_end (K : Type*) (n : ℕ) [DivisionRing K]
     [NeZero n] :
     Nonempty
       (Module.End (Matrix (Fin n) (Fin n) K) (Fin n → K) ≃+* Kᵐᵒᵖ) := by
-  sorry
+  classical
+  let e := ModuleCat.matrixEquivalence K (i := Classical.arbitrary (Fin n))
+  let f : Module.End K K →+* Module.End (Matrix (Fin n) (Fin n) K) (Fin n → K) :=
+    { toFun := fun x => (e.functor.map (ModuleCat.ofHom x)).hom
+      map_zero' := by
+        ext
+        rfl
+      map_add' := by
+        intro x y
+        ext v
+        rfl
+      map_one' := by
+        rfl
+      map_mul' := by
+        intro x y
+        rfl }
+  let ef : Module.End K K ≃+* Module.End (Matrix (Fin n) (Fin n) K) (Fin n → K) :=
+    RingEquiv.ofBijective f (by
+      constructor
+      · intro x y h
+        have h' : e.functor.map (ModuleCat.ofHom x) =
+            e.functor.map (ModuleCat.ofHom y) := by
+          apply ModuleCat.hom_ext
+          exact h
+        have hxy := e.functor.map_injective h'
+        exact congrArg ModuleCat.Hom.hom hxy
+      · intro y
+        obtain ⟨x, hx⟩ := e.functor.map_surjective
+          (ModuleCat.ofHom (X := e.functor.obj (ModuleCat.of K K))
+            (Y := e.functor.obj (ModuleCat.of K K)) y)
+        refine ⟨x.hom, ?_⟩
+        have hx' : x = ModuleCat.ofHom x.hom := by
+          apply ModuleCat.hom_ext
+          rfl
+        rw [hx'] at hx
+        have hxy := congrArg ModuleCat.Hom.hom hx
+        change (e.functor.map (ModuleCat.ofHom x.hom)).hom = y at hxy
+        exact hxy)
+  exact ⟨ef.symm.trans (RingEquiv.moduleEndSelf K).symm⟩
 
 end MatrixAlgebras
 
@@ -225,14 +338,68 @@ theorem finite_simple_algebra_modules_classified_by_dimension
     [Module.Finite A M] [AddCommGroup N] [Module A N] [Module k N]
     [IsScalarTower k A N] [Module.Finite A N] :
     Nonempty (M ≃ₗ[A] N) ↔ Module.finrank k M = Module.finrank k N := by
-  sorry
+  classical
+  letI : Module.Finite k M := Module.Finite.trans A M
+  letI : Module.Finite k N := Module.Finite.trans A N
+  obtain ⟨S, hS⟩ := finite_algebra_has_simple_submodule k A
+  letI : IsSimpleModule A S := hS
+  letI : Nontrivial S := IsSimpleModule.nontrivial A S
+  obtain ⟨s, hs⟩ := exists_ne (0 : S)
+  letI : Module.Finite A S :=
+    Module.Finite.of_surjective (LinearMap.toSpanSingleton A S s)
+      (IsSimpleModule.toSpanSingleton_surjective A hs)
+  letI : Module.Finite k S := Module.Finite.trans A S
+  constructor
+  · rintro ⟨e⟩
+    exact (e.restrictScalars k).finrank_eq
+  · intro h
+    obtain ⟨m, ⟨eM⟩⟩ := finite_module_is_direct_sum_of_simple k A M S
+    obtain ⟨n, ⟨eN⟩⟩ := finite_module_is_direct_sum_of_simple k A N S
+    have hM : Module.finrank k M = m * Module.finrank k S := by
+      calc
+        Module.finrank k M = Module.finrank k (Fin m → S) :=
+          (eM.restrictScalars k).finrank_eq
+        _ = m * Module.finrank k S := by simp [Module.finrank_pi_fintype]
+    have hN : Module.finrank k N = n * Module.finrank k S := by
+      calc
+        Module.finrank k N = Module.finrank k (Fin n → S) :=
+          (eN.restrictScalars k).finrank_eq
+        _ = n * Module.finrank k S := by simp [Module.finrank_pi_fintype]
+    have h' : m * Module.finrank k S = n * Module.finrank k S := by omega
+    have hmn : m = n :=
+      (Nat.mul_right_cancel (Module.finrank_pos (R := k) (M := S))) h'
+    subst n
+    exact ⟨eM.trans eN.symm⟩
 
 theorem simple_module_double_commutant (k A M : Type*) [Field k] [Ring A]
     [Algebra k A] [FiniteDimensional k A] [IsSimpleRing A]
     [AddCommGroup M] [Module A M] [IsSimpleModule A M]
     [Module k M] [IsScalarTower k A M] :
     Nonempty (A ≃ₐ[k] Module.End (Module.End A M) M) := by
-  sorry
+  classical
+  letI : Nontrivial M := IsSimpleModule.nontrivial A M
+  letI : Module.Finite k M := simple_module_over_finite_algebra_is_finite_dimensional k A M
+  letI : Module.Finite (Module.End A M) M :=
+    Module.Finite.of_restrictScalars_finite k (Module.End A M) M
+  have hAnn : Module.annihilator A M = ⊥ := by
+    have h := (isSimpleRing_iff_isTwoSided_imp.mp (inferInstance : IsSimpleRing A)).2
+      (Module.annihilator A M) inferInstance
+    exact h.resolve_right (by
+      intro htop
+      exact (not_subsingleton M) (Module.annihilator_eq_top_iff.mp htop))
+  letI : FaithfulSMul A M := Module.annihilator_eq_bot.mp hAnn
+  let f : A →ₐ[k] Module.End (Module.End A M) M :=
+    { toRingHom := Module.toModuleEnd (Module.End A M) (S := A) M
+      commutes' := by
+        intro r
+        ext x
+        change (algebraMap k A r) • x = r • x
+        exact IsScalarTower.algebraMap_smul A r x }
+  have hbij : Function.Bijective f := by
+    constructor
+    · exact (Module.toModuleEnd (Module.End A M) (S := A) M).injective
+    · exact Module.Finite.toModuleEnd_moduleEnd_surjective
+  exact ⟨AlgEquiv.ofBijective f hbij⟩
 
 theorem simple_module_center_and_dimension (k A M : Type*) [Field k]
     [Ring A] [Algebra k A] [FiniteDimensional k A] [IsSimpleRing A]
@@ -242,7 +409,169 @@ theorem simple_module_center_and_dimension (k A M : Type*) [Field k]
       FiniteDimensional k (Module.End A M) ∧
       Module.finrank k A * Module.finrank k (Module.End A M) =
         Module.finrank k M ^ 2 := by
-  sorry
+  classical
+  letI : Nontrivial M := IsSimpleModule.nontrivial A M
+  letI : Module.Finite k M :=
+    simple_module_over_finite_algebra_is_finite_dimensional k A M
+  letI : Module (Module.End A M) M :=
+    { smul := fun f m => f m
+      smul_zero := by intro f; exact f.map_zero
+      smul_add := by intro f x y; exact f.map_add x y
+      one_smul := by intro m; rfl
+      mul_smul := by intro f g m; rfl
+      zero_smul := by intro m; rfl
+      add_smul := by intro f g m; rfl }
+  letI : IsArtinianRing (Module.End A M) := inferInstance
+  letI : Module.Finite (Module.End A M) M :=
+    Module.Finite.of_restrictScalars_finite k (Module.End A M) M
+  letI : Module.Free (Module.End A M) M :=
+    Module.Free.of_divisionRing (Module.End A M) M
+  letI : ∀ n : ℕ, IsArtinian (Module.End A M) (Fin n → Module.End A M) := by
+    intro n
+    apply ((IsArtinianRing.tfae (Module.End A M) (Fin n → Module.End A M)).out 0 2).mp
+    infer_instance
+  letI : StrongRankCondition (Module.End A M) :=
+    StrongRankCondition.of_isArtinian (Module.End A M)
+  let f : Module.End A M →ₗ[k] Module.End k M :=
+    { toFun := fun d => d.restrictScalars k
+      map_add' := by
+        intro x y
+        ext m
+        rfl
+      map_smul' := by
+        intro r d
+        ext m
+        rfl }
+  letI : FiniteDimensional k (Module.End A M) :=
+    FiniteDimensional.of_injective f (by
+      intro x y h
+      exact LinearMap.restrictScalars_injective k h)
+  let e : A ≃ₐ[k] Module.End (Module.End A M) M :=
+    Classical.choice (simple_module_double_commutant k A M)
+  let φ : Subalgebra.center k (Module.End A M) →ₐ[k]
+      Subalgebra.center k (Module.End (Module.End A M) M) :=
+    { toFun := fun c =>
+        ⟨Module.End.smulLeft (c : Module.End A M) c.property, by
+          rw [Subalgebra.mem_center_iff]
+          intro g
+          ext m
+          change g ((c : Module.End A M) • m) =
+            (c : Module.End A M) • g m
+          exact g.map_smul (c : Module.End A M) m⟩
+      map_one' := by
+        apply Subtype.ext
+        ext m
+        simp [Module.End.smulLeft]
+      map_mul' := by
+        intro c d
+        apply Subtype.ext
+        ext m
+        simp [Module.End.smulLeft, Module.End.mul_eq_comp]
+      map_zero' := by
+        apply Subtype.ext
+        ext m
+        simp [Module.End.smulLeft]
+      map_add' := by
+        intro c d
+        apply Subtype.ext
+        ext m
+        simp [Module.End.smulLeft]
+      commutes' := by
+        intro r
+        apply Subtype.ext
+        ext m
+        simp [Module.End.smulLeft] }
+  let ψ : Subalgebra.center k A →ₐ[k]
+      Subalgebra.center k (Module.End (Module.End A M) M) :=
+    { toFun := fun a =>
+        ⟨e (a : A), by
+          rw [Subalgebra.mem_center_iff]
+          intro g
+          obtain ⟨b, rfl⟩ := e.surjective g
+          have h := (Subalgebra.mem_center_iff.mp a.property) b
+          simpa using congrArg e h⟩
+      map_one' := by
+        apply Subtype.ext
+        simp
+      map_mul' := by
+        intro a b
+        apply Subtype.ext
+        simp
+      map_zero' := by
+        apply Subtype.ext
+        simp
+      map_add' := by
+        intro a b
+        apply Subtype.ext
+        simp
+      commutes' := by
+        intro r
+        apply Subtype.ext
+        exact e.commutes r }
+  have hφ : Function.Bijective φ := by
+    constructor
+    · intro c d h
+      apply Subtype.ext
+      have hcd : (c : Module.End A M) = (d : Module.End A M) :=
+        FaithfulSMul.eq_of_smul_eq_smul (M := Module.End A M) (α := M) (by
+          intro m
+          have hm := congrArg (fun g : Module.End (Module.End A M) M => g m)
+            (congrArg Subtype.val h)
+          simpa [φ, Module.End.smulLeft] using hm)
+      exact hcd
+    · intro z
+      obtain ⟨a, ha, hza⟩ :=
+        (Module.End.mem_subalgebraCenter_iff (R := Module.End A M) (S := k)
+          (M := M)).mp z.property
+      let c : Subalgebra.center k (Module.End A M) := ⟨a, ha⟩
+      refine ⟨c, ?_⟩
+      apply Subtype.ext
+      simpa [φ, c] using hza.symm
+  have hψ : Function.Bijective ψ := by
+    constructor
+    · intro a b h
+      apply Subtype.ext
+      have h' : e (a : A) = e (b : A) := by
+        simpa [ψ] using congrArg Subtype.val h
+      exact e.injective h'
+    · intro z
+      have hpre : e.symm (z : Module.End (Module.End A M) M) ∈
+          Subalgebra.center k A := by
+        rw [Subalgebra.mem_center_iff]
+        intro b
+        obtain ⟨bE, hbE⟩ := e.symm.surjective b
+        have hz := (Subalgebra.mem_center_iff.mp z.property) bE
+        have hz' := congrArg e.symm hz
+        simpa [hbE] using hz'
+      let a : Subalgebra.center k A :=
+        ⟨e.symm (z : Module.End (Module.End A M) M), hpre⟩
+      refine ⟨a, ?_⟩
+      apply Subtype.ext
+      change e (e.symm (z : Module.End (Module.End A M) M)) =
+        (z : Module.End (Module.End A M) M)
+      exact e.apply_symm_apply _
+  let φe := AlgEquiv.ofBijective φ hφ
+  let ψe := AlgEquiv.ofBijective ψ hψ
+  have heq : Module.finrank k A =
+      Module.finrank k (Module.End (Module.End A M) M) :=
+    e.toLinearEquiv.finrank_eq
+  have hdim : Module.finrank k (Module.End (Module.End A M) M) =
+      Module.finrank (Module.End A M) M * Module.finrank k M := by
+    rw [Module.finrank_linearMap]
+  have htower : Module.finrank k (Module.End A M) *
+      Module.finrank (Module.End A M) M = Module.finrank k M :=
+    Module.finrank_mul_finrank k (Module.End A M) M
+  refine ⟨⟨ψe.trans φe.symm⟩, inferInstance, ?_⟩
+  calc
+    Module.finrank k A * Module.finrank k (Module.End A M) =
+        Module.finrank k (Module.End (Module.End A M) M) *
+          Module.finrank k (Module.End A M) := by rw [heq]
+    _ = (Module.finrank (Module.End A M) M * Module.finrank k M) *
+          Module.finrank k (Module.End A M) := by rw [hdim]
+    _ = Module.finrank k M *
+          (Module.finrank k (Module.End A M) *
+            Module.finrank (Module.End A M) M) := by ring
+    _ = Module.finrank k M ^ 2 := by rw [htower]; ring
 
 theorem simple_module_end_is_finite (k A M : Type*) [Field k] [Ring A]
     [Algebra k A] [FiniteDimensional k A] [IsSimpleRing A]

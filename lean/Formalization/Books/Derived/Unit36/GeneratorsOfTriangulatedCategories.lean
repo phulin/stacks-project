@@ -144,6 +144,7 @@ theorem generatedSubcategory_is_smallest (E : C) :
       (generatedSubcategory E).IsTriangulated ∧
       ObjectProperty.singleton E ≤ generatedSubcategory E ∧
       ∀ P : ObjectProperty C,
+        ObjectProperty.singleton E ≤ P →
         P.IsClosedUnderIsomorphisms → P.IsTriangulated → IsSaturated P →
           generatedSubcategory E ≤ P := by
   sorry

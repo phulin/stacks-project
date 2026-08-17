@@ -7,6 +7,10 @@ import Mathlib.Algebra.Order.Antidiag.FinsuppEquiv
 import Mathlib.Data.Nat.Choose.Basic
 import Mathlib.FieldTheory.IsAlgClosed.Basic
 import Mathlib.LinearAlgebra.DirectSum.Finite
+import Mathlib.LinearAlgebra.Dimension.RankNullity
+import Mathlib.LinearAlgebra.Dimension.Torsion.Basic
+import Mathlib.LinearAlgebra.Dimension.Torsion.Finite
+import Mathlib.LinearAlgebra.Isomorphisms
 import Mathlib.RingTheory.Ideal.Quotient.Noetherian
 import Mathlib.RingTheory.Finiteness.Basic
 import Mathlib.RingTheory.Finiteness.Prod
@@ -26,6 +30,7 @@ noncomputable section
 universe u v
 
 open CategoryTheory
+open scoped nonZeroDivisors
 
 namespace Formalization.Books.Exercises.Unit26
 
@@ -830,7 +835,883 @@ Euler–Poincaré functions on the nodal ring. -/
 theorem eulerPoincareFunction_node_classification
     (k : Type u) [Field k] [IsAlgClosed k] :
     Function.Bijective (nodeEulerParameters (k := k)) := by
-  sorry
+  classical
+  let A := nodeRing k
+  let B := Polynomial k
+  let q0 : MvPolynomial (Fin 2) k →+* MvPolynomial (Fin 1) k :=
+    MvPolynomial.eval₂Hom MvPolynomial.C ![0, MvPolynomial.X 0]
+  let r0 : MvPolynomial (Fin 1) k →+* MvPolynomial (Fin 2) k :=
+    MvPolynomial.eval₂Hom MvPolynomial.C ![MvPolynomial.X 1]
+  have hq0r0 : q0.comp r0 = RingHom.id (MvPolynomial (Fin 1) k) := by
+    apply MvPolynomial.ringHom_ext'
+    · ext r
+      simp [q0, r0]
+    · intro i
+      fin_cases i <;> simp [q0, r0]
+  have hq0r0_apply (p : MvPolynomial (Fin 1) k) :
+      q0 (r0 p) = p := by
+    simpa using RingHom.congr_fun hq0r0 p
+  let e1 : MvPolynomial (Fin 2) k ≃+* Polynomial (MvPolynomial (Fin 1) k) :=
+    MvPolynomial.finSuccEquiv k 1
+  have hq0 : q0 =
+      (Polynomial.evalRingHom (0 : MvPolynomial (Fin 1) k)).comp e1.toRingHom := by
+    apply MvPolynomial.ringHom_ext
+    · intro r
+      simp [q0, e1, MvPolynomial.finSuccEquiv_apply]
+    · intro i
+      simp only [q0, MvPolynomial.eval₂Hom_X', RingHom.comp_apply]
+      fin_cases i
+      · change (0 : MvPolynomial (Fin 1) k) =
+          Polynomial.eval 0 (e1 (MvPolynomial.X 0))
+        rw [show e1 (MvPolynomial.X 0) = Polynomial.X by
+          simpa [e1] using
+            (MvPolynomial.finSuccEquiv_X_zero (R := k) (n := 1))]
+        simp
+      · change MvPolynomial.X 0 =
+          Polynomial.eval 0 (e1 (MvPolynomial.X 1))
+        rw [show e1 (MvPolynomial.X (1 : Fin 2)) =
+          Polynomial.C (MvPolynomial.X (0 : Fin 1)) by
+            simpa [e1] using
+              (MvPolynomial.finSuccEquiv_X_succ (R := k) (n := 1) (j := 0))]
+        simp
+  have hker0 : RingHom.ker q0 = Ideal.span {MvPolynomial.X 0} := by
+    rw [hq0, ← RingHom.comap_ker, Polynomial.ker_evalRingHom]
+    change (Ideal.span {Polynomial.X - Polynomial.C 0}).comap
+        (e1 : MvPolynomial (Fin 2) k →+* Polynomial (MvPolynomial (Fin 1) k)) = _
+    rw [show (Ideal.span {Polynomial.X - Polynomial.C 0}).comap
+          (e1 : MvPolynomial (Fin 2) k →+* Polynomial (MvPolynomial (Fin 1) k)) =
+          (Ideal.span {Polynomial.X - Polynomial.C 0}).map e1.symm from
+        (Ideal.map_symm e1).symm, Ideal.map_span]
+    have he1symm :
+        e1.symm (Polynomial.X : Polynomial (MvPolynomial (Fin 1) k)) =
+          MvPolynomial.X 0 := by
+      apply e1.injective
+      simp [e1, MvPolynomial.finSuccEquiv_apply]
+    simp [he1symm]
+  let e0a : MvPolynomial (Fin 1) k ≃+* Polynomial (MvPolynomial (Fin 0) k) := by
+    simpa using (MvPolynomial.finSuccEquiv k 0).toRingEquiv
+  let eempty : MvPolynomial (Fin 0) k ≃+* k :=
+    MvPolynomial.isEmptyRingEquiv k (Fin 0)
+  let e0 : MvPolynomial (Fin 1) k ≃+* Polynomial k :=
+    e0a.trans (Polynomial.mapEquiv eempty)
+  let qY0 : MvPolynomial (Fin 2) k →+* Polynomial k :=
+    e0.toRingHom.comp q0
+  have hkerY0 : RingHom.ker qY0 = Ideal.span {MvPolynomial.X 0} := by
+    change RingHom.ker (e0.toRingHom.comp q0) = Ideal.span {MvPolynomial.X 0}
+    rw [RingHom.ker_comp_of_injective q0 e0.injective, hker0]
+  have hsurjY0 : Function.Surjective qY0 := by
+    intro q
+    refine ⟨r0 (e0.symm q), ?_⟩
+    simp [qY0, hq0r0_apply]
+  have hqY0_XY : qY0 (MvPolynomial.X 0 * MvPolynomial.X 1) = 0 := by
+    simp [qY0, q0]
+  have hle : nodePolynomialIdeal k ≤ RingHom.ker qY0 := by
+    rw [nodePolynomialIdeal]
+    exact Ideal.span_le.2 (by simpa [RingHom.mem_ker] using hqY0_XY)
+  let qY : A →+* Polynomial k :=
+    Ideal.Quotient.lift (nodePolynomialIdeal k) qY0 hle
+  have hqYmk (p : MvPolynomial (Fin 2) k) :
+      qY (Ideal.Quotient.mk (nodePolynomialIdeal k) p) = qY0 p := by
+    change qY0 p = qY0 p
+    rfl
+  have hkerY : RingHom.ker qY = nodeXIdeal k := by
+    apply le_antisymm
+    · intro a ha
+      obtain ⟨p, rfl⟩ := Ideal.Quotient.mk_surjective a
+      change qY (Ideal.Quotient.mk (nodePolynomialIdeal k) p) = 0 at ha
+      rw [hqYmk] at ha
+      have hp : p ∈ Ideal.span {MvPolynomial.X 0} := by
+        rw [← hkerY0]
+        exact ha
+      rcases Ideal.mem_span_singleton'.mp hp with ⟨r, hr⟩
+      rw [nodeXIdeal]
+      apply Ideal.mem_span_singleton'.mpr
+      refine ⟨Ideal.Quotient.mk (nodePolynomialIdeal k) r, ?_⟩
+      exact congrArg (Ideal.Quotient.mk (nodePolynomialIdeal k)) hr
+    · rw [nodeXIdeal]
+      apply Ideal.span_le.2
+      intro z hz
+      rcases hz with rfl
+      change qY (Ideal.Quotient.mk (nodePolynomialIdeal k) (MvPolynomial.X 0)) = 0
+      rw [hqYmk]
+      simp [qY0, q0]
+  let sY : Polynomial k →+* A :=
+    (Ideal.Quotient.mk (nodePolynomialIdeal k)).comp
+      (r0.comp e0.symm.toRingHom)
+  have hqYsY : qY.comp sY = RingHom.id (Polynomial k) := by
+    apply RingHom.ext
+    intro p
+    change qY (Ideal.Quotient.mk (nodePolynomialIdeal k)
+      (r0 (e0.symm p))) = p
+    rw [hqYmk]
+    change e0 (q0 (r0 (e0.symm p))) = p
+    rw [hq0r0_apply, e0.apply_symm_apply]
+  let swap : MvPolynomial (Fin 2) k ≃ₐ[k] MvPolynomial (Fin 2) k :=
+    MvPolynomial.renameEquiv k (Equiv.swap 0 1)
+  let qX0 : MvPolynomial (Fin 2) k →+* Polynomial k :=
+    qY0.comp swap.toRingHom
+  have hswapker :
+      (Ideal.span {MvPolynomial.X 0}).comap swap.toRingHom =
+        Ideal.span {MvPolynomial.X 1} := by
+    change (Ideal.span {MvPolynomial.X 0}).comap
+        (swap : MvPolynomial (Fin 2) k →+* MvPolynomial (Fin 2) k) = _
+    rw [show (Ideal.span {MvPolynomial.X 0}).comap
+          (swap : MvPolynomial (Fin 2) k →+* MvPolynomial (Fin 2) k) =
+          (Ideal.span {MvPolynomial.X 0}).map swap.symm.toRingEquiv from
+        (Ideal.map_symm swap.toRingEquiv).symm, Ideal.map_span]
+    congr 1
+    simp [swap, MvPolynomial.renameEquiv_apply]
+  have hkerX0 : RingHom.ker qX0 = Ideal.span {MvPolynomial.X 1} := by
+    change RingHom.ker (qY0.comp swap.toRingHom) = _
+    rw [← RingHom.comap_ker, hkerY0]
+    exact hswapker
+  let sX0 : Polynomial k →+* MvPolynomial (Fin 2) k :=
+    swap.symm.toRingHom.comp (r0.comp e0.symm.toRingHom)
+  have hqX0sX0 : qX0.comp sX0 = RingHom.id (Polynomial k) := by
+    apply RingHom.ext
+    intro p
+    change qY0 (swap (swap.symm (r0 (e0.symm p)))) = p
+    rw [swap.apply_symm_apply]
+    change e0 (q0 (r0 (e0.symm p))) = p
+    rw [hq0r0_apply, e0.apply_symm_apply]
+  have hsurjX0 : Function.Surjective qX0 := by
+    intro p
+    refine ⟨sX0 p, ?_⟩
+    exact RingHom.congr_fun hqX0sX0 p
+  have hqX0_XY : qX0 (MvPolynomial.X 0 * MvPolynomial.X 1) = 0 := by
+    have hx0 : swap (MvPolynomial.X (0 : Fin 2)) = MvPolynomial.X 1 := by
+      simp [swap, MvPolynomial.renameEquiv_apply]
+    have hx1 : swap (MvPolynomial.X (1 : Fin 2)) = MvPolynomial.X 0 := by
+      simp [swap, MvPolynomial.renameEquiv_apply]
+    calc
+      qX0 (MvPolynomial.X 0 * MvPolynomial.X 1) =
+          qY0 (swap (MvPolynomial.X 0 * MvPolynomial.X 1)) := by rfl
+      _ = qY0 (MvPolynomial.X 1 * MvPolynomial.X 0) := by
+        rw [map_mul, hx0, hx1]
+      _ = qY0 (MvPolynomial.X 0 * MvPolynomial.X 1) := by rw [mul_comm]
+      _ = 0 := hqY0_XY
+  have hleX : nodePolynomialIdeal k ≤ RingHom.ker qX0 := by
+    rw [nodePolynomialIdeal]
+    exact Ideal.span_le.2 (by simpa [RingHom.mem_ker] using hqX0_XY)
+  let qX : A →+* Polynomial k :=
+    Ideal.Quotient.lift (nodePolynomialIdeal k) qX0 hleX
+  have hqXmk (p : MvPolynomial (Fin 2) k) :
+      qX (Ideal.Quotient.mk (nodePolynomialIdeal k) p) = qX0 p := by
+    change qX0 p = qX0 p
+    rfl
+  have hkerX : RingHom.ker qX = nodeYIdeal k := by
+    apply le_antisymm
+    · intro a ha
+      obtain ⟨p, rfl⟩ := Ideal.Quotient.mk_surjective a
+      change qX (Ideal.Quotient.mk (nodePolynomialIdeal k) p) = 0 at ha
+      rw [hqXmk] at ha
+      have hp : p ∈ Ideal.span {MvPolynomial.X 1} := by
+        rw [← hkerX0]
+        exact ha
+      rcases Ideal.mem_span_singleton'.mp hp with ⟨r, hr⟩
+      rw [nodeYIdeal]
+      apply Ideal.mem_span_singleton'.mpr
+      refine ⟨Ideal.Quotient.mk (nodePolynomialIdeal k) r, ?_⟩
+      exact congrArg (Ideal.Quotient.mk (nodePolynomialIdeal k)) hr
+    · rw [nodeYIdeal]
+      apply Ideal.span_le.2
+      intro z hz
+      rcases hz with rfl
+      change qX (Ideal.Quotient.mk (nodePolynomialIdeal k) (MvPolynomial.X 1)) = 0
+      rw [hqXmk]
+      have hx : MvPolynomial.X (1 : Fin 2) ∈ RingHom.ker qX0 := by
+        rw [hkerX0]
+        exact Ideal.subset_span (by simp)
+      exact (RingHom.mem_ker.mp hx)
+  let sX : Polynomial k →+* A :=
+    (Ideal.Quotient.mk (nodePolynomialIdeal k)).comp sX0
+  have hqXsX : qX.comp sX = RingHom.id (Polynomial k) := by
+    apply RingHom.ext
+    intro p
+    change qX (Ideal.Quotient.mk (nodePolynomialIdeal k) (sX0 p)) = p
+    rw [hqXmk]
+    exact RingHom.congr_fun hqX0sX0 p
+  let x : A := Ideal.Quotient.mk (nodePolynomialIdeal k) (MvPolynomial.X 0)
+  let y : A := Ideal.Quotient.mk (nodePolynomialIdeal k) (MvPolynomial.X 1)
+  have hxy : x * y = 0 := by
+    change Ideal.Quotient.mk (nodePolynomialIdeal k)
+      (MvPolynomial.X 0 * MvPolynomial.X 1) = 0
+    apply Ideal.Quotient.eq_zero_iff_mem.mpr
+    exact Ideal.subset_span (by simp [nodePolynomialIdeal])
+  have hyx : y * x = 0 := by rw [mul_comm, hxy]
+  have hfiniteCompat :
+      ∀ {Q : Type u} [AddCommGroup Q] [Module A Q] [Module.Finite A Q]
+        [Module B Q] (q : A →+* B)
+        (hcompat : ∀ (a : A) (z : Q), q a • z = a • z),
+        Module.Finite B Q := by
+    intro Q _ _ _ _ q hcompat
+    let f : Q →ₛₗ[q] Q :=
+      { toFun := id
+        map_add' := by intro z w; rfl
+        map_smul' := by
+          intro a z
+          exact (hcompat a z).symm }
+    exact Module.Finite.of_surjective f (by
+      intro z
+      exact ⟨z, rfl⟩)
+  have hkerY_span : RingHom.ker qY = Ideal.span {x} := by
+    simpa [x, nodeXIdeal] using hkerY
+  have hkerX_span : RingHom.ker qX = Ideal.span {y} := by
+    simpa [y, nodeYIdeal] using hkerX
+  have hfiniteBranch :
+      ∀ (M : Type u) [AddCommGroup M] [Module A M] [Module.Finite A M]
+        (a : A) (s : B →+* A) (q : A →+* B)
+        (hker : RingHom.ker q = Ideal.span {a})
+        (hqs : q.comp s = RingHom.id B),
+        let m : M →ₗ[A] M :=
+          { toFun := fun z => a • z
+            map_add' := by intro z w; simp [add_smul]
+            map_smul' := by
+              intro b z
+              simpa only [smul_smul, RingHom.id_apply, mul_comm] }
+        let Q : Type u := M ⧸ LinearMap.range m
+        letI : Module B Q := Module.compHom Q s
+        Module.Finite B Q := by
+    intro M _ _ _ a s q hker hqs
+    let m : M →ₗ[A] M :=
+      { toFun := fun z => a • z
+        map_add' := by intro z w; simp [add_smul]
+        map_smul' := by
+          intro b z
+          simpa only [smul_smul, RingHom.id_apply, mul_comm] }
+    let Q : Type u := M ⧸ LinearMap.range m
+    letI : Module B Q := Module.compHom Q s
+    have hdiff (b : A) : b - s (q b) ∈ Ideal.span {a} := by
+      rw [← hker, RingHom.mem_ker]
+      have h := RingHom.congr_fun hqs (q b)
+      rw [map_sub]
+      have hs : q (s (q b)) = q b := by
+        simpa only [RingHom.comp_apply, RingHom.id_apply] using h
+      rw [hs]
+      simp
+    have hcompat (b : A) (z : Q) : q b • z = b • z := by
+      change s (q b) • z = b • z
+      obtain ⟨c, hc⟩ := Ideal.mem_span_singleton'.mp (hdiff b)
+      have hz : (b - s (q b)) • z = 0 := by
+        obtain ⟨z, rfl⟩ :=
+          (Submodule.Quotient.mk_surjective (LinearMap.range m)) z
+        rw [← Submodule.Quotient.mk_smul]
+        apply (Submodule.Quotient.mk_eq_zero (LinearMap.range m)).mpr
+        rw [← hc]
+        exact ⟨c • z, by simp [m, smul_smul, mul_comm]⟩
+      exact (sub_eq_zero.mp (by simpa only [sub_smul] using hz)).symm
+    simpa [m, Q] using (hfiniteCompat q hcompat)
+  have he0symm_X : e0.symm (Polynomial.X : Polynomial k) =
+      MvPolynomial.X 0 := by
+    apply e0.injective
+    simp [e0, e0a, eempty, MvPolynomial.finSuccEquiv_apply]
+  have hsY_X : sY (Polynomial.X : Polynomial k) = y := by
+    change (Ideal.Quotient.mk (nodePolynomialIdeal k))
+      (r0 (e0.symm Polynomial.X)) = y
+    rw [he0symm_X]
+    simp [y, r0]
+  have hsX_X : sX (Polynomial.X : Polynomial k) = x := by
+    change (Ideal.Quotient.mk (nodePolynomialIdeal k))
+      (sX0 Polynomial.X) = x
+    change (Ideal.Quotient.mk (nodePolynomialIdeal k))
+      (swap.symm (r0 (e0.symm Polynomial.X))) = x
+    rw [he0symm_X]
+    simp [x, r0, swap, MvPolynomial.renameEquiv_apply]
+  let rankYValue :
+      ∀ (M : Type u) [AddCommGroup M] [Module A M], ℕ :=
+    fun M _ _ =>
+      let my : M →ₗ[A] M :=
+        { toFun := fun m => y • m
+          map_add' := by intro m n; simp [add_smul]
+          map_smul' := by
+            intro a m
+            simpa only [smul_smul, RingHom.id_apply, mul_comm] }
+      let Q : Type u := M ⧸ LinearMap.range my
+      @Module.finrank B Q (inferInstance : Semiring B)
+        (inferInstance : AddCommMonoid Q)
+        (Module.compHom Q sX)
+  let rankXValue :
+      ∀ (M : Type u) [AddCommGroup M] [Module A M], ℕ :=
+    fun M _ _ =>
+      let mx : M →ₗ[A] M :=
+        { toFun := fun m => x • m
+          map_add' := by intro m n; simp [add_smul]
+          map_smul' := by
+            intro a m
+            simpa only [smul_smul, RingHom.id_apply, mul_comm] }
+      let Q : Type u := M ⧸ LinearMap.range mx
+      @Module.finrank B Q (inferInstance : Semiring B)
+        (inferInstance : AddCommMonoid Q)
+        (Module.compHom Q sY)
+  have hzero : ∀ (φ : EulerPoincareFunction A),
+      φ (FGModuleCat.of A (Fin 0 → A)) = 0 := by
+    intro φ
+    let Z : Type u := Fin 0 → A
+    letI : Subsingleton Z := by
+      dsimp [Z]
+      infer_instance
+    let F := forget₂ (FGModuleCat A) (ModuleCat A)
+    let S : ShortComplex (FGModuleCat A) :=
+      ShortComplex.mk
+        (FGModuleCat.ofHom (LinearMap.id : Z →ₗ[A] Z))
+        (FGModuleCat.ofHom (0 : Z →ₗ[A] Z)) (by
+          apply FGModuleCat.hom_ext
+          apply LinearMap.ext
+          intro z
+          change (0 : Z) = 0
+          rfl)
+    have hS : S.ShortExact := by
+      apply ShortComplex.ShortExact.mk'
+      · apply (ShortComplex.exact_map_iff_of_faithful S F).1
+        apply (ShortComplex.ShortExact.moduleCat_exact_iff_function_exact (S.map F)).2
+        change Function.Exact (LinearMap.id : Z →ₗ[A] Z) (0 : Z →ₗ[A] Z)
+        intro z
+        constructor
+        · intro _
+          exact ⟨z, by rfl⟩
+        · rintro ⟨z', rfl⟩
+          rfl
+      · apply F.mono_of_mono_map
+        apply (ModuleCat.mono_iff_injective _).2
+        intro x y hxy
+        exact hxy
+      · apply F.epi_of_epi_map
+        apply (ModuleCat.epi_iff_surjective _).2
+        intro z
+        exact ⟨0, by change (0 : Z) = z; exact Subsingleton.elim _ _⟩
+    have h := φ.map_shortExact' S hS
+    have h' : φ (FGModuleCat.of A Z) =
+        φ (FGModuleCat.of A Z) + φ (FGModuleCat.of A Z) := by
+      simpa [S] using h
+    have hz : φ (FGModuleCat.of A Z) = 0 := by omega
+    simpa [Z] using hz
+  have hIso : ∀ (φ : EulerPoincareFunction A)
+      {V W : Type u} [AddCommGroup V] [Module A V]
+      [Module.Finite A V] [AddCommGroup W] [Module A W]
+      [Module.Finite A W] (e : V ≃ₗ[A] W),
+      φ (FGModuleCat.of A V) = φ (FGModuleCat.of A W) := by
+    intro φ V W _ _ _ _ _ _ e
+    let Z : Type u := Fin 0 → A
+    letI : Subsingleton Z := by
+      dsimp [Z]
+      infer_instance
+    let F := forget₂ (FGModuleCat A) (ModuleCat A)
+    let S : ShortComplex (FGModuleCat A) :=
+      ShortComplex.mk
+        (FGModuleCat.ofHom (0 : Z →ₗ[A] V))
+        (FGModuleCat.ofHom e.toLinearMap) (by
+          apply FGModuleCat.hom_ext
+          apply LinearMap.ext
+          intro z
+          change e.toLinearMap (0 : V) = 0
+          simp)
+    have hS : S.ShortExact := by
+      apply ShortComplex.ShortExact.mk'
+      · apply (ShortComplex.exact_map_iff_of_faithful S F).1
+        apply (ShortComplex.ShortExact.moduleCat_exact_iff_function_exact (S.map F)).2
+        change Function.Exact (0 : Z →ₗ[A] V) e.toLinearMap
+        intro w
+        constructor
+        · intro hw
+          change e w = 0 at hw
+          have hw0 : w = 0 := e.injective (hw.trans e.map_zero.symm)
+          exact ⟨0, by change (0 : V) = w; rw [hw0]⟩
+        · rintro ⟨z, hz⟩
+          change e w = 0
+          rw [← hz]
+          simp
+      · apply F.mono_of_mono_map
+        apply (ModuleCat.mono_iff_injective _).2
+        intro x y hxy
+        exact @Subsingleton.elim Z _ (x : Z) (y : Z)
+      · apply F.epi_of_epi_map
+        apply (ModuleCat.epi_iff_surjective _).2
+        exact e.surjective
+    have h := φ.map_shortExact' S hS
+    have h' : φ (FGModuleCat.of A V) =
+        φ (FGModuleCat.of A Z) + φ (FGModuleCat.of A W) := by
+      simpa [S] using h
+    simpa [Z, hzero φ, add_zero] using h'
+  have hprod : ∀ (φ : EulerPoincareFunction A)
+      {V W : Type u} [AddCommGroup V] [Module A V]
+      [Module.Finite A V] [AddCommGroup W] [Module A W]
+      [Module.Finite A W],
+      φ (FGModuleCat.of A (V × W)) =
+        φ (FGModuleCat.of A V) + φ (FGModuleCat.of A W) := by
+    intro φ V W _ _ _ _ _ _
+    let F := forget₂ (FGModuleCat A) (ModuleCat A)
+    let S : ShortComplex (FGModuleCat A) :=
+      ShortComplex.mk
+        (FGModuleCat.ofHom (LinearMap.inl A V W))
+        (FGModuleCat.ofHom (LinearMap.snd A V W)) (by
+          apply FGModuleCat.hom_ext
+          apply LinearMap.ext
+          intro z
+          rfl)
+    have hS : S.ShortExact := by
+      apply ShortComplex.ShortExact.mk'
+      · apply (ShortComplex.exact_map_iff_of_faithful S F).1
+        apply (ShortComplex.ShortExact.moduleCat_exact_iff_function_exact (S.map F)).2
+        change Function.Exact (LinearMap.inl A V W) (LinearMap.snd A V W)
+        exact Function.Exact.inl_snd
+      · apply F.mono_of_mono_map
+        apply (ModuleCat.mono_iff_injective _).2
+        exact LinearMap.inl_injective
+      · apply F.epi_of_epi_map
+        apply (ModuleCat.epi_iff_surjective _).2
+        intro z
+        exact ⟨(0, z), rfl⟩
+    simpa [S] using φ.map_shortExact' S hS
+  have hsubzero : ∀ (φ : EulerPoincareFunction A)
+      {V : Type u} [AddCommGroup V] [Module A V] [Module.Finite A V]
+      [Subsingleton V], φ (FGModuleCat.of A V) = 0 := by
+    intro φ V _ _ _ _
+    let e : V ≃ₗ[A] (Fin 0 → A) :=
+      LinearEquiv.ofBijective 0 (by
+        constructor
+        · intro x y _
+          exact Subsingleton.elim _ _
+        · intro y
+          exact ⟨0, Subsingleton.elim _ _⟩)
+    simpa [hzero φ] using hIso φ e
+  constructor
+  · intro φ ψ h
+    have hcyclicFor :
+        ∀ (θ : EulerPoincareFunction A)
+          (q : A →+* B) (hq : Function.Surjective q) (p : B) (hp : p ≠ 0),
+          letI : Module A B := Module.compHom B q
+          let qLin : A →ₗ[A] B :=
+            { toFun := q
+              map_add' := by intro a b; simp
+              map_smul' := by
+                intro a b
+                change q (a * b) = q a • q b
+                simp [smul_eq_mul] }
+          letI : Module.Finite A B := Module.Finite.of_surjective qLin hq
+          let L : Submodule B B := B ∙ p
+          let Q : Type u := B ⧸ L
+          letI : Module A Q := Module.compHom Q q
+          let g : B →ₗ[A] Q :=
+            { toFun := L.mkQ
+              map_add' := by intro z w; rfl
+              map_smul' := by
+                intro a z
+                change L.mkQ (q a * z) = q a • L.mkQ z
+                rfl }
+          letI : Module.Finite A Q := Module.Finite.of_surjective g L.mkQ_surjective
+          θ (FGModuleCat.of A Q) = 0 := by
+      intro θ q hq p hp
+      letI : Module A B := Module.compHom B q
+      let qLin : A →ₗ[A] B :=
+        { toFun := q
+          map_add' := by intro a b; simp
+          map_smul' := by
+            intro a b
+            change q (a * b) = q a • q b
+            simp [smul_eq_mul] }
+      letI : Module.Finite A B := Module.Finite.of_surjective qLin hq
+      let L : Submodule B B := B ∙ p
+      let Q : Type u := B ⧸ L
+      letI : Module A Q := Module.compHom Q q
+      let f : B →ₗ[A] B :=
+        { toFun := fun z => p * z
+          map_add' := by intro z w; simp [mul_add]
+          map_smul' := by
+            intro a z
+            change p * (q a * z) = q a • (p * z)
+            simp [smul_eq_mul, mul_assoc, mul_comm, mul_left_comm] }
+      let g : B →ₗ[A] Q :=
+        { toFun := L.mkQ
+          map_add' := by intro z w; rfl
+          map_smul' := by
+            intro a z
+            change L.mkQ (q a * z) = q a • L.mkQ z
+            rfl }
+      have hcomp : g.comp f = 0 := by
+        ext z
+        change L.mkQ (p * z) = 0
+        apply (Submodule.Quotient.mk_eq_zero L).2
+        exact (Submodule.mem_span_singleton).2 ⟨z, by simp [smul_eq_mul, mul_comm]⟩
+      have hker : ∀ z, g z = 0 → z ∈ LinearMap.range f := by
+        intro z hz
+        have hzL : z ∈ L := (Submodule.Quotient.mk_eq_zero L).1 hz
+        rcases (Submodule.mem_span_singleton.mp hzL) with ⟨c, hc⟩
+        refine ⟨c, ?_⟩
+        simpa [f, smul_eq_mul, mul_comm] using hc
+      have hfun : Function.Exact f g :=
+        LinearMap.exact_of_comp_of_mem_range hcomp hker
+      have hf : Function.Injective f := by
+        intro z w hzw
+        apply mul_left_cancel₀ hp
+        simpa [f, smul_eq_mul] using hzw
+      have hg : Function.Surjective g := L.mkQ_surjective
+      letI : Module.Finite A Q := Module.Finite.of_surjective g hg
+      let F := forget₂ (FGModuleCat A) (ModuleCat A)
+      let S : ShortComplex (FGModuleCat A) :=
+        ShortComplex.mk
+          (FGModuleCat.ofHom f)
+          (FGModuleCat.ofHom g) (by
+            apply FGModuleCat.hom_ext
+            apply LinearMap.ext
+            intro z
+            change g (f z) = 0
+            exact DFunLike.congr_fun hcomp z)
+      have hS : S.ShortExact := by
+        apply ShortComplex.ShortExact.mk'
+        · apply (ShortComplex.exact_map_iff_of_faithful S F).1
+          apply (ShortComplex.ShortExact.moduleCat_exact_iff_function_exact (S.map F)).2
+          change Function.Exact f g
+          exact hfun
+        · apply F.mono_of_mono_map
+          apply (ModuleCat.mono_iff_injective _).2
+          change Function.Injective f
+          exact hf
+        · apply F.epi_of_epi_map
+          apply (ModuleCat.epi_iff_surjective _).2
+          change Function.Surjective g
+          exact hg
+      have hval := θ.map_shortExact' S hS
+      have hval' : θ (FGModuleCat.of A B) =
+          θ (FGModuleCat.of A B) + θ (FGModuleCat.of A Q) := by
+        simpa [S] using hval
+      have hz : θ (FGModuleCat.of A Q) = 0 := by omega
+      simpa [Q, L] using hz
+    have hDS : ∀ (θ : EulerPoincareFunction A)
+        (ι : Type) [Fintype ι] (Q : ι → Type u)
+        [∀ i, AddCommGroup (Q i)] [∀ i, Module A (Q i)]
+        [∀ i, Module.Finite A (Q i)]
+        [Module.Finite A (DirectSum ι Q)],
+        θ (FGModuleCat.of A (DirectSum ι Q)) =
+          ∑ i : ι, θ (FGModuleCat.of A (Q i)) := by
+      intro θ ι
+      refine Fintype.induction_empty_option
+        (P := fun ι _ => ∀ (Q : ι → Type u)
+          [∀ i, AddCommGroup (Q i)] [∀ i, Module A (Q i)]
+          [∀ i, Module.Finite A (Q i)]
+          [Module.Finite A (DirectSum ι Q)],
+          θ (FGModuleCat.of A (DirectSum ι Q)) =
+            ∑ i : ι, θ (FGModuleCat.of A (Q i))) ?_ ?_ ?_ ι
+      · intro α β _ e h Q hQadd hQmod hQfinite hQdirect
+        letI : Fintype α := Fintype.ofEquiv β e.symm
+        letI : ∀ i, AddCommGroup (Q i) := hQadd
+        letI : ∀ i, Module A (Q i) := hQmod
+        letI : ∀ i, Module.Finite A (Q i) := hQfinite
+        letI : ∀ i, AddCommGroup (Q (e i)) := fun i => hQadd (e i)
+        letI : ∀ i, Module A (Q (e i)) := fun i => hQmod (e i)
+        letI : ∀ i, Module.Finite A (Q (e i)) := fun i => hQfinite (e i)
+        letI : Module A (DirectSum α (fun i => Q (e i))) :=
+          @DirectSum.instModule A (inferInstance : Semiring A) α
+            (fun i => Q (e i))
+            (fun i => @AddCommGroup.toAddCommMonoid _ (hQadd (e i)))
+            (fun i => hQmod (e i))
+        letI : Module.Finite A (DirectSum α (fun i => Q (e i))) :=
+          @Module.Finite.instDirectSum A α (inferInstance : Semiring A)
+            inferInstance (fun i => Q (e i))
+            (fun i => @AddCommGroup.toAddCommMonoid _ (hQadd (e i)))
+            (fun i => hQmod (e i)) (fun i => hQfinite (e i))
+        have h' := h (fun i => Q (e i))
+        have he :
+            θ (FGModuleCat.of A (DirectSum β Q)) =
+              θ (FGModuleCat.of A (DirectSum α (fun i => Q (e i)))) :=
+          hIso θ (DirectSum.lequivCongrLeft A e.symm)
+        calc
+          θ (FGModuleCat.of A (DirectSum β Q)) =
+              θ (FGModuleCat.of A (DirectSum α (fun i => Q (e i)))) := he
+          _ = ∑ i : α, θ (FGModuleCat.of A (Q (e i))) := h'
+          _ = ∑ i : β, θ (FGModuleCat.of A (Q i)) := by
+            exact e.sum_comp (fun i => θ (FGModuleCat.of A (Q i)))
+      · intro Q hQadd hQmod hQfinite hQdirect
+        have h' := hsubzero θ (V := DirectSum PEmpty Q)
+        simpa using h'
+      · intro α _ h Q hQadd hQmod hQfinite hQdirect
+        letI : ∀ i, AddCommGroup (Q i) := hQadd
+        letI : ∀ i, Module A (Q i) := hQmod
+        letI : ∀ i, Module.Finite A (Q i) := hQfinite
+        letI : ∀ i, AddCommGroup (Q (some i)) := fun i => hQadd (some i)
+        letI : ∀ i, Module A (Q (some i)) := fun i => hQmod (some i)
+        letI : ∀ i, Module.Finite A (Q (some i)) := fun i => hQfinite (some i)
+        letI : Module A (DirectSum α (fun i => Q (some i))) :=
+          @DirectSum.instModule A (inferInstance : Semiring A) α
+            (fun i => Q (some i))
+            (fun i => @AddCommGroup.toAddCommMonoid _ (hQadd (some i)))
+            (fun i => hQmod (some i))
+        letI : Module.Finite A (DirectSum α (fun i => Q (some i))) :=
+          @Module.Finite.instDirectSum A α (inferInstance : Semiring A)
+            inferInstance (fun i => Q (some i))
+            (fun i => @AddCommGroup.toAddCommMonoid _ (hQadd (some i)))
+            (fun i => hQmod (some i)) (fun i => hQfinite (some i))
+        letI : AddCommGroup (Q none) := hQadd none
+        letI : Module A (Q none) := hQmod none
+        letI : Module.Finite A (Q none) := hQfinite none
+        letI : Module A (Q none × DirectSum α (fun i => Q (some i))) :=
+          @Prod.instModule A (Q none) (DirectSum α (fun i => Q (some i)))
+            (inferInstance : Semiring A)
+            (@AddCommGroup.toAddCommMonoid _ (hQadd none))
+            (@AddCommGroup.toAddCommMonoid _
+              (inferInstance : AddCommGroup (DirectSum α (fun i => Q (some i)))))
+            (hQmod none)
+            (inferInstance : Module A (DirectSum α (fun i => Q (some i))))
+        letI : Module.Finite A
+            (Q none × DirectSum α (fun i => Q (some i))) := inferInstance
+        have h' := h (fun i => Q (some i))
+        have he :
+            θ (FGModuleCat.of A (DirectSum (Option α) Q)) =
+              θ (FGModuleCat.of A
+                (Q none × DirectSum α (fun i => Q (some i)))) :=
+          hIso θ (DirectSum.lequivProdDirectSum A (α := Q))
+        calc
+          θ (FGModuleCat.of A (DirectSum (Option α) Q)) =
+              θ (FGModuleCat.of A
+                (Q none × DirectSum α (fun i => Q (some i)))) := he
+          _ = θ (FGModuleCat.of A (Q none)) +
+              θ (FGModuleCat.of A (DirectSum α (fun i => Q (some i)))) := by
+            simpa only using hprod θ (V := Q none)
+              (W := DirectSum α (fun i => Q (some i)))
+          _ = θ (FGModuleCat.of A (Q none)) +
+              ∑ i : α, θ (FGModuleCat.of A (Q (some i))) := by rw [h']
+          _ = ∑ i : Option α, θ (FGModuleCat.of A (Q i)) := by
+            simp [Fintype.sum_option]
+    have hbaseY : ∀ (θ : EulerPoincareFunction A),
+        θ (FGModuleCat.of A (nodeYComponent k)) =
+          θ (FGModuleCat.of A B) := by
+      intro θ
+      letI : Module A B := Module.compHom B qY
+      have hsurjY : Function.Surjective qY := by
+        intro b
+        refine ⟨sY b, ?_⟩
+        simpa only [RingHom.comp_apply, RingHom.id_apply] using
+          RingHom.congr_fun hqYsY b
+      let qLin : A →ₗ[A] B :=
+        { toFun := qY
+          map_add' := by intro a b; simp
+          map_smul' := by
+            intro a b
+            change qY (a * b) = qY a • qY b
+            simp [smul_eq_mul] }
+      letI : Module.Finite A B := Module.Finite.of_surjective qLin hsurjY
+      let fY : A →ₗ[A] B := qLin
+      have hkerfY : LinearMap.ker fY = nodeXIdeal k := by
+        ext a
+        change qY a = 0 ↔ a ∈ nodeXIdeal k
+        rw [← RingHom.mem_ker, hkerY]
+      have eY : (A ⧸ nodeXIdeal k) ≃ₗ[A] B := by
+        rw [← hkerfY]
+        exact fY.quotKerEquivOfSurjective hsurjY
+      exact hIso θ eY
+    have hbaseX : ∀ (θ : EulerPoincareFunction A),
+        θ (FGModuleCat.of A (nodeXComponent k)) =
+          θ (FGModuleCat.of A B) := by
+      intro θ
+      letI : Module A B := Module.compHom B qX
+      have hsurjX : Function.Surjective qX := by
+        intro b
+        refine ⟨sX b, ?_⟩
+        simpa only [RingHom.comp_apply, RingHom.id_apply] using
+          RingHom.congr_fun hqXsX b
+      let qLin : A →ₗ[A] B :=
+        { toFun := qX
+          map_add' := by intro a b; simp
+          map_smul' := by
+            intro a b
+            change qX (a * b) = qX a • qX b
+            simp [smul_eq_mul] }
+      letI : Module.Finite A B := Module.Finite.of_surjective qLin hsurjX
+      let fX : A →ₗ[A] B := qLin
+      have hkerfX : LinearMap.ker fX = nodeYIdeal k := by
+        ext a
+        change qX a = 0 ↔ a ∈ nodeYIdeal k
+        rw [← RingHom.mem_ker, hkerX]
+      have eX : (A ⧸ nodeYIdeal k) ≃ₗ[A] B := by
+        rw [← hkerfX]
+        exact fX.quotKerEquivOfSurjective hsurjX
+      exact hIso θ eX
+    have hbranchY :
+        ∀ (θ : EulerPoincareFunction A)
+          {Q : Type u} [AddCommGroup Q] [Module A Q]
+          [Module.Finite A Q] [Module B Q] [Module.Finite B Q]
+          (hcompat : ∀ (a : A) (z : Q), qY a • z = a • z),
+          θ (FGModuleCat.of A Q) =
+            θ (FGModuleCat.of A (nodeYComponent k)) *
+              (Module.finrank B Q : ℤ) := by
+      intro θ Q _ _ _ _ _ hcompat
+      letI : Module A B := Module.compHom B qY
+      have hsurjY : Function.Surjective qY := by
+        intro b
+        refine ⟨sY b, ?_⟩
+        simpa only [RingHom.comp_apply, RingHom.id_apply] using
+          RingHom.congr_fun hqYsY b
+      let qLin : A →ₗ[A] B :=
+        { toFun := qY
+          map_add' := by intro a b; simp
+          map_smul' := by
+            intro a b
+            change qY (a * b) = qY a • qY b
+            simp [smul_eq_mul] }
+      letI : Module.Finite A B := Module.Finite.of_surjective qLin hsurjY
+      have hfiniteQuot : ∀ (p : B),
+          let L : Submodule B B := B ∙ p
+          let T : Type u := B ⧸ L
+          letI : Module A T := Module.compHom T qY
+          Module.Finite A T := by
+        intro p
+        let L : Submodule B B := B ∙ p
+        let T : Type u := B ⧸ L
+        letI : Module A T := Module.compHom T qY
+        let g : B →ₗ[A] T :=
+          { toFun := L.mkQ
+            map_add' := by intro z w; rfl
+            map_smul' := by
+              intro a z
+              change L.mkQ (qY a * z) = qY a • L.mkQ z
+              rfl }
+        exact Module.Finite.of_surjective g L.mkQ_surjective
+      obtain ⟨n, ι, fι, p, hp, e, ⟨eQ⟩⟩ :=
+        Module.equiv_free_prod_directSum (R := B) (M := Q)
+      letI : Fintype ι := fι
+      letI : Module A (Fin n →₀ B) := Module.compHom (Fin n →₀ B) qY
+      letI : ∀ i, Module A (B ⧸ B ∙ p i ^ e i) := fun i =>
+        Module.compHom (B ⧸ B ∙ p i ^ e i) qY
+      letI : ∀ i, Module.Finite A (B ⧸ B ∙ p i ^ e i) := fun i =>
+        hfiniteQuot (p i ^ e i)
+      letI : Module A (DirectSum ι (fun i => B ⧸ B ∙ p i ^ e i)) :=
+        @DirectSum.instModule A (inferInstance : Semiring A) ι
+          (fun i => B ⧸ B ∙ p i ^ e i)
+          (fun i => @AddCommGroup.toAddCommMonoid _ (inferInstance : AddCommGroup (B ⧸ B ∙ p i ^ e i)))
+          (fun i => inferInstance)
+      letI : Module.Finite A (DirectSum ι (fun i => B ⧸ B ∙ p i ^ e i)) :=
+        @Module.Finite.instDirectSum A ι (inferInstance : Semiring A)
+          inferInstance (fun i => B ⧸ B ∙ p i ^ e i)
+          (fun i => @AddCommGroup.toAddCommMonoid _
+            (inferInstance : AddCommGroup (B ⧸ B ∙ p i ^ e i)))
+          (fun i => inferInstance) (fun i => hfiniteQuot (p i ^ e i))
+      letI : Module A
+          ((Fin n →₀ B) × DirectSum ι (fun i => B ⧸ B ∙ p i ^ e i)) :=
+        @Prod.instModule A (Fin n →₀ B)
+          (DirectSum ι (fun i => B ⧸ B ∙ p i ^ e i))
+          (inferInstance : Semiring A)
+          (inferInstance : AddCommMonoid (Fin n →₀ B))
+          (inferInstance : AddCommMonoid
+            (DirectSum ι (fun i => B ⧸ B ∙ p i ^ e i)))
+          (inferInstance : Module A (Fin n →₀ B))
+          (inferInstance : Module A
+            (DirectSum ι (fun i => B ⧸ B ∙ p i ^ e i)))
+      have blinearToA : ∀ {V W : Type u} [AddCommGroup V] [Module A V]
+          [Module B V] [AddCommGroup W] [Module A W] [Module B W]
+          (e : V ≃ₗ[B] W)
+          (hV : ∀ a v, qY a • v = a • v)
+          (hW : ∀ a w, qY a • w = a • w),
+          V ≃ₗ[A] W := by
+        intro V W _ _ _ _ _ _ e hV hW
+        exact
+          { toFun := e
+            invFun := e.symm
+            left_inv := e.left_inv
+            right_inv := e.right_inv
+            map_add' := e.map_add
+            map_smul' := by
+              intro a v
+              rw [← hV a v, ← hW a (e v)]
+              exact e.map_smul (qY a) v }
+      have hPcompat : ∀ (a : A)
+          (z : (Fin n →₀ B) × DirectSum ι (fun i => B ⧸ B ∙ p i ^ e i)),
+          qY a • z = a • z := by
+        intro a z
+        apply Prod.ext
+        · rfl
+        · ext i
+          rfl
+      let eA : Q ≃ₗ[A]
+          (Fin n →₀ B) × DirectSum ι (fun i => B ⧸ B ∙ p i ^ e i) :=
+        blinearToA eQ hcompat hPcompat
+      letI : Module.Finite A
+          ((Fin n →₀ B) × DirectSum ι (fun i => B ⧸ B ∙ p i ^ e i)) :=
+        Module.Finite.of_surjective eA.toLinearMap eA.surjective
+      have htorsionDS :
+          Module.IsTorsion B (DirectSum ι (fun i => B ⧸ B ∙ p i ^ e i)) := by
+        intro z
+        let r : B⁰ :=
+          ⟨∏ i, p i ^ e i,
+            Finset.prod_ne_zero (fun i hi => pow_ne_zero _ (hp i).ne_zero)⟩
+        refine ⟨r, ?_⟩
+        ext i
+        have hi : (p i ^ e i : B) • z i = 0 := by
+          obtain ⟨b, rfl⟩ :=
+            Submodule.Quotient.mk_surjective (B ∙ p i ^ e i) (z i)
+          apply (Submodule.Quotient.mk_eq_zero (B ∙ p i ^ e i)).2
+          exact (Submodule.mem_span_singleton).2
+            ⟨b, by simp [smul_eq_mul, mul_comm]⟩
+        rw [← Finset.prod_erase_mul _ _ (Finset.mem_univ i), mul_smul, hi,
+          smul_zero]
+      have htorsionDSzero :
+          Module.finrank B (DirectSum ι (fun i => B ⧸ B ∙ p i ^ e i)) = 0 :=
+        htorsionDS.finrank_eq_zero
+      have hfree :
+          θ (FGModuleCat.of A (Fin n →₀ B)) =
+            (n : ℤ) * θ (FGModuleCat.of A B) := by
+        letI : Module A (DirectSum (Fin n) (fun _ => B)) :=
+          @DirectSum.instModule A (inferInstance : Semiring A) (Fin n)
+            (fun _ => B) (fun _ => inferInstance) (fun _ => inferInstance)
+        letI : Module.Finite A (DirectSum (Fin n) (fun _ => B)) :=
+          @Module.Finite.instDirectSum A (Fin n) (inferInstance : Semiring A)
+            inferInstance (fun _ => B) (fun _ => inferInstance)
+            (fun _ => inferInstance) (fun _ => inferInstance)
+        let eFree : (Fin n →₀ B) ≃ₗ[A] DirectSum (Fin n) (fun _ => B) :=
+          blinearToA (finsuppLEquivDirectSum B B (Fin n))
+            (by intro a z; rfl) (by
+              intro a z
+              ext i
+              rfl)
+        calc
+          θ (FGModuleCat.of A (Fin n →₀ B)) =
+              θ (FGModuleCat.of A (DirectSum (Fin n) (fun _ => B))) :=
+            hIso θ eFree
+          _ = ∑ i : Fin n, θ (FGModuleCat.of A B) := by
+            exact hDS θ (Fin n) (fun _ => B)
+          _ = (n : ℤ) * θ (FGModuleCat.of A B) := by
+            simp [Finset.sum_const, nsmul_eq_mul, mul_comm]
+      have hDSval := hDS θ ι (fun i => B ⧸ B ∙ p i ^ e i)
+      have hDSzero :
+          ∑ i : ι, θ (FGModuleCat.of A (B ⧸ B ∙ p i ^ e i)) = 0 := by
+        apply Finset.sum_eq_zero
+        intro i hi
+        exact hcyclicFor θ qY hsurjY (p i ^ e i)
+          (pow_ne_zero _ (hp i).ne_zero)
+      have hPval :
+          θ (FGModuleCat.of A
+              ((Fin n →₀ B) × DirectSum ι (fun i => B ⧸ B ∙ p i ^ e i))) =
+            (n : ℤ) * θ (FGModuleCat.of A B) := by
+        calc
+          θ (FGModuleCat.of A
+              ((Fin n →₀ B) × DirectSum ι (fun i => B ⧸ B ∙ p i ^ e i))) =
+              θ (FGModuleCat.of A (Fin n →₀ B)) +
+                θ (FGModuleCat.of A (DirectSum ι
+                  (fun i => B ⧸ B ∙ p i ^ e i))) := by
+            exact hprod θ
+          _ = (n : ℤ) * θ (FGModuleCat.of A B) +
+                ∑ i : ι, θ (FGModuleCat.of A (B ⧸ B ∙ p i ^ e i)) := by
+            rw [hfree, hDSval]
+          _ = (n : ℤ) * θ (FGModuleCat.of A B) := by rw [hDSzero, add_zero]
+      have hfinrankP :
+          Module.finrank B
+              ((Fin n →₀ B) × DirectSum ι (fun i => B ⧸ B ∙ p i ^ e i)) = n := by
+        rw [Module.finrank_prod, Module.finrank_finsupp_self, htorsionDSzero,
+          add_zero]
+      have hfinrankQ : Module.finrank B Q = n := by
+        rw [eQ.finrank_eq, hfinrankP]
+      calc
+        θ (FGModuleCat.of A Q) =
+            θ (FGModuleCat.of A
+              ((Fin n →₀ B) × DirectSum ι (fun i => B ⧸ B ∙ p i ^ e i))) :=
+          hIso θ eA
+        _ = (n : ℤ) * θ (FGModuleCat.of A B) := hPval
+        _ = θ (FGModuleCat.of A (nodeYComponent k)) *
+            (Module.finrank B Q : ℤ) := by
+          rw [hfinrankQ, hbaseY θ]
+          ring
+    sorry
+    sorry
+  · intro z
+    sorry
 
 /-! ## Exercise 4: kernels of locally finite graded maps -/
 

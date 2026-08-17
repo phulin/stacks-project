@@ -1,4 +1,4 @@
-import Formalization.Books.Categories.Unit35.CategoriesFibredInGroupoids
+import Formalization.Books.Categories.Unit34.Inertia
 import Mathlib.CategoryTheory.FiberedCategory.Grothendieck
 
 /-!
@@ -18,11 +18,7 @@ open CategoryTheory.Bicategory
 open CategoryTheory.Functor
 open Opposite
 open Formalization.Books.Categories.Unit29
-open Formalization.Books.Categories.Unit30
-open Formalization.Books.Categories.Unit31
-open Formalization.Books.Categories.Unit32
 open Formalization.Books.Categories.Unit33
-open Formalization.Books.Categories.Unit34
 
 universe vC uC vS uS
 

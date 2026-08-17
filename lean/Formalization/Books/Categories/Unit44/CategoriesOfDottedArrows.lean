@@ -141,7 +141,27 @@ theorem dottedArrowCategory_isGroupoid
     {C : Type u} [Bicategory.{w, v} C] [Bicategory.Strict C]
     (hC : Bicategory.IsLocallyGroupoid C)
     (D : DottedArrowSquare C) : IsGroupoid (DottedArrowCategory D) := by
-  sorry
+  constructor
+  intro A A' h
+  letI : IsGroupoid (D.objT ⟶ D.objX) := hC D.objT D.objX
+  let e : A.a ≅ A'.a := asIso h.hom
+  let hinv : DottedArrow.Hom A' A :=
+    { hom := e.inv
+      alpha_naturality := by
+        rw [← h.alpha_naturality]
+        rw [← Category.assoc, ← Bicategory.whiskerLeft_comp]
+        simp [e]
+      beta_naturality := by
+        rw [← h.beta_naturality]
+        rw [Category.assoc, ← Bicategory.comp_whiskerRight]
+        simp [e] }
+  exact ⟨⟨hinv, by
+    apply DottedArrow.Hom.ext
+    change h.hom ≫ e.inv = 𝟙 _
+    exact e.hom_inv_id, by
+    apply DottedArrow.Hom.ext
+    change e.inv ≫ h.hom = 𝟙 _
+    exact e.inv_hom_id⟩⟩
 
 /-! ## Base change -/
 
@@ -420,10 +440,50 @@ theorem compositionAuxiliary_inner_commutes
           Bicategory.whiskerRight (inv A.eta) Q.g)) ≫
         strictAssocInv Q.j A.b Q.g ≫
         Bicategory.whiskerRight
-          (Bicategory.whiskerLeft Q.j A.eta ≫
+      (Bicategory.whiskerLeft Q.j A.eta ≫
             strictAssocInv Q.j A.dotted.a Q.f ≫
             Bicategory.whiskerRight A.dotted.alpha Q.f) Q.g := by
-  sorry
+  letI : IsIso (strictAssocHom Q.x Q.f Q.g) := by
+    dsimp [strictAssocHom]
+    infer_instance
+  apply (cancel_mono (strictAssocHom Q.x Q.f Q.g)).1
+  have hγ := A.dotted.commutes
+  change Q.gamma ≫ strictAssocHom Q.x Q.f Q.g = _ at hγ
+  rw [hγ]
+  have h₁ : strictAssocInv Q.j A.dotted.a (Q.f ≫ Q.g) =
+      (Bicategory.associator Q.j A.dotted.a (Q.f ≫ Q.g)).inv := by
+    simpa [strictAssocInv] using congrArg Iso.inv
+      (Bicategory.Strict.associator_eqToIso Q.j A.dotted.a (Q.f ≫ Q.g)) |>.symm
+  have h₂ : strictAssocHom Q.x Q.f Q.g =
+      (Bicategory.associator Q.x Q.f Q.g).hom := by
+    simpa [strictAssocHom] using congrArg Iso.hom
+      (Bicategory.Strict.associator_eqToIso Q.x Q.f Q.g) |>.symm
+  have h₃ : strictAssocInv Q.j A.b Q.g =
+      (Bicategory.associator Q.j A.b Q.g).inv := by
+    simpa [strictAssocInv] using congrArg Iso.inv
+      (Bicategory.Strict.associator_eqToIso Q.j A.b Q.g) |>.symm
+  have h₄ : strictAssocInv Q.j A.dotted.a Q.f =
+      (Bicategory.associator Q.j A.dotted.a Q.f).inv := by
+    simpa [strictAssocInv] using congrArg Iso.inv
+      (Bicategory.Strict.associator_eqToIso Q.j A.dotted.a Q.f) |>.symm
+  have h₅ : strictAssocInv A.dotted.a Q.f Q.g =
+      (Bicategory.associator A.dotted.a Q.f Q.g).inv := by
+    simpa [strictAssocInv] using congrArg Iso.inv
+      (Bicategory.Strict.associator_eqToIso A.dotted.a Q.f Q.g) |>.symm
+  rw [h₁, h₂, h₃, h₄, h₅]
+  simp only [Bicategory.whiskerLeft_comp, Bicategory.comp_whiskerRight,
+    Category.assoc]
+  have hn : Q.j ◁ (inv A.eta ▷ Q.g) =
+      (Bicategory.associator Q.j (A.dotted.a ≫ Q.f) Q.g).inv ≫
+        (Q.j ◁ inv A.eta) ▷ Q.g ≫
+        (Bicategory.associator Q.j A.b Q.g).hom := by
+    rw [Bicategory.whisker_assoc_symm]
+  rw [hn]
+  simp only [Category.assoc, Iso.hom_inv_id_assoc]
+  simp [← Bicategory.comp_whiskerRight]
+  rw [Bicategory.associator_naturality_left]
+  rw [Bicategory.pentagon_inv]
+  simp
 
 /-- The dotted arrow in `D'` associated to an object of `D''`. -/
 noncomputable def compositionAuxiliaryInnerDotted
@@ -465,7 +525,21 @@ theorem compositionAuxiliary_inner_map_alpha
     Bicategory.whiskerLeft Q.j H.theta₂ ≫
         (compositionAuxiliaryInnerDotted A').alpha =
       (compositionAuxiliaryInnerDotted A).alpha := by
-  sorry
+  dsimp [compositionAuxiliaryInnerDotted]
+  rw [← Category.assoc, ← Bicategory.whiskerLeft_comp, H.commutes]
+  have hA : strictAssocInv Q.j A.dotted.a Q.f =
+      (Bicategory.associator Q.j A.dotted.a Q.f).inv := by
+    simpa [strictAssocInv] using congrArg Iso.inv
+      (Bicategory.Strict.associator_eqToIso Q.j A.dotted.a Q.f) |>.symm
+  have hA' : strictAssocInv Q.j A'.dotted.a Q.f =
+      (Bicategory.associator Q.j A'.dotted.a Q.f).inv := by
+    simpa [strictAssocInv] using congrArg Iso.inv
+      (Bicategory.Strict.associator_eqToIso Q.j A'.dotted.a Q.f) |>.symm
+  rw [Bicategory.whiskerLeft_comp, hA, hA']
+  simp only [Category.assoc]
+  rw [Bicategory.whisker_assoc_symm Q.j H.theta₁.hom Q.f]
+  simp only [Category.assoc, Iso.hom_inv_id_assoc]
+  rw [← Bicategory.comp_whiskerRight, H.theta₁.alpha_naturality]
 
 theorem compositionAuxiliary_inner_map_beta
     {C : Type u} [Bicategory.{w, v} C] [Bicategory.Strict C]
@@ -474,7 +548,26 @@ theorem compositionAuxiliary_inner_map_beta
     (compositionAuxiliaryInnerDotted A).beta ≫
         Bicategory.whiskerRight H.theta₂ Q.g =
       (compositionAuxiliaryInnerDotted A').beta := by
-  sorry
+  dsimp [compositionAuxiliaryInnerDotted]
+  have hη : inv A.eta ≫ H.theta₂ =
+      Bicategory.whiskerRight H.theta₁.hom Q.f ≫ inv A'.eta := by
+    apply (cancel_mono A'.eta).1
+    simp only [Category.assoc]
+    rw [H.commutes]
+    simp
+  have hA : strictAssocInv A.dotted.a Q.f Q.g =
+      (Bicategory.associator A.dotted.a Q.f Q.g).inv := by
+    simpa [strictAssocInv] using congrArg Iso.inv
+      (Bicategory.Strict.associator_eqToIso A.dotted.a Q.f Q.g) |>.symm
+  have hA' : strictAssocInv A'.dotted.a Q.f Q.g =
+      (Bicategory.associator A'.dotted.a Q.f Q.g).inv := by
+    simpa [strictAssocInv] using congrArg Iso.inv
+      (Bicategory.Strict.associator_eqToIso A'.dotted.a Q.f Q.g) |>.symm
+  simp only [Category.assoc]
+  rw [← Bicategory.comp_whiskerRight, hη, Bicategory.comp_whiskerRight,
+    hA, hA']
+  rw [← Bicategory.associator_inv_naturality_left_assoc]
+  rw [← Category.assoc, H.theta₁.beta_naturality]
 
 /-- The morphism of inner dotted arrows induced by a morphism in `D''`. -/
 noncomputable def compositionAuxiliaryInnerMap

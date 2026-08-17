@@ -85,10 +85,10 @@ theorem exists_filteredColimitExtension_unique_up_to_iso
         intro i j f
         exact pres.w f)
     change t.Final
-    letI : ∀ d, IsFiltered (StructuredArrow d t) := by
+    let : ∀ d, IsFiltered (StructuredArrow d t) := by
       intro d
       apply isFiltered_structuredArrow_of_isFiltered_of_exists t d
-      · haveI : IsFinitelyPresentable d.left.obj := hcompact _ d.left.property
+      · have : IsFinitelyPresentable d.left.obj := hcompact _ d.left.property
         obtain ⟨j, f, hf⟩ :=
           IsFinitelyPresentable.exists_hom_of_isColimit (X := d.left.obj)
             pres.isColimit d.hom
@@ -96,7 +96,7 @@ theorem exists_filteredColimitExtension_unique_up_to_iso
       · intro c s s'
         change d ⟶ CostructuredArrow.mk (S := P.ι) (T := X) (Y := Q.obj c)
           (pres.ι.app c) at s s'
-        haveI : IsFinitelyPresentable d.left.obj := hcompact _ d.left.property
+        have : IsFinitelyPresentable d.left.obj := hcompact _ d.left.property
         obtain ⟨j, u, v, h⟩ :=
           IsFinitelyPresentable.exists_eq_of_isColimit (X := d.left.obj)
             pres.isColimit s.left.hom s'.left.hom (by
@@ -120,7 +120,7 @@ theorem exists_filteredColimitExtension_unique_up_to_iso
             rw [← pres.diag.map_comp, ← pres.diag.map_comp,
               IsFiltered.coeq_condition]
     exact Functor.final_of_isFiltered_structuredArrow t
-  letI : P.ι.HasPointwiseLeftKanExtension F' := by
+  let : P.ι.HasPointwiseLeftKanExtension F' := by
     intro X
     obtain ⟨J, _, _, pres, hp⟩ := hgenerated X
     let Q : J ⥤ P.FullSubcategory :=
@@ -132,7 +132,7 @@ theorem exists_filteredColimitExtension_unique_up_to_iso
         exact pres.w f)
     let hFinal : t.Final := by
       simpa [t, Q] using (final_of_presentation pres hp)
-    letI := hFinal
+    let _ := hFinal
     let c : ColimitCocone (Q ⋙ F') := getColimitCocone (Q ⋙ F')
     let G : CostructuredArrow P.ι X ⥤ D :=
       CostructuredArrow.proj P.ι X ⋙ F'
@@ -160,7 +160,7 @@ theorem exists_filteredColimitExtension_unique_up_to_iso
         ∃ (j : J) (f : d.left.obj ⟶ K.obj j),
           f ≫ c.ι.app j = d.hom := by
       intro d
-      haveI : IsFinitelyPresentable d.left.obj := hcompact _ d.left.property
+      have : IsFinitelyPresentable d.left.obj := hcompact _ d.left.property
       exact IsFinitelyPresentable.exists_hom_of_isColimit (X := d.left.obj) hc d.hom
     choose jfac ffac hffac using hfac
     have hleg_eq (s : Cocone (K ⋙ Efun))
@@ -171,7 +171,7 @@ theorem exists_filteredColimitExtension_unique_up_to_iso
         (hf' : f' ≫ c.ι.app j' = d.hom) :
         alpha.app d.left ≫ Efun.map f ≫ s.ι.app j =
           alpha.app d.left ≫ Efun.map f' ≫ s.ι.app j' := by
-      letI : IsFinitelyPresentable (P.ι.obj d.left) := hcompact _ d.left.property
+      let : IsFinitelyPresentable (P.ι.obj d.left) := hcompact _ d.left.property
       obtain ⟨k, u, v, huv⟩ :=
         IsFinitelyPresentable.exists_eq_of_isColimit (X := P.ι.obj d.left)
           hc f f' (hf.trans hf'.symm)
@@ -285,17 +285,17 @@ theorem exists_filteredColimitExtension_unique_up_to_iso
             exact ⟨preserve_one hc⟩ } }
   let restrictionIso : P.ι ⋙ Efun ≅ F' :=
     NatIso.ofComponents (fun X => by
-      haveI : IsIso (alpha.app X) :=
+      have : IsIso (alpha.app X) :=
         Functor.LeftExtension.IsPointwiseLeftKanExtensionAt.isIso_hom_app
           Eext (hpoint (P.ι.obj X))
       exact (asIso (alpha.app X)).symm)
       (by
         intro X Y f
-        haveI : IsIso (alpha.app X) := by
+        have : IsIso (alpha.app X) := by
           change IsIso (Eext.hom.app X)
           exact Functor.LeftExtension.IsPointwiseLeftKanExtensionAt.isIso_hom_app
             Eext (hpoint (P.ι.obj X))
-        haveI : IsIso (alpha.app Y) := by
+        have : IsIso (alpha.app Y) := by
           change IsIso (Eext.hom.app Y)
           exact Functor.LeftExtension.IsPointwiseLeftKanExtensionAt.isIso_hom_app
             Eext (hpoint (P.ι.obj Y))
@@ -307,7 +307,7 @@ theorem exists_filteredColimitExtension_unique_up_to_iso
           simpa only [Functor.comp_map, ObjectProperty.ι_map] using alpha.naturality f
         rw [hNat]
         simp)
-  letI : Efun.IsLeftKanExtension alpha := hpoint.isLeftKanExtension
+  let : Efun.IsLeftKanExtension alpha := hpoint.isLeftKanExtension
   have hPointE' (E' : FilteredColimitExtension P F') :
       (Functor.LeftExtension.mk E'.functor E'.restrictionIso.inv).IsPointwiseLeftKanExtension := by
     letI : PreservesFilteredColimitsOfSize.{v, v} E'.functor :=
@@ -324,7 +324,7 @@ theorem exists_filteredColimitExtension_unique_up_to_iso
         exact pres.w f)
     let hFinal : t.Final := by
       simpa [t, Q] using (final_of_presentation pres hp)
-    letI := hFinal
+    let _ := hFinal
     let cE : Cocone (Q ⋙ P.ι ⋙ E'.functor) := by
       change Cocone (pres.diag ⋙ E'.functor)
       exact E'.functor.mapCocone pres.cocone
@@ -356,7 +356,7 @@ theorem exists_filteredColimitExtension_unique_up_to_iso
       restrictionIso := restrictionIso }
   refine ⟨E, ?_⟩
   intro E'
-  letI : E'.functor.IsLeftKanExtension E'.restrictionIso.inv :=
+  let : E'.functor.IsLeftKanExtension E'.restrictionIso.inv :=
     (hPointE' E').isLeftKanExtension
   let e : Efun ≅ E'.functor :=
     Functor.leftKanExtensionUnique Efun alpha E'.functor E'.restrictionIso.inv
@@ -367,7 +367,7 @@ theorem exists_filteredColimitExtension_unique_up_to_iso
   have hcompat :
       Functor.isoWhiskerLeft P.ι e ≪≫ E'.restrictionIso = restrictionIso := by
     ext X
-    haveI : IsIso (alpha.app X) :=
+    have : IsIso (alpha.app X) :=
       Functor.LeftExtension.IsPointwiseLeftKanExtensionAt.isIso_hom_app
         Eext (hpoint (P.ι.obj X))
     apply (cancel_epi (alpha.app X)).1

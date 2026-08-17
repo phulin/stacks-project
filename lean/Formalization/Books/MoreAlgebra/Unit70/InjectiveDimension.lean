@@ -230,8 +230,8 @@ theorem dedekind_domain_finite_injective_dimension
         (ModuleCat.of R (R ⧸ I)) 1) ∧
     (∀ M : ModuleCat.{u} R,
       CategoryTheory.HasInjectiveDimensionLE M 1) ∧
-    (∀ M N : ModuleCat.{u} R, ∀ p : ℕ, 2 ≤ p →
-      DerivedExtVanishes (DerivedObject M) (DerivedObject N) (p : ℤ)) ∧
+    (∀ M N : ModuleCat.{u} R, ∀ i : ℤ, 2 ≤ i →
+      DerivedExtVanishes (DerivedObject M) (DerivedObject N) i) ∧
     (∀ K : DBounded (ModuleCat.{u} R),
       ∃ a : ℤ, ∃ n : ℕ,
         BoundedCohomologySupported K a n ∧

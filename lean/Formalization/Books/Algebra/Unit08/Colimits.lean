@@ -428,7 +428,7 @@ theorem direct_sum_of_exact_short_complexes {R : Type u} [CommRing R]
 
 theorem almost_directed_colimit_homology {R : Type u} [CommRing R]
     {I : Type v} [Category.{v'} I]
-    (hspan : Formalization.Books.Categories.Unit19.HasCommonCoconesForMorphisms I)
+    (hspan : Formalization.Books.Categories.Unit19.HasCoconesForSpans I)
     (heq : Formalization.Books.Categories.Unit19.HasParallelEqualizers I)
     (S : I ⥤ ShortComplex (ModuleCat.{max v v' w} R)) :
     Nonempty
@@ -439,7 +439,7 @@ theorem almost_directed_colimit_homology {R : Type u} [CommRing R]
 
 theorem almost_directed_colimit_exact {R : Type u} [CommRing R]
     {I : Type v} [Category.{v'} I]
-    (hspan : Formalization.Books.Categories.Unit19.HasCommonCoconesForMorphisms I)
+    (hspan : Formalization.Books.Categories.Unit19.HasCoconesForSpans I)
     (heq : Formalization.Books.Categories.Unit19.HasParallelEqualizers I)
     (S : I ⥤ ShortComplex (ModuleCat.{max v v' w} R))
     (hS : ∀ i : I, (S.obj i).Exact) :

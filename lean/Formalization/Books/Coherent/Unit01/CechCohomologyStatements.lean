@@ -1,6 +1,7 @@
 import Mathlib.Algebra.Category.Grp.Abelian
 import Mathlib.Algebra.Category.Grp.CartesianMonoidal
 import Mathlib.Algebra.Category.ModuleCat.Localization
+import Mathlib.RingTheory.LocalProperties.Exactness
 import Mathlib.Algebra.Homology.DerivedCategory.Ext.Basic
 import Mathlib.Algebra.Homology.ShortComplex.Abelian
 import Mathlib.Algebra.Category.ModuleCat.Sheaf.Quasicoherent
@@ -273,16 +274,37 @@ theorem PositiveContractingHomotopy.identity_at
     h.homotopy n ≫ K.d n (n + 1) + K.d (n + 1) (n + 2) ≫ h.homotopy (n + 1) = 𝟙 _ :=
   h.identity n
 
-/-- A positive contracting homotopy gives exactness in every positive degree. -/
-/- TODO(proof agents -- leaf: abstract homotopy-to-exactness): write a positive
-degree as `n + 1`, use `h.identity n`, and show every cycle is the image under
-the following differential of its image under `h.homotopy n`.  The categorical
-version can be proved through `ShortComplex.exact_iff_fIsKernel` or by showing
-the homology object is zero. -/
+/-- A positive contracting homotopy gives exactness in every positive degree.
+The homotopy identity supplies a section of the map from cycles to the middle
+term, so that map is a split epimorphism. -/
 theorem PositiveContractingHomotopy.exactAt
     {C : Type u} [Category.{v} C] [Abelian C] {K : CochainComplex C ℕ}
     (h : PositiveContractingHomotopy K) (n : ℕ) (hn : 0 < n) : K.ExactAt n := by
-  sorry
+  cases n with
+  | zero => simp at hn
+  | succ n =>
+    rw [HomologicalComplex.exactAt_iff' K n (n + 1) (n + 2) (by simp) (by simp)]
+    let S := K.sc' n (n + 1) (n + 2)
+    change S.Exact
+    rw [ShortComplex.exact_iff_epi_toCycles]
+    have hs : S.iCycles ≫ h.homotopy n ≫ S.toCycles = 𝟙 _ := by
+      apply (cancel_mono S.iCycles).1
+      rw [Category.assoc, S.toCycles_i]
+      simp only [id_comp]
+      have hid : h.homotopy n ≫ S.f + S.g ≫ h.homotopy (n + 1) = 𝟙 _ := by
+        simpa [S] using h.identity n
+      calc
+        S.iCycles ≫ h.homotopy n ≫ S.f =
+            S.iCycles ≫
+              (h.homotopy n ≫ S.f + S.g ≫ h.homotopy (n + 1)) := by
+          rw [comp_add]
+          simp only [Category.assoc, S.iCycles_g, zero_comp, add_zero]
+        _ = S.iCycles ≫ 𝟙 _ := by rw [hid]
+        _ = S.iCycles := by simp
+    letI : IsSplitEpi S.toCycles := IsSplitEpi.mk' {
+      section_ := S.iCycles ≫ h.homotopy n
+      id := hs }
+    infer_instance
 
 /-- The choice data used in the source's localized Čech argument. -/
 structure LocalizedCechHomotopyData {Y : Scheme.{u}} {hY : IsAffine Y}
@@ -402,30 +424,53 @@ theorem standard_open_prime_localized_positive_exact
 
 /-- Exactness of a complex of modules can be checked after localization at
 every prime. -/
-/- TODO(proof agents -- leaf: primewise reflection of exactness): prove that
-the family `ModuleCat.localizedModuleFunctor p.asIdeal.primeCompl`, indexed by
-`PrimeSpectrum Γ(Y, ⊤)`, jointly reflects isomorphisms.  Then apply
-`JointlyReflectIsomorphisms.exactAt_iff`; exactness of each localization functor
-is already supplied by `ModuleCat.localizedModuleFunctor`. -/
 theorem standard_open_cech_module_exactAt_of_prime_localized
     {Y : Scheme.{u}} {hY : IsAffine Y} (𝒰 : StandardOpenCover Y hY)
     (M : Y.Modules) (n : ℕ)
     (hlocal : ∀ p : PrimeSpectrum (Γ(Y, ⊤)),
       (primeLocalizedStandardOpenCechComplex 𝒰 M p).ExactAt n) :
     (standardOpenCechModuleComplex 𝒰 M).ExactAt n := by
-  sorry
+  let S := (standardOpenCechModuleComplex 𝒰 M).sc n
+  rw [HomologicalComplex.exactAt_iff]
+  apply (ShortComplex.ShortExact.moduleCat_exact_iff_function_exact S).2
+  refine exact_of_isLocalized_maximal
+    (Rₚ := fun P => Localization P.primeCompl)
+    (Mₚ := fun P => S.X₁.localizedModule P.primeCompl)
+    (f := fun P => S.X₁.localizedModuleMkLinearMap P.primeCompl)
+    (Nₚ := fun P => S.X₂.localizedModule P.primeCompl)
+    (g := fun P => S.X₂.localizedModuleMkLinearMap P.primeCompl)
+    (Lₚ := fun P => S.X₃.localizedModule P.primeCompl)
+    (h := fun P => S.X₃.localizedModuleMkLinearMap P.primeCompl)
+    S.f.hom S.g.hom ?_
+  intro J hJ
+  let p : PrimeSpectrum (Γ(Y, ⊤)) := ⟨J, hJ.isPrime⟩
+  have hp := hlocal p
+  rw [HomologicalComplex.exactAt_iff] at hp
+  change (S.map (ModuleCat.localizedModuleFunctor J.primeCompl)).Exact at hp
+  have hp' := (ShortComplex.ShortExact.moduleCat_exact_iff_function_exact _).1 hp
+  change Function.Exact
+    (IsLocalizedModule.map J.primeCompl
+      (S.X₁.localizedModuleMkLinearMap J.primeCompl)
+      (S.X₂.localizedModuleMkLinearMap J.primeCompl) S.f.hom)
+    (IsLocalizedModule.map J.primeCompl
+      (S.X₂.localizedModuleMkLinearMap J.primeCompl)
+      (S.X₃.localizedModuleMkLinearMap J.primeCompl) S.g.hom) at hp'
+  exact hp'
 
 /-- Transfer exactness from the global-linear model back to the geometric
 Čech complex. -/
-/- TODO(proof agents -- leaf: forget-and-transport): map exactness through
-`forget₂ (ModuleCat Γ(Y, ⊤)) AddCommGrpCat`, then transport it across
-`standardOpenCechModuleComplex_forget_iso` using `ExactAt.of_iso`. -/
 theorem standard_open_cech_exactAt_of_module_model_exactAt
     {Y : Scheme.{u}} {hY : IsAffine Y} (𝒰 : StandardOpenCover Y hY)
     (M : Y.Modules) (n : ℕ)
     (hmodule : (standardOpenCechModuleComplex 𝒰 M).ExactAt n) :
     (cechComplex M 𝒰.basicOpenFamily).ExactAt n := by
-  sorry
+  let F := forget₂ (ModuleCat.{u} Γ(Y, ⊤)) AddCommGrpCat
+  have hforget :
+      ((F.mapHomologicalComplex (ComplexShape.up ℕ)).obj
+        (standardOpenCechModuleComplex 𝒰 M)).ExactAt n := by
+    rw [HomologicalComplex.exactAt_iff] at hmodule ⊢
+    exact hmodule.map F
+  exact hforget.of_iso (standardOpenCechModuleComplex_forget_iso 𝒰 M)
 
 /-- Positive-degree exactness of the standard-open Čech complex, obtained by
 prime localization and the textbook's contracting homotopy. -/

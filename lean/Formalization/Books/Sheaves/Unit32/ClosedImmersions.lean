@@ -1,4 +1,5 @@
 import Formalization.Books.Categories.Unit23.ExactFunctors
+import Formalization.Books.Categories.Unit24.AdjointFunctors
 import Formalization.Books.Sheaves.Unit08.AbelianSheaves
 import Formalization.Books.Sheaves.Unit21.ContinuousMaps
 import Mathlib.CategoryTheory.EssentialImage
@@ -330,12 +331,7 @@ theorem closedSubsetPushforward_fullyFaithful
 /-- Generic form of the essential-image characterization. -/
 theorem closedSubsetPushforward_mem_essImage_iff
     {C : Type u} [Category.{w} C]
-    {FA : C → C → Type*} {CA : C → Type w}
-    [∀ A B, FunLike (FA A B) (CA A) (CA B)]
-    [ConcreteCategory.{w} C FA] [HasColimits C] [HasLimits C]
-    [PreservesLimits (CategoryTheory.forget C)]
-    [PreservesFilteredColimits (CategoryTheory.forget C)]
-    [(CategoryTheory.forget C).ReflectsIsomorphisms]
+    [HasColimits C] [HasTerminal C]
     {X : TopCat.{w}} {Z : Set X} (hZ : IsClosed Z)
     (G : TopCat.Sheaf C X) :
     (closedSubsetPushforward (C := C) Z).essImage G ↔

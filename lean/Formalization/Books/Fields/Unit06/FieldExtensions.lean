@@ -1,11 +1,12 @@
 import Mathlib.Algebra.Field.Rat
+import Mathlib.Algebra.Algebra.Rat
 import Mathlib.Algebra.Category.AlgCat.Basic
 import Mathlib.CategoryTheory.ObjectProperty.FullSubcategory
 import Mathlib.Data.Complex.Basic
 import Mathlib.FieldTheory.IntermediateField.Adjoin.Algebra
+import Mathlib.FieldTheory.IntermediateField.Adjoin.Basic
 import Mathlib.FieldTheory.RatFunc.AsPolynomial
 import Mathlib.LinearAlgebra.Complex.Module
-import Mathlib.RingTheory.Adjoin.Field
 
 /-!
 # Fields, Chapter 6: Field extensions
@@ -16,7 +17,7 @@ extensions, and `IntermediateField.adjoin` for `k(S)`.  Finite towers are
 recorded as adjacent algebra structures; when a three-field compatibility is
 needed, Mathlib's `IsScalarTower` is the canonical interface.  The category
 of field extensions is the full subcategory of `AlgCat k` on objects whose
-underlying type has a `Field` instance.
+underlying ring satisfies Mathlib's proposition-valued `IsField` predicate.
 -/
 
 namespace Formalization.Books.Fields.Unit06
@@ -38,16 +39,16 @@ theorem field_ring_hom_injective {F R : Type*} [Field F] [NonAssocSemiring R]
    precise while retaining Mathlib's canonical category of algebra maps. -/
 def fieldExtensionProperty (k : Type u) [Field k] :
     ObjectProperty (AlgCat.{v} k) :=
-  fun A => Nonempty (Field A)
+  fun A => IsField A
 
-/-- The category of field extensions of a fixed commutative ring. -/
+/-- The category of field extensions of a fixed field. -/
 abbrev FieldExtensionCat (k : Type u) [Field k] :=
   (fieldExtensionProperty.{u, v} k).FullSubcategory
 
 /-- The object of `FieldExtensionCat k` associated to a field `E/k`. -/
 def fieldExtensionObject (k : Type u) (E : Type v) [Field k] [Field E]
     [Algebra k E] : FieldExtensionCat.{u, v} k :=
-  ⟨AlgCat.of k E, ⟨inferInstance⟩⟩
+  ⟨AlgCat.of k E, Field.toIsField E⟩
 
 /-- The scalar map of a field extension is injective. -/
 theorem field_extension_algebraMap_injective {k : Type u} {E : Type v} [Field k]
@@ -55,11 +56,11 @@ theorem field_extension_algebraMap_injective {k : Type u} {E : Type v} [Field k]
   exact field_ring_hom_injective (algebraMap k E)
 
 /- The source's `Mor_k(E, E')` is Mathlib's `AlgHom`. -/
-abbrev fieldExtensionHom (k : Type u) (E E' : Type v) [Field k] [Field E]
+abbrev fieldExtensionHom (k : Type u) (E : Type v) (E' : Type w) [Field k] [Field E]
     [Field E'] [Algebra k E] [Algebra k E'] := E →ₐ[k] E'
 
 /-- A morphism of extensions commutes with the two scalar maps. -/
-theorem field_extension_hom_commutes {k : Type u} {E E' : Type v} [Field k]
+theorem field_extension_hom_commutes {k : Type u} {E : Type v} {E' : Type w} [Field k]
     [Field E] [Field E'] [Algebra k E] [Algebra k E']
     (f : fieldExtensionHom k E E') (x : k) :
     f (algebraMap k E x) = algebraMap k E' x := by
@@ -72,15 +73,18 @@ def fieldHomToAlgebra {F E : Type*} [Field F] [Field E] (φ : F →+* E) :
     Algebra F E :=
   φ.toAlgebra
 
-/-- A ring homomorphism of fields both injects and equips the target with the
-corresponding field-algebra structure. -/
+/-- A ring homomorphism of fields is injective and determines a compatible
+field-algebra structure on its target. -/
 theorem field_hom_gives_extension {F E : Type*} [Field F] [Field E]
-    (φ : F →+* E) : Function.Injective φ ∧ Nonempty (Algebra F E) := by
-  exact ⟨field_ring_hom_injective φ, ⟨fieldHomToAlgebra φ⟩⟩
+    (φ : F →+* E) :
+    Function.Injective φ ∧
+      ∃ A : Algebra F E, @algebraMap F E _ _ A = φ := by
+  refine ⟨field_ring_hom_injective φ, ⟨fieldHomToAlgebra φ, ?_⟩⟩
+  exact RingHom.algebraMap_toAlgebra φ
 
 /-- A field homomorphism can be viewed as an object of the extension category. -/
-def fieldHomExtensionObject {F E : Type u} [Field F] [Field E] (φ : F →+* E) :
-    FieldExtensionCat.{u, u} F := by
+def fieldHomExtensionObject {F : Type u} {E : Type v} [Field F] [Field E] (φ : F →+* E) :
+    FieldExtensionCat.{u, v} F := by
   letI : Algebra F E := fieldHomToAlgebra φ
   exact fieldExtensionObject F E
 
@@ -112,7 +116,7 @@ noncomputable def irreduciblePolynomialExtension {k : Type u} [Field k]
     {P : Polynomial k} (hP : Irreducible P) :
     FieldExtensionCat.{u, u} k := by
   letI : Fact (Irreducible P) := ⟨hP⟩
-  exact ⟨AlgCat.of k (AdjoinRoot P), ⟨inferInstance⟩⟩
+  exact ⟨AlgCat.of k (AdjoinRoot P), Field.toIsField _⟩
 
 /- Mathlib and the preceding chapter do not package a Riemann-surface
    function field.  Thus `C_X` is the supplied model of `C(X)`, recording the

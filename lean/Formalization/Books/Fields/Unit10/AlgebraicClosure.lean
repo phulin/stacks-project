@@ -42,7 +42,21 @@ theorem algebraically_closed_iff_polynomial_criteria (F : Type u) [Field F] :
       (∀ p : Polynomial F, Irreducible p → p.degree = 1) ∧
         (∀ p : Polynomial F, p.natDegree ≠ 0 → ∃ x : F, Polynomial.IsRoot p x) ∧
           (∀ p : Polynomial F, p.natDegree ≠ 0 → p.Splits) := by
-  sorry
+  constructor
+  · intro h
+    let _ : IsAlgClosed F := h
+    refine ⟨?_, ?_, ?_⟩
+    · intro p hp
+      exact IsAlgClosed.degree_eq_one_of_irreducible F hp
+    · intro p hp
+      exact IsAlgClosed.exists_root p (Polynomial.degree_ne_of_natDegree_ne hp)
+    · intro p hp
+      exact IsAlgClosed.splits p
+  · rintro ⟨_, _, h⟩
+    refine ⟨fun p => ?_⟩
+    by_cases hp : p.natDegree = 0
+    · exact Polynomial.Splits.of_natDegree_eq_zero hp
+    · exact h p hp
 
 /-! ## Algebraic closures -/
 

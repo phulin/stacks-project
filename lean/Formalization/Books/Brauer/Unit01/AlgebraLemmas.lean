@@ -168,7 +168,7 @@ theorem finite_simple_algebra_unique_simple_modules (k A M N : Type*)
 theorem finite_simple_algebra_module_isotypic (k A M : Type*) [Field k]
     [Ring A] [Algebra k A] [FiniteDimensional k A] [IsSimpleRing A]
     [AddCommGroup M] [Module A M] [Module k M] [IsScalarTower k A M]
-    [FiniteDimensional k M] :
+    [Module.Finite A M] :
     IsSemisimpleModule A M ∧ IsIsotypic A M := by
   sorry
 
@@ -184,8 +184,8 @@ theorem finite_simple_algebra_modules_classified_by_dimension
     (k A M N : Type*) [Field k] [Ring A] [Algebra k A]
     [FiniteDimensional k A] [IsSimpleRing A]
     [AddCommGroup M] [Module A M] [Module k M] [IsScalarTower k A M]
-    [FiniteDimensional k M] [AddCommGroup N] [Module A N] [Module k N]
-    [IsScalarTower k A N] [FiniteDimensional k N] :
+    [Module.Finite A M] [AddCommGroup N] [Module A N] [Module k N]
+    [IsScalarTower k A N] [Module.Finite A N] :
     Nonempty (M ≃ₗ[A] N) ↔ Module.finrank k M = Module.finrank k N := by
   sorry
 
@@ -193,7 +193,7 @@ theorem simple_module_double_commutant (k A M : Type*) [Field k] [Ring A]
     [Algebra k A] [FiniteDimensional k A] [IsSimpleRing A]
     [AddCommGroup M] [Module A M] [IsSimpleModule A M]
     [Module k M] [IsScalarTower k A M] :
-    Nonempty (A ≃+* Module.End (Module.End A M) M) := by
+    Nonempty (A ≃ₐ[k] Module.End (Module.End A M) M) := by
   sorry
 
 theorem simple_module_center_and_dimension (k A M : Type*) [Field k]
@@ -218,11 +218,11 @@ theorem finite_module_end_is_matrix_and_double_commutant
     (k A N : Type*) [Field k] [Ring A] [Algebra k A]
     [FiniteDimensional k A] [IsSimpleRing A]
     [AddCommGroup N] [Nontrivial N] [Module A N] [Module k N] [IsScalarTower k A N]
-    [FiniteDimensional k N] :
+    [Module.Finite A N] :
     ∃ (n : ℕ) (_ : NeZero n) (L : Type*) (_ : DivisionRing L) (_ : Algebra k L)
       (_ : FiniteDimensional k L),
-      Nonempty (Module.End A N ≃+* Matrix (Fin n) (Fin n) L) ∧
-        Nonempty (Module.End (Module.End A N) N ≃+* A) := by
+      Nonempty (Module.End A N ≃ₐ[k] Matrix (Fin n) (Fin n) L) ∧
+        Nonempty (Module.End (Module.End A N) N ≃ₐ[k] A) := by
   sorry
 
 end SimpleModules

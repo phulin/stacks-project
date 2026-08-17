@@ -51,22 +51,25 @@ theorem matrix_division_similarity_iff (k K K' : Type*) [Field k]
       Nonempty (K ≃ₐ[k] K') := by
   sorry
 
-theorem brauer_group_tensor_operation_interface (k : Type*) [Field k] :
-    ∃ mul : BrauerGroup k → BrauerGroup k → BrauerGroup k,
-      ∀ A B : CSA k, ∃ C : CSA k,
-        mul (brauerClass k A) (brauerClass k B) = brauerClass k C ∧
-          Nonempty ((A.carrier ⊗[k] B.carrier) ≃ₐ[k] C.carrier) := by
-  sorry
-
 theorem brauer_group_is_abelian (k : Type*) [Field k] :
-    Nonempty (CommGroup (BrauerGroup k)) := by
+    ∃ G : CommGroup (BrauerGroup k),
+      letI : CommGroup (BrauerGroup k) := G
+      ∀ A B : CSA k, ∃ C : CSA k,
+        brauerClass k A * brauerClass k B = brauerClass k C ∧
+          Nonempty ((A.carrier ⊗[k] B.carrier) ≃ₐ[k] C.carrier) := by
   sorry
 
 /- Make the existence result available to the later interfaces as the
    chapter's chosen group structure on the quotient. -/
 noncomputable instance brauerGroupCommGroup (k : Type*) [Field k] :
     CommGroup (BrauerGroup k) :=
-  Classical.choice (brauer_group_is_abelian k)
+  Classical.choose (brauer_group_is_abelian k)
+
+theorem brauer_group_tensor_operation_interface (k : Type*) [Field k] :
+    ∀ A B : CSA k, ∃ C : CSA k,
+      brauerClass k A * brauerClass k B = brauerClass k C ∧
+        Nonempty ((A.carrier ⊗[k] B.carrier) ≃ₐ[k] C.carrier) := by
+  sorry
 
 theorem brauer_group_base_change_hom (k k' : Type*) [Field k] [Field k']
     [Algebra k k'] :

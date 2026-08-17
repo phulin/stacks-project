@@ -39,7 +39,7 @@ theorem rieffel_bicommutant (A : Type u) [Ring A] [IsSimpleRing A]
 theorem finite_algebra_has_simple_right_module (k A : Type*) [Field k]
     [Ring A] [Algebra k A] [FiniteDimensional k A] [Nontrivial A] :
     ∃ S : Submodule Aᵐᵒᵖ A, IsSimpleModule Aᵐᵒᵖ S := by
-  sorry
+  exact Formalization.Books.Brauer.finite_algebra_nonzero_module_has_simple_submodule k Aᵐᵒᵖ A
 
 /-- Every nonzero right module over a finite algebra contains a simple submodule. -/
 theorem finite_algebra_nonzero_right_module_has_simple_submodule
@@ -47,7 +47,7 @@ theorem finite_algebra_nonzero_right_module_has_simple_submodule
     [FiniteDimensional k A] [AddCommGroup M] [RightModule A M]
     [Nontrivial M] :
     ∃ S : Submodule Aᵐᵒᵖ M, IsSimpleModule Aᵐᵒᵖ S := by
-  sorry
+  exact Formalization.Books.Brauer.finite_algebra_nonzero_module_has_simple_submodule k Aᵐᵒᵖ M
 
 /-- A simple module over a finite algebra is finite-dimensional over the base field. -/
 theorem simple_right_module_over_finite_algebra_is_finite_dimensional
@@ -56,14 +56,14 @@ theorem simple_right_module_over_finite_algebra_is_finite_dimensional
     [Module k M] [IsScalarTower k Aᵐᵒᵖ M]
     [IsSimpleModule Aᵐᵒᵖ M] :
     FiniteDimensional k M := by
-  sorry
+  exact Formalization.Books.Brauer.simple_module_over_finite_algebra_is_finite_dimensional k Aᵐᵒᵖ M
 
 /-- The endomorphism ring of a simple right module is a skew field. -/
 theorem simple_right_module_end_is_division_ring (A M : Type*) [Ring A]
     [AddCommGroup M] [RightModule A M]
     [IsSimpleModule Aᵐᵒᵖ M] :
     Nonempty (DivisionRing (Module.End Aᵐᵒᵖ M)) := by
-  sorry
+  exact Formalization.Books.Brauer.simple_module_end_is_division_ring Aᵐᵒᵖ M
 
 /-! ## The finite Wedderburn theorem -/
 

@@ -43,7 +43,7 @@ theorem purely_inseparable_element_iff_pow_mem
     (p : ℕ) (hp : p.Prime) [CharP F p] (α : E) :
     α ∈ perfectClosure F E ↔
       ∃ n : ℕ, α ^ p ^ n ∈ (algebraMap F E).range := by
-  letI : Fact p.Prime := ⟨hp⟩
+  let _ : Fact p.Prime := ⟨hp⟩
   exact mem_perfectClosure_iff_pow_mem p
 
 /- The simple-extension form is also useful for the source's p-th-root
@@ -55,7 +55,7 @@ theorem purely_inseparable_simple_extension_iff_pow_mem
     (p : ℕ) (hp : p.Prime) [CharP F p] (α : E) :
     IsPurelyInseparable F (IntermediateField.adjoin F ({α} : Set E)) ↔
       ∃ n : ℕ, α ^ p ^ n ∈ (algebraMap F E).range := by
-  letI : Fact p.Prime := ⟨hp⟩
+  let _ : Fact p.Prime := ⟨hp⟩
   exact IntermediateField.isPurelyInseparable_adjoin_simple_iff_pow_mem F E p
 
 /-- Over a field of exponential characteristic `p`, an extension is purely
@@ -65,7 +65,7 @@ theorem purely_inseparable_extension_iff_pow_mem
     (p : ℕ) (hp : p.Prime) [CharP F p] :
     IsPurelyInseparable F E ↔
       ∀ x : E, ∃ n : ℕ, x ^ p ^ n ∈ (algebraMap F E).range := by
-  letI : Fact p.Prime := ⟨hp⟩
+  let _ : Fact p.Prime := ⟨hp⟩
   exact isPurelyInseparable_iff_pow_mem F p
 
 /- The source's observation that purely inseparable extensions are algebraic is
@@ -81,8 +81,8 @@ theorem purely_inseparable_extension_is_algebraic
 theorem purely_inseparable_char_zero_is_trivial
     {F E : Type*} [Field F] [Field E] [Algebra F E] [CharZero F]
     [IsPurelyInseparable F E] : Function.Surjective (algebraMap F E) := by
-  letI : Algebra.IsAlgebraic F E := IsPurelyInseparable.isAlgebraic F E
-  letI : Algebra.IsSeparable F E :=
+  let _ : Algebra.IsAlgebraic F E := IsPurelyInseparable.isAlgebraic F E
+  let _ : Algebra.IsSeparable F E :=
     Formalization.Books.Fields.Unit12.algebraic_extension_separable_of_char_zero
   exact IsPurelyInseparable.surjective_algebraMap_of_isSeparable F E
 

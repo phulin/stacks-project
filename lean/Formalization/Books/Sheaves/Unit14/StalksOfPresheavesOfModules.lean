@@ -1,6 +1,5 @@
 import Formalization.Books.Sheaves.Unit06.PresheavesOfModules
 import Mathlib.Algebra.Category.ModuleCat.ChangeOfRings
-import Mathlib.Algebra.Category.ModuleCat.Presheaf.ColimitFunctor
 import Mathlib.Algebra.Category.ModuleCat.Stalk
 
 /-!
@@ -19,7 +18,6 @@ presheaf-of-modules API.
 namespace Formalization.Books.Sheaves.Unit14
 
 open CategoryTheory CategoryTheory.Limits Opposite TopologicalSpace
-open scoped ChangeOfRings
 open Formalization.Books.Sheaves.Unit06
 
 universe u

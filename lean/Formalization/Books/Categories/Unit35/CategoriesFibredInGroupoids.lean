@@ -309,6 +309,31 @@ def groupoidFibredObjectProperty {C : Cat.{v, u}} :
     ObjectProperty (FibredCategoryOver C) :=
   IsGroupoidFibredCategoryOver
 
+/- A source 1-morphism only asks for a functor over `C`.  Unit 33 packages
+   such morphisms with a preservation proof, which is automatic when the
+   target has groupoid fibres because every target morphism is strongly
+   cartesian. -/
+theorem mapsStronglyCartesian_to_groupoidFibred
+    {C : Cat.{v, u}} {X Y : FibredCategoryOver C}
+    (hY : IsGroupoidFibredCategoryOver Y)
+    (F : CategoryOverHom X.underlying Y.underlying) :
+    MapsStronglyCartesian
+      (structureFunctor X.underlying) (structureFunctor Y.underlying)
+      (overFunctor F) := by
+  intro a b φ _hφ
+  exact fibredInGroupoids_all_morphisms_stronglyCartesian
+    (structureFunctor Y.underlying)
+    (groupoidFibredCategoryOver_isFibredInGroupoids Y hY)
+    ((overFunctor F).map φ)
+
+def fibredCategoryOverHomOfGroupoid
+    {C : Cat.{v, u}} {X Y : FibredCategoryOver C}
+    (hY : IsGroupoidFibredCategoryOver Y)
+    (F : CategoryOverHom X.underlying Y.underlying) :
+    FibredCategoryOverHom X Y where
+  underlying := F
+  preserves := mapsStronglyCartesian_to_groupoidFibred hY F
+
 /-- The source's 2-category of categories fibred in groupoids over `C`.
 It is the full sub-2-category on the groupoid-fibre objects. -/
 abbrev CategoriesFibredInGroupoidsOver (C : Cat.{v, u}) :=

@@ -1,0 +1,449 @@
+import Formalization.Books.Categories.Unit38.CategoriesFibredInSets
+import Mathlib.CategoryTheory.Groupoid.Basic
+import Mathlib.CategoryTheory.Skeletal
+
+/-!
+# Categories, Chapter 39: Categories fibred in setoids
+
+The source's setoids are groupoids with trivial automorphism groups.  The
+fixed-base 2-category, its two-fibre products, the passage to isomorphism
+classes, the inertia criterion, and the product formula are stated using the
+category-over and presheaf interfaces developed in Units 32--38.
+-/
+
+namespace Formalization.Books.Categories.Unit39
+
+open CategoryTheory
+open CategoryTheory.Bicategory
+open CategoryTheory.Functor
+open CategoryTheory.ObjectProperty
+open Opposite
+open Formalization.Books.Categories.Unit29
+open Formalization.Books.Categories.Unit30
+open Formalization.Books.Categories.Unit32
+open Formalization.Books.Categories.Unit33
+open Formalization.Books.Categories.Unit34
+open Formalization.Books.Categories.Unit35
+open Formalization.Books.Categories.Unit36
+open Formalization.Books.Categories.Unit37
+open Formalization.Books.Categories.Unit38
+
+universe vC uC vS uS vS' uS' v u v' u' u₁ v₁
+
+noncomputable section
+
+/-! ## Setoids -/
+
+/- A setoid category is a groupoid whose endomorphism monoids are trivial.
+   This is the literal categorical form of the source definition; the
+   equivalent thin-groupoid formulation is recorded below for use with
+   Mathlib's skeleton and quotient APIs. -/
+def IsSetoid (C : Type* ) [Category* C] : Prop :=
+  IsGroupoid C ∧ ∀ X : C, ∀ f : X ⟶ X, f = 𝟙 X
+
+theorem isSetoid_iff_isGroupoid_and_hom_subsingleton
+    {C : Type*} [Category* C] :
+    IsSetoid C ↔
+      IsGroupoid C ∧ ∀ X Y : C, Subsingleton (X ⟶ Y) := by
+  sorry
+
+theorem isSetoid_of_isDiscrete
+    {C : Type*} [Category* C] [IsDiscrete C] : IsSetoid C := by
+  exact ⟨inferInstance, fun X f => Subsingleton.elim _ _⟩
+
+theorem isSetoid_of_groupoid_of_hom_subsingleton
+    {C : Type*} [Category* C] (hC : IsGroupoid C)
+    (hhom : ∀ X Y : C, Subsingleton (X ⟶ Y)) : IsSetoid C := by
+  exact ⟨hC, fun X f => Subsingleton.elim _ _⟩
+
+/- The source's concrete construction from a set with an equivalence relation.
+   `PLift` makes each related hom-set a proposition with one inhabitant. -/
+structure SetoidCategoryObject (X : Type*) (r : Setoid X) where
+  as : X
+
+abbrev SetoidCategory (X : Type*) (r : Setoid X) :=
+  SetoidCategoryObject X r
+
+def setoidCategoryObjectEquiv (X : Type*) (r : Setoid X) :
+    SetoidCategory X r ≃ X where
+  toFun A := A.as
+  invFun x := ⟨x⟩
+  left_inv A := by cases A; rfl
+  right_inv x := rfl
+
+instance setoidCategoryCategory (X : Type*) (r : Setoid X) :
+    Category (SetoidCategory X r) where
+  Hom A B := PLift (r.r A.as B.as)
+  id A := ⟨r.iseqv.refl A.as⟩
+  comp f g := ⟨r.iseqv.trans f.down g.down⟩
+  id_comp := by
+    intros A B f
+    cases f
+    rfl
+  comp_id := by
+    intros A B f
+    cases f
+    rfl
+  assoc := by
+    intros A B D E f g h
+    cases f
+    cases g
+    cases h
+    rfl
+
+instance setoidCategoryGroupoid (X : Type*) (r : Setoid X) :
+    Groupoid (SetoidCategory X r) where
+  inv f := ⟨r.iseqv.symm f.down⟩
+  inv_comp := by
+    intros A B f
+    cases f
+    rfl
+  comp_inv := by
+    intros A B f
+    cases f
+    rfl
+
+theorem setoidCategory_isSetoid (X : Type*) (r : Setoid X) :
+    IsSetoid (SetoidCategory X r) := by
+  exact ⟨inferInstance, fun A f => by cases f; rfl⟩
+
+theorem setoidCategory_hom_nonempty_iff
+    (X : Type*) (r : Setoid X)
+    (A B : SetoidCategory X r) :
+    Nonempty (A ⟶ B) ↔ r.r A.as B.as := by
+  constructor
+  · rintro ⟨f⟩
+    exact f.down
+  · intro h
+    exact ⟨⟨h⟩⟩
+
+/- The object quotient used by Mathlib is the source's set of isomorphism
+   classes.  `ThinSkeleton` additionally supplies the canonical thin category
+   structure on that quotient. -/
+abbrev SetoidObjectClasses (C : Type*) [Category* C] :=
+  ThinSkeleton C
+
+theorem setoidObjectClasses_eq_iff
+    {C : Type*} [Category* C] {X Y : C} :
+    (ThinSkeleton.mk X : SetoidObjectClasses C) = ThinSkeleton.mk Y ↔
+      Nonempty (X ≅ Y) := by
+  exact Quotient.eq
+
+theorem isSetoid_object_classes_are_discrete
+    {C : Type*} [Category* C] (hC : IsSetoid C) :
+    IsDiscrete (SetoidObjectClasses C) := by
+  sorry
+
+theorem isSetoid_skeleton_equivalence
+    {C : Type*} [Category* C] (hC : IsSetoid C) :
+    Nonempty (Skeleton C ≌ C) ∧
+      IsDiscrete (Skeleton C) := by
+  sorry
+
+theorem isSetoid_objectClasses_equivalence
+    {C : Type*} [Category* C] (hC : IsSetoid C) :
+    Nonempty (SetoidObjectClasses C ≌ C) ∧
+      IsDiscrete (SetoidObjectClasses C) := by
+  sorry
+
+/-! ## Categories fibred in setoids -/
+
+def IsCategoryFibredInSetoids
+    {S C : Type*} [Category* S] [Category* C]
+    (p : S ⥤ C) : Prop :=
+  p.IsFibredInGroupoids ∧
+    ∀ U : C, IsSetoid (Functor.Fiber p U)
+
+theorem isCategoryFibredInSetoids_iff_isFibered_and_setoidFibres
+    {S C : Type*} [Category* S] [Category* C] (p : S ⥤ C) :
+    IsCategoryFibredInSetoids p ↔
+      p.IsFibered ∧ ∀ U : C, IsSetoid (Functor.Fiber p U) := by
+  sorry
+
+/-! ## The fixed-base 2-category -/
+
+def IsSetoidFibredCategoryOver {C : Cat.{v, u}}
+    (X : FibredCategoryOver C) : Prop :=
+  ∀ U : C, IsSetoid (Functor.Fiber (structureFunctor X.underlying) U)
+
+def categoriesFibredInSetoidsObjectProperty {C : Cat.{v, u}} :
+    ObjectProperty (FibredCategoryOver C) :=
+  fun X => IsSetoidFibredCategoryOver X
+
+abbrev CategoriesFibredInSetoidsOver (C : Cat.{v, u}) :=
+  FullSubTwoCategory (FibredCategoryOver C)
+    (categoriesFibredInSetoidsObjectProperty (C := C))
+
+theorem setoidFibredCategoryOver_isCategoryFibredInSetoids
+    {C : Cat.{v, u}} (X : FibredCategoryOver C)
+    (hX : IsSetoidFibredCategoryOver X) :
+    IsCategoryFibredInSetoids (structureFunctor X.underlying) := by
+  exact (isCategoryFibredInSetoids_iff_isFibered_and_setoidFibres _).mpr
+    ⟨inferInstance, hX⟩
+
+theorem mapsStronglyCartesian_to_setoidFibred
+    {C : Cat.{v, u}} {X Y : FibredCategoryOver C}
+    (hY : IsSetoidFibredCategoryOver Y)
+    (F : CategoryOverHom X.underlying Y.underlying) :
+    MapsStronglyCartesian
+      (structureFunctor X.underlying) (structureFunctor Y.underlying)
+      (overFunctor F) := by
+  intro a b φ _hφ
+  have hY' := setoidFibredCategoryOver_isCategoryFibredInSetoids Y hY
+  exact fibredInGroupoids_all_morphisms_stronglyCartesian
+    (structureFunctor Y.underlying) hY'.1 ((overFunctor F).map φ)
+
+def fibredCategoryOverHomOfSetoid
+    {C : Cat.{v, u}} {X Y : FibredCategoryOver C}
+    (hY : IsSetoidFibredCategoryOver Y)
+    (F : CategoryOverHom X.underlying Y.underlying) :
+    FibredCategoryOverHom X Y where
+  underlying := F
+  preserves := mapsStronglyCartesian_to_setoidFibred hY F
+
+theorem setoidFibredCategoryOver_two_morphism_isIso
+    {C : Cat.{v, u}} {X Y : FibredCategoryOver C}
+    (hY : IsSetoidFibredCategoryOver Y)
+    {F G : FibredCategoryOverHom X Y} (η : F ⟶ G) : IsIso η := by
+  exact fibredInGroupoids_two_morphism_isIso
+    (X := X) (Y := Y) (fun U => (hY U).1) η
+
+theorem categoriesFibredInSetoidsOver_is_two_one_category
+    (C : Cat.{v, u}) :
+    IsTwoOneCategory (CategoriesFibredInSetoidsOver C) := by
+  sorry
+
+/-! ## Two-fibre products -/
+
+structure FibredInSetoidsTwoFibreProduct
+    {C : Cat.{v, u}} {X Y S : FibredCategoryOver C}
+    (F : FibredCategoryOverHom X S) (G : FibredCategoryOverHom Y S) where
+  product : FibredTwoFibreProduct.{u₁, v₁, v, u} F G
+  fibres_are_setoids : ∀ U : C,
+    IsSetoid (Functor.Fiber product.diagram.base U)
+
+theorem fibredInSetoidsTwoFibreProduct_apex_isCategoryFibredInSetoids
+    {C : Cat.{v, u}} {X Y S : FibredCategoryOver C}
+    {F : FibredCategoryOverHom X S} {G : FibredCategoryOverHom Y S}
+    (P : FibredInSetoidsTwoFibreProduct F G) :
+    IsCategoryFibredInSetoids P.product.diagram.base := by
+  sorry
+
+theorem categoriesFibredInSetoids_have_twoFibreProducts
+    {C : Cat.{v, u}} (X Y S : FibredCategoryOver C)
+    (hX : IsSetoidFibredCategoryOver X)
+    (hY : IsSetoidFibredCategoryOver Y)
+    (hS : IsSetoidFibredCategoryOver S)
+    (F : FibredCategoryOverHom X S) (G : FibredCategoryOverHom Y S) :
+    Nonempty (FibredInSetoidsTwoFibreProduct F G) := by
+  sorry
+
+/-! ## Equivalences with fibred-in-sets categories -/
+
+theorem equivalence_to_fibredInSets_gives_setoidFibres
+    {S S' C : Type*} [Category* S] [Category* S'] [Category* C]
+    (p : S ⥤ C) (p' : S' ⥤ C) (G : S ⥤ S')
+    (over : G ⋙ p' = p)
+    (hG : Nonempty G.IsEquivalence)
+    (hp' : IsCategoryFibredInSets p') :
+    IsCategoryFibredInSetoids p ∧
+      ∀ U : C,
+        Function.Surjective (fibreFunctor p p' G over U).obj ∧
+          ∀ x y : Functor.Fiber p U,
+            ((fibreFunctor p p' G over U).obj x =
+              (fibreFunctor p p' G over U).obj y) ↔
+              Nonempty (x ≅ y) := by
+  sorry
+
+/- The source's quotient construction is exposed through the canonical
+   set-valued presheaf associated to the object classes in each fibre. -/
+theorem fibredSetoid_object_presheaf_exists
+    {S : Type uS} [Category.{vS} S]
+    {C : Type uC} [Category.{vC} C]
+    (p : S ⥤ C) (hp : IsCategoryFibredInSetoids p) :
+    ∃ F : Cᵒᵖ ⥤ Type uS,
+      ∀ U : C,
+        Nonempty (F.obj (Opposite.op U) ≃
+          SetoidObjectClasses (Functor.Fiber p U)) := by
+  sorry
+
+noncomputable def fibredSetoidObjectPresheaf
+    {S : Type uS} [Category.{vS} S]
+    {C : Type uC} [Category.{vC} C]
+    (p : S ⥤ C) (hp : IsCategoryFibredInSetoids p) :
+    Cᵒᵖ ⥤ Type uS :=
+  Classical.choose (fibredSetoid_object_presheaf_exists p hp)
+
+theorem fibredSetoidObjectPresheaf_obj_equiv
+    {S : Type uS} [Category.{vS} S]
+    {C : Type uC} [Category.{vC} C]
+    (p : S ⥤ C) (hp : IsCategoryFibredInSetoids p) (U : C) :
+    Nonempty
+      ((fibredSetoidObjectPresheaf p hp).obj (Opposite.op U) ≃
+        SetoidObjectClasses (Functor.Fiber p U)) := by
+  exact (Classical.choose_spec (fibredSetoid_object_presheaf_exists p hp)) U
+
+abbrev setoidificationCategory
+    {S : Type uS} [Category.{vS} S]
+    {C : Type uC} [Category.{vC} C]
+    (p : S ⥤ C) (hp : IsCategoryFibredInSetoids p) :=
+  setPresheafCategory (fibredSetoidObjectPresheaf p hp)
+
+abbrev setoidificationProjection
+    {S : Type uS} [Category.{vS} S]
+    {C : Type uC} [Category.{vC} C]
+    (p : S ⥤ C) (hp : IsCategoryFibredInSetoids p) :
+    setoidificationCategory p hp ⥤ C :=
+  setPresheafProjection (fibredSetoidObjectPresheaf p hp)
+
+theorem setoidificationCategory_isFibredInSets
+    {S : Type uS} [Category.{vS} S]
+    {C : Type uC} [Category.{vC} C]
+    (p : S ⥤ C) (hp : IsCategoryFibredInSetoids p) :
+    IsCategoryFibredInSets (setoidificationProjection p hp) := by
+  exact setPresheaf_category_isFibredInSets _
+
+theorem fibredSetoids_equivalent_to_fibredInSets
+    {S : Type uS} [Category.{vS} S]
+    {C : Type uC} [Category.{vC} C]
+    (p : S ⥤ C) (hp : IsCategoryFibredInSetoids p) :
+    IsFibredEquivalenceOver p (setoidificationProjection p hp) := by
+  sorry
+
+/- The source packages the preceding construction as a functor from the
+   fixed-base 2-category to the ordinary category of fibred-in-sets objects. -/
+structure SetoidificationFunctorProperties
+    {C : Cat.{v, u}}
+    (F : CategoriesFibredInSetoidsOver C ⥤
+      CategoriesFibredInSetsOverCategory (Cat.of (C : Type u))) : Prop where
+  unique_two_iso :
+    ∀ {X Y : CategoriesFibredInSetoidsOver C}
+      {f g : X ⟶ Y}, F.map f = F.map g →
+        ∃! η : f ⟶ g, IsIso η
+  lifts_morphisms :
+    ∀ {X Y : CategoriesFibredInSetoidsOver C}
+      (h : F.obj X ⟶ F.obj Y),
+      ∃ f : X ⟶ Y, F.map f = h
+  fibredInSets_objects_are_fixed :
+    ∀ Z : CategoriesFibredInSetsOverCategory (Cat.of (C : Type u)),
+      ∃ X : CategoriesFibredInSetoidsOver C, F.obj X = Z
+
+theorem setoidificationFunctor_exists (C : Cat.{v, u}) :
+    ∃ F : CategoriesFibredInSetoidsOver C ⥤
+      CategoriesFibredInSetsOverCategory (Cat.of (C : Type u)),
+      SetoidificationFunctorProperties F := by
+  sorry
+
+noncomputable def setoidificationFunctor (C : Cat.{v, u}) :
+    CategoriesFibredInSetoidsOver C ⥤
+      CategoriesFibredInSetsOverCategory (Cat.of (C : Type u)) :=
+  Classical.choose (setoidificationFunctor_exists C)
+
+theorem setoidificationFunctor_properties (C : Cat.{v, u}) :
+    SetoidificationFunctorProperties (setoidificationFunctor C) := by
+  exact Classical.choose_spec (setoidificationFunctor_exists C)
+
+theorem setoidificationFunctor_lift_unique_up_to_unique_two_iso
+    {C : Cat.{v, u}}
+    (F : CategoriesFibredInSetoidsOver C ⥤
+      CategoriesFibredInSetsOverCategory (Cat.of (C : Type u)))
+    (hF : SetoidificationFunctorProperties F)
+    {X Y : CategoriesFibredInSetoidsOver C}
+    (h : F.obj X ⟶ F.obj Y) :
+    ∃ f : X ⟶ Y, F.map f = h ∧
+      ∀ g : X ⟶ Y, F.map g = h →
+        ∃! η : f ⟶ g, IsIso η := by
+  rcases hF.lifts_morphisms h with ⟨f, hf⟩
+  refine ⟨f, hf, ?_⟩
+  intro g hg
+  exact hF.unique_two_iso (hf.trans hg.symm)
+
+/-! ## Inertia -/
+
+theorem inertiaStructureMap_over_base
+    {C : Cat.{v, u}} (X : FibredCategoryOver C) :
+    inertiaStructureMap X ⋙ structureFunctor X.underlying =
+      relativeInertiaBase (toBaseFibredHom X).underlying := by
+  rfl
+
+theorem setoidFibred_iff_inertia_isEquivalentOverBase
+    {C : Cat.{v, u}} (X : FibredCategoryOver C) :
+    IsSetoidFibredCategoryOver X ↔
+      IsEquivalentOverBase
+        (relativeInertiaBase (toBaseFibredHom X).underlying)
+        (structureFunctor X.underlying) := by
+  sorry
+
+theorem setoidFibred_iff_inertia_structureMap_isEquivalence
+    {C : Cat.{v, u}} (X : FibredCategoryOver C) :
+    IsSetoidFibredCategoryOver X ↔
+      Nonempty (inertiaStructureMap X).IsEquivalence := by
+  sorry
+
+/-! ## Morphisms modulo 2-isomorphism -/
+
+def TwoIsomorphismRelation
+    {C : Cat.{v, u}}
+    {X Y : CategoriesFibredInSetoidsOver C}
+    (f g : X ⟶ Y) : Prop :=
+  ∃ η : f ⟶ g, IsIso η
+
+abbrev MorphismsModuloTwoIsomorphism
+    {C : Cat.{v, u}}
+    (X Y : CategoriesFibredInSetoidsOver C) :=
+  Quot (TwoIsomorphismRelation (X := X) (Y := Y))
+
+theorem twoIsomorphismRelation_isEquivalence
+    {C : Cat.{v, u}}
+    (X Y : CategoriesFibredInSetoidsOver C) :
+    Equivalence (TwoIsomorphismRelation (X := X) (Y := Y)) := by
+  sorry
+
+theorem setoidification_morphism_classes_equiv_presheaf_morphisms
+    {C : Cat.{v, u}}
+    (F : CategoriesFibredInSetoidsOver C ⥤
+      CategoriesFibredInSetsOverCategory (Cat.of (C : Type u)))
+    (hF : SetoidificationFunctorProperties F)
+    (X Y : CategoriesFibredInSetoidsOver C) :
+    Nonempty
+      (MorphismsModuloTwoIsomorphism X Y ≃
+        ((categoriesFibredInSetsOverEquivalence (C := (C : Type u))).inverse.obj
+            (F.obj X) ⟶
+          (categoriesFibredInSetsOverEquivalence (C := (C : Type u))).inverse.obj
+            (F.obj Y))) := by
+  sorry
+
+/-! ## Compatibility with two-fibre products -/
+
+def TypeFiberProduct {A B D : Type*} (f : A → D) (g : B → D) :=
+  {x : A × B // f x.1 = g x.2}
+
+noncomputable def objectIsoClassMap
+    {A B : Type*} [Category* A] [Category* B]
+    (F : A ⥤ B) : SetoidObjectClasses A → SetoidObjectClasses B :=
+  (ThinSkeleton.map F).obj
+
+theorem fibredSetoid_twoFibreProduct_object_classes_equiv
+    {C : Cat.{v, u}} {X Y S : FibredCategoryOver C}
+    {F : FibredCategoryOverHom X S} {G : FibredCategoryOverHom Y S}
+    (P : FibredInSetoidsTwoFibreProduct F G) (U : C) :
+    Nonempty
+      (SetoidObjectClasses (Functor.Fiber P.product.diagram.base U) ≃
+        TypeFiberProduct
+          (objectIsoClassMap
+            (fibreFunctor
+              (structureFunctor X.underlying)
+              (structureFunctor S.underlying)
+              (overFunctor F.underlying)
+              (overFunctor_comm F.underlying) U))
+          (objectIsoClassMap
+            (fibreFunctor
+              (structureFunctor Y.underlying)
+              (structureFunctor S.underlying)
+              (overFunctor G.underlying)
+              (overFunctor_comm G.underlying) U))) := by
+  sorry
+
+end
+
+end Formalization.Books.Categories.Unit39

@@ -27,6 +27,9 @@ universe u v
 
 /-! ## Differential fibres and algebraically closed fields -/
 
+/- The source warns that the first two lemmas below need not hold over
+   nonperfect fields; their algebraically closed hypotheses are retained. -/
+
 /- The source writes `Ω_{S/k} ⊗_S κ(q)`.  We use the canonically equivalent
    localized presentation, with the residue field as the left factor, so that
    the localized Kaehler module and its `κ(q)`-module structure are both
@@ -108,6 +111,8 @@ noncomputable def differentialCotangentMap
     IsLocalRing.CotangentSpace R →ₗ[k]
       IsLocalRing.ResidueField R ⊗[R]
         Formalization.Books.Algebra.Unit131.ModuleOfDifferentials k R :=
+  letI : Algebra R (IsLocalRing.ResidueField R) :=
+    IsLocalRing.ResidueField.algebra (R₀ := R) R
   let f : IsLocalRing.maximalIdeal R →ₗ[k]
       IsLocalRing.ResidueField R ⊗[R]
         Formalization.Books.Algebra.Unit131.ModuleOfDifferentials k R :=
@@ -121,9 +126,18 @@ noncomputable def differentialCotangentMap
       Formalization.Books.Algebra.Unit131.universalDifferential k R
         ((x : R) * (y : R)) = 0
     rw [Derivation.leibniz]
-    simp [TensorProduct.tmul_smul,
-      Ideal.algebraMap_residueField_eq_zero.mpr x.2,
-      Ideal.algebraMap_residueField_eq_zero.mpr y.2])
+    rw [TensorProduct.tmul_add]
+    rw [TensorProduct.tmul_smul, TensorProduct.tmul_smul]
+    rw [TensorProduct.smul_tmul', TensorProduct.smul_tmul']
+    rw [Algebra.smul_def, Algebra.smul_def]
+    have hx0 : algebraMap R (IsLocalRing.ResidueField R) (x : R) = 0 := by
+      rw [IsLocalRing.ResidueField.algebraMap_eq, IsLocalRing.residue_def]
+      exact Ideal.Quotient.eq_zero_iff_mem.mpr x.2
+    have hy0 : algebraMap R (IsLocalRing.ResidueField R) (y : R) = 0 := by
+      rw [IsLocalRing.ResidueField.algebraMap_eq, IsLocalRing.residue_def]
+      exact Ideal.Quotient.eq_zero_iff_mem.mpr y.2
+    rw [hx0, hy0]
+    simp)
 
 theorem computation_differential
     {k R : Type*} [Field k] [CommRing R] [Algebra k R]
@@ -171,6 +185,17 @@ theorem characteristic_zero_is_regular
       (Submodule.span S
         {Formalization.Books.Algebra.Unit131.universalDifferential R S f}) C) :
     IsRegular f := by
+  sorry
+
+/-! ## The characteristic-zero local criterion -/
+
+theorem characteristic_zero_local_smooth
+    {k S : Type u} [Field k] [CharZero k] [CommRing S] [Algebra k S]
+    [Algebra.FiniteType k S] (q : PrimeSpectrum S) :
+    List.TFAE
+      [ Formalization.Books.Algebra.Unit137.IsSmoothAt k S q,
+        Formalization.Books.Algebra.Unit137.DifferentialsFiniteFreeAt k S q,
+        IsRegularLocalRing (Localization.AtPrime q.asIdeal) ] := by
   sorry
 
 /-! ## Characteristic-p counterexamples -/

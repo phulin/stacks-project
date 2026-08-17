@@ -7,6 +7,7 @@ import Mathlib.Algebra.Category.ModuleCat.Colimits
 import Mathlib.Algebra.Category.ModuleCat.FilteredColimits
 import Mathlib.Algebra.Colimit.DirectLimit
 import Mathlib.Algebra.Colimit.Module
+import Mathlib.CategoryTheory.Limits.ConcreteCategory.WithAlgebraicStructures
 import Mathlib.Algebra.Homology.ShortComplex.Abelian
 import Mathlib.Algebra.Homology.ShortComplex.Exact
 import Mathlib.Algebra.Homology.ShortComplex.FunctorEquivalence
@@ -59,7 +60,7 @@ theorem moduleSystemMap_comp (M : ModuleSystem R I) {i j k : I}
     (hij : i ≤ j) (hjk : j ≤ k) (x : (M.obj i : Type (max v w))) :
     moduleSystemMap M hjk (moduleSystemMap M hij x) =
       moduleSystemMap M (hij.trans hjk) x := by
-  simp [moduleSystemMap]
+  simp [moduleSystemMap, ← ModuleCat.comp_apply, ← M.map_comp, homOfLE_comp]
 
 /-- The categorical colimit of a module system. -/
 abbrev moduleSystemColimit (M : ModuleSystem R I) : ModuleCat.{max v w} R :=
@@ -135,54 +136,93 @@ theorem moduleColimitQuotient_is_colimit_exists
     (M : ModuleSystem R I) :
     Nonempty (IsColimit (moduleColimitQuotientCocone M)) := by
   classical
+  let desc (s : Cocone M) : (moduleColimitQuotientCocone M).pt ⟶ s.pt := by
+    let f := DirectSum.toModule R I s.pt
+      (fun i => (s.ι.app i).hom)
+    have hf : moduleColimitRelations M ≤ LinearMap.ker f := by
+      apply Submodule.span_le.2
+      rintro z ⟨i, j, h, m, rfl⟩
+      change f (moduleColimitDirectSumInclusion M i m -
+        moduleColimitDirectSumInclusion M j (moduleSystemMap M h m)) = 0
+      have hs :
+          (s.ι.app j).hom (moduleSystemMap M h m) =
+            (s.ι.app i).hom m := by
+        simp [moduleSystemMap]
+      rw [map_sub]
+      simpa [f, moduleColimitDirectSumInclusion, DirectSum.toModule_lof] using
+        sub_eq_zero.mpr hs.symm
+    exact ModuleCat.ofHom ((moduleColimitRelations M).liftQ f hf)
+  have desc_proj (s : Cocone M) :
+      (desc s).hom.comp (moduleColimitProjection M) =
+        DirectSum.toModule R I s.pt (fun i => (s.ι.app i).hom) := by
+    dsimp [desc, moduleColimitProjection]
+    exact Submodule.liftQ_mkQ (moduleColimitRelations M)
+      (DirectSum.toModule R I s.pt (fun i => (s.ι.app i).hom)) _
   refine ⟨{
-    desc := fun s => ModuleCat.ofHom <|
-      (moduleColimitRelations M).liftQ
-        (DirectSum.toModule R I (moduleColimitQuotient M)
-          (fun i => (s.ι.app i).hom)) <|
-        Submodule.span_le.2 (by
-          rintro z ⟨i, j, h, m, rfl⟩
-          rw [LinearMap.mem_ker]
-          have hs :
-              (s.ι.app j).hom (moduleSystemMap M h m) =
-                (s.ι.app i).hom m := by
-            simpa [moduleSystemMap, ModuleCat.comp_apply] using
-              congrArg (fun q => q.hom m) (s.w (homOfLE h))
-          rw [map_sub]
-          simp only [moduleColimitDirectSumInclusion, DirectSum.toModule_lof]
-          exact sub_eq_zero.mpr hs.symm)
+    desc := fun s => desc s
     fac := fun s i => by
+      apply ModuleCat.hom_ext
+      change (desc s).hom.comp (moduleColimitQuotientInclusion M i) =
+        (s.ι.app i).hom
       ext m
-      change
-        (moduleColimitRelations M).liftQ
-            (DirectSum.toModule R I (moduleColimitQuotient M)
-              (fun i => (s.ι.app i).hom)) _
-            (moduleColimitProjection M
-              (moduleColimitDirectSumInclusion M i m)) =
-          (s.ι.app i).hom m
-      rw [moduleColimitProjection, Submodule.mkQ_apply, Submodule.liftQ_apply]
-      simp
+      change (desc s).hom (moduleColimitProjection M
+        (moduleColimitDirectSumInclusion M i m)) = (s.ι.app i).hom m
+      have h := congrArg (fun f => f (moduleColimitDirectSumInclusion M i m))
+        (desc_proj s)
+      rw [show (desc s).hom.comp (moduleColimitProjection M)
+          (moduleColimitDirectSumInclusion M i m) =
+          (desc s).hom (moduleColimitProjection M
+            (moduleColimitDirectSumInclusion M i m)) by rfl] at h
+      rw [h]
+      simp [moduleColimitDirectSumInclusion, DirectSum.toModule_lof]
     uniq := fun s g hg => by
       apply ModuleCat.hom_ext
       apply Submodule.quot_hom_ext
       intro z
       have hz :
           g.hom.comp (moduleColimitProjection M) =
-            DirectSum.toModule R I (moduleColimitQuotient M)
+            DirectSum.toModule R I s.pt
               (fun i => (s.ι.app i).hom) := by
+        dsimp [moduleColimitQuotientCocone]
         apply DirectSum.linearMap_ext
         intro i
-        ext m
-        have hi := congrArg (fun q => q.hom m) (hg i)
-        simpa [moduleColimitQuotientInclusion, moduleColimitProjection,
-          moduleColimitDirectSumInclusion, ModuleCat.comp_apply] using hi
+        have hi := congrArg (fun q => q.hom) (hg i)
+        dsimp [moduleColimitQuotientCocone] at hi
+        change g.hom.comp (moduleColimitQuotientInclusion M i) =
+          (s.ι.app i).hom at hi
+        have hleft :
+            (g.hom.comp (moduleColimitProjection M)).comp
+                (moduleColimitDirectSumInclusion M i) =
+              (s.ι.app i).hom := by
+          apply LinearMap.ext
+          intro m
+          have him := congrArg (fun f => f m) hi
+          dsimp [moduleColimitQuotientInclusion] at him
+          change g.hom (moduleColimitProjection M
+            (moduleColimitDirectSumInclusion M i m)) =
+            (s.ι.app i).hom m at him
+          calc
+            ((g.hom.comp (moduleColimitProjection M)).comp
+                (moduleColimitDirectSumInclusion M i)) m =
+              g.hom (moduleColimitProjection M
+                (moduleColimitDirectSumInclusion M i m)) := rfl
+            _ = (s.ι.app i).hom m := him
+        have hright :
+            (DirectSum.toModule R I s.pt (fun i => (s.ι.app i).hom)).comp
+                (moduleColimitDirectSumInclusion M i) =
+              (s.ι.app i).hom := by
+          ext m
+          calc
+            ((DirectSum.toModule R I s.pt (fun i => (s.ι.app i).hom)).comp
+                (moduleColimitDirectSumInclusion M i)) m =
+              DirectSum.toModule R I s.pt (fun i => (s.ι.app i).hom)
+                (moduleColimitDirectSumInclusion M i m) := rfl
+            _ = (s.ι.app i).hom m := by
+              simp [moduleColimitDirectSumInclusion]
+        exact hleft.trans hright.symm
       change g.hom (moduleColimitProjection M z) =
-        (moduleColimitRelations M).liftQ
-          (DirectSum.toModule R I (moduleColimitQuotient M)
-            (fun i => (s.ι.app i).hom)) _
-          (moduleColimitProjection M z)
-      rw [moduleColimitProjection, Submodule.mkQ_apply, Submodule.liftQ_apply]
-      exact LinearMap.congr_fun hz z }
+        (desc s).hom (moduleColimitProjection M z)
+      exact LinearMap.congr_fun (hz.trans (desc_proj s).symm) z }⟩
 
 noncomputable def moduleColimitQuotient_is_colimit
     (M : ModuleSystem R I) :
@@ -245,19 +285,24 @@ private noncomputable def moduleColimitQuotientDisjointUnionLinearEquiv
     letI : Nonempty I := hI.1
     moduleColimitQuotient M ≃ₗ[R] directedModuleColimitDisjointUnion M hI := by
   classical
+  letI : IsDirectedOrder I := hI.2
+  letI : Nonempty I := hI.1
+  let f := DirectSum.toModule R I (directedModuleColimitDisjointUnion M hI)
+    (fun i => directedModuleColimitDisjointUnionMap M hI i)
+  have hf : moduleColimitRelations M ≤ LinearMap.ker f := by
+    apply Submodule.span_le.2
+    rintro z ⟨i, j, h, x, rfl⟩
+    change f (moduleColimitDirectSumInclusion M i x -
+      moduleColimitDirectSumInclusion M j (moduleSystemMap M h x)) = 0
+    rw [map_sub]
+    have hcompat :
+        directedModuleColimitDisjointUnionMap M hI j (moduleSystemMap M h x) =
+          directedModuleColimitDisjointUnionMap M hI i x := by
+      apply _root_.DirectLimit.Module.of_f
+    simpa [f, moduleColimitDirectSumInclusion] using sub_eq_zero.mpr hcompat.symm
   let toDisjoint : moduleColimitQuotient M →ₗ[R]
       directedModuleColimitDisjointUnion M hI :=
-    (moduleColimitRelations M).liftQ
-      (DirectSum.toModule R I (directedModuleColimitDisjointUnion M hI)
-        (fun i => directedModuleColimitDisjointUnionMap M hI i)) <|
-      Submodule.span_le.2 (by
-        rintro z ⟨i, j, h, x, rfl⟩
-        rw [LinearMap.mem_ker]
-        have hf :
-            directedModuleColimitDisjointUnionMap M hI j (moduleSystemMap M h x) =
-              directedModuleColimitDisjointUnionMap M hI i x := by
-          apply _root_.DirectLimit.Module.of_f
-        simpa [moduleColimitDirectSumInclusion] using sub_eq_zero.mpr hf.symm)
+    (moduleColimitRelations M).liftQ f hf
   let fromDisjoint : directedModuleColimitDisjointUnion M hI →ₗ[R]
       moduleColimitQuotient M :=
     _root_.DirectLimit.Module.lift R I
@@ -266,8 +311,27 @@ private noncomputable def moduleColimitQuotientDisjointUnionLinearEquiv
       (fun i => moduleColimitQuotientInclusion M i)
       (fun i j h x => LinearMap.congr_fun
         (moduleColimitQuotientInclusion_compatibility M h) x)
+  have hto (i : I) (x : (M.obj i : Type (max v w))) :
+      toDisjoint (moduleColimitQuotientInclusion M i x) =
+        directedModuleColimitDisjointUnionMap M hI i x := by
+    have hq := Submodule.liftQ_mkQ (moduleColimitRelations M) f hf
+    have hq' := congrArg
+      (fun q => q (moduleColimitDirectSumInclusion M i x)) hq
+    simpa only [toDisjoint, moduleColimitQuotientInclusion,
+      moduleColimitProjection, LinearMap.comp_apply, f,
+      moduleColimitDirectSumInclusion,
+      DirectSum.toModule_lof] using hq'
   apply LinearEquiv.ofLinear toDisjoint fromDisjoint
-  · apply Submodule.quot_hom_ext
+  · apply _root_.DirectLimit.Module.hom_ext
+    intro i
+    ext x
+    change toDisjoint (fromDisjoint
+      (_root_.DirectLimit.Module.of R I (fun i => (M.obj i : Type (max v w)))
+        (fun i j h => moduleSystemMap M h) i x)) =
+      directedModuleColimitDisjointUnionMap M hI i x
+    dsimp [fromDisjoint]
+    rw [_root_.DirectLimit.Module.lift_of, hto]
+  · apply Submodule.quot_hom_ext (moduleColimitRelations M)
     intro z
     have hz :
         (fromDisjoint.comp toDisjoint).comp (moduleColimitProjection M) =
@@ -275,14 +339,19 @@ private noncomputable def moduleColimitQuotientDisjointUnionLinearEquiv
       apply DirectSum.linearMap_ext
       intro i
       ext x
-      simp [toDisjoint, fromDisjoint, moduleColimitProjection,
-        moduleColimitDirectSumInclusion]
+      change fromDisjoint (toDisjoint
+        (moduleColimitQuotientInclusion M i x)) =
+        moduleColimitProjection M (moduleColimitDirectSumInclusion M i x)
+      rw [hto]
+      change fromDisjoint
+          (_root_.DirectLimit.Module.of R I
+            (fun i => (M.obj i : Type (max v w)))
+            (fun i j h => moduleSystemMap M h) i x) =
+        moduleColimitProjection M (moduleColimitDirectSumInclusion M i x)
+      dsimp [fromDisjoint]
+      rw [_root_.DirectLimit.Module.lift_of]
+      simp [moduleColimitQuotientInclusion, LinearMap.comp_apply]
     exact LinearMap.congr_fun hz z
-  · apply _root_.DirectLimit.Module.hom_ext
-    intro i
-    ext x
-    simp [toDisjoint, fromDisjoint, moduleColimitProjection,
-      moduleColimitDirectSumInclusion]
 
 theorem directedModuleColimit_disjointUnion_equiv (M : ModuleSystem R I)
     (hI : IsDirectedSet I) :
@@ -298,15 +367,36 @@ theorem directedModuleColimit_eq_iff (M : ModuleSystem R I)
     directedModuleColimitClass M hI i x = directedModuleColimitClass M hI j y ↔
       ∃ (k : I) (hik : i ≤ k) (hjk : j ≤ k),
         moduleSystemMap M hik x = moduleSystemMap M hjk y := by
+  classical
   letI : IsDirectedOrder I := hI.2
   letI : Nonempty I := hI.1
   let e := moduleColimitQuotientDisjointUnionLinearEquiv M hI
   have hclass (i : I) (x : (M.obj i : Type (max v w))) :
-      e (directedModuleColimitClass M hI i x) =
+        e (directedModuleColimitClass M hI i x) =
         directedModuleColimitDisjointUnionMap M hI i x := by
-    simp [e, directedModuleColimitClass,
-      moduleColimitQuotientDisjointUnionLinearEquiv,
-      moduleColimitProjection, moduleColimitDirectSumInclusion]
+    let f := DirectSum.toModule R I (directedModuleColimitDisjointUnion M hI)
+      (fun i => directedModuleColimitDisjointUnionMap M hI i)
+    have hf : moduleColimitRelations M ≤ LinearMap.ker f := by
+      apply Submodule.span_le.2
+      rintro z ⟨i, j, h, x, rfl⟩
+      change f (moduleColimitDirectSumInclusion M i x -
+        moduleColimitDirectSumInclusion M j (moduleSystemMap M h x)) = 0
+      rw [map_sub]
+      have hcompat :
+          directedModuleColimitDisjointUnionMap M hI j
+              (moduleSystemMap M h x) =
+            directedModuleColimitDisjointUnionMap M hI i x := by
+        apply _root_.DirectLimit.Module.of_f
+      simpa [f, moduleColimitDirectSumInclusion] using
+        sub_eq_zero.mpr hcompat.symm
+    have hq := Submodule.liftQ_mkQ (moduleColimitRelations M) f hf
+    have hq' := congrArg
+      (fun f => f (moduleColimitDirectSumInclusion M i x)) hq
+    simpa only [e, LinearEquiv.ofLinear_apply, directedModuleColimitClass,
+      moduleColimitQuotientDisjointUnionLinearEquiv, f,
+      moduleColimitQuotientInclusion, moduleColimitProjection,
+      LinearMap.comp_apply, moduleColimitDirectSumInclusion,
+      DirectSum.toModule_lof] using hq'
   constructor
   · intro h
     have h' := congrArg e h
@@ -326,22 +416,72 @@ theorem directedModuleColimit_add (M : ModuleSystem R I)
     letI : Nonempty I := hI.1
     directedModuleColimitClass M hI i x +
         directedModuleColimitClass M hI j y =
-      directedModuleColimitClass M hI k
+        directedModuleColimitClass M hI k
         (moduleSystemMap M hik x + moduleSystemMap M hjk y) := by
+  classical
   letI : IsDirectedOrder I := hI.2
   letI : Nonempty I := hI.1
   let e := moduleColimitQuotientDisjointUnionLinearEquiv M hI
   have hclass (i : I) (x : (M.obj i : Type (max v w))) :
-      e (directedModuleColimitClass M hI i x) =
+        e (directedModuleColimitClass M hI i x) =
         directedModuleColimitDisjointUnionMap M hI i x := by
-    simp [e, directedModuleColimitClass,
-      moduleColimitQuotientDisjointUnionLinearEquiv,
-      moduleColimitProjection, moduleColimitDirectSumInclusion]
+    let f := DirectSum.toModule R I (directedModuleColimitDisjointUnion M hI)
+      (fun i => directedModuleColimitDisjointUnionMap M hI i)
+    have hf : moduleColimitRelations M ≤ LinearMap.ker f := by
+      apply Submodule.span_le.2
+      rintro z ⟨i, j, h, x, rfl⟩
+      change f (moduleColimitDirectSumInclusion M i x -
+        moduleColimitDirectSumInclusion M j (moduleSystemMap M h x)) = 0
+      rw [map_sub]
+      have hcompat :
+          directedModuleColimitDisjointUnionMap M hI j
+              (moduleSystemMap M h x) =
+            directedModuleColimitDisjointUnionMap M hI i x := by
+        apply _root_.DirectLimit.Module.of_f
+      simpa [f, moduleColimitDirectSumInclusion] using
+        sub_eq_zero.mpr hcompat.symm
+    have hq := Submodule.liftQ_mkQ (moduleColimitRelations M) f hf
+    have hq' := congrArg
+      (fun f => f (moduleColimitDirectSumInclusion M i x)) hq
+    simpa only [e, LinearEquiv.ofLinear_apply, directedModuleColimitClass,
+      moduleColimitQuotientDisjointUnionLinearEquiv, f,
+      moduleColimitQuotientInclusion, moduleColimitProjection,
+      LinearMap.comp_apply, moduleColimitDirectSumInclusion,
+      DirectSum.toModule_lof] using hq'
   apply e.injective
   rw [map_add, hclass i x, hclass j y, hclass k _]
-  rw [_root_.DirectLimit.eq_of_le ⟨i, x⟩ k hik,
-    _root_.DirectLimit.eq_of_le ⟨j, y⟩ k hjk,
-    _root_.DirectLimit.add_def]
+  change
+    (_root_.DirectLimit.Module.of R I
+      (fun i => (M.obj i : Type (max v w)))
+      (fun i j h => moduleSystemMap M h) i x) +
+      (_root_.DirectLimit.Module.of R I
+        (fun i => (M.obj i : Type (max v w)))
+        (fun i j h => moduleSystemMap M h) j y) =
+      _root_.DirectLimit.Module.of R I
+        (fun i => (M.obj i : Type (max v w)))
+        (fun i j h => moduleSystemMap M h) k
+          (moduleSystemMap M hik x + moduleSystemMap M hjk y)
+  change
+    (⟦⟨i, x⟩⟧ : _root_.DirectLimit
+      (fun i => (M.obj i : Type (max v w)))
+      (fun i j h => moduleSystemMap M h)) +
+      ⟦⟨j, y⟩⟧ =
+      ⟦⟨k, moduleSystemMap M hik x + moduleSystemMap M hjk y⟩⟧
+  have hi :
+      (⟦⟨i, x⟩⟧ : _root_.DirectLimit
+        (fun i => (M.obj i : Type (max v w)))
+        (fun i j h => moduleSystemMap M h)) =
+        ⟦⟨k, moduleSystemMap M hik x⟩⟧ :=
+    _root_.DirectLimit.eq_of_le
+      (f := fun i j h => moduleSystemMap M h) ⟨i, x⟩ k hik
+  have hj :
+      (⟦⟨j, y⟩⟧ : _root_.DirectLimit
+        (fun i => (M.obj i : Type (max v w)))
+        (fun i j h => moduleSystemMap M h)) =
+        ⟦⟨k, moduleSystemMap M hjk y⟩⟧ :=
+    _root_.DirectLimit.eq_of_le
+      (f := fun i j h => moduleSystemMap M h) ⟨j, y⟩ k hjk
+  rw [hi, hj, _root_.DirectLimit.add_def]
 
 theorem directedModuleColimit_smul (M : ModuleSystem R I)
     (hI : IsDirectedSet I) {i : I}
@@ -350,17 +490,46 @@ theorem directedModuleColimit_smul (M : ModuleSystem R I)
     letI : Nonempty I := hI.1
     r • directedModuleColimitClass M hI i x =
       directedModuleColimitClass M hI i (r • x) := by
+  classical
   letI : IsDirectedOrder I := hI.2
   letI : Nonempty I := hI.1
   let e := moduleColimitQuotientDisjointUnionLinearEquiv M hI
   have hclass (i : I) (x : (M.obj i : Type (max v w))) :
-      e (directedModuleColimitClass M hI i x) =
+        e (directedModuleColimitClass M hI i x) =
         directedModuleColimitDisjointUnionMap M hI i x := by
-    simp [e, directedModuleColimitClass,
-      moduleColimitQuotientDisjointUnionLinearEquiv,
-      moduleColimitProjection, moduleColimitDirectSumInclusion]
+    let f := DirectSum.toModule R I (directedModuleColimitDisjointUnion M hI)
+      (fun i => directedModuleColimitDisjointUnionMap M hI i)
+    have hf : moduleColimitRelations M ≤ LinearMap.ker f := by
+      apply Submodule.span_le.2
+      rintro z ⟨i, j, h, x, rfl⟩
+      change f (moduleColimitDirectSumInclusion M i x -
+        moduleColimitDirectSumInclusion M j (moduleSystemMap M h x)) = 0
+      rw [map_sub]
+      have hcompat :
+          directedModuleColimitDisjointUnionMap M hI j
+              (moduleSystemMap M h x) =
+            directedModuleColimitDisjointUnionMap M hI i x := by
+        apply _root_.DirectLimit.Module.of_f
+      simpa [f, moduleColimitDirectSumInclusion] using
+        sub_eq_zero.mpr hcompat.symm
+    have hq := Submodule.liftQ_mkQ (moduleColimitRelations M) f hf
+    have hq' := congrArg
+      (fun f => f (moduleColimitDirectSumInclusion M i x)) hq
+    simpa only [e, LinearEquiv.ofLinear_apply, directedModuleColimitClass,
+      moduleColimitQuotientDisjointUnionLinearEquiv, f,
+      moduleColimitQuotientInclusion, moduleColimitProjection,
+      LinearMap.comp_apply, moduleColimitDirectSumInclusion,
+      DirectSum.toModule_lof] using hq'
   apply e.injective
-  rw [map_smul, hclass i (r • x), hclass i x, _root_.DirectLimit.smul_def]
+  rw [map_smul, hclass i (r • x), hclass i x]
+  change
+    r • (⟦⟨i, x⟩⟧ : _root_.DirectLimit
+      (fun i => (M.obj i : Type (max v w)))
+      (fun i j h => moduleSystemMap M h)) =
+      ⟦⟨i, r • x⟩⟧
+  exact _root_.DirectLimit.smul_def
+    (G := fun i => (M.obj i : Type (max v w)))
+    (f := fun i j h => moduleSystemMap M h) i x r
 
 /-- The canonical maps into the directed-colimit quotient. -/
 def directedModuleColimitMap (M : ModuleSystem R I) (hI : IsDirectedSet I) (i : I) :
@@ -395,8 +564,8 @@ def directedModuleColimitCocone (M : ModuleSystem R I)
 theorem directedModuleColimit_is_colimit_exists (M : ModuleSystem R I)
     (hI : IsDirectedSet I) :
     Nonempty (IsColimit (directedModuleColimitCocone M hI)) := by
-  simpa [directedModuleColimitCocone, directedModuleColimitMap]
-    using moduleColimitQuotient_is_colimit_exists M
+  change Nonempty (IsColimit (moduleColimitQuotientCocone M))
+  exact moduleColimitQuotient_is_colimit_exists M
 
 noncomputable def directedModuleColimit_is_colimit (M : ModuleSystem R I)
     (hI : IsDirectedSet I) :
@@ -409,17 +578,52 @@ theorem moduleSystemColimit_ι_eq_zero_iff
     (x : (M.obj i : Type (max v w))) :
     (colimit.ι M i) x = 0 ↔
       ∃ (j : I) (hij : i ≤ j), moduleSystemMap M hij x = 0 := by
+  classical
   letI : IsDirectedOrder I := hI.2
   letI : Nonempty I := hI.1
-  letI : IsFiltered I := inferInstance
+  let e : ModuleCat.of R (moduleColimitQuotient M) ≅ colimit M :=
+    (moduleColimitQuotient_is_colimit M).coconePointUniqueUpToIso
+      (colimit.isColimit M)
+  have hfac (j : I) :
+      ModuleCat.ofHom (moduleColimitQuotientInclusion M j) ≫ e.hom =
+        colimit.ι M j := by
+    change (moduleColimitQuotientCocone M).ι.app j ≫ e.hom =
+      (colimit.cocone M).ι.app j
+    exact (moduleColimitQuotient_is_colimit M).comp_coconePointUniqueUpToIso_hom
+      (colimit.isColimit M) j
   constructor
   · intro hx
-    obtain ⟨j, f, hf⟩ :=
-      CategoryTheory.Limits.Concrete.colimit_rep_eq_zero M i x hx
-    exact ⟨j, f.le, by simpa [moduleSystemMap] using hf⟩
+    let j₀ : I := hI.1.some
+    have hq : moduleColimitQuotientInclusion M i x =
+        moduleColimitQuotientInclusion M j₀ 0 := by
+      apply (ConcreteCategory.bijective_of_isIso e.hom).1
+      have hi := congrArg (fun f => f.hom x) (hfac i)
+      have hj := congrArg (fun f => f.hom 0) (hfac j₀)
+      change e.hom.hom (moduleColimitQuotientInclusion M i x) =
+        (colimit.ι M i).hom x at hi
+      change e.hom.hom (moduleColimitQuotientInclusion M j₀ 0) =
+        (colimit.ι M j₀).hom 0 at hj
+      change e.hom.hom (moduleColimitQuotientInclusion M i x) =
+        e.hom.hom (moduleColimitQuotientInclusion M j₀ 0)
+      rw [hi, hj, hx]
+      simp
+    have hclasszero :
+        directedModuleColimitClass M hI i x =
+          directedModuleColimitClass M hI j₀ 0 := by
+      change moduleColimitQuotientInclusion M i x =
+        moduleColimitQuotientInclusion M j₀ 0
+      exact hq
+    obtain ⟨k, hik, hjk, hzero⟩ :=
+      (directedModuleColimit_eq_iff M hI x
+        (0 : (M.obj j₀ : Type (max v w)))).mp hclasszero
+    refine ⟨k, hik, ?_⟩
+    simpa using hzero
   · rintro ⟨j, hij, hx⟩
-    rw [← colimit.w_apply M (homOfLE hij)]
-    simp [moduleSystemMap, hx]
+    calc
+      (colimit.ι M i).hom x =
+          (colimit.ι M j).hom (moduleSystemMap M hij x) := by
+        simpa [moduleSystemMap] using colimit.w_apply M (homOfLE hij) x
+      _ = 0 := by rw [hx]; simp
 
 /-! ## The three-object fork example -/
 
@@ -481,7 +685,16 @@ theorem threeFork_colimit_is_cokernel {R : Type u} [CommRing R]
       (Abelian.BiproductToPushoutIsCokernel.isColimitBiproductToPushout uab uac)
       (threeForkRelationMap uab uac) (ModuleCat.biprodIsoProd B C).symm (by
         intro W φ
-        simp [hrel, Category.assoc])
+        change q ≫ φ = 0 ↔
+          threeForkRelationMap uab uac ≫
+            (ModuleCat.biprodIsoProd B C).inv ≫ φ = 0
+        constructor
+        · intro h
+          rw [hrel, Category.assoc, Iso.hom_inv_id_assoc]
+          exact h
+        · intro h
+          rw [hrel, Category.assoc, Iso.hom_inv_id_assoc] at h
+          exact h)
   let e : pushout uab uac ≅ threeForkCokernel uab uac :=
     hpush.coconePointUniqueUpToIso
       (colimit.isColimit (parallelPair (threeForkRelationMap uab uac) 0))
@@ -1200,6 +1413,453 @@ theorem direct_sum_of_exact_short_complexes {R : Type u} [CommRing R]
     (ShortComplex.isoMk (Iso.refl _) (Iso.refl _) (Iso.refl _) ?_ ?_) hcol
   · simpa [directSumShortComplex, moduleShortComplexColimit] using hff.symm
   · simpa [directSumShortComplex, moduleShortComplexColimit] using hgg.symm
+
+set_option backward.defeqAttrib.useBackward true in
+set_option backward.isDefEq.respectTransparency false in
+private def decomposedColimitCocone {R : Type u} [CommRing R]
+    {J : Type v} [Category.{v'} J]
+    (H : ∀ j : ConnectedComponents J,
+      j.Component ⥤ ModuleCat.{max v v' w} R) :
+    Cocone (CategoryTheory.Sigma.desc H) := by
+  let G : ConnectedComponents J → ModuleCat.{max v v' w} R :=
+    fun j => colimit (H j)
+  let O := colimit (Discrete.functor G)
+  let ι : CategoryTheory.Sigma.desc H ⟶
+      (Functor.const (Decomposed J)).obj O :=
+    Sigma.natTrans (fun j => {
+      app := fun x => (Sigma.inclDesc H j).hom.app x ≫
+        colimit.ι (H j) x ≫
+        colimit.ι (Discrete.functor G) (Discrete.mk j)
+      naturality := by
+        intro X Y f
+        dsimp [G]
+        have h := congrArg (fun q =>
+            q ≫ colimit.ι (H j) Y ≫
+              colimit.ι (Discrete.functor G) (Discrete.mk j))
+          ((Sigma.inclDesc H j).hom.naturality f)
+        have hf : (Sigma.incl j).map f = Sigma.SigmaHom.mk f := rfl
+        simpa [Functor.const_obj_map, Functor.comp_map,
+          CategoryTheory.Sigma.desc_map_mk, Sigma.inclDesc_hom_app,
+          hf, Category.id_comp, Category.comp_id, Category.assoc, colimit.w] using h
+      })
+  exact { pt := O, ι := ι }
+
+set_option backward.defeqAttrib.useBackward true in
+set_option backward.isDefEq.respectTransparency false in
+private def decomposedColimitIsColimit {R : Type u} [CommRing R]
+    {J : Type v} [Category.{v'} J]
+    (H : ∀ j : ConnectedComponents J,
+      j.Component ⥤ ModuleCat.{max v v' w} R) :
+    IsColimit (decomposedColimitCocone H) := by
+  let G : ConnectedComponents J → ModuleCat.{max v v' w} R :=
+    fun j => colimit (H j)
+  let O := colimit (Discrete.functor G)
+  let desc (s : Cocone (CategoryTheory.Sigma.desc H)) :
+      (decomposedColimitCocone H).pt ⟶ s.pt := by
+    let cG : Cocone (Discrete.functor G) :=
+      Cocone.mk s.pt (Discrete.natTrans (fun j => by
+        let c : Cocone (H j.as) :=
+          (Cocone.precompose (Sigma.inclDesc H j.as).inv).obj
+            (s.whisker (inclusion j.as))
+        exact colimit.desc (H j.as) c))
+    exact colimit.desc (Discrete.functor G) cG
+  refine { desc := fun s => desc s, fac := ?_, uniq := ?_ }
+  · intro s
+    rintro ⟨j, X⟩
+    dsimp [decomposedColimitCocone, desc, G]
+    change _ = s.ι.app ((inclusion j).obj X)
+    simp only [Category.id_comp, Category.assoc, Discrete.natTrans_app,
+      Cofan.mk_ι_app, colimit.ι_desc]
+    rfl
+  · intro s m hm
+    dsimp [decomposedColimitCocone] at m hm ⊢
+    apply colimit.hom_ext
+    rintro ⟨j⟩
+    apply colimit.hom_ext
+    intro X
+    have h := hm ⟨j, X⟩
+    dsimp [desc, G]
+    simpa [Sigma.natTrans_app, Sigma.inclDesc_hom_app,
+      Cocone.precompose_obj_ι, Cocone.whisker_ι, NatTrans.comp_app,
+      Discrete.natTrans_app, Category.assoc, colimit.ι_desc] using h
+
+private noncomputable def decomposedColimitIso {R : Type u} [CommRing R]
+    {J : Type v} [Category.{v'} J]
+    (F : J ⥤ ModuleCat.{max v v' w} R) :
+    colimit F ≅ colimit
+      (Discrete.functor (fun j : ConnectedComponents J =>
+          colimit (inclusion j ⋙
+          (decomposedEquiv (J := J)).functor ⋙ F))) := by
+  let e := (decomposedEquiv (J := J)).inverse
+  let ef := (decomposedEquiv (J := J)).functor
+  let H : ∀ j : ConnectedComponents J,
+      j.Component ⥤ ModuleCat.{max v v' w} R :=
+    fun j => inclusion j ⋙ ef ⋙ F
+  let i₀ : e ⋙ ef ⋙ F ≅ e ⋙ CategoryTheory.Sigma.desc H :=
+    Functor.isoWhiskerLeft e
+      (Sigma.descUniq H (ef ⋙ F) (fun _ => Iso.refl _))
+  let i : e ⋙ CategoryTheory.Sigma.desc H ≅ F :=
+    i₀.symm ≪≫ Functor.isoWhiskerRight
+      (decomposedEquiv (J := J)).counitIso F
+  exact (HasColimit.isoOfNatIso i).symm ≪≫
+    Functor.Final.colimitIso e (CategoryTheory.Sigma.desc H) ≪≫
+      (colimit.isColimit (CategoryTheory.Sigma.desc H)).coconePointUniqueUpToIso
+        (decomposedColimitIsColimit H)
+
+set_option backward.defeqAttrib.useBackward true in
+set_option backward.isDefEq.respectTransparency false in
+private theorem decomposedColimitIso_ι_hom_aux {R : Type u} [CommRing R]
+    {J : Type v} [Category.{v'} J]
+    (F : J ⥤ ModuleCat.{max v v' w} R)
+    (H : ∀ j : ConnectedComponents J,
+      j.Component ⥤ ModuleCat.{max v v' w} R)
+    (i : (decomposedEquiv (J := J)).inverse ⋙ CategoryTheory.Sigma.desc H ≅ F)
+    (X : J) :
+    colimit.ι F X ≫
+        ((HasColimit.isoOfNatIso i).symm ≪≫
+          Functor.Final.colimitIso (decomposedEquiv (J := J)).inverse
+            (CategoryTheory.Sigma.desc H) ≪≫
+          (colimit.isColimit (CategoryTheory.Sigma.desc H)).coconePointUniqueUpToIso
+            (decomposedColimitIsColimit H)).hom =
+      i.inv.app X ≫
+        (decomposedColimitCocone H).ι.app
+          ((decomposedEquiv (J := J)).inverse.obj X) := by
+  simp [Category.assoc, HasColimit.isoOfNatIso_ι_inv,
+    Functor.Final.ι_colimitIso_hom,
+    IsColimit.comp_coconePointUniqueUpToIso_hom]
+
+private def arbitraryModuleShortComplexFirstMap {R : Type u} [CommRing R]
+    {K : Type v} [Category.{v'} K]
+    (S : K ⥤ ShortComplex (ModuleCat.{w'} R)) :
+    (S ⋙ ShortComplex.π₁) ⟶ (S ⋙ ShortComplex.π₂) where
+  app i := (S.obj i).f
+  naturality _i _j f := (S.map f).comm₁₂
+
+private def arbitraryModuleShortComplexSecondMap {R : Type u} [CommRing R]
+    {K : Type v} [Category.{v'} K]
+    (S : K ⥤ ShortComplex (ModuleCat.{w'} R)) :
+    (S ⋙ ShortComplex.π₂) ⟶ (S ⋙ ShortComplex.π₃) where
+  app i := (S.obj i).g
+  naturality _i _j f := (S.map f).comm₂₃
+
+private def arbitraryModuleShortComplexColimit {R : Type u} [CommRing R]
+    {K : Type v} [Category.{v'} K]
+    [HasColimitsOfShape K (AddCommGrpCat.{w'})]
+    [HasColimitsOfShape K (ModuleCat.{w'} R)]
+    (S : K ⥤ ShortComplex (ModuleCat.{w'} R)) :
+    ShortComplex (ModuleCat.{w'} R) :=
+  ShortComplex.mk (colim.map (arbitraryModuleShortComplexFirstMap S))
+    (colim.map (arbitraryModuleShortComplexSecondMap S)) (by
+      apply colimit.hom_ext
+      intro i
+      rw [← Category.assoc, colimit.ι_map, Category.assoc, colimit.ι_map]
+      have hzero :
+          (arbitraryModuleShortComplexFirstMap S).app i ≫
+              (arbitraryModuleShortComplexSecondMap S).app i = 0 := by
+        change (S.obj i).f ≫ (S.obj i).g = 0
+        exact (S.obj i).zero
+      rw [← Category.assoc, hzero, zero_comp, comp_zero])
+
+private def decomposedShortComplexFamily {R : Type u} [CommRing R]
+    {I : Type v} [Category.{v'} I]
+    (S : I ⥤ ShortComplex (ModuleCat.{max v v' w} R)) :
+    ConnectedComponents I → ShortComplex (ModuleCat.{max v v' w} R) :=
+  fun j =>
+    moduleShortComplexColimit
+      (inclusion j ⋙ (decomposedEquiv (J := I)).functor ⋙ S)
+
+set_option backward.defeqAttrib.useBackward true in
+set_option backward.isDefEq.respectTransparency false in
+private noncomputable def decomposedShortComplexIso {R : Type u} [CommRing R]
+    {I : Type v} [Category.{v'} I]
+    (S : I ⥤ ShortComplex (ModuleCat.{max v v' w} R)) :
+    moduleShortComplexColimit S ≅
+      arbitraryModuleShortComplexColimit
+        (Discrete.functor (decomposedShortComplexFamily S)) := by
+  let D := decomposedShortComplexFamily S
+  let e₁ := decomposedColimitIso (S ⋙ ShortComplex.π₁)
+  let e₂ := decomposedColimitIso (S ⋙ ShortComplex.π₂)
+  let e₃ := decomposedColimitIso (S ⋙ ShortComplex.π₃)
+  let H₁ : ∀ j : ConnectedComponents I,
+      j.Component ⥤ ModuleCat.{max v v' w} R := fun j =>
+    inclusion j ⋙ (decomposedEquiv (J := I)).functor ⋙ S ⋙ ShortComplex.π₁
+  let H₂ : ∀ j : ConnectedComponents I,
+      j.Component ⥤ ModuleCat.{max v v' w} R := fun j =>
+    inclusion j ⋙ (decomposedEquiv (J := I)).functor ⋙ S ⋙ ShortComplex.π₂
+  let H₃ : ∀ j : ConnectedComponents I,
+      j.Component ⥤ ModuleCat.{max v v' w} R := fun j =>
+    inclusion j ⋙ (decomposedEquiv (J := I)).functor ⋙ S ⋙ ShortComplex.π₃
+  let b₁ := Discrete.compNatIsoDiscrete D ShortComplex.π₁
+  let b₂ := Discrete.compNatIsoDiscrete D ShortComplex.π₂
+  let b₃ := Discrete.compNatIsoDiscrete D ShortComplex.π₃
+  let a₁ : Discrete.functor (fun j : ConnectedComponents I =>
+      colimit (H₁ j)) ≅
+      Discrete.functor (ShortComplex.π₁.obj ∘ D) :=
+    Discrete.natIso (fun j => by
+      dsimp [D, H₁, moduleShortComplexColimit]
+      exact Iso.refl _)
+  let a₂ : Discrete.functor (fun j : ConnectedComponents I =>
+      colimit (H₂ j)) ≅
+      Discrete.functor (ShortComplex.π₂.obj ∘ D) :=
+    Discrete.natIso (fun j => by
+      dsimp [D, H₂, moduleShortComplexColimit]
+      exact Iso.refl _)
+  let a₃ : Discrete.functor (fun j : ConnectedComponents I =>
+      colimit (H₃ j)) ≅
+      Discrete.functor (ShortComplex.π₃.obj ∘ D) :=
+    Discrete.natIso (fun j => by
+      dsimp [D, H₃, moduleShortComplexColimit]
+      exact Iso.refl _)
+  let d₁ := HasColimit.isoOfNatIso a₁
+  let d₂ := HasColimit.isoOfNatIso a₂
+  let d₃ := HasColimit.isoOfNatIso a₃
+  let c₁ := HasColimit.isoOfNatIso b₁.symm
+  let c₂ := HasColimit.isoOfNatIso b₂.symm
+  let c₃ := HasColimit.isoOfNatIso b₃.symm
+  let i₀₁ : (decomposedEquiv (J := I)).inverse ⋙
+      (decomposedEquiv (J := I)).functor ⋙ S ⋙ ShortComplex.π₁ ≅
+      (decomposedEquiv (J := I)).inverse ⋙ CategoryTheory.Sigma.desc H₁ :=
+    Functor.isoWhiskerLeft (decomposedEquiv (J := I)).inverse
+      (Sigma.descUniq H₁ ((decomposedEquiv (J := I)).functor ⋙ S ⋙ ShortComplex.π₁)
+        (fun _ => Iso.refl _))
+  let i₀₂ : (decomposedEquiv (J := I)).inverse ⋙
+      (decomposedEquiv (J := I)).functor ⋙ S ⋙ ShortComplex.π₂ ≅
+      (decomposedEquiv (J := I)).inverse ⋙ CategoryTheory.Sigma.desc H₂ :=
+    Functor.isoWhiskerLeft (decomposedEquiv (J := I)).inverse
+      (Sigma.descUniq H₂ ((decomposedEquiv (J := I)).functor ⋙ S ⋙ ShortComplex.π₂)
+        (fun _ => Iso.refl _))
+  let i₀₃ : (decomposedEquiv (J := I)).inverse ⋙
+      (decomposedEquiv (J := I)).functor ⋙ S ⋙ ShortComplex.π₃ ≅
+      (decomposedEquiv (J := I)).inverse ⋙ CategoryTheory.Sigma.desc H₃ :=
+    Functor.isoWhiskerLeft (decomposedEquiv (J := I)).inverse
+      (Sigma.descUniq H₃ ((decomposedEquiv (J := I)).functor ⋙ S ⋙ ShortComplex.π₃)
+        (fun _ => Iso.refl _))
+  let i₁ : (decomposedEquiv (J := I)).inverse ⋙ CategoryTheory.Sigma.desc H₁ ≅
+      S ⋙ ShortComplex.π₁ :=
+    i₀₁.symm ≪≫ Functor.isoWhiskerRight
+      (decomposedEquiv (J := I)).counitIso (S ⋙ ShortComplex.π₁)
+  let i₂ : (decomposedEquiv (J := I)).inverse ⋙ CategoryTheory.Sigma.desc H₂ ≅
+      S ⋙ ShortComplex.π₂ :=
+    i₀₂.symm ≪≫ Functor.isoWhiskerRight
+      (decomposedEquiv (J := I)).counitIso (S ⋙ ShortComplex.π₂)
+  let i₃ : (decomposedEquiv (J := I)).inverse ⋙ CategoryTheory.Sigma.desc H₃ ≅
+      S ⋙ ShortComplex.π₃ :=
+    i₀₃.symm ≪≫ Functor.isoWhiskerRight
+      (decomposedEquiv (J := I)).counitIso (S ⋙ ShortComplex.π₃)
+  refine ShortComplex.isoMk
+    (by
+      let s₁ : (moduleShortComplexColimit S).X₁ ≅
+          colimit (S ⋙ ShortComplex.π₁) := by
+        dsimp [moduleShortComplexColimit]
+        rfl
+      let t₁ : colimit ((Discrete.functor D) ⋙ ShortComplex.π₁) ≅
+          (arbitraryModuleShortComplexColimit (Discrete.functor D)).X₁ := by
+        dsimp [arbitraryModuleShortComplexColimit]
+        rfl
+      exact s₁ ≪≫ e₁ ≪≫ d₁ ≪≫ c₁ ≪≫ t₁)
+    (by
+      let s₂ : (moduleShortComplexColimit S).X₂ ≅
+          colimit (S ⋙ ShortComplex.π₂) := by
+        dsimp [moduleShortComplexColimit]
+        rfl
+      let t₂ : colimit ((Discrete.functor D) ⋙ ShortComplex.π₂) ≅
+          (arbitraryModuleShortComplexColimit (Discrete.functor D)).X₂ := by
+        dsimp [arbitraryModuleShortComplexColimit]
+        rfl
+      exact s₂ ≪≫ e₂ ≪≫ d₂ ≪≫ c₂ ≪≫ t₂)
+    (by
+      let s₃ : (moduleShortComplexColimit S).X₃ ≅
+          colimit (S ⋙ ShortComplex.π₃) := by
+        dsimp [moduleShortComplexColimit]
+        rfl
+      let t₃ : colimit ((Discrete.functor D) ⋙ ShortComplex.π₃) ≅
+          (arbitraryModuleShortComplexColimit (Discrete.functor D)).X₃ := by
+        dsimp [arbitraryModuleShortComplexColimit]
+        rfl
+      exact s₃ ≪≫ e₃ ≪≫ d₃ ≪≫ c₃ ≪≫ t₃) ?_ ?_
+  · apply colimit.hom_ext
+    intro i
+    have hι₁ := decomposedColimitIso_ι_hom_aux
+      (S ⋙ ShortComplex.π₁) H₁ i₁ i
+    have hι₂ := decomposedColimitIso_ι_hom_aux
+      (S ⋙ ShortComplex.π₂) H₂ i₂ i
+    rw [Category.assoc, hι₁, Category.assoc, colimit.ι_map,
+      Category.assoc, hι₂]
+    simp [e₁, e₂, b₁, b₂, c₁, c₂, D, H₁, H₂, i₁, i₂,
+      arbitraryModuleShortComplexColimit,
+      arbitraryModuleShortComplexFirstMap, arbitraryModuleShortComplexSecondMap,
+      moduleShortComplexColimit, decomposedColimitCocone]
+  · apply colimit.hom_ext
+    intro i
+    have hι₂ := decomposedColimitIso_ι_hom_aux
+      (S ⋙ ShortComplex.π₂) H₂ i₂ i
+    have hι₃ := decomposedColimitIso_ι_hom_aux
+      (S ⋙ ShortComplex.π₃) H₃ i₃ i
+    rw [Category.assoc, hι₂, Category.assoc, colimit.ι_map,
+      Category.assoc, hι₃]
+    simp [e₂, e₃, b₂, b₃, c₂, c₃, D, H₂, H₃, i₂, i₃,
+      arbitraryModuleShortComplexColimit,
+      arbitraryModuleShortComplexFirstMap, arbitraryModuleShortComplexSecondMap,
+      moduleShortComplexColimit, decomposedColimitCocone]
+
+private def colimit_homology {R : Type u} [CommRing R]
+    {K : Type v} [Category.{v'} K]
+    [AB5OfSize.{v', v} (AddCommGrpCat.{max v v' w})]
+    [HasExactColimitsOfShape K (ModuleCat.{max v v' w} R)]
+    (S : K ⥤ ShortComplex (ModuleCat.{max v v' w} R)) :
+    Nonempty
+      ((moduleShortComplexColimit S).homology ≅
+        colimit (S ⋙ ShortComplex.homologyFunctor
+          (ModuleCat.{max v v' w} R))) := by
+  have hF : (colim : (K ⥤ ModuleCat.{max v v' w} R) ⥤
+      ModuleCat.{max v v' w} R).PreservesHomology := by infer_instance
+  let T := ShortComplex.FunctorEquivalence.inverse K
+    (ModuleCat.{max v v' w} R)
+  let ST := T.obj S
+  have hfirst : S.whiskerLeft ShortComplex.π₁Toπ₂ =
+      moduleShortComplexFirstMap S := by
+    apply NatTrans.ext
+    funext i
+    rfl
+  have hsecond : S.whiskerLeft ShortComplex.π₂Toπ₃ =
+      moduleShortComplexSecondMap S := by
+    apply NatTrans.ext
+    funext i
+    rfl
+  have hff : colim.map ST.f = colim.map (moduleShortComplexFirstMap S) := by
+    simpa [T, ST, ShortComplex.FunctorEquivalence.inverse] using
+      congrArg (fun q => colim.map q) hfirst
+  have hgg : colim.map ST.g = colim.map (moduleShortComplexSecondMap S) := by
+    simpa [T, ST, ShortComplex.FunctorEquivalence.inverse] using
+      congrArg (fun q => colim.map q) hsecond
+  let q : ST.map colim ≅ moduleShortComplexColimit S :=
+    ShortComplex.isoMk (Iso.refl _) (Iso.refl _) (Iso.refl _)
+      (by
+        simp only [Iso.refl_hom, Category.id_comp, Category.comp_id]
+        exact hff.symm)
+      (by
+        simp only [Iso.refl_hom, Category.id_comp, Category.comp_id]
+        exact hgg.symm)
+  let E := ShortComplex.FunctorEquivalence.functor K
+    (ModuleCat.{max v v' w} R)
+  let HST := E.obj ST ⋙ ShortComplex.homologyFunctor
+    (ModuleCat.{max v v' w} R)
+  let p₀ : ST.homology ≅ HST :=
+    NatIso.ofComponents (fun i => by
+      simpa [HST, E, T, ST, ShortComplex.FunctorEquivalence.functor,
+        ShortComplex.FunctorEquivalence.inverse] using
+        (ST.mapHomologyIso ((evaluation K (ModuleCat.{max v v' w} R)).obj i)).symm) (by
+      intro i j h
+      let eᵢ := ST.mapHomologyIso ((evaluation K (ModuleCat.{max v v' w} R)).obj i)
+      let eⱼ := ST.mapHomologyIso ((evaluation K (ModuleCat.{max v v' w} R)).obj j)
+      change ST.homology.map h ≫ eⱼ.inv =
+        eᵢ.inv ≫ ShortComplex.homologyMap (ST.mapNatTrans
+          ((evaluation K (ModuleCat.{max v v' w} R)).map h))
+      rw [ShortComplex.homologyMap_mapNatTrans]
+      change ST.homology.map h ≫ eⱼ.inv =
+        eᵢ.inv ≫ eᵢ.hom ≫
+          ((evaluation K (ModuleCat.{max v v' w} R)).map h).app ST.homology ≫ eⱼ.inv
+      simp)
+  let p : ST.homology ≅ S ⋙ ShortComplex.homologyFunctor
+      (ModuleCat.{max v v' w} R) :=
+    p₀ ≪≫ Functor.isoWhiskerRight
+      ((ShortComplex.FunctorEquivalence.counitIso K
+        (ModuleCat.{max v v' w} R)).app S)
+      (ShortComplex.homologyFunctor (ModuleCat.{max v v' w} R))
+  exact ⟨((ShortComplex.homologyFunctor (ModuleCat.{max v v' w} R)).mapIso q).symm ≪≫
+    ST.mapHomologyIso colim ≪≫ colim.mapIso p⟩
+
+private def filtered_colimit_homology {R : Type u} [CommRing R]
+    {K : Type v} [Category.{v'} K] [IsFiltered K]
+    (S : K ⥤ ShortComplex (ModuleCat.{max v v' w} R)) :
+    Nonempty
+      ((moduleShortComplexColimit S).homology ≅
+        colimit (S ⋙ ShortComplex.homologyFunctor
+          (ModuleCat.{max v v' w} R))) := by
+  letI : AB5OfSize.{v', v} (AddCommGrpCat.{max v v' w}) :=
+    AB5OfSize_of_univLE (AddCommGrpCat.{max v v' w})
+  letI : HasExactColimitsOfShape K (ModuleCat.{max v v' w} R) :=
+    HasExactColimitsOfShape.domain_of_functor K
+      (forget₂ (ModuleCat.{max v v' w} R) AddCommGrpCat)
+  exact colimit_homology S
+
+private def filtered_colimit_exact {R : Type u} [CommRing R]
+    {K : Type v} [Category.{v'} K] [IsFiltered K]
+    (S : K ⥤ ShortComplex (ModuleCat.{max v v' w} R))
+    (hS : ∀ i : K, (S.obj i).Exact) :
+    (moduleShortComplexColimit S).Exact := by
+  letI : AB5OfSize.{v', v} (AddCommGrpCat.{max v v' w}) :=
+    AB5OfSize_of_univLE (AddCommGrpCat.{max v v' w})
+  letI : HasExactColimitsOfShape K (ModuleCat.{max v v' w} R) :=
+    HasExactColimitsOfShape.domain_of_functor K
+      (forget₂ (ModuleCat.{max v v' w} R) AddCommGrpCat)
+  have hF : (colim : (K ⥤ ModuleCat.{max v v' w} R) ⥤
+      ModuleCat.{max v v' w} R).PreservesHomology := by infer_instance
+  let T := ShortComplex.FunctorEquivalence.inverse K
+    (ModuleCat.{max v v' w} R)
+  let ST := T.obj S
+  have hST : ST.Exact := by
+    apply (ST.exact_iff_isZero_homology).2
+    refine { unique_to := ?_, unique_from := ?_ }
+    · intro X
+      refine ⟨⟨⟨0⟩, ?_⟩⟩
+      intro q
+      apply NatTrans.ext
+      funext i
+      change q.app i = ((0 : ST.homology ⟶ X).app i)
+      have hi : IsZero (ST.homology.obj i) := by
+        let e := (ShortComplex.homologyFunctorIso
+          ((evaluation K (ModuleCat.{max v v' w} R)).obj i)).app ST
+        apply IsZero.of_iso
+          ((ST.map ((evaluation K (ModuleCat.{max v v' w} R)).obj i)).exact_iff_isZero_homology.1
+            (hS i)) e.symm
+      exact hi.eq_of_src (q.app i) ((0 : ST.homology ⟶ X).app i)
+    · intro X
+      refine ⟨⟨⟨0⟩, ?_⟩⟩
+      intro q
+      apply NatTrans.ext
+      funext i
+      change q.app i = ((0 : X ⟶ ST.homology).app i)
+      have hi : IsZero (ST.homology.obj i) := by
+        let e := (ShortComplex.homologyFunctorIso
+          ((evaluation K (ModuleCat.{max v v' w} R)).obj i)).app ST
+        apply IsZero.of_iso
+          ((ST.map ((evaluation K (ModuleCat.{max v v' w} R)).obj i)).exact_iff_isZero_homology.1
+            (hS i)) e.symm
+      exact hi.eq_of_tgt (q.app i) ((0 : X ⟶ ST.homology).app i)
+  have hfirst : S.whiskerLeft ShortComplex.π₁Toπ₂ =
+      moduleShortComplexFirstMap S := by
+    apply NatTrans.ext
+    funext i
+    rfl
+  have hsecond : S.whiskerLeft ShortComplex.π₂Toπ₃ =
+      moduleShortComplexSecondMap S := by
+    apply NatTrans.ext
+    funext i
+    rfl
+  have hff : colim.map ST.f = colim.map (moduleShortComplexFirstMap S) := by
+    simpa [T, ST, ShortComplex.FunctorEquivalence.inverse] using
+      congrArg (fun q => colim.map q) hfirst
+  have hgg : colim.map ST.g = colim.map (moduleShortComplexSecondMap S) := by
+    simpa [T, ST, ShortComplex.FunctorEquivalence.inverse] using
+      congrArg (fun q => colim.map q) hsecond
+  have hcol := colim.exact_mapShortComplex (S := ST) hST
+    (c₁ := colimit.cocone ST.X₁)
+    (hc₁ := colimit.isColimit ST.X₁)
+    (c₂ := colimit.cocone ST.X₂)
+    (hc₂ := colimit.isColimit ST.X₂)
+    (c₃ := colimit.cocone ST.X₃)
+    (hc₃ := colimit.isColimit ST.X₃)
+    (f := colim.map ST.f) (g := colim.map ST.g) (hf := by
+      intro i
+      exact colimit.ι_map ST.f i) (hg := by
+      intro i
+      exact colimit.ι_map ST.g i)
+  change (ShortComplex.mk (colim.map ST.f) (colim.map ST.g) _).Exact at hcol
+  apply ShortComplex.exact_of_iso
+    (ShortComplex.isoMk (Iso.refl _) (Iso.refl _) (Iso.refl _) ?_ ?_) hcol
+  · simpa [moduleShortComplexColimit] using hff.symm
+  · simpa [moduleShortComplexColimit] using hgg.symm
 
 theorem almost_directed_colimit_homology {R : Type u} [CommRing R]
     {I : Type v} [Category.{v'} I]

@@ -52,7 +52,20 @@ theorem compactSpace_iff_finite_subcover :
         (∀ i, IsOpen (U i)) →
           (⋃ i, U i) = (Set.univ : Set X) →
             ∃ s : Finset ι, (⋃ i ∈ s, U i) = (Set.univ : Set X) := by
-  sorry
+  constructor
+  · intro h
+    have hcompact : IsCompact (Set.univ : Set X) := isCompact_univ_iff.mpr h
+    intro ι U hU hcover
+    obtain ⟨s, hs⟩ := hcompact.elim_finite_subcover U hU (by rw [hcover])
+    refine ⟨s, Subset.antisymm (iUnion₂_subset fun i hi => subset_univ _) hs⟩
+  · intro h
+    apply isCompact_univ_iff.mp
+    apply isCompact_of_finite_subcover
+    intro ι U hU hsub
+    have hcover : (⋃ i, U i) = (Set.univ : Set X) :=
+      Subset.antisymm (subset_univ _) hsub
+    obtain ⟨s, hs⟩ := h U hU hcover
+    exact ⟨s, hs ▸ subset_rfl⟩
 
 /-! ### Composition and closed subsets -/
 

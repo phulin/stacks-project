@@ -26,7 +26,7 @@ namespace Formalization.Books.Categories.Unit02
 open CategoryTheory
 open CategoryTheory.Functor
 
-universe v u v₁ u₁ v₂ u₂
+universe v u v₁ u₁ v₂ u₂ v₃ u₃
 
 /-! ## Categories, identities, and isomorphisms -/
 
@@ -63,8 +63,8 @@ theorem isomorphism_iff_exists_inverse {C : Type u} [Category.{v} C] {X Y : C}
 
 theorem inverse_morphism_unique {C : Type u} [Category.{v} C] {X Y : C}
     {f : X ⟶ Y} {g h : Y ⟶ X}
-    (hg₁ : f ≫ g = 𝟙 X) (hg₂ : g ≫ f = 𝟙 Y)
-    (hh₁ : f ≫ h = 𝟙 X) (hh₂ : h ≫ f = 𝟙 Y) :
+    (hg₁ : f ≫ g = 𝟙 X) (_hg₂ : g ≫ f = 𝟙 Y)
+    (_hh₁ : f ≫ h = 𝟙 X) (hh₂ : h ≫ f = 𝟙 Y) :
     g = h := by
   calc
     g = 𝟙 Y ≫ g := by simp
@@ -73,12 +73,9 @@ theorem inverse_morphism_unique {C : Type u} [Category.{v} C] {X Y : C}
     _ = h ≫ 𝟙 X := by rw [hg₁]
     _ = h := by simp
 
-/- `Aut X` is Mathlib's automorphism group of `X`; its existing group
+/- `Aut X` is Mathlib's automorphism group of `X`; its existing `Group`
    instance formalizes the source's assertion about automorphisms. -/
 abbrev AutomorphismGroup {C : Type u} [Category.{v} C] (X : C) := Aut X
-
-theorem automorphism_group_is_group {C : Type u} [Category.{v} C] (X : C) :
-    Group (AutomorphismGroup X) := inferInstance
 
 /-! ## Groupoids and the two elementary examples -/
 
@@ -89,19 +86,22 @@ abbrev GroupoidCategory (C : Type u) [Category.{v} C] : Prop := IsGroupoid C
 theorem groupoid_iff_all_morphisms_invertible {C : Type u} [Category.{v} C] :
     GroupoidCategory C ↔ ∀ {X Y : C} (f : X ⟶ Y), IsIso f := by
   constructor
-  · intro h X Y f
-    letI : IsGroupoid C := h
-    exact inferInstance
+  · rintro ⟨h⟩ X Y f
+    exact h f
   · intro h
     exact ⟨fun f => h f⟩
 
 /- Mathlib's `SingleObj` is the canonical category with one object and
    endomorphisms given by a monoid; a group supplies the groupoid structure. -/
-def oneObjectCategoryOfGroup (G : Type u) [Group G] : Type u :=
+abbrev oneObjectCategoryOfGroup (G : Type u) [Group G] :=
   SingleObj G
 
 theorem oneObjectCategoryOfGroup_has_one_object (G : Type u) [Group G] :
-    Unique (oneObjectCategoryOfGroup G) := inferInstance
+    ∀ x y : oneObjectCategoryOfGroup G, x = y := by
+  intro x y
+  cases x
+  cases y
+  rfl
 
 theorem oneObjectCategoryOfGroup_is_groupoid (G : Type u) [Group G] :
     IsGroupoid (oneObjectCategoryOfGroup G) := by
@@ -110,10 +110,10 @@ theorem oneObjectCategoryOfGroup_is_groupoid (G : Type u) [Group G] :
 theorem oneObjectCategoryOfGroup_composition (G : Type u) [Group G]
     {x y z : oneObjectCategoryOfGroup G} (f : x ⟶ y) (g : y ⟶ z) :
     f ≫ g = g * f :=
-  SingleObj.comp_as_mul f g
+  SingleObj.comp_as_mul G f g
 
 /- Conversely, a groupoid with one object is equivalent to the single-object
-   category of the automorphism group of that object.  The source only needs
+   category of the endomorphism group of that object.  The source only needs
    this up to categorical equivalence, which is the usable Lean formulation. -/
 theorem one_object_groupoid_is_equivalent_to_single_object
     (C : Type u) [Groupoid C] [Unique C] :
@@ -121,7 +121,7 @@ theorem one_object_groupoid_is_equivalent_to_single_object
   sorry
 
 /- The discrete category on a type is Mathlib's canonical set groupoid. -/
-def discreteCategoryOn (C : Type u) : Type u :=
+abbrev discreteCategoryOn (C : Type u) : Type u :=
   Discrete C
 
 theorem discreteCategoryOn_is_groupoid (C : Type u) :
@@ -132,6 +132,20 @@ theorem discreteCategoryOn_hom_subsingleton (C : Type u)
     (x y : discreteCategoryOn C) :
     Subsingleton (x ⟶ y) := by
   infer_instance
+
+theorem discreteCategoryOn_hom_nonempty_iff (C : Type u)
+    (x y : discreteCategoryOn C) :
+    Nonempty (x ⟶ y) ↔ x.as = y.as := by
+  constructor
+  · rintro ⟨f⟩
+    exact Discrete.eq_of_hom f
+  · intro h
+    exact ⟨Discrete.eqToHom h⟩
+
+theorem discreteCategoryOn_identity_is_unique (C : Type u)
+    (x : discreteCategoryOn C) (f : x ⟶ x) :
+    f = 𝟙 x := by
+  exact Subsingleton.elim _ _
 
 /-! ## Functors and their standard properties -/
 
@@ -145,6 +159,38 @@ theorem functor_preserves_composition {C : Type u₁} [Category.{v₁} C]
     {X Y Z : C} (f : X ⟶ Y) (g : Y ⟶ Z) :
     F.map (f ≫ g) = F.map f ≫ F.map g :=
   F.map_comp f g
+
+abbrev identityFunctor {C : Type u} [Category.{v} C] : C ⥤ C :=
+  𝟭 C
+
+abbrev compositionFunctor {C : Type u₁} [Category.{v₁} C]
+    {D : Type u₂} [Category.{v₂} D] {E : Type u₃} [Category.{v₃} E]
+    (F : C ⥤ D) (G : D ⥤ E) : C ⥤ E :=
+  F ⋙ G
+
+theorem faithful_iff_injective_maps
+    {C : Type u₁} [Category.{v₁} C] {D : Type u₂} [Category.{v₂} D]
+    (F : C ⥤ D) :
+    F.Faithful ↔
+      ∀ (X Y : C), Function.Injective
+        (F.map : (X ⟶ Y) → (F.obj X ⟶ F.obj Y)) := by
+  constructor
+  · rintro ⟨h⟩ X Y
+    exact h
+  · intro h
+    exact ⟨fun {_ _} => h _ _⟩
+
+theorem full_iff_surjective_maps
+    {C : Type u₁} [Category.{v₁} C] {D : Type u₂} [Category.{v₂} D]
+    (F : C ⥤ D) :
+    F.Full ↔
+      ∀ (X Y : C), Function.Surjective
+        (F.map : (X ⟶ Y) → (F.obj X ⟶ F.obj Y)) := by
+  constructor
+  · rintro ⟨h⟩ X Y
+    exact h
+  · intro h
+    exact ⟨fun {_ _} => h _ _⟩
 
 /- Mathlib's `Full` and `Faithful` are the source's full and faithful
    conditions.  `FullyFaithful` packages the resulting hom-set bijections. -/
@@ -162,7 +208,7 @@ theorem essentially_surjective_iff_isomorphic_preimages
     F.EssSurj ↔ ∀ Y : D, ∃ X : C, Nonempty (F.obj X ≅ Y) := by
   constructor
   · intro h Y
-    letI : F.EssSurj := h
+    let _ : F.EssSurj := h
     simpa [Functor.essImage] using
       (Functor.EssSurj.mem_essImage (F := F) Y)
   · intro h
@@ -198,7 +244,7 @@ abbrev StrictlyFullObjectProperty {C : Type u} [Category.{v} C]
     (P : ObjectProperty C) : Prop :=
   ObjectProperty.IsClosedUnderIsomorphisms P
 
-theorem full_subcategory_inclusion_is_fully_faithful
+abbrev full_subcategory_inclusion_is_fully_faithful
     {C : Type u} [Category.{v} C] (P : ObjectProperty C) :
     P.ι.FullyFaithful :=
   P.fullyFaithfulι
@@ -250,13 +296,10 @@ theorem under_category_reindexing_forget {C : Type u} [Category.{v} C]
 
 /-! ## Natural transformations and functor categories -/
 
+/- Mathlib's `Functor.category` instance equips this type with the category
+   of natural transformations described in the source. -/
 abbrev FunctorCategory (C : Type u₁) [Category.{v₁} C]
     (D : Type u₂) [Category.{v₂} D] := C ⥤ D
-
-theorem functor_category_is_a_category
-    (C : Type u₁) [Category.{v₁} C] (D : Type u₂) [Category.{v₂} D] :
-    Category (FunctorCategory C D) :=
-  inferInstance
 
 theorem natural_transformation_naturality
     {C : Type u₁} [Category.{v₁} C] {D : Type u₂} [Category.{v₂} D]
@@ -285,7 +328,7 @@ def equivalenceOfQuasiInverse
     {C : Type u₁} [Category.{v₁} C] {D : Type u₂} [Category.{v₂} D]
     (F : C ⥤ D) (G : D ⥤ C) (unitIso : 𝟭 C ≅ F ⋙ G)
     (counitIso : G ⋙ F ≅ 𝟭 D) : C ≌ D :=
-  Equivalence.mk F G unitIso counitIso
+  CategoryTheory.Equivalence.mk F G unitIso counitIso
 
 theorem functor_is_equivalence_iff_quasi_inverse
     {C : Type u₁} [Category.{v₁} C] {D : Type u₂} [Category.{v₂} D]
@@ -295,11 +338,11 @@ theorem functor_is_equivalence_iff_quasi_inverse
         Nonempty (𝟭 C ≅ F ⋙ G) ∧ Nonempty (G ⋙ F ≅ 𝟭 D) := by
   constructor
   · intro h
-    letI : F.IsEquivalence := h
+    let _ : F.IsEquivalence := h
     let e := F.asEquivalence
     exact ⟨e.inverse, ⟨e.unitIso⟩, ⟨e.counitIso⟩⟩
   · rintro ⟨G, ⟨unitIso⟩, ⟨counitIso⟩⟩
-    exact Equivalence.isEquivalence_functor
+    exact CategoryTheory.Equivalence.isEquivalence_functor
       (equivalenceOfQuasiInverse F G unitIso counitIso)
 
 /- The source chooses an object `j(X)` and an isomorphism

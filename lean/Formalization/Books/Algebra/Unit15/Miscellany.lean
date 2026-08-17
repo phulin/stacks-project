@@ -52,7 +52,18 @@ theorem chinese_remainder
     (hI : Pairwise (fun i j => I i + I j = ⊤)) :
     (⨅ i, I i = ∏ i, I i) ∧
       Nonempty ((R ⧸ ∏ i, I i) ≃+* (∀ i, R ⧸ I i)) := by
-  sorry
+  have hcop : Pairwise (fun i j => IsCoprime (I i) (I j)) := by
+    intro i j hij
+    apply Ideal.isCoprime_iff_sup_eq.mpr
+    exact hI hij
+  have hprod : (∏ i, I i) = ⨅ i, I i := by
+    simpa using
+      (Ideal.prod_eq_iInf_of_pairwise_isCoprime
+        (s := (Finset.univ : Finset ι)) (J := I) (by
+          intro i hi j hj hij
+          exact hcop hij))
+  refine ⟨hprod.symm, ⟨(Ideal.quotEquivOfEq hprod).trans
+    (Ideal.quotientInfRingEquivPiQuotient I hcop)⟩⟩
 
 theorem chinese_remainder_of_pairwise_distinct_maximal
     {R ι : Type*} [CommRing R] [Fintype ι] (I : ι → Ideal R)
@@ -60,7 +71,11 @@ theorem chinese_remainder_of_pairwise_distinct_maximal
     (hdistinct : Pairwise (fun i j => I i ≠ I j)) :
     (⨅ i, I i = ∏ i, I i) ∧
       Nonempty ((R ⧸ ∏ i, I i) ≃+* (∀ i, R ⧸ I i)) := by
-  sorry
+  apply chinese_remainder I
+  intro i j hij
+  letI : (I i).IsMaximal := hmax i
+  letI : (I j).IsMaximal := hmax j
+  exact (Ideal.isCoprime_of_isMaximal (hdistinct hij)).sup_eq
 
 /-! ## Determinantal ideals and matrix inverses -/
 
@@ -78,7 +93,30 @@ theorem matrix_left_inverse_of_mem_maximalMinorIdeal
     (hf : f ∈ maximalMinorIdeal A) :
     ∃ B : Matrix (Fin m) (Fin n) R,
       B * A = f • (1 : Matrix (Fin m) (Fin m) R) := by
-  sorry
+  classical
+  unfold maximalMinorIdeal at hf
+  induction hf using Submodule.span_induction with
+  | mem f hf =>
+      obtain ⟨S, rfl⟩ := hf
+      let e : Fin m ↪ Fin n := (S.1.orderEmbOfFin S.2).toEmbedding
+      let A_S : Matrix (Fin m) (Fin m) R := A.submatrix e id
+      refine ⟨A_S.adjugate *
+          (1 : Matrix (Fin n) (Fin n) R).submatrix e (Equiv.refl (Fin n)), ?_⟩
+      rw [Matrix.mul_assoc, Matrix.one_submatrix_mul e (Equiv.refl (Fin n)) A]
+      simpa [A_S, e, Unit03.rowMinor, Function.comp_def] using
+        (Matrix.adjugate_mul A_S)
+  | zero =>
+      exact ⟨0, by simp⟩
+  | add f g hf hg hf' hg' =>
+      obtain ⟨Bf, hBf⟩ := hf'
+      obtain ⟨Bg, hBg⟩ := hg'
+      refine ⟨Bf + Bg, ?_⟩
+      rw [Matrix.add_mul, hBf, hBg, add_smul]
+  | smul c f hf hf' =>
+      obtain ⟨Bf, hBf⟩ := hf'
+      refine ⟨c • Bf, ?_⟩
+      rw [Matrix.smul_mul, hBf, smul_smul]
+      simp [smul_eq_mul]
 
 theorem matrix_left_inverse_power_mem_maximalMinorIdeal
     {R : Type u} [CommRing R] {m n : ℕ} (hmn : m ≤ n)
@@ -86,7 +124,19 @@ theorem matrix_left_inverse_power_mem_maximalMinorIdeal
     {B : Matrix (Fin m) (Fin n) R}
     (hBA : B * A = f • (1 : Matrix (Fin m) (Fin m) R)) :
     f ^ m ∈ maximalMinorIdeal A := by
-  sorry
+  have hdet : f ^ m =
+      ∑ S : {s : Finset (Fin n) // s.card = m},
+        Unit03.columnMinor B S * Unit03.rowMinor A S := by
+    calc
+      f ^ m = (f • (1 : Matrix (Fin m) (Fin m) R)).det := by
+        simp [Matrix.det_smul]
+      _ = (B * A).det := by rw [hBA]
+      _ = _ := Unit03.cauchyBinet B A
+  rw [maximalMinorIdeal, hdet]
+  apply Ideal.sum_mem
+  intro S hS
+  exact Ideal.mul_mem_left _ _
+    (Ideal.subset_span ⟨S, rfl⟩)
 
 /- The first conjunct records the upper block of the displayed product.  The
    second records that every lower entry is, up to sign, the determinant of
@@ -123,11 +173,24 @@ theorem module_map_from_fin_generators_not_injective
       ∃ g : (Fin k → R) →ₗ[R] M, Function.Surjective g)
     (f : (Fin n → R) →ₗ[R] M) :
     LinearMap.ker f ≠ ⊥ := by
-  sorry
+  rcases hM with ⟨k, hk, g, hg⟩
+  intro hker
+  have hf_inj : Function.Injective f := LinearMap.ker_eq_bot.mp hker
+  obtain ⟨l, hl⟩ := Module.projective_lifting_property g f hg
+  have hl_inj : Function.Injective l := by
+    intro x y hxy
+    apply hf_inj
+    calc
+      f x = (g.comp l) x := by rw [hl]
+      _ = g (l x) := rfl
+      _ = g (l y) := congrArg g hxy
+      _ = (g.comp l) y := rfl
+      _ = f y := by rw [hl]
+  exact (Nat.not_lt_of_ge (le_of_fin_injective R l hl_inj)) hk
 
 theorem fin_free_module_rank_unique
     {R : Type*} [CommRing R] [Nontrivial R] {n m : ℕ}
     (e : (Fin n → R) ≃ₗ[R] (Fin m → R)) : n = m := by
-  sorry
+  exact eq_of_fin_equiv R e
 
 end Formalization.Books.Algebra.Unit15

@@ -27,7 +27,10 @@ theorem transcendence_degree_eq_of_algebraic_extension
     (hK' : Algebra.IsAlgebraic K K') :
     Cardinal.lift.{w} (Algebra.trdeg k K) =
       Cardinal.lift.{v} (Algebra.trdeg k K') := by
-  sorry
+  have hz : Algebra.trdeg K K' = 0 := @trdeg_eq_zero K K' _ _ _ hK'
+  have h := lift_trdeg_add_eq k K K'
+  rw [hz] at h
+  simpa using h
 
 /-! ## Exercise 2: growth of powers of subvector spaces -/
 
@@ -39,7 +42,10 @@ theorem finiteDimensional_subvectorSpace_product
     {k : Type u} {K : Type v} [Field k] [Field K] [Algebra k K]
     (V W : Submodule k K) [FiniteDimensional k V] [FiniteDimensional k W] :
     FiniteDimensional k (V * W) := by
-  sorry
+  rw [Submodule.mul_eq_map₂]
+  exact Module.Finite.of_fg
+    (Submodule.FG.map₂ (f := LinearMap.mul k K) (p := V) (q := W)
+      (Submodule.FG.of_finite (N := V)) (Submodule.FG.of_finite (N := W)))
 
 /-- The lower polynomial-growth bound for a finitely generated field extension
 of transcendence degree `d`. -/

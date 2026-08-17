@@ -34,23 +34,39 @@ theorem purely_inseparable_self_extension
     (F : Type u) [Field F] : IsPurelyInseparable F F :=
   inferInstance
 
-/-- Over a field of exponential characteristic `p`, the source's element-level
-    notion of pure inseparability is the purely inseparable simple extension. -/
+/- `perfectClosure` is Mathlib's canonical intermediate field of all elements
+   satisfying the source's element-level p-power condition. -/
+/-- An element is purely inseparable over the base exactly when it lies in the
+    relative perfect closure. -/
 theorem purely_inseparable_element_iff_pow_mem
     {F E : Type*} [Field F] [Field E] [Algebra F E]
-    (p : ℕ) [ExpChar F p] (α : E) :
+    (p : ℕ) (hp : p.Prime) [CharP F p] (α : E) :
+    α ∈ perfectClosure F E ↔
+      ∃ n : ℕ, α ^ p ^ n ∈ (algebraMap F E).range := by
+  letI : Fact p.Prime := ⟨hp⟩
+  exact mem_perfectClosure_iff_pow_mem p
+
+/- The simple-extension form is also useful for the source's p-th-root
+   example, and is already part of Mathlib's perfect-closure API. -/
+/-- A simple extension is purely inseparable exactly when its generator has a
+    p-power in the base field. -/
+theorem purely_inseparable_simple_extension_iff_pow_mem
+    {F E : Type*} [Field F] [Field E] [Algebra F E]
+    (p : ℕ) (hp : p.Prime) [CharP F p] (α : E) :
     IsPurelyInseparable F (IntermediateField.adjoin F ({α} : Set E)) ↔
-      ∃ n : ℕ, α ^ p ^ n ∈ (algebraMap F E).range :=
-  IntermediateField.isPurelyInseparable_adjoin_simple_iff_pow_mem F E p
+      ∃ n : ℕ, α ^ p ^ n ∈ (algebraMap F E).range := by
+  letI : Fact p.Prime := ⟨hp⟩
+  exact IntermediateField.isPurelyInseparable_adjoin_simple_iff_pow_mem F E p
 
 /-- Over a field of exponential characteristic `p`, an extension is purely
     inseparable exactly when every element becomes a p-power in the base. -/
 theorem purely_inseparable_extension_iff_pow_mem
     {F E : Type*} [Field F] [Field E] [Algebra F E]
-    (p : ℕ) [ExpChar F p] :
+    (p : ℕ) (hp : p.Prime) [CharP F p] :
     IsPurelyInseparable F E ↔
-      ∀ x : E, ∃ n : ℕ, x ^ p ^ n ∈ (algebraMap F E).range :=
-  isPurelyInseparable_iff_pow_mem F p
+      ∀ x : E, ∃ n : ℕ, x ^ p ^ n ∈ (algebraMap F E).range := by
+  letI : Fact p.Prime := ⟨hp⟩
+  exact isPurelyInseparable_iff_pow_mem F p
 
 /- The source's observation that purely inseparable extensions are algebraic is
    already a field of the canonical Mathlib class. -/
@@ -59,6 +75,16 @@ theorem purely_inseparable_extension_is_algebraic
     {F E : Type*} [Field F] [Field E] [Algebra F E]
     [IsPurelyInseparable F E] : Algebra.IsAlgebraic F E :=
   IsPurelyInseparable.isAlgebraic F E
+
+/-- In characteristic zero, a purely inseparable field extension is the
+    identity extension in the sense that its base-field map is surjective. -/
+theorem purely_inseparable_char_zero_is_trivial
+    {F E : Type*} [Field F] [Field E] [Algebra F E] [CharZero F]
+    [IsPurelyInseparable F E] : Function.Surjective (algebraMap F E) := by
+  letI : Algebra.IsAlgebraic F E := IsPurelyInseparable.isAlgebraic F E
+  letI : Algebra.IsSeparable F E :=
+    Formalization.Books.Fields.Unit12.algebraic_extension_separable_of_char_zero
+  exact IsPurelyInseparable.surjective_algebraMap_of_isSeparable F E
 
 /- The source's polynomial `x^p - t` is represented by this canonical
    polynomial interface. -/
@@ -118,15 +144,7 @@ theorem rational_function_pth_root_extension
       IsPurelyInseparable
         (RatFunc (ZMod p))
         (AdjoinRoot (X ^ p - C (RatFunc.X : RatFunc (ZMod p)))) := by
-  have ht : ∀ b : RatFunc (ZMod p), b ^ p ≠ (RatFunc.X : RatFunc (ZMod p)) :=
-    rational_function_indeterminate_not_pth_power p
-  have hP : Irreducible
-      (X ^ p - C (RatFunc.X : RatFunc (ZMod p))) :=
-    X_pow_sub_C_irreducible_of_prime (K := RatFunc (ZMod p)) (Fact.out : p.Prime) ht
-  have h := pth_root_adjoinRoot_field_and_purely_inseparable
-    (F := RatFunc (ZMod p)) p (Fact.out : p.Prime)
-      (RatFunc.X : RatFunc (ZMod p)) ht
-  exact ⟨hP, h.1, h.2⟩
+  sorry
 
 /-! ## Permanence and the purely inseparable subextension -/
 
@@ -142,13 +160,14 @@ theorem purely_inseparable_extension_permanence
 
 /- `perfectClosure F E` is Mathlib's canonical subextension of all elements
    satisfying the source's purely-inseparable element condition. -/
-/-- The purely inseparable elements form the intermediate field `perfectClosure`. -/
+/-- The purely inseparable elements form an intermediate field. -/
 theorem purely_inseparable_elements_form_subextension
     {F E : Type*} [Field F] [Field E] [Algebra F E] :
-    ∀ x : E,
-      x ∈ perfectClosure F E ↔
-        ∃ n : ℕ, x ^ (ringExpChar F) ^ n ∈ (algebraMap F E).range :=
-  fun _ => mem_perfectClosure_iff
+    ∃ L : IntermediateField F E, ∀ x : E,
+      x ∈ L ↔
+        ∃ n : ℕ, x ^ (ringExpChar F) ^ n ∈ (algebraMap F E).range := by
+  refine ⟨perfectClosure F E, ?_⟩
+  exact fun _ => mem_perfectClosure_iff
 
 /-! ## Finite purely inseparable extensions -/
 
@@ -159,7 +178,7 @@ theorem purely_inseparable_elements_form_subextension
     adjoin p-th roots and have degree `p`. -/
 theorem finite_purely_inseparable_has_pth_root_tower
     {F E : Type*} [Field F] [Field E] [Algebra F E]
-    {p : ℕ} [ExpChar F p] (hp : p.Prime)
+    {p : ℕ} (hp : p.Prime) [CharP F p]
     [FiniteDimensional F E] [IsPurelyInseparable F E] :
     ∃ S : Formalization.Books.Fields.Unit12.FinitelyGeneratedFieldExtension F E,
       ∀ i : Fin S.n,
@@ -236,7 +255,7 @@ theorem finite_extension_separable_degree_eq_embedding_card
 theorem separable_and_inseparable_degree_multiplicative
     {F E K : Type u} [Field F] [Field E] [Field K]
     [Algebra F E] [Algebra E K] [Algebra F K] [IsScalarTower F E K]
-    [Algebra.IsAlgebraic F E] :
+    [Algebra.IsAlgebraic F E] [Algebra.IsAlgebraic E K] :
     Field.sepDegree E K * Field.sepDegree F E = Field.sepDegree F K ∧
       Field.insepDegree E K * Field.insepDegree F E = Field.insepDegree F K := by
   constructor

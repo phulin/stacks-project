@@ -196,7 +196,332 @@ def fibredCategoryDiagonalOver {C : Cat.{v, u}}
       have hτeq :=
         @CategoryTheory.IsHomLift.eq_of_isHomLift _ _ _ _ q _ _
           (g ≫ q.map (D.map f)) τ hτ
-      sorry
+      have hτbase :=
+        twoFibreProductOver_morphism_base_description
+          (F := F.underlying) (G := F.underlying) τ
+      rcases hτbase with ⟨U, U', hx, hy, hx', hy', hbase⟩
+      rcases τ with ⟨⟨⟨τL, τR, w⟩⟩⟩
+      change p.obj c.obj.obj.left = U at hx
+      change p.obj c.obj.obj.right = U at hy
+      change p.obj b = U' at hx'
+      change p.obj b = U' at hy'
+      change c.obj.obj.left ⟶ b at τL
+      change c.obj.obj.right ⟶ b at τR
+      change eqToHom hx.symm ≫ p.map τL ≫ eqToHom hx' =
+        eqToHom hy.symm ≫ p.map τR ≫ eqToHom hy' at hbase
+      change p.obj c.obj.obj.left ⟶ p.obj a at g
+      have hτeq' : g ≫ p.map f = p.map τL := by
+        exact hτeq
+      let gR : p.obj c.obj.obj.right ⟶ p.obj a :=
+        eqToHom (hy.trans hx.symm) ≫ g
+      have hbase' :
+          eqToHom hx.symm ≫ (g ≫ p.map f) ≫ eqToHom hx' =
+            eqToHom hy.symm ≫ p.map τR ≫ eqToHom hy' := by
+        simpa [hτeq'] using hbase
+      have hbase'' := congrArg
+        (fun k => eqToHom hy ≫ k ≫ eqToHom hy'.symm) hbase'
+      have hτeqR : gR ≫ p.map f = p.map τR := by
+        simpa [gR, Category.assoc, eqToHom_trans] using hbase''
+      let : p.IsStronglyCartesian (p.map f) f := hf
+      let : p.IsHomLift (g ≫ p.map f) τL := by
+        rw [hτeq']
+        exact Functor.IsHomLift.map _
+      let : p.IsHomLift (gR ≫ p.map f) τR := by
+        rw [hτeqR]
+        exact Functor.IsHomLift.map _
+      obtain ⟨χL, hχLprop, hχLuniq⟩ :=
+        Functor.IsStronglyCartesian.universal_property'
+          (p := p) (f := p.map f) (φ := f) g τL
+      obtain ⟨χR, hχRprop, hχRuniq⟩ :=
+        Functor.IsStronglyCartesian.universal_property'
+          (p := p) (f := p.map f) (φ := f) gR τR
+      rcases hχLprop with ⟨hχL, hχLfac⟩
+      rcases hχRprop with ⟨hχR, hχRfac⟩
+      rcases c.property with ⟨Uc, hxc, hyc, hc⟩
+      change p.obj c.obj.obj.left = Uc at hxc
+      change p.obj c.obj.obj.right = Uc at hyc
+      have hU : U = Uc := hx.symm.trans hxc
+      have hxcU : p.obj c.obj.obj.left = U := hxc.trans hU.symm
+      have hycU : p.obj c.obj.obj.right = U := hyc.trans hU.symm
+      have hLc := congrArg
+          (fun K : X.underlying.left ⥤ C => K.obj c.obj.obj.left)
+          (overFunctor_comm F.underlying)
+      have hRc := congrArg
+          (fun K : X.underlying.left ⥤ C => K.obj c.obj.obj.right)
+          (overFunctor_comm F.underlying)
+      have hLa := congrArg
+          (fun K : X.underlying.left ⥤ C => K.obj a)
+          (overFunctor_comm F.underlying)
+      have hRa := congrArg
+          (fun K : X.underlying.left ⥤ C => K.obj a)
+          (overFunctor_comm F.underlying)
+      change (structureFunctor S.underlying).obj
+          ((overFunctor F.underlying).obj c.obj.obj.left) =
+            p.obj c.obj.obj.left at hLc
+      change (structureFunctor S.underlying).obj
+          ((overFunctor F.underlying).obj c.obj.obj.right) =
+            p.obj c.obj.obj.right at hRc
+      change (structureFunctor S.underlying).obj
+          ((overFunctor F.underlying).obj a) = p.obj a at hLa
+      change (structureFunctor S.underlying).obj
+          ((overFunctor F.underlying).obj a) = p.obj a at hRa
+      have hLcU : (structureFunctor S.underlying).obj
+          ((overFunctor F.underlying).obj c.obj.obj.left) = U :=
+        hLc.trans hxcU
+      have hRcU : (structureFunctor S.underlying).obj
+          ((overFunctor F.underlying).obj c.obj.obj.right) = U :=
+        hRc.trans hycU
+      have hLcUEq : hLcU = hLc.trans hx := Subsingleton.elim _ _
+      have hRcUEq : hRcU = hRc.trans hy := Subsingleton.elim _ _
+      have hc' : (structureFunctor S.underlying).IsHomLift
+          (𝟙 U) c.obj.obj.hom := by
+        rw [hU]
+        exact hc
+      let : (structureFunctor S.underlying).IsHomLift
+          (𝟙 U) c.obj.obj.hom := hc'
+      have hcbase := CategoryTheory.IsHomLift.fac'
+        (structureFunctor S.underlying) (𝟙 U) c.obj.obj.hom
+      have hcd : (CategoryTheory.IsHomLift.domain_eq
+          (structureFunctor S.underlying) (𝟙 U) c.obj.obj.hom) = hLcU :=
+        Subsingleton.elim _ _
+      have hcc : (CategoryTheory.IsHomLift.codomain_eq
+          (structureFunctor S.underlying) (𝟙 U) c.obj.obj.hom) = hRcU :=
+        Subsingleton.elim _ _
+      rw [hcd, hcc] at hcbase
+      have hLmap := Functor.congr_hom
+          (overFunctor_comm F.underlying) χL
+      have hRmap := Functor.congr_hom
+          (overFunctor_comm F.underlying) χR
+      change (structureFunctor S.underlying).map
+          ((overFunctor F.underlying).map χL) =
+            eqToHom hLc ≫ p.map χL ≫ eqToHom hLa.symm at hLmap
+      change (structureFunctor S.underlying).map
+          ((overFunctor F.underlying).map χR) =
+            eqToHom hRc ≫ p.map χR ≫ eqToHom hRa.symm at hRmap
+      have hχLmap : g = p.map χL :=
+        CategoryTheory.IsHomLift.eq_of_isHomLift p g χL
+      have hχRmap : gR = p.map χR :=
+        CategoryTheory.IsHomLift.eq_of_isHomLift p gR χR
+      have hδbase :
+          (structureFunctor S.underlying).map
+              ((overFunctor F.underlying).map χL) =
+            (structureFunctor S.underlying).map c.obj.obj.hom ≫
+              (structureFunctor S.underlying).map
+                ((overFunctor F.underlying).map χR) := by
+        rw [hLmap, hRmap, hcbase, ← hχLmap, ← hχRmap,
+          hLcUEq, hRcUEq]
+        simp [gR, Category.assoc, eqToHom_trans]
+      have hFstrong :
+          (structureFunctor S.underlying).IsStronglyCartesian
+            ((structureFunctor S.underlying).map
+              ((overFunctor F.underlying).map f))
+            ((overFunctor F.underlying).map f) :=
+        F.preserves f hf
+      have hLlift :
+          (structureFunctor S.underlying).IsHomLift
+            ((structureFunctor S.underlying).map
+              ((overFunctor F.underlying).map χL))
+            ((overFunctor F.underlying).map χL) :=
+        Functor.IsHomLift.map _
+      have hRlift :
+          (structureFunctor S.underlying).IsHomLift
+            ((structureFunctor S.underlying).map
+              ((overFunctor F.underlying).map χL))
+            (c.obj.obj.hom ≫ (overFunctor F.underlying).map χR) := by
+        rw [hδbase]
+        simpa only [Functor.map_comp] using
+          (Functor.IsHomLift.map (p := structureFunctor S.underlying)
+            (c.obj.obj.hom ≫ (overFunctor F.underlying).map χR))
+      have hcomm :
+          (overFunctor F.underlying).map χL =
+            c.obj.obj.hom ≫ (overFunctor F.underlying).map χR := by
+        apply @Functor.IsStronglyCartesian.ext _ _ _ _
+          (structureFunctor S.underlying)
+          ((structureFunctor S.underlying).obj
+            ((overFunctor F.underlying).obj a))
+          ((structureFunctor S.underlying).obj
+            ((overFunctor F.underlying).obj b))
+          ((overFunctor F.underlying).obj a)
+          ((overFunctor F.underlying).obj b)
+          ((structureFunctor S.underlying).map
+            ((overFunctor F.underlying).map f))
+          ((overFunctor F.underlying).map f) hFstrong
+          ((structureFunctor S.underlying).obj
+            ((overFunctor F.underlying).obj c.obj.obj.left))
+          ((overFunctor F.underlying).obj c.obj.obj.left)
+          ((structureFunctor S.underlying).map
+            ((overFunctor F.underlying).map χL))
+          ((overFunctor F.underlying).map χL)
+          (c.obj.obj.hom ≫ (overFunctor F.underlying).map χR)
+          hLlift hRlift
+        have hw :
+            (overFunctor F.underlying).map τL =
+              c.obj.obj.hom ≫ (overFunctor F.underlying).map τR := by
+          change (overFunctor F.underlying).map τL ≫ 𝟙 _ =
+            c.obj.obj.hom ≫ (overFunctor F.underlying).map τR at w
+          simpa using w
+        calc
+          (overFunctor F.underlying).map χL ≫
+              (overFunctor F.underlying).map f =
+            (overFunctor F.underlying).map (χL ≫ f) := by simp
+          _ = (overFunctor F.underlying).map τL := by rw [hχLfac]
+          _ = c.obj.obj.hom ≫
+              (overFunctor F.underlying).map τR := hw
+          _ = c.obj.obj.hom ≫
+              (overFunctor F.underlying).map (χR ≫ f) := by
+            rw [← hχRfac]
+          _ = (c.obj.obj.hom ≫
+              (overFunctor F.underlying).map χR) ≫
+                (overFunctor F.underlying).map f := by
+            simp [Category.assoc]
+      let χ : c ⟶ D.obj a :=
+        by
+          change c ⟶
+            { obj := (isoCommaDiagonal (overFunctor F.underlying)).obj a
+              property := _ }
+          exact ObjectProperty.homMk
+            (ObjectProperty.homMk
+              { left := χL
+                right := χR
+                w := by
+                  change (overFunctor F.underlying).map χL ≫ 𝟙 _ =
+                    c.obj.obj.hom ≫ (overFunctor F.underlying).map χR
+                  simpa using hcomm })
+      have hqdom : q.obj c = p.obj c.obj.obj.left := by rfl
+      have hqcod : q.obj (D.obj a) = p.obj a := by rfl
+      have hqdom' : hqdom = rfl := Subsingleton.elim _ _
+      have hqcod' : hqcod = rfl := Subsingleton.elim _ _
+      have hqmap : q.map χ = p.map χL := by rfl
+      have hχq : q.IsHomLift g χ := by
+        have hmap := Functor.IsHomLift.map (p := q) χ
+        rw [hqmap, ← hχLmap] at hmap
+        exact hmap
+      have hχfac : χ ≫ D.map f =
+          { hom := { hom := { left := τL, right := τR, w := w } } } := by
+        apply ObjectProperty.hom_ext
+        apply ObjectProperty.hom_ext
+        apply Comma.hom_ext
+        · change χL ≫ f = τL
+          exact hχLfac
+        · change χR ≫ f = τR
+          exact hχRfac
+      refine ⟨χ, ⟨hχq, hχfac⟩, ?_⟩
+      intro y hy
+      rcases hy with ⟨hyq, hyfac⟩
+      rcases y with ⟨⟨⟨yL, yR, wy⟩⟩⟩
+      let y' : c ⟶ D.obj a := ⟨⟨⟨yL, yR, wy⟩⟩⟩
+      let gtmp : q.obj c ⟶ q.obj (D.obj a) := by
+        dsimp [q, p, twoFibreProductOverBaseFunctor,
+          twoFibreProductOverLeft, D, fibredCategoryDiagonalFunctor,
+          isoCommaDiagonal]
+        exact g
+      have hyq' : q.IsHomLift gtmp y' := by
+        dsimp [gtmp, q, p, twoFibreProductOverBaseFunctor,
+          twoFibreProductOverLeft, D, fibredCategoryDiagonalFunctor,
+          isoCommaDiagonal, y']
+        exact hyq
+      have hyqeq :=
+        @CategoryTheory.IsHomLift.eq_of_isHomLift _ _ _ _ q _ _
+          gtmp y' hyq'
+      have hqmap_y : q.map y' = p.map yL := by rfl
+      rw [hqmap_y] at hyqeq
+      dsimp [p, q, y', twoFibreProductOverBaseFunctor,
+        twoFibreProductOverLeft] at hyqeq
+      let gD : p.obj c.obj.obj.left ⟶
+          p.obj ((D.obj a).obj.obj.left) := by
+        dsimp [D, fibredCategoryDiagonalFunctor, isoCommaDiagonal]
+        exact g
+      have hgtmpD : gtmp = gD := by
+        rfl
+      have hyqeqD : gD = p.map yL := by
+        rw [← hgtmpD]
+        exact hyqeq
+      have hyqeqP : g = p.map yL := by
+        simpa [gD, D, fibredCategoryDiagonalFunctor, isoCommaDiagonal] using
+          hyqeqD
+      have hyLlift : p.IsHomLift g yL := by
+        rw [hyqeqP]
+        exact Functor.IsHomLift.map _
+      have hyLfac : yL ≫ f = τL := by
+        have h := congrArg (fun k => k.hom.hom.left) hyfac
+        change yL ≫ f = τL at h
+        exact h
+      have hyLeq : yL = χL :=
+        hχLuniq yL ⟨hyLlift, hyLfac⟩
+      have hybase :=
+        twoFibreProductOver_morphism_base_description
+          (F := F.underlying) (G := F.underlying) y'
+      rcases hybase with ⟨V, V', hVx, hVy, hVx', hVy', hVbase⟩
+      change p.obj c.obj.obj.left = V at hVx
+      change p.obj c.obj.obj.right = V at hVy
+      change eqToHom hVx.symm ≫ p.map yL ≫ eqToHom hVx' =
+        eqToHom hVy.symm ≫ p.map yR ≫ eqToHom hVy' at hVbase
+      have hVxT : p.obj ((D.obj a).obj.obj.left) = V' := by
+        change (structureFunctor X.underlying).obj
+            ((D.obj a).obj.obj.left) = V'
+        exact hVx'
+      have hVyT : p.obj ((D.obj a).obj.obj.right) = V' := by
+        change (structureFunctor X.underlying).obj
+            ((D.obj a).obj.obj.right) = V'
+        exact hVy'
+      have heqx : eqToHom hVx' = eqToHom hVxT := by
+        apply congrArg eqToHom
+        exact Subsingleton.elim _ _
+      have heqy : eqToHom hVy' = eqToHom hVyT := by
+        apply congrArg eqToHom
+        exact Subsingleton.elim _ _
+      have hybase' := hVbase
+      rw [← hyqeqD, heqx, heqy] at hybase'
+      have hybase'' := congrArg
+        (fun k => eqToHom hVy ≫ k ≫ eqToHom hVyT.symm) hybase'
+      have hxy :
+          p.obj ((D.obj a).obj.obj.left) =
+            p.obj ((D.obj a).obj.obj.right) := by
+        rfl
+      have htarget :
+          eqToHom hVxT ≫ eqToHom hVyT.symm = eqToHom hxy := by
+        calc
+          _ = eqToHom (hVxT.trans hVyT.symm) := by
+            rw [eqToHom_trans]
+          _ = eqToHom hxy := by
+            apply congrArg eqToHom
+            exact Subsingleton.elim _ _
+      have hxy' : hxy = rfl := Subsingleton.elim _ _
+      have hDR : p.obj a = p.obj ((D.obj a).obj.obj.right) := by
+        rfl
+      have hDR' : hDR = rfl := Subsingleton.elim _ _
+      have hybase''' := hybase''
+      simp only [Category.assoc] at hybase'''
+      rw [htarget] at hybase'''
+      have hxyId : eqToHom hxy = 𝟙 _ := by
+        rw [hxy']
+        rfl
+      have hyRightCancel :
+          p.map yR ≫ (eqToHom hVyT ≫ eqToHom hVyT.symm) = p.map yR := by
+        simp [eqToHom_trans]
+      rw [hxyId, hyRightCancel] at hybase'''
+      have hyReq :
+          eqToHom (hVy.trans hVx.symm) ≫ g = p.map yR := by
+        simpa [gD, D, fibredCategoryDiagonalFunctor, isoCommaDiagonal,
+          Category.assoc, eqToHom_trans] using hybase'''
+      have hyRtransport : hVy.trans hVx.symm = hy.trans hx.symm :=
+        Subsingleton.elim _ _
+      have hyReq' : gR = p.map yR := by
+        simpa [gR, hyRtransport] using hyReq
+      have hyRlift : p.IsHomLift gR yR := by
+        rw [hyReq']
+        exact Functor.IsHomLift.map _
+      have hyRfac : yR ≫ f = τR := by
+        have h := congrArg (fun k => k.hom.hom.right) hyfac
+        change yR ≫ f = τR at h
+        exact h
+      have hyReq'' : yR = χR :=
+        hχRuniq yR ⟨hyRlift, hyRfac⟩
+      apply ObjectProperty.hom_ext
+      apply ObjectProperty.hom_ext
+      apply Comma.hom_ext
+      · exact hyLeq
+      · exact hyReq''
 
 def VerticalIsoCommaProperty {A B S C : Type*}
     [Category* A] [Category* B] [Category* S] [Category* C]
@@ -256,7 +581,358 @@ theorem relativeInertia_equivalent_to_diagonal_product {C : Cat.{v, u}}
         (twoFibreProductOverBaseFunctor F.underlying F.underlying)
         (fibredCategoryDiagonal_over_base F)
         (fibredCategoryDiagonal_over_base F)) := by
-  sorry
+  have hauto (a : RelativeInertiaCategory F.underlying) :
+      (structureFunctor X.underlying).map a.automorphism.hom = 𝟙 _ := by
+    have h := congrArg (structureFunctor S.underlying).map a.map_eq_id
+    rw [← Functor.comp_map] at h
+    have hcomp := Functor.congr_hom
+      (overFunctor_comm F.underlying) a.automorphism.hom
+    rw [hcomp] at h
+    have h' := congrArg (fun k => k ≫ eqToHom
+      (Functor.congr_obj (overFunctor_comm F.underlying) a.carrier)) h
+    apply (cancel_epi (eqToHom
+      (Functor.congr_obj (overFunctor_comm F.underlying) a.carrier))).1
+    simpa using h'
+  let forward : RelativeInertiaCategory F.underlying ⥤
+      VerticalIsoComma
+        (fibredCategoryDiagonalFunctor F) (fibredCategoryDiagonalFunctor F)
+        (structureFunctor X.underlying) (structureFunctor X.underlying)
+        (twoFibreProductOverBaseFunctor F.underlying F.underlying)
+        (fibredCategoryDiagonal_over_base F)
+        (fibredCategoryDiagonal_over_base F) := {
+    obj a :=
+      let η : (fibredCategoryDiagonalFunctor F).obj a.carrier ≅
+          (fibredCategoryDiagonalFunctor F).obj a.carrier :=
+        ObjectProperty.isoMk _
+          (ObjectProperty.isoMk _
+            (Comma.isoMk a.automorphism (Iso.refl _) (by
+              dsimp [fibredCategoryDiagonalFunctor, isoCommaDiagonal]
+              change (overFunctor F.underlying).map
+                  a.automorphism.hom ≫ 𝟙 _ =
+                𝟙 _ ≫ (overFunctor F.underlying).map (𝟙 _)
+              simp [a.map_eq_id])))
+      { obj :=
+          { obj :=
+              { left := a.carrier
+                right := a.carrier
+                hom := η.hom }
+            property := by exact η.isIso_hom }
+        property := by
+          refine ⟨(structureFunctor X.underlying).obj a.carrier,
+            rfl, rfl, ?_⟩
+          apply CategoryTheory.IsHomLift.of_fac'
+            (twoFibreProductOverBaseFunctor F.underlying F.underlying)
+            (𝟙 _) η.hom rfl rfl
+          simp only [eqToHom_refl, Category.id_comp, Category.comp_id]
+          change (structureFunctor X.underlying).map
+              a.automorphism.hom = 𝟙 _
+          exact hauto a }
+    map := fun {a b} f =>
+      ObjectProperty.homMk
+        (ObjectProperty.homMk
+          { left := f.hom
+            right := f.hom
+            w := by
+              apply ObjectProperty.hom_ext
+              apply ObjectProperty.hom_ext
+              apply Comma.hom_ext
+              · change f.hom ≫ b.automorphism.hom =
+                  a.automorphism.hom ≫ f.hom
+                exact f.comm.symm
+              · simp [Comma.isoMk, fibredCategoryDiagonalFunctor,
+                  isoCommaDiagonal] })
+    map_id := by
+      intro a
+      apply ObjectProperty.hom_ext
+      apply ObjectProperty.hom_ext
+      apply Comma.hom_ext
+      · rfl
+      · rfl
+    map_comp := by
+      intro a b c f g
+      apply ObjectProperty.hom_ext
+      apply ObjectProperty.hom_ext
+      apply Comma.hom_ext
+      · rfl
+      · rfl
+    }
+  refine ⟨forward, ?_⟩
+  let inverse :
+      VerticalIsoComma
+        (fibredCategoryDiagonalFunctor F) (fibredCategoryDiagonalFunctor F)
+        (structureFunctor X.underlying) (structureFunctor X.underlying)
+        (twoFibreProductOverBaseFunctor F.underlying F.underlying)
+        (fibredCategoryDiagonal_over_base F)
+        (fibredCategoryDiagonal_over_base F) ⥤
+      RelativeInertiaCategory F.underlying := {
+    obj z :=
+      letI : IsIso z.obj.obj.hom := z.obj.property
+      let ι :
+          ((fibredCategoryDiagonalFunctor F).obj z.obj.obj.left).obj.obj.left ⟶
+            ((fibredCategoryDiagonalFunctor F).obj z.obj.obj.right).obj.obj.left :=
+        z.obj.obj.hom.hom.hom.left
+      let κ :
+          ((fibredCategoryDiagonalFunctor F).obj z.obj.obj.left).obj.obj.right ⟶
+            ((fibredCategoryDiagonalFunctor F).obj z.obj.obj.right).obj.obj.right :=
+        z.obj.obj.hom.hom.hom.right
+      let ι' :
+          ((fibredCategoryDiagonalFunctor F).obj z.obj.obj.right).obj.obj.left ⟶
+            ((fibredCategoryDiagonalFunctor F).obj z.obj.obj.left).obj.obj.left :=
+        (inv z.obj.obj.hom).hom.hom.left
+      let κ' :
+          ((fibredCategoryDiagonalFunctor F).obj z.obj.obj.right).obj.obj.right ⟶
+            ((fibredCategoryDiagonalFunctor F).obj z.obj.obj.left).obj.obj.right :=
+        (inv z.obj.obj.hom).hom.hom.right
+      let ex :
+          ((fibredCategoryDiagonalFunctor F).obj z.obj.obj.left).obj.obj.left =
+            ((fibredCategoryDiagonalFunctor F).obj z.obj.obj.left).obj.obj.right :=
+        rfl
+      let ey :
+          ((fibredCategoryDiagonalFunctor F).obj z.obj.obj.right).obj.obj.left =
+            ((fibredCategoryDiagonalFunctor F).obj z.obj.obj.right).obj.obj.right :=
+        rfl
+      let α :
+          ((fibredCategoryDiagonalFunctor F).obj z.obj.obj.left).obj.obj.left ≅
+            ((fibredCategoryDiagonalFunctor F).obj z.obj.obj.left).obj.obj.left :=
+        { hom := ι ≫ eqToHom ey ≫ κ' ≫ eqToHom ex.symm
+          inv := eqToHom ex ≫ κ ≫ eqToHom ey.symm ≫ ι'
+          hom_inv_id := by
+            have hL : ι ≫ ι' = 𝟙 _ := by
+              have h := congrArg (fun k => k.hom.hom.left)
+                (IsIso.hom_inv_id z.obj.obj.hom)
+              dsimp [ι, ι'] at h
+              exact h
+            have hR : κ' ≫ κ = 𝟙 _ := by
+              have h := congrArg (fun k => k.hom.hom.right)
+                (IsIso.inv_hom_id z.obj.obj.hom)
+              dsimp [κ, κ'] at h
+              exact h
+            have hRcast :
+                eqToHom ey ≫ κ' ≫ κ ≫ eqToHom ey.symm = 𝟙 _ := by
+              calc
+                eqToHom ey ≫ κ' ≫ κ ≫ eqToHom ey.symm =
+                    eqToHom ey ≫ (κ' ≫ κ) ≫ eqToHom ey.symm := by
+                      simp only [Category.assoc]
+                _ = eqToHom ey ≫ 𝟙 _ ≫ eqToHom ey.symm := by
+                      rw [hR]
+                _ = 𝟙 _ := by simp
+            have hex : eqToHom ex.symm ≫ eqToHom ex = 𝟙 _ := by
+              rw [eqToHom_trans]
+              simp
+            calc
+              (ι ≫ eqToHom ey ≫ κ' ≫ eqToHom ex.symm) ≫
+                  (eqToHom ex ≫ κ ≫ eqToHom ey.symm ≫ ι') =
+                ι ≫ eqToHom ey ≫ κ' ≫
+                  (eqToHom ex.symm ≫ eqToHom ex) ≫
+                  κ ≫ eqToHom ey.symm ≫ ι' := by
+                    simp only [Category.assoc]
+              _ = ι ≫ eqToHom ey ≫ κ' ≫ 𝟙 _ ≫
+                  κ ≫ eqToHom ey.symm ≫ ι' := by rw [hex]
+              _ = ι ≫ (eqToHom ey ≫ κ' ≫ κ ≫
+                  eqToHom ey.symm) ≫ ι' := by
+                    simp only [Category.assoc, Category.id_comp]
+              _ = ι ≫ 𝟙 _ ≫ ι' := by rw [hRcast]
+              _ = 𝟙 _ := by simpa using hL
+          inv_hom_id := by
+            have hL : ι' ≫ ι = 𝟙 _ := by
+              have h := congrArg (fun k => k.hom.hom.left)
+                (IsIso.inv_hom_id z.obj.obj.hom)
+              dsimp [ι, ι'] at h
+              exact h
+            have hR : κ ≫ κ' = 𝟙 _ := by
+              have h := congrArg (fun k => k.hom.hom.right)
+                (IsIso.hom_inv_id z.obj.obj.hom)
+              dsimp [κ, κ'] at h
+              exact h
+            have hey : eqToHom ey.symm ≫ eqToHom ey = 𝟙 _ := by
+              rw [eqToHom_trans]
+              simp
+            have hex : eqToHom ex ≫ eqToHom ex.symm = 𝟙 _ := by
+              rw [eqToHom_trans]
+              simp
+            calc
+              (eqToHom ex ≫ κ ≫ eqToHom ey.symm ≫ ι') ≫
+                  (ι ≫ eqToHom ey ≫ κ' ≫ eqToHom ex.symm) =
+                eqToHom ex ≫ κ ≫ eqToHom ey.symm ≫
+                  (ι' ≫ ι) ≫ eqToHom ey ≫ κ' ≫
+                  eqToHom ex.symm := by
+                    simp only [Category.assoc]
+              _ = eqToHom ex ≫ κ ≫ eqToHom ey.symm ≫
+                  𝟙 _ ≫ eqToHom ey ≫ κ' ≫
+                  eqToHom ex.symm := by rw [hL]
+              _ = eqToHom ex ≫ κ ≫
+                  (eqToHom ey.symm ≫ eqToHom ey) ≫ κ' ≫
+                  eqToHom ex.symm := by
+                    simp only [Category.assoc, Category.id_comp]
+              _ = eqToHom ex ≫ κ ≫ 𝟙 _ ≫ κ' ≫
+                  eqToHom ex.symm := by rw [hey]
+              _ = eqToHom ex ≫ (κ ≫ κ') ≫
+                  eqToHom ex.symm := by
+                    simp only [Category.assoc, Category.id_comp]
+              _ = eqToHom ex ≫ 𝟙 _ ≫ eqToHom ex.symm := by rw [hR]
+              _ = 𝟙 _ := by simpa [hex] }
+      { carrier :=
+          ((fibredCategoryDiagonalFunctor F).obj z.obj.obj.left).obj.obj.left
+        automorphism := α
+        map_eq_id := by
+          have hcmp := z.obj.obj.hom.hom.hom.w
+          have hright : κ ≫ κ' = 𝟙 _ := by
+            have h := congrArg (fun k => k.hom.hom.right)
+              (IsIso.hom_inv_id z.obj.obj.hom)
+            dsimp [κ, κ'] at h
+            exact h
+          dsimp [fibredCategoryDiagonalFunctor, isoCommaDiagonal] at hcmp
+          dsimp [α, ex, ey]
+          dsimp [fibredCategoryDiagonalFunctor, isoCommaDiagonal]
+          have hcmp' :
+              (overFunctor F.underlying).map ι =
+                (overFunctor F.underlying).map κ := by
+            simpa [ι, κ, fibredCategoryDiagonalFunctor, isoCommaDiagonal]
+              using hcmp
+          have hcmpcast :
+              (overFunctor F.underlying).map ι ≫
+                  (overFunctor F.underlying).map (eqToHom ey) =
+                (overFunctor F.underlying).map (eqToHom ex) ≫
+                  (overFunctor F.underlying).map κ := by
+            dsimp [fibredCategoryDiagonalFunctor, isoCommaDiagonal] at ex ey ⊢
+            simpa [eqToHom_map, Functor.map_comp, Category.assoc] using hcmp
+          have hexmap :
+              (overFunctor F.underlying).map (eqToHom ex) ≫
+                  (overFunctor F.underlying).map (eqToHom ex.symm) = 𝟙 _ := by
+            rw [← Functor.map_comp]
+            simp
+          calc
+            (overFunctor F.underlying).map
+                (ι ≫ eqToHom ey ≫ κ' ≫ eqToHom ex.symm) =
+                (overFunctor F.underlying).map ι ≫
+                  (overFunctor F.underlying).map (eqToHom ey) ≫
+                  (overFunctor F.underlying).map κ' ≫
+                  (overFunctor F.underlying).map (eqToHom ex.symm) := by
+                    simp [Functor.map_comp]
+            _ = (overFunctor F.underlying).map (eqToHom ex) ≫
+                  (overFunctor F.underlying).map κ ≫
+                  (overFunctor F.underlying).map κ' ≫
+                  (overFunctor F.underlying).map (eqToHom ex.symm) := by
+                    calc
+                      (overFunctor F.underlying).map ι ≫
+                          (overFunctor F.underlying).map (eqToHom ey) ≫
+                          (overFunctor F.underlying).map κ' ≫
+                          (overFunctor F.underlying).map (eqToHom ex.symm) =
+                        ((overFunctor F.underlying).map ι ≫
+                          (overFunctor F.underlying).map (eqToHom ey)) ≫
+                          (overFunctor F.underlying).map κ' ≫
+                          (overFunctor F.underlying).map (eqToHom ex.symm) := by
+                            simp only [Category.assoc]
+                      _ = (overFunctor F.underlying).map (eqToHom ex) ≫
+                          (overFunctor F.underlying).map κ ≫
+                          (overFunctor F.underlying).map κ' ≫
+                          (overFunctor F.underlying).map (eqToHom ex.symm) := by
+                            rw [hcmpcast]
+                            simp only [Category.assoc]
+            _ = (overFunctor F.underlying).map (eqToHom ex) ≫
+                  (overFunctor F.underlying).map (κ ≫ κ') ≫
+                  (overFunctor F.underlying).map (eqToHom ex.symm) := by
+                    rw [Functor.map_comp]
+                    simp only [Category.assoc]
+            _ = 𝟙 _ := by
+              rw [hright]
+              have hmapid :=
+                (overFunctor F.underlying).map_id
+                  (((fibredCategoryDiagonalFunctor F).obj z.obj.obj.left).obj.obj.right)
+              rw [hmapid]
+              simpa only [Category.id_comp] using hexmap }
+    map := fun {z z'} f =>
+      { hom := f.hom.hom.left
+        comm := by
+          have h := f.hom.hom.w
+          have hL := congrArg (fun k => k.hom.hom.left) h
+          have hR := congrArg (fun k => k.hom.hom.right) h
+          dsimp [fibredCategoryDiagonalFunctor, isoCommaDiagonal] at hL hR
+          let fL :
+              ((fibredCategoryDiagonalFunctor F).obj z.obj.obj.left).obj.obj.left ⟶
+                ((fibredCategoryDiagonalFunctor F).obj z'.obj.obj.left).obj.obj.left :=
+            f.hom.hom.left
+          let fR :
+              ((fibredCategoryDiagonalFunctor F).obj z.obj.obj.right).obj.obj.left ⟶
+                ((fibredCategoryDiagonalFunctor F).obj z'.obj.obj.right).obj.obj.left :=
+            f.hom.hom.right
+          let fLr :
+              ((fibredCategoryDiagonalFunctor F).obj z.obj.obj.left).obj.obj.right ⟶
+                ((fibredCategoryDiagonalFunctor F).obj z'.obj.obj.left).obj.obj.right :=
+            f.hom.hom.left
+          let fRr :
+              ((fibredCategoryDiagonalFunctor F).obj z.obj.obj.right).obj.obj.right ⟶
+                ((fibredCategoryDiagonalFunctor F).obj z'.obj.obj.right).obj.obj.right :=
+            f.hom.hom.right
+          let exz :
+              ((fibredCategoryDiagonalFunctor F).obj z.obj.obj.left).obj.obj.left =
+                ((fibredCategoryDiagonalFunctor F).obj z.obj.obj.left).obj.obj.right :=
+            rfl
+          let exz' :
+              ((fibredCategoryDiagonalFunctor F).obj z'.obj.obj.left).obj.obj.left =
+                ((fibredCategoryDiagonalFunctor F).obj z'.obj.obj.left).obj.obj.right :=
+            rfl
+          have hL' :
+              fL ≫ z'.obj.obj.hom.hom.hom.left =
+                z.obj.obj.hom.hom.hom.left ≫ fR := by
+            exact hL
+          have hR' :
+              fLr ≫ z'.obj.obj.hom.hom.hom.right =
+                z.obj.obj.hom.hom.hom.right ≫ fRr := by
+            exact hR
+          have hLr :
+              fLr ≫ z'.obj.obj.hom.hom.hom.left =
+                z.obj.obj.hom.hom.hom.left ≫ fRr := by
+            exact hL
+          have hz :
+              (inv z.obj.obj.hom).hom.hom.right ≫
+                  z.obj.obj.hom.hom.hom.right = 𝟙 _ := by
+            have h' := congrArg (fun k => k.hom.hom.right)
+              (IsIso.inv_hom_id z.obj.obj.hom)
+            dsimp at h'
+            exact h'
+          have hz' :
+              (inv z'.obj.obj.hom).hom.hom.right ≫
+                  z'.obj.obj.hom.hom.hom.right = 𝟙 _ := by
+            have h' := congrArg (fun k => k.hom.hom.right)
+              (IsIso.inv_hom_id z'.obj.obj.hom)
+            dsimp at h'
+            exact h'
+          dsimp [fibredCategoryDiagonalFunctor, isoCommaDiagonal] at hL hR hz hz' ⊢
+          have hκ :
+              (inv z.obj.obj.hom).hom.hom.right ≫ fLr =
+                fRr ≫
+                  (inv z'.obj.obj.hom).hom.hom.right := by
+            apply (cancel_mono z'.obj.obj.hom.hom.hom.right).1
+            simp only [Category.assoc]
+            rw [hR']
+            simp [hz, hz']
+          have hκL :
+              (inv z.obj.obj.hom).hom.hom.right ≫ f.hom.hom.left =
+                f.hom.hom.right ≫ (inv z'.obj.obj.hom).hom.hom.right := by
+            exact hκ
+          have hκOuter := congrArg
+            (fun k => z.obj.obj.hom.hom.hom.left ≫ k) hκL
+          have hLOuter := congrArg
+            (fun k => k ≫ (inv z'.obj.obj.hom).hom.hom.right) hL.symm
+          have hLOuterR :
+              z.obj.obj.hom.hom.hom.left ≫ f.hom.hom.right ≫
+                  (inv z'.obj.obj.hom).hom.hom.right =
+                f.hom.hom.left ≫ z'.obj.obj.hom.hom.hom.left ≫
+                  (inv z'.obj.obj.hom).hom.hom.right := by
+            exact (Category.assoc _ _ _).symm.trans
+              (hLOuter.trans (Category.assoc _ _ _))
+          simpa only [exz, exz', eqToHom_refl, Category.assoc,
+            Category.id_comp, Category.comp_id] using hκOuter.trans hLOuterR }
+    map_id := by
+      intro z
+      apply RelativeInertiaHom.ext
+      rfl
+    map_comp := by
+      intro z z' z'' f g
+      apply RelativeInertiaHom.ext
+      rfl }
+  exact ⟨inverse, ?_⟩
 
 /- A cartesian lift in the relative inertia can be chosen with an underlying
    cartesian lift in the source category. -/

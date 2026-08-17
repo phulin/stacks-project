@@ -200,7 +200,11 @@ theorem existsUnique_inducedColimitMap {M : I ⥤ C} {N : J ⥤ C} [HasColimit M
     (H : I ⥤ J) (t : M ⟶ H ⋙ N) :
     ∃! θ : colimit M ⟶ colimit N,
       ∀ i, colimit.ι M i ≫ θ = t.app i ≫ colimit.ι N (H.obj i) := by
-  sorry
+  refine ⟨inducedColimitMap H t, inducedColimitMap_ι H t, ?_⟩
+  intro θ hθ
+  apply colimit.hom_ext
+  intro i
+  exact (hθ i).trans (inducedColimitMap_ι H t i).symm
 
 /-- The map on chosen limits induced by a functor and a natural transformation. -/
 def inducedLimitMap {M : I ⥤ C} {N : J ⥤ C} [HasLimit M] [HasLimit N]
@@ -218,7 +222,11 @@ theorem existsUnique_inducedLimitMap {M : I ⥤ C} {N : J ⥤ C} [HasLimit M] [H
     (H : I ⥤ J) (t : H ⋙ N ⟶ M) :
     ∃! θ : limit N ⟶ limit M,
       ∀ i, θ ≫ limit.π M i = limit.π N (H.obj i) ≫ t.app i := by
-  sorry
+  refine ⟨inducedLimitMap H t, inducedLimitMap_π H t, ?_⟩
+  intro θ hθ
+  apply limit.hom_ext
+  intro i
+  exact (hθ i).trans (inducedLimitMap_π H t i).symm
 
 end Functoriality
 
@@ -256,24 +264,197 @@ def pointwiseLimit (M : I ⥤ J ⥤ C) (h : ∀ i, HasLimit (M.obj i)) : I ⥤ C
 theorem has_colimit_uncurry_iff_pointwiseColimit (M : I ⥤ J ⥤ C)
     (h : ∀ i, HasColimit (M.obj i)) :
     HasColimit (Functor.uncurry.obj M) ↔ HasColimit (pointwiseColimit M h) := by
-  sorry
+  let (i : I) : HasColimit (M.obj i) := h i
+  let D : DiagramOfCocones M :=
+    { obj := fun i => colimit.cocone (M.obj i)
+      map := fun f =>
+        { hom := colimMap (M.map f)
+          w := by
+            intro j
+            exact ι_colimMap (M.map f) j }
+      id := by
+        intro i
+        apply colimit.hom_ext
+        intro j
+        simp
+      comp := by
+        intro i j k f g
+        apply colimit.hom_ext
+        intro l
+        simp [Category.assoc] }
+  let hD : ∀ i, IsColimit (D.obj i) := fun i => colimit.isColimit (M.obj i)
+  constructor
+  · intro hM
+    let : HasColimit (Functor.uncurry.obj M) := hM
+    have hcol := coconeOfCoconeUncurryIsColimit hD (colimit.isColimit (Functor.uncurry.obj M))
+    simpa [D, pointwiseColimit, DiagramOfCocones.coconePoints] using
+      (HasColimit.mk (⟨coconeOfCoconeUncurry hD (colimit.cocone (Functor.uncurry.obj M)), hcol⟩
+        : ColimitCocone D.coconePoints))
+  · intro hP
+    let : HasColimit (pointwiseColimit M h) := hP
+    let c : Cocone (Functor.uncurry.obj M) :=
+      { pt := colimit (pointwiseColimit M h)
+        ι :=
+          { app := fun p =>
+              colimit.ι (M.obj p.1) p.2 ≫ colimit.ι (pointwiseColimit M h) p.1
+            naturality := by
+              rintro ⟨i, j⟩ ⟨i', j'⟩ ⟨f, g⟩
+              dsimp
+              have h_outer := colimit.w (pointwiseColimit M h) f
+              simp [pointwiseColimit, Category.assoc]
+              rw [← ι_colimMap_assoc]
+              simpa [pointwiseColimit, Category.assoc] using
+                congrArg (fun q => colimit.ι (M.obj i) j ≫ q) h_outer } }
+    have hc' : IsColimit (coconeOfCoconeUncurry hD c) := by
+      refine IsColimit.ofIsoColimit (colimit.isColimit (pointwiseColimit M h))
+        (Cocone.ext (c := colimit.cocone (pointwiseColimit M h))
+          (c' := coconeOfCoconeUncurry hD c) (Iso.refl _) ?_)
+      intro i
+      apply (hD i).hom_ext
+      intro j
+      let q : Cocone (M.obj i) :=
+        { pt := colimit (pointwiseColimit M h)
+          ι :=
+            { app := fun k =>
+                colimit.ι (M.obj i) k ≫ colimit.ι (pointwiseColimit M h) i
+              naturality := by
+                intro k k' g
+                simp [pointwiseColimit] } }
+      have hdesc : (hD i).desc q = colimit.ι (pointwiseColimit M h) i := by
+        apply colimit.hom_ext
+        intro k
+        simpa [D, q] using (hD i).fac q k
+      simp [D, coconeOfCoconeUncurry, c, q, hdesc]
+    exact ⟨⟨c, IsColimit.ofCoconeUncurry hD hc'⟩⟩
 
 theorem has_limit_uncurry_iff_pointwiseLimit (M : I ⥤ J ⥤ C)
     (h : ∀ i, HasLimit (M.obj i)) :
     HasLimit (Functor.uncurry.obj M) ↔ HasLimit (pointwiseLimit M h) := by
-  sorry
+  let (i : I) : HasLimit (M.obj i) := h i
+  let D : DiagramOfCones M :=
+    { obj := fun i => limit.cone (M.obj i)
+      map := fun f =>
+        { hom := limMap (M.map f)
+          w := by
+            intro j
+            exact limMap_π (M.map f) j }
+      id := by
+        intro i
+        apply limit.hom_ext
+        intro j
+        simp
+      comp := by
+        intro i j k f g
+        apply limit.hom_ext
+        intro l
+        simp [Category.assoc] }
+  let hD : ∀ i, IsLimit (D.obj i) := fun i => limit.isLimit (M.obj i)
+  constructor
+  · intro hM
+    let : HasLimit (Functor.uncurry.obj M) := hM
+    have hcone := coneOfConeUncurryIsLimit hD (limit.isLimit (Functor.uncurry.obj M))
+    simpa [D, pointwiseLimit, DiagramOfCones.conePoints] using
+      (HasLimit.mk (⟨coneOfConeUncurry hD (limit.cone (Functor.uncurry.obj M)), hcone⟩
+        : LimitCone D.conePoints))
+  · intro hP
+    let : HasLimit (pointwiseLimit M h) := hP
+    let c : Cone (Functor.uncurry.obj M) :=
+      { pt := limit (pointwiseLimit M h)
+        π :=
+          { app := fun p =>
+              limit.π (pointwiseLimit M h) p.1 ≫ limit.π (M.obj p.1) p.2
+            naturality := by
+              rintro ⟨i, j⟩ ⟨i', j'⟩ ⟨f, g⟩
+              dsimp
+              have h_outer := limit.w (pointwiseLimit M h) f
+              have h_outer' := congrArg (fun q =>
+                q ≫ limit.π (M.obj i') j ≫ (M.obj i').map g) h_outer
+              have h_inner := congrArg (fun q =>
+                limit.π (pointwiseLimit M h) i' ≫ q)
+                (limit.w (M.obj i') g)
+              simp [pointwiseLimit, Category.assoc]
+              rw [← limMap_π_assoc]
+              simpa [pointwiseLimit, Category.assoc] using (h_outer'.trans h_inner).symm } }
+    have hc' : IsLimit (coneOfConeUncurry hD c) := by
+      refine IsLimit.ofIsoLimit (limit.isLimit (pointwiseLimit M h))
+        (Cone.ext (c := limit.cone (pointwiseLimit M h))
+          (c' := coneOfConeUncurry hD c) (Iso.refl _) ?_)
+      intro i
+      apply (hD i).hom_ext
+      intro j
+      let q : Cone (M.obj i) :=
+        { pt := limit (pointwiseLimit M h)
+          π :=
+            { app := fun k =>
+                limit.π (pointwiseLimit M h) i ≫ limit.π (M.obj i) k
+              naturality := by
+                intro k k' g
+                simp [pointwiseLimit, Category.assoc] } }
+      have hlift : (hD i).lift q = limit.π (pointwiseLimit M h) i := by
+        apply limit.hom_ext
+        intro k
+        change (hD i).lift q ≫ (D.obj i).π.app k = q.π.app k
+        exact (hD i).fac q k
+      simp [D, coneOfConeUncurry, c, q, hlift]
+    exact ⟨⟨c, IsLimit.ofConeOfConeUncurry hD hc'⟩⟩
 
 theorem iterated_colimits_are_colimit (M : I ⥤ J ⥤ C)
     (h : ∀ i, HasColimit (M.obj i)) [HasColimit (Functor.uncurry.obj M)]
     [HasColimit (pointwiseColimit M h)] :
     Nonempty (colimit (pointwiseColimit M h) ≅ colimit (Functor.uncurry.obj M)) := by
-  sorry
+  let (i : I) : HasColimit (M.obj i) := h i
+  let D : DiagramOfCocones M :=
+    { obj := fun i => colimit.cocone (M.obj i)
+      map := fun f =>
+        { hom := colimMap (M.map f)
+          w := by
+            intro j
+            exact ι_colimMap (M.map f) j }
+      id := by
+        intro i
+        apply colimit.hom_ext
+        intro j
+        simp
+      comp := by
+        intro i j k f g
+        apply colimit.hom_ext
+        intro l
+        simp [Category.assoc] }
+  let hD : ∀ i, IsColimit (D.obj i) := fun i => colimit.isColimit (M.obj i)
+  have hflat :=
+    coconeOfCoconeUncurryIsColimit hD (colimit.isColimit (Functor.uncurry.obj M))
+  have e : colimit (pointwiseColimit M h) ≅ colimit (Functor.uncurry.obj M) :=
+    (hflat.coconePointUniqueUpToIso (colimit.isColimit (pointwiseColimit M h))).symm
+  exact ⟨e⟩
 
 theorem iterated_limits_are_limit (M : I ⥤ J ⥤ C)
     (h : ∀ i, HasLimit (M.obj i)) [HasLimit (Functor.uncurry.obj M)]
     [HasLimit (pointwiseLimit M h)] :
     Nonempty (limit (pointwiseLimit M h) ≅ limit (Functor.uncurry.obj M)) := by
-  sorry
+  let (i : I) : HasLimit (M.obj i) := h i
+  let D : DiagramOfCones M :=
+    { obj := fun i => limit.cone (M.obj i)
+      map := fun f =>
+        { hom := limMap (M.map f)
+          w := by
+            intro j
+            exact limMap_π (M.map f) j }
+      id := by
+        intro i
+        apply limit.hom_ext
+        intro j
+        simp
+      comp := by
+        intro i j k f g
+        apply limit.hom_ext
+        intro l
+        simp [Category.assoc] }
+  let hD : ∀ i, IsLimit (D.obj i) := fun i => limit.isLimit (M.obj i)
+  have hflat :=
+    coneOfConeUncurryIsLimit hD (limit.isLimit (Functor.uncurry.obj M))
+  have e : limit (pointwiseLimit M h) ≅ limit (Functor.uncurry.obj M) :=
+    (hflat.conePointUniqueUpToIso (limit.isLimit (pointwiseLimit M h))).symm
+  exact ⟨e⟩
 
 theorem iterated_colimits_can_be_swapped (M : I ⥤ J ⥤ C)
     (h : ∀ i, HasColimit (M.obj i))
@@ -283,7 +464,17 @@ theorem iterated_colimits_can_be_swapped (M : I ⥤ J ⥤ C)
     Nonempty
       (colimit (pointwiseColimit M h) ≅
         colimit (pointwiseColimit M.flip h')) := by
-  sorry
+  let : HasColimit (CategoryTheory.Prod.swap J I ⋙ Functor.uncurry.obj M) :=
+    Limits.hasColimit_equivalence_comp (Prod.braiding J I)
+  let : HasColimit (Functor.uncurry.obj M.flip) :=
+    hasColimit_of_iso (uncurryObjFlip M)
+  let e₀ :
+      colimit (Functor.uncurry.obj M) ≅ colimit (Functor.uncurry.obj M.flip) :=
+    HasColimit.isoOfEquivalence (Prod.braiding I J)
+      (NatIso.ofComponents fun _ => by rfl)
+  let e₁ := (iterated_colimits_are_colimit M h).some
+  let e₂ := (iterated_colimits_are_colimit M.flip h').some
+  exact ⟨e₁ ≪≫ e₀ ≪≫ e₂.symm⟩
 
 theorem iterated_limits_can_be_swapped (M : I ⥤ J ⥤ C)
     (h : ∀ i, HasLimit (M.obj i))
@@ -293,7 +484,17 @@ theorem iterated_limits_can_be_swapped (M : I ⥤ J ⥤ C)
     Nonempty
       (limit (pointwiseLimit M h) ≅
         limit (pointwiseLimit M.flip h')) := by
-  sorry
+  let : HasLimit (CategoryTheory.Prod.swap J I ⋙ Functor.uncurry.obj M) :=
+    Limits.hasLimit_equivalence_comp (Prod.braiding J I)
+  let : HasLimit (Functor.uncurry.obj M.flip) :=
+    hasLimit_of_iso (uncurryObjFlip M).symm
+  let e₀ :
+      limit (Functor.uncurry.obj M) ≅ limit (Functor.uncurry.obj M.flip) :=
+    HasLimit.isoOfEquivalence (Prod.braiding I J)
+      (NatIso.ofComponents fun _ => by rfl)
+  let e₁ := (iterated_limits_are_limit M h).some
+  let e₂ := (iterated_limits_are_limit M.flip h').some
+  exact ⟨e₁ ≪≫ e₀ ≪≫ e₂.symm⟩
 
 end Fubini
 

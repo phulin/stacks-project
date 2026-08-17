@@ -1,4 +1,4 @@
-import Formalization.Books.Algebra.Unit86
+import Formalization.Books.Algebra.Unit86.MittagLefflerSystems
 import Mathlib.Algebra.Category.ModuleCat.Limits
 import Mathlib.Algebra.Homology.ShortComplex.ModuleCat
 import Mathlib.Data.PNat.Basic

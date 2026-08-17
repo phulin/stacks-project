@@ -12,10 +12,11 @@ import Mathlib.Topology.Sets.OpenCover
 The source's Jacobson-space definition and its locally closed criterion are
 Mathlib's canonical `JacobsonSpace` and `jacobsonSpace_iff_locallyClosed`.
 Closed points are represented by `closedPoints`, and the closed-point
-subspace has the induced subtype topology.  The source's constructible and
-locally constructible subsets use Mathlib's `IsConstructible` and
-`IsLocallyConstructible`; Chapter 15 records the finite-locally-closed normal
-form for constructible sets.
+subspace has the induced subtype topology.  The source's constructible
+subsets use Mathlib's `IsConstructible`; its locally covered unions of
+locally closed subsets use the source-facing
+`IsLocallyUnionOfLocallyClosed` predicate below.  Chapter 15 records the
+finite-locally-closed normal form for constructible sets.
 -/
 
 namespace Formalization.Books.Topology.Unit18
@@ -31,9 +32,10 @@ variable {X : Type u} [TopologicalSpace X]
 /-! ### Source-facing set predicates and traces -/
 
 /-
-Mathlib has no separate predicate for an arbitrary union of locally closed
-subsets.  These two predicates are the literal source interfaces needed for
-the inherited-subspace lemma and its finite-union correspondence.
+Mathlib has no separate predicates for an arbitrary union of locally closed
+subsets or for a set which is locally such a union.  These predicates are the
+literal source interfaces needed for the inherited-subspace lemma and its
+finite-union correspondence.
 -/
 
 /-- A subset which is a finite union of locally closed subsets. -/
@@ -44,6 +46,15 @@ def IsFiniteUnionLocallyClosed (E : Set X) : Prop :=
 /-- A subset which is a union of locally closed subsets. -/
 def IsUnionOfLocallyClosed (E : Set X) : Prop :=
   ∃ S : Set (Set X), (∀ T ∈ S, IsLocallyClosed T) ∧ E = ⋃₀ S
+
+/-! A source-facing open-cover formulation of being locally a union of
+locally closed subsets. -/
+
+def IsLocallyUnionOfLocallyClosed (E : Set X) : Prop :=
+  ∃ S : Set (Set X),
+    (∀ U ∈ S, IsOpen U ∧
+      IsUnionOfLocallyClosed ((Subtype.val : U → X) ⁻¹' E)) ∧
+      ⋃₀ S = (Set.univ : Set X)
 
 /-- The intersection of a subset with the closed-point subspace. -/
 def closedPointTrace (E : Set X) : Set (closedPoints X) :=
@@ -103,10 +114,9 @@ theorem closedPoints_eq_iUnion_image_closedPoints_of_isOpenCover
 
 /-! ### Jacobson subspaces -/
 
-/-
-The last case below uses Mathlib's `IsLocallyConstructible`, which is the
-canonical pointwise/open-cover formulation of being locally a union of
-constructible (hence finite locally closed) pieces from Chapter 15.
+/-!
+The last case below uses the source-facing open-cover formulation of being
+locally a union of locally closed subsets.
 -/
 
 theorem jacobsonSpace_of_isOpen [JacobsonSpace X] {T : Set X}
@@ -139,8 +149,8 @@ theorem jacobsonSpace_of_isConstructible [JacobsonSpace X] {T : Set X}
       ∀ x : T, x ∈ closedPoints T → IsClosed ({(x : X)} : Set X) := by
   sorry
 
-theorem jacobsonSpace_of_isLocallyConstructible [JacobsonSpace X] {T : Set X}
-    (hT : IsLocallyConstructible T) :
+theorem jacobsonSpace_of_isLocallyUnionOfLocallyClosed [JacobsonSpace X]
+    {T : Set X} (hT : IsLocallyUnionOfLocallyClosed T) :
     JacobsonSpace T ∧
       ∀ x : T, x ∈ closedPoints T → IsClosed ({(x : X)} : Set X) := by
   sorry

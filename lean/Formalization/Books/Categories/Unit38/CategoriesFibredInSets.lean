@@ -87,6 +87,15 @@ theorem mapsStronglyCartesian_to_discreteFibred
       (overFunctor F) := by
   sorry
 
+/- A vertical natural transformation between functors into a discrete fibre
+   is automatically invertible.  This is the source's observation that the
+   fixed-base 2-category is in fact a (2, 1)-category. -/
+theorem discreteFibredCategoryOver_two_morphism_isIso
+    {C : Cat.{v, u}} {X Y : FibredCategoryOver C}
+    (hY : IsDiscreteFibredCategoryOver Y)
+    {F G : FibredCategoryOverHom X Y} (η : F ⟶ G) : IsIso η := by
+  sorry
+
 /-- The source-facing constructor for a 1-morphism over the base; the
 preservation field is automatic for a discrete-fibred target. -/
 def fibredCategoryOverHomOfDiscrete
@@ -120,6 +129,13 @@ structure FibredInSetsTwoFibreProduct
   fibres_are_discrete : ∀ U : C,
     IsDiscrete (Functor.Fiber product.diagram.base U)
 
+theorem fibredInSetsTwoFibreProduct_apex_isCategoryFibredInSets
+    {C : Cat.{v, u}} {X Y S : FibredCategoryOver C}
+    {F : FibredCategoryOverHom X S} {G : FibredCategoryOverHom Y S}
+    (P : FibredInSetsTwoFibreProduct F G) :
+    IsCategoryFibredInSets P.product.diagram.base := by
+  sorry
+
 theorem categoriesFibredInSets_have_twoFibreProducts
     {C : Cat.{v, u}} (X Y S : FibredCategoryOver C)
     (hX : IsDiscreteFibredCategoryOver X)
@@ -152,6 +168,21 @@ def setPresheafObjectValue
     F.obj (Opposite.op X.base) :=
   X.fiber.as
 
+@[simp]
+theorem setPresheafObjectValue_mk
+    {C : Type uC} [Category.{vC} C]
+    (F : Cᵒᵖ ⥤ Type uS) (U : C) (x : F.obj (Opposite.op U)) :
+    setPresheafObjectValue F
+        (⟨U, Discrete.mk x⟩ : setPresheafCategory F) = x :=
+  rfl
+
+theorem setPresheaf_object_description
+    {C : Type uC} [Category.{vC} C]
+    (F : Cᵒᵖ ⥤ Type uS) (X : setPresheafCategory F) :
+    ∃ x : F.obj (Opposite.op X.base),
+      X = (⟨X.base, Discrete.mk x⟩ : setPresheafCategory F) := by
+  sorry
+
 /-- The morphism with prescribed base arrow and the corresponding equality in
 the set-valued presheaf.  The fibre component is the unique arrow in the
 canonical discrete fibre. -/
@@ -183,6 +214,15 @@ theorem setPresheafHom_exists_iff
         setPresheafObjectValue F X := by
   sorry
 
+theorem setPresheaf_morphism_description
+    {C : Type uC} [Category.{vC} C]
+    (F : Cᵒᵖ ⥤ Type uS)
+    {X Y : setPresheafCategory F} (f : X ⟶ Y) :
+    ∃ h : F.map f.base.op (setPresheafObjectValue F Y) =
+        setPresheafObjectValue F X,
+      f = setPresheafHomOf F (X := X) (Y := Y) f.base h := by
+  sorry
+
 theorem setPresheafHom_ext
     {C : Type uC} [Category.{vC} C]
     (F : Cᵒᵖ ⥤ Type uS)
@@ -202,6 +242,15 @@ abbrev setPresheafRestriction
     {C : Type uC} [Category.{vC} C]
     (F : Cᵒᵖ ⥤ Type uS) {V U : C} (f : V ⟶ U) :=
   groupoidPresheafRestriction (setPresheafToCat F) f
+
+@[simp]
+theorem setPresheafRestriction_obj
+    {C : Type uC} [Category.{vC} C]
+    (F : Cᵒᵖ ⥤ Type uS) {V U : C} (f : V ⟶ U)
+    (x : F.obj (Opposite.op U)) :
+    (setPresheafRestriction F f).obj (Discrete.mk x) =
+      Discrete.mk (F.map f.op x) :=
+  rfl
 
 theorem setPresheafRestriction_comp
     {C : Type uC} [Category.{vC} C]
@@ -239,6 +288,20 @@ theorem setPresheaf_comp_base
     (F : Cᵒᵖ ⥤ Type uS)
     {X Y Z : setPresheafCategory F} (f : X ⟶ Y) (g : Y ⟶ Z) :
     (f ≫ g).base = f.base ≫ g.base :=
+  rfl
+
+/- The fibre component of composition is the canonical CoGrothendieck
+   composition; this is the displayed composition rule in the source. -/
+theorem setPresheaf_comp_fiber
+    {C : Type uC} [Category.{vC} C]
+    (F : Cᵒᵖ ⥤ Type uS)
+    {X Y Z : setPresheafCategory F} (f : X ⟶ Y) (g : Y ⟶ Z) :
+    (f ≫ g).fiber =
+      f.fiber ≫
+        ((splitFibredPseudofunctor (setPresheafToCat F)).map
+            f.base.op.toLoc).toFunctor.map g.fiber ≫
+        ((splitFibredPseudofunctor (setPresheafToCat F)).mapComp
+            g.base.op.toLoc f.base.op.toLoc).inv.toNatTrans.app Z.fiber :=
   rfl
 
 /-- The CoGrothendieck category has the source's displayed object and

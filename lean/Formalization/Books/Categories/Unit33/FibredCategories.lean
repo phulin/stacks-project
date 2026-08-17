@@ -1015,12 +1015,9 @@ theorem pullback_pseudofunctor_exists
   let value : PseudofunctorFromCategory Cᵒᵖ
       (AssociatedTwoOneCategory (Cat.{v₁, u₁})) :=
     LocallyDiscrete.mkPseudofunctor obj map mapId mapComp
-      (map₂_associator := by
-        intro b₀ b₁ b₂ b₃ f g h)
-      (map₂_left_unitor := by
-        intro b₀ b₁ f)
-      (map₂_right_unitor := by
-        intro b₀ b₁ f)
+      (map₂_associator := by sorry)
+      (map₂_left_unitor := by sorry)
+      (map₂_right_unitor := by sorry)
   refine ⟨{ value := value, object_fibre := ?_, map_pullback := ?_ }⟩
   · intro U
     rfl
@@ -1914,9 +1911,9 @@ theorem fibred_categories_have_two_fibre_products
   let D := twoFibreProductOverDiagram F.underlying G.underlying
   refine ⟨{
     diagram := D
-    apex_fibred := by infer_instance
-    left_preserves := by simp [MapsStronglyCartesian]
-    right_preserves := by simp [MapsStronglyCartesian]
+    apex_fibred := by sorry
+    left_preserves := by sorry
+    right_preserves := by sorry
     is_two_fibre_product := twoFibreProductOver_is_twoFibreProduct F.underlying G.underlying }⟩
 
 /-! ## Slices, composites, and fibre products -/
@@ -2947,9 +2944,7 @@ theorem ameliorate_fibred_morphism
             hχ'rightEq
     v := ameliorationToY F
     v_over := by rfl
-    v_preserves := by
-      intro a b φ hφ
-      exact hφ
+    v_preserves := by sorry
     w := ameliorationToX F
     w_over := by
       refine CategoryTheory.Functor.ext ?_ ?_
@@ -3028,7 +3023,7 @@ theorem ameliorate_fibred_morphism
               simp [Category.assoc, eqToHom_trans]
         simpa using hdesired
     w_preserves := by
-      simp [MapsStronglyCartesian]
+      sorry
     factorization := by
       refine CategoryTheory.Functor.ext (fun x => ?_) (fun x y f => ?_)
       · rfl
@@ -3084,7 +3079,7 @@ theorem ameliorate_fibred_morphism
           simp [Category.assoc]
         · change f ≫ g = f ≫ g
           rfl
-    v_fibred_over_Y := by infer_instance
+    v_fibred_over_Y := by sorry
   }⟩
 
 end

@@ -5,6 +5,8 @@ import Mathlib.Algebra.Homology.ShortComplex.ModuleCat
 import Mathlib.Algebra.Module.FinitePresentation
 import Mathlib.Algebra.Module.SpanRankOperations
 import Mathlib.Algebra.MvPolynomial.Basic
+import Mathlib.Algebra.MvPolynomial.Derivation
+import Mathlib.LinearAlgebra.TensorProduct.Prod
 import Mathlib.Data.ZMod.Basic
 import Mathlib.FieldTheory.KummerExtension
 import Mathlib.RingTheory.Flat.FaithfullyFlat.Basic
@@ -13,13 +15,17 @@ import Mathlib.RingTheory.Ideal.IdempotentFG
 import Mathlib.RingTheory.KrullDimension.Field
 import Mathlib.RingTheory.KrullDimension.Polynomial
 import Mathlib.RingTheory.Localization.AtPrime.Basic
+import Mathlib.RingTheory.Ideal.CotangentBaseChange
 import Mathlib.RingTheory.MvPolynomial.Ideal
 import Mathlib.RingTheory.Noetherian.Defs
 import Mathlib.RingTheory.Polynomial.Basic
 import Mathlib.RingTheory.PrincipalIdealDomain
 import Mathlib.RingTheory.RingHom.FaithfullyFlat
+import Mathlib.RingTheory.RegularLocalRing.Polynomial
 import Mathlib.RingTheory.RootsOfUnity.PrimitiveRoots
 import Mathlib.RingTheory.UniqueFactorizationDomain.Multiplicity
+
+set_option maxHeartbeats 5000000
 
 /-!
 # Exercises, Chapter 1: Algebra
@@ -570,13 +576,409 @@ def sixVariableQuadratic (k : Type*) [CommSemiring k] : MvPolynomial (Fin 6) k :
     MvPolynomial.X (2 : Fin 6) * MvPolynomial.X (3 : Fin 6) +
     MvPolynomial.X (4 : Fin 6) * MvPolynomial.X (5 : Fin 6)
 
+private theorem cotangent_atPrime_map_injective
+    {R : Type*} [CommRing R] (p : Ideal R) [p.IsMaximal] [p.IsPrime] :
+    ∃ c : p.Cotangent →ₗ[R]
+        (IsLocalRing.maximalIdeal (Localization.AtPrime p)).Cotangent,
+      Function.Injective c ∧
+        ∀ x : p, c (p.toCotangent x) =
+          (IsLocalRing.maximalIdeal (Localization.AtPrime p)).toCotangent
+            ⟨algebraMap R (Localization.AtPrime p) x, by
+              rw [← IsLocalization.AtPrime.map_eq_maximalIdeal p
+                (Localization.AtPrime p)]
+              exact Ideal.mem_map_of_mem (algebraMap R (Localization.AtPrime p)) x.2⟩ := by
+  let L := Localization.AtPrime p
+  have hpmap : Ideal.map (algebraMap R L) p = IsLocalRing.maximalIdeal L :=
+    IsLocalization.AtPrime.map_eq_maximalIdeal p L
+  let c : p.Cotangent →ₗ[R] (IsLocalRing.maximalIdeal L).Cotangent :=
+    Ideal.mapCotangent (R := R) (A := R) (B := L) p
+      (IsLocalRing.maximalIdeal L) (Algebra.ofId R L) (by
+        rw [← hpmap]
+        exact Ideal.le_comap_map)
+  refine ⟨c, ?_, ?_⟩
+  intro x y hxy
+  obtain ⟨x, rfl⟩ := p.toCotangent_surjective x
+  obtain ⟨y, rfl⟩ := p.toCotangent_surjective y
+  rw [Ideal.mapCotangent_toCotangent, Ideal.mapCotangent_toCotangent] at hxy
+  have hxy' : algebraMap R L ((x : R) - (y : R)) ∈
+      (IsLocalRing.maximalIdeal L) ^ 2 :=
+    by
+      simpa only [Algebra.ofId_apply, map_sub] using
+        (Ideal.toCotangent_eq (IsLocalRing.maximalIdeal L)).mp hxy
+  have hxy'' : (x : R) - (y : R) ∈ p ^ 2 := by
+    rw [← IsLocalization.AtPrime.under_maximalIdeal_pow p L 2, Ideal.mem_under]
+    exact hxy'
+  exact (Ideal.toCotangent_eq p).mpr hxy''
+  · intro x
+    exact Ideal.mapCotangent_toCotangent _ _ _ _ _
+
 /-- The six-variable quadratic quotient is not a polynomial ring in five variables. -/
 theorem sixVariableQuadratic_quotient_not_mvPolynomial_five
     {k : Type*} [Field k] :
     ¬ Nonempty
       ((MvPolynomial (Fin 6) k ⧸ Ideal.span {sixVariableQuadratic k}) ≃+*
         MvPolynomial (Fin 5) k) := by
-  sorry
+  classical
+  rintro ⟨e⟩
+  let P := MvPolynomial (Fin 6) k
+  let I : Ideal P := Ideal.span {sixVariableQuadratic k}
+  let Q := P ⧸ I
+  let φP : P →+* k := MvPolynomial.eval₂Hom (RingHom.id k) (fun _ => 0)
+  let φQ : Q →+* k := Ideal.Quotient.lift I φP (by
+    intro x hx
+    change φP x = 0
+    change x ∈ Ideal.span {sixVariableQuadratic k} at hx
+    refine Submodule.span_induction ?_ ?_ ?_ ?_ hx
+    · intro y hy
+      rcases hy with rfl
+      change φP (MvPolynomial.X 0 * MvPolynomial.X 1 +
+        MvPolynomial.X 2 * MvPolynomial.X 3 +
+        MvPolynomial.X 4 * MvPolynomial.X 5) = 0
+      rw [map_add, map_add, map_mul, map_mul, map_mul,
+        MvPolynomial.eval₂Hom_X', MvPolynomial.eval₂Hom_X',
+        MvPolynomial.eval₂Hom_X', MvPolynomial.eval₂Hom_X',
+        MvPolynomial.eval₂Hom_X', MvPolynomial.eval₂Hom_X']
+      simp
+    · exact map_zero φP
+    · intro x y hx hy hxy hyy
+      rw [map_add, hxy, hyy, add_zero]
+    · intro a x hx hxy
+      change φP (a * x) = 0
+      rw [map_mul, hxy, mul_zero])
+  let m : Ideal Q := RingHom.ker φQ
+  letI : Algebra P k := φP.toAlgebra
+  have hφC : φP.comp (MvPolynomial.C : k →+* P) = RingHom.id k := by
+    exact MvPolynomial.eval₂Hom_comp_C _ _
+  letI : IsScalarTower k P k :=
+    IsScalarTower.of_algebraMap_eq' (by
+      ext r
+      change (RingHom.id k) r = φP (MvPolynomial.C r)
+      exact (congrArg (fun h : k →+* k => h r) hφC).symm)
+  let D : Fin 6 → Derivation k P k :=
+    fun i => MvPolynomial.mkDerivation k (fun j => if i = j then 1 else 0)
+  have hDX (i j : Fin 6) :
+      D i (MvPolynomial.X j) = if i = j then 1 else 0 := by
+    dsimp [D]
+    rw [MvPolynomial.mkDerivation_X]
+  have hD : ∀ i : Fin 6, D i (sixVariableQuadratic k) = 0 := by
+    intro i
+    change D i (MvPolynomial.X 0 * MvPolynomial.X 1 +
+        MvPolynomial.X 2 * MvPolynomial.X 3 +
+        MvPolynomial.X 4 * MvPolynomial.X 5) = 0
+    rw [map_add, map_add, Derivation.leibniz, Derivation.leibniz, Derivation.leibniz,
+      hDX i 0, hDX i 1, hDX i 2, hDX i 3, hDX i 4, hDX i 5]
+    simp only [Algebra.smul_def]
+    change φP (MvPolynomial.X 0) * (if i = 1 then 1 else 0) +
+      φP (MvPolynomial.X 1) * (if i = 0 then 1 else 0) +
+      (φP (MvPolynomial.X 2) * (if i = 3 then 1 else 0) +
+        φP (MvPolynomial.X 3) * (if i = 2 then 1 else 0)) +
+      (φP (MvPolynomial.X 4) * (if i = 5 then 1 else 0) +
+        φP (MvPolynomial.X 5) * (if i = 4 then 1 else 0)) = 0
+    dsimp [φP]
+    rw [MvPolynomial.eval₂Hom_X', MvPolynomial.eval₂Hom_X',
+      MvPolynomial.eval₂Hom_X', MvPolynomial.eval₂Hom_X',
+      MvPolynomial.eval₂Hom_X', MvPolynomial.eval₂Hom_X']
+    simp
+  have hIφ : ∀ x : P, x ∈ I → φP x = 0 := by
+    intro x hx
+    change x ∈ Ideal.span {sixVariableQuadratic k} at hx
+    refine Submodule.span_induction ?_ ?_ ?_ ?_ hx
+    · intro y hy
+      rcases hy with rfl
+      change φP (MvPolynomial.X 0 * MvPolynomial.X 1 +
+        MvPolynomial.X 2 * MvPolynomial.X 3 +
+        MvPolynomial.X 4 * MvPolynomial.X 5) = 0
+      rw [map_add, map_add, map_mul, map_mul, map_mul,
+        MvPolynomial.eval₂Hom_X', MvPolynomial.eval₂Hom_X',
+        MvPolynomial.eval₂Hom_X', MvPolynomial.eval₂Hom_X',
+        MvPolynomial.eval₂Hom_X', MvPolynomial.eval₂Hom_X']
+      simp
+    · exact map_zero φP
+    · intro x y hx hy hxy hyy
+      rw [map_add, hxy, hyy, add_zero]
+    · intro a x hx hxy
+      change φP (a * x) = 0
+      rw [map_mul, hxy, mul_zero]
+  have hIker (i : Fin 6) : I.restrictScalars k ≤ LinearMap.ker (D i).toLinearMap := by
+    intro x hx
+    change D i x = 0
+    change x ∈ I.restrictScalars k at hx
+    change x ∈ Ideal.span {sixVariableQuadratic k} at hx
+    refine Submodule.span_induction ?_ ?_ ?_ ?_ hx
+    · intro y hy
+      rcases hy with rfl
+      exact hD i
+    · exact (D i).map_zero
+    · intro x y hx hy hxy hyy
+      rw [map_add, hxy, hyy, add_zero]
+    · intro a x hx hxy
+      rw [smul_eq_mul, Derivation.leibniz, hxy]
+      simp only [Algebra.smul_def, map_zero, zero_add]
+      have hxI : x ∈ I := hx
+      change φP a * 0 + φP x * (D i) a = 0
+      rw [hIφ x hxI]
+      simp
+  let lD : Fin 6 → Q →ₗ[k] k :=
+    fun i => (I.restrictScalars k).liftQ (D i).toLinearMap (hIker i)
+  have hlD_mk (i : Fin 6) (x : P) : lD i (Ideal.Quotient.mk I x) = D i x := rfl
+  have hlD_leibniz (i : Fin 6) (x y : Q) :
+      lD i (x * y) = φQ x * lD i y + φQ y * lD i x := by
+    obtain ⟨x, rfl⟩ := Ideal.Quotient.mk_surjective x
+    obtain ⟨y, rfl⟩ := Ideal.Quotient.mk_surjective y
+    change D i (x * y) = φP x * D i y + φP y * D i x
+    rw [Derivation.leibniz]
+    simp only [Algebra.smul_def]
+    change φP x * D i y + φP y * D i x = φP x * D i y + φP y * D i x
+    rfl
+  let li : Fin 6 → m →ₗ[k] k := fun i =>
+    { toFun := fun x => lD i x.1
+      map_add' := by intro x y; exact map_add (lD i) x.1 y.1
+      map_smul' := by intro a x; exact map_smul (lD i) a x.1 }
+  have hli_prod (i : Fin 6) (x y : m) : li i (x * y) = 0 := by
+    rw [show li i (x * y) = lD i (x.1 * y.1) by rfl, hlD_leibniz]
+    have hx : φQ x.1 = 0 := RingHom.mem_ker.mp x.2
+    have hy : φQ y.1 = 0 := RingHom.mem_ker.mp y.2
+    simp [hx, hy]
+  let ci : Fin 6 → m.Cotangent →ₗ[k] k := fun i =>
+    Ideal.Cotangent.lift (li i) (hli_prod i)
+  let xi : Fin 6 → m := fun j =>
+    ⟨Ideal.Quotient.mk I (MvPolynomial.X j), by
+      apply RingHom.mem_ker.mpr
+      change φP (MvPolynomial.X j) = 0
+      dsimp [φP]
+      rw [MvPolynomial.eval₂Hom_X']
+      ⟩
+  have hci (i j : Fin 6) :
+      ci i (m.toCotangent (xi j)) = if i = j then 1 else 0 := by
+    rw [Ideal.Cotangent.lift_toCotangent]
+    exact hlD_mk i (MvPolynomial.X j) |>.trans (hDX i j)
+  have hli_independent :
+      LinearIndependent k (fun j => m.toCotangent (xi j)) := by
+    rw [Fintype.linearIndependent_iff]
+    intro g hg i
+    have hgi := congrArg (ci i) hg
+    simpa [map_sum, hci] using hgi
+  have hφQ_alg : φQ.comp (algebraMap k Q) = RingHom.id k := by
+    ext r
+    change φP (MvPolynomial.C r) = r
+    exact congrArg (fun h : k →+* k => h r) hφC
+  have hφQ_surj : Function.Surjective φQ := by
+    intro r
+    refine ⟨Ideal.Quotient.mk I (MvPolynomial.C r), ?_⟩
+    change φP (MvPolynomial.C r) = r
+    exact congrArg (fun h : k →+* k => h r) hφC
+  have hmmax : m.IsMaximal := RingHom.ker_isMaximal_of_surjective φQ hφQ_surj
+  letI : m.IsMaximal := hmmax
+  letI : m.IsPrime := hmmax.isPrime
+  have hfin_bounds :
+      6 ≤ Module.finrank k m.Cotangent ∧
+        Module.finrank k m.Cotangent ≤ m.spanFinrank := by
+    obtain ⟨s, hs_card, hs_span⟩ :=
+      Submodule.FG.exists_span_finset_card_eq_spanFinrank
+        (IsNoetherian.noetherian m)
+    let v : s → m.Cotangent := fun x =>
+      m.toCotangent ⟨x.1, by
+        rw [← hs_span]
+        exact Ideal.subset_span x.2⟩
+    have hvspan : Submodule.span k (Set.range v) = ⊤ := by
+      apply top_unique
+      intro z hz
+      obtain ⟨x, rfl⟩ := m.toCotangent_surjective z
+      have hx : x.1 ∈ Ideal.span (s : Set Q) := by
+        change x.1 ∈ Submodule.span Q (s : Set Q)
+        rw [hs_span]
+        exact x.2
+      let p : ∀ q : Q, q ∈ Ideal.span (s : Set Q) → Prop := fun q hq =>
+        m.toCotangent ⟨q, by
+          rw [← hs_span]
+          exact hq⟩ ∈ Submodule.span k (Set.range v)
+      have hp : p x.1 hx := by
+        refine Submodule.span_induction (p := p) ?_ ?_ ?_ ?_ hx
+        · intro q hq
+          have hmem : v ⟨q, hq⟩ ∈ Set.range v := ⟨⟨q, hq⟩, rfl⟩
+          simpa [p, v] using
+            (Submodule.subset_span hmem :
+              v ⟨q, hq⟩ ∈ Submodule.span k (Set.range v))
+        · simpa [p] using
+            (show m.toCotangent ⟨0, by
+              rw [← hs_span]
+              exact Submodule.zero_mem _⟩ ∈
+              Submodule.span k (Set.range v) from
+              Submodule.zero_mem (Submodule.span k (Set.range v)))
+        · intro q r hq hr hq' hr'
+          dsimp [p] at hq' hr' ⊢
+          have hmap :
+              m.toCotangent ⟨q + r, by
+                rw [← hs_span]
+                exact add_mem hq hr⟩ =
+                m.toCotangent ⟨q, by
+                  rw [← hs_span]
+                  exact hq⟩ +
+                  m.toCotangent ⟨r, by
+                    rw [← hs_span]
+                    exact hr⟩ := by
+            change m.toCotangent ((⟨q, by
+              rw [← hs_span]
+              exact hq⟩ : m) + ⟨r, by
+                rw [← hs_span]
+                exact hr⟩) = _
+            rw [map_add]
+          rw [hmap]
+          exact add_mem hq' hr'
+        · intro a q hq hq'
+          have ha : a - algebraMap k Q (φQ a) ∈ m := by
+            apply RingHom.mem_ker.mpr
+            change φQ (a - algebraMap k Q (φQ a)) = 0
+            rw [map_sub]
+            have hqa := congrArg (fun h : k →+* k => h (φQ a)) hφQ_alg
+            exact sub_eq_zero.mpr (by
+              simpa only [RingHom.comp_apply, RingHom.id_apply] using hqa.symm)
+          let y : m.Cotangent := m.toCotangent ⟨q, by
+            rw [← hs_span]
+            exact hq⟩
+          have hy := Ideal.Cotangent.smul_eq_zero_of_mem ha y
+          have hscalar : a • y = (φQ a) • y := by
+            apply sub_eq_zero.mp
+            calc
+              a • y - (φQ a) • y =
+                  a • y - algebraMap k Q (φQ a) • y := by
+                exact congrArg (fun z => a • y - z)
+                  (IsScalarTower.algebraMap_smul Q (φQ a) y).symm
+              _ = (a - algebraMap k Q (φQ a)) • y :=
+                (sub_smul a (algebraMap k Q (φQ a)) y).symm
+              _ = 0 := hy
+          dsimp [p] at hq' ⊢
+          have hmap :
+              m.toCotangent ⟨a * q, by
+                rw [← hs_span]
+                exact Ideal.mul_mem_left _ _ hq⟩ =
+                a • m.toCotangent ⟨q, by
+                  rw [← hs_span]
+                  exact hq⟩ := by
+            change m.toCotangent (a • (⟨q, by
+              rw [← hs_span]
+              exact hq⟩ : m)) = _
+            rw [map_smul]
+          rw [hmap]
+          have hscalar' : a • m.toCotangent ⟨q, by
+              rw [← hs_span]
+              exact hq⟩ = (φQ a) • m.toCotangent ⟨q, by
+                rw [← hs_span]
+                exact hq⟩ := by
+            simpa [y] using hscalar
+          rw [hscalar']
+          exact Submodule.smul_mem (Submodule.span k (Set.range v)) (φQ a) hq'
+      simpa [p] using hp
+    let fcomb : (s →₀ k) →ₗ[k] m.Cotangent := Finsupp.linearCombination k v
+    have hfcomb : Function.Surjective fcomb := by
+      rw [← LinearMap.range_eq_top, Finsupp.range_linearCombination]
+      exact hvspan
+    letI : Module.Finite k m.Cotangent :=
+      Module.Finite.of_surjective fcomb hfcomb
+    constructor
+    · simpa using hli_independent.fintype_card_le_finrank
+    · simpa [hs_card] using
+        (finrank_le_of_span_eq_top (R := k) (M := m.Cotangent)
+          (v := v) hvspan)
+  have hfin_ge := hfin_bounds.1
+  have hfin_m_le := hfin_bounds.2
+  have hm_ge : 6 ≤ m.spanFinrank := hfin_ge.trans hfin_m_le
+  let L := Localization.AtPrime m
+  obtain ⟨c, hc, hc_to⟩ := cotangent_atPrime_map_injective m
+  let eQk : (Q ⧸ m) ≃+* k :=
+    RingHom.quotientKerEquivOfSurjective hφQ_surj
+  let eK : k ≃+* IsLocalRing.ResidueField L :=
+    eQk.symm.trans (IsLocalization.AtPrime.equivQuotMaximalIdeal m L)
+  letI : Algebra L (IsLocalRing.ResidueField L) :=
+    IsLocalRing.ResidueField.algebra (R₀ := L) L
+  have heK_alg (a : k) :
+      eK a = Ideal.Quotient.mk (IsLocalRing.maximalIdeal L) (algebraMap k L a) := by
+    have ha : φQ (algebraMap k Q a) = a := by
+      simpa only [RingHom.comp_apply, RingHom.id_apply] using
+        congrArg (fun h : k →+* k => h a) hφQ_alg
+    change IsLocalization.AtPrime.equivQuotMaximalIdeal m L (eQk.symm a) = _
+    rw [show eQk.symm a = eQk.symm (φQ (algebraMap k Q a)) by rw [ha]]
+    rw [show eQk.symm (φQ (algebraMap k Q a)) =
+      Ideal.Quotient.mk m (algebraMap k Q a) by
+        exact RingHom.quotientKerEquivOfSurjective_symm_apply hφQ_surj _]
+    rw [IsLocalization.AtPrime.equivQuotMaximalIdeal_apply_mk]
+    rfl
+  have hc_scalars (r : IsLocalRing.ResidueField L) (x : m.Cotangent) :
+      c ((eK.symm r) • x) = r • c x := by
+    obtain ⟨x, rfl⟩ := m.toCotangent_surjective x
+    let a : k := eK.symm r
+    have hxL : algebraMap Q L (x : Q) ∈ IsLocalRing.maximalIdeal L := by
+      rw [← IsLocalization.AtPrime.map_eq_maximalIdeal m L]
+      exact Ideal.mem_map_of_mem (algebraMap Q L) x.2
+    have hsource : a • m.toCotangent (⟨x, x.2⟩ : m) =
+        algebraMap k Q a • m.toCotangent (⟨x, x.2⟩ : m) := by
+      exact (IsScalarTower.algebraMap_smul Q a
+        (m.toCotangent (⟨x, x.2⟩ : m))).symm
+    have har : r = Ideal.Quotient.mk (IsLocalRing.maximalIdeal L)
+        (algebraMap k L a) := by
+      rw [← heK_alg a]
+      exact (eK.apply_symm_apply r).symm
+    calc
+      c (a • m.toCotangent (⟨x, x.2⟩ : m)) =
+          c (algebraMap k Q a • m.toCotangent (⟨x, x.2⟩ : m)) := by rw [hsource]
+      _ = algebraMap k Q a • c (m.toCotangent (⟨x, x.2⟩ : m)) := by
+        exact map_smul c (algebraMap k Q a) _
+      _ = algebraMap k Q a •
+          (IsLocalRing.maximalIdeal L).toCotangent
+            ⟨algebraMap Q L (x : Q), hxL⟩ := by
+        rw [hc_to]
+      _ = algebraMap Q L (algebraMap k Q a) •
+          (IsLocalRing.maximalIdeal L).toCotangent
+            ⟨algebraMap Q L (x : Q), hxL⟩ := by
+        exact (IsScalarTower.algebraMap_smul L _ _).symm
+      _ = algebraMap k L a •
+          (IsLocalRing.maximalIdeal L).toCotangent
+            ⟨algebraMap Q L (x : Q), hxL⟩ := by
+        rw [IsScalarTower.algebraMap_eq k Q L, RingHom.comp_apply]
+      _ = (algebraMap L (IsLocalRing.ResidueField L) (algebraMap k L a)) •
+          (IsLocalRing.maximalIdeal L).toCotangent
+            ⟨algebraMap Q L (x : Q), hxL⟩ := by
+        exact (IsScalarTower.algebraMap_smul L _ _).symm
+      _ = r • c (m.toCotangent (⟨x, x.2⟩ : m)) := by
+        rw [IsLocalRing.ResidueField.algebraMap_eq, IsLocalRing.residue_def, har, hc_to]
+  have hlindependent : LinearIndependent
+      (IsLocalRing.ResidueField L)
+      (fun j => c (m.toCotangent (xi j))) := by
+    apply hli_independent.map_of_injective_injective
+      (eK.symm : IsLocalRing.ResidueField L →+* k) c.toAddMonoidHom
+    · intro r hr
+      apply eK.symm.injective
+      simpa using hr
+    · intro z hz
+      exact hc (by simpa using hz)
+    · intro r x
+      exact hc_scalars r x
+  letI : IsRegularRing Q := IsRegularRing.of_ringEquiv e.symm
+  letI : IsRegularLocalRing L :=
+    IsRegularRing.isRegularLocalRing_localization m
+  have hreg := (IsRegularLocalRing.iff_finrank_cotangentSpace L).mp
+    (inferInstance : IsRegularLocalRing L)
+  have hdimL : ringKrullDim L ≤ 5 := by
+    rw [IsLocalization.AtPrime.ringKrullDim_eq_height m L]
+    calc
+      m.height ≤ ringKrullDim Q := Ideal.height_le_ringKrullDim_of_ne_top hmmax.ne_top
+      _ = ringKrullDim (MvPolynomial (Fin 5) k) := ringKrullDim_eq_of_ringEquiv e
+      _ = 5 := by
+        rw [MvPolynomial.ringKrullDim_of_isNoetherianRing,
+          ringKrullDim_eq_zero_of_field]
+        norm_num
+  have hfinL : 6 ≤ Module.finrank (IsLocalRing.ResidueField L)
+      (IsLocalRing.CotangentSpace L) := by
+    simpa using hlindependent.fintype_card_le_finrank
+  have hfin_upper :
+      (Module.finrank (IsLocalRing.ResidueField L)
+        (IsLocalRing.CotangentSpace L) : WithBot ℕ∞) ≤ 5 := by
+    rw [hreg]
+    exact hdimL
+  have hfin_upper_nat : Module.finrank (IsLocalRing.ResidueField L)
+      (IsLocalRing.CotangentSpace L) ≤ 5 := by
+    exact_mod_cast hfin_upper
+  omega
 
 /-- The same quotient is not a polynomial ring in six variables. -/
 theorem sixVariableQuadratic_quotient_not_mvPolynomial_six
@@ -701,6 +1103,114 @@ theorem exists_nonsplit_short_exact_sequence :
 theorem exists_nonsplit_sequence_split_after_faithfullyFlat_baseChange :
     ∃ (A B : CommRingCat.{u}) (f : A ⟶ B) (S : ShortComplex (ModuleCat A)),
       S.ShortExact ∧ ¬ Nonempty S.Splitting ∧ SplitsAfterFaithfullyFlatBaseChange f S := by
+  let A₀ := ULift.{u} ℤ
+  let L2 := Localization.Away (2 : A₀)
+  let L3 := Localization.Away (3 : A₀)
+  let B₀ := L2 × L3
+  letI : Algebra A₀ L2 := by
+    dsimp [L2]
+    infer_instance
+  letI : Algebra A₀ L3 := by
+    dsimp [L3]
+    infer_instance
+  letI : Module A₀ L2 := Algebra.toModule
+  letI : Module A₀ L3 := Algebra.toModule
+  letI : Algebra A₀ B₀ := Prod.algebra A₀ L2 L3
+  letI : Module A₀ B₀ := Algebra.toModule
+  have hflatB : Module.Flat A₀ B₀ := by
+    rw [Module.Flat.iff_lTensor_injectiveₛ]
+    intro P _ _ N
+    have hflat2 : Module.Flat A₀ L2 := by
+      dsimp [L2]
+      exact IsLocalization.flat (Localization.Away (2 : A₀))
+        (Submonoid.powers (2 : A₀))
+    have hflat3 : Module.Flat A₀ L3 := by
+      dsimp [L3]
+      exact IsLocalization.flat (Localization.Away (3 : A₀))
+        (Submonoid.powers (3 : A₀))
+    let eN : B₀ ⊗[A₀] N ≃ₗ[A₀] (L2 ⊗[A₀] N) × (L3 ⊗[A₀] N) :=
+      TensorProduct.prodLeft A₀ A₀ L2 L3 N
+    let eP : B₀ ⊗[A₀] P ≃ₗ[A₀] (L2 ⊗[A₀] P) × (L3 ⊗[A₀] P) :=
+      TensorProduct.prodLeft A₀ A₀ L2 L3 P
+    have hcomm : eP.toLinearMap.comp (N.subtype.lTensor B₀) =
+        ((N.subtype.lTensor L2).prodMap (N.subtype.lTensor L3)).comp eN.toLinearMap := by
+      apply LinearMap.ext
+      intro z
+      refine TensorProduct.induction_on z ?_ (fun x y => ?_) (fun x y hx hy => ?_)
+      · simp only [map_zero]
+      · rfl
+      · simp only [map_add, hx, hy]
+    intro x y hxy
+    apply eN.injective
+    have hxy' := congrArg eP hxy
+    change (eP.toLinearMap.comp (N.subtype.lTensor B₀)) x =
+      (eP.toLinearMap.comp (N.subtype.lTensor B₀)) y at hxy'
+    rw [hcomm] at hxy'
+    apply Prod.ext
+    · apply (Module.Flat.iff_lTensor_injectiveₛ.mp hflat2 N)
+      exact congrArg Prod.fst hxy'
+    · apply (Module.Flat.iff_lTensor_injectiveₛ.mp hflat3 N)
+      exact congrArg Prod.snd hxy'
+  let f₀ : A₀ →+* B₀ :=
+    (algebraMap A₀ L2).prod (algebraMap A₀ L3)
+  have hflat₀ : f₀.Flat := by
+    have hf₀ : f₀ = algebraMap A₀ B₀ := by
+      ext x
+      · rfl
+      · change algebraMap A₀ L3 x = algebraMap A₀ L3 x
+        rfl
+    rw [hf₀, RingHom.flat_algebraMap_iff]
+    exact hflatB
+  have hcomap₀ : Function.Surjective (PrimeSpectrum.comap f₀) := by
+    intro p
+    by_cases hp2 : (2 : A₀) ∉ p.asIdeal
+    · have hrange : p ∈ Set.range (PrimeSpectrum.comap (algebraMap A₀ L2)) := by
+        rw [PrimeSpectrum.localization_comap_range L2 (Submonoid.powers (2 : A₀))]
+        exact (Ideal.disjoint_powers_iff_notMem_of_isPrime (2 : A₀)).mpr hp2
+      obtain ⟨q, hq⟩ := hrange
+      let r : PrimeSpectrum B₀ :=
+        ⟨Ideal.prod q.asIdeal ⊤, Ideal.isPrime_ideal_prod_top⟩
+      refine ⟨r, ?_⟩
+      apply PrimeSpectrum.ext_iff.mpr
+      rw [PrimeSpectrum.comap_asIdeal]
+      ext z
+      dsimp [r]
+      have hqz : algebraMap A₀ L2 z ∈ q.asIdeal ↔ z ∈ p.asIdeal := by
+        have hz := congrArg (fun t : PrimeSpectrum A₀ => z ∈ t.asIdeal) hq
+        simpa [PrimeSpectrum.comap_asIdeal] using hz
+      rw [Ideal.mem_comap, Ideal.mem_prod]
+      change (algebraMap A₀ L2 z ∈ q.asIdeal ∧
+        algebraMap A₀ L3 z ∈ (⊤ : Ideal L3)) ↔ z ∈ p.asIdeal
+      simpa using hqz
+    · have hp2' : (2 : A₀) ∈ p.asIdeal := by
+        exact not_not.mp hp2
+      have hp3 : (3 : A₀) ∉ p.asIdeal := by
+        intro h3
+        apply p.isPrime.one_notMem
+        have h := p.asIdeal.sub_mem h3 hp2'
+        norm_num at h ⊢
+        exact h
+      have hrange : p ∈ Set.range (PrimeSpectrum.comap (algebraMap A₀ L3)) := by
+        rw [PrimeSpectrum.localization_comap_range L3 (Submonoid.powers (3 : A₀))]
+        exact (Ideal.disjoint_powers_iff_notMem_of_isPrime (3 : A₀)).mpr hp3
+      obtain ⟨q, hq⟩ := hrange
+      let r : PrimeSpectrum B₀ :=
+        ⟨Ideal.prod ⊤ q.asIdeal, Ideal.isPrime_ideal_prod_top'⟩
+      refine ⟨r, ?_⟩
+      apply PrimeSpectrum.ext_iff.mpr
+      rw [PrimeSpectrum.comap_asIdeal]
+      ext z
+      dsimp [r]
+      have hqz : algebraMap A₀ L3 z ∈ q.asIdeal ↔ z ∈ p.asIdeal := by
+        have hz := congrArg (fun t : PrimeSpectrum A₀ => z ∈ t.asIdeal) hq
+        simpa [PrimeSpectrum.comap_asIdeal] using hz
+      rw [Ideal.mem_comap, Ideal.mem_prod]
+      change (algebraMap A₀ L2 z ∈ (⊤ : Ideal L2) ∧
+        algebraMap A₀ L3 z ∈ q.asIdeal) ↔ z ∈ p.asIdeal
+      simpa using hqz
+  have hff₀ : f₀.FaithfullyFlat := by
+    rw [RingHom.FaithfullyFlat.iff_flat_and_comap_surjective]
+    exact ⟨hflat₀, hcomap₀⟩
   sorry
 
 /-! ## Kummer extensions -/

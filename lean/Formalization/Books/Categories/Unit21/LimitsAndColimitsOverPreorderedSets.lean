@@ -185,6 +185,39 @@ noncomputable def preorderQuotientSection (I : Type u) [Preorder I] :
     PreorderQuotient I ⥤ I :=
   (OrderEmbedding.ofAntisymmetrization I).monotone.functor
 
+def systemPullbackFunctor
+    {I : Type u} [Preorder I] {C : Type v} [Category.{w} C] :
+    (System (PreorderQuotient I) C) ⥤ (System I C) :=
+  (Functor.whiskeringLeft I (PreorderQuotient I) C).obj
+    (preorderQuotientProjection I)
+
+noncomputable def systemSectionFunctor
+    {I : Type u} [Preorder I] {C : Type v} [Category.{w} C] :
+    (System I C) ⥤ (System (PreorderQuotient I) C) :=
+  (Functor.whiskeringLeft (PreorderQuotient I) I C).obj
+    (preorderQuotientSection I)
+
+theorem systemPullback_section_iso
+    {I : Type u} [Preorder I] {C : Type v} [Category.{w} C] :
+    Nonempty (𝟭 (System (PreorderQuotient I) C) ≅
+      systemPullbackFunctor (I := I) (C := C) ⋙
+        systemSectionFunctor (I := I) (C := C)) := by
+  sorry
+
+theorem systemSection_pullback_iso
+    {I : Type u} [Preorder I] {C : Type v} [Category.{w} C] :
+    Nonempty (systemSectionFunctor (I := I) (C := C) ⋙
+        systemPullbackFunctor (I := I) (C := C) ≅
+      𝟭 (System I C)) := by
+  sorry
+
+theorem systemPullbackFunctor_is_equivalence
+    {I : Type u} [Preorder I] {C : Type v} [Category.{w} C] :
+    (systemPullbackFunctor (I := I) (C := C)).IsEquivalence := by
+  apply Functor.IsEquivalence.mk' (systemSectionFunctor (I := I) (C := C))
+  · exact (systemPullback_section_iso (I := I) (C := C)).some
+  · exact (systemSection_pullback_iso (I := I) (C := C)).some
+
 def inverseSystemPullbackFunctor
     {I : Type u} [Preorder I] {C : Type v} [Category.{w} C] :
     (InverseSystem (PreorderQuotient I) C) ⥤ (InverseSystem I C) :=

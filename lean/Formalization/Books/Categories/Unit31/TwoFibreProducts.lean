@@ -543,9 +543,10 @@ noncomputable instance twoCommutativeDiagramBicategory :
     exact Bicategory.triangle _ _
 
 theorem twoCommutativeDiagram_bicategory_exists :
-    Nonempty (Bicategory (TwoCommutativeDiagram f g)) :=
+    Nonempty (Bicategory.{w, max v w, max (max u v) w}
+      (TwoCommutativeDiagram f g)) :=
   by
-    sorry
+    exact ⟨twoCommutativeDiagramBicategory (C := C) (f := f) (g := g)⟩
 
 /-- The displayed 2-category is strict when the ambient 2-category is strict. -/
 noncomputable instance twoCommutativeDiagramStrict :
@@ -966,7 +967,7 @@ theorem isoComma_is_category_twoFibreProduct
     {B : Type*} [Category* B]
     {C : Type*} [Category* C]
     (F : A ⥤ C) (G : B ⥤ C) :
-    IsCategoryTwoFibreProduct F G
+    IsCategoryTwoFibreProduct.{v', u'} F G
       (isoCommaLeft F G) (isoCommaRight F G)
       (isoCommaComparisonIso F G) := by
   constructor
@@ -1133,7 +1134,7 @@ theorem category_twoFibreProduct_unique_up_to_iso
     {P : Type*} [Category* P]
     (F : A ⥤ C) (G : B ⥤ C)
     (p : P ⥤ A) (q : P ⥤ B) (ψ : p ⋙ F ≅ q ⋙ G)
-    (h : IsCategoryTwoFibreProduct F G p q ψ)
+    (h : IsCategoryTwoFibreProduct.{v', u'} F G p q ψ)
     {W : Type u'} [Category.{v'} W] (a : W ⥤ A) (b : W ⥤ B)
     (φ : a ⋙ F ≅ b ⋙ G)
     (γ₁ γ₂ : W ⥤ P)
@@ -1142,7 +1143,8 @@ theorem category_twoFibreProduct_unique_up_to_iso
     (h₁ : CategoryTwoFibreProductConeCommutes F G p q ψ a b φ γ₁ α₁ β₁)
     (h₂ : CategoryTwoFibreProductConeCommutes F G p q ψ a b φ γ₂ α₂ β₂) :
     Nonempty (γ₁ ≅ γ₂) := by
-  sorry
+  rcases h.2 (W := W) a b φ γ₁ γ₂ α₁ β₁ α₂ β₂ h₁ h₂ with ⟨δ, hδ, -⟩
+  exact ⟨δ⟩
 
 /- The source's explicit category is this `IsoComma`; its morphisms are the
    canonical comma morphisms, so the commutative-square condition is already
@@ -1173,7 +1175,7 @@ theorem isoComma_is_twoFibreProduct
     {B : Type*} [Category* B]
     {C : Type*} [Category* C]
     (F : A ⥤ C) (G : B ⥤ C) :
-    IsCategoryTwoFibreProduct F G
+    IsCategoryTwoFibreProduct.{v', u'} F G
       (isoCommaLeft F G) (isoCommaRight F G)
       (isoCommaComparisonIso F G) :=
   isoComma_is_category_twoFibreProduct F G
@@ -1921,10 +1923,37 @@ noncomputable def isoCommaAfterMapToDiagonal
     (Functor.rightUnitor (F ⋙ H))
 
 /- The source only needs a comparison between the two routes around this
-   square.  Its existence is the objectwise comma calculation; keeping a
-   chosen comparison separate leaves the square's universal-property
-   statement independent of a particular normalization of associators and
-   unitors. -/
+   square.  Use the objectwise comma calculation itself as the chosen
+   comparison, so its components are available definitionally to the
+   explicit universal-property constructions below. -/
+noncomputable def isoCommaAfterMapComparison
+    {A : Type*} [Category* A]
+    {B : Type*} [Category* B]
+    {C : Type*} [Category* C]
+    {D : Type*} [Category* D]
+    (F : A ⥤ C) (G : B ⥤ C) (H : C ⥤ D) :
+    (isoCommaLeft F G ⋙ F) ⋙ isoCommaDiagonal H ≅
+      isoCommaAfterMap F G H ⋙ isoCommaAfterMapToDiagonal F G H := by
+  exact NatIso.ofComponents (fun ξ => by
+    letI : IsIso ξ.obj.hom := ξ.property
+    exact ObjectProperty.isoMk _
+      (Comma.isoMk (Iso.refl _)
+        (@asIso _ _ _ _ ξ.obj.hom (by exact ξ.property)) (by
+          simp [isoCommaAfterMap, isoCommaAfterMapToDiagonal, isoCommaMap,
+            isoCommaDiagonal]
+          rfl))) (by
+        intro ξ η f
+        apply ObjectProperty.hom_ext
+        apply Comma.hom_ext
+        · dsimp [Functor.comp, isoCommaAfterMap, isoCommaAfterMapToDiagonal,
+            isoCommaMap, isoCommaDiagonal, isoCommaLeft, isoCommaRight,
+            ObjectProperty.isoMk, Comma.isoMk]
+          simp
+        · dsimp [Functor.comp, isoCommaAfterMap, isoCommaAfterMapToDiagonal,
+            isoCommaMap, isoCommaDiagonal, isoCommaLeft, isoCommaRight,
+            ObjectProperty.isoMk, Comma.isoMk]
+          exact f.hom.w)
+
 theorem isoComma_after_map_comparison_exists
     {A : Type*} [Category* A]
     {B : Type*} [Category* B]
@@ -1933,39 +1962,8 @@ theorem isoComma_after_map_comparison_exists
     (F : A ⥤ C) (G : B ⥤ C) (H : C ⥤ D) :
     Nonempty
       ((isoCommaLeft F G ⋙ F) ⋙ isoCommaDiagonal H ≅
-        isoCommaAfterMap F G H ⋙ isoCommaAfterMapToDiagonal F G H) := by
-  let α : (isoCommaLeft F G ⋙ F) ⋙ isoCommaDiagonal H ≅
-      isoCommaAfterMap F G H ⋙ isoCommaAfterMapToDiagonal F G H :=
-    NatIso.ofComponents (fun ξ => by
-      letI : IsIso ξ.obj.hom := ξ.property
-      exact ObjectProperty.isoMk _
-        (Comma.isoMk (Iso.refl _)
-          (@asIso _ _ _ _ ξ.obj.hom (by exact ξ.property)) (by
-            simp [isoCommaAfterMap, isoCommaAfterMapToDiagonal, isoCommaMap,
-              isoCommaDiagonal]
-            rfl))) (by
-          intro ξ η f
-          apply ObjectProperty.hom_ext
-          apply Comma.hom_ext
-          · dsimp [Functor.comp, isoCommaAfterMap, isoCommaAfterMapToDiagonal,
-              isoCommaMap, isoCommaDiagonal, isoCommaLeft, isoCommaRight,
-              ObjectProperty.isoMk, Comma.isoMk]
-            simp
-          · dsimp [Functor.comp, isoCommaAfterMap, isoCommaAfterMapToDiagonal,
-              isoCommaMap, isoCommaDiagonal, isoCommaLeft, isoCommaRight,
-              ObjectProperty.isoMk, Comma.isoMk]
-            exact f.hom.w)
-  exact ⟨α⟩
-
-noncomputable def isoCommaAfterMapComparison
-    {A : Type*} [Category* A]
-    {B : Type*} [Category* B]
-    {C : Type*} [Category* C]
-    {D : Type*} [Category* D]
-    (F : A ⥤ C) (G : B ⥤ C) (H : C ⥤ D) :
-    (isoCommaLeft F G ⋙ F) ⋙ isoCommaDiagonal H ≅
-      isoCommaAfterMap F G H ⋙ isoCommaAfterMapToDiagonal F G H :=
-  Classical.choice (isoComma_after_map_comparison_exists F G H)
+        isoCommaAfterMap F G H ⋙ isoCommaAfterMapToDiagonal F G H) :=
+  ⟨isoCommaAfterMapComparison F G H⟩
 
 /-- The square obtained by applying a functor to the common base is
 2-cartesian. -/
@@ -1975,7 +1973,7 @@ theorem isoComma_after_map
     {C : Type*} [Category* C]
     {D : Type*} [Category* D]
     (F : A ⥤ C) (G : B ⥤ C) (H : C ⥤ D) :
-    IsTwoCartesianSquare
+    IsTwoCartesianSquare.{v', u'}
       (isoCommaAfterMap F G H)
       (isoCommaLeft F G ⋙ F)
       (isoCommaAfterMapToDiagonal F G H)
@@ -2257,6 +2255,27 @@ noncomputable def isoCommaBaseChangeMap
     IsoComma top top ⥤ IsoComma bottom bottom :=
   isoCommaMap bottom bottom top top left left right comm comm.symm
 
+/- The base-change comparison is the objectwise identity comparison in the
+   diagonal iso-comma categories. -/
+noncomputable def isoCommaBaseChangeComparison
+    {U : Type*} [Category* U]
+    {V : Type*} [Category* V]
+    {X : Type*} [Category* X]
+    {Y : Type*} [Category* Y]
+    (top : U ⥤ V) (left : U ⥤ X)
+    (right : V ⥤ Y) (bottom : X ⥤ Y)
+    (comm : left ⋙ bottom ≅ top ⋙ right) :
+    left ⋙ isoCommaDiagonal bottom ≅
+      isoCommaDiagonal top ⋙ isoCommaBaseChangeMap top left right bottom comm := by
+  exact NatIso.ofComponents (fun u => by
+    exact ObjectProperty.isoMk _
+      (Comma.isoMk (Iso.refl _) (Iso.refl _) (by
+        simp [isoCommaBaseChangeMap, isoCommaMap, isoCommaDiagonal]))) (by
+          intro u v f
+          apply ObjectProperty.hom_ext
+          apply Comma.hom_ext <;>
+            simp [isoCommaBaseChangeMap, isoCommaMap, isoCommaDiagonal])
+
 theorem isoComma_base_change_comparison_exists
     {U : Type*} [Category* U]
     {V : Type*} [Category* V]
@@ -2267,31 +2286,8 @@ theorem isoComma_base_change_comparison_exists
     (comm : left ⋙ bottom ≅ top ⋙ right) :
     Nonempty
       (left ⋙ isoCommaDiagonal bottom ≅
-        isoCommaDiagonal top ⋙ isoCommaBaseChangeMap top left right bottom comm) := by
-  let α : left ⋙ isoCommaDiagonal bottom ≅
-      isoCommaDiagonal top ⋙ isoCommaBaseChangeMap top left right bottom comm :=
-    NatIso.ofComponents (fun u => by
-      exact ObjectProperty.isoMk _
-        (Comma.isoMk (Iso.refl _) (Iso.refl _) (by
-          simp [isoCommaBaseChangeMap, isoCommaMap, isoCommaDiagonal]))) (by
-            intro u v f
-            apply ObjectProperty.hom_ext
-            apply Comma.hom_ext <;>
-              simp [isoCommaBaseChangeMap, isoCommaMap, isoCommaDiagonal])
-  exact ⟨α⟩
-
-noncomputable def isoCommaBaseChangeComparison
-    {U : Type*} [Category* U]
-    {V : Type*} [Category* V]
-    {X : Type*} [Category* X]
-    {Y : Type*} [Category* Y]
-    (top : U ⥤ V) (left : U ⥤ X)
-    (right : V ⥤ Y) (bottom : X ⥤ Y)
-    (comm : left ⋙ bottom ≅ top ⋙ right) :
-    left ⋙ isoCommaDiagonal bottom ≅
-      isoCommaDiagonal top ⋙ isoCommaBaseChangeMap top left right bottom comm :=
-  Classical.choice
-    (isoComma_base_change_comparison_exists top left right bottom comm)
+        isoCommaDiagonal top ⋙ isoCommaBaseChangeMap top left right bottom comm) :=
+  ⟨isoCommaBaseChangeComparison top left right bottom comm⟩
 
 /-- Base change preserves the diagonal square. -/
 theorem isoComma_base_change_diagonal
@@ -2302,8 +2298,8 @@ theorem isoComma_base_change_diagonal
     (top : U ⥤ V) (left : U ⥤ X)
     (right : V ⥤ Y) (bottom : X ⥤ Y)
     (comm : left ⋙ bottom ≅ top ⋙ right)
-    (h : IsTwoCartesianSquare top left right bottom comm) :
-    IsTwoCartesianSquare
+    (h : IsTwoCartesianSquare.{v', u'} top left right bottom comm) :
+    IsTwoCartesianSquare.{v', u'}
       (isoCommaDiagonal top)
       left
       (isoCommaBaseChangeMap top left right bottom comm)

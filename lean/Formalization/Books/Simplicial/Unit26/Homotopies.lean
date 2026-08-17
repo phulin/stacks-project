@@ -40,6 +40,11 @@ theorem intervalSimplex_bijective (n : ℕ) :
     Function.Bijective (intervalSimplex n) := by
   exact SSet.stdSimplex.objMk₁_bijective
 
+theorem interval_degree_finite_nonempty (n : ℕ) :
+    Finite ((Δ[1] : SSet.{u}) _⦋n⦌) ∧
+      Nonempty ((Δ[1] : SSet.{u}) _⦋n⦌) :=
+  Unit13.standardSimplex_finite_nonempty 1 n
+
 theorem intervalSimplex_apply (n : ℕ) (i : Fin (n + 2))
     (j : Fin (n + 1)) :
     intervalSimplex n i j = if j.castSucc < i then 0 else 1 := by
@@ -54,6 +59,13 @@ theorem intervalSimplex_last_is_constant_zero (n : ℕ) :
     ∀ j : Fin (n + 1), intervalSimplex n (Fin.last (n + 1)) j = 0 := by
   intro j
   simp [intervalSimplex, SSet.stdSimplex.objMk₁_apply]
+
+theorem pointSimplex_subsingleton (n : ℕ) :
+    Subsingleton ((Δ[0] : SSet.{u}) _⦋n⦌) := by
+  constructor
+  intro x y
+  apply SSet.stdSimplex.objEquiv.injective
+  exact Subsingleton.elim _ _
 
 /-- The two vertex inclusions `Δ[0] ⟶ Δ[1]`. -/
 noncomputable def intervalVertex (ε : Fin 2) :
@@ -174,6 +186,43 @@ structure DegreewiseHomotopy
       (hij : i ≤ j.castSucc) :
     h n i ≫ V.σ j = U.σ j ≫ h (n + 1) i.castSucc
 
+def mapDegreewiseHomotopy
+    {C : Type u} [Category.{v} C]
+    {D : Type u'} [Category.{v'} D]
+    {U V : SimplicialObject C} {a b : U ⟶ V}
+    (H : DegreewiseHomotopy a b) (F : C ⥤ D) :
+    DegreewiseHomotopy
+      (((SimplicialObject.whiskering C D).obj F).map a)
+      (((SimplicialObject.whiskering C D).obj F).map b) where
+  h n i := F.map (H.h n i)
+  h_zero n := by
+    change F.map (H.h n 0) = F.map (b.app (op (SimplexCategory.mk n)))
+    exact congrArg F.map (H.h_zero n)
+  h_last n := by
+    change F.map (H.h n (Fin.last (n + 1))) =
+      F.map (a.app (op (SimplexCategory.mk n)))
+    exact congrArg F.map (H.h_last n)
+  face_of_gt i j hji := by
+    change F.map (H.h _ i) ≫ F.map (V.δ j) =
+      F.map (U.δ j) ≫ F.map (H.h _ _)
+    simpa only [Functor.map_comp] using
+      congrArg F.map (H.face_of_gt i j hji)
+  face_of_le i j hij := by
+    change F.map (H.h _ i) ≫ F.map (V.δ j) =
+      F.map (U.δ j) ≫ F.map (H.h _ _)
+    simpa only [Functor.map_comp] using
+      congrArg F.map (H.face_of_le i j hij)
+  degeneracy_of_gt i j hji := by
+    change F.map (H.h _ i) ≫ F.map (V.σ j) =
+      F.map (U.σ j) ≫ F.map (H.h _ _)
+    simpa only [Functor.map_comp] using
+      congrArg F.map (H.degeneracy_of_gt i j hji)
+  degeneracy_of_le i j hij := by
+    change F.map (H.h _ i) ≫ F.map (V.σ j) =
+      F.map (U.σ j) ≫ F.map (H.h _ _)
+    simpa only [Functor.map_comp] using
+      congrArg F.map (H.degeneracy_of_le i j hij)
+
 theorem cylinderHomotopyComponent_zero
     {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]
     {U V : SimplicialObject C} {a b : U ⟶ V}
@@ -285,6 +334,30 @@ theorem trivialCylinderHomotopy
     {U V : SimplicialObject C} (a : U ⟶ V) :
     Nonempty (CylinderHomotopy a a) := by
   exact (homotopy_iff_degreewise).2 (trivialOneStepHomotopy a)
+
+noncomputable def trivialDegreewiseHomotopy
+    {C : Type u} [Category.{v} C]
+    {U V : SimplicialObject C} (a : U ⟶ V) :
+    DegreewiseHomotopy a a where
+  h := fun n _ => a.app (op (SimplexCategory.mk n))
+  h_zero := by
+    intro n
+    rfl
+  h_last := by
+    intro n
+    rfl
+  face_of_gt := by
+    intro n i j hji
+    simpa using (a.naturality (SimplexCategory.δ j).op).symm
+  face_of_le := by
+    intro n i j hij
+    simpa using (a.naturality (SimplexCategory.δ j).op).symm
+  degeneracy_of_gt := by
+    intro n i j hji
+    simpa using (a.naturality (SimplexCategory.σ j).op).symm
+  degeneracy_of_le := by
+    intro n i j hij
+    simpa using (a.naturality (SimplexCategory.σ j).op).symm
 
 def homotopyHomRel (C : Type u) [Category.{v} C] :
     HomRel (SimplicialObject C) :=

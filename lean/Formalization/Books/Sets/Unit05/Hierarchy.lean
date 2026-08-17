@@ -38,6 +38,13 @@ def IsPartialUniverse (U : ZFSet.{u}) : Prop :=
 /-- `ZFSet.rank S` is the least ordinal whose successor level contains `S`. -/
 theorem rank_isLeast_vonNeumann (S : ZFSet.{u}) :
     IsLeast {α : Ordinal.{u} | S ∈ ZFSet.vonNeumann (α + 1)} (ZFSet.rank S) := by
-  sorry
+  constructor
+  · change S ∈ ZFSet.vonNeumann (S.rank + 1)
+    rw [ZFSet.mem_vonNeumann]
+    simp
+  · intro α hα
+    change S ∈ ZFSet.vonNeumann (α + 1) at hα
+    rw [ZFSet.mem_vonNeumann] at hα
+    simpa using hα
 
 end Formalization.Books.Sets.Unit05

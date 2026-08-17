@@ -372,6 +372,12 @@ theorem strictificationProjection_isFibered
     (strictificationProjection P).IsFibered := by
   sorry
 
+theorem strictificationProjection_isSplit
+    {S C : Type*} [Category* S] [Category* C]
+    {p : S ⥤ C} [p.IsFibered] (P : PullbackChoice p) :
+    IsSplitFibredCategory (strictificationProjection P) := by
+  sorry
+
 theorem strictification_object_description
     {S C : Type*} [Category* S] [Category* C]
     {p : S ⥤ C} [p.IsFibered] {P : PullbackChoice p}

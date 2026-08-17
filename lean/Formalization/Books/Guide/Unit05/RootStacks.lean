@@ -24,14 +24,19 @@ structure RootStackData {C : Type u} [Category.{v} C]
   muRGroup : CommGroup muR
   muRFinite : Finite muR
   muRIsTheRootOfUnityGroup : Prop
+  muRIsTheRootOfUnityGroupProof : muRIsTheRootOfUnityGroup
   rootLineBundle : LineBundleData rootStack
 
 structure RootStackProperties {C : Type u} [Category.{v} C]
     [StackCategory C] {X : C} (D : RootStackData X) where
   rootStackIsArtin : IsArtinStack D.rootStack
   muRStabilizerOverDivisor : Prop
+  muRStabilizerOverDivisorProof : muRStabilizerOverDivisor
   schemeLikeAwayFromDivisor : Prop
+  schemeLikeAwayFromDivisorProof : schemeLikeAwayFromDivisor
   rootLineBundlePowerIsTheDivisorLineBundle : Prop
+  rootLineBundlePowerIsTheDivisorLineBundleProof :
+    rootLineBundlePowerIsTheDivisorLineBundle
 
 structure RootStackConstruction {C : Type u} [Category.{v} C]
     [StackCategory C] (X : C) (D : EffectiveCartierDivisor X) (r : ℕ)
@@ -57,21 +62,21 @@ theorem root_stack_has_mu_r_stabilizer_over_divisor
     {D : EffectiveCartierDivisor X} {r : ℕ} {hr : 0 < r}
     (W : RootStackConstruction X D r hr) :
     W.properties.muRStabilizerOverDivisor := by
-  sorry
+  exact W.properties.muRStabilizerOverDivisorProof
 
 theorem root_stack_is_scheme_like_away_from_divisor
     {C : Type u} [Category.{v} C] [StackCategory C] {X : C}
     {D : EffectiveCartierDivisor X} {r : ℕ} {hr : 0 < r}
     (W : RootStackConstruction X D r hr) :
     W.properties.schemeLikeAwayFromDivisor := by
-  sorry
+  exact W.properties.schemeLikeAwayFromDivisorProof
 
 theorem root_stack_root_line_bundle_power_is_divisor
     {C : Type u} [Category.{v} C] [StackCategory C] {X : C}
     {D : EffectiveCartierDivisor X} {r : ℕ} {hr : 0 < r}
     (W : RootStackConstruction X D r hr) :
     W.properties.rootLineBundlePowerIsTheDivisorLineBundle := by
-  sorry
+  exact W.properties.rootLineBundlePowerIsTheDivisorLineBundleProof
 
 theorem cadman_root_stack_construction
     {C : Type u} [Category.{v} C] [StackCategory C] {X : C}

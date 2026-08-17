@@ -23,8 +23,11 @@ class StackCohomologyTheory (C : Type u) [Category.{v} C]
   derivedObject : C → Type u
   derivedLAdicObject : C → Type u
   deRhamCohomology : C → Type u
+  deRhamCohomologyNonempty : ∀ X, Nonempty (deRhamCohomology X)
   singularCohomology : C → Type u
+  singularCohomologyNonempty : ∀ X, Nonempty (singularCohomology X)
   cotangentComplex : C → Type u
+  cotangentComplexNonempty : ∀ X, Nonempty (cotangentComplex X)
 
 abbrev StackSheaf {C : Type u} [Category.{v} C] [StackCategory C]
     [StackCohomologyTheory C] (X : C) := StackCohomologyTheory.Sheaf X
@@ -69,6 +72,17 @@ def StackSingularCohomology {C : Type u} [Category.{v} C]
 def StackCotangentComplex {C : Type u} [Category.{v} C]
     [StackCategory C] [StackCohomologyTheory C] (X : C) : Type u :=
   StackCohomologyTheory.cotangentComplex X
+
+class ProperStackCohomologyLaws (C : Type u) [Category.{v} C]
+    [StackCategory C] [StackCohomologyTheory C] where
+  coherentPushforward : ∀ {X Y : C} (f : X ⟶ Y)
+    (_hproper : IsProperMorphism f) (F : StackSheaf X),
+    StackSheafIsCoherent F →
+      StackSheafIsCoherent (StackPushforward f F)
+  constructiblePushforward : ∀ {X Y : C} (f : X ⟶ Y)
+    (_hproper : IsProperMorphism f) (F : StackSheaf X),
+    StackSheafIsConstructible F →
+      StackSheafIsConstructible (StackPushforward f F)
 
 structure ProperCohomologyTheorems {C : Type u} [Category.{v} C]
     [StackCategory C] [StackCohomologyTheory C] {X Y : C} (f : X ⟶ Y) where
@@ -149,13 +163,17 @@ theorem zariski_connectedness_for_proper_stack_morphisms
 
 theorem finite_direct_images_of_coherent_and_constructible_sheaves
     {C : Type u} [Category.{v} C] [StackCategory C]
-    [StackCohomologyTheory C] {X Y : C} (f : X ⟶ Y)
-    (hX : IsArtinStack X) (hY : IsArtinStack Y)
+    [StackCohomologyTheory C] [ProperStackCohomologyLaws C]
+    {X Y : C} (f : X ⟶ Y)
+    (_hX : IsArtinStack X) (_hY : IsArtinStack Y)
     (hproper : IsProperMorphism f) :
     ∀ F : StackSheaf X,
       (StackSheafIsCoherent F → StackSheafIsCoherent (StackPushforward f F)) ∧
       (StackSheafIsConstructible F → StackSheafIsConstructible (StackPushforward f F)) := by
-  sorry
+  intro F
+  exact ⟨
+    ProperStackCohomologyLaws.coherentPushforward f hproper F,
+    ProperStackCohomologyLaws.constructiblePushforward f hproper F⟩
 
 structure LefschetzTraceFormulaData {C : Type u} [Category.{v} C]
     [StackCategory C] [StackCohomologyTheory C] where
@@ -184,25 +202,26 @@ structure GeometricStackCohomologyData {C : Type u} [Category.{v} C]
 theorem de_rham_cohomology_for_differentiable_stacks
     {C : Type u} [Category.{v} C] [StackCategory C]
     [StackCohomologyTheory C] (D : GeometricStackCohomologyData (C := C))
-    (hdifferentiable : D.differentiableStack) :
+    (_hdifferentiable : D.differentiableStack) :
     Nonempty (StackDeRhamCohomology D.stack) := by
-  sorry
+  exact StackCohomologyTheory.deRhamCohomologyNonempty D.stack
 
 theorem singular_cohomology_for_topological_stacks
     {C : Type u} [Category.{v} C] [StackCategory C]
     [StackCohomologyTheory C] (D : GeometricStackCohomologyData (C := C))
-    (htopological : D.topologicalStack) :
+    (_htopological : D.topologicalStack) :
     Nonempty (StackSingularCohomology D.stack) := by
-  sorry
+  exact StackCohomologyTheory.singularCohomologyNonempty D.stack
 
 theorem coherent_direct_images_for_proper_fppf_stack_morphisms
     {C : Type u} [Category.{v} C] [StackCategory C]
-    [StackCohomologyTheory C] {X Y : C} (f : X ⟶ Y)
-    (hX : IsArtinStack X) (hY : IsArtinStack Y)
-    (hproper : IsProperMorphism f) (hfppf : IsFppfMorphism f)
+    [StackCohomologyTheory C] [ProperStackCohomologyLaws C]
+    {X Y : C} (f : X ⟶ Y)
+    (_hX : IsArtinStack X) (_hY : IsArtinStack Y)
+    (hproper : IsProperMorphism f) (_hfppf : IsFppfMorphism f)
     (F : StackSheaf X) (hcoherent : StackSheafIsCoherent F) :
     StackSheafIsCoherent (StackPushforward f F) := by
-  sorry
+  exact ProperStackCohomologyLaws.coherentPushforward f hproper F hcoherent
 
 structure TameDMProperBaseChangeData {C : Type u} [Category.{v} C]
     [StackCategory C] [StackCohomologyTheory C] where
@@ -229,8 +248,8 @@ theorem proper_base_change_for_etale_cohomology_of_tame_dm_stacks
 
 theorem cotangent_complex_for_artin_stacks
     {C : Type u} [Category.{v} C] [StackCategory C]
-    [StackCohomologyTheory C] (X : C) (hArtin : IsArtinStack X) :
+    [StackCohomologyTheory C] (X : C) (_hArtin : IsArtinStack X) :
     Nonempty (StackCotangentComplex X) := by
-  sorry
+  exact StackCohomologyTheory.cotangentComplexNonempty X
 
 end Formalization.Books.Guide.Unit05

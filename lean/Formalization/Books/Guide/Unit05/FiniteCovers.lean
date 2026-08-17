@@ -44,7 +44,7 @@ structure FiniteGenericallyEtaleSchemeCover {C : Type u} [Category.{v} C]
 theorem laumon_moret_bailly_finite_generically_etale_cover
     {C : Type u} [Category.{v} C] [StackCategory C] (X : C)
     (hDM : IsDeligneMumfordStack X) (hfiniteType : IsFiniteTypeStack X)
-    (hnoetherianBase : Prop) :
+    (hnoetherianBase : Prop) (hbaseNoetherian : hnoetherianBase) :
     Nonempty (FiniteGenericallyEtaleSchemeCover X) := by
   sorry
 
@@ -68,7 +68,8 @@ structure NormalAlgebraicSpaceFiniteGroupQuotient {C : Type u}
 
 theorem normal_noetherian_algebraic_space_is_finite_group_quotient
     {C : Type u} [Category.{v} C] [StackCategory C]
-    (D : NormalNoetherianAlgebraicSpaceData (C := C)) :
+    (D : NormalNoetherianAlgebraicSpaceData (C := C))
+    (hnormal : D.normal) (hnoetherian : D.noetherian) :
     Nonempty (NormalAlgebraicSpaceFiniteGroupQuotient D) := by
   sorry
 
@@ -81,7 +82,8 @@ def HasFiniteSurjectiveSchemeCover {C : Type u} [Category.{v} C]
 
 theorem quasi_finite_diagonal_iff_finite_surjective_scheme_cover
     {C : Type u} [Category.{v} C] [StackCategory C] (X : C)
-    (hfiniteType : IsFiniteTypeStack X) (hnoetherianBase : Prop) :
+    (hfiniteType : IsFiniteTypeStack X) (hnoetherianBase : Prop)
+    (hbaseNoetherian : hnoetherianBase) :
     HasQuasiFiniteDiagonal X ↔ HasFiniteSurjectiveSchemeCover X := by
   sorry
 
@@ -100,7 +102,9 @@ theorem kresch_vistoli_smooth_finite_flat_cover
     {C : Type u} [Category.{v} C] [StackCategory C] (X : C)
     (hsmooth : IsSmoothStack X) (hseparated : IsSeparatedStack X)
     (hDM : IsDeligneMumfordStack X) (hfiniteTypeOverField : Prop)
-    (hcoarseQuasiProjective : Prop) :
+    (hfiniteTypeOverFieldProof : hfiniteTypeOverField)
+    (hcoarseQuasiProjective : Prop)
+    (hcoarseQuasiProjectiveProof : hcoarseQuasiProjective) :
     Nonempty (SmoothQuasiProjectiveFiniteFlatCover X) := by
   sorry
 
@@ -116,7 +120,7 @@ structure ProperQuasiProjectiveSchemeCover {C : Type u} [Category.{v} C]
 theorem olsson_proper_quasi_projective_scheme_cover
     {C : Type u} [Category.{v} C] [StackCategory C] (X S : C)
     (hartin : IsArtinStack X) (hseparated : IsSeparatedStack X)
-    (hfiniteTypeOverBase : Prop) :
+    (hfiniteTypeOverBase : Prop) (hfiniteTypeOverBaseProof : hfiniteTypeOverBase) :
     Nonempty (ProperQuasiProjectiveSchemeCover X S) := by
   sorry
 

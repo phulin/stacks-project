@@ -86,13 +86,15 @@ def HasRepresentableSurjectiveVectorBundleLocus {C : Type u} [Category.{v} C]
 
 theorem quotient_stack_iff_faithful_vector_bundle
     {C : Type u} [Category.{v} C] [StackCategory C] (X : C)
-    (hfiniteType : Prop) (hnoetherian : Prop) :
+    (hfiniteType : Prop) (hfiniteTypeProof : hfiniteType)
+    (hnoetherian : Prop) (hnoetherianProof : hnoetherian) :
     IsGlobalQuotient X ↔ HasFaithfulVectorBundle X := by
   sorry
 
 theorem quotient_stack_iff_representable_vector_bundle_locus
     {C : Type u} [Category.{v} C] [StackCategory C] (X : C)
-    (hfiniteType : Prop) (hnoetherian : Prop) :
+    (hfiniteType : Prop) (hfiniteTypeProof : hfiniteType)
+    (hnoetherian : Prop) (hnoetherianProof : hnoetherian) :
     IsGlobalQuotient X ↔ HasRepresentableSurjectiveVectorBundleLocus X := by
   sorry
 
@@ -127,7 +129,8 @@ structure GmGerbeBrauerData {C : Type u} [Category.{v} C]
 
 theorem gm_gerbe_is_quotient_iff_brauer_class_is_azumaya
     {C : Type u} [Category.{v} C] [StackCategory C]
-    (D : GmGerbeBrauerData (C := C)) :
+    (D : GmGerbeBrauerData (C := C))
+    (hbaseNoetherian : D.baseNoetherian) (hgerbe : D.isGmGerbe) :
     IsGlobalQuotient D.gerbe ↔ D.brauerMapImage := by
   sorry
 
@@ -171,13 +174,14 @@ def HasAffineFiniteTypeGroupQuotient {C : Type u} [Category.{v} C]
 theorem totaro_resolution_property_iff_gl_n_quasi_affine_quotient
     {C : Type u} [Category.{v} C] [StackCategory C] (X : C)
     (hnormal : IsNormalStack X) (hnoetherian : Prop)
-    (haffineStabilizers : Prop) :
+    (hnoetherianProof : hnoetherian) (haffineStabilizers : Prop)
+    (haffineStabilizersProof : haffineStabilizers) :
     HasResolutionProperty X ↔ HasResolutionPropertyViaGLnQuasiAffineQuotient X := by
   sorry
 
 theorem finite_type_field_resolution_property_iff_affine_group_quotient
     {C : Type u} [Category.{v} C] [StackCategory C] (X : C)
-    (hfiniteTypeOverField : Prop) :
+    (hfiniteTypeOverField : Prop) (hfiniteTypeOverFieldProof : hfiniteTypeOverField) :
     HasResolutionProperty X ↔ HasAffineFiniteTypeGroupQuotient X := by
   sorry
 
@@ -209,15 +213,17 @@ def ClosedPointsHaveAffineStabilizer {C : Type u} [Category.{v} C]
 
 theorem affine_diagonal_iff_affine_closed_stabilizers
     {C : Type u} [Category.{v} C] [StackCategory C] (X : C)
-    (hnoetherian : Prop) (hresolution : HasResolutionProperty X) :
+    (hnoetherian : Prop) (hnoetherianProof : hnoetherian)
+    (hresolution : HasResolutionProperty X) :
     HasAffineDiagonal X ↔ ClosedPointsHaveAffineStabilizer X := by
   sorry
 
 theorem smooth_separated_generically_tame_quasi_projective_is_quotient
     {C : Type u} [Category.{v} C] [StackCategory C] (X : C)
     (hsmooth : IsSmoothStack X) (hseparated : IsSeparatedStack X)
-    (hgenericallyTame : Prop) (hDM : IsDeligneMumfordStack X)
-    (hcoarseQuasiProjective : Prop) :
+    (hgenericallyTame : Prop) (hgenericallyTameProof : hgenericallyTame)
+    (hDM : IsDeligneMumfordStack X) (hcoarseQuasiProjective : Prop)
+    (hcoarseQuasiProjectiveProof : hcoarseQuasiProjective) :
     IsGlobalQuotient X := by
   sorry
 
@@ -269,7 +275,8 @@ def ProperCharacteristicZeroDMQuotientCriterion
 theorem proper_dm_projective_quotient_criterion
     {C : Type u} [Category.{v} C] [StackCategory C] (X Y : C)
     (hproper : IsProperStack X) (hDM : IsDeligneMumfordStack X)
-    (hcharZero : Prop) (q : X ⟶ Y) (hcoarseMap : IsCoarseModuliSpaceMap q)
+    (hcharZero : Prop) (hcharZeroProof : hcharZero)
+    (q : X ⟶ Y) (hcoarseMap : IsCoarseModuliSpaceMap q)
     (hcoarse : CoarseSpaceIsProjective Y) :
     ProperCharacteristicZeroDMQuotientCriterion X Y := by
   sorry
@@ -319,7 +326,7 @@ def AzumayaEqualsCohomologicalBrauerInDimension {C : Type u}
 
 theorem Kresch_Vistoli_dimension_equivalence
     {C : Type u} [Category.{v} C] [StackCategory C] (n : ℕ)
-    (hcharZero : Prop) :
+    (hcharZero : Prop) (hcharZeroProof : hcharZero) :
     EverySmoothDMStackOfDimensionIsQuotient (C := C) n hcharZero ↔
       AzumayaEqualsCohomologicalBrauerInDimension (C := C) n := by
   sorry
@@ -331,7 +338,8 @@ def StratifiedByQuotientStacks {C : Type u} [Category.{v} C]
 theorem reduced_artin_stack_stratified_by_quotients
     {C : Type u} [Category.{v} C] [StackCategory C] (X : C)
     (hartin : IsArtinStack X) (hfiniteType : IsFiniteTypeStack X)
-    (hreduced : Prop) (haffineStabilizers : Prop) :
+    (hreduced : Prop) (hreducedProof : hreduced)
+    (haffineStabilizers : Prop) (haffineStabilizersProof : haffineStabilizers) :
     StratifiedByQuotientStacks X := by
   sorry
 
@@ -378,14 +386,15 @@ structure LocalQuotientSliceData {C : Type u} [Category.{v} C]
 
 theorem local_quotient_slice_formal_statement
     {C : Type u} [Category.{v} C] [StackCategory C] {X : C}
-    (x : Point X) (hclosed : IsClosedPoint x) (hlinearlyReductive : Prop) :
+    (x : Point X) (hclosed : IsClosedPoint x) (hlinearlyReductive : Prop)
+    (hlinearlyReductiveProof : hlinearlyReductive) :
     ∃ D : LocalQuotientSliceData X, D.closedPoint = x ∧ D.formallyLocal := by
   sorry
 
 theorem luna_slice_for_linearly_reductive_quotient_stack
     {C : Type u} [Category.{v} C] [StackCategory C]
-    (X : C) (hquotient : IsGlobalQuotient X)
-    (hlinearlyReductive : Prop) :
+    (X : C) (hquotient : IsGlobalQuotient X) (hlinearlyReductive : Prop)
+    (hlinearlyReductiveProof : hlinearlyReductive) :
     IsEtaleLocalQuotient X := by
   sorry
 

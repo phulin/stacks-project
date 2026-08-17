@@ -331,7 +331,9 @@ structure EffectiveCartierDivisor {C : Type u} [Category.{v} C]
     [StackCategory C] (X : C) where
   carrier : Set (Point X)
   effective : Prop
+  effectiveProof : effective
   Cartier : Prop
+  CartierProof : Cartier
 
 structure GroupActionData (G X : Type u) [Group G] where
   action : G → X → X
@@ -342,6 +344,7 @@ structure LineBundleData {C : Type u} [Category.{v} C]
     [StackCategory C] (X : C) where
   underlying : Type u
   invertible : Prop
+  invertibleProof : invertible
   totalSpace : Point X → underlying → Prop
 
 structure GerbeData where

@@ -48,7 +48,10 @@ structure RigidificationWitness {C : Type u} [Category.{v} C]
 
 theorem rigidification_exists
     {C : Type u} [Category.{v} C] [StackCategory C] {X S : C}
-    (D : RigidificationInput X S) :
+    (D : RigidificationInput X S)
+    (hoverBase : D.overBase) (hflat : D.flat)
+    (hfinitelyPresented : D.finitelyPresented) (hseparated : D.separated)
+    (hcompatibleWithPullback : D.compatibleWithPullback) :
     Nonempty (RigidificationWitness D) := by
   sorry
 
@@ -115,7 +118,9 @@ structure NormalNoncentralRigidificationConclusion {C : Type u}
 
 theorem tame_stack_normal_noncentral_rigidification
     {C : Type u} [Category.{v} C] [StackCategory C] {X : C}
-    (D : NormalFlatInertiaSubgroup X) (htame : IsTameArtinStack X)
+    (D : NormalFlatInertiaSubgroup X) (_hsubgroupOfInertia : D.subgroupOfInertia)
+    (_hflat : D.flat) (_hfinitelyPresented : D.finitelyPresented)
+    (_hseparated : D.separated) (htame : IsTameArtinStack X)
     (hnormal : D.normal) :
     Nonempty (NormalNoncentralRigidificationConclusion D) := by
   exact ⟨{

@@ -58,6 +58,14 @@ structure FormalApproximationWitness {C : Type u} [Category.{v} C]
 
 theorem algebraic_approximation_of_effective_formal_deformation
     {C : Type u} [Category.{v} C] (D : FormalDeformationSituation C)
+    (hlocallyOfFinitePresentation : D.locallyOfFinitePresentation)
+    (hbaseFiniteTypeOverFieldOrExcellentDvr :
+      D.baseFiniteTypeOverFieldOrExcellentDvr)
+    (hmarkedPoint : D.markedPoint)
+    (hformalObjectIsCompletionAtMarkedPoint :
+      D.formalObjectIsCompletionAtMarkedPoint)
+    (htruncationIsInfinitesimalNeighborhood :
+      ∀ n, D.truncationIsInfinitesimalNeighborhood n)
     (n : ℕ) (hn : 0 < n) (heffective : D.effective) :
     Nonempty (FormalApproximationWitness D n) := by
   sorry
@@ -95,6 +103,18 @@ structure AlgebraizationComparison {C : Type u} [Category.{v} C]
 theorem algebraization_of_effective_formal_versal_deformation
     {C : Type u} [Category.{v} C] [StackCategory C]
     (D : FormalVersalSituation C)
+    (hlocallyOfFinitePresentation : D.deformation.locallyOfFinitePresentation)
+    (hbaseFiniteTypeOverFieldOrExcellentDvr :
+      D.deformation.baseFiniteTypeOverFieldOrExcellentDvr)
+    (hmarkedPoint : D.deformation.markedPoint)
+    (hformalObjectIsCompletionAtMarkedPoint :
+      D.deformation.formalObjectIsCompletionAtMarkedPoint)
+    (htruncationIsInfinitesimalNeighborhood :
+      ∀ n, D.deformation.truncationIsInfinitesimalNeighborhood n)
+    (hlocallyClosedMarkedPoint : D.locallyClosedMarkedPoint)
+    (hcompleteNoetherianLocalAlgebra : D.completeNoetherianLocalAlgebra)
+    (hfiniteResidueFieldExtension : D.finiteResidueFieldExtension)
+    (hresidueElement : D.residueElement)
     (heffective : D.deformation.effective) (hversal : D.formalVersal) :
     ∃ W : AlgebraizationWitness D, ∀ n : ℕ, W.agreesAtEveryOrder n := by
   sorry
@@ -113,6 +133,7 @@ structure FormalContractionSituation (C : Type u) [Category.{v} C]
   source : C
   closedSubspace : C
   closedEmbedding : closedSubspace ⟶ source
+  closedEmbeddingIsClosed : ClosedImmersion closedEmbedding
   closedSubset : Prop
   formallyLocallyContractible : Prop
 
@@ -127,6 +148,7 @@ structure GlobalContractionWitness {C : Type u} [Category.{v} C]
 theorem global_contraction_from_formal_contraction
     {C : Type u} [Category.{v} C] [StackCategory C]
     (D : FormalContractionSituation C)
+    (hclosedSubset : D.closedSubset)
     (hformal : D.formallyLocallyContractible) :
     ∃ W : GlobalContractionWitness D, W.contractsClosedSubset := by
   sorry
@@ -159,7 +181,15 @@ structure ArtinCriterionConclusion {C : Type u} [Category.{v} C]
 
 theorem artin_criterion
     {C : Type u} [Category.{v} C] [StackCategory C]
-    (D : ArtinCriterionInput C) :
+    (D : ArtinCriterionInput C)
+    (hlimitPreserving : D.limitPreserving)
+    (hschlessingerCriterion : D.schlessingerCriterion)
+    (hformalVersalDeformation : D.formalVersalDeformation)
+    (hformalDeformationsEffective : D.formalDeformationsEffective)
+    (hcompatibleWithEtaleLocalization :
+      D.obstructionTheory.compatibleWithEtaleLocalization)
+    (hcompatibleWithCompletion : D.obstructionTheory.compatibleWithCompletion)
+    (hconstructible : D.obstructionTheory.constructible) :
     ∃ W : ArtinCriterionConclusion D, W.smoothAfterShrinking := by
   sorry
 
@@ -206,11 +236,21 @@ structure QuotientStackByGroupData {C : Type u} [Category.{v} C]
     action (g * h) = action h ≫ action g
   presents : Prop
 
+/-!
+The quotient-stack construction is not a consequence of the bare predicate
+fields in `StackCategory`.  Keep that comparison result as a separate law so
+that an arbitrary presentation-level category does not acquire a spurious
+quotient construction merely from having an fppf atlas.
+-/
+class FppfQuotientLaws (C : Type u) [Category.{v} C] [StackCategory C] where
+  quotientByFlatGroup : ∀ {X : C} (_P : FppfPresentation X),
+    ∃ (S : C) (D : QuotientStackByGroupData X S), D.presents
+
 theorem fppf_presentation_gives_quotients_by_flat_groups
-    {C : Type u} [Category.{v} C] [StackCategory C] {X : C}
+    {C : Type u} [Category.{v} C] [StackCategory C] [FppfQuotientLaws C] {X : C}
     (P : FppfPresentation X) :
-    ∃ (S : C) (D : QuotientStackByGroupData X S), D.presents := by
-  sorry
+    ∃ (S : C) (D : QuotientStackByGroupData X S), D.presents :=
+  FppfQuotientLaws.quotientByFlatGroup P
 
 structure PopescuSituation where
   A : Type u
@@ -230,7 +270,8 @@ def IsRegularMorphism (D : PopescuSituation) : Prop := D.regularMorphism
 def IsFilteredColimitOfSmoothAlgebras (D : PopescuSituation) : Prop :=
   D.filteredColimitOfSmoothAlgebras
 
-theorem popescu_characterization (D : PopescuSituation) :
+theorem popescu_characterization (D : PopescuSituation)
+    (hnoetherianA : D.noetherianA) (hnoetherianB : D.noetherianB) :
     IsRegularMorphism D ↔ IsFilteredColimitOfSmoothAlgebras D := by
   sorry
 

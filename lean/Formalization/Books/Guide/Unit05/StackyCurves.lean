@@ -54,7 +54,8 @@ structure StableMapCompactificationConclusion {C : Type u}
 
 theorem compactification_of_stable_maps_to_tame_dm_stacks
     {C : Type u} [Category.{v} C] [StackCategory C]
-    (D : StableMapCompactificationData (C := C)) :
+    (D : StableMapCompactificationData (C := C))
+    (hparameterizesStableMaps : D.parameterizesStableMaps) :
     Nonempty (StableMapCompactificationConclusion D) := by
   sorry
 

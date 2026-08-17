@@ -25,14 +25,15 @@ structure KeelMoriHypotheses {C : Type u} [Category.{v} C]
 
 theorem keel_mori_coarse_moduli_space
     {C : Type u} [Category.{v} C] [StackCategory C]
-    (D : KeelMoriHypotheses (C := C)) :
+    (D : KeelMoriHypotheses (C := C))
+    (hbaseNoetherian : D.baseNoetherian) :
     HasSeparatedCoarseModuliSpace D.stack := by
   sorry
 
 theorem separated_coarse_moduli_space_iff_finite_inertia
     {C : Type u} [Category.{v} C] [StackCategory C] (X : C)
     (hartin : IsArtinStack X) (hfiniteType : IsFiniteTypeStack X)
-    (hnoetherianBase : Prop) :
+    (hnoetherianBase : Prop) (hbaseNoetherian : hnoetherianBase) :
     HasSeparatedCoarseModuliSpace X ↔ HasFiniteInertia X := by
   sorry
 

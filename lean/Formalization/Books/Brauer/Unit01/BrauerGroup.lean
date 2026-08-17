@@ -47,13 +47,12 @@ theorem similarity_is_equivalence (k : Type*) [Field k] :
 
 theorem similarity_has_unique_division_representative (k : Type u_k) [Field k]
     (A : CSA.{u_k, u_A} k) :
-      ∃ (D : Type u_A) (_ : DivisionRing D) (_ : Algebra k D)
-        (_ : FiniteDimensional k D) (_ : Algebra.IsCentral k D),
-        IsBrauerEquivalent A ({ AlgCat.of k D with } : CSA.{u_k, u_A} k) ∧
-          ∀ (E : Type u_E) (_ : DivisionRing E) (_ : Algebra k E)
-            (_ : FiniteDimensional k E) (_ : Algebra.IsCentral k E),
-            IsBrauerEquivalent A ({ AlgCat.of k E with } : CSA.{u_k, u_E} k) →
-              Nonempty (D ≃ₐ[k] E) := by
+      ∃ D : CSA.{u_k, u_A} k,
+        Nonempty (DivisionRing D.carrier) ∧
+          IsBrauerEquivalent A D ∧
+            ∀ E : CSA.{u_k, u_E} k, Nonempty (DivisionRing E.carrier) →
+            IsBrauerEquivalent A E →
+                Nonempty (D.carrier ≃ₐ[k] E.carrier) := by
   sorry
 
 private theorem matrix_standard_module_end_alg (k K : Type*) [Field k]
@@ -196,9 +195,9 @@ theorem brauer_group_base_change_interface (k k' : Type*) [Field k] [Field k']
           IsBaseChangeRepresentative k k' A B := by
   sorry
 
-theorem brauer_group_zero_iff (k : Type u_k) [Field k] :
+theorem brauer_group_zero_iff (k : Type*) [Field k] :
     (∀ x : BrauerGroup k, x = 1) ↔
-      (∀ (K : Type u_k) [DivisionRing K] [Algebra k K]
+      (∀ (K : Type*) [DivisionRing K] [Algebra k K]
         [FiniteDimensional k K] [Algebra.IsCentral k K],
         Nonempty (K ≃ₐ[k] k)) := by
   sorry

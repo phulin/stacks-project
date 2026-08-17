@@ -354,20 +354,33 @@ theorem setPresheaf_comp_fiber
             g.base.op.toLoc f.base.op.toLoc).inv.toNatTrans.app Z.fiber :=
   rfl
 
-/-- The CoGrothendieck category has the source's displayed object and
-morphism data: its objects have a base object and a value in the fibre, while
-its morphisms have a base arrow and a fibre arrow. -/
-theorem setPresheaf_category_isFibredInSets
-    {C : Type uC} [Category.{vC} C]
-    (F : Cᵒᵖ ⥤ Type uS) :
-    IsCategoryFibredInSets (setPresheafProjection F) := by
-  sorry
-
+/- The CoGrothendieck category has the source's displayed object and
+   morphism data: its objects have a base object and a value in the fibre,
+   while its morphisms have a base arrow and a fibre arrow. -/
 theorem setPresheaf_fibre_is_discrete
     {C : Type uC} [Category.{vC} C]
     (F : Cᵒᵖ ⥤ Type uS) (U : C) :
     IsDiscrete (Functor.Fiber (setPresheafProjection F) U) := by
   sorry
+
+/- The construction is already fibred in groupoids by the generic
+   CoGrothendieck lifting theorem from Unit 37.  The extra assertion here
+   isolates the first part of the source's conclusion before adding the
+   discrete-fibre condition. -/
+theorem setPresheaf_category_isFibredInGroupoids
+    {C : Type uC} [Category.{vC} C]
+    (F : Cᵒᵖ ⥤ Type uS) :
+    (setPresheafProjection F).IsFibredInGroupoids := by
+  sorry
+
+/- The source's final conclusion combines the preceding groupoid and
+   discrete-fibre assertions. -/
+theorem setPresheaf_category_isFibredInSets
+    {C : Type uC} [Category.{vC} C]
+    (F : Cᵒᵖ ⥤ Type uS) :
+    IsCategoryFibredInSets (setPresheafProjection F) := by
+  exact ⟨setPresheaf_category_isFibredInGroupoids F,
+    setPresheaf_fibre_is_discrete F⟩
 
 theorem setPresheaf_fibre_equivalent_to_discrete
     {C : Type uC} [Category.{vC} C]

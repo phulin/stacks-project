@@ -61,9 +61,9 @@ theorem normal_closure_spec
           IsNormalClosure F E K ∧
             (∀ K' : IntermediateField F L,
               K ≤ K' ↔ ∀ φ : E →ₐ[F] L, φ.fieldRange ≤ K') ∧
-              (∀ {T : Type*} [Field T] [Algebra F T]
-                  (hT : IsNormalClosure F E T),
-                Nonempty (T ≃ₐ[F] K)) := by
+            (∀ {T : Type*} [Field T] [Algebra F T] [Algebra E T]
+                [IsScalarTower F E T] [hT : IsNormalClosure F E T],
+              Nonempty (T ≃ₐ[E] K)) := by
   sorry
 
 /- The algebra over `E` on the normal closure is the canonical one supplied

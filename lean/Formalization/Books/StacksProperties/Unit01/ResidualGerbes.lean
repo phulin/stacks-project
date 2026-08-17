@@ -187,8 +187,12 @@ theorem exists_distinct_singleton_example :
       exact ⟨bc⟩
     · intro W w bc
       change Mono bc.projection
-      haveI : _root_.IsEmpty W.left := W.hom.base.hom.1.isEmpty
-      exact Over.mono_of_mono_left bc.projection
+      have hEmpty : _root_.IsEmpty W.left := W.hom.base.hom.1.isEmpty
+      have hIso : IsIso (Over.Hom.left bc.projection) :=
+        @AlgebraicGeometry.isIso_of_isEmpty _ _ (Over.Hom.left bc.projection) hEmpty
+      have hMono : Mono (Over.Hom.left bc.projection) :=
+        @CategoryTheory.IsIso.mono_of_iso _ _ _ _ (Over.Hom.left bc.projection) hIso
+      exact @Over.mono_of_mono_left _ _ _ _ _ bc.projection hMono
   have pointInclusion_not_equivalence : ¬ IsStackEquivalence pointInclusion := by
     intro h
     rcases h with ⟨E, hE⟩

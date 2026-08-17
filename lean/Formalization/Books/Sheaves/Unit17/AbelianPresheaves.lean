@@ -516,12 +516,12 @@ theorem existsUnique_abelianSheafificationStructure {X : TopCat.{v}}
       exact (e.app (op U)).toEquiv.symm.addCommGroup
     restriction_add := by
       intro U V h
-      letI : AddCommGroup (Sections G0 U) :=
+      let : AddCommGroup (Sections G0 U) :=
         underlyingPresheafAddCommGroup (abelianSheafification F).presheaf U
-      letI : AddCommGroup (Sections G0 V) :=
+      let : AddCommGroup (Sections G0 V) :=
         underlyingPresheafAddCommGroup (abelianSheafification F).presheaf V
-      letI := (e.app (op U)).toEquiv.symm.addCommGroup
-      letI := (e.app (op V)).toEquiv.symm.addCommGroup
+      let := (e.app (op U)).toEquiv.symm.addCommGroup
+      let := (e.app (op V)).toEquiv.symm.addCommGroup
       intro s t
       let eU := (e.app (op U)).toEquiv.symm.addEquiv
       let eV := (e.app (op V)).toEquiv.symm.addEquiv
@@ -544,12 +544,12 @@ theorem existsUnique_abelianSheafificationStructure {X : TopCat.{v}}
       exact ((abelianSheafification F).presheaf.map (homOfLE h).op).hom.map_add _ _
     restriction_zero := by
       intro U V h
-      letI : AddCommGroup (Sections G0 U) :=
+      let : AddCommGroup (Sections G0 U) :=
         underlyingPresheafAddCommGroup (abelianSheafification F).presheaf U
-      letI : AddCommGroup (Sections G0 V) :=
+      let : AddCommGroup (Sections G0 V) :=
         underlyingPresheafAddCommGroup (abelianSheafification F).presheaf V
-      letI := (e.app (op U)).toEquiv.symm.addCommGroup
-      letI := (e.app (op V)).toEquiv.symm.addCommGroup
+      let := (e.app (op U)).toEquiv.symm.addCommGroup
+      let := (e.app (op V)).toEquiv.symm.addCommGroup
       let eU := (e.app (op U)).toEquiv.symm.addEquiv
       let eV := (e.app (op V)).toEquiv.symm.addEquiv
       apply eV.injective
@@ -562,9 +562,9 @@ theorem existsUnique_abelianSheafificationStructure {X : TopCat.{v}}
     }
   refine ⟨S, ?_, ?_⟩
   · intro U
-    letI : AddCommGroup (Sections G0 U) :=
+    let : AddCommGroup (Sections G0 U) :=
       underlyingPresheafAddCommGroup (abelianSheafification F).presheaf U
-    letI := S.group U
+    let := S.group U
     let eU := (e.app (op U)).toEquiv.symm.addEquiv
     let η : AbelianSections F U →+ Sections H U :=
       eU.symm.toAddMonoidHom.comp
@@ -606,8 +606,6 @@ theorem existsUnique_abelianSheafificationStructure {X : TopCat.{v}}
     change (letI := T.group U; fun s t : Sections H U => s + t) =
       (letI := S.group U; fun s t : Sections H U => s + t)
     funext s t
-    change (letI := T.group U; s + t) =
-      (letI := S.group U; s + t)
     apply TopCat.Presheaf.section_ext
       (sheafification (underlyingPresheaf F)) U
     intro x hx
@@ -645,9 +643,7 @@ theorem existsUnique_abelianSheafificationStructure {X : TopCat.{v}}
           simpa [yV] using hs'
         _ = (underlyingPresheaf F).germ Z y.1 y.2 σZ := by
           symm
-          simpa [σZ] using
-            ((underlyingPresheaf F).germ_res_apply (homOfLE hZV)
-              y.1 y.2 σ)
+          simp [σZ]
     have htZ : ∀ y : Z, t.1 (iZU y) =
         (underlyingPresheaf F).germ Z y.1 y.2 τZ := by
       intro y
@@ -660,9 +656,7 @@ theorem existsUnique_abelianSheafificationStructure {X : TopCat.{v}}
           simpa [yW] using ht'
         _ = (underlyingPresheaf F).germ Z y.1 y.2 τZ := by
           symm
-          simpa [τZ] using
-            ((underlyingPresheaf F).germ_res_apply (homOfLE hZW)
-              y.1 y.2 τ)
+          simp [τZ]
     have hsZ' : H.map iZU.op s =
         (sheafificationUnit (underlyingPresheaf F)).app (op Z) σZ :=
       unit_restriction U Z s iZU σZ hsZ
@@ -673,8 +667,8 @@ theorem existsUnique_abelianSheafificationStructure {X : TopCat.{v}}
         (letI := T.group U; H.map iZU.op (s + t)) =
           (sheafificationUnit (underlyingPresheaf F)).app (op Z)
             (σZ + τZ) := by
-      letI : AddCommGroup (Sections H U) := T.group U
-      letI : AddCommGroup (Sections H Z) := T.group Z
+      let : AddCommGroup (Sections H U) := T.group U
+      let : AddCommGroup (Sections H Z) := T.group Z
       obtain ⟨ηT, hηT⟩ := hT Z
       calc
         H.map iZU.op (s + t) =
@@ -694,12 +688,12 @@ theorem existsUnique_abelianSheafificationStructure {X : TopCat.{v}}
         (letI := S.group U; H.map iZU.op (s + t)) =
           (sheafificationUnit (underlyingPresheaf F)).app (op Z)
             (σZ + τZ) := by
-      letI : AddCommGroup (Sections G0 U) :=
+      let : AddCommGroup (Sections G0 U) :=
         underlyingPresheafAddCommGroup (abelianSheafification F).presheaf U
-      letI : AddCommGroup (Sections G0 Z) :=
+      let : AddCommGroup (Sections G0 Z) :=
         underlyingPresheafAddCommGroup (abelianSheafification F).presheaf Z
-      letI : AddCommGroup (Sections H U) := S.group U
-      letI : AddCommGroup (Sections H Z) := S.group Z
+      let : AddCommGroup (Sections H U) := S.group U
+      let : AddCommGroup (Sections H Z) := S.group Z
       let eZ := (e.app (op Z)).toEquiv.symm.addEquiv
       let ηS : AbelianSections F Z →+ Sections H Z :=
         eZ.symm.toAddMonoidHom.comp

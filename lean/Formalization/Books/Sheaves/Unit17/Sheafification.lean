@@ -59,7 +59,7 @@ theorem sheafificationCondition_iff {X : TopCat.{v}}
     (F : TopCat.Presheaf (Type v) X) {U : Opens X}
     (s : ∀ x : U, F.stalk x) :
     sheafificationCondition F s ↔
-      ∀ x : U, ∃ (V : Opens X) (hxV : x.1 ∈ V) (i : V ⟶ U)
+      ∀ x : U, ∃ (V : Opens X) (_hxV : x.1 ∈ V) (i : V ⟶ U)
         (σ : F.obj (op V)),
         ∀ y : V, s (i y) = F.germ V y.1 y.2 σ := by
   rfl
@@ -186,7 +186,7 @@ private theorem existsUnique_sheafificationLift_aux {X : TopCat.{v}}
         G.presheaf.germ (V x) x.1 (hxV x)
             (G.presheaf.map (i x).op t) =
           G.presheaf.germ U x.1 x.2 t := by
-      simpa using G.presheaf.germ_res_apply (i x) x.1 (hxV x) t
+      simp
     exact h1.trans (h2.trans h3)
   let liftApp : ∀ (U : Opens X),
       (sheafificationPresheaf F).obj (op U) → G.presheaf.obj (op U) :=
@@ -310,7 +310,7 @@ private theorem existsUnique_sheafificationLift_aux {X : TopCat.{v}}
   have k1 :
       G.presheaf.germ U x.1 x.2 (ψ'.app (op U) s) =
         G.presheaf.germ V x.1 hxV (G.presheaf.map i.op (ψ'.app (op U) s)) := by
-    simpa using (G.presheaf.germ_res_apply i x.1 hxV (ψ'.app (op U) s)).symm
+    simp
   have k2 :
       G.presheaf.germ V x.1 hxV (G.presheaf.map i.op (ψ'.app (op U) s)) =
         G.presheaf.germ V x.1 hxV
@@ -468,7 +468,7 @@ theorem constantPresheafSheafificationMap_isIso {X : TopCat.{v}} (A : Type v) :
   let P := constantPresheaf (X := X) A
   let f : sheafification P ⟶ constantSheaf X A :=
     ⟨constantPresheafSheafificationMap (X := X) A⟩
-  letI : IsIso f := (TopCat.Presheaf.isIso_iff_stalkFunctor_map_iso f).2 (by
+  let : IsIso f := (TopCat.Presheaf.isIso_iff_stalkFunctor_map_iso f).2 (by
     intro x
     rw [isIso_iff_bijective]
     let u := (TopCat.Presheaf.stalkFunctor (Type v) x).map (sheafificationUnit P)
@@ -543,12 +543,10 @@ theorem separatedPresheaf_iff_sheafificationUnit_injective
     SeparatedPresheaf F ↔
       PresheafInjective (sheafificationUnit F) := by
   constructor
-  · intro h U
-    intro s t hst
+  · intro h U s t hst
     apply h U
     exact congrArg Subtype.val hst
-  · intro h U
-    intro s t hst
+  · intro h U s t hst
     apply h U
     apply Subtype.ext
     exact hst

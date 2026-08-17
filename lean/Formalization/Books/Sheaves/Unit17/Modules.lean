@@ -112,9 +112,9 @@ theorem moduleSheafification_underlying_iso {X : TopCat.{v}}
     Nonempty
       (moduleSheafificationSetPresheaf F ≅
         (sheafification (moduleUnderlyingSetPresheaf F)).presheaf) := by
-  letI : Presheaf.IsLocallyInjective (Opens.grothendieckTopology X)
+  let : Presheaf.IsLocallyInjective (Opens.grothendieckTopology X)
       (ringSheafificationUnit O) := ringSheafificationUnit_isLocallyInjective O
-  letI : Presheaf.IsLocallySurjective (Opens.grothendieckTopology X)
+  let : Presheaf.IsLocallySurjective (Opens.grothendieckTopology X)
       (ringSheafificationUnit O) := ringSheafificationUnit_isLocallySurjective O
   let eM := (PresheafOfModules.sheafificationCompForgetCompToPresheaf
     (ringSheafificationUnit O)).app F
@@ -597,13 +597,8 @@ theorem exists_sheafChangeOfRingsAdjunction {X : TopCat.{v}}
   let adj : sheafChangeOfRings α ⊣ sheafRestrictionOfScalars α :=
     Adjunction.mkOfHomEquiv
       { homEquiv := eHom
-        homEquiv_naturality_left_symm := by
-          intros
-          dsimp [eHom]
-          dsimp [eFF]
-        homEquiv_naturality_right := by
-          intros
-          sorry }
+        homEquiv_naturality_left_symm := by sorry
+        homEquiv_naturality_right := by sorry }
   exact Nonempty.intro adj
 
 /-- A chosen adjunction between sheaf extension and restriction of scalars. -/

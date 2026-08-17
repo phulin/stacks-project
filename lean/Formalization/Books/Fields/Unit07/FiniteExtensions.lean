@@ -2,6 +2,7 @@ import Formalization.Books.Fields.Unit06.FieldExtensions
 import Mathlib.Algebra.Polynomial.Degree.Support
 import Mathlib.Data.Countable.Basic
 import Mathlib.FieldTheory.KummerPolynomial
+import Mathlib.FieldTheory.RatFunc.IntermediateField
 import Mathlib.FieldTheory.Tower
 import Mathlib.LinearAlgebra.Basis.VectorSpace
 import Mathlib.LinearAlgebra.Complex.FiniteDimensional

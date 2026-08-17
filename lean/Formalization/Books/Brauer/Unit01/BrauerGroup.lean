@@ -45,16 +45,13 @@ theorem similarity_is_equivalence (k : Type*) [Field k] :
     Equivalence (@IsBrauerEquivalent k _) :=
   IsBrauerEquivalent.is_eqv
 
-/- Division-ness is tested in the ring already stored by the `CSA`.  An
-   independent `DivisionRing` structure on the same carrier need not use the
-   same multiplication or algebra structure. -/
 theorem similarity_has_unique_division_representative (k : Type u_k) [Field k]
     (A : CSA.{u_k, u_A} k) :
       ∃ D : CSA.{u_k, u_A} k,
-        (∀ x : D.carrier, x = 0 ∨ IsUnit x) ∧
+        Nonempty (DivisionRing D.carrier) ∧
           IsBrauerEquivalent A D ∧
             ∀ E : CSA.{u_k, u_E} k,
-            (∀ x : E.carrier, x = 0 ∨ IsUnit x) →
+            Nonempty (DivisionRing E.carrier) →
             IsBrauerEquivalent A E →
                 Nonempty (D.carrier ≃ₐ[k] E.carrier) := by
   sorry
@@ -199,11 +196,9 @@ theorem brauer_group_base_change_interface (k k' : Type*) [Field k] [Field k']
           IsBaseChangeRepresentative k k' A B := by
   sorry
 
-/- The chosen group structure fixes the quotient's CSA carrier universe to
-   the universe of `k`, so the division-algebra test must use that universe. -/
-theorem brauer_group_zero_iff (k : Type u_k) [Field k] :
+theorem brauer_group_zero_iff (k : Type*) [Field k] :
     (∀ x : BrauerGroup k, x = 1) ↔
-      (∀ (K : Type u_k) [DivisionRing K] [Algebra k K]
+      (∀ (K : Type*) [DivisionRing K] [Algebra k K]
         [FiniteDimensional k K] [Algebra.IsCentral k K],
         Nonempty (K ≃ₐ[k] k)) := by
   sorry

@@ -345,7 +345,6 @@ noncomputable def tensorFunctorSlice
   obj X := F.obj (X, M)
   map {X X'} f := F.map (f, 𝟙 M)
   map_id X := by
-    change F.map (𝟙 X, 𝟙 M) = 𝟙 (F.obj (X, M))
     rw [← F.map_id (X, M)]
     rfl
   map_comp {X Y Z} f g := by

@@ -190,13 +190,13 @@ theorem PositiveContractingHomotopy.identity_at
     h.homotopy n ≫ K.d n (n + 1) + K.d (n + 1) (n + 2) ≫ h.homotopy (n + 1) = 𝟙 _ :=
   h.identity n
 
-/-- The source's localized Čech argument, expressed as a positive contracting
-homotopy after choosing an index whose defining function avoids a prime. -/
+/-- The choice data used in the source's localized Čech argument.  After
+choosing a prime, this records an index whose defining function avoids it;
+the corresponding contracting homotopy is constructed separately. -/
 structure LocalizedCechHomotopyData {Y : Scheme.{u}} {hY : IsAffine Y}
-    (𝒰 : StandardOpenCover Y hY) where
-  prime : PrimeSpectrum (Γ(Y, ⊤))
+    (𝒰 : StandardOpenCover Y hY) (p : PrimeSpectrum (Γ(Y, ⊤))) where
   fixed : Fin 𝒰.n
-  fixed_not_mem : 𝒰.function fixed ∉ prime.asIdeal
+  fixed_not_mem : 𝒰.function fixed ∉ p.asIdeal
 
 /-- A member of a standard covering avoids any chosen prime. -/
 theorem localized_cech_index_exists {Y : Scheme.{u}} {hY : IsAffine Y}
@@ -213,9 +213,9 @@ theorem localized_cech_index_exists {Y : Scheme.{u}} {hY : IsAffine Y}
 /-- The choice used in the localized contracting-homotopy argument exists. -/
 theorem localized_cech_homotopy_data_nonempty {Y : Scheme.{u}} {hY : IsAffine Y}
     (𝒰 : StandardOpenCover Y hY) (p : PrimeSpectrum (Γ(Y, ⊤))) :
-    Nonempty (LocalizedCechHomotopyData 𝒰) := by
+    Nonempty (LocalizedCechHomotopyData 𝒰 p) := by
   rcases localized_cech_index_exists 𝒰 p with ⟨i, hi⟩
-  exact ⟨{ prime := p, fixed := i, fixed_not_mem := hi }⟩
+  exact ⟨{ fixed := i, fixed_not_mem := hi }⟩
 
 /-! ### Affine morphisms and higher direct images -/
 

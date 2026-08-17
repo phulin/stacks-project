@@ -66,8 +66,13 @@ def kernelIndicatorCondition {n : ℕ} (A : Matrix (Fin n) (Fin n) ℝ)
       -A i i * m i =
         (Finset.univ : Finset (Fin n)).sum (fun j => if j ≠ i then A i j * m j else 0)
 
-/-! The kernel of a real recurring matrix is spanned by the equality indicators. -/
+/-!
+The kernel of a symmetric real recurring matrix is spanned by the equality
+indicators. Symmetry is needed here: the one-sided cut condition from the
+source does not by itself make an indicator vector a right-kernel vector.
+-/
 theorem recurring_real {n : ℕ} (A : Matrix (Fin n) (Fin n) ℝ) (m : Fin n → ℝ)
+    (hsymm : ∀ i j, A i j = A j i)
     (hoffdiag : ∀ ⦃i j⦄, i ≠ j → 0 ≤ A i j)
     (hm : ∀ i, 0 < m i)
     (hineq : ∀ i,
@@ -160,10 +165,12 @@ theorem orthogonal_projection_sequence
     (hB : IsPositiveDefiniteIntegralForm B) (A : Submodule ℤ L)
     (hquotient : Module.IsTorsionFree ℤ (L ⧸ A)) :
     ∃ p : L →ₗ[ℤ] Module.Dual ℤ (B.orthogonal A),
-      (∀ (x : L) (y : B.orthogonal A), p x y = B x (y : L)) ∧
-        A = LinearMap.ker p ∧
-        Function.Exact p (LinearMap.range p).mkQ ∧
-          Function.Surjective (LinearMap.range p).mkQ := by
+      ∃ q : latticeDiscriminantQuotient B →ₗ[ℤ] moduleCokernel p,
+        (∀ (x : L) (y : B.orthogonal A), p x y = B x (y : L)) ∧
+          A = LinearMap.ker p ∧
+          Function.Exact p (LinearMap.range p).mkQ ∧
+            Function.Surjective (LinearMap.range p).mkQ ∧
+              Function.Surjective q := by
   sorry
 
 /-! The dual-lattice injections associated with an orthogonal decomposition. -/

@@ -66,7 +66,7 @@ def HasTypeProperty {S : Scheme.{u}}
 
 theorem type_property_of_representable_scheme {S : Scheme.{u}}
     (P : SmoothLocalSchemeProperty S) (X : AlgebraicStack S)
-    (hX : IsRepresentableByScheme X)
+    (_hX : IsRepresentableByScheme X)
     (hcover : ∃ (W : AlgebraicSpace S) (w : SpaceToStackMorphism W X),
       IsSmoothCover W w)
     (hlocal : ∀ (W : AlgebraicSpace S) (w : SpaceToStackMorphism W X),
@@ -84,7 +84,7 @@ theorem type_property_of_representable_scheme {S : Scheme.{u}}
 
 theorem type_property_of_representable_space {S : Scheme.{u}}
     (P : SmoothLocalSchemeProperty S) (X : AlgebraicStack S)
-    (hX : IsRepresentableByAlgebraicSpace X)
+    (_hX : IsRepresentableByAlgebraicSpace X)
     (hcover : ∃ (W : AlgebraicSpace S) (w : SpaceToStackMorphism W X),
       IsSmoothCover W w)
     (hlocal : ∀ (W : AlgebraicSpace S) (w : SpaceToStackMorphism W X),

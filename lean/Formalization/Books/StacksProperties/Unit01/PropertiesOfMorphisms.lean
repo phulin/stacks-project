@@ -115,7 +115,7 @@ definition of a relative property. -/
 theorem relative_property_base_change {S : Scheme.{u}}
     (P : RelativeSpaceProperty S) {X Y Z : AlgebraicStack S}
     (f : StackMorphism X Y) (g : StackMorphism Z Y)
-    (hP : P.stableUnderArbitraryBaseChange)
+    (_hP : P.stableUnderArbitraryBaseChange)
     (hf : HasRelativeProperty P f)
     (hrepresentable : RepresentableByAlgebraicSpaces (fibreProductSnd f g))
     (hbase : ∀ (W : AlgebraicSpace S) (w : SpaceToStackMorphism W Z)
@@ -152,8 +152,8 @@ theorem relative_property_product {S : Scheme.{u}}
     (P : RelativeSpaceProperty S)
     {X₁ Y₁ X₂ Y₂ : AlgebraicStack S}
     (f : StackMorphism X₁ X₂) (g : StackMorphism Y₁ Y₂)
-    (hbase : P.stableUnderArbitraryBaseChange)
-    (hcomp : P.preservedUnderComposition)
+    (_hbase : P.stableUnderArbitraryBaseChange)
+    (_hcomp : P.preservedUnderComposition)
     (hf : HasRelativeProperty P f) (hg : HasRelativeProperty P g)
     (hrepresentable :
       RepresentableByAlgebraicSpaces (stackProductMorphism f g))
@@ -270,8 +270,8 @@ theorem check_property_weak_covering {S : Scheme.{u}}
     (P : RelativeSpaceProperty S) {X Y Z : AlgebraicStack S}
     (f : StackMorphism X Y)
     (z : StackCoveringMorphism (Z := Z) (Y := Y))
-    (hP : P.fppfLocalOnTarget ∧ P.stableUnderArbitraryBaseChange)
-    (hz : RepresentableByAlgebraicSpaces z.map ∧
+    (_hP : P.fppfLocalOnTarget ∧ P.stableUnderArbitraryBaseChange)
+    (_hz : RepresentableByAlgebraicSpaces z.map ∧
       Function.Surjective (inducedPointMap z.map) ∧ z.flat ∧
       z.locallyOfFinitePresentation)
     (hf : RepresentableByAlgebraicSpaces f)
@@ -331,7 +331,7 @@ theorem property_after_precomposing {S : Scheme.{u}}
     (f : StackMorphism X Y) (g : StackMorphism Y Z)
     (τ : CoveringTopology) (hcover : HasPrecompositionCover f g τ)
     (hcomp : HasRelativeProperty P (StackMorphism.comp f g))
-    (hlocal : IsLocalOnSourceIn P τ)
+    (_hlocal : IsLocalOnSourceIn P τ)
     (hbase : ∀ (W : AlgebraicSpace S) (w : SpaceToStackMorphism W Z)
       (bc : BaseChangeData g W w),
       ∃ bc' : BaseChangeData (StackMorphism.comp f g) W w,
@@ -354,7 +354,7 @@ structure PresentationMorphismData {S : Scheme.{u}}
 theorem representable_in_terms_presentations {S : Scheme.{u}}
     {X' X : AlgebraicStack S} (g : StackMorphism X' X)
     (p : StackPresentation X)
-    (hg : RepresentableByAlgebraicSpaces g) :
+    (_hg : RepresentableByAlgebraicSpaces g) :
     Nonempty (StackPresentation X') →
     Nonempty (PresentationMorphismData g p) := by
   intro hp'

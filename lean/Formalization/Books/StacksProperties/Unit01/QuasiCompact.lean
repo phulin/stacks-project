@@ -56,13 +56,13 @@ theorem quasiCompact_stack_iff {S : Scheme.{u}} (X : AlgebraicStack S)
     (hcompactToChart : IsQuasiCompactStack X →
       ∃ c : QuasiCompactStackChart (X := X),
         Function.Surjective c.map ∧ c.smooth ∧ c.affineSource ∧
-          c.quasiCompactSchemeSource ∧ c.quasiCompactAlgebraicSpaceSource) →
+          c.quasiCompactSchemeSource ∧ c.quasiCompactAlgebraicSpaceSource)
     (hcoverToChart : (HasAffineSmoothCover X ∧
         HasQuasiCompactSchemeSmoothCover X ∧
       HasQuasiCompactSpaceSmoothCover X ∧ HasQuasiCompactStackCover X) →
       ∃ c : QuasiCompactStackChart (X := X),
         Function.Surjective c.map ∧ c.smooth ∧ c.affineSource ∧
-          c.quasiCompactSchemeSource ∧ c.quasiCompactAlgebraicSpaceSource) →
+          c.quasiCompactSchemeSource ∧ c.quasiCompactAlgebraicSpaceSource)
     (hchartToCompact : ∀ (c : QuasiCompactStackChart (X := X)),
       Function.Surjective c.map → c.smooth → c.affineSource →
         c.quasiCompactSchemeSource → c.quasiCompactAlgebraicSpaceSource →

@@ -122,8 +122,8 @@ structure FieldBaseSchemeData (S : Scheme.{u}) where
 
 theorem dimension_finite_for_nonempty_finite_type {S : Scheme.{u}}
     {X : AlgebraicStack S} (hX : IsLocallyNoetherian X)
-    (hfinite : X.finiteTypeOverBase) (hfield : FieldBaseSchemeData S)
-    (hbase : hfield.identifiesBase)
+    (_hfinite : X.finiteTypeOverBase) (hfield : FieldBaseSchemeData S)
+    (_hbase : hfield.identifiesBase)
     (hnonempty : ¬ IsEmpty X)
     (hbounded : ∃ n : ℤ, ∀ x : StackPoint X,
       dimensionAtPoint X hX x ≤ (n : WithTop ℤ)) :
@@ -222,7 +222,7 @@ structure QuotientStackDimensionData (S : Scheme.{u}) where
 
 theorem quotient_stack_dimension
     {S : Scheme.{u}} (D : QuotientStackDimensionData S)
-    (hfinite : D.finiteType) :
+    (_hfinite : D.finiteType) :
     stackDimension D.quotient D.locallyNoetherian =
       (((D.spaceDimension - D.groupDimension : ℤ) : WithTop ℤ) :
         WithBot (WithTop ℤ)) := by

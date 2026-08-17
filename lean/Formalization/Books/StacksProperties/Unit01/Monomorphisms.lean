@@ -173,7 +173,7 @@ theorem monomorphism_iff_local_test {S : Scheme.{u}}
 
 theorem monomorphism_injective_on_points {S : Scheme.{u}}
     {X Y : AlgebraicStack S} (f : StackMorphism X Y)
-    (hf : IsMonomorphism f)
+    (_hf : IsMonomorphism f)
     (hcancel : ∀ p q : RawPoint X,
       inducedPointMap f (Quotient.mk X.points.setoid p) =
           inducedPointMap f (Quotient.mk X.points.setoid q) →
@@ -214,7 +214,7 @@ structure StackPullbackSquare {S : Scheme.{u}}
 
 theorem monomorphism_diagonal_pullback {S : Scheme.{u}}
     {X X' Y : AlgebraicStack S} (i : StackMorphism X X')
-    (g : StackMorphism X' Y) (hi : IsMonomorphism i)
+    (g : StackMorphism X' Y) (_hi : IsMonomorphism i)
     (hcommutes :
       StackTwoMorphism
         (StackMorphism.comp (stackDiagonal (StackMorphism.comp i g))

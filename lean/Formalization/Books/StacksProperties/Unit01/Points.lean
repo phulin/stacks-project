@@ -247,16 +247,16 @@ theorem exists_stack_topology {S : Scheme.{u}} :
   refine ⟨T, ?_⟩
   constructor
   · intro X Y f
-    letI : TopologicalSpace (StackPoint X) := ⊥
-    letI : TopologicalSpace (StackPoint Y) := ⊥
-    letI : DiscreteTopology (StackPoint X) := discreteTopology_bot _
+    let : TopologicalSpace (StackPoint X) := ⊥
+    let : TopologicalSpace (StackPoint Y) := ⊥
+    let : DiscreteTopology (StackPoint X) := discreteTopology_bot _
     change @Continuous (StackPoint X) (StackPoint Y)
       (⊥ : TopologicalSpace (StackPoint X))
       (⊥ : TopologicalSpace (StackPoint Y)) (inducedPointMap f)
     exact continuous_of_discreteTopology
   · intro X W w _ _
-    letI : TopologicalSpace (pointSet X) := ⊥
-    letI : DiscreteTopology (pointSet X) := discreteTopology_bot _
+    let : TopologicalSpace (pointSet X) := ⊥
+    let : DiscreteTopology (pointSet X) := discreteTopology_bot _
     intro U _
     exact isOpen_discrete _
 
@@ -302,7 +302,7 @@ theorem points_locally_quasi_compact {S : Scheme.{u}}
     HasQuasiCompactOpenNeighbourhoodBasis (T X) := by
   unfold HasQuasiCompactOpenNeighbourhoodBasis pointSet
   intro hexists x U hU hx
-  letI : TopologicalSpace (StackPoint X) := T X
+  let : TopologicalSpace (StackPoint X) := T X
   rcases hexists x U hU hx with
     ⟨W, w, u, V, hflat, hlfp, hsmooth, hmap, hcontinuous, hopen, hcompact, hu, hsubset⟩
   refine ⟨w.map '' V, ?_, ?_, ?_, ?_⟩

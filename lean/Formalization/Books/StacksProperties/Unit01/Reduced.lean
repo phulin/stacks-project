@@ -60,8 +60,8 @@ theorem reduced_closed_substack_exists_unique {S : Scheme.{u}}
 
 theorem reduced_stack_determined_by_points {S : Scheme.{u}}
     {X : AlgebraicStack S} (U : ClosedSubstack X)
-    (hX : IsReduced X)
-    (hpoints : ClosedSubstackHasPoints U Set.univ)
+    (_hX : IsReduced X)
+    (_hpoints : ClosedSubstackHasPoints U Set.univ)
     (hinverse : ∃ e : StackMorphism X U.source,
       StackTwoMorphism
           (StackMorphism.comp U.inclusion e)
@@ -91,7 +91,7 @@ theorem map_into_reduction_iff {S : Scheme.{u}}
         Set.range (inducedPointMap Z.inclusion))
     (hbackward : (Set.range (inducedPointMap f) ⊆
       Set.range (inducedPointMap Z.inclusion) →
-      FactorsThroughClosedSubstack f Z) :
+      FactorsThroughClosedSubstack f Z)) :
     FactorsThroughClosedSubstack f Z ↔
       Set.range (inducedPointMap f) ⊆
         Set.range (inducedPointMap Z.inclusion) := by
@@ -155,7 +155,7 @@ structure ReducedLocallyClosedSubstackData {S : Scheme.{u}}
 
 theorem reduced_locally_closed_substack_exists {S : Scheme.{u}}
     (T : StackTopology S) (X : AlgebraicStack S)
-    (hT : IsCompatibleStackTopology T) (U : Set (StackPoint X))
+    (_hT : IsCompatibleStackTopology T) (U : Set (StackPoint X))
     (hU : @IsLocallyClosed (StackPoint X) (T X) U)
     (hrealization : ∃ (boundary : Set (StackPoint X))
       (openPart : OpenSubstack X)

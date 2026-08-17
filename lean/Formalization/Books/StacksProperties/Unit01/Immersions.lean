@@ -514,7 +514,7 @@ private theorem emptyStack_inclusion_isImmersion {S : Scheme.{u}}
 
 theorem immersion_into_presentation {S : Scheme.{u}}
     {X Z : AlgebraicStack S} (p : StackPresentation X)
-    (i : StackMorphism Z X) (hi : IsImmersionStack i) :
+    (i : StackMorphism Z X) (_hi : IsImmersionStack i) :
     Nonempty (StackPresentation Z) →
     Nonempty (PresentationImmersionData p i) := by
   intro hp'
@@ -710,7 +710,7 @@ def FactorsThrough {S : Scheme.{u}}
 
 theorem factors_through_substack_iff {S : Scheme.{u}}
     {Y X : AlgebraicStack S} (f : StackMorphism Y X)
-    {p : StackPresentation X} (D : SubstackPresentationData p) :
+    {p : StackPresentation X} (D : SubstackPresentationData p)
     (hforward : FactorsThrough f D.substack → D.subspace.invariant)
     (hbackward : D.subspace.invariant → FactorsThrough f D.substack) :
     FactorsThrough f D.substack ↔ D.subspace.invariant := by
@@ -724,7 +724,7 @@ def OpenSubstacks {S : Scheme.{u}} (X : AlgebraicStack S) :=
   OpenSubstack X
 
 theorem open_substacks_bijection {S : Scheme.{u}}
-    (T : StackTopology S) (hT : IsCompatibleStackTopology T)
+    (T : StackTopology S) (_hT : IsCompatibleStackTopology T)
     (X : AlgebraicStack S)
     (hcorrespondence :
       ∃ (forward : OpenSubstacks X → OpenPointSubsets T X)
@@ -788,7 +788,7 @@ structure OpenImageSubstackData {S : Scheme.{u}}
 theorem open_image_substack {S : Scheme.{u}}
     {X : AlgebraicStack S} (U : AlgebraicSpace S)
     (f : SpaceToStackMorphism U X)
-    (hf : Function.Surjective f.map ∧ f.smooth)
+    (_hf : Function.Surjective f.map ∧ f.smooth)
     (V : AlgebraicSpace S)
     (i : SpaceMorphism V U) (hi : SpaceOpenImmersion i) :
     (∃ (U' : OpenSubstack X)
@@ -846,9 +846,9 @@ theorem quasiCompact_open_substack_finite_subcover {S : Scheme.{u}}
       (canonicalStackTopology (S := S) X)
       (Set.range (inducedPointMap (members i).inclusion))) :
     ∃ s : Finset I, FiniteCoversOpenSubstacks members U s := by
-  letI : TopologicalSpace (pointSet U.source) :=
+  let : TopologicalSpace (pointSet U.source) :=
     canonicalStackTopology (S := S) U.source
-  letI : TopologicalSpace (pointSet X) :=
+  let : TopologicalSpace (pointSet X) :=
     canonicalStackTopology (S := S) X
   let V : I → Set (pointSet U.source) := fun i =>
     inducedPointMap U.inclusion ⁻¹'
@@ -939,9 +939,9 @@ structure LocalSourceBaseChangeData {S : Scheme.{u}}
 
 theorem local_source_locus {S : Scheme.{u}}
     (P Q R : RelativeSpaceProperty S)
-    (H : LocalSourceHypotheses P Q R)
+    (_H : LocalSourceHypotheses P Q R)
     {X Y : AlgebraicStack S} (f : StackMorphism X Y)
-    (hf : HasRelativeProperty Q f) :
+    (_hf : HasRelativeProperty Q f) :
     (∃ U : OpenSubstack X,
       HasRelativeProperty P (StackMorphism.comp U.inclusion f) ∧
         ∀ V : OpenSubstack X,
@@ -959,10 +959,10 @@ theorem local_source_locus {S : Scheme.{u}}
 
 theorem local_source_locus_base_change {S : Scheme.{u}}
     (P Q R : RelativeSpaceProperty S)
-    (H : LocalSourceHypotheses P Q R)
+    (_H : LocalSourceHypotheses P Q R)
     {X Y Z : AlgebraicStack S} (f : StackMorphism X Y)
-    (g : StackMorphism Z Y) (hf : HasRelativeProperty Q f)
-    (hg : HasRelativeProperty R g)
+    (g : StackMorphism Z Y) (_hf : HasRelativeProperty Q f)
+    (_hg : HasRelativeProperty R g)
     (hbase : ∃ (locus : LargestOpenStackLocus P f)
       (baseChangedLocus : LargestOpenStackLocus P (fibreProductSnd f g)),
       Set.range (inducedPointMap baseChangedLocus.substack.inclusion) =

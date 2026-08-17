@@ -82,7 +82,7 @@ theorem monomorphism_into_unique_point {S : Scheme.{u}}
     {Z' Z : AlgebraicStack S} (f : StackMorphism Z' Z)
     (hZ : ∃ p : FieldValuedMorphism Z,
       IsLocallyFinitePresentationFlatFieldCover p)
-    (hf : IsMonomorphism f)
+    (_hf : IsMonomorphism f)
     (hfullyFaithful : StackFullyFaithful f) :
     IsEmpty Z' ∨ IsStackEquivalence f := by
   classical
@@ -132,7 +132,7 @@ structure ImprovedUniquePointData {S : Scheme.{u}}
   monomorphism : IsMonomorphism inclusion
 
 theorem improve_unique_point {S : Scheme.{u}} (Z : AlgebraicStack S)
-    (hZ : IsReducedSingletonPointStack Z)
+    (_hZ : IsReducedSingletonPointStack Z)
     (hsource : ∃ (source : AlgebraicStack S)
       (inclusion : StackMorphism source Z),
       IsLocallyNoetherianReducedSingletonPointStack source ∧
@@ -413,7 +413,7 @@ noncomputable def residualGerbe {S : Scheme.{u}}
 
 theorem residual_gerbe_regular {S : Scheme.{u}}
     {Z : AlgebraicStack S}
-    (hZ : IsLocallyNoetherianReducedSingletonPointStack Z)
+    (_hZ : IsLocallyNoetherianReducedSingletonPointStack Z)
     (hcover : ∃ (W : AlgebraicSpace S) (w : SpaceToStackMorphism W Z),
       Function.Surjective w.map ∧ w.flat ∧
         w.locallyOfFinitePresentation)
@@ -635,7 +635,7 @@ theorem residual_gerbe_isomorphic {S : Scheme.{u}}
     (Y.points.isEquivalence.symm ((d.diagonalComparison _).mp hxrel)) hyrel
 
 theorem scheme_residual_gerbe {S : Scheme.{u}}
-    {X : AlgebraicStack S} (hX : IsRepresentableByScheme X)
+    {X : AlgebraicStack S} (_hX : IsRepresentableByScheme X)
     (x : StackPoint X)
     (hsingleton : IsSingletonPointStack X)
     (hid : IsMonomorphism (StackMorphism.id X)) :
@@ -660,7 +660,7 @@ theorem scheme_residual_gerbe {S : Scheme.{u}}
     rfl
 
 theorem algebraic_space_residual_gerbe {S : Scheme.{u}}
-    {X : AlgebraicStack S} (hX : IsRepresentableByAlgebraicSpace X)
+    {X : AlgebraicStack S} (_hX : IsRepresentableByAlgebraicSpace X)
     (x : StackPoint X)
     (hsingleton : IsSingletonPointStack X)
     (hid : IsMonomorphism (StackMorphism.id X)) :

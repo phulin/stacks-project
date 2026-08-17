@@ -72,7 +72,7 @@ theorem abelianStalkAddCommGroup_isStructure
     IsAbelianStalkGroupStructure F x (abelianStalkAddCommGroup F x) := by
   intro U hx
   let e := abelianStalkUnderlyingEquiv F x
-  letI : AddCommGroup (AbelianStalkAsSet F x) := e.addCommGroup
+  let : AddCommGroup (AbelianStalkAsSet F x) := e.addCommGroup
   let φ : AbelianSections F U →+ AbelianStalkAsSet F x :=
     (e.addEquiv).symm.toAddMonoidHom.comp (F.germ U x hx).hom
   refine ⟨φ, ?_⟩
@@ -111,7 +111,7 @@ theorem abelianStalkAddCommGroup_eq_canonical
   let W := U ⊓ V
   have hxW : x ∈ W := by
     simp [W, hxU, hxV]
-  letI : AddCommGroup (AbelianSections F W) := AddCommGrpCat.str _
+  let : AddCommGroup (AbelianSections F W) := AddCommGrpCat.str _
   let sW : AbelianSections F W :=
     (F.map (homOfLE (show W ≤ U from by simp [W])).op).hom s
   let tW : AbelianSections F W :=
@@ -128,7 +128,7 @@ theorem abelianStalkAddCommGroup_eq_canonical
       (letI := G; φG (sW + tW)) =
         (letI := G; φG sW + φG tW) :=
     φG.map_add sW tW
-  letI : AddCommGroup (AbelianStalkAsSet F x) := abelianStalkAddCommGroup F x
+  let : AddCommGroup (AbelianStalkAsSet F x) := abelianStalkAddCommGroup F x
   have hCadd :
       (letI := abelianStalkAddCommGroup F x; φC (sW + tW)) =
         (letI := abelianStalkAddCommGroup F x; φC sW + φC tW) :=

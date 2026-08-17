@@ -30,7 +30,7 @@ open CategoryTheory.Limits
 open Formalization.Books.Sites.Unit02
 open Opposite
 
-universe u u' v v' w w'
+universe u u' a v v' w w'
 
 variable {C : Type u} {D : Type u'} [Category.{v} C] [Category.{v} D]
 
@@ -158,20 +158,14 @@ abbrev HasIndexColimits (u : C ⥤ D) :=
 
 /-! ## Almost-directedness and filteredness -/
 
-/-- The two hypotheses of the source's ``split into directed'' lemma. -/
-def AlmostDirected (I : Type w) [Category.{w'} I] : Prop :=
-  (∀ {W X Y : I} (a : W ⟶ X) (b : W ⟶ Y),
-      ∃ (Z : I) (c : X ⟶ Z) (d : Y ⟶ Z), a ≫ c = b ≫ d) ∧
-    (∀ {X Y : I} (a b : X ⟶ Y),
-      ∃ (Z : I) (c : Y ⟶ Z), a ≫ c = b ≫ c)
-
 /-- Pullbacks and equalizers in `C`, preserved by `u`, give the two
-almost-directedness conditions for `(I_V)ᵒᵖ`. -/
+almost-directedness conditions for `(I_V)ᵒᵖ`.  This is Mathlib's
+empty-allowed filtered-category interface. -/
 theorem indexCategory_op_almostDirected (u : C ⥤ D) (V : D)
     [HasPullbacks C] [HasEqualizers C]
     [PreservesLimitsOfShape WalkingCospan u]
     [PreservesLimitsOfShape WalkingParallelPair u] :
-    AlmostDirected (indexCategory u V)ᵒᵖ := by
+    IsFilteredOrEmpty (indexCategory u V)ᵒᵖ := by
   sorry
 
 /-- If `C` has a final object carried by `u` to a final object of `D`, then
@@ -321,25 +315,25 @@ noncomputable def pullbackHomEquiv (u : C ⥤ D) (F : Presheaf C) (G : Presheaf 
 
 /-- Restriction of presheaves with values in an arbitrary category `A`. -/
 noncomputable def pullbackPresheafWithValuesFunctor (u : C ⥤ D)
-    (A : Type u') [Category.{v'} A] :
+    (A : Type a) [Category.{v'} A] :
     PresheafWithValues D A ⥤ PresheafWithValues C A :=
   (Functor.whiskeringLeft Cᵒᵖ Dᵒᵖ A).obj u.op
 
 /-- The `A`-valued version of the source diagram `F_V`. -/
-def indexPresheafWithValues (u : C ⥤ D) (A : Type u') [Category.{v'} A]
+def indexPresheafWithValues (u : C ⥤ D) (A : Type a) [Category.{v'} A]
     (F : PresheafWithValues C A) (V : D) :
     (indexCategory u V)ᵒᵖ ⥤ A :=
   (StructuredArrow.proj V u).op ⋙ F
 
 /-- The costructured-arrow presentation of the same `A`-valued diagram. -/
-abbrev kanIndexDiagramWithValues (u : C ⥤ D) (A : Type u') [Category.{v'} A]
+abbrev kanIndexDiagramWithValues (u : C ⥤ D) (A : Type a) [Category.{v'} A]
     (F : PresheafWithValues C A) (V : D) :=
   CostructuredArrow.proj u.op (op V) ⋙ F
 
 /-- The `A`-valued source diagram agrees with the canonical Kan-extension
 diagram under the structured/costructured-arrow equivalence. -/
 theorem indexPresheafWithValues_under_equivalence (u : C ⥤ D)
-    (A : Type u') [Category.{v'} A] (F : PresheafWithValues C A) (V : D) :
+    (A : Type a) [Category.{v'} A] (F : PresheafWithValues C A) (V : D) :
     (indexCostructuredEquivalence u V).functor ⋙ kanIndexDiagramWithValues u A F V =
       indexPresheafWithValues u A F V := by
   sorry
@@ -347,23 +341,23 @@ theorem indexPresheafWithValues_under_equivalence (u : C ⥤ D)
 /-- The source's arbitrary-value-category hypothesis that every diagram on
 `I_Vᵒᵖ` has a colimit in `A`. -/
 abbrev HasIndexColimitsWithValues (u : C ⥤ D)
-    (A : Type u') [Category.{v'} A] :=
+    (A : Type a) [Category.{v'} A] :=
   ∀ (V : D) (K : (indexCategory u V)ᵒᵖ ⥤ A), HasColimit K
 
 /-- The pointwise-colimit hypothesis for `A`-valued presheaves. -/
 abbrev HasLeftPushforwardWithValues (u : C ⥤ D)
-    (A : Type u') [Category.{v'} A] :=
+    (A : Type a) [Category.{v'} A] :=
   ∀ F : PresheafWithValues C A, Functor.HasLeftKanExtension u.op F
 
 /-- The pointwise-colimit hypothesis for `A`-valued presheaves. -/
 abbrev HasPointwisePushforwardWithValues (u : C ⥤ D)
-    (A : Type u') [Category.{v'} A] :=
+    (A : Type a) [Category.{v'} A] :=
   ∀ F : PresheafWithValues C A, Functor.HasPointwiseLeftKanExtension u.op F
 
 /-- The arbitrary-value-category index-colimit hypothesis supplies the
 pointwise Kan-extension hypothesis. -/
 theorem hasPointwisePushforwardWithValues_of_indexColimits
-    (u : C ⥤ D) (A : Type u') [Category.{v'} A]
+    (u : C ⥤ D) (A : Type a) [Category.{v'} A]
     [HasIndexColimitsWithValues u A] :
     HasPointwisePushforwardWithValues u A := by
   sorry
@@ -371,7 +365,7 @@ theorem hasPointwisePushforwardWithValues_of_indexColimits
 /-- Pointwise `A`-valued colimits supply the existence hypothesis for the
 functorial `A`-valued left Kan extension. -/
 theorem hasLeftPushforwardWithValues_of_pointwise (u : C ⥤ D)
-    (A : Type u') [Category.{v'} A]
+    (A : Type a) [Category.{v'} A]
     [HasPointwisePushforwardWithValues u A] :
     HasLeftPushforwardWithValues u A :=
   fun _F => inferInstance
@@ -379,14 +373,14 @@ theorem hasLeftPushforwardWithValues_of_pointwise (u : C ⥤ D)
 /-- The `A`-valued pushforward, whenever all the required pointwise colimits
 exist. -/
 noncomputable def pushforwardPresheafWithValuesFunctor (u : C ⥤ D)
-    (A : Type u') [Category.{v'} A]
+    (A : Type a) [Category.{v'} A]
     [h : HasLeftPushforwardWithValues u A] :
     PresheafWithValues C A ⥤ PresheafWithValues D A :=
   Functor.lan u.op
 
 /-- The arbitrary-value-category adjunction in the source's remark. -/
 noncomputable def pushforwardWithValuesAdjunction (u : C ⥤ D)
-    (A : Type u') [Category.{v'} A]
+    (A : Type a) [Category.{v'} A]
     [HasLeftPushforwardWithValues u A] :
     pushforwardPresheafWithValuesFunctor u A ⊣
       pullbackPresheafWithValuesFunctor u A := by

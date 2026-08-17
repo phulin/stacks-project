@@ -28,6 +28,16 @@ universe vC uC vS uS vT uT
 
 noncomputable section
 
+/- Unit 35 records the equivalence between the lifting definition of a
+   category fibred in groupoids and `IsFibered`, but does not register its
+   `IsFibered` consequence as an instance.  The chosen-pullback formulas in
+   this chapter use that canonical consequence. -/
+noncomputable instance twoYoneda_isFibered_of_isFibredInGroupoids
+    {S C : Type*} [Category* S] [Category* C]
+    (p : S ⥤ C) [p.IsFibredInGroupoids] : p.IsFibered :=
+  ((fibredInGroupoids_iff_fibred_groupoid_fibres p).mp
+    (inferInstance : p.IsFibredInGroupoids)).2
+
 /-! ## The categories of morphisms over a base -/
 
 /- Postcomposition by a functor `q : B ⥤ C` records the strict triangle over
@@ -494,6 +504,14 @@ def twoYonedaHomPresheaf
     intro X Y Z f g
     exact twoYonedaHomPresheaf_map_comp p f g
 
+theorem twoYonedaHomPresheaf_obj_isGroupoid
+    {C : Type uC} [Category.{vC} C]
+    {S : Type uS} [Category.{vS} S]
+    (p : S ⥤ C) [p.IsFibredInGroupoids] (U : C) :
+    IsGroupoid ((twoYonedaHomPresheaf p).obj (Opposite.op U)) := by
+  change IsGroupoid (twoYonedaGroupoidMorphismCategory p U)
+  exact twoYonedaGroupoidMorphismCategory_isGroupoid p U
+
 /- The CoGrothendieck construction is Mathlib's associated fibred category
    from the preceding presheaf formalization. -/
 abbrev twoYonedaAssociatedCategory
@@ -517,9 +535,7 @@ theorem twoYonedaAssociatedProjection_isFibredInGroupoids
     (p : S ⥤ C) [p.IsFibredInGroupoids] :
     (twoYonedaAssociatedProjection p).IsFibredInGroupoids := by
   apply groupoidPresheafProjection_isFibredInGroupoids
-  intro U
-  change IsGroupoid (twoYonedaGroupoidMorphismCategory p U)
-  exact twoYonedaGroupoidMorphismCategory_isGroupoid p U
+  exact twoYonedaHomPresheaf_obj_isGroupoid p
 
 /- The functor `G` of the source evaluates the fiber component at the
    identity object and then uses the arrow in the slice to reach the target

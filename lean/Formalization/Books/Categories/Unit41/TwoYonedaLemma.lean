@@ -412,6 +412,20 @@ abbrev twoYonedaGroupoidMorphismCategory
     (p : S ⥤ C) (U : C) :=
   twoYonedaOverCategory p U
 
+/- Every arrow in a category fibred in groupoids is strongly Cartesian.  Thus
+   in the groupoid case the preservation condition defining the fibred
+   morphism category is automatic, as asserted by the source's full
+   sub-2-category discussion. -/
+theorem twoYonedaGroupoidMorphism_preservesCartesian
+    {C : Type uC} [Category.{vC} C]
+    {S : Type uS} [Category.{vS} S]
+    (p : S ⥤ C) [p.IsFibredInGroupoids] (U : C)
+    (G : twoYonedaGroupoidMorphismCategory p U) :
+    MapsStronglyCartesian (Over.forget U) p G.1 := by
+  intro _ _ φ _
+  exact fibredInGroupoids_all_morphisms_stronglyCartesian p
+    (inferInstance : p.IsFibredInGroupoids) (G.1.map φ)
+
 /- The same chosen-pullback formulas land in the whole strict morphism
    category in the groupoid case; preservation is automatic there. -/
 def twoYonedaGroupoidPullbackMorphism

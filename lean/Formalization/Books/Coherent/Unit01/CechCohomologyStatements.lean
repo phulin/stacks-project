@@ -425,20 +425,22 @@ theorem affine_open_augmented_cech_exact {X : Scheme.{u}}
 
 /-- Positive augmented Čech exactness for the cofinal system of standard-open
 covers of an affine scheme implies vanishing of derived global sections. -/
-/- TODO(proof agents -- leaf: Čech-vanish-basis comparison): regard all finite
-standard-open covers, ordered by refinement, as a cofinal system of covers from
-the standard-open basis.  Construct the canonical maps from their Čech
-cohomology objects to `schemeCohomologyObject N n`, and invoke the
+/- TODO(proof agents -- leaf: Čech-vanish-basis comparison): regard the finite
+standard-open covers of every affine open, ordered by refinement, as a cofinal
+system of covers from the affine basis.  Construct the canonical maps from
+their Čech cohomology objects to `schemeCohomologyObject N n`, and invoke the
 Čech-vanish-basis theorem (or prove it through the usual refinement colimit of
-Čech resolutions).  For each cover `𝒰`, use
-`hcech 𝒰 |>.positive_exact` to kill positive Čech cohomology.  Cofinality,
+Čech resolutions).  For each affine open `V` and cover `𝒰`, use
+`hcech V hV 𝒰 |>.positive_exact` to kill positive Čech cohomology.  Cofinality,
 not exactness of any single cover, is what makes the resulting map compute
 derived sheaf cohomology. -/
 theorem affine_standard_cover_system_to_derived_positive_vanishing
     {Y : Scheme.{u}} {hY : IsAffine Y} (N : Y.Modules)
     [SheafOfModules.IsQuasicoherent (R := Y.ringCatSheaf) N]
     [CategoryTheory.HasExt.{u} Y.Modules]
-    (hcech : ∀ 𝒰 : StandardOpenCover Y hY, AugmentedCechExactness 𝒰 N)
+    (hcech : ∀ (V : Y.Opens) (hV : IsAffineOpen V)
+      (𝒰 : StandardOpenCover (V : Scheme) hV),
+      AugmentedCechExactness 𝒰 (N.restrict V.ι))
     {n : ℕ} (hn : 0 < n) :
     IsZero (schemeCohomologyObject N n) := by
   sorry
@@ -453,8 +455,9 @@ theorem quasi_coherent_affine_cohomology_zero {X : Scheme.{u}}
   simpa [schemeCohomologyOn] using
     (affine_standard_cover_system_to_derived_positive_vanishing
       (hY := hU) (M.restrict U.ι)
-      (fun 𝒰 : StandardOpenCover (U : Scheme) hU ↦
-        standard_open_cover_augmented_cech_exact (hY := hU) 𝒰 (M.restrict U.ι)) hn)
+      (fun V hV 𝒰 ↦
+        standard_open_cover_augmented_cech_exact (hY := hV) 𝒰
+          ((M.restrict U.ι).restrict V.ι)) hn)
 
 /-! ### Affine morphisms and higher direct images -/
 

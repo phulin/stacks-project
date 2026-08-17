@@ -95,11 +95,6 @@ theorem primeLocalizedIntegerShortComplex_shortExact :
 
 /-! ## Nonsplitting and localization -/
 
-/-- A short complex of modules is split when it has a Mathlib splitting. -/
-def IsSplitShortComplex {R : Type u} [Ring R]
-    (S : CategoryTheory.ShortComplex (ModuleCat.{u} R)) : Prop :=
-  Nonempty S.Splitting
-
 /-- There are no nonzero `ℤ`-linear maps `ℚ → ℤ_(p)`. -/
 theorem primeLocalizedInteger_no_nonzero_hom (p : PrimeIndex)
     (φ : ℚ →ₗ[ℤ] primeLocalizedInteger p) :
@@ -108,7 +103,7 @@ theorem primeLocalizedInteger_no_nonzero_hom (p : PrimeIndex)
 
 /-- The displayed short-exact sequence is nonsplit. -/
 theorem primeLocalizedIntegerShortComplex_not_split :
-    ¬ IsSplitShortComplex primeLocalizedIntegerShortComplex := by
+    ¬ Nonempty primeLocalizedIntegerShortComplex.Splitting := by
   sorry
 
 /- The localization of the displayed sequence at the prime ideal `(p)`. -/
@@ -127,7 +122,7 @@ theorem primeLocalizedIntegerShortComplexAt_shortExact (p : PrimeIndex) :
 
 /-- At every prime ideal `(p)`, the localized sequence is split. -/
 theorem primeLocalizedIntegerShortComplexAt_split (p : PrimeIndex) :
-    IsSplitShortComplex (primeLocalizedIntegerShortComplexAt p) := by
+    Nonempty (primeLocalizedIntegerShortComplexAt p).Splitting := by
   sorry
 
 /-! ## The general Zariski-local formulation -/
@@ -137,9 +132,9 @@ def IsZariskiLocallySplit {R : Type u} [CommRing R]
     (S : CategoryTheory.ShortComplex (ModuleCat.{u} R)) : Prop :=
   ∃ U : Set R, Ideal.span U = ⊤ ∧
     ∀ f ∈ U,
-      IsSplitShortComplex
+      Nonempty
         (S.map (ModuleCat.localizedModuleFunctor
-          (Submonoid.powers f)))
+          (Submonoid.powers f))).Splitting
 
 /-- A nonsplit short-exact sequence which becomes split on a Zariski cover. -/
 structure NonsplitZariskiLocallySplitSequence where
@@ -147,7 +142,7 @@ structure NonsplitZariskiLocallySplitSequence where
   [commRingR : CommRing R]
   S : CategoryTheory.ShortComplex (ModuleCat R)
   shortExact : S.ShortExact
-  nonsplit : ¬ IsSplitShortComplex S
+  nonsplit : ¬ Nonempty S.Splitting
   locallySplit : IsZariskiLocallySplit S
 
 /-- There exists a nonsplit short-exact sequence that is split Zariski locally. -/

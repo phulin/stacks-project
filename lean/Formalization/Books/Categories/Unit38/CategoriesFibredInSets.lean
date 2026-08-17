@@ -280,7 +280,7 @@ abbrev CategoriesFibredInSetsOverCategory (C : Cat.{v, u}) :=
 theorem categoriesFibredInSetsOver_equivalent_to_presheaves
     {C : Type uC} [Category.{vC} C] :
     Nonempty
-      ((Cᵒᵖ ⥤ Type uC) ≌
+      (Presheaf C ≌
         CategoriesFibredInSetsOverCategory (Cat.of C)) := by
   sorry
 
@@ -289,7 +289,7 @@ existence theorem above is kept as the proposition-level interface, while
 this definition makes the equivalence directly usable by later statements. -/
 noncomputable def categoriesFibredInSetsOverEquivalence
     {C : Type uC} [Category.{vC} C] :
-    (Cᵒᵖ ⥤ Type uC) ≌
+    Presheaf C ≌
       CategoriesFibredInSetsOverCategory (Cat.of C) :=
   Classical.choice (categoriesFibredInSetsOver_equivalent_to_presheaves (C := C))
 

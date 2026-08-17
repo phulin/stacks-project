@@ -53,7 +53,7 @@ theorem finiteDimensional_subvectorSpace_product
 of transcendence degree `d`. -/
 theorem exists_subvectorSpace_power_growth_lower_bound
     {k : Type u} {K : Type v} [Field k] [Field K] [Algebra k K]
-    (hK : Algebra.EssFiniteType k K) (d : ℕ)
+    (_hK : Algebra.EssFiniteType k K) (d : ℕ)
     (htrdeg : Algebra.trdeg k K = d) :
     ∃ V : Submodule k K, FiniteDimensional k V ∧
       ∃ ε : ℝ, 0 < ε ∧
@@ -61,7 +61,7 @@ theorem exists_subvectorSpace_power_growth_lower_bound
           (Module.finrank k ((V ^ n : Submodule k K) : Type v) : ℝ) ≥
             ε * (n : ℝ) ^ d := by
   classical
-  letI : FaithfulSMul k K := inferInstance
+  let : FaithfulSMul k K := inferInstance
   obtain ⟨ι, x, hx⟩ := exists_isTranscendenceBasis' k K
   have hcard : Cardinal.mk ι = d := by
     rw [hx.cardinalMk_eq_trdeg, htrdeg]
@@ -154,7 +154,7 @@ theorem exists_subvectorSpace_power_growth_lower_bound
     simpa [Function.comp_def] using hlin n
   have hcardfin (n : ℕ) :
       Fintype.card (I n) ≤ Module.finrank k ((V ^ n : Submodule k K) : Type v) := by
-    haveI : FiniteDimensional k V := hV
+    have : FiniteDimensional k V := hV
     have hpow_fin (m : ℕ) :
         FiniteDimensional k ((V ^ m : Submodule k K) : Type v) := by
       have hone : FiniteDimensional k ((1 : Submodule k K) : Type v) := by
@@ -166,9 +166,9 @@ theorem exists_subvectorSpace_power_growth_lower_bound
           exact hone
       | succ m ihm =>
           rw [Submodule.pow_succ]
-          haveI : FiniteDimensional k ((V ^ m : Submodule k K) : Type v) := ihm
+          have : FiniteDimensional k ((V ^ m : Submodule k K) : Type v) := ihm
           exact finiteDimensional_subvectorSpace_product (V ^ m) V
-    haveI : FiniteDimensional k ((V ^ n : Submodule k K) : Type v) := hpow_fin n
+    have : FiniteDimensional k ((V ^ n : Submodule k K) : Type v) := hpow_fin n
     exact (hlin_sub n).fintype_card_le_finrank
   exact ⟨V, hV, ((d + 1 : ℝ)⁻¹) ^ d, by positivity, by
     intro n hn

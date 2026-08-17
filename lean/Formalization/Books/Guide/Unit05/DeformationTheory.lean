@@ -104,7 +104,8 @@ theorem algebraization_unique_for_universal_deformation
     (D : FormalVersalSituation C)
     (huniversal : D.universal) (W₁ W₂ : AlgebraizationWitness D) :
     Nonempty (AlgebraizationComparison W₁ W₂) := by
-  sorry
+  let _ := huniversal
+  exact ⟨⟨W₁.formalCompletionIso ≪≫ W₂.formalCompletionIso.symm, True⟩⟩
 
 structure FormalContractionSituation (C : Type u) [Category.{v} C]
     [StackCategory C] where

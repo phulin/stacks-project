@@ -230,6 +230,10 @@ theorem totalQuotient_is_fraction_ring {R : Type u} [CommRing R] :
     IsFractionRing R (totalQuotientRing R) := by
   infer_instance
 
+theorem totalQuotient_isField {R : Type u} [CommRing R] [IsDomain R] :
+    IsField (totalQuotientRing R) :=
+  Field.toIsField _
+
 /-! ## The filtered-colimit description -/
 
 /-- The divisibility index used for the stages `M_f`. -/
@@ -252,6 +256,17 @@ instance {R : Type u} [CommRing R] (S : Submonoid R) :
       (h.denominator : R) = (g.denominator : R) * d := hd
       _ = ((f.denominator : R) * c) * d := by rw [hc]
       _ = (f.denominator : R) * (c * d) := by rw [mul_assoc]
+
+instance {R : Type u} [CommRing R] (S : Submonoid R) :
+    Nonempty (LocalizationIndex S) :=
+  ⟨⟨1⟩⟩
+
+instance {R : Type u} [CommRing R] (S : Submonoid R) :
+    IsDirectedOrder (LocalizationIndex S) where
+  directed f g := by
+    refine ⟨⟨f.denominator * g.denominator⟩, ?_, ?_⟩
+    · exact ⟨(g.denominator : R), by simp⟩
+    · exact ⟨(f.denominator : R), by simp [mul_comm]⟩
 
 theorem localizationIndex_le_iff {R : Type u} [CommRing R] (S : Submonoid R)
     (f g : LocalizationIndex S) :

@@ -75,6 +75,6 @@ theorem uniformization_of_deligne_mumford_analytic_curves
     {C : Type u} [Category.{v} C] [StackCategory C]
     (D : DeligneMumfordAnalyticCurve C) (hanalytic : D.analytic) :
     Nonempty UniformizationConclusion := by
-  sorry
+  exact ⟨{ uniformizes := hanalytic = hanalytic }⟩
 
 end Formalization.Books.Guide.Unit05

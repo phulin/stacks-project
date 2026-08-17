@@ -376,12 +376,9 @@ theorem graph_kernel_quotient_torsion_free {n : ℕ}
       (edgeLattice A ⧸ LinearMap.ker (graphCoboundary A)) := by
   sorry
 
+/-! The image of an oriented graph incidence map is saturated. -/
 theorem graph_image_quotient_torsion_free {n : ℕ}
-    (A : Matrix (Fin n) (Fin n) ℤ)
-    (hsymm : ∀ i j, A i j = A j i)
-    (hoffdiag : ∀ ⦃i j⦄, i ≠ j → 0 ≤ A i j)
-    (hconnected : ¬ ∃ I : Set (Fin n), I.Nonempty ∧ I ≠ Set.univ ∧
-      ∀ ⦃i j⦄, i ∈ I → j ∉ I → A i j = 0) :
+    (A : Matrix (Fin n) (Fin n) ℤ) :
     Module.IsTorsionFree ℤ
       (edgeLattice A ⧸ LinearMap.range (graphBoundary A)) := by
   sorry

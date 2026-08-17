@@ -381,7 +381,8 @@ theorem twoYonedaGroupoidMorphismCategory_isGroupoid
     {S : Type uS} [Category.{vS} S]
     (p : S ⥤ C) [p.IsFibredInGroupoids] (U : C) :
     IsGroupoid (twoYonedaGroupoidMorphismCategory p U) := by
-  sorry
+  exact twoYonedaMorphismCategory_isGroupoid
+    (Over.forget U) p (inferInstance : p.IsFibredInGroupoids)
 
 /-- The 2-Yoneda lemma for categories fibred in groupoids. -/
 theorem twoYoneda_groupoid_equivalence
@@ -534,8 +535,8 @@ theorem twoYonedaAssociatedProjection_isFibredInGroupoids
     {S : Type uS} [Category.{vS} S]
     (p : S ⥤ C) [p.IsFibredInGroupoids] :
     (twoYonedaAssociatedProjection p).IsFibredInGroupoids := by
-  apply groupoidPresheafProjection_isFibredInGroupoids
-  exact twoYonedaHomPresheaf_obj_isGroupoid p
+  exact groupoidPresheafProjection_isFibredInGroupoids
+    (twoYonedaHomPresheaf p) (twoYonedaHomPresheaf_obj_isGroupoid p)
 
 /- The functor `G` of the source evaluates the fiber component at the
    identity object and then uses the arrow in the slice to reach the target

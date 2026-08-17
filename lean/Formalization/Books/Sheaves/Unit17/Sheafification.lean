@@ -466,8 +466,8 @@ noncomputable def constantPresheafSheafificationMap {X : TopCat.{v}} (A : Type v
 theorem constantPresheafSheafificationMap_isIso {X : TopCat.{v}} (A : Type v) :
     IsIso (constantPresheafSheafificationMap (X := X) A) := by
   let P := constantPresheaf (X := X) A
-  let Q := constantSheaf X A
-  let f : sheafification P ⟶ Q := ⟨constantPresheafSheafificationMap (X := X) A⟩
+  let f : sheafification P ⟶ constantSheaf X A :=
+    ⟨constantPresheafSheafificationMap (X := X) A⟩
   letI : IsIso f := (TopCat.Presheaf.isIso_iff_stalkFunctor_map_iso f).2 (by
     intro x
     rw [isIso_iff_bijective]
@@ -479,8 +479,18 @@ theorem constantPresheafSheafificationMap_isIso {X : TopCat.{v}} (A : Type v) :
     have hw := constantSheafStalkMap_bijective A x
     have huv : u ≫ v = w := by
       dsimp [u, v, w]
-      rw [← Functor.map_comp]
-      exact sheafificationUnit_comp_lift P Q (constantPresheafToConstantSheaf A)
+      calc
+        (TopCat.Presheaf.stalkFunctor (Type v) x).map (sheafificationUnit P) ≫
+              (TopCat.Presheaf.stalkFunctor (Type v) x).map f.hom =
+            (TopCat.Presheaf.stalkFunctor (Type v) x).map
+              (sheafificationUnit P ≫ f.hom) :=
+          (Functor.map_comp _ _ _).symm
+        _ = (TopCat.Presheaf.stalkFunctor (Type v) x).map
+              (constantPresheafToConstantSheaf A) := by
+          rw [show sheafificationUnit P ≫ f.hom =
+            constantPresheafToConstantSheaf A by
+              exact sheafificationUnit_comp_lift P (constantSheaf X A)
+                (constantPresheafToConstantSheaf A)]
     constructor
     · intro a b hab
       obtain ⟨a₀, ha₀⟩ := hu.2 a
@@ -490,10 +500,20 @@ theorem constantPresheafSheafificationMap_isIso {X : TopCat.{v}} (A : Type v) :
         have h' := congrArg (fun q => q b₀) huv
         change v (u a₀) = w a₀ at h
         change v (u b₀) = w b₀ at h'
-        rw [ha₀, hb₀] at h h'
-        rw [h, h']
-        exact hab
-      have hab₀ : a₀ = b₀ := hw.1 hwab
+        change u a₀ = a at ha₀
+        change u b₀ = b at hb₀
+        rw [ha₀] at h
+        rw [hb₀] at h'
+        have hₐ : v a = w a₀ := h
+        have h_b : v b = w b₀ := h'
+        exact hₐ.symm.trans (hab.trans h_b)
+      have hwab' : constantSheafStalkMap A x a₀ = constantSheafStalkMap A x b₀ := by
+        change (TopCat.Presheaf.stalkFunctor (Type v) x).map
+            (constantPresheafToConstantSheaf A) a₀ =
+          (TopCat.Presheaf.stalkFunctor (Type v) x).map
+            (constantPresheafToConstantSheaf A) b₀
+        exact hwab
+      have hab₀ : a₀ = b₀ := hw.1 hwab'
       calc
         a = u a₀ := ha₀.symm
         _ = u b₀ := congrArg (fun z => u z) hab₀
@@ -503,7 +523,8 @@ theorem constantPresheafSheafificationMap_isIso {X : TopCat.{v}} (A : Type v) :
       refine ⟨u a, ?_⟩
       have h := congrArg (fun q => q a) huv
       change v (u a) = w a at h
-      rw [h, ha])
+      change v (u a) = b
+      simpa [w, constantSheafStalkMap] using h.trans ha)
   change IsIso f.hom
   exact (TopCat.Sheaf.forget (Type v) X).map_isIso f
 
@@ -568,7 +589,44 @@ theorem sheafificationMap_preserves_injective {X : TopCat.{v}}
     {F G : TopCat.Presheaf (Type v) X} (φ : F ⟶ G)
     (hφ : PresheafInjective φ) :
     PresheafInjective (sheafificationMap φ) := by
-  sorry
+  let f : sheafification F ⟶ sheafification G := ⟨sheafificationMap φ⟩
+  change ∀ U, Function.Injective (f.hom.app (op U))
+  apply (TopCat.Presheaf.app_injective_iff_stalkFunctor_map_injective f.hom).1
+  intro x
+  let uF := (TopCat.Presheaf.stalkFunctor (Type v) x).map (sheafificationUnit F)
+  let m := (TopCat.Presheaf.stalkFunctor (Type v) x).map (sheafificationMap φ)
+  let p := (TopCat.Presheaf.stalkFunctor (Type v) x).map φ
+  let uG := (TopCat.Presheaf.stalkFunctor (Type v) x).map (sheafificationUnit G)
+  have hF := sheafificationUnit_stalk_bijective F x
+  have hG := sheafificationUnit_stalk_bijective G x
+  have hp : Function.Injective p :=
+    TopCat.Presheaf.stalkFunctor_map_injective_of_app_injective hφ x
+  have hcomp : uF ≫ m = p ≫ uG := by
+    have h := congrArg
+      (fun q => (TopCat.Presheaf.stalkFunctor (Type v) x).map q)
+      (sheafificationUnit_comp_map φ)
+    dsimp [uF, m, p, uG]
+    rw [Functor.map_comp, Functor.map_comp] at h
+    exact h
+  intro a b hab
+  obtain ⟨a₀, ha₀⟩ := hF.2 a
+  obtain ⟨b₀, hb₀⟩ := hF.2 b
+  have hca := congrArg (fun q => q a₀) hcomp
+  have hcb := congrArg (fun q => q b₀) hcomp
+  change m (uF a₀) = uG (p a₀) at hca
+  change m (uF b₀) = uG (p b₀) at hcb
+  change uF a₀ = a at ha₀
+  change uF b₀ = b at hb₀
+  change m a = m b at hab
+  have hstalk : uG (p a₀) = uG (p b₀) := by
+    rw [← hca, ← hcb, ha₀, hb₀]
+    exact hab
+  have hpab : p a₀ = p b₀ := hG.1 hstalk
+  have hab₀ : a₀ = b₀ := hp hpab
+  calc
+    a = uF a₀ := ha₀.symm
+    _ = uF b₀ := congrArg (fun z => uF z) hab₀
+    _ = b := hb₀
 
 /-- Surjectivity in the sheaf sense (local sectionwise preimages) is
 preserved by sheafification. -/
@@ -577,7 +635,43 @@ theorem sheafificationMap_preserves_surjective {X : TopCat.{v}}
     (hφ : PresheafSurjective φ) :
     Presheaf.IsLocallySurjective (Opens.grothendieckTopology X)
       (sheafificationMap φ) := by
-  sorry
+  let f : sheafification F ⟶ sheafification G := ⟨sheafificationMap φ⟩
+  change TopCat.Presheaf.IsLocallySurjective f.hom
+  apply (TopCat.Presheaf.locally_surjective_iff_surjective_on_stalks f.hom).2
+  have hloc : TopCat.Presheaf.IsLocallySurjective φ := by
+    apply (TopCat.Presheaf.isLocallySurjective_iff φ).2
+    intro U t x hx
+    obtain ⟨s, hs⟩ := hφ U t
+    refine ⟨U, le_rfl, ⟨s, ?_⟩, hx⟩
+    simpa using hs
+  have hp_all :=
+    (TopCat.Presheaf.locally_surjective_iff_surjective_on_stalks φ).1 hloc
+  intro x
+  let uF := (TopCat.Presheaf.stalkFunctor (Type v) x).map (sheafificationUnit F)
+  let m := (TopCat.Presheaf.stalkFunctor (Type v) x).map (sheafificationMap φ)
+  let p := (TopCat.Presheaf.stalkFunctor (Type v) x).map φ
+  let uG := (TopCat.Presheaf.stalkFunctor (Type v) x).map (sheafificationUnit G)
+  have hF := sheafificationUnit_stalk_bijective F x
+  have hG := sheafificationUnit_stalk_bijective G x
+  have hp : Function.Surjective p := by
+    simpa [p] using hp_all x
+  have hcomp : uF ≫ m = p ≫ uG := by
+    have h := congrArg
+      (fun q => (TopCat.Presheaf.stalkFunctor (Type v) x).map q)
+      (sheafificationUnit_comp_map φ)
+    dsimp [uF, m, p, uG]
+    rw [Functor.map_comp, Functor.map_comp] at h
+    exact h
+  intro b
+  obtain ⟨c, hc⟩ := hG.2 b
+  obtain ⟨a, ha⟩ := hp c
+  refine ⟨uF a, ?_⟩
+  have h := congrArg (fun q => q a) hcomp
+  change m (uF a) = uG (p a) at h
+  change m (uF a) = b
+  have h' : uG (p a) = uG c :=
+    congrArg (fun z => (ConcreteCategory.hom uG) z) ha
+  exact h.trans (h'.trans hc)
 
 end
 

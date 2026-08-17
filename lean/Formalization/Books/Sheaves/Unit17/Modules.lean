@@ -52,16 +52,20 @@ noncomputable def ringSheafificationUnit {X : TopCat.{v}}
 /-- The ring sheafification unit is locally injective. -/
 theorem ringSheafificationUnit_isLocallyInjective {X : TopCat.{v}}
     (O : RingPresheaf.{v, v} X) :
-    Presheaf.IsLocallyInjective (Opens.grothendieckTopology X)
+      Presheaf.IsLocallyInjective (Opens.grothendieckTopology X)
       (ringSheafificationUnit O) := by
-  sorry
+  change Presheaf.IsLocallyInjective (Opens.grothendieckTopology X)
+    (CategoryTheory.toSheafify (Opens.grothendieckTopology X) O)
+  infer_instance
 
 /-- The ring sheafification unit is locally surjective. -/
 theorem ringSheafificationUnit_isLocallySurjective {X : TopCat.{v}}
     (O : RingPresheaf.{v, v} X) :
-    Presheaf.IsLocallySurjective (Opens.grothendieckTopology X)
+      Presheaf.IsLocallySurjective (Opens.grothendieckTopology X)
       (ringSheafificationUnit O) := by
-  sorry
+  change Presheaf.IsLocallySurjective (Opens.grothendieckTopology X)
+    (CategoryTheory.toSheafify (Opens.grothendieckTopology X) O)
+  infer_instance
 
 /-- The sheaf of modules obtained by sheafifying an `O`-module presheaf. -/
 noncomputable def moduleSheafification {X : TopCat.{v}}
@@ -108,7 +112,103 @@ theorem moduleSheafification_underlying_iso {X : TopCat.{v}}
     Nonempty
       (moduleSheafificationSetPresheaf F ≅
         (sheafification (moduleUnderlyingSetPresheaf F)).presheaf) := by
-  sorry
+  letI : Presheaf.IsLocallyInjective (Opens.grothendieckTopology X)
+      (ringSheafificationUnit O) := ringSheafificationUnit_isLocallyInjective O
+  letI : Presheaf.IsLocallySurjective (Opens.grothendieckTopology X)
+      (ringSheafificationUnit O) := ringSheafificationUnit_isLocallySurjective O
+  let eM := (PresheafOfModules.sheafificationCompForgetCompToPresheaf
+    (ringSheafificationUnit O)).app F
+  let eMSet :=
+    ((Functor.whiskeringRight (Opens X)ᵒᵖ AddCommGrpCat (Type v)).obj
+      (CategoryTheory.forget AddCommGrpCat)).mapIso eM
+  let eM' : moduleSheafificationSetPresheaf F ≅
+      Formalization.Books.Sheaves.Unit05.underlyingPresheaf
+        (CategoryTheory.forget AddCommGrpCat)
+        ((CategoryTheory.sheafToPresheaf
+          (Opens.grothendieckTopology X) AddCommGrpCat).obj
+          ((CategoryTheory.presheafToSheaf
+            (Opens.grothendieckTopology X) AddCommGrpCat).obj F.presheaf)) := by
+    change
+      @Iso ((Opens X)ᵒᵖ ⥤ Type v) Functor.category
+        (moduleSheafificationSetPresheaf F)
+        (Formalization.Books.Sheaves.Unit05.underlyingPresheaf
+          (CategoryTheory.forget AddCommGrpCat)
+          ((CategoryTheory.sheafToPresheaf
+            (Opens.grothendieckTopology X) AddCommGrpCat).obj
+            ((CategoryTheory.presheafToSheaf
+              (Opens.grothendieckTopology X) AddCommGrpCat).obj F.presheaf)))
+    change
+      @Iso ((Opens X)ᵒᵖ ⥤ Type v) Functor.category
+        (((PresheafOfModules.toPresheaf (ringSheafification O).obj).obj
+          ((PresheafOfModules.sheafification
+            (ringSheafificationUnit O)).obj F).val) ⋙
+            CategoryTheory.forget AddCommGrpCat)
+        (((CategoryTheory.presheafToSheaf
+            (Opens.grothendieckTopology X) AddCommGrpCat).obj
+          ((PresheafOfModules.toPresheaf O).obj F)).obj ⋙
+            CategoryTheory.forget AddCommGrpCat)
+    exact eMSet
+  let J := Opens.grothendieckTopology X
+  let P := moduleUnderlyingSetPresheaf F
+  let G : TopCat.Sheaf (Type v) X :=
+    ⟨moduleSheafificationSetPresheaf F,
+      (TopCat.Presheaf.isSheaf_iff_isSheaf_comp
+        (CategoryTheory.forget AddCommGrpCat)
+        ((SheafOfModules.toSheaf (ringSheafification O)).obj
+          (moduleSheafification F)).obj).mp
+        ((SheafOfModules.toSheaf (ringSheafification O)).obj
+          (moduleSheafification F)).property⟩
+  let H : TopCat.Sheaf (Type v) X :=
+    (CategoryTheory.presheafToSheaf J (Type v)).obj P
+  let p := CategoryTheory.sheafifyLift J (sheafificationUnit P)
+    (sheafification_isSheaf P)
+  let q := sheafificationLift P H (CategoryTheory.toSheafify J P)
+  have hp : CategoryTheory.toSheafify J P ≫ p = sheafificationUnit P := by
+    exact CategoryTheory.toSheafify_sheafifyLift _ _ _
+  have hq : sheafificationUnit P ≫ q = CategoryTheory.toSheafify J P := by
+    exact sheafificationUnit_comp_lift P H (CategoryTheory.toSheafify J P)
+  have hqp : q ≫ p = 𝟙 _ := by
+    have h₁ : q ≫ p =
+        sheafificationLift P (sheafification P) (sheafificationUnit P) := by
+      apply sheafificationLift_unique P (sheafification P) (sheafificationUnit P)
+      rw [← Category.assoc, hq, hp]
+    have h₂ : (𝟙 _) =
+        sheafificationLift P (sheafification P) (sheafificationUnit P) :=
+      sheafificationLift_unique P (sheafification P) (sheafificationUnit P) (𝟙 _)
+        (by simp)
+    exact h₁.trans h₂.symm
+  have hpq : p ≫ q = 𝟙 _ := by
+    apply CategoryTheory.sheafify_hom_ext J (p ≫ q) (𝟙 _) H.property
+    rw [← Category.assoc, hp, hq]
+    simp
+  let eLocal : H.presheaf ≅ (sheafification P).presheaf :=
+    { hom := p, inv := q, hom_inv_id := hpq, inv_hom_id := hqp }
+  let S : TopCat.Sheaf (Type v) X :=
+    ⟨Formalization.Books.Sheaves.Unit05.underlyingPresheaf
+        (CategoryTheory.forget AddCommGrpCat)
+        ((CategoryTheory.presheafToSheaf J AddCommGrpCat).obj F.presheaf).obj,
+      (TopCat.Presheaf.isSheaf_iff_isSheaf_comp
+        (CategoryTheory.forget AddCommGrpCat)
+        ((CategoryTheory.presheafToSheaf J AddCommGrpCat).obj F.presheaf).obj).mp
+        ((CategoryTheory.presheafToSheaf J AddCommGrpCat).obj F.presheaf).property⟩
+  let e := CategoryTheory.presheafToSheafCompComposeAndSheafifyIso J
+    (CategoryTheory.forget AddCommGrpCat)
+  let eF := e.app F.presheaf
+  let eK0 := (CategoryTheory.sheafToPresheaf J (Type v)).mapIso eF
+  let iS := CategoryTheory.isoSheafify J S.property
+  let iS' : S.presheaf ≅
+      (CategoryTheory.sheafToPresheaf J (Type v)).obj
+        ((CategoryTheory.presheafToSheaf J (Type v)).obj S.presheaf) := by
+    exact iS
+  let eGH : moduleSheafificationSetPresheaf F ≅ H.presheaf := by
+    simpa [P, G, H, S, moduleSheafificationSetPresheaf,
+      moduleUnderlyingSetPresheaf,
+      Formalization.Books.Sheaves.Unit05.underlyingPresheaf,
+      CategoryTheory.Sheaf.composeAndSheafify] using
+      (eM'.trans (iS'.trans eK0))
+  let eFinal : moduleSheafificationSetPresheaf F ≅
+      (sheafification P).presheaf := eGH ≪≫ eLocal
+  exact ⟨eFinal⟩
 
 /-- The universal property of the module sheafification, in the canonical
 restricted-scalar form used by Mathlib. -/
@@ -198,10 +298,19 @@ theorem existsUnique_moduleSheafificationFactorization {X : TopCat.{v}}
     (G : SheafOfModules.{v} (ringSheafification O))
     (φ : F ⟶ (sheafModuleRestriction O).obj G) :
     ∃! ψ : moduleSheafification F ⟶ G,
-      moduleSheafificationUnit F ≫
+  moduleSheafificationUnit F ≫
           (PresheafOfModules.restrictScalars (ringSheafificationUnit O)).map ψ.val =
         φ := by
-  sorry
+  let e := moduleSheafificationHomEquiv F G
+  refine ⟨e.symm φ, ?_, ?_⟩
+  · exact e.apply_symm_apply φ
+  · intro ψ hψ
+    apply e.injective
+    have hψ' : e ψ = φ := by
+      change moduleSheafificationUnit F ≫
+        (PresheafOfModules.restrictScalars (ringSheafificationUnit O)).map ψ.val = φ
+      exact hψ
+    exact hψ'.trans (e.apply_symm_apply φ).symm
 
 /-! ## The induced action and its universal property -/
 
@@ -278,7 +387,97 @@ theorem moduleSheafificationActionDomain_isSheaf {X : TopCat.{v}}
     TopCat.Presheaf.IsSheaf (presheafProduct
       (ringSheafificationSetPresheaf O)
       (moduleSheafificationSetPresheaf F)) := by
-  sorry
+  let R : TopCat.Sheaf (Type v) X :=
+    ⟨ringSheafificationSetPresheaf O,
+      (TopCat.Presheaf.isSheaf_iff_isSheaf_comp
+        (CategoryTheory.forget RingCat) (ringSheafification O).obj).mp
+        (ringSheafification O).property⟩
+  let M : TopCat.Sheaf (Type v) X :=
+    ⟨moduleSheafificationSetPresheaf F,
+      (TopCat.Presheaf.isSheaf_iff_isSheaf_comp
+        (CategoryTheory.forget AddCommGrpCat)
+        ((SheafOfModules.toSheaf (ringSheafification O)).obj
+          (moduleSheafification F)).obj).mp
+        ((SheafOfModules.toSheaf (ringSheafification O)).obj
+          (moduleSheafification F)).property⟩
+  change TopCat.Presheaf.IsSheaf (presheafProduct R.presheaf M.presheaf)
+  rw [TopCat.Presheaf.isSheaf_iff_isSheafUniqueGluing_types]
+  intro ι U sf hsf
+  let e := fun i : ι =>
+    presheafProductSectionsEquiv R.presheaf M.presheaf (U i)
+  have hInfLeft (i j : ι) :
+      Opens.infLELeft (U i) (U j) =
+        homOfLE (show U i ⊓ U j ≤ U i from inf_le_left) := by
+    apply Subsingleton.elim
+  have hInfRight (i j : ι) :
+      Opens.infLERight (U i) (U j) =
+        homOfLE (show U i ⊓ U j ≤ U j from inf_le_right) := by
+    apply Subsingleton.elim
+  have hLeSupr (i : ι) :
+      Opens.leSupr U i =
+        homOfLE (show U i ≤ iSup U from le_iSup U i) := by
+    apply Subsingleton.elim
+  have hR : TopCat.Presheaf.IsCompatible R.presheaf U
+      (fun i => (e i (sf i)).1) := by
+    intro i j
+    have h := hsf i j
+    rw [← (e i).symm_apply_apply (sf i),
+      ← (e j).symm_apply_apply (sf j), hInfLeft i j, hInfRight i j] at h
+    dsimp [e] at h
+    rw [presheafProduct_restriction, presheafProduct_restriction] at h
+    exact congrArg Prod.fst h
+  have hM : TopCat.Presheaf.IsCompatible M.presheaf U
+      (fun i => (e i (sf i)).2) := by
+    intro i j
+    have h := hsf i j
+    rw [← (e i).symm_apply_apply (sf i),
+      ← (e j).symm_apply_apply (sf j), hInfLeft i j, hInfRight i j] at h
+    dsimp [e] at h
+    rw [presheafProduct_restriction, presheafProduct_restriction] at h
+    exact congrArg Prod.snd h
+  obtain ⟨sR, hsR, hsR_unique⟩ :=
+    TopCat.Presheaf.IsSheaf.isSheafUniqueGluing_types R.property
+      (fun i => (e i (sf i)).1) hR
+  obtain ⟨sM, hsM, hsM_unique⟩ :=
+    TopCat.Presheaf.IsSheaf.isSheafUniqueGluing_types M.property
+      (fun i => (e i (sf i)).2) hM
+  refine ⟨(presheafProductSectionsEquiv R.presheaf M.presheaf (iSup U)).symm
+      (sR, sM), ?_, ?_⟩
+  · intro i
+    have h := hsR i
+    have h' := hsM i
+    rw [← (e i).symm_apply_apply (sf i),
+      hLeSupr i]
+    dsimp [e] at ⊢
+    rw [presheafProduct_restriction]
+    simp only [Equiv.symm_apply_apply]
+    apply (presheafProductSectionsEquiv R.presheaf M.presheaf (U i)).injective
+    simpa [e, presheafProductSectionsEquiv] using (Prod.ext h h')
+  · intro t ht
+    let p := presheafProductSectionsEquiv R.presheaf M.presheaf (iSup U) t
+    have hpR : TopCat.Presheaf.IsGluing R.presheaf U
+        (fun i => (e i (sf i)).1) p.1 := by
+      intro i
+      have h := ht i
+      rw [← (presheafProductSectionsEquiv R.presheaf M.presheaf (iSup U)).symm_apply_apply t,
+        ← (e i).symm_apply_apply (sf i), hLeSupr i] at h
+      dsimp [e] at h
+      rw [presheafProduct_restriction] at h
+      exact congrArg Prod.fst h
+    have hpM : TopCat.Presheaf.IsGluing M.presheaf U
+        (fun i => (e i (sf i)).2) p.2 := by
+      intro i
+      have h := ht i
+      rw [← (presheafProductSectionsEquiv R.presheaf M.presheaf (iSup U)).symm_apply_apply t,
+        ← (e i).symm_apply_apply (sf i), hLeSupr i] at h
+      dsimp [e] at h
+      rw [presheafProduct_restriction] at h
+      exact congrArg Prod.snd h
+    apply (presheafProductSectionsEquiv R.presheaf M.presheaf (iSup U)).injective
+    change p = (sR, sM)
+    have hpR' := hsR_unique p.1 hpR
+    have hpM' := hsM_unique p.2 hpM
+    exact Prod.ext hpR' hpM'
 
 /-- The scalar action as an actual morphism of sheaves of sets. -/
 noncomputable def moduleSheafificationActionSheaf {X : TopCat.{v}}
@@ -300,9 +499,11 @@ theorem moduleSheafificationUnit_action_compatibility {X : TopCat.{v}}
     (r : O.obj (op U)) (m : F.obj (op U)) :
     moduleSheafificationActionAt F U
         ((ringSheafificationUnit O).app (op U) r)
-        ((moduleSheafificationUnit F).app (op U) m) =
+      ((moduleSheafificationUnit F).app (op U) m) =
       (moduleSheafificationUnit F).app (op U) (r • m) := by
-  sorry
+  dsimp [moduleSheafificationActionAt]
+  have h := (((moduleSheafificationUnit F).app (op U)).hom.map_smul r m).symm
+  exact h
 
 /-! ## Restriction, tensor product sheaves, and change of rings -/
 
@@ -354,7 +555,56 @@ theorem exists_sheafChangeOfRingsAdjunction {X : TopCat.{v}}
     {O₁ O₂ : Sheaf (Opens.grothendieckTopology X) RingCat.{v}}
       (α : O₁ ⟶ O₂) :
     Nonempty (sheafChangeOfRings α ⊣ sheafRestrictionOfScalars α) := by
-  sorry
+  let hR : ∀ F : SheafOfModules.{v} O₂,
+      (restrictionOfScalars α.hom).obj F.val ≅
+        ((sheafRestrictionOfScalars α).obj F).val := fun F => by
+    refine PresheafOfModules.isoMk
+      (fun U => (ModuleCat.restrictScalarsCongr
+        (f := (asIdentityRingPresheafMorphism α.hom).app U |>.hom)
+        (g := (α.hom.app U).hom) (by
+          ext x
+          simp [asIdentityRingPresheafMorphism])).app (F.val.obj U)) ?_
+    intro U V f
+    ext x
+    change F.val.map f x = F.val.map f x
+    rfl
+  let ePost (G : SheafOfModules.{v} O₁) (F : SheafOfModules.{v} O₂) :
+      (G.val ⟶ (restrictionOfScalars α.hom).obj F.val) ≃
+        (G.val ⟶ ((sheafRestrictionOfScalars α).obj F).val) :=
+    { toFun := fun f => f ≫ (hR F).hom
+      invFun := fun f => f ≫ (hR F).inv
+      left_inv := by intro f; simp
+      right_inv := by intro f; simp }
+  let eFF (G : SheafOfModules.{v} O₁) (F : SheafOfModules.{v} O₂) :
+      (G.val ⟶ ((sheafRestrictionOfScalars α).obj F).val) ≃
+        (G ⟶ (sheafRestrictionOfScalars α).obj F) :=
+    (SheafOfModules.fullyFaithfulForget O₁).homEquiv
+      (X := G) (Y := (sheafRestrictionOfScalars α).obj F) |>.symm
+  let eSh (G : SheafOfModules.{v} O₁) (F : SheafOfModules.{v} O₂) :
+      ((sheafChangeOfRings α).obj G ⟶ F) ≃
+        ((changeOfRings α.hom).obj G.val ⟶ F.val) :=
+    (PresheafOfModules.sheafificationAdjunction (𝟙 O₂.obj)).homEquiv
+      ((changeOfRings α.hom).obj G.val) F
+  let eHom :
+      ∀ (G : SheafOfModules.{v} O₁) (F : SheafOfModules.{v} O₂),
+        ((sheafChangeOfRings α).obj G ⟶ F) ≃
+          (G ⟶ (sheafRestrictionOfScalars α).obj F) :=
+    fun G F =>
+      (eSh G F).trans
+        (((changeOfRingsAdjunction α.hom).homEquiv G.val F.val).trans
+          ((ePost G F).trans
+            (eFF G F)))
+  let adj : sheafChangeOfRings α ⊣ sheafRestrictionOfScalars α :=
+    Adjunction.mkOfHomEquiv
+      { homEquiv := eHom
+        homEquiv_naturality_left_symm := by
+          intros
+          dsimp [eHom]
+          dsimp [eFF]
+        homEquiv_naturality_right := by
+          intros
+          sorry }
+  exact Nonempty.intro adj
 
 /-- A chosen adjunction between sheaf extension and restriction of scalars. -/
 noncomputable def sheafChangeOfRingsAdjunction {X : TopCat.{v}}

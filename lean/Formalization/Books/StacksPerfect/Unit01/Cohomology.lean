@@ -22,21 +22,19 @@ namespace Formalization.Books.StacksPerfect.Unit01
 variable {𝒮 : Type u} [Category.{u} 𝒮]
   [AlgebraicStackCategory 𝒮]
 
-/-- The constant derived integer object on each of the four sites. -/
-class ConstantIntegerData (X : 𝒮) [StackSiteData X]
-    [StackCohomologyData X] where
-  object : ∀ τ : SiteKind, SiteDerivedCategory X τ .abelian
-
+/-- The constant integer sheaf on each of the four sites is supplied by the
+site data; its derived object is placed in degree zero. -/
 def ConstantIntegerObject (X : 𝒮) [StackSiteData X]
-    [StackCohomologyData X] [ConstantIntegerData X] (τ : SiteKind) :
+  (τ : SiteKind) :
     SiteDerivedCategory X τ .abelian :=
-  ConstantIntegerData.object (X := X) τ
+  (DerivedCategory.singleFunctor (CoefficientCarrier X τ .abelian) 0).obj
+    (StackSiteData.constantIntegerSheaf (X := X) τ)
 
 /-! ## The constant-integer comparison -/
 
 /-- `Lg_! ℤ = ℤ` for either the lisse-étale or the flat-fppf comparison. -/
 theorem lemma_higher_shriek_Z (X : 𝒮) [StackSiteData X]
-    [SiteComparisonData X] [StackCohomologyData X] [ConstantIntegerData X] :
+    [SiteComparisonData X] :
     ∀ c : ComparisonKind,
       Nonempty ((derivedShriek X c .abelian).obj
           (ConstantIntegerObject X (fineSite c)) ≅

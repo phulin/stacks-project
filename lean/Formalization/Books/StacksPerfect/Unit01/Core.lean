@@ -1,9 +1,7 @@
 import Mathlib.Algebra.Homology.DerivedCategory.HomologySequence
+import Mathlib.Algebra.Homology.HomotopyCategory.HomComplex
 import Mathlib.CategoryTheory.Abelian.Basic
-import Mathlib.CategoryTheory.Equivalence
-import Mathlib.CategoryTheory.Localization.Construction
-import Mathlib.CategoryTheory.Triangulated.Orthogonal
-import Mathlib.CategoryTheory.Triangulated.Subcategory
+import Mathlib.CategoryTheory.Functor.Derived.LeftDerived
 import Formalization.Books.StacksMorphisms.Unit07.QuasiCompactMorphisms
 
 /-!
@@ -21,6 +19,7 @@ noncomputable section
 open CategoryTheory CategoryTheory.Limits
 open CategoryTheory.Preadditive
 open CategoryTheory.Pretriangulated
+open Formalization.Books.StacksMorphisms.Unit07
 
 universe u
 
@@ -74,6 +73,7 @@ quasi-coherent modules. -/
 class StackSiteData {𝒮 : Type u} [Category.{u} 𝒮] (X : 𝒮) where
   abelianSheaves : SiteKind → AbelianCategoryData.{u}
   modules : SiteKind → AbelianCategoryData.{u}
+  constantIntegerSheaf : ∀ τ : SiteKind, (abelianSheaves τ).Carrier
   isQuasiCoherent : ∀ τ, ObjectProperty (modules τ).Carrier
   isLocallyQuasiCoherentFlatBaseChange : ∀ τ, ObjectProperty (modules τ).Carrier
   isParasitic : ∀ τ, ObjectProperty (modules τ).Carrier
@@ -193,9 +193,26 @@ def IsBoundedBelow {𝒮 : Type u} [Category.{u} 𝒮] {X : 𝒮}
   ∃ n : ℤ, ∀ i : ℤ, i < n →
     IsZero ((DerivedCategory.homologyFunctor (CoefficientCarrier X τ κ) i).obj K)
 
+/-- The data carried by a selected left derived functor.  The derived
+category functor is separated from the underived functor so that later
+statements can record the adjunction and comparison isomorphism explicitly. -/
+structure LeftDerivedFunctorData {A B : Type u} [Category.{u} A] [Category.{u} B]
+    [Abelian A] [Abelian B] [HasDerivedCategory.{u} A]
+    [HasDerivedCategory.{u} B] (F : A ⥤ B) where
+  functor : DerivedCategory A ⥤ DerivedCategory B
+  additive : F.Additive
+  comparison :
+    letI := additive
+    DerivedCategory.Q (C := A) ⋙ functor ⟶
+      F.mapHomologicalComplex (ComplexShape.up ℤ) ⋙ DerivedCategory.Q (C := B)
+  isLeftDerived :
+    letI := additive
+    functor.IsLeftDerivedFunctor comparison
+      (HomologicalComplex.quasiIso A (ComplexShape.up ℤ))
+
 /-! ## The comparison morphisms and derived functors -/
 
-/-- The underlying inverse-image and shriek functors attached to the two
+/-! The underlying inverse-image and shriek functors attached to the two
 comparison morphisms of sites. -/
 class SiteComparisonData {𝒮 : Type u} [Category.{u} 𝒮] (X : 𝒮)
     [StackSiteData X] where
@@ -205,14 +222,10 @@ class SiteComparisonData {𝒮 : Type u} [Category.{u} 𝒮] (X : 𝒮)
     CoefficientCarrier X (coarseSite c) κ ⥤ CoefficientCarrier X (fineSite c) κ
   derivedInverseImage : ∀ c : ComparisonKind, ∀ κ : CoefficientKind,
     SiteDerivedCategory X (coarseSite c) κ ⥤ SiteDerivedCategory X (fineSite c) κ
-
-/-- The data carried by a selected left derived functor.  The derived
-category functor is separated from the underived functor so that later
-statements can record the adjunction and comparison isomorphism explicitly. -/
-structure LeftDerivedFunctorData {A B : Type u} [Category.{u} A] [Category.{u} B]
-    [Abelian A] [Abelian B] [HasDerivedCategory.{u} A]
-    [HasDerivedCategory.{u} B] (F : A ⥤ B) where
-  functor : DerivedCategory A ⥤ DerivedCategory B
+  derivedInverseImageData : ∀ c : ComparisonKind, ∀ κ : CoefficientKind,
+    LeftDerivedFunctorData (inverseImage c κ)
+  derivedInverseImageIso : ∀ c : ComparisonKind, ∀ κ : CoefficientKind,
+    (derivedInverseImageData c κ).functor ≅ derivedInverseImage c κ
 
 /-- The source assertion for one coefficient category and one site
 comparison.  The orientation of `unitIso` records the source identity

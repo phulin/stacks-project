@@ -25,6 +25,24 @@ namespace Formalization.Books.StacksPerfect.Unit01
 variable {𝒮 : Type u} [Category.{u} 𝒮]
   [AlgebraicStackCategory 𝒮]
 
+/-! The earlier stack-morphism interface does not expose smoothness.  This
+small explicit interface supplies the missing predicate needed by the
+functoriality statement; flatness is already available as `Flat`. -/
+structure StackSmoothnessData (𝒮 : Type u) [Category.{u} 𝒮]
+    [AlgebraicStackCategory 𝒮] where
+  isSmooth : ∀ {X Y : 𝒮}, (X ⟶ Y) → Prop
+
+def IsSmoothStackMorphism {𝒮 : Type u} [Category.{u} 𝒮]
+    [AlgebraicStackCategory 𝒮] (D : StackSmoothnessData 𝒮)
+    {X Y : 𝒮} (f : X ⟶ Y) : Prop :=
+  D.isSmooth f
+
+def IsApplicableForComparison {𝒮 : Type u} [Category.{u} 𝒮]
+    [AlgebraicStackCategory 𝒮] (D : StackSmoothnessData 𝒮)
+    {X Y : 𝒮} (f : X ⟶ Y) : ComparisonKind → Prop
+  | .lisseEtale => IsSmoothStackMorphism D f
+  | .flatFppf => Flat f
+
 /-! ## Lemma 1: derived shriek -/
 
 /-- The four cases of the source lemma: two coefficient categories for each
@@ -89,8 +107,9 @@ source's bounded, bounded-above, and arbitrary-complex restrictions; the
 truncation and direct-sum arguments in the proof do not require separate
 interfaces once this natural isomorphism is available. -/
 theorem lemma_lisse_etale_functorial_derived
-    (S : FunctorialDerivedSquare X Y) :
-    ∀ c : ComparisonKind, ∀ κ : CoefficientKind,
+    (S : FunctorialDerivedSquare X Y) (D : StackSmoothnessData 𝒮)
+    (c : ComparisonKind) (hc : IsApplicableForComparison D S.f c) :
+    ∀ κ : CoefficientKind,
       Nonempty (S.coarsePushforward c κ ⋙ derivedInverseImage Y c κ ≅
         derivedInverseImage X c κ ⋙ S.finePushforward c κ) ∧
       Nonempty (S.finePullback c κ ⋙ derivedShriek X c κ ≅
@@ -101,19 +120,23 @@ theorem lemma_lisse_etale_functorial_derived
 direction of the source identity
 `g^{-1} Rf_* = Rf'_* (g')^{-1}`. -/
 def FunctorialDerivedPushforwardIso
-    (S : FunctorialDerivedSquare X Y) (c : ComparisonKind) (κ : CoefficientKind) :
+    (S : FunctorialDerivedSquare X Y) (D : StackSmoothnessData 𝒮)
+    (c : ComparisonKind) (hc : IsApplicableForComparison D S.f c)
+    (κ : CoefficientKind) :
     S.coarsePushforward c κ ⋙ derivedInverseImage Y c κ ≅
       derivedInverseImage X c κ ⋙ S.finePushforward c κ :=
-  Classical.choice (lemma_lisse_etale_functorial_derived S c κ).1
+  Classical.choice (lemma_lisse_etale_functorial_derived S D c hc κ).1
 
 /-- The second natural isomorphism in the functoriality lemma, written in the
 direction of the source identity
 `L(g')_! (f')^{-1} = f^{-1} Lg_!`. -/
 def FunctorialDerivedShriekIso
-    (S : FunctorialDerivedSquare X Y) (c : ComparisonKind) (κ : CoefficientKind) :
+    (S : FunctorialDerivedSquare X Y) (D : StackSmoothnessData 𝒮)
+    (c : ComparisonKind) (hc : IsApplicableForComparison D S.f c)
+    (κ : CoefficientKind) :
     S.finePullback c κ ⋙ derivedShriek X c κ ≅
       derivedShriek Y c κ ⋙ S.coarsePullback c κ :=
-  Classical.choice (lemma_lisse_etale_functorial_derived S c κ).2
+  Classical.choice (lemma_lisse_etale_functorial_derived S D c hc κ).2
 
 /-! ## Lemma 3: higher shriek of quasi-coherent modules -/
 

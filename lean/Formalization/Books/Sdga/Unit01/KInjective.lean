@@ -112,6 +112,7 @@ theorem lemma_product_graded_injective {S : RingedSite.{u,v} R}
       graded_laws := True
       graded_laws_proof := by trivial
       zero := fun _ _ => PUnit.unit
+      action_zero := by intros; rfl
       neg := fun _ _ _ => PUnit.unit
       differential := fun _ _ _ => PUnit.unit
       differential_zero := by intros; rfl
@@ -130,6 +131,7 @@ theorem lemma_characterize_graded_injectives_in_dg
       graded_laws := True
       graded_laws_proof := by trivial
       zero := fun _ _ => PUnit.unit
+      action_zero := by intros; rfl
       neg := fun _ _ _ => PUnit.unit
       differential := fun _ _ _ => PUnit.unit
       differential_zero := by intros; rfl
@@ -151,6 +153,7 @@ theorem lemma_small_acyclics {S : RingedSite.{u,v} R}
       graded_laws := True
       graded_laws_proof := by trivial
       zero := fun _ _ => PUnit.unit
+      action_zero := by intros; rfl
       neg := fun _ _ _ => PUnit.unit
       differential := fun _ _ _ => PUnit.unit
       differential_zero := by intros; rfl
@@ -172,6 +175,7 @@ theorem lemma_product_K_injective {S : RingedSite.{u,v} R}
       graded_laws := True
       graded_laws_proof := by trivial
       zero := fun _ _ => PUnit.unit
+      action_zero := by intros; rfl
       neg := fun _ _ _ => PUnit.unit
       differential := fun _ _ _ => PUnit.unit
       differential_zero := by intros; rfl
@@ -224,6 +228,7 @@ theorem lemma_better_set_of_monos {S : RingedSite.{u,v} R}
       graded_laws := True
       graded_laws_proof := by trivial
       zero := fun _ _ => PUnit.unit
+      action_zero := by intros; rfl
       neg := fun _ _ _ => PUnit.unit
       differential := fun _ _ _ => PUnit.unit
       differential_zero := by intros; rfl
@@ -252,6 +257,7 @@ theorem theorem_qis_into_dg_injective {S : RingedSite.{u,v} R}
       graded_laws := True
       graded_laws_proof := by trivial
       zero := fun _ _ => PUnit.unit
+      action_zero := by intros; rfl
       neg := fun _ _ _ => PUnit.unit
       differential := fun _ _ _ => PUnit.unit
       differential_zero := by intros; rfl

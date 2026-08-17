@@ -57,6 +57,7 @@ theorem proposition_homotopy_category_triangulated
       graded_laws := True
       graded_laws_proof := by trivial
       zero := fun _ _ => PUnit.unit
+      action_zero := by intros; rfl
       neg := fun _ _ _ => PUnit.unit
       differential := fun _ _ _ => PUnit.unit
       differential_zero := by intros; rfl
@@ -79,6 +80,7 @@ theorem lemma_dgm_grothendieck_abelian (S : RingedSite.{u,v} R)
       graded_laws := True
       graded_laws_proof := by trivial
       zero := fun _ _ => PUnit.unit
+      action_zero := by intros; rfl
       neg := fun _ _ _ => PUnit.unit
       differential := fun _ _ _ => PUnit.unit
       differential_zero := by intros; rfl

@@ -194,6 +194,8 @@ structure DGModule (S : RingedSite.{u,v} R) (A : DGAlgebra S) where
   graded_laws : Prop
   graded_laws_proof : graded_laws
   zero : ∀ (n : ℤ) (U : S.Obj), component n U
+  action_zero : ∀ (n m : ℤ) (U : S.Obj) (a : A.component m U),
+    action n m U (zero n U) a = zero (n + m) U
   neg : ∀ (n : ℤ) (U : S.Obj), component n U → component n U
   differential : ∀ (n : ℤ) (U : S.Obj),
     component n U → component (n + 1) U

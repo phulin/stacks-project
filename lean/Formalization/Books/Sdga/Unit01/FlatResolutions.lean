@@ -72,6 +72,7 @@ theorem lemma_supply_good {S : RingedSite.{u,v} R} {A : DGAlgebra S}
       graded_laws := True
       graded_laws_proof := by trivial
       zero := fun _ _ => PUnit.unit
+      action_zero := by intros; rfl
       neg := fun _ _ _ => PUnit.unit
       differential := fun _ _ _ => PUnit.unit
       differential_zero := by intros; rfl
@@ -100,6 +101,7 @@ theorem lemma_good_direct_sum {S : RingedSite.{u,v} R} {A : DGAlgebra S}
       graded_laws := True
       graded_laws_proof := by trivial
       zero := fun _ _ => PUnit.unit
+      action_zero := by intros; rfl
       neg := fun _ _ _ => PUnit.unit
       differential := fun _ _ _ => PUnit.unit
       differential_zero := by intros; rfl
@@ -117,6 +119,7 @@ theorem lemma_good_quotient {S : RingedSite.{u,v} R} {A : DGAlgebra S}
       graded_laws := True
       graded_laws_proof := by trivial
       zero := fun _ _ => PUnit.unit
+      action_zero := by intros; rfl
       neg := fun _ _ _ => PUnit.unit
       differential := fun _ _ _ => PUnit.unit
       differential_zero := by intros; rfl
@@ -138,6 +141,7 @@ theorem lemma_resolve {S : RingedSite.{u,v} R} {A : DGAlgebra S}
       graded_laws := True
       graded_laws_proof := by trivial
       zero := fun _ _ => PUnit.unit
+      action_zero := by intros; rfl
       neg := fun _ _ _ => PUnit.unit
       differential := fun _ _ _ => PUnit.unit
       differential_zero := by intros; rfl

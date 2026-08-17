@@ -36,6 +36,7 @@ theorem lemma_dg_hull {S : RingedSite.{u,v} R} (A : DGAlgebra S) :
       graded_laws := True
       graded_laws_proof := by trivial
       zero := fun _ _ => PUnit.unit
+      action_zero := by intros; rfl
       neg := fun _ _ _ => PUnit.unit
       differential := fun _ _ _ => PUnit.unit
       differential_zero := by intros; rfl

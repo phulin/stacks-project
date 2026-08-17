@@ -1,5 +1,6 @@
 import Formalization.Books.Stacks.Unit01.StackificationGroupoids
 import Mathlib.CategoryTheory.Sites.CoverLifting
+import Mathlib.CategoryTheory.FiberedCategory.Grothendieck
 
 /-!
 # Stacks, Chapter 1, Section 10: inherited topologies

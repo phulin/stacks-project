@@ -100,13 +100,69 @@ def FiberwiseEquivalence {F G : FiberedCategory C}
     (η : FiberedMorphism F G) : Prop :=
   FiberwiseFullyFaithful η ∧ FiberwiseEssentiallySurjective η
 
-/- TODO(stacks-foundation): Before retrying the stack-preservation results, prove a
-single transport lemma saying that a `FiberwiseEquivalence` induces an
-equivalence between the two descent-data categories for every family.  Build
-the functor from the strong transformation `η`; use fibrewise full faithfulness
-for morphisms and fibrewise essential surjectivity, together with the
-pseudonaturality isomorphisms, to descend the gluing data.  The later
-`equivalent_*_preserve` theorems should be short consequences of this lemma. -/
+/-! ### Transport of descent data along a fibred morphism
+
+The component of a strong transformation sends the objects in a descent
+datum to objects in the target fibres.  Its naturality isomorphisms transport
+the gluing morphisms.  The coherence fields below are deliberately kept in
+the standard `Pseudofunctor.DescentData` presentation, so later stack
+arguments can use Mathlib's descent-data functors directly.
+-/
+
+noncomputable def descentDataFunctor
+    {C : Type u} [Category.{v} C] {F G : FiberedCategory C}
+    (η : FiberedMorphism F G) {ι : Type t} {U : C} {X : ι → C}
+    (f : ∀ i, X i ⟶ U) : F.DescentData f ⥤ G.DescentData f where
+  obj D :=
+    { obj i := (η.app (.mk (op (X i)))).toFunctor.obj (D.obj i)
+      hom Y q i₁ i₂ f₁ f₂ hf₁ hf₂ :=
+        (η.naturality f₁.op.toLoc).inv.toNatTrans.app (D.obj i₁) ≫
+          (η.app (.mk (op Y))).toFunctor.map
+            (D.hom q f₁ f₂ hf₁ hf₂) ≫
+          (η.naturality f₂.op.toLoc).hom.toNatTrans.app (D.obj i₂)
+      pullHom_hom := by
+        sorry
+      hom_self := by
+        sorry
+      hom_comp := by
+        sorry }
+  map {D₁ D₂} φ :=
+    { hom i := (η.app (.mk (op (X i)))).toFunctor.map (φ.hom i)
+      comm := by
+        sorry }
+
+/- The transport functor is an equivalence whenever the fibred morphism is a
+fibrewise equivalence.  The proof is the descent-data version of transporting
+objects and gluing morphisms through the fibrewise full-faithful and
+essentially-surjective components of `η`. -/
+theorem descentDataFunctor_is_equivalence
+    {C : Type u} [Category.{v} C] {F G : FiberedCategory C}
+    (η : FiberedMorphism F G) (hη : FiberwiseEquivalence η)
+    {ι : Type t} {U : C} {X : ι → C}
+    (f : ∀ i, X i ⟶ U) :
+    (descentDataFunctor η f).IsEquivalence := by
+  sorry
+
+noncomputable def descentDataEquivalence
+    {C : Type u} [Category.{v} C] {F G : FiberedCategory C}
+    (η : FiberedMorphism F G) (hη : FiberwiseEquivalence η)
+    {ι : Type t} {U : C} {X : ι → C}
+    (f : ∀ i, X i ⟶ U) : F.DescentData f ≌ G.DescentData f := by
+  letI : (descentDataFunctor η f).IsEquivalence :=
+    descentDataFunctor_is_equivalence η hη f
+  exact (descentDataFunctor η f).asEquivalence
+
+/- The comparison isomorphism records that transport commutes with the
+canonical descent-data functors from the fibre over `U`. -/
+theorem descentDataEquivalence_toDescentData_iso
+    {C : Type u} [Category.{v} C] {F G : FiberedCategory C}
+    (η : FiberedMorphism F G) (hη : FiberwiseEquivalence η)
+    {ι : Type t} {U : C} {X : ι → C}
+    (f : ∀ i, X i ⟶ U) :
+    Nonempty
+      (F.toDescentData f ⋙ (descentDataEquivalence η hη f).functor ≅
+        (η.app (.mk (op U))).toFunctor ⋙ G.toDescentData f) := by
+  sorry
 
 structure Substack (F : FiberedCategory C) (J : GrothendieckTopology C) where
   value : FiberedCategory C

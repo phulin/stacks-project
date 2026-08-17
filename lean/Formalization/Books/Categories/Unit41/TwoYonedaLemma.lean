@@ -1,6 +1,7 @@
 import Formalization.Books.Categories.Unit37.PresheavesOfGroupoids
 import Mathlib.CategoryTheory.Comma.Over.Basic
 import Mathlib.CategoryTheory.Equivalence
+import Mathlib.CategoryTheory.FiberedCategory.HasFibers
 
 /-!
 # Categories, Chapter 41: The 2-Yoneda lemma
@@ -17,6 +18,7 @@ namespace Formalization.Books.Categories.Unit41
 
 open CategoryTheory
 open CategoryTheory.Functor
+open Opposite
 open Formalization.Books.Categories.Unit33
 open Formalization.Books.Categories.Unit35
 open Formalization.Books.Categories.Unit36
@@ -235,7 +237,7 @@ theorem twoYonedaEvaluationCore_obj_isFiber
     {S : Type uS} [Category.{vS} S]
     (p : S ⥤ C) (U : C) (G : twoYonedaOverCategory p U) :
     p.obj (G.1.obj (Over.mk (𝟙 U))) = U := by
-  exact congr_obj G.2 (Over.mk (𝟙 U))
+  exact Functor.congr_obj G.2 (Over.mk (𝟙 U))
 
 theorem twoYonedaEvaluationCore_map_isHomLift
     {C : Type uC} [Category.{vC} C]

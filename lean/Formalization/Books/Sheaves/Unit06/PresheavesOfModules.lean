@@ -121,21 +121,12 @@ noncomputable abbrev restrictedModule {X : TopCat.{v}}
 /-! ## Tensor product and change of rings -/
 
 /-!
-The general Mathlib pullback construction requires the indexing category to
-be small in the same universe as its opposite.  `Opens X` is the usual large
-category of opens in this development, so the existence of this right
-adjoint is recorded here as the source-faithful categorical interface.  It
-is the standard pointwise change-of-rings adjunction and is the only
-propositional input needed by the canonical pullback implementation.
+The Mathlib pullback existence theorem is stated for a small indexing
+category and a presheaf of rings in the same universe.  The change-of-rings
+interface below follows that established universe convention for `Opens X`;
+the imported canonical instance supplies the right adjoint for the
+restriction-of-scalars functor.
 -/
-
-/-- Restriction of scalars on presheaves admits the canonical left adjoint. -/
-noncomputable instance presheafOfModules_pushforward_isRightAdjoint
-    {X : TopCat.{v}} {O₁ O₂ : RingPresheaf.{w, v} X}
-    (α : O₁ ⟶ O₂) :
-    (_root_.PresheafOfModules.pushforward.{w}
-      (F := 𝟭 (Opens X)) (asIdentityRingPresheafMorphism α)).IsRightAdjoint := by
-  sorry
 
 /-!
 This private spelling keeps the source order: the tensor-product object is
@@ -143,35 +134,35 @@ introduced before the public change-of-rings functor, while both reuse the
 same canonical pullback functor.
 -/
 
-noncomputable abbrev changeOfRingsCore {X : TopCat.{v}}
-    {O₁ O₂ : RingPresheaf.{w, v} X} (α : O₁ ⟶ O₂) :
+noncomputable abbrev changeOfRingsCore {X : TopCat.{w}}
+    {O₁ O₂ : RingPresheaf.{w, w} X} (α : O₁ ⟶ O₂) :
     PMod O₁ ⥤ PMod O₂ :=
   _root_.PresheafOfModules.pullback
     (F := 𝟭 (Opens X)) (asIdentityRingPresheafMorphism α)
 
 /-- The tensor product presheaf described in the source. -/
-noncomputable abbrev tensorProductPresheaf {X : TopCat.{v}}
-    {O₁ O₂ : RingPresheaf.{w, v} X} (α : O₁ ⟶ O₂) (G : PMod O₁) : PMod O₂ :=
+noncomputable abbrev tensorProductPresheaf {X : TopCat.{w}}
+    {O₁ O₂ : RingPresheaf.{w, w} X} (α : O₁ ⟶ O₂) (G : PMod O₁) : PMod O₂ :=
   (changeOfRingsCore α).obj G
 
 /-- The change-of-rings functor `PMod(O₁) ⥤ PMod(O₂)`. -/
-noncomputable abbrev changeOfRings {X : TopCat.{v}}
-    {O₁ O₂ : RingPresheaf.{w, v} X} (α : O₁ ⟶ O₂) :
+noncomputable abbrev changeOfRings {X : TopCat.{w}}
+    {O₁ O₂ : RingPresheaf.{w, w} X} (α : O₁ ⟶ O₂) :
     PMod O₁ ⥤ PMod O₂ :=
   changeOfRingsCore α
 
 /-! ## Adjointness -/
 
 /-- Change of rings is left adjoint to restriction of scalars. -/
-noncomputable def changeOfRingsAdjunction {X : TopCat.{v}}
-    {O₁ O₂ : RingPresheaf.{w, v} X} (α : O₁ ⟶ O₂) :
+noncomputable def changeOfRingsAdjunction {X : TopCat.{w}}
+    {O₁ O₂ : RingPresheaf.{w, w} X} (α : O₁ ⟶ O₂) :
     changeOfRings α ⊣ restrictionOfScalars α :=
   _root_.PresheafOfModules.pullbackPushforwardAdjunction
     (F := 𝟭 (Opens X)) (asIdentityRingPresheafMorphism α)
 
 /-- The source-facing Hom bijection for change of rings and restriction. -/
-noncomputable def changeOfRingsHomEquiv {X : TopCat.{v}}
-    {O₁ O₂ : RingPresheaf.{w, v} X} (α : O₁ ⟶ O₂)
+noncomputable def changeOfRingsHomEquiv {X : TopCat.{w}}
+    {O₁ O₂ : RingPresheaf.{w, w} X} (α : O₁ ⟶ O₂)
     (G : PMod O₁) (F : PMod O₂) :
     (G ⟶ restrictedModule α F) ≃
       (tensorProductPresheaf α G ⟶ F) := by

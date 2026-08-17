@@ -243,12 +243,13 @@ abbrev RightFractionLocalization {C : Type u} [Category.{v} C]
   MorphismProperty.Localization W
 
 abbrev rightLocalizationFunctor {C : Type u} [Category.{v} C]
-    (W : MorphismProperty C) : C ⥤ RightFractionLocalization W :=
+    (W : MorphismProperty C) [RightMultiplicativeSystem W] :
+    C ⥤ RightFractionLocalization W :=
   MorphismProperty.Q W
 
 noncomputable def rightFractionHom {C : Type u} [Category.{v} C]
-    {W : MorphismProperty C} {X X' Y : C} (f : X' ⟶ Y) (s : X' ⟶ X)
-    (hs : W s) :
+    {W : MorphismProperty C} [RightMultiplicativeSystem W]
+    {X X' Y : C} (f : X' ⟶ Y) (s : X' ⟶ X) (hs : W s) :
     (rightLocalizationFunctor W).obj X ⟶ (rightLocalizationFunctor W).obj Y :=
   (MorphismProperty.RightFraction.mk s hs f).map
     (rightLocalizationFunctor W) (Localization.inverts _ W)
@@ -350,30 +351,35 @@ theorem right_localization_hom_is_filtered_colimit {C : Type u}
   sorry
 
 theorem right_localization_inverts {C : Type u} [Category.{v} C]
-    {W : MorphismProperty C} {X Y : C} (s : X ⟶ Y) (hs : W s) :
+    {W : MorphismProperty C} [RightMultiplicativeSystem W]
+    {X Y : C} (s : X ⟶ Y) (hs : W s) :
     IsIso ((rightLocalizationFunctor W).map s) := by
   exact MorphismProperty.Q_inverts W s hs
 
 noncomputable def rightLocalizationLift {C : Type u} [Category.{v} C]
-    {W : MorphismProperty C} {D : Type u'} [Category.{v'} D]
+    {W : MorphismProperty C} [RightMultiplicativeSystem W]
+    {D : Type u'} [Category.{v'} D]
     (G : C ⥤ D) (hG : W.IsInvertedBy G) : RightFractionLocalization W ⥤ D :=
   Localization.Construction.lift G hG
 
 theorem rightLocalizationLift_fac {C : Type u} [Category.{v} C]
-    {W : MorphismProperty C} {D : Type u'} [Category.{v'} D]
+    {W : MorphismProperty C} [RightMultiplicativeSystem W]
+    {D : Type u'} [Category.{v'} D]
     (G : C ⥤ D) (hG : W.IsInvertedBy G) :
     rightLocalizationFunctor W ⋙ rightLocalizationLift G hG = G :=
   Localization.Construction.fac G hG
 
 theorem rightLocalizationLift_unique {C : Type u} [Category.{v} C]
-    {W : MorphismProperty C} {D : Type u'} [Category.{v'} D]
+    {W : MorphismProperty C} [RightMultiplicativeSystem W]
+    {D : Type u'} [Category.{v'} D]
     (G₁ G₂ : RightFractionLocalization W ⥤ D)
     (h : rightLocalizationFunctor W ⋙ G₁ = rightLocalizationFunctor W ⋙ G₂) :
     G₁ = G₂ :=
   Localization.Construction.uniq G₁ G₂ h
 
 theorem right_localization_universal_property {C : Type u} [Category.{v} C]
-    {W : MorphismProperty C} {D : Type u'} [Category.{v'} D]
+    {W : MorphismProperty C} [RightMultiplicativeSystem W]
+    {D : Type u'} [Category.{v'} D]
     (G : C ⥤ D) (hG : W.IsInvertedBy G) :
     ∃! H : RightFractionLocalization W ⥤ D,
       rightLocalizationFunctor W ⋙ H = G := by
@@ -404,8 +410,9 @@ theorem right_localization_lift_square {C : Type u} [Category.{v} C]
 
 noncomputable def twoSidedLocalizationEquivalence {C : Type u} [Category.{v} C]
     {W : MorphismProperty C} [LeftMultiplicativeSystem W]
-    [RightMultiplicativeSystem W] (_hW : MultiplicativeSystem W) :
+    (hW : MultiplicativeSystem W) :
     LeftFractionLocalization W ≌ RightFractionLocalization W := by
+  letI : RightMultiplicativeSystem W := hW.2
   exact Localization.uniq (leftLocalizationFunctor W) (rightLocalizationFunctor W) W
 
 /- MS4 is the extra middle-composite condition in the source. -/

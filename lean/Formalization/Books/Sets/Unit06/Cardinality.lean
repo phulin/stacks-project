@@ -1,4 +1,5 @@
-import Formalization.Books.Sets.Unit05
+import Mathlib.SetTheory.Cardinal.Arithmetic
+import Mathlib.SetTheory.ZFC.Ordinal
 
 /-!
 # Set Theory, Chapter 6: Cardinality

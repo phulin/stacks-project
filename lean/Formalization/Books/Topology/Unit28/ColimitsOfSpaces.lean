@@ -1,6 +1,6 @@
 import Mathlib.CategoryTheory.Limits.Types.Coequalizers
 import Mathlib.Topology.Bases
-import Mathlib.Topology.Category.TopCat.Limits.Pullbacks
+import Mathlib.Topology.Category.TopCat.Limits.Basic
 
 /-!
 # Topology, Chapter 28: Colimits of spaces

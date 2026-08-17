@@ -178,6 +178,20 @@ def comp
 
 end DifferentialGradedModuleHomotopy
 
+/-- The chosen homotopy obtained by pre- and postcomposing a homotopy. -/
+def differentialGradedModuleHomotopy_comp
+    {R : Type u} [CommRing R]
+    {A : DifferentialGradedAlgebra R}
+    {K L M N : DifferentialGradedModule A}
+    {f g : DifferentialGradedModuleHom L M}
+    (a : DifferentialGradedModuleHom K L)
+    (c : DifferentialGradedModuleHom M N)
+    (H : DifferentialGradedModuleHomotopy f g) :
+    DifferentialGradedModuleHomotopy
+      (differentialGradedModuleHomComp (differentialGradedModuleHomComp a f) c)
+      (differentialGradedModuleHomComp (differentialGradedModuleHomComp a g) c) :=
+  H.comp a c
+
 /-- Composition on either side carries a compatible homotopy to a compatible
 homotopy, as in the source's composition lemma. -/
 theorem differentialGradedModuleHomotopic_comp
@@ -191,7 +205,7 @@ theorem differentialGradedModuleHomotopic_comp
     DifferentialGradedModuleHomotopic
       (differentialGradedModuleHomComp (differentialGradedModuleHomComp a f) c)
       (differentialGradedModuleHomComp (differentialGradedModuleHomComp a g) c) :=
-  ⟨H.comp a c⟩
+  ⟨differentialGradedModuleHomotopy_comp a c H⟩
 
 /-- Homotopy is an equivalence relation on every differential graded module
 hom-set. -/

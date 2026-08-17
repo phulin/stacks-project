@@ -96,13 +96,22 @@ theorem fibredInGroupoids_all_morphisms_stronglyCartesian
   sorry
 
 /- The chosen-pullback construction from Unit 33 is the source's
-`f^* x → x` data.  The additional field records that the values are
-groupoids, so the pseudofunctor is source-faithfully groupoid-valued. -/
+`f^* x → x` data.  The additional field records that the Cat-valued
+pseudofunctor has groupoid values; the bridge theorem below exposes this
+property on its actual `Pith` objects without duplicating the Unit 33 API. -/
 structure FibredInGroupoidsPseudofunctorData
     {S C : Type*} [Category* S] [Category* C]
     (p : S ⥤ C) [p.IsFibered] (P : PullbackChoice p) where
   data : PullbackPseudofunctorData p P
   fibre_is_groupoid : ∀ U : C, IsGroupoid (Functor.Fiber p U)
+
+theorem fibredInGroupoids_pseudofunctor_object_is_groupoid
+    {S C : Type*} [Category* S] [Category* C]
+    {p : S ⥤ C} [p.IsFibered] {P : PullbackChoice p}
+    (D : FibredInGroupoidsPseudofunctorData p P) (U : C) :
+    IsGroupoid (pseudofunctorObject D.data.value (Opposite.op U)).as := by
+  rw [D.data.object_fibre U]
+  exact D.fibre_is_groupoid U
 
 theorem fibredInGroupoids_pseudofunctor_exists
     {S C : Type*} [Category* S] [Category* C]
@@ -502,23 +511,46 @@ theorem fibredInGroupoids_fibre_product_goes_up
         IsPullback b a f g := by
   sorry
 
+/- A natural isomorphism is over a target functor when its components map
+to the transported identity in that target. -/
+def IsNatIsoOver
+    {A B D : Type*} [Category* A] [Category* B] [Category* D]
+    (q : B ⥤ D) {H K : A ⥤ B} (e : H ≅ K)
+    (over : H ⋙ q = K ⋙ q) : Prop :=
+  ∀ Z : A, q.map (e.hom.app Z) =
+    eqToHom (congrArg (fun L : A ⥤ D => L.obj Z) over)
+
+/- An equivalence over a target functor, with the chosen functor displayed.
+The quasi-inverse isomorphisms are required to be over the same target. -/
+def IsEquivalenceOverFunctor
+    {A B D : Type*} [Category* A] [Category* B] [Category* D]
+    (p : A ⥤ D) (q : B ⥤ D) (h : A ⥤ B) : Prop :=
+  ∃ k : B ⥤ A,
+    h ⋙ q = p ∧ k ⋙ p = q ∧
+      (∃ e : h ⋙ k ≅ 𝟭 A,
+        ∃ over : (h ⋙ k) ⋙ p = (𝟭 A) ⋙ p,
+          IsNatIsoOver p e over) ∧
+      (∃ e : k ⋙ h ≅ 𝟭 B,
+        ∃ over : (k ⋙ h) ⋙ q = (𝟭 B) ⋙ q,
+          IsNatIsoOver q e over)
+
 /-! ## The amelioration factorization -/
 
-/-- The source-facing strengthened factorization package.  The middle
-category is groupoid-fibred over `C`, the first map is an equivalence over
-`C`, and the second map is groupoid-fibred over `Y`. -/
+/-- The strengthened package for the explicit comma-category factorization
+from Unit 33.  The existing `AmeliorationFactorization` supplies the raw
+comma category and its three functors; the additional fields record that the
+middle projection is fibred in groupoids, that the first functor is an
+equivalence over `C`, and that the second functor is fibred in groupoids. -/
 structure GroupoidAmeliorationFactorization
     {C : Cat.{v, u}} {X Y : FibredCategoryOver C}
     (F : FibredCategoryOverHom X Y) where
-  middle : FibredCategoryOver C
-  u : FibredCategoryOverHom X middle
-  v : FibredCategoryOverHom middle Y
-  factorization : F.underlying =
-    CategoryOver.comp u.underlying v.underlying
-  middle_groupoid_fibred : IsGroupoidFibredCategoryOver middle
-  u_equivalence_over_C : IsEquivalenceOverHom u
-  v_groupoid_fibred_over_Y :
-    (overFunctor v.underlying).IsFibredInGroupoids
+  data : AmeliorationFactorization F
+  middle_groupoid_fibred :
+    (ameliorationBase F).IsFibredInGroupoids
+  u_equivalence_over_C :
+    IsEquivalenceOverFunctor
+      (structureFunctor X.underlying) (ameliorationBase F) data.u
+  v_groupoid_fibred_over_Y : data.v.IsFibredInGroupoids
 
 abbrev GroupoidAmeliorationCategory
     {C : Cat.{v, u}} {X Y : FibredCategoryOver C}
@@ -583,29 +615,6 @@ structure AmeliorationUniquenessData
   right_triangle :
     Formalization.Books.Categories.Unit31.IsTwoCommutative
       (C := FibredCategoryOver C) b (FibredCategoryOverHom.id X) g F
-
-/-- A natural isomorphism is over a target functor when its components map
-to the transported identity in that target. -/
-def IsNatIsoOver
-    {A B D : Type*} [Category* A] [Category* B] [Category* D]
-    (q : B ⥤ D) {H K : A ⥤ B} (e : H ≅ K)
-    (over : H ⋙ q = K ⋙ q) : Prop :=
-  ∀ Z : A, q.map (e.hom.app Z) =
-    eqToHom (congrArg (fun L : A ⥤ D => L.obj Z) over)
-
-/-- An equivalence over a target functor, with the chosen functor displayed.
-The quasi-inverse isomorphisms are required to be over the same target. -/
-def IsEquivalenceOverFunctor
-    {A B D : Type*} [Category* A] [Category* B] [Category* D]
-    (p : A ⥤ D) (q : B ⥤ D) (h : A ⥤ B) : Prop :=
-  ∃ k : B ⥤ A,
-    h ⋙ q = p ∧ k ⋙ p = q ∧
-      (∃ e : h ⋙ k ≅ 𝟭 A,
-        ∃ over : (h ⋙ k) ⋙ p = (𝟭 A) ⋙ p,
-          IsNatIsoOver p e over) ∧
-      (∃ e : k ⋙ h ≅ 𝟭 B,
-        ∃ over : (k ⋙ h) ⋙ q = (𝟭 B) ⋙ q,
-          IsNatIsoOver q e over)
 
 def underlyingIsoOfFibredHomIso
     {C : Cat.{v, u}} {X Y : FibredCategoryOver C}

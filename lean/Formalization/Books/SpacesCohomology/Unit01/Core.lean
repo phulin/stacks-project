@@ -410,6 +410,15 @@ def pullbackSheaf {X Y : AlgebraicSpace.{u}} [AlgebraicSpaceCohomology.{u}]
     (g : SpaceHom X Y) (F : SheafObj Y) : SheafObj X :=
   AlgebraicSpaceCohomology.pullbackSheaf g F
 
+/-! The cohomology model must expose invariance under isomorphisms separately
+from its raw carrier operations. -/
+
+class CohomologyIsoLaws [AlgebraicSpaceCohomology.{u}] where
+  cohomologyIsoOfIso : ∀ {X Y : AlgebraicSpace.{u}} (e : X ≅ Y)
+    (F : SheafObj X) (n : ℤ),
+    Nonempty (CohomologyGroup X F n ≃+
+      CohomologyGroup Y (pullbackSheaf e.inv F) n)
+
 def pushforwardSheaf {X Y : AlgebraicSpace.{u}} [AlgebraicSpaceCohomology.{u}]
     (f : SpaceHom X Y) (F : SheafObj X) : SheafObj Y :=
   AlgebraicSpaceCohomology.pushforwardSheaf f F

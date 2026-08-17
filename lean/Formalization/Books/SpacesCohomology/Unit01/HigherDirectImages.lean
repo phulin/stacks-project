@@ -24,10 +24,11 @@ structure SchemeRepresentation (X : AlgebraicSpace.{u}) where
 theorem representable_cohomology_identification
     (S X : AlgebraicSpace.{u}) (hS : IsScheme S)
     (F : SheafObj X) (hF : IsQuasiCoherent F)
+    [CohomologyIsoLaws.{u}]
     (r : SchemeRepresentation X) (i : ℤ) :
     CohomologyComparison X r.scheme F
       (pullbackSheaf r.equivalence.inv F) i i := by
-  sorry
+  exact CohomologyIsoLaws.cohomologyIsoOfIso r.equivalence F i
 
 theorem representable_higher_direct_image_identification
     (S X Y : AlgebraicSpace.{u}) (hS : IsScheme S)

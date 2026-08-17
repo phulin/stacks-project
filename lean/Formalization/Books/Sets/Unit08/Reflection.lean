@@ -407,7 +407,7 @@ theorem reflection_principle_meta {n : ℕ}
           ∀ (ρ : Fin n → ZFSet.{u}),
             (∀ i, ρ i ∈ M) →
               (conjunction Φ).Realize ρ ↔
-                (conjunction (Φ.map (fun φ => relativize φ))).Realize
+            (conjunction (Φ.map (fun φ => relativize φ))).Realize
                   (Fin.cons M ρ) := by
   sorry
 

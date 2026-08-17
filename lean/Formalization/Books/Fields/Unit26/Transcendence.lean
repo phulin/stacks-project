@@ -7,9 +7,10 @@ import Mathlib.RingTheory.AlgebraicIndependent.TranscendenceBasis
 
 The source's algebraic independence, transcendence bases, and transcendence
 degree are Mathlib's `AlgebraicIndependent`, `IsTranscendenceBasis`, and
-`Algebra.trdeg`.  This file adds only the source-facing purely transcendental
-and algebraically-closed-in predicates; fraction fields, generated fields,
-and relative algebraic closures use Mathlib's canonical constructions.
+`Algebra.trdeg`.  This file adds the source-facing purely transcendental and
+algebraically-closed-in predicates and the induced fraction-field extension
+interface; fraction fields, generated fields, and relative algebraic closures
+otherwise use Mathlib's canonical constructions.
 
 The source's Riemann-surface example needs analytic Riemann surfaces,
 meromorphic function fields, and the corresponding categories.  Those
@@ -43,16 +44,10 @@ def IsPurelyTranscendental (k K : Type u) [Field k] [Field K] [Algebra k K] : Pr
   ∃ ι : Type u, Nonempty (rationalFunctionField k ι ≃ₐ[k] K)
 
 /- Mathlib's `IsTranscendenceBasis` is the canonical maximal algebraically
-   independent family.  In a field extension its algebraicity characterization
-   is the source's condition that the extension over the generated field is
-   algebraic. -/
-theorem isTranscendenceBasis_iff_algebraic_generated_field
-    {F E : Type u} [Field F] [Field E] [Algebra F E]
-    {ι : Type v} (x : ι → E) :
-    IsTranscendenceBasis F x ↔
-      AlgebraicIndependent F x ∧
-        Algebra.IsAlgebraic (IntermediateField.adjoin F (Set.range x)) E := by
-  sorry
+   independent family.  Its theorem
+   `isTranscendenceBasis_iff_algebraicIndependent_isAlgebraic` gives the
+   source's condition that the extension over the generated field is
+   algebraic, so no parallel chapter-local interface is needed. -/
 
 /-! ## The first example and transcendence bases -/
 

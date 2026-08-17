@@ -202,7 +202,8 @@ structure CoveringCoding (C : Type u) [Category.{v} C] where
   arrowCode_injective : Function.Injective arrowCode
   /-- Singleton families are one hierarchy step above their arrows. -/
   singleton_family_mem_of_arrow_mem :
-    ∀ {X Y : C} (f : Y ⟶ X) (α : Ordinal.{max (u + 1) (v + 1)}),
+    ∀ {X Y : C} (f : Y ⟶ X) [IsIso f]
+      (α : Ordinal.{max (u + 1) (v + 1)}),
       arrowCode (Arrow.mk f) ∈ ZFSet.vonNeumann α →
         familyCode (CoveringFamily.singleton f).asAny ∈
           ZFSet.vonNeumann (α + 1)
@@ -496,6 +497,7 @@ theorem second_stage_is_limit
 theorem closureFunction_values_cofinal {C : Type u} [Category.{v} C]
     (K : SiteCoveringClass C) (H : CoveringCoding C)
     (κ : Cardinal.{max (u + 1) (v + 1)})
+    (hκ : Cardinal.aleph0 ≤ κ)
     {β₂ : Ordinal.{max (u + 1) (v + 1)}}
     (hβ₂ : Order.IsSuccLimit β₂) :
     ∀ γ < closureFunction K H κ β₂,
@@ -516,6 +518,7 @@ theorem exists_common_closure_stage {C : Type u} [Category.{v} C]
 theorem vonNeumann_mem_closureFunction_iff {C : Type u} [Category.{v} C]
     (K : SiteCoveringClass C) (H : CoveringCoding C)
     (κ : Cardinal.{max (u + 1) (v + 1)})
+    (hκ : Cardinal.aleph0 ≤ κ)
     {β₂ : Ordinal.{max (u + 1) (v + 1)}}
     (hβ₂ : Order.IsSuccLimit β₂)
     (x : ZFSet.{max (u + 1) (v + 1)}) :
@@ -537,6 +540,7 @@ noncomputable def firstClosureIndex {C : Type u} [Category.{v} C]
 theorem firstClosureIndex_lt_second {C : Type u} [Category.{v} C]
     (K : SiteCoveringClass C) (H : CoveringCoding C)
     (κ : Cardinal.{max (u + 1) (v + 1)})
+    (hκ : Cardinal.aleph0 ≤ κ)
     {β₂ : Ordinal.{max (u + 1) (v + 1)}}
     (hβ₂ : Order.IsSuccLimit β₂) {F : AnyCoveringFamily C}
     (hF : F ∈ K.coveringsAtCardinal H κ

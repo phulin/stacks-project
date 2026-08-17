@@ -21,7 +21,7 @@ open Formalization.Books.MoreAlgebra.Unit36
 
 noncomputable section
 
-universe u v
+universe u v w
 
 /-! ## The lifting definition -/
 
@@ -31,13 +31,13 @@ The square-zero test object is given the discrete topology, and the quotient is 
 quotient topology induced by its canonical projection.  Thus the two continuity hypotheses in
 the quantified diagram are exactly the two topological-ring-map conditions in the source. -/
 def FormallySmooth
-    {R S : Type u} [CommRing R] [CommRing S]
+    {R : Type u} {S : Type v} [CommRing R] [CommRing S]
     [TopologicalSpace R] [TopologicalSpace S]
     [IsTopologicalRing R] [IsTopologicalRing S]
     [IsLinearTopology R R] [IsLinearTopology S S]
     (f : R →+* S) : Prop :=
   Continuous f ∧
-    ∀ {A : Type u} [CommRing A] (J : Ideal A) (_hJ : J ^ 2 = ⊥),
+    ∀ {A : Type (max u v)} [CommRing A] (J : Ideal A) (_hJ : J ^ 2 = ⊥),
       letI : TopologicalSpace A := ⊥
       letI : TopologicalSpace (A ⧸ J) :=
         Formalization.Books.Topology.Unit29.quotientRingTopology (Ideal.Quotient.mk J)
@@ -54,7 +54,7 @@ def FormallySmooth
 /-- Formal smoothness for the `m`-adic topology on the source and the `n`-adic topology on the
 target. -/
 def FormallySmoothForIdeals
-    {R S : Type u} [CommRing R] [CommRing S]
+    {R : Type u} {S : Type v} [CommRing R] [CommRing S]
     (f : R →+* S) (m : Ideal R) (n : Ideal S) : Prop :=
   letI : TopologicalSpace R := IAdicRingTopology R m
   letI : NonarchimedeanRing R := m.nonarchimedean
@@ -67,7 +67,7 @@ def FormallySmoothForIdeals
 /-- The source's shorthand: the topology on the source is discrete and only the target ideal is
 recorded in the name of the property. -/
 def FormallySmoothForIdeal
-    {R S : Type u} [CommRing R] [CommRing S]
+    {R : Type u} {S : Type v} [CommRing R] [CommRing S]
     (f : R →+* S) (n : Ideal S) : Prop :=
   letI : TopologicalSpace R := ⊥
   letI : DiscreteTopology R := discreteTopology_bot R
@@ -80,20 +80,20 @@ def FormallySmoothForIdeal
 /-- Algebraic formal smoothness implies topological formal smoothness for every compatible
 linear/pre-adic choice of topologies. -/
 theorem formallySmooth_of_ringHom_formallySmooth
-    {R S : Type u} [CommRing R] [CommRing S]
+    {R : Type u} {S : Type v} [CommRing R] [CommRing S]
     [TopologicalSpace R] [TopologicalSpace S]
     [IsTopologicalRing R] [IsTopologicalRing S]
     [IsLinearTopology R R] [IsLinearTopology S S]
     (f : R →+* S) (hf : RingHom.FormallySmooth f)
     (hcont : Continuous f)
-    (hS : IsPreAdmissibleTopologicalRing S) :
+    (hS : IsPreAdicTopologicalRing S) :
     FormallySmooth f := by
   sorry
 
 /-- For adic topologies, changing the source topology to the discrete topology does not change
 formal smoothness. -/
 theorem formallySmooth_iff_discrete_source
-    {R S : Type u} [CommRing R] [CommRing S]
+    {R : Type u} {S : Type v} [CommRing R] [CommRing S]
     (f : R →+* S) (m : Ideal R) (n : Ideal S)
     (hcont : @Continuous R S (IAdicRingTopology R m) (IAdicRingTopology S n) f) :
     FormallySmoothForIdeals f m n ↔ FormallySmoothForIdeal f n := by
@@ -101,7 +101,7 @@ theorem formallySmooth_iff_discrete_source
 
 /-- The source's notation for formal smoothness in the `n`-adic topology. -/
 theorem formallySmoothForIdeal_iff_formallySmoothForIdeals
-    {R S : Type u} [CommRing R] [CommRing S]
+    {R : Type u} {S : Type v} [CommRing R] [CommRing S]
     (f : R →+* S) (m : Ideal R) (n : Ideal S)
     (hcont : @Continuous R S (IAdicRingTopology R m) (IAdicRingTopology S n) f) :
     FormallySmoothForIdeal f n ↔ FormallySmoothForIdeals f m n := by
@@ -120,7 +120,7 @@ The existence theorem below is the completion universal property needed to choos
 map.  The choice is exposed as a definition so later statements can use the completed map rather
 than carrying an existential witness. -/
 theorem exists_adicCompletionMap
-    {R S : Type u} [CommRing R] [CommRing S]
+    {R : Type u} {S : Type v} [CommRing R] [CommRing S]
     (m : Ideal R) (n : Ideal S) (f : R →+* S)
     (hm : m.FG) (hn : n.FG)
     (hcont : @Continuous R S (IAdicRingTopology R m) (IAdicRingTopology S n) f) :
@@ -130,7 +130,7 @@ theorem exists_adicCompletionMap
   sorry
 
 noncomputable def adicCompletionMap
-    {R S : Type u} [CommRing R] [CommRing S]
+    {R : Type u} {S : Type v} [CommRing R] [CommRing S]
     (m : Ideal R) (n : Ideal S) (f : R →+* S)
     (hm : m.FG) (hn : n.FG)
     (hcont : @Continuous R S (IAdicRingTopology R m) (IAdicRingTopology S n) f) :
@@ -138,7 +138,7 @@ noncomputable def adicCompletionMap
   Classical.choose (exists_adicCompletionMap m n f hm hn hcont)
 
 theorem adicCompletionMap_comp_algebraMap
-    {R S : Type u} [CommRing R] [CommRing S]
+    {R : Type u} {S : Type v} [CommRing R] [CommRing S]
     (m : Ideal R) (n : Ideal S) (f : R →+* S)
     (hm : m.FG) (hn : n.FG)
     (hcont : @Continuous R S (IAdicRingTopology R m) (IAdicRingTopology S n) f) :
@@ -151,7 +151,7 @@ theorem adicCompletionMap_comp_algebraMap
 respectively, the original map, the map into the target completion, and the map between both
 completions. -/
 theorem formallySmooth_completion_tfae
-    {R S : Type u} [CommRing R] [CommRing S]
+    {R : Type u} {S : Type v} [CommRing R] [CommRing S]
     (m : Ideal R) (n : Ideal S) (f : R →+* S)
     (hm : m.FG) (hn : n.FG)
     (hcont : @Continuous R S (IAdicRingTopology R m) (IAdicRingTopology S n) f) :
@@ -235,7 +235,7 @@ theorem exists_adicLiftingQuotient_square_zero
 
 /-- A continuous lifting statement for an adic target and a closed quotient ideal. -/
 theorem exists_continuous_lift
-    {R S A : Type u} [CommRing R] [CommRing S] [CommRing A]
+    {R : Type u} {S : Type v} {A : Type w} [CommRing R] [CommRing S] [CommRing A]
     (f : R →+* S) (n : Ideal S) (hf : FormallySmoothForIdeal f n)
     [TopologicalSpace A] [IsTopologicalRing A] [IsLinearTopology A A]
     (hA : IsAdicTopologicalRing A)
@@ -259,7 +259,7 @@ theorem exists_continuous_lift
 
 /-- Enlarging the target ideal preserves formal smoothness in the adic shorthand. -/
 theorem formallySmoothForIdeal_of_le
-    {R S : Type u} [CommRing R] [CommRing S]
+    {R : Type u} {S : Type v} [CommRing R] [CommRing S]
     (f : R →+* S) {n n' : Ideal S} (hnn' : n ≤ n') :
     FormallySmoothForIdeal f n → FormallySmoothForIdeal f n' := by
   sorry
@@ -267,7 +267,7 @@ theorem formallySmoothForIdeal_of_le
 /-- Composition of formally smooth continuous maps of linearly topologized rings is formally
 smooth. -/
 theorem formallySmooth_comp
-    {R S T : Type u} [CommRing R] [CommRing S] [CommRing T]
+    {R : Type u} {S : Type v} {T : Type w} [CommRing R] [CommRing S] [CommRing T]
     [TopologicalSpace R] [TopologicalSpace S] [TopologicalSpace T]
     [IsTopologicalRing R] [IsTopologicalRing S] [IsTopologicalRing T]
     [IsLinearTopology R R] [IsLinearTopology S S] [IsLinearTopology T T]
@@ -278,7 +278,7 @@ theorem formallySmooth_comp
 
 /-- The target ideal after tensor-product base change. -/
 noncomputable def baseChangeIdeal
-    {R S R' : Type u} [CommRing R] [CommRing S] [CommRing R']
+    {R : Type u} {S : Type v} {R' : Type w} [CommRing R] [CommRing S] [CommRing R']
     (f : R →+* S) (g : R →+* R') (n : Ideal S) :
     letI : Algebra R S := f.toAlgebra
     letI : Algebra R R' := g.toAlgebra
@@ -289,7 +289,7 @@ noncomputable def baseChangeIdeal
 
 /-- Formal smoothness in the target-ideal shorthand is preserved by arbitrary base change. -/
 theorem formallySmooth_baseChange
-    {R S R' : Type u} [CommRing R] [CommRing S] [CommRing R']
+    {R : Type u} {S : Type v} {R' : Type w} [CommRing R] [CommRing S] [CommRing R']
     (f : R →+* S) (g : R →+* R') (n : Ideal S)
     (hf : FormallySmoothForIdeal f n) :
     FormallySmoothForIdeal
@@ -303,14 +303,14 @@ theorem formallySmooth_baseChange
 `R`-module.  The complementary summand is only an `R`-module; it is not asserted to be an ideal
 of `R'`. -/
 def IsModuleRetract
-    {R R' : Type u} [CommRing R] [CommRing R'] (g : R →+* R') : Prop :=
+    {R : Type u} {R' : Type v} [CommRing R] [CommRing R'] (g : R →+* R') : Prop :=
   letI : Algebra R R' := g.toAlgebra
   ∃ r : R' →ₗ[R] R,
     r.comp (Algebra.linearMap R R') = LinearMap.id
 
 /-- Formal smoothness descends from a split tensor-product base change. -/
 theorem formallySmooth_of_moduleRetract
-    {R S R' : Type u} [CommRing R] [CommRing S] [CommRing R']
+    {R : Type u} {S : Type v} {R' : Type w} [CommRing R] [CommRing S] [CommRing R']
     (f : R →+* S) (g : R →+* R') (n : Ideal S)
     (hRetract : IsModuleRetract g)
     (hf : FormallySmoothForIdeal

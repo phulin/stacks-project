@@ -79,7 +79,8 @@ theorem dimension_at_point_formula {S : Scheme.{u}}
     {X : AlgebraicStack S} (hX : IsLocallyNoetherian X)
     (x : StackPoint X) (P : DimensionPresentation X x) :
     dimensionAtPoint X hX x = P.value := by
-  sorry
+  unfold dimensionAtPoint
+  exact dimension_presentation_independent _ P
 
 def stackDimension {S : Scheme.{u}} (X : AlgebraicStack S)
     (hX : IsLocallyNoetherian X) : StackDimension :=
@@ -161,6 +162,6 @@ theorem classifying_stack_dimension
     stackDimension D.quotient D.locallyNoetherian =
       (((-D.groupDimension : ℤ) : WithTop ℤ) :
         WithBot (WithTop ℤ)) := by
-  sorry
+  simpa [hspace] using quotient_stack_dimension D hfinite
 
 end Formalization.Books.StacksProperties.Unit01

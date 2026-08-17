@@ -39,27 +39,25 @@ universe u v
 
 /-! ## Finite coefficient maps -/
 
-/-- A finite map from the chapter's Noetherian base ring to a field has
-maximal kernel.  The Noetherian hypothesis is retained because it is part of
-the chapter-wide coefficient-ring convention. -/
+/-- A finite map from a commutative ring to a field has maximal kernel. -/
 theorem kernel_isMaximal_of_finite_to_field
-    {Λ : Type u} [CommRing Λ] [IsNoetherianRing Λ]
+    {Λ : Type u} [CommRing Λ]
     {k : Type v} [Field k] (f : Λ →+* k) (hf : f.Finite) :
     (RingHom.ker f).IsMaximal := by
   sorry
 
 /-- The quotient by the kernel of a finite map to a field is a field. -/
 theorem quotient_by_kernel_isField_of_finite_to_field
-    {Λ : Type u} [CommRing Λ] [IsNoetherianRing Λ]
+    {Λ : Type u} [CommRing Λ]
     {k : Type v} [Field k] (f : Λ →+* k) (hf : f.Finite) :
     IsField (Λ ⧸ RingHom.ker f) :=
   (Ideal.Quotient.maximal_ideal_iff_isField_quotient (RingHom.ker f)).mp
     (kernel_isMaximal_of_finite_to_field f hf)
 
-/-- The image of a finite map from the chapter's base ring to a field is a
-field, using the canonical bundled subring `RingHom.range f`. -/
+/-- The image of a finite map from a commutative ring to a field is a field,
+using the canonical bundled subring `RingHom.range f`. -/
 theorem image_isField_of_finite_to_field
-    {Λ : Type u} [CommRing Λ] [IsNoetherianRing Λ]
+    {Λ : Type u} [CommRing Λ]
     {k : Type v} [Field k] (f : Λ →+* k) (hf : f.Finite) :
     IsField (RingHom.range f) := by
   sorry
@@ -67,7 +65,7 @@ theorem image_isField_of_finite_to_field
 /-- The target field is finite over the image field.  The inclusion is the
 canonical subring homomorphism. -/
 theorem target_finite_over_image_of_finite_to_field
-    {Λ : Type u} [CommRing Λ] [IsNoetherianRing Λ]
+    {Λ : Type u} [CommRing Λ]
     {k : Type v} [Field k] (f : Λ →+* k) (hf : f.Finite) :
     (RingHom.range f).subtype.Finite := by
   sorry

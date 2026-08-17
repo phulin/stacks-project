@@ -1,4 +1,6 @@
 import Mathlib.Algebra.Category.ModuleCat.ChangeOfRings
+import Mathlib.Algebra.Category.ModuleCat.Descent
+import Mathlib.Algebra.Category.ModuleCat.Ulift
 import Mathlib.Algebra.Category.Ring.Basic
 import Mathlib.Algebra.Homology.ShortComplex.Exact
 import Mathlib.Algebra.Homology.ShortComplex.ModuleCat
@@ -10,6 +12,7 @@ import Mathlib.LinearAlgebra.TensorProduct.Prod
 import Mathlib.Data.ZMod.Basic
 import Mathlib.FieldTheory.KummerExtension
 import Mathlib.RingTheory.Flat.FaithfullyFlat.Basic
+import Mathlib.RingTheory.Filtration
 import Mathlib.RingTheory.Idempotents
 import Mathlib.RingTheory.Ideal.IdempotentFG
 import Mathlib.RingTheory.KrullDimension.Field
@@ -25,7 +28,7 @@ import Mathlib.RingTheory.RegularLocalRing.Polynomial
 import Mathlib.RingTheory.RootsOfUnity.PrimitiveRoots
 import Mathlib.RingTheory.UniqueFactorizationDomain.Multiplicity
 
-set_option maxHeartbeats 5000000
+set_option maxHeartbeats 20000000
 
 /-!
 # Exercises, Chapter 1: Algebra
@@ -1104,6 +1107,10 @@ theorem exists_nonsplit_sequence_split_after_faithfullyFlat_baseChange :
     ∃ (A B : CommRingCat.{u}) (f : A ⟶ B) (S : ShortComplex (ModuleCat A)),
       S.ShortExact ∧ ¬ Nonempty S.Splitting ∧ SplitsAfterFaithfullyFlatBaseChange f S := by
   let A₀ := ULift.{u} ℤ
+  letI : IsNoetherianRing A₀ :=
+    isNoetherianRing_of_ringEquiv ℤ (ULift.ringEquiv : A₀ ≃+* ℤ).symm
+  letI : IsDomain A₀ :=
+    (ULift.ringEquiv : A₀ ≃+* ℤ).toMulEquiv.isDomain ℤ
   let L2 := Localization.Away (2 : A₀)
   let L3 := Localization.Away (3 : A₀)
   let B₀ := L2 × L3
@@ -1211,7 +1218,235 @@ theorem exists_nonsplit_sequence_split_after_faithfullyFlat_baseChange :
   have hff₀ : f₀.FaithfullyFlat := by
     rw [RingHom.FaithfullyFlat.iff_flat_and_comap_surjective]
     exact ⟨hflat₀, hcomap₀⟩
-  sorry
+  let i : A₀ →ₗ[A₀] B₀ := Algebra.linearMap A₀ B₀
+  let C₀ := B₀ ⧸ LinearMap.range i
+  letI : Module A₀ C₀ := Submodule.Quotient.module (LinearMap.range i)
+  let q : B₀ →ₗ[A₀] C₀ := (LinearMap.range i).mkQ
+  have hcomp : q.comp i = 0 := by
+    apply LinearMap.ext
+    intro x
+    dsimp [q]
+    change (LinearMap.range i).mkQ (i x) = 0
+    apply (Submodule.Quotient.mk_eq_zero _).2
+    exact ⟨x, rfl⟩
+  have hf₀ : f₀ = algebraMap A₀ B₀ := by
+    ext x
+    · rfl
+    · change algebraMap A₀ L3 x = algebraMap A₀ L3 x
+      rfl
+  have hi : Function.Injective i := by
+    intro x y hxy
+    apply RingHom.FaithfullyFlat.injective hff₀
+    simpa [i, hf₀] using hxy
+  have hqsurj : Function.Surjective q := by
+    simpa [q] using (Submodule.mkQ_surjective (LinearMap.range i))
+  have hexact : Function.Exact i q := by
+    intro x
+    constructor
+    · intro hx
+      dsimp [q] at hx
+      change (LinearMap.range i).mkQ x = 0 at hx
+      exact (Submodule.Quotient.mk_eq_zero _).mp hx
+    · rintro ⟨y, rfl⟩
+      exact LinearMap.congr_fun hcomp y
+  let A : CommRingCat.{u} := CommRingCat.of A₀
+  let B : CommRingCat.{u} := CommRingCat.of B₀
+  let f : A ⟶ B := CommRingCat.ofHom f₀
+  let S₀ : ShortComplex (ModuleCat.{u} A) :=
+    ShortComplex.moduleCatMk i q hcomp
+  have hS₀ : S₀.ShortExact := ModuleCat.shortComplex_shortExact S₀ hexact hi hqsurj
+  have hnonsplit₀ : ¬ Nonempty S₀.Splitting := by
+    rintro ⟨s⟩
+    dsimp [S₀] at s
+    have hret := ModuleCat.hom_ext_iff.mp s.f_r
+    have hret1 := LinearMap.congr_fun hret (1 : A₀)
+    change s.r.hom (i 1) = (1 : A₀) at hret1
+    let a : A₀ := s.r.hom ((1 : L2), (0 : L3))
+    let b : A₀ := s.r.hom ((0 : L2), (1 : L3))
+    have hsum : a + b = 1 := by
+      have hunit : (1 : B₀) = ((1 : L2), (1 : L3)) := by
+        ext <;> simp
+      have hret1' := hret1
+      change s.r.hom (algebraMap A₀ B₀ 1) = (1 : A₀) at hret1'
+      rw [map_one, hunit] at hret1'
+      have hpair : ((1 : L2), (1 : L3)) =
+          ((1 : L2), (0 : L3)) + ((0 : L2), (1 : L3)) := by
+        ext <;> simp
+      have hmapadd := s.r.hom.map_add
+        ((1 : L2), (0 : L3)) ((0 : L2), (1 : L3))
+      have hret1'' := hret1'
+      rw [hpair] at hret1''
+      change s.r.hom ((1 : L2), (0 : L3)) +
+        s.r.hom ((0 : L2), (1 : L3)) = (1 : A₀)
+      rw [← hmapadd]
+      exact hret1''
+    have ha_div (n : ℕ) : (2 : A₀) ^ n ∣ a := by
+      letI : SMul A₀ B₀ := (inferInstance : Module A₀ B₀).toSMul
+      letI : SMul A₀ A₀ := (inferInstance : Module A₀ A₀).toSMul
+      have hu : IsUnit ((algebraMap A₀ L2 (2 : A₀)) ^ n) :=
+        IsLocalization.Away.algebraMap_pow_isUnit (S := L2) (x := (2 : A₀)) n
+      obtain ⟨y, hy⟩ := hu.exists_right_inv
+      let z : B₀ := (y, 0)
+      have hz : (2 : A₀) ^ n • z = ((1 : L2), (0 : L3)) := by
+        dsimp [z]
+        rw [Algebra.smul_def]
+        change
+          (algebraMap A₀ L2 ((2 : A₀) ^ n) * y,
+            algebraMap A₀ L3 ((2 : A₀) ^ n) * 0) = (1, 0)
+        congr 1
+        · rw [map_pow]
+          exact hy
+        · simp
+      refine ⟨s.r.hom z, ?_⟩
+      dsimp [a]
+      rw [← hz, s.r.hom.map_smul, Algebra.smul_def]
+    have hb_div (n : ℕ) : (3 : A₀) ^ n ∣ b := by
+      letI : SMul A₀ B₀ := (inferInstance : Module A₀ B₀).toSMul
+      letI : SMul A₀ A₀ := (inferInstance : Module A₀ A₀).toSMul
+      have hu : IsUnit ((algebraMap A₀ L3 (3 : A₀)) ^ n) :=
+        IsLocalization.Away.algebraMap_pow_isUnit (S := L3) (x := (3 : A₀)) n
+      obtain ⟨y, hy⟩ := hu.exists_right_inv
+      let z : B₀ := (0, y)
+      have hz : (3 : A₀) ^ n • z = ((0 : L2), (1 : L3)) := by
+        dsimp [z]
+        rw [Algebra.smul_def]
+        change
+          (algebraMap A₀ L2 ((3 : A₀) ^ n) * 0,
+            algebraMap A₀ L3 ((3 : A₀) ^ n) * y) = (0, 1)
+        congr 1
+        · simp
+        · rw [map_pow]
+          exact hy
+      refine ⟨s.r.hom z, ?_⟩
+      dsimp [b]
+      rw [← hz, s.r.hom.map_smul, Algebra.smul_def]
+    have ha_zero : a = 0 := by
+      let I : Ideal A₀ := Ideal.span {(2 : A₀)}
+      have hI : I ≠ ⊤ := by
+        apply Ideal.span_singleton_ne_top
+        intro hu
+        have hu' : IsUnit (2 : ℤ) :=
+          IsUnit.map (ULift.ringEquiv : A₀ ≃+* ℤ).toRingHom hu
+        norm_num [Int.isUnit_iff_abs_eq] at hu'
+      have haI : a ∈ ⨅ n : ℕ, I ^ n := by
+        rw [Ideal.mem_iInf]
+        intro n
+        rw [show I = Ideal.span {(2 : A₀)} by rfl,
+          Ideal.span_singleton_pow, Ideal.mem_span_singleton]
+        exact ha_div n
+      rw [Ideal.iInf_pow_eq_bot_of_isDomain I hI] at haI
+      simpa using haI
+    have hb_zero : b = 0 := by
+      let I : Ideal A₀ := Ideal.span {(3 : A₀)}
+      have hI : I ≠ ⊤ := by
+        apply Ideal.span_singleton_ne_top
+        intro hu
+        have hu' : IsUnit (3 : ℤ) :=
+          IsUnit.map (ULift.ringEquiv : A₀ ≃+* ℤ).toRingHom hu
+        norm_num [Int.isUnit_iff_abs_eq] at hu'
+      have hbI : b ∈ ⨅ n : ℕ, I ^ n := by
+        rw [Ideal.mem_iInf]
+        intro n
+        rw [show I = Ideal.span {(3 : A₀)} by rfl,
+          Ideal.span_singleton_pow, Ideal.mem_span_singleton]
+        exact hb_div n
+      rw [Ideal.iInf_pow_eq_bot_of_isDomain I hI] at hbI
+      simpa using hbI
+    rw [ha_zero, hb_zero] at hsum
+    exact zero_ne_one hsum
+  let U_A := ModuleCat.uliftFunctor.{u_1, u, u} A₀
+  let S : ShortComplex (ModuleCat.{max u u_1} A) := S₀.map U_A
+  have hS : S.ShortExact := hS₀.map_of_exact U_A
+  have hmap : (S.map (ModuleCat.extendScalars f.hom)).ShortExact := by
+    letI : Limits.PreservesFiniteLimits (ModuleCat.extendScalars f₀) :=
+      ModuleCat.preservesFiniteLimits_extendScalars_of_flat hflat₀
+    dsimp [f, A, B]
+    exact hS.map_of_exact (ModuleCat.extendScalars f₀)
+  have hnonsplit : ¬ Nonempty S.Splitting := by
+    rintro ⟨s⟩
+    apply hnonsplit₀
+    let FF := ModuleCat.fullyFaithfulUliftFunctor.{u, u, u_1} A₀
+    let r : S₀.X₂ ⟶ S₀.X₁ := FF.preimage s.r
+    let t : S₀.X₃ ⟶ S₀.X₂ := FF.preimage s.s
+    have hr : U_A.map r = s.r := by
+      exact FF.map_preimage s.r
+    have ht : U_A.map t = s.s := by
+      exact FF.map_preimage s.s
+    refine ⟨{ r := r, s := t, f_r := ?_, s_g := ?_, id := ?_ }⟩
+    · apply FF.map_injective
+      simp only [Functor.map_comp]
+      rw [hr]
+      change (S₀.map U_A).f ≫ s.r = 𝟙 _
+      exact s.f_r
+    · apply FF.map_injective
+      simp only [Functor.map_comp]
+      rw [ht]
+      change s.s ≫ (S₀.map U_A).g = 𝟙 _
+      exact s.s_g
+    · apply FF.map_injective
+      simp only [Functor.map_add, Functor.map_comp]
+      rw [hr, ht]
+      change s.r ≫ (S₀.map U_A).f + (S₀.map U_A).g ≫ s.s = 𝟙 _
+      exact s.id
+  let T := S.map (ModuleCat.extendScalars f.hom)
+  let r₁ : T.X₂ →ₗ[B] T.X₁ := by
+    letI : Algebra A₀ B₀ := f₀.toAlgebra
+    letI : Module A₀ B₀ := Algebra.toModule
+    letI : IsScalarTower A₀ B₀ B₀ := by
+      apply IsScalarTower.of_algebraMap_smul
+      intro a b
+      rfl
+    dsimp [T, S, U_A, f, A, B, ShortComplex.map, ModuleCat.extendScalars,
+      ModuleCat.ExtendScalars.map', ModuleCat.ExtendScalars.obj']
+    exact TensorProduct.AlgebraTensorModule.lift
+      { toFun := fun b =>
+          { toFun := fun x => (b * x.down) ⊗ₜ[A₀] ULift.up (1 : A₀)
+            map_add' := by
+              intro x y
+              change (b * (x.down + y.down)) ⊗ₜ[A₀] ULift.up (1 : A₀) = _
+              rw [mul_add, TensorProduct.add_tmul]
+            map_smul' := by
+              intro a x
+              simp [Algebra.smul_def, TensorProduct.smul_tmul', mul_assoc,
+                mul_comm] }
+        map_add' := by
+          intro b c
+          apply LinearMap.ext
+          intro x
+          change ((b + c) * x.down) ⊗ₜ[A₀] ULift.up (1 : A₀) =
+            (b * x.down) ⊗ₜ[A₀] ULift.up (1 : A₀) +
+              (c * x.down) ⊗ₜ[A₀] ULift.up (1 : A₀)
+          rw [add_mul, TensorProduct.add_tmul]
+        map_smul' := by
+          intro c b
+          apply LinearMap.ext
+          intro x
+          simp [TensorProduct.smul_tmul', mul_assoc] }
+  have hr₁ : r₁.comp T.f.hom = LinearMap.id := by
+    apply LinearMap.ext
+    intro z
+    refine TensorProduct.induction_on z ?_ (fun b x => ?_) (fun x y hx hy => ?_)
+    · simp
+    · dsimp [r₁, T, S, U_A, f, A, B, ShortComplex.map, ModuleCat.extendScalars,
+        ModuleCat.ExtendScalars.map', ModuleCat.ExtendScalars.obj']
+      change (b * algebraMap A₀ B₀ x.down) ⊗ₜ[A₀] ULift.up (1 : A₀) =
+        b ⊗ₜ[A₀] x
+      apply (TensorProduct.AlgebraTensorModule.congr
+        (LinearEquiv.refl B₀ B₀)
+        ULift.moduleEquiv).injective
+      apply (TensorProduct.AlgebraTensorModule.rid A₀ B₀ B₀).injective
+      simp [Algebra.smul_def, mul_comm]
+    · simp only [map_add, hx, hy]
+  have hsplit : Nonempty T.Splitting := by
+    let r : T.X₂ ⟶ T.X₁ := ModuleCat.ofHom r₁
+    have hfr : T.f ≫ r = 𝟙 T.X₁ := by
+      apply ModuleCat.hom_ext
+      simpa [r] using hr₁
+    exact ⟨ShortComplex.Splitting.ofExactOfRetraction T hmap.exact r hfr hmap.epi_g⟩
+  refine ⟨A, B, f, S, hS, hnonsplit, ?_⟩
+  refine ⟨?_, hmap, ?_⟩
+  · simpa [f] using hff₀
+  · simpa [T] using hsplit
 
 /-! ## Kummer extensions -/
 

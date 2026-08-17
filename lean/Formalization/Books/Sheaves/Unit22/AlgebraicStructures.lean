@@ -130,7 +130,7 @@ noncomputable abbrev algebraicPresheafPullbackPushforwardAdjunction
   TopCat.Presheaf.pullbackPushforwardAdjunction C f
 
 noncomputable abbrev algebraicPresheafHomEquiv
-    {C : Type v} [Category.{v} C] [HasColimits C]
+    {C : Type u} [Category.{v} C] [HasColimits C]
     {X Y : TopCat.{v}} (f : X ⟶ Y)
     (G : AlgebraicPresheaf C Y) (F : AlgebraicPresheaf C X) :
     ((algebraicPresheafPullback C f).obj G ⟶ F) ≃
@@ -168,7 +168,7 @@ noncomputable def algebraicPresheafPullbackStalkIso
 
 /-- The stalk formula for category-valued sheaf pullback. -/
 theorem algebraicSheafPullback_stalk_formula
-    {C : Type v} [Category.{v} C] {FC : C → C → Type*}
+    {C : Type u} [Category.{v} C] {FC : C → C → Type*}
     {CC : C → Type v} [∀ X Y, FunLike (FC X Y) (CC X) (CC Y)]
     [ConcreteCategory C FC] [HasColimits C]
     [HasLimits C] [PreservesLimits (CategoryTheory.forget C)]
@@ -222,6 +222,27 @@ abbrev AlgebraicFMap {C : Type u} [Category.{v} C]
     {X Y : TopCat.{v}} (f : X ⟶ Y)
     (G : AlgebraicSheaf C Y) (F : AlgebraicSheaf C X) : Type _ :=
   G ⟶ (algebraicSheafPushforward C f).obj F
+
+/-- The category-valued `f`-map is the corresponding morphism into the
+pushforward sheaf. -/
+noncomputable abbrev algebraicFMapHomEquiv
+    {C : Type u} [Category.{v} C] {X Y : TopCat.{v}}
+    (f : X ⟶ Y) (G : AlgebraicSheaf C Y) (F : AlgebraicSheaf C X) :
+    AlgebraicFMap f G F ≃ (G ⟶ (algebraicSheafPushforward C f).obj F) :=
+  Equiv.refl _
+
+/-- The pullback/pushforward Hom correspondence for algebraic `f`-maps. -/
+noncomputable abbrev algebraicFMapPullbackHomEquiv
+    {C : Type u} [Category.{v} C] {FC : C → C → Type*} {CC : C → Type v}
+    [∀ X Y, FunLike (FC X Y) (CC X) (CC Y)] [ConcreteCategory C FC]
+    [HasColimits C] [HasLimits C]
+    [PreservesLimits (CategoryTheory.forget C)]
+    [PreservesFilteredColimits (CategoryTheory.forget C)]
+    [(CategoryTheory.forget C).ReflectsIsomorphisms]
+    {X Y : TopCat.{v}} (f : X ⟶ Y)
+    (G : AlgebraicSheaf C Y) (F : AlgebraicSheaf C X) :
+    ((algebraicSheafPullback C f).obj G ⟶ F) ≃ AlgebraicFMap f G F :=
+  algebraicSheafHomEquiv f G F
 
 /-- Composition of algebraic `f`-maps. -/
 noncomputable def algebraicFMapComp

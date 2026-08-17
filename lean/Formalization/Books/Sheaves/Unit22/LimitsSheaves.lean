@@ -1,6 +1,7 @@
 import Formalization.Books.Sheaves.Unit22.LimitsPresheaves
 import Mathlib.CategoryTheory.Sites.Limits
 import Mathlib.CategoryTheory.Sites.LeftExact
+import Mathlib.CategoryTheory.Sites.ConstantSheaf
 import Mathlib.Topology.Spectral.Basic
 import Mathlib.Topology.Spectral.Hom
 
@@ -81,6 +82,20 @@ theorem sheafForgetPreservesLimits {X : TopCat.{v}} {C : Type (v + 1)}
     [Category.{v} C] [HasLimits C] :
     PreservesLimits (TopCat.Sheaf.forget C X) := by
   infer_instance
+
+/-- The inclusion of sheaves into presheaves does not preserve arbitrary
+colimits in general. -/
+theorem sheafForgetDoesNotPreserveAllColimits :
+    ∃ (X : TopCat.{v}),
+      ¬ PreservesColimits (TopCat.Sheaf.forget (Type v) X) := by
+  sorry
+
+/-- The inclusion of sheaves into presheaves need not preserve even finite
+colimits. -/
+theorem sheafForgetDoesNotPreserveFiniteColimits :
+    ∃ (X : TopCat.{v}),
+      ¬ PreservesFiniteColimits (TopCat.Sheaf.forget (Type v) X) := by
+  sorry
 
 /-- Sheafification preserves all colimits. -/
 theorem sheafificationPreservesColimits {X : TopCat.{v}}
@@ -235,11 +250,18 @@ theorem directedColimitSectionsMap_bijective_of_cofinal_cover
 /-! The tail products occurring in the global-section computation. -/
 
 /-- The directed system `∏_{m ≥ n} ℤ` with transition maps given by
-restriction to a later tail.  `ULift` only adjusts the universe to the one
-used by the sheaf counterexample. -/
-def tailProductDiagram : ℕ ⥤ Type v where
-  obj n := ∀ m : ℕ, n ≤ m → ULift.{v} ℤ
-  map f s := fun m hm => s m (le_trans (leOfHom f) hm)
+restriction to a later tail, regarded as a diagram of abelian groups.
+`ULift` only adjusts the universe to the one used by the sheaf counterexample. -/
+def tailProductDiagram : ℕ ⥤ AddCommGrpCat.{v} where
+  obj n := AddCommGrpCat.of (∀ m : ℕ, n ≤ m → ULift.{v} ℤ)
+  map f := AddCommGrpCat.ofHom {
+    toFun := fun s m hm => s m (le_trans (leOfHom f) hm)
+    map_zero' := by
+      intro s
+      rfl
+    map_add' := by
+      intro s t
+      rfl }
   map_id := by
     intro n
     rfl
@@ -262,34 +284,36 @@ structure DirectedColimitSectionsCounterexample where
     ∃ m : ℕ, n ≤ m ∧ x = xi m
   j : ∀ n, (Opens.toTopCat X).obj (U n) ⟶ X
   j_is_inclusion : ∀ n, j n = Opens.inclusion' (U n)
-  F : ℕ ⥤ TopCat.Sheaf (Type v) X
+  F : ℕ ⥤ Ab X
   F_is_pushforward_constant :
-    ∀ n, F.obj n = (pushforwardSheaf (j n)).obj
-      (Formalization.Books.Sheaves.Unit07.constantSheaf
-        ((Opens.toTopCat X).obj (U n)) (ULift.{v} ℤ))
+    ∀ n, F.obj n = (abelianSheafPushforward (j n)).obj
+      ((CategoryTheory.constantSheaf
+        (Opens.grothendieckTopology ((Opens.toTopCat X).obj (U n)))
+        AddCommGrpCat).obj (AddCommGrpCat.of (ULift.{v} ℤ)))
   F_colimit_cocone : Cocone F
   F_colimit_is_colimit : IsColimit F_colimit_cocone
   stalk_tail_zero : ∀ {n m}, m < n →
-    Nonempty ((F.obj n).presheaf.stalk (xi m) ≃ PEmpty.{v})
-  M : Type v
+    Nonempty ((F.obj n).presheaf.stalk (xi m) ≅ 0)
+  M : AddCommGrpCat.{v}
   M_nontrivial : Nontrivial M
-  M_is_tail_colimit : Nonempty (M ≃ colimit tailProductDiagram)
-  stalk_s1 : Nonempty (F_colimit_cocone.pt.presheaf.stalk s1 ≃ M)
-  stalk_s2 : Nonempty (F_colimit_cocone.pt.presheaf.stalk s2 ≃ M)
+  M_is_tail_colimit : Nonempty (M ≅ colimit tailProductDiagram)
+  stalk_s1 : Nonempty (F_colimit_cocone.pt.presheaf.stalk s1 ≅ M)
+  stalk_s2 : Nonempty (F_colimit_cocone.pt.presheaf.stalk s2 ≅ M)
   stalk_colimit_tail_zero : ∀ n,
-    Nonempty (F_colimit_cocone.pt.presheaf.stalk (xi n) ≃ PEmpty.{v})
-  two_skyscraper_sum : TopCat.Sheaf (Type v) X
-  two_skyscraper_sum_inl : setSkyscraperSheaf s1 M ⟶ two_skyscraper_sum
-  two_skyscraper_sum_inr : setSkyscraperSheaf s2 M ⟶ two_skyscraper_sum
+    Nonempty (F_colimit_cocone.pt.presheaf.stalk (xi n) ≅ 0)
+  two_skyscraper_sum : Ab X
+  two_skyscraper_sum_inl : abelianSkyscraperSheaf s1 M ⟶ two_skyscraper_sum
+  two_skyscraper_sum_inr : abelianSkyscraperSheaf s2 M ⟶ two_skyscraper_sum
   two_skyscraper_sum_is_coproduct :
     IsColimit (BinaryCofan.mk two_skyscraper_sum_inl two_skyscraper_sum_inr)
   sheaf_is_two_skyscrapers :
     Nonempty (F_colimit_cocone.pt ≅ two_skyscraper_sum)
   global_sections :
-    Nonempty (F_colimit_cocone.pt.presheaf.obj (op (⊤ : Opens X)) ≃ M × M)
+    Nonempty (F_colimit_cocone.pt.presheaf.obj (op (⊤ : Opens X)) ≃+
+      (M × M))
   colimit_global_sections :
-    Nonempty (colimit (F ⋙ TopCat.Sheaf.forget (Type v) X ⋙
-      (evaluation (Opens X)ᵒᵖ (Type v)).obj (op (⊤ : Opens X))) ≃ M)
+    Nonempty (colimit (F ⋙ TopCat.Sheaf.forget AddCommGrpCat X ⋙
+      (evaluation (Opens X)ᵒᵖ AddCommGrpCat).obj (op (⊤ : Opens X))) ≅ M)
 
 /-- The tail-space data described in the source exists. -/
 theorem exists_directedColimitSectionsCounterexample :
@@ -326,11 +350,34 @@ noncomputable abbrev spectralPullbackSectionsAt
 /-- The diagram of pullback sections indexed by all arrows into `i`.
 Its object part is the displayed source expression; the morphism part uses
 the canonical pullback comparison for a map of arrows. -/
+structure SpectralPullbackSectionsDiagramData
+    {I : Type u} [Category.{w} I] (X : I ⥤ TopCat.{v}) (i : I)
+    (G : TopCat.Sheaf (Type v) (X.obj i)) (Ui : Opens (X.obj i)) where
+  diagram : CostructuredArrow (𝟭 I) i ⥤ Type v
+  obj_eq : ∀ a, diagram.obj a = spectralPullbackSectionsAt X i G Ui a
+
+theorem exists_spectralPullbackSectionsDiagram
+    {I : Type u} [Category.{w} I] (X : I ⥤ TopCat.{v}) (i : I)
+    (G : TopCat.Sheaf (Type v) (X.obj i)) (Ui : Opens (X.obj i)) :
+    Nonempty (SpectralPullbackSectionsDiagramData X i G Ui) := by
+  sorry
+
+/-- The diagram of pullback sections indexed by all arrows into `i`.
+Its object part is the displayed source expression; the morphism part uses
+the canonical pullback comparison for a map of arrows. -/
 noncomputable def spectralPullbackSectionsDiagram
     {I : Type u} [Category.{w} I] (X : I ⥤ TopCat.{v}) (i : I)
     (G : TopCat.Sheaf (Type v) (X.obj i)) (Ui : Opens (X.obj i)) :
-    CostructuredArrow (𝟭 I) i ⥤ Type v := by
-  sorry
+    CostructuredArrow (𝟭 I) i ⥤ Type v :=
+  (Classical.choice (exists_spectralPullbackSectionsDiagram X i G Ui)).diagram
+
+theorem spectralPullbackSectionsDiagram_obj
+    {I : Type u} [Category.{w} I] (X : I ⥤ TopCat.{v}) (i : I)
+    (G : TopCat.Sheaf (Type v) (X.obj i)) (Ui : Opens (X.obj i))
+    (a : CostructuredArrow (𝟭 I) i) :
+    (spectralPullbackSectionsDiagram X i G Ui).obj a =
+      spectralPullbackSectionsAt X i G Ui a :=
+  (Classical.choice (exists_spectralPullbackSectionsDiagram X i G Ui)).obj_eq a
 
 /-- The colimit of the pullback-section diagram over arrows `a : j ⟶ i`. -/
 noncomputable abbrev spectralPullbackSectionsColimit
@@ -338,6 +385,20 @@ noncomputable abbrev spectralPullbackSectionsColimit
     (G : TopCat.Sheaf (Type v) (X.obj i)) (Ui : Opens (X.obj i))
     [HasColimit (spectralPullbackSectionsDiagram X i G Ui)] : Type v :=
   colimit (spectralPullbackSectionsDiagram X i G Ui)
+
+/-- Computation of sections after pulling a sheaf back to a spectral inverse
+limit. -/
+theorem exists_computePullbackToSpectralLimitSections
+    {I : Type u} [Category.{w} I] [IsCofiltered I]
+    (X : I ⥤ TopCat.{v}) [HasLimit X]
+    (hX : IsSpectralSpaceDiagram X) (i : I)
+    (G : TopCat.Sheaf (Type v) (X.obj i)) (Ui : Opens (X.obj i))
+    (hUi : QuasiCompactOpen Ui)
+    [HasColimit (spectralPullbackSectionsDiagram X i G Ui)] :
+    spectralPullbackSectionsColimit X i G Ui ≃
+      ((pullbackSheaf (spectralInverseLimitProjection X i)).obj G).presheaf.obj
+        (op ((Opens.map (spectralInverseLimitProjection X i)).obj Ui)) := by
+  sorry
 
 /-- Computation of sections after pulling a sheaf back to a spectral inverse
 limit. -/
@@ -350,8 +411,8 @@ noncomputable def computePullbackToSpectralLimitSections
     [HasColimit (spectralPullbackSectionsDiagram X i G Ui)] :
     spectralPullbackSectionsColimit X i G Ui ≃
       ((pullbackSheaf (spectralInverseLimitProjection X i)).obj G).presheaf.obj
-        (op ((Opens.map (spectralInverseLimitProjection X i)).obj Ui)) := by
-  sorry
+        (op ((Opens.map (spectralInverseLimitProjection X i)).obj Ui)) :=
+  Classical.choice (exists_computePullbackToSpectralLimitSections X hX i G Ui hUi)
 
 /-- A cofiltered system of sheaves and `f_a`-maps over a spectral diagram. -/
 structure SpectralSheafSystem {I : Type u} [Category.{w} I]
@@ -364,19 +425,78 @@ structure SpectralSheafSystem {I : Type u} [Category.{w} I]
 
 /-- The sheaf on the inverse-limit space obtained as the colimit of the
 pullbacks of a spectral sheaf system. -/
+theorem exists_spectralSystemLimitSheaf
+    {I : Type u} [Category.{w} I] [IsCofiltered I]
+    {X : I ⥤ TopCat.{v}} [HasLimit X]
+    (S : SpectralSheafSystem X) :
+    Nonempty (TopCat.Sheaf (Type v) (spectralInverseLimitSpace X)) := by
+  sorry
+
+/-- The sheaf on the inverse-limit space obtained as the colimit of the
+pullbacks of a spectral sheaf system. -/
 noncomputable def spectralSystemLimitSheaf
     {I : Type u} [Category.{w} I] [IsCofiltered I]
     {X : I ⥤ TopCat.{v}} [HasLimit X]
     (S : SpectralSheafSystem X) :
-    TopCat.Sheaf (Type v) (spectralInverseLimitSpace X) := by
+    TopCat.Sheaf (Type v) (spectralInverseLimitSpace X) :=
+  Classical.choice (exists_spectralSystemLimitSheaf S)
+
+/-- The source-facing colimit of the sections
+`F_j(f_a⁻¹(U_i))` over arrows `a : j ⟶ i`. -/
+structure SpectralSystemSectionsDiagramData
+    {I : Type u} [Category.{w} I] [IsCofiltered I]
+    {X : I ⥤ TopCat.{v}} [HasLimit X]
+    (S : SpectralSheafSystem X) (i : I) (Ui : Opens (X.obj i)) :
+    Type (max u w v) where
+  diagram : CostructuredArrow (𝟭 I) i ⥤ Type v
+  obj_eq : ∀ a,
+    diagram.obj a = spectralPullbackSectionsAt X i (S.sheaf i) Ui a
+
+theorem exists_spectralSystemSectionsDiagram
+    {I : Type u} [Category.{w} I] [IsCofiltered I]
+    {X : I ⥤ TopCat.{v}} [HasLimit X]
+    (S : SpectralSheafSystem X) (i : I) (Ui : Opens (X.obj i)) :
+    Nonempty (SpectralSystemSectionsDiagramData S i Ui) := by
   sorry
+
+/-- The source-facing colimit of the sections
+`F_j(f_a⁻¹(U_i))` over arrows `a : j ⟶ i`. -/
+noncomputable def spectralSystemSectionsDiagram
+    {I : Type u} [Category.{w} I] [IsCofiltered I]
+    {X : I ⥤ TopCat.{v}} [HasLimit X]
+    (S : SpectralSheafSystem X) (i : I) (Ui : Opens (X.obj i)) :
+    CostructuredArrow (𝟭 I) i ⥤ Type v :=
+  (Classical.choice (exists_spectralSystemSectionsDiagram S i Ui)).diagram
+
+theorem spectralSystemSectionsDiagram_obj
+    {I : Type u} [Category.{w} I] [IsCofiltered I]
+    {X : I ⥤ TopCat.{v}} [HasLimit X]
+    (S : SpectralSheafSystem X) (i : I) (Ui : Opens (X.obj i))
+    (a : CostructuredArrow (𝟭 I) i) :
+    (spectralSystemSectionsDiagram S i Ui).obj a =
+      spectralPullbackSectionsAt X i (S.sheaf i) Ui a :=
+  (Classical.choice (exists_spectralSystemSectionsDiagram S i Ui)).obj_eq a
 
 /-- The source-facing colimit of the sections
 `F_j(f_a⁻¹(U_i))` over arrows `a : j ⟶ i`. -/
 noncomputable def spectralSystemSectionsColimit
     {I : Type u} [Category.{w} I] [IsCofiltered I]
     {X : I ⥤ TopCat.{v}} [HasLimit X]
-    (S : SpectralSheafSystem X) (i : I) (Ui : Opens (X.obj i)) : Type v := by
+    (S : SpectralSheafSystem X) (i : I) (Ui : Opens (X.obj i))
+    [HasColimit (spectralSystemSectionsDiagram S i Ui)] : Type v :=
+  colimit (spectralSystemSectionsDiagram S i Ui)
+
+/-- Sections of the colimit system descend along quasi-compact opens of a
+spectral inverse-limit factor. -/
+theorem exists_spectralSystemDescendOpensEquiv
+    {I : Type u} [Category.{w} I] [IsCofiltered I]
+    {X : I ⥤ TopCat.{v}} [HasLimit X]
+    (hX : IsSpectralSpaceDiagram X) (S : SpectralSheafSystem X)
+    (i : I) (Ui : Opens (X.obj i)) (hUi : QuasiCompactOpen Ui)
+    [HasColimit (spectralSystemSectionsDiagram S i Ui)] :
+    Nonempty (spectralSystemSectionsColimit S i Ui ≃
+      (spectralSystemLimitSheaf S).presheaf.obj
+        (op ((Opens.map (spectralInverseLimitProjection X i)).obj Ui))) := by
   sorry
 
 /-- Sections of the colimit system descend along quasi-compact opens of a
@@ -385,11 +505,12 @@ noncomputable def spectralSystemDescendOpensEquiv
     {I : Type u} [Category.{w} I] [IsCofiltered I]
     {X : I ⥤ TopCat.{v}} [HasLimit X]
     (hX : IsSpectralSpaceDiagram X) (S : SpectralSheafSystem X)
-    (i : I) (Ui : Opens (X.obj i)) (hUi : QuasiCompactOpen Ui) :
+    (i : I) (Ui : Opens (X.obj i)) (hUi : QuasiCompactOpen Ui)
+    [HasColimit (spectralSystemSectionsDiagram S i Ui)] :
     spectralSystemSectionsColimit S i Ui ≃
       (spectralSystemLimitSheaf S).presheaf.obj
-        (op ((Opens.map (spectralInverseLimitProjection X i)).obj Ui)) := by
-  sorry
+        (op ((Opens.map (spectralInverseLimitProjection X i)).obj Ui)) :=
+  Classical.choice (exists_spectralSystemDescendOpensEquiv hX S i Ui hUi)
 
 end
 

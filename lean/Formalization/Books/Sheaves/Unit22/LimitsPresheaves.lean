@@ -20,6 +20,16 @@ noncomputable section
 
 /-! ## Pointwise limits and colimits -/
 
+/-- The category of set-valued presheaves has all limits. -/
+theorem presheaf_has_limits {X : TopCat.{v}} :
+    HasLimits (TopCat.Presheaf (Type v) X) := by
+  infer_instance
+
+/-- The category of set-valued presheaves has all colimits. -/
+theorem presheaf_has_colimits {X : TopCat.{v}} :
+    HasColimitsOfSize.{v, v} (TopCat.Presheaf (Type v) X) := by
+  infer_instance
+
 /-- The limit of a diagram of set-valued presheaves. -/
 noncomputable abbrev presheafLimit {X : TopCat.{v}} {J : Type v}
     [Category.{v} J] (F : J ⥤ TopCat.Presheaf (Type v) X) :
@@ -53,6 +63,12 @@ theorem presheafStalkPreservesFiniteLimits {X : TopCat.{v}} (x : X) :
     PreservesFiniteLimits (TopCat.Presheaf.stalkFunctor (Type v) x) := by
   dsimp [TopCat.Presheaf.stalkFunctor]
   infer_instance
+
+/-- Stalks do not preserve arbitrary limits in general. -/
+theorem presheafStalkDoesNotPreserveAllLimits :
+    ∃ (X : TopCat.{v}) (x : X),
+      ¬ PreservesLimits (TopCat.Presheaf.stalkFunctor (Type v) x) := by
+  sorry
 
 /-- The finite-diagram stalk/limit comparison. -/
 noncomputable def presheafFiniteLimitStalkIso {X : TopCat.{v}} {J : Type v}

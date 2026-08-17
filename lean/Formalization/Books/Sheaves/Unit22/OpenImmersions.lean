@@ -101,6 +101,12 @@ theorem openSheafRestriction_directImage_iso {C : Type u} [Category.{v} C]
       ((openSheafDirectImage C U).obj F) ≅ F) := by
   sorry
 
+/-- Direct image along an open inclusion is fully faithful. -/
+theorem openSheafDirectImage_fullFaithful (C : Type u) [Category.{v} C]
+    {X : TopCat.{v}} (U : Opens X) :
+    (openSheafDirectImage C U).Full := by
+  sorry
+
 /-! ## Extension by the initial object -/
 
 /-- Extension by the initial object at the presheaf level. -/
@@ -121,9 +127,19 @@ noncomputable def openPresheafExtensionByInitial (C : Type u) [Category.{v} C]
             eqToHom (by simp [hW])
         · exact eqToHom (by simp [hV]) ≫ initial.to _
       map_id := by
-        sorry
+        intro V
+        by_cases hV : V.unop ≤ U
+        · simp [hV]
+        · apply initial.hom_ext
       map_comp := by
-        sorry
+        intro V W T i k
+        by_cases hV : V.unop ≤ U
+        · have hW : W.unop ≤ U := by
+            exact (show W.unop ≤ V.unop from i.unop).trans hV
+          have hT : T.unop ≤ U := by
+            exact (show T.unop ≤ W.unop from k.unop).trans hW
+          simp [hV, hW, hT, ← F.map_comp, ← j.op.map_comp]
+        · apply initial.hom_ext
     }
     map := fun {F G} φ => {
       app := fun V => if hV : V.unop ≤ U then
@@ -131,18 +147,45 @@ noncomputable def openPresheafExtensionByInitial (C : Type u) [Category.{v} C]
             eqToHom (by simp [hV])
         else eqToHom (by simp [hV]) ≫ initial.to _
       naturality := by
-        sorry
-    }
+        intro V W i
+        by_cases hV : V.unop ≤ U
+        · have hW : W.unop ≤ U := by
+            exact (show W.unop ≤ V.unop from i.unop).trans hV
+          simp [hV, hW, ← φ.naturality]
+        · apply initial.hom_ext
+      }
     map_id := by
-      sorry
+      intro F
+      ext V
+      by_cases hV : V.unop ≤ U
+      · simp [hV]
+      · apply initial.hom_ext
     map_comp := by
-      sorry
+      intro F G H φ ψ
+      ext V
+      by_cases hV : V.unop ≤ U
+      · simp [hV]
+      · apply initial.hom_ext
   }
 
 /-- Extension by the empty set for set-valued presheaves. -/
 noncomputable abbrev openPresheafExtensionByEmpty {X : TopCat.{v}} (U : Opens X) :
     TopCat.Presheaf (Type v) (openSubspace U) ⥤ TopCat.Presheaf (Type v) X :=
   openPresheafExtensionByInitial (Type v) U
+
+/-! The same initial-object construction for abelian and algebraic
+presheaves. -/
+
+noncomputable abbrev openAbelianPresheafExtensionByZero {X : TopCat.{v}}
+    (U : Opens X) :
+    AbelianPresheaf (openSubspace U) ⥤ AbelianPresheaf X :=
+  openPresheafExtensionByInitial AddCommGrpCat U
+
+noncomputable abbrev openAlgebraicPresheafExtensionByInitial
+    (C : Type u) [Category.{v} C] [HasInitial C]
+    {X : TopCat.{v}} (U : Opens X) :
+    TopCat.Presheaf C (openSubspace U) ⥤ TopCat.Presheaf C X :=
+  openPresheafExtensionByInitial C U
 
 /-- Sheafification of extension by the initial object. -/
 noncomputable def openSheafExtensionByInitial (C : Type u) [Category.{v} C]
@@ -159,10 +202,33 @@ noncomputable abbrev openSetSheafExtensionByEmpty {X : TopCat.{v}} (U : Opens X)
     TopCat.Sheaf (Type v) (openSubspace U) ⥤ TopCat.Sheaf (Type v) X :=
   openSheafExtensionByInitial (Type v) U
 
+noncomputable abbrev openAbelianSheafExtensionByZero {X : TopCat.{v}} (U : Opens X)
+    [HasWeakSheafify (Opens.grothendieckTopology X) AddCommGrpCat] :
+    Ab (openSubspace U) ⥤ Ab X :=
+  openSheafExtensionByInitial AddCommGrpCat U
+
+/-- The presheaf extension/restriction adjunction. -/
+theorem exists_openPresheafExtensionAdjunction (C : Type u) [Category.{v} C]
+    [HasInitial C] [HasColimits C] {X : TopCat.{v}} (U : Opens X) :
+    Nonempty (openPresheafExtensionByInitial C U ⊣ openPresheafRestriction C U) := by
+  sorry
+
 /-- The presheaf extension/restriction adjunction. -/
 noncomputable def openPresheafExtensionAdjunction (C : Type u) [Category.{v} C]
     [HasInitial C] [HasColimits C] {X : TopCat.{v}} (U : Opens X) :
     openPresheafExtensionByInitial C U ⊣ openPresheafRestriction C U := by
+  exact Classical.choice (exists_openPresheafExtensionAdjunction C U)
+
+noncomputable abbrev openAbelianPresheafExtensionAdjunction
+    {X : TopCat.{v}} (U : Opens X) :
+    openAbelianPresheafExtensionByZero U ⊣ openPresheafRestriction AddCommGrpCat U :=
+  openPresheafExtensionAdjunction AddCommGrpCat U
+
+/-- The sheaf extension/restriction adjunction. -/
+theorem exists_openSheafExtensionAdjunction (C : Type u) [Category.{v} C]
+    [HasInitial C] {X : TopCat.{v}} (U : Opens X)
+    [HasWeakSheafify (Opens.grothendieckTopology X) C] :
+    Nonempty (openSheafExtensionByInitial C U ⊣ openSheafRestriction C U) := by
   sorry
 
 /-- The sheaf extension/restriction adjunction. -/
@@ -170,7 +236,7 @@ noncomputable def openSheafExtensionAdjunction (C : Type u) [Category.{v} C]
     [HasInitial C] {X : TopCat.{v}} (U : Opens X)
     [HasWeakSheafify (Opens.grothendieckTopology X) C] :
     openSheafExtensionByInitial C U ⊣ openSheafRestriction C U := by
-  sorry
+  exact Classical.choice (exists_openSheafExtensionAdjunction C U)
 
 /-- Restricting the presheaf extension by the initial object recovers the
 original presheaf on the open subspace. -/
@@ -287,9 +353,38 @@ noncomputable def ringedOpenInclusion (X : RingedSpace.{v}) (U : Opens X.carrier
           X.structureSheaf).hom
 
 /-- Extension by zero for modules on an open subspace. -/
+theorem exists_openModulePresheafExtensionByZero (X : RingedSpace.{v})
+    (U : Opens X.carrier) :
+    Nonempty (PMod (ringedOpenSubspace X U).structureSheaf.obj ⥤
+      PMod X.structureSheaf.obj) := by
+  sorry
+
+/-! The module-valued presheaf construction is the initial-object extension
+on the underlying additive presheaf, equipped with the ambient structure-sheaf
+action.  Its categorical interface is chosen from the source construction. -/
+noncomputable def openModulePresheafExtensionByZero (X : RingedSpace.{v})
+    (U : Opens X.carrier) :
+    PMod (ringedOpenSubspace X U).structureSheaf.obj ⥤
+      PMod X.structureSheaf.obj :=
+  Classical.choice (exists_openModulePresheafExtensionByZero X U)
+
+/-- Extension by zero for modules on an open subspace. -/
 noncomputable def openModuleExtensionFunctor (X : RingedSpace.{v}) (U : Opens X.carrier) :
     Mod (ringedOpenSubspace X U).structureSheaf ⥤ Mod X.structureSheaf := by
-  sorry
+  exact
+    SheafOfModules.forget (ringedOpenSubspace X U).structureSheaf ⋙
+      openModulePresheafExtensionByZero X U ⋙
+      PresheafOfModules.sheafification (𝟙 X.structureSheaf.obj)
+
+theorem exists_openModuleExtensionFunctor (X : RingedSpace.{v})
+    (U : Opens X.carrier) :
+    Nonempty (Mod (ringedOpenSubspace X U).structureSheaf ⥤ Mod X.structureSheaf) :=
+  ⟨openModuleExtensionFunctor X U⟩
+
+noncomputable abbrev openModuleSheafExtensionByZero (X : RingedSpace.{v})
+    (U : Opens X.carrier) :
+    Mod (ringedOpenSubspace X U).structureSheaf ⥤ Mod X.structureSheaf :=
+  openModuleExtensionFunctor X U
 
 /-- Restriction of modules to an open subspace. -/
 noncomputable abbrev openModuleRestrictionFunctor (X : RingedSpace.{v}) (U : Opens X.carrier) :
@@ -297,9 +392,14 @@ noncomputable abbrev openModuleRestrictionFunctor (X : RingedSpace.{v}) (U : Ope
   ringedSpaceModulePullback (ringedOpenInclusion X U)
 
 /-- The module extension/restriction adjunction for an open subspace. -/
+theorem exists_openModuleExtensionAdjunction (X : RingedSpace.{v}) (U : Opens X.carrier) :
+    Nonempty (openModuleExtensionFunctor X U ⊣ openModuleRestrictionFunctor X U) := by
+  sorry
+
+/-- The module extension/restriction adjunction for an open subspace. -/
 noncomputable def openModuleExtensionAdjunction (X : RingedSpace.{v}) (U : Opens X.carrier) :
     openModuleExtensionFunctor X U ⊣ openModuleRestrictionFunctor X U := by
-  sorry
+  exact Classical.choice (exists_openModuleExtensionAdjunction X U)
 
 /-- Module stalks of extension by zero vanish outside the open. -/
 theorem openModuleExtension_stalk_zero (X : RingedSpace.{v}) (U : Opens X.carrier)

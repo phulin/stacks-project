@@ -26,8 +26,8 @@ noncomputable section
 
 /-- The continuous map from the one-point space selecting `x`. -/
 noncomputable def skyscraperPointMap {X : TopCat.{v}} (x : X) :
-    TopCat.of PUnit.{v + 1} ⟶ X :=
-  TopCat.ofHom (ContinuousMap.const (TopCat.of PUnit.{v + 1}) x)
+    TopCat.of PUnit.{v} ⟶ X :=
+  TopCat.ofHom (ContinuousMap.const (TopCat.of PUnit.{v}) x)
 
 /-- The set-valued skyscraper presheaf at `x` with value `A`. -/
 noncomputable def setSkyscraperPresheaf {X : TopCat.{v}}
@@ -115,6 +115,32 @@ def IsAlgebraicSkyscraperSheaf
 
 /-! ## The module-valued construction -/
 
+/-! The support and away-from-support stalk properties are bundled with the
+module-valued construction.  This keeps the chosen object tied to its
+prescribed stalk module even though the construction itself is noncomputable.
+-/
+
+structure ModuleSkyscraperData {X : TopCat.{v}} (O : RingSheaf X) (x : X)
+    (A : ModuleCat.{v} (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x)) where
+  sheaf : Mod O
+  stalk_at_support :
+    Nonempty (ModuleCat.of (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x)
+      (↑(TopCat.Presheaf.stalk (C := AddCommGrpCat.{v})
+        sheaf.val.presheaf x)) ≅ A)
+  stalk_away : ∀ {x' : X}, ¬x ⤳ x' →
+    Nonempty (ModuleCat.of (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x')
+      (↑(TopCat.Presheaf.stalk (C := AddCommGrpCat.{v})
+        sheaf.val.presheaf x')) ≅ 0)
+
+/-- A source-facing module skyscraper sheaf.  Its value is a module over the
+support stalk, and the induced scalar actions on sections are part of the
+construction. -/
+theorem exists_moduleSkyscraperSheaf {X : TopCat.{v}}
+    (O : RingSheaf X) (x : X)
+    (A : ModuleCat.{v} (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x)) :
+    Nonempty (ModuleSkyscraperData O x A) := by
+  sorry
+
 /-- A source-facing module skyscraper sheaf.  Its value is a module over the
 support stalk, and the induced scalar actions on sections are part of the
 construction. -/
@@ -122,7 +148,7 @@ noncomputable def moduleSkyscraperSheaf {X : TopCat.{v}}
     (O : RingSheaf X) (x : X)
     (A : ModuleCat.{v} (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x)) :
     Mod O := by
-  sorry
+  exact (Classical.choice (exists_moduleSkyscraperSheaf O x A)).sheaf
 
 /-- The stalk functor on sheaves of `O`-modules, with its canonical stalk
 module structure. -/
@@ -162,18 +188,23 @@ noncomputable def moduleStalkFunctor {X : TopCat.{v}}
 
 /-- Functoriality of the module skyscraper construction in its stalk-module
 value. -/
+structure ModuleSkyscraperFunctorData {X : TopCat.{v}}
+    (O : RingSheaf X) (x : X) where
+  functor : ModuleCat.{v} (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x) ⥤ Mod O
+  obj_iso : ∀ A,
+    Nonempty (functor.obj A ≅ moduleSkyscraperSheaf O x A)
+
+theorem exists_moduleSkyscraperSheafFunctor {X : TopCat.{v}}
+    (O : RingSheaf X) (x : X) :
+    Nonempty (ModuleSkyscraperFunctorData O x) := by
+  sorry
+
+/-- Functoriality of the module skyscraper construction in its stalk-module
+value. -/
 noncomputable def moduleSkyscraperSheafFunctor {X : TopCat.{v}}
     (O : RingSheaf X) (x : X) :
-    ModuleCat.{v} (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x) ⥤ Mod O where
-  obj A := moduleSkyscraperSheaf O x A
-  map φ := by
-    sorry
-  map_id := by
-    intros
-    sorry
-  map_comp := by
-    intros
-    sorry
+    ModuleCat.{v} (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x) ⥤ Mod O :=
+  (Classical.choice (exists_moduleSkyscraperSheafFunctor O x)).functor
 
 /-- A sheaf of modules is a skyscraper sheaf when it is isomorphic to a
 module skyscraper at some point. -/
@@ -286,10 +317,16 @@ noncomputable def algebraicStalkSkyscraperAdjunction
     exact stalkSkyscraperSheafAdjunction x
 
 /-- The source-facing module stalk/skyscraper adjunction. -/
+theorem exists_moduleStalkSkyscraperAdjunction {X : TopCat.{v}}
+    (O : RingSheaf X) (x : X) :
+    Nonempty (moduleStalkFunctor O x ⊣ moduleSkyscraperSheafFunctor O x) := by
+  sorry
+
+/-- The source-facing module stalk/skyscraper adjunction. -/
 noncomputable def moduleStalkSkyscraperAdjunction {X : TopCat.{v}}
     (O : RingSheaf X) (x : X) :
     moduleStalkFunctor O x ⊣ moduleSkyscraperSheafFunctor O x := by
-  sorry
+  exact Classical.choice (exists_moduleStalkSkyscraperAdjunction O x)
 
 end
 

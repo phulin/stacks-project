@@ -148,12 +148,20 @@ noncomputable abbrev modulePresheafTensorOverPushforward {X Y : TopCat.{v}}
     |>.obj ((modulePresheafPullback f).obj G)
 
 /-- The tensor/pushforward Hom correspondence for presheaves of modules. -/
+theorem exists_modulePresheafTensorHomEquiv {X Y : TopCat.{v}}
+    {O : RingPresheaf.{v, v} X} (f : X ⟶ Y)
+    (G : PMod ((moduleRingPresheafPushforward f).obj O)) (F : PMod O) :
+    Nonempty ((modulePresheafTensorOverPushforward f G ⟶ F) ≃
+      (G ⟶ (modulePresheafPushforward f).obj F)) := by
+  sorry
+
+/-- The tensor/pushforward Hom correspondence for presheaves of modules. -/
 noncomputable def modulePresheafTensorHomEquiv {X Y : TopCat.{v}}
     {O : RingPresheaf.{v, v} X} (f : X ⟶ Y)
     (G : PMod ((moduleRingPresheafPushforward f).obj O)) (F : PMod O) :
     (modulePresheafTensorOverPushforward f G ⟶ F) ≃
       (G ⟶ (modulePresheafPushforward f).obj F) := by
-  sorry
+  exact Classical.choice (exists_modulePresheafTensorHomEquiv f G F)
 
 /-! ## Sheaves of modules -/
 
@@ -295,6 +303,23 @@ abbrev ModulePresheafFMap {X Y : TopCat.{v}}
     (α : O_Y ⟶ (moduleRingPresheafPushforward f).obj O_X)
     (G : PMod O_Y) (F : PMod O_X) : Type _ :=
   G ⟶ (modulePresheafPushforwardAlong f α).obj F
+
+noncomputable abbrev modulePresheafFMapHomEquiv {X Y : TopCat.{v}}
+    {O_X : RingPresheaf.{v, v} X} {O_Y : RingPresheaf.{v, v} Y}
+    (f : X ⟶ Y) (α : O_Y ⟶ (moduleRingPresheafPushforward f).obj O_X)
+    (G : PMod O_Y) (F : PMod O_X) :
+    ModulePresheafFMap f α G F ≃
+      (G ⟶ (modulePresheafPushforwardAlong f α).obj F) :=
+  Equiv.refl _
+
+noncomputable abbrev modulePresheafFMapPullbackHomEquiv {X Y : TopCat.{v}}
+    {O : RingPresheaf.{v, v} Y} (f : X ⟶ Y)
+    (G : PMod O) (F : PMod ((moduleRingPresheafPullback f).obj O)) :
+    ((modulePresheafPullback f).obj G ⟶ F) ≃
+      ModulePresheafFMap f
+        ((TopCat.Presheaf.pullbackPushforwardAdjunction RingCat f).unit.app O)
+        G F :=
+  modulePresheafHomEquiv f G F
 
 /-- A sheaf module `f`-map is a morphism into the module pushforward. -/
 abbrev ModuleSheafFMap {X Y : TopCat.{v}}

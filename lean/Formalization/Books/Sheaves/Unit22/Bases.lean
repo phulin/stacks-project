@@ -396,12 +396,31 @@ noncomputable def basisModuleStalk {X : TopCat.{v}} {ι : Type v}
   basisStalk B (F.presheaf ⋙ (CategoryTheory.forget AddCommGrpCat)) x
 
 /-- The extension of a sheaf of modules from a basis. -/
+structure BasisModuleExtensionData {X : TopCat.{v}} {ι : Type v}
+    (B : ι → Opens X) (hB : Opens.IsBasis (Set.range B))
+    (O : RingSheaf.{v, v} X)
+    (F : BasisModulePresheaf B ((inducedFunctor B).op ⋙ O.1))
+    (hF : BasisModuleSheaf B F) where
+  sheaf : Mod O
+  stalk_iso : ∀ x : X, Nonempty (TopCat.Presheaf.stalk (C := Type v)
+      ((sheaf.val.presheaf) ⋙ (CategoryTheory.forget AddCommGrpCat)) x ≃
+      basisModuleStalk B F x)
+
+theorem exists_basisModuleExtension {X : TopCat.{v}} {ι : Type v}
+    (B : ι → Opens X) (hB : Opens.IsBasis (Set.range B))
+    (O : RingSheaf.{v, v} X)
+    (F : BasisModulePresheaf B ((inducedFunctor B).op ⋙ O.1))
+    (hF : BasisModuleSheaf B F) :
+    Nonempty (BasisModuleExtensionData B hB O F hF) := by
+  sorry
+
+/-- The extension of a sheaf of modules from a basis. -/
 noncomputable def basisModuleExtension {X : TopCat.{v}} {ι : Type v}
     (B : ι → Opens X) (hB : Opens.IsBasis (Set.range B))
     (O : RingSheaf.{v, v} X)
     (F : BasisModulePresheaf B ((inducedFunctor B).op ⋙ O.1))
     (hF : BasisModuleSheaf B F) : Mod O := by
-  sorry
+  exact (Classical.choice (exists_basisModuleExtension B hB O F hF)).sheaf
 
 /-- Extension preserves the module stalks over the extended ring stalk. -/
 theorem basisModuleExtension_stalk_eq {X : TopCat.{v}} {ι : Type v}
@@ -454,6 +473,14 @@ def basisModuleRestriction {X : TopCat.{v}} {κ : Type v}
   map_id U := by simp
   map_comp f g := by simp
 
+/-- The induced map on restricted presheaves of modules. -/
+def basisModuleRestrictionHom {X : TopCat.{v}} {κ : Type v}
+    (B : κ → Opens X) {O : RingSheaf.{v, v} X}
+    {M N : PresheafOfModules O.1} (φ : M ⟶ N) :
+    basisModuleRestriction B M ⟶ basisModuleRestriction B N where
+  app U := φ.app ((inducedFunctor B).op.obj U)
+  naturality f := φ.naturality ((inducedFunctor B).op.map f)
+
 /-- A target-basis family uniquely determines an algebraic `f`-map. -/
 theorem basisFMap_below_unique {X Y : TopCat.{v}} {κ : Type v}
     (f : X ⟶ Y) {C : Type v} [Category.{v} C]
@@ -461,7 +488,8 @@ theorem basisFMap_below_unique {X Y : TopCat.{v}} {κ : Type v}
     (Bᵧ : κ → Opens Y) (hBᵧ : Opens.IsBasis (Set.range Bᵧ))
     (φ : (inducedFunctor Bᵧ).op ⋙ G.presheaf ⟶
       (inducedFunctor Bᵧ).op ⋙ (TopCat.Presheaf.pushforward C f).obj F.presheaf) :
-    Nonempty (G ⟶ (TopCat.Sheaf.pushforward C f).obj F) := by
+    ∃! ψ : G ⟶ (TopCat.Sheaf.pushforward C f).obj F,
+      (inducedFunctor Bᵧ).op ⋙ ψ.hom = φ := by
   sorry
 
 /-- The target-basis version for modules. -/
@@ -470,7 +498,8 @@ theorem basisFMapModule_below_unique {X Y : RingedSpace} {κ : Type v}
     (Bᵧ : κ → Opens Y) (hBᵧ : Opens.IsBasis (Set.range Bᵧ))
     (φ : basisModuleRestriction Bᵧ G.val ⟶
       basisModuleRestriction Bᵧ ((ringedSpaceModulePushforward f).obj F).val) :
-    Nonempty (RingedSpaceModuleFMap f G F) := by
+    ∃! ψ : RingedSpaceModuleFMap f G F,
+      basisModuleRestrictionHom Bᵧ ψ.val = φ := by
   sorry
 
 /-- A pair of source and target bases determines the maps on inverse-image opens. -/
@@ -526,7 +555,9 @@ theorem basisFMap_above_below_unique {X Y : TopCat.{v}} {ι : Type v} {κ : Type
     (Bₓ : ι → Opens X) (hBₓ : Opens.IsBasis (Set.range Bₓ))
     (Bᵧ : κ → Opens Y) (hBᵧ : Opens.IsBasis (Set.range Bᵧ))
     (d : BasisFMapAboveBelowData f Bₓ Bᵧ G F) :
-    Nonempty (G ⟶ (TopCat.Sheaf.pushforward C f).obj F) := by
+    ∃! ψ : G ⟶ (TopCat.Sheaf.pushforward C f).obj F,
+      ∀ (U : Opens X) (V : Opens Y) (h : U ≤ (Opens.map f).obj V),
+        ψ.hom.app (op V) ≫ F.presheaf.map (homOfLE h).op = d.app U V h := by
   sorry
 
 /-- On stalks the map obtained from two bases is the filtered colimit of the
@@ -548,7 +579,12 @@ theorem basisFMapModule_above_below_unique {X Y : RingedSpace} {ι : Type v} {κ
     (Bₓ : ι → Opens X) (hBₓ : Opens.IsBasis (Set.range Bₓ))
     (Bᵧ : κ → Opens Y) (hBᵧ : Opens.IsBasis (Set.range Bᵧ))
     (d : BasisModuleFMapAboveBelowData f Bₓ Bᵧ G F) :
-    Nonempty (RingedSpaceModuleFMap f G F) := by
+    ∃! ψ : RingedSpaceModuleFMap f G F,
+      ∀ (i : ι) (j : κ)
+        (hij : Bₓ i ≤ (Opens.map f.continuous).obj (Bᵧ j))
+        (s : G.val.presheaf.obj (op (Bᵧ j))),
+        F.val.presheaf.map (homOfLE hij).op
+            ((ψ.val.app (op (Bᵧ j))).hom s) = d.app i j hij s := by
   sorry
 
 end

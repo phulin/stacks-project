@@ -112,12 +112,15 @@ noncomputable def realContinuousFunctionRingSheaf (X : TopCat) :
     RingSheaf X :=
   { obj := realContinuousFunctionRingPresheaf X
     property := by
-      exact categoryValuedSheaf_of_underlying_isSheaf
-        (CategoryTheory.forget RingCat)
-        (realContinuousFunctionRingPresheaf X)
-        (by
-          simpa [realContinuousFunctionRingPresheaf, Functor.assoc] using
-            (realContinuousFunctionPresheaf_underlying_isSheaf X)) }
+      have hComm :
+          TopCat.Presheaf.IsSheaf (realContinuousFunctionPresheaf X) :=
+        (categoryValuedSheaf_iff_isSheaf
+          (realContinuousFunctionPresheaf X)).mp
+          (realContinuousFunctionPresheaf_isSheaf X)
+      exact
+        (TopCat.Presheaf.isSheaf_iff_isSheaf_comp
+          (CategoryTheory.forget₂ CommRingCat RingCat)
+          (realContinuousFunctionPresheaf X)).mp hComm }
 
 /-- Pullback of a real-valued continuous function along a continuous map is a
 map of sheaves of rings. -/
@@ -133,7 +136,8 @@ noncomputable def continuousFunctionRingedSharp {X Y : TopCat}
       { toFun := fun x => ⟨f.hom x.1, x.2⟩
         continuous_toFun :=
           Continuous.subtype_mk
-            (f.hom.continuous.comp continuous_subtype_val) (fun _ => by assumption) }
+            (f.hom.continuous.comp continuous_subtype_val) (fun x => by
+              simpa using (Opens.mem_map.mp x.2)) }
   let α : realContinuousFunctionRingPresheaf Y ⟶
       (TopCat.Presheaf.pushforward RingCat f).obj
         (realContinuousFunctionRingPresheaf X) :=

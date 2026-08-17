@@ -1,0 +1,206 @@
+import Mathlib.Algebra.MvPolynomial.Basic
+import Mathlib.Data.Nat.Prime.Basic
+import Mathlib.Data.ZMod.Basic
+import Mathlib.FieldTheory.IsAlgClosed.Basic
+import Mathlib.RingTheory.Localization.Basic
+import Mathlib.RingTheory.Polynomial.Basic
+import Mathlib.RingTheory.Spectrum.Prime.Topology
+
+import Formalization.Books.Exercises.Unit06.SpecializationConnected
+
+/-!
+# Exercises, Chapter 6: Explicit polynomial spectra
+
+The polynomial rings, the map used in the two-variable hint, and the
+localizing submonoid are defined explicitly.  Prime classification and
+topological descriptions are recorded as theorem interfaces; their proofs
+belong to the later prove stage.
+-/
+
+noncomputable section
+
+universe u
+
+open Set Topology
+
+namespace Formalization.Books.Exercises.Unit06
+
+/-! ## `Spec(k[x])` -/
+
+/-- The one-variable polynomial ring in the notation of the source. -/
+abbrev oneVariablePolynomialRing (k : Type u) [Field k] := Polynomial k
+
+/-- The generic point of `Spec(k[x])`. -/
+def polynomialGenericPoint (k : Type u) [Field k] :
+    PrimeSpectrum (oneVariablePolynomialRing k) :=
+  ⟨⊥, by infer_instance⟩
+
+/-- Over an arbitrary field, the nonzero prime ideals of `k[x]` are generated
+by irreducible polynomials. -/
+theorem polynomial_spectrum_prime_ideals (k : Type u) [Field k] :
+    ∀ p : PrimeSpectrum (oneVariablePolynomialRing k),
+      p.asIdeal = ⊥ ∨
+        ∃ f : Polynomial k, f ≠ 0 ∧ Irreducible f ∧
+          p.asIdeal = Ideal.span {f} := by
+  sorry
+
+/-- Over an algebraically closed field, the nonzero primes are the maximal
+ideals `(x - a)`. -/
+theorem polynomial_spectrum_prime_ideals_alg_closed
+    (k : Type u) [Field k] [IsAlgClosed k] :
+    ∀ p : PrimeSpectrum (oneVariablePolynomialRing k),
+      p.asIdeal = ⊥ ∨
+        ∃ a : k,
+          p.asIdeal =
+            Ideal.span {Polynomial.X - Polynomial.C a} := by
+  sorry
+
+/-- The closed sets of `Spec(k[x])` are the whole space and finite sets of
+closed points. -/
+theorem polynomial_spectrum_closed_sets (k : Type u) [Field k]
+    (Z : Set (PrimeSpectrum (oneVariablePolynomialRing k))) :
+    IsClosed Z ↔
+      Z = Set.univ ∨ (Z.Finite ∧ polynomialGenericPoint k ∉ Z) := by
+  sorry
+
+/-- The standard opens give the topology on `Spec(k[x])`. -/
+theorem polynomial_spectrum_standard_open_basis (k : Type u) [Field k] :
+    TopologicalSpace.IsTopologicalBasis
+      (Set.range fun f : Polynomial k =>
+        (PrimeSpectrum.basicOpen f : Set (PrimeSpectrum (oneVariablePolynomialRing k)))) := by
+  exact PrimeSpectrum.isTopologicalBasis_basic_opens
+
+/-- Specialization in `Spec(k[x])` is inclusion of prime ideals. -/
+theorem polynomial_spectrum_specialization_iff (k : Type u) [Field k]
+    (p q : PrimeSpectrum (oneVariablePolynomialRing k)) :
+    p ⤳ q ↔ p.asIdeal ≤ q.asIdeal := by
+  exact (PrimeSpectrum.le_iff_specializes p q).symm
+
+/-- The generic point specializes to every point of `Spec(k[x])`. -/
+theorem polynomial_generic_point_specializes_every_point (k : Type u) [Field k]
+    (p : PrimeSpectrum (oneVariablePolynomialRing k)) :
+    polynomialGenericPoint k ⤳ p := by
+  sorry
+
+/-! ## `Spec(k[x,y])` and its map to `Spec(k[x])` -/
+
+/-- The two-variable polynomial ring used for affine 2-space. -/
+abbrev twoVariablePolynomialRing (k : Type u) [Field k] :=
+  MvPolynomial (Fin 2) k
+
+/-- The inclusion of the `x`-axis coefficient polynomial ring into the
+two-variable polynomial ring. -/
+def polynomialXInclusion (k : Type u) [Field k] :
+    Polynomial k →+* twoVariablePolynomialRing k :=
+  Polynomial.eval₂RingHom
+    (MvPolynomial.C : k →+* twoVariablePolynomialRing k)
+    (MvPolynomial.X (0 : Fin 2))
+
+/-- The morphism `Spec(k[x,y]) → Spec(k[x])` from the source hint. -/
+def polynomialSpectrumMap (k : Type u) [Field k] :
+    PrimeSpectrum (twoVariablePolynomialRing k) →
+      PrimeSpectrum (oneVariablePolynomialRing k) :=
+  PrimeSpectrum.comap (polynomialXInclusion k)
+
+/-- The multiplicative subset of nonzero one-variable polynomials used in
+the generic-fibre localization hint. -/
+def nonzeroPolynomialSubmonoid (k : Type u) [Field k] : Submonoid (Polynomial k) where
+  carrier := {f | f ≠ 0}
+  one_mem' := one_ne_zero
+  mul_mem' := by
+    intro f g hf hg
+    exact mul_ne_zero hf hg
+
+/-- The localization of `k[x]` at all nonzero polynomials. -/
+abbrev nonzeroPolynomialLocalization (k : Type u) [Field k] :=
+  Localization (nonzeroPolynomialSubmonoid k)
+
+/-- The generic fibre of the displayed map is the locus where the induced
+prime of `k[x]` is zero. -/
+theorem polynomial_spectrum_generic_fiber_preimage (k : Type u) [Field k] :
+    polynomialSpectrumMap k ⁻¹'
+      ({polynomialGenericPoint k} : Set (PrimeSpectrum (oneVariablePolynomialRing k))) =
+      {p : PrimeSpectrum (twoVariablePolynomialRing k) |
+        Ideal.comap (polynomialXInclusion k) p.asIdeal = ⊥} := by
+  sorry
+
+/-- Over an algebraically closed field, the primes of `k[x,y]` are zero, a
+principal prime generated by an irreducible polynomial, or a maximal ideal
+of a point `(a,b)`. -/
+theorem two_variable_spectrum_prime_ideals_alg_closed
+    (k : Type u) [Field k] [IsAlgClosed k] :
+    ∀ p : PrimeSpectrum (twoVariablePolynomialRing k),
+      p.asIdeal = ⊥ ∨
+        (∃ f : twoVariablePolynomialRing k,
+          Irreducible f ∧ p.asIdeal = Ideal.span {f}) ∨
+        (∃ a b : k,
+          p.asIdeal =
+            Ideal.span
+              ({MvPolynomial.X (0 : Fin 2) - MvPolynomial.C a,
+                MvPolynomial.X (1 : Fin 2) - MvPolynomial.C b} :
+                Set (twoVariablePolynomialRing k))) := by
+  sorry
+
+/-- Closed subsets of affine 2-space are exactly the Zariski zero loci. -/
+theorem two_variable_spectrum_closed_sets (k : Type u) [Field k]
+    (Z : Set (PrimeSpectrum (twoVariablePolynomialRing k))) :
+    IsClosed Z ↔
+      ∃ S : Set (twoVariablePolynomialRing k),
+        Z = PrimeSpectrum.zeroLocus S := by
+  exact PrimeSpectrum.isClosed_iff_zeroLocus Z
+
+/-! ## `Spec(ℤ[y])` -/
+
+/-- The polynomial ring in the final exercise. -/
+abbrev integerPolynomialRing : Type := Polynomial ℤ
+
+/-- The coefficient inclusion `ℤ → ℤ[y]`. -/
+def integerPolynomialBaseMap : ℤ →+* integerPolynomialRing :=
+  Polynomial.C
+
+/-- The spectrum map used in the localization hint for `Spec(ℤ[y])`. -/
+def integerPolynomialSpectrumMap :
+    PrimeSpectrum integerPolynomialRing → PrimeSpectrum ℤ :=
+  PrimeSpectrum.comap integerPolynomialBaseMap
+
+/-- The maximal ideals of `ℤ[y]` are the inverse images of irreducible
+polynomial ideals over residue fields `𝔽_p`. -/
+def integerPolynomialMaximalIdeal (p : ℕ) (g : Polynomial (ZMod p)) :
+    Ideal integerPolynomialRing :=
+  Ideal.comap (Polynomial.mapRingHom (Int.castRingHom (ZMod p)))
+    (Ideal.span {g})
+
+/-- Every maximal ideal of `ℤ[y]` has the displayed residue-field form. -/
+theorem integer_polynomial_maximal_ideal_classification
+    (I : Ideal integerPolynomialRing) :
+    I.IsMaximal ↔
+      ∃ p : ℕ, ∃ hp : Nat.Prime p, ∃ g : Polynomial (ZMod p),
+        Irreducible g ∧ I = integerPolynomialMaximalIdeal p g := by
+  sorry
+
+/-- The primes of `ℤ[y]` are zero, principal primes generated by irreducible
+polynomials, or maximal ideals. -/
+theorem integer_polynomial_spectrum_prime_ideals :
+    ∀ P : PrimeSpectrum integerPolynomialRing,
+      P.asIdeal = ⊥ ∨
+        (∃ f : integerPolynomialRing,
+          Irreducible f ∧ P.asIdeal = Ideal.span {f}) ∨
+        P.asIdeal.IsMaximal := by
+  sorry
+
+/-- The topology of `Spec(ℤ[y])` is the Zariski topology described by zero
+loci, with standard opens as its basis. -/
+theorem integer_polynomial_spectrum_closed_sets
+    (Z : Set (PrimeSpectrum integerPolynomialRing)) :
+    IsClosed Z ↔
+      ∃ S : Set integerPolynomialRing,
+        Z = PrimeSpectrum.zeroLocus S := by
+  exact PrimeSpectrum.isClosed_iff_zeroLocus Z
+
+theorem integer_polynomial_spectrum_standard_open_basis :
+    TopologicalSpace.IsTopologicalBasis
+      (Set.range fun f : integerPolynomialRing =>
+        (PrimeSpectrum.basicOpen f : Set (PrimeSpectrum integerPolynomialRing))) := by
+  exact PrimeSpectrum.isTopologicalBasis_basic_opens
+
+end Formalization.Books.Exercises.Unit06

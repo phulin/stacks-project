@@ -7,6 +7,7 @@ import Formalization.Books.Guide.Unit05.Core
 noncomputable section
 
 open CategoryTheory
+open Formalization.Books.StacksMorphisms.Unit07
 
 universe u v
 
@@ -16,8 +17,8 @@ structure HilbertStackData {C : Type u} [Category.{v} C]
     [StackCategory C] (X S : C) where
   sheaf : Type u
   structureMap : X ⟶ S
-  separated : IsSeparatedStack X
-  locallyFiniteType : IsFiniteTypeStack X
+  separated : IsSeparatedMorphism structureMap
+  locallyFiniteType : IsLocallyFiniteTypeMorphism structureMap
   baseLocallyNoetherian : Prop
   baseLocallySeparated : Prop
   parameterizesFiniteUnramifiedProperSchemes : Prop
@@ -31,11 +32,12 @@ theorem hilbert_stack_is_algebraic
 
 structure HomStackData {C : Type u} [Category.{v} C]
     [StackCategory C] (T X S : C) where
-  sourceProper : IsProperStack T
   sourceToBase : T ⟶ S
-  sourceFlatOverBase : Prop
-  targetSeparated : IsSeparatedStack X
-  targetLocallyFiniteType : IsFiniteTypeStack X
+  sourceProper : IsProperMorphism sourceToBase
+  sourceFlatOverBase : Flat sourceToBase
+  targetToBase : X ⟶ S
+  targetSeparated : IsSeparatedMorphism targetToBase
+  targetLocallyFiniteType : IsLocallyFiniteTypeMorphism targetToBase
   baseLocallyNoetherian : Prop
   homStack : C
 
@@ -71,7 +73,8 @@ structure GeneratingSheafData {C : Type u} [Category.{v} C]
     [StackCategory C] (X : C) where
   tame : IsTameArtinStack X
   separated : IsSeparatedStack X
-  globalFiniteGroupQuotient : IsGlobalQuotient X
+  deligneMumford : IsDeligneMumfordStack X
+  globalFiniteGroupQuotient : IsStackQuotientByFiniteGroup X
 
 structure GeneratingSheafConclusion {C : Type u} [Category.{v} C]
     [StackCategory C] {X : C} where
@@ -88,10 +91,12 @@ structure HomStackFiniteDiagonalData {C : Type u} [Category.{v} C]
     [StackCategory C] (X Y S : C) where
   sourceArtin : IsArtinStack X
   targetArtin : IsArtinStack Y
+  sourceToBase : X ⟶ S
+  targetToBase : Y ⟶ S
   locallyFinitePresentation : Prop
   finiteDiagonal : Prop
-  sourceProper : IsProperStack X
-  sourceFlat : Prop
+  sourceProper : IsProperMorphism sourceToBase
+  sourceFlat : Flat sourceToBase
   fppfLocallyFiniteFlatCover : Prop
   homStack : C
 
@@ -159,8 +164,9 @@ theorem coherent_algebra_stack_generalizes_branchvarieties
 structure GAmpleLineBundleData {C : Type u} [Category.{v} C]
     [StackCategory C] (T S : C) where
   properAlgebraicSpace : IsAlgebraicSpace T
-  proper : IsProperStack T
-  lineBundle : LineBundleData (Point T)
+  structureMap : T ⟶ S
+  proper : IsProperMorphism structureMap
+  lineBundle : LineBundleData T
   ample : Prop
   groupActionCompatible : Prop
 
@@ -169,6 +175,7 @@ structure StarrMappingStackData {C : Type u} [Category.{v} C]
   stackLocallyFiniteTypeOverExcellentBase : Prop
   finiteDiagonal : Prop
   source : C
+  sourceIsAlgebraicSpace : IsAlgebraicSpace source
   sourceProperAlgebraicSpace : IsProperStack source
   ampleLineBundle : GAmpleLineBundleData source S
   mappingStack : C
@@ -187,17 +194,19 @@ theorem artin_axioms_mapping_stack_theorem
 structure NonEffectiveHilbertDeformationExample {C : Type u}
     [Category.{v} C] [StackCategory C] where
   nonSeparatedScheme : C
+  nonSeparatedSchemeIsScheme : IsScheme nonSeparatedScheme
   nonSeparated : ¬ IsSeparatedStack nonSeparatedScheme
   hilbertFunctor : Type u
   nonEffectiveDeformation : Prop
 
-structure NonEffectiveHilbertConclusion where
+structure NonEffectiveHilbertConclusion {C : Type u} [Category.{v} C]
+    [StackCategory C] (D : NonEffectiveHilbertDeformationExample (C := C)) where
   notRepresented : Prop
 
 theorem hilbert_functor_nonseparated_scheme_not_represented
     {C : Type u} [Category.{v} C] [StackCategory C]
     (D : NonEffectiveHilbertDeformationExample (C := C)) :
-    Nonempty NonEffectiveHilbertConclusion := by
+    Nonempty (NonEffectiveHilbertConclusion D) := by
   sorry
 
 structure GeneralMappingStackData {C : Type u} [Category.{v} C]

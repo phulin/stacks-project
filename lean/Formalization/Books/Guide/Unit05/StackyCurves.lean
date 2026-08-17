@@ -17,6 +17,7 @@ structure TwistedCurve (C : Type u) [Category.{v} C]
   curve : C
   coarseCurve : C
   coarseMap : curve ⟶ coarseCurve
+  coarseMapIsCoarse : IsCoarseModuliSpaceMap coarseMap
   nodal : Prop
   stackyMarkedPoints : Prop
   tame : Prop
@@ -37,9 +38,11 @@ structure StableMapCompactificationData {C : Type u} [Category.{v} C]
     [StackCategory C] where
   target : C
   targetTame : IsTameArtinStack target
+  targetDeligneMumford : IsDeligneMumfordStack target
   coarseSpace : C
   coarseSpaceProjective : CoarseSpaceIsProjective coarseSpace
   coarseMap : target ⟶ coarseSpace
+  coarseMapIsCoarse : IsCoarseModuliSpaceMap coarseMap
   moduliStack : C
   parameterizesStableMaps : Prop
 
@@ -47,6 +50,7 @@ structure StableMapCompactificationConclusion {C : Type u}
     [Category.{v} C] [StackCategory C]
     (D : StableMapCompactificationData (C := C)) where
   properOverBase : IsProperStack D.moduliStack
+  moduliStackIsArtin : IsArtinStack D.moduliStack
 
 theorem compactification_of_stable_maps_to_tame_dm_stacks
     {C : Type u} [Category.{v} C] [StackCategory C]

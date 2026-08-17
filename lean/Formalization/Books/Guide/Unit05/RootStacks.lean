@@ -15,15 +15,16 @@ namespace Formalization.Books.Guide.Unit05
 structure RootStackData {C : Type u} [Category.{v} C]
     [StackCategory C] (X : C) where
   baseIsScheme : IsScheme X
-  divisor : EffectiveCartierDivisor (Point X)
+  divisor : EffectiveCartierDivisor X
   rootIndex : ℕ
   rootIndexPositive : 0 < rootIndex
   rootStack : C
   projection : rootStack ⟶ X
   muR : Type u
-  muRGroup : Group muR
+  muRGroup : CommGroup muR
+  muRFinite : Finite muR
   muRIsTheRootOfUnityGroup : Prop
-  rootLineBundle : LineBundleData (Point rootStack)
+  rootLineBundle : LineBundleData rootStack
 
 structure RootStackProperties {C : Type u} [Category.{v} C]
     [StackCategory C] {X : C} (D : RootStackData X) where
@@ -33,41 +34,57 @@ structure RootStackProperties {C : Type u} [Category.{v} C]
   rootLineBundlePowerIsTheDivisorLineBundle : Prop
 
 structure RootStackConstruction {C : Type u} [Category.{v} C]
-    [StackCategory C] (X : C) where
+    [StackCategory C] (X : C) (D : EffectiveCartierDivisor X) (r : ℕ)
+    (hr : 0 < r) where
   data : RootStackData X
+  divisorMatches : data.divisor = D
+  rootIndexMatches : data.rootIndex = r
   properties : RootStackProperties data
 
 def IsRootStackAlongEffectiveCartierDivisor {C : Type u} [Category.{v} C]
-    [StackCategory C] (X : C) : Prop :=
-  Nonempty (RootStackConstruction X)
+    [StackCategory C] (X : C) (D : EffectiveCartierDivisor X) (r : ℕ)
+    (hr : 0 < r) : Prop :=
+  Nonempty (RootStackConstruction X D r hr)
 
 theorem root_stack_is_artin
     {C : Type u} [Category.{v} C] [StackCategory C] {X : C}
-    (D : RootStackData X) : Nonempty (RootStackProperties D) := by
+    {D : EffectiveCartierDivisor X} {r : ℕ} {hr : 0 < r}
+    (W : RootStackConstruction X D r hr) : IsArtinStack W.data.rootStack := by
   sorry
 
 theorem root_stack_has_mu_r_stabilizer_over_divisor
     {C : Type u} [Category.{v} C] [StackCategory C] {X : C}
-    (D : RootStackData X) : Nonempty (RootStackProperties D) := by
+    {D : EffectiveCartierDivisor X} {r : ℕ} {hr : 0 < r}
+    (W : RootStackConstruction X D r hr) :
+    W.properties.muRStabilizerOverDivisor := by
   sorry
 
 theorem root_stack_is_scheme_like_away_from_divisor
     {C : Type u} [Category.{v} C] [StackCategory C] {X : C}
-    (D : RootStackData X) : Nonempty (RootStackProperties D) := by
+    {D : EffectiveCartierDivisor X} {r : ℕ} {hr : 0 < r}
+    (W : RootStackConstruction X D r hr) :
+    W.properties.schemeLikeAwayFromDivisor := by
+  sorry
+
+theorem root_stack_root_line_bundle_power_is_divisor
+    {C : Type u} [Category.{v} C] [StackCategory C] {X : C}
+    {D : EffectiveCartierDivisor X} {r : ℕ} {hr : 0 < r}
+    (W : RootStackConstruction X D r hr) :
+    W.properties.rootLineBundlePowerIsTheDivisorLineBundle := by
   sorry
 
 theorem cadman_root_stack_construction
     {C : Type u} [Category.{v} C] [StackCategory C] {X : C}
-    (hX : IsScheme X) (D : EffectiveCartierDivisor (Point X))
+    (hX : IsScheme X) (D : EffectiveCartierDivisor X)
     (r : ℕ) (hr : 0 < r) :
-    Nonempty (RootStackConstruction X) := by
+    Nonempty (RootStackConstruction X D r hr) := by
   sorry
 
 theorem abramovich_graber_vistoli_root_stack_construction
     {C : Type u} [Category.{v} C] [StackCategory C] {X : C}
-    (hX : IsScheme X) (D : EffectiveCartierDivisor (Point X))
+    (hX : IsScheme X) (D : EffectiveCartierDivisor X)
     (r : ℕ) (hr : 0 < r) :
-    Nonempty (RootStackConstruction X) := by
+    Nonempty (RootStackConstruction X D r hr) := by
   sorry
 
 end Formalization.Books.Guide.Unit05

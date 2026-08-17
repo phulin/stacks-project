@@ -26,16 +26,13 @@ structure KeelMoriHypotheses {C : Type u} [Category.{v} C]
 theorem keel_mori_coarse_moduli_space
     {C : Type u} [Category.{v} C] [StackCategory C]
     (D : KeelMoriHypotheses (C := C)) :
-    HasCoarseModuliSpace D.stack := by
+    HasSeparatedCoarseModuliSpace D.stack := by
   sorry
-
-def HasSeparatedCoarseModuliSpace {C : Type u} [Category.{v} C]
-    [StackCategory C] (X : C) : Prop :=
-  ∃ (Y : C) (q : X ⟶ Y), IsCoarseModuliSpaceMap q ∧ IsSeparatedMorphism q
 
 theorem separated_coarse_moduli_space_iff_finite_inertia
     {C : Type u} [Category.{v} C] [StackCategory C] (X : C)
-    (hartin : IsArtinStack X) :
+    (hartin : IsArtinStack X) (hfiniteType : IsFiniteTypeStack X)
+    (hnoetherianBase : Prop) :
     HasSeparatedCoarseModuliSpace X ↔ HasFiniteInertia X := by
   sorry
 
@@ -78,7 +75,8 @@ theorem tame_iff_linearly_reductive_stabilizers
 theorem tame_iff_etale_local_linearly_reductive_quotient
     {C : Type u} [Category.{v} C] [StackCategory C] (X : C)
     (hartin : IsArtinStack X) (hfiniteInertia : HasFiniteInertia X) :
-    IsTameArtinStack X ↔ IsEtaleLocalQuotient X := by
+    IsTameArtinStack X ↔
+      (IsEtaleLocalQuotient X ∧ HasLinearlyReductiveStabilizers X) := by
   sorry
 
 structure TameCoarseBaseChangeData {C : Type u} [Category.{v} C]
@@ -131,11 +129,12 @@ structure AffineLineByMultiplicativeGroupExample
   [groupStructure : Group multiplicativeGroup]
   affineLineAction : GroupActionData multiplicativeGroup affineLine
   quotientStackPresentation : Prop
+  stackIsArtin : IsArtinStack stack
 
 theorem affine_line_by_multiplicative_group_has_no_coarse_moduli_space
     {C : Type u} [Category.{v} C] [StackCategory C]
     (D : AffineLineByMultiplicativeGroupExample (C := C)) :
-    ¬ HasSeparatedCoarseModuliSpace D.stack := by
+    ¬ HasCoarseModuliSpace D.stack := by
   sorry
 
 structure GITGoodModuliSpaceData {C : Type u} [Category.{v} C]
@@ -157,11 +156,5 @@ theorem git_quotient_is_a_good_moduli_space
     (hlinear : D.linearAction) (hreductive : D.reductive) :
     IsGoodModuliSpace D.quotientMap := by
   sorry
-
-theorem good_moduli_space_surjective_universally_closed_and_submersive
-    {C : Type u} [Category.{v} C] [StackCategory C]
-    {X Y : C} (q : X ⟶ Y) (hgood : IsGoodModuliSpace q) :
-    Nonempty (GoodModuliSpaceProperties q) :=
-  good_moduli_space_properties q hgood
 
 end Formalization.Books.Guide.Unit05

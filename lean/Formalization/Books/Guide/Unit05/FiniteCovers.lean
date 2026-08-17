@@ -25,10 +25,6 @@ def HasFiniteSchemeCover {C : Type u} [Category.{v} C]
     [StackCategory C] (X : C) : Prop :=
   Nonempty (SchemeFiniteCover X)
 
-def IsModuliSpaceMap {C : Type u} [Category.{v} C] [StackCategory C]
-    {X Y : C} (f : X ⟶ Y) : Prop :=
-  IsProperMorphism f ∧ Function.Bijective (stackPointMap f)
-
 theorem vistoli_finite_cover_of_deligne_mumford_moduli_space
     {C : Type u} [Category.{v} C] [StackCategory C] (X Y : C)
     (f : X ⟶ Y) (hDM : IsDeligneMumfordStack X)
@@ -66,6 +62,8 @@ structure NormalAlgebraicSpaceFiniteGroupQuotient {C : Type u}
   coverSchemeIsScheme : IsScheme coverScheme
   finiteGroup : Type u
   groupStructure : Group finiteGroup
+  quotientMap : coverScheme ⟶ D.algebraicSpace
+  quotientIsTheFiniteGroupQuotient : Prop
   quotientPresentation : Prop
 
 theorem normal_noetherian_algebraic_space_is_finite_group_quotient
@@ -92,7 +90,7 @@ structure SmoothQuasiProjectiveFiniteFlatCover {C : Type u}
   scheme : C
   schemeStructure : IsScheme scheme
   map : scheme ⟶ X
-  smooth : IsSmoothMorphism map
+  smooth : IsSmoothStack scheme
   quasiProjective : IsQuasiProjectiveStack scheme
   finite : IsFiniteMorphism map
   flat : Flat map
@@ -144,10 +142,13 @@ structure RydhApproximationCover {C : Type u} [Category.{v} C]
 
 structure RydhNoetherianApproximationHypotheses {C : Type u}
     [Category.{v} C] [StackCategory C] (X : C) where
-  quasiCompact : Prop
+  quasiCompact : IsQuasiCompactStack X
   quasiFiniteSeparatedDiagonal : Prop
-  deligneMumfordAlternative : Prop
+  deligneMumfordAlternative : IsDeligneMumfordStack X
   quasiCompactSeparatedDiagonalAlternative : Prop
+  hasApplicableAlternative :
+    quasiFiniteSeparatedDiagonal ∨
+      (deligneMumfordAlternative ∧ quasiCompactSeparatedDiagonalAlternative)
 
 theorem rydh_noetherian_approximation_theorem_B
     {C : Type u} [Category.{v} C] [StackCategory C] {X : C}

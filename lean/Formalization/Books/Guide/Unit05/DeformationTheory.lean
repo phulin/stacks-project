@@ -30,7 +30,9 @@ structure FormalDeformationSituation (C : Type u) [Category.{v} C] where
   baseFiniteTypeOverFieldOrExcellentDvr : Prop
   markedPoint : Prop
   formalObject : C
+  formalObjectIsCompletionAtMarkedPoint : Prop
   truncation : ℕ → C
+  truncationIsInfinitesimalNeighborhood : ∀ n : ℕ, Prop
   formalElement : functor.obj (op formalObject)
   restriction : ∀ n, functor.obj (op formalObject) → functor.obj (op (truncation n))
   effective : Prop
@@ -81,6 +83,7 @@ structure AlgebraizationWitness {C : Type u} [Category.{v} C]
   formalCompletion : C
   formalCompletionIso : formalCompletion ≅ D.deformation.formalObject
   element : D.deformation.functor.obj (op scheme)
+  elementMatchesFormalDeformation : Prop
   agreesAtEveryOrder : ℕ → Prop
 
 structure AlgebraizationComparison {C : Type u} [Category.{v} C]
@@ -181,11 +184,13 @@ theorem smooth_presentation_of_fppf_presentation
 structure FlatSeparatedFinitelyPresentedGroupScheme (C : Type u)
     [Category.{v} C] [StackCategory C] (S : C) where
   carrier : Type u
-  group : Group carrier
+  [group : Group carrier]
   overBase : Prop
   flat : Prop
   separated : Prop
   finitelyPresented : Prop
+
+attribute [instance] FlatSeparatedFinitelyPresentedGroupScheme.group
 
 structure QuotientStackByGroupData {C : Type u} [Category.{v} C]
     [StackCategory C] (X S : C) where
@@ -193,6 +198,10 @@ structure QuotientStackByGroupData {C : Type u} [Category.{v} C]
   quotient : C
   quotientMap : X ⟶ quotient
   quotientIsArtinStack : IsArtinStack quotient
+  action : groupScheme.carrier → (X ⟶ X)
+  one_action : action 1 = 𝟙 X
+  mul_action : ∀ g h,
+    action (g * h) = action h ≫ action g
   presents : Prop
 
 theorem fppf_presentation_gives_quotients_by_flat_groups
@@ -206,7 +215,9 @@ structure PopescuSituation where
   B : Type u
   [commRingA : CommRing A]
   [commRingB : CommRing B]
+  [algebraAB : Algebra A B]
   map : A →+* B
+  algebraMapAgrees : algebraMap A B = map
   noetherianA : Prop
   noetherianB : Prop
   regularMorphism : Prop
@@ -233,7 +244,7 @@ structure ExcellentApproximationSituation (C : Type u) [Category.{v} C]
 theorem excellent_base_artin_approximation
     {C : Type u} [Category.{v} C] [StackCategory C]
     (D : ExcellentApproximationSituation C) (hex : D.excellent) :
-    D.groupoidGeneralization ∧ D.etaleLocalUniqueness := by
+    D.groupoidGeneralization ∧ D.etaleLocalUniqueness ∧ D.arbitraryPoint := by
   sorry
 
 structure ArtinAxiomForMorphism {C : Type u} [Category.{v} C]
@@ -251,7 +262,7 @@ theorem artin_axioms_are_stable_under_composition
 structure RepresentableMorphismDeformationData
     {C : Type u} [Category.{v} C] [StackCategory C]
     {X Y : C} (f : X ⟶ Y) where
-  representable : Prop
+  representable : RepresentableByAlgebraicSpace f
   cotangentComplex : Type u
   controlsDeformations : Prop
   tangentSpace : Type u
@@ -260,7 +271,7 @@ structure RepresentableMorphismDeformationData
 theorem representable_morphism_deformation_theory
     {C : Type u} [Category.{v} C] [StackCategory C]
     {X Y : C} (f : X ⟶ Y) (D : RepresentableMorphismDeformationData f)
-    (hrepresentable : D.representable) :
+    (hrepresentable : RepresentableByAlgebraicSpace f) :
     D.controlsDeformations := by
   sorry
 

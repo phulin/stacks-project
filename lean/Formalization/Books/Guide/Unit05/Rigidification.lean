@@ -14,8 +14,8 @@ namespace Formalization.Books.Guide.Unit05
 
 structure RigidificationInput {C : Type u} [Category.{v} C]
     [StackCategory C] (X S : C) where
-  subgroup : Type u
-  groupStructure : Group subgroup
+  subgroupPoints : C → Type u
+  subgroupGroup : ∀ T, Group (subgroupPoints T)
   overBase : Prop
   flat : Prop
   finitelyPresented : Prop
@@ -23,7 +23,7 @@ structure RigidificationInput {C : Type u} [Category.{v} C]
   objectsOver : C → Type u
   automorphisms : ∀ T : C, objectsOver T → Type u
   embedding : ∀ (T : C) (ξ : objectsOver T),
-    subgroup → automorphisms T ξ
+    subgroupPoints T → automorphisms T ξ
   embeddingInjective : ∀ (T : C) (ξ : objectsOver T),
     Function.Injective (embedding T ξ)
   compatibleWithPullback : Prop
@@ -32,6 +32,7 @@ structure RigidificationWitness {C : Type u} [Category.{v} C]
     [StackCategory C] {X S : C} (D : RigidificationInput X S) where
   quotient : C
   rigidificationMap : X ⟶ quotient
+  quotientIsAlgebraicStack : IsArtinStack quotient
   isFppfGerbe : Prop
   rigidifiedAutomorphisms : ∀ T : C, D.objectsOver T → Type u
   automorphismMap : ∀ (T : C) (ξ : D.objectsOver T),
@@ -43,7 +44,7 @@ structure RigidificationWitness {C : Type u} [Category.{v} C]
   automorphismKernelIsImageOfSubgroup :
     ∀ (T : C) (ξ : D.objectsOver T) (a : D.automorphisms T ξ),
       a ∈ automorphismKernel T ξ ↔
-        ∃ h : D.subgroup, D.embedding T ξ h = a
+        ∃ h : D.subgroupPoints T, D.embedding T ξ h = a
 
 theorem rigidification_exists
     {C : Type u} [Category.{v} C] [StackCategory C] {X S : C}
@@ -108,7 +109,8 @@ structure NormalNoncentralRigidificationConclusion {C : Type u}
 
 theorem tame_stack_normal_noncentral_rigidification
     {C : Type u} [Category.{v} C] [StackCategory C] {X : C}
-    (D : NormalFlatInertiaSubgroup X) (hnormal : D.normal) :
+    (D : NormalFlatInertiaSubgroup X) (htame : IsTameArtinStack X)
+    (hnormal : D.normal) :
     Nonempty (NormalNoncentralRigidificationConclusion D) := by
   sorry
 

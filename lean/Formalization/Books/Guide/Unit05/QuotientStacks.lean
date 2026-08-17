@@ -1,6 +1,4 @@
 import Formalization.Books.Guide.Unit05.Core
-import Formalization.Books.SpacesGroupoids.Unit20.Core
-import Formalization.Books.SpacesGroupoids.Unit27.Gerbes
 
 /-!
 # Chapter 5, Section 4: quotient stacks
@@ -18,17 +16,19 @@ namespace Formalization.Books.Guide.Unit05
 def HasFiniteEtaleCoverByScheme {C : Type u} [Category.{v} C]
     [StackCategory C] (X : C) : Prop :=
   ∃ Y : C, IsScheme Y ∧ ∃ e : Y ⟶ X,
-    IsFiniteMorphism e ∧ IsEtaleMorphism e ∧ Surjective e
+    IsFiniteMorphism e ∧ IsEtaleMorphism e ∧
+      RepresentableByAlgebraicSpace e ∧ Surjective e
 
 structure FiniteGroupQuotientData {C : Type u} [Category.{v} C]
     [StackCategory C] (X : C) where
   group : Type u
   groupStructure : Group group
-  finiteGroup : Prop
-  quotientSpace : C
-  quotientMap : quotientSpace ⟶ X
-  quotientSpaceIsScheme : IsScheme quotientSpace
-  quotientSpaceIsAlgebraicSpace : IsAlgebraicSpace quotientSpace
+  finiteGroup : Finite group
+  cover : C
+  coverMap : cover ⟶ X
+  coverIsScheme : IsScheme cover
+  coverIsAlgebraicSpace : IsAlgebraicSpace cover
+  groupActionOnCover : Prop
   quotientPresentation : Prop
 
 def HasFiniteGroupQuotient {C : Type u} [Category.{v} C]
@@ -46,12 +46,14 @@ structure EtaleSeparatedFiniteGroupChart {C : Type u} [Category.{v} C]
   residueField : Type u
   group : Type u
   groupStructure : Group group
-  finiteGroup : Prop
-  affineScheme : C
-  affineSchemeIsAffine : Prop
+  finiteGroup : Finite group
   quotientChart : C
+  affineScheme : C
+  affineSchemeIsScheme : IsScheme affineScheme
+  affineSchemeIsAffine : Prop
+  affineSchemeToChart : affineScheme ⟶ quotientChart
   chartMap : quotientChart ⟶ X
-  representable : Prop
+  representable : RepresentableByAlgebraicSpace chartMap
   etale : IsEtaleMorphism chartMap
   separated : IsSeparatedMorphism chartMap
   chartIsFiniteGroupQuotient : Prop
@@ -67,6 +69,10 @@ structure FaithfulVectorBundleCriterion {C : Type u} [Category.{v} C]
     [StackCategory C] (X : C) where
   vectorBundle : VectorBundle X
   stabilizersActFaithfully : Prop
+
+structure RepresentableVectorBundleLocusData {C : Type u} [Category.{v} C]
+    [StackCategory C] (X : C) where
+  vectorBundle : VectorBundle X
   locallyClosedRepresentableLocus : Prop
   locusSurjects : Prop
 
@@ -76,8 +82,7 @@ def HasFaithfulVectorBundle {C : Type u} [Category.{v} C] [StackCategory C]
 
 def HasRepresentableSurjectiveVectorBundleLocus {C : Type u} [Category.{v} C]
     [StackCategory C] (X : C) : Prop :=
-  ∃ D : FaithfulVectorBundleCriterion X,
-    D.locallyClosedRepresentableLocus ∧ D.locusSurjects
+  Nonempty (RepresentableVectorBundleLocusData X)
 
 theorem quotient_stack_iff_faithful_vector_bundle
     {C : Type u} [Category.{v} C] [StackCategory C] (X : C)
@@ -113,6 +118,7 @@ structure GmGerbeBrauerData {C : Type u} [Category.{v} C]
     [StackCategory C] where
   base : C
   gerbe : C
+  gerbeToBase : gerbe ⟶ base
   cohomologicalBrauerClass : Type u
   isGmGerbe : Prop
   brauerMapImage : Prop
@@ -129,16 +135,34 @@ theorem exists_nonseparated_deligne_mumford_stack_not_quotient
       ¬ IsSeparatedStack X ∧ ¬ IsGlobalQuotient X := by
   sorry
 
+structure GLnQuasiAffineQuotientData {C : Type u} [Category.{v} C]
+    [StackCategory C] (X : C) where
+  quotientSpace : C
+  quotientSpaceIsQuasiAffine : IsQuasiAffineStack quotientSpace
+  gln : Type u
+  glnGroup : Group gln
+  quotientMap : quotientSpace ⟶ X
+  glnAction : Prop
+  isTheGLnQuotient : Prop
+
 def HasResolutionPropertyViaGLnQuasiAffineQuotient
     {C : Type u} [Category.{v} C] [StackCategory C] (X : C) : Prop :=
-  ∃ Y : C, IsQuasiAffineStack Y ∧
-    (∃ _f : Y ⟶ X, IsGlobalQuotient X) ∧
-      (∃ gln : Type u, Nonempty (Group gln))
+  Nonempty (GLnQuasiAffineQuotientData X)
+
+structure AffineFiniteTypeGroupQuotientData {C : Type u}
+    [Category.{v} C] [StackCategory C] (X : C) where
+  group : Type u
+  groupStructure : Group group
+  groupIsAffineFiniteType : Prop
+  affineScheme : C
+  affineSchemeIsScheme : IsScheme affineScheme
+  quotientMap : affineScheme ⟶ X
+  groupAction : Prop
+  isTheGroupQuotient : Prop
 
 def HasAffineFiniteTypeGroupQuotient {C : Type u} [Category.{v} C]
     [StackCategory C] (X : C) : Prop :=
-  ∃ G : Type u, Nonempty (Group G) ∧
-    ∃ Y : C, IsScheme Y ∧ (∃ _f : Y ⟶ X, IsGlobalQuotient X)
+  Nonempty (AffineFiniteTypeGroupQuotientData X)
 
 theorem totaro_resolution_property_iff_gl_n_quasi_affine_quotient
     {C : Type u} [Category.{v} C] [StackCategory C] (X : C)
@@ -171,11 +195,13 @@ theorem smooth_deligne_mumford_resolution_property
 
 structure ClosedPointStabilizerData {C : Type u} [Category.{v} C]
     [StackCategory C] (X : C) where
-  affineAtEveryClosedPoint : ∀ _x : Point X, Prop
+  affineAtEveryClosedPoint : ∀ _x : Point X, IsClosedPoint _x → Prop
 
 def ClosedPointsHaveAffineStabilizer {C : Type u} [Category.{v} C]
     [StackCategory C] (X : C) : Prop :=
-  ∃ D : ClosedPointStabilizerData X, ∀ x : Point X, D.affineAtEveryClosedPoint x
+  ∃ D : ClosedPointStabilizerData X,
+    ∀ x : Point X, ∀ hx : IsClosedPoint x,
+      D.affineAtEveryClosedPoint x hx
 
 theorem affine_diagonal_iff_affine_closed_stabilizers
     {C : Type u} [Category.{v} C] [StackCategory C] (X : C)
@@ -196,6 +222,11 @@ structure OpenFiniteGroupQuotientChart {C : Type u} [Category.{v} C]
   openSubstack : C
   inclusion : openSubstack ⟶ X
   openImmersion : Prop
+  affineScheme : C
+  affineSchemeIsScheme : IsScheme affineScheme
+  finiteGroup : Type u
+  finiteGroupStructure : Finite finiteGroup
+  quotientMap : affineScheme ⟶ openSubstack
   quotientByFiniteGroup : Prop
   covers : Prop
 
@@ -226,20 +257,22 @@ def IsProjectiveDMStackByEmbedding {C : Type u} [Category.{v} C]
 
 def ProperCharacteristicZeroDMQuotientCriterion
     {C : Type u} [Category.{v} C] [StackCategory C] (X Y : C) : Prop :=
-  CoarseSpaceIsProjective Y ∧
+  (∃ q : X ⟶ Y, IsCoarseModuliSpaceMap q) ∧ CoarseSpaceIsProjective Y ∧
     (IsGlobalQuotient X ↔ HasGeneratingSheaf X) ∧
     (HasGeneratingSheaf X ↔ IsProjectiveDMStackByEmbedding X)
 
 theorem proper_dm_projective_quotient_criterion
     {C : Type u} [Category.{v} C] [StackCategory C] (X Y : C)
     (hproper : IsProperStack X) (hDM : IsDeligneMumfordStack X)
-    (hcharZero : Prop) (hcoarse : CoarseSpaceIsProjective Y) :
+    (hcharZero : Prop) (q : X ⟶ Y) (hcoarseMap : IsCoarseModuliSpaceMap q)
+    (hcoarse : CoarseSpaceIsProjective Y) :
     ProperCharacteristicZeroDMQuotientCriterion X Y := by
   sorry
 
 theorem projective_dm_stack_definition
     {C : Type u} [Category.{v} C] [StackCategory C] (X : C) :
-    IsProjectiveStack X ↔ IsProjectiveDMStackByEmbedding X := by
+    IsDeligneMumfordStack X →
+      (IsProjectiveStack X ↔ IsProjectiveDMStackByEmbedding X) := by
   sorry
 
 def EverySmoothDMStackOfDimensionIsQuotient {C : Type u} [Category.{v} C]
@@ -260,18 +293,21 @@ structure AzumayaCohomologicalBrauerComparison (C : Type u)
   [azumayaGroupStructure : AddCommGroup azumayaBrauerGroup]
   cohomologicalBrauerGroup : Type u
   [cohomologicalGroupStructure : AddCommGroup cohomologicalBrauerGroup]
-  comparison : azumayaBrauerGroup ≃ cohomologicalBrauerGroup
+  comparison : azumayaBrauerGroup ≃+ cohomologicalBrauerGroup
+
+attribute [instance] AzumayaCohomologicalBrauerComparison.azumayaGroupStructure
+  AzumayaCohomologicalBrauerComparison.cohomologicalGroupStructure
 
 def AzumayaEqualsCohomologicalBrauerInDimension {C : Type u}
     [Category.{v} C] [StackCategory C] (n : ℕ) : Prop :=
   ∃ D : AzumayaCohomologicalBrauerComparison C n,
-    Nonempty (D.azumayaBrauerGroup ≃ D.cohomologicalBrauerGroup)
+    Nonempty (D.azumayaBrauerGroup ≃+ D.cohomologicalBrauerGroup)
 
 theorem Kresch_Vistoli_dimension_equivalence
     {C : Type u} [Category.{v} C] [StackCategory C] (n : ℕ)
     (hcharZero : Prop) :
-    hcharZero → (EverySmoothDMStackOfDimensionIsQuotient (C := C) n ↔
-      AzumayaEqualsCohomologicalBrauerInDimension (C := C) n) := by
+    EverySmoothDMStackOfDimensionIsQuotient (C := C) n ↔
+      AzumayaEqualsCohomologicalBrauerInDimension (C := C) n := by
   sorry
 
 def StratifiedByQuotientStacks {C : Type u} [Category.{v} C]
@@ -291,6 +327,7 @@ structure EtaleLocallyAffineFiniteStabilizerQuotientData
     {C : Type u} [Category.{v} C] [StackCategory C] (X : C) where
   chartForPoint : ∀ _x : Point X, C
   chartMapForPoint : ∀ (_x : Point X), chartForPoint _x ⟶ X
+  chartIsAlgebraicSpace : ∀ _x : Point X, IsAlgebraicSpace (chartForPoint _x)
   affineForPoint : ∀ _x : Point X, Prop
   finiteStabilizerGroupForPoint : ∀ _x : Point X, Prop
   quotientByFiniteStabilizerForPoint : ∀ _x : Point X, Prop
@@ -320,6 +357,7 @@ structure LocalQuotientSliceData {C : Type u} [Category.{v} C]
   stabilizerGroup : Group stabilizer
   linearlyReductive : Prop
   algebraicSpace : C
+  algebraicSpaceIsAlgebraicSpace : IsAlgebraicSpace algebraicSpace
   chart : C
   chartMap : chart ⟶ X
   etale : IsEtaleMorphism chartMap
@@ -328,7 +366,7 @@ structure LocalQuotientSliceData {C : Type u} [Category.{v} C]
 
 theorem local_quotient_slice_formal_statement
     {C : Type u} [Category.{v} C] [StackCategory C] {X : C}
-    (x : Point X) (hlinearlyReductive : Prop) :
+    (x : Point X) (hclosed : IsClosedPoint x) (hlinearlyReductive : Prop) :
     ∃ D : LocalQuotientSliceData X, D.closedPoint = x ∧ D.formallyLocal := by
   sorry
 

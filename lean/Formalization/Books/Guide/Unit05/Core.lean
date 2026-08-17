@@ -1,4 +1,3 @@
-import Mathlib.CategoryTheory.Limits.Shapes.Pullback.HasPullback
 import Mathlib.Data.Set.Lattice
 import Formalization.Books.StacksMorphisms.Unit07.QuasiCompactMorphisms
 
@@ -250,6 +249,10 @@ def stackPointMap {C : Type u} [Category.{v} C] [StackCategory C]
     {X Y : C} (f : X ⟶ Y) : Point X → Point Y :=
   Formalization.Books.StacksMorphisms.Unit07.pointMap f
 
+def IsClosedPoint {C : Type u} [Category.{v} C] [StackCategory C]
+    {X : C} (x : Point X) : Prop :=
+  IsClosed ({x} : Set (Point X))
+
 def ClosureEquivalent {α : Type u} [TopologicalSpace α] (x y : α) : Prop :=
   closure ({x} : Set α) = closure ({y} : Set α)
 
@@ -261,10 +264,13 @@ def FibresAreClosureEquivalence {C : Type u} [Category.{v} C] [StackCategory C]
 def IsCoarseModuliSpaceMap {C : Type u} [Category.{v} C] [StackCategory C]
     {X Y : C} (q : X ⟶ Y) : Prop :=
   IsAlgebraicSpace Y ∧
-    IsSeparatedMorphism q ∧
     Function.Bijective (stackPointMap q) ∧
     (∀ (Z : C), IsAlgebraicSpace Z → ∀ (f : X ⟶ Z),
       ∃! g : Y ⟶ Z, q ≫ g = f)
+
+def IsModuliSpaceMap {C : Type u} [Category.{v} C] [StackCategory C]
+    {X Y : C} (f : X ⟶ Y) : Prop :=
+  IsProperMorphism f ∧ Function.Bijective (stackPointMap f)
 
 structure CoarseModuliSpaceData {C : Type u} [Category.{v} C] [StackCategory C]
     (X : C) where
@@ -275,6 +281,10 @@ structure CoarseModuliSpaceData {C : Type u} [Category.{v} C] [StackCategory C]
 def HasCoarseModuliSpace {C : Type u} [Category.{v} C] [StackCategory C]
     (X : C) : Prop :=
   Nonempty (CoarseModuliSpaceData X)
+
+def HasSeparatedCoarseModuliSpace {C : Type u} [Category.{v} C]
+    [StackCategory C] (X : C) : Prop :=
+  ∃ (Y : C) (q : X ⟶ Y), IsCoarseModuliSpaceMap q ∧ IsSeparatedMorphism q
 
 def TameByExactPushforward {C : Type u} [Category.{v} C]
     [StackCategory C] {X Y : C} (q : X ⟶ Y) : Prop :=
@@ -288,8 +298,8 @@ def IsTameArtinStack {C : Type u} [Category.{v} C] [StackCategory C] (X : C) : P
 
 def IsGoodModuliSpace {C : Type u} [Category.{v} C] [StackCategory C]
     {X Y : C} (q : X ⟶ Y) : Prop :=
-  IsQuasiCompactMorphism q ∧ StructureSheafPushforwardIsIso q ∧
-    ExactOnQuasiCoherent q
+  IsAlgebraicSpace Y ∧ IsQuasiCompactMorphism q ∧
+    StructureSheafPushforwardIsIso q ∧ ExactOnQuasiCoherent q
 
 structure GoodModuliSpaceProperties {C : Type u} [Category.{v} C]
     [StackCategory C] {X Y : C} (q : X ⟶ Y) where
@@ -306,8 +316,9 @@ structure GoodModuliSpaceProperties {C : Type u} [Category.{v} C]
 
 /-! ## Small, reusable geometric data structures -/
 
-structure EffectiveCartierDivisor (X : Type u) where
-  carrier : Set X
+structure EffectiveCartierDivisor {C : Type u} [Category.{v} C]
+    [StackCategory C] (X : C) where
+  carrier : Set (Point X)
   effective : Prop
   Cartier : Prop
 
@@ -316,10 +327,11 @@ structure GroupActionData (G X : Type u) [Group G] where
   one_action : ∀ x, action 1 x = x
   mul_action : ∀ g h x, action (g * h) x = action g (action h x)
 
-structure LineBundleData (X : Type u) where
+structure LineBundleData {C : Type u} [Category.{v} C]
+    [StackCategory C] (X : C) where
   underlying : Type u
   invertible : Prop
-  totalSpace : X → underlying → Prop
+  totalSpace : Point X → underlying → Prop
 
 structure GerbeData where
   band : Type u

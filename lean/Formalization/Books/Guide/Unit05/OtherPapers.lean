@@ -21,6 +21,7 @@ structure RelativeSurfaceGerbeData {C : Type u} [Category.{v} C]
   projectiveRelativeSurface : Prop
   smoothConnectedGeometricFibers : Prop
   n : ℕ
+  nPositive : 0 < n
   gerbe : C
   gerbeToSurface : gerbe ⟶ surface
   isMuNGerbe : Prop
@@ -51,13 +52,14 @@ theorem lieblich_semistable_twisted_sheaves_form_an_artin_stack
     HasSemistableTwistedSheafModuli D := by
   sorry
 
-structure AssociatedPointsAndPurityConclusion where
+structure AssociatedPointsAndPurityConclusion {C : Type u}
+    [Category.{v} C] [StackCategory C] (X : C) where
   associatedPoints : Prop
   purityOfSheaves : Prop
 
 def HasAssociatedPointsAndPurityTheory {C : Type u} [Category.{v} C]
-    [StackCategory C] (_X : C) : Prop :=
-  Nonempty (AssociatedPointsAndPurityConclusion)
+    [StackCategory C] (X : C) : Prop :=
+  Nonempty (AssociatedPointsAndPurityConclusion X)
 
 theorem lieblich_associated_points_and_purity_on_artin_stacks
     {C : Type u} [Category.{v} C] [StackCategory C] (X : C)
@@ -70,18 +72,20 @@ structure FunctorialReconstructionData {C : Type u} [Category.{v} C]
   associatedFunctor : C → Type u
   reconstructionHypotheses : Prop
 
-structure FunctorialReconstructionConclusion where
+structure FunctorialReconstructionConclusion {C : Type u}
+    [Category.{v} C] [StackCategory C]
+    {X : C} (D : FunctorialReconstructionData X) where
   reconstructionConclusion : Prop
 
 def IsReconstructedFromAssociatedFunctor {C : Type u} [Category.{v} C]
     [StackCategory C] {X : C} (D : FunctorialReconstructionData X) : Prop :=
-  D.reconstructionHypotheses ∧ Nonempty FunctorialReconstructionConclusion
+  D.reconstructionHypotheses ∧ Nonempty (FunctorialReconstructionConclusion D)
 
 theorem lieblich_osserman_functorial_reconstruction
     {C : Type u} [Category.{v} C] [StackCategory C] {X : C}
     (D : FunctorialReconstructionData X)
     (h : D.reconstructionHypotheses) :
-    Nonempty FunctorialReconstructionConclusion := by
+    Nonempty (FunctorialReconstructionConclusion D) := by
   sorry
 
 structure NoetherianApproximationData {C : Type u} [Category.{v} C]

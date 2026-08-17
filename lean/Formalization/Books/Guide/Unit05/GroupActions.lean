@@ -62,13 +62,13 @@ structure SymmetricGroupActionOnStableCurves {C : Type u} [Category.{v} C]
   moduliStack : C
   symmetricGroup : Type u
   symmetricGroupStructure : Group symmetricGroup
-  symmetricGroupIdentification : Prop
   action : StackGroupActionData moduliStack
+  symmetricGroupIdentification : action.group = symmetricGroup
 
 def HasSymmetricGroupActionOnStableCurves {C : Type u} [Category.{v} C]
     [StackCategory C] : Prop :=
   ∃ D : SymmetricGroupActionOnStableCurves (C := C),
-    D.symmetricGroupIdentification ∧ IsGroupActionOnStack D.action
+    (D.action.group = D.symmetricGroup) ∧ IsGroupActionOnStack D.action
 
 structure NormalizerActionOnQuotientStack {C : Type u} [Category.{v} C]
     [StackCategory C] where
@@ -82,13 +82,13 @@ structure NormalizerActionOnQuotientStack {C : Type u} [Category.{v} C]
   normalizerGroupStructure : Group normalizer
   normalizerDefinition : Prop
   action : StackGroupActionData quotientStack
-  normalizerActionIdentification : Prop
+  normalizerActionIdentification : action.group = normalizer
 
 def HasNormalizerActionOnQuotientStack {C : Type u} [Category.{v} C]
     [StackCategory C] : Prop :=
   ∃ D : NormalizerActionOnQuotientStack (C := C),
     D.quotientConstruction ∧ D.normalizerDefinition ∧
-      D.normalizerActionIdentification ∧ IsGroupActionOnStack D.action
+      (D.action.group = D.normalizer) ∧ IsGroupActionOnStack D.action
 
 structure TorusActionInGromovWittenTheory {C : Type u} [Category.{v} C]
     [StackCategory C] where
@@ -96,13 +96,13 @@ structure TorusActionInGromovWittenTheory {C : Type u} [Category.{v} C]
   torus : Type u
   torusGroupStructure : CommGroup torus
   action : StackGroupActionData moduliStack
-  torusIdentification : Prop
+  torusIdentification : action.group = torus
   appearsInGromovWittenTheory : Prop
 
 def HasTorusActionInGromovWittenTheory {C : Type u} [Category.{v} C]
     [StackCategory C] : Prop :=
   ∃ D : TorusActionInGromovWittenTheory (C := C),
-    D.torusIdentification ∧ D.appearsInGromovWittenTheory ∧
+    (D.action.group = D.torus) ∧ D.appearsInGromovWittenTheory ∧
       IsGroupActionOnStack D.action
 
 end Formalization.Books.Guide.Unit05

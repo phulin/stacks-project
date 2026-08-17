@@ -322,7 +322,16 @@ theorem splitFibredCategory_isSplit
   {C : Type uC} [Category.{vC} C]
     (F : Cᵒᵖ ⥤ Cat.{vS, uS}) :
     IsSplitFibredCategory (splitFibredProjection F) := by
-  sorry
+  constructor
+  · exact splitFibredProjection_isFibered F
+  · refine ⟨F, ?_⟩
+    refine ⟨𝟭 _, 𝟭 _, Functor.id_comp _, Functor.id_comp _, ?_, ?_⟩
+    · refine ⟨Iso.refl _, rfl, ?_⟩
+      intro X
+      simp
+    · refine ⟨Iso.refl _, rfl, ?_⟩
+      intro X
+      simp
 
 /-! ## The splitting criterion -/
 

@@ -1,6 +1,7 @@
 import Formalization.Books.Simplicial.Unit12.TruncatedSimplicialObjects
 import Formalization.Books.Simplicial.Unit11.SimplicialSets
 import Formalization.Books.Categories.Unit05.CoproductsOfPairs
+import Mathlib.CategoryTheory.Yoneda
 import Mathlib.CategoryTheory.Limits.Shapes.FiniteProducts
 
 /-!
@@ -214,22 +215,45 @@ noncomputable def productWithSimplicialSetHomFunctor
     rw [NatTrans.comp_app]
     simp [Category.assoc]
 
+def compatibleFamilyEquivHomSet
+    {C : Type u} [Category.{v} C]
+    (U : SSet.{w}) (V W : SimplicialObject C) :
+    CompatibleFamily U V W ≃ productWithSimplicialSetHomSet U V W :=
+  Equiv.refl _
+
 /-! ## The representability lemma -/
 
 /-- The direct product represents the compatible-family functor. -/
-theorem exists_simplicialSetProduct_hom_equiv
-    {C : Type u} [Category.{v} C]
-    {U : SSet.{w}} {V : SimplicialObject C}
-    (h : HasDegreewiseCoproducts U V) (W : SimplicialObject C) :
-    Nonempty ((simplicialSetProductOf U V h ⟶ W) ≃ CompatibleFamily U V W) := by
-  sorry
-
 noncomputable def simplicialSetProduct_hom_equiv
     {C : Type u} [Category.{v} C]
     {U : SSet.{w}} {V : SimplicialObject C}
     (h : HasDegreewiseCoproducts U V) (W : SimplicialObject C) :
     (simplicialSetProductOf U V h ⟶ W) ≃ CompatibleFamily U V W :=
-  (exists_simplicialSetProduct_hom_equiv h W).some
+  { toFun := fun γ =>
+      ⟨fun n u =>
+          let _ := h n
+          Sigma.ι (fun _ : U _⦋n⦌ => V.obj (op (SimplexCategory.mk n))) u ≫
+            γ.app (op (SimplexCategory.mk n)),
+        by
+          sorry⟩
+    invFun := fun f =>
+      { app := fun X =>
+          let _ : HasCoproduct (fun _ : U.obj X => V.obj X) :=
+            degreewiseCoproductInstanceAt h X
+          Sigma.desc (fun u => f.1 X.unop.len u)
+        naturality := by
+          sorry }
+    left_inv := by
+      sorry
+    right_inv := by
+      sorry }
+
+theorem exists_simplicialSetProduct_hom_equiv
+    {C : Type u} [Category.{v} C]
+    {U : SSet.{w}} {V : SimplicialObject C}
+    (h : HasDegreewiseCoproducts U V) (W : SimplicialObject C) :
+    Nonempty ((simplicialSetProductOf U V h ⟶ W) ≃ CompatibleFamily U V W) :=
+  ⟨simplicialSetProduct_hom_equiv h W⟩
 
 noncomputable def finiteSimplicialSetProduct_hom_equiv
     {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]
@@ -237,6 +261,28 @@ noncomputable def finiteSimplicialSetProduct_hom_equiv
     (hU : FiniteNonemptySimplicialSet U) (W : SimplicialObject C) :
     (simplicialSetProduct U V hU ⟶ W) ≃ CompatibleFamily U V W :=
   simplicialSetProduct_hom_equiv (degreewiseCoproductInstance U V hU) W
+
+/-! The pointwise equivalences assemble to the functorial representability
+statement from the source.  The `ULift` is only the standard universe lift
+needed to compare the hom functor with the family type when the simplicial
+set has elements in a larger universe. -/
+
+theorem exists_simplicialSetProduct_hom_natIso
+    {C : Type u} [Category.{v} C]
+    {U : SSet.{w}} {V : SimplicialObject C}
+    (h : HasDegreewiseCoproducts U V) :
+    Nonempty
+      (uliftCoyoneda.{w}.obj (op (simplicialSetProductOf U V h)) ≅
+        productWithSimplicialSetHomFunctor U V) := by
+  sorry
+
+noncomputable def simplicialSetProduct_hom_natIso
+    {C : Type u} [Category.{v} C]
+    {U : SSet.{w}} {V : SimplicialObject C}
+    (h : HasDegreewiseCoproducts U V) :
+    uliftCoyoneda.{w}.obj (op (simplicialSetProductOf U V h)) ≅
+      productWithSimplicialSetHomFunctor U V :=
+  (exists_simplicialSetProduct_hom_natIso h).some
 
 /-! ## The FSSets functor and the canonical map back to `V` -/
 
@@ -248,20 +294,49 @@ def FSSets : Type (w + 1) :=
 instance fSSetsCategory : Category (FSSets.{w}) :=
   ObjectProperty.FullSubcategory.category _
 
-/-!
-The object-level construction used by the source's bifunctor.  The functorial
-assembly is recorded below as an existence statement; its component maps are
-the same `Sigma.desc` maps as in `simplicialSetProductOf`.
--/
-theorem exists_productWithSimplicialSetFunctor
-    {C : Type u} [Category.{v} C] [HasBinaryCoproducts C] :
-    Nonempty (FSSets.{w} × SimplicialObject C ⥤ SimplicialObject C) := by
-  sorry
+/-! The maps on morphisms in the two variables are again degreewise
+coproduct descents.  The proof that these components are natural is
+propositional and is left for the proof stage, while the construction itself
+is explicit. -/
+
+noncomputable def productWithSimplicialSetMap
+    {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]
+    {U U' : FSSets.{w}} {V V' : SimplicialObject C}
+    (f : U ⟶ U') (g : V ⟶ V') :
+    simplicialSetProduct U.obj V U.property ⟶
+      simplicialSetProduct U'.obj V' U'.property :=
+  { app := fun X =>
+      let hUV : HasDegreewiseCoproducts U.obj V :=
+        degreewiseCoproductInstance U.obj V U.property
+      let hU'V' : HasDegreewiseCoproducts U'.obj V' :=
+        degreewiseCoproductInstance U'.obj V' U'.property
+      let _ : HasCoproduct (fun _ : U.obj.obj X => V.obj X) :=
+        degreewiseCoproductInstanceAt hUV X
+      let _ : HasCoproduct (fun _ : U'.obj.obj X => V'.obj X) :=
+        degreewiseCoproductInstanceAt hU'V' X
+      Sigma.desc (fun u =>
+        g.app X ≫ Sigma.ι (fun _ : U'.obj.obj X => V'.obj X)
+          (f.hom.app X u))
+    naturality := by
+      sorry }
+
+/-! The source's rule `(U, V) ↦ U × V` is now given as an actual functor.
+The two functor laws are proposition-valued interfaces for the proof stage. -/
 
 noncomputable def productWithSimplicialSetBifunctor
     {C : Type u} [Category.{v} C] [HasBinaryCoproducts C] :
     FSSets.{w} × SimplicialObject C ⥤ SimplicialObject C :=
-  (exists_productWithSimplicialSetFunctor (C := C)).some
+  { obj := fun Z => simplicialSetProduct Z.1.obj Z.2 Z.1.property
+    map := fun f => productWithSimplicialSetMap f.1 f.2
+    map_id := by
+      sorry
+    map_comp := by
+      sorry }
+
+theorem exists_productWithSimplicialSetFunctor
+    {C : Type u} [Category.{v} C] [HasBinaryCoproducts C] :
+    Nonempty (FSSets.{w} × SimplicialObject C ⥤ SimplicialObject C) :=
+  ⟨productWithSimplicialSetBifunctor⟩
 
 /-- The canonical map which is the identity on each coproduct component. -/
 noncomputable def productWithSimplicialSetTo
@@ -327,23 +402,34 @@ noncomputable def constantObjectProductWithSimplexOf
   simplicialSetProductOf (Δ[k] : SSet.{w})
     ((SimplicialObject.const C).obj X) h
 
-theorem exists_constantObjectProductWithSimplexOf_hom_equiv
-    {C : Type u} [Category.{v} C]
-    (X : C) (k : ℕ)
-    (h : HasDegreewiseCoproducts (Δ[k] : SSet.{w})
-      ((SimplicialObject.const C).obj X)) (V : SimplicialObject C) :
-    Nonempty ((constantObjectProductWithSimplexOf X k h ⟶ V) ≃
-      (X ⟶ V.obj (op (SimplexCategory.mk k)))) := by
-  sorry
-
 noncomputable def constantObjectProductWithSimplexOf_hom_equiv
     {C : Type u} [Category.{v} C]
     (X : C) (k : ℕ)
     (h : HasDegreewiseCoproducts (Δ[k] : SSet.{w})
       ((SimplicialObject.const C).obj X)) (V : SimplicialObject C) :
     (constantObjectProductWithSimplexOf X k h ⟶ V) ≃
-      (X ⟶ V.obj (op (SimplexCategory.mk k))) :=
-  (exists_constantObjectProductWithSimplexOf_hom_equiv X k h V).some
+      (X ⟶ V.obj (op (SimplexCategory.mk k))) where
+  toFun γ :=
+    (simplicialSetProduct_hom_equiv h V γ).1 k
+      (SSet.stdSimplex.objEquiv.symm (𝟙 (SimplexCategory.mk k)))
+  invFun f :=
+    (simplicialSetProduct_hom_equiv h V).symm
+      ⟨fun n α =>
+        f ≫ V.map (SSet.stdSimplex.objEquiv α).op, by
+        sorry⟩
+  left_inv := by
+    sorry
+  right_inv := by
+    sorry
+
+theorem exists_constantObjectProductWithSimplexOf_hom_equiv
+    {C : Type u} [Category.{v} C]
+    (X : C) (k : ℕ)
+    (h : HasDegreewiseCoproducts (Δ[k] : SSet.{w})
+      ((SimplicialObject.const C).obj X)) (V : SimplicialObject C) :
+    Nonempty ((constantObjectProductWithSimplexOf X k h ⟶ V) ≃
+      (X ⟶ V.obj (op (SimplexCategory.mk k)))) :=
+  ⟨constantObjectProductWithSimplexOf_hom_equiv X k h V⟩
 
 theorem exists_constantObjectProductWithSimplexOf_truncated_hom_equiv
     {C : Type u} [Category.{v} C]
@@ -370,19 +456,22 @@ noncomputable def constantObjectProductWithSimplexOf_truncated_hom_equiv
   (exists_constantObjectProductWithSimplexOf_truncated_hom_equiv
     X k n hkn h W).some
 
-theorem exists_constantObjectProductWithSimplex_hom_equiv
-    {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]
-    (X : C) (k : ℕ) (V : SimplicialObject C) :
-    Nonempty ((constantObjectProductWithSimplex X k ⟶ V) ≃
-      (X ⟶ V.obj (op (SimplexCategory.mk k)))) := by
-  sorry
-
 noncomputable def constantObjectProductWithSimplex_hom_equiv
     {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]
     (X : C) (k : ℕ) (V : SimplicialObject C) :
     (constantObjectProductWithSimplex X k ⟶ V) ≃
       (X ⟶ V.obj (op (SimplexCategory.mk k))) :=
-  (exists_constantObjectProductWithSimplex_hom_equiv X k V).some
+  constantObjectProductWithSimplexOf_hom_equiv X k
+    (degreewiseCoproductInstance (Δ[k] : SSet.{w})
+      ((SimplicialObject.const C).obj X)
+      (standardSimplex_finite_nonempty k)) V
+
+theorem exists_constantObjectProductWithSimplex_hom_equiv
+    {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]
+    (X : C) (k : ℕ) (V : SimplicialObject C) :
+    Nonempty ((constantObjectProductWithSimplex X k ⟶ V) ≃
+      (X ⟶ V.obj (op (SimplexCategory.mk k)))) :=
+  ⟨constantObjectProductWithSimplex_hom_equiv X k V⟩
 
 theorem exists_constantObjectProductWithSimplex_truncated_hom_equiv
     {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]
@@ -405,18 +494,28 @@ noncomputable def constantObjectProductWithSimplex_truncated_hom_equiv
   (exists_constantObjectProductWithSimplex_truncated_hom_equiv
     X k n hkn W).some
 
-theorem exists_constant_simplicial_object_hom_equiv
-    {C : Type u} [Category.{v} C]
-    (X : C) (V : SimplicialObject C) :
-    Nonempty ((((SimplicialObject.const C).obj X) ⟶ V) ≃
-      (X ⟶ V.obj (op (SimplexCategory.mk 0)))) := by
-  sorry
-
 noncomputable def constant_simplicial_object_hom_equiv
     {C : Type u} [Category.{v} C]
     (X : C) (V : SimplicialObject C) :
     (((SimplicialObject.const C).obj X) ⟶ V) ≃
-      (X ⟶ V.obj (op (SimplexCategory.mk 0))) :=
-  (exists_constant_simplicial_object_hom_equiv X V).some
+      (X ⟶ V.obj (op (SimplexCategory.mk 0))) where
+  toFun γ := γ.app (op (SimplexCategory.mk 0))
+  invFun f :=
+    { app := fun Y =>
+        f ≫ V.map (SimplexCategory.const Y.unop
+          (SimplexCategory.mk 0) 0).op
+      naturality := by
+        sorry }
+  left_inv := by
+    sorry
+  right_inv := by
+    sorry
+
+theorem exists_constant_simplicial_object_hom_equiv
+    {C : Type u} [Category.{v} C]
+    (X : C) (V : SimplicialObject C) :
+    Nonempty ((((SimplicialObject.const C).obj X) ⟶ V) ≃
+      (X ⟶ V.obj (op (SimplexCategory.mk 0)))) :=
+  ⟨constant_simplicial_object_hom_equiv X V⟩
 
 end Formalization.Books.Simplicial.Unit13

@@ -38,6 +38,12 @@ noncomputable section
    its endpoints to be equal, and every hom type is subsingleton.  We use it
    directly below instead of introducing a parallel predicate. -/
 
+theorem isDiscrete_iff_every_morphism_is_eqToHom
+    {C : Type*} [Category* C] :
+    IsDiscrete C ↔
+      ∀ {X Y : C} (f : X ⟶ Y), ∃ h : X = Y, f = eqToHom h := by
+  sorry
+
 /-- A functor is a category fibred in sets when it is fibred in groupoids and
 all its fibre categories are discrete. -/
 def IsCategoryFibredInSets

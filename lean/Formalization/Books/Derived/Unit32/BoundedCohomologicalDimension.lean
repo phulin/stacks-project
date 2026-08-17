@@ -84,14 +84,20 @@ structure ElementaryDegreeZeroReplacement
   quasiIso : QuasiIsomorphism comparison
   mono : Mono u
   targetDegreeZero : d M = 0
+  degreeIso : replaced.X n ≅ M
+  comparisonAt : comparison.f n ≫ degreeIso.hom = u
   degreeZero : d (replaced.X n) = 0
   nextDegreeBound :
     d (replaced.X (n + 1)) ≤
       max (d (K.X n) - 1) (d (K.X (n + 1)))
+  nextIso : replaced.X (n + 1) ≅ elementaryReplacementObject K n M u
+  comparisonNext :
+    comparison.f (n + 1) ≫ nextIso.hom =
+      biprod.inr ≫ cokernel.π (elementaryReplacementMap K n M u)
+  unchangedTerm : ∀ m : ℤ, m ≠ n → m ≠ n + 1 →
+    Nonempty (replaced.X m ≅ K.X m)
   unchanged : ∀ m : ℤ, m ≠ n → m ≠ n + 1 →
     d (replaced.X m) = d (K.X m)
-  nextIsCokernel :
-    Nonempty (replaced.X (n + 1) ≅ elementaryReplacementObject K n M u)
 
 /-- An elementary replacement can be made at every positive-degree term. -/
 theorem exists_elementaryDegreeZeroReplacement
@@ -302,6 +308,20 @@ noncomputable def leftDerivedDegree
     {d : WithTop ℕ | ∃ i : ℕ,
       d = (i : WithTop ℕ) ∧
         ¬ IsZero ((higherLeftDerivedFunctor F L.functor (i : ℤ)).obj X)})
+
+/- The induction in the dual proof propagates a vanishing degree to every
+   larger degree, just as in the right-derived argument above. -/
+theorem leftDerived_vanishes_of_ge
+    {A : Type u} [Category.{v} A] [Abelian A]
+    {B : Type u'} [Category.{v'} B] [Abelian B]
+    [HasDerivedCategory.{w} A] [HasDerivedCategory.{w'} B]
+    {F : A ⥤ B} [F.Additive] (L : LeftDerivedFunctorData F)
+    (n m : ℕ) (hnm : n ≤ m)
+    (hn : ∀ X : A,
+      IsZero ((higherLeftDerivedFunctor F L.functor (n : ℤ)).obj X)) :
+    ∀ X : A,
+      IsZero ((higherLeftDerivedFunctor F L.functor (m : ℤ)).obj X) := by
+  sorry
 
 /-- The dual degree function satisfies the same replacement axioms. -/
 theorem leftDerivedDegree_isAdmissible

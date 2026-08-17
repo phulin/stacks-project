@@ -43,10 +43,6 @@ def shiftedPolynomialIdeal {A : Type*} [CommRing A] (m : Ideal A) (p : Polynomia
     Ideal (Polynomial A) :=
   Ideal.map (Polynomial.C : A →+* Polynomial A) m ⊔ Ideal.span {p}
 
-/-- The localization at the complement of a specified prime ideal. -/
-abbrev localizationAtPrime {R : Type v} [CommRing R] (P : Ideal R) (hP : P.IsPrime) : Type v :=
-  Localization (M := R) (@Ideal.primeCompl R _ P hP)
-
 /-- The two localizations at `(m, X)` and `(m, X - 1)` are isomorphic. -/
 theorem polynomial_shifted_localizations_equiv {A : Type v} [CommRing A]
     (m : Ideal A) [m.IsMaximal] :
@@ -55,8 +51,10 @@ theorem polynomial_shifted_localizations_equiv {A : Type v} [CommRing A]
       ∃ (h₁ : (shiftedPolynomialIdeal m Polynomial.X).IsPrime)
         (h₂ : (shiftedPolynomialIdeal m (Polynomial.X - Polynomial.C 1)).IsPrime),
         Nonempty
-          (localizationAtPrime (shiftedPolynomialIdeal m Polynomial.X) h₁ ≃+*
-            localizationAtPrime (shiftedPolynomialIdeal m (Polynomial.X - Polynomial.C 1)) h₂) := by
+          (@Localization.AtPrime (Polynomial A) _
+              (shiftedPolynomialIdeal m Polynomial.X) h₁ ≃+*
+            @Localization.AtPrime (Polynomial A) _
+              (shiftedPolynomialIdeal m (Polynomial.X - Polynomial.C 1)) h₂) := by
   sorry
 
 /-- A commutative ring is coherent when finitely generated ideals are finitely presented. -/

@@ -82,7 +82,7 @@ private theorem topologicalRing_induced
     {A B : Type u} [CommRing A] [CommRing B] [TopologicalSpace B]
     [IsTopologicalRing B] (f : A →+* B) :
     @IsTopologicalRing A (TopologicalSpace.induced f inferInstance) inferInstance := by
-  letI : TopologicalSpace A := TopologicalSpace.induced f inferInstance
+  let : TopologicalSpace A := TopologicalSpace.induced f inferInstance
   exact IsTopologicalSemiring.toIsTopologicalRing {
     continuous_add := (continuousAdd_induced f).continuous_add
     continuous_mul := (continuousMul_induced f).continuous_mul }
@@ -99,13 +99,13 @@ private noncomputable def topRingLimitCone {J : Type u} [Category.{u} J]
     IsTopologicalSemiring.toIsTopologicalRing {
       toContinuousAdd := continuousAdd_iInf fun j => by
         let tj : TopologicalSpace (G.obj j) := (F.obj j).isTopologicalSpace
-        letI : TopologicalSpace (G.obj j) := tj
-        letI : IsTopologicalRing (G.obj j) := (F.obj j).isTopologicalRing
+        let : TopologicalSpace (G.obj j) := tj
+        let : IsTopologicalRing (G.obj j) := (F.obj j).isTopologicalRing
         exact continuousAdd_induced (c.π.app j).hom
       toContinuousMul := continuousMul_iInf fun j => by
         let tj : TopologicalSpace (G.obj j) := (F.obj j).isTopologicalSpace
-        letI : TopologicalSpace (G.obj j) := tj
-        letI : IsTopologicalRing (G.obj j) := (F.obj j).isTopologicalRing
+        let : TopologicalSpace (G.obj j) := tj
+        let : IsTopologicalRing (G.obj j) := (F.obj j).isTopologicalRing
         exact continuousMul_induced (c.π.app j).hom }
   let L : TopCommRingCat.{u} := TopCommRingCat.of (c.pt : Type u)
   let p (j : J) : L ⟶ F.obj j :=
@@ -128,13 +128,13 @@ private noncomputable def topRingLimitConeIsLimit {J : Type u} [Category.{u} J]
     IsTopologicalSemiring.toIsTopologicalRing {
       toContinuousAdd := continuousAdd_iInf fun j => by
         let tj : TopologicalSpace (G.obj j) := (F.obj j).isTopologicalSpace
-        letI : TopologicalSpace (G.obj j) := tj
-        letI : IsTopologicalRing (G.obj j) := (F.obj j).isTopologicalRing
+        let : TopologicalSpace (G.obj j) := tj
+        let : IsTopologicalRing (G.obj j) := (F.obj j).isTopologicalRing
         exact continuousAdd_induced (c.π.app j).hom
       toContinuousMul := continuousMul_iInf fun j => by
         let tj : TopologicalSpace (G.obj j) := (F.obj j).isTopologicalSpace
-        letI : TopologicalSpace (G.obj j) := tj
-        letI : IsTopologicalRing (G.obj j) := (F.obj j).isTopologicalRing
+        let : TopologicalSpace (G.obj j) := tj
+        let : IsTopologicalRing (G.obj j) := (F.obj j).isTopologicalRing
         exact continuousMul_induced (c.π.app j).hom }
   letI : (forget₂ TopCommRingCat CommRingCat).Faithful :=
     ⟨fun {_ _} f g h => by
@@ -392,7 +392,7 @@ private noncomputable def topRingCoequalizerCoforkIsColimit {A B : TopCommRingCa
     ext x
     have hfac := (colimit.isColimit G).fac
       sG WalkingParallelPair.one
-    simpa [coequalizer.π, colimit.desc] using congrArg (fun k => k.hom x) hfac
+    exact congrArg (fun k => k.hom x) hfac
   · intro s m hm
     let sG : Cocone G :=
       Cofork.ofπ ((forget₂ TopCommRingCat CommRingCat).map s.π) (by
@@ -413,14 +413,25 @@ private noncomputable def topRingCoequalizerCoforkIsColimit {A B : TopCommRingCa
           c.ι.app WalkingParallelPair.one ≫ CommRingCat.ofHom m.val =
             c.ι.app WalkingParallelPair.one ≫
               (colimit.isColimit G).desc sG := by
-        simpa [coequalizer.π, colimit.desc, Category.assoc] using hm'.trans hfac.symm
+        exact hm'.trans hfac.symm
       intro j
       cases j with
       | zero =>
-          simpa only [← c.ι.naturality WalkingParallelPairHom.left,
-            Category.assoc] using
-            congrArg (fun k =>
-              ((forget₂ TopCommRingCat CommRingCat).map f) ≫ k) hone
+          change c.ι.app WalkingParallelPair.zero ≫ CommRingCat.ofHom m.val =
+            c.ι.app WalkingParallelPair.zero ≫ (colimit.isColimit G).desc sG
+          have hnat : G.map WalkingParallelPairHom.left ≫
+              c.ι.app WalkingParallelPair.one = c.ι.app WalkingParallelPair.zero := by
+            simpa using c.ι.naturality WalkingParallelPairHom.left
+          have hzero := congrArg (fun k => G.map WalkingParallelPairHom.left ≫ k) hone
+          have hzero' :
+              (G.map WalkingParallelPairHom.left ≫ c.ι.app WalkingParallelPair.one) ≫
+                  CommRingCat.ofHom m.val =
+                (G.map WalkingParallelPairHom.left ≫ c.ι.app WalkingParallelPair.one) ≫
+                  (colimit.isColimit G).desc sG := by
+            rw [Category.assoc, Category.assoc]
+            exact hzero
+          rw [hnat] at hzero'
+          exact hzero'
       | one =>
           exact hone
     exact congrArg (fun k => k.hom) hring
@@ -437,7 +448,7 @@ private theorem topological_rings_have_coproducts :
 private theorem topological_rings_have_coequalizers :
     HasCoequalizers (TopCommRingCat.{u}) := by
   refine { has_colimit := fun F => ?_ }
-  letI : HasColimit (parallelPair (F.map WalkingParallelPairHom.left)
+  let : HasColimit (parallelPair (F.map WalkingParallelPairHom.left)
       (F.map WalkingParallelPairHom.right)) :=
     ⟨topRingCoequalizerCofork (F.map WalkingParallelPairHom.left)
         (F.map WalkingParallelPairHom.right),
@@ -446,13 +457,45 @@ private theorem topological_rings_have_coequalizers :
   exact hasColimit_of_iso (diagramIsoParallelPair F)
 
 theorem topological_rings_have_colimits : HasColimits (TopCommRingCat.{u}) := by
-  letI : HasCoproducts.{u} (TopCommRingCat.{u}) := topological_rings_have_coproducts
-  letI : HasCoequalizers (TopCommRingCat.{u}) := topological_rings_have_coequalizers
+  let : HasCoproducts.{u} (TopCommRingCat.{u}) := topological_rings_have_coproducts
+  let : HasCoequalizers (TopCommRingCat.{u}) := topological_rings_have_coequalizers
   exact has_colimits_of_hasCoequalizers_and_coproducts
+
+private noncomputable def topologicalRingIndiscrete :
+    CommRingCat.{u} ⥤ TopCommRingCat.{u} where
+  obj R := by
+    letI : TopologicalSpace (R : Type u) := ⊤
+    letI : IsTopologicalRing (R : Type u) :=
+      { continuous_add := continuous_of_indiscreteTopology
+        continuous_mul := continuous_of_indiscreteTopology
+        continuous_neg := continuous_of_indiscreteTopology }
+    exact TopCommRingCat.of (R : Type u)
+  map f := ⟨f.hom, continuous_of_indiscreteTopology⟩
+  map_id _ := rfl
+  map_comp _ _ := rfl
+
+private noncomputable def topologicalRingForgetIndiscreteAdjunction :
+    (forget₂ TopCommRingCat CommRingCat) ⊣ topologicalRingIndiscrete :=
+  Adjunction.mkOfHomEquiv
+    { homEquiv X Y :=
+        { toFun := fun f =>
+            letI : IndiscreteTopology (topologicalRingIndiscrete.obj Y).α := ⟨rfl⟩
+            ⟨f.hom, continuous_of_indiscreteTopology⟩
+          invFun := fun f => CommRingCat.ofHom f.val
+          left_inv := by
+            intro f
+            rfl
+          right_inv := by
+            intro f
+            rfl }
+      homEquiv_naturality_left_symm := by
+        intros
+        ext x
+        rfl }
 
 theorem topological_ring_colimits_commute_with_commutative_rings :
     PreservesColimits (forget₂ TopCommRingCat.{u} CommRingCat.{u}) := by
-  sorry
+  exact topologicalRingForgetIndiscreteAdjunction.leftAdjoint_preservesColimits
 
 end Category
 

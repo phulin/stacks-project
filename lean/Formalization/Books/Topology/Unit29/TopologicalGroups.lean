@@ -642,7 +642,7 @@ private theorem topological_groups_have_coproducts :
 private theorem topological_groups_have_coequalizers :
     HasCoequalizers (TopGroupCat.{u}) := by
   refine { has_colimit := fun F => ?_ }
-  letI : HasColimit (parallelPair (F.map WalkingParallelPairHom.left)
+  let : HasColimit (parallelPair (F.map WalkingParallelPairHom.left)
       (F.map WalkingParallelPairHom.right)) :=
     ⟨topGroupCoequalizerCofork (F.map WalkingParallelPairHom.left)
         (F.map WalkingParallelPairHom.right),
@@ -651,8 +651,8 @@ private theorem topological_groups_have_coequalizers :
   exact hasColimit_of_iso (diagramIsoParallelPair F)
 
 theorem topological_groups_have_colimits : HasColimits (TopGroupCat.{u}) := by
-  letI : HasCoproducts.{u} (TopGroupCat.{u}) := topological_groups_have_coproducts
-  letI : HasCoequalizers (TopGroupCat.{u}) := topological_groups_have_coequalizers
+  let : HasCoproducts.{u} (TopGroupCat.{u}) := topological_groups_have_coproducts
+  let : HasCoequalizers (TopGroupCat.{u}) := topological_groups_have_coequalizers
   exact has_colimits_of_hasCoequalizers_and_coproducts
 
 private noncomputable def topologicalGroupIndiscrete : GrpCat.{u} ⥤ TopGroupCat.{u} where
@@ -695,11 +695,11 @@ theorem topological_group_sequence_colimit_carrier_comparison
     [HasColimit (F ⋙ topologicalGroupForgetToTopCat.{u})] :
     Nonempty (((colimit F : TopGroupCat.{u}) : Type u) ≃
       ((colimit (F ⋙ topologicalGroupForgetToTopCat) : TopCat.{u}) : Type u)) := by
-  letI : PreservesColimits (topologicalGroupForgetToGrpCat.{u}) :=
+  let : PreservesColimits (topologicalGroupForgetToGrpCat.{u}) :=
     topological_group_colimits_commute_with_groups
-  letI : PreservesColimitsOfSize.{0, 0} (topologicalGroupForgetToGrpCat.{u}) :=
+  let : PreservesColimitsOfSize.{0, 0} (topologicalGroupForgetToGrpCat.{u}) :=
     preservesSmallestColimits_of_preservesColimits _
-  letI : PreservesFilteredColimitsOfSize.{0, 0} (forget GrpCat.{u}) :=
+  let : PreservesFilteredColimitsOfSize.{0, 0} (forget GrpCat.{u}) :=
     preservesSmallestFilteredColimits_of_preservesFilteredColimits _
   let Fg := F ⋙ topologicalGroupForgetToGrpCat
   let Ft := F ⋙ topologicalGroupForgetToTopCat
@@ -877,7 +877,7 @@ private theorem isProfiniteSpace_of_finite_discrete_topological_limit
       intro X
       ext x
       change (D.map (𝟙 X)).hom x = x
-      simpa using congrArg (fun f : D.obj X ⟶ D.obj X => f x) (D.map_id X)
+      simp
     map_comp := by
       intro X Y Z f g
       ext x
@@ -929,10 +929,10 @@ theorem profiniteGroup_iff_finite_discrete_limit :
       is_limit := by
         exact profiniteGrpFiniteQuotientConeIsLimit P }⟩
   · rintro ⟨p⟩
-    letI : SmallCategory p.index := p.category
-    letI : PreservesLimits (topologicalGroupForgetToTopCat.{u}) :=
+    let : SmallCategory p.index := p.category
+    let : PreservesLimits (topologicalGroupForgetToTopCat.{u}) :=
       topological_group_limits_commute_with_topological_spaces
-    letI : PreservesLimitsOfSize.{0, u} (topologicalGroupForgetToTopCat.{u}) :=
+    let : PreservesLimitsOfSize.{0, u} (topologicalGroupForgetToTopCat.{u}) :=
       preservesLimitsOfSize_shrink _
     have hcone : IsLimit
         (topologicalGroupForgetToTopCat.mapCone p.cone) :=
@@ -956,7 +956,7 @@ theorem profiniteGroup_iff_cofiltered_finite_discrete_limit :
     let _ : CompactSpace G := hprops.2.1
     let _ : TotallyDisconnectedSpace G := hprops.2.2
     let P : ProfiniteGrp.{u} := ProfiniteGrp.of G
-    letI : IsCofiltered (OpenNormalSubgroup P) := {
+    let : IsCofiltered (OpenNormalSubgroup P) := {
       cone_objs X Y :=
         ⟨X ⊓ Y, homOfLE inf_le_left, homOfLE inf_le_right, trivial⟩
       cone_maps := by
@@ -988,7 +988,7 @@ theorem profiniteGroup_iff_cofiltered_finite_discrete_limit :
       is_limit := by
         exact profiniteGrpFiniteQuotientConeIsLimit P }⟩
   · rintro ⟨p⟩
-    letI : SmallCategory p.index := p.category
+    let : SmallCategory p.index := p.category
     apply (profiniteGroup_iff_finite_discrete_limit (G := G)).2
     exact ⟨{
       index := p.index

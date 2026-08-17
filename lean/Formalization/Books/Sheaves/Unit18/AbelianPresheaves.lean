@@ -101,7 +101,7 @@ theorem sheafification_fibreProduct {X : TopCat.{v}}
     (F : Presheaf X) (U : Opens X) :
     IsPullback (fibreProduct_top F U) (fibreProduct_left F U)
       (fibreProduct_right F U) (fibreProduct_bottom F U) := by
-  sorry
+  exact Formalization.Books.Sheaves.Unit17.sheafification_fibreProduct F U
 
 /-! ## The abelian specialization of the four maps -/
 
@@ -166,7 +166,7 @@ theorem existsUnique_abelianSheafificationStructure {X : TopCat.{v}}
     ∃! S : PointwiseAbelianPresheafData
         (sheafificationPresheaf (underlyingPresheaf F)),
       IsAbelianSheafificationStructure F S := by
-  sorry
+  exact Formalization.Books.Sheaves.Unit17.existsUnique_abelianSheafificationStructure F
 
 /-- The canonical abelian-group stalk map of the sheafification is an
 isomorphism, expressing the source's identification `Fₓ ≅ F#ₓ`. -/

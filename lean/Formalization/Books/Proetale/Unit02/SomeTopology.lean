@@ -1,6 +1,5 @@
 import Formalization.Books.Topology.Unit24.LimitsOfSpectralSpaces
 import Mathlib.CategoryTheory.Limits.Shapes.Pullback.IsPullback.Basic
-import Mathlib.RingTheory.Spectrum.Prime.Topology
 import Mathlib.Topology.Category.TopCat.Basic
 import Mathlib.Topology.JacobsonSpace
 import Mathlib.Topology.Sets.OpenCover
@@ -20,19 +19,11 @@ namespace Formalization.Books.Proetale.Unit02
 open Set Function CategoryTheory CategoryTheory.Limits
 open TopologicalSpace _root_.Topology
 open Formalization.Books.Topology.Unit22
-open Formalization.Books.Topology.Unit23
 open Formalization.Books.Topology.Unit24
 
 universe u v
 
 /-! ## Spectral spaces with disjoint clopen refinements -/
-
-/- The introductory assertion about spectra is already an instance in
-   Mathlib; this declaration records it without introducing a parallel
-   spectral-space predicate. -/
-theorem primeSpectrum_isSpectralSpace (R : Type u) [CommRing R] :
-    SpectralSpace (PrimeSpectrum R) := by
-  infer_instance
 
 /- A finite disjoint union refinement of an open cover is represented by a
    finite family of clopen subsets, pairwise disjoint and covering `univ`. -/

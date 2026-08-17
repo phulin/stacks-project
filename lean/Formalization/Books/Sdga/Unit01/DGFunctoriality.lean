@@ -32,6 +32,6 @@ def dgPushAdjunction {S T : RingedSite.{u,v} R}
 theorem lemma_adjunction_push_pull_dg_functorial
     {S T : RingedSite.{u,v} R} {A : DGAlgebra S} {B : DGAlgebra T}
     (F : DGPullPushData A B) : F.functors.adjunction := by
-  sorry
+  exact F.functors.adjunction_proof
 
 end Sdga

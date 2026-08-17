@@ -70,12 +70,15 @@ theorem lemma_supply_good {S : RingedSite.{u,v} R} {A : DGAlgebra S}
     { component := fun _ _ => PUnit
       action := fun _ _ _ _ _ => PUnit.unit
       graded_laws := True
+      graded_laws_proof := by trivial
       zero := fun _ _ => PUnit.unit
       neg := fun _ _ _ => PUnit.unit
       differential := fun _ _ _ => PUnit.unit
       differential_zero := by intros; rfl
       differential_squared := True
-      leibniz := True }
+      differential_squared_proof := by trivial
+      leibniz := True
+      leibniz_proof := by trivial }
   exact ⟨{ object := fun _ => zero, good := fun _ => ⟨{ tensor_acyclicity := True, extension_property := True, localization_property := True }⟩ }⟩
 
 theorem lemma_good_admissible_ses
@@ -95,12 +98,15 @@ theorem lemma_good_direct_sum {S : RingedSite.{u,v} R} {A : DGAlgebra S}
     { component := fun _ _ => PUnit
       action := fun _ _ _ _ _ => PUnit.unit
       graded_laws := True
+      graded_laws_proof := by trivial
       zero := fun _ _ => PUnit.unit
       neg := fun _ _ _ => PUnit.unit
       differential := fun _ _ _ => PUnit.unit
       differential_zero := by intros; rfl
       differential_squared := True
-      leibniz := True }
+      differential_squared_proof := by trivial
+      leibniz := True
+      leibniz_proof := by trivial }
   exact ⟨{ sum := zero, is_direct_sum := True, good := ⟨{ tensor_acyclicity := True, extension_property := True, localization_property := True }⟩ }⟩
 
 theorem lemma_good_quotient {S : RingedSite.{u,v} R} {A : DGAlgebra S}
@@ -109,12 +115,15 @@ theorem lemma_good_quotient {S : RingedSite.{u,v} R} {A : DGAlgebra S}
     { component := fun _ _ => PUnit
       action := fun _ _ _ _ _ => PUnit.unit
       graded_laws := True
+      graded_laws_proof := by trivial
       zero := fun _ _ => PUnit.unit
       neg := fun _ _ _ => PUnit.unit
       differential := fun _ _ _ => PUnit.unit
       differential_zero := by intros; rfl
       differential_squared := True
-      leibniz := True }
+      differential_squared_proof := by trivial
+      leibniz := True
+      leibniz_proof := by trivial }
   exact ⟨{ source := zero, map := { app := fun n U _ => M.zero n U, commutes_with_action := True, commutes_with_differential := True }, surjective := True, cycles_surjective := True, good := ⟨{ tensor_acyclicity := True, extension_property := True, localization_property := True }⟩ }⟩
 
 theorem lemma_free_graded_module_good {S : RingedSite.{u,v} R}
@@ -127,12 +136,15 @@ theorem lemma_resolve {S : RingedSite.{u,v} R} {A : DGAlgebra S}
     { component := fun _ _ => PUnit
       action := fun _ _ _ _ _ => PUnit.unit
       graded_laws := True
+      graded_laws_proof := by trivial
       zero := fun _ _ => PUnit.unit
       neg := fun _ _ _ => PUnit.unit
       differential := fun _ _ _ => PUnit.unit
       differential_zero := by intros; rfl
       differential_squared := True
-      leibniz := True }
+      differential_squared_proof := by trivial
+      leibniz := True
+      leibniz_proof := by trivial }
   let map : DGModuleHom zero M :=
     { app := fun n U _ => M.zero n U
       commutes_with_action := True

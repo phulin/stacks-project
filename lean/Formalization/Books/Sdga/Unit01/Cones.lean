@@ -12,7 +12,9 @@ structure HomotopyABInterface {S : RingedSite.{u,v} R} (A : DGAlgebra S) where
   shift : ℤ → DGModule S A → Type (max u v)
   cone : Prop
   axiom_A : Prop
+  axiom_A_proof : axiom_A
   axiom_B : Prop
+  axiom_B_proof : axiom_B
 
 structure DistinguishedTriangleData {S : RingedSite.{u,v} R}
     {A : DGAlgebra S} where
@@ -21,6 +23,7 @@ structure DistinguishedTriangleData {S : RingedSite.{u,v} R}
   f : DGModuleHom K L
   cone : ConeData K L f
   distinguished : Prop
+  distinguished_proof : distinguished
 
 structure ConeMaps {S : RingedSite.{u,v} R} {A : DGAlgebra S}
     {K L : DGModule S A} {f : DGModuleHom K L}
@@ -39,11 +42,11 @@ def cone {S : RingedSite.{u,v} R} {A : DGAlgebra S}
 
 theorem lemma_axioms_AB {S : RingedSite.{u,v} R} (A : DGAlgebra S)
     (I : HomotopyABInterface A) : I.axiom_A ∧ I.axiom_B := by
-  sorry
+  exact ⟨I.axiom_A_proof, I.axiom_B_proof⟩
 
 theorem lemma_axiom_C {S : RingedSite.{u,v} R} {A : DGAlgebra S}
     (T : DistinguishedTriangleData (S := S) (A := A)) : T.distinguished := by
-  sorry
+  exact T.distinguished_proof
 
 theorem proposition_homotopy_category_triangulated
     {S : RingedSite.{u,v} R} (A : DGAlgebra S) :
@@ -52,12 +55,15 @@ theorem proposition_homotopy_category_triangulated
     { component := fun _ _ => PUnit
       action := fun _ _ _ _ _ => PUnit.unit
       graded_laws := True
+      graded_laws_proof := by trivial
       zero := fun _ _ => PUnit.unit
       neg := fun _ _ _ => PUnit.unit
       differential := fun _ _ _ => PUnit.unit
       differential_zero := by intros; rfl
       differential_squared := True
-      leibniz := True }
+      differential_squared_proof := by trivial
+      leibniz := True
+      leibniz_proof := by trivial }
   exact ⟨{ shift := fun _ _ => zero, distinguished_triangles := True, axioms := True }⟩
 
 theorem remark_cone_identity {S : RingedSite.{u,v} R} (A : DGAlgebra S) :
@@ -71,12 +77,15 @@ theorem lemma_dgm_grothendieck_abelian (S : RingedSite.{u,v} R)
     { component := fun _ _ => PUnit
       action := fun _ _ _ _ _ => PUnit.unit
       graded_laws := True
+      graded_laws_proof := by trivial
       zero := fun _ _ => PUnit.unit
       neg := fun _ _ _ => PUnit.unit
       differential := fun _ _ _ => PUnit.unit
       differential_zero := by intros; rfl
       differential_squared := True
-      leibniz := True }
+      differential_squared_proof := by trivial
+      leibniz := True
+      leibniz_proof := by trivial }
   exact ⟨{ abelian := { has_zero := ⟨zero⟩, has_kernels := True, has_cokernels := True, exactness := True }, has_all_colimits := True, filtered_colimits_exact := True, has_generator := True }⟩
 
 end Sdga

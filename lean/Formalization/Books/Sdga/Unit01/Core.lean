@@ -102,6 +102,10 @@ def GradedModuleHom.IsInjective {S : RingedSite.{u,v} R} {A : GradedAlgebra S}
 structure HomogeneousMap {S : RingedSite.{u,v} R} {A : GradedAlgebra S}
     (M N : GradedModule S A) (k : ℤ) where
   app : ∀ (n : ℤ) (U : S.Obj), M.component n U → N.component (n + k) U
+  module_map : ∀ (n m : ℤ) (U : S.Obj) (x : M.component n U)
+    (a : A.component m U),
+    HEq (app (n + m) U (M.action n m U x a))
+      (N.action (n + k) m U (app n U x) a)
 
 def HomogeneousMap.isModuleMap {S : RingedSite.{u,v} R} {A : GradedAlgebra S}
     {M N : GradedModule S A} {k : ℤ} (f : HomogeneousMap M N k) : Prop :=
@@ -119,6 +123,8 @@ def HomogeneousMap.comp {S : RingedSite.{u,v} R} {A : GradedAlgebra S}
   app n U x :=
     cast (congrArg (fun q : ℤ => P.component q U) (Int.add_assoc n k l))
       (g.app (n + k) U (f.app n U x))
+  module_map := by
+    sorry
 
 /-- The graded part of a differential graded algebra. -/
 structure DGAlgebra (S : RingedSite.{u,v} R) where
@@ -127,10 +133,13 @@ structure DGAlgebra (S : RingedSite.{u,v} R) where
     component n U → component m U → component (n + m) U
   one : ∀ U : S.Obj, component 0 U
   graded_laws : Prop
+  graded_laws_proof : graded_laws
   differential : ∀ (n : ℤ) (U : S.Obj),
     component n U → component (n + 1) U
   differential_squared : Prop
+  differential_squared_proof : differential_squared
   leibniz : Prop
+  leibniz_proof : leibniz
 
 def dgAlgebraToGradedAlgebra {S : RingedSite.{u,v} R} (A : DGAlgebra S) : GradedAlgebra S where
   component := A.component
@@ -150,6 +159,7 @@ structure DGModule (S : RingedSite.{u,v} R) (A : DGAlgebra S) where
   action : ∀ (n m : ℤ) (U : S.Obj),
     component n U → A.component m U → component (n + m) U
   graded_laws : Prop
+  graded_laws_proof : graded_laws
   zero : ∀ (n : ℤ) (U : S.Obj), component n U
   neg : ∀ (n : ℤ) (U : S.Obj), component n U → component n U
   differential : ∀ (n : ℤ) (U : S.Obj),
@@ -157,7 +167,9 @@ structure DGModule (S : RingedSite.{u,v} R) (A : DGAlgebra S) where
   differential_zero : ∀ (n : ℤ) (U : S.Obj),
     differential n U (zero n U) = zero (n + 1) U
   differential_squared : Prop
+  differential_squared_proof : differential_squared
   leibniz : Prop
+  leibniz_proof : leibniz
 
 def dgModuleToGradedModule {S : RingedSite.{u,v} R} {A : DGAlgebra S}
     (M : DGModule S A) : GradedModule S (dgAlgebraToGradedAlgebra A) where
@@ -354,7 +366,9 @@ structure GradedTensorModel {S : RingedSite.{u,v} R} {A : GradedAlgebra S}
     (M : GradedModule S A) (N : LeftGradedModule S A) where
   component : GradedFamily S
   balanced : Prop
+  balanced_proof : balanced
   universal : Prop
+  universal_proof : universal
 
 structure DGTensorModel {S : RingedSite.{u,v} R} {A : DGAlgebra S}
     (M N : DGModule S A) where
@@ -362,8 +376,11 @@ structure DGTensorModel {S : RingedSite.{u,v} R} {A : DGAlgebra S}
   differential : ∀ (n : ℤ) (U : S.Obj),
     component n U → component (n + 1) U
   balanced : Prop
+  balanced_proof : balanced
   leibniz : Prop
+  leibniz_proof : leibniz
   differential_squared : Prop
+  differential_squared_proof : differential_squared
 
 def gradedTensorProduct {S : RingedSite.{u,v} R} {A : GradedAlgebra S}
     {M : GradedModule S A} {N : LeftGradedModule S A}
@@ -376,7 +393,9 @@ structure InternalHomModel {S : RingedSite.{u,v} R} {A : GradedAlgebra S}
     (M N : GradedModule S A) where
   component : GradedFamily S
   module_map_property : Prop
+  module_map_property_proof : module_map_property
   composition_property : Prop
+  composition_property_proof : composition_property
 
 structure DGInternalHomModel {S : RingedSite.{u,v} R} {A : DGAlgebra S}
     (M N : DGModule S A) where
@@ -384,7 +403,9 @@ structure DGInternalHomModel {S : RingedSite.{u,v} R} {A : DGAlgebra S}
   differential : ∀ (n : ℤ) (U : S.Obj),
     component n U → component (n + 1) U
   module_map_property : Prop
+  module_map_property_proof : module_map_property
   commutator_property : Prop
+  commutator_property_proof : commutator_property
 
 def internalHom {S : RingedSite.{u,v} R} {A : GradedAlgebra S}
     {M N : GradedModule S A} (H : InternalHomModel M N) : GradedFamily S := H.component
@@ -401,6 +422,7 @@ structure PullPushFunctorData {S T : RingedSite.{u,v} R}
   pull : DGModule T B → DGModule S A
   push : DGModule S A → DGModule T B
   adjunction : Prop
+  adjunction_proof : adjunction
 
 structure ShortExactSequence {S : RingedSite.{u,v} R} {A : DGAlgebra S} where
   K : DGModule S A

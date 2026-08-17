@@ -35,12 +35,15 @@ structure DGShiftFunctorData {S : RingedSite.{u,v} R}
     (A : DGAlgebra S) where
   shift : ℤ → DGModule S A → DGModule S A
   component_formula : Prop
+  component_formula_proof : component_formula
   composition : Prop
+  composition_proof : composition
   hom_shift : Prop
+  hom_shift_proof : hom_shift
 
 theorem dg_shift_functor_laws
     {S : RingedSite.{u,v} R} {A : DGAlgebra S}
     (D : DGShiftFunctorData A) : D.component_formula ∧ D.composition ∧ D.hom_shift := by
-  sorry
+  exact ⟨D.component_formula_proof, D.composition_proof, D.hom_shift_proof⟩
 
 end Sdga

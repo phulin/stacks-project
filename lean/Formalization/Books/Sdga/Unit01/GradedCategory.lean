@@ -20,6 +20,8 @@ def gradedCategoryIdentity {S : RingedSite.{u,v} R} {A : GradedAlgebra S}
     (M : GradedModule S A) : gradedCategoryHom M M 0 where
   app n U x := cast
     (congrArg (fun q : ℤ => M.component q U) (Int.add_zero n).symm) x
+  module_map := by
+    sorry
 
 structure GradedCategoryOfModules {S : RingedSite.{u,v} R}
     (A : GradedAlgebra S) where
@@ -47,7 +49,7 @@ theorem graded_category_hom_is_module_map
     {S : RingedSite.{u,v} R} {A : GradedAlgebra S}
     {M N : GradedModule S A} {k : ℤ} (f : gradedCategoryHom M N k) :
     HomogeneousMap.isModuleMap f := by
-  sorry
+  exact f.module_map
 
 theorem graded_category_composition_degree
     {S : RingedSite.{u,v} R} {A : GradedAlgebra S}

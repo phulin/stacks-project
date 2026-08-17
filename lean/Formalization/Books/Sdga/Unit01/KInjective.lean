@@ -110,12 +110,15 @@ theorem lemma_product_graded_injective {S : RingedSite.{u,v} R}
     { component := fun _ _ => PUnit
       action := fun _ _ _ _ _ => PUnit.unit
       graded_laws := True
+      graded_laws_proof := by trivial
       zero := fun _ _ => PUnit.unit
       neg := fun _ _ _ => PUnit.unit
       differential := fun _ _ _ => PUnit.unit
       differential_zero := by intros; rfl
       differential_squared := True
-      leibniz := True }
+      differential_squared_proof := by trivial
+      leibniz := True
+      leibniz_proof := by trivial }
   exact ⟨{ product := zero, product_property := True }⟩
 
 theorem lemma_characterize_graded_injectives_in_dg
@@ -125,12 +128,15 @@ theorem lemma_characterize_graded_injectives_in_dg
     { component := fun _ _ => PUnit
       action := fun _ _ _ _ _ => PUnit.unit
       graded_laws := True
+      graded_laws_proof := by trivial
       zero := fun _ _ => PUnit.unit
       neg := fun _ _ _ => PUnit.unit
       differential := fun _ _ _ => PUnit.unit
       differential_zero := by intros; rfl
       differential_squared := True
-      leibniz := True }
+      differential_squared_proof := by trivial
+      leibniz := True
+      leibniz_proof := by trivial }
   let q : DGModuleHom Z Z :=
     { app := fun _ _ _ => PUnit.unit
       commutes_with_action := True
@@ -143,12 +149,15 @@ theorem lemma_small_acyclics {S : RingedSite.{u,v} R}
     { component := fun _ _ => PUnit
       action := fun _ _ _ _ _ => PUnit.unit
       graded_laws := True
+      graded_laws_proof := by trivial
       zero := fun _ _ => PUnit.unit
       neg := fun _ _ _ => PUnit.unit
       differential := fun _ _ _ => PUnit.unit
       differential_zero := by intros; rfl
       differential_squared := True
-      leibniz := True }
+      differential_squared_proof := by trivial
+      leibniz := True
+      leibniz_proof := by trivial }
   exact ⟨{ family := PUnit, object := fun _ => Z, acyclic := by intro s n U x hx; refine ⟨PUnit.unit, ?_⟩; cases x; rfl, detects_nonzero_acyclics := True }⟩
 
 theorem lemma_product_K_injective {S : RingedSite.{u,v} R}
@@ -161,12 +170,15 @@ theorem lemma_product_K_injective {S : RingedSite.{u,v} R}
     { component := fun _ _ => PUnit
       action := fun _ _ _ _ _ => PUnit.unit
       graded_laws := True
+      graded_laws_proof := by trivial
       zero := fun _ _ => PUnit.unit
       neg := fun _ _ _ => PUnit.unit
       differential := fun _ _ _ => PUnit.unit
       differential_zero := by intros; rfl
       differential_squared := True
-      leibniz := True }
+      differential_squared_proof := by trivial
+      leibniz := True
+      leibniz_proof := by trivial }
   exact ⟨{ product := zero, product_property := True }⟩
 
 theorem lemma_first_property_dg_injective {S : RingedSite.{u,v} R}
@@ -210,12 +222,15 @@ theorem lemma_better_set_of_monos {S : RingedSite.{u,v} R}
     { component := fun _ _ => PUnit
       action := fun _ _ _ _ _ => PUnit.unit
       graded_laws := True
+      graded_laws_proof := by trivial
       zero := fun _ _ => PUnit.unit
       neg := fun _ _ _ => PUnit.unit
       differential := fun _ _ _ => PUnit.unit
       differential_zero := by intros; rfl
       differential_squared := True
-      leibniz := True }
+      differential_squared_proof := by trivial
+      leibniz := True
+      leibniz_proof := by trivial }
   let q : DGModuleHom Z Z :=
     { app := fun _ _ _ => PUnit.unit
       commutes_with_action := True
@@ -235,12 +250,15 @@ theorem theorem_qis_into_dg_injective {S : RingedSite.{u,v} R}
     { component := fun _ _ => PUnit
       action := fun _ _ _ _ _ => PUnit.unit
       graded_laws := True
+      graded_laws_proof := by trivial
       zero := fun _ _ => PUnit.unit
       neg := fun _ _ _ => PUnit.unit
       differential := fun _ _ _ => PUnit.unit
       differential_zero := by intros; rfl
       differential_squared := True
-      leibniz := True }
+      differential_squared_proof := by trivial
+      leibniz := True
+      leibniz_proof := by trivial }
   have hgraded : IsGradedInjective Z := by
     intro M N b hb a
     refine ⟨{ app := fun _ _ _ => PUnit.unit, commutes := True }, ?_⟩

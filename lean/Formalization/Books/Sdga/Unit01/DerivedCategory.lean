@@ -53,12 +53,15 @@ theorem lemma_acyclics {S : RingedSite.{u,v} R} (A : DGAlgebra S) :
     { component := fun _ _ => PUnit
       action := fun _ _ _ _ _ => PUnit.unit
       graded_laws := True
+      graded_laws_proof := by trivial
       zero := fun _ _ => PUnit.unit
       neg := fun _ _ _ => PUnit.unit
       differential := fun _ _ _ => PUnit.unit
       differential_zero := by intros; rfl
       differential_squared := True
-      leibniz := True }
+      differential_squared_proof := by trivial
+      leibniz := True
+      leibniz_proof := by trivial }
   let localized : DerivedCategoryData S A :=
     { Hom := fun _ _ => PUnit
       localization_property := True
@@ -79,12 +82,15 @@ theorem lemma_kernel_localization {S : RingedSite.{u,v} R}
     { component := fun _ _ => PUnit
       action := fun _ _ _ _ _ => PUnit.unit
       graded_laws := True
+      graded_laws_proof := by trivial
       zero := fun _ _ => PUnit.unit
       neg := fun _ _ _ => PUnit.unit
       differential := fun _ _ _ => PUnit.unit
       differential_zero := by intros; rfl
       differential_squared := True
-      leibniz := True }
+      differential_squared_proof := by trivial
+      leibniz := True
+      leibniz_proof := by trivial }
   let localized : DerivedCategoryData S A :=
     { Hom := fun _ _ => PUnit
       localization_property := True

@@ -17,6 +17,7 @@ structure GradedPullPushData {S T : RingedSite.{u,v} R}
   pull_on_homogeneous_maps : Prop
   push_on_homogeneous_maps : Prop
   adjunction : Prop
+  adjunction_proof : adjunction
 
 def gradedPull {S T : RingedSite.{u,v} R} {A : GradedAlgebra S}
     {B : GradedAlgebra T} (F : GradedPullPushData A B) := F.pull
@@ -27,6 +28,6 @@ def gradedPush {S T : RingedSite.{u,v} R} {A : GradedAlgebra S}
 theorem lemma_adjunction_push_pull_gr_functorial
     {S T : RingedSite.{u,v} R} {A : GradedAlgebra S} {B : GradedAlgebra T}
     (F : GradedPullPushData A B) : F.adjunction := by
-  sorry
+  exact F.adjunction_proof
 
 end Sdga

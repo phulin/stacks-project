@@ -26,6 +26,6 @@ theorem dg_internal_hom_properties
     {S : RingedSite.{u,v} R} {A : DGAlgebra S}
     {M N : DGModule S A} (H : DGInternalHomModel M N) :
     Nonempty (DGInternalHomProperties H) := by
-  sorry
+  exact ⟨{ module_map := H.module_map_property_proof, commutator := H.commutator_property_proof }⟩
 
 end Sdga

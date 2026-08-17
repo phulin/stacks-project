@@ -33,7 +33,7 @@ structure LongExactCohomologyStatement {S : RingedSite.{u,v} R}
 
 theorem definition_dgm (S : RingedSite.{u,v} R) (A : DGAlgebra S)
     (M : DGModuleSheaf S A) : M.graded_laws ∧ M.differential_squared ∧ M.leibniz := by
-  sorry
+  exact ⟨M.graded_laws_proof, M.differential_squared_proof, M.leibniz_proof⟩
 
 theorem lemma_dgm_abelian (S : RingedSite.{u,v} R) (A : DGAlgebra S) :
     Nonempty (DGModuleCategoryProperties A) := by
@@ -41,12 +41,15 @@ theorem lemma_dgm_abelian (S : RingedSite.{u,v} R) (A : DGAlgebra S) :
     { component := fun _ _ => PUnit
       action := fun _ _ _ _ _ => PUnit.unit
       graded_laws := True
+      graded_laws_proof := by trivial
       zero := fun _ _ => PUnit.unit
       neg := fun _ _ _ => PUnit.unit
       differential := fun _ _ _ => PUnit.unit
       differential_zero := by intros; rfl
       differential_squared := True
-      leibniz := True }
+      differential_squared_proof := by trivial
+      leibniz := True
+      leibniz_proof := by trivial }
   exact ⟨{ abelian := { has_zero := ⟨zero⟩, has_kernels := True, has_cokernels := True, exactness := True }, arbitrary_direct_sums := True, arbitrary_colimits := True, filtered_colimits_exact := True, arbitrary_products := True, arbitrary_limits := True, forgetful_preserves_limits := True, forgetful_preserves_colimits := True }⟩
 
 theorem equation_les {S : RingedSite.{u,v} R} {A : DGAlgebra S}

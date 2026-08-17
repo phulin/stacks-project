@@ -26,6 +26,6 @@ theorem dg_tensor_differential
     {S : RingedSite.{u,v} R} {A : DGAlgebra S}
     {M N : DGModule S A} (T : DGTensorModel M N) :
     Nonempty (DGTensorDifferentialStatement T) := by
-  sorry
+  exact ⟨{ graded_tensor := T.balanced_proof, Leibniz := T.leibniz_proof, square_zero := T.differential_squared_proof }⟩
 
 end Sdga

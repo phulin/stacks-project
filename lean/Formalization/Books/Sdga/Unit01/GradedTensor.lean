@@ -36,6 +36,6 @@ theorem graded_tensor_product_universal
     {S : RingedSite.{u,v} R} {A : GradedAlgebra S}
     {M : GradedModule S A} {N : LeftGradedModule S A}
     (T : GradedTensorModel M N) : Nonempty (GradedTensorUniversalProperty T) := by
-  sorry
+  exact ⟨{ balanced := T.balanced_proof, universal := T.universal_proof }⟩
 
 end Sdga

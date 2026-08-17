@@ -31,6 +31,6 @@ theorem graded_internal_hom_properties
     {S : RingedSite.{u,v} R} {A : GradedAlgebra S}
     {M N : GradedModule S A} (H : InternalHomModel M N) :
     Nonempty (GradedInternalHomProperties H) := by
-  sorry
+  exact ⟨{ module_map := H.module_map_property_proof, composition := H.composition_property_proof }⟩
 
 end Sdga

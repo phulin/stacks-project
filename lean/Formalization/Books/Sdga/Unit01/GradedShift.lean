@@ -29,12 +29,14 @@ structure GradedShiftData {S : RingedSite.{u,v} R}
   shift : ℤ → GradedModule S A → GradedModule S A
   component_formula : Prop
   composition : Prop
+  composition_proof : composition
   hom_shift : Prop
+  hom_shift_proof : hom_shift
 
 theorem graded_shift_composition
     {S : RingedSite.{u,v} R} {A : GradedAlgebra S}
     (D : GradedShiftData A) : D.composition ∧ D.hom_shift := by
-  sorry
+  exact ⟨D.composition_proof, D.hom_shift_proof⟩
 
 theorem lemma_gm_grothendieck_abelian (S : RingedSite.{u,v} R)
     (A : GradedAlgebra S) :

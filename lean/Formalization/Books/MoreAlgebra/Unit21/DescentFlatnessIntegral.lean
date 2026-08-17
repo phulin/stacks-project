@@ -119,7 +119,7 @@ theorem split_image
     (presentation : SplitPolynomialPresentation R S) :
     Set.range (PrimeSpectrum.comap (algebraMap R S)) =
       PrimeSpectrum.zeroLocus
-        ((⋂ k : ∀ i, Fin (presentation.degree i),
+        ((⨅ k : ∀ i, Fin (presentation.degree i),
           splitImageIdeal presentation.ideal presentation.root k : Ideal R) : Set R) := by
   sorry
 

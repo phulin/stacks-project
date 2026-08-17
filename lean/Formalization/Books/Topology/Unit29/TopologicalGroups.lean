@@ -394,6 +394,7 @@ private noncomputable def topGroupCoproductCarrier {ι : Type u}
     (X : ι → TopGroupCat.{u}) : Type u :=
   Monoid.CoprodI fun i => (X i : Type u)
 
+@[instance_reducible]
 private noncomputable def topGroupCoproductGroup {ι : Type u}
     (X : ι → TopGroupCat.{u}) : Group (topGroupCoproductCarrier X) := by
   letI : ∀ i, Group (X i : Type u) := fun i => (X i).isGroup

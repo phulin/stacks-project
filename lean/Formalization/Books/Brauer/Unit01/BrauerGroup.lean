@@ -3,6 +3,8 @@ import Mathlib.Algebra.BrauerGroup.Defs
 import Mathlib.FieldTheory.IsAlgClosed.Basic
 import Mathlib.FieldTheory.IsAlgClosed.AlgebraicClosure
 import Mathlib.RingTheory.SimpleModule.IsAlgClosed
+import Mathlib.Algebra.Algebra.TransferInstance
+import Mathlib.RingTheory.Finiteness.Small
 
 /-!
 # The Brauer group of a field
@@ -814,8 +816,25 @@ private theorem base_change_tensor_equiv (k k' : Type*) [Field k] [Field k']
         (A.carrier ⊗[k] k') B.carrier)
       (by
         intro a₁ a₂ r₁ r₂
-        simp [TensorProduct.AlgebraTensorModule.cancelBaseChange,
-          Algebra.smul_def, mul_assoc, mul_comm, mul_left_comm])
+        induction r₁ using TensorProduct.induction_on with
+        | zero => simp
+        | tmul r₁ b₁ =>
+            induction r₂ using TensorProduct.induction_on with
+            | zero => simp
+            | tmul r₂ b₂ =>
+                have hcent (r : k') (x y : A.carrier ⊗[k] k') :
+                    algebraMap k' (A.carrier ⊗[k] k') r * (x * y) =
+                      x * (algebraMap k' (A.carrier ⊗[k] k') r * y) := by
+                  rw [← Algebra.smul_def r (x * y),
+                    ← Algebra.smul_def r y]
+                  exact (mul_smul_comm r x y).symm
+                simp [TensorProduct.AlgebraTensorModule.cancelBaseChange,
+                  Algebra.smul_def, mul_assoc, mul_comm, mul_left_comm]
+                rw [hcent r₂ a₁ a₂]
+            | add r₂ s₂ hr₂ hs₂ =>
+                simp only [mul_add, TensorProduct.tmul_add, map_add, add_mul, hr₂, hs₂]
+        | add r₁ s₁ hr₁ hs₁ =>
+            simp only [add_mul, TensorProduct.tmul_add, map_add, hr₁, hs₁])
       (by
         simp [TensorProduct.AlgebraTensorModule.cancelBaseChange,
           Algebra.TensorProduct.one_def])
@@ -843,7 +862,102 @@ private theorem base_change_tensor_equiv (k k' : Type*) [Field k] [Field k']
             Algebra.TensorProduct.comm_tmul,
             Algebra.TensorProduct.one_def] }
       e₃k.bijective
-  exact ⟨e₁.trans (e₂.trans e₃)⟩
+  exact ⟨(e₁.trans (e₂.trans e₃)).symm⟩
+
+private theorem brauerClass_tensor_eq_mul (k : Type u_k) [Field k]
+    (A B : CSA.{u_k, u_k} k) :
+    brauerClass k (tensorCSA k A B) =
+      brauerClass k A * brauerClass k B := by
+  obtain ⟨C, hC, ⟨e⟩⟩ := brauer_group_tensor_operation_interface k A B
+  have hsim : IsBrauerEquivalent (tensorCSA k A B) C := by
+    refine ⟨1, 1, one_ne_zero, one_ne_zero, ?_⟩
+    change Nonempty
+      (Matrix (Fin 1) (Fin 1) (A.carrier ⊗[k] B.carrier) ≃ₐ[k]
+        Matrix (Fin 1) (Fin 1) C.carrier)
+    exact ⟨(matrixOneAlgEquiv k _).trans
+      (e.trans (matrixOneAlgEquiv k _).symm)⟩
+  exact (Quotient.sound hsim).trans hC.symm
+
+private noncomputable def shrunkBaseChangeCSA (k : Type u_k) (k' : Type u_A)
+    [Field k] [Field k'] [Algebra k k']
+    (A : CSA.{u_k, u_k} k) : CSA.{u_A, u_A} k' := by
+  let _ : Algebra k' (A.carrier ⊗[k] k') :=
+    Algebra.TensorProduct.rightAlgebra
+  let C := baseChangeCSA k k' A
+  letI : Algebra.IsCentral k' (A.carrier ⊗[k] k') := C.isCentral
+  letI : IsSimpleRing (A.carrier ⊗[k] k') := C.isSimple
+  letI : FiniteDimensional k' (A.carrier ⊗[k] k') := C.fin_dim
+  letI : Small.{u_A} (A.carrier ⊗[k] k') :=
+    Module.Finite.small k' (A.carrier ⊗[k] k')
+  let e : Shrink.{u_A} (A.carrier ⊗[k] k') ≃ (A.carrier ⊗[k] k') :=
+    (equivShrink (A.carrier ⊗[k] k')).symm
+  letI : Ring (Shrink.{u_A} (A.carrier ⊗[k] k')) := Equiv.ring e
+  letI : Algebra k' (Shrink.{u_A} (A.carrier ⊗[k] k')) := Equiv.algebra k' e
+  let ealg : Shrink.{u_A} (A.carrier ⊗[k] k') ≃ₐ[k']
+      (A.carrier ⊗[k] k') := Equiv.algEquiv k' e
+  exact
+    { AlgCat.of k' (Shrink.{u_A} (A.carrier ⊗[k] k')) with
+      isCentral := by
+        refine ⟨?_⟩
+        intro x hx
+        obtain ⟨r, hr⟩ := C.isCentral.out
+          ((MulEquivClass.apply_mem_center_iff ealg).mpr hx)
+        refine ⟨r, ?_⟩
+        apply ealg.injective
+        dsimp [C, baseChangeCSA] at hr
+        calc
+          ealg (algebraMap k' (Shrink.{u_A} (A.carrier ⊗[k] k')) r) =
+              algebraMap k' (A.carrier ⊗[k] k') r := ealg.commutes r
+          _ = (Algebra.ofId k' (A.carrier ⊗[k] k')).toRingHom r := by
+            simp [Algebra.ofId]
+          _ = ealg x := hr
+      isSimple := IsSimpleRing.of_ringEquiv ealg.symm.toRingEquiv
+        (inferInstance : IsSimpleRing (A.carrier ⊗[k] k'))
+      fin_dim := ealg.symm.toLinearEquiv.finiteDimensional }
+
+private theorem shrunk_base_change_equiv (k : Type u_k) (k' : Type u_A)
+    [Field k] [Field k'] [Algebra k k']
+    (A : CSA.{u_k, u_k} k) :
+    let _ : Algebra k' (A.carrier ⊗[k] k') :=
+      Algebra.TensorProduct.rightAlgebra
+    Nonempty
+      ((A.carrier ⊗[k] k') ≃ₐ[k'] (shrunkBaseChangeCSA k k' A).carrier) := by
+  let _ : Algebra k' (A.carrier ⊗[k] k') :=
+    Algebra.TensorProduct.rightAlgebra
+  dsimp [shrunkBaseChangeCSA]
+  let C := baseChangeCSA k k' A
+  letI : Algebra.IsCentral k' (A.carrier ⊗[k] k') := C.isCentral
+  letI : IsSimpleRing (A.carrier ⊗[k] k') := C.isSimple
+  letI : FiniteDimensional k' (A.carrier ⊗[k] k') := C.fin_dim
+  letI : Small.{u_A} (A.carrier ⊗[k] k') :=
+    Module.Finite.small k' (A.carrier ⊗[k] k')
+  let e : Shrink.{u_A} (A.carrier ⊗[k] k') ≃ (A.carrier ⊗[k] k') :=
+    (equivShrink (A.carrier ⊗[k] k')).symm
+  letI : Ring (Shrink.{u_A} (A.carrier ⊗[k] k')) := Equiv.ring e
+  letI : Algebra k' (Shrink.{u_A} (A.carrier ⊗[k] k')) := Equiv.algebra k' e
+  let ealg : Shrink.{u_A} (A.carrier ⊗[k] k') ≃ₐ[k']
+      (A.carrier ⊗[k] k') := Equiv.algEquiv k' e
+  exact ⟨ealg.symm⟩
+
+private theorem base_change_to_shrunk_similarity
+    (k : Type u_k) (k' : Type u_A) [Field k] [Field k'] [Algebra k k']
+    (A : CSA.{u_k, u_k} k) :
+    IsBrauerEquivalent (baseChangeCSA k k' A)
+      (shrunkBaseChangeCSA k k' A) := by
+  let _ : Algebra k' (A.carrier ⊗[k] k') :=
+    Algebra.TensorProduct.rightAlgebra
+  obtain ⟨e⟩ := shrunk_base_change_equiv k k' A
+  refine ⟨1, 1, one_ne_zero, one_ne_zero, ?_⟩
+  change Nonempty
+    (Matrix (Fin 1) (Fin 1) (A.carrier ⊗[k] k') ≃ₐ[k']
+      Matrix (Fin 1) (Fin 1) (shrunkBaseChangeCSA k k' A).carrier)
+  exact ⟨(matrixOneAlgEquiv k' _).trans
+    (e.trans (matrixOneAlgEquiv k' _).symm)⟩
+
+private theorem brauer_quotient_sound_low (k : Type u_k) [Field k]
+    (A B : CSA.{u_k, u_k} k) (h : IsBrauerEquivalent A B) :
+    brauerClass k A = brauerClass k B := by
+  exact Quotient.sound h
 
 theorem brauer_group_base_change_interface (k k' : Type*) [Field k] [Field k']
     [Algebra k k'] :
@@ -851,7 +965,134 @@ theorem brauer_group_base_change_interface (k k' : Type*) [Field k] [Field k']
       ∀ A : CSA k, ∃ B : CSA k',
         f (brauerClass k A) = brauerClass k' B ∧
           IsBaseChangeRepresentative k k' A B := by
-  sorry
+  classical
+  let _ : CommGroup (BrauerGroup k) := brauerGroupCommGroup k
+  let _ : CommGroup (BrauerGroup k') := brauerGroupCommGroup k'
+  let f₀ : BrauerGroup k → BrauerGroup k' :=
+    Quotient.lift (fun A => brauerClass k'
+        (shrunkBaseChangeCSA k k' A))
+      (by
+        intro A A' h
+        change (⟦shrunkBaseChangeCSA k k' A⟧ : BrauerGroup k') =
+          ⟦shrunkBaseChangeCSA k k' A'⟧
+        have hsim : IsBrauerEquivalent
+            (shrunkBaseChangeCSA k k' A)
+            (shrunkBaseChangeCSA k k' A') :=
+          IsBrauerEquivalent.trans
+            (IsBrauerEquivalent.trans
+              (base_change_to_shrunk_similarity k k' A).symm
+              (base_change_similarity k k' A A' h))
+            (base_change_to_shrunk_similarity k k' A')
+        exact brauer_quotient_sound_low k'
+          (shrunkBaseChangeCSA k k' A) (shrunkBaseChangeCSA k k' A') hsim)
+  have hscalar : IsBrauerEquivalent
+      (baseChangeCSA k k' (scalarCSA k)) (scalarCSA k') := by
+    let _ : Algebra k' (k ⊗[k] k') :=
+      Algebra.TensorProduct.rightAlgebra
+    let eScalarK : k ⊗[k] k' ≃ₐ[k] k' :=
+      Algebra.TensorProduct.lid k k'
+    let eScalar : k ⊗[k] k' ≃ₐ[k'] k' :=
+      AlgEquiv.ofBijective
+        { toFun := eScalarK
+          map_one' := eScalarK.map_one
+          map_mul' := eScalarK.map_mul
+          map_zero' := eScalarK.map_zero
+          map_add' := eScalarK.map_add
+          commutes' := by
+            intro r
+            simp [eScalarK, Algebra.TensorProduct.right_algebraMap_apply] }
+        eScalarK.bijective
+    refine ⟨1, 1, one_ne_zero, one_ne_zero, ?_⟩
+    change Nonempty
+      (Matrix (Fin 1) (Fin 1) (k ⊗[k] k') ≃ₐ[k']
+        Matrix (Fin 1) (Fin 1) k')
+    exact ⟨(matrixOneAlgEquiv k' _).trans
+      (eScalar.trans (matrixOneAlgEquiv k' _).symm)⟩
+  have hscalarShrunk : IsBrauerEquivalent
+      (shrunkBaseChangeCSA k k' (scalarCSA k)) (scalarCSA k') := by
+    exact IsBrauerEquivalent.trans
+      (base_change_to_shrunk_similarity k k' (scalarCSA k)).symm
+      hscalar
+  let f : BrauerGroup k →* BrauerGroup k' :=
+    { toFun := f₀
+      map_one' := by
+        have hone : (1 : BrauerGroup k) = brauerClass k (scalarCSA k) := by
+          symm
+          simpa only [brauerGroupCommGroup] using
+            (Classical.choose_spec (brauer_group_is_abelian k)).1
+        rw [hone]
+        dsimp [f₀]
+        change brauerClass k' (shrunkBaseChangeCSA k k' (scalarCSA k)) = 1
+        calc
+          brauerClass k' (shrunkBaseChangeCSA k k' (scalarCSA k)) =
+              brauerClass k' (scalarCSA k') := Quotient.sound hscalarShrunk
+          _ = 1 := by
+            simpa only [brauerGroupCommGroup] using
+              (Classical.choose_spec (brauer_group_is_abelian k')).1
+      map_mul' := by
+        intro x y
+        refine Quotient.inductionOn x ?_
+        intro A
+        refine Quotient.inductionOn y ?_
+        intro B
+        dsimp [f₀]
+        have hprod :
+            brauerClass k A * brauerClass k B =
+              brauerClass k (tensorCSA k A B) :=
+          (brauerClass_tensor_eq_mul k A B).symm
+        have hprodRaw :
+            (⟦A⟧ : BrauerGroup k) * ⟦B⟧ =
+              ⟦tensorCSA k A B⟧ := by
+          simpa only [brauerClass] using hprod
+        rw [hprodRaw]
+        change brauerClass k' (shrunkBaseChangeCSA k k'
+            (tensorCSA k A B)) =
+          brauerClass k' (shrunkBaseChangeCSA k k' A) *
+            brauerClass k' (shrunkBaseChangeCSA k k' B)
+        rw [← brauerClass_tensor_eq_mul k'
+          (shrunkBaseChangeCSA k k' A) (shrunkBaseChangeCSA k k' B)]
+        apply Quotient.sound
+        refine ⟨1, 1, one_ne_zero, one_ne_zero, ?_⟩
+        let _ : Algebra k' (A.carrier ⊗[k] k') :=
+          Algebra.TensorProduct.rightAlgebra
+        let _ : Algebra k' (B.carrier ⊗[k] k') :=
+          Algebra.TensorProduct.rightAlgebra
+        let _ : Algebra k' ((A.carrier ⊗[k] B.carrier) ⊗[k] k') :=
+          Algebra.TensorProduct.rightAlgebra
+        let _ : Algebra k' ((tensorCSA k A B).carrier ⊗[k] k') :=
+          Algebra.TensorProduct.rightAlgebra
+        obtain ⟨eAB⟩ := shrunk_base_change_equiv k k'
+          (tensorCSA k A B)
+        obtain ⟨eBase⟩ := base_change_tensor_equiv k k' A B
+        obtain ⟨eA⟩ := shrunk_base_change_equiv k k' A
+        obtain ⟨eB⟩ := shrunk_base_change_equiv k k' B
+        let eFactors :
+            (A.carrier ⊗[k] k') ⊗[k'] (B.carrier ⊗[k] k') ≃ₐ[k']
+              (shrunkBaseChangeCSA k k' A).carrier ⊗[k']
+                (shrunkBaseChangeCSA k k' B).carrier :=
+          Algebra.TensorProduct.congr eA eB
+        let eTotal :
+            (shrunkBaseChangeCSA k k' (tensorCSA k A B)).carrier ≃ₐ[k']
+              (shrunkBaseChangeCSA k k' A).carrier ⊗[k']
+                (shrunkBaseChangeCSA k k' B).carrier :=
+          eAB.symm.trans (eBase.trans eFactors)
+        change Nonempty
+          (Matrix (Fin 1) (Fin 1)
+              (shrunkBaseChangeCSA k k' (tensorCSA k A B)).carrier ≃ₐ[k']
+            Matrix (Fin 1) (Fin 1)
+              ((shrunkBaseChangeCSA k k' A).carrier ⊗[k']
+                (shrunkBaseChangeCSA k k' B).carrier))
+        exact ⟨(matrixOneAlgEquiv k' _).trans
+          (eTotal.trans (matrixOneAlgEquiv k' _).symm)⟩ }
+  refine ⟨f, ?_⟩
+  intro A
+  let B : CSA k' := shrunkBaseChangeCSA k k' A
+  refine ⟨B, ?_, ?_⟩
+  · change brauerClass k' (shrunkBaseChangeCSA k k' A) =
+      brauerClass k' (shrunkBaseChangeCSA k k' A)
+    rfl
+  · dsimp [IsBaseChangeRepresentative, B]
+    exact shrunk_base_change_equiv k k' A
 
 theorem brauer_group_zero_iff (k : Type u_k) [Field k] :
     (∀ x : BrauerGroup.{u_k, u_k} k, x = 1) ↔

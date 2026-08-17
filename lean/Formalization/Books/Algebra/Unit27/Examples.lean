@@ -1,11 +1,10 @@
 import Formalization.Books.Algebra.Unit17.Spectrum
 import Mathlib.Algebra.Algebra.Subalgebra.Basic
 import Mathlib.Algebra.Algebra.Subalgebra.Lattice
-import Mathlib.Algebra.Polynomial.Bivariate
+import Mathlib.Algebra.MvPolynomial.Eval
 import Mathlib.RingTheory.EuclideanDomain
 import Mathlib.RingTheory.FiniteType
 import Mathlib.RingTheory.Polynomial.Ideal
-import Mathlib.RingTheory.Spectrum.Prime.Polynomial
 import Mathlib.RingTheory.UniqueFactorizationDomain.Basic
 
 /-!

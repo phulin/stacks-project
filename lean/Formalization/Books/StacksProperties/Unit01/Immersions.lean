@@ -277,11 +277,9 @@ private theorem emptyStack_inclusion_isOpen {S : Scheme.{u}}
     exact ⟨bc⟩
   · intro W w bc
     change IsOpenImmersion bc.projection.left
-    haveI : _root_.IsEmpty (StackPoint (emptyStack S)) :=
-      emptyStack_points_isEmpty S
-    haveI : _root_.IsEmpty bc.source.left :=
-      ⟨fun p => isEmptyElim (bc.sourcePoint p)⟩
-    infer_instance
+    have hSource : _root_.IsEmpty bc.source.left :=
+      ⟨fun p => (emptyStack_points_isEmpty S).false (bc.sourcePoint p)⟩
+    exact @AlgebraicGeometry.isOpenImmersion_of_isEmpty _ _ bc.projection.left hSource
 
 private theorem emptyStack_inclusion_isClosed {S : Scheme.{u}}
     {X : AlgebraicStack S} :
@@ -300,11 +298,18 @@ private theorem emptyStack_inclusion_isClosed {S : Scheme.{u}}
     exact ⟨bc⟩
   · intro W w bc
     change IsClosedImmersion bc.projection.left
-    haveI : _root_.IsEmpty (StackPoint (emptyStack S)) :=
-      emptyStack_points_isEmpty S
-    haveI : _root_.IsEmpty bc.source.left :=
-      ⟨fun p => isEmptyElim (bc.sourcePoint p)⟩
-    infer_instance
+    have hSource : _root_.IsEmpty bc.source.left :=
+      ⟨fun p => (emptyStack_points_isEmpty S).false (bc.sourcePoint p)⟩
+    have hOpen : IsOpenImmersion bc.projection.left :=
+      @AlgebraicGeometry.isOpenImmersion_of_isEmpty _ _ bc.projection.left hSource
+    have hOpenData := IsOpenImmersion.iff_isIso_stalkMap.mp hOpen
+    have hPre : IsPreimmersion bc.projection.left := by
+      refine { isEmbedding := hOpenData.1.isEmbedding, stalkMap_surjective := ?_ }
+      intro x
+      exact (@ConcreteCategory.bijective_of_isIso _ _ _ _ _ _ _ _
+        (Scheme.Hom.stalkMap bc.projection.left x) (hOpenData.2 x)).2
+    exact IsClosedImmersion.iff_isPreimmersion.mpr
+      ⟨hPre, by rw [Set.range_eq_empty]; exact isClosed_empty⟩
 
 private theorem emptyStack_inclusion_isImmersion {S : Scheme.{u}}
     {X : AlgebraicStack S} :
@@ -323,11 +328,18 @@ private theorem emptyStack_inclusion_isImmersion {S : Scheme.{u}}
     exact ⟨bc⟩
   · intro W w bc
     change IsImmersion bc.projection.left
-    haveI : _root_.IsEmpty (StackPoint (emptyStack S)) :=
-      emptyStack_points_isEmpty S
-    haveI : _root_.IsEmpty bc.source.left :=
-      ⟨fun p => isEmptyElim (bc.sourcePoint p)⟩
-    infer_instance
+    have hSource : _root_.IsEmpty bc.source.left :=
+      ⟨fun p => (emptyStack_points_isEmpty S).false (bc.sourcePoint p)⟩
+    have hOpen : IsOpenImmersion bc.projection.left :=
+      @AlgebraicGeometry.isOpenImmersion_of_isEmpty _ _ bc.projection.left hSource
+    have hOpenData := IsOpenImmersion.iff_isIso_stalkMap.mp hOpen
+    have hPre : IsPreimmersion bc.projection.left := by
+      refine { isEmbedding := hOpenData.1.isEmbedding, stalkMap_surjective := ?_ }
+      intro x
+      exact (@ConcreteCategory.bijective_of_isIso _ _ _ _ _ _ _ _
+        (Scheme.Hom.stalkMap bc.projection.left x) (hOpenData.2 x)).2
+    exact isImmersion_iff bc.projection.left |>.mpr
+      ⟨hPre, hOpenData.1.2.isLocallyClosed⟩
 
 theorem immersion_into_presentation {S : Scheme.{u}}
     {X Z : AlgebraicStack S} (p : StackPresentation X)

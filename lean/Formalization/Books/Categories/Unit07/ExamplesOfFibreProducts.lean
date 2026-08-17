@@ -130,7 +130,8 @@ theorem g_sets_have_fibre_products (G : Type u) [Group G] :
 
 /-- The underlying type functor preserves the fibre products of `G`-sets. -/
 theorem g_sets_underlying_fibre_products (G : Type u) [Group G] :
-    PreservesLimitsOfShape WalkingCospan (Action.forget (Type u) G) := by
+    PreservesLimitsOfShape WalkingCospan (forget (GSetCategory G)) := by
+  change PreservesLimitsOfShape WalkingCospan (Action.forget (Type u) G)
   infer_instance
 
 /-- The category of (not necessarily commutative) rings has fibre products. -/

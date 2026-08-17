@@ -1,6 +1,7 @@
 import Formalization.Books.Fields.Unit08.AlgebraicExtensions
 import Mathlib.Analysis.SpecialFunctions.Exp
 import Mathlib.RingTheory.AlgebraicIndependent.Adjoin
+import Mathlib.RingTheory.AlgebraicIndependent.AlgebraicClosure
 import Mathlib.RingTheory.AlgebraicIndependent.TranscendenceBasis
 
 /-!
@@ -157,14 +158,53 @@ theorem rational_function_t_is_transcendence_basis
     (F : Type u) [Field F] :
     letI : Algebra F (RatFunc F) := RatFunc.instAlgebraOfPolynomial F F
     IsTranscendenceBasis F (fun _ : Fin 1 => (RatFunc.X : RatFunc F)) := by
-  sorry
+  refine isTranscendenceBasis_iff_algebraicIndependent_isAlgebraic.mpr ⟨?_, ?_⟩
+  · simpa using (algebraicIndependent_iff_transcendental.mpr
+      (RatFunc.transcendental_X (K := F)))
+  · apply IntermediateField.isAlgebraic_adjoin_iff_top.mp
+    have hrange : Set.range (fun _ : Fin 1 => (RatFunc.X : RatFunc F)) =
+        ({RatFunc.X} : Set (RatFunc F)) := by
+      ext y
+      constructor
+      · rintro ⟨i, rfl⟩
+        simp
+      · intro hy
+        have : y = (RatFunc.X : RatFunc F) := by simpa using hy
+        subst y
+        exact ⟨0, rfl⟩
+    rw [hrange]
+    simpa using
+      (RatFunc.isAlgebraic_adjoin_simple_X' (f := (RatFunc.X : RatFunc F)) (by
+        rintro ⟨c, hc⟩
+        exact (RatFunc.transcendental_X (K := F))
+          (hc.symm ▸ isAlgebraic_algebraMap c)))
 
 /-- The rational function field has the displayed transcendence basis `{t²}`. -/
 theorem rational_function_t_sq_is_transcendence_basis
     (F : Type u) [Field F] :
     letI : Algebra F (RatFunc F) := RatFunc.instAlgebraOfPolynomial F F
     IsTranscendenceBasis F (fun _ : Fin 1 => (RatFunc.X : RatFunc F) ^ 2) := by
-  sorry
+  refine isTranscendenceBasis_iff_algebraicIndependent_isAlgebraic.mpr ⟨?_, ?_⟩
+  · simpa using (algebraicIndependent_iff_transcendental.mpr
+      ((RatFunc.transcendental_X (K := F)).pow (by norm_num)))
+  · apply IntermediateField.isAlgebraic_adjoin_iff_top.mp
+    have hrange : Set.range (fun _ : Fin 1 => (RatFunc.X : RatFunc F) ^ 2) =
+        ({(RatFunc.X : RatFunc F) ^ 2} : Set (RatFunc F)) := by
+      ext y
+      constructor
+      · rintro ⟨i, rfl⟩
+        simp
+      · intro hy
+        have : y = (RatFunc.X : RatFunc F) ^ 2 := by simpa using hy
+        subst y
+        exact ⟨0, rfl⟩
+    rw [hrange]
+    simpa using
+      RatFunc.isAlgebraic_adjoin_simple_X' (f := (RatFunc.X : RatFunc F) ^ 2) (by
+        rintro ⟨c, hc⟩
+        have hpow : IsAlgebraic F ((RatFunc.X : RatFunc F) ^ 2) :=
+          hc.symm ▸ isAlgebraic_algebraMap c
+        exact (RatFunc.transcendental_X (K := F)) (hpow.of_pow (by norm_num)))
 
 /-- The extension `F(t) / F(t²)` is algebraic. -/
 theorem rational_function_is_algebraic_over_square_subfield
@@ -173,7 +213,11 @@ theorem rational_function_is_algebraic_over_square_subfield
     Algebra.IsAlgebraic
       (IntermediateField.adjoin F ({(RatFunc.X : RatFunc F) ^ 2} : Set (RatFunc F)))
       (RatFunc F) := by
-  sorry
+  exact RatFunc.isAlgebraic_adjoin_simple_X' (f := (RatFunc.X : RatFunc F) ^ 2) (by
+    rintro ⟨c, hc⟩
+    have hpow : IsAlgebraic F ((RatFunc.X : RatFunc F) ^ 2) :=
+      hc.symm ▸ isAlgebraic_algebraMap c
+    exact (RatFunc.transcendental_X (K := F)) (hpow.of_pow (by norm_num)))
 
 /-- The two displayed transcendence bases are genuinely different. -/
 theorem rational_function_transcendence_basis_not_unique
@@ -183,7 +227,21 @@ theorem rational_function_transcendence_basis_not_unique
       IsTranscendenceBasis F (fun _ : Fin 1 => (RatFunc.X : RatFunc F) ^ 2) ∧
       Set.range (fun _ : Fin 1 => (RatFunc.X : RatFunc F)) ≠
         Set.range (fun _ : Fin 1 => (RatFunc.X : RatFunc F) ^ 2) := by
-  sorry
+  refine ⟨rational_function_t_is_transcendence_basis F,
+    rational_function_t_sq_is_transcendence_basis F, ?_⟩
+  intro h
+  have hmem : (RatFunc.X : RatFunc F) ^ 2 ∈
+      Set.range (fun _ : Fin 1 => (RatFunc.X : RatFunc F)) := by
+    rw [h]
+    exact ⟨0, rfl⟩
+  obtain ⟨i, hi⟩ := hmem
+  have hsq : (RatFunc.X : RatFunc F) ^ 2 = RatFunc.X := hi.symm
+  have hone : (RatFunc.X : RatFunc F) = 1 := by
+    apply mul_left_cancel₀ (RatFunc.X_ne_zero (K := F))
+    simpa [pow_two] using hsq
+  have halg : IsAlgebraic F (RatFunc.X : RatFunc F) := by
+    simpa [hone] using (isAlgebraic_algebraMap (R := F) (A := RatFunc F) (1 : F))
+  exact (RatFunc.transcendental_X (K := F)) halg
 
 /-- Every field extension has an algebraic-over-purely-transcendental
     intermediate field, after choosing a transcendence basis. -/
@@ -230,7 +288,17 @@ theorem algebraicallyClosedIn_iff_relative_algebraic_closure_eq_bot
     {k : Type u} {K : Type v} [Field k] [Field K] [Algebra k K] :
     AlgebraicallyClosedIn k K ↔
       algebraicClosure k K = (⊥ : IntermediateField k K) := by
-  sorry
+  constructor
+  · intro h
+    apply le_antisymm
+    · intro x hx
+      obtain ⟨y, hy⟩ := h x (mem_algebraicClosure_iff.mp hx)
+      simpa [IntermediateField.mem_bot] using (show ∃ y : k, algebraMap k K y = x from ⟨y, hy⟩)
+    · exact bot_le
+  · intro h x hx
+    have hxbot : x ∈ (⊥ : IntermediateField k K) :=
+      h ▸ mem_algebraicClosure_iff.mpr hx
+    simpa [IntermediateField.mem_bot] using hxbot
 
 /-! ## Finite extensions of purely transcendental fields -/
 
@@ -259,11 +327,71 @@ theorem finite_purely_transcendental_extension_degree
       rationalFunctionFieldExtensionAlgebra k k' ι
     Formalization.Books.Fields.Unit07.fieldExtensionDegree
           (rationalFunctionField k ι) (rationalFunctionField k' ι) =
-        Formalization.Books.Fields.Unit07.fieldExtensionDegree k k' ∧
+      Formalization.Books.Fields.Unit07.fieldExtensionDegree k k' ∧
       Formalization.Books.Fields.Unit07.fieldExtensionDegree
           (rationalFunctionField k ι) (rationalFunctionField k' ι) <
         Cardinal.aleph0 := by
-  sorry
+  let _ : FaithfulSMul k k' :=
+    (faithfulSMul_iff_algebraMap_injective k k').mpr
+      Formalization.Books.Fields.Unit06.field_extension_algebraMap_injective
+  letI : Algebra (rationalFunctionField k ι) (rationalFunctionField k' ι) :=
+    rationalFunctionFieldExtensionAlgebra k k' ι
+  letI : Algebra (MvPolynomial ι k) (rationalFunctionField k' ι) :=
+    RingHom.toAlgebra
+      ((algebraMap (MvPolynomial ι k') (rationalFunctionField k' ι)).comp
+        (MvPolynomial.map (algebraMap k k')))
+  letI : FaithfulSMul (MvPolynomial ι k) (rationalFunctionField k' ι) :=
+    (faithfulSMul_iff_algebraMap_injective _ _).mpr <|
+      (IsFractionRing.injective (MvPolynomial ι k') (rationalFunctionField k' ι)).comp
+        (MvPolynomial.map_injective _
+          Formalization.Books.Fields.Unit06.field_extension_algebraMap_injective)
+  let algStd : Algebra (rationalFunctionField k ι) (rationalFunctionField k' ι) :=
+    FractionRing.liftAlgebra (MvPolynomial ι k) (rationalFunctionField k' ι)
+  have hmap :
+      @algebraMap (rationalFunctionField k ι) (rationalFunctionField k' ι)
+          _ _ (rationalFunctionFieldExtensionAlgebra k k' ι) =
+        @algebraMap (rationalFunctionField k ι) (rationalFunctionField k' ι)
+          _ _ algStd := by
+    apply IsFractionRing.ringHom_ext
+      (A := MvPolynomial ι k) (K := rationalFunctionField k ι)
+      (L := rationalFunctionField k' ι)
+    intro a
+    rfl
+  have halg : rationalFunctionFieldExtensionAlgebra k k' ι = algStd := by
+    apply Algebra.algebra_ext
+    intro r
+    exact DFunLike.congr_fun hmap r
+  have hmod := congrArg
+    (fun a : Algebra (rationalFunctionField k ι) (rationalFunctionField k' ι) =>
+      @Algebra.toModule (rationalFunctionField k ι) (rationalFunctionField k' ι)
+        _ _ a)
+    halg
+  rw [halg]
+  unfold Formalization.Books.Fields.Unit07.fieldExtensionDegree
+  change
+    (@Module.rank (rationalFunctionField k ι) (rationalFunctionField k' ι) _ _
+        (@Algebra.toModule (rationalFunctionField k ι) (rationalFunctionField k' ι)
+          _ _ (rationalFunctionFieldExtensionAlgebra k k' ι)) = Module.rank k k') ∧
+      (@Module.rank (rationalFunctionField k ι) (rationalFunctionField k' ι) _ _
+        (@Algebra.toModule (rationalFunctionField k ι) (rationalFunctionField k' ι)
+          _ _ (rationalFunctionFieldExtensionAlgebra k k' ι)) < Cardinal.aleph0)
+  have hrank_eq :
+      @Module.rank (FractionRing (MvPolynomial ι k)) (FractionRing (MvPolynomial ι k')) _ _
+          (@Algebra.toModule (FractionRing (MvPolynomial ι k))
+            (FractionRing (MvPolynomial ι k'))
+            _ _ (rationalFunctionFieldExtensionAlgebra k k' ι)) = Module.rank k k' := by
+    convert hmod.symm ▸
+      (Algebra.IsAlgebraic.rank_fractionRing_mvPolynomial (R := k) (S := k') ι) using 1
+    rw [Cardinal.lift_id'.{u, u}]
+  constructor
+  · exact hrank_eq
+  · have hdegree :
+        Formalization.Books.Fields.Unit07.fieldExtensionDegree k k' <
+          Cardinal.aleph0 :=
+      (Formalization.Books.Fields.Unit07.finite_extension_iff_degree_lt_aleph0 k k').mp
+        inferInstance
+    rw [hrank_eq]
+    simpa [Formalization.Books.Fields.Unit07.fieldExtensionDegree] using hdegree
 
 /-- The relative algebraic closure of the base field in a finitely generated
     field extension is finite over the base. -/

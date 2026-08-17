@@ -74,6 +74,7 @@ variable {J : Type v} [SmallCategory J] [IsCofiltered J]
 
 /- Constructibly closed compatible subsets in a cofiltered spectral diagram
 have quasi-compact inverse limit. -/
+omit [IsCofiltered J] in
 theorem inverseLimitSet_isCompact_of_constructibleClosed
     (F : J ⥤ TopCat.{max v u}) (hF : IsSpectralDiagram F)
     (Z : ∀ j, Set (F.obj j))
@@ -315,6 +316,7 @@ theorem inverseLimitSet_isCompact_of_constructibleClosed
   rw [← hrange]
   exact hgrange
 
+omit [IsCofiltered J] in
 /-- The inverse limit of a cofiltered diagram of spectral spaces is
 quasi-compact. -/
 theorem inverseLimit_spectralDiagram_isCompact
@@ -2511,7 +2513,7 @@ theorem spectralSpace_pointsSpecializingTo_diff_constructible
 is the limit of the corresponding differences of a directed quasi-compact-open
 presentation. -/
 theorem pointsSpecializingTo_diff_constructible_isLimit
-    [SpectralSpace X] {E : Set X} {I : Set (Set X)} (hE : IsConstructible E)
+    [SpectralSpace X] {E : Set X} {I : Set (Set X)} (_hE : IsConstructible E)
     (hI : IsDirectedFamilyOfQuasiCompactOpens I)
     (hW : pointsSpecializingTo E = ⋂₀ I) :
     Nonempty

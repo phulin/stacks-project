@@ -1,6 +1,5 @@
 import Formalization.Books.MoreAlgebra.Unit18.FlatteningLocalBase
 import Mathlib.RingTheory.AdicCompletion.Basic
-import Mathlib.RingTheory.AdicCompletion.Algebra
 import Mathlib.RingTheory.Ideal.Quotient.Operations
 
 /-!

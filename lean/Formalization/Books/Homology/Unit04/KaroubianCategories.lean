@@ -77,15 +77,15 @@ theorem karoubian_iff_idempotent_direct_sum_decomposition
           p ≫ e.hom = e.hom ≫ b.bicone.snd ≫ b.bicone.inr := by
   constructor
   · intro h Z p hp
-    letI : HasKernel p :=
+    let : HasKernel p :=
       (karoubian_iff_idempotents_have_kernels (C := C)).mp h Z p hp
-    letI : HasKernel (Formalization.Books.Homology.Unit03.idempotentComplement p) :=
+    let : HasKernel (Formalization.Books.Homology.Unit03.idempotentComplement p) :=
       (karoubian_iff_idempotents_have_kernels (C := C)).mp h Z
         (Formalization.Books.Homology.Unit03.idempotentComplement p)
         (Formalization.Books.Homology.Unit03.idempotent_complement_relations p hp).2.2
-    letI : HasCokernel p :=
+    let : HasCokernel p :=
       (karoubian_iff_idempotents_have_cokernels (C := C)).mp h Z p hp
-    letI : HasCokernel (Formalization.Books.Homology.Unit03.idempotentComplement p) :=
+    let : HasCokernel (Formalization.Books.Homology.Unit03.idempotentComplement p) :=
       (karoubian_iff_idempotents_have_cokernels (C := C)).mp h Z
         (Formalization.Books.Homology.Unit03.idempotentComplement p)
         (Formalization.Books.Homology.Unit03.idempotent_complement_relations p hp).2.2
@@ -125,13 +125,13 @@ theorem karoubian_iff_idempotent_direct_sum_decomposition
     apply (karoubian_iff_idempotents_have_kernels (C := C)).mpr
     intro Z p hp
     obtain ⟨X, Y, b, e, he⟩ := h Z p hp
-    letI : HasKernel b.bicone.snd :=
+    let : HasKernel b.bicone.snd :=
       ⟨⟨{
         cone := BinaryBicone.sndKernelFork b.bicone
         isLimit := BinaryBicone.isLimitSndKernelFork b.isBilimit.isLimit
       }⟩⟩
-    letI : HasKernel (b.bicone.snd ≫ b.bicone.inr) := inferInstance
-    letI : HasKernel (e.hom ≫ b.bicone.snd ≫ b.bicone.inr) := inferInstance
+    let : HasKernel (b.bicone.snd ≫ b.bicone.inr) := inferInstance
+    let : HasKernel (e.hom ≫ b.bicone.snd ≫ b.bicone.inr) := inferInstance
     let kcone : KernelFork p :=
       KernelFork.ofι (f := p) (kernel.ι (e.hom ≫ b.bicone.snd ≫ b.bicone.inr))
         (by
@@ -206,7 +206,7 @@ theorem idempotent_kernel_presheaf_isRepresentable_iff
         exact (hval.trans hm).trans (congrArg Subtype.val hg).symm
     exact ⟨⟨{ cone := kfork, isLimit := klimit }⟩⟩
   · intro hk
-    letI : HasKernel e := hk
+    let : HasKernel e := hk
     apply Functor.RepresentableBy.isRepresentable
     refine
       { homEquiv :=
@@ -352,9 +352,9 @@ theorem karoubian_of_countable_products_of_kernels_of_split_epimorphisms
     | succ n =>
         simp [psi, phi, Category.assoc, he, sub_eq_add_neg, add_assoc, add_left_comm,
           add_comm]
-  letI : IsSplitEpi phi :=
+  let : IsSplitEpi phi :=
     IsSplitEpi.mk' { section_ := psi, id := hpsi }
-  letI : HasKernel phi := h phi
+  let : HasKernel phi := h phi
   let i : kernel phi ⟶ X := kernel.ι phi ≫ Pi.π (fun _ : ℕ => X) 0
   let lift0 (W : C) (f : W ⟶ X) : W ⟶ P :=
     Pi.lift (fun n => if n = 0 then f else 0)
@@ -412,19 +412,19 @@ theorem karoubian_of_countable_coproducts_of_cokernels_of_split_monomorphisms
     [HasCountableCoproducts C]
     (h : ∀ {X Y : C} (f : X ⟶ Y) [IsSplitMono f], HasCokernel f) :
     IsIdempotentComplete C := by
-  letI : HasCountableProducts Cᵒᵖ :=
+  let : HasCountableProducts Cᵒᵖ :=
     { out := fun J _ => inferInstance }
   apply Idempotents.isIdempotentComplete_of_isIdempotentComplete_opposite
   apply karoubian_of_countable_products_of_kernels_of_split_epimorphisms (C := Cᵒᵖ)
   intro X Y f hf
-  letI : IsSplitEpi f := hf
-  letI : IsSplitMono f.unop :=
+  let : IsSplitEpi f := hf
+  let : IsSplitMono f.unop :=
     IsSplitMono.mk' {
       retraction := (section_ f).unop
       id := by
         apply Quiver.Hom.op_inj
         simp }
-  letI : HasCokernel f.unop := h f.unop
+  let : HasCokernel f.unop := h f.unop
   exact ⟨⟨{
     cone := KernelFork.ofι (cokernel.π f.unop).op (by
       apply Quiver.Hom.unop_inj

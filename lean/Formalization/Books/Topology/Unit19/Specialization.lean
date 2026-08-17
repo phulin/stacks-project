@@ -182,14 +182,14 @@ theorem quotient_of_finite_generalizing_maps_is_kolmogorov
     {U : Type w} [TopologicalSpace U]
     {Y : Type u} [TopologicalSpace Y]
     (s t : R → U) (π : U → Y)
-    (hs : Continuous s) (ht : Continuous t) (hπ : Continuous π)
+    (_hs : Continuous s) (_ht : Continuous t) (hπ : Continuous π)
     (hπ_open : IsOpenMap π)
     [QuasiSober U] [T0Space U]
     (hs_finite : ∀ u : U, (s ⁻¹' ({u} : Set U)).Finite)
-    (ht_finite : ∀ u : U, (t ⁻¹' ({u} : Set U)).Finite)
-    (hs_generalizing : GeneralizingMap s)
-    (ht_generalizing : GeneralizingMap t)
-    (hrel : Equivalence (fun u v : U => ∃ r : R, t r = u ∧ s r = v))
+    (_ht_finite : ∀ u : U, (t ⁻¹' ({u} : Set U)).Finite)
+    (_hs_generalizing : GeneralizingMap s)
+    (_ht_generalizing : GeneralizingMap t)
+    (_hrel : Equivalence (fun u v : U => ∃ r : R, t r = u ∧ s r = v))
     (hquot : Surjective π ∧
       ∀ u v : U, π u = π v ↔ ∃ r : R, t r = u ∧ s r = v) :
     T0Space Y := by

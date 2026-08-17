@@ -150,16 +150,6 @@ def IsEquivalentOverBase {A B C : Type*}
 
 /-! ## The diagonal and the 2-fibre-product description -/
 
-/- The canonical construction from Unit 33 packages the iso-comma
-   2-fibre-product together with the fibredness of its apex.  The two
-   preservation fields are the source's assertion that its projections are
-   1-morphisms of fibred categories. -/
-noncomputable def canonicalFibredTwoFibreProduct {C : Cat.{v, u}}
-    {X Y S : FibredCategoryOver C}
-    (F : FibredCategoryOverHom X S)
-    (G : FibredCategoryOverHom Y S) : FibredTwoFibreProduct F G :=
-  Classical.choice (fibred_categories_have_two_fibre_products X Y S F G)
-
 /- The diagonal sends `x` to `(x, x, id)` in the iso-comma presentation of
    the 2-fibre product.  The object property records that both entries lie
    over the same base object and that the comparison arrow is vertical. -/

@@ -3,7 +3,6 @@ import Formalization.Books.Sheaves.Unit08.AbelianSheaves
 import Formalization.Books.Sheaves.Unit21.ContinuousMaps
 import Mathlib.CategoryTheory.EssentialImage
 import Mathlib.CategoryTheory.Sites.Limits
-import Mathlib.CategoryTheory.Sites.LeftExact
 import Mathlib.CategoryTheory.Limits.Types.Colimits
 import Mathlib.CategoryTheory.Limits.Types.Coproducts
 import Mathlib.Algebra.Category.Grp.Colimits
@@ -286,6 +285,19 @@ abbrev closedSubsetTerminalStalkCondition
   ∀ x : X, x ∉ Z →
     Nonempty (IsTerminal (TopCat.Presheaf.stalk (C := C) (X := X) G.presheaf x))
 
+/-- Generic counit form of `i⁻¹ i_* ≅ id` for algebraic-structure sheaves. -/
+theorem closedSubsetPushforward_inverseImage_counit_isIso
+    {C : Type u} [Category.{w} C]
+    {FA : C → C → Type*} {CA : C → Type w}
+    [∀ A B, FunLike (FA A B) (CA A) (CA B)]
+    [ConcreteCategory.{w} C FA] [HasColimits C] [HasLimits C]
+    [PreservesLimits (CategoryTheory.forget C)]
+    [PreservesFilteredColimits (CategoryTheory.forget C)]
+    [(CategoryTheory.forget C).ReflectsIsomorphisms]
+    {X : TopCat.{w}} {Z : Set X} (hZ : IsClosed Z) :
+    IsIso ((closedSubsetStructureAdjunction (C := C) Z).counit) := by
+  sorry
+
 /-- Generic full faithfulness of closed-subset pushforward. -/
 theorem closedSubsetPushforward_fullyFaithful
     {C : Type u} [Category.{w} C]
@@ -306,19 +318,6 @@ theorem closedSubsetPushforward_mem_essImage_iff
     (G : TopCat.Sheaf C X) :
     (closedSubsetPushforward (C := C) Z).essImage G ↔
       closedSubsetTerminalStalkCondition Z G := by
-  sorry
-
-/-- Generic counit form of `i⁻¹ i_* ≅ id` for algebraic-structure sheaves. -/
-theorem closedSubsetPushforward_inverseImage_counit_isIso
-    {C : Type u} [Category.{w} C]
-    {FA : C → C → Type*} {CA : C → Type w}
-    [∀ A B, FunLike (FA A B) (CA A) (CA B)]
-    [ConcreteCategory.{w} C FA] [HasColimits C] [HasLimits C]
-    [PreservesLimits (CategoryTheory.forget C)]
-    [PreservesFilteredColimits (CategoryTheory.forget C)]
-    [(CategoryTheory.forget C).ReflectsIsomorphisms]
-    {X : TopCat.{w}} {Z : Set X} (hZ : IsClosed Z) :
-    IsIso ((closedSubsetStructureAdjunction (C := C) Z).counit) := by
   sorry
 
 /-! ## The non-exactness warning and the later abelian remark -/

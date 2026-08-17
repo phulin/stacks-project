@@ -8,6 +8,7 @@ import Mathlib.CategoryTheory.Limits.Types.Images
 import Mathlib.CategoryTheory.SingleObj
 import Mathlib.CategoryTheory.FinCategory.Basic
 import Mathlib.Order.Antisymmetrization
+import Mathlib.Order.Directed
 import Mathlib.Data.Fintype.Order
 import Mathlib.CategoryTheory.Whiskering
 
@@ -140,8 +141,9 @@ theorem hasColimit_of_pullbackSystem
 
 noncomputable def colimitIso_pullbackSystem
     {I : Type u} [Preorder I] {C : Type v} [Category.{w} C]
-    (N : System (PreorderQuotient I) C) [HasColimit N]
-    [HasColimit (pullbackSystem N)] :
+    (N : System (PreorderQuotient I) C) [HasColimit N] :
+    letI : Functor.Final (preorderQuotientProjection I) :=
+      preorderQuotientProjection_is_final I
     colimit (pullbackSystem N) ≅ colimit N := by
   letI : Functor.Final (preorderQuotientProjection I) :=
     preorderQuotientProjection_is_final I
@@ -174,8 +176,9 @@ theorem hasLimit_of_pullbackInverseSystem
 
 noncomputable def limitIso_pullbackInverseSystem
     {I : Type u} [Preorder I] {C : Type v} [Category.{w} C]
-    (N : InverseSystem (PreorderQuotient I) C) [HasLimit N]
-    [HasLimit (pullbackInverseSystem N)] :
+    (N : InverseSystem (PreorderQuotient I) C) [HasLimit N] :
+    letI : Functor.Initial (preorderQuotientProjection I).op :=
+      preorderQuotientProjection_op_is_initial I
     limit N ≅ limit (pullbackInverseSystem N) := by
   letI : Functor.Initial (preorderQuotientProjection I).op :=
     preorderQuotientProjection_op_is_initial I
@@ -254,14 +257,6 @@ theorem inverseSystemPullbackFunctor_is_equivalence
 
 /-! ### Directed systems and filtered categories -/
 
-theorem isDirectedSystem_iff
-    {I : Type u} [Preorder I] {C : Type v} [Category.{w} C]
-    (M : System I C) : IsDirectedSystem M ↔ IsDirectedSet I := Iff.rfl
-
-theorem isDirectedInverseSystem_iff
-    {I : Type u} [Preorder I] {C : Type v} [Category.{w} C]
-    (M : InverseSystem I C) : IsDirectedInverseSystem M ↔ IsDirectedSet I := Iff.rfl
-
 theorem filtered_category_has_directed_replacement
     (I : Type u) [SmallCategory I] [IsFiltered I] :
     ∃ (J : Type u) (_ : PartialOrder J) (_ : IsDirectedOrder J)
@@ -294,9 +289,9 @@ noncomputable def directed_replacement_limit_iso
     {C : Type u'} [Category.{v'} C] (F : J ⥤ I) [Functor.Final F]
     (M : Iᵒᵖ ⥤ C) [HasLimit (F.op ⋙ M)] :
     letI : HasLimit M := Functor.Initial.hasLimit_of_comp F.op
-    limit (F.op ⋙ M) ≅ limit M := by
+    limit M ≅ limit (F.op ⋙ M) := by
   letI : HasLimit M := Functor.Initial.hasLimit_of_comp F.op
-  exact Functor.Initial.limitIso F.op M
+  exact (Functor.Initial.limitIso F.op M).symm
 
 /-! ### Finite directed indices and the idempotent example -/
 
@@ -313,8 +308,9 @@ theorem hasColimit_of_finite_directed_system
 
 theorem finite_directed_system_colimit_iso_stage
     {I : Type u} [Finite I] [Preorder I] [Nonempty I] [IsDirectedOrder I]
-    {C : Type v} [Category.{w} C] (M : System I C) [HasColimit M]
+    {C : Type v} [Category.{w} C] (M : System I C)
     (i : I) (hi : ∀ j : I, j ≤ i) :
+    letI : HasColimit M := hasColimit_of_finite_directed_system M
     Nonempty (colimit M ≅ M.obj i) := by
   sorry
 

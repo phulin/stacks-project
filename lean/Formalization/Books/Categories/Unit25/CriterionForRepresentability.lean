@@ -550,7 +550,7 @@ theorem subgroup_closure_cardinal_le {E : Type v} {G : GrpCat.{v}}
   classical
   cases isEmpty_or_nonempty E with
   | inl hE =>
-      letI := hE
+      let hE := hE
       have hr : Set.range f = (∅ : Set (G : Type v)) := by
         ext z
         constructor
@@ -560,7 +560,7 @@ theorem subgroup_closure_cardinal_le {E : Type v} {G : GrpCat.{v}}
       rw [hr, Subgroup.closure_empty]
       simp
   | inr hE =>
-      letI := hE
+      let hE := hE
       let q : FreeGroup E → Subgroup.closure (Set.range f) := fun w =>
         ⟨FreeGroup.lift f w, by
           rw [← FreeGroup.range_lift_eq_closure]
@@ -660,12 +660,12 @@ theorem topologicalHomFactor_comp_inclusion {I : Type v} [Category.{v} I]
 instance topologicalHomFunctor_preservesLimits_instance {I : Type v} [Category.{v} I]
     (D : I ⥤ TopCat.{v}) : PreservesLimits (topologicalHomFunctor D) := by
   let F : Iᵒᵖ ⥤ TopCat.{v} ⥤ Type v := D.op ⋙ coyoneda
-  letI : PreservesLimits (F.flip) := by
+  let : PreservesLimits (F.flip) := by
     apply preservesLimits_of_evaluation
     intro k
     change PreservesLimits (coyoneda.obj (D.op.obj k))
     infer_instance
-  letI : PreservesLimits (F.flip ⋙ lim) := by
+  let : PreservesLimits (F.flip ⋙ lim) := by
     infer_instance
   apply preservesLimits_of_natIso (limitIsoFlipCompLim F).symm
 
@@ -817,7 +817,7 @@ theorem adjointHomFunctor_isCorepresentable
     [PreservesLimitsOfSize.{v, v} G]
     (hG : SolutionSetCondition.{v} G) (Y : D) :
     (adjointHomFunctor G Y).IsCorepresentable := by
-  letI : G.IsRightAdjoint :=
+  let : G.IsRightAdjoint :=
     isRightAdjoint_of_preservesLimits_of_solutionSetCondition G hG
   exact (Adjunction.ofIsRightAdjoint G).corepresentableBy Y |>.isCorepresentable
 

@@ -23,13 +23,15 @@ section Basic
 variable {R : Type u} {M N : Type v}
 
 /-- A bundled topological module from the unbundled data in the source definition. -/
-def topologicalModuleObject (R : Type u) (M : Type v) [Ring R] [TopologicalSpace R]
+def topologicalModuleObject (R : Type u) (M : Type v) [CommRing R] [TopologicalSpace R]
+    [IsTopologicalRing R]
     [AddCommGroup M] [Module R M] [TopologicalSpace M] [ContinuousAdd M]
     [ContinuousSMul R M] : TopModuleCat.{v} R :=
   TopModuleCat.of R M
 
 /-- A homomorphism of topological modules, using Mathlib's continuous linear map. -/
-abbrev TopologicalModuleHom (R : Type u) (M N : Type v) [Ring R] [TopologicalSpace R]
+abbrev TopologicalModuleHom (R : Type u) (M N : Type v) [CommRing R] [TopologicalSpace R]
+    [IsTopologicalRing R]
     [AddCommGroup M] [Module R M] [TopologicalSpace M] [ContinuousAdd M]
     [ContinuousSMul R M] [AddCommGroup N] [Module R N] [TopologicalSpace N] [ContinuousAdd N]
     [ContinuousSMul R N] :=
@@ -37,13 +39,14 @@ abbrev TopologicalModuleHom (R : Type u) (M N : Type v) [Ring R] [TopologicalSpa
 
 /-- The quotient topology on the target of a linear map. -/
 @[instance_reducible]
-def quotientModuleTopology [Ring R] [AddCommGroup M] [Module R M] [TopologicalSpace M]
+def quotientModuleTopology [CommRing R] [TopologicalSpace R] [IsTopologicalRing R]
+    [AddCommGroup M] [Module R M] [TopologicalSpace M]
     [AddCommGroup N] [Module R N]
     (f : M →ₗ[R] N) : TopologicalSpace N :=
   TopologicalSpace.coinduced f inferInstance
 
 /-- The additive group of a topological module is a topological additive group. -/
-theorem topologicalModule_additive_group [Ring R] [TopologicalSpace R] [IsTopologicalRing R]
+theorem topologicalModule_additive_group [CommRing R] [TopologicalSpace R] [IsTopologicalRing R]
     [AddCommGroup M] [Module R M] [TopologicalSpace M] [ContinuousAdd M]
     [ContinuousSMul R M] : IsTopologicalAddGroup M := by
   sorry

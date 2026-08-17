@@ -37,7 +37,8 @@ variable {G H : Type u}
   multiplication and inversion. -/
 
 /-- A homomorphism of topological groups, using Mathlib's canonical continuous monoid hom. -/
-abbrev TopologicalGroupHom [Group G] [Group H] [TopologicalSpace G] [TopologicalSpace H] :=
+abbrev TopologicalGroupHom [Group G] [Group H] [TopologicalSpace G] [TopologicalSpace H]
+    [IsTopologicalGroup G] [IsTopologicalGroup H] :=
   G →ₜ* H
 
 /-- The quotient topology on the target of a group homomorphism. -/
@@ -68,6 +69,7 @@ variable (E : Type u) [TopologicalSpace E] [DiscreteTopology E]
 topology.  For a discrete domain, this is the canonical Pi topology. -/
 @[instance_reducible]
 def selfMapTopology : TopologicalSpace (E → E) :=
+  let _ := ‹DiscreteTopology E›
   Pi.topologicalSpace
 
 /-- The source's basic neighborhood `U_S(f) = {f' | f'|_S = f|_S}`. -/

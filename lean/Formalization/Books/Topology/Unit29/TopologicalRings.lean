@@ -1,6 +1,5 @@
 import Formalization.Books.Topology.Unit29.TopologicalGroups
 import Mathlib.Topology.Algebra.Ring.Basic
-import Mathlib.Topology.Algebra.Ring.Ideal
 import Mathlib.Topology.Category.TopCommRingCat
 
 /-!
@@ -30,7 +29,8 @@ def topologicalRingObject (R : Type u) [CommRing R] [TopologicalSpace R]
   TopCommRingCat.of R
 
 /-- A homomorphism of topological rings, in the underlying form used by `TopCommRingCat`. -/
-abbrev TopologicalRingHom [CommRing R] [CommRing S] [TopologicalSpace R] [TopologicalSpace S] :=
+abbrev TopologicalRingHom [CommRing R] [CommRing S] [TopologicalSpace R] [TopologicalSpace S]
+    [IsTopologicalRing R] [IsTopologicalRing S] :=
   { f : R →+* S // Continuous f }
 
 /-- The quotient topology on the target of a ring homomorphism. -/

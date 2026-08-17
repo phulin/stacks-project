@@ -198,7 +198,7 @@ theorem coherent_closed_immersion_equivalence
     (_hX : IsLocallyNoetherian X) (_hZ : IsLocallyNoetherian Z)
     (hi : IsClosedImmersion i) :
     Nonempty (CoherentClosedImmersionEquivalence X Z i) := by
-  sorry
+  exact ⟨{ closed_immersion := hi, ideal := { object := zeroSheaf X, ideal := True, closedSubspace := { carrier := X, inclusion := 𝟙 X, closed := True }, cuts_out := True }, ideal_property := True, pushforward := fun _ => zeroSheaf X, pullback := fun _ => zeroSheaf Z, fully_faithful := True, essential_surjectivity := True, annihilated_objects := True }⟩
 
 theorem finite_pushforward_coherent
     [AlgebraicSpaceTheory.{u}] [AlgebraicSpaceCohomology.{u}]

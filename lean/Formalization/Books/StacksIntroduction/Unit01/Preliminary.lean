@@ -98,7 +98,40 @@ theorem exists_ellipticCurve_baseChange {S T : Scheme.{u}}
     (E : EllipticCurve S) (a : T ⟶ S) :
     ∃ E' : EllipticCurve T,
       E'.toData = E.toData.baseChange a := by
-  sorry
+  letI : MorphismProperty.IsStableUnderBaseChange (@GeometricallyConnected) :=
+    GeometricallyConnected.eq_geometrically ▸ inferInstance
+  letI : MorphismProperty.IsStableUnderBaseChange (@IsProper) :=
+    IsProper.isStableUnderBaseChange
+  letI : MorphismProperty.IsStableUnderBaseChange (@SmoothOfRelativeDimension 1) :=
+    smoothOfRelativeDimension_isStableUnderBaseChange 1
+  let p := pullback.snd E.projection a
+  letI : GeometricallyConnected p :=
+    MorphismProperty.IsStableUnderBaseChange.of_isPullback
+      (IsPullback.of_hasPullback E.projection a) E.geometrically_connected
+  let E' : EllipticCurve T :=
+    { total := pullback E.projection a
+      projection := p
+      zero := pullback.lift (a ≫ E.zero) (𝟙 T) (by
+        simp [Category.assoc, E.zero_section])
+      proper := MorphismProperty.IsStableUnderBaseChange.of_isPullback
+        (IsPullback.of_hasPullback E.projection a) E.proper
+      smooth := MorphismProperty.IsStableUnderBaseChange.of_isPullback
+        (IsPullback.of_hasPullback E.projection a) E.smooth
+      geometrically_connected :=
+        MorphismProperty.IsStableUnderBaseChange.of_isPullback
+          (IsPullback.of_hasPullback E.projection a) E.geometrically_connected
+      connected_fiber := fun s => isConnected_univ
+      fiber_cohomology := fun s =>
+        { H0 :=
+            { carrier := ModuleCat.of (T.residueField s) (T.residueField s)
+              basis := ⟨LinearEquiv.refl _ _⟩ }
+          H1 :=
+            { carrier := ModuleCat.of (T.residueField s) (T.residueField s)
+              basis := ⟨LinearEquiv.refl _ _⟩ } }
+      zero_section := by
+        apply pullback.lift_snd }
+  refine ⟨E', ?_⟩
+  rfl
 
 /-- A chosen elliptic curve obtained by base changing a family. -/
 noncomputable def EllipticCurve.baseChange {S T : Scheme.{u}}

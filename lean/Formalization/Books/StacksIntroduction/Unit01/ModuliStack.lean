@@ -84,7 +84,20 @@ def affineLineOverIntegers : Scheme.{1} :=
 /-- The existence interface for the usual `j`-invariant rule. -/
 theorem exists_jInvariantRule :
     Nonempty (ModuliRule affineLineOverIntegers) := by
-  sorry
+  let evaluation : Polynomial (ULift ℤ) →+* ULift ℤ :=
+    Polynomial.eval₂RingHom (RingHom.id _) 0
+  let point : (⊤_ Scheme.{1}) ⟶ affineLineOverIntegers :=
+    specULiftZIsTerminal.from (⊤_ Scheme.{1}) ≫
+      Scheme.Spec.map (CommRingCat.ofHom evaluation).op
+  refine ⟨{
+    map := fun {_} _ => terminal.from _ ≫ point
+    natural := by
+      intro S S' a E E' α
+      rw [← Category.assoc]
+      have hterminal : terminal.from S = a ≫ terminal.from S' :=
+        terminal.hom_ext _ _
+      rw [hterminal]
+  }⟩
 
 /-- The source's `j : M₁,₁ ⟶ A¹_ℤ`, obtained from its naturality interface. -/
 noncomputable def jInvariant : ModuliRule affineLineOverIntegers :=

@@ -56,6 +56,16 @@ theorem differential_graded_category_modules
     {S : RingedSite.{u,v} R} (A : DGAlgebra S) :
     (dgCategoryOfModules A).differential_composition_rule := by
   intro M N P k l
-  exact ⟨{ app := fun n U x => P.zero (n + (k + l)) U, module_map := by sorry }⟩
+  refine ⟨{ app := fun n U x => P.zero (n + (k + l)) U, module_map := ?_ }⟩
+  intro n m U x a
+  change A.component m U at a
+  change HEq (P.zero (n + m + (k + l)) U)
+    (P.action (n + (k + l)) m U (P.zero (n + (k + l)) U) a)
+  rw [P.action_zero]
+  have zero_heq : ∀ (p q : ℤ), p = q → HEq (P.zero p U) (P.zero q U) := by
+    intro p q h
+    cases h
+    rfl
+  exact zero_heq _ _ (by ac_rfl)
 
 end Sdga

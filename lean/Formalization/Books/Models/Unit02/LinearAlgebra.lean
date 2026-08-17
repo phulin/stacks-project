@@ -1,8 +1,5 @@
 import Mathlib.Algebra.Module.Torsion.Basic
 import Mathlib.Analysis.Complex.Basic
-import Mathlib.Analysis.Normed.Field.Basic
-import Mathlib.Data.Complex.Basic
-import Mathlib.Data.Matrix.Basic
 import Mathlib.Data.ZMod.Basic
 import Mathlib.LinearAlgebra.BilinearForm.Orthogonal
 import Mathlib.LinearAlgebra.Dimension.Free
@@ -32,17 +29,6 @@ theorem recurring_diagonal_dominance {n : ℕ} (A : Matrix (Fin n) (Fin n) ℂ)
     Matrix.det A ≠ 0 := by
   sorry
 
-/-! The weighted strict diagonal-dominance criterion. -/
-theorem recurring_weighted_diagonal_dominance {n : ℕ}
-    (A : Matrix (Fin n) (Fin n) ℂ) (m : Fin n → ℝ)
-    (hm : ∀ i, 0 < m i)
-    (hdominant : ∀ i,
-      norm (A i i * (m i : ℂ)) >
-        (Finset.univ : Finset (Fin n)).sum
-          (fun j => if j ≠ i then norm (A i j * (m j : ℂ)) else 0)) :
-    Matrix.det A ≠ 0 := by
-  sorry
-
 /-! The column-weighted matrix used in the proof of weighted diagonal dominance. -/
 def weightedComplexMatrix {n : ℕ} (A : Matrix (Fin n) (Fin n) ℂ) (m : Fin n → ℝ) :
     Matrix (Fin n) (Fin n) ℂ :=
@@ -55,27 +41,37 @@ theorem weightedComplexMatrix_det {n : ℕ} (A : Matrix (Fin n) (Fin n) ℂ)
       (Finset.univ : Finset (Fin n)).prod (fun i => (m i : ℂ)) * Matrix.det A := by
   sorry
 
+/-! The weighted strict diagonal-dominance criterion. -/
+theorem recurring_weighted_diagonal_dominance {n : ℕ}
+    (A : Matrix (Fin n) (Fin n) ℂ) (m : Fin n → ℝ)
+    (hm : ∀ i, 0 < m i)
+    (hdominant : ∀ i,
+      norm (A i i * (m i : ℂ)) >
+        (Finset.univ : Finset (Fin n)).sum
+          (fun j => if j ≠ i then norm (A i j * (m j : ℂ)) else 0)) :
+    Matrix.det A ≠ 0 := by
+  sorry
+
 /-! The vector obtained by retaining the coordinates in a subset and weighting them by `m`. -/
 def weightedSubsetVector {n : ℕ} (m : Fin n → ℝ) (I : Set (Fin n)) : Fin n → ℝ :=
   by
     classical
     exact fun i => if i ∈ I then m i else 0
 
-/-!
-The equality condition for the real recurring-matrix lemma.  The two displayed
-zero conditions express the symmetric cut condition needed for the kernel
-description when the matrix is not assumed symmetric.
--/
+/-! The equality condition for the real recurring-matrix lemma. -/
 def kernelIndicatorCondition {n : ℕ} (A : Matrix (Fin n) (Fin n) ℝ)
     (m : Fin n → ℝ) (I : Set (Fin n)) : Prop :=
   (∀ ⦃i j⦄, i ∈ I → j ∉ I → A i j = 0) ∧
-    (∀ ⦃i j⦄, i ∉ I → j ∈ I → A i j = 0) ∧
     ∀ i, i ∈ I →
       -A i i * m i =
         (Finset.univ : Finset (Fin n)).sum (fun j => if j ≠ i then A i j * m j else 0)
 
-/-! The kernel of a real recurring matrix is spanned by the equality indicators. -/
+/-!
+The kernel of a symmetric real recurring matrix is spanned by the equality
+indicators.
+-/
 theorem recurring_real {n : ℕ} (A : Matrix (Fin n) (Fin n) ℝ) (m : Fin n → ℝ)
+    (hsymm : ∀ i j, A i j = A j i)
     (hoffdiag : ∀ ⦃i j⦄, i ≠ j → 0 ≤ A i j)
     (hm : ∀ i, 0 < m i)
     (hineq : ∀ i,
@@ -85,6 +81,25 @@ theorem recurring_real {n : ℕ} (A : Matrix (Fin n) (Fin n) ℝ) (m : Fin n →
       Submodule.span ℝ {x : Fin n → ℝ |
         ∃ I : Set (Fin n), kernelIndicatorCondition A m I ∧
           x = weightedSubsetVector m I} := by
+  sorry
+
+/-! The off-diagonal energy identity used after normalizing the positive vector to one. -/
+def symmetricRealOffDiagonalEnergy {n : ℕ} (A : Matrix (Fin n) (Fin n) ℝ)
+    (x : Fin n → ℝ) : ℝ :=
+  ((Finset.univ : Finset (Fin n)).product (Finset.univ : Finset (Fin n))).sum
+    (fun p => if p.1 ≠ p.2 then -A p.1 p.2 * (x p.2 - x p.1) ^ 2 else 0)
+
+/-! A corrected source-facing form of the displayed quadratic-energy identity. -/
+theorem recurring_symmetric_real_energy_identity {n : ℕ}
+    (A : Matrix (Fin n) (Fin n) ℝ) (x : Fin n → ℝ)
+    (hsymm : ∀ i j, A i j = A j i)
+    (hrowsum : ∀ i,
+      A i i +
+          (Finset.univ : Finset (Fin n)).sum
+            (fun j => if j ≠ i then A i j else 0) = 0) :
+    symmetricRealOffDiagonalEnergy A x =
+      2 * ((Finset.univ : Finset (Fin n)).sum
+        (fun i => x i * (Matrix.mulVec A x) i)) := by
   sorry
 
 /-! A connected symmetric recurring matrix is negative semidefinite with one-dimensional nullspace. -/
@@ -108,25 +123,6 @@ theorem recurring_symmetric_real_range_finrank {n : ℕ}
     (hconnected : ¬ ∃ I : Set (Fin n), I.Nonempty ∧ I ≠ Set.univ ∧
       ∀ ⦃i j⦄, i ∈ I → j ∉ I → A i j = 0) :
     Module.finrank ℝ (LinearMap.range (Matrix.toLin' A)) = n - 1 := by
-  sorry
-
-/-! The off-diagonal energy identity used after normalizing the positive vector to one. -/
-def symmetricRealOffDiagonalEnergy {n : ℕ} (A : Matrix (Fin n) (Fin n) ℝ)
-    (x : Fin n → ℝ) : ℝ :=
-  ((Finset.univ : Finset (Fin n)).product (Finset.univ : Finset (Fin n))).sum
-    (fun p => if p.1 ≠ p.2 then -A p.1 p.2 * (x p.2 - x p.1) ^ 2 else 0)
-
-/-! A corrected source-facing form of the displayed quadratic-energy identity. -/
-theorem recurring_symmetric_real_energy_identity {n : ℕ}
-    (A : Matrix (Fin n) (Fin n) ℝ) (x : Fin n → ℝ)
-    (hsymm : ∀ i j, A i j = A j i)
-    (hrowsum : ∀ i,
-      A i i +
-          (Finset.univ : Finset (Fin n)).sum
-            (fun j => if j ≠ i then A i j else 0) = 0) :
-    symmetricRealOffDiagonalEnergy A x =
-      2 * ((Finset.univ : Finset (Fin n)).sum
-        (fun i => x i * (Matrix.mulVec A x) i)) := by
   sorry
 
 /-! Positive definite integral bilinear forms on lattices. -/
@@ -161,11 +157,17 @@ abbrev orthogonalDirectSumQuotient {M : Type*} [AddCommGroup M] [Module ℤ M]
     (B : LinearMap.BilinForm ℤ M) (N : Submodule ℤ M) : Type _ :=
   M ⧸ (N ⊔ B.orthogonal N)
 
-def submoduleInclusionRange {M : Type*} [AddCommGroup M] [Module ℤ M]
-    (N : Submodule ℤ M) : Submodule ℤ M :=
-  by
-    letI : Module ℤ N := N.module
-    exact LinearMap.range N.subtype
+/-! The projection exact sequence underlying the orthogonal decomposition. -/
+theorem orthogonal_projection_sequence
+    (L : Type*) [AddCommGroup L] [Module ℤ L] [Module.Free ℤ L]
+    [Module.Finite ℤ L] (B : LinearMap.BilinForm ℤ L)
+    (hB : IsPositiveDefiniteIntegralForm B) (A : Submodule ℤ L)
+    (hquotient : Module.IsTorsionFree ℤ (L ⧸ A)) :
+    ∃ p : L →ₗ[ℤ] Module.Dual ℤ (B.orthogonal A),
+      A = LinearMap.ker p ∧
+        Function.Exact p (LinearMap.range p).mkQ ∧
+          Function.Surjective (LinearMap.range p).mkQ := by
+  sorry
 
 /-! The dual-lattice injections associated with an orthogonal decomposition. -/
 theorem orthogonal_direct_sum
@@ -185,18 +187,6 @@ theorem orthogonal_direct_sum
             Function.Surjective q) ∧
           (∃ q : latticeDualQuotient B (B.orthogonal A) →ₗ[ℤ] moduleCokernel g,
             Function.Surjective q ∧ Function.Exact g q) := by
-  sorry
-
-/-! The projection exact sequence underlying the orthogonal decomposition. -/
-theorem orthogonal_projection_sequence
-    (L : Type*) [AddCommGroup L] [Module ℤ L] [Module.Free ℤ L]
-    [Module.Finite ℤ L] (B : LinearMap.BilinForm ℤ L)
-    (hB : IsPositiveDefiniteIntegralForm B) (A : Submodule ℤ L)
-    (hquotient : Module.IsTorsionFree ℤ (L ⧸ A)) :
-    ∃ p : L →ₗ[ℤ] Module.Dual ℤ (B.orthogonal A),
-      submoduleInclusionRange A = LinearMap.ker p ∧
-        Function.Exact p (LinearMap.range p).mkQ ∧
-          Function.Surjective (LinearMap.range p).mkQ := by
   sorry
 
 /-! The torsion-cokernel identification for an adjoint pair with unimodular source. -/
@@ -219,7 +209,7 @@ theorem coker
 abbrev matrixCokernel {n : ℕ} (A : Matrix (Fin n) (Fin n) ℤ) : Type _ :=
   moduleCokernel (Matrix.toLin' A)
 
-/-! The `ell`-primary torsion submodule of a matrix cokernel. -/
+/-! The `ell`-torsion subgroup of a matrix cokernel. -/
 def matrixPrimaryTorsion {n : ℕ} (A : Matrix (Fin n) (Fin n) ℤ) (ell : ℕ) :
     AddSubgroup (matrixCokernel A) :=
   AddSubgroup.torsionBy (matrixCokernel A) (ell : ℤ)
@@ -232,28 +222,21 @@ def matrixPrimaryTorsionFinrank {n : ℕ} (A : Matrix (Fin n) (Fin n) ℤ) (ell 
     AddSubgroup.torsionBy.zmodModule
   Module.finrank (ZMod ell) (matrixPrimaryTorsion A ell)
 
-/-! The diagonal rescaling used to reduce the integer lemma to `m = 1`. -/
-def integerDiagonalMatrix {n : ℕ} (m : Fin n → ℤ) :
-    Matrix (Fin n) (Fin n) ℤ :=
-  by
-    classical
-    exact Matrix.diagonal m
-
 def weightedIntegerMatrix {n : ℕ} (A : Matrix (Fin n) (Fin n) ℤ)
     (m : Fin n → ℤ) : Matrix (Fin n) (Fin n) ℤ :=
   fun i j => m i * A i j * m j
 
 theorem weightedIntegerMatrix_comp {n : ℕ}
     (A : Matrix (Fin n) (Fin n) ℤ) (m : Fin n → ℤ) :
-    (Matrix.toLin' (integerDiagonalMatrix m)).comp
-        ((Matrix.toLin' A).comp (Matrix.toLin' (integerDiagonalMatrix m))) =
+    (Matrix.toLin' (Matrix.diagonal m)).comp
+        ((Matrix.toLin' A).comp (Matrix.toLin' (Matrix.diagonal m))) =
       Matrix.toLin' (weightedIntegerMatrix A m) := by
   sorry
 
 theorem diagonal_matrix_primary_torsion_finrank_zero {n : ℕ}
     (m : Fin n → ℤ) (ell : ℕ) (hell : Nat.Prime ell)
     (hcoprime : ∀ i, Nat.Coprime ell (Int.natAbs (m i))) :
-    matrixPrimaryTorsionFinrank (integerDiagonalMatrix m) ell hell = 0 := by
+    matrixPrimaryTorsionFinrank (Matrix.diagonal m) ell hell = 0 := by
   sorry
 
 /-! The vertex and edge lattices of the positive off-diagonal graph. -/
@@ -409,11 +392,14 @@ theorem graph_coboundary_kernel_finrank {n : ℕ}
       1 - n + positiveOffDiagonalEdgeCount A := by
   sorry
 
-/-! The literal coprimality condition used in the integer recurring lemma. -/
+/-!
+Coprimality of the nonzero matrix and vector entries used in the integer
+recurring lemma.  Zero coefficients impose no restriction on `ell`.
+-/
 def CoprimeToMatrixAndVector {n : ℕ} (ell : ℕ)
     (A : Matrix (Fin n) (Fin n) ℤ) (m : Fin n → ℤ) : Prop :=
-  (∀ i j, Nat.Coprime ell (Int.natAbs (A i j))) ∧
-    ∀ i, Nat.Coprime ell (Int.natAbs (m i))
+  (∀ i j, A i j ≠ 0 → Nat.Coprime ell (Int.natAbs (A i j))) ∧
+    ∀ i, m i ≠ 0 → Nat.Coprime ell (Int.natAbs (m i))
 
 /-! The finite-field dimension bound for the integer recurring matrix. -/
 theorem recurring_symmetric_integer {n : ℕ} (A : Matrix (Fin n) (Fin n) ℤ)

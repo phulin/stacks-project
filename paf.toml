@@ -2,6 +2,23 @@
 repo = "."
 sandbox = "workspace-write"
 bypass_approvals_and_sandbox = false
+reasoning_effort = "xhigh"
+
+[shepherd]
+worker_reasoning_effort = "xhigh"
+
+[stages.discover]
+reasoning_effort = "xhigh"
+max_rounds = 1
+
+[stages.formalize]
+max_rounds = 3
+
+[stages.review]
+max_rounds = 3
+
+[stages.prove]
+max_rounds = 3
 
 [sources]
 roots = ["books"]

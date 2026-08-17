@@ -41,15 +41,8 @@ theorem spectralSpace_iff_source_conditions :
   sorry
 
 /- The source's spectral-map definition is Mathlib's `IsSpectralMap`, whose
-   structure already contains continuity and compact-open preimages. -/
-
-/-- Expanded source-facing form of Mathlib's spectral-map predicate. -/
-theorem isSpectralMap_iff_source_conditions
-    {Y : Type v} [TopologicalSpace Y] {f : X → Y} :
-    IsSpectralMap f ↔
-      Continuous f ∧
-        ∀ ⦃V : Set Y⦄, IsOpen V → IsCompact V → IsCompact (f ⁻¹' V) := by
-  sorry
+   structure already contains continuity and compact-open preimages.  The
+   earlier chapter API supplies the corresponding source-facing expansion. -/
 
 /-- A source open is open for the constructible topology on a spectral space. -/
 theorem isOpen_constructibleTopology_of_isOpen [SpectralSpace X]
@@ -185,16 +178,17 @@ theorem spectral_two_point_dichotomy [SpectralSpace X] (x y : X) :
 
 /-- The eight stated conditions characterizing profinite spectral spaces.
 The unfinished ninth item in the source is intentionally not included. -/
-theorem isProfiniteSpace_iff_spectral_separation_conditions [SpectralSpace X] :
-    IsProfiniteSpace X ↔
-      T2Space X ∧
-        TotallyDisconnectedSpace X ∧
-          (∀ U : Set X, IsOpen U → IsCompact U → IsClosed U) ∧
-            (∀ ⦃x y : X⦄, x ⤳ y → x = y) ∧
-              (∀ x : X, IsClosed ({x} : Set X)) ∧
-                (∀ x : X, ∃ C : irreducibleComponents X,
-                  IsGenericPoint x (C : Set X)) ∧
-                  constructibleTopology X = (inferInstance : TopologicalSpace X) := by
+theorem isProfiniteSpace_TFAE_spectral_separation_conditions [SpectralSpace X] :
+    List.TFAE
+      [IsProfiniteSpace X,
+        T2Space X,
+        TotallyDisconnectedSpace X,
+        (∀ U : Set X, IsOpen U → IsCompact U → IsClosed U),
+        (∀ ⦃x y : X⦄, x ⤳ y → x = y),
+        (∀ x : X, IsClosed ({x} : Set X)),
+        (∀ x : X, ∃ C : irreducibleComponents X,
+          IsGenericPoint x (C : Set X)),
+        constructibleTopology X = (inferInstance : TopologicalSpace X)] := by
   sorry
 
 /-- The connected-components space of a spectral space is profinite. -/

@@ -178,11 +178,6 @@ structure BinaryQuadraticPair (k : Type u) [Field k] where
 attribute [instance] BinaryQuadraticPair.fieldK BinaryQuadraticPair.algebraK
   BinaryQuadraticPair.finiteK BinaryQuadraticPair.separableK
 
-/-- The nondegeneracy condition on the quadratic form in a pair. -/
-def binaryQuadraticPairIsNondegenerate
-    {k : Type u} [Field k] (P : BinaryQuadraticPair k) : Prop :=
-  (binaryQuadraticFormOfCoefficients P.coeffA P.coeffB P.coeffC).Nondegenerate
-
 /-- Equivalence of the pairs `(k', q)`, allowing a scalar multiple of the
 equation as well as a linear change of variables. -/
 def binaryQuadraticPairEquivalent
@@ -214,7 +209,6 @@ structure OrdinaryDoublePointPresentation
     (k : Type u) [Field k] (A : Type w) [CommRing A] [Algebra k A] where
   complete_local : IsCompleteLocalRing A
   pair : BinaryQuadraticPair.{u, v} k
-  pair_nondegenerate : binaryQuadraticPairIsNondegenerate pair
   definingSeries : MvPowerSeries (Fin 2) pair.K
   order_eq_two : definingSeries.order = 2
   initial_term :

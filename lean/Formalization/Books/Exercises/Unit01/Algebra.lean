@@ -81,7 +81,53 @@ theorem minimal_generators_eq_residue_field_dimension
       (⊤ : Submodule A M).spanFinrank =
         Module.finrank (IsLocalRing.ResidueField A)
           (IsLocalRing.ResidueField A ⊗[A] M) := by
-  sorry
+  constructor
+  · exact IsLocalRing.spanFinrank_eq_finrank_quotient (⊤ : Submodule A M)
+      Module.Finite.fg_top
+  · letI : Module (IsLocalRing.ResidueField A)
+        ((⊤ : Submodule A M) ⧸ (IsLocalRing.maximalIdeal A) •
+          (⊤ : Submodule A (⊤ : Submodule A M))) :=
+      inferInstanceAs (Module (A ⧸ IsLocalRing.maximalIdeal A) _)
+    letI : IsScalarTower A (IsLocalRing.ResidueField A)
+        ((⊤ : Submodule A M) ⧸ (IsLocalRing.maximalIdeal A) •
+          (⊤ : Submodule A (⊤ : Submodule A M))) :=
+      inferInstanceAs (IsScalarTower A (A ⧸ IsLocalRing.maximalIdeal A) _)
+    letI : IsScalarTower A (IsLocalRing.ResidueField A)
+        ((IsLocalRing.ResidueField A) ⊗[A] (⊤ : Submodule A M)) :=
+      ⟨fun a r x => x.induction_on (by simp)
+        (fun m n => by simp [smul_assoc])
+        (fun x y hx hy => by simp [hx, hy])⟩
+    letI : IsScalarTower A (IsLocalRing.ResidueField A)
+        ((IsLocalRing.ResidueField A) ⊗[A] M) :=
+      ⟨fun a r x => x.induction_on (by simp)
+        (fun m n => by simp [smul_assoc])
+        (fun x y hx hy => by simp [hx, hy])⟩
+    let e₁ : (IsLocalRing.ResidueField A) ⊗[A] (⊤ : Submodule A M) ≃ₗ[IsLocalRing.ResidueField A]
+        (⊤ : Submodule A M) ⧸ (IsLocalRing.maximalIdeal A) • (⊤ : Submodule A (⊤ : Submodule A M)) :=
+      (TensorProduct.quotTensorEquivQuotSMul (⊤ : Submodule A M)
+        (IsLocalRing.maximalIdeal A)).extendScalarsOfSurjective IsLocalRing.residue_surjective
+    let e₂ : (IsLocalRing.ResidueField A) ⊗[A] (⊤ : Submodule A M) ≃ₗ[IsLocalRing.ResidueField A]
+        (IsLocalRing.ResidueField A) ⊗[A] M :=
+      (LinearEquiv.lTensor (IsLocalRing.ResidueField A)
+        (Submodule.topEquiv (R := A) (M := M))).extendScalarsOfSurjective
+        IsLocalRing.residue_surjective
+    calc
+      (⊤ : Submodule A M).spanFinrank =
+          Module.finrank (IsLocalRing.ResidueField A)
+            ((⊤ : Submodule A M) ⧸
+              (IsLocalRing.maximalIdeal A) • (⊤ : Submodule A (⊤ : Submodule A M))) := by
+        change (⊤ : Submodule A M).spanFinrank =
+          Module.finrank (A ⧸ IsLocalRing.maximalIdeal A)
+            ((⊤ : Submodule A M) ⧸
+              (IsLocalRing.maximalIdeal A) • (⊤ : Submodule A (⊤ : Submodule A M)))
+        exact IsLocalRing.spanFinrank_eq_finrank_quotient (⊤ : Submodule A M)
+          Module.Finite.fg_top
+      _ = Module.finrank (IsLocalRing.ResidueField A)
+          ((IsLocalRing.ResidueField A) ⊗[A] (⊤ : Submodule A M)) := by
+        exact e₁.symm.finrank_eq
+      _ = Module.finrank (IsLocalRing.ResidueField A)
+          ((IsLocalRing.ResidueField A) ⊗[A] M) := by
+        exact e₂.finrank_eq
 
 /-- Minimal generator counts multiply under tensor products over a local ring. -/
 theorem minimal_generators_tensorProduct_mul
@@ -162,7 +208,16 @@ theorem primitive_root_characteristic_coprime
     {k : Type*} [Field k] {n : ℕ} (hn : 0 < n) {ζ : k}
     (hζ : IsPrimitiveRoot ζ n) :
     ringChar k = 0 ∨ Nat.Coprime (ringChar k) n := by
-  sorry
+  rcases CharP.char_is_prime_or_zero k (ringChar k) with hp | hzero
+  · right
+    apply hp.coprime_iff_not_dvd.mpr
+    intro hpn
+    have hncast : NeZero (n : k) :=
+      @IsPrimitiveRoot.neZero' k ζ _ _ n ⟨Nat.ne_of_gt hn⟩ hζ
+    apply hncast.ne
+    obtain ⟨r, hr⟩ := hpn
+    rw [hr, Nat.cast_mul, ringChar.Nat.cast_ringChar, zero_mul]
+  · exact Or.inl hzero
 
 /-- The standard Kummer irreducibility criterion gives a field quotient. -/
 theorem kummer_polynomial_quotient_is_field
@@ -554,14 +609,150 @@ theorem polynomial_valuation_negative_is_negative_degree
     ∃ n : ℕ, 0 < n ∧
       ∀ (f : Polynomial k) (hf : f ≠ 0),
         ν.value f hf = -(n : ℤ) * (f.natDegree : ℤ) := by
-  sorry
+  obtain ⟨g, hg, hgv⟩ := hneg
+  have hxneg : ν.xValue < 0 := by
+    by_contra hx
+    have hlow := polynomial_valuation_lower_bound ν g hg
+    have hs : (ν.termValues g).Nonempty := by
+      change (g.support.image (fun i : ℕ => (i : ℤ) * ν.xValue)).Nonempty
+      exact (Polynomial.support_nonempty.mpr hg).image _
+    have hnonneg : 0 ≤ ν.termMinimum g hg := by
+      change 0 ≤ (ν.termValues g).min' hs
+      apply Finset.le_min' (s := ν.termValues g) (H := hs)
+      intro z hz
+      rcases Finset.mem_image.mp hz with ⟨i, hi, rfl⟩
+      exact mul_nonneg (Int.natCast_nonneg i) (le_of_not_gt hx)
+    exact False.elim ((not_lt_of_ge hnonneg) (lt_of_le_of_lt hlow hgv))
+  let n : ℕ := Int.toNat (-ν.xValue)
+  have hncast : (n : ℤ) = -ν.xValue := by
+    dsimp [n]
+    rw [Int.toNat_of_nonneg (le_of_lt (neg_pos.mpr hxneg))]
+  have hnpos : 0 < n := by
+    exact_mod_cast (show (0 : ℤ) < (n : ℤ) by rw [hncast]; exact neg_pos.mpr hxneg)
+  refine ⟨n, hnpos, ?_⟩
+  intro f hf
+  have hvalue := polynomial_valuation_eq_lower_bound_of_xValue_ne_zero ν hf
+    (ne_of_lt hxneg)
+  have hs : f.support.Nonempty := Polynomial.support_nonempty.mpr hf
+  have hi : f.natDegree ∈ f.support := by
+    rw [Polynomial.natDegree_eq_support_max' hf]
+    exact Finset.max'_mem _ _
+  have hterm : ν.termMinimum f hf = (f.natDegree : ℤ) * ν.xValue := by
+    apply le_antisymm
+    · change (ν.termValues f).min' _ ≤ _
+      apply Finset.min'_le
+      exact Finset.mem_image.mpr ⟨f.natDegree, hi, rfl⟩
+    · change _ ≤ (ν.termValues f).min' _
+      apply Finset.le_min'
+      intro z hz
+      rcases Finset.mem_image.mp hz with ⟨j, hj, rfl⟩
+      have hj' : j ≤ f.natDegree := Polynomial.le_natDegree_of_mem_supp j hj
+      have hj'' : (j : ℤ) ≤ (f.natDegree : ℤ) := by exact_mod_cast hj'
+      exact mul_le_mul_of_nonpos_right hj'' (le_of_lt hxneg)
+  calc
+    ν.value f hf = ν.termMinimum f hf := hvalue
+    _ = (f.natDegree : ℤ) * ν.xValue := hterm
+    _ = -(n : ℤ) * (f.natDegree : ℤ) := by rw [hncast]; ring
 
 /-- For nonnegative `ν(X)`, the positive-value set is a prime ideal. -/
 theorem polynomial_valuation_positiveSet_is_prime
     {k : Type*} [Field k] (ν : PolynomialValuation k) (hx : 0 ≤ ν.xValue) :
     ∃ I : Ideal (Polynomial k),
       (I : Set (Polynomial k)) = ν.positiveSet ∧ I.IsPrime := by
-  sorry
+  have hterm_nonneg : ∀ (f : Polynomial k) (hf : f ≠ 0),
+      0 ≤ ν.termMinimum f hf := by
+    intro f hf
+    have hs : (ν.termValues f).Nonempty := by
+      change (f.support.image (fun i : ℕ => (i : ℤ) * ν.xValue)).Nonempty
+      exact (Polynomial.support_nonempty.mpr hf).image _
+    change 0 ≤ (ν.termValues f).min' hs
+    apply Finset.le_min' (s := ν.termValues f) (H := hs)
+    intro z hz
+    rcases Finset.mem_image.mp hz with ⟨i, hi, rfl⟩
+    exact mul_nonneg (Int.natCast_nonneg i) hx
+  have hvalue_nonneg : ∀ (f : Polynomial k) (hf : f ≠ 0),
+      0 ≤ ν.value f hf := by
+    intro f hf
+    exact (hterm_nonneg f hf).trans (polynomial_valuation_lower_bound ν f hf)
+  let I : Ideal (Polynomial k) :=
+    { carrier := ν.positiveSet
+      zero_mem' := by
+        change (0 : Polynomial k) = 0 ∨ _
+        exact Or.inl rfl
+      add_mem' := by
+        intro f g hf hg
+        change f = 0 ∨ ∃ h : f ≠ 0, 0 < ν.value f h at hf
+        change g = 0 ∨ ∃ h : g ≠ 0, 0 < ν.value g h at hg
+        change f + g = 0 ∨ ∃ h : f + g ≠ 0, 0 < ν.value (f + g) h
+        rcases hf with rfl | ⟨hf, hfp⟩
+        · simpa using hg
+        rcases hg with rfl | ⟨hg, hgp⟩
+        · exact Or.inr ⟨by simpa using hf, by simpa using hfp⟩
+        by_cases hfg : f + g = 0
+        · exact Or.inl hfg
+        · right
+          refine ⟨hfg, ?_⟩
+          exact lt_of_lt_of_le (lt_min hfp hgp) (ν.map_add_min' hf hg hfg)
+      smul_mem' := by
+        intro a f hf
+        change f = 0 ∨ ∃ h : f ≠ 0, 0 < ν.value f h at hf
+        change a * f = 0 ∨ ∃ h : a * f ≠ 0, 0 < ν.value (a * f) h
+        rcases hf with rfl | ⟨hf, hfp⟩
+        · simp
+        by_cases ha : a = 0
+        · simp [ha]
+        · right
+          have haf : a * f ≠ 0 := mul_ne_zero ha hf
+          refine ⟨haf, ?_⟩
+          have hmul := ν.map_mul' ha hf
+          change ν.value (a * f) haf = ν.value a ha + ν.value f hf at hmul
+          rw [hmul]
+          exact lt_of_lt_of_le hfp (le_add_of_nonneg_left (hvalue_nonneg a ha)) }
+  have hone : (1 : Polynomial k) ∉ I := by
+    change (1 : Polynomial k) ∉ ν.positiveSet
+    intro h
+    rcases h with h | ⟨h1, hpos⟩
+    · exact one_ne_zero h
+    · have hval : ν.value (1 : Polynomial k) h1 = 0 := by
+        simpa [PolynomialValuation.value] using
+          (ν.map_C' (c := (1 : k)) one_ne_zero)
+      exact (lt_irrefl 0) (hval ▸ hpos)
+  have hIne : I ≠ (⊤ : Ideal (Polynomial k)) := by
+    intro h
+    apply hone
+    rw [h]
+    trivial
+  refine ⟨I, ?_, ⟨hIne, ?_⟩⟩
+  · rfl
+  · intro f g hfg
+    change f * g = 0 ∨ ∃ h : f * g ≠ 0, 0 < ν.value (f * g) h at hfg
+    change (f = 0 ∨ ∃ h : f ≠ 0, 0 < ν.value f h) ∨
+      (g = 0 ∨ ∃ h : g ≠ 0, 0 < ν.value g h)
+    rcases hfg with hfg | ⟨hfg, hprod⟩
+    · rcases mul_eq_zero.mp hfg with rfl | rfl
+      · exact Or.inl (Or.inl rfl)
+      · exact Or.inr (Or.inl rfl)
+    have hf : f ≠ 0 := by
+      intro hf
+      subst f
+      exact hfg (zero_mul g)
+    have hg : g ≠ 0 := by
+      intro hg
+      subst g
+      exact hfg (mul_zero f)
+    have hmap := ν.map_mul' hf hg
+    change ν.value (f * g) hfg = ν.value f hf + ν.value g hg at hmap
+    have hsum : 0 < ν.value f hf + ν.value g hg := by
+      rw [← hmap]
+      exact hprod
+    by_cases hfp : 0 < ν.value f hf
+    · exact Or.inl (Or.inr ⟨hf, hfp⟩)
+    · right
+      have hf0 : ν.value f hf ≤ 0 := le_of_not_gt hfp
+      have hgp : 0 < ν.value g hg := by
+        by_contra hgp
+        exact (not_lt_of_ge (add_nonpos hf0 (le_of_not_gt hgp))) hsum
+      exact Or.inr ⟨hg, hgp⟩
 
 /-- All such valuations are either trivial, degree valuations, or orders at an irreducible. -/
 theorem polynomial_valuation_classification
@@ -614,7 +805,74 @@ def IsProductOfTwoNonzeroRings (A : CommRingCat.{u}) : Prop :=
 /-- A product decomposition is equivalent to a nontrivial idempotent. -/
 theorem product_ring_iff_nontrivial_idempotent (A : CommRingCat.{u}) :
     IsProductOfTwoNonzeroRings A ↔ ∃ e : A, IsNontrivialIdempotent e := by
-  sorry
+  constructor
+  · rintro ⟨B, C, hB, hC, ⟨e⟩⟩
+    let z : A := e.symm (1, 0)
+    have hz : IsIdempotentElem z := by
+      change z * z = z
+      apply e.injective
+      simp [z]
+    have hz0 : z ≠ 0 := by
+      intro h
+      have h' : ((1, 0) : (B × C)) = (0, 0) := by
+        have h'' := congrArg e h
+        calc
+          (1, 0) = e z := by simp [z]
+          _ = e 0 := h''
+          _ = (0, 0) := by
+            rw [map_zero]
+            change ((0 : B), (0 : C)) = (0, 0)
+            rfl
+      exact one_ne_zero (congrArg Prod.fst h')
+    have hz1 : z ≠ 1 := by
+      intro h
+      have h' : ((1, 0) : (B × C)) = (1, 1) := by
+        have h'' := congrArg e h
+        calc
+          (1, 0) = e z := by simp [z]
+          _ = e 1 := h''
+          _ = (1, 1) := by
+            rw [map_one]
+            change ((1 : B), (1 : C)) = (1, 1)
+            rfl
+      exact zero_ne_one (congrArg Prod.snd h')
+    exact ⟨z, hz, hz0, hz1⟩
+  · rintro ⟨e, he, he0, he1⟩
+    have hunit_e : ¬ IsUnit e := by
+      intro hunit
+      exact he1 ((IsIdempotentElem.iff_eq_one_of_isUnit hunit).mp he)
+    have hunit_one_sub : ¬ IsUnit (1 - e) := by
+      intro hunit
+      have hsub : IsIdempotentElem (1 - e) := he.one_sub
+      have heq : 1 - e = 1 :=
+        (IsIdempotentElem.iff_eq_one_of_isUnit hunit).mp hsub
+      apply he0
+      calc
+        e = 1 - (1 - e) := by abel
+        _ = 1 - 1 := by rw [heq]
+        _ = 0 := sub_self 1
+    let B : CommRingCat := CommRingCat.of (A ⧸ Ideal.span ({e} : Set A))
+    let C : CommRingCat := CommRingCat.of (A ⧸ Ideal.span ({1 - e} : Set A))
+    have hB : Nontrivial B := by
+      change Nontrivial (A ⧸ Ideal.span ({e} : Set A))
+      exact Ideal.Quotient.nontrivial_iff.mpr (Ideal.span_singleton_ne_top hunit_e)
+    have hC : Nontrivial C := by
+      change Nontrivial (A ⧸ Ideal.span ({1 - e} : Set A))
+      exact Ideal.Quotient.nontrivial_iff.mpr
+        (Ideal.span_singleton_ne_top hunit_one_sub)
+    have hsub : IsIdempotentElem (1 - e) := he.one_sub
+    have hsum : e + (1 - e) = 1 := by abel
+    have hprod : e * (1 - e) = 0 := by simp [mul_sub, he.eq]
+    let q : A →+* (A ⧸ Ideal.span ({e} : Set A)) ×
+        (A ⧸ Ideal.span ({1 - e} : Set A)) :=
+      (Ideal.Quotient.mk (Ideal.span ({e} : Set A))).prod
+        (Ideal.Quotient.mk (Ideal.span ({1 - e} : Set A)))
+    have hq : Function.Bijective q := by
+      exact RingHom.prod_bijective_of_isIdempotentElem he hsub hsum hprod
+    refine ⟨B, C, hB, hC, ?_⟩
+    change Nonempty (A ≃+* (A ⧸ Ideal.span ({e} : Set A)) ×
+      (A ⧸ Ideal.span ({1 - e} : Set A)))
+    exact ⟨RingEquiv.ofBijective q hq⟩
 
 /-! ## Lifting idempotents -/
 
@@ -642,10 +900,13 @@ theorem quotient_idempotent_map_bijective {A : Type*} [CommRing A] (I : Ideal A)
     exact sub_eq_zero.mpr (congrArg Subtype.val he)
   · intro e
     obtain ⟨x, hx⟩ := Ideal.Quotient.mk_surjective e.1
+    have heq : IsIdempotentElem (q x) := by
+      rw [hx]
+      exact e.2
     obtain ⟨y, hy, hqy⟩ := exists_isIdempotentElem_eq_of_ker_isNilpotent
-      q hker (q x) ⟨x, rfl⟩ e.2
+      q hker (q x) ⟨x, rfl⟩ heq
     refine ⟨⟨y, hy⟩, ?_⟩
     apply Subtype.ext
-    rw [show q = Ideal.Quotient.mk I from rfl, hqy, hx]
+    exact hqy.trans hx
 
 end Formalization.Books.Exercises.Unit01

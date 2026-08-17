@@ -104,9 +104,7 @@ theorem algebraization_unique_for_universal_deformation
     (D : FormalVersalSituation C)
     (huniversal : D.universal) (W₁ W₂ : AlgebraizationWitness D) :
     Nonempty (AlgebraizationComparison W₁ W₂) := by
-  exact ⟨{
-    completionIso := W₁.formalCompletionIso ≪≫ W₂.formalCompletionIso.symm
-    identifiesFormalElements := (huniversal = huniversal) }⟩
+  sorry
 
 structure FormalContractionSituation (C : Type u) [Category.{v} C]
     [StackCategory C] where
@@ -259,8 +257,7 @@ theorem artin_axioms_are_stable_under_composition
     {X Y Z : C} (f : X ⟶ Y) (g : Y ⟶ Z)
     (hf : ArtinAxiomForMorphism f) (hg : ArtinAxiomForMorphism g) :
     Nonempty (ArtinAxiomForMorphism (f ≫ g)) := by
-  exact ⟨⟨hf.algebraizationAxiom = hf.algebraizationAxiom,
-    hg.approximationAxiom = hg.approximationAxiom⟩⟩
+  sorry
 
 structure RepresentableMorphismDeformationData
     {C : Type u} [Category.{v} C] [StackCategory C]

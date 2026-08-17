@@ -28,7 +28,7 @@ open Formalization.Books.Categories.Unit35
 open Formalization.Books.Categories.Unit36
 open Formalization.Books.Categories.Unit37
 
-universe vC uC vS uS v u
+universe vC uC vS uS u₁ v₁ v u
 
 noncomputable section
 
@@ -131,7 +131,7 @@ all fibres of its apex are discrete. -/
 structure FibredInSetsTwoFibreProduct
     {C : Cat.{v, u}} {X Y S : FibredCategoryOver C}
     (F : FibredCategoryOverHom X S) (G : FibredCategoryOverHom Y S) where
-  product : FibredTwoFibreProduct F G
+  product : FibredTwoFibreProduct.{u₁, v₁, v, u} F G
   fibres_are_discrete : ∀ U : C,
     IsDiscrete (Functor.Fiber product.diagram.base U)
 
@@ -172,7 +172,7 @@ def setPresheafObjectValue
     {C : Type uC} [Category.{vC} C]
     (F : Cᵒᵖ ⥤ Type uS) (X : setPresheafCategory F) :
     F.obj (Opposite.op X.base) :=
-  X.fiber.as
+  Discrete.as X.fiber
 
 @[simp]
 theorem setPresheafObjectValue_mk
@@ -200,7 +200,7 @@ def setPresheafHomOf
       setPresheafObjectValue F X) : X ⟶ Y where
   base := f
   fiber := by
-    change X.fiber ⟶ Discrete.mk (F.map f.op Y.fiber.as)
+    change X.fiber ⟶ Discrete.mk (F.map f.op (Discrete.as Y.fiber))
     exact Discrete.eqToHom h.symm
 
 theorem setPresheafHom_fibre_condition

@@ -1,0 +1,4 @@
+interface:
+  display_name: "PAF"
+  short_description: "Inspect and customize PAF orchestration state"
+  default_prompt: "Use $paf to inspect this project and make a safe, targeted change to its orchestration state."

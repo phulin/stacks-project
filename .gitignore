@@ -9,7 +9,16 @@
 *.toc
 *.pyc
 *~
-.*
+/.codex/
+/.nvimlog
+/.paf/
+/.ruff_cache/
+/lean/.lake/
+/.agents/*
+!/.agents/skills/
+/.agents/skills/*
+!/.agents/skills/paf/
+!/.agents/skills/paf/**
 *.patch
 *.gz
 *.bz2

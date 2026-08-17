@@ -1,7 +1,6 @@
 import Formalization.Books.Categories.Unit21.LimitsAndColimitsOverPreorderedSets
 import Mathlib.Algebra.Category.ModuleCat.Basic
 import Mathlib.Algebra.Category.ModuleCat.Colimits
-import Mathlib.Algebra.Category.ModuleCat.Limits
 import Mathlib.Algebra.DirectSum.Module
 import Mathlib.CategoryTheory.Functor.OfSequence
 import Mathlib.CategoryTheory.Limits.Constructions.EventuallyConstant
@@ -123,11 +122,17 @@ def zSquaredProjection :
 def zSquaredSystem : ℕ ⥤ AddCommGrpCat :=
   Functor.ofSequence (fun _ : ℕ => zSquaredTransition)
 
-/-- The first example has an essentially constant value isomorphic to `ℤ`. -/
+/-- The cocone exhibiting the value `ℤ` in the first example. -/
+def zSquaredCocone : Cocone zSquaredSystem where
+  pt := AddCommGrpCat.of ℤ
+  ι :=
+    { app := fun _ => zSquaredProjection
+      naturality := by
+        sorry }
+
+/-- The first example is essentially constant with value `ℤ`. -/
 theorem zSquaredSystem_is_essentiallyConstant :
-    ∃ c : Cocone zSquaredSystem,
-      IsEssentiallyConstantInd zSquaredSystem c ∧
-        Nonempty (c.pt ≅ AddCommGrpCat.of ℤ) := by
+    IsEssentiallyConstantInd zSquaredSystem zSquaredCocone := by
   sorry
 
 /-- Each displayed transition in the first example has a nonzero kernel element. -/

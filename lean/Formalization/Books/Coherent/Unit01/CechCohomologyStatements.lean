@@ -1,5 +1,6 @@
 import Mathlib.Algebra.Category.Grp.Abelian
 import Mathlib.Algebra.Category.Grp.CartesianMonoidal
+import Mathlib.Algebra.Category.ModuleCat.Localization
 import Mathlib.Algebra.Homology.DerivedCategory.Ext.Basic
 import Mathlib.Algebra.Homology.ShortComplex.Abelian
 import Mathlib.Algebra.Category.ModuleCat.Sheaf.Quasicoherent
@@ -9,7 +10,9 @@ import Mathlib.AlgebraicGeometry.Morphisms.Affine
 import Mathlib.AlgebraicGeometry.Modules.Sheaf
 import Mathlib.AlgebraicGeometry.Modules.Tilde
 import Mathlib.CategoryTheory.Abelian.RightDerived
+import Mathlib.CategoryTheory.Functor.ReflectsIso.Exact
 import Mathlib.CategoryTheory.Sites.SheafCohomology.Cech
+import Formalization.Books.Algebra.Unit24.GlueingFunctions
 
 /-!
 # Cohomology of Schemes, Chapter 1: Čech cohomology
@@ -124,6 +127,7 @@ structure AugmentedCechExactnessData {Y : Scheme.{u}} {ι : Type u}
     (M : Y.Modules) (U : ι → Y.Opens) : Prop where
   augmentation_is_cycle :
     cechAugmentation M U ≫ (cechComplex M U).d 0 1 = 0
+  augmentation_injective : Function.Injective (cechAugmentation M U)
   exact_at_zero :
     (ShortComplex.mk (cechAugmentation M U) ((cechComplex M U).d 0 1)
       augmentation_is_cycle).Exact
@@ -134,65 +138,112 @@ def AugmentedCechExactness {Y : Scheme.{u}} {hY : IsAffine Y}
     (𝒰 : StandardOpenCover Y hY) (M : Y.Modules) : Prop :=
   AugmentedCechExactnessData M 𝒰.basicOpenFamily
 
-/-- Standard affine covers have exact augmented Čech complexes for
-quasi-coherent sheaves. -/
-/- TODO(proof agents): do this after `Algebra.Unit24.cover_module_exact`.
-Add an isomorphism from the sections of `M` on each finite intersection of
-standard opens to the corresponding iterated localized module, and prove that
-it intertwines the augmentation and alternating Čech differentials.  Transport
-the module-cover exactness across this complex isomorphism; use the localized
-contracting-homotopy data below for positive degrees. -/
-theorem standard_open_cover_augmented_cech_exact {Y : Scheme.{u}} {hY : IsAffine Y}
-    (𝒰 : StandardOpenCover Y hY) (M : Y.Modules)
-    [SheafOfModules.IsQuasicoherent (R := Y.ringCatSheaf) M] :
-    AugmentedCechExactness 𝒰 M := by
+/-!
+The proof ladder for `standard_open_cover_augmented_cech_exact` is:
+
+1. Unit24 gives injectivity and exactness of `M → C⁰ → C¹`.
+2. The quasi-coherent sections/localization comparison transports that
+   truncation to the geometric Čech augmentation.
+3. `standardOpenCechModuleComplex` retains the global-section module structure
+   on the entire Čech complex.
+4. Localize that complex at every prime, insert an index whose cover function
+   becomes a unit, and obtain a positive contracting homotopy.
+5. Contractibility gives prime-localized exactness; primewise detection gives
+   exactness of the module complex; forgetting scalars gives exactness of the
+   geometric Čech complex.
+6. Combine the degree-zero and positive-degree branches in the final wrapper.
+-/
+
+/-- The restriction maps from global sections to a standard-open Čech
+complex form an augmentation. -/
+/- TODO(proof agents -- leaf: augmentation compatibility): unfold the degree
+zero and degree one terms of `CategoryTheory.cechComplexFunctor`.  For every
+ordered pair of basic opens, both composites are restriction from `⊤` to the
+same intersection, so the two summands in the alternating differential cancel.
+No localization exactness input is needed for this leaf. -/
+theorem standard_open_cech_augmentation_is_cycle {Y : Scheme.{u}}
+    {hY : IsAffine Y} (𝒰 : StandardOpenCover Y hY) (M : Y.Modules) :
+    cechAugmentation M 𝒰.basicOpenFamily ≫
+      (cechComplex M 𝒰.basicOpenFamily).d 0 1 = 0 := by
   sorry
 
-/-- The affine-open form of augmented Čech exactness. -/
-theorem affine_open_augmented_cech_exact {X : Scheme.{u}}
-    (𝒰 : StandardOpenCoverOfAffineOpen X) (M : X.Modules)
-    [SheafOfModules.IsQuasicoherent (R := X.ringCatSheaf) M] :
-    AugmentedCechExactness 𝒰.cover (M.restrict 𝒰.U.ι) := by
-  exact standard_open_cover_augmented_cech_exact 𝒰.cover (M.restrict 𝒰.U.ι)
+/-- The precise algebraic truncation supplied by Algebra Unit24 for the module
+of global sections.  This deliberately says nothing about Čech degrees above
+one. -/
+def StandardOpenModuleTruncationExact {Y : Scheme.{u}} {hY : IsAffine Y}
+    (𝒰 : StandardOpenCover Y hY) (M : Y.Modules) : Prop :=
+  Function.Injective
+      (Formalization.Books.Algebra.Unit24.standardCoverModuleAlpha
+        𝒰.function Γ(M, ⊤)) ∧
+    Function.Exact
+      (Formalization.Books.Algebra.Unit24.standardCoverModuleAlpha
+        𝒰.function Γ(M, ⊤))
+      (Formalization.Books.Algebra.Unit24.standardCoverModuleBeta
+        𝒰.function Γ(M, ⊤))
 
-/-! ### Cohomology on affine opens -/
+/-- Unit24 provides exactly the algebraic degree-zero truncation needed here. -/
+theorem standard_open_module_truncation_exact {Y : Scheme.{u}} {hY : IsAffine Y}
+    (𝒰 : StandardOpenCover Y hY) (M : Y.Modules) :
+    StandardOpenModuleTruncationExact 𝒰 M := by
+  exact Formalization.Books.Algebra.Unit24.cover_module_exact
+    𝒰.function 𝒰.span_eq_top Γ(M, ⊤)
 
-/-- Quasi-coherent sheaves have no positive cohomology on affine opens. -/
-/- TODO(proof agents): derive this only after augmented Čech exactness.  The
-missing bridge should identify derived global sections on an affine scheme with
-the cohomology of a finite standard-open Čech complex (or invoke the existing
-Mathlib affine quasi-coherent vanishing theorem, if an exact matching API is
-available), then use `standard_open_cover_augmented_cech_exact`. -/
-theorem quasi_coherent_affine_cohomology_zero {X : Scheme.{u}}
-    (M : X.Modules)
-    [SheafOfModules.IsQuasicoherent (R := X.ringCatSheaf) M]
-    (U : X.Opens) (hU : IsAffineOpen U)
-    [CategoryTheory.HasExt.{u} (U : Scheme).Modules] {n : ℕ} (hn : 0 < n) :
-    IsZero (schemeCohomologyOn M U n) := by
+/-- Transport the algebraic localization sequence to the augmentation and
+degree-zero differential of the geometric Čech complex. -/
+/- TODO(proof agents -- leaf: sections/localization bridge): for the
+quasi-coherent `M`, construct the natural linear equivalences
+
+  `M(D(f_i)) ≃ M(Y)_{f_i}` and
+  `M(D(f_i) ∩ D(f_j)) ≃ M(Y)_{f_i f_j}`,
+
+including the comparison between Mathlib's finite-intersection sections and
+`Algebra.Unit24.standardCoverJointModule`.  Prove that these equivalences
+intertwine `cechAugmentation` and the degree-zero Čech differential with
+`standardCoverModuleAlpha` and `standardCoverModuleBeta`.  Only then transport
+the two conclusions of `Algebra.Unit24.cover_module_exact 𝒰.function
+𝒰.span_eq_top`.  That upstream theorem currently contains a proof placeholder,
+so this leaf must remain an explicit obligation under no-`sorry` guardrails.
+It supplies only the three-term truncation `M → C⁰ → C¹` (injectivity of
+the first map and exactness at `C⁰`); it supplies no `ExactAt n` for positive
+complex degrees, which is deliberately the separate Coherent-local
+contracting-homotopy leaf below. -/
+theorem standard_open_cech_degree_zero_via_localization {Y : Scheme.{u}}
+    {hY : IsAffine Y} (𝒰 : StandardOpenCover Y hY) (M : Y.Modules)
+    [SheafOfModules.IsQuasicoherent (R := Y.ringCatSheaf) M]
+    (hcycle : cechAugmentation M 𝒰.basicOpenFamily ≫
+      (cechComplex M 𝒰.basicOpenFamily).d 0 1 = 0)
+    (htruncation : StandardOpenModuleTruncationExact 𝒰 M) :
+    Function.Injective (cechAugmentation M 𝒰.basicOpenFamily) ∧
+      (ShortComplex.mk (cechAugmentation M 𝒰.basicOpenFamily)
+        ((cechComplex M 𝒰.basicOpenFamily).d 0 1) hcycle).Exact := by
   sorry
 
-/-! ### The contracting-homotopy identity -/
-
-/-- A contracting homotopy in the positive degrees of a cochain complex.
-
-For degree `n + 1`, the displayed equation is the categorical form of
-`d h + h d = 1`. -/
-structure PositiveContractingHomotopy
-    (K : CochainComplex AddCommGrpCat.{u} ℕ) where
+/-- A contracting homotopy in the positive degrees of a cochain complex. -/
+structure PositiveContractingHomotopy {C : Type u} [Category.{v} C] [Preadditive C]
+    (K : CochainComplex C ℕ) where
   homotopy : ∀ n : ℕ, K.X (n + 1) ⟶ K.X n
   identity : ∀ n : ℕ,
     homotopy n ≫ K.d n (n + 1) + K.d (n + 1) (n + 2) ≫ homotopy (n + 1) = 𝟙 _
 
 /-- The identity supplied by a positive contracting homotopy. -/
 theorem PositiveContractingHomotopy.identity_at
-    {K : CochainComplex AddCommGrpCat.{u} ℕ} (h : PositiveContractingHomotopy K)
-    (n : ℕ) :
+    {C : Type u} [Category.{v} C] [Preadditive C] {K : CochainComplex C ℕ}
+    (h : PositiveContractingHomotopy K) (n : ℕ) :
     h.homotopy n ≫ K.d n (n + 1) + K.d (n + 1) (n + 2) ≫ h.homotopy (n + 1) = 𝟙 _ :=
   h.identity n
 
-/-- The choice data used in the source's localized Čech argument.  After
-choosing a prime, this records an index whose defining function avoids it;
-the corresponding contracting homotopy is constructed separately. -/
+/-- A positive contracting homotopy gives exactness in every positive degree. -/
+/- TODO(proof agents -- leaf: abstract homotopy-to-exactness): write a positive
+degree as `n + 1`, use `h.identity n`, and show every cycle is the image under
+the following differential of its image under `h.homotopy n`.  The categorical
+version can be proved through `ShortComplex.exact_iff_fIsKernel` or by showing
+the homology object is zero. -/
+theorem PositiveContractingHomotopy.exactAt
+    {C : Type u} [Category.{v} C] [Abelian C] {K : CochainComplex C ℕ}
+    (h : PositiveContractingHomotopy K) (n : ℕ) (hn : 0 < n) : K.ExactAt n := by
+  sorry
+
+/-- The choice data used in the source's localized Čech argument. -/
 structure LocalizedCechHomotopyData {Y : Scheme.{u}} {hY : IsAffine Y}
     (𝒰 : StandardOpenCover Y hY) (p : PrimeSpectrum (Γ(Y, ⊤))) where
   fixed : Fin 𝒰.n
@@ -217,6 +268,192 @@ theorem localized_cech_homotopy_data_nonempty {Y : Scheme.{u}} {hY : IsAffine Y}
   rcases localized_cech_index_exists 𝒰 p with ⟨i, hi⟩
   exact ⟨{ fixed := i, fixed_not_mem := hi }⟩
 
+/-- The Čech complex with its natural linear structure over the ring of global
+sections.  Its underlying additive complex is the geometric Čech complex. -/
+/- TODO(proof agents -- construction leaf: global-linear Čech model): apply
+`CategoryTheory.cechComplexFunctor` to the underlying presheaf of
+
+  `SheafOfModules.forgetToSheafModuleCat Y.ringCatSheaf (.op ⊤)
+    (Limits.initialOpOfTerminal Limits.isTerminalTop) |>.obj M`.
+
+This existing functor performs the required restriction of scalars from every
+`Γ(Y, V)` to `Γ(Y, ⊤)` and makes all restriction maps globally linear. -/
+noncomputable def standardOpenCechModuleComplex {Y : Scheme.{u}} {hY : IsAffine Y}
+    (𝒰 : StandardOpenCover Y hY) (M : Y.Modules) :
+    CochainComplex (ModuleCat.{u} Γ(Y, ⊤)) ℕ := by
+  sorry
+
+/-- Forgetting the global-section module structure recovers Mathlib's Čech
+complex, including its alternating differentials. -/
+/- TODO(proof agents -- leaf: underlying-complex comparison): construct the
+degreewise identity isomorphisms and prove compatibility with every coface and
+therefore with the alternating sums. -/
+noncomputable def standardOpenCechModuleComplex_forget_iso {Y : Scheme.{u}}
+    {hY : IsAffine Y} (𝒰 : StandardOpenCover Y hY) (M : Y.Modules) :
+    ((forget₂ (ModuleCat.{u} Γ(Y, ⊤)) AddCommGrpCat.{u}).mapHomologicalComplex
+        (ComplexShape.up ℕ)).obj (standardOpenCechModuleComplex 𝒰 M) ≅
+      cechComplex M 𝒰.basicOpenFamily := by
+  sorry
+
+/-- The global-linear Čech complex localized at one prime. -/
+noncomputable def primeLocalizedStandardOpenCechComplex {Y : Scheme.{u}}
+    {hY : IsAffine Y} (𝒰 : StandardOpenCover Y hY) (M : Y.Modules)
+    (p : PrimeSpectrum (Γ(Y, ⊤))) :
+    CochainComplex (ModuleCat.{u} (Localization p.asIdeal.primeCompl)) ℕ :=
+  ((ModuleCat.localizedModuleFunctor.{u} p.asIdeal.primeCompl).mapHomologicalComplex
+    (ComplexShape.up ℕ)).obj (standardOpenCechModuleComplex 𝒰 M)
+
+/-- The degreewise index-insertion map on the prime-localized Čech complex. -/
+/- TODO(proof agents -- construction leaf: localized insertion map): identify
+localization of each finite product with the product of the localized terms.
+Quasi-coherence identifies the factor indexed by `i₀, ..., iₙ` with the
+iterated localization of `Γ(M, ⊤)` at the corresponding cover functions.
+Because `choice.fixed_not_mem` makes the fixed function a unit at `p`, dropping
+that factor gives the required map
+`h(s) i₀ ... iₙ := s(choice.fixed, i₀, ..., iₙ)`. -/
+noncomputable def standard_open_prime_localized_homotopyMap
+    {Y : Scheme.{u}} {hY : IsAffine Y} (𝒰 : StandardOpenCover Y hY)
+    (M : Y.Modules) [SheafOfModules.IsQuasicoherent (R := Y.ringCatSheaf) M]
+    (p : PrimeSpectrum (Γ(Y, ⊤))) (choice : LocalizedCechHomotopyData 𝒰 p)
+    (n : ℕ) :
+    (primeLocalizedStandardOpenCechComplex 𝒰 M p).X (n + 1) ⟶
+      (primeLocalizedStandardOpenCechComplex 𝒰 M p).X n := by
+  sorry
+
+/-- The localized insertion maps satisfy `d h + h d = 1`. -/
+/- TODO(proof agents -- leaf: alternating-sign identity): expand the Čech
+differential as the alternating sum of face maps.  The term which removes the
+inserted fixed index is the identity; every other term occurs twice with
+opposite signs.  This is the textbook computation verbatim. -/
+theorem standard_open_prime_localized_homotopy_identity
+    {Y : Scheme.{u}} {hY : IsAffine Y} (𝒰 : StandardOpenCover Y hY)
+    (M : Y.Modules) [SheafOfModules.IsQuasicoherent (R := Y.ringCatSheaf) M]
+    (p : PrimeSpectrum (Γ(Y, ⊤))) (choice : LocalizedCechHomotopyData 𝒰 p)
+    (n : ℕ) :
+    standard_open_prime_localized_homotopyMap 𝒰 M p choice n ≫
+        (primeLocalizedStandardOpenCechComplex 𝒰 M p).d n (n + 1) +
+      (primeLocalizedStandardOpenCechComplex 𝒰 M p).d (n + 1) (n + 2) ≫
+        standard_open_prime_localized_homotopyMap 𝒰 M p choice (n + 1) = 𝟙 _ := by
+  sorry
+
+/-- Insertion of an index whose cover function is a unit after localization
+contracts the prime-localized Čech complex. -/
+noncomputable def standard_open_prime_localized_contracting_homotopy
+    {Y : Scheme.{u}} {hY : IsAffine Y} (𝒰 : StandardOpenCover Y hY)
+    (M : Y.Modules) [SheafOfModules.IsQuasicoherent (R := Y.ringCatSheaf) M]
+    (p : PrimeSpectrum (Γ(Y, ⊤))) :
+    PositiveContractingHomotopy (primeLocalizedStandardOpenCechComplex 𝒰 M p) := by
+  let choice := Classical.choice (localized_cech_homotopy_data_nonempty 𝒰 p)
+  exact
+    { homotopy := standard_open_prime_localized_homotopyMap 𝒰 M p choice
+      identity := standard_open_prime_localized_homotopy_identity 𝒰 M p choice }
+
+/-- Each prime localization of the Čech module complex is exact in positive
+degrees. -/
+theorem standard_open_prime_localized_positive_exact
+    {Y : Scheme.{u}} {hY : IsAffine Y} (𝒰 : StandardOpenCover Y hY)
+    (M : Y.Modules) [SheafOfModules.IsQuasicoherent (R := Y.ringCatSheaf) M]
+    (p : PrimeSpectrum (Γ(Y, ⊤))) (n : ℕ) (hn : 0 < n) :
+    (primeLocalizedStandardOpenCechComplex 𝒰 M p).ExactAt n := by
+  exact (standard_open_prime_localized_contracting_homotopy 𝒰 M p).exactAt n hn
+
+/-- Exactness of a complex of modules can be checked after localization at
+every prime. -/
+/- TODO(proof agents -- leaf: primewise reflection of exactness): prove that
+the family `ModuleCat.localizedModuleFunctor p.asIdeal.primeCompl`, indexed by
+`PrimeSpectrum Γ(Y, ⊤)`, jointly reflects isomorphisms.  Then apply
+`JointlyReflectIsomorphisms.exactAt_iff`; exactness of each localization functor
+is already supplied by `ModuleCat.localizedModuleFunctor`. -/
+theorem standard_open_cech_module_exactAt_of_prime_localized
+    {Y : Scheme.{u}} {hY : IsAffine Y} (𝒰 : StandardOpenCover Y hY)
+    (M : Y.Modules) (n : ℕ)
+    (hlocal : ∀ p : PrimeSpectrum (Γ(Y, ⊤)),
+      (primeLocalizedStandardOpenCechComplex 𝒰 M p).ExactAt n) :
+    (standardOpenCechModuleComplex 𝒰 M).ExactAt n := by
+  sorry
+
+/-- Transfer exactness from the global-linear model back to the geometric
+Čech complex. -/
+/- TODO(proof agents -- leaf: forget-and-transport): map exactness through
+`forget₂ (ModuleCat Γ(Y, ⊤)) AddCommGrpCat`, then transport it across
+`standardOpenCechModuleComplex_forget_iso` using `ExactAt.of_iso`. -/
+theorem standard_open_cech_exactAt_of_module_model_exactAt
+    {Y : Scheme.{u}} {hY : IsAffine Y} (𝒰 : StandardOpenCover Y hY)
+    (M : Y.Modules) (n : ℕ)
+    (hmodule : (standardOpenCechModuleComplex 𝒰 M).ExactAt n) :
+    (cechComplex M 𝒰.basicOpenFamily).ExactAt n := by
+  sorry
+
+/-- Positive-degree exactness of the standard-open Čech complex, obtained by
+prime localization and the textbook's contracting homotopy. -/
+theorem standard_open_cech_positive_exact_via_localized_contraction
+    {Y : Scheme.{u}} {hY : IsAffine Y} (𝒰 : StandardOpenCover Y hY)
+    (M : Y.Modules)
+    [SheafOfModules.IsQuasicoherent (R := Y.ringCatSheaf) M] :
+    ∀ n : ℕ, 0 < n → (cechComplex M 𝒰.basicOpenFamily).ExactAt n := by
+  intro n hn
+  apply standard_open_cech_exactAt_of_module_model_exactAt 𝒰 M n
+  apply standard_open_cech_module_exactAt_of_prime_localized 𝒰 M n
+  intro p
+  exact standard_open_prime_localized_positive_exact 𝒰 M p n hn
+
+/-- Standard affine covers have exact augmented Čech complexes for
+quasi-coherent sheaves. -/
+theorem standard_open_cover_augmented_cech_exact {Y : Scheme.{u}} {hY : IsAffine Y}
+    (𝒰 : StandardOpenCover Y hY) (M : Y.Modules)
+    [SheafOfModules.IsQuasicoherent (R := Y.ringCatSheaf) M] :
+    AugmentedCechExactness 𝒰 M := by
+  let hcycle := standard_open_cech_augmentation_is_cycle 𝒰 M
+  have hdegreeZero := standard_open_cech_degree_zero_via_localization
+    𝒰 M hcycle (standard_open_module_truncation_exact 𝒰 M)
+  exact
+    { augmentation_is_cycle := hcycle
+      augmentation_injective := hdegreeZero.1
+      exact_at_zero := hdegreeZero.2
+      positive_exact := standard_open_cech_positive_exact_via_localized_contraction 𝒰 M }
+
+/-- The affine-open form of augmented Čech exactness. -/
+theorem affine_open_augmented_cech_exact {X : Scheme.{u}}
+    (𝒰 : StandardOpenCoverOfAffineOpen X) (M : X.Modules)
+    [SheafOfModules.IsQuasicoherent (R := X.ringCatSheaf) M] :
+    AugmentedCechExactness 𝒰.cover (M.restrict 𝒰.U.ι) := by
+  exact standard_open_cover_augmented_cech_exact 𝒰.cover (M.restrict 𝒰.U.ι)
+
+/-! ### Cohomology on affine opens -/
+
+/-- Positive augmented Čech exactness for the cofinal system of standard-open
+covers of an affine scheme implies vanishing of derived global sections. -/
+/- TODO(proof agents -- leaf: Čech-vanish-basis comparison): regard all finite
+standard-open covers, ordered by refinement, as a cofinal system of covers from
+the standard-open basis.  Construct the canonical maps from their Čech
+cohomology objects to `schemeCohomologyObject N n`, and invoke the
+Čech-vanish-basis theorem (or prove it through the usual refinement colimit of
+Čech resolutions).  For each cover `𝒰`, use
+`hcech 𝒰 |>.positive_exact` to kill positive Čech cohomology.  Cofinality,
+not exactness of any single cover, is what makes the resulting map compute
+derived sheaf cohomology. -/
+theorem affine_standard_cover_system_to_derived_positive_vanishing
+    {Y : Scheme.{u}} {hY : IsAffine Y} (N : Y.Modules)
+    [SheafOfModules.IsQuasicoherent (R := Y.ringCatSheaf) N]
+    [CategoryTheory.HasExt.{u} Y.Modules]
+    (hcech : ∀ 𝒰 : StandardOpenCover Y hY, AugmentedCechExactness 𝒰 N)
+    {n : ℕ} (hn : 0 < n) :
+    IsZero (schemeCohomologyObject N n) := by
+  sorry
+
+/-- Quasi-coherent sheaves have no positive cohomology on affine opens. -/
+theorem quasi_coherent_affine_cohomology_zero {X : Scheme.{u}}
+    (M : X.Modules)
+    [SheafOfModules.IsQuasicoherent (R := X.ringCatSheaf) M]
+    (U : X.Opens) (hU : IsAffineOpen U)
+    [CategoryTheory.HasExt.{u} (U : Scheme).Modules] {n : ℕ} (hn : 0 < n) :
+    IsZero (schemeCohomologyOn M U n) := by
+  simpa [schemeCohomologyOn] using
+    (affine_standard_cover_system_to_derived_positive_vanishing
+      (hY := hU) (M.restrict U.ι)
+      (fun 𝒰 : StandardOpenCover (U : Scheme) hU ↦
+        standard_open_cover_augmented_cech_exact (hY := hU) 𝒰 (M.restrict U.ι)) hn)
+
 /-! ### Affine morphisms and higher direct images -/
 
 /-- The `i`th right-derived pushforward. -/
@@ -224,25 +461,78 @@ noncomputable def higherDirectImage {X S : Scheme.{u}} (f : X ⟶ S)
     [CategoryTheory.HasInjectiveResolutions X.Modules] (i : ℕ) : X.Modules ⥤ S.Modules :=
   (Scheme.Modules.pushforward f).rightDerived i
 
+/-- The affine-open evaluation of a positive higher direct image is zero. -/
+/- TODO(proof agents -- leaf: affine-open evaluation bridge): construct the
+canonical comparison
+
+  `(R^i f_* M)(U) ≃ H^i(f⁻¹(U), M|_{f⁻¹(U)})`
+
+for an affine open `U`.  Derive it by restricting an injective resolution along
+the open immersion (or by the right-derived pushforward/restriction base-change
+map), prove that the comparison is an isomorphism, use
+`hU.preimage f : IsAffineOpen (f ⁻¹ᵁ U)`, and finish with
+`quasi_coherent_affine_cohomology_zero`.  This leaf owns the currently missing
+local `HasExt`/injective-resolution comparison for the inverse-image open. -/
+theorem higher_direct_image_affine_open_evaluation_isZero {X S : Scheme.{u}}
+    (f : X ⟶ S) [IsAffineHom f]
+    [CategoryTheory.HasInjectiveResolutions X.Modules]
+    (M : X.Modules) [SheafOfModules.IsQuasicoherent (R := X.ringCatSheaf) M]
+    {i : ℕ} (hi : 0 < i) (U : S.Opens) (hU : IsAffineOpen U) :
+    IsZero (((higherDirectImage f i).obj M).presheaf.obj (Opposite.op U)) := by
+  sorry
+
+/-- A sheaf of modules whose sections vanish on every affine open is zero. -/
+/- TODO(proof agents -- leaf: affine-basis detection): use the affine opens as
+a basis.  Either show all stalks of `N` are zero by taking the filtered colimit
+over affine neighbourhoods, then apply stalkwise conservativity, or use the
+sheaf ext/detection theorem for a basis directly. -/
+theorem module_isZero_of_affine_open_evaluations {S : Scheme.{u}} (N : S.Modules)
+    (hN : ∀ (U : S.Opens), IsAffineOpen U →
+      IsZero (N.presheaf.obj (Opposite.op U))) :
+    IsZero N := by
+  sorry
+
 /-- Higher direct images of quasi-coherent sheaves vanish for affine morphisms. -/
-/- TODO(proof agents): first add the restriction/stalk formula identifying the
-value of `higherDirectImage f i` on an affine open of `S` with cohomology of its
-affine inverse image.  Apply `quasi_coherent_affine_cohomology_zero`, then use
-vanishing on an affine basis (or stalkwise zero) to conclude the sheaf is zero. -/
 theorem relative_affine_higher_direct_image_vanishes {X S : Scheme.{u}}
     (f : X ⟶ S) [IsAffineHom f]
     [CategoryTheory.HasInjectiveResolutions X.Modules]
     (M : X.Modules) [SheafOfModules.IsQuasicoherent (R := X.ringCatSheaf) M]
     {i : ℕ} (hi : 0 < i) :
     IsZero ((higherDirectImage f i).obj M) := by
+  apply module_isZero_of_affine_open_evaluations
+  intro U hU
+  exact higher_direct_image_affine_open_evaluation_isZero f M hi U hU
+
+/-- Degeneration data for the Leray comparison associated to an affine
+morphism.  Packaging all degrees together makes the intended natural edge
+comparison explicit, instead of choosing unrelated isomorphisms degree by
+degree. -/
+structure RelativeAffineLerayDegeneration {X S : Scheme.{u}} (f : X ⟶ S)
+    (M : X.Modules) [CategoryTheory.HasExt.{u} X.Modules]
+    [CategoryTheory.HasExt.{u} S.Modules] : Prop where
+  edgeIso : ∀ i : ℕ,
+    Nonempty
+      (schemeCohomologyObject M i ≅
+        schemeCohomologyObject ((Scheme.Modules.pushforward f).obj M) i)
+
+/-- The Leray edge comparison degenerates for an affine morphism and
+quasi-coherent coefficients. -/
+/- TODO(proof agents -- leaf: Leray/derived-pushforward comparison): construct
+the Grothendieck/Leray double complex comparing derived global sections on `X`
+with derived global sections after `f_*`.  Identify its positive vertical rows
+with higher direct images.  Use the affine-open evaluation argument from
+`higher_direct_image_affine_open_evaluation_isZero` (or compare the `HasExt`
+model here with a chosen injective-resolution model) to kill those rows, and
+prove that the surviving edge morphisms give the displayed isomorphisms,
+naturally in `M` and simultaneously for all degrees. -/
+theorem relative_affine_leray_degeneration {X S : Scheme.{u}}
+    (f : X ⟶ S) [IsAffineHom f]
+    (M : X.Modules) [SheafOfModules.IsQuasicoherent (R := X.ringCatSheaf) M]
+    [CategoryTheory.HasExt.{u} X.Modules] [CategoryTheory.HasExt.{u} S.Modules] :
+    RelativeAffineLerayDegeneration f M := by
   sorry
 
 /-- Cohomology is unchanged by an affine relative pushforward. -/
-/- TODO(proof agents): prove this after higher-direct-image vanishing.  Package
-the Leray/Grothendieck spectral-sequence comparison map for global sections
-composed with pushforward; its positive rows vanish by
-`relative_affine_higher_direct_image_vanishes`, so the edge map is an
-isomorphism in every degree. -/
 theorem relative_affine_cohomology_comparison {X S : Scheme.{u}}
     (f : X ⟶ S) [IsAffineHom f]
     (M : X.Modules) [SheafOfModules.IsQuasicoherent (R := X.ringCatSheaf) M]
@@ -251,7 +541,7 @@ theorem relative_affine_cohomology_comparison {X S : Scheme.{u}}
     Nonempty
       (schemeCohomologyObject M i ≅
         schemeCohomologyObject ((Scheme.Modules.pushforward f).obj M) i) := by
-  sorry
+  exact (relative_affine_leray_degeneration f M).edgeIso i
 
 /-! ### Affine diagonal -/
 
@@ -341,13 +631,31 @@ theorem has_affine_diagonal_of_separated (X : Scheme.{u}) [X.IsSeparated] :
 
 /-! ### Čech cohomology and sheaf cohomology -/
 
+/-- The cover Čech-to-derived comparison when every nonempty finite
+intersection in the cover is affine. -/
+/- TODO(proof agents -- leaf: cover double-complex collapse): apply an
+injective (or Cartan--Eilenberg) resolution of `M` termwise to the cover's
+cosimplicial object.  The vertical cohomology over the intersection indexed by
+`i : Fin (q + 1) → 𝒱.I₀` is sheaf cohomology on
+`⨅ j, (𝒱.f (i j)).opensRange`.  Use `hintersections q i` and
+`quasi_coherent_affine_cohomology_zero` to kill every positive vertical row.
+Identify the remaining row, including alternating signs, with
+`cechComplex M (fun i ↦ (𝒱.f i).opensRange)`, and show that the edge
+morphism induces the displayed isomorphism in degree `n`. -/
+theorem cover_cech_to_derived_of_affine_intersections {X : Scheme.{u}}
+    (𝒱 : Scheme.OpenCover.{u} X) (M : X.Modules)
+    [SheafOfModules.IsQuasicoherent (R := X.ringCatSheaf) M]
+    [CategoryTheory.HasExt.{u} X.Modules]
+    (hintersections : ∀ (q : ℕ) (i : Fin (q + 1) → 𝒱.I₀),
+      IsAffineOpen (⨅ j, (𝒱.f (i j)).opensRange))
+    (n : ℕ) :
+    Nonempty
+      (cechCohomologyObject M (fun i ↦ (𝒱.f i).opensRange) n ≅
+        schemeCohomologyObject M n) := by
+  sorry
+
 /-- Čech cohomology agrees with sheaf cohomology on an affine-intersection
 cover for quasi-coherent coefficients. -/
-/- TODO(proof agents): build the Čech-to-derived-cohomology comparison (double
-complex or spectral sequence) for a cover.  Apply
-`quasi_coherent_affine_cohomology_zero` to every finite intersection supplied
-by `𝒰.intersections_affine`; collapse the positive vertical rows and identify
-the remaining edge complex with `cechCohomologyObject`. -/
 theorem cech_cohomology_eq_sheaf_cohomology {X : Scheme.{u}}
     (𝒰 : AffineIntersectionCover X) (M : X.Modules)
     [SheafOfModules.IsQuasicoherent (R := X.ringCatSheaf) M]
@@ -356,6 +664,7 @@ theorem cech_cohomology_eq_sheaf_cohomology {X : Scheme.{u}}
     Nonempty
       (cechCohomologyObject M (fun i => (𝒰.cover.f i).opensRange) n ≅
         schemeCohomologyObject M n) := by
-  sorry
+  exact cover_cech_to_derived_of_affine_intersections
+    𝒰.cover M 𝒰.intersections_affine n
 
 end Formalization.Books.Coherent.Unit01

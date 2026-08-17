@@ -2503,7 +2503,7 @@ theorem ameliorationBase_isFibred {C : Cat.{v, u}}
   have hmRight : (structureFunctor X.underlying).IsHomLift gX m.hom.right := by
     apply CategoryTheory.IsHomLift.of_fac'
       (structureFunctor X.underlying) gX m.hom.right rfl rfl
-    exact hmXMap
+    simpa using hmXMap
   have hmRightFac : m.hom.right ≫ b = τ.hom.right := by
     have hh := congrArg (fun k => k.hom.right) hmFac
     simpa [φ, ObjectProperty.homMk] using hh

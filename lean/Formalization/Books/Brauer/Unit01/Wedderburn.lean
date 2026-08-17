@@ -34,9 +34,9 @@ private theorem exists_simple_submodule_of_finite_algebra (k A M : Type*)
   have hN : N ≠ ⊥ := by
     intro h
     exact hm ((Submodule.span_eq_bot.mp h) m (by simp))
-  haveI : Nontrivial N := Submodule.nontrivial_iff_ne_bot.mpr hN
-  haveI : IsArtinianRing A := IsArtinianRing.of_finite k A
-  haveI : Module.Finite A N := Module.Finite.of_fg (Submodule.fg_span (Set.finite_singleton m))
+  have : Nontrivial N := Submodule.nontrivial_iff_ne_bot.mpr hN
+  have : IsArtinianRing A := IsArtinianRing.of_finite k A
+  have : Module.Finite A N := Module.Finite.of_fg (Submodule.fg_span (Set.finite_singleton m))
   obtain ⟨S, hS, hmin⟩ :=
     IsArtinian.set_has_minimal (R := A) (M := N)
       {P : Submodule A N | P ≠ ⊥} ⟨⊤, top_ne_bot⟩
@@ -65,9 +65,9 @@ theorem simple_module_over_finite_algebra_is_finite_dimensional
     (k A M : Type*) [Field k] [Ring A] [Algebra k A] [FiniteDimensional k A]
     [AddCommGroup M] [Module A M] [Module k M] [IsScalarTower k A M]
     [IsSimpleModule A M] : FiniteDimensional k M := by
-  haveI : Nontrivial M := IsSimpleModule.nontrivial A M
+  have : Nontrivial M := IsSimpleModule.nontrivial A M
   obtain ⟨m, hm⟩ := exists_ne (0 : M)
-  haveI : Module.Finite A M :=
+  have : Module.Finite A M :=
     Module.Finite.of_surjective (LinearMap.toSpanSingleton A M m)
       (IsSimpleModule.toSpanSingleton_surjective A hm)
   exact Module.Finite.trans A M

@@ -294,13 +294,13 @@ theorem finite_simple_algebra_unique_simple_modules (k A M N : Type*)
     [AddCommGroup N] [Module A N] [IsSimpleModule A N] :
     Nonempty (M ≃ₗ[A] N) := by
   classical
-  letI : IsArtinianRing A := IsArtinianRing.of_finite k A
+  let : IsArtinianRing A := IsArtinianRing.of_finite k A
   obtain ⟨I, ⟨eM⟩⟩ :=
     IsSemisimpleRing.exists_linearEquiv_ideal_of_isSimpleModule A M
   obtain ⟨J, ⟨eN⟩⟩ :=
     IsSemisimpleRing.exists_linearEquiv_ideal_of_isSimpleModule A N
-  letI : IsSimpleModule A I := IsSimpleModule.congr eM.symm
-  letI : IsSimpleModule A J := IsSimpleModule.congr eN.symm
+  let : IsSimpleModule A I := IsSimpleModule.congr eM.symm
+  let : IsSimpleModule A J := IsSimpleModule.congr eN.symm
   have h := IsSimpleRing.isIsotypic A A
   exact ⟨eM.trans (h I J).some.symm |>.trans eN.symm⟩
 
@@ -309,7 +309,7 @@ theorem finite_simple_algebra_module_isotypic (k A M : Type*) [Field k]
     [AddCommGroup M] [Module A M] [Module k M] [IsScalarTower k A M]
     [Module.Finite A M] :
     IsSemisimpleModule A M ∧ IsIsotypic A M := by
-  letI : IsArtinianRing A := IsArtinianRing.of_finite k A
+  let : IsArtinianRing A := IsArtinianRing.of_finite k A
   exact ⟨inferInstance, IsSimpleRing.isIsotypic A M⟩
 
 theorem finite_module_is_direct_sum_of_simple (k A M S : Type*) [Field k]
@@ -319,15 +319,15 @@ theorem finite_module_is_direct_sum_of_simple (k A M S : Type*) [Field k]
     [IsSimpleModule A S] :
     ∃ n : ℕ, Nonempty (M ≃ₗ[A] (Fin n → S)) := by
   classical
-  letI : IsArtinianRing A := IsArtinianRing.of_finite k A
+  let : IsArtinianRing A := IsArtinianRing.of_finite k A
   by_cases hM : Nontrivial M
-  · letI : Nontrivial M := hM
+  · let : Nontrivial M := hM
     have h := IsSimpleRing.isIsotypic A M
     obtain ⟨n, hn, T, hT, ⟨e⟩⟩ := h.linearEquiv_fun
-    letI : IsSimpleModule A T := hT
+    let : IsSimpleModule A T := hT
     obtain ⟨eTS⟩ := finite_simple_algebra_unique_simple_modules k A T S
     exact ⟨n, ⟨e.trans (LinearEquiv.piCongrRight fun _ => eTS)⟩⟩
-  · letI : Subsingleton M := not_nontrivial_iff_subsingleton.mp hM
+  · let : Subsingleton M := not_nontrivial_iff_subsingleton.mp hM
     refine ⟨0, ⟨LinearEquiv.ofBijective (0 : M →ₗ[A] (Fin 0 → S)) ?_⟩⟩
     exact ⟨fun x y _ => Subsingleton.elim _ _, fun y => ⟨0, Subsingleton.elim _ _⟩⟩
 
@@ -339,16 +339,16 @@ theorem finite_simple_algebra_modules_classified_by_dimension
     [IsScalarTower k A N] [Module.Finite A N] :
     Nonempty (M ≃ₗ[A] N) ↔ Module.finrank k M = Module.finrank k N := by
   classical
-  letI : Module.Finite k M := Module.Finite.trans A M
-  letI : Module.Finite k N := Module.Finite.trans A N
+  let : Module.Finite k M := Module.Finite.trans A M
+  let : Module.Finite k N := Module.Finite.trans A N
   obtain ⟨S, hS⟩ := finite_algebra_has_simple_submodule k A
-  letI : IsSimpleModule A S := hS
-  letI : Nontrivial S := IsSimpleModule.nontrivial A S
+  let : IsSimpleModule A S := hS
+  let : Nontrivial S := IsSimpleModule.nontrivial A S
   obtain ⟨s, hs⟩ := exists_ne (0 : S)
-  letI : Module.Finite A S :=
+  let : Module.Finite A S :=
     Module.Finite.of_surjective (LinearMap.toSpanSingleton A S s)
       (IsSimpleModule.toSpanSingleton_surjective A hs)
-  letI : Module.Finite k S := Module.Finite.trans A S
+  let : Module.Finite k S := Module.Finite.trans A S
   constructor
   · rintro ⟨e⟩
     exact (e.restrictScalars k).finrank_eq
@@ -377,9 +377,9 @@ theorem simple_module_double_commutant (k A M : Type*) [Field k] [Ring A]
     [Module k M] [IsScalarTower k A M] :
     Nonempty (A ≃ₐ[k] Module.End (Module.End A M) M) := by
   classical
-  letI : Nontrivial M := IsSimpleModule.nontrivial A M
-  letI : Module.Finite k M := simple_module_over_finite_algebra_is_finite_dimensional k A M
-  letI : Module.Finite (Module.End A M) M :=
+  let : Nontrivial M := IsSimpleModule.nontrivial A M
+  let : Module.Finite k M := simple_module_over_finite_algebra_is_finite_dimensional k A M
+  let : Module.Finite (Module.End A M) M :=
     Module.Finite.of_restrictScalars_finite k (Module.End A M) M
   have hAnn : Module.annihilator A M = ⊥ := by
     have h := (isSimpleRing_iff_isTwoSided_imp.mp (inferInstance : IsSimpleRing A)).2
@@ -387,7 +387,7 @@ theorem simple_module_double_commutant (k A M : Type*) [Field k] [Ring A]
     exact h.resolve_right (by
       intro htop
       exact (not_subsingleton M) (Module.annihilator_eq_top_iff.mp htop))
-  letI : FaithfulSMul A M := Module.annihilator_eq_bot.mp hAnn
+  let : FaithfulSMul A M := Module.annihilator_eq_bot.mp hAnn
   let f : A →ₐ[k] Module.End (Module.End A M) M :=
     { toRingHom := Module.toModuleEnd (Module.End A M) (S := A) M
       commutes' := by
@@ -410,10 +410,10 @@ theorem simple_module_center_and_dimension (k A M : Type*) [Field k]
       Module.finrank k A * Module.finrank k (Module.End A M) =
         Module.finrank k M ^ 2 := by
   classical
-  letI : Nontrivial M := IsSimpleModule.nontrivial A M
-  letI : Module.Finite k M :=
+  let : Nontrivial M := IsSimpleModule.nontrivial A M
+  let : Module.Finite k M :=
     simple_module_over_finite_algebra_is_finite_dimensional k A M
-  letI : Module (Module.End A M) M :=
+  let : Module (Module.End A M) M :=
     { smul := fun f m => f m
       smul_zero := by intro f; exact f.map_zero
       smul_add := by intro f x y; exact f.map_add x y
@@ -421,16 +421,16 @@ theorem simple_module_center_and_dimension (k A M : Type*) [Field k]
       mul_smul := by intro f g m; rfl
       zero_smul := by intro m; rfl
       add_smul := by intro f g m; rfl }
-  letI : IsArtinianRing (Module.End A M) := inferInstance
-  letI : Module.Finite (Module.End A M) M :=
+  let : IsArtinianRing (Module.End A M) := inferInstance
+  let : Module.Finite (Module.End A M) M :=
     Module.Finite.of_restrictScalars_finite k (Module.End A M) M
-  letI : Module.Free (Module.End A M) M :=
+  let : Module.Free (Module.End A M) M :=
     Module.Free.of_divisionRing (Module.End A M) M
-  letI : ∀ n : ℕ, IsArtinian (Module.End A M) (Fin n → Module.End A M) := by
+  let : ∀ n : ℕ, IsArtinian (Module.End A M) (Fin n → Module.End A M) := by
     intro n
     apply ((IsArtinianRing.tfae (Module.End A M) (Fin n → Module.End A M)).out 0 2).mp
     infer_instance
-  letI : StrongRankCondition (Module.End A M) :=
+  let : StrongRankCondition (Module.End A M) :=
     StrongRankCondition.of_isArtinian (Module.End A M)
   let f : Module.End A M →ₗ[k] Module.End k M :=
     { toFun := fun d => d.restrictScalars k
@@ -442,7 +442,7 @@ theorem simple_module_center_and_dimension (k A M : Type*) [Field k]
         intro r d
         ext m
         rfl }
-  letI : FiniteDimensional k (Module.End A M) :=
+  let : FiniteDimensional k (Module.End A M) :=
     FiniteDimensional.of_injective f (by
       intro x y h
       exact LinearMap.restrictScalars_injective k h)
@@ -582,7 +582,7 @@ theorem simple_module_end_is_finite (k A M : Type*) [Field k] [Ring A]
   classical
   constructor
   · exact ⟨inferInstance⟩
-  · letI : FiniteDimensional k M :=
+  · let : FiniteDimensional k M :=
       simple_module_over_finite_algebra_is_finite_dimensional k A M
     infer_instance
 

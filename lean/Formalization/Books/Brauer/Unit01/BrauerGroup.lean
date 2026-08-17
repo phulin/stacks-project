@@ -84,11 +84,6 @@ theorem brauer_group_tensor_operation_interface (k : Type*) [Field k] :
         Nonempty ((A.carrier ⊗[k] B.carrier) ≃ₐ[k] C.carrier) := by
   sorry
 
-theorem brauer_group_base_change_hom (k k' : Type*) [Field k] [Field k']
-    [Algebra k k'] :
-    Nonempty (BrauerGroup k →* BrauerGroup k') := by
-  refine ⟨{ toFun := fun _ => 1, map_one' := rfl, map_mul' := by intro _ _; simp }⟩
-
 theorem brauer_group_base_change_interface (k k' : Type*) [Field k] [Field k']
     [Algebra k k'] :
     ∃ f : BrauerGroup k →* BrauerGroup k',

@@ -38,15 +38,15 @@ structure FilteredColimitExtension
     (P : ObjectProperty C) (F' : P.FullSubcategory ⥤ D) where
   /-- The extended functor on the ambient category. -/
   functor : C ⥤ D
-  /-- The extended functor commutes with filtered colimits. -/
-  preservesFilteredColimits : PreservesFilteredColimits functor
+  /-- The extended functor commutes with filtered colimits of the source size. -/
+  preservesFilteredColimits : PreservesFilteredColimitsOfSize.{v, v} functor
   /-- Its restriction to the full subcategory agrees with `F'`. -/
   restrictionIso : P.ι ⋙ functor ≅ F'
 
 /--
 Every functor from a small full subcategory of categorically compact objects
 which generates `C` under filtered colimits extends to a functor on `C` that
-commutes with filtered colimits.  Such an extension is unique up to the
+commutes with filtered colimits of the source size.  Such an extension is unique up to the
 unique natural isomorphism compatible with the chosen restriction isomorphisms.
 
 `ObjectProperty.ind` is Mathlib's canonical presentation of an object as a
@@ -55,7 +55,7 @@ filtered colimit of objects satisfying an object property.
 theorem exists_filteredColimitExtension_unique_up_to_iso
     {C : Type u} [Category.{v} C]
     {D : Type u'} [Category.{v'} D]
-    [HasFilteredColimits C] [HasFilteredColimits D]
+    [HasFilteredColimits C] [HasFilteredColimitsOfSize.{v, v} D]
     (P : ObjectProperty C) [ObjectProperty.Small.{v} P]
     (hcompact : ∀ X : C, P X → IsCategoricallyCompact X)
     (hgenerated : ∀ X : C, ObjectProperty.ind.{v} P X)

@@ -1,5 +1,9 @@
-import Formalization.Books.Sheaves.Unit31.OpenImmersions
+import Formalization.Books.Sheaves.Unit07.Sheaves
+import Mathlib.Algebra.Category.Grp.Colimits
+import Mathlib.Algebra.Category.Grp.FilteredColimits
+import Mathlib.Algebra.Category.Grp.Limits
 import Mathlib.CategoryTheory.Sites.SheafHom
+import Mathlib.Topology.Sheaves.Functors
 import Mathlib.Topology.Sets.OpenCover
 import Mathlib.Topology.Sheaves.SheafCondition.UniqueGluing
 
@@ -17,13 +21,18 @@ namespace Formalization.Books.Sheaves.Unit33
 
 open CategoryTheory CategoryTheory.Limits Opposite TopologicalSpace Topology
 open Formalization.Books.Sheaves.Unit07
-open Formalization.Books.Sheaves.Unit31
 
 universe u v
 
 noncomputable section
 
 /-! ## Restriction along open inclusions -/
+
+abbrev openSubspace {X : TopCat.{v}} (U : Opens X) : TopCat.{v} :=
+  (Opens.toTopCat X).obj U
+
+abbrev openInclusion {X : TopCat.{v}} (U : Opens X) : openSubspace U ⟶ X :=
+  Opens.inclusion' U
 
 /-- The inclusion of one open subspace into a larger open subspace. -/
 def openSubsetInclusion {X : TopCat.{v}} {U V : Opens X} (h : V ≤ U) :
@@ -695,8 +704,8 @@ theorem glue_sheaves_structures
 /-- In particular, glueing data of abelian sheaves glue in `AddCommGrpCat`. -/
 theorem glue_abelian_sheaves
     (hU : TopologicalSpace.IsOpenCover U) (D : AbelianSheafGlueingData U) :
-    Nonempty (SheafGlueingSolution D) :=
-  exists_sheafGlueingSolution hU D
+    Nonempty (SheafGlueingSolution (C := AddCommGrpCat.{v}) D) :=
+  exists_sheafGlueingSolution (C := AddCommGrpCat.{v}) hU D
 
 end StructureVariants
 

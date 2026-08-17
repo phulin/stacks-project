@@ -45,14 +45,31 @@ abbrev localizationRelation {A : Type u} [CommRing A] (S : Submonoid A) :=
 
 theorem localizationRelation_is_equivalence {A : Type u} [CommRing A]
     (S : Submonoid A) : IsEquiv _ (localizationRelation S) := by
-  sorry
+  exact (Localization.r S).iseqv.isEquiv
 
 /- The source's cross-multiplication presentation of the canonical relation. -/
 theorem localizationRelation_cross_multiplication {A : Type u} [CommRing A]
     (S : Submonoid A) (x y : A) (s t : S) :
     localizationRelation S (x, s) (y, t) ↔
       ∃ u : S, (x * (t : A) - y * (s : A)) * (u : A) = 0 := by
-  sorry
+  rw [localizationRelation, Localization.r_iff_exists]
+  constructor
+  · rintro ⟨u, hu⟩
+    refine ⟨u, ?_⟩
+    dsimp at hu ⊢
+    calc
+      (x * (t : A) - y * (s : A)) * (u : A) =
+          (u : A) * ((t : A) * x) - (u : A) * ((s : A) * y) := by ring
+      _ = 0 := sub_eq_zero.mpr hu
+  · rintro ⟨u, hu⟩
+    refine ⟨u, ?_⟩
+    dsimp at hu ⊢
+    have hu' : (u : A) * ((t : A) * x) - (u : A) * ((s : A) * y) = 0 := by
+      calc
+        (u : A) * ((t : A) * x) - (u : A) * ((s : A) * y) =
+            (x * (t : A) - y * (s : A)) * (u : A) := by ring
+        _ = 0 := hu
+    exact sub_eq_zero.mp hu'
 
 /-- The localization of a commutative ring at a multiplicative subset. -/
 abbrev localization {A : Type u} [CommRing A] (S : Submonoid A) := Localization S
@@ -66,13 +83,13 @@ theorem localizationFraction_add {A : Type u} [CommRing A] (S : Submonoid A)
     (x y : A) (s t : S) :
     localizationFraction S x s + localizationFraction S y t =
       localizationFraction S (x * (t : A) + y * (s : A)) (s * t) := by
-  sorry
+  simpa [localizationFraction, add_comm, mul_comm] using Localization.add_mk x s y t
 
 theorem localizationFraction_mul {A : Type u} [CommRing A] (S : Submonoid A)
     (x y : A) (s t : S) :
     localizationFraction S x s * localizationFraction S y t =
       localizationFraction S (x * y) (s * t) := by
-  sorry
+  simpa [localizationFraction] using Localization.mk_mul x y s t
 
 /-- The canonical map from a ring to its localization. -/
 def localizationMap {A : Type u} [CommRing A] (S : Submonoid A) :
@@ -85,24 +102,32 @@ theorem localizationMap_eq_fraction_one {A : Type u} [CommRing A] (S : Submonoid
 
 theorem localizationMap_eq_zero_iff {A : Type u} [CommRing A] (S : Submonoid A)
     (x : A) : localizationMap S x = 0 ↔ ∃ s : S, (s : A) * x = 0 := by
-  sorry
+  exact IsLocalization.map_eq_zero_iff S (localization S) x
 
 theorem localizationMap_injective_of_no_zero_divisors
     {A : Type u} [CommRing A] (S : Submonoid A)
     (hS : ∀ s : S, ∀ x : A, (s : A) * x = 0 → x = 0) :
     Function.Injective (localizationMap S) := by
-  sorry
+  intro x y hxy
+  apply sub_eq_zero.mp
+  have hzero : localizationMap S (x - y) = 0 := by
+    rw [map_sub, hxy, sub_self]
+  obtain ⟨s, hs⟩ := (localizationMap_eq_zero_iff S (x - y)).mp hzero
+  exact hS s (x - y) hs
 
 /-- The universal property of the localization, in the source's ring-hom form. -/
 theorem localization_universal_property {A : Type u} [CommRing A]
     (S : Submonoid A) {B : Type v} [CommRing B] (f : A →+* B)
     (hf : ∀ s : S, IsUnit (f s)) :
     ∃! g : localization S →+* B, g.comp (localizationMap S) = f := by
-  sorry
+  refine ⟨IsLocalization.lift hf, IsLocalization.lift_comp hf, ?_⟩
+  intro g hg
+  exact (IsLocalization.lift_unique (M := S) (S := localization S) hf
+    (fun x => RingHom.congr_fun hg x)).symm
 
 theorem localization_subsingleton_iff {A : Type u} [CommRing A] (S : Submonoid A) :
     Subsingleton (localization S) ↔ (0 : A) ∈ S := by
-  sorry
+  exact IsLocalization.subsingleton_iff (M := S) (S := localization S)
 
 /-! ## Modules localized at a multiplicative subset -/
 
@@ -117,7 +142,7 @@ abbrev localizedModuleRelation {R : Type u} [CommRing R] (S : Submonoid R)
 theorem localizedModuleRelation_is_equivalence {R : Type u} [CommRing R]
     (S : Submonoid R) (M : Type v) [AddCommGroup M] [Module R M] :
     IsEquiv _ (localizedModuleRelation S M) := by
-  sorry
+  exact LocalizedModule.r.isEquiv S M
 
 /- The source's relation written with module scalar multiplication. -/
 theorem localizedModuleRelation_cross_multiplication {R : Type u} [CommRing R]
@@ -125,7 +150,16 @@ theorem localizedModuleRelation_cross_multiplication {R : Type u} [CommRing R]
     (m n : M) (s t : S) :
     localizedModuleRelation S M (m, s) (n, t) ↔
       ∃ u : S, (u : R) • ((t : R) • m - (s : R) • n) = 0 := by
-  sorry
+  rw [localizedModuleRelation, LocalizedModule.r]
+  constructor
+  · rintro ⟨u, hu⟩
+    refine ⟨u, ?_⟩
+    rw [smul_sub, sub_eq_zero]
+    exact hu
+  · rintro ⟨u, hu⟩
+    refine ⟨u, ?_⟩
+    rw [smul_sub] at hu
+    exact sub_eq_zero.mp hu
 
 /-- A module fraction, using the canonical `LocalizedModule.mk`. -/
 def localizedModuleFraction {R : Type u} [CommRing R] (S : Submonoid R)
@@ -136,14 +170,19 @@ theorem localizedModuleFraction_add {R : Type u} [CommRing R] (S : Submonoid R)
     {M : Type v} [AddCommGroup M] [Module R M] (m n : M) (s t : S) :
     localizedModuleFraction S m s + localizedModuleFraction S n t =
       localizedModuleFraction S ((t : R) • m + (s : R) • n) (s * t) := by
-  sorry
+  change LocalizedModule.mk m s + LocalizedModule.mk n t =
+    LocalizedModule.mk ((t : R) • m + (s : R) • n) (s * t)
+  simpa [Submonoid.smul_def] using
+    (LocalizedModule.mk_add_mk (S := S) (m1 := m) (m2 := n) (s1 := s) (s2 := t))
 
 /- The textbook's module multiplication display is corrected to scalar action. -/
 theorem localizedModuleFraction_smul {R : Type u} [CommRing R] (S : Submonoid R)
     {M : Type v} [AddCommGroup M] [Module R M] (a : R) (m : M) (s t : S) :
     (localizationFraction S a s : localization S) • localizedModuleFraction S m t =
       localizedModuleFraction S (a • m) (s * t) := by
-  sorry
+  change Localization.mk a s • LocalizedModule.mk m t =
+    LocalizedModule.mk (a • m) (s * t)
+  exact LocalizedModule.mk_smul_mk (S := S) a m s t
 
 /-- The map from a module to its localization. -/
 def localizedModuleMap {R : Type u} [CommRing R] (S : Submonoid R)
@@ -177,7 +216,24 @@ theorem localizedModuleHomRestriction_bijective {R : Type u} [CommRing R]
     (hN : ∀ s : S, Function.Bijective (fun n : N => (s : R) • n)) :
     Function.Bijective (localizedModuleHomRestriction S :
       (localizedModule S M →ₗ[R] N) → (M →ₗ[R] N)) := by
-  sorry
+  have hEnd : ∀ s : S, IsUnit (algebraMap R (Module.End R N) (s : R)) := by
+    intro s
+    rw [Module.End.isUnit_iff]
+    constructor
+    · intro a b hab
+      apply (hN s).1
+      simpa only [Module.algebraMap_end_apply] using hab
+    · intro a
+      obtain ⟨b, hb⟩ := (hN s).2 a
+      refine ⟨b, ?_⟩
+      simpa only [Module.algebraMap_end_apply] using hb
+  refine Function.bijective_iff_has_inverse.mpr ⟨
+    (fun f => LocalizedModule.lift S f hEnd), ?_, ?_⟩
+  · intro f
+    exact LocalizedModule.lift_unique S (f.comp (localizedModuleMap S M)) hEnd f rfl
+  · intro f
+    change (LocalizedModule.lift S f hEnd).comp (localizedModuleMap S M) = f
+    exact LocalizedModule.lift_comp S f hEnd
 
 noncomputable def localizedModuleHomEquiv {R : Type u} [CommRing R]
     (S : Submonoid R) {M : Type v} [AddCommGroup M] [Module R M]
@@ -221,7 +277,9 @@ abbrev localizedModuleAway {R : Type u} [CommRing R] (f : R)
 
 theorem localizationAway_subsingleton_iff {R : Type u} [CommRing R] (f : R) :
     Subsingleton (localizationAway f) ↔ IsNilpotent f := by
-  sorry
+  simpa [localizationAway, localization, IsNilpotent, Submonoid.mem_powers_iff] using
+    (IsLocalization.subsingleton_iff (M := Submonoid.powers f)
+      (S := localizationAway f))
 
 /-- The total quotient ring, localized at all non-zero-divisors. -/
 abbrev totalQuotientRing (R : Type u) [CommRing R] := FractionRing R
@@ -340,7 +398,8 @@ theorem localizationProduct_mem_iff {R : Type u} [CommRing R]
     (S S' : Submonoid R) (x : R) :
     x ∈ localizationProduct S S' ↔
       ∃ s : S, ∃ s' : S', (s : R) * (s' : R) = x := by
-  sorry
+  simpa [localizationProduct] using
+    (Submonoid.mem_sup (s := S) (t := S') (x := x))
 
 def localizationProductElement {R : Type u} [CommRing R]
     (S S' : Submonoid R) (s : S) (s' : S') : localizationProduct S S' :=
@@ -359,7 +418,62 @@ theorem localization_iterated_ring_equiv {R : Type u} [CommRing R]
     (S S' : Submonoid R) :
     Nonempty (localization (localizationImage S S') ≃+*
       localization (localizationProduct S S')) := by
-  sorry
+  let algA : Algebra R (localization (localizationImage S S')) :=
+    RingHom.toAlgebra
+      ((algebraMap (localization S') (localization (localizationImage S S'))).comp
+        (algebraMap R (localization S')))
+  letI : Algebra R (localization (localizationImage S S')) := algA
+  letI : SMul R (localization (localizationImage S S')) := algA.toSMul
+  letI : IsScalarTower R (localization S') (localization (localizationImage S S')) :=
+    IsScalarTower.of_algebraMap_eq' rfl
+  letI : Algebra (localization S') (localization (localizationProduct S S')) :=
+    IsLocalization.localizationAlgebraOfSubmonoidLe
+      (localization S') (localization (localizationProduct S S')) S'
+        (localizationProduct S S') le_sup_right
+  letI : IsScalarTower R (localization S') (localization (localizationProduct S S')) :=
+    IsLocalization.localization_isScalarTower_of_submonoid_le
+      (localization S') (localization (localizationProduct S S')) S'
+        (localizationProduct S S') le_sup_right
+  let L : Submonoid R :=
+    IsLocalization.localizationLocalizationSubmodule S' (localizationImage S S')
+  have hA : IsLocalization L (localization (localizationImage S S')) := by
+    exact IsLocalization.localization_localization_isLocalization S'
+      (localizationImage S S') (localization (localizationImage S S'))
+  have hPL : localizationProduct S S' ≤ L := by
+    intro x hx
+    change x ∈ IsLocalization.localizationLocalizationSubmodule S'
+      (localizationImage S S')
+    rcases (Submonoid.mem_sup.mp hx) with ⟨s, hs, t, ht, rfl⟩
+    rw [IsLocalization.mem_localizationLocalizationSubmodule]
+    refine ⟨localizationImageElement S S' ⟨s, hs⟩, ⟨t, ht⟩, ?_⟩
+    simp [localizationImageElement, map_mul]
+  have hdiv : ∀ x ∈ L, ∃ p ∈ localizationProduct S S', x ∣ p := by
+    intro x hx
+    change x ∈ IsLocalization.localizationLocalizationSubmodule S'
+      (localizationImage S S') at hx
+    rcases IsLocalization.mem_localizationLocalizationSubmodule.mp hx with
+      ⟨y, z, hyz⟩
+    rcases Submonoid.mem_map.mp y.property with ⟨s, hs, hsy⟩
+    have heq : algebraMap R (localization S') x =
+        algebraMap R (localization S') ((s : R) * (z : R)) := by
+      rw [← hsy] at hyz
+      simpa [map_mul] using hyz
+    obtain ⟨c, hc⟩ := (IsLocalization.eq_iff_exists S' (localization S')).mp heq
+    refine ⟨(s : R) * ((z : R) * (c : R)), ?_, ?_⟩
+    · exact Submonoid.mul_mem_sup hs (S'.mul_mem z.property c.property)
+    · refine ⟨c, ?_⟩
+      calc
+        (s : R) * ((z : R) * (c : R)) = (c : R) * ((s : R) * (z : R)) := by ring
+        _ = (c : R) * x := by rw [hc]
+        _ = x * (c : R) := by ring
+  have hB : IsLocalization L (localization (localizationProduct S S')) := by
+    exact (IsLocalization.iff_of_le_of_exists_dvd
+      (M := localizationProduct S S')
+      (S := localization (localizationProduct S S')) L hPL hdiv).mp
+      (inferInstance : IsLocalization (localizationProduct S S')
+        (localization (localizationProduct S S')))
+  exact ⟨(IsLocalization.algEquiv L (localization (localizationImage S S'))
+    (localization (localizationProduct S S'))).toRingEquiv⟩
 
 theorem localization_iterated_ring_equiv_formula {R : Type u} [CommRing R]
     (S S' : Submonoid R) :
@@ -375,13 +489,216 @@ theorem localization_iterated_ring_equiv_formula {R : Type u} [CommRing R]
             (localizationProductElement S S' s s')) =
           localizationFraction (localizationImage S S')
             (localizationFraction S' x s') (localizationImageElement S S' s)) := by
-  sorry
+  letI : Algebra (localization S') (localization (localizationProduct S S')) :=
+    IsLocalization.localizationAlgebraOfSubmonoidLe
+      (localization S') (localization (localizationProduct S S')) S'
+        (localizationProduct S S') le_sup_right
+  letI : IsScalarTower R (localization S') (localization (localizationProduct S S')) :=
+    IsLocalization.localization_isScalarTower_of_submonoid_le
+      (localization S') (localization (localizationProduct S S')) S'
+        (localizationProduct S S') le_sup_right
+  let Pmap : Submonoid (localization S') :=
+    (localizationProduct S S').map (algebraMap R (localization S')).toMonoidHom
+  have hPmap : IsLocalization Pmap (localization (localizationProduct S S')) := by
+    exact IsLocalization.isLocalization_of_submonoid_le
+      (localization S') (localization (localizationProduct S S')) S'
+      (localizationProduct S S') le_sup_right
+  have hNP : localizationImage S S' ≤ Pmap := by
+    intro y hy
+    rcases Submonoid.mem_map.mp hy with ⟨s, hs, rfl⟩
+    exact Submonoid.mem_map_of_mem _ (Submonoid.mem_sup_left hs)
+  have hdiv : ∀ y ∈ Pmap, ∃ x ∈ localizationImage S S', y ∣ x := by
+    intro y hy
+    rcases Submonoid.mem_map.mp hy with ⟨r, hr, rfl⟩
+    rcases Submonoid.mem_sup.mp hr with ⟨s, hs, t, ht, rfl⟩
+    refine ⟨algebraMap R (localization S') s,
+      Submonoid.mem_map_of_mem _ hs, ?_⟩
+    let ut : (localization S')ˣ :=
+      (IsLocalization.map_units (localization S') ⟨t, ht⟩).unit
+    let utInv : localization S' := (ut⁻¹).val
+    refine ⟨utInv, ?_⟩
+    change algebraMap R (localization S') s =
+      algebraMap R (localization S') (s * t) * utInv
+    rw [map_mul]
+    change algebraMap R (localization S') s =
+      algebraMap R (localization S') s * (ut : localization S') * utInv
+    have hut : (ut : localization S') * utInv = 1 := by
+      dsimp [utInv]
+      simp
+    rw [mul_assoc, hut, mul_one]
+  have hN : IsLocalization (localizationImage S S')
+      (localization (localizationProduct S S')) := by
+    exact (IsLocalization.iff_of_le_of_exists_dvd
+      (M := localizationImage S S') (S := localization (localizationProduct S S'))
+        Pmap hNP hdiv).mpr hPmap
+  let e : localization (localizationImage S S') ≃+*
+      localization (localizationProduct S S') :=
+    (IsLocalization.algEquiv (localizationImage S S')
+      (localization (localizationImage S S'))
+      (localization (localizationProduct S S'))).toRingEquiv
+  have hforward : ∀ (x : R) (s : S) (s' : S'),
+      e (localizationFraction (localizationImage S S')
+          (localizationFraction S' x s') (localizationImageElement S S' s)) =
+        localizationFraction (localizationProduct S S') x
+          (localizationProductElement S S' s s') := by
+    intro x s s'
+    change e (Localization.mk (Localization.mk x s') (localizationImageElement S S' s)) =
+      Localization.mk x (localizationProductElement S S' s s')
+    dsimp [e]
+    rw [Localization.mk_eq_mk', IsLocalization.algEquiv_mk']
+    rw [Localization.mk_eq_mk', IsLocalization.mk'_eq_iff_eq_mul]
+    rw [Localization.mk_eq_mk'_apply]
+    apply (IsLocalization.map_units (M := localizationProduct S S')
+      (localization (localizationProduct S S'))
+      ⟨(s' : R), Submonoid.mem_sup_right s'.property⟩).mul_right_cancel
+    calc
+      (algebraMap (localization S') (localization (localizationProduct S S')))
+          (IsLocalization.mk' (localization S') x s') *
+          (algebraMap R (localization (localizationProduct S S'))) (s' : R) =
+        (algebraMap (localization S') (localization (localizationProduct S S')))
+          (IsLocalization.mk' (localization S') x s' *
+            (algebraMap R (localization S')) (s' : R)) := by
+          rw [map_mul, IsScalarTower.algebraMap_apply R (localization S')
+            (localization (localizationProduct S S'))]
+      _ = (algebraMap (localization S') (localization (localizationProduct S S')))
+          ((algebraMap R (localization S')) x) := by
+          rw [IsLocalization.mk'_spec]
+      _ = (algebraMap R (localization (localizationProduct S S'))) x := by
+          rw [IsScalarTower.algebraMap_apply R (localization S')
+            (localization (localizationProduct S S'))]
+      _ = IsLocalization.mk' (localization (localizationProduct S S')) x
+            (localizationProductElement S S' s s') *
+          (algebraMap R (localization (localizationProduct S S')))
+            (localizationProductElement S S' s s' : R) := by
+          symm
+          exact IsLocalization.mk'_spec _ _ _
+      _ = IsLocalization.mk' (localization (localizationProduct S S')) x
+            (localizationProductElement S S' s s') *
+          (algebraMap (localization S') (localization (localizationProduct S S')))
+            (localizationImageElement S S' s : localization S') *
+          (algebraMap R (localization (localizationProduct S S'))) (s' : R) := by
+          rw [mul_assoc]
+          congr 1
+          change (algebraMap R (localization (localizationProduct S S')))
+              ((s : R) * (s' : R)) =
+            (algebraMap (localization S') (localization (localizationProduct S S')))
+                ((algebraMap R (localization S')) (s : R)) *
+              (algebraMap R (localization (localizationProduct S S'))) (s' : R)
+          rw [map_mul, IsScalarTower.algebraMap_apply R (localization S')
+            (localization (localizationProduct S S'))]
+  refine ⟨e, hforward, ?_⟩
+  intro x s s'
+  apply e.injective
+  rw [e.apply_symm_apply]
+  exact (hforward x s s').symm
 
 theorem localizedModule_iterated_equiv {R : Type u} [CommRing R]
     (S S' : Submonoid R) {M : Type v} [AddCommGroup M] [Module R M] :
     Nonempty (localizedModule S (localizedModule S' M) ≃ₗ[R]
       localizedModule (localizationProduct S S') M) := by
-  sorry
+  let inner := localizedModule S' M
+  let outer := localizedModule S inner
+  let P := localizationProduct S S'
+  let f : M →ₗ[R] outer :=
+    (localizedModuleMap S inner).comp (localizedModuleMap S' M)
+  have hS' : ∀ s' : S', Function.Bijective
+      (fun x : outer => (s' : R) • x) := by
+    intro s'
+    let q : inner →ₗ[R] inner :=
+      algebraMap R (Module.End R inner) (s' : R)
+    have hq : Function.Bijective q := by
+      exact (Module.End.isUnit_iff _).mp
+        (IsLocalizedModule.map_units (LocalizedModule.mkLinearMap S' M) s')
+    have hmap_eq :
+        (LocalizedModule.map S q).restrictScalars R =
+          algebraMap R (Module.End R outer) (s' : R) := by
+      ext z
+      induction z using LocalizedModule.induction_on with
+      | _ m s =>
+        change (LocalizedModule.map S q) (LocalizedModule.mk m s) =
+          (algebraMap R (Module.End R outer) (s' : R))
+            (LocalizedModule.mk m s)
+        rw [LocalizedModule.map_mk]
+        change LocalizedModule.mk ((s' : R) • m) s =
+          (s' : R) • LocalizedModule.mk m s
+        rw [LocalizedModule.smul'_mk]
+    have hmap_bij : Function.Bijective
+        ((LocalizedModule.map S q).restrictScalars R) := by
+      exact ⟨LocalizedModule.map_injective S q hq.1,
+        LocalizedModule.map_surjective S q hq.2⟩
+    rw [hmap_eq] at hmap_bij
+    have hscalar :
+        (fun x : outer => (s' : R) • x) =
+          (algebraMap R (Module.End R outer) (s' : R)) := by
+      funext x
+      simp [Module.algebraMap_end_apply]
+    rw [hscalar]
+    exact hmap_bij
+  have hEnd : ∀ p : P, IsUnit (algebraMap R (Module.End R outer) (p : R)) := by
+    intro p
+    rcases Submonoid.mem_sup.mp p.property with ⟨s, hs, s', hs', hp⟩
+    rw [← hp]
+    apply (Module.End.isUnit_iff _).mpr
+    have hs_bij : Function.Bijective (fun x : outer => (s : R) • x) := by
+      have hs_bij' := (Module.End.isUnit_iff _).mp
+        (IsLocalizedModule.map_units (LocalizedModule.mkLinearMap S inner) ⟨s, hs⟩)
+      have hs_fun :
+          (algebraMap R (Module.End R outer) (s : R) : outer → outer) =
+            (fun x : outer => (s : R) • x) := by
+        funext x
+        simp [outer, Module.algebraMap_end_apply]
+      rw [hs_fun] at hs_bij'
+      exact hs_bij'
+    have hs'_bij : Function.Bijective (fun x : outer => (s' : R) • x) :=
+      hS' ⟨s', hs'⟩
+    have hfun :
+        (algebraMap R (Module.End R outer) (s * s') : outer → outer) =
+          (fun x : outer => (s : R) • ((s' : R) • x)) := by
+      funext x
+      simp [Module.algebraMap_end_apply, smul_smul, mul_comm]
+    rw [hfun]
+    exact hs_bij.comp hs'_bij
+  have hSource : IsLocalizedModule P f := by
+    refine { map_units := hEnd, surj := ?_, exists_of_eq := ?_ }
+    · intro y
+      induction y using LocalizedModule.induction_on with
+      | _ z s =>
+        induction z using LocalizedModule.induction_on with
+        | _ m s' =>
+          refine ⟨⟨m, localizationProductElement S S' s s'⟩, ?_⟩
+          change ((s : R) * (s' : R)) •
+              LocalizedModule.mk (LocalizedModule.mk m s') s =
+            LocalizedModule.mk (LocalizedModule.mk m 1) 1
+          calc
+            ((s : R) * (s' : R)) •
+                LocalizedModule.mk (LocalizedModule.mk m s') s =
+                LocalizedModule.mk
+                  (((s : R) * (s' : R)) • LocalizedModule.mk m s') s := by
+              rw [LocalizedModule.smul'_mk]
+            _ =
+                LocalizedModule.mk
+                  ((s : R) • ((s' : R) • LocalizedModule.mk m s')) s := by
+              congr 1
+              rw [mul_smul]
+            _ = LocalizedModule.mk ((s' : R) • LocalizedModule.mk m s') 1 := by
+              exact LocalizedModule.mk_cancel s ((s' : R) • LocalizedModule.mk m s')
+            _ = LocalizedModule.mk (LocalizedModule.mk m 1) 1 := by
+              rw [LocalizedModule.smul'_mk (S := S')]
+              congr 1
+              exact LocalizedModule.mk_cancel s' m
+    · intro m₁ m₂ h
+      change LocalizedModule.mk (LocalizedModule.mk m₁ 1) 1 =
+        LocalizedModule.mk (LocalizedModule.mk m₂ 1) 1 at h
+      obtain ⟨s, hs⟩ := LocalizedModule.mk_eq.mp h
+      have hinner : LocalizedModule.mk (S := S') ((s : R) • m₁) (1 : S') =
+          LocalizedModule.mk (S := S') ((s : R) • m₂) (1 : S') := by
+        simpa [Submonoid.smul_def, ← LocalizedModule.smul'_mk] using hs
+      obtain ⟨s', hs'⟩ := LocalizedModule.mk_eq.mp hinner
+      refine ⟨localizationProductElement S S' s s', ?_⟩
+      simpa [localizationProductElement, Submonoid.smul_def, smul_smul,
+        mul_comm, mul_left_comm, mul_assoc] using hs'
+  letI : IsLocalizedModule P f := hSource
+  exact ⟨IsLocalizedModule.linearEquiv P f (LocalizedModule.mkLinearMap P M)⟩
 
 theorem localizedModule_iterated_equiv_formula {R : Type u} [CommRing R]
     (S S' : Submonoid R) {M : Type v} [AddCommGroup M] [Module R M] :
@@ -413,12 +730,13 @@ theorem localizedLinearMap_mk {R : Type u} [CommRing R] (S : Submonoid R)
     (u : M →ₗ[R] N) (m : M) (s : S) :
     localizedLinearMap S u (localizedModuleFraction S m s) =
       localizedModuleFraction S (u m) s := by
-  sorry
+  simp [localizedLinearMap, localizedModuleFraction]
 
 theorem localizedLinearMap_id {R : Type u} [CommRing R] (S : Submonoid R)
     {M : Type v} [AddCommGroup M] [Module R M] :
     localizedLinearMap S (LinearMap.id : M →ₗ[R] M) = LinearMap.id := by
-  sorry
+  unfold localizedLinearMap
+  exact LocalizedModule.map_id S
 
 theorem localizedLinearMap_comp {R : Type u} [CommRing R]
     (S : Submonoid R) {L M N : Type v} [AddCommGroup L] [AddCommGroup M]
@@ -426,7 +744,9 @@ theorem localizedLinearMap_comp {R : Type u} [CommRing R]
     (u : L →ₗ[R] M) (v : M →ₗ[R] N) :
     localizedLinearMap S (v.comp u) =
       (localizedLinearMap S v).comp (localizedLinearMap S u) := by
-  sorry
+  ext x
+  induction x using LocalizedModule.induction_on with
+  | _ m s => simp [localizedLinearMap]
 
 abbrev localizationModuleFunctor {R : Type u} [CommRing R]
     (S : Submonoid R) [Small.{v} R] :
@@ -444,7 +764,7 @@ theorem localization_maps_exact {R : Type u} [CommRing R] (S : Submonoid R)
     [Module R L] [Module R M] [Module R N]
     (u : L →ₗ[R] M) (w : M →ₗ[R] N) (h : Function.Exact u w) :
     Function.Exact (localizedLinearMap S u) (localizedLinearMap S w) := by
-  sorry
+  exact LocalizedModule.map_exact S u w h
 
 /-! ## Quotient modules -/
 
@@ -458,7 +778,7 @@ theorem localizedQuotientModuleEquiv_exists {R : Type u} [CommRing R]
     (N : Submodule R M) :
     Nonempty (localizedModule S (M ⧸ N) ≃ₗ[localization S]
       localizedModule S M ⧸ localizedSubmodule S N) := by
-  sorry
+  exact ⟨(localizedQuotientEquiv S N).symm⟩
 
 theorem localizedQuotientModule_equiv_formula {R : Type u} [CommRing R]
     (S : Submonoid R) {M : Type v} [AddCommGroup M] [Module R M]
@@ -468,7 +788,29 @@ theorem localizedQuotientModule_equiv_formula {R : Type u} [CommRing R]
       ∀ (m : M) (s : S),
         e (localizedModuleFraction S (Submodule.Quotient.mk m) s) =
           Submodule.Quotient.mk (localizedModuleFraction S m s) := by
-  sorry
+  refine ⟨(localizedQuotientEquiv S N).symm, ?_⟩
+  intro m s
+  have hfracM : localizedModuleFraction S m s =
+      (localizationFraction S (1 : R) s) • localizedModuleFraction S m 1 := by
+    simpa [localizedModuleFraction, localizationFraction] using
+      (LocalizedModule.mk_smul_mk (S := S) (r := 1) (m := m) s 1).symm
+  have hfracQ : localizedModuleFraction S (Submodule.Quotient.mk (p := N) m) s =
+      (localizationFraction S (1 : R) s) •
+        localizedModuleFraction S (Submodule.Quotient.mk (p := N) m) 1 := by
+    simpa [localizedModuleFraction, localizationFraction] using
+      (LocalizedModule.mk_smul_mk (S := S) (r := 1)
+        (m := Submodule.Quotient.mk (p := N) m) s 1).symm
+  apply (localizedQuotientEquiv S N).injective
+  rw [(localizedQuotientEquiv S N).apply_symm_apply, hfracQ, hfracM,
+    Submodule.Quotient.mk_smul, map_smul]
+  congr 1
+  change LocalizedModule.mk (Submodule.Quotient.mk (p := N) m) 1 =
+    (IsLocalizedModule.linearEquiv S (Submodule.toLocalizedQuotient S N)
+      (LocalizedModule.mkLinearMap S (M ⧸ N)))
+      (Submodule.Quotient.mk (LocalizedModule.mk m 1))
+  exact (IsLocalizedModule.linearEquiv_apply S
+    (Submodule.toLocalizedQuotient S N)
+    (LocalizedModule.mkLinearMap S (M ⧸ N)) (Submodule.Quotient.mk m)).symm
 
 /-! ## Ideals and quotient rings -/
 
@@ -498,7 +840,21 @@ theorem localized_quotient_ring_equiv {A : Type u} [CommRing A]
     (I : Ideal A) (S : Submonoid A) :
     Nonempty (localization (quotientLocalizationSubmonoid I S) ≃+*
       localization S ⧸ localizedIdeal S I) := by
-  sorry
+  letI : Algebra (A ⧸ I) (localization S ⧸ localizedIdeal S I) :=
+    Ideal.Quotient.algebraQuotientOfLEComap Ideal.le_comap_map
+  letI : IsLocalization (quotientLocalizationSubmonoid I S)
+      (localization S ⧸ localizedIdeal S I) := by
+    change IsLocalization (Algebra.algebraMapSubmonoid (A ⧸ I) S)
+      (localization S ⧸ localizedIdeal S I)
+    exact IsLocalization.of_surjective S (localization S)
+      (Ideal.Quotient.mk I) Ideal.Quotient.mk_surjective
+      (Ideal.Quotient.mk (localizedIdeal S I)) Ideal.Quotient.mk_surjective rfl (by
+        rw [Ideal.mk_ker, Ideal.mk_ker]
+        exact le_rfl)
+  exact ⟨(IsLocalization.algEquiv
+    (quotientLocalizationSubmonoid I S)
+    (localization (quotientLocalizationSubmonoid I S))
+    (localization S ⧸ localizedIdeal S I)).toRingEquiv⟩
 
 theorem localized_quotient_ring_equiv_formula {A : Type u} [CommRing A]
     (I : Ideal A) (S : Submonoid A) :
@@ -513,7 +869,67 @@ theorem localized_quotient_ring_equiv_formula {A : Type u} [CommRing A]
             (localizationFraction S x s)) =
           localizationFraction (quotientLocalizationSubmonoid I S)
             (Ideal.Quotient.mk I x) (quotientLocalizationElement I S s)) := by
-  sorry
+  letI : Algebra (A ⧸ I) (localization S ⧸ localizedIdeal S I) :=
+    Ideal.Quotient.algebraQuotientOfLEComap Ideal.le_comap_map
+  letI : IsLocalization (quotientLocalizationSubmonoid I S)
+      (localization S ⧸ localizedIdeal S I) := by
+    change IsLocalization (Algebra.algebraMapSubmonoid (A ⧸ I) S)
+      (localization S ⧸ localizedIdeal S I)
+    exact IsLocalization.of_surjective S (localization S)
+      (Ideal.Quotient.mk I) Ideal.Quotient.mk_surjective
+      (Ideal.Quotient.mk (localizedIdeal S I)) Ideal.Quotient.mk_surjective rfl (by
+        rw [Ideal.mk_ker, Ideal.mk_ker]
+        exact le_rfl)
+  have hS : S ≤ (quotientLocalizationSubmonoid I S).comap
+      (Ideal.Quotient.mk I) := by
+    intro s hs
+    exact Submonoid.mem_map_of_mem (Ideal.Quotient.mk I).toMonoidHom hs
+  have hmap : IsLocalization.map (localization S ⧸ localizedIdeal S I)
+      (Ideal.Quotient.mk I) hS = Ideal.Quotient.mk (localizedIdeal S I) := by
+    apply IsLocalization.map_unique
+    intro x
+    change (Ideal.Quotient.mk (Ideal.map (algebraMap A (localization S)) I))
+        (algebraMap A (localization S) x) =
+      algebraMap (A ⧸ I)
+        (localization S ⧸ Ideal.map (algebraMap A (localization S)) I)
+        (Ideal.Quotient.mk I x)
+    rw [Ideal.Quotient.algebraMap_quotient_map_quotient]
+  let e : localization (quotientLocalizationSubmonoid I S) ≃+*
+      localization S ⧸ localizedIdeal S I :=
+    (Localization.algEquiv (quotientLocalizationSubmonoid I S)
+      (localization S ⧸ localizedIdeal S I)).toRingEquiv
+  have hforward : ∀ (x : A) (s : S),
+      e (localizationFraction (quotientLocalizationSubmonoid I S)
+          (Ideal.Quotient.mk I x) (quotientLocalizationElement I S s)) =
+        Ideal.Quotient.mk (localizedIdeal S I) (localizationFraction S x s) := by
+    intro x s
+    change (Localization.algEquiv (quotientLocalizationSubmonoid I S)
+        (localization S ⧸ localizedIdeal S I))
+        (Localization.mk (Ideal.Quotient.mk I x)
+          (quotientLocalizationElement I S s)) = _
+    rw [Localization.algEquiv_mk]
+    have hmk := IsLocalization.map_mk'
+      (M := S) (S := localization S)
+      (T := quotientLocalizationSubmonoid I S)
+      (Q := localization S ⧸ localizedIdeal S I)
+      (g := Ideal.Quotient.mk I) hS x s
+    calc
+      IsLocalization.mk' (localization S ⧸ localizedIdeal S I)
+          (Ideal.Quotient.mk I x) (quotientLocalizationElement I S s) =
+          IsLocalization.map (localization S ⧸ localizedIdeal S I)
+            (Ideal.Quotient.mk I) hS
+            (IsLocalization.mk' (localization S) x s) := by
+        symm
+        simpa [quotientLocalizationElement] using hmk
+      _ = Ideal.Quotient.mk (localizedIdeal S I) (localizationFraction S x s) := by
+        rw [hmap]
+        exact congrArg (Ideal.Quotient.mk (localizedIdeal S I))
+          (Localization.mk_eq_mk'_apply x s).symm
+  refine ⟨e, hforward, ?_⟩
+  intro x s
+  apply e.injective
+  rw [e.apply_symm_apply]
+  exact (hforward x s).symm
 
 /-! ## Submodules and ideals of a localization -/
 
@@ -526,7 +942,12 @@ theorem submodule_localization_eq {R : Type u} [CommRing R]
     (S : Submonoid R) {M : Type v} [AddCommGroup M] [Module R M]
     (N' : Submodule (localization S) (localizedModule S M)) :
     localizedSubmodule S (submoduleLocalizationPreimage S N') = N' := by
-  sorry
+  dsimp only [localizedSubmodule, submoduleLocalizationPreimage, Submodule.localized,
+    localizedModuleMap]
+  apply le_antisymm
+  · exact ((Submodule.localized'gi (Localization S) S (LocalizedModule.mkLinearMap S M)).gc
+      _ _).mpr le_rfl
+  · exact (Submodule.localized'gi (Localization S) S (LocalizedModule.mkLinearMap S M)).le_l_u N'
 
 theorem ideal_localization_eq {A : Type u} [CommRing A] (S : Submonoid A)
     (J : Ideal (localization S)) :

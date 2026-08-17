@@ -1,8 +1,13 @@
 import Mathlib.Algebra.Field.Rat
 import Mathlib.Algebra.Module.LocalizedModule.Submodule
+import Mathlib.Algebra.Order.Archimedean.Basic
 import Mathlib.Algebra.Polynomial.Roots
 import Mathlib.Data.Nat.Squarefree
+import Mathlib.Data.Nat.Factorization.Basic
+import Mathlib.Data.Nat.GCD.BigOperators
+import Mathlib.Data.Rat.Lemmas
 import Mathlib.RingTheory.Ideal.Prime
+import Mathlib.RingTheory.Coprime.Lemmas
 import Mathlib.RingTheory.Localization.FractionRing
 import Mathlib.RingTheory.Polynomial.Basic
 
@@ -144,9 +149,11 @@ theorem exampleModule_not_finite :
         refine ⟨rx + ry, ?_⟩
         calc
           algebraMap exampleBaseRing exampleFractionRing Q * (x + y).1 =
-              algebraMap exampleBaseRing exampleFractionRing Q * x.1 +
+                algebraMap exampleBaseRing exampleFractionRing Q * x.1 +
                 algebraMap exampleBaseRing exampleFractionRing Q * y.1 := by
-                  rw [map_mul, mul_add]
+                  change algebraMap exampleBaseRing exampleFractionRing Q *
+                      (x.1 + y.1) = _
+                  rw [mul_add]
           _ = algebraMap exampleBaseRing exampleFractionRing rx +
                 algebraMap exampleBaseRing exampleFractionRing ry := by
                   rw [hrx, hry]
@@ -157,8 +164,10 @@ theorem exampleModule_not_finite :
         refine ⟨a * rx, ?_⟩
         calc
           algebraMap exampleBaseRing exampleFractionRing Q * (a • x).1 =
-              algebraMap exampleBaseRing exampleFractionRing Q *
+                algebraMap exampleBaseRing exampleFractionRing Q *
                 (algebraMap exampleBaseRing exampleFractionRing a * x.1) := by
+                  change algebraMap exampleBaseRing exampleFractionRing Q *
+                      (a • x.1) = _
                   rw [Algebra.smul_def]
           _ = algebraMap exampleBaseRing exampleFractionRing a *
                 (algebraMap exampleBaseRing exampleFractionRing Q * x.1) := by
@@ -353,6 +362,103 @@ def integerExampleSquarefreeFractions : Set integerExampleFractionRing :=
 theorem integerExampleModule_eq_squarefreeFractions :
     (integerExampleModule : Set integerExampleFractionRing) =
       integerExampleSquarefreeFractions := by
-  sorry
+  have squarefree_lcm {m n : ℕ} (hm : Squarefree m) (hn : Squarefree n) :
+      Squarefree (Nat.lcm m n) := by
+    rw [Nat.squarefree_iff_factorization_le_one
+      (Nat.lcm_ne_zero hm.ne_zero hn.ne_zero)]
+    intro p
+    rw [Nat.factorization_lcm hm.ne_zero hn.ne_zero]
+    exact sup_le (hm.natFactorization_le_one p) (hn.natFactorization_le_one p)
+  have hden_squarefree : ∀ q : ℚ, q ∈ (integerExampleModule : Set ℚ) →
+      Squarefree q.den := by
+    intro q hq
+    induction hq using Submodule.span_induction with
+    | mem q hq =>
+        rcases hq with ⟨p, rfl⟩
+        simpa [integerExampleFractionalGenerator,
+          Rat.inv_natCast_den_of_pos p.2.pos] using p.2.squarefree
+    | zero =>
+        simp
+    | add x y hx hy hx' hy' =>
+        exact (squarefree_lcm hx' hy').squarefree_of_dvd (Rat.add_den_dvd_lcm x y)
+    | smul a x hx hx' =>
+        have hdvd : (a • x).den ∣ x.den := by
+          simpa [Algebra.smul_def] using (Rat.mul_den_dvd (a : ℚ) x)
+        exact hx'.squarefree_of_dvd hdvd
+  have hunit : (1 : ℚ) ∈ (integerExampleModule : Set ℚ) := by
+    let p : Nat.Primes := ⟨2, Nat.prime_two⟩
+    have hp : integerExampleFractionalGenerator p ∈
+        (integerExampleModule : Set ℚ) :=
+      Submodule.subset_span ⟨p, rfl⟩
+    have h := integerExampleModule.smul_mem (2 : ℤ) hp
+    simpa [integerExampleFractionalGenerator, p, Algebra.smul_def] using h
+  have hinv : ∀ s : Finset ℕ, (∀ p ∈ s, p.Prime) →
+      ((∏ p ∈ s, p : ℕ) : ℚ)⁻¹ ∈ (integerExampleModule : Set ℚ) := by
+    intro s
+    classical
+    induction s using Finset.induction_on with
+    | empty =>
+        intro hs
+        simpa using hunit
+    | @insert p s hps ih =>
+        intro hs
+        have hp : p.Prime := hs p (Finset.mem_insert_self p s)
+        have hs' : ∀ q ∈ s, q.Prime := by
+          intro q hq
+          exact hs q (Finset.mem_insert_of_mem hq)
+        let m : ℕ := ∏ q ∈ s, q
+        have hm : (m : ℚ)⁻¹ ∈ (integerExampleModule : Set ℚ) := by
+          simpa [m] using ih hs'
+        have hcop : p.Coprime m := by
+          rw [Nat.coprime_prod_right_iff]
+          intro q hq
+          apply hp.coprime_iff_not_dvd.mpr
+          intro hdiv
+          have hpq : p = q :=
+            (Nat.prime_dvd_prime_iff_eq hp (hs' q hq)).mp hdiv
+          exact hps (hpq ▸ hq)
+        obtain ⟨u, v, huv⟩ := hcop.isCoprime
+        have hpgen : ((p : ℕ) : ℚ)⁻¹ ∈
+            (integerExampleModule : Set ℚ) := by
+          let pp : Nat.Primes := ⟨p, hp⟩
+          change integerExampleFractionalGenerator pp ∈ integerExampleModule
+          exact Submodule.subset_span ⟨pp, rfl⟩
+        have hcomb : (u : ℚ) * (m : ℚ)⁻¹ + (v : ℚ) * (p : ℚ)⁻¹ ∈
+            (integerExampleModule : Set ℚ) := by
+          simpa [Algebra.smul_def] using
+            integerExampleModule.add_mem
+              (integerExampleModule.smul_mem u hm)
+              (integerExampleModule.smul_mem v hpgen)
+        have hm0 : m ≠ 0 := by
+          dsimp [m]
+          exact Finset.prod_ne_zero_iff.mpr (fun q hq => (hs' q hq).ne_zero)
+        have hEq : (u : ℚ) * (m : ℚ)⁻¹ + (v : ℚ) * (p : ℚ)⁻¹ =
+            ((p * m : ℕ) : ℚ)⁻¹ := by
+          have huvQ : (u : ℚ) * (p : ℚ) + (v : ℚ) * (m : ℚ) = 1 := by
+            exact_mod_cast huv
+          field_simp [hm0, hp.ne_zero]
+          rw [show (u : ℚ) * (p : ℚ) + (m : ℚ) * (v : ℚ) = 1 by
+            simpa [mul_comm] using huvQ]
+          norm_num [mul_comm]
+        have htarget : ((p * m : ℕ) : ℚ)⁻¹ ∈
+            (integerExampleModule : Set ℚ) := by
+          rw [← hEq]
+          exact hcomb
+        simpa [m, Finset.prod_insert hps, mul_comm] using htarget
+  apply Set.Subset.antisymm
+  · intro q hq
+    exact ⟨q.num, q.den, q.den_ne_zero, hden_squarefree q hq,
+      (Rat.num_div_den q).symm⟩
+  · intro q hq
+    change ∃ a : ℤ, ∃ b : ℕ, b ≠ 0 ∧ Squarefree b ∧
+      q = (a : ℚ) / (b : ℚ) at hq
+    rcases hq with ⟨a, b, hb, hbs, rfl⟩
+    have hprime : ∀ p ∈ b.primeFactors, p.Prime := by
+      intro p hp
+      exact (b.mem_primeFactors.mp hp).1
+    have hmem := hinv b.primeFactors hprime
+    have hsmul := integerExampleModule.smul_mem a hmem
+    simpa [Algebra.smul_def, Nat.prod_primeFactors_of_squarefree hbs,
+      div_eq_mul_inv] using hsmul
 
 end Formalization.Books.Examples.Unit31

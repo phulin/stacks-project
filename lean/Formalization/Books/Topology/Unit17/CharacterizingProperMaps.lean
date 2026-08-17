@@ -82,7 +82,7 @@ def IsProperTopologicalMap {Y : Type v} [TopologicalSpace Y] (f : X → Y) : Pro
 
 theorem compactSpace_iff_isClosedMap_prod_fst :
     CompactSpace X ↔
-      ∀ (Z : Type*) [TopologicalSpace Z],
+      ∀ (Z : Type u) [TopologicalSpace Z],
         IsClosedMap (Prod.fst : Z × X → Z) := by
   sorry
 
@@ -93,7 +93,7 @@ theorem proper_map_characterization_TFAE {Y : Type v} [TopologicalSpace Y]
     List.TFAE
       [IsQuasiProper f ∧ IsClosedMap f,
         IsProperMap f,
-        IsUniversallyClosed.{u, v, w} f,
+        IsUniversallyClosed.{u, v, max u v} f,
         IsClosedMap f ∧ ∀ y, IsCompact (f ⁻¹' {y})] := by
   sorry
 

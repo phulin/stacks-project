@@ -1,6 +1,8 @@
 import Formalization.Books.Sheaves.Unit04.AbelianPresheaves
 import Formalization.Books.Sheaves.Unit06.PresheavesOfModules
 import Formalization.Books.Sheaves.Unit14.StalksOfPresheavesOfModules
+import Formalization.Books.Sheaves.Unit15.AlgebraicStructures
+import Formalization.Books.Sheaves.Unit16.ExactnessAndPoints
 import Formalization.Books.Sheaves.Unit17.Sheafification
 import Mathlib.Algebra.Category.ModuleCat.Presheaf.Sheafification
 import Mathlib.Algebra.Category.ModuleCat.Sheaf.ChangeOfRings
@@ -24,6 +26,8 @@ open Formalization.Books.Sheaves.Unit04
 open Formalization.Books.Sheaves.Unit05
 open Formalization.Books.Sheaves.Unit06
 open Formalization.Books.Sheaves.Unit14
+open Formalization.Books.Sheaves.Unit16
+open Formalization.Books.Sheaves.Unit15
 open Formalization.Books.Sheaves.Unit03
 
 universe v
@@ -229,7 +233,8 @@ theorem moduleSheafificationActionAt_natural {X : TopCat.{v}}
   simp [moduleSheafificationActionAt]
 
 /-- The scalar action as a morphism of sheaves of sets, written on the
-underlying presheaves. -/
+underlying presheaves.  The corresponding morphism in the sheaf category is
+`moduleSheafificationActionSheaf` below. -/
 noncomputable def moduleSheafificationAction {X : TopCat.{v}}
     {O : RingPresheaf.{v, v} X} (F : PMod O) :
     presheafProduct (ringSheafificationSetPresheaf O)
@@ -252,6 +257,41 @@ noncomputable def moduleSheafificationAction {X : TopCat.{v}}
         restriction (F := moduleSheafificationSetPresheaf F) f.unop.le
           (moduleSheafificationActionAt F U.unop p.1 p.2)
       exact moduleSheafificationActionAt_natural F f.unop.le p.1 p.2 }
+
+/-! The source's action is a map of sheaves of sets.  The presheaf product
+above is the underlying presheaf of a sheaf because finite products of
+sheaves are sheaves; keeping this carrier explicit makes the map available
+at the same underlying sections used in the preceding definition. -/
+
+/-- The underlying set sheaf of the categorical module sheafification. -/
+noncomputable abbrev moduleSheafificationSetSheaf {X : TopCat.{v}}
+    {O : RingPresheaf.{v, v} X} (F : PMod O) : TopCat.Sheaf (Type v) X :=
+  letI : AlgebraicStructureType AddCommGrpCat (CategoryTheory.forget AddCommGrpCat) :=
+    standardAlgebraicStructureTypes.{v, v, v}.2.1
+  underlyingSheaf (CategoryTheory.forget AddCommGrpCat)
+    ((SheafOfModules.toSheaf (ringSheafification O)).obj
+      (moduleSheafification F))
+
+/-- The presheaf product used by the scalar action is a sheaf. -/
+theorem moduleSheafificationActionDomain_isSheaf {X : TopCat.{v}}
+    {O : RingPresheaf.{v, v} X} (F : PMod O) :
+    TopCat.Presheaf.IsSheaf (presheafProduct
+      (ringSheafificationSetPresheaf O)
+      (moduleSheafificationSetPresheaf F)) := by
+  sorry
+
+/-- The scalar action as an actual morphism of sheaves of sets. -/
+noncomputable def moduleSheafificationActionSheaf {X : TopCat.{v}}
+    {O : RingPresheaf.{v, v} X} (F : PMod O) :
+    (⟨presheafProduct (ringSheafificationSetPresheaf O)
+        (moduleSheafificationSetPresheaf F),
+      moduleSheafificationActionDomain_isSheaf F⟩ : TopCat.Sheaf (Type v) X) ⟶
+      moduleSheafificationSetSheaf F :=
+  ⟨by
+    change presheafProduct (ringSheafificationSetPresheaf O)
+        (moduleSheafificationSetPresheaf F) ⟶
+      moduleSheafificationSetPresheaf F
+    exact moduleSheafificationAction F⟩
 
 /-- The action map makes the sheafification unit a map of module presheaves;
 this is the source's commutative square on sections. -/

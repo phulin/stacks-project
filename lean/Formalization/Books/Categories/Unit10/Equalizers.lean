@@ -68,7 +68,18 @@ theorem equalizer_unique_up_to_unique_iso
     {e : Z ⟶ X} {e' : Z' ⟶ X}
     (he : IsEqualizer e a b) (he' : IsEqualizer e' a b) :
     ∃! i : Z ≅ Z', i.hom ≫ e' = e := by
-  sorry
+  rcases he with ⟨hcond, ⟨hlim⟩⟩
+  rcases he' with ⟨hcond', ⟨hlim'⟩⟩
+  let i : (Fork.ofι e hcond).pt ≅ (Fork.ofι e' hcond').pt :=
+    IsLimit.conePointUniqueUpToIso hlim hlim'
+  have hi : i.hom ≫ e' = e := by
+    simpa [i] using
+      IsLimit.conePointUniqueUpToIso_hom_comp hlim hlim' WalkingParallelPair.zero
+  refine ⟨i, hi, ?_⟩
+  intro j hj
+  apply Iso.ext
+  apply Fork.IsLimit.hom_ext hlim'
+  exact hj.trans hi.symm
 
 /- The source finally notes that the definition extends to more than two
 parallel morphisms.  Mathlib's `Multifork`/`HasMultiequalizer` interfaces

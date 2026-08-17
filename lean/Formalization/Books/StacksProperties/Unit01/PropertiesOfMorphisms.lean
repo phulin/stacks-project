@@ -111,7 +111,7 @@ theorem relative_property_implication {S : Scheme.{u}}
     {X Y : AlgebraicStack S} (f : StackMorphism X Y)
     (hf : HasRelativeProperty P f) :
     HasRelativeProperty Q f := by
-  sorry
+  exact ⟨hf.1, fun W w bc => hPQ bc.projection (hf.2 W w bc)⟩
 
 def baseChangeIsAlgebraicSpace {S : Scheme.{u}}
     {X Y : AlgebraicStack S} (f : StackMorphism X Y)
@@ -267,7 +267,16 @@ def RelativeSpaceOneMorphismEquivalent {S : Scheme.{u}}
 theorem relativeSpaceOneMorphism_equivalence {S : Scheme.{u}}
     {Y : AlgebraicStack S} (F G : RelativeSpaceObject Y) :
     Equivalence (@RelativeSpaceOneMorphismEquivalent S Y F G) := by
-  sorry
+  refine { refl := ?_, symm := ?_, trans := ?_ }
+  · intro a
+    exact ⟨{ component := fun p => G.source.points.isEquivalence.refl _, compatibility := True }⟩
+  · intro a b hab
+    rcases hab with ⟨h⟩
+    exact ⟨{ component := fun p => G.source.points.isEquivalence.symm (h.component p), compatibility := True }⟩
+  · intro a b c hab hbc
+    rcases hab with ⟨hab⟩
+    rcases hbc with ⟨hbc⟩
+    exact ⟨{ component := fun p => G.source.points.isEquivalence.trans (hab.component p) (hbc.component p), compatibility := True }⟩
 
 def relativeSpaceMorphismSetoid {S : Scheme.{u}}
     {Y : AlgebraicStack S} (F G : RelativeSpaceObject Y) :

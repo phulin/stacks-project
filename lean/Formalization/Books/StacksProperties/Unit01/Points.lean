@@ -34,14 +34,16 @@ def inducedPointMap {S : Scheme.{u}} {X Y : AlgebraicStack S}
 
 theorem inducedPointMap_id {S : Scheme.{u}} (X : AlgebraicStack S) :
     inducedPointMap (StackMorphism.id X) = id := by
-  sorry
+  funext p
+  exact Quotient.inductionOn p (fun p => rfl)
 
 theorem inducedPointMap_comp {S : Scheme.{u}}
     {X Y Z : AlgebraicStack S} (f : StackMorphism X Y)
     (g : StackMorphism Y Z) :
     inducedPointMap (StackMorphism.comp f g) =
       inducedPointMap g ∘ inducedPointMap f := by
-  sorry
+  funext p
+  exact Quotient.inductionOn p (fun p => rfl)
 
 def PointSquareCommutes {S : Scheme.{u}}
     {X Y Z W : AlgebraicStack S}
@@ -56,12 +58,30 @@ theorem point_square_commutes {S : Scheme.{u}}
     (hsquare : PointSquareCommutes f g h k) :
     inducedPointMap h ∘ inducedPointMap f =
       inducedPointMap k ∘ inducedPointMap g := by
-  sorry
+  funext p
+  exact Quotient.inductionOn p (fun p => Quotient.sound (hsquare p))
 
 theorem equivalence_bijective_on_points {S : Scheme.{u}}
     {X Y : AlgebraicStack S} (e : StackEquivalence X Y) :
     Function.Bijective (inducedPointMap e.forward) := by
-  sorry
+  let F := inducedPointMap e.forward
+  let G := inducedPointMap e.inverse
+  have hleft : G ∘ F = id := by
+    funext p
+    exact Quotient.inductionOn p (fun p => Quotient.sound (e.leftInverse p))
+  have hright : F ∘ G = id := by
+    funext p
+    exact Quotient.inductionOn p (fun p => Quotient.sound (e.rightInverse p))
+  constructor
+  · intro p q h
+    calc
+      p = (G ∘ F) p := (congrFun hleft p).symm
+      _ = G (F p) := rfl
+      _ = G (F q) := congrArg G h
+      _ = (G ∘ F) q := rfl
+      _ = q := congrFun hleft q
+  · intro p
+    exact ⟨G p, congrFun hright p⟩
 
 def SpaceMorphismSurjective {S : Scheme.{u}}
     {X Y : AlgebraicSpace S} (f : SpaceMorphism X Y) : Prop :=
@@ -100,7 +120,14 @@ theorem points_cartesian_surjective {S : Scheme.{u}}
     {X Y Z : AlgebraicStack S} (f : StackMorphism X Y)
     (g : StackMorphism Z Y) :
     Function.Surjective (fibreProductPointsMap f g) := by
-  sorry
+  intro y
+  rcases y with ⟨⟨px, pz⟩, h⟩
+  induction px using Quotient.inductionOn with
+  | _ p =>
+    induction pz using Quotient.inductionOn with
+    | _ q =>
+      refine ⟨Quotient.mk _ ⟨⟨p, q⟩, Quotient.exact h⟩, ?_⟩
+      rfl
 
 theorem characterize_surjective {S : Scheme.{u}}
     {X Y : AlgebraicStack S} (f : StackMorphism X Y)

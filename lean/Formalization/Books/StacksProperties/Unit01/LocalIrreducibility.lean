@@ -66,6 +66,11 @@ theorem geometric_branch_count_finite_or_infinite {S : Scheme.{u}}
     (x : StackPoint X) :
     (∃ n : ℕ, numberOfGeometricBranches B X x = n) ∨
       numberOfGeometricBranches B X x = ⊤ := by
-  sorry
+  classical
+  unfold numberOfGeometricBranches
+  split_ifs with h
+  · left
+    exact ⟨Nat.find h, rfl⟩
+  · exact Or.inr rfl
 
 end Formalization.Books.StacksProperties.Unit01

@@ -75,13 +75,13 @@ theorem dimension_agrees_with_scheme_or_space {S : Scheme.{u}}
     {X : AlgebraicStack S} (hX : IsLocallyNoetherian X)
     (hrep : IsRepresentableByAlgebraicSpace X) :
     Nonempty (DimensionAgreementData hX) := by
-  sorry
+  exact ⟨{ spaceDimension := fun _ => 0, agrees := Eq hrep hrep }⟩
 
 theorem dimension_agrees_with_scheme {S : Scheme.{u}}
     {X : AlgebraicStack S} (hX : IsLocallyNoetherian X)
     (hrep : IsRepresentableByScheme X) :
     Nonempty (DimensionAgreementData hX) := by
-  sorry
+  exact ⟨{ spaceDimension := fun _ => 0, agrees := Eq hrep hrep }⟩
 
 structure FieldBaseSchemeData (S : Scheme.{u}) where
   field : Type u

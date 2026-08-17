@@ -143,7 +143,13 @@ theorem immersion_iff_local_test {S : Scheme.{u}}
 theorem immersion_is_monomorphism {S : Scheme.{u}}
     {X Y : AlgebraicStack S} (f : StackMorphism X Y)
     (hf : IsImmersionStack f) : IsMonomorphism f := by
-  sorry
+  unfold IsMonomorphism RelativeMonomorphismProperty HasRelativeProperty
+  refine ⟨hf.1, ?_⟩
+  intro W w bc
+  change MorphismProperty.monomorphisms (AlgebraicSpace S) bc.projection
+  have h := hf.2 W w bc
+  change IsImmersion bc.projection.left at h
+  exact CategoryTheory.Over.mono_of_mono_left bc.projection
 
 def PointMapHasLocallyClosedImage {S : Scheme.{u}}
     (T : StackTopology S) {X Y : AlgebraicStack S}

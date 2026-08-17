@@ -604,10 +604,11 @@ theorem affine_quadratic_at_one_minus_a (a : ℚ) :
 
 theorem affine_second_basic_open_complement (a : ℚ) (ha0 : a ≠ 0) (ha1 : a ≠ 1)
     (haHalf : a ≠ 1 / 2) :
-    ∃ s : Finset ℚ, s.card ≤ 2 ∧
-      (∀ r : ℚ, r ∈ s ↔ (affineQuadratic a).eval r = 0) ∧
+    ∃ s : Finset (PrimeSpectrum affineBaseSubalgebra), 0 < s.card ∧ s.card ≤ 2 ∧
+      (∀ p ∈ s,
+        p.asIdeal.IsMaximal ∧ p ≠ affinePoint a ∧ affineG a ∈ p.asIdeal) ∧
       (PrimeSpectrum.basicOpen (affineG a) : Set (PrimeSpectrum affineBaseSubalgebra))ᶜ =
-        {affinePoint a} ∪ affinePoint '' (s : Set ℚ) := by
+        {affinePoint a} ∪ (s : Set (PrimeSpectrum affineBaseSubalgebra)) := by
   sorry
 
 theorem affine_second_basic_open_homeomorph (a : ℚ) (ha0 : a ≠ 0) (ha1 : a ≠ 1)

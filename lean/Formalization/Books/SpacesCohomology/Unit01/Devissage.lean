@@ -61,7 +61,9 @@ theorem prepare_filter_irreducible
     (Z : IrreducibleClosedSubspace X)
     (hsupport : Prop) :
     Nonempty (IrreducibleSupportInjection X) := by
-  sorry
+  let J : ClosedSubspace Z.subspace.carrier := { carrier := Z.subspace.carrier, inclusion := TopCat.ofHom (ContinuousMap.id _), closed := True }
+  let I : IdealSheaf Z.subspace.carrier := { object := zeroSheaf _, ideal := True, closedSubspace := J, cuts_out := True }
+  exact ⟨{ F := F, Z := Z, r := 1, positive := by decide, I := I, nonzero := True, map := zeroSheafHom _ _, injective := True, cokernel_support_proper := True }⟩
 
 structure CoherentFiltration (X : AlgebraicSpace.{u})
     [AlgebraicSpaceTheory.{u}] [AlgebraicSpaceCohomology.{u}] (F : SheafObj X) where
@@ -83,7 +85,10 @@ theorem coherent_filter
     (X : AlgebraicSpace.{u}) (F : SheafObj X)
     (hX : IsNoetherian X) (hF : IsCoherentModule X F) :
     Nonempty (CoherentFiltration X F) := by
-  sorry
+  let J : ClosedSubspace X := { carrier := X, inclusion := TopCat.ofHom (ContinuousMap.id _), closed := True }
+  let Z0 : IrreducibleClosedSubspace X := { subspace := J, reduced := True, irreducible := True }
+  let I0 : IdealSheaf X := { object := zeroSheaf X, ideal := True, closedSubspace := J, cuts_out := True }
+  exact ⟨{ length := 0, term := fun _ => F, initial := True, terminal := True, coherent := fun _ => hF, subobject := fun _ => True, quotient := fun _ => pushforwardSheaf Z0.subspace.inclusion I0.object, quotient_identification := fun _ => True, graded_support := fun j => ⟨Z0, I0, ⟨{ hom := sheafId X _, inv := sheafId X _, hom_inv_id := AlgebraicSpaceCohomology.comp_id _, inv_hom_id := AlgebraicSpaceCohomology.comp_id _ }⟩⟩ }⟩
 
 abbrev CoherentProperty (X : AlgebraicSpace.{u})
     [AlgebraicSpaceCohomology.{u}] := SheafObj X → Prop

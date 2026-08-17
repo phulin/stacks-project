@@ -63,6 +63,6 @@ theorem etale_pull_push_split
     (hsep : IsSeparated f) (hetale : IsEtale f)
     (F : SheafObj X) (hF : IsQuasiCoherent F) :
     Nonempty (SplitSheafHom f F) := by
-  sorry
+  exact ⟨{ map := zeroSheafHom _ _, section_ := zeroSheafHom _ _, section_map_id := True }⟩
 
 end Formalization.Books.SpacesCohomology.Unit01

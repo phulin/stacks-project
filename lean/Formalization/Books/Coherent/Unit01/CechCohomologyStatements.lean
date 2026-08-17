@@ -7,6 +7,7 @@ import Mathlib.AlgebraicGeometry.Cover.Open
 import Mathlib.AlgebraicGeometry.Morphisms.Separated
 import Mathlib.AlgebraicGeometry.Morphisms.Affine
 import Mathlib.AlgebraicGeometry.Modules.Sheaf
+import Mathlib.AlgebraicGeometry.Modules.Tilde
 import Mathlib.CategoryTheory.Abelian.RightDerived
 import Mathlib.CategoryTheory.Sites.SheafCohomology.Cech
 
@@ -64,7 +65,10 @@ structure StandardOpenCoverOfAffineOpen (X : Scheme.{u}) where
 theorem StandardOpenCover.iSup_basicOpen {Y : Scheme.{u}} {hY : IsAffine Y}
     (𝒰 : StandardOpenCover Y hY) :
     ⨆ i, 𝒰.basicOpen i = ⊤ := by
-  sorry
+  letI := hY
+  change (⨆ i, Y.basicOpen (𝒰.function i)) = ⊤
+  rw [← iSup_range]
+  exact iSup_basicOpen_of_span_eq_top (⊤ : Y.Opens) (Set.range 𝒰.function) 𝒰.span_eq_top
 
 /-! ### Sheaf and Čech cohomology objects -/
 
@@ -205,13 +209,20 @@ structure LocalizedCechHomotopyData {Y : Scheme.{u}} {hY : IsAffine Y}
 theorem localized_cech_index_exists {Y : Scheme.{u}} {hY : IsAffine Y}
     (𝒰 : StandardOpenCover Y hY) (p : PrimeSpectrum (Γ(Y, ⊤))) :
     ∃ i : Fin 𝒰.n, 𝒰.function i ∉ p.asIdeal := by
-  sorry
+  by_contra h
+  apply p.2.ne_top
+  rw [← top_le_iff, ← 𝒰.span_eq_top, Ideal.span_le]
+  intro x hx
+  obtain ⟨i, rfl⟩ := hx
+  by_contra hi
+  exact h ⟨i, hi⟩
 
 /-- The choice used in the localized contracting-homotopy argument exists. -/
 theorem localized_cech_homotopy_data_nonempty {Y : Scheme.{u}} {hY : IsAffine Y}
     (𝒰 : StandardOpenCover Y hY) (p : PrimeSpectrum (Γ(Y, ⊤))) :
     Nonempty (LocalizedCechHomotopyData 𝒰) := by
-  sorry
+  rcases localized_cech_index_exists 𝒰 p with ⟨i, hi⟩
+  exact ⟨{ prime := p, fixed := i, fixed_not_mem := hi }⟩
 
 /-! ### Affine morphisms and higher direct images -/
 
@@ -269,7 +280,64 @@ structure AffineIntersectionCover (X : Scheme.{u}) where
 theorem affine_diagonal_iff {X : Scheme.{u}} :
     (HasAffineDiagonal X ↔ AffineOpenIntersections X) ∧
       (AffineOpenIntersections X ↔ Nonempty (AffineIntersectionCover X)) := by
-  sorry
+  have hleft : HasAffineDiagonal X ↔ AffineOpenIntersections X := by
+    rw [HasAffineDiagonal, AffineOpenIntersections]
+    constructor
+    · intro h U V hU hV
+      exact isAffineHom_diagonal_iff.mp h ⊤ (isAffineOpen_top _) U (by simp) V (by simp) hU hV
+    · intro h
+      apply isAffineHom_diagonal_iff.mpr
+      intro U hU V₁ hV₁ V₂ hV₂ hV₁' hV₂'
+      exact h V₁ V₂ hV₁' hV₂'
+  refine ⟨hleft, ?_⟩
+  rw [AffineOpenIntersections]
+  constructor
+  · intro h
+    letI : IsAffineHom (pullback.diagonal (terminal.from X)) := hleft.mpr h
+    refine ⟨{ cover := X.affineOpenCover.openCover, intersections_affine := ?_ }⟩
+    intro n i
+    apply IsAffineOpen.iInf
+    intro j
+    have hAff : IsAffine (X.affineOpenCover.openCover.X (i j)) :=
+      Scheme.isAffine_affineOpenCover X X.affineOpenCover (i j)
+    letI := hAff
+    exact isAffineOpen_opensRange (X.affineOpenCover.openCover.f (i j))
+  · rintro ⟨𝒰⟩
+    have hAff (i : 𝒰.cover.I₀) : IsAffine (𝒰.cover.X i) := by
+      have htop : IsAffineOpen (⊤ : (𝒰.cover.X i).Opens) := by
+        apply (𝒰.cover.f i).isAffineOpen_iff_of_isOpenImmersion (U := ⊤) |>.mp
+        simpa using 𝒰.intersections_affine 0 (fun _ : Fin 1 => i)
+      letI : IsAffine (↑(⊤ : (𝒰.cover.X i).Opens)) := htop
+      exact IsAffine.of_isIso (𝒰.cover.X i).topIso.inv
+    letI : ∀ i, IsAffine (𝒰.cover.X i) := hAff
+    let Q : AffineTargetMorphismProperty := fun X _ _ _ => IsAffine X
+    letI : HasAffineProperty (@IsAffineHom) Q := by
+      simpa [Q] using instHasAffinePropertyIsAffineHomIsAffine
+    have hQ : Q.diagonal (terminal.from X) := by
+      letI : Q.IsLocal :=
+        HasAffineProperty.isLocal_affineProperty (P := @IsAffineHom) (Q := Q)
+      apply AffineTargetMorphismProperty.diagonal_of_openCover_source
+        (Q := Q) (terminal.from X) 𝒰.cover
+      intro i j
+      change IsAffine (pullback (𝒰.cover.f i) (𝒰.cover.f j))
+      have hh := 𝒰.intersections_affine 1 (fun k : Fin 2 => ![i, j] k)
+      rw [← Finset.inf_univ_eq_iInf, Finset.univ_fin2] at hh
+      simp only [Finset.inf_insert, Finset.inf_singleton,
+        Matrix.cons_val_zero, Matrix.cons_val_one] at hh
+      have hInt : IsAffineOpen
+          ((𝒰.cover.f i).opensRange ⊓ (𝒰.cover.f j).opensRange) := by
+        simpa using hh
+      have hRange : IsAffineOpen
+          (pullback.fst (𝒰.cover.f i) (𝒰.cover.f j) ≫ 𝒰.cover.f i).opensRange := by
+        convert hInt using 1
+        exact Opens.ext (IsOpenImmersion.range_pullback_to_base_of_left _ _)
+      change IsAffine _ at hRange
+      exact IsAffine.of_isIso
+        (pullback.fst (𝒰.cover.f i) (𝒰.cover.f j) ≫ 𝒰.cover.f i).isoOpensRange.hom
+    have hdiag : HasAffineDiagonal X := by
+      exact (HasAffineProperty.diagonal_iff (P := @IsAffineHom) (Q := Q)
+        (f := terminal.from X)).mp hQ
+    exact hleft.mp hdiag
 
 /-- A separated scheme has affine diagonal. -/
 theorem has_affine_diagonal_of_separated (X : Scheme.{u}) [X.IsSeparated] :

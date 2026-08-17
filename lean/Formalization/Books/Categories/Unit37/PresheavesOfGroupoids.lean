@@ -1,3 +1,4 @@
+import Formalization.Books.Categories.Unit35.CategoriesFibredInGroupoids
 import Formalization.Books.Categories.Unit36.PresheavesOfCategories
 
 /-!
@@ -196,9 +197,10 @@ def IsSplitCategoryFibredInGroupoids
     {S : Type uS} [Category.{vS} S]
     {C : Type uC} [Category.{vC} C]
     (p : S ⥤ C) : Prop :=
-  ∃ (F : Cᵒᵖ ⥤ CategoryTheory.Cat.{vS, uS}),
-    (∀ U : C, IsGroupoid (F.obj (Opposite.op U))) ∧
-      IsomorphicOverBase p (groupoidPresheafProjection F)
+  p.IsFibredInGroupoids ∧
+    ∃ (F : Cᵒᵖ ⥤ CategoryTheory.Cat.{vS, uS}),
+      (∀ U : C, IsGroupoid (F.obj (Opposite.op U))) ∧
+        IsomorphicOverBase p (groupoidPresheafProjection F)
 
 theorem groupoidPresheafProjection_isSplit
     (F : Cᵒᵖ ⥤ CategoryTheory.Cat.{vS, uS})

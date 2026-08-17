@@ -125,12 +125,28 @@ structure FibredFunctorOver {C : Cat.{v, u}}
   over : functor ⋙ q = p
   preserves : MapsStronglyCartesian p q functor
 
+/- Natural isomorphisms in the 2-category of categories over a base have
+   vertical components.  This generic form is needed here because the
+   full-subcategory presentations of the inertia categories can have larger
+   universes than `CategoryOver` permits. -/
+def IsOverNaturalIso {A C : Type*}
+    [Category* A] [Category* C]
+    (p : A ⥤ C) {F G : A ⥤ A}
+    (h : F ⋙ p = G ⋙ p) (e : F ≅ G) : Prop :=
+  ∀ x, p.map (e.hom.app x) =
+    eqToHom (congrArg (fun H : A ⥤ C => H.obj x) h)
+
 def IsEquivalentOverBase {A B C : Type*}
     [Category* A] [Category* B] [Category* C]
     (p : A ⥤ C) (q : B ⥤ C) : Prop :=
   ∃ (F : A ⥤ B) (G : B ⥤ A),
     F ⋙ q = p ∧ G ⋙ p = q ∧
-      Nonempty (F ⋙ G ≅ 𝟭 A) ∧ Nonempty (G ⋙ F ≅ 𝟭 B)
+      (∃ (e : F ⋙ G ≅ 𝟭 A)
+        (h : (F ⋙ G) ⋙ p = (𝟭 A) ⋙ p),
+        IsOverNaturalIso p h e) ∧
+      (∃ (e : G ⋙ F ≅ 𝟭 B)
+        (h : (G ⋙ F) ⋙ q = (𝟭 B) ⋙ q),
+        IsOverNaturalIso q h e)
 
 /-! ## The diagonal and the 2-fibre-product description -/
 
@@ -141,13 +157,8 @@ def IsEquivalentOverBase {A B C : Type*}
 noncomputable def canonicalFibredTwoFibreProduct {C : Cat.{v, u}}
     {X Y S : FibredCategoryOver C}
     (F : FibredCategoryOverHom X S)
-    (G : FibredCategoryOverHom Y S) : FibredTwoFibreProduct F G where
-  diagram := twoFibreProductOverDiagram F.underlying G.underlying
-  apex_fibred := by sorry
-  left_preserves := by sorry
-  right_preserves := by sorry
-  is_two_fibre_product := twoFibreProductOver_is_twoFibreProduct
-    F.underlying G.underlying
+    (G : FibredCategoryOverHom Y S) : FibredTwoFibreProduct F G :=
+  Classical.choice (fibred_categories_have_two_fibre_products X Y S F G)
 
 /- The diagonal sends `x` to `(x, x, id)` in the iso-comma presentation of
    the 2-fibre product.  The object property records that both entries lie

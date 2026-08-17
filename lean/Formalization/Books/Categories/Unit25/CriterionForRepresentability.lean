@@ -6,6 +6,7 @@ import Mathlib.CategoryTheory.Limits.IndYoneda
 import Mathlib.CategoryTheory.Limits.Shapes.WideEqualizers
 import Mathlib.CategoryTheory.Yoneda
 import Mathlib.SetTheory.Cardinal.Arithmetic
+import Mathlib.SetTheory.Cardinal.Free
 import Mathlib.Topology.Category.TopCat.Limits.Basic
 
 /-!
@@ -121,7 +122,14 @@ theorem brownUniversalElement_map_projection {C : Type u} [Category.{v} C]
     (x : ∀ i, F.obj (X i)) [HasLimits C] [PreservesLimits F] (i : I) :
     F.map (limit.π (brownIndexProjection F X x) (BrownIndex.mk i))
         (brownUniversalElement F X x) = x i := by
-  sorry
+  let hpres : Nonempty
+      (IsLimit (F.mapCone (limit.cone (brownIndexProjection F X x)))) :=
+    (inferInstance : PreservesLimit (brownIndexProjection F X x) F).preserves
+      (limit.isLimit _)
+  change (F.map (limit.π (brownIndexProjection F X x) (BrownIndex.mk i)))
+      ((hpres.some.lift (brownUniversalCone F X x)) PUnit.unit) = x i
+  have h := hpres.some.fac (brownUniversalCone F X x) (BrownIndex.mk i)
+  exact congrArg (fun q => q PUnit.unit) h
 
 theorem brownUniversalTransformation_app_apply {C : Type u} [Category.{v} C]
     (F : C ⥤ Type v) {I : Type v} (X : I → C)
@@ -140,16 +148,177 @@ theorem brownUniversalTransformation_surjective
     (hgen : IsGeneratingFamily F X x) :
     ∀ Y : C, Function.Surjective
       ((brownUniversalTransformation F X x).app Y) := by
-  sorry
+  intro Y g
+  obtain ⟨i, f, hf⟩ := hgen Y g
+  change (brownIndexProjection F X x).obj (BrownIndex.mk i) ⟶ Y at f
+  refine ⟨limit.π (brownIndexProjection F X x) (BrownIndex.mk i) ≫ f, ?_⟩
+  rw [brownUniversalTransformation_app_apply]
+  change F.map (limit.π (brownIndexProjection F X x) (BrownIndex.mk i) ≫ f)
+      (brownUniversalElement F X x) = g
+  rw [F.map_comp]
+  change (F.map f)
+      (F.map (limit.π (brownIndexProjection F X x) (BrownIndex.mk i))
+        (brownUniversalElement F X x)) = g
+  rw [brownUniversalElement_map_projection]
+  change (F.map f) (x i) = g at hf
+  exact hf
+
+private def brownCriterionStabilizer {C : Type u} [Category.{v} C]
+    (F : C ⥤ Type v) {Y : C} (y : F.obj Y) : Type v :=
+  {f : Y ⟶ Y // F.map f y = y}
+
+private def brownCriterionStabilizerFamily {C : Type u} [Category.{v} C]
+    (F : C ⥤ Type v) {Y : C} (y : F.obj Y) :
+    (brownCriterionStabilizer F y ⊕ PUnit.{v + 1}) → (Y ⟶ Y)
+  | Sum.inl f => f.1
+  | Sum.inr _ => 𝟙 Y
+
+private noncomputable def brownCriterionEqualizerObject {C : Type u}
+    [Category.{v} C] (F : C ⥤ Type v) {Y : C} (y : F.obj Y)
+    [HasLimits C] : C :=
+  wideEqualizer (brownCriterionStabilizerFamily F y)
+
+private noncomputable def brownCriterionEqualizerMap {C : Type u}
+    [Category.{v} C] (F : C ⥤ Type v) {Y : C} (y : F.obj Y)
+    [HasLimits C] : brownCriterionEqualizerObject F y ⟶ Y :=
+  wideEqualizer.ι (brownCriterionStabilizerFamily F y)
+
+private theorem brownCriterionEqualizerElement {C : Type u} [Category.{v} C]
+    (F : C ⥤ Type v) {Y : C} (y : F.obj Y) [HasLimits C] [PreservesLimits F] :
+    ∃ y' : F.obj (brownCriterionEqualizerObject F y),
+      F.map (brownCriterionEqualizerMap F y) y' = y := by
+  let hpres : Nonempty
+      (IsLimit (F.mapCone (limit.cone
+        (parallelFamily (brownCriterionStabilizerFamily F y))))) :=
+    (inferInstance : PreservesLimit
+      (parallelFamily (brownCriterionStabilizerFamily F y)) F).preserves
+      (limit.isLimit _)
+  let c : Cone ((parallelFamily (brownCriterionStabilizerFamily F y)) ⋙ F) :=
+    { pt := PUnit.{v + 1}
+      π :=
+        { app := fun j => match j with
+          | WalkingParallelFamily.zero => ↾(fun _ => y)
+          | WalkingParallelFamily.one => ↾(fun _ => y)
+          naturality := by
+            intro j k f
+            cases f with
+            | id => simp
+            | line j =>
+                rcases j with f | _
+                · ext z
+                  simpa [brownCriterionStabilizerFamily] using f.2.symm
+                · simp [brownCriterionStabilizerFamily] } }
+  refine ⟨hpres.some.lift c PUnit.unit, ?_⟩
+  have h := hpres.some.fac c WalkingParallelFamily.zero
+  exact congrArg (fun q => q PUnit.unit) h
+
+private theorem brownCriterionFinalEqualizerElement {C : Type u}
+    [Category.{v} C] (F : C ⥤ Type v) {Y' Z : C}
+    (a b : Y' ⟶ Z) (y' : F.obj Y')
+    (hab : F.map a y' = F.map b y') [HasLimits C] [PreservesLimits F] :
+    ∃ y'' : F.obj (equalizer a b),
+      F.map (equalizer.ι a b) y'' = y' := by
+  let hpres : Nonempty
+      (IsLimit (F.mapCone (limit.cone (parallelPair a b)))) :=
+    (inferInstance : PreservesLimit (parallelPair a b) F).preserves
+      (limit.isLimit _)
+  let c : Cone ((parallelPair a b) ⋙ F) :=
+    Cone.ofFork (Fork.ofι (↾(fun _ : PUnit.{v + 1} => y')) (by
+      ext z
+      exact hab))
+  refine ⟨hpres.some.lift c PUnit.unit, ?_⟩
+  have h := hpres.some.fac c WalkingParallelPair.zero
+  exact congrArg (fun q => q PUnit.unit) h
+
+private theorem brown_representability_criterion_corepresentableBy
+    {C : Type u} [Category.{v} C] [HasLimits C]
+    (F : C ⥤ Type v) [PreservesLimits F]
+    {I : Type v} (X : I → C) (x : ∀ i, F.obj (X i))
+    (hgen : IsGeneratingFamily F X x) :
+    ∃ Y : C, Nonempty (F.CorepresentableBy Y) := by
+  have hξ := brownUniversalTransformation_surjective F X x hgen
+  obtain ⟨y', he⟩ :=
+    brownCriterionEqualizerElement F (brownUniversalElement F X x)
+  have hsurj : ∀ Z : C, Function.Surjective
+      ((coyonedaEquiv.symm y').app Z) := by
+    intro Z g
+    obtain ⟨f, hf⟩ := hξ Z g
+    refine ⟨brownCriterionEqualizerMap F
+      (brownUniversalElement F X x) ≫ f, ?_⟩
+    change F.map (brownCriterionEqualizerMap F
+      (brownUniversalElement F X x) ≫ f) y' = g
+    rw [F.map_comp]
+    change F.map f (F.map (brownCriterionEqualizerMap F
+      (brownUniversalElement F X x)) y') = g
+    rw [he]
+    exact hf
+  have hinj : ∀ Z : C, Function.Injective
+      ((coyonedaEquiv.symm y').app Z) := by
+    intro Z a b hab
+    change F.map a y' = F.map b y' at hab
+    obtain ⟨y'', hy''⟩ := brownCriterionFinalEqualizerElement F a b y' hab
+    obtain ⟨ψ, hψ⟩ := hξ (equalizer a b) y''
+    rw [brownUniversalTransformation_app_apply] at hψ
+    let e₀ := brownCriterionEqualizerMap F
+      (brownUniversalElement F X x)
+    let e' := equalizer.ι a b
+    have hs : F.map (ψ ≫ e' ≫ e₀) (brownUniversalElement F X x) =
+        brownUniversalElement F X x := by
+      rw [F.map_comp, F.map_comp]
+      change F.map e₀ (F.map e' (F.map ψ
+        (brownUniversalElement F X x))) = brownUniversalElement F X x
+      rw [hψ, hy'', he]
+    let s : brownCriterionStabilizer F (brownUniversalElement F X x) :=
+      ⟨ψ ≫ e' ≫ e₀, hs⟩
+    have he_mono : Mono (brownCriterionEqualizerMap F
+        (brownUniversalElement F X x)) := by
+      change Mono (wideEqualizer.ι
+        (brownCriterionStabilizerFamily F (brownUniversalElement F X x)))
+      infer_instance
+    have hstab : e₀ ≫ s.1 = e₀ := by
+      simpa [e₀, brownCriterionEqualizerMap, brownCriterionEqualizerObject,
+        brownCriterionStabilizerFamily] using
+        (wideEqualizer.condition
+          (f := brownCriterionStabilizerFamily F
+            (brownUniversalElement F X x))
+          (Sum.inl s) (Sum.inr PUnit.unit))
+    have hsplit : e₀ ≫ ψ ≫ e' = 𝟙 _ := by
+      apply he_mono.right_cancellation
+      simpa [e₀, s, Category.assoc] using hstab
+    calc
+      a = 𝟙 _ ≫ a := by simp
+      _ = (e₀ ≫ ψ ≫ e') ≫ a := by rw [hsplit]
+      _ = e₀ ≫ ψ ≫ (e' ≫ a) := by simp [Category.assoc]
+      _ = e₀ ≫ ψ ≫ (e' ≫ b) := by
+        simpa [e'] using congrArg (fun q => e₀ ≫ ψ ≫ q)
+          (equalizer.condition a b)
+      _ = (e₀ ≫ ψ ≫ e') ≫ b := by simp [Category.assoc]
+      _ = 𝟙 _ ≫ b := by rw [hsplit]
+      _ = b := by simp
+  have hbij : ∀ Z : C, Function.Bijective
+      ((coyonedaEquiv.symm y').app Z) := fun Z =>
+    ⟨hinj Z, hsurj Z⟩
+  let e : F.CorepresentableBy
+      (brownCriterionEqualizerObject F (brownUniversalElement F X x)) :=
+    { homEquiv := fun {Z} =>
+        Equiv.ofBijective ((coyonedaEquiv.symm y').app Z) (hbij Z)
+      homEquiv_comp := by
+        intro Z Z' g f
+        change (coyonedaEquiv.symm y').app Z' (f ≫ g) =
+          F.map g ((coyonedaEquiv.symm y').app Z f)
+        exact (coyonedaEquiv.symm y').naturality_apply g f }
+  exact ⟨brownCriterionEqualizerObject F
+    (brownUniversalElement F X x), ⟨e⟩⟩
 
 /-- Brown's representability criterion, in Mathlib's covariant terminology. -/
 theorem brown_representability_criterion
     {C : Type u} [Category.{v} C] [HasLimits C]
     (F : C ⥤ Type v) [PreservesLimits F]
     {I : Type v} (X : I → C) (x : ∀ i, F.obj (X i))
-    (hgen : IsGeneratingFamily F X x) :
+  (hgen : IsGeneratingFamily F X x) :
     F.IsCorepresentable := by
-  sorry
+  obtain ⟨Y, hY⟩ := brown_representability_criterion_corepresentableBy F X x hgen
+  exact hY.some.isCorepresentable
 
 /-! ## The equalizer refinement in Brown's proof -/
 
@@ -199,7 +368,28 @@ theorem exists_brownEqualizerElement {C : Type u} [Category.{v} C]
     (F : C ⥤ Type v) {Y : C} (y : F.obj Y) [HasLimits C] [PreservesLimits F] :
     ∃ y' : F.obj (brownEqualizerObject F y),
       F.map (brownEqualizerMap F y) y' = y := by
-  sorry
+  let hpres : Nonempty
+      (IsLimit (F.mapCone (limit.cone (parallelFamily (brownStabilizerFamily F y))))) :=
+    (inferInstance : PreservesLimit (parallelFamily (brownStabilizerFamily F y)) F).preserves
+      (limit.isLimit _)
+  let c : Cone ((parallelFamily (brownStabilizerFamily F y)) ⋙ F) :=
+    { pt := PUnit.{v + 1}
+      π :=
+        { app := fun j => match j with
+          | WalkingParallelFamily.zero => ↾(fun _ => y)
+          | WalkingParallelFamily.one => ↾(fun _ => y)
+          naturality := by
+            intro j k f
+            cases f with
+            | id => simp
+            | line j =>
+                rcases j with f | _
+                · ext z
+                  simpa [brownStabilizerFamily] using f.2.symm
+                · simp [brownStabilizerFamily] } }
+  refine ⟨hpres.some.lift c PUnit.unit, ?_⟩
+  have h := hpres.some.fac c WalkingParallelFamily.zero
+  exact congrArg (fun q => q PUnit.unit) h
 
 noncomputable def brownEqualizerTransformation {C : Type u} [Category.{v} C]
     (F : C ⥤ Type v) {Y' : C} (y' : F.obj Y') :
@@ -214,7 +404,14 @@ theorem brownEqualizerTransformation_surjective {C : Type u} [Category.{v} C]
       ((coyonedaEquiv.symm y).app Z)) :
     ∀ Z : C, Function.Surjective
       ((brownEqualizerTransformation F y').app Z) := by
-  sorry
+  intro Z g
+  obtain ⟨f, hf⟩ := hξ Z g
+  refine ⟨e ≫ f, ?_⟩
+  change F.map (e ≫ f) y' = g
+  rw [F.map_comp]
+  change F.map f (F.map e y') = g
+  rw [he]
+  exact hf
 
 /- The second equalizer in the source proof is an ordinary equalizer. -/
 noncomputable def brownFinalEqualizerObject {C : Type u} [Category.{v} C]
@@ -236,7 +433,17 @@ theorem exists_brownFinalEqualizerElement {C : Type u} [Category.{v} C]
     (hab : F.map a y' = F.map b y') [HasLimits C] [PreservesLimits F] :
     ∃ y'' : F.obj (brownFinalEqualizerObject a b),
       F.map (brownFinalEqualizerMap a b) y'' = y' := by
-  sorry
+  let hpres : Nonempty
+      (IsLimit (F.mapCone (limit.cone (parallelPair a b)))) :=
+    (inferInstance : PreservesLimit (parallelPair a b) F).preserves
+      (limit.isLimit _)
+  let c : Cone ((parallelPair a b) ⋙ F) :=
+    Cone.ofFork (Fork.ofι (↾(fun _ : PUnit.{v + 1} => y')) (by
+      ext z
+      exact hab))
+  refine ⟨hpres.some.lift c PUnit.unit, ?_⟩
+  have h := hpres.some.fac c WalkingParallelPair.zero
+  exact congrArg (fun q => q PUnit.unit) h
 
 theorem brown_final_equalizer_argument
     {C : Type u} [Category.{v} C] [HasLimits C]
@@ -250,7 +457,32 @@ theorem brown_final_equalizer_argument
     (a b : brownEqualizerObject F (brownUniversalElement F X x) ⟶ Z)
     (hab : F.map a y' = F.map b y') :
     a = b := by
-  sorry
+  obtain ⟨y'', hy''⟩ := exists_brownFinalEqualizerElement F a b y' hab
+  obtain ⟨ψ, hψ⟩ := hξ (brownFinalEqualizerObject a b) y''
+  rw [brownUniversalTransformation_app_apply] at hψ
+  let e₀ := brownEqualizerMap F (brownUniversalElement F X x)
+  let e' := brownFinalEqualizerMap a b
+  have hs : F.map (ψ ≫ e' ≫ e₀) (brownUniversalElement F X x) =
+      brownUniversalElement F X x := by
+    rw [F.map_comp, F.map_comp]
+    change F.map e₀ (F.map e' (F.map ψ (brownUniversalElement F X x))) =
+      brownUniversalElement F X x
+    rw [hψ, hy'', he]
+  let s : BrownStabilizer F (brownUniversalElement F X x) :=
+    ⟨ψ ≫ e' ≫ e₀, hs⟩
+  have hstab := brownEqualizerMap_stabilizes F (brownUniversalElement F X x) s
+  have hsplit : e₀ ≫ ψ ≫ e' = 𝟙 _ := by
+    apply (brownEqualizerMap_mono F (brownUniversalElement F X x)).right_cancellation
+    simpa [e₀, s, Category.assoc] using hstab
+  calc
+    a = 𝟙 _ ≫ a := by simp
+    _ = (e₀ ≫ ψ ≫ e') ≫ a := by rw [hsplit]
+    _ = e₀ ≫ ψ ≫ (e' ≫ a) := by simp [Category.assoc]
+    _ = e₀ ≫ ψ ≫ (e' ≫ b) := by
+      rw [brownFinalEqualizerMap_condition a b]
+    _ = (e₀ ≫ ψ ≫ e') ≫ b := by simp [Category.assoc]
+    _ = 𝟙 _ ≫ b := by rw [hsplit]
+    _ = b := by simp
 
 theorem brown_equalizer_represents
     {C : Type u} [Category.{v} C] [HasLimits C]
@@ -262,7 +494,23 @@ theorem brown_equalizer_represents
         ((brownEqualizerTransformation F y').app Z)) ∧
       F.map (brownEqualizerMap F (brownUniversalElement F X x)) y' =
         brownUniversalElement F X x := by
-  sorry
+  have hξ := brownUniversalTransformation_surjective F X x hgen
+  obtain ⟨y', he⟩ :=
+    exists_brownEqualizerElement F (brownUniversalElement F X x)
+  have hsurj : ∀ Z : C, Function.Surjective
+      ((brownEqualizerTransformation F y').app Z) := by
+    apply brownEqualizerTransformation_surjective F
+      (brownUniversalElement F X x) y'
+      (brownEqualizerMap F (brownUniversalElement F X x)) he
+    simpa [brownUniversalTransformation] using hξ
+  refine ⟨y', ?_, he⟩
+  intro Z
+  constructor
+  · intro a b hab
+    apply brown_final_equalizer_argument F X x hξ y' he a b
+    change F.map a y' = F.map b y' at hab
+    exact hab
+  · exact hsurj Z
 
 /-! ## The free-group application -/
 
@@ -299,7 +547,35 @@ theorem subgroup_closure_cardinal_le {E : Type v} {G : GrpCat.{v}}
     (f : E → (G : Type v)) :
     Cardinal.mk (Subgroup.closure (Set.range f)) ≤
       max Cardinal.aleph0 (Cardinal.mk E) := by
-  sorry
+  classical
+  cases isEmpty_or_nonempty E with
+  | inl hE =>
+      letI := hE
+      have hr : Set.range f = (∅ : Set (G : Type v)) := by
+        ext z
+        constructor
+        · rintro ⟨e, rfl⟩
+          exact isEmptyElim e
+        · simp
+      rw [hr, Subgroup.closure_empty]
+      simp
+  | inr hE =>
+      letI := hE
+      let q : FreeGroup E → Subgroup.closure (Set.range f) := fun w =>
+        ⟨FreeGroup.lift f w, by
+          rw [← FreeGroup.range_lift_eq_closure]
+          exact ⟨w, rfl⟩⟩
+      calc
+        Cardinal.mk (Subgroup.closure (Set.range f)) ≤ Cardinal.mk (FreeGroup E) := by
+          apply Cardinal.mk_le_of_surjective (f := q)
+          intro z
+          have hz : z.1 ∈ (FreeGroup.lift f).range := by
+            rw [FreeGroup.range_lift_eq_closure]
+            exact z.2
+          rcases hz with ⟨w, hw⟩
+          exact ⟨w, Subtype.ext hw⟩
+        _ = max (Cardinal.mk E) Cardinal.aleph0 := Cardinal.mk_freeGroup E
+        _ = max Cardinal.aleph0 (Cardinal.mk E) := max_comm _ _
 
 def IsBoundedGroupMapFamily (E : Type v) {I : Type v}
     (G : I → GrpCat.{v}) (f : ∀ i, E → (G i : Type v)) : Prop :=
@@ -317,7 +593,8 @@ theorem groupMapsFunctor_isCorepresentable_of_bounded_family
 
 theorem freeGroupGenerator_generates (E : Type v) :
     Subgroup.closure (Set.range (freeGroupGenerator E)) = ⊤ := by
-  sorry
+  change Subgroup.closure (Set.range (FreeGroup.of : E → FreeGroup E)) = ⊤
+  exact FreeGroup.closure_range_of E
 
 /-! ## The topological-space application -/
 
@@ -382,7 +659,15 @@ theorem topologicalHomFactor_comp_inclusion {I : Type v} [Category.{v} I]
    assertion as a reusable instance for the representability application. -/
 instance topologicalHomFunctor_preservesLimits_instance {I : Type v} [Category.{v} I]
     (D : I ⥤ TopCat.{v}) : PreservesLimits (topologicalHomFunctor D) := by
-  sorry
+  let F : Iᵒᵖ ⥤ TopCat.{v} ⥤ Type v := D.op ⋙ coyoneda
+  letI : PreservesLimits (F.flip) := by
+    apply preservesLimits_of_evaluation
+    intro k
+    change PreservesLimits (coyoneda.obj (D.op.obj k))
+    infer_instance
+  letI : PreservesLimits (F.flip ⋙ lim) := by
+    infer_instance
+  apply preservesLimits_of_natIso (limitIsoFlipCompLim F).symm
 
 def IsBoundedTopologicalHomFamily {I : Type v} [Category.{v} I]
     (D : I ⥤ TopCat.{v}) {J : Type v} (Y : J → TopCat.{v})
@@ -405,7 +690,17 @@ theorem topologicalHomSubspace_cardinal_le {I : Type v} [Category.{v} I]
     (φ : (topologicalHomFunctor D).obj Y) :
     Cardinal.mk (topologicalHomSubspace D φ) ≤
       Cardinal.mk (Σ i : I, D.obj i) := by
-  sorry
+  let q : (Σ i : I, D.obj i) → topologicalHomSubspace D φ := fun z =>
+    ⟨topologicalHomFamily D φ z.1 z.2,
+      Set.mem_iUnion.2 ⟨z.1, Set.mem_range.2 ⟨z.2, rfl⟩⟩⟩
+  apply Cardinal.mk_le_of_surjective (f := q)
+  intro z
+  have hz := z.2
+  change z.1 ∈ ⋃ i, Set.range (topologicalHomFamily D φ i) at hz
+  rcases Set.mem_iUnion.1 hz with ⟨i, hi⟩
+  rcases Set.mem_range.1 hi with ⟨w, hw⟩
+  refine ⟨⟨i, w⟩, ?_⟩
+  exact Subtype.ext hw
 
 /- The factorization assertion used to pass from an arbitrary compatible
    family to the bounded subspace family. -/
@@ -414,7 +709,93 @@ theorem exists_topologicalHomSubspaceElement {I : Type v} [Category.{v} I]
     (φ : (topologicalHomFunctor D).obj Y) :
     ∃ φ' : (topologicalHomFunctor D).obj (topologicalHomSubspace D φ),
       (topologicalHomFunctor D).map (topologicalHomSubspaceInclusion D φ) φ' = φ := by
-  sorry
+  let F : Iᵒᵖ ⥤ TopCat.{v} ⥤ Type v := D.op ⋙ coyoneda
+  let S := topologicalHomSubspace D φ
+  let c : Cone (F ⋙ (evaluation _ _).obj S) :=
+    { pt := PUnit.{v + 1}
+      π :=
+        { app := fun j => ↾(fun _ => topologicalHomFactor D φ j.unop)
+          naturality := by
+            intro j k f
+            ext z
+            change topologicalHomFactor D φ k.unop =
+              (F ⋙ (evaluation _ _).obj S).map f
+                (topologicalHomFactor D φ j.unop)
+            ext w
+            have h := congrArg (fun q => q.app Y φ)
+              ((limit.cone F).π.naturality f)
+            have h' : topologicalHomFamily D φ k.unop =
+                (F.map f).app Y (topologicalHomFamily D φ j.unop) := by
+              simpa [F, topologicalHomFamily, Category.assoc] using h
+            apply Subtype.ext
+            change topologicalHomFamily D φ k.unop w =
+              topologicalHomFamily D φ j.unop (D.map f.unop w)
+            simpa [F] using congrArg (fun g => g w) h' } }
+  let φ' := (topologicalHomFunctor_objIso D S).inv
+    (limit.lift _ c PUnit.unit)
+  refine ⟨φ', ?_⟩
+  have hgoal :
+      (topologicalHomFunctor_objIso D Y).hom
+          ((topologicalHomFunctor D).map (topologicalHomSubspaceInclusion D φ) φ') =
+        (topologicalHomFunctor_objIso D Y).hom φ := by
+    apply Types.limit_ext' (F ⋙ (evaluation _ _).obj Y)
+    intro j
+    calc
+      (limit.π (F ⋙ (evaluation _ _).obj Y) j)
+          ((topologicalHomFunctor_objIso D Y).hom
+            ((topologicalHomFunctor D).map (topologicalHomSubspaceInclusion D φ) φ')) =
+          (F.obj j).map (topologicalHomSubspaceInclusion D φ)
+            ((limit.π F j).app S φ') := by
+        calc
+          _ = (limit.π F j).app Y
+              ((topologicalHomFunctor D).map
+                (topologicalHomSubspaceInclusion D φ) φ') := by
+            have h := congrArg
+              (fun q => q ((topologicalHomFunctor D).map
+                (topologicalHomSubspaceInclusion D φ) φ'))
+              (limitObjIsoLimitCompEvaluation_hom_π F j Y)
+            change
+              (limit.π (F ⋙ (evaluation _ _).obj Y) j)
+                  ((limitObjIsoLimitCompEvaluation F Y).hom
+                    ((limit F).map (topologicalHomSubspaceInclusion D φ) φ')) =
+                (limit.π F j).app Y
+                  ((limit F).map (topologicalHomSubspaceInclusion D φ) φ')
+            simpa only [ConcreteCategory.comp_apply] using h
+          _ = _ := by
+            have h := congrArg (fun q => q φ')
+              ((limit.π F j).naturality
+                (topologicalHomSubspaceInclusion D φ))
+            exact h
+      _ = (F.obj j).map (topologicalHomSubspaceInclusion D φ)
+          ((limit.π (F ⋙ (evaluation _ _).obj S) j)
+            (limit.lift _ c PUnit.unit)) := by
+        congr 1
+        have h := congrArg (fun q => q (limit.lift _ c PUnit.unit))
+          (limitObjIsoLimitCompEvaluation_inv_π_app F j S)
+        change
+          (limit.π F j).app S
+              ((limitObjIsoLimitCompEvaluation F S).inv
+                (limit.lift _ c PUnit.unit)) =
+            (limit.π (F ⋙ (evaluation _ _).obj S) j)
+              (limit.lift _ c PUnit.unit)
+        simpa only [ConcreteCategory.comp_apply] using h
+      _ = (F.obj j).map (topologicalHomSubspaceInclusion D φ)
+          (c.π.app j PUnit.unit) := by
+        rw [limit.lift_π_apply]
+      _ = (limit.π F j).app Y φ := by
+        dsimp only [c, F]
+        change topologicalHomFactor D φ j.unop ≫
+            topologicalHomSubspaceInclusion D φ =
+          topologicalHomFamily D φ j.unop
+        exact topologicalHomFactor_comp_inclusion D φ j.unop
+      _ = (limit.π (F ⋙ (evaluation _ _).obj Y) j)
+          ((topologicalHomFunctor_objIso D Y).hom φ) := by
+        have h := congrArg (fun q => q φ)
+          (limitObjIsoLimitCompEvaluation_hom_π F j Y)
+        simpa only [F, topologicalHomFunctor_objIso,
+          ConcreteCategory.comp_apply] using h.symm
+  have hgoal' := congrArg (fun q => (topologicalHomFunctor_objIso D Y).inv q) hgoal
+  simpa using hgoal'
 
 noncomputable def topologicalHomFunctor_corepresentable_by_colimit {I : Type v} [Category.{v} I]
     (D : I ⥤ TopCat.{v}) :
@@ -436,7 +817,9 @@ theorem adjointHomFunctor_isCorepresentable
     [PreservesLimitsOfSize.{v, v} G]
     (hG : SolutionSetCondition.{v} G) (Y : D) :
     (adjointHomFunctor G Y).IsCorepresentable := by
-  sorry
+  letI : G.IsRightAdjoint :=
+    isRightAdjoint_of_preservesLimits_of_solutionSetCondition G hG
+  exact (Adjunction.ofIsRightAdjoint G).corepresentableBy Y |>.isCorepresentable
 
 /-- The general adjoint functor theorem, using Mathlib's canonical
     solution-set-condition interface. -/

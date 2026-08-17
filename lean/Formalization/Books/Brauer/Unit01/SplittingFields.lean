@@ -33,6 +33,13 @@ theorem splits_iff_exists_matrix_degree (k A k' : Type*) [Field k] [Ring A]
     Splits k A k' ↔ ∃ d : ℕ, SplitsInDegree k A k' d := by
   rfl
 
+theorem splits_iff_base_change_class_eq_one (k k' : Type*) [Field k]
+    [Field k'] [Algebra k k'] (A : CSA k) :
+    Splits k A.carrier k' ↔
+      ∃ B : CSA k',
+        IsBaseChangeRepresentative k k' A B ∧ brauerClass k' B = 1 := by
+  sorry
+
 theorem splitting_iff_similar_embedded_subfield (k k' : Type*) [Field k]
     [Field k'] [Algebra k k'] [FiniteDimensional k k'] (A : CSA k) :
     Splits k A.carrier k' ↔

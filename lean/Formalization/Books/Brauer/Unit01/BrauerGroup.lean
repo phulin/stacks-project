@@ -18,6 +18,16 @@ open scoped TensorProduct
 def brauerClass (k : Type*) [Field k] (A : CSA k) : BrauerGroup k :=
   Quotient.mk (Brauer.CSA_Setoid k) A
 
+/- The scalar algebra is the identity representative in the source's
+   tensor-product construction. -/
+def scalarCSA (k : Type*) [Field k] : CSA k :=
+  { AlgCat.of k k with }
+
+/- The opposite algebra is the source's representative for the inverse
+   similarity class. -/
+def oppositeCSA (k : Type*) [Field k] (A : CSA k) : CSA k :=
+  { AlgCat.of k (A.carrierᵐᵒᵖ) with }
+
 /- The canonical right-hand tensor algebra is local in Mathlib, so this
    relation packages the source's base-change representative without
    introducing a competing algebra structure. -/
@@ -54,9 +64,12 @@ theorem matrix_division_similarity_iff (k K K' : Type*) [Field k]
 theorem brauer_group_is_abelian (k : Type*) [Field k] :
     ∃ G : CommGroup (BrauerGroup k),
       letI : CommGroup (BrauerGroup k) := G
-      ∀ A B : CSA k, ∃ C : CSA k,
-        brauerClass k A * brauerClass k B = brauerClass k C ∧
-          Nonempty ((A.carrier ⊗[k] B.carrier) ≃ₐ[k] C.carrier) := by
+      brauerClass k (scalarCSA k) = 1 ∧
+        (∀ A B : CSA k, ∃ C : CSA k,
+          brauerClass k A * brauerClass k B = brauerClass k C ∧
+            Nonempty ((A.carrier ⊗[k] B.carrier) ≃ₐ[k] C.carrier)) ∧
+          ∀ A : CSA k,
+            brauerClass k A * brauerClass k (oppositeCSA k A) = 1 := by
   sorry
 
 /- Make the existence result available to the later interfaces as the

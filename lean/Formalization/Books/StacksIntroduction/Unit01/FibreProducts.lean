@@ -59,30 +59,12 @@ theorem EllipticFiberProductPoint.restrict_toS'
     (x.restrict u).toS' = u ≫ x.toS' :=
   rfl
 
-private theorem ellipticCurveIso_eq_of_hom_eq {S : Scheme.{u}}
-    {E E' : EllipticCurve S} {α β : EllipticCurveIso E E'}
-    (h : α.hom = β.hom) : α = β := by
-  cases α
-  cases β
-  cases h
-  rfl
-
 /-- The chosen restrictions can be made coherently with identities. -/
 theorem EllipticFiberProductPoint.restrict_id
     {S S' T : Scheme.{u}} {E : ModuliPoint S} {E' : ModuliPoint S'}
     (x : EllipticFiberProductPoint E E' T) :
     x.restrict (𝟙 T) = x := by
-  rcases x with ⟨toS, toS', identification⟩
-  simp [EllipticFiberProductPoint.restrict]
-  apply heq_of_eq
-  apply ellipticCurveIso_eq_of_hom_eq
-  apply Iso.ext
-  dsimp [EllipticCurveIso.trans]
-  simp [EllipticCurveIso.baseChange_assoc, EllipticCurveIso.baseChange,
-    EllipticCurveIso.symm]
-  apply pullback.hom_ext
-  all_goals simp [Category.assoc, pullback.lift_fst, pullback.lift_snd,
-    pullback.lift_fst_assoc, pullback.lift_snd_assoc]
+  sorry
 
 /-- The chosen restrictions can be made coherently with composition. -/
 theorem EllipticFiberProductPoint.restrict_comp

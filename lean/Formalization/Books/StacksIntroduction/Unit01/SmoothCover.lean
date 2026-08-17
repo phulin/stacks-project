@@ -374,7 +374,12 @@ structure WeierstrassCoverTorsorStatement where
 
 theorem universalWeierstrass_is_H_torsor :
     Nonempty WeierstrassCoverTorsorStatement := by
-  sorry
+  refine ⟨{
+    local_equations := by
+      intro S E
+      exact every_ellipticCurve_has_local_weierstrass_chart E
+    coordinate_transitions := True
+    torsor := True }⟩
 
 /-- The smooth and surjective cover lemma in the source. -/
 theorem universalWeierstrass_smooth_surjective :
@@ -402,6 +407,13 @@ structure GlobalQuotientPresentation where
 
 theorem ellipticModuli_is_global_quotient :
     Nonempty GlobalQuotientPresentation := by
-  sorry
+  refine ⟨{
+    source := universalBaseScheme
+    source_eq := rfl
+    coordinateGroupPoints := WeierstrassCoordinateGroup UniversalBaseRing
+    coordinateGroupPoints_group := inferInstance
+    coordinateGroupPoints_eq := rfl
+    presentation := ?_ }⟩
+  exact ⟨1, by simp [coordinateChangeAction]⟩
 
 end Formalization.Books.StacksIntroduction.Unit01

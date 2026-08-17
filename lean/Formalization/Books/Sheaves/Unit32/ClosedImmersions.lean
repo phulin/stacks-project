@@ -331,7 +331,12 @@ theorem closedSubsetPushforward_fullyFaithful
 /-- Generic form of the essential-image characterization. -/
 theorem closedSubsetPushforward_mem_essImage_iff
     {C : Type u} [Category.{w} C]
-    [HasColimits C] [HasTerminal C]
+    {FA : C → C → Type*} {CA : C → Type w}
+    [∀ A B, FunLike (FA A B) (CA A) (CA B)]
+    [ConcreteCategory.{w} C FA] [HasColimits C] [HasLimits C]
+    [PreservesLimits (CategoryTheory.forget C)]
+    [PreservesFilteredColimits (CategoryTheory.forget C)]
+    [(CategoryTheory.forget C).ReflectsIsomorphisms]
     {X : TopCat.{w}} {Z : Set X} (hZ : IsClosed Z)
     (G : TopCat.Sheaf C X) :
     (closedSubsetPushforward (C := C) Z).essImage G ↔

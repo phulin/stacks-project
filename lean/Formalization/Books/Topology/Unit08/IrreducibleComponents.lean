@@ -111,7 +111,6 @@ theorem irreducibleComponents_ncard_le_of_surjective_continuous
     (hX : (irreducibleComponents X).Finite) :
     Set.ncard (irreducibleComponents Y) ≤ Set.ncard (irreducibleComponents X) := by
   classical
-  haveI : Fintype (irreducibleComponents X) := hX.fintype
   have hq : ∀ C : irreducibleComponents X, ∃ D ∈ irreducibleComponents Y,
       f '' (C : Set X) ⊆ D := by
     intro C
@@ -129,7 +128,8 @@ theorem irreducibleComponents_ncard_le_of_surjective_continuous
       exact mem_univ x)
     exact mem_sUnion_of_mem (hqsub ⟨C, hC⟩ ⟨x, hxC, rfl⟩)
       ⟨⟨C, hC⟩, rfl⟩
-  have hqfinite : (Set.range q).Finite := Set.finite_range q
+  have hqfinite : (Set.range q).Finite :=
+    @Set.finite_range _ _ q hX.fintype.finite
   have hg : Surjective g := by
     intro D
     have hD : (D : Set Y) ∈ Set.range q := by
@@ -145,7 +145,7 @@ theorem irreducibleComponents_ncard_le_of_surjective_continuous
     exact Subtype.ext hCD
   have hcard : Nat.card (irreducibleComponents Y) ≤
       Nat.card (irreducibleComponents X) :=
-    Nat.card_le_card_of_surjective g hg
+    @Nat.card_le_card_of_surjective _ _ hX.fintype.finite g hg
   simpa only [Nat.card_coe_set_eq] using hcard
 
 theorem closure_singleton_isIrreducible_closed (x : X) :
@@ -769,7 +769,7 @@ def soberificationOpen (U : Set X) : Set (Soberification X) :=
   {Z | ((Z : Set X) ∩ U).Nonempty}
 
 def soberificationBasis : Set (Set (Soberification X)) :=
-  Set.range (soberificationOpen (X := X))
+  Set.range (fun U : Opens X => soberificationOpen (U : Set X))
 
 instance soberification_topologicalSpace : TopologicalSpace (Soberification X) :=
   TopologicalSpace.generateFrom (soberificationBasis (X := X))
@@ -803,9 +803,9 @@ theorem soberificationOpenComap_preserves_finite_intersections
     soberificationOpenComap (X := X) (⨅ i, U i) =
       ⨅ i, soberificationOpenComap (X := X) (U i) := by
   classical
-  letI := Fintype.ofFinite ι
-  rw [← Finset.inf_univ_eq_iInf, ← Finset.inf_univ_eq_iInf]
-  exact map_finset_inf (soberificationOpenComap (X := X)) Finset.univ U
+  exact (letI := Fintype.ofFinite ι; by
+    rw [← Finset.inf_univ_eq_iInf, ← Finset.inf_univ_eq_iInf]
+    exact map_finset_inf (soberificationOpenComap (X := X)) Finset.univ U)
 
 theorem soberificationOpenComap_preserves_arbitrary_unions
     {ι : Type v} (U : ι → Opens (Soberification X)) :
@@ -825,6 +825,7 @@ theorem soberificationLift_continuous
   refine continuous_def.2 ?_
   intro V hV
   let U : Set X := f ⁻¹' V
+  have hU : IsOpen U := hV.preimage hf
   have hEq : (soberificationLift f hf) ⁻¹' V = soberificationOpen U := by
     ext Z
     constructor
@@ -841,7 +842,7 @@ theorem soberificationLift_continuous
       have hgen := (Z.isIrreducible.image f hf.continuousOn).isGenericPoint_genericPoint_closure
       exact hgen.specializes (subset_closure ⟨x, hxZ, rfl⟩) |>.mem_open hV hfx
   rw [hEq]
-  exact isOpen_generateFrom_of_mem ⟨U, rfl⟩
+  exact isOpen_generateFrom_of_mem ⟨⟨U, hU⟩, rfl⟩
 
 theorem soberificationLift_comp_map
     {Y : Type v} [TopologicalSpace Y] [QuasiSober Y] [T0Space Y]
@@ -921,7 +922,7 @@ theorem soberificationRangeLift_continuous
   rw [hEq]
   have hgen : IsOpen (soberificationOpen U) :=
     isOpen_generateFrom_of_mem
-      (show soberificationOpen U ∈ soberificationBasis (X := X) from ⟨U, rfl⟩)
+      (show soberificationOpen U ∈ soberificationBasis (X := X) from ⟨⟨U, hU⟩, rfl⟩)
   exact hgen.preimage continuous_subtype_val
 
 theorem soberificationRangeLift_comp_map
@@ -974,7 +975,9 @@ theorem exists_connected_sUnion_irreducibleComponents_sdiff_singleton
     ∃ C ∈ irreducibleComponents X,
       IsConnected (⋃₀ (irreducibleComponents X \ {C})) := by
   classical
-  letI : Fintype (irreducibleComponents X) := hX.fintype
+  have hfinite : Finite (irreducibleComponents X) := hX.to_subtype
+  have hfinite_set (S : Set (irreducibleComponents X)) : S.Finite :=
+    (@Set.finite_univ _ hfinite).subset (subset_univ S)
   have hnontrivial : Nontrivial (irreducibleComponents X) := by
     apply not_subsingleton_iff_nontrivial.mp
     intro hsub
@@ -994,14 +997,14 @@ theorem exists_connected_sUnion_irreducibleComponents_sdiff_singleton
       let S : Set (irreducibleComponents X) := {D | G.Reachable A D}
       let U : Set X := ⋃ D ∈ S, (D : Set X)
       let V : Set X := ⋃ D ∈ Sᶜ, (D : Set X)
-      have hSfin : S.Finite := Set.toFinite _
+      have hSfin : S.Finite := hfinite_set S
       have hUclosed : IsClosed U := by
         dsimp [U]
         exact hSfin.isClosed_biUnion fun D _ =>
           isClosed_of_mem_irreducibleComponents (D : Set X) D.2
       have hVclosed : IsClosed V := by
         dsimp [V]
-        exact (Set.toFinite _).isClosed_biUnion fun D _ =>
+        exact (hfinite_set Sᶜ).isClosed_biUnion fun D _ =>
           isClosed_of_mem_irreducibleComponents (D : Set X) D.2
       have hUV : U ∪ V = (Set.univ : Set X) := by
         apply Set.eq_univ_of_forall
@@ -1039,13 +1042,13 @@ theorem exists_connected_sUnion_irreducibleComponents_sdiff_singleton
       exact hES (SimpleGraph.Reachable.trans hDS hDE.reachable)
     · obtain ⟨x⟩ := (inferInstance : Nonempty X)
       exact ⟨⟨irreducibleComponent x, irreducibleComponent_mem_irreducibleComponents x⟩⟩
-  letI : Nontrivial (irreducibleComponents X) := hnontrivial
   obtain ⟨C, hC⟩ :=
-    hGconn.exists_connected_induce_compl_singleton_of_finite_nontrivial
+    @SimpleGraph.Connected.exists_connected_induce_compl_singleton_of_finite_nontrivial
+      _ G hfinite hnontrivial hGconn
   refine ⟨C, C.2, ?_⟩
   let t : Set (irreducibleComponents X) := {D | D ≠ C}
   have ht : t.Nonempty := by
-    obtain ⟨D, hD⟩ := exists_ne C
+    obtain ⟨D, hD⟩ := @exists_ne _ hnontrivial C
     exact ⟨D, hD⟩
   have hfamily : ∀ D ∈ t, IsConnected (D : Set X) := by
     intro D _

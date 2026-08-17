@@ -219,13 +219,13 @@ theorem equivalent_stacks_in_setoids_preserve
         ⟨hFsetoid.1, hFstack⟩
     refine ⟨⟨hGgroupstack.1, ?_⟩, hGgroupstack.2⟩
     intro U Y Z
-    letI := hη.2 U
+    haveI := hη.2 U
     rcases hη.1 U with ⟨hηff⟩
     let x := (η.app (.mk (op U))).toFunctor.objPreimage Y
     let y := (η.app (.mk (op U))).toFunctor.objPreimage Z
     let eY := (η.app (.mk (op U))).toFunctor.objObjPreimageIso Y
     let eZ := (η.app (.mk (op U))).toFunctor.objObjPreimageIso Z
-    letI := hFsetoid.2 U x y
+    haveI := hFsetoid.2 U x y
     constructor
     intro a b
     let a' := hηff.preimage (eY.hom ≫ a ≫ eZ.inv)
@@ -250,7 +250,7 @@ theorem equivalent_stacks_in_setoids_preserve
     refine ⟨⟨hFgroupstack.1, ?_⟩, hFgroupstack.2⟩
     intro U X Y
     rcases hη.1 U with ⟨hηff⟩
-    letI := hGsetoid.2 U
+    haveI := hGsetoid.2 U
       ((η.app (.mk (op U))).toFunctor.obj X)
       ((η.app (.mk (op U))).toFunctor.obj Y)
     constructor

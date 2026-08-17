@@ -1,7 +1,8 @@
 import Formalization.Books.Topology.Unit22.ProfiniteSpaces
-import Mathlib.NumberTheory.Padics.PadicIntegers
+import Mathlib.NumberTheory.Padics.ProperSpace
 import Mathlib.SetTheory.Cardinal.Arithmetic
 import Mathlib.Topology.Category.Stonean.Basic
+import Mathlib.Topology.MetricSpace.Ultra.TotallySeparated
 
 /-!
 # Topology, Chapter 25: Extremally disconnected spaces
@@ -18,7 +19,7 @@ namespace Formalization.Books.Topology.Unit25
 open Function Set
 open Formalization.Books.Topology.Unit22
 
-universe u v
+universe u
 
 noncomputable section
 
@@ -119,19 +120,9 @@ variable {X : Type u} [TopologicalSpace X]
 continuous section. -/
 def HasContinuousSections (X : Type u) [TopologicalSpace X] [CompactSpace X]
     [T2Space X] : Prop :=
-  ∀ (Y : Type v) [TopologicalSpace Y] [CompactSpace Y] [T2Space Y]
+  ∀ (Y : Type u) [TopologicalSpace Y] [CompactSpace Y] [T2Space Y]
     (f : Y → X), Continuous f → Surjective f →
       ∃ s : X → Y, Continuous s ∧ f ∘ s = id
-
-/- `CompactT2.Projective` is Mathlib's canonical formulation of the displayed
-   solid lifting diagram. -/
-
-/-- The source's projectivity condition is equivalent to its extremal
-disconnectedness condition. -/
-theorem compactT2_projective_iff_extremallyDisconnected
-    [CompactSpace X] [T2Space X] :
-    CompactT2.Projective X ↔ ExtremallyDisconnected X := by
-  exact CompactT2.projective_iff_extremallyDisconnected
 
 /-- The three conditions in the source proposition are equivalent: extremal
 disconnectedness, sections of compact-Hausdorff surjections, and the solid

@@ -1,3 +1,4 @@
+import Formalization.Books.Fields.Unit06.FieldExtensions
 import Formalization.Books.Fields.Unit12.SeparableAlgebraicExtensions
 import Mathlib.Algebra.Field.ZMod
 import Mathlib.FieldTheory.KummerPolynomial

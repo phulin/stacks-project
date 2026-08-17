@@ -65,7 +65,7 @@ theorem lieblich_associated_points_and_purity_on_artin_stacks
     {C : Type u} [Category.{v} C] [StackCategory C] (X : C)
     (hArtin : IsArtinStack X) :
     HasAssociatedPointsAndPurityTheory X := by
-  exact ⟨⟨hArtin = hArtin, True⟩⟩
+  sorry
 
 structure FunctorialReconstructionData {C : Type u} [Category.{v} C]
     [StackCategory C] (X : C) where
@@ -86,7 +86,7 @@ theorem lieblich_osserman_functorial_reconstruction
     (D : FunctorialReconstructionData X)
     (h : D.reconstructionHypotheses) :
     Nonempty (FunctorialReconstructionConclusion D) := by
-  exact ⟨{ reconstructionConclusion := h = h }⟩
+  sorry
 
 structure NoetherianApproximationData {C : Type u} [Category.{v} C]
     [StackCategory C] (X : C) where
@@ -118,11 +118,10 @@ theorem rydh_noetherian_approximation_of_quasi_finite_diagonal
     (hqc : IsQuasiCompactStack X) (hdiagonal : HasQuasiFiniteDiagonal X)
     (hArtin : IsArtinStack X) :
     HasNoetherianApproximation X := by
-  exact ⟨{ approximation := X, approximationMap := 𝟙 X },
-    ⟨{ approximationIsNoetherian := (hqc = hqc) ∧ (hArtin = hArtin), approximatesOriginalStack := hdiagonal = hdiagonal }⟩⟩
+  sorry
 
 theorem rydh_applications_of_noetherian_approximation :
     HasNoetherianApproximationApplications := by
-  exact ⟨⟨True, True, True, True⟩, True.intro, True.intro, True.intro, True.intro⟩
+  sorry
 
 end Formalization.Books.Guide.Unit05

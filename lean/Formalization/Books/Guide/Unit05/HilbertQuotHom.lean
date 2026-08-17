@@ -169,7 +169,7 @@ theorem coherent_algebra_stack_generalizes_branchvarieties
     {C : Type u} [Category.{v} C] [StackCategory C] {Y : C}
     (D : CoherentAlgebraStackData Y) :
     Nonempty CoherentAlgebraStackConclusion := by
-  exact ⟨{ quotAndHomExistence := D.algebraObject = D.algebraObject }⟩
+  sorry
 
 structure GAmpleLineBundleData {C : Type u} [Category.{v} C]
     [StackCategory C] (T S : C) where
@@ -217,7 +217,7 @@ theorem hilbert_functor_nonseparated_scheme_not_represented
     {C : Type u} [Category.{v} C] [StackCategory C]
     (D : NonEffectiveHilbertDeformationExample (C := C)) :
     Nonempty (NonEffectiveHilbertConclusion D) := by
-  exact ⟨{ notRepresented := D.nonEffectiveDeformation = D.nonEffectiveDeformation }⟩
+  sorry
 
 structure GeneralMappingStackData {C : Type u} [Category.{v} C]
     [StackCategory C] (X Y S : C) where

@@ -71,7 +71,7 @@ theorem group_actions_compatible_with_rigidification
     {C : Type u} [Category.{v} C] [StackCategory C] {X S : C}
     (D : RigidificationGroupActionData X S) :
     Nonempty (RigidificationActionCompatibility D) := by
-  exact ⟨{ inducedActionOnRigidification := fun _ Y => Y, commutesWithRigidification := D.group = D.group }⟩
+  sorry
 
 structure RigidificationAlternativeInterpretations {C : Type u}
     [Category.{v} C] [StackCategory C] where
@@ -87,7 +87,7 @@ theorem rigidification_alternative_interpretations_and_applications
     {C : Type u} [Category.{v} C] [StackCategory C]
     (D : RigidificationAlternativeInterpretations (C := C)) :
     Nonempty RigidificationApplications := by
-  exact ⟨{ alternativeInterpretationOne := D.rigidification = D.rigidification, alternativeInterpretationTwo := True, gluingAlongClosedSubstacks := True, takingRootsOfLineBundles := True }⟩
+  sorry
 
 structure NormalFlatInertiaSubgroup {C : Type u} [Category.{v} C]
     [StackCategory C] (X : C) where
@@ -112,6 +112,6 @@ theorem tame_stack_normal_noncentral_rigidification
     (D : NormalFlatInertiaSubgroup X) (htame : IsTameArtinStack X)
     (hnormal : D.normal) :
     Nonempty (NormalNoncentralRigidificationConclusion D) := by
-  exact ⟨{ quotientMap := D.quotientMap, isFppfGerbe := hnormal = hnormal, handlesNoncentralCase := htame = htame }⟩
+  sorry
 
 end Formalization.Books.Guide.Unit05

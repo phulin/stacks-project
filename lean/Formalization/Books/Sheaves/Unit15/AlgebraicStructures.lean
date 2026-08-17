@@ -19,7 +19,6 @@ import Mathlib.CategoryTheory.Limits.Constructions.Pullbacks
 import Mathlib.CategoryTheory.Limits.Filtered
 import Mathlib.CategoryTheory.Limits.Preserves.Filtered
 import Mathlib.CategoryTheory.Limits.Preserves.Limits
-import Mathlib.Topology.Sheaves.SheafOfFunctions
 
 /-!
 # Sheaves on Spaces, Chapter 15: Algebraic structures

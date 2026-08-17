@@ -53,11 +53,17 @@ theorem profiniteSpace_has_cofiltered_finite_discrete_limit
     (hX : IsProfiniteSpace X) :
     ∃ (P : Profinite.{u}),
       Nonempty (X ≃ₜ (P : Type u)) ∧
-        IsCofiltered (DiscreteQuotient P) ∧
+          IsCofiltered (DiscreteQuotient P) ∧
+          (∀ i : DiscreteQuotient P,
+            Finite (P.fintypeDiagram.obj i) ∧
+              @DiscreteTopology (P.fintypeDiagram.obj i)
+                (FintypeCat.botTopology (P.fintypeDiagram.obj i))) ∧
           Nonempty (IsLimit (Profinite.toTopCat.mapCone P.asLimitCone)) := by
   rcases hX with ⟨P, hP⟩
-  refine ⟨P, hP, inferInstance, ?_⟩
-  exact ⟨isLimitOfPreserves Profinite.toTopCat P.asLimit⟩
+  refine ⟨P, hP, inferInstance, ?_, ?_⟩
+  · intro i
+    exact ⟨inferInstance, FintypeCat.discreteTopology _⟩
+  · exact ⟨isLimitOfPreserves Profinite.toTopCat P.asLimit⟩
 
 /-- The limit of a diagram of profinite spaces is profinite. -/
 theorem limit_of_profinite_spaces_is_profinite
@@ -77,12 +83,15 @@ theorem profiniteSpace_open_cover_has_finite_clopen_refinement
     (hU : IsOpenCover U) :
     ∃ (n : ℕ) (V : Fin n → Clopens X),
       (∀ j, V j ≠ ⊥ ∧ ∃ i, (V j : Set X) ⊆ U i) ∧
-        (univ : Set X) ⊆ ⋃ j, (V j : Set X) ∧
+        (⋃ j, (V j : Set X)) = (univ : Set X) ∧
           Pairwise (fun i j => Disjoint (V i) (V j)) := by
   have hprops :=
     (isProfiniteSpace_iff_hausdorff_quasiCompact_totallyDisconnected.mp hX)
-  exact @TopologicalSpace.IsOpenCover.exists_finite_nonempty_disjoint_clopen_cover
-    ι X inferInstance hprops.2.2 hprops.1 hprops.2.1 U hU
+  obtain ⟨n, V, hV, hcover, hdisj⟩ :=
+    @TopologicalSpace.IsOpenCover.exists_finite_nonempty_disjoint_clopen_cover
+      ι X inferInstance hprops.2.2 hprops.1 hprops.2.1 U hU
+  refine ⟨n, V, hV, ?_, hdisj⟩
+  exact Set.Subset.antisymm (Set.subset_univ _) hcover
 
 /-- The connected-components space is profinite under the source's
 quasi-compactness and component-intersection hypothesis. -/

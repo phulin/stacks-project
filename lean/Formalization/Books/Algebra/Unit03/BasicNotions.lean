@@ -6,6 +6,7 @@ import Mathlib.Algebra.Module.FinitePresentation
 import Mathlib.Data.Finset.Sort
 import Mathlib.FieldTheory.IsAlgClosed.Basic
 import Mathlib.LinearAlgebra.FreeModule.Basic
+import Mathlib.LinearAlgebra.Isomorphisms
 import Mathlib.LinearAlgebra.Matrix.Determinant.Basic
 import Mathlib.LinearAlgebra.TensorProduct.Basic
 import Mathlib.RingTheory.AlgebraicIndependent.TranscendenceBasis
@@ -49,7 +50,7 @@ universe u v w
 -- `IsUnit`, `IsIdempotentElem`, and `RingHom`.
 
 def trivialIdempotent {R : Type u} [MulOneClass R] [Zero R] (e : R) : Prop :=
-  e = 1 ∨ e = 0
+  IsIdempotentElem e ∧ (e = 1 ∨ e = 0)
 
 -- The finiteness notions in the list are `RingHom.FinitePresentation`,
 -- `RingHom.FiniteType`, and `RingHom.Finite`.
@@ -65,8 +66,9 @@ def trivialIdempotent {R : Type u} [MulOneClass R] [Zero R] (e : R) : Prop :=
 
 theorem exists_algHom_of_algebraic_of_algClosed
     {K L Ω : Type*} [Field K] [Field L] [Field Ω]
-    [Algebra K L] [Algebra K Ω] [Algebra.IsAlgebraic K L] [IsAlgClosed Ω] :
-    Nonempty (L →ₐ[K] Ω) := by
+    [Algebra K L] [Algebra K Ω] [IsAlgClosed Ω]
+    (hL : Algebra.IsAlgebraic K L) : Nonempty (L →ₐ[K] Ω) := by
+  let _ : Algebra.IsAlgebraic K L := hL
   exact ⟨IsAlgClosed.lift⟩
 
 /-! ### Ideals -/
@@ -118,17 +120,17 @@ theorem comap_prime_ideal
 -- `Module.FinitePresentation`, and `Module.Free` are the canonical module
 -- notions.  The annihilator of an element is a span-annihilator.
 
-def annihilatorOf {R M : Type u} [CommRing R] [AddCommGroup M] [Module R M]
+def annihilatorOf {R : Type u} {M : Type v} [CommRing R] [AddCommGroup M] [Module R M]
     (m : M) : Ideal R :=
   (Submodule.span R ({m} : Set M)).annihilator
 
-theorem annihilatorOf_mem_iff {R M : Type u} [CommRing R] [AddCommGroup M] [Module R M]
+theorem annihilatorOf_mem_iff {R : Type u} {M : Type v} [CommRing R] [AddCommGroup M] [Module R M]
     (m : M) (r : R) :
     r ∈ annihilatorOf m ↔ r • m = 0 := by
   exact Submodule.mem_annihilator_span_singleton m r
 
 theorem free_of_short_exact
-    {R K L M : Type u} [Ring R]
+    {R : Type u} {K L M : Type*} [Ring R]
     [AddCommGroup K] [AddCommGroup L] [AddCommGroup M]
     [Module R K] [Module R L] [Module R M]
     (f : K →ₗ[R] L) (g : L →ₗ[R] M)
@@ -137,11 +139,8 @@ theorem free_of_short_exact
     Module.Free R L := by
   sorry
 
-theorem quotient_quotient_linearEquiv
-    {R L : Type u} [Ring R] [AddCommGroup L] [Module R L]
-    {N M : Submodule R L} (hNM : N ≤ M) :
-    Nonempty (((L ⧸ N) ⧸ M.map N.mkQ) ≃ₗ[R] (L ⧸ M)) := by
-  sorry
+-- The module third isomorphism theorem is Mathlib's canonical
+-- `Submodule.quotientQuotientEquivQuotient`.
 
 /-! ### Localization -/
 
@@ -223,7 +222,7 @@ theorem ideal_in_localization_eq_map_under
   exact IsLocalization.map_under S (Localization S) J
 
 theorem submodule_in_localizedModule_eq_localized
-    {R M : Type u} [CommSemiring R] [AddCommMonoid M] [Module R M]
+    {R : Type u} {M : Type v} [CommSemiring R] [AddCommMonoid M] [Module R M]
     (S : Submonoid R)
     (N' : Submodule (Localization S) (LocalizedModule S M)) :
     N' =

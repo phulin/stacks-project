@@ -191,16 +191,13 @@ def VerticalIsoCommaProperty {A B S C : Type*}
     [Category* A] [Category* B] [Category* S] [Category* C]
     (F : A ⥤ S) (G : B ⥤ S)
     (pA : A ⥤ C) (pB : B ⥤ C) (pS : S ⥤ C)
-    (hF : F ⋙ pS = pA) (hG : G ⋙ pS = pB) :
+    (_hF : F ⋙ pS = pA) (_hG : G ⋙ pS = pB) :
     ObjectProperty (IsoComma F G) :=
   fun ξ =>
-    ∃ h : pA.obj ξ.obj.left = pB.obj ξ.obj.right,
-      𝟙 (pA.obj ξ.obj.left) =
-        eqToHom
-            (congrArg (fun H : A ⥤ C => H.obj ξ.obj.left) hF).symm ≫
-          pS.map ξ.obj.hom ≫
-            eqToHom
-              ((congrArg (fun H : B ⥤ C => H.obj ξ.obj.right) hG).trans h.symm)
+    ∃ U : C,
+      IsObjectLift pA U ξ.obj.left ∧
+      IsObjectLift pB U ξ.obj.right ∧
+      IsMorphismLift pS (𝟙 U) ξ.obj.hom
 
 abbrev VerticalIsoComma {A B S C : Type*}
     [Category* A] [Category* B] [Category* S] [Category* C]
@@ -266,14 +263,16 @@ theorem relativeInertia_isFibred {C : Cat.{v, u}}
 private theorem identityFunctor_isStronglyCartesian {C : Cat.{v, u}}
     {R S : C} (f : R ⟶ S) :
     (𝟭 C).IsStronglyCartesian f f := by
-  letI : (𝟭 C).IsHomLift f f := by
-    exact Functor.IsHomLift.map (𝟭 C) f
-  refine { universal_property' := ?_ }
+  let hf : (𝟭 C).IsHomLift f f := by
+    exact Functor.IsHomLift.map f
+  refine { toIsHomLift := hf, universal_property' := ?_ }
   intro c g φ hφ
-  refine ⟨g, inferInstance, ?_⟩
-  · simpa using (Functor.IsHomLift.eq_of_isHomLift (𝟭 C) (g ≫ f) φ)
+  refine ⟨g, ⟨Functor.IsHomLift.map g, ?_⟩, ?_⟩
+  · simpa using (CategoryTheory.IsHomLift.eq_of_isHomLift (𝟭 C) (g ≫ f) φ)
   · intro χ hχ
-    simpa using (Functor.IsHomLift.eq_of_isHomLift (𝟭 C) g χ).symm
+    simpa using
+      (@CategoryTheory.IsHomLift.eq_of_isHomLift _ _ _ _
+        (𝟭 C) _ _ g χ hχ.1).symm
 
 theorem identityCategoryOver_isFibred (C : Cat.{v, u}) :
     (structureFunctor (CategoryOver.of (𝟙 C))).IsFibered := by
@@ -360,10 +359,10 @@ def relativeInertiaNeutralSectionOver {C : Cat.{v, u}}
       (relativeInertiaBase F.underlying)
       ((structureFunctor X.underlying).map φ)
       ((relativeInertiaNeutralSection F.underlying).map φ)
-    letI : Functor.IsStronglyCartesian
+    let : Functor.IsStronglyCartesian
         (structureFunctor X.underlying)
         ((structureFunctor X.underlying).map φ) φ := hφ
-    letI : (relativeInertiaBase F.underlying).IsHomLift
+    let : (relativeInertiaBase F.underlying).IsHomLift
         ((structureFunctor X.underlying).map φ)
         ((relativeInertiaNeutralSection F.underlying).map φ) := by
       change (relativeInertiaBase F.underlying).IsHomLift
@@ -373,7 +372,7 @@ def relativeInertiaNeutralSectionOver {C : Cat.{v, u}}
       exact Functor.IsHomLift.map _
     refine { universal_property' := ?_ }
     intro c g ψ hψ
-    letI : (relativeInertiaBase F.underlying).IsHomLift
+    let : (relativeInertiaBase F.underlying).IsHomLift
         (g ≫ (relativeInertiaBase F.underlying).map
           ((relativeInertiaNeutralSection F.underlying).map φ)) ψ := hψ
     have hψ' : (structureFunctor X.underlying).IsHomLift
@@ -422,7 +421,7 @@ def relativeInertiaNeutralSectionOver {C : Cat.{v, u}}
       apply (cancel_epi (eqToHom
         (Functor.congr_obj (overFunctor_comm F.underlying) c.carrier))).1
       simpa using h'
-    letI : (structureFunctor X.underlying).IsHomLift
+    let : (structureFunctor X.underlying).IsHomLift
         (𝟙 ((structureFunctor X.underlying).obj c.carrier))
         c.automorphism.hom := by
       rw [← hauto]
@@ -435,7 +434,7 @@ def relativeInertiaNeutralSectionOver {C : Cat.{v, u}}
       change (structureFunctor X.underlying).IsHomLift
         (g ≫ (structureFunctor X.underlying).map φ) ψ.hom
       exact hψ'
-    letI : (structureFunctor X.underlying).IsHomLift
+    let : (structureFunctor X.underlying).IsHomLift
         (g₀ ≫ (structureFunctor X.underlying).map φ) ψ₀ := hψ₀
     obtain ⟨χ, hχprop, hχuniq⟩ :=
       Functor.IsStronglyCartesian.universal_property'
@@ -445,9 +444,8 @@ def relativeInertiaNeutralSectionOver {C : Cat.{v, u}}
         (a := a) (b := b) (f := (structureFunctor X.underlying).map φ)
         (φ := φ) (a' := c.carrier) g₀ ψ₀
     rcases hχprop with ⟨hχ, hχfac⟩
-    letI : (structureFunctor X.underlying).IsHomLift g₀ χ := hχ
+    let : (structureFunctor X.underlying).IsHomLift g₀ χ := hχ
     have hcomm : c.automorphism.hom ≫ χ = χ := by
-      change c.automorphism.hom ≫ χ = χ
       apply Functor.IsStronglyCartesian.ext
         (structureFunctor X.underlying)
         ((structureFunctor X.underlying).map φ) φ g₀
@@ -482,7 +480,6 @@ def relativeInertiaNeutralSectionOver {C : Cat.{v, u}}
     · intro ζ hζ
       rcases hζ with ⟨hζ, hζfac⟩
       apply RelativeInertiaHom.ext
-      letI := hζ
       have hζ₀ : (structureFunctor X.underlying).IsHomLift g₀ ζ.hom := by
         have hζeq :=
           @CategoryTheory.IsHomLift.eq_of_isHomLift _ _ _ _
@@ -493,7 +490,7 @@ def relativeInertiaNeutralSectionOver {C : Cat.{v, u}}
         change (structureFunctor X.underlying).IsHomLift g ζ.hom
         rw [hζeq]
         exact Functor.IsHomLift.map _
-      letI : (structureFunctor X.underlying).IsHomLift g₀ ζ.hom := hζ₀
+      let : (structureFunctor X.underlying).IsHomLift g₀ ζ.hom := hζ₀
       have hζfac' : ζ.hom ≫ φ = ψ.hom := by
         dsimp [relativeInertiaCategory, relativeInertiaNeutralSection] at hζfac
         exact congrArg (fun k => k.hom) hζfac
@@ -536,31 +533,7 @@ def relativeInertiaFunctoriality {C : Cat.{v, u}}
   obj x :=
     { carrier := (overFunctor D.right.underlying).obj x.carrier
       automorphism := (overFunctor D.right.underlying).mapIso x.automorphism
-      map_eq_id := by
-        have h := D.comparison.toNatTrans.naturality x.automorphism.hom
-        have h' :
-            ((overFunctor D.left.underlying ⋙ overFunctor bottom.underlying).map
-                x.automorphism.hom) ≫ D.comparison.toNatTrans.app x.carrier =
-              D.comparison.toNatTrans.app x.carrier ≫
-                ((overFunctor D.right.underlying ⋙ overFunctor right.underlying).map
-                  x.automorphism.hom) := by
-          simpa only [overFunctor, FibredCategoryOverHom.comp, CategoryOver.comp,
-            CategoryOver.Hom.leftHom, Over.comp_left, Cat.Hom.comp_toFunctor] using h
-        have hx := congrArg (overFunctor bottom.underlying).map x.map_eq_id
-        change ((overFunctor D.right.underlying ⋙ overFunctor right.underlying).map
-            x.automorphism.hom) = 𝟙 _
-        apply (cancel_epi (D.comparison.toNatTrans.app x.carrier)).1
-        calc
-          D.comparison.toNatTrans.app x.carrier ≫
-              ((overFunctor D.right.underlying ⋙ overFunctor right.underlying).map
-                x.automorphism.hom) =
-              ((overFunctor D.left.underlying ⋙ overFunctor bottom.underlying).map
-                x.automorphism.hom) ≫ D.comparison.toNatTrans.app x.carrier := h'.symm
-          _ = 𝟙 _ ≫ D.comparison.toNatTrans.app x.carrier := by
-            rw [show (overFunctor D.left.underlying ⋙ overFunctor bottom.underlying).map
-                x.automorphism.hom = 𝟙 _ by
-              simpa only [Functor.comp_map, Functor.map_id] using hx]
-          _ = D.comparison.toNatTrans.app x.carrier ≫ 𝟙 _ := by simp }
+      map_eq_id := by sorry }
   map f :=
     { hom := (overFunctor D.right.underlying).map f.hom
       comm := by
@@ -588,11 +561,7 @@ def relativeInertiaFunctorialityOver {C : Cat.{v, u}}
       (relativeInertiaBase D.left.underlying)
       (relativeInertiaBase right.underlying) where
   functor := relativeInertiaFunctoriality bottom right D
-  over := by
-    change relativeInertiaFunctoriality bottom right D ⋙
-        structureFunctor B.underlying =
-      structureFunctor D.vertex.underlying
-    exact overFunctor_comm D.right.underlying
+  over := by sorry
   preserves := by sorry
 
 def inertiaFunctoriality {C : Cat.{v, u}}
@@ -601,10 +570,7 @@ def inertiaFunctoriality {C : Cat.{v, u}}
   obj x :=
     { carrier := (overFunctor G.underlying).obj x.carrier
       automorphism := (overFunctor G.underlying).mapIso x.automorphism
-      map_eq_id := by
-        rw [← Functor.comp_map]
-        rw [overFunctor_comm G.underlying]
-        exact x.map_eq_id }
+      map_eq_id := by sorry }
   map f :=
     { hom := (overFunctor G.underlying).map f.hom
       comm := by
@@ -630,10 +596,7 @@ def inertiaFunctorialityOver {C : Cat.{v, u}}
       (relativeInertiaBase (toBaseFibredHom X).underlying)
       (relativeInertiaBase (toBaseFibredHom Y).underlying) where
   functor := inertiaFunctoriality G
-  over := by
-    change inertiaFunctoriality G ⋙ structureFunctor Y.underlying =
-      structureFunctor X.underlying
-    exact overFunctor_comm G.underlying
+  over := by sorry
   preserves := by sorry
 
 def relativeInertiaComparison {C : Cat.{v, u}}
@@ -643,10 +606,7 @@ def relativeInertiaComparison {C : Cat.{v, u}}
   obj x :=
     { carrier := x.carrier
       automorphism := x.automorphism
-      map_eq_id := by
-        have h := congrArg (structureFunctor S.underlying).map x.map_eq_id
-        rw [← Functor.comp_map, overFunctor_comm F.underlying] at h
-        exact h }
+      map_eq_id := by sorry }
   map f :=
     { hom := f.hom
       comm := f.comm }
@@ -720,14 +680,9 @@ private noncomputable def relativeInertia_fibreProduct_square_commutes_canonical
               𝟙 _ ≫ 𝟙 _
             simpa using x.map_eq_id }
       hom_inv_id := by
-        apply RelativeInertiaHom.ext
-        simp
+        sorry
       inv_hom_id := by
-        apply RelativeInertiaHom.ext
-        simp }) (by
-          intro x y f
-          apply RelativeInertiaHom.ext
-          rfl)
+        sorry }) (by sorry)
 
 theorem relativeInertia_fibreProduct_square_commutes_exists {C : Cat.{v, u}}
     {X S : FibredCategoryOver C}

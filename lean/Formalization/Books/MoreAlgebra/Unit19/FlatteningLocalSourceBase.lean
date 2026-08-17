@@ -120,6 +120,7 @@ theorem flatAtPrimesOverSource_limit
     [CommRing R] [CommRing S] [CommRing R']
     [AddCommGroup M] [Module S M]
     (f : R →+* S) (hf : RingHom.EssFinitePresentation f)
+    (hM : Module.FinitePresentation S M)
     (J : Ideal S) (g : R →+* R')
     (D : Formalization.Books.Algebra.Unit127.DirectedAlgebraColimit g)
     (I : ∀ i : D.index,

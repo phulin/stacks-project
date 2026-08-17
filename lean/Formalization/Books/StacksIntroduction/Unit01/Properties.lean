@@ -60,43 +60,43 @@ structure EllipticModuliPropertyPresentation where
   irreducible_of_universalBase :
     IrreducibleSpace universalBaseScheme → irreducible
 
-/- A native stack-property theorem is the missing implementation of this
-interface; its existence is the source-facing theorem retained here. -/
-theorem exists_ellipticModuliPropertyPresentation :
-    Nonempty EllipticModuliPropertyPresentation := by
-  exact ⟨{ smooth := Smooth universalBaseToIntegers, smooth_iff_universalBase := Iff.rfl, quasiCompact := True, quasiCompact_of_universalBase := by simp, irreducible := True, irreducible_of_universalBase := by simp }⟩
+/- A native stack-property theorem would supply a value of this interface.
+The properties below therefore take that value explicitly; fabricating one
+with `True` fields would turn the source's implications into tautologies. -/
 
-noncomputable def ellipticModuliPropertyPresentation :
-    EllipticModuliPropertyPresentation :=
-  Classical.choice exists_ellipticModuliPropertyPresentation
+/-- Smoothness of the moduli object over `Spec(ℤ)` for a presentation. -/
+def IsSmoothEllipticModuliOverIntegers
+    (P : EllipticModuliPropertyPresentation) : Prop :=
+  P.smooth
 
-/-- Smoothness of the moduli object over `Spec(ℤ)`. -/
-def IsSmoothEllipticModuliOverIntegers : Prop :=
-  ellipticModuliPropertyPresentation.smooth
+/-- Quasi-compactness of the moduli object for a presentation. -/
+def IsQuasiCompactEllipticModuli
+    (P : EllipticModuliPropertyPresentation) : Prop :=
+  P.quasiCompact
 
-/-- Quasi-compactness of the moduli object. -/
-def IsQuasiCompactEllipticModuli : Prop :=
-  ellipticModuliPropertyPresentation.quasiCompact
+/-- Irreducibility of the moduli object for a presentation. -/
+def IsIrreducibleEllipticModuli
+    (P : EllipticModuliPropertyPresentation) : Prop :=
+  P.irreducible
 
-/-- Irreducibility of the moduli object. -/
-def IsIrreducibleEllipticModuli : Prop :=
-  ellipticModuliPropertyPresentation.irreducible
-
-theorem ellipticModuli_smooth_iff_universalBase_smooth :
-    IsSmoothEllipticModuliOverIntegers ↔ Smooth universalBaseToIntegers :=
-  ellipticModuliPropertyPresentation.smooth_iff_universalBase
+theorem ellipticModuli_smooth_iff_universalBase_smooth
+    (P : EllipticModuliPropertyPresentation) :
+    IsSmoothEllipticModuliOverIntegers P ↔ Smooth universalBaseToIntegers :=
+  P.smooth_iff_universalBase
 
 /-- Quasi-compactness descends from the chosen smooth cover. -/
 theorem ellipticModuli_quasiCompact_of_universalBase_quasiCompact
+    (P : EllipticModuliPropertyPresentation)
     (h : CompactSpace universalBaseScheme) :
-    IsQuasiCompactEllipticModuli :=
-  ellipticModuliPropertyPresentation.quasiCompact_of_universalBase h
+    IsQuasiCompactEllipticModuli P :=
+  P.quasiCompact_of_universalBase h
 
 /-- Irreducibility descends from the chosen smooth cover. -/
 theorem ellipticModuli_irreducible_of_universalBase_irreducible
+    (P : EllipticModuliPropertyPresentation)
     (h : IrreducibleSpace universalBaseScheme) :
-    IsIrreducibleEllipticModuli :=
-  ellipticModuliPropertyPresentation.irreducible_of_universalBase h
+    IsIrreducibleEllipticModuli P :=
+  P.irreducible_of_universalBase h
 
 /-! ### Quasi-coherent modules -/
 
@@ -152,7 +152,9 @@ identifications.
 
 The group types are kept as fields: defining both of them to be `ZMod 12`
 would make the advertised calculation a reflexive alias rather than a
-statement about `\Pic(\mathcal M_{1,1})` and `\Pic_H(W)`. -/
+statement about `\Pic(\mathcal M_{1,1})` and `\Pic_H(W)`.  A native
+stack-Picard construction would supply this interface; the chapter does not
+manufacture one from `ZMod 12`. -/
 structure PicardModuliIdentification where
   moduliGroup : Type u
   [moduliGroup_structure : AddCommGroup moduliGroup]
@@ -164,28 +166,21 @@ structure PicardModuliIdentification where
 /-- The scheme-side Picard group is Mathlib's canonical Picard group of the ring. -/
 abbrev PicardGroupOfUniversalBase := CommRing.Pic UniversalBaseRing
 
-/-- The source's `Pic(M₁,₁) = Pic_H(W) = ℤ/12ℤ` calculation. -/
-theorem exists_picard_moduli_identification :
-    Nonempty PicardModuliIdentification := by
-  exact ⟨{ moduliGroup := ULift (ZMod 12), equivariantGroup := ULift (ZMod 12), moduli_equivariant := AddEquiv.refl _, equivariant_ZMod := AddEquiv.ulift }⟩
+/-- The moduli Picard group supplied by an identification interface. -/
+abbrev PicardGroupOfModuli (P : PicardModuliIdentification) := P.moduliGroup
 
-/-- A chosen pair of Picard-group models for the moduli object and its
-equivariant presentation. -/
-noncomputable def picardModuliIdentification : PicardModuliIdentification :=
-  Classical.choice exists_picard_moduli_identification
+abbrev EquivariantPicardGroupOfUniversalBase
+    (P : PicardModuliIdentification) := P.equivariantGroup
 
-abbrev PicardGroupOfModuli := picardModuliIdentification.moduliGroup
+noncomputable instance picardGroupOfModuli_addCommGroup
+    (P : PicardModuliIdentification) :
+    AddCommGroup (PicardGroupOfModuli P) :=
+  P.moduliGroup_structure
 
-abbrev EquivariantPicardGroupOfUniversalBase :=
-  picardModuliIdentification.equivariantGroup
-
-noncomputable instance picardGroupOfModuli_addCommGroup :
-    AddCommGroup PicardGroupOfModuli :=
-  picardModuliIdentification.moduliGroup_structure
-
-noncomputable instance equivariantPicardGroupOfUniversalBase_addCommGroup :
-    AddCommGroup EquivariantPicardGroupOfUniversalBase :=
-  picardModuliIdentification.equivariantGroup_structure
+noncomputable instance equivariantPicardGroupOfUniversalBase_addCommGroup
+    (P : PicardModuliIdentification) :
+    AddCommGroup (EquivariantPicardGroupOfUniversalBase P) :=
+  P.equivariantGroup_structure
 
 /-- The class-group calculation used in the source gives a trivial Picard group on `W`. -/
 theorem picard_universalBase_subsingleton :
@@ -199,32 +194,34 @@ def picardDiscriminantMap : ℤ →+ ℤ :=
     map_add' := by intro m n; ring }
 
 /-- The restriction map into the chosen model of the equivariant Picard group. -/
-def picardRestrictionMap : ℤ →+ EquivariantPicardGroupOfUniversalBase :=
-  picardModuliIdentification.equivariant_ZMod.symm.toAddMonoidHom.comp
+def picardRestrictionMap (P : PicardModuliIdentification) :
+    ℤ →+ EquivariantPicardGroupOfUniversalBase P :=
+  P.equivariant_ZMod.symm.toAddMonoidHom.comp
     (Int.castAddHom (ZMod 12))
 
 /-- The exact sequence displayed in the Picard-group paragraph. -/
-theorem picard_discriminant_exact_sequence :
-    Function.Exact picardDiscriminantMap picardRestrictionMap ∧
-      Function.Surjective picardRestrictionMap := by
+theorem picard_discriminant_exact_sequence
+    (P : PicardModuliIdentification) :
+    Function.Exact picardDiscriminantMap (picardRestrictionMap P) ∧
+      Function.Surjective (picardRestrictionMap P) := by
   refine ⟨?_, ?_⟩
   · unfold Function.Exact
     intro x
-    change picardModuliIdentification.equivariant_ZMod.symm (x : ZMod 12) = 0 ↔
+    change P.equivariant_ZMod.symm (x : ZMod 12) = 0 ↔
       ∃ y : ℤ, 12 * y = x
     constructor
     · intro hx
       have hcast : (x : ZMod 12) = 0 := by
-        simpa using (picardModuliIdentification.equivariant_ZMod.symm_apply_eq.mp hx)
+        simpa using (P.equivariant_ZMod.symm_apply_eq.mp hx)
       rcases (ZMod.intCast_zmod_eq_zero_iff_dvd x 12).mp hcast with ⟨y, hy⟩
       exact ⟨y, by simpa using hy.symm⟩
     · rintro ⟨y, rfl⟩
       rw [Int.cast_mul]
       have h12 : ((12 : ℤ) : ZMod 12) = 0 :=
         (ZMod.intCast_zmod_eq_zero_iff_dvd 12 12).2 (dvd_refl 12)
-      rw [h12, zero_mul, picardModuliIdentification.equivariant_ZMod.symm.map_zero]
+      rw [h12, zero_mul, P.equivariant_ZMod.symm.map_zero]
   · intro z
-    refine ⟨(ZMod.cast (picardModuliIdentification.equivariant_ZMod z) : ℤ), ?_⟩
+    refine ⟨(ZMod.cast (P.equivariant_ZMod z) : ℤ), ?_⟩
     simp [picardRestrictionMap]
 
 /-- The factors in the Čech nerve term `W × H^p`.
@@ -254,6 +251,31 @@ noncomputable def cechProductPresentation (H : Scheme.{0}) (p : ℕ) :
 
 /-! ### Čech-to-étale cohomology -/
 
+/-- A filtration and eventual-page formulation of convergence for the
+Čech spectral sequence.  A finite page is not, in general, the abutment;
+the associated graded pieces are required to agree with all sufficiently
+late pages instead. -/
+structure CechSpectralSequenceConvergence
+    {Λ : Type u} [Ring Λ]
+    (spectralSequence :
+      CategoryTheory.CohomologicalSpectralSequenceNat (ModuleCat.{u} Λ) 1)
+    (moduliCohomology : ℕ → ModuleCat.{u} Λ) where
+  filtration : ∀ n : ℕ, Fin (n + 2) →
+    Submodule Λ (moduliCohomology n)
+  filtration_mono : ∀ n : ℕ, ∀ i j : Fin (n + 2), i ≤ j →
+    filtration n i ≤ filtration n j
+  filtration_bot : ∀ n : ℕ, filtration n 0 = ⊥
+  filtration_top : ∀ n : ℕ,
+    filtration n (Fin.last (n + 1)) = ⊤
+  eventual_stability : ∀ n : ℕ, ∀ i : Fin (n + 1), ∃ r₀ : ℕ, ∀ r : ℕ,
+    r₀ ≤ r → Nonempty
+      (CategoryTheory.Iso
+        (ModuleCat.of Λ
+          (filtration n (Fin.succ i) ⧸
+            Submodule.comap (Submodule.subtype (filtration n (Fin.succ i)))
+              (filtration n (Fin.castSucc i))))
+        ((spectralSequence.page (r + 1)).X (i, n - i)))
+
 /-- The actual spectral-sequence data needed from an étale cohomology theory. -/
 structure CechSpectralSequenceData
     {Λ : Type u} [Ring Λ]
@@ -265,18 +287,7 @@ structure CechSpectralSequenceData
     ((spectralSequence.page 1).X (p, q) ≅
       schemeCohomology (cechProductPresentation H p).carrier q)
   convergence :
-    ∀ n : ℕ, ∃ filtration : Fin (n + 2) →
-      Submodule Λ (moduliCohomology n),
-      (∀ i j : Fin (n + 2), i ≤ j → filtration i ≤ filtration j) ∧
-      filtration 0 = ⊥ ∧
-      filtration (Fin.last (n + 1)) = ⊤ ∧
-      ∀ i : Fin (n + 1), Nonempty
-        (CategoryTheory.Iso
-          (ModuleCat.of Λ
-            (filtration (Fin.succ i) ⧸
-              Submodule.comap (Submodule.subtype (filtration (Fin.succ i)))
-                (filtration (Fin.castSucc i))))
-          ((spectralSequence.page (n + 2)).X (i, n - i)))
+    CechSpectralSequenceConvergence spectralSequence moduliCohomology
 
 /-- A source-facing coefficient-valued étale cohomology theory.
 

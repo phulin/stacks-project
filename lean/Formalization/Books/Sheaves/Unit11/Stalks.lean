@@ -61,7 +61,7 @@ theorem germ_eq_iff_common_restriction
     {U V : Opens X} (x : X) (hxU : x ∈ U) (hxV : x ∈ V)
     (s : Sections F U) (t : Sections F V) :
     germApply (F := F) U x hxU s = germApply (F := F) V x hxV t ↔
-      ∃ (W : Opens X) (hxW : x ∈ W) (hWU : W ≤ U) (hWV : W ≤ V),
+      ∃ (W : Opens X) (_hxW : x ∈ W) (hWU : W ≤ U) (hWV : W ≤ V),
         F.map (homOfLE hWU).op s = F.map (homOfLE hWV).op t := by
   constructor
   · intro h

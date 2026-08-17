@@ -72,9 +72,14 @@ theorem exists_finite_compact_open_refinement
       rw [hWref.2.1.2])
   let e := t.equivFin
   let V : Fin t.card → Set X := fun j => W (e.symm j)
+  have hVsubU : ∀ j, V j ⊆ U := by
+    intro j x hx
+    rw [← hWref.2.1.2]
+    exact mem_iUnion.mpr ⟨e.symm j, hx⟩
   have hVopen : ∀ j, IsOpen (V j) := by
     intro j
-    exact (hWbasis (e.symm j)).1
+    rw [← inter_eq_right.mpr (hVsubU j)]
+    exact hUopen.inter (hWbasis (e.symm j)).1
   have hVcompact : ∀ j, IsCompact (V j) := by
     intro j
     exact (hWbasis (e.symm j)).2

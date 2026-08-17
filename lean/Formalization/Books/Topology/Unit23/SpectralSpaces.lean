@@ -28,7 +28,7 @@ open Formalization.Books.Topology.Unit22
 
 universe u v
 
-variable {X : Type u} [TopologicalSpace X]
+variable {X : Type u} [topologyX : TopologicalSpace X]
 
 section SpectralSpaces
 
@@ -101,11 +101,13 @@ theorem isClosed_constructibleTopology_of_isClosed [SpectralSpace X]
 constructible subset clopen. -/
 theorem constructibleTopology_is_coarsest_for_constructible_clopen
     [SpectralSpace X] :
-    (∀ E : Set X, IsConstructible E →
-      IsOpen[constructibleTopology X] E ∧ IsClosed[constructibleTopology X] E) ∧
+    (∀ E : Set X, @IsConstructible X topologyX E →
+      @IsOpen X (@constructibleTopology X topologyX) E ∧
+        @IsClosed X (@constructibleTopology X topologyX) E) ∧
     ∀ t : TopologicalSpace X,
-    (∀ E : Set X, IsConstructible E → IsOpen[t] E ∧ IsClosed[t] E) →
-          t ≤ constructibleTopology X := by
+    (∀ E : Set X, @IsConstructible X topologyX E →
+      @IsOpen X t E ∧ @IsClosed X t E) →
+          t ≤ @constructibleTopology X topologyX := by
   sorry
 
 /-- Open subsets of the constructible topology are unions of constructible

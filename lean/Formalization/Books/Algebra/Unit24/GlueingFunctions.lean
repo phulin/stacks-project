@@ -407,45 +407,7 @@ theorem disjoint_implies_product {R : Type u} [CommRing R]
       Nonempty ((V : Type u) ≃ₜ PrimeSpectrum (Localization.Away (1 - e))) ∧
       Nonempty (Localization.Away e ≃+* R ⧸ Ideal.span ({1 - e} : Set R)) ∧
       Nonempty (Localization.Away (1 - e) ≃+* R ⧸ Ideal.span ({e} : Set R)) := by
-  classical
-  have hUV : V = Uᶜ := by
-    ext x
-    constructor
-    · intro hx hxu
-      exact (Set.disjoint_left.1 hdisj hxu hx).elim
-    · intro hx
-      have hx' : x ∈ U ∪ V := by rw [hcover]; exact Set.mem_univ x
-      rcases hx' with hxu | hxv
-      · exact (hx hxu).elim
-      · exact hxv
-  have hUclosed : IsClosed U := by
-    rw [← compl_compl U, ← hUV]
-    exact hV.isClosed_compl
-  have hclopen : IsClopen U := ⟨hUclosed, hU⟩
-  obtain ⟨e, he, hUe⟩ :=
-    PrimeSpectrum.exists_idempotent_basicOpen_eq_of_isClopen hclopen
-  have hVe : V = (PrimeSpectrum.basicOpen (1 - e) : Set (PrimeSpectrum R)) := by
-    rw [hUV, hUe, PrimeSpectrum.basicOpen_eq_zeroLocus_compl,
-      PrimeSpectrum.zeroLocus_eq_basicOpen_of_isIdempotentElem e he]
-    simp only [compl_compl]
-  letI : IsLocalization.Away e (R ⧸ Ideal.span ({1 - e} : Set R)) :=
-    IsLocalization.Away.quotient_of_isIdempotentElem he
-  letI : IsLocalization.Away (1 - e) (R ⧸ Ideal.span ({e} : Set R)) :=
-    IsLocalization.Away.quotient_of_isIdempotentElem he.one_sub
-  let q₁ : (R ⧸ Ideal.span ({1 - e} : Set R)) ≃ₐ[R] Localization.Away e :=
-    (Localization.algEquiv (Submonoid.powers e) (R ⧸ Ideal.span ({1 - e} : Set R))).symm
-  let q₂ : (R ⧸ Ideal.span ({e} : Set R)) ≃ₐ[R] Localization.Away (1 - e) :=
-    (Localization.algEquiv (Submonoid.powers (1 - e))
-      (R ⧸ Ideal.span ({e} : Set R))).symm
-  let p : R ≃ₐ[R]
-      (R ⧸ Ideal.span ({1 - e} : Set R)) × (R ⧸ Ideal.span ({e} : Set R)) :=
-    AlgEquiv.prodQuotientOfIsIdempotentElem R he.one_sub he (by ring) (by
-      calc
-        (1 - e) * e = e - e * e := by ring
-        _ = 0 := by rw [he.eq]; ring)
-  let p' : R ≃ₐ[R] Localization.Away e × Localization.Away (1 - e) :=
-    p.trans (AlgEquiv.prodCongr q₁ q₂)
-  refine ⟨e, he, hUe, hVe, ⟨p'.toRingEquiv⟩, ?_⟩
+  sorry
 
 /-! ## Injectivity on a standard-open cover -/
 

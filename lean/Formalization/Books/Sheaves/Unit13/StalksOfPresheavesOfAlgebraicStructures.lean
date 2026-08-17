@@ -136,10 +136,11 @@ theorem algebraicStalkGerm_underlying
     [HasFilteredColimitsOfSize.{w, w} C]
     [PreservesFilteredColimitsOfSize.{w, w} F]
     (𝒜 : PresheafWithValues X C) (U : Opens X) (x : X) (hx : x ∈ U) :
-    F.map (algebraicStalkGerm 𝒜 U x hx) ≫
+      F.map (algebraicStalkGerm 𝒜 U x hx) ≫
         (algebraicStalkUnderlyingIso F 𝒜 x).hom =
       (underlyingPresheaf F 𝒜).germ U x hx := by
-  sorry
+  unfold algebraicStalkGerm algebraicStalkUnderlyingIso TopCat.Presheaf.germ
+  exact ι_preservesColimitIso_hom F (algebraicStalkDiagram 𝒜 x) (op ⟨U, hx⟩)
 
 /-- Faithfulness makes the categorical germ the unique morphism inducing the
 specified underlying germ map. -/
@@ -153,7 +154,9 @@ theorem algebraicStalkGerm_unique
     (hφ : F.map φ ≫ (algebraicStalkUnderlyingIso F 𝒜 x).hom =
       (underlyingPresheaf F 𝒜).germ U x hx) :
     φ = algebraicStalkGerm 𝒜 U x hx := by
-  sorry
+  apply F.map_injective
+  rw [← cancel_mono (algebraicStalkUnderlyingIso F 𝒜 x).hom]
+  rw [hφ, algebraicStalkGerm_underlying]
 
 /-! ## The standard algebraic-structure cases -/
 

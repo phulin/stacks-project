@@ -54,7 +54,7 @@ theorem coherent_module_characterization
 
 structure CoherentStandardObjects (X : AlgebraicSpace.{u})
     [AlgebraicSpaceTheory.{u}] [AlgebraicSpaceCohomology.{u}] where
-  structure_sheaf : IsCoherentModule X (constantSheaf X)
+  structure_sheaf : IsCoherentModule X (structureSheaf X)
   invertible : ∀ (F : SheafObj X), IsInvertible F → IsCoherentModule X F
   finite_locally_free : ∀ (F : SheafObj X), IsFiniteLocallyFree F →
     IsCoherentModule X F

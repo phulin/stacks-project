@@ -28,8 +28,8 @@ theorem finite_morphism_noetherian
     (D : FiniteClosedBaseChangeData X Y Z Z' f i i' f')
     (hX : IsLocallyNoetherian X) :
     IsCoherentModule Z
-        (pushforwardSheaf f' (constantSheaf Z')) ∧
-      sheafSupport Z (pushforwardSheaf f' (constantSheaf Z')) =
+        (pushforwardSheaf f' (structureSheaf Z')) ∧
+      sheafSupport Z (pushforwardSheaf f' (structureSheaf Z')) =
         Set.range (fun z : Z => z) := by
   sorry
 

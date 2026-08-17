@@ -239,6 +239,7 @@ class AlgebraicSpaceCohomology where
   isFiniteLocallyFree : ∀ {X : AlgebraicSpace.{u}}, Sheaf X → Prop
   isAmple : ∀ {X : AlgebraicSpace.{u}}, Sheaf X → Prop
   constantSheaf : ∀ X : AlgebraicSpace.{u}, Sheaf X
+  structureSheaf : ∀ X : AlgebraicSpace.{u}, Sheaf X
   zeroSheaf : ∀ X : AlgebraicSpace.{u}, Sheaf X
   sections : ∀ (X : AlgebraicSpace.{u}), Sheaf X → Type u
   sectionsGroup : ∀ (X : AlgebraicSpace.{u}) (F : Sheaf X), AddCommGroup (sections X F)
@@ -385,6 +386,9 @@ def IsAmple {X : AlgebraicSpace.{u}} [AlgebraicSpaceCohomology.{u}]
 
 def constantSheaf (X : AlgebraicSpace.{u}) [AlgebraicSpaceCohomology.{u}] : SheafObj X :=
   AlgebraicSpaceCohomology.constantSheaf X
+
+def structureSheaf (X : AlgebraicSpace.{u}) [AlgebraicSpaceCohomology.{u}] : SheafObj X :=
+  AlgebraicSpaceCohomology.structureSheaf X
 
 def zeroSheaf (X : AlgebraicSpace.{u}) [AlgebraicSpaceCohomology.{u}] : SheafObj X :=
   AlgebraicSpaceCohomology.zeroSheaf X

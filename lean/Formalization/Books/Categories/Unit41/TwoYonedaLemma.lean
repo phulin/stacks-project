@@ -425,58 +425,15 @@ theorem twoYonedaGroupoidMorphism_preservesCartesian
   exact fibredInGroupoids_all_morphisms_stronglyCartesian p
     (inferInstance : p.IsFibredInGroupoids) (G.1.map φ)
 
-/- The same chosen-pullback formulas land in the whole strict morphism
-   category in the groupoid case; preservation is automatic there. -/
-def twoYonedaGroupoidPullbackMorphism
-    {C : Type uC} [Category.{vC} C]
-    {S : Type uS} [Category.{vS} S]
-    (p : S ⥤ C) [p.IsFibered] (P : PullbackChoice p) (U : C)
-    (x : Functor.Fiber p U) : twoYonedaGroupoidMorphismCategory p U :=
-  ⟨twoYonedaPullbackFunctor p P U x,
-    twoYonedaPullbackFunctor_isOver p P U x⟩
-
-def twoYonedaGroupoidPullbackMap
-    {C : Type uC} [Category.{vC} C]
-    {S : Type uS} [Category.{vS} S]
-    (p : S ⥤ C) [p.IsFibered] (P : PullbackChoice p) (U : C)
-    {x y : Functor.Fiber p U} (η : x ⟶ y) :
-    twoYonedaGroupoidPullbackMorphism p P U x ⟶
-      twoYonedaGroupoidPullbackMorphism p P U y :=
-  ⟨twoYonedaPullbackNatTrans p P U η,
-    twoYonedaPullbackNatTrans_isOver p P U η⟩
-
-theorem twoYonedaGroupoidPullbackMap_map_id
-    {C : Type uC} [Category.{vC} C]
-    {S : Type uS} [Category.{vS} S]
-    (p : S ⥤ C) [p.IsFibered] (P : PullbackChoice p) (U : C)
-    (x : Functor.Fiber p U) :
-    twoYonedaGroupoidPullbackMap p P U (𝟙 x) =
-      𝟙 (twoYonedaGroupoidPullbackMorphism p P U x) := by
-  sorry
-
-theorem twoYonedaGroupoidPullbackMap_map_comp
-    {C : Type uC} [Category.{vC} C]
-    {S : Type uS} [Category.{vS} S]
-    (p : S ⥤ C) [p.IsFibered] (P : PullbackChoice p) (U : C)
-    {x y z : Functor.Fiber p U} (η : x ⟶ y) (θ : y ⟶ z) :
-    twoYonedaGroupoidPullbackMap p P U (η ≫ θ) =
-      twoYonedaGroupoidPullbackMap p P U η ≫
-        twoYonedaGroupoidPullbackMap p P U θ := by
-  sorry
-
+/- The pullback functor constructed above lands in the full subcategory of
+   fibred morphisms.  In the groupoid case, inclusion of that full
+   subcategory gives the source's functor into the whole morphism category. -/
 def twoYonedaGroupoidPullback
     {C : Type uC} [Category.{vC} C]
     {S : Type uS} [Category.{vS} S]
-    (p : S ⥤ C) [p.IsFibered] (P : PullbackChoice p) (U : C) :
-    Functor.Fiber p U ⥤ twoYonedaGroupoidMorphismCategory p U where
-  obj x := twoYonedaGroupoidPullbackMorphism p P U x
-  map η := twoYonedaGroupoidPullbackMap p P U η
-  map_id := by
-    intro x
-    exact twoYonedaGroupoidPullbackMap_map_id p P U x
-  map_comp := by
-    intro x y z η θ
-    exact twoYonedaGroupoidPullbackMap_map_comp p P U η θ
+    (p : S ⥤ C) [p.IsFibredInGroupoids] (P : PullbackChoice p) (U : C) :
+    Functor.Fiber p U ⥤ twoYonedaGroupoidMorphismCategory p U :=
+  twoYonedaPullback p P U ⋙ (twoYonedaPreservesCartesian p U).ι
 
 /-- The morphism category in the groupoid version is a groupoid. -/
 theorem twoYonedaGroupoidMorphismCategory_isGroupoid

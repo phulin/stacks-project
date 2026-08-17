@@ -61,7 +61,7 @@ noncomputable def intervalVertex (ε : Fin 2) :
   SSet.const (SSet.stdSimplex.obj₀Equiv.symm ε)
 
 /-- The coproducts used to form `U × Δ[1]` degree by degree. -/
-def intervalCoproducts
+theorem intervalCoproducts
     {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]
     (U : SimplicialObject C) :
     Unit13.HasDegreewiseCoproducts (Δ[1] : SSet.{u}) U :=
@@ -178,7 +178,7 @@ theorem cylinderHomotopyComponent_zero
     {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]
     {U V : SimplicialObject C} {a b : U ⟶ V}
     (H : CylinderHomotopy a b) (n : ℕ) :
-    cylinderHomotopyComponent H n 0 = a.app (op (SimplexCategory.mk n)) := by
+    cylinderHomotopyComponent H n 0 = b.app (op (SimplexCategory.mk n)) := by
   sorry
 
 theorem cylinderHomotopyComponent_last
@@ -186,7 +186,7 @@ theorem cylinderHomotopyComponent_last
     {U V : SimplicialObject C} {a b : U ⟶ V}
     (H : CylinderHomotopy a b) (n : ℕ) :
     cylinderHomotopyComponent H n (Fin.last (n + 1)) =
-      b.app (op (SimplexCategory.mk n)) := by
+      a.app (op (SimplexCategory.mk n)) := by
   sorry
 
 theorem exists_cylinderHomotopy_to_degreewise
@@ -240,7 +240,7 @@ def Homotopic
     (a b : U ⟶ V) : Prop :=
   Relation.EqvGen (fun a b : U ⟶ V => OneStepHomotopy a b) a b
 
-def homotopicOfHomotopy
+theorem homotopicOfHomotopy
     {C : Type u} [Category.{v} C] {U V : SimplicialObject C}
     {a b : U ⟶ V} (H : Homotopy a b) : Homotopic a b :=
   Relation.EqvGen.rel a b ⟨H⟩
@@ -255,13 +255,13 @@ theorem homotopic_refl
   (a : U ⟶ V) : Homotopic a a := by
   exact Relation.EqvGen.refl a
 
-def homotopicOfEq
+theorem homotopicOfEq
     {C : Type u} [Category.{v} C] {U V : SimplicialObject C}
     {a b : U ⟶ V} (h : a = b) : Homotopic a b := by
   subst b
   exact Relation.EqvGen.refl a
 
-/-- The constant componentwise homotopy from a map to itself. -/
+/-- The canonical homotopy from a map to itself. -/
 def trivialHomotopy
     {C : Type u} [Category.{v} C]
     {U V : SimplicialObject C} (a : U ⟶ V) : Homotopy a a :=
@@ -279,6 +279,12 @@ theorem homotopy_iff_degreewise
     Nonempty (CylinderHomotopy a b) ↔ OneStepHomotopy a b := by
   rw [cylinderHomotopy_iff_degreewise]
   sorry
+
+theorem trivialCylinderHomotopy
+    {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]
+    {U V : SimplicialObject C} (a : U ⟶ V) :
+    Nonempty (CylinderHomotopy a a) := by
+  exact (homotopy_iff_degreewise).2 (trivialOneStepHomotopy a)
 
 def homotopyHomRel (C : Type u) [Category.{v} C] :
     HomRel (SimplicialObject C) :=
@@ -504,7 +510,7 @@ theorem cechNerveSelfMap_homotopic_identity
     Homotopic (cechNerveSelfMap f s hs) (𝟙 f.cechNerve) := by
   sorry
 
-noncomputable def cechNerveHomotopyEquivalence
+theorem cechNerveHomotopyEquivalence
     {C : Type u} [Category.{v} C]
     (f : Arrow C) (s : f.right ⟶ f.left)
     (hs : s ≫ f.hom = 𝟙 f.right)

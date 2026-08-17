@@ -46,14 +46,14 @@ theorem knutson_formal_functions_for_algebraic_spaces
     (f : X ⟶ Y) (hX : IsAlgebraicSpace X) (hY : IsAlgebraicSpace Y)
     (hproper : IsProperMorphism f) :
     HasFormalFunctionsAndGrothendieckExistence f := by
-  exact ⟨⟨hproper, IsAlgebraicSpace X, IsAlgebraicSpace Y⟩, hX, hY⟩
+  sorry
 
 theorem abramovich_vistoli_formal_functions_for_tame_deligne_mumford_stacks
     {C : Type u} [Category.{v} C] [StackCategory C] {X Y : C}
     (f : X ⟶ Y) (hX : IsTameDeligneMumfordStack X)
     (hY : IsTameDeligneMumfordStack Y) (hproper : IsProperMorphism f) :
     HasFormalFunctionsAndGrothendieckExistence f := by
-  exact ⟨⟨hproper, IsTameDeligneMumfordStack X, IsTameDeligneMumfordStack Y⟩, hX, hY⟩
+  sorry
 
 theorem olsson_starr_formal_functions_for_separated_deligne_mumford_stacks
     {C : Type u} [Category.{v} C] [StackCategory C] {X Y : C}
@@ -61,9 +61,7 @@ theorem olsson_starr_formal_functions_for_separated_deligne_mumford_stacks
     (hseparatedX : IsSeparatedStack X) (hseparatedY : IsSeparatedStack Y)
     (hproper : IsProperMorphism f) :
     HasFormalFunctionsAndGrothendieckExistence f := by
-  exact ⟨⟨hproper, IsDeligneMumfordStack X ∧ IsSeparatedStack X,
-    IsDeligneMumfordStack Y ∧ IsSeparatedStack Y⟩,
-    ⟨hX, hseparatedX⟩, ⟨hY, hseparatedY⟩⟩
+  sorry
 
 theorem olsson_formal_functions_for_proper_artin_stacks
     {C : Type u} [Category.{v} C] [StackCategory C] {X Y : C}
@@ -71,9 +69,7 @@ theorem olsson_formal_functions_for_proper_artin_stacks
     (hproperX : IsProperStack X) (hproperY : IsProperStack Y)
     (hproper : IsProperMorphism f) :
     HasFormalFunctionsAndGrothendieckExistence f := by
-  exact ⟨⟨hproper, IsArtinStack X ∧ IsProperStack X,
-    IsArtinStack Y ∧ IsProperStack Y⟩,
-    ⟨hX, hproperX⟩, ⟨hY, hproperY⟩⟩
+  sorry
 
 theorem conrad_formal_gaga_for_proper_artin_stacks
     {C : Type u} [Category.{v} C] [StackCategory C] {X Y : C}
@@ -81,11 +77,7 @@ theorem conrad_formal_gaga_for_proper_artin_stacks
     (hproperX : IsProperStack X) (hproperY : IsProperStack Y)
     (hproper : IsProperMorphism f) :
     HasFormalFunctionsAndGrothendieckExistence f ∧ HasFormalGAGA f := by
-  refine ⟨⟨⟨hproper, IsArtinStack X ∧ IsProperStack X,
-    IsArtinStack Y ∧ IsProperStack Y⟩,
-    ⟨hX, hproperX⟩, ⟨hY, hproperY⟩⟩,
-    ⟨⟨hproper, IsArtinStack X ∧ IsProperStack X⟩,
-    ⟨hX, hproperX⟩⟩⟩
+  sorry
 
 theorem olsson_sheaves_second_proof_for_proper_artin_stacks
     {C : Type u} [Category.{v} C] [StackCategory C] {X Y : C}
@@ -93,8 +85,6 @@ theorem olsson_sheaves_second_proof_for_proper_artin_stacks
     (hproperX : IsProperStack X) (hproperY : IsProperStack Y)
     (hproper : IsProperMorphism f) :
     HasFormalFunctionsAndGrothendieckExistence f := by
-  exact ⟨⟨hproper, IsArtinStack X ∧ IsProperStack X,
-    IsArtinStack Y ∧ IsProperStack Y⟩,
-    ⟨hX, hproperX⟩, ⟨hY, hproperY⟩⟩
+  sorry
 
 end Formalization.Books.Guide.Unit05

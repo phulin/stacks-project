@@ -53,7 +53,57 @@ theorem abelianSheafification_underlying_iso {X : TopCat.{v}}
         (sheafification (underlyingPresheaf F)).presheaf) := by
   exact Formalization.Books.Sheaves.Unit17.abelianSheafification_underlying_iso F
 
-/-! ## The four maps in the fibre-product diagram -/
+/-! ## The fibre-product diagram -/
+
+/-!
+The source's fibre-product lemma is stated for an arbitrary set-valued
+presheaf.  The four maps below use the canonical local-germ sheafification
+and stalk-product presheaves from Chapter 17; the abelian aliases below are
+kept for the specialization used in the second lemma.
+-/
+
+abbrev fibreProductStalkProduct {X : TopCat.{v}}
+    (F : Presheaf X) : TopCat.Presheaf (Type v) X :=
+  stalkProductPresheaf F
+
+/-! The top horizontal map `F#(U) → Π(F)(U)`. -/
+abbrev fibreProduct_top {X : TopCat.{v}}
+    (F : Presheaf X) (U : Opens X) :
+    (sheafificationPresheaf F).obj (op U) ⟶
+      (fibreProductStalkProduct F).obj (op U) :=
+  (sheafificationProductMap F).app (op U)
+
+/-! The left vertical map `F#(U) → ∏ x∈U Fₓ`. -/
+def fibreProduct_left {X : TopCat.{v}}
+    (F : Presheaf X) (U : Opens X) :
+    (sheafificationPresheaf F).obj (op U) ⟶
+      (∀ x : U, F.stalk x) :=
+  TypeCat.ofHom (fun s => s.1)
+
+/-! The right vertical map `Π(F)(U) → ∏ x∈U Π(F)ₓ`. -/
+abbrev fibreProduct_right {X : TopCat.{v}}
+    (F : Presheaf X) (U : Opens X) :
+    (fibreProductStalkProduct F).obj (op U) ⟶
+      (∀ x : U, (fibreProductStalkProduct F).stalk x) :=
+  (presheafToStalkProduct (fibreProductStalkProduct F)).app (op U)
+
+/-! The bottom horizontal map, componentwise induced by `Fₓ → Π(F)ₓ`. -/
+def fibreProduct_bottom {X : TopCat.{v}}
+    (F : Presheaf X) (U : Opens X) :
+    (∀ x : U, F.stalk x) ⟶
+      (∀ x : U, (fibreProductStalkProduct F).stalk x) :=
+  TypeCat.ofHom (fun s x =>
+    (TopCat.Presheaf.stalkFunctor (Type v) x.1).map
+      (presheafToStalkProduct F) (s x))
+
+/-! The source's four-corner diagram is a pullback in `Type`. -/
+theorem sheafification_fibreProduct {X : TopCat.{v}}
+    (F : Presheaf X) (U : Opens X) :
+    IsPullback (fibreProduct_top F U) (fibreProduct_left F U)
+      (fibreProduct_right F U) (fibreProduct_bottom F U) := by
+  sorry
+
+/-! ## The abelian specialization of the four maps -/
 
 /-- The presheaf of all stalkwise sections `Π(F)`. -/
 abbrev abelianFibreProductStalkProduct {X : TopCat.{v}}

@@ -266,10 +266,19 @@ theorem extremallyDisconnected_projectivity_characterization
     intro U hU
     let A : Type u := {x : X // x ∈ closure U}
     let B : Type u := {x : X // x ∈ Uᶜ}
-    letI : CompactSpace A := isCompact_iff_compactSpace.mp isClosed_closure.isCompact
-    letI : CompactSpace B :=
+    have hA : CompactSpace A := isCompact_iff_compactSpace.mp isClosed_closure.isCompact
+    have hB : CompactSpace B :=
       isCompact_iff_compactSpace.mp hU.isClosed_compl.isCompact
-    letI : CompactSpace (A ⊕ B) := inferInstance
+    have hAinl : IsCompact (Set.range (Sum.inl : A → A ⊕ B)) := by
+      rw [← image_univ]
+      exact hA.isCompact_univ.image continuous_inl
+    have hBinr : IsCompact (Set.range (Sum.inr : B → A ⊕ B)) := by
+      rw [← image_univ]
+      exact hB.isCompact_univ.image continuous_inr
+    have hAB : CompactSpace (A ⊕ B) := by
+      constructor
+      rw [← range_inl_union_range_inr]
+      exact hAinl.union hBinr
     let g : A ⊕ B → X :=
       Sum.elim ((↑) : A → X) ((↑) : B → X)
     have hg : Continuous g := by
@@ -281,7 +290,7 @@ theorem extremallyDisconnected_projectivity_characterization
       by_cases hx : x ∈ closure U
       · exact ⟨Sum.inl ⟨x, hx⟩, rfl⟩
       · exact ⟨Sum.inr ⟨x, fun hxU => hx (subset_closure hxU)⟩, rfl⟩
-    obtain ⟨s, hs, hsg⟩ := h (A ⊕ B) g hg hgsurj
+    obtain ⟨s, hs, hsg⟩ := @h (A ⊕ B) _ hAB inferInstance g hg hgsurj
     let L : Set (A ⊕ B) := Set.range (Sum.inl : A → A ⊕ B)
     have hpre : closure U = s ⁻¹' L := by
       apply Subset.antisymm
@@ -410,7 +419,6 @@ theorem exists_minimalStoneanCover (X : CompHaus.{u}) :
     exact (CompHaus.epi_iff_surjective (CompHaus.presentation.π X)).mp inferInstance
   obtain ⟨E, hEcompact, hEonto, hEmin⟩ :=
     exists_compact_surjective_zorn_subset hf hsurj
-  letI : CompactSpace E := hEcompact
   let p : E → X.toTop := E.domRestrict f
   have hp : Continuous p := hf.continuousOn.domRestrict
   have hpsurj : Surjective p := by
@@ -439,7 +447,7 @@ theorem exists_minimalStoneanCover (X : CompHaus.{u}) :
       obtain ⟨e', _, he'⟩ := hqeq ▸ mem_univ e
       exact ⟨e', he'⟩
     have hqclosed : IsClosed (q '' (univ : Set E)) :=
-      (isCompact_univ.image hq).isClosed
+      (hEcompact.isCompact_univ.image hq).isClosed
     have hpimage : p '' (q '' (univ : Set E)) = (univ : Set X.toTop) := by
       apply Subset.antisymm
       · exact subset_univ _
@@ -478,7 +486,7 @@ theorem exists_minimalStoneanCover (X : CompHaus.{u}) :
     simpa [Function.comp_def, heq] using he
   let S : Stonean :=
     { toTop := TopCat.of E,
-      prop := CompactT2.Projective.extremallyDisconnected hEproj }
+      prop := @CompactT2.Projective.extremallyDisconnected E _ hEcompact inferInstance hEproj }
   refine ⟨⟨S, p, hp, hpsurj, ?_⟩⟩
   simpa [S, p] using hEmin
 
@@ -603,8 +611,11 @@ theorem minimalStoneanCover_cardinal_bound (X : CompHaus.{u})
         rw [Cardinal.mk_set, Cardinal.mk_set]
   have hpow : (2 : Cardinal.{u}) ^ Cardinal.mk S ≤ (2 : Cardinal.{u}) ^ κ :=
     Cardinal.power_le_power_left two_ne_zero hSleκ
-  exact hcard.trans <|
+  have hbound := hcard.trans <|
     (Cardinal.power_le_power_left two_ne_zero hpow)
+  by_cases h : Cardinal.aleph0 ≤ κ
+  · exact hbound
+  · exact (h hκ).elim
 
 end ProjectiveCovers
 

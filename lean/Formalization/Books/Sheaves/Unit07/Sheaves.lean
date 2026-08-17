@@ -210,8 +210,8 @@ theorem constantSheaf_presheaf (X : TopCat.{u}) (A : Type u) :
 theorem constantSheaf_sections_equiv (X : TopCat.{u}) (A : Type u) (U : Opens X) :
     Nonempty (Sections (constantSheaf X A).presheaf U ≃
       LocallyConstantSections X A U) := by
-  letI : TopologicalSpace A := ⊥
-  letI : DiscreteTopology A := ⟨rfl⟩
+  let : TopologicalSpace A := ⊥
+  let : DiscreteTopology A := ⟨rfl⟩
   change Nonempty
     (((Opens.toTopCat X).obj U ⟶ TopCat.discrete.obj A) ≃
       LocallyConstantSections X A U)
@@ -345,6 +345,7 @@ theorem directSumPresheaf_sheaf_implies_sum_product {X : TopCat.{v}}
     (hF : SetSheaf (directSumPresheafOfSets M)) :
     Nonempty ((⨁ x : X, M x) ≃+ (∀ x : X, M x)) := by
   classical
+  let : Infinite X := hX
   let e (x : X) : singletonOpen X x ≃ Unit := {
     toFun := fun _ => ()
     invFun := fun _ => ⟨x, by simp [singletonOpen]⟩
@@ -478,12 +479,12 @@ direct-sum/product mismatch mentioned in the source. -/
 theorem directSum_product_gap_nat :
     ¬ Nonempty ((⨁ _ : ℕ, ℤ) ≃+ (ℕ → ℤ)) := by
   rintro ⟨e⟩
-  letI : Countable (⨁ _ : ℕ, ℤ) := by
+  let : Countable (⨁ _ : ℕ, ℤ) := by
     change Countable (Π₀ _ : ℕ, ℤ)
     infer_instance
   have hcount : Countable (ℕ → ℤ) :=
     Countable.of_equiv (⨁ _ : ℕ, ℤ) e.toEquiv
-  letI : Countable (ℕ → ℤ) := hcount
+  let : Countable (ℕ → ℤ) := hcount
   obtain ⟨f, hf⟩ := exists_surjective_nat (ℕ → ℤ)
   let g : ℕ → ℤ := fun n => if f n n = 0 then 1 else 0
   obtain ⟨n, hn⟩ := hf g
@@ -493,10 +494,8 @@ theorem directSum_product_gap_nat :
       g n = if f n n = 0 then 1 else 0 := by rfl
       _ = if g n = 0 then 1 else 0 := by rw [hng]
   by_cases hz : g n = 0
-  · have h01 : (0 : ℤ) = 1 := by simpa [hz] using hdiag
-    exact zero_ne_one h01
-  · have hz' : g n = 0 := by simpa [hz] using hdiag
-    exact hz hz'
+  · simp [hz] at hdiag
+  · simp [hz] at hdiag
 
 /-- The direct-sum presheaf is not a sheaf for the standard infinite discrete
 space and integer-valued family. -/

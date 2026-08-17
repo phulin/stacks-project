@@ -1,10 +1,12 @@
 import Formalization.Books.Homology.Unit27.Injectives
 import Mathlib.Algebra.Category.ModuleCat.Presheaf.Abelian
 import Mathlib.Algebra.Category.ModuleCat.Presheaf.Free
+import Mathlib.Algebra.Category.ModuleCat.Presheaf.Generator
 import Mathlib.Algebra.Category.ModuleCat.Presheaf.Sheafification
 import Mathlib.Algebra.Category.ModuleCat.Sheaf.Abelian
 import Mathlib.CategoryTheory.Comma.Arrow
 import Mathlib.CategoryTheory.Sites.Sheaf
+import Mathlib.CategoryTheory.Sites.SheafHom
 import Mathlib.RingTheory.Flat.Basic
 
 /-!
@@ -58,6 +60,28 @@ structure SheafDualData
   evaluation_naturality : ∀ {F G : SheafOfModules.{u} R} (f : F ⟶ G),
     f ≫ evaluation G = evaluation F ≫ dual.map (op (dual.map f.op))
 
+/-!
+The source calls the object below `SheafHom(F, J)`.  Mathlib currently exposes
+the internal Hom of sheaves as a sheaf of types; its sections are canonically
+the morphisms of sheaves.  The module-valued dual in `SheafDualData` is the
+source's module refinement of this interface.
+-/
+
+noncomputable def internalSheafHom
+    {C : Type u} [Category.{u} C] {J : GrothendieckTopology C}
+    {R : Sheaf J RingCat.{u}}
+    (F : SheafOfModules.{u} R) (G : Sheaf J AddCommGrpCat.{u}) :
+    Sheaf J (Type u) :=
+  CategoryTheory.sheafHom ((SheafOfModules.toSheaf R).obj F) G
+
+noncomputable def internalSheafHomSectionsEquiv
+    {C : Type u} [Category.{u} C] {J : GrothendieckTopology C}
+    {R : Sheaf J RingCat.{u}}
+    (F : SheafOfModules.{u} R) (G : Sheaf J AddCommGrpCat.{u}) :
+    (internalSheafHom F G).1.sections ≃
+      ((SheafOfModules.toSheaf R).obj F ⟶ G) :=
+  CategoryTheory.sheafHomSectionsEquiv ((SheafOfModules.toSheaf R).obj F) G
+
 /-- The injective abelian sheaf selected by a duality package. -/
 abbrev selectedInjectiveAbelianSheaf
     {C : Type u} [Category.{u} C] {J : GrothendieckTopology C}
@@ -96,23 +120,66 @@ theorem evaluationMap_natural
 
 /-! ## The free flat resolution -/
 
-/-- The presheaf of types underlying a sheaf module. -/
-noncomputable def underlyingTypePresheaf
-    {C : Type u} [Category.{u} C] {J : GrothendieckTopology C}
-    (R : Sheaf J RingCat.{u}) :
-    SheafOfModules.{u} R ⥤ (Cᵒᵖ ⥤ Type u) :=
-  SheafOfModules.forget R ⋙ PresheafOfModules.toPresheaf R.obj ⋙
-    (Functor.whiskeringRight Cᵒᵖ AddCommGrpCat.{u} (Type u)).obj
-      (CategoryTheory.forget AddCommGrpCat.{u})
+/- The source's free Yoneda coproduct is the canonical presheaf model of
+   `⊕_{U, s ∈ F(U)} j_{U!} O_U`.  The index `m : M.Elements` is precisely a
+   pair consisting of an object and a section over that object. -/
+noncomputable def freeYonedaCoproductMap
+    {C : Type u} [Category.{u} C]
+    {R : Cᵒᵖ ⥤ RingCat.{u}}
+    {M N : PresheafOfModules.{u} R} (f : M ⟶ N) :
+    M.freeYonedaCoproduct ⟶ N.freeYonedaCoproduct :=
+  Sigma.desc fun m =>
+    N.ιFreeYonedaCoproduct (N.elementsMk m.1 (f.app m.1 m.2))
 
-/-- The free, sheafified module used for the source's functor `𝓕`. -/
+@[reassoc (attr := simp)]
+theorem freeYonedaCoproductMap_ι
+    {C : Type u} [Category.{u} C]
+    {R : Cᵒᵖ ⥤ RingCat.{u}}
+    {M N : PresheafOfModules.{u} R} (f : M ⟶ N) (m : M.Elements) :
+    M.ιFreeYonedaCoproduct m ≫ freeYonedaCoproductMap f =
+      N.ιFreeYonedaCoproduct (N.elementsMk m.1 (f.app m.1 m.2)) := by
+  apply Sigma.ι_desc
+
+theorem freeYonedaCoproductMap_id
+    {C : Type u} [Category.{u} C]
+    {R : Cᵒᵖ ⥤ RingCat.{u}}
+    (M : PresheafOfModules.{u} R) :
+    freeYonedaCoproductMap (𝟙 M) = 𝟙 M.freeYonedaCoproduct := by
+  apply Sigma.hom_ext
+  intro m
+  rw [freeYonedaCoproductMap_ι]
+  rfl
+
+theorem freeYonedaCoproductMap_comp
+    {C : Type u} [Category.{u} C]
+    {R : Cᵒᵖ ⥤ RingCat.{u}}
+    {M N P : PresheafOfModules.{u} R} (f : M ⟶ N) (g : N ⟶ P) :
+    freeYonedaCoproductMap (f ≫ g) =
+      freeYonedaCoproductMap f ≫ freeYonedaCoproductMap g := by
+  apply Sigma.hom_ext
+  intro m
+  rw [freeYonedaCoproductMap_ι, ← Category.assoc,
+    freeYonedaCoproductMap_ι, freeYonedaCoproductMap_ι]
+  rfl
+
+/- The functorial version of the source's free construction. -/
+noncomputable def freeYonedaCoproductFunctor
+    {C : Type u} [Category.{u} C]
+    (R : Cᵒᵖ ⥤ RingCat.{u}) :
+    PresheafOfModules.{u} R ⥤ PresheafOfModules.{u} R where
+  obj M := M.freeYonedaCoproduct
+  map f := freeYonedaCoproductMap f
+  map_id M := freeYonedaCoproductMap_id M
+  map_comp f g := freeYonedaCoproductMap_comp f g
+
+/- The free, sheafified module used for the source's functor `𝓕`. -/
 noncomputable def flatResolutionFunctor
     {C : Type u} [Category.{u} C] {J : GrothendieckTopology C}
     (R : Sheaf J RingCat.{u})
     [HasWeakSheafify J AddCommGrpCat.{u}]
     [J.WEqualsLocallyBijective AddCommGrpCat.{u}] :
     SheafOfModules.{u} R ⥤ SheafOfModules.{u} R :=
-  underlyingTypePresheaf R ⋙ PresheafOfModules.free R.obj ⋙
+  SheafOfModules.forget R ⋙ freeYonedaCoproductFunctor R.obj ⋙
     PresheafOfModules.sheafification (𝟙 R.obj)
 
 /-- The object part of the free flat resolution. -/
@@ -132,14 +199,10 @@ noncomputable def flatResolutionCounitApp
     [J.WEqualsLocallyBijective AddCommGrpCat.{u}]
     (F : SheafOfModules.{u} R) :
     flatResolution R F ⟶ F := by
-  change
-    (PresheafOfModules.sheafification (𝟙 R.obj)).obj
-        ((PresheafOfModules.free R.obj).obj ((underlyingTypePresheaf R).obj F)) ⟶ F
+  change (PresheafOfModules.sheafification (𝟙 R.obj)).obj
+      F.val.freeYonedaCoproduct ⟶ F
   exact (PresheafOfModules.sheafificationHomEquiv (𝟙 R.obj)).symm
-    (PresheafOfModules.freeObjDesc
-      (F := (underlyingTypePresheaf R).obj F)
-      (G := (SheafOfModules.forget R).obj F)
-      (𝟙 ((underlyingTypePresheaf R).obj F)))
+    (PresheafOfModules.fromFreeYonedaCoproduct F.val)
 
 /- The source's displayed surjection is the canonical free-module counit. -/
 theorem flatResolutionCounitApp_epi
@@ -180,7 +243,9 @@ structure PointwiseFlatModule (R : RingCat.{u}) (M : ModuleCat.{u} R) where
   flat : @Module.Flat (R : Type u) (M : Type u) commSemiring
     M.isAddCommGroup.toAddCommMonoid module
 
-/- The source's flatness assertion, checked on every section. -/
+/- The source's flatness assertion, checked on every section.  The module
+   structure is already part of `SheafOfModules`; `PointwiseFlatModule` only
+   records the commutative semiring required by Mathlib's flatness API. -/
 def IsSectionwiseFlatModule
     {C : Type u} [Category.{u} C] {J : GrothendieckTopology C}
     (R : Sheaf J RingCat.{u}) (M : SheafOfModules.{u} R) : Prop :=

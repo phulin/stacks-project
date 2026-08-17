@@ -52,9 +52,10 @@ theorem codimension_eq_iSup_length (Y : IrreducibleCloseds X) :
   hypothesis is retained because it is part of the source assertion.
 -/
 theorem exists_maximal_chain_extension
-    (Y : IrreducibleCloseds X) (p : LTSeries (IrreducibleCloseds X))
-    (hp : p.head = Y) (_hfinite : codimension Y < ⊤) :
-    ∃ F : Flag (IrreducibleCloseds X), Set.range p ⊆ F := by
+    (Y : IrreducibleCloseds X) (p : LTSeries (Set.Ici Y))
+    (hp : p.head = (⟨Y, Set.mem_Ici.mpr le_rfl⟩ : Set.Ici Y))
+    (_hfinite : codimension Y < ⊤) :
+    ∃ F : Flag (Set.Ici Y), Set.range p ⊆ F := by
   sorry
 
 /-! ## Restriction to an open subset -/

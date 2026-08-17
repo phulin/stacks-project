@@ -241,7 +241,7 @@ theorem binarySequenceTail_infinite : Infinite BinarySequenceTail := by
 tails in the corresponding pointwise-product stalk. -/
 theorem pointwiseProductStalk_surjects_binarySequenceTails
     {X : TopCat.{v}} (x : X) (xSeq : ℕ → X)
-    (hlim : Filter.Tendsto xSeq atTop (𝓝 x))
+    (hlim : Filter.Tendsto xSeq Filter.atTop (𝓝 x))
     (hinj : Function.Injective xSeq) :
     ∃ q : TopCat.Presheaf.stalk
         (pointwiseProductPresheaf (fun _ : X => Bool)) x →
@@ -253,7 +253,7 @@ theorem pointwiseProductStalk_surjects_binarySequenceTails
 fiber `Bool` at the limit point. -/
 theorem pointwiseProductStalk_not_equiv_bool_of_limit_sequence
     {X : TopCat.{v}} (x : X) (xSeq : ℕ → X)
-    (hlim : Filter.Tendsto xSeq atTop (𝓝 x))
+    (hlim : Filter.Tendsto xSeq Filter.atTop (𝓝 x))
     (hinj : Function.Injective xSeq) :
     ¬ Nonempty (TopCat.Presheaf.stalk
       (pointwiseProductPresheaf (fun _ : X => Bool)) x ≃ Bool) := by

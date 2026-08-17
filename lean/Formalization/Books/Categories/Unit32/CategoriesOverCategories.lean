@@ -215,7 +215,7 @@ def overNatIsoOfUnderlying {C : Cat.{v, u}}
     {X Y : CategoryOver C} {F G : CategoryOverHom X Y}
     (e : overFunctor F ≅ overFunctor G)
     (h : ∀ Z, (structureFunctor Y).map (e.hom.app Z) =
-      overIdentityComponent F G Z := by sorry) : F ≅ G where
+      overIdentityComponent F G Z) : F ≅ G where
   hom :=
     { toNatTrans := e.hom
       over := h }

@@ -468,7 +468,6 @@ theorem twoYonedaGroupoidRestriction_obj_isOver
     (p : S ⥤ C) {U V : C} (f : U ⟶ V)
     (G : twoYonedaGroupoidMorphismCategory p V) :
     (Over.map f ⋙ G.1) ⋙ p = Over.forget U := by
-  change (Over.map f ⋙ G.1) ⋙ p = Over.forget U
   have hG : G.1 ⋙ p = Over.forget V := G.2
   rw [Functor.assoc, hG]
   rfl

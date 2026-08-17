@@ -7,10 +7,12 @@ import Mathlib.AlgebraicGeometry.Normalization
 import Mathlib.AlgebraicGeometry.OpenImmersion
 import Mathlib.AlgebraicGeometry.QuasiAffine
 import Mathlib.AlgebraicGeometry.Restrict
-import Mathlib.Algebra.MvPolynomial.Basic
 import Mathlib.Algebra.MvPolynomial.Eval
 import Mathlib.RingTheory.Localization.Away.Basic
 import Mathlib.RingTheory.TensorProduct.Maps
+
+set_option genSizeOf false
+set_option linter.all false
 
 /-!
 # Examples, Chapter 23: Non-quasi-affine variety with quasi-affine normalization
@@ -493,6 +495,15 @@ theorem exampleOverlapTransition_inv' (k : Type u) [Field k] :
     exampleOverlapTransitionInv k ≫ exampleOverlapTransition k = 𝟙 _ := by
   sorry
 
+private theorem exampleGlue_no_three_distinct
+    (i j l : ULift Bool) (hij : i ≠ j) (hil : i ≠ l) (hjl : j ≠ l) : False := by
+  cases i with
+  | up i =>
+    cases j with
+    | up j =>
+      cases l with
+      | up l => cases i <;> cases j <;> cases l <;> simp_all
+
 def exampleCategoryGlueDataPrime (k : Type u) [Field k] :
     CategoryTheory.GlueData' (Scheme.{u}) where
   J := ULift Bool
@@ -548,42 +559,10 @@ def exampleCategoryGlueDataPrime (k : Type u) [Field k] :
         · exact (h rfl).elim
   t' := by
     intro i j l hij hil hjl
-    cases i with
-    | up i =>
-      cases j with
-      | up j =>
-        cases l with
-        | up l =>
-          cases i
-          · cases j
-            · exact (hij rfl).elim
-            · cases l
-              · exact (hil rfl).elim
-              · exact (hjl rfl).elim
-          · cases j
-            · cases l
-              · exact (hjl rfl).elim
-              · exact (hil rfl).elim
-            · exact (hij rfl).elim
+    exact (exampleGlue_no_three_distinct i j l hij hil hjl).elim
   t_fac := by
     intro i j l hij hil hjl
-    cases i with
-    | up i =>
-      cases j with
-      | up j =>
-        cases l with
-        | up l =>
-          cases i
-          · cases j
-            · exact (hij rfl).elim
-            · cases l
-              · exact (hil rfl).elim
-              · exact (hjl rfl).elim
-          · cases j
-            · cases l
-              · exact (hjl rfl).elim
-              · exact (hil rfl).elim
-            · exact (hij rfl).elim
+    exact (exampleGlue_no_three_distinct i j l hij hil hjl).elim
   t_inv := by
     intro i j h
     cases i with
@@ -597,23 +576,7 @@ def exampleCategoryGlueDataPrime (k : Type u) [Field k] :
         · exact (h rfl).elim
   cocycle := by
     intro i j l hij hil hjl
-    cases i with
-    | up i =>
-      cases j with
-      | up j =>
-        cases l with
-        | up l =>
-          cases i
-          · cases j
-            · exact (hij rfl).elim
-            · cases l
-              · exact (hil rfl).elim
-              · exact (hjl rfl).elim
-          · cases j
-            · cases l
-              · exact (hjl rfl).elim
-              · exact (hil rfl).elim
-            · exact (hij rfl).elim
+    exact (exampleGlue_no_three_distinct i j l hij hil hjl).elim
 
 def exampleCategoryGlueData (k : Type u) [Field k] :
     CategoryTheory.GlueData (Scheme.{u}) :=
@@ -813,18 +776,69 @@ def IsExampleQuotientMorphism (k : Type u) [Field k] {X : Scheme.{u}}
       IsSchemeCoequalizer (exampleCurveOneAndTwoToY k)
         (exampleCurveOneViaInversionToY k) π
 
-/-- The exact finite, surjective, birational morphism asserted in the example. -/
-structure ExampleFiniteBirationalData (k : Type u) [Field k] where
-  finite : IsFinite (exampleMorphism k)
-  surjective : Surjective (exampleMorphism k)
-  birational : Scheme.Birational (examplePuncturedAffinePlane k) (exampleGluedScheme k)
-  coequalizer : IsSchemeCoequalizer
-    (exampleCurveOneAndTwoToY k) (exampleCurveOneViaInversionToY k) (exampleMorphism k)
-  variety : IsVarietyOver k (exampleGluedScheme k)
-  not_quasi_affine : ¬ Scheme.IsQuasiAffine (exampleGluedScheme k)
-  normalization_quasi_affine : IsQuasiAffineNormalization (exampleMorphism k)
-  source_normalization_is_quasi_affine :
-    Scheme.IsQuasiAffine (examplePuncturedAffinePlane k)
+/-- The exact finite, surjective, birational assertions in the example.
+
+This proposition bundle is definitionally just a conjunction.  Avoiding an
+inductive structure here prevents Lean from generating and kernel-checking a
+large recursor/no-confusion API whose types repeatedly unfold the glued
+scheme.  The named accessors below retain the source-level field interface. -/
+def ExampleFiniteBirationalData (k : Type u) [Field k] : Prop :=
+  IsFinite (exampleMorphism k) ∧
+  Surjective (exampleMorphism k) ∧
+  Scheme.Birational (examplePuncturedAffinePlane k) (exampleGluedScheme k) ∧
+  IsSchemeCoequalizer
+    (exampleCurveOneAndTwoToY k) (exampleCurveOneViaInversionToY k) (exampleMorphism k) ∧
+  IsVarietyOver k (exampleGluedScheme k) ∧
+  ¬ Scheme.IsQuasiAffine (exampleGluedScheme k) ∧
+  IsQuasiAffineNormalization (exampleMorphism k) ∧
+  Scheme.IsQuasiAffine (examplePuncturedAffinePlane k)
+
+namespace ExampleFiniteBirationalData
+
+def mk {k : Type u} [Field k]
+    (finite : IsFinite (exampleMorphism k))
+    (surjective : Surjective (exampleMorphism k))
+    (birational : Scheme.Birational (examplePuncturedAffinePlane k) (exampleGluedScheme k))
+    (coequalizer : IsSchemeCoequalizer
+      (exampleCurveOneAndTwoToY k) (exampleCurveOneViaInversionToY k) (exampleMorphism k))
+    (variety : IsVarietyOver k (exampleGluedScheme k))
+    (not_quasi_affine : ¬ Scheme.IsQuasiAffine (exampleGluedScheme k))
+    (normalization_quasi_affine : IsQuasiAffineNormalization (exampleMorphism k))
+    (source_normalization_is_quasi_affine :
+      Scheme.IsQuasiAffine (examplePuncturedAffinePlane k)) :
+    ExampleFiniteBirationalData k :=
+  ⟨finite, surjective, birational, coequalizer, variety, not_quasi_affine,
+    normalization_quasi_affine, source_normalization_is_quasi_affine⟩
+
+def finite {k : Type u} [Field k] (h : ExampleFiniteBirationalData k) :
+    IsFinite (exampleMorphism k) := h.1
+
+def surjective {k : Type u} [Field k] (h : ExampleFiniteBirationalData k) :
+    Surjective (exampleMorphism k) := h.2.1
+
+def birational {k : Type u} [Field k] (h : ExampleFiniteBirationalData k) :
+    Scheme.Birational (examplePuncturedAffinePlane k) (exampleGluedScheme k) := h.2.2.1
+
+def coequalizer {k : Type u} [Field k] (h : ExampleFiniteBirationalData k) :
+    IsSchemeCoequalizer
+      (exampleCurveOneAndTwoToY k) (exampleCurveOneViaInversionToY k) (exampleMorphism k) :=
+  h.2.2.2.1
+
+def variety {k : Type u} [Field k] (h : ExampleFiniteBirationalData k) :
+    IsVarietyOver k (exampleGluedScheme k) := h.2.2.2.2.1
+
+def not_quasi_affine {k : Type u} [Field k] (h : ExampleFiniteBirationalData k) :
+    ¬ Scheme.IsQuasiAffine (exampleGluedScheme k) := h.2.2.2.2.2.1
+
+def normalization_quasi_affine {k : Type u} [Field k]
+    (h : ExampleFiniteBirationalData k) :
+    IsQuasiAffineNormalization (exampleMorphism k) := h.2.2.2.2.2.2.1
+
+def source_normalization_is_quasi_affine {k : Type u} [Field k]
+    (h : ExampleFiniteBirationalData k) :
+    Scheme.IsQuasiAffine (examplePuncturedAffinePlane k) := h.2.2.2.2.2.2.2
+
+end ExampleFiniteBirationalData
 
 theorem example_finite_birational_data_exists (k : Type u) [Field k] :
     Nonempty (ExampleFiniteBirationalData k) := by

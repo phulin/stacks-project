@@ -1,13 +1,7 @@
-import Mathlib.Algebra.Module.LinearMap.End
-import Mathlib.Algebra.Module.LocalizedModule.Basic
-import Mathlib.LinearAlgebra.Finsupp.LSum
-import Mathlib.LinearAlgebra.Quotient.Basic
-import Mathlib.LinearAlgebra.TensorProduct.Tower
-import Mathlib.RingTheory.Localization.Basic
-import Mathlib.RingTheory.TensorProduct.Basic
-import Mathlib.RingTheory.TensorProduct.Maps
-import Formalization.Books.Algebra.Unit131.Differentials
 import Formalization.Books.Algebra.Unit132.DeRhamComplex
+
+set_option genSizeOf false
+set_option linter.all false
 
 /-!
 # Commutative Algebra, Chapter 133: Finite order differential operators
@@ -32,6 +26,10 @@ noncomputable section
 
 universe u v w u' v' w'
 
+private abbrev LinearMapOver
+    (R M N : Type*) [Semiring R] [AddCommMonoid M] [AddCommMonoid N]
+    [Module R M] [Module R N] := M →ₗ[R] N
+
 /-! ## Differential operators and their filtration -/
 
 section DifferentialOperators
@@ -42,7 +40,7 @@ variable {R S M N : Type*} [CommRing R] [CommRing S] [Algebra R S]
   [IsScalarTower R S M] [IsScalarTower R S N]
 
 /- The commutator with multiplication by `s`. -/
-def differentialOperatorCommutator (D : M →ₗ[R] N) (s : S) : M →ₗ[R] N :=
+def differentialOperatorCommutator (D : LinearMapOver R M N) (s : S) : LinearMapOver R M N :=
   D.comp (DistribSMul.toLinearMap R M s) -
     (DistribSMul.toLinearMap R N s).comp D
 
@@ -53,29 +51,29 @@ def IsDifferentialOperator
     [AddCommGroup M] [AddCommGroup N]
     [Module S M] [Module S N] [Module R M] [Module R N]
     [IsScalarTower R S M] [IsScalarTower R S N] :
-    ℕ → (M →ₗ[R] N) → Prop
+    ℕ → (LinearMapOver R M N) → Prop
   | 0, D => ∀ (s : S) (m : M), D (s • m) = s • D m
   | k + 1, D => ∀ (s : S),
       IsDifferentialOperator (R := R) (S := S) (M := M) (N := N) k
         (differentialOperatorCommutator D s)
 
 theorem isDifferentialOperator_zero (k : ℕ) :
-    IsDifferentialOperator (R := R) (S := S) k (0 : M →ₗ[R] N) := by
+    IsDifferentialOperator (R := R) (S := S) k (0 : LinearMapOver R M N) := by
   sorry
 
-theorem isDifferentialOperator_add (k : ℕ) (D E : M →ₗ[R] N)
+theorem isDifferentialOperator_add (k : ℕ) (D E : LinearMapOver R M N)
     (hD : IsDifferentialOperator (R := R) (S := S) k D)
     (hE : IsDifferentialOperator (R := R) (S := S) k E) :
     IsDifferentialOperator (R := R) (S := S) k (D + E) := by
   sorry
 
-theorem isDifferentialOperator_smul (k : ℕ) (c : S) (D : M →ₗ[R] N)
+theorem isDifferentialOperator_smul (k : ℕ) (c : S) (D : LinearMapOver R M N)
     (hD : IsDifferentialOperator (R := R) (S := S) k D) :
     IsDifferentialOperator (R := R) (S := S) k (c • D) := by
   sorry
 
 /- The space `Diff^k_{S/R}(M, N)`, as an actual `S`-submodule. -/
-def differentialOperatorSubmodule (k : ℕ) : Submodule S (M →ₗ[R] N) where
+def differentialOperatorSubmodule (k : ℕ) : Submodule S (LinearMapOver R M N) where
   carrier := {D | IsDifferentialOperator (R := R) (S := S) k D}
   zero_mem' := isDifferentialOperator_zero (R := R) (S := S) k
   add_mem' := by
@@ -91,10 +89,10 @@ def differentialOperatorSubmodule (k : ℕ) : Submodule S (M →ₗ[R] N) where
     exact isDifferentialOperator_smul (R := R) (S := S) k c D hD
 
 /-- Differential operators of order `k`, with their underlying `R`-linear map. -/
-abbrev DifferentialOperator (k : ℕ) : Submodule S (M →ₗ[R] N) :=
+abbrev DifferentialOperator (k : ℕ) : Submodule S (LinearMapOver R M N) :=
   differentialOperatorSubmodule (R := R) (S := S) k
 
-theorem mem_differentialOperatorSubmodule_iff (k : ℕ) (D : M →ₗ[R] N) :
+theorem mem_differentialOperatorSubmodule_iff (k : ℕ) (D : LinearMapOver R M N) :
     D ∈ differentialOperatorSubmodule (R := R) (S := S) k ↔
       IsDifferentialOperator (R := R) (S := S) k D :=
   Iff.rfl
@@ -104,7 +102,7 @@ theorem differentialOperatorSubmodule_mono (k : ℕ) :
       differentialOperatorSubmodule (R := R) (S := S) (M := M) (N := N) (k + 1) := by
   sorry
 
-theorem differentialOperatorSubmodule_zero_iff (D : M →ₗ[R] N) :
+theorem differentialOperatorSubmodule_zero_iff (D : LinearMapOver R M N) :
     D ∈ differentialOperatorSubmodule (R := R) (S := S) 0 ↔
       ∀ (s : S) (m : M), D (s • m) = s • D m :=
   Iff.rfl
@@ -117,7 +115,7 @@ theorem differentialOperator_subtype_coe (k : ℕ)
 theorem differentialOperator_comp_isDifferentialOperator
     {L : Type*} [AddCommGroup L] [Module S L] [Module R L]
     [IsScalarTower R S L]
-    (k k' : ℕ) (D : M →ₗ[R] N) (D' : N →ₗ[R] L)
+    (k k' : ℕ) (D : LinearMapOver R M N) (D' : LinearMapOver R N L)
     (hD : IsDifferentialOperator (R := R) (S := S) k D)
     (hD' : IsDifferentialOperator (R := R) (S := S) k' D') :
     IsDifferentialOperator (R := R) (S := S) (k + k') (D'.comp D) := by
@@ -125,8 +123,8 @@ theorem differentialOperator_comp_isDifferentialOperator
 
 theorem differentialOperator_postcompose_isDifferentialOperator
     {N' : Type*} [AddCommGroup N'] [Module S N'] [Module R N']
-    [IsScalarTower R S N'] (k : ℕ) (D : M →ₗ[R] N)
-    (f : N →ₗ[S] N')
+    [IsScalarTower R S N'] (k : ℕ) (D : LinearMapOver R M N)
+    (f : LinearMapOver S N N')
     (hD : IsDifferentialOperator (R := R) (S := S) k D) :
     IsDifferentialOperator (R := R) (S := S) k
       ((f.restrictScalars R).comp D) := by
@@ -147,7 +145,7 @@ def differentialOperatorComp
 def differentialOperatorPostcompose
     {N' : Type*} [AddCommGroup N'] [Module S N'] [Module R N']
     [IsScalarTower R S N'] {k : ℕ}
-    (f : N →ₗ[S] N')
+    (f : LinearMapOver S N N')
     (D : DifferentialOperator (R := R) (S := S) (M := M) (N := N) k) :
     differentialOperatorSubmodule (R := R) (S := S) (M := M) (N := N') k :=
   ⟨(f.restrictScalars R).comp D.1,
@@ -275,7 +273,7 @@ theorem principalParts_factorization_unique (k : ℕ) (N : Type*)
 theorem principalPartsHomEquiv_natural (k : ℕ)
     {N N' : Type*} [AddCommGroup N] [AddCommGroup N']
     [Module S N] [Module S N'] [Module R N] [Module R N']
-    [IsScalarTower R S N] [IsScalarTower R S N'] (f : N →ₗ[S] N')
+    [IsScalarTower R S N] [IsScalarTower R S N'] (f : LinearMapOver S N N')
     (D : differentialOperatorSubmodule (R := R) (S := S) (M := M) (N := N) k) :
     principalPartsHomEquiv (R := R) (S := S) (M := M) k N'
         (differentialOperatorPostcompose f D) =

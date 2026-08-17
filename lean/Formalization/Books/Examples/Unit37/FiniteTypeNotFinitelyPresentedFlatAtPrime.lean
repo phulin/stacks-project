@@ -58,8 +58,21 @@ instance ftBaseMaximalIdeal_isMaximal (k : Type u) [Field k] :
   sorry
 
 /-- The local ring `A₀ = k[x, y]_(x,y)`. -/
-abbrev ftA0 (k : Type u) [Field k] :=
+def ftA0 (k : Type u) [Field k] :=
   Localization.AtPrime (ftBaseMaximalIdeal k)
+
+noncomputable instance ftA0CommRing (k : Type u) [Field k] : CommRing (ftA0 k) := by
+  unfold ftA0
+  infer_instance
+
+noncomputable instance ftA0Algebra (k : Type u) [Field k] :
+    Algebra (ftBasePolynomialRing k) (ftA0 k) := by
+  unfold ftA0
+  infer_instance
+
+noncomputable instance ftA0IsLocalRing (k : Type u) [Field k] : IsLocalRing (ftA0 k) := by
+  unfold ftA0
+  infer_instance
 
 abbrev ftAPolynomialRing (k : Type u) [Field k] [h : CommRing (ftA0 k)] :=
   @MvPolynomial ℕ (ftA0 k) h.toCommSemiring
@@ -111,8 +124,16 @@ def ftARelationsIdeal (k : Type u) [Field k] : Ideal (ftAPolynomialRing k) :=
 
 /-- The ring
 `A = A₀[z₁, z₂, …]/(zₙzₘ, zₙ(y+xⁿ+x^(2n+1)))`. -/
-abbrev ftA (k : Type u) [Field k] :=
+def ftA (k : Type u) [Field k] :=
   ftIdealQuotient (ftAPolynomialRing k) (ftARelationsIdeal k)
+
+noncomputable instance ftACommRing (k : Type u) [Field k] : CommRing (ftA k) := by
+  unfold ftA
+  infer_instance
+
+noncomputable instance ftAAlgebra (k : Type u) [Field k] : Algebra (ftA0 k) (ftA k) := by
+  unfold ftA
+  infer_instance
 
 def ftAGenerator (k : Type u) [Field k] (n : ℕ) : ftA k :=
   ftIdealQuotientMk (ftARelationsIdeal k) (MvPolynomial.X n)
@@ -182,8 +203,18 @@ def ftCRelation (k : Type u) [Field k] : ftPolynomialRing (ftA k) :=
 def ftCRelationsIdeal (k : Type u) [Field k] : Ideal (ftPolynomialRing (ftA k)) :=
   Ideal.span {ftCRelation k}
 
-abbrev ftCQuotient (k : Type u) [Field k] :=
+def ftCQuotient (k : Type u) [Field k] :=
   ftIdealQuotient (ftPolynomialRing (ftA k)) (ftCRelationsIdeal k)
+
+noncomputable instance ftCQuotientCommRing (k : Type u) [Field k] :
+    CommRing (ftCQuotient k) := by
+  unfold ftCQuotient
+  infer_instance
+
+noncomputable instance ftCQuotientAlgebra (k : Type u) [Field k] :
+    Algebra (ftA k) (ftCQuotient k) := by
+  unfold ftCQuotient
+  infer_instance
 
 def ftCDerivativePolynomial (k : Type u) [Field k] : ftPolynomialRing (ftA k) :=
   Polynomial.C (2 * ftAX k) * Polynomial.X + 1
@@ -193,8 +224,21 @@ def ftCDerivative (k : Type u) [Field k] : ftCQuotient k :=
 
 /-- The ring
 `C = A[z]/(xz²+z+y)[1/(2zx+1)]`. -/
-abbrev ftC (k : Type u) [Field k] :=
+def ftC (k : Type u) [Field k] :=
   ftAway (ftCQuotient k) (ftCDerivative k)
+
+noncomputable instance ftCCommRing (k : Type u) [Field k] : CommRing (ftC k) := by
+  unfold ftC
+  infer_instance
+
+noncomputable instance ftCQuotientToCAlgebra (k : Type u) [Field k] :
+    Algebra (ftCQuotient k) (ftC k) := by
+  unfold ftC
+  infer_instance
+
+noncomputable instance ftAToCAlgebra (k : Type u) [Field k] : Algebra (ftA k) (ftC k) := by
+  unfold ftC
+  infer_instance
 
 def ftAToC (k : Type u) [Field k] : ftA k →+* ftC k :=
   algebraMap (ftA k) (ftC k)
@@ -399,15 +443,31 @@ theorem ftCQPrimeIdeal_mul_Xi (k : Type u) [Field k] (n : ℕ) {r : ftC k}
 
 /-! ## The image algebra `B` -/
 
-abbrev ftCAtQ (k : Type u) [Field k] :=
+def ftCAtQ (k : Type u) [Field k] :=
   Localization.AtPrime (ftCQ k)
+
+noncomputable instance ftCAtQCommRing (k : Type u) [Field k] : CommRing (ftCAtQ k) := by
+  unfold ftCAtQ
+  infer_instance
+
+noncomputable instance ftCAtQAlgebra (k : Type u) [Field k] : Algebra (ftC k) (ftCAtQ k) := by
+  unfold ftCAtQ
+  infer_instance
+
+noncomputable instance ftCAtQIsLocalRing (k : Type u) [Field k] : IsLocalRing (ftCAtQ k) := by
+  unfold ftCAtQ
+  infer_instance
 
 def ftCToCAtQ (k : Type u) [Field k] : ftC k →+* ftCAtQ k :=
   algebraMap (ftC k) (ftCAtQ k)
 
 /-- `B = Im(C → C_𝔮)`, represented by Mathlib's canonical range subring. -/
-abbrev ftB (k : Type u) [Field k] :=
+def ftB (k : Type u) [Field k] :=
   RingHom.range (ftCToCAtQ k)
+
+noncomputable instance ftBCommRing (k : Type u) [Field k] : CommRing (ftB k) := by
+  unfold ftB
+  infer_instance
 
 def ftCToB (k : Type u) [Field k] : ftC k →+* ftB k :=
   (ftCToCAtQ k).rangeRestrict

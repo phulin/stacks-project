@@ -15,6 +15,9 @@ import Mathlib.Algebra.Homology.ShortComplex.Homology
 import Mathlib.Algebra.Homology.ShortComplex.PreservesHomology
 import Mathlib.CategoryTheory.Abelian.GrothendieckAxioms.Colim
 
+set_option genSizeOf false
+set_option linter.all false
+
 /-!
 # Commutative Algebra, Chapter 8: Colimits
 
@@ -2105,7 +2108,7 @@ private noncomputable def decomposedShortComplexIso {R : Type u} [CommRing R]
               (HasColimit.isoOfNatIso b₃.symm).hom := by
         simpa only [Category.assoc, Category.id_comp, Category.comp_id] using hright₂.symm
 
-private def colimit_homology {R : Type u} [CommRing R]
+private theorem colimit_homology {R : Type u} [CommRing R]
     {K : Type v} [Category.{v'} K]
     [AB5OfSize.{v', v} (AddCommGrpCat.{max v v' w})]
     [HasExactColimitsOfShape K (ModuleCat.{max v v' w} R)]
@@ -2172,7 +2175,7 @@ private def colimit_homology {R : Type u} [CommRing R]
   exact ⟨((ShortComplex.homologyFunctor (ModuleCat.{max v v' w} R)).mapIso q).symm ≪≫
     ST.mapHomologyIso colim ≪≫ colim.mapIso p⟩
 
-private def filtered_colimit_homology {R : Type u} [CommRing R]
+private theorem filtered_colimit_homology {R : Type u} [CommRing R]
     {K : Type v} [Category.{v'} K] [IsFiltered K]
     (S : K ⥤ ShortComplex (ModuleCat.{max v v' w} R)) :
     Nonempty
@@ -2186,7 +2189,7 @@ private def filtered_colimit_homology {R : Type u} [CommRing R]
       (forget₂ (ModuleCat.{max v v' w} R) AddCommGrpCat)
   exact colimit_homology S
 
-private def filtered_colimit_exact {R : Type u} [CommRing R]
+private theorem filtered_colimit_exact {R : Type u} [CommRing R]
     {K : Type v} [Category.{v'} K] [IsFiltered K]
     (S : K ⥤ ShortComplex (ModuleCat.{max v v' w} R))
     (hS : ∀ i : K, (S.obj i).Exact) :

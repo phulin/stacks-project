@@ -1,14 +1,11 @@
-import Mathlib.RingTheory.Algebraic.Basic
 import Mathlib.RingTheory.AlgebraicIndependent.Basic
 import Mathlib.RingTheory.DiscreteValuationRing.TFAE
 import Mathlib.RingTheory.FiniteType
 import Mathlib.RingTheory.Ideal.Quotient.Operations
 import Mathlib.RingTheory.Jacobson.Radical
 import Mathlib.RingTheory.KrullDimension.Polynomial
-import Mathlib.RingTheory.Localization.AtPrime.Basic
 import Mathlib.RingTheory.Localization.FractionRing
 import Mathlib.RingTheory.Localization.Ideal
-import Mathlib.RingTheory.Noetherian.Basic
 import Mathlib.RingTheory.PowerSeries.NoZeroDivisors
 import Mathlib.RingTheory.RegularLocalRing.Defs
 
@@ -320,10 +317,20 @@ noncomputable def multiplicativeSubmonoid (d : PowerSeriesData k) : Submonoid (R
       exact (multiplicativeSet_isMultiplicative d).2 hr hs }
 
 /-- The ring `B = S⁻¹R`. -/
-noncomputable abbrev B (d : PowerSeriesData k) := Localization (multiplicativeSubmonoid d)
+noncomputable def B (d : PowerSeriesData k) := Localization (multiplicativeSubmonoid d)
 
-noncomputable instance b_commRing_instance (d : PowerSeriesData k) : CommRing (B d) :=
-  inferInstance
+instance b_commRing_instance (d : PowerSeriesData k) : CommRing (B d) := by
+  unfold B
+  infer_instance
+
+noncomputable instance b_algebra_R_instance (d : PowerSeriesData k) : Algebra (R d) (B d) :=
+  by
+    unfold B
+    infer_instance
+
+noncomputable instance b_algebra_k_instance (d : PowerSeriesData k) : Algebra k (B d) := by
+  unfold B R
+  infer_instance
 
 theorem b_isDomain (d : PowerSeriesData k) :
     IsDomain (B d) := by
@@ -530,11 +537,23 @@ instance mPrime_isPrime_instance (d : PowerSeriesData k) :
     (mPrime d).IsPrime := mPrime_isPrime d
 
 /-- The localization of `A[x]` at the maximal ideal `m'`. -/
-abbrev mPrimeLocalization (d : PowerSeriesData k) :=
+def mPrimeLocalization (d : PowerSeriesData k) :=
   Localization.AtPrime (mPrime d)
 
-noncomputable instance mPrimeLocalization_commRing_instance (d : PowerSeriesData k) :
-    CommRing (mPrimeLocalization d) := inferInstance
+instance mPrimeLocalization_commRing_instance (d : PowerSeriesData k) :
+    CommRing (mPrimeLocalization d) := by
+  unfold mPrimeLocalization
+  infer_instance
+
+noncomputable instance mPrimeLocalization_algebra (d : PowerSeriesData k) :
+    Algebra (Polynomial (A d)) (mPrimeLocalization d) := by
+  unfold mPrimeLocalization
+  infer_instance
+
+instance mPrimeLocalization_isLocalRing (d : PowerSeriesData k) :
+    IsLocalRing (mPrimeLocalization d) := by
+  unfold mPrimeLocalization
+  infer_instance
 
 /-- The localization of the prime `p` in the displayed chain. -/
 noncomputable def pLocalizedIdeal (d : PowerSeriesData k) :

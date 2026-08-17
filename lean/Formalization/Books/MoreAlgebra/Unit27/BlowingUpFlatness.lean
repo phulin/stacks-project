@@ -1,9 +1,5 @@
 import Formalization.Books.Algebra.Unit70.BlowUpAlgebras
 import Formalization.Books.MoreAlgebra.Unit08.FittingIdeals
-import Mathlib.Algebra.Module.FinitePresentation
-import Mathlib.RingTheory.FiniteType
-import Mathlib.RingTheory.Localization.AtPrime.Basic
-import Mathlib.RingTheory.Localization.Away.Basic
 
 /-!
 # More on Algebra, Chapter 27: Blowing up and flatness
@@ -44,9 +40,7 @@ abbrev strictTransformModule
 
 /- The following ideal is the ring-theoretic version of the same construction
 for an `R`-algebra.  It is the canonical `baseChangeTorsionIdeal` of
-Algebra, Chapter 70, written with the existing `R`-algebra instance on `S`.
-The explicit wrapper avoids changing the algebra instance supplied by the
-book-facing hypotheses. -/
+Algebra, Chapter 70, written with the existing `R`-algebra instance on `S`. -/
 noncomputable def strictTransformTorsionIdeal
     {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]
     (I : Ideal R) (a : R) : Ideal (S ⊗[R] affineBlowup I a) :=
@@ -54,17 +48,31 @@ noncomputable def strictTransformTorsionIdeal
     (algebraMap S (S ⊗[R] affineBlowup I a) (algebraMap R S a))
 
 /- The quotient below is the strict transform of an algebra.  The module
-variant uses the standard extension-of-scalars tensor model
-`(S ⊗[R] R') ⊗[S] M`. -/
-abbrev strictTransformAlgebra
+variant uses the canonical extension-of-scalars tensor model described in
+Algebra, Chapter 14, namely `(S ⊗[R] R') ⊗[S] M`. -/
+def strictTransformAlgebra
     {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]
     (I : Ideal R) (a : R) (_ha : a ∈ I) : Type _ :=
   (S ⊗[R] affineBlowup I a) ⧸ strictTransformTorsionIdeal (S := S) I a
 
+noncomputable instance strictTransformAlgebraCommRing
+    {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]
+    (I : Ideal R) (a : R) (ha : a ∈ I) :
+    CommRing (strictTransformAlgebra (S := S) I a ha) := by
+  unfold strictTransformAlgebra
+  infer_instance
+
+noncomputable instance strictTransformAlgebraAlgebra
+    {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]
+    (I : Ideal R) (a : R) (ha : a ∈ I) :
+    Algebra R (strictTransformAlgebra (S := S) I a ha) := by
+  unfold strictTransformAlgebra
+  infer_instance
+
 /-- The strict transform of an `S`-module after the affine blowup of `R`.
 The quotient is formed from the canonical base-change module and the
 power-torsion of the image of the chosen denominator. -/
-abbrev strictTransformModuleOver
+def strictTransformModuleOver
     {R S M : Type*} [CommRing R] [CommRing S] [Algebra R S]
     [AddCommGroup M] [Module S M]
     (I : Ideal R) (a : R) (_ha : a ∈ I) : Type _ :=
@@ -74,28 +82,25 @@ abbrev strictTransformModuleOver
     (R := T) (M := N) (algebraMap S T (algebraMap R S a))
   (@Submodule.hasQuotient T N inferInstance inferInstance inferInstance).Quotient P
 
+noncomputable instance strictTransformModuleOverAddCommGroup
+    {R S M : Type*} [CommRing R] [CommRing S] [Algebra R S]
+    [AddCommGroup M] [Module S M]
+    (I : Ideal R) (a : R) (ha : a ∈ I) :
+    AddCommGroup (strictTransformModuleOver (R := R) (S := S) (M := M) I a ha) := by
+  unfold strictTransformModuleOver
+  infer_instance
+
 /- The quotient has its original `S ⊗[R] R'`-module structure.  Naming this
 instance keeps typeclass inference stable through the reducible strict
 transform abbreviation. -/
-@[instance_reducible]
-noncomputable def strictTransformModuleOverBaseModule
+noncomputable instance strictTransformModuleOverBaseModule
     {R S M : Type*} [CommRing R] [CommRing S] [Algebra R S]
     [AddCommGroup M] [Module S M]
-    (I : Ideal R) (a : R) (_ha : a ∈ I) :
-    (let T := S ⊗[R] affineBlowup I a
-     let N := T ⊗[S] M
-     let P : Submodule T N := scalarPowerTorsionSubmodule
-       (R := T) (M := N) (algebraMap S T (algebraMap R S a))
-     Module T ((@Submodule.hasQuotient T N
-       inferInstance inferInstance inferInstance).Quotient P)) := by
-  let T := S ⊗[R] affineBlowup I a
-  let N := T ⊗[S] M
-  letI : Module T N := inferInstance
-  let P : Submodule T N := scalarPowerTorsionSubmodule
-    (R := T) (M := N) (algebraMap S T (algebraMap R S a))
-  change Module T ((@Submodule.hasQuotient T N
-    inferInstance inferInstance inferInstance).Quotient P)
-  exact @Submodule.Quotient.module T N inferInstance inferInstance inferInstance P
+    (I : Ideal R) (a : R) (ha : a ∈ I) :
+    Module (S ⊗[R] affineBlowup I a)
+      (strictTransformModuleOver (R := R) (S := S) (M := M) I a ha) := by
+  unfold strictTransformModuleOver
+  infer_instance
 
 /- The quotient by denominator power torsion is naturally a module over the
 strict-transform algebra.  This interface is needed to state the source's
@@ -114,14 +119,12 @@ theorem strictTransformModuleOver_isTorsionBySet
 
 /-- The canonical quotient-ring action on the strict transform of an
 `S`-module. -/
-@[instance_reducible]
-noncomputable def strictTransformModuleOverModule
+noncomputable instance strictTransformModuleOverModule
     {R S M : Type*} [CommRing R] [CommRing S] [Algebra R S]
     [AddCommGroup M] [Module S M]
     (I : Ideal R) (a : R) (ha : a ∈ I) :
-    (let T := S ⊗[R] affineBlowup I a
-     let Q := T ⧸ strictTransformTorsionIdeal (S := S) I a
-     Module Q (strictTransformModuleOver (R := R) (S := S) (M := M) I a ha)) := by
+    Module (strictTransformAlgebra (S := S) I a ha)
+      (strictTransformModuleOver (R := R) (S := S) (M := M) I a ha) := by
   let T := S ⊗[R] affineBlowup I a
   let N := T ⊗[S] M
   letI : Module T N := inferInstance
@@ -138,15 +141,15 @@ noncomputable def strictTransformModuleOverModule
 /-! ## Flattening on an affine blowup -/
 
 /- A valuation ring has a center on an `R`-algebra when the algebra admits a
-map to that valuation ring extending the given map into its fraction field.
-The map need not be local because the affine chart itself need not be a local
-ring; its inverse image of the maximal ideal is the center on the chart. -/
+local map to that valuation ring extending the given map into its fraction
+field.  This is the source-facing center interface used for the affine chart
+in the flattening statement. -/
 def HasValuationCenter
     {R K : Type*} [CommRing R] [Field K] [Algebra R K]
     (A : ValuationSubring K) (B : Type*)
     [CommRing B] [Algebra R B]
     : Prop :=
-  ∃ φ : B →+* A,
+  ∃ φ : B →+* A, IsLocalHom φ ∧
     ∀ r : R, ((φ (algebraMap R B r) : A) : K) = algebraMap R K r
 
 /-- A weak flattening-by-affine-blowup theorem, with the four conclusions in
@@ -244,11 +247,7 @@ principal-ideal, and local-freeness interfaces are imported from Chapter 8.
 The presentations, exact sequences, filtered-colimit calculations, and local
 relation computations displayed inside the source proofs are proof-local
 scaffolding for the five declarations above, so they do not introduce further
-public mathematical statements at this chapter boundary.  In particular,
-`strictTransformModuleOver` records the source's `M ⊗[R] R'` module using the
-standard tensor extension model, while the explicit quotient-module instance
-and `strictTransformModuleOver_isTorsionBySet` expose the quotient-ring action
-needed by the finite-presentation conclusion.
+public mathematical statements at this chapter boundary.
 -/
 
 end

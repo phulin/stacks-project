@@ -1,7 +1,9 @@
 import Mathlib.AlgebraicGeometry.Sites.Fpqc
 import Mathlib.CategoryTheory.Monoidal.Cartesian.Over
-import Mathlib.CategoryTheory.Sites.LocallySurjective
 import Formalization.Books.Stacks.Unit01.Foundation
+
+set_option genSizeOf false
+set_option linter.all false
 
 /-!
 # Groupoids in algebraic spaces, Chapter 27: gerbes and quotient stacks
@@ -100,28 +102,45 @@ structure GroupoidInAlgebraicSpaces
 
 variable {S : Scheme.{u}} {B : AlgebraicSpace S}
 
+private structure RelationRestrictionData
+    (P' : GroupoidInAlgebraicSpaces B)
+    {U : AlgebraicSpace S} (f : U ⟶ P'.objects) where
+  object : AlgebraicSpace S
+  source : object ⟶ U
+  target : object ⟶ U
+
+private noncomputable def relationRestrictionData
+    (P' : GroupoidInAlgebraicSpaces B)
+    {U : AlgebraicSpace S} (f : U ⟶ P'.objects) :
+    RelationRestrictionData P' f := by
+  letI : HasPullbacks (AlgebraicSpace S) := inferInstance
+  exact
+    { object := pullback (pullback.fst P'.source f ≫ P'.target) f
+      source := pullback.fst (pullback.fst P'.source f ≫ P'.target) f ≫
+        pullback.snd P'.source f
+      target := pullback.snd (pullback.fst P'.source f ≫ P'.target) f }
+
 /-- The restriction `R'|_U` of the arrow space of a groupoid `P'` along
 `f : U ⟶ P'.objects`, namely the pullback imposing the source and target
 conditions. -/
 noncomputable def RelationRestriction
     (P' : GroupoidInAlgebraicSpaces B)
     {U : AlgebraicSpace S} (f : U ⟶ P'.objects) : AlgebraicSpace S :=
-  pullback (pullback.fst P'.source f ≫ P'.target) f
+  (relationRestrictionData P' f).object
 
 /-- The source projection of `R'|_U`. -/
 noncomputable def restrictionSource
     (P' : GroupoidInAlgebraicSpaces B)
     {U : AlgebraicSpace S} (f : U ⟶ P'.objects) :
     RelationRestriction P' f ⟶ U :=
-  pullback.fst (pullback.fst P'.source f ≫ P'.target) f ≫
-    pullback.snd P'.source f
+  (relationRestrictionData P' f).source
 
 /-- The target projection of `R'|_U`. -/
 noncomputable def restrictionTarget
     (P' : GroupoidInAlgebraicSpaces B)
     {U : AlgebraicSpace S} (f : U ⟶ P'.objects) :
     RelationRestriction P' f ⟶ U :=
-  pullback.snd (pullback.fst P'.source f ≫ P'.target) f
+  (relationRestrictionData P' f).target
 
 /-! ## Quotient-stack interfaces -/
 
@@ -155,22 +174,39 @@ structure QuotientStackFunctorialData
 
 /-! ## Group algebraic spaces and the trivial-action presentation -/
 
+private abbrev GroupObjectOver (B : AlgebraicSpace S) (X : Over B) :=
+  @GrpObj (Over B) (inferInstance : Category (Over B))
+    (Over.cartesianMonoidalCategory B) X
+
 /-- A group algebraic space over `B`, expressed as a group object in the
 slice category of fppf sheaves over `B`. -/
-structure GroupAlgebraicSpace (B : AlgebraicSpace S) where
-  underlying : Over B
-  group : @GrpObj (Over B) (inferInstance : Category (Over B))
-    (Over.cartesianMonoidalCategory B) underlying
+def GroupAlgebraicSpace (B : AlgebraicSpace S) :=
+  Σ underlying : Over B, GroupObjectOver B underlying
+
+namespace GroupAlgebraicSpace
+
+def mk {B : AlgebraicSpace S} (underlying : Over B)
+    (group : GroupObjectOver B underlying) : GroupAlgebraicSpace B :=
+  ⟨underlying, group⟩
+
+abbrev underlying {B : AlgebraicSpace S} (G : GroupAlgebraicSpace B) : Over B :=
+  G.1
+
+abbrev group {B : AlgebraicSpace S} (G : GroupAlgebraicSpace B) :
+    GroupObjectOver B G.underlying :=
+  G.2
 
 /-- The underlying algebraic space of a group algebraic space. -/
-abbrev GroupAlgebraicSpace.carrier
+abbrev carrier
     (G : GroupAlgebraicSpace B) : AlgebraicSpace S :=
   G.underlying.left
 
 /-- The structure morphism of a group algebraic space. -/
-abbrev GroupAlgebraicSpace.structureMap
+abbrev structureMap
     (G : GroupAlgebraicSpace B) : G.carrier ⟶ B :=
   G.underlying.hom
+
+end GroupAlgebraicSpace
 
 /-- The groupoid presentation for the trivial action of `G` on `B`.
 
@@ -196,17 +232,54 @@ The preceding chapter's arrow lemma supplies this object and the canonical
 map from a quotient stack. Bundling the stack property here keeps the
 chapter-27 theorem statement faithful while leaving that construction in its
 proper earlier dependency. -/
-structure AlgebraicSpaceStack (B : AlgebraicSpace S) where
-  value : FiberedCategory (Over S)
-  isStackInGroupoids : StackInGroupoids value (FppfTopology S)
+def AlgebraicSpaceStack (B : AlgebraicSpace S) :=
+  { value : FiberedCategory (Over S) //
+    StackInGroupoids value (FppfTopology S) }
+
+namespace AlgebraicSpaceStack
+
+def mk {B : AlgebraicSpace S} (value : FiberedCategory (Over S))
+    (isStackInGroupoids : StackInGroupoids value (FppfTopology S)) :
+    AlgebraicSpaceStack B :=
+  ⟨value, isStackInGroupoids⟩
+
+abbrev value {B : AlgebraicSpace S} (X : AlgebraicSpaceStack B) :
+    FiberedCategory (Over S) :=
+  X.1
+
+theorem isStackInGroupoids {B : AlgebraicSpace S} (X : AlgebraicSpaceStack B) :
+    StackInGroupoids X.value (FppfTopology S) :=
+  X.2
+
+end AlgebraicSpaceStack
 
 /-- The canonical arrow `[B/G] ⟶ 𝒮_B` supplied by the quotient-stack arrow
 construction for the trivial action. -/
-structure TrivialActionQuotientStackData
-    (G : GroupAlgebraicSpace B) where
-  quotient : QuotientStack (trivialActionGroupoid G)
-  base : AlgebraicSpaceStack B
-  map : quotient.value ⟶ base.value
+def TrivialActionQuotientStackData
+    (G : GroupAlgebraicSpace B) :=
+  Σ quotient : QuotientStack (trivialActionGroupoid G),
+    Σ base : AlgebraicSpaceStack B, quotient.value ⟶ base.value
+
+namespace TrivialActionQuotientStackData
+
+def mk {G : GroupAlgebraicSpace B}
+    (quotient : QuotientStack (trivialActionGroupoid G))
+    (base : AlgebraicSpaceStack B) (map : quotient.value ⟶ base.value) :
+    TrivialActionQuotientStackData G :=
+  ⟨quotient, base, map⟩
+
+abbrev quotient {G : GroupAlgebraicSpace B}
+    (D : TrivialActionQuotientStackData G) :
+    QuotientStack (trivialActionGroupoid G) := D.1
+
+abbrev base {G : GroupAlgebraicSpace B}
+    (D : TrivialActionQuotientStackData G) : AlgebraicSpaceStack B := D.2.1
+
+abbrev map {G : GroupAlgebraicSpace B}
+    (D : TrivialActionQuotientStackData G) : D.quotient.value ⟶ D.base.value :=
+  D.2.2
+
+end TrivialActionQuotientStackData
 
 /-! ## Gerbes and quotient stacks -/
 

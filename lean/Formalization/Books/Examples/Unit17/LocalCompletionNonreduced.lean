@@ -12,7 +12,6 @@ import Mathlib.RingTheory.Kaehler.Basic
 import Mathlib.RingTheory.KrullDimension.Basic
 import Mathlib.RingTheory.LaurentSeries
 import Mathlib.RingTheory.Localization.FractionRing
-import Mathlib.RingTheory.PowerSeries.Basic
 import Mathlib.RingTheory.DualNumber
 import Mathlib.Topology.Algebra.Nonarchimedean.AdicTopology
 
@@ -193,9 +192,35 @@ def localCompletionSubalgebra (C : ConvergentPowerSeriesRing)
     exact (formalPowerSeriesSubmodule C).zero_mem
 
 /-- The ring underlying `A`. -/
-abbrev localCompletionRing (C : ConvergentPowerSeriesRing)
+def localCompletionRing (C : ConvergentPowerSeriesRing)
     (Δ : FerrandRaynaudDifferentialData C) :=
   (localCompletionSubalgebra C Δ : Type)
+
+instance localCompletionRing_commRing (C : ConvergentPowerSeriesRing)
+    (Δ : FerrandRaynaudDifferentialData C) : CommRing (localCompletionRing C Δ) := by
+  unfold localCompletionRing
+  infer_instance
+
+instance localCompletionRing_algebra_complex (C : ConvergentPowerSeriesRing)
+    (Δ : FerrandRaynaudDifferentialData C) : Algebra ℂ (localCompletionRing C Δ) := by
+  unfold localCompletionRing
+  infer_instance
+
+instance localCompletionRing_algebra_carrier (C : ConvergentPowerSeriesRing)
+    (Δ : FerrandRaynaudDifferentialData C) :
+    Algebra (localCompletionRing C Δ) C.carrier := by
+  unfold localCompletionRing
+  infer_instance
+
+instance localCompletionRing_isDomain (C : ConvergentPowerSeriesRing)
+    (Δ : FerrandRaynaudDifferentialData C) : IsDomain (localCompletionRing C Δ) := by
+  unfold localCompletionRing
+  infer_instance
+
+instance localCompletionRing_algebra_self (C : ConvergentPowerSeriesRing)
+    (Δ : FerrandRaynaudDifferentialData C) :
+    Algebra (localCompletionRing C Δ) (localCompletionRing C Δ) :=
+  Algebra.id _
 
 /-- The power-series-valued restriction of `Δ.derivation` to `A`. -/
 noncomputable def localCompletionDerivation
@@ -204,8 +229,9 @@ noncomputable def localCompletionDerivation
     (a : localCompletionRing C Δ) : FormalPowerSeries :=
   Classical.choose
     ((mem_formalPowerSeriesSubmodule_iff C
-        (Δ.derivation (a : C.carrier))).mp
-      (show Δ.derivation (a : C.carrier) ∈ formalPowerSeriesSubmodule C from
+        (Δ.derivation (show localCompletionSubalgebra C Δ from a).1)).mp
+      (show Δ.derivation (show localCompletionSubalgebra C Δ from a).1 ∈
+          formalPowerSeriesSubmodule C from
         a.property))
 
 theorem localCompletionDerivation_spec
@@ -213,11 +239,12 @@ theorem localCompletionDerivation_spec
     (Δ : FerrandRaynaudDifferentialData C)
     (a : localCompletionRing C Δ) :
     formalPowerSeriesToLaurent (localCompletionDerivation C Δ a) =
-      Δ.derivation (a : C.carrier) := by
+      Δ.derivation (show localCompletionSubalgebra C Δ from a).1 := by
   exact Classical.choose_spec
     ((mem_formalPowerSeriesSubmodule_iff C
-        (Δ.derivation (a : C.carrier))).mp
-      (show Δ.derivation (a : C.carrier) ∈ formalPowerSeriesSubmodule C from
+        (Δ.derivation (show localCompletionSubalgebra C Δ from a).1)).mp
+      (show Δ.derivation (show localCompletionSubalgebra C Δ from a).1 ∈
+          formalPowerSeriesSubmodule C from
         a.property))
 
 /-- The element `x ∈ A`. -/
@@ -347,7 +374,8 @@ theorem localCompletion_nonunits_eq_x_multiple
     (Δ : FerrandRaynaudDifferentialData C) :
     {a : localCompletionRing C Δ | ¬ IsUnit a} =
       {a : localCompletionRing C Δ |
-        (a : C.carrier) ∈ Ideal.span ({C.x} : Set C.carrier)} := by
+        (show localCompletionSubalgebra C Δ from a).1 ∈
+          Ideal.span ({C.x} : Set C.carrier)} := by
   sorry
 
 theorem localCompletion_ideal_membership_steps
@@ -401,8 +429,9 @@ theorem localCompletion_derivation_adic_continuity
 /-- The `m`-adic completion of `A` at the displayed candidate ideal. -/
 abbrev localCompletionCompletion (C : ConvergentPowerSeriesRing)
     (Δ : FerrandRaynaudDifferentialData C) :=
-  AdicCompletion (localCompletionCandidateMaximalIdeal C Δ)
-    (localCompletionRing C Δ)
+  @AdicCompletion (localCompletionRing C Δ) _
+    (localCompletionCandidateMaximalIdeal C Δ) (localCompletionRing C Δ) _
+      Semiring.toModule
 
 def localCompletionCompletionIdeal
     (C : ConvergentPowerSeriesRing)
@@ -487,7 +516,8 @@ structure LocalCompletionCompletionData
   psi_on_localCompletion :
     ∀ a : localCompletionRing C Δ,
       psi (algebraMap (localCompletionRing C Δ)
-        (localCompletionCompletion C Δ) a) = C.expansion (a : C.carrier)
+        (localCompletionCompletion C Δ) a) =
+          C.expansion (show localCompletionSubalgebra C Δ from a).1
   sectionMap : FormalPowerSeries →+* localCompletionCompletion C Δ
   section_psi : sectionMap.comp psi = RingHom.id _
   induced_derivation : RelativeDerivation psi

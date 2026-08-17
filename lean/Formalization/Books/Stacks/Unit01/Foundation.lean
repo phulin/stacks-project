@@ -1,8 +1,5 @@
-import Mathlib.CategoryTheory.FiberedCategory.Grothendieck
 import Mathlib.CategoryTheory.Bicategory.FunctorBicategory.Pseudo
-import Mathlib.CategoryTheory.Bicategory.Modification.Pseudo
 import Mathlib.CategoryTheory.Sites.Descent.IsStack
-import Mathlib.CategoryTheory.Sites.Sheafification
 import Mathlib.CategoryTheory.Groupoid.Discrete
 
 /-!
@@ -55,6 +52,12 @@ def IsomPresheaf (F : FiberedCategory C) {U : C} (x y : Fiber F U) :
             Pseudofunctor.LocallyDiscreteOpToCat.pullHom] using
             congrArg (fun h => (F.presheafHom y y).map q h) h₂⟩ :
         { f : (F.presheafHom x y).obj T₂ // IsIso f })
+  map_id T := by
+    ext f
+    simp
+  map_comp f g := by
+    ext h
+    simp
 
 abbrev DescentData (F : FiberedCategory C) {ι : Type t} {U : C}
     {X : ι → C} (f : ∀ i, X i ⟶ U) := F.DescentData f
@@ -112,14 +115,12 @@ structure Substack (F : FiberedCategory C) (J : GrothendieckTopology C) where
   stableUnderPullback : ∀ {U V : C} (f : V ⟶ U) (x : Fiber value U),
     ∃ y : Fiber value V,
       Nonempty (y ≅ (value.map f.op.toLoc).toFunctor.obj x)
-  descentClosed : ∀ {ι : Type t} {U : C} {X : ι → C}
-      (f : ∀ i, X i ⟶ U) (x : Fiber F U),
-      CoveringFamily J f →
-        (∀ i, ∃ y : Fiber value (X i),
+  locallyEssentiallyInImage : ∀ (U : C) (x : Fiber F U),
+    ∃ (ι : Type t) (X : ι → C) (f : ∀ i, X i ⟶ U),
+      CoveringFamily J f ∧
+        ∀ i, ∃ y : Fiber value (X i),
           Nonempty ((F.map (f i).op.toLoc).toFunctor.obj x ≅
-            (inclusion.app (.mk (op (X i)))).toFunctor.obj y)) →
-        ∃ y : Fiber value U,
-          Nonempty (x ≅ (inclusion.app (.mk (op U))).toFunctor.obj y)
+            (inclusion.app (.mk (op (X i)))).toFunctor.obj y)
 
 def IsTwoPullbackCone {F G H A : FiberedCategory C}
     (f : FiberedMorphism F H) (g : FiberedMorphism G H)

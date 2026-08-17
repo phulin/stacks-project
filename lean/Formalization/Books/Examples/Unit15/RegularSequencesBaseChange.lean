@@ -1,7 +1,5 @@
-import Mathlib.Algebra.Module.RingHom
 import Mathlib.Algebra.Module.Torsion.Free
 import Mathlib.Algebra.TrivSqZeroExt.Basic
-import Mathlib.LinearAlgebra.Quotient.Basic
 import Mathlib.RingTheory.Flat.Basic
 import Mathlib.RingTheory.Localization.AtPrime.Basic
 import Mathlib.RingTheory.Localization.Away.Basic
@@ -159,8 +157,18 @@ def strangeRelationSubmodule (k : Type u) [Field k] :
   Submodule.span (PolynomialRing k) (Set.range (strangeRelationGenerator k))
 
 /-- The module `E` in the source, defined by its explicit pair presentation. -/
-abbrev StrangeModule (k : Type u) [Field k] :=
+def StrangeModule (k : Type u) [Field k] :=
   (StrangeTopMiddle k × StrangeBottomLeft k) ⧸ strangeRelationSubmodule k
+
+instance strangeModule_addCommGroup (k : Type u) [Field k] :
+    AddCommGroup (StrangeModule k) := by
+  unfold StrangeModule
+  infer_instance
+
+instance strangeModule_module (k : Type u) [Field k] :
+    Module (PolynomialRing k) (StrangeModule k) := by
+  unfold StrangeModule
+  infer_instance
 
 /-- The class in `E` of the pair `(f,g)`. -/
 def strangePairClass (k : Type u) [Field k] (f : XYLocalization k)
@@ -408,8 +416,18 @@ instance strangeSquareZeroMaximalIdeal_isMaximal (k : Type u) [Field k] :
 
 /-- The local ring obtained by localizing the square-zero extension at its
 displayed maximal ideal. -/
-abbrev StrangeLocalRing (k : Type u) [Field k] :=
+def StrangeLocalRing (k : Type u) [Field k] :=
   Localization (strangeSquareZeroMaximalIdeal k).primeCompl
+
+instance strangeLocalRing_commRing (k : Type u) [Field k] :
+    CommRing (StrangeLocalRing k) := by
+  unfold StrangeLocalRing
+  infer_instance
+
+instance strangeLocalRing_algebra (k : Type u) [Field k] :
+    Algebra (StrangeSquareZeroRing k) (StrangeLocalRing k) := by
+  unfold StrangeLocalRing
+  infer_instance
 
 def strangeLocalRingMap (k : Type u) [Field k] :
     StrangeSquareZeroRing k →+* StrangeLocalRing k :=
@@ -417,6 +435,7 @@ def strangeLocalRingMap (k : Type u) [Field k] :
 
 instance strangeLocalRing_isLocalRing (k : Type u) [Field k] :
     IsLocalRing (StrangeLocalRing k) := by
+  unfold StrangeLocalRing
   infer_instance
 
 def strangeLocalX (k : Type u) [Field k] : StrangeLocalRing k :=

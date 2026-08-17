@@ -1,13 +1,9 @@
 import Formalization.Books.Algebra.Unit13.TensorAlgebra
 import Formalization.Books.Algebra.Unit55.KGroups
-import Formalization.Books.Algebra.Unit78.FiniteProjectiveModules
 import Formalization.Books.MoreAlgebra.Unit118.PicardGroups
-import Mathlib.Algebra.Homology.ShortComplex.ModuleCat
-import Mathlib.Algebra.Module.Equiv.Basic
-import Mathlib.LinearAlgebra.ExteriorAlgebra.Basic
-import Mathlib.LinearAlgebra.TensorProduct.Associator
-import Mathlib.LinearAlgebra.TensorProduct.Basic
-import Mathlib.RingTheory.PicardGroup
+
+set_option genSizeOf false
+set_option linter.all false
 
 /-!
 # More on Algebra, Chapter 119: Determinants

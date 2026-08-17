@@ -9,12 +9,12 @@ import Mathlib.SetTheory.ZFC.VonNeumann
 # Set Theory, Chapter 11: Coverings of a site
 
 The source section works with a category whose covering families may form a
-proper class.  Mathlib's `Presieve` is the canonical predicate-valued
-presentation of a family of arrows with a fixed target, so the global
-covering predicate below is expressed in that language.  The indexed-family
-wrapper is retained where the source uses the index set: it makes cardinal
-bounds and the source's combinatorial equivalence literal while reusing
-Mathlib's `Over`, `Arrow`, pullback, and presieve APIs.
+proper class.  The indexed-family wrapper is retained where the source uses
+the index set: it makes cardinal bounds and the source's combinatorial
+equivalence literal while reusing Mathlib's `Over`, `Arrow`, pullback, and
+presieve APIs.  The covering predicate itself is kept on indexed families,
+since the source does not assume that combinatorially equivalent families are
+literally the same covering.
 
 The source's `V_α` notation requires a coding of the category-theoretic data
 as ZF sets.  `CoveringCoding` makes that ambient set-theoretic interface
@@ -23,7 +23,7 @@ hierarchy.  The reflection lemma itself is a statement interface and is left
 unproved at this stage.
 -/
 
-universe u v
+universe u v w
 
 namespace Formalization.Books.Sets.Unit11
 
@@ -137,39 +137,31 @@ Unlike `CategoryTheory.Pretopology`, this interface does not require global
 pullbacks: the third field asks for pullbacks only along a covering family,
 which is exactly the hypothesis in the book. -/
 structure SiteCoveringClass (C : Type u) [Category.{v} C] where
-  covering : ∀ X : C, Presieve X → Prop
+  covering : ∀ X : C, CoveringFamily C X → Prop
   has_isos : ∀ {X Y : C} (f : Y ⟶ X) [IsIso f],
-    covering X (CoveringFamily.singleton f).presieve
+    covering X (CoveringFamily.singleton f)
   transitive : ∀ {X : C} (U : CoveringFamily C X),
-    covering X U.presieve →
+    covering X U →
       ∀ (V : ∀ i, CoveringFamily C (U.arrow i).left),
-        (∀ i, covering (U.arrow i).left (V i).presieve) →
-          covering X (CoveringFamily.bind U V).presieve
+        (∀ i, covering (U.arrow i).left (V i)) →
+          covering X (CoveringFamily.bind U V)
   base_change : ∀ {X Y : C} (U : CoveringFamily C X),
-    covering X U.presieve →
+    covering X U →
       ∀ (f : Y ⟶ X),
         ∃ h : ∀ i, HasPullback (U.arrow i).hom f,
-          covering Y (CoveringFamily.baseChange U f h).presieve
+          covering Y (CoveringFamily.baseChange U f h)
 
 namespace SiteCoveringClass
 
-/-- A family is covering when its associated presieve is covering. -/
+/-- A family is covering according to the indexed-family predicate. -/
 def isCovering {C : Type u} [Category.{v} C] (K : SiteCoveringClass C)
     {X : C} (F : CoveringFamily C X) : Prop :=
-  K.covering X F.presieve
+  K.covering X F
 
 /-- The class of all covering families of `K`. -/
 def allCoverings {C : Type u} [Category.{v} C] (K : SiteCoveringClass C) :
     Set (AnyCoveringFamily C) :=
   {F | K.isCovering F.2}
-
-theorem isCovering_iff_of_combinatoriallyEquivalent
-    {C : Type u} [Category.{v} C] (K : SiteCoveringClass C)
-    {X : C} {U V : CoveringFamily C X}
-    (h : CoveringFamily.combinatoriallyEquivalent U V) :
-    K.isCovering U ↔ K.isCovering V := by
-  change K.covering X U.presieve ↔ K.covering X V.presieve
-  rw [CoveringFamily.presieve_eq_of_combinatoriallyEquivalent h]
 
 end SiteCoveringClass
 
@@ -194,12 +186,19 @@ def IsSiteCoveringCollection {C : Type u} [Category.{v} C]
 
 This is the explicit ambient-set interface behind the source's use of
 `V_α`.  The injectivity fields prevent the coding from identifying distinct
-category-theoretic data. -/
+category-theoretic data, and the singleton field records the set-theoretic
+closure needed for the first site axiom at a bounded stage. -/
 structure CoveringCoding (C : Type u) [Category.{v} C] where
   familyCode : AnyCoveringFamily C → ZFSet.{max u v}
   familyCode_injective : Function.Injective familyCode
   arrowCode : Arrow C → ZFSet.{max u v}
   arrowCode_injective : Function.Injective arrowCode
+  /-- Singleton families are one hierarchy step above their arrows. -/
+  singleton_family_mem_of_arrow_mem :
+    ∀ {X Y : C} (f : Y ⟶ X) (α : Ordinal.{max u v}),
+      arrowCode (Arrow.mk f) ∈ ZFSet.vonNeumann α →
+        familyCode (CoveringFamily.singleton f).asAny ∈
+          ZFSet.vonNeumann (α + 1)
 
 namespace CoveringCoding
 
@@ -447,13 +446,13 @@ theorem exists_first_large_stage {C : Type u} [Category.{v} C]
         (∀ F ∈ Cov₀, H.familyInV F β₁) := by
   sorry
 
-theorem exists_second_stage {C : Type u} [Category.{v} C]
-    (κ : Cardinal.{max u v}) (β₁ : Ordinal.{max u v}) :
-    ∃ β₂ : Ordinal.{max u v}, β₁ < β₂ ∧ κ < Ordinal.cof β₂ := by
+theorem exists_second_stage
+    (κ : Cardinal.{w}) (β₁ : Ordinal.{w}) :
+    ∃ β₂ : Ordinal.{w}, β₁ < β₂ ∧ κ < Ordinal.cof β₂ := by
   sorry
 
-theorem second_stage_is_limit {C : Type u} [Category.{v} C]
-    (κ : Cardinal.{max u v}) (β₂ : Ordinal.{max u v})
+theorem second_stage_is_limit
+    (κ : Cardinal.{w}) (β₂ : Ordinal.{w})
     (hκ : Cardinal.aleph0 ≤ κ) (hcf : κ < Ordinal.cof β₂) :
     Order.IsSuccLimit β₂ := by
   sorry
@@ -506,6 +505,7 @@ theorem boundedCoverings_at_closureStage_isSite {C : Type u}
     (H : CoveringCoding C) (κ : Cardinal.{max u v})
     {β₁ β₂ : Ordinal.{max u v}}
     (hβ₁ : initialCoveringStage K H ≤ β₁)
+    (hκ : Cardinal.aleph0 ≤ κ)
     (hβ₂ : β₁ < β₂ ∧ κ < Ordinal.cof β₂) :
     Order.IsSuccLimit (closureFunction K H κ β₂) ∧
       IsSiteCoveringCollection

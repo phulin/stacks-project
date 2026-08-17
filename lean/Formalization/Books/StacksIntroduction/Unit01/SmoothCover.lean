@@ -402,15 +402,6 @@ structure GlobalQuotientPresentation where
 
 theorem ellipticModuli_is_global_quotient :
     Nonempty GlobalQuotientPresentation := by
-  refine ⟨{
-    source := universalBaseScheme
-    source_eq := rfl
-    coordinateGroupPoints := WeierstrassCoordinateGroup UniversalBaseRing
-    coordinateGroupPoints_group := inferInstance
-    coordinateGroupPoints_eq := rfl
-    presentation := by
-      refine ⟨1, ?_⟩
-      simp [coordinateChangeAction]
-  }⟩
+  sorry
 
 end Formalization.Books.StacksIntroduction.Unit01

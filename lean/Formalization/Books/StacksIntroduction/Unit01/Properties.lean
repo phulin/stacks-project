@@ -64,13 +64,7 @@ structure EllipticModuliPropertyPresentation where
 interface; its existence is the source-facing theorem retained here. -/
 theorem exists_ellipticModuliPropertyPresentation :
     Nonempty EllipticModuliPropertyPresentation := by
-  exact ⟨EllipticModuliPropertyPresentation.mk
-    (Smooth universalBaseToIntegers)
-    Iff.rfl
-    (Nonempty (CompactSpace universalBaseScheme))
-    (fun h => ⟨h⟩)
-    (Nonempty (IrreducibleSpace universalBaseScheme))
-    (fun h => ⟨h⟩)⟩
+  sorry
 
 noncomputable def ellipticModuliPropertyPresentation :
     EllipticModuliPropertyPresentation :=
@@ -173,14 +167,7 @@ abbrev PicardGroupOfUniversalBase := CommRing.Pic UniversalBaseRing
 /-- The source's `Pic(M₁,₁) = Pic_H(W) = ℤ/12ℤ` calculation. -/
 theorem exists_picard_moduli_identification :
     Nonempty PicardModuliIdentification := by
-  exact ⟨{
-    moduliGroup := ULift (ZMod 12)
-    moduliGroup_structure := inferInstance
-    equivariantGroup := ULift (ZMod 12)
-    equivariantGroup_structure := inferInstance
-    moduli_equivariant := AddEquiv.refl _
-    equivariant_ZMod := AddEquiv.ulift
-  }⟩
+  sorry
 
 /-- A chosen pair of Picard-group models for the moduli object and its
 equivariant presentation. -/

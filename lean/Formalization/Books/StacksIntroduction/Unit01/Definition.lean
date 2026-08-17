@@ -195,7 +195,7 @@ def WeierstrassCurveDescends {K L : Type u} [Field K] [Field L] [Algebra K L]
 theorem weierstrass_galois_descent
     {K L : Type u} [Field K] [Field L] [Algebra K L]
     [FiniteDimensional K L] [IsGalois K L]
-    {W : WeierstrassCurve L}
+    {W : WeierstrassCurve L} [W.IsElliptic]
     (D : WeierstrassGaloisDescentData (K := K) W) :
     WeierstrassCurveDescends (K := K) W := by
   sorry

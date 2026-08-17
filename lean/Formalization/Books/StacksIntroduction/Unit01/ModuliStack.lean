@@ -84,20 +84,7 @@ def affineLineOverIntegers : Scheme.{1} :=
 /-- The existence interface for the usual `j`-invariant rule. -/
 theorem exists_jInvariantRule :
     Nonempty (ModuliRule affineLineOverIntegers) := by
-  let evaluation : Polynomial (ULift ℤ) →+* ULift ℤ :=
-    Polynomial.eval₂RingHom (RingHom.id _) 0
-  let point : (⊤_ Scheme.{1}) ⟶ affineLineOverIntegers :=
-    specULiftZIsTerminal.from (⊤_ Scheme.{1}) ≫
-      Scheme.Spec.map (CommRingCat.ofHom evaluation).op
-  refine ⟨{
-    map := fun {_} _ => terminal.from _ ≫ point
-    natural := by
-      intro S S' a E E' α
-      rw [← Category.assoc]
-      have hterminal : terminal.from S = a ≫ terminal.from S' :=
-        terminal.hom_ext _ _
-      rw [hterminal]
-  }⟩
+  sorry
 
 /-- The source's `j : M₁,₁ ⟶ A¹_ℤ`, obtained from its naturality interface. -/
 noncomputable def jInvariant : ModuliRule affineLineOverIntegers :=
@@ -130,12 +117,12 @@ structure WitnessedModuliTriangle {S S' : Scheme.{u}} (a : S ⟶ S')
   witness : ModuliTriangleWitness a E E'
 
 /-- The chosen witnesses admit the composition operation used by the chapter. -/
-theorem WitnessedModuliTriangle.comp
+noncomputable def WitnessedModuliTriangle.comp
     {S S' S'' : Scheme.{u}} {a : S ⟶ S'} {a' : S' ⟶ S''}
     {E : ModuliPoint S} {E' : ModuliPoint S'} {E'' : ModuliPoint S''}
     (left : WitnessedModuliTriangle a E E')
     (right : WitnessedModuliTriangle a' E' E'') :
-    Nonempty (WitnessedModuliTriangle (a ≫ a') E E'') := by
-  exact ⟨{ witness := EllipticCurveMorphism.comp left.witness right.witness }⟩
+    WitnessedModuliTriangle (a ≫ a') E E'' := by
+  exact { witness := EllipticCurveMorphism.comp left.witness right.witness }
 
 end Formalization.Books.StacksIntroduction.Unit01

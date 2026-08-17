@@ -1,0 +1,353 @@
+import Formalization.Books.Homology.Unit27.Injectives
+import Mathlib.Algebra.Category.ModuleCat.Presheaf.Abelian
+import Mathlib.Algebra.Category.ModuleCat.Presheaf.Free
+import Mathlib.Algebra.Category.ModuleCat.Presheaf.Sheafification
+import Mathlib.Algebra.Category.ModuleCat.Sheaf.Abelian
+import Mathlib.CategoryTheory.Comma.Arrow
+import Mathlib.CategoryTheory.Sites.Sheaf
+import Mathlib.RingTheory.Flat.Basic
+
+/-!
+# Injectives, Chapter 8: Modules on a ringed site
+
+The canonical sheaf and presheaf module categories are used throughout.  The
+source's internal sheaf Hom with values in a chosen injective abelian sheaf is
+recorded by `SheafDualData`: this is the one source-facing interface not yet
+provided by Mathlib for sheaves of modules over a varying sheaf of rings.
+-/
+
+noncomputable section
+
+open CategoryTheory
+open CategoryTheory.Limits
+open Opposite
+open Formalization.Books.Categories.Unit23
+open Formalization.Books.Homology.Unit27
+
+universe u
+
+namespace Formalization.Books.Injectives.Unit08
+
+/-! ## The injective abelian sheaf and the duality construction -/
+
+/--
+The chosen injective abelian-sheaf embedding from the local-generator
+construction.  Its source stands for the displayed coproduct of the sheaves
+`j_{U!} O_U / I`; the target is the chosen injective abelian sheaf.
+-/
+structure AbelianSheafInjectiveEmbedding
+    {C : Type u} [Category.{u} C] (J : GrothendieckTopology C) where
+  source : Sheaf J AddCommGrpCat.{u}
+  target : Sheaf J AddCommGrpCat.{u}
+  hom : source ⟶ target
+  hom_mono : Mono hom
+  target_injective : Injective target
+
+/-- The source-facing duality package `F ↦ SheafHom(F, J)`. -/
+structure SheafDualData
+    {C : Type u} [Category.{u} C] {J : GrothendieckTopology C}
+    (R : Sheaf J RingCat.{u}) where
+  /-- The selected embedding of the local-generator abelian sheaf. -/
+  injectiveEmbedding : AbelianSheafInjectiveEmbedding J
+  /-- The contravariant internal-Hom dual, represented as a functor on the opposite category. -/
+  dual : (SheafOfModules.{u} R)ᵒᵖ ⥤ SheafOfModules.{u} R
+  /-- Evaluation into the double dual. -/
+  evaluation : ∀ F : SheafOfModules.{u} R,
+    F ⟶ dual.obj (op (dual.obj (op F)))
+  /-- Naturality of evaluation. -/
+  evaluation_naturality : ∀ {F G : SheafOfModules.{u} R} (f : F ⟶ G),
+    f ≫ evaluation G = evaluation F ≫ dual.map (op (dual.map f.op))
+
+/-- The injective abelian sheaf selected by a duality package. -/
+abbrev selectedInjectiveAbelianSheaf
+    {C : Type u} [Category.{u} C] {J : GrothendieckTopology C}
+    {R : Sheaf J RingCat.{u}} (D : SheafDualData R) : Sheaf J AddCommGrpCat.{u} :=
+  D.injectiveEmbedding.target
+
+/-- The contravariant sheaf-module dual. -/
+def sheafDual
+    {C : Type u} [Category.{u} C] {J : GrothendieckTopology C}
+    {R : Sheaf J RingCat.{u}} (D : SheafDualData R)
+    (F : SheafOfModules.{u} R) : SheafOfModules.{u} R :=
+  D.dual.obj (op F)
+
+/-- The map on duals induced by a morphism of sheaf modules. -/
+def sheafDualMap
+    {C : Type u} [Category.{u} C] {J : GrothendieckTopology C}
+    {R : Sheaf J RingCat.{u}} (D : SheafDualData R)
+    {F G : SheafOfModules.{u} R} (f : F ⟶ G) :
+    sheafDual D G ⟶ sheafDual D F :=
+  D.dual.map f.op
+
+/-- The evaluation map `F ⟶ F^∨∨`. -/
+def evaluationMap
+    {C : Type u} [Category.{u} C] {J : GrothendieckTopology C}
+    {R : Sheaf J RingCat.{u}} (D : SheafDualData R)
+    (F : SheafOfModules.{u} R) :
+    F ⟶ sheafDual D (sheafDual D F) :=
+  D.evaluation F
+
+theorem evaluationMap_natural
+    {C : Type u} [Category.{u} C] {J : GrothendieckTopology C}
+    {R : Sheaf J RingCat.{u}} (D : SheafDualData R)
+    {F G : SheafOfModules.{u} R} (f : F ⟶ G) :
+    f ≫ evaluationMap D G = evaluationMap D F ≫ sheafDualMap D (sheafDualMap D f) := by
+  exact D.evaluation_naturality f
+
+/-! ## The free flat resolution -/
+
+/-- The presheaf of types underlying a sheaf module. -/
+noncomputable def underlyingTypePresheaf
+    {C : Type u} [Category.{u} C] {J : GrothendieckTopology C}
+    (R : Sheaf J RingCat.{u}) :
+    SheafOfModules.{u} R ⥤ (Cᵒᵖ ⥤ Type u) :=
+  SheafOfModules.forget R ⋙ PresheafOfModules.toPresheaf R.obj ⋙
+    (Functor.whiskeringRight Cᵒᵖ AddCommGrpCat.{u} (Type u)).obj
+      (CategoryTheory.forget AddCommGrpCat.{u})
+
+/-- The free, sheafified module used for the source's functor `𝓕`. -/
+noncomputable def flatResolutionFunctor
+    {C : Type u} [Category.{u} C] {J : GrothendieckTopology C}
+    (R : Sheaf J RingCat.{u})
+    [HasWeakSheafify J AddCommGrpCat.{u}]
+    [J.WEqualsLocallyBijective AddCommGrpCat.{u}] :
+    SheafOfModules.{u} R ⥤ SheafOfModules.{u} R :=
+  underlyingTypePresheaf R ⋙ PresheafOfModules.free R.obj ⋙
+    PresheafOfModules.sheafification (𝟙 R.obj)
+
+/-- The object part of the free flat resolution. -/
+noncomputable def flatResolution
+    {C : Type u} [Category.{u} C] {J : GrothendieckTopology C}
+    (R : Sheaf J RingCat.{u})
+    [HasWeakSheafify J AddCommGrpCat.{u}]
+    [J.WEqualsLocallyBijective AddCommGrpCat.{u}]
+    (F : SheafOfModules.{u} R) : SheafOfModules.{u} R :=
+  (flatResolutionFunctor R).obj F
+
+/-- The canonical map `𝓕(F) ⟶ F`. -/
+noncomputable def flatResolutionCounitApp
+    {C : Type u} [Category.{u} C] {J : GrothendieckTopology C}
+    (R : Sheaf J RingCat.{u})
+    [HasWeakSheafify J AddCommGrpCat.{u}]
+    [J.WEqualsLocallyBijective AddCommGrpCat.{u}]
+    (F : SheafOfModules.{u} R) :
+    flatResolution R F ⟶ F := by
+  change
+    (PresheafOfModules.sheafification (𝟙 R.obj)).obj
+        ((PresheafOfModules.free R.obj).obj ((underlyingTypePresheaf R).obj F)) ⟶ F
+  exact (PresheafOfModules.sheafificationHomEquiv (𝟙 R.obj)).symm
+    (PresheafOfModules.freeObjDesc
+      (F := (underlyingTypePresheaf R).obj F)
+      (G := (SheafOfModules.forget R).obj F)
+      (𝟙 ((underlyingTypePresheaf R).obj F)))
+
+/- The source's displayed surjection is the canonical free-module counit. -/
+theorem flatResolutionCounitApp_epi
+    {C : Type u} [Category.{u} C] {J : GrothendieckTopology C}
+    (R : Sheaf J RingCat.{u})
+    [HasWeakSheafify J AddCommGrpCat.{u}]
+    [J.WEqualsLocallyBijective AddCommGrpCat.{u}]
+    (F : SheafOfModules.{u} R) :
+    Epi (flatResolutionCounitApp R F) := by
+  sorry
+
+/- The flatness assertion for a module over a commutative ring, with the
+   commutative structure required to have the same semiring as the ring
+   structure already carried by `RingCat`. -/
+structure PointwiseFlatModule (R : RingCat.{u}) (M : ModuleCat.{u} R) : Prop where
+  commSemiring : CommSemiring (R : Type u)
+  commSemiring_toSemiring : commSemiring.toSemiring = (inferInstance : Semiring (R : Type u))
+  flat : @Module.Flat (R : Type u) (M : Type u) commSemiring M.isAddCommGroup.toAddCommMonoid
+    (commSemiring_toSemiring.symm ▸ M.isModule)
+
+/- The source's flatness assertion, checked on every section. -/
+def IsSectionwiseFlatModule
+    {C : Type u} [Category.{u} C] {J : GrothendieckTopology C}
+    (R : Sheaf J RingCat.{u}) (M : SheafOfModules.{u} R) : Prop :=
+  ∀ X : Cᵒᵖ, PointwiseFlatModule (R.obj.obj X) (M.val.obj X)
+
+/-- The free resolution is flat. -/
+theorem flatResolution_isSectionwiseFlatModule
+    {C : Type u} [Category.{u} C] {J : GrothendieckTopology C}
+    (R : Sheaf J RingCat.{u})
+    [HasWeakSheafify J AddCommGrpCat.{u}]
+    [J.WEqualsLocallyBijective AddCommGrpCat.{u}]
+    (F : SheafOfModules.{u} R) :
+    IsSectionwiseFlatModule R (flatResolution R F) := by
+  sorry
+
+/-! ## Exact duality and the injective target -/
+
+/-- Duality is exact, as in the source's `Hom(-, 𝓙)` lemma. -/
+theorem sheafDual_isExact
+    {C : Type u} [Category.{u} C] {J : GrothendieckTopology C}
+    (R : Sheaf J RingCat.{u}) (D : SheafDualData R)
+    [HasSheafify J AddCommGrpCat.{u}]
+    [J.WEqualsLocallyBijective AddCommGrpCat.{u}] :
+    IsExact D.dual := by
+  sorry
+
+/-- Evaluation into the double dual is a monomorphism. -/
+theorem evaluationMap_mono
+    {C : Type u} [Category.{u} C] {J : GrothendieckTopology C}
+    {R : Sheaf J RingCat.{u}} (D : SheafDualData R)
+    (F : SheafOfModules.{u} R) :
+    Mono (evaluationMap D F) := by
+  sorry
+
+/-- The source's injective object `𝓙(F) = (𝓕(F^∨))^∨`. -/
+noncomputable abbrev injectiveModule
+    {C : Type u} [Category.{u} C] {J : GrothendieckTopology C}
+    (R : Sheaf J RingCat.{u})
+    [HasWeakSheafify J AddCommGrpCat.{u}]
+    [J.WEqualsLocallyBijective AddCommGrpCat.{u}]
+    (D : SheafDualData R) (F : SheafOfModules.{u} R) :
+    SheafOfModules.{u} R :=
+  sheafDual D (flatResolution R (sheafDual D F))
+
+/-- Dualization of the free-resolution counit. -/
+noncomputable def dualFlatResolutionMap
+    {C : Type u} [Category.{u} C] {J : GrothendieckTopology C}
+    (R : Sheaf J RingCat.{u})
+    [HasWeakSheafify J AddCommGrpCat.{u}]
+    [J.WEqualsLocallyBijective AddCommGrpCat.{u}]
+    (D : SheafDualData R) (F : SheafOfModules.{u} R) :
+    sheafDual D (sheafDual D F) ⟶ injectiveModule R D F :=
+  D.dual.map (op (flatResolutionCounitApp R (sheafDual D F)))
+
+/-- The canonical monomorphism `F ⟶ 𝓙(F)`. -/
+noncomputable def injectiveModuleEmbeddingApp
+    {C : Type u} [Category.{u} C] {J : GrothendieckTopology C}
+    (R : Sheaf J RingCat.{u})
+    [HasWeakSheafify J AddCommGrpCat.{u}]
+    [J.WEqualsLocallyBijective AddCommGrpCat.{u}]
+    (D : SheafDualData R) (F : SheafOfModules.{u} R) :
+    F ⟶ injectiveModule R D F :=
+  evaluationMap D F ≫ dualFlatResolutionMap R D F
+
+/-- The functorial object part of `F ↦ 𝓙(F)`. -/
+noncomputable abbrev injectiveModuleFunctor
+    {C : Type u} [Category.{u} C] {J : GrothendieckTopology C}
+    (R : Sheaf J RingCat.{u})
+    [HasWeakSheafify J AddCommGrpCat.{u}]
+    [J.WEqualsLocallyBijective AddCommGrpCat.{u}]
+    (D : SheafDualData R) :
+    SheafOfModules.{u} R ⥤ SheafOfModules.{u} R :=
+  D.dual.rightOp ⋙ (flatResolutionFunctor R).op ⋙ D.dual
+
+theorem injectiveModuleFunctor_obj
+    {C : Type u} [Category.{u} C] {J : GrothendieckTopology C}
+    (R : Sheaf J RingCat.{u})
+    [HasWeakSheafify J AddCommGrpCat.{u}]
+    [J.WEqualsLocallyBijective AddCommGrpCat.{u}]
+    (D : SheafDualData R) (F : SheafOfModules.{u} R) :
+    (injectiveModuleFunctor R D).obj F = injectiveModule R D F := by
+  rfl
+
+theorem injectiveModule_isInjective
+    {C : Type u} [Category.{u} C] {J : GrothendieckTopology C}
+    (R : Sheaf J RingCat.{u})
+    [HasWeakSheafify J AddCommGrpCat.{u}]
+    [J.WEqualsLocallyBijective AddCommGrpCat.{u}]
+    (D : SheafDualData R) (F : SheafOfModules.{u} R) :
+    Injective (injectiveModule R D F) := by
+  sorry
+
+theorem injectiveModuleEmbeddingApp_mono
+    {C : Type u} [Category.{u} C] {J : GrothendieckTopology C}
+    (R : Sheaf J RingCat.{u})
+    [HasWeakSheafify J AddCommGrpCat.{u}]
+    [J.WEqualsLocallyBijective AddCommGrpCat.{u}]
+    (D : SheafDualData R) (F : SheafOfModules.{u} R) :
+    Mono (injectiveModuleEmbeddingApp R D F) := by
+  sorry
+
+theorem injectiveModuleEmbeddingApp_natural
+    {C : Type u} [Category.{u} C] {J : GrothendieckTopology C}
+    (R : Sheaf J RingCat.{u})
+    [HasWeakSheafify J AddCommGrpCat.{u}]
+    [J.WEqualsLocallyBijective AddCommGrpCat.{u}]
+    (D : SheafDualData R) {F G : SheafOfModules.{u} R} (f : F ⟶ G) :
+    f ≫ injectiveModuleEmbeddingApp R D G =
+      injectiveModuleEmbeddingApp R D F ≫ (injectiveModuleFunctor R D).map f := by
+  sorry
+
+/-- The functor to the arrow category supplied by the source's functorial embedding. -/
+noncomputable def injectiveModuleEmbeddingFunctor
+    {C : Type u} [Category.{u} C] {J : GrothendieckTopology C}
+    (R : Sheaf J RingCat.{u})
+    [HasWeakSheafify J AddCommGrpCat.{u}]
+    [J.WEqualsLocallyBijective AddCommGrpCat.{u}]
+    (D : SheafDualData R) :
+    SheafOfModules.{u} R ⥤ Arrow (SheafOfModules.{u} R) where
+  obj F := Arrow.mk (injectiveModuleEmbeddingApp R D F)
+  map {F G} f :=
+    Arrow.homMk f ((injectiveModuleFunctor R D).map f) (by
+      change f ≫ injectiveModuleEmbeddingApp R D G =
+        injectiveModuleEmbeddingApp R D F ≫ (injectiveModuleFunctor R D).map f
+      exact injectiveModuleEmbeddingApp_natural R D f)
+  map_id F := by
+    apply Arrow.hom_ext
+    · rw [Arrow.id_left]
+      rfl
+    · rw [Arrow.id_right, Functor.map_id]
+  map_comp f g := by
+    apply Arrow.hom_ext
+    · rw [Arrow.comp_left]
+      rfl
+    · rw [Arrow.comp_right, Functor.map_comp]
+
+theorem injectiveModuleEmbeddingFunctor_left
+    {C : Type u} [Category.{u} C] {J : GrothendieckTopology C}
+    (R : Sheaf J RingCat.{u})
+    [HasWeakSheafify J AddCommGrpCat.{u}]
+    [J.WEqualsLocallyBijective AddCommGrpCat.{u}]
+    (D : SheafDualData R) :
+    injectiveModuleEmbeddingFunctor R D ⋙ Arrow.leftFunc =
+      𝟭 (SheafOfModules.{u} R) := by
+  rfl
+
+/-! ## Enough injectives and the presheaf corollary -/
+
+/-- Existence of the source's chosen injective abelian sheaf and duality package. -/
+theorem exists_sheafDualData
+    {C : Type u} [Category.{u} C] {J : GrothendieckTopology C}
+    (R : Sheaf J RingCat.{u})
+    [HasSheafify J AddCommGrpCat.{u}]
+    [J.WEqualsLocallyBijective AddCommGrpCat.{u}] :
+    Nonempty (SheafDualData R) := by
+  sorry
+
+/-- Sheaves of modules on a ringed site have functorial injective embeddings. -/
+theorem sheavesOfModules_have_functorial_injective_embeddings
+    {C : Type u} [Category.{u} C] {J : GrothendieckTopology C}
+    (R : Sheaf J RingCat.{u})
+    [HasSheafify J AddCommGrpCat.{u}]
+    [J.WEqualsLocallyBijective AddCommGrpCat.{u}] :
+    HasFunctorialInjectiveEmbeddings (C := SheafOfModules.{u} R) := by
+  obtain ⟨D⟩ := exists_sheafDualData R
+  exact ⟨injectiveModuleEmbeddingFunctor R D,
+    injectiveModuleEmbeddingFunctor_left R D,
+    injectiveModuleEmbeddingApp_mono R D,
+    fun F => by
+      change Injective (injectiveModule R D F)
+      exact injectiveModule_isInjective R D F⟩
+
+/-- The trivial topology used to identify presheaves with sheaves. -/
+abbrev presheafTrivialTopology
+    {C : Type u} [Category.{u} C] : GrothendieckTopology C := ⊥
+
+/-- Every presheaf is a sheaf for the trivial topology. -/
+theorem presheaf_isSheaf_for_trivialTopology
+    {C : Type u} [Category.{u} C] {A : Type u} [Category A]
+    (P : Cᵒᵖ ⥤ A) :
+    Presheaf.IsSheaf (presheafTrivialTopology (C := C)) P := by
+  exact Presheaf.isSheaf_bot P
+
+/-- Presheaves of modules have functorial injective embeddings. -/
+theorem presheafModules_have_functorial_injective_embeddings
+    {C : Type u} [Category.{u} C] (R : Cᵒᵖ ⥤ RingCat.{u}) :
+    HasFunctorialInjectiveEmbeddings (C := PresheafOfModules.{u} R) := by
+  sorry
+
+end Formalization.Books.Injectives.Unit08

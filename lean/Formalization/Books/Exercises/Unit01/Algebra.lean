@@ -84,50 +84,20 @@ theorem minimal_generators_eq_residue_field_dimension
   constructor
   · exact IsLocalRing.spanFinrank_eq_finrank_quotient (⊤ : Submodule A M)
       Module.Finite.fg_top
-  · letI : Module (IsLocalRing.ResidueField A)
-        ((⊤ : Submodule A M) ⧸ (IsLocalRing.maximalIdeal A) •
-          (⊤ : Submodule A (⊤ : Submodule A M))) :=
-      inferInstanceAs (Module (A ⧸ IsLocalRing.maximalIdeal A) _)
-    letI : IsScalarTower A (IsLocalRing.ResidueField A)
-        ((⊤ : Submodule A M) ⧸ (IsLocalRing.maximalIdeal A) •
-          (⊤ : Submodule A (⊤ : Submodule A M))) :=
-      inferInstanceAs (IsScalarTower A (A ⧸ IsLocalRing.maximalIdeal A) _)
-    letI : IsScalarTower A (IsLocalRing.ResidueField A)
-        ((IsLocalRing.ResidueField A) ⊗[A] (⊤ : Submodule A M)) :=
-      ⟨fun a r x => x.induction_on (by simp)
-        (fun m n => by simp [smul_assoc])
-        (fun x y hx hy => by simp [hx, hy])⟩
-    letI : IsScalarTower A (IsLocalRing.ResidueField A)
-        ((IsLocalRing.ResidueField A) ⊗[A] M) :=
-      ⟨fun a r x => x.induction_on (by simp)
-        (fun m n => by simp [smul_assoc])
-        (fun x y hx hy => by simp [hx, hy])⟩
-    let e₁ : (IsLocalRing.ResidueField A) ⊗[A] (⊤ : Submodule A M) ≃ₗ[IsLocalRing.ResidueField A]
-        (⊤ : Submodule A M) ⧸ (IsLocalRing.maximalIdeal A) • (⊤ : Submodule A (⊤ : Submodule A M)) :=
-      (TensorProduct.quotTensorEquivQuotSMul (⊤ : Submodule A M)
-        (IsLocalRing.maximalIdeal A)).extendScalarsOfSurjective IsLocalRing.residue_surjective
-    let e₂ : (IsLocalRing.ResidueField A) ⊗[A] (⊤ : Submodule A M) ≃ₗ[IsLocalRing.ResidueField A]
-        (IsLocalRing.ResidueField A) ⊗[A] M :=
-      (LinearEquiv.lTensor (IsLocalRing.ResidueField A)
-        (Submodule.topEquiv (R := A) (M := M))).extendScalarsOfSurjective
-        IsLocalRing.residue_surjective
-    calc
+  · calc
       (⊤ : Submodule A M).spanFinrank =
-          Module.finrank (IsLocalRing.ResidueField A)
-            ((⊤ : Submodule A M) ⧸
-              (IsLocalRing.maximalIdeal A) • (⊤ : Submodule A (⊤ : Submodule A M))) := by
-        change (⊤ : Submodule A M).spanFinrank =
-          Module.finrank (A ⧸ IsLocalRing.maximalIdeal A)
-            ((⊤ : Submodule A M) ⧸
-              (IsLocalRing.maximalIdeal A) • (⊤ : Submodule A (⊤ : Submodule A M)))
-        exact IsLocalRing.spanFinrank_eq_finrank_quotient (⊤ : Submodule A M)
-          Module.Finite.fg_top
+          (⊤ : Submodule (IsLocalRing.ResidueField A)
+            ((IsLocalRing.ResidueField A) ⊗[A] (⊤ : Submodule A M))).spanFinrank :=
+        (TensorProduct.spanFinrank_top_eq_of_residueField (⊤ : Submodule A M)
+          Module.Finite.fg_top).symm
       _ = Module.finrank (IsLocalRing.ResidueField A)
-          ((IsLocalRing.ResidueField A) ⊗[A] (⊤ : Submodule A M)) := by
-        exact e₁.symm.finrank_eq
+          ((IsLocalRing.ResidueField A) ⊗[A] (⊤ : Submodule A M)) :=
+        Module.finrank_eq_spanFinrank_of_free.symm
       _ = Module.finrank (IsLocalRing.ResidueField A)
           ((IsLocalRing.ResidueField A) ⊗[A] M) := by
-        exact e₂.finrank_eq
+        exact (LinearEquiv.lTensor (IsLocalRing.ResidueField A)
+          (Submodule.topEquiv (R := A) (M := M))).extendScalarsOfSurjective
+          IsLocalRing.residue_surjective |>.finrank_eq
 
 /-- Minimal generator counts multiply under tensor products over a local ring. -/
 theorem minimal_generators_tensorProduct_mul
@@ -447,7 +417,7 @@ theorem polynomial_valuation_lower_bound
                 (ν.termMinimum g hg) :=
               le_min hmin_i hmin_g
             _ ≤ ν.value (Polynomial.monomial i (p.coeff i) + g) hsum := hmap''
-            _ = ν.value p hp := by simpa [hdecomp]
+            _ = ν.value p hp := by simp [hdecomp]
   exact hbound f.support f rfl hf
 
 /-- A unique lowest-valued term forces equality in the lower bound. -/

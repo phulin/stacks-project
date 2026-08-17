@@ -285,6 +285,50 @@ abbrev standardOpenModuleSections (R M : Type u) [CommRing R]
 abbrev standardOpenRingSections (R : Type u) [CommRing R] (f : R) : Type u :=
   Localization.Away f
 
+/-! The source computes the stalk as a filtered colimit over the standard
+opens containing a point.  This preorder makes that indexing assertion
+explicit; the canonical stalk isomorphisms below identify its localization
+colimit with the Mathlib stalk. -/
+
+/-- The standard-open index attached to a prime `p`, consisting of elements
+outside `p`. -/
+def standardOpenStalkIndex {R : Type u} [CommRing R] (p : PrimeSpectrum R) :=
+  {f : R // f ∉ p.asIdeal}
+
+/-- The order on the stalk index is reverse inclusion of standard opens. -/
+instance standardOpenStalkIndex_preorder {R : Type u} [CommRing R]
+    (p : PrimeSpectrum R) : Preorder (standardOpenStalkIndex p) where
+  le f g := standardOpen g.1 ≤ standardOpen f.1
+  le_refl f := le_rfl
+  le_trans a b c hab hbc := hbc.trans hab
+
+/-- The order relation is exactly reverse inclusion of the corresponding
+standard opens. -/
+theorem standardOpenStalkIndex_le_iff {R : Type u} [CommRing R]
+    (p : PrimeSpectrum R) (f g : standardOpenStalkIndex p) :
+    f ≤ g ↔ standardOpen g.1 ≤ standardOpen f.1 :=
+  Iff.rfl
+
+/-- Equivalently, `f ≥ g` means `D(f) ⊆ D(g)`, as in the source. -/
+theorem standardOpenStalkIndex_ge_iff {R : Type u} [CommRing R]
+    (p : PrimeSpectrum R) (f g : standardOpenStalkIndex p) :
+    f ≥ g ↔ standardOpen f.1 ≤ standardOpen g.1 :=
+  Iff.rfl
+
+/-- Products give common upper bounds in the standard-open stalk index. -/
+theorem standardOpenStalkIndex_mul_upperBound {R : Type u} [CommRing R]
+    (p : PrimeSpectrum R) (f g : standardOpenStalkIndex p) :
+    ∃ h : standardOpenStalkIndex p, h ≥ f ∧ h ≥ g := by
+  have hmem : f.1 * g.1 ∉ p.asIdeal := by
+    intro h
+    exact (p.isPrime.mul_mem_iff_mem_or_mem.mp h).elim f.2 g.2
+  let h : standardOpenStalkIndex p := ⟨f.1 * g.1, hmem⟩
+  refine ⟨h, ?_, ?_⟩
+  · change standardOpen (f.1 * g.1) ≤ standardOpen f.1
+    exact standardOpen_mul_le_left _ _
+  · change standardOpen (f.1 * g.1) ≤ standardOpen g.1
+    exact standardOpen_mul_le_right _ _
+
 /- The two inverse-map statements above are the basis-presheaf
 independence-of-presentation assertion: if `D(f) = D(g)`, either element may
 be used to present the same standard-open section object. -/

@@ -94,7 +94,7 @@ theorem sPlus_generated_iff
           exact DirectSum.decompose_of_mem_same G.component z.property
         rw [hxy, map_add, hy₀, hz₀] at hx₀
         simpa only [zero_add] using hx₀
-      exact ⟨y, hy, by simpa [hxy, hxzero]⟩
+      exact ⟨y, hy, by simp [hxy, hxzero]⟩
   constructor
   · intro hgen
     apply le_antisymm
@@ -139,7 +139,7 @@ theorem sPlus_generated_iff
                   (p := fun y _ =>
                     (DirectSum.decompose G.component y n : S) ∈
                       Algebra.adjoin (degreeZeroSubring G) (Set.range f)) ?_ ?_ ?_ hxI
-                · simpa using (Algebra.adjoin (degreeZeroSubring G) (Set.range f)).zero_mem
+                · simp
                 · intro y z hy hz py pz
                   rw [DirectSum.decompose_add]
                   exact (Algebra.adjoin (degreeZeroSubring G) (Set.range f)).add_mem
@@ -347,7 +347,7 @@ private theorem finiteType_of_irrelevant_fg (G : GradedRingData S)
   let ι₀ := Σ x : s, (DirectSum.decompose G.component (x : S)).support
   let f₀ : ι₀ → S := fun i =>
     (DirectSum.decompose G.component (i.1 : S) i.2 : S)
-  letI : Fintype ι₀ := inferInstance
+  let : Fintype ι₀ := inferInstance
   have hf₀ : ∀ i, IsHomogeneousElement G (f₀ i) ∧ f₀ i ∈ irrelevantIdeal G := by
     intro i
     constructor
@@ -378,23 +378,23 @@ theorem graded_noetherian_iff (G : GradedRingData S) :
       IsNoetherianRing (degreeZeroSubring G) ∧ (irrelevantIdeal G).FG := by
   constructor
   · intro hS
-    letI : IsNoetherianRing S := hS
+    let : IsNoetherianRing S := hS
     have h₀ : IsNoetherianRing (degreeZeroSubring G) := by
       exact isNoetherianRing_of_surjective S (degreeZeroSubring G)
         (GradedRing.projZeroRingHom' G.component)
         (GradedRing.projZeroRingHom'_surjective G.component)
-    letI : IsNoetherianRing (degreeZeroSubring G) := h₀
+    let : IsNoetherianRing (degreeZeroSubring G) := h₀
     exact ⟨h₀, Ideal.fg_of_isNoetherianRing _⟩
   · rintro ⟨h₀, hfg⟩
-    letI : IsNoetherianRing (degreeZeroSubring G) := h₀
-    letI : Algebra.FiniteType (degreeZeroSubring G) S :=
+    let : IsNoetherianRing (degreeZeroSubring G) := h₀
+    let : Algebra.FiniteType (degreeZeroSubring G) S :=
       finiteType_of_irrelevant_fg G hfg
     exact Algebra.FiniteType.isNoetherianRing (degreeZeroSubring G) S
 
 theorem finiteType_of_noetherian_graded
     (G : GradedRingData S) (hS : IsNoetherianRing S) :
     Algebra.FiniteType (degreeZeroSubring G) S := by
-  letI : IsNoetherianRing S := hS
+  let : IsNoetherianRing S := hS
   exact finiteType_of_irrelevant_fg G (Ideal.fg_of_isNoetherianRing _)
 
 /-! ## Numerical polynomials -/
@@ -431,14 +431,17 @@ theorem numericalPolynomial_comp_addMonoidHom
     (φ : A →+ A') (f : ℤ → A) (hf : IsNumericalPolynomial f) :
     IsNumericalPolynomial (fun n => φ (f n)) := by
   rcases hf with ⟨r, a, ha⟩
-  refine ⟨r, fun i => φ (a i), ha.mono (fun n hn => by simpa [hn])⟩
+  refine ⟨r, fun i => φ (a i), ha.mono (fun n hn => by simp [hn])⟩
 
 private lemma integerBinomial_sub_shift (n : ℤ) (hn : 0 ≤ n) (i : ℕ) :
     integerBinomial (n + 1) (i + 1) - integerBinomial n (i + 1) =
       integerBinomial n i := by
-  simp [integerBinomial, hn, add_nonneg hn (by norm_num),
-    Int.toNat_of_nonneg hn, Int.toNat_of_nonneg (add_nonneg hn (by norm_num)),
-    Nat.choose_succ_succ']
+  have hnp : 0 ≤ n + 1 := add_nonneg hn (by norm_num)
+  simp only [integerBinomial, if_pos hn, if_pos hnp]
+  rw [Int.toNat_add hn (by norm_num)]
+  simp only [Int.toNat_one]
+  rw [Nat.choose_succ_succ']
+  norm_num
 
 theorem isNumericalPolynomial_of_sub
     {A : Type v} [AddCommGroup A] (f : ℤ → A)

@@ -3,6 +3,8 @@ import Formalization.Books.Fields.Unit26.Transcendence
 import Mathlib.Algebra.Colimit.DirectLimit
 import Mathlib.FieldTheory.IsAlgClosed.AlgebraicClosure
 import Mathlib.FieldTheory.IsSepClosed
+import Mathlib.RingTheory.LocalRing.ResidueField.Fiber
+import Mathlib.RingTheory.Spectrum.Prime.Chevalley
 import Mathlib.RingTheory.Spectrum.Prime.Topology
 import Mathlib.Topology.Maps.Basic
 
@@ -57,7 +59,41 @@ theorem irreducibleSpectrum_of_openMap_of_dense_irreducibleFiber
     (hopen : IsOpenMap (PrimeSpectrum.comap (algebraMap R S)))
     (h : Dense {p : PrimeSpectrum R | irreducibleFiber (S := S) p}) :
     IrreducibleSpace (PrimeSpectrum S) := by
-  sorry
+  let f := PrimeSpectrum.comap (algebraMap R S)
+  have hfiber : {p : PrimeSpectrum R | irreducibleFiber (S := S) p} ⊆
+      {p : PrimeSpectrum R | IsPreirreducible (f ⁻¹' {p})} := by
+    intro p hp
+    let e : f ⁻¹' {p} ≃ₜ PrimeSpectrum (S ⊗[R] p.asIdeal.ResidueField) :=
+      (PrimeSpectrum.preimageHomeomorphFiber R S p).trans
+        (PrimeSpectrum.homeomorphOfRingEquiv
+          (Algebra.TensorProduct.comm R p.asIdeal.ResidueField S).toRingEquiv)
+    have he : IrreducibleSpace (f ⁻¹' {p}) :=
+      (e.irreducibleSpace_iff).mpr hp
+    have hsub : IsIrreducible (f ⁻¹' {p}) :=
+      @IsIrreducible.of_subtype _ _ _ he
+    exact hsub.isPreirreducible
+  have hpre : IsPreirreducible (f ⁻¹' (Set.univ : Set (PrimeSpectrum R))) :=
+    (hR.isIrreducible_univ.isPreirreducible).preimage_of_dense_isPreirreducible_fiber
+      f hopen (by
+        intro p hp
+        apply (closure_mono (show {p : PrimeSpectrum R |
+            irreducibleFiber (S := S) p} ⊆
+            (Set.univ : Set (PrimeSpectrum R)) ∩
+              {p : PrimeSpectrum R | IsPreirreducible (f ⁻¹' {p})} from
+          fun p hp => ⟨by simp, hfiber hp⟩)) (h p))
+  have hne : (f ⁻¹' (Set.univ : Set (PrimeSpectrum R))).Nonempty := by
+    obtain ⟨p, hp⟩ := h.nonempty
+    let e : f ⁻¹' {p} ≃ₜ PrimeSpectrum (S ⊗[R] p.asIdeal.ResidueField) :=
+      (PrimeSpectrum.preimageHomeomorphFiber R S p).trans
+        (PrimeSpectrum.homeomorphOfRingEquiv
+          (Algebra.TensorProduct.comm R p.asIdeal.ResidueField S).toRingEquiv)
+    obtain ⟨q, hq⟩ := (show IrreducibleSpace
+      (PrimeSpectrum (S ⊗[R] p.asIdeal.ResidueField)) from hp).toNonempty
+    exact ⟨(e.symm ⟨q, hq⟩).1, by simp⟩
+  rw [irreducibleSpace_def]
+  change IsIrreducible (Set.univ : Set (PrimeSpectrum S))
+  exact ⟨by simpa only [preimage_univ] using hne,
+    by simpa only [preimage_univ] using hpre⟩
 
 /-- Flat finite-presentation maps satisfy the dense irreducible-fibre
 criterion. -/
@@ -67,7 +103,8 @@ theorem flat_fibres_irreducible
     [Algebra.FinitePresentation R S]
     (h : Dense {p : PrimeSpectrum R | irreducibleFiber (S := S) p}) :
     IrreducibleSpace (PrimeSpectrum S) := by
-  sorry
+  exact irreducibleSpectrum_of_openMap_of_dense_irreducibleFiber hR
+    PrimeSpectrum.isOpenMap_comap_of_hasGoingDown_of_finitePresentation h
 
 /-- Over a separably closed field, the tensor product of two algebras with
 irreducible spectra again has irreducible spectrum. -/

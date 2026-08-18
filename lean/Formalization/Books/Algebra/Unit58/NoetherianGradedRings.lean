@@ -500,7 +500,7 @@ theorem isNumericalPolynomial_of_sub
       simp only [integerBinomial, if_pos hn, if_pos hnp]
       rw [Int.toNat_add hn (by norm_num), Int.toNat_one,
         Nat.choose_succ_succ']
-      norm_num
+      exact_mod_cast rfl
     have hcond :
         (∑ j ∈ Finset.range (r + 1),
             integerBinomial n (j + 1) •

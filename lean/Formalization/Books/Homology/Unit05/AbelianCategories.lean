@@ -439,8 +439,8 @@ theorem covariant_hom_exact_iff
       apply (ShortComplex.exact_iff_epi_kernel_lift (S := S)).2
       let u := kernel.lift g f (by simp [hfg])
       change Epi u
-      letI : ∀ N : C, IsIso ((G N).map u) := fun N => by
-        letI : Mono ((G N).map f) := by
+      let : ∀ N : C, IsIso ((G N).map u) := fun N => by
+        let : Mono ((G N).map f) := by
           exact inferInstance
         have hNtail : (ShortComplex.mk ((G N).map f) ((G N).map g)
             (by simp [G, ← Functor.map_comp, hfg])).Exact := by
@@ -464,7 +464,7 @@ theorem covariant_hom_exact_iff
         rw [heq]
         change IsIso e.inv
         infer_instance
-      haveI : IsIso u := hJ.isIso u
+      have : IsIso u := hJ.isIso u
       infer_instance
     refine ⟨?_, ?_⟩
     · refine ⟨?_⟩
@@ -533,7 +533,7 @@ theorem cartesian_iff_exact
       change (ShortComplex.mk (0 : (0 : C) ⟶ W) (biprod.lift g f)
         (by simp)).Exact at h'
       exact (ShortComplex.exact_iff_mono _ rfl).1 h'
-    letI : Mono (biprod.lift g f) := hmono
+    let : Mono (biprod.lift g f) := hmono
     have hsc : (ShortComplex.mk (biprod.lift g f) (biprod.desc k (-h))
         (by simp [comm])).Exact := by
       have h' := hex.exact 1

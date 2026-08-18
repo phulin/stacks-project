@@ -465,7 +465,18 @@ theorem termwiseSplitConnectingMap_exists
         _ = ((s n).s ≫ S.X₂.d n (n + (-1 : ℤ))) ≫
             (𝟙 _ - S.g.f (n + (-1 : ℤ)) ≫ (s (n + (-1 : ℤ))).s) ≫
               S.X₂.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ)) := by
-          exact Category.assoc _ _ _
+          have ha :
+              (((s' i).s ≫ (s i).r) ≫
+                  (S.X₁.XIsoOfEq
+                    (by omega : i + 1 + (-1 : ℤ) = i)).inv) ≫
+                S.X₁.d (i + 1 + (-1 : ℤ)) (i + (-1 : ℤ)) =
+              ((s' i).s ≫ (s i).r) ≫
+                ((S.X₁.XIsoOfEq
+                    (by omega : i + 1 + (-1 : ℤ) = i)).inv ≫
+                  S.X₁.d (i + 1 + (-1 : ℤ)) (i + (-1 : ℤ))) :=
+            Category.assoc _ _ _
+          exact congrArg
+            (fun z : S.X₃.X i ⟶ S.X₁.X (i + (-1 : ℤ)) => -z) ha
     have h₂ :
         S.X₃.d n (n + (-1 : ℤ)) ≫
             ((s (n + (-1 : ℤ))).s ≫ S.X₂.d (n + (-1 : ℤ))
@@ -1052,7 +1063,94 @@ private theorem termwiseSplitConnectingMap_homotopy_of_difference
     (δ' : TermwiseSplitConnectingMap s') :
     ∃ h : Homotopy δ.hom δ'.hom,
       ∀ n : ℤ, h.hom n (n + 1) = termwiseSplittingDifferenceShift s s' n := by
-  sorry
+  let hshift : ∀ i j : ℤ, j = i + 1 → i = j + (-1 : ℤ) :=
+    fun i j h => by omega
+  let hhom : ∀ i j, S.X₃.X i ⟶ ((shiftFunctor C (-1 : ℤ)).obj S.X₁).X j :=
+    fun i j => dite (j = i + 1)
+      (fun h => termwiseSplittingDifference s s' i ≫
+        (shiftFunctorObjXIso S.X₁ (-1 : ℤ) j i (hshift i j h)).inv)
+      (fun _ => 0)
+  let H : Homotopy δ.hom δ'.hom :=
+    { hom := hhom
+      zero := by
+        intro i j hij
+        dsimp [hhom]
+        split_ifs with h
+        · exfalso
+          apply hij
+          simp only [ComplexShape.down]
+          exact h.symm
+        · rfl
+      comm := by
+        intro i
+        have hi : i = i - 1 + 1 := (sub_add_cancel i 1).symm
+        have hq (n : ℤ) :
+            termwiseSplittingDifference s s' n ≫
+                (S.map (HomologicalComplex.eval C (ComplexShape.down ℤ) n)).f =
+              (s' n).s - (s n).s := by
+          rw [termwiseSplitting_section_eq s s' n]
+          abel
+        have hproj (n : ℤ) :
+            (s' n).r = (s n).r -
+              (S.map (HomologicalComplex.eval C (ComplexShape.down ℤ) n)).g ≫
+              termwiseSplittingDifference s s' n := by
+          let _ : Mono ((S.map (HomologicalComplex.eval C (ComplexShape.down ℤ) n)).f) :=
+            (s n).mono_f
+          apply (cancel_mono
+            (S.map (HomologicalComplex.eval C (ComplexShape.down ℤ) n)).f).1
+          rw [Preadditive.sub_comp]
+          rw [(s' n).r_f, (s n).r_f]
+          rw [Category.assoc]
+          rw [hq]
+          rw [Preadditive.comp_sub]
+          abel
+        rw [dNext_eq hhom (show (ComplexShape.down ℤ).Rel i (i - 1) by simp),
+          prevD_eq hhom (show (ComplexShape.down ℤ).Rel (i + 1) i by
+            norm_num [ComplexShape.down, add_assoc])]
+        simp only [hhom, dif_pos hi, dif_pos rfl]
+        rw [δ.hom_f i, δ'.hom_f i]
+        dsimp [termwiseSplitConnectingFamily, termwiseSplittingDifference]
+        simp only [hproj]
+        simp only [sub_eq_add_neg]
+        have hterm :
+            (((s' i).s ≫ (s i).r) ≫
+                (S.X₁.XIsoOfEq (hshift i (i + 1) rfl).symm).inv) ≫
+              ((shiftFunctor C (-1 : ℤ)).obj S.X₁).d (i + 1) i =
+            -(((s' i).s ≫ (s i).r) ≫
+                S.X₁.d i (i + (-1 : ℤ))) ≫
+              (S.X₁.XIsoOfEq rfl).inv := by
+          dsimp [shiftFunctor]
+          rw [show (-1 : ℤ).negOnePow = -1 by
+            rw [Int.negOnePow_neg, Int.negOnePow_one]]
+          simp only [Units.neg_smul, one_smul, Category.comp_id,
+            Preadditive.comp_neg, Preadditive.neg_comp, Category.assoc]
+          have hd := HomologicalComplex.XIsoOfEq_inv_comp_d S.X₁
+            (hshift i (i + 1) rfl).symm (i + (-1 : ℤ))
+          convert congrArg
+            (fun z : S.X₁.X i ⟶ S.X₁.X (i + (-1 : ℤ)) =>
+              (-(((s' i).s ≫ (s i).r) ≫ z) :
+                S.X₃.X i ⟶ S.X₁.X (i + (-1 : ℤ)))) hd using 1
+          have ha :
+              (((s' i).s ≫ (s i).r) ≫
+                  (S.X₁.XIsoOfEq
+                    (hshift i (i + 1) rfl).symm).inv) ≫
+                S.X₁.d (i + 1 + (-1 : ℤ)) (i + (-1 : ℤ)) =
+              ((s' i).s ≫ (s i).r) ≫
+                ((S.X₁.XIsoOfEq
+                    (hshift i (i + 1) rfl).symm).inv ≫
+                  S.X₁.d (i + 1 + (-1 : ℤ)) (i + (-1 : ℤ))) :=
+            Category.assoc _ _ _
+          exact congrArg
+            (fun z : S.X₃.X i ⟶ S.X₁.X (i + (-1 : ℤ)) => -z) ha
+        set_option backward.isDefEq.respectTransparency false in
+          conv_rhs => rw [hterm]
+        exact by omega }
+  refine ⟨H, ?_⟩
+  intro n
+  dsimp [H, hhom, termwiseSplittingDifferenceShift, termwiseSplittingDifference]
+  split_ifs with h
+  · congr 1
+  · exact (h rfl).elim
 
 /-- Changing a termwise splitting changes the resulting connecting maps by a
 homotopy. -/
@@ -1212,11 +1310,10 @@ theorem cochain_homotopy_shift_self (a : A ⟶ B) :
           prevD_eq h.hom
             (show (ComplexShape.up ℤ).Rel (j - 2) (j - 1) by
               simp [ComplexShape.up]; omega)] at ht
-        /- Prior attempt:
-        convert ht.symm using 1 <;>
-          simp [sub_eq_add_neg, add_assoc, add_comm, add_left_comm]
-        -/
-        sorry }
+        have h₁ : j + (-1 : ℤ) = j - 1 := by omega
+        have h₂ : j - 1 + (-1 : ℤ) = j - 2 := by omega
+        rw [h₁, h₂]
+        simpa [sub_eq_add_neg, add_assoc, add_comm, add_left_comm] using ht.symm }
   let G :
       (A ⟶ (CategoryTheory.shiftFunctor (CochainComplex C ℤ) (-1 : ℤ)).obj B) →
         Homotopy a a := fun g =>
@@ -1240,7 +1337,7 @@ theorem cochain_homotopy_shift_self (a : A ⟶ B) :
           (fun _ => 0)
         let hi : i = i + 1 + (-1 : ℤ) := by omega
         let ρ :=
-          (CochainComplex.shiftFunctorObjXIso B (-1) (i + 1) i (by omega)).hom
+          (CochainComplex.shiftFunctorObjXIso B (-1) (i + 1) i hi).hom
         have hg := congrArg (fun z => z ≫ ρ) (g.comm i (i + 1))
         rw [dNext_eq H (show (ComplexShape.up ℤ).Rel i (i + 1) by simp),
           prevD_eq H (show (ComplexShape.up ℤ).Rel (i + (-1 : ℤ)) i by
@@ -1256,16 +1353,45 @@ theorem cochain_homotopy_shift_self (a : A ⟶ B) :
           rw [show (-1 : ℤ).negOnePow = -1 by
             rw [Int.negOnePow_neg, Int.negOnePow_one]] at hg
           simp only [Units.neg_smul, one_smul] at hg
-          /- Prior attempt:
-          have hneg := congrArg Neg.neg hg
-          simp only [Preadditive.neg_comp, Preadditive.comp_neg, neg_neg,
-            Category.assoc] at hneg
           rw [← neg_eq_iff_add_eq_zero]
-          simpa [CochainComplex.shiftFunctorObjXIso, sub_eq_add_neg,
-            add_assoc, add_comm, add_left_comm, Int.add_neg_cancel_right] using
-            hneg.symm
-          -/
-          sorry
+          have hneg := congrArg Neg.neg hg
+          convert hneg.symm using 1
+          · rw [← Category.assoc]
+            congr 1
+          · have hc := Preadditive.comp_neg (P := A.X i)
+                (R := B.X (i + 1 + (-1 : ℤ))) (g.f i)
+                (B.d (i + (-1 : ℤ)) (i + 1 + (-1 : ℤ)))
+            have hc' := congrArg (fun z => z ≫ ρ) hc
+            have hnegc := congrArg Neg.neg hc'
+            have hdouble := congrArg Neg.neg hc
+            have hleft := congrArg (fun z => z ≫ ρ) hdouble
+            have hrr :
+                -(-g.f i ≫ B.d (i + (-1 : ℤ))
+                    (i + 1 + (-1 : ℤ))) ≫ ρ =
+                  g.f i ≫ B.d (i + (-1 : ℤ)) i := by
+              simp [ρ, CochainComplex.shiftFunctorObjXIso,
+                CochainComplex.shiftFunctor, sub_eq_add_neg,
+                Preadditive.neg_comp, Category.assoc]
+              have hd := HomologicalComplex.d_comp_XIsoOfEq_hom B
+                (by omega : i + 1 + (-1 : ℤ) = i) (i + (-1 : ℤ))
+              convert congrArg (fun z => g.f i ≫ z) hd using 1
+              exact Category.assoc _ _ _
+              rfl
+            calc
+              g.f i ≫
+                    (CochainComplex.shiftFunctorObjXIso B (-1) i
+                      (i + (-1 : ℤ)) rfl).hom ≫ B.d (i + (-1 : ℤ)) i =
+                  g.f i ≫ B.d (i + (-1 : ℤ)) i := by
+                dsimp [CochainComplex.shiftFunctorObjXIso,
+                  CochainComplex.shiftFunctor]
+                simp only [Category.id_comp]
+              _ =
+                  -(-g.f i ≫ B.d (i + (-1 : ℤ))
+                    (i + 1 + (-1 : ℤ))) ≫ ρ := by
+                symm
+                exact hrr
+              _ = -(g.f i ≫ (-B.d (i + (-1 : ℤ))
+                    (i + 1 + (-1 : ℤ)))) ≫ ρ := hnegc.symm
         rw [hz, zero_add] }
   refine ⟨{ toFun := F, invFun := G, left_inv := ?_, right_inv := ?_ }⟩
   · intro h
@@ -1282,15 +1408,12 @@ theorem cochain_homotopy_shift_self (a : A ⟶ B) :
       change j + 1 = i at hji
       omega
   · intro g
-    /- Prior attempt:
     ext i
     dsimp [F, G]
     split_ifs with hij
-    · dsimp [CochainComplex.shiftFunctorObjXIso, CochainComplex.shiftFunctor]
-      simp only [Category.comp_id]
+    · change g.f i ≫ 𝟙 _ = g.f i
+      rw [Category.comp_id]
     · exact (hij rfl).elim
-    -/
-    sorry
 
 /-- For two cochain maps, the homotopy set is empty or a principal homogeneous
 space under maps into the negative shifted target. -/

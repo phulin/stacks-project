@@ -1947,7 +1947,7 @@ theorem epimorphism_iff_restrictScalars_fullyFaithful
     let F := ModuleCat.restrictScalars f
     List.TFAE
       [ Epi (CommRingCat.ofHom f),
-        ∀ (M N : ModuleCat S),
+        ∀ (M N : ModuleCat.{u} S),
           Function.Bijective
             (F.map : (M ⟶ N) → (F.obj M ⟶ F.obj N)),
         Nonempty F.FullyFaithful ] := by
@@ -1958,7 +1958,7 @@ theorem epimorphism_iff_restrictScalars_fullyFaithful
     · intro h
       have hepi : Algebra.IsEpi R S := (CommRingCat.epi_iff_epi).mp h
       let F := ModuleCat.restrictScalars f
-      change ∀ (M N : ModuleCat S),
+      change ∀ (M N : ModuleCat.{u} S),
         Function.Bijective (F.map : (M ⟶ N) → (F.obj M ⟶ F.obj N))
       intro M N
       constructor

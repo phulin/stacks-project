@@ -31,7 +31,8 @@ universe u v
 
 noncomputable section
 section
-classical
+attribute [local instance] Classical.propDecidable
+local instance instDecidableEq (A : Type u) : DecidableEq A := Classical.decEq A
 
 /-! ## Affine w-locality and locally closed pieces -/
 
@@ -78,7 +79,7 @@ def localizedPieceRingHom {A : Type u} [CommRing A]
 /-- The points of `Spec(A)` specializing to a subset. -/
 def pointsSpecializingToPiece {A : Type u} [CommRing A]
     (Z : LocallyClosedPiece A) : Set (PrimeSpectrum A) :=
-  Topology.pointsSpecializingTo Z.carrier
+  pointsSpecializingTo Z.carrier
 
 def localizedPieceSpectrumMap {A : Type u} [CommRing A]
     (Z : LocallyClosedPiece A) :
@@ -191,18 +192,19 @@ instance stratumFactor.commRing {A : Type u} [CommRing A] {E : Finset A}
 
 def stratumFactorDiagram {A : Type u} [CommRing A] (E : Finset A) :
     Discrete (StratumPartition E) ⥤ CommRingCat :=
-  Discrete.functor (fun p => CommRingCat.of (stratumFactor p.as))
+  Discrete.functor (fun p : StratumPartition E =>
+    CommRingCat.of (stratumFactor p))
 
 /-- The product ring `A_E` of the localized strata. -/
 noncomputable def stageRing {A : Type u} [CommRing A] (E : Finset A) : CommRingCat :=
-  limit (stratumFactorDiagram A E)
+  limit (stratumFactorDiagram E)
 
 /-- The disjoint-union presentation of the spectrum of `A_E`. -/
 def stageSpectrum {A : Type u} [CommRing A] (E : Finset A) : Type u :=
   Σ p : StratumPartition E, PrimeSpectrum (stratumFactor p)
 
 def stageClosedLocus {A : Type u} [CommRing A] (E : Finset A) :
-    Set (stageSpectrum A E) :=
+    Set (stageSpectrum E) :=
   {x | x.2 ∈
     (localizedPieceSpectrumMap (stratumPiece x.1) ⁻¹'
       (stratumPiece x.1).carrier)}
@@ -211,37 +213,37 @@ def stageClosedLocus {A : Type u} [CommRing A] (E : Finset A) :
 localized spectra. -/
 theorem exists_stageSpectrumHomeomorph
     {A : Type u} [CommRing A] (E : Finset A) :
-    Nonempty (Homeomorph (stageSpectrum A E)
-      (PrimeSpectrum (stageRing A E))) := by
+    Nonempty (Homeomorph (stageSpectrum E)
+      (PrimeSpectrum (stageRing E))) := by
   sorry
 
 noncomputable def stageSpectrumHomeomorph
     {A : Type u} [CommRing A] (E : Finset A) :
-    Homeomorph (stageSpectrum A E) (PrimeSpectrum (stageRing A E)) :=
+    Homeomorph (stageSpectrum E) (PrimeSpectrum (stageRing E)) :=
   Classical.choice (exists_stageSpectrumHomeomorph E)
 
 /-- The closed subscheme `Z_E`, transported to `Spec(A_E)`. -/
 def stageClosedLocusOnSpectrum {A : Type u} [CommRing A] (E : Finset A) :
-    Set (PrimeSpectrum (stageRing A E)) :=
-  stageSpectrumHomeomorph E '' stageClosedLocus A E
+    Set (PrimeSpectrum (stageRing E)) :=
+  stageSpectrumHomeomorph E '' stageClosedLocus E
 
 theorem stageClosedLocus_isClosed
     {A : Type u} [CommRing A] (E : Finset A) :
-    IsClosedAffineLocus (stageClosedLocusOnSpectrum A E) := by
+    IsClosedAffineLocus (stageClosedLocusOnSpectrum E) := by
   sorry
 
 theorem stageClosedLocus_contains_closedPoints
     {A : Type u} [CommRing A] (E : Finset A) :
-    closedPoints (PrimeSpectrum (stageRing A E)) ⊆
-      stageClosedLocusOnSpectrum A E := by
+    closedPoints (PrimeSpectrum (stageRing E)) ⊆
+      stageClosedLocusOnSpectrum E := by
   sorry
 
 /-! ## Transition maps and the w-localization -/
 
 def restrictPartition {A : Type u} {E₁ E₂ : Finset A}
     (h : E₁ ⊆ E₂) (p : StratumPartition E₂) : StratumPartition E₁ where
-  nonvanishing := p.nonvanishing ∩ E₁
-  vanishing := p.vanishing ∩ E₁
+  nonvanishing := Finset.inter p.nonvanishing E₁
+  vanishing := Finset.inter p.vanishing E₁
   disjoint := by
     exact p.disjoint.mono inf_le_left inf_le_left
   union_eq := by
@@ -273,18 +275,18 @@ noncomputable def stratumTransition
 /-- The induced transition map `A_E₁ → A_E₂`. -/
 theorem exists_stageRingHom
     {A : Type u} [CommRing A] {E₁ E₂ : Finset A} (h : E₁ ⊆ E₂) :
-    ∃! g : stageRing A E₁ ⟶ stageRing A E₂, True := by
+    ∃! g : stageRing E₁ ⟶ stageRing E₂, True := by
   sorry
 
 noncomputable def stageRingHom
     {A : Type u} [CommRing A] {E₁ E₂ : Finset A} (h : E₁ ⊆ E₂) :
-    stageRing A E₁ ⟶ stageRing A E₂ :=
+    stageRing E₁ ⟶ stageRing E₂ :=
   Classical.choose (exists_stageRingHom h)
 
 /-- The finite stages form the directed system used in the construction. -/
 structure StageFunctorData (A : Type u) [CommRing A] where
   functor : Finset A ⥤ CommRingCat
-  object_eq : ∀ E, functor.obj E = stageRing A E
+  object_eq : ∀ E, functor.obj E = stageRing E
 
 theorem exists_stageFunctorData {A : Type u} [CommRing A] :
     Nonempty (StageFunctorData A) := by
@@ -296,31 +298,32 @@ noncomputable def stageFunctor {A : Type u} [CommRing A] :
 
 /-- The colimit ring `A_w`. -/
 noncomputable def wLocalRing {A : Type u} [CommRing A] : CommRingCat :=
-  colimit (stageFunctor A)
+  colimit (stageFunctor (A := A))
 
 /-- The affine scheme `X_w = Spec(A_w)`. -/
 def wLocalSpectrum {A : Type u} [CommRing A] : Scheme :=
-  Scheme.Spec (wLocalRing A)
+  AlgebraicGeometry.Scheme.Spec (wLocalRing (A := A))
 
 /-- The closed-point locus denoted `Z` in the source's inverse-limit formula. -/
-def wLocalClosedLocus {A : Type u} [CommRing A) :
-    Set (PrimeSpectrum (wLocalRing A)) :=
-  closedPoints (PrimeSpectrum (wLocalRing A))
+def wLocalClosedLocus {A : Type u} [CommRing A] :
+    Set (PrimeSpectrum (wLocalRing (A := A))) :=
+  closedPoints (PrimeSpectrum (wLocalRing (A := A)))
 
 theorem wLocalRing_isIndZariski_and_faithfullyFlat
     {A : Type u} [CommRing A] :
     IsIndZariski (CommRingCat.ofHom
-      (algebraMap A (wLocalRing A))) ∧
-      Function.Surjective (algebraMap A (wLocalRing A)) := by
+      (algebraMap A (wLocalRing (A := A)))) ∧
+      RingHom.FaithfullyFlat (algebraMap A (wLocalRing (A := A))) := by
   sorry
 
 theorem wLocalConstruction_properties
     {A : Type u} [CommRing A] :
-    IsIndZariski (CommRingCat.ofHom (algebraMap A (wLocalRing A))) ∧
-      Nonempty (wLocalClosedLocus A ≃ₜ PrimeSpectrum A) ∧
-        IsClosed (wLocalClosedLocus A) ∧
-          ∀ x : PrimeSpectrum (wLocalRing A),
-            ∃! z : wLocalClosedLocus A, x ⤳ (z : PrimeSpectrum (wLocalRing A)) := by
+    IsIndZariski (algebraMap A (wLocalRing (A := A))) ∧
+      Nonempty (wLocalClosedLocus (A := A) ≃ₜ PrimeSpectrum A) ∧
+        IsClosed (wLocalClosedLocus (A := A)) ∧
+          ∀ x : PrimeSpectrum (wLocalRing (A := A)),
+            ∃! z : wLocalClosedLocus (A := A),
+              x ⤳ (z : PrimeSpectrum (wLocalRing (A := A))) := by
   sorry
 
 /-! ## The size remark and the universal property -/
@@ -328,7 +331,7 @@ theorem wLocalConstruction_properties
 theorem wLocalRing_cardinal_le
     {A : Type u} [CommRing A] (κ : Cardinal) (hκ : Cardinal.mk A ≤ κ)
     (hinfinite : ℵ₀ ≤ κ) :
-    Cardinal.mk (wLocalRing A) ≤ κ := by
+    Cardinal.mk (wLocalRing (A := A)) ≤ κ := by
   sorry
 
 theorem wLocalRing_universal

@@ -877,7 +877,6 @@ theorem categoriesFibredInGroupoids_have_twoFibreProducts
     {C : Cat.{v, u}} (X Y S : FibredCategoryOver C)
     (hX : IsGroupoidFibredCategoryOver X)
     (hY : IsGroupoidFibredCategoryOver Y)
-    (hS : IsGroupoidFibredCategoryOver S)
     (F : FibredCategoryOverHom X S) (G : FibredCategoryOverHom Y S) :
     Nonempty (FibredInGroupoidsTwoFibreProduct F G) := by
   refine ⟨{
@@ -940,9 +939,7 @@ independent of the chosen lifts.  This awaits a reusable strict over-base
 equivalence/transport API. -/
 theorem twoFibreProductOverCategory_canonically_equivalent
     {C : Cat.{v, u}} {X Y S : FibredCategoryOver C}
-    (hX : IsGroupoidFibredCategoryOver X)
     (hY : IsGroupoidFibredCategoryOver Y)
-    (hS : IsGroupoidFibredCategoryOver S)
     (F : FibredCategoryOverHom X S) (G : FibredCategoryOverHom Y S) :
     Nonempty
       (TwoFibreProductOverCategory F.underlying G.underlying ≌
@@ -1437,7 +1434,6 @@ private theorem canonicalFibredTwoFibreProduct_fibres_are_groupoids
     {C : Cat.{v, u}} (X Y S : FibredCategoryOver C)
     (hX : IsGroupoidFibredCategoryOver X)
     (hY : IsGroupoidFibredCategoryOver Y)
-    (hS : IsGroupoidFibredCategoryOver S)
     (F : FibredCategoryOverHom X S) (G : FibredCategoryOverHom Y S) :
     ∀ U : C,
       IsGroupoid (Functor.Fiber
@@ -1554,7 +1550,7 @@ theorem fibredInGroupoids_fullyFaithful_iff_diagonal_isEquivalence
       intro z
       let f : z.obj.obj.left ⟶ z.obj.obj.right :=
         hH.preimage z.obj.obj.hom
-      letI : IsIso (H.map f) := by
+      let : IsIso (H.map f) := by
         dsimp [f]
         rw [hH.map_preimage]
         exact z.obj.property
@@ -1577,10 +1573,13 @@ theorem fibredInGroupoids_fullyFaithful_iff_diagonal_isEquivalence
       groupoidFibredCategoryOver_isFibredInGroupoids X hX
     let _ : pY.IsFibredInGroupoids :=
       groupoidFibredCategoryOver_isFibredInGroupoids Y hY
-    obtain ⟨P⟩ := categoriesFibredInGroupoids_have_twoFibreProducts
-      X X Y hX hX hY F F
+    let P : FibredInGroupoidsTwoFibreProduct F F := {
+      product := canonicalFibredTwoFibreProduct X X Y F F
+      fibres_are_groupoids :=
+        canonicalFibredTwoFibreProduct_fibres_are_groupoids
+          X X Y hX hX hY F F }
     have hpT : pT.IsFibredInGroupoids := by
-      simpa [pT, canonicalFibredTwoFibreProduct_diagram] using
+      simpa [P, pT, canonicalFibredTwoFibreProduct_diagram] using
         fibredInGroupoidsTwoFibreProduct_apex_isFibredInGroupoids P
     have hDfibre : ∀ U : C,
         (fibreFunctor pX pT D rfl U).IsEquivalence := by
@@ -1588,7 +1587,9 @@ theorem fibredInGroupoids_fullyFaithful_iff_diagonal_isEquivalence
       exact (fibredInGroupoids_equivalence_iff_fibrewise
         pX pT D rfl (groupoidFibredCategoryOver_isFibredInGroupoids X hX)
           hpT).mp hD U
-    exact ⟨Functor.FullyFaithful.ofFullyFaithful (overFunctor F.underlying)⟩
+    /- Prior attempt: the diagonal fibrewise equivalences above do not provide
+       a `(overFunctor F.underlying).Full` instance for this constructor. -/
+    sorry
 
 /-! ## Equivalences and functor categories -/
 

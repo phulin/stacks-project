@@ -48,7 +48,7 @@ theorem isSeparator_iff_source_generator [Abelian C] (U : C) :
       by_contra hf
       exact h' ⟨f, hf⟩
     apply hN
-    letI : Epi N.arrow := by
+    let : Epi N.arrow := by
       constructor
       intro Z g k e
       apply h.def g k
@@ -60,8 +60,8 @@ theorem isSeparator_iff_source_generator [Abelian C] (U : C) :
         _ = N.factorThru f (hfac f) ≫ (N.arrow ≫ k) := by rw [e]
         _ = (N.factorThru f (hfac f) ≫ N.arrow) ≫ k := by simp only [Category.assoc]
         _ = f ≫ k := by rw [Subobject.factorThru_arrow]
-    letI : Mono N.arrow := inferInstance
-    letI : IsIso N.arrow := isIso_of_mono_of_epi _
+    let : Mono N.arrow := inferInstance
+    let : IsIso N.arrow := isIso_of_mono_of_epi _
     exact Subobject.eq_top_of_isIso_arrow N
   · intro h
     apply (isSeparator_def U).2
@@ -70,13 +70,13 @@ theorem isSeparator_iff_source_generator [Abelian C] (U : C) :
     let K := kernelSubobject (f - g)
     have hK : K ≠ ⊤ := by
       intro hK
-      letI : IsIso K.arrow := (Subobject.isIso_arrow_iff_eq_top K).2 hK
-      letI : IsIso (kernelSubobjectIso (f - g)).hom :=
+      let : IsIso K.arrow := (Subobject.isIso_arrow_iff_eq_top K).2 hK
+      let : IsIso (kernelSubobjectIso (f - g)).hom :=
         (kernelSubobjectIso (f - g)).isIso_hom
-      letI : IsIso ((kernelSubobjectIso (f - g)).hom ≫ kernel.ι (f - g)) := by
+      let : IsIso ((kernelSubobjectIso (f - g)).hom ≫ kernel.ι (f - g)) := by
         rw [kernelSubobject_arrow]
         infer_instance
-      letI : IsIso (kernel.ι (f - g)) :=
+      let : IsIso (kernel.ι (f - g)) :=
         IsIso.of_isIso_comp_left (kernelSubobjectIso (f - g)).hom (kernel.ι (f - g))
       apply hne
       apply sub_eq_zero.mp

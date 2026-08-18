@@ -521,15 +521,6 @@ noncomputable abbrev sheafTensorProductPresheaf {X : TopCat.{v}}
     (α : O₁ ⟶ O₂) (G : SheafOfModules.{v} O₁) : PMod O₂.obj :=
   tensorProductPresheaf α.hom G.val
 
-/-- The presheaf tensor product need not be a sheaf. -/
-theorem tensorProductPresheaf_not_always_isSheaf :
-    ¬ ∀ {X : TopCat.{v}}
-      {O₁ O₂ : Sheaf (Opens.grothendieckTopology X) RingCat.{v}}
-      (α : O₁ ⟶ O₂) (G : SheafOfModules.{v} O₁),
-      Presheaf.IsSheaf (Opens.grothendieckTopology X)
-        (sheafTensorProductPresheaf α G).presheaf := by
-  sorry
-
 /-- The tensor product sheaf in the source is module sheafification of the
 presheaf-level extension of scalars. -/
 noncomputable def tensorProductSheaf {X : TopCat.{v}}

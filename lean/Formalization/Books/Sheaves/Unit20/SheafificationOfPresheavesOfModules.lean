@@ -246,14 +246,28 @@ noncomputable abbrev sheafTensorProductPresheaf {X : TopCat.{v}}
   Formalization.Books.Sheaves.Unit17.sheafTensorProductPresheaf α G
 
 /-- The source's warning that the presheaf tensor product need not itself be a
-sheaf. -/
+sheaf.
+
+Proof roadmap:
+
+1. expose a natural sectionwise isomorphism identifying the value on an open
+   `U` with extension of scalars
+   `O₂(U) ⊗[O₁(U)] G(U)`; this belongs with the presheaf change-of-rings API in
+   Unit 06;
+2. construct a sheaf on a finite space whose two-open gluing diagram contains
+   a non-pure equalizer over `ℤ`;
+3. extend scalars along `ℤ → ℤ/2`, where tensoring destroys that equalizer;
+4. transport the failed gluing condition through the sectionwise isomorphism.
+
+The theorem lives here, rather than in Unit 17, because the assertion occurs
+in the source's discussion of sheafifying presheaves of modules. -/
 theorem tensorProductPresheaf_not_always_isSheaf :
     ¬ ∀ {X : TopCat.{v}}
       {O₁ O₂ : Sheaf (Opens.grothendieckTopology X) RingCat.{v}}
       (α : O₁ ⟶ O₂) (G : SheafOfModules.{v} O₁),
       Presheaf.IsSheaf (Opens.grothendieckTopology X)
         (sheafTensorProductPresheaf α G).presheaf := by
-  exact Formalization.Books.Sheaves.Unit17.tensorProductPresheaf_not_always_isSheaf
+  sorry
 
 /-- The tensor product sheaf, defined by sheafifying the presheaf tensor. -/
 noncomputable abbrev tensorProductSheaf {X : TopCat.{v}}

@@ -33,7 +33,7 @@ noncomputable section
 change remains reduced. -/
 def IsGeometricallyReduced (k : Type u) (S : Type v) [Field k] [CommRing S]
     [Algebra k S] : Prop :=
-  ∀ (K : Type w) [Field K] [Algebra k K],
+  ∀ (K : Type u) [Field K] [Algebra k K],
     IsReduced (K ⊗[k] S)
 
 /- The introductory reduction to an algebraic closure and to finite purely

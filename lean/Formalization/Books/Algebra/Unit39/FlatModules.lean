@@ -1,4 +1,6 @@
 import Mathlib.Algebra.Colimit.DirectLimit
+import Mathlib.LinearAlgebra.TensorProduct.DirectLimit
+import Mathlib.LinearAlgebra.TensorProduct.Prod
 import Mathlib.RingTheory.Flat.EquationalCriterion
 import Mathlib.RingTheory.Flat.FaithfullyFlat.Algebra
 import Mathlib.RingTheory.Flat.Localization
@@ -75,7 +77,68 @@ theorem flat_intersect_ideals
     (I J : Ideal R) :
     (I • (⊤ : Submodule R M)) ⊓ (J • (⊤ : Submodule R M)) =
       (I ⊓ J) • (⊤ : Submodule R M) := by
-  sorry
+  let g : R →ₗ[R] (R ⧸ I) × (R ⧸ J) := I.mkQ.prod J.mkQ
+  have hker : LinearMap.ker g = I ⊓ J := by
+    simp [g, LinearMap.ker_prod]
+  apply le_antisymm
+  · intro x hx
+    rw [← Ideal.subtype_rTensor_range, ← hker]
+    have hxI' : x ∈ LinearMap.range ((TensorProduct.lid R M).comp (I.subtype.rTensor M)) := by
+      rw [Ideal.subtype_rTensor_range]
+      exact hx.1
+    obtain ⟨y, hy⟩ := hxI'
+    have hy' : (TensorProduct.lid R M).symm x = (I.subtype.rTensor M) y := by
+      rw [← hy]
+      simp
+    have hI : (I.mkQ.rTensor M) ((TensorProduct.lid R M).symm x) = 0 := by
+      rw [hy', ← LinearMap.rTensor_comp_apply]
+      rw [show I.mkQ.comp I.subtype = 0 by
+        ext x
+        exact Ideal.Quotient.eq_zero_iff_mem.mpr x.property]
+      simp
+    have hxJ' : x ∈ LinearMap.range ((TensorProduct.lid R M).comp (J.subtype.rTensor M)) := by
+      rw [Ideal.subtype_rTensor_range]
+      exact hx.2
+    obtain ⟨z, hz⟩ := hxJ'
+    have hz' : (TensorProduct.lid R M).symm x = (J.subtype.rTensor M) z := by
+      rw [← hz]
+      simp
+    have hJ : (J.mkQ.rTensor M) ((TensorProduct.lid R M).symm x) = 0 := by
+      rw [hz', ← LinearMap.rTensor_comp_apply]
+      rw [show J.mkQ.comp J.subtype = 0 by
+        ext x
+        exact Ideal.Quotient.eq_zero_iff_mem.mpr x.property]
+      simp
+    have hprod :
+        (TensorProduct.prodLeft R R (R ⧸ I) (R ⧸ J) M).toLinearMap.comp (g.rTensor M) =
+          (I.mkQ.rTensor M).prod (J.mkQ.rTensor M) := by
+      apply LinearMap.ext
+      intro t
+      induction t using TensorProduct.induction_on with
+      | zero => rfl
+      | add x y ihx ihy =>
+          rw [map_add, map_add, ihx, ihy]
+      | tmul r m => simp [g]
+    have hgzero : (g.rTensor M) ((TensorProduct.lid R M).symm x) = 0 := by
+      apply (TensorProduct.prodLeft R R (R ⧸ I) (R ⧸ J) M).injective
+      simp only [map_zero]
+      change (TensorProduct.prodLeft R R (R ⧸ I) (R ⧸ J) M).toLinearMap
+        ((g.rTensor M) ((TensorProduct.lid R M).symm x)) = 0
+      rw [← LinearMap.comp_apply, hprod]
+      exact Prod.ext hI hJ
+    have hex : Function.Exact ((LinearMap.ker g).subtype.rTensor M) (g.rTensor M) :=
+      Module.Flat.rTensor_exact (M := M) (LinearMap.exact_subtype_ker_map g)
+    have hxrange : (TensorProduct.lid R M).symm x ∈
+        LinearMap.range ((LinearMap.ker g).subtype.rTensor M) := by
+      rw [← hex.linearMap_ker_eq]
+      exact hgzero
+    obtain ⟨w, hw⟩ := hxrange
+    refine ⟨w, ?_⟩
+    change (TensorProduct.lid R M) ((LinearMap.ker g).subtype.rTensor M w) = x
+    rw [hw]
+    exact (TensorProduct.lid R M).apply_symm_apply x
+  · exact le_inf (Submodule.smul_mono inf_le_left le_rfl)
+      (Submodule.smul_mono inf_le_right le_rfl)
 
 theorem directLimit_flat
     {R : Type u} [CommRing R] {ι : Type v} [Preorder ι] [Nonempty ι]
@@ -84,7 +147,118 @@ theorem directLimit_flat
     [DirectedSystem G (f · · ·)]
     (hflat : ∀ i, Module.Flat R (G i)) :
     Module.Flat R (DirectLimit G f) := by
-  sorry
+  classical
+  rw [Module.Flat.iff_rTensor_injective']
+  intro I
+  let q : ∀ i, (I ⊗[R] G i) →ₗ[R] (R ⊗[R] G i) :=
+    fun i => I.subtype.rTensor (G i)
+  have hq : ∀ i j (h : i ≤ j),
+      (q j).comp (LinearMap.lTensor I (f i j h)) =
+        (LinearMap.lTensor R (f i j h)).comp (q i) := by
+    intro i j h
+    apply LinearMap.ext
+    intro x
+    induction x using TensorProduct.induction_on with
+    | zero => rfl
+    | add x y ihx ihy => rw [map_add, map_add, ihx, ihy]
+    | tmul a x => simp [q]
+  let Q : Module.DirectLimit (fun i => I ⊗[R] G i)
+      (fun i j h => LinearMap.lTensor I (f i j h)) →ₗ[R]
+      Module.DirectLimit (fun i => R ⊗[R] G i)
+        (fun i j h => LinearMap.lTensor R (f i j h)) :=
+    Module.DirectLimit.map q hq
+  have hQ : Function.Injective Q := by
+    intro x y hxy
+    have hzero : Q (x - y) = 0 := by
+      rw [map_sub, sub_eq_zero.mpr hxy]
+    obtain ⟨i, t, ht⟩ := Module.DirectLimit.exists_of (x - y)
+    have hzero' : Q (Module.DirectLimit.of R ι _ _ i t) = 0 := by
+      rw [ht]
+      exact hzero
+    have hqzero :
+        Module.DirectLimit.of R ι (fun i => R ⊗[R] G i)
+          (fun i j h => LinearMap.lTensor R (f i j h)) i (q i t) = 0 := by
+      simpa [Q] using hzero'
+    obtain ⟨j, hij, htrans⟩ :=
+      Module.DirectLimit.of.zero_exact hqzero
+    have hqtrans : q j ((LinearMap.lTensor I (f i j hij)) t) = 0 := by
+      rw [show q j ((LinearMap.lTensor I (f i j hij)) t) =
+          (LinearMap.lTensor R (f i j hij)) (q i t) by
+            exact LinearMap.congr_fun (hq i j hij) t]
+      exact htrans
+    have htzero : (LinearMap.lTensor I (f i j hij)) t = 0 :=
+      ((Module.Flat.iff_rTensor_injective'.mp (hflat j) I) hqtrans)
+    have hsourcezero :
+        Module.DirectLimit.of R ι (fun i => I ⊗[R] G i)
+          (fun i j h => LinearMap.lTensor I (f i j h)) i t = 0 := by
+      rw [← Module.DirectLimit.of_f (R := R) (ι := ι)
+        (G := fun i => I ⊗[R] G i)
+        (f := fun i j h => LinearMap.lTensor I (f i j h))
+        (i := i) (j := j) (hij := hij), htzero, map_zero]
+    have hsub : x - y = 0 := by
+      rw [← ht, hsourcezero]
+    exact sub_eq_zero.mp hsub
+  let e : Module.DirectLimit G f ≃ₗ[R] DirectLimit G f :=
+    Module.DirectLimit.linearEquiv G f
+  let eI : I ⊗[R] Module.DirectLimit G f ≃ₗ[R]
+      Module.DirectLimit (fun i => I ⊗[R] G i)
+        (fun i j h => LinearMap.lTensor I (f i j h)) :=
+    TensorProduct.directLimitRight f I
+  let eR : R ⊗[R] Module.DirectLimit G f ≃ₗ[R]
+      Module.DirectLimit (fun i => R ⊗[R] G i)
+        (fun i j h => LinearMap.lTensor R (f i j h)) :=
+    TensorProduct.directLimitRight f R
+  have hcomm :
+      Q.comp eI.toLinearMap =
+        eR.toLinearMap.comp (I.subtype.rTensor (Module.DirectLimit G f)) := by
+    apply LinearMap.ext
+    intro x
+    induction x using TensorProduct.induction_on with
+    | zero => rfl
+    | add x y ihx ihy => rw [map_add, map_add, ihx, ihy]
+    | tmul a x =>
+        induction x using Module.DirectLimit.induction_on with
+        | ih i x => simp [Q, eI, eR, q]
+  have hD : Function.Injective (I.subtype.rTensor (Module.DirectLimit G f)) := by
+    intro x y hxy
+    apply eI.injective
+    apply hQ
+    change (Q.comp eI.toLinearMap) x = (Q.comp eI.toLinearMap) y
+    rw [hcomm]
+    simpa only [LinearMap.comp_apply] using congrArg (fun z => eR.toLinearMap z) hxy
+  let uI := e.symm.toLinearMap.lTensor I
+  let uR := e.symm.toLinearMap.lTensor R
+  have huI : Function.Injective uI := by
+    have hleft : (e.toLinearMap.lTensor I).comp uI = LinearMap.id := by
+      apply LinearMap.ext
+      intro x
+      induction x using TensorProduct.induction_on with
+      | zero => rfl
+      | add x y ihx ihy => rw [map_add, map_add, ihx, ihy]
+      | tmul a x => simp [uI, e]
+    intro x y hxy
+    have h' := congrArg (fun z => (e.toLinearMap.lTensor I) z) hxy
+    change ((e.toLinearMap.lTensor I).comp uI) x =
+      ((e.toLinearMap.lTensor I).comp uI) y at h'
+    rw [hleft, LinearMap.id_apply] at h'
+    exact h'
+  have hucomm :
+      uR.comp (I.subtype.rTensor (DirectLimit G f)) =
+        (I.subtype.rTensor (Module.DirectLimit G f)).comp uI := by
+    apply LinearMap.ext
+    intro x
+    induction x using TensorProduct.induction_on with
+    | zero => rfl
+    | add x y ihx ihy => rw [map_add, map_add, ihx, ihy]
+    | tmul a x => simp [uI, uR, e]
+  exact fun x y hxy => by
+    apply huI
+    apply hD
+    have h' := congrArg (fun z => uR z) hxy
+    change (uR.comp (I.subtype.rTensor (DirectLimit G f))) x =
+      (uR.comp (I.subtype.rTensor (DirectLimit G f))) y at h'
+    rw [hucomm, LinearMap.comp_apply] at h'
+    exact h'
 
 theorem module_flat_trans
     {R S M : Type*} [CommRing R] [CommRing S] [Algebra R S]
@@ -110,7 +284,8 @@ theorem ringHom_faithfullyFlat_comp
     {f : R →+* S} {g : S →+* T}
     (hf : RingHom.FaithfullyFlat f) (hg : RingHom.FaithfullyFlat g) :
     RingHom.FaithfullyFlat (g.comp f) := by
-  sorry
+  algebraize [f, g, g.comp f]
+  exact Module.FaithfullyFlat.trans R S T
 
 theorem flat_criteria
     {R : Type u} {M : Type v} [CommRing R] [AddCommGroup M] [Module R M] :
@@ -121,7 +296,10 @@ theorem flat_criteria
         Injective f → Injective (f.rTensor M),
       ∀ (I : Ideal R), Injective (I.subtype.rTensor M),
       ∀ (I : Ideal R), I.FG → Injective (I.subtype.rTensor M)] := by
-  sorry
+  tfae_have 1 ↔ 2 := Module.Flat.iff_rTensor_preserves_injective_linearMap
+  tfae_have 1 ↔ 3 := Module.Flat.iff_rTensor_injective'
+  tfae_have 1 ↔ 4 := Module.Flat.iff_rTensor_injective
+  tfae_finish
 
 end Flatness
 

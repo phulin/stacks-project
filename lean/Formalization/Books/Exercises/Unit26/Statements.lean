@@ -3164,14 +3164,14 @@ theorem kernel_of_graded_map_is_locally_finite
     [AddCommGroup M] [AddCommGroup N]
     [Module A M] [Module A N] [DecidableEq ι]
     (G : GradedModuleData A M ι) (H : GradedModuleData A N ι)
-    (hG : G.LocallyFinite) (hH : H.LocallyFinite)
+    (hG : G.LocallyFinite) (_hH : H.LocallyFinite)
     (f : GradedLinearMap G H) :
     ∃ K : GradedModuleData A (LinearMap.ker f.toLinearMap) ι,
       (∀ n : ι, K.component n = f.kernelComponent n) ∧ K.LocallyFinite := by
   classical
   let p : Submodule A M := LinearMap.ker f.toLinearMap
   letI : DirectSum.Decomposition (fun n => G.component n) := G.decomposition
-  letI : DirectSum.Decomposition (fun n => H.component n) := H.decomposition
+  let : DirectSum.Decomposition (fun n => H.component n) := H.decomposition
   have hmap_component : ∀ (x : M) (n : ι),
       f.toLinearMap (DirectSum.decompose (fun n => G.component n) x n : M) =
         (DirectSum.decompose (fun n => H.component n)
@@ -3201,16 +3201,15 @@ theorem kernel_of_graded_map_is_locally_finite
           (DirectSum.decompose (fun n => G.component n) (x + y) n : M) =
             (DirectSum.decompose (fun n => G.component n) x n : M) +
               (DirectSum.decompose (fun n => G.component n) y n : M) := by
-        simpa using congrArg (fun z : (⨁ n, G.component n) => (z n : M))
-          (DirectSum.decompose_add (fun n => G.component n) x y)
+        rw [DirectSum.decompose_add]
+        simp
       have hHadd :
           (DirectSum.decompose (fun n => H.component n)
             (f.toLinearMap x + f.toLinearMap y) n : N) =
             (DirectSum.decompose (fun n => H.component n) (f.toLinearMap x) n : N) +
               (DirectSum.decompose (fun n => H.component n) (f.toLinearMap y) n : N) := by
-        simpa using congrArg (fun z : (⨁ n, H.component n) => (z n : N))
-          (DirectSum.decompose_add (fun n => H.component n)
-            (f.toLinearMap x) (f.toLinearMap y))
+        rw [DirectSum.decompose_add]
+        simp
       calc
         f.toLinearMap
             (DirectSum.decompose (fun n => G.component n) (x + y) n : M) =
@@ -3284,7 +3283,7 @@ theorem kernel_of_graded_map_is_locally_finite
   · intro n
     rfl
   · intro n
-    letI : Module.Finite A (G.component n) := hG n
+    let : Module.Finite A (G.component n) := hG n
     let q : Kc n →ₗ[A] G.component n :=
       { toFun := fun x => ⟨(x : p).1, x.2⟩
         map_add' := by intro x y; rfl
@@ -3334,10 +3333,10 @@ theorem weighted_polynomial_hilbert_function (k : Type u) [Field k] (n : ℕ) :
       (MvPolynomial.weightedHomogeneousSubmodule k twoThreeWeights n) =
     weightedTwoThreeFormula n
   let S : Set (Fin 2 →₀ ℕ) := {d | Finsupp.weight twoThreeWeights d = n}
-  haveI : Finite S :=
+  have : Finite S :=
     (Finsupp.finite_of_nat_weight_eq twoThreeWeights
       (by intro x; fin_cases x <;> simp [twoThreeWeights]) n).to_subtype
-  letI := Fintype.ofFinite S
+  let := Fintype.ofFinite S
   have hsub :
       MvPolynomial.weightedHomogeneousSubmodule k twoThreeWeights n =
         MvPolynomial.restrictSupport k S := by
@@ -3355,7 +3354,7 @@ theorem weighted_polynomial_hilbert_function (k : Type u) [Field k] (n : ℕ) :
     simp [S, T, e, Finsupp.weight_eq_sum, twoThreeWeights, finTwoArrowEquiv]
     omega
   let eT : S ≃ T := e.subtypeEquiv he
-  letI : Fintype T := Fintype.ofEquiv S eT
+  let : Fintype T := Fintype.ofEquiv S eT
   have hcardST : Fintype.card S = Fintype.card T := Fintype.card_congr eT
   calc
     Module.finrank k
@@ -3463,7 +3462,7 @@ private theorem graded_quotient_data
   classical
   let C : ℕ → Submodule A M := fun n => G.component n
   let Q : ℕ → Submodule A N := fun n => (C n).map q
-  letI : DirectSum.Decomposition C := hdec
+  let : DirectSum.Decomposition C := hdec
   let r : ∀ n : ℕ, C n →ₗ[A] Q n := fun n =>
     { toFun := fun x => ⟨q x, ⟨x, x.property, rfl⟩⟩
       map_add' := by
@@ -3572,7 +3571,7 @@ theorem truncated_polynomial_graded_quotient_exists (k : Type u) [Field k] :
         ∀ n : ℕ,
           fieldDimensionHilbertFunction G n = truncatedPolynomialHilbertFunction n := by
   classical
-  letI : GradedAlgebra
+  let : GradedAlgebra
       (MvPolynomial.weightedHomogeneousSubmodule k twoThreeWeights) :=
     MvPolynomial.weightedGradedAlgebra k twoThreeWeights
   have hI : (truncatedPolynomialIdeal k).IsHomogeneous
@@ -3597,14 +3596,14 @@ theorem truncated_polynomial_graded_quotient_exists (k : Type u) [Field k] :
     exact Ideal.Quotient.eq_zero_iff_mem
   have hqsurj : Function.Surjective q := by
     exact Ideal.Quotient.mkₐ_surjective k (truncatedPolynomialIdeal k)
-  letI : DirectSum.Decomposition
+  let : DirectSum.Decomposition
       (fun n : ℕ => (weightedPolynomialGradedModule k).component n) :=
     (weightedPolynomialGradedModule k).decomposition
   rcases graded_quotient_data (weightedPolynomialGradedModule k)
       (truncatedPolynomialIdeal k) q hq hqsurj hI with ⟨G, hG⟩
   have hfinite : ∀ n : ℕ, Module.Finite k (G.component n) := by
     intro n
-    letI : Module.Finite k
+    let : Module.Finite k
         (MvPolynomial.weightedHomogeneousSubmodule k twoThreeWeights n) :=
       weighted_polynomial_grading_locally_finite k n
     rw [hG n]
@@ -3647,7 +3646,7 @@ theorem truncated_polynomial_graded_quotient_exists (k : Type u) [Field k] :
     by_cases h20 : 2 ≤ d 0
     · refine ⟨Finsupp.single 0 2, by simp [s], ?_⟩
       intro i
-      fin_cases i <;> simp <;> omega
+      fin_cases i <;> simp; omega
     by_cases h11 : 1 ≤ d 1
     · refine ⟨Finsupp.single 0 1 + Finsupp.single 1 1, by simp [s], ?_⟩
       intro i
@@ -3735,13 +3734,13 @@ theorem truncated_polynomial_graded_quotient_exists (k : Type u) [Field k] :
     · left
       apply Finsupp.ext
       intro i
-      fin_cases i <;> simp [h0] at hd ⊢ <;> omega
+      fin_cases i <;> simp [h0] at hd ⊢; omega
     · right
       by_cases h20 : 2 ≤ d 0
       · refine ⟨Finsupp.single 0 2, ?_, ?_⟩
         · simp [s]
         · intro i
-          fin_cases i <;> simp <;> omega
+          fin_cases i <;> simp; omega
       · have hone : d 0 = 1 := by omega
         exfalso
         omega
@@ -3764,7 +3763,6 @@ theorem truncated_polynomial_graded_quotient_exists (k : Type u) [Field k] :
           (MvPolynomial.monomial 0 (1 : k)) := by
     apply le_antisymm
     · rintro y ⟨p, hp, rfl⟩
-      change q p ∈ _
       rw [p.as_sum, map_sum]
       apply Submodule.sum_mem
       intro d hd
@@ -3791,7 +3789,6 @@ theorem truncated_polynomial_graded_quotient_exists (k : Type u) [Field k] :
           (MvPolynomial.monomial (Finsupp.single 0 1) (1 : k)) := by
     apply le_antisymm
     · rintro y ⟨p, hp, rfl⟩
-      change q p ∈ _
       rw [p.as_sum, map_sum]
       apply Submodule.sum_mem
       intro d hd
@@ -3822,7 +3819,6 @@ theorem truncated_polynomial_graded_quotient_exists (k : Type u) [Field k] :
           (MvPolynomial.monomial (Finsupp.single 1 c) (1 : k)) := by
     apply le_antisymm
     · rintro y ⟨p, hp, rfl⟩
-      change q p ∈ _
       rw [p.as_sum, map_sum]
       apply Submodule.sum_mem
       intro d hd
@@ -3933,7 +3929,7 @@ theorem truncated_polynomial_graded_quotient_exists (k : Type u) [Field k] :
     by_cases hdiv : 0 < n ∧ 3 ∣ n
     · rcases hdiv.2 with ⟨c, rfl⟩
       simpa [hdiv, hn0, hn2] using hdimc c
-    · letI : Module.Finite k (G.component n) := hfinite n
+    · let : Module.Finite k (G.component n) := hfinite n
       have hbad : ¬(n = 0 ∨ n = 2 ∨ (0 < n ∧ 3 ∣ n)) := by
         intro h
         rcases h with h | h | h
@@ -4013,7 +4009,7 @@ theorem hypersurface_graded_quotient_exists (k : Type u) [Field k]
           fieldDimensionHilbertFunction G n = hypersurfaceHilbertFunction d n := by
   classical
   let f : MvPolynomial (Fin 3) k := hypersurfacePolynomial k d
-  letI : GradedAlgebra
+  let : GradedAlgebra
       (MvPolynomial.homogeneousSubmodule (Fin 3) k) :=
     MvPolynomial.gradedAlgebra
   have hf : MvPolynomial.IsHomogeneous f d := by
@@ -4039,7 +4035,7 @@ theorem hypersurface_graded_quotient_exists (k : Type u) [Field k]
       have h'2 := congrArg (fun e => e 2) h'
       simp [hd.ne'] at h'0 h'2
     have hc' : (1 : k) = 0 := by
-      simpa [h10, h20] using hc
+      simp [h10, h20] at hc
     exact (one_ne_zero : (1 : k) ≠ 0) hc'
   let H : GradedModuleData k (MvPolynomial (Fin 3) k) ℕ :=
     { component := MvPolynomial.homogeneousSubmodule (Fin 3) k
@@ -4062,10 +4058,10 @@ theorem hypersurface_graded_quotient_exists (k : Type u) [Field k]
     have hSet : (T : Set (Fin 3 →₀ ℕ)) = S := by
       ext z
       exact hST z
-    haveI : Finite S := by
+    have : Finite S := by
       rw [← hSet]
       exact Set.toFinite _
-    letI := Fintype.ofFinite S
+    let := Fintype.ofFinite S
     have hsub : H.component m = MvPolynomial.restrictSupport k S := by
       rw [show H.component m = MvPolynomial.homogeneousSubmodule (Fin 3) k m by rfl]
       rw [MvPolynomial.homogeneousSubmodule_eq_finsupp_supported]
@@ -4185,7 +4181,7 @@ theorem hypersurface_graded_quotient_exists (k : Type u) [Field k]
     ext p
     change q p = 0 ↔ p ∈ Ideal.span {f}
     exact hq p
-  letI : DirectSum.Decomposition (fun n : ℕ => H.component n) := H.decomposition
+  let : DirectSum.Decomposition (fun n : ℕ => H.component n) := H.decomposition
   rcases graded_quotient_data H (Ideal.span {f}) q hq hqsurj hI with ⟨G, hG⟩
   have hintersection (n : ℕ) (hdn : d ≤ n) :
       LinearMap.range
@@ -4202,7 +4198,7 @@ theorem hypersurface_graded_quotient_exists (k : Type u) [Field k]
           (f * (g : MvPolynomial (Fin 3) k)) n
         have hg : MvPolynomial.IsHomogeneous
             (g : MvPolynomial (Fin 3) k) (n - d) := g.property
-        convert hf.mul hg using 1 <;> omega
+        convert hf.mul hg using 1; omega
       · exact Ideal.mem_span_singleton'.mpr ⟨(g : MvPolynomial (Fin 3) k), by
           change (g : MvPolynomial (Fin 3) k) * f =
             f * (g : MvPolynomial (Fin 3) k)
@@ -4239,7 +4235,7 @@ theorem hypersurface_graded_quotient_exists (k : Type u) [Field k]
           Module.finrank k (H.component n) -
             Module.finrank k (H.component (n - d))
         else Module.finrank k (H.component n) := by
-    letI : Module.Finite k (H.component n) := hfiniteH n
+    let : Module.Finite k (H.component n) := hfiniteH n
     let qn : H.component n →ₗ[k] hypersurfaceRing k d :=
       q.domRestrict (H.component n)
     let K : Submodule k (MvPolynomial (Fin 3) k) :=
@@ -4296,7 +4292,7 @@ theorem hypersurface_graded_quotient_exists (k : Type u) [Field k]
       omega
   refine ⟨G, ?_, ?_, ?_⟩
   · intro n
-    letI : Module.Finite k (H.component n) := hfiniteH n
+    let : Module.Finite k (H.component n) := hfiniteH n
     rw [hG n]
     exact Module.Finite.map (H.component n) q
   · intro n

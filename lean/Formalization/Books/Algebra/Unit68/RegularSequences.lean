@@ -2806,7 +2806,7 @@ private theorem sublist_weaklyRegular_of_polynomial_weaklyRegular
       | cons a as ih =>
           cases r with
           | zero => simp
-          | succ r => simp [ih]
+          | succ r => simp
     exact aux (k : ℕ)
   rw [htop]
   rw [← htake_map]

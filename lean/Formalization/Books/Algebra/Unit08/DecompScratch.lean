@@ -27,17 +27,14 @@ def decompCocone {J : Type v} [Category.{v'} J]
     Cocone F := by
   let G : ConnectedComponents J → ModuleCat.{max v v' w} R := componentColim F
   let O := colimit (Discrete.functor G)
-  let ι : F ⟶ (Functor.const (D J)).obj O :=
-    Sigma.natTrans (fun j => {
-      app := fun x => colimit.ι (inclusion j ⋙ F) x ≫
-        colimit.ι (Discrete.functor G) (Discrete.mk j)
-      naturality := by
-        intro X Y f
-        have h := congrArg (fun q =>
-            q ≫ colimit.ι (Discrete.functor G) (Discrete.mk j))
-          (colimit.w (inclusion j ⋙ F) f)
-        simpa [O, Category.assoc] using h })
-  exact { pt := O, ι := ι }
+  refine { pt := O, ι := ?_ }
+  refine Sigma.natTrans (fun j => ?_)
+  refine { app := fun x => colimit.ι (inclusion j ⋙ F) x ≫
+      colimit.ι (Discrete.functor G) (Discrete.mk j), naturality := ?_ }
+  intro X Y f
+  simpa [O, Category.assoc] using congrArg (fun q =>
+      q ≫ colimit.ι (Discrete.functor G) (Discrete.mk j))
+    (colimit.w (inclusion j ⋙ F) f)
 
 set_option backward.defeqAttrib.useBackward true in
 set_option backward.isDefEq.respectTransparency false in
@@ -53,13 +50,12 @@ def decompIsColimit {J : Type v} [Category.{v'} J]
           s.whisker (inclusion j.as)
         exact colimit.desc (inclusion j.as ⋙ F) c))
     exact colimit.desc (Discrete.functor G) cG
-  refine { desc := fun s => desc s, fac := ?_, uniq := ?_ }
+  refine { desc := desc, fac := ?_, uniq := ?_ }
   · intro s
     rintro ⟨j, X⟩
     dsimp [decompCocone, desc, G]
     change _ = s.ι.app ((inclusion j).obj X)
-    simp only [Category.assoc, Discrete.natTrans_app, colimit.ι_desc]
-    rfl
+    simp [Category.assoc, Discrete.natTrans_app, colimit.ι_desc]
   · intro s m hm
     dsimp [decompCocone] at m hm ⊢
     apply colimit.hom_ext
@@ -93,10 +89,11 @@ example {J : Type v} [Category.{v'} J]
   let i : e ⋙ CategoryTheory.Sigma.desc H ≅ F :=
     i₀.symm ≪≫ Functor.isoWhiskerRight
       (decomposedEquiv (J := J)).counitIso F
-  exact ⟨(HasColimit.isoOfNatIso i).symm ≪≫
+  let k := (HasColimit.isoOfNatIso i).symm ≪≫
     Functor.Final.colimitIso e (CategoryTheory.Sigma.desc H) ≪≫
       (colimit.isColimit (CategoryTheory.Sigma.desc H)).coconePointUniqueUpToIso
-        hH⟩
+        hH
+  exact ⟨k⟩
 
 end
 

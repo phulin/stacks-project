@@ -127,7 +127,48 @@ unrelated definition. -/
 theorem gradedRightModuleHomogeneous_addCommGroup_nonempty
     (L M : GradedRightModule (R := R) (A := A)) (n : ℤ) :
     Nonempty (AddCommGroup (GradedRightModuleHomogeneous L M n)) := by
-  sorry
+  have hzero : ∀ {i j k : ℤ} (h : i + j = k) (a : A j),
+      GradedRightModule.rightActionAt M h (0 : M.component i) a = 0 := by
+    intro i j k h a
+    subst k
+    exact M.action_zero_left a
+  have hadd : ∀ {i j k : ℤ} (h : i + j = k)
+      (x x' : M.component i) (a : A j),
+      GradedRightModule.rightActionAt M h (x + x') a =
+        GradedRightModule.rightActionAt M h x a +
+          GradedRightModule.rightActionAt M h x' a := by
+    intro i j k h x x' a
+    subst k
+    exact M.action_add_left x x' a
+  have hsmul : ∀ {i j k : ℤ} (h : i + j = k) (r : R)
+      (x : M.component i) (a : A j),
+      GradedRightModule.rightActionAt M h (r • x) a =
+        r • GradedRightModule.rightActionAt M h x a := by
+    intro i j k h r x a
+    subst k
+    exact M.action_smul_left r x a
+  let P : Submodule R (GradedRightModuleHomogeneousFamily L M n) :=
+    { carrier := {f | IsGradedRightModuleMap L M f}
+      zero_mem' := by
+        intro s i a m
+        dsimp [IsGradedRightModuleMap]
+        simpa only [Pi.zero_apply, LinearMap.zero_apply] using
+          (hzero (i := s.1.1 - i) (j := i) (k := s.1.1)
+            (h := by omega) a).symm
+      add_mem' := by
+        intro f g hf hg s i a m
+        dsimp [IsGradedRightModuleMap] at hf hg ⊢
+        rw [hf, hg]
+        convert (hadd (i := s.1.1 - i) (j := i) (k := s.1.1)
+          (h := by omega) _ _ a).symm using 1 <;> apply Subsingleton.elim
+      smul_mem' := by
+        intro r f hf s i a m
+        dsimp [IsGradedRightModuleMap] at hf ⊢
+        rw [hf]
+        convert (hsmul (i := s.1.1 - i) (j := i) (k := s.1.1)
+          (h := by omega) r _ a).symm using 1 <;> apply Subsingleton.elim }
+  change Nonempty (AddCommGroup P)
+  exact ⟨inferInstance⟩
 
 noncomputable instance gradedRightModuleHomogeneousAddCommGroup
     (L M : GradedRightModule (R := R) (A := A)) (n : ℤ) :
@@ -160,7 +201,121 @@ theorem gradedRightModuleHomogeneousCompFamily_is_map
     (g : GradedRightModuleHomogeneous L M j) :
     IsGradedRightModuleMap K M
       (gradedRightModuleHomogeneousCompFamily i j f g) := by
-  sorry
+  intro s k a m
+  dsimp [IsGradedRightModuleMap]
+  simp only [gradedRightModuleHomogeneousCompFamily, LinearMap.comp_apply]
+  have hrightActionAt :
+      ∀ {x y z d : ℤ} (hxy : x = y)
+        (h1 : x + d = z) (h2 : y + d = z)
+        (m : L.component x) (a : A d),
+        GradedRightModule.rightActionAt L h1 m a =
+          GradedRightModule.rightActionAt L h2
+            (cast (hxy ▸ rfl) m) a := by
+    intro x y z d hxy h1 h2 m a
+    subst y
+    rfl
+  let sf : GradedDegreePair i :=
+    ⟨(-(j - s.1.1), s.1.2), by omega⟩
+  let sf2 : GradedDegreePair i :=
+    ⟨(-(j - s.1.1) - k, s.1.2 + k), by omega⟩
+  let sg : GradedDegreePair j :=
+    ⟨(s.1.1, j - s.1.1), by omega⟩
+  let sg' : GradedDegreePair j :=
+    ⟨(s.1.1 - k, j - (s.1.1 - k)), by omega⟩
+  have hf := f.2 sf k a m
+  dsimp [sf] at hf
+  let ml : L.component (-((j - s.1.1) + k)) := by
+    convert (f.1 sf2 m) using 1
+    change -(j - s.1.1 + k) = -(j - s.1.1) - k
+    omega
+  have hg := g.2 sg k a ml
+  dsimp [sg, ml] at hg ⊢
+  rw [hf]
+  convert hg using 1
+  · congr 1
+    convert (hrightActionAt
+      (x := -(j - s.1.1) - k)
+      (y := -((j - s.1.1) + k))
+      (z := -(j - s.1.1))
+      (d := k)
+      (hxy := by omega)
+      (h1 := by omega)
+      (h2 := by omega)
+      (m := (f.1
+        ⟨(-(j - s.1.1) - k, s.1.2 + k), by omega⟩) m) a) using 1
+  ·
+    have h1 : j - (s.1.1 - k) = j - s.1.1 + k := by omega
+    have h2 : -(j - (s.1.1 - k)) = -(j - s.1.1) - k := by omega
+    have hsg :
+        (⟨(s.1.1 - k, j - (s.1.1 - k)), by omega⟩ : GradedDegreePair j) =
+          ⟨(s.1.1 - k, j - s.1.1 + k), by omega⟩ := by
+      apply Subtype.ext
+      apply Prod.ext
+      · rfl
+      · exact h1
+    have hsf :
+        (⟨(-(j - (s.1.1 - k)), s.1.2 + k), by omega⟩ : GradedDegreePair i) =
+          ⟨(-(j - s.1.1) - k, s.1.2 + k), by omega⟩ := by
+      apply Subtype.ext
+      apply Prod.ext
+      · exact h2
+      · rfl
+    have hfamily_f :
+        ∀ {u v : GradedDegreePair i} (huv : u = v)
+          {x : K.component (-u.1.2)} {y : K.component (-v.1.2)},
+          HEq x y → HEq (f.1 u x) (f.1 v y) := by
+      intro u v huv x y hxy
+      cases huv
+      cases hxy
+      rfl
+    have hfamily_g :
+        ∀ {u v : GradedDegreePair j} (huv : u = v)
+          {x : L.component (-u.1.2)} {y : L.component (-v.1.2)},
+          HEq x y → HEq (g.1 u x) (g.1 v y) := by
+      intro u v huv x y hxy
+      cases huv
+      cases hxy
+      rfl
+    have hcast_heq :
+        ∀ {X Y : Type _} (h : X = Y) (x : X), HEq x (cast h x) := by
+      intro X Y h x
+      cases h
+      rfl
+    have hcastEq :
+        L.component (sf2.1).1 =
+          L.component (-(⟨(s.1.1 - k, j - s.1.1 + k), by omega⟩ :
+            GradedDegreePair j).1.2) := by
+      change L.component (-(j - s.1.1) - k) =
+        L.component (-(j - s.1.1 + k))
+      congr 1 <;> omega
+    have hrightActionAt_heq :
+        ∀ {x y z d : ℤ} (hxy : x = y)
+          (h1 : x + d = z) (h2 : y + d = z)
+          {u : M.component x} {v : M.component y}, HEq u v →
+          ∀ a : A d,
+            HEq (GradedRightModule.rightActionAt M h1 u a)
+              (GradedRightModule.rightActionAt M h2 v a) := by
+      intro x y z d hxy h1 h2 u v huv a
+      subst y
+      cases huv
+      rfl
+    have hfm : HEq
+        ((f.1 ⟨(-(j - (s.1.1 - k)), s.1.2 + k), by omega⟩) m)
+          (cast hcastEq ((f.1 sf2) m)) := by
+      dsimp [sf2]
+      exact (hfamily_f hsf (heq_of_eq rfl)).trans
+        (hcast_heq hcastEq ((f.1 sf2) m))
+    have hgm : HEq
+        ((g.1 ⟨(s.1.1 - k, j - (s.1.1 - k)), by omega⟩)
+          ((f.1 ⟨(-(j - (s.1.1 - k)), s.1.2 + k), by omega⟩) m))
+          ((g.1 ⟨(s.1.1 - k, j - s.1.1 + k), by omega⟩)
+            (cast hcastEq ((f.1 sf2) m))) := by
+      apply hfamily_g hsg
+      exact hfm
+    apply eq_of_heq
+    apply hrightActionAt_heq (hxy := rfl) (h1 := by omega) (h2 := by omega)
+      (a := a)
+    exact hgm
 
 def gradedRightModuleHomogeneousComp
     {K L M : GradedRightModule (R := R) (A := A)} (i j : ℤ)

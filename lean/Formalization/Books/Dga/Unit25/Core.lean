@@ -66,7 +66,49 @@ theorem directSum_decomposition_nonempty
     [CommRing R] [DecidableEq ι]
     [∀ i, AddCommGroup (M i)] [∀ i, Module R (M i)] :
     Nonempty (DirectSum.Decomposition (fun n => directSumComponent R M n)) := by
-  sorry
+  let φ : ∀ n : ι, M n →ₗ[R] directSumComponent R M n :=
+    fun n =>
+      { toFun := fun x => ⟨DirectSum.lof R ι M n x, ⟨x, rfl⟩⟩
+        map_add' := by
+          intro x y
+          apply Subtype.ext
+          simp
+        map_smul' := by
+          intro r x
+          apply Subtype.ext
+          simp }
+  let d : (DirectSum ι M) →ₗ[R] ⨁ n, directSumComponent R M n :=
+    DirectSum.lmap φ
+  refine ⟨DirectSum.Decomposition.ofLinearMap
+    (fun n => directSumComponent R M n) d ?_ ?_⟩
+  · apply DirectSum.linearMap_ext R
+    intro n
+    apply LinearMap.ext
+    intro x
+    change (DirectSum.coeLinearMap (fun n => directSumComponent R M n))
+      (DirectSum.lmap φ (DirectSum.lof R ι M n x)) = DirectSum.lof R ι M n x
+    rw [DirectSum.lmap_lof, DirectSum.coeLinearMap_lof]
+    rfl
+  · apply DirectSum.linearMap_ext R
+    intro n
+    apply LinearMap.ext
+    intro x
+    rcases x.property with ⟨y, hy⟩
+    have hx : (⟨DirectSum.lof R ι M n y, ⟨y, rfl⟩⟩ :
+        directSumComponent R M n) = x := Subtype.ext hy
+    rw [← hx]
+    change DirectSum.lmap φ
+      (DirectSum.coeLinearMap (fun n => directSumComponent R M n)
+        (DirectSum.lof R ι (fun n => directSumComponent R M n) n
+          (⟨DirectSum.lof R ι M n y, ⟨y, rfl⟩⟩))) =
+      DirectSum.lof R ι (fun n => directSumComponent R M n) n
+        (⟨DirectSum.lof R ι M n y, ⟨y, rfl⟩⟩)
+    rw [DirectSum.coeLinearMap_lof, DirectSum.lmap_lof]
+    change DirectSum.lof R ι (fun n => directSumComponent R M n) n
+      (⟨DirectSum.lof R ι M n y, ⟨y, rfl⟩⟩) =
+      DirectSum.lof R ι (fun n => directSumComponent R M n) n
+        (⟨DirectSum.lof R ι M n y, ⟨y, rfl⟩⟩)
+    rfl
 
 /-- Package the canonical direct-sum grading as graded-module data. -/
 noncomputable def directSumGradedModuleData

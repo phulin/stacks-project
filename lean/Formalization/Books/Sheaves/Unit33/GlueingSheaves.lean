@@ -11,7 +11,7 @@ import Mathlib.Topology.Sheaves.SheafCondition.UniqueGluing
 /-!
 # Sheaves on Spaces, Chapter 33: Glueing sheaves
 
-The source section is `books/sheaves.tex:5070-5337`.  Restrictions to open
+The source section is `books/sheaves.tex:5070-5327`.  Restrictions to open
 subspaces and their coherence are expressed with Mathlib's canonical sheaf
 pullback functors.  The category of cover glueing data below is the
 source-facing packaging of the local sheaves, transition isomorphisms, and
@@ -793,6 +793,14 @@ theorem exists_omoduleGlueingSolution
     (hU : TopologicalSpace.IsOpenCover U) (D : OModuleGlueingData O U) :
     Nonempty (OModuleGlueingSolution D) := by
   sorry
+
+/-- The source-facing existence statement for gluing sheaves of modules over
+   a fixed sheaf of rings. -/
+theorem glue_omodule_sheaves
+    {O : RingSheaf.{v, v} X} {U : ι → Opens X}
+    (hU : TopologicalSpace.IsOpenCover U) (D : OModuleGlueingData O U) :
+    Nonempty (OModuleGlueingSolution D) :=
+  exists_omoduleGlueingSolution hU D
 
 /-- Glueing data for sheaves valued in any of Mathlib's concrete algebraic
 categories satisfying the standard pullback hypotheses. -/

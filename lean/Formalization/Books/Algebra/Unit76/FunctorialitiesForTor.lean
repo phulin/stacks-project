@@ -13,9 +13,9 @@ import Mathlib.RingTheory.RingHom.Flat
 
 This file records the change-of-rings and filtered-colimit interfaces for the
 Tor construction from Chapter 75.  Restriction and extension of scalars are
-Mathlib's canonical `ModuleCat` functors.  The source's naturality and
-flat-base-change assertions are retained as fields of one canonical
-change-of-rings datum.
+Mathlib's canonical `ModuleCat` functors.  The source's naturality assertions
+are retained as fields of one change-of-rings datum; flat base change remains
+a separate theorem.
 -/
 
 namespace Formalization.Books.Algebra.Unit76
@@ -276,8 +276,7 @@ theorem exists_target_tor_module {R R' : Type u} [CommRing R] [CommRing R']
 
 /-- The complete source-faithful change-of-rings datum for Tor.  The two
 map fields are the natural maps in the source's second and third items;
-the remaining fields state naturality in the module variables and the
-flat-base-change property of the first map. -/
+the remaining fields state naturality in the module variables. -/
 structure TorChangeOfRingsData {R R' : Type u} [CommRing R] [CommRing R']
     (f : R →+* R') where
   target : ∀ (M : ModuleCat.{u} R) (N' : ModuleCat.{u} R') (i : ℕ),
@@ -332,13 +331,10 @@ structure TorChangeOfRingsData {R R' : Type u} [CommRing R] [CommRing R']
             ((ModuleCat.restrictScalars f).map ψ) i x) ∧
           ψ' ≫ map_mixed M N'₂ i =
           map_mixed M N'₁ i ≫ torMapSecond (extendedModule f M) N'₁ N'₂ ψ i
-  flat_base_change :
-    ∀ (_hf : RingHom.Flat f) (M N : ModuleCat.{u} R) (i : ℕ),
-      IsIso ((ModuleCat.extendScalars f).map (map_both M N i) ≫
-        (ModuleCat.extendRestrictScalarsAdj f).counit.app
-          (extendedTor f M N i))
+/-! The flat-base-change assertion is a separate theorem below; it is not
+part of the data witnessing the three source items. -/
 
-/-- Existence of the natural change-of-rings data, including flat base change. -/
+/-- Existence of the natural change-of-rings data. -/
 theorem exists_tor_change_of_rings_data {R R' : Type u} [CommRing R] [CommRing R']
     (f : R →+* R') : Nonempty (TorChangeOfRingsData f) := by
   sorry
@@ -383,8 +379,12 @@ noncomputable def torFlatBaseChangeMap {R R' : Type u} [CommRing R] [CommRing R'
 theorem flat_base_change_tor {R R' : Type u} [CommRing R] [CommRing R']
     (f : R →+* R') (hf : RingHom.Flat f) (M N : ModuleCat.{u} R) (i : ℕ) :
     IsIso (torFlatBaseChangeMap f M N i) := by
+  /-
+  Prior attempt:
   unfold torFlatBaseChangeMap canonicalTorChangeOfRingsMap
   exact (canonicalTorChangeOfRingsData f).flat_base_change hf M N i
+  -/
+  sorry
 
 /-! ## Filtered colimits -/
 

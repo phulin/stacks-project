@@ -43,19 +43,8 @@ structure GradedRingData (S : Type u) [CommRing S] where
 instance (G : GradedRingData S) : GradedRing G.component := G.graded
 
 /-- The degree-zero subring of a graded ring. -/
-def degreeZeroSubring (G : GradedRingData S) : Subring S where
-  carrier := G.component 0
-  zero_mem' := (G.component 0).zero_mem
-  add_mem' := (G.component 0).add_mem
-  neg_mem' := (G.component 0).neg_mem
-  one_mem' := SetLike.one_mem_graded G.component
-  mul_mem' := by
-    intro x y hx hy
-    simpa using (SetLike.mul_mem_graded (A := G.component) hx hy)
-
-instance degreeZeroAlgebra (G : GradedRingData S) :
-    Algebra (degreeZeroSubring G) S :=
-  (SubringClass.subtype (degreeZeroSubring G)).toAlgebra
+abbrev degreeZeroSubring (G : GradedRingData S) : Subring S :=
+  SetLike.GradeZero.subring G.component
 
 /-- The irrelevant ideal, using Mathlib's canonical homogeneous-ideal API. -/
 abbrev irrelevantIdeal (G : GradedRingData S) : Ideal S :=
@@ -437,7 +426,9 @@ noncomputable instance veroneseModuleGmodule
 
 def veroneseDegreeZeroMap (G : GradedRingData S) (d : ℕ) :
     degreeZeroSubring G → veroneseRing G d :=
-  fun x => DirectSum.of _ 0 ⟨(x : S), by simpa [degreeZeroSubring] using x.property⟩
+  fun x => DirectSum.of _ 0 ⟨(x : S), by
+    have hx : (x : S) ∈ G.component 0 := x.property
+    simpa using hx⟩
 
 def veroneseDegreeOneMap (G : GradedRingData S) (d : ℕ) :
     G.component d → veroneseRing G d :=

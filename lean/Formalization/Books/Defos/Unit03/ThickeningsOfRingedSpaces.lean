@@ -7,7 +7,7 @@ import Mathlib.Topology.Homeomorph.Defs
 /-!
 # Deformation Theory, Chapter 3: Thickenings of ringed spaces
 
-This file formalizes the source span `books/defos.tex:479-573`.  The
+This file formalizes the source section `books/defos.tex:479-574`.  The
 ringed-space and sheaf-module constructions are the canonical interfaces from
 the Sheaves and Modules chapters.  In particular, the ideal of a morphism is
 the kernel module already used for closed immersions, and epimorphisms are the
@@ -168,27 +168,52 @@ abbrev baseIdeal (M : MorphismOfThickenings) : IdealSheaf M.S' :=
 
 /- The sheaf-module pullback below is the canonical `f^*` construction.  The
    right-adjoint instance is an explicit Mathlib hypothesis in the existing
-   API, so the source's induced-map assertion is exposed under that same
-   interface. -/
+   API.  First expose the map on the pushed-forward ideal (the module form of
+   `f'^{-1}𝓙 → 𝓘`), then transpose it along the existing pullback/pushforward
+   Hom equivalence. -/
 
-/-- The map `(f')^*𝓙 → 𝓘` induced by the morphism of thickenings. -/
-theorem exists_inducedIdealMap
+/- The source's map `f'⁻¹𝓙 → 𝓘` is represented as an `f'`-map
+   `𝓙 → f'_*𝓘`; extension of scalars gives the displayed map
+   `(f')^*𝓙 → 𝓘`. -/
+theorem exists_inducedIdealFMap
     (M : MorphismOfThickenings)
     [((SheafOfModules.pushforward (F := Opens.map M.f'.continuous)
       M.f'.sharp).IsRightAdjoint)] :
     Nonempty
-      ((ringedSpaceModulePullback M.f').obj M.baseIdeal.carrier ⟶
-        M.sourceIdeal.carrier) := by
+      (M.baseIdeal.carrier ⟶
+        (ringedSpaceModulePushforward M.f').obj M.sourceIdeal.carrier) := by
   sorry
 
-/-- A chosen source-facing representative of the induced ideal map. -/
+/- A chosen source-facing representative of the induced map before extension
+   of scalars. -/
+noncomputable def inducedIdealFMap
+    (M : MorphismOfThickenings)
+    [((SheafOfModules.pushforward (F := Opens.map M.f'.continuous)
+      M.f'.sharp).IsRightAdjoint)] :
+    M.baseIdeal.carrier ⟶
+      (ringedSpaceModulePushforward M.f').obj M.sourceIdeal.carrier :=
+  Classical.choice (exists_inducedIdealFMap M)
+
+/- The adjoint-transposed map is the source's map
+   `(f')^*𝓙 → 𝓘`. -/
 noncomputable def inducedIdealMap
     (M : MorphismOfThickenings)
     [((SheafOfModules.pushforward (F := Opens.map M.f'.continuous)
       M.f'.sharp).IsRightAdjoint)] :
     (ringedSpaceModulePullback M.f').obj M.baseIdeal.carrier ⟶
       M.sourceIdeal.carrier :=
-  Classical.choice (exists_inducedIdealMap M)
+  (ringedSpaceModuleFMapPullbackHomEquiv M.f' M.baseIdeal.carrier
+    M.sourceIdeal.carrier).symm (inducedIdealFMap M)
+
+/-- The induced ideal map exists as a morphism of `𝒪_{X'}`-modules. -/
+theorem exists_inducedIdealMap
+    (M : MorphismOfThickenings)
+    [((SheafOfModules.pushforward (F := Opens.map M.f'.continuous)
+      M.f'.sharp).IsRightAdjoint)] :
+    Nonempty
+      ((ringedSpaceModulePullback M.f').obj M.baseIdeal.carrier ⟶
+        M.sourceIdeal.carrier) :=
+  ⟨inducedIdealMap M⟩
 
 /-- A morphism of thickenings is strict when its induced ideal map is an
 epimorphism. -/

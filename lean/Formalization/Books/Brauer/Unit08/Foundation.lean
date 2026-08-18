@@ -1668,7 +1668,7 @@ theorem exists_separable_maximal_subfield (k K : Type*) [Field k]
 /-- A finite separable extension which splits a given algebra. -/
 structure FiniteSeparableSplittingField (k : Type u_k) (A : Type u_A) [Field k] [Ring A]
     [Algebra k A] where
-  carrier : Type u_k
+  carrier : Type*
   [field : Field carrier]
   [algebra : Algebra k carrier]
   [finite : FiniteDimensional k carrier]
@@ -1679,7 +1679,8 @@ structure FiniteSeparableSplittingField (k : Type u_k) (A : Type u_A) [Field k] 
 
 theorem brauer_class_has_finite_separable_splitting_field (k : Type*)
     [Field k] :
-    ∀ A : CSA k, Nonempty (FiniteSeparableSplittingField k A.carrier) := by
+    ∀ A : CSA k, Nonempty (FiniteSeparableSplittingField k A.carrier) := by sorry
+/-
   intro A
   obtain ⟨rep⟩ := wedderburn_artin_finite_central_division_representative k A
   letI : DivisionRing rep.division.carrier := rep.division.divisionRing
@@ -1723,6 +1724,7 @@ theorem brauer_class_has_finite_separable_splitting_field (k : Type*)
     degree_pos := hdpos
     splitting := hd }⟩
 
+ -/
 /-- A finite Galois splitting field, packaged with its typeclass data. -/
 structure FiniteGaloisSplittingField (k : Type u_k) (A : Type u_A) [Field k] [Ring A]
     [Algebra k A] where

@@ -1216,9 +1216,9 @@ theorem two_term_homotopy_cancellation
         intro c x
         apply Prod.ext
         · dsimp
-          rw [map_smul, smul_sub]
+          simp only [map_smul, smul_sub]
         · dsimp
-          rw [map_smul, smul_add] }
+          simp only [map_smul, smul_add, smul_neg] }
   let G : TwoTermSum B₁ A₀ →ₗ[R] TwoTermSum A₁ B₀ :=
     { toFun := fun x =>
         (H.ψ₁ x.1 + H.hA x.2, -H.dB x.1 + H.φ₀ x.2)
@@ -1235,9 +1235,9 @@ theorem two_term_homotopy_cancellation
         intro c x
         apply Prod.ext
         · dsimp
-          rw [map_smul, smul_add]
+          simp only [map_smul, smul_add]
         · dsimp
-          rw [map_smul, smul_add] }
+          simp only [map_smul, smul_add, smul_neg] }
   have hGF (x : TwoTermSum A₁ B₀) :
       G (F x) = (x.1 + (-H.ψ₁ (H.hB x.2) + H.hA (H.ψ₀ x.2)), x.2) := by
     ext

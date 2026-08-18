@@ -506,6 +506,348 @@ private noncomputable def zeroDimensionalFlatIdealTailMulOp_none_right
   change zeroDimensionalFlatIdealTailMul a none = none
   exact zeroDimensionalFlatIdealTailMul_none_right a
 
+private theorem zeroDimensionalFlatIdealTailMonoid_finset_prod_single
+    (k : Type u) [Field k] (s : Finset ℕ) :
+    (∏ n ∈ s, MonoidAlgebra.single (some ({n} : Set ℕ)) (1 : k)) =
+      MonoidAlgebra.single (some (s : Set ℕ)) 1 := by
+  classical
+  induction s using Finset.induction_on with
+  | empty =>
+      change MonoidAlgebra.single (some (∅ : Set ℕ)) 1 = _
+      congr 2
+      ext n
+      simp
+  | @insert n s hn ih =>
+      rw [Finset.prod_insert hn, ih]
+      rw [MonoidAlgebra.single_mul_single]
+      rw [zeroDimensionalFlatIdealTailMul_some_some]
+      have hdis : Disjoint ({n} : Set ℕ) (s : Set ℕ) := by
+        rw [Set.disjoint_singleton_left]
+        simpa using hn
+      rw [if_pos hdis]
+      simp [Set.ext_iff, hn]
+
+private theorem zeroDimensionalFlatIdealTailMonoid_finsupp_prod_low
+    (k : Type u) [Field k] (i : ℕ)
+    (d : zeroDimensionalFlatIdealVariables →₀ ℕ)
+    (hd : ∀ z ∈ d.support, ∃ n, z = (n, true) ∧ n < i ∧ d z = 1) :
+    d.prod (fun z e =>
+        MonoidAlgebra.single (some ({z.1} : Set ℕ)) (1 : k) ^ e) =
+      MonoidAlgebra.single
+        (some ((d.support.image Prod.fst : Finset ℕ) : Set ℕ)) 1 := by
+  classical
+  rw [Finsupp.prod]
+  have hfactor (z : zeroDimensionalFlatIdealVariables)
+      (hz : z ∈ d.support) :
+      MonoidAlgebra.single (some ({z.1} : Set ℕ)) (1 : k) ^ d z =
+        MonoidAlgebra.single (some ({z.1} : Set ℕ)) (1 : k) := by
+    obtain ⟨n, hzn, hn, hdz⟩ := hd z hz
+    subst z
+    simp [hdz]
+  have hleft :
+      (∏ z ∈ d.support,
+        MonoidAlgebra.single (some ({z.1} : Set ℕ)) (1 : k) ^ d z) =
+        ∏ z ∈ d.support,
+          MonoidAlgebra.single (some ({z.1} : Set ℕ)) (1 : k) := by
+    apply Finset.prod_congr rfl
+    intro z hz
+    exact hfactor z hz
+  rw [hleft]
+  rw [← zeroDimensionalFlatIdealTailMonoid_finset_prod_single k
+    (d.support.image Prod.fst)]
+  apply Finset.prod_bij (fun z _ => z.1)
+  · intro z hz
+    exact Finset.mem_image.2 ⟨z, hz, rfl⟩
+  · intro z₁ hz₁ z₂ hz₂ h
+    have h₁ := hd z₁ hz₁
+    have h₂ := hd z₂ hz₂
+    rcases h₁ with ⟨n₁, rfl, hn₁, hd₁⟩
+    rcases h₂ with ⟨n₂, rfl, hn₂, hd₂⟩
+    simpa using h
+  · intro n hn
+    rcases Finset.mem_image.1 hn with ⟨z, hz, rfl⟩
+    exact ⟨z, hz, rfl⟩
+  · intro z hz
+    rfl
+
+private noncomputable def zeroDimensionalFlatIdealTailEvalHom
+    (k : Type u) [Field k] :
+    zeroDimensionalFlatIdealPolynomial k →+*
+      MonoidAlgebra k zeroDimensionalFlatIdealTailMonoid :=
+  MvPolynomial.eval₂Hom (algebraMap k
+      (MonoidAlgebra k zeroDimensionalFlatIdealTailMonoid))
+    (fun z => match z with
+      | (n, false) => MonoidAlgebra.single (some (Set.Ici n)) 1
+      | (n, true) => MonoidAlgebra.single (some ({n} : Set ℕ)) 1)
+
+private theorem zeroDimensionalFlatIdealTailEvalHom_X
+    (k : Type u) [Field k] (z : zeroDimensionalFlatIdealVariables) :
+    zeroDimensionalFlatIdealTailEvalHom k (MvPolynomial.X z) =
+      match z with
+      | (n, false) => MonoidAlgebra.single (some (Set.Ici n)) 1
+      | (n, true) => MonoidAlgebra.single (some ({n} : Set ℕ)) 1 := by
+  simp [zeroDimensionalFlatIdealTailEvalHom]
+
+private theorem zeroDimensionalFlatIdealTailEvalHom_eq_eval₂Hom
+    (k : Type u) [Field k] :
+    zeroDimensionalFlatIdealTailEvalHom k =
+      MvPolynomial.eval₂Hom (algebraMap k
+          (MonoidAlgebra k zeroDimensionalFlatIdealTailMonoid))
+        (fun z => match z with
+          | (n, false) => MonoidAlgebra.single (some (Set.Ici n)) 1
+          | (n, true) => MonoidAlgebra.single (some ({n} : Set ℕ)) 1) := by
+  rfl
+
+private theorem zeroDimensionalFlatIdealTailMonoid_low_eval
+    (k : Type u) [Field k] (i : ℕ)
+    (d : zeroDimensionalFlatIdealVariables →₀ ℕ) (a : k) (s : Set ℕ)
+    (hd : ∀ z ∈ d.support, ∃ n, z = (n, true) ∧ n < i ∧ d z = 1) :
+    (MonoidAlgebra.coeff
+      (zeroDimensionalFlatIdealTailEvalHom k (MvPolynomial.monomial d a) *
+        MonoidAlgebra.single (some (Set.Ici i)) 1))
+        (some s) =
+      if Set.Ici i ∪ ((d.support.image Prod.fst : Finset ℕ) : Set ℕ) = s
+        then a else 0 := by
+  classical
+  let A := MonoidAlgebra k zeroDimensionalFlatIdealTailMonoid
+  let e : zeroDimensionalFlatIdealVariables → A := fun z =>
+    match z with
+    | (n, false) => MonoidAlgebra.single (some (Set.Ici n)) 1
+    | (n, true) => MonoidAlgebra.single (some ({n} : Set ℕ)) 1
+  have hprod : d.prod (fun z r => e z ^ r) =
+      d.prod (fun z r =>
+        MonoidAlgebra.single (some ({z.1} : Set ℕ)) (1 : k) ^ r) := by
+    rw [Finsupp.prod]
+    apply Finset.prod_congr rfl
+    intro z hz
+    obtain ⟨n, hzn, hn, hdz⟩ := hd z hz
+    subst z
+    rfl
+  have hdis : Disjoint (Set.Ici i)
+      ((d.support.image Prod.fst : Finset ℕ) : Set ℕ) := by
+    rw [Set.disjoint_left]
+    intro n hni hns
+    rcases Finset.mem_image.1 hns with ⟨z, hz, rfl⟩
+    obtain ⟨n', hzn, hn', hdz⟩ := hd z hz
+    subst z
+    exact (Nat.not_lt_of_ge hni) hn'
+  change MonoidAlgebra.coeff
+      ((MvPolynomial.eval₂Hom (algebraMap k A) e)
+        (MvPolynomial.monomial d a) *
+          MonoidAlgebra.single (some (Set.Ici i)) 1) _ = _
+  rw [MvPolynomial.eval₂Hom_monomial]
+  rw [hprod]
+  rw [zeroDimensionalFlatIdealTailMonoid_finsupp_prod_low k i d hd]
+  rw [mul_assoc]
+  rw [MonoidAlgebra.single_mul_single]
+  rw [zeroDimensionalFlatIdealTailMul_some_some]
+  rw [if_pos hdis.symm]
+  simp [A, Set.union_comm, Finsupp.single_apply]
+
+private theorem zeroDimensionalFlatIdealTailMonoid_coeff_mul_none
+    (k : Type u) [Field k]
+    (r : MonoidAlgebra k zeroDimensionalFlatIdealTailMonoid)
+    (s : Set ℕ) :
+    (r * MonoidAlgebra.single (none : zeroDimensionalFlatIdealTailMonoid) 1).coeff
+        (some s) = 0 := by
+  rw [MonoidAlgebra.coeff_mul]
+  rw [Finsupp.sum]
+  apply Finset.sum_eq_zero
+  intro m hm
+  rw [Finsupp.sum]
+  apply Finset.sum_eq_zero
+  intro n hn
+  have hn' : n = none := by simpa using hn
+  subst n
+  simp [zeroDimensionalFlatIdealTailMulOp_none_right]
+
+private theorem zeroDimensionalFlatIdeal_low_squarefree_image_injective
+    (i : ℕ) (d m : zeroDimensionalFlatIdealVariables →₀ ℕ)
+    (hd : ∀ z ∈ d.support, ∃ n, z = (n, true) ∧ n < i ∧ d z = 1)
+    (hm : ∀ z ∈ m.support, ∃ n, z = (n, true) ∧ n < i ∧ m z = 1)
+    (hsets : Set.Ici i ∪ ((d.support.image Prod.fst : Finset ℕ) : Set ℕ) =
+      Set.Ici i ∪ ((m.support.image Prod.fst : Finset ℕ) : Set ℕ)) :
+    d = m := by
+  classical
+  have hsupp : d.support = m.support := by
+    apply Finset.ext
+    intro z
+    constructor
+    · intro hz
+      obtain ⟨n, hzn, hni, hdz⟩ := hd z hz
+      have hnimg : n ∈ (d.support.image Prod.fst : Finset ℕ) := by
+        exact Finset.mem_image.2 ⟨z, hz, by simpa [hzn]⟩
+      have hnT : n ∈ Set.Ici i ∪
+          ((m.support.image Prod.fst : Finset ℕ) : Set ℕ) := by
+        rw [← hsets]
+        exact Or.inr hnimg
+      rcases hnT with hnI | hnimg
+      · exact False.elim ((Nat.not_lt_of_ge hnI) hni)
+      · rcases Finset.mem_image.1 hnimg with ⟨z', hz', hz'eq⟩
+        obtain ⟨n', hzn', hn'i, hmz'⟩ := hm z' hz'
+        have hn'eq : n' = n := by simpa [hzn'] using hz'eq
+        simpa [hzn, hzn', hn'eq] using hz'
+    · intro hz
+      obtain ⟨n, hzn, hni, hmz⟩ := hm z hz
+      have hnimg : n ∈ (m.support.image Prod.fst : Finset ℕ) := by
+        exact Finset.mem_image.2 ⟨z, hz, by simpa [hzn]⟩
+      have hnT : n ∈ Set.Ici i ∪
+          ((d.support.image Prod.fst : Finset ℕ) : Set ℕ) := by
+        rw [hsets]
+        exact Or.inr hnimg
+      rcases hnT with hnI | hnimg
+      · exact False.elim ((Nat.not_lt_of_ge hnI) hni)
+      · rcases Finset.mem_image.1 hnimg with ⟨z', hz', hz'eq⟩
+        obtain ⟨n', hzn', hn'i, hdz'⟩ := hd z' hz'
+        have hn'eq : n' = n := by simpa [hzn'] using hz'eq
+        simpa [hzn, hzn', hn'eq] using hz'
+  apply Finsupp.ext
+  intro z
+  by_cases hdz0 : d z = 0
+  · have hmz0 : m z = 0 := by
+      by_contra hmz0
+      have hmz : z ∈ m.support := Finsupp.mem_support_iff.mpr hmz0
+      have hdz : z ∈ d.support := by simpa [hsupp] using hmz
+      exact (Finsupp.mem_support_iff.mp hdz) hdz0
+    simp [hdz0, hmz0]
+  · have hdz : z ∈ d.support := Finsupp.mem_support_iff.mpr hdz0
+    have hmz : z ∈ m.support := by simpa [hsupp] using hdz
+    rcases hd z hdz with ⟨n, hzn, hni, hd1⟩
+    rcases hm z hmz with ⟨n', hzn', hn'i, hm1⟩
+    rw [hd1, hm1]
+
+private theorem zeroDimensionalFlatIdealTailMonoid_bad_eval
+    (k : Type u) [Field k] (i : ℕ)
+    (d : zeroDimensionalFlatIdealVariables →₀ ℕ) (a : k) (s : Set ℕ)
+    (hd : ¬ ∀ z ∈ d.support,
+      ∃ n, z = (n, true) ∧ n < i ∧ d z = 1) :
+    (MonoidAlgebra.coeff
+      (((MvPolynomial.eval₂Hom (algebraMap k (MonoidAlgebra k
+          zeroDimensionalFlatIdealTailMonoid))
+        (fun z => match z with
+          | (n, false) => MonoidAlgebra.single (some (Set.Ici n)) 1
+          | (n, true) => MonoidAlgebra.single (some ({n} : Set ℕ)) 1))
+        (MvPolynomial.monomial d a)) *
+        MonoidAlgebra.single (some (Set.Ici i)) 1))
+      (some s) = 0 := by
+  classical
+  by_cases hlow : ∀ z ∈ d.support,
+      ∃ n, z = (n, true) ∧ n < i
+  · have hsq : ¬ ∀ z ∈ d.support, d z = 1 := by
+      intro hsq
+      apply hd
+      intro z hz
+      obtain ⟨n, hzn, hn⟩ := hlow z hz
+      exact ⟨n, hzn, hn, hsq z hz⟩
+    push_neg at hsq
+    obtain ⟨z, hz, hdz⟩ := hsq
+    have hdz0 : d z ≠ 0 := Finsupp.mem_support_iff.mp hz
+    have hdz2 : 2 ≤ d z := by omega
+    have hdecomp : d - Finsupp.single z 2 + Finsupp.single z 2 = d := by
+      ext w
+      by_cases hw : w = z
+      · subst w
+        simp [hdz2]
+      · simp [hw]
+    have hmon : MvPolynomial.monomial d a =
+        MvPolynomial.monomial (d - Finsupp.single z 2) a *
+          MvPolynomial.X z ^ 2 := by
+      calc
+        MvPolynomial.monomial d a =
+            MvPolynomial.monomial
+              (d - Finsupp.single z 2 + Finsupp.single z 2) a :=
+                congrArg (fun q => MvPolynomial.monomial q a) hdecomp.symm
+        _ = _ := by rw [MvPolynomial.monomial_add_single]
+    have hnone : zeroDimensionalFlatIdealTailEvalHom k (MvPolynomial.X z ^ 2) =
+        MonoidAlgebra.single (none : zeroDimensionalFlatIdealTailMonoid) 1 := by
+      rw [map_pow, zeroDimensionalFlatIdealTailEvalHom_X]
+      cases z with
+      | mk n b =>
+          cases b with
+          | false =>
+              have hnd : ¬ Disjoint (Set.Ici n) (Set.Ici n) := by
+                intro hnd
+                have hn : n ∈ Set.Ici n := by simp
+                exact (Set.disjoint_left.1 hnd) hn hn
+              change MonoidAlgebra.single (some (Set.Ici n)) (1 : k) ^ 2 = _
+              rw [pow_two, MonoidAlgebra.single_mul_single,
+                zeroDimensionalFlatIdealTailMul_some_some, if_neg hnd]
+              simp
+          | true =>
+              have hnd : ¬ Disjoint ({n} : Set ℕ) ({n} : Set ℕ) := by
+                rw [Set.disjoint_singleton]
+                simp
+              change MonoidAlgebra.single (some ({n} : Set ℕ)) (1 : k) ^ 2 = _
+              rw [pow_two, MonoidAlgebra.single_mul_single,
+                zeroDimensionalFlatIdealTailMul_some_some, if_neg hnd]
+              simp
+    rw [hmon, map_mul]
+    rw [← zeroDimensionalFlatIdealTailEvalHom_eq_eval₂Hom]
+    rw [mul_assoc]
+    change MonoidAlgebra.coeff
+      (zeroDimensionalFlatIdealTailEvalHom k
+          (MvPolynomial.monomial (d - Finsupp.single z 2) a) *
+        (zeroDimensionalFlatIdealTailEvalHom k (MvPolynomial.X z ^ 2) *
+          MonoidAlgebra.single (some (Set.Ici i)) 1)) (some s) = 0
+    rw [hnone]
+    rw [MonoidAlgebra.single_mul_single]
+    rw [show (none : zeroDimensionalFlatIdealTailMonoid) *
+        some (Set.Ici i) = none by rfl]
+    simp
+    exact zeroDimensionalFlatIdealTailMonoid_coeff_mul_none k _ s
+  · push_neg at hlow
+    obtain ⟨z, hz, hzl⟩ := hlow
+    have hdz0 : d z ≠ 0 := Finsupp.mem_support_iff.mp hz
+    have hdecomp : d - Finsupp.single z 1 + Finsupp.single z 1 = d := by
+      exact Finsupp.sub_add_single_one_cancel hdz0
+    have hmon : MvPolynomial.monomial d a =
+        MvPolynomial.monomial (d - Finsupp.single z 1) a *
+          MvPolynomial.X z := by
+      calc
+        MvPolynomial.monomial d a =
+            MvPolynomial.monomial
+              (d - Finsupp.single z 1 + Finsupp.single z 1) a :=
+                congrArg (fun q => MvPolynomial.monomial q a) hdecomp.symm
+        _ = _ := by rw [MvPolynomial.monomial_add_single]; simp
+    have hnone : zeroDimensionalFlatIdealTailEvalHom k (MvPolynomial.X z) *
+          MonoidAlgebra.single (some (Set.Ici i)) 1 =
+        MonoidAlgebra.single (none : zeroDimensionalFlatIdealTailMonoid) 1 := by
+      rw [zeroDimensionalFlatIdealTailEvalHom_X]
+      cases z with
+      | mk n b =>
+          cases b with
+          | false =>
+              have hdis : ¬ Disjoint (Set.Ici n) (Set.Ici i) := by
+                intro hdis
+                have hm : max n i ∈ Set.Ici n := by simp
+                have hm' : max n i ∈ Set.Ici i := by simp
+                exact (Set.disjoint_left.1 hdis) hm hm'
+              change MonoidAlgebra.single (some (Set.Ici n)) (1 : k) *
+                MonoidAlgebra.single (some (Set.Ici i)) 1 = _
+              rw [MonoidAlgebra.single_mul_single,
+                zeroDimensionalFlatIdealTailMul_some_some, if_neg hdis]
+              simp
+          | true =>
+              have hni : i ≤ n := hzl n rfl
+              have hdis : ¬ Disjoint ({n} : Set ℕ) (Set.Ici i) := by
+                rw [Set.disjoint_singleton_left]
+                simp [hni]
+              change MonoidAlgebra.single (some ({n} : Set ℕ)) (1 : k) *
+                MonoidAlgebra.single (some (Set.Ici i)) 1 = _
+              rw [MonoidAlgebra.single_mul_single,
+                zeroDimensionalFlatIdealTailMul_some_some, if_neg hdis]
+              simp
+    rw [hmon, map_mul]
+    rw [← zeroDimensionalFlatIdealTailEvalHom_eq_eval₂Hom]
+    rw [mul_assoc]
+    change MonoidAlgebra.coeff
+      (zeroDimensionalFlatIdealTailEvalHom k
+          (MvPolynomial.monomial (d - Finsupp.single z 1) a) *
+        (zeroDimensionalFlatIdealTailEvalHom k (MvPolynomial.X z) *
+          MonoidAlgebra.single (some (Set.Ici i)) 1)) (some s) = 0
+    rw [hnone]
+    exact zeroDimensionalFlatIdealTailMonoid_coeff_mul_none k _ s
+
 /-- The source's ideal `I` is nonzero. -/
 theorem zeroDimensionalFlatIdeal_ne_bot
     (k : Type u) [Field k] : zeroDimensionalFlatIdeal k ≠ ⊥ := by
@@ -654,9 +996,10 @@ theorem zeroDimensionalFlatIdeal_x_annihilator
     (Submodule.span (zeroDimensionalFlatIdealRing k)
         ({zeroDimensionalFlatIdealX k i} : Set (zeroDimensionalFlatIdealRing k))).annihilator =
       zeroDimensionalFlatIdealXAnnihilatorCandidate k i := by
-  apply le_antisymm
-  · sorry
-  · rw [zeroDimensionalFlatIdealXAnnihilatorCandidate]
+  have hC : zeroDimensionalFlatIdealXAnnihilatorCandidate k i ≤
+      (Submodule.span (zeroDimensionalFlatIdealRing k)
+        ({zeroDimensionalFlatIdealX k i} : Set (zeroDimensionalFlatIdealRing k))).annihilator := by
+    rw [zeroDimensionalFlatIdealXAnnihilatorCandidate]
     apply Ideal.span_le.2
     rintro z (⟨j, rfl⟩ | ⟨j, rfl⟩)
     · change zeroDimensionalFlatIdealX k j ∈
@@ -714,6 +1057,353 @@ theorem zeroDimensionalFlatIdeal_x_annihilator
             (zeroDimensionalFlatIdealY k j.1 *
               zeroDimensionalFlatIdealX k j.1) by ring]
       rw [hyx, mul_zero]
+  apply le_antisymm
+  · intro r hr
+    classical
+    let P := zeroDimensionalFlatIdealPolynomial k
+    let J := zeroDimensionalFlatIdealRelationsIdeal k
+    let q : P →+* zeroDimensionalFlatIdealRing k := Ideal.Quotient.mk J
+    let C : Ideal (zeroDimensionalFlatIdealRing k) :=
+      zeroDimensionalFlatIdealXAnnihilatorCandidate k i
+    let A := MonoidAlgebra k zeroDimensionalFlatIdealTailMonoid
+    let N : Ideal A := Ideal.span
+      ({MonoidAlgebra.single none 1} : Set A)
+    let Q := A ⧸ N
+    let qa : A →+* Q := Ideal.Quotient.mk N
+    let t : Set ℕ → Q := fun s => qa (MonoidAlgebra.single (some s) 1)
+    have hmul (a b : Set ℕ) :
+        t a * t b = if Disjoint a b then t (a ∪ b) else 0 := by
+      by_cases h : Disjoint a b
+      · simp only [t]
+        rw [← qa.map_mul, MonoidAlgebra.single_mul_single]
+        rw [zeroDimensionalFlatIdealTailMul_some_some, if_pos h]
+        simp [h]
+      · have hzero :
+            qa (MonoidAlgebra.single none (1 : k)) = 0 := by
+          rw [Ideal.Quotient.eq_zero_iff_mem]
+          exact Ideal.subset_span (Set.mem_singleton _)
+        simp only [t]
+        rw [← qa.map_mul, MonoidAlgebra.single_mul_single]
+        rw [zeroDimensionalFlatIdealTailMul_some_some, if_neg h]
+        rw [if_neg h]
+        simpa using hzero
+    have hdisjoint (n : ℕ) :
+        Disjoint ({n} : Set ℕ) (Set.Ici (n + 1)) := by
+      rw [Set.disjoint_singleton_left]
+      simp only [Set.mem_Ici]
+      omega
+    have hunion (n : ℕ) :
+        ({n} : Set ℕ) ∪ Set.Ici (n + 1) = Set.Ici n := by
+      ext m
+      simp only [Set.mem_union, Set.mem_singleton_iff, Set.mem_Ici]
+      omega
+    have hxy (n : ℕ) :
+        t ({n} : Set ℕ) * t (Set.Ici (n + 1)) = t (Set.Ici n) := by
+      rw [hmul, if_pos (hdisjoint n), hunion]
+    have hnotdisjoint (n : ℕ) :
+        ¬ Disjoint ({n} : Set ℕ) ({n} : Set ℕ) := by
+      rw [Set.disjoint_singleton]
+      simp
+    have hyy (n : ℕ) : t ({n} : Set ℕ) ^ 2 = 0 := by
+      rw [pow_two, hmul, if_neg (hnotdisjoint n)]
+    let c : k →+* Q := qa.comp (algebraMap k A)
+    let v : zeroDimensionalFlatIdealVariables → Q := fun z =>
+      match z with
+      | (n, false) => t (Set.Ici n)
+      | (n, true) => t {n}
+    let φ : P →+* Q := MvPolynomial.eval₂Hom c v
+    have hrel (n : ℕ) : φ (zeroDimensionalFlatIdealRelation k n) = 0 := by
+      simp only [φ, zeroDimensionalFlatIdealRelation, map_sub, map_mul]
+      rw [MvPolynomial.eval₂Hom_X', MvPolynomial.eval₂Hom_X',
+        MvPolynomial.eval₂Hom_X']
+      simp only [zeroDimensionalFlatIdealXVar, zeroDimensionalFlatIdealYVar, v]
+      rw [hxy]
+      ring
+    have hsq (n : ℕ) : φ (zeroDimensionalFlatIdealSquareRelation k n) = 0 := by
+      simp only [φ, zeroDimensionalFlatIdealSquareRelation, map_pow]
+      rw [MvPolynomial.eval₂Hom_X']
+      simp only [zeroDimensionalFlatIdealYVar, v]
+      exact hyy n
+    have hker : J ≤ RingHom.ker φ := by
+      change zeroDimensionalFlatIdealRelationsIdeal k ≤ RingHom.ker φ
+      rw [zeroDimensionalFlatIdealRelationsIdeal]
+      apply Ideal.span_le.2
+      rintro z (⟨n, rfl⟩ | ⟨n, rfl⟩)
+      · exact hrel n
+      · exact hsq n
+    have hker' : ∀ a, a ∈ J → φ a = 0 := by
+      intro a ha
+      exact RingHom.mem_ker.mp (hker ha)
+    let ψ : zeroDimensionalFlatIdealRing k →+* Q :=
+      Ideal.Quotient.lift J φ hker'
+    have hφA : qa.comp (zeroDimensionalFlatIdealTailEvalHom k) = φ := by
+      apply MvPolynomial.ringHom_ext
+      · intro a
+        simp [φ, c, A, zeroDimensionalFlatIdealTailEvalHom]
+      · intro z
+        cases z with
+        | mk n b =>
+            cases b with
+            | false => simp [φ, c, A, v, t, zeroDimensionalFlatIdealTailEvalHom]
+            | true => simp [φ, c, A, v, t, zeroDimensionalFlatIdealTailEvalHom]
+    have hprop : ∀ p : A, p ∈ N →
+        ∀ s : zeroDimensionalFlatIdealTailMonoid, s ≠ none → p.coeff s = 0 := by
+      intro p hp
+      change p ∈ Ideal.span ({MonoidAlgebra.single none 1} : Set A) at hp
+      induction hp using Submodule.span_induction with
+      | mem p hp =>
+          intro s hs
+          rw [Set.mem_singleton_iff] at hp
+          subst p
+          simp [hs]
+      | zero =>
+          intro s hs
+          simp
+      | add p q hp hq hp' hq' =>
+          intro s hs
+          rw [MonoidAlgebra.coeff_add]
+          simp [hp' s hs, hq' s hs]
+      | smul r p hp hp' =>
+          intro s hs
+          classical
+          rw [smul_eq_mul]
+          rw [MonoidAlgebra.coeff_mul]
+          rw [Finsupp.sum]
+          apply Finset.sum_eq_zero
+          intro m₁ hm₁
+          rw [Finsupp.sum]
+          apply Finset.sum_eq_zero
+          intro m₂ hm₂
+          by_cases hm₂none : m₂ = none
+          · subst m₂
+            have hprod : m₁ * (none : zeroDimensionalFlatIdealTailMonoid) ≠ s := by
+              rw [zeroDimensionalFlatIdealTailMulOp_none_right]
+              exact Ne.symm hs
+            rw [if_neg hprod]
+          · simp [hp' m₂ hm₂none]
+    have hφA_apply (p : P) :
+        qa (zeroDimensionalFlatIdealTailEvalHom k p) = φ p := by
+      have := congrArg (fun f => f p) hφA
+      exact this
+    have hψ_mk (p : P) : ψ (q p) = φ p := by
+      simp [ψ, q]
+    have hψx : ψ (zeroDimensionalFlatIdealX k i) = t (Set.Ici i) := by
+      change ψ (q (MvPolynomial.X (zeroDimensionalFlatIdealXVar i))) = _
+      rw [hψ_mk]
+      simp only [φ]
+      rw [MvPolynomial.eval₂Hom_X']
+      simp [v, zeroDimensionalFlatIdealXVar]
+    let Good : (zeroDimensionalFlatIdealVariables →₀ ℕ) → Prop := fun d =>
+      ∀ z ∈ d.support, ∃ n, z = (n, true) ∧ n < i ∧ d z = 1
+    let bad : Set (zeroDimensionalFlatIdealVariables →₀ ℕ) :=
+      Set.range (fun j : ℕ => Finsupp.single (zeroDimensionalFlatIdealXVar j) 1) ∪
+        Set.range (fun j : {j : ℕ // i ≤ j} =>
+          Finsupp.single (zeroDimensionalFlatIdealYVar j.1) 1) ∪
+        Set.range (fun j : ℕ => Finsupp.single (zeroDimensionalFlatIdealYVar j) 2)
+    let L : Ideal P :=
+      Ideal.span ((fun d => MvPolynomial.monomial d (1 : k)) '' bad)
+    have hL : L ≤ Ideal.comap q C := by
+      dsimp [L]
+      apply Ideal.span_le.2
+      rintro z ⟨d, hd, rfl⟩
+      change q (MvPolynomial.monomial d (1 : k)) ∈ C
+      rcases hd with hxy' | ⟨j, rfl⟩
+      · rcases hxy' with ⟨j, rfl⟩ | ⟨j, rfl⟩
+        · change zeroDimensionalFlatIdealX k j ∈
+            zeroDimensionalFlatIdealXAnnihilatorCandidate k i
+          rw [zeroDimensionalFlatIdealXAnnihilatorCandidate]
+          exact Ideal.subset_span (Or.inl ⟨j, rfl⟩)
+        · change zeroDimensionalFlatIdealY k j.1 ∈
+            zeroDimensionalFlatIdealXAnnihilatorCandidate k i
+          rw [zeroDimensionalFlatIdealXAnnihilatorCandidate]
+          exact Ideal.subset_span (Or.inr ⟨j, rfl⟩)
+      · change q (MvPolynomial.monomial
+          (Finsupp.single (zeroDimensionalFlatIdealYVar j) 2) (1 : k)) ∈ C
+        have hsq : q (MvPolynomial.monomial
+            (Finsupp.single (zeroDimensionalFlatIdealYVar j) 2) (1 : k)) =
+            (zeroDimensionalFlatIdealY k j) ^ 2 := by
+          change Ideal.Quotient.mk J
+              (MvPolynomial.monomial
+                (Finsupp.single (zeroDimensionalFlatIdealYVar j) 2) (1 : k)) =
+            Ideal.Quotient.mk J
+              (MvPolynomial.X (zeroDimensionalFlatIdealYVar j) ^ 2)
+          congr 1
+          rw [show (Finsupp.single (zeroDimensionalFlatIdealYVar j) 2) =
+              Finsupp.single (zeroDimensionalFlatIdealYVar j) 2 + 0 by simp]
+          rw [MvPolynomial.monomial_single_add]
+          simp
+        rw [hsq, zeroDimensionalFlatIdeal_y_sq_eq_zero]
+        exact C.zero_mem
+    have hcoeff (p : P) (m : zeroDimensionalFlatIdealVariables →₀ ℕ)
+        (hm : m ∈ p.support) (hgm : Good m)
+        (hzero : φ p * t (Set.Ici i) = 0) : p.coeff m = 0 := by
+      have hzeroA :
+          qa (zeroDimensionalFlatIdealTailEvalHom k p *
+            MonoidAlgebra.single (some (Set.Ici i)) 1) = 0 := by
+        rw [qa.map_mul, hφA_apply]
+        simpa [t] using hzero
+      have hmemN :
+          zeroDimensionalFlatIdealTailEvalHom k p *
+            MonoidAlgebra.single (some (Set.Ici i)) 1 ∈ N := by
+        rw [← Ideal.Quotient.eq_zero_iff_mem]
+        exact hzeroA
+      let target : Set ℕ :=
+        Set.Ici i ∪ ((m.support.image Prod.fst : Finset ℕ) : Set ℕ)
+      have hc := hprop _ hmemN (some target) (by simp)
+      have hsum :
+          (MonoidAlgebra.coeff
+            (zeroDimensionalFlatIdealTailEvalHom k p *
+              MonoidAlgebra.single (some (Set.Ici i)) 1)) (some target) =
+            Finset.sum p.support (fun d =>
+              (MonoidAlgebra.coeff
+                (zeroDimensionalFlatIdealTailEvalHom k
+                    (MvPolynomial.monomial d (p.coeff d)) *
+                  MonoidAlgebra.single (some (Set.Ici i)) 1)) (some target)) := by
+        conv_lhs => rw [p.as_sum]
+        rw [map_sum, Finset.sum_mul]
+        have hfun := congrArg (fun f => f (some target))
+          (MonoidAlgebra.coeff_sum p.support (fun d =>
+            zeroDimensionalFlatIdealTailEvalHom k
+                (MvPolynomial.monomial d (p.coeff d)) *
+              MonoidAlgebra.single (some (Set.Ici i)) 1))
+        have happly := Finset.sum_apply' (s := p.support)
+          (f := fun d =>
+            (zeroDimensionalFlatIdealTailEvalHom k
+                (MvPolynomial.monomial d (p.coeff d)) *
+              MonoidAlgebra.single (some (Set.Ici i)) 1).coeff)
+          (some target)
+        calc
+          _ = ((Finset.sum p.support (fun d =>
+              (zeroDimensionalFlatIdealTailEvalHom k
+                (MvPolynomial.monomial d (p.coeff d)) *
+                MonoidAlgebra.single (some (Set.Ici i)) 1).coeff))
+              (some target)) := hfun
+          _ = _ := happly
+      have hterm (d : zeroDimensionalFlatIdealVariables →₀ ℕ)
+          (hd : d ∈ p.support) (hdm : d ≠ m) :
+          (MonoidAlgebra.coeff
+            (zeroDimensionalFlatIdealTailEvalHom k
+                (MvPolynomial.monomial d (p.coeff d)) *
+              MonoidAlgebra.single (some (Set.Ici i)) 1)) (some target) = 0 := by
+        by_cases hgd : Good d
+        · have hsets :
+              Set.Ici i ∪ ((d.support.image Prod.fst : Finset ℕ) : Set ℕ) ≠
+                target := by
+            intro heq
+            apply hdm
+            exact zeroDimensionalFlatIdeal_low_squarefree_image_injective i d m
+              (by simpa [Good] using hgd) (by simpa [Good] using hgm) heq
+          have hlow := zeroDimensionalFlatIdealTailMonoid_low_eval k i d
+            (p.coeff d) target (by simpa [Good] using hgd)
+          rw [if_neg (by simpa using hsets)] at hlow
+          exact hlow
+        · exact zeroDimensionalFlatIdealTailMonoid_bad_eval k i d
+            (p.coeff d) target (by simpa [Good] using hgd)
+      have hmain := zeroDimensionalFlatIdealTailMonoid_low_eval k i m
+        (p.coeff m) target (by simpa [Good] using hgm)
+      have hmain' :
+          (MonoidAlgebra.coeff
+            (zeroDimensionalFlatIdealTailEvalHom k
+                (MvPolynomial.monomial m (p.coeff m)) *
+              MonoidAlgebra.single (some (Set.Ici i)) 1)) (some target) =
+            p.coeff m := by
+        simpa [target] using hmain
+      have hsum_eval :
+          Finset.sum p.support (fun d =>
+              (MonoidAlgebra.coeff
+                (zeroDimensionalFlatIdealTailEvalHom k
+                    (MvPolynomial.monomial d (p.coeff d)) *
+                  MonoidAlgebra.single (some (Set.Ici i)) 1)) (some target)) =
+            p.coeff m := by
+        rw [Finset.sum_eq_single m]
+        · exact hmain'
+        · intro d hd hdm
+          exact hterm d hd hdm
+        · intro hm'
+          exact False.elim (hm' hm)
+      rw [hsum] at hc
+      rw [hsum_eval] at hc
+      exact hc
+    induction r using Quotient.inductionOn' with
+    | _ p =>
+      change q p ∈ C
+      have hzeroR : q p * zeroDimensionalFlatIdealX k i = 0 := by
+        rw [Submodule.mem_annihilator_span_singleton] at hr
+        exact hr
+      have hzeroQ : φ p * t (Set.Ici i) = 0 := by
+        simpa only [map_mul, map_zero, hψ_mk, hψx] using congrArg ψ hzeroR
+      have hpL : p ∈ L := by
+        dsimp [L]
+        rw [MvPolynomial.mem_ideal_span_monomial_image]
+        intro m hm
+        by_cases hgm : Good m
+        · have hcm := hcoeff p m hm hgm hzeroQ
+          exact False.elim ((Finsupp.mem_support_iff.mp hm) hcm)
+        · by_cases hlow : ∀ z ∈ m.support,
+              ∃ n, z = (n, true) ∧ n < i
+          · have hexp : ¬ ∀ z ∈ m.support, m z = 1 := by
+              intro hexp
+              apply hgm
+              intro z hz
+              obtain ⟨n, hzn, hni⟩ := hlow z hz
+              exact ⟨n, hzn, hni, hexp z hz⟩
+            push_neg at hexp
+            obtain ⟨z, hz, hz1⟩ := hexp
+            obtain ⟨n, hzn, hni⟩ := hlow z hz
+            subst z
+            have hmn0 : m (n, true) ≠ 0 := Finsupp.mem_support_iff.mp hz
+            have hmn2 : 2 ≤ m (n, true) := by omega
+            refine ⟨Finsupp.single (zeroDimensionalFlatIdealYVar n) 2, ?_, ?_⟩
+            · change Finsupp.single (zeroDimensionalFlatIdealYVar n) 2 ∈ bad
+              dsimp [bad]
+              exact Or.inr ⟨n, rfl⟩
+            · intro w
+              by_cases hw : w = (n, true)
+              · subst w
+                simpa [zeroDimensionalFlatIdealYVar] using hmn2
+              · have hw' : ¬ (n, true) = w := fun h => hw h.symm
+                simp [Finsupp.single_apply, zeroDimensionalFlatIdealYVar, hw']
+          · push_neg at hlow
+            obtain ⟨z, hz, hzl⟩ := hlow
+            cases z with
+            | mk n b =>
+                cases b with
+                | false =>
+                    have hmn0 : m (n, false) ≠ 0 :=
+                      Finsupp.mem_support_iff.mp hz
+                    refine ⟨Finsupp.single (zeroDimensionalFlatIdealXVar n) 1,
+                      ?_, ?_⟩
+                    · change Finsupp.single (zeroDimensionalFlatIdealXVar n) 1 ∈ bad
+                      dsimp [bad]
+                      exact Or.inl (Or.inl ⟨n, rfl⟩)
+                    · intro w
+                      by_cases hw : w = (n, false)
+                      · subst w
+                        simpa [zeroDimensionalFlatIdealXVar] using
+                          (Nat.one_le_iff_ne_zero.mpr hmn0)
+                      · have hw' : ¬ (n, false) = w := fun h => hw h.symm
+                        simp [Finsupp.single_apply, zeroDimensionalFlatIdealXVar, hw']
+                | true =>
+                    have hni : i ≤ n := by
+                      by_contra hni
+                      have hbad := hzl n rfl
+                      omega
+                    have hmn0 : m (n, true) ≠ 0 :=
+                      Finsupp.mem_support_iff.mp hz
+                    refine ⟨Finsupp.single (zeroDimensionalFlatIdealYVar n) 1,
+                      ?_, ?_⟩
+                    · change Finsupp.single (zeroDimensionalFlatIdealYVar n) 1 ∈ bad
+                      dsimp [bad]
+                      exact Or.inl (Or.inr ⟨⟨n, hni⟩, rfl⟩)
+                    · intro w
+                      by_cases hw : w = (n, true)
+                      · subst w
+                        simpa [zeroDimensionalFlatIdealYVar] using
+                          (Nat.one_le_iff_ne_zero.mpr hmn0)
+                      · have hw' : ¬ (n, true) = w := fun h => hw h.symm
+                        simp [Finsupp.single_apply, zeroDimensionalFlatIdealYVar, hw']
+      exact hL hpL
+  · exact hC
 
 /-! ## The flat direct-limit module -/
 

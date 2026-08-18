@@ -3,6 +3,8 @@ import Mathlib.Algebra.Homology.HomologicalComplexAbelian
 import Mathlib.Algebra.Homology.HomologySequence
 import Mathlib.Algebra.Homology.ShortComplex.ModuleCat
 import Mathlib.Algebra.Homology.ShortComplex.ShortExact
+import Mathlib.CategoryTheory.Abelian.ShortExact
+
 import Mathlib.CategoryTheory.Abelian.Transfer
 import Mathlib.Algebra.Field.Rat
 import Mathlib.RingTheory.Length
@@ -992,6 +994,10 @@ theorem TwoOnePeriodicComplex.zeroFirst_multiplicity_eq_cokernel_sub_kernel
   simp only [moduleLengthNat] at hnat₀ hnat₁ ⊢
   omega
 
+private theorem int_cancel_of_add_eq {a b c d e : ℤ}
+    (h₁ : a = b + c) (h₂ : d = c + e) (hb : b = 0) (he : e = 0) : a = d := by
+  omega
+
 theorem TwoOnePeriodicComplex.multiplicity_invariant_under_finite_kernel_cokernel
     {R : Type u} [Ring R]
     (C D : TwoOnePeriodicComplex R)
@@ -1000,6 +1006,422 @@ theorem TwoOnePeriodicComplex.multiplicity_invariant_under_finite_kernel_cokerne
     (hD : D.HasFiniteLengthCohomology)
     (hf : f.FiniteLengthKernelAndCokernel) :
     C.multiplicity hC = D.multiplicity hD := by
-  sorry
+  change C.toTwoPeriodic.multiplicity hC = D.toTwoPeriodic.multiplicity hD
+  let κ := LinearMap.ker f.f.hom
+  have hphiK_mem : ∀ x : κ, C.phi.hom x ∈ κ := by
+    intro x
+    change f.f.hom (C.phi.hom x) = 0
+    have hcomm := ModuleCat.hom_ext_iff.mp f.comm_phi
+    have hx := congrArg (fun k => k (x : C.M)) hcomm
+    simpa using hx.symm.trans (by simp)
+  have hpsiK_mem : ∀ x : κ, C.psi.hom x ∈ κ := by
+    intro x
+    change f.f.hom (C.psi.hom x) = 0
+    have hcomm := ModuleCat.hom_ext_iff.mp f.comm_psi
+    have hx := congrArg (fun k => k (x : C.M)) hcomm
+    simpa using hx.symm.trans (by simp)
+  let phiK : κ →ₗ[R] κ :=
+    (C.phi.hom.domRestrict κ).codRestrict κ hphiK_mem
+  let psiK : κ →ₗ[R] κ :=
+    (C.psi.hom.domRestrict κ).codRestrict κ hpsiK_mem
+  have hphiK_psiK : psiK.comp phiK = 0 := by
+    ext x
+    change C.psi.hom (C.phi.hom (x : C.M)) = 0
+    exact congrArg (fun k => k (x : C.M)) (ModuleCat.hom_ext_iff.mp C.phi_psi)
+  have hpsiK_phiK : phiK.comp psiK = 0 := by
+    ext x
+    change C.phi.hom (C.psi.hom (x : C.M)) = 0
+    exact congrArg (fun k => k (x : C.M)) (ModuleCat.hom_ext_iff.mp C.psi_phi)
+  let K : TwoPeriodicComplex R := {
+    M := ModuleCat.of R κ
+    N := ModuleCat.of R κ
+    phi := ModuleCat.ofHom phiK
+    psi := ModuleCat.ofHom psiK
+    phi_psi := by apply ModuleCat.hom_ext; simpa using hphiK_psiK
+    psi_phi := by apply ModuleCat.hom_ext; simpa using hpsiK_phiK }
+  let k : K ⟶ C.toTwoPeriodic := {
+    f := ModuleCat.ofHom κ.subtype
+    g := ModuleCat.ofHom κ.subtype
+    comm_phi := by apply ModuleCat.hom_ext; ext x; rfl
+    comm_psi := by apply ModuleCat.hom_ext; ext x; rfl }
+  let ρ := LinearMap.range f.f.hom
+  have hphiI_mem : ∀ x : ρ, D.phi.hom x ∈ ρ := by
+    rintro ⟨_, ⟨y, rfl⟩⟩
+    have hcomm := ModuleCat.hom_ext_iff.mp f.comm_phi
+    have hy := congrArg (fun k => k y) hcomm
+    exact ⟨C.phi.hom y, by
+      change f.f.hom (C.phi.hom y) = D.phi.hom (f.f.hom y)
+      simpa using hy.symm⟩
+  have hpsiI_mem : ∀ x : ρ, D.psi.hom x ∈ ρ := by
+    rintro ⟨_, ⟨y, rfl⟩⟩
+    have hcomm := ModuleCat.hom_ext_iff.mp f.comm_psi
+    have hy := congrArg (fun k => k y) hcomm
+    exact ⟨C.psi.hom y, by
+      change f.f.hom (C.psi.hom y) = D.psi.hom (f.f.hom y)
+      simpa using hy.symm⟩
+  let phiI : ρ →ₗ[R] ρ :=
+    (D.phi.hom.domRestrict ρ).codRestrict ρ hphiI_mem
+  let psiI : ρ →ₗ[R] ρ :=
+    (D.psi.hom.domRestrict ρ).codRestrict ρ hpsiI_mem
+  have hphiI_psiI : psiI.comp phiI = 0 := by
+    ext x
+    change D.psi.hom (D.phi.hom (x : D.M)) = 0
+    exact congrArg (fun k => k (x : D.M)) (ModuleCat.hom_ext_iff.mp D.phi_psi)
+  have hpsiI_phiI : phiI.comp psiI = 0 := by
+    ext x
+    change D.phi.hom (D.psi.hom (x : D.M)) = 0
+    exact congrArg (fun k => k (x : D.M)) (ModuleCat.hom_ext_iff.mp D.psi_phi)
+  let I : TwoPeriodicComplex R := {
+    M := ModuleCat.of R ρ
+    N := ModuleCat.of R ρ
+    phi := ModuleCat.ofHom phiI
+    psi := ModuleCat.ofHom psiI
+    phi_psi := by apply ModuleCat.hom_ext; simpa using hphiI_psiI
+    psi_phi := by apply ModuleCat.hom_ext; simpa using hpsiI_phiI }
+  let p : C.toTwoPeriodic ⟶ I := {
+    f := ModuleCat.ofHom (f.f.hom.codRestrict ρ (fun x => ⟨x, rfl⟩))
+    g := ModuleCat.ofHom (f.f.hom.codRestrict ρ (fun x => ⟨x, rfl⟩))
+    comm_phi := by
+      apply ModuleCat.hom_ext
+      ext x
+      change D.phi.hom (f.f.hom x) = f.f.hom (C.phi.hom x)
+      exact congrArg (fun k => k x) (ModuleCat.hom_ext_iff.mp f.comm_phi)
+    comm_psi := by
+      apply ModuleCat.hom_ext
+      ext x
+      change D.psi.hom (f.f.hom x) = f.f.hom (C.psi.hom x)
+      exact congrArg (fun k => k x) (ModuleCat.hom_ext_iff.mp f.comm_psi) }
+  let i : I ⟶ D.toTwoPeriodic := {
+    f := ModuleCat.ofHom ρ.subtype
+    g := ModuleCat.ofHom ρ.subtype
+    comm_phi := by apply ModuleCat.hom_ext; ext x; rfl
+    comm_psi := by apply ModuleCat.hom_ext; ext x; rfl }
+  have hphiQ_le : ρ ≤ LinearMap.ker (ρ.mkQ.comp D.phi.hom) := by
+    intro x hx
+    change ρ.mkQ (D.phi.hom x) = 0
+    simpa only [Submodule.mkQ_apply] using
+      (Submodule.Quotient.mk_eq_zero ρ).2 (hphiI_mem ⟨x, hx⟩)
+  have hpsiQ_le : ρ ≤ LinearMap.ker (ρ.mkQ.comp D.psi.hom) := by
+    intro x hx
+    change ρ.mkQ (D.psi.hom x) = 0
+    simpa only [Submodule.mkQ_apply] using
+      (Submodule.Quotient.mk_eq_zero ρ).2 (hpsiI_mem ⟨x, hx⟩)
+  let phiQ : (D.M ⧸ ρ) →ₗ[R] (D.M ⧸ ρ) :=
+    ρ.liftQ (ρ.mkQ.comp D.phi.hom) hphiQ_le
+  let psiQ : (D.M ⧸ ρ) →ₗ[R] (D.M ⧸ ρ) :=
+    ρ.liftQ (ρ.mkQ.comp D.psi.hom) hpsiQ_le
+  have hphiQ_psiQ : psiQ.comp phiQ = 0 := by
+    apply LinearMap.ext
+    intro x
+    refine Submodule.Quotient.induction_on ρ x ?_
+    intro y
+    change ρ.mkQ (D.psi.hom (D.phi.hom y)) = 0
+    have hy := congrArg (fun k => k y) (ModuleCat.hom_ext_iff.mp D.phi_psi)
+    have hy' : D.psi.hom (D.phi.hom y) = 0 := by simpa using hy
+    rw [hy']
+    simp
+  have hpsiQ_phiQ : phiQ.comp psiQ = 0 := by
+    apply LinearMap.ext
+    intro x
+    refine Submodule.Quotient.induction_on ρ x ?_
+    intro y
+    change ρ.mkQ (D.phi.hom (D.psi.hom y)) = 0
+    have hy := congrArg (fun k => k y) (ModuleCat.hom_ext_iff.mp D.psi_phi)
+    have hy' : D.phi.hom (D.psi.hom y) = 0 := by simpa using hy
+    rw [hy']
+    simp
+  let Q : TwoPeriodicComplex R := {
+    M := ModuleCat.of R (D.M ⧸ ρ)
+    N := ModuleCat.of R (D.M ⧸ ρ)
+    phi := ModuleCat.ofHom phiQ
+    psi := ModuleCat.ofHom psiQ
+    phi_psi := by apply ModuleCat.hom_ext; simpa using hphiQ_psiQ
+    psi_phi := by apply ModuleCat.hom_ext; simpa using hpsiQ_phiQ }
+  let q : D.toTwoPeriodic ⟶ Q := {
+    f := ModuleCat.ofHom ρ.mkQ
+    g := ModuleCat.ofHom ρ.mkQ
+    comm_phi := by
+      apply ModuleCat.hom_ext
+      ext x
+      change phiQ (ρ.mkQ x) = ρ.mkQ (D.phi.hom x)
+      exact congrArg (fun k => k x) (Submodule.liftQ_mkQ ρ (ρ.mkQ.comp D.phi.hom) hphiQ_le)
+    comm_psi := by
+      apply ModuleCat.hom_ext
+      ext x
+      change psiQ (ρ.mkQ x) = ρ.mkQ (D.psi.hom x)
+      exact congrArg (fun k => k x) (Submodule.liftQ_mkQ ρ (ρ.mkQ.comp D.psi.hom) hpsiQ_le) }
+  have hExactK : Function.Exact κ.subtype
+      (f.f.hom.codRestrict ρ (fun x => ⟨x, rfl⟩)) := by
+    intro x
+    constructor
+    · intro hx
+      have hx' := congrArg Subtype.val hx
+      refine ⟨⟨x, ?_⟩, rfl⟩
+      change f.f.hom x = 0 at hx'
+      exact hx'
+    · rintro ⟨y, rfl⟩
+      apply Subtype.ext
+      exact y.property
+  have hExactQ : Function.Exact ρ.subtype ρ.mkQ := by
+    exact LinearMap.exact_subtype_mkQ ρ
+  have hKM : IsFiniteLength R K.M := by
+    simpa [K, κ] using hf.1
+  have hQN : IsFiniteLength R Q.M := by
+    simpa [Q, ρ, moduleCokernel] using hf.2
+  let hK := K.hasFiniteLengthCohomology_of_finite_terms hKM hKM
+  let hQ := Q.hasFiniteLengthCohomology_of_finite_terms hQN hQN
+  have hKzero : K.multiplicity hK = 0 := by
+    calc
+      K.multiplicity hK =
+          (moduleLengthNat R K.M hKM : ℤ) - moduleLengthNat R K.N hKM :=
+        TwoPeriodicComplex.multiplicity_eq_moduleLength_sub K hKM hKM
+      _ = 0 := by
+        have h : moduleLengthNat R K.M hKM = moduleLengthNat R K.N hKM := by rfl
+        have h' : (moduleLengthNat R K.M hKM : ℤ) =
+            (moduleLengthNat R K.N hKM : ℤ) := congrArg (fun n : ℕ => (n : ℤ)) h
+        exact sub_eq_zero.mpr h'
+  have hQzero : Q.multiplicity hQ = 0 := by
+    calc
+      Q.multiplicity hQ =
+          (moduleLengthNat R Q.M hQN : ℤ) - moduleLengthNat R Q.N hQN :=
+        TwoPeriodicComplex.multiplicity_eq_moduleLength_sub Q hQN hQN
+      _ = 0 := by
+        have h : moduleLengthNat R Q.M hQN = moduleLengthNat R Q.N hQN := by rfl
+        have h' : (moduleLengthNat R Q.M hQN : ℤ) =
+            (moduleLengthNat R Q.N hQN : ℤ) := congrArg (fun n : ℕ => (n : ℤ)) h
+        exact sub_eq_zero.mpr h'
+  let F₀ := TwoPeriodicComplex.toHomologicalComplexFunctor (R := R)
+  let hF₀ : Functor.FullyFaithful F₀ := Functor.FullyFaithful.ofFullyFaithful F₀
+  letI : Preadditive (TwoPeriodicComplex R) := Preadditive.ofFullyFaithful hF₀
+  have hzero_inst :
+      (Preadditive.preadditiveHasZeroMorphisms : HasZeroMorphisms (TwoPeriodicComplex R)) =
+        TwoPeriodicComplex.instHasZeroMorphisms := by
+    exact HasZeroMorphisms.ext _ _
+  letI : HasZeroMorphisms (TwoPeriodicComplex R) := TwoPeriodicComplex.instHasZeroMorphisms
+  have multiplicity_additive_explicit :
+      ∀ (X₁ X₂ X₃ : TwoPeriodicComplex R)
+        (a : X₁ ⟶ X₂) (b : X₂ ⟶ X₃)
+        (hz : a ≫ b = @Zero.zero (X₁ ⟶ X₃)
+          (@HasZeroMorphisms.zero (TwoPeriodicComplex R)
+            TwoPeriodicComplex.instCategory TwoPeriodicComplex.instHasZeroMorphisms X₁ X₃)),
+        (@ShortComplex.mk _ _ TwoPeriodicComplex.instHasZeroMorphisms _ _ _ a b
+          (by exact hz)).ShortExact →
+        TwoPeriodicComplex.TwoOfThreeFiniteLength
+          (@ShortComplex.mk _ _ TwoPeriodicComplex.instHasZeroMorphisms _ _ _ a b
+            (by exact hz)) →
+        ∃ h₁ : X₁.HasFiniteLengthCohomology,
+          ∃ h₂ : X₂.HasFiniteLengthCohomology,
+            ∃ h₃ : X₃.HasFiniteLengthCohomology,
+              X₂.multiplicity h₂ = X₁.multiplicity h₁ + X₃.multiplicity h₃ := by
+    intro X₁ X₂ X₃ a b hz hS hfin
+    let S := @ShortComplex.mk _ _ TwoPeriodicComplex.instHasZeroMorphisms _ _ _ a b
+      (by exact hz)
+    obtain ⟨h₁, h₂, h₃, hadd⟩ :=
+      TwoPeriodicComplex.multiplicity_additive S hS hfin
+    exact ⟨h₁, h₂, h₃, hadd⟩
+  let z₁ : K ⟶ I := {
+    f := 0
+    g := 0
+    comm_phi := by simp
+    comm_psi := by simp }
+  have hkp : k ≫ p = z₁ := by
+    apply TwoPeriodicComplex.Hom.ext
+    · apply ModuleCat.hom_ext
+      ext x
+      change f.f.hom (κ.subtype x) = 0
+      exact x.property
+    · apply ModuleCat.hom_ext
+      ext x
+      change f.f.hom (κ.subtype x) = 0
+      exact x.property
+  let z₂ : I ⟶ Q := {
+    f := 0
+    g := 0
+    comm_phi := by simp
+    comm_psi := by simp }
+  have hiq : i ≫ q = z₂ := by
+    apply TwoPeriodicComplex.Hom.ext
+    · apply ModuleCat.hom_ext
+      ext x
+      change ρ.mkQ (ρ.subtype x) = 0
+      exact (Submodule.Quotient.mk_eq_zero ρ).2 x.property
+    · apply ModuleCat.hom_ext
+      ext x
+      change ρ.mkQ (ρ.subtype x) = 0
+      exact (Submodule.Quotient.mk_eq_zero ρ).2 x.property
+  have hzero₁ : k ≫ p = @Zero.zero (K ⟶ I)
+      (@HasZeroMorphisms.zero (TwoPeriodicComplex R)
+        TwoPeriodicComplex.instCategory TwoPeriodicComplex.instHasZeroMorphisms K I) := by
+    apply hF₀.map_injective
+    rw [hkp]
+    have hz : F₀.map z₁ = (0 : F₀.obj K ⟶ F₀.obj I) := by
+      apply HomologicalComplex.Hom.ext
+      funext j
+      cases j <;> rfl
+    rw [hz]
+    exact (F₀.map_zero K I).symm
+  have hzero₂ : i ≫ q = @Zero.zero (I ⟶ Q)
+      (@HasZeroMorphisms.zero (TwoPeriodicComplex R)
+        TwoPeriodicComplex.instCategory TwoPeriodicComplex.instHasZeroMorphisms I Q) := by
+    apply hF₀.map_injective
+    rw [hiq]
+    have hz : F₀.map z₂ = (0 : F₀.obj I ⟶ F₀.obj Q) := by
+      apply HomologicalComplex.Hom.ext
+      funext j
+      cases j <;> rfl
+    rw [hz]
+    exact (F₀.map_zero I Q).symm
+  have hS₁ :
+      (@ShortComplex.mk _ _ TwoPeriodicComplex.instHasZeroMorphisms _ _ _ k p
+        (by exact hzero₁)).ShortExact := by
+    letI : HasZeroMorphisms (TwoPeriodicComplex R) :=
+      Preadditive.preadditiveHasZeroMorphisms
+    have hzero₁' : k ≫ p = @Zero.zero (K ⟶ I)
+        (@HasZeroMorphisms.zero (TwoPeriodicComplex R)
+          TwoPeriodicComplex.instCategory Preadditive.preadditiveHasZeroMorphisms K I) := by
+      rw [hzero_inst]
+      exact hzero₁
+    let S₁ := @ShortComplex.mk _ _ Preadditive.preadditiveHasZeroMorphisms _ _ _ k p
+      (by exact hzero₁')
+    let F := TwoPeriodicComplex.toHomologicalComplexFunctor (R := R)
+    letI : Functor.IsEquivalence F :=
+      { faithful := by dsimp [F]; infer_instance
+        full := by dsimp [F]; infer_instance
+        essSurj := by dsimp [F]; infer_instance }
+    let T := S₁.map F
+    have hT : T.ShortExact := by
+      dsimp [T]
+      apply HomologicalComplex.shortExact_of_degreewise_shortExact
+      intro j
+      cases j
+      · change (ShortComplex.mk (ModuleCat.ofHom κ.subtype)
+          (ModuleCat.ofHom (f.f.hom.codRestrict ρ (fun x => ⟨x, rfl⟩)))
+          (by apply ModuleCat.hom_ext; ext x; exact x.property)).ShortExact
+        exact ModuleCat.shortComplex_shortExact _ hExactK κ.subtype_injective
+          (LinearMap.surjective_rangeRestrict _)
+      · change (ShortComplex.mk (ModuleCat.ofHom κ.subtype)
+          (ModuleCat.ofHom (f.f.hom.codRestrict ρ (fun x => ⟨x, rfl⟩)))
+          (by apply ModuleCat.hom_ext; ext x; exact x.property)).ShortExact
+        exact ModuleCat.shortComplex_shortExact _ hExactK κ.subtype_injective
+          (LinearMap.surjective_rangeRestrict _)
+    have hS₁' : S₁.ShortExact := by
+      exact CategoryTheory.ShortExact.reflects_shortExact_of_faithful F hT
+    letI : HasZeroMorphisms (TwoPeriodicComplex R) :=
+      TwoPeriodicComplex.instHasZeroMorphisms
+    have hlocal_all :
+        ∀ (hz : k ≫ p = @Zero.zero (K ⟶ I)
+          (@HasZeroMorphisms.zero (TwoPeriodicComplex R)
+            TwoPeriodicComplex.instCategory Preadditive.preadditiveHasZeroMorphisms K I)),
+          @ShortComplex.ShortExact _ _ Preadditive.preadditiveHasZeroMorphisms
+            (@ShortComplex.mk _ _ Preadditive.preadditiveHasZeroMorphisms _ _ _ k p hz) := by
+      intro hz
+      simpa [S₁] using hS₁'
+    have htransport :
+        (∀ (hz : k ≫ p = @Zero.zero (K ⟶ I)
+          (@HasZeroMorphisms.zero (TwoPeriodicComplex R)
+            TwoPeriodicComplex.instCategory Preadditive.preadditiveHasZeroMorphisms K I)),
+            @ShortComplex.ShortExact _ _ Preadditive.preadditiveHasZeroMorphisms
+              (@ShortComplex.mk _ _ Preadditive.preadditiveHasZeroMorphisms _ _ _ k p hz)) =
+        (∀ (hz : k ≫ p = @Zero.zero (K ⟶ I)
+          (@HasZeroMorphisms.zero (TwoPeriodicComplex R)
+            TwoPeriodicComplex.instCategory TwoPeriodicComplex.instHasZeroMorphisms K I)),
+            @ShortComplex.ShortExact _ _ TwoPeriodicComplex.instHasZeroMorphisms
+              (@ShortComplex.mk _ _ TwoPeriodicComplex.instHasZeroMorphisms _ _ _ k p hz)) := by
+      exact congrArg (fun H : HasZeroMorphisms (TwoPeriodicComplex R) =>
+        ∀ (hz : k ≫ p = @Zero.zero (K ⟶ I)
+            (@HasZeroMorphisms.zero (TwoPeriodicComplex R)
+              TwoPeriodicComplex.instCategory H K I)),
+          @ShortComplex.ShortExact _ _ H (@ShortComplex.mk _ _ H _ _ _ k p hz)) hzero_inst
+    exact (htransport ▸ hlocal_all) hzero₁
+  have hS₂ :
+      (@ShortComplex.mk _ _ TwoPeriodicComplex.instHasZeroMorphisms _ _ _ i q
+        (by exact hzero₂)).ShortExact := by
+    letI : HasZeroMorphisms (TwoPeriodicComplex R) :=
+      Preadditive.preadditiveHasZeroMorphisms
+    have hzero₂' : i ≫ q = @Zero.zero (I ⟶ Q)
+        (@HasZeroMorphisms.zero (TwoPeriodicComplex R)
+          TwoPeriodicComplex.instCategory Preadditive.preadditiveHasZeroMorphisms I Q) := by
+      rw [hzero_inst]
+      exact hzero₂
+    let S₂ := @ShortComplex.mk _ _ Preadditive.preadditiveHasZeroMorphisms _ _ _ i q
+      (by exact hzero₂')
+    let F := TwoPeriodicComplex.toHomologicalComplexFunctor (R := R)
+    letI : Functor.IsEquivalence F :=
+      { faithful := by dsimp [F]; infer_instance
+        full := by dsimp [F]; infer_instance
+        essSurj := by dsimp [F]; infer_instance }
+    let T := S₂.map F
+    have hT : T.ShortExact := by
+      dsimp [T]
+      apply HomologicalComplex.shortExact_of_degreewise_shortExact
+      intro j
+      cases j
+      · change (ShortComplex.mk (ModuleCat.ofHom ρ.subtype)
+          (ModuleCat.ofHom ρ.mkQ)
+          (by
+            apply ModuleCat.hom_ext
+            ext x
+            exact (Submodule.Quotient.mk_eq_zero ρ).2 x.property)).ShortExact
+        exact ModuleCat.shortComplex_shortExact _ hExactQ ρ.subtype_injective
+          (Submodule.mkQ_surjective _)
+      · change (ShortComplex.mk (ModuleCat.ofHom ρ.subtype)
+          (ModuleCat.ofHom ρ.mkQ)
+          (by
+            apply ModuleCat.hom_ext
+            ext x
+            exact (Submodule.Quotient.mk_eq_zero ρ).2 x.property)).ShortExact
+        exact ModuleCat.shortComplex_shortExact _ hExactQ ρ.subtype_injective
+          (Submodule.mkQ_surjective _)
+    have hS₂' : S₂.ShortExact := by
+      exact CategoryTheory.ShortExact.reflects_shortExact_of_faithful F hT
+    letI : HasZeroMorphisms (TwoPeriodicComplex R) :=
+      TwoPeriodicComplex.instHasZeroMorphisms
+    have hlocal_all :
+        ∀ (hz : i ≫ q = @Zero.zero (I ⟶ Q)
+          (@HasZeroMorphisms.zero (TwoPeriodicComplex R)
+            TwoPeriodicComplex.instCategory Preadditive.preadditiveHasZeroMorphisms I Q)),
+          @ShortComplex.ShortExact _ _ Preadditive.preadditiveHasZeroMorphisms
+            (@ShortComplex.mk _ _ Preadditive.preadditiveHasZeroMorphisms _ _ _ i q hz) := by
+      intro hz
+      simpa [S₂] using hS₂'
+    have htransport :
+        (∀ (hz : i ≫ q = @Zero.zero (I ⟶ Q)
+          (@HasZeroMorphisms.zero (TwoPeriodicComplex R)
+            TwoPeriodicComplex.instCategory Preadditive.preadditiveHasZeroMorphisms I Q)),
+            @ShortComplex.ShortExact _ _ Preadditive.preadditiveHasZeroMorphisms
+              (@ShortComplex.mk _ _ Preadditive.preadditiveHasZeroMorphisms _ _ _ i q hz)) =
+        (∀ (hz : i ≫ q = @Zero.zero (I ⟶ Q)
+          (@HasZeroMorphisms.zero (TwoPeriodicComplex R)
+            TwoPeriodicComplex.instCategory TwoPeriodicComplex.instHasZeroMorphisms I Q)),
+            @ShortComplex.ShortExact _ _ TwoPeriodicComplex.instHasZeroMorphisms
+              (@ShortComplex.mk _ _ TwoPeriodicComplex.instHasZeroMorphisms _ _ _ i q hz)) := by
+      exact congrArg (fun H : HasZeroMorphisms (TwoPeriodicComplex R) =>
+        ∀ (hz : i ≫ q = @Zero.zero (I ⟶ Q)
+            (@HasZeroMorphisms.zero (TwoPeriodicComplex R)
+              TwoPeriodicComplex.instCategory H I Q)),
+          @ShortComplex.ShortExact _ _ H (@ShortComplex.mk _ _ H _ _ _ i q hz)) hzero_inst
+    exact (htransport ▸ hlocal_all) hzero₂
+  obtain ⟨hK', hC', hI', hadd₁⟩ :=
+    multiplicity_additive_explicit K C.toTwoPeriodic I k p hzero₁ hS₁
+      (Or.inl ⟨hK, hC⟩)
+  obtain ⟨hI'', hD', hQ', hadd₂⟩ :=
+    multiplicity_additive_explicit I D.toTwoPeriodic Q i q hzero₂ hS₂
+      (Or.inl ⟨hI', hD⟩)
+  have hKproof : hK' = hK := Subsingleton.elim _ _
+  have hCproof : hC' = hC := Subsingleton.elim _ _
+  have hIproof : hI'' = hI' := Subsingleton.elim _ _
+  have hDproof : hD' = hD := Subsingleton.elim _ _
+  have hQproof : hQ' = hQ := Subsingleton.elim _ _
+  have hadd₁' : C.toTwoPeriodic.multiplicity hC =
+      K.multiplicity hK + I.multiplicity hI' := by
+    simpa only [hCproof, hKproof] using hadd₁
+  have hadd₂' : D.toTwoPeriodic.multiplicity hD =
+      I.multiplicity hI' + Q.multiplicity hQ := by
+    simpa only [hDproof, hIproof, hQproof] using hadd₂
+  have hKzero' : K.multiplicity hK' = 0 := by
+    simpa only [hKproof] using hKzero
+  have hQzero' : Q.multiplicity hQ' = 0 := by
+    simpa only [hQproof] using hQzero
+  exact int_cancel_of_add_eq hadd₁' hadd₂' hKzero' hQzero'
 
 end Formalization.Books.Chow.Unit02

@@ -444,6 +444,53 @@ theorem image_proper_closed_not_dense_of_algebraic_fractionFields
     {Z : Set (PrimeSpectrum B)} (hZclosed : IsClosed Z)
     (hZproper : Z ≠ Set.univ) :
     ¬ Dense (PrimeSpectrum.comap (algebraMap A B) '' Z) := by
-  sorry
+  rcases (PrimeSpectrum.isClosed_iff_zeroLocus_ideal Z).mp hZclosed with ⟨J, hJZ⟩
+  have hJne : J ≠ (⊥ : Ideal B) := by
+    intro hJbot
+    apply hZproper
+    rw [hJZ, hJbot, PrimeSpectrum.zeroLocus_bot]
+  have hIne :
+      Ideal.comap (algebraMap A B) J ≠ (⊥ : Ideal A) :=
+    ideal_comap_ne_bot_of_algebraic_fractionFields
+      (A := A) (B := B) (K := K) (L := L) hAB J hJne
+  have hsub :
+      PrimeSpectrum.comap (algebraMap A B) '' Z ⊆
+        PrimeSpectrum.zeroLocus
+          (Ideal.comap (algebraMap A B) J : Set A) := by
+    rintro p ⟨q, hq, rfl⟩
+    rw [PrimeSpectrum.mem_zeroLocus]
+    intro a ha
+    change algebraMap A B a ∈ q.asIdeal
+    apply (PrimeSpectrum.mem_zeroLocus q (J : Set B)).mp
+      (hJZ ▸ hq)
+    exact ha
+  intro hdense
+  have hclosedI : IsClosed
+      (PrimeSpectrum.zeroLocus
+        (Ideal.comap (algebraMap A B) J : Set A)) :=
+    PrimeSpectrum.isClosed_zeroLocus _
+  have hclosure :
+      closure (PrimeSpectrum.comap (algebraMap A B) '' Z) =
+        (Set.univ : Set (PrimeSpectrum A)) :=
+    hdense.closure_eq
+  have hunivsubset :
+      (Set.univ : Set (PrimeSpectrum A)) ⊆
+        PrimeSpectrum.zeroLocus
+          (Ideal.comap (algebraMap A B) J : Set A) := by
+    rw [← hclosure]
+    exact (hclosedI.closure_subset_iff).mpr hsub
+  have hIbot :
+      Ideal.comap (algebraMap A B) J ≤ (⊥ : Ideal A) := by
+    intro a ha
+    have hbotmem :
+        (⊥ : PrimeSpectrum A) ∈
+          PrimeSpectrum.zeroLocus
+            (Ideal.comap (algebraMap A B) J : Set A) :=
+      hunivsubset (Set.mem_univ _)
+    have ha' :
+        a ∈ (⊥ : PrimeSpectrum A).asIdeal :=
+      (PrimeSpectrum.mem_zeroLocus _ _).mp hbotmem ha
+    simpa only [PrimeSpectrum.asIdeal_bot, Ideal.mem_bot] using ha'
+  exact hIne (le_antisymm hIbot bot_le)
 
 end Formalization.Books.Algebra.Unit30

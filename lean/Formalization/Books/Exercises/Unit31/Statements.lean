@@ -2,7 +2,9 @@ import Formalization.Books.Exercises.Unit31.Core
 
 import Mathlib.Algebra.Algebra.Subalgebra.Basic
 import Mathlib.Algebra.MvPolynomial.Equiv
+import Mathlib.Algebra.MvPolynomial.Funext
 import Mathlib.Algebra.MvPolynomial.Division
+import Mathlib.Algebra.MvPolynomial.Nilpotent
 import Mathlib.Algebra.Polynomial.Eval.Irreducible
 import Mathlib.Analysis.Complex.Polynomial.Basic
 import Mathlib.FieldTheory.KummerPolynomial
@@ -10,6 +12,7 @@ import Mathlib.LinearAlgebra.Dimension.Finite
 import Mathlib.NumberTheory.Padics.PadicNumbers
 import Mathlib.RingTheory.Polynomial.IsIntegral
 import Mathlib.RingTheory.Prime
+import Mathlib.RingTheory.UniqueFactorizationDomain.Basic
 
 /-!
 # Exercises, Chapter 31: Regular functions
@@ -348,6 +351,384 @@ theorem extra_function_on_affine_curve :
 
 /-! ## Exercise `no-extra-function` -/
 
+private lemma cofinite_aeval_eq_zero
+    {n : ℕ} (hn : 0 < n) (E : Set (Fin n → ℂ)) (hE : E.Finite)
+    {p : MvPolynomial (Fin n) ℂ}
+    (hp : ∀ x, x ∉ E → MvPolynomial.aeval x p = 0) : p = 0 := by
+  classical
+  let i₀ : Fin n := ⟨0, hn⟩
+  let S : Fin n → Set ℂ := fun i =>
+    if i = i₀ then (E.image (fun x => x i₀))ᶜ else Set.univ
+  have hS : ∀ i, (S i).Infinite := by
+    intro i
+    by_cases hi : i = i₀
+    · subst i
+      simpa [S] using (hE.image (fun x => x i₀)).infinite_compl
+    · simpa [S, hi] using (Set.infinite_univ : (Set.univ : Set ℂ).Infinite)
+  apply MvPolynomial.funext_set S hS
+  intro x hx
+  have hxE : x ∉ E := by
+    intro hxE
+    have hxi : x i₀ ∈ E.image (fun y => y i₀) := ⟨x, hxE, rfl⟩
+    have hxi' : x i₀ ∉ E.image (fun y => y i₀) := by
+      simpa [S] using hx i₀
+    exact hxi' hxi
+  simpa [MvPolynomial.aeval_def] using hp x hxE
+
+private lemma exists_aeval_ne_zero_of_finite_complement
+    {n : ℕ} (hn : 0 < n) (E : Set (Fin n → ℂ)) (hE : E.Finite)
+    {p q : MvPolynomial (Fin n) ℂ} (hp : p ≠ 0) (hq : q ≠ 0) :
+    ∃ x, x ∉ E ∧ MvPolynomial.aeval x p ≠ 0 ∧
+      MvPolynomial.aeval x q ≠ 0 := by
+  classical
+  by_contra h
+  apply mul_ne_zero hp hq
+  apply cofinite_aeval_eq_zero hn E hE
+  intro x hxE
+  by_cases hpx : MvPolynomial.aeval x p = 0
+  · rw [map_mul, hpx, zero_mul]
+  by_cases hqx : MvPolynomial.aeval x q = 0
+  · rw [map_mul, hqx, mul_zero]
+  exact False.elim (h ⟨x, hxE, hpx, hqx⟩)
+
+private lemma exists_aeval_ne_zero_of_finite_complement_single
+    {n : ℕ} (hn : 0 < n) (E : Set (Fin n → ℂ)) (hE : E.Finite)
+    {p : MvPolynomial (Fin n) ℂ} (hp : p ≠ 0) :
+    ∃ x, x ∉ E ∧ MvPolynomial.aeval x p ≠ 0 := by
+  obtain ⟨x, hxE, hpx, _⟩ :=
+    exists_aeval_ne_zero_of_finite_complement hn E hE hp (one_ne_zero :
+      (1 : MvPolynomial (Fin n) ℂ) ≠ 0)
+  exact ⟨x, hxE, hpx⟩
+
+private lemma exists_aeval_eq_zero_of_not_isUnit
+    {n : ℕ} {p : MvPolynomial (Fin n) ℂ} (hp : p ≠ 0)
+    (hpn : ¬IsUnit p) : ∃ x : Fin n → ℂ, MvPolynomial.aeval x p = 0 := by
+  obtain ⟨M, hM, hMmax⟩ :=
+    Ideal.exists_le_maximal (Ideal.span {p}) (Ideal.span_singleton_ne_top hpn)
+  obtain ⟨x, hx⟩ :=
+    MvPolynomial.eq_vanishingIdeal_singleton_of_isMaximal ℂ hM
+  refine ⟨x, ?_⟩
+  have hpx : p ∈ MvPolynomial.vanishingIdeal ℂ ({x} : Set (Fin n → ℂ)) := by
+    rw [← hx]
+    exact hMmax (Ideal.subset_span (by simp))
+  exact (MvPolynomial.mem_vanishingIdeal_singleton_iff x p).mp hpx
+
+private lemma aeval_eval_C_eq_zero_of_isRoot_map
+    {m : ℕ} {F : Polynomial (MvPolynomial (Fin m) ℂ)}
+    (y : Fin m → ℂ) (r : ℂ)
+    (hr : (F.map (MvPolynomial.aeval y).toRingHom).IsRoot r) :
+    MvPolynomial.aeval y (Polynomial.eval (MvPolynomial.C r) F) = 0 := by
+  have hrootQ : Polynomial.aeval r (F.map (MvPolynomial.aeval y).toRingHom) = 0 := by
+    simpa [Polynomial.IsRoot.def] using hr
+  have hrootQr : Polynomial.eval r (F.map (MvPolynomial.aeval y).toRingHom) = 0 := by
+    simpa [Polynomial.aeval_def] using hrootQ
+  have hrootQ' : Polynomial.eval₂ (MvPolynomial.aeval y).toRingHom r F = 0 := by
+    simpa [Polynomial.eval_map] using hrootQr
+  calc
+    MvPolynomial.aeval y (Polynomial.eval (MvPolynomial.C r) F) =
+        Polynomial.eval₂ (MvPolynomial.aeval y).toRingHom
+          (MvPolynomial.aeval y (MvPolynomial.C r)) F := by
+      exact (Polynomial.eval₂_at_apply
+        (p := F) (MvPolynomial.aeval y).toRingHom
+        (MvPolynomial.C r)).symm
+    _ = Polynomial.eval₂ (MvPolynomial.aeval y).toRingHom r F := by simp
+    _ = 0 := hrootQ'
+
+private lemma aeval_finSucc_eq_zero_of_eval_C_eq_zero
+    {m : ℕ} {p : MvPolynomial (Fin (m + 1)) ℂ}
+    (y : Fin m → ℂ) (r : ℂ)
+    (hroot : MvPolynomial.aeval y
+      (Polynomial.eval (MvPolynomial.C r) (MvPolynomial.finSuccEquiv ℂ m p)) = 0) :
+    MvPolynomial.aeval (Fin.cases r y) p = 0 := by
+  have hroot'' := MvPolynomial.eval_polynomial_eval_finSuccEquiv
+    (R := ℂ) (x := y) p (MvPolynomial.C r)
+  have hcases :
+      (Fin.cases (MvPolynomial.eval y (MvPolynomial.C r)) y :
+        Fin (m + 1) → ℂ) = Fin.cases r y := by
+    funext i
+    simp
+  rw [hcases] at hroot''
+  have hroot'e : MvPolynomial.eval y
+      (Polynomial.eval (MvPolynomial.C r) (MvPolynomial.finSuccEquiv ℂ m p)) = 0 := by
+    simpa [MvPolynomial.aeval_def] using hroot
+  have hroot_eval : MvPolynomial.eval (Fin.cases r y) p = 0 :=
+    (hroot'e.symm.trans hroot'').symm
+  simpa [MvPolynomial.aeval_def] using hroot_eval
+
+private lemma exists_root_of_map_of_positive_degree
+    {m : ℕ} {F : Polynomial (MvPolynomial (Fin m) ℂ)}
+    (y : Fin m → ℂ) (hdeg : 0 < F.natDegree)
+    (hly : MvPolynomial.aeval y F.leadingCoeff ≠ 0) :
+    ∃ r, (F.map (MvPolynomial.aeval y).toRingHom).IsRoot r := by
+  let Q := F.map (MvPolynomial.aeval y).toRingHom
+  have hQdeg : Q.natDegree = F.natDegree := by
+    dsimp [Q]
+    rw [Polynomial.natDegree_map_of_leadingCoeff_ne_zero]
+    simpa using hly
+  obtain ⟨r, hr⟩ :=
+    IsAlgClosed.exists_root Q
+      (Polynomial.degree_ne_of_natDegree_ne (by
+        have hQpos : 0 < Q.natDegree := by
+          rw [hQdeg]
+          exact hdeg
+        exact Nat.ne_of_gt hQpos))
+  exact ⟨r, by change Q.IsRoot r; exact hr⟩
+
+private lemma exists_root_outside_finite_projection_of_positive_degree
+    {m : ℕ} (hm : 0 < m) (E : Set (Fin (m + 1) → ℂ)) (hE : E.Finite)
+    {p : MvPolynomial (Fin (m + 1)) ℂ}
+    (hdeg : 0 < (MvPolynomial.finSuccEquiv ℂ m p).natDegree) :
+    ∃ y r, y ∉ E.image (fun x : Fin (m + 1) → ℂ => fun i => x i.succ) ∧
+      ((MvPolynomial.finSuccEquiv ℂ m p).map
+        (MvPolynomial.aeval y).toRingHom).IsRoot r := by
+  classical
+  let F := MvPolynomial.finSuccEquiv ℂ m p
+  have hF : F ≠ 0 := by
+    intro hF
+    have : F.natDegree = 0 := by simp [hF]
+    have hdegF : 0 < F.natDegree := by
+      change 0 < F.natDegree
+      exact hdeg
+    omega
+  have hdegF : 0 < F.natDegree := by
+    change 0 < F.natDegree
+    exact hdeg
+  have hlc : F.leadingCoeff ≠ 0 :=
+    Polynomial.leadingCoeff_ne_zero.mpr hF
+  let E' : Set (Fin m → ℂ) :=
+    E.image (fun x : Fin (m + 1) → ℂ => fun i => x i.succ)
+  have hE' : E'.Finite := hE.image _
+  obtain ⟨y, hyE', hly⟩ :=
+    exists_aeval_ne_zero_of_finite_complement_single hm E' hE' hlc
+  obtain ⟨r, hr⟩ := exists_root_of_map_of_positive_degree y hdegF hly
+  refine ⟨y, r, ?_, ?_⟩
+  · change y ∉ E'
+    exact hyE'
+  · change (F.map (MvPolynomial.aeval y).toRingHom).IsRoot r
+    exact hr
+
+private lemma exists_aeval_eq_zero_outside_finite_of_positive_degree
+    {m : ℕ} (hm : 0 < m) (E : Set (Fin (m + 1) → ℂ)) (hE : E.Finite)
+    {p : MvPolynomial (Fin (m + 1)) ℂ}
+    (hdeg : 0 < (MvPolynomial.finSuccEquiv ℂ m p).natDegree) :
+    ∃ x, x ∉ E ∧ MvPolynomial.aeval x p = 0 := by
+  obtain ⟨y, r, hyE', hr⟩ :=
+    exists_root_outside_finite_projection_of_positive_degree
+      (p := p) hm E hE hdeg
+  have hxE : Fin.cases r y ∉ E := by
+    intro hx
+    apply hyE'
+    exact ⟨Fin.cases r y, hx, by funext i; simp⟩
+  have hroot' : MvPolynomial.aeval y
+      (Polynomial.eval (MvPolynomial.C r)
+        (MvPolynomial.finSuccEquiv ℂ m p)) = 0 :=
+    aeval_eval_C_eq_zero_of_isRoot_map
+      (F := MvPolynomial.finSuccEquiv ℂ m p) y r hr
+  have hroot : MvPolynomial.aeval (Fin.cases r y) p = 0 :=
+    aeval_finSucc_eq_zero_of_eval_C_eq_zero (p := p) y r hroot'
+  refine ⟨Fin.cases r y, ?_, ?_⟩
+  · exact hxE
+  · exact hroot
+
+private lemma exists_fin_cases_not_mem_finite
+    {m : ℕ} (E : Set (Fin (m + 1) → ℂ)) (hE : E.Finite)
+    (y : Fin m → ℂ) : ∃ r : ℂ, Fin.cases r y ∉ E := by
+  classical
+  let S : Set ℂ := {r | Fin.cases r y ∈ E}
+  have hS : S.Finite := by
+    apply (hE.image (fun x : Fin (m + 1) → ℂ => x 0)).subset
+    intro r hr
+    change Fin.cases r y ∈ E at hr
+    exact ⟨Fin.cases r y, hr, by simp⟩
+  have hSnot : ∃ r : ℂ, r ∉ S := by
+    by_contra hnot
+    push_neg at hnot
+    apply (Set.infinite_univ : (Set.univ : Set ℂ).Infinite)
+    apply hS.subset
+    intro r hr
+    exact hnot r
+  obtain ⟨r, hrS⟩ := hSnot
+  exact ⟨r, by intro hx; exact hrS hx⟩
+
+private lemma exists_aeval_eq_zero_outside_finite_of_constant_value
+    {m : ℕ} (E : Set (Fin (m + 1) → ℂ)) (hE : E.Finite)
+    {p : MvPolynomial (Fin (m + 1)) ℂ} {q : MvPolynomial (Fin m) ℂ}
+    (hFC : MvPolynomial.finSuccEquiv ℂ m p = Polynomial.C q)
+    (y : Fin m → ℂ) (hqy : MvPolynomial.aeval y q = 0) :
+    ∃ x, x ∉ E ∧ MvPolynomial.aeval x p = 0 := by
+  classical
+  obtain ⟨r, hxE⟩ := exists_fin_cases_not_mem_finite E hE y
+  have hroot' : MvPolynomial.aeval y
+      (Polynomial.eval (MvPolynomial.C r)
+        (MvPolynomial.finSuccEquiv ℂ m p)) = 0 := by
+    rw [hFC]
+    simp [hqy]
+  have hroot : MvPolynomial.aeval (Fin.cases r y) p = 0 :=
+    aeval_finSucc_eq_zero_of_eval_C_eq_zero (p := p) y r hroot'
+  refine ⟨Fin.cases r y, ?_, ?_⟩
+  · exact hxE
+  · exact hroot
+
+private lemma exists_aeval_eq_zero_outside_finite_of_constant_coefficient
+    {m : ℕ} (hm : 0 < m) (E : Set (Fin (m + 1) → ℂ)) (hE : E.Finite)
+    {p : MvPolynomial (Fin (m + 1)) ℂ} {q : MvPolynomial (Fin m) ℂ}
+    (hFC : MvPolynomial.finSuccEquiv ℂ m p = Polynomial.C q)
+    (hqne : q ≠ 0) (hqnonunit : ¬IsUnit q) :
+    ∃ x, x ∉ E ∧ MvPolynomial.aeval x p = 0 := by
+  classical
+  obtain ⟨y, hqy⟩ := exists_aeval_eq_zero_of_not_isUnit hqne hqnonunit
+  exact exists_aeval_eq_zero_outside_finite_of_constant_value
+    E hE hFC y hqy
+
+private lemma exists_aeval_eq_zero_outside_finite_of_degree_zero
+    {m : ℕ} (hm : 0 < m) (E : Set (Fin (m + 1) → ℂ)) (hE : E.Finite)
+    {p : MvPolynomial (Fin (m + 1)) ℂ} (hp0 : p ≠ 0)
+    (hunit : ¬IsUnit p)
+    (hdeg : ¬0 < (MvPolynomial.finSuccEquiv ℂ m p).natDegree) :
+    ∃ x, x ∉ E ∧ MvPolynomial.aeval x p = 0 := by
+  classical
+  let F := MvPolynomial.finSuccEquiv ℂ m p
+  have hFdeg : F.natDegree = 0 := by
+    have hdegF : ¬0 < F.natDegree := by
+      change ¬0 < F.natDegree
+      exact hdeg
+    omega
+  have hFC : F = Polynomial.C (F.coeff 0) :=
+    Polynomial.eq_C_of_natDegree_eq_zero hFdeg
+  have hFne : F ≠ 0 := by
+    intro hFzero
+    apply hp0
+    have hFzero' := congrArg (MvPolynomial.finSuccEquiv ℂ m).symm hFzero
+    have heq : (MvPolynomial.finSuccEquiv ℂ m).symm F = p := by
+      change (MvPolynomial.finSuccEquiv ℂ m).symm
+          ((MvPolynomial.finSuccEquiv ℂ m) p) = p
+      exact (MvPolynomial.finSuccEquiv ℂ m).symm_apply_apply p
+    exact heq.symm.trans (hFzero'.trans (by simp))
+  have hqne : F.coeff 0 ≠ 0 := by
+    intro hqzero
+    apply hFne
+    rw [hFC, hqzero]
+    simp
+  have hqnonunit : ¬IsUnit (F.coeff 0) := by
+    intro hqunit
+    apply hunit
+    have hFunit : IsUnit F := by
+      rw [hFC]
+      exact IsUnit.map (Polynomial.C :
+        MvPolynomial (Fin m) ℂ →+* Polynomial (MvPolynomial (Fin m) ℂ)) hqunit
+    have hpunit :=
+      IsUnit.map (MvPolynomial.finSuccEquiv ℂ m).symm.toRingHom hFunit
+    have heq : (MvPolynomial.finSuccEquiv ℂ m).symm.toRingHom F = p := by
+      change (MvPolynomial.finSuccEquiv ℂ m).symm
+          ((MvPolynomial.finSuccEquiv ℂ m) p) = p
+      exact (MvPolynomial.finSuccEquiv ℂ m).symm_apply_apply p
+    rw [heq] at hpunit
+    exact hpunit
+  exact exists_aeval_eq_zero_outside_finite_of_constant_coefficient
+    hm E hE hFC hqne hqnonunit
+
+private lemma isUnit_of_aeval_ne_zero_on_finite_complement
+    {n : ℕ} (hn : 2 ≤ n) (E : Set (Fin n → ℂ)) (hE : E.Finite)
+    {p : MvPolynomial (Fin n) ℂ}
+    (hp : ∀ x, x ∉ E → MvPolynomial.aeval x p ≠ 0) : IsUnit p := by
+  classical
+  by_contra hunit
+  cases n with
+  | zero => omega
+  | succ m =>
+    have hm : 0 < m := by omega
+    have hp0 : p ≠ 0 := by
+      intro hpzero
+      obtain ⟨x, hxE, hx⟩ :=
+        exists_aeval_ne_zero_of_finite_complement_single (by omega) E hE
+          (one_ne_zero : (1 : MvPolynomial (Fin (m + 1)) ℂ) ≠ 0)
+      apply hp x hxE
+      simp [hpzero]
+    let F := MvPolynomial.finSuccEquiv ℂ m p
+    by_cases hdeg : 0 < F.natDegree
+    · obtain ⟨x, hxE, hzero⟩ :=
+        exists_aeval_eq_zero_outside_finite_of_positive_degree hm E hE hdeg
+      exact (hp x hxE) hzero
+    · obtain ⟨x, hxE, hzero⟩ :=
+        exists_aeval_eq_zero_outside_finite_of_degree_zero hm E hE hp0 hunit hdeg
+      exact (hp x hxE) hzero
+
+private lemma exists_mem_inter_of_nonempty_principal_opens
+    {n : ℕ} (hn : 0 < n) (E : Set (Fin n → ℂ)) (hE : E.Finite)
+    {U V : Set (Fin n → ℂ)}
+    (hU : IsZariskiOpenIn ℂ n (Set.univ \ E) U)
+    (hV : IsZariskiOpenIn ℂ n (Set.univ \ E) V)
+    (hUnonempty : U.Nonempty) (hVnonempty : V.Nonempty) :
+    ∃ x, x ∈ U ∧ x ∈ V := by
+  classical
+  rcases hU with ⟨J, hUeq⟩
+  rcases hV with ⟨K, hVeq⟩
+  obtain ⟨u, hu⟩ := hUnonempty
+  obtain ⟨v, hv⟩ := hVnonempty
+  have hu' := hu
+  have hv' := hv
+  rw [hUeq] at hu'
+  rw [hVeq] at hv'
+  have huJ : ∃ p, p ∈ J ∧ MvPolynomial.aeval u p ≠ 0 := by
+    have huJ0 := hu'.2
+    rw [MvPolynomial.mem_zeroLocus_iff] at huJ0
+    push_neg at huJ0
+    exact huJ0
+  have hvK : ∃ q, q ∈ K ∧ MvPolynomial.aeval v q ≠ 0 := by
+    have hvK0 := hv'.2
+    rw [MvPolynomial.mem_zeroLocus_iff] at hvK0
+    push_neg at hvK0
+    exact hvK0
+  obtain ⟨p, hpJ, hpval⟩ := huJ
+  obtain ⟨q, hqK, hqval⟩ := hvK
+  have hpne : p ≠ 0 := by
+    intro hp
+    subst p
+    simp at hpval
+  have hqne : q ≠ 0 := by
+    intro hq
+    subst q
+    simp at hqval
+  obtain ⟨x, hxE, hpx, hqx⟩ :=
+    exists_aeval_ne_zero_of_finite_complement hn E hE hpne hqne
+  have hxZ : x ∈ Set.univ \ E := ⟨Set.mem_univ _, hxE⟩
+  have hxJ : x ∉ MvPolynomial.zeroLocus ℂ J := by
+    intro hx
+    exact hpx ((MvPolynomial.mem_zeroLocus_iff.mp hx) p hpJ)
+  have hxK : x ∉ MvPolynomial.zeroLocus ℂ K := by
+    intro hx
+    exact hqx ((MvPolynomial.mem_zeroLocus_iff.mp hx) q hqK)
+  exact ⟨x, hUeq ▸ ⟨hxZ, hxJ⟩, hVeq ▸ ⟨hxZ, hxK⟩⟩
+
+private lemma eq_zero_of_aeval_eq_zero_on_basic_open
+    {n : ℕ} {p q : MvPolynomial (Fin n) ℂ} (hq : q ≠ 0)
+    (hp : ∀ x : Fin n → ℂ, MvPolynomial.aeval x q ≠ 0 →
+      MvPolynomial.aeval x p = 0) : p = 0 := by
+  have hmul : q * p = 0 := by
+    apply MvPolynomial.funext (R := ℂ)
+    intro x
+    by_cases hqx : MvPolynomial.aeval x q = 0
+    · have hqx' : MvPolynomial.eval x q = 0 := by
+        simpa [MvPolynomial.aeval_def] using hqx
+      simpa [MvPolynomial.eval_mul, hqx']
+    · have hp' : MvPolynomial.eval x p = 0 := by
+        simpa [MvPolynomial.aeval_def] using hp x hqx
+      simpa [MvPolynomial.eval_mul, hp']
+  exact (mul_eq_zero.mp hmul).resolve_left hq
+
+private lemma eq_zero_of_aeval_eq_zero_on_finite_complement_basic_open
+    {n : ℕ} (hn : 0 < n) (E : Set (Fin n → ℂ)) (hE : E.Finite)
+    {p q : MvPolynomial (Fin n) ℂ} (hq : q ≠ 0)
+    (hp : ∀ x, x ∉ E → MvPolynomial.aeval x q ≠ 0 →
+      MvPolynomial.aeval x p = 0) : p = 0 := by
+  have hmul : q * p = 0 := by
+    apply cofinite_aeval_eq_zero hn E hE
+    intro x hxE
+    by_cases hqx : MvPolynomial.aeval x q = 0
+    · rw [map_mul, hqx, zero_mul]
+    · rw [map_mul, hp x hxE hqx, mul_zero]
+  exact (mul_eq_zero.mp hmul).resolve_left hq
+
 /-- A regular function on the complement of a finite subset of complex affine
 `n`-space is induced by an ambient polynomial when `n ≥ 2`. -/
 theorem regular_function_on_finite_complement_is_polynomial
@@ -355,7 +736,184 @@ theorem regular_function_on_finite_complement_is_polynomial
     (φ : ↥(Set.univ \ E) → ℂ)
     (hφ : IsRegularFunction (Set.univ \ E) φ) :
     IsPolynomialRestriction (Set.univ \ E) φ := by
-  sorry
+  classical
+  unfold IsPolynomialRestriction
+  have hn0 : 0 < n := by omega
+  by_cases hZ : (Set.univ \ E).Nonempty
+  · obtain ⟨z0, hz0⟩ := hZ
+    rcases hφ ⟨z0, hz0⟩ with
+      ⟨U0, hz0U, hU0, hOpen0, f0, g0, hg0, hfg0⟩
+    have hOpen0' := hOpen0
+    rcases hOpen0 with ⟨J0, hU0eq⟩
+    have hg0ne : g0 ≠ 0 := by
+      intro hg
+      subst g0
+      have hg0' := hg0 z0 hz0U
+      simp at hg0'
+    have hcross_of_local :
+        ∀ (U : Set (Fin n → ℂ)) (hU : U ⊆ Set.univ \ E)
+          (hOpen : IsZariskiOpenIn ℂ n (Set.univ \ E) U)
+          (hUnonempty : U.Nonempty) (f g : MvPolynomial (Fin n) ℂ),
+          (∀ u, u ∈ U → MvPolynomial.aeval u g ≠ 0) →
+          (∀ u (hu : u ∈ U),
+            φ ⟨u, hU hu⟩ = MvPolynomial.aeval u f /
+              MvPolynomial.aeval u g) →
+          f0 * g - f * g0 = 0 := by
+      intro U hU hOpen hUnonempty f g hg hfg
+      rcases hOpen with ⟨J, hUeq⟩
+      have hp0data : ∃ p, p ∈ J0 ∧ MvPolynomial.aeval z0 p ≠ 0 := by
+        have hz0' := hz0U
+        rw [hU0eq] at hz0'
+        have hz0J := hz0'.2
+        rw [MvPolynomial.mem_zeroLocus_iff] at hz0J
+        push_neg at hz0J
+        exact hz0J
+      obtain ⟨p0, hp0J, hp0val⟩ := hp0data
+      have hp0ne : p0 ≠ 0 := by
+        intro hp0
+        subst p0
+        simp at hp0val
+      obtain ⟨u, hu⟩ := hUnonempty
+      have hu' := hu
+      rw [hUeq] at hu'
+      have hpdata : ∃ p, p ∈ J ∧ MvPolynomial.aeval u p ≠ 0 := by
+        have huJ := hu'.2
+        rw [MvPolynomial.mem_zeroLocus_iff] at huJ
+        push_neg at huJ
+        exact huJ
+      obtain ⟨p, hpJ, hpval⟩ := hpdata
+      have hpne : p ≠ 0 := by
+        intro hp
+        subst p
+        simp at hpval
+      have hprodne : p0 * p ≠ 0 := mul_ne_zero hp0ne hpne
+      apply eq_zero_of_aeval_eq_zero_on_finite_complement_basic_open
+        hn0 E hE hprodne
+      intro y hyE hyprod
+      have hyp0 : MvPolynomial.aeval y p0 ≠ 0 := by
+        intro hyp0
+        apply hyprod
+        rw [map_mul, hyp0, zero_mul]
+      have hyp : MvPolynomial.aeval y p ≠ 0 := by
+        intro hyp
+        apply hyprod
+        rw [map_mul, hyp, mul_zero]
+      have hyZ : y ∈ Set.univ \ E := ⟨Set.mem_univ _, hyE⟩
+      have hyJ0 : y ∉ MvPolynomial.zeroLocus ℂ J0 := by
+        intro hyJ0
+        exact hyp0 ((MvPolynomial.mem_zeroLocus_iff.mp hyJ0) p0 hp0J)
+      have hyJ : y ∉ MvPolynomial.zeroLocus ℂ J := by
+        intro hyJ
+        exact hyp ((MvPolynomial.mem_zeroLocus_iff.mp hyJ) p hpJ)
+      have hyU0 : y ∈ U0 := hU0eq ▸ ⟨hyZ, hyJ0⟩
+      have hyU : y ∈ U := hUeq ▸ ⟨hyZ, hyJ⟩
+      have hratio :
+          MvPolynomial.aeval y f0 / MvPolynomial.aeval y g0 =
+            MvPolynomial.aeval y f / MvPolynomial.aeval y g := by
+        calc
+          MvPolynomial.aeval y f0 / MvPolynomial.aeval y g0 =
+              φ ⟨y, hU0 hyU0⟩ := (hfg0 y hyU0).symm
+          _ = φ ⟨y, hU hyU⟩ := by rfl
+          _ = MvPolynomial.aeval y f / MvPolynomial.aeval y g :=
+            hfg y hyU
+      have hratio' :=
+        (div_eq_div_iff (hg0 y hyU0) (hg y hyU)).mp hratio
+      rw [map_sub, map_mul, map_mul]
+      exact sub_eq_zero.mpr hratio'
+    by_cases hf0 : f0 = 0
+    · refine ⟨0, ?_⟩
+      intro z
+      rcases hφ z with
+        ⟨U, hzU, hU, hOpen, f, g, hg, hfg⟩
+      have hc := hcross_of_local U hU hOpen ⟨z.1, hzU⟩ f g hg hfg
+      have hfg0 : f * g0 = 0 := by
+        simpa [hf0] using hc
+      have hf : f = 0 := (mul_eq_zero.mp hfg0).resolve_right hg0ne
+      rw [hfg z.1 hzU, hf]
+      simp
+    · obtain ⟨a, b, c, hab, hca, hcb⟩ :=
+        UniqueFactorizationMonoid.exists_reduced_factors f0 hf0 g0
+      have hcne : c ≠ 0 := by
+        intro hc
+        subst c
+        simp at hca
+        exact hf0 hca.symm
+      have hbne : b ≠ 0 := by
+        intro hb
+        subst b
+        simp at hcb
+        exact hg0ne hcb.symm
+      have hno_factors : ∀ {d}, d ∣ b → d ∣ a → ¬Prime d := by
+        intro d hdb hda hd
+        exact hd.not_isUnit (hab.symm hdb hda)
+      have hb_dvd_of_local :
+          ∀ (U : Set (Fin n → ℂ)) (hU : U ⊆ Set.univ \ E)
+            (hOpen : IsZariskiOpenIn ℂ n (Set.univ \ E) U)
+            (hUnonempty : U.Nonempty) (f g : MvPolynomial (Fin n) ℂ),
+            (∀ u, u ∈ U → MvPolynomial.aeval u g ≠ 0) →
+            (∀ u (hu : u ∈ U),
+              φ ⟨u, hU hu⟩ = MvPolynomial.aeval u f /
+                MvPolynomial.aeval u g) → b ∣ g := by
+        intro U hU hOpen hUnonempty f g hg hfg
+        have hcros := hcross_of_local U hU hOpen hUnonempty f g hg hfg
+        have hcros' : a * g = f * b := by
+          have htmp : c * (a * g - f * b) = 0 := by
+            calc
+              c * (a * g - f * b) = (c * a) * g - f * (c * b) := by ring
+              _ = f0 * g - f * g0 := by rw [hca, hcb]
+              _ = 0 := hcros
+          exact sub_eq_zero.mp ((mul_eq_zero.mp htmp).resolve_left hcne)
+        have hdiv : b ∣ a * g := by
+          refine ⟨f, ?_⟩
+          simpa [mul_comm] using hcros'
+        exact UniqueFactorizationMonoid.dvd_of_dvd_mul_right_of_no_prime_factors
+          hbne hno_factors hdiv
+      have hbunit : IsUnit b := isUnit_of_aeval_ne_zero_on_finite_complement
+        hn E hE (by
+          intro x hxE
+          have hx : x ∈ Set.univ \ E := ⟨Set.mem_univ _, hxE⟩
+          rcases hφ ⟨x, hx⟩ with
+            ⟨U, hxU, hU, hOpen, f, g, hg, hfg⟩
+          obtain ⟨t, ht⟩ :=
+            hb_dvd_of_local U hU hOpen ⟨x, hxU⟩ f g hg hfg
+          intro hbx
+          apply hg x hxU
+          rw [ht, map_mul, hbx, zero_mul])
+      obtain ⟨d, hd, hdb⟩ :=
+        (MvPolynomial.isUnit_iff_eq_C_of_isReduced (P := b)).mp hbunit
+      refine ⟨(d⁻¹ : ℂ) • a, ?_⟩
+      intro z
+      rcases hφ z with
+        ⟨U, hzU, hU, hOpen, f, g, hg, hfg⟩
+      have hcros := hcross_of_local U hU hOpen ⟨z.1, hzU⟩ f g hg hfg
+      have hcros' : a * g = f * b := by
+        have htmp : c * (a * g - f * b) = 0 := by
+          calc
+            c * (a * g - f * b) = (c * a) * g - f * (c * b) := by ring
+            _ = f0 * g - f * g0 := by rw [hca, hcb]
+            _ = 0 := hcros
+        exact sub_eq_zero.mp ((mul_eq_zero.mp htmp).resolve_left hcne)
+      obtain ⟨t, ht⟩ := hb_dvd_of_local U hU hOpen ⟨z.1, hzU⟩ f g hg hfg
+      have hbval : MvPolynomial.aeval z.1 b ≠ 0 := by
+        intro hbz
+        apply hg z.1 hzU
+        rw [ht, map_mul, hbz, zero_mul]
+      have hratio :
+          MvPolynomial.aeval z.1 f / MvPolynomial.aeval z.1 g =
+            MvPolynomial.aeval z.1 a / MvPolynomial.aeval z.1 b := by
+        apply (div_eq_div_iff (hg z.1 hzU) hbval).2
+        simpa [map_mul, mul_comm] using
+          congrArg (fun q => MvPolynomial.aeval z.1 q) hcros'.symm
+      calc
+        φ z = MvPolynomial.aeval z.1 f / MvPolynomial.aeval z.1 g :=
+          hfg z.1 hzU
+        _ = MvPolynomial.aeval z.1 a / MvPolynomial.aeval z.1 b := hratio
+        _ = MvPolynomial.aeval z.1 ((d⁻¹ : ℂ) • a) := by
+          rw [hdb]
+          simp [div_eq_mul_inv, Algebra.smul_def, mul_comm]
+  · refine ⟨0, ?_⟩
+    intro z
+    exact False.elim (hZ ⟨z.1, z.2⟩)
 
 /-! ## Exercise `cone` -/
 

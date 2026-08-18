@@ -134,6 +134,7 @@ theorem openPresheafRestriction_directImage_iso (C : Type u) [Category.{v} C]
     (F : TopCat.Presheaf C (openSubspace U)) :
     Nonempty ((openPresheafRestriction C U).obj
       ((openPresheafDirectImage C U).obj F) ≅ F) := by
+  let f := openInclusion U
   refine ⟨?_⟩
   let hf := U.isOpenEmbedding
   have hfun : hf.functor ⋙ Opens.map f = 𝟭 _ := by
@@ -175,24 +176,34 @@ theorem openSheafRestriction_directImage_iso {C : Type u} [Category.{v} C]
 theorem openSheafDirectImage_fullFaithful (C : Type u) [Category.{v} C]
     {X : TopCat.{v}} (U : Opens X) :
     Nonempty (openSheafDirectImage C U).FullyFaithful := by
+  let f := openInclusion U
   let hf := U.isOpenEmbedding
-  letI : hf.functor.IsContinuous (Opens.grothendieckTopology (openSubspace U))
+  have hfun : hf.functor ⋙ Opens.map f = 𝟭 _ := by
+    refine CategoryTheory.Functor.ext ?_ ?_
+    · intro V
+      exact TopologicalSpace.Opens.map_functor_eq' f hf V
+    · subsingleton
+  have hcont : hf.functor.IsContinuous (Opens.grothendieckTopology (openSubspace U))
       (Opens.grothendieckTopology X) := hf.functor_isContinuous
   let adj₀ := hf.isOpenMap.adjunction
-  let adj := adj₀.sheafPushforwardContinuous C
+  let adj : openSheafRestriction C U ⊣ openSheafDirectImage C U :=
+    adj₀.sheafPushforwardContinuous
     (Opens.grothendieckTopology (openSubspace U))
     (Opens.grothendieckTopology X)
-  letI : IsIso adj.counit := by
-    letI : ∀ F, IsIso (adj.counit.app F) := by
+  have hIso : IsIso adj.counit := by
+    have hF : ∀ F, IsIso (adj.counit.app F) := by
       intro F
-      apply (ObjectProperty.FullSubcategory.isIso_hom_iff
+      apply (ObjectProperty.isIso_hom_iff
         (adj.counit.app F)).mp
       change IsIso ((adj₀.op.whiskerLeft _).counit.app F.presheaf)
-      letI : ∀ V, IsIso (((adj₀.op.whiskerLeft _).counit.app F.presheaf).app V) := by
+      have hV : ∀ V, IsIso (((adj₀.op.whiskerLeft _).counit.app F.presheaf).app V) := by
         intro V
         dsimp [CategoryTheory.Adjunction.whiskerLeft]
-        rw [show adj₀.unit.app V.unop =
-          eqToHom (by simp) from Subsingleton.elim _ _]
+        rw [show adj₀.op.counit.app V =
+          eqToHom (by
+            change op ((hf.functor ⋙ Opens.map f).obj V.unop) = V
+            rw [hfun]
+            rfl) from Subsingleton.elim _ _]
         infer_instance
       exact NatIso.isIso_of_isIso_app _
     exact NatIso.isIso_of_isIso_app _

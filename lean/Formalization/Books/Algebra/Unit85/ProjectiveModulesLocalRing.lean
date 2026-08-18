@@ -1,6 +1,8 @@
 import Formalization.Books.Algebra.Unit84.TransfiniteDevissage
 import Mathlib.RingTheory.Finiteness.Defs
+import Mathlib.RingTheory.Finiteness.Prod
 import Mathlib.LinearAlgebra.FreeModule.Finite.Basic
+import Mathlib.LinearAlgebra.Basis.Prod
 import Mathlib.RingTheory.LocalRing.Defs
 import Mathlib.RingTheory.LocalRing.ResidueField.Basic
 import Mathlib.LinearAlgebra.Transvection.Basic
@@ -145,6 +147,128 @@ private theorem matrix_isUnit_det_of_isUnit_diag_of_nonunit_offdiag
   rw [RingHom.map_det, RingHom.mapMatrix_apply]
   exact hdet'
 
+private structure CountableFreeDecomposition
+    {R : Type u} {M : Type v} [CommRing R]
+    [AddCommGroup M] [Module R M] where
+  F : ModuleCat.{v} R
+  C : ModuleCat.{v} R
+  e : M ≃ₗ[R] (ModuleCat.carrier F) × (ModuleCat.carrier C)
+  finiteF : Module.Finite R (ModuleCat.carrier F)
+  freeF : Module.Free R (ModuleCat.carrier F)
+
+private structure CountableFreeExtension
+    {R : Type u} {M : Type v} [CommRing R]
+    [AddCommGroup M] [Module R M]
+    (D : CountableFreeDecomposition (R := R) (M := M)) (x : M) where
+  Q : Submodule R (ModuleCat.carrier D.C)
+  U : Submodule R (ModuleCat.carrier D.C)
+  hQU : IsCompl Q U
+  T : Submodule R Q
+  V : Submodule R Q
+  hTV : IsCompl T V
+  finiteT : Module.Finite R T
+  freeT : Module.Free R T
+  eC : ModuleCat.carrier D.C ≃ₗ[R] T × (V × U)
+  e : M ≃ₗ[R] (ModuleCat.carrier D.F × T) × (V × U)
+  e_eq : e =
+    ((D.e.trans ((LinearEquiv.refl R (ModuleCat.carrier D.F)).prodCongr eC)).trans
+      (LinearEquiv.prodAssoc R (ModuleCat.carrier D.F) T (V × U)).symm)
+  contains : ∃ z : ModuleCat.carrier D.F × T,
+    e.symm (z, (0, 0)) = x
+
+private def CountableFreeExtension.next
+    {R : Type u} {M : Type v} [CommRing R]
+    [AddCommGroup M] [Module R M]
+    {D : CountableFreeDecomposition (R := R) (M := M)} {x : M}
+    (E : CountableFreeExtension D x) :
+    CountableFreeDecomposition (R := R) (M := M) := by
+  letI : Module.Finite R (ModuleCat.carrier D.F) := D.finiteF
+  letI : Module.Free R (ModuleCat.carrier D.F) := D.freeF
+  letI : Module.Finite R E.T := E.finiteT
+  letI : Module.Free R E.T := E.freeT
+  exact
+    { F := ModuleCat.of R (ModuleCat.carrier D.F × E.T)
+      C := ModuleCat.of R (E.V × E.U)
+      e := E.e
+      finiteF := inferInstance
+      freeF := inferInstance }
+
+private theorem countableFreeExtension_exists
+    {R : Type u} {M : Type v} [CommRing R]
+    [AddCommGroup M] [Module R M]
+    (hproperty :
+      ∀ (N N' : Type v) [AddCommGroup N] [Module R N]
+        [AddCommGroup N'] [Module R N']
+        [Module.Finite R N'] [Module.Free R N'],
+        Nonempty (M ≃ₗ[R] N × N') →
+          ∀ x : N, ∃ Q : Submodule R N,
+            x ∈ Q ∧ IsComplemented Q ∧ Module.Free R Q)
+    (D : CountableFreeDecomposition (R := R) (M := M)) (x : M) :
+    Nonempty (CountableFreeExtension D x) := by
+  classical
+  letI := D.finiteF
+  letI := D.freeF
+  let eCF : M ≃ₗ[R] ModuleCat.carrier D.C × ModuleCat.carrier D.F :=
+    D.e.trans (LinearEquiv.prodComm R (ModuleCat.carrier D.F)
+      (ModuleCat.carrier D.C))
+  obtain ⟨Q, hyQ, hQcomp, hQfree⟩ :=
+    hproperty (ModuleCat.carrier D.C) (ModuleCat.carrier D.F) ⟨eCF⟩ (eCF x).1
+  letI : Module.Free R Q := hQfree
+  obtain ⟨U, hQU⟩ := hQcomp
+  obtain ⟨T, hTmem, hTcomp, hTfinite, hTfree⟩ :=
+    free_element_mem_finite_free_direct_summand hQfree ⟨(eCF x).1, hyQ⟩
+  letI : Module.Finite R T := hTfinite
+  letI : Module.Free R T := hTfree
+  obtain ⟨V, hTV⟩ := hTcomp
+  let eC : ModuleCat.carrier D.C ≃ₗ[R] T × (V × U) :=
+    ((Submodule.prodEquivOfIsCompl Q U hQU).symm.trans
+      ((Submodule.prodEquivOfIsCompl T V hTV).symm.prodCongr
+        (LinearEquiv.refl R U))).trans
+      (LinearEquiv.prodAssoc R T V U)
+  let e : M ≃ₗ[R] (ModuleCat.carrier D.F × T) × (V × U) :=
+    (D.e.trans ((LinearEquiv.refl R (ModuleCat.carrier D.F)).prodCongr eC)).trans
+      (LinearEquiv.prodAssoc R (ModuleCat.carrier D.F) T (V × U)).symm
+  have hcontains : ∃ z : ModuleCat.carrier D.F × T,
+      e.symm (z, (0, 0)) = x := by
+    let zQ : Q := ⟨(eCF x).1, hyQ⟩
+    let zT : T := ((Submodule.prodEquivOfIsCompl T V hTV).symm zQ).1
+    refine ⟨((eCF x).2, zT), ?_⟩
+    apply e.injective
+    rw [e.apply_symm_apply]
+    simp only [e, LinearEquiv.trans_apply, LinearEquiv.prodAssoc_apply,
+      LinearEquiv.prodCongr_apply]
+    change (((eCF x).2, zT), 0, 0) =
+      (((D.e x).1, (eC (D.e x).2).1), (eC (D.e x).2).2)
+    have hD : D.e x = ((eCF x).2, (eCF x).1) := by rfl
+    have hprojQ : Q.projectionOnto U hQU (eCF x).1 = zQ := by
+      exact Submodule.projectionOnto_apply_of_mem_left hQU hyQ
+    have hTVzero : V.projectionOnto T hTV.symm zQ = 0 :=
+      Submodule.projectionOnto_apply_of_mem_right hTV.symm hTmem
+    have hQUzero : U.projectionOnto Q hQU.symm (eCF x).1 = 0 :=
+      Submodule.projectionOnto_apply_of_mem_right hQU.symm hyQ
+    rw [hD]
+    congr 1
+    all_goals
+      simp only [LinearEquiv.trans_apply, LinearEquiv.prodAssoc_apply,
+        LinearEquiv.prodCongr_apply]
+      simp [eC, zT, zQ,
+        Submodule.prodEquivOfIsCompl_symm_apply_left,
+        Submodule.prodEquivOfIsCompl_symm_apply_right, hprojQ, hTVzero,
+        hQUzero]
+  refine ⟨{
+    Q := Q
+    U := U
+    hQU := hQU
+    T := T
+    V := V
+    hTV := hTV
+    finiteT := hTfinite
+    freeT := hTfree
+    eC := eC
+    e := e
+    e_eq := by rfl
+    contains := hcontains }⟩
+
 /-- A countably generated module is free when every decomposition with a
 finite free complement has the free-direct-summand property from the source.
 
@@ -162,7 +286,208 @@ theorem free_of_countablyGenerated_of_free_direct_summand_property
           ∀ x : N, ∃ Q : Submodule R N,
             x ∈ Q ∧ IsComplemented Q ∧ Module.Free R Q) :
     Module.Free R M := by
-  sorry
+  classical
+  rcases hM with ⟨s, hs, hspan⟩
+  obtain ⟨x, hxs⟩ := Set.countable_iff_exists_subset_range.mp hs
+  have hxspan : Submodule.span R (Set.range x) = ⊤ := by
+    apply top_unique
+    rw [← hspan]
+    exact Submodule.span_mono hxs
+  let b0 : Module.Basis (PEmpty.{v + 1}) R (⊥ : Submodule R M) :=
+    Module.Basis.empty (⊥ : Submodule R M)
+  let D0 : CountableFreeDecomposition (R := R) (M := M) :=
+    { F := ModuleCat.of R (⊥ : Submodule R M)
+      C := ModuleCat.of R M
+      e := (LinearEquiv.uniqueProd (R := R) (M := M)
+        (M₂ := (⊥ : Submodule R M))).symm
+      finiteF := Module.Finite.of_basis b0
+      freeF := Module.Free.of_basis b0 }
+  let pick : ∀ (D : CountableFreeDecomposition (R := R) (M := M)) (n : ℕ),
+      CountableFreeExtension D (x n) := fun D n =>
+    Classical.choice (countableFreeExtension_exists hproperty D (x n))
+  let D : ℕ → CountableFreeDecomposition (R := R) (M := M) :=
+    Nat.rec D0 (fun n Dn => (pick Dn n).next)
+  let E (n : ℕ) : CountableFreeExtension (D n) (x n) := pick (D n) n
+  have hDnext (n : ℕ) : D (n + 1) = (E n).next := by
+    rfl
+  let inc (n : ℕ) : ModuleCat.carrier (D n).F →ₗ[R] M :=
+    (D n).e.symm.toLinearMap.comp
+      (LinearMap.inl R (ModuleCat.carrier (D n).F) (ModuleCat.carrier (D n).C))
+  let P (n : ℕ) : Submodule R M := LinearMap.range (inc n)
+  let incT (n : ℕ) : (E n).T →ₗ[R] M :=
+    (D n).e.symm.toLinearMap.comp
+      ((LinearMap.inr R (ModuleCat.carrier (D n).F) (ModuleCat.carrier (D n).C)).comp
+        ((E n).eC.symm.toLinearMap.comp
+          (LinearMap.inl R (E n).T ((E n).V × (E n).U))))
+  let A (n : ℕ) : Submodule R M := LinearMap.range (incT n)
+  have hPnext (n : ℕ) : P (n + 1) = P n ⊔ A n := by
+    change LinearMap.range (inc (n + 1)) =
+      LinearMap.range (inc n) ⊔ LinearMap.range (incT n)
+    cases hDnext n
+    change LinearMap.range
+        ((E n).e.symm.toLinearMap.comp
+          (LinearMap.inl R (ModuleCat.carrier (D n).F × (E n).T)
+            ((E n).V × (E n).U))) =
+      LinearMap.range (inc n) ⊔ LinearMap.range (incT n)
+    ext y
+    constructor
+    · rintro ⟨z, rfl⟩
+      rcases z with ⟨f, t⟩
+      change (E n).e.symm ((f, t), (0, 0)) ∈
+        LinearMap.range (inc n) ⊔ LinearMap.range (incT n)
+      rw [(E n).e_eq]
+      change (D n).e.symm (f, (E n).eC.symm (t, (0, 0))) ∈
+        LinearMap.range (inc n) ⊔ LinearMap.range (incT n)
+      rw [show (D n).e.symm (f, (E n).eC.symm (t, (0, 0))) =
+          (D n).e.symm (f, 0) + (D n).e.symm (0, (E n).eC.symm (t, (0, 0))) by
+        rw [← map_add]
+        congr 1 <;> simp]
+      apply Submodule.mem_sup.mpr
+      refine ⟨(D n).e.symm (f, 0), ?_,
+        (D n).e.symm (0, (E n).eC.symm (t, (0, 0))), ?_, rfl⟩
+      · exact ⟨f, by
+          simp [P, inc, CountableFreeExtension.next, E]⟩
+      · exact ⟨t, by
+          simp [A, incT, CountableFreeExtension.next, E]
+          rfl⟩
+    · intro hy
+      rcases Submodule.mem_sup'.mp hy with
+        ⟨⟨y₁, hy₁⟩, ⟨y₂, hy₂⟩, rfl⟩
+      rcases hy₁ with ⟨f, rfl⟩
+      rcases hy₂ with ⟨t, rfl⟩
+      refine ⟨(f, t), ?_⟩
+      change (E n).e.symm ((f, t), (0, 0)) = _
+      rw [(E n).e_eq]
+      change (D n).e.symm (f, (E n).eC.symm (t, (0, 0))) = _
+      change (D n).e.symm (f, (E n).eC.symm (t, (0, 0))) =
+        (D n).e.symm (f, 0) + (D n).e.symm (0, (E n).eC.symm (t, (0, 0)))
+      rw [← map_add]
+      congr 1 <;> simp
+  have hincE (n : ℕ) (f : ModuleCat.carrier (D n).F) :
+      (E n).e (inc n f) = ((f, 0), (0, 0)) := by
+    rw [(E n).e_eq]
+    simp [inc] <;> rfl
+  have hincTE (n : ℕ) (t : (E n).T) :
+      (E n).e (incT n t) = ((0, t), (0, 0)) := by
+    rw [(E n).e_eq]
+    simp [incT] <;> rfl
+  have hdisjoint (n : ℕ) : Disjoint (A n) (P n) := by
+    rw [Submodule.disjoint_def]
+    intro y hyA hyP
+    rcases hyA with ⟨t, hty⟩
+    rcases hyP with ⟨f, hfy⟩
+    have heq0 : incT n t = inc n f := hty.trans hfy.symm
+    have heq : (E n).e (incT n t) = (E n).e (inc n f) := congrArg (E n).e heq0
+    rw [hincTE, hincE] at heq
+    have hf : f = 0 :=
+      (congrArg Prod.fst (congrArg Prod.fst heq)).symm
+    have ht : t = 0 := by
+      exact congrArg Prod.snd (congrArg Prod.fst heq)
+    apply (E n).e.injective
+    rw [← hty, hincTE, ht]
+    simp
+  have hPzero : P 0 = ⊥ := by
+    apply le_antisymm
+    · rintro y ⟨z, rfl⟩
+      simp [P, inc, D, D0]
+    · exact (bot_le : (⊥ : Submodule R M) ≤ P 0)
+  have hPmono : Monotone P := by
+    intro m n hmn
+    induction n, hmn using Nat.le_induction with
+    | base => exact le_rfl
+    | succ n hmn ih =>
+        rw [hPnext n]
+        exact ih.trans le_sup_left
+  have hPtop : ∀ n : ℕ, P n ≤ ⨆ i : ℕ, A i := by
+    intro n
+    induction n with
+    | zero => rw [hPzero]; exact bot_le
+    | succ n ih =>
+        rw [hPnext n]
+        exact sup_le ih (le_iSup A n)
+  have hxP : ∀ n : ℕ, x n ∈ P (n + 1) := by
+    intro n
+    rcases (E n).contains with ⟨z, hz⟩
+    rw [← hz]
+    change (E n).e.symm (z, (0, 0)) ∈ LinearMap.range (inc (n + 1))
+    cases hDnext n
+    exact ⟨z, rfl⟩
+  have hAtop : (⨆ i : ℕ, A i) = ⊤ := by
+    apply top_unique
+    rw [← hxspan]
+    apply Submodule.span_le.2
+    rintro y ⟨n, rfl⟩
+    exact hPtop (n + 1) (hxP n)
+  have hInternal : DirectSum.IsInternal A := by
+    apply DirectSum.isInternal_submodule_of_iSupIndep_of_iSup_eq_top
+    · apply iSupIndep_of_dfinsupp_lsum_injective A
+      intro f g hfg
+      by_contra hne
+      let s := (f - g).support
+      have hs : s.Nonempty := by
+        rw [Finset.nonempty_iff_ne_empty]
+        intro hs0
+        apply hne
+        ext j
+        have hnot : j ∉ (f - g).support := by simp [s, hs0]
+        have hzeroDF : (f - g) j = 0 := by
+          by_contra hne0
+          exact hnot (DFinsupp.mem_support_iff.mpr hne0)
+        have hzero : f j - g j = 0 := by
+          simpa only [DFinsupp.sub_apply] using hzeroDF
+        exact congrArg Subtype.val (sub_eq_zero.mp hzero)
+      let n := s.max' hs
+      have hnmem : n ∈ s := Finset.max'_mem s hs
+      have hnne : (f - g) n ≠ 0 := DFinsupp.mem_support_iff.mp hnmem
+      have hrest :
+          DFinsupp.lsum ℕ (fun j => (A j).subtype) ((f - g).erase n) ∈ P n := by
+        rw [DFinsupp.lsum_apply_apply]
+        apply Submodule.dfinsuppSumAddHom_mem
+        intro j hj
+        have hjne : j ≠ n := by
+          intro hjeq
+          subst j
+          simpa using hj
+        have hjmem : j ∈ s := by
+          apply DFinsupp.mem_support_iff.mpr
+          simpa [DFinsupp.erase_apply, hjne] using hj
+        have hjlt : j < n :=
+          lt_of_le_of_ne (Finset.le_max' s j hjmem) hjne
+        have hAj : A j ≤ P (j + 1) := by
+          rw [hPnext j]
+          exact le_sup_right
+        exact (hPmono (Nat.succ_le_iff.mpr hjlt))
+          (hAj ((f - g).erase n j).property)
+      have hsum :
+          DFinsupp.lsum ℕ (fun j => (A j).subtype) ((f - g).erase n) +
+            (A n).subtype ((f - g) n) = 0 := by
+        calc
+          _ = DFinsupp.lsum ℕ (fun j => (A j).subtype)
+              ((f - g).erase n + DFinsupp.single n ((f - g) n)) := by
+            rw [map_add, DFinsupp.lsum_single]
+          _ = DFinsupp.lsum ℕ (fun j => (A j).subtype) (f - g) := by
+            rw [DFinsupp.erase_add_single]
+          _ = 0 := by rw [map_sub, hfg]; simp
+      have hmem : (A n).subtype ((f - g) n) ∈ P n := by
+        rw [eq_neg_of_add_eq_zero_right hsum]
+        exact (P n).neg_mem hrest
+      have hzero : (f - g) n = 0 := by
+        apply Subtype.ext
+        exact Submodule.disjoint_def.mp (hdisjoint n) _
+          ((f - g) n).property hmem
+      exact hnne hzero
+    · exact hAtop
+  let _ : ∀ n, Module.Free R (A n) := fun n => by
+    apply Module.Free.of_equiv' (E n).freeT
+    apply LinearEquiv.ofInjective (incT n)
+    intro a b hab
+    have heq := congrArg (E n).e hab
+    rw [hincTE, hincTE] at heq
+    exact congrArg Prod.snd (congrArg Prod.fst heq)
+  let _ : Module.Free R (DirectSum ℕ (fun n => (A n : Type v))) :=
+    Module.Free.dfinsupp R (fun n : ℕ => (A n : Type v))
+  exact Module.Free.of_equiv' (by infer_instance)
+    (LinearEquiv.ofBijective (DirectSum.coeLinearMap A) hInternal)
 
 /-- Every element of a projective module over a local ring lies in a free
 direct summand. -/

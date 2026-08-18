@@ -91,18 +91,18 @@ theorem ringColimitFpCategory {R A : Type u} [CommRing R] [CommRing A]
       cocone_maps := ?_
       nonempty := ?_ }
     · intro X Y
-      letI : Algebra (CommRingCat.of R) (X.left.obj.right) := RingHom.toAlgebra X.left.obj.hom.hom
-      letI : Algebra (CommRingCat.of R) (Y.left.obj.right) := RingHom.toAlgebra Y.left.obj.hom.hom
-      letI : Algebra (CommRingCat.of R) ((P.ι.obj X.left).right) :=
+      let : Algebra (CommRingCat.of R) (X.left.obj.right) := RingHom.toAlgebra X.left.obj.hom.hom
+      let : Algebra (CommRingCat.of R) (Y.left.obj.right) := RingHom.toAlgebra Y.left.obj.hom.hom
+      let : Algebra (CommRingCat.of R) ((P.ι.obj X.left).right) :=
         RingHom.toAlgebra (P.ι.obj X.left).hom.hom
-      letI : Algebra (CommRingCat.of R) ((P.ι.obj Y.left).right) :=
+      let : Algebra (CommRingCat.of R) ((P.ι.obj Y.left).right) :=
         RingHom.toAlgebra (P.ι.obj Y.left).hom.hom
       let T : Under (CommRingCat.of R) :=
         CommRingCat.mkUnder (CommRingCat.of R) ((X.left.obj).right ⊗[R] (Y.left.obj).right)
       have hT : P T := by
-        letI : Algebra.FinitePresentation R (X.left.obj.right) := X.left.property
-        letI : Algebra.FinitePresentation R (Y.left.obj.right) := Y.left.property
-        letI : Algebra.FinitePresentation (X.left.obj.right)
+        let : Algebra.FinitePresentation R (X.left.obj.right) := X.left.property
+        let : Algebra.FinitePresentation R (Y.left.obj.right) := Y.left.property
+        let : Algebra.FinitePresentation (X.left.obj.right)
             ((X.left.obj.right) ⊗[R] (Y.left.obj.right)) := Algebra.FinitePresentation.baseChange _
         dsimp [P, finitelyPresentedAlgebraProperty, T]
         exact (RingHom.finitePresentation_algebraMap (A := R)
@@ -120,8 +120,8 @@ theorem ringColimitFpCategory {R A : Type u} [CommRing R] [CommRing A]
               algebraMap R ((X.left.obj.right) ⊗[R] (Y.left.obj.right)) r
             rw [Algebra.TensorProduct.algebraMap_apply']
             rfl)
-      letI : Algebra (CommRingCat.of R) A := RingHom.toAlgebra f
-      letI : IsScalarTower (CommRingCat.of R) (CommRingCat.of R) A := ⟨by
+      let : Algebra (CommRingCat.of R) A := RingHom.toAlgebra f
+      let : IsScalarTower (CommRingCat.of R) (CommRingCat.of R) A := ⟨by
         intro r s a
         exact smul_assoc r s a
       ⟩
@@ -177,11 +177,11 @@ theorem ringColimitFpCategory {R A : Type u} [CommRing R] [CommRing A]
           rw [Algebra.TensorProduct.lift_comp_includeRight']
           rfl)
     · intro X Y g h
-      letI : Algebra (CommRingCat.of R) X.left.obj.right :=
+      let : Algebra (CommRingCat.of R) X.left.obj.right :=
         RingHom.toAlgebra X.left.obj.hom.hom
-      letI : Algebra (CommRingCat.of R) Y.left.obj.right :=
+      let : Algebra (CommRingCat.of R) Y.left.obj.right :=
         RingHom.toAlgebra Y.left.obj.hom.hom
-      letI : Algebra (CommRingCat.of R) A := RingHom.toAlgebra f
+      let : Algebra (CommRingCat.of R) A := RingHom.toAlgebra f
       obtain ⟨n, p, hp⟩ :=
         Algebra.FiniteType.iff_quotient_mvPolynomial''.mp
           (RingHom.FiniteType.of_finitePresentation X.left.property)
@@ -191,14 +191,14 @@ theorem ringColimitFpCategory {R A : Type u} [CommRing R] [CommRing A]
       let I : Ideal Y.left.obj.right := Ideal.span (Set.range d)
       have hI : I.FG := by
         exact Submodule.fg_span (Set.finite_range d)
-      letI : Algebra.FinitePresentation (CommRingCat.of R) Y.left.obj.right := by
+      let : Algebra.FinitePresentation (CommRingCat.of R) Y.left.obj.right := by
         apply (RingHom.finitePresentation_algebraMap
           (A := CommRingCat.of R) (B := Y.left.obj.right)).mp
-        convert Y.left.property using 1 <;> rfl
+        convert Y.left.property using 1; rfl
       let Q : Under (CommRingCat.of R) :=
         CommRingCat.mkUnder (CommRingCat.of R) (Y.left.obj.right ⧸ I)
-      letI : Algebra (CommRingCat.of R) Q.right := RingHom.toAlgebra Q.hom.hom
-      letI : Algebra.FinitePresentation (CommRingCat.of R) Q.right :=
+      let : Algebra (CommRingCat.of R) Q.right := RingHom.toAlgebra Q.hom.hom
+      let : Algebra.FinitePresentation (CommRingCat.of R) Q.right :=
         Algebra.FinitePresentation.quotient hI
       have hQ : P Q := by
         dsimp [P, Q, finitelyPresentedAlgebraProperty]
@@ -223,10 +223,10 @@ theorem ringColimitFpCategory {R A : Type u} [CommRing R] [CommRing A]
           dsimp [underRingHom] at hgi hhi
           have hgi' : aY (g.left.hom.right.hom (p (MvPolynomial.X i))) =
               X.hom.right.hom (p (MvPolynomial.X i)) := by
-            convert hgi using 1 <;> rfl
+            convert hgi using 1; rfl
           have hhi' : aY (h.left.hom.right.hom (p (MvPolynomial.X i))) =
               X.hom.right.hom (p (MvPolynomial.X i)) := by
-            convert hhi using 1 <;> rfl
+            convert hhi using 1; rfl
           rw [hgi', hhi']
           exact sub_self _
         exact hle hz
@@ -296,15 +296,15 @@ theorem ringColimitFpCategory {R A : Type u} [CommRing R] [CommRing A]
       exact ⟨CostructuredArrow.mk (Y := ObjectProperty.FullSubcategory.mk B hB)
         (Under.homMk (CommRingCat.ofHom f))⟩
   refine ⟨hfiltered, ?_⟩
-  letI : IsFiltered (FinitelyPresentedAlgebraMapCategory f) := hfiltered
+  let : IsFiltered (FinitelyPresentedAlgebraMapCategory f) := hfiltered
   have hsurj : ∀ a : A, ∃ i xi,
       a = (finitelyPresentedAlgebraMapCocone f).ι.app i xi := by
     intro a
-    letI : Algebra (CommRingCat.of R) A := RingHom.toAlgebra f
+    let : Algebra (CommRingCat.of R) A := RingHom.toAlgebra f
     let B : Under (CommRingCat.of R) :=
       CommRingCat.mkUnder (CommRingCat.of R) (MvPolynomial (Fin 1) R)
     have hB : P B := by
-      letI : Algebra.FinitePresentation R (MvPolynomial (Fin 1) R) := inferInstance
+      let : Algebra.FinitePresentation R (MvPolynomial (Fin 1) R) := inferInstance
       dsimp [P, B, finitelyPresentedAlgebraProperty]
       exact (RingHom.finitePresentation_algebraMap
         (A := CommRingCat.of R) (B := MvPolynomial (Fin 1) R)).2 inferInstance
@@ -342,12 +342,12 @@ theorem ringColimitFpCategory {R A : Type u} [CommRing R] [CommRing A]
       have hcommon : z.hom.right.hom (u.left.hom.right.hom xi) =
           z.hom.right.hom (v.left.hom.right.hom xj) := by
         exact hu.trans (h.trans hv.symm)
-      letI : Algebra (CommRingCat.of R) z.left.obj.right :=
+      let : Algebra (CommRingCat.of R) z.left.obj.right :=
         RingHom.toAlgebra z.left.obj.hom.hom
       let B : Under (CommRingCat.of R) :=
         CommRingCat.mkUnder (CommRingCat.of R) (MvPolynomial (Fin 1) R)
       have hB : P B := by
-        letI : Algebra.FinitePresentation R (MvPolynomial (Fin 1) R) := inferInstance
+        let : Algebra.FinitePresentation R (MvPolynomial (Fin 1) R) := inferInstance
         dsimp [P, B, finitelyPresentedAlgebraProperty]
         exact (RingHom.finitePresentation_algebraMap
           (A := CommRingCat.of R) (B := MvPolynomial (Fin 1) R)).2 inferInstance
@@ -367,7 +367,7 @@ theorem ringColimitFpCategory {R A : Type u} [CommRing R] [CommRing A]
           z.left.obj.hom.hom r
         rw [pXj.commutes]
         rfl)
-      letI : Algebra (CommRingCat.of R) A := RingHom.toAlgebra f
+      let : Algebra (CommRingCat.of R) A := RingHom.toAlgebra f
       let zMap : z.left.obj.right →+* A := by
         dsimp [underRingHom]
         exact z.hom.right.hom
@@ -475,7 +475,7 @@ theorem ringColimitFpCategory {R A : Type u} [CommRing R] [CommRing A]
       rw [← hsmap s h (1 : i.left.obj.right)]
       exact (s.ι.app i).hom.map_one
     map_mul' := by
-      letI : CommRing ((forget CommRingCat).mapCocone s).pt :=
+      let : CommRing ((forget CommRingCat).mapCocone s).pt :=
         inferInstanceAs (CommRing s.pt)
       intro a b
       obtain ⟨i, xi, hxi⟩ := hsurj a
@@ -521,7 +521,7 @@ theorem ringColimitFpCategory {R A : Type u} [CommRing R] [CommRing A]
       rw [← hsmap s h (0 : i.left.obj.right)]
       exact (s.ι.app i).hom.map_zero
     map_add' := by
-      letI : CommRing ((forget CommRingCat).mapCocone s).pt :=
+      let : CommRing ((forget CommRingCat).mapCocone s).pt :=
         inferInstanceAs (CommRing s.pt)
       intro a b
       obtain ⟨i, xi, hxi⟩ := hsurj a
@@ -1596,13 +1596,14 @@ def DirectedRingMapColimit.transitionsAreBijective
   exact ∀ {i j : D.index} (hij : D.indexPreorder.le i j),
     Function.Bijective (D.transitionBaseChange hij)
 
-/-- Every transition base-change map fails to be a localization of its source. -/
+/-- Every strict transition base-change map fails to be a localization of its source.
+Reflexive transitions are canonical equivalences and therefore localizations. -/
 def DirectedRingMapColimit.transitionsAreNotLocalizations
     {R S : Type u} [CommRing R] [CommRing S] {f : R →+* S}
     (D : DirectedRingMapColimit f) : Prop := by
   letI : Preorder D.index := D.indexPreorder
-  exact ∀ {i j : D.index} (hij : D.indexPreorder.le i j),
-    ¬ IsLocalizationMap (D.transitionBaseChange hij)
+  exact ∀ {i j : D.index} (hij : D.indexPreorder.lt i j),
+    ¬ IsLocalizationMap (D.transitionBaseChange hij.le)
 
 /-- The source stages are of finite type over the integers. -/
 def DirectedRingMapColimit.sourceStagesFiniteTypeOverInt

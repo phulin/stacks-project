@@ -1165,7 +1165,7 @@ theorem directLimit_isNormalRing
   let g : ∀ i j, i ≤ j → S i →+* S j := fun i j hij =>
     IsLocalization.map (S := S i) (M := (p i).primeCompl)
       (Q := S j) (T := (p j).primeCompl) (f i j hij) (hmap i j hij)
-  letI : DirectedSystem S (g · · ·) := by
+  let : DirectedSystem S (g · · ·) := by
     constructor
     · intro i
       have hself : g i i le_rfl = RingHom.id (S i) := by
@@ -1174,7 +1174,7 @@ theorem directLimit_isNormalRing
         dsimp [g]
         rw [IsLocalization.map_eq]
         rw [DirectedSystem.map_self' f x]
-      simpa [hself]
+      simp [hself]
     · intro i j k hij hjk
       have hcomp : (g j i hjk).comp (g k j hij) = g k i (hij.trans hjk) := by
         apply IsLocalization.ringHom_ext (R := R k) (M := (p k).primeCompl)
@@ -1189,8 +1189,8 @@ theorem directLimit_isNormalRing
     exact hR i ⟨p i, hp i⟩
   let U := Ring.DirectLimit S (g · · ·)
   have hUdomain : IsDomain U := by
-    letI : ∀ i, IsDomain (S i) := fun i => (hS i).1
-    letI : Nontrivial U := by
+    let : ∀ i, IsDomain (S i) := fun i => (hS i).1
+    let : Nontrivial U := by
       let i : ι := Classical.arbitrary ι
       refine ⟨⟨Ring.DirectLimit.of S (g · · ·) i 0,
         Ring.DirectLimit.of S (g · · ·) i 1, ?_⟩⟩
@@ -1199,9 +1199,9 @@ theorem directLimit_isNormalRing
         rw [(Ring.DirectLimit.of S (g · · ·) i).map_sub, h]
         simp
       obtain ⟨j, hij, hj⟩ := Ring.DirectLimit.of.zero_exact hzero
-      haveI : IsDomain (S j) := (hS j).1
-      exact (one_ne_zero : (1 : S j) ≠ 0) (by simpa using hj)
-    letI : NoZeroDivisors U := by
+      have : IsDomain (S j) := (hS j).1
+      simp at hj
+    let : NoZeroDivisors U := by
       constructor
       intro x y hxy
       obtain ⟨i, a, ha⟩ := Ring.DirectLimit.exists_of (G := S)
@@ -1226,7 +1226,7 @@ theorem directLimit_isNormalRing
           _ = x * y := by rw [hax, hby]
           _ = 0 := hxy
       obtain ⟨l, hkl, hab⟩ := Ring.DirectLimit.of.zero_exact hprod
-      letI : IsDomain (S l) := (hS l).1
+      let : IsDomain (S l) := (hS l).1
       have hab' : g k l hkl a' * g k l hkl b' = 0 := by
         simpa only [map_mul] using hab
       rcases eq_zero_or_eq_zero_of_mul_eq_zero hab' with ha' | hb'
@@ -1251,7 +1251,7 @@ theorem directLimit_isNormalRing
     intro P hP
     obtain ⟨i, P_i, hP_i⟩ := Ring.DirectLimit.Polynomial.exists_of (G := S)
       (f' := fun i j h => g i j h) P
-    letI : DecidableEq (S i) := Classical.decEq _
+    let : DecidableEq (S i) := Classical.decEq _
     let d := P.natDegree
     let N := d + 1
     let v : Fin N → S i := fun k => P_i.coeff (k : ℕ)
@@ -1280,7 +1280,7 @@ theorem directLimit_isNormalRing
       intro n
       simpa only [Polynomial.coeff_map] using
         congrArg (fun z => z.coeff n) hP_i
-    letI : DecidableEq U := Classical.decEq _
+    let : DecidableEq U := Classical.decEq _
     have hmap_ofFn :
         Polynomial.map (Ring.DirectLimit.of S (g · · ·) i)
             (Polynomial.ofFn N v) =
@@ -1416,7 +1416,7 @@ theorem directLimit_isNormalRing
       change g n l hml b_m = 0 at h
       rw [← Ring.DirectLimit.of_f (G := S)
         (f := fun i j h => g i j h) hml b_m, h, map_zero]
-    letI : IsDomain (S l) := (hS l).1
+    let : IsDomain (S l) := (hS l).1
     have hb_lF : algebraMap (S l) (FractionRing (S l)) b_l ≠ 0 :=
       IsFractionRing.to_map_ne_zero_of_mem_nonZeroDivisors
         (mem_nonZeroDivisors_iff_ne_zero.mpr hb_l)
@@ -1519,8 +1519,7 @@ theorem directLimit_isNormalRing
       r (DirectLimit.Ring.of R (f · · ·) i x) = ri i x := by
     intro i x
     change r' (Ring.DirectLimit.of R (f · · ·) i x) = ri i x
-    simpa [r'] using
-      (Ring.DirectLimit.lift_of U ri hri i x)
+    simp [r']
   have hunit : ∀ s : q.asIdeal.primeCompl,
       IsUnit (r (s : DirectLimit R f)) := by
     intro s
@@ -1545,8 +1544,7 @@ theorem directLimit_isNormalRing
   let v : Q →+* U :=
     IsLocalization.lift (M := q.asIdeal.primeCompl) (S := Q) (g := r) hunit
   have hvr : v.comp (algebraMap (DirectLimit R f) Q) = r := by
-    simpa [v] using
-      (IsLocalization.lift_comp (M := q.asIdeal.primeCompl) hunit)
+    simp [v]
   have hur : u.comp r = algebraMap (DirectLimit R f) Q := by
     apply RingHom.ext
     intro z

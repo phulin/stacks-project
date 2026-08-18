@@ -396,10 +396,7 @@ theorem projective_element_mem_free_direct_summand
           Finset.sum (t.erase b) (fun k => c k * (f0 k * uinv)) := by
         apply Finset.sum_congr rfl
         intro k hk
-        have hkb' : k ≠ b := Finset.ne_of_mem_erase hk
-        have hks : k ∈ s := by
-          exact (Finset.mem_erase.mp (Finset.mem_erase.mp hk).2).2
-        simp [f, f0, hkb', hks, mul_assoc]
+        simp [f, f0, mul_assoc]
       have hsumzero : Finset.sum (t.erase b) (fun k => c k *
           if hkb : k = b then (1 - B b b) * uinv else -f0 k * uinv) =
           Finset.sum (t.erase b) (fun k => c k * (-f0 k * uinv)) := by

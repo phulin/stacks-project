@@ -819,12 +819,10 @@ theorem finite_projective_is_free_pid
     Module.Free R M := by
   obtain ⟨F, _, _, _, i, s, his⟩ :=
     Module.Projective.iff_split.mp (inferInstance : Module.Projective R M)
-  let bF := Module.Free.chooseBasis R F
-  let _ : Module.IsTorsionFree R F := bF.isTorsionFree
   let _ : Module.IsTorsionFree R M :=
     (LinearMap.injective_of_comp_eq_id i s his).moduleIsTorsionFree i
       (fun r x => i.map_smul r x)
-  exact Module.free_of_finite_type_torsion_free'
+  exact Module.free_iff_isTorsionFree.mpr inferInstance
 
 /- A short exact sequence of finite free modules splits, so its middle term
 is the direct sum of its outer terms.  A binary product is the additive

@@ -639,7 +639,22 @@ theorem flat_base_change_ext {R R' : Type u} [CommRing R] [CommRing R']
                 (ModuleCat.restrictScalars f).mapDerivedCategory).hom.app
               ((HomologicalComplex.single (ModuleCat R') (ComplexShape.up ℤ) 0).obj
                 (extendedModule f M)) := by
-      sorry
+      change eG.inv.app (extendedModule f M) =
+        DerivedCategory.Q.map
+            (((ModuleCat.restrictScalars f).mapCochainComplexSingleFunctor 0).inv.app
+              (extendedModule f M)) ≫
+          (ModuleCat.restrictScalars f).mapDerivedCategoryFactors.inv.app
+            ((HomologicalComplex.single (ModuleCat R') (ComplexShape.up ℤ) 0).obj
+              (extendedModule f M))
+      have h := congrArg (fun h =>
+        h ≫ (ModuleCat.restrictScalars f).mapDerivedCategoryFactors.inv.app
+          ((HomologicalComplex.single (ModuleCat R') (ComplexShape.up ℤ) 0).obj
+            (extendedModule f M))) heG_factor
+      set_option backward.isDefEq.respectTransparency false in
+        rw [Category.assoc] at h
+      rw [Iso.hom_inv_id_app] at h
+      rw [Category.comp_id] at h
+      exact h
     dsimp [X₀, Y₀, adjD] at hh'
     erw [CategoryTheory.Adjunction.localization_unit_app,
       CategoryTheory.Adjunction.localization_counit_app] at hh'
@@ -649,7 +664,8 @@ theorem flat_base_change_ext {R R' : Type u} [CommRing R] [CommRing R']
     simp at hh'
     calc
       _ = _ := by
-        sorry
+        rw [heF_unit, heG_inv]
+        simp only [Functor.map_comp]
       _ = _ := hh'
   have hright (x : restrictedExt f M N' i) :
       (ConcreteCategory.hom (D.map M N' i)) (inv x) = x := by
@@ -713,7 +729,45 @@ theorem flat_base_change_ext {R R' : Type u} [CommRing R] [CommRing R']
     dsimp [F, G] at hh'
     set_option backward.isDefEq.respectTransparency false in
       rw [Functor.map_comp, Functor.map_comp, Functor.map_comp, Functor.map_comp] at hh'
-    sorry
+    have heG_factor :
+        eG.inv.app N' ≫
+            (ModuleCat.restrictScalars f).mapDerivedCategoryFactors.hom.app
+              ((HomologicalComplex.single (ModuleCat R') (ComplexShape.up ℤ) 0).obj N') =
+          DerivedCategory.Q.map
+            ((Functor.mapCochainComplexSingleFunctor
+              (ModuleCat.restrictScalars f) 0).inv.app N') := by
+      simpa [eG, Functor.mapCochainComplexSingleFunctor] using
+        (Functor.mapDerivedCategorySingleFunctor_inv_app_mapDerivedCategoryFactors_hom_app
+          (F := ModuleCat.restrictScalars f) (X := N'))
+    have heG_inv :
+        eG.inv.app N' =
+          DerivedCategory.Q.map
+              ((Functor.mapCochainComplexSingleFunctor
+                (ModuleCat.restrictScalars f) 0).inv.app N') ≫
+            (CatCommSq.iso ((ModuleCat.restrictScalars f).mapHomologicalComplex
+                (ComplexShape.up ℤ)) DerivedCategory.Q DerivedCategory.Q
+                (ModuleCat.restrictScalars f).mapDerivedCategory).hom.app
+              ((HomologicalComplex.single (ModuleCat R') (ComplexShape.up ℤ) 0).obj N') := by
+      change eG.inv.app N' =
+        DerivedCategory.Q.map
+            ((Functor.mapCochainComplexSingleFunctor
+              (ModuleCat.restrictScalars f) 0).inv.app N') ≫
+          (ModuleCat.restrictScalars f).mapDerivedCategoryFactors.inv.app
+            ((HomologicalComplex.single (ModuleCat R') (ComplexShape.up ℤ) 0).obj N')
+      have h := congrArg (fun h =>
+        h ≫ (ModuleCat.restrictScalars f).mapDerivedCategoryFactors.inv.app
+          ((HomologicalComplex.single (ModuleCat R') (ComplexShape.up ℤ) 0).obj N')) heG_factor
+      set_option backward.isDefEq.respectTransparency false in
+        rw [Category.assoc] at h
+      rw [Iso.hom_inv_id_app] at h
+      rw [Category.comp_id] at h
+      exact h
+    have hh'' := congrArg (fun k =>
+      k ≫ (Functor.commShiftIso G (i : ℤ)).hom.app
+        ((DerivedCategory.singleFunctor (ModuleCat R') 0).obj N') ≫
+        (shiftFunctor (DerivedCategory (ModuleCat R)) (i : ℤ)).map
+          (eG.hom.app N')) hh'
+    simpa [h₀, heG_inv] using hh''.symm
   constructor
   · intro x y h
     have := congrArg inv h

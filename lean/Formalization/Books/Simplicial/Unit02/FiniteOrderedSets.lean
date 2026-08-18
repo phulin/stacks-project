@@ -1,8 +1,10 @@
 import Mathlib.AlgebraicTopology.SimplexCategory.GeneratorsRelations.Basic
+import Mathlib.AlgebraicTopology.SimplexCategory.GeneratorsRelations.NormalForms
 import Mathlib.AlgebraicTopology.SimplexCategory.ToMkOne
 import Mathlib.Algebra.BigOperators.Intervals
 import Mathlib.Order.Interval.Finset.Fin
 import Mathlib.SetTheory.Cardinal.NatCard
+
 
 /-!
 # Simplicial Methods, Chapter 2: The category of finite ordered sets
@@ -145,7 +147,61 @@ theorem every_simplex_morphism_is_generated
     ∃ g : SimplexCategoryGenRel.mk n ⟶ SimplexCategoryGenRel.mk m,
       SimplexCategoryGenRel.toSimplexCategory.map g = f ∧
         SimplexCategoryGenRel.generators.multiplicativeClosure g := by
-  sorry
+  let P : ℕ → Prop := fun k =>
+    ∀ n m, k = n + m → ∀ f : SimplexCategory.mk n ⟶ SimplexCategory.mk m,
+      ∃ g : SimplexCategoryGenRel.mk n ⟶ SimplexCategoryGenRel.mk m,
+        SimplexCategoryGenRel.toSimplexCategory.map g = f ∧
+          SimplexCategoryGenRel.generators.multiplicativeClosure g
+  have H : ∀ k, P k := by
+    intro k
+    induction k using Nat.strong_induction_on with
+    | h k ih =>
+      intro n m hnm f
+      by_cases hni : Function.Injective f.toOrderHom
+      · by_cases hns : Function.Surjective f.toOrderHom
+        · have hcard : n + 1 = m + 1 := by
+            simpa using Nat.card_congr
+              (Equiv.ofBijective f.toOrderHom.toFun ⟨hni, hns⟩)
+          have hnm' : n = m := by omega
+          subst m
+          have hmono : Mono f := (SimplexCategory.mono_iff_injective).mpr hni
+          refine ⟨𝟙 _, ?_, ?_⟩
+          · simpa [SimplexCategory.eq_id_of_mono f]
+          · rw [SimplexCategoryGenRel.multiplicativeClosure_isGenerator_eq_top]
+            exact MorphismProperty.top_apply (𝟙 _)
+        · cases m with
+          | zero =>
+            exfalso
+            apply hns
+            intro y
+            exact ⟨0, (Fin.eq_zero _).trans (Fin.eq_zero y).symm⟩
+          | succ m =>
+            obtain ⟨i, f', hf⟩ :=
+              SimplexCategory.eq_comp_δ_of_not_surjective f hns
+            obtain ⟨g, hg, hgc⟩ := ih (n + m) (by omega) n m rfl f'
+            refine ⟨g ≫ SimplexCategoryGenRel.δ i, ?_, ?_⟩
+            · rw [Functor.map_comp, SimplexCategoryGenRel.toSimplexCategory_map_δ, hg]
+              exact hf.symm
+            · exact SimplexCategoryGenRel.generators.multiplicativeClosure.comp_mem _ _
+                hgc (MorphismProperty.multiplicativeClosure.of _
+                  (SimplexCategoryGenRel.generators.δ i))
+      · cases n with
+        | zero =>
+          exfalso
+          apply hni
+          intro a b hab
+          exact (Fin.eq_zero a).trans (Fin.eq_zero b).symm
+        | succ n =>
+          obtain ⟨i, f', hf⟩ :=
+            SimplexCategory.eq_σ_comp_of_not_injective f hni
+          obtain ⟨g, hg, hgc⟩ := ih (n + m) (by omega) n m rfl f'
+          refine ⟨SimplexCategoryGenRel.σ i ≫ g, ?_, ?_⟩
+          · rw [Functor.map_comp, SimplexCategoryGenRel.toSimplexCategory_map_σ, hg]
+            exact hf.symm
+          · exact SimplexCategoryGenRel.generators.multiplicativeClosure.comp_mem _ _
+              (MorphismProperty.multiplicativeClosure.of _
+                (SimplexCategoryGenRel.generators.σ i)) hgc
+  simpa only [P] using H (n + m) n m rfl f
 
 /-!
 The five displayed source diagrams are already covered by the stronger,

@@ -1957,7 +1957,7 @@ theorem epimorphism_iff_restrictScalars_fullyFaithful
     constructor
     · intro h
       have hepi : Algebra.IsEpi R S := (CommRingCat.epi_iff_epi).mp h
-      let F := ModuleCat.restrictScalars f
+      let F : ModuleCat.{u} S ⥤ ModuleCat.{u} R := ModuleCat.restrictScalars.{u} f
       change ∀ (M N : ModuleCat.{u} S),
         Function.Bijective (F.map : (M ⟶ N) → (F.obj M ⟶ F.obj N))
       intro M N
@@ -2049,8 +2049,9 @@ theorem epimorphism_iff_restrictScalars_fullyFaithful
       intro s
       let _ : Algebra S (S ⊗[R] S) :=
         (Algebra.TensorProduct.includeLeft (R := R) (S := S) (A := S) (B := S)).toRingHom.toAlgebra
-      let g : (ModuleCat.restrictScalars f).obj (ModuleCat.of S S) ⟶
-          (ModuleCat.restrictScalars f).obj (ModuleCat.of S (S ⊗[R] S)) :=
+      let g : (ModuleCat.restrictScalars.{u} f).obj (ModuleCat.of S S : ModuleCat.{u} S) ⟶
+          (ModuleCat.restrictScalars.{u} f).obj
+            (ModuleCat.of S (S ⊗[R] S) : ModuleCat.{u} S) :=
         ModuleCat.ofHom
           { toFun := fun x => (1 : S) ⊗ₜ[R] (x : S)
             map_add' := by
@@ -2064,11 +2065,11 @@ theorem epimorphism_iff_restrictScalars_fullyFaithful
               rw [← har, ← Algebra.smul_def]
               rw [← TensorProduct.tmul_smul] }
       let l : ModuleCat.of S S ⟶ ModuleCat.of S (S ⊗[R] S) :=
-        Classical.choose ((h (ModuleCat.of S S)
-          (ModuleCat.of S (S ⊗[R] S))).2 g)
-      have hl : (ModuleCat.restrictScalars f).map l = g :=
-        Classical.choose_spec ((h (ModuleCat.of S S)
-          (ModuleCat.of S (S ⊗[R] S))).2 g)
+        Classical.choose ((h (ModuleCat.of S S : ModuleCat.{u} S)
+          (ModuleCat.of S (S ⊗[R] S) : ModuleCat.{u} S)).2 g)
+      have hl : (ModuleCat.restrictScalars.{u} f).map l = g :=
+        Classical.choose_spec ((h (ModuleCat.of S S : ModuleCat.{u} S)
+          (ModuleCat.of S (S ⊗[R] S) : ModuleCat.{u} S)).2 g)
       have happly := congrArg (fun q => q (s : S)) hl
       change l.hom (s : S) = (1 : S) ⊗ₜ[R] s at happly
       have h1 := congrArg (fun q => q (1 : S)) hl
@@ -2084,12 +2085,12 @@ theorem epimorphism_iff_restrictScalars_fullyFaithful
   tfae_have h23 : 2 ↔ 3 := by
     constructor
     · intro h
-      let hF : (ModuleCat.restrictScalars f).FullyFaithful :=
+      let hF : (ModuleCat.restrictScalars.{u} f).FullyFaithful :=
         { preimage := fun {M N} g => Classical.choose ((h M N).2 g)
           map_preimage := fun {M N} g => Classical.choose_spec ((h M N).2 g)
           preimage_map := fun {M N} g => by
             apply (h M N).1
-            exact Classical.choose_spec ((h M N).2 ((ModuleCat.restrictScalars f).map g)) }
+            exact Classical.choose_spec ((h M N).2 ((ModuleCat.restrictScalars.{u} f).map g)) }
       exact ⟨hF⟩
     · rintro ⟨h⟩
       intro M N

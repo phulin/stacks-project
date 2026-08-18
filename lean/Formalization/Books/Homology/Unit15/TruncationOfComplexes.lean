@@ -610,6 +610,7 @@ private noncomputable def stupidTruncLEπ (K : ChainComplex C ℤ) (n : ℤ) :
       · simp only [dif_neg hj]
         simp
 
+omit C [Category.{v} C] [Abelian C] in
 private lemma mono_iso_inv {D : Type u} [Category.{v} D] {X Y : D}
     (e : X ≅ Y) : Mono e.inv := by
   constructor
@@ -617,6 +618,7 @@ private lemma mono_iso_inv {D : Type u} [Category.{v} D] {X Y : D}
   simpa only [Category.assoc, e.inv_hom_id, Category.comp_id] using
     congrArg (fun t => t ≫ e.hom) w
 
+omit C [Category.{v} C] [Abelian C] in
 private lemma mono_iso_hom {D : Type u} [Category.{v} D] {X Y : D}
     (e : X ≅ Y) : Mono e.hom := by
   constructor
@@ -624,6 +626,7 @@ private lemma mono_iso_hom {D : Type u} [Category.{v} D] {X Y : D}
   simpa only [Category.assoc, e.hom_inv_id, Category.comp_id] using
     congrArg (fun t => t ≫ e.inv) w
 
+omit C [Category.{v} C] [Abelian C] in
 private lemma epi_iso_inv {D : Type u} [Category.{v} D] {X Y : D}
     (e : X ≅ Y) : Epi e.inv := by
   constructor
@@ -631,6 +634,7 @@ private lemma epi_iso_inv {D : Type u} [Category.{v} D] {X Y : D}
   simpa only [Category.assoc, e.hom_inv_id_assoc] using
     congrArg (fun t => e.hom ≫ t) w
 
+omit C [Category.{v} C] [Abelian C] in
 private lemma epi_iso_hom {D : Type u} [Category.{v} D] {X Y : D}
     (e : X ≅ Y) : Epi e.hom := by
   constructor
@@ -1158,6 +1162,7 @@ private noncomputable def stupidTruncι_f {ι ι' : Type*}
       (fun hi => (K.stupidTruncXIso e hi.choose_spec).hom)
       (fun _ => 0)
 
+omit [Abelian C] in
 private noncomputable def stupidTruncι {ι ι' : Type*}
     {c : ComplexShape ι} {c' : ComplexShape ι'}
     {C : Type*} [Category C] [HasZeroMorphisms C] [HasZeroObject C]

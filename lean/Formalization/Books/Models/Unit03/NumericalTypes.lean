@@ -645,8 +645,362 @@ def contractedWeight (T : NumericalType) (i : Fin T.n)
 def contractedComponentGenus (T : NumericalType) (i : Fin T.n)
     (j : RemainingIndex T i) : ℤ :=
   T.w j.1 / contractedWeight T i j * (T.g j.1 - 1) + 1 +
-    (T.a j.1 i ^ 2 - T.w i * T.a j.1 i) /
+      (T.a j.1 i ^ 2 - T.w i * T.a j.1 i) /
       (2 * contractedWeight T i j * T.w i)
+
+private theorem contracted_genus_expression
+    (T : NumericalType) (i : Fin T.n) (hi : IsMinusOneIndex T i)
+    (e : Fin (T.n - 1) ≃ RemainingIndex T i)
+    (a' : Matrix (Fin (T.n - 1)) (Fin (T.n - 1)) ℤ)
+    (w' g' : Fin (T.n - 1) → ℤ)
+    (hcomponent : ∀ j, (w' j : ℚ) * ((g' j : ℚ) - 1) - (a' j j : ℚ) / 2 =
+      (T.w (e j).1 : ℚ) * ((T.g (e j).1 : ℚ) - 1) -
+        (T.a (e j).1 i : ℚ) / 2 - (T.a (e j).1 (e j).1 : ℚ) / 2)
+    (hsumQ : ∀ (f : Fin T.n → ℚ),
+      (∑ j : Fin (T.n - 1), f (e j).1) =
+        (Finset.univ.erase i).sum f) :
+    1 + (∑ j : Fin (T.n - 1),
+      (T.m (e j).1 : ℚ) * ((w' j : ℚ) * ((g' j : ℚ) - 1) - (a' j j : ℚ) / 2)) =
+      1 + (Finset.univ : Finset (Fin T.n)).sum (fun k =>
+        (T.m k : ℚ) * ((T.w k : ℚ) * ((T.g k : ℚ) - 1) -
+          (T.a k k : ℚ) / 2)) := by
+  have hsum_component :
+      (∑ j : Fin (T.n - 1),
+        (T.m (e j).1 : ℚ) * ((w' j : ℚ) * ((g' j : ℚ) - 1) - (a' j j : ℚ) / 2)) =
+        (Finset.univ.erase i).sum (fun k =>
+          (T.m k : ℚ) * ((T.w k : ℚ) * ((T.g k : ℚ) - 1) -
+            (T.a k i : ℚ) / 2 - (T.a k k : ℚ) / 2)) := by
+    calc
+      (∑ j : Fin (T.n - 1),
+          (T.m (e j).1 : ℚ) * ((w' j : ℚ) * ((g' j : ℚ) - 1) - (a' j j : ℚ) / 2)) =
+          ∑ j : Fin (T.n - 1),
+            (T.m (e j).1 : ℚ) *
+              ((T.w (e j).1 : ℚ) * ((T.g (e j).1 : ℚ) - 1) -
+                (T.a (e j).1 i : ℚ) / 2 -
+                (T.a (e j).1 (e j).1 : ℚ) / 2) := by
+            apply Finset.sum_congr rfl
+            intro j hj
+            rw [hcomponent]
+      _ = (Finset.univ.erase i).sum (fun k =>
+          (T.m k : ℚ) * ((T.w k : ℚ) * ((T.g k : ℚ) - 1) -
+            (T.a k i : ℚ) / 2 - (T.a k k : ℚ) / 2)) := by
+            simpa using hsumQ (fun k =>
+              (T.m k : ℚ) * ((T.w k : ℚ) * ((T.g k : ℚ) - 1) -
+                (T.a k i : ℚ) / 2 - (T.a k k : ℚ) / 2))
+  have hsum_b :
+      (Finset.univ.erase i).sum (fun k =>
+        (T.m k : ℚ) * (T.a k i : ℚ) / 2) =
+          (T.w i : ℚ) * (T.m i : ℚ) / 2 := by
+    have hrowQ := congrArg (fun z : ℤ => (z : ℚ))
+      (show (Finset.univ.erase i).sum (fun k => T.a i k * T.m k) =
+          -T.a i i * T.m i from by
+        have hsplit := Finset.sum_erase_add
+          (s := (Finset.univ : Finset (Fin T.n)))
+          (f := fun k => T.a i k * T.m k) (Finset.mem_univ i)
+        rw [T.row_sum i] at hsplit
+        nlinarith)
+    push_cast at hrowQ
+    have hsumcast :
+        (Finset.univ.erase i).sum (fun k =>
+            (T.m k : ℚ) * (T.a k i : ℚ)) =
+          (Finset.univ.erase i).sum (fun k =>
+            ((T.a i k * T.m k : ℤ) : ℚ)) := by
+      apply Finset.sum_congr rfl
+      intro k hk
+      rw [T.a_symmetric k i]
+      push_cast
+      ring
+    have hrowQ' :
+        (Finset.univ.erase i).sum (fun k =>
+            ((T.a i k * T.m k : ℤ) : ℚ)) =
+          ((-T.a i i * T.m i : ℤ) : ℚ) := by
+      calc
+        (Finset.univ.erase i).sum (fun k =>
+            ((T.a i k * T.m k : ℤ) : ℚ)) =
+            (Finset.univ.erase i).sum (fun k =>
+              (T.a i k : ℚ) * (T.m k : ℚ)) := by
+                apply Finset.sum_congr rfl
+                intro k hk
+                push_cast
+                rfl
+        _ = ((-T.a i i * T.m i : ℤ) : ℚ) := by
+          simpa only [Int.cast_neg, Int.cast_mul] using hrowQ
+    calc
+      (Finset.univ.erase i).sum (fun k =>
+          (T.m k : ℚ) * (T.a k i : ℚ) / 2) =
+          (1 / 2 : ℚ) * (Finset.univ.erase i).sum (fun k =>
+            (T.m k : ℚ) * (T.a k i : ℚ)) := by
+              calc
+                _ = (Finset.univ.erase i).sum (fun k =>
+                    (1 / 2 : ℚ) * ((T.m k : ℚ) * (T.a k i : ℚ))) := by
+                      apply Finset.sum_congr rfl
+                      intro k hk
+                      ring
+                _ = _ := by rw [Finset.mul_sum]
+      _ = (1 / 2 : ℚ) * (Finset.univ.erase i).sum (fun k =>
+            ((T.a i k * T.m k : ℤ) : ℚ)) := by rw [hsumcast]
+      _ = (1 / 2 : ℚ) * ((-T.a i i * T.m i : ℤ) : ℚ) := by
+        rw [hrowQ']
+      _ = (T.w i : ℚ) * (T.m i : ℚ) / 2 := by
+        rw [hi.2]
+        push_cast
+        ring
+  calc
+    1 + (∑ j : Fin (T.n - 1),
+        (T.m (e j).1 : ℚ) * ((w' j : ℚ) * ((g' j : ℚ) - 1) - (a' j j : ℚ) / 2)) =
+        1 + (Finset.univ.erase i).sum (fun k =>
+          (T.m k : ℚ) * ((T.w k : ℚ) * ((T.g k : ℚ) - 1) -
+            (T.a k i : ℚ) / 2 - (T.a k k : ℚ) / 2)) := by
+          rw [hsum_component]
+    _ = 1 + (Finset.univ.erase i).sum (fun k =>
+          (T.m k : ℚ) * ((T.w k : ℚ) * ((T.g k : ℚ) - 1) -
+            (T.a k k : ℚ) / 2)) - (T.w i : ℚ) * (T.m i : ℚ) / 2 := by
+          have hsum_rearrange :
+              (Finset.univ.erase i).sum (fun k =>
+                (T.m k : ℚ) * ((T.w k : ℚ) * ((T.g k : ℚ) - 1) -
+                  (T.a k i : ℚ) / 2 - (T.a k k : ℚ) / 2)) =
+                (Finset.univ.erase i).sum (fun k =>
+                  (T.m k : ℚ) * ((T.w k : ℚ) * ((T.g k : ℚ) - 1) -
+                    (T.a k k : ℚ) / 2)) -
+                  (Finset.univ.erase i).sum (fun k =>
+                    (T.m k : ℚ) * (T.a k i : ℚ) / 2) := by
+            rw [← Finset.sum_sub_distrib]
+            apply Finset.sum_congr rfl
+            intro k hk
+            ring
+          rw [hsum_rearrange, hsum_b]
+          ring
+    _ = 1 + (Finset.univ : Finset (Fin T.n)).sum (fun k =>
+          (T.m k : ℚ) * ((T.w k : ℚ) * ((T.g k : ℚ) - 1) -
+            (T.a k k : ℚ) / 2)) := by
+          have hsplit := Finset.sum_erase_add
+            (s := (Finset.univ : Finset (Fin T.n)))
+            (f := fun k => (T.m k : ℚ) *
+              ((T.w k : ℚ) * ((T.g k : ℚ) - 1) - (T.a k k : ℚ) / 2))
+            (Finset.mem_univ i)
+          rw [← hsplit]
+          rw [hi.1, hi.2]
+          push_cast
+          ring
+
+private theorem contracted_component_genus_data (T : NumericalType) (i : Fin T.n) :
+    (∀ j : RemainingIndex T i,
+      0 < contractedWeight T i j ∧ contractedWeight T i j ∣ T.w j.1) ∧
+    (∀ (b c : ℤ), T.w i ∣ b → T.w i ∣ c →
+      b * c / (-T.w i) = -(b / T.w i * c)) ∧
+    (∀ (b c : ℤ), T.w i ∣ c →
+      b * c / (-T.w i) = -(b * (c / T.w i))) ∧
+    (∀ j : RemainingIndex T i, 0 ≤ contractedComponentGenus T i j) ∧
+    (∀ j : RemainingIndex T i,
+      Even (T.a j.1 i / T.w i) ∧ Odd (T.a j.1 i / T.w j.1) →
+        (2 : ℤ) ∣ T.w j.1) := by
+  have hdivwi (j : RemainingIndex T i) :
+      T.w i ∣ T.a j.1 i := by
+    rw [T.a_symmetric j.1 i]
+    exact T.w_dvd i j.1
+  have hdivwj (j : RemainingIndex T i) :
+      T.w j.1 ∣ T.a j.1 i := T.w_dvd j.1 i
+  have hhalf_dvd (j : RemainingIndex T i)
+      (hcond : Even (T.a j.1 i / T.w i) ∧ Odd (T.a j.1 i / T.w j.1)) :
+      (2 : ℤ) ∣ T.w j.1 := by
+    have hw_even : Even (T.w j.1) := by
+      rw [← Int.not_odd_iff_even]
+      intro hwj_odd
+      have hb_even : Even (T.a j.1 i) := by
+        obtain ⟨r, hr⟩ := hcond.1
+        refine ⟨r * T.w i, ?_⟩
+        have hcancel := Int.ediv_mul_cancel (hdivwi j)
+        rw [← hcancel, hr]
+        ring
+      have hb_odd : Odd (T.a j.1 i) := by
+        have hcancel := Int.ediv_mul_cancel (hdivwj j)
+        rw [← hcancel]
+        exact hcond.2.mul hwj_odd
+      exact (Int.not_odd_iff_even.mpr hb_even) hb_odd
+    obtain ⟨r, hr⟩ := hw_even
+    refine ⟨r, ?_⟩
+    omega
+  have hweight_data : ∀ j : RemainingIndex T i,
+      0 < contractedWeight T i j ∧ contractedWeight T i j ∣ T.w j.1 := by
+    intro j
+    have hwj_pos := T.w_pos j.1
+    unfold contractedWeight
+    split
+    next hcond =>
+      have hdivtwo := hhalf_dvd j hcond
+      constructor
+      · exact Int.ediv_pos_of_pos_of_dvd hwj_pos (by norm_num) hdivtwo
+      · refine ⟨2, ?_⟩
+        have hcancel := Int.ediv_mul_cancel hdivtwo
+        nlinarith
+    next hcond => exact ⟨hwj_pos, dvd_refl _⟩
+  have hdiv_formula : ∀ (b c : ℤ),
+      T.w i ∣ b → T.w i ∣ c →
+      b * c / (-T.w i) = -(b / T.w i * c) := by
+    intro b c hb hc
+    obtain ⟨r, hr⟩ := hb
+    obtain ⟨s, hs⟩ := hc
+    rw [hr, hs]
+    simp only [Int.ediv_neg]
+    rw [show (T.w i * r) * (T.w i * s) =
+        T.w i * (r * (T.w i * s)) by ring]
+    rw [Int.mul_ediv_cancel_left _ (ne_of_gt (T.w_pos i))]
+    rw [Int.mul_ediv_cancel_left _ (ne_of_gt (T.w_pos i))]
+  have hdiv_formula_right : ∀ (b c : ℤ),
+      T.w i ∣ c →
+      b * c / (-T.w i) = -(b * (c / T.w i)) := by
+    intro b c hc
+    obtain ⟨r, hr⟩ := hc
+    rw [hr]
+    simp only [Int.ediv_neg]
+    rw [show b * (T.w i * r) = T.w i * (b * r) by ring]
+    rw [Int.mul_ediv_cancel_left _ (ne_of_gt (T.w_pos i))]
+    have hcancel : (T.w i * r) / T.w i = r := by
+      rw [Int.mul_ediv_cancel_left _ (ne_of_gt (T.w_pos i))]
+    rw [hcancel]
+  have hgenus : ∀ j : RemainingIndex T i,
+      0 ≤ contractedComponentGenus T i j := by
+    intro j
+    have hjne : j.1 ≠ i := j.2
+    have hbnonneg : 0 ≤ T.a j.1 i := T.a_offdiag_nonneg hjne
+    have hwi_pos : 0 < T.w i := T.w_pos i
+    have hwj_pos : 0 < T.w j.1 := T.w_pos j.1
+    have hqdiv := hdivwi j
+    have hpdiv := hdivwj j
+    have hqediv : T.a j.1 i / T.w i * T.w i = T.a j.1 i := by
+      rw [Int.ediv_mul_cancel hqdiv]
+    have hpediv : T.a j.1 i / T.w j.1 * T.w j.1 = T.a j.1 i := by
+      rw [Int.ediv_mul_cancel hpdiv]
+    let p : ℤ := T.a j.1 i / T.w j.1
+    let q : ℤ := T.a j.1 i / T.w i
+    have hp_nonneg : 0 ≤ p := by
+      dsimp [p]
+      exact Int.ediv_nonneg (by omega) (by omega)
+    have hq_nonneg : 0 ≤ q := by
+      dsimp [q]
+      exact Int.ediv_nonneg (by omega) (by omega)
+    have hp_eq : T.a j.1 i = p * T.w j.1 := by
+      dsimp [p]
+      exact hpediv.symm
+    have hq_eq : T.a j.1 i = q * T.w i := by
+      dsimp [q]
+      exact hqediv.symm
+    have hnum_eq :
+        T.a j.1 i ^ 2 - T.w i * T.a j.1 i =
+          p * (q - 1) * (T.w j.1 * T.w i) := by
+      have hsq : T.a j.1 i ^ 2 =
+          (p * T.w j.1) * (q * T.w i) := by
+        calc
+          T.a j.1 i ^ 2 = T.a j.1 i * (q * T.w i) := by rw [hq_eq]; ring
+          _ = (p * T.w j.1) * (q * T.w i) := by rw [hp_eq]
+      calc
+        T.a j.1 i ^ 2 - T.w i * T.a j.1 i =
+            (p * T.w j.1) * (q * T.w i) - T.w i * (p * T.w j.1) := by
+              rw [hsq, hp_eq]
+        _ = p * (q - 1) * (T.w j.1 * T.w i) := by ring
+    by_cases hhalf : Even q ∧ Odd p
+    · have hq_two : 2 ≤ q := by
+        have hqpos : 0 < q := by
+          by_contra hqzero
+          have hqz : q = 0 := by omega
+          rw [hqz] at hq_eq
+          have hbzero : T.a j.1 i = 0 := by simpa using hq_eq
+          rw [hbzero] at hp_eq
+          have hpz : p = 0 := by nlinarith [hwj_pos]
+          have : ¬ Odd p := by simp [hpz]
+          exact this hhalf.2
+        obtain ⟨r, hr⟩ := hhalf.1
+        omega
+      have hp_one : 1 ≤ p := by
+        obtain ⟨r, hr⟩ := hhalf.2
+        omega
+      have hprod : 1 ≤ p * (q - 1) := by
+        nlinarith [hp_nonneg, hq_two, hp_one]
+      have hhalf_pos : 0 < T.w j.1 / 2 := by
+        exact Int.ediv_pos_of_pos_of_dvd hwj_pos (by norm_num)
+          (hhalf_dvd j (by simpa [p, q] using hhalf))
+      have htwohalf : 2 * (T.w j.1 / 2) = T.w j.1 := by
+        have hcancel := Int.ediv_mul_cancel (hhalf_dvd j (by
+          simpa [p, q] using hhalf))
+        nlinarith
+      have hratio : T.w j.1 / (T.w j.1 / 2) = 2 := by
+        apply Int.ediv_eq_of_eq_mul_left (ne_of_gt hhalf_pos)
+        nlinarith [htwohalf]
+      have hden : 2 * (T.w j.1 / 2) * T.w i = T.w j.1 * T.w i := by
+        nlinarith [htwohalf]
+      have hquot :
+          (T.a j.1 i ^ 2 - T.w i * T.a j.1 i) /
+              (2 * (T.w j.1 / 2) * T.w i) = p * (q - 1) := by
+        apply Int.ediv_eq_of_eq_mul_left
+          (ne_of_gt (by nlinarith [hwi_pos, hhalf_pos]))
+        rw [hden, hnum_eq]
+      have hform : contractedComponentGenus T i j =
+          2 * (T.g j.1 - 1) + 1 + p * (q - 1) := by
+        unfold contractedComponentGenus
+        rw [show contractedWeight T i j = T.w j.1 / 2 by
+          simp [contractedWeight, p, q, hhalf], hratio, hquot]
+      rw [hform]
+      have hgj := T.g_nonneg j.1
+      nlinarith
+    · have hprod_even : Even (p * (q - 1)) := by
+        by_cases hq_even : Even q
+        · have hp_even : Even p := by
+            by_contra hp_not
+            exact hhalf ⟨hq_even, Int.not_even_iff_odd.mp hp_not⟩
+          obtain ⟨r, hr⟩ := hp_even
+          refine ⟨r * (q - 1), ?_⟩
+          rw [hr]
+          ring
+        · have hq_odd : Odd q := Int.not_even_iff_odd.mp hq_even
+          have hqsub_even : Even (q - 1) := by
+            obtain ⟨r, hr⟩ := hq_odd
+            refine ⟨r, ?_⟩
+            omega
+          obtain ⟨r, hr⟩ := hqsub_even
+          refine ⟨p * r, ?_⟩
+          rw [hr]
+          ring
+      have hprod : 0 ≤ p * (q - 1) := by
+        by_cases hqz : q = 0
+        · rw [hqz] at hq_eq
+          have hbzero : T.a j.1 i = 0 := by simpa using hq_eq
+          rw [hbzero] at hp_eq
+          have hpz : p = 0 := by nlinarith [hwj_pos]
+          simp [hpz]
+        · have hqpos : 0 < q := by omega
+          have hqone : 1 ≤ q := by omega
+          exact mul_nonneg hp_nonneg (by omega)
+      have hquot :
+          (T.a j.1 i ^ 2 - T.w i * T.a j.1 i) /
+              (2 * T.w j.1 * T.w i) = p * (q - 1) / 2 := by
+        have hprod_dvd : (2 : ℤ) ∣ p * (q - 1) := by
+          obtain ⟨r, hr⟩ := hprod_even
+          refine ⟨r, ?_⟩
+          omega
+        have hnum' :
+            T.a j.1 i ^ 2 - T.w i * T.a j.1 i =
+              (p * (q - 1) / 2) * (2 * T.w j.1 * T.w i) := by
+          rw [hnum_eq]
+          have hc := Int.ediv_mul_cancel hprod_dvd
+          calc
+            p * (q - 1) * (T.w j.1 * T.w i) =
+                (p * (q - 1) / 2 * 2) * (T.w j.1 * T.w i) := by rw [hc]
+            _ = (p * (q - 1) / 2) * (2 * T.w j.1 * T.w i) := by ring
+        apply Int.ediv_eq_of_eq_mul_left
+          (ne_of_gt (by nlinarith [hwi_pos, hwj_pos]))
+        exact hnum'
+      have hform : contractedComponentGenus T i j =
+          T.g j.1 + p * (q - 1) / 2 := by
+        unfold contractedComponentGenus
+        rw [show contractedWeight T i j = T.w j.1 by
+          simp [contractedWeight, p, q, hhalf], Int.ediv_self (ne_of_gt hwj_pos), hquot]
+        ring
+      rw [hform]
+      have hgj := T.g_nonneg j.1
+      have hquot_nonneg : 0 ≤ p * (q - 1) / 2 :=
+        Int.ediv_nonneg hprod (by norm_num)
+      nlinarith
+  exact ⟨hweight_data, hdiv_formula, hdiv_formula_right, hgenus, hhalf_dvd⟩
 
 /-! Contraction of a `(-1)`-index, with the source formulas exposed through an equivalence. -/
 theorem contract_minus_one_index (T : NumericalType) (i : Fin T.n)
@@ -659,8 +1013,6 @@ theorem contract_minus_one_index (T : NumericalType) (i : Fin T.n)
                 (∀ j, T'.w j = contractedWeight T i (e j)) ∧
                 (∀ j, T'.g j = contractedComponentGenus T i (e j)) ∧
                   genus T' = genus T := by
-  sorry
-  /- Attempted approach:
   classical
   have hn1 : 1 < T.n := by
     by_contra h
@@ -704,6 +1056,21 @@ theorem contract_minus_one_index (T : NumericalType) (i : Fin T.n)
       exact congrArg Subtype.val (e.apply_symm_apply b')
     · intro j hj
       rfl
+  have hdivwi (j : RemainingIndex T i) :
+      T.w i ∣ T.a j.1 i := by
+    rw [T.a_symmetric j.1 i]
+    exact T.w_dvd i j.1
+  have hdivwj (j : RemainingIndex T i) :
+      T.w j.1 ∣ T.a j.1 i := T.w_dvd j.1 i
+  have hcontract_data := contracted_component_genus_data T i
+  have hweight_data := hcontract_data.1
+  have hweight_pos : ∀ j : RemainingIndex T i,
+      0 < contractedWeight T i j := fun j => (hweight_data j).1
+  have hdiv_formula := hcontract_data.2.1
+  have hdiv_formula_right := hcontract_data.2.2.1
+  have hgenus := hcontract_data.2.2.2.1
+  have hhalf_dvd := hcontract_data.2.2.2.2
+  /-
   have hdivwi (j : RemainingIndex T i) :
       T.w i ∣ T.a j.1 i := by
     rw [T.a_symmetric j.1 i]
@@ -914,6 +1281,7 @@ theorem contract_minus_one_index (T : NumericalType) (i : Fin T.n)
       have hquot_nonneg : 0 ≤ p * (q - 1) / 2 :=
         Int.ediv_nonneg hprod (by norm_num)
       nlinarith
+  -/
   let m' : Fin (T.n - 1) → ℤ := fun j => T.m (e j).1
   let a' : Matrix (Fin (T.n - 1)) (Fin (T.n - 1)) ℤ :=
     fun j k => contractedIntersection T i (e j) (e k)
@@ -1400,8 +1768,8 @@ theorem contract_minus_one_index (T : NumericalType) (i : Fin T.n)
       row_sum := hrow'
       w_dvd := hwdiv' }
   have hgenus_expr : genusExpression T' = genusExpression T := by
-    sorry
-    /- Attempted approach:
+    exact contracted_genus_expression T i hi e a' w' g' hcomponent hsumQ
+    /-
     have hsum_component :
         (∑ j : Fin (T.n - 1),
           (m' j : ℚ) *
@@ -1491,7 +1859,6 @@ theorem contract_minus_one_index (T : NumericalType) (i : Fin T.n)
     exact_mod_cast hcast
   exact ⟨T', rfl, e, by simp [T', m'], by simp [T', a'],
     by simp [T', w'], by simp [T', g'], hgenus_eq⟩
-  -/
 
 def topologicalGenus (T : NumericalType) : ℤ :=
   1 - (T.n : ℤ) +
@@ -1616,7 +1983,20 @@ theorem minimal_genus_at_least_one (T : NumericalType) (genusValue : ℤ)
     (hgenus : IsOfGenus T genusValue) (hminimal : IsMinimal T)
     (hn : 1 < T.n) :
     genusValue ≥ 1 := by
-  sorry
+  have hcontrib : ∀ i, (0 : ℚ) ≤ genusContribution T i := by
+    intro i
+    by_contra hneg
+    exact hminimal ⟨i, minus_one_contribution T genusValue hgenus hn (lt_of_not_ge hneg)⟩
+  have hsum : (0 : ℚ) ≤ ∑ i : Fin T.n, genusContribution T i :=
+    Finset.sum_nonneg (fun i hi => hcontrib i)
+  have hsum' : (0 : ℚ) ≤ ∑ i : Fin T.n,
+      (T.m i : ℚ) * ((T.w i : ℚ) * ((T.g i : ℚ) - 1) - (T.a i i : ℚ) / 2) := by
+    simpa [genusContribution] using hsum
+  have hformula := genus_formula T
+  rw [hgenus, genusExpression] at hformula
+  have hbound : (1 : ℚ) ≤ (genusValue : ℚ) := by
+    linarith [hsum', hformula]
+  exact_mod_cast hbound
 
 theorem minimal_genus_ge_topological_genus (T : NumericalType) (genusValue : ℤ)
     (hgenus : IsOfGenus T genusValue) (hminimal : IsMinimal T)
@@ -1629,7 +2009,8 @@ theorem minimal_genus_ge_max_one_topological_genus (T : NumericalType)
     (genusValue : ℤ) (hgenus : IsOfGenus T genusValue)
     (hminimal : IsMinimal T) (hn : 1 < T.n) :
     max 1 (topologicalGenus T) ≤ genusValue := by
-  sorry
+  exact (max_le_iff).2 ⟨minimal_genus_at_least_one T genusValue hgenus hminimal hn,
+    minimal_genus_ge_topological_genus T genusValue hgenus hminimal hn⟩
 
 /-! A zero genus contribution is exactly a `(-2)` component in the reducible case. -/
 theorem minus_two_contribution (T : NumericalType) (genusValue : ℤ)

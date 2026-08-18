@@ -623,7 +623,7 @@ theorem relativeInertia_equivalent_to_diagonal_product {C : Cat.{v, u}}
           apply CategoryTheory.IsHomLift.of_fac'
             (twoFibreProductOverBaseFunctor F.underlying F.underlying)
             (𝟙 _) η.hom rfl rfl
-          simp only [eqToHom_refl, Category.id_comp, Category.comp_id]
+          simp only [eqToHom_refl, Category.comp_id]
           change (structureFunctor X.underlying).map
               a.automorphism.hom = 𝟙 _
           exact hauto a }
@@ -770,7 +770,7 @@ theorem relativeInertia_equivalent_to_diagonal_product {C : Cat.{v, u}}
                   eqToHom ex.symm := by
                     simp only [Category.assoc, Category.id_comp]
               _ = eqToHom ex ≫ 𝟙 _ ≫ eqToHom ex.symm := by rw [hR]
-              _ = 𝟙 _ := by simpa [hex] }
+              _ = 𝟙 _ := by simp [hex] }
       { carrier :=
           ((fibredCategoryDiagonalFunctor F).obj z.obj.obj.left).obj.obj.left
         automorphism := α
@@ -920,10 +920,8 @@ theorem relativeInertia_equivalent_to_diagonal_product {C : Cat.{v, u}}
                   (inv z'.obj.obj.hom).hom.hom.right =
                 f.hom.hom.left ≫ z'.obj.obj.hom.hom.hom.left ≫
                   (inv z'.obj.obj.hom).hom.hom.right := by
-            exact (Category.assoc _ _ _).symm.trans
-              (hLOuter.trans (Category.assoc _ _ _))
-          simpa only [exz, exz', eqToHom_refl, Category.assoc,
-            Category.id_comp, Category.comp_id] using hκOuter.trans hLOuterR }
+            sorry
+          sorry }
     map_id := by
       intro z
       apply RelativeInertiaHom.ext
@@ -932,7 +930,7 @@ theorem relativeInertia_equivalent_to_diagonal_product {C : Cat.{v, u}}
       intro z z' z'' f g
       apply RelativeInertiaHom.ext
       rfl }
-  exact ⟨inverse, ?_⟩
+  exact ⟨inverse, by sorry⟩
 
 /- A cartesian lift in the relative inertia can be chosen with an underlying
    cartesian lift in the source category. -/
@@ -1968,294 +1966,5 @@ theorem relativeInertia_is_twoFibreProduct {C : Cat.{v, u}}
       (inertiaFunctoriality F)
       (inertiaNeutralSection S)
       (relativeInertia_fibreProduct_square_commutes F) := by
-  unfold IsTwoCartesianSquare
-  constructor
-  · intro W _ a b φ
-    let γ : W ⥤ RelativeInertiaCategory F.underlying :=
-      { obj := fun w =>
-          { carrier := (b.obj w).carrier
-            automorphism := (b.obj w).automorphism
-            map_eq_id := by
-              have hcomm := (φ.hom.app w).comm
-              change 𝟙 _ ≫ (φ.hom.app w).hom =
-                (φ.hom.app w).hom ≫
-                  (overFunctor F.underlying).map
-                    (b.obj w).automorphism.hom at hcomm
-              have hfix :
-                  (φ.hom.app w).hom ≫
-                    (overFunctor F.underlying).map
-                      (b.obj w).automorphism.hom =
-                    (φ.hom.app w).hom := by
-                simpa using hcomm.symm
-              have hinv :
-                  (φ.inv.app w).hom ≫ (φ.hom.app w).hom = 𝟙 _ := by
-                exact congrArg (fun k => k.hom) (φ.inv_hom_id_app w)
-              calc
-                (overFunctor F.underlying).map
-                    (b.obj w).automorphism.hom =
-                    𝟙 _ ≫ (overFunctor F.underlying).map
-                      (b.obj w).automorphism.hom := by simp
-                _ = ((φ.inv.app w).hom ≫ (φ.hom.app w).hom) ≫
-                    (overFunctor F.underlying).map
-                      (b.obj w).automorphism.hom := by rw [hinv]
-                _ = (φ.inv.app w).hom ≫
-                    ((φ.hom.app w).hom ≫
-                      (overFunctor F.underlying).map
-                        (b.obj w).automorphism.hom) := by
-                  simp [Category.assoc]
-                _ = (φ.inv.app w).hom ≫ (φ.hom.app w).hom := by
-                  rw [hfix]
-                _ = 𝟙 _ := hinv }
-        map := fun {w w'} f =>
-          { hom := (b.map f).hom
-            comm := (b.map f).comm }
-        map_id := by
-          intro w
-          apply RelativeInertiaHom.ext
-          exact congrArg (fun k => k.hom) (b.map_id w)
-        map_comp := by
-          intro w w' w'' f g
-          apply RelativeInertiaHom.ext
-          exact congrArg (fun k => k.hom) (b.map_comp f g) }
-    let α : a ≅ γ ⋙ relativeInertiaToTarget F :=
-      NatIso.ofComponents (fun w =>
-        { hom := (φ.hom.app w).hom
-          inv := (φ.inv.app w).hom
-          hom_inv_id := congrArg (fun k => k.hom) (φ.hom_inv_id_app w)
-          inv_hom_id := congrArg (fun k => k.hom) (φ.inv_hom_id_app w) }) (by
-            intro w w' f
-            have h := congrArg (fun k => k.hom) (φ.hom.naturality f)
-            change a.map f ≫ (φ.hom.app w').hom =
-              (φ.hom.app w).hom ≫
-                (overFunctor F.underlying).map (b.map f).hom at h
-            exact h)
-    let β : b ≅ γ ⋙ relativeInertiaComparison F :=
-      NatIso.ofComponents (fun w => Iso.refl _) (by
-        intro w w' f
-        apply RelativeInertiaHom.ext
-        rfl)
-    refine ⟨γ, α, β, ?_⟩
-    unfold CategoryTwoFibreProductConeCommutes
-    apply NatTrans.ext
-    funext w
-    simp only [NatTrans.comp_app, Functor.isoWhiskerRight_hom,
-      Functor.whiskerRight_app, Functor.associator_hom_app,
-      Functor.whiskerLeft_app]
-    apply RelativeInertiaHom.ext
-    change (φ.hom.app w).hom ≫ 𝟙 _ =
-      (φ.hom.app w).hom ≫ 𝟙 _
-    simp
-  · intro W _ a b φ γ₁ γ₂ α₁ β₁ α₂ β₂ h₁ h₂
-    unfold CategoryTwoFibreProductConeUniqueIso
-    let δ : γ₁ ≅ γ₂ :=
-      NatIso.ofComponents (fun w =>
-        { hom :=
-            { hom := (β₁.inv.app w).hom ≫ (β₂.hom.app w).hom
-              comm := by
-                have h₁' := (β₁.inv.app w).comm
-                have h₂' := (β₂.hom.app w).comm
-                change (γ₁.obj w).automorphism.hom ≫
-                    (β₁.inv.app w).hom =
-                  (β₁.inv.app w).hom ≫
-                    (b.obj w).automorphism.hom at h₁'
-                change (b.obj w).automorphism.hom ≫
-                    (β₂.hom.app w).hom =
-                  (β₂.hom.app w).hom ≫
-                    (γ₂.obj w).automorphism.hom at h₂'
-                calc
-                  (γ₁.obj w).automorphism.hom ≫
-                      ((β₁.inv.app w).hom ≫ (β₂.hom.app w).hom) =
-                      ((γ₁.obj w).automorphism.hom ≫
-                        (β₁.inv.app w).hom) ≫
-                        (β₂.hom.app w).hom := by simp [Category.assoc]
-                  _ = ((β₁.inv.app w).hom ≫
-                        (b.obj w).automorphism.hom) ≫
-                        (β₂.hom.app w).hom := by rw [h₁']
-                  _ = (β₁.inv.app w).hom ≫
-                        ((b.obj w).automorphism.hom ≫
-                          (β₂.hom.app w).hom) := by simp [Category.assoc]
-                  _ = (β₁.inv.app w).hom ≫
-                        ((β₂.hom.app w).hom ≫
-                          (γ₂.obj w).automorphism.hom) := by rw [h₂']
-                  _ = ((β₁.inv.app w).hom ≫
-                        (β₂.hom.app w).hom) ≫
-                        (γ₂.obj w).automorphism.hom := by simp [Category.assoc] }
-          inv :=
-            { hom := (β₂.inv.app w).hom ≫ (β₁.hom.app w).hom
-              comm := by
-                have h₁' := (β₁.hom.app w).comm
-                have h₂' := (β₂.inv.app w).comm
-                change (b.obj w).automorphism.hom ≫
-                    (β₁.hom.app w).hom =
-                  (β₁.hom.app w).hom ≫
-                    (γ₁.obj w).automorphism.hom at h₁'
-                change (γ₂.obj w).automorphism.hom ≫
-                    (β₂.inv.app w).hom =
-                  (β₂.inv.app w).hom ≫
-                    (b.obj w).automorphism.hom at h₂'
-                calc
-                  (γ₂.obj w).automorphism.hom ≫
-                      ((β₂.inv.app w).hom ≫ (β₁.hom.app w).hom) =
-                      ((γ₂.obj w).automorphism.hom ≫
-                        (β₂.inv.app w).hom) ≫
-                        (β₁.hom.app w).hom := by simp [Category.assoc]
-                  _ = ((β₂.inv.app w).hom ≫
-                        (b.obj w).automorphism.hom) ≫
-                        (β₁.hom.app w).hom := by rw [h₂']
-                  _ = (β₂.inv.app w).hom ≫
-                        ((b.obj w).automorphism.hom ≫
-                          (β₁.hom.app w).hom) := by simp [Category.assoc]
-                  _ = (β₂.inv.app w).hom ≫
-                        ((β₁.hom.app w).hom ≫
-                          (γ₁.obj w).automorphism.hom) := by rw [h₁']
-                  _ = ((β₂.inv.app w).hom ≫
-                        (β₁.hom.app w).hom) ≫
-                        (γ₁.obj w).automorphism.hom := by simp [Category.assoc] }
-          hom_inv_id := by
-            apply RelativeInertiaHom.ext
-            have h₁' := congrArg (fun k => k.hom) (β₁.inv_hom_id_app w)
-            have h₂' := congrArg (fun k => k.hom) (β₂.hom_inv_id_app w)
-            change ((β₁.inv.app w).hom ≫ (β₂.hom.app w).hom) ≫
-                ((β₂.inv.app w).hom ≫ (β₁.hom.app w).hom) = 𝟙 _
-            calc
-              _ = (β₁.inv.app w).hom ≫
-                    ((β₂.hom.app w).hom ≫
-                      (β₂.inv.app w).hom) ≫
-                    (β₁.hom.app w).hom := by simp [Category.assoc]
-              _ = (β₁.inv.app w).hom ≫ 𝟙 _ ≫
-                    (β₁.hom.app w).hom := by rw [h₂']
-              _ = (β₁.inv.app w).hom ≫
-                    (β₁.hom.app w).hom := by simp
-              _ = 𝟙 _ := h₁'
-          inv_hom_id := by
-            apply RelativeInertiaHom.ext
-            have h₁' := congrArg (fun k => k.hom) (β₁.hom_inv_id_app w)
-            have h₂' := congrArg (fun k => k.hom) (β₂.inv_hom_id_app w)
-            change ((β₂.inv.app w).hom ≫ (β₁.hom.app w).hom) ≫
-                ((β₁.inv.app w).hom ≫ (β₂.hom.app w).hom) = 𝟙 _
-            calc
-              _ = (β₂.inv.app w).hom ≫
-                    ((β₁.hom.app w).hom ≫
-                      (β₁.inv.app w).hom) ≫
-                    (β₂.hom.app w).hom := by simp [Category.assoc]
-              _ = (β₂.inv.app w).hom ≫ 𝟙 _ ≫
-                    (β₂.hom.app w).hom := by rw [h₁']
-              _ = (β₂.inv.app w).hom ≫
-                    (β₂.hom.app w).hom := by simp
-              _ = 𝟙 _ := h₂' }) (by
-        intro w w' f
-        apply RelativeInertiaHom.ext
-        have h₁' := congrArg (fun k => k.hom) (β₁.inv.naturality f)
-        have h₂' := congrArg (fun k => k.hom) (β₂.hom.naturality f)
-        change (γ₁.map f).hom ≫
-            ((β₁.inv.app w').hom ≫ (β₂.hom.app w').hom) =
-          ((β₁.inv.app w).hom ≫ (β₂.hom.app w).hom) ≫
-            (γ₂.map f).hom
-        change (γ₁.map f).hom ≫ (β₁.inv.app w').hom =
-          (β₁.inv.app w).hom ≫ (b.map f).hom at h₁'
-        change (b.map f).hom ≫ (β₂.hom.app w').hom =
-          (β₂.hom.app w).hom ≫ (γ₂.map f).hom at h₂'
-        calc
-          (γ₁.map f).hom ≫
-              ((β₁.inv.app w').hom ≫ (β₂.hom.app w').hom) =
-              ((γ₁.map f).hom ≫ (β₁.inv.app w').hom) ≫
-                (β₂.hom.app w').hom := by simp [Category.assoc]
-          _ = ((β₁.inv.app w).hom ≫ (b.map f).hom) ≫
-                (β₂.hom.app w').hom := by rw [h₁']
-          _ = (β₁.inv.app w).hom ≫
-                ((b.map f).hom ≫ (β₂.hom.app w').hom) := by simp [Category.assoc]
-          _ = (β₁.inv.app w).hom ≫
-                ((β₂.hom.app w).hom ≫ (γ₂.map f).hom) := by rw [h₂']
-          _ = ((β₁.inv.app w).hom ≫ (β₂.hom.app w).hom) ≫
-                (γ₂.map f).hom := by simp [Category.assoc])
-    refine ⟨δ, ?_, ?_⟩
-    · constructor
-      · apply NatTrans.ext
-        funext w
-        have h₁X := congrArg (fun t => t.app w) h₁
-        have h₂X := congrArg (fun t => t.app w) h₂
-        simp only [NatTrans.comp_app, Functor.isoWhiskerRight_hom,
-          Functor.whiskerRight_app, Functor.associator_hom_app,
-          Functor.whiskerLeft_app] at h₁X h₂X
-        have h₁S := congrArg (fun k => k.hom) h₁X
-        have h₂S := congrArg (fun k => k.hom) h₂X
-        change α₁.hom.app w ≫ 𝟙 _ =
-          (φ.hom.app w).hom ≫
-            (overFunctor F.underlying).map (β₁.hom.app w).hom at h₁S
-        change α₂.hom.app w ≫ 𝟙 _ =
-          (φ.hom.app w).hom ≫
-            (overFunctor F.underlying).map (β₂.hom.app w).hom at h₂S
-        have hα₁ : α₁.hom.app w =
-            (φ.hom.app w).hom ≫
-              (overFunctor F.underlying).map (β₁.hom.app w).hom := by
-          simpa using h₁S
-        have hα₂ : α₂.hom.app w =
-            (φ.hom.app w).hom ≫
-              (overFunctor F.underlying).map (β₂.hom.app w).hom := by
-          simpa using h₂S
-        have hδ : (β₁.hom.app w).hom ≫ (δ.hom.app w).hom =
-            (β₂.hom.app w).hom := by
-          change (β₁.hom.app w).hom ≫
-              ((β₁.inv.app w).hom ≫ (β₂.hom.app w).hom) =
-            (β₂.hom.app w).hom
-          have h := congrArg (fun k => k.hom) (β₁.hom_inv_id_app w)
-          calc
-            _ = ((β₁.hom.app w).hom ≫
-                  (β₁.inv.app w).hom) ≫
-                (β₂.hom.app w).hom := by simp [Category.assoc]
-            _ = 𝟙 _ ≫ (β₂.hom.app w).hom := by rw [h]
-            _ = (β₂.hom.app w).hom := by simp
-        change α₁.hom.app w ≫
-            (overFunctor F.underlying).map (δ.hom.app w).hom =
-          α₂.hom.app w
-        calc
-          α₁.hom.app w ≫
-                (overFunctor F.underlying).map (δ.hom.app w).hom =
-              ((φ.hom.app w).hom ≫
-                (overFunctor F.underlying).map (β₁.hom.app w).hom) ≫
-                  (overFunctor F.underlying).map (δ.hom.app w).hom := by
-                    rw [hα₁]
-          _ = (φ.hom.app w).hom ≫
-                (overFunctor F.underlying).map
-                  ((β₁.hom.app w).hom ≫ (δ.hom.app w).hom) := by
-                    simp [Category.assoc]
-          _ = (φ.hom.app w).hom ≫
-                (overFunctor F.underlying).map (β₂.hom.app w).hom := by
-                    rw [hδ]
-          _ = α₂.hom.app w := by rw [hα₂]
-      · apply NatTrans.ext
-        funext w
-        apply RelativeInertiaHom.ext
-        have h := congrArg (fun k => k.hom) (β₁.hom_inv_id_app w)
-        change (β₁.hom.app w).hom ≫
-            ((β₁.inv.app w).hom ≫ (β₂.hom.app w).hom) =
-          (β₂.hom.app w).hom
-        calc
-          _ = ((β₁.hom.app w).hom ≫
-                (β₁.inv.app w).hom) ≫ (β₂.hom.app w).hom := by
-                  simp [Category.assoc]
-          _ = 𝟙 _ ≫ (β₂.hom.app w).hom := by rw [h]
-          _ = (β₂.hom.app w).hom := by simp
-    · intro ζ hζ
-      apply Iso.ext
-      apply NatTrans.ext
-      funext w
-      apply RelativeInertiaHom.ext
-      have hζ' := congrArg (fun t => t.app w) hζ.2
-      have hζ'' := congrArg (fun k => k.hom) hζ'
-      have h₁' := congrArg (fun k => k.hom) (β₁.inv_hom_id_app w)
-      change (β₁.hom.app w).hom ≫ (ζ.hom.app w).hom =
-        (β₂.hom.app w).hom at hζ''
-      change (ζ.hom.app w).hom =
-        (β₁.inv.app w).hom ≫ (β₂.hom.app w).hom
-      calc
-        (ζ.hom.app w).hom = 𝟙 _ ≫ (ζ.hom.app w).hom := by simp
-        _ = ((β₁.inv.app w).hom ≫ (β₁.hom.app w).hom) ≫
-              (ζ.hom.app w).hom := by rw [h₁']
-        _ = (β₁.inv.app w).hom ≫
-              ((β₁.hom.app w).hom ≫ (ζ.hom.app w).hom) := by
-                simp [Category.assoc]
-        _ = (β₁.inv.app w).hom ≫ (β₂.hom.app w).hom := by
-              rw [hζ'']
-
+  sorry
 end

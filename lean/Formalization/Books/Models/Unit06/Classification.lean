@@ -640,13 +640,27 @@ theorem genus_one_normal_form_is_minimal_and_genus_one (T : NumericalType)
         IsMinimal T ∧ genus T = 1 := by
     intro h
     rcases h with ⟨h, _m, _w, _hm, _hw, _hmdata, ha, _hweight, hgenus⟩
+    have htransport {k : ℕ} (S : NumericalType) (hs : S.n = k)
+        (i : Fin S.n) :
+        (ambientDataAt hs).a (Fin.cast hs i) (Fin.cast hs i) = S.a i i := by
+      cases S
+      cases hs
+      rfl
+    have hgenus_transport {k : ℕ} (S : NumericalType) (hs : S.n = k)
+        (i : Fin S.n) :
+        ambientGenusAt hs (Fin.cast hs i) = S.g i := by
+      cases S
+      cases hs
+      rfl
     have hA : ∀ i, T.a i i = 0 := by
       intro i
-      have hi := congrFun (congrFun ha i) i
+      have hi := congrFun (congrFun ha (Fin.cast h i)) (Fin.cast h i)
+      rw [← htransport T h i]
       simpa [ambientDataAt, ambientData, scalarMatrix] using hi
     have hG : ∀ i, T.g i = 1 := by
       intro i
-      have hi := congrFun hgenus i
+      have hi := congrFun hgenus (Fin.cast h i)
+      rw [← hgenus_transport T h i]
       simpa [ambientGenusAt, constantVector] using hi
     have hminimal : IsMinimal T := by
       rintro ⟨i, hi⟩

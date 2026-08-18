@@ -1,4 +1,6 @@
 import Formalization.Books.Homology.Unit05.AbelianCategories
+import Mathlib.Algebra.Homology.ShortComplex.Ab
+import Mathlib.Algebra.Category.Grp.EpiMono
 import Mathlib.Algebra.Category.Grp.Ulift
 
 /-!
@@ -3385,8 +3387,170 @@ noncomputable def covariantBoundary
   AddCommGrpCat.ofHom
     { toFun := fun h =>
         pullbackClass h.down (extensionClass (extensionOfShortExact hS))
-      map_zero' := by sorry
-      map_add' := by sorry }
+      map_zero' := by
+        change pullbackClass 0 (extensionClass (extensionOfShortExact hS)) = zeroExtClass
+        change extensionClass (pullbackExtension (extensionOfShortExact hS) 0) =
+          extensionClass (splitExtension S.X₁ N)
+        let e : ExtensionMorphism (splitExtension S.X₁ N)
+            (extensionOfShortExact hS) :=
+          { left := 𝟙 S.X₁
+            middle := biprod.desc (extensionOfShortExact hS).inclusion
+              (0 : N ⟶ S.X₂)
+            right := 0
+            comm_left := by
+              dsimp [extensionOfShortExact, splitExtension]
+              simp
+            comm_right := by
+              dsimp [extensionOfShortExact, splitExtension]
+              apply biprod.hom_ext'
+              · rw [← Category.assoc, biprod.inl_desc, S.zero]
+                simp
+              · rw [← Category.assoc, biprod.inr_desc]
+                simp }
+        have h := pushout_pullback_extension_morphism_iso e
+        apply Quotient.sound
+        exact ⟨h.some.symm.trans
+          (pushout_extension_id_iso (splitExtension S.X₁ N)).some⟩
+      map_add' := by
+        intro h₁ h₂
+        change pullbackClass (h₁.down + h₂.down)
+          (extensionClass (extensionOfShortExact hS)) =
+          baerSumClass
+            (pullbackClass h₁.down (extensionClass (extensionOfShortExact hS)))
+            (pullbackClass h₂.down (extensionClass (extensionOfShortExact hS)))
+        change extensionClass
+            (pullbackExtension (extensionOfShortExact hS) (h₁.down + h₂.down)) =
+          extensionClass
+            (baerSumExtension
+              (pullbackExtension (extensionOfShortExact hS) h₁.down)
+              (pullbackExtension (extensionOfShortExact hS) h₂.down))
+        let p₁ : N ⟶ S.X₃ := h₁.down
+        let p₂ : N ⟶ S.X₃ := h₂.down
+        let E : Extension C S.X₁ S.X₃ := extensionOfShortExact hS
+        let F₁ := pullbackExtension E p₁
+        let F₂ := pullbackExtension E p₂
+        let G := directSumExtensionVarying F₁ F₂
+        let P := pushoutExtension G (biprodCodiagonal S.X₁)
+        letI instP : HasPullback P.projection (biprodDiagonal N) :=
+          pullbackExtension._proof_1 P (biprodDiagonal N)
+        let F := pullbackExtension P (biprodDiagonal N)
+        let q₁ := pullbackExtensionMorphism E p₁
+        let q₂ := pullbackExtensionMorphism E p₂
+        let mD : G.middle ⟶ E.middle :=
+          biprod.desc q₁.middle q₂.middle
+        have hDproj :
+            mD ≫ E.projection =
+              G.projection ≫ biprod.desc p₁ p₂ := by
+          dsimp [G, directSumExtensionVarying, mD]
+          apply biprod.hom_ext'
+          · calc
+              biprod.inl ≫ mD ≫ E.projection =
+                  q₁.middle ≫ E.projection := by
+                    change biprod.inl ≫ biprod.desc q₁.middle q₂.middle ≫
+                      E.projection = q₁.middle ≫ E.projection
+                    rw [← Category.assoc, biprod.inl_desc]
+              _ = F₁.projection ≫ p₁ := q₁.comm_right
+              _ = biprod.inl ≫
+                    biprod.map F₁.projection F₂.projection ≫
+                  biprod.desc p₁ p₂ := by
+                    rw [← Category.assoc, biprod.inl_map,
+                      Category.assoc, biprod.inl_desc]
+          · calc
+              biprod.inr ≫ mD ≫ E.projection =
+                  q₂.middle ≫ E.projection := by
+                    change biprod.inr ≫ biprod.desc q₁.middle q₂.middle ≫
+                      E.projection = q₂.middle ≫ E.projection
+                    rw [← Category.assoc, biprod.inr_desc]
+              _ = F₂.projection ≫ p₂ := q₂.comm_right
+              _ = biprod.inr ≫
+                    biprod.map F₁.projection F₂.projection ≫
+                  biprod.desc p₁ p₂ := by
+                    rw [← Category.assoc, biprod.inr_map,
+                      Category.assoc, biprod.inr_desc]
+        have hleft :
+            G.inclusion ≫ mD =
+              biprodCodiagonal S.X₁ ≫ E.inclusion := by
+          dsimp [G, directSumExtensionVarying, mD]
+          apply biprod.hom_ext'
+          · calc
+              biprod.inl ≫ G.inclusion ≫ mD =
+                  F₁.inclusion ≫ q₁.middle := by
+                    simp [G, mD, directSumExtensionVarying, Category.assoc]
+              _ = E.inclusion := by
+                    simpa [F₁, q₁, pullbackExtensionMorphism, pullbackExtension]
+                      using q₁.comm_left
+              _ = biprod.inl ≫ biprodCodiagonal S.X₁ ≫ E.inclusion := by
+                    simp [biprodCodiagonal, Category.assoc]
+          · calc
+              biprod.inr ≫ G.inclusion ≫ mD =
+                  F₂.inclusion ≫ q₂.middle := by
+                    simp [G, mD, directSumExtensionVarying, Category.assoc]
+              _ = E.inclusion := by
+                    simpa [F₂, q₂, pullbackExtensionMorphism, pullbackExtension]
+                      using q₂.comm_left
+              _ = biprod.inr ≫ biprodCodiagonal S.X₁ ≫ E.inclusion := by
+                    simp [biprodCodiagonal, Category.assoc]
+        let pMap : P.middle ⟶ E.middle :=
+          pushout.desc E.inclusion mD hleft.symm
+        have hpMap :
+            pMap ≫ E.projection = P.projection ≫ biprod.desc p₁ p₂ := by
+          dsimp [P, pushoutExtension, pMap]
+          apply pushout.hom_ext
+          · rw [← Category.assoc, pushout.inl_desc]
+            rw [← Category.assoc, pushout.inl_desc]
+            simp [E.zero]
+          · rw [← Category.assoc, pushout.inr_desc, ← Category.assoc,
+              pushout.inr_desc]
+            exact hDproj
+        letI instH : HasPullback E.projection (p₁ + p₂) :=
+          pullbackExtension._proof_1 E (p₁ + p₂)
+        let mMiddle :
+            pullback P.projection (biprodDiagonal N) ⟶
+              pullback E.projection (p₁ + p₂) := by
+          exact pullback.lift
+            (pullback.fst P.projection (biprodDiagonal N) ≫ pMap)
+            (pullback.snd P.projection (biprodDiagonal N)) (by
+              rw [Category.assoc, hpMap, ← Category.assoc,
+                pullback.condition]
+              simp [biprodDiagonal, biprod.desc_eq, add_comp, comp_add])
+        have hmMiddle_fst :
+            mMiddle ≫ pullback.fst E.projection (p₁ + p₂) =
+              pullback.fst P.projection (biprodDiagonal N) ≫ pMap := by
+          dsimp [mMiddle]
+          rw [pullback.lift_fst]
+        have hmMiddle_snd :
+            mMiddle ≫ pullback.snd E.projection (p₁ + p₂) =
+              pullback.snd P.projection (biprodDiagonal N) := by
+          dsimp [mMiddle]
+          rw [pullback.lift_snd]
+        have hpMap_inl : P.inclusion ≫ pMap = E.inclusion := by
+          dsimp [P, pushoutExtension, pMap]
+          rw [pushout.inl_desc]
+        let e : ExtensionMorphism F
+            (pullbackExtension E (p₁ + p₂)) :=
+          { left := 𝟙 S.X₁
+            middle := mMiddle
+            right := 𝟙 N
+            comm_left := by
+              rw [Category.id_comp]
+              dsimp [F, pullbackExtension]
+              apply pullback.hom_ext
+              · simp only [Category.assoc, hmMiddle_fst,
+                  pullback.lift_fst]
+                rw [← Category.assoc, pullback.lift_fst]
+                exact hpMap_inl
+              · simp only [Category.assoc, hmMiddle_snd,
+                  pullback.lift_snd]
+            comm_right := by
+              rw [Category.comp_id]
+              dsimp [F, pullbackExtension]
+              simp [hmMiddle_snd] }
+        have h := pushout_pullback_extension_morphism_iso e
+        apply Quotient.sound
+        have hPO := pushout_extension_id_iso F
+        have hPB := pullback_extension_id_iso
+          (pullbackExtension E (p₁ + p₂))
+        exact ⟨hPB.some.symm.trans (h.some.symm.trans hPO.some)⟩ }
 
 noncomputable def contravariantExtSequence
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -3426,18 +3590,567 @@ noncomputable def covariantExtSequence
     (extPushoutHom S.f)
     (extPushoutHom S.g)
 
+private theorem pullback_ext_lift_of_zero
+    {C : Type u} [Category.{v} C] [Abelian C]
+    (S : ShortComplex C) (hS : S.ShortExact) (N : C)
+    (E : Extension C N S.X₂)
+    (hE : extensionClass (pullbackExtension E S.f) = zeroExtClass) :
+    ∃ F : Extension C N S.X₃,
+      extensionClass (pullbackExtension F S.g) = extensionClass E := by
+  change extensionClass (pullbackExtension E S.f) =
+    extensionClass (splitExtension N S.X₁) at hE
+  rcases Quotient.exact hE with ⟨e⟩
+  let i : S.X₁ ⟶ (splitExtension N S.X₁).middle := by
+    let hi : (N ⊞ S.X₁) = (splitExtension N S.X₁).middle := by
+      change (N ⊞ S.X₁) = (splitExtension N S.X₁).middle
+      unfold splitExtension
+      rfl
+    let ei : (N ⊞ S.X₁) ⟶ (splitExtension N S.X₁).middle :=
+      eqToHom hi
+    exact (biprod.inr : S.X₁ ⟶ N ⊞ S.X₁) ≫ ei
+  have hi_proj : i ≫ (splitExtension N S.X₁).projection = 𝟙 S.X₁ := by
+    dsimp [i]
+    simp [splitExtension]
+  let j : S.X₁ ⟶ E.middle :=
+    i ≫ e.inv.middle ≫ (pullbackExtensionMorphism E S.f).middle
+  have hj : j ≫ E.projection = S.f := by
+    dsimp [j]
+    calc
+      i ≫ e.inv.middle ≫ (pullbackExtensionMorphism E S.f).middle ≫
+          E.projection =
+          i ≫ e.inv.middle ≫
+            ((pullbackExtension E S.f).projection ≫ S.f) := by
+              rw [(pullbackExtensionMorphism E S.f).comm_right]
+      _ = i ≫ (e.inv.middle ≫ (pullbackExtension E S.f).projection) ≫
+          S.f := by simp [Category.assoc]
+      _ = i ≫ ((splitExtension N S.X₁).projection ≫ e.inv.right) ≫
+          S.f := by rw [e.inv.comm_right]
+      _ = S.f := by simp [Category.assoc, hi_proj]
+  letI : Mono S.f := hS.mono_f
+  have hj_mono : Mono j := by
+    constructor
+    intro Z a b hab
+    apply (cancel_mono S.f).1
+    calc
+      a ≫ S.f = a ≫ (j ≫ E.projection) := by rw [hj]
+      _ = (a ≫ j) ≫ E.projection := by simp [Category.assoc]
+      _ = (b ≫ j) ≫ E.projection := by rw [hab]
+      _ = b ≫ S.f := by rw [Category.assoc, hj]
+  let q : E.middle ⟶ cokernel j := cokernel.π j
+  have hqd : q ≫ cokernel.desc j (E.projection ≫ S.g) _ =
+      E.projection ≫ S.g := by
+    dsimp [q]
+    exact cokernel.π_desc j (E.projection ≫ S.g) _
+  have hjd : j ≫ E.projection ≫ S.g = 0 := by
+    rw [Category.assoc, hj, S.zero, comp_zero]
+  let d : cokernel j ⟶ S.X₃ := cokernel.desc j
+    (E.projection ≫ S.g) hjd
+  have hqd' : q ≫ d = E.projection ≫ S.g := by
+    dsimp [q, d]
+    exact cokernel.π_desc j (E.projection ≫ S.g) hjd
+  have hzero : (E.inclusion ≫ q) ≫ d = 0 := by
+    rw [Category.assoc, hqd', Category.assoc, E.zero, zero_comp]
+  let T : ShortComplex C := ShortComplex.mk (E.inclusion ≫ q) d hzero
+  have hT_exact : T.Exact := by
+    rw [ShortComplex.exact_iff_exact_up_to_refinements]
+    intro Z k hk
+    let π : pullback k q ⟶ Z := pullback.fst k q
+    let x : pullback k q ⟶ E.middle := pullback.snd k q
+    have hπ : Epi π := by
+      dsimp [π]
+      exact Abelian.epi_pullback_of_epi_g k q
+    have hxpg : x ≫ E.projection ≫ S.g = 0 := by
+      calc
+        x ≫ E.projection ≫ S.g = x ≫ (q ≫ d) := by rw [hqd']
+        _ = (x ≫ q) ≫ d := by simp [Category.assoc]
+        _ = (π ≫ k) ≫ d := by rw [pullback.condition]
+        _ = 0 := by simp [Category.assoc, hk]
+    obtain ⟨Z', r, hr, a, ha⟩ :=
+      hS.exact.exact_up_to_refinements (x ≫ E.projection) (by
+        simpa [Category.assoc] using hxpg)
+    have hvr : (r ≫ x - a ≫ j) ≫ E.projection = 0 := by
+      simp only [sub_comp, Category.assoc, ha, hj]
+    let b : Z' ⟶ N := E.shortExact.fIsKernel.lift
+      (KernelFork.ofι (r ≫ x - a ≫ j) hvr)
+    have hb : b ≫ E.inclusion = r ≫ x - a ≫ j := by
+      dsimp [b]
+      simpa using
+        (E.shortExact.fIsKernel.fac
+          (KernelFork.ofι (r ≫ x - a ≫ j) hvr)
+          WalkingParallelPair.zero)
+    have hba : r ≫ x = b ≫ E.inclusion + a ≫ j := by
+      rw [← hb, sub_add_cancel]
+    refine ⟨Z', r ≫ π, inferInstance, b, ?_⟩
+    calc
+      (r ≫ π) ≫ k = r ≫ (π ≫ k) := by simp [Category.assoc]
+      _ = r ≫ (x ≫ q) := by rw [pullback.condition]
+      _ = (r ≫ x) ≫ q := by simp [Category.assoc]
+      _ = (b ≫ E.inclusion + a ≫ j) ≫ q := by rw [hba]
+      _ = b ≫ (E.inclusion ≫ q) := by
+        rw [add_comp, Category.assoc, Category.assoc,
+          cokernel.condition, comp_zero, add_zero]
+  have hmono : Mono (E.inclusion ≫ q) := by
+    rw [Preadditive.mono_iff_cancel_zero]
+    intro Z k hk
+    let U : ShortComplex C := ShortComplex.mk j q (cokernel.condition j)
+    have hU : U.Exact := by
+      dsimp [U]
+      exact ShortComplex.exact_of_g_is_cokernel _ (cokernelIsCokernel j)
+    obtain ⟨Z', r, hr, a, ha⟩ :=
+      hU.exact_up_to_refinements (k ≫ E.inclusion) (by
+        simpa [Category.assoc] using hk)
+    have haf : a ≫ S.f = 0 := by
+      rw [← hj, Category.assoc, ← ha, Category.assoc]
+      dsimp
+      simp [Category.assoc, E.zero]
+    have ha0 : a = 0 := (cancel_mono S.f).1 haf
+    have hrx : r ≫ (k ≫ E.inclusion) = 0 := by
+      rw [ha, ha0, comp_zero]
+    have hrk : r ≫ k = 0 := by
+      apply (cancel_mono E.inclusion).1
+      simpa [Category.assoc] using hrx
+    exact (cancel_epi r).1 hrk
+  have hepi : Epi d := by
+    apply epi_of_epi_fac (f := q) (g := d) (h := E.projection ≫ S.g)
+    exact hqd'
+  let F : Extension C N S.X₃ :=
+    { middle := cokernel j
+      inclusion := E.inclusion ≫ q
+      projection := d
+      zero := hzero
+      shortExact := ShortComplex.ShortExact.mk' hT_exact hmono hepi }
+  refine ⟨F, ?_⟩
+  change extensionClass (pullbackExtension F S.g) = extensionClass E
+  let em : ExtensionMorphism E F :=
+    { left := 𝟙 N
+      middle := q
+      right := S.g
+      comm_left := by
+        dsimp [F]
+        rw [Category.id_comp]
+      comm_right := by
+        dsimp [F]
+        exact hqd' }
+  have hem := pushout_pullback_extension_morphism_iso em
+  exact Quotient.sound ⟨
+    ((pushout_extension_id_iso E).some.trans hem.some).symm⟩
+
 theorem contravariant_ext_six_term_exact
     {C : Type u} [Category.{v} C] [Abelian C]
     (S : ShortComplex C) (hS : S.ShortExact) :
     ∀ N : C, (contravariantExtSequence S hS N).Exact := by
   intro N
-  sorry
+  apply ComposableArrows.exact_of_δ₀
+  · change (ComposableArrows.mk₂
+      (0 : (0 : AddCommGrpCat.{max u v}) ⟶ HomGroup S.X₃ N)
+      (homPrecomposition S.g)).Exact
+    change (ShortComplex.mk
+      (0 : (0 : AddCommGrpCat.{max u v}) ⟶ HomGroup S.X₃ N)
+      (homPrecomposition S.g) (by simp)).toComposableArrows.Exact
+    apply ShortComplex.Exact.exact_toComposableArrows
+    apply (ShortComplex.exact_iff_mono _ (by simp)).2
+    rw [AddCommGrpCat.mono_iff_injective]
+    letI : Epi S.g := hS.epi_g
+    intro x y hxy
+    apply ULift.ext
+    apply (cancel_epi S.g).1
+    change ULift.up (S.g ≫ x.down) = ULift.up (S.g ≫ y.down) at hxy
+    exact congrArg ULift.down hxy
+  · apply ComposableArrows.exact_of_δ₀
+    · change (ComposableArrows.mk₂
+        (homPrecomposition S.g) (homPrecomposition S.f)).Exact
+      change (ShortComplex.mk (homPrecomposition S.g)
+        (homPrecomposition S.f) (by
+          change AddCommGrpCat.uliftFunctor.map
+              ((preadditiveYoneda.obj N).map S.g.op) ≫
+            AddCommGrpCat.uliftFunctor.map
+              ((preadditiveYoneda.obj N).map S.f.op) = 0
+          rw [← Functor.map_comp]
+          simp [← Functor.map_comp, ← op_comp, S.zero]
+          ext
+          rfl)).toComposableArrows.Exact
+      have hbase :
+          (ComposableArrows.mk₃ S.f S.g
+            (0 : S.X₃ ⟶ (0 : C))).Exact := by
+        apply ComposableArrows.exact_of_δ₀
+        · exact hS.exact.exact_toComposableArrows
+        · change (ShortComplex.mk S.g (0 : S.X₃ ⟶ (0 : C))
+            (by simp)).toComposableArrows.Exact
+          apply ShortComplex.Exact.exact_toComposableArrows
+          change (ShortComplex.mk S.g (0 : S.X₃ ⟶ (0 : C)) (by simp)).Exact
+          exact (ShortComplex.exact_iff_epi _ (by rfl)).2 hS.epi_g
+      have h :=
+        (Formalization.Books.Homology.Unit05.contravariant_hom_exact_iff
+          S.f S.g S.zero).1 hbase N
+      have h' := h.exact 1
+      change (ShortComplex.mk
+        ((preadditiveYoneda.obj N).map S.g.op)
+        ((preadditiveYoneda.obj N).map S.f.op) (by
+          simp [← Functor.map_comp, ← op_comp, S.zero])).Exact at h'
+      exact (h'.map (AddCommGrpCat.uliftFunctor.{u, v})).exact_toComposableArrows
+    · apply ComposableArrows.exact_of_δ₀
+      · dsimp [contravariantExtSequence, sixTermSequence]
+        change (ComposableArrows.mk₂
+          (homPrecomposition S.f) (contravariantBoundary hS N)).Exact
+        change (ShortComplex.mk (homPrecomposition S.f)
+          (contravariantBoundary hS N) (by
+            ext h
+            change extensionClass
+              (pushoutExtension (extensionOfShortExact hS)
+                (S.f ≫ h.down)) = zeroExtClass
+            let q : S.X₂ ⟶ N := h.down
+            let e : ExtensionMorphism (extensionOfShortExact hS)
+                (splitExtension N S.X₃) :=
+              { left := S.f ≫ q
+                middle :=
+                  biprod.lift q (extensionOfShortExact hS).projection
+                right := 𝟙 S.X₃
+                comm_left := by
+                  dsimp [extensionOfShortExact, splitExtension]
+                  apply biprod.hom_ext
+                  · simp only [Category.assoc, biprod.lift_fst, biprod.inl_fst]
+                    rw [← Category.assoc]
+                    exact (Category.comp_id (S.f ≫ q)).symm
+                  · simp only [Category.assoc, biprod.lift_snd, biprod.inl_snd,
+                      S.zero, comp_zero]
+                comm_right := by
+                  dsimp [extensionOfShortExact, splitExtension]
+                  rw [biprod.lift_snd]
+                  exact (Category.comp_id _).symm }
+            change extensionClass
+              (pushoutExtension (extensionOfShortExact hS) (S.f ≫ h.down)) =
+                extensionClass (splitExtension N S.X₃)
+            exact Quotient.sound ⟨
+              (pushout_pullback_extension_morphism_iso e).some.trans
+                (pullback_extension_id_iso (splitExtension N S.X₃)).some⟩)).toComposableArrows.Exact
+        apply ShortComplex.Exact.exact_toComposableArrows
+        rw [ShortComplex.ab_exact_iff]
+        intro x hx
+        change extensionClass
+          (pushoutExtension (extensionOfShortExact hS) x.down) =
+            zeroExtClass at hx
+        rcases Quotient.exact hx with ⟨e⟩
+        let h : S.X₂ ⟶ N :=
+          pushout.inr x.down S.f ≫ e.hom.middle ≫ biprod.fst
+        refine ⟨ULift.up h, ?_⟩
+        apply ULift.ext
+        change S.f ≫ h = x.down
+        dsimp [h]
+        rw [← Category.assoc]
+        rw [show S.f ≫ pushout.inr x.down S.f =
+          x.down ≫ pushout.inl x.down S.f from pushout.condition.symm]
+        have he : pushout.inl x.down S.f ≫ e.hom.middle = biprod.inl := by
+          simpa [pushoutExtension, extensionOfShortExact, splitExtension]
+            using e.hom.comm_left
+        have hhe := congrArg (fun k => x.down ≫ k ≫ biprod.fst) he
+        let a : S.X₁ ⟶ N := x.down
+        have hassoc :
+            (a ≫ pushout.inl a S.f) ≫ (e.hom.middle ≫ biprod.fst) =
+              a ≫ (pushout.inl a S.f ≫ e.hom.middle) ≫ biprod.fst := by
+          exact
+            (Category.assoc a (pushout.inl a S.f)
+              (e.hom.middle ≫ biprod.fst)).trans
+              (congrArg (fun k => a ≫ k)
+                (Category.assoc (pushout.inl a S.f) e.hom.middle
+                  biprod.fst).symm)
+        have hzero : x.down ≫ (biprod.inl : N ⟶ N ⊞ S.X₃) ≫
+            (biprod.fst : N ⊞ S.X₃ ⟶ N) = x.down := by
+          rw [biprod.inl_fst]
+          exact Category.comp_id _
+        have hright :
+            a ≫ (pushout.inl a S.f ≫ e.hom.middle) ≫ biprod.fst = x.down := by
+          dsimp [a]
+          exact hhe.trans hzero
+        simpa [a] using hassoc.trans hright
+      · dsimp [contravariantExtSequence, sixTermSequence]
+        refine { zero := ?_, exact := fun i hi => ?_ }
+        · intro i hi
+          obtain rfl | rfl : i = 0 ∨ i = 1 := by omega
+          · change contravariantBoundary hS N ≫ extPullbackHom S.g = 0
+            ext x
+            change pullbackClass S.g
+              (pushoutClass x.down (extensionClass (extensionOfShortExact hS))) =
+                zeroExtClass
+            change extensionClass
+              (pullbackExtension
+                (pushoutExtension (extensionOfShortExact hS) x.down) S.g) =
+              extensionClass (splitExtension N S.X₂)
+            let a : S.X₁ ⟶ N := x.down
+            let E : Extension C S.X₁ S.X₃ := extensionOfShortExact hS
+            let P := pushoutExtension E a
+            let Q := pullbackExtension P S.g
+            let r : S.X₂ ⟶ P.middle :=
+              pushout.inr a E.inclusion
+            have hr : r ≫ P.projection = S.g := by
+              change pushout.inr a E.inclusion ≫ P.projection = S.g
+              dsimp [P, pushoutExtension]
+              rw [pushout.inr_desc]
+              rfl
+            let s : S.X₂ ⟶ Q.middle :=
+              pullback.lift r (𝟙 S.X₂) (by
+                change r ≫ P.projection = (𝟙 S.X₂) ≫ S.g
+                rw [hr, Category.id_comp])
+            have hs : s ≫ Q.projection = 𝟙 S.X₂ := by
+              dsimp [s, Q, pullbackExtension]
+              rw [pullback.lift_snd]
+            let e : ExtensionMorphism (splitExtension N S.X₂) Q :=
+              { left := 𝟙 N
+                middle := by
+                  dsimp [splitExtension]
+                  change N ⊞ S.X₂ ⟶ Q.middle
+                  exact biprod.desc Q.inclusion s
+                right := 𝟙 S.X₂
+                comm_left := by
+                  dsimp [splitExtension]
+                  rw [biprod.inl_desc]
+                  rw [Category.id_comp]
+                comm_right := by
+                  dsimp [splitExtension]
+                  simp only [Category.id_comp, Category.comp_id]
+                  change biprod.desc Q.inclusion s ≫ Q.projection = biprod.snd
+                  rw [biprod.desc_eq, add_comp, Category.assoc, Q.zero,
+                    comp_zero, Category.assoc, hs, Category.comp_id, zero_add] }
+            have h := pushout_pullback_extension_morphism_iso e
+            exact Quotient.sound ⟨
+              ((pushout_extension_id_iso (splitExtension N S.X₂)).some.symm.trans
+                (h.some.trans (pullback_extension_id_iso Q).some)).symm⟩
+          · change extPullbackHom S.g ≫ extPullbackHom S.f = 0
+            ext x
+            change pullbackClass S.f (pullbackClass S.g x) = zeroExtClass
+            rw [pullbackClass_comp, S.zero]
+            refine Quotient.inductionOn x ?_
+            intro E
+            change extensionClass (pullbackExtension E 0) =
+              extensionClass (splitExtension N S.X₁)
+            let e : ExtensionMorphism (splitExtension N S.X₁)
+                (pullbackExtension E (0 : S.X₁ ⟶ S.X₃)) :=
+              { left := 𝟙 N
+                middle := by
+                  change N ⊞ S.X₁ ⟶ pullback E.projection (0 : S.X₁ ⟶ S.X₃)
+                  exact pullback.lift
+                    (biprod.fst ≫ E.inclusion) biprod.snd (by
+                      simp [E.zero])
+                right := 𝟙 S.X₁
+                comm_left := by
+                  dsimp [splitExtension, pullbackExtension]
+                  simp only [Category.comp_id, Category.id_comp]
+                  apply pullback.hom_ext
+                  · rw [Category.assoc, pullback.lift_fst, pullback.lift_fst]
+                    simp [Category.assoc]
+                  · rw [Category.assoc, pullback.lift_snd, pullback.lift_snd]
+                    simp [Category.assoc]
+                comm_right := by
+                  dsimp [splitExtension, pullbackExtension]
+                  rw [pullback.lift_snd, Category.comp_id] }
+            have h := pushout_pullback_extension_morphism_iso e
+            exact Quotient.sound ⟨
+              ((pushout_extension_id_iso (splitExtension N S.X₁)).some.symm.trans
+                (h.some.trans (pullback_extension_id_iso
+                  (pullbackExtension E (0 : S.X₁ ⟶ S.X₃))).some)).symm⟩
+        · obtain rfl | rfl : i = 0 ∨ i = 1 := by omega
+          · change (ShortComplex.mk (contravariantBoundary hS N)
+              (extPullbackHom S.g) (by
+                ext x
+                change pullbackClass S.g
+                  (pushoutClass x.down
+                    (extensionClass (extensionOfShortExact hS))) =
+                  zeroExtClass
+                change extensionClass
+                  (pullbackExtension
+                    (pushoutExtension (extensionOfShortExact hS) x.down) S.g) =
+                  extensionClass (splitExtension N S.X₂)
+                let a : S.X₁ ⟶ N := x.down
+                let E : Extension C S.X₁ S.X₃ := extensionOfShortExact hS
+                let P := pushoutExtension E a
+                let Q := pullbackExtension P S.g
+                let r : S.X₂ ⟶ P.middle := pushout.inr a E.inclusion
+                have hr : r ≫ P.projection = S.g := by
+                  change pushout.inr a E.inclusion ≫ P.projection = S.g
+                  dsimp [P, pushoutExtension]
+                  rw [pushout.inr_desc]
+                  rfl
+                let s : S.X₂ ⟶ Q.middle :=
+                  pullback.lift r (𝟙 S.X₂) (by
+                    change r ≫ P.projection = (𝟙 S.X₂) ≫ S.g
+                    rw [hr, Category.id_comp])
+                have hs : s ≫ Q.projection = 𝟙 S.X₂ := by
+                  dsimp [s, Q, pullbackExtension]
+                  rw [pullback.lift_snd]
+                let e : ExtensionMorphism (splitExtension N S.X₂) Q :=
+                  { left := 𝟙 N
+                    middle := by
+                      dsimp [splitExtension]
+                      change N ⊞ S.X₂ ⟶ Q.middle
+                      exact biprod.desc Q.inclusion s
+                    right := 𝟙 S.X₂
+                    comm_left := by
+                      dsimp [splitExtension]
+                      rw [biprod.inl_desc, Category.id_comp]
+                    comm_right := by
+                      dsimp [splitExtension]
+                      simp only [Category.id_comp, Category.comp_id]
+                      change biprod.desc Q.inclusion s ≫ Q.projection = biprod.snd
+                      rw [biprod.desc_eq, add_comp, Category.assoc, Q.zero,
+                        comp_zero, Category.assoc, hs, Category.comp_id,
+                        zero_add] }
+                have h := pushout_pullback_extension_morphism_iso e
+                exact Quotient.sound ⟨
+                  ((pushout_extension_id_iso (splitExtension N S.X₂)).some.symm.trans
+                    (h.some.trans (pullback_extension_id_iso Q).some)).symm⟩)).Exact
+            rw [ShortComplex.ab_exact_iff]
+            intro x hx
+            change pullbackClass S.g x = zeroExtClass at hx
+            revert hx
+            refine Quotient.inductionOn x ?_
+            intro E hx
+            change extensionClass (pullbackExtension E S.g) =
+              extensionClass (splitExtension N S.X₂) at hx
+            rcases Quotient.exact hx with ⟨e⟩
+            let i : S.X₂ ⟶ (splitExtension N S.X₂).middle := by
+              let hi : (N ⊞ S.X₂) = (splitExtension N S.X₂).middle := by
+                change (N ⊞ S.X₂) = (splitExtension N S.X₂).middle
+                unfold splitExtension
+                rfl
+              let ei : (N ⊞ S.X₂) ⟶ (splitExtension N S.X₂).middle :=
+                eqToHom hi
+              exact (biprod.inr : S.X₂ ⟶ N ⊞ S.X₂) ≫ ei
+            have hi_proj : i ≫ (splitExtension N S.X₂).projection =
+                𝟙 S.X₂ := by
+              dsimp [i]
+              simp [splitExtension]
+            let s : S.X₂ ⟶ (pullbackExtension E S.g).middle :=
+              i ≫ e.inv.middle
+            have hs : s ≫ (pullbackExtension E S.g).projection =
+                𝟙 S.X₂ := by
+              dsimp [s]
+              rw [Category.assoc, e.inv.comm_right]
+              exact hi_proj
+            let t : S.X₂ ⟶ E.middle :=
+              s ≫ (pullbackExtensionMorphism E S.g).middle
+            have ht : t ≫ E.projection = S.g := by
+              dsimp [t]
+              rw [Category.assoc, (pullbackExtensionMorphism E S.g).comm_right,
+                ← Category.assoc, hs]
+              simp [pullbackExtensionMorphism]
+            let h : S.X₁ ⟶ N :=
+              E.shortExact.fIsKernel.lift
+                (KernelFork.ofι (S.f ≫ t) (by
+                  simpa [Category.assoc, ht, S.zero]))
+            have hh : h ≫ E.inclusion = S.f ≫ t := by
+              dsimp [h]
+              simpa using
+                (E.shortExact.fIsKernel.fac
+                  (KernelFork.ofι (S.f ≫ t) (by
+                    simpa [Category.assoc, ht, S.zero]))
+                  WalkingParallelPair.zero)
+            refine ⟨ULift.up h, ?_⟩
+            change extensionClass
+                (pushoutExtension (extensionOfShortExact hS) h) =
+              extensionClass E
+            let em : ExtensionMorphism (extensionOfShortExact hS) E :=
+              { left := h
+                middle := t
+                right := 𝟙 S.X₃
+                comm_left := by
+                  dsimp [extensionOfShortExact]
+                  exact hh.symm
+                comm_right := by
+                  dsimp [extensionOfShortExact]
+                  rw [ht, Category.comp_id] }
+            have hem := pushout_pullback_extension_morphism_iso em
+            exact Quotient.sound ⟨hem.some.trans
+              (pullback_extension_id_iso E).some⟩
+          · change (ShortComplex.mk (extPullbackHom S.g)
+              (extPullbackHom S.f) (by
+                ext x
+                change pullbackClass S.f (pullbackClass S.g x) = zeroExtClass
+                rw [pullbackClass_comp, S.zero]
+                refine Quotient.inductionOn x ?_
+                intro E
+                change extensionClass (pullbackExtension E 0) =
+                  extensionClass (splitExtension N S.X₁)
+                let e : ExtensionMorphism (splitExtension N S.X₁)
+                    (pullbackExtension E (0 : S.X₁ ⟶ S.X₃)) :=
+                  { left := 𝟙 N
+                    middle := by
+                      change N ⊞ S.X₁ ⟶ pullback E.projection
+                        (0 : S.X₁ ⟶ S.X₃)
+                      exact pullback.lift
+                        (biprod.fst ≫ E.inclusion) biprod.snd (by
+                          simp [E.zero])
+                    right := 𝟙 S.X₁
+                    comm_left := by
+                      dsimp [splitExtension, pullbackExtension]
+                      simp only [Category.comp_id, Category.id_comp]
+                      apply pullback.hom_ext
+                      · rw [Category.assoc, pullback.lift_fst,
+                          pullback.lift_fst]
+                        simp [Category.assoc]
+                      · rw [Category.assoc, pullback.lift_snd,
+                          pullback.lift_snd]
+                        simp [Category.assoc]
+                    comm_right := by
+                      dsimp [splitExtension, pullbackExtension]
+                      rw [pullback.lift_snd, Category.comp_id] }
+                have h := pushout_pullback_extension_morphism_iso e
+                exact Quotient.sound ⟨
+                  ((pushout_extension_id_iso (splitExtension N S.X₁)).some.symm.trans
+                    (h.some.trans (pullback_extension_id_iso
+                      (pullbackExtension E (0 : S.X₁ ⟶ S.X₃))).some)).symm⟩)).Exact
+            sorry
 
 theorem covariant_ext_six_term_exact
     {C : Type u} [Category.{v} C] [Abelian C]
     (S : ShortComplex C) (hS : S.ShortExact) :
     ∀ N : C, (covariantExtSequence S hS N).Exact := by
   intro N
-  sorry
+  apply ComposableArrows.exact_of_δ₀
+  · change (ComposableArrows.mk₂
+      (0 : (0 : AddCommGrpCat.{max u v}) ⟶ HomGroup N S.X₁)
+      (homPostcomposition S.f)).Exact
+    change (ShortComplex.mk
+      (0 : (0 : AddCommGrpCat.{max u v}) ⟶ HomGroup N S.X₁)
+      (homPostcomposition S.f) (by simp)).toComposableArrows.Exact
+    apply ShortComplex.Exact.exact_toComposableArrows
+    apply (ShortComplex.exact_iff_mono _ (by simp)).2
+    rw [AddCommGrpCat.mono_iff_injective]
+    letI : Mono S.f := hS.mono_f
+    intro x y hxy
+    apply ULift.ext
+    apply (cancel_mono S.f).1
+    change ULift.up (x.down ≫ S.f) = ULift.up (y.down ≫ S.f) at hxy
+    exact congrArg ULift.down hxy
+  · apply ComposableArrows.exact_of_δ₀
+    · change (ComposableArrows.mk₂
+        (homPostcomposition S.f) (homPostcomposition S.g)).Exact
+      change (ShortComplex.mk (homPostcomposition S.f)
+        (homPostcomposition S.g) (by
+          change AddCommGrpCat.uliftFunctor.map
+              ((preadditiveCoyoneda.obj (Opposite.op N)).map S.f) ≫
+            AddCommGrpCat.uliftFunctor.map
+              ((preadditiveCoyoneda.obj (Opposite.op N)).map S.g) = 0
+          rw [← Functor.map_comp]
+          simp [← Functor.map_comp, S.zero]
+          ext
+          rfl)).toComposableArrows.Exact
+      have hbase :
+          (ComposableArrows.mk₃ (0 : (0 : C) ⟶ S.X₁)
+            S.f S.g).Exact := by
+        apply ComposableArrows.exact_of_δ₀
+        · change (ShortComplex.mk
+            (0 : (0 : C) ⟶ S.X₁) S.f (by simp)).toComposableArrows.Exact
+          apply ShortComplex.Exact.exact_toComposableArrows
+          exact (ShortComplex.exact_iff_mono _ (by rfl)).2 hS.mono_f
+        · exact hS.exact.exact_toComposableArrows
+      have h :=
+        (Formalization.Books.Homology.Unit05.covariant_hom_exact_iff
+          S.f S.g S.zero).1 hbase N
+      have h' := h.exact 1
+      change (ShortComplex.mk
+        ((preadditiveCoyoneda.obj (Opposite.op N)).map S.f)
+        ((preadditiveCoyoneda.obj (Opposite.op N)).map S.g) (by
+          simp [← Functor.map_comp, S.zero])).Exact at h'
+      exact (h'.map (AddCommGrpCat.uliftFunctor.{u, v})).exact_toComposableArrows
+    · sorry
 
 end Formalization.Books.Homology.Unit06

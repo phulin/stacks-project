@@ -532,7 +532,7 @@ private theorem gradedRightModuleHomogeneousComp_id_right
           HEq (⟨⟨-(0 - p), i - p⟩, by omega⟩ : GradedDegreePair i)
             (⟨⟨p, i - p⟩, by omega⟩ : GradedDegreePair (i + 0)) := by
         apply (Subtype.heq_iff_coe_heq rfl (heq_of_eq hp.symm)).2
-        exact heq_of_eq (Prod.ext (by simp only [zero_sub, neg_neg]) rfl)
+        exact heq_of_eq (Prod.ext (by ring) rfl)
       exact hsub
     rw [← hsf] at hmap
     exact hmap

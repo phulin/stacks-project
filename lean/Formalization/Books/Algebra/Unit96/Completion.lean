@@ -438,7 +438,351 @@ theorem completion_not_complete_in_general :
     ¬ ∀ (R : Type u) [CommRing R] (I : Ideal R)
       (M : Type v) [AddCommGroup M] [Module R M],
       IsAdicComplete I (completion I M) := by
-  sorry
+  intro hall
+  let B := MvPolynomial ℕ ℤ
+  let R := MvPolynomial ℕ (ULift.{u} ℤ)
+  let coeffDown : ULift.{u} ℤ →+* ℤ := ULift.ringEquiv.toRingHom
+  let φ : R →+* B := MvPolynomial.map coeffDown
+  let I : Ideal R := MvPolynomial.idealOfVars ℕ (ULift.{u} ℤ)
+  let M := ULift.{v} B
+  let _ : Module R M := Module.compHom M φ
+  let A := completion I M
+  have hA : IsAdicComplete I A := hall R I M
+  let pB (n : ℕ) : B :=
+    Finset.sum (Finset.range n) (fun i => (MvPolynomial.X i : B) ^ (i + 1))
+  let pM (n : ℕ) : M := ULift.up (pB n)
+  let c : AdicCompletion.AdicCauchySequence I M :=
+    AdicCompletion.AdicCauchySequence.mk I M pM (by
+      intro n
+      apply (SModEq.sub_mem).2
+      have hmem :
+          (MvPolynomial.X n : R) ^ (n + 1) ∈ I ^ n := by
+        rw [show I = MvPolynomial.idealOfVars ℕ (ULift.{u} ℤ) by rfl]
+        rw [MvPolynomial.X_pow_eq_monomial]
+        apply (MvPolynomial.monomial_mem_pow_idealOfVars_iff n
+          (Finsupp.single n (n + 1)) (by simp)).2
+        simp
+      have hneg : -((MvPolynomial.X n : R) ^ (n + 1)) ∈ I ^ n :=
+        (I ^ n).neg_mem hmem
+      have hnegM : -(⟨(MvPolynomial.X n : B) ^ (n + 1)⟩ : M) ∈
+          I ^ n • (⊤ : Submodule R M) := by
+        have hs := Submodule.smul_mem_smul hneg
+          (show (⟨(1 : B)⟩ : M) ∈ (⊤ : Submodule R M) by simp)
+        have heq :
+            (-(MvPolynomial.X n : R) ^ (n + 1)) • (⟨(1 : B)⟩ : M) =
+              -(⟨(MvPolynomial.X n : B) ^ (n + 1)⟩ : M) := by
+          apply ULift.ext
+          change φ (-(MvPolynomial.X n : R) ^ (n + 1)) * (1 : B) =
+            -((MvPolynomial.X n : B) ^ (n + 1))
+          rw [map_neg, map_pow]
+          simp only [mul_one]
+          dsimp [φ]
+          rw [MvPolynomial.map_X]
+        rw [← heq]
+        exact hs
+      have hdiff : pM n - pM (n + 1) =
+          -(⟨(MvPolynomial.X n : B) ^ (n + 1)⟩ : M) := by
+        apply ULift.ext
+        change pB n - pB (n + 1) = -(MvPolynomial.X n : B) ^ (n + 1)
+        rw [show pB (n + 1) = pB n + (MvPolynomial.X n : B) ^ (n + 1) by
+          simp [pB, Finset.sum_range_succ]]
+        abel
+      rw [hdiff]
+      exact hnegM)
+  have hmap_smul (n : ℕ) :
+      Submodule.map (AdicCompletion.of I M) (I ^ n • (⊤ : Submodule R M)) ≤
+        I ^ n • (⊤ : Submodule R A) := by
+    intro x hx
+    rcases hx with ⟨y, hy, rfl⟩
+    exact Submodule.smul_induction_on
+      (p := fun y : M => AdicCompletion.of I M y ∈
+        I ^ n • (⊤ : Submodule R A)) hy
+      (fun r hr y hy => by
+        simp only [LinearMap.map_smul]
+        exact Submodule.smul_mem_smul hr (show y ∈ (⊤ : Submodule R M) by simp))
+      (fun x y hx hy => by
+        rw [map_add]
+        exact Submodule.add_mem _ hx hy)
+  let a : ℕ → A := fun n => AdicCompletion.of I M (pM n)
+  have ha : ∀ {m n : ℕ}, m ≤ n →
+      a m ≡ a n [SMOD (I ^ m • (⊤ : Submodule R A))] := by
+    intro m n hmn
+    apply (SModEq.sub_mem).2
+    change (AdicCompletion.of I M (pM m) - AdicCompletion.of I M (pM n)) ∈
+      I ^ m • (⊤ : Submodule R A)
+    apply hmap_smul m
+    refine ⟨pM m - pM n, (SModEq.sub_mem).mp (c.property hmn), rfl⟩
+  obtain ⟨y, hy⟩ := hA.toIsPrecomplete.prec ha
+  let S := MvPolynomial (Fin 1) ℤ
+  let N := ULift.{v} S
+  let evalm (n : ℕ) : B →+* S :=
+    MvPolynomial.eval₂Hom (MvPolynomial.C)
+      (fun i => if i = n then (MvPolynomial.X 0 : S) else 0)
+  let ρ (n : ℕ) : R →+* S := (evalm n).comp φ
+  let bad (n : ℕ) (x : A) : Prop :=
+    let _ : Module R N := Module.compHom N (ρ n)
+    let f : M →ₗ[R] N :=
+      { toFun := fun z => ⟨evalm n z.down⟩
+        map_add' := by
+          intro z z'
+          apply ULift.ext
+          change evalm n (z.down + z'.down) =
+            evalm n z.down + evalm n z'.down
+          rw [map_add]
+        map_smul' := by
+          intro r z
+          apply ULift.ext
+          change evalm n (φ r * z.down) = ρ n r * evalm n z.down
+          rw [map_mul]
+          rfl }
+    AdicCompletion.map I f x = 0
+  have hconst (r : R) (hr : r ∈ I) : r.constantCoeff = 0 := by
+    change r ∈ MvPolynomial.idealOfVars ℕ (ULift.{u} ℤ) at hr
+    rw [MvPolynomial.idealOfVars_eq_restrictSupportIdeal] at hr
+    change r ∈ MvPolynomial.restrictSupport (ULift.{u} ℤ)
+      (Finsupp.degree ⁻¹' Set.Ici 1) at hr
+    have hzero : (0 : ℕ →₀ ℕ) ∉ r.support := by
+      intro hz
+      have hdeg : Finsupp.degree (0 : ℕ →₀ ℕ) ∈ Set.Ici 1 := hr hz
+      simp at hdeg
+    change MvPolynomial.coeff 0 r = 0
+    apply not_ne_iff.mp
+    intro hne
+    apply hzero
+    exact MvPolynomial.mem_support_iff.mpr hne
+  have hgen (r : R) (hr : r ∈ I) :
+      ∃ s : Finset ℕ, ∀ n ∉ s, ρ n r = 0 := by
+    refine ⟨r.vars, ?_⟩
+    intro n hn
+    have hvars : ∀ i ∈ r.vars,
+        (if i = n then (MvPolynomial.X 0 : S) else 0) = 0 := by
+      intro i hi
+      by_cases hin : i = n
+      · exact (hn (hin ▸ hi)).elim
+      · simp [hin]
+    rw [show ρ n r =
+      MvPolynomial.eval₂Hom (MvPolynomial.C.comp coeffDown)
+        (fun i => if i = n then (MvPolynomial.X 0 : S) else 0) r by
+      dsimp [ρ, evalm, φ]
+      rw [MvPolynomial.eval₂Hom_map_hom]
+      rfl]
+    rw [MvPolynomial.eval₂Hom_eq_constantCoeff_of_vars _ hvars]
+    simp [hconst r hr]
+  have hzero (n : ℕ) (r : R) (hr : ρ n r = 0) (z : A) :
+      bad n (r • z) := by
+    let _ : Module R N := Module.compHom N (ρ n)
+    let f : M →ₗ[R] N :=
+      { toFun := fun z => ⟨evalm n z.down⟩
+        map_add' := by
+          intro z z'
+          apply ULift.ext
+          change evalm n (z.down + z'.down) =
+            evalm n z.down + evalm n z'.down
+          rw [map_add]
+        map_smul' := by
+          intro r z
+          apply ULift.ext
+          change evalm n (φ r * z.down) = ρ n r * evalm n z.down
+          rw [map_mul]
+          rfl }
+    change AdicCompletion.map I f (r • z) = 0
+    apply AdicCompletion.ext
+    intro k
+    simp only [AdicCompletion.map_val_apply]
+    rw [show (r • z).val k = r • z.val k by rfl]
+    induction z.val k using Quotient.inductionOn' with
+    | _ q =>
+        change (f.reduceModIdeal (I ^ k))
+          (r • (Submodule.Quotient.mk q)) = 0
+        rw [← Submodule.Quotient.mk_smul, LinearMap.reduceModIdeal_apply]
+        rw [map_smul]
+        rw [Submodule.Quotient.mk_eq_zero]
+        change (⟨ρ n r * evalm n q.down⟩ : N) ∈ I ^ k • (⊤ : Submodule R N)
+        rw [hr, zero_mul]
+        exact (I ^ k • (⊤ : Submodule R N)).zero_mem
+  have hadd (n : ℕ) (x x' : A) (hx : bad n x) (hx' : bad n x') :
+      bad n (x + x') := by
+    let _ : Module R N := Module.compHom N (ρ n)
+    let f : M →ₗ[R] N :=
+      { toFun := fun z => ⟨evalm n z.down⟩
+        map_add' := by
+          intro z z'
+          apply ULift.ext
+          change evalm n (z.down + z'.down) =
+            evalm n z.down + evalm n z'.down
+          rw [map_add]
+        map_smul' := by
+          intro r z
+          apply ULift.ext
+          change evalm n (φ r * z.down) = ρ n r * evalm n z.down
+          rw [map_mul]
+          rfl }
+    change AdicCompletion.map I f x = 0 at hx
+    change AdicCompletion.map I f x' = 0 at hx'
+    change AdicCompletion.map I f (x + x') = 0
+    simp [map_add, hx, hx']
+  have hmap (x : A) (hx : x ∈ I • (⊤ : Submodule R A)) :
+      ∃ s : Finset ℕ, ∀ n ∉ s, bad n x := by
+    refine Submodule.smul_induction_on
+      (p := fun x : A => ∃ s : Finset ℕ, ∀ n ∉ s, bad n x) hx
+      (fun r hr z hz => by
+        obtain ⟨s, hs⟩ := hgen r hr
+        refine ⟨r.vars ∪ s, ?_⟩
+        intro n hn
+        apply hzero n r (hs n (fun h => hn (Finset.mem_union_right _ h))) z)
+      (fun x x' hx hx' => by
+        obtain ⟨s, hs⟩ := hx
+        obtain ⟨s', hs'⟩ := hx'
+        refine ⟨s ∪ s', ?_⟩
+        intro n hn
+        apply hadd n x x'
+        · exact hs n (fun h => hn (Finset.mem_union_left _ h))
+        · exact hs' n (fun h => hn (Finset.mem_union_right _ h)))
+  let J : Ideal S := MvPolynomial.idealOfVars (Fin 1) ℤ
+  have hbase (n : ℕ) : Ideal.map (ρ n) I ≤ J := by
+    rw [show I = MvPolynomial.idealOfVars ℕ (ULift.{u} ℤ) by rfl,
+      MvPolynomial.idealOfVars]
+    refine Ideal.map_le_iff_le_comap.mpr (Ideal.span_le.2 ?_)
+    rintro _ ⟨i, rfl⟩
+    by_cases hin : i = n
+    · subst i
+      change ρ n (MvPolynomial.X n : R) ∈ J
+      dsimp [ρ, evalm, φ]
+      rw [MvPolynomial.map_X, MvPolynomial.eval₂Hom_X']
+      simp only [if_pos]
+      change (MvPolynomial.X 0 : S) ∈
+        Ideal.span (Set.range (MvPolynomial.X : Fin 1 → S))
+      exact Ideal.subset_span ⟨0, rfl⟩
+    · change ρ n (MvPolynomial.X i : R) ∈ J
+      dsimp [ρ, evalm, φ]
+      rw [MvPolynomial.map_X, MvPolynomial.eval₂Hom_X']
+      simp only [if_neg hin]
+      exact J.zero_mem
+  have hpowI (n k : ℕ) : Ideal.map (ρ n) (I ^ k) ≤ J ^ k := by
+    rw [Ideal.map_pow]
+    induction k with
+    | zero => exact le_rfl
+    | succ k ih =>
+        rw [pow_succ, pow_succ]
+        exact Ideal.mul_mono ih (hbase n)
+  have hdown (n k : ℕ) :
+      letI : Module R N := Module.compHom N (ρ n)
+      ∀ (q : N), q ∈ I ^ k • (⊤ : Submodule R N) → q.down ∈ J ^ k := by
+    let _ : Module R N := Module.compHom N (ρ n)
+    intro q hq
+    refine Submodule.smul_induction_on hq ?_ ?_
+    · intro r hr z hz
+      have hr' : ρ n r ∈ J ^ k :=
+        hpowI n k (Ideal.mem_map_of_mem (ρ n) hr)
+      change ρ n r * z.down ∈ J ^ k
+      exact (J ^ k).mul_mem_right z.down hr'
+    · intro x x' hx hx'
+      change x.down + x'.down ∈ J ^ k
+      exact (J ^ k).add_mem hx hx'
+  have hp (n : ℕ) :
+      evalm n (pB (n + 2)) = (MvPolynomial.X 0 : S) ^ (n + 1) := by
+    dsimp [evalm]
+    simp only [pB, map_sum, map_pow]
+    rw [Finset.sum_eq_single n]
+    · rw [MvPolynomial.eval₂Hom_X']
+      simp only [if_pos]
+    · intro i hi hne
+      rw [MvPolynomial.eval₂Hom_X']
+      simp [hne]
+    · simp
+  have hnot (n : ℕ) :
+      (MvPolynomial.X 0 : S) ^ (n + 1) ∉ J ^ (n + 2) := by
+    change (MvPolynomial.X 0 : S) ^ (n + 1) ∉
+      MvPolynomial.idealOfVars (Fin 1) ℤ ^ (n + 2)
+    rw [MvPolynomial.X_pow_eq_monomial]
+    intro hh
+    have hdeg :=
+      (MvPolynomial.monomial_mem_pow_idealOfVars_iff (n + 2)
+        (Finsupp.single (0 : Fin 1) (n + 1)) (by simp)).1 hh
+    simp at hdeg
+  have hx0 : (MvPolynomial.X 0 : R) ∈ I := by
+    change (MvPolynomial.X 0 : R) ∈
+      Ideal.span (Set.range (MvPolynomial.X : ℕ → R))
+    exact Ideal.subset_span ⟨0, rfl⟩
+  have hx0M : pM 1 ∈ I • (⊤ : Submodule R M) := by
+    change (⟨pB 1⟩ : M) ∈ I • (⊤ : Submodule R M)
+    rw [show pB 1 = (MvPolynomial.X 0 : B) by
+      simp [pB, Finset.sum_range_succ]]
+    have hs := Submodule.smul_mem_smul hx0
+      (show (⟨(1 : B)⟩ : M) ∈ (⊤ : Submodule R M) by simp)
+    have heq : (MvPolynomial.X 0 : R) • (⟨(1 : B)⟩ : M) =
+        (⟨(MvPolynomial.X 0 : B)⟩ : M) := by
+      apply ULift.ext
+      change φ (MvPolynomial.X 0 : R) * (1 : B) = MvPolynomial.X 0
+      dsimp [φ]
+      rw [MvPolynomial.map_X]
+      simp
+    rw [← heq]
+    exact hs
+  have ha1 : a 1 ∈ I • (⊤ : Submodule R A) := by
+    change AdicCompletion.of I M (pM 1) ∈ I • (⊤ : Submodule R A)
+    have hx0M' : pM 1 ∈ I ^ 1 • (⊤ : Submodule R M) := by
+      simpa only [pow_one] using hx0M
+    simpa only [pow_one] using (hmap_smul 1 ⟨pM 1, hx0M', rfl⟩)
+  have hyI : y ∈ I • (⊤ : Submodule R A) := by
+    have hdiff : a 1 - y ∈ I • (⊤ : Submodule R A) := by
+      simpa only [pow_one] using (SModEq.sub_mem.mp (hy 1))
+    have hmem := Submodule.sub_mem (I • (⊤ : Submodule R A)) ha1 hdiff
+    simpa only [sub_sub_cancel] using hmem
+  obtain ⟨s, hs⟩ := hmap y hyI
+  have hnotbad (n : ℕ) : ¬ bad n y := by
+    let _ : Module R N := Module.compHom N (ρ n)
+    let f : M →ₗ[R] N :=
+      { toFun := fun z => ⟨evalm n z.down⟩
+        map_add' := by
+          intro z z'
+          apply ULift.ext
+          change evalm n (z.down + z'.down) =
+            evalm n z.down + evalm n z'.down
+          rw [map_add]
+        map_smul' := by
+          intro r z
+          apply ULift.ext
+          change evalm n (φ r * z.down) = ρ n r * evalm n z.down
+          rw [map_mul]
+          rfl }
+    intro hby
+    have hdiff : a (n + 2) - y ∈ I ^ (n + 2) • (⊤ : Submodule R A) :=
+      (SModEq.sub_mem.mp (hy (n + 2)))
+    have heval :=
+      (AdicCompletion.pow_smul_top_le_ker_eval I (n + 2)) hdiff
+    have hcoord : y.val (n + 2) = (a (n + 2)).val (n + 2) := by
+      change (a (n + 2)).val (n + 2) - y.val (n + 2) = 0 at heval
+      exact (sub_eq_zero.mp heval).symm
+    change AdicCompletion.map I f y = 0 at hby
+    have hz : (AdicCompletion.map I f y).val (n + 2) = 0 := by
+      simpa using congrArg (fun q => q.val (n + 2)) hby
+    rw [AdicCompletion.map_val_apply, hcoord] at hz
+    change (f.reduceModIdeal (I ^ (n + 2)))
+        (Submodule.Quotient.mk (p := I ^ (n + 2) • (⊤ : Submodule R M))
+          (pM (n + 2))) = 0 at hz
+    rw [LinearMap.reduceModIdeal_apply] at hz
+    have hmem : f (pM (n + 2)) ∈ I ^ (n + 2) • (⊤ : Submodule R N) := by
+      rw [Submodule.Quotient.mk_eq_zero] at hz
+      exact hz
+    have hfp : f (pM (n + 2)) =
+        (⟨(MvPolynomial.X 0 : S) ^ (n + 1)⟩ : N) := by
+      apply ULift.ext
+      change evalm n (pB (n + 2)) = (MvPolynomial.X 0 : S) ^ (n + 1)
+      exact hp n
+    rw [hfp] at hmem
+    exact hnot n (hdown n (n + 2) _ hmem)
+  by_cases hs0 : s.Nonempty
+  · let n := s.max' hs0 + 1
+    have hn : n ∉ s := by
+      intro hn
+      have hle := Finset.le_max' s n hn
+      dsimp [n] at hle
+      omega
+    exact (hnotbad n) (hs n hn)
+  · have hse : s = ∅ := Finset.not_nonempty_iff_eq_empty.mp hs0
+    subst s
+    exact (hnotbad 0) (hs 0 (by simp))
 
 /- The footnote in the source is the Hausdorff/separated part of the canonical
    `IsAdicComplete` class. -/

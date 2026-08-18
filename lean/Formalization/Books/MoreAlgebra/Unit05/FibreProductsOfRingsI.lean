@@ -1453,7 +1453,20 @@ theorem moduleFiberLeftMap_naturality
     (f : X ⟶ Y) :
     (ModuleCat.restrictScalars D.u).map f.hom.left ≫ moduleFiberLeftMap D Y =
       moduleFiberLeftMap D X ≫ moduleFiberCommonMap D f := by
-  sorry
+  have hunit : f.hom.left ≫ (ModuleCat.extendRestrictScalarsAdj D.s).unit.app Y.obj.left =
+      (ModuleCat.extendRestrictScalarsAdj D.s).unit.app X.obj.left ≫
+        (ModuleCat.restrictScalars D.s).map ((ModuleCat.extendScalars D.s).map f.hom.left) := by
+    simp
+  have hw : (ModuleCat.extendScalars D.s).map f.hom.left ≫ Y.obj.hom =
+      X.obj.hom ≫ (ModuleCat.extendScalars D.t).map f.hom.right := by
+    simp
+  simp only [moduleFiberLeftMap, moduleFiberCommonMap, ← Functor.map_comp, ← Category.assoc]
+  rw [hunit]
+  rw [Category.assoc]
+  rw [← (ModuleCat.restrictScalars D.s).map_comp]
+  rw [hw]
+  simp only [Functor.map_comp, Category.assoc]
+  rw [ModuleCat.restrictScalarsComp'App_inv_naturality]
 
 /-- Naturality of the second map in the categorical module pullback. -/
 theorem moduleFiberRightMap_naturality
@@ -1462,7 +1475,23 @@ theorem moduleFiberRightMap_naturality
     (f : X ⟶ Y) :
     (ModuleCat.restrictScalars D.v).map f.hom.right ≫ moduleFiberRightMap D Y =
       moduleFiberRightMap D X ≫ moduleFiberCommonMap D f := by
-  sorry
+  have hunit : f.hom.right ≫ (ModuleCat.extendRestrictScalarsAdj D.t).unit.app Y.obj.right =
+      (ModuleCat.extendRestrictScalarsAdj D.t).unit.app X.obj.right ≫
+        (ModuleCat.restrictScalars D.t).map ((ModuleCat.extendScalars D.t).map f.hom.right) := by
+    simp
+  simp only [moduleFiberRightMap, moduleFiberCommonMap, ← Functor.map_comp, ← Category.assoc]
+  rw [hunit]
+  simp only [Functor.map_comp, Category.assoc]
+  rw [← Category.assoc
+    ((ModuleCat.restrictScalars D.v).map ((ModuleCat.restrictScalars D.t).map
+      ((ModuleCat.extendScalars D.t).map f.hom.right)))
+    (ModuleCat.restrictScalarsComp'App D.v D.t (D.t.comp D.v) rfl
+      ((ModuleCat.extendScalars D.t).obj Y.obj.right)).inv
+    ((ModuleCat.restrictScalarsCongr D.comm).inv.app
+      ((ModuleCat.extendScalars D.t).obj Y.obj.right))]
+  rw [ModuleCat.restrictScalarsComp'App_inv_naturality]
+  simp only [Category.assoc]
+  rw [(ModuleCat.restrictScalarsCongr D.comm).inv.naturality]
 
 /-- The source's compatible-pair set, written in terms of the canonical
 tensor base-change elements. -/
@@ -1540,7 +1569,14 @@ theorem moduleFiberProduct_pair_is_compatible
     (D : RingSquare R R' B B') (X : ModuleGluingCategory D)
     (x : moduleFiberProduct D X) :
     moduleFiberProductPair D X x ∈ moduleFiberCompatiblePairs D X := by
-  sorry
+  have h := congrArg (fun k => k x)
+    (PullbackCone.condition (limit.cone
+      (cospan (moduleFiberLeftMap D X) (moduleFiberRightMap D X))))
+  change (moduleFiberLeftMap D X) (moduleFiberProductPair D X x).1 =
+      (moduleFiberRightMap D X) (moduleFiberProductPair D X x).2 at h
+  change X.obj.hom ((1 : R) ⊗ₜ[B, D.s] (moduleFiberProductPair D X x).1) =
+      (1 : R) ⊗ₜ[R', D.t] (moduleFiberProductPair D X x).2 at h
+  exact h
 
 /-- The compatible-pair presentation is equivalent to the underlying set of
 the categorical module pullback. -/
@@ -1552,7 +1588,37 @@ theorem moduleFiberProduct_compatiblePairEquiv_exists
         {p : (moduleGluingLeftObj (D := D) (X := X) : Type u) ×
           (moduleGluingRightObj (D := D) (X := X) : Type u) //
           p ∈ moduleFiberCompatiblePairs D X}) := by
-  sorry
+  have hforward :
+      ∀ p : (moduleGluingLeftObj (D := D) (X := X) : Type u) ×
+        (moduleGluingRightObj (D := D) (X := X) : Type u),
+        (moduleFiberLeftMap D X) p.1 = (moduleFiberRightMap D X) p.2 →
+          p ∈ moduleFiberCompatiblePairs D X := by
+    intro p h
+    change X.obj.hom ((1 : R) ⊗ₜ[B, D.s] p.1) =
+        (1 : R) ⊗ₜ[R', D.t] p.2 at h
+    exact h
+  have hbackward :
+      ∀ p : (moduleGluingLeftObj (D := D) (X := X) : Type u) ×
+        (moduleGluingRightObj (D := D) (X := X) : Type u),
+        p ∈ moduleFiberCompatiblePairs D X →
+          (moduleFiberLeftMap D X) p.1 = (moduleFiberRightMap D X) p.2 := by
+    intro p h
+    change X.obj.hom ((1 : R) ⊗ₜ[B, D.s] p.1) =
+        (1 : R) ⊗ₜ[R', D.t] p.2 at h
+    change (moduleFiberLeftMap D X) p.1 = (moduleFiberRightMap D X) p.2
+    exact h
+  let c :
+      {p : (moduleGluingLeftObj (D := D) (X := X) : Type u) ×
+          (moduleGluingRightObj (D := D) (X := X) : Type u) //
+        (moduleFiberLeftMap D X) p.1 = (moduleFiberRightMap D X) p.2} ≃
+        {p : (moduleGluingLeftObj (D := D) (X := X) : Type u) ×
+          (moduleGluingRightObj (D := D) (X := X) : Type u) //
+          p ∈ moduleFiberCompatiblePairs D X} :=
+    { toFun := fun p => ⟨p.1, hforward p.1 p.2⟩
+      invFun := fun p => ⟨p.1, hbackward p.1 p.2⟩
+      left_inv := by intro p; rfl
+      right_inv := by intro p; rfl }
+  exact ⟨(Concrete.pullbackEquiv (moduleFiberLeftMap D X) (moduleFiberRightMap D X)).trans c⟩
 
 /-- Source-facing chosen equivalence between the categorical pullback and its
 compatible-pair presentation. -/

@@ -1,5 +1,8 @@
 import Mathlib.Algebra.Module.LocalizedModule.AtPrime
+import Mathlib.Algebra.Module.LocalizedModule.Submodule
 import Mathlib.RingTheory.Localization.AtPrime.Basic
+import Mathlib.RingTheory.Support
+import Mathlib.RingTheory.Finiteness.ModuleFinitePresentation
 import Mathlib.RingTheory.MvPolynomial
 import Mathlib.Algebra.MvPolynomial.Equiv
 import Mathlib.RingTheory.MvPolynomial.Ideal
@@ -1553,6 +1556,129 @@ theorem regular_sequence_flat_local
     exact ((TensorProduct.isBaseChange R M S).map_smul_top_ne_top_iff_of_faithfullyFlat
       R M (Ideal.ofList xs)).mp htop |>.symm
 
+private theorem localized_prefix_smul_eq
+    {R M S N : Type*} [CommRing R] [CommRing S] [Algebra R S]
+    [AddCommGroup M] [Module R M] [AddCommGroup N] [Module R N]
+    [Module S N] [IsScalarTower R S N]
+    (p : Submonoid R) [IsLocalization p S]
+    (f : M →ₗ[R] N) [IsLocalizedModule p f]
+    (xs : List R) (i : Fin xs.length) :
+    (Ideal.ofList (xs.take i) • (⊤ : Submodule R M)).localized' S p f =
+      Ideal.ofList ((xs.map (algebraMap R S)).take i) •
+        (⊤ : Submodule S N) := by
+  rw [Submodule.localized'_smul, Ideal.localized'_eq_map,
+    Submodule.localized'_top, Ideal.map_ofList]
+  simp only [List.map_take]
+
+private theorem isSMulRegular_localized_of_kernel
+    {R Q : Type*} [CommRing R] [AddCommGroup Q] [Module R Q]
+    (p : Submonoid R) (r : R)
+    (hK : (LinearMap.ker (LinearMap.lsmul R Q r)).localized'
+        (Localization p) p (LocalizedModule.mkLinearMap p Q) = ⊥) :
+    IsSMulRegular (LocalizedModule p Q)
+      (algebraMap R (Localization p) r) := by
+  have hmap :
+      LocalizedModule.map p (LinearMap.lsmul R Q r) =
+        LinearMap.lsmul (Localization p) (LocalizedModule p Q)
+          (algebraMap R (Localization p) r) := by
+    ext x
+    obtain ⟨⟨x, s⟩, rfl⟩ :=
+      IsLocalizedModule.mk'_surjective p (LocalizedModule.mkLinearMap p Q) x
+    simp only [Function.uncurry_apply_pair]
+    rw [← IsLocalizedModule.mk_eq_mk' (S := p)]
+    rw [LocalizedModule.map_mk]
+    simp only [LinearMap.lsmul_apply]
+    rw [IsScalarTower.algebraMap_smul (Localization p) r]
+    rw [LocalizedModule.smul'_mk]
+  have hk :
+      (LinearMap.ker (LinearMap.lsmul R Q r)).localized'
+          (Localization p) p (LocalizedModule.mkLinearMap p Q) =
+        LinearMap.ker (LocalizedModule.map p (LinearMap.lsmul R Q r)) := by
+    exact LinearMap.localized'_ker_eq_ker_localizedMap
+      (p := p) (S := Localization p)
+      (f := LocalizedModule.mkLinearMap p Q)
+      (f' := LocalizedModule.mkLinearMap p Q)
+      (g := LinearMap.lsmul R Q r)
+  rw [isSMulRegular_iff_ker_lsmul_eq_bot]
+  rw [← hmap]
+  exact hk.symm.trans hK
+
+private theorem weakly_regular_localized_of_quotient
+    {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
+    (p : Submonoid R) (xs : List R)
+    (hreg : ∀ i : Fin xs.length,
+      IsSMulRegular
+        (LocalizedModule p
+          (M ⧸ (Ideal.ofList (xs.take i) • (⊤ : Submodule R M))))
+        (algebraMap R (Localization p) xs[i])) :
+    RingTheory.Sequence.IsWeaklyRegular (LocalizedModule p M)
+      (xs.map (algebraMap R (Localization p))) := by
+  rw [RingTheory.Sequence.isWeaklyRegular_iff_Fin]
+  intro i
+  let j : Fin xs.length := ⟨i, by simpa using i.isLt⟩
+  let I : Submodule R M := Ideal.ofList (xs.take j) • (⊤ : Submodule R M)
+  let Q := M ⧸ I
+  let e :
+      (LocalizedModule p M ⧸
+          (Ideal.ofList ((xs.map (algebraMap R (Localization p))).take i) •
+            (⊤ : Submodule (Localization p) (LocalizedModule p M)))) ≃ₗ[Localization p]
+        LocalizedModule p Q := by
+    exact Submodule.quotEquivOfEq _ _
+        (localized_prefix_smul_eq p (LocalizedModule.mkLinearMap p M) xs j).symm ≪≫ₗ
+      localizedQuotientEquiv p I
+  have hq : IsSMulRegular (LocalizedModule p Q)
+      (algebraMap R (Localization p) xs[j]) := by
+    simpa [j, I, Q] using hreg j
+  have hsource : IsSMulRegular
+      (LocalizedModule p M ⧸
+        (Ideal.ofList ((xs.map (algebraMap R (Localization p))).take i) •
+          (⊤ : Submodule (Localization p) (LocalizedModule p M))))
+      (algebraMap R (Localization p) xs[j]) := by
+    intro x y hxy
+    apply e.injective
+    apply hq
+    change (algebraMap R (Localization p) xs[j]) • x =
+      (algebraMap R (Localization p) xs[j]) • y at hxy
+    calc
+      (algebraMap R (Localization p) xs[j]) • e x =
+          e ((algebraMap R (Localization p) xs[j]) • x) := (e.map_smul _ _).symm
+      _ =
+          e ((algebraMap R (Localization p) xs[j]) • y) := congrArg e hxy
+      _ = (algebraMap R (Localization p) xs[j]) • e y := e.map_smul _ _
+  simpa [j] using hsource
+
+private theorem localized_kernel_eq_bot_of_isSMulRegular
+    {R Q : Type*} [CommRing R] [AddCommGroup Q] [Module R Q]
+    (p : Submonoid R) (r : R)
+    (hreg : IsSMulRegular (LocalizedModule p Q)
+      (algebraMap R (Localization p) r)) :
+    (LinearMap.ker (LinearMap.lsmul R Q r)).localized'
+        (Localization p) p (LocalizedModule.mkLinearMap p Q) = ⊥ := by
+  have hmap :
+      LocalizedModule.map p (LinearMap.lsmul R Q r) =
+        LinearMap.lsmul (Localization p) (LocalizedModule p Q)
+          (algebraMap R (Localization p) r) := by
+    ext x
+    obtain ⟨⟨x, s⟩, rfl⟩ :=
+      IsLocalizedModule.mk'_surjective p (LocalizedModule.mkLinearMap p Q) x
+    simp only [Function.uncurry_apply_pair]
+    rw [← IsLocalizedModule.mk_eq_mk' (S := p)]
+    rw [LocalizedModule.map_mk]
+    simp only [LinearMap.lsmul_apply]
+    rw [IsScalarTower.algebraMap_smul (Localization p) r]
+    rw [LocalizedModule.smul'_mk]
+  have hk :
+      (LinearMap.ker (LinearMap.lsmul R Q r)).localized'
+          (Localization p) p (LocalizedModule.mkLinearMap p Q) =
+        LinearMap.ker (LocalizedModule.map p (LinearMap.lsmul R Q r)) := by
+    exact LinearMap.localized'_ker_eq_ker_localizedMap
+      (p := p) (S := Localization p)
+      (f := LocalizedModule.mkLinearMap p Q)
+      (f' := LocalizedModule.mkLinearMap p Q)
+      (g := LinearMap.lsmul R Q r)
+  rw [hk, hmap]
+  exact (isSMulRegular_iff_ker_lsmul_eq_bot _ _).mp hreg
+
 theorem regular_sequence_in_neighborhood
     {R M : Type*} [CommRing R] [IsNoetherianRing R]
     [AddCommGroup M] [Module R M] [Module.Finite R M]
@@ -1564,7 +1690,226 @@ theorem regular_sequence_in_neighborhood
       RingTheory.Sequence.IsRegular
         (LocalizedModule (Submonoid.powers g) M)
         (xs.map (algebraMap R (Localization (Submonoid.powers g)))) := by
-  sorry
+  classical
+  let Q := fun i : Fin xs.length ↦
+    M ⧸ (Ideal.ofList (xs.take i) • (⊤ : Submodule R M))
+  let K : ∀ i, Submodule R (Q i) := fun i ↦
+    LinearMap.ker (LinearMap.lsmul R (Q i) xs[i])
+  have hregQ : ∀ i : Fin xs.length,
+      IsSMulRegular (LocalizedModule p.primeCompl (Q i))
+        (algebraMap R (Localization p.primeCompl) xs[i]) := by
+    intro i
+    let e :
+        (LocalizedModule p.primeCompl M ⧸
+            (Ideal.ofList ((xs.map (algebraMap R (Localization p.primeCompl))).take i) •
+              (⊤ : Submodule (Localization p.primeCompl)
+                (LocalizedModule p.primeCompl M)))) ≃ₗ[Localization p.primeCompl]
+          LocalizedModule p.primeCompl (Q i) := by
+      exact Submodule.quotEquivOfEq _ _
+          (localized_prefix_smul_eq p.primeCompl
+            (LocalizedModule.mkLinearMap p.primeCompl M) xs i).symm ≪≫ₗ
+        localizedQuotientEquiv p.primeCompl
+          (Ideal.ofList (xs.take i) • (⊤ : Submodule R M))
+    let j : Fin (xs.map (algebraMap R (Localization p.primeCompl))).length :=
+      ⟨i, by
+        simp only [List.length_map]
+        exact i.isLt⟩
+    have hsource : IsSMulRegular
+        (LocalizedModule p.primeCompl M ⧸
+          (Ideal.ofList ((xs.map (algebraMap R (Localization p.primeCompl))).take i) •
+            (⊤ : Submodule (Localization p.primeCompl)
+              (LocalizedModule p.primeCompl M))))
+        (algebraMap R (Localization p.primeCompl) xs[i]) := by
+      simpa [j] using hp.1.regular_mod_prev j j.isLt
+    intro x y hxy
+    apply e.symm.injective
+    apply hsource
+    change (algebraMap R (Localization p.primeCompl) xs[i]) • e.symm x =
+      (algebraMap R (Localization p.primeCompl) xs[i]) • e.symm y
+    calc
+      (algebraMap R (Localization p.primeCompl) xs[i]) • e.symm x =
+          e.symm ((algebraMap R (Localization p.primeCompl) xs[i]) • x) :=
+            (e.symm.map_smul _ _).symm
+      _ = e.symm ((algebraMap R (Localization p.primeCompl) xs[i]) • y) :=
+        congrArg e.symm hxy
+      _ = (algebraMap R (Localization p.primeCompl) xs[i]) • e.symm y :=
+        e.symm.map_smul _ _
+  have hKp : ∀ i : Fin xs.length,
+      (K i).localized' (Localization p.primeCompl) p.primeCompl
+        (LocalizedModule.mkLinearMap p.primeCompl (Q i)) = ⊥ := by
+    intro i
+    exact localized_kernel_eq_bot_of_isSMulRegular p.primeCompl xs[i] (hregQ i)
+  have hsubp : ∀ i : Fin xs.length,
+      Subsingleton (LocalizedModule p.primeCompl (K i)) := by
+    intro i
+    rw [LocalizedModule.subsingleton_iff (S := p.primeCompl)]
+    intro x
+    have hxmem :
+        LocalizedModule.mkLinearMap p.primeCompl (Q i) (x : Q i) ∈
+          (K i).localized' (Localization p.primeCompl) p.primeCompl
+            (LocalizedModule.mkLinearMap p.primeCompl (Q i)) := by
+      rw [Submodule.localized'_eq_span]
+      exact Submodule.subset_span ⟨(x : Q i), x.property, rfl⟩
+    rw [hKp i] at hxmem
+    have hxzero :
+        LocalizedModule.mkLinearMap p.primeCompl (Q i) (x : Q i) = 0 := by
+      simpa only [Submodule.mem_bot] using hxmem
+    have hxker : (x : Q i) ∈
+        LinearMap.ker (LocalizedModule.mkLinearMap p.primeCompl (Q i)) := hxzero
+    obtain ⟨r, hr, hrx⟩ :=
+      (IsLocalizedModule.mem_ker_iff p.primeCompl
+        (g := LocalizedModule.mkLinearMap p.primeCompl (Q i))).mp hxker
+    refine ⟨r, hr, ?_⟩
+    apply Subtype.ext
+    exact hrx
+  have haway : ∀ i : Fin xs.length, ∃ f : R, f ∉ p ∧
+      Subsingleton (LocalizedModule.Away f (K i)) := by
+    intro i
+    exact @LocalizedModule.exists_subsingleton_away R (K i) _ _ _ _ p
+      inferInstance (hsubp i)
+  let gi : ∀ i : Fin xs.length, R := fun i ↦
+    Classical.choose (haway i)
+  have hgi_notp : ∀ i : Fin xs.length, gi i ∉ p := by
+    intro i
+    exact (Classical.choose_spec (haway i)).1
+  have hgi_sub : ∀ i : Fin xs.length,
+      Subsingleton (LocalizedModule.Away (gi i) (K i)) := by
+    intro i
+    exact (Classical.choose_spec (haway i)).2
+  let g : R := ∏ i : Fin xs.length, gi i
+  have hdiv : ∀ i : Fin xs.length, gi i ∣ g := by
+    intro i
+    dsimp [g]
+    exact Finset.dvd_prod_of_mem _ (Finset.mem_univ i)
+  have hg_notp : g ∉ p := by
+    have hmem : g ∈ p.primeCompl := by
+      dsimp [g]
+      exact p.primeCompl.prod_mem (fun i _ ↦ hgi_notp i)
+    simpa [Ideal.primeCompl] using hmem
+  have hKg : ∀ i : Fin xs.length,
+      (K i).localized' (Localization (Submonoid.powers g)) (Submonoid.powers g)
+        (LocalizedModule.mkLinearMap (Submonoid.powers g) (Q i)) = ⊥ := by
+    intro i
+    rw [Submodule.localized'_eq_span]
+    apply le_antisymm
+    · rw [Submodule.span_le]
+      rintro z ⟨x, hx, rfl⟩
+      let xi : K i := ⟨x, hx⟩
+      obtain ⟨s, hs, hxs⟩ :=
+        (LocalizedModule.subsingleton_iff (S := Submonoid.powers (gi i))).mp
+          (hgi_sub i) xi
+      obtain ⟨n, hn⟩ := (Submonoid.mem_powers_iff _ _).mp hs
+      have hxs' : s • (x : Q i) = 0 := by
+        exact congrArg (fun z : K i ↦ (z : Q i)) hxs
+      have hpow : (gi i) ^ n • (x : Q i) = 0 := by
+        rw [hn]
+        exact hxs'
+      obtain ⟨c, hc⟩ := hdiv i
+      have hgpow : g ^ n • (x : Q i) = 0 := by
+        calc
+          g ^ n • (x : Q i) = (gi i ^ n * c ^ n) • (x : Q i) := by
+            rw [hc, mul_pow]
+          _ = c ^ n • (gi i ^ n • (x : Q i)) := by
+            rw [mul_comm (gi i ^ n) (c ^ n), mul_smul]
+          _ = 0 := by rw [hpow, smul_zero]
+      have hz :
+          LocalizedModule.mkLinearMap (Submonoid.powers g) (Q i) (x : Q i) = 0 := by
+        rw [IsLocalizedModule.eq_zero_iff (Submonoid.powers g)
+          (LocalizedModule.mkLinearMap (Submonoid.powers g) (Q i))]
+        exact ⟨⟨g ^ n, (Submonoid.powers g).pow_mem (Submonoid.mem_powers g) n⟩,
+          hgpow⟩
+      change LocalizedModule.mkLinearMap (Submonoid.powers g) (Q i) (x : Q i) = 0
+      exact hz
+    · exact bot_le
+  have hregAway : ∀ i : Fin xs.length,
+      IsSMulRegular (LocalizedModule (Submonoid.powers g) (Q i))
+        (algebraMap R (Localization (Submonoid.powers g)) xs[i]) := by
+    intro i
+    exact isSMulRegular_localized_of_kernel (Submonoid.powers g) xs[i] (hKg i)
+  have hweak := weakly_regular_localized_of_quotient
+    (Submonoid.powers g) xs hregAway
+  have hfull_atPrime :
+      (Ideal.ofList xs • (⊤ : Submodule R M)).localized'
+          (Localization p.primeCompl) p.primeCompl
+          (LocalizedModule.mkLinearMap p.primeCompl M) =
+        Ideal.ofList (xs.map (algebraMap R (Localization p.primeCompl))) •
+          (⊤ : Submodule (Localization p.primeCompl)
+            (LocalizedModule p.primeCompl M)) := by
+    rw [Submodule.localized'_smul, Ideal.localized'_eq_map,
+      Submodule.localized'_top, Ideal.map_ofList]
+  have hfull_away :
+      (Ideal.ofList xs • (⊤ : Submodule R M)).localized'
+          (Localization (Submonoid.powers g)) (Submonoid.powers g)
+          (LocalizedModule.mkLinearMap (Submonoid.powers g) M) =
+        Ideal.ofList (xs.map (algebraMap R (Localization (Submonoid.powers g)))) •
+          (⊤ : Submodule (Localization (Submonoid.powers g))
+            (LocalizedModule (Submonoid.powers g) M)) := by
+    rw [Submodule.localized'_smul, Ideal.localized'_eq_map,
+      Submodule.localized'_top, Ideal.map_ofList]
+  let C := M ⧸ (Ideal.ofList xs • (⊤ : Submodule R M))
+  let eprime :
+      (LocalizedModule p.primeCompl M ⧸
+          (Ideal.ofList (xs.map (algebraMap R (Localization p.primeCompl))) •
+            (⊤ : Submodule (Localization p.primeCompl)
+              (LocalizedModule p.primeCompl M)))) ≃ₗ[Localization p.primeCompl]
+        LocalizedModule p.primeCompl C := by
+    exact Submodule.quotEquivOfEq _ _ hfull_atPrime.symm ≪≫ₗ
+      localizedQuotientEquiv p.primeCompl
+        (Ideal.ofList xs • (⊤ : Submodule R M))
+  have hprime_subsingleton_of_away :
+      Subsingleton (LocalizedModule (Submonoid.powers g) C) →
+        Subsingleton (LocalizedModule p.primeCompl C) := by
+    intro hawayC
+    rw [LocalizedModule.subsingleton_iff (S := p.primeCompl)]
+    intro c
+    obtain ⟨s, hs, hsc⟩ :=
+      (LocalizedModule.subsingleton_iff (S := Submonoid.powers g)).mp
+        hawayC c
+    obtain ⟨n, hn⟩ := (Submonoid.mem_powers_iff _ _).mp hs
+    have hgprime : g ∈ p.primeCompl := by
+      simpa [Ideal.primeCompl] using hg_notp
+    have hspr : s ∈ p.primeCompl := by
+      rw [← hn]
+      exact p.primeCompl.pow_mem hgprime n
+    exact ⟨s, hspr, hsc⟩
+  refine ⟨g, hg_notp, ⟨hweak, ?_⟩⟩
+  intro heq
+  have hqaway_sub :
+      Subsingleton
+        (LocalizedModule (Submonoid.powers g) M ⧸
+          (Ideal.ofList (xs.map (algebraMap R (Localization (Submonoid.powers g)))) •
+            (⊤ : Submodule (Localization (Submonoid.powers g))
+              (LocalizedModule (Submonoid.powers g) M)))) := by
+    apply not_nontrivial_iff_subsingleton.mp
+    intro hnon
+    exact (Submodule.Quotient.nontrivial_iff.mp hnon) heq.symm
+  let eaway :
+      (LocalizedModule (Submonoid.powers g) M ⧸
+          (Ideal.ofList (xs.map (algebraMap R (Localization (Submonoid.powers g)))) •
+            (⊤ : Submodule (Localization (Submonoid.powers g))
+              (LocalizedModule (Submonoid.powers g) M)))) ≃ₗ[Localization (Submonoid.powers g)]
+        LocalizedModule (Submonoid.powers g) C := by
+    exact Submodule.quotEquivOfEq _ _ hfull_away.symm ≪≫ₗ
+      localizedQuotientEquiv (Submonoid.powers g)
+        (Ideal.ofList xs • (⊤ : Submodule R M))
+  have hCsub : Subsingleton (LocalizedModule (Submonoid.powers g) C) := by
+    constructor
+    intro x y
+    obtain ⟨x', rfl⟩ := eaway.surjective x
+    obtain ⟨y', rfl⟩ := eaway.surjective y
+    exact congrArg eaway (hqaway_sub.elim _ _)
+  have hCprime : Subsingleton (LocalizedModule p.primeCompl C) :=
+    hprime_subsingleton_of_away hCsub
+  have hI_top :
+      Ideal.ofList (xs.map (algebraMap R (Localization p.primeCompl))) •
+          (⊤ : Submodule (Localization p.primeCompl)
+            (LocalizedModule p.primeCompl M)) = ⊤ :=
+    Submodule.Quotient.subsingleton_iff.mp (by
+      constructor
+      intro x y
+      apply eprime.injective
+      exact hCprime.elim _ _)
+  exact hp.2 hI_top.symm
 
 theorem regular_sequence_join
     {A : Type*} [CommRing A] (I : Ideal A)
@@ -1631,9 +1976,10 @@ theorem regular_sequence_of_short_exact
     RingTheory.Sequence.IsRegular M₂ xs := by
   induction xs generalizing M₁ M₂ M₃ with
   | nil =>
-      letI := h₃.nontrivial
-      letI := hg.nontrivial
-      exact RingTheory.Sequence.IsRegular.nil R M₂
+      have hn₃ : Nontrivial M₃ := h₃.nontrivial
+      have hn₂ : Nontrivial M₂ :=
+        @Function.Surjective.nontrivial M₂ M₃ hn₃ g hg
+      exact @RingTheory.Sequence.IsRegular.nil R M₂ _ _ _ hn₂
   | cons r rs ih =>
       simp only [RingTheory.Sequence.isRegular_cons_iff] at h₁ h₃ ⊢
       refine ⟨?_, ?_⟩
@@ -1710,6 +2056,268 @@ theorem regular_sequence_of_short_exact
         exact ih (QuotSMulTop.map r f) (QuotSMulTop.map r g) hfi hq
           (QuotSMulTop.map_surjective r hg) h₁.2 h₃.2
 
+private theorem regular_sequence_power_map_injective
+    {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
+    (a : R) (e : ℕ) (ha : IsSMulRegular M a) :
+    Function.Injective
+      (Submodule.mapQ (a • (⊤ : Submodule R M))
+        (a ^ (e + 1) • (⊤ : Submodule R M))
+        (LinearMap.lsmul R M (a ^ e)) (by
+          rintro x ⟨z, _hz, rfl⟩
+          change a ^ e • (a • z) ∈ a ^ (e + 1) • (⊤ : Submodule R M)
+          rw [← mul_smul, pow_succ']
+          exact (Submodule.mem_smul_pointwise_iff_exists _ _ _).mpr
+            ⟨z, Submodule.mem_top, by rw [mul_comm]⟩)) := by
+  intro x
+  induction x using Submodule.Quotient.induction_on with
+  | _ x =>
+    intro y hxy
+    induction y using Submodule.Quotient.induction_on with
+    | _ y =>
+      have hzero :
+          (Submodule.Quotient.mk (a ^ e • x - a ^ e • y) :
+            QuotSMulTop (a ^ (e + 1)) M) = 0 := by
+        rw [Submodule.Quotient.mk_sub]
+        have hxy' :
+            (Submodule.Quotient.mk (a ^ e • x) :
+                QuotSMulTop (a ^ (e + 1)) M) =
+              Submodule.Quotient.mk (a ^ e • y) := by
+          simpa only [Submodule.mapQ_apply, LinearMap.lsmul_apply] using hxy
+        exact sub_eq_zero.mpr hxy'
+      have hmem : a ^ e • (x - y) ∈ a ^ (e + 1) • (⊤ : Submodule R M) := by
+        simpa only [smul_sub] using (Submodule.Quotient.mk_eq_zero _).mp hzero
+      obtain ⟨z, _, hz⟩ :=
+        (Submodule.mem_smul_pointwise_iff_exists (a ^ e • (x - y))
+          (a ^ (e + 1)) (⊤ : Submodule R M)).mp hmem
+      have hcancel : x - y = a • z := by
+        apply ha.pow e
+        change a ^ e • (x - y) = a ^ e • (a • z)
+        rw [← hz, pow_succ, mul_smul]
+      apply sub_eq_zero.mp
+      rw [← Submodule.Quotient.mk_sub, Submodule.Quotient.mk_eq_zero]
+      rw [hcancel]
+      exact (Submodule.mem_smul_pointwise_iff_exists _ _ _).mpr
+        ⟨z, Submodule.mem_top, rfl⟩
+
+private theorem regular_sequence_power_short_exact
+    {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
+    (a : R) (e : ℕ) (ha : IsSMulRegular M a) :
+    ∃ (f : QuotSMulTop a M →ₗ[R] QuotSMulTop (a ^ (e + 1)) M)
+      (g : QuotSMulTop (a ^ (e + 1)) M →ₗ[R] QuotSMulTop (a ^ e) M),
+      Function.Injective f ∧ Exact f g ∧ Function.Surjective g := by
+  let hf : (a • (⊤ : Submodule R M)) ≤
+      (a ^ (e + 1) • (⊤ : Submodule R M)).comap
+        (LinearMap.lsmul R M (a ^ e)) := by
+    rintro x ⟨z, hz, rfl⟩
+    change a ^ e • (a • z) ∈ a ^ (e + 1) • (⊤ : Submodule R M)
+    rw [← mul_smul, pow_succ']
+    exact (Submodule.mem_smul_pointwise_iff_exists _ _ _).mpr
+      ⟨z, Submodule.mem_top, by rw [mul_comm]⟩
+  let hg : (a ^ (e + 1) • (⊤ : Submodule R M)) ≤
+      (a ^ e • (⊤ : Submodule R M)).comap LinearMap.id := by
+    rintro x ⟨z, hz, rfl⟩
+    change a ^ (e + 1) • z ∈ a ^ e • (⊤ : Submodule R M)
+    exact (Submodule.mem_smul_pointwise_iff_exists _ _ _).mpr
+      ⟨a • z, Submodule.mem_top, by rw [pow_succ, mul_smul]⟩
+  let f := Submodule.mapQ _ _ (LinearMap.lsmul R M (a ^ e)) hf
+  let g := Submodule.mapQ _ _ (LinearMap.id : M →ₗ[R] M) hg
+  refine ⟨f, g, ?_, ?_, ?_⟩
+  · exact regular_sequence_power_map_injective a e ha
+  · intro x
+    constructor
+    · intro hx
+      induction x using Submodule.Quotient.induction_on with
+      | _ x =>
+        have hx' : x ∈ a ^ e • (⊤ : Submodule R M) := by
+          exact (Submodule.Quotient.mk_eq_zero _).mp (by simpa [g] using hx)
+        obtain ⟨z, _, hz⟩ :=
+          (Submodule.mem_smul_pointwise_iff_exists x (a ^ e)
+            (⊤ : Submodule R M)).mp hx'
+        refine ⟨Submodule.Quotient.mk z, ?_⟩
+        simp only [f, Submodule.mapQ_apply, LinearMap.lsmul_apply]
+        exact congrArg Submodule.Quotient.mk hz
+    · rintro ⟨y, rfl⟩
+      induction y using Submodule.Quotient.induction_on with
+      | _ y =>
+        simp only [f, g, Submodule.mapQ_apply, LinearMap.lsmul_apply]
+        exact (Submodule.Quotient.mk_eq_zero _).mpr
+          ((Submodule.mem_smul_pointwise_iff_exists _ _ _).mpr
+            ⟨y, Submodule.mem_top, rfl⟩)
+  · intro x
+    induction x using Submodule.Quotient.induction_on with
+    | _ x => exact ⟨Submodule.Quotient.mk x, by simp [g]⟩
+
+private noncomputable def regular_sequence_quot_smul_comm
+    {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
+    (a r : R) :
+    QuotSMulTop r (QuotSMulTop a M) ≃ₗ[R]
+      QuotSMulTop a (QuotSMulTop r M) := by
+  have hsingleA : Ideal.ofList [r] • (⊤ : Submodule R (QuotSMulTop a M)) =
+      r • (⊤ : Submodule R (QuotSMulTop a M)) := by
+    rw [Ideal.ofList_singleton, Submodule.ideal_span_singleton_smul]
+  have hsingleR : Ideal.ofList [a] • (⊤ : Submodule R (QuotSMulTop r M)) =
+      a • (⊤ : Submodule R (QuotSMulTop r M)) := by
+    rw [Ideal.ofList_singleton, Submodule.ideal_span_singleton_smul]
+  let e₁ : QuotSMulTop r (QuotSMulTop a M) ≃ₗ[R]
+      M ⧸ (Ideal.ofList [a, r] • (⊤ : Submodule R M)) := by
+    exact
+      (Submodule.quotEquivOfEq _ _
+        hsingleA.symm) ≪≫ₗ
+        (Submodule.quotOfListConsSMulTopEquivQuotSMulTopInner M a [r]).symm
+  let e₂ : (M ⧸ (Ideal.ofList [r, a] • (⊤ : Submodule R M))) ≃ₗ[R]
+      QuotSMulTop a (QuotSMulTop r M) := by
+    let q₂ : (QuotSMulTop r M ⧸
+        (Ideal.ofList [a] • (⊤ : Submodule R (QuotSMulTop r M)))) ≃ₗ[R]
+        QuotSMulTop a (QuotSMulTop r M) :=
+      Submodule.quotEquivOfEq _ _ hsingleR
+    exact Submodule.quotOfListConsSMulTopEquivQuotSMulTopInner M r [a] ≪≫ₗ q₂
+  let h : Ideal.ofList [a, r] • (⊤ : Submodule R M) =
+      Ideal.ofList [r, a] • (⊤ : Submodule R M) := by
+    calc
+      Ideal.ofList [a, r] • (⊤ : Submodule R M) =
+          (a • (⊤ : Submodule R M)) ⊔ (r • (⊤ : Submodule R M)) := by
+        simp [Ideal.ofList_cons, Ideal.ofList_nil, Submodule.sup_smul,
+          Submodule.ideal_span_singleton_smul]
+      _ = (r • (⊤ : Submodule R M)) ⊔ (a • (⊤ : Submodule R M)) := sup_comm _ _
+      _ = Ideal.ofList [r, a] • (⊤ : Submodule R M) := by
+        simp [Ideal.ofList_cons, Ideal.ofList_nil, Submodule.sup_smul,
+          Submodule.ideal_span_singleton_smul]
+  exact e₁ ≪≫ₗ Submodule.quotEquivOfEq _ _ h ≪≫ₗ e₂
+
+private theorem regular_sequence_power_quotient_iff
+    {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
+    (a : R) (xs : List R) (e : ℕ) (he : 0 < e)
+    (ha : IsSMulRegular M a) :
+    RingTheory.Sequence.IsRegular (QuotSMulTop a M) xs ↔
+      RingTheory.Sequence.IsRegular (QuotSMulTop (a ^ e) M) xs := by
+  induction xs generalizing M e with
+  | nil =>
+      have hpow_le : a ^ e • (⊤ : Submodule R M) ≤ a • (⊤ : Submodule R M) := by
+        obtain ⟨k, rfl⟩ := Nat.exists_eq_succ_of_ne_zero (Nat.ne_of_gt he)
+        rintro x ⟨z, _, rfl⟩
+        refine (Submodule.mem_smul_pointwise_iff_exists _ _ _).mpr
+          ⟨a ^ k • z, Submodule.mem_top, ?_⟩
+        have hz : a • (a ^ k • z) = (a ^ k * a) • z := by
+          rw [← mul_smul, mul_comm]
+        simpa [pow_succ, LinearMap.lsmul_apply] using hz
+      constructor
+      · intro h
+        have htop : (a ^ e • (⊤ : Submodule R M)) ≠ (⊤ : Submodule R M) := by
+          intro heq
+          have hle : (⊤ : Submodule R M) ≤ a • (⊤ : Submodule R M) := by
+            have hle' := hpow_le
+            rw [heq] at hle'
+            exact hle'
+          exact (Submodule.Quotient.nontrivial_iff.mp h.nontrivial)
+            (le_antisymm le_top hle)
+        exact @RingTheory.Sequence.IsRegular.nil R (QuotSMulTop (a ^ e) M)
+          _ _ _ (Submodule.Quotient.nontrivial_iff.mpr htop)
+      · intro h
+        have htop : (a • (⊤ : Submodule R M)) ≠ (⊤ : Submodule R M) := by
+          intro heq
+          have hpow : ∀ k : ℕ, a ^ k • (⊤ : Submodule R M) = ⊤ := by
+            intro k
+            induction k with
+            | zero => simp
+            | succ k ih =>
+                calc
+                  a ^ (k + 1) • (⊤ : Submodule R M) =
+                      a ^ k • (a • (⊤ : Submodule R M)) := by
+                    rw [pow_succ, mul_smul]
+                  _ = a ^ k • (⊤ : Submodule R M) :=
+                    congrArg (fun N : Submodule R M => a ^ k • N) heq
+                  _ = ⊤ := ih
+          exact (Submodule.Quotient.nontrivial_iff.mp h.nontrivial)
+            (hpow e)
+        exact @RingTheory.Sequence.IsRegular.nil R (QuotSMulTop a M)
+          _ _ _ (Submodule.Quotient.nontrivial_iff.mpr htop)
+  | cons r rs ih =>
+      constructor
+      · intro h
+        have hforward : ∀ k : ℕ,
+            RingTheory.Sequence.IsRegular (QuotSMulTop a M) (r :: rs) →
+              RingTheory.Sequence.IsRegular (QuotSMulTop (a ^ (k + 1)) M) (r :: rs) := by
+          intro k hA
+          induction k with
+          | zero =>
+              change RingTheory.Sequence.IsRegular
+                (QuotSMulTop (a ^ 1) M) (r :: rs)
+              rw [pow_one]
+              exact hA
+          | succ k ihk =>
+              obtain ⟨f, g, hf, hfg, hg⟩ :=
+                regular_sequence_power_short_exact a (k + 1) ha
+              have hC := ihk
+              exact regular_sequence_of_short_exact f g hf hfg hg (r :: rs) hA hC
+        have he' : 1 ≤ e := he
+        have heqpow : e - 1 + 1 = e := by omega
+        have hforward' := hforward (e - 1) h
+        rw [heqpow] at hforward'
+        exact hforward'
+      · intro h
+        have heqpow : e - 1 + 1 = e := by omega
+        rw [← heqpow] at h
+        have hcons :=
+          (RingTheory.Sequence.isRegular_cons_iff
+            (M := QuotSMulTop (a ^ (e - 1 + 1)) M) r rs).mp h
+        obtain ⟨f, g, hf, hfg, hg⟩ :=
+          regular_sequence_power_short_exact a (e - 1) ha
+        have hr : IsSMulRegular (QuotSMulTop a M) r := by
+          rw [isSMulRegular_iff_right_eq_zero_of_smul]
+          intro x hx
+          apply hf
+          apply hcons.1
+          change r • f x = r • f 0
+          rw [← f.map_smul, hx, map_zero]
+          simp
+        have ha' : IsSMulRegular (QuotSMulTop r M) a := by
+          rw [isSMulRegular_iff_right_eq_zero_of_smul]
+          intro x hx
+          induction x using Submodule.Quotient.induction_on with
+          | _ x =>
+              have hmem : a • x ∈ r • (⊤ : Submodule R M) := by
+                exact (Submodule.Quotient.mk_eq_zero _).mp (by simpa using hx)
+              obtain ⟨y, _, hy⟩ :=
+                (Submodule.mem_smul_pointwise_iff_exists (a • x) r
+                  (⊤ : Submodule R M)).mp hmem
+              have hry : r • (Submodule.Quotient.mk y : QuotSMulTop a M) = 0 := by
+                change (Submodule.Quotient.mk (r • y) : QuotSMulTop a M) = 0
+                rw [hy, Submodule.Quotient.mk_eq_zero]
+                exact (Submodule.mem_smul_pointwise_iff_exists _ _ _).mpr
+                  ⟨x, Submodule.mem_top, rfl⟩
+              have hy0 : (Submodule.Quotient.mk y : QuotSMulTop a M) = 0 := by
+                apply hr
+                simpa only [smul_zero] using hry
+              obtain ⟨z, _, hz⟩ :=
+                (Submodule.mem_smul_pointwise_iff_exists y a
+                  (⊤ : Submodule R M)).mp
+                  ((Submodule.Quotient.mk_eq_zero _).mp hy0)
+              have hcancel : x = r • z := by
+                apply ha
+                change a • x = a • (r • z)
+                calc
+                  a • x = r • y := hy.symm
+                  _ = r • (a • z) := by rw [← hz]
+                  _ = a • (r • z) := by rw [smul_comm]
+              rw [hcancel, Submodule.Quotient.mk_eq_zero]
+              exact (Submodule.mem_smul_pointwise_iff_exists _ _ _).mpr
+                ⟨z, Submodule.mem_top, rfl⟩
+        have htail' :
+            RingTheory.Sequence.IsRegular
+              (QuotSMulTop (a ^ (e - 1 + 1)) (QuotSMulTop r M)) rs := by
+          exact ((regular_sequence_quot_smul_comm (a ^ (e - 1 + 1)) r).isRegular_congr rs).mp
+            hcons.2
+        have htail :
+            RingTheory.Sequence.IsRegular
+              (QuotSMulTop a (QuotSMulTop r M)) rs :=
+          (ih (M := QuotSMulTop r M) (e := e - 1 + 1) (by omega) ha').mpr htail'
+        have htail'' :
+            RingTheory.Sequence.IsRegular
+              (QuotSMulTop r (QuotSMulTop a M)) rs := by
+          exact ((regular_sequence_quot_smul_comm a r).isRegular_congr rs).mpr htail
+        exact (RingTheory.Sequence.isRegular_cons_iff
+          (M := QuotSMulTop a M) r rs).mpr ⟨hr, htail''⟩
+
 /- The source's first induction step uses the displayed short exact sequence
   `0 → M/fM → M/f^eM → M/f^(e-1)M → 0`; it is an intermediate proof interface, so the
   public chapter statement is the following powers equivalence and no duplicate auxiliary
@@ -1721,7 +2329,47 @@ theorem regular_sequence_powers_iff
     RingTheory.Sequence.IsRegular M (List.ofFn f) ↔
       RingTheory.Sequence.IsRegular M
         (List.ofFn (fun i => f i ^ e i)) := by
-  sorry
+  induction n generalizing M with
+  | zero =>
+      simp only [List.ofFn_zero]
+  | succ n ih =>
+      simp only [List.ofFn_succ]
+      constructor
+      · intro h
+        have hcons :=
+          (RingTheory.Sequence.isRegular_cons_iff (M := M) (f 0)
+            (List.ofFn (fun i : Fin n => f i.succ))).mp h
+        have htail :=
+          (ih (M := QuotSMulTop (f 0) M)
+            (f := fun i : Fin n => f i.succ)
+            (e := fun i : Fin n => e i.succ)
+            (fun i => he i.succ)).mp hcons.2
+        have htailpow :=
+          (regular_sequence_power_quotient_iff (f 0)
+            (List.ofFn (fun i : Fin n => f i.succ ^ e i.succ))
+            (e 0) (he 0) hcons.1).mp htail
+        exact (RingTheory.Sequence.isRegular_cons_iff (M := M) (f 0 ^ e 0)
+          (List.ofFn (fun i : Fin n => f i.succ ^ e i.succ))).mpr
+          ⟨hcons.1.pow (e 0), htailpow⟩
+      · intro h
+        have hcons :=
+          (RingTheory.Sequence.isRegular_cons_iff (M := M) (f 0 ^ e 0)
+            (List.ofFn (fun i : Fin n => f i.succ ^ e i.succ))).mp h
+        have ha : IsSMulRegular M (f 0) :=
+          (IsSMulRegular.pow_iff (M := M) (a := f 0) (he 0)).mp hcons.1
+        have htailpow :
+            RingTheory.Sequence.IsRegular (QuotSMulTop (f 0) M)
+              (List.ofFn (fun i : Fin n => f i.succ ^ e i.succ)) :=
+          (regular_sequence_power_quotient_iff (f 0)
+            (List.ofFn (fun i : Fin n => f i.succ ^ e i.succ))
+            (e 0) (he 0) ha).mpr hcons.2
+        have htail :=
+          (ih (M := QuotSMulTop (f 0) M)
+            (f := fun i : Fin n => f i.succ)
+            (e := fun i : Fin n => e i.succ)
+            (fun i => he i.succ)).mpr htailpow
+        exact (RingTheory.Sequence.isRegular_cons_iff (M := M) (f 0)
+          (List.ofFn (fun i : Fin n => f i.succ))).mpr ⟨ha, htail⟩
 
 /- The source's polynomial proof uses the direct-sum decomposition indexed by multi-indices
   and the ideals `I_E`; these are proof-level bookkeeping for the final TFAE, not additional

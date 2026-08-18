@@ -281,7 +281,30 @@ term, so that map is a split epimorphism. -/
 theorem PositiveContractingHomotopy.exactAt
     {C : Type u} [Category.{v} C] [Abelian C] {K : CochainComplex C ℕ}
     (h : PositiveContractingHomotopy K) (n : ℕ) (hn : 0 < n) : K.ExactAt n := by
-  sorry
+  obtain ⟨m, rfl⟩ := Nat.exists_eq_succ_of_ne_zero (Nat.ne_of_gt hn)
+  apply (HomologicalComplex.exactAt_iff'
+    (K := K) (i := m) (j := m + 1) (k := m + 2)
+    (CochainComplex.prev_nat_succ m) (by simp)).2
+  change (ShortComplex.mk (K.d m (m + 1)) (K.d (m + 1) (m + 2))
+    (K.d_comp_d m (m + 1) (m + 2))).Exact
+  rw [ShortComplex.exact_iff_epi_toCycles]
+  let S := ShortComplex.mk (K.d m (m + 1)) (K.d (m + 1) (m + 2))
+    (K.d_comp_d m (m + 1) (m + 2))
+  let section_ : S.cycles ⟶ S.X₁ := S.iCycles ≫ h.homotopy m
+  have hsection : section_ ≫ S.toCycles = 𝟙 _ := by
+    apply (cancel_mono S.iCycles).1
+    simp only [section_, Category.assoc, ShortComplex.toCycles_i,
+      Category.id_comp, Category.comp_id]
+    change S.iCycles ≫ h.homotopy m ≫ K.d m (m + 1) = _
+    calc
+      _ = S.iCycles ≫
+          (h.homotopy m ≫ K.d m (m + 1) +
+            K.d (m + 1) (m + 2) ≫ h.homotopy (m + 1)) := by
+        simp only [Preadditive.comp_add, Category.assoc,
+          ShortComplex.iCycles_g, comp_zero, add_zero]
+      _ = S.iCycles ≫ 𝟙 _ := by rw [h.identity m]
+      _ = _ := by simp
+  exact (⟨section_, hsection⟩ : SplitEpi S.toCycles).epi
 
 /-- The choice data used in the source's localized Čech argument. -/
 structure LocalizedCechHomotopyData {Y : Scheme.{u}} {hY : IsAffine Y}

@@ -1998,7 +1998,89 @@ theorem kPrimeZeroLength_artinian_local_bijective
 theorem kZeroRank_local_bijective
     (R : Type u) [CommRing R] [IsLocalRing R] :
     Function.Bijective (kZeroRank (R := R)) := by
-  sorry
+  have hfiniteProjectiveRank (P : FiniteProjectivePresentation R) :
+      finiteProjectiveRank P = Module.finrank R P.presentation.module := by
+    let e := Classical.choice
+      (Classical.choose_spec
+        (finite_projective_is_finite_free_over_local
+          (R := R) (M := P.presentation.module)))
+    have he := e.finrank_eq
+    simpa [finiteProjectiveRank, Module.finrank_pi] using he.symm
+  have hfreeZero (n : ℕ) :
+      kZeroClass (R := R) (M := Fin n → R) =
+        (n : ℤ) • kZeroClass (R := R) (M := R) := by
+    induction n with
+    | zero =>
+        simpa using
+          (kZeroClass_subsingleton (R := R) (M := Fin 0 → R))
+    | succ n ih =>
+        let e :=
+          LinearEquiv.piCongrLeft R (fun _ : Option (Fin n) => R)
+            (finSuccEquiv n) ≪≫ₗ LinearEquiv.piOptionEquivProd R
+        rw [kZeroClass_eq_of_linearEquiv e, kZeroClass_prod, ih]
+        simp [add_smul, add_comm]
+  let P₀ := Classical.choose
+    (exists_finite_projective_presentation (R := R) (M := R))
+  let eP₀ := Classical.choice
+    (Classical.choose_spec
+      (exists_finite_projective_presentation (R := R) (M := R)))
+  let c : KZero R := kZeroClassOfPresentation P₀
+  have hc : kZeroRank (R := R) c = 1 := by
+    rw [kZeroRank_apply_class, hfiniteProjectiveRank]
+    simpa using eP₀.finrank_eq
+  have hcZero : kZeroClass (R := R) (M := R) = c := by
+    calc
+      kZeroClass (R := R) (M := R) =
+          kZeroClass (R := R) (M := P₀.presentation.module) :=
+        kZeroClass_eq_of_linearEquiv eP₀.symm
+      _ = c := kZeroClass_eq_of_presentation (R := R) P₀
+  have hclassZero (P : FiniteProjectivePresentation R) :
+      kZeroClassOfPresentation P =
+        (finiteProjectiveRank P : ℤ) • c := by
+    let _ : Module.Free R P.presentation.module :=
+      finite_projective_is_free_over_local
+    let n := Classical.choose
+      (exists_finite_free_equiv (R := R) (M := P.presentation.module))
+    let e := Classical.choice
+      (Classical.choose_spec
+        (exists_finite_free_equiv (R := R) (M := P.presentation.module)))
+    have hn : finiteProjectiveRank P = n := by
+      rw [hfiniteProjectiveRank]
+      have he := e.finrank_eq
+      simpa [Module.finrank_pi] using he
+    calc
+      kZeroClassOfPresentation P =
+          kZeroClass (R := R) (M := P.presentation.module) :=
+        (kZeroClass_eq_of_presentation P).symm
+      _ = kZeroClass (R := R) (M := Fin n → R) :=
+        kZeroClass_eq_of_linearEquiv e
+      _ = (n : ℤ) • kZeroClass (R := R) (M := R) := hfreeZero n
+      _ = (finiteProjectiveRank P : ℤ) • c := by rw [hn, hcZero]
+  have hrepr (x : KZero R) :
+      x = (kZeroRank (R := R) x) • c := by
+    rcases kZero_generated x with ⟨n, P, z, hx⟩
+    have hrank : kZeroRank (R := R) x =
+        ∑ i, z i * (finiteProjectiveRank (P i) : ℤ) := by
+      rw [hx]
+      simp only [map_sum, map_zsmul, kZeroRank_apply_class, smul_eq_mul]
+    calc
+      x = ∑ i, z i • kZeroClassOfPresentation (P i) := hx
+      _ = ∑ i, z i • ((finiteProjectiveRank (P i) : ℤ) • c) := by
+        apply Finset.sum_congr rfl
+        intro i hi
+        rw [hclassZero (P i)]
+      _ = (∑ i, z i * (finiteProjectiveRank (P i) : ℤ)) • c := by
+        simp_rw [smul_smul]
+        rw [Finset.sum_smul]
+      _ = (kZeroRank (R := R) x) • c := by rw [hrank]
+  have hinj : Function.Injective (kZeroRank (R := R)) := by
+    intro x y hxy
+    rw [hrepr x, hrepr y, hxy]
+  have hsurj : Function.Surjective (kZeroRank (R := R)) := by
+    intro z
+    refine ⟨z • c, ?_⟩
+    simp [hc]
+  exact ⟨hinj, hsurj⟩
 
 /-- Multiplication by an integer, as an additive homomorphism. -/
 def intMul (n : ℤ) : ℤ →+ ℤ where
@@ -2014,7 +2096,75 @@ theorem kZero_kPrimeZero_artinian_local
           intMul (Module.length R R).toNat (kZeroRank (R := R) x)) ∧
       Function.Bijective (kZeroRank (R := R)) ∧
       Function.Bijective (kPrimeZeroLength (R := R)) := by
-  sorry
+  have hfiniteR : Module.length R R ≠ ⊤ := by
+    apply Module.length_ne_top_iff.mpr
+    exact ((IsArtinianRing.tfae R R).out 0 3).mp
+      (inferInstance : Module.Finite R R)
+  have hfiniteFin (n : ℕ) : Module.length R (Fin n → R) ≠ ⊤ := by
+    apply Module.length_ne_top_iff.mpr
+    exact ((IsArtinianRing.tfae R (Fin n → R)).out 0 3).mp
+      (inferInstance : Module.Finite R (Fin n → R))
+  have hfreeLength (n : ℕ) :
+      (Module.length R (Fin n → R)).toNat =
+        n * (Module.length R R).toNat := by
+    induction n with
+    | zero =>
+        simp
+    | succ n ih =>
+        let e :=
+          LinearEquiv.piCongrLeft R (fun _ : Option (Fin n) => R)
+            (finSuccEquiv n) ≪≫ₗ LinearEquiv.piOptionEquivProd R
+        rw [e.length_eq]
+        rw [Module.length_eq_add_of_exact
+          (LinearMap.inl R R (Fin n → R))
+          (LinearMap.snd R R (Fin n → R))
+          LinearMap.inl_injective LinearMap.snd_surjective (by exact .inl_snd)]
+        rw [ENat.toNat_add hfiniteR (hfiniteFin n), ih]
+        simp [Nat.succ_mul, add_comm]
+  have hfiniteProjectiveRank (P : FiniteProjectivePresentation R) :
+      finiteProjectiveRank P = Module.finrank R P.presentation.module := by
+    let e := Classical.choice
+      (Classical.choose_spec
+        (finite_projective_is_finite_free_over_local
+          (R := R) (M := P.presentation.module)))
+    have he := e.finrank_eq
+    simpa [finiteProjectiveRank, Module.finrank_pi] using he.symm
+  have hclassLength (P : FiniteProjectivePresentation R) :
+      (Module.length R P.presentation.module).toNat =
+        (Module.length R R).toNat * finiteProjectiveRank P := by
+    let _ : Module.Free R P.presentation.module :=
+      finite_projective_is_free_over_local
+    let n := Classical.choose
+      (exists_finite_free_equiv (R := R) (M := P.presentation.module))
+    let e := Classical.choice
+      (Classical.choose_spec
+        (exists_finite_free_equiv (R := R) (M := P.presentation.module)))
+    have hn : finiteProjectiveRank P = n := by
+      rw [hfiniteProjectiveRank]
+      have he := e.finrank_eq
+      simpa [Module.finrank_pi] using he
+    rw [e.length_eq, hfreeLength n, hn, Nat.mul_comm]
+  have hcompatClass (P : FiniteProjectivePresentation R) :
+      kPrimeZeroLength (R := R)
+          (kZeroToKPrime (R := R) (kZeroClassOfPresentation P)) =
+        intMul (Module.length R R).toNat
+          (kZeroRank (R := R) (kZeroClassOfPresentation P)) := by
+    rw [kZeroToKPrime_apply_class, kPrimeZeroLength_apply_class,
+      kZeroRank_apply_class]
+    dsimp [finitePresentationLength, intMul]
+    exact_mod_cast hclassLength P
+  have hcompat (x : KZero R) :
+      kPrimeZeroLength (R := R) (kZeroToKPrime (R := R) x) =
+        intMul (Module.length R R).toNat (kZeroRank (R := R) x) := by
+    rcases kZero_generated x with ⟨n, P, z, hx⟩
+    rw [hx]
+    simp only [map_sum, map_zsmul]
+    apply Finset.sum_congr rfl
+    intro i hi
+    rw [hcompatClass]
+  refine ⟨hcompat, ?_⟩
+  exact ⟨kZeroRank_local_bijective R,
+    kPrimeZeroLength_artinian_local_bijective R⟩
 
 end
 

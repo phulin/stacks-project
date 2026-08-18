@@ -102,21 +102,28 @@ theorem quasiRegularMonomialMapRaw_map_smul_quotient
 theorem quotientSemilinearMap_smul
     {R M N : Type*} [CommRing R] [AddCommGroup M] [Module R M]
     [AddCommGroup N] [Module R N]
-    (I : Ideal R) [Module (R ⧸ I) N]
+    (I : Ideal R)
     (hN : Module.IsTorsionBySet R N I)
-    (g : (M ⧸ (I • (⊤ : Submodule R M))) →ₛₗ[Ideal.Quotient.mk I] N)
+    (g : letI := hN.module
+      (M ⧸ (I • (⊤ : Submodule R M))) →ₛₗ[Ideal.Quotient.mk I] N)
     (s : R ⧸ I) (x : M ⧸ (I • (⊤ : Submodule R M))) :
+    letI := hN.module
     g (s • x) = s • g x := by
-  sorry
+  letI := hN.module
+  obtain ⟨r, rfl⟩ := Ideal.Quotient.mk_surjective s
+  exact g.map_smulₛₗ r x
 
 /-- Turn the semilinear quotient map into its canonical quotient-ring linear map. -/
 def quotientSemilinearMapToLinear
     {R M N : Type*} [CommRing R] [AddCommGroup M] [Module R M]
     [AddCommGroup N] [Module R N]
-    (I : Ideal R) [Module (R ⧸ I) N]
+    (I : Ideal R)
     (hN : Module.IsTorsionBySet R N I)
-    (g : (M ⧸ (I • (⊤ : Submodule R M))) →ₛₗ[Ideal.Quotient.mk I] N) :
+    (g : letI := hN.module
+      (M ⧸ (I • (⊤ : Submodule R M))) →ₛₗ[Ideal.Quotient.mk I] N) :
+    letI := hN.module
     (M ⧸ (I • (⊤ : Submodule R M))) →ₗ[R ⧸ I] N :=
+  letI := hN.module
   { toFun := g
     map_add' := g.map_add
     map_smul' := fun s x => quotientSemilinearMap_smul I hN g s x }
@@ -128,6 +135,10 @@ def quasiRegularMonomialMapQuotient
     (M ⧸ (Ideal.ofList f • (⊤ : Submodule R M))) →ₗ[R ⧸ Ideal.ofList f]
       quasiRegularPiece R M (Ideal.ofList f) (quasiRegularDegree d) := by
   let I := Ideal.ofList f
+  let hN := Module.isTorsionBySet_quotient_ideal_smul
+    (M := ↥(I ^ quasiRegularDegree d • (⊤ : Submodule R M))) (I := I)
+  letI : Module (R ⧸ I)
+      (quasiRegularPiece R M I (quasiRegularDegree d)) := hN.module
   let g : M →ₛₗ[Ideal.Quotient.mk I]
       quasiRegularPiece R M I (quasiRegularDegree d) :=
     { toFun := quasiRegularMonomialMapRaw R M f d
@@ -135,9 +146,7 @@ def quasiRegularMonomialMapQuotient
       map_smul' := fun r m => quasiRegularMonomialMapRaw_map_smul_quotient R M f d r m }
   let gq := (I • (⊤ : Submodule R M)).liftQ g
     (quasiRegularMonomialMapRaw_ker R M f d)
-  exact quotientSemilinearMapToLinear I
-    (Module.isTorsionBySet_quotient_ideal_smul
-      (M := ↥(I ^ quasiRegularDegree d • (⊤ : Submodule R M))) (I := I)) gq
+  exact quotientSemilinearMapToLinear I hN gq
 
 /-- The polynomial-linear map obtained by summing the monomial components. -/
 def quasiRegularPolynomialMap

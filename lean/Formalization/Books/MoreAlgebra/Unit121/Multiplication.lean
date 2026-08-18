@@ -114,7 +114,34 @@ theorem finiteLength_restrictScalars_length
     @finiteLengthNat R M _ _ (Module.compHom M f)
         (finiteLength_restrictScalars f E hM) =
       finiteLengthNat S M hM * residueFieldDegree f E := by
-  sorry
+  let _ : Algebra R S := f.toAlgebra
+  let _ : Module R M := Module.restrictScalars R S M
+  let _ : IsScalarTower R S M := IsScalarTower.restrictScalars R S M
+  simp only [finiteLengthNat, residueFieldDegree]
+  rw [IsLocalRing.length_restrictScalars R S M, ENat.toNat_mul]
+  have hmodule : fieldExtensionModule (residueAlgebra f) =
+      (inferInstance : Module (IsLocalRing.ResidueField R) (IsLocalRing.ResidueField S)) := by
+    apply Module.ext'
+    intro c x
+    obtain ⟨r, rfl⟩ := IsLocalRing.residue_surjective c
+    rfl
+  have hfiniteCustom :
+      @Module.Finite (IsLocalRing.ResidueField R) (IsLocalRing.ResidueField S)
+        _ _ (fieldExtensionModule (residueAlgebra f)) := E.finite
+  have hfinite : Module.Finite (IsLocalRing.ResidueField R) (IsLocalRing.ResidueField S) := by
+    change @Module.Finite (IsLocalRing.ResidueField R) (IsLocalRing.ResidueField S)
+      _ _ (inferInstance : Module (IsLocalRing.ResidueField R) (IsLocalRing.ResidueField S))
+    exact hmodule ▸ hfiniteCustom
+  rw [Module.length_eq_finrank]
+  simp only [ENat.toNat_natCast]
+  have hfinrank :
+      @Module.finrank (IsLocalRing.ResidueField R) (IsLocalRing.ResidueField S)
+        _ _ (fieldExtensionModule (residueAlgebra f)) =
+      @Module.finrank (IsLocalRing.ResidueField R) (IsLocalRing.ResidueField S)
+        _ _ (inferInstance : Module (IsLocalRing.ResidueField R) (IsLocalRing.ResidueField S)) :=
+    congrArg (fun m : Module (IsLocalRing.ResidueField R) (IsLocalRing.ResidueField S) =>
+      @Module.finrank (IsLocalRing.ResidueField R) (IsLocalRing.ResidueField S) _ _ m) hmodule
+  rw [hfinrank]
 
 /-- The `R`-linear endomorphism given by multiplication by an element of `S`, on an `S`-module
 viewed through `f`. -/

@@ -401,7 +401,7 @@ private lemma exists_aeval_ne_zero_of_finite_complement_single
   exact ⟨x, hxE, hpx⟩
 
 private lemma exists_aeval_eq_zero_of_not_isUnit
-    {n : ℕ} {p : MvPolynomial (Fin n) ℂ} (hp : p ≠ 0)
+    {n : ℕ} {p : MvPolynomial (Fin n) ℂ} (_hp : p ≠ 0)
     (hpn : ¬IsUnit p) : ∃ x : Fin n → ℂ, MvPolynomial.aeval x p = 0 := by
   obtain ⟨M, hM, hMmax⟩ :=
     Ideal.exists_le_maximal (Ideal.span {p}) (Ideal.span_singleton_ne_top hpn)
@@ -487,11 +487,9 @@ private lemma exists_root_outside_finite_projection_of_positive_degree
     intro hF
     have : F.natDegree = 0 := by simp [hF]
     have hdegF : 0 < F.natDegree := by
-      change 0 < F.natDegree
       exact hdeg
     omega
   have hdegF : 0 < F.natDegree := by
-    change 0 < F.natDegree
     exact hdeg
   have hlc : F.leadingCoeff ≠ 0 :=
     Polynomial.leadingCoeff_ne_zero.mpr hF
@@ -542,7 +540,7 @@ private lemma exists_fin_cases_not_mem_finite
     exact ⟨Fin.cases r y, hr, by simp⟩
   have hSnot : ∃ r : ℂ, r ∉ S := by
     by_contra hnot
-    push_neg at hnot
+    push Not at hnot
     apply (Set.infinite_univ : (Set.univ : Set ℂ).Infinite)
     apply hS.subset
     intro r hr
@@ -570,7 +568,7 @@ private lemma exists_aeval_eq_zero_outside_finite_of_constant_value
   · exact hroot
 
 private lemma exists_aeval_eq_zero_outside_finite_of_constant_coefficient
-    {m : ℕ} (hm : 0 < m) (E : Set (Fin (m + 1) → ℂ)) (hE : E.Finite)
+    {m : ℕ} (_hm : 0 < m) (E : Set (Fin (m + 1) → ℂ)) (hE : E.Finite)
     {p : MvPolynomial (Fin (m + 1)) ℂ} {q : MvPolynomial (Fin m) ℂ}
     (hFC : MvPolynomial.finSuccEquiv ℂ m p = Polynomial.C q)
     (hqne : q ≠ 0) (hqnonunit : ¬IsUnit q) :
@@ -590,7 +588,6 @@ private lemma exists_aeval_eq_zero_outside_finite_of_degree_zero
   let F := MvPolynomial.finSuccEquiv ℂ m p
   have hFdeg : F.natDegree = 0 := by
     have hdegF : ¬0 < F.natDegree := by
-      change ¬0 < F.natDegree
       exact hdeg
     omega
   have hFC : F = Polynomial.C (F.coeff 0) :=
@@ -672,12 +669,12 @@ private lemma exists_mem_inter_of_nonempty_principal_opens
   have huJ : ∃ p, p ∈ J ∧ MvPolynomial.aeval u p ≠ 0 := by
     have huJ0 := hu'.2
     rw [MvPolynomial.mem_zeroLocus_iff] at huJ0
-    push_neg at huJ0
+    push Not at huJ0
     exact huJ0
   have hvK : ∃ q, q ∈ K ∧ MvPolynomial.aeval v q ≠ 0 := by
     have hvK0 := hv'.2
     rw [MvPolynomial.mem_zeroLocus_iff] at hvK0
-    push_neg at hvK0
+    push Not at hvK0
     exact hvK0
   obtain ⟨p, hpJ, hpval⟩ := huJ
   obtain ⟨q, hqK, hqval⟩ := hvK
@@ -710,10 +707,10 @@ private lemma eq_zero_of_aeval_eq_zero_on_basic_open
     by_cases hqx : MvPolynomial.aeval x q = 0
     · have hqx' : MvPolynomial.eval x q = 0 := by
         simpa [MvPolynomial.aeval_def] using hqx
-      simpa [MvPolynomial.eval_mul, hqx']
+      simp [MvPolynomial.eval_mul, hqx']
     · have hp' : MvPolynomial.eval x p = 0 := by
         simpa [MvPolynomial.aeval_def] using hp x hqx
-      simpa [MvPolynomial.eval_mul, hp']
+      simp [MvPolynomial.eval_mul, hp']
   exact (mul_eq_zero.mp hmul).resolve_left hq
 
 private lemma eq_zero_of_aeval_eq_zero_on_finite_complement_basic_open
@@ -1585,11 +1582,11 @@ theorem regular_function_on_affine_space_is_polynomial
 field is regular. -/
 theorem finite_field_every_function_is_regular
     (k : Type u) [Field k] [Finite k] {n : ℕ}
-    (Z : Set (Fin n → k)) (hZ : IsZariskiLocallyClosed k n Z)
+    (Z : Set (Fin n → k)) (_hZ : IsZariskiLocallyClosed k n Z)
     (φ : Z → k) :
     IsRegularFunction Z φ := by
   classical
-  revert hZ
+  revert _hZ
   intro _
   let _ : Fintype k := Fintype.ofFinite k
   let _ : Fintype Z := Fintype.ofFinite Z

@@ -122,7 +122,7 @@ def inducedFilteredObject {C : Type u} [Category.{v} C] [HasPullbacks C]
 
 /-- The quotient filtration associated to a morphism, using categorical images. -/
 def quotientFiltration {C : Type u} [Category.{v} C] [HasImages C]
-    {A Y : C} (F : DecreasingFiltration C A) (π : A ⟶ Y) :
+    {A Y : C} (F : DecreasingFiltration C A) (π : A ⟶ Y) [Epi π] :
     DecreasingFiltration C Y where
   obj i := (Subobject.«exists» π).obj (F.obj i)
   antitone := by
@@ -131,7 +131,7 @@ def quotientFiltration {C : Type u} [Category.{v} C] [HasImages C]
 
 /-- The filtered object with quotient filtration along `π`. -/
 def quotientFilteredObject {C : Type u} [Category.{v} C] [HasImages C]
-    (A : FilteredObject C) {Y : C} (π : A.carrier ⟶ Y) : FilteredObject C where
+    (A : FilteredObject C) {Y : C} (π : A.carrier ⟶ Y) [Epi π] : FilteredObject C where
   carrier := Y
   filtration := quotientFiltration A.filtration π
 
@@ -146,7 +146,7 @@ def inducedFilteredHom {C : Type u} [Category.{v} C] [HasPullbacks C]
 
 /-- The quotient map is a filtered morphism for the quotient filtration. -/
 def quotientFilteredHom {C : Type u} [Category.{v} C] [HasImages C]
-    (A : FilteredObject C) {Y : C} (π : A.carrier ⟶ Y) :
+    (A : FilteredObject C) {Y : C} (π : A.carrier ⟶ Y) [Epi π] :
     A ⟶ quotientFilteredObject A π :=
   ⟨π, fun i => by
     let h := Subobject.imageFactorisation π (A.filtration.obj i)
@@ -301,10 +301,12 @@ theorem filteredCategory_additive_exists {C : Type u} [Category.{v} C] [Abelian 
     Nonempty (Formalization.Books.Homology.Unit03.AdditiveCategory (FilteredObject C)) := by
   sorry
 
-@[instance_reducible]
-noncomputable def filteredCategory_additive {C : Type u} [Category.{v} C] [Abelian C] :
-    Formalization.Books.Homology.Unit03.AdditiveCategory (FilteredObject C) := by
-  exact Classical.choice (filteredCategory_additive_exists (C := C))
+noncomputable instance filteredCategory_additive {C : Type u} [Category.{v} C]
+    [Abelian C] :
+    Formalization.Books.Homology.Unit03.AdditiveCategory (FilteredObject C) :=
+  { toPreadditive := inferInstance
+    toHasFiniteProducts :=
+      (Classical.choice (filteredCategory_additive_exists (C := C))).toHasFiniteProducts }
 
 /-- The filtered kernel object uses the induced filtration on the kernel
     subobject. -/
@@ -802,13 +804,15 @@ def filteredCokernelGradedShortComplex {C : Type u} [Category.{v} C] [Abelian C]
     (gradedPieceMap (C := C) f p)
     (gradedPieceMap (C := C) (filteredCokernelπ f) p) (by sorry)
 
-theorem graded_piece_kernel_coimage_exact {C : Type u} [Category.{v} C]
-    [Abelian C] {A B : FilteredObject C} (f : A ⟶ B) (p : ℤ) :
+theorem graded_piece_kernel_exact {C : Type u} [Category.{v} C]
+    [Abelian C] {A B : FilteredObject C} (f : A ⟶ B) (p : ℤ)
+    (hf : Strict f) :
     (filteredKernelGradedShortComplex f p).Exact := by
   sorry
 
-theorem graded_piece_image_cokernel_exact {C : Type u} [Category.{v} C]
-    [Abelian C] {A B : FilteredObject C} (f : A ⟶ B) (p : ℤ) :
+theorem graded_piece_cokernel_exact {C : Type u} [Category.{v} C]
+    [Abelian C] {A B : FilteredObject C} (f : A ⟶ B) (p : ℤ)
+    (hf : Strict f) :
     (filteredCokernelGradedShortComplex f p).Exact := by
   sorry
 

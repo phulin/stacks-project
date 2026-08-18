@@ -1,4 +1,5 @@
 import Formalization.Books.Modules.Unit05.Supports
+import Mathlib.Algebra.Category.ModuleCat.Sheaf.Generators
 import Mathlib.Algebra.Homology.ShortComplex.ShortExact
 
 /-!
@@ -9,9 +10,12 @@ definition and Lemmas `pullback-finite-type`, `extension-finite-type`,
 `finite-type-surjective-on-stalk`, `finite-type-stalk-zero`,
 `support-finite-type-closed`, `finite-type-quasi-compact-colimit`, and
 `set-isomorphism-classes-finite-type-modules`).  The finite-type condition is
-Mathlib's canonical `SheafOfModules.IsFiniteType` class; the statements below
-use the project interfaces for ringed-space pullback, open restriction,
-stalks, support, colimits, and short exact complexes.
+Mathlib's canonical `SheafOfModules.IsFiniteType` class, whose local-generator
+data is exactly the source definition.  The statements below use the project
+interfaces for ringed-space pullback, open restriction, stalks, support,
+colimits, and short exact complexes.  The source's final equality in the
+injective-colimit clause is represented by the canonical categorical
+isomorphism, since colimits are not definitionally fixed representatives.
 -/
 
 namespace Formalization.Books.Modules.Unit09

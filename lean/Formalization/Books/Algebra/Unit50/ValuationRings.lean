@@ -174,7 +174,7 @@ theorem directLimit_isValuationRing
     [DirectedSystem A (f · · ·)] [∀ i, ValuationRing (A i)] :
     letI : IsDomain (DirectLimit A f) := directLimit_isDomain f
     ValuationRing (DirectLimit A f) := by
-  letI : IsDomain (DirectLimit A f) := directLimit_isDomain f
+  let : IsDomain (DirectLimit A f) := directLimit_isDomain f
   exact { toPreValuationRing := directLimit_isPreValuationRing f }
 
 /-- The intersection of a valuation subring with a subfield is a valuation
@@ -233,7 +233,7 @@ theorem localizationAtPrime_valuationRing
     {A : Type u} [CommRing A] [IsDomain A] [ValuationRing A]
     (p : Ideal A) [p.IsPrime] :
     ValuationRing (Localization.AtPrime p) := by
-  letI : PreValuationRing (Localization.AtPrime p) := by
+  let : PreValuationRing (Localization.AtPrime p) := by
     refine { cond' := ?_ }
     intro x y
     obtain ⟨a, s, rfl⟩ := IsLocalization.exists_mk'_eq p.primeCompl x

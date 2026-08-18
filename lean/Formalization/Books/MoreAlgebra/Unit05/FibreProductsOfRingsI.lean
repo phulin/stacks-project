@@ -1711,7 +1711,8 @@ theorem moduleFiberProductHomPairEquiv_exists
               moduleGluingLeftObj (D := D) (X := X)) ×
           ((ModuleCat.extendScalars D.v).obj L ⟶
             moduleGluingRightObj (D := D) (X := X)) //
-          p ∈ moduleCompatibleHomPairs D L X}) := by
+          p ∈ moduleCompatibleHomPairs D L X}) := by sorry
+/- Original nontrivial proof retained for later completion:
   have hcompat :
       ∀ (p : (ModuleCat.extendScalars D.u).obj L ⟶ X.obj.left)
         (q : (ModuleCat.extendScalars D.v).obj L ⟶ X.obj.right),
@@ -1808,6 +1809,7 @@ theorem moduleFiberProductHomPairEquiv_exists
       simp [moduleFiberLeftMap, moduleFiberRightMap,
         ModuleCat.extendRestrictScalarsAdj_homEquiv_apply] at *
   sorry
+-/
 
 /-- The second displayed Hom fibre product is equivalent to maps into the
 categorical module pullback. -/

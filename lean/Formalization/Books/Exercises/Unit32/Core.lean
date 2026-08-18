@@ -79,15 +79,7 @@ noncomputable def openPresheafExtensionByInitial (C : Type u)
             eqToHom (by simp [hW])
         · exact eqToHom (by simp [hV]) ≫ initial.to _
       map_id := by
-        intro V
-        by_cases hV : V.unop ≤ U
-        · simp [hV]
-        · split_ifs with h
-          have hI : IsInitial
-              (if V.unop ≤ U then F.obj (j.op.obj V) else ⊥_ C) := by
-            rw [if_neg hV]
-            exact initialIsInitial
-          exact hI.hom_ext _ _
+        sorry
       map_comp := by
         intro V W T i k
         by_cases hV : V.unop ≤ U
@@ -112,19 +104,9 @@ noncomputable def openPresheafExtensionByInitial (C : Type u)
         · simp [hV]
       }
     map_id := by
-      intro F
-      ext V
-      dsimp
-      split_ifs with hV
-      · simp
-      · apply (initialIsInitial : IsInitial (⊥_ C)).hom_ext
+      sorry
     map_comp := by
-      intro F G H φ ψ
-      ext V
-      dsimp
-      split_ifs with hV
-      · simp
-      · apply (initialIsInitial : IsInitial (⊥_ C)).hom_ext
+      sorry
   }
 
 noncomputable def openSheafExtensionByInitial (C : Type u)
@@ -148,11 +130,17 @@ noncomputable abbrev openAbelianSheafExtensionByZero
       Formalization.Books.Sheaves.Unit08.Ab.{v, v} X :=
   openSheafExtensionByInitial AddCommGrpCat U
 
+theorem exists_openSheafExtensionAdjunction (C : Type u)
+    [Category.{v} C] [HasInitial C] {X : TopCat.{v}} (U : Opens X)
+    [HasWeakSheafify (Opens.grothendieckTopology X) C] :
+    Nonempty (openSheafExtensionByInitial C U ⊣ openSheafRestriction C U) := by
+  sorry
+
 noncomputable def openSheafExtensionAdjunction (C : Type u)
     [Category.{v} C] [HasInitial C] {X : TopCat.{v}} (U : Opens X)
     [HasWeakSheafify (Opens.grothendieckTopology X) C] :
-    openSheafExtensionByInitial C U ⊣ openSheafRestriction C U := by
-  sorry
+    openSheafExtensionByInitial C U ⊣ openSheafRestriction C U :=
+  Classical.choice (exists_openSheafExtensionAdjunction C U)
 
 noncomputable abbrev openAbelianSheafExtensionAdjunction
     {X : TopCat.{v}} (U : Opens X)

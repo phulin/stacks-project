@@ -1366,7 +1366,7 @@ theorem cochain_homotopy_shift_self (a : A ⟶ B) :
               simp [ρ, CochainComplex.shiftFunctorObjXIso,
                 CochainComplex.shiftFunctor, Preadditive.neg_comp]
               have hd := HomologicalComplex.d_comp_XIsoOfEq_hom B
-                (by omega : i + 1 + (-1 : ℤ) = i) (i + (-1 : ℤ))
+                (by norm_num : i + 1 + (-1 : ℤ) = i) (i + (-1 : ℤ))
               convert congrArg (fun z => g.f i ≫ z) hd using 1
               exact Category.assoc _ _ _
               rfl

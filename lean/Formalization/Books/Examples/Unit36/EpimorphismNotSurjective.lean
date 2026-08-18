@@ -753,16 +753,16 @@ private lemma local_zero_dimensional_of_polynomial_quotient
     exact ⟨fun hx => hx.not_isUnit, hnil x⟩
   have hmax : (nilradical Q).IsMaximal :=
     ((Ring.krullDimLE_zero_and_isLocalRing_tfae Q).out 2 3 rfl rfl).mp hnil_iff
-  letI : (nilradical Q).IsMaximal := hmax
+  let _ : (nilradical Q).IsMaximal := hmax
   have hdimLE : Ring.KrullDimLE 0 Q := Ring.KrullDimLE.of_isMaximal_nilradical Q
   exact ⟨hlocal, (ringKrullDimZero_iff_ringKrullDim_eq_zero).mp hdimLE⟩
 
 /-- The source quotient is a local ring of Krull dimension zero. -/
 theorem sourceRing_is_local_zero_dimensional (k : Type u) [Field k] :
     IsLocalRing (sourceRing k) ∧ ringKrullDim (sourceRing k) = 0 := by
-  letI : Nontrivial (targetRing k) :=
+  let _ : Nontrivial (targetRing k) :=
     ⟨⟨targetYElement k 1, 0, target_y_one_ne_zero k⟩⟩
-  letI : Nontrivial (sourceRing k) := (sourceToTarget k).domain_nontrivial
+  let _ : Nontrivial (sourceRing k) := (sourceToTarget k).domain_nontrivial
   apply local_zero_dimensional_of_polynomial_quotient
     (Q := sourceRing k) (σ := sourceVariable)
     (Ideal.Quotient.mk (sourceRelationIdeal k))
@@ -785,7 +785,7 @@ theorem sourceRing_is_local_zero_dimensional (k : Type u) [Field k] :
 /-- The target quotient is a local ring of Krull dimension zero. -/
 theorem targetRing_is_local_zero_dimensional (k : Type u) [Field k] :
     IsLocalRing (targetRing k) ∧ ringKrullDim (targetRing k) = 0 := by
-  letI : Nontrivial (targetRing k) :=
+  let _ : Nontrivial (targetRing k) :=
     ⟨⟨targetYElement k 1, 0, target_y_one_ne_zero k⟩⟩
   apply local_zero_dimensional_of_polynomial_quotient
     (Q := targetRing k) (σ := targetVariable)

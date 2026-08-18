@@ -948,7 +948,72 @@ theorem degree_zero_shift_family_nonempty :
     Nonempty
       {T : LinearShiftFamily R (DegreeZero (inferInstance : GradedCategory R C)) //
         IsDegreeZeroShiftRestriction S T} := by
-  sorry
+  have hcoe2 {X Y : DegreeZero (inferInstance : GradedCategory R C)}
+      (h : X = Y) {U V : C} (k : U = V)
+      (hU : DegreeZero.obj (inferInstance : GradedCategory R C) X = U)
+      (hV : DegreeZero.obj (inferInstance : GradedCategory R C) Y = V) :
+      HEq (eqToHom h : X ⟶ Y).1 (eqToHom k) := by
+    cases h
+    cases hU
+    cases hV
+    cases k
+    rfl
+  let T : LinearShiftFamily R (DegreeZero (inferInstance : GradedCategory R C)) :=
+    { shift := fun n => (S.graded n).degreeZero
+      additive := fun n => GradedFunctor.degreeZero_additive (S.graded n)
+      linear := fun n => GradedFunctor.degreeZero_linear (S.graded n)
+      shift_comp := by
+        intro n m
+        refine CategoryTheory.Functor.ext
+          (fun X => ?_) (fun X Y f => ?_)
+        · exact congrArg (fun F : C ⥤ C => DegreeZero.of _ (F.obj X.down))
+            (S.shift_comp n m)
+        · apply Subtype.ext
+          dsimp [GradedFunctor.degreeZero, CategoryTheory.Functor.comp,
+            DegreeZero.category]
+          convert Functor.congr_hom (S.shift_comp n m) f.1 using 1
+          · rfl
+          · rfl
+          · apply heq_of_eq
+            change
+              (eqToHom (C := DegreeZero
+                (inferInstance : GradedCategory R C)) _ : _ ⟶ _).1 ≫
+                (S.shift (n + m)).map f.1 ≫
+              (eqToHom (C := DegreeZero
+                (inferInstance : GradedCategory R C)) _ : _ ⟶ _).1 = _
+            congr 1
+            · apply eq_of_heq
+              exact hcoe2 _ _ rfl rfl
+            · congr 1
+              apply eq_of_heq
+              exact hcoe2 _ _ rfl rfl
+      shift_zero := by
+        refine CategoryTheory.Functor.ext
+          (fun X => ?_) (fun X Y f => ?_)
+        · exact congrArg (fun F : C ⥤ C => DegreeZero.of _ (F.obj X.down))
+            S.shift_zero
+        · apply Subtype.ext
+          dsimp [GradedFunctor.degreeZero, CategoryTheory.Functor.comp,
+            DegreeZero.category]
+          convert Functor.congr_hom S.shift_zero f.1 using 1
+          · rfl
+          · rfl
+          · apply heq_of_eq
+            change
+              (eqToHom (C := DegreeZero
+                (inferInstance : GradedCategory R C)) _ : _ ⟶ _).1 ≫
+                (𝟭 C).map f.1 ≫
+              (eqToHom (C := DegreeZero
+                (inferInstance : GradedCategory R C)) _ : _ ⟶ _).1 = _
+            congr 1
+            · apply eq_of_heq
+              exact hcoe2 _ _ rfl rfl
+            · congr 1
+              apply eq_of_heq
+              exact hcoe2 _ _ rfl rfl }
+  refine ⟨T, ?_⟩
+  intro n
+  rfl
 
 noncomputable def degree_zero_shift_family :
     LinearShiftFamily R (DegreeZero (inferInstance : GradedCategory R C)) :=

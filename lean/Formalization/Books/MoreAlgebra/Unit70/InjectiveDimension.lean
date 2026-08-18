@@ -148,7 +148,6 @@ structure InjectiveAmplitudeTruncationData
   truncationTermIso : ∀ (i : ℤ), a ≤ i → i < b →
     Nonempty (truncation.X i ≅ I.X i)
   kernel : ModuleCat.{u} R
-  kernelInjective : Injective kernel
   kernelIso : kernel ≅ CategoryTheory.Limits.kernel (I.d b (b + 1))
   triangle : Triangle (DerivedCategory (ModuleCat.{u} R))
   distinguished : triangle ∈ distTriang (DerivedCategory (ModuleCat.{u} R))
@@ -172,6 +171,16 @@ theorem injective_amplitude_truncation_exists
     (hRep : Nonempty
       ((DerivedCategory.Q (C := ModuleCat.{u} R)).obj I ≅ K)) :
     Nonempty (InjectiveAmplitudeTruncationData K I a b) := by
+  sorry
+
+/-- Under the Ext-vanishing hypothesis used in the source, the kernel at the
+right edge of the injective truncation is injective. -/
+theorem injective_amplitude_truncated_kernel_injective
+    (T : InjectiveAmplitudeTruncationData K I a b)
+    (hExt : ∀ J : Ideal R,
+      DerivedExtVanishes
+        (DerivedObject (ModuleCat.of R (R ⧸ J))) K (1 + b)) :
+    Injective T.kernel := by
   sorry
 
 /-! ## The exact Ext sequence -/

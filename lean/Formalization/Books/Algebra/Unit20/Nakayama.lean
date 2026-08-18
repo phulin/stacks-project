@@ -115,7 +115,40 @@ theorem nakayama_part_five
         (Submodule.smul_top_le_comap_smul_top I φ))) :
     ∃ f : R, f - 1 ∈ I ∧
       Function.Surjective (LocalizedModule.map (Submonoid.powers f) φ) := by
-  sorry
+  have hM : (⊤ : Submodule R M) =
+      LinearMap.range φ ⊔ I • (⊤ : Submodule R M) := by
+    have hq : LinearMap.range
+        ((I • (⊤ : Submodule R N)).mapQ (I • (⊤ : Submodule R M)) φ
+          (Submodule.smul_top_le_comap_smul_top I φ)) = ⊤ :=
+      LinearMap.range_eq_top.mpr hφ
+    rw [Submodule.range_mapQ] at hq
+    rw [Submodule.map_mkQ_eq_top] at hq
+    have hq' : (⊤ : Submodule R M) = I • (⊤ : Submodule R M) ⊔ LinearMap.range φ :=
+      hq.symm
+    rw [sup_comm] at hq'
+    exact hq'
+  obtain ⟨f, hf, hsmul⟩ :=
+    Submodule.exists_sub_one_mem_and_smul_le_of_fg_of_le_sup
+      (I := I) (N := LinearMap.range φ) (N' := (⊤ : Submodule R M)) (P := ⊤)
+      Module.Finite.fg_top le_top hM.le
+  refine ⟨f, hf, ?_⟩
+  rw [← IsLocalizedModule.map_surjective_iff_localizedModuleMap_surjective
+    (LocalizedModule.mkLinearMap (Submonoid.powers f) N)
+    (LocalizedModule.mkLinearMap (Submonoid.powers f) M)]
+  rw [← LinearMap.range_eq_top]
+  rw [LinearMap.range_localizedMap_eq_localized₀_range
+    (Submonoid.powers f)
+    (LocalizedModule.mkLinearMap (Submonoid.powers f) N)
+    (LocalizedModule.mkLinearMap (Submonoid.powers f) M) φ]
+  have hloc := Submodule.localized₀_le_localized₀_of_smul_le
+    (Submonoid.powers f) (LocalizedModule.mkLinearMap (Submonoid.powers f) M)
+    ⟨f, Submonoid.mem_powers f⟩ hsmul
+  have htop :
+      (⊤ : Submodule R (LocalizedModule (Submonoid.powers f) M)) ≤
+        Submodule.localized₀ (Submonoid.powers f)
+          (LocalizedModule.mkLinearMap (Submonoid.powers f) M) (LinearMap.range φ) := by
+    simpa only [Submodule.localized₀_top] using hloc
+  exact le_antisymm le_top htop
 
 /-- Nakayama, part (6): the Jacobson-radical version of part (5). -/
 theorem nakayama_part_six
@@ -127,7 +160,19 @@ theorem nakayama_part_six
         (Submodule.smul_top_le_comap_smul_top I φ)))
     (hI : I ≤ Ring.jacobson R) :
     Function.Surjective φ := by
-  sorry
+  have hM : (⊤ : Submodule R M) = LinearMap.range φ ⊔ I • (⊤ : Submodule R M) := by
+    have hq : LinearMap.range
+        ((I • (⊤ : Submodule R N)).mapQ (I • (⊤ : Submodule R M)) φ
+          (Submodule.smul_top_le_comap_smul_top I φ)) = ⊤ :=
+      LinearMap.range_eq_top.mpr hφ
+    rw [Submodule.range_mapQ] at hq
+    rw [Submodule.map_mkQ_eq_top] at hq
+    have hq' : (⊤ : Submodule R M) = I • (⊤ : Submodule R M) ⊔ LinearMap.range φ :=
+      hq.symm
+    rw [sup_comm] at hq'
+    exact hq'
+  rw [← LinearMap.range_eq_top]
+  exact nakayama_part_four I (LinearMap.range φ) (⊤ : Submodule R M) hM hI
 
 /-- Nakayama, part (7): a finite generating family modulo `I` generates after
 localization at a scalar in `1 + I`. -/
@@ -141,7 +186,78 @@ theorem nakayama_part_seven
       Submodule.span (Localization.Away f)
         (Set.range (fun i =>
           LocalizedModule.mkLinearMap (Submonoid.powers f) M (x i))) = ⊤ := by
-  sorry
+  let ψ : (Fin n →₀ R) →ₗ[R] M := Finsupp.linearCombination R x
+  have hq : LinearMap.range
+      ((I • (⊤ : Submodule R (Fin n →₀ R))).mapQ
+        (I • (⊤ : Submodule R M)) ψ
+        (Submodule.smul_top_le_comap_smul_top I ψ)) = ⊤ := by
+    rw [Submodule.range_mapQ, Finsupp.range_linearCombination]
+    rw [Submodule.map_span]
+    have himage :
+        (I • (⊤ : Submodule R M)).mkQ '' Set.range x =
+          Set.range (fun i => (I • (⊤ : Submodule R M)).mkQ (x i)) := by
+      ext y
+      constructor
+      · rintro ⟨z, ⟨i, rfl⟩, rfl⟩
+        exact ⟨i, rfl⟩
+      · rintro ⟨i, rfl⟩
+        exact ⟨x i, ⟨i, rfl⟩, rfl⟩
+    rw [himage]
+    exact hx
+  have hφ : Function.Surjective
+      ((I • (⊤ : Submodule R (Fin n →₀ R))).mapQ
+        (I • (⊤ : Submodule R M)) ψ
+        (Submodule.smul_top_le_comap_smul_top I ψ)) :=
+    LinearMap.range_eq_top.mp hq
+  obtain ⟨f, hf, hmap⟩ := nakayama_part_five I ψ hφ
+  have hsource_id :
+      Submodule.span R
+        (Set.range (fun i : Fin n => Finsupp.single (id i) (1 : R))) = ⊤ := by
+    rw [← Finsupp.range_lmapDomain]
+    rw [Finsupp.lmapDomain_id]
+    simp
+  have hsource :
+      Submodule.span R (Set.range (fun i : Fin n => Finsupp.single i (1 : R))) = ⊤ := by
+    simpa only [id_eq] using hsource_id
+  refine ⟨f, hf, ?_⟩
+  have hsource_loc :
+      Submodule.span (Localization (Submonoid.powers f))
+        ((LocalizedModule.mkLinearMap (Submonoid.powers f) (Fin n →₀ R)) ''
+          Set.range (fun i : Fin n => Finsupp.single i (1 : R))) = ⊤ :=
+    span_eq_top_of_isLocalizedModule (Localization (Submonoid.powers f))
+      (Submonoid.powers f)
+      (LocalizedModule.mkLinearMap (Submonoid.powers f) (Fin n →₀ R)) hsource
+  have hspan :
+      Submodule.span (Localization (Submonoid.powers f))
+        ((LocalizedModule.map (Submonoid.powers f) ψ) ''
+          ((LocalizedModule.mkLinearMap (Submonoid.powers f) (Fin n →₀ R)) ''
+            Set.range (fun i => Finsupp.single i (1 : R)))) = ⊤ := by
+    rw [Submodule.span_image, hsource_loc, Submodule.map_top]
+    exact LinearMap.range_eq_top.mpr hmap
+  have himage :
+      (LocalizedModule.map (Submonoid.powers f) ψ) ''
+          ((LocalizedModule.mkLinearMap (Submonoid.powers f) (Fin n →₀ R)) ''
+            Set.range (fun i => Finsupp.single i (1 : R))) =
+        Set.range (fun i =>
+          LocalizedModule.mkLinearMap (Submonoid.powers f) M (x i)) := by
+    ext y
+    constructor
+    · rintro ⟨z, ⟨w, ⟨i, rfl⟩, rfl⟩, rfl⟩
+      refine ⟨i, ?_⟩
+      simp [ψ]
+    · rintro ⟨i, rfl⟩
+      refine ⟨(LocalizedModule.mkLinearMap (Submonoid.powers f) (Fin n →₀ R))
+          (Finsupp.single i 1), ⟨Finsupp.single i 1, ⟨i, rfl⟩, rfl⟩, ?_⟩
+      change LocalizedModule.map (Submonoid.powers f) ψ
+          (LocalizedModule.mk (Finsupp.single i 1) 1) =
+        LocalizedModule.mk (x i) 1
+      rw [LocalizedModule.map_mk]
+      simp [ψ]
+  change Submodule.span (Localization (Submonoid.powers f))
+    (Set.range (fun i =>
+      LocalizedModule.mkLinearMap (Submonoid.powers f) M (x i))) = ⊤
+  rw [← himage]
+  exact hspan
 
 /-- Nakayama, part (8): the Jacobson-radical version of part (7). -/
 theorem nakayama_part_eight
@@ -152,7 +268,34 @@ theorem nakayama_part_eight
       (Set.range (fun i => (I • (⊤ : Submodule R M)).mkQ (x i))) = ⊤)
     (hI : I ≤ Ring.jacobson R) :
     Submodule.span R (Set.range x) = ⊤ := by
-  sorry
+  let ψ : (Fin n →₀ R) →ₗ[R] M := Finsupp.linearCombination R x
+  have hq : LinearMap.range
+      ((I • (⊤ : Submodule R (Fin n →₀ R))).mapQ
+        (I • (⊤ : Submodule R M)) ψ
+        (Submodule.smul_top_le_comap_smul_top I ψ)) = ⊤ := by
+    rw [Submodule.range_mapQ, Finsupp.range_linearCombination]
+    rw [Submodule.map_span]
+    have himage :
+        (I • (⊤ : Submodule R M)).mkQ '' Set.range x =
+          Set.range (fun i => (I • (⊤ : Submodule R M)).mkQ (x i)) := by
+      ext y
+      constructor
+      · rintro ⟨z, ⟨i, rfl⟩, rfl⟩
+        exact ⟨i, rfl⟩
+      · rintro ⟨i, rfl⟩
+        exact ⟨x i, ⟨i, rfl⟩, rfl⟩
+    rw [himage]
+    exact hx
+  have hφ : Function.Surjective
+      ((I • (⊤ : Submodule R (Fin n →₀ R))).mapQ
+        (I • (⊤ : Submodule R M)) ψ
+        (Submodule.smul_top_le_comap_smul_top I ψ)) :=
+    LinearMap.range_eq_top.mp hq
+  have hsurj : Function.Surjective ψ :=
+    nakayama_part_six I ψ hφ hI
+  rw [span_range_eq_top_iff_surjective_finsuppLinearCombination R]
+  change Function.Surjective ψ
+  exact hsurj
 
 /-- Nakayama, part (9): finiteness is unnecessary when the ideal is nilpotent. -/
 theorem nakayama_part_nine

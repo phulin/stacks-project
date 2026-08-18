@@ -309,7 +309,7 @@ private lemma strict_id_whisker_left_identity
     rfl
   rw [hleft, hα]
   rw [Bicategory.id_whiskerLeft]
-  simp [Category.assoc]
+  simp
 
 private lemma eqToHom_proof_irrel
     {C : Type u} [CategoryStruct.{v} C] {X Y : C} (p q : X = Y) :
@@ -1204,19 +1204,12 @@ theorem dottedArrow_baseChange_equivalence
             exact congrArg (fun t => 𝟙 (A.a ≫ B.q) ≫
               (H.hom ▷ B.q ≫ t)) hL
           exact h1.trans (h2.trans (by
-            have he :
-                eqToHom (Bicategory.Strict.id_comp (A'.a ≫ B.q)).symm =
-                  (Bicategory.leftUnitor (A'.a ≫ B.q)).inv := by
-              rw [Bicategory.Strict.leftUnitor_eqToIso]
-              rfl
-            convert (strict_id_whisker_left_identity H.hom B.q) using 1 <;>
-              simp only [he, BaseChangeData.leftSquare,
+            convert (strict_id_whisker_left_identity H.hom B.q) using 1;
+              simp only [BaseChangeData.leftSquare,
               TwoCommutativeDiagram.strictAssocInv,
               Bicategory.Strict.leftUnitor_eqToIso,
-              Bicategory.Strict.associator_eqToIso, Bicategory.id_whiskerLeft,
-              Bicategory.whiskerLeft_id, Bicategory.leftUnitor_naturality,
-              Iso.hom_inv_id_assoc, Iso.inv_hom_id_assoc, eqToHom_trans,
-              Category.id_comp, Category.assoc] <;> rfl)) }
+              Category.assoc];
+              rfl)) }
       let τ₁ := TwoCommutativeDiagram.TwoHom.comp δ
         (liftMapHom (forward.map H))
       let τ₂ := TwoCommutativeDiagram.TwoHom.comp explicitMap

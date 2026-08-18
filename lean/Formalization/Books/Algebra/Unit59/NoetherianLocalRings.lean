@@ -188,7 +188,26 @@ theorem idealPowerPiece_isFiniteLength
     [Module.Finite R M] (I : Ideal R) (hI : IsIdealOfDefinition R I)
     (n : ℕ) :
     IsFiniteLength R (idealPowerPiece I M n) := by
-  sorry
+  let P : Submodule R M := I ^ n • (⊤ : Submodule R M)
+  let Q : Submodule R M := I ^ (n + 1) • (⊤ : Submodule R M)
+  let K : Submodule R P := Submodule.comap P.subtype Q
+  change IsFiniteLength R (P ⧸ K)
+  have hkill : I • (⊤ : Submodule R (P ⧸ K)) = ⊥ := by
+    have hmap : I • (⊤ : Submodule R (P ⧸ K)) =
+        (I • (⊤ : Submodule R P)).map K.mkQ := by
+      rw [Submodule.map_smul'', Submodule.map_top,
+        LinearMap.range_eq_top.mpr K.mkQ_surjective]
+    rw [hmap]
+    apply le_antisymm
+    · rw [Submodule.map_le_iff_le_comap, Submodule.comap_bot,
+        Submodule.ker_mkQ]
+      have hIP : I • P ≤ Q := by
+        simpa [P, Q, pow_succ, Submodule.mul_smul, mul_comm]
+      intro x hx
+      exact hIP ((Submodule.mem_smul_top_iff I P x).mp hx)
+    · exact bot_le
+  exact finiteLength_of_pow_smul_top_eq_bot_of_isIdealOfDefinition I hI
+    ⟨1, hkill⟩
 
 theorem idealPowerCumulativeQuotient_isFiniteLength
     {R : Type u} {M : Type v} [CommRing R] [IsLocalRing R]
@@ -196,7 +215,21 @@ theorem idealPowerCumulativeQuotient_isFiniteLength
     [Module.Finite R M] (I : Ideal R) (hI : IsIdealOfDefinition R I)
     (n : ℕ) :
     IsFiniteLength R (idealPowerCumulativeQuotient I M n) := by
-  sorry
+  let Q : Submodule R M := I ^ (n + 1) • (⊤ : Submodule R M)
+  change IsFiniteLength R (M ⧸ Q)
+  have hkill : I ^ (n + 1) • (⊤ : Submodule R (M ⧸ Q)) = ⊥ := by
+    have hmap : I ^ (n + 1) • (⊤ : Submodule R (M ⧸ Q)) =
+        (I ^ (n + 1) • (⊤ : Submodule R M)).map Q.mkQ := by
+      rw [Submodule.map_smul'', Submodule.map_top,
+        LinearMap.range_eq_top.mpr Q.mkQ_surjective]
+    rw [hmap]
+    apply le_antisymm
+    · rw [Submodule.map_le_iff_le_comap, Submodule.comap_bot,
+        Submodule.ker_mkQ]
+      exact le_rfl
+    · exact bot_le
+  exact finiteLength_of_pow_smul_top_eq_bot_of_isIdealOfDefinition I hI
+    ⟨n + 1, hkill⟩
 
 theorem hilbertPowerPiece_isFiniteLength
     (R : Type u) (M : Type v) [CommRing R] [IsLocalRing R]
@@ -204,7 +237,8 @@ theorem hilbertPowerPiece_isFiniteLength
     [Module.Finite R M] (n : ℕ) :
     IsFiniteLength R
       (idealPowerPiece (IsLocalRing.maximalIdeal R) M n) := by
-  sorry
+  exact idealPowerPiece_isFiniteLength (IsLocalRing.maximalIdeal R)
+    (maximalIdeal_isIdealOfDefinition R) n
 
 theorem hilbertPowerCumulativeQuotient_isFiniteLength
     (R : Type u) (M : Type v) [CommRing R] [IsLocalRing R]

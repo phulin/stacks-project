@@ -93,6 +93,22 @@ theorem KZero.classOf_zero
     simpa only [add_sub_cancel_right, sub_self] using
       (congrArg (fun z => z - KZero.classOf (0 : C)) h.symm))
 
+private theorem kZero_classOf_iso
+    {D : Type u'} [Category.{v'} D] [Abelian D]
+    {X Y : D} (e : X ≅ Y) :
+    KZero.classOf X = KZero.classOf Y := by
+  let S : ShortComplex D :=
+    ShortComplex.mk e.hom (0 : Y ⟶ (0 : D)) (by simp)
+  let hS : S.ShortExact :=
+    (ShortComplex.Splitting.ofIsIsoOfIsZero S (by
+      dsimp [S]
+      infer_instance) (isZero_zero D)).shortExact
+  have h := KZero.classOf_shortExact
+    ({ sequence := S, shortExact := hS } : KZeroRelation D)
+  change KZero.classOf Y = KZero.classOf X + KZero.classOf (0 : D) at h
+  rw [KZero.classOf_zero] at h
+  exact h.symm
+
 /-! ## Maps induced by exact functors -/
 
 /-- The homomorphism on K-groups induced by an exact functor. -/
@@ -197,25 +213,79 @@ theorem cyclicComplex_isExactAfter_serreQuotient_iff
     (P : ObjectProperty C) [P.IsSerreClass] (K : CyclicComplex C) :
     letI : Abelian (serreQuotient P) := serreQuotientAbelian P
     K.IsExactAfter (serreQuotientExactFunctor P) ↔ P K.H0 ∧ P K.H1 := by
-  sorry
+  dsimp only [CyclicComplex.IsExactAfter]
+  rw [@cyclicComplex_isExact_iff_isZero_H0_H1 _ _ (serreQuotientAbelian P)]
+  constructor
+  · rintro ⟨h₀, h₁⟩
+    constructor
+    · apply (ObjectProperty.SerreClassLocalization.isZero_obj_iff
+        (serreQuotientFunctor P) P K.H0).1
+      exact IsZero.of_iso h₀
+        ((ShortComplex.mk K.φ K.ψ K.φψ).mapHomologyIso
+          ((serreQuotientExactFunctor P).obj)).symm
+    · apply (ObjectProperty.SerreClassLocalization.isZero_obj_iff
+        (serreQuotientFunctor P) P K.H1).1
+      exact IsZero.of_iso h₁
+        ((ShortComplex.mk K.ψ K.φ K.ψφ).mapHomologyIso
+          ((serreQuotientExactFunctor P).obj)).symm
+  · rintro ⟨h₀, h₁⟩
+    constructor
+    · apply IsZero.of_iso
+        ((ObjectProperty.SerreClassLocalization.isZero_obj_iff
+          (serreQuotientFunctor P) P K.H0).2 h₀)
+      exact (ShortComplex.mk K.φ K.ψ K.φψ).mapHomologyIso
+        ((serreQuotientExactFunctor P).obj)
+    · apply IsZero.of_iso
+        ((ObjectProperty.SerreClassLocalization.isZero_obj_iff
+          (serreQuotientFunctor P) P K.H1).2 h₁)
+      exact (ShortComplex.mk K.ψ K.φ K.ψφ).mapHomologyIso
+        ((serreQuotientExactFunctor P).obj)
 
 /-- A bundled exact inclusion of a Serre full subcategory. -/
 noncomputable def serreSubcategoryExactFunctor
     (P : ObjectProperty C) [P.IsSerreClass] :
     P.FullSubcategory ⥤ₑ C := by
-  /-
+  have hBin : P.IsClosedUnderBinaryProducts :=
+    ObjectProperty.IsClosedUnderLimitsOfShape.mk' (P := P)
+      (J := Discrete WalkingPair) (by
+        rintro _ ⟨F, hF⟩
+        exact P.prop_of_iso
+          (IsLimit.conePointsIsoOfNatIso (BinaryBiproduct.isLimit _ _)
+            (limit.isLimit F) (diagramIsoPair F).symm)
+          (P.prop_biprod (hF _) (hF _)))
+  have hFinite : P.IsClosedUnderFiniteProducts :=
+    @ObjectProperty.IsClosedUnderFiniteProducts.mk' C _ P inferInstance inferInstance hBin
   letI : Abelian P.FullSubcategory :=
-    (serre_subcategory_is_abelian_and_inclusion_exact P).1.some
-  exact ⟨P.ι, (serre_subcategory_is_abelian_and_inclusion_exact P).2⟩
-  -/
-  sorry
+    @ObjectProperty.instAbelianFullSubcategoryOfContainsZeroOfIsClosedUnderKernelsOfIsClosedUnderCokernelsOfIsClosedUnderFiniteProducts
+      C _ P inferInstance inferInstance inferInstance inferInstance hFinite
+  refine ⟨P.ι, ?_⟩
+  rw [exactFunctor_iff]
+  constructor
+  · apply (Functor.preservesFiniteLimits_tfae P.ι).out 2 3 |>.mp
+    intro X Y f
+    exact P.preservesKernels_ι f
+  · apply (Functor.preservesFiniteColimits_tfae P.ι).out 2 3 |>.mp
+    intro X Y f
+    exact P.preservesCokernels_ι f
 
 /-- The map on K-groups induced by the inclusion of a Serre subcategory. -/
 noncomputable def serreSubcategoryKZeroMap
     (P : ObjectProperty C) [P.IsSerreClass] :
     KZero P.FullSubcategory →+ KZero C :=
   by
-    letI : Abelian P.FullSubcategory := by sorry
+    have hBin : P.IsClosedUnderBinaryProducts :=
+      ObjectProperty.IsClosedUnderLimitsOfShape.mk' (P := P)
+        (J := Discrete WalkingPair) (by
+          rintro _ ⟨F, hF⟩
+          exact P.prop_of_iso
+            (IsLimit.conePointsIsoOfNatIso (BinaryBiproduct.isLimit _ _)
+              (limit.isLimit F) (diagramIsoPair F).symm)
+            (P.prop_biprod (hF _) (hF _)))
+    have hFinite : P.IsClosedUnderFiniteProducts :=
+      @ObjectProperty.IsClosedUnderFiniteProducts.mk' C _ P inferInstance inferInstance hBin
+    letI : Abelian P.FullSubcategory :=
+      @ObjectProperty.instAbelianFullSubcategoryOfContainsZeroOfIsClosedUnderKernelsOfIsClosedUnderCokernelsOfIsClosedUnderFiniteProducts
+        C _ P inferInstance inferInstance inferInstance inferInstance hFinite
     exact kZeroMap (serreSubcategoryExactFunctor P)
 
 /-- The map on K-groups induced by the Serre quotient functor. -/

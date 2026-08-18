@@ -5,8 +5,11 @@ import Mathlib.Algebra.Module.Projective
 import Mathlib.Algebra.Polynomial.Eval.Algebra
 import Mathlib.GroupTheory.Congruence.Hom
 import Mathlib.GroupTheory.FreeAbelianGroup
+import Mathlib.LinearAlgebra.FreeModule.Finite.Basic
 import Mathlib.RingTheory.EuclideanDomain
+import Mathlib.RingTheory.Flat.Basic
 import Mathlib.RingTheory.Finiteness.Cardinality
+import Mathlib.RingTheory.LocalRing.Module
 
 /-!
 # Commutative Algebra, Chapter 55: K-groups
@@ -649,7 +652,7 @@ theorem kPrimeZeroLength_apply_class
     (P : FiniteModulePresentation R) :
     kPrimeZeroLength (R := R) (kPrimeZeroClassOfPresentation P) =
       finitePresentationLength P := by
-  sorry
+  rfl
 
 /-- Over a local ring, a finite projective module has a finite free basis. -/
 theorem finite_projective_is_free_over_local
@@ -657,7 +660,7 @@ theorem finite_projective_is_free_over_local
     [AddCommGroup M] [Module R M] [Module.Finite R M]
     [Module.Projective R M] :
     Module.Free R M := by
-  sorry
+  exact Module.free_of_flat_of_isLocalRing
 
 /-- A finite free presentation of a finite projective module over a local
 ring. -/
@@ -666,7 +669,9 @@ theorem finite_projective_is_finite_free_over_local
     [AddCommGroup M] [Module R M] [Module.Finite R M]
     [Module.Projective R M] :
     ∃ n : ℕ, Nonempty (M ≃ₗ[R] (Fin n → R)) := by
-  sorry
+  have hfree : Module.Free R M := finite_projective_is_free_over_local
+  exact ⟨Fintype.card (@Module.Free.ChooseBasisIndex R M _ _ _ hfree),
+    ⟨((@Module.Free.chooseBasis R M _ _ _ hfree).reindex (Fintype.equivFin _)).equivFun⟩⟩
 
 /-- The finite free rank of a projective presentation over a local ring. -/
 noncomputable def finiteProjectiveRank
@@ -686,7 +691,56 @@ def kZeroRankOnFree
 theorem kZeroRankOnFree_respects_relations
     {R : Type u} [CommRing R] [IsLocalRing R] :
     kZeroCon R ≤ AddCon.ker (kZeroRankOnFree (R := R)) := by
-  sorry
+  refine AddCon.addConGen_le.2 ?_
+  rintro x y ⟨S, rfl, rfl⟩
+  simp only [kZeroRankOnFree]
+  change (finiteProjectiveRank S.middle : ℤ) =
+    (finiteProjectiveRank S.left : ℤ) + (finiteProjectiveRank S.right : ℤ)
+  have hrank (P : FiniteProjectivePresentation R) :
+      finiteProjectiveRank P = Module.finrank R P.presentation.module := by
+    let e := Classical.choice
+      (Classical.choose_spec
+        (finite_projective_is_finite_free_over_local
+          (R := R) (M := P.presentation.module)))
+    have he := e.finrank_eq
+    simpa [finiteProjectiveRank, Module.finrank_pi] using he.symm
+  let hleft : Module.Free R S.left.presentation.module :=
+    finite_projective_is_free_over_local
+  let hright : Module.Free R S.right.presentation.module :=
+    finite_projective_is_free_over_local
+  have hsplit :
+      ∃ l : S.right.presentation.module →ₗ[R] S.middle.presentation.module,
+        S.middleToRight ∘ₗ l = LinearMap.id :=
+    (Module.Projective.iff_split_of_projective
+      S.middleToRight S.middle_surjective).mp S.right.projective
+  obtain ⟨l, hl⟩ := hsplit
+  let hs :
+      { l : S.right.presentation.module →ₗ[R] S.middle.presentation.module //
+        S.middleToRight ∘ₗ l = LinearMap.id } :=
+    ⟨l, hl⟩
+  let e := (S.exact.splitSurjectiveEquiv S.left_injective hs).1
+  have hprod :
+      Module.finrank R (S.left.presentation.module × S.right.presentation.module) =
+        Module.finrank R S.left.presentation.module +
+          Module.finrank R S.right.presentation.module :=
+    @Module.finrank_prod R S.left.presentation.module S.right.presentation.module
+      _ _ _ _ _ _ hleft hright inferInstance inferInstance
+  have hdim :
+      Module.finrank R S.middle.presentation.module =
+        Module.finrank R S.left.presentation.module +
+          Module.finrank R S.right.presentation.module :=
+    e.finrank_eq.trans hprod
+  have hnat :
+      finiteProjectiveRank S.middle =
+        finiteProjectiveRank S.left + finiteProjectiveRank S.right := by
+    calc
+      finiteProjectiveRank S.middle =
+          Module.finrank R S.middle.presentation.module := hrank S.middle
+      _ = Module.finrank R S.left.presentation.module +
+          Module.finrank R S.right.presentation.module := hdim
+      _ = finiteProjectiveRank S.left + finiteProjectiveRank S.right := by
+        rw [hrank S.left, hrank S.right]
+  exact_mod_cast hnat
 
 /-- The rank homomorphism K₀(R) → ℤ over a local ring. -/
 noncomputable def kZeroRank

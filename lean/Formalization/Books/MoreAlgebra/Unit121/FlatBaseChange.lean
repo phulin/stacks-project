@@ -3,7 +3,9 @@
 -/
 
 import Formalization.Books.MoreAlgebra.Unit121.Multiplication
+import Mathlib.LinearAlgebra.TensorProduct.Tower
 import Mathlib.RingTheory.Flat.Basic
+import Mathlib.RingTheory.LocalRing.Length
 
 namespace Formalization.Books.MoreAlgebra.Unit121
 

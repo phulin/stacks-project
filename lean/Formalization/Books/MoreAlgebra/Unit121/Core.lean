@@ -3,12 +3,11 @@
 -/
 
 import Mathlib.Algebra.Category.ModuleCat.Basic
-import Mathlib.Algebra.Algebra.RestrictScalars
 import Mathlib.Algebra.Module.Torsion.Basic
 import Mathlib.CategoryTheory.Abelian.Basic
+import Mathlib.CategoryTheory.Noetherian
 import Mathlib.LinearAlgebra.Charpoly.Basic
 import Mathlib.LinearAlgebra.Determinant
-import Mathlib.LinearAlgebra.TensorProduct.Tower
 import Mathlib.LinearAlgebra.Trace
 import Mathlib.RingTheory.Length
 import Mathlib.RingTheory.LocalRing.ResidueField.Ideal
@@ -25,7 +24,7 @@ namespace Formalization.Books.MoreAlgebra.Unit121
 noncomputable section
 
 open CategoryTheory
-open scoped BigOperators Polynomial TensorProduct
+open scoped BigOperators Polynomial
 
 universe u v
 
@@ -82,6 +81,12 @@ noncomputable instance : Abelian (FiniteLengthEndomorphism.{u, v} R) := by
 theorem isNoetherian_and_isArtinian (X : FiniteLengthEndomorphism.{u, v} R) :
     IsNoetherian R X.carrier ∧ IsArtinian R X.carrier :=
   isFiniteLength_iff_isNoetherian_isArtinian.mp X.finite_length
+
+/-- Every finite-length pair is Noetherian and Artinian in the pair category. -/
+theorem isNoetherianObject_and_isArtinianObject
+    (X : FiniteLengthEndomorphism.{u, v} R) :
+    IsNoetherianObject X ∧ IsArtinianObject X := by
+  sorry
 
 end FiniteLengthEndomorphism
 
@@ -160,13 +165,24 @@ noncomputable def simpleCharacteristicPolynomial
     Module.Free.of_divisionRing (IsLocalRing.ResidueField R) M
   D.residue_endomorphism.charpoly
 
-/-! ## Stable composition series and the three invariants -/
+/-! ## Stable filtrations and the three invariants -/
 
-/-- The quotient module belonging to a step of a composition series. -/
+/-- A submodule which is stable under a specified endomorphism. -/
+structure StableSubmodule {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
+    (φ : Module.End R M) where
+  carrier : Submodule R M
+  stable : Submodule.map φ carrier ≤ carrier
+
+/-- A finite strictly increasing filtration by submodules stable under `φ`. -/
+abbrev StableSubmoduleSeries {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
+    (φ : Module.End R M) : Type _ :=
+  RelSeries {(P, Q) : StableSubmodule φ × StableSubmodule φ | P.carrier < Q.carrier}
+
+/-- The quotient module belonging to a step of a stable filtration. -/
 abbrev factorModule {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
-    (s : CompositionSeries (Submodule R M)) (i : Fin s.length) : Type _ :=
-  s (Fin.succ i) ⧸
-    Submodule.comap (s (Fin.succ i)).subtype (s (Fin.castSucc i))
+    {φ : Module.End R M} (s : StableSubmoduleSeries φ) (i : Fin s.length) : Type _ :=
+  (s (Fin.succ i)).carrier ⧸
+    Submodule.comap (s (Fin.succ i)).carrier.subtype (s (Fin.castSucc i)).carrier
 
 /-- Restrict an endomorphism to an invariant submodule. -/
 def restrictToStableSubmodule
@@ -178,31 +194,29 @@ def restrictToStableSubmodule
 /-- The endomorphism induced on a composition factor. -/
 def factorEnd
     {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
-    (s : CompositionSeries (Submodule R M)) (φ : Module.End R M)
-    (hstable : ∀ j, Submodule.map φ (s j) ≤ s j) (i : Fin s.length) :
+    {φ : Module.End R M} (s : StableSubmoduleSeries φ) (i : Fin s.length) :
     Module.End R (factorModule s i) := by
-  let U := s (Fin.succ i)
+  let U := (s (Fin.succ i)).carrier
   let L : Submodule R U :=
-    Submodule.comap U.subtype (s (Fin.castSucc i))
+    Submodule.comap U.subtype (s (Fin.castSucc i)).carrier
   let fU : Module.End R U :=
-    restrictToStableSubmodule φ U (hstable (Fin.succ i))
+    restrictToStableSubmodule φ U (s (Fin.succ i)).stable
   let hL : L ≤ L.comap fU := by
     intro x hx
-    change φ (x : M) ∈ s (Fin.castSucc i)
-    exact hstable (Fin.castSucc i) ⟨x, hx, rfl⟩
+    change φ (x : M) ∈ (s (Fin.castSucc i)).carrier
+    exact (s (Fin.castSucc i)).stable ⟨x, hx, rfl⟩
   exact L.mapQ L fU hL
 
 /-- A stable composition series together with the simple pair carried by every factor. -/
 structure StableCompositionSeries
     {R : Type u} [CommRing R] [IsLocalRing R]
     (X : FiniteLengthEndomorphism.{u, v} R) where
-  series : CompositionSeries (Submodule R X.carrier)
-  head_eq_bot : series.head = ⊥
-  last_eq_top : series.last = ⊤
-  stable : ∀ j, Submodule.map X.endomorphism.hom (series j) ≤ series j
+  series : StableSubmoduleSeries X.endomorphism.hom
+  head_eq_bot : series.head.carrier = ⊥
+  last_eq_top : series.last.carrier = ⊤
   simple_factor :
     ∀ i, SimplePairData R (factorModule series i)
-      (factorEnd series X.endomorphism.hom stable i)
+      (factorEnd series i)
 
 theorem exists_stableCompositionSeries
     {R : Type u} [CommRing R] [IsLocalRing R]

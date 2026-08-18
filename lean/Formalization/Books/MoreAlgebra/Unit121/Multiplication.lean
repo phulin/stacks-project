@@ -3,7 +3,9 @@
 -/
 
 import Formalization.Books.MoreAlgebra.Unit121.ShortExact
+import Mathlib.Algebra.Algebra.RestrictScalars
 import Mathlib.RingTheory.LocalRing.RingHom.Basic
+import Mathlib.RingTheory.LocalRing.Length
 import Mathlib.RingTheory.Norm.Basic
 
 namespace Formalization.Books.MoreAlgebra.Unit121

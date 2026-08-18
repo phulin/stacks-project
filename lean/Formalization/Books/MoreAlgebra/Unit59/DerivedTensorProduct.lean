@@ -1,6 +1,10 @@
 import Mathlib.Algebra.Homology.ShortComplex.ShortExact
 import Mathlib.Algebra.Module.FinitePresentation
+import Mathlib.Algebra.Category.Ring.Constructions
+import Mathlib.RingTheory.Localization.AtPrime.Basic
 import Formalization.Books.Derived.Unit37.CompactObjects
+import Formalization.Books.Algebra.Unit76.FunctorialitiesForTor
+import Formalization.Books.Homology.Unit24.FilteredComplexes
 import Formalization.Books.MoreAlgebra.Unit56.DerivedCategoriesOfModules
 import Formalization.Books.MoreAlgebra.Unit57.ComputingTor
 import Formalization.Books.MoreAlgebra.Unit58.TensorProductsOfComplexes
@@ -27,6 +31,9 @@ open Formalization.Books.Derived.Unit10
 open Formalization.Books.MoreAlgebra.Unit56
 open Formalization.Books.MoreAlgebra.Unit57
 open Formalization.Books.MoreAlgebra.Unit58
+open Formalization.Books.Algebra.Unit71
+open Formalization.Books.Homology.Unit19
+open Formalization.Books.Homology.Unit24
 open ComplexShape
 open HomologicalComplex
 open scoped BigOperators
@@ -615,6 +622,740 @@ theorem factor_through_kFlat
       IsKFlat N ∧ QuasiIso c ∧
         Nonempty (Homotopy a (b ≫ c)) ∧
         (TermwiseFlat K → TermwiseFlat N) := by
+  sorry
+
+/-! ## Derived change of rings -/
+
+/- The ordinary tensor product of a complex of `R`-modules with a complex of
+   `A`-modules is represented using extension of scalars followed by the
+   canonical total tensor product over `A`.  This is the source's concrete
+   model for the cross-ring tensor product. -/
+noncomputable abbrev crossTensorComplex
+    {R A : Type u} [CommRing R] [CommRing A] (f : R →+* A)
+    (K : Comp R) (N : Comp A) : Comp A :=
+  tensorProductComplex A (baseChangeComplex f K) N
+
+/- A package for the left derived functor with values in complexes of
+   `A`-modules.  The represented field records the K-flat computation used in
+   the source construction. -/
+structure DerivedTensorOverData
+    {R A : Type u} [CommRing R] [CommRing A]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)]
+    [HasDerivedCategory.{w} (ModuleCat.{u} A)] (f : R →+* A) (N : Comp A) where
+  functor : D R ⥤ D A
+  exact : Nonempty (ExactTriangulatedFunctorData functor)
+  represented : ∀ (K : Comp R), IsKFlat K →
+    Nonempty (functor.obj ((derivedComplexQuotient R).obj K) ≅
+      (derivedComplexQuotient A).obj (crossTensorComplex f K N))
+
+theorem exists_derivedTensorOverData
+    {R A : Type u} [CommRing R] [CommRing A]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)]
+    [HasDerivedCategory.{w} (ModuleCat.{u} A)] (f : R →+* A) (N : Comp A) :
+    Nonempty (DerivedTensorOverData f N) := by
+  sorry
+
+noncomputable def derivedTensorOverFunctor
+    {R A : Type u} [CommRing R] [CommRing A]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)]
+    [HasDerivedCategory.{w} (ModuleCat.{u} A)] (f : R →+* A) (N : Comp A) :
+    D R ⥤ D A :=
+  (Classical.choice (exists_derivedTensorOverData f N)).functor
+
+theorem derivedTensorOver_exact
+    {R A : Type u} [CommRing R] [CommRing A]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)]
+    [HasDerivedCategory.{w} (ModuleCat.{u} A)] (f : R →+* A) (N : Comp A) :
+    Nonempty (ExactTriangulatedFunctorData (derivedTensorOverFunctor f N)) := by
+  exact (Classical.choice (exists_derivedTensorOverData f N)).exact
+
+theorem derivedTensorOver_represented
+    {R A : Type u} [CommRing R] [CommRing A]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)]
+    [HasDerivedCategory.{w} (ModuleCat.{u} A)] (f : R →+* A) (N : Comp A)
+    (K : Comp R) (hK : IsKFlat K) :
+    Nonempty ((derivedTensorOverFunctor f N).obj ((derivedComplexQuotient R).obj K) ≅
+      (derivedComplexQuotient A).obj (crossTensorComplex f K N)) := by
+  exact (Classical.choice (exists_derivedTensorOverData f N)).represented K hK
+
+/- Functoriality in the fixed complex is recorded separately because the
+   source constructs it by changing a K-flat resolution. -/
+theorem derivedTensorOver_map
+    {R A : Type u} [CommRing R] [CommRing A]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)]
+    [HasDerivedCategory.{w} (ModuleCat.{u} A)] (f : R →+* A)
+    {L N : Comp A} (g : L ⟶ N) :
+    Nonempty (derivedTensorOverFunctor f L ⟶ derivedTensorOverFunctor f N) := by
+  sorry
+
+theorem derivedTensorOver_map_iso_of_quasiIso
+    {R A : Type u} [CommRing R] [CommRing A]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)]
+    [HasDerivedCategory.{w} (ModuleCat.{u} A)] (f : R →+* A)
+    {L N : Comp A} (g : L ⟶ N) (hg : QuasiIso g) :
+    Nonempty (derivedTensorOverFunctor f L ≅ derivedTensorOverFunctor f N) := by
+  sorry
+
+/- The derived base-change functor is the special case in which the second
+   complex is the tensor unit. -/
+noncomputable abbrev derivedBaseChangeFunctor
+    {R A : Type u} [CommRing R] [CommRing A]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)]
+    [HasDerivedCategory.{w} (ModuleCat.{u} A)] (f : R →+* A) :
+    D R ⥤ D A :=
+  derivedTensorOverFunctor f (tensorUnit A)
+
+theorem derivedBaseChange_extends_boundedAbove
+    {R A : Type u} [CommRing R] [CommRing A]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)]
+    [HasDerivedCategory.{w} (ModuleCat.{u} A)] (f : R →+* A) :
+    Nonempty (
+      (DerivedCategory.Minus.ι (C := ModuleCat.{u} R) ⋙
+        derivedBaseChangeFunctor f) ≅
+      (derivedTensorAlgebraFunctor f ⋙
+        DerivedCategory.Minus.ι (C := ModuleCat.{u} A))) := by
+  sorry
+
+/- Restriction of scalars on derived categories.  Keeping this as a chosen
+   datum makes the adjunction statement independent of a particular model of
+   the localization. -/
+structure DerivedRestrictionData
+    {R A : Type u} [CommRing R] [CommRing A]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)]
+    [HasDerivedCategory.{w} (ModuleCat.{u} A)] (f : R →+* A) where
+  functor : D A ⥤ D R
+  exact : Nonempty (ExactTriangulatedFunctorData functor)
+
+theorem exists_derivedRestrictionData
+    {R A : Type u} [CommRing R] [CommRing A]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)]
+    [HasDerivedCategory.{w} (ModuleCat.{u} A)] (f : R →+* A) :
+    Nonempty (DerivedRestrictionData f) := by
+  sorry
+
+noncomputable def derivedRestrictionFunctor
+    {R A : Type u} [CommRing R] [CommRing A]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)]
+    [HasDerivedCategory.{w} (ModuleCat.{u} A)] (f : R →+* A) :
+    D A ⥤ D R :=
+  (Classical.choice (exists_derivedRestrictionData f)).functor
+
+theorem derivedBaseChange_leftAdjoint
+    {R A : Type u} [CommRing R] [CommRing A]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)]
+    [HasDerivedCategory.{w} (ModuleCat.{u} A)] (f : R →+* A) :
+    Nonempty (Adjunction (derivedBaseChangeFunctor f)
+      (derivedRestrictionFunctor f)) := by
+  sorry
+
+/- The associativity statement for a chain of ring maps. -/
+theorem derived_double_baseChange
+    {A B C : Type u} [CommRing A] [CommRing B] [CommRing C]
+    [HasDerivedCategory.{w} (ModuleCat.{u} A)]
+    [HasDerivedCategory.{w} (ModuleCat.{u} B)]
+    [HasDerivedCategory.{w} (ModuleCat.{u} C)]
+    (f : A →+* B) (g : B →+* C) (N : Comp B) (K : Comp C) :
+    Nonempty ((derivedTensorOverFunctor f N ⋙
+        derivedTensorOverFunctor g K) ≅
+      derivedTensorOverFunctor (g.comp f) (crossTensorComplex g N K)) := by
+  sorry
+
+/-! ## Tor independence and the comparison map -/
+
+structure RingMapSquare
+    (R A R' A' : Type u) [CommRing R] [CommRing A] [CommRing R'] [CommRing A'] where
+  rToA : R →+* A
+  rToR' : R →+* R'
+  aToA' : A →+* A'
+  r'ToA' : R' →+* A'
+  commutes : ∀ x : R, aToA' (rToA x) = r'ToA' (rToR' x)
+
+def TorIndependent
+    {R A B : Type u} [CommRing R] [CommRing A] [CommRing B]
+    (f : R →+* A) (g : R →+* B) : Prop :=
+  ∀ i : ℕ, 0 < i →
+    IsZero (Tor (algebraAsRModule f) (algebraAsRModule g) i)
+
+structure DerivedComparisonData
+    (S : RingMapSquare R A R' A')
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)]
+    [HasDerivedCategory.{w} (ModuleCat.{u} A)]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R')]
+    [HasDerivedCategory.{w} (ModuleCat.{u} A')] where
+  comparison : ∀ K : D A,
+    (derivedBaseChangeFunctor S.rToR').obj
+        ((derivedRestrictionFunctor S.rToA).obj K) ⟶
+      (derivedRestrictionFunctor S.r'ToA').obj
+        ((derivedBaseChangeFunctor S.aToA').obj K)
+
+theorem exists_derivedComparisonData
+    (S : RingMapSquare R A R' A')
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)]
+    [HasDerivedCategory.{w} (ModuleCat.{u} A)]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R')]
+    [HasDerivedCategory.{w} (ModuleCat.{u} A')] :
+    Nonempty (DerivedComparisonData S) := by
+  sorry
+
+noncomputable def derivedComparisonMap
+    (S : RingMapSquare R A R' A')
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)]
+    [HasDerivedCategory.{w} (ModuleCat.{u} A)]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R')]
+    [HasDerivedCategory.{w} (ModuleCat.{u} A')] (K : D A) :
+    (derivedBaseChangeFunctor S.rToR').obj
+        ((derivedRestrictionFunctor S.rToA).obj K) ⟶
+      (derivedRestrictionFunctor S.r'ToA').obj
+        ((derivedBaseChangeFunctor S.aToA').obj K) :=
+  (Classical.choice (exists_derivedComparisonData S)).comparison K
+
+def IsTensorBaseChange
+    (S : RingMapSquare R A R' A') : Prop :=
+  letI : Algebra R A := S.rToA.toAlgebra
+  letI : Algebra R R' := S.rToR'.toAlgebra
+  ∃ e : A' ≃+* A ⊗[R] R',
+    e.toRingHom.comp S.aToA' =
+        Algebra.TensorProduct.includeLeftRingHom (A := A) ∧
+      e.toRingHom.comp S.r'ToA' =
+        Algebra.TensorProduct.includeRight.toRingHom (A := R')
+
+theorem derivedComparison_iso_of_torIndependent
+    {R A R' A' : Type u} [CommRing R] [CommRing A] [CommRing R'] [CommRing A']
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)]
+    [HasDerivedCategory.{w} (ModuleCat.{u} A)]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R')]
+    [HasDerivedCategory.{w} (ModuleCat.{u} A')]
+    (S : RingMapSquare R A R' A') (hS : IsTensorBaseChange S)
+    (hTor : TorIndependent S.rToA S.rToR') (K : D A) :
+    IsIso (derivedComparisonMap S K) := by
+  sorry
+
+def ModuleTorIndependent
+    {R : Type u} [CommRing R] (M N : ModuleCat.{u} R) : Prop :=
+  ∀ i : ℕ, 0 < i → IsZero (Tor M N i)
+
+theorem flat_baseChange_preserves_torIndependent
+    {R R' : Type u} [CommRing R] [CommRing R']
+    (f : R →+* R') (hf : RingHom.Flat f)
+    (M N : ModuleCat.{u} R) (h : ModuleTorIndependent M N) :
+    ModuleTorIndependent (extendedModule f M) (extendedModule f N) := by
+  sorry
+
+theorem tor_flat_baseChange_iso
+    {R R' : Type u} [CommRing R] [CommRing R']
+    (f : R →+* R') (hf : RingHom.Flat f)
+    (M N : ModuleCat.{u} R) (i : ℕ) :
+    IsIso (Formalization.Books.Algebra.Unit76.torFlatBaseChangeMap f M N i) := by
+  exact Formalization.Books.Algebra.Unit76.flat_base_change_tor f hf M N i
+
+structure TorPrimeTriple
+    {R A B : Type u} [CommRing R] [CommRing A] [CommRing B]
+    (f : R →+* A) (g : R →+* B) where
+  p : Ideal A
+  q : Ideal B
+  r : Ideal R
+  hp : p.IsPrime
+  hq : q.IsPrime
+  hr : r.IsPrime
+  p_over_r : r = p.comap f
+  q_over_r : r = q.comap g
+
+def TorIndependentLocalAtPrime
+    {R A B : Type u} [CommRing R] [CommRing A] [CommRing B]
+    (f : R →+* A) (g : R →+* B) (P : TorPrimeTriple f g) : Prop :=
+  letI := P.hp
+  letI := P.hq
+  letI := P.hr
+  ∀ i : ℕ, 0 < i →
+    IsZero (Tor
+      ((ModuleCat.restrictScalars
+        (Localization.localRingHom P.r P.p f P.p_over_r)).obj
+        (ModuleCat.of (Localization.AtPrime P.p) (Localization.AtPrime P.p)))
+      ((ModuleCat.restrictScalars
+        (Localization.localRingHom P.r P.q g P.q_over_r)).obj
+        (ModuleCat.of (Localization.AtPrime P.q) (Localization.AtPrime P.q))) i)
+
+def TorIndependentAtPrimes
+    {R A B : Type u} [CommRing R] [CommRing A] [CommRing B]
+    (f : R →+* A) (g : R →+* B) : Prop :=
+  ∀ P : TorPrimeTriple f g, TorIndependentLocalAtPrime f g P
+
+theorem torIndependent_iff_localized_at_primes
+    {R A B : Type u} [CommRing R] [CommRing A] [CommRing B]
+    (f : R →+* A) (g : R →+* B) :
+    TorIndependent f g ↔ TorIndependentAtPrimes f g := by
+  sorry
+
+/- A canonical `A`-module structure on `Tor_R(M,A)` supplied by the
+   change-of-rings construction from the preceding algebra chapters. -/
+noncomputable def torOverAlgebra
+    {R A : Type u} [CommRing R] [CommRing A] (f : R →+* A)
+    (M : ModuleCat.{u} R) (i : ℕ) : ModuleCat.{u} A :=
+  let T := Classical.choice
+    (Formalization.Books.Algebra.Unit76.exists_target_tor_module f M
+      (ModuleCat.of A A) i)
+  letI : Module A
+      (Formalization.Books.Algebra.Unit76.restrictedTor f M
+        (ModuleCat.of A A) i) := T.module
+  ModuleCat.of A
+    (Formalization.Books.Algebra.Unit76.restrictedTor f M
+      (ModuleCat.of A A) i)
+
+/-! ## Spectral sequences for Tor -/
+
+def ChainComplexBoundedBelow {R : Type u} [CommRing R]
+    (K : ModuleChainComplex R) : Prop :=
+  ∃ b : ℕ, ∀ n : ℕ, n < b → IsZero (K.X n)
+
+/- The two spectral sequences in the double-complex example.  The page
+   objects and the displayed differentials are kept as categorical module
+   maps; the abutment is recorded by its degree-indexed family. -/
+structure CohomologyTensorSpectralSequence
+    {R : Type u} [CommRing R] (K : ModuleChainComplex R)
+    (M : ModuleCat.{u} R) where
+  page : ℕ → ℕ → ℕ → ModuleCat.{u} R
+  abutment : ℕ → ModuleCat.{u} R
+  e₂ : ∀ i j : ℕ,
+    Nonempty (page 2 i j ≅ Tor (chainHomology K i) M j)
+  e₁ : ∀ i j : ℕ,
+    Nonempty (page 1 i j ≅ Tor (K.X i) M j)
+  d₂ : ∀ i j : ℕ,
+    Tor (chainHomology K i) M j ⟶
+      Tor (chainHomology K (i + 1)) M (j - 2)
+  d₁ : ∀ i j : ℕ,
+    Tor (K.X (i + 1)) M j ⟶ Tor (K.X i) M j
+
+theorem exists_cohomologyTensorSpectralSequence
+    {R : Type u} [CommRing R] (K : ModuleChainComplex R)
+    (hK : ChainComplexBoundedBelow K) (M : ModuleCat.{u} R) :
+    Nonempty (CohomologyTensorSpectralSequence K M) := by
+  sorry
+
+/- The change-of-rings spectral sequence is naturally mixed-valued: its page
+   is an `S`-module while its abutment is the underlying `R`-module. -/
+structure TorChangeRingsSpectralSequence
+    {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S)
+    (M : ModuleCat.{u} R) (N : ModuleCat.{u} S) where
+  page : ℕ → ℕ → Type u
+  e₂ : ∀ n m : ℕ,
+    Nonempty (page n m ≃
+      (Tor (torOverAlgebra f M m) N n : Type u))
+  abutment : ℕ → Type u
+  abutment_formula : ∀ k : ℕ,
+    Nonempty (abutment k ≃
+      (Tor M (ModuleCat.restrictScalars f).obj N k : Type u))
+
+theorem exists_torChangeRingsSpectralSequence
+    {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S)
+    (M : ModuleCat.{u} R) (N : ModuleCat.{u} S) :
+    Nonempty (TorChangeRingsSpectralSequence f M N) := by
+  sorry
+
+structure TorBaseChangeSpectralSequence
+    {A B A' B' : Type u} [CommRing A] [CommRing B] [CommRing A'] [CommRing B']
+    (aToB : A →+* B) (aToA' : A →+* A') (bToB' : B →+* B')
+    (M N : ModuleCat.{u} B) where
+  page : ℕ → ℕ → Type u
+  e₂ : ∀ i j : ℕ,
+    Nonempty (page i j ≃
+      (Tor
+        ((ModuleCat.restrictScalars aToB).obj (Tor M N j))
+        ((ModuleCat.restrictScalars aToA').obj (ModuleCat.of A' A')) i : Type u))
+  abutment : ℕ → Type u
+  abutment_formula : ∀ k : ℕ,
+    Nonempty (abutment k ≃
+      (Tor
+        ((ModuleCat.extendScalars bToB').obj M)
+        ((ModuleCat.extendScalars bToB').obj N) k : Type u))
+
+theorem exists_torBaseChangeSpectralSequence
+    {A B A' B' : Type u} [CommRing A] [CommRing B] [CommRing A'] [CommRing B']
+    (aToB : A →+* B) (aToA' : A →+* A') (bToB' : B →+* B')
+    (M N : ModuleCat.{u} B)
+    (hB : Module.Flat A ((ModuleCat.restrictScalars aToB).obj
+      (ModuleCat.of B B) : Type u))
+    (hM : Module.Flat A ((ModuleCat.restrictScalars aToB).obj M : Type u))
+    (hN : Module.Flat A ((ModuleCat.restrictScalars aToB).obj N : Type u)) :
+    Nonempty (TorBaseChangeSpectralSequence aToB aToA' bToB' M N) := by
+  sorry
+
+noncomputable abbrev dMinusCohomologyObject
+    {R : Type u} [CommRing R]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)]
+    (n : ℤ) (K : DMinus R) : ModuleCat.{u} R :=
+  (dMinusCohomologyFunctor (C := Mod R) n).obj K
+
+noncomputable abbrev derivedTorCohomologyPage
+    {R : Type u} [CommRing R]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)]
+    (K L : DMinus R) (p q : ℤ) : ModuleCat.{u} R :=
+  (dMinusCohomologyFunctor (C := Mod R) p).obj
+    ((derivedTensorModuleFunctor R (dMinusCohomologyObject q L)).obj K)
+
+structure DerivedTorSpectralSequences
+    {R : Type u} [CommRing R]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)] (K L : DMinus R) where
+  firstPage : ℕ → ℤ → ℤ → ModuleCat.{u} R
+  secondPage : ℕ → ℤ → ℤ → ModuleCat.{u} R
+  firstE₂ : ∀ p q : ℤ,
+    Nonempty (firstPage 2 p q ≅ derivedTorCohomologyPage K L p q)
+  secondE₂ : ∀ p q : ℤ,
+    Nonempty (secondPage 2 p q ≅
+      (dMinusCohomologyFunctor (C := Mod R) p).obj
+        ((derivedTensorModuleFunctor R (dMinusCohomologyObject q K)).obj L))
+  firstD₂ : ∀ p q : ℤ,
+    firstPage 2 p q ⟶ firstPage 2 (p + 2) (q - 1)
+  secondD₂ : ∀ p q : ℤ,
+    secondPage 2 p q ⟶ secondPage 2 (p + 2) (q - 1)
+
+theorem exists_derivedTorSpectralSequences
+    {R : Type u} [CommRing R]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)] (K L : DMinus R) :
+    Nonempty (DerivedTorSpectralSequences K L) := by
+  sorry
+
+/-! ## Products and Tor -/
+
+noncomputable abbrev derivedCohomologyFunctor
+    {R : Type u} [CommRing R]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)] (n : ℤ) :
+    D R ⥤ ModuleCat.{u} R :=
+  derivedComplexQuotient R ⋙ DerivedCategory.homologyFunctor (ModuleCat.{u} R) n
+
+noncomputable abbrev derivedCohomologyObject
+    {R : Type u} [CommRing R]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)] (n : ℤ) (K : D R) :
+    ModuleCat.{u} R :=
+  (derivedCohomologyFunctor n).obj K
+
+noncomputable abbrev cohomologyTensorSource
+    {R : Type u} [CommRing R]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)]
+    (K L : D R) (i j : ℤ) : ModuleCat.{u} R :=
+  ModuleCat.of R (TensorProduct R
+    (derivedCohomologyObject i K : Type u)
+    (derivedCohomologyObject j L : Type u))
+
+theorem exists_derivedCohomologyProductMap
+    {R : Type u} [CommRing R]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)]
+    (K L : D R) (i j : ℤ) :
+    Nonempty (cohomologyTensorSource K L i j ⟶
+      derivedCohomologyObject (i + j) (derivedTensor K L)) := by
+  sorry
+
+noncomputable def derivedCohomologyProductMap
+    {R : Type u} [CommRing R]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)]
+    (K L : D R) (i j : ℤ) :
+    cohomologyTensorSource K L i j ⟶
+      derivedCohomologyObject (i + j) (derivedTensor K L) :=
+  Classical.choice (exists_derivedCohomologyProductMap K L i j)
+
+theorem derivedTensor_pullback_iso
+    {R A : Type u} [CommRing R] [CommRing A]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)]
+    [HasDerivedCategory.{w} (ModuleCat.{u} A)] (f : R →+* A)
+    (K L : D R) :
+    Nonempty (
+      derivedTensor ((derivedBaseChangeFunctor f).obj K)
+        ((derivedBaseChangeFunctor f).obj L) ≅
+      (derivedBaseChangeFunctor f).obj (derivedTensor K L)) := by
+  sorry
+
+noncomputable abbrev torProductSource
+    {R A : Type u} [CommRing R] [CommRing A]
+    (f : R →+* A) (M N : ModuleCat.{u} R) (n m : ℕ) : ModuleCat.{u} A :=
+  ModuleCat.of A (TensorProduct A
+    (torOverAlgebra f M n : Type u) (torOverAlgebra f N m : Type u))
+
+theorem exists_torProductMap
+    {R A : Type u} [CommRing R] [CommRing A]
+    (f : R →+* A) (M N : ModuleCat.{u} R) (n m : ℕ) :
+    Nonempty (torProductSource f M N n m ⟶
+      torOverAlgebra f (MonoidalCategory.tensor M N) (n + m)) := by
+  sorry
+
+noncomputable def torProductMap
+    {R A : Type u} [CommRing R] [CommRing A]
+    (f : R →+* A) (M N : ModuleCat.{u} R) (n m : ℕ) :
+    torProductSource f M N n m ⟶
+      torOverAlgebra f (MonoidalCategory.tensor M N) (n + m) :=
+  Classical.choice (exists_torProductMap f M N n m)
+
+/- The multiplication special case is packaged as a graded `A`-algebra
+   datum.  The two maps in the source are retained separately. -/
+structure TorStarAlgebraData
+    {R A B : Type u} [CommRing R] [CommRing A] [CommRing B]
+    (f : R →+* A) (g : R →+* B) where
+  degree : ℕ → ModuleCat.{u} A
+  degree_formula : ∀ n : ℕ,
+    Nonempty (degree n ≅ torOverAlgebra f (algebraAsRModule g) n)
+  product_to_tensor : ∀ n m : ℕ,
+    ModuleCat.of A (TensorProduct A (degree n : Type u) (degree m : Type u)) ⟶
+      torOverAlgebra f (MonoidalCategory.tensor (algebraAsRModule g)
+        (algebraAsRModule g)) (n + m)
+  multiplication : ∀ n m : ℕ,
+    torOverAlgebra f (MonoidalCategory.tensor (algebraAsRModule g)
+      (algebraAsRModule g)) (n + m) ⟶ degree (n + m)
+
+noncomputable def torStarTensorMap
+    {R A : Type u} [CommRing R] [CommRing A]
+    {M M' N N' : ModuleCat.{u} A} (f : M ⟶ M') (g : N ⟶ N') :
+    ModuleCat.of A (TensorProduct A (M : Type u) (N : Type u)) ⟶
+      ModuleCat.of A (TensorProduct A (M' : Type u) (N' : Type u)) :=
+  ModuleCat.ofHom (TensorProduct.map f.hom g.hom)
+
+theorem exists_torStarAlgebraData
+    {R A B : Type u} [CommRing R] [CommRing A] [CommRing B]
+    (f : R →+* A) (g : R →+* B) :
+    Nonempty (TorStarAlgebraData f g) := by
+  sorry
+
+noncomputable def torStarAlgebraData
+    {R A B : Type u} [CommRing R] [CommRing A] [CommRing B]
+    (f : R →+* A) (g : R →+* B) : TorStarAlgebraData f g :=
+  Classical.choice (exists_torStarAlgebraData f g)
+
+structure TorStarAlgebraHom
+    {R A B C : Type u} [CommRing R] [CommRing A] [CommRing B] [CommRing C]
+    (f : R →+* A) (gB : R →+* B) (gC : R →+* C)
+    (h : B →+* C) (commutes : ∀ r : R, h (gB r) = gC r) where
+  component : ∀ n : ℕ,
+    (torStarAlgebraData f gB).degree n ⟶ (torStarAlgebraData f gC).degree n
+  preserves_product : ∀ n m : ℕ,
+    (torStarAlgebraData f gB).product_to_tensor n m ≫
+        (torStarAlgebraData f gB).multiplication n m ≫ component (n + m) =
+      torStarTensorMap (component n) (component m) ≫
+        (torStarAlgebraData f gC).product_to_tensor n m ≫
+          (torStarAlgebraData f gC).multiplication n m
+
+theorem exists_torStarAlgebraHom
+    {R A B C : Type u} [CommRing R] [CommRing A] [CommRing B] [CommRing C]
+    (f : R →+* A) (gB : R →+* B) (gC : R →+* C)
+    (h : B →+* C) (commutes : ∀ r : R, h (gB r) = gC r) :
+    Nonempty (TorStarAlgebraHom f gB gC h commutes) := by
+  sorry
+
+/-! ## Künneth spectral sequence -/
+
+abbrev FilteredComp (R : Type u) [CommRing R] :=
+  FilteredComplex (ModuleCat.{u} R)
+
+noncomputable abbrev forgetFilteredComplex
+    {R : Type u} [CommRing R] (K : FilteredComp R) : Comp R :=
+  filteredComplexUnderlying K
+
+noncomputable def forgetFilteredComplexMap
+    {R : Type u} [CommRing R] {K L : FilteredComp R} (f : K ⟶ L) :
+    forgetFilteredComplex K ⟶ forgetFilteredComplex L :=
+  ((filteredComplexForgetful (C := ModuleCat.{u} R)).mapHomologicalComplex
+    (.up ℤ)).map f
+
+def KunnethSummandIndex (n : ℤ) :=
+  {ij : ℤ × ℤ // ij.1 + ij.2 = n}
+
+noncomputable abbrev KunnethGradedSum
+    {R : Type u} [CommRing R] (K L : FilteredComp R) (n : ℤ) : Comp R :=
+  ∐ fun ij : KunnethSummandIndex n =>
+    tensorProductComplex R (filteredComplexGradedPiece K ij.1)
+      (filteredComplexGradedPiece L ij.2)
+
+/- The filtered total complex and the associated-graded direct-sum formula. -/
+structure KunnethFilteredTensorData
+    {R : Type u} [CommRing R] (K L : FilteredComp R) where
+  total : FilteredComp R
+  total_iso : Nonempty (forgetFilteredComplex total ≅
+    tensorProductComplex R (forgetFilteredComplex K) (forgetFilteredComplex L))
+  graded_piece : ∀ n : ℤ,
+    Nonempty (filteredComplexGradedPiece total n ≅ KunnethGradedSum K L n)
+
+def KunnethTermwiseFlat
+    {R : Type u} [CommRing R] (K : FilteredComp R) : Prop :=
+  ∀ n i : ℤ,
+    Module.Flat R ((K.X n).carrier : Type u) ∧
+    Module.Flat R (((K.X n).filtration.obj i : ModuleCat.{u} R) : Type u) ∧
+    Module.Flat R (gradedPiece (K.X n) i : Type u)
+
+def KunnethFilteredKFlat
+    {R : Type u} [CommRing R] (K : FilteredComp R) : Prop :=
+  IsKFlat (forgetFilteredComplex K) ∧
+    (∀ i : ℤ, IsKFlat (filteredComplexFiltrationStep K i)) ∧
+    (∀ i : ℤ, IsKFlat (filteredComplexGradedPiece K i))
+
+theorem exists_kunnethFilteredTensorData
+    {R : Type u} [CommRing R] (K L : FilteredComp R)
+    (hK : KunnethTermwiseFlat K) (hL : KunnethTermwiseFlat L) :
+    Nonempty (KunnethFilteredTensorData K L) := by
+  sorry
+
+noncomputable def kunnethFilteredTensorData
+    {R : Type u} [CommRing R] (K L : FilteredComp R)
+    (hK : KunnethTermwiseFlat K) (hL : KunnethTermwiseFlat L) :
+    KunnethFilteredTensorData K L :=
+  Classical.choice (exists_kunnethFilteredTensorData K L hK hL)
+
+def FilteredStepAcyclic
+    {R : Type u} [CommRing R] (K : FilteredComp R) (i : ℤ) : Prop :=
+  IsAcyclic (filteredComplexFiltrationStep K i)
+
+def FilteredStepQuasiIsoBelow
+    {R : Type u} [CommRing R] (K : FilteredComp R) : Prop :=
+  ∃ a : ℤ, ∀ i : ℤ, i < a,
+    QuasiIso (filteredComplexStepToUnderlying K i)
+
+structure KunnethConvergenceHypotheses
+    {R : Type u} [CommRing R] (K L : FilteredComp R) where
+  termwiseFlat_K : KunnethTermwiseFlat K
+  termwiseFlat_L : KunnethTermwiseFlat L
+  kFlat_K : KunnethFilteredKFlat K
+  kFlat_L : KunnethFilteredKFlat L
+  finite_or_asymptotic :
+    (FilteredComplexFiniteFiltration K ∧ FilteredComplexFiniteFiltration L) ∨
+      ((∃ b : ℤ, ∀ i : ℤ, b < i → FilteredStepAcyclic K i) ∧
+       FilteredStepQuasiIsoBelow K ∧
+       (∃ b : ℤ, ∀ i : ℤ, b < i → FilteredStepAcyclic L i) ∧
+       FilteredStepQuasiIsoBelow L)
+
+noncomputable abbrev kunnethE₁Term
+    {R : Type u} [CommRing R]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)]
+    (K L : FilteredComp R) (p q : ℤ) : ModuleCat.{u} R :=
+  ∐ fun ij : KunnethSummandIndex p =>
+    derivedCohomologyObject (p + q)
+      (derivedTensor
+        ((derivedComplexQuotient R).obj (filteredComplexGradedPiece K ij.1))
+        ((derivedComplexQuotient R).obj (filteredComplexGradedPiece L ij.2)))
+
+structure KunnethFilteredSpectralSequenceData
+    {R : Type u} [CommRing R]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)] (K L : FilteredComp R)
+    (T : KunnethFilteredTensorData K L) where
+  spectral : FilteredComplexSpectralSequence T.total
+  first_page : ∀ p q : ℤ,
+    Nonempty (spectral.page 1 (p, q) ≅ kunnethE₁Term K L p q)
+
+theorem exists_kunnethFilteredSpectralSequence
+    {R : Type u} [CommRing R]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)]
+    (K L : FilteredComp R) (h : KunnethConvergenceHypotheses K L) :
+    Nonempty (KunnethFilteredSpectralSequenceData K L
+      (kunnethFilteredTensorData K L h.termwiseFlat_K h.termwiseFlat_L)) := by
+  sorry
+
+structure FilteredComplexResolutionData
+    {R : Type u} [CommRing R] (K : FilteredComp R) where
+  P : FilteredComp R
+  map : P ⟶ K
+  termwiseFlat : KunnethTermwiseFlat P
+  termwise_free : ∀ n i : ℤ,
+    Module.Free R ((P.X n).carrier : Type u) ∧
+    Module.Free R (((P.X n).filtration.obj i : ModuleCat.{u} R) : Type u) ∧
+    Module.Free R (gradedPiece (P.X n) i : Type u)
+  kFlat : KunnethFilteredKFlat P
+  quasiIso : QuasiIso (forgetFilteredComplexMap map)
+  filtration_quasiIso : ∀ i : ℤ,
+    ∃ f : filteredComplexFiltrationStep P i ⟶
+      filteredComplexFiltrationStep K i, QuasiIso f
+  graded_quasiIso : ∀ i : ℤ,
+    ∃ f : filteredComplexGradedPiece P i ⟶ filteredComplexGradedPiece K i,
+      QuasiIso f
+
+theorem exists_filteredComplexResolutionData
+    {R : Type u} [CommRing R] (K : FilteredComp R) :
+    Nonempty (FilteredComplexResolutionData K) := by
+  sorry
+
+structure KunnethFilteredPropositionData
+    {R : Type u} [CommRing R]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)]
+    (K L : FilteredComp R) where
+  resolution_K : FilteredComplexResolutionData K
+  resolution_L : FilteredComplexResolutionData L
+  tensor : KunnethFilteredTensorData resolution_K.P resolution_L.P
+    resolution_K.termwiseFlat resolution_L.termwiseFlat
+  spectral : KunnethFilteredSpectralSequenceData resolution_K.P resolution_L.P tensor
+  bounded : filteredComplexBounded spectral.spectral
+  finite_abutment_filtration :
+    FilteredComplexCohomologyFiniteFiltration tensor.total
+  converges : filteredComplexConverges tensor.total
+
+theorem exists_kunnethFilteredPropositionData
+    {R : Type u} [CommRing R]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)]
+    (K L : FilteredComp R) :
+    Nonempty (KunnethFilteredPropositionData K L) := by
+  sorry
+
+def IsBoundedCochain
+    {R : Type u} [CommRing R] (K : Comp R) : Prop :=
+  (∃ a : ℤ, ∀ n : ℤ, n < a → IsZero (K.X n)) ∧
+  (∃ b : ℤ, ∀ n : ℤ, b < n → IsZero (K.X n))
+
+def IsBoundedDerivedObject
+    {R : Type u} [CommRing R]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)] (K : D R) : Prop :=
+  ∃ P : Comp R, Nonempty ((derivedComplexQuotient R).obj P ≅ K) ∧
+    IsBoundedCochain P
+
+def kunnethE₂Term
+    {R : Type u} [CommRing R]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)]
+    (K L : D R) (p q : ℤ) : ModuleCat.{u} R :=
+  if h : p ≤ 0 then
+    ∐ fun ij : {ij : ℤ × ℤ // ij.1 + ij.2 = q} =>
+      Tor (derivedCohomologyObject ij.1 K) (derivedCohomologyObject ij.2 L)
+        (-p).toNat
+  else 0
+
+structure KunnethSpectralSequenceData
+    {R : Type u} [CommRing R]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)] (K L : D R) where
+  page : ℕ → ℤ → ℤ → ModuleCat.{u} R
+  differential : ∀ r : ℕ, ∀ p q : ℤ,
+    page r p q ⟶ page r (p + r) (q - r + 1)
+  e₂ : ∀ p q : ℤ,
+    Nonempty (page 2 p q ≅ kunnethE₂Term K L p q)
+  abutment : ℤ → ModuleCat.{u} R
+  abutment_formula : ∀ n : ℤ,
+    Nonempty (abutment n ≅ derivedCohomologyObject n (derivedTensor K L))
+
+theorem exists_kunnethSpectralSequenceData
+    {R : Type u} [CommRing R]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)] (K L : D R)
+    (hK : IsBoundedDerivedObject K) (hL : IsBoundedDerivedObject L) :
+    Nonempty (KunnethSpectralSequenceData K L) := by
+  sorry
+
+theorem tor_vanishes_above_one_of_dedekind
+    {R : Type u} [CommRing R] [IsDedekindDomain R]
+    (M N : ModuleCat.{u} R) {i : ℕ} (hi : 1 < i) :
+    IsZero (Tor M N i) := by
+  sorry
+
+structure KunnethDedekindShortExact
+    {R : Type u} [CommRing R]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)] (K L : D R) (n : ℤ) where
+  left : ModuleCat.{u} R
+  middle : ModuleCat.{u} R
+  right : ModuleCat.{u} R
+  sequence : ShortComplex (ModuleCat.{u} R)
+  shortExact : sequence.ShortExact
+  left_formula : Nonempty (left ≅
+    ∐ fun ij : {ij : ℤ × ℤ // ij.1 + ij.2 = n} =>
+      ModuleCat.of R (TensorProduct R
+        (derivedCohomologyObject ij.1 K : Type u)
+        (derivedCohomologyObject ij.2 L : Type u)))
+  middle_formula : Nonempty (middle ≅ derivedCohomologyObject n (derivedTensor K L))
+  right_formula : Nonempty (right ≅
+    ∐ fun ij : {ij : ℤ × ℤ // ij.1 + ij.2 = n + 1} =>
+      Tor (derivedCohomologyObject ij.1 K) (derivedCohomologyObject ij.2 L) 1)
+
+theorem exists_kunnethDedekindShortExact
+    {R : Type u} [CommRing R] [IsDedekindDomain R]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)] (K L : D R)
+    (hK : IsBoundedDerivedObject K) (hL : IsBoundedDerivedObject L) (n : ℤ) :
+    Nonempty (KunnethDedekindShortExact K L n) := by
   sorry
 
 end Formalization.Books.MoreAlgebra.Unit59

@@ -1634,6 +1634,110 @@ structure ModuleFiberProductAdjunctionData
     (D : RingSquare R R' B B') where
   adjunction : moduleBaseChangeFunctor D ⊣ moduleFiberProductRightAdjointCanonical D
 
+private theorem moduleFiberProduct_hcompat
+    {R R' B B' : Type u} [CommRing R] [CommRing R'] [CommRing B] [CommRing B']
+    (D : RingSquare R R' B B') (L : ModuleCat.{u} B')
+    (X : ModuleGluingCategory D) :
+    ∀ (p : (ModuleCat.extendScalars D.u).obj L ⟶ X.obj.left)
+      (q : (ModuleCat.extendScalars D.v).obj L ⟶ X.obj.right),
+      (moduleBaseChangeComparison D).hom.app L ≫
+            (ModuleCat.extendScalars D.t).map q =
+          (ModuleCat.extendScalars D.s).map p ≫
+            moduleGluingComparison (D := D) (X := X) ↔
+        (ModuleCat.extendRestrictScalarsAdj D.u).homEquiv _ _ p ≫
+              moduleFiberLeftMap D X =
+          (ModuleCat.extendRestrictScalarsAdj D.v).homEquiv _ _ q ≫
+            moduleFiberRightMap D X := by
+  intro p q
+  constructor
+  · intro h
+    apply ModuleCat.hom_ext
+    ext x
+    have hleft :
+        ((ModuleCat.extendRestrictScalarsAdj D.u).homEquiv L
+            X.obj.left p ≫
+            moduleFiberLeftMap D X) x =
+          X.obj.hom ((1 : R) ⊗ₜ[B, D.s]
+            (p ((1 : B) ⊗ₜ[B', D.u] x))) := by
+      dsimp [moduleFiberLeftMap]
+      simp [ModuleCat.comp_apply,
+        ModuleCat.extendRestrictScalarsAdj_homEquiv_apply,
+        ModuleCat.restrictScalarsComp'App_inv_apply]
+      rw [ModuleCat.extendRestrictScalarsAdj_unit_app_apply]
+      rfl
+    have hright :
+        ((ModuleCat.extendRestrictScalarsAdj D.v).homEquiv L
+            X.obj.right q ≫
+            moduleFiberRightMap D X) x =
+          (1 : R) ⊗ₜ[R', D.t]
+            (q ((1 : R') ⊗ₜ[B', D.v] x)) := by
+      dsimp [moduleFiberRightMap]
+      simp [ModuleCat.comp_apply,
+        ModuleCat.extendRestrictScalarsAdj_homEquiv_apply,
+        ModuleCat.restrictScalarsComp'App_inv_apply]
+      rw [ModuleCat.extendRestrictScalarsAdj_unit_app_apply]
+      rfl
+    rw [hleft, hright]
+    let z0 : (ModuleCat.extendScalars (D.s.comp D.u)).obj L :=
+      ((1 : R) ⊗ₜ[B'] x)
+    let z : (ModuleCat.extendScalars D.u ⋙ ModuleCat.extendScalars D.s).obj L :=
+      (ModuleCat.extendScalarsComp D.u D.s).hom.app L z0
+    have hcancel :
+        (ModuleCat.extendScalarsComp D.u D.s).inv.app L
+            ((ModuleCat.extendScalarsComp D.u D.s).hom.app L z0) = z0 := by
+      simpa [ModuleCat.hom_comp, LinearMap.coe_comp] using
+        congrArg (fun f => f z0)
+          ((ModuleCat.extendScalarsComp D.u D.s).hom_inv_id_app L)
+    have heq {f g : B' →+* R} (hfg : f = g) :
+        ((eqToHom (congrArg (fun k => ModuleCat.extendScalars k) hfg)).app L).hom
+            ((1 : R) ⊗ₜ[B', f] x) =
+          (1 : R) ⊗ₜ[B', g] x := by
+      subst g
+      rfl
+    have heq' :
+        ((eqToHom (congrArg (fun k => ModuleCat.extendScalars k) D.comm)).app L).hom z0 =
+          (1 : R) ⊗ₜ[B', D.t.comp D.v] x := by
+      dsimp [z0]
+      exact heq D.comm
+    have hbase_z :
+        (moduleBaseChangeComparison D).hom.app L z =
+          (ModuleCat.extendScalarsComp D.v D.t).hom.app L
+            ((1 : R) ⊗ₜ[B', D.t.comp D.v] x) := by
+      dsimp [z, moduleBaseChangeComparison]
+      rw [hcancel]
+      dsimp [z0]
+      rw [heq']
+      rfl
+    have hx := congrArg (fun k => k.hom z) h
+    simp only [ModuleCat.hom_comp] at hx
+    simp only [LinearMap.comp_apply] at hx
+    rw [hbase_z] at hx
+    dsimp only [z, z0] at hx
+    have hut := ModuleCat.extendScalarsComp_hom_app_one_tmul D.u D.s L x
+    have hvt := ModuleCat.extendScalarsComp_hom_app_one_tmul D.v D.t L x
+    rw [hut] at hx
+    erw [hvt] at hx
+    change
+      X.obj.hom ((1 : R) ⊗ₜ[B, D.s]
+        (p ((1 : B) ⊗ₜ[B', D.u] x))) =
+        (1 : R) ⊗ₜ[R', D.t]
+        (q ((1 : R') ⊗ₜ[B', D.v] x))
+    change
+      ((ModuleCat.extendScalars D.t).map q).hom'
+          ((1 : R) ⊗ₜ[R', D.t] ((1 : R') ⊗ₜ[B', D.v] x)) =
+        X.obj.hom.hom'
+          (((ModuleCat.extendScalars D.s).map p).hom'
+            ((1 : R) ⊗ₜ[B, D.s] ((1 : B) ⊗ₜ[B', D.u] x))) at hx
+    exact hx.symm
+  · intro h
+    apply ModuleCat.hom_ext
+    ext x
+    induction x using TensorProduct.induction_on with
+    | zero => simp
+    | add x y hx hy => simp [hx, hy]
+    | tmul r y =>
+      sorry
+
 /-- The source's module functor has the compatible-pair fibre product as a
 right adjoint. -/
 theorem moduleFiberProduct_rightAdjoint_exists

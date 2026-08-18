@@ -266,12 +266,12 @@ noncomputable abbrev localizedModuleTensorProductSheaf
     (ringSheafificationMap (localizationPresheafMap S))
     (Formalization.Books.Sheaves.Unit17.moduleSheafification F)
 
-/-- The two displayed module identities from the source. -/
+/-- The sheafified localization identity from the source.  No sheaf
+hypothesis on `O` or `F` is needed: both sides are formed by the canonical
+module-sheafification construction. -/
 theorem simple_invert_module
     {X : TopCat.{u}} {O : CommRingPresheaf X}
-    (S : MultiplicativePresheaf O) (F : ModulePresheaf O)
-    (_hO : Presheaf.IsSheaf (Opens.grothendieckTopology X) O)
-    (_hF : Presheaf.IsSheaf (Opens.grothendieckTopology X) F.presheaf) :
+    (S : MultiplicativePresheaf O) (F : ModulePresheaf O) :
     Nonempty
       (localizedModuleSheafification S F ≅
         localizedModuleTensorProductSheaf S F) := by

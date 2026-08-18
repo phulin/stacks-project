@@ -1,4 +1,5 @@
 import Mathlib.Algebra.Homology.HomotopyCategory.DegreewiseSplit
+import Mathlib.Algebra.Homology.HomotopyCategory.MappingCocone
 import Mathlib.CategoryTheory.ComposableArrows.Basic
 import Formalization.Books.Derived.Unit08.HomotopyCategory
 
@@ -21,6 +22,7 @@ open CategoryTheory.Pretriangulated
 open Formalization.Books.Derived.Unit08
 open Formalization.Books.Homology.Unit03
 open HomologicalComplex
+open CochainComplex.HomComplex
 
 universe v u
 
@@ -150,7 +152,8 @@ theorem functorial_cone
       (coneTriangleMapOfHomotopy H).hom₃ =
         (HomotopyCategory.quotient C (ComplexShape.up ℤ)).map
           (coneMapOfHomotopy H) := by
-  sorry
+  dsimp [coneTriangleMapOfHomotopy, coneMapOfHomotopy]
+  exact And.intro rfl (And.intro rfl rfl)
 
 theorem map_from_cone
     {C : Type u} [Category.{v} C] [AdditiveCategory C]
@@ -159,7 +162,45 @@ theorem map_from_cone
     (∃ u : Cone f ⟶ M, coneInclusion f ≫ u = g) ∧
       (∃ u : K ⟶ (coneTriangle g).invRotate.obj₁,
         u ≫ (coneTriangle g).invRotate.mor₁ = f) := by
-  sorry
+  refine ⟨?_, ?_⟩
+  · let z : Cochain K M (-1) := ((Cochain.equivHomotopy (f ≫ g) 0) H).1
+    have hz : δ (-1) 0 z = Cochain.ofHom (f ≫ g) := by
+      have hz' := ((Cochain.equivHomotopy (f ≫ g) 0) H).2
+      simpa [z] using hz'.symm
+    refine ⟨CochainComplex.mappingCone.desc f z g hz, ?_⟩
+    exact CochainComplex.mappingCone.inr_desc f z g hz
+  · let z : Cochain K M (-1) := ((Cochain.equivHomotopy (f ≫ g) 0) H).1
+    have hz : δ (-1) 0 (-z) + Cochain.ofHom (f ≫ g) = 0 := by
+      have hz' := ((Cochain.equivHomotopy (f ≫ g) 0) H).2
+      simp only [Cochain.ofHom_zero, add_zero] at hz'
+      rw [δ_neg, hz'.symm]
+      abel
+    let u : K ⟶ CochainComplex.mappingCocone g :=
+      CochainComplex.mappingCocone.lift g f (-z) hz
+    refine ⟨u, ?_⟩
+    set_option backward.defeqAttrib.useBackward true in
+    set_option backward.isDefEq.respectTransparency false in
+    have hfst : (coneTriangle g).invRotate.mor₁ =
+        CochainComplex.mappingCocone.fst g := by
+      dsimp [Triangle.invRotate, coneTriangle]
+      ext n
+      simp [CochainComplex.mappingCocone.fst,
+        CochainComplex.mappingCone.triangle,
+        Triangle.mk,
+        CochainComplex.shiftFunctor_map_f', HomologicalComplex.XIsoOfEq,
+        Cochain.leftShift_v _ _ _ _ _ _ _ _ rfl,
+        Cochain.rightShift_v _ _ _ _ _ _ _ _ rfl,
+        shiftFunctorCompIsoId, CochainComplex.shiftFunctorAdd'_inv_app_f',
+        CochainComplex.shiftFunctorZero_hom_app_f]
+      rw [Cochain.leftShift_v _ _ _ _ n n (by simp) (n + -1) (by omega)]
+      have hn : n + -1 + 1 = n := by omega
+      change ((CochainComplex.mappingCone.fst g :
+        Cochain (CochainComplex.mappingCone g) L 1).v
+        (n + -1) (n + -1 + 1) _ ≫ (L.XIsoOfEq hn).hom) = _
+      rw [Cochain.v_comp_XIsoOfEq_hom]
+      simp [HomologicalComplex.XIsoOfEq, sub_eq_add_neg]
+    rw [hfst]
+    exact CochainComplex.mappingCocone.lift_fst g f (-z) hz
 
 /-! ## Termwise split maps and replacements -/
 
@@ -182,7 +223,57 @@ theorem make_commute_map_injection
     (H : Homotopy (f ≫ b) (a ≫ g))
     (hf : termwiseSplitInjection f) :
     ∃ b' : B ⟶ D, Nonempty (Homotopy b b') ∧ f ≫ b' = a ≫ g := by
-  sorry
+  let r : ∀ n : ℤ, B.X n ⟶ A.X n :=
+    fun n => (hf n).exists_splitMono.some.retraction
+  have hr : ∀ n : ℤ, f.f n ≫ r n = 𝟙 _ := by
+    intro n
+    exact (hf n).exists_splitMono.some.id
+  let h : Cochain A D (-1) :=
+    ((Cochain.equivHomotopy (f ≫ b) (a ≫ g)) H).1
+  let z : Cochain B D (-1) :=
+    (Cochain.ofHoms r).comp h (zero_add (-1))
+  have hfr :
+      (Cochain.ofHom f).comp (Cochain.ofHoms r) (zero_add 0) =
+        Cochain.ofHom (𝟙 A) := by
+    ext n q hpq
+    simp [Cochain.ofHom, Cochain.ofHoms, hr]
+  have hzcomp :
+      (Cochain.ofHom f).comp z (zero_add (-1)) = h := by
+    dsimp [z]
+    rw [← Cochain.comp_assoc_of_first_is_zero_cochain, hfr,
+      Cochain.id_comp]
+  let q : Cochain B D 0 := Cochain.ofHom b - δ (-1) 0 z
+  have hq : δ 0 1 q = 0 := by
+    dsimp [q]
+    rw [δ_sub, δ_ofHom, δ_δ]
+    simp
+  let b' : B ⟶ D :=
+    Cocycle.homOf (Cocycle.mk q 1 (zero_add 1) hq)
+  have hb'co : Cochain.ofHom b' = q := by
+    dsimp [b']
+    exact Cocycle.cochain_ofHom_homOf_eq_coe _
+  have hbb' : Nonempty (Homotopy b b') := by
+    refine ⟨(Cochain.equivHomotopy b b').symm ⟨z, ?_⟩⟩
+    rw [hb'co]
+    dsimp [q]
+    abel
+  have hH : Cochain.ofHom (f ≫ b) =
+      δ (-1) 0 h + Cochain.ofHom (a ≫ g) := by
+    simpa [h] using ((Cochain.equivHomotopy (f ≫ b) (a ≫ g)) H).2
+  have hδ :
+      (Cochain.ofHom f).comp (δ (-1) 0 z) (zero_add 0) =
+        δ (-1) 0 h := by
+    rw [← δ_ofHom_comp f z 0, hzcomp]
+  have hfb :
+      (Cochain.ofHom f).comp (Cochain.ofHom b) (zero_add 0) =
+        Cochain.ofHom (f ≫ b) := (Cochain.ofHom_comp f b).symm
+  have hcomm : f ≫ b' = a ≫ g := by
+    apply Cochain.ofHom_injective
+    rw [Cochain.ofHom_comp, hb'co]
+    dsimp [q]
+    rw [Cochain.comp_sub, hfb, hδ, hH]
+    abel
+  exact ⟨b', hbb', hcomm⟩
 
 theorem make_commute_map_surjection
     {C : Type u} [Category.{v} C] [AdditiveCategory C]
@@ -191,7 +282,61 @@ theorem make_commute_map_surjection
     (H : Homotopy (f ≫ b) (a ≫ g))
     (hg : termwiseSplitSurjection g) :
     ∃ a' : A ⟶ C', Nonempty (Homotopy a a') ∧ f ≫ b = a' ≫ g := by
-  sorry
+  let s : ∀ n : ℤ, D.X n ⟶ C'.X n :=
+    fun n => (hg n).exists_splitEpi.some.section_
+  have hs : ∀ n : ℤ, s n ≫ g.f n = 𝟙 _ := by
+    intro n
+    exact (hg n).exists_splitEpi.some.id
+  let h : Cochain A D (-1) :=
+    ((Cochain.equivHomotopy (f ≫ b) (a ≫ g)) H).1
+  let z : Cochain A C' (-1) :=
+    h.comp (Cochain.ofHoms s) (add_zero (-1))
+  have hsg :
+      (Cochain.ofHoms s).comp (Cochain.ofHom g) (zero_add 0) =
+        Cochain.ofHom (𝟙 D) := by
+    ext n q hpq
+    simp [Cochain.ofHom, Cochain.ofHoms, hs]
+  have hzcomp :
+      z.comp (Cochain.ofHom g) (add_zero (-1)) = h := by
+    dsimp [z]
+    rw [Cochain.comp_assoc_of_second_is_zero_cochain, hsg,
+      Cochain.comp_id]
+  let q : Cochain A C' 0 := Cochain.ofHom a + δ (-1) 0 z
+  have hq : δ 0 1 q = 0 := by
+    dsimp [q]
+    rw [δ_add, δ_ofHom, δ_δ]
+    simp
+  let a' : A ⟶ C' :=
+    Cocycle.homOf (Cocycle.mk q 1 (zero_add 1) hq)
+  have ha'co : Cochain.ofHom a' = q := by
+    dsimp [a']
+    exact Cocycle.cochain_ofHom_homOf_eq_coe _
+  have haa' : Nonempty (Homotopy a a') := by
+    refine ⟨(Cochain.equivHomotopy a a').symm ⟨-z, ?_⟩⟩
+    rw [ha'co]
+    dsimp [q]
+    rw [δ_neg]
+    abel
+  have hH : Cochain.ofHom (f ≫ b) =
+      δ (-1) 0 h + Cochain.ofHom (a ≫ g) := by
+    simpa [h] using ((Cochain.equivHomotopy (f ≫ b) (a ≫ g)) H).2
+  have hδ :
+      (δ (-1) 0 z).comp (Cochain.ofHom g) (add_zero 0) =
+        δ (-1) 0 h := by
+    rw [← δ_comp_ofHom z g 0, hzcomp]
+  have hag :
+      (Cochain.ofHom a).comp (Cochain.ofHom g) (zero_add 0) =
+        Cochain.ofHom (a ≫ g) := (Cochain.ofHom_comp a g).symm
+  have hfb :
+      (Cochain.ofHom f).comp (Cochain.ofHom b) (zero_add 0) =
+        Cochain.ofHom (f ≫ b) := (Cochain.ofHom_comp f b).symm
+  have hcomm : f ≫ b = a' ≫ g := by
+    apply Cochain.ofHom_injective
+    rw [Cochain.ofHom_comp, Cochain.ofHom_comp, ha'co]
+    dsimp [q]
+    rw [Cochain.add_comp, hag, hδ, hfb, hH]
+    abel
+  exact ⟨a', haa', hcomm⟩
 
 theorem make_injective
     {C : Type u} [Category.{v} C] [AdditiveCategory C]

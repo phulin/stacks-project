@@ -1,6 +1,7 @@
 import Formalization.Books.Simplicial.Unit14.HomFromSimplicialSetsIntoCosimplicialObjects
 import Formalization.Books.Simplicial.Unit25.DoldKanForCosimplicialObjects
 import Formalization.Books.Simplicial.Unit26.Homotopies
+import Formalization.Books.Homology.Unit03.PreadditiveAndAdditiveCategories
 import Mathlib.Algebra.Homology.Homotopy
 import Mathlib.CategoryTheory.Limits.Shapes.WidePullbacks
 import Mathlib.Logic.Relation
@@ -23,6 +24,7 @@ open CategoryTheory.Limits
 open Formalization.Books.Simplicial.Unit14
 open Formalization.Books.Simplicial.Unit25
 open Formalization.Books.Simplicial.Unit26
+open Formalization.Books.Homology.Unit03
 open Opposite
 open scoped _root_.Simplicial
 
@@ -141,10 +143,16 @@ def Homotopic
     (a b : U ⟶ V) : Prop :=
   Relation.EqvGen (fun a b : U ⟶ V => OneStepHomotopy a b) a b
 
+theorem oneStepHomotopy_iff_cylinderHomotopy
+    {C : Type u} [Category.{v} C] [HasFiniteProducts C]
+    {U V : CosimplicialObject C} {a b : U ⟶ V} :
+    OneStepHomotopy a b ↔ Nonempty (CylinderHomotopy a b) := by
+  rw [OneStepHomotopy, cylinderHomotopy_iff_degreewise]
+
 theorem homotopicOfHomotopy
     {C : Type u} [Category.{v} C] {U V : CosimplicialObject C}
     {a b : U ⟶ V} (H : DegreewiseHomotopy a b) : Homotopic a b :=
-  Relation.EqvGen.rel a b ⟨H⟩
+  Relation.EqvGen.rel a b (show OneStepHomotopy a b from ⟨H⟩)
 
 theorem homotopic_is_equivalence
     {C : Type u} [Category.{v} C] (U V : CosimplicialObject C) :
@@ -336,7 +344,6 @@ def contravariantCosimplicialMap
       congrArg (fun k => k.unop) h.symm
 
 lemma functorialHomotopy
-    {C : Type u} [Category.{v} C] {C' : Type u'} [Category.{v'} C']
     {D : Type u} [Category.{v} D] {D' : Type u'} [Category.{v'} D']
     {U V : SimplicialObject D} {a b : U ⟶ V}
     (H : Formalization.Books.Simplicial.Unit26.Homotopic a b)
@@ -420,8 +427,8 @@ theorem splitPushout_homotopy_equivalent_constant
 /-! ## The cosimplicial Dold--Kan homotopy interfaces -/
 
 /- The associated cochain complex only uses the preadditive structure.  The
-   source calls this the additive case; `HasFiniteBiproducts` is retained on
-   the theorem interfaces below to match that terminology. -/
+   source's homotopy statements below retain its additive-category
+   hypothesis. -/
 def associatedCochainBoundaryAdditive
     {C : Type u} [Category.{v} C] [Preadditive C]
     (U : CosimplicialObject C) (n : ℕ) :
@@ -459,7 +466,7 @@ def associatedCochainMapAdditive
     comm' := associatedCochainMapAdditive_comm f }
 
 theorem associatedCochainMap_homotopic
-    {C : Type u} [Category.{v} C] [Preadditive C] [HasFiniteBiproducts C]
+    {C : Type u} [Category.{v} C] [AdditiveCategory C]
     {U V : CosimplicialObject C} {a b : U ⟶ V}
     (H : Homotopic a b) :
     Nonempty (_root_.Homotopy
@@ -476,20 +483,19 @@ theorem normalizedCochainMap_homotopic
   sorry
 
 theorem associatedCochainMap_homotopy_equivalence
-    {C : Type u} [Category.{v} C] [Preadditive C] [HasFiniteBiproducts C]
+    {C : Type u} [Category.{v} C] [AdditiveCategory C]
     {U V : CosimplicialObject C} (a : U ⟶ V)
     (H : IsHomotopyEquivalence a) :
-    Nonempty (_root_.HomotopyEquiv
-      (associatedCochainComplexAdditive U)
-      (associatedCochainComplexAdditive V)) := by
+    HomologicalComplex.homotopyEquivalences C (ComplexShape.up ℕ)
+      (associatedCochainMapAdditive a) := by
   sorry
 
 theorem normalizedCochainMap_homotopy_equivalence
     {C : Type u} [Category.{v} C] [Abelian C]
     {U V : CosimplicialObject C} (a : U ⟶ V)
     (H : IsHomotopyEquivalence a) :
-    Nonempty (_root_.HomotopyEquiv
-      (normalizedCochainComplex U) (normalizedCochainComplex V)) := by
+    HomologicalComplex.homotopyEquivalences C (ComplexShape.up ℕ)
+      (normalizedCochainMap a) := by
   sorry
 
 end Formalization.Books.Simplicial.Unit28

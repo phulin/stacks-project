@@ -1,4 +1,3 @@
-import Formalization.Books.Algebra.Unit144.LocalStructureEtaleRingMaps
 import Formalization.Books.Algebra.Unit151.UnramifiedRingMaps
 import Mathlib.RingTheory.TensorProduct.Basic
 
@@ -20,27 +19,15 @@ universe u v
 
 /-! ## Locally standard presentations -/
 
-/-- Data for the standard étale neighborhood of an unramified point. -/
-structure LocallyStandardUnramifiedData
-    {R : Type v} {S : Type u} [CommRing R] [CommRing S]
-    [Algebra R S] (q : PrimeSpectrum S) where
-  g : S
-  g_not_mem : g ∉ q.asIdeal
-  S' : Type u
-  [commRingS' : CommRing S']
-  [algebraRS' : Algebra R S']
-  standardEtale : Formalization.Books.Algebra.Unit144.IsStandardEtale
-    (algebraMap R S')
-  map : S' →ₐ[R] Localization.Away g
-  surjective : Function.Surjective map
-
 /-- If `R → S` is unramified at `q`, it is locally a quotient of a standard
-étale algebra. -/
+étale algebra.  `HasStandardEtaleSurjectionOn` is Mathlib's canonical
+predicate for the standard-étale algebra and surjection in the source
+proposition. -/
 theorem proposition_unramified_locally_standard
     {R : Type v} {S : Type u} [CommRing R] [CommRing S]
     [Algebra R S] (q : PrimeSpectrum S)
     (h : Formalization.Books.Algebra.Unit151.UnramifiedAt R S q) :
-    Nonempty (LocallyStandardUnramifiedData (R := R) (S := S) q) := by
+    ∃ g : S, g ∉ q.asIdeal ∧ HasStandardEtaleSurjectionOn R g := by
   sorry
 
 /-! ## Étale neighborhoods at a chosen point -/

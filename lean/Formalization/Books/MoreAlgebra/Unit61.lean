@@ -466,6 +466,9 @@ structure TensorPrimePair
     (R A B : Type u) [CommRing R] [CommRing A] [CommRing B]
     [Algebra R A] [Algebra R B] extends LocalPrimePair R A B where
   s : PrimeSpectrum (A ⊗[R] B)
+  rContraction :
+    PrimeSpectrum.comap (tensorBaseMap R A B) s =
+      toLocalPrimePair.r
   pContraction :
     PrimeSpectrum.comap
         (Algebra.TensorProduct.includeLeftRingHom : A →+* (A ⊗[R] B)) s =

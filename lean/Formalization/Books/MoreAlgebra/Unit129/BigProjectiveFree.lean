@@ -44,18 +44,16 @@ private theorem free_equiv_finsupp_nat
   let b := Module.Free.chooseBasis R F
   have hι : ¬ Finite (Module.Free.ChooseBasisIndex R F) := by
     intro hι
-    letI := hι
+    let hι := hι
     exact hF (Module.Finite.of_basis b)
-  letI : Infinite (Module.Free.ChooseBasisIndex R F) :=
+  let _ : Infinite (Module.Free.ChooseBasisIndex R F) :=
     not_finite_iff_infinite.mp hι
   let c := Finsupp.basis (fun _ : ℕ => b)
   have hcard :
       Cardinal.mk (Σ _ : ℕ, Module.Free.ChooseBasisIndex R F) =
         Cardinal.mk (Module.Free.ChooseBasisIndex R F) := by
     rw [Cardinal.mk_sigma, Cardinal.sum_const]
-    simpa using
-      (Cardinal.aleph0_mul_mk_eq
-        (α := Module.Free.ChooseBasisIndex R F))
+    simp
   exact ⟨b.equiv c (Cardinal.eq.mp hcard.symm).some⟩
 
 private def finsupp_prod_equiv

@@ -153,7 +153,7 @@ theorem flat_factors_finitePresentation
           (g : (Fin n →₀ R) →ₗ[R] M), f = g.comp h := by
   constructor
   · intro h P _ _ _ f
-    letI : Module.Flat R M := h
+    let : Module.Flat R M := h
     exact Module.Flat.exists_factorization_of_finitePresentation f
   · intro h
     apply Module.Flat.of_forall_exists_factorization
@@ -161,7 +161,7 @@ theorem flat_factors_finitePresentation
     let S : Submodule R (Fin l →₀ R) := Submodule.span R ({f} : Set (Fin l →₀ R))
     let Q : Type u := (Fin l →₀ R) ⧸ S
     have hfree : Module.FinitePresentation R (Fin l →₀ R) := inferInstance
-    letI : Module.FinitePresentation R Q :=
+    let : Module.FinitePresentation R Q :=
       Module.finitePresentation_of_surjective (h := hfree) S.mkQ S.mkQ_surjective
         (by
           rw [Submodule.ker_mkQ]
@@ -206,7 +206,7 @@ theorem flat_iff_surjective_hom
         Function.Surjective (internalHomPostcomp (M := P) q) := by
   constructor
   · intro h P _ _ _ N _ _ q hq
-    letI : Module.Flat R M := h
+    let : Module.Flat R M := h
     intro φ
     obtain ⟨n, h', g, hφ⟩ :=
       Module.Flat.exists_factorization_of_finitePresentation φ
@@ -221,7 +221,7 @@ theorem flat_iff_surjective_hom
     let S : Submodule R (Fin l →₀ R) := Submodule.span R ({f} : Set (Fin l →₀ R))
     let Q : Type u := (Fin l →₀ R) ⧸ S
     have hfree : Module.FinitePresentation R (Fin l →₀ R) := inferInstance
-    letI : Module.FinitePresentation R Q :=
+    let : Module.FinitePresentation R Q :=
       Module.finitePresentation_of_surjective (h := hfree) S.mkQ S.mkQ_surjective
         (by
           rw [Submodule.ker_mkQ]
@@ -245,7 +245,7 @@ theorem flat_iff_surjective_hom
     obtain ⟨b, hb⟩ := hpost xbar
     classical
     let B := LinearMap.range b
-    letI : Module.Finite R B := Module.Finite.range b
+    let : Module.Finite R B := Module.Finite.range b
     obtain ⟨s, hs⟩ := Module.finite_def.mp (inferInstance : Module.Finite R B)
     let T : Finset M := s.biUnion (fun z : B => z.1.support)
     let S' : Set N := (fun z : B => (z : N)) '' (↑s : Set B)

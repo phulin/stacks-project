@@ -144,7 +144,7 @@ theorem linearTopology_neighborhood_subgroup_isOpen
     [IsTopologicalAddGroup G] [IsLinearTopology ℤ G]
     (N : AddSubgroup G) (hN : (N : Set G) ∈ nhds (0 : G)) :
     IsOpen (N : Set G) := by
-  sorry
+  exact N.isOpen_of_mem_nhds hN
 
 theorem quotient_add_group_projection_isQuotientMap
     {G : Type u} [AddCommGroup G] [TopologicalSpace G]
@@ -193,19 +193,310 @@ def inverseLimitKernel {I : Type u} [Preorder I]
 theorem inverseLimit_is_linearly_topologized {I : Type u} [Preorder I]
     (F : DiscreteInverseSystem I) :
     IsLinearTopology ℤ (inverseLimit F) := by
-  sorry
+  classical
+  unfold inverseLimit at *
+  have htop : (inferInstance : TopologicalSpace ((limit F.diagram).toModuleCat)) =
+      ⨅ i : Iᵒᵖ, (F.diagram.obj i).topologicalSpace.induced ((limit.π F.diagram i).hom) := by
+    exact TopCat.induced_of_isLimit
+      ((forget₂ (TopologicalAbelianGroupCat) TopCat).mapCone (limit.cone F.diagram))
+      (isLimitOfPreserves (forget₂ (TopologicalAbelianGroupCat) TopCat)
+        (limit.isLimit F.diagram))
+  have hnhds :
+      @nhds _ (inferInstance : TopologicalSpace ((limit F.diagram).toModuleCat))
+          (0 : (limit F.diagram).toModuleCat) =
+        @nhds _ (⨅ i : Iᵒᵖ, (F.diagram.obj i).topologicalSpace.induced
+          ((limit.π F.diagram i).hom)) (0 : (limit F.diagram).toModuleCat) := by
+    exact congrArg (fun t : TopologicalSpace ((limit F.diagram).toModuleCat) =>
+      @nhds _ t (0 : (limit F.diagram).toModuleCat)) htop
+  have hi : ∀ i : Iᵒᵖ,
+      @nhds _ (F.diagram.obj i).topologicalSpace (0 : F.diagram.obj i) = pure 0 := by
+    intro i
+    let _ : DiscreteTopology (F.diagram.obj i) := F.discrete i
+    rw [nhds_discrete]
+  let K : Iᵒᵖ → Submodule ℤ ((limit F.diagram).toModuleCat) :=
+    fun i => (limit.π F.diagram i).hom.toLinearMap.ker
+  let S : Iᵒᵖ → Set ((limit F.diagram).toModuleCat) :=
+    fun i => (K i : Set ((limit F.diagram).toModuleCat))
+  refine IsLinearTopology.mk_of_hasBasis' ℤ
+    (S := Submodule ℤ ((limit F.diagram).toModuleCat))
+    (s := fun s : Set Iᵒᵖ => ⨅ i : s, K i)
+    (p := fun s : Set Iᵒᵖ => s.Finite) ?_
+    (by intro s r m hm; exact s.smul_mem r hm)
+  rw [hnhds]
+  have hnhds_i :
+      @nhds _ (⨅ i : Iᵒᵖ, (F.diagram.obj i).topologicalSpace.induced
+          ((limit.π F.diagram i).hom)) (0 : (limit F.diagram).toModuleCat) =
+        ⨅ i : Iᵒᵖ, Filter.comap ((limit.π F.diagram i).hom)
+          (@nhds _ (F.diagram.obj i).topologicalSpace (0 : F.diagram.obj i)) := by
+    rw [nhds_iInf]
+    apply iInf_congr
+    intro i
+    rw [nhds_induced]
+    rw [map_zero]
+  rw [hnhds_i]
+  have hcomp : ∀ i : Iᵒᵖ,
+      Filter.comap ((limit.π F.diagram i).hom)
+          (nhds (0 : F.diagram.obj i)) =
+        𝓟 (S i) := by
+    intro i
+    rw [hi i, Filter.comap_pure]
+    congr 1
+  have hfilter : (⨅ i : Iᵒᵖ, Filter.comap ((limit.π F.diagram i).hom)
+      (nhds (0 : F.diagram.obj i))) = ⨅ i : Iᵒᵖ, 𝓟 (S i) := by
+    apply iInf_congr
+    intro i
+    exact hcomp i
+  rw [hfilter]
+  have hb := Filter.hasBasis_iInf_principal_finite S
+  refine hb.congr ?_ ?_
+  · intro s
+    exact Iff.rfl
+  · intro s hs
+    ext x
+    simpa [S, K]
 
 theorem inverseLimit_kernels_form_fundamental_system
     {I : Type u} [Preorder I] (F : DiscreteInverseSystem I) :
     (nhds (0 : inverseLimit F)).HasBasis
       (fun _ : Iᵒᵖ => True)
       (fun i => (inverseLimitKernel F i : Set (inverseLimit F))) := by
-  sorry
+  classical
+  unfold inverseLimit at *
+  let K : Iᵒᵖ → Submodule ℤ ((limit F.diagram).toModuleCat) :=
+    fun i => (limit.π F.diagram i).hom.toLinearMap.ker
+  let S : Iᵒᵖ → Set ((limit F.diagram).toModuleCat) :=
+    fun i => (K i : Set ((limit F.diagram).toModuleCat))
+  have htop : (inferInstance : TopologicalSpace ((limit F.diagram).toModuleCat)) =
+      ⨅ i : Iᵒᵖ, (F.diagram.obj i).topologicalSpace.induced ((limit.π F.diagram i).hom) := by
+    exact TopCat.induced_of_isLimit
+      ((forget₂ (TopologicalAbelianGroupCat) TopCat).mapCone (limit.cone F.diagram))
+      (isLimitOfPreserves (forget₂ (TopologicalAbelianGroupCat) TopCat)
+        (limit.isLimit F.diagram))
+  have hnhds :
+      @nhds _ (inferInstance : TopologicalSpace ((limit F.diagram).toModuleCat))
+          (0 : (limit F.diagram).toModuleCat) =
+        @nhds _ (⨅ i : Iᵒᵖ, (F.diagram.obj i).topologicalSpace.induced
+          ((limit.π F.diagram i).hom)) (0 : (limit F.diagram).toModuleCat) := by
+    exact congrArg (fun t : TopologicalSpace ((limit F.diagram).toModuleCat) =>
+      @nhds _ t (0 : (limit F.diagram).toModuleCat)) htop
+  have hi : ∀ i : Iᵒᵖ,
+      @nhds _ (F.diagram.obj i).topologicalSpace (0 : F.diagram.obj i) = pure 0 := by
+    intro i
+    let _ : DiscreteTopology (F.diagram.obj i) := F.discrete i
+    rw [nhds_discrete]
+  have hnhds_i :
+      @nhds _ (⨅ i : Iᵒᵖ, (F.diagram.obj i).topologicalSpace.induced
+          ((limit.π F.diagram i).hom)) (0 : (limit F.diagram).toModuleCat) =
+        ⨅ i : Iᵒᵖ, Filter.comap ((limit.π F.diagram i).hom)
+          (@nhds _ (F.diagram.obj i).topologicalSpace (0 : F.diagram.obj i)) := by
+    rw [nhds_iInf]
+    apply iInf_congr
+    intro i
+    rw [nhds_induced]
+    rw [map_zero]
+  have hcomp : ∀ i : Iᵒᵖ,
+      Filter.comap ((limit.π F.diagram i).hom)
+          (nhds (0 : F.diagram.obj i)) =
+        𝓟 (S i) := by
+    intro i
+    rw [hi i, Filter.comap_pure]
+    congr 1
+  have hfilter : (⨅ i : Iᵒᵖ, Filter.comap ((limit.π F.diagram i).hom)
+      (nhds (0 : F.diagram.obj i))) = ⨅ i : Iᵒᵖ, 𝓟 (S i) := by
+    apply iInf_congr
+    intro i
+    exact hcomp i
+  have hker : ∀ {i j : Iᵒᵖ} (f : i ⟶ j), K i ≤ K j := by
+    intro i j f
+    dsimp [K]
+    have hcomp' := limit.w F.diagram f
+    have heq :
+        (F.diagram.map f).hom.toLinearMap.comp
+            (limit.π F.diagram i).hom.toLinearMap =
+          (limit.π F.diagram j).hom.toLinearMap := by
+      ext x
+      exact congrArg (fun q => q.hom x) hcomp'
+    rw [← heq]
+    exact LinearMap.ker_le_ker_comp
+      (limit.π F.diagram i).hom.toLinearMap
+      (F.diagram.map f).hom.toLinearMap
+  let _ : Nonempty Iᵒᵖ := F.nonempty.map Opposite.op
+  have hdir : Directed (· ≥ ·) (fun i : Iᵒᵖ => S i) := by
+    intro i j
+    obtain ⟨k, hik, hjk⟩ := F.directed i.unop j.unop
+    let f_i : Opposite.op k ⟶ i := (homOfLE hik).op
+    let f_j : Opposite.op k ⟶ j := (homOfLE hjk).op
+    refine ⟨Opposite.op k, ?_, ?_⟩
+    · intro x hx
+      exact (hker f_i) hx
+    · intro x hx
+      exact (hker f_j) hx
+  rw [hnhds, hnhds_i, hfilter]
+  simpa [S, K, inverseLimitKernel] using
+    (Filter.hasBasis_iInf_principal hdir)
 
 theorem inverseLimit_is_complete {I : Type u} [Preorder I]
     (F : DiscreteInverseSystem I) :
     IsCompleteTopologicalAddGroup (inverseLimit F) := by
-  sorry
+  classical
+  unfold inverseLimit at *
+  have hcomplete_i : ∀ i : Iᵒᵖ,
+      @CompleteSpace (F.diagram.obj i)
+        (IsTopologicalAddGroup.rightUniformSpace (F.diagram.obj i)) := by
+    intro i
+    let _ : DiscreteTopology (F.diagram.obj i) := F.discrete i
+    let u := IsTopologicalAddGroup.rightUniformSpace (F.diagram.obj i)
+    let _ : UniformSpace (F.diagram.obj i) := u
+    have hdisc : @DiscreteUniformity (F.diagram.obj i) u := by
+      refine ⟨?_⟩
+      apply @UniformSpace.ext (F.diagram.obj i) u (⊥ : UniformSpace (F.diagram.obj i))
+      change @uniformity (F.diagram.obj i) u =
+        @uniformity (F.diagram.obj i) (⊥ : UniformSpace (F.diagram.obj i))
+      change comap (fun x : (F.diagram.obj i) × (F.diagram.obj i) => x.2 + (-x.1))
+          (@nhds (F.diagram.obj i) (F.diagram.obj i).2 (0 : F.diagram.obj i)) =
+        𝓟 SetRel.id
+      rw [nhds_discrete, Filter.comap_pure]
+      congr 1
+      ext p
+      change p.2 + -p.1 = 0 ↔ p.1 = p.2
+      constructor
+      · intro h
+        have hp : p.2 - p.1 = 0 := by simpa [sub_eq_add_neg] using h
+        exact (sub_eq_zero.mp hp).symm
+      · intro h
+        have hp : p.2 - p.1 = 0 := sub_eq_zero.mpr h.symm
+        simpa [sub_eq_add_neg] using hp
+    let _ : DiscreteUniformity (F.diagram.obj i) := hdisc
+    change @CompleteSpace (F.diagram.obj i) u
+    refine ⟨?_⟩
+    intro f hf
+    obtain ⟨x, hfx⟩ := DiscreteUniformity.eq_pure_of_cauchy hf
+    refine ⟨x, ?_⟩
+    rw [hfx]
+    exact pure_le_nhds x
+  let g : (limit F.diagram).toModuleCat →+ ∀ i : Iᵒᵖ, F.diagram.obj i :=
+    { toFun := fun x i => (limit.π F.diagram i).hom x
+      map_zero' := by
+        ext i
+        exact map_zero _
+      map_add' := by
+        intro x y
+        ext i
+        exact map_add _ _ _ }
+  letI : ∀ i : Iᵒᵖ, TopologicalSpace (F.diagram.obj i) :=
+    fun i => (F.diagram.obj i).topologicalSpace
+  have htop : (inferInstance : TopologicalSpace ((limit F.diagram).toModuleCat)) =
+      ⨅ i : Iᵒᵖ, (F.diagram.obj i).topologicalSpace.induced ((limit.π F.diagram i).hom) := by
+    exact TopCat.induced_of_isLimit
+      ((forget₂ (TopologicalAbelianGroupCat) TopCat).mapCone (limit.cone F.diagram))
+      (isLimitOfPreserves (forget₂ (TopologicalAbelianGroupCat) TopCat)
+        (limit.isLimit F.diagram))
+  have hind : Topology.IsInducing (g : (limit F.diagram).toModuleCat →
+      ∀ i : Iᵒᵖ, F.diagram.obj i) := by
+    refine ⟨?_⟩
+    calc
+      _ = ⨅ i, (F.diagram.obj i).topologicalSpace.induced
+          ((limit.π F.diagram i).hom) := htop
+      _ = TopologicalSpace.induced (g : (limit F.diagram).toModuleCat →
+          ∀ i : Iᵒᵖ, F.diagram.obj i) Pi.topologicalSpace := by
+        change _ = TopologicalSpace.induced
+          (fun x i => (limit.π F.diagram i).hom x)
+          (@Pi.topologicalSpace Iᵒᵖ (fun i => F.diagram.obj i)
+            (fun i => (F.diagram.obj i).topologicalSpace))
+        rw [@induced_to_pi (ι := Iᵒᵖ) (A := fun i => F.diagram.obj i)
+          (T := fun i => (F.diagram.obj i).topologicalSpace)
+          (X := (limit F.diagram).toModuleCat)]
+  let _ : ∀ i : Iᵒᵖ, DiscreteTopology (F.diagram.obj i) :=
+    fun i => F.discrete i
+  have hD : IsLimit ((forget TopCat).mapCone
+      ((forget₂ (TopologicalAbelianGroupCat) TopCat).mapCone
+        (limit.cone F.diagram))) :=
+    isLimitOfPreserves (forget TopCat)
+      (isLimitOfPreserves (forget₂ (TopologicalAbelianGroupCat) TopCat)
+        (limit.isLimit F.diagram))
+  have hinj : Function.Injective (g : (limit F.diagram).toModuleCat →
+      ∀ i : Iᵒᵖ, F.diagram.obj i) := by
+    intro x y hxy
+    apply (Types.isLimitEquivSections hD).injective
+    ext i
+    exact congrFun hxy i
+  have hT2 : T2Space ((limit F.diagram).toModuleCat) :=
+    T2Space.of_injective_continuous hinj hind.continuous
+  have hSclosed : IsClosed (⋂ (i : Iᵒᵖ) (j : Iᵒᵖ) (f : i ⟶ j),
+      { z : ∀ i : Iᵒᵖ, F.diagram.obj i |
+        (F.diagram.map f).hom (z i) = z j }) := by
+    apply isClosed_iInter
+    intro i
+    apply isClosed_iInter
+    intro j
+    apply isClosed_iInter
+    intro f
+    apply isClosed_eq
+    · exact ((F.diagram.map f).hom.continuous).comp (continuous_apply i)
+    · exact continuous_apply j
+  have hgrange : Set.range (g : (limit F.diagram).toModuleCat →
+      ∀ i : Iᵒᵖ, F.diagram.obj i) =
+      ⋂ (i : Iᵒᵖ) (j : Iᵒᵖ) (f : i ⟶ j),
+        { z : ∀ i : Iᵒᵖ, F.diagram.obj i |
+          (F.diagram.map f).hom (z i) = z j } := by
+    ext z
+    constructor
+    · rintro ⟨x, rfl⟩
+      simp only [Set.mem_iInter]
+      intro i j f
+      exact congrArg (fun q => q.hom x) (limit.w F.diagram f)
+    · intro hz
+      have hz' : ∀ (i j : Iᵒᵖ) (f : i ⟶ j),
+          (F.diagram.map f).hom (z i) = z j := by
+        intro i j f
+        have hi := Set.mem_iInter.1 hz i
+        have hij := Set.mem_iInter.1 hi j
+        simpa using Set.mem_iInter.1 hij f
+      let c : Cone (F.diagram ⋙ forget₂ (TopologicalAbelianGroupCat) TopCat ⋙
+          forget TopCat) :=
+        { pt := PUnit.{u + 1}
+          π := { app := fun i =>
+                   TypeCat.ofHom
+                     (fun _ : ((Functor.const Iᵒᵖ).obj PUnit.{u + 1}).obj i => z i)
+                 naturality := by
+                   intro i j f
+                   ext x
+                   exact (hz' i j f).symm } }
+      refine ⟨hD.lift c (PUnit.unit : PUnit.{u + 1}), ?_⟩
+      funext i
+      simpa [g, c] using congrArg (fun q => q (PUnit.unit : PUnit.{u + 1}))
+        (hD.fac c i)
+  letI : ∀ i : Iᵒᵖ, UniformSpace (F.diagram.obj i) :=
+    fun i => IsTopologicalAddGroup.rightUniformSpace (F.diagram.obj i)
+  letI : ∀ i : Iᵒᵖ, IsUniformAddGroup (F.diagram.obj i) :=
+    fun i => isUniformAddGroup_of_addCommGroup
+  letI : ∀ i : Iᵒᵖ, CompleteSpace (F.diagram.obj i) :=
+    fun i => hcomplete_i i
+  have hprod : CompleteSpace (∀ i : Iᵒᵖ, F.diagram.obj i) := by
+    infer_instance
+  letI : CompleteSpace (∀ i : Iᵒᵖ, F.diagram.obj i) := hprod
+  letI : UniformSpace ((limit F.diagram).toModuleCat) :=
+    IsTopologicalAddGroup.rightUniformSpace _
+  letI : IsUniformAddGroup ((limit F.diagram).toModuleCat) :=
+    isUniformAddGroup_of_addCommGroup
+  letI : IsUniformAddGroup (∀ i : Iᵒᵖ, F.diagram.obj i) := by
+    refine { uniformContinuous_sub := ?_ }
+    rw [uniformContinuous_pi]
+    intro i
+    exact IsUniformAddGroup.uniformContinuous_sub.comp
+      (((Pi.uniformContinuous_proj _ i).comp uniformContinuous_fst).prodMk
+        ((Pi.uniformContinuous_proj _ i).comp uniformContinuous_snd))
+  have huind : IsUniformInducing (g : (limit F.diagram).toModuleCat →
+      ∀ i : Iᵒᵖ, F.diagram.obj i) :=
+    AddMonoidHom.isUniformInducing_of_isInducing hind
+  have hrange : IsComplete (Set.range (g : (limit F.diagram).toModuleCat →
+      ∀ i : Iᵒᵖ, F.diagram.obj i)) := by
+    rw [hgrange]
+    exact hSclosed.isComplete
+  have hcomplete : @CompleteSpace ((limit F.diagram).toModuleCat)
+      (IsTopologicalAddGroup.rightUniformSpace _) :=
+    (completeSpace_iff_isComplete_range huind).2 hrange
+  exact ⟨hcomplete, hT2⟩
 
 /-- A chosen fundamental system of open subgroup neighborhoods of zero. -/
 structure LinearNeighborhoodBasis (M : Type u) [AddCommGroup M]

@@ -49,12 +49,15 @@ theorem grothendieck_brown
   sorry
 
 /- The source calls this AB3*.  `HasProducts` is the established Mathlib
-interface for arbitrary products, so no parallel class is introduced. -/
+   interface for arbitrary products.  Mathlib's
+   `IsGrothendieckAbelian.hasLimits` instance supplies the larger limits,
+   and `HasLimitsOfShape.of_small` gives the required universe-sized form. -/
 instance grothendieck_has_products
     {C : Type u} [Category.{v} C] [Abelian C]
     [IsGrothendieckAbelian.{max u v} C] :
     HasProducts.{v} C := by
-  sorry
+  intro J
+  exact HasLimitsOfShape.of_small C (Discrete J)
 
 /- A precise version of the size warning in the source remark.  The
 derived-category universe is explicit in Mathlib; the theorem below records

@@ -98,7 +98,60 @@ def canonicalRelations
 theorem canonical_kernel_is_generated_by_relations
     {R S : Type*} [CommRing R] [CommRing S] [Algebra R S] :
     Ideal.span (canonicalRelations R S) = (CanonicalGenerators R S).ker := by
-  sorry
+  apply le_antisymm
+  · rw [Algebra.Generators.ker_eq_ker_aeval_val, Ideal.span_le]
+    intro p hp
+    simp only [canonicalRelations, Set.mem_union, Set.mem_range] at hp
+    rcases hp with (⟨⟨s, t⟩, rfl⟩ | ⟨⟨s, t⟩, rfl⟩) | ⟨r, rfl⟩
+    · simp [CanonicalGenerators, Algebra.Generators.self]
+    · simp [CanonicalGenerators, Algebra.Generators.self]
+    · simp [CanonicalGenerators, Algebra.Generators.self]
+  · intro p hp
+    have hnormal : ∀ p : PolynomialRing R S,
+        p - X ((canonicalPresentation R S) p) ∈ Ideal.span (canonicalRelations R S) := by
+      intro q
+      induction q using MvPolynomial.induction_on with
+      | C r =>
+          have hrel : X (algebraMap R S r) - C r ∈ canonicalRelations R S := by
+            simp [canonicalRelations]
+          have hm := neg_mem (Ideal.subset_span hrel)
+          simpa [canonicalPresentation] using hm
+      | add p q hp hq =>
+          have hrel : X ((canonicalPresentation R S) p) +
+                X ((canonicalPresentation R S) q) -
+                X ((canonicalPresentation R S) p + (canonicalPresentation R S) q) ∈
+                Ideal.span (canonicalRelations R S) := by
+            have hm := Ideal.subset_span (show
+                X ((canonicalPresentation R S) p + (canonicalPresentation R S) q) -
+                  X ((canonicalPresentation R S) p) -
+                  X ((canonicalPresentation R S) q) ∈ canonicalRelations R S by
+                    simp [canonicalRelations])
+            simpa [sub_eq_add_neg, add_assoc, add_comm, add_left_comm] using
+              neg_mem hm
+          rw [map_add]
+          have hm := add_mem (add_mem hp hq) hrel
+          convert hm using 1 <;> abel
+      | mul_X p s hp =>
+          have hrel : X ((canonicalPresentation R S) p) * X s -
+                X ((canonicalPresentation R S) p * s) ∈
+                Ideal.span (canonicalRelations R S) := by
+            exact Ideal.subset_span (show
+                X ((canonicalPresentation R S) p) * X s -
+                  X ((canonicalPresentation R S) p * s) ∈ canonicalRelations R S by
+                    simp [canonicalRelations])
+          rw [map_mul, canonicalPresentation_variable]
+          have hm := add_mem
+            (Ideal.mul_mem_right (X s) (Ideal.span (canonicalRelations R S)) hp) hrel
+          convert hm using 1 <;> ring_nf
+    rw [Algebra.Generators.ker_eq_ker_aeval_val] at hp
+    have hval : canonicalPresentation R S p = 0 := RingHom.mem_ker.mp hp
+    have hz : X (0 : S) ∈ Ideal.span (canonicalRelations R S) := by
+      apply Ideal.subset_span
+      unfold canonicalRelations
+      exact Or.inr ⟨0, by simp⟩
+    have hm := add_mem (hnormal p) hz
+    rw [hval] at hm
+    convert hm using 1 <;> abel
 
 theorem canonical_cotangentComplex_on_conormal
     {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]
@@ -124,7 +177,15 @@ theorem canonical_cokernel_equiv_differentials
     {R S : Type*} [CommRing R] [CommRing S] [Algebra R S] :
     Nonempty (NaiveCotangentCokernel R S ≃ₗ[S]
       Formalization.Books.Algebra.Unit131.ModuleOfDifferentials R S) := by
-  sorry
+  let f : CanonicalCotangentSpace R S →ₗ[S]
+      Formalization.Books.Algebra.Unit131.ModuleOfDifferentials R S :=
+    (CanonicalExtension R S).toKaehler
+  have hf : Function.Surjective f :=
+    canonical_to_differentials_surjective (R := R) (S := S)
+  have hExact := canonical_exact_cotangentComplex_to_differentials (R := R) (S := S)
+  have hker : LinearMap.range (NaiveCotangentComplex R S) = LinearMap.ker f := by
+    simpa [f] using (LinearMap.exact_iff.mp hExact).symm
+  refine ⟨(Submodule.quotEquivOfEq (R := S) (M := CanonicalCotangentSpace R S) _ _ hker).trans (f.quotKerEquivOfSurjective hf)⟩
 
 /-! ## Presentations and their naive cotangent complexes -/
 
@@ -190,7 +251,16 @@ theorem presentation_cokernel_equiv_differentials
     Nonempty ((PresentationCotangentSpace P ⧸
         LinearMap.range (PresentationNaiveCotangentComplex P)) ≃ₗ[S]
       Formalization.Books.Algebra.Unit131.ModuleOfDifferentials R S) := by
-  sorry
+  let f : PresentationCotangentSpace P →ₗ[S]
+      Formalization.Books.Algebra.Unit131.ModuleOfDifferentials R S :=
+    P.toExtension.toKaehler
+  have hf : Function.Surjective f :=
+    presentation_to_differentials_surjective (R := R) (S := S) (ι := ι) P
+  have hExact :=
+    presentation_exact_cotangentComplex_to_differentials (R := R) (S := S) (ι := ι) P
+  have hker : LinearMap.range (PresentationNaiveCotangentComplex P) = LinearMap.ker f := by
+    simpa [f] using (LinearMap.exact_iff.mp hExact).symm
+  exact ⟨(Submodule.quotEquivOfEq (R := S) (M := PresentationCotangentSpace P) _ _ hker).trans (f.quotKerEquivOfSurjective hf)⟩
 
 theorem presentation_cotangentComplex_on_conormal
     {R S ι : Type*} [CommRing R] [CommRing S] [Algebra R S]
@@ -203,7 +273,7 @@ theorem finite_type_has_finite_generator_presentation
     {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]
     [Algebra.FiniteType R S] :
     ∃ n : ℕ, Nonempty (Presentation R S (Fin n)) := by
-  sorry
+  exact (Algebra.FiniteType.iff_exists_generators (R := R) (S := S)).mp inferInstance
 
 /-! ## Functoriality and homotopy independence -/
 

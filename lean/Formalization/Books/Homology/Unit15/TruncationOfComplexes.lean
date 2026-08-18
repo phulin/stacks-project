@@ -228,9 +228,9 @@ private noncomputable def stupidTruncLEι (K : ChainComplex C ℤ) (n : ℤ) :
             HomologicalComplex.extendXIso, CategoryTheory.eqToIso]
           rfl
         rw [hstupid a, hstupid_inv b]
-        simp only [Category.assoc]
+        simp [Category.assoc]
       rw [hd k l]
-      simp only [Category.assoc, Iso.inv_hom_id, Category.comp_id]
+      simp [Category.assoc, Iso.inv_hom_id, Category.comp_id]
     · have hz := HomologicalComplex.isZero_stupidTrunc_X K
         (chainLEEmbedding n) i (by
           intro k hk
@@ -584,8 +584,13 @@ private noncomputable def stupidTruncLEπ (K : ChainComplex C ℤ) (n : ℤ) :
         simp [ComplexShape.down, ComplexShape.down'] at hij'
       simp only [dif_pos hi, dif_neg hj]
       have hd : (degreeConcentrated (K.X n) n).d i j = 0 := by
-        simp [degreeConcentrated,
-          Formalization.Books.Homology.Unit14.ChainComplex.concentrated] ; rfl
+        have hz : IsZero ((degreeConcentrated (K.X n) n).X j) := by
+          change IsZero
+            ((Formalization.Books.Homology.Unit14.ChainComplex.concentrated
+              C (K.X n) (-n)).X j)
+          apply Formalization.Books.Homology.Unit14.ChainComplex.concentrated_isZero
+          simpa using hj
+        exact hz.eq_of_tgt _ _
       rw [hd]
       simp
     · simp only [dif_neg hi]
@@ -605,29 +610,29 @@ private noncomputable def stupidTruncLEπ (K : ChainComplex C ℤ) (n : ℤ) :
       · simp only [dif_neg hj]
         simp
 
-omit [Abelian C] in
-private lemma mono_iso_inv {X Y : C} (e : X ≅ Y) : Mono e.inv := by
+private lemma mono_iso_inv {D : Type u} [Category.{v} D] {X Y : D}
+    (e : X ≅ Y) : Mono e.inv := by
   constructor
   intro Z g h w
   simpa only [Category.assoc, e.inv_hom_id, Category.comp_id] using
     congrArg (fun t => t ≫ e.hom) w
 
-omit [Abelian C] in
-private lemma mono_iso_hom {X Y : C} (e : X ≅ Y) : Mono e.hom := by
+private lemma mono_iso_hom {D : Type u} [Category.{v} D] {X Y : D}
+    (e : X ≅ Y) : Mono e.hom := by
   constructor
   intro Z g h w
   simpa only [Category.assoc, e.hom_inv_id, Category.comp_id] using
     congrArg (fun t => t ≫ e.inv) w
 
-omit [Abelian C] in
-private lemma epi_iso_inv {X Y : C} (e : X ≅ Y) : Epi e.inv := by
+private lemma epi_iso_inv {D : Type u} [Category.{v} D] {X Y : D}
+    (e : X ≅ Y) : Epi e.inv := by
   constructor
   intro Z g h w
   simpa only [Category.assoc, e.hom_inv_id_assoc] using
     congrArg (fun t => e.hom ≫ t) w
 
-omit [Abelian C] in
-private lemma epi_iso_hom {X Y : C} (e : X ≅ Y) : Epi e.hom := by
+private lemma epi_iso_hom {D : Type u} [Category.{v} D] {X Y : D}
+    (e : X ≅ Y) : Epi e.hom := by
   constructor
   intro Z g h w
   simpa only [Category.assoc, e.inv_hom_id_assoc] using
@@ -718,7 +723,7 @@ theorem stupidTruncLE_quotient (K : ChainComplex C ℤ) (n : ℤ) :
       rw [dif_neg hi]
       change Epi (0 : _ ⟶ _)
       apply (Formalization.Books.Homology.Unit14.ChainComplex.concentrated_isZero
-        (K.X n) (-n) i (by simp; omega)).epi
+        (K.X n) (-n) i (by omega)).epi
   let : Epi p := hp
   have hf : Mono f := by
     apply HomologicalComplex.mono_of_mono_f
@@ -1209,9 +1214,9 @@ private noncomputable def stupidTruncι {ι ι' : Type*}
             HomologicalComplex.extendXIso, CategoryTheory.eqToIso]
           rfl
         rw [hstupid a, hstupid_inv b]
-        simp only [Category.assoc]
+        simp [Category.assoc]
       rw [hd k l]
-      simp only [Category.assoc, Iso.inv_hom_id, Category.comp_id]
+      simp [Category.assoc, Iso.inv_hom_id, Category.comp_id]
     · have hz := HomologicalComplex.isZero_stupidTrunc_X K e i (by
         intro k hk
         exact hi ⟨k, hk⟩)

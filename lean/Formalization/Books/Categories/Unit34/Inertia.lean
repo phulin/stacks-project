@@ -607,9 +607,6 @@ theorem relativeInertia_equivalent_to_diagonal_product {C : Cat.{v, u}}
           (ObjectProperty.isoMk _
             (Comma.isoMk a.automorphism (Iso.refl _) (by
               dsimp [fibredCategoryDiagonalFunctor, isoCommaDiagonal]
-              change (overFunctor F.underlying).map
-                  a.automorphism.hom ≫ 𝟙 _ =
-                𝟙 _ ≫ (overFunctor F.underlying).map (𝟙 _)
               simp [a.map_eq_id])))
       { obj :=
           { obj :=
@@ -906,7 +903,7 @@ theorem relativeInertia_equivalent_to_diagonal_product {C : Cat.{v, u}}
             apply (cancel_mono z'.obj.obj.hom.hom.hom.right).1
             simp only [Category.assoc]
             rw [hR']
-            simp [hz, hz']
+            simp
           have hκL :
               (inv z.obj.obj.hom).hom.hom.right ≫ f.hom.hom.left =
                 f.hom.hom.right ≫ (inv z'.obj.obj.hom).hom.hom.right := by

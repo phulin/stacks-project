@@ -251,7 +251,7 @@ theorem finitePthRootFieldAtLevel_isPurelyInseparable
     (F : Type u) [Field F] (p : ℕ) (hp : 0 < p) (n : ℕ) [Fact p.Prime]
     [CharP F p] (s : Finset F) :
     IsPurelyInseparable F (finitePthRootFieldAtLevel F p hp n s) := by
-  letI : ExpChar F p := ExpChar.prime (Fact.out : Nat.Prime p)
+  let : ExpChar F p := ExpChar.prime (Fact.out : Nat.Prime p)
   rw [finitePthRootFieldAtLevel,
     IntermediateField.isPurelyInseparable_adjoin_iff_pow_mem F
       (AlgebraicClosure F) p]
@@ -278,7 +278,7 @@ theorem finitePthRootField_isPurelyInseparable
     (F : Type u) [Field F] (p : ℕ) (hp : 0 < p) [Fact p.Prime] [CharP F p]
     (s : Finset F) :
     IsPurelyInseparable F (finitePthRootField F p hp s) := by
-  letI : ExpChar F p := ExpChar.prime (Fact.out : Nat.Prime p)
+  let : ExpChar F p := ExpChar.prime (Fact.out : Nat.Prime p)
   rw [finitePthRootField,
     IntermediateField.isPurelyInseparable_adjoin_iff_pow_mem F (AlgebraicClosure F) p]
   rintro _ ⟨a, rfl⟩
@@ -316,7 +316,7 @@ theorem finitePthRootTop_isPurelyInseparable
     (p : ℕ) (hp : 0 < p) [Fact p.Prime] [CharP k p] [CharP K p]
     (s : Finset k) (t : Finset K) :
     IsPurelyInseparable K (finitePthRootTop k K p hp s t) := by
-  letI : ExpChar K p := ExpChar.prime (Fact.out : Nat.Prime p)
+  let : ExpChar K p := ExpChar.prime (Fact.out : Nat.Prime p)
   rw [finitePthRootTop,
     IntermediateField.isPurelyInseparable_adjoin_iff_pow_mem K (AlgebraicClosure K) p]
   rintro _ (⟨a, rfl⟩ | ⟨b, rfl⟩)
@@ -361,7 +361,7 @@ theorem finitePthRootTopAtLevel_isPurelyInseparable
     (p : ℕ) (hp : 0 < p) (n : ℕ) [Fact p.Prime] [CharP k p] [CharP K p]
     (s : Finset k) (t : Finset K) :
     IsPurelyInseparable K (finitePthRootTopAtLevel k K p hp n s t) := by
-  letI : ExpChar K p := ExpChar.prime (Fact.out : Nat.Prime p)
+  let : ExpChar K p := ExpChar.prime (Fact.out : Nat.Prime p)
   rw [finitePthRootTopAtLevel,
     IntermediateField.isPurelyInseparable_adjoin_iff_pow_mem K
       (AlgebraicClosure K) p]

@@ -382,7 +382,7 @@ theorem linearCoordinateAlgHom_left_inverse
   have hrepr (v : Fin 2 → K) :
       ∑ j : Fin 2, v j • (Pi.single j 1) = v := by
     funext j
-    fin_cases j <;> simp [Fin.sum_univ_two, Pi.single_apply]
+    fin_cases j <;> simp [Pi.single_apply]
   have hlin (i : Fin 2) :
       ∑ j : Fin 2, (ℓ (Pi.single i 1) j) • (ℓ.symm (Pi.single j 1)) =
         Pi.single i 1 := by
@@ -471,11 +471,11 @@ theorem linearCoordinateAlgHom_left_inverse
             ((ℓ (Pi.single i 1) 0) * (ℓ.symm (Pi.single 0 1) 1) +
               (ℓ (Pi.single i 1) 1) * (ℓ.symm (Pi.single 1 1) 1)) *
             MvPowerSeries.X (1 : Fin 2) := by
-        rw [← map_add (MvPowerSeries.C : K →+* MvPowerSeries (Fin 2) K),
-          ← map_add (MvPowerSeries.C : K →+* MvPowerSeries (Fin 2) K)]
+        rw [← map_add (MvPowerSeries.C : K →+* MvPowerSeries (Fin 2) K)]
+        rw [← map_add (MvPowerSeries.C : K →+* MvPowerSeries (Fin 2) K)]
       _ = MvPowerSeries.X i := by
         rw [hcoeff 0, hcoeff 1]
-        fin_cases i <;> simp [Pi.single_apply]
+        fin_cases i <;> simp
   have hfun :
       (fun i : Fin 2 =>
         MvPowerSeries.substAlgHom (linearCoordinateHasSubst ℓ.symm)
@@ -890,7 +890,7 @@ private theorem twoVariableMaximalIdeal_eq_constantCoeff_ker
       apply MvPowerSeries.X_dvd_iff.mpr
       intro m hm
       have hm0 : m = 0 := by
-        ext i
+        ext
         simpa using hm
       subst m
       simpa [MvPowerSeries.coeff_zero_eq_constantCoeff] using hF0
@@ -912,8 +912,7 @@ private theorem twoVariableMaximalIdeal_eq_constantCoeff_ker
           MvPowerSeries.X (1 : Fin 2) * E.symm (PowerSeries.C H) := by
       have hE0' : E (MvPowerSeries.X (0 : Fin 2)) =
           (PowerSeries.X : PowerSeries (MvPowerSeries (Fin 1) K)) := by
-        simpa [E] using
-          (MvPowerSeries.finSuccEquiv_X_zero (R := K) (n := 1))
+        simp [E]
       have hE1' : E (MvPowerSeries.X (1 : Fin 2)) =
           PowerSeries.C (MvPowerSeries.X (0 : Fin 1)) := by
         simpa [E] using

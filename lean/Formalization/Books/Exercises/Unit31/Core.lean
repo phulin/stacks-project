@@ -1,6 +1,4 @@
-import Mathlib.Algebra.Algebra.Subalgebra.Basic
 import Mathlib.RingTheory.MvPolynomial.Homogeneous
-import Mathlib.Data.Complex.Basic
 import Mathlib.RingTheory.Nullstellensatz
 
 /-!

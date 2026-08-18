@@ -1308,6 +1308,85 @@ theorem isGeometricallyReduced_iff_of_separable_algebraic
     let _ : IsReduced ((K ⊗[k] k') ⊗[k'] A) := hbase
     exact isReduced_of_injective e.symm e.symm.injective
 
+private theorem test_finitePurelyInseparable_baseChanges
+    {k : Type u} {S : Type v} [Field k] [CommRing S] [Algebra k S]
+    (hS : IsReduced S)
+    (h : ∀ (k' : Type u) [Field k'] [Algebra k k']
+      [FiniteDimensional k k'] [IsPurelyInseparable k k'],
+      IsReduced (k' ⊗[k] S)) :
+    IsGeometricallyReduced k S := by
+  classical
+  intro K _ _
+  by_contra hnot
+  obtain ⟨R', S', hR', hS', hnot'⟩ :=
+    exists_finiteType_subalgebras_of_not_isReduced_tensorProduct hnot
+  let _ : Algebra.FiniteType k R' := hR'
+  let _ : Algebra.FiniteType k S' := hS'
+  let _ : IsReduced R' := isReduced_of_injective R'.val Subtype.val_injective
+  letI : CommRing R' := Subalgebra.toCommRing R'
+  letI : IsDomain R' := by
+    have hK : IsDomain K := inferInstance
+    have hinj : Function.Injective (R'.val.toRingHom : R' →+* K) :=
+      Subtype.val_injective
+    exact Function.Injective.isDomain R'.val.toRingHom hinj
+  let L := FractionRing R'
+  let _ : Algebra.EssFiniteType k L :=
+    Algebra.EssFiniteType.of_isLocalization (nonZeroDivisors R')
+  obtain ⟨D⟩ := Formalization.Books.Algebra.Unit42.exists_purely_inseparable_base_change
+    (k := k) (K := L)
+  let _ : Field D.base := D.baseField
+  let _ : Field D.top := D.topField
+  let _ : Algebra k D.base := D.baseAlgebra
+  let _ : Algebra k D.top := D.topAlgebra
+  let _ : Algebra L D.top := D.topOverK
+  let _ : Algebra D.base D.top := D.topOverBase
+  let _ : IsScalarTower k D.base D.top := D.baseTower
+  let _ : IsScalarTower k L D.top := D.topTower
+  let _ : FiniteDimensional k D.base := D.baseFinite
+  let _ : IsPurelyInseparable k D.base := D.basePurelyInseparable
+  let _ : FiniteDimensional L D.top := D.topFinite
+  let _ : IsPurelyInseparable L D.top := D.topPurelyInseparable
+  let _ : Algebra D.base (D.base ⊗[k] S') :=
+    Algebra.TensorProduct.leftAlgebra
+  let _ : Module D.base (D.base ⊗[k] S') :=
+    @Algebra.toModule D.base (D.base ⊗[k] S') _ _ Algebra.TensorProduct.leftAlgebra
+  let q : (D.base ⊗[k] S') →ₐ[k] (D.base ⊗[k] S) :=
+    Algebra.TensorProduct.map (AlgHom.id k D.base) S'.val
+  have hq : Function.Injective q :=
+    TensorProduct.map_injective_of_flat_flat (LinearMap.id) S'.val.toLinearMap
+      Function.injective_id Subtype.val_injective
+  let _ : IsReduced (D.base ⊗[k] S) := h D.base
+  have hbase : IsReduced (D.base ⊗[k] S') := isReduced_of_injective q hq
+  have htop₀ : IsReduced (D.top ⊗[D.base] (D.base ⊗[k] S')) :=
+    isReduced_tensorProduct_of_separable_extension
+      (k := D.base) (S := D.base ⊗[k] S') (K := D.top) hbase
+      (Or.inr D.topSeparablyGenerated)
+  let e₁ : (D.top ⊗[D.base] (D.base ⊗[k] S')) ≃ₐ[D.top]
+      D.top ⊗[k] S' :=
+    Algebra.TensorProduct.cancelBaseChange k D.base D.top D.top S'
+  let _ : IsReduced (D.top ⊗[D.base] (D.base ⊗[k] S')) := htop₀
+  have htop : IsReduced (D.top ⊗[k] S') :=
+    isReduced_of_injective e₁.symm.toRingEquiv.toRingHom e₁.symm.injective
+  let m : (L ⊗[k] S') →ₐ[k] (D.top ⊗[k] S') :=
+    Algebra.TensorProduct.map (IsScalarTower.toAlgHom k L D.top) (AlgHom.id k S')
+  have hm : Function.Injective m :=
+    TensorProduct.map_injective_of_flat_flat
+      (IsScalarTower.toAlgHom k L D.top).toLinearMap (LinearMap.id)
+      (IsScalarTower.toAlgHom k L D.top).injective Function.injective_id
+  let _ : IsReduced (D.top ⊗[k] S') := htop
+  have hL : IsReduced (L ⊗[k] S') := isReduced_of_injective m hm
+  let _ : IsScalarTower k R' L := IsScalarTower.of_algebraMap_eq' (by
+    ext x
+    simp [← IsScalarTower.algebraMap_apply])
+  let n : (R' ⊗[k] S') →ₐ[k] (L ⊗[k] S') :=
+    Algebra.TensorProduct.map (IsScalarTower.toAlgHom k R' L) (AlgHom.id k S')
+  have hn : Function.Injective n :=
+    TensorProduct.map_injective_of_flat_flat
+      (IsScalarTower.toAlgHom k R' L).toLinearMap (LinearMap.id)
+      (IsScalarTower.toAlgHom k R' L).injective Function.injective_id
+  have hRS : IsReduced (R' ⊗[k] S') := isReduced_of_injective n hn
+  exact hnot' hRS
+
 end
 
 end Formalization.Books.Algebra.Unit43

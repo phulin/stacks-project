@@ -60,7 +60,7 @@ theorem formallyEtale_baseChange
     letI : Algebra R' (R' ⊗[R] S) := Algebra.TensorProduct.leftAlgebra
     Algebra.FormallyEtale R' (R' ⊗[R] S) := by
   let : Algebra R' (R' ⊗[R] S) := Algebra.TensorProduct.leftAlgebra
-  haveI : Algebra.FormallyEtale R S := h
+  let : Algebra.FormallyEtale R S := h
   infer_instance
 
 /-- For a ring map of finite presentation, formal étaleness is equivalent to
@@ -213,7 +213,7 @@ theorem formallyEtale_omega_differentials
     (hf : Algebra.FormallyEtale S S') :
     Nonempty (S' ⊗[S] ModuleOfDifferentials R S ≃ₗ[S']
       ModuleOfDifferentials R S') := by
-  haveI : Algebra.FormallyEtale S S' := hf
+  let : Algebra.FormallyEtale S S' := hf
   exact ⟨KaehlerDifferential.tensorKaehlerEquivOfFormallyEtale R S S'⟩
 
 /-- The module used after base change in the principal-parts lemma. -/
@@ -265,7 +265,6 @@ theorem formallyEtale_differentialOperator_extension
     [IsScalarTower R S M] [IsScalarTower R S N]
     (_hf : Algebra.FormallyEtale S S') (k : ℕ)
     (D : DifferentialOperator (R := R) (S := S) (M := M) (N := N) k) :
-    letI : Algebra.FormallyEtale S S' := hf
     letI : Module S' (principalPartsBaseChangeModule (S := S) (S' := S') M) :=
       TensorProduct.leftModule
     letI : Module S' (principalPartsBaseChangeModule (S := S) (S' := S') N) :=

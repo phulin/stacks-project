@@ -67,7 +67,43 @@ theorem finitePresentation_descends_of_faithfullyFlat
     [Algebra R S] [AddCommGroup M] [Module R M]
     [Module.FaithfullyFlat R S] :
     Module.FinitePresentation S (S ⊗[R] M) → Module.FinitePresentation R M := by
-  sorry
+  intro h
+  let _ : Module.FinitePresentation S (S ⊗[R] M) := h
+  have hfiniteR : Module.Finite R M :=
+    finite_type_descends_of_faithfullyFlat (R := R) (S := S) (M := M) inferInstance
+  let _ : Module.Finite R M := hfiniteR
+  obtain ⟨n, f, hf⟩ := Module.Finite.exists_fin' R M
+  have hfS : Function.Surjective (f.baseChange S) :=
+    LinearMap.baseChange_surjective S hf
+  have hfgS : (LinearMap.ker (f.baseChange S)).FG :=
+    Module.FinitePresentation.fg_ker (f.baseChange S) hfS
+  have hbase :
+      (LinearMap.ker f).baseChange S = LinearMap.ker (f.baseChange S) := by
+    ext x
+    change x ∈ LinearMap.range ((LinearMap.ker f).subtype.baseChange S) ↔
+      x ∈ LinearMap.ker (f.baseChange S)
+    have hx := congrArg (fun p => x ∈ p)
+      (Module.Flat.lTensor_exact S (LinearMap.exact_subtype_ker_map f)).linearMap_ker_eq.symm
+    have hx' : (∃ y, (LinearMap.lTensor S (LinearMap.ker f).subtype) y = x) ↔
+        (LinearMap.lTensor S f) x = 0 := Iff.of_eq hx
+    have h₁ (y : S ⊗[R] LinearMap.ker f) :
+        ((LinearMap.ker f).subtype.baseChange S) y =
+          (LinearMap.lTensor S (LinearMap.ker f).subtype) y := rfl
+    have h₂ : (f.baseChange S) x = (LinearMap.lTensor S f) x := rfl
+    simpa only [LinearMap.mem_range, LinearMap.mem_ker, h₁, h₂] using hx'
+  have hfgBC : ((LinearMap.ker f).baseChange S).FG := by
+    rw [hbase]
+    exact hfgS
+  have hfiniteBC : Module.Finite S ((LinearMap.ker f).baseChange S) :=
+    Module.Finite.of_fg hfgBC
+  have hfiniteTensor : Module.Finite S (S ⊗[R] LinearMap.ker f) := by
+    rw [Module.Finite.equiv_iff (Submodule.toBaseChange.toLinearEquiv S (LinearMap.ker f))]
+    exact hfiniteBC
+  let _ : Module.Finite S (S ⊗[R] LinearMap.ker f) := hfiniteTensor
+  have hfiniteKer : Module.Finite R (LinearMap.ker f) :=
+    Module.Finite.of_finite_tensorProduct_of_faithfullyFlat S
+  have hfgKer : (LinearMap.ker f).FG := Module.Finite.iff_fg.mp hfiniteKer
+  exact Module.finitePresentation_of_free_of_surjective f hf hfgKer
 
 /-- Flatness descends along faithfully flat base change.
 

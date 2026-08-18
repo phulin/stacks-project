@@ -1436,22 +1436,22 @@ theorem cartesianComponentSquare_silly
   have hcc : IsProfiniteSpace (ConnectedComponents X) :=
     Formalization.Books.Topology.Unit23.connectedComponents_isProfiniteSpace
   obtain ⟨Pcc, ⟨ecc⟩⟩ := hcc
-  letI : T2Space (ConnectedComponents X) := ecc.symm.t2Space
-  letI : CompactSpace (ConnectedComponents X) := ecc.symm.compactSpace
-  letI : TotallyDisconnectedSpace (ConnectedComponents X) :=
+  let : T2Space (ConnectedComponents X) := ecc.symm.t2Space
+  let : CompactSpace (ConnectedComponents X) := ecc.symm.compactSpace
+  let : TotallyDisconnectedSpace (ConnectedComponents X) :=
     ecc.symm.totallyDisconnectedSpace
   obtain ⟨PT, ⟨eT0⟩⟩ := hT
   let eT : T ≃ₜ (PT : Type u) := eT0
-  letI : T2Space T := eT.symm.t2Space
-  letI : CompactSpace T := eT.symm.compactSpace
-  letI : TotallyDisconnectedSpace T := eT.symm.totallyDisconnectedSpace
-  letI : PrespectralSpace T :=
+  let : T2Space T := eT.symm.t2Space
+  let : CompactSpace T := eT.symm.compactSpace
+  let : TotallyDisconnectedSpace T := eT.symm.totallyDisconnectedSpace
+  let : PrespectralSpace T :=
     PrespectralSpace.of_isTopologicalBasis isTopologicalBasis_isClopen
       (fun U hU => hU.1.isCompact)
-  letI : SpectralSpace T :=
+  let : SpectralSpace T :=
     Formalization.Books.Topology.Unit23.spectralSpace_iff_source_conditions.mpr
       ⟨inferInstance, inferInstance, inferInstance, inferInstance, inferInstance⟩
-  letI : SpectralSpace (T × X) :=
+  let : SpectralSpace (T × X) :=
     Formalization.Books.Topology.Unit23.spectralSpace_prod
   let hPclosed : IsClosed ({p : T × X |
       sq.toPi0.hom p.1 = ConnectedComponents.mk p.2} : Set (T × X)) :=
@@ -1460,7 +1460,7 @@ theorem cartesianComponentSquare_silly
         ConnectedComponents.continuous_coe
   let P : Type u := {p : T × X //
       sq.toPi0.hom p.1 = ConnectedComponents.mk p.2}
-  letI : SpectralSpace P :=
+  let : SpectralSpace P :=
     Formalization.Books.Topology.Unit23.spectralSpace_subtype_of_isClosed hPclosed
   let eY : (sq.Y : Type u) ≃ₜ P :=
     TopCat.homeoOfIso
@@ -1487,8 +1487,8 @@ theorem cartesianComponentSquare_silly
         (quasiSeparatedSpace_congr eY).mpr inferInstance,
         PrespectralSpace.of_isInducing eY eY.isInducing
           eY.isProperMap.isSpectralMap⟩
-  letI : SpectralSpace (sq.Y : Type u) := hYspectral
-  letI : CompactSpace (sq.Y : Type u) := hYspectral.toCompactSpace
+  let : SpectralSpace (sq.Y : Type u) := hYspectral
+  let : CompactSpace (sq.Y : Type u) := hYspectral.toCompactSpace
   have hfiber (t : T) :
       IsConnected (sq.toT.hom ⁻¹' ({t} : Set T)) := by
     obtain ⟨x, hx⟩ := ConnectedComponents.surjective_coe (sq.toPi0.hom t)
@@ -1524,8 +1524,8 @@ theorem cartesianComponentSquare_silly
           apply Continuous.subtype_mk
           apply Continuous.subtype_mk
           exact continuous_const.prodMk continuous_subtype_val }
-    letI : ConnectedSpace Q := Subtype.connectedSpace isConnected_connectedComponent
-    letI : ConnectedSpace S := ef.symm.surjective.connectedSpace ef.symm.continuous
+    let : ConnectedSpace Q := Subtype.connectedSpace isConnected_connectedComponent
+    let : ConnectedSpace S := ef.symm.surjective.connectedSpace ef.symm.continuous
     have hSconn : IsConnected S :=
       isConnected_iff_connectedSpace.mpr inferInstance
     have hpre : IsConnected (eY ⁻¹' S) :=
@@ -1723,8 +1723,7 @@ theorem cartesianComponentSquare_silly
           (Subtype.val : P → T × X) ⁻¹' ((Set.univ : Set T) ×ˢ U) = W := by
         ext p
         dsimp [W]
-        simp only [Set.mem_preimage, Set.mem_prod, Set.mem_univ,
-          Set.mem_setOf_eq, true_and]
+        simp only [Set.mem_preimage, Set.mem_prod, Set.mem_univ, true_and]
         change p.val.2 ∈ U ↔ p.val.2 ∈ U
         rfl
       rw [← hset]

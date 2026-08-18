@@ -75,7 +75,7 @@ theorem finiteType_ringHom_of_basicOpenCovers
       (g := gAU) (f i) hunit
   let eTensor : T ≃ₐ[B'] U :=
     IsLocalization.Away.tensorRightEquiv B' (f i) R'
-  haveI : IsLocalization.Away (φ (f i) * g j) U := by
+  have hloc : IsLocalization.Away (φ (f i) * g j) U := by
     simpa [U, B', mul_comm] using
       (IsLocalization.Away.mul' B' U (g j) (φ (f i)))
   let e : L ≃ₐ[B] U :=
@@ -97,8 +97,8 @@ theorem finiteType_ringHom_of_basicOpenCovers
       simpa only [RingHom.comp_apply] using congrArg (fun k : A →+* U => k a) hG
     rw [hHa, hGa, e.commutes, congrArg (fun k : A →+* U => k a) hBU]
     simp only [RingHom.comp_apply]
-  letI : Algebra R' L := H.toAlgebra
-  letI : Algebra R' U := G.toAlgebra
+  let : Algebra R' L := H.toAlgebra
+  let : Algebra R' U := G.toAlgebra
   let eA : L ≃ₐ[R'] U :=
     AlgEquiv.ofRingEquiv (f := e.toRingEquiv) (by
       intro r

@@ -201,6 +201,9 @@ theorem finite_flat_nonprojective_base_not_noetherian
     (hfinite : Module.Finite A M) (hflat : Module.Flat A M)
     (hnotProjective : ¬ Module.Projective A M) :
     ¬ IsNoetherianRing A := by
-  sorry
+  intro hnoeth
+  exact hnotProjective
+    (projective_of_flat_of_finitePresentation hflat
+      (@Module.finitePresentation_of_finite A M _ _ _ hnoeth hfinite))
 
 end Formalization.Books.Exercises.Unit05

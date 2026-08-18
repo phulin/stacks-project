@@ -254,14 +254,20 @@ theorem isQuasiRegular_of_isRegular
     (hf : RingTheory.Sequence.IsRegular R f) : IsQuasiRegular R f := by
   exact isMQuasiRegular_of_isRegular hf
 
-/-- In the ring case, quasi-regularity gives the module-level form of the textbook's
-associated-graded polynomial identification. -/
+/-- In the ring case, quasi-regularity identifies the polynomial ring over the quotient
+with the associated graded object, as in the textbook. -/
 noncomputable def quasiRegular_graded_ring_identification
     {R : Type u} [CommRing R] (f : List R)
     (hf : IsQuasiRegular R f) :
-    quasiRegularSource R R f ≃ₗ[R ⧸ Ideal.ofList f]
+    MvPolynomial (Fin f.length) (R ⧸ Ideal.ofList f) ≃ₗ[R ⧸ Ideal.ofList f]
       quasiRegularTarget R R (Ideal.ofList f) :=
-  quasiRegularCanonicalEquiv R R f hf
+by
+  /-
+  PRIOR ATTEMPT: This returned the canonical equivalence with the tensor-form source
+  `quasiRegularSource R R f`.  In the ring case the first tensor factor is canonically
+  the quotient ring, so the chapter-facing statement is the polynomial-ring form above.
+  -/
+  sorry
 
 /-! ## Base change, localization, and truncation -/
 

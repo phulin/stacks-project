@@ -18,7 +18,7 @@ is represented by a linear equivalence `M ≃ₗ[R] N × N'`.
 
 namespace Formalization.Books.Algebra.Unit85
 
-universe u v w
+universe u v
 
 /-! ## Projective modules over a local ring -/
 
@@ -155,7 +155,7 @@ theorem free_of_countablyGenerated_of_free_direct_summand_property
     [AddCommGroup M] [Module R M]
     (hM : Formalization.Books.Algebra.Unit84.Module.IsCountablyGenerated R M)
     (hproperty :
-      ∀ (N N' : Type w) [AddCommGroup N] [Module R N]
+      ∀ (N N' : Type v) [AddCommGroup N] [Module R N]
         [AddCommGroup N'] [Module R N']
         [Module.Finite R N'] [Module.Free R N'],
         Nonempty (M ≃ₗ[R] N × N') →

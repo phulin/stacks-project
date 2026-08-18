@@ -498,7 +498,23 @@ theorem coSpecial_triangle_isIso₂
     {T T' : Triangle C} (hT : CoSpecialTriangle T)
     (hT' : CoSpecialTriangle T') (φ : T ⟶ T')
     (h₁ : IsIso φ.hom₁) (h₃ : IsIso φ.hom₃) : IsIso φ.hom₂ := by
-  sorry
+  let Top : Triangle Cᵒᵖ :=
+    (triangleOpEquivalence C).functor.obj (Opposite.op T)
+  let Topp : Triangle Cᵒᵖ :=
+    (triangleOpEquivalence C).functor.obj (Opposite.op T')
+  let phop : Topp ⟶ Top :=
+    (triangleOpEquivalence C).functor.map (Opposite.op φ)
+  have hTopp : SpecialTriangle Topp := hT'
+  have hTop : SpecialTriangle Top := hT
+  have h1op : IsIso phop.hom₃ := by
+    change IsIso (φ.hom₁.op : Topp.obj₃ ⟶ Top.obj₃)
+    exact (isIso_op_iff φ.hom₁).2 h₁
+  have h3op : IsIso phop.hom₁ := by
+    change IsIso (φ.hom₃.op : Topp.obj₁ ⟶ Top.obj₁)
+    exact (isIso_op_iff φ.hom₃).2 h₃
+  exact (isIso_op_iff φ.hom₂).1
+    (special_triangle_isIso₂ (C := Cᵒᵖ) (T := Topp) (T' := Top)
+      hTopp hTop phop h3op h1op)
 
 /-- The first component of a co-special-triangle morphism is an isomorphism
 when the second and third components are. -/
@@ -506,17 +522,44 @@ theorem coSpecial_triangle_isIso₁
     {T T' : Triangle C} (hT : CoSpecialTriangle T)
     (hT' : CoSpecialTriangle T') (φ : T ⟶ T')
     (h₂ : IsIso φ.hom₂) (h₃ : IsIso φ.hom₃) : IsIso φ.hom₁ := by
-  sorry
+  let Top : Triangle Cᵒᵖ :=
+    (triangleOpEquivalence C).functor.obj (Opposite.op T)
+  let Topp : Triangle Cᵒᵖ :=
+    (triangleOpEquivalence C).functor.obj (Opposite.op T')
+  let phop : Topp ⟶ Top :=
+    (triangleOpEquivalence C).functor.map (Opposite.op φ)
+  have hTopp : SpecialTriangle Topp := hT'
+  have hTop : SpecialTriangle Top := hT
+  have h2op : IsIso phop.hom₂ := by
+    change IsIso (φ.hom₂.op : Topp.obj₂ ⟶ Top.obj₂)
+    exact (isIso_op_iff φ.hom₂).2 h₂
+  have h3op : IsIso phop.hom₁ := by
+    change IsIso (φ.hom₃.op : Topp.obj₁ ⟶ Top.obj₁)
+    exact (isIso_op_iff φ.hom₃).2 h₃
+  exact (isIso_op_iff φ.hom₁).1
+    (special_triangle_two_out_of_three (C := Cᵒᵖ) (T := Topp) (T' := Top)
+      hTopp hTop phop h3op h2op)
 
 /-- Every distinguished triangle is special. -/
 theorem distinguished_triangle_special
     (T : Triangle C) (hT : T ∈ distTriang C) : SpecialTriangle T := by
-  sorry
+  intro W n
+  let F := preadditiveCoyoneda.obj (Opposite.op W)
+  refine ⟨F.homologySequence_comp T hT n, ?_, ?_, ?_, ?_, ?_⟩
+  · exact F.comp_homologySequenceδ T hT n (n + 1) (by rfl)
+  · exact F.homologySequenceδ_comp T hT n (n + 1) (by rfl)
+  · exact F.homologySequence_exact₂ T hT n
+  · exact F.homologySequence_exact₃ T hT n (n + 1) (by rfl)
+  · exact F.homologySequence_exact₁ T hT n (n + 1) (by rfl)
 
 /-- Every distinguished triangle is co-special. -/
 theorem distinguished_triangle_coSpecial
     (T : Triangle C) (hT : T ∈ distTriang C) : CoSpecialTriangle T := by
-  sorry
+  let Top : Triangle Cᵒᵖ :=
+    (triangleOpEquivalence C).functor.obj (Opposite.op T)
+  change SpecialTriangle Top
+  have hTop : Top ∈ distTriang Cᵒᵖ := op_distinguished T hT
+  exact distinguished_triangle_special (C := Cᵒᵖ) Top hTop
 
 /-! ## Square-zero, idempotents, and cones -/
 

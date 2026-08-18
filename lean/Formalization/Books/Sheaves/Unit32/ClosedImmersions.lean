@@ -1160,36 +1160,42 @@ private theorem closedSubsetPushforward_unit_stalk_comp
                   (fun q =>
                     (((f₀.op.lanUnit.app G₀.obj).app (op U) ≫
                         (toSheafify K (f₀.op.lan.obj G₀.obj)).app
-                          (op (f₀.obj U))) ≫ q) ≫
+                        (op (f₀.obj U))) ≫ q) ≫
                       TopCat.Presheaf.germ F₀.obj (f₀.obj U) z hU') hW'
+                dsimp [F₀, sheafToPresheaf] at hcompunitUg
                 convert hcompunitUg.symm using 1
-                · simp [hW, hW', Functor.sheafPullbackConstruction.sheafAdjunctionContinuous,
-                  fullyFaithfulSheafToPresheaf, sheafToPresheaf,
-                  Iso.refl_hom, NatTrans.id_app, NatTrans.comp_app,
-                  Functor.map_id, Functor.comp_map, Functor.id_obj,
-                  Functor.comp_obj, Functor.whiskeringLeft_obj_obj,
-                  Functor.whiskeringLeft_obj_map,
-                  Functor.whiskeringRight_obj_obj,
-                  Functor.whiskeringRight_obj_map,
-                  Adjunction.comp_unit_app, sheafificationAdjunction_unit_app,
-                  Functor.whiskerRight_id', TopCat.Sheaf.id_app,
-                  ObjectProperty.FullSubcategory.id_hom, Category.assoc,
-                  Category.id_comp, Category.comp_id]
-                · have hproof : hU' = hU := Subsingleton.elim _ _
-                  have hWg' := congrArg
+                · simp [F₀]
+                · have hWg' := congrArg
                     (fun q =>
                       ((((f₀.op.lanAdjunction C).comp
                           (sheafificationAdjunction K C)).unit.app G₀.obj).app
                         (op U) ≫ q) ≫
                         TopCat.Presheaf.germ F₀.obj (f₀.obj U) z hU') hW'
                   calc
-                    _ = (((f₀.op.lanAdjunction C).comp
+                    _ = ((((f₀.op.lanAdjunction C).comp
                           (sheafificationAdjunction K C)).unit.app G₀.obj).app
-                        (op U) ≫
-                        TopCat.Presheaf.germ F₀.obj (f₀.obj U) z hU' := by
-                      exact hWg'.trans (by simpa [Category.assoc])
+                        (op U) ≫ 𝟙 (F₀.obj.obj (op (f₀.obj U)))) ≫
+                      TopCat.Presheaf.germ F₀.obj (f₀.obj U) z hU' := by
+                      change
+                        (((((f₀.op.lanAdjunction C).comp
+                              (sheafificationAdjunction K C)).unit.app G₀.obj).app
+                            (op U) ≫
+                          ((ObjectProperty.ι (Presheaf.IsSheaf K) ⋙
+                              (Functor.whiskeringLeft (Opens ↑X)ᵒᵖ (Opens ↑Z)ᵒᵖ C).obj f₀.op).map
+                                (𝟙 ((presheafToSheaf K C).obj (f₀.op.lan.obj G₀.obj))) ≫
+                            𝟙 (f₀.op ⋙
+                              ((Functor.sheafPullbackConstruction.sheafPullback f₀ C J K).obj G₀).obj)).app
+                            (op U)) ≫
+                          TopCat.Presheaf.germ F₀.obj (f₀.obj U) z hU') =
+                        ((((f₀.op.lanAdjunction C).comp
+                              (sheafificationAdjunction K C)).unit.app G₀.obj).app
+                            (op U) ≫ 𝟙 (F₀.obj.obj (op (f₀.obj U)))) ≫
+                          TopCat.Presheaf.germ F₀.obj (f₀.obj U) z hU'
+                      simpa only [Functor.id_obj] using hWg'
                     _ = _ := by
-                      simpa [F₀, sheafToPresheaf, hproof, Category.assoc,
+                      simp [Category.assoc]
+                    _ = _ := by
+                      simpa [F₀, sheafToPresheaf, Category.assoc,
                         Category.id_comp, Category.comp_id] using hcompunitUg
               _ = _ := by simp
   change m ≫ eS.hom = eP.hom

@@ -5,6 +5,8 @@ import Mathlib.Algebra.Homology.DerivedCategory.Ext.ExactSequences
 import Mathlib.Algebra.Homology.Homotopy
 import Mathlib.Algebra.Homology.ShortComplex.HomologicalComplex
 import Mathlib.CategoryTheory.Abelian.Projective.Resolution
+import Mathlib.CategoryTheory.Abelian.Ext
+import Mathlib.CategoryTheory.Abelian.Projective.Ext
 import Mathlib.Algebra.Category.ModuleCat.LeftResolution
 import Mathlib.RingTheory.Noetherian.Basic
 
@@ -354,7 +356,51 @@ theorem free_augmented_complex_map_exists {R : Type u} [Ring R]
     {M N : ModuleCat.{u} R} (F : FreeAugmentedComplex R M) (G : Resolution R N)
     (φ : M ⟶ N) :
     Nonempty (FreeAugmentedComplexMap F G φ) := by
-  sorry
+  classical
+  letI : Epi G.augmentation := G.augmentation_epi
+  letI : Module.Free R (F.complex.X 0 : Type u) := F.free 0
+  letI : Projective (F.complex.X 0) :=
+    ModuleCat.projective_of_free (Module.Free.chooseBasis R (F.complex.X 0 : Type u))
+  let lift_zero : F.complex.X 0 ⟶ G.complex.X 0 :=
+    Projective.factorThru (F.augmentation ≫ φ) G.augmentation
+  have lift_zero_comm :
+      lift_zero ≫ G.augmentation = F.augmentation ≫ φ := by
+    dsimp [lift_zero]
+    exact Projective.factorThru_comp _ _
+  letI : Module.Free R (F.complex.X 1 : Type u) := F.free 1
+  letI : Projective (F.complex.X 1) :=
+    ModuleCat.projective_of_free (Module.Free.chooseBasis R (F.complex.X 1 : Type u))
+  let lift_one : F.complex.X 1 ⟶ G.complex.X 1 :=
+    G.exact_zero.liftFromProjective (F.complex.d 1 0 ≫ lift_zero) (by
+      rw [Category.assoc, lift_zero_comm, ← Category.assoc,
+        F.augmentation_condition, zero_comp])
+  have lift_one_comm :
+      lift_one ≫ G.complex.d 1 0 = F.complex.d 1 0 ≫ lift_zero := by
+    exact G.exact_zero.liftFromProjective_comp _ _
+  let lift_succ (n : ℕ)
+      (g : F.complex.X n ⟶ G.complex.X n)
+      (g' : F.complex.X (n + 1) ⟶ G.complex.X (n + 1))
+      (w : g' ≫ G.complex.d (n + 1) n =
+        F.complex.d (n + 1) n ≫ g) :
+      Σ' g'' : F.complex.X (n + 2) ⟶ G.complex.X (n + 2),
+        g'' ≫ G.complex.d (n + 2) (n + 1) =
+          F.complex.d (n + 2) (n + 1) ≫ g' := by
+    letI : Module.Free R (F.complex.X (n + 2) : Type u) := F.free (n + 2)
+    letI : Projective (F.complex.X (n + 2)) :=
+      ModuleCat.projective_of_free
+        (Module.Free.chooseBasis R (F.complex.X (n + 2) : Type u))
+    refine ⟨G.exact_succ n |>.liftFromProjective
+      (F.complex.d (n + 2) (n + 1) ≫ g') ?_, ?_⟩
+    · rw [Category.assoc, w]
+      simp
+    · exact G.exact_succ n |>.liftFromProjective_comp _ _
+  let hom : F.complex ⟶ G.complex :=
+    ChainComplex.mkHom F.complex G.complex lift_zero lift_one lift_one_comm
+      (fun n p => lift_succ n p.1 p.2.1 p.2.2)
+  have hcompat : hom.f 0 ≫ G.augmentation = F.augmentation ≫ φ := by
+    rw [show hom.f 0 = lift_zero by rfl]
+    exact lift_zero_comm
+  exact ⟨FreeAugmentedComplexMap.mk hom hcompat⟩
 
 /- A map of resolutions is a map of complexes compatible with the augmentation. -/
 structure ResolutionMap {R : Type u} [Ring R] {M N : ModuleCat.{u} R}
@@ -660,7 +706,214 @@ choosing a comparison equivalence. -/
 theorem resolution_ext_represents_ext {R : Type u} [Ring R]
     {M N : ModuleCat.{u} R} (F : FreeResolution R M) (i : ℕ) :
     Nonempty (ResolutionExt F N i ≃+ ExtGroup M N i) := by
-  sorry
+  classical
+  let π : F.complex ⟶ (ChainComplex.single₀ (ModuleCat.{u} R)).obj M :=
+    (ChainComplex.toSingle₀Equiv F.complex M).symm
+      ⟨F.resolution.augmentation, F.resolution.augmentation_condition⟩
+  have hquasi : QuasiIso π := by
+    constructor
+    intro n
+    cases n with
+    | zero =>
+      rw [ChainComplex.quasiIsoAt₀_iff, ShortComplex.quasiIso_iff_of_zeros']
+      · constructor
+        · change (ShortComplex.mk (F.complex.d 1 0) F.resolution.augmentation
+            F.resolution.augmentation_condition).Exact
+          exact F.resolution.exact_zero
+        · exact F.resolution.augmentation_epi
+      all_goals simp [HomologicalComplex.shortComplexFunctor', ChainComplex.single₀] <;>
+        exact Eq.refl _
+    | succ n =>
+      rw [quasiIsoAt_iff_exactAt']
+      · apply (HomologicalComplex.exactAt_iff'
+          (K := F.complex) (j := n + 1) (i := n + 2) (k := n) (by simp) (by simp)).2
+        exact F.resolution.exact_succ n
+      · exact ChainComplex.exactAt_succ_single_obj _ _
+  let P : ProjectiveResolution M :=
+    { complex := F.complex
+      projective := fun n => by
+        let hfree := F.free n
+        let _ : Module.Free R (F.complex.X n : Type u) := hfree
+        exact ModuleCat.projective_of_free
+          (Module.Free.chooseBasis R (F.complex.X n : Type u))
+      π := π
+      quasiIso := hquasi }
+  let S := (CochainComplex.singleFunctor (ModuleCat.{u} R) 0).obj N
+  let H := P.cochainComplex.HomComplex S
+  let sign : ℕ → ℤ := fun n =>
+    Nat.rec 1 (fun n s => Int.negOnePow (n + 1) * s) n
+  have sign_sq (n : ℕ) : sign n * sign n = 1 := by
+    induction n with
+    | zero => simp [sign]
+    | succ n ih =>
+      have hrec : sign (n + 1) = Int.negOnePow (n + 1) * sign n := by rfl
+      rw [hrec]
+      calc
+        _ = (Int.negOnePow (n + 1) * Int.negOnePow (n + 1)) *
+              (sign n * sign n) := by ac_rfl
+        _ = 1 := by
+          have hpow : (Int.negOnePow (n + 1) : ℤ) *
+              (Int.negOnePow (n + 1) : ℤ) = 1 := by
+            rw [← Units.val_mul, ← Int.negOnePow_add]
+            rw [show ((n + 1 : ℤ) + (n + 1 : ℤ)) = 2 * (n + 1 : ℤ) by ring]
+            simp
+          nlinarith [hpow, ih]
+  let ecomp (n : ℕ) :
+      (H.X (n : ℤ) : Type u) ≃+ (resolutionHomComplex F.complex N).X n := by
+    let e₀ := CochainComplex.HomComplex.Cochain.toSingleEquiv
+      (K := P.cochainComplex) (X := N)
+        (p := -(n : ℤ)) (q := 0) (n := (n : ℤ)) (by simp)
+    exact
+      { toFun := fun f =>
+          sign n • ((P.cochainComplexXIso (-(n : ℤ)) n (by simp)).inv ≫ e₀ (by
+            change CochainComplex.HomComplex.Cochain
+              P.cochainComplex S (n : ℤ)
+            exact f))
+        invFun := fun f =>
+          sign n • e₀.symm ((P.cochainComplexXIso (-(n : ℤ)) n (by simp)).hom ≫ (by
+            change F.complex.X n ⟶ N
+            exact f))
+        left_inv := by
+          intro f
+          change CochainComplex.HomComplex.Cochain P.cochainComplex S (n : ℤ) at f
+          simp [e₀, sign_sq n, smul_smul, Category.assoc] <;> rfl
+        right_inv := by
+          intro f
+          change F.complex.X n ⟶ N at f
+          simp [e₀, sign_sq n, smul_smul, Category.assoc] <;> rfl
+        map_add' := by
+          intro f g
+          change CochainComplex.HomComplex.Cochain P.cochainComplex S (n : ℤ) at f g
+          change sign n • ((P.cochainComplexXIso (-(n : ℤ)) n (by simp)).inv ≫ e₀ (f + g)) = _
+          rw [e₀.map_add]
+          rw [Preadditive.comp_add, smul_add]
+          rfl }
+  have ecomp_apply (n : ℕ) (f : (H.X (n : ℤ) : Type u)) :
+      ecomp n f =
+        sign n •
+          ((P.cochainComplexXIso (-(n : ℤ)) n (by simp)).inv ≫
+            (CochainComplex.HomComplex.Cochain.toSingleEquiv
+              (K := P.cochainComplex) (X := N)
+              (p := -(n : ℤ)) (q := 0) (n := (n : ℤ)) (by simp)) (by
+                change CochainComplex.HomComplex.Cochain
+                  P.cochainComplex S (n : ℤ)
+                exact f)) := by
+    rfl
+  let Ksc (n : ℕ) := ShortComplex.mk
+    ((resolutionHomComplex F.complex N).d n (n + 1))
+    ((resolutionHomComplex F.complex N).d (n + 1) (n + 2))
+    ((resolutionHomComplex F.complex N).d_comp_d n (n + 1) (n + 2))
+  let Lsc (n : ℕ) := ShortComplex.mk
+    (H.d (n : ℤ) (n + 1 : ℤ))
+    (H.d (n + 1 : ℤ) (n + 2 : ℤ))
+    (H.d_comp_d (n : ℤ) (n + 1 : ℤ) (n + 2 : ℤ))
+  let ψ (n : ℕ) : Ksc n ≅ Lsc n := by
+    let e₁ : (Ksc n).X₁ ≅ (Lsc n).X₁ := by
+      change (resolutionHomComplex F.complex N).X n ≅ H.X (n : ℤ)
+      exact (ecomp n).symm.toAddCommGrpIso
+    let e₂ : (Ksc n).X₂ ≅ (Lsc n).X₂ := by
+      change (resolutionHomComplex F.complex N).X (n + 1) ≅ H.X (n + 1 : ℤ)
+      exact (ecomp (n + 1)).symm.toAddCommGrpIso
+    let e₃ : (Ksc n).X₃ ≅ (Lsc n).X₃ := by
+      change (resolutionHomComplex F.complex N).X (n + 2) ≅ H.X (n + 2 : ℤ)
+      exact (ecomp (n + 2)).symm.toAddCommGrpIso
+    refine ShortComplex.isoMk e₁ e₂ e₃ ?_ ?_
+    · apply AddCommGrpCat.hom_ext
+      apply AddMonoidHom.ext
+      intro f
+      apply (ecomp (n + 1)).injective
+      dsimp [H, S, Ksc, Lsc]
+      dsimp [e₁, e₂]
+      change F.complex.X n ⟶ N at f
+      change (ecomp (n + 1))
+          ((CochainComplex.HomComplex.δ_hom ℤ P.cochainComplex S
+            (n : ℤ) (n + 1)) ((ecomp n).symm f)) =
+        (ecomp (n + 1))
+          ((ecomp (n + 1)).symm
+            ((resolutionHomComplex F.complex N).d n (n + 1) f))
+      have hsymm : (ecomp n).symm f =
+          sign n • CochainComplex.HomComplex.Cochain.toSingleMk
+            ((P.cochainComplexXIso (-(n : ℤ)) n (by simp)).hom ≫ f) (by simp) := by
+        dsimp [ecomp]
+        rfl
+      rw [hsymm]
+      change (ecomp (n + 1))
+          (CochainComplex.HomComplex.δ (F := P.cochainComplex) (G := S)
+            (n : ℤ) (n + 1)
+            (sign n • CochainComplex.HomComplex.Cochain.toSingleMk
+              ((P.cochainComplexXIso (-(n : ℤ)) n (by simp)).hom ≫ f) (by simp))) = _
+      rw [CochainComplex.HomComplex.δ_smul]
+      rw [CochainComplex.HomComplex.Cochain.δ_toSingleMk
+        ((P.cochainComplexXIso (-(n : ℤ)) n (by simp)).hom ≫ f) (by simp)
+        (n + 1 : ℤ) (-(n + 1 : ℤ)) (by simp)]
+      simp only [Int.natCast_add, Int.natCast_one]
+      rw [(ecomp (n + 1)).apply_symm_apply]
+      dsimp only [H]
+      let t : CochainComplex.HomComplex.Cochain P.cochainComplex S ((n + 1 : ℕ) : ℤ) := by
+        simpa only [Int.natCast_add, Int.natCast_one] using
+          (sign n • (↑(n + 1 : ℤ).negOnePow •
+            CochainComplex.HomComplex.Cochain.toSingleMk
+              (P.cochainComplex.d (-(n + 1 : ℤ)) (-(n : ℤ)) ≫
+                (P.cochainComplexXIso (-(n : ℤ)) n (by simp)).hom ≫ f) (by simp))
+          )
+      let t' : (H.X ((n + 1 : ℕ) : ℤ) : Type u) := by
+        change CochainComplex.HomComplex.Cochain P.cochainComplex S ((n + 1 : ℕ) : ℤ)
+        exact t
+      change (ecomp (n + 1)) t' = _
+      dsimp [ecomp]
+      let e₀ := CochainComplex.HomComplex.Cochain.toSingleEquiv
+        (K := P.cochainComplex) (X := N)
+        (p := -((n + 1 : ℕ) : ℤ)) (q := 0) (n := ((n + 1 : ℕ) : ℤ)) (by simp)
+      rw [map_zsmul]
+      rw [CochainComplex.HomComplex.Cochain.toSingleEquiv_toSingleMk]
+      simp only [Preadditive.comp_zsmul, Preadditive.zsmul_comp, smul_smul]
+    · apply AddCommGrpCat.hom_ext
+      apply AddMonoidHom.ext
+      intro f
+      apply (ecomp (n + 2)).injective
+      dsimp [H, S, Ksc, Lsc]
+      dsimp [e₂, e₃]
+      change F.complex.X (n + 1) ⟶ N at f
+      change (ecomp (n + 2))
+          ((CochainComplex.HomComplex.δ_hom ℤ P.cochainComplex S
+            (n + 1 : ℤ) (n + 2)) ((ecomp (n + 1)).symm f)) =
+        (ecomp (n + 2))
+          ((ecomp (n + 2)).symm
+            ((resolutionHomComplex F.complex N).d (n + 1) (n + 2) f))
+      have hsymm : (ecomp (n + 1)).symm f =
+          sign (n + 1) • CochainComplex.HomComplex.Cochain.toSingleMk
+            ((P.cochainComplexXIso (-(n + 1 : ℤ)) (n + 1) (by simp)).hom ≫ f) (by simp) := by
+        dsimp [ecomp]
+        rfl
+      rw [hsymm]
+      change (ecomp (n + 2))
+          (CochainComplex.HomComplex.δ (F := P.cochainComplex) (G := S)
+            (n + 1 : ℤ) (n + 2)
+            (sign (n + 1) • CochainComplex.HomComplex.Cochain.toSingleMk
+              ((P.cochainComplexXIso (-(n + 1 : ℤ)) (n + 1) (by simp)).hom ≫ f) (by simp))) = _
+      rw [CochainComplex.HomComplex.δ_smul]
+      rw [CochainComplex.HomComplex.Cochain.δ_toSingleMk
+        ((P.cochainComplexXIso (-(n + 1 : ℤ)) (n + 1) (by simp)).hom ≫ f) (by simp)
+        (n + 2 : ℤ) (-(n + 2 : ℤ)) (by simp)]
+      dsimp [ecomp]
+      let e₀ := CochainComplex.HomComplex.Cochain.toSingleEquiv
+        (K := P.cochainComplex) (X := N)
+        (p := -(n + 2 : ℤ)) (q := 0) (n := (n + 2 : ℤ)) (by simp)
+      change sign (n + 2) •
+          ((P.cochainComplexXIso (-(n + 2 : ℤ)) (n + 2) (by simp)).inv ≫
+            e₀
+              (sign (n + 1) • (↑(n + 2 : ℤ).negOnePow •
+                CochainComplex.HomComplex.Cochain.toSingleMk
+                  (P.cochainComplex.d (-(n + 2 : ℤ)) (-(n + 1 : ℤ)) ≫
+                    (P.cochainComplexXIso (-(n + 1 : ℤ)) (n + 1) (by simp)).hom ≫ f) (by simp)))) = _
+      rw [e₀.map_zsmul]
+      rw [CochainComplex.HomComplex.Cochain.toSingleEquiv_toSingleMk]
+      simp only [Preadditive.comp_zsmul, Preadditive.zsmul_comp, smul_smul]
+  let e :=
+    (CochainComplex.HomComplex.homologyAddEquiv
+      P.cochainComplex S (i : ℤ)).trans
+      (P.extAddEquivCohomologyClass (Y := N) (n := i)).symm
+  exact ⟨e⟩
 
 /-- Degree zero Ext is the module-hom group. -/
 noncomputable def extZeroLinearEquiv {R : Type u} [CommRing R]
@@ -691,7 +944,75 @@ theorem resolution_hom_maps_homotopic {R : Type u} [Ring R]
     (G : Resolution R M₂) (φ : M₁ ⟶ M₂) (α β : ResolutionMap F.resolution G φ)
     (N : ModuleCat.{u} R) :
     AdditiveCochainHomotopic (resolutionHomMap α.hom N) (resolutionHomMap β.hom N) := by
-  sorry
+  rcases resolution_maps_homotopic F G φ α β with ⟨h⟩
+  exact ⟨
+    { hom := fun i j =>
+        if j + 1 = i then
+          (show (resolutionHomComplex G.complex N).X i ⟶
+              (resolutionHomComplex F.resolution.complex N).X j from by
+            change AddCommGrpCat.of (G.complex.X i ⟶ N) ⟶
+              AddCommGrpCat.of (F.resolution.complex.X j ⟶ N)
+            exact AddCommGrpCat.ofHom (homPrecompAddMonoidHom (h.hom j i)))
+        else 0
+      zero := by
+        intro i j hij
+        dsimp
+        split_ifs with hji
+        · exact (hij (by simpa [ComplexShape.up_Rel] using hji)).elim
+        · rfl
+      comm := by
+        intro i
+        apply AddCommGrpCat.hom_ext
+        apply AddMonoidHom.ext
+        intro g
+        change G.complex.X i ⟶ N at g
+        cases i with
+        | zero =>
+          rw [Homotopy.dNext_cochainComplex]
+          rw [Homotopy.prevD_zero_cochainComplex]
+          dsimp [resolutionHomMap, resolutionHomComplex, resolutionHomDifferential,
+            homPrecompAddMonoidHom]
+          change α.hom.f 0 ≫ g =
+            h.hom 0 1 ≫ G.complex.d 1 0 ≫ g + 0 + β.hom.f 0 ≫ g
+          have hcomm := h.comm 0
+          rw [Homotopy.dNext_zero_chainComplex, Homotopy.prevD_chainComplex] at hcomm
+          have hcomm' : α.hom.f 0 = h.hom 0 1 ≫ G.complex.d 1 0 + β.hom.f 0 := by
+            simpa using hcomm
+          have hc := congrArg (fun q : F.complex.X 0 ⟶ G.complex.X 0 => q ≫ g) hcomm'
+          have hadd := Preadditive.add_comp (F.complex.X 0) (G.complex.X 0) N
+            (h.hom 0 1 ≫ G.complex.d 1 0) (β.hom.f 0) g
+          rw [hadd] at hc
+          rw [Category.assoc] at hc
+          simpa using hc
+        | succ i =>
+          rw [Homotopy.dNext_cochainComplex, Homotopy.prevD_succ_cochainComplex]
+          dsimp [resolutionHomMap, resolutionHomComplex, resolutionHomDifferential,
+            homPrecompAddMonoidHom]
+          simp only [if_pos rfl, if_true]
+          change α.hom.f (i + 1) ≫ g =
+            h.hom (i + 1) (i + 2) ≫ G.complex.d (i + 2) (i + 1) ≫ g +
+              F.resolution.complex.d (i + 1) i ≫ h.hom i (i + 1) ≫ g +
+              β.hom.f (i + 1) ≫ g
+          have hcomm := h.comm (i + 1)
+          rw [Homotopy.dNext_succ_chainComplex, Homotopy.prevD_chainComplex] at hcomm
+          have hcomm' : α.hom.f (i + 1) =
+              h.hom (i + 1) (i + 2) ≫ G.complex.d (i + 2) (i + 1) +
+                F.complex.d (i + 1) i ≫ h.hom i (i + 1) + β.hom.f (i + 1) := by
+            simpa [Nat.add_assoc, add_comm, add_left_comm, add_assoc] using hcomm
+          have hc := congrArg
+            (fun q : F.complex.X (i + 1) ⟶ G.complex.X (i + 1) => q ≫ g)
+            hcomm'
+          have hadd₁ := Preadditive.add_comp (F.complex.X (i + 1))
+            (G.complex.X (i + 1)) N
+            (h.hom (i + 1) (i + 2) ≫ G.complex.d (i + 2) (i + 1))
+            (F.complex.d (i + 1) i ≫ h.hom i (i + 1)) g
+          have hadd₂ := Preadditive.add_comp (F.complex.X (i + 1))
+            (G.complex.X (i + 1)) N
+            (h.hom (i + 1) (i + 2) ≫ G.complex.d (i + 2) (i + 1) +
+              F.complex.d (i + 1) i ≫ h.hom i (i + 1))
+            (β.hom.f (i + 1)) g
+          rw [hadd₂, hadd₁] at hc
+          simpa [Category.assoc] using hc }⟩
 
 /-- The induced map on `H^i(Hom_R(-,N))` is independent of the comparison map.
 

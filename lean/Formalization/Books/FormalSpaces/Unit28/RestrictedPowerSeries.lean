@@ -158,7 +158,30 @@ theorem restrictedPowerSeriesProjection_polynomialMap
     restrictedPowerSeriesProjection A B r i
         (restrictedPowerSeriesPolynomialMap A B r p) =
       MvPolynomial.map (Ideal.Quotient.mk (B.I i)) p := by
-  sorry
+  let D := restrictedPowerSeriesDiagram A B r
+  let c : Cone D :=
+    { pt := CommRingCat.of (MvPolynomial (Fin r) A)
+      π :=
+        { app := fun j =>
+            CommRingCat.ofHom
+              (MvPolynomial.map (Ideal.Quotient.mk (B.I j.unop)))
+          naturality := by
+            intro j k f
+            apply CommRingCat.hom_ext
+            apply RingHom.ext
+            intro q
+            change
+              MvPolynomial.map (Ideal.Quotient.mk (B.I k.unop)) q =
+                MvPolynomial.map
+                  (Ideal.Quotient.factor
+                    (B.antitone (CategoryTheory.le_of_op_hom f)))
+                  (MvPolynomial.map (Ideal.Quotient.mk (B.I j.unop)) q)
+            rw [MvPolynomial.map_map, Ideal.Quotient.factor_comp_mk] } }
+  have h := limit.lift_π c (Opposite.op i)
+  have h' := congrArg (fun g => g.hom p) h
+  change ((limit.lift D c ≫ limit.π D (Opposite.op i)).hom p) =
+    (MvPolynomial.map (Ideal.Quotient.mk (B.I i))) p
+  exact h'
 
 /-! ## Assertions in the source -/
 

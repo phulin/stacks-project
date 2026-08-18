@@ -3,6 +3,8 @@ import Formalization.Books.Algebra.Unit11.CharacterizingFinite
 import Formalization.Books.Algebra.Unit39.FlatModules
 import Mathlib.Algebra.Colimit.DirectLimit
 import Mathlib.CategoryTheory.Comma.StructuredArrow.Basic
+import Mathlib.CategoryTheory.Filtered.Basic
+import Mathlib.CategoryTheory.Limits.Cones
 import Mathlib.CategoryTheory.ObjectProperty.FullSubcategory
 import Mathlib.RingTheory.Finiteness.Prod
 

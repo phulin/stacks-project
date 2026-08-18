@@ -2450,7 +2450,7 @@ theorem lemma_two_by_two (T : NumericalType) (S : MinusTwoSubgraph T 2)
     · ext a b
       fin_cases a <;> fin_cases b <;>
         simp [scalarMatrix, pathLastMatrix, haa0,
-          haa1, hae01, hae10] <;> ring
+          haa1, hae01, hae10] ; ring
     · funext a
       fin_cases a ; simp [scalarVector, lastVector, hw0, hw1] ; ring
   have realizeG : ∀ (E : LocalNumericalData 2) (r : ℤ),
@@ -2463,7 +2463,7 @@ theorem lemma_two_by_two (T : NumericalType) (S : MinusTwoSubgraph T 2)
     · ext a b
       fin_cases a <;> fin_cases b <;>
         simp [scalarMatrix, pathLastMatrix, haa0,
-          haa1, hae01, hae10] <;> ring
+          haa1, hae01, hae10] ; ring
     · funext a
       fin_cases a ; simp [scalarVector, lastVector, hw0] ; ring
   have hp_cases : p = 1 ∨ p = 2 ∨ p = 3 := by omega
@@ -2764,8 +2764,7 @@ theorem lemma_three_by_three (T : NumericalType) (S : MinusTwoSubgraph T 3)
           by_cases hq0 : q = S.index 0 <;>
             by_cases hq1 : q = S.index 1 <;>
               by_cases hq2 : q = S.index 2 <;>
-                simp [hq0, hq1, hq2, h01, h02, h12, h01.symm, h02.symm,
-                  h12.symm]
+                simp [hq0, hq1, hq2]
         _ = _ := by
           rw [Finset.sum_add_distrib, Finset.sum_add_distrib]
           simp
@@ -2792,8 +2791,7 @@ theorem lemma_three_by_three (T : NumericalType) (S : MinusTwoSubgraph T 3)
           by_cases hp0 : p = S.index 0 <;>
             by_cases hp1 : p = S.index 1 <;>
               by_cases hp2 : p = S.index 2 <;>
-                simp [hp0, hp1, hp2, h01, h02, h12, h01.symm, h02.symm,
-                  h12.symm]
+                simp [hp0, hp1, hp2]
         _ = _ := by
           rw [Finset.sum_add_distrib, Finset.sum_add_distrib]
           change _ = x 0 * Matrix.mulVec (fun p q => (T.a p q : ℝ)) y (S.index 0) +
@@ -3100,7 +3098,7 @@ theorem lemma_three_by_three (T : NumericalType) (S : MinusTwoSubgraph T 3)
         simp [scalarMatrix, pathMatrix, constantVector,
           haa0, haa1, haa2, hae01, hae10, hae12, hae21, hae02, hae20] <;> ring
     · funext a
-      fin_cases a <;> simp [scalarVector, constantVector, hw0, hw1, hw2]
+      fin_cases a <;> simp [scalarVector, constantVector]
   have realizeC3 : ∀ (E : LocalNumericalData 3) (r : ℤ),
       0 < r → E.w 0 = r → E.w 1 = r → E.w 2 = 2 * r →
       E.a 0 0 = -2 * r → E.a 1 1 = -2 * r → E.a 2 2 = -4 * r →
@@ -3115,7 +3113,7 @@ theorem lemma_three_by_three (T : NumericalType) (S : MinusTwoSubgraph T 3)
         simp [scalarMatrix, pathLastMatrix,
           haa0, haa1, haa2, hae01, hae10, hae12, hae21, hae02, hae20] <;> ring
     · funext a
-      fin_cases a ; simp [scalarVector, lastVector, hw0, hw1, hw2] ; ring
+      fin_cases a ; simp [scalarVector] ; ring
   have realizeB3 : ∀ (E : LocalNumericalData 3) (r : ℤ),
       0 < r → E.w 0 = 2 * r → E.w 1 = 2 * r → E.w 2 = r →
       E.a 0 0 = -4 * r → E.a 1 1 = -4 * r → E.a 2 2 = -2 * r →
@@ -3128,9 +3126,9 @@ theorem lemma_three_by_three (T : NumericalType) (S : MinusTwoSubgraph T 3)
     · ext a b
       fin_cases a <;> fin_cases b <;>
         simp [scalarMatrix, pathLastMatrix,
-          haa0, haa1, haa2, hae01, hae10, hae12, hae21, hae02, hae20] <;> ring
+          haa0, haa1, haa2, hae01, hae10, hae12, hae21, hae02, hae20] ; ring
     · funext a
-      fin_cases a <;> simp [scalarVector, lastVector, hw0, hw1, hw2]
+      fin_cases a <;> simp [scalarVector]
       all_goals ring
   have hnonneg : ∀ i j : Fin 3, i ≠ j → 0 ≤ D.a i j := by
     intro i j hij

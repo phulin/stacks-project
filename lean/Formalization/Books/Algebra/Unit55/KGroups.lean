@@ -473,7 +473,86 @@ theorem kZeroClass_exact
     kZeroClass (R := R) (M := M) =
       kZeroClass (R := R) (M := M') +
         kZeroClass (R := R) (M := M'') := by
-  sorry
+  let P' := Classical.choose
+    (exists_finite_projective_presentation (R := R) (M := M'))
+  let P := Classical.choose
+    (exists_finite_projective_presentation (R := R) (M := M))
+  let P'' := Classical.choose
+    (exists_finite_projective_presentation (R := R) (M := M''))
+  let eP' := Classical.choice
+    (Classical.choose_spec
+      (exists_finite_projective_presentation (R := R) (M := M')))
+  let eP := Classical.choice
+    (Classical.choose_spec
+      (exists_finite_projective_presentation (R := R) (M := M)))
+  let eP'' := Classical.choice
+    (Classical.choose_spec
+      (exists_finite_projective_presentation (R := R) (M := M'')))
+  let f' : P'.presentation.module →ₗ[R] P.presentation.module :=
+    eP.symm.toLinearMap.comp (f.comp eP'.toLinearMap)
+  let g' : P.presentation.module →ₗ[R] P''.presentation.module :=
+    eP''.symm.toLinearMap.comp (g.comp eP.toLinearMap)
+  have hf' : Function.Injective f' := by
+    intro x y hxy
+    apply eP'.injective
+    apply hf
+    simpa [f'] using congrArg (fun t => eP t) hxy
+  have hg' : Function.Surjective g' := by
+    intro y
+    obtain ⟨x, hx⟩ := hg (eP'' y)
+    refine ⟨eP.symm x, ?_⟩
+    simpa [g'] using congrArg (fun t => eP''.symm t) hx
+  have hcomm₁₂ :
+      f'.comp eP'.symm.toLinearMap =
+        eP.symm.toLinearMap.comp f := by
+    ext x
+    simp [f']
+  have hcomm₂₃ :
+      g'.comp eP.symm.toLinearMap =
+        eP''.symm.toLinearMap.comp g := by
+    ext x
+    simp [g']
+  have hfg' : Function.Exact f' g' :=
+    (LinearMap.exact_iff_of_surjective_of_bijective_of_injective
+      f g f' g' eP'.symm.toLinearMap eP.symm.toLinearMap
+      eP''.symm.toLinearMap hcomm₁₂ hcomm₂₃ eP'.symm.surjective
+      ⟨eP.symm.injective, eP.symm.surjective⟩ eP''.symm.injective).mp hfg
+  let S : FiniteProjectiveShortExact R :=
+    { left := P'
+      middle := P
+      right := P''
+      leftToMiddle := f'
+      middleToRight := g'
+      left_injective := hf'
+      middle_surjective := hg'
+      exact := hfg' }
+  have hrel : kZeroCon R
+      (kZeroGenerator P)
+      (kZeroGenerator P' + kZeroGenerator P'') := by
+    change AddConGen.Rel
+      (fun x y : KZeroFree R =>
+        ∃ S : FiniteProjectiveShortExact R, kZeroRelation S x y)
+      (kZeroGenerator P)
+      (kZeroGenerator P' + kZeroGenerator P'')
+    exact AddConGen.Rel.of _ _ ⟨S, rfl, rfl⟩
+  change kZeroClassOfPresentation P =
+    kZeroClassOfPresentation P' +
+      kZeroClassOfPresentation P''
+  exact (kZeroCon R).eq.mpr hrel
+
+private theorem kPrimeZeroClass_eq_of_presentation
+    {R : Type u} [CommRing R] (P : FiniteModulePresentation R) :
+    kPrimeZeroClass (R := R) (M := P.module) =
+      kPrimeZeroClassOfPresentation P := by
+  let Q := Classical.choose
+    (exists_finite_module_presentation (R := R) (M := P.module))
+  let eQ := Classical.choice
+    (Classical.choose_spec
+      (exists_finite_module_presentation (R := R) (M := P.module)))
+  change kPrimeZeroClassOfPresentation Q =
+    kPrimeZeroClassOfPresentation P
+  exact kPrimeZeroClassOfPresentation_eq_of_linearEquiv Q P
+    (eQ.trans (LinearEquiv.refl R P.module))
 
 /-- The homomorphism from the free K₀ generators to K′₀. -/
 def kZeroFreeToKPrime
@@ -486,7 +565,21 @@ def kZeroFreeToKPrime
 theorem kZeroFreeToKPrime_respects_relations
     {R : Type u} [CommRing R] :
     kZeroCon R ≤ AddCon.ker (kZeroFreeToKPrime (R := R)) := by
-  sorry
+  refine AddCon.addConGen_le.2 ?_
+  rintro x y ⟨S, rfl, rfl⟩
+  simp only [kZeroFreeToKPrime]
+  calc
+    kPrimeZeroClassOfPresentation S.middle.presentation =
+        kPrimeZeroClass (R := R) (M := S.middle.presentation.module) :=
+      (kPrimeZeroClass_eq_of_presentation S.middle.presentation).symm
+    _ = kPrimeZeroClass (R := R) (M := S.left.presentation.module) +
+        kPrimeZeroClass (R := R) (M := S.right.presentation.module) :=
+      kPrimeZeroClass_exact S.leftToMiddle S.middleToRight
+        S.left_injective S.middle_surjective S.exact
+    _ = kPrimeZeroClassOfPresentation S.left.presentation +
+        kPrimeZeroClassOfPresentation S.right.presentation := by
+      rw [kPrimeZeroClass_eq_of_presentation S.left.presentation,
+        kPrimeZeroClass_eq_of_presentation S.right.presentation]
 
 /-- The canonical homomorphism K₀(R) → K′₀(R). -/
 noncomputable def kZeroToKPrime
@@ -500,7 +593,9 @@ theorem kZeroToKPrime_apply_class
     {R : Type u} [CommRing R] (P : FiniteProjectivePresentation R) :
     kZeroToKPrime (R := R) (kZeroClassOfPresentation P) =
       kPrimeZeroClassOfPresentation P.presentation := by
-  sorry
+  change kZeroFreeToKPrime (R := R) (kZeroGenerator P) =
+    kPrimeZeroClassOfPresentation P.presentation
+  simp [kZeroFreeToKPrime, kZeroGenerator]
 
 /-- The length of a finite presented module over an Artinian ring. -/
 def finitePresentationLength
@@ -519,7 +614,27 @@ theorem kPrimeZeroLengthOnFree_respects_relations
     {R : Type u} [CommRing R] [IsArtinianRing R] :
     kPrimeZeroCon R ≤
       AddCon.ker (kPrimeZeroLengthOnFree (R := R)) := by
-  sorry
+  refine AddCon.addConGen_le.2 ?_
+  rintro x y ⟨S, rfl, rfl⟩
+  simp only [kPrimeZeroLengthOnFree]
+  change (finitePresentationLength S.middle : ℤ) =
+    (finitePresentationLength S.left : ℤ) +
+      (finitePresentationLength S.right : ℤ)
+  have hleftFin : IsFiniteLength R S.left.module :=
+    ((IsArtinianRing.tfae R S.left.module).out 0 3).mp
+      (inferInstance : Module.Finite R S.left.module)
+  have hrightFin : IsFiniteLength R S.right.module :=
+    ((IsArtinianRing.tfae R S.right.module).out 0 3).mp
+      (inferInstance : Module.Finite R S.right.module)
+  have hleft : Module.length R S.left.module ≠ ⊤ :=
+    Module.length_ne_top_iff.mpr hleftFin
+  have hright : Module.length R S.right.module ≠ ⊤ :=
+    Module.length_ne_top_iff.mpr hrightFin
+  have hlen := Module.length_eq_add_of_exact S.leftToMiddle S.middleToRight
+    S.left_injective S.middle_surjective S.exact
+  have hnat := congrArg ENat.toNat hlen
+  rw [ENat.toNat_add hleft hright] at hnat
+  exact_mod_cast hnat
 
 /-- The length homomorphism K′₀(R) → ℤ. -/
 noncomputable def kPrimeZeroLength

@@ -10,6 +10,15 @@ inclusion `(SSet.boundary n).ι`.  The declarations below give the source's
 lifting property and its closure properties in the category of simplicial
 sets.  Products, limits, filtered colimits, and homotopy equivalences use the
 canonical categorical and homotopical interfaces established earlier.
+
+The preliminary recalls about standard simplices are already represented by
+the earlier interfaces `standard_simplex_obj_equiv`,
+`standard_simplex_unique_nonDegenerate_top`, `simplex_map_equiv`, and
+`simplex_map_equiv_apply`, together with Mathlib's
+`SSet.stdSimplex.mem_nonDegenerate_iff_mono` and
+`SSet.stdSimplex.nonDegenerateEquiv'`.  Thus the source's descriptions of
+nondegenerate simplices as injective maps (or subsets) and of maps out of a
+standard simplex require no parallel declarations here.
 -/
 
 noncomputable section
@@ -27,12 +36,13 @@ universe u v w
 
 /-
 The source's boundary construction
-`∂Δ[n] = i_(n - 1)! sk_(n - 1) Δ[n]` is already represented by
-`Unit21.boundaryViaLeftAdjoint_iso_boundary`, while `∂Δ[n]` itself and its
-inclusion are Mathlib's `SSet.boundary` and `(SSet.boundary n).ι`.  The
-standard-simplex and Yoneda facts recalled immediately before the definition
-are represented by `SSet.stdSimplex.objEquiv` and `SSet.yonedaEquiv` (and the
-source-facing interfaces in Unit11).
+`∂Δ[n] = i_(n - 1)! sk_(n - 1) Δ[n]` is represented by Mathlib's canonical
+`SSet.boundary` and its inclusion `(SSet.boundary n).ι`; the earlier
+left-adjoint identification is not needed to state any result in this
+chapter.  The source's assertion that all lower-dimensional simplices lie in
+the boundary and that the top simplex does not is already the pair of
+Mathlib facts `SSet.boundary_obj_eq_univ` and
+`SSet.stdSimplex.notMem_boundary`.
 -/
 
 /-- A simplicial map is injective in every degree. -/
@@ -154,14 +164,7 @@ theorem trivialKanFibration_isHomotopyEquivalence
     Formalization.Books.Simplicial.Unit26.IsHomotopyEquivalence f := by
   sorry
 
-/-!
-The source also notes that horns are nonempty, so the empty-to-anything map
-is a Kan fibration, and that trivial Kan fibrations are Kan fibrations.  Kan
-fibrations are introduced in the following source section; the canonical horn
-objects and this dependency are therefore intentionally left to that later
-interface rather than moving a later definition into this chapter.
-
-The displayed cylinder in the final proof is represented by Mathlib's
+/-! The displayed cylinder in the final proof is represented by Mathlib's
 `SSet.Homotopy`, whose interval object is `Δ[1]`; the degreewise identity
 `(∂Δ[1] × X)_n ≅ X_n ⊔ X_n` is consequently subsumed by that established
 endpoint API.

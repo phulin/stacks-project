@@ -322,17 +322,240 @@ theorem localization_has_kernels_of_right
     {C : Type u} {D : Type*} [Category.{v} C] [Category* D]
     [Abelian C] {W : MorphismProperty C} (L : C ⥤ D)
     [L.IsLocalization W] (hW : RightMultiplicativeSystem W) :
-    ∃ hD : Formalization.Books.Homology.Unit03.AdditiveCategory D,
+    ∃ _hD : Formalization.Books.Homology.Unit03.AdditiveCategory D,
       HasKernels D ∧
         ∀ {X Y : C} (f : X ⟶ Y),
           PreservesLimit (parallelPair f 0) L := by
-  sorry
+  let hC : Formalization.Books.Homology.Unit03.AdditiveCategory C :=
+    { toPreadditive := inferInstance
+      toHasFiniteProducts := inferInstance }
+  let _hC : Formalization.Books.Homology.Unit03.AdditiveCategory C := hC
+  let _hW : RightMultiplicativeSystem W := hW
+  obtain ⟨hD, hL⟩ := localization_additive_right (W := W) L
+  let _hD : Formalization.Books.Homology.Unit03.AdditiveCategory D := hD
+  let _hL : Functor.Additive L := hL
+  let _hRightPres : PreservesFiniteLimits (rightLocalizationFunctor W) :=
+    right_localization_preserves_finite_limits
+  let e := CategoryTheory.Localization.uniq (rightLocalizationFunctor W) L W
+  let _hePres : PreservesFiniteLimits e.functor := inferInstance
+  let _hCompPres : PreservesFiniteLimits ((rightLocalizationFunctor W) ⋙ e.functor) :=
+    comp_preservesFiniteLimits (rightLocalizationFunctor W) e.functor
+  have hpres : PreservesFiniteLimits L :=
+    preservesFiniteLimits_of_natIso
+      (CategoryTheory.Localization.compUniqFunctor
+        (rightLocalizationFunctor W) L W)
+  refine ⟨hD, ?_, ?_⟩
+  · exact ⟨fun f => by
+      obtain ⟨g, ⟨eg⟩⟩ :=
+        (CategoryTheory.Localization.essSurj_mapArrow_of_hasRightCalculusOfFractions
+          (L := L) (W := W)).mem_essImage (Arrow.mk f)
+      let _hpres : PreservesFiniteLimits L := hpres
+      have : HasLimit (parallelPair (L.map g.hom) 0) :=
+        ⟨_, (KernelFork.ofι (kernel.ι g.hom)
+            (by simp)).mapIsLimit
+          (kernelIsKernel g.hom) L⟩
+      let e0 : (parallelPair f 0).obj WalkingParallelPair.zero ≅
+          (parallelPair (L.map g.hom) 0).obj WalkingParallelPair.zero := by
+        change Arrow.leftFunc.obj (Arrow.mk f) ≅
+          Arrow.leftFunc.obj (L.mapArrow.obj g)
+        exact Arrow.leftFunc.mapIso eg.symm
+      let e1 : (parallelPair f 0).obj WalkingParallelPair.one ≅
+          (parallelPair (L.map g.hom) 0).obj WalkingParallelPair.one := by
+        change Arrow.rightFunc.obj (Arrow.mk f) ≅
+          Arrow.rightFunc.obj (L.mapArrow.obj g)
+        exact Arrow.rightFunc.mapIso eg.symm
+      exact hasLimit_of_iso ((show parallelPair f 0 ≅
+          parallelPair (L.map g.hom) 0 from
+        parallelPair.ext e0 e1
+          (by
+            dsimp [e0, e1]
+            exact eg.inv.w.symm)
+          (by dsimp [e0, e1]; rw [zero_comp, comp_zero])).symm)⟩
+  · let _hpres : PreservesFiniteLimits L := hpres
+    intro X Y f
+    exact inferInstance
 
 theorem localization_is_abelian
     {C : Type u} {D : Type*} [Category.{v} C] [Category* D]
     [Abelian C] {W : MorphismProperty C} (L : C ⥤ D)
     [L.IsLocalization W] (hW : MultiplicativeSystem W) :
-    ∃ hD : Abelian D, exactFunctor C D L := by
-  sorry
+    ∃ _hD : Abelian D, exactFunctor C D L := by
+  let hC : Formalization.Books.Homology.Unit03.AdditiveCategory C :=
+    { toPreadditive := inferInstance
+      toHasFiniteProducts := inferInstance }
+  let _hC : Formalization.Books.Homology.Unit03.AdditiveCategory C := hC
+  let _hLeft : LeftMultiplicativeSystem W := hW.1
+  let _hRight : RightMultiplicativeSystem W := hW.2
+  obtain ⟨hD, hL⟩ := localization_additive_left (W := W) L
+  let _hD : Formalization.Books.Homology.Unit03.AdditiveCategory D := hD
+  let _hL : Functor.Additive L := hL
+  let _hLeftPres : PreservesFiniteColimits (leftLocalizationFunctor W) :=
+    left_localization_preserves_finite_colimits
+  let eL := CategoryTheory.Localization.uniq (leftLocalizationFunctor W) L W
+  let _heLeftPres : PreservesFiniteColimits eL.functor := inferInstance
+  let _hCompLeftPres : PreservesFiniteColimits ((leftLocalizationFunctor W) ⋙ eL.functor) :=
+    comp_preservesFiniteColimits (leftLocalizationFunctor W) eL.functor
+  have hpresColimits : PreservesFiniteColimits L :=
+    preservesFiniteColimits_of_natIso
+      (CategoryTheory.Localization.compUniqFunctor
+        (leftLocalizationFunctor W) L W)
+  let _hRightPres : PreservesFiniteLimits (rightLocalizationFunctor W) :=
+    right_localization_preserves_finite_limits
+  let eR := CategoryTheory.Localization.uniq (rightLocalizationFunctor W) L W
+  let _heRightPres : PreservesFiniteLimits eR.functor := inferInstance
+  let _hCompRightPres : PreservesFiniteLimits ((rightLocalizationFunctor W) ⋙ eR.functor) :=
+    comp_preservesFiniteLimits (rightLocalizationFunctor W) eR.functor
+  have hpresLimits : PreservesFiniteLimits L :=
+    preservesFiniteLimits_of_natIso
+      (CategoryTheory.Localization.compUniqFunctor
+        (rightLocalizationFunctor W) L W)
+  let _hpresColimits : PreservesFiniteColimits L := hpresColimits
+  let _hpresLimits : PreservesFiniteLimits L := hpresLimits
+  have hAbelian : Abelian D := by
+    apply Abelian.mk'
+    intro X Y f
+    obtain ⟨g, ⟨eg⟩⟩ :=
+      (CategoryTheory.Localization.essSurj_mapArrow L W).mem_essImage (Arrow.mk f)
+    change Arrow.mk (L.map g.hom) ≅ Arrow.mk f at eg
+    have himageKernel : IsLimit (KernelFork.ofι (f := Abelian.factorThruImage g.hom)
+        (kernel.ι g.hom) (by
+          apply (cancel_mono (Abelian.image.ι g.hom)).1
+          rw [Category.assoc]
+          rw [Abelian.image.fac, kernel.condition, zero_comp])) := by
+      refine Fork.IsLimit.mk' _ (fun s => ?_)
+      refine ⟨kernel.lift g.hom s.ι ?_, kernel.lift_ι _ _ _, ?_⟩
+      · calc
+          s.ι ≫ g.hom =
+              (s.ι ≫ Abelian.factorThruImage g.hom) ≫ Abelian.image.ι g.hom := by
+            rw [Category.assoc, Abelian.image.fac]
+          _ = 0 := by simp
+      · intro m hm
+        apply (kernelIsKernel g.hom).hom_ext
+        intro j
+        rcases j with (_ | _)
+        · change m ≫ kernel.ι g.hom =
+            kernel.lift g.hom s.ι _ ≫ kernel.ι g.hom
+          simpa only [KernelFork.ι_ofι] using
+            hm.trans (kernel.lift_ι _ _ _).symm
+        · simp
+    let hs : CategoryTheory.Abelian.AbelianStruct g.hom :=
+      { kernelFork := KernelFork.ofι (kernel.ι g.hom) (kernel.condition g.hom)
+        isLimitKernelFork := kernelIsKernel g.hom
+        cokernelCofork := CokernelCofork.ofπ (cokernel.π g.hom)
+          (cokernel.condition g.hom)
+        isColimitCokernelCofork := cokernelIsCokernel g.hom
+        image := Abelian.image g.hom
+        imageπ := Abelian.factorThruImage g.hom
+        imageIsCokernel := Abelian.epiIsCokernelOfKernel _ himageKernel
+        imageι := Abelian.image.ι g.hom
+        imageIsKernel := kernelIsKernel (cokernel.π g.hom)
+        fac := by simp }
+    have hmap : Nonempty (CategoryTheory.Abelian.AbelianStruct (L.map g.hom)) := by
+      refine ⟨{
+        kernelFork := KernelFork.ofι (L.map hs.kernelFork.ι) (by
+          rw [← L.map_comp, hs.kernelFork.condition, L.map_zero])
+        isLimitKernelFork :=
+          (KernelFork.isLimitMapConeEquiv _ L).1
+            (isLimitOfPreserves L hs.isLimitKernelFork)
+        cokernelCofork := CokernelCofork.ofπ (L.map hs.cokernelCofork.π) (by
+          rw [← L.map_comp, hs.cokernelCofork.condition, L.map_zero])
+        isColimitCokernelCofork :=
+          (CokernelCofork.isColimitMapCoconeEquiv _ L).1
+            (isColimitOfPreserves L hs.isColimitCokernelCofork)
+        image := L.obj hs.image
+        imageπ := L.map hs.imageπ
+        ι_imageπ := by
+          change L.map hs.kernelFork.ι ≫ L.map hs.imageπ = 0
+          rw [← L.map_comp, hs.ι_imageπ, L.map_zero]
+        imageIsCokernel :=
+          (CokernelCofork.isColimitMapCoconeEquiv _ L).1
+            (isColimitOfPreserves L hs.imageIsCokernel)
+        imageι := L.map hs.imageι
+        imageι_π := by
+          change L.map hs.imageι ≫ L.map hs.cokernelCofork.π = 0
+          rw [← L.map_comp, hs.imageι_π, L.map_zero]
+        imageIsKernel :=
+          (isLimitMapConeForkEquiv' L hs.imageι_π).1
+            (isLimitOfPreserves L hs.imageIsKernel)
+        fac := by
+          rw [← L.map_comp]
+          simp }⟩
+    obtain ⟨a⟩ := hmap
+    let el := Arrow.leftFunc.mapIso eg
+    let er := Arrow.rightFunc.mapIso eg
+    change L.obj g.left ≅ X at el
+    change L.obj g.right ≅ Y at er
+    have hleft : el.hom ≫ f = L.map g.hom ≫ er.hom := by
+      change eg.hom.left ≫ f = L.map g.hom ≫ eg.hom.right
+      exact eg.hom.w
+    have hpre : f ≫ er.inv = el.inv ≫ L.map g.hom := by
+      rw [← cancel_mono er.hom]
+      simp only [Category.assoc]
+      rw [← hleft]
+      simp
+    let kf : KernelFork f :=
+      KernelFork.ofι (a.kernelFork.ι ≫ el.hom) (by
+        calc
+          (a.kernelFork.ι ≫ el.hom) ≫ f =
+              a.kernelFork.ι ≫ (el.hom ≫ f) := Category.assoc _ _ _
+          _ = a.kernelFork.ι ≫ (L.map g.hom ≫ er.hom) := by rw [hleft]
+          _ = 0 := by simp [← Category.assoc, a.kernelFork.condition])
+    let cf : CokernelCofork f :=
+      CokernelCofork.ofπ (er.inv ≫ a.cokernelCofork.π) (by
+        calc
+          f ≫ (er.inv ≫ a.cokernelCofork.π) =
+              (f ≫ er.inv) ≫ a.cokernelCofork.π :=
+                (Category.assoc _ _ _).symm
+          _ = (el.inv ≫ L.map g.hom) ≫ a.cokernelCofork.π := by rw [hpre]
+          _ = el.inv ≫ (L.map g.hom ≫ a.cokernelCofork.π) :=
+            Category.assoc _ _ _
+          _ = 0 := by rw [a.cokernelCofork.condition, comp_zero])
+    refine ⟨{
+      kernelFork := kf
+      isLimitKernelFork := Fork.isLimitOfIsos a.kernelFork a.isLimitKernelFork kf
+        el er (Iso.refl _)
+        (by exact hleft) (by simp only [comp_zero, zero_comp])
+        (by simp [kf, el])
+      cokernelCofork := cf
+      isColimitCokernelCofork := Cofork.isColimitOfIsos a.cokernelCofork
+        a.isColimitCokernelCofork cf el er (Iso.refl _)
+        (by exact hleft) (by simp only [comp_zero, zero_comp])
+        (by simp [cf, er])
+      image := a.image
+      imageπ := el.inv ≫ a.imageπ
+      ι_imageπ := by
+        change (a.kernelFork.ι ≫ el.hom) ≫ (el.inv ≫ a.imageπ) = 0
+        simp [Category.assoc, a.ι_imageπ]
+      imageIsCokernel :=
+        Cofork.isColimitOfIsos
+          (CokernelCofork.ofπ a.imageπ a.ι_imageπ) a.imageIsCokernel
+          (CokernelCofork.ofπ (el.inv ≫ a.imageπ) (by
+            change (a.kernelFork.ι ≫ el.hom) ≫ (el.inv ≫ a.imageπ) = 0
+            simp [Category.assoc, a.ι_imageπ]))
+          (Iso.refl _) el (Iso.refl _)
+          (by simp [kf]) (by simp) (by simp)
+      imageι := a.imageι ≫ er.hom
+      imageι_π := by
+        dsimp [cf]
+        simp [Category.assoc, a.imageι_π]
+      imageIsKernel :=
+        Fork.isLimitOfIsos (KernelFork.ofι a.imageι a.imageι_π) a.imageIsKernel
+          (KernelFork.ofι (a.imageι ≫ er.hom) (by
+            dsimp [cf]
+            simp [Category.assoc, a.imageι_π]))
+          er (Iso.refl _) (Iso.refl _)
+          (by simp [cf]) (by simp) (by simp)
+      fac := by
+        calc
+          (el.inv ≫ a.imageπ) ≫ (a.imageι ≫ er.hom) =
+              el.inv ≫ (a.imageπ ≫ a.imageι) ≫ er.hom := by
+                simp [Category.assoc]
+          _ = el.inv ≫ L.map g.hom ≫ er.hom := by rw [a.fac]
+          _ = f := by
+            rw [← hleft]
+            simp }⟩
+  refine ⟨hAbelian, ?_⟩
+  rw [exactFunctor_iff]
+  exact ⟨hpresLimits, hpresColimits⟩
 
 end Formalization.Books.Homology.Unit08

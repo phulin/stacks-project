@@ -66,13 +66,49 @@ theorem serre_subcategory_characterization
         P.IsClosedUnderIsomorphisms ∧
           (P.IsClosedUnderSubobjects ∧ P.IsClosedUnderQuotients) ∧
             P.IsClosedUnderExtensions := by
-  sorry
+  constructor
+  · intro h
+    have hsub : P.IsClosedUnderSubobjects := h.toIsClosedUnderSubobjects
+    have hquot : P.IsClosedUnderQuotients := h.toIsClosedUnderQuotients
+    have hext : P.IsClosedUnderExtensions := h.toIsClosedUnderExtensions
+    obtain ⟨Z, hZ, hP⟩ := h.toContainsZero.exists_zero
+    have h0 : P (0 : C) := hsub.prop_of_mono (hZ.iso (isZero_zero C)).inv hP
+    have hIso : P.IsClosedUnderIsomorphisms :=
+      { of_iso := fun e hX => hsub.prop_of_mono e.inv hX }
+    exact ⟨h0, hIso, ⟨hsub, hquot⟩, hext⟩
+  · rintro ⟨h0, _, ⟨hsub, hquot⟩, hext⟩
+    refine @ObjectProperty.IsSerreClass.mk C _ _ P ?_ ?_ ?_ ?_
+    · exact ⟨⟨0, isZero_zero C, h0⟩⟩
+    · exact hsub
+    · exact hquot
+    · exact hext
 
 theorem serre_subcategory_is_abelian_and_inclusion_exact
     (P : ObjectProperty C) [P.IsSerreClass] :
     Nonempty (Abelian P.FullSubcategory) ∧
       exactFunctor P.FullSubcategory C P.ι := by
-  sorry
+  have hBin : P.IsClosedUnderBinaryProducts :=
+    ObjectProperty.IsClosedUnderLimitsOfShape.mk' (P := P)
+      (J := Discrete WalkingPair) (by
+        rintro _ ⟨F, hF⟩
+        exact P.prop_of_iso
+          (IsLimit.conePointsIsoOfNatIso (BinaryBiproduct.isLimit _ _)
+            (limit.isLimit F) (diagramIsoPair F).symm)
+          (P.prop_biprod (hF _) (hF _)))
+  have hFinite : P.IsClosedUnderFiniteProducts :=
+    @ObjectProperty.IsClosedUnderFiniteProducts.mk' C _ P inferInstance inferInstance hBin
+  letI : Abelian P.FullSubcategory :=
+    @ObjectProperty.instAbelianFullSubcategoryOfContainsZeroOfIsClosedUnderKernelsOfIsClosedUnderCokernelsOfIsClosedUnderFiniteProducts
+      C _ P inferInstance inferInstance inferInstance inferInstance hFinite
+  refine ⟨⟨inferInstance⟩, ?_⟩
+  rw [exactFunctor_iff]
+  constructor
+  · apply (Functor.preservesFiniteLimits_tfae P.ι).out 2 3 |>.mp
+    intro X Y f
+    exact P.preservesKernels_ι f
+  · apply (Functor.preservesFiniteColimits_tfae P.ι).out 2 3 |>.mp
+    intro X Y f
+    exact P.preservesCokernels_ι f
 
 /- The class above is the source's nonempty full subcategory closed under
 exact five-term sequences. -/
@@ -83,8 +119,17 @@ theorem weak_serre_subcategory_definition
       Nonempty P.FullSubcategory ∧
         ∀ (S : ComposableArrows C 4), S.Exact →
           P (S.obj' 0) → P (S.obj' 1) → P (S.obj' 3) → P (S.obj' 4) →
-            P (S.obj' 2) := by
-  sorry
+          P (S.obj' 2) := by
+  constructor
+  · intro h
+    obtain ⟨X, hX⟩ := h.toNonempty.exists_prop
+    refine ⟨⟨⟨X, hX⟩⟩, ?_⟩
+    intro S hS h₀ h₁ h₃ h₄
+    exact h.prop_X₂_of_exact hS h₀ h₁ h₃ h₄
+  · rintro ⟨⟨X, hX⟩, hprop⟩
+    refine @ObjectProperty.IsWeakSerreClass.mk C _ _ P ?_ ?_
+    · exact ⟨X, hX⟩
+    · exact fun {S} hS h₀ h₁ h₃ h₄ => hprop S hS h₀ h₁ h₃ h₄
 
 theorem weak_serre_subcategory_is_nonempty_and_full
     (P : ObjectProperty C) [P.IsWeakSerreClass] :
@@ -98,7 +143,130 @@ theorem weak_serre_subcategory_characterization
         P.IsClosedUnderIsomorphisms ∧
           (P.IsClosedUnderKernels ∧ P.IsClosedUnderCokernels) ∧
             P.IsClosedUnderExtensions := by
-  sorry
+  constructor
+  · intro h
+    obtain ⟨X, hX⟩ := h.toNonempty.exists_prop
+    have hzero : P (0 : C) := by
+      let T := ComposableArrows.mk₄ (𝟙 X) (0 : X ⟶ 0) (0 : 0 ⟶ X) (𝟙 X)
+      have hT : T.Exact := by
+        refine ComposableArrows.Exact.mk
+          (ComposableArrows.IsComplex.mk (fun i hi => ?_)) ?_
+        · have hi' : i = 0 ∨ i = 1 ∨ i = 2 := by omega
+          rcases hi' with rfl | rfl | rfl
+          · change (𝟙 X) ≫ (0 : X ⟶ 0) = 0
+            simp
+          · change (0 : X ⟶ 0) ≫ (0 : 0 ⟶ X) = 0
+            simp
+          · change (0 : 0 ⟶ X) ≫ (𝟙 X) = 0
+            simp
+        · intro i hi
+          have hi' : i = 0 ∨ i = 1 ∨ i = 2 := by omega
+          rcases hi' with rfl | rfl | rfl
+          · exact (ShortComplex.exact_iff_epi _ (by simp)).2 inferInstance
+          · exact ShortComplex.exact_of_isZero_X₂ _ (isZero_zero C)
+          · exact (ShortComplex.exact_iff_mono _ (by simp)).2 inferInstance
+      exact h.prop_X₂_of_exact hT hX hX hX hX
+    have hIso : P.IsClosedUnderIsomorphisms := by
+      refine { of_iso := ?_ }
+      intro X Y e hX
+      let T := ComposableArrows.mk₄ (0 : (0 : C) ⟶ X) e.hom (0 : Y ⟶ (0 : C))
+        (0 : (0 : C) ⟶ (0 : C))
+      have hT : T.Exact := by
+        refine ComposableArrows.Exact.mk
+          (ComposableArrows.IsComplex.mk (fun i hi => ?_)) ?_
+        · have hi' : i = 0 ∨ i = 1 ∨ i = 2 := by omega
+          rcases hi' with rfl | rfl | rfl
+          · change (0 : (0 : C) ⟶ X) ≫ e.hom = 0
+            simp
+          · change e.hom ≫ (0 : Y ⟶ (0 : C)) = 0
+            simp
+          · change (0 : Y ⟶ (0 : C)) ≫ (0 : (0 : C) ⟶ (0 : C)) = 0
+            simp
+        · intro i hi
+          have hi' : i = 0 ∨ i = 1 ∨ i = 2 := by omega
+          rcases hi' with rfl | rfl | rfl
+          · exact (ShortComplex.exact_iff_mono _ (by simp)).2 inferInstance
+          · exact (ShortComplex.exact_iff_epi _ (by simp)).2 inferInstance
+          · exact ShortComplex.exact_of_isZero_X₂ _ (isZero_zero C)
+      exact h.prop_X₂_of_exact hT hzero hX hzero hzero
+    have hK : P.IsClosedUnderKernels := by
+      refine ⟨?_⟩
+      intro Z hZ
+      rcases hZ with ⟨f, k, hk, ⟨hX, hY⟩⟩
+      exact P.prop_of_isLimit_kernelFork hk hX hY
+    have hC : P.IsClosedUnderCokernels := by
+      refine ⟨?_⟩
+      intro Z hZ
+      rcases hZ with ⟨f, k, hk, ⟨hX, hY⟩⟩
+      exact P.prop_of_isColimit_cokernelCofork hk hX hY
+    have hExt : P.IsClosedUnderExtensions := by
+      refine ⟨?_⟩
+      intro S hS h₁ h₃
+      let T := ComposableArrows.mk₄ (0 : 0 ⟶ S.X₁) S.f S.g (0 : S.X₃ ⟶ 0)
+      have hT : T.Exact := by
+        refine ComposableArrows.Exact.mk
+          (ComposableArrows.IsComplex.mk (fun i hi => ?_)) ?_
+        · have hi' : i = 0 ∨ i = 1 ∨ i = 2 := by omega
+          rcases hi' with rfl | rfl | rfl
+          · simp [T]
+          · simpa [T] using hS.zero
+          · simp [T]
+        · intro i hi
+          have hi' : i = 0 ∨ i = 1 ∨ i = 2 := by omega
+          rcases hi' with rfl | rfl | rfl
+          · exact (ShortComplex.exact_iff_mono _ (by simp)).2 hS.mono_f
+          · simpa [T] using hS.exact
+          · exact (ShortComplex.exact_iff_epi _ (by simp)).2 hS.epi_g
+      exact h.prop_X₂_of_exact hT hzero h₁ h₃ hzero
+    exact ⟨hzero, hIso, ⟨hK, hC⟩, hExt⟩
+  · rintro ⟨hzero, hIso, ⟨hK, hC⟩, hExt⟩
+    refine @ObjectProperty.IsWeakSerreClass.mk C _ _ P ?_ ?_
+    · exact ⟨0, hzero⟩
+    · intro S hS h₀ h₁ h₃ h₄
+      letI : P.IsClosedUnderKernels := hK
+      letI : P.IsClosedUnderCokernels := hC
+      letI : P.IsClosedUnderExtensions := hExt
+      let f₀ := S.map' 0 1
+      let f₁ := S.map' 1 2
+      let f₂ := S.map' 2 3
+      let f₃ := S.map' 3 4
+      let Q := cokernel f₀
+      let K := kernel f₃
+      let u := cokernel.desc f₀ f₁ (hS.toIsComplex.zero 0)
+      let v := kernel.lift f₃ f₂ (hS.toIsComplex.zero 2)
+      have hQ : P Q := P.prop_cokernel f₀ h₀ h₁
+      have hK' : P K := P.prop_kernel f₃ h₃ h₄
+      let T₁ : ShortComplex C := ShortComplex.mk u f₂ (by
+        apply (cancel_epi (cokernel.π f₀)).1
+        dsimp [u]
+        rw [Category.assoc, cokernel.π_desc, hS.toIsComplex.zero 1])
+      have hT₁ : T₁.Exact := by
+        let φ : S.sc hS.toIsComplex 1 ⟶ T₁ := ShortComplex.homMk
+          (cokernel.π f₀) (𝟙 _) (𝟙 _)
+          (by dsimp [T₁, u]; simp)
+          (by dsimp [T₁]; simp)
+        exact (ShortComplex.exact_iff_of_epi_of_isIso_of_mono φ).1 (hS.exact 1)
+      let T : ShortComplex C := ShortComplex.mk u v (by
+        apply (cancel_mono (kernel.ι f₃)).1
+        dsimp [v]
+        rw [Category.assoc, kernel.lift_ι]
+        apply (cancel_epi (cokernel.π f₀)).1
+        dsimp [u]
+        rw [Category.assoc, cokernel.π_desc, hS.toIsComplex.zero 1])
+      have hT : T.Exact := by
+        let φ : T ⟶ T₁ := ShortComplex.homMk
+          (𝟙 _) (𝟙 _) (kernel.ι f₃)
+          (by dsimp [T, T₁]; simp)
+          (by dsimp [T, T₁, v]; simp)
+        exact (ShortComplex.exact_iff_of_epi_of_isIso_of_mono φ).2 hT₁
+      letI : Mono u := by
+        dsimp [u]
+        exact (hS.exact 0).mono_cokernelDesc
+      letI : Epi v := by
+        dsimp [v]
+        exact (hS.exact 2).epi_kernelLift
+      exact hExt.prop_X₂_of_shortExact (ShortComplex.ShortExact.mk' hT inferInstance inferInstance)
+        hQ hK'
 
 theorem weak_serre_subcategory_is_abelian_and_inclusion_exact
     (P : ObjectProperty C) [P.IsWeakSerreClass] :

@@ -30,12 +30,6 @@ namespace Formalization.Books.Injectives.Unit13
 
 /-! ## Representability and products -/
 
-abbrev Complex (C : Type u) [Category.{v} C] [HasZeroMorphisms C] :=
-  Formalization.Books.Injectives.Unit12.Complex C
-
-abbrev Derived (C : Type u) [Category.{v} C] [Abelian C]
-    [HasDerivedCategory.{w} C] := DerivedCategory C
-
 /- A contravariant functor preserves colimits in `C` precisely when it
 preserves limits after viewing the colimit diagram in `Cᵒᵖ`.  The latter is
 Mathlib's canonical preservation predicate. -/
@@ -306,6 +300,9 @@ noncomputable def filteredComplexQuotientComplex
     (K : FilteredComplex C) (p : ℤ) : CochainComplex C ℤ :=
   cokernel (filteredComplexStepToUnderlying K p)
 
+/- For the decreasing filtration used by the preceding Homology chapter,
+   `p' ≤ p` gives `F^p ⟶ F^p'`; hence the well-typed subquotient is
+   `F^p'/F^p`, correcting the reversed quotient notation in the source. -/
 noncomputable def filteredComplexSubquotientComplex
     {C : Type u} [Category.{v} C] [Abelian C]
     (K : FilteredComplex C) (p p' : ℤ) (hp' : p' ≤ p) :

@@ -403,7 +403,15 @@ theorem determinant_four_by_four_formula (D : LocalNumericalData 4)
         4 * D.a 0 3 ^ 2 * D.w 1 * D.w 2 +
         D.a 0 1 ^ 2 * D.a 2 3 ^ 2 + D.a 1 2 ^ 2 * D.a 0 3 ^ 2 -
         2 * D.a 0 1 * D.a 0 3 * D.a 1 2 * D.a 2 3 := by
-  sorry
+  rcases _hzero with ⟨h02, h13⟩
+  have h10 : D.a 1 0 = D.a 0 1 := hsymm 1 0
+  have h21 : D.a 2 1 = D.a 1 2 := hsymm 2 1
+  have h32 : D.a 3 2 = D.a 2 3 := hsymm 3 2
+  have h30 : D.a 3 0 = D.a 0 3 := hsymm 3 0
+  have h20 : D.a 2 0 = 0 := (hsymm 2 0).trans h02
+  have h31 : D.a 3 1 = 0 := (hsymm 3 1).trans h13
+  simp [Matrix.det_succ_row_zero (n := 3), Matrix.det_fin_three, Fin.succAbove,
+    Fin.sum_univ_succ, hdiag, h02, h13, h10, h21, h32, h30, h20, h31] <;> ring
 
 theorem determinant_five_by_five_formula (D : LocalNumericalData 5)
     (hdiag : ∀ i, D.a i i = -2 * D.w i) (hsymm : ∀ i j, D.a i j = D.a j i)
@@ -432,7 +440,16 @@ theorem star_four_by_four_determinant_formula (D : LocalNumericalData 4)
         4 * D.a 0 1 ^ 2 * D.w 2 * D.w 3 -
         4 * D.a 0 2 ^ 2 * D.w 1 * D.w 3 -
         4 * D.a 0 3 ^ 2 * D.w 1 * D.w 2 := by
-  sorry
+  rcases _hzero with ⟨h12, h13, h23⟩
+  have h10 : D.a 1 0 = D.a 0 1 := hsymm 1 0
+  have h20 : D.a 2 0 = D.a 0 2 := hsymm 2 0
+  have h30 : D.a 3 0 = D.a 0 3 := hsymm 3 0
+  have h21 : D.a 2 1 = 0 := (hsymm 2 1).trans h12
+  have h31 : D.a 3 1 = 0 := (hsymm 3 1).trans h13
+  have h32 : D.a 3 2 = 0 := (hsymm 3 2).trans h23
+  simp [Matrix.det_succ_row_zero (n := 3), Matrix.det_fin_three, Fin.succAbove,
+    Fin.sum_univ_succ, hdiag, h12, h13, h23, h10, h20, h30, h21, h31, h32]
+  ring
 
 /-! The base-case observation and the source's determinant identities. -/
 theorem singleton_minus_two_constraints (T : NumericalType) :

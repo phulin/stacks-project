@@ -6,6 +6,10 @@ import Mathlib.CategoryTheory.Sites.DenseSubsite.InducedTopology
 import Mathlib.Topology.Sheaves.SheafCondition.Sites
 import Mathlib.Algebra.Category.ModuleCat.Presheaf
 import Mathlib.Algebra.Category.ModuleCat.Stalk
+import Mathlib.Algebra.Category.ModuleCat.Presheaf.Pullback
+import Mathlib.Algebra.Category.ModuleCat.Presheaf.Sheafification
+import Mathlib.Algebra.Category.ModuleCat.Sheaf.PullbackContinuous
+import Mathlib.CategoryTheory.Adjunction.FullyFaithful
 
 /-!
 # Sheaves on Spaces, Chapter 22, Section 9: Bases and sheaves
@@ -1227,7 +1231,253 @@ theorem exists_basisModuleExtension {X : TopCat.{v}} {ι : Type v}
     (F : BasisModulePresheaf B ((inducedFunctor B).op ⋙ O.1))
     (hF : BasisModuleSheaf B F) :
     Nonempty (BasisModuleExtensionData B hB O F hF) := by
-  sorry
+  letI : (inducedFunctor B).IsCoverDense (Opens.grothendieckTopology X) :=
+    TopCat.Opens.coverDense_inducedFunctor hB
+  letI : (inducedFunctor B).IsContinuous (basisTopology B)
+      (Opens.grothendieckTopology X) :=
+    Functor.IsCoverDense.isContinuous _ _ _
+      (Functor.coverPreserving_restrictedTopology _ _)
+  let Rb := (basisAlgebraicRestrictionFunctor (C := RingCat) B hB).obj O
+  let Fb : SheafOfModules Rb :=
+    ⟨F, (CategoryTheory.Presheaf.isSheaf_iff_isSheaf_forget
+      (J := basisTopology B) (P' := F.presheaf)
+      (CategoryTheory.forget AddCommGrpCat)).2 hF⟩
+  let φ : Rb ⟶
+      (inducedFunctor B).sheafPushforwardContinuous RingCat
+        (basisTopology B) (Opens.grothendieckTopology X) |>.obj O :=
+    𝟙 _
+  letI : Presheaf.IsLocallyInjective (Opens.grothendieckTopology X)
+      (𝟙 O.obj) := by infer_instance
+  letI : Presheaf.IsLocallySurjective (Opens.grothendieckTopology X)
+      (𝟙 O.obj) := by infer_instance
+  letI : (PresheafOfModules.pushforward φ.hom).IsRightAdjoint :=
+    Functor.isRightAdjoint_of_leftAdjointObjIsDefined_eq_top
+      (PresheafOfModules.pullbackObjIsDefined_eq_top φ.hom)
+  let E :=
+    (SheafOfModules.forget Rb ⋙ PresheafOfModules.pullback φ.hom ⋙
+      PresheafOfModules.sheafification (𝟙 O.obj)).obj Fb
+  let S := SheafOfModules.pushforward φ
+  letI : S.Faithful := by
+    constructor
+    intro M N f g h
+    apply SheafOfModules.hom_ext
+    apply (PresheafOfModules.toPresheaf O.obj).map_injective
+    have h' : ((SheafOfModules.toSheaf.{v} O).map f).hom =
+        ((SheafOfModules.toSheaf.{v} O).map g).hom := by
+      apply TopCat.Sheaf.hom_ext ((SheafOfModules.toSheaf.{v} O).obj M).obj
+        ((SheafOfModules.toSheaf.{v} O).obj N) hB
+      intro i
+      have hi := congrArg (fun q => q.val.app (op i)) h
+      have hi' := congrArg (fun q =>
+        (CategoryTheory.forget₂ (ModuleCat (Rb.obj.obj (op i))) AddCommGrpCat).map q) hi
+      have hmap (q : M.val.obj (op (B i)) ⟶ N.val.obj (op (B i))) :
+          (CategoryTheory.forget₂ (ModuleCat (Rb.obj.obj (op i))) AddCommGrpCat).map
+              ((ModuleCat.restrictScalars
+                (RingCat.Hom.hom (𝟙 (Rb.obj.obj (op i)) ))).map q) =
+              (CategoryTheory.forget₂ (ModuleCat (Rb.obj.obj (op i))) AddCommGrpCat).map q := by
+        ext x
+        rfl
+      change (CategoryTheory.forget₂ (ModuleCat (Rb.obj.obj (op i))) AddCommGrpCat).map
+          ((ModuleCat.restrictScalars
+            (RingCat.Hom.hom (𝟙 (Rb.obj.obj (op i)) ))).map
+            (f.val.app (op (B i)))) =
+        (CategoryTheory.forget₂ (ModuleCat (Rb.obj.obj (op i))) AddCommGrpCat).map
+          ((ModuleCat.restrictScalars
+            (RingCat.Hom.hom (𝟙 (Rb.obj.obj (op i)) ))).map
+            (g.val.app (op (B i)))) at hi'
+      rw [hmap, hmap] at hi'
+      change (CategoryTheory.forget₂ (ModuleCat (Rb.obj.obj (op i))) AddCommGrpCat).map
+          (f.val.app (op (B i))) =
+        (CategoryTheory.forget₂ (ModuleCat (Rb.obj.obj (op i))) AddCommGrpCat).map
+          (g.val.app (op (B i)))
+      exact hi'
+    change ((SheafOfModules.toSheaf.{v} O).map f).hom =
+      ((SheafOfModules.toSheaf.{v} O).map g).hom
+    exact h'
+  letI : S.Full := by
+    constructor
+    intro M N h
+    let α : M.val.presheaf ⟶ N.val.presheaf :=
+      TopCat.Sheaf.restrictHomEquivHom M.val.presheaf
+        ⟨N.val.presheaf, N.isSheaf⟩ hB
+        ((PresheafOfModules.toPresheaf Rb.obj).map h.val)
+    let fval : M.val ⟶ N.val := PresheafOfModules.homMk α (by
+      intro U r m
+      let I := {i : ι // B i ≤ U.unop}
+      let A : I → Opens X := fun i => B i.1
+      have hA : iSup A = U.unop := by
+        apply le_antisymm
+        · exact iSup_le fun i => i.2
+        · intro x hx
+          obtain ⟨V, ⟨i, rfl⟩, hxV, hi⟩ := (Opens.isBasis_iff_nbhd.mp hB) hx
+          exact Opens.mem_iSup.mpr ⟨⟨i, hi⟩, hxV⟩
+      let R : Presieve U.unop := TopCat.Presheaf.presieveOfCoveringAux A U.unop
+      have hR : Sieve.generate R ∈ Opens.grothendieckTopology X U.unop := by
+        change Sieve.generate
+          (TopCat.Presheaf.presieveOfCoveringAux A U.unop) ∈
+            Opens.grothendieckTopology X U.unop
+        exact hA ▸ TopCat.Presheaf.presieveOfCovering.mem_grothendieckTopology A
+      have hNtype : Presheaf.IsSheaf (Opens.grothendieckTopology X)
+          (N.val.presheaf ⋙ CategoryTheory.forget AddCommGrpCat) :=
+        (CategoryTheory.Presheaf.isSheaf_iff_isSheaf_forget
+          (J := Opens.grothendieckTopology X) (P' := N.val.presheaf)
+          (CategoryTheory.forget AddCommGrpCat)).mp N.isSheaf
+      have hNsheaf : Presieve.IsSheaf (Opens.grothendieckTopology X)
+          (N.val.presheaf ⋙ CategoryTheory.forget AddCommGrpCat) :=
+        (CategoryTheory.isSheaf_iff_isSheaf_of_type
+          (J := Opens.grothendieckTopology X)
+          (N.val.presheaf ⋙ CategoryTheory.forget AddCommGrpCat)).mp hNtype
+      have hsep : Presieve.IsSeparatedFor
+          (N.val.presheaf ⋙ CategoryTheory.forget AddCommGrpCat) R :=
+        (hNsheaf.isSheafFor R hR).isSeparatedFor
+      apply hsep.ext
+        (t₁ := (α.app U) (r • m)) (t₂ := r • (α.app U) m)
+      intro V f hf
+      obtain ⟨i, rfl⟩ := hf
+      have hα := TopCat.Sheaf.extend_hom_app M.val.presheaf
+        ⟨N.val.presheaf, N.isSheaf⟩ hB
+        ((PresheafOfModules.toPresheaf Rb.obj).map h.val) i.1
+      have hn := α.naturality f.op
+      have hn' := congrArg (fun q =>
+        (ConcreteCategory.hom q) ((r • m : M.val.obj U) : M.val.presheaf.obj U)) hn
+      change (ConcreteCategory.hom (N.val.presheaf.map f.op))
+          ((ConcreteCategory.hom (α.app (op (unop U))))
+            ((r • m : M.val.obj U) : M.val.presheaf.obj (op (unop U)))) =
+        (ConcreteCategory.hom (N.val.presheaf.map f.op))
+          ((r • (ConcreteCategory.hom (α.app (op (unop U)))) m : N.val.obj U) :
+            N.val.presheaf.obj (op (unop U)))
+      have hn'' := hn'.symm
+      have hleft :
+          (ConcreteCategory.hom ((N.val.presheaf ⋙ CategoryTheory.forget AddCommGrpCat).map f.op))
+              ((ConcreteCategory.hom (α.app U))
+                ((r • m : M.val.obj U) : M.val.presheaf.obj U)) =
+            (ConcreteCategory.hom (α.app (op (A i))))
+              ((ConcreteCategory.hom (M.val.presheaf.map f.op))
+              ((r • m : M.val.obj U) : M.val.presheaf.obj U)) := by
+        exact hn''
+      have hφ' : ∀ z : M.val.presheaf.obj (op (unop U)),
+          (α.app (op (A i))) ((M.val.presheaf.map f.op) z) =
+            (N.val.presheaf.map f.op) ((α.app (op (unop U))) z) :=
+        fun z => CategoryTheory.congr_fun (α.naturality f.op) z
+      rw [← hφ' ((r • m : M.val.obj U) : M.val.presheaf.obj (op (unop U)))]
+      have hM := M.val.map_smul f.op r m
+      have hM' := congrArg (fun q =>
+        (ConcreteCategory.hom (α.app (op (A i))))
+          ((q : M.val.obj (op (A i))) : M.val.presheaf.obj (op (A i)))) hM
+      have hN := N.val.map_smul f.op r ((α.app (op (unop U))) m)
+      have hh := (h.val.app (op i.1)).hom.map_smul
+        ((ConcreteCategory.hom (O.obj.map f.op)) r)
+        ((ConcreteCategory.hom (M.val.map f.op)) m)
+      let hm0 : (S.obj M).val.obj (op i.1) :=
+        (ConcreteCategory.hom (M.val.map f.op)) m
+      let hr : Rb.obj.obj (op i.1) :=
+        (ConcreteCategory.hom (O.obj.map f.op)) r
+      have hq :
+          (((ConcreteCategory.hom (O.obj.map f.op)) r) •
+            ((ConcreteCategory.hom (M.val.map f.op)) m) :
+            M.val.presheaf.obj (op (A i))) =
+          ((hr • hm0 : (S.obj M).val.obj (op i.1)) :
+            M.val.presheaf.obj (op (A i))) := by
+        dsimp [hr, hm0, S, φ, Rb]
+        rfl
+      have hh2 := (h.val.app (op i.1)).hom.map_smul
+        hr hm0
+      change (ConcreteCategory.hom (α.app (op (A i))))
+          ((ConcreteCategory.hom (M.val.map f.op)) (r • m)) =
+        (ConcreteCategory.hom (N.val.map f.op))
+          (r • (ConcreteCategory.hom (α.app (op (unop U)))) m)
+      rw [hM']
+      rw [hα]
+      change (ModuleCat.Hom.hom (h.val.app (op i.1)))
+          (hr • hm0) =
+        (ConcreteCategory.hom (N.val.map f.op))
+          (r • (ConcreteCategory.hom (α.app (op (unop U)))) m)
+      rw [hh2]
+      dsimp [hr, hm0, S, φ, Rb]
+      have hαm :
+          (ConcreteCategory.hom (α.app (op (A i))))
+              ((ConcreteCategory.hom (M.val.map f.op)) m) =
+            (ModuleCat.Hom.hom (h.val.app (op i.1)))
+              ((ConcreteCategory.hom (M.val.map f.op)) m) := by
+        have hαm' := congrArg (fun q => (ConcreteCategory.hom q)
+          ((ConcreteCategory.hom (M.val.map f.op)) m)) hα
+        calc
+          _ = (ConcreteCategory.hom
+              (((PresheafOfModules.toPresheaf Rb.obj).map h.val).app (op i.1)))
+                ((ConcreteCategory.hom (M.val.map f.op)) m) := by
+            exact hαm'
+          _ = _ := by
+            exact PresheafOfModules.toPresheaf_map_app_apply h.val (op i.1)
+              ((ConcreteCategory.hom (M.val.map f.op)) m)
+      have hφm :
+          (ConcreteCategory.hom (α.app (op (A i))))
+              ((ConcreteCategory.hom (M.val.map f.op)) m) =
+            (ConcreteCategory.hom (N.val.map f.op))
+              ((ConcreteCategory.hom (α.app (op (unop U))))
+                ((m : M.val.obj U) : M.val.presheaf.obj (op (unop U)))) := by
+        have hmapm :
+            (ConcreteCategory.hom (M.val.presheaf.map f.op)) m =
+              (ConcreteCategory.hom (M.val.map f.op)) m := by
+          rfl
+        have hφm' := hφ' ((m : M.val.obj U) : M.val.presheaf.obj (op (unop U)))
+        rw [hmapm] at hφm'
+        exact hφm'
+      rw [← hαm]
+      rw [hφm]
+      exact hN.symm
+      )
+    refine ⟨⟨fval⟩, ?_⟩
+    apply SheafOfModules.hom_ext
+    apply (PresheafOfModules.toPresheaf Rb.obj).map_injective
+    ext U x
+    change (ConcreteCategory.hom (α.app (op (B U.unop)))) x =
+      (ConcreteCategory.hom
+        (((PresheafOfModules.toPresheaf Rb.obj).map h.val).app U)) x
+    exact congrArg (fun q => (ConcreteCategory.hom q) x)
+      (TopCat.Sheaf.extend_hom_app M.val.presheaf
+        ⟨N.val.presheaf, N.isSheaf⟩ hB
+        ((PresheafOfModules.toPresheaf Rb.obj).map h.val) U.unop)
+  refine ⟨{ sheaf := E, restriction_iso := ?_, stalk_iso := ?_ }⟩
+  · change Nonempty ((PresheafOfModules.pushforward (F := inducedFunctor B) φ.hom).obj E.val ≅ F)
+    let P := (PresheafOfModules.pullback φ.hom).obj F
+    let η := (PresheafOfModules.pullbackPushforwardAdjunction φ.hom).unit.app F
+    let σ := (PresheafOfModules.sheafificationAdjunction (𝟙 O.obj)).unit.app P
+    let e := η ≫ (PresheafOfModules.pushforward φ.hom).map σ
+    haveI : PresheafOfModules.IsLocallyInjective
+        (Opens.grothendieckTopology X) σ := by
+      change Presheaf.IsLocallyInjective (Opens.grothendieckTopology X)
+        ((PresheafOfModules.toPresheaf O.obj).map σ)
+      rw [PresheafOfModules.toPresheaf_map_sheafificationAdjunction_unit_app]
+      exact (Opens.grothendieckTopology X).W_toSheafify P.presheaf |>.isLocallyInjective
+    haveI : PresheafOfModules.IsLocallySurjective
+        (Opens.grothendieckTopology X) σ := by
+      change Presheaf.IsLocallySurjective (Opens.grothendieckTopology X)
+        ((PresheafOfModules.toPresheaf O.obj).map σ)
+      rw [PresheafOfModules.toPresheaf_map_sheafificationAdjunction_unit_app]
+      exact (Opens.grothendieckTopology X).W_toSheafify P.presheaf |>.isLocallySurjective
+    letI : (inducedFunctor B).IsCocontinuous (basisTopology B)
+        (Opens.grothendieckTopology X) := by infer_instance
+    haveI : PresheafOfModules.IsLocallyInjective
+        (basisTopology B) ((PresheafOfModules.pushforward φ.hom).map σ) := by
+      change Presheaf.IsLocallyInjective (basisTopology B)
+        (((Functor.whiskeringLeft (basisIndex B)ᵒᵖ (Opens X)ᵒᵖ AddCommGrpCat).obj
+          (inducedFunctor B).op).map
+            ((PresheafOfModules.toPresheaf O.obj).map σ))
+      exact Presheaf.isLocallyInjective_whisker (basisTopology B)
+        (Opens.grothendieckTopology X) (inducedFunctor B)
+        ((PresheafOfModules.toPresheaf O.obj).map σ)
+    haveI : PresheafOfModules.IsLocallySurjective
+        (basisTopology B) ((PresheafOfModules.pushforward φ.hom).map σ) := by
+      change Presheaf.IsLocallySurjective (basisTopology B)
+        (((Functor.whiskeringLeft (basisIndex B)ᵒᵖ (Opens X)ᵒᵖ AddCommGrpCat).obj
+          (inducedFunctor B).op).map
+            ((PresheafOfModules.toPresheaf O.obj).map σ))
+      exact Presheaf.isLocallySurjective_whisker (basisTopology B)
+        (Opens.grothendieckTopology X) (inducedFunctor B)
+        ((PresheafOfModules.toPresheaf O.obj).map σ)
+    sorry
+  · intro x
+    sorry
 
 /-- A selected module-extension datum. -/
 noncomputable def basisModuleExtensionData {X : TopCat.{v}} {ι : Type v}
@@ -1301,7 +1551,7 @@ theorem basisModuleExtension_stalk_eq {X : TopCat.{v}} {ι : Type v}
       ((basisModuleExtension B hB O F hF).val.presheaf ⋙
         (CategoryTheory.forget AddCommGrpCat)) x ≃
       basisModuleStalk B F x) := by
-  sorry
+  exact (basisModuleExtensionData B hB O F hF).stalk_iso x
 
 /-- Extension preserves the stalk as a module, after transporting scalars
 along the canonical comparison between the ordinary and basis ring stalks. -/

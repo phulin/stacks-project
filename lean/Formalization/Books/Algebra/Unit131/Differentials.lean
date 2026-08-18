@@ -97,7 +97,7 @@ theorem mapOfDifferentials_smul_universalDifferential
     mapOfDifferentials (R := R) (T := T) (A := A) (B := B)
         (a • universalDifferential R A b) =
       algebraMap A B a • universalDifferential T B (algebraMap A B b) := by
-  simpa only [LinearMap.map_smul, mapOfDifferentials_apply_universalDifferential,
+  rw [LinearMap.map_smul, mapOfDifferentials_apply_universalDifferential,
     IsScalarTower.algebraMap_smul]
 
 /-! ## Colimits and surjective maps -/

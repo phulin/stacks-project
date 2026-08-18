@@ -2374,6 +2374,7 @@ variable {A A' A'' B B' B'' M M' M'' : Type*}
   [Algebra A B] [Algebra A A'] [Algebra B B'] [Algebra A' B']
   [Algebra A' A''] [Algebra B' B''] [Algebra A'' B'']
   [Algebra A A''] [Algebra B B'']
+  [IsScalarTower A A' A''] [IsScalarTower B B' B'']
   [AddCommGroup M] [Module B M] [Module A M] [IsScalarTower A B M]
   [AddCommGroup M'] [Module B' M'] [Module A' M'] [IsScalarTower A' B' M']
   [AddCommGroup M''] [Module B'' M''] [Module A'' M'']

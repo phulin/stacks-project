@@ -558,6 +558,79 @@ private lemma planeIdeal_isPrime :
   rw [hcomap] at hc
   exact hc
 
+private lemma sourceFullReindex_tRelation :
+    sourceFullReindex sourceTRelation = sourceTPolynomial := by
+  let f : MvPolynomial (Fin 2) ℚ →+* Polynomial (Polynomial ℚ) :=
+    (Polynomial.mapRingHom
+      (MvPolynomial.uniqueAlgEquiv ℚ (Fin 1) :
+        MvPolynomial (Fin 1) ℚ →+* Polynomial ℚ)).comp
+      (MvPolynomial.finSuccEquiv ℚ 1)
+  have hf0 : f (MvPolynomial.X (0 : Fin 2)) = Polynomial.X := by
+    change Polynomial.map (MvPolynomial.uniqueAlgEquiv ℚ (Fin 1)).toRingHom
+        ((MvPolynomial.finSuccEquiv ℚ 1) (MvPolynomial.X (0 : Fin 2))) = _
+    rw [MvPolynomial.finSuccEquiv_X_zero]
+    simp [MvPolynomial.uniqueAlgEquiv]
+  have hf1 : f (MvPolynomial.X (1 : Fin 2)) =
+      Polynomial.C (Polynomial.X) := by
+    change Polynomial.map (MvPolynomial.uniqueAlgEquiv ℚ (Fin 1)).toRingHom
+        ((MvPolynomial.finSuccEquiv ℚ 1)
+          (MvPolynomial.X (Fin.succ (0 : Fin 1)))) = _
+    rw [MvPolynomial.finSuccEquiv_X_succ]
+    simp [MvPolynomial.uniqueAlgEquiv]
+  change Polynomial.map f
+      ((MvPolynomial.finSuccEquiv ℚ 2)
+        (MvPolynomial.rename (Equiv.swap (0 : Fin 3) 2) sourceTRelation)) =
+    sourceTPolynomial
+  have hswap0 : (Equiv.swap (0 : Fin 3) 2) 0 = 2 := by decide
+  have hswap1 : (Equiv.swap (0 : Fin 3) 2) 1 = 1 := by decide
+  have hswap2 : (Equiv.swap (0 : Fin 3) 2) 2 = 0 := by decide
+  have hfin2 :
+      Polynomial.map f (Fin.cases Polynomial.X
+        (fun k => Polynomial.C (MvPolynomial.X k)) 2) =
+      Polynomial.C (Polynomial.C Polynomial.X) := by
+    change Polynomial.map f (Polynomial.C (MvPolynomial.X (1 : Fin 2))) = _
+    rw [Polynomial.map_C, hf1]
+  have hC2 : f (MvPolynomial.C (2 : ℚ)) =
+      Polynomial.C (Polynomial.C (2 : ℚ)) := by
+    change Polynomial.map (MvPolynomial.uniqueAlgEquiv ℚ (Fin 1)).toRingHom
+        ((MvPolynomial.finSuccEquiv ℚ 1) (MvPolynomial.C (2 : ℚ))) = _
+    rw [MvPolynomial.finSuccEquiv_apply]
+    simp [MvPolynomial.uniqueAlgEquiv]
+  have hC3 : f (MvPolynomial.C (3 : ℚ)) =
+      Polynomial.C (Polynomial.C (3 : ℚ)) := by
+    change Polynomial.map (MvPolynomial.uniqueAlgEquiv ℚ (Fin 1)).toRingHom
+        ((MvPolynomial.finSuccEquiv ℚ 1) (MvPolynomial.C (3 : ℚ))) = _
+    rw [MvPolynomial.finSuccEquiv_apply]
+    simp [MvPolynomial.uniqueAlgEquiv]
+  simp only [sourceTRelation, MvPolynomial.rename_X, MvPolynomial.rename_C,
+    hswap0, hswap1, hswap2, map_sub, map_mul, map_pow,
+    MvPolynomial.finSuccEquiv_X_zero, MvPolynomial.finSuccEquiv_X_succ,
+    MvPolynomial.finSuccEquiv_apply, Polynomial.map_sub, Polynomial.map_pow,
+    Polynomial.map_C, Polynomial.map_X, hf0, hf1, hfin2, hC2, hC3]
+  have hfin2' := hfin2
+  have hC2' := hC2
+  have hC3' := hC3
+  dsimp [f] at hfin2' hC2' hC3'
+  simp only [MvPolynomial.eval₂Hom_X', MvPolynomial.eval₂Hom_C,
+    RingHom.comp_apply, hfin2', hC2', hC3']
+  simp [map_mul, map_sub, map_pow, Polynomial.map_mul, Polynomial.map_sub, Polynomial.map_C,
+    hfin2', hC2', hC3', sourceSecondRelation, sourceTPolynomial, f,
+    MvPolynomial.finSuccEquiv_apply, MvPolynomial.uniqueAlgEquiv]
+
+private lemma sourceSPolynomial_span_isPrime :
+    (Ideal.span {sourceSPolynomial} :
+      Ideal (Polynomial (Polynomial ℚ))).IsPrime := by
+  have hmap : Ideal.map (sourceBaseReindex :
+      MvPolynomial (Fin 2) ℚ →+* Polynomial (Polynomial ℚ)) sourceBaseIdeal =
+      Ideal.span {sourceSPolynomial} := by
+    rw [sourceBaseIdeal, Ideal.map_span, Set.image_singleton]
+    change Ideal.span ({sourceBaseReindex sourceBaseRelationMv} :
+      Set (Polynomial (Polynomial ℚ))) = Ideal.span {sourceSPolynomial}
+    rw [sourceBaseReindex_relation]
+  rw [← hmap]
+  letI : sourceBaseIdeal.IsPrime := sourceBaseIdeal_isPrime
+  exact Ideal.map_isPrime_of_surjective sourceBaseReindex.surjective (by simp)
+
 /-! ## Exercise `find-fraction-field` -/
 
 /- The source calls the displayed quotient a domain.  Recording that fact as

@@ -1435,7 +1435,13 @@ theorem evaluationMap_eq_evaluationEquiv_toLinearMap
     [Module.Finite R M] [Module.Projective R M] :
     evaluationMap (R := R) (L := L) (M := M) (N := N) =
       (evaluationEquiv (R := R) (L := L) (M := M) (N := N)).toLinearMap := by
-  sorry
+  apply LinearMap.ext
+  intro x
+  simp [evaluationMap, evaluationEquiv, LinearEquiv.trans, LinearEquiv.arrowCongr,
+    LinearEquiv.refl]
+  apply LinearMap.ext
+  intro y
+  rfl
 
 /-- The evaluation map is an isomorphism when `M` is finite projective. -/
 theorem evaluationMap_isomorphism

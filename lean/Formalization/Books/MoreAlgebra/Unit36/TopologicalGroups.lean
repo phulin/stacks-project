@@ -253,7 +253,7 @@ theorem inverseLimit_is_linearly_topologized {I : Type u} [Preorder I]
     exact Iff.rfl
   · intro s hs
     ext x
-    simpa [S, K]
+    simp [S, K]
 
 theorem inverseLimit_kernels_form_fundamental_system
     {I : Type u} [Preorder I] (F : DiscreteInverseSystem I) :
@@ -350,8 +350,6 @@ theorem inverseLimit_is_complete {I : Type u} [Preorder I]
     have hdisc : @DiscreteUniformity (F.diagram.obj i) u := by
       refine ⟨?_⟩
       apply @UniformSpace.ext (F.diagram.obj i) u (⊥ : UniformSpace (F.diagram.obj i))
-      change @uniformity (F.diagram.obj i) u =
-        @uniformity (F.diagram.obj i) (⊥ : UniformSpace (F.diagram.obj i))
       change comap (fun x : (F.diagram.obj i) × (F.diagram.obj i) => x.2 + (-x.1))
           (@nhds (F.diagram.obj i) (F.diagram.obj i).2 (0 : F.diagram.obj i)) =
         𝓟 SetRel.id
@@ -383,7 +381,7 @@ theorem inverseLimit_is_complete {I : Type u} [Preorder I]
         intro x y
         ext i
         exact map_add _ _ _ }
-  letI : ∀ i : Iᵒᵖ, TopologicalSpace (F.diagram.obj i) :=
+  let : ∀ i : Iᵒᵖ, TopologicalSpace (F.diagram.obj i) :=
     fun i => (F.diagram.obj i).topologicalSpace
   have htop : (inferInstance : TopologicalSpace ((limit F.diagram).toModuleCat)) =
       ⨅ i : Iᵒᵖ, (F.diagram.obj i).topologicalSpace.induced ((limit.π F.diagram i).hom) := by
@@ -466,20 +464,20 @@ theorem inverseLimit_is_complete {I : Type u} [Preorder I]
       funext i
       simpa [g, c] using congrArg (fun q => q (PUnit.unit : PUnit.{u + 1}))
         (hD.fac c i)
-  letI : ∀ i : Iᵒᵖ, UniformSpace (F.diagram.obj i) :=
+  let : ∀ i : Iᵒᵖ, UniformSpace (F.diagram.obj i) :=
     fun i => IsTopologicalAddGroup.rightUniformSpace (F.diagram.obj i)
-  letI : ∀ i : Iᵒᵖ, IsUniformAddGroup (F.diagram.obj i) :=
+  let : ∀ i : Iᵒᵖ, IsUniformAddGroup (F.diagram.obj i) :=
     fun i => isUniformAddGroup_of_addCommGroup
-  letI : ∀ i : Iᵒᵖ, CompleteSpace (F.diagram.obj i) :=
+  let : ∀ i : Iᵒᵖ, CompleteSpace (F.diagram.obj i) :=
     fun i => hcomplete_i i
   have hprod : CompleteSpace (∀ i : Iᵒᵖ, F.diagram.obj i) := by
     infer_instance
-  letI : CompleteSpace (∀ i : Iᵒᵖ, F.diagram.obj i) := hprod
-  letI : UniformSpace ((limit F.diagram).toModuleCat) :=
+  let : CompleteSpace (∀ i : Iᵒᵖ, F.diagram.obj i) := hprod
+  let : UniformSpace ((limit F.diagram).toModuleCat) :=
     IsTopologicalAddGroup.rightUniformSpace _
-  letI : IsUniformAddGroup ((limit F.diagram).toModuleCat) :=
+  let : IsUniformAddGroup ((limit F.diagram).toModuleCat) :=
     isUniformAddGroup_of_addCommGroup
-  letI : IsUniformAddGroup (∀ i : Iᵒᵖ, F.diagram.obj i) := by
+  let : IsUniformAddGroup (∀ i : Iᵒᵖ, F.diagram.obj i) := by
     refine { uniformContinuous_sub := ?_ }
     rw [uniformContinuous_pi]
     intro i

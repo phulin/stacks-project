@@ -504,7 +504,81 @@ def filteredCokernelCofork {C : Type u} [Category.{v} C] [Abelian C]
 theorem filteredCokernelCofork_isColimit_exists {C : Type u} [Category.{v} C] [Abelian C]
     {A B : FilteredObject C} (f : A ⟶ B) :
     Nonempty (IsColimit (filteredCokernelCofork f)) := by
-  sorry
+  have underlying_zero : ∀ {Z : FilteredObject C} (g : B ⟶ Z),
+      f ≫ g = 0 → f.hom ≫ g.hom = 0 := by
+    intro Z g hg
+    have h := congrArg FilteredHom.hom hg
+    change f.hom ≫ g.hom = (0 : filteredHomAddSubgroup A Z).1 at h
+    exact h
+  let desc : ∀ {Z : FilteredObject C} (g : B ⟶ Z),
+      f ≫ g = 0 → (filteredCokernel f ⟶ Z) := by
+    intro Z g hg
+    have hg' : f.hom ≫ g.hom = 0 := underlying_zero g hg
+    let d := cokernel.desc f.hom g.hom hg'
+    refine ⟨d, ?_⟩
+    intro i
+    let π := cokernel.π f.hom
+    let X := B.filtration.obj i
+    let I := (Subobject.«exists» π).obj X
+    let T := Z.filtration.obj i
+    have hX : T.Factors (X.arrow ≫ g.hom) := g.map_filtration i
+    have hπd : X.arrow ≫ π ≫ d = X.arrow ≫ g.hom := by
+      simp [d, π, Category.assoc]
+    have hIle : I ≤ (Subobject.pullback d).obj T := by
+      have hXle : X ≤ (Subobject.pullback (π ≫ d)).obj T := by
+        let hpb := Subobject.isPullback (π ≫ d) T
+        refine Subobject.le_of_comm
+          (hpb.lift (T.factorThru (X.arrow ≫ g.hom) hX) X.arrow ?_) ?_
+        · calc
+            T.factorThru (X.arrow ≫ g.hom) hX ≫ T.arrow =
+                X.arrow ≫ g.hom := T.factorThru_arrow (X.arrow ≫ g.hom) hX
+            _ = X.arrow ≫ π ≫ d := hπd.symm
+        · exact hpb.lift_snd _ _ _
+      have hXle' : X ≤ (Subobject.pullback π).obj ((Subobject.pullback d).obj T) := by
+        simpa only [Subobject.pullback_comp] using hXle
+      have h := ((Subobject.existsPullbackAdj π).homEquiv X
+        ((Subobject.pullback d).obj T)).symm
+        (CategoryTheory.homOfLE hXle')
+      exact h.le
+    change T.Factors (I.arrow ≫ d)
+    apply (Subobject.factors_iff _ _).mpr
+    let hpb := Subobject.isPullback d T
+    let q : (I : C) ⟶ (T : C) := Subobject.ofLE I ((Subobject.pullback d).obj T) hIle ≫
+      Subobject.pullbackπ d T
+    have hq : q ≫ T.arrow = I.arrow ≫ d := by
+      dsimp [q]
+      rw [Category.assoc, hpb.w, ← Category.assoc, Subobject.ofLE_arrow]
+    let w : (I : C) ⟶ (Subobject.representative.obj T : C) := by
+      simpa only [Subobject.representative_coe] using q
+    refine ⟨w, ?_⟩
+    dsimp [w]
+    simpa only [Subobject.representative_coe] using hq
+  refine ⟨CokernelCofork.IsColimit.ofπ (filteredCokernelπ f)
+    (filteredCokernel_comp f) (fun g hg => desc g hg) ?_ ?_⟩
+  · intro Z g hg
+    apply FilteredHom.ext _ _
+    change (filteredCokernelπ f).hom ≫ (desc g hg).hom = g.hom
+    change cokernel.π f.hom ≫ cokernel.desc f.hom g.hom
+      (underlying_zero g hg) = g.hom
+    simp
+  · intro Z g hg m hm
+    apply FilteredHom.ext _ _
+    letI : Epi (filteredCokernelπ f).hom := by
+      change Epi (cokernel.π f.hom)
+      infer_instance
+    apply (cancel_epi (filteredCokernelπ f).hom).mp
+    have hm' : (filteredCokernelπ f).hom ≫ m.hom = g.hom := by
+      have h := congrArg FilteredHom.hom hm
+      simpa only [filteredHom_comp_hom] using h
+    change (filteredCokernelπ f).hom ≫ m.hom =
+      (filteredCokernelπ f).hom ≫ (desc g hg).hom
+    calc
+      (filteredCokernelπ f).hom ≫ m.hom = g.hom := hm'
+      _ = (filteredCokernelπ f).hom ≫ (desc g hg).hom := by
+        symm
+        change cokernel.π f.hom ≫ cokernel.desc f.hom g.hom
+          (underlying_zero g hg) = g.hom
+        simp
 
 noncomputable def filteredCokernelCofork_isColimit {C : Type u} [Category.{v} C] [Abelian C]
     {A B : FilteredObject C} (f : A ⟶ B) :
@@ -518,12 +592,69 @@ instance filteredHasCokernels {C : Type u} [Category.{v} C] [Abelian C] :
 theorem filtered_mono_iff_underlying_mono {C : Type u} [Category.{v} C]
     [Abelian C] {A B : FilteredObject C} (f : A ⟶ B) :
     Mono f ↔ Mono f.hom := by
-  sorry
+  constructor
+  · intro hf
+    letI : Mono f := hf
+    apply (mono_iff_isZero_kernel f.hom).2
+    have hk : IsZero (filteredKernel f) :=
+      KernelFork.IsLimit.isZero_of_mono (filteredKernelFork_isLimit f)
+    let e := hk.iso (zeroFilteredObject_isZero (C := C))
+    let eC : (filteredKernel f).carrier ≅
+        (zeroFilteredObject (C := C)).carrier :=
+      { hom := e.hom.hom
+        inv := e.inv.hom
+        hom_inv_id := by
+          have h := congrArg FilteredHom.hom e.hom_inv_id
+          simpa only [filteredHom_comp_hom, filteredHom_id_hom] using h
+        inv_hom_id := by
+          have h := congrArg FilteredHom.hom e.inv_hom_id
+          simpa only [filteredHom_comp_hom, filteredHom_id_hom] using h }
+    have hkC : IsZero (filteredKernel f).carrier :=
+      IsZero.of_iso (isZero_zero C) eC
+    exact IsZero.of_iso hkC
+      (Subobject.underlyingIso (kernel.ι f.hom)).symm
+  · intro hf
+    letI : Mono f.hom := hf
+    constructor
+    intro X g h w
+    apply FilteredHom.ext _ _
+    apply (cancel_mono f.hom).mp
+    have hw := congrArg FilteredHom.hom w
+    simpa only [filteredHom_comp_hom] using hw
 
 theorem filtered_epi_iff_underlying_epi {C : Type u} [Category.{v} C]
     [Abelian C] {A B : FilteredObject C} (f : A ⟶ B) :
     Epi f ↔ Epi f.hom := by
-  sorry
+  constructor
+  · intro hf
+    letI : Epi f := hf
+    apply (epi_iff_isZero_cokernel f.hom).2
+    have hc : IsZero (filteredCokernel f) :=
+      CokernelCofork.IsColimit.isZero_of_epi
+        (filteredCokernelCofork_isColimit f)
+    let e := hc.iso (zeroFilteredObject_isZero (C := C))
+    let eC : (filteredCokernel f).carrier ≅
+        (zeroFilteredObject (C := C)).carrier :=
+      { hom := e.hom.hom
+        inv := e.inv.hom
+        hom_inv_id := by
+          have h := congrArg FilteredHom.hom e.hom_inv_id
+          simpa only [filteredHom_comp_hom, filteredHom_id_hom] using h
+        inv_hom_id := by
+          have h := congrArg FilteredHom.hom e.inv_hom_id
+          simpa only [filteredHom_comp_hom, filteredHom_id_hom] using h }
+    have hcC : IsZero (filteredCokernel f).carrier :=
+      IsZero.of_iso (isZero_zero C) eC
+    change IsZero (cokernel f.hom) at hcC
+    exact hcC
+  · intro hf
+    letI : Epi f.hom := hf
+    constructor
+    intro X g h w
+    apply FilteredHom.ext _ _
+    apply (cancel_epi f.hom).mp
+    have hw := congrArg FilteredHom.hom w
+    simpa only [filteredHom_comp_hom] using hw
 
 def FilteredInjective {C : Type u} [Category.{v} C]
     {A B : FilteredObject C} (f : A ⟶ B) : Prop := Mono f.hom
@@ -567,7 +698,70 @@ theorem strict_iff_induced_filtration {C : Type u} [Category.{v} C]
     Strict u ↔
       ∀ i : ℤ,
         A.filtration.obj i = (Subobject.pullback u.hom).obj (B.filtration.obj i) := by
-  sorry
+  letI : Mono u.hom := hu
+  have map_eq : ∀ P : Subobject A.carrier,
+      (Subobject.map u.hom).obj P = Subobject.mk (P.arrow ≫ u.hom) := by
+    intro P
+    rw [← Subobject.mk_arrow P, Subobject.map_mk]
+    apply Subobject.mk_eq_mk_of_comm _ _ (Subobject.underlyingIso P.arrow).symm
+    simp [Category.assoc]
+  have map_pullback_eq : ∀ G : Subobject B.carrier,
+      (Subobject.map u.hom).obj ((Subobject.pullback u.hom).obj G) =
+        (Subobject.map u.hom).obj (⊤ : Subobject A.carrier) ⊓ G := by
+    intro G
+    let P := (Subobject.pullback u.hom).obj G
+    have hPG : (Subobject.map u.hom).obj P ≤ G := by
+      rw [map_eq P, ← Subobject.mk_arrow G]
+      apply Subobject.le_mk_of_comm
+        ((Subobject.underlyingIso (P.arrow ≫ u.hom)).hom ≫
+          Subobject.pullbackπ u.hom G)
+      dsimp [P]
+      rw [Category.assoc, (Subobject.isPullback u.hom G).w,
+        Subobject.underlyingIso_hom_comp_eq_mk]
+    apply le_antisymm
+    · exact le_inf ((Subobject.map u.hom).monotone le_top) hPG
+    · let X := (Subobject.map u.hom).obj (⊤ : Subobject A.carrier) ⊓ G
+      have hXtop : X ≤ Subobject.mk u.hom := by
+        simpa [X, Subobject.map_top] using (Subobject.inf_le_left _ _)
+      let q := Subobject.ofLEMk X u.hom hXtop
+      let r := Subobject.ofLE X G (by
+        dsimp [X]
+        exact Subobject.inf_le_right _ _)
+      have hqr : r ≫ G.arrow = q ≫ u.hom := by
+        dsimp [q, r]
+        simp
+      rw [map_eq P]
+      apply Subobject.le_mk_of_comm
+        ((Subobject.isPullback u.hom G).lift r q hqr)
+      dsimp [q, r]
+      simp [P, Category.assoc]
+  constructor
+  · intro h i
+    have hi := h i
+    rw [Subobject.exists_iso_map u.hom] at hi
+    have hle : A.filtration.obj i ≤
+        (Subobject.pullback u.hom).obj (B.filtration.obj i) := by
+      have hmap : (Subobject.map u.hom).obj (A.filtration.obj i) ≤
+          B.filtration.obj i := by
+        rw [hi]
+        exact Subobject.inf_le_right _ _
+      exact ((Subobject.mapPullbackAdj u.hom).homEquiv _ _
+        (CategoryTheory.homOfLE hmap)).le
+    have hge : (Subobject.pullback u.hom).obj (B.filtration.obj i) ≤
+        A.filtration.obj i := by
+      have hmap : (Subobject.map u.hom).obj
+          ((Subobject.pullback u.hom).obj (B.filtration.obj i)) ≤
+          (Subobject.map u.hom).obj (A.filtration.obj i) := by
+        rw [map_pullback_eq, hi]
+      have ht := ((Subobject.mapPullbackAdj u.hom).homEquiv
+        ((Subobject.pullback u.hom).obj (B.filtration.obj i))
+        ((Subobject.map u.hom).obj (A.filtration.obj i)))
+        (CategoryTheory.homOfLE hmap)
+      simpa using ht.le
+    exact le_antisymm hle hge
+  · intro h i
+    rw [Subobject.exists_iso_map u.hom]
+    rw [h i, map_pullback_eq]
 
 theorem strict_iff_quotient_filtration {C : Type u} [Category.{v} C]
     [Abelian C] {A B : FilteredObject C} (u : A ⟶ B)

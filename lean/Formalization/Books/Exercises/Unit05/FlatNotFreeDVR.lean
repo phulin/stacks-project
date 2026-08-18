@@ -29,7 +29,7 @@ instance integerTwoIdeal_isPrime : integerTwoIdeal.IsPrime :=
 
 /-- The local ring `ℤ_(2)`, represented by localization at `(2)ᶜ`. -/
 abbrev integersLocalizedAtTwo : Type :=
-  Localization (integerTwoIdeal.primeCompl)
+  Localization.AtPrime integerTwoIdeal
 
 /-- The localization of `ℤ_(2)` in which `2` is invertible. -/
 abbrev fractionLocalizationAtTwo : Type :=

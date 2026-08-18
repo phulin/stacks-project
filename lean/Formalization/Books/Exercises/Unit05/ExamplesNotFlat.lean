@@ -1,7 +1,6 @@
 import Mathlib.Algebra.MvPolynomial.Basic
-import Mathlib.LinearAlgebra.TensorProduct.Basic
-import Mathlib.RingTheory.Flat.Basic
-import Mathlib.RingTheory.Ideal.Quotient.Operations
+import Mathlib.LinearAlgebra.TensorProduct.Map
+import Mathlib.RingTheory.Ideal.Quotient.Basic
 
 /-!
 # Exercises, Chapter 5: Flat ring maps

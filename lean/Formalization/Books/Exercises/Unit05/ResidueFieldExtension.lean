@@ -25,22 +25,27 @@ def IsFlatLocalResidueFieldExtension
     {A : Type u} {B : Type v} {K : Type w}
     [CommRing A] [IsLocalRing A]
     [CommRing B] [IsLocalRing B] [Algebra A B]
-    [Field K] [Algebra (A ⧸ IsLocalRing.maximalIdeal A) K] : Prop :=
+    [Field K] [Algebra (IsLocalRing.ResidueField A) K] : Prop :=
+  letI : Algebra (IsLocalRing.ResidueField A)
+      (B ⧸ Ideal.map (algebraMap A B) (IsLocalRing.maximalIdeal A)) :=
+    inferInstanceAs
+      (Algebra (A ⧸ IsLocalRing.maximalIdeal A)
+        (B ⧸ Ideal.map (algebraMap A B) (IsLocalRing.maximalIdeal A)))
   IsLocalHom (algebraMap A B) ∧
     Module.Flat A B ∧
       Ideal.map (algebraMap A B) (IsLocalRing.maximalIdeal A) =
         IsLocalRing.maximalIdeal B ∧
         Nonempty
           ((B ⧸ Ideal.map (algebraMap A B) (IsLocalRing.maximalIdeal A))
-            ≃ₐ[A ⧸ IsLocalRing.maximalIdeal A] K)
+            ≃ₐ[IsLocalRing.ResidueField A] K)
 
 /-- A finite residue-field extension is realized by a flat local map with the
 prescribed residue field. -/
 theorem exists_flat_local_residueField_extension
     {A : Type u} [CommRing A] [IsLocalRing A]
     {K : Type v} [Field K]
-    [Algebra (A ⧸ IsLocalRing.maximalIdeal A) K]
-    [Module.Finite (A ⧸ IsLocalRing.maximalIdeal A) K] :
+    [Algebra (IsLocalRing.ResidueField A) K]
+    [Module.Finite (IsLocalRing.ResidueField A) K] :
     ∃ (B : Type (max u v)) (_ : CommRing B) (_ : IsLocalRing B)
       (_ : Algebra A B),
       IsFlatLocalResidueFieldExtension (A := A) (B := B) (K := K) := by
@@ -51,7 +56,7 @@ extension. -/
 theorem exists_flat_local_residueField_extension_of_arbitrary
     {A : Type u} [CommRing A] [IsLocalRing A]
     {K : Type v} [Field K]
-    [Algebra (A ⧸ IsLocalRing.maximalIdeal A) K] :
+    [Algebra (IsLocalRing.ResidueField A) K] :
     ∃ (B : Type (max u v)) (_ : CommRing B) (_ : IsLocalRing B)
       (_ : Algebra A B),
       IsFlatLocalResidueFieldExtension (A := A) (B := B) (K := K) := by

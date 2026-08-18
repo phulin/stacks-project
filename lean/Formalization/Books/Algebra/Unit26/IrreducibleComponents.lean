@@ -346,8 +346,7 @@ theorem isProfinite_TFAE_primeSpectrum_separation_conditions :
     refine Filter.mem_of_superset
       (PrimeSpectrum.isOpen_basicOpen.mem_nhds
         ((PrimeSpectrum.mem_basicOpen f p).2 hf)) ?_
-    intro x hx
-    intro hxU
+    intro x hx hxU
     have hxint : x ∈
         (PrimeSpectrum.basicOpen f : Set (PrimeSpectrum R)) ∩ U :=
       ⟨hx, hxU⟩

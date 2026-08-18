@@ -229,11 +229,9 @@ theorem exists_ext_change_of_rings_data {R R' : Type u} [CommRing R] [CommRing R
       letI : Module R' (restrictedExt f M N' i) := T.module
       exact ModuleCat.ofHom 0
   refine ⟨{ target := target, map := map, natural_in_first := ?_, natural_in_second := ?_ }⟩
-  · intro M₁ M₂ φ N' i
-    intro x
+  · intro M₁ M₂ φ N' i x
     simp [map]
-  · intro M N'₁ N'₂ ψ i
-    intro x
+  · intro M N'₁ N'₂ ψ i x
     simp [map]
 
 /-- The chosen canonical change-of-rings family for the first source item. -/

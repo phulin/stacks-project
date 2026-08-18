@@ -1124,10 +1124,6 @@ theorem deRhamExteriorPowerTensorMap_surjective
         rw [(Classical.choice
           (deRhamExteriorPowerTensorMap_exists (A := A) (B := B) (n + 1))).2]
         apply Subtype.ext
-        change (deRhamPureWedgeTerms (A := A) (B := B) (n + 1) ω :
-            ExteriorAlgebra B (ModuleOfDifferentials A B)) =
-          (deRhamGenerator (A := A) (B := B) (n + 1) b₀ b :
-            ExteriorAlgebra B (ModuleOfDifferentials A B))
         have hfun : Fin.cons (deRhamUniversalDifferential A B (b 0))
               (fun i => deRhamUniversalDifferential A B (b i.succ)) =
             (fun i => deRhamUniversalDifferential A B (b i)) := by
@@ -1175,7 +1171,7 @@ theorem deRhamExteriorPowerTensorMap_surjective
       · intro c x hx ih
         rcases ih with ⟨u, hu⟩
         refine ⟨c • u, ?_⟩
-        simp [map_smul, hu]
+        simp [hu]
 
 theorem deRhamExteriorPowerTensorMap_on_pure_tensor
     {A B : Type*} [CommRing A] [CommRing B] [Algebra A B] (p : ℕ)

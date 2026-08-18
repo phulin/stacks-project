@@ -27,6 +27,7 @@ namespace Formalization.Books.Homology.Unit14
 This is the set-theoretic content of the source's “principal homogeneous
 space under a group” wording. -/
 structure PrincipalHomogeneousSpace (G P : Type*) [AddGroup G] where
+  nonempty : Nonempty P
   translate : G → P → P
   translate_zero : ∀ p, translate 0 p = p
   translate_add : ∀ (g h : G) (p : P), translate (g + h) p = translate g (translate h p)

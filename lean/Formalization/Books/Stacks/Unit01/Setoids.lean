@@ -1,4 +1,5 @@
 import Formalization.Books.Stacks.Unit01.Groupoids
+import Mathlib.CategoryTheory.IsomorphismClasses
 
 /-!
 # Stacks, Chapter 1, Section 6: stacks in setoids
@@ -22,19 +23,8 @@ def StackInSets {C : Type u} [Category.{v} C]
     (F : FiberedCategory C) (J : GrothendieckTopology C) : Prop :=
   FiberwiseSet F ∧ Stack F J
 
-def ObjectIsoSetoid (K : Type u) [Category.{v} K] : Setoid K where
-  r X Y := Nonempty (X ≅ Y)
-  iseqv := {
-    refl := fun X => ⟨Iso.refl X⟩
-    symm := by
-      intro X Y h
-      rcases h with ⟨e⟩
-      exact ⟨e.symm⟩
-    trans := by
-      intro X Y Z h₁ h₂
-      rcases h₁ with ⟨e₁⟩
-      rcases h₂ with ⟨e₂⟩
-      exact ⟨e₁.trans e₂⟩ }
+abbrev ObjectIsoSetoid (K : Type u) [Category.{v} K] : Setoid K :=
+  CategoryTheory.isIsomorphicSetoid K
 
 def ObjectIsomorphismClasses {C : Type u} [Category.{v} C]
     (F : FiberedCategory C) (U : C) :=

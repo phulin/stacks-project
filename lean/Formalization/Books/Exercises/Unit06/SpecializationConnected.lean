@@ -23,7 +23,12 @@ namespace Formalization.Books.Exercises.Unit06
 /-- A point is closed exactly when its singleton is closed. -/
 theorem closed_point_iff_closed_singleton {X : Type u} [TopologicalSpace X] (x : X) :
     closure ({x} : Set X) = {x} ↔ IsClosed ({x} : Set X) := by
-  sorry
+  constructor
+  · intro h
+    rw [← h]
+    exact isClosed_closure
+  · intro h
+    exact h.closure_eq
 
 /-- Closed points of an affine spectrum correspond to maximal ideals. -/
 theorem spectrum_closed_point_iff_maximal {A : Type u} [CommRing A]

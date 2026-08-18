@@ -3,6 +3,8 @@ import Mathlib.Algebra.Ring.Prod
 import Mathlib.CategoryTheory.Linear.LinearFunctor
 import Mathlib.CategoryTheory.Monoidal.Linear
 import Mathlib.CategoryTheory.Limits.Preserves.Shapes.Products
+import Mathlib.Algebra.Category.ModuleCat.AB
+import Mathlib.Algebra.Category.ModuleCat.Products
 
 import Formalization.Books.Exercises.Unit04.Core
 
@@ -137,6 +139,156 @@ theorem exists_right_exact_R_linear_not_tensorProductFunctor :
           ¬ CommutesWithDirectSums F ∧
             ¬ ∃ N : ModuleCat ℤ, Nonempty (F ≅ tensorProductFunctor N) := by
   refine ⟨infiniteProductFunctor, ?_⟩
-  sorry
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · constructor
+    · refine { map_add := ?_ }
+      intro X Y f g
+      apply ModuleCat.hom_ext
+      ext x n
+      rfl
+    · letI lin : CategoryTheory.Linear ℤ (ModuleCat ℤ) := ModuleCat.instLinear
+      refine { map_smul := ?_ }
+      intro X Y f r
+      letI : Module ℤ (X ⟶ Y) := lin.homModule X Y
+      letI : SMul ℤ (X ⟶ Y) :=
+        (lin.homModule X Y).toDistribMulAction.toDistribSMul.toSMul
+      let zf : X ⟶ Y :=
+        @SMul.smul ℤ (X ⟶ Y) ModuleCat.instSMulIntHom r f
+      have hscalar :
+          (@SMul.smul ℤ (X ⟶ Y) this r f) = zf := by
+        exact int_smul_eq_zsmul (lin.homModule X Y) r f
+      have hmap (g : X ⟶ Y) (x : infiniteProductFunctor.obj X) (n : ℕ) :
+          (infiniteProductFunctor.map g).hom x n = g.hom (x n) := by
+        rfl
+      apply ModuleCat.hom_ext
+      ext x
+      funext n
+      have hleft := hmap zf x n
+      have hright := congrArg (fun q => r • q) (hmap f x n)
+      have h₁ := congrArg (fun q => q (x n)) (ModuleCat.hom_zsmul r f)
+      have h₂ := congrArg (fun q => q x n)
+        (ModuleCat.hom_zsmul r (infiniteProductFunctor.map f))
+      have htransport := congrArg
+        (fun g : X ⟶ Y => (infiniteProductFunctor.map g).hom x n) hscalar
+      exact htransport.trans (hleft.trans (h₁.trans (hright.trans h₂.symm)))
+  · let G : ModuleCat ℤ ⥤ ModuleCat ℤ :=
+      Functor.const (Discrete ℕ) ⋙ lim
+    let H : ModuleCat ℤ ⥤ ModuleCat ℤ :=
+      { obj := fun M => ∏ᶜ fun _ : ℕ => M
+        map := fun {M N} f => CategoryTheory.Limits.Pi.map (fun _ => f)
+        map_id := by
+          intro M
+          apply ModuleCat.hom_ext
+          ext x n
+          simp
+        map_comp := by
+          intro M N P f g
+          apply CategoryTheory.Limits.Pi.hom_ext
+          intro n
+          simp [CategoryTheory.Limits.Pi.map_comp_map] }
+    let e : G ≅ H :=
+      NatIso.ofComponents (fun M =>
+        (piEquivalenceFunctorDiscreteCompLim (C := ModuleCat ℤ) ℕ).app (fun _ => M))
+    have hGH : PreservesFiniteColimits G := by infer_instance
+    have hH : PreservesFiniteColimits H := by
+      exact preservesFiniteColimits_of_natIso e
+    have hobj : ∀ M : ModuleCat ℤ,
+        @ModuleCat.of ℤ Int.instRing (ℕ → (M : Type)) Pi.addCommGroup
+            (Pi.module ℕ (fun _ => (M : Type)) ℤ) = infiniteProductFunctor.obj M := by
+      intro M
+      congr 1
+      apply Subsingleton.elim
+    have eqToHom_apply {A B : ModuleCat ℤ} (h : A = B) (x : A) :
+        (eqToHom h).hom x = cast (congrArg ModuleCat.carrier h) x := by
+      cases h
+      rfl
+    let q : H ≅ infiniteProductFunctor :=
+      NatIso.ofComponents (fun M =>
+        (ModuleCat.piIsoPi (fun _ : ℕ => M)).trans (eqToIso (hobj M)))
+        (by
+          intro X Y f
+          letI : Module ℤ (ℕ → (X : Type)) :=
+            Pi.module ℕ (fun _ => (X : Type)) ℤ
+          letI : Module ℤ (ℕ → (Y : Type)) :=
+            Pi.module ℕ (fun _ => (Y : Type)) ℤ
+          let k :
+              @ModuleCat.of ℤ Int.instRing (ℕ → (X : Type)) Pi.addCommGroup
+                  (Pi.module ℕ (fun _ => (X : Type)) ℤ) ⟶
+                @ModuleCat.of ℤ Int.instRing (ℕ → (Y : Type)) Pi.addCommGroup
+                  (Pi.module ℕ (fun _ => (Y : Type)) ℤ) :=
+            ModuleCat.ofHom (LinearMap.piMap (fun _ => f.hom))
+          have hp :
+              H.map f ≫ (ModuleCat.piIsoPi (fun _ : ℕ => Y)).hom =
+                (ModuleCat.piIsoPi (fun _ : ℕ => X)).hom ≫ k := by
+            apply ModuleCat.hom_ext
+            apply LinearMap.ext
+            intro x
+            funext n
+            have hy := congrArg
+              (fun a : (H.obj Y ⟶ Y) => a.hom ((H.map f).hom x))
+              (ModuleCat.piIsoPi_hom_ker_subtype (fun _ : ℕ => Y) n)
+            have hm := congrArg
+              (fun a : (H.obj X ⟶ Y) => a.hom x)
+              (CategoryTheory.Limits.Pi.map_π (fun _ : ℕ => f) n)
+            have hx := congrArg
+              (fun a : (H.obj X ⟶ X) => a.hom x)
+              (ModuleCat.piIsoPi_hom_ker_subtype (fun _ : ℕ => X) n)
+            have hxf := congrArg (fun z : X => f.hom z) hx.symm
+            have hy' :
+                ((ModuleCat.piIsoPi (fun _ : ℕ => Y)).hom.hom
+                    ((H.map f).hom x)) n =
+                  (Pi.π (fun _ : ℕ => Y) n).hom ((H.map f).hom x) := by
+              change ((ModuleCat.piIsoPi (fun _ : ℕ => Y)).hom ≫
+                  ModuleCat.ofHom (LinearMap.proj n)).hom ((H.map f).hom x) = _
+              exact hy
+            have hx' :
+                (Pi.π (fun _ : ℕ => X) n).hom x =
+                  ((ModuleCat.piIsoPi (fun _ : ℕ => X)).hom.hom x) n := by
+              change _ = ((ModuleCat.piIsoPi (fun _ : ℕ => X)).hom ≫
+                  ModuleCat.ofHom (LinearMap.proj n)).hom x
+              exact hx.symm
+            calc
+              ((ModuleCat.piIsoPi (fun _ : ℕ => Y)).hom.hom
+                    ((H.map f).hom x)) n =
+                  (Pi.π (fun _ : ℕ => Y) n).hom ((H.map f).hom x) := hy'
+              _ = (f.hom ((Pi.π (fun _ : ℕ => X) n).hom x)) := by
+                change ((H.map f ≫
+                    Pi.π (fun _ : ℕ => Y) n).hom x) =
+                  ((Pi.π (fun _ : ℕ => X) n ≫ f).hom x)
+                simpa only [H] using hm
+              _ = f.hom (((ModuleCat.piIsoPi (fun _ : ℕ => X)).hom.hom x) n) := by
+                rw [hx']
+              _ = (k.hom ((ModuleCat.piIsoPi (fun _ : ℕ => X)).hom.hom x)) n := by
+                rfl
+          have hk : k = eqToHom (hobj X) ≫ infiniteProductFunctor.map f ≫
+              eqToHom (hobj Y).symm := by
+            have hcX : congrArg ModuleCat.carrier (hobj X) = rfl :=
+              Subsingleton.elim _ _
+            have hcY : congrArg ModuleCat.carrier (hobj Y).symm = rfl :=
+              Subsingleton.elim _ _
+            apply ModuleCat.hom_ext
+            ext x n
+            simp only [ModuleCat.hom_comp, LinearMap.comp_apply]
+            rw [eqToHom_apply, eqToHom_apply, hcX, hcY]
+            rfl
+          calc
+            H.map f ≫ ((ModuleCat.piIsoPi (fun _ : ℕ => Y)).trans
+                (eqToIso (hobj Y))).hom =
+                H.map f ≫ (ModuleCat.piIsoPi (fun _ : ℕ => Y)).hom ≫
+                  eqToHom (hobj Y) := by simp [Iso.trans_hom, Category.assoc]
+            _ = (ModuleCat.piIsoPi (fun _ : ℕ => X)).hom ≫ k ≫
+                eqToHom (hobj Y) := by
+              rw [← Category.assoc, hp]
+              simp only [Category.assoc]
+            _ = ((ModuleCat.piIsoPi (fun _ : ℕ => X)).trans
+                (eqToIso (hobj X))).hom ≫ infiniteProductFunctor.map f := by
+              rw [Iso.trans_hom, hk]
+              simp only [Category.assoc, eqToIso.hom, eqToHom_trans,
+                eqToHom_refl, Category.comp_id]
+          )
+    letI := hH
+    exact preservesFiniteColimits_of_natIso q
+  · sorry
+  · sorry
 
 end Formalization.Books.Exercises.Unit04

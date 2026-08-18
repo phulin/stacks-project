@@ -484,19 +484,12 @@ theorem image_proper_closed_not_dense_of_algebraic_fractionFields
           (Ideal.comap (algebraMap A B) J : Set A) =
         (Set.univ : Set (PrimeSpectrum A)) :=
     Set.eq_univ_of_forall fun p => hunivsubset (Set.mem_univ p)
-  have hIbot :
-      Ideal.comap (algebraMap A B) J ≤ (⊥ : Ideal A) := by
-    intro a ha
-    have hbotmem :
-        (⊥ : PrimeSpectrum A) ∈
-          PrimeSpectrum.zeroLocus
-            (Ideal.comap (algebraMap A B) J : Set A) := by
-      rw [hzero]
-      exact Set.mem_univ _
-    have ha' :
-        a ∈ (⊥ : PrimeSpectrum A).asIdeal :=
-      (PrimeSpectrum.mem_zeroLocus _ _).mp hbotmem ha
-    simpa only [PrimeSpectrum.asIdeal_bot, Ideal.mem_bot] using ha'
-  exact hIne (le_antisymm hIbot bot_le)
+  have hIleNil :
+      Ideal.comap (algebraMap A B) J ≤ nilradical A := by
+    exact (PrimeSpectrum.zeroLocus_eq_univ_iff
+      (Ideal.comap (algebraMap A B) J : Set A)).mp hzero
+  have hnil : nilradical A = (⊥ : Ideal A) :=
+    nilradical_eq_bot_iff.mpr inferInstance
+  exact hIne (le_antisymm (by simpa [hnil] using hIleNil) bot_le)
 
 end Formalization.Books.Algebra.Unit30

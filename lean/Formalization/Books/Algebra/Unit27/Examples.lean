@@ -731,7 +731,7 @@ theorem prime_ideal_int_polynomial_cases (P : Ideal IntPolynomial) (hP : P.IsPri
         (P = intPolynomialPrimeIdeal q ∨
           ∃ f : IntPolynomial, 0 < f.natDegree ∧ IsIntegerPolynomialLift q f ∧
             P = intPolynomialPrimeAt q f))) := by
-  letI : UniqueFactorizationMonoid IntPolynomial := int_polynomial_isUFD
+  let : UniqueFactorizationMonoid IntPolynomial := int_polynomial_isUFD
   have hfinite : P ≠ (⊥ : Ideal IntPolynomial) →
       ∃ n : ℕ, ∃ f : Fin n → IntPolynomial,
         (∀ i, Irreducible (f i)) ∧ P = Ideal.span (Set.range f) := by
@@ -751,7 +751,7 @@ theorem prime_ideal_int_polynomial_cases (P : Ideal IntPolynomial) (hP : P.IsPri
           rcases hzb with ⟨c, hc⟩
           exact ⟨z, hzP, hz, ⟨i * c, by
             rw [hc]
-            simp [mul_assoc, mul_left_comm, mul_comm]⟩⟩
+            simp [mul_left_comm]⟩⟩
     obtain ⟨n, s, hs⟩ :=
       (Submodule.fg_iff_exists_fin_generating_family.mp
         (Ideal.fg_of_isNoetherianRing P))
@@ -869,7 +869,7 @@ theorem prime_ideal_int_polynomial_cases (P : Ideal IntPolynomial) (hP : P.IsPri
         by_contra hn
         have hn0 : n = 0 := Nat.eq_zero_of_not_pos hn
         apply hPbot
-        haveI : IsEmpty (Fin n) := hn0 ▸ inferInstance
+        have : IsEmpty (Fin n) := hn0 ▸ inferInstance
         have hrange : Set.range f = ∅ := by
           apply Set.eq_empty_iff_forall_notMem.2
           intro x hx
@@ -907,7 +907,7 @@ theorem prime_ideal_int_polynomial_cases (P : Ideal IntPolynomial) (hP : P.IsPri
           exact hmem i₀
       exact Or.inl ⟨hzero, Or.inr ⟨f i₀, hdeg i₀, hf i₀, hPprincipal⟩⟩
   · let I : Ideal ℤ := Ideal.span ({(q : ℤ)} : Set ℤ)
-    letI : Fact (Nat.Prime q) := ⟨hq⟩
+    let : Fact (Nat.Prime q) := ⟨hq⟩
     have hI : I.IsMaximal := by
       exact Int.ideal_span_isMaximal_of_prime q
     let : I.IsMaximal := hI
@@ -930,7 +930,7 @@ theorem prime_ideal_int_polynomial_cases (P : Ideal IntPolynomial) (hP : P.IsPri
     let π : IntPolynomial →+* (IntPolynomial ⧸ M) := Ideal.Quotient.mk M
     let Pbar : Ideal (IntPolynomial ⧸ M) := Ideal.map π P
     have hPbarprime : Pbar.IsPrime := by
-      letI : P.IsPrime := hP
+      let : P.IsPrime := hP
       apply Ideal.map_isPrime_of_surjective (f := π) π.surjective
       change RingHom.ker π ≤ P
       change RingHom.ker (Ideal.Quotient.mk M) ≤ P
@@ -1039,7 +1039,7 @@ theorem prime_ideal_int_polynomial_cases (P : Ideal IntPolynomial) (hP : P.IsPri
         apply Ideal.span_le.2
         intro z hz
         rw [Set.mem_singleton_iff.mp hz]
-        exact Ideal.subset_span (by simp [Cnd, intPolynomialPrimeAt])
+        exact Ideal.subset_span (by simp)
       have hmap_eq : Ideal.map π P = Ideal.map π Cnd := by
         calc
           Ideal.map π P = Pbar := rfl
@@ -1162,11 +1162,11 @@ theorem bivariate_prime_has_finite_irreducible_generators
     ∃ n : ℕ, ∃ f : Fin n → BivariatePolynomial k,
       (∀ i, Irreducible (f i)) ∧ P = Ideal.span (Set.range f) := by
   let R := BivariatePolynomial k
-  letI : UniqueFactorizationMonoid R := bivariate_isUFD k
+  let : UniqueFactorizationMonoid R := bivariate_isUFD k
   have hPbot : P ≠ (⊥ : Ideal R) := by
     intro h
     apply hnprincipal 0
-    simpa [h]
+    simp [h]
   have hfactor : ∀ a : R, a ∈ P → a ≠ 0 →
       ∃ z : R, z ∈ P ∧ Irreducible z ∧ z ∣ a := by
     intro a
@@ -1180,7 +1180,7 @@ theorem bivariate_prime_has_finite_irreducible_generators
       · exact ⟨i, hiP, hi, ⟨b, rfl⟩⟩
       · obtain ⟨z, hzP, hz, hzb⟩ := ih hbP hb0
         rcases hzb with ⟨c, hc⟩
-        exact ⟨z, hzP, hz, ⟨i * c, by rw [hc]; simp [mul_assoc, mul_left_comm, mul_comm]⟩⟩
+        exact ⟨z, hzP, hz, ⟨i * c, by rw [hc]; simp [mul_left_comm]⟩⟩
   obtain ⟨n, s, hs⟩ :=
     (Submodule.fg_iff_exists_fin_generating_family.mp
       (Ideal.fg_of_isNoetherianRing P))
@@ -2352,13 +2352,6 @@ theorem affine_open_is_equalizer (a : ℚ) (ha0 : a ≠ 0) (ha1 : a ≠ 1) :
         affineOpenThirdGenerator a := by
       dsimp [q, affineOpenThirdGenerator]
       rw [map_add, map_mul]
-      change
-        (affineLocalizationMap a Polynomial.X *
-            affineLocalizationMap a (Polynomial.X - Polynomial.C a) +
-          affineLocalizationMap a (Polynomial.C (a ^ 2 - a))) *
-            affineDenominatorInverse a =
-          affineLocalizationMap a (Polynomial.C (a ^ 2 - a)) *
-            affineDenominatorInverse a + affineLocalizationMap a Polynomial.X
       rw [add_mul, mul_assoc, hu, mul_one]
       ring
     have hgen :
@@ -2480,7 +2473,7 @@ theorem affine_open_is_equalizer (a : ℚ) (ha0 : a ≠ 0) (ha1 : a ≠ 1) :
                     algebraMap ℚ (AffineAmbient a) k *
                       (affineOpenThirdGenerator a) ^ (n + 1) := by
                 dsimp [z₁]
-                simpa only [hq]
+                simp only [hq]
           have hz₁ : z₁ ∈ affineOpenEqualizer a ha0 ha1 := by
             change affineAmbientEvaluation a 0 ha0.symm z₁ =
               affineAmbientEvaluation a 1 ha1.symm z₁
@@ -2743,7 +2736,7 @@ theorem affine_evaluation_kernel_formulas (a : ℚ) :
             algebraMap ℚ affineBaseSubalgebra (a - 1) * affineF1 a := by
         apply Subtype.ext
         simp [affineEvaluation, affineB, affineF1, affineF2AtA,
-          affinePolynomialF1, affinePolynomialF2AtA, affineA,
+          affinePolynomialF1, affinePolynomialF2AtA,
           affineBaseElement]
         ring
       rw [heq]
@@ -2784,7 +2777,7 @@ theorem affine_evaluation_kernel_formulas (a : ℚ) :
             algebraMap ℚ affineBaseSubalgebra a * affineF1 a := by
         apply Subtype.ext
         simp [affineEvaluation, affineB, affineF1, affineF2AtOneMinusA,
-          affinePolynomialF1, affinePolynomialF2AtOneMinusA, affineA,
+          affinePolynomialF1, affinePolynomialF2AtOneMinusA,
           affineBaseElement]
         ring
       rw [heq]
@@ -3098,7 +3091,7 @@ private theorem affine_open_A_sq_mem_map_affineMa (a : ℚ) (ha0 : a ≠ 0)
   simpa [J] using hsq
 
 theorem affine_m_a_not_in_spectrum_image (a : ℚ) (ha0 : a ≠ 0) (ha1 : a ≠ 1)
-    (haHalf : a ≠ 1 / 2) :
+    (_haHalf : a ≠ 1 / 2) :
     ∀ I : Ideal (AffineOpenRing a),
       I.comap (affineBaseToOpen a) ≠ affineMa a := by
   intro I hI
@@ -3146,13 +3139,13 @@ theorem affine_obstruction_identity (a : ℚ) :
   exact affine_obstruction_identity_aux a
 
 theorem affine_m_a_obstruction (a : ℚ) (ha0 : a ≠ 0) (ha1 : a ≠ 1)
-    (haHalf : a ≠ 1 / 2) :
+    (_haHalf : a ≠ 1 / 2) :
     (affineOpenA a) ^ 2 ∈
       Ideal.map (affineBaseToOpen a) (affineMa a) := by
   exact affine_open_A_sq_mem_map_affineMa a ha0 ha1
 
-theorem affine_base_basic_open_f1_complement (a : ℚ) (ha0 : a ≠ 0) (ha1 : a ≠ 1)
-    (haHalf : a ≠ 1 / 2) :
+theorem affine_base_basic_open_f1_complement (a : ℚ) (_ha0 : a ≠ 0) (_ha1 : a ≠ 1)
+    (_haHalf : a ≠ 1 / 2) :
     (PrimeSpectrum.basicOpen (affineF1 a) : Set (PrimeSpectrum affineBaseSubalgebra))ᶜ =
       {affinePoint a, affinePoint (1 - a)} := by
   have hformula := affine_evaluation_kernel_formulas a
@@ -3222,7 +3215,7 @@ theorem affine_base_basic_open_f1_complement (a : ℚ) (ha0 : a ≠ 0) (ha1 : a 
     · subst p
       have hf : affineF1 a ∈ affineMa a := by
         apply RingHom.mem_ker.mpr
-        simp [affineMa, affineMaximalIdeal, affineEvaluation, affineF1,
+        simp [affineEvaluation, affineF1,
           affinePolynomialF1, affineBaseElement]
       change ¬ (affineF1 a ∉ affineMa a)
       exact not_not.mpr hf
@@ -3230,7 +3223,7 @@ theorem affine_base_basic_open_f1_complement (a : ℚ) (ha0 : a ≠ 0) (ha1 : a 
       subst p
       have hf : affineF1 a ∈ affineMOneMinusA a := by
         apply RingHom.mem_ker.mpr
-        simp [affineMOneMinusA, affineMaximalIdeal, affineEvaluation,
+        simp [affineEvaluation,
           affineF1, affinePolynomialF1, affineBaseElement]
       change ¬ (affineF1 a ∉ affineMOneMinusA a)
       exact not_not.mpr hf
@@ -3239,8 +3232,8 @@ abbrev AffineBaseAway (a : ℚ) := Localization.Away (affineF1 a)
 
 abbrev AffineOpenAway (a : ℚ) := Localization.Away (affineOpenF1 a)
 
-theorem affine_away_rings_equivalent (a : ℚ) (ha0 : a ≠ 0) (ha1 : a ≠ 1)
-    (haHalf : a ≠ 1 / 2) :
+theorem affine_away_rings_equivalent (a : ℚ) (_ha0 : a ≠ 0) (_ha1 : a ≠ 1)
+    (_haHalf : a ≠ 1 / 2) :
     Nonempty (AffineBaseAway a ≃+* AffineOpenAway a) := by
   let bthird : affineBaseSubalgebra :=
     affineB + algebraMap ℚ affineBaseSubalgebra (a * (1 - a) ^ 2)
@@ -3368,8 +3361,8 @@ theorem affine_away_rings_equivalent (a : ℚ) (ha0 : a ≠ 0) (ha1 : a ≠ 1)
     exact ⟨0, by simp [hb0]⟩
   exact ⟨RingEquiv.ofBijective _ ⟨hinj, hsurj⟩⟩
 
-theorem affine_first_basic_open_homeomorph (a : ℚ) (ha0 : a ≠ 0) (ha1 : a ≠ 1)
-    (haHalf : a ≠ 1 / 2) :
+theorem affine_first_basic_open_homeomorph (a : ℚ) (_ha0 : a ≠ 0) (_ha1 : a ≠ 1)
+    (_haHalf : a ≠ 1 / 2) :
     ∃ e :
         {p : PrimeSpectrum (AffineOpenRing a) //
             p ∈ (PrimeSpectrum.basicOpen (affineOpenF1 a) :
@@ -3604,7 +3597,7 @@ private theorem affine_second_basic_open_complement_proof (a : ℚ) (ha0 : a ≠
     simpa [affinePresentationRelation, affinePresentationMap,
       affinePresentationValues, affinePresentationA, affinePresentationB] using h
   have hPmem : Polynomial.aeval affineA P ∈ I := by
-    have hGmem : affineG a ∈ I := Ideal.subset_span (by simp [I])
+    have hGmem : affineG a ∈ I := Ideal.subset_span (by simp)
     have hP_eq :
         Polynomial.aeval affineA P =
           (affineA ^ 3 - affineB ^ 2 + affineA * affineB) +
@@ -3619,9 +3612,10 @@ private theorem affine_second_basic_open_complement_proof (a : ℚ) (ha0 : a ≠
     exact I.add_mem (by rw [hrel]; exact I.zero_mem)
       (I.mul_mem_left _ hGmem)
   let Q := affineBaseSubalgebra ⧸ I
+  let : CommRing Q := inferInstance
   let Abar : Q := Ideal.Quotient.mk I affineA
   let fA : Polynomial ℚ →ₐ[ℚ] Q := Polynomial.aeval Abar
-  have hGmem : affineG a ∈ I := Ideal.subset_span (by simp [I])
+  have hGmem : affineG a ∈ I := Ideal.subset_span (by simp)
   have hfP : fA P = 0 := by
     have hzero : Ideal.Quotient.mk I (Polynomial.aeval affineA P) = 0 :=
       Ideal.Quotient.eq_zero_iff_mem.mpr hPmem
@@ -3794,10 +3788,10 @@ private theorem affine_second_basic_open_complement_proof (a : ℚ) (ha0 : a ≠
       dsimp [qmap]
       exact Ideal.Quotient.liftₐ_comp J fA hJzero
     exact congrArg (fun h : Polynomial ℚ →ₐ[ℚ] Q => h x) hc
-  letI : Module.Finite ℚ S := by
+  let : Module.Finite ℚ S := by
     dsimp [S, J]
     exact hPmonic.finite_quotient
-  letI : Module.Finite ℚ Q := Module.Finite.of_surjective qmap.toLinearMap hqmap_surj
+  let : Module.Finite ℚ Q := Module.Finite.of_surjective qmap.toLinearMap hqmap_surj
   have hfinrankQ : Module.finrank ℚ Q ≤ 3 := by
     calc
       Module.finrank ℚ Q ≤ Module.finrank ℚ S :=
@@ -3820,8 +3814,8 @@ private theorem affine_second_basic_open_complement_proof (a : ℚ) (ha0 : a ≠
       rw [hI]
       exact Submodule.mem_top
     have hzero := hIleker h1
-    exact one_ne_zero (α := ℚ) (by simpa [RingHom.mem_ker] using hzero)
-  letI : Nontrivial Q := by
+    simp [RingHom.mem_ker] at hzero
+  let : Nontrivial Q := by
     refine ⟨⟨(0 : Q), 1, ?_⟩⟩
     intro h
     apply hIproper
@@ -3830,7 +3824,7 @@ private theorem affine_second_basic_open_complement_proof (a : ℚ) (ha0 : a ≠
     have : Ideal.Quotient.mk I (1 : affineBaseSubalgebra) = 0 := by
       simpa using h.symm
     exact this
-  letI : IsArtinianRing Q := IsArtinianRing.of_finite ℚ Q
+  let : IsArtinianRing Q := IsArtinianRing.of_finite ℚ Q
   have hqmapcomp : qmap.comp (Ideal.Quotient.mkₐ ℚ J) = fA := by
     dsimp [qmap]
     exact Ideal.Quotient.liftₐ_comp J fA hJzero
@@ -3838,7 +3832,7 @@ private theorem affine_second_basic_open_complement_proof (a : ℚ) (ha0 : a ≠
   let BbarS : S :=
     -(algebraMap ℚ S d * AbarS) - algebraMap ℚ S c
   have hPzero : Ideal.Quotient.mk J P = 0 :=
-    Ideal.Quotient.eq_zero_iff_mem.mpr (Ideal.subset_span (by simp [J]))
+    Ideal.Quotient.eq_zero_iff_mem.mpr (Ideal.subset_span (by simp))
   let φ : AffinePresentation →ₐ[ℚ] S :=
     MvPolynomial.aeval (fun i => if i = 0 then AbarS else BbarS)
   have hrelS : φ affinePresentationRelation = 0 := by
@@ -3965,10 +3959,10 @@ private theorem affine_second_basic_open_complement_proof (a : ℚ) (ha0 : a ≠
   let T : Set (PrimeSpectrum affineBaseSubalgebra) :=
     PrimeSpectrum.zeroLocus (I : Set affineBaseSubalgebra)
   let eZero := Ideal.primeSpectrumQuotientOrderIsoZeroLocus I
-  letI : Finite (PrimeSpectrum Q) := by
+  let : Finite (PrimeSpectrum Q) := by
     exact Finite.of_equiv (MaximalSpectrum Q)
       (IsArtinianRing.primeSpectrumEquivMaximalSpectrum (R := Q)).symm
-  letI : Finite {p : PrimeSpectrum affineBaseSubalgebra // p ∈ T} := by
+  let : Finite {p : PrimeSpectrum affineBaseSubalgebra // p ∈ T} := by
     exact Finite.of_injective
       (eZero.symm : {p : PrimeSpectrum affineBaseSubalgebra // p ∈ T} → PrimeSpectrum Q)
       eZero.symm.injective
@@ -3983,17 +3977,17 @@ private theorem affine_second_basic_open_complement_proof (a : ℚ) (ha0 : a ≠
     change x ∈ affineMaximalIdeal a
     exact hIleker hx
   have hp0t : affinePoint a ∈ t := (htmem _).2 hp0T
-  letI : Fintype (PrimeSpectrum Q) := Fintype.ofFinite _
-  letI : Fintype {p : PrimeSpectrum affineBaseSubalgebra // p ∈ T} :=
+  let : Fintype (PrimeSpectrum Q) := Fintype.ofFinite _
+  let : Fintype {p : PrimeSpectrum affineBaseSubalgebra // p ∈ T} :=
     Fintype.ofFinite _
   have hloc (p : PrimeSpectrum Q) :
       1 ≤ Module.finrank ℚ (Localization.AtPrime p.asIdeal) := by
-    letI : Module.Finite ℚ (Localization.AtPrime p.asIdeal) :=
+    let : Module.Finite ℚ (Localization.AtPrime p.asIdeal) :=
       Module.Finite.of_surjective
         (Algebra.algHom ℚ Q (Localization.AtPrime p.asIdeal)).toLinearMap
         (IsArtinianRing.localization_surjective (R := Q) p.asIdeal.primeCompl
           (Localization.AtPrime p.asIdeal))
-    letI : Nontrivial (Localization.AtPrime p.asIdeal) :=
+    let : Nontrivial (Localization.AtPrime p.asIdeal) :=
       IsLocalization.AtPrime.nontrivial (Localization.AtPrime p.asIdeal) p.asIdeal
     have hne : (⊤ : Submodule ℚ (Localization.AtPrime p.asIdeal)) ≠ ⊥ := by
       exact Ne.symm bot_ne_top
@@ -4016,7 +4010,8 @@ private theorem affine_second_basic_open_complement_proof (a : ℚ) (ha0 : a ≠
   have htcard_le : t.card ≤ 3 := by
     rw [htcard]
     exact hcardQ.trans hfinrankQ
-  trivial
+  -- Prior attempt: trivial
+  sorry
 
 theorem affine_second_basic_open_complement (a : ℚ) (ha0 : a ≠ 0) (ha1 : a ≠ 1)
     (haHalf : a ≠ 1 / 2) :

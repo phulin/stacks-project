@@ -783,7 +783,19 @@ theorem length_pullback_transitive
           (C ⧸ (IsLocalRing.maximalIdeal B).map (algebraMap B C)) =
       Module.length C
         (C ⧸ (IsLocalRing.maximalIdeal A).map (algebraMap A C)) := by
-  sorry
+  have hmap :
+      ((IsLocalRing.maximalIdeal A).map (algebraMap A B)).map (algebraMap B C) =
+        (IsLocalRing.maximalIdeal A).map (algebraMap A C) := by
+    rw [Ideal.map_map, ← IsScalarTower.algebraMap_eq]
+  calc
+    _ = Module.length C
+        (C ⊗[B] (B ⧸ (IsLocalRing.maximalIdeal A).map (algebraMap A B))) := by
+      exact (length_pullback (A := B) (B := C)
+        (M := B ⧸ (IsLocalRing.maximalIdeal A).map (algebraMap A B))).symm
+    _ = _ := by
+      rw [← hmap]
+      exact (Algebra.TensorProduct.quotIdealMapEquivTensorQuot C
+        ((IsLocalRing.maximalIdeal A).map (algebraMap A B))).toLinearEquiv.length_eq.symm
 
 end
 

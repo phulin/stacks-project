@@ -312,7 +312,7 @@ theorem effaceable_isUniversal
                 dsimp [φ₂] at hG₂
                 simpa [Category.assoc] using
                   congrArg (fun k => α.app W.X₃ ≫ k) hG₂.symm
-      letI := delta_epi W hW hzW
+      let := delta_epi W hW hzW
       apply (cancel_epi (F.delta W hW n)).1
       rw [h₁, h₂]
     have beta_natural : ∀ (X Y : A) (f : X ⟶ Y),
@@ -412,7 +412,7 @@ theorem effaceable_isUniversal
               (G.functor (n + 1)).map f := by
                 simpa only [Category.assoc] using
                   congrArg (fun k => α.app W.X₃ ≫ k) hG₂.symm
-      letI := delta_epi W hW hzW
+      let := delta_epi W hW hzW
       apply (cancel_epi (F.delta W hW n)).1
       rw [h₂]
       simpa only [Category.assoc] using
@@ -479,7 +479,7 @@ theorem effaceable_isUniversal
           F.delta S hS n ≫ (β₂).app S.X₁ = α.app S.X₃ ≫ G.delta S hS n) :
         β₁ = β₂ := by
       ext X
-      letI := delta_epi (S X) (hS X) (hu0 X)
+      let := delta_epi (S X) (hS X) (hu0 X)
       apply (cancel_epi (F.delta (S X) (hS X) n)).1
       rw [h₁, h₂]
     refine ⟨{ app := b, naturality := beta_natural }, comm_all, beta_natural, unique⟩
@@ -530,17 +530,13 @@ theorem effaceable_isUniversal
       induction n with
       | zero =>
           change ψ.app 0 = t at hψ
-          change ψ.app 0 = app 0
           rw [show app 0 = t from rfl]
           exact hψ
       | succ n ih =>
           apply (extend n (app n)).2.2.2 (ψ.app (n + 1)) (app (n + 1))
           · intro S hS
             simpa [ih] using ψ.comm S hS n
-          · change ∀ (S : ShortComplex A) (hS : S.ShortExact),
-              F.delta S hS n ≫ (app (n + 1)).app S.X₁ =
-                (app n).app S.X₃ ≫ G.delta S hS n
-            intro S hS
+          · intro S hS
             change F.delta S hS n ≫ (extend n (app n)).1.app S.X₁ =
               (app n).app S.X₃ ≫ G.delta S hS n
             exact (extend n (app n)).2.1 S hS

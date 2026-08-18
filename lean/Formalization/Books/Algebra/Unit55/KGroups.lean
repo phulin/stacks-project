@@ -755,7 +755,7 @@ theorem kZeroRank_apply_class
     (P : FiniteProjectivePresentation R) :
     kZeroRank (R := R) (kZeroClassOfPresentation P) =
       finiteProjectiveRank P := by
-  sorry
+  rfl
 
 /-- For a field, the K′₀ length is the vector-space dimension. -/
 theorem kPrimeZeroLength_field_eq_finrank
@@ -763,7 +763,18 @@ theorem kPrimeZeroLength_field_eq_finrank
     [AddCommGroup M] [Module k M] [Module.Finite k M] :
     kPrimeZeroLength (R := k) (kPrimeZeroClass (R := k) (M := M)) =
       Module.finrank k M := by
-  sorry
+  let P := Classical.choose
+    (exists_finite_module_presentation (R := k) (M := M))
+  let eP := Classical.choice
+    (Classical.choose_spec
+      (exists_finite_module_presentation (R := k) (M := M)))
+  change kPrimeZeroLength (R := k) (kPrimeZeroClassOfPresentation P) =
+    Module.finrank k M
+  rw [kPrimeZeroLength_apply_class, finitePresentationLength]
+  have hlen : Module.length k P.module = Module.finrank k P.module :=
+    Module.length_eq_finrank k P.module
+  rw [hlen]
+  simpa using eP.finrank_eq
 
 /-! ## The PID calculation -/
 
@@ -773,7 +784,9 @@ theorem exists_finite_free_equiv
     {R : Type u} [CommRing R] {M : Type v}
     [AddCommGroup M] [Module R M] [Module.Finite R M] [Module.Free R M] :
     ∃ n : ℕ, Nonempty (M ≃ₗ[R] (Fin n → R)) := by
-  sorry
+  exact ⟨Fintype.card (@Module.Free.ChooseBasisIndex R M _ _ _ inferInstance),
+    ⟨((@Module.Free.chooseBasis R M _ _ _ inferInstance).reindex
+      (Fintype.equivFin _)).equivFun⟩⟩
 
 /- The rank is the cardinality of any finite free basis. -/
 noncomputable def finiteFreeRank
@@ -787,7 +800,15 @@ theorem finiteFreeRank_eq_of_linearEquiv
     [AddCommGroup M] [Module R M] [Module.Finite R M] [Module.Free R M]
     {n : ℕ} (e : M ≃ₗ[R] (Fin n → R)) :
     finiteFreeRank (R := R) (M := M) = n := by
-  sorry
+  let q := Classical.choose (exists_finite_free_equiv (R := R) (M := M))
+  have hq : Module.finrank R M = Module.finrank R (Fin q → R) :=
+    (Classical.choice (Classical.choose_spec
+      (exists_finite_free_equiv (R := R) (M := M)))).finrank_eq
+  have hn : Module.finrank R M = Module.finrank R (Fin n → R) := e.finrank_eq
+  have hfin : Module.finrank R (Fin q → R) = Module.finrank R (Fin n → R) :=
+    hq.symm.trans hn
+  change q = n
+  simpa [Module.finrank_pi] using hfin
 
 /- A finite projective module over a PID is finite free. -/
 theorem finite_projective_is_free_pid

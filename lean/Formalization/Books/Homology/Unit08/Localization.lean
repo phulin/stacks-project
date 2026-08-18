@@ -150,7 +150,7 @@ theorem localization_additive_left
     [L.IsLocalization W] [hW : LeftMultiplicativeSystem W] :
     ∃ hD : Formalization.Books.Homology.Unit03.AdditiveCategory D,
       @Functor.Additive C D _ _ _ hD.toPreadditive L := by
-  obtain ⟨p, hp, hpuniq⟩ :=
+  obtain ⟨p, hp, _⟩ :=
     localization_preadditive_left (W := W) L
   letI : Preadditive D := p
   letI : Functor.Additive L := hp

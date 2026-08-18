@@ -412,7 +412,7 @@ theorem determinant_four_by_four_formula (D : LocalNumericalData 4)
   have h20 : D.a 2 0 = 0 := (hsymm 2 0).trans h02
   have h31 : D.a 3 1 = 0 := (hsymm 3 1).trans h13
   simp [Matrix.det_succ_row_zero (n := 3), Matrix.det_fin_three, Fin.succAbove,
-    Fin.sum_univ_succ, hdiag, h02, h13, h10, h21, h32, h30, h20, h31] <;> ring
+    Fin.sum_univ_succ, hdiag, h02, h13, h10, h21, h32, h30, h20, h31] ; ring
 
 private theorem square_factorization (x p q u v : ℤ)
     (h₁ : x = p * u) (h₂ : x = q * v) :
@@ -927,11 +927,11 @@ private theorem classify_three_two_edges
     rw [he0, he1, he2, hsymm 1 0]
     have hdet' := hdet
     rw [hzero] at hdet'
-    convert hdet' using 1 <;> ring
+    convert hdet' using 1 ; ring
   have hEbound01 : 0 < 4 * (E.w 0 : ℝ) * E.w 1 - E.a 0 1 ^ 2 := by
     change 0 < 4 * (D.w (e 0) : ℝ) * D.w (e 1) - D.a (e 0) (e 1) ^ 2
     rw [he0, he1, hsymm 1 0]
-    convert hbound01 using 1 <;> ring
+    convert hbound01 using 1 ; ring
   have hEbound12 : 0 < 4 * (E.w 1 : ℝ) * E.w 2 - E.a 1 2 ^ 2 := by
     change 0 < 4 * (D.w (e 1) : ℝ) * D.w (e 2) - D.a (e 1) (e 2) ^ 2
     rw [he1, he2]
@@ -1048,15 +1048,15 @@ private theorem classify_three_two_edges_right
     rw [he0, he1, he2, hsymm 2 1]
     have hdet' := hdet
     rw [hzero] at hdet'
-    convert hdet' using 1 <;> ring
+    convert hdet' using 1 ; ring
   have hEbound01 : 0 < 4 * (E.w 0 : ℝ) * E.w 1 - E.a 0 1 ^ 2 := by
     change 0 < 4 * (D.w (e 0) : ℝ) * D.w (e 1) - D.a (e 0) (e 1) ^ 2
     rw [he0, he1]
-    convert hbound02 using 1 <;> ring
+    convert hbound02 using 1
   have hEbound12 : 0 < 4 * (E.w 1 : ℝ) * E.w 2 - E.a 1 2 ^ 2 := by
     change 0 < 4 * (D.w (e 1) : ℝ) * D.w (e 2) - D.a (e 1) (e 2) ^ 2
     rw [he1, he2, hsymm 2 1]
-    convert hbound12 using 1 <;> ring
+    convert hbound12 using 1 ; ring
   have hEa01 : 0 < E.a 0 1 := by
     change 0 < D.a (e 0) (e 1)
     rw [he0, he1]
@@ -1483,7 +1483,7 @@ theorem double_triple_matrix_singular (t : ℕ) (ht : 4 ≤ t) (r : ℤ) :
                   exact h0 h.symm
                 have ht1 : t - 1 ≠ 0 := by omega
                 have ht1' : 0 ≠ t - 1 := Ne.symm ht1
-                simp [doubleTripleMatrix, hj0, hj2, h0', ht1, ht1', ht]
+                simp [hj2, h0', ht1']
           _ = -2 * v 0 + v 2 := by
             simp [Finset.sum_add_distrib]
       rw [hsum]
@@ -1492,7 +1492,7 @@ theorem double_triple_matrix_singular (t : ℕ) (ht : 4 ≤ t) (r : ℤ) :
         simp [Fin.coe_ofNat_eq_mod, Nat.mod_eq_of_lt h2lt]
       have h2mod : 2 % (t + 2) = 2 := Nat.mod_eq_of_lt h2lt
       have h2t : 2 < t := by omega
-      simp [v, ht, h2lt, h2val, h2mod, h2t]
+      simp [v, h2mod, h2t]
     · by_cases hi1 : i.val = 1
       · have hi : i = 1 := by
           apply Fin.ext
@@ -1528,7 +1528,7 @@ theorem double_triple_matrix_singular (t : ℕ) (ht : 4 ≤ t) (r : ℤ) :
                     norm_num at hv
                     rw [h2mod] at hv
                     omega
-                  simp [doubleTripleMatrix, ht, h2mod, h2le, h12, h12.symm]
+                  simp [doubleTripleMatrix, h2mod, h2le, h12, h12.symm]
                 · have hj1 : j.val ≠ 1 := by
                     intro hj'
                     apply h1
@@ -1577,8 +1577,7 @@ theorem double_triple_matrix_singular (t : ℕ) (ht : 4 ≤ t) (r : ℤ) :
                       t = 0 ∧ j.val = t - 1) := by
                     intro h
                     rcases h with h | h <;> omega
-                  simp [doubleTripleMatrix, h1, h2, hj1, hj2, ht, h2mod,
-                    h0val, h1val, h2val, h2le, h1rev, h2rev, h1j,
+                  simp [doubleTripleMatrix, h1, h2, hj2, h1rev,
                     hbranch, hend]
             _ = -2 * v 1 + v 2 := by
               simp [Finset.sum_add_distrib]
@@ -1588,7 +1587,7 @@ theorem double_triple_matrix_singular (t : ℕ) (ht : 4 ≤ t) (r : ℤ) :
         have h2lt : 2 < t + 2 := by omega
         have h2mod : 2 % (t + 2) = 2 := Nat.mod_eq_of_lt h2lt
         have h2t : 2 < t := by omega
-        simp [v, ht, h1val, h2mod, h2t]
+        simp [v, h2mod, h2t]
       · by_cases hi2 : i.val = 2
         · have hi : i = 2 := by
             apply Fin.ext
@@ -1648,7 +1647,7 @@ theorem double_triple_matrix_singular (t : ℕ) (ht : 4 ≤ t) (r : ℤ) :
                       norm_num at hv
                       rw [h3mod] at hv
                       omega
-                    simp [doubleTripleMatrix, h2mod, h3mod, htpos, ht, h03]
+                    simp [doubleTripleMatrix, h2mod, h03]
                     split <;> omega
                   · by_cases h1 : j = 1
                     · subst j
@@ -1663,7 +1662,7 @@ theorem double_triple_matrix_singular (t : ℕ) (ht : 4 ≤ t) (r : ℤ) :
                         norm_num at hv
                         rw [h3mod] at hv
                         omega
-                      simp [doubleTripleMatrix, ht, h2mod, h3mod, h2le, h13]
+                      simp [doubleTripleMatrix, h2mod, h2le, h13]
                       split <;> omega
                     · by_cases h3 : j = 3
                       · subst j
@@ -1696,7 +1695,7 @@ theorem double_triple_matrix_singular (t : ℕ) (ht : 4 ≤ t) (r : ℤ) :
                           norm_num at hv
                           rw [h2mod, h3mod] at hv
                           omega
-                        simp [doubleTripleMatrix, ht, h2mod, h3mod, h3le,
+                        simp [doubleTripleMatrix, h2mod, h3mod, h3le,
                           h23, h30, h31, h32]
                       · have hj0 : j.val ≠ 0 := by
                           intro hj'
@@ -1750,9 +1749,8 @@ theorem double_triple_matrix_singular (t : ℕ) (ht : 4 ≤ t) (r : ℤ) :
                           intro h
                           rcases h with h | h | h | h <;> omega
                         simp [doubleTripleMatrix, h0, h1, h2, h3, hj0, hj1,
-                          hj2, hj3, ht, h2mod, h3mod, h3val, h2rev, hpath,
-                          hend, hbranch]
-                        split <;> simp_all <;> omega
+                          hj2, h2mod, h2rev]
+                        split <;> simp_all
               _ = -2 * v 2 + v 0 + v 1 + v 3 := by
                 simp [Finset.sum_add_distrib]
           rw [hsum]
@@ -1766,7 +1764,7 @@ theorem double_triple_matrix_singular (t : ℕ) (ht : 4 ≤ t) (r : ℤ) :
             simp [Fin.coe_ofNat_eq_mod, h3mod]
           have h2t : 2 < t := by omega
           have h3t : 3 < t := by omega
-          simp [v, ht, h2mod, h2val, h3mod, h3val, h2t, h3t]
+          simp [v, h2mod, h3mod, h2t, h3t]
         · by_cases hit : i.val = t
           · let it : Fin (t + 2) := ⟨t, by omega⟩
             let im1 : Fin (t + 2) := ⟨t - 1, by omega⟩
@@ -1821,14 +1819,14 @@ theorem double_triple_matrix_singular (t : ℕ) (ht : 4 ≤ t) (r : ℤ) :
                         rcases h with h | h <;> omega
                       have hend' : ¬ (t = t - 1 ∧ j.val = t + 1) := by
                         omega
-                      simp [doubleTripleMatrix, it, im1, hjt, hjm, hjt', hjm',
-                        hpath, hend, hdiag, hpath', hspecial, hend', ht]
+                      simp [doubleTripleMatrix, it, im1, hjt, hjm, hjm',
+                        hdiag, hpath', hspecial, hend']
                 _ = -2 * v it + v im1 := by
                   simp [Finset.sum_add_distrib]
             rw [hsum]
             have htle : ¬ t ≤ 2 := by omega
             have htpos : 0 < t := by omega
-            simp [v, it, im1, ht, htle, htpos]
+            simp [v, it, im1, htle, htpos]
           · by_cases hit1 : i.val = t + 1
             · let it1 : Fin (t + 2) := ⟨t + 1, by omega⟩
               let im1 : Fin (t + 2) := ⟨t - 1, by omega⟩
@@ -1883,13 +1881,13 @@ theorem double_triple_matrix_singular (t : ℕ) (ht : 4 ≤ t) (r : ℤ) :
                         have hend' : ¬ (t + 1 = t - 1 ∧ j.val = t + 1) := by
                           omega
                         simp [doubleTripleMatrix, it1, im1, hjt, hjm, hjt', hjm',
-                          hpath, hend, hdiag, hpath', hspecial, hend', ht]
+                          hdiag, hpath', hspecial]
                   _ = -2 * v it1 + v im1 := by
                     simp [Finset.sum_add_distrib]
               rw [hsum]
               have htle : ¬ t ≤ 2 := by omega
               have htpos : 0 < t := by omega
-              simp [v, it1, im1, ht, htle, htpos]
+              simp [v, it1, im1, htle, htpos]
             · by_cases hitm : i.val = t - 1
               · let im1 : Fin (t + 2) := ⟨t - 1, by omega⟩
                 let im2 : Fin (t + 2) := ⟨t - 2, by omega⟩
@@ -1971,16 +1969,15 @@ theorem double_triple_matrix_singular (t : ℕ) (ht : 4 ≤ t) (r : ℤ) :
                                 intro h
                                 rcases h with h | h <;> omega
                               simp [doubleTripleMatrix, im1, im2, it, it1,
-                                hjm1, hjm2, hjt, hjt1, hjm1', hjm2', hjt',
-                                hjt1', hpath, hpath2, hend, hdiag, hpath',
-                                hspecial, ht]
+                                hjm1, hjm2, hjt, hjt1, hjm1', hjt1',
+                                hpath2, hdiag, hspecial]
                     _ = -2 * v im1 + v im2 + v it + v it1 := by
                       simp [Finset.sum_add_distrib]
                 rw [hsum]
                 have htle : ¬ t ≤ 2 := by omega
                 have ht3 : ¬ t ≤ 3 := by omega
                 have htpos : 0 < t := by omega
-                simp [v, im1, im2, it, it1, ht, htle, ht3, htpos]
+                simp [v, im1, im2, it, it1, htle, ht3, htpos]
               · have hi3 : 3 ≤ i.val := by omega
                 have hitwo : i.val ≤ t - 2 := by omega
                 let im : Fin (t + 2) := ⟨i.val - 1, by omega⟩
@@ -2080,8 +2077,7 @@ theorem double_triple_matrix_singular (t : ℕ) (ht : 4 ≤ t) (r : ℤ) :
                                 1 ≤ i.val ∧ j.val ≤ t) ∨
                                 (j.val + 1 = i.val ∧ 1 ≤ j.val ∧ i.val ≤ t)) := hpath
                             simp [doubleTripleMatrix, im, ip, hji, hjm, hjp,
-                              hji', hjm', hjp', hpath, hpath', hspecial, hend,
-                              hi3, hitwo, hi0', hi2', hi2, hdiag]
+                              hpath, hend, hi0', hi2, hdiag]
                     _ = -2 * v i + v im + v ip := by
                       simp [Finset.sum_add_distrib]
                 rw [hsum]
@@ -2097,8 +2093,8 @@ theorem double_triple_matrix_singular (t : ℕ) (ht : 4 ≤ t) (r : ℤ) :
                   have hi0val : i.val = 0 := by simpa using hv
                   omega
                 change -2 * v i + v im + v ip = 0
-                simp [v, im, ip, hi3, hitwo, hi_le_one, hi_le_two, hi_lt_t,
-                  him_ge_two, him_lt_t, hip_lt_t, hi0fin]
+                simp [v, im, ip, hi_le_one, hi_le_two, hi_lt_t,
+                  him_lt_t, hip_lt_t, hi0fin]
   have hkernel' : Matrix.mulVec (scalarMatrix (doubleTripleMatrix t) r) v = 0 := by
     funext i
     rw [Matrix.mulVec_apply_eq_sum]
@@ -2249,7 +2245,7 @@ theorem lemma_two_by_two (T : NumericalType) (S : MinusTwoSubgraph T 2)
             simp [hli, hlj, hij, hij.symm]
         _ = _ := by
           rw [Finset.sum_add_distrib]
-          simp [hij]
+          simp
     have houter :
         (∑ k : Fin T.n,
           (if k = i then (T.a i j : ℝ) else if k = j then 2 * (T.w i : ℝ) else 0) *
@@ -2268,7 +2264,7 @@ theorem lemma_two_by_two (T : NumericalType) (S : MinusTwoSubgraph T 2)
             simp [hki, hkj, hij, hij.symm]
         _ = _ := by
           rw [Finset.sum_add_distrib]
-          simp [hij]
+          simp
     rw [houter, hinner i, hinner j]
     have hAii : (T.a i i : ℝ) = -2 * (T.w i : ℝ) := by exact_mod_cast hai
     have hAjj : (T.a j j : ℝ) = -2 * (T.w j : ℝ) := by exact_mod_cast haj
@@ -2317,11 +2313,11 @@ theorem lemma_two_by_two (T : NumericalType) (S : MinusTwoSubgraph T 2)
       have hki : k ≠ i := by
         apply Fin.ne_of_val_ne
         dsimp [k]
-        split_ifs <;> simp only [Fin.val_mk] at * <;> omega
+        split_ifs <;> simp only at * <;> omega
       have hkj : k ≠ j := by
         apply Fin.ne_of_val_ne
         dsimp [k]
-        split_ifs <;> simp only [Fin.val_mk] at * <;> omega
+        split_ifs <;> simp only at * <;> omega
       have hck := congrFun hcx k
       have hck' : (0 : ℝ) = c * (T.m k : ℝ) := by
         simpa [x, hki, hkj] using hck
@@ -2440,7 +2436,7 @@ theorem lemma_two_by_two (T : NumericalType) (S : MinusTwoSubgraph T 2)
     refine ⟨r, hr, ?_, ?_, hmp, hmc⟩
     · ext a b
       fin_cases a <;> fin_cases b <;>
-        simp [scalarMatrix, pathMatrix, constantVector, hw0, hw1, haa0,
+        simp [scalarMatrix, pathMatrix, constantVector, haa0,
           haa1, hae01, hae10] <;> ring
     · funext a
       fin_cases a <;> simp [scalarVector, constantVector, hw0, hw1]
@@ -2453,10 +2449,10 @@ theorem lemma_two_by_two (T : NumericalType) (S : MinusTwoSubgraph T 2)
     refine ⟨r, hr, ?_, ?_, hmp, hmc⟩
     · ext a b
       fin_cases a <;> fin_cases b <;>
-        simp [scalarMatrix, pathLastMatrix, lastVector, hw0, hw1, haa0,
+        simp [scalarMatrix, pathLastMatrix, haa0,
           haa1, hae01, hae10] <;> ring
     · funext a
-      fin_cases a <;> simp [scalarVector, lastVector, hw0, hw1] <;> ring
+      fin_cases a <;> simp [scalarVector, lastVector, hw0, hw1] ; ring
   have realizeG : ∀ (E : LocalNumericalData 2) (r : ℤ),
       0 < r → E.w 0 = r → E.w 1 = 3 * r → E.a 0 0 = -2 * r →
       E.a 1 1 = -6 * r → E.a 0 1 = 3 * r → E.a 1 0 = 3 * r →
@@ -2466,10 +2462,10 @@ theorem lemma_two_by_two (T : NumericalType) (S : MinusTwoSubgraph T 2)
     refine ⟨r, hr, ?_, ?_, hmp, hmc⟩
     · ext a b
       fin_cases a <;> fin_cases b <;>
-        simp [scalarMatrix, pathLastMatrix, lastVector, hw0, hw1, haa0,
+        simp [scalarMatrix, pathLastMatrix, haa0,
           haa1, hae01, hae10] <;> ring
     · funext a
-      fin_cases a <;> simp [scalarVector, lastVector, hw0, hw1] <;> ring
+      fin_cases a <;> simp [scalarVector, lastVector, hw0, hw1] ; ring
   have hp_cases : p = 1 ∨ p = 2 ∨ p = 3 := by omega
   rcases hp_cases with hp1 | hp23
   · have hq_cases : q = 1 ∨ q = 2 ∨ q = 3 := by omega
@@ -2769,10 +2765,10 @@ theorem lemma_three_by_three (T : NumericalType) (S : MinusTwoSubgraph T 3)
             by_cases hq1 : q = S.index 1 <;>
               by_cases hq2 : q = S.index 2 <;>
                 simp [hq0, hq1, hq2, h01, h02, h12, h01.symm, h02.symm,
-                  h12.symm] <;> ring
+                  h12.symm]
         _ = _ := by
           rw [Finset.sum_add_distrib, Finset.sum_add_distrib]
-          simp [y, h01, h02, h12, h01.symm, h02.symm, h12.symm]
+          simp
     have houter :
         (∑ p : Fin T.n, y p * Matrix.mulVec
           (fun p q => (T.a p q : ℝ)) y p) =
@@ -2797,13 +2793,13 @@ theorem lemma_three_by_three (T : NumericalType) (S : MinusTwoSubgraph T 3)
             by_cases hp1 : p = S.index 1 <;>
               by_cases hp2 : p = S.index 2 <;>
                 simp [hp0, hp1, hp2, h01, h02, h12, h01.symm, h02.symm,
-                  h12.symm] <;> ring
+                  h12.symm]
         _ = _ := by
           rw [Finset.sum_add_distrib, Finset.sum_add_distrib]
           change _ = x 0 * Matrix.mulVec (fun p q => (T.a p q : ℝ)) y (S.index 0) +
             x 1 * Matrix.mulVec (fun p q => (T.a p q : ℝ)) y (S.index 1) +
               x 2 * Matrix.mulVec (fun p q => (T.a p q : ℝ)) y (S.index 2)
-          simp [h01, h02, h12, h01.symm, h02.symm, h12.symm]
+          simp
     change (∑ p : Fin T.n, y p * Matrix.mulVec
       (fun p q => (T.a p q : ℝ)) y p) = _
     calc
@@ -3075,10 +3071,6 @@ theorem lemma_three_by_three (T : NumericalType) (S : MinusTwoSubgraph T 3)
         (((Finset.univ : Finset (Fin T.n)).erase (S.index i)).erase
           (S.index j)).sum
           (fun l => T.a (S.index i) l * T.m l) := by
-      change rest.sum (fun l => T.a (S.index i) l * T.m l) +
-          T.a (S.index i) (S.index k) * T.m (S.index k) =
-        ((Finset.univ.erase (S.index i)).erase (S.index j)).sum
-          (fun l => T.a (S.index i) l * T.m l)
       exact hs3
     rw [T.row_sum (S.index i)] at hs1
     linarith [hs1, hs2, hs3', hrest]
@@ -3105,7 +3097,7 @@ theorem lemma_three_by_three (T : NumericalType) (S : MinusTwoSubgraph T 3)
     refine ⟨r, hr, ?_, ?_, hmp, hmc⟩
     · ext a b
       fin_cases a <;> fin_cases b <;>
-        simp [scalarMatrix, pathMatrix, constantVector, hw0, hw1, hw2,
+        simp [scalarMatrix, pathMatrix, constantVector,
           haa0, haa1, haa2, hae01, hae10, hae12, hae21, hae02, hae20] <;> ring
     · funext a
       fin_cases a <;> simp [scalarVector, constantVector, hw0, hw1, hw2]
@@ -3120,10 +3112,10 @@ theorem lemma_three_by_three (T : NumericalType) (S : MinusTwoSubgraph T 3)
     refine ⟨r, hr, ?_, ?_, hmp, hmc⟩
     · ext a b
       fin_cases a <;> fin_cases b <;>
-        simp [scalarMatrix, pathLastMatrix, lastVector, hw0, hw1, hw2,
+        simp [scalarMatrix, pathLastMatrix,
           haa0, haa1, haa2, hae01, hae10, hae12, hae21, hae02, hae20] <;> ring
     · funext a
-      fin_cases a <;> simp [scalarVector, lastVector, hw0, hw1, hw2] <;> ring
+      fin_cases a <;> simp [scalarVector, lastVector, hw0, hw1, hw2] ; ring
   have realizeB3 : ∀ (E : LocalNumericalData 3) (r : ℤ),
       0 < r → E.w 0 = 2 * r → E.w 1 = 2 * r → E.w 2 = r →
       E.a 0 0 = -4 * r → E.a 1 1 = -4 * r → E.a 2 2 = -2 * r →
@@ -3135,7 +3127,7 @@ theorem lemma_three_by_three (T : NumericalType) (S : MinusTwoSubgraph T 3)
     refine ⟨r, hr, ?_, ?_, hmp, hmc⟩
     · ext a b
       fin_cases a <;> fin_cases b <;>
-        simp [scalarMatrix, pathLastMatrix, lastVector, hw0, hw1, hw2,
+        simp [scalarMatrix, pathLastMatrix,
           haa0, haa1, haa2, hae01, hae10, hae12, hae21, hae02, hae20] <;> ring
     · funext a
       fin_cases a <;> simp [scalarVector, lastVector, hw0, hw1, hw2] <;> ring
@@ -3441,8 +3433,8 @@ private theorem five_path_det_strict_ineq (D : LocalNumericalData 5)
         2 * D.a 1 2 ^ 2 * D.a 3 4 ^ 2 * D.w 0 := by
     simp [Matrix.det_succ_row_zero (n := 4),
       Matrix.det_succ_row_zero (n := 3), Matrix.det_fin_three, Fin.succAbove,
-      Fin.sum_univ_succ, hdiag, h02, h03, h13, h14, h24, h20, h30, h31, h41,
-      h42, h04, h10, h21, h32, h43, h40, hsymm]
+      Fin.sum_univ_succ, hdiag, h03, h13, h14, h24, h20, h30,
+      h04, h10, h21, h32, h43, h40, hsymm]
     ring
   have hcast := (Int.cast_det D.a : (D.a.det : ℝ) = _)
   have hdetR : Matrix.det (Matrix.map D.a (fun x : ℤ => (x : ℝ))) =
@@ -3539,8 +3531,8 @@ private theorem five_path_det_strict_ineq_general (D : LocalNumericalData 5)
         2 * D.a 0 1 * D.a 1 2 * D.a 2 3 * D.a 3 4 * D.a 0 4 := by
     simp [Matrix.det_succ_row_zero (n := 4),
       Matrix.det_succ_row_zero (n := 3), Matrix.det_fin_three, Fin.succAbove,
-      Fin.sum_univ_succ, hdiag, h02, h03, h13, h14, h24, h20, h30, h31, h41,
-      h42, h10, h21, h32, h43, h40, hsymm]
+      Fin.sum_univ_succ, hdiag, h03, h13, h14, h24, h20, h30,
+      h10, h21, h32, h43, h40, hsymm]
     ring
   have hcast := (Int.cast_det D.a : (D.a.det : ℝ) = _)
   have hdetR : Matrix.det (Matrix.map D.a (fun x : ℤ => (x : ℝ))) =
@@ -4119,7 +4111,7 @@ theorem lemma_D4 (T : NumericalType) (S : MinusTwoSubgraph T 4)
     have h := hrow4 0 1 2 3 (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
     rw [hDdiag 0, hpa01, hpa02, hpa03, hp01', hp02', hp03'] at h
     have hfactor : D.w 0 * (D.m 1 + D.m 2 + D.m 3 - 2 * D.m 0) ≤ 0 := by
-      convert h using 1 <;> ring
+      convert h using 1 ; ring
     by_contra hnot
     have hdiff : 0 < D.m 1 + D.m 2 + D.m 3 - 2 * D.m 0 := by omega
     exact (not_lt_of_ge hfactor) (mul_pos (hDpos 0) hdiff)
@@ -4128,7 +4120,7 @@ theorem lemma_D4 (T : NumericalType) (S : MinusTwoSubgraph T 4)
     rw [hDdiag 1, hDsym 1 0, hpa01, hp01', hzero12, hzero13] at h
     rw [hw01] at h
     have hfactor : D.w 1 * (D.m 0 - 2 * D.m 1) ≤ 0 := by
-      convert h using 1 <;> ring
+      convert h using 1 ; ring
     by_contra hnot
     have hdiff : 0 < D.m 0 - 2 * D.m 1 := by omega
     exact (not_lt_of_ge hfactor) (mul_pos (hDpos 1) hdiff)
@@ -4137,7 +4129,7 @@ theorem lemma_D4 (T : NumericalType) (S : MinusTwoSubgraph T 4)
     rw [hDdiag 2, hDsym 2 0, hpa02, hp02', hDsym 2 1, hzero12, hzero23] at h
     rw [hw02] at h
     have hfactor : D.w 2 * (D.m 0 - 2 * D.m 2) ≤ 0 := by
-      convert h using 1 <;> ring
+      convert h using 1 ; ring
     by_contra hnot
     have hdiff : 0 < D.m 0 - 2 * D.m 2 := by omega
     exact (not_lt_of_ge hfactor) (mul_pos (hDpos 2) hdiff)
@@ -4147,7 +4139,7 @@ theorem lemma_D4 (T : NumericalType) (S : MinusTwoSubgraph T 4)
       hDsym 3 2, hzero23] at h
     rw [hw03] at h
     have hfactor : D.w 3 * (D.m 0 - 2 * D.m 3) ≤ 0 := by
-      convert h using 1 <;> ring
+      convert h using 1 ; ring
     by_contra hnot
     have hdiff : 0 < D.m 0 - 2 * D.m 3 := by omega
     exact (not_lt_of_ge hfactor) (mul_pos (hDpos 3) hdiff)
@@ -4492,7 +4484,6 @@ theorem lemma_five_by_five (T : NumericalType) (S : MinusTwoSubgraph T 5)
     have hprodD : (D.a 0 1 : ℝ) * D.a 0 3 * D.a 1 2 * D.a 2 3 =
         (p01 * q03 * p12 * p23 : ℝ) * (D.w 0 * D.w 1 * D.w 2 * D.w 3) := by
       rw [hpa01R, hqa03R, hpa12R, hpa23R]
-      push_cast
       ring
     have hineqR := four_path_det_strict_ineq E0 hE0diag hE0symm hE0zero hE0pos
       hdetA0 (p01 * q01 : ℝ) (p12 * q12 : ℝ) (p23 * q23 : ℝ)
@@ -4527,7 +4518,6 @@ theorem lemma_five_by_five (T : NumericalType) (S : MinusTwoSubgraph T 5)
     have hprodD : (D.a 1 2 : ℝ) * D.a 1 4 * D.a 2 3 * D.a 3 4 =
         (p12 * q14 * p23 * p34 : ℝ) * (D.w 1 * D.w 2 * D.w 3 * D.w 4) := by
       rw [hpa12R, hqa14R, hpa23R, hpa34R]
-      push_cast
       ring
     have hineqR := four_path_det_strict_ineq E1 hE1diag hE1symm hE1zero hE1pos
       hdetA1 (p12 * q12 : ℝ) (p23 * q23 : ℝ) (p34 * q34 : ℝ)
@@ -4563,7 +4553,6 @@ theorem lemma_five_by_five (T : NumericalType) (S : MinusTwoSubgraph T 5)
         (p01 * p12 * p23 * p34 * q04 : ℝ) *
           (D.w 0 * D.w 1 * D.w 2 * D.w 3 * D.w 4) := by
       rw [hpa01R, hpa12R, hpa23R, hpa34R, hqa04R]
-      push_cast
       ring
     have hineqR := five_path_det_strict_ineq_general D hDdiag hDsym
       ⟨hzero02, hzero03, hzero13, hzero14, hzero24⟩ (by exact hDpos)

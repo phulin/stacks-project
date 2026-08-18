@@ -326,11 +326,11 @@ theorem exists_natural_localization_z_grading (G : GradedRingData S)
 /-- The two homeomorphisms in the affine-chart description of `D_+(f)`. -/
 theorem DPlus_chart_homeomorphisms (G : GradedRingData S)
     {f : S} {d : ℕ} (hf : f ∈ G.component d) (hd : 0 < d)
-    (H : ZGradedRingData (Localization (Submonoid.powers f)))
-    (e₀ : H.component 0 ≃+* homogeneousLocalizationAway G f) :
-    Nonempty (DPlus G f ≃ₜ zGradedPrimeSpectrum H) ∧
-      Nonempty (zGradedPrimeSpectrum H ≃ₜ
-      PrimeSpectrum (homogeneousLocalizationAway G f)) := by
+    : ∃ (H : ZGradedRingData (Localization (Submonoid.powers f))),
+      Nonempty (H.component 0 ≃+* homogeneousLocalizationAway G f) ∧
+        Nonempty (DPlus G f ≃ₜ zGradedPrimeSpectrum H) ∧
+          Nonempty (zGradedPrimeSpectrum H ≃ₜ
+            PrimeSpectrum (homogeneousLocalizationAway G f)) := by
   sorry
 
 theorem isClosed_VPlus (G : GradedRingData S)
@@ -401,7 +401,8 @@ theorem one_variable_polynomial_proj_homeomorph
 
 /-- The degree-zero prime of a point of `Proj(R[X])` is the contraction to `R`. -/
 theorem one_variable_polynomial_prime_description
-    (G : GradedRingData R[X]) (p : projectiveSpectrum G) :
+    (G : GradedRingData R[X]) (p : projectiveSpectrum G)
+    (hG : IsStandardOneVariablePolynomialGrading G) :
     p.asHomogeneousIdeal.toIdeal =
       Ideal.map (Polynomial.C : R →+* R[X])
         (Ideal.comap (Polynomial.C : R →+* R[X]) p.asHomogeneousIdeal.toIdeal) := by
@@ -410,7 +411,7 @@ theorem one_variable_polynomial_prime_description
 /-! ## Prime avoidance and homogeneous minimal primes -/
 
 theorem homogeneous_prime_avoidance (G : GradedRingData S) {n : ℕ}
-    (p : Fin n → Ideal S)
+    (hn : 0 < n) (p : Fin n → Ideal S)
     (hp : ∀ i, (p i).IsHomogeneous G.component ∧ (p i).IsPrime)
     (I : Ideal S) (hI : I.IsHomogeneous G.component)
     (hIplus : I ≤ projIrrelevantIdeal G)
@@ -486,7 +487,12 @@ structure HomogenizationWitness (R R' M : Type u)
   module_equiv : Nonempty (CompatibleModuleEquiv (M₁ := M)
     (M₂ := homogeneousModuleAway gradedAlgebra.grading gradedModule.grading f 1
       f_degree_one (by norm_num)) ring_equiv)
-  degree_zero_equiv : Nonempty (R ≃+* gradedAlgebra.grading.component 0)
+  degree_zero_equiv : R ≃+* gradedAlgebra.grading.component 0
+  degree_zero_equiv_compatible :
+    ∀ r : R,
+      ((degree_zero_equiv r :
+          gradedAlgebra.grading.component 0) : gradedAlgebra.carrier) =
+        algebraMap R gradedAlgebra.carrier r
   generated_in_degree_one :
     ∃ n : ℕ, ∃ x : Fin n → gradedAlgebra.carrier,
       (∀ i, x i ∈ gradedAlgebra.grading.component 1) ∧

@@ -2,6 +2,8 @@ import Formalization.Books.Categories.Unit31.TwoFibreProducts
 import Formalization.Books.Algebra.Unit09.Localization
 import Formalization.Books.Algebra.Unit51.MoreNoetherianRings
 import Mathlib.Algebra.Algebra.Pi
+import Mathlib.Algebra.MvPolynomial.Eval
+import Mathlib.Algebra.MvPolynomial.Variables
 import Mathlib.Algebra.Category.ModuleCat.ChangeOfRings
 import Mathlib.Algebra.Category.ModuleCat.Limits
 import Mathlib.Algebra.Category.Ring.Constructions
@@ -363,6 +365,44 @@ def piAlgHomMap
       funext i
       simp }
 
+private theorem finiteType_pi_of_finite
+    {R I : Type u} {A : I → Type u}
+    [CommRing R] [∀ i, CommRing (A i)]
+    [∀ i, Algebra R (A i)] [Finite I]
+    (hA : ∀ i, Algebra.FiniteType R (A i)) :
+    Algebra.FiniteType R (∀ i, A i) := by
+  classical
+  revert A
+  apply Finite.induction_empty_option
+    (P := fun I => ∀ {A : I → Type u} [∀ i, CommRing (A i)]
+      [∀ i, Algebra R (A i)],
+      (∀ i, Algebra.FiniteType R (A i)) →
+        Algebra.FiniteType R (∀ i, A i))
+  · intro I J e ih A _ _ hA
+    exact Algebra.FiniteType.equiv
+      (ih (A := fun i => A (e i)) (fun i => hA (e i)))
+      (AlgEquiv.piCongrLeft R A e)
+  · intro A _ _ hA
+    letI : Subsingleton (∀ i : PEmpty, A i) :=
+      ⟨fun x y => funext fun i => PEmpty.elim i⟩
+    exact Algebra.FiniteType.of_surjective (Algebra.ofId R _)
+      (fun x => ⟨0, Subsingleton.elim _ _⟩)
+  · intro I _ ih A _ _ hA
+    letI : ∀ i : I, CommRing (A (some i)) := fun i => inferInstance
+    letI : ∀ i : I, Algebra R (A (some i)) := fun i => inferInstance
+    have hprod : Algebra.FiniteType R
+        (A none × (∀ i : I, A (some i))) := by
+      letI : Algebra.FiniteType R (∀ i : I, A (some i)) :=
+        ih (A := fun i => A (some i)) (fun i => hA (some i))
+      infer_instance
+    exact Algebra.FiniteType.equiv hprod
+      (AlgEquiv.ofRingEquiv
+        (f := (RingEquiv.piOptionEquivProd (R := A)).symm) (by
+        intro r
+        ext i
+        cases i <;> simp [RingEquiv.piOptionEquivProd,
+          Equiv.piOptionEquivProd]))
+
 /-- The finite-index cartesian-product consequence of the first lemma. -/
 theorem finiteType_of_finite_cartesian_product
     {R P Q I : Type u} {A B : I → Type u}
@@ -388,7 +428,113 @@ theorem finiteType_of_finite_cartesian_product
     (hφ : ∀ i, Function.Surjective (φ i))
     (hψ : ∀ i, Function.Surjective (ψ i)) :
     Algebra.FiniteType R P := by
-  sorry
+  letI : Algebra.FiniteType R (∀ i, A i) := finiteType_pi_of_finite hA
+  letI : Algebra.FiniteType R (∀ i, B i) := finiteType_pi_of_finite hB
+  have hφ' : Function.Surjective (piAlgHomMap φ) := by
+    intro y
+    choose x hx using fun i => hφ i (y i)
+    exact ⟨x, funext fun i => hx i⟩
+  have hfiniteψ : RingHom.Finite (AlgHom.pi ψ).toRingHom := by
+    letI : ∀ i, Algebra Q (B i) := fun i => (ψ i).toRingHom.toAlgebra
+    letI : ∀ i, Module.Finite Q (B i) := fun i =>
+      Module.Finite.of_surjective (Algebra.linearMap Q (B i)) (hψ i)
+    change Module.Finite Q (∀ i, B i)
+    infer_instance
+  have hpull : Algebra.FiniteType R (AlgHom.pullback (piAlgHomMap φ) (AlgHom.pi ψ)) :=
+    finiteType_algHom_pullback (piAlgHomMap φ) (AlgHom.pi ψ) hR
+      (finiteType_pi_of_finite hA) (finiteType_pi_of_finite hB) hQ hφ' hfiniteψ
+  let u : P →ₐ[R] AlgHom.pullback (piAlgHomMap φ) (AlgHom.pi ψ) :=
+    (pA.prod pQ).codRestrict _ (by
+      intro x
+      change (piAlgHomMap φ) (pA x) = (AlgHom.pi ψ) (pQ x)
+      simpa using congrArg (fun k => k.hom x) hcart.w)
+  have w :
+      CommRingCat.ofHom (AlgHom.pullbackFst (piAlgHomMap φ) (AlgHom.pi ψ)).toRingHom ≫
+          CommRingCat.ofHom (piAlgHomMap φ).toRingHom =
+        CommRingCat.ofHom (AlgHom.pullbackSnd (piAlgHomMap φ) (AlgHom.pi ψ)).toRingHom ≫
+          CommRingCat.ofHom (AlgHom.pi ψ).toRingHom := by
+    apply CommRingCat.hom_ext
+    apply RingHom.ext
+    intro x
+    dsimp only [CommRingCat.hom_comp, RingHom.coe_comp, Function.comp_apply,
+      CommRingCat.hom_ofHom]
+    exact congrArg (fun k => k x)
+      (AlgHom.pullback_comm_sq (piAlgHomMap φ) (AlgHom.pi ψ))
+  let vRing : AlgHom.pullback (piAlgHomMap φ) (AlgHom.pi ψ) →+* P :=
+    (hcart.lift
+      (CommRingCat.ofHom (AlgHom.pullbackFst (piAlgHomMap φ) (AlgHom.pi ψ)).toRingHom)
+      (CommRingCat.ofHom (AlgHom.pullbackSnd (piAlgHomMap φ) (AlgHom.pi ψ)).toRingHom)
+      w).hom
+  have hvA :
+      pA.toRingHom.comp vRing =
+        (AlgHom.pullbackFst (piAlgHomMap φ) (AlgHom.pi ψ)).toRingHom := by
+    have hh := congrArg CommRingCat.Hom.hom (hcart.lift_fst _ _ w)
+    dsimp only [CommRingCat.hom_comp, CommRingCat.hom_ofHom] at hh
+    exact hh
+  have hvB :
+      pQ.toRingHom.comp vRing =
+        (AlgHom.pullbackSnd (piAlgHomMap φ) (AlgHom.pi ψ)).toRingHom := by
+    have hh := congrArg CommRingCat.Hom.hom (hcart.lift_snd _ _ w)
+    dsimp only [CommRingCat.hom_comp, CommRingCat.hom_ofHom] at hh
+    exact hh
+  let v : AlgHom.pullback (piAlgHomMap φ) (AlgHom.pi ψ) →ₐ[R] P :=
+    { vRing with
+      commutes' := by
+        intro r
+        have heq :
+            CommRingCat.ofHom (vRing.comp (algebraMap R
+              (AlgHom.pullback (piAlgHomMap φ) (AlgHom.pi ψ)))) =
+              CommRingCat.ofHom (algebraMap R P) := by
+          apply hcart.hom_ext
+          · ext x
+            simp [vRing, CategoryTheory.Category.assoc]
+          · ext x
+            simp [vRing, CategoryTheory.Category.assoc]
+        exact congrArg (fun k => k.hom r) heq }
+  have huv : vRing.comp u.toRingHom = RingHom.id P := by
+    apply RingHom.ext
+    intro x
+    have heq :
+        CommRingCat.ofHom (vRing.comp u.toRingHom) =
+          CommRingCat.ofHom (RingHom.id P) := by
+      apply hcart.hom_ext
+      · apply CommRingCat.hom_ext
+        apply RingHom.ext
+        intro y
+        dsimp only [CommRingCat.hom_comp, RingHom.coe_comp, Function.comp_apply,
+          CommRingCat.hom_ofHom]
+        change pA (vRing (u y)) = pA y
+        have hh := DFunLike.congr_fun hvA (u y)
+        change pA (vRing (u y)) = pA y at hh
+        exact hh
+      · apply CommRingCat.hom_ext
+        apply RingHom.ext
+        intro y
+        dsimp only [CommRingCat.hom_comp, RingHom.coe_comp, Function.comp_apply,
+          CommRingCat.hom_ofHom]
+        change pQ (vRing (u y)) = pQ y
+        have hh := DFunLike.congr_fun hvB (u y)
+        change pQ (vRing (u y)) = pQ y at hh
+        exact hh
+    exact congrArg (fun k => k.hom x) heq
+  have hvu : u.toRingHom.comp vRing =
+      RingHom.id (AlgHom.pullback (piAlgHomMap φ) (AlgHom.pi ψ)) := by
+    apply RingHom.ext
+    intro x
+    apply Subtype.ext
+    apply Prod.ext
+    · change pA (vRing x) = (AlgHom.pullbackFst (piAlgHomMap φ) (AlgHom.pi ψ)) x
+      exact DFunLike.congr_fun hvA x
+    · change pQ (vRing x) = (AlgHom.pullbackSnd (piAlgHomMap φ) (AlgHom.pi ψ)) x
+      exact DFunLike.congr_fun hvB x
+  let e : P ≃+* AlgHom.pullback (piAlgHomMap φ) (AlgHom.pi ψ) :=
+    RingEquiv.ofRingHom u.toRingHom vRing hvu huv
+  exact Algebra.FiniteType.equiv hpull
+    (AlgEquiv.ofRingEquiv (f := e.symm) (by
+      intro r
+      change v (algebraMap R
+        (AlgHom.pullback (piAlgHomMap φ) (AlgHom.pi ψ)) r) = algebraMap R P r
+      exact v.commutes r))
 
 /-! ## Localization -/
 
@@ -439,6 +585,21 @@ noncomputable def localizedPullbackBaseRight
   rw [h]
   exact Localization.awayMap t f
 
+private theorem ringPullback_exact_aux
+    {R R' B : Type u} [CommRing R] [CommRing R'] [CommRing B]
+    (s : B →+* R) (t : R' →+* R) :
+    Function.Exact
+      (fun x : RingHom.pullback s t => (x : B × R'))
+      (fun x : B × R' => s x.1 - t x.2) := by
+  change ∀ x : B × R', s x.1 - t x.2 = 0 ↔
+    x ∈ Set.range (fun x : RingHom.pullback s t => (x : B × R'))
+  intro x
+  constructor
+  · intro hx
+    exact Set.mem_range.mpr ⟨⟨x, sub_eq_zero.mp hx⟩, rfl⟩
+  · rintro ⟨y, rfl⟩
+    exact sub_eq_zero.mpr y.property
+
 /-- Localization preserves the ring pullback diagram from the source. -/
 theorem localized_ring_pullback_isPullback
     {R R' B : Type u} [CommRing R] [CommRing R'] [CommRing B]
@@ -449,7 +610,535 @@ theorem localized_ring_pullback_isPullback
       (CommRingCat.ofHom (localizedPullbackSnd s t g f h))
       (CommRingCat.ofHom (localizedPullbackBaseLeft s t g f h))
       (CommRingCat.ofHom (localizedPullbackBaseRight s t g f h)) := by
-  sorry
+  let P := RingHom.pullback s t
+  let hp : P := ringPullbackElement s t g f h
+  letI : Algebra P B := (RingHom.pullbackFst s t).toAlgebra
+  letI : Algebra P R' := (RingHom.pullbackSnd s t).toAlgebra
+  letI : Algebra P R := (s.comp (RingHom.pullbackFst s t)).toAlgebra
+  letI : Module P (Localization.Away g) :=
+    Module.compHom (Localization.Away g)
+      ((algebraMap B (Localization.Away g)).comp (RingHom.pullbackFst s t))
+  letI : Module P (Localization.Away f) :=
+    Module.compHom (Localization.Away f)
+      ((algebraMap R' (Localization.Away f)).comp (RingHom.pullbackSnd s t))
+  letI : Module P (Localization.Away (s g)) :=
+    Module.compHom (Localization.Away (s g))
+      ((algebraMap R (Localization.Away (s g))).comp
+        (s.comp (RingHom.pullbackFst s t)))
+  letI : SMul P (Localization.Away g) :=
+    ⟨fun x y => ((algebraMap B (Localization.Away g)).comp
+      (RingHom.pullbackFst s t)) x * y⟩
+  letI : SMul P (Localization.Away f) :=
+    ⟨fun x y => ((algebraMap R' (Localization.Away f)).comp
+      (RingHom.pullbackSnd s t)) x * y⟩
+  letI : SMul P (Localization.Away (s g)) :=
+    ⟨fun x y => ((algebraMap R (Localization.Away (s g))).comp
+      (s.comp (RingHom.pullbackFst s t))) x * y⟩
+  letI : IsScalarTower P B (Localization.Away g) :=
+    IsScalarTower.of_algebraMap_smul (by
+      intro x y
+      rw [RingHom.algebraMap_toAlgebra]
+      rw [Algebra.smul_def]
+      rfl)
+  letI : IsScalarTower P R' (Localization.Away f) :=
+    IsScalarTower.of_algebraMap_smul (by
+      intro x y
+      rw [RingHom.algebraMap_toAlgebra]
+      rw [Algebra.smul_def]
+      rfl)
+  letI : IsLocalizedModule (.powers ((algebraMap P B) hp))
+      (Algebra.linearMap B (Localization.Away g)) := by
+    simpa [RingHom.algebraMap_toAlgebra, hp, ringPullbackElement] using
+      (inferInstance : IsLocalizedModule (.powers g)
+        (Algebra.linearMap B (Localization.Away g)))
+  letI : IsLocalizedModule (.powers ((algebraMap P R') hp))
+      (Algebra.linearMap R' (Localization.Away f)) := by
+    simpa [RingHom.algebraMap_toAlgebra, hp, ringPullbackElement] using
+      (inferInstance : IsLocalizedModule (.powers f)
+        (Algebra.linearMap R' (Localization.Away f)))
+  have hB_loc : IsLocalizedModule (.powers hp)
+      ((Algebra.linearMap B (Localization.Away g)).restrictScalars P) := by
+    exact IsLocalizedModule.restrictScalars_powers hp
+      (Algebra.linearMap B (Localization.Away g))
+  have hR'_loc : IsLocalizedModule (.powers hp)
+      ((Algebra.linearMap R' (Localization.Away f)).restrictScalars P) := by
+    exact IsLocalizedModule.restrictScalars_powers hp
+      (Algebra.linearMap R' (Localization.Away f))
+  letI : Algebra P (B × R') :=
+    ((RingHom.pullbackFst s t).prod (RingHom.pullbackSnd s t)).toAlgebra
+  letI : Algebra P (Localization.Away (s g)) :=
+    ((algebraMap R (Localization.Away (s g))).comp
+      (s.comp (RingHom.pullbackFst s t))).toAlgebra
+  letI : IsScalarTower P R (Localization.Away (s g)) :=
+    IsScalarTower.of_algebraMap_smul (by
+      intro x y
+      rw [RingHom.algebraMap_toAlgebra]
+      rw [Algebra.smul_def]
+      rfl)
+  let i : P →ₗ[P] B × R' := Algebra.linearMap P (B × R')
+  let d : (B × R') →ₗ[P] R :=
+    { toFun := fun x => s x.1 - t x.2
+      map_add' := by
+        intro x y
+        simp only [Prod.fst_add, Prod.snd_add, map_add, sub_add_sub_comm]
+      map_smul' := by
+        intro x y
+        change s (x.1.1 * y.1) - t (x.1.2 * y.2) =
+          s x.1.1 * (s y.1 - t y.2)
+        have hx : s (x : B × R').1 = t (x : B × R').2 := x.property
+        rw [map_mul, map_mul, hx]
+        ring }
+  let f1 : (B × R') →ₗ[P]
+      (Localization.Away g × Localization.Away f) :=
+    { toFun := fun x =>
+        ((Algebra.linearMap B (Localization.Away g)) x.1,
+          (Algebra.linearMap R' (Localization.Away f)) x.2)
+      map_add' := by
+        intro x y
+        ext <;> simp
+      map_smul' := by
+        intro x y
+        ext
+        · change (algebraMap B (Localization.Away g))
+              ((algebraMap P B x) * y.1) =
+            (algebraMap B (Localization.Away g)) (algebraMap P B x) *
+              (algebraMap B (Localization.Away g) y.1)
+          rw [map_mul]
+        · change (algebraMap R' (Localization.Away f))
+              ((algebraMap P R' x) * y.2) =
+            (algebraMap R' (Localization.Away f)) (algebraMap P R' x) *
+              (algebraMap R' (Localization.Away f) y.2)
+          rw [map_mul] }
+  let f2 : R →ₗ[P] Localization.Away (s g) :=
+    (Algebra.linearMap R (Localization.Away (s g))).restrictScalars P
+  have hP_loc : IsLocalizedModule (.powers hp)
+      (Algebra.linearMap P (Localization.Away hp)) := by
+    infer_instance
+  letI : IsLocalizedModule (.powers ((algebraMap P R) hp))
+      (Algebra.linearMap R (Localization.Away (s g))) := by
+    simpa [RingHom.algebraMap_toAlgebra, hp, ringPullbackElement] using
+      (inferInstance : IsLocalizedModule (.powers (s g))
+        (Algebra.linearMap R (Localization.Away (s g))))
+  have hbase_loc : IsLocalizedModule (.powers hp) f2 := by
+    exact IsLocalizedModule.restrictScalars_powers hp
+      (Algebra.linearMap R (Localization.Away (s g)))
+  have hprod_loc : IsLocalizedModule (.powers hp) f1 := by
+    constructor
+    · intro c
+      rw [Module.End.isUnit_iff]
+      constructor
+      · intro x y hxy
+        apply Prod.ext
+        · apply ((Module.End.isUnit_iff _).mp (hB_loc.map_units c)).1
+          exact congrArg Prod.fst hxy
+        · apply ((Module.End.isUnit_iff _).mp (hR'_loc.map_units c)).1
+          exact congrArg Prod.snd hxy
+      · intro x
+        obtain ⟨y, hy⟩ := ((Module.End.isUnit_iff _).mp (hB_loc.map_units c)).2 x.1
+        obtain ⟨z, hz⟩ := ((Module.End.isUnit_iff _).mp (hR'_loc.map_units c)).2 x.2
+        change c • y = x.1 at hy
+        change c • z = x.2 at hz
+        exact ⟨(y, z), by
+          change (c • y, c • z) = x
+          exact Prod.ext hy hz⟩
+    · intro x
+      rcases hB_loc.surj x.1 with ⟨⟨y, c₁⟩, hy⟩
+      rcases hR'_loc.surj x.2 with ⟨⟨z, c₂⟩, hz⟩
+      change c₁ • x.1 = (Algebra.linearMap B (Localization.Away g)) y at hy
+      change c₂ • x.2 = (Algebra.linearMap R' (Localization.Away f)) z at hz
+      refine ⟨((c₂ • y, c₁ • z), c₁ * c₂), ?_⟩
+      apply Prod.ext
+      · change (c₁ * c₂) • x.1 =
+          (Algebra.linearMap B (Localization.Away g)) (c₂ • y)
+        calc
+          (c₁ * c₂) • x.1 = c₂ • (c₁ • x.1) := by
+            change
+              (algebraMap B (Localization.Away g))
+                  ((RingHom.pullbackFst s t) (c₁ * c₂)) * x.1 =
+                (algebraMap B (Localization.Away g))
+                  ((RingHom.pullbackFst s t) c₂) *
+                  ((algebraMap B (Localization.Away g))
+                    ((RingHom.pullbackFst s t) c₁) * x.1)
+            simp only [map_mul]
+            ring
+          _ = c₂ • (Algebra.linearMap B (Localization.Away g) y) := by rw [hy]
+          _ = (Algebra.linearMap B (Localization.Away g)) (c₂ • y) := by
+            exact (LinearMap.map_smul_of_tower
+              (Algebra.linearMap B (Localization.Away g)) c₂ y).symm
+      · change (c₁ * c₂) • x.2 =
+          (Algebra.linearMap R' (Localization.Away f)) (c₁ • z)
+        calc
+          (c₁ * c₂) • x.2 = c₁ • (c₂ • x.2) := by
+            change
+              (algebraMap R' (Localization.Away f))
+                  ((RingHom.pullbackSnd s t) (c₁ * c₂)) * x.2 =
+                (algebraMap R' (Localization.Away f))
+                  ((RingHom.pullbackSnd s t) c₁) *
+                  ((algebraMap R' (Localization.Away f))
+                    ((RingHom.pullbackSnd s t) c₂) * x.2)
+            simp only [map_mul]
+            ring
+          _ = c₁ • (Algebra.linearMap R' (Localization.Away f) z) := by rw [hz]
+          _ = (Algebra.linearMap R' (Localization.Away f)) (c₁ • z) := by
+            exact (LinearMap.map_smul_of_tower
+              (Algebra.linearMap R' (Localization.Away f)) c₁ z).symm
+    · intro x y hxy
+      rcases hB_loc.exists_of_eq (congrArg Prod.fst hxy) with ⟨c₁, hc₁⟩
+      rcases hR'_loc.exists_of_eq (congrArg Prod.snd hxy) with ⟨c₂, hc₂⟩
+      refine ⟨c₁ * c₂, ?_⟩
+      apply Prod.ext
+      · change (c₁ * c₂) • x.1 = (c₁ * c₂) • y.1
+        calc
+          (c₁ * c₂) • x.1 = c₂ • (c₁ • x.1) := by
+            change
+              (algebraMap P B) (c₁ * c₂ : P) * x.1 =
+                (algebraMap P B)
+                  (c₂ : P) *
+                  ((algebraMap P B) (c₁ : P) * x.1)
+            simp only [map_mul]
+            ring
+          _ = c₂ • (c₁ • y.1) := by rw [hc₁]
+          _ = (c₁ * c₂) • y.1 := by
+            change
+              (algebraMap P B) (c₂ : P) *
+                  ((algebraMap P B)
+                    (c₁ : P) * y.1) =
+                (algebraMap P B)
+                  (c₁ * c₂ : P) * y.1
+            simp only [map_mul]
+            ring
+      · change (c₁ * c₂) • x.2 = (c₁ * c₂) • y.2
+        calc
+          (c₁ * c₂) • x.2 = c₁ • (c₂ • x.2) := by
+            change
+              (algebraMap P R')
+                  (c₁ * c₂ : P) * x.2 =
+                (algebraMap P R')
+                  (c₁ : P) *
+                  ((algebraMap P R')
+                    (c₂ : P) * x.2)
+            simp only [map_mul]
+            ring
+          _ = c₁ • (c₂ • y.2) := by rw [hc₂]
+          _ = (c₁ * c₂) • y.2 := by
+            change
+              (algebraMap P R')
+                  (c₁ : P) *
+                  ((algebraMap P R')
+                    (c₂ : P) * y.2) =
+                (algebraMap P R')
+                  (c₁ * c₂ : P) * y.2
+            simp only [map_mul]
+            ring
+  letI : IsLocalizedModule (.powers hp)
+      (Algebra.linearMap P (Localization.Away hp)) := hP_loc
+  letI : IsLocalizedModule (.powers hp) f1 := hprod_loc
+  letI : IsLocalizedModule (.powers hp) f2 := hbase_loc
+  have hPD : Function.Exact i d := by
+    change ∀ x : B × R', d x = 0 ↔ x ∈ Set.range i
+    intro x
+    constructor
+    · intro hx
+      refine Set.mem_range.mpr ⟨⟨x, sub_eq_zero.mp hx⟩, ?_⟩
+      rfl
+    · rintro ⟨y, rfl⟩
+      exact sub_eq_zero.mpr y.property
+  have hloc_exact : Function.Exact
+      (IsLocalizedModule.map (.powers hp) (Algebra.linearMap P (Localization.Away hp)) f1 i)
+      (IsLocalizedModule.map (.powers hp) f1 f2 d) := by
+    exact IsLocalizedModule.map_exact (.powers hp)
+      (Algebra.linearMap P (Localization.Away hp)) f1 f2 i d hPD
+  let qLinear : Localization.Away hp →ₗ[P]
+      (Localization.Away g × Localization.Away f) :=
+    { toFun := fun x =>
+        (Localization.awayMap (RingHom.pullbackFst s t) hp x,
+          Localization.awayMap (RingHom.pullbackSnd s t) hp x)
+      map_add' := by
+        intro x y
+        ext
+        · exact (Localization.awayMap (RingHom.pullbackFst s t) hp).map_add x y
+        · exact (Localization.awayMap (RingHom.pullbackSnd s t) hp).map_add x y
+      map_smul' := by
+        intro x y
+        ext
+        · dsimp
+          rw [Algebra.smul_def]
+          change
+            (Localization.awayMap (RingHom.pullbackFst s t) hp)
+                ((algebraMap P (Localization.Away hp)) x * y) =
+              (algebraMap B
+                (Localization.Away ((RingHom.pullbackFst s t) hp)))
+                  ((RingHom.pullbackFst s t) x) *
+                (Localization.awayMap (RingHom.pullbackFst s t) hp) y
+          rw [(Localization.awayMap (RingHom.pullbackFst s t) hp).map_mul]
+          change
+            (IsLocalization.map (Localization.Away ((RingHom.pullbackFst s t) hp))
+              (RingHom.pullbackFst s t) _
+                ((algebraMap P (Localization.Away hp)) x)) * _ = _
+          rw [IsLocalization.map_eq]
+        · dsimp
+          rw [Algebra.smul_def]
+          change
+            (Localization.awayMap (RingHom.pullbackSnd s t) hp)
+                ((algebraMap P (Localization.Away hp)) x * y) =
+              (algebraMap R'
+                (Localization.Away ((RingHom.pullbackSnd s t) hp)))
+                  ((RingHom.pullbackSnd s t) x) *
+                (Localization.awayMap (RingHom.pullbackSnd s t) hp) y
+          rw [(Localization.awayMap (RingHom.pullbackSnd s t) hp).map_mul]
+          change
+            (IsLocalization.map (Localization.Away ((RingHom.pullbackSnd s t) hp))
+              (RingHom.pullbackSnd s t) _
+                ((algebraMap P (Localization.Away hp)) x)) * _ = _
+          rw [IsLocalization.map_eq] }
+  have hql : qLinear =
+      IsLocalizedModule.map (.powers hp)
+        (Algebra.linearMap P (Localization.Away hp)) f1 i := by
+    apply IsLocalizedModule.linearMap_ext (.powers hp)
+      (Algebra.linearMap P (Localization.Away hp)) f1
+    apply LinearMap.ext
+    intro x
+    simp only [LinearMap.coe_comp, Function.comp_apply,
+      IsLocalizedModule.map_apply]
+    apply Prod.ext
+    · change
+        (Localization.awayMap (RingHom.pullbackFst s t) hp)
+            ((algebraMap P (Localization.Away hp)) x) =
+          (algebraMap B (Localization.Away g))
+            ((RingHom.pullbackFst s t) x)
+      change
+        (IsLocalization.map (Localization.Away ((RingHom.pullbackFst s t) hp))
+          (RingHom.pullbackFst s t) _
+            ((algebraMap P (Localization.Away hp)) x)) = _
+      rw [IsLocalization.map_eq]
+      rfl
+    · change
+        (Localization.awayMap (RingHom.pullbackSnd s t) hp)
+            ((algebraMap P (Localization.Away hp)) x) =
+          (algebraMap R' (Localization.Away f))
+            ((RingHom.pullbackSnd s t) x)
+      change
+        (IsLocalization.map (Localization.Away ((RingHom.pullbackSnd s t) hp))
+          (RingHom.pullbackSnd s t) _
+            ((algebraMap P (Localization.Away hp)) x)) = _
+      rw [IsLocalization.map_eq]
+      rfl
+  let bLeft : Localization.Away g →+* Localization.Away (s g) :=
+    Localization.awayMap s g
+  let bRight : Localization.Away f →+* Localization.Away (s g) := by
+    exact IsLocalization.map (Localization.Away (s g)) t (show
+      Submonoid.powers f ≤ (Submonoid.powers (s g)).comap t by
+      rintro x ⟨n, rfl⟩
+      use n
+      rw [map_pow, h])
+  have hleft (x : P) :
+      bLeft ((algebraMap B (Localization.Away g))
+        ((algebraMap P B) x)) = (algebraMap P (Localization.Away (s g))) x := by
+    simp [bLeft, Localization.awayMap, IsLocalization.Away.map,
+      IsLocalization.map_eq, RingHom.algebraMap_toAlgebra]
+  have hright (x : P) :
+      bRight ((algebraMap R' (Localization.Away f))
+        ((algebraMap P R') x)) = (algebraMap P (Localization.Away (s g))) x := by
+    simp [bRight, IsLocalization.map_eq, RingHom.algebraMap_toAlgebra,
+      x.property]
+    exact congrArg (algebraMap R (Localization.Away (s g))) x.property.symm
+  let dWanted : (Localization.Away g × Localization.Away f) →ₗ[P]
+      Localization.Away (s g) :=
+    { toFun := fun x => bLeft x.1 - bRight x.2
+      map_add' := by
+        intro x y
+        simp only [Prod.fst_add, Prod.snd_add, map_add, sub_add_sub_comm]
+      map_smul' := by
+        intro x y
+        change bLeft ((algebraMap B (Localization.Away g) ((algebraMap P B) x)) * y.1) -
+            bRight ((algebraMap R' (Localization.Away f) ((algebraMap P R') x)) * y.2) =
+          (algebraMap P (Localization.Away (s g)) x) *
+            (bLeft y.1 - bRight y.2)
+        rw [map_mul, map_mul, hleft, hright]
+        ring }
+  have hd : dWanted =
+      IsLocalizedModule.map (.powers hp) f1 f2 d := by
+    apply IsLocalizedModule.linearMap_ext (.powers hp) f1 f2
+    apply LinearMap.ext
+    intro x
+    simp only [LinearMap.coe_comp, Function.comp_apply,
+      IsLocalizedModule.map_apply]
+    simp [dWanted, d, f1, f2, bLeft, bRight, Localization.awayMap,
+      IsLocalization.Away.map, IsLocalization.map_eq]
+  have hi : Function.Injective i := by
+    intro x y hxy
+    apply Subtype.ext
+    exact hxy
+  have hq_inj : Function.Injective qLinear := by
+    rw [hql]
+    exact IsLocalizedModule.map_injective (.powers hp)
+      (Algebra.linearMap P (Localization.Away hp)) f1 i hi
+  let K := RingHom.pullback bLeft bRight
+  let qRing : Localization.Away hp →+* K :=
+    ((Localization.awayMap (RingHom.pullbackFst s t) hp).prod
+      (Localization.awayMap (RingHom.pullbackSnd s t) hp)).codRestrict K (by
+        intro x
+        have heq :
+            bLeft.comp (Localization.awayMap (RingHom.pullbackFst s t) hp) =
+              bRight.comp (Localization.awayMap (RingHom.pullbackSnd s t) hp) := by
+          apply IsLocalization.ringHom_ext (.powers hp)
+          apply RingHom.ext
+          intro z
+          change
+            bLeft ((Localization.awayMap (RingHom.pullbackFst s t) hp)
+              ((algebraMap P (Localization.Away hp)) z)) =
+              bRight ((Localization.awayMap (RingHom.pullbackSnd s t) hp)
+                ((algebraMap P (Localization.Away hp)) z))
+          have hfst :
+              Localization.awayMap (RingHom.pullbackFst s t) hp
+                  ((algebraMap P (Localization.Away hp)) z) =
+                (algebraMap B (Localization.Away g))
+                  ((RingHom.pullbackFst s t) z) := by
+            change
+              (IsLocalization.map
+                (Localization.Away ((RingHom.pullbackFst s t) hp))
+                (RingHom.pullbackFst s t) _
+                  ((algebraMap P (Localization.Away hp)) z)) = _
+            rw [IsLocalization.map_eq]
+            rfl
+          have hsnd :
+              Localization.awayMap (RingHom.pullbackSnd s t) hp
+                  ((algebraMap P (Localization.Away hp)) z) =
+                (algebraMap R' (Localization.Away f))
+                  ((RingHom.pullbackSnd s t) z) := by
+            change
+              (IsLocalization.map
+                (Localization.Away ((RingHom.pullbackSnd s t) hp))
+                (RingHom.pullbackSnd s t) _
+                  ((algebraMap P (Localization.Away hp)) z)) = _
+            rw [IsLocalization.map_eq]
+            rfl
+          calc
+            bLeft ((Localization.awayMap (RingHom.pullbackFst s t) hp)
+                ((algebraMap P (Localization.Away hp)) z)) =
+                bLeft ((algebraMap B (Localization.Away g))
+                  ((RingHom.pullbackFst s t) z)) := by rw [hfst]
+            _ = bLeft ((algebraMap B (Localization.Away g))
+                  ((algebraMap P B) z)) := by rfl
+            _ = (algebraMap P (Localization.Away (s g))) z := hleft z
+            _ = bRight ((algebraMap R' (Localization.Away f))
+                  ((algebraMap P R') z)) := (hright z).symm
+            _ = bRight ((algebraMap R' (Localization.Away f))
+                  ((RingHom.pullbackSnd s t) z)) := by rfl
+            _ = bRight ((Localization.awayMap (RingHom.pullbackSnd s t) hp)
+                  ((algebraMap P (Localization.Away hp)) z)) := by rw [hsnd]
+        exact DFunLike.congr_fun heq x)
+  have hqRing_inj : Function.Injective qRing := by
+    intro x y hxy
+    apply hq_inj
+    exact congrArg Subtype.val hxy
+  have hqRing_surj : Function.Surjective qRing := by
+    intro z
+    have hzker : dWanted z.1 = 0 := by
+      exact sub_eq_zero.mpr z.property
+    have hzker' :
+        (IsLocalizedModule.map (.powers hp) f1 f2 d) z.1 = 0 := by
+      rw [← hd]
+      exact hzker
+    rcases (hloc_exact z.1).mp hzker' with ⟨x, hx⟩
+    refine ⟨x, ?_⟩
+    apply Subtype.ext
+    change qLinear x = z.1
+    rw [hql]
+    exact hx
+  have hK :
+      IsPullback
+        (CommRingCat.ofHom (RingHom.pullbackFst bLeft bRight))
+        (CommRingCat.ofHom (RingHom.pullbackSnd bLeft bRight))
+        (CommRingCat.ofHom bLeft)
+        (CommRingCat.ofHom bRight) := by
+    exact IsPullback.of_isLimit
+      (CommRingCat.pullbackConeIsLimit
+        (CommRingCat.ofHom bLeft) (CommRingCat.ofHom bRight))
+  let e : Localization.Away hp ≃+* K :=
+    RingEquiv.ofBijective qRing ⟨hqRing_inj, hqRing_surj⟩
+  have hbRight :
+      bRight = localizedPullbackBaseRight s t g f h := by
+    apply IsLocalization.ringHom_ext (.powers f)
+    apply RingHom.ext
+    intro x
+    change bRight (algebraMap R' (Localization.Away f) x) =
+      localizedPullbackBaseRight s t g f h
+        (algebraMap R' (Localization.Away f) x)
+    let he : Localization.Away (t f) = Localization.Away (s g) :=
+      congrArg Localization.Away h.symm
+    have hm :
+        (Localization.awayMap t f)
+            (algebraMap R' (Localization.Away f) x) =
+          (algebraMap R (Localization.Away (t f))) (t x) := by
+      simp [Localization.awayMap, IsLocalization.Away.map,
+        IsLocalization.map_eq]
+    have hm' := congrArg (fun z : Localization.Away (t f) => cast he z) hm
+    have cast_algebraMap (a b : R) (e' : a = b) (y : R) :
+        cast (congrArg (fun z : R => Localization.Away z) e')
+            ((algebraMap R (Localization.Away a)) y) =
+          (algebraMap R (Localization.Away b)) y := by
+      cases e'
+      rfl
+    have cast_ringHom_apply (a b : R) (e' : a = b)
+        (φ : Localization.Away f →+* Localization.Away a)
+        (y : Localization.Away f) :
+        (cast
+            (congrArg (fun z : R => Localization.Away f →+* Localization.Away z) e')
+            φ) y =
+          cast (congrArg (fun z : R => Localization.Away z) e') (φ y) := by
+      cases e'
+      rfl
+    convert hm'.symm using 1
+    · symm
+      calc
+        cast he ((algebraMap R (Localization.Away (t f))) (t x)) =
+            (algebraMap R (Localization.Away (s g))) (t x) :=
+          cast_algebraMap (t f) (s g) h.symm (t x)
+        _ = bRight (algebraMap R' (Localization.Away f) x) := by
+          simp [bRight, IsLocalization.map_eq]
+    · simpa [bRight, localizedPullbackBaseRight, he] using
+        cast_ringHom_apply (t f) (s g) h.symm
+          (Localization.awayMap t f) (algebraMap R' (Localization.Away f) x)
+  let e₂ : Localization.Away
+      ((RingHom.pullbackFst s t) hp) ≃+*
+      Localization.Away g :=
+    RingEquiv.cast (show
+      (RingHom.pullbackFst s t) hp = g by
+        change (ringPullbackElement s t g f h).1.1 = g
+        rfl)
+  let e₃ : Localization.Away
+      ((RingHom.pullbackSnd s t) hp) ≃+*
+      Localization.Away f :=
+    RingEquiv.cast (show
+      (RingHom.pullbackSnd s t) hp = f by
+        change (ringPullbackElement s t g f h).1.2 = f
+        rfl)
+  have hfst :
+      (RingHom.pullbackFst bLeft bRight).comp qRing =
+        e₂.toRingHom.comp (localizedPullbackFst s t g f h) := by
+    ext x
+    rfl
+  have hsnd :
+      (RingHom.pullbackSnd bLeft bRight).comp qRing =
+        e₃.toRingHom.comp (localizedPullbackSnd s t g f h) := by
+    ext x
+    rfl
+  have hbLeft :
+      bLeft = localizedPullbackBaseLeft s t g f h := by
+    rfl
+  apply hK.of_iso' e.toCommRingCatIso e₂.toCommRingCatIso
+    e₃.toCommRingCatIso (Iso.refl _)
+  · apply CommRingCat.hom_ext
+    exact hfst
+  · apply CommRingCat.hom_ext
+    exact hsnd
+  · apply CommRingCat.hom_ext
+    rw [hbLeft]
+    rfl
+  · apply CommRingCat.hom_ext
+    rw [hbRight]
+    rfl
 
 /-- The exact sequence displayed in the localization proof, before
 localization: it is the equalizer sequence for the canonical pullback. -/
@@ -459,7 +1148,7 @@ theorem ringPullback_exact
     Function.Exact
       (fun x : RingHom.pullback s t => (x : B × R'))
       (fun x : B × R' => s x.1 - t x.2) := by
-  sorry
+  exact ringPullback_exact_aux s t
 
 /-- The two component maps in the localized exact sequence, stated directly
 for an arbitrary element of the canonical pullback subring. -/
@@ -501,7 +1190,105 @@ theorem localized_ringPullback_exact
           Localization.Away ((RingHom.pullbackSnd s t) h) =>
         Localization.awayMap s ((RingHom.pullbackFst s t) h) p.1 -
           localizedPullbackBaseRightCanonical s t h p.2) := by
-  sorry
+  let F : Localization.Away h →
+      Localization.Away ((RingHom.pullbackFst s t) h) ×
+        Localization.Away ((RingHom.pullbackSnd s t) h) :=
+    fun x =>
+      (localizedPullbackFstCanonical s t h x,
+        localizedPullbackSndCanonical s t h x)
+  let G : Localization.Away ((RingHom.pullbackFst s t) h) ×
+      Localization.Away ((RingHom.pullbackSnd s t) h) →
+      Localization.Away (s ((RingHom.pullbackFst s t) h)) :=
+    fun p =>
+      Localization.awayMap s ((RingHom.pullbackFst s t) h) p.1 -
+        localizedPullbackBaseRightCanonical s t h p.2
+  change Function.Exact F G
+  have hEq :
+      ringPullbackElement s t ((RingHom.pullbackFst s t) h)
+          ((RingHom.pullbackSnd s t) h) h.property = h := by
+    apply Subtype.ext
+    rfl
+  have hpull :
+      IsPullback
+        (CommRingCat.ofHom (localizedPullbackFstCanonical s t h))
+        (CommRingCat.ofHom (localizedPullbackSndCanonical s t h))
+        (CommRingCat.ofHom (Localization.awayMap s
+          ((RingHom.pullbackFst s t) h)))
+        (CommRingCat.ofHom (localizedPullbackBaseRightCanonical s t h)) := by
+    rw [← hEq]
+    exact localized_ring_pullback_isPullback s t
+      ((RingHom.pullbackFst s t) h) ((RingHom.pullbackSnd s t) h)
+      h.property
+  intro p
+  constructor
+  · intro hp
+    have hz :
+        Localization.awayMap s ((RingHom.pullbackFst s t) h) p.1 =
+          localizedPullbackBaseRightCanonical s t h p.2 := by
+      apply sub_eq_zero.mp
+      simpa [G] using hp
+    let l₁ : MvPolynomial (ULift Unit) ℤ →+*
+        Localization.Away ((RingHom.pullbackFst s t) h) :=
+      MvPolynomial.eval₂Hom (algebraMap ℤ _) (fun _ => p.1)
+    let l₂ : MvPolynomial (ULift Unit) ℤ →+*
+        Localization.Away ((RingHom.pullbackSnd s t) h) :=
+      MvPolynomial.eval₂Hom (algebraMap ℤ _) (fun _ => p.2)
+    have hl :
+        (localizedPullbackBaseRightCanonical s t h).comp l₂ =
+          (Localization.awayMap s ((RingHom.pullbackFst s t) h)).comp l₁ := by
+      rw [MvPolynomial.comp_eval₂Hom, MvPolynomial.comp_eval₂Hom]
+      apply DFunLike.ext _ _
+      intro q
+      apply MvPolynomial.hom_congr_vars
+      · exact RingHom.ext_int _ _
+      · intro i hi₁ hi₂
+        simpa only [MvPolynomial.coe_eval₂Hom, MvPolynomial.eval₂_X] using hz.symm
+      · rfl
+    have hl' :
+        CommRingCat.ofHom l₂ ≫
+            CommRingCat.ofHom (localizedPullbackBaseRightCanonical s t h) =
+          CommRingCat.ofHom l₁ ≫
+            CommRingCat.ofHom (Localization.awayMap s
+              ((RingHom.pullbackFst s t) h)) := by
+      apply CommRingCat.hom_ext
+      exact hl
+    rcases hpull.exists_lift (CommRingCat.ofHom l₁) (CommRingCat.ofHom l₂)
+        hl'.symm with ⟨q, hq₁, hq₂⟩
+    refine ⟨q.hom (MvPolynomial.X (ULift.up ())), ?_⟩
+    apply Prod.ext
+    · have hq₁' := congrArg
+          (fun k => k.hom (MvPolynomial.X (ULift.up ()))) hq₁
+      change localizedPullbackFstCanonical s t h
+          (q.hom (MvPolynomial.X (ULift.up ()))) = p.1
+      change localizedPullbackFstCanonical s t h
+          (q.hom (MvPolynomial.X (ULift.up ()))) =
+        l₁ (MvPolynomial.X (ULift.up ())) at hq₁'
+      simpa only [l₁, MvPolynomial.eval₂Hom_X'] using hq₁'
+    · have hq₂' := congrArg (fun k => k.hom (MvPolynomial.X (ULift.up ()))) hq₂
+      change localizedPullbackSndCanonical s t h
+          (q.hom (MvPolynomial.X (ULift.up ()))) = p.2
+      change localizedPullbackSndCanonical s t h
+          (q.hom (MvPolynomial.X (ULift.up ()))) =
+        l₂ (MvPolynomial.X (ULift.up ())) at hq₂'
+      simpa only [l₂, MvPolynomial.eval₂Hom_X'] using hq₂'
+  · rintro ⟨q, rfl⟩
+    have hw' :
+        (Localization.awayMap s ((RingHom.pullbackFst s t) h)).comp
+            (localizedPullbackFstCanonical s t h) =
+          (localizedPullbackBaseRightCanonical s t h).comp
+            (localizedPullbackSndCanonical s t h) := by
+      change (Localization.awayMap s ((RingHom.pullbackFst s t) h)).comp
+            (localizedPullbackFstCanonical s t h) =
+          (localizedPullbackBaseRightCanonical s t h).comp
+            (localizedPullbackSndCanonical s t h)
+      exact congrArg CommRingCat.Hom.hom hpull.w
+    have hw := congrArg (fun k : Localization.Away h →+*
+        Localization.Away (s ((RingHom.pullbackFst s t) h)) => k q) hw'
+    change (Localization.awayMap s ((RingHom.pullbackFst s t) h))
+          (localizedPullbackFstCanonical s t h q) -
+        localizedPullbackBaseRightCanonical s t h
+          (localizedPullbackSndCanonical s t h q) = 0
+    exact sub_eq_zero.mpr hw
 
 /-! ## Modules over a commutative square -/
 

@@ -228,8 +228,74 @@ universal-category assertion from the source is the equivalence statement
 below; its proof is left for the proof stage.
 -/
 
+private def standardδ (L : List ℕ) {m₁ m₂ : ℕ} (h : m₁ + L.length = m₂) :
+    SimplexCategoryGenRel.mk m₁ ⟶ SimplexCategoryGenRel.mk m₂ :=
+  match L with
+  | [] => eqToHom (by grind)
+  | a :: L =>
+    SimplexCategoryGenRel.δ (Fin.ofNat _ a) ≫ standardδ L (by grind)
+
+private lemma standardδ_simplicialInsert
+    {n : ℕ} (L : List ℕ)
+    (hL : SimplexCategoryGenRel.IsAdmissible (n + 2) L)
+    (j : ℕ) (hj : j ≤ n + 1) :
+    standardδ (SimplexCategoryGenRel.simplicialInsert j L)
+        (m₁ := n) (m₂ := n + 1 + L.length) (by
+          rw [SimplexCategoryGenRel.simplicialInsert_length]
+          omega) =
+      SimplexCategoryGenRel.δ (n := n) (Fin.ofNat (n + 2) j) ≫
+        standardδ L (m₁ := n + 1) (m₂ := n + 1 + L.length) (by omega) := by
+  induction L generalizing j n with
+  | nil => simp [SimplexCategoryGenRel.simplicialInsert, standardδ]
+  | cons a L ih =>
+    simp only [SimplexCategoryGenRel.simplicialInsert]
+    split_ifs with h
+    · simp only [standardδ]
+    · have ha : a ≤ j := by omega
+      have hL' : SimplexCategoryGenRel.IsAdmissible (n + 3) L := hL.of_cons
+      have hj' : j + 1 ≤ n + 2 := by omega
+      have hih := ih (n := n + 1) (j := j + 1) hL' hj'
+      have hδ :
+          SimplexCategoryGenRel.δ (n := n) (Fin.ofNat (n + 2) a) ≫
+              SimplexCategoryGenRel.δ (Fin.ofNat (n + 3) (j + 1)) =
+              SimplexCategoryGenRel.δ (n := n) (Fin.ofNat (n + 2) j) ≫
+              SimplexCategoryGenRel.δ (Fin.ofNat (n + 3) a) := by
+        have ha' : Fin.ofNat (n + 2) a =
+            (⟨a, show a < n + 2 by omega⟩ : Fin (n + 2)) := by
+          apply Fin.ext
+          simp [Fin.ofNat, Nat.mod_eq_of_lt (by omega)]
+        have hj' : Fin.ofNat (n + 2) j =
+            (⟨j, show j < n + 2 by omega⟩ : Fin (n + 2)) := by
+          apply Fin.ext
+          simp [Fin.ofNat, Nat.mod_eq_of_lt (by omega)]
+        have hj₁ : Fin.ofNat (n + 3) (j + 1) =
+            (⟨j + 1, show j + 1 < n + 3 by omega⟩ : Fin (n + 3)) := by
+          apply Fin.ext
+          simp [Fin.ofNat, Nat.mod_eq_of_lt (by omega)]
+        have ha₁ : Fin.ofNat (n + 3) a =
+            (⟨a, show a < n + 3 by omega⟩ : Fin (n + 3)) := by
+          apply Fin.ext
+          simp [Fin.ofNat, Nat.mod_eq_of_lt (by omega)]
+        simpa only [ha', hj', hj₁, ha₁] using
+          (SimplexCategoryGenRel.δ_comp_δ_nat (n := n) a j (by omega)
+            (by omega) (by omega))
+      simp only [standardδ]
+      rw [hih, hδ]
+      simp only [Category.assoc]
+
 theorem toSimplexCategory_is_equivalence :
     Functor.IsEquivalence SimplexCategoryGenRel.toSimplexCategory := by
-  sorry
+  refine { faithful := ?_, full := { map_surjective := ?_ },
+    essSurj := { mem_essImage := ?_ } }
+  · exact { map_injective := by
+      intro X Y f g h
+      sorry }
+  · rintro ⟨n⟩ ⟨m⟩ f
+    change (SimplexCategory.mk n ⟶ SimplexCategory.mk m) at f
+    obtain ⟨g, hg, _⟩ := every_simplex_morphism_is_generated f
+    exact ⟨g, hg⟩
+  · intro Y
+    refine ⟨SimplexCategoryGenRel.mk Y.len, ?_⟩
+    exact ⟨eqToIso (by simp)⟩
 
 end Formalization.Books.Simplicial.Unit02

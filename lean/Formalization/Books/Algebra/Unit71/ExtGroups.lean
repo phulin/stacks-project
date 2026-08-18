@@ -5,6 +5,7 @@ import Mathlib.Algebra.Homology.DerivedCategory.Ext.ExactSequences
 import Mathlib.Algebra.Homology.Homotopy
 import Mathlib.Algebra.Homology.ShortComplex.HomologicalComplex
 import Mathlib.CategoryTheory.Abelian.Projective.Resolution
+import Mathlib.Algebra.Category.ModuleCat.LeftResolution
 import Mathlib.RingTheory.Noetherian.Basic
 
 /-!
@@ -101,16 +102,239 @@ theorem resolution_exact_succ {R : Type u} [Ring R] {M : ModuleCat.{u} R}
       (F.complex.d (n + 1) n) (F.complex.d_comp_d (n + 2) (n + 1) n)).Exact :=
   F.exact_succ n
 
+set_option backward.isDefEq.respectTransparency.types false in
+set_option backward.isDefEq.respectTransparency false in
 /-- Every module admits a free resolution. -/
 theorem exists_free_resolution {R : Type u} [Ring R] (M : ModuleCat.{u} R) :
     Nonempty (FreeResolution R M) := by
-  sorry
+  let ι := ObjectProperty.ι (isProjective (ModuleCat.{u} R))
+  let Λ := ModuleCat.projectiveResolution R
+  let C := Λ.chainComplexFunctor.obj M
+  let K := (ι.mapHomologicalComplex (ComplexShape.down ℕ)).obj C
+  let e0 : C.X 0 ≅ Λ.F.obj M := by
+    simpa [C, CategoryTheory.Abelian.LeftResolution.chainComplexFunctor] using
+      Λ.chainComplexXZeroIso M
+  let e1 : C.X 1 ≅ Λ.F.obj (kernel (Λ.π.app M)) := by
+    simpa [C, CategoryTheory.Abelian.LeftResolution.chainComplexFunctor] using
+      Λ.chainComplexXOneIso M
+  let e1' : K.X 1 ≅ (Λ.F ⋙ ι).obj (kernel (Λ.π.app M)) := by
+    simpa only [K, Functor.mapHomologicalComplex_obj_X, Functor.comp_obj] using ι.mapIso e1
+  let e0' : K.X 0 ≅ (Λ.F ⋙ ι).obj M := by
+    simpa only [K, Functor.mapHomologicalComplex_obj_X, Functor.comp_obj] using ι.mapIso e0
+  let aug := e0'.hom ≫ Λ.π.app M
+  have exact_of_epi_kernel {X Y P : ModuleCat.{u} R} (f : X ⟶ Y)
+      (p : P ⟶ kernel f) [Epi p] :
+      (ShortComplex.mk (p ≫ kernel.ι f) f (by simp)).Exact := by
+    let α : ShortComplex.mk (p ≫ kernel.ι f) f (by simp) ⟶
+        ShortComplex.mk (kernel.ι f) f (by simp) :=
+      { τ₁ := p, τ₂ := 𝟙 _, τ₃ := 𝟙 _ }
+    rw [ShortComplex.exact_iff_of_epi_of_isIso_of_mono α]
+    apply ShortComplex.exact_of_f_is_kernel
+    apply kernelIsKernel
+  have hdK : K.d 1 0 =
+      e1'.hom ≫ Λ.π.app (kernel (Λ.π.app M)) ≫ kernel.ι (Λ.π.app M) ≫ e0'.inv := by
+    change ι.map (C.d 1 0) =
+      ι.map e1.hom ≫ Λ.π.app (kernel (Λ.π.app M)) ≫ kernel.ι (Λ.π.app M) ≫ ι.map e0.inv
+    change ι.map ((Λ.chainComplex M).d 1 0) =
+      ι.map (Λ.chainComplexXOneIso M).hom ≫
+        Λ.π.app (kernel (Λ.π.app M)) ≫ kernel.ι (Λ.π.app M) ≫
+          ι.map (Λ.chainComplexXZeroIso M).inv
+    exact Λ.map_chainComplex_d_1_0 M
+  have hzero : K.d 1 0 ≫ aug = 0 := by
+    rw [hdK]
+    simp [aug, Category.assoc]
+  refine ⟨⟨⟨K, aug, ?_, ?_, ?_⟩, ?_⟩⟩
+  · change K.d 1 0 ≫ aug = 0
+    exact hzero
+  · let f := Λ.π.app M
+    let p := Λ.π.app (kernel f)
+    have hS₂ :
+        (ShortComplex.mk (p ≫ kernel.ι f) f (by simp)).Exact :=
+      exact_of_epi_kernel f p
+    let S₁ := ShortComplex.mk (K.d 1 0) aug hzero
+    let S₂ := ShortComplex.mk (p ≫ kernel.ι f) f (by simp)
+    let i : S₁ ≅ S₂ := ShortComplex.isoMk e1' e0' (Iso.refl _)
+      (by
+        have hh := congrArg (fun q : K.X 1 ⟶ K.X 0 => q ≫ e0'.hom) hdK.symm
+        simpa [S₁, S₂, aug, f, p, Category.assoc] using hh)
+      (by simp [S₁, S₂, aug, f])
+    exact (ShortComplex.exact_iff_of_iso i).2 hS₂
+  · intro n
+    apply (HomologicalComplex.exactAt_iff' (K := K) (j := n + 1)
+      (i := n + 2) (k := n) (by simp) (by simp)).mp
+    simpa [K, C, CategoryTheory.Abelian.LeftResolution.chainComplexFunctor] using
+      Λ.exactAt_map_chainComplex_succ M n
+  · intro n
+    have free_F : ∀ X : ModuleCat.{u} R,
+        Module.Free R (ι.obj (Λ.F.obj X)) := by
+      intro X
+      dsimp [Λ, ModuleCat.projectiveResolution]
+      change Module.Free R ((X : Type u) →₀ R)
+      infer_instance
+    obtain _ | _ | n := n
+    · exact Module.Free.of_equiv' (free_F M)
+        ((ι.mapIso (Λ.chainComplexXZeroIso M)).symm.toLinearEquiv)
+    · exact Module.Free.of_equiv' (free_F _)
+        ((ι.mapIso (Λ.chainComplexXOneIso M)).symm.toLinearEquiv)
+    · exact Module.Free.of_equiv' (free_F _)
+        ((ι.mapIso (Λ.chainComplexXIso M n)).symm.toLinearEquiv)
 
+set_option backward.isDefEq.respectTransparency.types false in
+set_option backward.isDefEq.respectTransparency false in
+set_option backward.defeqAttrib.useBackward true in
 /-- Noetherian finite modules admit finite-free resolutions. -/
 theorem exists_finite_free_resolution {R : Type u} [Ring R]
     [IsNoetherianRing R] (M : ModuleCat.{u} R) [Module.Finite R M] :
     Nonempty (FiniteFreeResolution R M) := by
-  sorry
+  classical
+  let globalEnough : EnoughProjectives (ModuleCat.{u} R) := inferInstance
+  let finitePresentation : ∀ (X : ModuleCat.{u} R), Module.Finite R X →
+      ProjectivePresentation X := fun X hX => by
+    letI := hX
+    let h := Module.Finite.exists_fin' R X
+    let n := h.choose
+    let f := h.choose_spec.choose
+    have hf : Function.Surjective f := h.choose_spec.choose_spec
+    let P := ModuleCat.of R (Fin n → R)
+    let p : P ⟶ X := ModuleCat.ofHom f
+    letI : Projective P := ModuleCat.projective_of_free (Module.Free.chooseBasis R _)
+    letI : Epi p := (ModuleCat.epi_iff_surjective p).mpr hf
+    exact ⟨P, p⟩
+  let presentation : ∀ X : ModuleCat.{u} R, ProjectivePresentation X := fun X =>
+    if hX : Module.Finite R X then finitePresentation X hX else
+      (globalEnough.presentation X).some
+  let over : ModuleCat.{u} R → ModuleCat.{u} R := fun X => (presentation X).p
+  let pi : ∀ X : ModuleCat.{u} R, over X ⟶ X :=
+    fun X => (presentation X).f
+  have finite_over : ∀ X : ModuleCat.{u} R, Module.Finite R X →
+      Module.Finite R ↑(over X) := by
+    intro X hX
+    have heq : over X = (finitePresentation X hX).p := by
+      dsimp [over, presentation]
+      rw [dif_pos hX]
+    let e : over X ≅ (finitePresentation X hX).p := eqToIso heq
+    letI : IsNoetherian R ((finitePresentation X hX).p : Type u) :=
+      isNoetherian_of_isNoetherianRing_of_finite R _
+    apply Module.Finite.of_injective (R := R) (S := R)
+      (M := (over X : Type u)) (N := ((finitePresentation X hX).p : Type u))
+      e.toLinearEquiv.toLinearMap
+    exact e.toLinearEquiv.injective
+  have free_over : ∀ X : ModuleCat.{u} R, Module.Finite R X →
+      Module.Free R ↑(over X) := by
+    intro X hX
+    have heq : over X = (finitePresentation X hX).p := by
+      dsimp [over, presentation]
+      rw [dif_pos hX]
+    let e : over X ≅ (finitePresentation X hX).p := eqToIso heq
+    have hfree : Module.Free R ((finitePresentation X hX).p : Type u) := by
+      dsimp [finitePresentation]
+      infer_instance
+    exact Module.Free.of_equiv' hfree e.symm.toLinearEquiv
+  have epi_pi (X : ModuleCat.{u} R) : Epi (pi X) :=
+    (presentation X).epi
+  have kernel_finite {X Y : ModuleCat.{u} R} (f : X ⟶ Y)
+      [Module.Finite R X] : Module.Finite R ↑(kernel f) := by
+    letI : IsNoetherian R (X : Type u) :=
+      isNoetherian_of_isNoetherianRing_of_finite R (X : Type u)
+    apply Module.Finite.of_injective (R := R) (S := R)
+      (M := ((kernel f : ModuleCat.{u} R) : Type u)) (N := (X : Type u))
+      (kernel.ι f).hom
+    exact (ModuleCat.mono_iff_injective _).mp inferInstance
+  have exact_d_f' {X Y : ModuleCat.{u} R} (f : X ⟶ Y) :
+      (ShortComplex.mk (pi (kernel f) ≫ kernel.ι f) f (by simp)).Exact := by
+    letI : Epi (pi (kernel f)) := epi_pi (kernel f)
+    let α : ShortComplex.mk (pi (kernel f) ≫ kernel.ι f) f (by simp) ⟶
+        ShortComplex.mk (kernel.ι f) f (by simp) :=
+      { τ₁ := pi (kernel f), τ₂ := 𝟙 _, τ₃ := 𝟙 _ }
+    rw [ShortComplex.exact_iff_of_epi_of_isIso_of_mono α]
+    apply ShortComplex.exact_of_f_is_kernel
+    apply kernelIsKernel
+  let C : ModuleChainComplex R :=
+    ChainComplex.mk' (over M) (over (kernel (pi M)))
+      (pi (kernel (pi M)) ≫ kernel.ι (pi M))
+      (fun {X₀ X₁} f => ⟨over (kernel f), pi (kernel f) ≫ kernel.ι f, by simp⟩)
+  have finite_C : ∀ n : ℕ, Module.Finite R (C.X n) := by
+    intro n
+    induction n using Nat.strong_induction_on with
+    | h n ih =>
+      obtain _ | _ | n := n
+      · change Module.Finite R ↑(over M)
+        exact finite_over M inferInstance
+      · change Module.Finite R ↑(over (kernel (pi M)))
+        apply finite_over
+        letI : Module.Finite R ↑(over M) := finite_over M inferInstance
+        exact kernel_finite (pi M)
+      · let f := C.d (n + 1) n
+        letI : Module.Finite R (C.X (n + 1)) :=
+          ih (n + 1) (Nat.lt_succ_self (n + 1))
+        letI : Module.Finite R ↑(over (kernel f)) :=
+          finite_over _ (kernel_finite f)
+        let e : C.X (n + 2) ≅ over (kernel f) := by
+          simpa [C, f] using
+            (ChainComplex.mk'XIso (over M) (over (kernel (pi M)))
+              (pi (kernel (pi M)) ≫ kernel.ι (pi M))
+              (fun {X₀ X₁} g =>
+                ⟨over (kernel g), pi (kernel g) ≫ kernel.ι g, by simp⟩) n)
+        letI : IsNoetherian R (over (kernel f) : Type u) :=
+          isNoetherian_of_isNoetherianRing_of_finite R _
+        apply Module.Finite.of_injective (R := R) (S := R)
+          (M := (C.X (n + 2) : Type u)) (N := (over (kernel f) : Type u))
+          e.toLinearEquiv.toLinearMap
+        exact e.toLinearEquiv.injective
+  have free_C : ∀ n : ℕ, Module.Free R (C.X n) := by
+    intro n
+    obtain _ | _ | n := n
+    · change Module.Free R ↑(over M)
+      exact free_over M inferInstance
+    · change Module.Free R ↑(over (kernel (pi M)))
+      apply free_over
+      letI : Module.Finite R ↑(over M) := finite_over M inferInstance
+      exact kernel_finite (pi M)
+    · let f := C.d (n + 1) n
+      letI : Module.Finite R (C.X (n + 1)) := finite_C (n + 1)
+      have hfree : Module.Free R ↑(over (kernel f)) :=
+        free_over _ (kernel_finite f)
+      let e : C.X (n + 2) ≅ over (kernel f) := by
+        simpa [C, f] using
+          (ChainComplex.mk'XIso (over M) (over (kernel (pi M)))
+            (pi (kernel (pi M)) ≫ kernel.ι (pi M))
+            (fun {X₀ X₁} g =>
+              ⟨over (kernel g), pi (kernel g) ≫ kernel.ι g, by simp⟩) n)
+      exact Module.Free.of_equiv' hfree e.symm.toLinearEquiv
+  have hzero : C.d 1 0 ≫ pi M = 0 := by
+    change (pi (kernel (pi M)) ≫ kernel.ι (pi M)) ≫ pi M = 0
+    simp
+  have hexact_zero :
+      (ShortComplex.mk (C.d 1 0) (pi M) hzero).Exact := by
+    simpa [C] using exact_d_f' (pi M)
+  have hexact_succ : ∀ n : ℕ,
+      (ShortComplex.mk (C.d (n + 2) (n + 1)) (C.d (n + 1) n)
+        (C.d_comp_d (n + 2) (n + 1) n)).Exact := by
+    intro n
+    let f := C.d (n + 1) n
+    let e : C.X (n + 2) ≅ over (kernel f) := by
+      simpa [C, f] using
+        (ChainComplex.mk'XIso (over M) (over (kernel (pi M)))
+          (pi (kernel (pi M)) ≫ kernel.ι (pi M))
+          (fun {X₀ X₁} g =>
+            ⟨over (kernel g), pi (kernel g) ≫ kernel.ι g, by simp⟩) n)
+    let S₁ := ShortComplex.mk (C.d (n + 2) (n + 1)) f
+      (C.d_comp_d (n + 2) (n + 1) n)
+    let S₂ := ShortComplex.mk (pi (kernel f) ≫ kernel.ι f) f (by simp)
+    have hS₂ : S₂.Exact := exact_d_f' f
+    let i : S₁ ≅ S₂ := ShortComplex.isoMk e (Iso.refl _) (Iso.refl _)
+      (by simpa [S₁, S₂, e, C, f] using
+        (ChainComplex.mk'_d (over M) (over (kernel (pi M)))
+          (pi (kernel (pi M)) ≫ kernel.ι (pi M))
+          (fun {X₀ X₁} g =>
+            ⟨over (kernel g), pi (kernel g) ≫ kernel.ι g, by simp⟩) n).symm)
+      (by simp [S₁, S₂, f])
+    exact (ShortComplex.exact_iff_of_iso i).2 hS₂
+  let H : Resolution R M :=
+    { complex := C, augmentation := pi M, augmentation_condition := hzero,
+      exact_zero := hexact_zero, exact_succ := hexact_succ }
+  let FF : FreeResolution R M := { resolution := H, free := free_C }
+  exact ⟨{ resolution := FF, finite := finite_C }⟩
 
 /-- A comparison map from a free augmented complex to a resolution. -/
 structure FreeAugmentedComplexMap {R : Type u} [Ring R]
@@ -222,7 +446,71 @@ theorem free_augmented_complex_maps_homotopic {R : Type u} [Ring R]
     {M N : ModuleCat.{u} R} (F : FreeAugmentedComplex R M) (G : Resolution R N)
     (φ : M ⟶ N) (α β : FreeAugmentedComplexMap F G φ) :
     ChainHomotopic α.hom β.hom := by
-  sorry
+  have lift_of_exact {A B C X : ModuleCat.{u} R} (f : A ⟶ B) (g : B ⟶ C)
+      (hfg : f ≫ g = 0)
+      (hex : (ShortComplex.mk f g hfg).Exact) (u : X ⟶ B) (hu : u ≫ g = 0)
+      (hfree : Module.Free R X) : ∃ v : X ⟶ A, v ≫ f = u := by
+    letI : Projective X :=
+      ModuleCat.projective_of_free (Module.Free.chooseBasis R (X : Type u))
+    letI : Epi (kernel.lift g f hfg) :=
+      (ShortComplex.exact_iff_epi_kernel_lift (ShortComplex.mk f g hfg)).mp hex
+    let v := Projective.factorThru (kernel.lift g u hu) (kernel.lift g f hfg)
+    refine ⟨v, ?_⟩
+    calc
+      v ≫ f = (v ≫ kernel.lift g f hfg) ≫ kernel.ι g := by
+        simp [Category.assoc]
+      _ = kernel.lift g u hu ≫ kernel.ι g := by
+        rw [Projective.factorThru_comp]
+      _ = u := by simp
+  classical
+  let e : F.complex ⟶ G.complex := α.hom - β.hom
+  have he0 : e.f 0 ≫ G.augmentation = 0 := by
+    dsimp [e]
+    rw [Preadditive.sub_comp, α.hom_f_zero_comp_augmentation,
+      β.hom_f_zero_comp_augmentation, sub_self]
+  have h0_exists := lift_of_exact (G.complex.d 1 0) G.augmentation
+    G.augmentation_condition G.exact_zero (e.f 0) he0 (F.free 0)
+  let h0 := Classical.choose h0_exists
+  have h0_spec := Classical.choose_spec h0_exists
+  have h1_zero :
+      (e.f 1 - F.complex.d 1 0 ≫ h0) ≫ G.complex.d 1 0 = 0 := by
+    rw [Preadditive.sub_comp, e.comm' 1 0 (by simp), Category.assoc, h0_spec]
+    simp
+  have h1_exists := lift_of_exact (G.complex.d 2 1) (G.complex.d 1 0)
+    (G.complex.d_comp_d 2 1 0) (G.exact_succ 0)
+    (e.f 1 - F.complex.d 1 0 ≫ h0) h1_zero (F.free 1)
+  let h1 := Classical.choose h1_exists
+  have h1_spec := Classical.choose_spec h1_exists
+  have h1_comm :
+      e.f 1 = F.complex.d 1 0 ≫ h0 + h1 ≫ G.complex.d 2 1 := by
+    rw [h1_spec]
+    abel
+  have hs : ∀ (n : ℕ)
+      (p : Σ' (f : F.complex.X n ⟶ G.complex.X (n + 1))
+        (f' : F.complex.X (n + 1) ⟶ G.complex.X (n + 2)),
+        e.f (n + 1) = F.complex.d (n + 1) n ≫ f + f' ≫ G.complex.d (n + 2) (n + 1)),
+      Σ' f'' : F.complex.X (n + 2) ⟶ G.complex.X (n + 3),
+        e.f (n + 2) = F.complex.d (n + 2) (n + 1) ≫ p.2.1 +
+          f'' ≫ G.complex.d (n + 3) (n + 2) := by
+    intro n p
+    rcases p with ⟨p0, p1, hp⟩
+    have hu :
+        (e.f (n + 2) - F.complex.d (n + 2) (n + 1) ≫ p1) ≫
+            G.complex.d (n + 2) (n + 1) = 0 := by
+      rw [Preadditive.sub_comp, e.comm' (n + 2) (n + 1) (by simp), Category.assoc,
+        hp]
+      simp [Category.assoc]
+    have h_exists := lift_of_exact (G.complex.d (n + 3) (n + 2))
+      (G.complex.d (n + 2) (n + 1))
+      (G.complex.d_comp_d (n + 3) (n + 2) (n + 1)) (G.exact_succ (n + 1))
+      (e.f (n + 2) - F.complex.d (n + 2) (n + 1) ≫ p1) hu (F.free (n + 2))
+    let h := Classical.choose h_exists
+    have h_spec := Classical.choose_spec h_exists
+    refine ⟨h, ?_⟩
+    rw [h_spec]
+    abel
+  have h := Homotopy.mkInductive e h0 h0_spec.symm h1 h1_comm hs
+  exact ⟨(Homotopy.equivSubZero (f := α.hom) (g := β.hom)).symm h⟩
 
 theorem chain_homotopic_maps_equal_on_homology {R : Type u} [Ring R]
     {F G : ModuleChainComplex R} {α β : F ⟶ G} (h : ChainHomotopic α β) (i : ℕ) :

@@ -325,6 +325,6 @@ theorem localization_closed_image_product
   refine ⟨R', inferInstance, ?_⟩
   let E := AlgEquiv.prodQuotientOfIsIdempotentElem R hyidem hxidem
     (by simpa [add_comm] using hxy1) (by simpa [mul_comm] using hxy)
-  exact ⟨by sorry⟩
+  exact ⟨E.toRingEquiv.trans (RingEquiv.prodCongr hquot (RingEquiv.refl _))⟩
 
 end Formalization.Books.Algebra.Unit33

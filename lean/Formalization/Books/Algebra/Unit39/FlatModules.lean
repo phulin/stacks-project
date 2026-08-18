@@ -1026,7 +1026,53 @@ theorem directLimit_faithfullyFlat
     [DirectedSystem S (f · · ·)]
     (hff : ∀ i, Module.FaithfullyFlat R (S i)) :
     Module.FaithfullyFlat R (DirectLimit S f) := by
-  sorry
+  classical
+  let _ : DirectedSystem S (fun i j h => (f i j h).toLinearMap) :=
+    { map_self := by
+        intro i x
+        change f i i le_rfl x = x
+        exact DirectedSystem.map_self (f := fun i j h => f i j h) x
+      map_map := by
+        intro k j i hij hjk x
+        change f j k hjk (f i j hij x) = f i k (hij.trans hjk) x
+        exact DirectedSystem.map_map (f := fun i j h => f i j h) hij hjk x }
+  let e : Module.DirectLimit S (fun i j h => (f i j h).toLinearMap) ≃ₗ[R]
+      DirectLimit S f := Module.DirectLimit.linearEquiv S
+        (fun i j h => (f i j h).toLinearMap)
+  have hflat : Module.Flat R (DirectLimit S f) := by
+    change Module.Flat R
+      (DirectLimit S (fun i j h => (f i j h).toLinearMap))
+    exact directLimit_flat (fun i j h => (f i j h).toLinearMap)
+      (fun i => (hff i).toFlat)
+  let _ : Module.Flat R (DirectLimit S f) := hflat
+  have hflat' : Module.Flat R
+      (Module.DirectLimit S (fun i j h => (f i j h).toLinearMap)) :=
+    Module.Flat.of_linearEquiv e
+  have hff' : Module.FaithfullyFlat R
+      (Module.DirectLimit S (fun i j h => (f i j h).toLinearMap)) := by
+    apply (Module.FaithfullyFlat.iff_flat_and_lTensor_faithful R _).2
+    refine ⟨hflat', ?_⟩
+    intro N _ _ hN
+    let _ : Nontrivial N := hN
+    apply (nontrivial_iff_exists_ne
+      (0 : Module.DirectLimit S (fun i j h => (f i j h).toLinearMap) ⊗[R] N)).2
+    obtain ⟨n, hn⟩ := nontrivial_iff_exists_ne (0 : N) |>.1 inferInstance
+    let i : ι := Classical.arbitrary ι
+    refine ⟨(Module.DirectLimit.of R ι S
+      (fun i j h => (f i j h).toLinearMap) i 1) ⊗ₜ[R] n, ?_⟩
+    intro hzero
+    have hzero' := congrArg (TensorProduct.directLimitLeft
+      (fun i j h => (f i j h).toLinearMap) N) hzero
+    rw [TensorProduct.directLimitLeft_tmul_of] at hzero'
+    obtain ⟨j, hij, htrans⟩ := Module.DirectLimit.of.zero_exact hzero'
+    let _ : Module.FaithfullyFlat R (S j) := hff j
+    have htrans' : (1 : S j) ⊗ₜ[R] n = 0 := by
+      simpa using htrans
+    exact hn ((Module.FaithfullyFlat.one_tmul_eq_zero_iff R N n).1 htrans')
+  let _ : Module.FaithfullyFlat R
+      (Module.DirectLimit S (fun i j h => (f i j h).toLinearMap)) := hff'
+  exact Module.FaithfullyFlat.of_linearEquiv R
+    (Module.DirectLimit S (fun i j h => (f i j h).toLinearMap)) e.symm
 
 end FaithfullyFlatColimits
 

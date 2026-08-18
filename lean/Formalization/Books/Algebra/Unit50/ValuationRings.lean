@@ -73,7 +73,7 @@ theorem exists_valuationSubring_dominating {K : Type u} [Field K]
 theorem valuationRing_isNormalDomain
     {A : Type u} [CommRing A] [IsDomain A] [ValuationRing A] :
     Formalization.Books.Algebra.Unit37.IsNormalDomain A := by
-  sorry
+  exact ⟨inferInstance, inferInstance⟩
 
 /-- The `x` or `x⁻¹` property for a valuation subring of a field. -/
 theorem valuationSubring_mem_or_inv_mem {K : Type u} [Field K]
@@ -112,7 +112,43 @@ theorem directLimit_isDomain
     (f : ∀ i j, i ≤ j → A i →+* A j)
     [DirectedSystem A (f · · ·)] :
     IsDomain (DirectLimit A f) := by
-  sorry
+  refine { mul_left_cancel_of_ne_zero := ?_, mul_right_cancel_of_ne_zero := ?_ }
+  · intro a ha b c h
+    obtain ⟨i, x, y, z, rfl, rfl, rfl⟩ := DirectLimit.exists_eq_mk₃ f a b c
+    change (⟦⟨i, x⟩⟧ : DirectLimit A f) * ⟦⟨i, y⟩⟧ =
+      ⟦⟨i, x⟩⟧ * ⟦⟨i, z⟩⟧ at h
+    rw [DirectLimit.mul_def, DirectLimit.mul_def] at h
+    obtain ⟨j, hij, hij', hEq⟩ := Quotient.eq.mp h
+    have hxj : f i j hij x ≠ 0 := by
+      intro hxj
+      apply ha
+      calc
+        (⟦⟨i, x⟩⟧ : DirectLimit A f) =
+            ⟦⟨j, f i j hij x⟩⟧ := DirectLimit.eq_of_le (f := f) ⟨i, x⟩ j hij
+        _ = 0 := by rw [hxj, ← DirectLimit.zero_def j]
+    have hEq' : f i j hij x * f i j hij y = f i j hij x * f i j hij z := by
+      simpa only [map_mul] using hEq
+    have hyz : f i j hij y = f i j hij z := mul_left_cancel₀ hxj hEq'
+    apply Quotient.sound
+    exact ⟨j, hij, hij', by simpa using hyz⟩
+  · intro a ha b c h
+    obtain ⟨i, x, y, z, rfl, rfl, rfl⟩ := DirectLimit.exists_eq_mk₃ f a b c
+    change (⟦⟨i, y⟩⟧ : DirectLimit A f) * ⟦⟨i, x⟩⟧ =
+      ⟦⟨i, z⟩⟧ * ⟦⟨i, x⟩⟧ at h
+    rw [DirectLimit.mul_def, DirectLimit.mul_def] at h
+    obtain ⟨j, hij, hij', hEq⟩ := Quotient.eq.mp h
+    have hxj : f i j hij x ≠ 0 := by
+      intro hxj
+      apply ha
+      calc
+        (⟦⟨i, x⟩⟧ : DirectLimit A f) =
+            ⟦⟨j, f i j hij x⟩⟧ := DirectLimit.eq_of_le (f := f) ⟨i, x⟩ j hij
+        _ = 0 := by rw [hxj, ← DirectLimit.zero_def j]
+    have hEq' : f i j hij y * f i j hij x = f i j hij z * f i j hij x := by
+      simpa only [map_mul] using hEq
+    have hyz : f i j hij y = f i j hij z := mul_right_cancel₀ hxj hEq'
+    apply Quotient.sound
+    exact ⟨j, hij, hij', by simpa using hyz⟩
 
 /-- A directed colimit of valuation rings has the divisibility condition of a
 valuation ring. -/
@@ -122,7 +158,12 @@ theorem directLimit_isPreValuationRing
     (f : ∀ i j, i ≤ j → A i →+* A j)
     [DirectedSystem A (f · · ·)] [∀ i, ValuationRing (A i)] :
     PreValuationRing (DirectLimit A f) := by
-  sorry
+  refine ⟨?_⟩
+  intro a b
+  obtain ⟨i, x, y, rfl, rfl⟩ := DirectLimit.exists_eq_mk₂ f a b
+  obtain ⟨c, hc | hc⟩ := ValuationRing.cond x y
+  · exact ⟨⟦⟨i, c⟩⟧, Or.inl (by rw [DirectLimit.mul_def, hc])⟩
+  · exact ⟨⟦⟨i, c⟩⟧, Or.inr (by rw [DirectLimit.mul_def, hc])⟩
 
 /-- A directed colimit of valuation rings is a valuation ring. -/
 theorem directLimit_isValuationRing
@@ -132,7 +173,8 @@ theorem directLimit_isValuationRing
     [DirectedSystem A (f · · ·)] [∀ i, ValuationRing (A i)] :
     letI : IsDomain (DirectLimit A f) := directLimit_isDomain f
     ValuationRing (DirectLimit A f) := by
-  sorry
+  letI : IsDomain (DirectLimit A f) := directLimit_isDomain f
+  exact { toPreValuationRing := directLimit_isPreValuationRing f }
 
 /-- The intersection of a valuation subring with a subfield is a valuation
 subring of that subfield. -/

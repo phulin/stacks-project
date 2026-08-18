@@ -155,8 +155,7 @@ theorem basisSheafExtension_unique {X : TopCat.{v}} {ι : Type v}
     ∃! e : F ≅ G,
       (basisRestrictionFunctor B hB).mapIso e ≪≫ eG = eF := by
   let R := basisRestrictionFunctor B hB
-  let hR : R.FullyFaithful := by
-    exact (basisSheafEquivalence B hB).fullyFaithfulFunctor
+  let hR : R.FullyFaithful := (basisSheafEquivalence B hB).fullyFaithfulFunctor
   let q : R.obj F ≅ R.obj G := eF ≪≫ eG.symm
   let e : F ≅ G := hR.preimageIso q
   have he : R.mapIso e ≪≫ eG = eF := by

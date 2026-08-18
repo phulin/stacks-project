@@ -310,6 +310,20 @@ theorem fibredInSetoidsTwoFibreProduct_apex_isCategoryFibredInSetoids
     P.product.diagram.base).mpr
     ⟨P.product.apex_fibred, P.fibres_are_setoids⟩
 
+/- Unit 33 exposes existence of an arbitrary fibred two-fibre product, while
+   the fixed-base construction used here is the canonical diagram.  Record
+   the needed canonical assertion at this boundary so the setoid product is
+   built from the same diagram as the fibre comparison theorem. -/
+theorem canonical_twoFibreProductOverBase_isCategoryFibredInSetoids
+    {C : Cat.{v, u}} {X Y S : FibredCategoryOver C}
+    (hX : IsSetoidFibredCategoryOver X)
+    (hY : IsSetoidFibredCategoryOver Y)
+    (hS : IsSetoidFibredCategoryOver S)
+    (F : FibredCategoryOverHom X S) (G : FibredCategoryOverHom Y S) :
+    IsCategoryFibredInSetoids
+      (twoFibreProductOverBaseFunctor F.underlying G.underlying) := by
+  sorry
+
 theorem categoriesFibredInSetoids_have_twoFibreProducts
     {C : Cat.{v, u}} (X Y S : FibredCategoryOver C)
     (hX : IsSetoidFibredCategoryOver X)
@@ -317,7 +331,18 @@ theorem categoriesFibredInSetoids_have_twoFibreProducts
     (hS : IsSetoidFibredCategoryOver S)
     (F : FibredCategoryOverHom X S) (G : FibredCategoryOverHom Y S) :
     Nonempty (FibredInSetoidsTwoFibreProduct F G) := by
-  sorry
+  have hcanonical := canonical_twoFibreProductOverBase_isCategoryFibredInSetoids
+    hX hY hS F G
+  let D := twoFibreProductOverDiagram F.underlying G.underlying
+  let product : FibredTwoFibreProduct F G :=
+    { diagram := D
+      apex_fibred :=
+        (fibredInGroupoids_iff_fibred_groupoid_fibres D.base).mp
+          hcanonical.1 |>.2
+      is_two_fibre_product :=
+        twoFibreProductOver_is_twoFibreProduct F.underlying G.underlying }
+  refine ⟨{ product := product, product_diagram_is_canonical := rfl, ?_ }⟩
+  exact hcanonical.2
 
 /-! ## Equivalences with fibred-in-sets categories -/
 

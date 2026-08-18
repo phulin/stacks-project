@@ -71,7 +71,7 @@ finite-étale conditions on its stages and the residue-field identification.
 The maximal-ideal equality records that the colimit has the local structure
 constructed in the source lemma. -/
 structure FiniteEtaleLocalAlgebraColimit
-    {R A K : Type u}
+    {R A : Type u} {K : Type v}
     [CommRing R] [IsLocalRing R] [CommRing A] [Field K]
     (f : R →+* A)
     [Algebra (IsLocalRing.ResidueField R) K] where
@@ -112,7 +112,7 @@ structure FiniteEtaleLocalAlgebraColimit
 field of a directed colimit of finite étale local extensions. -/
 theorem exists_finiteEtale_local_colimit_residueField
     (R : Type u) [CommRing R] [IsLocalRing R]
-    (K : Type u) [Field K]
+    (K : Type v) [Field K]
     [Algebra (IsLocalRing.ResidueField R) K]
     [Algebra.IsAlgebraic (IsLocalRing.ResidueField R) K]
     [Algebra.IsSeparable (IsLocalRing.ResidueField R) K] :

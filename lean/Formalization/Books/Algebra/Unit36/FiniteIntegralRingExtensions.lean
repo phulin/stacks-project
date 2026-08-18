@@ -881,7 +881,7 @@ theorem primeSpectrum_comap_surjective_of_integral
     {R S : Type*} [CommRing R] [CommRing S]
     (f : R →+* S) (hf : f.IsIntegral) (hinj : Function.Injective f) :
     Function.Surjective (PrimeSpectrum.comap f) := by
-  letI := f.toAlgebra
+  let := f.toAlgebra
   let _ : Algebra.IsIntegral R S := ⟨hf⟩
   intro p
   have hker : RingHom.ker (algebraMap R S) ≤ p.asIdeal := by

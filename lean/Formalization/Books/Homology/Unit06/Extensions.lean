@@ -507,17 +507,428 @@ noncomputable def extensionClassMap
     Ext B A → Ext B' A' :=
   fun x => pullbackClass p (pushoutClass a x)
 
+private theorem pullback_extension_comp_iso
+    {C : Type u} [Category.{v} C] [Abelian C]
+    {A B B' B'' : C} (E : Extension C A B) (p : B' ⟶ B) (q : B'' ⟶ B') :
+    Nonempty
+      (pullbackExtension (pullbackExtension E p) q ≅
+        pullbackExtension E (q ≫ p)) := by
+  let iP : A ⟶ pullback E.projection p :=
+    pullback.lift E.inclusion 0 (by simp [E.zero])
+  let iL : A ⟶ pullback (pullback.snd E.projection p) q :=
+    pullback.lift iP 0 (by
+      dsimp [iP]
+      rw [pullback.lift_snd]
+      simp)
+  let iR : A ⟶ pullback E.projection (q ≫ p) :=
+    pullback.lift E.inclusion 0 (by simp [E.zero])
+  let rP : pullback E.projection p ⟶ E.middle :=
+    pullback.fst E.projection p
+  let fP : pullback E.projection p ⟶ B' :=
+    pullback.snd E.projection p
+  let rL : pullback (pullback.snd E.projection p) q ⟶
+      pullback E.projection p :=
+    pullback.fst (pullback.snd E.projection p) q
+  let fL : pullback (pullback.snd E.projection p) q ⟶ B'' :=
+    pullback.snd (pullback.snd E.projection p) q
+  let rR : pullback E.projection (q ≫ p) ⟶ E.middle :=
+    pullback.fst E.projection (q ≫ p)
+  let fR : pullback E.projection (q ≫ p) ⟶ B'' :=
+    pullback.snd E.projection (q ≫ p)
+  let mMiddle : pullback (pullback.snd E.projection p) q ⟶
+      pullback E.projection (q ≫ p) :=
+    pullback.lift (rL ≫ rP) fL (by
+      dsimp [rL, rP, fL, fP]
+      calc
+        (pullback.fst (pullback.snd E.projection p) q ≫
+            pullback.fst E.projection p) ≫ E.projection =
+            pullback.fst (pullback.snd E.projection p) q ≫
+              (pullback.fst E.projection p ≫ E.projection) := by simp [Category.assoc]
+        _ = pullback.fst (pullback.snd E.projection p) q ≫
+              (pullback.snd E.projection p ≫ p) := by rw [pullback.condition]
+        _ = (pullback.fst (pullback.snd E.projection p) q ≫
+            pullback.snd E.projection p) ≫ p := by simp [Category.assoc]
+        _ = (pullback.snd (pullback.snd E.projection p) q ≫ q) ≫ p := by
+          rw [pullback.condition]
+        _ = pullback.snd (pullback.snd E.projection p) q ≫ (q ≫ p) := by
+          simp [Category.assoc])
+  let nInner : pullback E.projection (q ≫ p) ⟶ pullback E.projection p :=
+    pullback.lift rR (fR ≫ q) (by
+      dsimp [rR, fR]
+      simp only [Category.assoc]
+      rw [pullback.condition])
+  let nMiddle : pullback E.projection (q ≫ p) ⟶
+      pullback (pullback.snd E.projection p) q :=
+    pullback.lift nInner fR (by
+      dsimp [nInner]
+      rw [pullback.lift_snd])
+  have hm_r : mMiddle ≫ rR = rL ≫ rP := by
+    dsimp [mMiddle]
+    rw [pullback.lift_fst]
+  have hm_f : mMiddle ≫ fR = fL := by
+    dsimp [mMiddle]
+    rw [pullback.lift_snd]
+  have hninner_r : nInner ≫ rP = rR := by
+    dsimp [nInner]
+    rw [pullback.lift_fst]
+  have hninner_f : nInner ≫ fP = fR ≫ q := by
+    dsimp [nInner]
+    rw [pullback.lift_snd]
+  have hn_r : nMiddle ≫ rL = nInner := by
+    dsimp [nMiddle]
+    rw [pullback.lift_fst]
+  have hn_f : nMiddle ≫ fL = fR := by
+    dsimp [nMiddle]
+    rw [pullback.lift_snd]
+  have hmn_inner : mMiddle ≫ nInner = rL := by
+    apply pullback.hom_ext
+    · calc
+        (mMiddle ≫ nInner) ≫ rP = mMiddle ≫ (nInner ≫ rP) := by simp [Category.assoc]
+        _ = mMiddle ≫ rR := by rw [hninner_r]
+        _ = rL ≫ rP := hm_r
+    · calc
+        (mMiddle ≫ nInner) ≫ fP = mMiddle ≫ (nInner ≫ fP) := by simp [Category.assoc]
+        _ = mMiddle ≫ (fR ≫ q) := by rw [hninner_f]
+        _ = (mMiddle ≫ fR) ≫ q := by simp [Category.assoc]
+        _ = fL ≫ q := by rw [hm_f]
+        _ = rL ≫ fP := by
+          dsimp [rL, fL, fP]
+          rw [pullback.condition]
+  have hmn : mMiddle ≫ nMiddle = 𝟙 _ := by
+    apply pullback.hom_ext
+    · calc
+        (mMiddle ≫ nMiddle) ≫ rL = mMiddle ≫ (nMiddle ≫ rL) := by simp [Category.assoc]
+        _ = mMiddle ≫ nInner := by rw [hn_r]
+        _ = rL := hmn_inner
+        _ = 𝟙 _ ≫ rL := by simp
+    · calc
+        (mMiddle ≫ nMiddle) ≫ fL = mMiddle ≫ (nMiddle ≫ fL) := by simp [Category.assoc]
+        _ = mMiddle ≫ fR := by rw [hn_f]
+        _ = fL := hm_f
+        _ = 𝟙 _ ≫ fL := by simp
+  have hnm : nMiddle ≫ mMiddle = 𝟙 _ := by
+    apply pullback.hom_ext
+    · calc
+        (nMiddle ≫ mMiddle) ≫ rR = nMiddle ≫ (mMiddle ≫ rR) := by simp [Category.assoc]
+        _ = nMiddle ≫ (rL ≫ rP) := by rw [hm_r]
+        _ = (nMiddle ≫ rL) ≫ rP := by simp [Category.assoc]
+        _ = nInner ≫ rP := by rw [hn_r]
+        _ = rR := hninner_r
+        _ = 𝟙 _ ≫ rR := by simp
+    · calc
+        (nMiddle ≫ mMiddle) ≫ fR = nMiddle ≫ (mMiddle ≫ fR) := by simp [Category.assoc]
+        _ = nMiddle ≫ fL := by rw [hm_f]
+        _ = fR := hn_f
+        _ = 𝟙 _ ≫ fR := by simp
+  let m : ExtensionHom (pullbackExtension (pullbackExtension E p) q)
+      (pullbackExtension E (q ≫ p)) :=
+    { middle := mMiddle
+      comm_left := by
+        change iL ≫ mMiddle = iR
+        apply pullback.hom_ext
+        · calc
+            (iL ≫ mMiddle) ≫ rR = iL ≫ (mMiddle ≫ rR) := by simp [Category.assoc]
+            _ = iL ≫ (rL ≫ rP) := by rw [hm_r]
+            _ = (iL ≫ rL) ≫ rP := by simp [Category.assoc]
+            _ = iP ≫ rP := by
+              dsimp [iL]
+              rw [pullback.lift_fst]
+            _ = E.inclusion := by
+              dsimp [iP, rP]
+              rw [pullback.lift_fst]
+            _ = iR ≫ rR := by
+              dsimp [iR, rR]
+              rw [pullback.lift_fst]
+        · calc
+            (iL ≫ mMiddle) ≫ fR = iL ≫ (mMiddle ≫ fR) := by simp [Category.assoc]
+            _ = iL ≫ fL := by rw [hm_f]
+            _ = 0 := by
+              dsimp [iL]
+              rw [pullback.lift_snd]
+            _ = iR ≫ fR := by
+              dsimp [iR, fR]
+              rw [pullback.lift_snd]
+      comm_right := by
+        change mMiddle ≫ fR = fL
+        exact hm_f }
+  let n : ExtensionHom (pullbackExtension E (q ≫ p))
+      (pullbackExtension (pullbackExtension E p) q) :=
+    { middle := nMiddle
+      comm_left := by
+        change iR ≫ nMiddle = iL
+        apply pullback.hom_ext
+        · calc
+            (iR ≫ nMiddle) ≫ rL = iR ≫ (nMiddle ≫ rL) := by simp [Category.assoc]
+            _ = iR ≫ nInner := by rw [hn_r]
+            _ = iP := by
+              apply pullback.hom_ext
+              · calc
+                  (iR ≫ nInner) ≫ rP = iR ≫ (nInner ≫ rP) := by simp [Category.assoc]
+                  _ = iR ≫ rR := by rw [hninner_r]
+                  _ = E.inclusion := by
+                    dsimp [iR, rR]
+                    rw [pullback.lift_fst]
+                  _ = iP ≫ rP := by
+                    dsimp [iP, rP]
+                    rw [pullback.lift_fst]
+              · calc
+                  (iR ≫ nInner) ≫ fP = iR ≫ (nInner ≫ fP) := by simp [Category.assoc]
+                  _ = iR ≫ (fR ≫ q) := by rw [hninner_f]
+                  _ = (iR ≫ fR) ≫ q := by simp [Category.assoc]
+                  _ = 0 := by
+                    dsimp [iR, fR]
+                    rw [pullback.lift_snd, zero_comp]
+                  _ = iP ≫ fP := by
+                    dsimp [iP, fP]
+                    rw [pullback.lift_snd]
+            _ = iL ≫ rL := by
+              dsimp [iL]
+              rw [pullback.lift_fst]
+        · calc
+            (iR ≫ nMiddle) ≫ fL = iR ≫ (nMiddle ≫ fL) := by simp [Category.assoc]
+            _ = iR ≫ fR := by rw [hn_f]
+            _ = 0 := by
+              dsimp [iR, fR]
+              rw [pullback.lift_snd]
+            _ = iL ≫ fL := by
+              dsimp [iL, fL]
+              rw [pullback.lift_snd]
+      comm_right := by
+        change nMiddle ≫ fL = fR
+        exact hn_f }
+  exact ⟨
+    { hom := m
+      inv := n
+      hom_inv_id := ExtensionHom.ext _ _ hmn
+      inv_hom_id := ExtensionHom.ext _ _ hnm }⟩
+
+private theorem pushout_extension_comp_iso
+    {C : Type u} [Category.{v} C] [Abelian C]
+    {A A' A'' B : C} (E : Extension C A B) (a : A ⟶ A') (b : A' ⟶ A'') :
+    Nonempty
+      (pushoutExtension (pushoutExtension E a) b ≅
+        pushoutExtension E (a ≫ b)) := by
+  let iP : A' ⟶ pushout a E.inclusion :=
+    pushout.inl a E.inclusion
+  let rP : E.middle ⟶ pushout a E.inclusion :=
+    pushout.inr a E.inclusion
+  let gP : pushout a E.inclusion ⟶ B :=
+    pushout.desc 0 E.projection (by simp [E.zero])
+  let iL : A'' ⟶ pushout b iP :=
+    pushout.inl b iP
+  let rL : pushout a E.inclusion ⟶ pushout b iP :=
+    pushout.inr b iP
+  let gL : pushout b iP ⟶ B :=
+    pushout.desc 0 gP (by
+      dsimp [gP]
+      rw [pushout.inl_desc]
+      simp)
+  let iR : A'' ⟶ pushout (a ≫ b) E.inclusion :=
+    pushout.inl (a ≫ b) E.inclusion
+  let rR : E.middle ⟶ pushout (a ≫ b) E.inclusion :=
+    pushout.inr (a ≫ b) E.inclusion
+  let gR : pushout (a ≫ b) E.inclusion ⟶ B :=
+    pushout.desc 0 E.projection (by simp [E.zero])
+  let mapP : pushout a E.inclusion ⟶ pushout (a ≫ b) E.inclusion :=
+    pushout.desc (b ≫ iR) rR (by
+      dsimp [iP, iR, rR]
+      calc
+        a ≫ (b ≫ pushout.inl (a ≫ b) E.inclusion) =
+            (a ≫ b) ≫ pushout.inl (a ≫ b) E.inclusion := by simp [Category.assoc]
+        _ = E.inclusion ≫ pushout.inr (a ≫ b) E.inclusion := by
+          rw [pushout.condition]
+        _ = E.inclusion ≫ rR := by rfl)
+  let mMiddle : pushout b iP ⟶ pushout (a ≫ b) E.inclusion :=
+    pushout.desc iR mapP (by
+      dsimp [iP, iR, mapP]
+      rw [pushout.inl_desc])
+  let nMiddle : pushout (a ≫ b) E.inclusion ⟶ pushout b iP :=
+    pushout.desc iL (rP ≫ rL) (by
+      dsimp [iL, rP, rL]
+      calc
+        (a ≫ b) ≫ pushout.inl b (pushout.inl a E.inclusion) =
+            a ≫ (b ≫ pushout.inl b (pushout.inl a E.inclusion)) := by simp [Category.assoc]
+        _ = a ≫ (pushout.inl a E.inclusion ≫ pushout.inr b (pushout.inl a E.inclusion)) := by
+          rw [pushout.condition]
+        _ = (a ≫ pushout.inl a E.inclusion) ≫ pushout.inr b (pushout.inl a E.inclusion) := by
+          simp [Category.assoc]
+        _ = (E.inclusion ≫ pushout.inr a E.inclusion) ≫
+            pushout.inr b (pushout.inl a E.inclusion) := by
+          rw [pushout.condition]
+        _ = E.inclusion ≫ pushout.inr a E.inclusion ≫
+            pushout.inr b (pushout.inl a E.inclusion) := by simp [Category.assoc]
+        _ = E.inclusion ≫ pushout.inr a E.inclusion ≫ rL := by rfl)
+  have hm_i : iL ≫ mMiddle = iR := by
+    dsimp [mMiddle]
+    rw [pushout.inl_desc]
+  have hm_r : rL ≫ mMiddle = mapP := by
+    dsimp [mMiddle]
+    rw [pushout.inr_desc]
+  have hn_i : iR ≫ nMiddle = iL := by
+    dsimp [nMiddle]
+    rw [pushout.inl_desc]
+  have hn_r : rR ≫ nMiddle = rP ≫ rL := by
+    dsimp [nMiddle]
+    rw [pushout.inr_desc]
+  have hmapP_g : mapP ≫ gR = gP := by
+    apply pushout.hom_ext
+    · calc
+        iP ≫ mapP ≫ gR = (iP ≫ mapP) ≫ gR := by simp [Category.assoc]
+        _ = (b ≫ iR) ≫ gR := by rw [show iP ≫ mapP = b ≫ iR by
+          dsimp [mapP]
+          rw [pushout.inl_desc]]
+        _ = 0 := by
+          dsimp [iR, gR]
+          simp only [Category.assoc, pushout.inl_desc, comp_zero]
+        _ = iP ≫ gP := by
+          dsimp [iP, gP]
+          simp only [pushout.inl_desc]
+    · calc
+        rP ≫ mapP ≫ gR = (rP ≫ mapP) ≫ gR := by simp [Category.assoc]
+        _ = rR ≫ gR := by
+          rw [show rP ≫ mapP = rR by
+            dsimp [mapP]
+            rw [pushout.inr_desc]]
+        _ = E.projection := by
+          dsimp [rR, gR]
+          rw [pushout.inr_desc]
+        _ = rP ≫ gP := by
+          dsimp [rP, gP]
+          rw [pushout.inr_desc]
+  have hm_g : mMiddle ≫ gR = gL := by
+    apply pushout.hom_ext
+    · calc
+        iL ≫ mMiddle ≫ gR = (iL ≫ mMiddle) ≫ gR := by simp [Category.assoc]
+        _ = iR ≫ gR := by rw [hm_i]
+        _ = 0 := by
+          dsimp [iR, gR]
+          simp only [pushout.inl_desc]
+        _ = iL ≫ gL := by
+          dsimp [iL, gL]
+          simp only [pushout.inl_desc]
+    · calc
+        rL ≫ mMiddle ≫ gR = (rL ≫ mMiddle) ≫ gR := by simp [Category.assoc]
+        _ = mapP ≫ gR := by rw [hm_r]
+        _ = gP := hmapP_g
+        _ = rL ≫ gL := by
+          dsimp [rL, gL]
+          rw [pushout.inr_desc]
+  have hn_g : nMiddle ≫ gL = gR := by
+    apply pushout.hom_ext
+    · calc
+        iR ≫ nMiddle ≫ gL = (iR ≫ nMiddle) ≫ gL := by simp [Category.assoc]
+        _ = iL ≫ gL := by rw [hn_i]
+        _ = 0 := by
+          dsimp [iL, gL]
+          simp only [pushout.inl_desc]
+        _ = iR ≫ gR := by
+          dsimp [iR, gR]
+          simp only [pushout.inl_desc]
+    · calc
+        rR ≫ nMiddle ≫ gL = (rR ≫ nMiddle) ≫ gL := by simp [Category.assoc]
+        _ = (rP ≫ rL) ≫ gL := by rw [hn_r]
+        _ = rP ≫ (rL ≫ gL) := by simp [Category.assoc]
+        _ = rP ≫ gP := by
+          dsimp [rL, gL]
+          rw [pushout.inr_desc]
+        _ = E.projection := by
+          dsimp [rP, gP]
+          rw [pushout.inr_desc]
+        _ = rR ≫ gR := by
+          dsimp [rR, gR]
+          rw [pushout.inr_desc]
+  have hmn_map : mapP ≫ nMiddle = rL := by
+    apply pushout.hom_ext
+    · calc
+        iP ≫ mapP ≫ nMiddle = (iP ≫ mapP) ≫ nMiddle := by simp [Category.assoc]
+        _ = (b ≫ iR) ≫ nMiddle := by rw [show iP ≫ mapP = b ≫ iR by
+          dsimp [mapP]
+          rw [pushout.inl_desc]]
+        _ = b ≫ (iR ≫ nMiddle) := by simp [Category.assoc]
+        _ = b ≫ iL := by rw [hn_i]
+        _ = iP ≫ rL := by
+          dsimp [iP, rL]
+          rw [pushout.condition]
+    · calc
+        rP ≫ mapP ≫ nMiddle = (rP ≫ mapP) ≫ nMiddle := by simp [Category.assoc]
+        _ = rR ≫ nMiddle := by
+          rw [show rP ≫ mapP = rR by
+            dsimp [mapP]
+            rw [pushout.inr_desc]]
+        _ = rP ≫ rL := hn_r
+  have hmn : mMiddle ≫ nMiddle = 𝟙 _ := by
+    apply pushout.hom_ext
+    · calc
+        iL ≫ mMiddle ≫ nMiddle = (iL ≫ mMiddle) ≫ nMiddle := by simp [Category.assoc]
+        _ = iR ≫ nMiddle := by rw [hm_i]
+        _ = iL := hn_i
+        _ = iL ≫ 𝟙 _ := by simp
+    · calc
+        rL ≫ mMiddle ≫ nMiddle = (rL ≫ mMiddle) ≫ nMiddle := by simp [Category.assoc]
+        _ = mapP ≫ nMiddle := by rw [hm_r]
+        _ = rL := hmn_map
+        _ = rL ≫ 𝟙 _ := by simp
+  have hnm : nMiddle ≫ mMiddle = 𝟙 _ := by
+    apply pushout.hom_ext
+    · calc
+        iR ≫ nMiddle ≫ mMiddle = (iR ≫ nMiddle) ≫ mMiddle := by simp [Category.assoc]
+        _ = iL ≫ mMiddle := by rw [hn_i]
+        _ = iR := hm_i
+        _ = iR ≫ 𝟙 _ := by simp
+    · calc
+        rR ≫ nMiddle ≫ mMiddle = (rR ≫ nMiddle) ≫ mMiddle := by simp [Category.assoc]
+        _ = (rP ≫ rL) ≫ mMiddle := by rw [hn_r]
+        _ = rP ≫ (rL ≫ mMiddle) := by simp [Category.assoc]
+        _ = rP ≫ mapP := by rw [hm_r]
+        _ = rR := by
+          dsimp [mapP]
+          rw [pushout.inr_desc]
+        _ = rR ≫ 𝟙 _ := by simp
+  let m : ExtensionHom (pushoutExtension (pushoutExtension E a) b)
+      (pushoutExtension E (a ≫ b)) :=
+    { middle := mMiddle
+      comm_left := by
+        change iL ≫ mMiddle = iR
+        exact hm_i
+      comm_right := by
+        change mMiddle ≫ gR = gL
+        exact hm_g }
+  let n : ExtensionHom (pushoutExtension E (a ≫ b))
+      (pushoutExtension (pushoutExtension E a) b) :=
+    { middle := nMiddle
+      comm_left := by
+        change iR ≫ nMiddle = iL
+        exact hn_i
+      comm_right := by
+        change nMiddle ≫ gL = gR
+        exact hn_g }
+  exact ⟨
+    { hom := m
+      inv := n
+      hom_inv_id := ExtensionHom.ext _ _ hmn
+      inv_hom_id := ExtensionHom.ext _ _ hnm }⟩
+
 theorem pullbackClass_comp
     {C : Type u} [Category.{v} C] [Abelian C]
     {A B B' B'' : C} (p : B' ⟶ B) (q : B'' ⟶ B') (x : Ext B A) :
     pullbackClass q (pullbackClass p x) = pullbackClass (q ≫ p) x := by
-  sorry
+  refine Quotient.inductionOn x ?_
+  intro E
+  change extensionClass (pullbackExtension (pullbackExtension E p) q) =
+    extensionClass (pullbackExtension E (q ≫ p))
+  apply Quotient.sound
+  exact pullback_extension_comp_iso E p q
 
 theorem pushoutClass_comp
     {C : Type u} [Category.{v} C] [Abelian C]
     {A A' A'' B : C} (a : A ⟶ A') (b : A' ⟶ A'') (x : Ext B A) :
     pushoutClass b (pushoutClass a x) = pushoutClass (a ≫ b) x := by
-  sorry
+  refine Quotient.inductionOn x ?_
+  intro E
+  change extensionClass (pushoutExtension (pushoutExtension E a) b) =
+    extensionClass (pushoutExtension E (a ≫ b))
+  apply Quotient.sound
+  exact pushout_extension_comp_iso E a b
 
 theorem pushout_pullback_extension_iso
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -525,14 +936,202 @@ theorem pushout_pullback_extension_iso
     Nonempty
       (pushoutExtension (pullbackExtension E p) a ≅
         pullbackExtension (pushoutExtension E a) p) := by
-  sorry
+  let iP : A ⟶ pullback E.projection p :=
+    pullback.lift E.inclusion 0 (by simp [E.zero])
+  let rP : pullback E.projection p ⟶ E.middle :=
+    pullback.fst E.projection p
+  let fP : pullback E.projection p ⟶ B' :=
+    pullback.snd E.projection p
+  have hiP : iP ≫ fP = 0 := by
+    dsimp [iP, fP]
+    rw [pullback.lift_snd]
+  let iL : A' ⟶ pushout a iP :=
+    pushout.inl a iP
+  let rL : pullback E.projection p ⟶ pushout a iP :=
+    pushout.inr a iP
+  let gL : pushout a iP ⟶ B' :=
+    pushout.desc 0 fP (by
+      dsimp [iP, fP]
+      rw [pullback.lift_snd]
+      simp)
+  let iQ : A' ⟶ pushout a E.inclusion :=
+    pushout.inl a E.inclusion
+  let rQ : E.middle ⟶ pushout a E.inclusion :=
+    pushout.inr a E.inclusion
+  have hQ : a ≫ (0 : A' ⟶ B) = E.inclusion ≫ E.projection := by
+    rw [comp_zero, E.zero]
+  let gQ : pushout a E.inclusion ⟶ B :=
+    pushout.desc 0 E.projection hQ
+  have hiQ : iQ ≫ gQ = 0 := by
+    dsimp [iQ, gQ]
+    rw [pushout.inl_desc]
+  have hgQ : rQ ≫ gQ = E.projection := by
+    dsimp [rQ, gQ]
+    rw [pushout.inr_desc]
+  let iR : A' ⟶ pullback gQ p :=
+    pullback.lift iQ 0 (by rw [hiQ, zero_comp])
+  let rR : pullback gQ p ⟶ pushout a E.inclusion :=
+    pullback.fst gQ p
+  let fR : pullback gQ p ⟶ B' :=
+    pullback.snd gQ p
+  have hmapP : (rP ≫ rQ) ≫ gQ = fP ≫ p := by
+    calc
+      (rP ≫ rQ) ≫ gQ = rP ≫ (rQ ≫ gQ) := by simp [Category.assoc]
+      _ = rP ≫ E.projection := by rw [hgQ]
+      _ = fP ≫ p := by
+        dsimp [rP, fP]
+        exact pullback.condition
+  let mapP : pullback E.projection p ⟶ pullback gQ p :=
+    pullback.lift (rP ≫ rQ) fP hmapP
+  have hmapP_f : mapP ≫ fR = fP := by
+    dsimp [mapP]
+    rw [pullback.lift_snd]
+  let mMiddle : pushout a iP ⟶ pullback gQ p :=
+    pushout.desc iR mapP (by
+      apply pullback.hom_ext
+      · calc
+          (a ≫ iR) ≫ rR = a ≫ (iR ≫ rR) := by simp [Category.assoc]
+          _ = a ≫ iQ := by
+            dsimp [iR, rR]
+            rw [pullback.lift_fst]
+          _ = E.inclusion ≫ rQ := by
+            dsimp [iQ, rQ]
+            rw [pushout.condition]
+          _ = (iP ≫ rP) ≫ rQ := by
+            dsimp [iP, rP]
+            rw [pullback.lift_fst]
+          _ = iP ≫ (rP ≫ rQ) := by simp [Category.assoc]
+          _ = iP ≫ (mapP ≫ rR) := by
+            dsimp [mapP]
+            rw [pullback.lift_fst]
+          _ = (iP ≫ mapP) ≫ rR := by simp [Category.assoc]
+      · calc
+          (a ≫ iR) ≫ fR = a ≫ (iR ≫ fR) := by simp [Category.assoc]
+          _ = 0 := by
+            dsimp [iR, fR]
+            rw [pullback.lift_snd, comp_zero]
+          _ = (iP ≫ mapP) ≫ fR := by
+            rw [Category.assoc, hmapP_f]
+            exact hiP.symm)
+  have hm_i : iL ≫ mMiddle = iR := by
+    dsimp [mMiddle]
+    rw [pushout.inl_desc]
+  have hm_r : rL ≫ mMiddle = mapP := by
+    dsimp [mMiddle]
+    rw [pushout.inr_desc]
+  have hm_f : mapP ≫ fR = fP := by
+    exact hmapP_f
+  have hm_g : mMiddle ≫ fR = gL := by
+    apply pushout.hom_ext
+    · calc
+        iL ≫ mMiddle ≫ fR = (iL ≫ mMiddle) ≫ fR := by simp [Category.assoc]
+        _ = iR ≫ fR := by rw [hm_i]
+        _ = 0 := by
+          dsimp [iR, fR]
+          rw [pullback.lift_snd]
+        _ = iL ≫ gL := by
+          dsimp [iL, gL]
+          rw [pushout.inl_desc]
+    · calc
+        rL ≫ mMiddle ≫ fR = (rL ≫ mMiddle) ≫ fR := by simp [Category.assoc]
+        _ = mapP ≫ fR := by rw [hm_r]
+        _ = fP := hm_f
+        _ = rL ≫ gL := by
+          dsimp [rL, gL]
+          rw [pushout.inr_desc]
+  let φ : (pushoutExtension (pullbackExtension E p) a).toShortComplex ⟶
+      (pullbackExtension (pushoutExtension E a) p).toShortComplex :=
+    { τ₁ := 𝟙 A'
+      τ₂ := mMiddle
+      τ₃ := 𝟙 B'
+      comm₁₂ := by
+        change 𝟙 A' ≫ iR = iL ≫ mMiddle
+        rw [Category.id_comp, hm_i]
+      comm₂₃ := by
+        change mMiddle ≫ fR = gL ≫ 𝟙 B'
+        rw [hm_g, Category.comp_id] }
+  have hmono : Mono mMiddle := by
+    letI : Mono (pushoutExtension (pullbackExtension E p) a).toShortComplex.f :=
+      (pushoutExtension (pullbackExtension E p) a).shortExact.mono_f
+    letI : Mono (pullbackExtension (pushoutExtension E a) p).toShortComplex.f :=
+      (pullbackExtension (pushoutExtension E a) p).shortExact.mono_f
+    letI : Mono φ.τ₁ := by
+      dsimp [φ]
+      constructor
+      intro Z g h w
+      rw [← Category.comp_id g, ← Category.comp_id h]
+      exact w
+    letI : Mono φ.τ₃ := by
+      dsimp [φ]
+      constructor
+      intro Z g h w
+      rw [← Category.comp_id g, ← Category.comp_id h]
+      exact w
+    apply ShortComplex.mono_τ₂_of_exact_of_mono φ
+    exact (pushoutExtension (pullbackExtension E p) a).shortExact.exact
+  have hepi : Epi mMiddle := by
+    letI : Epi (pushoutExtension (pullbackExtension E p) a).toShortComplex.g :=
+      (pushoutExtension (pullbackExtension E p) a).shortExact.epi_g
+    letI : Epi (pullbackExtension (pushoutExtension E a) p).toShortComplex.g :=
+      (pullbackExtension (pushoutExtension E a) p).shortExact.epi_g
+    letI : Epi φ.τ₁ := by
+      dsimp [φ]
+      constructor
+      intro Z g h w
+      rw [← Category.id_comp g, ← Category.id_comp h]
+      exact w
+    letI : Epi φ.τ₃ := by
+      dsimp [φ]
+      constructor
+      intro Z g h w
+      rw [← Category.id_comp g, ← Category.id_comp h]
+      exact w
+    apply ShortComplex.epi_τ₂_of_exact_of_epi φ
+    exact (pullbackExtension (pushoutExtension E a) p).shortExact.exact
+  letI : Mono mMiddle := hmono
+  letI : Epi mMiddle := hepi
+  letI : IsIso mMiddle := isIso_of_mono_of_epi mMiddle
+  let invMiddle : pullback gQ p ⟶ pushout a iP := inv mMiddle
+  let m : ExtensionHom (pushoutExtension (pullbackExtension E p) a)
+      (pullbackExtension (pushoutExtension E a) p) :=
+    { middle := mMiddle
+      comm_left := by
+        change iL ≫ mMiddle = iR
+        exact hm_i
+      comm_right := by
+        change mMiddle ≫ fR = gL
+        exact hm_g }
+  let n : ExtensionHom (pullbackExtension (pushoutExtension E a) p)
+      (pushoutExtension (pullbackExtension E p) a) :=
+    { middle := invMiddle
+      comm_left := by
+        change iR ≫ invMiddle = iL
+        rw [← cancel_mono mMiddle, Category.assoc, IsIso.inv_hom_id,
+          Category.comp_id, hm_i]
+      comm_right := by
+        change invMiddle ≫ gL = fR
+        rw [← cancel_epi mMiddle, IsIso.hom_inv_id_assoc, hm_g] }
+  exact ⟨
+    { hom := m
+      inv := n
+      hom_inv_id := ExtensionHom.ext _ _ (by
+        dsimp [m, n]
+        exact IsIso.hom_inv_id mMiddle)
+      inv_hom_id := ExtensionHom.ext _ _ (by
+        dsimp [m, n]
+        exact IsIso.inv_hom_id mMiddle) }⟩
 
 theorem pushout_pullbackClass_comm
     {C : Type u} [Category.{v} C] [Abelian C]
     {A A' B B' : C} (a : A ⟶ A') (p : B' ⟶ B) (x : Ext B A) :
     pushoutClass a (pullbackClass p x) =
       pullbackClass p (pushoutClass a x) := by
-  sorry
+  refine Quotient.inductionOn x ?_
+  intro E
+  change extensionClass (pushoutExtension (pullbackExtension E p) a) =
+    extensionClass (pullbackExtension (pushoutExtension E a) p)
+  apply Quotient.sound
+  exact pushout_pullback_extension_iso E a p
 
 /-- The set-valued functor described in the chapter. -/
 noncomputable def extensionClassFunctor

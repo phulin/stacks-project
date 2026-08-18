@@ -208,7 +208,7 @@ noncomputable def openPresheafExtensionByInitial (C : Type u) [Category.{v} C]
   let j := Opens.map (openInclusion U)
   exact {
     obj := fun F => {
-      obj := fun V => if V.unop ≤ U then F.obj (j.op.obj V) else ⊥_ C
+      obj := fun V => if hV : V.unop ≤ U then F.obj (j.op.obj V) else ⊥_ C
       map := by
         intro V W i
         by_cases hV : V.unop ≤ U
@@ -219,10 +219,26 @@ noncomputable def openPresheafExtensionByInitial (C : Type u) [Category.{v} C]
         · exact eqToHom (by simp [hV]) ≫ initial.to _
       map_id := by
         intro V
-        sorry
+        by_cases hV : V.unop ≤ U
+        · simp [hV]
+        · let e : (if V.unop ≤ U then F.obj (j.op.obj V) else ⊥_ C) ≅ (⊥_ C) :=
+            eqToIso (if_neg hV)
+          rw [← cancel_epi e.inv]
+          simp only [dif_neg hV]
+          exact initial.hom_ext _ _
       map_comp := by
         intro V W T i k
-        sorry
+        by_cases hV : V.unop ≤ U
+        · have hW : W.unop ≤ U := by
+            exact (show W.unop ≤ V.unop from leOfHom i.unop).trans hV
+          have hT : T.unop ≤ U := by
+            exact (show T.unop ≤ W.unop from leOfHom k.unop).trans hW
+          simp [hV, hW, hT]
+        · let e : (if V.unop ≤ U then F.obj (j.op.obj V) else ⊥_ C) ≅ (⊥_ C) :=
+            eqToIso (if_neg hV)
+          rw [← cancel_epi e.inv]
+          simp only [dif_neg hV]
+          exact initial.hom_ext _ _
     }
     map := fun {F G} φ => {
       app := fun V => if hV : V.unop ≤ U then
@@ -231,7 +247,15 @@ noncomputable def openPresheafExtensionByInitial (C : Type u) [Category.{v} C]
         else eqToHom (by simp [hV]) ≫ initial.to _
       naturality := by
         intro V W i
-        sorry
+        by_cases hV : V.unop ≤ U
+        · have hW : W.unop ≤ U := by
+            exact (show W.unop ≤ V.unop from leOfHom i.unop).trans hV
+          simp [hV, hW]
+        · let e : (if V.unop ≤ U then F.obj (j.op.obj V) else ⊥_ C) ≅ (⊥_ C) :=
+            eqToIso (if_neg hV)
+          rw [← cancel_epi e.inv]
+          simp only [dif_neg hV]
+          exact initial.hom_ext _ _
       }
     map_id := by
       intro F

@@ -1179,7 +1179,112 @@ theorem projective_isDirectSumOfCountablyGeneratedProjectiveModules
     {R : Type u} {M : Type v} [CommRing R] [AddCommGroup M] [Module R M]
     [Module.Projective R M] :
     IsDirectSumOfCountablyGeneratedProjectiveModules (ModuleCat.of R M) := by
-  sorry
+  classical
+  let F : Type v := ⨁ x : M, (Submodule.span R ({x} : Set M) : Type v)
+  let f : F →ₗ[R] M :=
+    DirectSum.toModule R M M (fun x =>
+      (Submodule.span R ({x} : Set M)).subtype)
+  have hf : Function.Surjective f := by
+    intro m
+    let xm : (Submodule.span R ({m} : Set M) : Type v) :=
+      ⟨m, Submodule.subset_span (by simp)⟩
+    refine ⟨DirectSum.lof R M
+      (fun x => (Submodule.span R ({x} : Set M) : Type v)) m xm, ?_⟩
+    change DirectSum.toModule R M M (fun x =>
+      (Submodule.span R ({x} : Set M)).subtype)
+        (DirectSum.lof R M
+          (fun x => (Submodule.span R ({x} : Set M) : Type v)) m xm) = m
+    rw [DirectSum.toModule_lof]
+    rfl
+  obtain ⟨g, hg⟩ :=
+    Module.projective_lifting_property f (LinearMap.id : M →ₗ[R] M) hf
+  let Q : Submodule R F := LinearMap.range g
+  let p : F →ₗ[R] Q :=
+    (g.comp f).codRestrict Q (fun x => ⟨f x, rfl⟩)
+  have hp (x : Q) : p x = x := by
+    rcases x.property with ⟨y, hy⟩
+    apply Subtype.ext
+    change g (f (x : F)) = (x : F)
+    have hx : (x : F) = g y := hy.symm
+    rw [hx, show f (g y) = y by exact LinearMap.congr_fun hg y]
+  have hcomp : IsComplemented Q :=
+    ⟨LinearMap.ker p, LinearMap.isCompl_of_proj hp⟩
+  let ge : M →ₗ[R] Q :=
+    g.codRestrict Q (fun x => ⟨x, rfl⟩)
+  let se : Q →ₗ[R] M := f.comp Q.subtype
+  have hleft : se.comp ge = LinearMap.id := by
+    apply LinearMap.ext
+    intro x
+    change f (g x) = x
+    exact LinearMap.congr_fun hg x
+  have hright : ge.comp se = LinearMap.id := by
+    apply LinearMap.ext
+    intro x
+    apply Subtype.ext
+    rcases x.property with ⟨y, hy⟩
+    have hx : (x : F) = g y := hy.symm
+    change g (f (x : F)) = (x : F)
+    rw [hx, show f (g y) = y by exact LinearMap.congr_fun hg y]
+  let e : M ≃ₗ[R] Q :=
+    LinearEquiv.ofBijective ge ⟨
+      (by
+        intro x y hxy
+        calc
+          x = se (ge x) := (LinearMap.congr_fun hleft x).symm
+          _ = se (ge y) := congrArg se hxy
+          _ = y := LinearMap.congr_fun hleft y),
+      (by
+        intro x
+        refine ⟨se x, ?_⟩
+        simpa only [LinearMap.comp_apply, LinearMap.id_apply] using
+          LinearMap.congr_fun hright x)⟩
+  have hM : IsDirectSumOfCountablyGeneratedModules (ModuleCat.of R M) :=
+    isDirectSumOfCountablyGeneratedModules_of_isComplemented (M := F) (P := M)
+      (by
+        refine ⟨M, (fun x => ModuleCat.of R
+          (Submodule.span R ({x} : Set M) : Type v)), ?_, ?_⟩
+        · intro x
+          have hcyclic (x : M) :
+              Module.IsCountablyGenerated R
+                (Submodule.span R ({x} : Set M) : Type v) := by
+            let xgen : (Submodule.span R ({x} : Set M) : Type v) :=
+              ⟨x, Submodule.subset_span (by simp)⟩
+            refine ⟨({xgen} : Set _), Set.countable_singleton _, ?_⟩
+            apply top_unique
+            intro y _
+            change y ∈ Submodule.span R ({xgen} : Set _)
+            refine Submodule.span_induction
+              (p := fun z hz => (⟨z, hz⟩ :
+                (Submodule.span R ({x} : Set M) : Type v)) ∈
+                  Submodule.span R ({xgen} : Set _)) ?_ ?_ ?_ ?_ y.property
+            · intro z hz
+              rcases hz with rfl
+              exact Submodule.subset_span rfl
+            · exact Submodule.zero_mem _
+            · intro z w hz hw hz' hw'
+              exact Submodule.add_mem _ hz' hw'
+            · intro a z hz hz'
+              exact Submodule.smul_mem _ a hz'
+          simpa using hcyclic x
+        · exact ⟨LinearEquiv.refl R F⟩)
+      ⟨Q, hcomp, ⟨e⟩⟩
+  rcases hM with ⟨ι, N, hN, ⟨eM⟩⟩
+  refine ⟨ι, N, ?_, ⟨eM⟩⟩
+  intro i
+  refine ⟨hN i, ?_⟩
+  let inc : (N i : Type v) →ₗ[R] M :=
+    eM.symm.toLinearMap.comp
+      (DirectSum.lof R ι (fun j => (N j : Type v)) i)
+  let proj : M →ₗ[R] (N i : Type v) :=
+    (DirectSum.component R ι (fun j => (N j : Type v)) i).comp eM.toLinearMap
+  apply Module.Projective.of_split inc proj
+  apply LinearMap.ext
+  intro x
+  change DirectSum.component R ι (fun j => (N j : Type v)) i
+      (eM (eM.symm (DirectSum.lof R ι (fun j => (N j : Type v)) i x))) = x
+  rw [eM.apply_symm_apply]
+  exact DirectSum.component.lof_self (R := R)
+    (M := fun j => (N j : Type v)) i x
 
 end
 

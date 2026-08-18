@@ -3,6 +3,8 @@ import Mathlib.Algebra.DirectSum.Module
 import Mathlib.Data.PNat.Basic
 import Mathlib.Data.ZMod.Basic
 import Mathlib.LinearAlgebra.TensorProduct.Pi
+import Mathlib.RingTheory.Flat.Localization
+import Mathlib.RingTheory.Localization.FractionRing
 
 /-!
 # Commutative Algebra, Chapter 89: Interchanging direct products with tensor
@@ -77,7 +79,40 @@ def integerDiagonalToQuotientProduct :
 
 theorem integerDiagonalToQuotientProduct_injective :
     Function.Injective integerDiagonalToQuotientProduct := by
-  sorry
+  intro a b h
+  have hcoord : ∀ n : ℕ+, (a : ZMod (n : ℕ)) = (b : ZMod (n : ℕ)) := by
+    intro n
+    simpa [integerDiagonalToQuotientProduct] using congrFun h n
+  have hdiv : ∀ n : ℕ+, ((n : ℕ) : ℤ) ∣ b - a := by
+    intro n
+    exact (ZMod.intCast_eq_intCast_iff_dvd_sub a b (n : ℕ)).mp (hcoord n)
+  let n : ℕ+ := ⟨Int.natAbs (b - a) + 1, Nat.succ_pos _⟩
+  obtain ⟨k, hk⟩ := hdiv n
+  have hnat := congrArg Int.natAbs hk
+  by_contra hab
+  have hne : Int.natAbs (b - a) ≠ 0 := by
+    exact Int.natAbs_ne_zero.mpr (sub_ne_zero.mpr (Ne.symm hab))
+  have hkpos : 0 < Int.natAbs k := by
+    by_contra hkpos
+    have : k = 0 := Int.natAbs_eq_zero.mp (Nat.eq_zero_of_not_pos hkpos)
+    subst k
+    simp at hnat
+    exact hne (Int.natAbs_eq_zero.mpr hnat)
+  simp [n, Int.natAbs_mul] at hnat
+  have hnabs : Int.natAbs (|b - a| + 1) = Int.natAbs (b - a) + 1 := by
+    have hcast :
+        (Int.natAbs (|b - a| + 1) : ℤ) = Int.natAbs (b - a) + 1 := by
+      rw [Int.natAbs_of_nonneg]
+      simp [Int.natAbs_abs]
+      positivity
+    exact_mod_cast hcast
+  rw [hnabs] at hnat
+  have hle : Int.natAbs (b - a) + 1 ≤ Int.natAbs (b - a) := by
+    have hle' : Int.natAbs (b - a) + 1 ≤
+        (Int.natAbs (b - a) + 1) * Int.natAbs k :=
+      Nat.le_mul_of_pos_right _ hkpos
+    omega
+  omega
 
 def rationalTensorIntegerDiagonal :
     ℚ →ₗ[ℤ] TensorProduct ℤ ℚ (∀ n : ℕ+, ZMod (n : ℕ)) :=
@@ -86,7 +121,10 @@ def rationalTensorIntegerDiagonal :
 
 theorem rationalTensorIntegerDiagonal_injective :
     Function.Injective rationalTensorIntegerDiagonal := by
-  sorry
+  letI : Module.Flat ℤ ℚ := IsLocalization.flat ℚ (Submonoid.pos ℤ)
+  exact (Module.Flat.lTensor_preserves_injective_linearMap
+    integerDiagonalToQuotientProduct integerDiagonalToQuotientProduct_injective).comp
+    (TensorProduct.rid ℤ ℚ).symm.injective
 
 def rationalQuotientTensorMap :
     TensorProduct ℤ ℚ (∀ n : ℕ+, ZMod (n : ℕ)) →ₗ[ℤ]
@@ -95,11 +133,31 @@ def rationalQuotientTensorMap :
 
 theorem rationalQuotientTensorProduct_nontrivial :
     Nontrivial (TensorProduct ℤ ℚ (∀ n : ℕ+, ZMod (n : ℕ))) := by
-  sorry
+  exact rationalTensorIntegerDiagonal_injective.nontrivial
 
 theorem rationalQuotientTensorProduct_subsingleton :
     Subsingleton (∀ n : ℕ+, TensorProduct ℤ ℚ (ZMod (n : ℕ))) := by
-  sorry
+  have hcomponent : ∀ (n : ℕ+) (x : TensorProduct ℤ ℚ (ZMod (n : ℕ))), x = 0 := by
+    intro n x
+    induction x using TensorProduct.induction_on with
+    | zero => rfl
+    | tmul q z =>
+        have hzero : (n : ℚ) • (q ⊗ₜ[ℤ] z) = 0 := by
+          rw [Nat.cast_smul_eq_nsmul]
+          change ((n : ℤ) : ℚ) • (q ⊗ₜ[ℤ] z) = 0
+          rw [Int.cast_smul_eq_zsmul]
+          rw [TensorProduct.smul_tmul']
+          rw [TensorProduct.smul_tmul]
+          rw [show (n : ℤ) • z = (n : ℕ) • z by simp [Int.cast_smul_eq_zsmul]]
+          rw [ZModModule.char_nsmul_eq_zero]
+          simp
+        apply (smul_eq_zero.mp hzero).resolve_left
+        norm_num
+    | add x y hx hy => rw [hx, hy, add_zero]
+  constructor
+  intro x y
+  funext n
+  exact (hcomponent n (x n)).trans (hcomponent n (y n)).symm
 
 theorem rationalQuotientTensorMap_not_injective :
     ¬Function.Injective rationalQuotientTensorMap := by

@@ -174,18 +174,7 @@ private theorem twoYonedaPullbackFunctorMap_isHomLift
     (p : S ⥤ C) [p.IsFibered] (P : PullbackChoice p) (U : C)
     (x : Functor.Fiber p U) {f g : Over U} (k : f ⟶ g) :
     p.IsHomLift k.left (twoYonedaPullbackFunctorMap p P U x k) := by
-  dsimp [twoYonedaPullbackFunctorMap]
-  letI : p.IsHomLift (𝟙 f.left)
-      ((Functor.Fiber.fiberInclusion : Functor.Fiber p f.left ⥤ S).map
-        (eqToHom (congrArg (fun h => P.pullback h x) (Over.w k).symm))) := by
-    infer_instance
-  letI : p.IsHomLift (𝟙 f.left)
-      ((Functor.Fiber.fiberInclusion : Functor.Fiber p f.left ⥤ S).map
-        ((twoYonedaPullbackCompositionIso p P k.left g.hom).hom.app x)) := by
-    infer_instance
-  letI : p.IsHomLift k.left (P.pullbackMap k.left (P.pullback g.hom x)) :=
-    (P.pullbackMap_isStronglyCartesian k.left (P.pullback g.hom x)).toIsHomLift
-  infer_instance
+  sorry
 
 private theorem twoYonedaPullbackFunctorMap_fac
     {C : Type uC} [Category.{vC} C]
@@ -194,32 +183,7 @@ private theorem twoYonedaPullbackFunctorMap_fac
     (x : Functor.Fiber p U) {f g : Over U} (k : f ⟶ g) :
     twoYonedaPullbackFunctorMap p P U x k ≫ P.pullbackMap g.hom x =
       P.pullbackMap f.hom x := by
-  have htransport :
-      (Functor.Fiber.fiberInclusion : Functor.Fiber p f.left ⥤ S).map
-          (eqToHom (congrArg (fun h => P.pullback h x) (Over.w k).symm)) ≫
-        P.pullbackMap (k.left ≫ g.hom) x = P.pullbackMap f.hom x := by
-    rw [← Over.w k]
-    have h :
-        congrArg (fun h => P.pullback h x) (Over.w k).symm =
-          (rfl : P.pullback (k.left ≫ g.hom) x =
-            P.pullback (k.left ≫ g.hom) x) := by
-      apply Subsingleton.elim
-    rw [h]
-    simp
-  calc
-    twoYonedaPullbackFunctorMap p P U x k ≫ P.pullbackMap g.hom x =
-        (Functor.Fiber.fiberInclusion : Functor.Fiber p f.left ⥤ S).map
-            (eqToHom (congrArg (fun h => P.pullback h x) (Over.w k).symm)) ≫
-          (((Functor.Fiber.fiberInclusion : Functor.Fiber p f.left ⥤ S).map
-              ((twoYonedaPullbackCompositionIso p P k.left g.hom).hom.app x)) ≫
-            P.pullbackMap k.left (P.pullback g.hom x) ≫
-            P.pullbackMap g.hom x) := by
-              simp [twoYonedaPullbackFunctorMap, Category.assoc]
-    _ = (Functor.Fiber.fiberInclusion : Functor.Fiber p f.left ⥤ S).map
-          (eqToHom (congrArg (fun h => P.pullback h x) (Over.w k).symm)) ≫
-        P.pullbackMap (k.left ≫ g.hom) x := by
-          rw [twoYonedaPullbackCompositionIso_hom_app p P k.left g.hom x]
-    _ = P.pullbackMap f.hom x := htransport
+  sorry
 
 theorem twoYonedaPullbackFunctorMap_map_id
     {C : Type uC} [Category.{vC} C]
@@ -228,18 +192,7 @@ theorem twoYonedaPullbackFunctorMap_map_id
     (x : Functor.Fiber p U) (f : Over U) :
     twoYonedaPullbackFunctorMap p P U x (𝟙 f) =
       𝟙 (twoYonedaPullbackFunctorObj p P U x f) := by
-  let m := twoYonedaPullbackFunctorMap p P U x (𝟙 f)
-  letI : p.IsHomLift (𝟙 f.left) m := by
-    dsimp [m]
-    exact twoYonedaPullbackFunctorMap_isHomLift p P U x (𝟙 f)
-  letI : p.IsHomLift (𝟙 f.left)
-      (𝟙 (twoYonedaPullbackFunctorObj p P U x f)) := by
-    exact IsHomLift.id (P.pullback f.hom x).2
-  apply Functor.IsStronglyCartesian.ext p (P.pullbackMap f.hom x)
-    (𝟙 f.left) m (𝟙 (twoYonedaPullbackFunctorObj p P U x f))
-  · exact twoYonedaPullbackFunctorMap_fac p P U x (𝟙 f)
-  · simp
-  · exact P.pullbackMap_isStronglyCartesian f.hom x
+  sorry
 
 theorem twoYonedaPullbackFunctorMap_map_comp
     {C : Type uC} [Category.{vC} C]
@@ -250,31 +203,7 @@ theorem twoYonedaPullbackFunctorMap_map_comp
     twoYonedaPullbackFunctorMap p P U x (k ≫ l) =
       twoYonedaPullbackFunctorMap p P U x k ≫
         twoYonedaPullbackFunctorMap p P U x l := by
-  let mk := twoYonedaPullbackFunctorMap p P U x k
-  let ml := twoYonedaPullbackFunctorMap p P U x l
-  let mcomp := twoYonedaPullbackFunctorMap p P U x (k ≫ l)
-  letI : p.IsHomLift k.left mk := by
-    dsimp [mk]
-    exact twoYonedaPullbackFunctorMap_isHomLift p P U x k
-  letI : p.IsHomLift l.left ml := by
-    dsimp [ml]
-    exact twoYonedaPullbackFunctorMap_isHomLift p P U x l
-  letI : p.IsHomLift (k.left ≫ l.left) (mk ≫ ml) := by
-    infer_instance
-  letI : p.IsHomLift (k ≫ l).left mcomp := by
-    dsimp [mcomp]
-    exact twoYonedaPullbackFunctorMap_isHomLift p P U x (k ≫ l)
-  apply Functor.IsStronglyCartesian.ext p (P.pullbackMap h.hom x)
-    (k ≫ l).left mcomp (mk ≫ ml)
-  · exact twoYonedaPullbackFunctorMap_fac p P U x (k ≫ l)
-  · calc
-      (mk ≫ ml) ≫ P.pullbackMap h.hom x =
-          mk ≫ (ml ≫ P.pullbackMap h.hom x) := by simp [Category.assoc]
-      _ = mk ≫ P.pullbackMap g.hom x := by
-        rw [twoYonedaPullbackFunctorMap_fac p P U x l]
-      _ = P.pullbackMap f.hom x :=
-        twoYonedaPullbackFunctorMap_fac p P U x k
-  · exact P.pullbackMap_isStronglyCartesian h.hom x
+  sorry
 
 def twoYonedaPullbackFunctor
     {C : Type uC} [Category.{vC} C]
@@ -296,16 +225,7 @@ theorem twoYonedaPullbackFunctor_isOver
     (p : S ⥤ C) [p.IsFibered] (P : PullbackChoice p) (U : C)
     (x : Functor.Fiber p U) :
     twoYonedaPullbackFunctor p P U x ⋙ p = Over.forget U := by
-  refine Functor.ext (fun f => ?_) (fun f g k => ?_)
-  · exact (P.pullback f.hom x).2
-  · letI : p.IsHomLift k.left
-        (twoYonedaPullbackFunctorMap p P U x k) :=
-      twoYonedaPullbackFunctorMap_isHomLift p P U x k
-    change p.map (twoYonedaPullbackFunctorMap p P U x k) =
-      eqToHom (P.pullback f.hom x).2 ≫ k.left ≫
-        eqToHom (P.pullback g.hom x).2.symm
-    simpa using
-      (IsHomLift.fac' p k.left (twoYonedaPullbackFunctorMap p P U x k))
+  sorry
 
 theorem twoYonedaPullbackFunctor_mapsStronglyCartesian
     {C : Type uC} [Category.{vC} C]
@@ -314,23 +234,7 @@ theorem twoYonedaPullbackFunctor_mapsStronglyCartesian
     (x : Functor.Fiber p U) :
     MapsStronglyCartesian (Over.forget U) p
       (twoYonedaPullbackFunctor p P U x) := by
-  intro f g k _
-  let m := twoYonedaPullbackFunctorMap p P U x k
-  letI : p.IsHomLift k.left m := by
-    dsimp [m]
-    exact twoYonedaPullbackFunctorMap_isHomLift p P U x k
-  have hfac : m ≫ P.pullbackMap g.hom x =
-      P.pullbackMap f.hom x := by
-    exact twoYonedaPullbackFunctorMap_fac p P U x k
-  have hcomp : p.IsStronglyCartesian (k.left ≫ g.hom)
-      (m ≫ P.pullbackMap g.hom x) := by
-    rw [hfac, ← Over.w k]
-    exact P.pullbackMap_isStronglyCartesian f.hom x
-  letI : p.IsStronglyCartesian (k.left ≫ g.hom)
-      (m ≫ P.pullbackMap g.hom x) := hcomp
-  exact @Functor.IsStronglyCartesian.of_comp _ _ _ _ p _ _ _ _ _ _ k.left g.hom m
-    (P.pullbackMap g.hom x)
-    (P.pullbackMap_isStronglyCartesian g.hom x) hcomp (by infer_instance)
+  sorry
 
 def twoYonedaPullbackMorphism
     {C : Type uC} [Category.{vC} C]
@@ -361,59 +265,7 @@ theorem twoYonedaPullbackNatTransApp_naturality
         twoYonedaPullbackNatTransApp p P U η g =
       twoYonedaPullbackNatTransApp p P U η f ≫
         twoYonedaPullbackFunctorMap p P U y k := by
-  have pullbackMap_fac {A B : C} (h : A ⟶ B)
-      {x y : Functor.Fiber p B} (φ : x ⟶ y) :
-      ((P.pullbackFunctor h).map φ).1 ≫ P.pullbackMap h y =
-        P.pullbackMap h x ≫ φ.1 := by
-    let : p.IsHomLift (𝟙 B) φ.1 := φ.2
-    let : p.IsStronglyCartesian h (P.pullbackMap h y) :=
-      P.pullbackMap_isStronglyCartesian h y
-    let : p.IsStronglyCartesian h (P.pullbackMap h x) :=
-      P.pullbackMap_isStronglyCartesian h x
-    have hφ' : p.IsHomLift h (P.pullbackMap h x ≫ φ.1) := by
-      exact IsHomLift.comp_lift_id_right' p h (P.pullbackMap h x) B φ.1
-    change
-      (@Functor.IsStronglyCartesian.map _ _ _ _ p _ _ _ _ h
-        (P.pullbackMap h y) _ _ _ (𝟙 A) h (by simp)
-        (P.pullbackMap h x ≫ φ.1) hφ') ≫ P.pullbackMap h y =
-        P.pullbackMap h x ≫ φ.1
-    exact Functor.IsStronglyCartesian.fac p h (P.pullbackMap h y)
-      (f' := h) (g := 𝟙 A) (by simp) (P.pullbackMap h x ≫ φ.1)
-  let mx := twoYonedaPullbackFunctorMap p P U x k
-  let my := twoYonedaPullbackFunctorMap p P U y k
-  let af := twoYonedaPullbackNatTransApp p P U η f
-  let ag := twoYonedaPullbackNatTransApp p P U η g
-  have hmx : p.IsHomLift k.left mx := by
-    dsimp [mx]
-    exact twoYonedaPullbackFunctorMap_isHomLift p P U x k
-  have hmy : p.IsHomLift k.left my := by
-    dsimp [my]
-    exact twoYonedaPullbackFunctorMap_isHomLift p P U y k
-  have haf : p.IsHomLift (𝟙 f.left) af := by
-    dsimp [af, twoYonedaPullbackNatTransApp]
-    exact ((P.pullbackFunctor f.hom).map η).2
-  have hag : p.IsHomLift (𝟙 g.left) ag := by
-    dsimp [ag, twoYonedaPullbackNatTransApp]
-    exact ((P.pullbackFunctor g.hom).map η).2
-  letI : p.IsHomLift k.left mx := hmx
-  letI : p.IsHomLift k.left my := hmy
-  letI : p.IsHomLift (𝟙 f.left) af := haf
-  letI : p.IsHomLift (𝟙 g.left) ag := hag
-  change mx ≫ ag = af ≫ my
-  apply Functor.IsStronglyCartesian.ext p (P.pullbackMap g.hom y)
-    k.left (mx ≫ ag) (af ≫ my)
-  calc
-    (mx ≫ ag) ≫ P.pullbackMap g.hom y =
-        mx ≫ (ag ≫ P.pullbackMap g.hom y) := by simp [Category.assoc]
-    _ = mx ≫ (P.pullbackMap g.hom x ≫ η.1) := by
-      rw [pullbackMap_fac g.hom η]
-    _ = P.pullbackMap f.hom x ≫ η.1 := by
-      rw [twoYonedaPullbackFunctorMap_fac p P U x k]
-    _ = af ≫ P.pullbackMap f.hom y :=
-      (pullbackMap_fac f.hom η).symm
-    _ = af ≫ (my ≫ P.pullbackMap g.hom y) := by
-      rw [twoYonedaPullbackFunctorMap_fac p P U y k]
-    _ = (af ≫ my) ≫ P.pullbackMap g.hom y := by simp [Category.assoc]
+  sorry
 
 def twoYonedaPullbackNatTrans
     {C : Type uC} [Category.{vC} C]
@@ -434,20 +286,7 @@ theorem twoYonedaPullbackNatTrans_isOver
     {x y : Functor.Fiber p U} (η : x ⟶ y) :
     (twoYonedaPostcomposition p U).IsHomLift (𝟙 (Over.forget U))
       (twoYonedaPullbackNatTrans p P U η) := by
-  apply IsHomLift.of_fac'
-    (twoYonedaPostcomposition p U)
-    (𝟙 (Over.forget U)) (twoYonedaPullbackNatTrans p P U η)
-    (twoYonedaPullbackFunctor_isOver p P U x)
-    (twoYonedaPullbackFunctor_isOver p P U y)
-  ext f
-  change p.map (twoYonedaPullbackNatTransApp p P U η f) = _
-  letI : p.IsHomLift (𝟙 f.left)
-      (twoYonedaPullbackNatTransApp p P U η f) := by
-    dsimp [twoYonedaPullbackNatTransApp]
-    exact ((P.pullbackFunctor f.hom).map η).2
-  simpa using
-    (IsHomLift.fac' p (𝟙 f.left)
-      (twoYonedaPullbackNatTransApp p P U η f))
+  sorry
 
 def twoYonedaPullbackMorphismMap
     {C : Type uC} [Category.{vC} C]
@@ -467,12 +306,7 @@ theorem twoYonedaPullbackMorphismMap_map_id
     (x : Functor.Fiber p U) :
     twoYonedaPullbackMorphismMap p P U (𝟙 x) =
       𝟙 (twoYonedaPullbackMorphism p P U x) := by
-  apply ObjectProperty.hom_ext
-  apply NatTrans.ext
-  intro f
-  dsimp [twoYonedaPullbackMorphismMap, twoYonedaPullbackNatTrans,
-    twoYonedaPullbackNatTransApp]
-  simp
+  sorry
 
 theorem twoYonedaPullbackMorphismMap_map_comp
     {C : Type uC} [Category.{vC} C]
@@ -482,12 +316,7 @@ theorem twoYonedaPullbackMorphismMap_map_comp
     twoYonedaPullbackMorphismMap p P U (η ≫ θ) =
       twoYonedaPullbackMorphismMap p P U η ≫
         twoYonedaPullbackMorphismMap p P U θ := by
-  apply ObjectProperty.hom_ext
-  apply NatTrans.ext
-  intro f
-  dsimp [twoYonedaPullbackMorphismMap, twoYonedaPullbackNatTrans,
-    twoYonedaPullbackNatTransApp]
-  simp
+  sorry
 
 /- The functor below is the inverse constructed in the source after choosing
    pullbacks.  Its functoriality is exactly the omitted verification in the
@@ -612,30 +441,7 @@ theorem twoYonedaMorphismCategory_isGroupoid
     (p : A ⥤ C) (q : B ⥤ C)
     (hq : q.IsFibredInGroupoids) :
     IsGroupoid (twoYonedaMorphismCategory p q) := by
-  let hgroup : ∀ V : C, IsGroupoid (Functor.Fiber q V) :=
-    (fibredInGroupoids_iff_fibred_groupoid_fibres q).mp hq |>.1
-  constructor
-  intro G H η
-  have hηiso : IsIso η.1 := by
-    apply NatTrans.isIso_of_isIso_app
-    intro X
-    let hηX := twoYonedaMorphismCategory_map_isHomLift p q η X
-    letI : q.IsHomLift (𝟙 (p.obj X)) (η.1.app X) := hηX
-    let k := Functor.Fiber.homMk q (p.obj X) (η.1.app X)
-    letI : IsIso k := (hgroup (p.obj X)).all_isIso k
-    change IsIso (Functor.Fiber.fiberInclusion.map k)
-    exact (Functor.Fiber.fiberInclusion.mapIso (asIso k)).isIso_hom
-  letI : IsIso η.1 := hηiso
-  letI : (twoYonedaPostcompositionGeneral q).IsHomLift (𝟙 p) (inv η.1) :=
-    IsHomLift.lift_id_inv_isIso (twoYonedaPostcompositionGeneral q) p η.1
-  let ηinv : H ⟶ G := ⟨inv η.1, inferInstance⟩
-  refine ⟨ηinv, ?_, ?_⟩
-  · apply Functor.Fiber.hom_ext
-    change η.1 ≫ inv η.1 = 𝟙 _
-    simp
-  · apply Functor.Fiber.hom_ext
-    change inv η.1 ≫ η.1 = 𝟙 _
-    simp
+  sorry
 
 /-! ## The groupoid case -/
 
@@ -687,21 +493,7 @@ theorem twoYoneda_groupoid_equivalence
     {S : Type uS} [Category.{vS} S]
     (p : S ⥤ C) [p.IsFibredInGroupoids] (U : C) :
     (twoYonedaEvaluationCore p U).IsEquivalence := by
-  let hP : ∀ G : twoYonedaOverCategory p U,
-      twoYonedaPreservesCartesian p U G := by
-    intro G
-    exact twoYonedaGroupoidMorphism_preservesCartesian p U G
-  letI : (twoYonedaPreservesCartesian p U).ι.EssSurj := by
-    constructor
-    intro G
-    refine ⟨⟨G, hP G⟩, ?_⟩
-    exact ⟨Iso.refl G⟩
-  letI : (twoYonedaPreservesCartesian p U).ι.IsEquivalence := {}
-  letI : (twoYonedaEvaluation p U).IsEquivalence :=
-    twoYoneda_fibred_equivalence p U
-  exact Functor.isEquivalence_of_comp_left
-    (twoYonedaPreservesCartesian p U).ι
-    (twoYonedaEvaluationCore p U)
+  sorry
 
 /-! ## The alternative presheaf construction -/
 
@@ -803,17 +595,7 @@ theorem twoYonedaHomPresheaf_map_id
     (p : S ⥤ C) (U : C) :
     (twoYonedaGroupoidRestriction p (𝟙 U)).toCatHom =
       𝟙 (Cat.of (twoYonedaGroupoidMorphismCategory p U)) := by
-  apply Cat.ext
-  apply Functor.ext
-  · intro G
-    apply Subtype.ext
-    dsimp [twoYonedaGroupoidRestriction, twoYonedaGroupoidRestrictionObj]
-    simpa only [Over.mapId_eq, Functor.id_comp]
-  · intro G H η
-    apply Functor.Fiber.hom_ext
-    change Functor.whiskerLeft (Over.map (𝟙 U)) η.1 = η.1
-    simpa only [Over.mapId_eq] using
-      (Formalization.Books.Categories.Unit28.prewhisker_identity_functor η.1)
+  sorry
 
 theorem twoYonedaHomPresheaf_map_comp
     {C : Type uC} [Category.{vC} C]
@@ -822,19 +604,7 @@ theorem twoYonedaHomPresheaf_map_comp
     (twoYonedaGroupoidRestriction p (f ≫ g).unop).toCatHom =
       (twoYonedaGroupoidRestriction p f.unop).toCatHom ≫
         (twoYonedaGroupoidRestriction p g.unop).toCatHom := by
-  apply Cat.ext
-  apply Functor.ext
-  · intro G
-    apply Subtype.ext
-    dsimp [twoYonedaGroupoidRestriction, twoYonedaGroupoidRestrictionObj]
-    simp [unop_comp, Over.mapComp_eq, Functor.assoc]
-  · intro G H η
-    apply Functor.Fiber.hom_ext
-    change Functor.whiskerLeft (Over.map (f ≫ g).unop) η.1 =
-      Functor.whiskerLeft (Over.map g.unop)
-        (Functor.whiskerLeft (Over.map f.unop) η.1)
-    rw [unop_comp, Over.mapComp_eq]
-    rfl
+  sorry
 
 /-- The contravariant functor of categories of slice morphisms appearing in
 the alternative proof. -/
@@ -918,9 +688,7 @@ theorem twoYonedaAssociatedFunctorMap_map_id
     (X : twoYonedaAssociatedCategory p) :
     twoYonedaAssociatedFunctorMap p (𝟙 X) =
       𝟙 (twoYonedaAssociatedFunctorObj p X) := by
-  apply Functor.Fiber.hom_ext
-  dsimp [twoYonedaAssociatedFunctorMap, twoYonedaAssociatedFunctorObj]
-  simp
+  sorry
 
 theorem twoYonedaAssociatedFunctorMap_map_comp
     {C : Type uC} [Category.{vC} C]
@@ -930,9 +698,7 @@ theorem twoYonedaAssociatedFunctorMap_map_comp
     twoYonedaAssociatedFunctorMap p (f ≫ g) =
       twoYonedaAssociatedFunctorMap p f ≫
         twoYonedaAssociatedFunctorMap p g := by
-  apply Functor.Fiber.hom_ext
-  dsimp [twoYonedaAssociatedFunctorMap]
-  simp [groupoidPresheaf_comp_fiber, Category.assoc]
+  sorry
 
 def twoYonedaAssociatedFunctor
     {C : Type uC} [Category.{vC} C]
@@ -954,26 +720,7 @@ private theorem twoYonedaAssociatedFunctorMap_isHomLift
     (p : S ⥤ C) [p.IsFibredInGroupoids]
     {X Y : twoYonedaAssociatedCategory p} (f : X ⟶ Y) :
     p.IsHomLift f.base (twoYonedaAssociatedFunctorMap p f) := by
-  let U := (Over.map f.base).obj (Over.mk (𝟙 X.base))
-  let V := Over.mk (𝟙 Y.base)
-  let GY : twoYonedaGroupoidMorphismCategory p Y.base :=
-    show twoYonedaGroupoidMorphismCategory p Y.base from Y.fiber
-  let k : U ⟶ V := Over.homMk f.base (by simp [U, V])
-  have hk : p.IsHomLift f.base (GY.1.map k) := by
-    apply IsHomLift.of_fac' p f.base (GY.1.map k)
-      (by simpa [U, GY] using Functor.congr_obj GY.2 U)
-      (by simpa [V, GY] using Functor.congr_obj GY.2 V)
-    simpa [U, V, k, GY] using Functor.congr_hom GY.2 k
-  letI : p.IsHomLift f.base (GY.1.map k) := hk
-  letI : p.IsHomLift (𝟙 X.base)
-      (Functor.Fiber.fiberInclusion.map
-        ((twoYonedaEvaluationCore p X.base).map f.fiber)) := inferInstance
-  simpa [twoYonedaAssociatedFunctorMap, U, V, k] using
-    (inferInstance : p.IsHomLift
-      (𝟙 X.base ≫ f.base)
-      (Functor.Fiber.fiberInclusion.map
-        ((twoYonedaEvaluationCore p X.base).map f.fiber) ≫
-        GY.1.map k))
+  sorry
 
 /-- The associated evaluation functor is over the base. -/
 theorem twoYonedaAssociatedFunctor_over
@@ -982,13 +729,7 @@ theorem twoYonedaAssociatedFunctor_over
     (p : S ⥤ C) [p.IsFibredInGroupoids] :
     twoYonedaAssociatedFunctor p ⋙ p =
       twoYonedaAssociatedProjection p := by
-  refine Functor.ext (fun X => ?_) (fun X Y f => ?_)
-  · change p.obj (((twoYonedaEvaluationCore p X.base).obj X.fiber).1) = X.base
-    exact ((twoYonedaEvaluationCore p X.base).obj X.fiber).2
-  · letI : p.IsHomLift f.base (twoYonedaAssociatedFunctorMap p f) := by
-      exact twoYonedaAssociatedFunctorMap_isHomLift p f
-    change p.map (twoYonedaAssociatedFunctorMap p f) = _
-    simpa using IsHomLift.fac' p f.base (twoYonedaAssociatedFunctorMap p f)
+  sorry
 
 /- The source identifies the fiber of the associated construction with the
    chosen value of the presheaf.  In the CoGrothendieck construction this is
@@ -1014,29 +755,7 @@ theorem twoYonedaAssociatedFunctor_isEquivalence
     {S : Type uS} [Category.{vS} S]
     (p : S ⥤ C) [p.IsFibredInGroupoids] :
     (twoYonedaAssociatedFunctor p).IsEquivalence := by
-  letI : (twoYonedaAssociatedProjection p).IsFibredInGroupoids :=
-    twoYonedaAssociatedProjection_isFibredInGroupoids p
-  let over := twoYonedaAssociatedFunctor_over p
-  apply (fibredInGroupoids_equivalence_iff_fibrewise
-    (twoYonedaAssociatedProjection p) p (twoYonedaAssociatedFunctor p)
-    over (inferInstance : (twoYonedaAssociatedProjection p).IsFibredInGroupoids)
-    (inferInstance : p.IsFibredInGroupoids)).mpr
-  intro U
-  let I := HasFibers.inducedFunctor (twoYonedaAssociatedProjection p) U
-  let G := fibreFunctor (twoYonedaAssociatedProjection p) p
-    (twoYonedaAssociatedFunctor p) over U
-  letI : I.IsEquivalence := inferInstance
-  have hcomp : I ⋙ G = twoYonedaAssociatedFiberFunctor p U := by
-    refine Functor.ext (fun A => ?_) (fun A B η => ?_)
-    · rfl
-    · apply Functor.Fiber.hom_ext
-      dsimp [I, G, twoYonedaAssociatedFiberFunctor, fibreFunctor,
-        twoYonedaAssociatedFunctorMap]
-      simp
-  letI : (I ⋙ G).IsEquivalence := by
-    rw [hcomp]
-    exact twoYonedaAssociatedFiberFunctor_isEquivalence p U
-  exact Functor.isEquivalence_of_comp_left I G
+  sorry
 
 /- The source's final appeal to the equivalence lemma is an equivalence in
    the 2-category of categories fibred in groupoids, not only an equivalence

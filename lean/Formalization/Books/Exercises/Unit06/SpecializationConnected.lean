@@ -48,21 +48,40 @@ theorem spectrum_closed_point_iff_no_proper_specialization {A : Type u} [CommRin
     (p : PrimeSpectrum A) :
     IsClosed ({p} : Set (PrimeSpectrum A)) ↔
       ∀ q : PrimeSpectrum A, p ⤳ q → q = p := by
-  sorry
+  exact ⟨
+    fun hp q hq =>
+      Set.mem_singleton_iff.mp (hp.closure_eq ▸ (specializes_iff_mem_closure.mp hq)),
+    fun h =>
+      (closed_point_iff_closed_singleton p).mp
+        (Set.Subset.antisymm
+          (fun q hq =>
+            Set.mem_singleton_iff.mpr (h q (specializes_iff_mem_closure.mpr hq)))
+          subset_closure)⟩
 
 /-- Maximal ideals are the primes with no proper specialization. -/
 theorem spectrum_maximal_iff_no_proper_specialization {A : Type u} [CommRing A]
     (p : PrimeSpectrum A) :
     p.asIdeal.IsMaximal ↔
       ∀ q : PrimeSpectrum A, p ⤳ q → q = p := by
-  sorry
+  exact (spectrum_closed_point_iff_maximal p).symm.trans
+    (spectrum_closed_point_iff_no_proper_specialization p)
 
 /-- Minimal primes are exactly the points with no proper generalization. -/
 theorem spectrum_minimal_prime_iff_no_proper_generalization {A : Type u} [CommRing A]
     (p : PrimeSpectrum A) :
     p.asIdeal ∈ minimalPrimes A ↔
       ∀ q : PrimeSpectrum A, q ⤳ p → q = p := by
-  sorry
+  exact ⟨
+    fun hp q hq =>
+      Set.mem_singleton_iff.mp
+        ((PrimeSpectrum.stableUnderGeneralization_singleton (R := A) (x := p)).mpr hp
+          hq (Set.mem_singleton p)),
+    fun h =>
+      (PrimeSpectrum.stableUnderGeneralization_singleton (R := A) (x := p)).mp (by
+        intro x y hyx hx
+        have hx' : x = p := Set.mem_singleton_iff.mp hx
+        subst x
+        exact Set.mem_singleton_iff.mpr (h y hyx))⟩
 
 /-- A generic point of a reducible spectrum is a generic point of one of its
 irreducible components, exactly at a minimal prime. -/

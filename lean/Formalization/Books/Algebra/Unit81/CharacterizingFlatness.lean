@@ -19,7 +19,7 @@ namespace Formalization.Books.Algebra.Unit81
 
 open Formalization.Books.Algebra.Unit10
 
-universe u v w z
+universe u v z
 
 /-! ## Factorization through finite free modules -/
 
@@ -147,7 +147,7 @@ theorem flat_factors_finitePresentation
     {R : Type u} {M : Type v} [CommRing R]
     [AddCommGroup M] [Module R M] :
     Module.Flat R M ↔
-      ∀ (P : Type w) [AddCommGroup P] [Module R P]
+      ∀ (P : Type u) [AddCommGroup P] [Module R P]
         [Module.FinitePresentation R P] (f : P →ₗ[R] M),
       ∃ (n : ℕ) (h : P →ₗ[R] (Fin n →₀ R))
           (g : (Fin n →₀ R) →ₗ[R] M), f = g.comp h := by
@@ -169,9 +169,9 @@ theorem flat_iff_surjective_hom
     {R : Type u} {M : Type v} [CommRing R]
     [AddCommGroup M] [Module R M] :
     Module.Flat R M ↔
-      ∀ (P : Type w) [AddCommGroup P] [Module R P]
+      ∀ (P : Type u) [AddCommGroup P] [Module R P]
         [Module.FinitePresentation R P]
-        (N : Type z) [AddCommGroup N] [Module R N]
+        (N : Type (max u v)) [AddCommGroup N] [Module R N]
         (q : N →ₗ[R] M), Function.Surjective q →
         Function.Surjective (internalHomPostcomp (M := P) q) := by
   constructor

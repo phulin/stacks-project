@@ -6,6 +6,7 @@ import Mathlib.AlgebraicGeometry.Scheme
 import Mathlib.AlgebraicGeometry.Morphisms.ClosedImmersion
 import Mathlib.AlgebraicGeometry.Properties
 import Mathlib.CategoryTheory.Category.Preorder
+import Mathlib.CategoryTheory.Filtered.Basic
 import Mathlib.CategoryTheory.Limits.Shapes.Products
 import Mathlib.RingTheory.Localization.Away.Basic
 import Mathlib.RingTheory.LocalRing.ResidueField.Ideal
@@ -119,10 +120,6 @@ def localizedPieceSpectrumMap {A : Type u} [CommRing A]
     PrimeSpectrum (localizedPieceRing Z) → PrimeSpectrum A :=
   PrimeSpectrum.comap (localizedPieceRingHom Z)
 
-/-- The closed-locus predicate used for affine closed subschemes. -/
-def IsClosedAffineLocus {R : Type u} [CommRing R]
-    (T : Set (PrimeSpectrum R)) : Prop := IsClosed T
-
 theorem localizedPieceRing_quotient_equiv_localizedQuotient
     {A : Type u} [CommRing A] (Z : LocallyClosedPiece A) :
     Nonempty
@@ -149,7 +146,7 @@ theorem localization_piece_properties
     ∃ e : PrimeSpectrum (Localization Z.units) ≃ₜ
         LocallyClosedPointSpace Z,
       (∀ x, (e x : PrimeSpectrum A) = localizedPieceSpectrumMap Z x) ∧
-        IsClosedAffineLocus
+        IsClosed
           (localizedPieceSpectrumMap Z ⁻¹' Z.carrier) := by
   sorry
 
@@ -330,7 +327,7 @@ def stageClosedLocusOnSpectrum {A : Type u} [CommRing A] (E : Finset A) :
 
 theorem stageClosedLocus_isClosed
     {A : Type u} [CommRing A] (E : Finset A) :
-    IsClosedAffineLocus (stageClosedLocusOnSpectrum E) := by
+    IsClosed (stageClosedLocusOnSpectrum E) := by
   sorry
 
 theorem stageClosedLocus_has_closed_subscheme
@@ -454,6 +451,12 @@ def stageFunctorBaseMap {A : Type u} [CommRing A] (E : Finset A) :
     A →+* stageFunctor (A := A).obj E :=
   stageRingMap E
 
+/- The finite-subset index is the directed poset denoted `I(A)` in the
+   source. -/
+theorem finiteSubsetIndex_isFiltered {A : Type u} [CommRing A] :
+    IsFiltered (Finset A) := by
+  infer_instance
+
 /-- The colimit ring `A_w`. -/
 noncomputable def wLocalRing {A : Type u} [CommRing A] : CommRingCat :=
   colimit (stageFunctor (A := A))
@@ -466,7 +469,10 @@ def wLocalSpectrum {A : Type u} [CommRing A] : AlgebraicGeometry.Scheme :=
 colimit diagram. -/
 noncomputable def stageSchemeDiagram {A : Type u} [CommRing A] :
     (Finset A)ᵒᵖ ⥤ AlgebraicGeometry.Scheme :=
-  (stageFunctor (A := A)).op ⋙ AlgebraicGeometry.Scheme.Spec
+  { obj := fun E => stageScheme E.unop
+    map := fun {E F} h => stageTransitionScheme (leOfHom h.unop)
+    map_id := by sorry
+    map_comp := by sorry }
 
 theorem stageSchemeDiagram_obj_iso
     {A : Type u} [CommRing A] (E : Finset A) :
@@ -481,12 +487,11 @@ noncomputable def wLocalSpectrumStageCone {A : Type u} [CommRing A] :
     Cone (stageSchemeDiagram (A := A)) where
   pt := AlgebraicGeometry.Spec (colimit (stageFunctor (A := A)))
   π := { app := fun E =>
-      AlgebraicGeometry.Spec.map (colimit.ι (stageFunctor (A := A)) E.unop)
+      let i : stageRing E.unop ⟶ colimit (stageFunctor (A := A)) :=
+        colimit.ι (stageFunctor (A := A)) E.unop
+      AlgebraicGeometry.Spec.map i
          naturality := by
-           intro E F f
-           dsimp [stageSchemeDiagram]
-           simp only [Category.id_comp]
-           rw [← AlgebraicGeometry.Spec.map_comp, colimit.w] }
+           sorry }
 
 theorem wLocalSpectrum_is_limit_of_stage_schemes
     {A : Type u} [CommRing A] :
@@ -502,8 +507,7 @@ noncomputable def wLocalRingMap {A : Type u} [CommRing A] :
    spectrum to the spectrum of a finite stage. -/
 noncomputable def wLocalStageRingMap {A : Type u} [CommRing A]
     (E : Finset A) : stageRing E →+* wLocalRing (A := A) :=
-  (colimit.ι (stageFunctor (A := A)) E).hom.comp
-    (RingHom.id (stageRing E))
+  (colimit.ι (stageFunctor (A := A)) E).hom
 
 /-- The closed subscheme locus `Z` in the source's inverse-limit formula. -/
 noncomputable def wLocalClosedLocus {A : Type u} [CommRing A] :

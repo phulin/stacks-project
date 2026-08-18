@@ -152,7 +152,7 @@ theorem contraction_square (T T' : NumericalType) (i : Fin T.n)
 
 /-! The weight ratios used to control the contraction cokernel. -/
 theorem contracted_weight_ratio_one_or_two (T T' : NumericalType)
-    (i : Fin T.n) (hi : IsMinusOneIndex T i)
+    (i : Fin T.n)
     (e : Fin T'.n ≃ RemainingIndex T i)
     (hcontraction : IsContraction T T' i e) :
     ∀ j, T.w (e j).1 / T'.w j = 1 ∨ T.w (e j).1 / T'.w j = 2 := by
@@ -197,29 +197,29 @@ theorem contractionP_two_smul_basis_mem_range (T T' : NumericalType)
     ∀ j : Fin T'.n,
       (2 : ℤ) • (Pi.single j 1) ∈ LinearMap.range (contractionP T T' i e) := by
   intro j
-  rcases contracted_weight_ratio_one_or_two T T' i hi e hcontraction j with hratio | hratio
+  rcases contracted_weight_ratio_one_or_two T T' i e hcontraction j with hratio | hratio
   · refine ⟨2 • Pi.single (e j).1 1, ?_⟩
     ext k
     have hne : (e j).1 ≠ i := (e j).2
     by_cases hkj : k = j
     · subst k
-      simp [contractionP, hratio, Pi.single_apply, hne]
+      simp [contractionP, hratio, hne]
     · have hek : (e k).1 ≠ (e j).1 := by
         intro h
         apply hkj
         exact e.injective (Subtype.ext h)
-      simp [contractionP, hkj, hek, Pi.single_apply, hne]
+      simp [contractionP, hkj, hek, hne]
   · refine ⟨Pi.single (e j).1 1, ?_⟩
     ext k
     have hne : (e j).1 ≠ i := (e j).2
     by_cases hkj : k = j
     · subst k
-      simp [contractionP, hratio, Pi.single_apply, hne]
+      simp [contractionP, hratio, hne]
     · have hek : (e k).1 ≠ (e j).1 := by
         intro h
         apply hkj
         exact e.injective (Subtype.ext h)
-      simp [contractionP, hkj, hek, Pi.single_apply, hne]
+      simp [contractionP, hkj, hek, hne]
 
 /-! The target quotient map used to descend `p` to the Picard cokernel. -/
 def contractionTargetMap (T T' : NumericalType) (i : Fin T.n)

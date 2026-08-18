@@ -1219,13 +1219,195 @@ theorem bivariate_pair_intersects_univariate
     (k : Type*) [Field k] (f g : BivariatePolynomial k)
     (hf : Irreducible f) (hg : Irreducible g) (hnassoc : ¬Associated f g) :
     ∃ p : Polynomial k, p ≠ 0 ∧ Polynomial.C p ∈ bivariateTwoGeneratorIdeal f g := by
-  sorry
+  let R := Polynomial k
+  let K := FractionRing R
+  have hres : Polynomial.resultant f g ≠ 0 := by
+    intro hres
+    have hzero :
+        Polynomial.resultant (f.map (algebraMap R K))
+          (g.map (algebraMap R K)) = 0 := by
+      simpa [Polynomial.resultant_map_map,
+        Polynomial.natDegree_map_eq_of_injective (IsFractionRing.injective R K)] using
+        congrArg (algebraMap R K) hres
+    by_cases hfd : f.natDegree = 0
+    · by_cases hgd : g.natDegree = 0
+      · obtain ⟨a, rfl⟩ := Polynomial.natDegree_eq_zero.mp hfd
+        obtain ⟨b, rfl⟩ := Polynomial.natDegree_eq_zero.mp hgd
+        have ha : Irreducible a := by
+          rw [irreducible_iff]
+          constructor
+          · intro ha
+            exact hf.not_isUnit (Polynomial.isUnit_C.mpr ha)
+          · intro x y hxy
+            have hfac : Polynomial.C a = Polynomial.C x * Polynomial.C y := by
+              simpa only [Polynomial.C_mul] using congrArg Polynomial.C hxy
+            rcases hf.isUnit_or_isUnit hfac with hx | hy
+            · exact Or.inl (Polynomial.isUnit_C.mp hx)
+            · exact Or.inr (Polynomial.isUnit_C.mp hy)
+        have hb : Irreducible b := by
+          rw [irreducible_iff]
+          constructor
+          · intro hb
+            exact hg.not_isUnit (Polynomial.isUnit_C.mpr hb)
+          · intro x y hxy
+            have hfac : Polynomial.C b = Polynomial.C x * Polynomial.C y := by
+              simpa only [Polynomial.C_mul] using congrArg Polynomial.C hxy
+            rcases hg.isUnit_or_isUnit hfac with hx | hy
+            · exact Or.inl (Polynomial.isUnit_C.mp hx)
+            · exact Or.inr (Polynomial.isUnit_C.mp hy)
+        have hab : IsCoprime a b := by
+          apply (ha.coprime_iff_not_dvd).2
+          intro hab
+          rcases hab with ⟨c, hc⟩
+          apply hnassoc
+          apply hf.associated_of_dvd hg
+          exact ⟨Polynomial.C c, by rw [← Polynomial.C_mul, hc]⟩
+        obtain ⟨u, v, huv⟩ := hab
+        have hcop :
+            IsCoprime (Polynomial.C a : Polynomial R)
+              (Polynomial.C b : Polynomial R) := by
+          refine ⟨Polynomial.C u, Polynomial.C v, ?_⟩
+          simpa only [Polynomial.C_mul, Polynomial.C_add, Polynomial.C_1] using
+            congrArg Polynomial.C huv
+        exact (Polynomial.resultant_eq_zero_iff.mp hzero).2
+          (hcop.map (Polynomial.mapRingHom (algebraMap R K)))
+      · have hgprim : g.IsPrimitive := hg.isPrimitive hgd
+        have hgmap : Irreducible (g.map (algebraMap R K)) :=
+          hgprim.irreducible_iff_irreducible_map_fraction_map.mp hg
+        have hnotcop :
+            ¬ IsCoprime (g.map (algebraMap R K))
+              (f.map (algebraMap R K)) := by
+          intro hcop
+          exact (Polynomial.resultant_eq_zero_iff.mp hzero).2 hcop.symm
+        have hdiv : g.map (algebraMap R K) ∣ f.map (algebraMap R K) :=
+          (hgmap.dvd_iff_not_isCoprime).2 hnotcop
+        have hdiv' : g ∣ f := hgprim.dvd_of_fraction_map_dvd_fraction_map hdiv
+        exact hnassoc (hg.associated_of_dvd hf hdiv').symm
+    · have hfprim : f.IsPrimitive := hf.isPrimitive hfd
+      have hfmap : Irreducible (f.map (algebraMap R K)) :=
+        hfprim.irreducible_iff_irreducible_map_fraction_map.mp hf
+      have hnotcop :
+          ¬ IsCoprime (f.map (algebraMap R K))
+            (g.map (algebraMap R K)) := by
+        intro hcop
+        exact (Polynomial.resultant_eq_zero_iff.mp hzero).2 hcop
+      have hdiv : f.map (algebraMap R K) ∣ g.map (algebraMap R K) :=
+        (hfmap.dvd_iff_not_isCoprime).2 hnotcop
+      have hdiv' : f ∣ g := hfprim.dvd_of_fraction_map_dvd_fraction_map hdiv
+      exact hnassoc (hf.associated_of_dvd hg hdiv')
+  by_cases hfd : f.natDegree = 0
+  · by_cases hgd : g.natDegree = 0
+    · obtain ⟨a, rfl⟩ := Polynomial.natDegree_eq_zero.mp hfd
+      obtain ⟨b, rfl⟩ := Polynomial.natDegree_eq_zero.mp hgd
+      have ha : Irreducible a := by
+        rw [irreducible_iff]
+        constructor
+        · intro ha
+          exact hf.not_isUnit (Polynomial.isUnit_C.mpr ha)
+        · intro x y hxy
+          have hfac : Polynomial.C a = Polynomial.C x * Polynomial.C y := by
+            simpa only [Polynomial.C_mul] using congrArg Polynomial.C hxy
+          rcases hf.isUnit_or_isUnit hfac with hx | hy
+          · exact Or.inl (Polynomial.isUnit_C.mp hx)
+          · exact Or.inr (Polynomial.isUnit_C.mp hy)
+      have hb : Irreducible b := by
+        rw [irreducible_iff]
+        constructor
+        · intro hb
+          exact hg.not_isUnit (Polynomial.isUnit_C.mpr hb)
+        · intro x y hxy
+          have hfac : Polynomial.C b = Polynomial.C x * Polynomial.C y := by
+            simpa only [Polynomial.C_mul] using congrArg Polynomial.C hxy
+          rcases hg.isUnit_or_isUnit hfac with hx | hy
+          · exact Or.inl (Polynomial.isUnit_C.mp hx)
+          · exact Or.inr (Polynomial.isUnit_C.mp hy)
+      have hab : IsCoprime a b := by
+        apply (ha.coprime_iff_not_dvd).2
+        intro hab
+        rcases hab with ⟨c, hc⟩
+        apply hnassoc
+        apply hf.associated_of_dvd hg
+        exact ⟨Polynomial.C c, by rw [← Polynomial.C_mul, hc]⟩
+      obtain ⟨u, v, huv⟩ := hab
+      refine ⟨1, one_ne_zero, ?_⟩
+      rw [bivariateTwoGeneratorIdeal]
+      apply Ideal.mem_span_pair.mpr
+      refine ⟨Polynomial.C u, Polynomial.C v, ?_⟩
+      simpa only [Polynomial.C_mul, Polynomial.C_add, Polynomial.C_1] using
+        congrArg Polynomial.C huv
+    · obtain ⟨a, b, ha, hb, hab⟩ :=
+        Polynomial.exists_mul_add_mul_eq_C_resultant f g le_rfl le_rfl (Or.inr hgd)
+      refine ⟨Polynomial.resultant f g, hres, ?_⟩
+      rw [bivariateTwoGeneratorIdeal]
+      rw [← hab]
+      exact add_mem ((Ideal.span {f, g}).mul_mem_right a
+        (Ideal.subset_span (by simp)))
+        ((Ideal.span {f, g}).mul_mem_right b
+          (Ideal.subset_span (by simp)))
+  · obtain ⟨a, b, ha, hb, hab⟩ :=
+      Polynomial.exists_mul_add_mul_eq_C_resultant f g le_rfl le_rfl (Or.inl hfd)
+    refine ⟨Polynomial.resultant f g, hres, ?_⟩
+    rw [bivariateTwoGeneratorIdeal]
+    rw [← hab]
+    exact add_mem ((Ideal.span {f, g}).mul_mem_right a
+      (Ideal.subset_span (by simp)))
+      ((Ideal.span {f, g}).mul_mem_right b
+        (Ideal.subset_span (by simp)))
 
 theorem bivariate_prime_contains_univariate_irreducible
     (k : Type*) [Field k] (P : Ideal (BivariatePolynomial k)) (hP : P.IsPrime)
     (hnprincipal : ∀ f, P ≠ Ideal.span ({f} : Set (BivariatePolynomial k))) :
     ∃ p : Polynomial k, Irreducible p ∧ Polynomial.C p ∈ P := by
-  sorry
+  obtain ⟨n, f, hf, hPspan⟩ := bivariate_prime_has_finite_irreducible_generators
+    k P hP hnprincipal
+  have hpair : ∃ i j : Fin n, ¬Associated (f i) (f j) := by
+    by_contra h
+    push_neg at h
+    by_cases hn : n = 0
+    · apply hnprincipal 0
+      subst n
+      simpa [hPspan]
+    · have hnpos : 0 < n := Nat.pos_of_ne_zero hn
+      let i₀ : Fin n := ⟨0, hnpos⟩
+      have hspan : Ideal.span (Set.range f) =
+          Ideal.span ({f i₀} : Set (BivariatePolynomial k)) := by
+        apply le_antisymm
+        · apply Ideal.span_le.2
+          rintro _ ⟨i, rfl⟩
+          exact Ideal.mem_span_singleton.mpr (h i₀ i).dvd
+        · apply Ideal.span_le.2
+          intro x hx
+          rw [Set.mem_singleton_iff.mp hx]
+          exact Ideal.subset_span (s := Set.range f) (Set.mem_range_self i₀)
+      apply hnprincipal (f i₀)
+      exact hPspan.trans hspan
+  obtain ⟨i, j, hij⟩ := hpair
+  obtain ⟨p, hp0, hpP⟩ := bivariate_pair_intersects_univariate k (f i) (f j)
+    (hf i) (hf j) hij
+  have hpP' : Polynomial.C p ∈ P := by
+    rw [hPspan]
+    apply (Ideal.span_le.2 (by
+      intro x hx
+      simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at hx
+      rcases hx with rfl | rfl
+      · exact Ideal.subset_span ⟨i, rfl⟩
+      · exact Ideal.subset_span ⟨j, rfl⟩)) hpP
+  have hfactor : ∀ q : Polynomial k, Polynomial.C q ∈ P → q ≠ 0 →
+      ∃ r : Polynomial k, Irreducible r ∧ Polynomial.C r ∈ P := by
+    intro q
+    refine WfDvdMonoid.induction_on_irreducible q ?_ ?_ ?_
+    · intro hq hq0
+      exact (hq0 rfl).elim
+    · intro u hu hmem _
+      exact (hP.ne_top
+        (P.eq_top_of_isUnit_mem hmem (Polynomial.isUnit_C.mpr hu))).elim
+    · intro q r hq0 hr ih hmem _
+      have hmem' : Polynomial.C r * Polynomial.C q ∈ P := by
+        simpa only [Polynomial.C_mul] using hmem
+      rcases hP.mem_or_mem hmem' with hrP | hqP
+      · exact ⟨r, hr, hrP⟩
+      · exact ih hqP hq0
+  exact hfactor p hpP' hp0
 
 theorem bivariate_univariate_quotient_isPID
     (k : Type*) [Field k] (p : Polynomial k) (hp : Irreducible p) :
@@ -1258,9 +1440,106 @@ theorem prime_ideal_bivariate_cases (k : Type*) [Field k]
       (∃ f : BivariatePolynomial k, Irreducible f ∧ P = Ideal.span {f}) ∨
       (∃ p : Polynomial k, Irreducible p ∧
         (P = bivariateUnivariateIdeal p ∨
-          ∃ f : BivariatePolynomial k, BivariateQuotientIrreducible p f ∧
+            ∃ f : BivariatePolynomial k, BivariateQuotientIrreducible p f ∧
             P = bivariateTwoGeneratorIdeal (Polynomial.C p) f)) := by
-  sorry
+  letI : UniqueFactorizationMonoid (BivariatePolynomial k) := bivariate_isUFD k
+  by_cases hzero : P = ⊥
+  · exact Or.inl hzero
+  by_cases hprincipal : ∃ f : BivariatePolynomial k,
+      P = Ideal.span ({f} : Set (BivariatePolynomial k))
+  · rcases hprincipal with ⟨f, hfP⟩
+    refine Or.inr (Or.inl ⟨f, ?_, hfP⟩)
+    have hf0 : f ≠ 0 := by
+      intro hf0
+      apply hzero
+      rw [hfP, hf0]
+      simp
+    apply UniqueFactorizationMonoid.irreducible_iff_prime.mpr
+    apply (Ideal.span_singleton_prime hf0).mp
+    rw [← hfP]
+    exact hP
+  · obtain ⟨p, hp, hpP⟩ := bivariate_prime_contains_univariate_irreducible
+      k P hP (by
+        intro f hf
+        exact hprincipal ⟨f, hf⟩)
+    let I : Ideal (BivariatePolynomial k) := bivariateUnivariateIdeal p
+    let qmk : BivariatePolynomial k →+* BivariateQuotient p := Ideal.Quotient.mk I
+    have hI : I ≤ P := by
+      intro x hx
+      change x ∈ bivariateUnivariateIdeal p at hx
+      rw [bivariateUnivariateIdeal] at hx
+      rcases (Ideal.mem_span_singleton.mp hx) with ⟨c, hc⟩
+      rw [hc]
+      exact P.mul_mem_right c hpP
+    letI : P.IsPrime := hP
+    have hQ : (P.map qmk).IsPrime :=
+      Ideal.isPrime_map_quotientMk_of_isPrime hI
+    obtain ⟨hdom, hpid⟩ := bivariate_univariate_quotient_isPID k p hp
+    letI : IsDomain (BivariateQuotient p) := hdom
+    letI : IsPrincipalIdealRing (BivariateQuotient p) := hpid
+    rcases (Ideal.isPrime_iff_of_isPrincipalIdealRing_of_noZeroDivisors
+      (P := P.map qmk)).mp hQ with
+      hQbot | ⟨q, hq, hQq⟩
+    · refine Or.inr (Or.inr ⟨p, hp, Or.inl ?_⟩)
+      have hcomap : (P.map qmk).comap qmk = P := Ideal.comap_map_mk hI
+      rw [hQbot] at hcomap
+      calc
+        P = (⊥ : Ideal (BivariateQuotient p)).comap qmk := hcomap.symm
+        _ = RingHom.ker qmk := (RingHom.ker_eq_comap_bot qmk).symm
+        _ = I := by
+          change RingHom.ker (Ideal.Quotient.mk I) = I
+          exact Ideal.mk_ker
+    · obtain ⟨f, hfq⟩ := Ideal.Quotient.mk_surjective q
+      have hfq' : qmk f = q := by simpa [qmk, I] using hfq
+      have hEq : (P.map qmk).comap qmk =
+          Ideal.span ({Polynomial.C p, f} : Set (BivariatePolynomial k)) := by
+        rw [hQq, ← hfq']
+        ext x
+        constructor
+        · intro hx
+          change qmk x ∈ Ideal.span ({qmk f} : Set (BivariateQuotient p)) at hx
+          have hdiv : qmk f ∣ qmk x :=
+            (Ideal.mem_span_singleton (α := BivariateQuotient p)).mp hx
+          rcases hdiv with ⟨c, hc⟩
+          obtain ⟨y, rfl⟩ := Ideal.Quotient.mk_surjective c
+          have hxy : x - f * y ∈ I := by
+            rw [← Ideal.Quotient.eq_zero_iff_mem]
+            have hc' : qmk x = qmk f * qmk y := by simpa [qmk] using hc
+            rw [map_sub, map_mul, hc']
+            change qmk f * qmk y - qmk f * qmk y = 0
+            simp
+          have hxy' : x - f * y ∈
+              Ideal.span ({Polynomial.C p} : Set (BivariatePolynomial k)) := by
+            simpa [I, bivariateUnivariateIdeal] using hxy
+          rcases Ideal.mem_span_singleton.mp hxy' with ⟨z, hz⟩
+          apply Ideal.mem_span_pair.mpr
+          exact ⟨z, y, by
+            calc
+              z * Polynomial.C p + y * f = Polynomial.C p * z + f * y := by ring
+              _ = (x - f * y) + f * y := by rw [hz]
+              _ = x := sub_add_cancel x (f * y)⟩
+        · intro hx
+          change qmk x ∈ Ideal.span ({qmk f} : Set (BivariateQuotient p))
+          rcases (Ideal.mem_span_pair (α := BivariatePolynomial k)).mp hx with
+            ⟨a, b, hab⟩
+          rw [← hab, map_add, map_mul]
+          apply add_mem
+          · have hcp : qmk (Polynomial.C p) = 0 := by
+              apply Ideal.Quotient.eq_zero_iff_mem.mpr
+              change Polynomial.C p ∈ bivariateUnivariateIdeal p
+              exact Ideal.subset_span (Set.mem_singleton _)
+            rw [hcp]
+            exact (Ideal.span ({qmk f} : Set (BivariateQuotient p))).mul_mem_left
+              (qmk a) (Ideal.span ({qmk f} : Set (BivariateQuotient p))).zero_mem
+          · exact (Ideal.span ({qmk f} : Set (BivariateQuotient p))).mul_mem_left
+              (qmk b) (Ideal.subset_span (Set.mem_singleton (qmk f)))
+      refine Or.inr (Or.inr ⟨p, hp, Or.inr ⟨f, ?_, ?_⟩⟩)
+      · unfold BivariateQuotientIrreducible
+        rw [hfq]
+        exact hq.irreducible
+      · have hcomap : (P.map qmk).comap qmk = P := Ideal.comap_map_mk hI
+        rw [hEq] at hcomap
+        exact hcomap.symm
 
 /-! ## The affine open which is not a standard localization -/
 
@@ -1289,7 +1568,160 @@ theorem affine_base_is_generated_by_A_and_B :
     affineBaseSubalgebra =
       Algebra.adjoin ℚ ({(affineA : Polynomial ℚ), (affineB : Polynomial ℚ)} :
         Set (Polynomial ℚ)) := by
-  sorry
+  let S : Subalgebra ℚ (Polynomial ℚ) :=
+    Algebra.adjoin ℚ ({(affineA : Polynomial ℚ), (affineB : Polynomial ℚ)} :
+      Set (Polynomial ℚ))
+  have hA : (affineA : Polynomial ℚ) ∈ S :=
+    Algebra.subset_adjoin (by simp)
+  have hB : (affineB : Polynomial ℚ) ∈ S :=
+    Algebra.subset_adjoin (by simp)
+  have hAmonic : (affineA : Polynomial ℚ).Monic := by
+    change (Polynomial.X ^ 2 - Polynomial.X : Polynomial ℚ).Monic
+    simpa using (Polynomial.monic_X_pow_sub (p := Polynomial.X) (n := 2) (by simp))
+  have hAq : ∀ q : Polynomial ℚ,
+      (affineA : Polynomial ℚ) * q ∈ S := by
+    intro q
+    induction hq : q.natDegree using Nat.strong_induction_on generalizing q with
+    | h n ih =>
+        by_cases hsmall : q.natDegree ≤ 1
+        · obtain ⟨c₁, c₀, hqform⟩ :=
+            Polynomial.exists_eq_X_add_C_of_natDegree_le_one hsmall
+          have hident :
+              (affineA : Polynomial ℚ) * q =
+                Polynomial.C c₁ * (affineB : Polynomial ℚ) +
+                  Polynomial.C c₀ * (affineA : Polynomial ℚ) := by
+            rw [hqform]
+            simp [affineA, affineB, affineBaseElement]
+            ring
+          rw [hident]
+          apply S.add_mem
+          · apply S.mul_mem
+            · simpa only [Polynomial.C_eq_algebraMap] using S.algebraMap_mem c₁
+            · exact hB
+          · apply S.mul_mem
+            · simpa only [Polynomial.C_eq_algebraMap] using S.algebraMap_mem c₀
+            · exact hA
+        · have hquot :
+              (q /ₘ (affineA : Polynomial ℚ)).natDegree < q.natDegree := by
+            have hAnat : (affineA : Polynomial ℚ).natDegree = 2 := by
+              change (Polynomial.X ^ 2 - Polynomial.X : Polynomial ℚ).natDegree = 2
+              rw [Polynomial.natDegree_sub_eq_left_of_natDegree_lt (by simp)]
+              simp
+            rw [Polynomial.natDegree_divByMonic q hAmonic, hAnat, hq]
+            omega
+          have hquot' :
+              (q /ₘ (affineA : Polynomial ℚ)).natDegree < n := by
+            simpa [hq] using hquot
+          have hih := ih _ hquot' (q /ₘ (affineA : Polynomial ℚ)) rfl
+          have hrem :
+              (affineA : Polynomial ℚ) * (q %ₘ (affineA : Polynomial ℚ)) ∈ S := by
+            have hremdeg : (q %ₘ (affineA : Polynomial ℚ)).natDegree ≤ 1 := by
+              have hlt := Polynomial.degree_modByMonic_lt q hAmonic
+              change (q %ₘ (affineA : Polynomial ℚ)).degree <
+                (affineA : Polynomial ℚ).degree at hlt
+              have hAdeg : (affineA : Polynomial ℚ).degree = (2 : WithBot ℕ) := by
+                rw [Polynomial.degree_eq_natDegree hAmonic.ne_zero]
+                have hAnat : (affineA : Polynomial ℚ).natDegree = 2 := by
+                  change (Polynomial.X ^ 2 - Polynomial.X : Polynomial ℚ).natDegree = 2
+                  rw [Polynomial.natDegree_sub_eq_left_of_natDegree_lt (by simp)]
+                  simp
+                rw [hAnat]
+                norm_num
+              rw [hAdeg] at hlt
+              have hle : (q %ₘ (affineA : Polynomial ℚ)).degree ≤ (1 : WithBot ℕ) := by
+                by_cases hbot : (q %ₘ (affineA : Polynomial ℚ)).degree = ⊥
+                · rw [hbot]
+                  exact bot_le
+                · obtain ⟨n, hn⟩ := WithBot.ne_bot_iff_exists.mp hbot
+                  rw [← hn]
+                  apply WithBot.coe_le_coe.mpr
+                  rw [← hn] at hlt
+                  have hn' : n < 2 := WithBot.coe_lt_coe.mp hlt
+                  omega
+              exact Polynomial.natDegree_le_of_degree_le hle
+            obtain ⟨c₁, c₀, hremform⟩ :=
+              Polynomial.exists_eq_X_add_C_of_natDegree_le_one hremdeg
+            have hident :
+                (affineA : Polynomial ℚ) * (q %ₘ (affineA : Polynomial ℚ)) =
+                  Polynomial.C c₁ * (affineB : Polynomial ℚ) +
+                    Polynomial.C c₀ * (affineA : Polynomial ℚ) := by
+              rw [hremform]
+              simp [affineA, affineB, affineBaseElement]
+              ring
+            rw [hident]
+            apply S.add_mem
+            · apply S.mul_mem
+              · simpa only [Polynomial.C_eq_algebraMap] using S.algebraMap_mem c₁
+              · exact hB
+            · apply S.mul_mem
+              · simpa only [Polynomial.C_eq_algebraMap] using S.algebraMap_mem c₀
+              · exact hA
+          have hqdecomp := Polynomial.modByMonic_add_div q (affineA : Polynomial ℚ)
+          rw [← hqdecomp]
+          rw [mul_add]
+          exact S.add_mem hrem (S.mul_mem hA hih)
+  have hgen : ∀ f : Polynomial ℚ,
+      Polynomial.aeval (0 : ℚ) f = Polynomial.aeval (1 : ℚ) f → f ∈ S := by
+    intro f hf
+    let r : Polynomial ℚ := f %ₘ (affineA : Polynomial ℚ)
+    let q : Polynomial ℚ := f /ₘ (affineA : Polynomial ℚ)
+    have hdecomp : r + (affineA : Polynomial ℚ) * q = f := by
+      simpa [r, q] using Polynomial.modByMonic_add_div f (affineA : Polynomial ℚ)
+    have hrEq : Polynomial.aeval (0 : ℚ) r = Polynomial.aeval (1 : ℚ) r := by
+      have h := hf
+      rw [← hdecomp] at h
+      simpa [r, q, affineA, affineBaseElement] using h
+    have hrdeg : r.natDegree ≤ 1 := by
+      have hlt := Polynomial.degree_modByMonic_lt f hAmonic
+      change r.degree < (affineA : Polynomial ℚ).degree at hlt
+      have hAdeg : (affineA : Polynomial ℚ).degree = (2 : WithBot ℕ) := by
+        rw [Polynomial.degree_eq_natDegree hAmonic.ne_zero]
+        have hAnat : (affineA : Polynomial ℚ).natDegree = 2 := by
+          change (Polynomial.X ^ 2 - Polynomial.X : Polynomial ℚ).natDegree = 2
+          rw [Polynomial.natDegree_sub_eq_left_of_natDegree_lt (by simp)]
+          simp
+        rw [hAnat]
+        norm_num
+      rw [hAdeg] at hlt
+      have hle : r.degree ≤ (1 : WithBot ℕ) := by
+        by_cases hbot : r.degree = ⊥
+        · rw [hbot]
+          exact bot_le
+        · obtain ⟨n, hn⟩ := WithBot.ne_bot_iff_exists.mp hbot
+          rw [← hn]
+          apply WithBot.coe_le_coe.mpr
+          rw [← hn] at hlt
+          have hn' : n < 2 := WithBot.coe_lt_coe.mp hlt
+          omega
+      exact Polynomial.natDegree_le_of_degree_le hle
+    obtain ⟨c₁, c₀, hremform⟩ :=
+      Polynomial.exists_eq_X_add_C_of_natDegree_le_one hrdeg
+    have hc₁ : c₁ = 0 := by
+      rw [hremform] at hrEq
+      have : c₀ = c₁ + c₀ := by simpa using hrEq
+      linarith
+    have hrconst : r = Polynomial.C c₀ := by
+      rw [hremform, hc₁]
+      simp
+    have hfdecomp : f = Polynomial.C c₀ +
+        (affineA : Polynomial ℚ) * q := by
+      rw [← hdecomp, hrconst]
+    rw [hfdecomp]
+    apply S.add_mem
+    · simpa only [Polynomial.C_eq_algebraMap] using S.algebraMap_mem c₀
+    · exact hAq q
+  change affineBaseSubalgebra = S
+  apply le_antisymm
+  · intro f hf
+    change Polynomial.aeval (0 : ℚ) f = Polynomial.aeval (1 : ℚ) f at hf
+    exact hgen f hf
+  · apply Algebra.adjoin_le
+    intro f hf
+    rcases Set.mem_insert_iff.mp hf with rfl | hf
+    · exact affineA.property
+    · have hf' : f = (affineB : Polynomial ℚ) := by simpa using hf
+      subst f
+      exact affineB.property
 
 theorem affine_base_isFiniteType : Algebra.FiniteType ℚ affineBaseSubalgebra := by
   rw [affine_base_is_generated_by_A_and_B]

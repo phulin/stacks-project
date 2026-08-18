@@ -4,7 +4,6 @@ import Mathlib.Algebra.Order.GroupWithZero.Range
 import Mathlib.Algebra.Order.Group.Units
 import Mathlib.Algebra.Order.Monoid.Submonoid
 import Mathlib.RingTheory.DiscreteValuationRing.Basic
-import Mathlib.RingTheory.Valuation.Discrete.Basic
 import Mathlib.RingTheory.Valuation.LocalSubring
 import Mathlib.RingTheory.Valuation.ValuationSubring
 
@@ -174,6 +173,16 @@ theorem localizationAtPrime_valuationRing
     ValuationRing (Localization.AtPrime p) := by
   sorry
 
+/- The source also allows an arbitrary localization.  Mathlib's
+   `ValuationRing` class requires a domain, so the unrestricted statement is
+   recorded at the corresponding pre-valuation level; the domain-preserving
+   case below recovers the full class. -/
+theorem localization_preValuationRing
+    {A : Type u} [CommRing A] [IsDomain A] [ValuationRing A]
+    (S : Submonoid A) :
+    PreValuationRing (Localization S) := by
+  sorry
+
 /-- Localization at any multiplicative set of non-zero-divisors preserves the
 valuation-ring property. -/
 theorem localization_valuationRing
@@ -235,15 +244,16 @@ theorem localSubring_eq_iInf_valuationSubrings
 
 /- The source's “totally ordered abelian group” is represented by Mathlib's
    split assumptions `[AddCommGroup Γ] [LinearOrder Γ]
-   [IsOrderedAddMonoid Γ]`; there is deliberately no parallel bundled class. -/
+   [IsOrderedAddMonoid Γ]`; there is deliberately no parallel bundled class.
+   The order dual below makes Lean's `≤` represent the source's `≥`. -/
 
 /-- The nonzero value group associated to a valuation ring, written additively
 using Mathlib's canonical subgroup of units. -/
 abbrev ValueGroup
     {A : Type u} [CommRing A] [IsDomain A] [ValuationRing A]
     {K : Type v} [Field K] [Algebra A K] [IsFractionRing A K] :=
-  Additive (MonoidWithZeroHom.valueGroup
-    (ValuationRing.valuation A K).toMonoidWithZeroHom)
+  Additive (OrderDual (MonoidWithZeroHom.valueGroup
+    (ValuationRing.valuation A K).toMonoidWithZeroHom))
 
 /-- The canonical value group with zero used internally by Mathlib. -/
 abbrev ValueGroupWithZero
@@ -275,11 +285,6 @@ theorem valueGroup_int_orderIso_unique
     Nonempty (ValueGroup (A := A) (K := K) ≃+o ℤ) ∧
       ∀ e₁ e₂ : ValueGroup (A := A) (K := K) ≃+o ℤ, e₁ = e₂ := by
   sorry
-
-/-- The source's DVR terminology is available through Mathlib's canonical
-local-PID/non-field predicate. -/
-abbrev IsDVR (A : Type u) [CommRing A] [IsDomain A] : Prop :=
-  IsDiscreteValuationRing A
 
 /- The source fixes the order-preserving normalization of an isomorphism with
    `ℤ`; the ordered-additive-isomorphism API records that normalization. -/

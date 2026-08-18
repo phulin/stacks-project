@@ -132,7 +132,7 @@ theorem genus_diagonal_parity (T : NumericalType) :
       simp [d]
     · intro p hp
       have heq : p.1 = p.2 := Classical.not_not.mp (Finset.mem_filter.mp hp).2
-      simpa [heq]
+      simp [heq]
   have hpartition :
       (Finset.univ.product Finset.univ).sum
           (fun p => (T.m p.1 : ZMod 2) * (T.a p.1 p.2 : ZMod 2) * (T.m p.2 : ZMod 2)) =
@@ -174,8 +174,7 @@ private theorem genusNumerator_even (T : NumericalType) : Even (genusNumerator T
     | @insert i s hi ih =>
       rw [Finset.sum_insert hi]
       have hiEven : Even (2 * T.m i * T.w i * (T.g i - 1)) := by
-        simpa [mul_assoc] using
-          (even_two_mul (T.m i * T.w i * (T.g i - 1)))
+        simp [mul_assoc]
       exact hiEven.add ih
   have hdiag : Even ((Finset.univ : Finset (Fin T.n)).sum (fun i => T.m i * T.a i i)) := by
     simpa [mul_comm] using genus_diagonal_parity T
@@ -195,7 +194,6 @@ theorem genus_integral (T : NumericalType) :
     dsimp [genus]
     exact hdiv.symm
   rw [hkgenus, genus, genusNumerator, genusExpression]
-  push_cast
   have hquot :
       (2 + (Finset.univ : Finset (Fin T.n)).sum
         (fun i => 2 * T.m i * T.w i * (T.g i - 1) - T.m i * T.a i i)) / 2 = k := by
@@ -222,7 +220,6 @@ theorem genus_formula (T : NumericalType) :
     dsimp [genus]
     exact hdiv.symm
   rw [← hkgenus, genusExpression]
-  push_cast
   have hkq := congrArg (fun z : ℤ => (z : ℚ)) hk
   rw [genusNumerator] at hkq
   push_cast at hkq
@@ -259,7 +256,7 @@ theorem irreducible_numerical_type (T : NumericalType) (genusValue : ℤ)
 
 /-! Negative diagonal entries in the reducible case. -/
 theorem diagonal_negative (T : NumericalType) (genusValue : ℤ)
-    (hgenus : IsOfGenus T genusValue) (hn : 1 < T.n) :
+    (_hgenus : IsOfGenus T genusValue) (hn : 1 < T.n) :
     ∀ i, T.a i i < 0 := by
   have hAm : Matrix.mulVec (fun i j => (T.a i j : ℝ)) (fun i => (T.m i : ℝ)) = 0 := by
     funext i
@@ -315,7 +312,7 @@ theorem diagonal_negative (T : NumericalType) (genusValue : ℤ)
       exfalso
       exact (ne_of_gt hmj) hcj
   have hci := congrFun hc i
-  simpa [x, hc0] using hci
+  simp [x, hc0] at hci
 
 /-! A negative genus contribution is exactly a `(-1)` component. -/
 theorem minus_one_contribution (T : NumericalType) (genusValue : ℤ)
@@ -362,17 +359,9 @@ theorem contract_minus_one_index (T : NumericalType) (i : Fin T.n)
                   genus T' = genus T := by
   sorry
 
-/-! Positive off-diagonal pairs and the topological genus. -/
-def positiveEdgePairs (T : NumericalType) : Finset (Fin T.n × Fin T.n) := by
-  classical
-  exact (Finset.univ.product Finset.univ).filter (fun p =>
-    p.1 < p.2 ∧ 0 < T.a p.1 p.2)
-
-def positiveEdgeCount (T : NumericalType) : ℕ :=
-  (positiveEdgePairs T).card
-
 def topologicalGenus (T : NumericalType) : ℤ :=
-  1 - (T.n : ℤ) + (positiveEdgeCount T : ℤ)
+  1 - (T.n : ℤ) +
+    (Formalization.Books.Models.Unit02.positiveOffDiagonalEdgeCount T.a : ℤ)
 
 theorem topological_genus_nonnegative (T : NumericalType) :
     0 ≤ topologicalGenus T := by

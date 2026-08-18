@@ -374,7 +374,7 @@ theorem deRhamGamma_exists
     by_cases h : i = j
     · subst h
       simp [Matrix.vecTail]
-    · simp [Matrix.vecTail, h, Ne.symm h]
+    · simp [Matrix.vecTail, Ne.symm h]
   have coe_cast : ∀ {n m : ℕ} (h : n = m) (x : deRhamTerm A B n),
       ((cast (congrArg (fun k => (deRhamTerm A B k : Type _)) h) x :
         deRhamTerm A B m) : ExteriorAlgebra B (ModuleOfDifferentials A B)) =
@@ -416,7 +416,7 @@ theorem deRhamGamma_exists
           ExteriorAlgebra B (ModuleOfDifferentials A B)) := by
     intro n ω j
     simp only [deRhamWedgeWithDifferential]
-    apply coe_cast (by simp [Nat.add_comm, Nat.add_left_comm, Nat.add_assoc])
+    apply coe_cast (by simp [Nat.add_left_comm])
   have pure_add : ∀ (n : ℕ) (ω : Fin n → deRhamTerm A B 1)
       (i : Fin n) (x y : deRhamTerm A B 1),
       deRhamPureWedgeTerms (A := A) (B := B) n
@@ -441,7 +441,7 @@ theorem deRhamGamma_exists
                 (Function.update ω 0 y))
           rw [pure_succ_val, pure_succ_val, pure_succ_val,
             tail_update_zero, tail_update_zero, tail_update_zero]
-          simp [deRhamWedge, Function.update, Fin.succ_ne_zero, add_mul]
+          simp [deRhamWedge, Function.update]
         ·
           apply Subtype.ext
           change (↑(deRhamPureWedgeTerms (A := A) (B := B) (n + 1)
@@ -457,7 +457,7 @@ theorem deRhamGamma_exists
           have hzero : (0 : Fin (n + 1)) ≠ j.succ := by
             intro h
             exact Fin.succ_ne_zero j h.symm
-          simp [deRhamWedge, Function.update, hzero, add_mul]
+          simp [deRhamWedge, Function.update, hzero]
           rw [mul_add]
   have pure_smul : ∀ (n : ℕ) (ω : Fin n → deRhamTerm A B 1)
       (i : Fin n) (c : A) (x : deRhamTerm A B 1),
@@ -481,8 +481,7 @@ theorem deRhamGamma_exists
             (↑((algebraMap A B c) • deRhamPureWedgeTerms (A := A) (B := B) (n + 1)
                 (Function.update ω 0 x)) : ExteriorAlgebra B (ModuleOfDifferentials A B))
           rw [coe_smul, pure_succ_val, pure_succ_val, tail_update_zero, tail_update_zero]
-          simp [deRhamWedge, Function.update, Fin.succ_ne_zero,
-            IsScalarTower.algebraMap_smul, mul_assoc]
+          simp [deRhamWedge, Function.update]
         ·
           rw [← IsScalarTower.algebraMap_smul B c
             (deRhamPureWedgeTerms (A := A) (B := B) (n + 1)
@@ -499,8 +498,7 @@ theorem deRhamGamma_exists
           have hzero : (0 : Fin (n + 1)) ≠ j.succ := by
             intro h
             exact Fin.succ_ne_zero j h.symm
-          simp [deRhamWedge, Function.update, Fin.succ_ne_zero,
-            hzero, IsScalarTower.algebraMap_smul, mul_assoc]
+          simp [deRhamWedge, Function.update, hzero]
   have diff_add : ∀ (n : ℕ) (ω : Fin n → deRhamTerm A B 1)
       (i : Fin n) (x y : deRhamTerm A B 1) (j : Fin n),
       deRhamWedgeWithDifferential (A := A) (B := B) n
@@ -525,7 +523,7 @@ theorem deRhamGamma_exists
               ↑(deRhamWedgeWithDifferential (A := A) (B := B) (n + 1)
                   (Function.update ω 0 y) 0)
             rw [diff_zero_val, diff_zero_val, diff_zero_val]
-            simp [deRhamWedge, Function.update, tail_update_zero, add_mul]
+            simp [deRhamWedge, Function.update, tail_update_zero]
           · apply Subtype.ext
             change (↑(deRhamWedgeWithDifferential (A := A) (B := B) (n + 1)
                 (Function.update ω 0 (x + y)) l.succ) :
@@ -536,7 +534,7 @@ theorem deRhamGamma_exists
               ↑(deRhamWedgeWithDifferential (A := A) (B := B) (n + 1)
                   (Function.update ω 0 y) l.succ)
             rw [diff_succ_val, diff_succ_val, diff_succ_val]
-            simp [deRhamWedge, Function.update, tail_update_zero, add_mul]
+            simp [deRhamWedge, Function.update, tail_update_zero]
         · refine Fin.cases ?_ (fun l => ?_) j
           · apply Subtype.ext
             change (↑(deRhamWedgeWithDifferential (A := A) (B := B) (n + 1)
@@ -552,7 +550,7 @@ theorem deRhamGamma_exists
             have hzero : (0 : Fin (n + 1)) ≠ k.succ := by
               intro h
               exact Fin.succ_ne_zero k h.symm
-            simp [deRhamWedge, Function.update, hzero, pure_add, add_mul]
+            simp [deRhamWedge, Function.update, hzero, pure_add]
             rw [mul_add]
           · apply Subtype.ext
             change (↑(deRhamWedgeWithDifferential (A := A) (B := B) (n + 1)
@@ -569,7 +567,7 @@ theorem deRhamGamma_exists
             have hzero : (0 : Fin (n + 1)) ≠ k.succ := by
               intro h
               exact Fin.succ_ne_zero k h.symm
-            simp [deRhamWedge, Function.update, hzero, add_mul]
+            simp [deRhamWedge, Function.update, hzero]
             rw [mul_add]
   have wedge_smul_A_coe : ∀ (r s : ℕ) (u : deRhamTerm A B r)
       (c : A) (v : deRhamTerm A B s),
@@ -829,7 +827,7 @@ theorem deRhamGamma_exists
             exact deRhamGamma_sum_smul (A := A) (B := B) p ω i c x }
   refine ⟨⟨PiTensorProduct.lift f, ?_⟩⟩
   intro ω
-  simpa [f] using (PiTensorProduct.lift.tprod (φ := f) ω)
+  simp [f]
 
 /-- The alternating map `γ` from the source's tensor product construction. -/
 noncomputable def deRhamGamma

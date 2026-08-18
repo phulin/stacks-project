@@ -1,4 +1,5 @@
 import Mathlib.Algebra.Category.Ring.Epi
+import Mathlib.Algebra.Polynomial.Div
 import Mathlib.Data.PNat.Notation
 import Mathlib.RingTheory.KrullDimension.Basic
 import Mathlib.RingTheory.LocalRing.Basic
@@ -205,11 +206,144 @@ theorem target_y_power_eq_zero (k : Type u) [Field k] (i : ℕ+) :
     targetYElement k i ^ nilpotenceExponent (i + 1) = 0 := by
   rw [target_y_relation, mul_pow, target_x_power_eq_zero, zero_mul]
 
+private def targetEvaluationXExponent (N i : ℕ+) : ℕ :=
+  2 * 4 ^ ((N : ℕ) + 1 - (i : ℕ))
+
+private def targetEvaluationYExponent (N i : ℕ+) : ℕ :=
+  4 ^ ((N : ℕ) + 1 - (i : ℕ))
+
+private def targetEvaluationPolynomialMap (k : Type u) [Field k] (N : ℕ+) :
+    targetPolynomialRing k →+* Polynomial k :=
+  MvPolynomial.eval₂Hom Polynomial.C fun v =>
+    match v with
+    | .inl i => Polynomial.X ^ targetEvaluationXExponent N i
+    | .inr i => Polynomial.X ^ targetEvaluationYExponent N i
+
+private lemma targetEvaluationYExponent_relation (N i : ℕ+) (hi : i ≤ N) :
+    targetEvaluationYExponent N i =
+      targetEvaluationXExponent N (i + 1) +
+        2 * targetEvaluationYExponent N (i + 1) := by
+  have hjs : (i : ℕ) ≤ (N : ℕ) := by exact_mod_cast hi
+  dsimp [targetEvaluationXExponent, targetEvaluationYExponent]
+  simp only [Nat.add_sub_add_right]
+  rw [Nat.sub_add_comm hjs, pow_succ]
+  ring
+
+private lemma targetEvaluation_map_x_power (k : Type u) [Field k] (N i : ℕ+)
+    (hi : i ≤ N) :
+    targetEvaluationPolynomialMap k N (targetX k i ^ nilpotenceExponent i) =
+      Polynomial.X ^ (2 * 4 ^ ((N : ℕ) + 1)) := by
+  have hjs : (i : ℕ) ≤ (N : ℕ) := by exact_mod_cast hi
+  rw [map_pow]
+  simp only [targetEvaluationPolynomialMap, targetX, MvPolynomial.eval₂Hom_X',
+    targetEvaluationXExponent, nilpotenceExponent]
+  rw [← pow_mul]
+  congr 1
+  rw [mul_assoc, ← pow_add, Nat.sub_add_cancel (Nat.le_succ_of_le hjs)]
+
+private lemma targetEvaluation_map_relation (k : Type u) [Field k] (N i : ℕ+)
+    (hi : i ≤ N) :
+    targetEvaluationPolynomialMap k N
+        (targetY k i - targetX k (i + 1) * targetY k (i + 1) ^ 2) = 0 := by
+  rw [map_sub, map_mul, map_pow]
+  simp only [targetEvaluationPolynomialMap, targetY, targetX,
+    MvPolynomial.eval₂Hom_X']
+  rw [← pow_mul, ← pow_add]
+  rw [show targetEvaluationYExponent N i =
+      targetEvaluationXExponent N (i + 1) +
+        targetEvaluationYExponent N (i + 1) * 2 by
+    rw [targetEvaluationYExponent_relation N i hi]
+    ring]
+  exact sub_self _
+
+private lemma targetEvaluation_map_generator_mem (k : Type u) [Field k] (N : ℕ+)
+    {p : targetPolynomialRing k}
+    (hp : ∃ i : ℕ+, i ≤ N ∧
+      (p = targetX k i ^ nilpotenceExponent i ∨
+        p = targetY k i - targetX k (i + 1) * targetY k (i + 1) ^ 2)) :
+    targetEvaluationPolynomialMap k N p ∈
+      Ideal.span ({Polynomial.X ^ (2 * 4 ^ ((N : ℕ) + 1))} : Set (Polynomial k)) := by
+  rcases hp with ⟨i, hi, rfl | rfl⟩
+  · rw [targetEvaluation_map_x_power k N i hi]
+    exact Ideal.subset_span (by simp)
+  · rw [targetEvaluation_map_relation k N i hi]
+    exact (Ideal.span ({Polynomial.X ^ (2 * 4 ^ ((N : ℕ) + 1))} : Set (Polynomial k))).zero_mem
+
+private lemma exists_target_relation_index_bound (k : Type u) [Field k]
+    {T : Finset (targetPolynomialRing k)}
+    (hT : (↑T : Set (targetPolynomialRing k)) ⊆ targetRelationGenerators k) :
+    ∃ N : ℕ+, ∀ p ∈ T, ∃ i : ℕ+, i ≤ N ∧
+      (p = targetX k i ^ nilpotenceExponent i ∨
+        p = targetY k i - targetX k (i + 1) * targetY k (i + 1) ^ 2) := by
+  classical
+  induction T using Finset.induction_on with
+  | empty =>
+      refine ⟨1, ?_⟩
+      simp
+  | @insert p T hp ih =>
+      have hpgen : p ∈ targetRelationGenerators k := hT (by simp)
+      have hTgen : (↑T : Set (targetPolynomialRing k)) ⊆ targetRelationGenerators k :=
+        fun q hq => hT (by simp [hq])
+      obtain ⟨N, hN⟩ := ih hTgen
+      change p ∈
+        Set.range (fun i : ℕ+ => targetX k i ^ nilpotenceExponent i) ∪
+          Set.range (fun i : ℕ+ =>
+            targetY k i - targetX k (i + 1) * targetY k (i + 1) ^ 2) at hpgen
+      rcases hpgen with hpgen | hpgen
+      · rcases hpgen with ⟨j, hj⟩
+        refine ⟨max N j, ?_⟩
+        intro q hq
+        rcases Finset.mem_insert.mp hq with rfl | hq
+        · exact ⟨j, le_max_right _ _, Or.inl hj.symm⟩
+        · obtain ⟨l, hlN, hlp⟩ := hN q hq
+          exact ⟨l, le_trans hlN (le_max_left _ _), hlp⟩
+      · rcases hpgen with ⟨j, hj⟩
+        refine ⟨max N j, ?_⟩
+        intro q hq
+        rcases Finset.mem_insert.mp hq with rfl | hq
+        · exact ⟨j, le_max_right _ _, Or.inr hj.symm⟩
+        · obtain ⟨l, hlN, hlp⟩ := hN q hq
+          exact ⟨l, le_trans hlN (le_max_left _ _), hlp⟩
+
 /-- The first target `y` is nonzero, as in the source (the coefficient
 computation proving this is omitted there). -/
 theorem target_y_one_ne_zero (k : Type u) [Field k] :
     targetYElement k 1 ≠ 0 := by
-  sorry
+  intro hzero
+  have hp : targetY k 1 ∈ Ideal.span (targetRelationGenerators k) :=
+    Ideal.Quotient.eq_zero_iff_mem.mp hzero
+  obtain ⟨T, hT, hmem⟩ :=
+    Submodule.mem_span_finite_of_mem_span hp
+  obtain ⟨N, hN⟩ := exists_target_relation_index_bound k hT
+  let P : Ideal (Polynomial k) :=
+    Ideal.span ({Polynomial.X ^ (2 * 4 ^ ((N : ℕ) + 1))} : Set (Polynomial k))
+  let J : Ideal (targetPolynomialRing k) :=
+    Ideal.comap (targetEvaluationPolynomialMap k N) P
+  have hTJ : Ideal.span (↑T : Set (targetPolynomialRing k)) ≤ J := by
+    refine Ideal.span_le.mpr ?_
+    intro p hpT
+    exact targetEvaluation_map_generator_mem k N (hN p hpT)
+  change targetY k 1 ∈ Ideal.span (↑T : Set (targetPolynomialRing k)) at hmem
+  have hYJ : targetY k 1 ∈ J := hTJ hmem
+  have hY : targetEvaluationPolynomialMap k N (targetY k 1) ∈ P := hYJ
+  change targetEvaluationPolynomialMap k N (targetY k 1) ∈
+    Ideal.span ({Polynomial.X ^ (2 * 4 ^ ((N : ℕ) + 1))} : Set (Polynomial k)) at hY
+  simp only [targetEvaluationPolynomialMap, targetY, MvPolynomial.eval₂Hom_X',
+    targetEvaluationYExponent] at hY
+  change (Polynomial.X : Polynomial k) ^ (4 ^ (N : ℕ)) ∈
+    Ideal.span ({Polynomial.X ^ (2 * 4 ^ ((N : ℕ) + 1))} : Set (Polynomial k)) at hY
+  rw [Ideal.mem_span_singleton'] at hY
+  obtain ⟨q, hq⟩ := hY
+  have hdiv : (Polynomial.X : Polynomial k) ^ (2 * 4 ^ ((N : ℕ) + 1)) ∣
+      (Polynomial.X : Polynomial k) ^ (4 ^ (N : ℕ)) := by
+    exact ⟨q, by simpa [mul_comm] using hq.symm⟩
+  have hlt : 4 ^ (N : ℕ) < 2 * 4 ^ ((N : ℕ) + 1) := by
+    have h : 4 ^ (N : ℕ) < 8 * 4 ^ (N : ℕ) :=
+      lt_mul_of_one_lt_left (pow_pos (by decide : 0 < (4 : ℕ)) (N : ℕ))
+        (by decide : 1 < (8 : ℕ))
+    rw [pow_succ]
+    convert h using 1 <;> ring
+  exact Polynomial.not_dvd_of_natDegree_lt (by simp) (by simpa using hlt) hdiv
 
 /-- The degree assigned to a source variable: `deg(xᵢ) = -1` and
 `deg(zᵢ) = 0`. -/
@@ -267,14 +401,22 @@ theorem source_tensor_identity_first (k : Type u) [Field k] (i : ℕ+) :
     sourceTargetTensor k (targetYElement k i) 1 =
       sourceTargetTensor k
         (targetXElement k (i + 1) * targetYElement k (i + 1) ^ 2) 1 := by
-  sorry
+  rw [target_y_relation]
 
 theorem source_tensor_identity_middle_left (k : Type u) [Field k] (i : ℕ+) :
     sourceTargetTensor k
         (targetXElement k (i + 1) * targetYElement k (i + 1) ^ 2) 1 =
       sourceTargetTensor k (targetYElement k (i + 1))
         (targetXElement k (i + 1) * targetYElement k (i + 1)) := by
-  sorry
+  have hz : algebraMap (sourceRing k) (targetRing k) (sourceZElement k (i + 1)) =
+      targetXElement k (i + 1) * targetYElement k (i + 1) := by
+    change sourceToTarget k (sourceZElement k (i + 1)) = _
+    exact sourceToTarget_z k (i + 1)
+  simpa [sourceTargetTensor, Algebra.smul_def, hz, pow_two, mul_assoc, mul_comm,
+    mul_left_comm] using
+    (TensorProduct.smul_tmul (R := sourceRing k) (R' := sourceRing k)
+      (M := targetRing k) (N := targetRing k) (sourceZElement k (i + 1))
+      (targetYElement k (i + 1)) (1 : targetRing k))
 
 theorem source_tensor_identity_middle_right (k : Type u) [Field k] (i : ℕ+) :
     sourceTargetTensor k (targetYElement k (i + 1))

@@ -310,13 +310,29 @@ field. -/
 theorem power_series_counterexample_not_finite_type
     (k : Type u) [Field k] :
     ¬ Algebra.FiniteType k (powerSeriesCounterexampleRing k) := by
-  sorry
+  intro hft
+  let _ : Algebra.FiniteType k (powerSeriesCounterexampleRing k) := hft
+  obtain ⟨m, hm, hXm⟩ :=
+    finite_type_exists_maximal_ideal_not_mem
+      (k := k) (R := powerSeriesCounterexampleRing k)
+      (f := powerSeriesCounterexampleElement k) (by
+        rintro ⟨n, hn⟩
+        have hc := congr_arg (PowerSeries.coeff n) hn
+        simp [powerSeriesCounterexampleElement] at hc)
+  have hm_eq : m = Ideal.span {powerSeriesCounterexampleElement k} :=
+    (IsLocalRing.eq_maximalIdeal hm).trans
+      (PowerSeries.maximalIdeal_eq_span_X (k := k))
+  apply hXm
+  rw [hm_eq]
+  exact Ideal.mem_span_singleton_self _
 
 /-- The formal variable in the power-series counterexample is not nilpotent. -/
 theorem power_series_counterexample_element_not_nilpotent
     (k : Type u) [Field k] :
     ¬ IsNilpotent (powerSeriesCounterexampleElement k) := by
-  sorry
+  rintro ⟨n, hn⟩
+  have hc := congr_arg (PowerSeries.coeff n) hn
+  simp [powerSeriesCounterexampleElement] at hc
 
 /-- The unique maximal ideal description of formal power series over a field. -/
 theorem power_series_counterexample_maximal_ideal
@@ -331,14 +347,21 @@ theorem power_series_counterexample_maximal_ideals_contain_element
     (k : Type u) [Field k] :
     ∀ m : Ideal (powerSeriesCounterexampleRing k),
       m.IsMaximal → powerSeriesCounterexampleElement k ∈ m := by
-  sorry
+  intro m hm
+  rw [IsLocalRing.eq_maximalIdeal hm, power_series_counterexample_maximal_ideal k]
+  exact Ideal.mem_span_singleton_self _
 
 /-- A radical ideal in `ℂ[x₁, ..., xₙ]` is the infimum of the maximal ideals
 which contain it. -/
 theorem complex_polynomial_radical_ideal_eq_intersection_maximal_ideals
     (n : ℕ) (I : Ideal (polynomialRing ℂ n)) (hI : I.IsRadical) :
     I = sInf {m : Ideal (polynomialRing ℂ n) | I ≤ m ∧ m.IsMaximal} := by
-  sorry
+  let _ : IsJacobsonRing (polynomialRing ℂ n) := inferInstance
+  calc
+    I = I.radical := hI.radical.symm
+    _ = I.jacobson := Ideal.radical_eq_jacobson I
+    _ = sInf {m : Ideal (polynomialRing ℂ n) | I ≤ m ∧ m.IsMaximal} := by
+      rfl
 
 /-! ## Remark `Hilbert-Nullstellensatz` -/
 

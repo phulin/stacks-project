@@ -287,9 +287,9 @@ theorem graded_kernel_component_iso_exists {C : Type u} [Category.{v} C] [Abelia
     {A B : GradedObject ℤ C} (f : A ⟶ B) (i : ℤ) :
     Nonempty ((kernel f) i ≅ kernel (f i)) := by
   let hkernel : HasKernel f := inferInstance
-  letI : HasZeroMorphisms (ℤ → C) :=
+  let : HasZeroMorphisms (ℤ → C) :=
     (inferInstance : HasZeroMorphisms (GradedObject ℤ C))
-  letI : HasKernel f := hkernel
+  let : HasKernel f := hkernel
   let E := piEquivalenceFunctorDiscrete ℤ C
   let e₁ := PreservesKernel.iso E.functor f
   let e₂ := PreservesKernel.iso
@@ -306,9 +306,9 @@ theorem graded_cokernel_component_iso_exists {C : Type u} [Category.{v} C] [Abel
     {A B : GradedObject ℤ C} (f : A ⟶ B) (i : ℤ) :
     Nonempty ((cokernel f) i ≅ cokernel (f i)) := by
   let hcokernel : HasCokernel f := inferInstance
-  letI : HasZeroMorphisms (ℤ → C) :=
+  let : HasZeroMorphisms (ℤ → C) :=
     (inferInstance : HasZeroMorphisms (GradedObject ℤ C))
-  letI : HasCokernel f := hcokernel
+  let : HasCokernel f := hcokernel
   let E := piEquivalenceFunctorDiscrete ℤ C
   let e₁ := PreservesCokernel.iso E.functor f
   let e₂ := PreservesCokernel.iso
@@ -327,11 +327,11 @@ theorem graded_coimage_image_comparison_isIso {C : Type u} [Category.{v} C]
   let E := piEquivalenceFunctorDiscrete ℤ C
   let hKernels : HasKernels (GradedObject ℤ C) := inferInstance
   let hCokernels : HasCokernels (GradedObject ℤ C) := inferInstance
-  letI : HasZeroMorphisms (ℤ → C) :=
+  let : HasZeroMorphisms (ℤ → C) :=
     (inferInstance : HasZeroMorphisms (GradedObject ℤ C))
-  letI : HasKernels (ℤ → C) := hKernels
-  letI : HasCokernels (ℤ → C) := hCokernels
-  letI : E.inverse.PreservesZeroMorphisms :=
+  let : HasKernels (ℤ → C) := hKernels
+  let : HasCokernels (ℤ → C) := hCokernels
+  let : E.inverse.PreservesZeroMorphisms :=
     { map_zero := by
         intro X Y
         funext j

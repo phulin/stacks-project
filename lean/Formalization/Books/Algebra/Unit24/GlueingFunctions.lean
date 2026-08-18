@@ -745,8 +745,10 @@ theorem glue_modules {R : Type u} [CommRing R] {n : ℕ}
               LocalizedModule.mk m s =
                 D.ψ j i (LocalizedModule.mk y 1) := by
           let z := D.ψ j i (LocalizedModule.mk y 1)
+          change ∃ m : F.carrier j, ∃ s : standardCoverJointSubmonoid f j i,
+            LocalizedModule.mk m s = z
           induction z using LocalizedModule.induction_on with
-          | _ m s => exact ⟨m, s, rfl⟩
+            | _ m s => exact ⟨m, s, rfl⟩
         choose num den hnum using hrepr
         choose denLeft denRight hden using fun j =>
           (Formalization.Books.Algebra.Unit09.localizationProduct_mem_iff
@@ -756,7 +758,341 @@ theorem glue_modules {R : Type u} [CommRing R] {n : ℕ}
           (Submonoid.mem_powers_iff _ _).mp (denLeft j).property
         choose b hb using fun j =>
           (Submonoid.mem_powers_iff _ _).mp (denRight j).property
-        sorry
+        have hq (j : Fin n) : ∃ q : F.carrier j, (denLeft j : R) • q = num j := by
+          have hs := ((Module.End.isUnit_iff _).mp (hunit j (denLeft j))).2 (num j)
+          rcases hs with ⟨q, hq⟩
+          exact ⟨q, by simpa [← IsScalarTower.algebraMap_apply] using hq⟩
+        choose q hq using hq
+        have hnum' (j : Fin n) :
+            (den j : R) • D.ψ j i (LocalizedModule.mk y 1) =
+              LocalizedModule.mk (num j) 1 := by
+          rw [← hnum j, LocalizedModule.smul'_mk]
+          exact LocalizedModule.mk_cancel (den j) (num j)
+        have hrel (j : Fin n) :
+            (denRight j : R) • D.ψ j i (LocalizedModule.mk y 1) =
+              LocalizedModule.mk (q j) 1 := by
+          let sLeft : standardCoverJointSubmonoid f j i :=
+            ⟨denLeft j, (le_sup_left : Submonoid.powers (f j) ≤
+              standardCoverJointSubmonoid f j i) (denLeft j).property⟩
+          apply (IsLocalizedModule.smul_injective
+            (f := LocalizedModule.mkLinearMap (standardCoverJointSubmonoid f j i)
+              (F.carrier j)) sLeft)
+          calc
+            (sLeft : R) • ((denRight j : R) • D.ψ j i (LocalizedModule.mk y 1)) =
+                (den j : R) • D.ψ j i (LocalizedModule.mk y 1) := by
+                  change (denLeft j : R) • _ = _
+                  rw [← mul_smul, hden j]
+            _ = LocalizedModule.mk (num j) 1 := hnum' j
+            _ = (sLeft : R) • LocalizedModule.mk (q j) 1 := by
+              rw [LocalizedModule.smul'_mk]
+              change LocalizedModule.mk (num j) 1 =
+                LocalizedModule.mk ((denLeft j : R) • q j) 1
+              rw [hq j]
+        have hrel' (j : Fin n) :
+            (f i) ^ b j • D.ψ j i (LocalizedModule.mk y 1) =
+              LocalizedModule.mk (q j) 1 := by
+          rw [hb j]
+          exact hrel j
+        let B : ℕ := ∑ j, b j
+        have hB (j : Fin n) : b j ≤ B := by
+          dsimp [B]
+          exact Finset.single_le_sum (fun _ _ => Nat.zero_le _)
+            (Finset.mem_univ j)
+        let x₀ : ∀ j : Fin n, F.carrier j :=
+          fun j => (f i) ^ (B - b j) • q j
+        have hrelB (j : Fin n) :
+            (f i) ^ B • D.ψ j i (LocalizedModule.mk y 1) =
+              LocalizedModule.mk (x₀ j) 1 := by
+          rw [show B = (B - b j) + b j by
+            exact (Nat.sub_add_cancel (hB j)).symm, pow_add, mul_smul, hrel']
+          rw [LocalizedModule.smul'_mk]
+        have htrans (j : Fin n) (T : Submonoid R)
+            (hji : standardCoverJointSubmonoid f j i ≤ T) :
+            glueTransitionAt F D j i T hji
+                (LocalizedModule.liftOfLE (Submonoid.powers (f i)) T
+                  (by
+                    intro x hx
+                    exact hji ((le_sup_right : Submonoid.powers (f i) ≤
+                      standardCoverJointSubmonoid f j i) hx))
+                  (LocalizedModule.mk y (1 : Submonoid.powers (f i)))) =
+              LocalizedModule.liftOfLE (standardCoverJointSubmonoid f j i) T hji
+                (D.ψ j i (LocalizedModule.mk y 1)) := by
+          rw [show LocalizedModule.liftOfLE (Submonoid.powers (f i)) T
+                (by
+                  intro x hx
+                  exact hji ((le_sup_right : Submonoid.powers (f i) ≤
+                    standardCoverJointSubmonoid f j i) hx))
+                (LocalizedModule.mk y (1 : Submonoid.powers (f i))) =
+              LocalizedModule.liftOfLE (standardCoverJointSubmonoid f j i) T hji
+                (LocalizedModule.mk y (1 : standardCoverJointSubmonoid f j i)) by
+            simp only [IsLocalizedModule.mk_eq_mk', IsLocalizedModule.liftOfLE_mk',
+              Submonoid.coe_one]]
+          simp [glueTransitionAt, glueTransitionAsRLinear]
+        let T (j k : Fin n) :=
+          standardCoverJointSubmonoid f j k ⊔ Submonoid.powers (f i)
+        have hTjk (j k : Fin n) :
+            standardCoverJointSubmonoid f j k ≤ T j k := by
+          exact le_sup_left
+        have hTki (j k : Fin n) :
+            standardCoverJointSubmonoid f k i ≤ T j k := by
+          change Submonoid.powers (f k) ⊔ Submonoid.powers (f i) ≤
+            (Submonoid.powers (f j) ⊔ Submonoid.powers (f k)) ⊔
+              Submonoid.powers (f i)
+          exact sup_le (le_trans le_sup_right le_sup_left) le_sup_right
+        have hTji (j k : Fin n) :
+            standardCoverJointSubmonoid f j i ≤ T j k := by
+          change Submonoid.powers (f j) ⊔ Submonoid.powers (f i) ≤
+            (Submonoid.powers (f j) ⊔ Submonoid.powers (f k)) ⊔
+              Submonoid.powers (f i)
+          exact sup_le (le_trans le_sup_left le_sup_left) le_sup_right
+        have hTi (j k : Fin n) :
+            Submonoid.powers (f i) ≤ T j k :=
+          le_trans (le_sup_right : Submonoid.powers (f i) ≤
+            standardCoverJointSubmonoid f j i) (hTji j k)
+        have hrelT (l j k : Fin n)
+            (h : standardCoverJointSubmonoid f l i ≤ T j k) :
+            (f i) ^ B •
+                LocalizedModule.liftOfLE (standardCoverJointSubmonoid f l i) (T j k)
+                  h (D.ψ l i (LocalizedModule.mk y 1)) =
+              LocalizedModule.liftOfLE (standardCoverJointSubmonoid f l i) (T j k)
+                h (LocalizedModule.mk (x₀ l) 1) := by
+          simpa only [map_smul] using
+            congrArg
+              (LocalizedModule.liftOfLE (standardCoverJointSubmonoid f l i) (T j k)
+                h) (hrelB l)
+        have hmap (j k : Fin n) :
+            LocalizedModule.liftOfLE (standardCoverJointSubmonoid f j k) (T j k)
+                (hTjk j k) (LocalizedModule.mk (x₀ j) 1) =
+              glueTransitionAt F D j k (T j k) (hTjk j k)
+                (LocalizedModule.liftOfLE (standardCoverJointSubmonoid f k i) (T j k)
+                  (hTki j k) (LocalizedModule.mk (x₀ k) 1)) := by
+          let u := LocalizedModule.liftOfLE (Submonoid.powers (f i)) (T j k)
+            (hTi j k) (LocalizedModule.mk y (1 : Submonoid.powers (f i)))
+          have hc := hD i k j (T j k) (hTki j k) (hTjk j k) (hTji j k)
+          have hc' :
+              glueTransitionAt F D j k (T j k) (hTjk j k)
+                  (glueTransitionAt F D k i (T j k) (hTki j k) u) =
+                glueTransitionAt F D j i (T j k) (hTji j k) u := by
+            simpa only [LinearMap.comp_apply] using congrArg (fun l => l u) hc
+          have hj :
+              LocalizedModule.liftOfLE (standardCoverJointSubmonoid f j i) (T j k)
+                  (hTji j k) (LocalizedModule.mk (x₀ j) 1) =
+                LocalizedModule.liftOfLE (standardCoverJointSubmonoid f j k) (T j k)
+                  (hTjk j k) (LocalizedModule.mk (x₀ j) 1) := by
+            simp only [IsLocalizedModule.mk_eq_mk', IsLocalizedModule.liftOfLE_mk',
+              Submonoid.coe_one]
+          have hk :
+              LocalizedModule.liftOfLE (standardCoverJointSubmonoid f k i) (T j k)
+                  (hTki j k) (LocalizedModule.mk (x₀ k) 1) =
+                (f i) ^ B • glueTransitionAt F D k i (T j k) (hTki j k) u := by
+            rw [htrans k (T j k) (hTki j k), ← hrelT k j k (hTki j k)]
+          calc
+            _ = LocalizedModule.liftOfLE (standardCoverJointSubmonoid f j i) (T j k)
+                  (hTji j k) (LocalizedModule.mk (x₀ j) 1) := hj.symm
+            _ = (f i) ^ B •
+                  LocalizedModule.liftOfLE (standardCoverJointSubmonoid f j i) (T j k)
+                    (hTji j k) (D.ψ j i (LocalizedModule.mk y 1)) :=
+              (hrelT j j k (hTji j k)).symm
+            _ = (f i) ^ B • glueTransitionAt F D j i (T j k) (hTji j k) u := by
+              rw [htrans j (T j k) (hTji j k)]
+            _ = glueTransitionAt F D j k (T j k) (hTjk j k)
+                  ((f i) ^ B • glueTransitionAt F D k i (T j k) (hTki j k) u) := by
+              rw [map_smul, hc']
+            _ = _ := by rw [← hk]
+        have htransAny (j k : Fin n) (T' : Submonoid R)
+            (hjk : standardCoverJointSubmonoid f j k ≤ T')
+            (hki : standardCoverJointSubmonoid f k i ≤ T')
+            (a' : F.carrier k) :
+            glueTransitionAt F D j k T' hjk
+                (LocalizedModule.liftOfLE (standardCoverJointSubmonoid f k i) T' hki
+                  (LocalizedModule.mk a' 1)) =
+              LocalizedModule.liftOfLE (standardCoverJointSubmonoid f j k) T' hjk
+                (D.ψ j k (LocalizedModule.mk a' 1)) := by
+          rw [show LocalizedModule.liftOfLE (standardCoverJointSubmonoid f k i) T' hki
+                (LocalizedModule.mk a' 1) =
+              LocalizedModule.liftOfLE (standardCoverJointSubmonoid f j k) T' hjk
+                (LocalizedModule.mk a' (1 : standardCoverJointSubmonoid f j k)) by
+            simp only [IsLocalizedModule.mk_eq_mk', IsLocalizedModule.liftOfLE_mk',
+              Submonoid.coe_one]]
+          simp [glueTransitionAt, glueTransitionAsRLinear]
+        have hmap' (j k : Fin n) :
+            LocalizedModule.liftOfLE (standardCoverJointSubmonoid f j k) (T j k)
+                (hTjk j k) (LocalizedModule.mk (x₀ j) 1) =
+              LocalizedModule.liftOfLE (standardCoverJointSubmonoid f j k) (T j k)
+                (hTjk j k)
+                (D.ψ j k (LocalizedModule.mk (x₀ k) 1)) := by
+          rw [hmap j k, htransAny j k (T j k) (hTjk j k) (hTki j k)]
+        have hpair (j k : Fin n) :
+            ∃ e : ℕ, (f i) ^ e •
+                (LocalizedModule.mk (x₀ j) (1 : standardCoverJointSubmonoid f j k) -
+                  D.ψ j k (LocalizedModule.mk (x₀ k) 1)) = 0 := by
+          have hc := IsLocalizedModule.exists_of_eq
+            (S := T j k)
+            (f := LocalizedModule.liftOfLE (standardCoverJointSubmonoid f j k) (T j k)
+              (hTjk j k)) (hmap' j k)
+          rcases hc with ⟨c, hc⟩
+          obtain ⟨cLeft, cRight, hcprod⟩ :=
+            (Formalization.Books.Algebra.Unit09.localizationProduct_mem_iff
+              (standardCoverJointSubmonoid f j k) (Submonoid.powers (f i)) (c : R)).mp
+              c.property
+          obtain ⟨e, he⟩ := (Submonoid.mem_powers_iff _ _).mp cRight.property
+          let cLeft' : standardCoverJointSubmonoid f j k :=
+            ⟨cLeft, cLeft.property⟩
+          have hc' :
+              (cRight : R) • LocalizedModule.mk (x₀ j) 1 =
+                (cRight : R) • D.ψ j k (LocalizedModule.mk (x₀ k) 1) := by
+            apply (IsLocalizedModule.smul_injective
+              (f := LocalizedModule.mkLinearMap (standardCoverJointSubmonoid f j k)
+                (F.carrier j)) cLeft')
+            calc
+              (cLeft' : R) • ((cRight : R) • LocalizedModule.mk (x₀ j) 1) =
+                  (c : R) • LocalizedModule.mk (x₀ j) 1 := by
+                    rw [← mul_smul, hcprod]
+              _ = (c : R) • D.ψ j k (LocalizedModule.mk (x₀ k) 1) := hc
+              _ = (cLeft' : R) • ((cRight : R) •
+                    D.ψ j k (LocalizedModule.mk (x₀ k) 1)) := by
+                    rw [← mul_smul, hcprod]
+          refine ⟨e, ?_⟩
+          rw [smul_sub, he]
+          exact sub_eq_zero.mpr hc'
+        have htransSelfAll (a' : F.carrier i)
+            (s' : standardCoverJointSubmonoid f i i) :
+            glueTransitionAt F D i i
+                (standardCoverJointSubmonoid f i i) le_rfl
+                (LocalizedModule.liftOfLE (standardCoverJointSubmonoid f i i)
+                  (standardCoverJointSubmonoid f i i) le_rfl
+                  (LocalizedModule.mk a' s')) =
+              LocalizedModule.liftOfLE (standardCoverJointSubmonoid f i i)
+                (standardCoverJointSubmonoid f i i) le_rfl
+                (D.ψ i i (LocalizedModule.mk a' s')) := by
+          simp [glueTransitionAt, glueTransitionAsRLinear]
+        have hlift_id :
+            LocalizedModule.liftOfLE (standardCoverJointSubmonoid f i i)
+                (standardCoverJointSubmonoid f i i) le_rfl =
+              (LinearMap.id : LocalizedModule (standardCoverJointSubmonoid f i i)
+                (F.carrier i) →ₗ[R] _) := by
+          apply LinearMap.ext
+          intro z
+          induction z using LocalizedModule.induction_on with
+            | _ a s =>
+              simp only [IsLocalizedModule.mk_eq_mk', IsLocalizedModule.liftOfLE_mk',
+                LinearMap.id_apply]
+        have hselfmap :
+            glueTransitionAt F D i i (standardCoverJointSubmonoid f i i) le_rfl =
+              glueTransitionAsRLinear F D i i := by
+          apply LinearMap.ext
+          intro z
+          induction z using LocalizedModule.induction_on with
+            | _ a s =>
+              have h := htransSelfAll a s
+              rw [hlift_id] at h
+              simpa [glueTransitionAsRLinear, LinearMap.id_apply] using h
+        have hself :=
+          hD i i i (standardCoverJointSubmonoid f i i) le_rfl le_rfl le_rfl
+        have hselfy := congrArg
+          (fun l => l (LocalizedModule.mk y (1 : standardCoverJointSubmonoid f i i))) hself
+        rw [LinearMap.comp_apply, hselfmap] at hselfy
+        have hψid :
+            D.ψ i i (LocalizedModule.mk y (1 : standardCoverJointSubmonoid f i i)) =
+              LocalizedModule.mk y 1 := by
+          apply (D.ψ i i).injective
+          simpa [glueTransitionAsRLinear] using hselfy
+        have hmk' :
+            (f i) ^ B • LocalizedModule.mk y (1 : standardCoverJointSubmonoid f i i) =
+              LocalizedModule.mk (x₀ i) 1 := by
+          calc
+            (f i) ^ B • LocalizedModule.mk y (1 : standardCoverJointSubmonoid f i i) =
+                (f i) ^ B • D.ψ i i (LocalizedModule.mk y 1) := by rw [hψid]
+            _ = LocalizedModule.mk (x₀ i) 1 := hrelB i
+        have hmk'' :
+            (f i) ^ B •
+                LocalizedModule.mkLinearMap (standardCoverJointSubmonoid f i i)
+                  (F.carrier i) y =
+              LocalizedModule.mkLinearMap (standardCoverJointSubmonoid f i i)
+                (F.carrier i) (x₀ i) := by
+          simpa [LocalizedModule.mkLinearMap_apply] using hmk'
+        have hmk :
+            LocalizedModule.mkLinearMap (standardCoverJointSubmonoid f i i)
+              (F.carrier i) ((f i) ^ B • y - x₀ i) = 0 := by
+          rw [map_sub, map_smul, hmk'', sub_self]
+        rcases LocalizedModule.mem_ker_mkLinearMap_iff.mp
+            (LinearMap.mem_ker.mpr hmk) with ⟨s0, hs0, hsz⟩
+        obtain ⟨sLeft, sRight, hprod⟩ :=
+          (Formalization.Books.Algebra.Unit09.localizationProduct_mem_iff
+            (Submonoid.powers (f i)) (Submonoid.powers (f i)) (s0 : R)).mp hs0
+        obtain ⟨a, ha⟩ := (Submonoid.mem_powers_iff _ _).mp sLeft.property
+        obtain ⟨b', hb'⟩ := (Submonoid.mem_powers_iff _ _).mp sRight.property
+        let hloc : IsLocalizedModule (Submonoid.powers (f i))
+            (LinearMap.id : F.carrier i →ₗ[R] F.carrier i) :=
+          isLocalizedModule_id (Submonoid.powers (f i)) (F.carrier i)
+            (Localization.Away (f i))
+        have hright : sRight • ((f i) ^ B • y - x₀ i) = 0 := by
+          apply (@IsLocalizedModule.smul_injective R inferInstance
+            (Submonoid.powers (f i)) (F.carrier i) (F.carrier i)
+            inferInstance inferInstance inferInstance inferInstance
+            (LinearMap.id : F.carrier i →ₗ[R] F.carrier i) hloc sLeft)
+          rw [← hprod] at hsz
+          simpa [Submonoid.smul_def, mul_smul] using hsz
+        have hdiff : (f i) ^ B • y - x₀ i = 0 := by
+          apply (@IsLocalizedModule.smul_injective R inferInstance
+            (Submonoid.powers (f i)) (F.carrier i) (F.carrier i)
+            inferInstance inferInstance inferInstance inferInstance
+            (LinearMap.id : F.carrier i →ₗ[R] F.carrier i) hloc sRight)
+          simpa using hright
+        have hx0 : (f i) ^ B • y = x₀ i := sub_eq_zero.mp hdiff
+        choose e he using hpair
+        let K : ℕ := ∑ j, ∑ k, e j k
+        have hK (j k : Fin n) : e j k ≤ K := by
+          dsimp [K]
+          calc
+            e j k ≤ ∑ k', e j k' :=
+              Finset.single_le_sum (fun _ _ => Nat.zero_le _)
+                (Finset.mem_univ k)
+            _ ≤ ∑ j', ∑ k', e j' k' :=
+              Finset.single_le_sum (s := (Finset.univ : Finset (Fin n)))
+                (f := fun j' => ∑ k', e j' k')
+                (fun _ _ => Nat.zero_le _) (Finset.mem_univ j)
+        have hkillK (j k : Fin n) :
+            (f i) ^ K •
+                (LocalizedModule.mk (x₀ j) (1 : standardCoverJointSubmonoid f j k) -
+                  D.ψ j k (LocalizedModule.mk (x₀ k) 1)) = 0 := by
+          rw [← Nat.sub_add_cancel (hK j k), pow_add, mul_smul]
+          rw [he j k, smul_zero]
+        let x : ∀ j : Fin n, F.carrier j :=
+          fun j => (f i) ^ K • x₀ j
+        have hcompat (j k : Fin n) :
+            LocalizedModule.mk (x j) (1 : standardCoverJointSubmonoid f j k) =
+              D.ψ j k (LocalizedModule.mk (x k) 1) := by
+          change LocalizedModule.mk ((f i) ^ K • x₀ j) 1 =
+            D.ψ j k (LocalizedModule.mk ((f i) ^ K • x₀ k) 1)
+          have hscaled :
+              (f i) ^ K • LocalizedModule.mk (x₀ j) 1 =
+                (f i) ^ K • D.ψ j k (LocalizedModule.mk (x₀ k) 1) := by
+            have hk := hkillK j k
+            rw [smul_sub] at hk
+            exact sub_eq_zero.mp hk
+          calc
+            LocalizedModule.mk ((f i) ^ K • x₀ j) 1 =
+                (f i) ^ K • LocalizedModule.mk (x₀ j) 1 := by
+              rw [LocalizedModule.smul'_mk]
+            _ = (f i) ^ K • D.ψ j k (LocalizedModule.mk (x₀ k) 1) := hscaled
+            _ = D.ψ j k ((f i) ^ K • LocalizedModule.mk (x₀ k) 1) := by
+              exact ((D.ψ j k).map_smul_of_tower ((f i) ^ K)
+                (LocalizedModule.mk (x₀ k) 1)).symm
+            _ = D.ψ j k (LocalizedModule.mk ((f i) ^ K • x₀ k) 1) := by
+              rw [LocalizedModule.smul'_mk]
+        have hxker : gluedModuleComparisonMap F D x = 0 := by
+          funext p
+          rw [gluedModuleComparisonMap_apply]
+          change LocalizedModule.mk (x p.1) 1 -
+              D.ψ p.1 p.2 (LocalizedModule.mk (x p.2) 1) = 0
+          exact sub_eq_zero.mpr (hcompat p.1 p.2)
+        let m : gluedModule F D := ⟨x, hxker⟩
+        let s : Submonoid.powers (f i) :=
+          ⟨(f i) ^ (K + B), (Submonoid.mem_powers_iff _ _).2 ⟨K + B, rfl⟩⟩
+        refine ⟨⟨m, s⟩, ?_⟩
+        change (f i) ^ (K + B) • y = (f i) ^ K • x₀ i
+        rw [← hx0, ← mul_smul, ← pow_add]
       · intro x y hxy
         let z : gluedModule F D := x - y
         have hz_i : gluedModuleProjection F D i z = 0 := by
@@ -788,13 +1124,15 @@ theorem glue_modules {R : Type u} [CommRing R] {n : ℕ}
               (Submonoid.powers (f j)) (Submonoid.powers (f i)) (s : R)).mp hs
           obtain ⟨a, ha⟩ := (Submonoid.mem_powers_iff _ _).mp sj.property
           obtain ⟨b, hb⟩ := (Submonoid.mem_powers_iff _ _).mp si.property
-          letI : IsLocalizedModule (Submonoid.powers (f j))
+          let hlocj : IsLocalizedModule (Submonoid.powers (f j))
               (LinearMap.id : F.carrier j →ₗ[R] F.carrier j) :=
             isLocalizedModule_id (Submonoid.powers (f j)) (F.carrier j)
               (Localization.Away (f j))
           refine ⟨b, ?_⟩
-          apply (IsLocalizedModule.smul_injective
-            (f := (LinearMap.id : F.carrier j →ₗ[R] F.carrier j)) sj)
+          apply (@IsLocalizedModule.smul_injective R inferInstance
+            (Submonoid.powers (f j)) (F.carrier j) (F.carrier j)
+            inferInstance inferInstance inferInstance inferInstance
+            (LinearMap.id : F.carrier j →ₗ[R] F.carrier j) hlocj sj)
           rw [← hsi] at hsz
           simpa [ha, hb, Submonoid.smul_def, mul_smul] using hsz
         choose b hb using hkill

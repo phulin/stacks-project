@@ -1,4 +1,5 @@
 import Mathlib.Data.ZMod.Basic
+import Mathlib.RingTheory.Idempotents
 import Mathlib.RingTheory.Spectrum.Prime.Noetherian
 import Mathlib.Topology.Connected.Basic
 
@@ -128,7 +129,68 @@ theorem spectrum_disconnected_iff_product {A : Type u} [CommRing A] [Nontrivial 
     ¬ ConnectedSpace (PrimeSpectrum A) ↔
       ∃ (B C : Type u) (_ : CommRing B) (_ : CommRing C),
         Nontrivial B ∧ Nontrivial C ∧ Nonempty (A ≃+* B × C) := by
-  sorry
+  constructor
+  · intro h
+    have hcl : ∃ s : Set (PrimeSpectrum A),
+        IsClopen s ∧ s ≠ ∅ ∧ s ≠ Set.univ := by
+      by_contra! hs
+      apply h
+      rw [connectedSpace_iff_clopen]
+      refine ⟨inferInstance, ?_⟩
+      intro s hs'
+      by_cases hs_empty : s = ∅
+      · exact Or.inl hs_empty
+      · exact Or.inr (hs s hs' (Set.nonempty_iff_ne_empty.mpr hs_empty))
+    rcases hcl with ⟨s, hs, hs0, hsu⟩
+    obtain ⟨e, he, hse⟩ := PrimeSpectrum.exists_idempotent_basicOpen_eq_of_isClopen hs
+    have he0 : e ≠ 0 := by
+      intro he0
+      apply hs0
+      rw [hse, he0]
+      simp
+    have he1 : e ≠ 1 := by
+      intro he1
+      apply hsu
+      rw [hse, he1]
+      simp
+    have hspan₁ : Ideal.span ({e} : Set A) ≠ ⊤ := by
+      intro htop
+      have hunit : IsUnit e := Ideal.span_singleton_eq_top.mp htop
+      exact he1 ((IsIdempotentElem.iff_eq_one_of_isUnit hunit).mp he)
+    have hspan₂ : Ideal.span ({1 - e} : Set A) ≠ ⊤ := by
+      intro htop
+      have hunit : IsUnit (1 - e) := Ideal.span_singleton_eq_top.mp htop
+      have hone : 1 - e = 1 :=
+        (IsIdempotentElem.iff_eq_one_of_isUnit hunit).mp he.one_sub
+      have h' : (1 : A) + 0 = 1 + e := by
+        simpa using (sub_eq_iff_eq_add.mp hone)
+      have heq : e = 0 := (add_left_cancel h').symm
+      exact he0 heq
+    refine ⟨A ⧸ Ideal.span ({e} : Set A), A ⧸ Ideal.span ({1 - e} : Set A),
+      inferInstance, inferInstance, Ideal.Quotient.nontrivial_iff.mpr hspan₁,
+      Ideal.Quotient.nontrivial_iff.mpr hspan₂, ?_⟩
+    have heq : e * (1 - e) = 0 := by
+      rw [mul_sub, mul_one, he.eq, sub_self]
+    exact ⟨(AlgEquiv.prodQuotientOfIsIdempotentElem A he he.one_sub
+      (by simp) heq).toRingEquiv⟩
+  · rintro ⟨B, C, hBcomm, hCcomm, hB, hC, ⟨e⟩⟩
+    let _ : CommRing B := hBcomm
+    let _ : CommRing C := hCcomm
+    intro hconn
+    have hsum : ConnectedSpace (PrimeSpectrum B ⊕ PrimeSpectrum C) :=
+      (PrimeSpectrum.primeSpectrumProdHomeo (R := B) (S := C)).connectedSpace_iff.mp
+        ((PrimeSpectrum.homeomorphOfRingEquiv e).connectedSpace_iff.mp hconn)
+    have hcl := (connectedSpace_iff_clopen.mp hsum).2
+      (Set.range (Sum.inl : PrimeSpectrum B → PrimeSpectrum B ⊕ PrimeSpectrum C))
+      isClopen_range_inl
+    rcases hcl with hcl | hcl
+    · exact (Set.range_nonempty _).ne_empty hcl
+    · let c : PrimeSpectrum C := Classical.choice (inferInstance : Nonempty (PrimeSpectrum C))
+      have hc : Sum.inr c ∈ Set.range (Sum.inl : PrimeSpectrum B → PrimeSpectrum B ⊕ PrimeSpectrum C) := by
+        rw [hcl]
+        exact mem_univ _
+      rcases hc with ⟨b, hb⟩
+      cases hb
 
 /-- Mathlib's `connectedComponent` contains its defining point, is connected,
 and is closed. -/
@@ -153,13 +215,51 @@ generalization. -/
 theorem spectrum_connected_component_stable_under_generalization
     {A : Type u} [CommRing A] (x : PrimeSpectrum A) :
     StableUnderGeneralization (connectedComponent x) := by
-  sorry
+  intro y z hyz hz
+  have hu : IsConnected (connectedComponent x ∪ closure ({z} : Set (PrimeSpectrum A))) :=
+    IsConnected.union ⟨y, hz, specializes_iff_mem_closure.mp hyz⟩
+      isConnected_connectedComponent isConnected_singleton.closure
+  have hsub : connectedComponent x ∪ closure ({z} : Set (PrimeSpectrum A)) ⊆
+      connectedComponent x :=
+    hu.subset_connectedComponent (mem_union_left _ mem_connectedComponent)
+  exact hsub (mem_union_right _ (subset_closure (mem_singleton z)))
 
 /-- For a Noetherian ring, connected components of the spectrum are open. -/
 theorem spectrum_connected_component_is_open_of_noetherian
     {A : Type u} [CommRing A] [IsNoetherianRing A] (x : PrimeSpectrum A) :
     IsOpen (connectedComponent x) := by
-  sorry
+  have hfin : (irreducibleComponents (PrimeSpectrum A)).Finite :=
+    TopologicalSpace.NoetherianSpace.finite_irreducibleComponents
+  let T : Set (Set (PrimeSpectrum A)) :=
+    {Z | Z ∈ irreducibleComponents (PrimeSpectrum A) ∧
+      Disjoint Z (connectedComponent x)}
+  have hTfin : T.Finite := hfin.subset (fun Z hZ => hZ.1)
+  have hCcompl : (connectedComponent x)ᶜ = ⋃₀ T := by
+    apply subset_antisymm
+    · intro y hy
+      let Z := irreducibleComponent y
+      have hZ : Z ∈ irreducibleComponents (PrimeSpectrum A) :=
+        irreducibleComponent_mem_irreducibleComponents y
+      have hdisj : Disjoint Z (connectedComponent x) := by
+        rw [Set.disjoint_iff_inter_eq_empty]
+        apply Set.eq_empty_iff_forall_notMem.mpr
+        intro z hz
+        apply hy
+        have hZsub : Z ⊆ connectedComponent z :=
+          hZ.1.isConnected.subset_connectedComponent hz.1
+        have heq : connectedComponent z = connectedComponent x :=
+          (connectedComponent_eq hz.2).symm
+        exact heq ▸ hZsub (mem_irreducibleComponent)
+      exact mem_sUnion_of_mem mem_irreducibleComponent ⟨hZ, hdisj⟩
+    · intro y hy
+      rcases mem_sUnion.mp hy with ⟨Z, hZT, hyZ⟩
+      intro hyC
+      exact Set.disjoint_left.mp hZT.2 hyZ hyC
+  have hclosed : IsClosed (connectedComponent x)ᶜ := by
+    rw [hCcompl, Set.sUnion_eq_biUnion]
+    exact hTfin.isClosed_biUnion (fun Z hZ =>
+      isClosed_of_mem_irreducibleComponents Z hZ.1)
+  simpa only [compl_compl] using (isOpen_compl_iff.mpr hclosed)
 
 /-- The infinite product of copies of `𝔽₂` used in the source warning. -/
 abbrev infiniteBooleanProductRing : Type := ℕ → ZMod 2

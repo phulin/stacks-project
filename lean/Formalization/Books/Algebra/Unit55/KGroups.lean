@@ -1526,7 +1526,7 @@ private theorem kPrimeZeroClass_free_pid
         LinearEquiv.piCongrLeft R (fun _ : Option (Fin n) => R)
           (finSuccEquiv n) ≪≫ₗ LinearEquiv.piOptionEquivProd R
       rw [kPrimeZeroClass_eq_of_linearEquiv e, kPrimeZeroClass_prod, ih]
-      simp [add_smul, add_comm, add_left_comm, add_assoc]
+      simp [add_smul, add_comm]
 
 private theorem kZeroClass_free_pid
     {R : Type u} [CommRing R] [IsDomain R]
@@ -1542,7 +1542,7 @@ private theorem kZeroClass_free_pid
         LinearEquiv.piCongrLeft R (fun _ : Option (Fin n) => R)
           (finSuccEquiv n) ≪≫ₗ LinearEquiv.piOptionEquivProd R
       rw [kZeroClass_eq_of_linearEquiv e, kZeroClass_prod, ih]
-      simp [add_smul, add_comm, add_left_comm, add_assoc]
+      simp [add_smul, add_comm]
 
 private theorem kPrimeZeroClass_eq_free_rank_pid
     {R M : Type u} [CommRing R] [IsDomain R] [IsPrincipalIdealRing R]
@@ -1922,8 +1922,7 @@ private theorem kPrimeZeroClass_eq_length_smul_artinian_local
             kPrimeZeroClass (R := R) (M := x) =
               (t.snoc x htx).length • c := by
           rw [hexact, ih ht', hres]
-          simp [RelSeries.snoc_length, add_smul, add_comm, add_left_comm,
-            add_assoc]
+          simp [RelSeries.snoc_length, add_smul, add_comm]
         have hlast : (t.snoc x htx).last = x :=
           RelSeries.last_snoc t x htx
         exact (kPrimeZeroClass_eq_of_linearEquiv

@@ -705,6 +705,41 @@ noncomputable abbrev derivedBaseChangeFunctor
     D R ⥤ D A :=
   derivedTensorOverFunctor f (tensorUnit A)
 
+/- The two possible `A`-module structures in the warning remark are kept as
+   separate derived tensors. -/
+noncomputable abbrev derivedBaseChangeLeftSide
+    {R A : Type u} [CommRing R] [CommRing A]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)]
+    [HasDerivedCategory.{w} (ModuleCat.{u} A)] (f : R →+* A)
+    (N N' : Comp A) : D A :=
+  (derivedTensorOverFunctor f N').obj
+    ((derivedComplexQuotient R).obj (restrictScalarsComplex f N))
+
+noncomputable abbrev derivedBaseChangeRightSide
+    {R A : Type u} [CommRing R] [CommRing A]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)]
+    [HasDerivedCategory.{w} (ModuleCat.{u} A)] (f : R →+* A)
+    (N N' : Comp A) : D A :=
+  (derivedTensorOverFunctor f N).obj
+    ((derivedComplexQuotient R).obj (restrictScalarsComplex f N'))
+
+def DerivedBaseChangeSideWarning
+    {R A : Type u} [CommRing R] [CommRing A]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)]
+    [HasDerivedCategory.{w} (ModuleCat.{u} A)] (f : R →+* A) : Prop :=
+  ∃ N N' : Comp A,
+    ¬ Nonempty (derivedBaseChangeLeftSide f N N' ≅
+      derivedBaseChangeRightSide f N N')
+
+theorem derivedTensorOver_baseChange_iso
+    {R A : Type u} [CommRing R] [CommRing A]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)]
+    [HasDerivedCategory.{w} (ModuleCat.{u} A)] (f : R →+* A) (N : Comp A) :
+    Nonempty (derivedTensorOverFunctor f N ≅
+      derivedBaseChangeFunctor f ⋙
+        derivedTensorOverFunctor (RingHom.id A) N) := by
+  sorry
+
 theorem derivedBaseChange_extends_boundedAbove
     {R A : Type u} [CommRing R] [CommRing A]
     [HasDerivedCategory.{w} (ModuleCat.{u} R)]
@@ -936,14 +971,13 @@ theorem exists_cohomologyTensorSpectralSequence
 structure TorChangeRingsSpectralSequence
     {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S)
     (M : ModuleCat.{u} R) (N : ModuleCat.{u} S) where
-  page : ℕ → ℕ → Type u
+  page : ℕ → ℕ → ModuleCat.{u} S
   e₂ : ∀ n m : ℕ,
-    Nonempty (page n m ≃
-      (Tor (torOverAlgebra f M m) N n : Type u))
-  abutment : ℕ → Type u
+    Nonempty (page n m ≅ Tor (torOverAlgebra f M m) N n)
+  abutment : ℕ → ModuleCat.{u} R
   abutment_formula : ∀ k : ℕ,
-    Nonempty (abutment k ≃
-      (Tor M (ModuleCat.restrictScalars f).obj N k : Type u))
+    Nonempty (abutment k ≅
+      Tor M (ModuleCat.restrictScalars f).obj N k)
 
 theorem exists_torChangeRingsSpectralSequence
     {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S)
@@ -955,18 +989,18 @@ structure TorBaseChangeSpectralSequence
     {A B A' B' : Type u} [CommRing A] [CommRing B] [CommRing A'] [CommRing B']
     (aToB : A →+* B) (aToA' : A →+* A') (bToB' : B →+* B')
     (M N : ModuleCat.{u} B) where
-  page : ℕ → ℕ → Type u
+  page : ℕ → ℕ → ModuleCat.{u} A
   e₂ : ∀ i j : ℕ,
-    Nonempty (page i j ≃
-      (Tor
+    Nonempty (page i j ≅
+      Tor
         ((ModuleCat.restrictScalars aToB).obj (Tor M N j))
-        ((ModuleCat.restrictScalars aToA').obj (ModuleCat.of A' A')) i : Type u))
-  abutment : ℕ → Type u
+        ((ModuleCat.restrictScalars aToA').obj (ModuleCat.of A' A')) i)
+  abutment : ℕ → ModuleCat.{u} B'
   abutment_formula : ∀ k : ℕ,
-    Nonempty (abutment k ≃
-      (Tor
+    Nonempty (abutment k ≅
+      Tor
         ((ModuleCat.extendScalars bToB').obj M)
-        ((ModuleCat.extendScalars bToB').obj N) k : Type u))
+        ((ModuleCat.extendScalars bToB').obj N) k)
 
 theorem exists_torBaseChangeSpectralSequence
     {A B A' B' : Type u} [CommRing A] [CommRing B] [CommRing A'] [CommRing B']
@@ -1279,16 +1313,34 @@ structure KunnethFilteredPropositionData
   tensor : KunnethFilteredTensorData resolution_K.P resolution_L.P
     resolution_K.termwiseFlat resolution_L.termwiseFlat
   spectral : KunnethFilteredSpectralSequenceData resolution_K.P resolution_L.P tensor
-  bounded : filteredComplexBounded spectral.spectral
-  finite_abutment_filtration :
-    FilteredComplexCohomologyFiniteFiltration tensor.total
-  converges : filteredComplexConverges tensor.total
+  derived_representation : Nonempty (
+    (derivedComplexQuotient R).obj (forgetFilteredComplex tensor.total) ≅
+      derivedTensor
+        ((derivedComplexQuotient R).obj (forgetFilteredComplex K))
+        ((derivedComplexQuotient R).obj (forgetFilteredComplex L)))
 
 theorem exists_kunnethFilteredPropositionData
     {R : Type u} [CommRing R]
     [HasDerivedCategory.{w} (ModuleCat.{u} R)]
     (K L : FilteredComp R) :
     Nonempty (KunnethFilteredPropositionData K L) := by
+  sorry
+
+structure KunnethFilteredConvergenceData
+    {R : Type u} [CommRing R]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)]
+    (K L : FilteredComp R) (h : KunnethConvergenceHypotheses K L) where
+  proposition : KunnethFilteredPropositionData K L
+  bounded : filteredComplexBounded proposition.spectral.spectral
+  finite_abutment_filtration :
+    FilteredComplexCohomologyFiniteFiltration proposition.tensor.total
+  converges : filteredComplexConverges proposition.tensor.total
+
+theorem exists_kunnethFilteredConvergenceData
+    {R : Type u} [CommRing R]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)]
+    (K L : FilteredComp R) (h : KunnethConvergenceHypotheses K L) :
+    Nonempty (KunnethFilteredConvergenceData K L h) := by
   sorry
 
 def IsBoundedCochain
@@ -1320,6 +1372,8 @@ structure KunnethSpectralSequenceData
     page r p q ⟶ page r (p + r) (q - r + 1)
   e₂ : ∀ p q : ℤ,
     Nonempty (page 2 p q ≅ kunnethE₂Term K L p q)
+  bounded : ∀ n : ℤ, Set.Finite {p : ℤ |
+    ¬ IsZero (page 2 p (n - p))}
   abutment : ℤ → ModuleCat.{u} R
   abutment_formula : ∀ n : ℤ,
     Nonempty (abutment n ≅ derivedCohomologyObject n (derivedTensor K L))
@@ -1345,6 +1399,9 @@ structure KunnethDedekindShortExact
   right : ModuleCat.{u} R
   sequence : ShortComplex (ModuleCat.{u} R)
   shortExact : sequence.ShortExact
+  sequence_left : Nonempty (sequence.X₁ ≅ left)
+  sequence_middle : Nonempty (sequence.X₂ ≅ middle)
+  sequence_right : Nonempty (sequence.X₃ ≅ right)
   left_formula : Nonempty (left ≅
     ∐ fun ij : {ij : ℤ × ℤ // ij.1 + ij.2 = n} =>
       ModuleCat.of R (TensorProduct R

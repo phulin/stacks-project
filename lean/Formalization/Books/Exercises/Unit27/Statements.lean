@@ -1,4 +1,5 @@
 import Formalization.Books.Exercises.Unit27.Core
+import Mathlib.RingTheory.MvPolynomial.Ideal
 
 /-!
 # Exercises, Chapter 27: statements
@@ -136,7 +137,19 @@ theorem dOnProj_eq_zero_component_union_positive
       dOnProj 𝒜 (GradedRing.proj 𝒜 0 g) ∪
         ⋃ n : {n : ℕ // 0 < n},
           dPlus 𝒜 (GradedRing.proj 𝒜 n.1 g) := by
-  sorry
+  rw [dOnProj_eq_iUnion_projections]
+  ext x
+  simp only [Set.mem_iUnion, Set.mem_union]
+  constructor
+  · rintro ⟨n, hn⟩
+    by_cases h : n = 0
+    · left
+      simpa [h] using hn
+    · right
+      exact ⟨⟨n, Nat.pos_of_ne_zero h⟩, hn⟩
+  · rintro (hn | ⟨n, hn⟩)
+    · exact ⟨0, hn⟩
+    · exact ⟨n.1, hn⟩
 
 theorem dOnProj_degree_zero_eq_iUnion_mul
     (𝒜 : ℕ → Submodule ℤ R) [GradedAlgebra 𝒜]
@@ -145,14 +158,74 @@ theorem dOnProj_degree_zero_eq_iUnion_mul
     (hspan : (HomogeneousIdeal.irrelevant 𝒜).toIdeal ≤
       Ideal.span (Set.range f)) :
     dOnProj 𝒜 g = ⋃ i, dPlus 𝒜 (g * f i) := by
-  sorry
+  ext x
+  simp only [Set.mem_iUnion, mem_dPlus_iff]
+  constructor
+  · intro hg
+    have hfi : ∃ i, f i ∉ x.asHomogeneousIdeal := by
+      by_contra h
+      apply x.not_irrelevant_le
+      exact hspan.trans (Ideal.span_le.mpr (by
+        rintro _ ⟨i, rfl⟩
+        by_contra hfi
+        exact h ⟨i, hfi⟩))
+    obtain ⟨i, hfi⟩ := hfi
+    exact ⟨i, x.isPrime.mul_notMem hg hfi⟩
+  · rintro ⟨i, hi⟩ hg
+    exact hi (x.asHomogeneousIdeal.toIdeal.mul_mem_right (f i) hg)
 
 theorem dPlus_isTopologicalBasis
     (𝒜 : ℕ → Submodule ℤ R) [GradedAlgebra 𝒜] :
     IsTopologicalBasis
       {U : Set (ProjPoints 𝒜) |
         ∃ (n : ℕ) (hn : 0 < n) (f : R), f ∈ 𝒜 n ∧ U = dPlus 𝒜 f} := by
-  sorry
+  apply TopologicalSpace.isTopologicalBasis_of_isOpen_of_nhds
+  · rintro U ⟨n, hn, f, hf, rfl⟩
+    exact isOpen_dPlus 𝒜 f
+  · intro x U hx hU
+    obtain ⟨V, ⟨r, rfl⟩, hxV, hVU⟩ :=
+      (ProjectiveSpectrum.isTopologicalBasis_basic_opens (𝒜 := 𝒜)).mem_nhds_iff.mp
+        (hU.mem_nhds hx)
+    change x ∈ dOnProj 𝒜 r at hxV
+    change dOnProj 𝒜 r ⊆ U at hVU
+    rw [dOnProj_eq_iUnion_projections] at hxV
+    obtain ⟨n, hxn⟩ := Set.mem_iUnion.mp hxV
+    by_cases hn : 0 < n
+    · refine ⟨dPlus 𝒜 (GradedRing.proj 𝒜 n r),
+        ⟨n, hn, GradedRing.proj 𝒜 n r, SetLike.coe_mem _, rfl⟩, hxn, ?_⟩
+      intro y hy
+      apply hVU
+      rw [dOnProj_eq_iUnion_projections]
+      exact Set.mem_iUnion.mpr ⟨n, hy⟩
+    · have hpos : ∃ (m : ℕ) (hm : 0 < m) (f : R),
+          f ∈ 𝒜 m ∧ f ∉ x.asHomogeneousIdeal := by
+        by_contra h
+        apply x.not_irrelevant_le
+        refine (HomogeneousIdeal.irrelevant_le 𝒜).mpr ?_
+        intro m hm z hz
+        by_contra hzp
+        exact h ⟨m, hm, z, hz, hzp⟩
+      have hn0 : n = 0 := Nat.eq_zero_of_not_pos hn
+      subst n
+      have hxn0 : GradedRing.proj 𝒜 0 r ∉ x.asHomogeneousIdeal :=
+        (mem_dPlus_iff 𝒜 _ x).mp hxn
+      obtain ⟨m, hm, f, hf, hxf⟩ := hpos
+      have hproj0 : GradedRing.proj 𝒜 0 r ∈ 𝒜 0 := by
+        rw [GradedRing.proj_apply]
+        exact SetLike.coe_mem _
+      have hq : GradedRing.proj 𝒜 0 r * f ∈ 𝒜 m := by
+        simpa using SetLike.mul_mem_graded hproj0 hf
+      refine ⟨dPlus 𝒜 (GradedRing.proj 𝒜 0 r * f),
+        ⟨m, hm, _, hq, rfl⟩, ?_, ?_⟩
+      · rw [mem_dPlus_iff]
+        exact x.isPrime.mul_notMem hxn0 hxf
+      · intro y hy
+        apply hVU
+        have hy' : y ∈ dPlus 𝒜 (GradedRing.proj 𝒜 0 r) ∩ dPlus 𝒜 f := by
+          rw [← dPlus_mul]
+          exact hy
+        rw [dOnProj_eq_iUnion_projections]
+        exact Set.mem_iUnion.mpr ⟨0, hy'.1⟩
 
 /- Mathlib's chart isomorphism is the source's canonical bijection and
    homeomorphism `D₊(f) ≅ Spec(R_(f))`. -/
@@ -183,7 +256,110 @@ noncomputable def infinitePolynomialProj (k : Type u) [CommRing k] : Type u :=
 theorem infinitePolynomialProj_not_quasiCompact (k : Type u) [Field k] :
     letI : GradedAlgebra (InfinitePolynomialGrading k) := MvPolynomial.gradedAlgebra
     ¬ CompactSpace (ProjectiveSpectrum (InfinitePolynomialGrading k)) := by
-  sorry
+  classical
+  letI : GradedAlgebra (InfinitePolynomialGrading k) := MvPolynomial.gradedAlgebra
+  intro hcompact
+  letI := hcompact
+  have hXrange : Set.range (MvPolynomial.X : ℕ → MvPolynomial ℕ k) =
+      MvPolynomial.X '' (Set.univ : Set ℕ) := by
+    ext p
+    constructor
+    · rintro ⟨i, rfl⟩
+      exact ⟨i, Set.mem_univ _, rfl⟩
+    · rintro ⟨i, -, rfl⟩
+      exact ⟨i, rfl⟩
+  have hspan : (HomogeneousIdeal.irrelevant (InfinitePolynomialGrading k)).toIdeal ≤
+      Ideal.span (MvPolynomial.X '' (Set.univ : Set ℕ)) := by
+    rw [HomogeneousIdeal.irrelevant_eq_span]
+    apply Ideal.span_le.mpr
+    intro p hp
+    rcases Set.mem_iUnion.mp hp with ⟨n, hp⟩
+    rcases Set.mem_iUnion.mp hp with ⟨hn, hp⟩
+    apply (MvPolynomial.mem_ideal_span_X_image (x := p) (s := Set.univ)).mpr
+    intro m hm
+    have hdeg :=
+      (MvPolynomial.mem_homogeneousSubmodule n p).mp hp |>.degree_eq_sum_deg_support hm
+    have hsum : 0 < ∑ i ∈ m.support, m i := hdeg ▸ hn
+    by_contra hnonempty
+    simp only [not_exists, not_and, not_not] at hnonempty
+    have hsum_zero : (∑ i ∈ m.support, m i) = 0 := by
+      apply Finset.sum_eq_zero
+      intro i hi
+      exact hnonempty i (Set.mem_univ _)
+    exact (Nat.not_lt_zero _ (hsum_zero ▸ hsum))
+  have hspan_range : (HomogeneousIdeal.irrelevant (InfinitePolynomialGrading k)).toIdeal ≤
+      Ideal.span (Set.range (MvPolynomial.X : ℕ → MvPolynomial ℕ k)) := by
+    rw [hXrange]
+    exact hspan
+  have htop :
+      (⨆ i, ProjectiveSpectrum.basicOpen (InfinitePolynomialGrading k)
+        (MvPolynomial.X i)) = ⊤ := by
+    change (⨆ i, AlgebraicGeometry.Proj.basicOpen (InfinitePolynomialGrading k)
+        (MvPolynomial.X i)) = ⊤
+    exact AlgebraicGeometry.Proj.iSup_basicOpen_eq_top
+      (InfinitePolynomialGrading k)
+      (MvPolynomial.X : ℕ → MvPolynomial ℕ k) hspan_range
+  have hcover : (Set.univ : Set (ProjectiveSpectrum (InfinitePolynomialGrading k))) ⊆
+      ⋃ i, (ProjectiveSpectrum.basicOpen (InfinitePolynomialGrading k) (MvPolynomial.X i) :
+        Set (ProjectiveSpectrum (InfinitePolynomialGrading k))) := by
+    rw [← TopologicalSpace.Opens.coe_iSup, htop]
+    exact subset_rfl
+  obtain ⟨s, hs⟩ := isCompact_univ.elim_finite_subcover
+    (fun i => (ProjectiveSpectrum.basicOpen (InfinitePolynomialGrading k) (MvPolynomial.X i) :
+      Set (ProjectiveSpectrum (InfinitePolynomialGrading k))))
+    (fun _ => ProjectiveSpectrum.isOpen_basicOpen (InfinitePolynomialGrading k))
+    hcover
+  obtain ⟨n, hn⟩ := s.exists_notMem
+  let q : MvPolynomial ℕ k →+* MvPolynomial ℕ k :=
+    MvPolynomial.eval₂Hom MvPolynomial.C
+      (fun i => if i ∈ s then 0 else MvPolynomial.X i)
+  let qg : InfinitePolynomialGrading k →+*ᵍ InfinitePolynomialGrading k :=
+    { q with
+      map_mem := by
+        intro d p hp
+        rw [MvPolynomial.mem_homogeneousSubmodule] at hp ⊢
+        simpa [q] using hp.eval₂ (n := 1) MvPolynomial.C
+          (fun i => if i ∈ s then 0 else MvPolynomial.X i)
+          (fun r => MvPolynomial.isHomogeneous_C _ _)
+          (fun i => by
+            by_cases hi : i ∈ s
+            · simp [hi, MvPolynomial.isHomogeneous_zero]
+            · simp [hi, MvPolynomial.isHomogeneous_X]) }
+  let P : HomogeneousIdeal (InfinitePolynomialGrading k) :=
+    HomogeneousIdeal.comap qg (⊥ : HomogeneousIdeal (InfinitePolynomialGrading k))
+  have hPprime : P.toIdeal.IsPrime := by
+    dsimp [P]
+    infer_instance
+  let x : ProjectiveSpectrum (InfinitePolynomialGrading k) :=
+    { asHomogeneousIdeal := P
+      isPrime := hPprime
+      not_irrelevant_le := by
+        intro hle
+        have hxn_gr : MvPolynomial.X n ∈ InfinitePolynomialGrading k 1 := by
+          exact (MvPolynomial.mem_homogeneousSubmodule 1 (MvPolynomial.X n)).mpr
+            (MvPolynomial.isHomogeneous_X k n)
+        have hxn_irr : MvPolynomial.X n ∈
+            HomogeneousIdeal.irrelevant (InfinitePolynomialGrading k) :=
+          HomogeneousIdeal.mem_irrelevant_of_mem (InfinitePolynomialGrading k)
+            (by decide) hxn_gr
+        have hxnP : MvPolynomial.X n ∈ P := hle hxn_irr
+        have hqzero : q (MvPolynomial.X n) = 0 := by
+          change q (MvPolynomial.X n) ∈ (⊥ : Ideal (MvPolynomial ℕ k)) at hxnP
+          simpa only [Ideal.mem_bot] using hxnP
+        have hqeval : q (MvPolynomial.X n) = MvPolynomial.X n := by
+          simp [q, hn]
+        have : MvPolynomial.X n = 0 := hqeval ▸ hqzero
+        exact MvPolynomial.X_ne_zero n this }
+  have hXiP : ∀ i ∈ s, MvPolynomial.X i ∈ P := by
+    intro i hi
+    change q (MvPolynomial.X i) ∈ (⊥ : Ideal (MvPolynomial ℕ k))
+    simp [q, hi]
+  rcases Set.mem_iUnion.mp (hs (Set.mem_univ x)) with ⟨i, hi⟩
+  rcases Set.mem_iUnion.mp hi with ⟨his, hxi⟩
+  have hnot : MvPolynomial.X i ∉ x.asHomogeneousIdeal :=
+    (ProjectiveSpectrum.mem_coe_basicOpen (InfinitePolynomialGrading k)
+      (MvPolynomial.X i) x).mp hxi
+  exact hnot (hXiP i his)
 
 theorem exists_homogeneousIdeal_eq_vPlus
     (𝒜 : ℕ → Submodule ℤ R) [GradedAlgebra 𝒜]

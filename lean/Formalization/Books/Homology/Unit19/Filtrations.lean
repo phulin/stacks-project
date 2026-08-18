@@ -1632,11 +1632,8 @@ theorem strict_biproduct_lift_of_strict_mono {C : Type u} [Category.{v} C]
     constructor
     intro Z a b hab
     apply (cancel_mono f.hom).mp
-    calc
-      a ≫ f.hom = (a ≫ biprod.lift f.hom g.hom) ≫ biprod.fst := by
-        rw [Category.assoc, biprod.lift_fst]
-      _ = (b ≫ biprod.lift f.hom g.hom) ≫ biprod.fst := by rw [hab]
-      _ = b ≫ f.hom := by rw [Category.assoc, biprod.lift_fst]
+    simpa only [Category.assoc, biprod.lift_fst] using
+      congrArg (fun k => k ≫ biprod.fst) hab
   refine ⟨?_, hmono⟩
   apply (strict_iff_induced_filtration h hmono).2
   intro i
@@ -1712,6 +1709,13 @@ def filteredBiproductDesc {C : Type u} [Category.{v} C] [Abelian C]
   refine ⟨(Subobject.underlyingIso
       (biprod.map (B.filtration.obj i).arrow (D.filtration.obj i).arrow)).hom ≫
     biprod.desc u v, ?_⟩
+  have hT : T.arrow =
+      (Subobject.underlyingIso
+        (biprod.map (B.filtration.obj i).arrow
+          (D.filtration.obj i).arrow)).hom ≫
+        biprod.map (B.filtration.obj i).arrow
+          (D.filtration.obj i).arrow := by
+    simp [T]
   dsimp [u, v]
   calc
     ((Subobject.underlyingIso
@@ -1733,7 +1737,8 @@ def filteredBiproductDesc {C : Type u} [Category.{v} C] [Abelian C]
             congr 1
             simp [biprod.desc_eq, Category.assoc]
     _ = T.arrow ≫ biprod.desc f.hom g.hom := by
-      simp [T]
+      rw [hT]
+      simp only [Category.assoc]
 
 theorem strict_biproduct_desc_of_strict_epi {C : Type u} [Category.{v} C]
     [Abelian C] {A B D : FilteredObject C} (f : B ⟶ A) (g : D ⟶ A)
@@ -1743,7 +1748,9 @@ theorem strict_biproduct_desc_of_strict_epi {C : Type u} [Category.{v} C]
   let : Epi f.hom := hfepi
   have hdesc_epi : FilteredSurjective (filteredBiproductDesc f g) := by
     change Epi (biprod.desc f.hom g.hom)
-    exact epi_of_epi_fac (biprod.inl_desc f.hom g.hom)
+    have hfac : biprod.inl ≫ biprod.desc f.hom g.hom = f.hom :=
+      biprod.inl_desc _ _
+    exact epi_of_epi_fac hfac
   refine ⟨?_, hdesc_epi⟩
   apply (strict_iff_quotient_filtration
     (filteredBiproductDesc f g) hdesc_epi).2
@@ -1800,11 +1807,11 @@ theorem strict_biproduct_desc_of_strict_epi {C : Type u} [Category.{v} C]
 theorem strict_induced_iff {C : Type u} [Category.{v} C] [Abelian C]
     {A : FilteredObject C} (X : Subobject A.carrier) :
     Strict (inducedFilteredHom A X) := by
-  apply (strict_iff_induced_filtration (inducedFilteredHom A X) (by
+  have hmono : FilteredInjective (inducedFilteredHom A X) := by
     change Mono X.arrow
-    infer_instance)).2
-  intro i
-  rfl
+    infer_instance
+  apply (strict_iff_induced_filtration (inducedFilteredHom A X) hmono).2
+  exact fun _ => rfl
 
 theorem strict_quotient_iff {C : Type u} [Category.{v} C] [Abelian C]
     {A : FilteredObject C} {Y : C} (π : A.carrier ⟶ Y) [Epi π] :

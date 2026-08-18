@@ -14,6 +14,7 @@ import Mathlib.CategoryTheory.Abelian.RightDerived
 import Mathlib.CategoryTheory.Functor.ReflectsIso.Exact
 import Mathlib.CategoryTheory.Sites.SheafCohomology.Cech
 import Formalization.Books.Algebra.Unit24.GlueingFunctions
+import Formalization.Books.Homology.Unit25.DoubleComplexes
 
 /-!
 # Cohomology of Schemes, Chapter 1: Čech cohomology
@@ -739,17 +740,67 @@ theorem has_affine_diagonal_of_separated (X : Scheme.{u}) [X.IsSeparated] :
 
 /-! ### Čech cohomology and sheaf cohomology -/
 
+/-- The exact comparison data that the cover-resolution double complex must
+provide before the abstract one-row collapse theorem can be applied. -/
+structure CoverCechDerivedDoubleComplexData {X : Scheme.{u}}
+    (𝒱 : Scheme.OpenCover.{u} X) (M : X.Modules)
+    [CategoryTheory.HasExt.{u} X.Modules] where
+  /-- The cover degree and resolution degree form the two indices. -/
+  doubleComplex :
+    Formalization.Books.Homology.Unit18.DoubleComplex AddCommGrpCat.{u}
+  /-- First-quadrant support implies finite support on each diagonal. -/
+  finiteDiagonal :
+    Formalization.Books.Homology.Unit18.HasFiniteDiagonalSupport doubleComplex
+  /-- Affine-intersection vanishing kills every vertical cohomology row except
+  degree zero (negative degrees vanish by the chosen resolution convention). -/
+  verticalCohomologyZero : ∀ p q : ℤ, q ≠ 0 →
+    IsZero
+      (Formalization.Books.Homology.Unit25.doubleComplexVerticalCohomology
+        doubleComplex p q)
+  /-- The surviving second-page row is the Čech cohomology of the cover. -/
+  cechToSecondPage : ∀ n : ℕ,
+    Nonempty
+      (cechCohomologyObject M (fun i ↦ (𝒱.f i).opensRange) n ≅
+        Formalization.Books.Homology.Unit25.doubleComplexFirstIteratedCohomology
+          doubleComplex (n : ℤ) 0)
+  /-- Total cohomology of the cover-resolution double complex computes the
+  chosen derived-functor model for sheaf cohomology. -/
+  totalToDerived : ∀ n : ℕ,
+    Nonempty
+      (Formalization.Books.Homology.Unit25.doubleComplexFirstTotalCohomology
+          doubleComplex (n : ℤ) ≅
+        schemeCohomologyObject M n)
+
+/-- Construct the cover-resolution double complex and all comparison maps
+needed by the abstract collapse argument. -/
+/- TODO(proof agents -- cover-resolution construction leaf): choose an
+injective resolution `M → I•`, extend both its degree and the cover degree from
+`ℕ` to `ℤ` by zero, and set
+
+  `A^{p,q} = ∏_{i : Fin (p+1) → 𝒱.I₀} Γ(⋂_j 𝒱_{i_j}, I^q)`.
+
+The horizontal differential is the alternating Čech differential and the
+vertical differential comes from `I•`, with the totalization sign convention
+of Homology Unit18.  Prove `finiteDiagonal` from first-quadrant support.  On
+each finite intersection, identify vertical cohomology with sheaf cohomology;
+`hintersections` and `quasi_coherent_affine_cohomology_zero` kill positive
+degrees, while the zero-extension kills negative degrees.  In degree zero,
+the augmentation `M → I•` identifies the horizontal complex with
+`cechComplex M`; this supplies `cechToSecondPage`, including the alternating
+sign comparison.  Finally apply the resolution totalization comparison (the
+resolution lemmas in Homology Unit25, after packaging the row/column
+orientation) to construct the canonical `totalToDerived` isomorphisms. -/
+theorem cover_cech_derived_double_complex_data {X : Scheme.{u}}
+    (𝒱 : Scheme.OpenCover.{u} X) (M : X.Modules)
+    [SheafOfModules.IsQuasicoherent (R := X.ringCatSheaf) M]
+    [CategoryTheory.HasExt.{u} X.Modules]
+    (hintersections : ∀ (q : ℕ) (i : Fin (q + 1) → 𝒱.I₀),
+      IsAffineOpen (⨅ j, (𝒱.f (i j)).opensRange)) :
+    Nonempty (CoverCechDerivedDoubleComplexData 𝒱 M) := by
+  sorry
+
 /-- The cover Čech-to-derived comparison when every nonempty finite
 intersection in the cover is affine. -/
-/- TODO(proof agents -- leaf: cover double-complex collapse): apply an
-injective (or Cartan--Eilenberg) resolution of `M` termwise to the cover's
-cosimplicial object.  The vertical cohomology over the intersection indexed by
-`i : Fin (q + 1) → 𝒱.I₀` is sheaf cohomology on
-`⨅ j, (𝒱.f (i j)).opensRange`.  Use `hintersections q i` and
-`quasi_coherent_affine_cohomology_zero` to kill every positive vertical row.
-Identify the remaining row, including alternating signs, with
-`cechComplex M (fun i ↦ (𝒱.f i).opensRange)`, and show that the edge
-morphism induces the displayed isomorphism in degree `n`. -/
 theorem cover_cech_to_derived_of_affine_intersections {X : Scheme.{u}}
     (𝒱 : Scheme.OpenCover.{u} X) (M : X.Modules)
     [SheafOfModules.IsQuasicoherent (R := X.ringCatSheaf) M]
@@ -760,7 +811,14 @@ theorem cover_cech_to_derived_of_affine_intersections {X : Scheme.{u}}
     Nonempty
       (cechCohomologyObject M (fun i ↦ (𝒱.f i).opensRange) n ≅
         schemeCohomologyObject M n) := by
-  sorry
+  let D := Classical.choice
+    (cover_cech_derived_double_complex_data 𝒱 M hintersections)
+  let e₁ := Classical.choice (D.cechToSecondPage n)
+  let e₂ := Classical.choice
+    (Formalization.Books.Homology.Unit25.doubleComplex_first_edge_iso_of_vertical_cohomology_zero
+        D.doubleComplex D.finiteDiagonal D.verticalCohomologyZero (n : ℤ))
+  let e₃ := Classical.choice (D.totalToDerived n)
+  exact ⟨e₁.trans (e₂.trans e₃)⟩
 
 /-- Čech cohomology agrees with sheaf cohomology on an affine-intersection
 cover for quasi-coherent coefficients. -/

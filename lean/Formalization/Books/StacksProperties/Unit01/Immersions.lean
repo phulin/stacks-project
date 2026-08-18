@@ -382,6 +382,7 @@ structure PresentationImmersionData {S : Scheme.{u}}
     {X Z : AlgebraicStack S} (p : StackPresentation X)
     (i : StackMorphism Z X) where
   subspace : PresentationSubspace p
+  subspace_invariant : subspace.invariant
   presentation : StackPresentation Z
   twoCommutative : Prop
   restriction : Prop
@@ -533,6 +534,9 @@ theorem immersion_into_presentation {S : Scheme.{u}}
       carrier := p.source
       inclusion := 𝟙 p.source
       locallyClosed := by infer_instance }
+    subspace_invariant := by
+      intro u v _
+      simp
     presentation := p'
     twoCommutative := True
     restriction := True
@@ -541,7 +545,7 @@ theorem immersion_into_presentation {S : Scheme.{u}}
 
 theorem immersion_from_invariant_presentation {S : Scheme.{u}}
     {X : AlgebraicStack S} (p : StackPresentation X)
-    (z : PresentationSubspace p) :
+    (z : PresentationSubspace p) (hinvariant : z.invariant) :
     ∃ (Z : AlgebraicStack S) (i : StackMorphism Z X)
       (D : PresentationImmersionData p i),
       D.subspace = z ∧ IsImmersionStack i ∧
@@ -578,6 +582,7 @@ theorem immersion_from_invariant_presentation {S : Scheme.{u}}
   let i := emptyStackInclusion (S := S) (X := X)
   let D : PresentationImmersionData p i :=
     { subspace := z
+      subspace_invariant := hinvariant
       presentation := ep
       twoCommutative := True
       restriction := True

@@ -641,7 +641,157 @@ noncomputable def basisGermAt {X : TopCat.{v}} {ι : Type v} (B : ι → Opens X
 theorem basisNeighborhoodIndex_isFiltered {X : TopCat.{v}} {ι : Type v}
     (B : ι → Opens X) (hB : Opens.IsBasis (Set.range B)) (x : X) :
     IsFiltered ((basisNeighborhoodIndex B x)ᵒᵖ) := by
-  sorry
+  let hnonempty : Nonempty ((basisNeighborhoodIndex B x)ᵒᵖ) := by
+    obtain ⟨U, hU, hxU, _⟩ :=
+      (Opens.isBasis_iff_nbhd.mp hB) (show x ∈ (⊤ : Opens X) from trivial)
+    obtain ⟨k, rfl⟩ := hU
+    exact ⟨op ⟨k, hxU⟩⟩
+  let hfiltered : IsFiltered ((basisNeighborhoodIndex B x)ᵒᵖ) :=
+    { toIsFilteredOrEmpty :=
+        { cocone_objs := by
+            intro i j
+            obtain ⟨U, hU, hxU, hUInt⟩ :=
+              (Opens.isBasis_iff_nbhd.mp hB)
+                (show x ∈ B i.unop.1 ⊓ B j.unop.1 from ⟨i.unop.2, j.unop.2⟩)
+            obtain ⟨k, rfl⟩ := hU
+            refine ⟨op ⟨k, hxU⟩, ?_, ?_, trivial⟩
+            · exact (ObjectProperty.homMk
+                (InducedCategory.homMk (homOfLE (hUInt.trans inf_le_left)))).op
+            · exact (ObjectProperty.homMk
+                (InducedCategory.homMk (homOfLE (hUInt.trans inf_le_right)))).op
+          cocone_maps := by
+            intro i j f g
+            exact ⟨j, 𝟙 _, rfl⟩ }
+      nonempty := hnonempty }
+  exact hfiltered
+
+private lemma basisGermAt_res {X : TopCat.{v}} {ι : Type v}
+    (B : ι → Opens X) (P : BasisPresheaf B) {j k : ι} {x : X}
+    (hx : x ∈ B j) (hjk : B j ≤ B k) (s : P.obj (op k)) :
+    basisGermAt B P hx (P.map (InducedCategory.homMk (homOfLE hjk)).op s) =
+      basisGermAt B P (hjk hx) s := by
+  change colimit.ι (basisStalkDiagram B P x) (op ⟨j, hx⟩)
+      (P.map (InducedCategory.homMk (homOfLE hjk)).op s) =
+    colimit.ι (basisStalkDiagram B P x) (op ⟨k, hjk hx⟩) s
+  let f : (⟨j, hx⟩ : basisNeighborhoodIndex B x) ⟶ ⟨k, hjk hx⟩ :=
+    ObjectProperty.homMk (InducedCategory.homMk (homOfLE hjk))
+  have hw := colimit.w (basisStalkDiagram B P x) f.op
+  exact congrArg (fun f => f s) hw
+
+private lemma basisGermAt_eq_iff_exists_restriction_eq {X : TopCat.{v}} {ι : Type v}
+    (B : ι → Opens X) (hB : Opens.IsBasis (Set.range B))
+    (P : BasisPresheaf B) {j j' : ι} {x : X}
+    (hj : x ∈ B j) (hj' : x ∈ B j')
+    (s : P.obj (op j)) (t : P.obj (op j')) :
+    basisGermAt B P hj s = basisGermAt B P hj' t ↔
+      ∃ (k : ι) (_hk : x ∈ B k) (hkj : B k ≤ B j) (hkj' : B k ≤ B j'),
+        P.map (InducedCategory.homMk (homOfLE hkj)).op s =
+          P.map (InducedCategory.homMk (homOfLE hkj')).op t :=
+  letI : IsFiltered ((basisNeighborhoodIndex B x)ᵒᵖ) :=
+    basisNeighborhoodIndex_isFiltered B hB x
+  by
+    constructor
+    · intro h
+      obtain ⟨k, f, g, hfg⟩ :=
+        (CategoryTheory.Limits.Types.FilteredColimit.colimit_eq_iff
+          (basisStalkDiagram B P x)).mp h
+      change P.map f.unop.hom.op s = P.map g.unop.hom.op t at hfg
+      refine ⟨k.unop.1, k.unop.2, f.unop.hom.hom.le, g.unop.hom.hom.le, ?_⟩
+      have hf : f.unop.hom =
+          InducedCategory.homMk (homOfLE f.unop.hom.hom.le) := by
+        apply InducedCategory.hom_ext
+        apply Subsingleton.elim
+      have hg : g.unop.hom =
+          InducedCategory.homMk (homOfLE g.unop.hom.hom.le) := by
+        apply InducedCategory.hom_ext
+        apply Subsingleton.elim
+      rw [hf, hg] at hfg
+      exact hfg
+    · rintro ⟨k, hk, hkj, hkj', h⟩
+      change colimit.ι (basisStalkDiagram B P x) (op ⟨j, hj⟩) s =
+        colimit.ι (basisStalkDiagram B P x) (op ⟨j', hj'⟩) t
+      apply (CategoryTheory.Limits.Types.FilteredColimit.colimit_eq_iff
+        (basisStalkDiagram B P x)).2
+      refine ⟨op ⟨k, hk⟩, ?_, ?_, ?_⟩
+      · exact (ObjectProperty.homMk
+          (InducedCategory.homMk (homOfLE hkj))).op
+      · exact (ObjectProperty.homMk
+          (InducedCategory.homMk (homOfLE hkj'))).op
+      · exact h
+
+private lemma basisSection_eq_of_basisGerms {X : TopCat.{v}} {ι : Type v}
+    (B : ι → Opens X) (hB : Opens.IsBasis (Set.range B))
+    (P : BasisPresheaf B) (hP : BasisSheafCondition B P) (i : ι)
+    (s t : P.obj (op i))
+    (h : ∀ x (hx : x ∈ B i), basisGermAt B P hx s = basisGermAt B P hx t) :
+    s = t := by
+  classical
+  have hom_eq : ∀ (a b : ι) (hab hab' : B a ≤ B b),
+      InducedCategory.homMk (homOfLE hab) =
+        InducedCategory.homMk (homOfLE hab') := by
+    intro a b hab hab'
+    apply InducedCategory.hom_ext
+    apply Subsingleton.elim
+  have map_comp_eq : ∀ (a b c : ι) (hab : B a ≤ B b) (hbc : B b ≤ B c)
+      (hac : B a ≤ B c) (z : P.obj (op c)),
+      P.map (InducedCategory.homMk (homOfLE hab)).op
+          (P.map (InducedCategory.homMk (homOfLE hbc)).op z) =
+        P.map (InducedCategory.homMk (homOfLE hac)).op z := by
+    intro a b c hab hbc hac z
+    rw [← comp_apply, ← P.map_comp, ← op_comp]
+    congr 1
+  let hloc : ∀ z : {x : X // x ∈ B i},
+      ∃ (k : ι) (hk : z.1 ∈ B k) (hki : B k ≤ B i)
+        (hki' : B k ≤ B i),
+        P.map (InducedCategory.homMk (homOfLE hki)).op s =
+          P.map (InducedCategory.homMk (homOfLE hki')).op t := by
+    intro z
+    obtain ⟨k, hk, hki, hki', heq⟩ :=
+      (basisGermAt_eq_iff_exists_restriction_eq B hB P z.2 z.2 s t).mp
+        (h z.1 z.2)
+    exact ⟨k, hk, hki, hki', heq⟩
+  choose K hK hKi hKi' hK_eq using hloc
+  let W : BasisCover B i :=
+    { index := {x : X // x ∈ B i}
+      member := K
+      covers := by
+        apply le_antisymm
+        · apply iSup_le
+          intro z
+          exact hKi z
+        · intro x hx
+          rw [Opens.mem_iSup]
+          exact ⟨⟨x, hx⟩, hK ⟨x, hx⟩⟩ }
+  let r : ∀ j, P.obj (op (W.member j)) := fun j =>
+    P.map (InducedCategory.homMk (homOfLE (hKi j))).op s
+  have hr : ∀ (j j' : W.index) (k : ι)
+      (hkj : B k ≤ B (W.member j)) (hkj' : B k ≤ B (W.member j')),
+      P.map (InducedCategory.homMk (homOfLE hkj)).op (r j) =
+        P.map (InducedCategory.homMk (homOfLE hkj')).op (r j') := by
+    intro j j' k hkj hkj'
+    calc
+      P.map (InducedCategory.homMk (homOfLE hkj)).op (r j) =
+          P.map (InducedCategory.homMk
+            (homOfLE (le_trans hkj (hKi j)))).op s := by
+        simpa [r] using map_comp_eq k (W.member j) i hkj (hKi j)
+          (le_trans hkj (hKi j)) s
+      _ = P.map (InducedCategory.homMk
+            (homOfLE (le_trans hkj' (hKi j')))).op s := by
+        rw [hom_eq k i (le_trans hkj (hKi j)) (le_trans hkj' (hKi j'))]
+      _ = P.map (InducedCategory.homMk (homOfLE hkj')).op (r j') := by
+        simpa [r] using (map_comp_eq k (W.member j') i hkj' (hKi j')
+          (le_trans hkj' (hKi j')) s).symm
+  obtain ⟨u, hu, huuniq⟩ :=
+    (basisSheafCondition_iff_cover_gluing B hB P).1 hP i W r hr
+  have hs : ∀ j, ∃ h : B (W.member j) ≤ B i,
+      P.map (InducedCategory.homMk (homOfLE h)).op s = r j := by
+    intro j
+    exact ⟨hKi j, rfl⟩
+  have ht : ∀ j, ∃ h : B (W.member j) ≤ B i,
+      P.map (InducedCategory.homMk (homOfLE h)).op t = r j := by
+    intro j
+    exact ⟨hKi' j, (hK_eq j).symm.trans (by rfl)⟩
+  exact (huuniq s hs).trans (huuniq t ht).symm
 
 /-- A family of stalk elements is locally represented by basis sections. -/
 def BasisLocallyRepresented {X : TopCat.{v}} {ι : Type v} (B : ι → Opens X)
@@ -671,13 +821,107 @@ theorem basisConditionStarSections {X : TopCat.{v}} {ι : Type v}
     (P : BasisPresheaf B) (i : ι) :
     BasisSheafCondition B P →
       Function.Bijective (basisSectionGermFamilySubtype B P i) := by
-  sorry
+  intro hP
+  classical
+  let forward := basisSectionGermFamilySubtype B P i
+  have hforward_injective : Function.Injective forward := by
+    intro s t hst
+    apply basisSection_eq_of_basisGerms B hB P hP i s t
+    intro x hx
+    have hst' := congrArg Subtype.val hst
+    dsimp [forward, basisSectionGermFamilySubtype] at hst'
+    exact congrFun (congrFun hst' x) hx
+  have hforward_surjective : Function.Surjective forward := by
+    intro q
+    let hloc : ∀ z : {x : X // x ∈ B i},
+        ∃ (j : ι) (hj : z.1 ∈ B j) (hji : B j ≤ B i)
+          (σ : P.obj (op j)),
+          ∀ y hy, q.1 y (hji hy) = basisGermAt B P hy σ := by
+      intro z
+      exact q.2 z.1 z.2
+    choose K hK hKi σ hσ using hloc
+    let W : BasisCover B i :=
+      { index := {x : X // x ∈ B i}
+        member := K
+        covers := by
+          apply le_antisymm
+          · apply iSup_le
+            intro z
+            exact hKi z
+          · intro x hx
+            rw [Opens.mem_iSup]
+            exact ⟨⟨x, hx⟩, hK ⟨x, hx⟩⟩ }
+    have hr : ∀ (j j' : W.index) (k : ι)
+        (hkj : B k ≤ B (W.member j)) (hkj' : B k ≤ B (W.member j')),
+        P.map (InducedCategory.homMk (homOfLE hkj)).op (σ j) =
+          P.map (InducedCategory.homMk (homOfLE hkj')).op (σ j') := by
+      intro j j' k hkj hkj'
+      apply basisSection_eq_of_basisGerms B hB P hP k
+        (P.map (InducedCategory.homMk (homOfLE hkj)).op (σ j))
+        (P.map (InducedCategory.homMk (homOfLE hkj')).op (σ j'))
+      intro y hy
+      calc
+        basisGermAt B P hy
+            (P.map (InducedCategory.homMk (homOfLE hkj)).op (σ j)) =
+            basisGermAt B P (hkj hy) (σ j) :=
+          basisGermAt_res B P hy hkj (σ j)
+        _ = q.1 y (hKi j (hkj hy)) := (hσ j y (hkj hy)).symm
+        _ = q.1 y (hKi j' (hkj' hy)) := by congr 1
+        _ = basisGermAt B P (hkj' hy) (σ j') := hσ j' y (hkj' hy)
+        _ = basisGermAt B P hy
+            (P.map (InducedCategory.homMk (homOfLE hkj')).op (σ j')) :=
+          (basisGermAt_res B P hy hkj' (σ j')).symm
+    obtain ⟨t, ht, _⟩ :=
+      (basisSheafCondition_iff_cover_gluing B hB P).1 hP i W σ hr
+    refine ⟨t, ?_⟩
+    apply Subtype.ext
+    funext y hy
+    let z : W.index := ⟨y, hy⟩
+    have hyW : y ∈ B (W.member z) := hK z
+    obtain ⟨hzi, htzi⟩ := ht z
+    calc
+      basisGermAt B P hy t =
+          basisGermAt B P hyW
+            (P.map (InducedCategory.homMk (homOfLE hzi)).op t) :=
+        (basisGermAt_res B P hyW hzi t).symm
+      _ = basisGermAt B P hyW (σ z) := by rw [htzi]
+      _ = q.1 y (hKi z hyW) := (hσ z y hyW).symm
+      _ = q.1 y hy := by congr 1
+  exact ⟨hforward_injective, hforward_surjective⟩
 
 /-- Extension preserves stalks. -/
 theorem basisExtension_stalk_eq {X : TopCat.{v}} {ι : Type v}
     (B : ι → Opens X) (hB : Opens.IsBasis (Set.range B)) (P : BasisSheaf B) (x : X) :
     Nonempty ((basisSheafExtension B hB P).presheaf.stalk x ≃ basisStalk B P.1 x) := by
-  sorry
+  let : IsFiltered ((basisNeighborhoodIndex B x)ᵒᵖ) :=
+    basisNeighborhoodIndex_isFiltered B hB x
+  let E := basisSheafExtension B hB P
+  let F : (basisNeighborhoodIndex B x)ᵒᵖ ⥤ (OpenNhds x)ᵒᵖ :=
+    { obj := fun i => op ⟨B i.unop.1, i.unop.2⟩
+      map := fun f => (homOfLE f.unop.hom.hom.le).op
+      map_id := by intro i; subsingleton
+      map_comp := by intro i j k f g; subsingleton }
+  have hF : F.Final := by
+    apply Functor.final_of_exists_of_isFiltered
+    · intro U
+      obtain ⟨V, ⟨k, hk, rfl⟩, hxV, hVU⟩ :=
+        (Opens.isBasis_iff_nbhd.mp hB) U.unop.2
+      refine ⟨op ⟨k, hxV⟩, ?_⟩
+      exact ⟨(homOfLE hVU).op⟩
+    · intro U V f g
+      exact ⟨V, 𝟙 _, by subsingleton⟩
+  let eR := basisSheafExtensionRestrictionIso B hB P
+  let eP := (CategoryTheory.sheafToPresheaf (basisTopology B) (Type v)).mapIso eR.symm
+  let eQ := (basisRestrictionUnderlyingIso B hB).app E
+  let e := eP ≪≫ eQ
+  let G := (OpenNhds.inclusion x).op ⋙ E.presheaf
+  let dIso := Functor.isoWhiskerLeft
+    (ObjectProperty.ι (fun i : basisIndex B => x ∈ B i)).op e
+  let cIso : colimit (basisStalkDiagram B P.1 x) ≅ colimit (F ⋙ G) :=
+    HasColimit.isoOfNatIso dIso
+  let fIso : colimit (F ⋙ G) ≅ colimit G :=
+    Functor.Final.colimitIso F G
+  exact ⟨(cIso ≪≫ fIso).symm.toEquiv⟩
 
 /-! ## Category-valued structures on a basis -/
 
@@ -722,7 +966,10 @@ theorem basisAlgebraicStalk_underlying {C : Type u} [Category.{v} C]
     Nonempty ((CategoryTheory.forget C).obj (basisAlgebraicStalk B P x) ≃
       colimit ((ObjectProperty.ι (fun i : basisIndex B => x ∈ B i)).op ⋙
         P ⋙ CategoryTheory.forget C)) := by
-  sorry
+  let : IsFiltered ((basisNeighborhoodIndex B x)ᵒᵖ) :=
+    basisNeighborhoodIndex_isFiltered B hB x
+  exact ⟨(preservesColimitIso (CategoryTheory.forget C)
+      ((ObjectProperty.ι (fun i : basisIndex B => x ∈ B i)).op ⋙ P)).toEquiv⟩
 
 /-- Restriction of category-valued sheaves to a dense basis. -/
 noncomputable def basisAlgebraicRestrictionFunctor {C : Type u} [Category.{v} C]

@@ -184,25 +184,92 @@ theorem finite_conjugate_norm_tends_to_zero_contradiction
       exact_mod_cast Int.one_le_abs hz0)
   exact (not_lt_of_ge hle) hp'
 
+/-! ### The arithmetic interface for the exponential approximation
+
+The public Mathlib approximation theorem records only the estimate at the
+roots of its input polynomial.  That estimate is deliberately not reused as
+the interface below: after an algebraic number is put in a fixed finite
+number field, its other conjugates are not values of the complex exponential
+at those roots.  The arithmetic construction therefore has to expose its
+growth bounds and the denominator-cleared elements on which the norm argument
+actually operates.
+-/
+
+/-- The data retained from the Lindemann approximation construction for the
+    finite-conjugate argument.  The fields `n_bound`, `gp_bound`, and
+    `conjugate_bound` are the uniform estimates needed away from the
+    distinguished embedding.  The last three fields are the denominator
+    clearing and arithmetic conclusions used by
+    `finite_conjugate_norm_tends_to_zero_contradiction`.
+-/
+structure LindemannApproximationData
+    (K : Type*) [Field K] [Algebra ℚ K] [FiniteDimensional ℚ K]
+    [Algebra.IsSeparable ℚ K] where
+  embedding : K →ₐ[ℚ] ℂ
+  exponential_one : K
+  embedding_exponential_one : embedding exponential_one = Complex.exp 1
+  f : Polynomial ℤ
+  f_eval_zero_ne_zero : Polynomial.eval 0 f ≠ 0
+  one_is_root : (1 : ℂ) ∈ f.aroots ℂ
+  c : ℝ
+  c_nonnegative : 0 ≤ c
+  threshold : ℕ
+  n : ℕ → ℤ
+  gp : ℕ → Polynomial ℤ
+  denominator : ℕ → ℕ
+  x : ℕ → K
+  n_not_dvd : ∀ p, threshold < p → p.Prime → ¬(↑p : ℤ) ∣ n p
+  gp_degree : ∀ p, threshold < p → p.Prime →
+    (gp p).natDegree ≤ p * f.natDegree - 1
+  n_bound : ∀ p, threshold < p → p.Prime →
+    ‖(n p : ℂ)‖ ≤ c ^ p
+  gp_bound : ∀ p, threshold < p → p.Prime →
+    ‖((Polynomial.eval 1 (gp p) : ℤ) : ℂ)‖ ≤ c ^ p
+  approximation : ∀ p, threshold < p → p.Prime →
+    ∀ {r : ℂ}, r ∈ f.aroots ℂ →
+      ‖(n p : ℂ) * Complex.exp r -
+          (p : ℂ) * (Polynomial.aeval r (gp p))‖ ≤
+        c ^ p / ((Nat.factorial (p - 1) : ℕ) : ℝ)
+  denominator_ne_zero : ∀ p, denominator p ≠ 0
+  cleared_value : ∀ p,
+    embedding (x p) = (denominator p : ℂ) *
+      ((n p : ℂ) * embedding exponential_one -
+        (p : ℂ) * ((Polynomial.eval 1 (gp p) : ℤ) : ℂ))
+  cleared_integral : ∀ p, IsIntegral ℤ (x p)
+  cleared_nonzero : ∀ p, x p ≠ 0
+  conjugate_bound : ∀ p, threshold < p → p.Prime →
+    ∀ σ : K →ₐ[ℚ] ℂ, ‖σ (x p)‖ ≤ c ^ p
+  conjugate_norm_tends_to_zero : ∀ ε : ℝ, 0 < ε → ∃ p : ℕ,
+    ‖(finiteConjugateEmbeddings (F := ℚ) (K := K) (A := ℂ)).prod
+      (fun σ => σ (x p))‖ < ε
+
+abbrev LindemannApproximation :=
+  ∃ (K : Type*) (hK : Field K) (hAlgebra : Algebra ℚ K)
+    (hFinite : FiniteDimensional ℚ K)
+    (hSeparable : Algebra.IsSeparable ℚ K),
+    Nonempty (@LindemannApproximationData K hK hAlgebra hFinite hSeparable)
+
 /-- The arithmetic/conjugate-norm conclusion needed for the exponential of a
-    nonzero rational number.  Its proof combines
-    `LindemannWeierstrass.exp_polynomial_approx` with the preceding finite
-    norm contradiction. -/
+    nonzero rational number.  The strengthened approximation interface keeps
+    the analytic construction separate from the finite norm contradiction. -/
 theorem complex_exp_one_not_isAlgebraic_of_exp_polynomial_approx
-    (happrox :
-      ∀ (f : Polynomial ℤ), Polynomial.eval 0 f ≠ 0 →
-        ∃ c, ∀ p > (Polynomial.eval 0 f).natAbs, p.Prime →
-          ∃ n : ℤ, ¬(↑p : ℤ) ∣ n ∧ ∃ gp : Polynomial ℤ,
-            gp.natDegree ≤ p * f.natDegree - 1 ∧
-              ∀ {r : ℂ}, r ∈ f.aroots ℂ →
-                ‖n • Complex.exp r - p • Polynomial.aeval r gp‖ ≤
-                  c ^ p / ((Nat.factorial (p - 1) : ℕ) : ℝ)) :
+    (happrox : LindemannApproximation) :
     ¬ IsAlgebraic ℚ (Complex.exp 1) := by
-  sorry
+  intro _
+  obtain ⟨K, hK, hAlgebra, hFinite, hSeparable, ⟨data⟩⟩ := happrox
+  let _ : Field K := hK
+  let _ : Algebra ℚ K := hAlgebra
+  let _ : FiniteDimensional ℚ K := hFinite
+  let _ : Algebra.IsSeparable ℚ K := hSeparable
+  exact finite_conjugate_norm_tends_to_zero_contradiction
+    data.x data.cleared_integral data.cleared_nonzero
+    data.conjugate_norm_tends_to_zero
 
 /-- Euler's number is transcendental over the rationals. -/
 theorem euler_number_transcendental_over_rationals :
+    LindemannApproximation →
     Transcendental ℚ eulerNumber := by
+  intro happrox
   rw [transcendental_iff]
   by_contra h
   have h_not_injective :
@@ -217,14 +284,15 @@ theorem euler_number_transcendental_over_rationals :
     (isAlgebraic_iff_not_injective).2 h_not_injective
   have h_euler : ¬ IsAlgebraic ℚ eulerNumber := by
     simpa [eulerNumber] using
-      (complex_exp_one_not_isAlgebraic_of_exp_polynomial_approx
-        (fun f hf => LindemannWeierstrass.exp_polynomial_approx f hf))
+      (complex_exp_one_not_isAlgebraic_of_exp_polynomial_approx happrox)
   exact h_euler h_alg
 
 /-- The field generated by `e` and `π` has transcendence degree at least one. -/
 theorem euler_pi_transcendence_degree_at_least_one :
+    LindemannApproximation →
     letI : Algebra ℚ eulerPiField := eulerPiField.algebra'
     1 ≤ Algebra.trdeg ℚ eulerPiField := by
+  intro happrox
   let _ : Algebra ℚ eulerPiField := eulerPiField.algebra'
   let ee : eulerPiField :=
     ⟨eulerNumber,
@@ -232,7 +300,7 @@ theorem euler_pi_transcendence_degree_at_least_one :
         eulerNumber ∈ ({eulerNumber, piComplex} : Set ℂ))⟩
   have he : Transcendental ℚ ee := by
     intro halg
-    apply euler_number_transcendental_over_rationals
+    apply euler_number_transcendental_over_rationals happrox
     have hcomplex : IsAlgebraic ℚ (ee : ℂ) :=
       (isAlgebraic_algHom_iff eulerPiField.val Subtype.val_injective).mpr halg
     simpa [ee] using hcomplex

@@ -89,7 +89,7 @@ theorem spectrum_surjective_radical_ideal_conditions
         rw [Ideal.radical_eq_sInf]
         refine le_sInf ?_
         intro p hp
-        letI : p.IsPrime := hp.2
+        let _ : p.IsPrime := hp.2
         have hprime : Ideal.comap φ (p.map φ) = p := by
           obtain ⟨q, hq⟩ := h ⟨p, hp.2⟩
           rw [Ideal.comap_map_eq_self_iff_of_isPrime]

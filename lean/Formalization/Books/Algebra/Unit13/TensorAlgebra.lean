@@ -1,4 +1,7 @@
 import Mathlib.Algebra.Category.ModuleCat.Colimits
+import Mathlib.Algebra.Category.AlgCat.FilteredColimits
+import Mathlib.Algebra.Category.AlgCat.TensorAlgebra
+import Mathlib.Algebra.Category.ModuleCat.FilteredColimits
 import Mathlib.Algebra.Algebra.RestrictScalars
 import Mathlib.CategoryTheory.Filtered.Basic
 import Mathlib.LinearAlgebra.ExteriorAlgebra.Basis
@@ -708,7 +711,356 @@ theorem algebra_colimit_iso
         (exteriorAlgebraFunctor R).obj (colimit M)) ∧
       Nonempty (colimit (M ⋙ symmetricAlgebraFunctor R) ≅
         (symmetricAlgebraFunctor R).obj (colimit M)) := by
-  sorry
+  letI : PreservesFilteredColimits (forget₂ (AlgCat.{u} R) (ModuleCat.{u} R)) :=
+    { preserves_filtered_colimits := fun J =>
+        { preservesColimit := fun {F} =>
+            { preserves := fun {c} hc =>
+                ⟨by
+                  apply isColimitOfReflects (forget₂ (ModuleCat R) AddCommGrpCat)
+                  change IsColimit
+                    ((forget₂ (AlgCat R) RingCat ⋙
+                      forget₂ RingCat AddCommGrpCat).mapCocone c)
+                  exact isColimitOfPreserves
+                    (forget₂ (AlgCat R) RingCat ⋙ forget₂ RingCat AddCommGrpCat) hc⟩ } } }
+  letI : PreservesColimitsOfSize (AlgCat.tensorAlgebra R) :=
+    (AlgCat.tensorAlgebraAdj R).leftAdjoint_preservesColimits
+  constructor
+  · exact ⟨(preservesColimitIso
+      (AlgCat.tensorAlgebra R ⋙ forget₂ (AlgCat R) (ModuleCat R)) M).symm⟩
+  · constructor
+    · let exteriorAlgCat : ModuleCat.{u} R ⥤ AlgCat.{u} R :=
+        { obj := fun X => AlgCat.of R (exteriorAlgebra R X)
+          map := fun f => AlgCat.ofHom (exteriorAlgebraMap f.hom)
+          map_id := fun X => by
+            apply AlgCat.hom_ext
+            simpa using (exteriorAlgebraMap_id (R := R) (M := (X : Type u)))
+          map_comp := fun f g => by
+            apply AlgCat.hom_ext
+            simpa using (exteriorAlgebraMap_comp f.hom g.hom) }
+      let A := M ⋙ exteriorAlgCat
+      let C : AlgCat.{u} R := colimit A
+      let moduleHomOfLinear {X Y : ModuleCat R} (f : X →ₗ[R] Y) : X ⟶ Y :=
+        ModuleCat.homMk (AddCommGrpCat.ofHom f.toAddMonoidHom) (by
+          intro r
+          ext x
+          simpa [ModuleCat.smul] using (f.map_smul r x).symm)
+      let genCocone : Cocone M :=
+        { pt := (forget₂ (AlgCat R) (ModuleCat R)).obj C
+          ι :=
+            { app := fun i => moduleHomOfLinear
+                ((colimit.ι A i).hom.toLinearMap.comp (ExteriorAlgebra.ι R))
+              naturality := fun i j f => by
+                apply ModuleCat.hom_ext
+                dsimp [moduleHomOfLinear]
+                change (colimit.ι A j).hom.toLinearMap.comp
+                    ((ExteriorAlgebra.ι R).comp (M.map f).hom) =
+                  (colimit.ι A i).hom.toLinearMap.comp (ExteriorAlgebra.ι R)
+                have hnat := (colimit.cocone A).w f
+                have hnat' := congrArg (fun k => k.hom.toLinearMap) hnat
+                dsimp [A, exteriorAlgCat] at hnat'
+                change
+                  ((colimit.ι A j).hom.comp (ExteriorAlgebra.map (M.map f).hom)).toLinearMap =
+                    (colimit.ι A i).hom.toLinearMap at hnat'
+                have hnat'' := congrArg (fun k => k.comp (ExteriorAlgebra.ι R)) hnat'
+                rw [AlgHom.comp_toLinearMap, LinearMap.comp_assoc,
+                  ExteriorAlgebra.map_comp_ι] at hnat''
+                simpa [A, exteriorAlgCat, exteriorAlgebraMap,
+                  LinearMap.comp_assoc] using hnat'' } }
+      let h : colimit M ⟶ (forget₂ (AlgCat R) (ModuleCat R)).obj C :=
+        colimit.desc M genCocone
+      let hC : ((colimit M : ModuleCat R) : Type u) →ₗ[R] (C : Type u) := h.hom
+      have hsq : ∀ x : ((colimit M : ModuleCat.{u} R) : Type u),
+          hC x * hC x = 0 := by
+        intro x
+        obtain ⟨i, m, hm⟩ :=
+          Types.jointly_surjective_of_isColimit
+            (isColimitOfPreserves (forget (ModuleCat R)) (colimit.isColimit M)) x
+        rw [← hm]
+        simp [h, hC, genCocone, moduleHomOfLinear]
+        change (colimit.ι A i).hom (ExteriorAlgebra.ι R m) *
+          (colimit.ι A i).hom (ExteriorAlgebra.ι R m) = 0
+        calc
+          _ = (colimit.ι A i).hom
+              (ExteriorAlgebra.ι R m * ExteriorAlgebra.ι R m) :=
+            ((colimit.ι A i).hom.map_mul _ _).symm
+          _ = (colimit.ι A i).hom 0 := by rw [ExteriorAlgebra.ι_sq_zero]
+          _ = 0 := map_zero _
+      let g : exteriorAlgebra R ((colimit M : ModuleCat R) : Type u) →ₐ[R] C :=
+        ExteriorAlgebra.lift R ⟨hC, hsq⟩
+      let targetCocone := exteriorAlgCat.mapCocone (colimit.cocone M)
+      let f : colimit A ⟶ targetCocone.pt := colimit.desc A targetCocone
+      have hgen' :
+          moduleHomOfLinear (f.hom.toLinearMap.comp h.hom) =
+            moduleHomOfLinear
+              (X := colimit M)
+              (Y := (forget₂ (AlgCat R) (ModuleCat R)).obj targetCocone.pt)
+              (ExteriorAlgebra.ι R :
+                ((colimit M : ModuleCat R) : Type u) →ₗ[R] (targetCocone.pt : Type u)) := by
+        apply colimit.hom_ext
+        intro i
+        have hcomp :
+            moduleHomOfLinear (f.hom.toLinearMap.comp h.hom) =
+              h ≫ (forget₂ (AlgCat R) (ModuleCat R)).map f := by
+          apply ModuleCat.hom_ext
+          rfl
+        rw [hcomp, ← Category.assoc, colimit.ι_desc]
+        have hf := colimit.ι_desc targetCocone i
+        have hfi :
+            moduleHomOfLinear
+                ((colimit.ι A i).hom.toLinearMap.comp (ExteriorAlgebra.ι R)) ≫
+              (forget₂ (AlgCat R) (ModuleCat R)).map f =
+              moduleHomOfLinear
+                ((targetCocone.ι.app i).hom.toLinearMap.comp (ExteriorAlgebra.ι R)) := by
+          apply ModuleCat.hom_ext
+          change (f.hom.toLinearMap.comp
+              ((colimit.ι A i).hom.toLinearMap.comp (ExteriorAlgebra.ι R))) =
+            (targetCocone.ι.app i).hom.toLinearMap.comp (ExteriorAlgebra.ι R)
+          have hfc := congrArg (fun k => k.hom.toLinearMap) hf
+          change
+            ((f.hom.comp (colimit.ι A i).hom).toLinearMap) =
+              (targetCocone.ι.app i).hom.toLinearMap at hfc
+          rw [AlgHom.comp_toLinearMap] at hfc
+          have hfc' := congrArg (fun k => k.comp (ExteriorAlgebra.ι R)) hfc
+          simpa [LinearMap.comp_assoc] using hfc'
+        rw [hfi]
+        apply ModuleCat.hom_ext
+        change (targetCocone.ι.app i).hom.toLinearMap.comp (ExteriorAlgebra.ι R) =
+          (ExteriorAlgebra.ι R).comp (colimit.ι M i).hom
+        simp [targetCocone, exteriorAlgCat, exteriorAlgebraMap,
+          ExteriorAlgebra.map_comp_ι]
+      have hgen : f.hom.toLinearMap.comp h.hom = ExteriorAlgebra.ι R :=
+        congrArg ModuleCat.Hom.hom hgen'
+      have h₁ : f.hom.comp g =
+          AlgHom.id R (exteriorAlgebra R ((colimit M : ModuleCat R) : Type u)) := by
+        apply ExteriorAlgebra.hom_ext
+        simpa [g, LinearMap.comp_assoc] using hgen
+      have h₂ : g.comp f.hom = AlgHom.id R C := by
+        have h₂' :
+            (AlgCat.ofHom (g.comp f.hom) : C ⟶ C) =
+              AlgCat.ofHom (AlgHom.id R C) := by
+          apply colimit.hom_ext
+          intro i
+          apply AlgCat.hom_ext
+          apply ExteriorAlgebra.hom_ext
+          ext m
+          change g (f.hom ((colimit.ι A i).hom (ExteriorAlgebra.ι R m))) =
+            (colimit.ι A i).hom (ExteriorAlgebra.ι R m)
+          have hf := colimit.ι_desc targetCocone i
+          have hf' := congrArg (fun k => k.hom) hf
+          dsimp [A] at hf'
+          change f.hom.comp (colimit.ι A i).hom = (targetCocone.ι.app i).hom at hf'
+          have hf_m := congrArg (fun k => k (ExteriorAlgebra.ι R m)) hf'
+          change g ((f.hom.comp (colimit.ι A i).hom) (ExteriorAlgebra.ι R m)) =
+            (colimit.ι A i).hom (ExteriorAlgebra.ι R m)
+          rw [hf_m]
+          simp [g, targetCocone, exteriorAlgCat, exteriorAlgebraMap]
+          have hi := colimit.ι_desc genCocone i
+          have hi' := congrArg (fun k => k.hom) hi
+          change h.hom.comp (colimit.ι M i).hom = (genCocone.ι.app i).hom at hi'
+          have hi_m := congrArg (fun k => k m) hi'
+          have hi_m' := hi_m
+          change hC ((colimit.ι M i).hom m) =
+            (colimit.ι A i).hom (ExteriorAlgebra.ι R m) at hi_m'
+          rw [ExteriorAlgebra.map_apply_ι, ExteriorAlgebra.lift_ι_apply]
+          exact hi_m'
+        exact congrArg AlgCat.Hom.hom h₂'
+      let eAlg : C ≃ₐ[R] exteriorAlgebra R ((colimit M : ModuleCat R) : Type u) :=
+        AlgEquiv.ofAlgHom f.hom g h₁ h₂
+      exact ⟨(preservesColimitIso
+          (forget₂ (AlgCat R) (ModuleCat R)) A).symm ≪≫ eAlg.toLinearEquiv.toModuleIso⟩
+    · let symmetricAlgCat : ModuleCat.{u} R ⥤ AlgCat.{u} R :=
+        { obj := fun X => AlgCat.of R (symmetricAlgebra R X)
+          map := fun f => AlgCat.ofHom (symmetricAlgebraMap f.hom)
+          map_id := fun X => by
+            apply AlgCat.hom_ext
+            simpa using (symmetricAlgebraMap_id (R := R) (M := (X : Type u)))
+          map_comp := fun f g => by
+            apply AlgCat.hom_ext
+            simpa using (symmetricAlgebraMap_comp f.hom g.hom) }
+      let A := M ⋙ symmetricAlgCat
+      let C : AlgCat.{u} R := colimit A
+      let moduleHomOfLinear {X Y : ModuleCat R} (f : X →ₗ[R] Y) : X ⟶ Y :=
+        ModuleCat.homMk (AddCommGrpCat.ofHom f.toAddMonoidHom) (by
+          intro r
+          ext x
+          simpa [ModuleCat.smul] using (f.map_smul r x).symm)
+      let genCocone : Cocone M :=
+        { pt := (forget₂ (AlgCat R) (ModuleCat R)).obj C
+          ι :=
+            { app := fun i => moduleHomOfLinear
+                ((colimit.ι A i).hom.toLinearMap.comp
+                  (SymmetricAlgebra.ι R (M.obj i)))
+              naturality := fun i j f => by
+                apply ModuleCat.hom_ext
+                dsimp [moduleHomOfLinear]
+                change (colimit.ι A j).hom.toLinearMap.comp
+                    ((SymmetricAlgebra.ι R (M.obj j)).comp (M.map f).hom) =
+                  (colimit.ι A i).hom.toLinearMap.comp
+                    (SymmetricAlgebra.ι R (M.obj i))
+                have hnat := (colimit.cocone A).w f
+                have hnat' := congrArg (fun k => k.hom.toLinearMap) hnat
+                dsimp [A, symmetricAlgCat] at hnat'
+                change
+                  ((colimit.ι A j).hom.comp (symmetricAlgebraMap (M.map f).hom)).toLinearMap =
+                    (colimit.ι A i).hom.toLinearMap at hnat'
+                have hnat'' :=
+                  congrArg (fun k => k.comp (SymmetricAlgebra.ι R (M.obj i))) hnat'
+                rw [AlgHom.comp_toLinearMap] at hnat''
+                have hmapι :
+                    (symmetricAlgebraMap (M.map f).hom).toLinearMap.comp
+                        (SymmetricAlgebra.ι R (M.obj i)) =
+                      (SymmetricAlgebra.ι R (M.obj j)).comp (M.map f).hom := by
+                  apply LinearMap.ext
+                  intro x
+                  simp [symmetricAlgebraMap]
+                rw [LinearMap.comp_assoc, hmapι] at hnat''
+                exact hnat'' } }
+      let h : colimit M ⟶ (forget₂ (AlgCat R) (ModuleCat R)).obj C :=
+        colimit.desc M genCocone
+      let hC : ((colimit M : ModuleCat R) : Type u) →ₗ[R] (C : Type u) := h.hom
+      have hcomm : ∀ x y : (C : Type u), x * y = y * x := by
+        intro x y
+        obtain ⟨i, xi, hxi⟩ :=
+          Types.jointly_surjective_of_isColimit
+            (isColimitOfPreserves (forget (AlgCat R)) (colimit.isColimit A)) x
+        obtain ⟨j, yj, hyj⟩ :=
+          Types.jointly_surjective_of_isColimit
+            (isColimitOfPreserves (forget (AlgCat R)) (colimit.isColimit A)) y
+        rw [← hxi, ← hyj]
+        let k := IsFiltered.max i j
+        let fi := IsFiltered.leftToMax i j
+        let fj := IsFiltered.rightToMax i j
+        change (colimit.ι A i).hom xi * (colimit.ι A j).hom yj =
+          (colimit.ι A j).hom yj * (colimit.ι A i).hom xi
+        rw [← colimit.w_apply A fi xi, ← colimit.w_apply A fj yj]
+        calc
+          (colimit.ι A k).hom (A.map fi xi) *
+              (colimit.ι A k).hom (A.map fj yj) =
+              (colimit.ι A k).hom (A.map fi xi * A.map fj yj) :=
+            ((colimit.ι A k).hom.map_mul _ _).symm
+          _ = (colimit.ι A k).hom (A.map fj yj * A.map fi xi) := by
+            let xk : symmetricAlgebra R (M.obj k) :=
+              symmetricAlgebraMap (M.map fi).hom xi
+            let yk : symmetricAlgebra R (M.obj k) :=
+              symmetricAlgebraMap (M.map fj).hom yj
+            have hmul :
+                xk * yk = yk * xk := mul_comm xk yk
+            simpa [A, symmetricAlgCat, xk, yk] using
+              congrArg (colimit.ι A k).hom hmul
+          _ = (colimit.ι A k).hom (A.map fj yj) *
+              (colimit.ι A k).hom (A.map fi xi) :=
+            (colimit.ι A k).hom.map_mul _ _
+      letI : CommRing (C : Type u) :=
+        { (inferInstance : Ring (C : Type u)) with mul_comm := hcomm }
+      let g : symmetricAlgebra R ((colimit M : ModuleCat R) : Type u) →ₐ[R] C :=
+        SymmetricAlgebra.lift (R := R) (A := (C : Type u)) hC
+      let targetCocone := symmetricAlgCat.mapCocone (colimit.cocone M)
+      let f : colimit A ⟶ targetCocone.pt := colimit.desc A targetCocone
+      have hgen' :
+          moduleHomOfLinear (f.hom.toLinearMap.comp h.hom) =
+            moduleHomOfLinear
+              (X := colimit M)
+              (Y := (forget₂ (AlgCat R) (ModuleCat R)).obj targetCocone.pt)
+              (SymmetricAlgebra.ι R ((colimit M : ModuleCat R) : Type u) :
+                ((colimit M : ModuleCat R) : Type u) →ₗ[R] (targetCocone.pt : Type u)) := by
+        apply colimit.hom_ext
+        intro i
+        have hcomp :
+            moduleHomOfLinear (f.hom.toLinearMap.comp h.hom) =
+              h ≫ (forget₂ (AlgCat R) (ModuleCat R)).map f := by
+          apply ModuleCat.hom_ext
+          rfl
+        rw [hcomp, ← Category.assoc, colimit.ι_desc]
+        have hf := colimit.ι_desc targetCocone i
+        have hfi :
+            moduleHomOfLinear
+                ((colimit.ι A i).hom.toLinearMap.comp
+                  (SymmetricAlgebra.ι R (M.obj i))) ≫
+              (forget₂ (AlgCat R) (ModuleCat R)).map f =
+              moduleHomOfLinear
+                ((targetCocone.ι.app i).hom.toLinearMap.comp
+                  (SymmetricAlgebra.ι R (M.obj i))) := by
+          apply ModuleCat.hom_ext
+          change (f.hom.toLinearMap.comp
+              ((colimit.ι A i).hom.toLinearMap.comp
+                (SymmetricAlgebra.ι R (M.obj i)))) =
+            (targetCocone.ι.app i).hom.toLinearMap.comp
+              (SymmetricAlgebra.ι R (M.obj i))
+          have hfc := congrArg (fun k => k.hom.toLinearMap) hf
+          change
+            ((f.hom.comp (colimit.ι A i).hom).toLinearMap) =
+              (targetCocone.ι.app i).hom.toLinearMap at hfc
+          rw [AlgHom.comp_toLinearMap] at hfc
+          have hfc' := congrArg
+            (fun k => k.comp (SymmetricAlgebra.ι R (M.obj i))) hfc
+          simpa [LinearMap.comp_assoc] using hfc'
+        rw [hfi]
+        apply ModuleCat.hom_ext
+        change (targetCocone.ι.app i).hom.toLinearMap.comp
+              (SymmetricAlgebra.ι R (M.obj i)) =
+            (SymmetricAlgebra.ι R ((colimit M : ModuleCat R) : Type u)).comp
+              (colimit.ι M i).hom
+        simp [targetCocone, symmetricAlgCat, symmetricAlgebraMap]
+        exact
+          SymmetricAlgebra.lift_comp_ι
+            ((SymmetricAlgebra.ι R ((colimit M : ModuleCat R) : Type u)).comp
+              (colimit.ι M i).hom)
+      have hgen : f.hom.toLinearMap.comp h.hom =
+          SymmetricAlgebra.ι R ((colimit M : ModuleCat R) : Type u) :=
+        congrArg ModuleCat.Hom.hom hgen'
+      have h₁ : f.hom.comp g =
+          AlgHom.id R (symmetricAlgebra R ((colimit M : ModuleCat R) : Type u)) := by
+        refine SymmetricAlgebra.algHom_ext (F := f.hom.comp g)
+          (G := AlgHom.id R _) ?_
+        apply LinearMap.ext
+        intro m
+        simpa [g, LinearMap.comp_apply] using LinearMap.congr_fun hgen m
+      have h₂ : g.comp f.hom = AlgHom.id R C := by
+        have h₂' :
+            (AlgCat.ofHom (g.comp f.hom) : C ⟶ C) =
+              AlgCat.ofHom (AlgHom.id R C) := by
+          apply colimit.hom_ext
+          intro i
+          apply AlgCat.hom_ext
+          change (g.comp f.hom).comp (colimit.ι A i).hom =
+            (AlgHom.id R C).comp (colimit.ι A i).hom
+          apply SymmetricAlgebra.algHom_ext
+          ext m
+          change g (f.hom ((colimit.ι A i).hom
+              (SymmetricAlgebra.ι R (M.obj i) m))) =
+            (colimit.ι A i).hom (SymmetricAlgebra.ι R (M.obj i) m)
+          have hf := colimit.ι_desc targetCocone i
+          have hf' := congrArg (fun k => k.hom) hf
+          dsimp [A] at hf'
+          change f.hom.comp (colimit.ι A i).hom =
+            (targetCocone.ι.app i).hom at hf'
+          have hf_m := congrArg
+            (fun k => k (SymmetricAlgebra.ι R (M.obj i) m)) hf'
+          change g ((f.hom.comp (colimit.ι A i).hom)
+              (SymmetricAlgebra.ι R (M.obj i) m)) =
+            (colimit.ι A i).hom (SymmetricAlgebra.ι R (M.obj i) m)
+          rw [hf_m]
+          simp [g, targetCocone, symmetricAlgCat, symmetricAlgebraMap]
+          have hi := colimit.ι_desc genCocone i
+          have hi' := congrArg (fun k => k.hom) hi
+          change h.hom.comp (colimit.ι M i).hom =
+            (genCocone.ι.app i).hom at hi'
+          have hi_m := congrArg (fun k => k m) hi'
+          have hi_m' := hi_m
+          change hC ((colimit.ι M i).hom m) =
+            (colimit.ι A i).hom (SymmetricAlgebra.ι R (M.obj i) m) at hi_m'
+          rw [SymmetricAlgebra.lift_ι_apply]
+          change (SymmetricAlgebra.lift hC)
+              (SymmetricAlgebra.ι R ((colimit M : ModuleCat R) : Type u)
+                ((colimit.ι M i).hom m)) =
+            (colimit.ι A i).hom (SymmetricAlgebra.ι R (M.obj i) m)
+          rw [SymmetricAlgebra.lift_ι_apply]
+          exact hi_m'
+        exact congrArg AlgCat.Hom.hom h₂'
+      let eAlg : C ≃ₐ[R] symmetricAlgebra R ((colimit M : ModuleCat R) : Type u) :=
+        AlgEquiv.ofAlgHom f.hom g h₁ h₂
+      exact ⟨(preservesColimitIso
+          (forget₂ (AlgCat R) (ModuleCat R)) A).symm ≪≫ eAlg.toLinearEquiv.toModuleIso⟩
 
 /-! ## Localization -/
 
@@ -729,7 +1081,215 @@ theorem algebra_localization_iso
         exteriorAlgebra (localization S) (localizedModule S M)) ∧
       Nonempty (localizedAlgebra (A := symmetricAlgebra R M) S ≃ₐ[localization S]
         symmetricAlgebra (localization S) (localizedModule S M)) := by
-  sorry
+  constructor
+  · let e := Formalization.Books.Algebra.Unit12.tensorProductLocalizationModuleEquiv S
+      (M := M)
+    let fgen : M →ₗ[R] tensorAlgebra (localization S) (localizedModule S M) :=
+      (TensorAlgebra.ι (localization S)).restrictScalars R |>.comp
+        (localizedModuleMap S M)
+    let fR : tensorAlgebra R M →ₐ[R] tensorAlgebra (localization S) (localizedModule S M) :=
+      TensorAlgebra.lift R fgen
+    let f : localizedAlgebra (A := tensorAlgebra R M) S →ₐ[localization S]
+        tensorAlgebra (localization S) (localizedModule S M) :=
+      AlgHom.liftEquiv R (localization S) (tensorAlgebra R M)
+        (tensorAlgebra (localization S) (localizedModule S M)) fR
+    let ggen : localizedModule S M →ₗ[localization S]
+        localizedAlgebra (A := tensorAlgebra R M) S :=
+      (LinearMap.baseChange (localization S) (TensorAlgebra.ι R)).comp e.symm.toLinearMap
+    let g : tensorAlgebra (localization S) (localizedModule S M) →ₐ[localization S]
+        localizedAlgebra (A := tensorAlgebra R M) S :=
+      TensorAlgebra.lift (localization S) ggen
+    have he (m : M) (s : S) :
+        e.symm (localizedModuleFraction S m s) =
+          (Localization.mk 1 s ⊗ₜ[R] m) := by
+      apply e.injective
+      simp [e]
+    have hgen : f.toLinearMap.comp ggen = TensorAlgebra.ι (localization S) := by
+      apply LinearMap.ext
+      intro x
+      induction x using LocalizedModule.induction_on with
+      | _ m s =>
+        dsimp [ggen]
+        rw [show e.symm (LocalizedModule.mk m s) =
+          (Localization.mk 1 s ⊗ₜ[R] m) by simpa [localizedModuleFraction] using he m s]
+        simp [f, fR, fgen]
+        rw [← (TensorAlgebra.ι (localization S)).map_smul]
+        apply congrArg (TensorAlgebra.ι (localization S))
+        change Localization.mk 1 s • localizedModuleFraction S m 1 =
+          localizedModuleFraction S m s
+        simpa [localizationFraction] using
+          (localizedModuleFraction_smul S 1 m s 1)
+    have h₁ : f.comp g = AlgHom.id (localization S)
+        (tensorAlgebra (localization S) (localizedModule S M)) := by
+      apply TensorAlgebra.hom_ext
+      simpa [g, LinearMap.comp_assoc] using hgen
+    have hmap : (ggen.restrictScalars R).comp (localizedModuleMap S M) =
+        (((Algebra.TensorProduct.includeRight :
+          tensorAlgebra R M →ₐ[R] localizedAlgebra (A := tensorAlgebra R M) S).toLinearMap).comp
+          (TensorAlgebra.ι R)) := by
+      apply LinearMap.ext
+      intro m
+      dsimp [ggen]
+      rw [show e.symm (localizedModuleMap S M m) =
+        (Localization.mk 1 (1 : S) ⊗ₜ[R] m) by
+          rw [localizedModuleMap_apply]
+          exact he m 1]
+      simp [LinearMap.baseChange_tmul, Algebra.TensorProduct.includeRight]
+      rw [Localization.mk_one_eq_algebraMap, map_one]
+    have h₂ : g.comp f = AlgHom.id (localization S)
+        (localizedAlgebra (A := tensorAlgebra R M) S) := by
+      apply Algebra.TensorProduct.ext_ring
+      apply TensorAlgebra.hom_ext
+      ext m
+      simp [f, fR, fgen, g, hmap, Algebra.TensorProduct.includeRight]
+      simpa using LinearMap.congr_fun hmap m
+    exact ⟨AlgEquiv.ofAlgHom f g h₁ h₂⟩
+  · constructor
+    · let e := Formalization.Books.Algebra.Unit12.tensorProductLocalizationModuleEquiv S
+        (M := M)
+      let fgen : M →ₗ[R] exteriorAlgebra (localization S) (localizedModule S M) :=
+        (ExteriorAlgebra.ι (localization S)).restrictScalars R |>.comp
+          (localizedModuleMap S M)
+      let fR : exteriorAlgebra R M →ₐ[R]
+          exteriorAlgebra (localization S) (localizedModule S M) :=
+        ExteriorAlgebra.lift R ⟨fgen, by
+          intro m
+          simpa [fgen] using
+            (ExteriorAlgebra.ι_sq_zero (R := localization S) (M := localizedModule S M)
+              (localizedModuleMap S M m))⟩
+      let f : localizedAlgebra (A := exteriorAlgebra R M) S →ₐ[localization S]
+          exteriorAlgebra (localization S) (localizedModule S M) :=
+        AlgHom.liftEquiv R (localization S) (exteriorAlgebra R M)
+          (exteriorAlgebra (localization S) (localizedModule S M)) fR
+      let ggen : localizedModule S M →ₗ[localization S]
+          localizedAlgebra (A := exteriorAlgebra R M) S :=
+        (LinearMap.baseChange (localization S) (ExteriorAlgebra.ι R)).comp e.symm.toLinearMap
+      have he (m : M) (s : S) :
+          e.symm (localizedModuleFraction S m s) =
+            (Localization.mk 1 s ⊗ₜ[R] m) := by
+        apply e.injective
+        simp [e]
+      let g : exteriorAlgebra (localization S) (localizedModule S M) →ₐ[localization S]
+          localizedAlgebra (A := exteriorAlgebra R M) S :=
+        ExteriorAlgebra.lift (localization S) ⟨ggen, by
+          intro x
+          induction x using LocalizedModule.induction_on with
+          | _ m s =>
+            dsimp [ggen]
+            rw [show e.symm (LocalizedModule.mk m s) =
+              (Localization.mk 1 s ⊗ₜ[R] m) by
+                simpa [localizedModuleFraction] using he m s]
+            simp [LinearMap.baseChange_tmul, Algebra.TensorProduct.tmul_mul_tmul]⟩
+      have hgen : f.toLinearMap.comp ggen = ExteriorAlgebra.ι (localization S) := by
+        apply LinearMap.ext
+        intro x
+        induction x using LocalizedModule.induction_on with
+        | _ m s =>
+          dsimp [ggen]
+          rw [show e.symm (LocalizedModule.mk m s) =
+            (Localization.mk 1 s ⊗ₜ[R] m) by
+              simpa [localizedModuleFraction] using he m s]
+          simp [f, fR, fgen]
+          rw [← (ExteriorAlgebra.ι (localization S)).map_smul]
+          apply congrArg (ExteriorAlgebra.ι (localization S))
+          change Localization.mk 1 s • localizedModuleFraction S m 1 =
+            localizedModuleFraction S m s
+          simpa [localizationFraction] using
+            (localizedModuleFraction_smul S 1 m s 1)
+      have h₁ : f.comp g = AlgHom.id (localization S)
+          (exteriorAlgebra (localization S) (localizedModule S M)) := by
+        apply ExteriorAlgebra.hom_ext
+        simpa [g, LinearMap.comp_assoc] using hgen
+      have hmap : (ggen.restrictScalars R).comp (localizedModuleMap S M) =
+          (((Algebra.TensorProduct.includeRight :
+            exteriorAlgebra R M →ₐ[R]
+              localizedAlgebra (A := exteriorAlgebra R M) S).toLinearMap).comp
+            (ExteriorAlgebra.ι R)) := by
+        apply LinearMap.ext
+        intro m
+        dsimp [ggen]
+        rw [show e.symm (localizedModuleMap S M m) =
+          (Localization.mk 1 (1 : S) ⊗ₜ[R] m) by
+            rw [localizedModuleMap_apply]
+            exact he m 1]
+        simp [LinearMap.baseChange_tmul, Algebra.TensorProduct.includeRight]
+        rw [Localization.mk_one_eq_algebraMap, map_one]
+      have h₂ : g.comp f = AlgHom.id (localization S)
+          (localizedAlgebra (A := exteriorAlgebra R M) S) := by
+        apply Algebra.TensorProduct.ext_ring
+        apply ExteriorAlgebra.hom_ext
+        ext m
+        simp [f, fR, fgen, g, hmap, Algebra.TensorProduct.includeRight]
+        simpa using LinearMap.congr_fun hmap m
+      exact ⟨AlgEquiv.ofAlgHom f g h₁ h₂⟩
+    · let e := Formalization.Books.Algebra.Unit12.tensorProductLocalizationModuleEquiv S
+        (M := M)
+      let fgen : M →ₗ[R] symmetricAlgebra (localization S) (localizedModule S M) :=
+        (SymmetricAlgebra.ι (localization S) (localizedModule S M)).restrictScalars R |>.comp
+          (localizedModuleMap S M)
+      let fR : symmetricAlgebra R M →ₐ[R]
+          symmetricAlgebra (localization S) (localizedModule S M) :=
+        SymmetricAlgebra.lift fgen
+      let f : localizedAlgebra (A := symmetricAlgebra R M) S →ₐ[localization S]
+          symmetricAlgebra (localization S) (localizedModule S M) :=
+        AlgHom.liftEquiv R (localization S) (symmetricAlgebra R M)
+          (symmetricAlgebra (localization S) (localizedModule S M)) fR
+      let ggen : localizedModule S M →ₗ[localization S]
+          localizedAlgebra (A := symmetricAlgebra R M) S :=
+        (LinearMap.baseChange (localization S) (SymmetricAlgebra.ι R M)).comp e.symm.toLinearMap
+      have he (m : M) (s : S) :
+          e.symm (localizedModuleFraction S m s) =
+            (Localization.mk 1 s ⊗ₜ[R] m) := by
+        apply e.injective
+        simp [e]
+      let g : symmetricAlgebra (localization S) (localizedModule S M) →ₐ[localization S]
+          localizedAlgebra (A := symmetricAlgebra R M) S :=
+        SymmetricAlgebra.lift ggen
+      have hgen : f.toLinearMap.comp ggen =
+          SymmetricAlgebra.ι (localization S) (localizedModule S M) := by
+        apply LinearMap.ext
+        intro x
+        induction x using LocalizedModule.induction_on with
+        | _ m s =>
+          dsimp [ggen]
+          rw [show e.symm (LocalizedModule.mk m s) =
+            (Localization.mk 1 s ⊗ₜ[R] m) by
+              simpa [localizedModuleFraction] using he m s]
+          simp [f, fR, fgen]
+          rw [← (SymmetricAlgebra.ι (localization S) (localizedModule S M)).map_smul]
+          apply congrArg (SymmetricAlgebra.ι (localization S) (localizedModule S M))
+          change Localization.mk 1 s • localizedModuleFraction S m 1 =
+            localizedModuleFraction S m s
+          simpa [localizationFraction] using
+            (localizedModuleFraction_smul S 1 m s 1)
+      have h₁ : f.comp g = AlgHom.id (localization S)
+          (symmetricAlgebra (localization S) (localizedModule S M)) := by
+        apply SymmetricAlgebra.algHom_ext
+        apply LinearMap.ext
+        intro m
+        simpa [g, LinearMap.comp_apply] using LinearMap.congr_fun hgen m
+      have hmap : (ggen.restrictScalars R).comp (localizedModuleMap S M) =
+          (((Algebra.TensorProduct.includeRight :
+            symmetricAlgebra R M →ₐ[R]
+              localizedAlgebra (A := symmetricAlgebra R M) S).toLinearMap).comp
+            (SymmetricAlgebra.ι R M)) := by
+        apply LinearMap.ext
+        intro m
+        dsimp [ggen]
+        rw [show e.symm (localizedModuleMap S M m) =
+          (Localization.mk 1 (1 : S) ⊗ₜ[R] m) by
+            rw [localizedModuleMap_apply]
+            exact he m 1]
+        simp [LinearMap.baseChange_tmul, Algebra.TensorProduct.includeRight]
+        rw [Localization.mk_one_eq_algebraMap, map_one]
+      have h₂ : g.comp f = AlgHom.id (localization S)
+          (localizedAlgebra (A := symmetricAlgebra R M) S) := by
+        apply Algebra.TensorProduct.ext_ring
+        apply SymmetricAlgebra.algHom_ext
+        ext m
+        simp [f, fR, fgen, g, hmap, Algebra.TensorProduct.includeRight]
+        simpa using LinearMap.congr_fun hmap m
+      exact ⟨AlgEquiv.ofAlgHom f g h₁ h₂⟩
 
 end
 end Formalization.Books.Algebra.Unit13

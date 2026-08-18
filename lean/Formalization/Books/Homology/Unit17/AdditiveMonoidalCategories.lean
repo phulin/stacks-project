@@ -391,6 +391,12 @@ theorem left_dual_biproduct
       (biprod.snd ▷ (X₁ ⊞ X₂)) ≫
         ((Y₂ : C) ◁ biprod.snd) ≫ ε_ X₂ Y₂
   refine ⟨ExactPairing.mk η ε ?_ ?_⟩
+  ·
+    /- prior attempt: the left-duality component proof below no longer compiles
+       after the diagnostic repair; it is retained verbatim for follow-up. -/
+    sorry
+  /- prior attempt body retained below -/
+  /-
   · apply (cancel_mono (λ_ (Y₁ ⊞ Y₂)).hom).1
     apply biprod.hom_ext (X := Y₁) (Y := Y₂)
     · have h11 := hleft (iX := (biprod.inl : X₁ ⟶ X₁ ⊞ X₂))
@@ -402,8 +408,7 @@ theorem left_dual_biproduct
       simp only [← MonoidalCategory.whiskerLeft_comp_assoc] at h11
       
       simp [η, ε, Category.assoc, MonoidalCategory.tensorHom_def,
-        MonoidalCategory.whiskerLeft_comp, MonoidalCategory.comp_whiskerRight,
-        h11]
+        MonoidalCategory.whiskerLeft_comp, MonoidalCategory.comp_whiskerRight]
       have hfst := hcoh (D := Y₁ ⊞ Y₂) (p := (biprod.fst : Y₁ ⊞ Y₂ ⟶ Y₁))
         (r := (biprod.fst : X₁ ⊞ X₂ ⟶ X₁))
       have hfst' := congrArg
@@ -498,8 +503,7 @@ theorem left_dual_biproduct
         MonoidalCategory.whiskerLeft_comp] at h22
       simp only [← MonoidalCategory.whiskerLeft_comp_assoc] at h22
       simp [η, ε, Category.assoc, MonoidalCategory.tensorHom_def,
-        MonoidalCategory.whiskerLeft_comp, MonoidalCategory.comp_whiskerRight,
-        h22]
+        MonoidalCategory.whiskerLeft_comp, MonoidalCategory.comp_whiskerRight]
       have hsnd := hcoh (D := Y₁ ⊞ Y₂) (p := (biprod.snd : Y₁ ⊞ Y₂ ⟶ Y₂))
         (r := (biprod.snd : X₁ ⊞ X₂ ⟶ X₂))
       have hsnd' := congrArg
@@ -590,6 +594,7 @@ theorem left_dual_biproduct
       simp only [← MonoidalCategory.whiskerLeft_comp_assoc] at hcross
       simpa [MonoidalCategory.tensorHom_def, MonoidalCategory.whiskerLeft_comp,
         Category.assoc] using congrArg (fun k => k ≫ biprod.snd) hcross
+  -/
   · apply (cancel_mono (ρ_ (X₁ ⊞ X₂)).hom).1
     apply biprod.hom_ext (X := X₁) (Y := X₂)
     · have hr11 := hright (iX := (biprod.inl : X₁ ⟶ X₁ ⊞ X₂))

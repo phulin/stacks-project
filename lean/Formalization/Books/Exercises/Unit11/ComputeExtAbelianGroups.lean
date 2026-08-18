@@ -1,4 +1,6 @@
 import Formalization.Books.Algebra.Unit71.ExtGroups
+import Mathlib.Algebra.Category.Grp.Injective
+import Mathlib.Algebra.Module.CharacterModule
 import Mathlib.Data.Rat.Defs
 import Mathlib.Data.ZMod.Basic
 
@@ -345,22 +347,304 @@ theorem ext_mod_four_mod_eight_degree_one :
 theorem ext_mod_four_mod_eight_higher_vanishes {i : ℕ} (hi : 2 ≤ i) :
     Nonempty
       (ExtGroup integerModFourModule integerModEightModule i ≃+ (Fin 0 → ZMod 4)) := by
-  sorry
+  obtain ⟨k, rfl⟩ := Nat.exists_eq_add_of_le' hi
+  let f : ℤ →ₗ[ℤ] ℤ := LinearMap.lsmul ℤ ℤ 4
+  let g : ℤ →ₗ[ℤ] ZMod 4 :=
+    { toFun := fun x => (x : ZMod 4)
+      map_add' := by intro x y; simp
+      map_smul' := by intro c x; simp }
+  let S : CategoryTheory.ShortComplex (ModuleCat ℤ) :=
+    ModuleCat.shortComplexOfCompEqZero f g (by
+      apply LinearMap.ext
+      intro x
+      change ((4 * x : ℤ) : ZMod 4) = 0
+      rw [Int.cast_mul]
+      rw [show ((4 : ℤ) : ZMod 4) = 0 by
+        apply (ZMod.intCast_zmod_eq_zero_iff_dvd (4 : ℤ) 4).2
+        exact ⟨1, by norm_num⟩]
+      simp)
+  have hex : Function.Exact f g := by
+    intro y
+    constructor
+    · intro hy
+      have hy' : (4 : ℤ) ∣ y := by
+        apply (ZMod.intCast_zmod_eq_zero_iff_dvd y 4).mp
+        simpa [g] using hy
+      rcases hy' with ⟨x, rfl⟩
+      refine ⟨x, ?_⟩
+      simp [f]
+    · rintro ⟨x, rfl⟩
+      change ((4 * x : ℤ) : ZMod 4) = 0
+      rw [Int.cast_mul]
+      rw [show ((4 : ℤ) : ZMod 4) = 0 by
+        apply (ZMod.intCast_zmod_eq_zero_iff_dvd (4 : ℤ) 4).2
+        exact ⟨1, by norm_num⟩]
+      simp
+  have hinj : Function.Injective f := by
+    intro x y hxy
+    have : (4 : ℤ) * x = 4 * y := by simpa [f] using hxy
+    omega
+  have hsurj : Function.Surjective g := by
+    intro z
+    obtain ⟨n, rfl⟩ := ZMod.intCast_surjective z
+    exact ⟨n, by simp [g]⟩
+  have hS : S.ShortExact := ModuleCat.shortComplex_shortExact S hex hinj hsurj
+  let _ : CategoryTheory.Projective S.X₂ := by
+    dsimp [S]
+    infer_instance
+  let _ : CategoryTheory.Projective S.X₁ := by
+    dsimp [S]
+    infer_instance
+  have hseq : 1 + (k + 1) = k + 2 := by omega
+  have hzero : ∀ x : ExtGroup integerModFourModule integerModEightModule (k + 2), x = 0 := by
+    intro x
+    have hx :
+        (CategoryTheory.Abelian.Ext.mk₀ S.g).comp x (Nat.zero_add (k + 2)) = 0 := by
+      exact CategoryTheory.Abelian.Ext.eq_zero_of_projective
+        (P := S.X₂) (Y := integerModEightModule) (n := k + 1) _
+    obtain ⟨z, hz⟩ :=
+      CategoryTheory.Abelian.Ext.contravariant_sequence_exact₃ hS
+        integerModEightModule x hx hseq
+    have hz0 : z = 0 := by
+      exact CategoryTheory.Abelian.Ext.eq_zero_of_projective
+        (P := S.X₁) (Y := integerModEightModule) (n := k) _
+    rw [← hz, hz0]
+    simp
+  have hsub : Subsingleton (ExtGroup integerModFourModule integerModEightModule (k + 2)) :=
+    ⟨fun x y => (hzero x).trans (hzero y).symm⟩
+  let huniq : Unique (ExtGroup integerModFourModule integerModEightModule (k + 2)) :=
+    { default := 0
+      uniq := fun _ => hsub.elim _ _ }
+  exact ⟨@AddEquiv.ofUnique _ _ huniq inferInstance inferInstance inferInstance⟩
 
 /-- All Ext groups from `ℚ` to `ℤ/2` vanish. -/
 theorem ext_rational_mod_two_vanishes (i : ℕ) :
     Nonempty (ExtGroup rationalModule modTwoModule i ≃+ (Fin 0 → ZMod 2)) := by
-  sorry
+  let f : ℚ →ₗ[ℤ] ℚ := LinearMap.lsmul ℤ ℚ 2
+  let fi : ℚ →ₗ[ℤ] ℚ := LinearMap.mulLeft ℤ (1 / 2 : ℚ)
+  have hff : ModuleCat.ofHom (fi.comp f) =
+      ModuleCat.ofHom (LinearMap.id : ℚ →ₗ[ℤ] ℚ) := by
+    ext x
+    simp [f, fi]
+  have htarget : ModuleCat.ofHom (LinearMap.lsmul ℤ (ZMod 2) 2) = 0 := by
+    ext x
+    change ZMod 2 at x
+    change (2 : ℤ) • x = 0
+    obtain ⟨m, rfl⟩ := ZMod.intCast_surjective x
+    rw [← Int.cast_smul_eq_zsmul (ZMod 2)]
+    change ((2 : ℤ) : ZMod 2) * (m : ZMod 2) = 0
+    have hcast : ((2 : ℤ) : ZMod 2) = 0 :=
+      (ZMod.intCast_zmod_eq_zero_iff_dvd (2 : ℤ) (2 : ℕ)).2 (by norm_num)
+    rw [hcast]
+    simp
+  let α : ExtGroup rationalModule modTwoModule i →+
+      ExtGroup rationalModule modTwoModule i :=
+    (CategoryTheory.Abelian.Ext.mk₀ (ModuleCat.ofHom f)).precomp modTwoModule
+      (Nat.zero_add i)
+  let β : ExtGroup rationalModule modTwoModule i →+
+      ExtGroup rationalModule modTwoModule i :=
+    (CategoryTheory.Abelian.Ext.mk₀ (ModuleCat.ofHom fi)).precomp modTwoModule
+      (Nat.zero_add i)
+  have hαzero (e : ExtGroup rationalModule modTwoModule i) : α e = 0 := by
+    change (CategoryTheory.Abelian.Ext.mk₀ (ModuleCat.ofHom f)).comp e
+      (Nat.zero_add i) = 0
+    have hf : ModuleCat.ofHom f =
+        (2 : ℤ) • ModuleCat.ofHom (LinearMap.id : ℚ →ₗ[ℤ] ℚ) := by
+      ext x
+      simp [f]
+    rw [hf, CategoryTheory.Abelian.Ext.mk₀_smul,
+      CategoryTheory.Abelian.Ext.smul_comp]
+    simp only [ModuleCat.ofHom_id, CategoryTheory.Abelian.Ext.mk₀_id_comp]
+    rw [CategoryTheory.Abelian.Ext.smul_eq_comp_mk₀ (R := ℤ) (C := ModuleCat ℤ) e (2 : ℤ)]
+    rw [← ModuleCat.lsmul_eq_smul_id, show
+      CategoryTheory.Abelian.Ext.mk₀
+        (ModuleCat.ofHom (LinearMap.lsmul ℤ (ZMod 2) 2)) = 0 by
+        rw [htarget]
+        exact CategoryTheory.Abelian.Ext.mk₀_zero modTwoModule modTwoModule,
+      CategoryTheory.Abelian.Ext.comp_zero]
+  have hαβ (e : ExtGroup rationalModule modTwoModule i) : α (β e) = e := by
+    change (CategoryTheory.Abelian.Ext.mk₀ (ModuleCat.ofHom f)).comp
+      ((CategoryTheory.Abelian.Ext.mk₀ (ModuleCat.ofHom fi)).comp e
+        (Nat.zero_add i))
+      (Nat.zero_add i) = e
+    rw [CategoryTheory.Abelian.Ext.mk₀_comp_mk₀_assoc,
+      ← ModuleCat.ofHom_comp, hff]
+    simp
+  have hzero : ∀ e : ExtGroup rationalModule modTwoModule i, e = 0 := by
+    intro e
+    obtain ⟨d, hd⟩ := Function.surjective_iff_hasRightInverse.mpr ⟨β, hαβ⟩ e
+    calc
+      e = α d := hd.symm
+      _ = 0 := hαzero d
+  let hsub : Subsingleton (ExtGroup rationalModule modTwoModule i) :=
+    ⟨fun x y => (hzero x).trans (hzero y).symm⟩
+  let huniq : Unique (ExtGroup rationalModule modTwoModule i) :=
+    { default := 0
+      uniq := fun _ => hsub.elim _ _ }
+  exact ⟨@AddEquiv.ofUnique _ _ huniq inferInstance inferInstance inferInstance⟩
 
 /-- For the pair `(ℤ/2, ℚ/ℤ)`, degree zero is `ℤ/2` and all positive
 degrees vanish. -/
 theorem ext_mod_two_rational_mod_integer_degree_zero :
     Nonempty (ExtGroup modTwoModule rationalModIntegerModule 0 ≃+ ZMod 2) := by
-  sorry
+  let f : ℤ →+ rationalModInteger := CharacterModule.int.divByNat 2
+  have hf : f 2 = 0 := by
+    exact CharacterModule.int.divByNat_self 2
+  let u : ZMod 2 →+ rationalModInteger := ZMod.lift 2 ⟨f, hf⟩
+  have hu : Function.Injective u := by
+    apply (ZMod.lift_injective (f := ⟨f, hf⟩)).2
+    intro m hm
+    apply (ZMod.intCast_zmod_eq_zero_iff_dvd m 2).2
+    have hm' := (AddCircle.coe_eq_zero_iff (p := (1 : ℚ))).mp hm
+    rcases (show ∃ n : ℤ, (n : ℚ) = (m : ℚ) * (2 : ℚ)⁻¹ by
+      simpa [f, CharacterModule.int.divByNat,
+        AddMonoidHom.coe_toIntLinearMap, LinearMap.toSpanSingleton_apply] using hm') with ⟨n, hn⟩
+    refine ⟨n, ?_⟩
+    have hn' : (m : ℚ) = 2 * (n : ℚ) := by
+      calc
+        (m : ℚ) = (m : ℚ) * 2 * (2 : ℚ)⁻¹ := by field_simp
+        _ = 2 * (n : ℚ) := by rw [hn]; ring
+    exact_mod_cast hn'
+  have hzeroZ (z : ZMod 2) : (2 : ℤ) • z = 0 := by
+    obtain ⟨m, rfl⟩ := ZMod.intCast_surjective z
+    rw [← Int.cast_smul_eq_zsmul (ZMod 2)]
+    change ((2 : ℤ) : ZMod 2) * (m : ZMod 2) = 0
+    have hcast : ((2 : ℤ) : ZMod 2) = 0 :=
+      (ZMod.intCast_zmod_eq_zero_iff_dvd (2 : ℤ) (2 : ℕ)).2 (by norm_num)
+    rw [hcast]
+    simp
+  let hOf : ZMod 2 → (ZMod 2 →ₗ[ℤ] rationalModInteger) := fun z =>
+    let fz : ℤ →+ rationalModInteger :=
+      { toFun := fun m => m • u z
+        map_zero' := by simp
+        map_add' := by intro m n; simp [add_smul] }
+    let hfz : fz 2 = 0 := by
+      change (2 : ℤ) • u z = 0
+      calc
+        (2 : ℤ) • u z = u ((2 : ℤ) • z) := by
+          symm
+          exact u.map_zsmul 2 z
+        _ = 0 := by rw [hzeroZ, u.map_zero]
+    (ZMod.lift 2 ⟨fz, hfz⟩).toIntLinearMap
+  have hOf_apply (z : ZMod 2) (m : ℤ) :
+      hOf z (m : ZMod 2) = m • u z := by
+    dsimp [hOf]
+    simp
+  have hOf_one (z : ZMod 2) : hOf z 1 = u z := by
+    simpa using hOf_apply z 1
+  have htorsion :
+      ∀ x : rationalModInteger, (2 : ℤ) • x = 0 → ∃ z : ZMod 2, u z = x := by
+    intro x hx
+    obtain ⟨q, rfl⟩ := QuotientAddGroup.mk_surjective x
+    have hq0 : ((2 * q : ℚ) : rationalModInteger) = 0 := by
+      change (2 : ℤ) • (q : rationalModInteger) = 0
+      exact hx
+    have hm := (AddCircle.coe_eq_zero_iff (p := (1 : ℚ))).mp hq0
+    rcases hm with ⟨n, hn⟩
+    obtain ⟨k, hn_even | hn_odd⟩ := Int.even_or_odd' n
+    · refine ⟨0, ?_⟩
+      have hu0 : u 0 = 0 := by simp [u]
+      rw [hu0]
+      symm
+      apply (AddCircle.coe_eq_zero_iff (p := (1 : ℚ))).2
+      refine ⟨k, ?_⟩
+      have hnk := hn
+      rw [hn_even] at hnk
+      norm_num [smul_eq_mul] at hnk ⊢
+      linarith
+    · refine ⟨1, ?_⟩
+      have hu1 : u 1 = f 1 := by
+        simpa [u] using
+          (ZMod.lift_coe (n := 2) (f := (⟨f, hf⟩)) (1 : ℤ))
+      rw [hu1]
+      change f 1 = (q : rationalModInteger)
+      rw [← sub_eq_zero]
+      apply (AddCircle.coe_eq_zero_iff (p := (1 : ℚ))).2
+      refine ⟨-k, ?_⟩
+      have hnk := hn
+      rw [hn_odd] at hnk
+      simp at ⊢
+      norm_num [smul_eq_mul] at hnk
+      linarith
+  have htwo (h : ZMod 2 →ₗ[ℤ] rationalModInteger) :
+      (2 : ℤ) • h 1 = 0 := by
+    have hzero : (2 : ℤ) • (1 : ZMod 2) = 0 := hzeroZ 1
+    calc
+      (2 : ℤ) • h 1 = h ((2 : ℤ) • (1 : ZMod 2)) := by
+        symm
+        exact map_zsmul h 2 1
+      _ = h 0 := by rw [hzero]
+      _ = 0 := h.map_zero
+  let pick : (ZMod 2 →ₗ[ℤ] rationalModInteger) → ZMod 2 :=
+    fun h => Classical.choose (htorsion (h 1) (htwo h))
+  have pick_spec (h : ZMod 2 →ₗ[ℤ] rationalModInteger) :
+      u (pick h) = h 1 := by
+    dsimp [pick]
+    exact Classical.choose_spec (htorsion (h 1) (htwo h))
+  let toZ : (ZMod 2 →ₗ[ℤ] rationalModInteger) →+ ZMod 2 :=
+    { toFun := pick
+      map_zero' := by
+        apply hu
+        calc
+          u (pick 0) = (0 : ZMod 2 →ₗ[ℤ] rationalModInteger) 1 := pick_spec _
+          _ = 0 := by simp
+          _ = u 0 := by simp
+      map_add' := by
+        intro h k
+        apply hu
+        calc
+          u (pick (h + k)) = (h + k) 1 := pick_spec _
+          _ = h 1 + k 1 := by rfl
+          _ = u (pick h) + u (pick k) := by rw [pick_spec, pick_spec]
+          _ = u (pick h + pick k) := (u.map_add _ _).symm }
+  have htoZ_inj : Function.Injective toZ := by
+    intro h k hhk
+    apply LinearMap.ext
+    intro x
+    obtain ⟨m, rfl⟩ := ZMod.intCast_surjective x
+    have hcastm : (m : ZMod 2) = m • (1 : ZMod 2) := by
+      rw [← Int.cast_smul_eq_zsmul (ZMod 2)]
+      simp
+    have hh : u (toZ h) = h 1 := by
+      simpa [toZ] using pick_spec h
+    have hk : u (toZ k) = k 1 := by
+      simpa [toZ] using pick_spec k
+    have hval : h 1 = k 1 := by
+      rw [← hh, ← hk, hhk]
+    calc
+      h (m : ZMod 2) = m • h 1 := by
+        rw [hcastm]
+        exact map_zsmul h m 1
+      _ = m • k 1 := by rw [hval]
+      _ = k (m : ZMod 2) := by
+        rw [hcastm]
+        exact (map_zsmul k m 1).symm
+  have htoZ_surj : Function.Surjective toZ := by
+    intro z
+    refine ⟨hOf z, ?_⟩
+    apply hu
+    calc
+      u (toZ (hOf z)) = (hOf z) 1 := by
+        simpa [toZ] using pick_spec (hOf z)
+      _ = u z := hOf_one z
+  let eHom : (ZMod 2 →ₗ[ℤ] rationalModInteger) ≃+ ZMod 2 :=
+    AddEquiv.ofBijective toZ ⟨htoZ_inj, htoZ_surj⟩
+  exact ⟨CategoryTheory.Abelian.Ext.addEquiv₀.trans
+    (ModuleCat.homAddEquiv.trans eHom)⟩
 
 theorem ext_mod_two_rational_mod_integer_positive_vanishes {i : ℕ} (hi : 0 < i) :
     Nonempty
       (ExtGroup modTwoModule rationalModIntegerModule i ≃+ (Fin 0 → ZMod 2)) := by
-  sorry
+  obtain ⟨n, rfl⟩ := Nat.exists_eq_succ_of_ne_zero (Nat.ne_of_gt hi)
+  let _ : DivisibleBy rationalModInteger ℤ := inferInstance
+  let _ : CategoryTheory.Injective rationalModIntegerModule :=
+    (AddCommGrpCat.injective_as_module_iff rationalModInteger).mpr inferInstance
+  let hsub : Subsingleton (ExtGroup modTwoModule rationalModIntegerModule (n + 1)) :=
+    CategoryTheory.Abelian.Ext.subsingleton_of_injective
+      modTwoModule rationalModIntegerModule n
+  let huniq : Unique (ExtGroup modTwoModule rationalModIntegerModule (n + 1)) :=
+    { default := 0
+      uniq := fun _ => hsub.elim _ _ }
+  exact ⟨@AddEquiv.ofUnique _ _ huniq inferInstance inferInstance inferInstance⟩
 
 end Formalization.Books.Exercises.Unit11

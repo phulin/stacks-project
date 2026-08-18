@@ -1,4 +1,3 @@
-import Formalization.Books.Algebra.Unit46.UniversalHomeomorphisms
 import Formalization.Books.Fields.Unit26.Transcendence
 import Mathlib.Algebra.Colimit.DirectLimit
 import Mathlib.FieldTheory.IsAlgClosed.AlgebraicClosure

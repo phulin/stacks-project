@@ -4,6 +4,7 @@ import Mathlib.Algebra.Homology.ShortComplex.ModuleCat
 import Mathlib.Algebra.Category.ModuleCat.Localization
 import Mathlib.Algebra.Module.Submodule.Ker
 import Mathlib.Data.Nat.Prime.Basic
+import Mathlib.Data.Nat.Factorization.Basic
 import Mathlib.Data.Nat.Prime.Int
 import Mathlib.Data.Nat.Prime.Infinite
 import Mathlib.RingTheory.Localization.AtPrime.Basic
@@ -152,7 +153,7 @@ theorem primeLocalizedInteger_no_nonzero_hom (p : PrimeIndex)
     rw [hq, map_smul]
     have hp : algebraMap ℤ (primeLocalizedInteger p) (p.1 : ℤ) ∈ I :=
       Ideal.mem_map_of_mem _ (by
-      simpa [primeIdeal] using (Ideal.mem_span_singleton_self (p.1 : ℤ)))
+      simp [primeIdeal])
     have hpow : algebraMap ℤ (primeLocalizedInteger p) ((p.1 : ℤ) ^ n) ∈ I ^ n := by
       rw [map_pow]
       exact Ideal.pow_mem_pow hp n
@@ -166,7 +167,23 @@ theorem primeLocalizedInteger_no_nonzero_hom (p : PrimeIndex)
 /-- The displayed short-exact sequence is nonsplit. -/
 theorem primeLocalizedIntegerShortComplex_not_split :
     ¬ Nonempty primeLocalizedIntegerShortComplex.Splitting := by
-  sorry
+  rintro ⟨s⟩
+  have hs (p : PrimeIndex) :
+      (DirectSum.component ℤ PrimeIndex (fun p => primeLocalizedInteger p) p).comp
+          s.s.hom = 0 := by
+    exact primeLocalizedInteger_no_nonzero_hom p _
+  have hs' : s.s.hom = 0 := by
+    apply LinearMap.ext
+    intro q
+    apply DirectSum.ext_component ℤ
+    intro p
+    exact LinearMap.congr_fun (hs p) q
+  have hid := congrArg ModuleCat.Hom.hom s.s_g
+  rw [ModuleCat.hom_comp, hs'] at hid
+  simp at hid
+  change (0 : ℚ →ₗ[ℤ] ℚ) = LinearMap.id at hid
+  have hzero : (0 : ℚ) = 1 := LinearMap.congr_fun hid 1
+  norm_num at hzero
 
 /- The localization of the displayed sequence on the principal open `D(p)`,
    obtained by inverting `p`. -/
@@ -183,10 +200,320 @@ theorem primeLocalizedIntegerShortComplexAt_shortExact (p : PrimeIndex) :
   exact primeLocalizedIntegerShortComplex_shortExact.map_of_exact
     (ModuleCat.localizedModuleFunctor (Submonoid.powers (p.1 : ℤ)))
 
+private theorem primeLocalizedIntegerToRatLinearMap_isLocalizedModule (p : PrimeIndex) :
+    IsLocalizedModule (Submonoid.powers (p.1 : ℤ))
+      (primeLocalizedIntegerToRatLinearMap p) := by
+  refine { map_units := ?_, surj := ?_, exists_of_eq := ?_ }
+  · intro s
+    rw [Module.End.isUnit_iff]
+    have hs : (s : ℤ) ≠ 0 := by
+      rcases (Submonoid.mem_powers_iff _ _).mp s.2 with ⟨n, hn⟩
+      rw [← hn]
+      exact pow_ne_zero _ (by exact_mod_cast p.2.ne_zero)
+    have hbij : Function.Bijective (fun x : ℚ => (s : ℤ) • x) := by
+      constructor
+      · intro a b h
+        apply mul_left_cancel₀ (Int.cast_ne_zero.mpr hs)
+        simpa [Algebra.smul_def] using h
+      · intro a
+        refine ⟨(s : ℚ)⁻¹ * a, ?_⟩
+        simp [Algebra.smul_def, Int.cast_ne_zero.mpr hs]
+    change Function.Bijective (fun x : ℚ => (s : ℤ) • x)
+    exact hbij
+  · intro q
+    rcases Nat.exists_eq_pow_mul_and_not_dvd q.den_nz p.1 p.2.ne_one with ⟨e, m, hm, hden⟩
+    have hmd : ¬(p.1 : ℤ) ∣ (m : ℤ) := by
+      exact fun h => hm (Int.natCast_dvd_natCast.mp h)
+    have hm' : (m : ℤ) ∈ (primeIdeal p).primeCompl := by
+      change (m : ℤ) ∉ Ideal.span {(p.1 : ℤ)}
+      simpa [Ideal.mem_span_singleton] using hmd
+    let x := IsLocalization.mk' (primeLocalizedInteger p) q.num ⟨(m : ℤ), hm'⟩
+    let s : Submonoid.powers (p.1 : ℤ) :=
+      ⟨(p.1 : ℤ) ^ e, (Submonoid.mem_powers_iff _ _).2 ⟨e, rfl⟩⟩
+    refine ⟨⟨x, s⟩, ?_⟩
+    change (p.1 : ℤ) ^ e • q = primeLocalizedIntegerToRatLinearMap p x
+    change (p.1 : ℤ) ^ e • q = primeLocalizedIntegerToRat p x
+    dsimp [x, primeLocalizedIntegerToRat]
+    symm
+    rw [IsLocalization.lift_mk'_spec]
+    change (q.num : ℚ) = (m : ℚ) * ((algebraMap ℤ ℚ) ((p.1 : ℤ) ^ e) * q)
+    have hq : q = (q.num : ℚ) / q.den := by
+      simpa [Rat.divInt_eq_div] using q.num_divInt_den.symm
+    have hdenQ : (q.den : ℚ) = (p.1 : ℚ) ^ e * (m : ℚ) := by
+      exact_mod_cast hden
+    have hdenQ' : (q.den : ℚ) = (algebraMap ℤ ℚ) ((p.1 : ℤ) ^ e) * (m : ℚ) := by
+      rw [map_pow]
+      norm_num
+      exact_mod_cast hden
+    have hden_ne : (q.den : ℚ) ≠ 0 := by
+      exact_mod_cast q.den_nz
+    have hnum : (q.num : ℚ) = q * (q.den : ℚ) := by
+      calc
+        (q.num : ℚ) = (q.num : ℚ) / q.den * q.den :=
+          (div_mul_cancel₀ _ hden_ne).symm
+        _ = q * q.den := by rw [← hq]
+    calc
+      (q.num : ℚ) = q * (q.den : ℚ) := hnum
+      _ = q * ((algebraMap ℤ ℚ) ((p.1 : ℤ) ^ e) * (m : ℚ)) := by rw [hdenQ']
+      _ = (m : ℚ) * ((algebraMap ℤ ℚ) ((p.1 : ℤ) ^ e) * q) := by ring
+  · intro x y hxy
+    have hinj : Function.Injective (primeLocalizedIntegerToRat p) := by
+      rw [primeLocalizedIntegerToRat, IsLocalization.lift_injective_iff]
+      intro a b
+      constructor
+      · intro h
+        exact_mod_cast h
+      · intro h
+        exact_mod_cast h
+    exact ⟨1, by simpa [hinj hxy]⟩
+
 /-- After inverting every prime `p`, the localized sequence is split. -/
 theorem primeLocalizedIntegerShortComplexAt_split (p : PrimeIndex) :
     Nonempty (primeLocalizedIntegerShortComplexAt p).Splitting := by
-  sorry
+  let S := Submonoid.powers (p.1 : ℤ)
+  letI : Module ℤ (LocalizedModule S (primeLocalizedInteger p)) :=
+    OreLocalization.instModuleOfIsScalarTower
+  letI : Module ℤ (LocalizedModule S ℚ) :=
+    OreLocalization.instModuleOfIsScalarTower
+  letI : SMul ℤ (LocalizedModule S ℚ) :=
+    (inferInstance : Module ℤ (LocalizedModule S ℚ)).toDistribMulAction.toDistribSMul.toSMul
+  letI : MulAction ℤ (LocalizedModule S ℚ) :=
+    (inferInstance : Module ℤ (LocalizedModule S ℚ)).toDistribMulAction.toMulAction
+  let fA : primeLocalizedInteger p →ₗ[ℤ] LocalizedModule S (primeLocalizedInteger p) :=
+    LocalizedModule.mkLinearMap S (primeLocalizedInteger p)
+  let fQ : ℚ →ₗ[ℤ] LocalizedModule S ℚ :=
+    LocalizedModule.mkLinearMap S ℚ
+  let l := primeLocalizedIntegerToRatLinearMap p
+  letI : IsLocalizedModule S l :=
+    primeLocalizedIntegerToRatLinearMap_isLocalizedModule p
+  have hcomp : IsLocalizedModule S (fQ.comp l) := by
+    refine { map_units := IsLocalizedModule.map_units fQ, surj := ?_, exists_of_eq := ?_ }
+    · intro y
+      obtain ⟨⟨q, s⟩, hy⟩ := IsLocalizedModule.surj S fQ y
+      obtain ⟨⟨a, t⟩, hq⟩ := IsLocalizedModule.surj S l q
+      have hy' : s • y = fQ q := by simpa using hy
+      have hq' : t • q = l a := by simpa using hq
+      refine ⟨⟨a, t * s⟩, ?_⟩
+      have hmain : (t * s : S) • y = fQ (l a) := by
+        calc
+          (t * s : S) • y = t • (s • y) := by
+            simpa only [Submonoid.smul_def, Submonoid.coe_mul] using
+              (mul_smul (↑t : ℤ) (↑s : ℤ) y)
+          _ = t • fQ q := by rw [hy']
+          _ = fQ (t • q) := (fQ.map_smul_of_tower t q).symm
+          _ = fQ (l a) := by rw [hq']
+      simpa only [LinearMap.comp_apply] using hmain
+    · intro x y hxy
+      obtain ⟨c, hc⟩ := (IsLocalizedModule.eq_iff_exists S fQ).mp hxy
+      have hxy' : l x = l y := (IsLocalizedModule.smul_injective l c) hc
+      exact (IsLocalizedModule.eq_iff_exists S l).mp hxy'
+  let e₀ :=
+    IsLocalizedModule.linearEquiv S fA (fQ.comp l)
+  let e : LocalizedModule S (primeLocalizedInteger p) ≃ₗ[Localization S]
+      LocalizedModule S ℚ :=
+    e₀.extendScalarsOfIsLocalization S (Localization S)
+  let e' : (ModuleCat.of ℤ (primeLocalizedInteger p)).localizedModule S ≃ₗ[Localization S]
+      (ModuleCat.of ℤ ℚ).localizedModule S :=
+    (Shrink.linearEquiv (Localization S) (LocalizedModule S (primeLocalizedInteger p))).trans
+      (e.trans (Shrink.linearEquiv (Localization S) (LocalizedModule S ℚ)).symm)
+  let gLoc := IsLocalizedModule.map S fA fQ l
+  letI : IsLocalizedModule S (fQ.comp l) := hcomp
+  have he₀ : e₀.toLinearMap = gLoc := by
+    apply IsLocalizedModule.linearMap_ext (S := S) (f := fA) (f' := fQ.comp l)
+    ext a
+    simp [e₀, gLoc]
+  have he : e.toLinearMap =
+      gLoc.extendScalarsOfIsLocalization S (Localization S) := by
+    dsimp [e]
+    ext a
+    exact LinearMap.congr_fun he₀ a
+  have hgLoc : IsLocalizedModule S gLoc := by
+    refine { map_units := IsLocalizedModule.map_units fQ, surj := ?_, exists_of_eq := ?_ }
+    · intro y
+      refine ⟨⟨e₀.symm y, 1⟩, ?_⟩
+      change 1 • y = gLoc (e₀.symm y)
+      rw [one_smul, ← he₀]
+      simp
+    · intro x y hxy
+      refine ⟨1, ?_⟩
+      rw [← he₀] at hxy
+      have hxy' : x = y := e₀.injective hxy
+      simpa [hxy']
+  letI : IsLocalizedModule S gLoc := hgLoc
+  let j : (ModuleCat.of ℤ (primeLocalizedInteger p)).localizedModule S ⟶
+      (ModuleCat.of ℤ ℚ).localizedModule S :=
+    e'.toModuleIso.hom
+  letI : CategoryTheory.IsIso j := by
+    dsimp [j]
+    infer_instance
+  let i : (ModuleCat.of ℤ (primeLocalizedInteger p)).localizedModule S ⟶
+      (ModuleCat.of ℤ primeLocalizedIntegerDirectSum).localizedModule S :=
+    (ModuleCat.localizedModuleFunctor S).map
+      (ModuleCat.ofHom (DirectSum.lof ℤ PrimeIndex
+        (fun p => primeLocalizedInteger p) p))
+  let sec : (ModuleCat.of ℤ ℚ).localizedModule S ⟶
+      (ModuleCat.of ℤ primeLocalizedIntegerDirectSum).localizedModule S :=
+    CategoryTheory.CategoryStruct.comp (CategoryTheory.asIso j).inv i
+  have hmap :
+      CategoryTheory.CategoryStruct.comp i
+          (primeLocalizedIntegerShortComplexAt p).g = j := by
+    dsimp [i, primeLocalizedIntegerShortComplexAt]
+    change CategoryTheory.CategoryStruct.comp
+        ((ModuleCat.localizedModuleFunctor S).map
+          (ModuleCat.ofHom (DirectSum.lof ℤ PrimeIndex
+            (fun p => primeLocalizedInteger p) p)))
+        ((ModuleCat.localizedModuleFunctor S).map
+          (ModuleCat.ofHom primeLocalizedIntegerSumToRat)) = j
+    rw [← (ModuleCat.localizedModuleFunctor S).map_comp]
+    apply ModuleCat.hom_ext
+    ext x
+    letI : Module ℤ ((ModuleCat.of ℤ (primeLocalizedInteger p)).localizedModule S) :=
+      (ModuleCat.of ℤ (primeLocalizedInteger p)).instModuleCarrierLocalizationLocalizedModule S
+    letI : Module ℤ ((ModuleCat.of ℤ ℚ).localizedModule S) :=
+      (ModuleCat.of ℤ ℚ).instModuleCarrierLocalizationLocalizedModule S
+    let fA' := (ModuleCat.of ℤ (primeLocalizedInteger p)).localizedModuleMkLinearMap S
+    let fQ' := (ModuleCat.of ℤ ℚ).localizedModuleMkLinearMap S
+    let eAℤ : LocalizedModule S (primeLocalizedInteger p) ≃ₗ[ℤ]
+        (ModuleCat.of ℤ (primeLocalizedInteger p)).localizedModule S :=
+      (Shrink.linearEquiv ℤ (LocalizedModule S (primeLocalizedInteger p))).symm
+    let eQℤ : LocalizedModule S ℚ ≃ₗ[ℤ] (ModuleCat.of ℤ ℚ).localizedModule S :=
+      (Shrink.linearEquiv ℤ (LocalizedModule S ℚ)).symm
+    letI : IsLocalizedModule S fA' := by
+      dsimp [fA']
+      exact ModuleCat.localizedModule_isLocalizedModule
+        (ModuleCat.of ℤ (primeLocalizedInteger p)) S
+    letI : IsLocalizedModule S fQ' := by
+      dsimp [fQ']
+      exact ModuleCat.localizedModule_isLocalizedModule (ModuleCat.of ℤ ℚ) S
+    have hIsoA (z : LocalizedModule S (primeLocalizedInteger p)) :
+        IsLocalizedModule.iso S fA' z =
+          eAℤ z := by
+      have hIsoA' :
+          (IsLocalizedModule.iso S fA').toLinearMap = eAℤ.toLinearMap := by
+        apply IsLocalizedModule.linearMap_ext
+          (S := S) (f := LocalizedModule.mkLinearMap S (primeLocalizedInteger p)) fA'
+        ext a
+        change IsLocalizedModule.iso S fA' (LocalizedModule.mk a 1) =
+          eAℤ (LocalizedModule.mk a 1)
+        rw [IsLocalizedModule.iso_mk_one]
+        rfl
+      exact LinearMap.congr_fun hIsoA' z
+    have hIsoQ (z : LocalizedModule S ℚ) :
+        IsLocalizedModule.iso S fQ' z =
+          eQℤ z := by
+      have hIsoQ' :
+          (IsLocalizedModule.iso S fQ').toLinearMap = eQℤ.toLinearMap := by
+        apply IsLocalizedModule.linearMap_ext
+          (S := S) (f := LocalizedModule.mkLinearMap S ℚ) fQ'
+        ext a
+        change IsLocalizedModule.iso S fQ' (LocalizedModule.mk a 1) =
+          eQℤ (LocalizedModule.mk a 1)
+        rw [IsLocalizedModule.iso_mk_one]
+        rfl
+      exact LinearMap.congr_fun hIsoQ' z
+    have hlcomp :
+        primeLocalizedIntegerSumToRat.comp
+            (DirectSum.lof ℤ PrimeIndex
+              (fun p => primeLocalizedInteger p) p) = l := by
+      ext a
+      simp only [LinearMap.comp_apply, primeLocalizedIntegerSumToRat,
+        DirectSum.toModule_lof]
+      rfl
+    have hcomm :
+        IsLocalizedModule.map S fA' fQ'
+            (primeLocalizedIntegerSumToRat.comp
+              (DirectSum.lof ℤ PrimeIndex
+                (fun p => primeLocalizedInteger p) p)) ∘ₗ
+            IsLocalizedModule.iso S fA' =
+          IsLocalizedModule.iso S fQ' ∘ₗ
+            IsLocalizedModule.map S (LocalizedModule.mkLinearMap S
+              (primeLocalizedInteger p)) (LocalizedModule.mkLinearMap S ℚ)
+              (primeLocalizedIntegerSumToRat.comp
+                (DirectSum.lof ℤ PrimeIndex
+                  (fun p => primeLocalizedInteger p) p)) := by
+      exact IsLocalizedModule.map_iso_commute
+        (S := S) (f₀ := fA') (f₁ := fQ')
+        (primeLocalizedIntegerSumToRat.comp
+          (DirectSum.lof ℤ PrimeIndex
+            (fun p => primeLocalizedInteger p) p))
+    change IsLocalizedModule.mapExtendScalars S fA' fQ' (Localization S)
+        (primeLocalizedIntegerSumToRat.comp
+          (DirectSum.lof ℤ PrimeIndex
+            (fun p => primeLocalizedInteger p) p)) x =
+      e' x
+    let y := eAℤ.symm x
+    have hy : IsLocalizedModule.iso S fA' y = x := by
+      rw [hIsoA]
+      simpa [y] using eAℤ.apply_symm_apply x
+    have he_fun (z : LocalizedModule S (primeLocalizedInteger p)) :
+        e z = gLoc z :=
+      LinearMap.congr_fun he z
+    calc
+      IsLocalizedModule.mapExtendScalars S fA' fQ' (Localization S)
+          (primeLocalizedIntegerSumToRat.comp
+            (DirectSum.lof ℤ PrimeIndex
+              (fun p => primeLocalizedInteger p) p)) x =
+          IsLocalizedModule.mapExtendScalars S fA' fQ' (Localization S)
+            (primeLocalizedIntegerSumToRat.comp
+              (DirectSum.lof ℤ PrimeIndex
+                (fun p => primeLocalizedInteger p) p))
+            (IsLocalizedModule.iso S fA' y) := by rw [hy]
+      _ = IsLocalizedModule.map S fA' fQ'
+            (primeLocalizedIntegerSumToRat.comp
+              (DirectSum.lof ℤ PrimeIndex
+                (fun p => primeLocalizedInteger p) p))
+            (IsLocalizedModule.iso S fA' y) := by rfl
+      _ = IsLocalizedModule.iso S fQ'
+            (IsLocalizedModule.map S (LocalizedModule.mkLinearMap S
+              (primeLocalizedInteger p)) (LocalizedModule.mkLinearMap S ℚ)
+              (primeLocalizedIntegerSumToRat.comp
+                (DirectSum.lof ℤ PrimeIndex
+              (fun p => primeLocalizedInteger p) p)) y) := by
+        change
+          ((IsLocalizedModule.map S fA' fQ'
+              (primeLocalizedIntegerSumToRat.comp
+                (DirectSum.lof ℤ PrimeIndex
+                  (fun p => primeLocalizedInteger p) p))).comp
+            (IsLocalizedModule.iso S fA').toLinearMap) y =
+          ((IsLocalizedModule.iso S fQ').toLinearMap.comp
+            (IsLocalizedModule.map S (LocalizedModule.mkLinearMap S
+              (primeLocalizedInteger p)) (LocalizedModule.mkLinearMap S ℚ)
+              (primeLocalizedIntegerSumToRat.comp
+                (DirectSum.lof ℤ PrimeIndex
+                  (fun p => primeLocalizedInteger p) p)))) y
+        exact LinearMap.congr_fun hcomm y
+      _ = eQℤ (gLoc y) := by
+        rw [hIsoQ, hlcomp]
+      _ = eQℤ (e y) := by
+        rw [he_fun]
+      _ = e' x := by
+        change
+          (Shrink.linearEquiv ℤ (LocalizedModule S ℚ)).symm
+              (e ((Shrink.linearEquiv ℤ
+                (LocalizedModule S (primeLocalizedInteger p))) x)) =
+            (Shrink.linearEquiv (Localization S)
+              (LocalizedModule S ℚ)).symm
+              (e ((Shrink.linearEquiv (Localization S)
+                (LocalizedModule S (primeLocalizedInteger p))) x))
+        rfl
+  have hsec : CategoryTheory.CategoryStruct.comp sec (primeLocalizedIntegerShortComplexAt p).g =
+      CategoryTheory.CategoryStruct.id _ := by
+    let g' := (primeLocalizedIntegerShortComplexAt p).g
+    have hmap' : CategoryTheory.CategoryStruct.comp i g' = j := by
+      exact hmap
+    apply (CategoryTheory.cancel_epi j).1
+    dsimp [sec]
+    change CategoryTheory.CategoryStruct.comp j
+        (CategoryTheory.CategoryStruct.comp
+          (CategoryTheory.CategoryStruct.comp (CategoryTheory.inv j) i) g') =
+      CategoryTheory.CategoryStruct.comp j (CategoryTheory.CategoryStruct.id _)
+    rw [CategoryTheory.Category.assoc (CategoryTheory.inv j) i g']
+    rw [hmap']
+    exact CategoryTheory.IsIso.hom_inv_id_assoc j j
+  exact ⟨CategoryTheory.ShortComplex.Splitting.ofExactOfSection
+    (primeLocalizedIntegerShortComplexAt p)
+    (primeLocalizedIntegerShortComplexAt_shortExact p).exact sec hsec
+    (primeLocalizedIntegerShortComplexAt_shortExact p).mono_f⟩
 
 /-! ## The general Zariski-local formulation -/
 
@@ -211,6 +538,32 @@ structure NonsplitZariskiLocallySplitSequence where
 /-- There exists a nonsplit short-exact sequence that is split Zariski locally. -/
 theorem exists_nonsplit_zariski_locally_split_sequence :
     Nonempty NonsplitZariskiLocallySplitSequence := by
-  sorry
+  let U : Set ℤ := Set.range (fun p : PrimeIndex => (p.1 : ℤ))
+  have hU : Ideal.span U = ⊤ := by
+    rw [Ideal.eq_top_iff_one]
+    have h2 : (2 : ℤ) ∈ U := by
+      exact ⟨⟨2, by decide⟩, rfl⟩
+    have h3 : (3 : ℤ) ∈ U := by
+      exact ⟨⟨3, by decide⟩, rfl⟩
+    have h2' : (2 : ℤ) ∈ Ideal.span U := Ideal.subset_span h2
+    have h3' : (3 : ℤ) ∈ Ideal.span U := Ideal.subset_span h3
+    have hcomb : (-1 : ℤ) * 2 + 1 * 3 ∈ Ideal.span U :=
+      (Ideal.span U).add_mem
+        ((Ideal.span U).mul_mem_left (-1) h2')
+        ((Ideal.span U).mul_mem_left 1 h3')
+    norm_num at hcomb
+    exact hcomb
+  refine ⟨{
+    R := ℤ
+    S := primeLocalizedIntegerShortComplex
+    shortExact := primeLocalizedIntegerShortComplex_shortExact
+    nonsplit := primeLocalizedIntegerShortComplex_not_split
+    locallySplit := ?_ }⟩
+  refine ⟨U, hU, ?_⟩
+  intro f hf
+  rcases (show f ∈ Set.range (fun p : PrimeIndex => (p.1 : ℤ)) by
+    simpa [U] using hf) with ⟨p, rfl⟩
+  simpa [primeLocalizedIntegerShortComplexAt] using
+    primeLocalizedIntegerShortComplexAt_split p
 
 end Formalization.Books.Examples.Unit14

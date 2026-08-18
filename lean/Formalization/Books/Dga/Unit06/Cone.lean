@@ -26,7 +26,8 @@ namespace Formalization.Books.Dga.Unit06
 /-! ## The cone -/
 
 /-- The underlying cochain complex of the cone.  Mathlib's mapping-cone
-construction has components `Lⁿ ⊞ Kⁿ⁺¹` and differential matrix
+construction has components `Kⁿ⁺¹ ⊞ Lⁿ`; `dgmConeComplexComponentIso`
+supplies the source-facing order `Lⁿ ⊞ Kⁿ⁺¹` and differential matrix
 `[[dL, f], [0, -dK]]`; this definition supplies the source's grading and
 differential by reuse of that canonical construction. -/
 noncomputable abbrev dgmConeComplex
@@ -36,15 +37,6 @@ noncomputable abbrev dgmConeComplex
     (f : DifferentialGradedModuleHom K L) : CochainComplexOver R :=
   CochainComplex.mappingCone f.underlying
 
-theorem dgmConeComplex_component_iso_exists
-    {R : Type u} [CommRing R]
-    {A : DifferentialGradedAlgebra R}
-    {K L : DifferentialGradedModule A}
-    (f : DifferentialGradedModuleHom K L) (n : ℤ) :
-    Nonempty ((dgmConeComplex f).X n ≅
-      (L.complex.X n ⊞ K.complex.X (n + 1))) := by
-  sorry
-
 /-- The source's degree-`n` identification `C(f)ⁿ = Lⁿ ⊕ Kⁿ⁺¹`. -/
 noncomputable def dgmConeComplexComponentIso
     {R : Type u} [CommRing R]
@@ -52,7 +44,25 @@ noncomputable def dgmConeComplexComponentIso
     {K L : DifferentialGradedModule A}
     (f : DifferentialGradedModuleHom K L) (n : ℤ) :
     (dgmConeComplex f).X n ≅ (L.complex.X n ⊞ K.complex.X (n + 1)) :=
-  Classical.choice (dgmConeComplex_component_iso_exists f n)
+  HomologicalComplex.homotopyCofiber.XIsoBiprod f.underlying n (n + 1) rfl ≪≫
+    biprod.braiding (K.complex.X (n + 1)) (L.complex.X n)
+
+/-- In the source-facing component order `Lⁿ ⊕ Kⁿ⁺¹`, the cone differential
+is the matrix `[[dL, f], [0, -dK]]`. -/
+theorem dgmConeComplex_differential_matrix
+    {R : Type u} [CommRing R]
+    {A : DifferentialGradedAlgebra R}
+    {K L : DifferentialGradedModule A}
+    (f : DifferentialGradedModuleHom K L) (n : ℤ) :
+    (dgmConeComplexComponentIso f n).inv ≫
+        (dgmConeComplex f).d n (n + 1) ≫
+        (dgmConeComplexComponentIso f (n + 1)).hom =
+      Biprod.ofComponents
+        (L.complex.d n (n + 1))
+        (0 : L.complex.X n ⟶ K.complex.X ((n + 1) + 1))
+        (f.underlying.f (n + 1))
+        (-(K.complex.d (n + 1) ((n + 1) + 1))) := by
+  sorry
 
 /-- The action and module-object laws for a cone. -/
 structure DgmConeActionData
@@ -181,6 +191,54 @@ noncomputable def dgmConeTriangleData
 
 /-! ## Functoriality -/
 
+/-- The underlying cochain-complex map is Mathlib's explicit cone map. -/
+noncomputable def dgmConeUnderlyingMapOfHomotopy
+    {R : Type u} [CommRing R]
+    {A : DifferentialGradedAlgebra R}
+    {K₁ L₁ K₂ L₂ : DifferentialGradedModule A}
+    {f₁ : DifferentialGradedModuleHom K₁ L₁}
+    {f₂ : DifferentialGradedModuleHom K₂ L₂}
+    {a : DifferentialGradedModuleHom K₁ K₂}
+    {b : DifferentialGradedModuleHom L₁ L₂}
+    (H : DifferentialGradedModuleHomotopy
+      (differentialGradedModuleHomComp f₁ b)
+      (differentialGradedModuleHomComp a f₂)) :
+    dgmConeComplex f₁ ⟶ dgmConeComplex f₂ :=
+  CochainComplex.mappingCone.mapOfHomotopy H.homotopy
+
+theorem dgmConeUnderlyingMapOfHomotopy_isHom
+    {R : Type u} [CommRing R]
+    {A : DifferentialGradedAlgebra R}
+    {K₁ L₁ K₂ L₂ : DifferentialGradedModule A}
+    {f₁ : DifferentialGradedModuleHom K₁ L₁}
+    {f₂ : DifferentialGradedModuleHom K₂ L₂}
+    {a : DifferentialGradedModuleHom K₁ K₂}
+    {b : DifferentialGradedModuleHom L₁ L₂}
+    (H : DifferentialGradedModuleHomotopy
+      (differentialGradedModuleHomComp f₁ b)
+      (differentialGradedModuleHomComp a f₂)) :
+    (dgmConeUnderlyingMapOfHomotopy H :
+        (dgmCone f₁).complex ⟶ (dgmCone f₂).complex) ∈
+      DifferentialGradedModuleHomSubgroup (dgmCone f₁) (dgmCone f₂) := by
+  sorry
+
+/-- The cone map associated to the chosen compatible homotopy.  Its
+underlying map is the matrix map supplied by Mathlib's mapping-cone API. -/
+noncomputable def dgmConeMapOfHomotopy
+    {R : Type u} [CommRing R]
+    {A : DifferentialGradedAlgebra R}
+    {K₁ L₁ K₂ L₂ : DifferentialGradedModule A}
+    {f₁ : DifferentialGradedModuleHom K₁ L₁}
+    {f₂ : DifferentialGradedModuleHom K₂ L₂}
+    {a : DifferentialGradedModuleHom K₁ K₂}
+    {b : DifferentialGradedModuleHom L₁ L₂}
+    (H : DifferentialGradedModuleHomotopy
+      (differentialGradedModuleHomComp f₁ b)
+      (differentialGradedModuleHomComp a f₂)) :
+    DifferentialGradedModuleHom (dgmCone f₁) (dgmCone f₂) :=
+  ⟨dgmConeUnderlyingMapOfHomotopy H,
+    dgmConeUnderlyingMapOfHomotopy_isHom H⟩
+
 /-- A compatible homotopy induces a morphism of differential graded module
 cones. -/
 theorem dgmConeMapOfHomotopy_exists
@@ -195,22 +253,7 @@ theorem dgmConeMapOfHomotopy_exists
       (differentialGradedModuleHomComp f₁ b)
       (differentialGradedModuleHomComp a f₂)) :
     Nonempty (DifferentialGradedModuleHom (dgmCone f₁) (dgmCone f₂)) := by
-  sorry
-
-/-- The cone map associated to a chosen compatible homotopy. -/
-noncomputable def dgmConeMapOfHomotopy
-    {R : Type u} [CommRing R]
-    {A : DifferentialGradedAlgebra R}
-    {K₁ L₁ K₂ L₂ : DifferentialGradedModule A}
-    {f₁ : DifferentialGradedModuleHom K₁ L₁}
-    {f₂ : DifferentialGradedModuleHom K₂ L₂}
-    {a : DifferentialGradedModuleHom K₁ K₂}
-    {b : DifferentialGradedModuleHom L₁ L₂}
-    (H : DifferentialGradedModuleHomotopy
-      (differentialGradedModuleHomComp f₁ b)
-      (differentialGradedModuleHomComp a f₂)) :
-    DifferentialGradedModuleHom (dgmCone f₁) (dgmCone f₂) :=
-  Classical.choice (dgmConeMapOfHomotopy_exists H)
+  exact ⟨dgmConeMapOfHomotopy H⟩
 
 /-- A morphism of cone triangles in the differential graded module homotopy
 category. -/

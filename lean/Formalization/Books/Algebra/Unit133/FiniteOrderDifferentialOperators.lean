@@ -2523,11 +2523,187 @@ theorem principalParts_diagonal_equiv_exists (k : ℕ) :
     simp only [principalPartsHigherEvaluationMap, principalPartsHigherRelation,
       Finsupp.lsum_apply, Finset.smul_sum, Finsupp.smul_single',
       smul_smul, mul_assoc, mul_comm, mul_left_comm]
-    sorry
+    change (Finsupp.sum (Finset.sum (Finset.univ : Finset (Finset (Fin (k + 1))))
+        (fun x => Finsupp.single (x.prod g • m)
+          (1 * ((-1) ^ x.card * (Finset.univ \ x).prod g))))
+        (fun b c => c • D b)) = 0
+    have hsum : ∀ t : Finset (Finset (Fin (k + 1))),
+        (Finsupp.sum (Finset.sum t (fun x => Finsupp.single (x.prod g • m)
+          (1 * ((-1) ^ x.card * (Finset.univ \ x).prod g))))
+          (fun b c => c • D b)) =
+          Finset.sum t (fun x => (1 * ((-1) ^ x.card * (Finset.univ \ x).prod g)) •
+            D (x.prod g • m)) := by
+      intro t
+      induction t using Finset.induction_on with
+      | empty => simp
+      | @insert x t hx ih =>
+          rw [Finset.sum_insert hx, Finsupp.sum_add_index' (fun b => by simp)
+            (fun b c d => by rw [add_smul])]
+          rw [ih]
+          simp [Finset.sum_insert, hx]
+    rw [hsum]
+    let q : S ⊗[R] M →ₗ[S] DiagonalPrincipalParts (R := R) (S := S) (M := M) k :=
+      Submodule.mkQ _
+    let T : M →ₗ[R] S ⊗[R] M :=
+      TensorProduct.AlgebraTensorModule.mk R S S M 1
+    have hq (c : S) (z : S ⊗[R] M) : c • q z = q (c • z) := by
+      exact (q.map_smul c z).symm
+    have hmk (c : S) (b : M) : c • T b = c ⊗ₜ[R] b := by
+      change c • (1 ⊗ₜ[R] b) = c ⊗ₜ[R] b
+      rw [TensorProduct.smul_tmul']
+      simp
+    unfold D diagonalUniversalLinearMap
+    simp only [LinearMap.comp_apply]
+    change ∑ x : Finset (Fin (k + 1)),
+        (1 * ((-1) ^ x.card * (Finset.univ \ x).prod g)) •
+          q (T (x.prod g • m)) = 0
+    simp_rw [hq, hmk]
+    rw [← map_sum]
+    have hrel :
+        (∑ x : Finset (Fin (k + 1)),
+          (1 * ((-1) ^ x.card * (Finset.univ \ x).prod g)) ⊗ₜ[R]
+            (x.prod g • m)) =
+          diagonalHigherRelation (R := R) (S := S) k g m := by
+      unfold diagonalHigherRelation
+      apply Finset.sum_congr rfl
+      intro x hx
+      simp [TensorProduct.smul_tmul', TensorProduct.tmul_smul, smul_smul,
+        mul_assoc, mul_comm, mul_left_comm]
+    rw [hrel]
+    change Submodule.mkQ (diagonalPowerSubmodule (R := R) (S := S) (M := M) k)
+      (diagonalHigherRelation (R := R) (S := S) k g m) = 0
+    rw [Submodule.mkQ_apply, Submodule.Quotient.mk_eq_zero]
+    exact Submodule.subset_span ⟨(g, m), rfl⟩
   /- Prior attempt:
   exact ⟨LinearEquiv.refl _, by intro m; rfl⟩
   -/
-  sorry
+  classical
+  let D' : differentialOperatorSubmodule (R := R) (S := S) (M := M)
+      (N := DiagonalPrincipalParts (R := R) (S := S) (M := M) k) k :=
+    ⟨D, hD⟩
+  let α : PrincipalParts (R := R) (S := S) (M := M) k →ₗ[S]
+      DiagonalPrincipalParts (R := R) (S := S) (M := M) k :=
+    principalPartsHomEquiv (R := R) (S := S) (M := M) k
+      (DiagonalPrincipalParts (R := R) (S := S) (M := M) k) D'
+  have hα :
+      (α.restrictScalars R).comp
+          (principalPartsUniversalLinearMap (R := R) (S := S) (M := M) k) = D := by
+    simpa [α, D'] using
+      (principalPartsHomEquiv_factorization (R := R) (S := S) (M := M) k
+        (DiagonalPrincipalParts (R := R) (S := S) (M := M) k) D')
+  have hαgen (m : M) :
+      α (principalPartsGenerator (R := R) (S := S) (M := M) k m) = D m := by
+    have h := congrArg (fun f => f m) hα
+    simpa [LinearMap.comp_apply, principalPartsUniversalLinearMap_apply] using h
+  let qP : (M →₀ S) →ₗ[S]
+      PrincipalParts (R := R) (S := S) (M := M) k := Submodule.mkQ _
+  let U : M →ₗ[R] PrincipalParts (R := R) (S := S) (M := M) k :=
+    principalPartsUniversalLinearMap (R := R) (S := S) (M := M) k
+  let V : (M →₀ S) →ₗ[S] PrincipalParts (R := R) (S := S) (M := M) k :=
+    Finsupp.lsum S (fun m => (LinearMap.id : S →ₗ[S] S).smulRight (U m))
+  have hqP (F : M →₀ S) : V F = qP F := by
+    induction F using Finsupp.induction_linear with
+    | zero => simp [V, qP]
+    | add F G hF hG =>
+        rw [map_add, qP.map_add, hF, hG]
+    | single m c =>
+        rw [← Finsupp.smul_single_one m c, qP.map_smul]
+        simp [V, U, principalPartsUniversalLinearMap_apply,
+          principalPartsGenerator, Finsupp.lsum_single]
+        change c • qP (Finsupp.single m 1) = c • qP (Finsupp.single m 1)
+        rfl
+  have hLdiag (g : Fin (k + 1) → S) (m : M) :
+      (TensorProduct.AlgebraTensorModule.lift
+          ((LinearMap.id : S →ₗ[S] S).smulRight U))
+        (diagonalHigherRelation (R := R) (S := S) k g m) = 0 := by
+    unfold diagonalHigherRelation
+    rw [map_sum]
+    have hz : V (principalPartsHigherRelation (S := S) (M := M) k g m) = 0 := by
+      rw [hqP]
+      change qP (principalPartsHigherRelation (S := S) (M := M) k g m) = 0
+      rw [Submodule.mkQ_apply, Submodule.Quotient.mk_eq_zero]
+      apply Submodule.subset_span
+      exact Or.inr ⟨(g, m), rfl⟩
+    simpa [V, principalPartsHigherRelation, Finsupp.lsum_apply,
+      Finset.smul_sum, Finsupp.smul_single', smul_smul,
+      mul_assoc, mul_comm, mul_left_comm,
+      TensorProduct.AlgebraTensorModule.lift_tmul] using hz
+  let φ : S →ₗ[S]
+      (M →ₗ[R] PrincipalParts (R := R) (S := S) (M := M) k) :=
+    (LinearMap.id : S →ₗ[S] S).smulRight U
+  let L : S ⊗[R] M →ₗ[S] PrincipalParts (R := R) (S := S) (M := M) k :=
+    TensorProduct.AlgebraTensorModule.lift φ
+  have hL_tmul (s : S) (m : M) : L (s ⊗ₜ[R] m) = s • U m := by
+    change (TensorProduct.AlgebraTensorModule.lift φ) (s ⊗ₜ[R] m) = s • U m
+    rw [TensorProduct.AlgebraTensorModule.lift_tmul]
+    rfl
+  have hker :
+      diagonalPowerSubmodule (R := R) (S := S) (M := M) k ≤ LinearMap.ker L := by
+    apply Submodule.span_le.2
+    rintro x ⟨p, rfl⟩
+    change L (diagonalHigherRelation (R := R) (S := S) k p.1 p.2) = 0
+    simpa [L, φ] using hLdiag p.1 p.2
+  let β : DiagonalPrincipalParts (R := R) (S := S) (M := M) k →ₗ[S]
+      PrincipalParts (R := R) (S := S) (M := M) k :=
+    Submodule.liftQ _ L hker
+  have hβgen (m : M) :
+      β (diagonalUniversalLinearMap (R := R) (S := S) (M := M) k m) = U m := by
+    change (Submodule.liftQ _ L hker)
+      (Submodule.mkQ _ ((TensorProduct.AlgebraTensorModule.mk R S S M 1) m)) = U m
+    have hm := congrArg
+      (fun F : (S ⊗[R] M) →ₗ[S] PrincipalParts (R := R) (S := S) (M := M) k =>
+        F ((TensorProduct.AlgebraTensorModule.mk R S S M 1) m))
+      (Submodule.liftQ_mkQ
+        (p := diagonalPowerSubmodule (R := R) (S := S) (M := M) k)
+        (f := L) hker)
+    simpa [LinearMap.comp_apply, L, φ,
+      TensorProduct.AlgebraTensorModule.lift_tmul] using hm
+  have hβα : β.comp α = LinearMap.id := by
+    apply LinearMap.ext
+    intro x
+    obtain ⟨F, rfl⟩ := Submodule.mkQ_surjective _ x
+    induction F using Finsupp.induction_linear with
+    | zero => simp
+    | add F G hF hG => simp only [map_add, LinearMap.comp_apply, LinearMap.id_apply, hF, hG]
+    | single m c =>
+        calc
+          β (α (qP (Finsupp.single m c))) =
+              β (α (c • qP (Finsupp.single m 1))) := by
+                rw [← Finsupp.smul_single_one m c, qP.map_smul]
+          _ = c • β (α (qP (Finsupp.single m 1))) := by rw [map_smul, map_smul]
+          _ = c • qP (Finsupp.single m 1) := by
+            change c • β (α (principalPartsGenerator (R := R) (S := S) (M := M) k m)) =
+              c • principalPartsGenerator (R := R) (S := S) (M := M) k m
+            rw [hαgen, hβgen, principalPartsUniversalLinearMap_apply]
+          _ = qP (Finsupp.single m c) := by
+            rw [← Finsupp.smul_single_one m c, qP.map_smul]
+  let qD : S ⊗[R] M →ₗ[S]
+      DiagonalPrincipalParts (R := R) (S := S) (M := M) k := Submodule.mkQ _
+  have hβtmul (s : S) (m : M) :
+      β (qD (s ⊗ₜ[R] m)) = s • U m := by
+    rw [show s ⊗ₜ[R] m = s • (1 ⊗ₜ[R] m) by simp [TensorProduct.smul_tmul']]
+    rw [qD.map_smul, map_smul]
+    rw [show qD (1 ⊗ₜ[R] m) = diagonalUniversalLinearMap (R := R) (S := S) (M := M) k m by rfl,
+      hβgen]
+  have hαβ : α.comp β = LinearMap.id := by
+    apply LinearMap.ext
+    intro z
+    obtain ⟨y, rfl⟩ := Submodule.mkQ_surjective _ z
+    refine TensorProduct.induction_on y ?_ ?_ ?_
+    · simp
+    · intro s m
+      change α (β (qD (s ⊗ₜ[R] m))) = qD (s ⊗ₜ[R] m)
+      rw [hβtmul, map_smul, principalPartsUniversalLinearMap_apply,
+        hαgen]
+      change s • qD (1 ⊗ₜ[R] m) = qD (s ⊗ₜ[R] m)
+      rw [← qD.map_smul]
+      congr 1
+      simp [TensorProduct.smul_tmul']
+    · intro x y hx hy
+      simp only [map_add, LinearMap.comp_apply, LinearMap.id_apply, hx, hy]
+  refine ⟨LinearEquiv.ofLinear α β hαβ hβα, ?_⟩
+  intro m
+  exact hαgen m
 
 noncomputable def principalPartsDiagonalEquiv (k : ℕ) :
     PrincipalParts (R := R) (S := S) (M := M) k ≃ₗ[S]

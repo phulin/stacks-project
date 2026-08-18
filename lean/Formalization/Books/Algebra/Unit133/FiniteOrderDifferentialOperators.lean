@@ -2763,7 +2763,7 @@ theorem differentialOperator_check_on_algebra_generators
           differentialOperatorCommutator (R := A) (S := B) D y := by
     ext m
     simp [differentialOperatorCommutator, sub_eq_add_neg, add_assoc,
-      add_comm, add_left_comm, add_smul, smul_add, smul_smul]
+      add_comm, add_left_comm, add_smul, smul_add, smul_smul] <;> abel_nf
   have hcomm_mul (x y : B) :
       differentialOperatorCommutator (R := A) (S := B) D (x * y) =
         (differentialOperatorCommutator (R := A) (S := B) D x).comp
@@ -2772,13 +2772,13 @@ theorem differentialOperator_check_on_algebra_generators
             (differentialOperatorCommutator (R := A) (S := B) D y) := by
     ext m
     simp [differentialOperatorCommutator, sub_eq_add_neg, add_assoc,
-      add_comm, add_left_comm, mul_assoc, add_smul, smul_add, smul_smul]
+      add_comm, add_left_comm, mul_assoc, add_smul, smul_add, smul_smul] <;> abel_nf
   have hcomm_algebraMap (a : A) :
       differentialOperatorCommutator (R := A) (S := B) D (algebraMap A B a) = 0 := by
     ext m
     simp [differentialOperatorCommutator,
       IsScalarTower.algebraMap_smul B a m,
-      IsScalarTower.algebraMap_smul B a (D m)]
+      IsScalarTower.algebraMap_smul B a (D m)] <;> abel_nf
   have hcomm_all : ∀ s : B,
       IsDifferentialOperator (R := A) (S := B) (k - 1)
         (differentialOperatorCommutator (R := A) (S := B) D s) := by
@@ -2788,7 +2788,8 @@ theorem differentialOperator_check_on_algebra_generators
       exact Algebra.mem_top
     refine Algebra.adjoin_induction (R := A) (s := Set.range g)
       (p := fun x _ => IsDifferentialOperator (R := A) (S := B) (k - 1)
-        (differentialOperatorCommutator (R := A) (S := B) D x)) ?_ ?_ ?_ ?_ hs
+        (differentialOperatorCommutator (R := A) (S := B) D x))
+      (mem := ?_) (algebraMap := ?_) (add := ?_) (mul := ?_) hs
     · intro x hx
       rcases hx with ⟨i, rfl⟩
       exact hD i

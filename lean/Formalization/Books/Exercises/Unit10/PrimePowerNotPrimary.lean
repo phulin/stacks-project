@@ -1,4 +1,5 @@
 import Mathlib.Algebra.MvPolynomial.Basic
+import Mathlib.Algebra.MvPolynomial.Division
 import Mathlib.RingTheory.Ideal.AssociatedPrime.Basic
 import Mathlib.RingTheory.Ideal.Quotient.Noetherian
 import Mathlib.RingTheory.Ideal.Quotient.Operations
@@ -76,7 +77,24 @@ theorem square_example_ring_is_noetherian (k : Type u) [Field k] :
 /-- The ideal `p=(x)` is prime. -/
 theorem square_example_prime_is_prime (k : Type u) [Field k] :
     (squareExamplePrimeIdeal k).IsPrime := by
-  sorry
+  let P : Ideal (squareExamplePolynomialRing k) :=
+    Ideal.span ({squareExampleXPolynomial k} : Set _)
+  let hP : P.IsPrime := Ideal.isPrime_span_singleton_of_prime
+    (MvPolynomial.X_prime : Prime (squareExampleXPolynomial k))
+  have hIP : squareExampleRelationIdeal k ≤ P := by
+    rw [squareExampleRelationIdeal, Ideal.span_le]
+    intro f hf
+    simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at hf
+    rcases hf with rfl | rfl
+    · apply P.mul_mem_left
+      exact Ideal.subset_span (by simp)
+    · apply P.mul_mem_right
+      exact Ideal.subset_span (by simp)
+  have hmap : Ideal.map (Ideal.Quotient.mk (squareExampleRelationIdeal k)) P =
+      squareExamplePrimeIdeal k := by
+    simp [P, squareExamplePrimeIdeal, squareExampleX, Ideal.map_span]
+  rw [← hmap]
+  exact @Ideal.isPrime_map_quotientMk_of_isPrime _ _ _ _ P hP hIP
 
 /-- The square of `p` is zero in the displayed quotient ring. -/
 theorem square_example_prime_square_eq_bot (k : Type u) [Field k] :

@@ -73,7 +73,7 @@ to the free-sheaf epimorphism.
 -/
 theorem locallyGenerated_pullback
     {X Y : RingedSpace.{v}} (f : RingedSpaceHom X Y)
-    (G : Mod Y.structureSheaf)
+    (G : Mod Y.structureSheaf) (hG : locallyGenerated G)
     [((SheafOfModules.pushforward (F := Opens.map f.continuous)
       f.sharp).IsRightAdjoint)] :
     locallyGenerated ((sheafModuleRingedSpacePullback f).obj G) := by

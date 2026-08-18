@@ -57,7 +57,7 @@ theorem isNilpotent_mem_maximalIdeal_localizationAt_minimalPrime
   have hsub : Subsingleton (PrimeSpectrum (Localization.AtPrime p.1.asIdeal)) :=
     IsLocalization.subsingleton_primeSpectrum_of_mem_minimalPrimes
       p.1.asIdeal p.2 (Localization.AtPrime p.1.asIdeal)
-  letI : Subsingleton (PrimeSpectrum (Localization.AtPrime p.1.asIdeal)) := hsub
+  let : Subsingleton (PrimeSpectrum (Localization.AtPrime p.1.asIdeal)) := hsub
   rw [nilpotent_iff_mem_prime]
   intro J hJ
   let z : PrimeSpectrum (Localization.AtPrime p.1.asIdeal) := ⟨J, hJ⟩
@@ -87,10 +87,10 @@ private theorem mapToMinimalPrimeLocalizations_injective_aux
   have hnil : IsNilpotent (x - y) := by
     rw [nilpotent_iff_mem_prime]
     intro I hI
-    letI : I.IsPrime := hI
+    let : I.IsPrime := hI
     obtain ⟨p, hp, hp_le⟩ :=
       Ideal.exists_minimalPrimes_le (I := (⊥ : Ideal R)) (J := I) bot_le
-    letI : p.IsPrime := hp.isPrime
+    let : p.IsPrime := hp.isPrime
     let q : MinimalPrimeSpectrum R := ⟨⟨p, hp.isPrime⟩, hp⟩
     apply hp_le
     have hcomponent :
@@ -150,14 +150,14 @@ theorem iUnion_minimalPrimeSpectrum_eq_zeroDivisors
       have hnil : IsNilpotent y := by
         rw [nilpotent_iff_mem_prime]
         intro I hI
-        letI : I.IsPrime := hI
+        let : I.IsPrime := hI
         obtain ⟨p, hp, hpI⟩ :=
           Ideal.exists_minimalPrimes_le (I := (⊥ : Ideal R)) (J := I) bot_le
         let q : MinimalPrimeSpectrum R := ⟨⟨p, hp.isPrime⟩, hp⟩
         exact hpI (hall q)
       exact hyne (isNilpotent_iff_eq_zero.mp hnil)
     obtain ⟨p, hyp⟩ := hex
-    letI : p.1.asIdeal.IsPrime := p.1.2
+    let : p.1.asIdeal.IsPrime := p.1.2
     have hprod : y * x ∈ p.1.asIdeal := by
       rw [hyx]
       exact p.1.asIdeal.zero_mem
@@ -174,19 +174,19 @@ theorem totalQuotientRing_equiv_localization
     (hS : S ≤ nonZeroDivisors R) :
     Nonempty (Formalization.Books.Algebra.Unit09.totalQuotientRing R ≃+*
       Formalization.Books.Algebra.Unit09.totalQuotientRing (Localization S)) := by
-  letI : Algebra (Localization S)
+  let : Algebra (Localization S)
       (Formalization.Books.Algebra.Unit09.totalQuotientRing R) :=
     IsLocalization.localizationAlgebraOfSubmonoidLe
       (Localization S)
       (Formalization.Books.Algebra.Unit09.totalQuotientRing R)
       S (nonZeroDivisors R) hS
-  letI : IsScalarTower R (Localization S)
+  let : IsScalarTower R (Localization S)
       (Formalization.Books.Algebra.Unit09.totalQuotientRing R) :=
     IsLocalization.localization_isScalarTower_of_submonoid_le
       (Localization S)
       (Formalization.Books.Algebra.Unit09.totalQuotientRing R)
       S (nonZeroDivisors R) hS
-  letI : IsFractionRing (Localization S)
+  let : IsFractionRing (Localization S)
       (Formalization.Books.Algebra.Unit09.totalQuotientRing R) :=
     IsFractionRing.isFractionRing_of_isLocalization S
       (Localization S)
@@ -225,11 +225,11 @@ theorem totalQuotientRing_equiv_pi_minimalPrime_localizations
       have hR : Subsingleton R := by
         apply not_nontrivial_iff_subsingleton.mp
         intro hR
-        letI : Nontrivial R := hR
+        let : Nontrivial R := hR
         obtain ⟨p, hp⟩ := Ideal.nonempty_minimalPrimes (I := (⊥ : Ideal R)) bot_ne_top
-        simpa [hmin] using hp
-      letI : Subsingleton R := hR
-      letI : Subsingleton (Formalization.Books.Algebra.Unit09.totalQuotientRing R) := inferInstance
+        simp [hmin] at hp
+      let : Subsingleton R := hR
+      let : Subsingleton (Formalization.Books.Algebra.Unit09.totalQuotientRing R) := inferInstance
       let f : Formalization.Books.Algebra.Unit09.totalQuotientRing R →+*
           (∀ i : Fin 0, Localization.AtPrime (q i).asIdeal) :=
         { toFun := fun _ => 0
@@ -345,7 +345,7 @@ theorem totalQuotientRing_equiv_pi_minimalPrime_localizations
           (∀ i : Fin (Nat.succ n), Localization.AtPrime (qi i)) ≃+*
             PrimeSpectrum.PiLocalization A :=
         (E₂.symm.toRingEquiv).trans E₁.toRingEquiv
-      letI : Finite (PrimeSpectrum A) := Finite.of_surjective r r_surj
+      let : Finite (PrimeSpectrum A) := Finite.of_surjective r r_surj
       have hmax : ∀ J : Ideal A, J.IsPrime → J.IsMaximal := by
         intro J hJ
         let pJ : PrimeSpectrum A := ⟨J, hJ⟩
@@ -408,7 +408,7 @@ theorem totalQuotientRing_equiv_pi_minimalPrime_localizations
           have hKle : K ≤ (r i).asIdeal := hKM.trans_eq (hM_eq.trans hreq)
           have hKeq : K = (r i).asIdeal := le_antisymm hKle hriK
           exact hxri (hKeq ▸ hxK)
-      letI : Ring.KrullDimLE 0 A := Ring.KrullDimLE.mk₀ hmax
+      let : Ring.KrullDimLE 0 A := Ring.KrullDimLE.mk₀ hmax
       let : DiscreteTopology (PrimeSpectrum A) :=
         (PrimeSpectrum.discreteTopology_iff_finite_and_krullDimLE_zero).2
           ⟨inferInstance, inferInstance⟩

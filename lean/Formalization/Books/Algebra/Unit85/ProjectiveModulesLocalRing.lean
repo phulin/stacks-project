@@ -1,6 +1,6 @@
 import Formalization.Books.Algebra.Unit84.TransfiniteDevissage
-import Mathlib.Algebra.Module.FinitePresentation
-import Mathlib.RingTheory.LocalRing.Basic
+import Mathlib.RingTheory.Finiteness.Defs
+import Mathlib.RingTheory.LocalRing.Defs
 
 /-!
 # Commutative Algebra, Chapter 85: Projective modules over a local ring

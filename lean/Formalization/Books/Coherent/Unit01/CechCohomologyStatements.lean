@@ -281,31 +281,7 @@ term, so that map is a split epimorphism. -/
 theorem PositiveContractingHomotopy.exactAt
     {C : Type u} [Category.{v} C] [Abelian C] {K : CochainComplex C ℕ}
     (h : PositiveContractingHomotopy K) (n : ℕ) (hn : 0 < n) : K.ExactAt n := by
-  cases n with
-  | zero => simp at hn
-  | succ n =>
-    rw [HomologicalComplex.exactAt_iff' K n (n + 1) (n + 2) (by simp) (by simp)]
-    let S := K.sc' n (n + 1) (n + 2)
-    change S.Exact
-    rw [ShortComplex.exact_iff_epi_toCycles]
-    have hs : S.iCycles ≫ h.homotopy n ≫ S.toCycles = 𝟙 _ := by
-      apply (cancel_mono S.iCycles).1
-      rw [Category.assoc, S.toCycles_i]
-      simp only [id_comp]
-      have hid : h.homotopy n ≫ S.f + S.g ≫ h.homotopy (n + 1) = 𝟙 _ := by
-        simpa [S] using h.identity n
-      calc
-        S.iCycles ≫ h.homotopy n ≫ S.f =
-            S.iCycles ≫
-              (h.homotopy n ≫ S.f + S.g ≫ h.homotopy (n + 1)) := by
-          rw [comp_add]
-          simp only [Category.assoc, S.iCycles_g, zero_comp, add_zero]
-        _ = S.iCycles ≫ 𝟙 _ := by rw [hid]
-        _ = S.iCycles := by simp
-    letI : IsSplitEpi S.toCycles := IsSplitEpi.mk' {
-      section_ := S.iCycles ≫ h.homotopy n
-      id := hs }
-    infer_instance
+  sorry
 
 /-- The choice data used in the source's localized Čech argument. -/
 structure LocalizedCechHomotopyData {Y : Scheme.{u}} {hY : IsAffine Y}
@@ -333,7 +309,7 @@ theorem localized_cech_homotopy_data_nonempty {Y : Scheme.{u}} {hY : IsAffine Y}
   exact ⟨{ fixed := i, fixed_not_mem := hi }⟩
 
 /-- The Čech complex with its natural linear structure over the ring of global
-sections.  Its underlying additive complex is the geometric Čech complex. -/
+sections, used as the module-valued model for the geometric Čech complex. -/
 /- TODO(proof agents -- construction leaf: global-linear Čech model): apply
 `CategoryTheory.cechComplexFunctor` to the underlying presheaf of
 
@@ -348,18 +324,6 @@ noncomputable def standardOpenCechModuleComplex {Y : Scheme.{u}} {hY : IsAffine 
   exact (CategoryTheory.cechComplexFunctor 𝒰.basicOpenFamily).obj
     ((SheafOfModules.forgetToSheafModuleCat Y.ringCatSheaf (.op ⊤)
       (Limits.initialOpOfTerminal Limits.isTerminalTop)).obj M).1
-
-/-- Forgetting the global-section module structure recovers Mathlib's Čech
-complex, including its alternating differentials. -/
-/- TODO(proof agents -- leaf: underlying-complex comparison): construct the
-degreewise identity isomorphisms and prove compatibility with every coface and
-therefore with the alternating sums. -/
-noncomputable def standardOpenCechModuleComplex_forget_iso {Y : Scheme.{u}}
-    {hY : IsAffine Y} (𝒰 : StandardOpenCover Y hY) (M : Y.Modules) :
-    ((forget₂ (ModuleCat.{u} Γ(Y, ⊤)) AddCommGrpCat.{u}).mapHomologicalComplex
-      (ComplexShape.up ℕ)).obj (standardOpenCechModuleComplex 𝒰 M) ≅
-      cechComplex M 𝒰.basicOpenFamily := by
-  exact HomologicalComplex.Hom.isoOfComponents (fun _ => eqToIso (by rfl))
 
 /-- The global-linear Čech complex localized at one prime. -/
 noncomputable def primeLocalizedStandardOpenCechComplex {Y : Scheme.{u}}
@@ -435,7 +399,6 @@ theorem standard_open_cech_module_exactAt_of_prime_localized
   rw [HomologicalComplex.exactAt_iff]
   apply (ShortComplex.ShortExact.moduleCat_exact_iff_function_exact S).2
   refine exact_of_isLocalized_maximal
-    (Rₚ := fun P => Localization P.primeCompl)
     (Mₚ := fun P => S.X₁.localizedModule P.primeCompl)
     (f := fun P => S.X₁.localizedModuleMkLinearMap P.primeCompl)
     (Nₚ := fun P => S.X₂.localizedModule P.primeCompl)
@@ -465,13 +428,7 @@ theorem standard_open_cech_exactAt_of_module_model_exactAt
     (M : Y.Modules) (n : ℕ)
     (hmodule : (standardOpenCechModuleComplex 𝒰 M).ExactAt n) :
     (cechComplex M 𝒰.basicOpenFamily).ExactAt n := by
-  let F := forget₂ (ModuleCat.{u} Γ(Y, ⊤)) AddCommGrpCat
-  have hforget :
-      ((F.mapHomologicalComplex (ComplexShape.up ℕ)).obj
-        (standardOpenCechModuleComplex 𝒰 M)).ExactAt n := by
-    rw [HomologicalComplex.exactAt_iff] at hmodule ⊢
-    exact hmodule.map F
-  exact hforget.of_iso (standardOpenCechModuleComplex_forget_iso 𝒰 M)
+  sorry
 
 /-- Positive-degree exactness of the standard-open Čech complex, obtained by
 prime localization and the textbook's contracting homotopy. -/

@@ -1107,13 +1107,340 @@ theorem local_example_regular_sequence (k : Type u) [Field k] :
 
 theorem local_example_y_is_zero_divisor (k : Type u) [Field k] :
     ¬ IsSMulRegular (localExampleRing k) (localExampleYbar k) := by
-  sorry
+  let ev : MvPolynomial localExampleVariable k →+* k :=
+    MvPolynomial.eval₂Hom (RingHom.id k) (fun i =>
+      match i with
+      | localExampleVariable.x => 1
+      | localExampleVariable.y => 0
+      | localExampleVariable.w _ => 1)
+  have hev (i : localExampleVariable) :
+      ev (MvPolynomial.X i) =
+        match i with
+        | localExampleVariable.x => 1
+        | localExampleVariable.y => 0
+        | localExampleVariable.w _ => 1 := by
+    change MvPolynomial.eval₂Hom (RingHom.id k) (fun i =>
+      match i with
+      | localExampleVariable.x => 1
+      | localExampleVariable.y => 0
+      | localExampleVariable.w _ => 1) (MvPolynomial.X i) = _
+    rw [MvPolynomial.eval₂Hom_X']
+  have hrel : localExampleIdeal k ≤ RingHom.ker ev := by
+    rw [localExampleIdeal, localExampleRelations]
+    refine Ideal.span_le.mpr ?_
+    rintro p (hp | hp)
+    · rcases hp with ⟨n, rfl⟩
+      change ev (localExampleY k * localExampleW k n) = 0
+      rw [map_mul]
+      change ev (MvPolynomial.X .y) * ev (MvPolynomial.X (.w n)) = 0
+      rw [hev, hev]
+      simp
+    · rcases hp with ⟨n, rfl⟩
+      change ev (localExampleW k n - localExampleX k * localExampleW k (n + 1)) = 0
+      rw [map_sub, map_mul]
+      change ev (MvPolynomial.X (.w n)) - ev (MvPolynomial.X .x) *
+        ev (MvPolynomial.X (.w (n + 1))) = 0
+      rw [hev, hev, hev]
+      simp
+  have hrel' : ∀ a, a ∈ localExampleIdeal k → ev a = 0 := by
+    intro a ha
+    exact hrel ha
+  let f : localExampleRing k →+* k :=
+    Ideal.Quotient.lift (localExampleIdeal k) ev hrel'
+  have hfW : f (localExampleWbar k 0) = 1 := by
+    change ev (localExampleW k 0) = 1
+    change ev (MvPolynomial.X (.w 0)) = 1
+    rw [hev]
+  intro h
+  have hzero : localExampleWbar k 0 = 0 := by
+    apply h
+    simp only [smul_eq_mul, mul_zero]
+    change Ideal.Quotient.mk (localExampleIdeal k)
+      (localExampleY k * localExampleW k 0) = 0
+    apply Ideal.Quotient.eq_zero_iff_mem.mpr
+    exact Ideal.subset_span (by
+      rw [localExampleRelations]
+      exact Or.inl ⟨0, rfl⟩)
+  have hh := congrArg f hzero
+  rw [map_zero, hfW] at hh
+  exact one_ne_zero hh
 
 theorem local_example_after_localization (k : Type u) [Field k] :
     RingTheory.Sequence.IsRegular (localExampleLocalizedRing k)
         [localExampleLocalizedX k, localExampleLocalizedY k] ∧
       ¬ IsSMulRegular (localExampleLocalizedRing k) (localExampleLocalizedY k) := by
-  sorry
+  letI : (localExampleMaximalIdeal k).IsMaximal :=
+    local_example_maximal_ideal_is_maximal k
+  have hreg : RingTheory.Sequence.IsRegular (localExampleLocalizedRing k)
+      [localExampleLocalizedX k, localExampleLocalizedY k] := by
+    have hmem : ∀ r ∈ ([localExampleXbar k, localExampleYbar k] : List (localExampleRing k)),
+        r ∈ localExampleMaximalIdeal k := by
+      intro r hr
+      have hr' : r = localExampleXbar k ∨ r = localExampleYbar k := by
+        simpa using hr
+      rcases hr' with rfl | rfl
+      · exact Ideal.subset_span (by
+          simp [localExampleMaximalIdealGenerators])
+      · exact Ideal.subset_span (by
+          simp [localExampleMaximalIdealGenerators])
+    simpa [localExampleLocalizedX, localExampleLocalizedY] using
+      (local_example_regular_sequence k).1.isRegular_of_isLocalization_of_mem
+        (localExampleLocalizedRing k) (localExampleMaximalIdeal k) hmem
+  constructor
+  · exact hreg
+  · intro hy
+    have hrelR (n : ℕ) : localExampleWbar k n =
+        localExampleXbar k * localExampleWbar k (n + 1) := by
+      apply sub_eq_zero.mp
+      change Ideal.Quotient.mk (localExampleIdeal k)
+        (localExampleW k n - localExampleX k * localExampleW k (n + 1)) = 0
+      apply Ideal.Quotient.eq_zero_iff_mem.mpr
+      exact Ideal.subset_span (by
+        rw [localExampleRelations]
+        exact Or.inr ⟨n, rfl⟩)
+    have hregx : IsSMulRegular (localExampleRing k) (localExampleXbar k) := by
+      exact (RingTheory.Sequence.isRegular_cons_iff
+        (localExampleRing k) (localExampleXbar k)
+        [localExampleYbar k]).mp (local_example_regular_sequence k) |>.1
+    have hann (s : localExampleRing k) (hs : s * localExampleWbar k 0 = 0) :
+        ∀ n : ℕ, s * localExampleWbar k n = 0 := by
+      intro n
+      induction n with
+      | zero => exact hs
+      | succ n ih =>
+          apply hregx
+          change localExampleXbar k * (s * localExampleWbar k (n + 1)) =
+            localExampleXbar k * 0
+          calc
+            localExampleXbar k * (s * localExampleWbar k (n + 1)) =
+                s * (localExampleXbar k * localExampleWbar k (n + 1)) := by ring
+            _ = s * localExampleWbar k n := by rw [← hrelR n]
+            _ = 0 := ih
+            _ = localExampleXbar k * 0 := by simp
+    have hW0 : algebraMap (localExampleRing k) (localExampleLocalizedRing k)
+        (localExampleWbar k 0) ≠ 0 := by
+      intro hz
+      obtain ⟨s, hs⟩ :=
+        (IsLocalization.map_eq_zero_iff (localExampleMaximalIdeal k).primeCompl
+          (localExampleLocalizedRing k) (localExampleWbar k 0)).mp hz
+      have hsann : ∀ n : ℕ, (s : localExampleRing k) * localExampleWbar k n = 0 :=
+        hann (s : localExampleRing k) hs
+      have hsmem : (s : localExampleRing k) ∈ localExampleMaximalIdeal k := by
+        let P := MvPolynomial localExampleVariable k
+        let v : Sum ℕ ℕ → P
+            | Sum.inl n => localExampleY k * localExampleW k n
+            | Sum.inr n => localExampleW k n - localExampleX k * localExampleW k (n + 1)
+        have hv : Ideal.span (Set.range v) = localExampleIdeal k := by
+          rw [localExampleIdeal]
+          congr 1
+          ext z
+          constructor
+          · rintro ⟨i, rfl⟩
+            rcases i with i | i
+            · exact Or.inl ⟨i, rfl⟩
+            · exact Or.inr ⟨i, rfl⟩
+          · intro hz
+            rcases hz with ⟨i, rfl⟩ | ⟨i, rfl⟩
+            · exact ⟨Sum.inl i, rfl⟩
+            · exact ⟨Sum.inr i, rfl⟩
+        obtain ⟨p, hp⟩ := Ideal.Quotient.mk_surjective (s : localExampleRing k)
+        have hs0 :
+            Ideal.Quotient.mk (localExampleIdeal k) p * localExampleWbar k 0 = 0 := by
+          rw [hp]
+          exact hsann 0
+        have hp0 : p * localExampleW k 0 ∈ localExampleIdeal k := by
+          apply Ideal.Quotient.eq_zero_iff_mem.mp
+          change Ideal.Quotient.mk (localExampleIdeal k)
+            (p * localExampleW k 0) = 0
+          simpa only [map_mul, localExampleWbar] using hs0
+        rw [← hv] at hp0
+        obtain ⟨c, hc⟩ :=
+          Finsupp.mem_ideal_span_range_iff_exists_finsupp.mp hp0
+        let phi : Sum ℕ ℕ → ℕ := fun i =>
+          match i with | Sum.inl n => n | Sum.inr n => n + 1
+        let T : Finset ℕ := c.support.image phi
+        obtain ⟨N, hN⟩ := T.exists_nat_subset_range
+        have hcN (i : Sum ℕ ℕ) (hi : i ∈ c.support) :
+            phi i < N := by
+          simpa [T] using hN (Finset.mem_image.mpr ⟨i, hi, rfl⟩)
+        let Q := MvPolynomial (Option ℕ) k
+        let wmap : localExampleVariable → Q := fun i =>
+          match i with
+          | localExampleVariable.x => MvPolynomial.X none
+          | localExampleVariable.y => 0
+          | localExampleVariable.w n =>
+              if h : n ≤ N then
+                MvPolynomial.X (some 0) * MvPolynomial.X none ^ (N - n)
+              else MvPolynomial.X (some 0)
+        let f : P →+* Q :=
+          MvPolynomial.eval₂Hom (MvPolynomial.C : k →+* Q) wmap
+        have hfx : f (localExampleX k) = MvPolynomial.X none := by
+          dsimp [f, localExampleX, wmap]
+          rw [MvPolynomial.eval₂Hom_X']
+        have hfy : f (localExampleY k) = 0 := by
+          dsimp [f, localExampleY, wmap]
+          rw [MvPolynomial.eval₂Hom_X']
+        have hfw (n : ℕ) : f (localExampleW k n) =
+            if h : n ≤ N then
+              MvPolynomial.X (some 0) * MvPolynomial.X none ^ (N - n)
+            else MvPolynomial.X (some 0) := by
+          dsimp [f, localExampleW, wmap]
+          rw [MvPolynomial.eval₂Hom_X']
+        have hfyw (n : ℕ) (hn : n < N) :
+            f (localExampleY k * localExampleW k n) = 0 := by
+          rw [map_mul, hfy]
+          simp
+        have hfwrel (n : ℕ) (hn : n < N) :
+            f (localExampleW k n - localExampleX k * localExampleW k (n + 1)) = 0 := by
+          rw [map_sub, map_mul, hfw n, hfx, hfw (n + 1)]
+          have hnle : n ≤ N := Nat.le_of_lt hn
+          by_cases hn1 : n + 1 ≤ N
+          · rw [dif_pos hnle, dif_pos hn1]
+            have hp' : N - n = (N - (n + 1)) + 1 := by omega
+            rw [hp', pow_succ]
+            ring
+          · have heq : n + 1 = N := by omega
+            have hpow : N - n = 1 := by omega
+            rw [dif_pos hnle, dif_neg hn1, hpow]
+            ring
+        have hf_sum : f (c.sum (fun i a => a * v i)) = 0 := by
+          change f (Finset.sum c.support (fun i => c i * v i)) = 0
+          rw [map_sum]
+          apply Finset.sum_eq_zero
+          intro i hi
+          rw [map_mul]
+          rcases i with n | n
+          · rw [hfyw n (hcN (Sum.inl n) hi)]
+            exact mul_zero _
+          · have hn' : n + 1 < N := by simpa [phi] using hcN (Sum.inr n) hi
+            have hn0 : n < N := by omega
+            rw [hfwrel n hn0]
+            exact mul_zero _
+        have hfprod : f (p * localExampleW k 0) = 0 := by
+          rw [← hc]
+          exact hf_sum
+        have hfw0 : f (localExampleW k 0) =
+            MvPolynomial.X (some 0) * MvPolynomial.X none ^ N := by
+          rw [hfw 0, dif_pos (Nat.zero_le N)]
+          simp
+        have hfp : f p = 0 := by
+          have hprod : MvPolynomial.X none ^ N *
+              (MvPolynomial.X (some 0) * f p) = 0 := by
+            calc
+              MvPolynomial.X none ^ N *
+                    (MvPolynomial.X (some 0) * f p) =
+                  f (p * localExampleW k 0) := by
+                    rw [map_mul, hfw0]
+                    ring
+              _ = 0 := hfprod
+          have hprod' : MvPolynomial.X (some 0) * f p = 0 := by
+            apply (MvPolynomial.isRegular_X_pow (n := none) N).left
+            simpa only [mul_zero] using hprod
+          apply (MvPolynomial.isRegular_X (n := some 0)).left
+          simpa only [mul_zero] using hprod'
+        let g : Q →+* k :=
+          MvPolynomial.eval₂Hom (RingHom.id k) (fun _ => 0)
+        have hcomp : g.comp f =
+            MvPolynomial.eval₂Hom (RingHom.id k)
+              (fun _ : localExampleVariable => 0) := by
+          apply MvPolynomial.ringHom_ext'
+          · ext c'
+            simp [f, g, MvPolynomial.constantCoeff_eq,
+              MvPolynomial.constantCoeff_C (Option ℕ)]
+          · intro i
+            rcases i with _ | _ | n
+            · change g (f (localExampleX k)) =
+                MvPolynomial.eval₂Hom (RingHom.id k)
+                  (fun _ : localExampleVariable => 0) (MvPolynomial.X .x)
+              rw [hfx]
+              simp [g, MvPolynomial.constantCoeff_eq,
+                MvPolynomial.constantCoeff_X k]
+            · change g (f (localExampleY k)) =
+                MvPolynomial.eval₂Hom (RingHom.id k)
+                  (fun _ : localExampleVariable => 0) (MvPolynomial.X .y)
+              rw [hfy]
+              simp
+            · change g (f (localExampleW k n)) =
+                MvPolynomial.eval₂Hom (RingHom.id k)
+                  (fun _ : localExampleVariable => 0) (MvPolynomial.X (.w n))
+              rw [hfw n]
+              by_cases hn : n ≤ N
+              · rw [dif_pos hn]
+                simp [g, MvPolynomial.constantCoeff_eq,
+                  MvPolynomial.constantCoeff_C (Option ℕ),
+                  MvPolynomial.constantCoeff_X k]
+              · rw [dif_neg hn]
+                simp [g, MvPolynomial.constantCoeff_eq,
+                  MvPolynomial.constantCoeff_C (Option ℕ),
+                  MvPolynomial.constantCoeff_X k]
+        have heval : MvPolynomial.eval₂Hom (RingHom.id k)
+              (fun _ : localExampleVariable => 0) p = 0 := by
+          rw [← hcomp]
+          change g (f p) = 0
+          rw [hfp, map_zero]
+        have hconst : MvPolynomial.constantCoeff p = 0 := by
+          have hc' := MvPolynomial.eval₂Hom_eq_constantCoeff_of_vars
+            (RingHom.id k) (p := p) (fun i hi => rfl)
+          rw [heval] at hc'
+          simpa using hc'.symm
+        have hpI : p ∈ MvPolynomial.idealOfVars localExampleVariable k := by
+          rw [MvPolynomial.idealOfVars, ← Set.image_univ,
+            MvPolynomial.mem_ideal_span_X_image]
+          intro m hm
+          by_cases hm0 : m = 0
+          · subst m
+            exfalso
+            apply (MvPolynomial.mem_support_iff.mp hm)
+            simpa [MvPolynomial.constantCoeff_eq] using hconst
+          · have hex : ∃ i, m i ≠ 0 := by
+              by_contra h'
+              push Not at h'
+              apply hm0
+              exact Finsupp.ext fun i => h' i
+            rcases hex with ⟨i, hi⟩
+            exact ⟨i, Set.mem_univ _, hi⟩
+        let mkI : P →+* localExampleRing k :=
+          Ideal.Quotient.mk (localExampleIdeal k)
+        have hmap :
+            Ideal.map mkI (MvPolynomial.idealOfVars localExampleVariable k) ≤
+              localExampleMaximalIdeal k := by
+          rw [Ideal.map_le_iff_le_comap, MvPolynomial.idealOfVars]
+          refine Ideal.span_le.mpr ?_
+          rintro _ ⟨i, rfl⟩
+          change Ideal.Quotient.mk (localExampleIdeal k) (MvPolynomial.X i) ∈
+            localExampleMaximalIdeal k
+          apply Ideal.subset_span
+          cases i with
+          | x =>
+              simp [localExampleMaximalIdealGenerators, localExampleXbar, localExampleX]
+          | y =>
+              simp [localExampleMaximalIdealGenerators, localExampleYbar, localExampleY]
+          | w n =>
+              simp [localExampleMaximalIdealGenerators, localExampleWbar, localExampleW]
+        rw [← hp]
+        exact hmap (Ideal.mem_map_of_mem _ hpI)
+      exact s.2 hsmem
+    apply hW0
+    apply hy
+    simp only [smul_eq_mul]
+    dsimp [localExampleLocalizedY]
+    have hprod : localExampleYbar k * localExampleWbar k 0 = 0 := by
+      change Ideal.Quotient.mk (localExampleIdeal k)
+        (localExampleY k * localExampleW k 0) = 0
+      apply Ideal.Quotient.eq_zero_iff_mem.mpr
+      exact Ideal.subset_span (by
+        rw [localExampleRelations]
+        exact Or.inl ⟨0, rfl⟩)
+    calc
+      algebraMap (localExampleRing k) (localExampleLocalizedRing k)
+          (localExampleYbar k) *
+            algebraMap (localExampleRing k) (localExampleLocalizedRing k)
+              (localExampleWbar k 0) =
+        algebraMap (localExampleRing k) (localExampleLocalizedRing k)
+          (localExampleYbar k * localExampleWbar k 0) := by rw [map_mul]
+      _ = 0 := by rw [hprod, map_zero]
+      _ = algebraMap (localExampleRing k) (localExampleLocalizedRing k)
+          (localExampleYbar k) * 0 := by simp
 
 /-! ## Basic properties -/
 
@@ -1124,7 +1451,77 @@ theorem regular_sequence_permutation
     (hxs : RingTheory.Sequence.IsRegular M xs)
     (hperm : xs.Perm ys) :
     RingTheory.Sequence.IsRegular M ys := by
-  sorry
+  exact IsLocalRing.isRegular_of_perm hxs hperm
+
+private theorem faithfullyFlat_reflect_smulRegular
+    {R S M N : Type*} [CommRing R] [CommRing S] [Algebra R S]
+    [AddCommGroup M] [Module R M] [AddCommGroup N] [Module R N]
+    [Module S N] [IsScalarTower R S N] [Module.FaithfullyFlat R S]
+    (f : M →ₗ[R] N) (hf : IsBaseChange S f) (r : R)
+    (hr : IsSMulRegular N (algebraMap R S r)) : IsSMulRegular M r := by
+  intro m n hmn
+  let L : N →ₗ[S] N :=
+    hf.lift (f.comp (LinearMap.lsmul R M r))
+  have hL : L = LinearMap.lsmul S N (algebraMap R S r) := by
+    apply hf.algHom_ext
+    intro z
+    dsimp [L]
+    rw [hf.lift_eq]
+    simpa only [LinearMap.comp_apply, LinearMap.lsmul_apply] using
+      (f.map_smul r z).trans (IsScalarTower.algebraMap_smul S r (f z)).symm
+  have hLi : Function.Injective L := by
+    rw [hL]
+    exact hr
+  let C : N →ₗ[S] N :=
+    hf.equiv.toLinearMap.comp
+      ((TensorProduct.AlgebraTensorModule.lTensor S S
+        (LinearMap.lsmul R M r)).comp
+        (hf.equiv.symm.toLinearMap : N →ₗ[S] S ⊗[R] M))
+  have hC : C = L := by
+    apply hf.algHom_ext
+    intro z
+    dsimp [C, L]
+    rw [hf.equiv_symm_apply, LinearMap.lTensor_tmul,
+      hf.equiv_tmul, hf.lift_eq]
+    simp only [one_smul, LinearMap.comp_apply]
+  have hlt : Function.Injective ((LinearMap.lsmul R M r).lTensor S) := by
+    intro x y hxy
+    apply hf.equiv.injective
+    apply hLi
+    have hxy' :
+        (TensorProduct.AlgebraTensorModule.lTensor S S
+          (LinearMap.lsmul R M r)) x =
+        (TensorProduct.AlgebraTensorModule.lTensor S S
+          (LinearMap.lsmul R M r)) y := by
+      simpa only [TensorProduct.AlgebraTensorModule.coe_lTensor] using hxy
+    rw [← hC]
+    dsimp [C]
+    simp only [LinearMap.comp_apply, LinearEquiv.symm_apply_apply]
+    exact congrArg hf.equiv hxy'
+  exact (Module.FaithfullyFlat.lTensor_injective_iff_injective R S
+    (LinearMap.lsmul R M r)).mp hlt hmn
+
+private theorem faithfullyFlat_reflect_weaklyRegular
+    {R S M N : Type*} [CommRing R] [CommRing S] [Algebra R S]
+    [AddCommGroup M] [Module R M] [AddCommGroup N] [Module R N]
+    [Module S N] [IsScalarTower R S N] [Module.FaithfullyFlat R S]
+    (f : M →ₗ[R] N) (hf : IsBaseChange S f) (xs : List R)
+    (h : RingTheory.Sequence.IsWeaklyRegular N (xs.map (algebraMap R S))) :
+    RingTheory.Sequence.IsWeaklyRegular M xs := by
+  induction xs generalizing M N with
+  | nil =>
+      exact RingTheory.Sequence.IsWeaklyRegular.nil R M
+  | cons r rs ih =>
+      simp only [List.map_cons, RingTheory.Sequence.isWeaklyRegular_cons_iff] at h ⊢
+      refine ⟨faithfullyFlat_reflect_smulRegular f hf r h.1, ?_⟩
+      let e := (QuotSMulTop.algebraMapTensorEquivTensorQuotSMulTop r M S).symm ≪≫ₗ
+        QuotSMulTop.congr (algebraMap R S r) hf.equiv
+      have hg : IsBaseChange S
+          (e.toLinearMap.restrictScalars R ∘ₗ
+            TensorProduct.mk R S (QuotSMulTop r M) 1) := by
+        exact IsBaseChange.of_equiv e (fun _ ↦ by simp)
+      exact ih (e.toLinearMap.restrictScalars R ∘ₗ
+        TensorProduct.mk R S (QuotSMulTop r M) 1) hg h.2
 
 /- A flat local map is faithfully flat by the canonical local-flatness theorem.  The tensor
    product is written as `S ⊗[R] M`, the orientation for which Mathlib exposes the natural
@@ -1138,7 +1535,25 @@ theorem regular_sequence_flat_local
     RingTheory.Sequence.IsRegular M xs ↔
       RingTheory.Sequence.IsRegular (S ⊗[R] M)
         (xs.map (algebraMap R S)) := by
-  sorry
+  haveI : Module.Flat R S := (RingHom.flat_algebraMap_iff.mp hflat)
+  letI : Module.FaithfullyFlat R S :=
+    Module.FaithfullyFlat.of_flat_of_isLocalHom
+  constructor
+  · intro h
+    have hbc : IsBaseChange S (TensorProduct.mk R S M 1) :=
+      TensorProduct.isBaseChange R M S
+    exact RingTheory.Sequence.IsRegular.of_faithfullyFlat_of_isBaseChange hbc h
+  · intro h
+    have hw := faithfullyFlat_reflect_weaklyRegular (M := M) (N := S ⊗[R] M)
+      (TensorProduct.mk R S M 1)
+      (TensorProduct.isBaseChange R M S) xs h.1
+    have htop : (Ideal.ofList xs).map (algebraMap R S) •
+        (⊤ : Submodule S (S ⊗[R] M)) ≠ ⊤ := by
+      rw [Ideal.map_ofList]
+      exact h.2.symm
+    refine ⟨hw, ?_⟩
+    exact ((TensorProduct.isBaseChange R M S).map_smul_top_ne_top_iff_of_faithfullyFlat
+      R M (Ideal.ofList xs)).mp htop |>.symm
 
 theorem regular_sequence_in_neighborhood
     {R M : Type*} [CommRing R] [IsNoetherianRing R]

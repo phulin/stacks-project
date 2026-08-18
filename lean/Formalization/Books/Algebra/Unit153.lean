@@ -158,8 +158,7 @@ def EtaleRetractionProperty (R : Type u) [CommRing R] [IsLocalRing R] : Prop :=
   ∀ {A : Type u} [CommRing A] [Algebra R A]
     (_hA : Algebra.Etale R A) (q : PrimeSpectrum A)
     (hq : q.asIdeal.comap (algebraMap R A) = IsLocalRing.maximalIdeal R)
-    (_hqResidue : Nonempty
-      (q.asIdeal.ResidueField ≃+* IsLocalRing.ResidueField R)),
+    (_hqResidue : ResidueFieldIdentification q hq),
     ∃ f : A →ₐ[R] R,
       PrimeSpectrum.comap f.toRingHom (maximalPrime R) = q
 
@@ -169,8 +168,7 @@ def UniqueEtaleRetractionProperty
   ∀ {A : Type u} [CommRing A] [Algebra R A]
     (_hA : Algebra.Etale R A) (q : PrimeSpectrum A)
     (hq : q.asIdeal.comap (algebraMap R A) = IsLocalRing.maximalIdeal R)
-    (_hqResidue : Nonempty
-      (q.asIdeal.ResidueField ≃+* IsLocalRing.ResidueField R)),
+    (_hqResidue : ResidueFieldIdentification q hq),
     ∃! f : A →ₐ[R] R,
       PrimeSpectrum.comap f.toRingHom (maximalPrime R) = q
 
@@ -182,7 +180,7 @@ structure ProductOfLocalAlgebras
   [commRingFactor : ∀ i, CommRing (factor i)]
   [algebraFactor : ∀ i, Algebra R (factor i)]
   [localFactor : ∀ i, IsLocalRing (factor i)]
-  decomposition : Nonempty (S ≃+* (∀ i, factor i))
+  decomposition : Nonempty (S ≃ₐ[R] (∀ i, factor i))
 
 /-- A finite product of local `R`-algebras. -/
 structure FiniteProductOfLocalAlgebras
@@ -192,7 +190,7 @@ structure FiniteProductOfLocalAlgebras
   [commRingFactor : ∀ i, CommRing (factor i)]
   [algebraFactor : ∀ i, Algebra R (factor i)]
   [localFactor : ∀ i, IsLocalRing (factor i)]
-  decomposition : Nonempty (S ≃+* (∀ i, factor i))
+  decomposition : Nonempty (S ≃ₐ[R] (∀ i, factor i))
 
 /-- The assertion in item (9). -/
 def ProductOfLocalAlgebrasProperty
@@ -219,7 +217,7 @@ structure FiniteTypePartData
   [commRingB : CommRing B]
   [algebraRB : Algebra R B]
   finiteA : RingHom.Finite (algebraMap R A)
-  decomposition : Nonempty (S ≃+* A × B)
+  decomposition : Nonempty (S ≃ₐ[R] A × B)
   noQuasiFiniteAt : ∀ q : PrimeSpectrum B,
     q.asIdeal.comap (algebraMap R B) = IsLocalRing.maximalIdeal R →
       ¬ RingHom.QuasiFiniteAt (algebraMap R B) q.asIdeal
@@ -235,7 +233,7 @@ structure QuasiFinitePartData
   [commRingB : CommRing B]
   [algebraRB : Algebra R B]
   finiteA : RingHom.Finite (algebraMap R A)
-  decomposition : Nonempty (S ≃+* A × B)
+  decomposition : Nonempty (S ≃ₐ[R] A × B)
   specialFiberZero : Subsingleton (B ⊗[R] IsLocalRing.ResidueField R)
 
 /-- Data for item (12), whose remaining special-fibre components all have
@@ -250,7 +248,7 @@ structure PositiveDimensionalPartData
   [commRingB : CommRing B]
   [algebraRB : Algebra R B]
   finiteA : RingHom.Finite (algebraMap R A)
-  decomposition : Nonempty (S ≃+* A × B)
+  decomposition : Nonempty (S ≃ₐ[R] A × B)
   positiveDimensionalFiber :
     ∀ C ∈ irreducibleComponents
       (PrimeSpectrum (B ⊗[R] IsLocalRing.ResidueField R)),
@@ -301,7 +299,7 @@ structure FiniteHenselianLocalProductData
   [localFactor : ∀ i, IsLocalRing (factor i)]
   [henselianFactor : ∀ i, HenselianLocalRing (factor i)]
   finiteFactor : ∀ i, RingHom.Finite (algebraMap R (factor i))
-  decomposition : Nonempty (S ≃+* (∀ i, factor i))
+  decomposition : Nonempty (S ≃ₐ[R] (∀ i, factor i))
 
 theorem finite_over_henselian
     {R S : Type u} [CommRing R] [CommRing S] [Algebra R S]
@@ -347,7 +345,7 @@ structure MopUpData
   [commRingB : CommRing B]
   [algebraRB : Algebra R B]
   finiteA : ∀ i, RingHom.Finite (algebraMap R (A i))
-  decomposition : Nonempty (S ≃+* (∀ i, A i) × B)
+  decomposition : Nonempty (S ≃ₐ[R] (∀ i, A i) × B)
   noQuasiFiniteAt : ∀ q : PrimeSpectrum B,
     q.asIdeal.comap (algebraMap R B) = IsLocalRing.maximalIdeal R →
       ¬ RingHom.QuasiFiniteAt (algebraMap R B) q.asIdeal
@@ -369,7 +367,7 @@ structure StrictMopUpData
   [commRingB : CommRing B]
   [algebraRB : Algebra R B]
   finiteA : ∀ i, RingHom.Finite (algebraMap R (A i))
-  decomposition : Nonempty (S ≃+* (∀ i, A i) × B)
+  decomposition : Nonempty (S ≃ₐ[R] (∀ i, A i) × B)
   noQuasiFiniteAt : ∀ q : PrimeSpectrum B,
     q.asIdeal.comap (algebraMap R B) = IsLocalRing.maximalIdeal R →
       ¬ RingHom.QuasiFiniteAt (algebraMap R B) q.asIdeal
@@ -393,10 +391,16 @@ theorem strictly_henselian_finite_type_decomposition
 
 /-! ## Finite étale, unramified, complete, and zero-dimensional cases -/
 
+/- The special fibre is canonically the base change to the residue field. -/
+def finiteEtaleSpecialFiber
+    (R : Type u) [CommRing R] [IsLocalRing R] :
+    CommAlgCat.FiniteEtale R ⥤
+      CommAlgCat.FiniteEtale (IsLocalRing.ResidueField R) :=
+  CommAlgCat.FiniteEtale.baseChange R (IsLocalRing.ResidueField R)
+
 theorem finite_etale_residue_equivalence
     (R : Type u) [CommRing R] [HenselianLocalRing R] :
-    Nonempty (CommAlgCat.FiniteEtale R ≌
-      CommAlgCat.FiniteEtale (IsLocalRing.ResidueField R)) := by
+    (finiteEtaleSpecialFiber R).IsEquivalence := by
   sorry
 
 structure StrictUnramifiedDecompositionData
@@ -411,7 +415,7 @@ structure StrictUnramifiedDecompositionData
   [commRingB : CommRing B]
   [algebraRB : Algebra R B]
   finiteA : ∀ i, RingHom.Finite (algebraMap R (A i))
-  decomposition : Nonempty (S ≃+* (∀ i, A i) × B)
+  decomposition : Nonempty (S ≃ₐ[R] (∀ i, A i) × B)
   surjective : ∀ i, Function.Surjective (algebraMap R (A i))
   noPrimeOver : ∀ q : PrimeSpectrum B,
     q.asIdeal.comap (algebraMap R B) ≠ IsLocalRing.maximalIdeal R

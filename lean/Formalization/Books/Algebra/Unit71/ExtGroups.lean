@@ -1,5 +1,6 @@
 import Mathlib.Algebra.Category.ModuleCat.AB
 import Mathlib.Algebra.Category.ModuleCat.Ext.Finite
+import Mathlib.Algebra.Category.ModuleCat.Ext.Basic
 import Mathlib.Algebra.Homology.DerivedCategory.Ext.ExactSequences
 import Mathlib.Algebra.Homology.Homotopy
 import Mathlib.Algebra.Homology.ShortComplex.HomologicalComplex
@@ -148,7 +149,11 @@ noncomputable def canonicalResolutionMap {R : Type u} [Ring R]
 theorem resolution_map_exists {R : Type u} [Ring R] {M N : ModuleCat.{u} R}
     (F : FreeResolution R M) (G : Resolution R N) (φ : M ⟶ N) :
     Nonempty (ResolutionMap F.resolution G φ) := by
-  sorry
+  let FF : FreeAugmentedComplex R M :=
+    { complex := F.complex, augmentation := F.resolution.augmentation,
+      augmentation_condition := F.resolution.augmentation_condition, free := F.free }
+  rcases free_augmented_complex_map_exists FF G φ with ⟨h⟩
+  exact ⟨⟨h.hom, h.hom_f_zero_comp_augmentation⟩⟩
 
 /-! ## Homology, cohomology, maps, and homotopies -/
 
@@ -373,14 +378,19 @@ noncomputable def extZeroLinearEquiv {R : Type u} [CommRing R]
 theorem resolution_ext_zero_equiv_hom {R : Type u} [CommRing R]
     {M : ModuleCat.{u} R} (F : FreeResolution R M) (N : ModuleCat.{u} R) :
     Nonempty (ResolutionExt F N 0 ≃+ (M ⟶ N)) := by
-  sorry
+  rcases resolution_ext_represents_ext F 0 with ⟨e⟩
+  exact ⟨e.trans (extZeroLinearEquiv M N).toAddEquiv⟩
 
 /-- Two comparison maps induce homotopic maps on the Hom complexes. -/
 theorem resolution_maps_homotopic {R : Type u} [Ring R]
     {M₁ M₂ : ModuleCat.{u} R} (F : FreeResolution R M₁)
     (G : Resolution R M₂) (φ : M₁ ⟶ M₂) (α β : ResolutionMap F.resolution G φ) :
     ChainHomotopic α.hom β.hom := by
-  sorry
+  exact free_augmented_complex_maps_homotopic
+    { complex := F.complex, augmentation := F.resolution.augmentation,
+      augmentation_condition := F.resolution.augmentation_condition, free := F.free }
+    G φ ⟨α.hom, α.hom_f_zero_comp_augmentation⟩
+      ⟨β.hom, β.hom_f_zero_comp_augmentation⟩
 
 /-- Two comparison maps induce homotopic maps on the Hom complexes. -/
 theorem resolution_hom_maps_homotopic {R : Type u} [Ring R]
@@ -399,7 +409,8 @@ theorem resolution_ext_map_independent {R : Type u} [Ring R]
     (G : FreeResolution R M₂) (φ : M₁ ⟶ M₂)
     (α β : ResolutionMap F.resolution G.resolution φ) (N : ModuleCat.{u} R) (i : ℕ) :
     resolutionHomCohomologyMap α.hom N i = resolutionHomCohomologyMap β.hom N i := by
-  sorry
+  exact additive_cochain_homotopic_maps_equal_on_cohomology
+    (resolution_hom_maps_homotopic F G.resolution φ α β N) i
 
 /-- An isomorphism of modules induces an isomorphism on the resolution Ext groups. -/
 theorem isIso_resolution_ext_map_of_isIso {R : Type u} [Ring R]
@@ -485,7 +496,12 @@ vanishes on every Ext group. -/
 theorem ext_smul_eq_zero_of_annihilates_left {R : Type u} [CommRing R]
     (r : R) (M N : ModuleCat.{u} R) (hM : r ∈ Module.annihilator R M) (i : ℕ) :
     ∀ e : ExtGroup M N i, r • e = 0 := by
-  sorry
+  intro e
+  have hz := CategoryTheory.Abelian.Ext.postcomp_smul_id_eq_zero_of_mem_annihilator
+    (R := R) (M := N) (N := M) (r := r) (mem_ann := hM) i
+  have hz' := congrArg (fun f => f e) hz
+  rw [CategoryTheory.Abelian.Ext.mk₀_smul (C := ModuleCat R) (X := N) (Y := N) r (𝟙 N)] at hz'
+  simpa [CategoryTheory.Abelian.Ext.postcomp, CategoryTheory.Abelian.Ext.comp_smul] using hz'
 
 /-- Ext between finite modules over a Noetherian ring is finite. -/
 theorem ext_finite_of_noetherian {R : Type u} [CommRing R]

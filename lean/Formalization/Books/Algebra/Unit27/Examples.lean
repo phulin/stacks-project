@@ -194,8 +194,8 @@ theorem int_quadratic_prime_spectra_reduction_correspondence (q : ℕ) (hq : Nat
           (Polynomial (ℤ ⧸ Ideal.span {(q : ℤ)}) ⧸
             Ideal.span {Polynomial.X ^ 2 -
               Polynomial.C (4 : ℤ ⧸ Ideal.span {(q : ℤ)})})) := by
-  rcases int_quadratic_reduction_mod_prime q hq with ⟨e⟩
-  exact ⟨(PrimeSpectrum.comapEquiv e).toEquiv⟩
+  exact Nonempty.map (fun e => (PrimeSpectrum.comapEquiv e).toEquiv)
+    (int_quadratic_reduction_mod_prime q hq)
 
 theorem int_polynomial_root_quotient_equiv (r : ℤ) :
     Nonempty ((IntPolynomial ⧸
@@ -305,9 +305,8 @@ theorem int_quadratic_prime_ideals_isPrime (q : ℕ) (hq : Nat.Prime q) (hq2 : 2
   let J (r : ℤ) : Ideal IntPolynomial :=
     Ideal.span {Polynomial.C (q : ℤ), Polynomial.X - Polynomial.C r}
   have hJdomain (r : ℤ) : IsDomain (IntPolynomial ⧸ J r) := by
-    exact @MulEquiv.isDomain (IntPolynomial ⧸ J r)
-      (ℤ ⧸ Ideal.span ({(q : ℤ)} : Set ℤ)) _ _ hcoeffDomain
-      (Polynomial.quotientSpanCXSubCAlgEquiv (q : ℤ) r).toMulEquiv
+    letI := hcoeffDomain
+    exact (Polynomial.quotientSpanCXSubCAlgEquiv (q : ℤ) r).toMulEquiv.isDomain
   have hJprime (r : ℤ) : (J r).IsPrime := by
     exact (Ideal.Quotient.isDomain_iff_prime _).mp (hJdomain r)
   have hrel2 : intQuadraticRelation ≤ J 2 := by

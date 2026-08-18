@@ -474,7 +474,7 @@ theorem completionTensorCoordinate_naturality
       rw [hmap_apply]
       have ha := (a.property (leOfHom f.unop)).symm
       have hmem : a.val i.unop - a.val j.unop ∈
-          (I ^ (j.unop : ℕ) : Ideal A) := by
+          I ^ (j.unop : ℕ) := by
         have hmem' : a.val i.unop - a.val j.unop ∈
             (I ^ (j.unop : ℕ)) • (⊤ : Submodule A A) :=
           (SModEq.sub_mem

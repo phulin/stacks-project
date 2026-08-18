@@ -2,9 +2,7 @@ import Mathlib.RingTheory.Localization.AtPrime.Basic
 import Mathlib.RingTheory.RingHom.Flat
 import Formalization.Books.Algebra.Unit14.BaseChange
 import Formalization.Books.Algebra.Unit75.TorGroups
-import Formalization.Books.Algebra.Unit76.FunctorialitiesForTor
-import Formalization.Books.MoreAlgebra.Unit60
-import Formalization.Books.MoreAlgebra.Unit59.DerivedTensorProduct
+import Formalization.Books.MoreAlgebra.Unit60.DerivedBaseChange
 
 /-!
 # More on Algebra, Chapter 61: Tor independence
@@ -187,6 +185,20 @@ theorem polynomialAtZero_not_torIndependent
     ¬ TorIndependent (Polynomial k) (polynomialAtZero k) (polynomialAtZero k) := by
   sorry
 
+/-- If the base-change comparison is an isomorphism for every derived object,
+then the Tor groups in the base-change square vanish in positive degrees. -/
+theorem torIndependent_of_comparisonMap_isIso
+    {R A R' : Type u} [CommRing R] [CommRing A] [CommRing R']
+    (f : R →+* A) (g : R →+* R')
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)]
+    [HasDerivedCategory.{w} (ModuleCat.{u} A)]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R')]
+    [HasDerivedCategory.{w} (ModuleCat.{u} (baseChangeTensor f g))]
+    (hComparison : ∀ K : Derived A,
+      IsIso (comparisonMap (derivedRingSquare (baseChangeRingSquare f g)) K)) :
+    TorIndependentVia f g := by
+  sorry
+
 /-- Under the base-change identification `A' = A ⊗[R] R'`, Tor independence
 of `A` and `R'` makes the derived comparison map an isomorphism. -/
 theorem comparisonMap_isIso_of_torIndependent
@@ -303,15 +315,6 @@ theorem tor_flat_baseChange
       ((torTensorModule R A B).object i) ≅
       (torTensorModule R' A' B').object i) := by
   sorry
-
-/-- The canonical change-of-rings map supplied by the earlier Tor
-functoriality chapter is an isomorphism under flat base change. -/
-theorem torFlatBaseChangeMap_isIso
-    {R R' : Type u} [CommRing R] [CommRing R']
-    (g : R →+* R') (hR : RingHom.Flat g)
-    (M N : ModuleCat R) (i : ℕ) :
-    IsIso (Formalization.Books.Algebra.Unit76.torFlatBaseChangeMap g M N i) := by
-  exact Formalization.Books.Algebra.Unit76.flat_base_change_tor g hR M N i
 
 /-- Flat base change preserves Tor independence. -/
 theorem torIndependent_flat_baseChange
@@ -642,5 +645,22 @@ theorem torIndependent_iff_localizedTor_vanishing
       ∀ S : TensorPrimePair R A B, ∀ i : ℕ,
         0 < i → IsZero (localizedTor S i) := by
   sorry
+
+/-- The second and third localization formulations in the source are
+equivalent; the comparison identity is supplied by
+`tor_localization_identity`. -/
+theorem localPrimePairs_iff_localizedTor_vanishing
+    {R A B : Type u} [CommRing R] [CommRing A] [CommRing B]
+    [Algebra R A] [Algebra R B] :
+    (∀ P : LocalPrimePair R A B, P.TorIndependent) ↔
+      ∀ S : TensorPrimePair R A B, ∀ i : ℕ,
+        0 < i → IsZero (localizedTor S i) := by
+  constructor
+  · intro h
+    exact torIndependent_iff_localizedTor_vanishing.mp
+      (torIndependent_iff_localPrimePairs.mpr h)
+  · intro h
+    exact torIndependent_iff_localPrimePairs.mp
+      (torIndependent_iff_localizedTor_vanishing.mpr h)
 
 end Formalization.Books.MoreAlgebra.Unit61

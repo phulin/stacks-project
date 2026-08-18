@@ -88,6 +88,31 @@ noncomputable def intervalCylinder
   Unit13.simplicialSetProductOf (Δ[1] : SSet.{u}) U
     (intervalCoproducts U)
 
+/-! The degenerate interval `Δ[0]` gives back the original simplicial object,
+up to the canonical chosen-product isomorphism. -/
+
+theorem pointCoproducts
+    {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]
+    (U : SimplicialObject C) :
+    Unit13.HasDegreewiseCoproducts (Δ[0] : SSet.{u}) U :=
+  fun n => Unit13.degreewiseCoproductInstance (Δ[0] : SSet.{u}) U
+    (Unit13.standardSimplex_finite_nonempty 0) n
+
+noncomputable def pointCylinder
+    {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]
+    (U : SimplicialObject C) : SimplicialObject C :=
+  Unit13.simplicialSetProductOf (Δ[0] : SSet.{u}) U (pointCoproducts U)
+
+theorem pointCylinder_iso
+    {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]
+    (U : SimplicialObject C) : Nonempty (pointCylinder U ≅ U) := by
+  sorry
+
+noncomputable def pointCylinderIso
+    {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]
+    (U : SimplicialObject C) : pointCylinder U ≅ U :=
+  (pointCylinder_iso U).some
+
 /-- The endpoint inclusion at the vertex `ε` of `Δ[1]`. -/
 noncomputable def intervalEndpoint
     {C : Type u} [Category.{v} C] [HasBinaryCoproducts C]

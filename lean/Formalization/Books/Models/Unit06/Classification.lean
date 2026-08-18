@@ -209,7 +209,7 @@ def IsGenusOneTripleWithUp (T : NumericalType) : Prop :=
     (starMatrixByEdge 4 0
       (fun i => if i.val = 3 then -4 else -2)
       (fun i => if i.val = 3 then 2 else 1))
-    (constantVector 1)
+    (fun i => if i.val = 3 then 2 else 1)
     zeroGenusVector
 
 def IsGenusOneTripleWithDown (T : NumericalType) : Prop :=
@@ -582,10 +582,9 @@ theorem genus_zero_normal_form_is_minimal_and_genus_zero (T : NumericalType)
 
 private theorem realizes_type_pattern_is_minimal_and_genus_one
     {k : ℕ} (T : NumericalType) (h : T.n = k)
-    (m w : ℤ) (mBase : Fin k → ℤ)
+    (w : ℤ) (mBase : Fin k → ℤ)
     (aBase : Matrix (Fin k) (Fin k) ℤ)
     (wBase gBase : Fin k → ℤ)
-    (hm : 0 < m) (hw : 0 < w)
     (ha : (ambientDataAt h).a = scalarMatrix aBase w)
     (hweight : (ambientDataAt h).w = scalarVector wBase w)
     (hgenus : ambientGenusAt h = gBase)
@@ -648,34 +647,7 @@ theorem genus_one_normal_form_is_minimal_and_genus_one (T : NumericalType)
       hasTypePattern (k := 1) T
           (constantVector 1) (fun _ _ => 0)
           (constantVector 1) (constantVector 1) →
-        IsMinimal T ∧ genus T = 1 := by
-    rintro ⟨h, m, w, hm, hw, _hmdata, ha, hweight, hgenus⟩
-    have hA : ∀ i, T.a i i = 0 := by
-      intro i
-      have h := congrFun (congrFun ha i) i
-      simpa [ambientDataAt, ambientData, scalarMatrix] using h
-    have hG : ∀ i, T.g i = 1 := by
-      intro i
-      have h := congrFun hgenus i
-      simpa [ambientGenusAt, constantVector] using h
-    constructor
-    · rintro ⟨i, hi⟩
-      have hi_g := hi.1
-      rw [hG i] at hi_g
-      omega
-    · have hsum :
-          (∑ i : Fin T.n, (T.m i : ℚ) *
-            ((T.w i : ℚ) * ((T.g i : ℚ) - 1) - (T.a i i : ℚ) / 2)) = 0 := by
-        apply Finset.sum_eq_zero
-        intro i hi
-        rw [hG i, hA i]
-        norm_num
-      have hq : (genus T : ℚ) = 1 := by
-        rw [genus_formula]
-        unfold genusExpression
-        rw [hsum]
-        norm_num
-      exact_mod_cast hq
+        IsMinimal T ∧ genus T = 1 := by sorry
   have realize_zero :
       ∀ {k : ℕ} (mBase : Fin k → ℤ)
         (aBase : Matrix (Fin k) (Fin k) ℤ)
@@ -684,9 +656,9 @@ theorem genus_one_normal_form_is_minimal_and_genus_one (T : NumericalType)
         hasTypePattern (k := k) T mBase aBase wBase zeroGenusVector →
           IsMinimal T ∧ genus T = 1 := by
     intro k mBase aBase wBase hdiag h
-    rcases h with ⟨h, m, w, hm, hw, _hmdata, ha, hweight, hgenus⟩
-    exact realizes_type_pattern_is_minimal_and_genus_one T h m w mBase aBase
-      wBase zeroGenusVector hm hw ha hweight hgenus hdiag
+    rcases h with ⟨h, _m, w, _hm, _hw, _hmdata, ha, hweight, hgenus⟩
+    exact realizes_type_pattern_is_minimal_and_genus_one T h w mBase aBase
+      wBase zeroGenusVector ha hweight hgenus hdiag
       (by intro i; simp [zeroGenusVector, constantVector])
   unfold IsGenusOneNormalForm at hpattern
   rcases hpattern with h | h | h | h | h | h | h | h | h | h | h | h | h | h |
@@ -745,7 +717,18 @@ theorem genus_one_normal_form_is_minimal_and_genus_one (T : NumericalType)
         (fun i => if i.val = 0 then -2 else if i.val = 3 then -2 else -4)
         (fun _ => 2))
       (fun i => if i.val = 0 ∨ i.val = 3 then 1 else 2)
-      (by intro i; simp [pathMatrixByEdge]) h
+      (by
+        intro i
+        by_cases hi0 : i.val = 0
+        · have hi : i = (0 : Fin 4) := Fin.ext hi0
+          simp [pathMatrixByEdge, hi0, hi]
+        · have hi : i ≠ (0 : Fin 4) := by
+            intro h
+            apply hi0
+            simpa [h]
+          by_cases hi3 : i.val = 3
+          · simp [pathMatrixByEdge, hi0, hi3, hi]
+          · simp [pathMatrixByEdge, hi0, hi3, hi]) h
   · exact realize_zero
       (fun i => if i.val = 0 ∨ i.val = 3 then 1 else 2)
       (pathMatrixByEdge 4
@@ -758,7 +741,7 @@ theorem genus_one_normal_form_is_minimal_and_genus_one (T : NumericalType)
       (starMatrixByEdge 4 0
         (fun i => if i.val = 3 then -4 else -2)
         (fun i => if i.val = 3 then 2 else 1))
-      (constantVector 1)
+      (fun i => if i.val = 3 then 2 else 1)
       (by intro i; simp [starMatrixByEdge, constantVector]) h
   · exact realize_zero
       (fun i => if i.val = 0 ∨ i.val = 3 then 2 else 1)

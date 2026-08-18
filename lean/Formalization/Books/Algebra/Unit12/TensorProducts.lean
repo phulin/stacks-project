@@ -10,6 +10,7 @@ import Mathlib.Data.ZMod.Basic
 import Mathlib.LinearAlgebra.Multilinear.Basic
 import Mathlib.LinearAlgebra.Multilinear.Curry
 import Mathlib.LinearAlgebra.PiTensorProduct.Basic
+import Mathlib.LinearAlgebra.TensorProduct.Pi
 import Mathlib.LinearAlgebra.TensorProduct.Associator
 import Mathlib.LinearAlgebra.TensorProduct.Prod
 import Mathlib.LinearAlgebra.TensorProduct.RightExactness
@@ -246,7 +247,23 @@ theorem tensorProductBModule_smulCommClass
     letI : Module B (TensorProduct A X Y) :=
       tensorProductBModule A B X Y
     SMulCommClass A B (TensorProduct A X Y) := by
-  sorry
+  letI : Module B (TensorProduct A X Y) := tensorProductBModule A B X Y
+  refine ⟨?_⟩
+  intro a b z
+  refine TensorProduct.induction_on z ?_ ?_ ?_
+  · simp
+  · intro x y
+    change
+      a • (TensorProduct.comm A X Y).symm
+          (b • (TensorProduct.comm A X Y) (x ⊗ₜ[A] y)) =
+        (TensorProduct.comm A X Y).symm
+          (b • (TensorProduct.comm A X Y) (a • x ⊗ₜ[A] y))
+    apply (TensorProduct.comm A X Y).injective
+    simp only [map_smul, LinearEquiv.apply_symm_apply]
+    simp only [TensorProduct.comm_tmul, TensorProduct.smul_tmul']
+    rw [smul_comm]
+  · intro x y hx hy
+    simp [smul_add, hx, hy]
 
 theorem tensorProductBModule_smulCommClass_symm
     (A B X Y : Type*) [CommRing A] [CommRing B]
@@ -256,7 +273,10 @@ theorem tensorProductBModule_smulCommClass_symm
     letI : Module B (TensorProduct A X Y) :=
       tensorProductBModule A B X Y
     SMulCommClass B A (TensorProduct A X Y) := by
-  sorry
+  letI : Module B (TensorProduct A X Y) := tensorProductBModule A B X Y
+  letI : SMulCommClass A B (TensorProduct A X Y) :=
+    tensorProductBModule_smulCommClass A B X Y
+  exact SMulCommClass.symm A B (TensorProduct A X Y)
 
 /- The tensor-with-bimodule assertion uses the induced actions above. -/
 theorem tensor_with_bimodule {A B M N P : Type*} [CommRing A] [CommRing B]
@@ -281,7 +301,36 @@ theorem tensor_with_bimodule {A B M N P : Type*} [CommRing A] [CommRing B]
       Nonempty
         ((TensorProduct A M N) ⊗[B] P ≃ₗ[A]
           TensorProduct A M (TensorProduct B N P)) := by
-  sorry
+  letI : SMulCommClass A B N := hN
+  letI : SMulCommClass B A N := SMulCommClass.symm A B N
+  letI : Module B (TensorProduct A M N) := tensorProductBModule A B M N
+  letI : SMulCommClass A B (TensorProduct A M N) :=
+    tensorProductBModule_smulCommClass A B M N
+  letI : SMulCommClass B A (TensorProduct A M N) :=
+    tensorProductBModule_smulCommClass_symm A B M N
+  letI : SMulCommClass A B (TensorProduct B N P) := inferInstance
+  letI : Module B (TensorProduct A M (TensorProduct B N P)) :=
+    tensorProductBModule A B M (TensorProduct B N P)
+  letI : SMulCommClass A B (TensorProduct A M (TensorProduct B N P)) :=
+    tensorProductBModule_smulCommClass A B M (TensorProduct B N P)
+  refine ⟨?_, ?_, ?_⟩
+  · change SMulCommClass A B ((TensorProduct A M N) ⊗[B] P)
+    exact inferInstance
+  · change SMulCommClass A B (TensorProduct A M (TensorProduct B N P))
+    exact inferInstance
+  · let e :
+        ((TensorProduct A M N) ⊗[B] P) ≃ₗ[A]
+          TensorProduct A M (TensorProduct B N P) :=
+      _root_.IsTensorProduct.assocOfMapSMul
+      (TensorProduct.mk A M N) (TensorProduct.isTensorProduct A M N)
+      (TensorProduct.mk B N P) (TensorProduct.isTensorProduct B N P)
+      (fun a m n => rfl)
+      (fun b m n => by
+        change m ⊗ₜ[A] (b • n) =
+          (TensorProduct.comm A M N).symm
+            (b • (TensorProduct.comm A M N) (m ⊗ₜ[A] n))
+        rfl)
+    exact ⟨e⟩
 
 /-- The tensor/Hom adjunction for modules. -/
 noncomputable def tensorHomEquiv {R M N P : Type*} [CommRing R]
@@ -358,7 +407,9 @@ def integerDoubling : ℤ →ₗ[ℤ] ℤ :=
   (LinearMap.id : ℤ →ₗ[ℤ] ℤ).smulRight 2
 
 theorem integerDoubling_injective : Function.Injective integerDoubling := by
-  sorry
+  intro x y hxy
+  apply mul_right_cancel₀ (show (2 : ℤ) ≠ 0 by decide)
+  exact hxy
 
 theorem integer_tensor_zmod_two_nontrivial :
     Nontrivial (TensorProduct ℤ ℤ (ZMod 2)) := by
@@ -366,15 +417,37 @@ theorem integer_tensor_zmod_two_nontrivial :
 
 theorem integerDoubling_rTensor_zmod_two_zero :
     LinearMap.rTensor (ZMod 2) integerDoubling = 0 := by
-  sorry
+  ext x y
+  change LinearMap.rTensor (ZMod 2) integerDoubling (1 ⊗ₜ[ℤ] x) = 0
+  simp only [LinearMap.rTensor_tmul, LinearMap.zero_apply]
+  change (2 * 1 : ℤ) ⊗ₜ[ℤ] x = 0
+  rw [mul_one]
+  change (2 : ℤ) ⊗ₜ[ℤ] x = 0
+  calc
+    (2 : ℤ) ⊗ₜ[ℤ] x = (2 : ℤ) • ((1 : ℤ) ⊗ₜ[ℤ] x) :=
+      TensorProduct.tmul_eq_smul_one_tmul 2 x
+    _ = (1 : ℤ) ⊗ₜ[ℤ] ((2 : ℤ) • x) := by
+      rw [← TensorProduct.tmul_smul]
+    _ = 0 := by
+      have hx : (2 : ℤ) • x = 0 := by
+        rw [← Int.cast_smul_eq_zsmul (ZMod 2)]
+        simpa using (ZModModule.char_nsmul_eq_zero 2 x)
+      rw [hx]
+      simp
 
 theorem integerDoubling_rTensor_zmod_two_not_injective :
     ¬Function.Injective (LinearMap.rTensor (ZMod 2) integerDoubling) := by
-  sorry
+  rw [integerDoubling_rTensor_zmod_two_zero]
+  intro h
+  letI : Nontrivial (TensorProduct ℤ ℤ (ZMod 2)) :=
+    integer_tensor_zmod_two_nontrivial
+  obtain ⟨x, hx⟩ := exists_ne (0 : TensorProduct ℤ ℤ (ZMod 2))
+  exact hx (h (by simp))
 
 theorem integerDoubling_rTensor_zmod_two_pure_zero (x : ℤ) (y : ZMod 2) :
     LinearMap.rTensor (ZMod 2) integerDoubling (x ⊗ₜ[ℤ] y) = 0 := by
-  sorry
+  rw [integerDoubling_rTensor_zmod_two_zero]
+  rfl
 
 /-- The canonical Mathlib flatness predicate used by the book's definition. -/
 abbrev FlatModule (R M : Type*) [CommRing R] [AddCommGroup M] [Module R M] :=
@@ -399,7 +472,20 @@ theorem tensorProduct_finitePresentation {R M N : Type*} [CommRing R]
     [AddCommGroup M] [AddCommGroup N] [Module R M] [Module R N]
     [Module.FinitePresentation R M] [Module.FinitePresentation R N] :
     Module.FinitePresentation R (TensorProduct R M N) := by
-  sorry
+  obtain ⟨n, m, f, g, hf, hfg⟩ := Module.FinitePresentation.exists_fin' R M
+  letI : Module.FinitePresentation R ((Fin n → R) ⊗[R] N) := by
+    apply Module.FinitePresentation.of_equiv
+      ((TensorProduct.piLeft R N (fun _ : Fin n => R) ≪≫ₗ
+        LinearEquiv.piCongrRight (fun _ => TensorProduct.lid R N)).symm)
+  letI : Module.Finite R ((Fin m → R) ⊗[R] N) :=
+    tensorProduct_finite
+  apply Module.finitePresentation_of_surjective (LinearMap.rTensor N f)
+    (LinearMap.rTensor_surjective N hf)
+  have hfg' : Function.Exact (LinearMap.rTensor N g) (LinearMap.rTensor N f) :=
+    rTensor_exact N hfg hf
+  rw [LinearMap.exact_iff] at hfg'
+  rw [hfg']
+  exact Submodule.fg_range _
 
 /-- The canonical localization/module-tensor equivalence. -/
 noncomputable def tensorProductLocalizationModuleEquiv
@@ -437,7 +523,7 @@ noncomputable def tensorProductLocalizationEquiv
         (localizedModuleFraction S m s ⊗ₜ[localization S]
           localizedModuleFraction S n t) =
       localizedModuleFraction S (m ⊗ₜ[R] n) (s * t) := by
-  sorry
+  simp [tensorProductLocalizationEquiv, localizedModuleFraction]
 
 end
 end Formalization.Books.Algebra.Unit12

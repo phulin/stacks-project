@@ -684,6 +684,8 @@ structure ModuleSkyscraperFunctorData {X : TopCat.{v}}
   functor : ModuleCat.{v} (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x) ⥤ Mod O
   obj_iso : ∀ A,
     Nonempty (functor.obj A ≅ moduleSkyscraperSheaf O x A)
+  stalk_iso :
+    Nonempty (functor ⋙ moduleStalkFunctor O x ≅ 𝟭 _)
 
 theorem exists_moduleSkyscraperSheafFunctor {X : TopCat.{v}}
     (O : RingSheaf X) (x : X) :
@@ -964,7 +966,7 @@ theorem exists_moduleSkyscraperSheafFunctor {X : TopCat.{v}}
       alpha A A (𝟙 A) = 𝟙 _ := by
     dsimp [alpha]
     rw [hk_id A, S.map_id]
-    simp
+    simp [Category.assoc]
   have hα_comp (A B C : ModuleCat.{v}
       (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x))
       (f : A ⟶ B) (g : B ⟶ C) :
@@ -1122,11 +1124,43 @@ theorem exists_moduleSkyscraperSheafFunctor {X : TopCat.{v}}
             ((ConcreteCategory.hom ((alpha A B f).app U)) m)
         rw [hα_comp A B C f g]
         rfl }
-  refine ⟨{ functor := F, obj_iso := ?_ }⟩
-  intro A
-  refine ⟨?_⟩
-  change (D A).sheaf ≅ moduleSkyscraperSheaf O x A
-  exact eqToIso (htypes A)
+  refine ⟨{ functor := F, obj_iso := ?_, stalk_iso := ?_ }⟩
+  · intro A
+    refine ⟨?_⟩
+    change (D A).sheaf ≅ moduleSkyscraperSheaf O x A
+    exact eqToIso (htypes A)
+  · refine ⟨NatIso.ofComponents (fun A => p A) ?_⟩
+    intro A B f
+    apply (forget₂ (ModuleCat
+      (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x)) AddCommGrpCat).map_injective
+    change moduleStalkAddMap (F.map f) x ≫
+        (forget₂ (ModuleCat
+          (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x)) AddCommGrpCat).map
+          (p B).hom =
+      (forget₂ (ModuleCat
+        (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x)) AddCommGrpCat).map
+          (p A).hom ≫
+        (forget₂ (ModuleCat
+          (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x)) AddCommGrpCat).map f
+    change (TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map (alpha A B f) ≫
+        (forget₂ (ModuleCat
+          (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x)) AddCommGrpCat).map
+          (p B).hom =
+      (forget₂ (ModuleCat
+        (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x)) AddCommGrpCat).map
+          (p A).hom ≫
+        (forget₂ (ModuleCat
+          (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x)) AddCommGrpCat).map f
+    rw [hαStalk A B f]
+    change (pF A).hom ≫
+        (forget₂ (ModuleCat
+          (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x)) AddCommGrpCat).map f ≫
+        (pF B).inv ≫ (pF B).hom =
+      (pF A).hom ≫
+        (forget₂ (ModuleCat
+          (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x)) AddCommGrpCat).map f
+    rw [← Category.assoc, (pF B).inv_hom_id]
+    exact Category.comp_id _
 
 /-- Functoriality of the module skyscraper construction in its stalk-module
 value. -/
@@ -1141,7 +1175,7 @@ to lift the additive skyscraper adjunction. -/
 theorem exists_moduleSkyscraperSheafFunctor_stalkIso {X : TopCat.{v}}
     (O : RingSheaf X) (x : X) :
     Nonempty (moduleSkyscraperSheafFunctor O x ⋙ moduleStalkFunctor O x ≅ 𝟭 _) := by
-  sorry
+  exact (Classical.choice (exists_moduleSkyscraperSheafFunctor O x)).stalk_iso
 
 /-- A sheaf of modules is a skyscraper sheaf when it is isomorphic to a
 module skyscraper at some point. -/

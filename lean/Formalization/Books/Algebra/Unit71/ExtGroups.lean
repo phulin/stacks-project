@@ -1032,7 +1032,94 @@ theorem isIso_resolution_ext_map_of_isIso {R : Type u} [Ring R]
     (G : FreeResolution R M₂) (φ : M₁ ⟶ M₂) [IsIso φ]
     (α : ResolutionMap F.resolution G.resolution φ) (N : ModuleCat.{u} R) (i : ℕ) :
     IsIso (resolutionHomCohomologyMap α.hom N i) := by
-  sorry
+  let γ : ResolutionMap G.resolution F.resolution (inv φ) :=
+    Classical.choice (resolution_map_exists G F.resolution (inv φ))
+  let δ₁ : ResolutionMap F.resolution F.resolution (𝟙 M₁) :=
+    { hom := α.hom ≫ γ.hom
+      hom_f_zero_comp_augmentation := by
+        change (α.hom.f 0 ≫ γ.hom.f 0) ≫ F.resolution.augmentation = _
+        rw [Category.assoc, γ.hom_f_zero_comp_augmentation,
+          ← Category.assoc, α.hom_f_zero_comp_augmentation]
+        simp }
+  let δ₂ : ResolutionMap G.resolution G.resolution (𝟙 M₂) :=
+    { hom := γ.hom ≫ α.hom
+      hom_f_zero_comp_augmentation := by
+        change (γ.hom.f 0 ≫ α.hom.f 0) ≫ G.resolution.augmentation = _
+        rw [Category.assoc, α.hom_f_zero_comp_augmentation,
+          ← Category.assoc, γ.hom_f_zero_comp_augmentation]
+        simp }
+  let ε₁ : ResolutionMap F.resolution F.resolution (𝟙 M₁) :=
+    { hom := 𝟙 F.complex
+      hom_f_zero_comp_augmentation := by simp }
+  let ε₂ : ResolutionMap G.resolution G.resolution (𝟙 M₂) :=
+    { hom := 𝟙 G.complex
+      hom_f_zero_comp_augmentation := by simp }
+  have hmap_id (K : ModuleChainComplex R) :
+      resolutionHomMap (𝟙 K) N = 𝟙 (resolutionHomComplex K N) := by
+    apply HomologicalComplex.hom_ext
+    intro p
+    apply AddCommGrpCat.hom_ext
+    apply AddMonoidHom.ext
+    intro g
+    change K.X p ⟶ N at g
+    change (𝟙 K : K ⟶ K).f p ≫ g = g
+    rw [HomologicalComplex.id_f]
+    simp
+  have hδ₁ : resolutionHomCohomologyMap δ₁.hom N i =
+      𝟙 (ResolutionExt F N i) := by
+    rw [resolution_ext_map_independent F F (𝟙 M₁) δ₁ ε₁ N i]
+    change HomologicalComplex.homologyMap (resolutionHomMap ε₁.hom N) i = _
+    rw [show ε₁.hom = 𝟙 F.complex by rfl, hmap_id F.complex]
+    exact HomologicalComplex.homologyMap_id _ _
+  have hδ₂ : resolutionHomCohomologyMap δ₂.hom N i =
+      𝟙 (ResolutionExt G N i) := by
+    rw [resolution_ext_map_independent G G (𝟙 M₂) δ₂ ε₂ N i]
+    change HomologicalComplex.homologyMap (resolutionHomMap ε₂.hom N) i = _
+    rw [show ε₂.hom = 𝟙 G.complex by rfl, hmap_id G.complex]
+    exact HomologicalComplex.homologyMap_id _ _
+  have hcomp₁ : resolutionHomMap α.hom N ≫ resolutionHomMap γ.hom N =
+      resolutionHomMap δ₂.hom N := by
+    apply HomologicalComplex.hom_ext
+    intro p
+    apply AddCommGrpCat.hom_ext
+    apply AddMonoidHom.ext
+    intro g
+    change G.complex.X p ⟶ N at g
+    change γ.hom.f p ≫ (α.hom.f p ≫ g) =
+      (γ.hom.f p ≫ α.hom.f p) ≫ g
+    simp only [Category.assoc]
+  have hcomp₂ : resolutionHomMap γ.hom N ≫ resolutionHomMap α.hom N =
+      resolutionHomMap δ₁.hom N := by
+    apply HomologicalComplex.hom_ext
+    intro p
+    apply AddCommGrpCat.hom_ext
+    apply AddMonoidHom.ext
+    intro g
+    change F.complex.X p ⟶ N at g
+    change α.hom.f p ≫ (γ.hom.f p ≫ g) =
+      (α.hom.f p ≫ γ.hom.f p) ≫ g
+    simp only [Category.assoc]
+  have hleft : resolutionHomCohomologyMap α.hom N i ≫
+      resolutionHomCohomologyMap γ.hom N i =
+        𝟙 (ResolutionExt G N i) := by
+    change HomologicalComplex.homologyMap (resolutionHomMap α.hom N) i ≫
+        HomologicalComplex.homologyMap (resolutionHomMap γ.hom N) i =
+      𝟙 (HomologicalComplex.homology (resolutionHomComplex G.complex N) i)
+    rw [← HomologicalComplex.homologyMap_comp (resolutionHomMap α.hom N)
+      (resolutionHomMap γ.hom N) i, hcomp₁]
+    change resolutionHomCohomologyMap δ₂.hom N i = 𝟙 (ResolutionExt G N i)
+    exact hδ₂
+  have hright : resolutionHomCohomologyMap γ.hom N i ≫
+      resolutionHomCohomologyMap α.hom N i =
+        𝟙 (ResolutionExt F N i) := by
+    change HomologicalComplex.homologyMap (resolutionHomMap γ.hom N) i ≫
+        HomologicalComplex.homologyMap (resolutionHomMap α.hom N) i =
+      𝟙 (HomologicalComplex.homology (resolutionHomComplex F.complex N) i)
+    rw [← HomologicalComplex.homologyMap_comp (resolutionHomMap γ.hom N)
+      (resolutionHomMap α.hom N) i, hcomp₂]
+    change resolutionHomCohomologyMap δ₁.hom N i = 𝟙 (ResolutionExt F N i)
+    exact hδ₁
+  exact ⟨⟨resolutionHomCohomologyMap γ.hom N i, hleft, hright⟩⟩
 
 /-- A comparison map lifting the identity between one resolution and itself
 induces an isomorphism on the computed Ext groups. -/

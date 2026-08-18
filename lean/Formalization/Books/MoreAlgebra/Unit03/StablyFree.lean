@@ -549,7 +549,70 @@ theorem finiteProjective_map_isIso_of_inducesQuotientEquiv
         (P' ⧸ (I • (⊤ : Submodule R P'))),
       InducesQuotientEquiv I φ e) :
     ∃ e : P ≃ₗ[R] P', e.toLinearMap = φ := by
-  sorry
+  classical
+  obtain ⟨e, he⟩ := hφ
+  let q : P →ₗ[R] (P ⧸ (I • (⊤ : Submodule R P))) :=
+    (I • (⊤ : Submodule R P)).mkQ
+  let q' : P' →ₗ[R] (P' ⧸ (I • (⊤ : Submodule R P'))) :=
+    (I • (⊤ : Submodule R P')).mkQ
+  let eR : (P' ⧸ (I • (⊤ : Submodule R P'))) →ₗ[R]
+      (P ⧸ (I • (⊤ : Submodule R P))) :=
+    e.symm.toLinearMap.restrictScalars R
+  obtain ⟨ψ, hψ⟩ := Module.projective_lifting_property q
+    (eR.comp q') (Submodule.mkQ_surjective _)
+  have hI' : I ≤ Ideal.jacobson (⊥ : Ideal R) := by
+    simpa only [Ideal.jacobson_bot] using hI
+  have surj_of_quotient_eq :
+      ∀ {X : Type u} [AddCommGroup X] [Module R X]
+        [Module.Finite R X] (f : X →ₗ[R] X),
+        (∀ x : X, (I • (⊤ : Submodule R X)).mkQ (f x) =
+          (I • (⊤ : Submodule R X)).mkQ x) → Function.Surjective f := by
+    intro X _ _ _ f hf
+    apply LinearMap.range_eq_top.mp
+    apply Submodule.le_of_le_smul_of_le_jacobson_bot
+      Module.Finite.fg_top hI'
+    intro x hx
+    have hzero : (I • (⊤ : Submodule R X)).mkQ (x - f x) = 0 := by
+      rw [map_sub, hf x, sub_self]
+    have hmem : x - f x ∈ I • (⊤ : Submodule R X) := by
+      exact (Submodule.Quotient.mk_eq_zero I).mp hzero
+    rw [← sub_add_cancel x (f x)]
+    exact Submodule.add_mem _
+      ((le_sup_right : I • (⊤ : Submodule R X) ≤
+        LinearMap.range f ⊔ I • (⊤ : Submodule R X)) hmem)
+      ((le_sup_left : LinearMap.range f ≤
+        LinearMap.range f ⊔ I • (⊤ : Submodule R X)) ⟨f x, rfl⟩)
+  have hleft (x : P) : q (ψ (φ x)) = q x := by
+    calc
+      q (ψ (φ x)) = e.symm (q' (φ x)) := by
+        simpa [q, q', eR, LinearMap.comp_apply] using
+          congrArg (fun f => f (φ x)) hψ
+      _ = e.symm (e (q x)) := by rw [← he x]
+      _ = q x := e.symm_apply_apply _
+  have hright (y : P') : q' (φ (ψ y)) = q' y := by
+    calc
+      q' (φ (ψ y)) = e (q (ψ y)) := (he (ψ y)).symm
+      _ = e (e.symm (q' y)) := by
+        have h := congrArg (fun f => f y) hψ
+        simpa [q, q', eR, LinearMap.comp_apply] using h
+      _ = q' y := e.apply_symm_apply _
+  have hleft_surj : Function.Surjective (ψ.comp φ) :=
+    surj_of_quotient_eq (ψ.comp φ) hleft
+  have hright_surj : Function.Surjective (φ.comp ψ) :=
+    surj_of_quotient_eq (φ.comp ψ) hright
+  have hleft_bij : Function.Bijective (ψ.comp φ) :=
+    OrzechProperty.bijective_of_surjective_endomorphism _ hleft_surj
+  have hright_bij : Function.Bijective (φ.comp ψ) :=
+    OrzechProperty.bijective_of_surjective_endomorphism _ hright_surj
+  have hφ_bij : Function.Bijective φ := by
+    refine ⟨?_, ?_⟩
+    · intro x y hxy
+      apply hleft_bij.1
+      simpa [LinearMap.comp_apply, hxy]
+    · intro y
+      obtain ⟨x, hx⟩ := hright_surj y
+      exact ⟨ψ x, by simpa [LinearMap.comp_apply] using hx⟩
+  exact ⟨LinearEquiv.ofBijective φ hφ_bij, rfl⟩
 
 /-- Finite projective modules with isomorphic reductions modulo a
 Jacobson-radical ideal are isomorphic. -/
@@ -563,6 +626,21 @@ theorem finiteProjective_quotientEquiv_imp_isomorphic
     (h : Nonempty ((P ⧸ (I • (⊤ : Submodule R P))) ≃ₗ[R ⧸ I]
       (P' ⧸ (I • (⊤ : Submodule R P'))))) :
     Nonempty (P ≃ₗ[R] P') := by
-  sorry
+  classical
+  obtain ⟨e⟩ := h
+  let q' : P' →ₗ[R] (P' ⧸ (I • (⊤ : Submodule R P'))) :=
+    (I • (⊤ : Submodule R P')).mkQ
+  let eR : (P ⧸ (I • (⊤ : Submodule R P))) →ₗ[R]
+      (P' ⧸ (I • (⊤ : Submodule R P'))) :=
+    e.toLinearMap.restrictScalars R
+  obtain ⟨φ, hφ⟩ := Module.projective_lifting_property q' (eR.comp
+    ((I • (⊤ : Submodule R P)).mkQ)) (Submodule.mkQ_surjective _)
+  have hφ' : InducesQuotientEquiv I φ e := by
+    intro x
+    have h := congrArg (fun f => f x) hφ
+    simpa [eR, q', LinearMap.comp_apply] using h
+  obtain ⟨e', _⟩ := finiteProjective_map_isIso_of_inducesQuotientEquiv
+    I hI φ ⟨e, hφ'⟩
+  exact ⟨e'⟩
 
 end Formalization.Books.MoreAlgebra.Unit03

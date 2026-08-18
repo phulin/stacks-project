@@ -1,6 +1,7 @@
 import Mathlib.CategoryTheory.Triangulated.Triangulated
 import Mathlib.CategoryTheory.Triangulated.Subcategory
 import Mathlib.CategoryTheory.Triangulated.Yoneda
+import Mathlib.CategoryTheory.Abelian.DiagramLemmas.Four
 import Mathlib.CategoryTheory.Limits.Preserves.Shapes.Products
 import Mathlib.CategoryTheory.Limits.Preserves.Shapes.Biproducts
 import Mathlib.CategoryTheory.Limits.Shapes.Countable
@@ -136,7 +137,106 @@ theorem special_triangle_two_out_of_three
     {T T' : Triangle C} (hT : SpecialTriangle T)
     (hT' : SpecialTriangle T') (φ : T ⟶ T')
     (h₁ : IsIso φ.hom₁) (h₂ : IsIso φ.hom₂) : IsIso φ.hom₃ := by
-  sorry
+  dsimp [SpecialTriangle, RepresentableLongExact] at hT hT'
+  have hshift : ∀ (W : C) (n : ℤ),
+      IsIso (((preadditiveCoyoneda.obj (Opposite.op W)).shift n).map φ.hom₃) := by
+    intro W n
+    let F := preadditiveCoyoneda.obj (Opposite.op W)
+    obtain ⟨h₁₂, h₂₃, h₃₁, e₁₂, e₂₃, e₃₁⟩ := hT W n
+    obtain ⟨h₁₂', h₂₃', h₃₁', e₁₂', e₂₃', e₃₁'⟩ := hT' W n
+    let R : ComposableArrows AddCommGrpCat 4 :=
+      ComposableArrows.mk₄
+        ((F.shift n).map T.mor₁)
+        ((F.shift n).map T.mor₂)
+        (F.homologySequenceδ T n (n + 1) (by rfl))
+        ((F.shift (n + 1)).map T.mor₁)
+    let R' : ComposableArrows AddCommGrpCat 4 :=
+      ComposableArrows.mk₄
+        ((F.shift n).map T'.mor₁)
+        ((F.shift n).map T'.mor₂)
+        (F.homologySequenceδ T' n (n + 1) (by rfl))
+        ((F.shift (n + 1)).map T'.mor₁)
+    have hR : R.Exact := by
+      dsimp [R]
+      exact ComposableArrows.exact_of_δ₀
+        e₁₂.exact_toComposableArrows
+        (ComposableArrows.exact_of_δ₀
+          e₂₃.exact_toComposableArrows e₃₁.exact_toComposableArrows)
+    have hR' : R'.Exact := by
+      dsimp [R']
+      exact ComposableArrows.exact_of_δ₀
+        e₁₂'.exact_toComposableArrows
+        (ComposableArrows.exact_of_δ₀
+          e₂₃'.exact_toComposableArrows e₃₁'.exact_toComposableArrows)
+    let α : R ⟶ R' := ComposableArrows.homMk
+      (fun i => match i with
+        | ⟨0, _⟩ => (F.shift n).map φ.hom₁
+        | ⟨1, _⟩ => (F.shift n).map φ.hom₂
+        | ⟨2, _⟩ => (F.shift n).map φ.hom₃
+        | ⟨3, _⟩ => (F.shift (n + 1)).map φ.hom₁
+        | ⟨4, _⟩ => (F.shift (n + 1)).map φ.hom₂)
+      (by
+        intro i hi
+        have hi' : i = 0 ∨ i = 1 ∨ i = 2 ∨ i = 3 := by omega
+        rcases hi' with rfl | rfl | rfl | rfl
+        · change (F.shift n).map T.mor₁ ≫ (F.shift n).map φ.hom₂ =
+            (F.shift n).map φ.hom₁ ≫ (F.shift n).map T'.mor₁
+          simpa only [Functor.map_comp] using
+            congrArg ((F.shift n).map) φ.comm₁
+        · change (F.shift n).map T.mor₂ ≫ (F.shift n).map φ.hom₃ =
+            (F.shift n).map φ.hom₂ ≫ (F.shift n).map T'.mor₂
+          simpa only [Functor.map_comp] using
+            congrArg ((F.shift n).map) φ.comm₂
+        · change F.homologySequenceδ T n (n + 1) (by rfl) ≫
+            (F.shift (n + 1)).map φ.hom₁ =
+            (F.shift n).map φ.hom₃ ≫
+              F.homologySequenceδ T' n (n + 1) (by rfl)
+          simpa only using
+            (F.homologySequenceδ_naturality T T' φ n (n + 1) (by rfl)).symm
+        · change (F.shift (n + 1)).map T.mor₁ ≫
+              (F.shift (n + 1)).map φ.hom₂ =
+            (F.shift (n + 1)).map φ.hom₁ ≫
+              (F.shift (n + 1)).map T'.mor₁
+          simpa only [Functor.map_comp] using
+            congrArg ((F.shift (n + 1)).map) φ.comm₁)
+    change IsIso ((F.shift n).map φ.hom₃)
+    have hfive := CategoryTheory.Abelian.isIso_of_epi_of_isIso_of_isIso_of_mono hR hR' α
+        (by change Epi ((F.shift n).map φ.hom₁); infer_instance)
+        (by change IsIso ((F.shift n).map φ.hom₂); infer_instance)
+        (by change IsIso ((F.shift (n + 1)).map φ.hom₁); infer_instance)
+        (by change Mono ((F.shift (n + 1)).map φ.hom₂); infer_instance)
+    dsimp [α] at hfive
+    change IsIso ((F.shift n).map φ.hom₃) at hfive
+    exact hfive
+  have hraw : ∀ W : C,
+      IsIso ((preadditiveCoyoneda.obj (Opposite.op W)).map φ.hom₃) := by
+    intro W
+    let F := preadditiveCoyoneda.obj (Opposite.op W)
+    change IsIso (F.map φ.hom₃)
+    have h₀ := hshift W 0
+    let _ : IsIso ((F.shift (0 : ℤ)).map φ.hom₃) := h₀
+    let e := F.isoShiftZero ℤ
+    have h : F.map φ.hom₃ = e.inv.app T.obj₃ ≫
+        (F.shift (0 : ℤ)).map φ.hom₃ ≫ e.hom.app T'.obj₃ := by
+      calc
+        F.map φ.hom₃ = (𝟙 _ : F.obj T.obj₃ ⟶ F.obj T.obj₃) ≫ F.map φ.hom₃ := by simp
+        _ = (e.inv.app T.obj₃ ≫ e.hom.app T.obj₃) ≫ F.map φ.hom₃ := by simp
+        _ = e.inv.app T.obj₃ ≫ (e.hom.app T.obj₃ ≫ F.map φ.hom₃) := by simp [Category.assoc]
+        _ = e.inv.app T.obj₃ ≫
+            ((F.shift (0 : ℤ)).map φ.hom₃ ≫ e.hom.app T'.obj₃) := by
+              rw [e.hom.naturality]
+        _ = e.inv.app T.obj₃ ≫
+            (F.shift (0 : ℤ)).map φ.hom₃ ≫ e.hom.app T'.obj₃ := by simp [Category.assoc]
+    rw [h]
+    infer_instance
+  exact isIso_of_yoneda_map_bijective φ.hom₃ (by
+    intro W
+    let F := preadditiveCoyoneda.obj (Opposite.op W)
+    let _ : IsIso (F.map φ.hom₃) := hraw W
+    change Function.Bijective (fun x : W ⟶ T.obj₃ => x ≫ φ.hom₃)
+    have hb := ConcreteCategory.bijective_of_isIso (f := F.map φ.hom₃)
+    change Function.Bijective (fun x : W ⟶ T.obj₃ => x ≫ φ.hom₃) at hb
+    exact hb)
 
 /-- The middle component of a special-triangle morphism is an isomorphism when
 the first and third components are. -/
@@ -144,7 +244,114 @@ theorem special_triangle_isIso₂
     {T T' : Triangle C} (hT : SpecialTriangle T)
     (hT' : SpecialTriangle T') (φ : T ⟶ T')
     (h₁ : IsIso φ.hom₁) (h₃ : IsIso φ.hom₃) : IsIso φ.hom₂ := by
-  sorry
+  dsimp [SpecialTriangle, RepresentableLongExact] at hT hT'
+  have hshift : ∀ (W : C) (n : ℤ),
+      IsIso (((preadditiveCoyoneda.obj (Opposite.op W)).shift n).map φ.hom₂) := by
+    intro W n
+    let F := preadditiveCoyoneda.obj (Opposite.op W)
+    obtain ⟨_, _, _, _, _, e₃₁⟩ := hT W (n - 1)
+    obtain ⟨h₁₂, h₂₃, _, e₁₂, e₂₃, _⟩ := hT W (n - 1 + 1)
+    obtain ⟨_, _, _, _, _, e₃₁'⟩ := hT' W (n - 1)
+    obtain ⟨h₁₂', h₂₃', _, e₁₂', e₂₃', _⟩ := hT' W (n - 1 + 1)
+    let R : ComposableArrows AddCommGrpCat 4 :=
+      ComposableArrows.mk₄
+        (F.homologySequenceδ T (n - 1) (n - 1 + 1) (by rfl))
+        ((F.shift (n - 1 + 1)).map T.mor₁)
+        ((F.shift (n - 1 + 1)).map T.mor₂)
+        (F.homologySequenceδ T (n - 1 + 1) (n - 1 + 1 + 1) (by rfl))
+    let R' : ComposableArrows AddCommGrpCat 4 :=
+      ComposableArrows.mk₄
+        (F.homologySequenceδ T' (n - 1) (n - 1 + 1) (by rfl))
+        ((F.shift (n - 1 + 1)).map T'.mor₁)
+        ((F.shift (n - 1 + 1)).map T'.mor₂)
+        (F.homologySequenceδ T' (n - 1 + 1) (n - 1 + 1 + 1) (by rfl))
+    have hR : R.Exact := by
+      dsimp [R]
+      exact ComposableArrows.exact_of_δ₀
+        e₃₁.exact_toComposableArrows
+        (ComposableArrows.exact_of_δ₀
+          e₁₂.exact_toComposableArrows e₂₃.exact_toComposableArrows)
+    have hR' : R'.Exact := by
+      dsimp [R']
+      exact ComposableArrows.exact_of_δ₀
+        e₃₁'.exact_toComposableArrows
+        (ComposableArrows.exact_of_δ₀
+          e₁₂'.exact_toComposableArrows e₂₃'.exact_toComposableArrows)
+    let α : R ⟶ R' := ComposableArrows.homMk
+      (fun i => match i with
+        | ⟨0, _⟩ => (F.shift (n - 1)).map φ.hom₃
+        | ⟨1, _⟩ => (F.shift (n - 1 + 1)).map φ.hom₁
+        | ⟨2, _⟩ => (F.shift (n - 1 + 1)).map φ.hom₂
+        | ⟨3, _⟩ => (F.shift (n - 1 + 1)).map φ.hom₃
+        | ⟨4, _⟩ => (F.shift (n - 1 + 1 + 1)).map φ.hom₁)
+      (by
+        intro i hi
+        have hi' : i = 0 ∨ i = 1 ∨ i = 2 ∨ i = 3 := by omega
+        rcases hi' with rfl | rfl | rfl | rfl
+        · change F.homologySequenceδ T (n - 1) (n - 1 + 1) (by rfl) ≫
+              (F.shift (n - 1 + 1)).map φ.hom₁ =
+            (F.shift (n - 1)).map φ.hom₃ ≫
+              F.homologySequenceδ T' (n - 1) (n - 1 + 1) (by rfl)
+          simpa only using
+            (F.homologySequenceδ_naturality T T' φ (n - 1) (n - 1 + 1) (by rfl)).symm
+        · change (F.shift (n - 1 + 1)).map T.mor₁ ≫
+              (F.shift (n - 1 + 1)).map φ.hom₂ =
+            (F.shift (n - 1 + 1)).map φ.hom₁ ≫
+              (F.shift (n - 1 + 1)).map T'.mor₁
+          simpa only [Functor.map_comp] using
+            congrArg ((F.shift (n - 1 + 1)).map) φ.comm₁
+        · change (F.shift (n - 1 + 1)).map T.mor₂ ≫
+              (F.shift (n - 1 + 1)).map φ.hom₃ =
+            (F.shift (n - 1 + 1)).map φ.hom₂ ≫
+              (F.shift (n - 1 + 1)).map T'.mor₂
+          simpa only [Functor.map_comp] using
+            congrArg ((F.shift (n - 1 + 1)).map) φ.comm₂
+        · change F.homologySequenceδ T (n - 1 + 1) (n - 1 + 1 + 1) (by rfl) ≫
+              (F.shift (n - 1 + 1 + 1)).map φ.hom₁ =
+            (F.shift (n - 1 + 1)).map φ.hom₃ ≫
+              F.homologySequenceδ T' (n - 1 + 1) (n - 1 + 1 + 1) (by rfl)
+          simpa only using
+            (F.homologySequenceδ_naturality T T' φ (n - 1 + 1)
+              (n - 1 + 1 + 1) (by rfl)).symm)
+    have hfive := CategoryTheory.Abelian.isIso_of_epi_of_isIso_of_isIso_of_mono hR hR' α
+      (by change Epi ((F.shift (n - 1)).map φ.hom₃); infer_instance)
+      (by change IsIso ((F.shift (n - 1 + 1)).map φ.hom₁); infer_instance)
+      (by change IsIso ((F.shift (n - 1 + 1)).map φ.hom₃); infer_instance)
+      (by change Mono ((F.shift (n - 1 + 1 + 1)).map φ.hom₁); infer_instance)
+    dsimp [α] at hfive
+    change IsIso ((F.shift (n - 1 + 1)).map φ.hom₂) at hfive
+    have hn : n - 1 + 1 = n := by omega
+    rw [hn] at hfive
+    exact hfive
+  have hraw : ∀ W : C,
+      IsIso ((preadditiveCoyoneda.obj (Opposite.op W)).map φ.hom₂) := by
+    intro W
+    let F := preadditiveCoyoneda.obj (Opposite.op W)
+    change IsIso (F.map φ.hom₂)
+    have h₀ := hshift W 0
+    let _ : IsIso ((F.shift (0 : ℤ)).map φ.hom₂) := h₀
+    let e := F.isoShiftZero ℤ
+    have h : F.map φ.hom₂ = e.inv.app T.obj₂ ≫
+        (F.shift (0 : ℤ)).map φ.hom₂ ≫ e.hom.app T'.obj₂ := by
+      calc
+        F.map φ.hom₂ = (𝟙 _ : F.obj T.obj₂ ⟶ F.obj T.obj₂) ≫ F.map φ.hom₂ := by simp
+        _ = (e.inv.app T.obj₂ ≫ e.hom.app T.obj₂) ≫ F.map φ.hom₂ := by simp
+        _ = e.inv.app T.obj₂ ≫ (e.hom.app T.obj₂ ≫ F.map φ.hom₂) := by simp [Category.assoc]
+        _ = e.inv.app T.obj₂ ≫
+            ((F.shift (0 : ℤ)).map φ.hom₂ ≫ e.hom.app T'.obj₂) := by
+              rw [e.hom.naturality]
+        _ = e.inv.app T.obj₂ ≫
+            (F.shift (0 : ℤ)).map φ.hom₂ ≫ e.hom.app T'.obj₂ := by simp [Category.assoc]
+    rw [h]
+    infer_instance
+  exact isIso_of_yoneda_map_bijective φ.hom₂ (by
+    intro W
+    let F := preadditiveCoyoneda.obj (Opposite.op W)
+    let _ : IsIso (F.map φ.hom₂) := hraw W
+    change Function.Bijective (fun x : W ⟶ T.obj₂ => x ≫ φ.hom₂)
+    have hb := ConcreteCategory.bijective_of_isIso (f := F.map φ.hom₂)
+    change Function.Bijective (fun x : W ⟶ T.obj₂ => x ≫ φ.hom₂) at hb
+    exact hb)
 
 /-- The first component of a special-triangle morphism is an isomorphism when
 the second and third components are. -/
@@ -152,14 +359,130 @@ theorem special_triangle_isIso₁
     {T T' : Triangle C} (hT : SpecialTriangle T)
     (hT' : SpecialTriangle T') (φ : T ⟶ T')
     (h₂ : IsIso φ.hom₂) (h₃ : IsIso φ.hom₃) : IsIso φ.hom₁ := by
-  sorry
+  dsimp [SpecialTriangle, RepresentableLongExact] at hT hT'
+  have hshift : ∀ (W : C) (n : ℤ),
+      IsIso (((preadditiveCoyoneda.obj (Opposite.op W)).shift n).map φ.hom₁) := by
+    intro W n
+    let F := preadditiveCoyoneda.obj (Opposite.op W)
+    obtain ⟨_, h₂₃prev, h₃₁prev, _, e₂₃prev, e₃₁prev⟩ := hT W (n - 1)
+    obtain ⟨h₁₂, h₂₃, _, e₁₂, e₂₃, _⟩ := hT W (n - 1 + 1)
+    obtain ⟨_, h₂₃prev', h₃₁prev', _, e₂₃prev', e₃₁prev'⟩ := hT' W (n - 1)
+    obtain ⟨h₁₂', h₂₃', _, e₁₂', e₂₃', _⟩ := hT' W (n - 1 + 1)
+    let R : ComposableArrows AddCommGrpCat 4 :=
+      ComposableArrows.mk₄
+        ((F.shift (n - 1)).map T.mor₂)
+        (F.homologySequenceδ T (n - 1) (n - 1 + 1) (by rfl))
+        ((F.shift (n - 1 + 1)).map T.mor₁)
+        ((F.shift (n - 1 + 1)).map T.mor₂)
+    let R' : ComposableArrows AddCommGrpCat 4 :=
+      ComposableArrows.mk₄
+        ((F.shift (n - 1)).map T'.mor₂)
+        (F.homologySequenceδ T' (n - 1) (n - 1 + 1) (by rfl))
+        ((F.shift (n - 1 + 1)).map T'.mor₁)
+        ((F.shift (n - 1 + 1)).map T'.mor₂)
+    have hR : R.Exact := by
+      dsimp [R]
+      exact ComposableArrows.exact_of_δ₀
+        e₂₃prev.exact_toComposableArrows
+        (ComposableArrows.exact_of_δ₀
+          e₃₁prev.exact_toComposableArrows e₁₂.exact_toComposableArrows)
+    have hR' : R'.Exact := by
+      dsimp [R']
+      exact ComposableArrows.exact_of_δ₀
+        e₂₃prev'.exact_toComposableArrows
+        (ComposableArrows.exact_of_δ₀
+          e₃₁prev'.exact_toComposableArrows e₁₂'.exact_toComposableArrows)
+    let α : R ⟶ R' := ComposableArrows.homMk
+      (fun i => match i with
+        | ⟨0, _⟩ => (F.shift (n - 1)).map φ.hom₂
+        | ⟨1, _⟩ => (F.shift (n - 1)).map φ.hom₃
+        | ⟨2, _⟩ => (F.shift (n - 1 + 1)).map φ.hom₁
+        | ⟨3, _⟩ => (F.shift (n - 1 + 1)).map φ.hom₂
+        | ⟨4, _⟩ => (F.shift (n - 1 + 1)).map φ.hom₃)
+      (by
+        intro i hi
+        have hi' : i = 0 ∨ i = 1 ∨ i = 2 ∨ i = 3 := by omega
+        rcases hi' with rfl | rfl | rfl | rfl
+        · change (F.shift (n - 1)).map T.mor₂ ≫
+              (F.shift (n - 1)).map φ.hom₃ =
+            (F.shift (n - 1)).map φ.hom₂ ≫
+              (F.shift (n - 1)).map T'.mor₂
+          simpa only [Functor.map_comp] using
+            congrArg ((F.shift (n - 1)).map) φ.comm₂
+        · change F.homologySequenceδ T (n - 1) (n - 1 + 1) (by rfl) ≫
+              (F.shift (n - 1 + 1)).map φ.hom₁ =
+            (F.shift (n - 1)).map φ.hom₃ ≫
+              F.homologySequenceδ T' (n - 1) (n - 1 + 1) (by rfl)
+          simpa only using
+            (F.homologySequenceδ_naturality T T' φ (n - 1)
+              (n - 1 + 1) (by rfl)).symm
+        · change (F.shift (n - 1 + 1)).map T.mor₁ ≫
+              (F.shift (n - 1 + 1)).map φ.hom₂ =
+            (F.shift (n - 1 + 1)).map φ.hom₁ ≫
+              (F.shift (n - 1 + 1)).map T'.mor₁
+          simpa only [Functor.map_comp] using
+            congrArg ((F.shift (n - 1 + 1)).map) φ.comm₁
+        · change (F.shift (n - 1 + 1)).map T.mor₂ ≫
+              (F.shift (n - 1 + 1)).map φ.hom₃ =
+            (F.shift (n - 1 + 1)).map φ.hom₂ ≫
+              (F.shift (n - 1 + 1)).map T'.mor₂
+          simpa only [Functor.map_comp] using
+            congrArg ((F.shift (n - 1 + 1)).map) φ.comm₂)
+    have hfive := CategoryTheory.Abelian.isIso_of_epi_of_isIso_of_isIso_of_mono hR hR' α
+      (by change Epi ((F.shift (n - 1)).map φ.hom₂); infer_instance)
+      (by change IsIso ((F.shift (n - 1)).map φ.hom₃); infer_instance)
+      (by change IsIso ((F.shift (n - 1 + 1)).map φ.hom₂); infer_instance)
+      (by change Mono ((F.shift (n - 1 + 1)).map φ.hom₃); infer_instance)
+    dsimp [α] at hfive
+    change IsIso ((F.shift (n - 1 + 1)).map φ.hom₁) at hfive
+    have hn : n - 1 + 1 = n := by omega
+    rw [hn] at hfive
+    exact hfive
+  have hraw : ∀ W : C,
+      IsIso ((preadditiveCoyoneda.obj (Opposite.op W)).map φ.hom₁) := by
+    intro W
+    let F := preadditiveCoyoneda.obj (Opposite.op W)
+    change IsIso (F.map φ.hom₁)
+    have h₀ := hshift W 0
+    let _ : IsIso ((F.shift (0 : ℤ)).map φ.hom₁) := h₀
+    let e := F.isoShiftZero ℤ
+    have h : F.map φ.hom₁ = e.inv.app T.obj₁ ≫
+        (F.shift (0 : ℤ)).map φ.hom₁ ≫ e.hom.app T'.obj₁ := by
+      calc
+        F.map φ.hom₁ = (𝟙 _ : F.obj T.obj₁ ⟶ F.obj T.obj₁) ≫ F.map φ.hom₁ := by simp
+        _ = (e.inv.app T.obj₁ ≫ e.hom.app T.obj₁) ≫ F.map φ.hom₁ := by simp
+        _ = e.inv.app T.obj₁ ≫ (e.hom.app T.obj₁ ≫ F.map φ.hom₁) := by simp [Category.assoc]
+        _ = e.inv.app T.obj₁ ≫
+            ((F.shift (0 : ℤ)).map φ.hom₁ ≫ e.hom.app T'.obj₁) := by
+              rw [e.hom.naturality]
+        _ = e.inv.app T.obj₁ ≫
+            (F.shift (0 : ℤ)).map φ.hom₁ ≫ e.hom.app T'.obj₁ := by simp [Category.assoc]
+    rw [h]
+    infer_instance
+  exact isIso_of_yoneda_map_bijective φ.hom₁ (by
+    intro W
+    let F := preadditiveCoyoneda.obj (Opposite.op W)
+    let _ : IsIso (F.map φ.hom₁) := hraw W
+    change Function.Bijective (fun x : W ⟶ T.obj₁ => x ≫ φ.hom₁)
+    have hb := ConcreteCategory.bijective_of_isIso (f := F.map φ.hom₁)
+    change Function.Bijective (fun x : W ⟶ T.obj₁ => x ≫ φ.hom₁) at hb
+    exact hb)
 
 /-- The dual two-out-of-three statement for co-special triangles. -/
 theorem coSpecial_triangle_two_out_of_three
     {T T' : Triangle C} (hT : CoSpecialTriangle T)
     (hT' : CoSpecialTriangle T') (φ : T ⟶ T')
     (h₁ : IsIso φ.hom₁) (h₂ : IsIso φ.hom₂) : IsIso φ.hom₃ := by
-  sorry
+  dsimp [CoSpecialTriangle] at hT hT'
+  have hψ :=
+    special_triangle_isIso₁ (C := Cᵒᵖ)
+      (T := (triangleOpEquivalence C).functor.obj (Opposite.op T'))
+      (T' := (triangleOpEquivalence C).functor.obj (Opposite.op T))
+      hT' hT ((triangleOpEquivalence C).functor.map (Opposite.op φ))
+      (by change IsIso φ.hom₂.op; infer_instance)
+      (by change IsIso φ.hom₁.op; infer_instance)
+  change IsIso φ.hom₃.op at hψ
+  exact isIso_op_iff.mp hψ
 
 /-- The middle component of a co-special-triangle morphism is an isomorphism
 when the first and third components are. -/

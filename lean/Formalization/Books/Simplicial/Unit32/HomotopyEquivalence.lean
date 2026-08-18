@@ -92,7 +92,7 @@ theorem homotopy_lemma {V U : SSet.{u}} (f₀ f₁ : V ⟶ U) (n : ℕ)
 /-! ## The `cosk₋₁` Čech nerve -/
 
 /-- The wide pullbacks needed for the Čech nerve of a map of types. -/
-def hasCechNerveOfFunction {A B : Type u} (f : A → B) :
+theorem hasCechNerveOfFunction {A B : Type u} (f : A → B) :
     Unit20.HasCechNerve (C := Type u) (TypeCat.ofHom f) := by
   intro n
   infer_instance

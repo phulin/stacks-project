@@ -190,8 +190,9 @@ theorem cumulativeHilbertFunction_eq_sum
         intro x hx
         exact hIP ((Submodule.mem_smul_top_iff _ P x).mp hx)
       · exact bot_le
-    exact finiteLength_of_maximalIdeal_pow_smul_top_eq_bot
-      ⟨1, by simpa only [pow_one] using hkill⟩
+    refine finiteLength_of_maximalIdeal_pow_smul_top_eq_bot ⟨1, ?_⟩
+    rw [pow_one]
+    exact hkill
   have hcum_fin (k : ℕ) :
       IsFiniteLength R
         (idealPowerCumulativeQuotient (IsLocalRing.maximalIdeal R) M k) := by
@@ -327,8 +328,9 @@ theorem idealPowerPiece_isFiniteLength
       intro x hx
       exact hIP ((Submodule.mem_smul_top_iff I P x).mp hx)
     · exact bot_le
-  exact finiteLength_of_pow_smul_top_eq_bot_of_isIdealOfDefinition I hI
-    ⟨1, by simpa only [pow_one] using hkill⟩
+  refine finiteLength_of_pow_smul_top_eq_bot_of_isIdealOfDefinition I hI ⟨1, ?_⟩
+  rw [pow_one]
+  exact hkill
 /-
   let P : Submodule R M := I ^ n • (⊤ : Submodule R M)
   let Q : Submodule R M := I ^ (n + 1) • (⊤ : Submodule R M)

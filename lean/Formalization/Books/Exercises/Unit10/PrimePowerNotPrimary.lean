@@ -114,10 +114,10 @@ private theorem square_example_x_kernel (k : Type u) [Field k] :
         (squareExampleRing k)) := by
   have hx2 : squareExampleX k ^ 2 = 0 := by
     apply Ideal.Quotient.eq_zero_iff_mem.mpr
-    exact Ideal.subset_span (by simp [squareExampleRelationIdeal])
+    exact Ideal.subset_span (by simp)
   have hxy : squareExampleX k * squareExampleY k = 0 := by
     apply Ideal.Quotient.eq_zero_iff_mem.mpr
-    exact Ideal.subset_span (by simp [squareExampleRelationIdeal])
+    exact Ideal.subset_span (by simp)
   have hx_mul : squareExampleX k * squareExampleX k = 0 := by
     simpa [pow_two] using hx2
   ext r
@@ -156,7 +156,7 @@ private theorem square_example_x_kernel (k : Type u) [Field k] :
       Set (squareExampleRing k)) at hr
     rcases Ideal.mem_span_pair.mp hr with ⟨a, b, hab⟩
     rw [← hab, mul_add]
-    simp [mul_assoc, mul_comm, mul_left_comm, hx_mul, hxy]
+    simp [mul_left_comm, hx_mul, hxy]
 
 private theorem square_example_y_kernel (k : Type u) [Field k] :
     LinearMap.ker (LinearMap.lsmul (squareExampleRing k) (squareExampleRing k)
@@ -165,7 +165,7 @@ private theorem square_example_y_kernel (k : Type u) [Field k] :
         (squareExampleRing k)) := by
   have hxy : squareExampleX k * squareExampleY k = 0 := by
     apply Ideal.Quotient.eq_zero_iff_mem.mpr
-    exact Ideal.subset_span (by simp [squareExampleRelationIdeal])
+    exact Ideal.subset_span (by simp)
   have hyx : squareExampleY k * squareExampleX k = 0 := by
     simpa [mul_comm] using hxy
   have hprime : (Ideal.span ({squareExampleXPolynomial k} :
@@ -279,25 +279,25 @@ theorem square_example_associated_primes (k : Type u) [Field k] :
         exact hJ ▸
           ((Polynomial.quotientSpanCXSubCAlgEquiv
             (MvPolynomial.X (0 : Fin 1)) 0).restrictScalars k)
-      letI : IsDomain (MvPolynomial (Fin 1) k ⧸ Ideal.span
+      let hCdomain : IsDomain (MvPolynomial (Fin 1) k ⧸ Ideal.span
           ({MvPolynomial.X (0 : Fin 1)} : Set (MvPolynomial (Fin 1) k))) :=
         (Ideal.Quotient.isDomain_iff_prime _).mpr
           (Ideal.isPrime_span_singleton_of_prime
             (MvPolynomial.X_prime : Prime (MvPolynomial.X (0 : Fin 1))))
       have hKprime : K.IsPrime := by
-        letI : IsDomain (Polynomial (MvPolynomial (Fin 1) k) ⧸ K) :=
+        let hKdomain : IsDomain (Polynomial (MvPolynomial (Fin 1) k) ⧸ K) :=
           ep.toRingEquiv.toMulEquiv.isDomain _
-        exact (Ideal.Quotient.isDomain_iff_prime K).mp inferInstance
-      letI : IsDomain (squareExamplePolynomialRing k ⧸ P) :=
+        exact (Ideal.Quotient.isDomain_iff_prime K).mp hKdomain
+      let hPdomain : IsDomain (squareExamplePolynomialRing k ⧸ P) :=
         ((Ideal.quotientEquivAlg P K e hmap.symm).trans ep).toRingEquiv.toMulEquiv.isDomain _
-      exact (Ideal.Quotient.isDomain_iff_prime P).mp inferInstance
+      exact (Ideal.Quotient.isDomain_iff_prime P).mp hPdomain
     have hIP : squareExampleRelationIdeal k ≤ P := by
       rw [squareExampleRelationIdeal, Ideal.span_le]
       intro f hf
       simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at hf
       rcases hf with rfl | rfl
-      · exact P.mul_mem_left _ (Ideal.subset_span (by simp [P]))
-      · exact P.mul_mem_right _ (Ideal.subset_span (by simp [P]))
+      · exact P.mul_mem_left _ (Ideal.subset_span (by simp))
+      · exact P.mul_mem_right _ (Ideal.subset_span (by simp))
     have hmap : Ideal.map (Ideal.Quotient.mk (squareExampleRelationIdeal k)) P =
         squareExampleExtraPrimeIdeal k := by
       simp only [P, squareExampleExtraPrimeIdeal, Ideal.map_span]
@@ -307,9 +307,9 @@ theorem square_example_associated_primes (k : Type u) [Field k] :
       constructor
       · rintro ⟨x, (rfl | rfl), rfl⟩
         · left
-          simpa [squareExampleX, squareExampleXPolynomial]
+          simp [squareExampleX, squareExampleXPolynomial]
         · right
-          simpa [squareExampleY, squareExampleYPolynomial]
+          simp [squareExampleY, squareExampleYPolynomial]
       · intro hz
         rcases hz with rfl | rfl
         · exact ⟨_, Or.inl rfl, rfl⟩

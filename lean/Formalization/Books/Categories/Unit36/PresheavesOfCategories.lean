@@ -1022,9 +1022,9 @@ theorem isFibredEquivalenceOver_trans
     rw [hGmap]
     change 𝟙 ((G ⋙ p).obj (K.obj (H.obj (F.obj x)))) ≫ _ = _
     simp only [Category.id_comp]
-    simp only [Category.comp_id, Category.assoc]
+    simp only [Category.assoc]
     rw [overHKv, overFGv]
-    simp only [Category.id_comp, Category.comp_id, Category.assoc, eqToHom_trans]
+    simp only [eqToHom_trans]
   · have overB : (B ⋙ A) ⋙ r = (𝟭 U) ⋙ r := by
       calc
         (B ⋙ A) ⋙ r = B ⋙ (A ⋙ r) := Functor.assoc B A r
@@ -1051,9 +1051,9 @@ theorem isFibredEquivalenceOver_trans
     rw [hHmap]
     change 𝟙 ((H ⋙ r).obj (F.obj (G.obj (K.obj x)))) ≫ _ = _
     simp only [Category.id_comp]
-    simp only [Category.comp_id, Category.assoc]
+    simp only [Category.assoc]
     rw [overGFv, overKHv]
-    simp only [Category.id_comp, Category.comp_id, Category.assoc, eqToHom_trans]
+    simp only [eqToHom_trans]
 
 /-- The source's comparison data for the strictification construction.  The
 first fields are the natural functor `\mathcal S \to \mathcal S'`, its

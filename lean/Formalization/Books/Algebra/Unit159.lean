@@ -1,9 +1,11 @@
 import Formalization.Books.Algebra.Unit127.ColimitsAndFinitePresentation
 import Mathlib.FieldTheory.Separable
 import Mathlib.RingTheory.Algebraic.Defs
+import Mathlib.RingTheory.Etale.Basic
 import Mathlib.RingTheory.Flat.Basic
 import Mathlib.RingTheory.LocalRing.ResidueField.Basic
 import Mathlib.RingTheory.LocalRing.RingHom.Basic
+import Mathlib.RingTheory.RingHom.Finite
 import Mathlib.RingTheory.RingHom.Etale
 import Mathlib.SetTheory.Cardinal.Arithmetic
 
@@ -12,8 +14,7 @@ import Mathlib.SetTheory.Cardinal.Arithmetic
 
 This file records the four construction lemmas in the chapter.  The
 ring-theoretic predicates use Mathlib's flatness, local-homomorphism,
-finite-module, formally-étale, residue-field, directed-colimit, and cardinal
-interfaces.
+finite-étale, residue-field, directed-colimit, and cardinal interfaces.
 -/
 
 namespace Formalization.Books.Algebra.Unit159
@@ -61,20 +62,14 @@ theorem exists_flat_local_residueField_extension
 
 /-! ## Finite étale local systems -/
 
-/-- The standard finite-étale condition on a commutative ring map, expressed
-as finite as a module together with formal étaleness. -/
-def FiniteEtaleRingHom
-    {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S) : Prop :=
-  letI : Algebra R S := f.toAlgebra
-  Module.Finite R S ∧ Algebra.FormallyEtale R S
-
 /-- A directed system of finite étale local `R`-algebras, together with a
 local colimit and its prescribed residue field.  `presentation` is the
 canonical directed-colimit presentation; the remaining fields record the
 locality and finite-étale conditions on its stages and the residue-field
 identification. -/
 structure FiniteEtaleLocalAlgebraColimit
-    {R A K : Type u} [CommRing R] [IsLocalRing R] [CommRing A] [Field K]
+    {R A K : Type u}
+    [CommRing R] [IsLocalRing R] [CommRing A] [Field K]
     (f : R →+* A)
     [Algebra (IsLocalRing.ResidueField R) K] where
   presentation : Formalization.Books.Algebra.Unit127.DirectedAlgebraColimit f
@@ -90,7 +85,8 @@ structure FiniteEtaleLocalAlgebraColimit
       IsLocalHom (presentation.diagram.obj i).hom.hom
   stagesFiniteEtale :
     ∀ i, letI : Preorder presentation.index := presentation.indexPreorder
-      FiniteEtaleRingHom (presentation.diagram.obj i).hom.hom
+      RingHom.Finite (presentation.diagram.obj i).hom.hom ∧
+        RingHom.Etale (presentation.diagram.obj i).hom.hom
   transitionLocal :
     ∀ {i j},
       letI : Preorder presentation.index := presentation.indexPreorder

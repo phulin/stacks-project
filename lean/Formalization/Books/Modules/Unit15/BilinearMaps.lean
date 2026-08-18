@@ -1039,6 +1039,7 @@ private noncomputable def sheafRingHomMul {X : TopCat.{v}}
               (show (O.obj.obj U : Type v) from b.hom.app U s)) := by
           rw [map_mul] }
 
+@[instance_reducible]
 private noncomputable def sheafHomAddCommGroup {X : TopCat.{v}}
     {O : RingSheaf.{v, v} X} {F : Mod O} (S : TopCat.Sheaf (Type v) X) :
     AddCommGroup (S ⟶ moduleSetSheaf F) := by
@@ -1115,6 +1116,7 @@ private noncomputable def sheafHomAddCommGroup {X : TopCat.{v}}
           (show (F.val.obj U : Type v) from a.hom.app U s)
     exact add_comm _ _ }
 
+@[instance_reducible]
 private noncomputable def sheafRingHomAddCommGroup {X : TopCat.{v}}
     {O : RingSheaf.{v, v} X} (S : TopCat.Sheaf (Type v) X) :
     AddCommGroup (S ⟶ ringSetSheaf O) := by
@@ -1191,6 +1193,7 @@ private noncomputable def sheafRingHomAddCommGroup {X : TopCat.{v}}
             (show (O.obj.obj U : Type v) from a.hom.app U s)
       exact add_comm _ _ }
 
+@[instance_reducible]
 private noncomputable def sheafRingHomRing {X : TopCat.{v}}
     {O : RingSheaf.{v, v} X} (S : TopCat.Sheaf (Type v) X) :
     Ring (S ⟶ ringSetSheaf O) := by
@@ -1312,6 +1315,7 @@ private noncomputable def sheafRingHomRing {X : TopCat.{v}}
             (show (O.obj.obj U : Type v) from c.hom.app U s)
       exact right_distrib _ _ _ }
 
+@[instance_reducible]
 private noncomputable def sheafHomModule {X : TopCat.{v}}
     {O : RingSheaf.{v, v} X} {F : Mod O} (S : TopCat.Sheaf (Type v) X) :
     (letI : Ring (S ⟶ ringSetSheaf O) := sheafRingHomRing S;
@@ -1589,15 +1593,15 @@ theorem isSectionwiseBilinear_iff_isHomCharacterization
       ⟨(Opens.grothendieckTopology X).sheafify (CategoryTheory.yoneda.obj U),
         (Opens.grothendieckTopology X).sheafify_isSheaf
           (CategoryTheory.yoneda.obj U)⟩
-    letI : Ring (S ⟶ ringSetSheaf O) := sheafRingHomRing S
-    letI : AddCommGroup (S ⟶ moduleSetSheaf F) := sheafHomAddCommGroup S
-    letI : AddCommGroup (S ⟶ moduleSetSheaf G) := sheafHomAddCommGroup S
-    letI : AddCommGroup (S ⟶ moduleSetSheaf H) := sheafHomAddCommGroup S
-    letI : Module (S ⟶ ringSetSheaf O) (S ⟶ moduleSetSheaf F) :=
+    let : Ring (S ⟶ ringSetSheaf O) := sheafRingHomRing S
+    let : AddCommGroup (S ⟶ moduleSetSheaf F) := sheafHomAddCommGroup S
+    let : AddCommGroup (S ⟶ moduleSetSheaf G) := sheafHomAddCommGroup S
+    let : AddCommGroup (S ⟶ moduleSetSheaf H) := sheafHomAddCommGroup S
+    let : Module (S ⟶ ringSetSheaf O) (S ⟶ moduleSetSheaf F) :=
       sheafHomModule S
-    letI : Module (S ⟶ ringSetSheaf O) (S ⟶ moduleSetSheaf G) :=
+    let : Module (S ⟶ ringSetSheaf O) (S ⟶ moduleSetSheaf G) :=
       sheafHomModule S
-    letI : Module (S ⟶ ringSetSheaf O) (S ⟶ moduleSetSheaf H) :=
+    let : Module (S ⟶ ringSetSheaf O) (S ⟶ moduleSetSheaf H) :=
       sheafHomModule S
     have hp : IsPointwiseBilinearOperations (O := O) (F := F) (G := G)
         (H := H) S := by

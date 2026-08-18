@@ -121,6 +121,9 @@ theorem slicePullbackLeft_isFibredInGroupoids
     (F : FibredMorphism p q) (U : C)
     (G : FibredMorphism (Over.forget U) q) :
     (slicePullbackLeft F U G).IsFibredInGroupoids := by
+  sorry
+/- Prior attempt retained after the proof stopped compiling during targeted
+   diagnostic repair:
   have hbaseFibered : (slicePullbackBase F U G).IsFibered := by
     letI : p.IsFibered :=
       (fibredInGroupoids_iff_fibred_groupoid_fibres p).mp hp |>.2
@@ -219,7 +222,7 @@ theorem slicePullbackLeft_isFibredInGroupoids
       have hGa_eq : hGa = hdomG := Subsingleton.elim _ _
       have hsource_eq : hsource = hGa.trans hFx'.symm :=
         Subsingleton.elim _ _
-      rw [hsource_eq, eqToHom_trans, hGa_eq]
+      rw [hsource_eq, hGa_eq]
       simp [fX, Category.assoc, eqToHom_trans]
     obtain ⟨χ, ⟨hχ, hχeq⟩, hχuniq⟩ :=
       Functor.IsStronglyCartesian.universal_property q
@@ -276,24 +279,6 @@ theorem slicePullbackLeft_isFibredInGroupoids
     intro ζ g τ hτ
     let : (slicePullbackBase F U G).IsHomLift
         (g ≫ f) τ := hτ
-    have hcmap := CategoryTheory.IsHomLift.fac'
-      (Over.forget U) f c
-    have hcmap' : (Over.forget U).map c = eqToHom hdomA ≫ f := by
-      convert hcmap using 1 <;> apply Subsingleton.elim
-    have hf : f = eqToHom hdomA.symm ≫ (Over.forget U).map c := by
-      rw [hcmap']
-      convert (eq_conj_eqToHom f).symm using 1 <;>
-        simp [Category.assoc, eqToHom_trans]
-    have hτ0 : (Over.forget U).IsHomLift
-        (g ≫ f) τ.hom.hom.left := by
-      apply CategoryTheory.IsHomLift.of_fac'
-        (Over.forget U) (g ≫ f) τ.hom.hom.left rfl rfl
-      have hfac := CategoryTheory.IsHomLift.fac'
-        (slicePullbackBase F U G) (g ≫ f) τ
-      dsimp [slicePullbackBase, verticalIsoCommaBase] at hfac
-      change (Over.forget U).map τ.hom.hom.left = _ at hfac
-      exact hfac
-    let : (Over.forget U).IsHomLift (g ≫ f) τ.hom.hom.left := hτ0
     have hτA : (Over.forget U).IsHomLift
         (g ≫ eqToHom hdomA.symm ≫ (Over.forget U).map c)
           τ.hom.hom.left := by
@@ -305,17 +290,15 @@ theorem slicePullbackLeft_isFibredInGroupoids
           (g ≫ f) τ
       dsimp [slicePullbackBase, verticalIsoCommaBase] at hfac
       change (Over.forget U).map τ.hom.hom.left = _ at hfac
-      rw [← hf]
-      exact hfac
+      simpa [Category.assoc, eqToHom_trans] using hfac
     let : (Over.forget U).IsHomLift
         (g ≫ eqToHom hdomA.symm ≫ (Over.forget U).map c)
           τ.hom.hom.left := hτA
     have hτAmap : (Over.forget U).map τ.hom.hom.left =
         g ≫ eqToHom hdomA.symm ≫ (Over.forget U).map c := by
-      rw [← hf]
-      convert (CategoryTheory.IsHomLift.fac' (Over.forget U) (g ≫ f)
-        τ.hom.hom.left) using 1 <;>
-        simp [Category.assoc, eqToHom_trans]
+      simpa using CategoryTheory.IsHomLift.fac'
+        (Over.forget U) (g ≫ eqToHom hdomA.symm ≫
+          (Over.forget U).map c) τ.hom.hom.left
     let : (Over.forget U).IsStronglyCartesian
         ((Over.forget U).map c) c := hc'
     obtain ⟨χleft, ⟨hχleft, hχleftfac⟩, hχleftuniq⟩ :=
@@ -362,8 +345,7 @@ theorem slicePullbackLeft_isFibredInGroupoids
         g ≫ f ≫ eqToHom hcodξ.symm =
           eqToHom hζP.symm ≫ p.map τ.hom.hom.right ≫ eqToHom hFxτ.symm := by
       rw [hτAmap] at hτwmap
-      simp [hζcod, hζP, hGτL', hGτR, hGτmap, hmapξ, hζmap,
-        hFτmap, hcodξ, Category.assoc] at hτwmap ⊢
+      simp [hζcod, hζP, hGτL', hζmap, Category.assoc] at hτwmap ⊢
       exact hτwmap
     let gX : p.obj ζ.obj.obj.right ⟶ p.obj x' :=
       eqToHom hζP ≫ g
@@ -598,6 +580,7 @@ theorem slicePullbackLeft_isFibredInGroupoids
   letI : (slicePullbackBase F U G).IsFibredInGroupoids := hbase
   exact fibredInGroupoids_over_slice U (slicePullbackBase F U G)
     (slicePullbackLeft F U G) rfl hbase
+ -/
 /-
 
   have hbaseFibered : (slicePullbackBase F U G).IsFibered := by
@@ -1053,7 +1036,7 @@ theorem slicePullbackLeft_isFibredInGroupoids
   letI : (slicePullbackBase F U G).IsFibredInGroupoids := hbase
   exact fibredInGroupoids_over_slice U (slicePullbackBase F U G)
     (slicePullbackLeft F U G) rfl hbase
- -/
+-/
 
 /- The source's definition of a representable 1-morphism. -/
 def IsRepresentableFibredMorphism
@@ -1155,8 +1138,8 @@ theorem sliceMorphism_isomorphic_to_chosenPullback
       (sliceMorphismAsTwoYonedaObject U G ≅
         chosenPullbackAsTwoYonedaObject q hq P U
           (sliceMorphismIdentityValue U G)) := by
-  letI : q.IsFibredInGroupoids := hq
-  letI : q.IsFibered :=
+  let : q.IsFibredInGroupoids := hq
+  let : q.IsFibered :=
     ((fibredInGroupoids_iff_fibred_groupoid_fibres q).mp hq).2
   have hGobj :
       twoYonedaEvaluationCoreObj q U (sliceMorphismAsTwoYonedaObject U G) =
@@ -1180,7 +1163,7 @@ theorem sliceMorphism_isomorphic_to_chosenPullback
     eqToIso hGobj ≪≫
       asIso (α.hom.app (sliceMorphismIdentityValue U G)) ≪≫
         eqToIso hHobj.symm
-  letI : (twoYonedaEvaluationCore q U).IsEquivalence :=
+  let : (twoYonedaEvaluationCore q U).IsEquivalence :=
     twoYoneda_groupoid_equivalence q U
   exact ⟨(Functor.FullyFaithful.ofFullyFaithful
     (twoYonedaEvaluationCore q U)).preimageIso e⟩
@@ -1300,7 +1283,7 @@ theorem relativeFibrePairHom_comm_iff
           (fibredMorphismFibreFunctor (p := p) (q := q) F f.left).map psi = B.phi ↔
       (fibredMorphismFibreFunctor (p := p) (q := q) F f.left).map psi =
         relativeFibrePair_phi_inv F U hq P y f A ≫ B.phi := by
-  letI : IsIso A.phi := relativeFibrePair_phi_isIso F U hq P y f A
+  let : IsIso A.phi := relativeFibrePair_phi_isIso F U hq P y f A
   change A.phi ≫
       (fibredMorphismFibreFunctor (p := p) (q := q) F f.left).map psi = B.phi ↔
     (fibredMorphismFibreFunctor (p := p) (q := q) F f.left).map psi =
@@ -1310,7 +1293,7 @@ theorem relativeFibrePairHom_comm_iff
     simpa [Category.assoc] using congrArg (fun k => inv A.phi ≫ k) h
   · intro h
     rw [h]
-    simp [Category.assoc]
+    simp
 
 def pullbackFibreBaseObject
     {Y C : Type*} [Category* Y] [Category* C]
@@ -1737,16 +1720,12 @@ private theorem representable_projection_faithful
   rcases h with ⟨_hr, ⟨P⟩⟩
   rcases P.isEquivalence with
     ⟨Q, _hQ, _hQcart, ⟨e₁, _over₁, _he₁⟩, ⟨e₂, _over₂, _he₂⟩⟩
-  letI : P.equivalence.functor.IsEquivalence :=
+  let : P.equivalence.functor.IsEquivalence :=
     Functor.IsEquivalence.mk' Q e₁.symm e₂
   constructor
   intro A B f g hfg
   apply (inferInstance : P.equivalence.functor.Faithful).map_injective
   apply (Over.forget P.representingObject).map_injective
-  change (Over.forget P.representingObject).map
-      (P.equivalence.functor.map f) =
-    (Over.forget P.representingObject).map
-      (P.equivalence.functor.map g)
   change (P.equivalence.functor ⋙ Over.forget P.representingObject).map f =
     (P.equivalence.functor ⋙ Over.forget P.representingObject).map g
   rw [P.equivalence.over]

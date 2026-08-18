@@ -332,12 +332,12 @@ behind the existential presentation of `IsStalkwiseBilinear`. -/
 theorem exists_stalkPairing {X : TopCat.{v}}
     {O : RingSheaf.{v, v} X} (F G : Mod O) (x : X) :
     Nonempty (StalkPairing F G x) := by
-  letI : PreservesFiniteLimits
+  let : PreservesFiniteLimits
       (colim : ((OpenNhds x)ᵒᵖ ⥤ Type v) ⥤ Type v) := by infer_instance
-  letI : PreservesFiniteLimits
+  let : PreservesFiniteLimits
       ((Functor.whiskeringLeft (OpenNhds x)ᵒᵖ (Opens X)ᵒᵖ (Type v)).obj
         (OpenNhds.inclusion x).op) := by infer_instance
-  letI : PreservesFiniteLimits (TopCat.Presheaf.stalkFunctor (Type v) x) := by
+  let : PreservesFiniteLimits (TopCat.Presheaf.stalkFunctor (Type v) x) := by
     exact comp_preservesFiniteLimits _ _
   let e₁ := preservesLimitIso (TopCat.Sheaf.forget (Type v) X)
     (pair (moduleSetSheaf F) (moduleSetSheaf G))
@@ -392,10 +392,6 @@ theorem exists_stalkPairing {X : TopCat.{v}}
           (limit.π (pair (moduleSetSheaf F) (moduleSetSheaf G))
             (Discrete.mk j)).hom q := by
     change (e₄ (e₃.hom (e.hom q))) j = (TopCat.Presheaf.stalkFunctor (Type v) x).map
-          (limit.π (pair (moduleSetSheaf F) (moduleSetSheaf G))
-            (Discrete.mk j)).hom q
-    change (e₄ (e₃.hom (e.hom q))) j =
-      (TopCat.Presheaf.stalkFunctor (Type v) x).map
           (limit.π (pair (moduleSetSheaf F) (moduleSetSheaf G))
             (Discrete.mk j)).hom q
     let K : WalkingPair → Type v := fun j =>
@@ -589,7 +585,7 @@ theorem exists_stalkPairing {X : TopCat.{v}}
                     (Discrete.mk j))
                 (TopCat.Sheaf.forget (Type v) X)).hom.app
                 (Discrete.mk j) := by
-        simpa [e₁', Function.comp_def] using h₁
+        simp [e₁', Function.comp_def]
       have h₀ := preservesLimitIso_hom_π
         (TopCat.Sheaf.forget (Type v) X)
         (pair (moduleSetSheaf F) (moduleSetSheaf G))
@@ -603,7 +599,7 @@ theorem exists_stalkPairing {X : TopCat.{v}}
             (TopCat.Sheaf.forget (Type v) X).map
               (limit.π (pair (moduleSetSheaf F) (moduleSetSheaf G))
                 (Discrete.mk j)) := by
-        simpa [e₁] using h₀
+        simp [e₁]
       have h₁map :
           (TopCat.Presheaf.stalkFunctor (Type v) x).map e₁'.hom ≫
               (TopCat.Presheaf.stalkFunctor (Type v) x).map
@@ -690,10 +686,10 @@ theorem exists_stalkPairing {X : TopCat.{v}}
             (limit.π (pair (moduleSetSheaf F) (moduleSetSheaf G))
               (Discrete.mk j)).hom := by
         rfl
-      convert h₀map using 1 <;>
+      convert h₀map using 1
+      all_goals
         simp [Functor.map_comp, Discrete.compNatIsoDiscrete,
-          Discrete.natIso, NatIso.ofComponents, Category.assoc, hforget] <;>
-        try rfl
+        Discrete.natIso, NatIso.ofComponents, hforget]; try rfl
     have hq := congrArg (fun k => k q) h_arrow
     change
       (limit.π
@@ -1388,12 +1384,6 @@ private theorem product_germ_first {X : TopCat.{v}}
               (algebraicStalkGerm ((SheafOfModules.toSheaf O).obj F).obj
                 U x.1 x.2))) s') = _ at hF'
       rw [hgerm] at hF'
-      have hmoduleSetSheaf :
-          (moduleSetSheaf F).presheaf =
-            underlyingPresheaf (forget AddCommGrpCat)
-              ((SheafOfModules.toSheaf O).obj F).val := by
-        rfl
-      simp only [hmoduleSetSheaf]
       exact hF'.symm
 
 private theorem product_germ_second {X : TopCat.{v}}
@@ -1458,12 +1448,6 @@ private theorem product_germ_second {X : TopCat.{v}}
               (algebraicStalkGerm ((SheafOfModules.toSheaf O).obj G).obj
                 U x.1 x.2))) s') = _ at hF'
       rw [hgerm] at hF'
-      have hmoduleSetSheaf :
-          (moduleSetSheaf G).presheaf =
-            underlyingPresheaf (forget AddCommGrpCat)
-              ((SheafOfModules.toSheaf O).obj G).val := by
-        rfl
-      simp only [hmoduleSetSheaf]
       exact hF'.symm
 
 private theorem stalk_product_ext {X : TopCat.{v}}
@@ -1620,7 +1604,8 @@ private theorem stalk_product_ext {X : TopCat.{v}}
       change (limit.π (pair (moduleSetSheaf F) (moduleSetSheaf G))
           (Discrete.mk WalkingPair.left)).hom.app (op W)
             ((moduleSetProduct F G).presheaf.map k₁.op s₁) = _ at hn
-      convert hn using 1 <;> rfl
+      convert hn using 1
+      all_goals rfl
     have hnF₂ :
         (limit.π (pair (moduleSetSheaf F) (moduleSetSheaf G))
           (Discrete.mk WalkingPair.left)).hom.app (op W)
@@ -1634,7 +1619,8 @@ private theorem stalk_product_ext {X : TopCat.{v}}
       change (limit.π (pair (moduleSetSheaf F) (moduleSetSheaf G))
           (Discrete.mk WalkingPair.left)).hom.app (op W)
             ((moduleSetProduct F G).presheaf.map k₂.op s₂) = _ at hn
-      convert hn using 1 <;> rfl
+      convert hn using 1
+      all_goals rfl
     have hnGleft :
         (limit.π (pair (moduleSetSheaf F) (moduleSetSheaf G))
           (Discrete.mk WalkingPair.right)).hom.app (op W)
@@ -1648,7 +1634,8 @@ private theorem stalk_product_ext {X : TopCat.{v}}
       change (limit.π (pair (moduleSetSheaf F) (moduleSetSheaf G))
           (Discrete.mk WalkingPair.right)).hom.app (op W)
             ((moduleSetProduct F G).presheaf.map k₁.op s₁) = _ at hn
-      convert hn using 1 <;> rfl
+      convert hn using 1
+      all_goals rfl
     have hnGright :
         (limit.π (pair (moduleSetSheaf F) (moduleSetSheaf G))
           (Discrete.mk WalkingPair.right)).hom.app (op W)
@@ -1662,7 +1649,8 @@ private theorem stalk_product_ext {X : TopCat.{v}}
       change (limit.π (pair (moduleSetSheaf F) (moduleSetSheaf G))
           (Discrete.mk WalkingPair.right)).hom.app (op W)
             ((moduleSetProduct F G).presheaf.map k₂.op s₂) = _ at hn
-      convert hn using 1 <;> rfl
+      convert hn using 1
+      all_goals rfl
     have hleft₁ :
         (sheafProductSectionsEquiv (moduleSetSheaf F) (moduleSetSheaf G) W
           ((moduleSetProduct F G).presheaf.map k₁.op s₁)).1 =

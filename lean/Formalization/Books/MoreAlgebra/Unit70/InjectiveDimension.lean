@@ -177,13 +177,13 @@ theorem injective_amplitude_truncation_exists
 /-! ## The exact Ext sequence -/
 
 /-- The five-term covariant Ext window attached to the truncation triangle.
-At degree `b + 1` its first two terms are the shifted `J` and `K` terms in
-the source's displayed long exact sequence. -/
+The source's displayed three-term sequence is the middle part of this window
+at degree `b`: its terms are the `K'`, shifted `J`, and `K` terms. -/
 noncomputable def injectiveAmplitudeExtWindow
     (T : InjectiveAmplitudeTruncationData K I a b)
     (N : ModuleCat.{u} R) :
     ComposableArrows (AddCommGrpCat.{w}) 5 :=
-  derivedExtCovariantWindow T.triangle (DerivedObject N) (b + 1)
+  derivedExtCovariantWindow T.triangle (DerivedObject N) b
 
 /-- The Ext window attached to the truncation triangle is exact. -/
 theorem injectiveAmplitudeExtWindow_exact
@@ -191,22 +191,43 @@ theorem injectiveAmplitudeExtWindow_exact
     (N : ModuleCat.{u} R) :
     (injectiveAmplitudeExtWindow T N).Exact := by
   exact derivedExtCovariantWindow_exact T.triangle T.distinguished
-    (DerivedObject N) (b + 1)
+    (DerivedObject N) b
+
+/-- The three-term exact Ext sequence extracted from the central part of the
+window.  Its three objects are canonically the terms occurring in the
+source's displayed sequence after applying the triangle identifications. -/
+noncomputable def injectiveAmplitudeExtSequence
+    (T : InjectiveAmplitudeTruncationData K I a b)
+    (N : ModuleCat.{u} R) : ShortComplex (AddCommGrpCat.{w}) :=
+  ShortComplex.mk
+    ((injectiveAmplitudeExtWindow T N).map' 2 3 (by omega) (by omega))
+    ((injectiveAmplitudeExtWindow T N).map' 3 4 (by omega) (by omega))
+    ((injectiveAmplitudeExtWindow_exact T N).toIsComplex.zero 2 (by omega))
+
+/-- The extracted three-term Ext sequence is exact. -/
+theorem injectiveAmplitudeExtSequence_exact
+    (T : InjectiveAmplitudeTruncationData K I a b)
+    (N : ModuleCat.{u} R) :
+    (injectiveAmplitudeExtSequence T N).Exact := by
+  simpa [injectiveAmplitudeExtSequence] using
+    (injectiveAmplitudeExtWindow_exact T N).exact 2 (by omega)
 
 /-- Source-facing form of the displayed three-term Ext sequence
 `Ext^b(R/I, K') → Ext^1(R/I, J) → Ext^(1+b)(R/I, K)`. -/
 theorem injective_amplitude_displayed_ext_sequence
     (T : InjectiveAmplitudeTruncationData K I a b)
     (J : Ideal R) :
-    ∃ S : ComposableArrows (AddCommGrpCat.{w}) 2,
-      S.Exact ∧
-        Nonempty (S.obj' 0 ≅ AddCommGrpCat.of
+    (injectiveAmplitudeExtSequence T (ModuleCat.of R (R ⧸ J))).Exact ∧
+      Nonempty ((injectiveAmplitudeExtSequence T (ModuleCat.of R (R ⧸ J))).X₁ ≅
+        AddCommGrpCat.of
           (DerivedExt (DerivedObject (ModuleCat.of R (R ⧸ J)))
             ((DerivedCategory.Q (C := ModuleCat.{u} R)).obj T.truncation) b)) ∧
-        Nonempty (S.obj' 1 ≅ AddCommGrpCat.of
+      Nonempty ((injectiveAmplitudeExtSequence T (ModuleCat.of R (R ⧸ J))).X₂ ≅
+        AddCommGrpCat.of
           (DerivedExt (DerivedObject (ModuleCat.of R (R ⧸ J)))
             (DerivedObject T.kernel) 1)) ∧
-        Nonempty (S.obj' 2 ≅ AddCommGrpCat.of
+      Nonempty ((injectiveAmplitudeExtSequence T (ModuleCat.of R (R ⧸ J))).X₃ ≅
+        AddCommGrpCat.of
           (DerivedExt (DerivedObject (ModuleCat.of R (R ⧸ J))) K (1 + b))) := by
   sorry
 
@@ -234,7 +255,7 @@ theorem dedekind_domain_finite_injective_dimension
     (∀ I : Ideal R, I ≠ ⊥ → I ≠ ⊤ →
       CategoryTheory.projectiveDimension
           (ModuleCat.of R (R ⧸ I)) = 1) ∧
-    (∀ I : Ideal R, I ≠ ⊥ →
+    (∀ I : Ideal R,
       CategoryTheory.HasProjectiveDimensionLE
         (ModuleCat.of R (R ⧸ I)) 1) ∧
     (∀ M : ModuleCat.{u} R,

@@ -183,8 +183,7 @@ theorem continuousFunctionAlgebraSharp_exists {X Y : TopCat} (f : X ⟶ Y) :
         apply TopCat.ext
         intro z
         rfl }
-  refine ⟨?_⟩
-  exact ObjectProperty.homMk α
+  exact ⟨ObjectProperty.homMk α⟩
 
 /-- The continuous-function example gives a morphism of ringed spaces. -/
 noncomputable abbrev continuousFunctionRingedSpaceHom {X Y : TopCat}

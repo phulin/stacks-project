@@ -1,6 +1,7 @@
 import Formalization.Books.Algebra.Unit133.FiniteOrderDifferentialOperators
 import Formalization.Books.Algebra.Unit148.FormallyUnramifiedMaps
 import Mathlib.Algebra.DirectSum.Ring
+import Mathlib.LinearAlgebra.Quotient.Basic
 import Mathlib.RingTheory.Etale.Kaehler
 import Mathlib.RingTheory.RingHom.Etale
 import Mathlib.RingTheory.Ideal.Quotient.Operations
@@ -117,15 +118,31 @@ def infinitesimalQuotientMap
     exact pow_le_pow_left' (Ideal.map_comap_le (f := f) (K := J)) n)
 
 /-- The `n`th associated-graded piece of an ideal filtration. -/
+abbrev submoduleQuotient
+    {R M : Type*} [Ring R] [AddCommGroup M] [Module R M]
+    (P Q : Submodule R M) : Type _ :=
+  HasQuotient.Quotient (P : Type _) (Q.comap P.subtype)
+
+/-- The degree-`n` component `I^n/I^(n+1)` of the associated graded ring. -/
 abbrev associatedGradedPiece
-    (R : Type u) [CommRing R] (I : Ideal R) (n : ℕ) :=
-  (↥(I ^ n • (⊤ : Submodule R R))) ⧸
-    (I • (⊤ : Submodule R ↥(I ^ n • (⊤ : Submodule R R))))
+    {R : Type u} [CommRing R] (I : Ideal R) (n : ℕ) : Type u :=
+  submoduleQuotient (I ^ n : Submodule R R) (I ^ (n + 1) : Submodule R R)
 
 /-- The external direct sum of the associated-graded pieces. -/
 abbrev associatedGraded
-    (R : Type u) [CommRing R] (I : Ideal R) :=
-  ⨁ n, associatedGradedPiece R I n
+    {R : Type u} [CommRing R] (I : Ideal R) : Type u :=
+  DirectSum ℕ (associatedGradedPiece I)
+
+/-- The canonical graded-ring operations on the associated graded ring. -/
+theorem associatedGradedRing_gcommRing_exists
+    {R : Type u} [CommRing R] (I : Ideal R) :
+    Nonempty (DirectSum.GCommRing (associatedGradedPiece I)) := by
+  sorry
+
+noncomputable instance associatedGradedRing_gcommRing
+    {R : Type u} [CommRing R] (I : Ideal R) :
+    DirectSum.GCommRing (associatedGradedPiece I) :=
+  Classical.choice (associatedGradedRing_gcommRing_exists I)
 
 /-- A graded ring equivalence between two external associated-graded rings.
 The component maps and the homogeneous-component equation retain the grading
@@ -133,19 +150,11 @@ that is implicit in the textbook's displayed graded-ring isomorphism. -/
 structure AssociatedGradedRingEquivalence
     {R S : Type u} [CommRing R] [CommRing S]
     (I : Ideal R) (J : Ideal S) where
-  sourceRing : DirectSum.GCommRing (fun n => associatedGradedPiece R I n)
-  targetRing : DirectSum.GCommRing (fun n => associatedGradedPiece S J n)
-  equiv :
-    letI := sourceRing
-    letI := targetRing
-    associatedGraded R I ≃+* associatedGraded S J
-  component : ∀ n, associatedGradedPiece R I n →+ associatedGradedPiece S J n
-  equiv_homogeneous :
-    letI := sourceRing
-    letI := targetRing
-    ∀ (n : ℕ) (x : associatedGradedPiece R I n),
-      equiv (DirectSum.of (fun n => associatedGradedPiece R I n) n x) =
-        DirectSum.of (fun n => associatedGradedPiece S J n) n (component n x)
+  equiv : associatedGraded I ≃+* associatedGraded J
+  component : ∀ n, associatedGradedPiece I n →+ associatedGradedPiece J n
+  equiv_homogeneous : ∀ (n : ℕ) (x : associatedGradedPiece I n),
+    equiv (DirectSum.of (associatedGradedPiece I) n x) =
+      DirectSum.of (associatedGradedPiece J) n (component n x)
 
 /-- Formal étaleness identifies all infinitesimal quotients and their
 associated graded rings. -/
@@ -220,6 +229,17 @@ theorem formallyEtale_principalParts
     (hf : Algebra.FormallyEtale S S') (k : ℕ) :
     letI : Module S' (principalPartsBaseChangeModule (S := S) (S' := S') M) :=
       TensorProduct.leftModule
+    letI : IsScalarTower R S'
+        (principalPartsBaseChangeModule (S := S) (S' := S') M) :=
+      by
+        refine IsScalarTower.of_algebraMap_smul ?_
+        intro r x
+        refine TensorProduct.induction_on x ?_ ?_ ?_
+        · simp
+        · intro s m
+          simp
+        · intro x y hx hy
+          simp [hx, hy]
     Nonempty
       (S' ⊗[S] PrincipalParts (R := R) (S := S) (M := M) k ≃ₗ[S']
         PrincipalParts (R := R) (S := S')

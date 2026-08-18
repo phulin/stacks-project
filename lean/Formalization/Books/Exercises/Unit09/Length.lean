@@ -12,6 +12,7 @@ import Mathlib.RingTheory.MvPolynomial.Ideal
 import Mathlib.RingTheory.OrderOfVanishing.Basic
 import Mathlib.RingTheory.Polynomial.Basic
 import Mathlib.Tactic.NormNum
+import Mathlib.FieldTheory.KummerPolynomial
 
 /-!
 # Exercises, Chapter 9: Length
@@ -142,7 +143,21 @@ theorem complex_polynomial_quotient_length :
 /-- The length of `ℝ[x]/(x^4 + 2x^2 + 1)` over `ℝ[x]`. -/
 theorem real_polynomial_quotient_length :
     Module.length (Polynomial ℝ) realLengthExample = 2 := by
-  sorry
+  change Ring.ord (Polynomial ℝ) realLengthPolynomial = 2
+  unfold realLengthPolynomial
+  rw [show (Polynomial.X ^ 4 + Polynomial.C (2 : ℝ) * Polynomial.X ^ 2 + 1 : Polynomial ℝ) =
+      (Polynomial.X ^ 2 + 1) ^ 2 by rw [Polynomial.C_ofNat]; ring]
+  have hirr : Irreducible (Polynomial.X ^ 2 + 1 : Polynomial ℝ) := by
+    simpa [sub_eq_add_neg] using
+      (X_pow_sub_C_irreducible_of_prime (K := ℝ) (p := 2) Nat.prime_two
+        (a := (-1 : ℝ)) (by
+          intro b hb
+          have hnonneg : (0 : ℝ) ≤ b ^ 2 := sq_nonneg b
+          rw [hb] at hnonneg
+          exact (not_lt_of_ge hnonneg) neg_one_lt_zero))
+  rw [Ring.ord_pow (mem_nonZeroDivisors_of_ne_zero hirr.ne_zero),
+    Ring.ord_of_irreducible hirr]
+  norm_num
 
 /-! ## The local plane calculation -/
 

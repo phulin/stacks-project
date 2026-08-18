@@ -57,15 +57,15 @@ theorem stablyFree_iff_stablyIsomorphic_free
         (_ : Module.Free R F), StablyIsomorphic R M F := by
   constructor
   · intro h
-    letI : Module.IsStablyFree R M := h
+    let : Module.IsStablyFree R M := h
     obtain ⟨N, hNadd, hNmod, hNfin, hNfree, hMNfree⟩ :=
       Module.IsStablyFree.exist_free_prod R M
-    letI : AddCommGroup N := hNadd
-    letI : Module R N := hNmod
-    letI : Module.Finite R N := hNfin
-    letI : Module.Free R N := hNfree
+    let : AddCommGroup N := hNadd
+    let : Module R N := hNmod
+    let : Module.Finite R N := hNfin
+    let : Module.Free R N := hNfree
     let ι := Module.Free.ChooseBasisIndex R N
-    letI : Fintype ι := Module.Free.ChooseBasisIndex.fintype R N
+    let : Fintype ι := Module.Free.ChooseBasisIndex.fintype R N
     let b := Module.Free.chooseBasis R N
     let m := Fintype.card ι
     let eN : N ≃ₗ[R] (Fin m → R) :=
@@ -75,14 +75,14 @@ theorem stablyFree_iff_stablyIsomorphic_free
     exact ⟨((LinearEquiv.refl R M).prodCongr eN.symm) ≪≫ₗ
       (LinearEquiv.prodUnique (R := R) (M := M × N) (M₂ := Fin 0 → R)).symm⟩
   · rintro ⟨F, hFadd, hFmod, hFfree, ⟨m, n, ⟨e⟩⟩⟩
-    letI : AddCommGroup F := hFadd
-    letI : Module R F := hFmod
-    letI : Module.Free R F := hFfree
-    letI : Module.Free R (F × (Fin n → R)) := inferInstance
-    letI : Module.Finite R (Fin m → R) := inferInstance
+    let : AddCommGroup F := hFadd
+    let : Module R F := hFmod
+    let : Module.Free R F := hFfree
+    let : Module.Free R (F × (Fin n → R)) := inferInstance
+    let : Module.Finite R (Fin m → R) := inferInstance
     have hfree : Module.Free R (M × (Fin m → R)) :=
       Module.Free.of_equiv e.symm
-    letI : Module.Free R (M × (Fin m → R)) := hfree
+    let : Module.Free R (M × (Fin m → R)) := hfree
     exact Module.IsStablyFree.of_free_prod R M (Fin m → R)
 
 /-- A stably free module is projective.  This is Mathlib's existing
@@ -122,26 +122,26 @@ theorem shortExact_isStablyFree_two_of_three
         [AddCommGroup C] [Module R C],
         StablyFree R A → StablyFree R C → StablyFree R (A × C) := by
     intro A C _ _ _ _ hA hC
-    letI : Module.IsStablyFree R A := hA
-    letI : Module.IsStablyFree R C := hC
+    let : Module.IsStablyFree R A := hA
+    let : Module.IsStablyFree R C := hC
     obtain ⟨N₁, hN₁add, hN₁mod, hN₁fin, hN₁free, hAfree⟩ :=
       Module.IsStablyFree.exist_free_prod R A
     obtain ⟨N₂, hN₂add, hN₂mod, hN₂fin, hN₂free, hCfree⟩ :=
       Module.IsStablyFree.exist_free_prod R C
-    letI : AddCommGroup N₁ := hN₁add
-    letI : Module R N₁ := hN₁mod
-    letI : Module.Finite R N₁ := hN₁fin
-    letI : Module.Free R N₁ := hN₁free
-    letI : AddCommGroup N₂ := hN₂add
-    letI : Module R N₂ := hN₂mod
-    letI : Module.Finite R N₂ := hN₂fin
-    letI : Module.Free R N₂ := hN₂free
-    letI : Module.Free R (A × N₁) := hAfree
-    letI : Module.Free R (C × N₂) := hCfree
+    let : AddCommGroup N₁ := hN₁add
+    let : Module R N₁ := hN₁mod
+    let : Module.Finite R N₁ := hN₁fin
+    let : Module.Free R N₁ := hN₁free
+    let : AddCommGroup N₂ := hN₂add
+    let : Module R N₂ := hN₂mod
+    let : Module.Finite R N₂ := hN₂fin
+    let : Module.Free R N₂ := hN₂free
+    let : Module.Free R (A × N₁) := hAfree
+    let : Module.Free R (C × N₂) := hCfree
     have hfree : Module.Free R ((A × C) × (N₁ × N₂)) := by
       exact Module.Free.of_equiv
         (LinearEquiv.prodProdProdComm R A C N₁ N₂).symm
-    letI : Module.Free R ((A × C) × (N₁ × N₂)) := hfree
+    let : Module.Free R ((A × C) × (N₁ × N₂)) := hfree
     exact Module.IsStablyFree.of_free_prod R (A × C) (N₁ × N₂)
   have hcancel :
       ∀ (A B C : Type u) [AddCommGroup A] [Module R A] [Module.Finite R A]
@@ -149,22 +149,22 @@ theorem shortExact_isStablyFree_two_of_three
         (B ≃ₗ[R] A × C) → StablyFree R A → StablyFree R B →
           StablyFree R C := by
     intro A B C _ _ _ _ _ _ _ e hA hB
-    letI : Module.IsStablyFree R A := hA
-    letI : Module.IsStablyFree R B := hB
+    let : Module.IsStablyFree R A := hA
+    let : Module.IsStablyFree R B := hB
     obtain ⟨N₁, hN₁add, hN₁mod, hN₁fin, hN₁free, hAfree⟩ :=
       Module.IsStablyFree.exist_free_prod R A
     obtain ⟨N₂, hN₂add, hN₂mod, hN₂fin, hN₂free, hBfree⟩ :=
       Module.IsStablyFree.exist_free_prod R B
-    letI : AddCommGroup N₁ := hN₁add
-    letI : Module R N₁ := hN₁mod
-    letI : Module.Finite R N₁ := hN₁fin
-    letI : Module.Free R N₁ := hN₁free
-    letI : AddCommGroup N₂ := hN₂add
-    letI : Module R N₂ := hN₂mod
-    letI : Module.Finite R N₂ := hN₂fin
-    letI : Module.Free R N₂ := hN₂free
-    letI : Module.Free R (A × N₁) := hAfree
-    letI : Module.Free R (B × N₂) := hBfree
+    let : AddCommGroup N₁ := hN₁add
+    let : Module R N₁ := hN₁mod
+    let : Module.Finite R N₁ := hN₁fin
+    let : Module.Free R N₁ := hN₁free
+    let : AddCommGroup N₂ := hN₂add
+    let : Module R N₂ := hN₂mod
+    let : Module.Finite R N₂ := hN₂fin
+    let : Module.Free R N₂ := hN₂free
+    let : Module.Free R (A × N₁) := hAfree
+    let : Module.Free R (B × N₂) := hBfree
     let equivC : (C × ((A × N₁) × N₂)) ≃ₗ[R] ((B × N₂) × N₁) :=
       { toFun := fun x =>
           ((e.symm (x.2.1.1, x.1), x.2.2), x.2.1.2)
@@ -192,13 +192,13 @@ theorem shortExact_isStablyFree_two_of_three
           · rfl }
     have hfree : Module.Free R (C × ((A × N₁) × N₂)) := by
       exact Module.Free.of_equiv (LinearEquiv.symm equivC)
-    letI : Module.Free R (C × ((A × N₁) × N₂)) := hfree
+    let : Module.Free R (C × ((A × N₁) × N₂)) := hfree
     exact Module.IsStablyFree.of_free_prod R C ((A × N₁) × N₂)
   refine ⟨?_, ?_, ?_⟩
   · intro h
     exact hcancel S.X₁ S.X₂ S.X₃ hsplit h.1 h.2
   · intro h
-    letI : Module.IsStablyFree R (S.X₁ × S.X₃) := hprod S.X₁ S.X₃ h.1 h.2
+    let : Module.IsStablyFree R (S.X₁ × S.X₃) := hprod S.X₁ S.X₃ h.1 h.2
     exact Module.IsStablyFree.equiv hsplit.symm
   · intro h
     exact hcancel S.X₃ S.X₂ S.X₁

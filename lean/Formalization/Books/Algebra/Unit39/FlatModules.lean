@@ -696,7 +696,17 @@ theorem faithfullyFlat_iff_flat_and_tensor_zero
         ∀ {N N' : Type (max u v)} [AddCommGroup N] [AddCommGroup N']
           [Module R N] [Module R N'] (α : N →ₗ[R] N'),
           α = 0 ↔ α.rTensor M = 0) := by
-  sorry
+  constructor
+  · intro h
+    letI := h
+    refine ⟨inferInstance, ?_⟩
+    intro N N' _ _ _ _ α
+    exact Module.FaithfullyFlat.zero_iff_rTensor_zero R M α
+  · rintro ⟨hflat, hzero⟩
+    apply (Module.FaithfullyFlat.iff_zero_iff_rTensor_zero (R := R) (M := M)).2
+    refine ⟨hflat, ?_⟩
+    intro N _ _ N' _ _ α
+    exact (hzero α).symm
 
 theorem faithfullyFlat_criteria
     {R : Type u} {M : Type v} [CommRing R] [AddCommGroup M] [Module R M]
@@ -709,7 +719,56 @@ theorem faithfullyFlat_criteria
         Nontrivial (M ⊗[R] p.asIdeal.ResidueField),
       ∀ (m : Ideal R) [m.IsMaximal],
         Nontrivial (M ⊗[R] m.ResidueField)] := by
-  sorry
+  tfae_have 1 ↔ 2 := by
+    constructor
+    · intro h
+      letI := h
+      intro N _ _ hN
+      letI := hN
+      exact inferInstance
+    · intro h
+      apply (Module.FaithfullyFlat.iff_flat_and_lTensor_faithful R M).2
+      exact ⟨inferInstance, h⟩
+  tfae_have 2 → 3 := by
+    intro h p
+    letI : Nontrivial (ULift.{max u v, u} p.asIdeal.ResidueField) := inferInstance
+    letI : Nontrivial (M ⊗[R] ULift.{max u v, u} p.asIdeal.ResidueField) :=
+      h (ULift.{max u v, u} p.asIdeal.ResidueField) inferInstance
+    exact (TensorProduct.congr (LinearEquiv.refl R M)
+      (ULift.moduleEquiv : ULift.{max u v, u} p.asIdeal.ResidueField ≃ₗ[R] p.asIdeal.ResidueField)).symm.toEquiv.nontrivial
+  tfae_have 3 → 4 := by
+    intro h m hm
+    let p : PrimeSpectrum R := ⟨m, hm.isPrime⟩
+    simpa [p] using h p
+  tfae_have 4 → 1 := by
+    intro h
+    apply (Module.FaithfullyFlat.iff_flat_and_proper_ideal R M).2
+    refine ⟨inferInstance, ?_⟩
+    intro I hI
+    obtain ⟨m, hm, hIm⟩ := I.exists_le_maximal hI
+    letI : m.IsMaximal := hm
+    intro htop
+    have hm_top : m • (⊤ : Submodule R M) = ⊤ := by
+      apply top_unique
+      calc
+        (⊤ : Submodule R M) = I • ⊤ := htop.symm
+        _ ≤ m • ⊤ := Submodule.smul_mono hIm le_rfl
+    let e : (R ⧸ m) ≃ₗ[R] m.ResidueField :=
+      LinearEquiv.ofBijective (Algebra.linearMap (R ⧸ m) m.ResidueField)
+        (Ideal.bijective_algebraMap_quotient_residueField m) |>.restrictScalars R
+    let e' : M ⊗[R] (R ⧸ m) ≃ₗ[R] M ⊗[R] m.ResidueField :=
+      TensorProduct.congr (LinearEquiv.refl R M) e
+    have htensor : Nontrivial (M ⊗[R] (R ⧸ m)) := by
+      letI : Nontrivial (M ⊗[R] m.ResidueField) := h m
+      exact e'.toEquiv.nontrivial
+    have hquot : Nontrivial (M ⧸ (m • (⊤ : Submodule R M))) := by
+      letI : Nontrivial (M ⊗[R] (R ⧸ m)) := htensor
+      letI : Nontrivial ((R ⧸ m) ⊗[R] M) :=
+        (TensorProduct.comm R (R ⧸ m) M).toEquiv.nontrivial
+      exact (TensorProduct.quotTensorEquivQuotSMul M m).toEquiv.symm.nontrivial
+    letI := hquot
+    exact not_subsingleton _ (Submodule.Quotient.subsingleton_iff.mpr hm_top)
+  tfae_finish
 
 noncomputable def tensor_quotient_equiv_smul
     {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M] (m : Ideal R) :
@@ -724,13 +783,35 @@ theorem faithfullyFlat_ringHom_criteria
       Function.Surjective (PrimeSpectrum.comap f),
       ∀ p : PrimeSpectrum R, p.asIdeal.IsMaximal →
         ∃ q : PrimeSpectrum S, PrimeSpectrum.comap f q = p] := by
-  sorry
+  algebraize [f]
+  tfae_have 1 ↔ 2 := by
+    rw [RingHom.FaithfullyFlat.iff_flat_and_comap_surjective]
+    exact and_iff_right hflat
+  tfae_have 2 → 3 := by
+    intro h p hp
+    exact h ⟨p, hp.isPrime⟩
+  tfae_have 3 → 2 := by
+    intro h p
+    obtain ⟨m, hm, hpm⟩ := p.asIdeal.exists_le_maximal p.isPrime.ne_top
+    obtain ⟨q, hq⟩ := h ⟨m, hm.isPrime⟩ hm
+    letI : q.asIdeal.LiesOver m := ⟨by
+      change m = Ideal.comap (algebraMap R S) q.asIdeal
+      rw [RingHom.algebraMap_toAlgebra f]
+      rw [← PrimeSpectrum.comap_asIdeal f q, hq]
+    ⟩
+    obtain ⟨P, hPq, hPprime, hPover⟩ :=
+      Ideal.exists_ideal_le_liesOver_of_le q.asIdeal (p := p.asIdeal) (q := m) hpm
+    refine ⟨⟨P, hPprime⟩, ?_⟩
+    apply PrimeSpectrum.ext
+    simpa [Ideal.under_def, RingHom.algebraMap_toAlgebra f] using hPover.over.symm
+  tfae_finish
 
 theorem faithfullyFlat_of_localRingHom
     {R S : Type*} [CommRing R] [CommRing S] [IsLocalRing R] [IsLocalRing S]
     (f : R →+* S) [IsLocalHom f] (hflat : RingHom.Flat f) :
     RingHom.FaithfullyFlat f := by
-  sorry
+  algebraize [f]
+  exact Module.FaithfullyFlat.of_flat_of_isLocalHom
 
 end FaithfulFlatness
 

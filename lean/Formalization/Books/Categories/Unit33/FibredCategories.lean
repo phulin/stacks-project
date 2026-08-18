@@ -119,6 +119,47 @@ theorem stronglyCartesian_over_composition
     infer_instance
   exact hδuniq δ' ⟨inferInstance, hδ'eq⟩
 
+private lemma stronglyCartesian_map_of
+    {X C : Type*} [Category* X] [Category* C]
+    {p : X ⥤ C} {R S : C} {a b : X}
+    (f : R ⟶ S) (φ : a ⟶ b)
+    (h : p.IsStronglyCartesian f φ) :
+    p.IsStronglyCartesian (p.map φ) φ := by
+  let : p.IsStronglyCartesian f φ := h
+  refine { toIsHomLift := ?_, universal_property' := ?_ }
+  · exact Functor.IsHomLift.map _
+  · intro c g τ hτ
+    let : p.IsHomLift (g ≫ p.map φ) τ := hτ
+    let hdom := CategoryTheory.IsHomLift.domain_eq p f φ
+    let hcod := CategoryTheory.IsHomLift.codomain_eq p f φ
+    let g' : p.obj c ⟶ R := g ≫ eqToHom hdom
+    have hφmap : p.map φ = eqToHom hdom ≫ f ≫ eqToHom hcod.symm := by
+      exact CategoryTheory.IsHomLift.fac' p f φ
+    have hτmap : p.map τ = g ≫ p.map φ := by
+      simpa using CategoryTheory.IsHomLift.fac' p (g ≫ p.map φ) τ
+    have hτ' : p.IsHomLift (g' ≫ f) τ := by
+      apply CategoryTheory.IsHomLift.of_fac' p (g' ≫ f) τ rfl hcod
+      rw [hτmap, hφmap]
+      simp [g', Category.assoc]
+    let : p.IsHomLift (g' ≫ f) τ := hτ'
+    obtain ⟨χ, ⟨hχ, hχfac⟩, hχuniq⟩ :=
+      Functor.IsStronglyCartesian.universal_property p f φ g'
+        (g' ≫ f) rfl τ
+    have hχg : p.IsHomLift g χ := by
+      apply CategoryTheory.IsHomLift.of_fac' p g χ rfl rfl
+      have h := CategoryTheory.IsHomLift.fac' p g' χ
+      dsimp [g'] at h
+      simpa [Category.assoc] using h
+    refine ⟨χ, ⟨hχg, hχfac⟩, ?_⟩
+    intro χ' hχ'
+    let : p.IsHomLift g χ' := hχ'.1
+    have hχ'base : p.IsHomLift g' χ' := by
+      apply CategoryTheory.IsHomLift.of_fac' p g' χ' rfl hdom
+      have h := CategoryTheory.IsHomLift.fac' p g χ'
+      dsimp [g']
+      simpa [Category.assoc] using h
+    exact hχuniq χ' ⟨hχ'base, hχ'.2⟩
+
 theorem stronglyCartesian_fibre_product
     {X C : Type*} [Category* X] [Category* C]
     (p : X ⥤ C) {x y z : X} (f : x ⟶ y) (g : z ⟶ y)
@@ -1191,18 +1232,37 @@ theorem pullback_pseudofunctor_exists
                       ((map f).of.toFunctor.obj x)) ≫
                     P.pullbackMap f.unop x := (Category.assoc _ _ _).symm
                 _ = _ := congrArg (fun z => z ≫ P.pullbackMap f.unop x) h3inv
+            have pullbackMap_eq_of_eq :
+                ∀ {R S : C} (q₁ q₂ : R ⟶ S) (z : Functor.Fiber p S)
+                  (hq : q₁ = q₂),
+                  P.pullbackMap q₁ z =
+                    eqToHom (congrArg
+                      (fun q => Functor.Fiber.fiberInclusion.obj (P.pullback q z))
+                      hq) ≫ P.pullbackMap q₂ z := by
+              intro R S q₁ q₂ z hq
+              cases hq
+              simp
             change
               (A₁.1 ≫ ((P.pullbackFunctor h.unop).map A₂).1 ≫
                   A₃.1 ≫ A₄.1) ≫
                   P.pullbackMap ((h.unop ≫ g.unop) ≫ f.unop) x =
                 Functor.Fiber.fiberInclusion.map R ≫
                   P.pullbackMap ((h.unop ≫ g.unop) ≫ f.unop) x
+            have hx0 :
+                Functor.Fiber.fiberInclusion.obj
+                    ((map ((f ≫ g) ≫ h)).of.toFunctor.obj x) =
+                  Functor.Fiber.fiberInclusion.obj
+                    ((map (f ≫ g ≫ h)).of.toFunctor.obj x) := by
+              exact congrArg
+                (fun K => Functor.Fiber.fiberInclusion.obj
+                  (K.of.toFunctor.obj x)) e
             have hx :
                 Functor.Fiber.fiberInclusion.obj
                     ((map ((f ≫ g) ≫ h)).of.toFunctor.obj x) =
                   Functor.Fiber.fiberInclusion.obj
                     (P.pullback ((h.unop ≫ g.unop) ≫ f.unop) x) := by
-              simp [map, obj, PullbackChoice.pullbackFunctor, Category.assoc]
+              simpa [map, obj, PullbackChoice.pullbackFunctor, Category.assoc]
+                using hx0
             calc
               _ = A₁.1 ≫ ((P.pullbackFunctor h.unop).map A₂).1 ≫
                     A₃.1 ≫ (A₄.1 ≫
@@ -1275,24 +1335,16 @@ theorem pullback_pseudofunctor_exists
                     ((map (f ≫ g)).of.toFunctor.obj x) ≫
                     (A₂.1 ≫ P.pullbackMap g.unop
                         (P.pullback f.unop x) ≫ P.pullbackMap f.unop x) := by
-                sorry
-                /- Attempted approach:
                 let a := A₁.1
                 let q := P.pullbackMap h.unop
                   ((map (f ≫ g)).of.toFunctor.obj x)
                 let u := A₂.1
                 let d := P.pullbackMap g.unop ((map f).of.toFunctor.obj x)
                 let e := P.pullbackMap f.unop x
-                change
-                  (a ≫ (q ≫ u)) ≫ (d ≫ e) =
-                    a ≫ (q ≫ (u ≫ (d ≫ e)))
-                calc
-                  _ = a ≫ ((q ≫ u) ≫ (d ≫ e)) :=
-                    Category.assoc a (q ≫ u) (d ≫ e)
-                  _ = a ≫ (q ≫ (u ≫ (d ≫ e))) :=
-                    congrArg (fun z => a ≫ z)
-                      (Category.assoc q u (d ≫ e))
-                -/
+                change a ≫ ((q ≫ u) ≫ (d ≫ e)) =
+                  a ≫ (q ≫ (u ≫ (d ≫ e)))
+                have hq := Category.assoc q u (d ≫ e)
+                exact congrArg (fun z => a ≫ z) hq
               _ = A₁.1 ≫ P.pullbackMap h.unop
                     ((map (f ≫ g)).of.toFunctor.obj x) ≫
                     P.pullbackMap (g.unop ≫ f.unop) x := by rw [h2']
@@ -1305,18 +1357,402 @@ theorem pullback_pseudofunctor_exists
                 calc
                   _ = eqToHom hx ≫
                         P.pullbackMap ((h.unop ≫ g.unop) ≫ f.unop) x := by
-                    sorry
-                    /- Attempted approach:
-                    simpa [A₁, hx, Category.assoc] using h1
-                    -/
+                    rw [h1']
+                    simpa [map, obj, PullbackChoice.pullbackFunctor, Category.assoc] using
+                      pullbackMap_eq_of_eq (h.unop ≫ (f ≫ g).unop)
+                        ((h.unop ≫ g.unop) ≫ f.unop) x (by simp [Category.assoc])
                   _ = _ := by
-                    sorry
-                    /- Attempted approach:
-                    simp [hx, R, e, Category.assoc]
-                    -/
+                    have hR : Functor.Fiber.fiberInclusion.map R = eqToHom hx := by
+                      have hR0 : Functor.Fiber.fiberInclusion.map R = eqToHom hx0 := by
+                        dsimp [R]
+                        have he := CategoryTheory.eqToHom_map
+                          (Core.inclusion _) e
+                        rw [show (eqToHom e).iso.hom =
+                            (eqToHom (congrArg (fun z => z.of) e) : _) from he]
+                        change (obj b₀).as at x
+                        change Functor.Fiber.fiberInclusion.map
+                            ((eqToHom (congrArg (fun z => z.of) e) :
+                              (map ((f ≫ g) ≫ h)).of ⟶
+                                (map (f ≫ g ≫ h)).of).toNatTrans.app x) =
+                          eqToHom hx0
+                        rw [CategoryTheory.Cat.eqToHom_app]
+                        change Functor.Fiber.fiberInclusion.map
+                            (eqToHom (congrArg (fun z => z.of.toFunctor.obj x) e)) =
+                          eqToHom hx0
+                        have hm := CategoryTheory.eqToHom_map
+                          (Functor.Fiber.fiberInclusion (p := p)
+                            (S := b₃.unop))
+                          (congrArg (fun z => z.of.toFunctor.obj x) e)
+                        calc
+                          _ = eqToHom
+                              (congrArg
+                                (fun z => Functor.Fiber.fiberInclusion.obj
+                                  (z.of.toFunctor.obj x)) e) := hm
+                          _ = eqToHom hx0 := by
+                            congr 1
+                      dsimp [R]
+                      simpa [R, map, obj, PullbackChoice.pullbackFunctor,
+                        Category.assoc] using hR0
+                    rw [hR]
+                    rfl
               )
-      (map₂_left_unitor := by sorry)
-      (map₂_right_unitor := by sorry)
+      (map₂_left_unitor := by
+        intro b₀ b₁ f
+        apply CoreHom.ext
+        apply Iso.ext
+        simp
+        ext x
+        apply Functor.Fiber.hom_ext
+        simp [Category.assoc]
+        dsimp [mapComp, mapId, map, obj, Functor.Fiber.fiberInclusion]
+        let A := (mapComp (𝟙 b₀) f).hom.iso.hom.toNatTrans.app x ≫
+          (map f).of.toFunctor.map
+            ((mapId b₀).hom.iso.hom.toNatTrans.app x)
+        let R : (map ((𝟙 b₀) ≫ f)).of.toFunctor.obj x ⟶
+            (map f).of.toFunctor.obj x :=
+          (eqToHom (show map ((𝟙 b₀) ≫ f) = map f by simp)).iso.hom.toNatTrans.app x
+        change Functor.Fiber.fiberInclusion.map A = _
+        let k := P.pullbackMap f.unop x
+        letI : p.IsStronglyCartesian f.unop k :=
+          P.pullbackMap_isStronglyCartesian f.unop x
+        have hA : p.IsHomLift (𝟙 b₁.unop)
+            (Functor.Fiber.fiberInclusion.map A) := A.2
+        have hR : p.IsHomLift (𝟙 b₁.unop)
+            (Functor.Fiber.fiberInclusion.map R) := R.2
+        apply @Functor.IsStronglyCartesian.ext _ _ _ _ p _ _ _ _
+          f.unop k (by infer_instance) _ _ (𝟙 b₁.unop)
+          (Functor.Fiber.fiberInclusion.map A)
+          (Functor.Fiber.fiberInclusion.map R) hA hR
+        change Functor.Fiber p b₀.unop at x
+        let α := Classical.choose (pullback_identity_iso p P b₀.unop)
+        have hαinv :
+            Functor.Fiber.fiberInclusion.map (α.symm.hom.app x) =
+              P.pullbackMap (𝟙 b₀.unop) x := by
+          letI : IsIso (α.hom.app x) := NatIso.hom_app_isIso α x
+          letI : IsIso (Functor.Fiber.fiberInclusion.map (α.hom.app x)) :=
+            (Functor.Fiber.fiberInclusion.mapIso (asIso (α.hom.app x))).isIso_hom
+          apply (cancel_epi
+            (Functor.Fiber.fiberInclusion.map (α.hom.app x))).1
+          have hleft₀ :
+              Functor.Fiber.fiberInclusion.map (α.hom.app x) ≫
+                  Functor.Fiber.fiberInclusion.map (α.inv.app x) =
+                𝟙 (Functor.Fiber.fiberInclusion.obj x) := by
+            rw [← Functor.Fiber.fiberInclusion.map_comp,
+              α.hom_inv_id_app, Functor.Fiber.fiberInclusion.map_id]
+            rfl
+          have hleft :
+              Functor.Fiber.fiberInclusion.map (α.hom.app x) ≫
+                  Functor.Fiber.fiberInclusion.map (α.symm.hom.app x) =
+                  𝟙 (Functor.Fiber.fiberInclusion.obj ((𝟭
+                  (Functor.Fiber p b₀.unop)).obj x)) := by
+            change Functor.Fiber.fiberInclusion.map (α.hom.app x) ≫
+              Functor.Fiber.fiberInclusion.map (α.inv.app x) = _
+            simpa only [Functor.id_obj] using hleft₀
+          have hfac :
+              Functor.Fiber.fiberInclusion.map (α.hom.app x) ≫
+                  P.pullbackMap (𝟙 b₀.unop) x =
+                𝟙 (Functor.Fiber.fiberInclusion.obj ((𝟭
+                  (Functor.Fiber p b₀.unop)).obj x)) := by
+            simpa [α, PullbackChoice.pullbackFunctor,
+              Functor.Fiber.fiberInclusion, Functor.id_obj] using
+              (Classical.choose_spec
+                (pullback_identity_iso p P b₀.unop)).1 x
+          rw [hleft]
+          exact hfac.symm
+        have hcomp := mapComp_fac (𝟙 b₀) f x
+        have hpull := pullback_map_fac f.unop
+          ((mapId b₀).hom.iso.hom.toNatTrans.app x)
+        have hmapId :
+            Functor.Fiber.fiberInclusion.map
+                ((mapId b₀).hom.iso.hom.toNatTrans.app x) =
+              P.pullbackMap (𝟙 b₀.unop) x := by
+          dsimp [mapId]
+          change Functor.Fiber.fiberInclusion.map (α.symm.hom.app x) = _
+          exact hαinv
+        have hpull' :
+            ((P.pullbackFunctor f.unop).map
+                ((mapId b₀).hom.iso.hom.toNatTrans.app x)).1 ≫
+                P.pullbackMap f.unop x =
+                P.pullbackMap f.unop (P.pullback (𝟙 b₀.unop) x) ≫
+                Functor.Fiber.fiberInclusion.map
+                  ((mapId b₀).hom.iso.hom.toNatTrans.app x) := by
+          change
+            ((P.pullbackFunctor f.unop).map
+                ((mapId b₀).hom.iso.hom.toNatTrans.app x)).1 ≫
+                P.pullbackMap f.unop
+                  ((𝟭 (Functor.Fiber p b₀.unop)).obj x) =
+              P.pullbackMap f.unop
+                  ((P.pullbackFunctor (𝟙 b₀.unop)).obj x) ≫
+                Functor.Fiber.fiberInclusion.map
+                  ((mapId b₀).hom.iso.hom.toNatTrans.app x)
+          exact hpull
+        have hleftcomp :
+            Functor.Fiber.fiberInclusion.map A ≫ k =
+              P.pullbackMap ((𝟙 b₀ ≫ f).unop) x := by
+          change
+            (Functor.Fiber.fiberInclusion.map
+                ((mapComp (𝟙 b₀) f).hom.iso.hom.toNatTrans.app x) ≫
+              ((P.pullbackFunctor f.unop).map
+                ((mapId b₀).hom.iso.hom.toNatTrans.app x)).1) ≫
+              P.pullbackMap f.unop x =
+                P.pullbackMap ((𝟙 b₀ ≫ f).unop) x
+          have hassoc :
+              (Functor.Fiber.fiberInclusion.map
+                  ((mapComp (𝟙 b₀) f).hom.iso.hom.toNatTrans.app x) ≫
+                ((P.pullbackFunctor f.unop).map
+                  ((mapId b₀).hom.iso.hom.toNatTrans.app x)).1) ≫
+                  P.pullbackMap f.unop x =
+                Functor.Fiber.fiberInclusion.map
+                  ((mapComp (𝟙 b₀) f).hom.iso.hom.toNatTrans.app x) ≫
+                (((P.pullbackFunctor f.unop).map
+                  ((mapId b₀).hom.iso.hom.toNatTrans.app x)).1 ≫
+                  P.pullbackMap f.unop x) :=
+            Category.assoc _ _ _
+          rw [hassoc]
+          have h₁ := congrArg
+            (fun z => Functor.Fiber.fiberInclusion.map
+                ((mapComp (𝟙 b₀) f).hom.iso.hom.toNatTrans.app x) ≫ z)
+            hpull'
+          have h₂ := congrArg
+            (fun z => Functor.Fiber.fiberInclusion.map
+                ((mapComp (𝟙 b₀) f).hom.iso.hom.toNatTrans.app x) ≫
+              (P.pullbackMap f.unop (P.pullback (𝟙 b₀.unop) x) ≫ z))
+            hmapId
+          exact h₁.trans (h₂.trans hcomp)
+        have pullbackMap_eq_of_eq :
+            ∀ {R S : C} (q₁ q₂ : R ⟶ S) (z : Functor.Fiber p S)
+              (hq : q₁ = q₂),
+              P.pullbackMap q₁ z =
+                eqToHom (congrArg
+                  (fun q => Functor.Fiber.fiberInclusion.obj
+                    (P.pullback q z)) hq) ≫ P.pullbackMap q₂ z := by
+          intro R S q₁ q₂ z hq
+          cases hq
+          simp
+        have hRcomp :
+            Functor.Fiber.fiberInclusion.map R ≫ k =
+              P.pullbackMap ((𝟙 b₀ ≫ f).unop) x := by
+          have hq : f.unop ≫ 𝟙 (Opposite.unop b₀) = f.unop := by simp
+          let e : map (𝟙 b₀ ≫ f) = map f := by simp
+          have hx0 :
+              Functor.Fiber.fiberInclusion.obj
+                  ((map (𝟙 b₀ ≫ f)).of.toFunctor.obj x) =
+                Functor.Fiber.fiberInclusion.obj
+                  ((map f).of.toFunctor.obj x) := by
+            exact congrArg
+              (fun K => Functor.Fiber.fiberInclusion.obj
+                (K.of.toFunctor.obj x)) e
+          have hR0 :
+              Functor.Fiber.fiberInclusion.map R = eqToHom hx0 := by
+            dsimp [R]
+            have he := CategoryTheory.eqToHom_map
+              (Core.inclusion _) e
+            rw [show (eqToHom e).iso.hom =
+                (eqToHom (congrArg (fun z => z.of) e) : _) from he]
+            change (obj b₀).as at x
+            change Functor.Fiber.fiberInclusion.map
+                ((eqToHom (congrArg (fun z => z.of) e) :
+                  (map (𝟙 b₀ ≫ f)).of ⟶ (map f).of).toNatTrans.app x) =
+              eqToHom hx0
+            rw [CategoryTheory.Cat.eqToHom_app]
+            change Functor.Fiber.fiberInclusion.map
+                (eqToHom (congrArg (fun z => z.of.toFunctor.obj x) e)) =
+              eqToHom hx0
+            have hm := CategoryTheory.eqToHom_map
+              (Functor.Fiber.fiberInclusion (p := p)
+                (S := b₁.unop))
+              (congrArg (fun z => z.of.toFunctor.obj x) e)
+            calc
+              _ = eqToHom
+                  (congrArg
+                    (fun z => Functor.Fiber.fiberInclusion.obj
+                      (z.of.toFunctor.obj x)) e) := hm
+              _ = eqToHom hx0 := by congr 1
+          have hpmap :=
+            (pullbackMap_eq_of_eq (f.unop ≫ 𝟙 (Opposite.unop b₀))
+              f.unop x hq).symm
+          dsimp [k]
+          have hfirst := congrArg
+            (fun z => z ≫ P.pullbackMap f.unop x) hR0
+          have hsecond :
+              eqToHom hx0 ≫ P.pullbackMap f.unop x =
+                P.pullbackMap (f.unop ≫ 𝟙 (Opposite.unop b₀)) x := by
+            simpa [map, obj, PullbackChoice.pullbackFunctor,
+              Functor.Fiber.fiberInclusion, Category.assoc] using hpmap
+          exact hfirst.trans hsecond
+        exact hleftcomp.trans hRcomp.symm
+      )
+      (map₂_right_unitor := by
+        intro b₀ b₁ f
+        apply CoreHom.ext
+        apply Iso.ext
+        simp
+        ext x
+        apply Functor.Fiber.hom_ext
+        simp [Category.assoc]
+        dsimp [mapComp, mapId, map, obj, Functor.Fiber.fiberInclusion]
+        let A := (mapComp f (𝟙 b₁)).hom.iso.hom.toNatTrans.app x ≫
+          (mapId b₁).hom.iso.hom.toNatTrans.app
+            ((map f).of.toFunctor.obj x)
+        let R : (map (f ≫ 𝟙 b₁)).of.toFunctor.obj x ⟶
+            (map f).of.toFunctor.obj x :=
+          (eqToHom (show map (f ≫ 𝟙 b₁) = map f by simp)).iso.hom.toNatTrans.app x
+        change Functor.Fiber.fiberInclusion.map A = _
+        let k := P.pullbackMap f.unop x
+        letI : p.IsStronglyCartesian f.unop k :=
+          P.pullbackMap_isStronglyCartesian f.unop x
+        have hA : p.IsHomLift (𝟙 b₁.unop)
+            (Functor.Fiber.fiberInclusion.map A) := A.2
+        have hR : p.IsHomLift (𝟙 b₁.unop)
+            (Functor.Fiber.fiberInclusion.map R) := R.2
+        apply @Functor.IsStronglyCartesian.ext _ _ _ _ p _ _ _ _
+          f.unop k (by infer_instance) _ _ (𝟙 b₁.unop)
+          (Functor.Fiber.fiberInclusion.map A)
+          (Functor.Fiber.fiberInclusion.map R) hA hR
+        change Functor.Fiber p b₀.unop at x
+        let y := (map f).of.toFunctor.obj x
+        change Functor.Fiber p b₁.unop at y
+        let α := Classical.choose (pullback_identity_iso p P b₁.unop)
+        have hαinv :
+            Functor.Fiber.fiberInclusion.map (α.symm.hom.app y) =
+              P.pullbackMap (𝟙 b₁.unop) y := by
+          letI : IsIso (α.hom.app y) := NatIso.hom_app_isIso α y
+          letI : IsIso (Functor.Fiber.fiberInclusion.map (α.hom.app y)) :=
+            (Functor.Fiber.fiberInclusion.mapIso (asIso (α.hom.app y))).isIso_hom
+          apply (cancel_epi
+            (Functor.Fiber.fiberInclusion.map (α.hom.app y))).1
+          have hleft₀ :
+              Functor.Fiber.fiberInclusion.map (α.hom.app y) ≫
+                  Functor.Fiber.fiberInclusion.map (α.inv.app y) =
+                𝟙 (Functor.Fiber.fiberInclusion.obj y) := by
+            rw [← Functor.Fiber.fiberInclusion.map_comp,
+              α.hom_inv_id_app, Functor.Fiber.fiberInclusion.map_id]
+            rfl
+          have hleft :
+              Functor.Fiber.fiberInclusion.map (α.hom.app y) ≫
+                  Functor.Fiber.fiberInclusion.map (α.symm.hom.app y) =
+                𝟙 (Functor.Fiber.fiberInclusion.obj ((𝟭
+                  (Functor.Fiber p b₁.unop)).obj y)) := by
+            change Functor.Fiber.fiberInclusion.map (α.hom.app y) ≫
+              Functor.Fiber.fiberInclusion.map (α.inv.app y) = _
+            simpa only [Functor.id_obj] using hleft₀
+          have hfac :
+              Functor.Fiber.fiberInclusion.map (α.hom.app y) ≫
+                  P.pullbackMap (𝟙 b₁.unop) y =
+                𝟙 (Functor.Fiber.fiberInclusion.obj ((𝟭
+                  (Functor.Fiber p b₁.unop)).obj y)) := by
+            simpa [α, PullbackChoice.pullbackFunctor,
+              Functor.Fiber.fiberInclusion, Functor.id_obj] using
+              (Classical.choose_spec
+                (pullback_identity_iso p P b₁.unop)).1 y
+          rw [hleft]
+          exact hfac.symm
+        have hmapId :
+            Functor.Fiber.fiberInclusion.map
+                ((mapId b₁).hom.iso.hom.toNatTrans.app y) =
+              P.pullbackMap (𝟙 b₁.unop) y := by
+          dsimp [mapId]
+          change Functor.Fiber.fiberInclusion.map (α.symm.hom.app y) = _
+          exact hαinv
+        have hcomp := mapComp_fac f (𝟙 b₁) x
+        have hleftcomp :
+            Functor.Fiber.fiberInclusion.map A ≫ k =
+              P.pullbackMap ((f ≫ 𝟙 b₁).unop) x := by
+          change
+            (Functor.Fiber.fiberInclusion.map
+                ((mapComp f (𝟙 b₁)).hom.iso.hom.toNatTrans.app x) ≫
+              Functor.Fiber.fiberInclusion.map
+                ((mapId b₁).hom.iso.hom.toNatTrans.app y)) ≫
+              P.pullbackMap f.unop x =
+                P.pullbackMap ((f ≫ 𝟙 b₁).unop) x
+          have hassoc :
+              (Functor.Fiber.fiberInclusion.map
+                  ((mapComp f (𝟙 b₁)).hom.iso.hom.toNatTrans.app x) ≫
+                Functor.Fiber.fiberInclusion.map
+                  ((mapId b₁).hom.iso.hom.toNatTrans.app y)) ≫
+                  P.pullbackMap f.unop x =
+                Functor.Fiber.fiberInclusion.map
+                  ((mapComp f (𝟙 b₁)).hom.iso.hom.toNatTrans.app x) ≫
+                (Functor.Fiber.fiberInclusion.map
+                  ((mapId b₁).hom.iso.hom.toNatTrans.app y) ≫
+                  P.pullbackMap f.unop x) :=
+            Category.assoc _ _ _
+          have hstep := congrArg
+            (fun z => Functor.Fiber.fiberInclusion.map
+                ((mapComp f (𝟙 b₁)).hom.iso.hom.toNatTrans.app x) ≫ z)
+            (congrArg
+              (fun z => z ≫ P.pullbackMap f.unop x) hmapId)
+          have hcomp' :
+              Functor.Fiber.fiberInclusion.map
+                  ((mapComp f (𝟙 b₁)).hom.iso.hom.toNatTrans.app x) ≫
+                P.pullbackMap (𝟙 b₁.unop) y ≫
+                P.pullbackMap f.unop x =
+                  P.pullbackMap ((f ≫ 𝟙 b₁).unop) x := by
+            simpa [y, map, obj, PullbackChoice.pullbackFunctor,
+              Category.assoc] using hcomp
+          exact hassoc.trans (hstep.trans hcomp')
+        have pullbackMap_eq_of_eq :
+            ∀ {R S : C} (q₁ q₂ : R ⟶ S) (z : Functor.Fiber p S)
+              (hq : q₁ = q₂),
+              P.pullbackMap q₁ z =
+                eqToHom (congrArg
+                  (fun q => Functor.Fiber.fiberInclusion.obj
+                    (P.pullback q z)) hq) ≫ P.pullbackMap q₂ z := by
+          intro R S q₁ q₂ z hq
+          cases hq
+          simp
+        let e : map (f ≫ 𝟙 b₁) = map f := by simp
+        have hx0 :
+            Functor.Fiber.fiberInclusion.obj
+                ((map (f ≫ 𝟙 b₁)).of.toFunctor.obj x) =
+              Functor.Fiber.fiberInclusion.obj
+                ((map f).of.toFunctor.obj x) := by
+          exact congrArg
+            (fun K => Functor.Fiber.fiberInclusion.obj
+              (K.of.toFunctor.obj x)) e
+        have hR0 :
+            Functor.Fiber.fiberInclusion.map R = eqToHom hx0 := by
+          dsimp [R]
+          have he := CategoryTheory.eqToHom_map
+            (Core.inclusion _) e
+          rw [show (eqToHom e).iso.hom =
+              (eqToHom (congrArg (fun z => z.of) e) : _) from he]
+          change (obj b₀).as at x
+          change Functor.Fiber.fiberInclusion.map
+              ((eqToHom (congrArg (fun z => z.of) e) :
+                (map (f ≫ 𝟙 b₁)).of ⟶ (map f).of).toNatTrans.app x) =
+            eqToHom hx0
+          rw [CategoryTheory.Cat.eqToHom_app]
+          change Functor.Fiber.fiberInclusion.map
+              (eqToHom (congrArg (fun z => z.of.toFunctor.obj x) e)) =
+            eqToHom hx0
+          have hm := CategoryTheory.eqToHom_map
+            (Functor.Fiber.fiberInclusion (p := p)
+              (S := b₁.unop))
+            (congrArg (fun z => z.of.toFunctor.obj x) e)
+          calc
+            _ = eqToHom
+                (congrArg
+                  (fun z => Functor.Fiber.fiberInclusion.obj
+                    (z.of.toFunctor.obj x)) e) := hm
+            _ = eqToHom hx0 := by congr 1
+        have hq : 𝟙 (Opposite.unop b₁) ≫ f.unop = f.unop := by simp
+        have hpmap :=
+          (pullbackMap_eq_of_eq (𝟙 (Opposite.unop b₁) ≫ f.unop)
+            f.unop x hq).symm
+        have hRcomp :
+            Functor.Fiber.fiberInclusion.map R ≫ k =
+              P.pullbackMap ((f ≫ 𝟙 b₁).unop) x := by
+          have hfirst := congrArg
+            (fun z => z ≫ P.pullbackMap f.unop x) hR0
+          have hsecond :
+              eqToHom hx0 ≫ P.pullbackMap f.unop x =
+                P.pullbackMap (𝟙 (Opposite.unop b₁) ≫ f.unop) x := by
+            simpa [map, obj, PullbackChoice.pullbackFunctor,
+              Functor.Fiber.fiberInclusion, Category.assoc] using hpmap
+          exact hfirst.trans hsecond
+        exact hleftcomp.trans hRcomp.symm
+      )
   refine ⟨{ value := value, object_fibre := ?_, map_pullback := ?_ }⟩
   · intro U
     rfl
@@ -2206,7 +2642,145 @@ theorem fibred_categories_have_two_fibre_products
   let D := twoFibreProductOverDiagram F.underlying G.underlying
   refine ⟨{
     diagram := D
-    apex_fibred := by sorry
+    apex_fibred := by
+      refine Functor.IsFibered.of_exists_isStronglyCartesian ?_
+      intro ξ R f
+      rcases ξ.property with ⟨U, hX, hY, hξ⟩
+      subst U
+      change R ⟶ (structureFunctor X.underlying).obj ξ.obj.obj.left at f
+      obtain ⟨x', φ, hφ⟩ :=
+        (fibred_category_iff_exists_stronglyCartesian
+          (structureFunctor X.underlying)).mp inferInstance
+          ξ.obj.obj.left R f
+      let fY := f ≫ eqToHom hY.symm
+      obtain ⟨y', ψ, hψ⟩ :=
+        (fibred_category_iff_exists_stronglyCartesian
+          (structureFunctor Y.underlying)).mp inferInstance
+          ξ.obj.obj.right R fY
+      let : (structureFunctor X.underlying).IsStronglyCartesian f φ := hφ
+      let : (structureFunctor Y.underlying).IsStronglyCartesian fY ψ := hψ
+      have hdomX : (structureFunctor X.underlying).obj x' = R :=
+        CategoryTheory.IsHomLift.domain_eq
+          (structureFunctor X.underlying) f φ
+      have hdomY : (structureFunctor Y.underlying).obj y' = R :=
+        CategoryTheory.IsHomLift.domain_eq
+          (structureFunctor Y.underlying) fY ψ
+      subst R
+      have hφ' := stronglyCartesian_map_of f φ hφ
+      have hψ' := stronglyCartesian_map_of fY ψ hψ
+      have hFstrong := F.preserves φ hφ'
+      let : (structureFunctor S.underlying).IsStronglyCartesian
+          ((structureFunctor S.underlying).map
+            ((overFunctor F.underlying).map φ))
+          ((overFunctor F.underlying).map φ) := hFstrong
+      have hGstrong := G.preserves ψ hψ'
+      let : (structureFunctor S.underlying).IsStronglyCartesian
+          ((structureFunctor S.underlying).map
+            ((overFunctor G.underlying).map ψ))
+          ((overFunctor G.underlying).map ψ) := hGstrong
+      let : (structureFunctor S.underlying).IsHomLift
+          (𝟙 ((structureFunctor X.underlying).obj ξ.obj.obj.left))
+          ξ.obj.obj.hom := hξ
+      let hFx' := congrArg (fun K : X.underlying.left ⥤ C => K.obj x')
+        (overFunctor_comm F.underlying)
+      let hFx := congrArg (fun K : X.underlying.left ⥤ C =>
+        K.obj ξ.obj.obj.left) (overFunctor_comm F.underlying)
+      let hGy' := congrArg (fun K : Y.underlying.left ⥤ C => K.obj y')
+        (overFunctor_comm G.underlying)
+      let hGy := congrArg (fun K : Y.underlying.left ⥤ C =>
+        K.obj ξ.obj.obj.right) (overFunctor_comm G.underlying)
+      have hFmap : (structureFunctor S.underlying).map
+          ((overFunctor F.underlying).map φ) =
+          eqToHom hFx' ≫ (structureFunctor X.underlying).map φ ≫
+            eqToHom hFx.symm := by
+        exact Functor.congr_hom (overFunctor_comm F.underlying) φ
+      have hGmap : (structureFunctor S.underlying).map
+          ((overFunctor G.underlying).map ψ) =
+          eqToHom hGy' ≫ (structureFunctor Y.underlying).map ψ ≫
+            eqToHom hGy.symm := by
+        exact Functor.congr_hom (overFunctor_comm G.underlying) ψ
+      have hmapφ : (structureFunctor X.underlying).map φ =
+          f := by
+        simpa using CategoryTheory.IsHomLift.fac'
+          (structureFunctor X.underlying) f φ
+      have hmapψ : (structureFunctor Y.underlying).map ψ =
+          eqToHom hdomY ≫ fY := by
+        simpa using CategoryTheory.IsHomLift.fac'
+          (structureFunctor Y.underlying) fY ψ
+      let hFa := hFx
+      let hGa := hGy.trans hY
+      have hξfac := CategoryTheory.IsHomLift.fac'
+        (structureFunctor S.underlying)
+        (𝟙 ((structureFunctor X.underlying).obj ξ.obj.obj.left))
+        ξ.obj.obj.hom
+      have hξt : eqToHom hFa.symm ≫
+          (structureFunctor S.underlying).map ξ.obj.obj.hom ≫
+          eqToHom hGa = 𝟙 ((structureFunctor X.underlying).obj ξ.obj.obj.left) := by
+        rw [hξfac]
+        simp [hFa, hGa]
+      have hξleft : eqToHom hFa.symm ≫
+          (structureFunctor S.underlying).map ξ.obj.obj.hom =
+          eqToHom hGa.symm := by
+        calc
+          eqToHom hFa.symm ≫
+              (structureFunctor S.underlying).map ξ.obj.obj.hom =
+              (eqToHom hFa.symm ≫
+                (structureFunctor S.underlying).map ξ.obj.obj.hom ≫
+                eqToHom hGa) ≫ eqToHom hGa.symm := by
+                  simp [Category.assoc]
+          _ = 𝟙 _ ≫ eqToHom hGa.symm := by rw [hξt]
+          _ = eqToHom hGa.symm := by simp
+      let hsource := hFx'.trans
+        (hdomY.symm.trans hGy'.symm)
+      have hfactor : (structureFunctor S.underlying).map
+          (((overFunctor F.underlying).map φ) ≫ ξ.obj.obj.hom) =
+          eqToHom hsource ≫ (structureFunctor S.underlying).map
+            ((overFunctor G.underlying).map ψ) := by
+        calc
+          (structureFunctor S.underlying).map
+              (((overFunctor F.underlying).map φ) ≫ ξ.obj.obj.hom) =
+              (structureFunctor S.underlying).map
+                ((overFunctor F.underlying).map φ) ≫
+                (structureFunctor S.underlying).map ξ.obj.obj.hom := by
+                  rw [Functor.map_comp]
+          _ = (eqToHom hFx' ≫ f ≫ eqToHom hFx.symm) ≫
+                (structureFunctor S.underlying).map ξ.obj.obj.hom := by
+                  rw [hFmap, hmapφ]
+          _ = eqToHom hFx' ≫ f ≫
+                (eqToHom hFa.symm ≫
+                  (structureFunctor S.underlying).map ξ.obj.obj.hom) := by
+                  simp [Category.assoc, hFa]
+          _ = eqToHom hFx' ≫ f ≫ eqToHom hGa.symm := by
+                  rw [hξleft]
+          _ = eqToHom hsource ≫
+                (eqToHom hGy' ≫ (eqToHom hdomY ≫ fY) ≫
+                  eqToHom hGy.symm) := by
+                  dsimp [hsource, fY, hGa]
+                  simp [Category.assoc]
+          _ = eqToHom hsource ≫ (structureFunctor S.underlying).map
+                ((overFunctor G.underlying).map ψ) := by
+                  rw [hGmap, hmapψ]
+      obtain ⟨β, ⟨hβ, hβeq⟩, hβuniq⟩ :=
+        Functor.IsStronglyCartesian.universal_property
+          (structureFunctor S.underlying)
+          ((structureFunctor S.underlying).map
+            ((overFunctor G.underlying).map ψ))
+          ((overFunctor G.underlying).map ψ) (eqToHom hsource)
+          ((structureFunctor S.underlying).map
+            (((overFunctor F.underlying).map φ) ≫ ξ.obj.obj.hom)) hfactor
+          (((overFunctor F.underlying).map φ) ≫ ξ.obj.obj.hom)
+      have hβmap : eqToHom hsource =
+          (structureFunctor S.underlying).map β :=
+        CategoryTheory.IsHomLift.eq_of_isHomLift
+          (structureFunctor S.underlying) (eqToHom hsource) β
+      have hβvertical : (structureFunctor S.underlying).IsHomLift
+          (𝟙 ((structureFunctor X.underlying).obj x')) β := by
+        apply CategoryTheory.IsHomLift.of_fac'
+          (structureFunctor S.underlying)
+          (𝟙 ((structureFunctor X.underlying).obj x')) β
+          (hFx'.trans rfl) (hGy'.trans hdomY)
+        simpa [hsource, Category.assoc] using hβmap.symm
+      sorry
     is_two_fibre_product := twoFibreProductOver_is_twoFibreProduct F.underlying G.underlying }⟩
 
 /-! ## Slices, composites, and fibre products -/

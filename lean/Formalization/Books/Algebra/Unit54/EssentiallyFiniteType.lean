@@ -237,13 +237,88 @@ theorem finiteType_iff_finiteType_residue
     rw [heq] at hcomp
     exact hcomp
 
+private theorem isLocalizationOfQuotient_of_isLocalization
+    {P S : Type*} [CommRing P] [CommRing S] (p : P →+* S)
+    (M : Submonoid P)
+    (hloc : letI : Algebra P S := p.toAlgebra; IsLocalization M S) :
+    RingHom.IsLocalizationOfQuotient p := by
+  letI : Algebra P S := p.toAlgebra
+  let I : Ideal P := RingHom.ker p
+  let hI : I ≤ RingHom.ker p := by
+    intro x hx
+    exact hx
+  let q : (P ⧸ I) →+* S := Ideal.Quotient.lift I p hI
+  have hcomp : q.comp (Ideal.Quotient.mk I) = p := by
+    ext x
+    exact Ideal.Quotient.lift_mk I p hI
+  have hqmk (x : P) : q (Ideal.Quotient.mk I x) = p x := DFunLike.congr_fun hcomp x
+  letI : Algebra (P ⧸ I) S := q.toAlgebra
+  have hq : IsLocalization (M.map (Ideal.Quotient.mk I)) S := by
+    rw [isLocalization_iff]
+    constructor
+    · rintro ⟨_, ⟨u, hu, rfl⟩⟩
+      change IsUnit (q (Ideal.Quotient.mk I u))
+      rw [hqmk]
+      exact IsLocalization.map_units S ⟨u, hu⟩
+    constructor
+    · intro z
+      obtain ⟨⟨x, u⟩, hz⟩ := IsLocalization.surj M z
+      refine ⟨⟨Ideal.Quotient.mk I x, ⟨Ideal.Quotient.mk I (u : P), ?_⟩⟩, ?_⟩
+      · exact Submonoid.mem_map.mpr ⟨(u : P), u.2, rfl⟩
+      change z * q (Ideal.Quotient.mk I (u : P)) = q (Ideal.Quotient.mk I x)
+      rw [hqmk, hqmk]
+      exact hz
+    · intro x y hxy
+      obtain ⟨x, rfl⟩ := Ideal.Quotient.mk_surjective x
+      obtain ⟨y, rfl⟩ := Ideal.Quotient.mk_surjective y
+      change q (Ideal.Quotient.mk I x) = q (Ideal.Quotient.mk I y) at hxy
+      obtain ⟨u, hu⟩ := IsLocalization.exists_of_eq (M := M) (S := S)
+        (show p x = p y from by simpa only [hqmk] using hxy)
+      refine ⟨⟨Ideal.Quotient.mk I (u : P),
+        Submonoid.mem_map.mpr ⟨(u : P), u.2, rfl⟩⟩, ?_⟩
+      simpa only [map_mul] using congrArg (Ideal.Quotient.mk I) hu
+  exact ⟨I, M.map (Ideal.Quotient.mk I), q, hcomp, hq⟩
+
+private theorem isLocalizationOfQuotient_of_surjective
+    {P A S : Type*} [CommRing P] [CommRing A] [CommRing S]
+    (a : P →+* A) (ha : Function.Surjective a) (b : A →+* S) (M : Submonoid A)
+    (hloc : letI : Algebra A S := b.toAlgebra; IsLocalization M S) :
+    RingHom.IsLocalizationOfQuotient (b.comp a) := by
+  letI : Algebra A S := b.toAlgebra
+  let I : Ideal P := RingHom.ker a
+  let e : (P ⧸ I) ≃+* A := RingHom.quotientKerEquivOfSurjective ha
+  let q : (P ⧸ I) →+* S := (algebraMap A S).comp e.toRingHom
+  have hcomp : q.comp (Ideal.Quotient.mk I) = b.comp a := by
+    ext x
+    change b (e (Ideal.Quotient.mk I x)) = b (a x)
+    change b ((RingHom.quotientKerEquivOfSurjective ha) (Ideal.Quotient.mk I x)) = b (a x)
+    exact congrArg b (RingHom.quotientKerEquivOfSurjective_apply_mk ha x)
+  letI : Algebra (P ⧸ I) S := q.toAlgebra
+  have hq : IsLocalization (M.map e.symm) S := by
+    convert IsLocalization.isLocalization_of_base_ringEquiv M S e.symm using 1
+    apply Algebra.algebra_ext
+    intro x
+    rfl
+  exact ⟨I, M.map e.symm, q, hcomp, hq⟩
+
 theorem essFiniteType_iff_essFiniteType_residue
     {R S : Type*} [CommRing R] [CommRing S]
     [IsArtinianRing S] [IsLocalRing S]
     (f : R →+* S) (m : Ideal S) [m.IsMaximal] :
     RingHom.EssFiniteType f ↔
       RingHom.EssFiniteType ((Ideal.Quotient.mk m).comp f) := by
-  sorry
+  algebraize [f, (Ideal.Quotient.mk m).comp f]
+  let : Algebra R (S ⧸ m) := ((Ideal.Quotient.mk m).comp f).toAlgebra
+  constructor
+  · intro hf
+    exact RingHom.EssFiniteType.comp hf
+      (RingHom.FiniteType.essFiniteType
+        (RingHom.FiniteType.of_surjective _ Ideal.Quotient.mk_surjective))
+  · intro hq
+    change Algebra.EssFiniteType R (S ⧸ m) at hq
+    rw [Algebra.essFiniteType_iff_exists_subalgebra] at hq
+    rcases hq with ⟨A, M, hA, hloc⟩
+    sorry
 
 /-! ## Localization at a closed point of the special fibre -/
 

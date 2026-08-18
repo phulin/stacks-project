@@ -374,7 +374,7 @@ theorem polynomial_closed_sets_correspond_to_radical_ideals
     IsClosed Z ↔
       ∃ I : Ideal (polynomialRing k n), I.IsRadical ∧
         Z = PrimeSpectrum.zeroLocus (I : Set (polynomialRing k n)) := by
-  sorry
+  exact PrimeSpectrum.isClosed_iff_zeroLocus_radical_ideal Z
 
 /-- Closed subsets of the spectrum of a finite-variable polynomial ring are
 determined by the maximal ideals, equivalently the closed points, they contain. -/
@@ -385,7 +385,35 @@ theorem polynomial_closed_subsets_determined_by_closed_points
     (hclosed : ∀ p : PrimeSpectrum (polynomialRing k n),
       p.asIdeal.IsMaximal → (p ∈ Z ↔ p ∈ W)) :
     Z = W := by
-  sorry
+  rcases (PrimeSpectrum.isClosed_iff_zeroLocus_radical_ideal Z).mp hZ with ⟨I, hI, hIZ⟩
+  rcases (PrimeSpectrum.isClosed_iff_zeroLocus_radical_ideal W).mp hW with ⟨J, hJ, hJW⟩
+  have hmax : ∀ m : Ideal (polynomialRing k n), m.IsMaximal → (I ≤ m ↔ J ≤ m) := by
+    intro m hm
+    have hp := hclosed (⟨m, hm.isPrime⟩ : PrimeSpectrum (polynomialRing k n)) hm
+    rw [hIZ, hJW, PrimeSpectrum.mem_zeroLocus, PrimeSpectrum.mem_zeroLocus] at hp
+    exact hp
+  have hIJ : I.jacobson = J.jacobson := by
+    rw [Ideal.jacobson, Ideal.jacobson]
+    apply le_antisymm
+    · refine le_sInf ?_
+      intro m hm
+      exact sInf_le ⟨(hmax m hm.2).mpr hm.1, hm.2⟩
+    · refine le_sInf ?_
+      intro m hm
+      exact sInf_le ⟨(hmax m hm.2).mp hm.1, hm.2⟩
+  calc
+    Z = PrimeSpectrum.zeroLocus (I : Set (polynomialRing k n)) := hIZ
+    _ = PrimeSpectrum.zeroLocus (I.jacobson : Set (polynomialRing k n)) := by
+      calc
+        PrimeSpectrum.zeroLocus (I : Set (polynomialRing k n)) =
+            PrimeSpectrum.zeroLocus (I.radical : Set (polynomialRing k n)) :=
+          (PrimeSpectrum.zeroLocus_radical I).symm
+        _ = PrimeSpectrum.zeroLocus (I.jacobson : Set (polynomialRing k n)) := by
+          rw [Ideal.radical_eq_jacobson I]
+    _ = PrimeSpectrum.zeroLocus (J.jacobson : Set (polynomialRing k n)) := by rw [hIJ]
+    _ = PrimeSpectrum.zeroLocus (J : Set (polynomialRing k n)) := by
+      rw [← Ideal.radical_eq_jacobson J, PrimeSpectrum.zeroLocus_radical]
+    _ = W := hJW.symm
 
 /-! ## Exercise `product-matrices-ring` -/
 

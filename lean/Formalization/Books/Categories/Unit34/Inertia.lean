@@ -2361,8 +2361,7 @@ theorem relativeInertia_is_twoFibreProduct {C : Cat.{v, u}}
               (γ₂.obj w').carrier := by rfl
         cases hcar1
         cases hcar2
-        simp only [CategoryStruct.comp, Category.assoc, Category.id_comp,
-          Category.comp_id]
+        simp only [CategoryStruct.comp, Category.assoc]
         have hβ1 := congrArg (fun k => k.hom) (β₁.inv.naturality f)
         have hβ2 := congrArg (fun k => k.hom) (β₂.hom.naturality f)
         change (γ₁.map f).hom ≫ (β₁.inv.app w').hom =
@@ -2414,9 +2413,7 @@ theorem relativeInertia_is_twoFibreProduct {C : Cat.{v, u}}
           relativeInertiaNeutralSection, relativeInertiaStructureMap,
           relativeInertiaComparison, NatIso.ofComponents, Functor.comp]
           at h₁w' h₂w'
-        have hid {Z : Inertia S} :
-            (𝟙 Z : Z ⟶ Z).hom = 𝟙 _ := by rfl
-        simp only [hid, Category.comp_id, Category.id_comp] at h₁w' h₂w'
+        simp only [Category.comp_id, Category.id_comp] at h₁w' h₂w'
         have hcarrier :
             ((b ⋙ inertiaFunctoriality F).obj w).carrier =
               (overFunctor F.underlying).obj (b.obj w).carrier := by
@@ -2452,7 +2449,7 @@ theorem relativeInertia_is_twoFibreProduct {C : Cat.{v, u}}
           apply RelativeInertiaHom.ext
           dsimp [δ, NatIso.ofComponents, relativeInertiaComparison,
             CategoryStruct.comp]
-          simp [Functor.comp, relativeInertiaComparison, Category.assoc]
+          simp [Functor.comp]
           have h := congrArg (fun t => t.app w) β₁.hom_inv_id
           have h' := congrArg (fun t => t.hom) h
           change (β₁.hom.app w).hom ≫ (β₁.inv.app w).hom = 𝟙 _ at h'
@@ -2569,7 +2566,7 @@ theorem relativeInertia_is_twoFibreProduct {C : Cat.{v, u}}
         apply RelativeInertiaHom.ext
         dsimp [δ, NatIso.ofComponents, relativeInertiaComparison,
           CategoryStruct.comp]
-        simp [Functor.comp, relativeInertiaComparison, Category.assoc]
+        simp [Functor.comp]
         have h := congrArg (fun t => t.app w) β₁.hom_inv_id
         have h' := congrArg (fun t => t.hom) h
         change (β₁.hom.app w).hom ≫ (β₁.inv.app w).hom = 𝟙 _ at h'

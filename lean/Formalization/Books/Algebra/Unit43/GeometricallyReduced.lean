@@ -835,6 +835,48 @@ noncomputable def tensorProductMultiplication
     (k' ⊗[k] k') →ₐ[k] k' :=
   Algebra.TensorProduct.productMap (AlgHom.id k k') (AlgHom.id k k')
 
+private theorem exists_tensorProductMultiplication_localization_of_finite
+    {k : Type u} {L : Type v} [Field k] [Field L] [Algebra k L]
+    [FiniteDimensional k L] [Algebra.IsSeparable k L] :
+    ∃ M : Submonoid (L ⊗[k] L),
+      letI : Algebra (L ⊗[k] L) L :=
+        (Algebra.TensorProduct.productMap (AlgHom.id k L) (AlgHom.id k L)).toAlgebra
+      IsLocalization M L := by
+  let f : (L ⊗[k] L) →ₐ[k] L :=
+    Algebra.TensorProduct.productMap (AlgHom.id k L) (AlgHom.id k L)
+  let _ : Algebra (L ⊗[k] L) L := f.toAlgebra
+  have hmul : f = (Algebra.TensorProduct.lmul' k : (L ⊗[k] L) →ₐ[k] L) := by
+    change Algebra.TensorProduct.productMap (AlgHom.id k L) (AlgHom.id k L) = _
+    rw [Algebra.TensorProduct.productMap_eq_comp_map]
+    simp
+  have hf : Function.Surjective f := by
+    intro x
+    refine ⟨1 ⊗ₜ[k] x, ?_⟩
+    simp [f]
+  let _ : IsScalarTower k (L ⊗[k] L) L :=
+    IsScalarTower.of_algebraMap_eq' (by
+      simp only [RingHom.algebraMap_toAlgebra]
+      rw [hmul]
+      simp)
+  let _ : Algebra.FormallyUnramified k L :=
+    Algebra.FormallyUnramified.of_isSeparable k L
+  let _ : Algebra.EssFiniteType k L := inferInstance
+  have hI : IsIdempotentElem (KaehlerDifferential.ideal k L) :=
+    (Ideal.cotangent_subsingleton_iff _).mp
+      (inferInstanceAs (Subsingleton Ω[L⁄k]))
+  obtain ⟨e, he, hker⟩ :=
+    (Ideal.isIdempotentElem_iff_of_fg _ (KaehlerDifferential.ideal_fg _ _)).mp hI
+  have hker' : RingHom.ker (algebraMap (L ⊗[k] L) L) = Ideal.span {1 - (1 - e)} := by
+    rw [show RingHom.ker (algebraMap (L ⊗[k] L) L) =
+        KaehlerDifferential.ideal k L by rfl, hker]
+    simp
+  have hsurj : Function.Surjective (algebraMap (L ⊗[k] L) L) := by
+    rw [show algebraMap (L ⊗[k] L) L = f.toRingHom by
+      simp [RingHom.algebraMap_toAlgebra]]
+    exact hf
+  refine ⟨Submonoid.powers (1 - e), ?_⟩
+  exact IsLocalization.away_of_isIdempotentElem he.one_sub hker' hsurj
+
 /-- For a separable algebraic extension, the multiplication map from the
 diagonal tensor product is a localization map. -/
 theorem exists_tensorProductMultiplication_localization
@@ -844,6 +886,299 @@ theorem exists_tensorProductMultiplication_localization
       letI : Algebra (k' ⊗[k] k') k' :=
         (tensorProductMultiplication (k := k) (k' := k')).toAlgebra
       IsLocalization M k' := by
+  let f : (k' ⊗[k] k') →ₐ[k] k' :=
+    tensorProductMultiplication (k := k) (k' := k')
+  let _ : Algebra (k' ⊗[k] k') k' := f.toAlgebra
+  let M : Submonoid (k' ⊗[k] k') := (IsUnit.submonoid k').comap f.toRingHom
+  refine ⟨M, ?_⟩
+  refine ⟨⟨?_, ?_, ?_⟩⟩
+  · intro s
+    exact s.2
+  · intro z
+    refine ⟨((1 : k') ⊗ₜ[k] z, ⟨1, by simp [M]⟩), ?_⟩
+    simp only [Prod.snd, Prod.fst, Subtype.coe_mk, Submonoid.coe_one, one_mul]
+    simp only [map_one, one_mul]
+    rw [show algebraMap (k' ⊗[k] k') k' = f.toRingHom by
+      simp [RingHom.algebraMap_toAlgebra]]
+    simp [f, tensorProductMultiplication]
+  · intro x y hxy
+    have hxyf : f x = f y := by
+      simpa [RingHom.algebraMap_toAlgebra] using hxy
+    obtain ⟨r, a, b, hx⟩ := TensorProduct.exists_sum_tmul_eq x
+    obtain ⟨s, c, d, hy⟩ := TensorProduct.exists_sum_tmul_eq y
+    let X : Set k' := Set.range a ∪ Set.range b ∪ Set.range c ∪ Set.range d
+    let _ : Finite X := by
+      dsimp [X]
+      infer_instance
+    let L : IntermediateField k k' := IntermediateField.adjoin k X
+    let _ : FiniteDimensional k L := by
+      dsimp [L]
+      exact IntermediateField.finiteDimensional_adjoin
+        (fun z _ => Algebra.IsIntegral.isIntegral z)
+    let iL : L →ₐ[k] k' :=
+      { toFun := fun z => z.1
+        map_one' := rfl
+        map_mul' := by intro z w; rfl
+        map_zero' := rfl
+        map_add' := by intro z w; rfl
+        commutes' := by intro z; rfl }
+    have hiL : Function.Injective iL := by
+      intro z w h
+      exact Subtype.ext h
+    let _ : Algebra.IsSeparable k L := Algebra.IsSeparable.of_algHom k k' iL
+    have haL : ∀ j : Fin r, a j ∈ L := by
+      intro j
+      change a j ∈ IntermediateField.adjoin k X
+      exact IntermediateField.subset_adjoin k X (by simp [X])
+    have hbL : ∀ j : Fin r, b j ∈ L := by
+      intro j
+      change b j ∈ IntermediateField.adjoin k X
+      exact IntermediateField.subset_adjoin k X (by simp [X])
+    have hcL : ∀ j : Fin s, c j ∈ L := by
+      intro j
+      change c j ∈ IntermediateField.adjoin k X
+      exact IntermediateField.subset_adjoin k X (by simp [X])
+    have hdL : ∀ j : Fin s, d j ∈ L := by
+      intro j
+      change d j ∈ IntermediateField.adjoin k X
+      exact IntermediateField.subset_adjoin k X (by simp [X])
+    let aL : Fin r → L := fun j => ⟨a j, haL j⟩
+    let bL : Fin r → L := fun j => ⟨b j, hbL j⟩
+    let cL : Fin s → L := fun j => ⟨c j, hcL j⟩
+    let dL : Fin s → L := fun j => ⟨d j, hdL j⟩
+    let xL : L ⊗[k] L := ∑ j, aL j ⊗ₜ[k] bL j
+    let yL : L ⊗[k] L := ∑ j, cL j ⊗ₜ[k] dL j
+    let φ : (L ⊗[k] L) →ₐ[k] (k' ⊗[k] k') :=
+      Algebra.TensorProduct.map iL iL
+    let g : (L ⊗[k] L) →ₐ[k] L :=
+      Algebra.TensorProduct.productMap (AlgHom.id k L) (AlgHom.id k L)
+    obtain ⟨N, hN⟩ :=
+      exists_tensorProductMultiplication_localization_of_finite (k := k) (L := L)
+    let _ : Algebra (L ⊗[k] L) L := g.toAlgebra
+    let _ : IsLocalization N L := hN
+    have hxmap : φ xL = x := by
+      dsimp [xL]
+      rw [hx]
+      simp [φ, aL, bL, iL]
+    have hymap : φ yL = y := by
+      dsimp [yL]
+      rw [hy]
+      simp [φ, cL, dL, iL]
+    have hcomp : f.comp φ = iL.comp g := by
+      apply AlgHom.ext
+      intro z
+      refine TensorProduct.induction_on z ?_ ?_ ?_
+      · simp
+      swap
+      · intro z w hz hw
+        simp only [map_add]
+        rw [hz, hw]
+      · intro z w
+        simp [f, g, φ, iL, tensorProductMultiplication]
+    have hxyL : g xL = g yL := by
+      apply hiL
+      calc
+        iL (g xL) = f (φ xL) := by
+          exact congrArg (fun q => q xL) hcomp |>.symm
+        _ = f x := by rw [hxmap]
+        _ = f y := hxyf
+        _ = f (φ yL) := by rw [hymap]
+        _ = iL (g yL) := by
+          exact congrArg (fun q => q yL) hcomp
+    obtain ⟨m, hm⟩ := (IsLocalization.eq_iff_exists N L).mp hxyL
+    have hmUnit : IsUnit (g (m : L ⊗[k] L)) := by
+      simpa [g, RingHom.algebraMap_toAlgebra] using IsLocalization.map_units L m
+    have hmMem : φ (m : L ⊗[k] L) ∈ M := by
+      change IsUnit (f (φ (m : L ⊗[k] L)))
+      have hcompm : f (φ (m : L ⊗[k] L)) = iL (g (m : L ⊗[k] L)) := by
+        simpa only [AlgHom.comp_apply] using
+          congrArg (fun q => q (m : L ⊗[k] L)) hcomp
+      rw [hcompm]
+      exact IsUnit.map iL hmUnit
+    refine ⟨⟨φ (m : L ⊗[k] L), hmMem⟩, ?_⟩
+    change φ (m : L ⊗[k] L) * x = φ (m : L ⊗[k] L) * y
+    rw [← hxmap, ← hymap]
+    simpa [φ] using congrArg (fun z => φ z) hm
+
+private theorem isSeparablyGenerated_of_separable_algebraic
+    {k : Type u} {k' : Type v} [Field k] [Field k'] [Algebra k k']
+    [Algebra.IsAlgebraic k k'] [Algebra.IsSeparable k k'] :
+    Formalization.Books.Algebra.Unit42.IsSeparablyGenerated k k' := by
+  let x : {i : k' // False} → k' := fun i => nomatch i.2
+  have htr : IsTranscendenceBasis k x := by
+    rw [isTranscendenceBasis_iff_algebraicIndependent_isAlgebraic]
+    constructor
+    · exact algebraicIndependent_empty_type
+    · have hbot : Algebra.IsAlgebraic (⊥ : Subalgebra k k') k' :=
+        (Subalgebra.algebra_isAlgebraic_bot_left_iff
+          (FaithfulSMul.algebraMap_injective k k')).2
+          (inferInstance : Algebra.IsAlgebraic k k')
+      rw [Set.range_eq_empty x, Algebra.adjoin_empty]
+      exact hbot
+  have hsepbot : Algebra.IsSeparable (⊥ : IntermediateField k k') k' := by
+    apply Algebra.IsSeparable.of_equiv_equiv
+      (e₁ := (IntermediateField.botEquiv k k').symm.toRingEquiv)
+      (e₂ := RingEquiv.refl k')
+    ext z
+    rfl
+  refine ⟨{i : k' // False}, x, htr, ?_⟩
+  rw [Set.range_eq_empty x, IntermediateField.adjoin_empty]
+  exact hsepbot
+
+private theorem isReduced_tensorProduct_of_isReduced_of_separable_algebraic_base_change
+    {k : Type u} {k' : Type v} {A : Type w} {K : Type z}
+    [Field k] [Field k'] [CommRing A] [Field K]
+    [Algebra k k'] [Algebra k' A] [Algebra k A]
+    [Algebra k' K] [Algebra k K]
+    [IsScalarTower k k' A] [IsScalarTower k k' K]
+    [Algebra.IsAlgebraic k k'] [Algebra.IsSeparable k k']
+    (hS : IsReduced (K ⊗[k] A)) : IsReduced (K ⊗[k'] A) := by
+  let D : Type _ := k' ⊗[k] k'
+  let S₀ : Type _ := K ⊗[k] A
+  let T : Type _ := K ⊗[k'] A
+  let f : D →ₐ[k] k' := tensorProductMultiplication (k := k) (k' := k')
+  let _ : Algebra D k' := f.toAlgebra
+  obtain ⟨M, hM⟩ := exists_tensorProductMultiplication_localization (k := k) (k' := k')
+  let hM' : IsLocalization M k' := by simpa [D, f] using hM
+  let dS : D →ₐ[k] S₀ :=
+    Algebra.TensorProduct.map (IsScalarTower.toAlgHom k k' K)
+      (IsScalarTower.toAlgHom k k' A)
+  let _ : Algebra D S₀ := dS.toAlgebra
+  let _ : IsScalarTower k k' T :=
+    IsScalarTower.of_algebraMap_eq' (R := k) (S := k') (A := T) (by
+      ext x
+      simp [Algebra.TensorProduct.algebraMap_def, ← IsScalarTower.algebraMap_apply])
+  let iK : K →ₐ[k] T :=
+    (Algebra.TensorProduct.includeLeft : K →ₐ[k'] T).restrictScalars k
+  let iA : A →ₐ[k] T :=
+    (Algebra.TensorProduct.includeRight : A →ₐ[k'] T).restrictScalars k
+  let q : S₀ →ₐ[k] T :=
+    Algebra.TensorProduct.lift iK iA (by
+      intro x y
+      simp [iK, iA]
+      exact mul_comm _ _)
+  let dT : D →ₐ[k] T := (IsScalarTower.toAlgHom k k' T).comp f
+  let _ : Algebra D T := dT.toAlgebra
+  have hqd : ∀ x : D, q (dS x) = dT x := by
+    intro x
+    refine TensorProduct.induction_on x ?_ ?_ ?_
+    · simp [q, dS, dT, f]
+    swap
+    · intro x y hx hy
+      simp only [map_add]
+      rw [hx, hy]
+    · intro x y
+      dsimp [q, dS, dT, f]
+      rw [Algebra.TensorProduct.map_tmul]
+      rw [Algebra.TensorProduct.lift_tmul]
+      change iK ((algebraMap k' K) x) * iA ((algebraMap k' A) y) =
+        (algebraMap k' T) (x * y)
+      calc
+        iK ((algebraMap k' K) x) * iA ((algebraMap k' A) y) =
+          (algebraMap k' T) x * (algebraMap k' T) y := by
+          congr 1
+          change 1 ⊗ₜ[k'] (algebraMap k' A) y =
+            (algebraMap k' K) y ⊗ₜ[k'] 1
+          exact (Algebra.TensorProduct.tmul_one_eq_one_tmul y).symm
+        _ = (algebraMap k' T) (x * y) := by rw [map_mul]
+  let _ : IsLocalization M k' := hM'
+  have hX : IsLocalization (Algebra.algebraMapSubmonoid S₀ M)
+      (S₀ ⊗[D] k') := inferInstance
+  let X : Type _ := S₀ ⊗[D] k'
+  let _ : Algebra S₀ X := Algebra.TensorProduct.leftAlgebra
+  let _ : Algebra k' X := Algebra.TensorProduct.rightAlgebra
+  let s0X : S₀ →ₐ[k] X :=
+    (Algebra.TensorProduct.includeLeft : S₀ →ₐ[D] X).restrictScalars k
+  let jK0 : K →ₐ[k] X :=
+    s0X.comp (Algebra.TensorProduct.includeLeft : K →ₐ[k] S₀)
+  let jA0 : A →ₐ[k] X :=
+    s0X.comp (Algebra.TensorProduct.includeRight : A →ₐ[k] S₀)
+  let jK : K →ₐ[k'] X :=
+    { jK0.toRingHom with
+      commutes' := by
+        intro r
+        change (((algebraMap k' K) r) ⊗ₜ[k] (1 : A)) ⊗ₜ[D] (1 : k') =
+          (1 : S₀) ⊗ₜ[D] r
+        have hr :=
+          Algebra.TensorProduct.tmul_one_eq_one_tmul
+            (R := D) (A := S₀) (B := k')
+            (Algebra.TensorProduct.includeLeft (R := k) (S := k')
+              (A := k') (B := k') r)
+        change dS (Algebra.TensorProduct.includeLeft (R := k) (S := k')
+            (A := k') (B := k') r) ⊗ₜ[D] (1 : k') =
+          (1 : S₀) ⊗ₜ[D] f (Algebra.TensorProduct.includeLeft (R := k)
+            (S := k') (A := k') (B := k') r) at hr
+        dsimp [dS, f] at hr
+        rw [Algebra.TensorProduct.map_tmul] at hr
+        simp [tensorProductMultiplication] at hr
+        rw [Algebra.TensorProduct.productMap_left_apply] at hr
+        simpa [RingHom.algebraMap_toAlgebra] using hr }
+  let jA : A →ₐ[k'] X :=
+    { jA0.toRingHom with
+      commutes' := by
+        intro r
+        change ((1 : K) ⊗ₜ[k] ((algebraMap k' A) r)) ⊗ₜ[D] (1 : k') =
+          (1 : S₀) ⊗ₜ[D] r
+        have hr :=
+          Algebra.TensorProduct.tmul_one_eq_one_tmul
+            (R := D) (A := S₀) (B := k')
+            (Algebra.TensorProduct.includeRight (R := k) (A := k') (B := k') r)
+        change dS (Algebra.TensorProduct.includeRight (R := k)
+            (A := k') (B := k') r) ⊗ₜ[D] (1 : k') =
+          (1 : S₀) ⊗ₜ[D] f (Algebra.TensorProduct.includeRight (R := k)
+            (A := k') (B := k') r) at hr
+        dsimp [dS, f] at hr
+        rw [Algebra.TensorProduct.map_tmul] at hr
+        simp [tensorProductMultiplication] at hr
+        rw [Algebra.TensorProduct.productMap_right_apply] at hr
+        change ((1 : K) ⊗ₜ[k] ((algebraMap k' A) r)) ⊗ₜ[D] (1 : k') =
+          (1 : S₀) ⊗ₜ[D] r at hr
+        exact hr }
+  let _ : IsScalarTower D k' T :=
+    IsScalarTower.of_algebraMap_eq' (R := D) (S := k') (A := T) (by
+      change dT.toRingHom = (algebraMap k' T).comp f.toRingHom
+      rfl)
+  let gD : k' →ₐ[D] T := IsScalarTower.toAlgHom D k' T
+  let qD : S₀ →ₐ[D] T :=
+    { q.toRingHom with
+      commutes' := by
+        intro x
+        simpa [RingHom.algebraMap_toAlgebra] using hqd x }
+  let e : X →ₐ[D] T :=
+    Algebra.TensorProduct.lift qD gD (by
+      intro x y
+      exact Commute.all _ _)
+  let p : T →ₐ[k'] X :=
+    Algebra.TensorProduct.lift jK jA (by
+      intro x y
+      exact Commute.all _ _)
+  have hpq : p.toRingHom.comp q.toRingHom = s0X.toRingHom := by
+    apply RingHom.ext
+    intro z
+    refine TensorProduct.induction_on z ?_ ?_ ?_
+    · simp
+    swap
+    · intro x y hx hy
+      simp only [map_add]
+      rw [hx, hy]
+    · intro x y
+      change p (iK x * iA y) = s0X (x ⊗ₜ[k] y)
+      rw [map_mul]
+      change p (x ⊗ₜ[k'] (1 : A)) * p ((1 : K) ⊗ₜ[k'] y) =
+        s0X (x ⊗ₜ[k] y)
+      rw [Algebra.TensorProduct.lift_tmul, Algebra.TensorProduct.lift_tmul]
+      simp [jK, jA, jK0, jA0, s0X, Algebra.TensorProduct.one_def,
+        Algebra.TensorProduct.tmul_mul_tmul]
+      rw [Algebra.TensorProduct.tmul_mul_tmul]
+      rw [Algebra.TensorProduct.tmul_mul_tmul]
+      rw [Algebra.TensorProduct.tmul_mul_tmul]
+      simp only [mul_one, one_mul]
+      rw [show Algebra.TensorProduct.includeLeft x =
+        x ⊗ₜ[k] (1 : A) by rfl]
+      rw [show Algebra.TensorProduct.includeRight y =
+        (1 : K) ⊗ₜ[k] y by rfl]
+      rw [Algebra.TensorProduct.tmul_mul_tmul]
+      simp
   sorry
 
 /-! ## Changing a separable algebraic base field -/
@@ -856,7 +1191,51 @@ theorem isGeometricallyReduced_iff_of_separable_algebraic
     [IsScalarTower k k' A]
     [Algebra.IsAlgebraic k k'] [Algebra.IsSeparable k k'] :
     IsGeometricallyReduced k A ↔ IsGeometricallyReduced k' A := by
-  sorry
+  constructor
+  · intro hA K _ _
+    let _ : Algebra k K :=
+      ((algebraMap k' K).comp (algebraMap k k')).toAlgebra
+    let _ : IsScalarTower k k' K :=
+      IsScalarTower.of_algebraMap_eq' (by rfl)
+    have hS : IsReduced (K ⊗[k] A) :=
+      isReduced_tensorProduct_of_isReduced_of_isGeometricallyReduced
+        (k := k) (R := K) (S := A) inferInstance hA
+    sorry
+  · intro hA K _ _
+    let hKsep' : IsReduced (k' ⊗[k] K) :=
+      isReduced_tensorProduct_of_separable_extension
+        (k := k) (S := K) (K := k') (inferInstance : IsReduced K)
+        (Or.inr (isSeparablyGenerated_of_separable_algebraic (k := k) (k' := k')))
+    let _ : IsReduced (k' ⊗[k] K) := hKsep'
+    let hKsep : IsReduced (K ⊗[k] k') :=
+      isReduced_of_injective (Algebra.TensorProduct.comm k k' K).symm
+        (Algebra.TensorProduct.comm k k' K).symm.injective
+    let _ : Algebra k' (K ⊗[k] k') := Algebra.TensorProduct.rightAlgebra
+    let _ : Module k' (K ⊗[k] k') :=
+      @Algebra.toModule k' (K ⊗[k] k') _ _ Algebra.TensorProduct.rightAlgebra
+    let _ : IsScalarTower k' (K ⊗[k] k') (K ⊗[k] k') := inferInstance
+    let _ : SMulCommClass k' (K ⊗[k] k') (K ⊗[k] k') := inferInstance
+    let _ : IsReduced (K ⊗[k] k') := hKsep
+    have hbase :=
+      isReduced_tensorProduct_of_isReduced_of_isGeometricallyReduced
+        (k := k') (R := K ⊗[k] k') (S := A) hKsep hA
+    let e₁ : ((K ⊗[k] k') ⊗[k'] A) ≃ₐ[k']
+        A ⊗[k'] (K ⊗[k] k') :=
+      Algebra.TensorProduct.comm k' (K ⊗[k] k') A
+    let e₂ : (A ⊗[k'] (K ⊗[k] k')) ≃ₐ[k']
+        A ⊗[k'] (k' ⊗[k] K) :=
+      Algebra.TensorProduct.congr (AlgEquiv.refl : A ≃ₐ[k'] A)
+        (Algebra.TensorProduct.commRight k k' K).symm
+    let e₃ : (A ⊗[k'] (k' ⊗[k] K)) ≃ₐ[A]
+        A ⊗[k] K :=
+      Algebra.TensorProduct.cancelBaseChange k k' A A K
+    let e₄ : (A ⊗[k] K) ≃ₐ[k] K ⊗[k] A :=
+      Algebra.TensorProduct.comm k A K
+    let e : ((K ⊗[k] k') ⊗[k'] A) ≃+* (K ⊗[k] A) :=
+      e₁.toRingEquiv.trans (e₂.toRingEquiv.trans
+        (e₃.toRingEquiv.trans e₄.toRingEquiv))
+    let _ : IsReduced ((K ⊗[k] k') ⊗[k'] A) := hbase
+    exact isReduced_of_injective e.symm e.symm.injective
 
 end
 

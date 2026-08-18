@@ -35,6 +35,10 @@ def homMap (U : C) {A B : C} (f : A ⟶ B) :
       simp [Category.assoc]
   }
 
+@[simp]
+theorem homMap_apply (U : C) {A B : C} (f : A ⟶ B) (g : U ⟶ A) :
+    (homMap U f).hom g = g ≫ f := rfl
+
 def homFunctor (U : C) : C ⥤ ModuleCat.{v} (GabrielRing U)ᵐᵒᵖ where
   obj A := homModule U A
   map f := homMap U f
@@ -87,6 +91,23 @@ structure FreePresentation (U : C) (M : ModuleCat.{v} (GabrielRing U)ᵐᵒᵖ)
   exact :
     (ShortComplex.mk differential augmentation differential_augmentation).Exact
   augmentation_epi : Epi augmentation
+
+/-- The exact sequence in a chosen free presentation, with its zero term
+omitted as in the `ShortComplex` API. -/
+def FreePresentation.sequence {U : C}
+    {M : ModuleCat.{v} (GabrielRing U)ᵐᵒᵖ} (P : FreePresentation U M) :
+    ShortComplex (ModuleCat.{v} (GabrielRing U)ᵐᵒᵖ) :=
+  ShortComplex.mk P.differential P.augmentation P.differential_augmentation
+
+omit [IsGrothendieckAbelian C] in
+theorem FreePresentation.sequence_exact {U : C}
+    {M : ModuleCat.{v} (GabrielRing U)ᵐᵒᵖ} (P : FreePresentation U M) :
+    P.sequence.Exact := P.exact
+
+omit [IsGrothendieckAbelian C] in
+theorem FreePresentation.augmentation_is_epimorphism {U : C}
+    {M : ModuleCat.{v} (GabrielRing U)ᵐᵒᵖ} (P : FreePresentation U M) :
+    Epi P.augmentation := P.augmentation_epi
 
 /-- Every module admits the free presentation used in the construction of `F`. -/
 theorem exists_freePresentation (U : C)

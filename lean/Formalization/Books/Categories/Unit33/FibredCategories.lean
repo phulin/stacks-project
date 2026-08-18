@@ -2634,12 +2634,12 @@ structure FibredTwoFibreProduct {C : Cat.{v, u}}
     IsTwoFibreProductOverDiagram.{v, u, u₁, v₁}
       (F := F.underlying) (G := G.underlying) diagram
 
-theorem fibred_categories_have_two_fibre_products
+noncomputable def canonicalFibredTwoFibreProduct
     {C : Cat.{v, u}} (X Y S : FibredCategoryOver C)
     (F : FibredCategoryOverHom X S) (G : FibredCategoryOverHom Y S) :
-    Nonempty (FibredTwoFibreProduct F G) := by
+    FibredTwoFibreProduct F G := by
   let D := twoFibreProductOverDiagram F.underlying G.underlying
-  refine ⟨{
+  refine {
     diagram := D
     apex_fibred := by
       refine Functor.IsFibered.of_exists_isStronglyCartesian ?_
@@ -3257,7 +3257,20 @@ theorem fibred_categories_have_two_fibre_products
         exact hmLeftEq
       · dsimp [κ, ObjectProperty.homMk]
         exact hmRightEq
-    is_two_fibre_product := twoFibreProductOver_is_twoFibreProduct F.underlying G.underlying }⟩
+    is_two_fibre_product := twoFibreProductOver_is_twoFibreProduct F.underlying G.underlying }
+
+@[simp]
+theorem canonicalFibredTwoFibreProduct_diagram
+    {C : Cat.{v, u}} (X Y S : FibredCategoryOver C)
+    (F : FibredCategoryOverHom X S) (G : FibredCategoryOverHom Y S) :
+    (canonicalFibredTwoFibreProduct X Y S F G).diagram =
+      twoFibreProductOverDiagram F.underlying G.underlying := rfl
+
+theorem fibred_categories_have_two_fibre_products
+    {C : Cat.{v, u}} (X Y S : FibredCategoryOver C)
+    (F : FibredCategoryOverHom X S) (G : FibredCategoryOverHom Y S) :
+    Nonempty (FibredTwoFibreProduct F G) :=
+  ⟨canonicalFibredTwoFibreProduct X Y S F G⟩
 
 /-! ## Slices, composites, and fibre products -/
 

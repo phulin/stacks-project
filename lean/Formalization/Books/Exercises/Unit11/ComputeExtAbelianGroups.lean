@@ -65,12 +65,12 @@ theorem ext_integer_integer_degree_zero :
 theorem ext_integer_integer_positive_vanishes {i : ℕ} (hi : 0 < i) :
     Nonempty (ExtGroup integerModule integerModule i ≃+ (Fin 0 → ℤ)) := by
   obtain ⟨n, rfl⟩ := Nat.exists_eq_succ_of_ne_zero (Nat.ne_of_gt hi)
-  letI : Subsingleton (ExtGroup integerModule integerModule (n + 1)) :=
+  let hsub : Subsingleton (ExtGroup integerModule integerModule (n + 1)) :=
     CategoryTheory.Abelian.Ext.subsingleton_of_projective integerModule integerModule n
-  letI : Unique (ExtGroup integerModule integerModule (n + 1)) :=
+  let huniq : Unique (ExtGroup integerModule integerModule (n + 1)) :=
     { default := 0
-      uniq := fun _ => Subsingleton.elim _ _ }
-  exact ⟨AddEquiv.ofUnique⟩
+      uniq := fun _ => hsub.elim _ _ }
+  exact ⟨@AddEquiv.ofUnique _ _ huniq inferInstance inferInstance inferInstance⟩
 
 /-- For the pair `(ℤ/4, ℤ/8)`, both `Ext^0` and `Ext^1` are `ℤ/4`, and
 all higher Ext groups vanish. -/
@@ -150,7 +150,7 @@ theorem ext_mod_four_mod_eight_degree_zero :
       have hvk : v (k : ZMod 4) 1 = h 1 := by
         rw [hv_one]
         rw [← hn]
-        simpa [u, fbase, AddMonoidHom.mulRight_apply, hkn, mul_comm]
+        simp [u, fbase, hkn, mul_comm]
       apply AddMonoidHom.ext
       intro x
       obtain ⟨m, rfl⟩ := ZMod.intCast_surjective x
@@ -172,7 +172,7 @@ theorem ext_mod_four_mod_eight_degree_one :
   let g : ℤ →ₗ[ℤ] ZMod 4 :=
     { toFun := fun x => (x : ZMod 4)
       map_add' := by intro x y; simp
-      map_smul' := by intro c x; simp [smul_eq_mul] }
+      map_smul' := by intro c x; simp }
   let S : CategoryTheory.ShortComplex (ModuleCat ℤ) :=
     ModuleCat.shortComplexOfCompEqZero f g (by
       apply LinearMap.ext
@@ -229,10 +229,10 @@ theorem ext_mod_four_mod_eight_degree_one :
       let h : ℤ →ₗ[ℤ] ZMod 8 :=
         { toFun := fun x => x • z
           map_add' := by intro x y; simp [add_smul]
-          map_smul' := by intro x y; simp [smul_eq_mul, mul_assoc] }
+          map_smul' := by intro x y; simp [mul_assoc] }
       refine ⟨h, ?_⟩
       change (1 : ℤ) • z = z
-      simp [LinearMap.lsmul_apply]
+      simp
   let e0 : ExtGroup integerModule integerModEightModule 0 ≃+ ZMod 8 :=
     CategoryTheory.Abelian.Ext.addEquiv₀.trans
       (ModuleCat.homAddEquiv.trans (AddEquiv.ofBijective evalEight hevalEight))
@@ -276,12 +276,12 @@ theorem ext_mod_four_mod_eight_degree_one :
             (CategoryTheory.Abelian.Ext.mk₀ w) = w :=
       (CategoryTheory.Abelian.Ext.addEquiv₀).right_inv w
     rw [hright]
-    simp [S, β, e0, CategoryTheory.Abelian.Ext.addEquiv₀, f, evalEight,
+    simp [S, CategoryTheory.Abelian.Ext.addEquiv₀, f, evalEight,
       ModuleCat.homEquiv, ModuleCat.homAddEquiv, ModuleCat.hom_comp,
-      ModuleCat.hom_ofHom, LinearMap.coe_comp, LinearMap.lsmul_apply]
+      LinearMap.coe_comp, LinearMap.lsmul_apply]
     change (CategoryTheory.Abelian.Ext.homEquiv₀ z) 4 = _
     rw [show (4 : ℤ) = (4 : ℤ) • (1 : ℤ) by simp, map_smul]
-    simp [smul_eq_mul]
+    simp
   let qS : ExtGroup S.X₁ integerModEightModule 0 →+ ZMod 4 := q
   have hqβ (z : ExtGroup S.X₂ integerModEightModule 0) : qS (β z) = 0 := by
     rw [show qS (β z) = c (e0 (β z)) by rfl, hβ]
@@ -330,8 +330,7 @@ theorem ext_mod_four_mod_eight_degree_one :
             norm_num
           _ = 4 * e0 z := by simp [z]
       have hz0 : α (β z) = 0 := by
-        simpa [α, β] using
-          (CategoryTheory.Abelian.Ext.extClass_comp_assoc hS z (by simp))
+        exact CategoryTheory.ShortComplex.ShortExact.extClass_comp_assoc hS z (h := rfl)
       rw [← sub_eq_zero, ← map_sub]
       rw [hdiff]
       exact hz0

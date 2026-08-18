@@ -38,7 +38,8 @@ theorem formallyEtale_iff_lifting
           Function.Bijective
             ((Ideal.Quotient.mkₐ R I).comp :
               (S →ₐ[R] A) → S →ₐ[R] A ⧸ I) := by
-  sorry
+  letI : Algebra R S := f.toAlgebra
+  exact Algebra.FormallyEtale.iff_comp_bijective
 
 /-- Formal étaleness is equivalent to formal smoothness and formal
 unramifiedness, in the order used in the source. -/
@@ -67,7 +68,13 @@ theorem formallyEtale_iff_etale_of_finitePresentation
     {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S)
     (hfp : f.FinitePresentation) :
     f.FormallyEtale ↔ f.Etale := by
-  sorry
+  letI : Algebra R S := f.toAlgebra
+  change Algebra.FormallyEtale R S ↔ Algebra.Etale R S
+  constructor
+  · intro h
+    exact { formallyEtale := h, finitePresentation := hfp }
+  · intro h
+    exact h.formallyEtale
 
 /-- A directed colimit of formally étale algebras is formally étale. -/
 theorem formallyEtale_directedColimit

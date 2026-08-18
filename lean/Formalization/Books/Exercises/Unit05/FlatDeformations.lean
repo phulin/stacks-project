@@ -1,8 +1,12 @@
 import Mathlib.Algebra.DualNumber
 import Mathlib.Algebra.MvPolynomial.Basic
 import Mathlib.Algebra.Algebra.ZMod
+import Mathlib.LinearAlgebra.Basis.VectorSpace
 import Mathlib.RingTheory.Flat.Basic
+import Mathlib.RingTheory.Flat.Stability
 import Mathlib.RingTheory.Ideal.Quotient.Operations
+import Mathlib.RingTheory.MvPolynomial.Ideal
+import Mathlib.RingTheory.TensorProduct.Quotient
 
 /-!
 # Exercises, Chapter 5: Flat ring maps
@@ -67,7 +71,67 @@ theorem dualNumber_baseChange_is_deformation
     letI : Algebra (dualNumberRing k) (dualNumberBaseChange k A) :=
       dualNumberBaseChangeAlgebra k A
     IsFlatDualNumberDeformation k A (dualNumberBaseChange k A) := by
-  sorry
+  letI : Algebra (dualNumberRing k) (dualNumberBaseChange k A) :=
+    dualNumberBaseChangeAlgebra k A
+  dsimp only [IsFlatDualNumberDeformation]
+  constructor
+  · letI : Module.Free k A := Module.Free.of_divisionRing k A
+    letI : Module.Flat k A := Module.Flat.of_free
+    exact Module.Flat.of_linearEquiv
+      (Algebra.TensorProduct.commRight k (dualNumberRing k) A).symm.toLinearEquiv
+  · let Iε : Ideal (dualNumberRing k) := Ideal.span {dualNumberEpsilon k}
+    let f : dualNumberRing k →ₐ[k] k := TrivSqZeroExt.fstHom k k k
+    have hf : Function.Surjective f := by
+      intro a
+      exact ⟨TrivSqZeroExt.inl a, by simp [f]⟩
+    have hker : Iε = RingHom.ker f := by
+      ext x
+      constructor
+      · intro hx
+        rcases Ideal.mem_span_singleton'.mp hx with ⟨a, ha⟩
+        rw [← ha]
+        change TrivSqZeroExt.fst (a * TrivSqZeroExt.inr (1 : k)) = 0
+        rw [TrivSqZeroExt.fst_mul, TrivSqZeroExt.fst_inr, mul_zero]
+      · intro hx
+        change x.1 = 0 at hx
+        refine Ideal.mem_span_singleton'.mpr
+          ⟨TrivSqZeroExt.inl (TrivSqZeroExt.snd x), ?_⟩
+        apply TrivSqZeroExt.ext
+        · change TrivSqZeroExt.fst
+            (TrivSqZeroExt.inl (TrivSqZeroExt.snd x) * TrivSqZeroExt.inr (1 : k)) =
+              TrivSqZeroExt.fst x
+          rw [TrivSqZeroExt.fst_mul, TrivSqZeroExt.fst_inr, mul_zero]
+          exact hx.symm
+        · simp [dualNumberEpsilon]
+    have hmap :
+        (RingHom.ker f).map
+            (Algebra.TensorProduct.includeRight :
+              dualNumberRing k →ₐ[k] dualNumberBaseChange k A) =
+          dualNumberIdeal k (dualNumberBaseChange k A) := by
+      rw [← hker]
+      change (Ideal.map
+          (Algebra.TensorProduct.includeRight :
+            dualNumberRing k →ₐ[k] dualNumberBaseChange k A)
+          (Ideal.span {dualNumberEpsilon k})) =
+        Ideal.span {(algebraMap (dualNumberRing k) (dualNumberBaseChange k A))
+          (dualNumberEpsilon k)}
+      rw [Ideal.map_span, Set.image_singleton]
+      rfl
+    let q : (dualNumberRing k ⧸ RingHom.ker f) ≃ₐ[k] k :=
+      Ideal.quotientKerAlgEquivOfSurjective hf
+    let e₀ : A ≃ₐ[k] A ⊗[k] k :=
+      (Algebra.TensorProduct.rid k k A).symm
+    let e₁ : A ⊗[k] k ≃ₐ[k]
+        A ⊗[k] (dualNumberRing k ⧸ RingHom.ker f) :=
+      Algebra.TensorProduct.congr (AlgEquiv.refl : A ≃ₐ[k] A) q.symm
+    letI : CommRing (dualNumberBaseChange k A) := inferInstance
+    let e₂ : A ⊗[k] (dualNumberRing k ⧸ RingHom.ker f) ≃ₐ[k]
+        (dualNumberBaseChange k A) ⧸
+          (RingHom.ker f).map
+            (Algebra.TensorProduct.includeRight :
+              dualNumberRing k →ₐ[k] dualNumberBaseChange k A) :=
+      Algebra.TensorProduct.tensorQuotientEquiv k (dualNumberRing k) A (RingHom.ker f)
+    exact ⟨e₀.trans (e₁.trans (e₂.trans (Ideal.quotientEquivAlgOfEq k hmap)))⟩
 
 /-! ## Polynomial lifts from `ℤ/p²ℤ` -/
 
@@ -100,7 +164,129 @@ abbrev sixVariablePowerLiftSpecialFiber (p : ℕ) :=
 /-- The displayed polynomial lift is flat over `ℤ/p²ℤ`. -/
 theorem sixVariablePowerLift_flat (p : ℕ) (hp : Nat.Prime p) :
     Module.Flat (ZMod (p ^ 2)) (sixVariablePowerLift p) := by
-  sorry
+  let R := ZMod (p ^ 2)
+  change Module.Flat R
+    (MvPolynomial (Fin 6) R ⧸ sixVariablePowerIdeal p R)
+  let red : MvPolynomial (Fin 6) R →ₗ[R] MvPolynomial (Fin 6) R :=
+    { toFun := fun q =>
+        ⟨Finsupp.filter (fun m : Fin 6 →₀ ℕ => ∀ i : Fin 6, m i < p)
+            (AddMonoidAlgebra.coeff q)⟩
+      map_add' := by
+        intro q r
+        ext m
+        by_cases hm : ∀ i : Fin 6, m i < p <;>
+          simp [Finsupp.filter_apply, hm, smul_eq_mul]
+      map_smul' := by
+        intro a q
+        ext m
+        by_cases hm : ∀ i : Fin 6, m i < p <;>
+          simp [Finsupp.filter_apply, hm, smul_eq_mul] }
+  have hgen :
+      Ideal.span
+          ((fun m : Fin 6 →₀ ℕ => MvPolynomial.monomial m (1 : R)) ''
+            Set.range (fun i : Fin 6 => Finsupp.single i p)) =
+        sixVariablePowerIdeal p R := by
+    unfold sixVariablePowerIdeal
+    apply congrArg Ideal.span
+    ext z
+    constructor
+    · rintro ⟨m, ⟨i, rfl⟩, rfl⟩
+      exact ⟨i, by simp [MvPolynomial.X, MvPolynomial.monomial]⟩
+    · rintro ⟨i, rfl⟩
+      exact ⟨Finsupp.single i p, ⟨i, rfl⟩, by
+        simp [MvPolynomial.X, MvPolynomial.monomial]⟩
+  have hker : LinearMap.ker red = (sixVariablePowerIdeal p R).restrictScalars R := by
+    ext q
+    change red q = 0 ↔ q ∈ sixVariablePowerIdeal p R
+    rw [← hgen, MvPolynomial.mem_ideal_span_monomial_image]
+    constructor
+    · intro hq
+      intro xi hxi
+      by_contra hno
+      push_neg at hno
+      have hgood : ∀ i : Fin 6, xi i < p := by
+        intro i
+        exact Nat.lt_of_not_ge (fun hpi =>
+          hno (Finsupp.single i p) ⟨i, rfl⟩ (Finsupp.single_le_iff.mpr hpi))
+      have hcoeff : (AddMonoidAlgebra.coeff q) xi = 0 := by
+        have hcoeff' := congrArg (fun z => MvPolynomial.coeff xi z) hq
+        change (Finsupp.filter
+          (fun m : Fin 6 →₀ ℕ => ∀ i : Fin 6, m i < p)
+          (AddMonoidAlgebra.coeff q)) xi = 0 at hcoeff'
+        simpa [Finsupp.filter_apply, hgood] using hcoeff'
+      exact (MvPolynomial.mem_support_iff.mp hxi) hcoeff
+    · intro hq
+      ext xi
+      by_cases hgood : ∀ i : Fin 6, xi i < p
+      · have hcoeff : (AddMonoidAlgebra.coeff q) xi = 0 := by
+          by_contra hcoeff
+          have hxi : xi ∈ q.support := MvPolynomial.mem_support_iff.mpr hcoeff
+          rcases hq xi hxi with ⟨s, ⟨i, rfl⟩, hle⟩
+          exact Nat.not_le_of_lt (hgood i) (Finsupp.single_le_iff.mp hle)
+        change (Finsupp.filter
+          (fun m : Fin 6 →₀ ℕ => ∀ i : Fin 6, m i < p)
+          (AddMonoidAlgebra.coeff q)) xi = 0
+        simp [Finsupp.filter_apply, hgood, hcoeff]
+      · change (Finsupp.filter
+          (fun m : Fin 6 →₀ ℕ => ∀ i : Fin 6, m i < p)
+          (AddMonoidAlgebra.coeff q)) xi = 0
+        simp [Finsupp.filter_apply, hgood]
+  let red' : MvPolynomial (Fin 6) R →ₗ[R] LinearMap.range red :=
+    red.codRestrict (LinearMap.range red) (fun q => ⟨q, rfl⟩)
+  have hred_surj : Function.Surjective red' := by
+    rintro ⟨x, ⟨q, rfl⟩⟩
+    exact ⟨q, rfl⟩
+  have hker' : LinearMap.ker red' = (sixVariablePowerIdeal p R).restrictScalars R := by
+    ext q
+    constructor
+    · intro hq
+      have hredq : red q = 0 := by
+        have hq' := congrArg Subtype.val hq
+        change red q = 0 at hq'
+        exact hq'
+      have hqker : q ∈ LinearMap.ker red := hredq
+      rw [hker] at hqker
+      exact hqker
+    · intro hq
+      have hredq : red q = 0 := by
+        have hqker : q ∈ LinearMap.ker red := by
+          rw [hker]
+          exact hq
+        exact hqker
+      apply Subtype.ext
+      exact hredq
+  have hred_idem : red.comp red = red := by
+    apply LinearMap.ext
+    intro q
+    apply AddMonoidAlgebra.ext
+    ext m
+    change (Finsupp.filter
+      (fun m : Fin 6 →₀ ℕ => ∀ i : Fin 6, m i < p)
+      (Finsupp.filter
+        (fun m : Fin 6 →₀ ℕ => ∀ i : Fin 6, m i < p)
+        (AddMonoidAlgebra.coeff q))) m =
+      (Finsupp.filter
+        (fun m : Fin 6 →₀ ℕ => ∀ i : Fin 6, m i < p)
+        (AddMonoidAlgebra.coeff q)) m
+    by_cases hm : ∀ i : Fin 6, m i < p <;>
+      simp [Finsupp.filter_apply, hm]
+  let r : MvPolynomial (Fin 6) R →ₗ[R] LinearMap.range red := red'
+  have hri : r.comp (LinearMap.range red).subtype = LinearMap.id := by
+    apply LinearMap.ext
+    intro x
+    rcases x with ⟨x, ⟨q, hq⟩⟩
+    apply Subtype.ext
+    change red x = x
+    rw [← hq]
+    simpa [LinearMap.comp_apply] using congrArg (fun f => f q) hred_idem
+  letI : Module.Flat R (LinearMap.range red) :=
+    Module.Flat.of_retract (LinearMap.range red).subtype r hri
+  let equot :
+      (MvPolynomial (Fin 6) R ⧸ (sixVariablePowerIdeal p R).restrictScalars R) ≃ₗ[R]
+        LinearMap.range red :=
+    (Submodule.quotEquivOfEq _ _ hker'.symm).trans
+      (r.quotKerEquivOfSurjective hred_surj)
+  exact Module.Flat.of_linearEquiv equot
 
 /-- Its reduction modulo `p` is the characteristic-`p` algebra in the source.
 -/

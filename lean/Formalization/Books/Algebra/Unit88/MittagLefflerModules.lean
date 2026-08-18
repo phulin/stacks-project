@@ -102,7 +102,7 @@ private structure GeneralFilteredColimit
   [indexFiltered : IsFiltered index]
   presentation : ColimitPresentation index N
   underlyingIsColimit :
-    IsColimit ((forget (ModuleCat.{w} R)).mapCocone presentation.ι)
+    IsColimit ((forget (ModuleCat.{w} R)).mapCocone presentation.cocone)
   finitelyPresented : ∀ i, Module.FinitePresentation R (presentation.diag.obj i)
 
 private theorem exists_generalFilteredColimit
@@ -140,8 +140,8 @@ private theorem exists_generalFilteredColimit
   let indexLE : Index → Index → Prop := fun a b =>
     ∃ hST : a.1 ≤ b.1, ∀ e ∈ a.2.1,
       extend a.1 b.1 hST e ∈ b.2.1
-  letI : LE Index := ⟨indexLE⟩
-  letI : Preorder Index := {
+  let _ : LE Index := ⟨indexLE⟩
+  let _ : Preorder Index := {
     le_refl := by
       intro a
       refine ⟨le_rfl, ?_⟩
@@ -334,8 +334,7 @@ private theorem exists_generalFilteredColimit
       apply Module.finitePresentation_of_surjective (Submodule.mkQ _)
       · exact Submodule.mkQ_surjective _
       · rw [Submodule.ker_mkQ]
-        exact Submodule.fg_span a.2.1.finite_toSet }⟩
-
+      exact Submodule.fg_span a.2.1.finite_toSet }⟩
 private lemma tensor_rep
     {R : Type u} [CommRing R] {P : Type w} [AddCommGroup P] [Module R P]
     {Q : ModuleCat.{w} R} (C : GeneralFilteredColimit Q) :
@@ -554,8 +553,7 @@ private lemma pushout_inr_cokernel
       exact hqcol.desc (CokernelCofork.ofπ k hk)
     · intro s
       apply (pushoutIsPushout ff gg).hom_ext
-      · simp [π]
-        exact Cofork.IsColimit.π_desc hqcol
+      · simp
       · simp [π, s.condition]
     · intro s m hm
       haveI : Epi hqcol.π := epi_of_isColimit_cofork hqcol
@@ -593,7 +591,7 @@ theorem dominates_iff_factors_of_finitelyPresented_cokernel
     apply LinearMap.mem_ker.mpr
     simpa [LinearMap.rTensor_comp, hx]
   · intro hd
-    haveI : Module.FinitePresentation R
+    have : Module.FinitePresentation R
         (N ⧸ LinearMap.range f) := h
     let ff := ModuleCat.ofHom f
     let gg := ModuleCat.ofHom g
@@ -770,12 +768,10 @@ theorem isMittagLefflerModule_iff_finiteFreeTest
             ∃ g : (F : Type w) →ₗ[R] (Q : Type w), mutuallyDominates g f := by
   constructor
   · intro h F hFfree hFfinite f
-    letI : Module.Free R (F : Type w) := hFfree
-    letI : Module.Finite R (F : Type w) := hFfinite
-    exact h F inferInstance f
+    exact h F hFfree hFfinite f
   · intro h P hP f
-    letI : Module.FinitePresentation R (P : Type w) := hP
-    obtain ⟨n, m, p, q, hp, hpq⟩ := Module.FinitePresentation.exists_fin' R (P : Type w)
+    obtain ⟨n, m, p, q, hp, hpq⟩ :=
+      Module.FinitePresentation.exists_fin' R (P : Type w) (fp := hP)
     let F : ModuleCat.{w} R := ModuleCat.of R (Fin n → R)
     let p' : (F : Type w) →ₗ[R] (P : Type w) := p
     obtain ⟨Q, hQ, g, hmut⟩ := h F (by infer_instance) (by infer_instance)

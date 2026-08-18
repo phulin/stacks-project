@@ -234,7 +234,7 @@ structure FilteredDifferentialSpectralSequence
           (differential r (p - r) ≫
             (eqToHom (by
               change page r (r + (p - r)) = page r p
-              congr 1 <;> ring) :
+              congr 1; ring) :
               (gradedShift C (r : ℤ)).obj (page r) (p - r) ⟶
                 page r p))))
         (Subobject.mk (kernel.ι (differential r p)))
@@ -245,7 +245,7 @@ structure FilteredDifferentialSpectralSequence
   differential_compatibility : ∀ (r : ℕ) (p : ℤ),
     differential r p ≫ eqToHom (by
       change page r (r + p) = page r (p + r)
-      congr 1 <;> ring) ≫ (component_iso r (p + r)).hom =
+      congr 1; ring) ≫ (component_iso r (p + r)).hom =
       (component_iso r p).hom ≫ (page_differentials r).differential r p
   zero_page : ∀ p : ℤ,
     Nonempty (page 0 p ≅ filteredDifferentialE₀ K p)

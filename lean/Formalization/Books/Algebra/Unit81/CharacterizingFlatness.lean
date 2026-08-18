@@ -149,7 +149,7 @@ theorem flat_factors_finitePresentation
     Module.Flat R M ↔
       ∀ (P : Type w) [AddCommGroup P] [Module R P]
         [Module.FinitePresentation R P] (f : P →ₗ[R] M),
-        ∃ (n : ℕ) (h : P →ₗ[R] (Fin n →₀ R))
+      ∃ (n : ℕ) (h : P →ₗ[R] (Fin n →₀ R))
           (g : (Fin n →₀ R) →ₗ[R] M), f = g.comp h := by
   sorry
 

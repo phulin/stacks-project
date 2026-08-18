@@ -333,7 +333,7 @@ structure TorChangeOfRingsData {R R' : Type u} [CommRing R] [CommRing R']
           ψ' ≫ map_mixed M N'₂ i =
           map_mixed M N'₁ i ≫ torMapSecond (extendedModule f M) N'₁ N'₂ ψ i
   flat_base_change :
-    ∀ (hf : RingHom.Flat f) (M N : ModuleCat.{u} R) (i : ℕ),
+    ∀ (_hf : RingHom.Flat f) (M N : ModuleCat.{u} R) (i : ℕ),
       IsIso ((ModuleCat.extendScalars f).map (map_both M N i) ≫
         (ModuleCat.extendRestrictScalarsAdj f).counit.app
           (extendedTor f M N i))

@@ -2,6 +2,8 @@ import Formalization.Books.Categories.Unit27.Localization
 import Formalization.Books.Homology.Unit03.PreadditiveAndAdditiveCategories
 import Mathlib.CategoryTheory.Abelian.Basic
 import Mathlib.CategoryTheory.Localization.CalculusOfFractions.Preadditive
+import Mathlib.CategoryTheory.Preadditive.Opposite
+import Mathlib.CategoryTheory.Preadditive.Transfer
 import Mathlib.CategoryTheory.Limits.ExactFunctor
 import Mathlib.CategoryTheory.Limits.Preserves.Shapes.Kernels
 
@@ -39,7 +41,37 @@ theorem localization_preadditive_left
   refine ⟨CategoryTheory.Localization.preadditive L W, ?_, ?_⟩
   · exact CategoryTheory.Localization.functor_additive L W
   · intro p hp
-    sorry
+    apply Preadditive.ext; funext X Y; apply AddCommGroup.ext; funext f g
+    letI : L.EssSurj := CategoryTheory.Localization.essSurj L W
+    let eX := L.objObjPreimageIso X
+    let eY := L.objObjPreimageIso Y
+    let u := eX.hom ≫ f ≫ eY.inv
+    let v := eX.hom ≫ g ≫ eY.inv
+    obtain ⟨φ, hu, hv⟩ := CategoryTheory.Localization.exists_leftFraction₂ L W u v
+    letI : Preadditive D := p
+    letI : Functor.Additive L := hp
+    have hfp : f + g =
+        eX.inv ≫ φ.add.map L (CategoryTheory.Localization.inverts L W) ≫ eY.hom := by
+      calc
+        f + g = (eX.inv ≫ u ≫ eY.hom) +
+            (eX.inv ≫ v ≫ eY.hom) := by simp [u, v, Category.assoc]
+        _ = eX.inv ≫ (u + v) ≫ eY.hom := by
+          simp only [Preadditive.comp_add, Preadditive.add_comp, Category.assoc]
+        _ = eX.inv ≫ φ.add.map L (CategoryTheory.Localization.inverts L W) ≫ eY.hom := by
+          rw [hu, hv, ← MorphismProperty.LeftFraction₂.map_add]
+    let q := CategoryTheory.Localization.preadditive L W
+    letI : Preadditive D := q
+    letI : Functor.Additive L := CategoryTheory.Localization.functor_additive L W
+    have hq : f + g =
+        eX.inv ≫ φ.add.map L (CategoryTheory.Localization.inverts L W) ≫ eY.hom := by
+      calc
+        f + g = (eX.inv ≫ u ≫ eY.hom) +
+            (eX.inv ≫ v ≫ eY.hom) := by simp [u, v, Category.assoc]
+        _ = eX.inv ≫ (u + v) ≫ eY.hom := by
+          simp only [Preadditive.comp_add, Preadditive.add_comp, Category.assoc]
+        _ = eX.inv ≫ φ.add.map L (CategoryTheory.Localization.inverts L W) ≫ eY.hom := by
+          rw [hu, hv, ← MorphismProperty.LeftFraction₂.map_add]
+    exact hfp.trans hq.symm
 
 /- The right-calculus statement is the dual part of the source lemma. -/
 theorem localization_preadditive_right
@@ -47,7 +79,58 @@ theorem localization_preadditive_right
     [Preadditive C] {W : MorphismProperty C} (L : C ⥤ D)
     [L.IsLocalization W] (hW : RightMultiplicativeSystem W) :
     ∃! p : Preadditive D, @Functor.Additive C D _ _ _ p L := by
-  sorry
+  letI : RightMultiplicativeSystem W := hW
+  let pop := CategoryTheory.Localization.preadditive L.op W.op
+  letI : Preadditive Dᵒᵖ := pop
+  let hFF := Functor.FullyFaithful.ofFullyFaithful (opOp D)
+  let pD := Preadditive.ofFullyFaithful hFF
+  letI : Preadditive D := pD
+  have hpop : (@CategoryTheory.instPreadditiveOpposite D _ pD) = pop := by
+    apply Preadditive.ext; funext X Y; apply AddCommGroup.ext; funext f g
+    apply Quiver.Hom.unop_inj
+    rw [unop_add]
+    apply hFF.homEquiv.injective
+    simp only [pD, Equiv.add_def]
+    apply (opEquiv _ _).injective
+    rw [Equiv.apply_symm_apply]
+    change f + g = f + g
+    rfl
+  refine ⟨pD, ?_, ?_⟩
+  · constructor
+    intro X Y f g
+    apply Quiver.Hom.op_inj
+    rw [op_add]
+    rw [hpop]
+    letI : Functor.Additive L.op := CategoryTheory.Localization.functor_additive L.op W.op
+    have h := Functor.Additive.map_add (F := L.op) (f := f.op) (g := g.op)
+    simpa only [Functor.op_map, unop_add, Quiver.Hom.unop_op] using h
+  · intro q hq
+    letI : Preadditive D := q
+    letI : Functor.Additive L := hq
+    letI : Preadditive Dᵒᵖ := @CategoryTheory.instPreadditiveOpposite D _ q
+    letI : W.op.HasLeftCalculusOfFractions := inferInstance
+    have hopq : Functor.Additive L.op := by infer_instance
+    obtain ⟨p', hp', huniq⟩ :=
+      localization_preadditive_left (W := W.op) L.op
+    have hqop : (@CategoryTheory.instPreadditiveOpposite D _ q) = p' :=
+      huniq (@CategoryTheory.instPreadditiveOpposite D _ q) hopq
+    have hpop' : p' = pop := by
+      symm
+      apply huniq
+      exact CategoryTheory.Localization.functor_additive L.op W.op
+    have hqpdop :
+        (@CategoryTheory.instPreadditiveOpposite D _ q) =
+          @CategoryTheory.instPreadditiveOpposite D _ pD :=
+      hqop.trans (hpop'.trans hpop.symm)
+    apply Preadditive.ext; funext X Y; apply AddCommGroup.ext; funext f g
+    apply Quiver.Hom.op_inj
+    change
+      ((@CategoryTheory.instPreadditiveOpposite D _ q).homGroup
+          (Opposite.op Y) (Opposite.op X)).add f.op g.op =
+        ((@CategoryTheory.instPreadditiveOpposite D _ pD).homGroup
+          (Opposite.op Y) (Opposite.op X)).add f.op g.op
+    exact congrArg (fun r : Preadditive Dᵒᵖ =>
+      (r.homGroup (Opposite.op Y) (Opposite.op X)).add f.op g.op) hqpdop
 
 theorem localization_preadditive
     {C : Type u} {D : Type*} [Category.{v} C] [Category* D]
@@ -55,7 +138,10 @@ theorem localization_preadditive
     [L.IsLocalization W]
     (hW : LeftMultiplicativeSystem W ∨ RightMultiplicativeSystem W) :
     ∃! p : Preadditive D, @Functor.Additive C D _ _ _ p L := by
-  sorry
+  rcases hW with hW | hW
+  · letI : LeftMultiplicativeSystem W := hW
+    exact localization_preadditive_left (W := W) L
+  · exact localization_preadditive_right (W := W) L hW
 
 theorem localization_additive_left
     {C : Type u} {D : Type*} [Category.{v} C] [Category* D]
@@ -64,7 +150,17 @@ theorem localization_additive_left
     [L.IsLocalization W] [hW : LeftMultiplicativeSystem W] :
     ∃ hD : Formalization.Books.Homology.Unit03.AdditiveCategory D,
       @Functor.Additive C D _ _ _ hD.toPreadditive L := by
-  sorry
+  obtain ⟨p, hp, hpuniq⟩ :=
+    localization_preadditive_left (W := W) L
+  letI : Preadditive D := p
+  letI : Functor.Additive L := hp
+  letI : L.EssSurj := CategoryTheory.Localization.essSurj L W
+  have hprod : HasFiniteProducts D :=
+    Functor.hasFiniteProducts_of_additive_of_essSurj L
+  let hD : Formalization.Books.Homology.Unit03.AdditiveCategory D :=
+    { toPreadditive := p
+      toHasFiniteProducts := hprod }
+  exact ⟨hD, hp⟩
 
 theorem localization_additive_right
     {C : Type u} {D : Type*} [Category.{v} C] [Category* D]

@@ -75,7 +75,55 @@ theorem int_quadratic_reduction_mod_prime (q : ℕ) (hq : Nat.Prime q) :
             Ideal.span {intQuadraticQuotientMap (Polynomial.C (q : ℤ))}) ≃+*
           (Polynomial (ℤ ⧸ Ideal.span {(q : ℤ)}) ⧸
             Ideal.span {Polynomial.X ^ 2 - Polynomial.C (4 : ℤ ⧸ Ideal.span {(q : ℤ)})})) := by
-  sorry
+  let I : Ideal ℤ := Ideal.span {(q : ℤ)}
+  let M : Ideal IntPolynomial := Ideal.map Polynomial.C I
+  let K : Ideal IntPolynomial := intQuadraticRelation
+  let Kq : Ideal (Polynomial (ℤ ⧸ I)) :=
+    Ideal.span {Polynomial.X ^ 2 - Polynomial.C (4 : ℤ ⧸ I)}
+  let ePoly := I.polynomialQuotientEquivQuotientPolynomial
+  have hsource :
+      Ideal.span {intQuadraticQuotientMap (Polynomial.C (q : ℤ))} =
+        M.map (Ideal.Quotient.mk K) := by
+    simp [I, M, K, intQuadraticQuotientMap, Ideal.map_span]
+  have hgen :
+      ePoly (Polynomial.X ^ 2 - Polynomial.C (4 : ℤ ⧸ I)) =
+        Ideal.Quotient.mk M (Polynomial.X ^ 2 - Polynomial.C (4 : ℤ)) := by
+    calc
+      ePoly (Polynomial.X ^ 2 - Polynomial.C (4 : ℤ ⧸ I)) =
+          ePoly ((Polynomial.X ^ 2 - Polynomial.C (4 : ℤ)).map
+            (Ideal.Quotient.mk I)) := by
+        congr 1
+        simp only [Polynomial.map_sub, Polynomial.map_pow, Polynomial.map_X,
+          Polynomial.map_C]
+        congr 2
+      _ = Ideal.Quotient.mk M (Polynomial.X ^ 2 - Polynomial.C (4 : ℤ)) := by
+        exact Ideal.polynomialQuotientEquivQuotientPolynomial_map_mk I
+          (Polynomial.X ^ 2 - Polynomial.C (4 : ℤ))
+  have hmapideal :
+      (intQuadraticRelation.map (Ideal.Quotient.mk M)) =
+        Kq.map (ePoly : (Polynomial (ℤ ⧸ I)) →+* (IntPolynomial ⧸ M)) := by
+    simp only [intQuadraticRelation, Kq, Ideal.map_span, Set.image_singleton]
+    change Ideal.span {Ideal.Quotient.mk M (Polynomial.X ^ 2 - Polynomial.C (4 : ℤ))} =
+      Ideal.span {ePoly (Polynomial.X ^ 2 - Polynomial.C (4 : ℤ ⧸ I))}
+    rw [hgen]
+  have e0 :
+      (IntQuadraticRing ⧸ Ideal.span
+          {intQuadraticQuotientMap (Polynomial.C (q : ℤ))}) ≃+*
+        IntPolynomial ⧸ (K ⊔ M) := by
+    rw [hsource]
+    exact DoubleQuot.quotQuotEquivQuotSup K M
+  have e1 : IntPolynomial ⧸ (K ⊔ M) ≃+* IntPolynomial ⧸ (M ⊔ K) :=
+    Ideal.quotEquivOfEq (sup_comm K M)
+  have e2 :
+      IntPolynomial ⧸ (M ⊔ K) ≃+*
+        (IntPolynomial ⧸ M) ⧸ intQuadraticRelation.map (Ideal.Quotient.mk M) :=
+    (DoubleQuot.quotQuotEquivQuotSup M K).symm
+  have e3 :
+      ((IntPolynomial ⧸ M) ⧸ intQuadraticRelation.map (Ideal.Quotient.mk M)) ≃+*
+        (Polynomial (ℤ ⧸ I) ⧸ Kq) :=
+    (Ideal.quotientEquiv Kq (intQuadraticRelation.map (Ideal.Quotient.mk M))
+      ePoly hmapideal).symm
+  exact ⟨e0.trans (e1.trans (e2.trans e3))⟩
 
 theorem int_quadratic_reduction_mod_two :
     Nonempty
@@ -84,7 +132,58 @@ theorem int_quadratic_reduction_mod_two :
           (Polynomial (ℤ ⧸ Ideal.span {(2 : ℤ)}) ⧸
             Ideal.span
               ({Polynomial.X ^ 2} : Set (Polynomial (ℤ ⧸ Ideal.span {(2 : ℤ)}))))) := by
-  sorry
+  let I : Ideal ℤ := Ideal.span {(2 : ℤ)}
+  let M : Ideal IntPolynomial := Ideal.map Polynomial.C I
+  let K : Ideal IntPolynomial := intQuadraticRelation
+  let Kq : Ideal (Polynomial (ℤ ⧸ I)) :=
+    Ideal.span ({Polynomial.X ^ 2} : Set (Polynomial (ℤ ⧸ I)))
+  let ePoly := I.polynomialQuotientEquivQuotientPolynomial
+  have h4map : (Ideal.Quotient.mk I) (4 : ℤ) = 0 := by
+    rw [Ideal.Quotient.eq_zero_iff_mem]
+    exact Ideal.mem_span_singleton.mpr ⟨2, by norm_num⟩
+  have hsource :
+      Ideal.span {intQuadraticQuotientMap (Polynomial.C (2 : ℤ))} =
+        M.map (Ideal.Quotient.mk K) := by
+    simp [I, M, K, intQuadraticQuotientMap, Ideal.map_span]
+  have hgen :
+      ePoly Polynomial.X ^ 2 =
+        Ideal.Quotient.mk M (Polynomial.X ^ 2 - Polynomial.C (4 : ℤ)) := by
+    calc
+      ePoly Polynomial.X ^ 2 =
+          ePoly ((Polynomial.X ^ 2 - Polynomial.C (4 : ℤ)).map
+            (Ideal.Quotient.mk I)) := by
+        congr 1
+        simp only [Polynomial.map_sub, Polynomial.map_pow, Polynomial.map_X,
+          Polynomial.map_C]
+        rw [h4map]
+        simp
+      _ = Ideal.Quotient.mk M (Polynomial.X ^ 2 - Polynomial.C (4 : ℤ)) := by
+        exact Ideal.polynomialQuotientEquivQuotientPolynomial_map_mk I
+          (Polynomial.X ^ 2 - Polynomial.C (4 : ℤ))
+  have hmapideal :
+      (intQuadraticRelation.map (Ideal.Quotient.mk M)) =
+        Kq.map (ePoly : (Polynomial (ℤ ⧸ I)) →+* (IntPolynomial ⧸ M)) := by
+    simp only [intQuadraticRelation, Kq, Ideal.map_span, Set.image_singleton]
+    apply congrArg Ideal.span
+    simpa using congrArg (fun z => ({z} : Set (IntPolynomial ⧸ M))) hgen.symm
+  have e0 :
+      (IntQuadraticRing ⧸ Ideal.span
+          {intQuadraticQuotientMap (Polynomial.C (2 : ℤ))}) ≃+*
+        IntPolynomial ⧸ (K ⊔ M) := by
+    rw [hsource]
+    exact DoubleQuot.quotQuotEquivQuotSup K M
+  have e1 : IntPolynomial ⧸ (K ⊔ M) ≃+* IntPolynomial ⧸ (M ⊔ K) :=
+    Ideal.quotEquivOfEq (sup_comm K M)
+  have e2 :
+      IntPolynomial ⧸ (M ⊔ K) ≃+*
+        (IntPolynomial ⧸ M) ⧸ intQuadraticRelation.map (Ideal.Quotient.mk M) :=
+    (DoubleQuot.quotQuotEquivQuotSup M K).symm
+  have e3 :
+      ((IntPolynomial ⧸ M) ⧸ intQuadraticRelation.map (Ideal.Quotient.mk M)) ≃+*
+        (Polynomial (ℤ ⧸ I) ⧸ Kq) :=
+    (Ideal.quotientEquiv Kq (intQuadraticRelation.map (Ideal.Quotient.mk M))
+      ePoly hmapideal).symm
+  exact ⟨e0.trans (e1.trans (e2.trans e3))⟩
 
 theorem int_quadratic_prime_spectra_reduction_correspondence (q : ℕ) (hq : Nat.Prime q) :
     Nonempty
@@ -95,7 +194,8 @@ theorem int_quadratic_prime_spectra_reduction_correspondence (q : ℕ) (hq : Nat
           (Polynomial (ℤ ⧸ Ideal.span {(q : ℤ)}) ⧸
             Ideal.span {Polynomial.X ^ 2 -
               Polynomial.C (4 : ℤ ⧸ Ideal.span {(q : ℤ)})})) := by
-  sorry
+  rcases int_quadratic_reduction_mod_prime q hq with ⟨e⟩
+  exact ⟨(PrimeSpectrum.comapEquiv e).toEquiv⟩
 
 theorem int_polynomial_root_quotient_equiv (r : ℤ) :
     Nonempty ((IntPolynomial ⧸
@@ -195,9 +295,62 @@ theorem int_quadratic_prime_ideal_at_two_isPrime :
   exact hm
 
 theorem int_quadratic_prime_ideals_isPrime (q : ℕ) (hq : Nat.Prime q) (hq2 : 2 < q) :
-    (intQuadraticPrimeIdeal q 2).IsPrime ∧
+      (intQuadraticPrimeIdeal q 2).IsPrime ∧
       (intQuadraticPrimeIdeal q (-2)).IsPrime := by
-  sorry
+  have hcoeff : (Ideal.span ({(q : ℤ)} : Set ℤ)).IsPrime := by
+    haveI : Fact (Nat.Prime q) := ⟨hq⟩
+    exact (Int.ideal_span_isMaximal_of_prime q).isPrime
+  have hcoeffDomain : IsDomain (ℤ ⧸ Ideal.span ({(q : ℤ)} : Set ℤ)) :=
+    (Ideal.Quotient.isDomain_iff_prime _).mpr hcoeff
+  let J (r : ℤ) : Ideal IntPolynomial :=
+    Ideal.span {Polynomial.C (q : ℤ), Polynomial.X - Polynomial.C r}
+  have hJdomain (r : ℤ) : IsDomain (IntPolynomial ⧸ J r) := by
+    exact @MulEquiv.isDomain (IntPolynomial ⧸ J r)
+      (ℤ ⧸ Ideal.span ({(q : ℤ)} : Set ℤ)) _ _ hcoeffDomain
+      (Polynomial.quotientSpanCXSubCAlgEquiv (q : ℤ) r).toMulEquiv
+  have hJprime (r : ℤ) : (J r).IsPrime := by
+    exact (Ideal.Quotient.isDomain_iff_prime _).mp (hJdomain r)
+  have hrel2 : intQuadraticRelation ≤ J 2 := by
+    have hX : Polynomial.X - Polynomial.C (2 : ℤ) ∈ J 2 :=
+      Ideal.subset_span (by simp)
+    change Ideal.span ({Polynomial.X ^ 2 - Polynomial.C (4 : ℤ)} : Set IntPolynomial) ≤ J 2
+    rw [int_quadratic_factorization]
+    rw [Ideal.span_singleton_le_iff_mem]
+    exact (J 2).mul_mem_right (Polynomial.X + Polynomial.C 2) hX
+  have hrelNeg2 : intQuadraticRelation ≤ J (-2) := by
+    have hX : Polynomial.X - Polynomial.C (-2 : ℤ) ∈ J (-2) :=
+      Ideal.subset_span (by simp)
+    have hfac : Polynomial.X + Polynomial.C (2 : ℤ) ∈ J (-2) := by
+      simpa [sub_eq_add_neg] using hX
+    change Ideal.span ({Polynomial.X ^ 2 - Polynomial.C (4 : ℤ)} : Set IntPolynomial) ≤ J (-2)
+    rw [int_quadratic_factorization]
+    rw [Ideal.span_singleton_le_iff_mem]
+    exact (J (-2)).mul_mem_left (Polynomial.X - Polynomial.C 2) hfac
+  have hmap (r : ℤ) :
+      Ideal.map intQuadraticQuotientMap (J r) = intQuadraticPrimeIdeal q r := by
+    rw [Ideal.map_span]
+    congr 1
+    ext z
+    simp only [Set.mem_insert_iff, Set.mem_singleton_iff, Set.mem_image]
+    constructor
+    · rintro ⟨x, (rfl | rfl), h⟩
+      · exact Or.inl h.symm
+      · exact Or.inr h.symm
+    · rintro (h | h)
+      · exact ⟨Polynomial.C q, Or.inl rfl, h.symm⟩
+      · exact ⟨Polynomial.X - Polynomial.C r, Or.inr rfl, h.symm⟩
+  have hprime (r : ℤ) (hr : intQuadraticRelation ≤ J r) :
+      (intQuadraticPrimeIdeal q r).IsPrime := by
+    have hk : RingHom.ker intQuadraticQuotientMap ≤ J r := by
+      change RingHom.ker (Ideal.Quotient.mk intQuadraticRelation) ≤ J r
+      rw [Ideal.mk_ker]
+      exact hr
+    have hm := @Ideal.map_isPrime_of_surjective IntPolynomial IntQuadraticRing
+      (IntPolynomial →+* IntQuadraticRing) _ _ _ _ intQuadraticQuotientMap
+      Ideal.Quotient.mk_surjective (J r) (hJprime r) hk
+    rw [← hmap r]
+    exact hm
+  exact ⟨hprime 2 hrel2, hprime (-2) hrelNeg2⟩
 
 /-- The complete list of prime ideals in the first example.
 

@@ -179,7 +179,51 @@ theorem pullback_extension_shortExact
       (pullback.lift E.inclusion 0 (by simp [E.zero]))
       (pullback.snd E.projection p)
       (by rw [pullback.lift_snd])).ShortExact := by
-  sorry
+  let f : A ⟶ pullback E.projection p :=
+    pullback.lift E.inclusion 0 (by simp [E.zero])
+  let g : pullback E.projection p ⟶ B' := pullback.snd E.projection p
+  let z : f ≫ g = 0 := by
+    dsimp [f, g]
+    rw [pullback.lift_snd]
+  let S := ShortComplex.mk f g z
+  have hK : IsLimit (KernelFork.ofι f z) := by
+    have hE : IsLimit (KernelFork.ofι E.inclusion E.zero) :=
+      E.shortExact.fIsKernel
+    let lift : ∀ {W' : C} (k : W' ⟶ pullback E.projection p)
+        (_ : k ≫ g = 0), W' ⟶ A :=
+      fun k hk => hE.lift (KernelFork.ofι (k ≫ pullback.fst E.projection p) (by
+        change k ≫ pullback.snd E.projection p = 0 at hk
+        rw [Category.assoc, pullback.condition, ← Category.assoc, hk, zero_comp]))
+    refine KernelFork.IsLimit.ofι f z lift ?_ ?_
+    · intro _ k hk
+      change k ≫ pullback.snd E.projection p = 0 at hk
+      let l := lift k hk
+      apply pullback.hom_ext
+      · dsimp [l, lift, f]
+        rw [Category.assoc, pullback.lift_fst]
+        simpa using
+          (hE.fac (KernelFork.ofι (k ≫ pullback.fst E.projection p) _)
+            WalkingParallelPair.zero)
+      · dsimp [l, lift, f]
+        simp only [Category.assoc, pullback.lift_snd, comp_zero]
+        exact hk.symm
+    · intro _ k hk l hl
+      change k ≫ pullback.snd E.projection p = 0 at hk
+      change l = lift k hk
+      dsimp [lift]
+      refine hE.uniq (KernelFork.ofι (k ≫ pullback.fst E.projection p) _) l ?_
+      intro j
+      rcases j with (_ | _)
+      · change l ≫ E.inclusion = k ≫ pullback.fst E.projection p
+        rw [← hl, Category.assoc, pullback.lift_fst]
+      · simp only [KernelFork.app_one, comp_zero]
+  change S.ShortExact
+  letI : Epi E.projection := E.shortExact.epi_g
+  letI : Epi g := Abelian.epi_pullback_of_epi_f E.projection p
+  exact
+    { exact := S.exact_of_f_is_kernel hK
+      mono_f := mono_of_isLimit_fork hK
+      epi_g := inferInstance }
 
 /-- The pullback extension of `E` along `p : B' ⟶ B`. -/
 noncomputable def pullbackExtension
@@ -215,7 +259,55 @@ theorem pushout_extension_shortExact
       (pushout.inl a E.inclusion)
       (pushout.desc 0 E.projection (by simp [E.zero]))
       (by rw [pushout.inl_desc])).ShortExact := by
-  sorry
+  let f : A' ⟶ pushout a E.inclusion := pushout.inl a E.inclusion
+  let g : pushout a E.inclusion ⟶ B :=
+    pushout.desc 0 E.projection (by simp [E.zero])
+  let z : f ≫ g = 0 := by
+    dsimp [f, g]
+    rw [pushout.inl_desc]
+  let S := ShortComplex.mk f g z
+  have hC : IsColimit (CokernelCofork.ofπ g z) := by
+    have hE : IsColimit (CokernelCofork.ofπ E.projection E.zero) :=
+      E.shortExact.gIsCokernel
+    let desc : ∀ {Z' : C} (k : pushout a E.inclusion ⟶ Z')
+        (_ : f ≫ k = 0), B ⟶ Z' :=
+      fun k hk => hE.desc (CokernelCofork.ofπ
+        (pushout.inr a E.inclusion ≫ k) (by
+          change pushout.inl a E.inclusion ≫ k = 0 at hk
+          rw [← Category.assoc, ← pushout.condition, Category.assoc, hk, comp_zero]))
+    refine CokernelCofork.IsColimit.ofπ g z desc ?_ ?_
+    · intro _ k hk
+      change pushout.inl a E.inclusion ≫ k = 0 at hk
+      let l := desc k hk
+      apply pushout.hom_ext
+      · dsimp [l, desc, g]
+        rw [← Category.assoc, pushout.inl_desc, zero_comp, hk]
+      · dsimp [l, desc, g]
+        rw [← Category.assoc, pushout.inr_desc]
+        simpa using
+          (hE.fac (CokernelCofork.ofπ (pushout.inr a E.inclusion ≫ k) _)
+            WalkingParallelPair.one)
+    · intro _ k hk l hl
+      change l = desc k hk
+      dsimp [desc]
+      refine hE.uniq (CokernelCofork.ofπ (pushout.inr a E.inclusion ≫ k) _) l ?_
+      intro j
+      rcases j with (_ | _)
+      · simp only [CokernelCofork.π_eq_zero, zero_comp]
+      · change E.projection ≫ l = pushout.inr a E.inclusion ≫ k
+        calc
+          E.projection ≫ l =
+              (pushout.inr a E.inclusion ≫ g) ≫ l := by
+                rw [pushout.inr_desc]
+          _ = pushout.inr a E.inclusion ≫ (g ≫ l) := by rw [Category.assoc]
+          _ = pushout.inr a E.inclusion ≫ k := by rw [hl]
+  change S.ShortExact
+  haveI : Mono E.inclusion := E.shortExact.mono_f
+  haveI : Mono f := Abelian.mono_pushout_of_mono_g a E.inclusion
+  exact
+    { exact := S.exact_of_g_is_cokernel hC
+      mono_f := inferInstance
+      epi_g := epi_of_isColimit_cofork hC }
 
 /-- The pushout extension of `E` along `a : A ⟶ A'`. -/
 noncomputable def pushoutExtension
@@ -249,14 +341,150 @@ theorem pullback_extension_preserves_iso
     {A B B' : C} {E F : Extension C A B} (p : B' ⟶ B)
     (h : Nonempty (E ≅ F)) :
     Nonempty (pullbackExtension E p ≅ pullbackExtension F p) := by
-  sorry
+  rcases h with ⟨e⟩
+  have hhm : e.hom.middle ≫ e.inv.middle = 𝟙 E.middle := by
+    exact congrArg (fun q : E ⟶ E => q.middle) e.hom_inv_id
+  have hmi : e.inv.middle ≫ e.hom.middle = 𝟙 F.middle := by
+    exact congrArg (fun q : F ⟶ F => q.middle) e.inv_hom_id
+  let mMiddle : pullback E.projection p ⟶ pullback F.projection p :=
+    pullback.lift (pullback.fst E.projection p ≫ e.hom.middle)
+      (pullback.snd E.projection p) (by
+        rw [Category.assoc, e.hom.comm_right]
+        exact pullback.condition)
+  let nMiddle : pullback F.projection p ⟶ pullback E.projection p :=
+    pullback.lift (pullback.fst F.projection p ≫ e.inv.middle)
+      (pullback.snd F.projection p) (by
+        rw [Category.assoc, e.inv.comm_right]
+        exact pullback.condition)
+  let m : pullbackExtension E p ⟶ pullbackExtension F p :=
+    { middle := mMiddle
+      comm_left := by
+        change
+          pullback.lift E.inclusion 0 _ ≫ mMiddle =
+            pullback.lift F.inclusion 0 _
+        apply pullback.hom_ext
+        · dsimp [mMiddle]
+          rw [Category.assoc, pullback.lift_fst, ← Category.assoc,
+            pullback.lift_fst, e.hom.comm_left, pullback.lift_fst]
+        · dsimp [mMiddle]
+          simp only [Category.assoc, pullback.lift_snd]
+      comm_right := by
+        change mMiddle ≫ pullback.snd F.projection p =
+          pullback.snd E.projection p
+        dsimp [mMiddle]
+        rw [pullback.lift_snd] }
+  let n : pullbackExtension F p ⟶ pullbackExtension E p :=
+    { middle := nMiddle
+      comm_left := by
+        change
+          pullback.lift F.inclusion 0 _ ≫ nMiddle =
+            pullback.lift E.inclusion 0 _
+        apply pullback.hom_ext
+        · dsimp [nMiddle]
+          rw [Category.assoc, pullback.lift_fst, ← Category.assoc,
+            pullback.lift_fst, e.inv.comm_left, pullback.lift_fst]
+        · dsimp [nMiddle]
+          simp only [Category.assoc, pullback.lift_snd]
+      comm_right := by
+        change nMiddle ≫ pullback.snd E.projection p =
+          pullback.snd F.projection p
+        dsimp [nMiddle]
+        rw [pullback.lift_snd] }
+  have hmn : mMiddle ≫ nMiddle = 𝟙 _ := by
+    apply pullback.hom_ext
+    · dsimp [mMiddle, nMiddle]
+      rw [Category.assoc, pullback.lift_fst, ← Category.assoc, pullback.lift_fst,
+        Category.assoc, hhm, Category.comp_id, Category.id_comp]
+    · dsimp [mMiddle, nMiddle]
+      rw [Category.assoc, pullback.lift_snd, pullback.lift_snd,
+        Category.id_comp]
+  have hnm : nMiddle ≫ mMiddle = 𝟙 _ := by
+    apply pullback.hom_ext
+    · dsimp [mMiddle, nMiddle]
+      rw [Category.assoc, pullback.lift_fst, ← Category.assoc, pullback.lift_fst,
+        Category.assoc, hmi, Category.comp_id, Category.id_comp]
+    · dsimp [mMiddle, nMiddle]
+      rw [Category.assoc, pullback.lift_snd, pullback.lift_snd,
+        Category.id_comp]
+  exact ⟨
+    { hom := m
+      inv := n
+      hom_inv_id := ExtensionHom.ext _ _ hmn
+      inv_hom_id := ExtensionHom.ext _ _ hnm }⟩
 
 theorem pushout_extension_preserves_iso
     {C : Type u} [Category.{v} C] [Abelian C]
     {A A' B : C} {E F : Extension C A B} (a : A ⟶ A')
     (h : Nonempty (E ≅ F)) :
     Nonempty (pushoutExtension E a ≅ pushoutExtension F a) := by
-  sorry
+  rcases h with ⟨e⟩
+  have hhm : e.hom.middle ≫ e.inv.middle = 𝟙 E.middle := by
+    exact congrArg (fun q : E ⟶ E => q.middle) e.hom_inv_id
+  have hmi : e.inv.middle ≫ e.hom.middle = 𝟙 F.middle := by
+    exact congrArg (fun q : F ⟶ F => q.middle) e.inv_hom_id
+  let mMiddle : pushout a E.inclusion ⟶ pushout a F.inclusion :=
+    pushout.desc (pushout.inl a F.inclusion)
+      (e.hom.middle ≫ pushout.inr a F.inclusion) (by
+        rw [pushout.condition, ← Category.assoc, e.hom.comm_left])
+  let nMiddle : pushout a F.inclusion ⟶ pushout a E.inclusion :=
+    pushout.desc (pushout.inl a E.inclusion)
+      (e.inv.middle ≫ pushout.inr a E.inclusion) (by
+        rw [pushout.condition, ← Category.assoc, e.inv.comm_left])
+  let m : pushoutExtension E a ⟶ pushoutExtension F a :=
+    { middle := mMiddle
+      comm_left := by
+        change pushout.inl a E.inclusion ≫ mMiddle =
+          pushout.inl a F.inclusion
+        dsimp [mMiddle]
+        rw [pushout.inl_desc]
+      comm_right := by
+        change mMiddle ≫ pushout.desc 0 F.projection _ =
+          pushout.desc 0 E.projection _
+        apply pushout.hom_ext
+        · dsimp [mMiddle]
+          rw [← Category.assoc, pushout.inl_desc, pushout.inl_desc,
+            pushout.inl_desc]
+        · dsimp [mMiddle]
+          rw [← Category.assoc, pushout.inr_desc, Category.assoc,
+            pushout.inr_desc, e.hom.comm_right, pushout.inr_desc] }
+  let n : pushoutExtension F a ⟶ pushoutExtension E a :=
+    { middle := nMiddle
+      comm_left := by
+        change pushout.inl a F.inclusion ≫ nMiddle =
+          pushout.inl a E.inclusion
+        dsimp [nMiddle]
+        rw [pushout.inl_desc]
+      comm_right := by
+        change nMiddle ≫ pushout.desc 0 E.projection _ =
+          pushout.desc 0 F.projection _
+        apply pushout.hom_ext
+        · dsimp [nMiddle]
+          rw [← Category.assoc, pushout.inl_desc, pushout.inl_desc,
+            pushout.inl_desc]
+        · dsimp [nMiddle]
+          rw [← Category.assoc, pushout.inr_desc, Category.assoc,
+            pushout.inr_desc, e.inv.comm_right, pushout.inr_desc] }
+  have hmn : mMiddle ≫ nMiddle = 𝟙 _ := by
+    apply pushout.hom_ext
+    · rw [← Category.assoc, pushout.inl_desc, pushout.inl_desc,
+        Category.comp_id]
+    · dsimp [mMiddle, nMiddle]
+      rw [← Category.assoc, pushout.inr_desc, Category.assoc,
+        pushout.inr_desc, ← Category.assoc, hhm, Category.id_comp,
+        Category.comp_id]
+  have hnm : nMiddle ≫ mMiddle = 𝟙 _ := by
+    apply pushout.hom_ext
+    · rw [← Category.assoc, pushout.inl_desc, pushout.inl_desc,
+        Category.comp_id]
+    · dsimp [mMiddle, nMiddle]
+      rw [← Category.assoc, pushout.inr_desc, Category.assoc,
+        pushout.inr_desc, ← Category.assoc, hmi, Category.id_comp,
+        Category.comp_id]
+  exact ⟨
+    { hom := m
+      inv := n
+      hom_inv_id := ExtensionHom.ext _ _ hmn
+      inv_hom_id := ExtensionHom.ext _ _ hnm }⟩
 
 /-- Pullback on extension classes. -/
 noncomputable def pullbackClass

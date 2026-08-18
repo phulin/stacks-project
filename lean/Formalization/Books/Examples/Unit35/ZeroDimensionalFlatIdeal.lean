@@ -342,7 +342,7 @@ theorem zeroDimensionalFlatIdeal_unique_prime
         rw [show zeroDimensionalFlatIdealY k n ^ 2 = 0 by
           exact zeroDimensionalFlatIdeal_y_sq_eq_zero k n]
         exact p.zero_mem)
-  exact (hmax.eq_of_le hp.ne_top hle).symm
+  simpa only [eq_comm] using hmax.eq_of_le hp.ne_top hle
 
 /-- The quotient ring is zero-dimensional in the Krull-dimension sense. -/
 theorem zeroDimensionalFlatIdeal_ring_krullDimLE_zero

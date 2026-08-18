@@ -87,7 +87,11 @@ equivalence, by the dense-subsite comparison theorem. -/
 theorem basisRestrictionFunctor_isEquivalence {X : TopCat.{v}} {ι : Type v}
     (B : ι → Opens X) (hB : Opens.IsBasis (Set.range B)) :
     (basisRestrictionFunctor B hB).IsEquivalence := by
-  sorry
+  have : (inducedFunctor B).IsCoverDense (Opens.grothendieckTopology X) :=
+    TopCat.Opens.coverDense_inducedFunctor hB
+  change ((inducedFunctor B).sheafPushforwardContinuous (Type v)
+    (basisTopology B) (Opens.grothendieckTopology X)).IsEquivalence
+  infer_instance
 
 /-- A presheaf identity restriction map on the basis. -/
 @[simp] theorem basisPresheaf_map_id {X : TopCat.{v}} {ι : Type v}

@@ -268,8 +268,7 @@ theorem polynomialComparisonMap_not_isIso
 algebras. -/
 def tensorBaseMap (R A B : Type u) [CommRing R] [CommRing A] [CommRing B]
     [Algebra R A] [Algebra R B] : R →+* (A ⊗[R] B) :=
-  (Algebra.TensorProduct.includeLeftRingHom : A →+* (A ⊗[R] B)).comp
-    (algebraMap R A)
+  algebraMap R (A ⊗[R] B)
 
 /-- A source-facing model for the canonical `A ⊗[R] B`-module structure on
 `Tor_i^R(A, B)`.  The resolution-based Tor object from Chapter 75 supplies

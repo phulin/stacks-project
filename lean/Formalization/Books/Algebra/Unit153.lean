@@ -1,8 +1,8 @@
+import Mathlib.FieldTheory.IsSepClosed
+import Mathlib.FieldTheory.PurelyInseparable.Basic
 import Formalization.Books.Algebra.Unit84.TransfiniteDevissage
 import Mathlib.Algebra.Category.ModuleCat.Basic
 import Mathlib.Algebra.DirectSum.Module
-import Mathlib.FieldTheory.IsSepClosed
-import Mathlib.FieldTheory.PurelyInseparable.Basic
 import Mathlib.RingTheory.Etale.Finite
 import Mathlib.RingTheory.Henselian
 import Mathlib.RingTheory.Localization.AtPrime.Basic
@@ -139,8 +139,7 @@ structure ResidueFieldIdentification
   residueEquiv : Nonempty
     (q.asIdeal.ResidueField ≃+* IsLocalRing.ResidueField R)
 
-/-- An explicitly chosen residue-field map for a point over the closed point
-of a local target. -/
+/- An explicitly chosen residue-field map for the map-into-Henselian lemma. -/
 structure ResidueFieldCompatibility
     {R A S : Type u} [CommRing R] [CommRing A] [CommRing S]
     [Algebra R A] [Algebra R S] [IsLocalRing S]
@@ -221,20 +220,6 @@ structure FiniteTypePartData
     q.asIdeal.comap (algebraMap R B) = IsLocalRing.maximalIdeal R →
       ¬ RingHom.QuasiFiniteAt (algebraMap R B) q.asIdeal
 
-/-- Data for item (13), with the special fibre of the remainder zero. -/
-structure QuasiFinitePartData
-    (R S : Type u) [CommRing R] [CommRing S] [IsLocalRing R]
-    [Algebra R S] where
-  A : Type u
-  [commRingA : CommRing A]
-  [algebraRA : Algebra R A]
-  B : Type u
-  [commRingB : CommRing B]
-  [algebraRB : Algebra R B]
-  finiteA : RingHom.Finite (algebraMap R A)
-  decomposition : Nonempty (S ≃ₐ[R] A × B)
-  specialFiberZero : Subsingleton (B ⊗[R] IsLocalRing.ResidueField R)
-
 /-- Data for item (12), whose remaining special-fibre components all have
 positive dimension. -/
 structure PositiveDimensionalPartData
@@ -252,6 +237,20 @@ structure PositiveDimensionalPartData
     ∀ C ∈ irreducibleComponents
       (PrimeSpectrum (B ⊗[R] IsLocalRing.ResidueField R)),
       1 ≤ topologicalKrullDim C
+
+/-- Data for item (13), with the special fibre of the remainder zero. -/
+structure QuasiFinitePartData
+    (R S : Type u) [CommRing R] [CommRing S] [IsLocalRing R]
+    [Algebra R S] where
+  A : Type u
+  [commRingA : CommRing A]
+  [algebraRA : Algebra R A]
+  B : Type u
+  [commRingB : CommRing B]
+  [algebraRB : Algebra R B]
+  finiteA : RingHom.Finite (algebraMap R A)
+  decomposition : Nonempty (S ≃ₐ[R] A × B)
+  specialFiberZero : Subsingleton (B ⊗[R] IsLocalRing.ResidueField R)
 
 def FiniteTypePartProperty
     (R : Type u) [CommRing R] [IsLocalRing R] : Prop :=
@@ -391,7 +390,7 @@ theorem strictly_henselian_finite_type_decomposition
     Nonempty (StrictMopUpData R S) := by
   sorry
 
-/-! ## Finite étale, unramified, complete, and zero-dimensional cases -/
+/-! ## Finite étale, unramified, and complete cases -/
 
 /- The special fibre is canonically the base change to the residue field. -/
 def finiteEtaleSpecialFiber
@@ -439,7 +438,7 @@ theorem zero_dimensional_local_henselian
     (hzero : ringKrullDim R = 0) : HenselianLocalRing R := by
   sorry
 
-/-! ## Maps into henselian rings and polynomial systems -/
+/-! ## Maps into Henselian rings and polynomial systems -/
 
 theorem map_into_henselian
     {R A S : Type u} [CommRing R] [CommRing A] [CommRing S]
@@ -473,10 +472,9 @@ theorem strictly_henselian_solution_bijection
 
 /-! ## Countably generated Mittag--Leffler modules -/
 
-/-- Tensor-kernel domination, expanded in the source's module-theoretic form.
-This is the module-theoretic interface used for Mittag--Lefflerness in the
-earlier module chapters, whose bundled predicate is not available through the
-focused imports of this chapter. -/
+/- The earlier project chapters expose the module-theoretic predicate through
+the tensor-kernel criterion.  This local form keeps the chapter interface
+independent of later categorical packaging. -/
 def TensorKernelDominates
     {R M N N' : Type u} [CommRing R]
     [AddCommGroup M] [Module R M]
@@ -506,7 +504,7 @@ def ModuleMittagLefflerCondition
             ∃ g : P →ₗ[R] Q, TensorKernelMutuallyDominates g f
 
 theorem henselian_countable_mittag_leffler
-    {R M : Type u} [CommRing R] [HenselianLocalRing R]
+    {R : Type u} [CommRing R] [HenselianLocalRing R]
     [AddCommGroup M] [Module R M]
     (hcountable : Module.IsCountablyGenerated R M)
     (hML : ModuleMittagLefflerCondition R M) :

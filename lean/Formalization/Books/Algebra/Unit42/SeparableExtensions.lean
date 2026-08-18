@@ -1,8 +1,10 @@
 import Mathlib.FieldTheory.PurelyInseparable.Basic
+import Mathlib.FieldTheory.PurelyInseparable.PerfectClosure
 import Mathlib.FieldTheory.Separable
 import Mathlib.FieldTheory.SeparableClosure
 import Mathlib.FieldTheory.PrimitiveElement
 import Mathlib.FieldTheory.SeparablyGenerated
+import Mathlib.FieldTheory.IsAlgClosed.AlgebraicClosure
 import Mathlib.LinearAlgebra.FiniteDimensional.Defs
 import Mathlib.RingTheory.AlgebraicIndependent.TranscendenceBasis
 import Mathlib.RingTheory.EssentialFiniteness
@@ -192,6 +194,176 @@ structure PurelyInseparableBaseChange
   [topPurelyInseparable : IsPurelyInseparable K top]
   topSeparablyGenerated : IsSeparablyGenerated base top
 
+/-! ### Finite positive-characteristic root extensions -/
+
+/- The construction below deliberately uses finite sets of roots in algebraic
+   closures.  The relative perfect closure is usually not finite over its
+   base, and its ambient universe is not the one required by the diagram. -/
+
+/-- A chosen `p`-th root of an element in an algebraic closure. -/
+noncomputable def pthRootInAlgebraicClosure
+    (F : Type u) [Field F] (p : ℕ) (hp : 0 < p) (a : F) : AlgebraicClosure F :=
+  Classical.choose <|
+    IsAlgClosed.exists_pow_nat_eq (algebraMap F (AlgebraicClosure F) a) hp
+
+@[simp]
+theorem pthRootInAlgebraicClosure_pow
+    (F : Type u) [Field F] (p : ℕ) (hp : 0 < p) (a : F) :
+    pthRootInAlgebraicClosure F p hp a ^ p = algebraMap F (AlgebraicClosure F) a :=
+  Classical.choose_spec <|
+    IsAlgClosed.exists_pow_nat_eq (algebraMap F (AlgebraicClosure F) a) hp
+
+/-- The finite field obtained by adjoining the selected roots of a finite set. -/
+noncomputable def finitePthRootField
+    (F : Type u) [Field F] (p : ℕ) (hp : 0 < p) (s : Finset F) :
+    IntermediateField F (AlgebraicClosure F) :=
+  IntermediateField.adjoin F
+    (range fun a : s => pthRootInAlgebraicClosure F p hp (a : F))
+
+theorem finitePthRootField_finiteDimensional
+    (F : Type u) [Field F] (p : ℕ) (hp : 0 < p) (s : Finset F) :
+    FiniteDimensional F (finitePthRootField F p hp s) := by
+  apply IntermediateField.finiteDimensional_adjoin
+  rintro _ ⟨a, rfl⟩
+  exact Algebra.IsIntegral.isIntegral _
+
+theorem finitePthRootField_isPurelyInseparable
+    (F : Type u) [Field F] (p : ℕ) (hp : 0 < p) [Fact p.Prime] [CharP F p]
+    (s : Finset F) :
+    IsPurelyInseparable F (finitePthRootField F p hp s) := by
+  letI : ExpChar F p := ExpChar.prime (Fact.out : Nat.Prime p)
+  rw [finitePthRootField,
+    IntermediateField.isPurelyInseparable_adjoin_iff_pow_mem F (AlgebraicClosure F) p]
+  rintro _ ⟨a, rfl⟩
+  refine ⟨1, ?_⟩
+  simp only [pow_one]
+  rw [pthRootInAlgebraicClosure_pow F p hp (a : F)]
+  exact ⟨a, rfl⟩
+
+/-- The algebra map from the algebraic closure of the base into that of the top. -/
+noncomputable def pthRootClosureMap
+    (k : Type u) (K : Type v) [Field k] [Field K] [Algebra k K] :
+    AlgebraicClosure k →ₐ[k] AlgebraicClosure K :=
+  IsAlgClosed.lift
+
+/-- Adjoin the selected base roots and selected top roots to the original top. -/
+noncomputable def finitePthRootTop
+    (k : Type u) (K : Type v) [Field k] [Field K] [Algebra k K]
+    (p : ℕ) (hp : 0 < p) (s : Finset k) (t : Finset K) :
+    IntermediateField K (AlgebraicClosure K) :=
+  IntermediateField.adjoin K
+    ((range fun a : s =>
+      pthRootClosureMap k K (pthRootInAlgebraicClosure k p hp (a : k))) ∪
+      (range fun b : t => pthRootInAlgebraicClosure K p hp (b : K)))
+
+theorem finitePthRootTop_finiteDimensional
+    (k : Type u) (K : Type v) [Field k] [Field K] [Algebra k K]
+    (p : ℕ) (hp : 0 < p) (s : Finset k) (t : Finset K) :
+    FiniteDimensional K (finitePthRootTop k K p hp s t) := by
+  apply IntermediateField.finiteDimensional_adjoin
+  intro x hx
+  exact Algebra.IsIntegral.isIntegral x
+
+theorem finitePthRootTop_isPurelyInseparable
+    (k : Type u) (K : Type v) [Field k] [Field K] [Algebra k K]
+    (p : ℕ) (hp : 0 < p) [Fact p.Prime] [CharP k p] [CharP K p]
+    (s : Finset k) (t : Finset K) :
+    IsPurelyInseparable K (finitePthRootTop k K p hp s t) := by
+  letI : ExpChar K p := ExpChar.prime (Fact.out : Nat.Prime p)
+  rw [finitePthRootTop,
+    IntermediateField.isPurelyInseparable_adjoin_iff_pow_mem K (AlgebraicClosure K) p]
+  rintro _ (⟨a, rfl⟩ | ⟨b, rfl⟩)
+  · refine ⟨1, ?_⟩
+    change (pthRootClosureMap k K
+      (pthRootInAlgebraicClosure k p hp (a : k))) ^ p ^ 1 ∈
+      (algebraMap K (AlgebraicClosure K)).range
+    simp only [pow_one]
+    rw [← map_pow, pthRootInAlgebraicClosure_pow k p hp (a : k)]
+    exact ⟨algebraMap k K a, by
+      rw [← IsScalarTower.algebraMap_apply k K (AlgebraicClosure K) (a : k)]
+      exact ((pthRootClosureMap k K).commutes a).symm⟩
+  · refine ⟨1, ?_⟩
+    change (pthRootInAlgebraicClosure K p hp (b : K)) ^ p ^ 1 ∈
+      (algebraMap K (AlgebraicClosure K)).range
+    simp only [pow_one]
+    rw [pthRootInAlgebraicClosure_pow K p hp (b : K)]
+    exact ⟨b, rfl⟩
+
+/- The image of the finite base root field lies in the finite top root
+   field.  This is the map used to install the `base → top` algebra. -/
+theorem finitePthRootField_map_mem_top
+    (k : Type u) (K : Type v) [Field k] [Field K] [Algebra k K]
+    (p : ℕ) (hp : 0 < p) (s : Finset k) (t : Finset K)
+    (x : finitePthRootField k p hp s) :
+    pthRootClosureMap k K x ∈ finitePthRootTop k K p hp s t := by
+  have hle :
+      (finitePthRootField k p hp s).map (pthRootClosureMap k K) ≤
+        (finitePthRootTop k K p hp s t).restrictScalars k := by
+    rw [finitePthRootField, IntermediateField.adjoin_map]
+    rw [IntermediateField.adjoin_le_iff]
+    rintro _ ⟨a, ⟨a₀, rfl⟩, rfl⟩
+    change _ ∈ finitePthRootTop k K p hp s t
+    exact IntermediateField.subset_adjoin K _ (Or.inl ⟨a₀, rfl⟩)
+  exact hle ((IntermediateField.map_mem_map
+    (S := finitePthRootField k p hp s) (pthRootClosureMap k K)).2 x.property)
+
+/-- Package the finite root construction with all of the tower instances used
+    by the textbook diagram. -/
+noncomputable def finitePthRootBaseToTop
+    (k : Type u) (K : Type v) [Field k] [Field K] [Algebra k K]
+    (p : ℕ) (hp : 0 < p) (s : Finset k) (t : Finset K) :
+    finitePthRootField k p hp s →+* finitePthRootTop k K p hp s t :=
+  RingHom.codRestrict (pthRootClosureMap k K |>.comp
+    (finitePthRootField k p hp s).val)
+    (finitePthRootTop k K p hp s t)
+    (fun x => finitePthRootField_map_mem_top k K p hp s t x)
+
+noncomputable instance finitePthRootBaseAlgebra
+    (k : Type u) (K : Type v) [Field k] [Field K] [Algebra k K]
+    (p : ℕ) (hp : 0 < p) (s : Finset k) (t : Finset K) :
+    Algebra (finitePthRootField k p hp s) (finitePthRootTop k K p hp s t) :=
+  RingHom.toAlgebra (finitePthRootBaseToTop k K p hp s t)
+
+noncomputable instance finitePthRootBaseTower
+    (k : Type u) (K : Type v) [Field k] [Field K] [Algebra k K]
+    (p : ℕ) (hp : 0 < p) (s : Finset k) (t : Finset K) :
+    IsScalarTower k (finitePthRootField k p hp s)
+      (finitePthRootTop k K p hp s t) := by
+  apply IsScalarTower.of_algebraMap_eq'
+  ext a
+  change algebraMap k (AlgebraicClosure K) a =
+    pthRootClosureMap k K (algebraMap k (AlgebraicClosure k) a)
+  exact ((pthRootClosureMap k K).commutes a).symm
+
+noncomputable def finitePthRootBaseChange
+    (k : Type u) (K : Type v) [Field k] [Field K] [Algebra k K]
+    (p : ℕ) (hp : 0 < p) [Fact p.Prime] [CharP k p] [CharP K p]
+    (s : Finset k) (t : Finset K)
+    (hsep : IsSeparablyGenerated
+      (finitePthRootField k p hp s) (finitePthRootTop k K p hp s t)) :
+    PurelyInseparableBaseChange k K := by
+  let B := finitePthRootField k p hp s
+  let T := finitePthRootTop k K p hp s t
+  letI : Algebra B T := finitePthRootBaseAlgebra k K p hp s t
+  letI : IsScalarTower k B T := finitePthRootBaseTower k K p hp s t
+  letI : FiniteDimensional k B := finitePthRootField_finiteDimensional k p hp s
+  letI : IsPurelyInseparable k B := finitePthRootField_isPurelyInseparable k p hp s
+  letI : FiniteDimensional K T := finitePthRootTop_finiteDimensional k K p hp s t
+  letI : IsPurelyInseparable K T := finitePthRootTop_isPurelyInseparable k K p hp s t
+  exact { base := B, top := T, topSeparablyGenerated := hsep }
+
+/- The coefficient-selection part is the positive-characteristic argument from
+   the source.  Its finite output is exposed here so the construction above is
+   reusable by later proof stages without introducing a perfect closure. -/
+theorem exists_finite_pth_root_coefficients_isSeparablyGenerated
+    {k : Type u} {K : Type v} [Field k] [Field K] [Algebra k K]
+    [Algebra.EssFiniteType k K] (p : ℕ) (hp : 0 < p) [Fact p.Prime]
+    [CharP k p] [CharP K p] :
+    ∃ s : Finset k, ∃ t : Finset K,
+      IsSeparablyGenerated
+        (finitePthRootField k p hp s) (finitePthRootTop k K p hp s t) := by
+  sorry
+
 /- The source's construction is the existence statement below; the structure
    above records its diagram rather than introducing unbundled typeclass
    arguments at the theorem boundary. -/
@@ -213,7 +385,16 @@ theorem exists_purely_inseparable_base_change
       { base := k, top := K,
         topSeparablyGenerated := ⟨s, x, hs, by rw [hxrange]; exact hsep⟩ }
     exact ⟨b⟩
-  · sorry
+  · obtain _ | ⟨p, hp, hpk⟩ := CharP.exists' k
+    · exact (hzero ‹CharZero k›).elim
+    · let _ : Fact p.Prime := hp
+      let _ : CharP k p := hpk
+      let _ : CharP K p :=
+        CharP.of_ringHom_of_ne_zero (algebraMap k K) p hp.out.ne_zero
+      obtain ⟨s, t, hsep⟩ :=
+        exists_finite_pth_root_coefficients_isSeparablyGenerated
+          (k := k) (K := K) p hp.out.pos
+      exact ⟨finitePthRootBaseChange k K p hp.out.pos s t hsep⟩
 
 end
 

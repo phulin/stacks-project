@@ -191,7 +191,9 @@ theorem exists_pow_le_of_le_radical_of_noetherian
     {R : Type u} [CommRing R] [IsNoetherianRing R]
     (I J : Ideal R) (hJ : J ≤ I.radical) :
     ∃ n : ℕ, J ^ n ≤ I := by
-  exact Ideal.exists_pow_le_of_le_radical_of_fg hJ (Ideal.FG.of_isNoetherianRing J)
+  obtain ⟨n, hn⟩ :=
+    Ideal.exists_pow_le_of_le_radical_of_fg hJ (Ideal.FG.of_isNoetherianRing J)
+  exact ⟨n, hn⟩
 
 theorem locallyNilpotentIdeal_iff_isNilpotent_of_noetherian
     {R : Type u} [CommRing R] [IsNoetherianRing R] (I : Ideal R) :

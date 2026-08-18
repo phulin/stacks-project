@@ -25,7 +25,7 @@ open Formalization.Books.Algebra.Unit56
 open DirectSum SetLike
 open scoped DirectSum Pointwise Polynomial
 
-universe u v w
+universe u v w a
 
 noncomputable section
 
@@ -107,6 +107,10 @@ variable {A : Type u} [CommRing A]
 /-- The degree-zero subring of a `ℤ`-graded ring. -/
 abbrev zDegreeZeroSubring {A : Type u} [CommRing A] (H : ZGradedRingData A) :=
   SetLike.GradeZero.subring H.component
+
+/-- A grading has the positive homogeneous unit required by the source lemma. -/
+def HasPositiveHomogeneousUnit (H : ZGradedRingData A) : Prop :=
+  ∃ (d : ℤ) (f : A), 0 < d ∧ f ∈ H.component d ∧ IsUnit f
 
 /-- Homogeneous primes for a `ℤ`-graded ring. -/
 abbrev zGradedPrimeSpectrum (H : ZGradedRingData A) :=
@@ -320,14 +324,17 @@ theorem isTopologicalBasis_DPlus (G : GradedRingData S) :
 theorem exists_natural_localization_z_grading (G : GradedRingData S)
     {f : S} {d : ℕ} (hf : f ∈ G.component d) (hd : 0 < d) :
     ∃ H : ZGradedRingData (Localization (Submonoid.powers f)),
-      Nonempty (H.component 0 ≃+* homogeneousLocalizationAway G f) := by
+      HasPositiveHomogeneousUnit H ∧
+        Nonempty (H.component 0 ≃+* homogeneousLocalizationAway G f) := by
   sorry
 
 /-- The two homeomorphisms in the affine-chart description of `D_+(f)`. -/
 theorem DPlus_chart_homeomorphisms (G : GradedRingData S)
     {f : S} {d : ℕ} (hf : f ∈ G.component d) (hd : 0 < d)
     : ∃ (H : ZGradedRingData (Localization (Submonoid.powers f))),
-      Nonempty (H.component 0 ≃+* homogeneousLocalizationAway G f) ∧
+      HasPositiveHomogeneousUnit H ∧
+        Nonempty (H.component 0 ≃+* homogeneousLocalizationAway G f) ∧
+        IsHomeomorph (zGradedPrimeToDegreeZero H) ∧
         Nonempty (DPlus G f ≃ₜ zGradedPrimeSpectrum H) ∧
           Nonempty (zGradedPrimeSpectrum H ≃ₜ
             PrimeSpectrum (homogeneousLocalizationAway G f)) := by
@@ -460,15 +467,15 @@ theorem dehomogenization_finite_module (G : GradedRingData S)
 
 /-- A graded algebra and a graded module with the data produced by homogenization. -/
 structure GradedAlgebraOver (R : Type u) [CommRing R] where
-  carrier : Type u
+  carrier : Type v
   [commRing : CommRing carrier]
   [algebra : Algebra R carrier]
   grading : GradedRingData carrier
 
 attribute [instance] GradedAlgebraOver.commRing GradedAlgebraOver.algebra
 
-structure GradedModuleOver (A : GradedAlgebraOver R) where
-  carrier : Type u
+structure GradedModuleOver (A : GradedAlgebraOver.{u, v} R) where
+  carrier : Type w
   [addCommGroup : AddCommGroup carrier]
   [module : Module A.carrier carrier]
   grading : GradedModuleData A.grading carrier
@@ -476,11 +483,11 @@ structure GradedModuleOver (A : GradedAlgebraOver R) where
 attribute [instance] GradedModuleOver.addCommGroup GradedModuleOver.module
 
 /-- The full conclusion of the finite-type homogenization theorem. -/
-structure HomogenizationWitness (R R' M : Type u)
+structure HomogenizationWitness (R : Type u) (R' : Type a) (M : Type w)
     [CommRing R] [CommRing R'] [AddCommGroup M]
     [Algebra R R'] [Module R' M] where
-  gradedAlgebra : GradedAlgebraOver R
-  gradedModule : GradedModuleOver gradedAlgebra
+  gradedAlgebra : GradedAlgebraOver.{u, v} R
+  gradedModule : GradedModuleOver.{u, v, w} gradedAlgebra
   f : gradedAlgebra.carrier
   f_degree_one : f ∈ gradedAlgebra.grading.component 1
   ring_equiv : R' ≃+* homogeneousLocalizationAway gradedAlgebra.grading f
@@ -499,7 +506,7 @@ structure HomogenizationWitness (R R' M : Type u)
         Algebra.adjoin R (Set.range x) = ⊤
   module_finite : Module.Finite gradedAlgebra.carrier gradedModule.carrier
 
-theorem exists_homogenization (R R' M : Type u)
+theorem exists_homogenization (R : Type u) (R' : Type a) (M : Type w)
     [CommRing R] [CommRing R'] [AddCommGroup M]
     [Algebra R R'] [Module R' M]
     [Algebra.FiniteType R R'] [Module.Finite R' M] :

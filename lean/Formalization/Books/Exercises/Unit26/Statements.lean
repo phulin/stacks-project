@@ -16,7 +16,6 @@ import Mathlib.RingTheory.Finiteness.Basic
 import Mathlib.RingTheory.Finiteness.Prod
 import Mathlib.RingTheory.MvPolynomial.Ideal
 import Mathlib.RingTheory.MvPolynomial.WeightedHomogeneous
-set_option maxHeartbeats 5000000
 /- The quotient examples below use the canonical ideal-quotient ring API. -/
 
 /-!
@@ -222,7 +221,8 @@ private def quotient_kernel_ringHom_linearEquiv
     simpa only [RingHom.comp_apply, RingHom.id_apply] using
       RingHom.congr_fun hqs b
   have hrl : r.comp lB = LinearMap.id := by
-    ext z
+    apply LinearMap.ext
+    intro z
     refine Submodule.Quotient.induction_on I z ?_
     intro a
     change Submodule.Quotient.mk (s (q a)) = Submodule.Quotient.mk a
@@ -1749,12 +1749,9 @@ def nodeEulerParameters (k : Type u) [Field k]
   (φ (FGModuleCat.of (nodeRing k) (nodeXComponent k)),
     φ (FGModuleCat.of (nodeRing k) (nodeYComponent k)))
 
-/-- For an algebraically closed field, the two component values classify all
-Euler–Poincaré functions on the nodal ring. -/
-theorem eulerPoincareFunction_node_classification
+private theorem eulerPoincareFunction_node_injective
     (k : Type u) [Field k] [IsAlgClosed k] :
-    Function.Bijective (nodeEulerParameters (k := k)) :=
-  set_option maxHeartbeats 5000000 in by
+    Function.Injective (nodeEulerParameters (k := k)) := by
   classical
   let A := nodeRing k
   let B := Polynomial k
@@ -2226,9 +2223,8 @@ theorem eulerPoincareFunction_node_classification
         · intro y
           exact ⟨0, Subsingleton.elim _ _⟩)
     simpa [hzero φ] using hIso φ e
-  constructor
-  · intro φ ψ h
-    have hcyclicFor :
+  intro φ ψ h
+  · have hcyclicFor :
         ∀ (θ : EulerPoincareFunction A)
           (q : A →+* B) (hq : Function.Surjective q) (p : B) (hp : p ≠ 0),
           letI : Module A B := Module.compHom B q
@@ -3022,26 +3018,19 @@ theorem eulerPoincareFunction_node_classification
         _ = ψ (FGModuleCat.of A (M : Type u)) := hψM.symm
         _ = ψ M := by rfl
     exact eulerPoincareFunction_ext hfun
-  · intro z
-    let b : B⁰ :=
-      ⟨Polynomial.X, by
-        rw [mem_nonZeroDivisors_iff_ne_zero]
-        exact Polynomial.X_ne_zero⟩
-    have hsYb : sY (b : B) = y := by
-      change sY Polynomial.X = y
-      exact hsY_X
-    have hsXb : sX (b : B) = x := by
-      change sX Polynomial.X = x
-      exact hsX_X
-    have hIspan : nodeXIdeal k = Ideal.span {x} := hkerY.symm.trans hkerY_span
-    have hJspan : nodeYIdeal k = Ideal.span {y} := hkerX.symm.trans hkerX_span
-    have hExists :
-        ∀ z : ℤ × ℤ, ∃ φ : EulerPoincareFunction (nodeRing k),
-          nodeEulerParameters k φ = z := by
-      sorry
-    obtain ⟨φ, hφ⟩ := hExists z
-    refine ⟨φ, ?_⟩
-    simpa [nodeEulerParameters, A] using hφ
+
+private theorem eulerPoincareFunction_node_surjective
+    (k : Type u) [Field k] [IsAlgClosed k] :
+    Function.Surjective (nodeEulerParameters (k := k)) := by
+  sorry
+
+/-- For an algebraically closed field, the two component values classify all
+Euler–Poincaré functions on the nodal ring. -/
+theorem eulerPoincareFunction_node_classification
+    (k : Type u) [Field k] [IsAlgClosed k] :
+    Function.Bijective (nodeEulerParameters (k := k)) :=
+  ⟨eulerPoincareFunction_node_injective k,
+    eulerPoincareFunction_node_surjective k⟩
 
 /-! ## Exercise 4: kernels of locally finite graded maps -/
 

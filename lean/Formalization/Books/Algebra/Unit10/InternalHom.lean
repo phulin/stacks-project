@@ -157,7 +157,64 @@ theorem internalHom_exact_of_right_exact
       exact LinearMap.lcomp_injective_of_surjective g hg
     · change Function.Exact (LinearMap.lcomp R N g) (LinearMap.lcomp R N f)
       exact LinearMap.exact_lcomp_of_exact_of_surjective N hfg hg
-  · sorry
+  · intro h
+    have hg : Function.Surjective g := by
+      let Q := ULift.{max u (max v w)} (M₃ ⧸ LinearMap.range g)
+      let e : Q ≃ₗ[R] (M₃ ⧸ LinearMap.range g) := ULift.moduleEquiv
+      let q : M₃ →ₗ[R] Q := e.symm.toLinearMap.comp (LinearMap.range g).mkQ
+      have hq : q = 0 := by
+        apply (h Q).1
+        change q.comp g = (0 : M₂ →ₗ[R] Q)
+        apply LinearMap.ext
+        intro x
+        change e.symm ((LinearMap.range g).mkQ (g x)) = 0
+        apply e.injective
+        simp
+      apply (LinearMap.range_eq_top).mp
+      rw [eq_top_iff]
+      intro y _hy
+      have hmk : (LinearMap.range g).mkQ y = 0 := by
+        have hq' := congrArg (fun k => e (k y)) hq
+        simpa [q] using hq'
+      exact (Submodule.Quotient.mk_eq_zero _).mp hmk
+    constructor
+    · intro x
+      constructor
+      · intro hx
+        let q : M₂ →ₗ[R] (M₂ ⧸ LinearMap.range f) := (LinearMap.range f).mkQ
+        let Q := ULift.{max u (max v z)} (M₂ ⧸ LinearMap.range f)
+        let e : Q ≃ₗ[R] (M₂ ⧸ LinearMap.range f) := ULift.moduleEquiv
+        let q' : M₂ →ₗ[R] Q := e.symm.toLinearMap.comp q
+        have hq' : internalHomPrecomp (N := Q) f q' = 0 := by
+          change q'.comp f = (0 : M₁ →ₗ[R] Q)
+          apply LinearMap.ext
+          intro y
+          change e.symm (q (f y)) = 0
+          apply e.injective
+          simp [q]
+        rcases ((h Q).2 q').mp hq' with ⟨φ, hφ⟩
+        have hx' := congrArg (fun k => k x) hφ
+        have hxq' : q' x = 0 := by
+          rw [← hx']
+          simp [internalHomPrecomp, hx]
+        have hxq : e.symm (q x) = 0 := by
+          change q' x = 0
+          exact hxq'
+        have hqx : q x = 0 := by
+          apply e.symm.injective
+          rw [map_zero]
+          exact hxq
+        exact (Submodule.Quotient.mk_eq_zero _).mp hqx
+      · rintro ⟨y, rfl⟩
+        let Q := ULift.{max u (max v w)} M₃
+        let e : Q ≃ₗ[R] M₃ := ULift.moduleEquiv
+        let idQ : M₃ →ₗ[R] Q := e.symm.toLinearMap
+        have hc := (h Q).2.linearMap_comp_eq_zero
+        have hcy := congrArg (fun k => k idQ) hc
+        have hcy' := congrArg (fun k => k y) hcy
+        apply e.symm.injective
+        simpa [internalHomPrecomp, idQ] using hcy'
+    · exact hg
 
 theorem internalHom_exact_of_left_exact
     {R : Type u} {M₁ : Type v} {M₂ : Type w} {M₃ : Type z} [CommRing R]
@@ -203,7 +260,48 @@ theorem internalHom_exact_of_left_exact
         ext x
         have hx := congrArg (fun k => k (ψ x)) hfg.linearMap_comp_eq_zero
         simpa [internalHomPostcomp_apply] using hx
-  · sorry
+  · intro h
+    have hf : Function.Injective f := by
+      intro x y hxy
+      let Q := ULift.{max v (max w z)} R
+      let e : Q ≃ₗ[R] R := ULift.moduleEquiv
+      let φx : Q →ₗ[R] M₁ :=
+        (LinearMap.toSpanSingleton R M₁ x).comp e.toLinearMap
+      let φy : Q →ₗ[R] M₁ :=
+        (LinearMap.toSpanSingleton R M₁ y).comp e.toLinearMap
+      have hcomp : internalHomPostcomp (M := Q) f φx =
+          internalHomPostcomp (M := Q) f φy := by
+        apply LinearMap.ext
+        intro r
+        simp [φx, φy, hxy]
+      have hφ := (h Q).1 hcomp
+      have hφ1 := congrArg (fun k => k (e.symm 1)) hφ
+      simpa [φx, φy] using hφ1
+    constructor
+    · exact hf
+    · intro y
+      constructor
+      · intro hy
+        let Q := ULift.{max v (max w z)} R
+        let e : Q ≃ₗ[R] R := ULift.moduleEquiv
+        let φ : Q →ₗ[R] M₂ :=
+          (LinearMap.toSpanSingleton R M₂ y).comp e.toLinearMap
+        have hφ : internalHomPostcomp (M := Q) g φ = 0 := by
+          apply LinearMap.ext
+          intro r
+          simp [φ, hy]
+        rcases ((h Q).2 φ).mp hφ with ⟨ψ, hψ⟩
+        refine ⟨ψ (e.symm 1), ?_⟩
+        have hψ1 := congrArg (fun k => k (e.symm 1)) hψ
+        simpa [internalHomPostcomp, φ] using hψ1
+      · rintro ⟨x, rfl⟩
+        let Q := ULift.{max u (max w z)} M₁
+        let e : Q ≃ₗ[R] M₁ := ULift.moduleEquiv
+        let idQ : Q →ₗ[R] M₁ := e.toLinearMap
+        have hc := (h Q).2.linearMap_comp_eq_zero
+        have hcx := congrArg (fun k => k idQ) hc
+        have hcx' := congrArg (fun k => k (e.symm x)) hcx
+        simpa [internalHomPostcomp, idQ] using hcx'
 
 /-! ## Localization of internal homs -/
 

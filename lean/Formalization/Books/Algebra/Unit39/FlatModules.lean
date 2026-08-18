@@ -870,7 +870,48 @@ theorem flat_iff_localized_on_generators
     Module.Flat R M ↔
       ∀ i : Fin n,
         Module.Flat R (LocalizedModule (Submonoid.powers (g i)) M) := by
-  sorry
+  constructor
+  · intro h i
+    rw [Module.Flat.iff_lTensor_injectiveₛ]
+    simp_rw [← TensorProduct.AlgebraTensorModule.coe_lTensor (A := A)]
+    intro P _ _ N
+    let gLoc : M →ₗ[A] LocalizedModule (Submonoid.powers (g i)) M :=
+      LocalizedModule.mkLinearMap (Submonoid.powers (g i)) M
+    have hF : Function.Injective
+        (TensorProduct.AlgebraTensorModule.lTensor A M N.subtype) :=
+      (Module.Flat.iff_lTensor_injectiveₛ.mp h) N
+    have hmap := IsLocalizedModule.map_injective
+      (S := Submonoid.powers (g i))
+      (f := TensorProduct.AlgebraTensorModule.rTensor R N gLoc)
+      (g := TensorProduct.AlgebraTensorModule.rTensor R P gLoc)
+      (TensorProduct.AlgebraTensorModule.lTensor A M N.subtype) hF
+    simpa [IsLocalizedModule.map_lTensor] using hmap
+  · intro h
+    refine Module.flat_of_isLocalized_span A M (Set.range g) hg
+      (fun r : Set.range g => LocalizedModule (Submonoid.powers (r : A)) M)
+      (fun (r : Set.range g) => LocalizedModule.mkLinearMap
+        (Submonoid.powers (r : A)) M) ?_
+    rintro ⟨a, ⟨i, rfl⟩⟩
+    exact h i
+
+private theorem flat_localizedModule_of_flat
+    {R A M : Type*} [CommRing R] [CommRing A] [Algebra R A]
+    [AddCommGroup M] [Module R M] [Module A M] [IsScalarTower R A M]
+    (S : Submonoid A) (h : Module.Flat R M) :
+    Module.Flat R (LocalizedModule S M) := by
+  rw [Module.Flat.iff_lTensor_injectiveₛ]
+  simp_rw [← TensorProduct.AlgebraTensorModule.coe_lTensor (A := A)]
+  intro P _ _ N
+  let gLoc : M →ₗ[A] LocalizedModule S M := LocalizedModule.mkLinearMap S M
+  have hF : Function.Injective
+      (TensorProduct.AlgebraTensorModule.lTensor A M N.subtype) :=
+    (Module.Flat.iff_lTensor_injectiveₛ.mp h) N
+  have hmap := IsLocalizedModule.map_injective
+    (S := S)
+    (f := TensorProduct.AlgebraTensorModule.rTensor R N gLoc)
+    (g := TensorProduct.AlgebraTensorModule.rTensor R P gLoc)
+    (TensorProduct.AlgebraTensorModule.lTensor A M N.subtype) hF
+  simpa [IsLocalizedModule.map_lTensor] using hmap
 
 noncomputable def flat_at_prime_over
     {R A M : Type*} [CommRing R] [CommRing A] [Algebra R A]
@@ -888,14 +929,80 @@ theorem flat_iff_localized_over_primes
     [AddCommGroup M] [Module R M] [Module A M] [IsScalarTower R A M] :
     Module.Flat R M ↔
       ∀ (P : Ideal A) [P.IsPrime], flat_at_prime_over (R := R) (A := A) (M := M) P := by
-  sorry
+  constructor
+  · intro h P hP
+    let : P.IsPrime := hP
+    let p := P.comap (algebraMap R A)
+    let : Algebra (Localization.AtPrime p) (Localization.AtPrime P) :=
+      Localization.AtPrime.algebraOfLiesOver p P
+    let : IsScalarTower R (Localization.AtPrime p) (Localization.AtPrime P) := inferInstance
+    let : Module (Localization.AtPrime p) (LocalizedModule P.primeCompl M) :=
+      Module.compHom _ (algebraMap (Localization.AtPrime p) (Localization.AtPrime P))
+    let : IsScalarTower R (Localization.AtPrime p) (LocalizedModule P.primeCompl M) :=
+      IsScalarTower.of_algebraMap_smul fun r x => by
+        change algebraMap (Localization.AtPrime p) (Localization.AtPrime P)
+            (algebraMap R (Localization.AtPrime p) r) • x = r • x
+        rw [← IsScalarTower.algebraMap_apply R (Localization.AtPrime p)
+          (Localization.AtPrime P)]
+        exact algebraMap_smul (Localization.AtPrime P) r x
+    change Module.Flat (Localization.AtPrime p) (LocalizedModule P.primeCompl M)
+    apply (Module.flat_iff_of_isLocalization (Localization.AtPrime p)
+      p.primeCompl (LocalizedModule P.primeCompl M)).2
+    exact flat_localizedModule_of_flat P.primeCompl h
+  · intro h
+    refine Module.flat_of_isLocalized_maximal A M
+      (fun P _ => LocalizedModule P.primeCompl M)
+      (fun P _ => LocalizedModule.mkLinearMap P.primeCompl M) ?_
+    intro P hP
+    let : P.IsMaximal := hP
+    let p := P.comap (algebraMap R A)
+    let : Algebra (Localization.AtPrime p) (Localization.AtPrime P) :=
+      Localization.AtPrime.algebraOfLiesOver p P
+    let : IsScalarTower R (Localization.AtPrime p) (Localization.AtPrime P) := inferInstance
+    let : Module (Localization.AtPrime p) (LocalizedModule P.primeCompl M) :=
+      Module.compHom _ (algebraMap (Localization.AtPrime p) (Localization.AtPrime P))
+    let : IsScalarTower R (Localization.AtPrime p) (LocalizedModule P.primeCompl M) :=
+      IsScalarTower.of_algebraMap_smul fun r x => by
+        change algebraMap (Localization.AtPrime p) (Localization.AtPrime P)
+            (algebraMap R (Localization.AtPrime p) r) • x = r • x
+        rw [← IsScalarTower.algebraMap_apply R (Localization.AtPrime p)
+          (Localization.AtPrime P)]
+        exact algebraMap_smul (Localization.AtPrime P) r x
+    apply (Module.flat_iff_of_isLocalization (Localization.AtPrime p)
+      p.primeCompl (LocalizedModule P.primeCompl M)).1
+    simpa [flat_at_prime_over] using h P
 
 theorem flat_iff_localized_over_maximals
     {R A M : Type*} [CommRing R] [CommRing A] [Algebra R A]
     [AddCommGroup M] [Module R M] [Module A M] [IsScalarTower R A M] :
     Module.Flat R M ↔
       ∀ (P : Ideal A) [P.IsMaximal], flat_at_prime_over (R := R) (A := A) (M := M) P := by
-  sorry
+  constructor
+  · intro h P hP
+    let : P.IsMaximal := hP
+    exact (flat_iff_localized_over_primes (R := R) (A := A) (M := M)).1 h P
+  · intro h
+    refine Module.flat_of_isLocalized_maximal A M
+      (fun P _ => LocalizedModule P.primeCompl M)
+      (fun P _ => LocalizedModule.mkLinearMap P.primeCompl M) ?_
+    intro P hP
+    let : P.IsMaximal := hP
+    let p := P.comap (algebraMap R A)
+    let : Algebra (Localization.AtPrime p) (Localization.AtPrime P) :=
+      Localization.AtPrime.algebraOfLiesOver p P
+    let : IsScalarTower R (Localization.AtPrime p) (Localization.AtPrime P) := inferInstance
+    let : Module (Localization.AtPrime p) (LocalizedModule P.primeCompl M) :=
+      Module.compHom _ (algebraMap (Localization.AtPrime p) (Localization.AtPrime P))
+    let : IsScalarTower R (Localization.AtPrime p) (LocalizedModule P.primeCompl M) :=
+      IsScalarTower.of_algebraMap_smul fun r x => by
+        change algebraMap (Localization.AtPrime p) (Localization.AtPrime P)
+            (algebraMap R (Localization.AtPrime p) r) • x = r • x
+        rw [← IsScalarTower.algebraMap_apply R (Localization.AtPrime p)
+          (Localization.AtPrime P)]
+        exact algebraMap_smul (Localization.AtPrime P) r x
+    apply (Module.flat_iff_of_isLocalization (Localization.AtPrime p)
+      p.primeCompl (LocalizedModule P.primeCompl M)).1
+    simpa [flat_at_prime_over] using h P
 
 end Localization
 
@@ -906,7 +1013,7 @@ theorem flat_going_down
     {p p' : Ideal R} [p.IsPrime] [p'.IsPrime] (hpp : p ≤ p')
     (Q : Ideal S) [Q.IsPrime] [Q.LiesOver p'] :
     ∃ P : Ideal S, P ≤ Q ∧ P.IsPrime ∧ P.LiesOver p := by
-  sorry
+  exact Ideal.exists_ideal_le_liesOver_of_le Q hpp
 
 end GoingDown
 

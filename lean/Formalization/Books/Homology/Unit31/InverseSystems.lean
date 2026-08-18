@@ -866,7 +866,8 @@ theorem essentiallyConstant_iff_biproduct_decomposition
   have split_data :
       ∀ {X Y : C} (j : Y ⟶ X) (q : X ⟶ Y), j ≫ q = 𝟙 Y →
         ∃ e : biprod Y (kernel (q ≫ j)) ≅ X,
-          e.hom ≫ q = biprod.fst ∧ biprod.inl ≫ e.hom = j := by
+          e.hom ≫ q = biprod.fst ∧ biprod.inl ≫ e.hom = j ∧
+            biprod.inr ≫ e.hom = kernel.ι (q ≫ j) := by
     intro X Y j q h
     letI : Mono j := ⟨fun a b hab => by
       rw [← Category.comp_id a, ← Category.comp_id b, ← h,
@@ -916,15 +917,62 @@ theorem essentiallyConstant_iff_biproduct_decomposition
       change biprod.lift q p ≫ biprod.desc j (kernel.ι (q ≫ j)) = 𝟙 X
       rw [biprod.lift_desc, hp]
       abel
-    refine ⟨Iso.mk eh ei hhi hih, ?_, ?_⟩
+    refine ⟨Iso.mk eh ei hhi hih, ?_, ?_, ?_⟩
     · dsimp [eh]
       apply biprod.hom_ext'
-      · simp only [Category.assoc, biprod.inl_desc, h, biprod.inl_fst]
-      · simp only [Category.assoc, biprod.inr_desc, hjq, biprod.inr_fst]
+      · rw [← Category.assoc, biprod.inl_desc, h]
+        simp
+      · rw [← Category.assoc, biprod.inr_desc, hjq]
+        simp
     · change biprod.inl ≫ eh = j
       simp [eh]
+    · change biprod.inr ≫ eh = kernel.ι (q ≫ j)
+      simp [eh]
   constructor
-  · sorry
+  · intro hF
+    rcases hF with ⟨hI, hF⟩
+    letI : Nonempty ℕ+ := hI.1
+    letI : IsDirectedOrder ℕ+ := hI.2
+    obtain ⟨c, hcLim, hc⟩ := essentiallyConstantPro_hasLimit hF
+    rcases hc with ⟨i, r, hr, hfactor⟩
+    let hcl : IsLimit c := Classical.choice hcLim
+    let ec : c.pt ≅ inverseSystemLimit F :=
+      hcl.conePointUniqueUpToIso (limit.isLimit F)
+    let i₀ : ℕ+ := i.unop
+    let q (j : ℕ+) (hij : i₀ ≤ j) :
+        F.obj (Opposite.op j) ⟶ inverseSystemLimit F :=
+      F.map (opHomOfLE hij) ≫ r ≫ ec.hom
+    let l (j : ℕ+) : inverseSystemLimit F ⟶ F.obj (Opposite.op j) :=
+      ec.inv ≫ c.π.app (Opposite.op j)
+    have hsplit : ∀ (j : ℕ+) (hij : i₀ ≤ j),
+        l j ≫ q j hij = 𝟙 _ := by
+      intro j hij
+      dsimp [l, q]
+      rw [Category.assoc ec.inv (c.π.app (Opposite.op j))
+        (F.map (opHomOfLE hij) ≫ r ≫ ec.hom)]
+      rw [← Category.assoc (c.π.app (Opposite.op j))
+        (F.map (opHomOfLE hij)) (r ≫ ec.hom)]
+      rw [c.w (opHomOfLE hij)]
+      rw [← Category.assoc (c.π.app i) r ec.hom, hr]
+      simp
+    have hdata : ∀ (j : ℕ+) (hij : i₀ ≤ j),
+        ∃ e : biprod (inverseSystemLimit F) (kernel (q j hij ≫ l j)) ≅
+            F.obj (Opposite.op j),
+          e.hom ≫ q j hij = biprod.fst ∧
+            biprod.inl ≫ e.hom = l j ∧
+              biprod.inr ≫ e.hom = kernel.ι (q j hij ≫ l j) := by
+      intro j hij
+      exact split_data (l j) (q j hij) (hsplit j hij)
+    choose e₀ he₀q he₀inl he₀inr using hdata
+    let Z (j : ℕ+) : C :=
+      if hij : i₀ ≤ j then kernel (q j hij ≫ l j) else 0
+    let e : ∀ (j : ℕ+), i₀ ≤ j →
+        biprod (inverseSystemLimit F) (Z j) ≅ F.obj (Opposite.op j) :=
+      fun j hij => by
+        dsimp [Z]
+        rw [dif_pos hij]
+        exact e₀ j hij
+    trace_state
   · sorry
 
 theorem essentiallyConstant_isMittagLeffler

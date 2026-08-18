@@ -2523,9 +2523,11 @@ theorem principalParts_diagonal_equiv_exists (k : ℕ) :
     simp only [principalPartsHigherEvaluationMap, principalPartsHigherRelation,
       Finsupp.lsum_apply, Finset.smul_sum, Finsupp.smul_single',
       smul_smul, mul_assoc, mul_comm, mul_left_comm]
-    trace_state
     sorry
+  /- Prior attempt:
   exact ⟨LinearEquiv.refl _, by intro m; rfl⟩
+  -/
+  sorry
 
 noncomputable def principalPartsDiagonalEquiv (k : ℕ) :
     PrincipalParts (R := R) (S := S) (M := M) k ≃ₗ[S]

@@ -57,16 +57,10 @@ theorem finiteType_ringHom_of_basicOpenCovers
   have hspanB : Ideal.span (Set.range g) = ⊤ :=
     PrimeSpectrum.iSup_basicOpen_eq_top_iff.mp hB.iSup_eq_top
   apply Algebra.FiniteType.of_span_eq_top_target (Set.range g) hspanB
-  intro y hy
-  let j := Classical.choose hy
-  have hj : g j = y := Classical.choose_spec hy
-  rw [← hj]
+  rintro y ⟨j, rfl⟩
   let B' := Localization.Away (g j)
   apply Algebra.FiniteType.of_span_eq_top_source (Set.range f) hspanA
-  intro x hx
-  let i := Classical.choose hx
-  have hi : f i = x := Classical.choose_spec hx
-  rw [← hi]
+  rintro x ⟨i, rfl⟩
   let R' := Localization.Away (f i)
   let T := R' ⊗[A] B'
   let L := Localization.Away (φ (f i) * g j)

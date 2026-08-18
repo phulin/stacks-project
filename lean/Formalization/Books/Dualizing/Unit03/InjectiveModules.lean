@@ -40,8 +40,8 @@ theorem product_injective
   infer_instance
 
 theorem injective_of_flat
-    {R S E : Type*} [CommRing R] [CommRing S] [AddCommGroup E]
-    [Module S E] (f : R →+* S) (hf : f.Flat)
+    {R : Type u} {S : Type v} {E : Type w} [CommRing R] [CommRing S]
+    [AddCommGroup E] [Module S E] [Small.{w} S] (f : R →+* S) (hf : f.Flat)
     [Module.Injective S E] :
     @Module.Injective R _ E _ (Module.compHom E f) := by
   sorry
@@ -56,8 +56,9 @@ theorem injective_of_ring_epimorphism
 /-! ### Hom and coextension of scalars -/
 
 theorem hom_injective
-    {R S E : Type*} [CommRing R] [CommRing S] [AddCommGroup E]
-    [Module R E] (f : R →+* S) [Module.Injective R E] :
+    {R : Type u} {S : Type v} {E : Type w} [CommRing R] [CommRing S]
+    [AddCommGroup E] [Module R E] [Small.{w} R] (f : R →+* S)
+    [Module.Injective R E] :
     Module.Injective S
       ((ModuleCat.coextendScalars f).obj (ModuleCat.of R E) : Type _) := by
   sorry
@@ -114,13 +115,13 @@ theorem hom_to_minimal_prime_localization_equiv
 theorem directSum_injective
     {R : Type u} [CommRing R] [IsNoetherianRing R] {ι : Type w}
     {M : ι → Type v} [∀ i, AddCommGroup (M i)] [∀ i, Module R (M i)]
-    [∀ i, Module.Injective R (M i)] :
+    [∀ i, Module.Injective R (M i)] [Small.{v} R] :
     Module.Injective R (DirectSum ι M) := by
   sorry
 
 theorem localization_injective
-    {R E : Type*} [CommRing R] [AddCommGroup E] [Module R E]
-    [IsNoetherianRing R] (S : Submonoid R) [Module.Injective R E] :
+    {R : Type u} {E : Type v} [CommRing R] [AddCommGroup E] [Module R E]
+    [IsNoetherianRing R] [Small.{v} R] (S : Submonoid R) [Module.Injective R E] :
     Module.Injective (Localization S) (LocalizedModule S E) := by
   sorry
 

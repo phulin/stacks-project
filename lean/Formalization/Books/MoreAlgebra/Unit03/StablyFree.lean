@@ -5,7 +5,11 @@ import Mathlib.Algebra.Homology.ShortComplex.ShortExact
 import Mathlib.Algebra.Module.StablyFree.Basic
 import Mathlib.Algebra.Module.Torsion.Basic
 import Mathlib.RingTheory.Flat.Basic
+import Mathlib.RingTheory.Finiteness.Prod
 import Mathlib.RingTheory.Jacobson.Radical
+import Mathlib.RingTheory.Nakayama
+import Mathlib.LinearAlgebra.Matrix.ToLin
+import Mathlib.LinearAlgebra.Matrix.SemiringInverse
 
 /-!
 # More on Algebra, Chapter 3: Stably free modules
@@ -46,7 +50,35 @@ theorem stablyFree_iff_stablyIsomorphic_free
     StablyFree R M ↔
       ∃ (F : Type u) (_ : AddCommGroup F) (_ : Module R F)
         (_ : Module.Free R F), StablyIsomorphic R M F := by
-  sorry
+  constructor
+  · intro h
+    letI : Module.IsStablyFree R M := h
+    obtain ⟨N, hNadd, hNmod, hNfin, hNfree, hMNfree⟩ :=
+      Module.IsStablyFree.exist_free_prod R M
+    letI : AddCommGroup N := hNadd
+    letI : Module R N := hNmod
+    letI : Module.Finite R N := hNfin
+    letI : Module.Free R N := hNfree
+    let ι := Module.Free.ChooseBasisIndex R N
+    letI : Fintype ι := Module.Free.ChooseBasisIndex.fintype R N
+    let b := Module.Free.chooseBasis R N
+    let m := Fintype.card ι
+    let eN : N ≃ₗ[R] (Fin m → R) :=
+      (b.reindex (Fintype.equivFin ι)).equivFun
+    refine ⟨M × N, inferInstance, inferInstance, hMNfree, ?_⟩
+    refine ⟨m, 0, ?_⟩
+    exact ⟨((LinearEquiv.refl R M).prodCongr eN.symm) ≪≫ₗ
+      (LinearEquiv.prodUnique (R := R) (M := M × N) (M₂ := Fin 0 → R)).symm⟩
+  · rintro ⟨F, hFadd, hFmod, hFfree, ⟨m, n, ⟨e⟩⟩⟩
+    letI : AddCommGroup F := hFadd
+    letI : Module R F := hFmod
+    letI : Module.Free R F := hFfree
+    letI : Module.Free R (F × (Fin n → R)) := inferInstance
+    letI : Module.Finite R (Fin m → R) := inferInstance
+    have hfree : Module.Free R (M × (Fin m → R)) :=
+      Module.Free.of_equiv e.symm
+    letI : Module.Free R (M × (Fin m → R)) := hfree
+    exact Module.IsStablyFree.of_free_prod R M (Fin m → R)
 
 /-- A stably free module is projective.  This is Mathlib's existing
 `Module.IsStablyFree` instance, exposed under the source-facing name. -/
@@ -80,7 +112,92 @@ theorem shortExact_isStablyFree_two_of_three
       (StablyFree R S.X₁ ∧ StablyFree R S.X₃ → StablyFree R S.X₂) ∧
         (StablyFree R S.X₂ ∧ StablyFree R S.X₃ → StablyFree R S.X₁) := by
   have hsplit := shortExact_middle_linearEquiv_prod S hS
-  sorry
+  have hprod :
+      ∀ (A C : Type u) [AddCommGroup A] [Module R A]
+        [AddCommGroup C] [Module R C],
+        StablyFree R A → StablyFree R C → StablyFree R (A × C) := by
+    intro A C _ _ _ _ hA hC
+    letI : Module.IsStablyFree R A := hA
+    letI : Module.IsStablyFree R C := hC
+    obtain ⟨N₁, hN₁add, hN₁mod, hN₁fin, hN₁free, hAfree⟩ :=
+      Module.IsStablyFree.exist_free_prod R A
+    obtain ⟨N₂, hN₂add, hN₂mod, hN₂fin, hN₂free, hCfree⟩ :=
+      Module.IsStablyFree.exist_free_prod R C
+    letI : AddCommGroup N₁ := hN₁add
+    letI : Module R N₁ := hN₁mod
+    letI : Module.Finite R N₁ := hN₁fin
+    letI : Module.Free R N₁ := hN₁free
+    letI : AddCommGroup N₂ := hN₂add
+    letI : Module R N₂ := hN₂mod
+    letI : Module.Finite R N₂ := hN₂fin
+    letI : Module.Free R N₂ := hN₂free
+    letI : Module.Free R (A × N₁) := hAfree
+    letI : Module.Free R (C × N₂) := hCfree
+    have hfree : Module.Free R ((A × C) × (N₁ × N₂)) := by
+      exact Module.Free.of_equiv
+        (LinearEquiv.prodProdProdComm R A C N₁ N₂).symm
+    letI : Module.Free R ((A × C) × (N₁ × N₂)) := hfree
+    exact Module.IsStablyFree.of_free_prod R (A × C) (N₁ × N₂)
+  have hcancel :
+      ∀ (A B C : Type u) [AddCommGroup A] [Module R A] [Module.Finite R A]
+        [AddCommGroup B] [Module R B] [AddCommGroup C] [Module R C],
+        (B ≃ₗ[R] A × C) → StablyFree R A → StablyFree R B →
+          StablyFree R C := by
+    intro A B C _ _ _ _ _ _ _ e hA hB
+    letI : Module.IsStablyFree R A := hA
+    letI : Module.IsStablyFree R B := hB
+    obtain ⟨N₁, hN₁add, hN₁mod, hN₁fin, hN₁free, hAfree⟩ :=
+      Module.IsStablyFree.exist_free_prod R A
+    obtain ⟨N₂, hN₂add, hN₂mod, hN₂fin, hN₂free, hBfree⟩ :=
+      Module.IsStablyFree.exist_free_prod R B
+    letI : AddCommGroup N₁ := hN₁add
+    letI : Module R N₁ := hN₁mod
+    letI : Module.Finite R N₁ := hN₁fin
+    letI : Module.Free R N₁ := hN₁free
+    letI : AddCommGroup N₂ := hN₂add
+    letI : Module R N₂ := hN₂mod
+    letI : Module.Finite R N₂ := hN₂fin
+    letI : Module.Free R N₂ := hN₂free
+    letI : Module.Free R (A × N₁) := hAfree
+    letI : Module.Free R (B × N₂) := hBfree
+    let equivC : (C × ((A × N₁) × N₂)) ≃ₗ[R] ((B × N₂) × N₁) :=
+      { toFun := fun x =>
+          ((e.symm (x.2.1.1, x.1), x.2.2), x.2.1.2)
+        invFun := fun y =>
+          ((e y.1.1).2, (((e y.1.1).1, y.2), y.1.2))
+        left_inv := by
+          rintro ⟨c, ⟨⟨a, n₁⟩, n₂⟩⟩
+          simp
+        right_inv := by
+          rintro ⟨⟨b, n₂⟩, n₁⟩
+          simp
+        map_add' := by
+          intro x y
+          apply Prod.ext
+          · apply Prod.ext
+            · simpa using e.symm.map_add (x.2.1.1, x.1) (y.2.1.1, y.1)
+            · rfl
+          · rfl
+        map_smul' := by
+          intro r x
+          apply Prod.ext
+          · apply Prod.ext
+            · simpa using e.symm.map_smul r (x.2.1.1, x.1)
+            · rfl
+          · rfl }
+    have hfree : Module.Free R (C × ((A × N₁) × N₂)) := by
+      exact Module.Free.of_equiv (LinearEquiv.symm equivC)
+    letI : Module.Free R (C × ((A × N₁) × N₂)) := hfree
+    exact Module.IsStablyFree.of_free_prod R C ((A × N₁) × N₂)
+  refine ⟨?_, ?_, ?_⟩
+  · intro h
+    exact hcancel S.X₁ S.X₂ S.X₃ hsplit h.1 h.2
+  · intro h
+    letI : Module.IsStablyFree R (S.X₁ × S.X₃) := hprod S.X₁ S.X₃ h.1 h.2
+    exact Module.IsStablyFree.equiv hsplit.symm
+  · intro h
+    exact hcancel S.X₃ S.X₂ S.X₁
+      (hsplit ≪≫ₗ LinearEquiv.prodComm R S.X₁ S.X₃) h.2 h.1
 
 /- The displayed chain of direct sums in the source proof is an informal use
 of associativity and commutativity of finite products.  The preceding
@@ -103,9 +220,290 @@ theorem exists_finite_stablyFree_lift
     (E : ModuleCat.{u} (R ⧸ I))
     [Module.Finite (R ⧸ I) E] [StablyFree (R ⧸ I) E] :
     ∃ M : ModuleCat.{u} R,
-      Module.Finite R M ∧ StablyFree R M ∧
+        Module.Finite R M ∧ StablyFree R M ∧
         Nonempty ((M ⧸ (I • (⊤ : Submodule R M))) ≃ₗ[R ⧸ I] E) := by
-  sorry
+  classical
+  let A := R ⧸ I
+  letI : Module.IsStablyFree A E := ‹StablyFree A E›
+  obtain ⟨N, hNadd, hNmod, hNfin, hNfree, hENfree⟩ :=
+    Module.IsStablyFree.exist_free_prod A E
+  letI : AddCommGroup N := hNadd
+  letI : Module A N := hNmod
+  letI : Module.Finite A N := hNfin
+  letI : Module.Free A N := hNfree
+  let ιN := Module.Free.ChooseBasisIndex A N
+  letI : Fintype ιN := Module.Free.ChooseBasisIndex.fintype A N
+  let eN : N ≃ₗ[A] (Fin (Fintype.card ιN) → A) :=
+    (Module.Free.chooseBasis A N).reindex (Fintype.equivFin ιN) |>.equivFun
+  letI : Module.Free A (E × N) := hENfree
+  let ιF := Module.Free.ChooseBasisIndex A (E × N)
+  letI : Fintype ιF := Module.Free.ChooseBasisIndex.fintype A (E × N)
+  let eF : (E × N) ≃ₗ[A] (Fin (Fintype.card ιF) → A) :=
+    (Module.Free.chooseBasis A (E × N)).reindex (Fintype.equivFin ιF) |>.equivFun
+  let n := Fintype.card ιN
+  let m := Fintype.card ιF
+  let e : (E × (Fin n → A)) ≃ₗ[A] (Fin m → A) :=
+    ((LinearEquiv.refl A E).prodCongr eN.symm) ≪≫ₗ eF
+  let F : Type u := Fin m → R
+  let G : Type u := Fin n → R
+  let Fbar : Type u := Fin m → A
+  let Gbar : Type u := Fin n → A
+  let qF : F →ₗ[R] Fbar :=
+    LinearMap.piMap (fun _ : Fin m => (I.mkQ : R →ₗ[R] A))
+  let qG : G →ₗ[R] Gbar :=
+    LinearMap.piMap (fun _ : Fin n => (I.mkQ : R →ₗ[R] A))
+  have hqF : Function.Surjective qF := by
+    intro y
+    choose x hx using fun i : Fin m => I.mkQ_surjective (y i)
+    refine ⟨x, ?_⟩
+    ext i
+    exact hx i
+  have hqG : Function.Surjective qG := by
+    intro y
+    choose x hx using fun i : Fin n => I.mkQ_surjective (y i)
+    refine ⟨x, ?_⟩
+    ext i
+    exact hx i
+  let pbar : Fbar →ₗ[A] Gbar :=
+    (LinearMap.snd A E Gbar).comp e.symm.toLinearMap
+  let ibar : Gbar →ₗ[A] Fbar :=
+    e.toLinearMap.comp (LinearMap.inr A E Gbar)
+  have hpibar : pbar.comp ibar = LinearMap.id := by
+    apply LinearMap.ext
+    intro x
+    change (e.symm (e (0, x))).2 = x
+    rw [e.symm_apply_apply]
+  let pbarR : Fbar →ₗ[R] Gbar := pbar.restrictScalars R
+  let ibarR : Gbar →ₗ[R] Fbar := ibar.restrictScalars R
+  obtain ⟨p, hp⟩ :=
+    Module.projective_lifting_property qG (pbarR.comp qF) hqG
+  obtain ⟨i, hi⟩ :=
+    Module.projective_lifting_property qF (ibarR.comp qG) hqF
+  let a : G →ₗ[R] G := p.comp i
+  have hqa : qG.comp a = qG := by
+    apply LinearMap.ext
+    intro x
+    change qG (p (i x)) = qG x
+    have hp' := congrArg (fun f : F →ₗ[R] Gbar => f (i x)) hp
+    have hi' := congrArg (fun f : G →ₗ[R] Fbar => f x) hi
+    rw [show qG (p (i x)) = pbarR (qF (i x)) by
+      simpa [LinearMap.comp_apply] using hp']
+    rw [show qF (i x) = ibarR (qG x) by
+      simpa [LinearMap.comp_apply] using hi']
+    simpa [pbarR, ibarR, LinearMap.comp_apply] using
+      congrArg (fun z => z (qG x)) hpibar
+  have hI' : I ≤ Ideal.jacobson (⊥ : Ideal R) := by
+    simpa only [Ideal.jacobson_bot] using hI
+  have hrange : LinearMap.range a = ⊤ := by
+    apply top_unique
+    apply Submodule.le_of_le_smul_of_le_jacobson_bot
+      (N' := (⊤ : Submodule R G)) Module.Finite.fg_top hI'
+    intro x hx
+    have hxy : qG (x - a x) = 0 := by
+      rw [map_sub]
+      have hqa' := congrArg (fun f : G →ₗ[R] Gbar => f x) hqa
+      rw [show qG (a x) = qG x by simpa [LinearMap.comp_apply] using hqa']
+      exact sub_self _
+    have hmem : x - a x ∈ I • (⊤ : Submodule R G) := by
+      rw [show x - a x = (∑ j : Fin n, (x - a x) j • Pi.single j 1) by
+        ext k
+        simp [Finset.sum_apply, Pi.single_apply]]
+      apply Submodule.sum_mem
+      intro j hj
+      have hj' := congrFun hxy j
+      change I.mkQ ((x - a x) j) = 0 at hj'
+      exact Submodule.smul_mem_smul
+        ((Submodule.Quotient.mk_eq_zero I).mp hj') Submodule.mem_top
+    rw [← sub_add_cancel x (a x)]
+    exact Submodule.add_mem _
+      ((le_sup_right : I • (⊤ : Submodule R G) ≤
+        LinearMap.range a ⊔ I • (⊤ : Submodule R G)) hmem)
+      ((le_sup_left : LinearMap.range a ≤
+        LinearMap.range a ⊔ I • (⊤ : Submodule R G)) ⟨x, rfl⟩)
+  have ha_surj : Function.Surjective a := LinearMap.range_eq_top.mp hrange
+  have ha : Function.Bijective a := ⟨Module.End.injective_of_surjective_fin ha_surj, ha_surj⟩
+  let ae : G ≃ₗ[R] G := LinearEquiv.ofBijective a ha
+  let i' : G →ₗ[R] F := i.comp ae.symm.toLinearMap
+  have hi' : p.comp i' = LinearMap.id := by
+    apply LinearMap.ext
+    intro x
+    change p (i (ae.symm x)) = x
+    have h := ae.apply_symm_apply x
+    change a (ae.symm x) = x at h
+    change p (i (ae.symm x)) = x at h
+    exact h
+  let K : Type u := LinearMap.ker p
+  let eK : (K × G) ≃ₗ[R] F :=
+    { toFun := fun x => (x.1 : F) + i' x.2
+      invFun := fun x =>
+        (⟨x - i' (p x), by
+          change p (x - i' (p x)) = 0
+          rw [map_sub]
+          have h := congrArg (fun f : G →ₗ[R] G => f (p x)) hi'
+          change p (i' (p x)) = p x at h
+          rw [h, sub_self]⟩, p x)
+      left_inv := by
+        rintro ⟨x, y⟩
+        apply Prod.ext
+        · apply Subtype.ext
+          change (x : F) + i' y - i' (p ((x : F) + i' y)) = (x : F)
+          rw [map_add, x.property]
+          have h := congrArg (fun f : G →ₗ[R] G => f y) hi'
+          change p (i' y) = y at h
+          rw [h]
+          simp
+          simp
+        · change p ((x : F) + i' y) = y
+          rw [map_add, x.property]
+          have h := congrArg (fun f : G →ₗ[R] G => f y) hi'
+          change p (i' y) = y at h
+          rw [h]
+      right_inv := by
+        intro x
+        simp [i', hi']
+      map_add' := by
+        rintro ⟨x₁, y₁⟩ ⟨x₂, y₂⟩
+        change (x₁ : F) + (x₂ : F) + i' (y₁ + y₂) =
+          ((x₁ : F) + i' y₁) + ((x₂ : F) + i' y₂)
+        rw [map_add]
+        abel
+      map_smul' := by
+        intro r x
+        change r • (x.1 : F) + i' (r • x.2) = r • ((x.1 : F) + i' x.2)
+        rw [map_smul, smul_add] }
+  letI : Module.Finite R (K × G) := Module.Finite.equiv eK.symm
+  letI : Module.Finite R K := by
+    apply Module.Finite.of_surjective (LinearMap.fst R K G)
+    intro x
+    exact ⟨(x, 0), rfl⟩
+  letI : Module R E := Module.compHom E (Ideal.Quotient.mk I)
+  letI : IsScalarTower R A E :=
+    ⟨fun r a x => by
+      change (r • a) • x = r • (a • x)
+      rw [Algebra.smul_def, smul_smul, Ideal.Quotient.algebraMap_eq]
+      rfl⟩
+  letI : Module.Free R (K × G) := Module.Free.of_equiv eK.symm
+  have hstable : StablyFree R K := Module.IsStablyFree.of_free_prod R K G
+  let IK : Submodule R K := I • (⊤ : Submodule R K)
+  let fbar : Fbar →ₗ[A] E :=
+    (LinearMap.fst A E Gbar).comp e.symm.toLinearMap
+  let fbarR : Fbar →ₗ[R] E :=
+    { toFun := fbar
+      map_add' := by intro x y; exact fbar.map_add x y
+      map_smul' := by
+        intro r x
+        change fbar (r • x) = r • fbar x
+        rw [← IsScalarTower.algebraMap_smul A r,
+          ← IsScalarTower.algebraMap_smul A r, Ideal.Quotient.algebraMap_eq]
+        exact fbar.map_smul (Ideal.Quotient.mk I r) x }
+  let f0 : K →ₗ[R] E := fbarR.comp (qF.comp (LinearMap.ker p).subtype)
+  have hf0 : IK ≤ LinearMap.ker f0 := by
+    intro x hx
+    refine Submodule.smul_induction_on hx (fun r hr y _ => ?_) (fun x y hx hy => ?_)
+    · change fbarR (qF ((LinearMap.ker p).subtype (r • y))) = 0
+      rw [(LinearMap.ker p).subtype.map_smul, qF.map_smul, fbarR.map_smul]
+      have hr0 : Ideal.Quotient.mk I r = 0 :=
+        Ideal.Quotient.eq_zero_iff_mem.mpr hr
+      change (Ideal.Quotient.mk I r) • fbarR (qF ((LinearMap.ker p).subtype y)) = 0
+      rw [hr0, zero_smul]
+    · simp only [LinearMap.mem_ker, map_add]
+      rw [LinearMap.mem_ker.mp hx, LinearMap.mem_ker.mp hy, add_zero]
+  let φ0 : (K ⧸ IK) →ₗ[R] E :=
+    ((⊥ : Submodule R E).quotEquivOfEqBot rfl).toLinearMap.comp
+      (IK.mapQ (⊥ : Submodule R E) f0 hf0)
+  let φ : (K ⧸ IK) →ₗ[A] E :=
+    LinearMap.extendScalarsOfSurjective I.mkQ_surjective φ0
+  have hφ_mk (x : K) : φ (Submodule.Quotient.mk x) = f0 x := by
+    rfl
+  have hker_q (x : K) : pbar (qF (x : F)) = 0 := by
+    have hp' := congrArg (fun f : F →ₗ[R] Gbar => f (x : F)) hp
+    simpa [LinearMap.mem_ker.mp x.property, pbarR, LinearMap.comp_apply] using hp'.symm
+  let ret : F →ₗ[R] K :=
+    (LinearMap.fst R K G).comp eK.symm.toLinearMap
+  have hret : ret.comp (LinearMap.ker p).subtype = LinearMap.id := by
+    apply LinearMap.ext
+    intro x
+    apply Subtype.ext
+    simp only [LinearMap.comp_apply, LinearMap.id_apply]
+    change ((eK.symm ((LinearMap.ker p).subtype x))).1 = x
+    simp [ret, eK, x.property]
+  have hret_mem {x : F} (hx : x ∈ I • (⊤ : Submodule R F)) :
+      ret x ∈ IK := by
+    refine Submodule.smul_induction_on hx (fun r hr y _ => ?_) (fun x y hx hy => ?_)
+    · rw [map_smul]
+      exact Submodule.smul_mem_smul hr Submodule.mem_top
+    · rw [map_add]
+      exact Submodule.add_mem _ hx hy
+  have hker_component (x : K) :
+      e.symm (qF (x : F)) = (fbar (qF (x : F)), 0) := by
+    apply Prod.ext
+    · rfl
+    · simpa [pbar, LinearMap.comp_apply] using hker_q x
+  have hqae (y : G) : qG (ae.symm y) = qG y := by
+    have h := congrArg (fun f : G →ₗ[R] Gbar => f (ae.symm y)) hqa
+    have h' : a (ae.symm y) = y := by
+      exact ae.apply_symm_apply y
+    have h'' : qG y = qG (ae.symm y) := by
+      simpa [a, LinearMap.comp_apply] using h
+    exact h''.symm
+  have hqi' (y : G) : qF (i' y) = ibar (qG y) := by
+    change qF (i (ae.symm y)) = ibar (qG y)
+    have h := congrArg (fun f : G →ₗ[R] Fbar => f (ae.symm y)) hi
+    simpa [ibarR, LinearMap.comp_apply, hqae y] using h
+  have hcompat (x : K) (y : G) :
+      e.symm (qF (eK (x, y))) = (fbar (qF (x : F)), qG y) := by
+    change e.symm (qF ((x : F) + i' y)) = _
+    rw [qF.map_add, e.symm.map_add, hker_component x]
+    have hi_bar : e.symm (ibar (qG y)) = (0, qG y) := by
+      change e.symm (e (0, qG y)) = _
+      rw [e.symm_apply_apply]
+    rw [hqi', hi_bar]
+    rfl
+  have hφ_surj : Function.Surjective φ := by
+    intro y
+    obtain ⟨x, hx⟩ := hqF (e (y, 0))
+    let z : K × G := eK.symm x
+    refine ⟨Submodule.Quotient.mk z.1, ?_⟩
+    have hz : e.symm (qF (eK z)) = (y, 0) := by
+      rw [show eK z = x by simp [z], hx, e.symm_apply_apply]
+    have hfirst := congrArg Prod.fst (hcompat z.1 z.2 |>.trans hz.symm)
+    rw [hφ_mk]
+    simpa [f0, fbarR] using hfirst
+  have hφ_inj : Function.Injective φ := by
+    intro x y hxy
+    obtain ⟨x', rfl⟩ := Submodule.Quotient.mk_surjective IK x
+    obtain ⟨y', rfl⟩ := Submodule.Quotient.mk_surjective IK y
+    have hxy' : fbar (qF (x' : F)) = fbar (qF (y' : F)) := by
+      have h := hxy
+      rw [hφ_mk, hφ_mk] at h
+      simpa [f0, fbarR] using h
+    have hqxy : qF (x' : F) = qF (y' : F) := by
+      apply e.symm.injective
+      rw [hker_component x', hker_component y', hxy']
+    have hqzero : qF ((x' : F) - (y' : F)) = 0 := by
+      rw [map_sub, hqxy, sub_self]
+    have hmemF : (x' : F) - (y' : F) ∈ I • (⊤ : Submodule R F) := by
+      rw [show (x' : F) - (y' : F) =
+        (∑ j : Fin m, ((x' : F) - (y' : F)) j • Pi.single j 1) by
+          ext k
+          simp [Finset.sum_apply, Pi.single_apply]]
+      apply Submodule.sum_mem
+      intro j hj
+      have hj' := congrFun hqzero j
+      change I.mkQ (((x' : F) - (y' : F)) j) = 0 at hj'
+      exact Submodule.smul_mem_smul
+        ((Submodule.Quotient.mk_eq_zero I).mp hj') Submodule.mem_top
+    have hmemK : x' - y' ∈ IK := by
+      have h := hret_mem hmemF
+      have hret' : ret ((x' : F) - (y' : F)) = x' - y' := by
+        simpa [ret, LinearMap.comp_apply] using
+          congrArg (fun f => f (x' - y')) hret
+      rw [hret'] at h
+      exact h
+    rw [← sub_eq_zero]
+    exact (Submodule.Quotient.mk_eq_zero IK).2 hmemK
+  exact ⟨ModuleCat.of R K, inferInstance, hstable,
+    ⟨LinearEquiv.ofBijective φ ⟨hφ_inj, hφ_surj⟩⟩⟩
 
 /-! ## Lifting finite projectivity -/
 

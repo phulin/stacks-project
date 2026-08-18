@@ -18,7 +18,7 @@ namespace Formalization.Books.Algebra.Unit10
 open CategoryTheory
 open Formalization.Books.Algebra.Unit09
 
-universe u v w
+universe u v w z
 
 /-! ## The module of homomorphisms -/
 
@@ -140,13 +140,13 @@ surjectivity of the second map, and the zero at the left by injectivity of the
 first map.  `Function.Exact` supplies exactness at the middle term. -/
 
 theorem internalHom_exact_of_right_exact
-    {R M₁ M₂ M₃ : Type*} [CommRing R]
+    {R : Type u} {M₁ : Type v} {M₂ : Type w} {M₃ : Type z} [CommRing R]
     [AddCommGroup M₁] [Module R M₁]
     [AddCommGroup M₂] [Module R M₂]
     [AddCommGroup M₃] [Module R M₃]
     (f : M₁ →ₗ[R] M₂) (g : M₂ →ₗ[R] M₃) :
     (Function.Exact f g ∧ Function.Surjective g) ↔
-      ∀ (N : Type*) [AddCommGroup N] [Module R N],
+      ∀ (N : Type (max u (max v (max w z)))) [AddCommGroup N] [Module R N],
         Function.Injective (internalHomPrecomp (N := N) g) ∧
           Function.Exact (internalHomPrecomp (N := N) g)
             (internalHomPrecomp (N := N) f) := by
@@ -160,13 +160,13 @@ theorem internalHom_exact_of_right_exact
   · sorry
 
 theorem internalHom_exact_of_left_exact
-    {R M₁ M₂ M₃ : Type*} [CommRing R]
+    {R : Type u} {M₁ : Type v} {M₂ : Type w} {M₃ : Type z} [CommRing R]
     [AddCommGroup M₁] [Module R M₁]
     [AddCommGroup M₂] [Module R M₂]
     [AddCommGroup M₃] [Module R M₃]
     (f : M₁ →ₗ[R] M₂) (g : M₂ →ₗ[R] M₃) :
     (Function.Injective f ∧ Function.Exact f g) ↔
-      ∀ (N : Type*) [AddCommGroup N] [Module R N],
+      ∀ (N : Type (max u (max v (max w z)))) [AddCommGroup N] [Module R N],
         Function.Injective (internalHomPostcomp (M := N) f) ∧
           Function.Exact (internalHomPostcomp (M := N) f)
             (internalHomPostcomp (M := N) g) := by

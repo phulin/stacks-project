@@ -157,13 +157,13 @@ theorem change_of_rings_preserves_injectives_iff_flat
   have hAdj : F ⊣ G := ModuleCat.extendRestrictScalarsAdj.{u₁, u₁, u₂} f
   constructor
   · intro hG
-    letI : Functor.PreservesInjectiveObjects G := hG
+    let : Functor.PreservesInjectiveObjects G := hG
     have hMonoF : PreservesMonomorphisms F :=
       Functor.preservesMonomorphisms_of_adjunction_of_preservesInjectiveObjects hAdj
     have hMonoF' : ∀ {X Y : ModuleCat.{max u₁ u₂} R} (g : X ⟶ Y),
         Mono g → Mono (F.map g) := by
       intro X Y g hg
-      letI : Mono g := hg
+      let : Mono g := hg
       exact hMonoF.preserves g
     refine Module.Flat.iff_lTensor_preserves_injective_linearMap.mpr ?_
     intro N N' _ _ _ _ g hg
@@ -175,7 +175,7 @@ theorem change_of_rings_preserves_injectives_iff_flat
     rw [LinearMap.baseChange_eq_ltensor] at hFg'
     exact hFg'
   · intro hf
-    letI : Module.Flat R S := hf
+    let : Module.Flat R S := hf
     have hMonoF : PreservesMonomorphisms F := by
       constructor
       intro X Y g hg
@@ -183,7 +183,7 @@ theorem change_of_rings_preserves_injectives_iff_flat
       change Function.Injective (g.hom.baseChange S)
       rw [LinearMap.baseChange_eq_ltensor]
       exact Module.Flat.lTensor_preserves_injective_linearMap g.hom hg
-    letI : PreservesMonomorphisms F := hMonoF
+    let : PreservesMonomorphisms F := hMonoF
     exact Functor.preservesInjectiveObjects_of_adjunction_of_preservesMonomorphisms hAdj
 
 /- The source's example is stated with an explicit primality hypothesis, since
@@ -196,8 +196,8 @@ theorem zmod_prime_change_of_rings_counterexample
           (ModuleCat.of (ZMod p) (ZMod p))) ∧
       ¬ Functor.PreservesInjectiveObjects
         (ModuleCat.restrictScalars (Int.castRingHom (ZMod p))) := by
-  letI : Fact (Nat.Prime p) := ⟨hp⟩
-  letI : IsArtinianRing (ZMod p) := isArtinian_of_finite
+  let : Fact (Nat.Prime p) := ⟨hp⟩
+  let : IsArtinianRing (ZMod p) := isArtinian_of_finite
   have hfield : Module.Injective (ZMod p) (ZMod p) := by
     apply Module.injective_of_isSemisimpleRing
   have hinj : Injective (ModuleCat.of (ZMod p) (ZMod p)) :=
@@ -358,8 +358,8 @@ theorem adjoint_faithful_iff_reflects_zero
       _ = 0 := hB₀.eq_of_src _ _
       _ = v.map (0 : B₀ ⟶ B₀) := (v.map_zero B₀ B₀).symm
   · intro hReflectsZero
-    haveI : PreservesMonomorphisms v := hMono
-    haveI : PreservesEpimorphisms v :=
+    have : PreservesMonomorphisms v := hMono
+    have : PreservesEpimorphisms v :=
       Functor.preservesEpimorphisms_of_adjunction hAdj
     constructor
     intro X Y f g hfg

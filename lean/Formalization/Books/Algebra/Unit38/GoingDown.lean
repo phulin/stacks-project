@@ -2,6 +2,7 @@ import Formalization.Books.Algebra.Unit37.NormalRings
 import Mathlib.FieldTheory.Minpoly.IsIntegrallyClosed
 import Mathlib.RingTheory.IntegralClosure.Algebra.Ideal
 import Mathlib.RingTheory.IntegralClosure.GoingDown
+import Mathlib.RingTheory.Polynomial.IsIntegral
 
 /-!
 # Commutative Algebra, Chapter 38: Going down for integral over normal
@@ -109,7 +110,119 @@ theorem integralOverIdeal_iff
     (f : R →+* S) (I : Ideal R) (s : S) :
     IsIntegralOverIdeal f I s ↔
       (integralOverIdealPolynomialMap f I).IsIntegralElem
-        (Polynomial.C s * Polynomial.X) := by sorry
+        (Polynomial.C s * Polynomial.X) := by
+  constructor
+  · rintro ⟨p, hp, hp0, hcoeff⟩
+    have hcoeff' : ∀ i, i ≤ p.natDegree → p.coeff i ∈ I ^ (p.natDegree - i) := by
+      intro i hi
+      rcases lt_or_eq_of_le hi with hi | rfl
+      · exact hcoeff i hi
+      · rw [hp.coeff_natDegree]
+        simp
+    have hcoeff'' : ∀ i, p.coeff i ∈ I ^ (p.natDegree - i) := by
+      intro i
+      by_cases hi : i ≤ p.natDegree
+      · exact hcoeff' i hi
+      · rw [Polynomial.coeff_eq_zero_of_natDegree_lt (lt_of_not_ge hi)]
+        exact (I ^ (p.natDegree - i)).zero_mem
+    have hmem (i : ℕ) :
+        Polynomial.C (p.coeff i) * Polynomial.X ^ (p.natDegree - i) ∈
+          integralOverIdealPolynomialSubalgebra I :=
+      mem_integralOverIdealPolynomialSubalgebra_of_mem_pow (R := R) I
+        (n := p.natDegree - i) (a := p.coeff i) (hcoeff'' i)
+    let q : (integralOverIdealPolynomialSubalgebra I)[X] :=
+      ∑ i ∈ Finset.range (p.natDegree + 1),
+        Polynomial.C
+            (⟨Polynomial.C (p.coeff i) * Polynomial.X ^ (p.natDegree - i),
+              hmem i⟩ :
+              integralOverIdealPolynomialSubalgebra I) * Polynomial.X ^ i
+    have hqdeg : q.natDegree = p.natDegree := by
+      cases subsingleton_or_nontrivial R with
+      | inl hR =>
+          let _ : Subsingleton R := hR
+          rw [Subsingleton.eq_zero q, Polynomial.natDegree_zero,
+            Subsingleton.eq_zero p, Polynomial.natDegree_zero]
+      | inr _ =>
+          refine Polynomial.natDegree_eq_of_le_of_coeff_ne_zero
+            (Polynomial.natDegree_sum_le_of_forall_le _ _ ?_) ?_
+          · intro i hi
+            exact (Polynomial.natDegree_C_mul_X_pow_le _ _).trans
+              (Nat.le_of_lt_succ (Finset.mem_range.1 hi))
+          · have hqcoeff : q.coeff p.natDegree =
+                (1 : integralOverIdealPolynomialSubalgebra I) := by
+              apply Subtype.ext
+              simp [q, hp.coeff_natDegree]
+            rw [hqcoeff]
+            intro hzero
+            have hzero' : (1 : R[X]) = 0 := congrArg Subtype.val hzero
+            have hzero'' : (1 : R) = 0 := by
+              have := congrArg (fun p : R[X] => p.coeff 0) hzero'
+              simpa only [Polynomial.coeff_one, Polynomial.coeff_zero, if_true] using this
+            exact (one_ne_zero : (1 : R) ≠ 0) hzero''
+    have hqmonic : q.Monic := by
+      rw [Polynomial.Monic, Polynomial.leadingCoeff, hqdeg]
+      apply Subtype.ext
+      simp [q, hp.coeff_natDegree]
+    refine ⟨q, hqmonic, ?_⟩
+    simp only [q, Polynomial.eval₂_finsetSum, Polynomial.eval₂_mul,
+      Polynomial.eval₂_C, Polynomial.eval₂_X_pow, map_mul, map_pow,
+      RingHom.coe_comp, Function.comp_apply, Subalgebra.coe_val,
+      Polynomial.map_mul, Polynomial.map_C, Polynomial.map_X]
+    have hterm (i : ℕ) (hi : i < p.natDegree + 1) :
+        (integralOverIdealPolynomialMap f I)
+            ⟨Polynomial.C (p.coeff i) * Polynomial.X ^ (p.natDegree - i), hmem i⟩ *
+          (Polynomial.C s * Polynomial.X) ^ i =
+        Polynomial.C (f (p.coeff i) * s ^ i) * Polynomial.X ^ p.natDegree := by
+      have hi' : i ≤ p.natDegree := Nat.le_of_lt_succ hi
+      simp [integralOverIdealPolynomialMap, pow_add]
+      rw [mul_pow]
+      calc
+        Polynomial.C (f (p.coeff i)) * Polynomial.X ^ (p.natDegree - i) *
+              (Polynomial.C s ^ i * Polynomial.X ^ i) =
+            Polynomial.C (f (p.coeff i)) * Polynomial.C s ^ i *
+              (Polynomial.X ^ (p.natDegree - i) * Polynomial.X ^ i) := by ring
+        _ = Polynomial.C (f (p.coeff i)) * Polynomial.C s ^ i *
+              Polynomial.X ^ p.natDegree := by
+            rw [← pow_add, Nat.sub_add_cancel hi']
+    calc
+      (∑ i ∈ Finset.range (p.natDegree + 1),
+          (integralOverIdealPolynomialMap f I)
+              ⟨Polynomial.C (p.coeff i) * Polynomial.X ^ (p.natDegree - i), hmem i⟩ *
+            (Polynomial.C s * Polynomial.X) ^ i) =
+          ∑ i ∈ Finset.range (p.natDegree + 1),
+            Polynomial.C (f (p.coeff i) * s ^ i) * Polynomial.X ^ p.natDegree := by
+        apply Finset.sum_congr rfl
+        intro i hi
+        exact hterm i (Finset.mem_range.1 hi)
+      _ = (∑ i ∈ Finset.range (p.natDegree + 1),
+            Polynomial.C (f (p.coeff i) * s ^ i)) * Polynomial.X ^ p.natDegree := by
+        rw [Finset.sum_mul]
+      _ = Polynomial.C (∑ i ∈ Finset.range (p.natDegree + 1),
+            f (p.coeff i) * s ^ i) * Polynomial.X ^ p.natDegree := by
+        rw [map_sum]
+      _ = 0 := by
+        rw [← Polynomial.eval₂_eq_sum_range, hp0, map_zero, zero_mul]
+  · intro h
+    let _ : Algebra R S := f.toAlgebra
+    let _ : Algebra R[X] S[X] := Polynomial.algebra R S
+    change ∃ p : R[X], p.Monic ∧ Polynomial.eval₂ f s p = 0 ∧
+      ∀ i, i < p.natDegree → p.coeff i ∈ I ^ (p.natDegree - i)
+    obtain ⟨p, hp, heval, hcoeff⟩ :=
+      Polynomial.exists_monic_aeval_eq_zero_forall_mem_pow_of_isIntegral
+        (R := R) (S := S) (I := I) (x := s) (by
+        change IsIntegral
+          (Algebra.adjoin R {Polynomial.C r * Polynomial.X | r ∈ I})
+          (Polynomial.C s * Polynomial.X)
+        rw [IsIntegral, Subalgebra.algebraMap_eq]
+        change ((Polynomial.mapRingHom f).comp
+          (Algebra.adjoin R {Polynomial.C r * Polynomial.X | r ∈ I}).val.toRingHom).IsIntegralElem
+          (Polynomial.C s * Polynomial.X) at h
+        simpa [Polynomial.algebraMap_def, RingHom.algebraMap_toAlgebra] using h)
+    refine ⟨p, hp, ?_, ?_⟩
+    · change Polynomial.eval₂ f s p = 0
+      exact heval
+    · intro i hi
+      exact hcoeff i
 /- Original nontrivial proof retained for later completion:
   constructor
   · rintro ⟨p, hp, hp0, hcoeff⟩
@@ -251,7 +364,21 @@ theorem isIntegral_mul_integralOverIdeal
     (hs : f.IsIntegralElem s)
     (hs' : IsIntegralOverIdeal f I s') :
     IsIntegralOverIdeal f I (s * s') := by
-  sorry
+  let A := integralOverIdealPolynomialSubalgebra I
+  let g := integralOverIdealPolynomialMap f I
+  rw [integralOverIdeal_iff] at hs' ⊢
+  have hsC : g.IsIntegralElem (Polynomial.C s) := by
+    obtain ⟨p, hp, hp0⟩ := hs
+    have hcomp : g.comp (algebraMap R A) = Polynomial.C.comp f := by
+      ext r
+      simp [A, g, integralOverIdealPolynomialMap]
+    refine ⟨p.map (algebraMap R A), hp.map _, ?_⟩
+    rw [Polynomial.eval₂_eq_eval_map, Polynomial.map_map, hcomp]
+    rw [← Polynomial.eval₂_eq_eval_map]
+    simpa [Polynomial.eval₂_eq_sum_range, map_mul, map_pow] using
+      congrArg Polynomial.C hp0
+  have hmul := hsC.mul g hs'
+  simpa [A, g, integralOverIdealPolynomialMap, mul_assoc] using hmul
 
 /-- If a ring map is integral, every element of the extended ideal is
 integral over the original ideal. -/
@@ -260,7 +387,37 @@ theorem isIntegralOverIdeal_of_mem_map
     (f : R →+* S) (hf : f.IsIntegral) (I : Ideal R) {s : S}
     (hs : s ∈ I.map f) :
     IsIntegralOverIdeal f I s := by
-  sorry
+  let A := integralOverIdealPolynomialSubalgebra I
+  let g := integralOverIdealPolynomialMap f I
+  let J : Ideal S :=
+    { carrier := {x | IsIntegralOverIdeal f I x}
+      zero_mem' := by
+        change IsIntegralOverIdeal f I 0
+        rw [integralOverIdeal_iff]
+        simpa [A, g] using g.isIntegralElem_zero
+      add_mem' := by
+        intro x y hx hy
+        change IsIntegralOverIdeal f I x at hx
+        change IsIntegralOverIdeal f I y at hy
+        change IsIntegralOverIdeal f I (x + y)
+        rw [integralOverIdeal_iff] at hx hy ⊢
+        simpa [A, g, add_mul] using hx.add g hy
+      smul_mem' := by
+        intro x y hy
+        change IsIntegralOverIdeal f I y at hy
+        change IsIntegralOverIdeal f I (x * y)
+        simpa [smul_eq_mul] using
+          isIntegral_mul_integralOverIdeal f I (hf x) hy }
+  apply (show I.map f ≤ J from ?_) hs
+  rw [Ideal.map_le_iff_le_comap]
+  intro a ha
+  change IsIntegralOverIdeal f I (f a)
+  rw [integralOverIdeal_iff]
+  have haX : Polynomial.C a * Polynomial.X ∈ A :=
+    Algebra.subset_adjoin ⟨a, ha, rfl⟩
+  have h : g.IsIntegralElem
+      (g (⟨Polynomial.C a * Polynomial.X, haX⟩ : A)) := g.isIntegralElem_map
+  simpa [A, g, integralOverIdealPolynomialMap] using h
 
 /-! ## Divisibility of monic polynomials -/
 
@@ -273,7 +430,23 @@ theorem polynomial_divisor_coeff_isIntegral
     (T : Subring K)
     (hT : ∀ i, i < q.natDegree → q.coeff i ∈ (T : Set K)) :
     ∀ i, i < p.natDegree → IsIntegral T (p.coeff i) := by
-  sorry
+  have hq_lifts : q ∈ Polynomial.lifts (algebraMap T K) := by
+    rw [Polynomial.lifts_iff_coeff_lifts]
+    intro i
+    by_cases hi : i < q.natDegree
+    · exact ⟨⟨q.coeff i, hT i hi⟩, rfl⟩
+    · have hle : q.natDegree ≤ i := Nat.le_of_not_gt hi
+      rcases lt_or_eq_of_le hle with hlt | rfl
+      · rw [Polynomial.coeff_eq_zero_of_natDegree_lt hlt]
+        exact ⟨0, by simp⟩
+      · rw [hq.coeff_natDegree]
+        exact ⟨1, by simp⟩
+  obtain ⟨q', hq'map, hq'natDegree, hq'monic⟩ :=
+    Polynomial.lifts_and_natDegree_eq_and_monic hq_lifts hq
+  intro i hi
+  have hdiv' : p ∣ q'.map (algebraMap T K) := by
+    simpa [hq'map] using hdiv
+  exact Polynomial.isIntegral_coeff_of_dvd q' p hq'monic hp hdiv' i
 
 /- The second conclusion of the source lemma is stated over a subring of the
    field containing both sets of coefficients.  The coefficient set below is

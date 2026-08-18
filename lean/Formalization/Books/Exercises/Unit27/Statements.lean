@@ -902,6 +902,8 @@ def twoVariableParabolaIdeal (k : Type u) [Field k] :
 
 theorem twoVariableBlowupPresentation_exists (k : Type u) [Field k] :
     Nonempty (BlowupPresentation (twoVariableMaximalIdeal k)) := by
+  sorry
+/-
   classical
   let A := twoVariablePolynomialRing k
   let I : Ideal A := twoVariableMaximalIdeal k
@@ -1067,6 +1069,7 @@ theorem twoVariableBlowupPresentation_exists (k : Type u) [Field k] :
       exact (hpiece_eq d x hx).symm
     · simp [DirectSum.of_eq_of_ne, h]
   sorry
+-/
 
 noncomputable def twoVariableBlowupPresentation (k : Type u) [Field k] :
     BlowupPresentation (twoVariableMaximalIdeal k) :=

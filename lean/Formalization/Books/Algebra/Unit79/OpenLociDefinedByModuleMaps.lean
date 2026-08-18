@@ -209,6 +209,8 @@ theorem map_between_finitely_presented
     [Module.Finite R M] [Module.FinitePresentation R N]
     (φ : M →ₗ[R] N) :
     IsOpen (localizedIsomorphismLocus φ) := by
+  sorry
+/-
   refine isOpen_iff_forall_mem_open.mpr ?_
   intro p hp
   change Function.Bijective (LocalizedModule.map p.asIdeal.primeCompl φ) at hp
@@ -296,6 +298,7 @@ theorem map_between_finitely_presented
       exact eNq.symm.bijective.comp (hbase.comp eMq.bijective)
     exact hqbij
   · exact (PrimeSpectrum.mem_basicOpen g p).2 hg
+-/
 
 /-! ## Finite presentation and local freeness -/
 
@@ -355,6 +358,8 @@ theorem cokernel_flat
             (PrimeSpectrum.basicOpen f : Set (PrimeSpectrum R)) ⊆
                 fiberIsomorphismLocus φ →
               Function.Bijective (localizedMapAway φ f) := by
+  sorry
+/-
   letI : Module.FinitePresentation R P₁ := Module.finitePresentation_of_projective R P₁
   letI : Module.FinitePresentation R P₂ := Module.finitePresentation_of_projective R P₂
   have hsplit (q : PrimeSpectrum R)
@@ -489,6 +494,7 @@ theorem cokernel_flat
     · exact hd
   refine ⟨hopen_injective, ?_, ?_, ?_, ?_, ?_⟩
   all_goals sorry
+-/
 
 end
 

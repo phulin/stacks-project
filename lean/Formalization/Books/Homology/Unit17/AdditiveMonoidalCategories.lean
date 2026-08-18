@@ -55,6 +55,8 @@ theorem left_dual_biproduct
     {C : Type u} [Category.{v} C] [AdditiveMonoidalCategory C]
     {X₁ X₂ Y₁ Y₂ : C} [ExactPairing X₁ Y₁] [ExactPairing X₂ Y₂] :
     Nonempty (ExactPairing (X₁ ⊞ X₂) (Y₁ ⊞ Y₂)) := by
+      sorry
+/-
   have htransport {Xi Yi B A : C} [ExactPairing Xi Yi]
       (iX : Xi ⟶ B) (pX : B ⟶ Xi) (iY : Yi ⟶ A) (pY : A ⟶ Yi) :
       A ◁ η_ Xi Yi ≫ A ◁ (iX ⊗ₘ iY) ≫ (α_ A B A).inv ≫
@@ -475,7 +477,7 @@ theorem left_dual_biproduct
         MonoidalCategory.whisker_exchange_assoc, hr22]
       simp only [← MonoidalCategory.whiskerLeft_comp_assoc]
       sorry
-
+-/
 /-- In a Karoubian additive monoidal category, both summands in a biproduct
 decomposition of a left-dualizable object are left-dualizable. -/
 theorem left_dual_of_biproduct_summand

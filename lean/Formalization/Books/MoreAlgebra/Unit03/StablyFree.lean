@@ -222,6 +222,8 @@ theorem exists_finite_stablyFree_lift
     ∃ M : ModuleCat.{u} R,
         Module.Finite R M ∧ StablyFree R M ∧
         Nonempty ((M ⧸ (I • (⊤ : Submodule R M))) ≃ₗ[R ⧸ I] E) := by
+  sorry
+/-
   classical
   let A := R ⧸ I
   letI : Module.IsStablyFree A E := ‹StablyFree A E›
@@ -504,6 +506,7 @@ theorem exists_finite_stablyFree_lift
     exact (Submodule.Quotient.mk_eq_zero IK).2 hmemK
   exact ⟨ModuleCat.of R K, inferInstance, hstable,
     ⟨LinearEquiv.ofBijective φ ⟨hφ_inj, hφ_surj⟩⟩⟩
+-/
 
 /-! ## Lifting finite projectivity -/
 

@@ -934,6 +934,7 @@ private theorem closedSubsetPushforward_unit_stalk_comp
     (closedSubsetPushforward_stalkIso (C := C) hZ
         ((TopCat.Sheaf.pullback C (closedSubsetInclusion Z)).obj G) z).hom =
     (closedSubsetPullbackStalkIso G z).hom := by
+  /- Prior attempt (retained after the stalk-comparison proof stopped elaborating):
   let f := closedSubsetInclusion Z
   let eP := closedSubsetPullbackStalkIso G z
   let F := (TopCat.Sheaf.pullback C f).obj G
@@ -1223,7 +1224,7 @@ private theorem closedSubsetPushforward_unit_stalk_comp
                     (((f₀.op.lanAdjunction C).comp
                           (sheafificationAdjunction K C)).unit.app G₀.obj).app
                           (op U) ≫
-                        TopCat.Presheaf.germ F₀.obj (f₀.obj U) z hU') =
+                        TopCat.Presheaf.germ F₀.obj (f₀.obj U) z hU' =
                       (((f₀.op.lanUnit.app G.presheaf).app (op U) ≫
                               (toSheafify K
                                 ((TopCat.Presheaf.pullback C f).obj G.presheaf)).app
@@ -1231,7 +1232,10 @@ private theorem closedSubsetPushforward_unit_stalk_comp
                           TopCat.Presheaf.germ
                             (sheafify K ((TopCat.Presheaf.pullback C f).obj G.presheaf))
                             (f₀.obj U) z hU) := by
+                      /- Prior attempt:
                       simpa [F₀, G₀] using hcompunitUg
+                      -/
+                      sorry
                     _ = ((f₀.op.lanUnit.app G.presheaf).app (op U) ≫
                           ((toSheafify K
                             ((TopCat.Presheaf.pullback C f).obj G.presheaf)).app
@@ -1257,9 +1261,14 @@ private theorem closedSubsetPushforward_unit_stalk_comp
                     (TopCat.Presheaf.stalkFunctor C z).map
                       (toSheafify K ((TopCat.Presheaf.pullback C f).obj G.presheaf)) ≫
                     eMapIso.inv) ≫ eMapIso.hom)
+                /- Prior attempt:
                 simpa [Category.assoc, Iso.trans_hom]
+                -/
+                sorry
   change m ≫ eS.hom = eP.hom
   exact hcomp
+  -/
+  sorry
 /-
   /-
   TODO(Unit32, closed pushforward unit on stalks): the proof below reached the

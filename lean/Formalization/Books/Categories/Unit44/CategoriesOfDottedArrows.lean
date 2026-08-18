@@ -296,8 +296,6 @@ theorem dottedArrow_baseChange_equivalence
     Nonempty
       (DottedArrowCategory (BaseChangeData.leftSquare B) ≌
         DottedArrowCategory (BaseChangeData.outerSquare B)) := by
-  sorry
-/-
   let forward : DottedArrowCategory (BaseChangeData.leftSquare B) ⥤
       DottedArrowCategory (BaseChangeData.outerSquare B) := {
     obj := fun A => by
@@ -585,17 +583,7 @@ theorem dottedArrow_baseChange_equivalence
         simp [strictAssocHom, strictAssocInv] }
   let liftToSource : ∀ A : DottedArrowCategory (BaseChangeData.outerSquare B),
       sourceDiagram ⟶₂ P := fun A =>
-    { vertex := B.j ≫ (liftHom A).vertex
-      left := B.j ◁ (liftHom A).left ≫
-        strictAssocInv B.j (liftHom A).vertex B.p
-      right := inv A.alpha ≫ B.j ◁ (liftHom A).right ≫
-        strictAssocInv B.j (liftHom A).vertex B.q
-      commutes := by
-        have hcomp :=
-          (TwoCommutativeDiagram.Hom.comp (sourceToOuter A) (liftHom A)).commutes
-        simpa [sourceToOuter, outerDiagram, P, sourceDiagram,
-          TwoCommutativeDiagram.Hom.comp,
-          Category.assoc, Category.id_comp] using hcomp }
+    TwoCommutativeDiagram.Hom.comp (sourceToOuter A) (liftHom A)
   let comparisonHom : ∀ A : DottedArrowCategory (BaseChangeData.outerSquare B),
       TwoCommutativeDiagram.TwoHom (liftToSource A) canonical := fun A =>
     Classical.choose ((hP sourceDiagram).2 (liftToSource A) canonical)
@@ -611,7 +599,10 @@ theorem dottedArrow_baseChange_equivalence
         alpha := η₀.vertex
         beta := h₀.left
         alpha_isIso := by
-          letI := hC B.objS B.objXp
+          letI : IsGroupoid (sourceDiagram.vertex ⟶ P.vertex) :=
+            hC sourceDiagram.vertex P.vertex
+          let e := asIso η₀.vertex
+          change IsIso e.hom
           infer_instance
         beta_isIso := by
           letI := hC B.objT B.objYp
@@ -619,13 +610,20 @@ theorem dottedArrow_baseChange_equivalence
         commutes := by
           dsimp [h₀, η₀]
           have hη := (comparisonHom A).left
-          dsimp [comparisonHom, liftToSource, sourceToOuter, canonical, P,
+          dsimp [liftToSource, sourceToOuter, canonical, P,
             outerDiagram,
             TwoCommutativeDiagram.Hom.comp] at hη
-          simp [Category.assoc] at hη
-          simpa [P, Bicategory.id_whiskerRight,
-            Bicategory.Strict.rightUnitor_eqToIso, Category.id_comp,
-            Category.assoc] using hη.symm }
+          have hηid :
+              𝟙 (B.j ≫ B.y') ≫
+                  ((B.j ◁ (liftHom A).left) ≫
+                    strictAssocInv B.j (liftHom A).vertex B.p) =
+                (B.j ◁ (liftHom A).left) ≫
+                  strictAssocInv B.j (liftHom A).vertex B.p := by
+            exact Category.id_comp _
+          have hηcomp := congrArg
+            (fun t => t ≫ (comparisonHom A).vertex ▷ B.p) hηid
+          have hη' := hηcomp.symm.trans hη
+          exact hη'.symm.trans (Category.assoc _ _ _) }
   let outerHom : ∀ {A A' : DottedArrowCategory (BaseChangeData.outerSquare B)},
       DottedArrow.Hom A A' → outerDiagram A ⟶₂ outerDiagram A' := by
     intro A A' H
@@ -921,8 +919,9 @@ theorem dottedArrow_baseChange_equivalence
                     (Bicategory.rightUnitor (𝟙 B.objT)).hom ▷
                       (liftHom A'').vertex) ≫
                     (Bicategory.leftUnitor (liftHom A'').vertex).hom := by
-                simpa only [Category.assoc] using congrArg
-                  (fun t => (𝟙 B.objT ◁ (liftMapHom K).vertex) ≫ t)
+                exact congrArg
+                  (fun t =>
+                    (𝟙 B.objT ◁ (liftMapHom K).vertex) ≫ t)
                   ((Category.assoc
                     (Bicategory.associator (𝟙 B.objT) (𝟙 B.objT)
                       (liftHom A'').vertex).inv
@@ -1017,8 +1016,6 @@ theorem dottedArrow_baseChange_equivalence
     exact {
       hom := δ.vertex
       alpha_naturality := by
-        change (B.j ◁ δ.vertex) ≫
-            (comparisonHom (forward.obj A)).vertex = A.alpha
         let sourceLeftToP := TwoCommutativeDiagram.Hom.comp
           (sourceToOuter (forward.obj A)) (leftToP A)
         let sourceComparison : TwoCommutativeDiagram.TwoHom
@@ -1041,16 +1038,39 @@ theorem dottedArrow_baseChange_equivalence
               exact Category.assoc _ _ _
             convert hassoc.trans hcomm.symm using 1 <;> try rfl
           right := by
+            change DottedArrow (BaseChangeData.leftSquare B) at A
+            dsimp [BaseChangeData.leftSquare] at A
             dsimp [sourceLeftToP, sourceToOuter, leftToP,
               forward, TwoCommutativeDiagram.Hom.comp,
-              TwoCommutativeDiagram.strictAssocInv, canonical, P,
-              BaseChangeData.leftSquare]
-            simp [Bicategory.Strict.associator_eqToIso,
-              Bicategory.Strict.leftUnitor_eqToIso,
-              Bicategory.Strict.rightUnitor_eqToIso,
-              Bicategory.id_whiskerLeft, Bicategory.id_whiskerRight,
-              Bicategory.comp_whiskerRight, Bicategory.whiskerLeft_comp,
-              Category.assoc] }
+              canonical, P, BaseChangeData.leftSquare]
+            letI : IsGroupoid (B.objS ⟶ B.objXp) := hC B.objS B.objXp
+            letI : IsIso A.alpha := A.alpha_isIso
+            letI : IsIso (Bicategory.whiskerRight A.alpha B.q) := by
+              infer_instance
+            letI : IsIso (strictAssocInv B.j A.a B.q) := by
+              infer_instance
+            letI : IsIso (strictAssocInv B.j A.a B.q ≫
+                Bicategory.whiskerRight A.alpha B.q) := by
+              apply IsIso.comp_isIso'
+              · infer_instance
+              · infer_instance
+            change
+              (inv (strictAssocInv B.j A.a B.q ≫
+                Bicategory.whiskerRight A.alpha B.q) ≫
+                  (B.j ◁ 𝟙 (A.a ≫ B.q)) ≫
+                    strictAssocInv B.j A.a B.q) ≫
+                      Bicategory.whiskerRight A.alpha B.q =
+                        𝟙 (B.x' ≫ B.q)
+            calc
+              _ = inv (strictAssocInv B.j A.a B.q ≫
+                    Bicategory.whiskerRight A.alpha B.q) ≫
+                  ((B.j ◁ 𝟙 (A.a ≫ B.q)) ≫
+                    strictAssocInv B.j A.a B.q ≫
+                    Bicategory.whiskerRight A.alpha B.q) := by
+                      simp only [Category.assoc]
+              _ = _ := by
+                simp [Bicategory.whiskerLeft_id, Category.assoc,
+                  ← Bicategory.comp_whiskerRight] }
         let θ := TwoCommutativeDiagram.TwoHom.comp
           (TwoCommutativeDiagram.TwoHom.whiskerLeft
             (sourceToOuter (forward.obj A)) δ)
@@ -1063,11 +1083,19 @@ theorem dottedArrow_baseChange_equivalence
           exact (huuniq θ (by infer_instance)).trans
             (huuniq sourceComparison (by infer_instance)).symm
         have hθv := congrArg TwoCommutativeDiagram.TwoHom.vertex hθ
+        dsimp [inverse, inverseObj]
+        change (B.j ◁ δ.vertex) ≫
+            (comparisonHom (forward.obj A)).vertex = A.alpha
         dsimp [θ, sourceComparison, sourceLeftToP,
           sourceToOuter, TwoCommutativeDiagram.Hom.comp,
           TwoCommutativeDiagram.TwoHom.comp,
-          TwoCommutativeDiagram.TwoHom.whiskerLeft]
-        exact hθv
+          TwoCommutativeDiagram.TwoHom.whiskerLeft, leftToP, forward,
+          comparisonHom]
+        simpa [θ, sourceComparison, sourceLeftToP,
+          sourceToOuter, TwoCommutativeDiagram.Hom.comp,
+          TwoCommutativeDiagram.TwoHom.comp,
+          TwoCommutativeDiagram.TwoHom.whiskerLeft, leftToP, forward,
+          comparisonHom, Category.assoc] using hθv
       beta_naturality := by
         change A.beta ≫ δ.vertex ▷ B.p = (liftHom (forward.obj A)).left
         exact δ.left }
@@ -1075,7 +1103,9 @@ theorem dottedArrow_baseChange_equivalence
     dottedArrowCategory_isGroupoid hC _
   let unitIso : 𝟭 (DottedArrowCategory (BaseChangeData.leftSquare B)) ≅
       forward ⋙ inverse :=
-    NatIso.ofComponents (fun A => asIso (unitHom A)) (by
+    NatIso.ofComponents (fun A => by
+      change A ≅ inverse.obj (forward.obj A)
+      exact asIso (unitHom A)) (by
       intro A A' H
       apply DottedArrow.Hom.ext
       let δ := Classical.choose ((hP (outerDiagram (forward.obj A))).2
@@ -1206,7 +1236,7 @@ theorem dottedArrow_baseChange_equivalence
     simpa [unitHom, leftToP, TwoCommutativeDiagram.Hom.comp,
       Category.id_comp, Category.assoc] using hδ)⟩
 
- -/
+
 
 /-! ## Composition -/
 

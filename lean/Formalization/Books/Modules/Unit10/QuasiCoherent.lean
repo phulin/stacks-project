@@ -169,7 +169,7 @@ noncomputable def constantModulePresheaf
   map_comp := by
     intro X₁ Y Z f g
     apply ModuleCat.hom_ext
-    intro m
+    ext m
     rfl
 
 /-- The map from a constant ring presheaf to the structure sheaf, induced by
@@ -186,10 +186,23 @@ noncomputable def globalSectionsPresheafMap
   · intro U V f
     apply RingCat.hom_ext
     ext r
-    simp only [constantRingPresheaf]
-    rw [← X.structureSheaf.obj.map_comp]
-    congr 1
-    apply Subsingleton.elim
+    have htop :
+        (X.structureSheaf.obj.map
+            (homOfLE (show (V.unop : Opens X.carrier) ≤ ⊤ from le_top)).op).hom =
+          (X.structureSheaf.obj.map f).hom.comp
+            (X.structureSheaf.obj.map
+              (homOfLE (show (U.unop : Opens X.carrier) ≤ ⊤ from le_top)).op).hom := by
+      rw [← RingCat.hom_comp, ← X.structureSheaf.obj.map_comp]
+      congr 1
+    change
+      (X.structureSheaf.obj.map
+          (homOfLE (show (V.unop : Opens X.carrier) ≤ ⊤ from le_top)).op).hom
+          (α r) =
+        (X.structureSheaf.obj.map f).hom
+          ((X.structureSheaf.obj.map
+            (homOfLE (show (U.unop : Opens X.carrier) ≤ ⊤ from le_top)).op).hom
+            (α r))
+    exact congrArg (fun h : globalSectionsRing X →+* _ => h (α r)) htop
 
 /-- The presheaf `U ↦ O_X(U) ⊗_R M`. -/
 noncomputable abbrev associatedSheafPresheaf
@@ -256,7 +269,8 @@ structure ModulePresentation {R : Type v} [Ring R] (M : ModuleCat R) where
 abbrev ModulePresentation.matrixEntry {R : Type v} [Ring R]
     {M : ModuleCat R} (P : ModulePresentation M)
     (j : P.relations) (i : P.generators) : R :=
-  ((P.map.hom (ModuleCat.freeMk j) : (ModuleCat.free R).obj P.generators) i)
+  let v : P.generators →₀ R := P.map.hom (ModuleCat.freeMk j)
+  v i
 
 /-- A one-point ringed space with structure ring `R`. -/
 noncomputable def onePointRingedSpace (R : Type v) [Ring R] : RingedSpace.{v} :=
@@ -271,19 +285,28 @@ noncomputable def onePointContinuousMap
     {X : RingedSpace.{v}} {R : Type v} [Ring R] :
     X.carrier ⟶ (onePointRingedSpace R).carrier :=
   TopCat.ofHom
-    (ContinuousMap.const X.carrier (default : (onePointRingedSpace R).carrier))
+    (ContinuousMap.const X.carrier
+      (ULift.up PUnit.unit : (onePointRingedSpace R).carrier))
 
 /-- The one-point morphism whose map on structure sheaves is induced by `α`. -/
 noncomputable def onePointRingedSpaceHom
     {X : RingedSpace.{v}} {R : Type v} [Ring R]
     (α : R →+* globalSectionsRing X) :
     RingedSpaceHom X (onePointRingedSpace R) :=
-  { continuous := onePointContinuousMap
+  { continuous := onePointContinuousMap (X := X) (R := R)
     sharp := by
-      let F := (TopCat.Sheaf.pushforward RingCat onePointContinuousMap).obj
+      let F := (TopCat.Sheaf.pushforward RingCat
+        (onePointContinuousMap (X := X) (R := R))).obj
         X.structureSheaf
       let hα : R →+* F.presheaf.obj (op (⊤ : Opens (onePointRingedSpace R).carrier)) := by
-        simpa [F, globalSectionsRing] using α
+        let e : F.presheaf.obj (op (⊤ : Opens (onePointRingedSpace R).carrier)) =
+            X.structureSheaf.obj.obj (op (⊤ : Opens X.carrier)) := by
+          change X.structureSheaf.obj.obj
+              (op ((Opens.map (onePointContinuousMap (X := X) (R := R))).obj
+                (⊤ : Opens (onePointRingedSpace R).carrier))) =
+            X.structureSheaf.obj.obj (op (⊤ : Opens X.carrier))
+          rw [Opens.map_top]
+        exact (RingCat.Hom.hom (eqToHom e.symm)).comp α
       exact
         ((CategoryTheory.constantSheafAdj
             (Opens.grothendieckTopology (onePointRingedSpace R).carrier) RingCat
@@ -295,29 +318,46 @@ def onePointRingedSpaceHomInduces
     {X : RingedSpace.{v}} {R : Type v} [Ring R]
     (α : R →+* globalSectionsRing X)
     (f : RingedSpaceHom X (onePointRingedSpace R)) : Prop :=
-  f.sharp = (onePointRingedSpaceHom α).sharp
+  f.continuous = onePointContinuousMap ∧
+    HEq f.sharp (onePointRingedSpaceHom α).sharp
 
 theorem onePointRingedSpaceHom_induces
     {X : RingedSpace.{v}} {R : Type v} [Ring R]
     (α : R →+* globalSectionsRing X) :
     onePointRingedSpaceHomInduces α (onePointRingedSpaceHom α) := by
-  rfl
+  exact ⟨rfl, HEq.rfl⟩
+
+/-! The pullback API exposes the right-adjoint witness explicitly here. -/
+
+noncomputable def pointModulePullback
+    {X : RingedSpace.{v}} {R : Type v} [Ring R]
+    (α : R →+* globalSectionsRing X)
+    (h : (SheafOfModules.pushforward
+      (F := Opens.map (onePointRingedSpaceHom α).continuous)
+      (onePointRingedSpaceHom α).sharp).IsRightAdjoint)
+    (P : Mod (onePointRingedSpace R).structureSheaf) : Mod X.structureSheaf := by
+  letI := h
+  exact (sheafModuleRingedSpacePullback (onePointRingedSpaceHom α)).obj P
 
 /-- The point/pullback description of the associated sheaf. -/
 def PointModuleDescription
     {X : RingedSpace.{v}} {R : Type v} [Ring R]
     (α : R →+* globalSectionsRing X) (M : ModuleCat R) : Prop :=
-  ∃ P : Mod (onePointRingedSpace R).structureSheaf,
-    Nonempty ((sheafModuleRingedSpacePullback (onePointRingedSpaceHom α)).obj P ≅
-      associatedSheafModule α M)
+  ∃ h : (SheafOfModules.pushforward
+      (F := Opens.map (onePointRingedSpaceHom α).continuous)
+      (onePointRingedSpaceHom α).sharp).IsRightAdjoint,
+    ∃ P : Mod (onePointRingedSpace R).structureSheaf,
+      Nonempty (pointModulePullback α h P ≅ associatedSheafModule α M)
 
 /-- A source-facing name for the pullback description. -/
 abbrev PullbackDescription
     {X : RingedSpace.{v}} {R : Type v} [Ring R]
     (α : R →+* globalSectionsRing X) (M : ModuleCat R) : Prop :=
-  ∃ P : Mod (onePointRingedSpace R).structureSheaf,
-    Nonempty ((sheafModuleRingedSpacePullback (onePointRingedSpaceHom α)).obj P ≅
-      associatedSheafModule α M)
+  ∃ h : (SheafOfModules.pushforward
+      (F := Opens.map (onePointRingedSpaceHom α).continuous)
+      (onePointRingedSpaceHom α).sharp).IsRightAdjoint,
+    ∃ P : Mod (onePointRingedSpace R).structureSheaf,
+      Nonempty (pointModulePullback α h P ≅ associatedSheafModule α M)
 
 /-- The three constructions in the source have canonical comparison
 isomorphisms. -/
@@ -398,15 +438,18 @@ noncomputable def associatedSheafQCohFunctor
     {X : RingedSpace.{v}} {R : Type v} [Ring R]
     (α : R →+* globalSectionsRing X) : ModuleCat R ⥤ QCoh X where
   obj M := ⟨associatedSheafModule α M, associatedSheafModule_isQuasiCoherent α M⟩
-  map f := ⟨(associatedSheafFunctor α).map f⟩
+  map f := ⟨
+    (Classical.choice (associatedSheafFunctor_obj α _)).inv ≫
+      (associatedSheafFunctor α).map f ≫
+      (Classical.choice (associatedSheafFunctor_obj α _)).hom⟩
   map_id := by
     intro M
     apply ObjectProperty.hom_ext
-    exact (associatedSheafFunctor α).map_id M
+    simp
   map_comp := by
     intro M N P f g
     apply ObjectProperty.hom_ext
-    exact (associatedSheafFunctor α).map_comp f g
+    simp [Category.assoc]
 
 theorem associatedSheafFunctor_preserves_colimits
     {X : RingedSpace.{v}} {R : Type v} [Ring R]
@@ -425,17 +468,28 @@ noncomputable def globalToStalkRing
 noncomputable abbrev StalkTensorProduct
     {X : RingedSpace.{v}} {R : Type v} [Ring R]
     (α : R →+* globalSectionsRing X) (M : Type v)
-    [AddCommGroup M] [Module R M] (x : X) :
+    [AddCommGroup M] [Module R M] (x : X)
+    (hR : ∀ a b : R, a * b = b * a)
+    (hA : ∀ a b : TopCat.Presheaf.stalk (C := RingCat.{v}) X.structureSheaf.obj x,
+      a * b = b * a) :
     ModuleCat (TopCat.Presheaf.stalk (C := RingCat.{v}) X.structureSheaf.obj x) :=
+  let A := TopCat.Presheaf.stalk (C := RingCat.{v}) X.structureSheaf.obj x
+  let ringR : Ring R := inferInstance
+  let ringA : Ring A := inferInstance
+  letI : CommRing R := { ringR with mul_comm := hR }
+  letI : CommRing A := { ringA with mul_comm := hA }
   (ModuleCat.extendScalars ((globalToStalkRing x).comp α)).obj
     (ModuleCat.of R M)
 
 theorem associatedSheaf_stalk_iso
     {X : RingedSpace.{v}} {R : Type v} [Ring R]
     (α : R →+* globalSectionsRing X) (M : Type v)
-    [AddCommGroup M] [Module R M] (x : X) :
+    [AddCommGroup M] [Module R M] (x : X)
+    (hR : ∀ a b : R, a * b = b * a)
+    (hA : ∀ a b : TopCat.Presheaf.stalk (C := RingCat.{v}) X.structureSheaf.obj x,
+      a * b = b * a) :
     Nonempty ((sheafModuleStalkFunctor X.structureSheaf x).obj
-        (associatedSheaf α M) ≅ StalkTensorProduct α M x) := by
+        (associatedSheaf α M) ≅ StalkTensorProduct α M x hR hA) := by
   sorry
 
 /-- The induced `R`-module of global sections. -/
@@ -459,22 +513,36 @@ theorem associatedSheaf_hom_equiv
 noncomputable def ringedSpaceGlobalSectionsMap
     {X Y : RingedSpace.{v}} (g : RingedSpaceHom Y X) :
     globalSectionsRing X →+* globalSectionsRing Y := by
-  simpa using (g.sharp.hom.app (op (⊤ : Opens X.carrier))).hom
+  have h := (g.sharp.hom.app (op (⊤ : Opens X.carrier))).hom
+  change X.structureSheaf.obj.obj (op (⊤ : Opens X.carrier)) →+*
+    Y.structureSheaf.obj.obj
+      (op ((Opens.map g.continuous).obj (⊤ : Opens X.carrier))) at h
+  rw [Opens.map_top] at h
+  exact h
 
 /-- Scalar extension of a module. -/
 noncomputable abbrev associatedScalarExtensionModule
     {R S : Type v} [Ring R] [Ring S]
-    (β : R →+* S) (M : ModuleCat R) : ModuleCat S :=
-  (ModuleCat.extendScalars β).obj M
+    (hR : ∀ a b : R, a * b = b * a)
+    (hS : ∀ a b : S, a * b = b * a)
+    (β : R →+* S) (M : ModuleCat R) : ModuleCat S := by
+  let ringR : Ring R := inferInstance
+  let ringS : Ring S := inferInstance
+  letI : CommRing R := { ringR with mul_comm := hR }
+  letI : CommRing S := { ringS with mul_comm := hS }
+  exact (ModuleCat.extendScalars β).obj M
 
 theorem restrict_associatedSheaf
     {X Y : RingedSpace.{v}} (g : RingedSpaceHom Y X)
     [((SheafOfModules.pushforward (F := Opens.map g.continuous)
       g.sharp).IsRightAdjoint)]
-    {R : Type v} [Ring R] (α : R →+* globalSectionsRing X) (M : ModuleCat R) :
+    {R : Type v} [Ring R] (α : R →+* globalSectionsRing X) (M : ModuleCat R)
+    (hR : ∀ a b : R, a * b = b * a)
+    (hY : ∀ a b : globalSectionsRing Y, a * b = b * a) :
     Nonempty ((sheafModuleRingedSpacePullback g).obj (associatedSheafModule α M) ≅
       associatedSheafModule (RingHom.id _)
-        (associatedScalarExtensionModule (ringedSpaceGlobalSectionsMap g).comp α M)) := by
+        (associatedScalarExtensionModule
+          hR hY ((ringedSpaceGlobalSectionsMap g).comp α) M)) := by
   sorry
 
 /-- A fundamental system of quasi-compact neighbourhoods at a point. -/
@@ -502,7 +570,7 @@ structure CutoffFunction where
   toFun : ℝ → ℝ
   continuous_toFun : Continuous toFun
   zero_on : ∀ x ∈ Set.Ioo (-1 : ℝ) 1, toFun x = 0
-  one_on : ∀ x, x ∈ Set.Iic (-2 : ℝ) ∨ x ∈ Set.Ici 2 → toFun x = 1
+  one_on : ∀ x, x ∈ Set.Iio (-2 : ℝ) ∨ x ∈ Set.Ioi 2 → toFun x = 1
 
 instance : CoeFun CutoffFunction (fun _ => ℝ → ℝ) := ⟨CutoffFunction.toFun⟩
 

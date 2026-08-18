@@ -859,7 +859,20 @@ theorem integralClosure_transitive
     [IsScalarTower B' B C]
     [IsIntegralClosure B' A B] [IsIntegralClosure C' B' C] :
     IsIntegralClosure C' A C := by
-  sorry
+  let _ : Algebra.IsIntegral A B' := IsIntegralClosure.isIntegral_algebra A B
+  refine
+    { algebraMap_injective := IsIntegralClosure.algebraMap_injective C' B' C
+      isIntegral_iff := ?_ }
+  intro x
+  constructor
+  · intro hx
+    exact (IsIntegralClosure.isIntegral_iff (A := C') (R := B') (B := C)).mp
+      (IsIntegral.tower_top hx)
+  · rintro ⟨y, hy⟩
+    have hy' : IsIntegral B' (algebraMap C' C y) :=
+      (IsIntegralClosure.isIntegral_iff (A := C') (R := B') (B := C)).mpr ⟨y, rfl⟩
+    rw [← hy]
+    exact isIntegral_trans (R := A) _ hy'
 
 /-! ## Spectra and field consequences -/
 
@@ -868,7 +881,20 @@ theorem primeSpectrum_comap_surjective_of_integral
     {R S : Type*} [CommRing R] [CommRing S]
     (f : R →+* S) (hf : f.IsIntegral) (hinj : Function.Injective f) :
     Function.Surjective (PrimeSpectrum.comap f) := by
-  sorry
+  letI := f.toAlgebra
+  let _ : Algebra.IsIntegral R S := ⟨hf⟩
+  intro p
+  have hker : RingHom.ker (algebraMap R S) ≤ p.asIdeal := by
+    rw [(RingHom.injective_iff_ker_eq_bot (algebraMap R S)).mp hinj]
+    exact bot_le
+  have hbot : (⊥ : Ideal S).comap (algebraMap R S) ≤ p.asIdeal := by
+    rw [← RingHom.ker_eq_comap_bot]
+    exact hker
+  obtain ⟨Q, _, hQ, hQcomap⟩ :=
+    Ideal.exists_ideal_over_prime_of_isIntegral p.asIdeal (⊥ : Ideal S) hbot
+  refine ⟨⟨Q, hQ⟩, ?_⟩
+  apply PrimeSpectrum.ext
+  exact hQcomap
 
 /-- An integral subring of a field is a field, and the field is algebraic over
 the subring. -/
@@ -876,7 +902,12 @@ theorem integral_subring_of_field
     {R K : Type*} [CommRing R] [Field K] [Algebra R K]
     [FaithfulSMul R K] [Algebra.IsIntegral R K] :
     IsField R ∧ Algebra.IsAlgebraic R K := by
-  sorry
+  have hR : IsField R :=
+    isField_of_isIntegral_of_isField (FaithfulSMul.algebraMap_injective R K)
+      (Field.toIsField K)
+  refine ⟨hR, ?_⟩
+  let _ : Nontrivial R := hR.nontrivial
+  exact ⟨fun x => (Algebra.IsIntegral.isIntegral x).isAlgebraic⟩
 
 /-- A finite subring of a field is a field and the field is finite algebraic
 over it. -/
@@ -884,7 +915,13 @@ theorem finite_subring_of_field
     {R K : Type*} [CommRing R] [Field K] [Algebra R K]
     [FaithfulSMul R K] [Module.Finite R K] :
     IsField R ∧ Module.Finite R K ∧ Algebra.IsAlgebraic R K := by
-  sorry
+  have hR : IsField R :=
+    isField_of_isIntegral_of_isField (FaithfulSMul.algebraMap_injective R K)
+      (Field.toIsField K)
+  have hfinite : Module.Finite R K := inferInstance
+  refine ⟨hR, hfinite, ?_⟩
+  let _ : Nontrivial R := hR.nontrivial
+  exact inferInstance
 
 /-- A domain that is integral over a field is a field. -/
 theorem integral_domain_over_field_isField

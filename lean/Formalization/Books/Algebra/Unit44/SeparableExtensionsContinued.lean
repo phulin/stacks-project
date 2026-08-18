@@ -281,7 +281,7 @@ theorem isSeparableExtension_iff_frobenius_linearIndependent_iff_tensorProduct_r
           rw [htset]
           apply hli.linearIndepOn_id'
           ext z
-          simp [Function.comp_def]
+          simp
         have hpowK := hpow t hliK
         have hpowK' : LinearIndepOn k (fun z : K => z ^ p)
             (L.val '' (s : Set L)) := by

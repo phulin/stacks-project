@@ -1,7 +1,11 @@
 import Formalization.Books.Algebra.Unit75.TorGroups
 import Mathlib.Algebra.Homology.ShortComplex.Linear
+import Mathlib.Algebra.Homology.ShortComplex.PreservesHomology
+import Mathlib.Algebra.Homology.ShortComplex.FunctorEquivalence
 import Mathlib.Algebra.Category.ModuleCat.ChangeOfRings
 import Mathlib.Algebra.Category.ModuleCat.FilteredColimits
+import Mathlib.Algebra.Category.ModuleCat.AB
+import Mathlib.CategoryTheory.Abelian.GrothendieckAxioms.Colim
 import Mathlib.RingTheory.RingHom.Flat
 
 /-!
@@ -467,13 +471,337 @@ noncomputable def torFirstFunctor {R : Type u} [CommRing R]
   map_id _ := torMapFirst_id (N := N) i
   map_comp φ ψ := torMapFirst_comp (N := N) φ ψ i
 
+private def torFilteredFirstMap {R : Type u} [CommRing R]
+    {J : Type u} [SmallCategory J]
+    (S : J ⥤ ShortComplex (ModuleCat.{u} R)) :
+    (S ⋙ ShortComplex.π₁) ⟶ (S ⋙ ShortComplex.π₂) where
+  app i := (S.obj i).f
+  naturality _ _ h := (S.map h).comm₁₂
+
+private def torFilteredSecondMap {R : Type u} [CommRing R]
+    {J : Type u} [SmallCategory J]
+    (S : J ⥤ ShortComplex (ModuleCat.{u} R)) :
+    (S ⋙ ShortComplex.π₂) ⟶ (S ⋙ ShortComplex.π₃) where
+  app i := (S.obj i).g
+  naturality _ _ h := (S.map h).comm₂₃
+
+private def torFilteredColimShort {R : Type u} [CommRing R]
+    {J : Type u} [SmallCategory J] [IsFiltered J]
+    (S : J ⥤ ShortComplex (ModuleCat.{u} R)) :
+    ShortComplex (ModuleCat.{u} R) :=
+  ShortComplex.mk (colim.map (torFilteredFirstMap S))
+    (colim.map (torFilteredSecondMap S)) (by
+      apply colimit.hom_ext
+      intro i
+      rw [← Category.assoc, colimit.ι_map, Category.assoc, colimit.ι_map]
+      have hi : (torFilteredFirstMap S).app i ≫
+          (torFilteredSecondMap S).app i = 0 := by
+        change (S.obj i).f ≫ (S.obj i).g = 0
+        exact (S.obj i).zero
+      rw [← Category.assoc, hi, zero_comp, comp_zero])
+
+private def torFilteredHomologySystem {R : Type u} [CommRing R]
+    {J : Type u} [SmallCategory J]
+    (S : J ⥤ ShortComplex (ModuleCat.{u} R)) :
+    J ⥤ ModuleCat.{u} R :=
+  S ⋙ ShortComplex.homologyFunctor (ModuleCat.{u} R)
+
+private theorem tor_filtered_colimit_homology {R : Type u} [CommRing R]
+    {J : Type u} [SmallCategory J] [IsFiltered J]
+    (S : J ⥤ ShortComplex (ModuleCat.{u} R)) :
+    Nonempty ((torFilteredColimShort S).homology ≅
+      colimit (torFilteredHomologySystem S)) := by
+  let : AB5OfSize.{u, u} (AddCommGrpCat.{u}) :=
+    AB5OfSize_of_univLE (AddCommGrpCat.{u})
+  let : HasExactColimitsOfShape J (ModuleCat.{u} R) :=
+    HasExactColimitsOfShape.domain_of_functor J
+      (forget₂ (ModuleCat.{u} R) AddCommGrpCat)
+  let T := ShortComplex.FunctorEquivalence.inverse J (ModuleCat.{u} R)
+  let ST := T.obj S
+  have hfirst : S.whiskerLeft ShortComplex.π₁Toπ₂ =
+      torFilteredFirstMap S := by
+    apply NatTrans.ext
+    funext i
+    rfl
+  have hsecond : S.whiskerLeft ShortComplex.π₂Toπ₃ =
+      torFilteredSecondMap S := by
+    apply NatTrans.ext
+    funext i
+    rfl
+  have hff : colim.map ST.f = colim.map (torFilteredFirstMap S) := by
+    simpa [T, ST, ShortComplex.FunctorEquivalence.inverse] using
+      congrArg (fun q => colim.map q) hfirst
+  have hgg : colim.map ST.g = colim.map (torFilteredSecondMap S) := by
+    simpa [T, ST, ShortComplex.FunctorEquivalence.inverse] using
+      congrArg (fun q => colim.map q) hsecond
+  let q : ST.map colim ≅ torFilteredColimShort S :=
+    ShortComplex.isoMk (Iso.refl _) (Iso.refl _) (Iso.refl _)
+      (by
+        simp only [Iso.refl_hom]
+        exact hff.symm)
+      (by
+        simp only [Iso.refl_hom]
+        exact hgg.symm)
+  let E := ShortComplex.FunctorEquivalence.functor J
+    (ModuleCat.{u} R)
+  let HST := E.obj ST ⋙ ShortComplex.homologyFunctor (ModuleCat.{u} R)
+  let p₀ : ST.homology ≅ HST :=
+    NatIso.ofComponents (fun i => by
+      simpa [HST, E, T, ST, ShortComplex.FunctorEquivalence.functor,
+        ShortComplex.FunctorEquivalence.inverse] using
+        (ST.mapHomologyIso ((evaluation J (ModuleCat.{u} R)).obj i)).symm) (by
+      intro i j h
+      let eᵢ := ST.mapHomologyIso ((evaluation J (ModuleCat.{u} R)).obj i)
+      let eⱼ := ST.mapHomologyIso ((evaluation J (ModuleCat.{u} R)).obj j)
+      change ST.homology.map h ≫ eⱼ.inv =
+        eᵢ.inv ≫ ShortComplex.homologyMap (ST.mapNatTrans
+          ((evaluation J (ModuleCat.{u} R)).map h))
+      rw [ShortComplex.homologyMap_mapNatTrans]
+      change ST.homology.map h ≫ eⱼ.inv =
+        eᵢ.inv ≫ eᵢ.hom ≫
+          ((evaluation J (ModuleCat.{u} R)).map h).app ST.homology ≫ eⱼ.inv
+      simp)
+  let p : ST.homology ≅ torFilteredHomologySystem S :=
+    p₀ ≪≫ Functor.isoWhiskerRight
+      ((ShortComplex.FunctorEquivalence.counitIso J
+        (ModuleCat.{u} R)).app S)
+      (ShortComplex.homologyFunctor (ModuleCat.{u} R))
+  exact ⟨((ShortComplex.homologyFunctor (ModuleCat.{u} R)).mapIso q).symm ≪≫
+    ST.mapHomologyIso colim ≪≫ colim.mapIso p⟩
+
 /-- Tor commutes with filtered colimits in its first module variable. -/
 theorem tor_commutes_filtered_colimits {R : Type u} [CommRing R]
     {J : Type u} [SmallCategory J] [IsFiltered J]
     (F : J ⥤ ModuleCat.{u} R) (N : ModuleCat.{u} R) (n : ℕ) :
     Nonempty (Tor (colimit F) N n ≅
       colimit (F ⋙ torFirstFunctor N n)) := by
-  sorry
+  let P : FreeResolution R N := Classical.choice (exists_free_resolution N)
+  let K : ModuleCat.{u} R ⥤ ModuleChainComplex R := {
+    obj := fun M => tensorComplex P.complex M
+    map := fun φ => tensorComplexMapRight P.complex φ
+    map_id := by
+      intro X
+      apply HomologicalComplex.hom_ext
+      intro p
+      apply ModuleCat.hom_ext
+      simp [tensorComplexMapRight, LinearMap.lTensor_id]
+      rfl
+    map_comp := by
+      intro X Y Z f g
+      apply HomologicalComplex.hom_ext
+      intro p
+      apply ModuleCat.hom_ext
+      simp [tensorComplexMapRight, ModuleCat.hom_comp, LinearMap.lTensor_comp]
+      rfl }
+  let S := F ⋙ K ⋙ HomologicalComplex.shortComplexFunctor
+    (ModuleCat.{u} R) (ComplexShape.down ℕ) n
+  let eT : ∀ p : ℕ,
+      colimit ((F ⋙ K) ⋙ HomologicalComplex.eval
+        (ModuleCat.{u} R) (ComplexShape.down ℕ) p) ≅
+      (K.obj (colimit F)).X p := fun p => by
+    change _ ≅ MonoidalCategoryStruct.tensorObj
+      (ModuleCat.of R (P.complex.X p)) (colimit F)
+    have hdiag :
+        ((F ⋙ K) ⋙ HomologicalComplex.eval (ModuleCat.{u} R)
+          (ComplexShape.down ℕ) p) =
+        F ⋙ MonoidalCategory.tensorLeft (ModuleCat.of R (P.complex.X p)) := by
+      dsimp [K, tensorComplex, tensorComplexMapRight,
+        MonoidalCategory.tensorLeft]
+      rfl
+    rw [hdiag]
+    exact (preservesColimitIso
+      (MonoidalCategory.tensorLeft (ModuleCat.of R (P.complex.X p))) F).symm
+  have hprev :
+      S ⋙ ShortComplex.π₁ =
+        (F ⋙ K) ⋙ HomologicalComplex.eval (ModuleCat.{u} R)
+          (ComplexShape.down ℕ) ((ComplexShape.down ℕ).prev n) := by
+    rfl
+  have hmiddle :
+      S ⋙ ShortComplex.π₂ =
+        (F ⋙ K) ⋙ HomologicalComplex.eval (ModuleCat.{u} R)
+          (ComplexShape.down ℕ) n := by
+    rfl
+  have hnext :
+      S ⋙ ShortComplex.π₃ =
+        (F ⋙ K) ⋙ HomologicalComplex.eval (ModuleCat.{u} R)
+          (ComplexShape.down ℕ) ((ComplexShape.down ℕ).next n) := by
+    rfl
+  cases hprev
+  cases hmiddle
+  cases hnext
+  let q₁ : (torFilteredColimShort S).X₁ ≅
+      (K.obj (colimit F)).X ((ComplexShape.down ℕ).prev n) := by
+    exact eT ((ComplexShape.down ℕ).prev n)
+  let q₂ : (torFilteredColimShort S).X₂ ≅
+      (K.obj (colimit F)).X n := by
+    exact eT n
+  let q₃ : (torFilteredColimShort S).X₃ ≅
+      (K.obj (colimit F)).X ((ComplexShape.down ℕ).next n) := by
+    exact eT ((ComplexShape.down ℕ).next n)
+  have hq₁ (j : J) :
+      colimit.ι (S ⋙ ShortComplex.π₁) j ≫ q₁.hom =
+        (K.map (colimit.ι F j)).f ((ComplexShape.down ℕ).prev n) := by
+    change colimit.ι ((F ⋙ K) ⋙ HomologicalComplex.eval
+      (ModuleCat.{u} R) (ComplexShape.down ℕ)
+      ((ComplexShape.down ℕ).prev n)) j ≫
+        (eT ((ComplexShape.down ℕ).prev n)).hom = _
+    change colimit.ι (F ⋙ MonoidalCategory.tensorLeft
+      (ModuleCat.of R (P.complex.X ((ComplexShape.down ℕ).prev n)))) j ≫
+        (preservesColimitIso
+          (MonoidalCategory.tensorLeft
+            (ModuleCat.of R (P.complex.X ((ComplexShape.down ℕ).prev n)))) F).inv =
+      (MonoidalCategory.tensorLeft
+        (ModuleCat.of R (P.complex.X ((ComplexShape.down ℕ).prev n)))).map
+          (colimit.ι F j)
+    exact ι_preservesColimitIso_inv
+      (MonoidalCategory.tensorLeft
+        (ModuleCat.of R (P.complex.X ((ComplexShape.down ℕ).prev n)))) F j
+  have hq₂ (j : J) :
+      colimit.ι (S ⋙ ShortComplex.π₂) j ≫ q₂.hom =
+        (K.map (colimit.ι F j)).f n := by
+    change colimit.ι (F ⋙ MonoidalCategory.tensorLeft
+      (ModuleCat.of R (P.complex.X n))) j ≫
+        (preservesColimitIso
+          (MonoidalCategory.tensorLeft (ModuleCat.of R (P.complex.X n))) F).inv =
+      (MonoidalCategory.tensorLeft (ModuleCat.of R (P.complex.X n))).map
+        (colimit.ι F j)
+    exact ι_preservesColimitIso_inv
+      (MonoidalCategory.tensorLeft (ModuleCat.of R (P.complex.X n))) F j
+  have hq₃ (j : J) :
+      colimit.ι (S ⋙ ShortComplex.π₃) j ≫ q₃.hom =
+        (K.map (colimit.ι F j)).f ((ComplexShape.down ℕ).next n) := by
+    change colimit.ι (F ⋙ MonoidalCategory.tensorLeft
+      (ModuleCat.of R (P.complex.X ((ComplexShape.down ℕ).next n)))) j ≫
+        (preservesColimitIso
+          (MonoidalCategory.tensorLeft
+            (ModuleCat.of R (P.complex.X ((ComplexShape.down ℕ).next n)))) F).inv =
+      (MonoidalCategory.tensorLeft
+        (ModuleCat.of R (P.complex.X ((ComplexShape.down ℕ).next n)))).map
+          (colimit.ι F j)
+    exact ι_preservesColimitIso_inv
+      (MonoidalCategory.tensorLeft
+        (ModuleCat.of R (P.complex.X ((ComplexShape.down ℕ).next n)))) F j
+  let q : torFilteredColimShort S ≅ (K.obj (colimit F)).sc n :=
+    ShortComplex.isoMk q₁ q₂ q₃ (by
+        change q₁.hom ≫ (K.obj (colimit F)).d
+            ((ComplexShape.down ℕ).prev n) n =
+          (torFilteredColimShort S).f ≫ q₂.hom
+        apply (colimit.isColimit _).hom_ext
+        intro j
+        change (colimit.ι (S ⋙ ShortComplex.π₁) j ≫ q₁.hom) ≫
+            (K.obj (colimit F)).d ((ComplexShape.down ℕ).prev n) n =
+          (colimit.ι (S ⋙ ShortComplex.π₁) j ≫
+            (torFilteredColimShort S).f) ≫ q₂.hom
+        have hcomp₁ :
+            (colimit.ι (S ⋙ ShortComplex.π₁) j ≫ q₁.hom) ≫
+                (K.obj (colimit F)).d ((ComplexShape.down ℕ).prev n) n =
+              (K.map (colimit.ι F j)).f ((ComplexShape.down ℕ).prev n) ≫
+                (K.obj (colimit F)).d ((ComplexShape.down ℕ).prev n) n := by
+          exact congrArg (fun t => t ≫
+            (K.obj (colimit F)).d ((ComplexShape.down ℕ).prev n) n) (hq₁ j)
+        have hcomm₁ :
+            (K.map (colimit.ι F j)).f ((ComplexShape.down ℕ).prev n) ≫
+                (K.obj (colimit F)).d ((ComplexShape.down ℕ).prev n) n =
+              (S.obj j).f ≫ (K.map (colimit.ι F j)).f n := by
+          have hrel : (ComplexShape.down ℕ).Rel
+              ((ComplexShape.down ℕ).prev n) n := by simp
+          rw [(K.map (colimit.ι F j)).comm' _ _ hrel]
+          rfl
+        have hq₂' :
+            (S.obj j).f ≫ (K.map (colimit.ι F j)).f n =
+              ((S.obj j).f ≫ colimit.ι (S ⋙ ShortComplex.π₂) j) ≫ q₂.hom := by
+          exact (congrArg (fun t => (S.obj j).f ≫ t) (hq₂ j).symm).trans
+            (Category.assoc _ _ _).symm
+        have hw₁ :
+            ((S.obj j).f ≫ colimit.ι (S ⋙ ShortComplex.π₂) j) ≫ q₂.hom =
+              (colimit.ι (S ⋙ ShortComplex.π₁) j ≫
+                (torFilteredColimShort S).f) ≫ q₂.hom := by
+          have hmap := congrArg (fun t => t ≫ q₂.hom)
+            (colimit.ι_map (torFilteredFirstMap S) j).symm
+          change ((S.obj j).f ≫ colimit.ι (S ⋙ ShortComplex.π₂) j) ≫ q₂.hom =
+            (colimit.ι (S ⋙ ShortComplex.π₁) j ≫
+              (torFilteredColimShort S).f) ≫ q₂.hom at hmap
+          exact hmap
+        exact hcomp₁.trans (hcomm₁.trans (hq₂'.trans hw₁))) (by
+        change q₂.hom ≫ (K.obj (colimit F)).d n
+            ((ComplexShape.down ℕ).next n) =
+          (torFilteredColimShort S).g ≫ q₃.hom
+        apply (colimit.isColimit _).hom_ext
+        intro j
+        change (colimit.ι (S ⋙ ShortComplex.π₂) j ≫ q₂.hom) ≫
+            (K.obj (colimit F)).d n ((ComplexShape.down ℕ).next n) =
+          (colimit.ι (S ⋙ ShortComplex.π₂) j ≫
+            (torFilteredColimShort S).g) ≫ q₃.hom
+        have hcomp₂ :
+            (colimit.ι (S ⋙ ShortComplex.π₂) j ≫ q₂.hom) ≫
+                (K.obj (colimit F)).d n ((ComplexShape.down ℕ).next n) =
+              (K.map (colimit.ι F j)).f n ≫
+                (K.obj (colimit F)).d n ((ComplexShape.down ℕ).next n) := by
+          exact congrArg (fun t => t ≫
+            (K.obj (colimit F)).d n ((ComplexShape.down ℕ).next n)) (hq₂ j)
+        have hcomm₂ :
+            (K.map (colimit.ι F j)).f n ≫
+                (K.obj (colimit F)).d n ((ComplexShape.down ℕ).next n) =
+              (S.obj j).g ≫ (K.map (colimit.ι F j)).f
+                ((ComplexShape.down ℕ).next n) := by
+          cases n with
+          | zero =>
+              change (tensorComplexMapRight P.complex (colimit.ι F j)).f 0 ≫
+                    (tensorComplex P.complex (colimit F)).d 0
+                      ((ComplexShape.down ℕ).next 0) =
+                (tensorComplex P.complex (F.obj j)).d 0
+                    ((ComplexShape.down ℕ).next 0) ≫
+                  (tensorComplexMapRight P.complex (colimit.ι F j)).f
+                    ((ComplexShape.down ℕ).next 0)
+              rw [ChainComplex.next_nat_zero]
+              rw [HomologicalComplex.shape _ _ _ (by simp), comp_zero]
+              rw [HomologicalComplex.shape _ _ _ (by simp), zero_comp]
+          | succ n =>
+              rw [(K.map (colimit.ι F j)).comm' _ _ (by simp)]
+              change (tensorComplex P.complex (F.obj j)).d (n + 1)
+                    ((ComplexShape.down ℕ).next (n + 1)) ≫
+                  (tensorComplexMapRight P.complex (colimit.ι F j)).f
+                    ((ComplexShape.down ℕ).next (n + 1)) =
+                (tensorComplex P.complex (F.obj j)).d (n + 1)
+                    ((ComplexShape.down ℕ).next (n + 1)) ≫
+                  (tensorComplexMapRight P.complex (colimit.ι F j)).f
+                    ((ComplexShape.down ℕ).next (n + 1))
+              apply ModuleCat.hom_ext
+              simp [tensorComplexMapRight]
+        have hq₃' :
+            (S.obj j).g ≫ (K.map (colimit.ι F j)).f
+                ((ComplexShape.down ℕ).next n) =
+              ((S.obj j).g ≫ colimit.ι (S ⋙ ShortComplex.π₃) j) ≫ q₃.hom := by
+          exact (congrArg (fun t => (S.obj j).g ≫ t) (hq₃ j).symm).trans
+            (Category.assoc _ _ _).symm
+        have hw₂ :
+            ((S.obj j).g ≫ colimit.ι (S ⋙ ShortComplex.π₃) j) ≫ q₃.hom =
+              (colimit.ι (S ⋙ ShortComplex.π₂) j ≫
+                (torFilteredColimShort S).g) ≫ q₃.hom := by
+          have hmap := congrArg (fun t => t ≫ q₃.hom)
+            (colimit.ι_map (torFilteredSecondMap S) j).symm
+          change ((S.obj j).g ≫ colimit.ι (S ⋙ ShortComplex.π₃) j) ≫ q₃.hom =
+            (colimit.ι (S ⋙ ShortComplex.π₂) j ≫
+              (torFilteredColimShort S).g) ≫ q₃.hom at hmap
+          exact hmap
+        exact hcomp₂.trans (hcomm₂.trans (hq₃'.trans hw₂)))
+  have hS := tor_filtered_colimit_homology S
+  rcases hS with ⟨hS⟩
+  let η : F ⋙ torFirstFunctor N n ≅ torFilteredHomologySystem S :=
+    NatIso.ofComponents (fun j => torLeftRightIso (F.obj j) N n) (by
+      intro j k h
+      have hh := torLeftRightIso_natural (F.map h) (𝟙 N) n
+      change torMapFirst (N := N) (F.map h) n ≫
+          (torLeftRightIso (F.obj k) N n).hom =
+        (torLeftRightIso (F.obj j) N n).hom ≫
+          torMapSecond N (F.obj j) (F.obj k) (F.map h) n
+      simpa [torMapFirst_id, torMapSecond_id, Category.assoc] using hh.symm)
+  let hq :=
+    ((ShortComplex.homologyFunctor (ModuleCat.{u} R)).mapIso q).symm
+  let C : (J ⥤ ModuleCat.{u} R) ⥤ ModuleCat.{u} R := colim
+  exact ⟨(torLeftRightIso (colimit F) N n) ≪≫
+    (Iso.refl _ ≪≫ hq ≪≫ hS) ≪≫
+      (C.mapIso η).symm⟩
 
 end
 

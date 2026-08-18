@@ -572,7 +572,7 @@ noncomputable def exteriorPowerRelationMap
         apply LinearMap.ext
         intro z
         apply Subtype.ext
-        simp [add_mul]
+        simp
       map_smul' := by
         intro r x
         apply LinearMap.ext

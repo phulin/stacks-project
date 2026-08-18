@@ -5,6 +5,7 @@ import Mathlib.Data.ZMod.Basic
 import Mathlib.LinearAlgebra.BilinearForm.Orthogonal
 import Mathlib.LinearAlgebra.Dual.Lemmas
 import Mathlib.LinearAlgebra.Dimension.Free
+import Mathlib.LinearAlgebra.Dimension.Torsion.Finite
 import Mathlib.LinearAlgebra.Matrix.Adjugate
 import Mathlib.LinearAlgebra.Matrix.Determinant.Basic
 import Mathlib.LinearAlgebra.Matrix.Gershgorin
@@ -2903,7 +2904,171 @@ theorem graph_coboundary_kernel_finrank {n : ℕ}
       ∀ ⦃i j⦄, i ∈ I → j ∉ I → A i j = 0) :
     Module.finrank ℤ (LinearMap.ker (graphCoboundary A)) =
       positiveOffDiagonalEdgeCount A + 1 - n := by
-  sorry
+  classical
+  let root : Fin n := ⟨0, hn⟩
+  let edgeRel : Fin n → Fin n → Prop := fun i j =>
+    ∃ e : positiveEdge A,
+      (edgeSource e = i ∧ edgeTarget e = j) ∨
+        (edgeSource e = j ∧ edgeTarget e = i)
+  have hedge {i j : Fin n} (hij : i ≠ j) (hpos : A i j ≠ 0) :
+      edgeRel i j := by
+    have hnonneg : 0 ≤ A i j := hoffdiag hij
+    have hpos' : 0 < A i j := by omega
+    rcases lt_or_gt_of_ne hij with hlt | hlt
+    · exact ⟨⟨(i, j), hlt, hpos'⟩, Or.inl ⟨rfl, rfl⟩⟩
+    · have hpos'' : 0 < A j i := by rw [hsymm j i]; exact hpos'
+      exact ⟨⟨(j, i), hlt, hpos''⟩, Or.inr ⟨rfl, rfl⟩⟩
+  have hconn : ∀ i : Fin n, Relation.EqvGen edgeRel root i := by
+    let I : Set (Fin n) := {j | Relation.EqvGen edgeRel root j}
+    have hI : I.Nonempty := ⟨root, Relation.EqvGen.refl root⟩
+    have hcut : ∀ ⦃i j : Fin n⦄, i ∈ I → j ∉ I → A i j = 0 := by
+      intro i j hi hj
+      by_contra hne
+      have hrel : edgeRel i j := hedge (by
+        intro hij
+        apply hj
+        simpa [I, hij] using hi) hne
+      apply hj
+      change Relation.EqvGen edgeRel root j
+      exact Relation.EqvGen.trans root i j hi (Relation.EqvGen.rel i j hrel)
+    have hIu : I = Set.univ := by
+      apply Set.eq_univ_of_forall
+      intro i
+      by_contra hi
+      apply hconnected
+      have hne : I ≠ Set.univ := by
+        intro h
+        apply hi
+        rw [h]
+        exact Set.mem_univ i
+      exact ⟨I, hI, hne, hcut⟩
+    intro i
+    have hi : i ∈ I := hIu ▸ Set.mem_univ i
+    exact hi
+  have hkerB :
+      LinearMap.ker (graphBoundary A) =
+        Submodule.span ℤ ({(1 : vertexLattice n)} : Set (vertexLattice n)) := by
+    apply le_antisymm
+    · intro x hx
+      have hxedge (e : positiveEdge A) :
+          x (edgeSource e) = x (edgeTarget e) := by
+        have he := congrFun (LinearMap.mem_ker.mp hx) e
+        rw [graphBoundary_apply] at he
+        exact sub_eq_zero.mp he
+      have heq : ∀ {i j : Fin n}, Relation.EqvGen edgeRel i j → x i = x j := by
+        intro i j hpath
+        induction hpath with
+        | refl i => rfl
+        | rel i j h =>
+            rcases h with ⟨e, hforward | hreverse⟩
+            · simpa [hforward.1, hforward.2] using hxedge e
+            · simpa [hreverse.1, hreverse.2] using (hxedge e).symm
+        | symm i j h ih => exact ih.symm
+        | trans i j k h₁ h₂ ih₁ ih₂ => exact ih₁.trans ih₂
+      have hconst : x = x root • (1 : vertexLattice n) := by
+        funext i
+        simpa using (heq (hconn i)).symm
+      rw [hconst]
+      exact Submodule.smul_mem _ _ (Submodule.subset_span
+        (Set.mem_singleton (1 : vertexLattice n)))
+    · rw [Submodule.span_le]
+      intro v hv
+      have hv' : v = (1 : vertexLattice n) := by simpa using hv
+      rw [hv']
+      apply LinearMap.mem_ker.mpr
+      funext e
+      rw [graphBoundary_apply]
+      simp
+  let fone : ℤ →ₗ[ℤ] vertexLattice n :=
+    { toFun := fun z => z • (1 : vertexLattice n)
+      map_add' := by intro x y; simp [add_smul]
+      map_smul' := by intro a x; simp }
+  have hfone : Function.Injective fone := by
+    intro x y hxy
+    have hcoord := congrFun hxy root
+    simpa [fone] using hcoord
+  have hspan : LinearMap.range fone =
+      Submodule.span ℤ ({(1 : vertexLattice n)} : Set (vertexLattice n)) := by
+    apply le_antisymm
+    · rintro _ ⟨z, rfl⟩
+      exact Submodule.smul_mem _ _ (Submodule.subset_span
+        (Set.mem_singleton (1 : vertexLattice n)))
+    · rw [Submodule.span_le]
+      intro v hv
+      have hv' : v = (1 : vertexLattice n) := by simpa using hv
+      rw [hv']
+      exact LinearMap.mem_range_self fone 1
+  have hkerfin : Module.finrank ℤ (LinearMap.ker (graphBoundary A)) = 1 := by
+    rw [hkerB, ← hspan, LinearMap.finrank_range_of_inj hfone]
+    simp
+  have hdimB := (LinearMap.ker (graphBoundary A)).finrank_quotient_add_finrank
+  rw [(graphBoundary A).quotKerEquivRange.finrank_eq] at hdimB
+  simp [hkerfin] at hdimB
+  obtain ⟨p, q, hp, hkerp, hex, hsur, hq⟩ :=
+    orthogonal_projection_sequence (edgeLattice A) (graphEdgePairing A)
+      (graphEdgePairing_positive_definite A)
+      (LinearMap.range (graphBoundary A))
+      (graph_image_quotient_torsion_free A)
+  have hP : graphEdgeWeightProduct A ≠ 0 := by
+    unfold graphEdgeWeightProduct
+    apply Finset.prod_ne_zero_iff.mpr
+    intro e he
+    exact ne_of_gt e.2.2
+  have hT : Module.IsTorsion ℤ
+      (latticeDiscriminantQuotient (graphEdgePairing A)) := by
+    intro x
+    refine ⟨⟨graphEdgeWeightProduct A,
+      mem_nonZeroDivisors_of_ne_zero hP⟩, ?_⟩
+    exact graph_discriminant_product_annihilates A x
+  have hTc : Module.IsTorsion ℤ (moduleCokernel p) := by
+    intro z
+    obtain ⟨x, hx⟩ := hq z
+    obtain ⟨a, ha⟩ := hT (x := x)
+    refine ⟨a, ?_⟩
+    calc
+      a • z = a • q x := by rw [hx]
+      _ = q (a • x) := (q.map_smul (a : ℤ) x).symm
+      _ = 0 := by rw [ha, q.map_zero]
+  have hTcfin : Module.finrank ℤ (moduleCokernel p) = 0 :=
+    Module.IsTorsion.finrank_eq_zero hTc
+  have hdimP := (LinearMap.range p).finrank_quotient_add_finrank
+  rw [hTcfin, zero_add] at hdimP
+  have hdimKp := (LinearMap.ker p).finrank_quotient_add_finrank
+  rw [p.quotKerEquivRange.finrank_eq] at hdimKp
+  have hdual : Module.finrank ℤ
+      (Module.Dual ℤ ↥((graphEdgePairing A).orthogonal (LinearMap.range (graphBoundary A)))) =
+      Module.finrank ℤ ↥((graphEdgePairing A).orthogonal (LinearMap.range (graphBoundary A))) := by
+    apply Nat.cast_injective (R := Cardinal)
+    change (Module.finrank ℤ
+        (Module.Dual ℤ ↥((graphEdgePairing A).orthogonal
+          (LinearMap.range (graphBoundary A)))) : Cardinal) =
+      (Module.finrank ℤ ↥((graphEdgePairing A).orthogonal
+        (LinearMap.range (graphBoundary A))) : Cardinal)
+    rw [Module.finrank_eq_rank, Submodule.finrank_eq_rank]
+    simpa using (Module.Basis.dual_rank_eq
+      (Module.Free.chooseBasis ℤ ↥((graphEdgePairing A).orthogonal
+        (LinearMap.range (graphBoundary A)))))
+  have hkerfinp : Module.finrank ℤ ↥(LinearMap.ker p) =
+      Module.finrank ℤ ↥(LinearMap.range (graphBoundary A)) :=
+    congrArg (fun S : Submodule ℤ (edgeLattice A) => Module.finrank ℤ S) hkerp.symm
+  have horthfin : Module.finrank ℤ
+      ↥((graphEdgePairing A).orthogonal (LinearMap.range (graphBoundary A))) =
+      Module.finrank ℤ ↥(LinearMap.ker (graphCoboundary A)) :=
+    congrArg (fun S : Submodule ℤ (edgeLattice A) => Module.finrank ℤ S)
+      (graph_coboundary_ker_eq_orthogonal A).symm
+  rw [hdimP, hdual] at hdimKp
+  rw [horthfin, hkerfinp] at hdimKp
+  simp [edgeLattice, positiveOffDiagonalEdgeCount] at hdimKp
+  let b : ℕ := Module.finrank ℤ ↥(LinearMap.ker (graphCoboundary A))
+  let c : ℕ := Module.finrank ℤ ↥(LinearMap.range (graphBoundary A))
+  let d : ℕ := Fintype.card (positiveEdge A)
+  have hB' : c + 1 = n := by
+    simpa [c] using hdimB
+  have hK' : b + c = d := by
+    simpa [b, c, d] using hdimKp
+  have harith : b = d + 1 - n := by
+    omega
+  simpa [b, d, positiveOffDiagonalEdgeCount] using harith
 
 /-!
 Coprimality of the nonzero matrix and vector entries used in the integer

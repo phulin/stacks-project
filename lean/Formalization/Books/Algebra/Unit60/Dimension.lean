@@ -1,5 +1,4 @@
 import Formalization.Books.Algebra.Unit59.NoetherianLocalRings
-import Formalization.Books.Algebra.Unit53.ArtinianRings
 import Mathlib.RingTheory.Ideal.KrullsHeightTheorem
 import Mathlib.RingTheory.KrullDimension.Zero
 import Mathlib.RingTheory.RegularLocalRing.Defs

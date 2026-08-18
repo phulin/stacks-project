@@ -259,7 +259,7 @@ theorem irreducible_numerical_type (T : NumericalType) (genusValue : ℤ)
     intro U hUn j
     apply Fin.ext
     have hj : j.val = 0 := by omega
-    simpa [firstIndex, hj]
+    simp [firstIndex, hj]
   have hdiag_one : ∀ (U : NumericalType), U.n = 1 →
       ∀ j : Fin U.n, U.a j j = 0 := by
     intro U hUn j
@@ -1387,7 +1387,7 @@ theorem contract_minus_one_index (T : NumericalType) (i : Fin T.n)
           exact ⟨e.symm k, hkI, by simp [k]⟩
         have hzero := (hcross_data I hcross hj hk).1
         simpa [k] using hzero
-    · push_neg at hIzero
+    · push Not at hIzero
       obtain ⟨j₀, hj₀, hbj₀⟩ := hIzero
       have hcompzero : ∀ k, k ∉ I → T.a (e k).1 i = 0 := by
         intro k hk
@@ -2271,7 +2271,7 @@ theorem minimal_genus_ge_topological_genus (T : NumericalType) (genusValue : ℤ
         (Fintype.card (Formalization.Books.Models.Unit02.positiveEdge T.a) : ℚ)) ≤
       ∑ i : Fin T.n, ((T.g i : ℚ) - 1 + (k i : ℚ) / 2) := by
     have hg_sum : (-(T.n : ℚ)) ≤ ∑ i : Fin T.n, ((T.g i : ℚ) - 1) := by
-      simp only [Finset.sum_sub_distrib, Finset.sum_const_zero]
+      simp only [Finset.sum_sub_distrib]
       have := Finset.sum_nonneg (fun i hi => T.g_nonneg i)
       push_cast at this
       linarith

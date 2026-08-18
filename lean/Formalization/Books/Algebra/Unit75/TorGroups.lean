@@ -309,20 +309,77 @@ theorem torMapFirst_comp {R : Type u} [CommRing R]
     (φ : M₁ ⟶ M₂) (ψ : M₂ ⟶ M₃) (i : ℕ) :
     torMapFirst (N := N) (φ ≫ ψ) i =
       torMapFirst (N := N) φ i ≫ torMapFirst (N := N) ψ i := by
-  sorry
+  unfold torMapFirst
+  dsimp
+  let F₁ : FreeResolution R M₁ := Classical.choice (exists_free_resolution M₁)
+  let F₂ : FreeResolution R M₂ := Classical.choice (exists_free_resolution M₂)
+  let F₃ : FreeResolution R M₃ := Classical.choice (exists_free_resolution M₃)
+  let α : ResolutionMap F₁.resolution F₂.resolution φ :=
+    Classical.choice (resolution_map_exists F₁ F₂.resolution φ)
+  let β : ResolutionMap F₂.resolution F₃.resolution ψ :=
+    Classical.choice (resolution_map_exists F₂ F₃.resolution ψ)
+  let γ : ResolutionMap F₁.resolution F₃.resolution (φ ≫ ψ) :=
+    Classical.choice (resolution_map_exists F₁ F₃.resolution (φ ≫ ψ))
+  change resolutionTorMap F₁ F₃ (φ ≫ ψ) γ N i =
+    resolutionTorMap F₁ F₂ φ α N i ≫ resolutionTorMap F₂ F₃ ψ β N i
+  let δ : ResolutionMap F₁.resolution F₃.resolution (φ ≫ ψ) :=
+    { hom := α.hom ≫ β.hom
+      hom_f_zero_comp_augmentation := by
+        change (α.hom.f 0 ≫ β.hom.f 0) ≫ F₃.resolution.augmentation = _
+        rw [Category.assoc, β.hom_f_zero_comp_augmentation,
+          ← Category.assoc, α.hom_f_zero_comp_augmentation]
+        simp }
+  rw [resolutionTorMap_independent F₁ F₃ (φ ≫ ψ) γ δ]
+  have hmap : tensorComplexMap δ.hom N =
+      tensorComplexMap α.hom N ≫ tensorComplexMap β.hom N := by
+    apply HomologicalComplex.hom_ext
+    intro p
+    apply ModuleCat.hom_ext
+    simp [tensorComplexMap, δ, ModuleCat.hom_comp, LinearMap.rTensor_comp]
+    rfl
+  unfold resolutionTorMap
+  change HomologicalComplex.homologyMap (tensorComplexMap δ.hom N) i =
+    HomologicalComplex.homologyMap (tensorComplexMap α.hom N) i ≫
+      HomologicalComplex.homologyMap (tensorComplexMap β.hom N) i
+  rw [hmap, HomologicalComplex.homologyMap_comp]
 
 /-- The second Tor construction is functorial. -/
 theorem torMapSecond_id {R : Type u} [CommRing R]
     {M N : ModuleCat.{u} R} (i : ℕ) :
     torMapSecond M N N (𝟙 N) i = 𝟙 (Tor M N i) := by
-  sorry
+  unfold torMapSecond
+  dsimp
+  rw [show tensorComplexMapRight (Classical.choice (exists_free_resolution M)).complex (𝟙 N) =
+      𝟙 (tensorComplex (Classical.choice (exists_free_resolution M)).complex N) by
+    apply HomologicalComplex.hom_ext
+    intro p
+    apply ModuleCat.hom_ext
+    simp [tensorComplexMapRight, LinearMap.lTensor_id]
+    rfl]
+  exact HomologicalComplex.homologyMap_id _ _
 
 theorem torMapSecond_comp {R : Type u} [CommRing R]
     {M N₁ N₂ N₃ : ModuleCat.{u} R}
     (φ : N₁ ⟶ N₂) (ψ : N₂ ⟶ N₃) (i : ℕ) :
     torMapSecond M N₁ N₃ (φ ≫ ψ) i =
       torMapSecond M N₁ N₂ φ i ≫ torMapSecond M N₂ N₃ ψ i := by
-  sorry
+  unfold torMapSecond
+  dsimp
+  change HomologicalComplex.homologyMap
+      (tensorComplexMapRight (Classical.choice (exists_free_resolution M)).complex (φ ≫ ψ)) i =
+    HomologicalComplex.homologyMap
+        (tensorComplexMapRight (Classical.choice (exists_free_resolution M)).complex φ) i ≫
+      HomologicalComplex.homologyMap
+        (tensorComplexMapRight (Classical.choice (exists_free_resolution M)).complex ψ) i
+  have hmap : tensorComplexMapRight (Classical.choice (exists_free_resolution M)).complex (φ ≫ ψ) =
+      tensorComplexMapRight (Classical.choice (exists_free_resolution M)).complex φ ≫
+        tensorComplexMapRight (Classical.choice (exists_free_resolution M)).complex ψ := by
+    apply HomologicalComplex.hom_ext
+    intro p
+    apply ModuleCat.hom_ext
+    simp [tensorComplexMapRight, ModuleCat.hom_comp, LinearMap.lTensor_comp]
+    rfl
+  rw [hmap, HomologicalComplex.homologyMap_comp]
 
 /-- The two Tor-variable maps form the commutative square from the source. -/
 theorem torMap_commute {R : Type u} [CommRing R]
@@ -330,7 +387,36 @@ theorem torMap_commute {R : Type u} [CommRing R]
     (φ : M₁ ⟶ M₂) (ψ : N₁ ⟶ N₂) (i : ℕ) :
     torMapFirst (N := N₁) φ i ≫ torMapSecond M₂ N₁ N₂ ψ i =
       torMapSecond M₁ N₁ N₂ ψ i ≫ torMapFirst (N := N₂) φ i := by
-  sorry
+  unfold torMapFirst torMapSecond
+  dsimp
+  let F₁ : FreeResolution R M₁ := Classical.choice (exists_free_resolution M₁)
+  let F₂ : FreeResolution R M₂ := Classical.choice (exists_free_resolution M₂)
+  let α : ResolutionMap F₁.resolution F₂.resolution φ :=
+    Classical.choice (resolution_map_exists F₁ F₂.resolution φ)
+  change resolutionTorMap F₁ F₂ φ α N₁ i ≫
+      chainHomologyMap (tensorComplexMapRight F₂.complex ψ) i =
+    chainHomologyMap (tensorComplexMapRight F₁.complex ψ) i ≫
+      resolutionTorMap F₁ F₂ φ α N₂ i
+  have hmap :
+      tensorComplexMap α.hom N₁ ≫ tensorComplexMapRight F₂.complex ψ =
+        tensorComplexMapRight F₁.complex ψ ≫ tensorComplexMap α.hom N₂ := by
+    apply HomologicalComplex.hom_ext
+    intro p
+    apply ModuleCat.hom_ext
+    simp [tensorComplexMap, tensorComplexMapRight]
+    apply TensorProduct.ext'
+    intro x y
+    rfl
+  unfold resolutionTorMap
+  change HomologicalComplex.homologyMap (tensorComplexMap α.hom N₁) i ≫
+      HomologicalComplex.homologyMap (tensorComplexMapRight F₂.complex ψ) i =
+    HomologicalComplex.homologyMap (tensorComplexMapRight F₁.complex ψ) i ≫
+      HomologicalComplex.homologyMap (tensorComplexMap α.hom N₂) i
+  rw [← HomologicalComplex.homologyMap_comp
+        (tensorComplexMap α.hom N₁) (tensorComplexMapRight F₂.complex ψ) i,
+      ← HomologicalComplex.homologyMap_comp
+        (tensorComplexMapRight F₁.complex ψ) (tensorComplexMap α.hom N₂) i,
+      hmap]
 
 /-! ## The Tor long exact sequence -/
 

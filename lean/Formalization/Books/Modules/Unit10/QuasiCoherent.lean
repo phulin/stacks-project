@@ -89,8 +89,8 @@ theorem locallyPresented_has_cokernel_sequence
   rcases hF x with ⟨U, hxU, hU⟩
   rcases hU with ⟨I, J, φ, e⟩
   exact ⟨U, hxU, I, J, φ, e,
-    ⟨Formalization.Books.Modules.Unit03.sheafModuleCokernel_universal
-      (ringedOpenSubspace X U).structureSheaf φ⟩⟩
+    Formalization.Books.Modules.Unit03.sheafModuleCokernel_universal
+      (ringedOpenSubspace X U).structureSheaf φ⟩
 
 /-- The displayed presentation is exact after identifying its cokernel with
 the restricted sheaf. -/
@@ -166,7 +166,11 @@ noncomputable def constantModulePresheaf
       ((constantRingPresheaf X R).map (𝟙 _)).hom
       (congrArg RingCat.Hom.hom ((constantRingPresheaf X R).map_id _))).inv.app M
   map_id := by simp
-  map_comp := by simp
+  map_comp := by
+    intro X₁ Y Z f g
+    apply ModuleCat.hom_ext
+    intro m
+    rfl
 
 /-- The map from a constant ring presheaf to the structure sheaf, induced by
 a map into global sections. -/
@@ -182,7 +186,10 @@ noncomputable def globalSectionsPresheafMap
   · intro U V f
     apply RingCat.hom_ext
     ext r
-    simp [constantRingPresheaf]
+    simp only [constantRingPresheaf]
+    rw [← X.structureSheaf.obj.map_comp]
+    congr 1
+    apply Subsingleton.elim
 
 /-- The presheaf `U ↦ O_X(U) ⊗_R M`. -/
 noncomputable abbrev associatedSheafPresheaf
@@ -249,7 +256,7 @@ structure ModulePresentation {R : Type v} [Ring R] (M : ModuleCat R) where
 abbrev ModulePresentation.matrixEntry {R : Type v} [Ring R]
     {M : ModuleCat R} (P : ModulePresentation M)
     (j : P.relations) (i : P.generators) : R :=
-  (P.map (ModuleCat.freeMk j)) i
+  ((P.map.hom (ModuleCat.freeMk j) : (ModuleCat.free R).obj P.generators) i)
 
 /-- A one-point ringed space with structure ring `R`. -/
 noncomputable def onePointRingedSpace (R : Type v) [Ring R] : RingedSpace.{v} :=
@@ -263,7 +270,8 @@ noncomputable def onePointRingedSpace (R : Type v) [Ring R] : RingedSpace.{v} :=
 noncomputable def onePointContinuousMap
     {X : RingedSpace.{v}} {R : Type v} [Ring R] :
     X.carrier ⟶ (onePointRingedSpace R).carrier :=
-  TopCat.ofHom (ContinuousMap.const X.carrier (default : ULift.{v} PUnit))
+  TopCat.ofHom
+    (ContinuousMap.const X.carrier (default : (onePointRingedSpace R).carrier))
 
 /-- The one-point morphism whose map on structure sheaves is induced by `α`. -/
 noncomputable def onePointRingedSpaceHom
@@ -393,11 +401,11 @@ noncomputable def associatedSheafQCohFunctor
   map f := ⟨(associatedSheafFunctor α).map f⟩
   map_id := by
     intro M
-    apply ObjectProperty.FullSubcategory.hom_ext
+    apply ObjectProperty.hom_ext
     exact (associatedSheafFunctor α).map_id M
   map_comp := by
     intro M N P f g
-    apply ObjectProperty.FullSubcategory.hom_ext
+    apply ObjectProperty.hom_ext
     exact (associatedSheafFunctor α).map_comp f g
 
 theorem associatedSheafFunctor_preserves_colimits

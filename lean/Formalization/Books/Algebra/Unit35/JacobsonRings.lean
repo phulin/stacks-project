@@ -1166,7 +1166,8 @@ theorem localizationAway_isJacobson_and_maximal_correspondence
       Nonempty
         ({p : Ideal (Localization.Away f) // p.IsMaximal} ≃o
           {p : Ideal R // p.IsMaximal ∧ f ∉ p}) := by
-  sorry
+  exact ⟨isJacobsonRing_localization f,
+    ⟨maximalIdealLocalizationOrderIso f⟩⟩
 
 def integerTwoIdeal : Ideal ℤ :=
   Ideal.span ({(2 : ℤ)} : Set ℤ)

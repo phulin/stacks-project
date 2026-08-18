@@ -48,14 +48,61 @@ def factorsThroughProjectiveSubmodule (M N : ModuleCat.{u} R) :
 theorem factorsThroughProjective_iff_factorsThroughFree
     {M N : ModuleCat.{u} R} (φ : M ⟶ N) :
     FactorsThroughProjective φ ↔ FactorsThroughFree φ := by
-  sorry
+  constructor
+  · rintro ⟨P, hP, f, g, h⟩
+    obtain ⟨s, hs⟩ := hP.out
+    refine ⟨ModuleCat.of R (P →₀ R), inferInstance,
+      ModuleCat.ofHom (s.comp f.hom),
+      ModuleCat.ofHom (g.hom.comp (Finsupp.linearCombination R id)), ?_⟩
+    apply ModuleCat.hom_ext
+    ext x
+    change g.hom (Finsupp.linearCombination R id (s (f.hom x))) = φ.hom x
+    rw [hs (f.hom x)]
+    simpa only [ModuleCat.comp_apply] using congrArg (fun k : M ⟶ N => k x) h
+  · rintro ⟨P, hP, f, g, h⟩
+    exact ⟨P, inferInstance, f, g, h⟩
 
 /-- The maps factoring through projectives are exactly the carrier of the
 submodule introduced above. -/
 theorem mem_factorsThroughProjectiveSubmodule_iff
     {M N : ModuleCat.{u} R} (φ : M ⟶ N) :
     φ ∈ factorsThroughProjectiveSubmodule M N ↔ FactorsThroughProjective φ := by
-  sorry
+  constructor
+  · intro hφ
+    change φ ∈ Submodule.span R {φ : M ⟶ N | FactorsThroughProjective φ} at hφ
+    refine Submodule.span_induction
+      (p := fun x _ => FactorsThroughProjective x) ?_ ?_ ?_ ?_ hφ
+    · intro x hx
+      exact hx
+    · exact ⟨ModuleCat.of R R, inferInstance, 0, 0, by simp⟩
+    · intro φ₁ φ₂ _ _ h₁ h₂
+      rcases h₁ with ⟨P₁, hP₁, f₁, g₁, e₁⟩
+      rcases h₂ with ⟨P₂, hP₂, f₂, g₂, e₂⟩
+      have hprod : Module.Projective R (P₁ × P₂) := by
+        refine Module.Projective.of_lifting_property'' fun q hq => ?_
+        rcases Module.projective_lifting_property (P := P₁) (h := hP₁) q
+            (LinearMap.inl R P₁ P₂) hq with ⟨u₁, hu₁⟩
+        rcases Module.projective_lifting_property (P := P₂) (h := hP₂) q
+            (LinearMap.inr R P₁ P₂) hq with ⟨u₂, hu₂⟩
+        exact ⟨LinearMap.coprod u₁ u₂, by
+          rw [LinearMap.comp_coprod, hu₁, hu₂, LinearMap.coprod_inl_inr]⟩
+      refine ⟨ModuleCat.of R (P₁ × P₂), hprod,
+        ModuleCat.ofHom (LinearMap.prod f₁.hom f₂.hom),
+        ModuleCat.ofHom (LinearMap.coprod g₁.hom g₂.hom), ?_⟩
+      apply ModuleCat.hom_ext
+      ext x
+      change g₁.hom (f₁.hom x) + g₂.hom (f₂.hom x) = (φ₁ + φ₂).hom x
+      rw [show g₁.hom (f₁.hom x) = φ₁.hom x by
+        simpa only [ModuleCat.comp_apply] using congrArg (fun k : M ⟶ N => k x) e₁]
+      rw [show g₂.hom (f₂.hom x) = φ₂.hom x by
+        simpa only [ModuleCat.comp_apply] using congrArg (fun k : M ⟶ N => k x) e₂]
+      rfl
+    · intro a φ _ hφ
+      rcases hφ with ⟨P, hP, f, g, e⟩
+      refine ⟨P, hP, a • f, g, ?_⟩
+      simp [e]
+  · intro hφ
+    exact Submodule.subset_span hφ
 
 /-- Factoring through a projective module is stable under pre- and
 postcomposition. -/
@@ -63,14 +110,18 @@ theorem factorsThroughProjective_comp
     {M M' N N' : ModuleCat.{u} R} {φ : M ⟶ N}
     (hφ : FactorsThroughProjective φ) (ψ : M' ⟶ M) (ξ : N ⟶ N') :
     FactorsThroughProjective (ψ ≫ φ ≫ ξ) := by
-  sorry
+  rcases hφ with ⟨P, hP, f, g, h⟩
+  refine ⟨P, hP, ψ ≫ f, g ≫ ξ, ?_⟩
+  simpa only [Category.assoc] using congrArg (fun k : M ⟶ N => ψ ≫ k ≫ ξ) h
 
 /-- Factoring through a free module is stable under pre- and postcomposition. -/
 theorem factorsThroughFree_comp
     {M M' N N' : ModuleCat.{u} R} {φ : M ⟶ N}
     (hφ : FactorsThroughFree φ) (ψ : M' ⟶ M) (ξ : N ⟶ N') :
     FactorsThroughFree (ψ ≫ φ ≫ ξ) := by
-  sorry
+  rcases hφ with ⟨P, hP, f, g, h⟩
+  refine ⟨P, hP, ψ ≫ f, g ≫ ξ, ?_⟩
+  simpa only [Category.assoc] using congrArg (fun k : M ⟶ N => ψ ≫ k ≫ ξ) h
 
 /-- A module is projective exactly when its identity map factors through a
 projective module. -/

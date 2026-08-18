@@ -179,11 +179,7 @@ theorem integralClosure_localization
     [IsLocalization (Algebra.algebraMapSubmonoid S M) Sf]
     [Algebra (integralClosure R S) (integralClosure Rf Sf)]
     [IsScalarTower (integralClosure R S) (integralClosure Rf Sf) Sf]
-    [IsScalarTower R (integralClosure R S) (integralClosure Rf Sf)]
-    (hcompat : ∀ x : integralClosure R S,
-      algebraMap (integralClosure Rf Sf) Sf
-          ((algebraMap (integralClosure R S) (integralClosure Rf Sf)) x) =
-        algebraMap S Sf x.1) :
+    [IsScalarTower R (integralClosure R S) (integralClosure Rf Sf)] :
     IsLocalization
       (Algebra.algebraMapSubmonoid (integralClosure R S) M)
       (integralClosure Rf Sf) := by

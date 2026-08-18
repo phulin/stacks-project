@@ -46,6 +46,7 @@ theorem review_minimal_polynomial_unique
     (hP_monic : P.Monic) (hP_irreducible : Irreducible P)
     (hP_root : Polynomial.aeval α P = 0) :
     P = minpoly k α := by
+  have _ := hα
   exact minpoly.eq_of_irreducible_of_monic hP_irreducible hP_root hP_monic
 
 /- The derivative criterion and the distinct-root formulation are already
@@ -130,7 +131,7 @@ theorem review_inseparable_frobenius_contraction
   obtain ⟨p, e, Q, hp_pos, hchar, hQsep, hQirr, hPQ⟩ :=
     Formalization.Books.Fields.Unit12.irreducible_polynomial_derivative_zero_factorization
       hPirr hderiv
-  letI : CharP k p := hchar
+  let : CharP k p := hchar
   have hp : p.Prime :=
     (CharP.char_is_prime_or_zero k p).resolve_right (Nat.ne_of_gt hp_pos)
   refine ⟨p, e, Q, hp, hchar, hQsep, hQirr, hPQ, ?_, ?_⟩
@@ -203,8 +204,8 @@ private theorem pth_root_of_separable_polynomial_aux
     (hcoeff : ∀ i : ℕ, ∃ b : K, P.coeff i = b ^ p) :
     ∃ β : L, β ^ p = α := by
   classical
-  letI : Fact p.Prime := ⟨hp⟩
-  letI : ExpChar K p := ExpChar.prime hp
+  let : Fact p.Prime := ⟨hp⟩
+  let : ExpChar K p := ExpChar.prime hp
   let f : K →+* K := frobenius K p
   have hPlifts : P ∈ Polynomial.lifts f := by
     rw [Polynomial.lifts_iff_coeff_lifts]
@@ -215,8 +216,8 @@ private theorem pth_root_of_separable_polynomial_aux
   have hQsep : Q.Separable := by
     apply (Polynomial.separable_map f).1
     simpa [hQmap] using hseparable
-  letI : CharP L p := charP_of_injective_algebraMap (algebraMap K L).injective p
-  letI : ExpChar L p := ExpChar.prime hp
+  let : CharP L p := charP_of_injective_algebraMap (algebraMap K L).injective p
+  let : ExpChar L p := ExpChar.prime hp
   by_contra hno
   have hno_root : ∀ b : L, b ^ p ≠ α := by
     simpa only [not_exists] using hno

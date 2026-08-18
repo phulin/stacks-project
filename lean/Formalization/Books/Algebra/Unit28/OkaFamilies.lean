@@ -4,6 +4,7 @@ import Mathlib.Algebra.Homology.ShortComplex.ModuleCat
 import Mathlib.Algebra.Homology.ShortComplex.ShortExact
 import Mathlib.CategoryTheory.ObjectProperty.Extensions
 import Mathlib.RingTheory.MvPolynomial
+import Mathlib.RingTheory.MvPolynomial.Ideal
 import Mathlib.RingTheory.Ideal.Oka
 import Mathlib.RingTheory.Ideal.Quotient.Operations
 import Mathlib.RingTheory.Noetherian.OfPrime
@@ -548,6 +549,188 @@ def okaCounterexampleZIdeal (k T : Type u) [Field k] :
     Ideal (okaCounterexampleRing k T) :=
   Ideal.span (Set.range (fun p : T × ℕ => okaCounterexampleZ k T p.1 p.2))
 
+private def okaCounterexampleEvalZero {k T : Type u} [Field k] :
+    okaCounterexampleRing k T →+* k :=
+  Ideal.Quotient.lift (okaCounterexampleRelationIdeal k T)
+    (MvPolynomial.constantCoeff : MvPolynomial (okaCounterexampleVariables T) k →+* k) (by
+      have hker : okaCounterexampleRelationIdeal k T ≤
+          RingHom.ker MvPolynomial.constantCoeff := by
+        apply Ideal.span_le.2
+        intro f hf
+        simp only [okaCounterexampleRelationSet, Set.mem_union, Set.mem_singleton_iff,
+          Set.mem_range] at hf
+        rcases hf with (((⟨rfl⟩ | ⟨n, rfl⟩) | ⟨p, rfl⟩) | ⟨p, rfl⟩)
+        all_goals simp
+      exact fun f hf => hker hf)
+
+private theorem okaCounterexampleEvalZero_mk {k T : Type u} [Field k]
+    (f : MvPolynomial (okaCounterexampleVariables T) k) :
+    okaCounterexampleEvalZero (Ideal.Quotient.mk
+      (okaCounterexampleRelationIdeal k T) f) = MvPolynomial.constantCoeff f := by
+  rfl
+
+private theorem okaCounterexampleMaximalIdeal_le_ker_evalZero {k T : Type u} [Field k] :
+    okaCounterexampleMaximalIdeal k T ≤
+      RingHom.ker (okaCounterexampleEvalZero (k := k) (T := T)) := by
+  apply Ideal.span_le.2
+  rintro _ ⟨n, rfl⟩
+  change okaCounterexampleEvalZero (okaCounterexampleX k T n) = 0
+  change MvPolynomial.constantCoeff
+      (MvPolynomial.X (Sum.inl (n + 1)) :
+        MvPolynomial (okaCounterexampleVariables T) k) = 0
+  simp
+
+private theorem okaCounterexample_zero_constant_mem_vars {k T : Type u} [Field k]
+    {f : MvPolynomial (okaCounterexampleVariables T) k}
+    (hf : MvPolynomial.constantCoeff f = 0) :
+    f ∈ Ideal.span (Set.range (MvPolynomial.X : okaCounterexampleVariables T →
+      MvPolynomial (okaCounterexampleVariables T) k)) := by
+  rw [show Set.range (MvPolynomial.X : okaCounterexampleVariables T →
+      MvPolynomial (okaCounterexampleVariables T) k) =
+      MvPolynomial.X '' (Set.univ : Set (okaCounterexampleVariables T)) by
+        rw [Set.image_univ]]
+  rw [MvPolynomial.mem_ideal_span_X_image]
+  intro m hm
+  have hcoeff : MvPolynomial.coeff m f ≠ 0 :=
+    MvPolynomial.mem_support_iff.mp hm
+  by_cases hm0 : m = 0
+  · subst m
+    exact False.elim (hcoeff (by simpa [MvPolynomial.constantCoeff_eq] using hf))
+  · obtain ⟨i, hi⟩ : ∃ i, m i ≠ 0 := by
+      by_contra h
+      push_neg at h
+      exact hm0 (Finsupp.ext h)
+    exact ⟨i, Set.mem_univ _, hi⟩
+
+private theorem okaCounterexample_variable_mem_maximal {k T : Type u} [Field k]
+    (i : okaCounterexampleVariables T) :
+    Ideal.Quotient.mk (okaCounterexampleRelationIdeal k T)
+        (MvPolynomial.X i) ∈ okaCounterexampleMaximalIdeal k T := by
+  let q := Ideal.Quotient.mk (okaCounterexampleRelationIdeal k T)
+  cases i with
+  | inl n =>
+      cases n with
+      | zero =>
+          have hi : (MvPolynomial.X (Sum.inl 0) :
+              MvPolynomial (okaCounterexampleVariables T) k) ∈
+              okaCounterexampleRelationIdeal k T := by
+            apply Ideal.subset_span
+            simp [okaCounterexampleRelationSet]
+          exact (Ideal.Quotient.eq_zero_iff_mem.mpr hi) ▸
+            (okaCounterexampleMaximalIdeal k T).zero_mem
+      | succ n =>
+          change okaCounterexampleX k T n ∈ okaCounterexampleMaximalIdeal k T
+          exact Ideal.subset_span ⟨n, rfl⟩
+  | inr p =>
+      have hi :
+          (MvPolynomial.X (Sum.inl (p.2 + 1)) :
+              MvPolynomial (okaCounterexampleVariables T) k) *
+              MvPolynomial.X (Sum.inr (p.1, p.2 + 1)) -
+              MvPolynomial.X (Sum.inr p) ∈
+            okaCounterexampleRelationIdeal k T := by
+        apply Ideal.subset_span
+        simp [okaCounterexampleRelationSet]
+      have hq := Ideal.Quotient.eq_zero_iff_mem.mpr hi
+      change q (MvPolynomial.X (Sum.inl (p.2 + 1)) *
+          MvPolynomial.X (Sum.inr (p.1, p.2 + 1)) -
+          MvPolynomial.X (Sum.inr p)) = 0 at hq
+      rw [map_sub, map_mul] at hq
+      have hq' : q (MvPolynomial.X (Sum.inl (p.2 + 1))) *
+          q (MvPolynomial.X (Sum.inr (p.1, p.2 + 1))) -
+          q (MvPolynomial.X (Sum.inr p)) = 0 := by simpa using hq
+      have hEq : q (MvPolynomial.X (Sum.inr p)) =
+          q (MvPolynomial.X (Sum.inl (p.2 + 1))) *
+            q (MvPolynomial.X (Sum.inr (p.1, p.2 + 1))) :=
+        (sub_eq_zero.mp hq').symm
+      rw [hEq]
+      have hx : q (MvPolynomial.X (Sum.inl (p.2 + 1))) ∈
+          okaCounterexampleMaximalIdeal k T := by
+        change okaCounterexampleX k T p.2 ∈ okaCounterexampleMaximalIdeal k T
+        exact Ideal.subset_span ⟨p.2, rfl⟩
+      exact (okaCounterexampleMaximalIdeal k T).mul_mem_right _ hx
+
+private theorem okaCounterexample_zero_constant_mk_mem_maximal
+    {k T : Type u} [Field k] (f : MvPolynomial (okaCounterexampleVariables T) k)
+    (hf : MvPolynomial.constantCoeff f = 0) :
+    Ideal.Quotient.mk (okaCounterexampleRelationIdeal k T) f ∈
+      okaCounterexampleMaximalIdeal k T := by
+  have hfp := okaCounterexample_zero_constant_mem_vars (k := k) (T := T) hf
+  have hmap : Ideal.map (Ideal.Quotient.mk (okaCounterexampleRelationIdeal k T))
+      (Ideal.span (Set.range (MvPolynomial.X : okaCounterexampleVariables T →
+        MvPolynomial (okaCounterexampleVariables T) k))) ≤
+      okaCounterexampleMaximalIdeal k T := by
+    rw [Ideal.map_le_iff_le_comap]
+    apply Ideal.span_le.2
+    rintro _ ⟨i, rfl⟩
+    change Ideal.Quotient.mk (okaCounterexampleRelationIdeal k T)
+        (MvPolynomial.X i) ∈ okaCounterexampleMaximalIdeal k T
+    exact okaCounterexample_variable_mem_maximal i
+  exact hmap (Ideal.mem_map_of_mem _ hfp)
+
+private theorem okaCounterexampleEvalZero_ker_eq_maximal {k T : Type u} [Field k] :
+    RingHom.ker (okaCounterexampleEvalZero (k := k) (T := T)) =
+      okaCounterexampleMaximalIdeal k T := by
+  apply le_antisymm
+  · intro a ha
+    obtain ⟨f, rfl⟩ := Ideal.Quotient.mk_surjective a
+    apply okaCounterexample_zero_constant_mk_mem_maximal
+    change okaCounterexampleEvalZero
+        (Ideal.Quotient.mk (okaCounterexampleRelationIdeal k T) f) = 0 at ha
+    simpa [okaCounterexampleEvalZero_mk] using ha
+  · exact okaCounterexampleMaximalIdeal_le_ker_evalZero
+
+private theorem okaCounterexampleEvalZero_algebraMap {k T : Type u} [Field k]
+    (c : k) :
+    okaCounterexampleEvalZero (algebraMap k (okaCounterexampleRing k T) c) = c := by
+  change MvPolynomial.constantCoeff (MvPolynomial.C c) = c
+  simp
+
+private theorem okaCounterexampleMaximalIdeal_isMaximal {k T : Type u} [Field k] :
+    (okaCounterexampleMaximalIdeal k T).IsMaximal := by
+  apply Ideal.isMaximal_iff.2
+  constructor
+  · intro h1
+    have hzero : okaCounterexampleEvalZero (1 : okaCounterexampleRing k T) = 0 := by
+      apply RingHom.mem_ker.mp
+      rw [okaCounterexampleEvalZero_ker_eq_maximal]
+      exact h1
+    simpa using hzero
+  · intro J a hMJ haM haJ
+    have hdiff : a - algebraMap k (okaCounterexampleRing k T)
+        (okaCounterexampleEvalZero a) ∈ okaCounterexampleMaximalIdeal k T := by
+      rw [← okaCounterexampleEvalZero_ker_eq_maximal]
+      apply RingHom.mem_ker.mpr
+      rw [map_sub, okaCounterexampleEvalZero_algebraMap]
+      simp
+    have hconst : algebraMap k (okaCounterexampleRing k T)
+        (okaCounterexampleEvalZero a) ∈ J := by
+      have hsub := J.sub_mem haJ (hMJ hdiff)
+      simpa [sub_sub_cancel] using hsub
+    have hne : okaCounterexampleEvalZero a ≠ 0 := by
+      intro hzero
+      apply haM
+      rw [← okaCounterexampleEvalZero_ker_eq_maximal]
+      apply RingHom.mem_ker.mpr
+      simpa [hzero]
+    have hinv := J.mul_mem_left
+      (algebraMap k (okaCounterexampleRing k T)
+        (okaCounterexampleEvalZero a)⁻¹) hconst
+    simpa only [← map_mul, inv_mul_cancel₀ hne, map_one] using hinv
+
+private theorem okaCounterexampleX_sq_eq_zero {k T : Type u} [Field k] (n : ℕ) :
+    okaCounterexampleX k T n ^ 2 = 0 := by
+  apply Ideal.Quotient.eq_zero_iff_mem.mpr
+  apply Ideal.subset_span
+  simp [okaCounterexampleRelationSet]
+
+private theorem okaCounterexampleMaximalIdeal_le_of_prime
+    {k T : Type u} [Field k] {P : Ideal (okaCounterexampleRing k T)}
+    (hP : P.IsPrime) : okaCounterexampleMaximalIdeal k T ≤ P := by
+  apply Ideal.span_le.2
+  rintro _ ⟨n, rfl⟩
+  apply hP.mem_of_pow_mem 2
+  simpa [okaCounterexampleX_sq_eq_zero]
+
 /-- The Oka-family counterexample attached to an uncountable indexing type.
 
 Proof roadmap:
@@ -578,7 +761,18 @@ theorem okaCounterexample_spec {k T : Type u} [Field k]
         P = okaCounterexampleMaximalIdeal k T) ∧
       ¬ generatedByAtMost (R := okaCounterexampleRing k T)
           Cardinal.aleph0 (okaCounterexampleZIdeal k T) := by
-  sorry
+  let hMmax : (okaCounterexampleMaximalIdeal k T).IsMaximal :=
+    okaCounterexampleMaximalIdeal_isMaximal
+  have huniq : ∃! I : Ideal (okaCounterexampleRing k T), I.IsMaximal := by
+    refine ⟨okaCounterexampleMaximalIdeal k T, hMmax, ?_⟩
+    intro J hJ
+    exact (hMmax.eq_of_le hJ.ne_top
+      (okaCounterexampleMaximalIdeal_le_of_prime hJ.isPrime)).symm
+  refine ⟨IsLocalRing.of_unique_max_ideal huniq, hMmax.isPrime, ?_, ?_⟩
+  · intro P hP
+    exact (hMmax.eq_of_le hP.ne_top
+      (okaCounterexampleMaximalIdeal_le_of_prime hP)).symm
+  · sorry
 
 /-! ## The Noetherian spectrum example -/
 

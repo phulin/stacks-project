@@ -322,6 +322,14 @@ private noncomputable def stupidTruncLEStep (K : ChainComplex C ℤ) (n : ℤ) :
       have hkpos : ∃ t : ℕ,
           (chainLEEmbedding (n - 1)).f t = (chainLEEmbedding (n - 1)).f k :=
         ⟨k, rfl⟩
+      have hs_k : (chainLEEmbedding n).f (hkpos.choose + 1) =
+          (chainLEEmbedding (n - 1)).f k :=
+        chainLEEmbedding_succ_eq n ((chainLEEmbedding (n - 1)).f k)
+          hkpos.choose hkpos.choose_spec
+      have hs_l : (chainLEEmbedding n).f (hj.choose + 1) =
+          (chainLEEmbedding (n - 1)).f l :=
+        chainLEEmbedding_succ_eq n ((chainLEEmbedding (n - 1)).f l)
+          hj.choose hj.choose_spec
       have htest :
           (K.stupidTruncXIso (chainLEEmbedding (n - 1)) hkpos.choose_spec).hom =
             ((K.restriction (chainLEEmbedding (n - 1))).extendXIso
@@ -333,15 +341,11 @@ private noncomputable def stupidTruncLEStep (K : ChainComplex C ℤ) (n : ℤ) :
         rfl
       have htest₂ :
           (K.stupidTruncXIso (chainLEEmbedding n)
-            (chainLEEmbedding_succ_eq n ((chainLEEmbedding (n - 1)).f k)
-              hkpos.choose hkpos.choose_spec)).inv =
+            hs_k).inv =
             (K.restrictionXIso (chainLEEmbedding n)
-              (chainLEEmbedding_succ_eq n ((chainLEEmbedding (n - 1)).f k)
-                hkpos.choose hkpos.choose_spec)).inv ≫
+              hs_k).inv ≫
               ((K.restriction (chainLEEmbedding n)).extendXIso
-                (chainLEEmbedding n)
-                (chainLEEmbedding_succ_eq n ((chainLEEmbedding (n - 1)).f k)
-                  hkpos.choose hkpos.choose_spec)).inv := by
+                (chainLEEmbedding n) hs_k).inv := by
         dsimp [HomologicalComplex.stupidTruncXIso, Iso.trans_inv,
           HomologicalComplex.restrictionXIso,
           HomologicalComplex.extendXIso, CategoryTheory.eqToIso]
@@ -357,20 +361,16 @@ private noncomputable def stupidTruncLEStep (K : ChainComplex C ℤ) (n : ℤ) :
         rfl
       have htest₂_j :
           (K.stupidTruncXIso (chainLEEmbedding n)
-            (chainLEEmbedding_succ_eq n ((chainLEEmbedding (n - 1)).f l)
-              hj.choose hj.choose_spec)).inv =
+            hs_l).inv =
             (K.restrictionXIso (chainLEEmbedding n)
-              (chainLEEmbedding_succ_eq n ((chainLEEmbedding (n - 1)).f l)
-                hj.choose hj.choose_spec)).inv ≫
+              hs_l).inv ≫
               ((K.restriction (chainLEEmbedding n)).extendXIso
-                (chainLEEmbedding n)
-                (chainLEEmbedding_succ_eq n ((chainLEEmbedding (n - 1)).f l)
-                  hj.choose hj.choose_spec)).inv := by
+                (chainLEEmbedding n) hs_l).inv := by
         dsimp [HomologicalComplex.stupidTruncXIso, Iso.trans_inv,
           HomologicalComplex.restrictionXIso,
           HomologicalComplex.extendXIso, CategoryTheory.eqToIso]
         rfl
-      simp only [dif_pos hkpos, dif_pos hj]
+      rw [dif_pos hkpos, dif_pos hj]
       simp only [htest, htest₂, htest_j, htest₂_j]
       change _ ≫
           ((K.restriction (chainLEEmbedding n)).extend (chainLEEmbedding n)).d
@@ -381,15 +381,14 @@ private noncomputable def stupidTruncLEStep (K : ChainComplex C ℤ) (n : ℤ) :
             ((chainLEEmbedding (n - 1)).f l) ≫ _
       rw [HomologicalComplex.extend_d_eq
         (K.restriction (chainLEEmbedding (n - 1))) (chainLEEmbedding (n - 1))
-          rfl rfl,
+          hkpos.choose_spec hj.choose_spec,
         HomologicalComplex.extend_d_eq
           (K.restriction (chainLEEmbedding n)) (chainLEEmbedding n)
-            (chainLEEmbedding_succ_eq n ((chainLEEmbedding (n - 1)).f k) k rfl)
-            (chainLEEmbedding_succ_eq n ((chainLEEmbedding (n - 1)).f l) l rfl)]
-      rw [HomologicalComplex.restriction_d_eq K (chainLEEmbedding (n - 1)) rfl rfl,
+            hs_k hs_l]
+      rw [HomologicalComplex.restriction_d_eq K (chainLEEmbedding (n - 1))
+          hkpos.choose_spec hj.choose_spec,
         HomologicalComplex.restriction_d_eq K (chainLEEmbedding n)
-          (chainLEEmbedding_succ_eq n ((chainLEEmbedding (n - 1)).f k) k rfl)
-          (chainLEEmbedding_succ_eq n ((chainLEEmbedding (n - 1)).f l) l rfl)]
+          hs_k hs_l]
       have hstupid₁ (t : ℕ) :
           (K.stupidTruncXIso (chainLEEmbedding (n - 1)) (rfl :
             (chainLEEmbedding (n - 1)).f t = (chainLEEmbedding (n - 1)).f t)).hom =
@@ -438,7 +437,106 @@ private noncomputable def stupidTruncLEStep (K : ChainComplex C ℤ) (n : ℤ) :
           HomologicalComplex.restrictionXIso,
           HomologicalComplex.extendXIso, CategoryTheory.eqToIso]
         rfl
-      sorry
+      have hE₂k :
+          ((K.restriction (chainLEEmbedding n)).extendXIso
+            (chainLEEmbedding n) hs_k).inv ≫
+            ((K.restriction (chainLEEmbedding n)).extendXIso
+              (chainLEEmbedding n) hs_k).hom = 𝟙 _ := by
+        simp
+      have hR₂k :
+          (K.restrictionXIso (chainLEEmbedding n) hs_k).inv ≫
+            (K.restrictionXIso (chainLEEmbedding n) hs_k).hom = 𝟙 _ := by
+        simp
+      have hE₁l :
+          ((K.restriction (chainLEEmbedding (n - 1))).extendXIso
+            (chainLEEmbedding (n - 1)) hj.choose_spec).inv ≫
+            ((K.restriction (chainLEEmbedding (n - 1))).extendXIso
+              (chainLEEmbedding (n - 1)) hj.choose_spec).hom = 𝟙 _ := by
+        simp
+      have hR₁l :
+          (K.restrictionXIso (chainLEEmbedding (n - 1)) hj.choose_spec).inv ≫
+            (K.restrictionXIso (chainLEEmbedding (n - 1)) hj.choose_spec).hom = 𝟙 _ := by
+        simp
+      have hmiddle₂ :
+          ((K.restrictionXIso (chainLEEmbedding n) hs_k).inv ≫
+            ((K.restriction (chainLEEmbedding n)).extendXIso
+              (chainLEEmbedding n) hs_k).inv) ≫
+            ((K.restriction (chainLEEmbedding n)).extendXIso
+              (chainLEEmbedding n) hs_k).hom ≫
+              (K.restrictionXIso (chainLEEmbedding n) hs_k).hom = 𝟙 _ := by
+        simp only [Category.assoc]
+        rw [← Category.assoc
+          (((K.restriction (chainLEEmbedding n)).extendXIso
+            (chainLEEmbedding n) hs_k).inv)
+          (((K.restriction (chainLEEmbedding n)).extendXIso
+            (chainLEEmbedding n) hs_k).hom)
+          ((K.restrictionXIso (chainLEEmbedding n) hs_k).hom), hE₂k]
+        simp only [Category.id_comp, hR₂k]
+      have hmiddle₁ :
+          ((K.restrictionXIso (chainLEEmbedding (n - 1)) hj.choose_spec).inv ≫
+            ((K.restriction (chainLEEmbedding (n - 1))).extendXIso
+              (chainLEEmbedding (n - 1)) hj.choose_spec).inv) ≫
+            ((K.restriction (chainLEEmbedding (n - 1))).extendXIso
+              (chainLEEmbedding (n - 1)) hj.choose_spec).hom ≫
+              (K.restrictionXIso (chainLEEmbedding (n - 1)) hj.choose_spec).hom = 𝟙 _ := by
+        simp only [Category.assoc]
+        rw [← Category.assoc
+          (((K.restriction (chainLEEmbedding (n - 1))).extendXIso
+            (chainLEEmbedding (n - 1)) hj.choose_spec).inv)
+          (((K.restriction (chainLEEmbedding (n - 1))).extendXIso
+            (chainLEEmbedding (n - 1)) hj.choose_spec).hom)
+          ((K.restrictionXIso (chainLEEmbedding (n - 1)) hj.choose_spec).hom), hE₁l]
+        simp only [Category.id_comp, hR₁l]
+      have h₂q :
+          (K.restrictionXIso (chainLEEmbedding n) hs_k).inv ≫
+              ((K.restriction (chainLEEmbedding n)).extendXIso
+                (chainLEEmbedding n) hs_k).inv ≫
+              ((K.restriction (chainLEEmbedding n)).extendXIso
+                (chainLEEmbedding n) hs_k).hom ≫
+              (K.restrictionXIso (chainLEEmbedding n) hs_k).hom ≫
+              K.d ((chainLEEmbedding (n - 1)).f k)
+                ((chainLEEmbedding (n - 1)).f l) ≫
+              (K.restrictionXIso (chainLEEmbedding n) hs_l).inv ≫
+              ((K.restriction (chainLEEmbedding n)).extendXIso
+                (chainLEEmbedding n) hs_l).inv =
+            K.d ((chainLEEmbedding (n - 1)).f k)
+              ((chainLEEmbedding (n - 1)).f l) ≫
+              (K.restrictionXIso (chainLEEmbedding n) hs_l).inv ≫
+              ((K.restriction (chainLEEmbedding n)).extendXIso
+                (chainLEEmbedding n) hs_l).inv := by
+        simpa only [Category.assoc, Category.id_comp] using
+          congrArg
+            (fun q => q ≫ K.d ((chainLEEmbedding (n - 1)).f k)
+              ((chainLEEmbedding (n - 1)).f l) ≫
+              (K.restrictionXIso (chainLEEmbedding n) hs_l).inv ≫
+              ((K.restriction (chainLEEmbedding n)).extendXIso
+                (chainLEEmbedding n) hs_l).inv) hmiddle₂
+      have h₁q :
+          K.d ((chainLEEmbedding (n - 1)).f k)
+              ((chainLEEmbedding (n - 1)).f l) ≫
+            (K.restrictionXIso (chainLEEmbedding (n - 1)) hj.choose_spec).inv ≫
+            ((K.restriction (chainLEEmbedding (n - 1))).extendXIso
+              (chainLEEmbedding (n - 1)) hj.choose_spec).inv ≫
+            ((K.restriction (chainLEEmbedding (n - 1))).extendXIso
+              (chainLEEmbedding (n - 1)) hj.choose_spec).hom ≫
+            (K.restrictionXIso (chainLEEmbedding (n - 1)) hj.choose_spec).hom ≫
+            (K.restrictionXIso (chainLEEmbedding n) hs_l).inv ≫
+            ((K.restriction (chainLEEmbedding n)).extendXIso
+              (chainLEEmbedding n) hs_l).inv =
+          K.d ((chainLEEmbedding (n - 1)).f k)
+              ((chainLEEmbedding (n - 1)).f l) ≫
+            (K.restrictionXIso (chainLEEmbedding n) hs_l).inv ≫
+            ((K.restriction (chainLEEmbedding n)).extendXIso
+              (chainLEEmbedding n) hs_l).inv := by
+        simpa only [Category.assoc, Category.id_comp] using
+          congrArg
+            (fun q => K.d ((chainLEEmbedding (n - 1)).f k)
+                ((chainLEEmbedding (n - 1)).f l) ≫ q ≫
+              (K.restrictionXIso (chainLEEmbedding n) hs_l).inv ≫
+              ((K.restriction (chainLEEmbedding n)).extendXIso
+                (chainLEEmbedding n) hs_l).inv) hmiddle₁
+      simp only [Category.assoc, HomologicalComplex.stupidTrunc]
+      rw [h₂q, h₁q]
     · have hz := HomologicalComplex.isZero_stupidTrunc_X K
         (chainLEEmbedding (n - 1)) i (by
           intro k hk
@@ -898,7 +996,23 @@ theorem stupidTruncGE_transition (K : ChainComplex C ℤ) (n : ℤ) :
       · rename_i h
         exact (hi h).elim
       · exact hz.mono _
-  exact ⟨f, hf, ⟨by sorry⟩⟩
+  have hkepi : Epi (kernel.lift f q hq) :=
+    S.exact_iff_epi_kernel_lift.1 hS
+  have hkmono : Mono (kernel.lift f q hq) := by
+    constructor
+    intro Z a b hab
+    have hki : kernel.lift f q hq ≫ kernel.ι f = q := kernel.lift_ι f q hq
+    apply (cancel_mono q).1
+    calc
+      a ≫ q = a ≫ (kernel.lift f q hq ≫ kernel.ι f) := by rw [hki]
+      _ = (a ≫ kernel.lift f q hq) ≫ kernel.ι f := by
+        simp only [Category.assoc]
+      _ = (b ≫ kernel.lift f q hq) ≫ kernel.ι f := by rw [hab]
+      _ = b ≫ (kernel.lift f q hq ≫ kernel.ι f) := by
+        simp only [Category.assoc]
+      _ = b ≫ q := by rw [hki]
+  letI : IsIso (kernel.lift f q hq) := isIso_of_mono_of_epi _
+  exact ⟨f, hf, ⟨(asIso (kernel.lift f q hq)).symm⟩⟩
 
 /-! ### The third numbered item: canonical `τ ≥ n` -/
 
@@ -943,7 +1057,13 @@ theorem canonicalTruncGE_homology_above (K : ChainComplex C ℤ) (n i : ℤ)
 theorem canonicalTruncGE_homology_below (K : ChainComplex C ℤ) (n i : ℤ)
     [∀ j, K.HasHomology j] (h : i < n) :
     IsZero ((canonicalTruncGE K n).homology i) := by
-  sorry
+  change IsZero ((HomologicalComplex.truncLE K (chainGEEmbedding n)).homology i)
+  exact (HomologicalComplex.exactAt_of_isSupported
+    (HomologicalComplex.truncLE K (chainGEEmbedding n))
+    (chainGEEmbedding n) i (by
+      intro k hk
+      dsimp [chainGEEmbedding, ComplexShape.Embedding.mk'] at hk
+      omega)).isZero_homology
 
 /-! ### The fourth numbered item: canonical `τ ≤ n` -/
 
@@ -961,7 +1081,21 @@ noncomputable def canonicalTruncLEπ (K : ChainComplex C ℤ) (n : ℤ)
 theorem canonicalTruncLE_boundary (K : ChainComplex C ℤ) (n : ℤ)
     [∀ i, K.HasHomology i] :
     Nonempty ((canonicalTruncLE K n).X n ≅ K.opcycles n) := by
-  sorry
+  refine ⟨HomologicalComplex.truncGEXIsoOpcycles K (chainLEEmbedding n)
+    (i := 0) (by
+      dsimp [chainLEEmbedding, ComplexShape.Embedding.mk']
+      omega) (by
+      dsimp [ComplexShape.Embedding.BoundaryGE, chainLEEmbedding,
+        ComplexShape.Embedding.mk']
+      constructor
+      · simp only [sub_zero]
+        have hprev : (ComplexShape.down ℤ).Rel (n + 1) n := by
+          simp only [ComplexShape.down_Rel]
+        rw [(ComplexShape.down ℤ).prev_eq' hprev]
+        simp only [ComplexShape.down_Rel]
+      · intro k hk
+        simp only [ComplexShape.down_Rel] at hk
+        omega)⟩
 
 theorem canonicalTruncLE_homology_below (K : ChainComplex C ℤ) (n i : ℤ)
     [∀ j, K.HasHomology j] (h : i ≤ n) :

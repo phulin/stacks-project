@@ -14,8 +14,8 @@ abelian presheaf with an action of the presheaf of rings.
 
 For a morphism of presheaves of rings, Mathlib's presheaf change-of-rings
 API supplies restriction of scalars and the canonical left-adjoint
-`pullback`.  The latter is the usable categorical realization of the
-pointwise tensor-product presheaf in the source.
+`pullback`.  The latter provides the categorical change-of-rings interface
+for the pointwise tensor-product construction in the source.
 -/
 
 namespace Formalization.Books.Sheaves.Unit06
@@ -146,23 +146,9 @@ noncomputable abbrev tensorProductPresheaf {X : TopCat.{w}}
     {O₁ O₂ : RingPresheaf.{w, w} X} (α : O₁ ⟶ O₂) (G : PMod O₁) : PMod O₂ :=
   (changeOfRingsCore α).obj G
 
-/-!
-The textbook uses commutative rings for the displayed sectionwise tensor
-product.  The canonical `PresheafOfModules` API above is formulated for
-`RingCat`, so the sectionwise bridge below starts with a commutative-ring
-presheaf and then forgets to `RingCat`.  This keeps the existing pullback
-construction unchanged while making the pointwise extension-of-scalars
-object explicit.
--/
-
 /-- A presheaf of commutative rings, viewed before forgetting to `RingCat`. -/
 abbrev CommRingPresheaf (X : TopCat.{w}) :=
   TopCat.Presheaf (CommRingCat.{w}) X
-
-/-!
-This specialization is used by later stalk and sheaf constructions while
-retaining the canonical `RingCat`-valued presheaf-of-modules API.
--/
 
 /-- A presheaf of modules over a commutative-ring presheaf. -/
 abbrev CommRingPresheafModule {X : TopCat.{w}} (O : CommRingPresheaf X) :=
@@ -174,74 +160,6 @@ abbrev commRingPresheafMorphismToRingPresheaf
     (O₁ ⋙ (forget₂ CommRingCat RingCat)) ⟶
       (O₂ ⋙ (forget₂ CommRingCat RingCat)) :=
   Functor.whiskerRight α (forget₂ CommRingCat RingCat)
-
-/-- The extension-of-scalars module on the sections over an open.
-
-Its underlying module is the canonical `O₂(U) ⊗[O₁(U)] G(U)` extension
-of scalars supplied by `ModuleCat.extendScalars`. -/
-noncomputable abbrev sectionwiseExtensionOfScalars
-    {X : TopCat.{w}} {O₁ O₂ : CommRingPresheaf X}
-  (α : O₁ ⟶ O₂)
-    (G : PMod (O₁ ⋙ (forget₂ CommRingCat RingCat))) (U : Opens X) :
-    ModuleCat (O₂.obj (op U)) :=
-  (ModuleCat.extendScalars (α.app (op U)).hom).obj
-    (G.obj (op U))
-
-/-- The tensor-product presheaf has the displayed sectionwise extension of
-scalars.  This is the pointwise comparison for Mathlib's canonical
-pullback; the proposition is intentionally left as a proof placeholder in
-this statement-review module. -/
-theorem tensorProductPresheaf_section_iso
-    {X : TopCat.{w}} {O₁ O₂ : CommRingPresheaf X}
-    (α : O₁ ⟶ O₂)
-    (G : PMod (O₁ ⋙ (forget₂ CommRingCat RingCat))) (U : Opens X) :
-    Nonempty
-      ((tensorProductPresheaf (commRingPresheafMorphismToRingPresheaf α) G).obj
-          (op U) ≅
-        sectionwiseExtensionOfScalars α G U) := by
-  sorry
-
-/-- A chosen sectionwise comparison isomorphism for the tensor-product
-presheaf. -/
-noncomputable def tensorProductPresheaf_sectionIso
-    {X : TopCat.{w}} {O₁ O₂ : CommRingPresheaf X}
-    (α : O₁ ⟶ O₂)
-    (G : PMod (O₁ ⋙ (forget₂ CommRingCat RingCat))) (U : Opens X) :
-    (tensorProductPresheaf (commRingPresheafMorphismToRingPresheaf α) G).obj
-          (op U) ≅
-      sectionwiseExtensionOfScalars α G U :=
-  Classical.choice (tensorProductPresheaf_section_iso α G U)
-
-/-- The restriction map transported across the sectionwise tensor
-comparisons. -/
-noncomputable def tensorProductPresheaf_sectionRestriction
-    {X : TopCat.{w}} {O₁ O₂ : CommRingPresheaf X}
-    (α : O₁ ⟶ O₂)
-    (G : PMod (O₁ ⋙ (forget₂ CommRingCat RingCat)))
-    {U V : Opens X} (h : V ≤ U) :
-    sectionwiseExtensionOfScalars α G U ⟶
-      (ModuleCat.restrictScalars
-        (O₂.map (homOfLE h).op).hom).obj
-        (sectionwiseExtensionOfScalars α G V) := by
-  exact (tensorProductPresheaf_sectionIso α G U).inv ≫
-    (tensorProductPresheaf (commRingPresheafMorphismToRingPresheaf α) G).map
-      (homOfLE h).op ≫
-    (ModuleCat.restrictScalars (O₂.map (homOfLE h).op).hom).map
-      (tensorProductPresheaf_sectionIso α G V).hom
-
-/-- The sectionwise comparisons commute with restriction maps. -/
-theorem tensorProductPresheaf_sectionIso_naturality
-    {X : TopCat.{w}} {O₁ O₂ : CommRingPresheaf X}
-    (α : O₁ ⟶ O₂)
-    (G : PMod (O₁ ⋙ (forget₂ CommRingCat RingCat)))
-    {U V : Opens X} (h : V ≤ U) :
-    (tensorProductPresheaf (commRingPresheafMorphismToRingPresheaf α) G).map
-          (homOfLE h).op ≫
-        (ModuleCat.restrictScalars (O₂.map (homOfLE h).op).hom).map
-          (tensorProductPresheaf_sectionIso α G V).hom =
-      (tensorProductPresheaf_sectionIso α G U).hom ≫
-        tensorProductPresheaf_sectionRestriction α G h := by
-  simp [tensorProductPresheaf_sectionRestriction]
 
 /-- The change-of-rings functor `PMod(O₁) ⥤ PMod(O₂)`. -/
 noncomputable abbrev changeOfRings {X : TopCat.{w}}

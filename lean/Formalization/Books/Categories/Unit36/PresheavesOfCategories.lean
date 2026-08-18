@@ -225,6 +225,24 @@ theorem isSplitFibredCategory_iff_exists_strictPullbackChoice
     (p : S ⥤ C) [p.IsFibered] :
       IsSplitFibredCategory.{vC, uC, vS, uS, vS, uS} p ↔
       ∃ P : PullbackChoice p, P.IsUnital ∧ isStrictPullbackChoice P := by
+  /-
+  Proof roadmap:
+
+  * Forward: unpack the strict over-base isomorphism with a
+    `splitFibredProjection F`. Transport its canonical cartesian lifts back
+    along the inverse functor. Strict inverse equations, rather than merely
+    natural isomorphisms, make the transported identity and composite
+    pullback functors literally equal.
+  * Reverse: use the fibres of `p` as the values of a functor
+    `Cᵒᵖ ⟶ Cat`. Its arrow maps are `P.pullbackFunctor`; `P.IsUnital`
+    supplies `map_id`, and `isStrictPullbackChoice P` supplies `map_comp`.
+    Construct the two Grothendieck-comparison functors and prove their strict
+    inverse equations by strongly-cartesian factorization uniqueness.
+
+  The missing library bridge is transport of a `PullbackChoice` across
+  `IsomorphicOverBase` with computation lemmas strong enough to yield
+  equality of bundled functors, not only a natural isomorphism.
+  -/
   sorry
 
 /-! ## The explicit strictification category -/
@@ -550,6 +568,26 @@ theorem strictificationProjection_isSplit
     IsSplitFibredCategory.{vC, uC, vS, max (max uC vC) uS, vS,
       max (max uC vC) uS}
       (strictificationProjection P) := by
+  /-
+  Proof roadmap:
+
+  1. Define reindexing along `g : V' ⟶ V` by
+     `(x, f : V ⟶ U) ↦ (x, g ≫ f : V' ⟶ U)` and define its action
+     on vertical morphisms using the unique strongly-cartesian comparison
+     between the chosen pullbacks.
+  2. Prove the identity and composition laws as literal equalities. The
+     object components reduce to category laws; the morphism components use
+     `Functor.IsStronglyCartesian.ext` against the same chosen pullback map.
+  3. Assemble these reindexing functors into an ordinary
+     `Cᵒᵖ ⟶ Cat.{vS, max (max uC vC) uS}`.
+  4. Build the strict over-base isomorphism from its CoGrothendieck category
+     to `StrictificationCategory p P`, checking the four functor equations
+     fieldwise.
+
+  `strictificationProjection_isFibered` already supplies the fibredness
+  conjunct. What remains is the explicit strictly functorial fibre
+  presentation in steps 1--4.
+  -/
   sorry
 
 theorem strictification_object_description
@@ -584,6 +622,59 @@ def IsFibredEquivalenceOver
       (∃ (e : G ⋙ F ≅ 𝟭 T)
         (over : (G ⋙ F) ⋙ q = (𝟭 T) ⋙ q),
         Formalization.Books.Categories.Unit34.IsOverNaturalIso q over e)
+
+/-- A strict isomorphism over the base is, in particular, an equivalence in
+the 2-category of fibred categories over that base. This is the bridge from
+the source's definition of a split fibred category to the stronger
+cartesian-preserving interface used by the strictification theorem.
+
+Proof roadmap:
+
+1. Reuse the strict inverse functors in `h` as the two comparison functors.
+2. Show each functor preserves strongly cartesian arrows. Given a competing
+   lift after applying the functor, send it through the strict inverse, use
+   the original universal property, and transport the unique factorization
+   back. The strict triangle equations remove all unit/counit transports.
+3. Turn `F ⋙ G = 𝟭 _` and `G ⋙ F = 𝟭 _` into identity natural
+   isomorphisms after equality induction.
+4. The strict equations over the base make every component vertical, so the
+   two `IsOverNaturalIso` obligations reduce to identity morphisms.
+
+The important point is to prove cartesian preservation from the inverse
+functor, rather than attempting to infer it merely from `F ⋙ q = p`.
+-/
+theorem isomorphicOverBase_isFibredEquivalenceOver
+    {S T C : Type*} [Category* S] [Category* T] [Category* C]
+    {p : S ⥤ C} {q : T ⥤ C}
+    (h : IsomorphicOverBase p q) :
+    IsFibredEquivalenceOver p q := by
+  sorry
+
+/-- Fibred equivalences over a fixed base compose. -/
+theorem isFibredEquivalenceOver_trans
+    {S T U C : Type*}
+    [Category* S] [Category* T] [Category* U] [Category* C]
+    {p : S ⥤ C} {q : T ⥤ C} {r : U ⥤ C}
+    (hpq : IsFibredEquivalenceOver p q)
+    (hqr : IsFibredEquivalenceOver q r) :
+    IsFibredEquivalenceOver p r := by
+  /-
+  Proof roadmap:
+
+  * Compose the forward functors and compose the inverse functors in the
+    opposite order. Derive their strict base triangles by associativity and
+    the triangles stored in `hpq` and `hqr`.
+  * Cartesian preservation is closed under composition directly from the
+    two `MapsStronglyCartesian` fields.
+  * Form the new unit and counit by whiskering and composing the supplied
+    vertical natural isomorphisms. Prove their base components are identities
+    with `IsOverNaturalIso`, functor associativity, and the stored strict base
+    equalities.
+
+  The only lengthy part is bookkeeping for reassociation of the whiskered
+  natural isomorphisms; no new categorical construction is required.
+  -/
+  sorry
 
 /-- The source's comparison data for the strictification construction.  The
 first fields are the natural functor `\mathcal S \to \mathcal S'`, its
@@ -1475,13 +1566,49 @@ theorem strictification_comparison_exists
         simp
   }⟩
 
+/-- The explicit strictification admits a split presentation through a
+fibred equivalence. This packages the precise bridge needed by the final
+strictification theorem: `strictificationProjection_isSplit` supplies a
+strict isomorphism over the base, and
+`isomorphicOverBase_isFibredEquivalenceOver` promotes it to the
+cartesian-preserving 2-categorical interface. -/
+theorem strictificationProjection_fibredEquivalence_to_split
+    {S : Type uS} [Category.{vS} S]
+    {C : Type uC} [Category.{vC} C]
+    {p : S ⥤ C} [p.IsFibered] (P : PullbackChoice p) :
+    ∃ F : Cᵒᵖ ⥤ Cat.{vS, max (max uC vC) uS},
+      IsFibredEquivalenceOver (strictificationProjection P)
+        (splitFibredProjection F) := by
+  rcases strictificationProjection_isSplit P with ⟨_, F, hF⟩
+  exact ⟨F, isomorphicOverBase_isFibredEquivalenceOver hF⟩
+
 theorem fibred_category_equivalent_to_split
     {S : Type uS} [Category.{vS} S]
     {C : Type uC} [Category.{vC} C]
     (p : S ⥤ C) [p.IsFibered] :
     ∃ F : Cᵒᵖ ⥤ Cat.{vS, max (max uC vC) uS},
       IsFibredEquivalenceOver p (splitFibredProjection F) := by
-  sorry
+  /-
+  Final assembly roadmap:
+
+  1. Choose `P := PullbackChoice.default p`.
+  2. Use `strictification_comparison_exists p P` and
+     `strictificationComparison_isFibredEquivalence` to compare `p` with
+     `strictificationProjection P`.
+  3. Use `strictificationProjection_fibredEquivalence_to_split P` for the
+     split presentation of the strictification.
+  4. Compose the two fibred equivalences with
+     `isFibredEquivalenceOver_trans`.
+
+  Thus the final theorem has no independent proof gap: its remaining axioms
+  are isolated in the strict split-presentation and generic bridge lemmas.
+  -/
+  let P : PullbackChoice p := PullbackChoice.default p
+  obtain ⟨D⟩ := strictification_comparison_exists p P
+  obtain ⟨F, hF⟩ :=
+    strictificationProjection_fibredEquivalence_to_split P
+  exact ⟨F, isFibredEquivalenceOver_trans
+    (strictificationComparison_isFibredEquivalence D) hF⟩
 
 end
 

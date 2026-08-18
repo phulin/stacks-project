@@ -1,6 +1,7 @@
 import Formalization.Books.Sheaves.Unit05.PresheavesOfAlgebraicStructures
 import Mathlib.Algebra.Category.ModuleCat.Presheaf.ChangeOfRings
 import Mathlib.Algebra.Category.ModuleCat.Presheaf.Pullback
+import Mathlib.Algebra.Category.ModuleCat.Stalk
 
 /-!
 # Sheaves on Spaces, Chapter 6: Presheaves of modules
@@ -166,6 +167,54 @@ noncomputable abbrev changeOfRings {X : TopCat.{w}}
     {O₁ O₂ : RingPresheaf.{w, w} X} (α : O₁ ⟶ O₂) :
     PMod O₁ ⥤ PMod O₂ :=
   changeOfRingsCore α
+
+/-!
+## Change of rings and stalks
+
+This comparison belongs with `tensorProductPresheaf`, rather than with a
+later consumer of that construction.  It is the missing computational API
+for Mathlib's abstract left-adjoint implementation of presheaf pullback.
+-/
+
+/-- Change of rings for presheaves of modules commutes with passage to a
+stalk.  The source writes the left side in the symmetric order
+`F_x ⊗_{O_x} O'_x`; `ModuleCat.extendScalars` uses the canonically
+isomorphic order `O'_x ⊗_{O_x} F_x`.
+
+Proof roadmap:
+
+1. Construct the explicit presheaf whose value on an open `U` is extension
+   of scalars of `F(U)` along `O(U) → O'(U)`.  Define its restriction maps
+   with `ModuleCat.extendRestrictScalarsAdj.homEquiv` and prove their identity
+   and composition laws, including the `restrictScalarsComp'` transports.
+2. Prove that this explicit construction is left adjoint to
+   `restrictionOfScalars α`, naturally in both module variables.  Uniqueness
+   of left adjoints then gives a natural isomorphism with the abstract
+   `tensorProductPresheaf α F` used here.
+3. Express both stalks as the filtered colimit over neighbourhoods of `x`.
+   Use the pointwise natural isomorphism from step 2 and the fact that tensor
+   product, as a left adjoint, preserves these colimits.
+4. Identify the colimits of the section rings and modules with `O.stalk x`,
+   `O'.stalk x`, and `F.stalk x`; transport the resulting isomorphism through
+   the canonical `ModuleCat` stalk actions and verify `O'.stalk x`-linearity.
+
+The current blocker is step 1: the public `PresheafOfModules.pullback` API
+exposes only its adjunction, not an objectwise extension-of-scalars model or
+the restriction-map coherence needed by step 3.
+-/
+theorem tensorProductPresheaf_stalk_iso
+    {X : TopCat.{w}} {O O' : CommRingPresheaf X}
+    (α : O ⟶ O') (F : CommRingPresheafModule O) (x : X) :
+    Nonempty
+      ((ModuleCat.extendScalars
+          ((TopCat.Presheaf.stalkFunctor (CommRingCat.{w}) x).map α).hom).obj
+        (ModuleCat.of (O.stalk x)
+          (↑(TopCat.Presheaf.stalk F.presheaf x))) ≅
+        ModuleCat.of (O'.stalk x)
+          (↑(TopCat.Presheaf.stalk
+            (tensorProductPresheaf
+              (commRingPresheafMorphismToRingPresheaf α) F).presheaf x))) := by
+  sorry
 
 /-! ## Adjointness -/
 

@@ -80,7 +80,7 @@ theorem stalk_tensorProductPresheaf_iso
       ModuleCat.of (O'.stalk x)
         (↑(TopCat.Presheaf.stalk
           (tensorProductPresheaf (commRingPresheafMorphismToRingPresheaf α) F).presheaf x))) := by
-  sorry
+  exact tensorProductPresheaf_stalk_iso α F x
 
 end
 

@@ -536,12 +536,102 @@ def IsGenusOneNormalForm (T : NumericalType) : Prop :=
 theorem minimal_genus_zero_classification (T : NumericalType)
     (hminimal : IsMinimal T) (hgenus : IsOfGenus T 0) :
     IsGenusZeroNormalForm T := by
-  sorry
+  unfold IsGenusZeroNormalForm
+  by_cases hn : T.n = 1
+  · rcases irreducible_numerical_type T 0 hn hgenus with
+      ⟨ha, hformula, hneg, hzero, hone, hgt⟩
+    rcases hzero rfl with ⟨hm, hw, hg⟩
+    exact ⟨hn, hm, ha (firstIndex T), hw, hg⟩
+  · have hn' : 1 < T.n := Nat.lt_of_le_of_ne T.hn (Ne.symm hn)
+    have hge := minimal_genus_at_least_one T 0 hgenus hminimal hn'
+    omega
 
 theorem genus_zero_normal_form_is_minimal_and_genus_zero (T : NumericalType)
     (hpattern : IsGenusZeroNormalForm T) :
     IsMinimal T ∧ genus T = 0 := by
-  sorry
+  rcases hpattern with ⟨hn, hm, ha, hw, hg⟩
+  constructor
+  · rintro ⟨i, hi_g, hi_a⟩
+    have hii : i = firstIndex T := Fin.ext (by omega)
+    subst i
+    simp [ha, hw] at hi_a
+  · have hi : ∀ i : Fin T.n, i = firstIndex T := by
+      intro i
+      apply Fin.ext
+      omega
+    have hsum :
+        (∑ i : Fin T.n, (T.m i : ℚ) *
+          ((T.w i : ℚ) * ((T.g i : ℚ) - 1) - (T.a i i : ℚ) / 2)) =
+        (T.m (firstIndex T) : ℚ) *
+          ((T.w (firstIndex T) : ℚ) * ((T.g (firstIndex T) : ℚ) - 1) -
+            (T.a (firstIndex T) (firstIndex T) : ℚ) / 2) := by
+      calc
+        _ = ∑ _ : Fin T.n, (T.m (firstIndex T) : ℚ) *
+            ((T.w (firstIndex T) : ℚ) * ((T.g (firstIndex T) : ℚ) - 1) -
+              (T.a (firstIndex T) (firstIndex T) : ℚ) / 2) := by
+          apply Finset.sum_congr rfl
+          intro i hi_mem
+          rw [hi i]
+        _ = _ := by simp [hn]
+    have hq : (genus T : ℚ) = 0 := by
+      rw [genus_formula]
+      unfold genusExpression
+      rw [hsum]
+      simp [hm, ha, hw, hg]
+    exact_mod_cast hq
+
+private theorem realizes_type_pattern_is_minimal_and_genus_one
+    {k : ℕ} (T : NumericalType) (h : T.n = k)
+    (m w : ℤ) (mBase : Fin k → ℤ)
+    (aBase : Matrix (Fin k) (Fin k) ℤ)
+    (wBase gBase : Fin k → ℤ)
+    (hm : 0 < m) (hw : 0 < w)
+    (ha : (ambientDataAt h).a = scalarMatrix aBase w)
+    (hweight : (ambientDataAt h).w = scalarVector wBase w)
+    (hgenus : ambientGenusAt h = gBase)
+    (hdiag : ∀ i, aBase i i = -2 * wBase i)
+    (hzero : ∀ i, gBase i = 0) :
+    IsMinimal T ∧ genus T = 1 := by
+  subst k
+  have hA : ∀ i, T.a i i = w * aBase i i := by
+    intro i
+    have h := congrFun (congrFun ha i) i
+    simpa [ambientDataAt, ambientData, scalarMatrix] using h
+  have hW : ∀ i, T.w i = w * wBase i := by
+    intro i
+    have h := congrFun hweight i
+    simpa [ambientDataAt, ambientData, scalarVector] using h
+  have hG : ∀ i, T.g i = gBase i := by
+    intro i
+    have h := congrFun hgenus i
+    simpa [ambientGenusAt] using h
+  have hdiag' : ∀ i, T.a i i = -2 * T.w i := by
+    intro i
+    rw [hA i, hW i, hdiag i]
+    ring
+  have hzero' : ∀ i, T.g i = 0 := by
+    intro i
+    rw [hG i, hzero i]
+  constructor
+  · rintro ⟨i, hi⟩
+    rcases hi with ⟨hi_g, hi_a⟩
+    rw [hdiag' i] at hi_a
+    have hwi := T.w_pos i
+    omega
+  · have hsum :
+        (∑ i : Fin T.n, (T.m i : ℚ) *
+          ((T.w i : ℚ) * ((T.g i : ℚ) - 1) - (T.a i i : ℚ) / 2)) = 0 := by
+      apply Finset.sum_eq_zero
+      intro i hi
+      rw [hzero' i, hdiag' i]
+      push_cast
+      ring
+    have hq : (genus T : ℚ) = 1 := by
+      rw [genus_formula]
+      unfold genusExpression
+      rw [hsum]
+      norm_num
+    exact_mod_cast hq
 
 theorem minimal_genus_one_classification (T : NumericalType)
     (hminimal : IsMinimal T) (hgenus : IsOfGenus T 1) :

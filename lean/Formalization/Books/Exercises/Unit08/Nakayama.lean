@@ -36,17 +36,8 @@ theorem generators_of_quotient_generators
       Submodule.map (I • (⊤ : Submodule A M)).mkQ
         (Submodule.span A (Set.range x)) = ⊤ := by
     rw [Submodule.map_span]
-    have hset :
-        (I • (⊤ : Submodule A M)).mkQ '' Set.range x =
-          Set.range (fun i => (I • (⊤ : Submodule A M)).mkQ (x i)) := by
-      ext z
-      constructor
-      · rintro ⟨y, ⟨i, rfl⟩, rfl⟩
-        exact ⟨i, rfl⟩
-      · rintro ⟨i, rfl⟩
-        exact ⟨x i, ⟨i, rfl⟩, rfl⟩
-    rw [hset]
-    exact hx
+    rw [← Set.range_comp]
+    simpa [Function.comp_def] using hx
   rw [hmap]
   exact le_top
 

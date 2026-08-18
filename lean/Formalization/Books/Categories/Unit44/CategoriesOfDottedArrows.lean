@@ -1178,7 +1178,6 @@ theorem dottedArrow_baseChange_equivalence
             _ = _ := by
               simp [BaseChangeData.leftSquare,
                 TwoCommutativeDiagram.strictAssocInv, outerDiagram,
-                Bicategory.Strict.associator_eqToIso,
                 Bicategory.Strict.leftUnitor_eqToIso, Category.assoc]
               rfl
         right := by

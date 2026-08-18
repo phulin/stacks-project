@@ -36,11 +36,11 @@ theorem projective_free_iff_countablyGenerated_projective_free
   · intro h M _ _ hP _
     exact h M hP
   · intro h M _ _ hP
-    letI : Module.Projective R M := hP
+    let _ : Module.Projective R M := hP
     obtain ⟨ι, N, hN, ⟨e⟩⟩ :=
       Formalization.Books.Algebra.Unit84.projective_isDirectSumOfCountablyGeneratedProjectiveModules
         (R := R) (M := M)
-    letI : ∀ i, Module.Free R (N i) := fun i => h (N i) (hN i).2 (hN i).1
+    let _ : ∀ i, Module.Free R (N i) := fun i => h (N i) (hN i).2 (hN i).1
     let hfree : Module.Free R (DirectSum ι (fun i => (N i : Type v))) :=
       Module.Free.dfinsupp R (fun i => (N i : Type v))
     exact Module.Free.of_equiv' hfree e.symm
@@ -54,14 +54,13 @@ private theorem free_element_mem_finite_free_direct_summand
   let b := Module.Free.chooseBasis R F
   let c := b.repr x
   let s : Set (Module.Free.ChooseBasisIndex R F) := c.support
-  letI : Finite s := Finite.of_injective
-    (fun i : s => (⟨(i : Module.Free.ChooseBasisIndex R F), by simpa [s] using i.property⟩ : c.support))
+  let _ : Finite s := Finite.of_injective
+    (fun i : s => (⟨(i : Module.Free.ChooseBasisIndex R F), by simp [s]⟩ : c.support))
     (by intro i j hij; exact Subtype.ext (congrArg Subtype.val hij))
   let Q : Submodule R F := Submodule.span R (b '' s)
   refine ⟨Q, ?_, ?_, ?_, ?_⟩
   · have hx : c.sum (fun i a => a • b i) = x := by
-      change c.sum (fun i a => a • b i) = x
-      exact b.repr.symm_apply_apply x
+      simpa only [c, Finsupp.linearCombination_apply] using b.linearCombination_repr x
     rw [← hx]
     change c.sum (fun i a => a • b i) ∈ Q
     apply Submodule.sum_mem
@@ -80,16 +79,16 @@ private theorem free_element_mem_finite_free_direct_summand
         b.linearIndependent.comp (fun i : s => (i : Module.Free.ChooseBasisIndex R F))
           Subtype.val_injective) (by
       intro y hy
-      change (y : F) ∈ Submodule.span R (b '' s) at hy
+      have hy' : (y : F) ∈ Submodule.span R (b '' s) := y.property
       refine Submodule.span_induction (p := fun z hz =>
-        (⟨z, hz⟩ : Q) ∈ Submodule.span R (Set.range v)) ?_ ?_ ?_ ?_ y hy
+        (⟨z, hz⟩ : Q) ∈ Submodule.span R (Set.range v)) ?_ ?_ ?_ ?_ hy'
       · rintro z ⟨i, hi, rfl⟩
         exact Submodule.subset_span ⟨⟨i, hi⟩, rfl⟩
       · exact Submodule.zero_mem _
-      · intro z w hz hw
-        exact Submodule.add_mem _ hz hw
-      · intro a z hz
-        exact Submodule.smul_mem _ a hz)
+      · intro z w hz hw hz' hw'
+        exact Submodule.add_mem _ hz' hw'
+      · intro a z hz hz'
+        exact Submodule.smul_mem _ a hz')
     exact Module.Finite.of_basis bQ
   · let v : s → Q := fun i =>
       ⟨b i, Submodule.subset_span ⟨i, i.property, rfl⟩⟩
@@ -100,16 +99,16 @@ private theorem free_element_mem_finite_free_direct_summand
         b.linearIndependent.comp (fun i : s => (i : Module.Free.ChooseBasisIndex R F))
           Subtype.val_injective) (by
       intro y hy
-      change (y : F) ∈ Submodule.span R (b '' s) at hy
+      have hy' : (y : F) ∈ Submodule.span R (b '' s) := y.property
       refine Submodule.span_induction (p := fun z hz =>
-        (⟨z, hz⟩ : Q) ∈ Submodule.span R (Set.range v)) ?_ ?_ ?_ ?_ y hy
+        (⟨z, hz⟩ : Q) ∈ Submodule.span R (Set.range v)) ?_ ?_ ?_ ?_ hy'
       · rintro z ⟨i, hi, rfl⟩
         exact Submodule.subset_span ⟨⟨i, hi⟩, rfl⟩
       · exact Submodule.zero_mem _
-      · intro z w hz hw
-        exact Submodule.add_mem _ hz hw
-      · intro a z hz
-        exact Submodule.smul_mem _ a hz)
+      · intro z w hz hw hz' hw'
+        exact Submodule.add_mem _ hz' hw'
+      · intro a z hz hz'
+        exact Submodule.smul_mem _ a hz')
     exact Module.Free.of_basis bQ
 
 /-- A countably generated module is free when every decomposition with a
@@ -147,11 +146,11 @@ theorem projective_free_over_local_ring
     [AddCommGroup P] [Module R P]
     (hP : Module.Projective R P) :
     Module.Free R P := by
-  letI : Module.Projective R P := hP
+  let _ : Module.Projective R P := hP
   obtain ⟨ι, N, hN, ⟨e⟩⟩ :=
     Formalization.Books.Algebra.Unit84.projective_isDirectSumOfCountablyGeneratedProjectiveModules
       (R := R) (M := P)
-  letI : ∀ i, Module.Projective R (N i) := fun i => (hN i).2
+  let _ : ∀ i, Module.Projective R (N i) := fun i => (hN i).2
   have hfree : ∀ i, Module.Free R (N i) := by
     intro i
     refine free_of_countablyGenerated_of_free_direct_summand_property
@@ -164,11 +163,11 @@ theorem projective_free_over_local_ring
     have hproj : proj.comp inc = LinearMap.id := by
       ext a
       simp [inc, proj]
-    letI : Module.Projective R A := Module.Projective.of_split inc proj hproj
+    let _ : Module.Projective R A := Module.Projective.of_split inc proj hproj
     exact projective_element_mem_free_direct_summand (R := R) (P := A)
       (inferInstance : Module.Projective R A) x
-  letI : ∀ j, Module.Free R (N j) := fun j => hfree j
-  letI : Module.Free R (DirectSum ι (fun j => (N j : Type v))) :=
+  let _ : ∀ j, Module.Free R (N j) := fun j => hfree j
+  let _ : Module.Free R (DirectSum ι (fun j => (N j : Type v))) :=
     Module.Free.dfinsupp R (fun j : ι => (N j : Type v))
   exact Module.Free.of_equiv' (by infer_instance) e.symm
 

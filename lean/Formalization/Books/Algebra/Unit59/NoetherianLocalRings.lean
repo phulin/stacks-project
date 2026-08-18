@@ -60,7 +60,8 @@ def cumulativeHilbertFunction
 
 theorem cumulativeHilbertFunction_eq_sum
     (R : Type u) (M : Type v) [CommRing R] [IsLocalRing R]
-    [AddCommGroup M] [Module R M] (n : ℕ) :
+    [IsNoetherianRing R] [AddCommGroup M] [Module R M]
+    [Module.Finite R M] (n : ℕ) :
     cumulativeHilbertFunction R M n =
       ∑ i ∈ Finset.range (n + 1), hilbertFunction R M i := by
   sorry
@@ -136,7 +137,9 @@ theorem hilbertPowerCumulativeQuotient_isFiniteLength
 
 theorem idealCumulativeHilbertFunction_eq_sum
     {R : Type u} {M : Type v} [CommRing R]
-    [AddCommGroup M] [Module R M] (I : Ideal R) (n : ℕ) :
+    [IsLocalRing R] [IsNoetherianRing R] [AddCommGroup M] [Module R M]
+    [Module.Finite R M] (I : Ideal R) (hI : IsIdealOfDefinition R I)
+    (n : ℕ) :
     idealCumulativeHilbertFunction I M n =
       ∑ i ∈ Finset.range (n + 1), idealHilbertFunction I M i := by
   sorry

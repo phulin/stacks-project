@@ -1093,11 +1093,15 @@ private theorem closedSubsetPushforward_unit_stalk_comp
               dsimp [TopCat.Sheaf.pullbackPushforwardAdjunction,
                 TopCat.Sheaf.pushforward, TopCat.Presheaf.pushforward] at huU ⊢
               exact huU
+            /- Prior attempt: the intermediate unit rewrite did not yet prove
+            the required germ/stalk comparison.
             exact (Category.assoc _ _ _).symm.trans
               (congrArg
                 (fun q => q ≫
                   TopCat.Presheaf.germ ((sheafToPresheaf K C).obj F')
                     ((Opens.map (closedSubsetInclusion Z)).obj U) z hU) huU')
+            -/
+            sorry
   change m ≫ eS.hom = eP.hom
   exact hcomp
 

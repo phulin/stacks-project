@@ -2574,8 +2574,8 @@ def ListedProperConfiguration {k : ℕ} (D : LocalNumericalData k) : Prop :=
       (fun E => isA4 E ∨ isC4 E ∨ isB4 E ∨ isF4 E ∨ isD4 E)) ∨
     (∃ h : k = 5, UpToReordering (h ▸ D)
       (fun E => isA5 E ∨ isC5 E ∨ isB5 E ∨ isD5 E)) ∨
-    (6 ≤ k ∧ (UpToReversal D (fun E => isAn E ∨ isCn E ∨ isBn E) ∨
-        isDn D)) ∨
+    (6 ≤ k ∧ (UpToReordering D (fun E => isAn E ∨ isCn E ∨ isBn E) ∨
+        UpToReordering D (fun E => isDn E))) ∨
     (∃ h : k = 6, UpToReordering (h ▸ D) (fun E => isE6 E)) ∨
     (∃ h : k = 7, UpToReordering (h ▸ D) (fun E => isE7 E)) ∨
     (∃ h : k = 8, UpToReordering (h ▸ D) (fun E => isE8 E))

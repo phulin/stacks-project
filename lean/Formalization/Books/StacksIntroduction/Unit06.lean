@@ -1,0 +1,1 @@
+import Formalization.Books.StacksIntroduction.Unit06.SmoothCover

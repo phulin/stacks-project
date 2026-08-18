@@ -1,8 +1,4 @@
 import Formalization.Books.StacksPerfect.Unit01.Introduction
-import Formalization.Books.StacksPerfect.Unit01.Conventions
-import Formalization.Books.StacksPerfect.Unit01.Core
-import Formalization.Books.StacksPerfect.Unit01.Sites
-import Formalization.Books.StacksPerfect.Unit01.Cohomology
 
 /-!
 # Derived Categories of Stacks, Chapter 1: Introduction

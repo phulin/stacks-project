@@ -114,7 +114,7 @@ theorem isPreAdicTopologicalRing_iff_ideal_powers_open
       have hmem : ((I ^ n : Ideal R) : Set R) ∈ nhds (0 : R) := by
         cases n with
         | zero =>
-            simpa using (univ_mem : (Set.univ : Set R) ∈ nhds (0 : R))
+            simp
         | succ n =>
             exact (hopen (n + 1) (by omega)).mem_nhds (Ideal.zero_mem _)
       exact Filter.mem_of_superset hmem hnU

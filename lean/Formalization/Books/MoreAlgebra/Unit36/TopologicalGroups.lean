@@ -746,8 +746,8 @@ theorem linearCompletionMap_injective_iff_separated
     (M : Type u) [AddCommGroup M] [TopologicalSpace M]
     [IsTopologicalAddGroup M] :
     Function.Injective (linearCompletionMap M) ↔ T2Space M := by
-  letI : UniformSpace M := IsTopologicalAddGroup.rightUniformSpace M
-  letI : IsUniformAddGroup M := isUniformAddGroup_of_addCommGroup
+  let : UniformSpace M := IsTopologicalAddGroup.rightUniformSpace M
+  let : IsUniformAddGroup M := isUniformAddGroup_of_addCommGroup
   constructor
   · intro h
     exact T2Space.of_injective_continuous h (linearCompletionMap M).continuous

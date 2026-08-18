@@ -4,7 +4,6 @@ import Mathlib.RingTheory.GradedAlgebra.RingHom
 import Mathlib.RingTheory.GradedAlgebra.Homogeneous.Ideal
 import Mathlib.RingTheory.GradedAlgebra.Homogeneous.Submodule
 import Mathlib.RingTheory.IntegralClosure.Algebra.Basic
-import Mathlib.RingTheory.Nakayama
 import Mathlib.LinearAlgebra.TensorProduct.Basic
 
 /-!
@@ -349,6 +348,13 @@ noncomputable instance gradedHomGmodule
     DirectSum.Gmodule (fun n : ℕ => G.component n)
       (fun n : ℤ => gradedHomComponent G 𝓜 𝓝 n) :=
   Classical.choice (gradedHom_gmodule_exists G 𝓜 𝓝)
+
+/-- The graded Hom is an `S`-module, by transporting the external graded-ring action
+along the decomposition equivalence of `S`. -/
+noncomputable instance gradedHomModule
+    (G : GradedRingData S) (𝓜 : GradedModuleData G M) (𝓝 : GradedModuleData G N) :
+    Module S (gradedHom G 𝓜 𝓝) :=
+  Module.compHom _ (DirectSum.decomposeRingEquiv G.component).toRingHom
 
 theorem gradedHomComponent_spec
     (G : GradedRingData S) (𝓜 : GradedModuleData G M) (𝓝 : GradedModuleData G N)

@@ -4,6 +4,7 @@ import Mathlib.CategoryTheory.Abelian.Basic
 import Mathlib.Topology.Algebra.Group.Quotient
 import Mathlib.Topology.Algebra.GroupCompletion
 import Mathlib.Topology.Algebra.LinearTopology
+import Mathlib.Topology.UniformSpace.CompleteSeparated
 
 namespace Formalization.Books.MoreAlgebra.Unit36
 
@@ -751,7 +752,7 @@ theorem linearCompletionMap_injective_iff_separated
   · intro h
     exact T2Space.of_injective_continuous h (linearCompletionMap M).continuous
   · intro h
-    letI : T2Space M := h
+    let : T2Space M := h
     exact UniformSpace.Completion.coe_injective M
 
 theorem isCompleteTopologicalAddGroup_iff_linearCompletionMap_bijective
@@ -759,15 +760,15 @@ theorem isCompleteTopologicalAddGroup_iff_linearCompletionMap_bijective
     [IsTopologicalAddGroup M] :
     IsCompleteTopologicalAddGroup M ↔
       Function.Bijective (linearCompletionMap M) := by
-  letI : UniformSpace M := IsTopologicalAddGroup.rightUniformSpace M
-  letI : IsUniformAddGroup M := isUniformAddGroup_of_addCommGroup
+  let : UniformSpace M := IsTopologicalAddGroup.rightUniformSpace M
+  let : IsUniformAddGroup M := isUniformAddGroup_of_addCommGroup
   change IsCompleteTopologicalAddGroup M ↔
     Function.Bijective
       (UniformSpace.Completion.toCompl : M →+ UniformSpace.Completion M)
   constructor
   · rintro ⟨hcomplete, hT2⟩
-    letI : CompleteSpace M := hcomplete
-    letI : T2Space M := hT2
+    let : CompleteSpace M := hcomplete
+    let : T2Space M := hT2
     have hinj : Function.Injective
         (UniformSpace.Completion.toCompl : M →+ UniformSpace.Completion M) :=
       UniformSpace.Completion.coe_injective M
@@ -796,11 +797,16 @@ theorem isCompleteTopologicalAddGroup_iff_linearCompletionMap_bijective
     have hT2 : T2Space M := by
       apply T2Space.of_injective_continuous h.1
       exact UniformSpace.Completion.continuous_toCompl
-    letI : T2Space M := hT2
+    let : T2Space M := hT2
     have hcomplete : CompleteSpace M := by
       apply (completeSpace_iff_isComplete_range
         (UniformSpace.Completion.isUniformInducing_coe M)).mpr
-      rw [h.2.range_eq]
+      have hsurj : Function.Surjective
+          ((↑) : M → UniformSpace.Completion M) := by
+        intro y
+        obtain ⟨x, hx⟩ := h.2 y
+        exact ⟨x, hx⟩
+      rw [hsurj.range_eq]
       exact (completeSpace_iff_isComplete_univ).mp inferInstance
     exact ⟨hcomplete, hT2⟩
 

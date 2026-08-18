@@ -598,7 +598,7 @@ private theorem okaCounterexample_zero_constant_mem_vars {k T : Type u} [Field k
     exact False.elim (hcoeff (by simpa [MvPolynomial.constantCoeff_eq] using hf))
   · obtain ⟨i, hi⟩ : ∃ i, m i ≠ 0 := by
       by_contra h
-      push_neg at h
+      push Not at h
       exact hm0 (Finsupp.ext h)
     exact ⟨i, Set.mem_univ _, hi⟩
 
@@ -694,7 +694,7 @@ private theorem okaCounterexampleMaximalIdeal_isMaximal {k T : Type u} [Field k]
       apply RingHom.mem_ker.mp
       rw [okaCounterexampleEvalZero_ker_eq_maximal]
       exact h1
-    simpa using hzero
+    simp at hzero
   · intro J a hMJ haM haJ
     have hdiff : a - algebraMap k (okaCounterexampleRing k T)
         (okaCounterexampleEvalZero a) ∈ okaCounterexampleMaximalIdeal k T := by
@@ -711,7 +711,7 @@ private theorem okaCounterexampleMaximalIdeal_isMaximal {k T : Type u} [Field k]
       apply haM
       rw [← okaCounterexampleEvalZero_ker_eq_maximal]
       apply RingHom.mem_ker.mpr
-      simpa [hzero]
+      simp [hzero]
     have hinv := J.mul_mem_left
       (algebraMap k (okaCounterexampleRing k T)
         (okaCounterexampleEvalZero a)⁻¹) hconst
@@ -729,7 +729,7 @@ private theorem okaCounterexampleMaximalIdeal_le_of_prime
   apply Ideal.span_le.2
   rintro _ ⟨n, rfl⟩
   apply hP.mem_of_pow_mem 2
-  simpa [okaCounterexampleX_sq_eq_zero]
+  simp [okaCounterexampleX_sq_eq_zero]
 
 private abbrev okaCounterexampleTestVariables := Sum ℕ Unit
 
@@ -757,14 +757,14 @@ private def okaCounterexampleTestTail {k : Type u} [Field k]
 
 private theorem okaCounterexampleTestX_sq {k : Type u} [Field k]
     (i : okaCounterexampleTestVariables) :
-    okaCounterexampleTestX i ^ 2 = 0 := by
+    okaCounterexampleTestX (k := k) i ^ 2 = 0 := by
   change (Ideal.Quotient.mk (okaCounterexampleTestSquareIdeal k)
       (MvPolynomial.X i)) ^ 2 = 0
   apply Ideal.Quotient.eq_zero_iff_mem.mpr
   exact Ideal.subset_span ⟨i, rfl⟩
 
 private theorem okaCounterexampleTestTail_sq {k : Type u} [Field k]
-    (N n : ℕ) : okaCounterexampleTestTail N n ^ 2 = 0 := by
+    (N n : ℕ) : okaCounterexampleTestTail (k := k) N n ^ 2 = 0 := by
   unfold okaCounterexampleTestTail
   split_ifs with hn
   · rw [mul_pow, okaCounterexampleTestX_sq]
@@ -773,23 +773,170 @@ private theorem okaCounterexampleTestTail_sq {k : Type u} [Field k]
 
 private theorem okaCounterexampleTestTail_succ {k : Type u} [Field k]
     {N n : ℕ} (hn : n < N) :
-    okaCounterexampleTestX (Sum.inl (n + 1)) *
-        okaCounterexampleTestTail N (n + 1) =
-      okaCounterexampleTestTail N n := by
+    okaCounterexampleTestX (k := k) (Sum.inl (n + 1)) *
+        okaCounterexampleTestTail (k := k) N (n + 1) =
+      okaCounterexampleTestTail (k := k) N n := by
   unfold okaCounterexampleTestTail
-  simp only [Nat.le_of_lt hn, ↓reduceIte]
+  have hn' : n + 1 ≤ N := Nat.succ_le_of_lt hn
+  simp only [hn', ↓reduceIte]
   have hset : Finset.Icc (n + 1) N =
       insert (n + 1) (Finset.Icc (n + 2) N) := by
     ext i
     simp only [Finset.mem_Icc, Finset.mem_insert]
     omega
   rw [hset, Finset.prod_insert]
-  · simp [mul_assoc, mul_left_comm, mul_comm]
-  · simp
+  · have hn0 : n ≤ N := Nat.le_of_lt hn
+    simp only [hn0, ↓reduceIte]
+    simp [mul_left_comm, mul_comm]
+  · intro h
+    simp only [Finset.mem_Icc] at h
+    exfalso
+    omega
 
 private theorem okaCounterexampleTestTail_zero {k : Type u} [Field k]
-    (N n : ℕ) (hn : N < n) : okaCounterexampleTestTail N n = 0 := by
+    (N n : ℕ) (hn : N < n) : okaCounterexampleTestTail (k := k) N n = 0 := by
   simp [okaCounterexampleTestTail, Nat.not_le.mpr hn]
+
+private def okaCounterexampleTVariableIndices {k T : Type u} [Field k]
+    (f : MvPolynomial (okaCounterexampleVariables T) k) : Set (T × ℕ) :=
+  Sum.inr ⁻¹' (f.vars : Set (okaCounterexampleVariables T))
+
+private theorem okaCounterexampleTVariableIndices_finite
+    {k T : Type u} [Field k]
+    (f : MvPolynomial (okaCounterexampleVariables T) k) :
+    (okaCounterexampleTVariableIndices f).Finite := by
+  apply f.vars.finite_toSet.preimage
+  intro p hp q hq h
+  exact Sum.inr.inj h
+
+private def okaCounterexampleTestAssignment {k T : Type u} [Field k]
+    (t : T) (N : ℕ) : okaCounterexampleVariables T → okaCounterexampleTestRing k := by
+  classical
+  exact Sum.elim
+    (fun n => if n = 0 then 0 else okaCounterexampleTestX (k := k) (Sum.inl n))
+    (fun p => if p.1 = t then okaCounterexampleTestTail N p.2 else 0)
+
+private def okaCounterexampleTestEval {k T : Type u} [Field k]
+    (t : T) (N : ℕ) :
+    MvPolynomial (okaCounterexampleVariables T) k →+*
+      okaCounterexampleTestRing k :=
+  MvPolynomial.eval₂Hom (algebraMap k (okaCounterexampleTestRing k))
+    (okaCounterexampleTestAssignment t N)
+
+private theorem okaCounterexampleTestEval_relation
+    {k T : Type u} [Field k] {t : T} {N : ℕ}
+    {r : okaCounterexampleRelationSet k T}
+    (hr : ∀ p : T × ℕ, Sum.inr (t, p.2) ∈ (r : MvPolynomial
+      (okaCounterexampleVariables T) k).vars → p.2 < N) :
+    okaCounterexampleTestEval t N (r : MvPolynomial (okaCounterexampleVariables T) k) = 0 := by
+  classical
+  have hr' := r.property
+  simp only [okaCounterexampleRelationSet, Set.mem_union, Set.mem_singleton_iff,
+    Set.mem_range] at hr'
+  rcases hr' with (((⟨h0⟩ | ⟨n, hn⟩) | ⟨p, hp⟩) | ⟨p, hp⟩)
+  · rw [h0]
+    simp [okaCounterexampleTestEval, okaCounterexampleTestAssignment]
+  · rw [← hn]
+    simp [okaCounterexampleTestEval, okaCounterexampleTestAssignment,
+      okaCounterexampleTestX_sq]
+  · by_cases hpt : p.1 = t
+    · have hpn : p.2 < N := by
+        apply hr p
+        rw [← hp]
+        rw [MvPolynomial.mem_vars_iff_mem_support]
+        refine ⟨Finsupp.single (Sum.inr (t, p.2)) 2, ?_, ?_⟩
+        · rw [MvPolynomial.mem_support_iff, MvPolynomial.coeff_X_pow]
+          have hp' : p = (t, p.2) := Prod.ext hpt rfl
+          rw [hp']
+          simp
+        · simp
+      rw [← hp]
+      simp [okaCounterexampleTestEval, okaCounterexampleTestAssignment, hpt,
+        okaCounterexampleTestTail_sq]
+    · rw [← hp]
+      simp [okaCounterexampleTestEval, okaCounterexampleTestAssignment, hpt]
+  · by_cases hpt : p.1 = t
+    · have hpn : p.2 < N := by
+        apply hr p
+        rw [← hp]
+        rw [MvPolynomial.mem_vars_iff_mem_support]
+        refine ⟨Finsupp.single (Sum.inr (t, p.2)) 1, ?_, ?_⟩
+        · rw [MvPolynomial.mem_support_iff]
+          have hp' : p = (t, p.2) := Prod.ext hpt rfl
+          rw [hp']
+          simp [MvPolynomial.coeff_sub, MvPolynomial.coeff_mul]
+        · simp
+      rw [← hp]
+      simp [okaCounterexampleTestEval, okaCounterexampleTestAssignment, hpt,
+        okaCounterexampleTestTail_succ hpn]
+    · rw [← hp]
+      simp [okaCounterexampleTestEval, okaCounterexampleTestAssignment, hpt]
+
+private theorem okaCounterexampleTestTail_zero_ne_zero {k : Type u} [Field k]
+    (N : ℕ) : okaCounterexampleTestTail (k := k) N 0 ≠ 0 := by
+  intro h
+  have hmem :
+      (∏ i ∈ Finset.Icc 1 N,
+          (MvPolynomial.X (Sum.inl i) : okaCounterexampleTestPolynomial k)) *
+        MvPolynomial.X (Sum.inr ()) ∈ okaCounterexampleTestSquareIdeal k := by
+    apply Ideal.Quotient.eq_zero_iff_mem.mp
+    simpa [okaCounterexampleTestTail, okaCounterexampleTestX] using h
+  have hmem' := hmem
+  change _ ∈ Ideal.span (Set.range (fun i : okaCounterexampleTestVariables =>
+    (MvPolynomial.X i : okaCounterexampleTestPolynomial k) ^ 2)) at hmem'
+  rw [show (fun i : okaCounterexampleTestVariables =>
+      (MvPolynomial.X i : okaCounterexampleTestPolynomial k) ^ 2) =
+      fun i => MvPolynomial.monomial (Finsupp.single i 2) (1 : k) by
+        funext i
+        rw [MvPolynomial.X_pow_eq_monomial]] at hmem'
+  have hset : Set.range (fun i : okaCounterexampleTestVariables =>
+      MvPolynomial.monomial (Finsupp.single i 2) (1 : k)) =
+      (fun d : okaCounterexampleTestVariables →₀ ℕ =>
+        MvPolynomial.monomial d (1 : k)) ''
+        Set.range (fun i : okaCounterexampleTestVariables => Finsupp.single i 2) := by
+    ext p
+    constructor
+    · rintro ⟨i, rfl⟩
+      exact ⟨Finsupp.single i 2, ⟨i, rfl⟩, rfl⟩
+    · rintro ⟨d, ⟨i, rfl⟩, rfl⟩
+      exact ⟨i, rfl⟩
+  rw [hset] at hmem'
+  let m : okaCounterexampleTestVariables →₀ ℕ :=
+    Finsupp.indicator (Finset.image Sum.inl (Finset.Icc 1 N)) (fun _ _ => 1) +
+      Finsupp.single (Sum.inr ()) 1
+  have hp :
+      (∏ i ∈ Finset.Icc 1 N,
+          (MvPolynomial.X (Sum.inl i) : okaCounterexampleTestPolynomial k)) *
+        MvPolynomial.X (Sum.inr ()) = MvPolynomial.monomial m (1 : k) := by
+    dsimp [m]
+    rw [MvPolynomial.monomial_add_single]
+    simp only [pow_one]
+    rw [← Finset.prod_image]
+    · simpa using (MvPolynomial.prod_X_pow (R := k)
+        (fun _ : okaCounterexampleTestVariables => 1)
+        (Finset.image Sum.inl (Finset.Icc 1 N)))
+    · intro a ha b hb hab
+      exact Sum.inl.inj hab
+  rw [hp] at hmem'
+  rw [MvPolynomial.mem_ideal_span_monomial_image_iff_dvd] at hmem'
+  have hm_support : m ∈ (MvPolynomial.monomial m (1 : k)).support := by
+    simp
+  obtain ⟨si, hsi, hdiv⟩ := hmem' m hm_support
+  obtain ⟨i, rfl⟩ := hsi
+  have hdiv' :
+      MvPolynomial.monomial (Finsupp.single i 2) (1 : k) ∣
+        MvPolynomial.monomial m (1 : k) := by
+    simpa using hdiv
+  have hle : Finsupp.single i 2 ≤ m :=
+    MvPolynomial.monomial_one_dvd_monomial_one.mp hdiv'
+  have hi_le : 2 ≤ m i := by
+    have := hle i
+    simpa using this
+  have hm_le : m i ≤ 1 := by
+    dsimp [m]
+    rcases i with n | u <;> simp
+    split_ifs <;> omega
+  omega
 
 /-- The Oka-family counterexample attached to an uncountable indexing type.
 
@@ -810,9 +957,8 @@ Proof roadmap:
    index outside their countable union using `hT`, and use the normal form to
    show that its `z t 0` cannot lie in the generated ideal, a contradiction.
 
-The missing ingredient is a reusable normal-form API for this bespoke
-infinitely generated quotient; the theorem is intentionally admitted until
-that API is developed. -/
+The finite-support evaluation argument below supplies the required normal-form
+step for the non-generation assertion. -/
 theorem okaCounterexample_spec {k T : Type u} [Field k]
     (hT : Cardinal.aleph0 < Cardinal.mk T) :
     IsLocalRing (okaCounterexampleRing k T) ∧
@@ -832,7 +978,229 @@ theorem okaCounterexample_spec {k T : Type u} [Field k]
   · intro P hP
     exact (hMmax.eq_of_le hP.ne_top
       (okaCounterexampleMaximalIdeal_le_of_prime hP)).symm
-  · sorry
+  · classical
+    intro hgen
+    obtain ⟨s, hsκ, hs⟩ := hgen
+    let q : MvPolynomial (okaCounterexampleVariables T) k →+*
+        okaCounterexampleRing k T :=
+      Ideal.Quotient.mk (okaCounterexampleRelationIdeal k T)
+    let zPoly : T × ℕ → MvPolynomial (okaCounterexampleVariables T) k :=
+      fun p => MvPolynomial.X (Sum.inr p)
+    let zRing : T × ℕ → okaCounterexampleRing k T :=
+      fun p => okaCounterexampleZ k T p.1 p.2
+    have hrep : ∀ a : s, ∃ f : MvPolynomial (okaCounterexampleVariables T) k,
+        q f = a := by
+      intro a
+      obtain ⟨f, hf⟩ := Ideal.Quotient.mk_surjective (a : okaCounterexampleRing k T)
+      exact ⟨f, by simpa [q] using hf⟩
+    choose f hf using hrep
+    have hzrep : ∀ a : s, ∃ c : (T × ℕ) →₀ okaCounterexampleRing k T,
+        c.sum (fun p b => b * zRing p) = a := by
+      intro a
+      have ha : (a : okaCounterexampleRing k T) ∈
+          okaCounterexampleZIdeal k T := by
+        rw [← hs]
+        exact Ideal.subset_span a.property
+      simpa [zRing, okaCounterexampleZIdeal] using
+        (Finsupp.mem_ideal_span_range_iff_exists_finsupp.mp ha)
+    choose c hc using hzrep
+    have hlift : ∀ a : s, ∀ p : T × ℕ, ∃ g :
+        MvPolynomial (okaCounterexampleVariables T) k, q g = c a p := by
+      intro a p
+      obtain ⟨g, hg⟩ := Ideal.Quotient.mk_surjective (c a p)
+      exact ⟨g, by simpa [q] using hg⟩
+    choose b hb using hlift
+    let cPoly : s → MvPolynomial (okaCounterexampleVariables T) k :=
+      fun a => ∑ p ∈ (c a).support, b a p * zPoly p
+    have hrel : ∀ a : s, ∃ d :
+        (okaCounterexampleRelationSet k T) →₀
+          MvPolynomial (okaCounterexampleVariables T) k,
+        d.sum (fun r b => b * (r : MvPolynomial
+          (okaCounterexampleVariables T) k)) =
+          f a - cPoly a := by
+      intro a
+      have hsum : q (cPoly a) = (c a).sum (fun p b => b * zRing p) := by
+        simp only [cPoly, Finsupp.sum, map_sum, map_mul]
+        apply Finset.sum_congr rfl
+        intro p hp
+        rw [hb a p]
+        rfl
+      have hmem : f a - cPoly a ∈
+          okaCounterexampleRelationIdeal k T := by
+        apply Ideal.Quotient.eq_zero_iff_mem.mp
+        change q (f a - cPoly a) = 0
+        rw [map_sub, hf a]
+        rw [hsum, hc a]
+        simp
+      have hmem' : f a - cPoly a ∈
+          Ideal.span (Set.range (fun r : okaCounterexampleRelationSet k T =>
+            (r : MvPolynomial (okaCounterexampleVariables T) k))) := by
+        simpa [okaCounterexampleRelationIdeal] using hmem
+      exact Finsupp.mem_ideal_span_range_iff_exists_finsupp.mp hmem'
+    choose d hd using hrel
+    have hs_countable : s.Countable :=
+      Cardinal.le_aleph0_iff_set_countable.mp hsκ
+    let _ : Countable s := hs_countable.to_subtype
+    let U : Set T := ⋃ a : s,
+      (Prod.fst '' ((c a).support : Set (T × ℕ))) ∪
+        ⋃ r ∈ (d a).support,
+          Prod.fst '' okaCounterexampleTVariableIndices (r : MvPolynomial
+            (okaCounterexampleVariables T) k)
+    have hU_countable : U.Countable := by
+      apply Set.countable_iUnion
+      intro a
+      apply Countable.union
+      · exact ((c a).support.countable_toSet.image Prod.fst)
+      · apply (d a).support.countable_toSet.biUnion
+        intro r hr
+        exact ((okaCounterexampleTVariableIndices_finite
+          (r : MvPolynomial (okaCounterexampleVariables T) k)).countable.image Prod.fst)
+    have hU_ne_univ : U ≠ (Set.univ : Set T) := by
+      intro hU
+      have hUcard : Cardinal.mk U ≤ Cardinal.aleph0 := hU_countable.le_aleph0
+      have hTcard : Cardinal.mk T ≤ Cardinal.aleph0 := by
+        simpa [hU] using hUcard
+      exact (not_le_of_gt hT) hTcard
+    obtain ⟨t, ht⟩ : ∃ t : T, t ∉ U := by
+      by_contra h
+      push Not at h
+      exact hU_ne_univ (Set.eq_univ_of_forall h)
+    have hzt : zRing (t, 0) ∈ Ideal.span s := by
+      rw [hs]
+      exact Ideal.subset_span ⟨(t, 0), rfl⟩
+    have he : ∃ e : s →₀ okaCounterexampleRing k T,
+        e.sum (fun a b => b * (a : okaCounterexampleRing k T)) = zRing (t, 0) := by
+      simpa using
+        (Finsupp.mem_ideal_span_range_iff_exists_finsupp.mp
+          (show zRing (t, 0) ∈
+            Ideal.span (Set.range (fun a : s => (a : okaCounterexampleRing k T))) by
+            simpa using hzt))
+    obtain ⟨e, he⟩ := he
+    have elift : ∀ a : s, ∃ g : MvPolynomial (okaCounterexampleVariables T) k,
+        q g = e a := by
+      intro a
+      obtain ⟨g, hg⟩ := Ideal.Quotient.mk_surjective (e a)
+      exact ⟨g, by simpa [q] using hg⟩
+    choose g hg using elift
+    let ePoly : MvPolynomial (okaCounterexampleVariables T) k :=
+      ∑ a ∈ e.support, g a * f a
+    have he' : (∑ a ∈ e.support, e a * (a : okaCounterexampleRing k T)) =
+        zRing (t, 0) := by
+      simpa [Finsupp.sum] using he
+    have hePoly : q ePoly = zRing (t, 0) := by
+      calc
+        q ePoly = ∑ a ∈ e.support, q (g a) * q (f a) := by
+          dsimp [ePoly]
+          rw [map_sum]
+          apply Finset.sum_congr rfl
+          intro a ha
+          rw [map_mul]
+        _ = ∑ a ∈ e.support, e a * (a : okaCounterexampleRing k T) := by
+          apply Finset.sum_congr rfl
+          intro a ha
+          rw [hg a, hf a]
+        _ = zRing (t, 0) := he'
+    have htarget : zPoly (t, 0) - ePoly ∈
+        okaCounterexampleRelationIdeal k T := by
+      apply Ideal.Quotient.eq_zero_iff_mem.mp
+      change q (zPoly (t, 0) - ePoly) = 0
+      rw [map_sub, hePoly]
+      simp [q, zPoly, zRing, okaCounterexampleZ]
+    have htarget' : zPoly (t, 0) - ePoly ∈
+        Ideal.span (Set.range (fun r : okaCounterexampleRelationSet k T =>
+          (r : MvPolynomial (okaCounterexampleVariables T) k))) := by
+      simpa [okaCounterexampleRelationIdeal] using htarget
+    obtain ⟨eD, heD⟩ :=
+      Finsupp.mem_ideal_span_range_iff_exists_finsupp.mp htarget'
+    let W : Set (T × ℕ) := ⋃ r ∈ eD.support,
+      okaCounterexampleTVariableIndices (r : MvPolynomial
+        (okaCounterexampleVariables T) k)
+    have hWfinite : W.Finite := by
+      apply eD.support.finite_toSet.biUnion
+      intro r hr
+      exact okaCounterexampleTVariableIndices_finite
+        (r : MvPolynomial (okaCounterexampleVariables T) k)
+    have hWnfinite : (Prod.snd '' W).Finite := hWfinite.image Prod.snd
+    obtain ⟨B, hB⟩ := hWnfinite.bddAbove
+    have hrelD (r : okaCounterexampleRelationSet k T) (hr : r ∈ eD.support) :
+        okaCounterexampleTestEval t (B + 1)
+          (r : MvPolynomial (okaCounterexampleVariables T) k) = 0 := by
+      apply okaCounterexampleTestEval_relation
+      intro p hp
+      have hpW : (t, p.2) ∈ W := by
+        exact Set.mem_iUnion.2 ⟨r, Set.mem_iUnion.2 ⟨hr, hp⟩⟩
+      have hpWn : p.2 ∈ Prod.snd '' W := ⟨(t, p.2), hpW, rfl⟩
+      exact Nat.lt_succ_of_le (hB hpWn)
+    have hrel_a (a : s) (r : okaCounterexampleRelationSet k T)
+        (hr : r ∈ (d a).support) :
+        okaCounterexampleTestEval t (B + 1)
+          (r : MvPolynomial (okaCounterexampleVariables T) k) = 0 := by
+      apply okaCounterexampleTestEval_relation
+      intro p hp
+      have htr : t ∉ Prod.fst '' okaCounterexampleTVariableIndices
+          (r : MvPolynomial (okaCounterexampleVariables T) k) := by
+        intro htr
+        apply ht
+        refine Set.mem_iUnion.2 ⟨a, ?_⟩
+        simp only [Set.mem_union]
+        right
+        exact Set.mem_iUnion.2 ⟨r, Set.mem_iUnion.2 ⟨hr, htr⟩⟩
+      exact (htr ⟨(t, p.2), hp, rfl⟩).elim
+    have hsum_a (a : s) :
+        okaCounterexampleTestEval t (B + 1)
+            ((d a).sum (fun r b => b *
+              (r : MvPolynomial (okaCounterexampleVariables T) k))) = 0 := by
+      simp only [Finsupp.sum, map_sum, map_mul]
+      apply Finset.sum_eq_zero
+      intro r hr
+      rw [hrel_a a r hr, mul_zero]
+    have hcpoly (a : s) :
+        okaCounterexampleTestEval t (B + 1) (cPoly a) = 0 := by
+      dsimp [cPoly]
+      simp only [map_sum, map_mul]
+      apply Finset.sum_eq_zero
+      intro p hp
+      have hpt : p.1 ≠ t := by
+        intro hpt
+        apply ht
+        refine Set.mem_iUnion.2 ⟨a, ?_⟩
+        simp only [Set.mem_union]
+        left
+        exact ⟨p, hp, hpt⟩
+      rw [show okaCounterexampleTestEval t (B + 1) (zPoly p) = 0 by
+        simp [okaCounterexampleTestEval, okaCounterexampleTestAssignment, zPoly, hpt]]
+      simp
+    have haeval (a : s) :
+        okaCounterexampleTestEval t (B + 1) (f a) = 0 := by
+      have hEq := congrArg (okaCounterexampleTestEval t (B + 1)) (hd a)
+      rw [map_sub, hsum_a a, hcpoly a] at hEq
+      have hzero : (0 : okaCounterexampleTestRing k) =
+          okaCounterexampleTestEval t (B + 1) (f a) := by
+        simpa using hEq
+      exact hzero.symm
+    have hePoly_eval :
+        okaCounterexampleTestEval t (B + 1) ePoly = 0 := by
+      dsimp [ePoly]
+      simp only [map_sum, map_mul]
+      apply Finset.sum_eq_zero
+      intro a ha
+      rw [haeval a, mul_zero]
+    have heD_eval :
+        okaCounterexampleTestEval t (B + 1)
+            (eD.sum (fun r b => b *
+              (r : MvPolynomial (okaCounterexampleVariables T) k))) = 0 := by
+      simp only [Finsupp.sum, map_sum, map_mul]
+      apply Finset.sum_eq_zero
+      intro r hr
+      rw [hrelD r hr, mul_zero]
+    have hz_eval :
+        okaCounterexampleTestEval t (B + 1) (zPoly (t, 0)) = 0 := by
+      have hEq := congrArg (okaCounterexampleTestEval t (B + 1)) heD
+      rw [heD_eval, map_sub, hePoly_eval] at hEq
+      simpa using hEq.symm
+    have htail : okaCounterexampleTestTail (k := k) (B + 1) 0 = 0 := by
+      simpa [zPoly, okaCounterexampleTestEval, okaCounterexampleTestAssignment] using hz_eval
+    exact okaCounterexampleTestTail_zero_ne_zero (k := k) (B + 1) htail
 
 /-! ## The Noetherian spectrum example -/
 

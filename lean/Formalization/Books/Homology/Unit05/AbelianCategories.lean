@@ -8,7 +8,9 @@ import Mathlib.CategoryTheory.Abelian.CommSq
 import Mathlib.CategoryTheory.Abelian.DiagramLemmas.Four
 import Mathlib.CategoryTheory.Abelian.Exact
 import Mathlib.CategoryTheory.Abelian.Opposite
+import Mathlib.CategoryTheory.Abelian.Transfer
 import Mathlib.CategoryTheory.Limits.Shapes.Pullback.IsPullback.Kernels
+import Mathlib.CategoryTheory.Preadditive.Transfer
 import Mathlib.CategoryTheory.Preadditive.Yoneda.Basic
 
 /-!
@@ -50,12 +52,37 @@ theorem additive_opposite_iff
     {C : Type u} [Category.{v} C] :
     Nonempty (Formalization.Books.Homology.Unit03.AdditiveCategory C) ↔
       Nonempty (Formalization.Books.Homology.Unit03.AdditiveCategory Cᵒᵖ) := by
-  sorry
+  constructor
+  · rintro ⟨h⟩
+    letI : Formalization.Books.Homology.Unit03.AdditiveCategory C := h
+    letI : HasFiniteBiproducts C :=
+      Formalization.Books.Homology.Unit03.additiveCategory_hasFiniteBiproducts C
+    exact ⟨{ toPreadditive := inferInstance, toHasFiniteProducts := inferInstance }⟩
+  · rintro ⟨h⟩
+    letI : Formalization.Books.Homology.Unit03.AdditiveCategory Cᵒᵖ := h
+    letI : Preadditive Cᵒᵖᵒᵖ := inferInstance
+    letI : Preadditive C :=
+      Preadditive.ofFullyFaithful (opOpEquivalence C).fullyFaithfulInverse
+    letI : HasFiniteCoproducts C := Limits.hasFiniteCoproducts_of_opposite
+    letI : HasFiniteBiproducts C := HasFiniteBiproducts.of_hasFiniteCoproducts
+    exact ⟨{ toPreadditive := inferInstance, toHasFiniteProducts := inferInstance }⟩
 
 theorem abelian_opposite_iff
     {C : Type u} [Category.{v} C] :
     Nonempty (Abelian C) ↔ Nonempty (Abelian Cᵒᵖ) := by
-  sorry
+  constructor
+  · rintro ⟨h⟩
+    letI : Abelian C := h
+    exact ⟨inferInstance⟩
+  · rintro ⟨h⟩
+    letI : Abelian Cᵒᵖ := h
+    letI : Abelian Cᵒᵖᵒᵖ := inferInstance
+    letI : Preadditive Cᵒᵖᵒᵖ := inferInstance
+    letI : Preadditive C :=
+      Preadditive.ofFullyFaithful (opOpEquivalence C).fullyFaithfulInverse
+    letI : HasFiniteCoproducts C := Limits.hasFiniteCoproducts_of_opposite
+    letI : HasFiniteBiproducts C := HasFiniteBiproducts.of_hasFiniteCoproducts
+    exact ⟨abelianOfEquivalence (opOp C)⟩
 
 theorem abelian_coimage_image_comparison_isIso
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -88,7 +115,8 @@ theorem isIso_iff_injective_and_surjective
     {C : Type u} [Category.{v} C] [Abelian C]
     {X Y : C} (f : X ⟶ Y) :
     IsIso f ↔ InjectiveMorphism f ∧ SurjectiveMorphism f := by
-  sorry
+  rw [isIso_iff_mono_and_epi]
+  exact and_congr (injective_iff_mono f).symm (surjective_iff_epi f).symm
 
 noncomputable abbrev quotientOfSubobject
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -181,7 +209,13 @@ theorem split_short_exact_section_exists_unique
     (s : S.X₃ ⟶ S.X₂) (hs : s ≫ S.g = 𝟙 _) :
     ∃! r : S.X₂ ⟶ S.X₁,
       ∃ h : S.Splitting, h.s = s ∧ h.r = r := by
-  sorry
+  let h₀ := split_of_section hS s hs
+  refine ⟨h₀.r, ⟨h₀, rfl, rfl⟩, ?_⟩
+  intro r hr
+  obtain ⟨h, hs', hr'⟩ := hr
+  have h₀s : h₀.s = s := rfl
+  have hh : h = h₀ := ShortComplex.Splitting.ext_s h h₀ (hs'.trans h₀s.symm)
+  exact hr'.symm.trans (congrArg (fun t : S.Splitting => t.r) hh)
 
 theorem split_short_exact_retraction_exists_unique
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -189,7 +223,13 @@ theorem split_short_exact_retraction_exists_unique
     (r : S.X₂ ⟶ S.X₁) (hr : S.f ≫ r = 𝟙 _) :
     ∃! s : S.X₃ ⟶ S.X₂,
       ∃ h : S.Splitting, h.r = r ∧ h.s = s := by
-  sorry
+  let h₀ := split_of_retraction hS r hr
+  refine ⟨h₀.s, ⟨h₀, rfl, rfl⟩, ?_⟩
+  intro s hs
+  obtain ⟨h, hr', hs'⟩ := hs
+  have h₀r : h₀.r = r := rfl
+  have hh : h = h₀ := ShortComplex.Splitting.ext_r h h₀ (hr'.trans h₀r.symm)
+  exact hs'.symm.trans (congrArg (fun t : S.Splitting => t.s) hh)
 
 noncomputable def contravariantHomSequence
     {C : Type u} [Category.{v} C] [Preadditive C]
@@ -302,7 +342,14 @@ theorem exact_iff_epi_refinement
       ∀ {W : C} (h : W ⟶ Y) (hh : h ≫ g = 0),
         ∃ (V : C) (k : V ⟶ W) (l : V ⟶ X),
           Epi k ∧ k ≫ h = l ≫ f := by
-  sorry
+  rw [ShortComplex.exact_iff_exact_up_to_refinements]
+  constructor
+  · intro h W x hx
+    obtain ⟨V, k, hk, l, hl⟩ := h x hx
+    exact ⟨V, k, l, hk, hl⟩
+  · intro h A x hx
+    obtain ⟨V, k, l, hk, hl⟩ := h x hx
+    exact ⟨V, k, hk, l, hl⟩
 
 noncomputable def inducedKernelMap
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -402,7 +449,20 @@ theorem snake_connecting_morphism_exists_unique
         x₂ ≫ S.L₁.g = x₃ ≫ S.v₀₁.τ₃ →
         x₁ ≫ S.L₂.f = x₂ ≫ S.v₁₂.τ₂ →
         x₃ ≫ δ = x₁ ≫ S.v₂₃.τ₁ := by
-  sorry
+  set_option backward.isDefEq.respectTransparency false in
+  refine ⟨S.δ, ?_, ?_⟩
+  · intro A x₃ x₂ x₁ h₂ h₁
+    exact S.δ_eq x₃ x₂ x₁ h₂ h₁
+  · intro δ' hδ'
+    apply (cancel_epi (pullback.snd S.L₁.g S.v₀₁.τ₃)).1
+    let e : pullback S.L₁.g S.v₀₁.τ₃ = S.P := rfl
+    have h := hδ' (pullback.snd S.L₁.g S.v₀₁.τ₃)
+      (pullback.fst S.L₁.g S.v₀₁.τ₃) (eqToHom e ≫ S.φ₁) pullback.condition
+      (by
+        simp only [Category.assoc, eqToHom_trans, eqToHom_refl, eqToHom_map,
+          Category.comp_id]
+        simpa [ShortComplex.SnakeInput.φ₂] using S.φ₁_L₂_f)
+    simpa [e] using h
 
 theorem snake_exact_sequence_exact
     {C : Type u} [Category.{v} C] [Abelian C]

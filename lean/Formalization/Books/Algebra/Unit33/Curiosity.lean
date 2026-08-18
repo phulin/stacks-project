@@ -1,3 +1,4 @@
+import Formalization.Books.Algebra.Unit31.NoetherianRings
 import Mathlib.Algebra.Ring.Prod
 import Mathlib.GroupTheory.Finiteness
 import Mathlib.RingTheory.Localization.Basic
@@ -12,7 +13,9 @@ The two source lemmas are represented using Mathlib's canonical localization
 `Localization`, spectrum map `PrimeSpectrum.comap`, closed-set predicate
 `IsClosed`, Noetherian-ring predicate `IsNoetherianRing`, Noetherian-space
 predicate `TopologicalSpace.NoetherianSpace`, and finitely generated-submonoid
-predicate `Submonoid.FG`.
+predicate `Submonoid.FG`.  The quotient statement records that its ideal is the
+kernel of the canonical localization map, which is the ideal used by the
+subsequent product-decomposition argument.
 -/
 
 namespace Formalization.Books.Algebra.Unit33
@@ -27,7 +30,11 @@ theorem localization_closed_image_quotient
     (hclosed :
       IsClosed
         (Set.range (PrimeSpectrum.comap (algebraMap R (Localization S))))) :
-    ∃ I : Ideal R, Nonempty (Localization S ≃+* R ⧸ I) := by
+    ∃ I : Ideal R,
+      I = RingHom.ker (algebraMap R (Localization S)) ∧
+        Set.range (PrimeSpectrum.comap (algebraMap R (Localization S))) =
+          PrimeSpectrum.zeroLocus (I : Set R) ∧
+        Nonempty (Localization S ≃+* R ⧸ I) := by
   sorry
 
 /-- Under any of the source's finiteness hypotheses, the localization splits off

@@ -109,8 +109,8 @@ theorem localization_isNormalDomain
     {R : Type*} [CommRing R] (hR : IsNormalDomain R)
     (M : Submonoid R) (hM : M ≤ nonZeroDivisors R) :
     IsNormalDomain (Localization M) := by
-  letI : IsDomain R := hR.1
-  letI : IsIntegrallyClosed R := hR.2
+  let : IsDomain R := hR.1
+  let : IsIntegrallyClosed R := hR.2
   refine ⟨IsLocalization.isDomain_localization hM, ?_⟩
   exact isIntegrallyClosed_of_isLocalization (Localization M) M hM
 

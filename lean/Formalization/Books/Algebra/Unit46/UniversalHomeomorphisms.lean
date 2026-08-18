@@ -176,7 +176,16 @@ theorem tensorProduct_spectrum_homeomorph_of_isPurelyInseparable
     [Algebra k K] [Algebra k R] [IsPurelyInseparable k K] :
     IsHomeomorph (PrimeSpectrum.comap
       (Algebra.TensorProduct.includeRight : R →ₐ[k] K ⊗[k] R).toRingHom) := by
-  sorry
+  let e := Algebra.TensorProduct.comm k R K
+  have he : e.toAlgHom.comp
+      (Algebra.TensorProduct.includeLeft : R →ₐ[k] R ⊗[k] K) =
+      (Algebra.TensorProduct.includeRight : R →ₐ[k] K ⊗[k] R) := by
+    exact Algebra.TensorProduct.comm_comp_includeLeft k R K
+  rw [← he]
+  simp only [AlgHom.toRingHom_eq_coe, AlgHom.comp_toRingHom,
+    AlgEquiv.toAlgHom_toRingHom, PrimeSpectrum.comap_comp]
+  exact (PrimeSpectrum.isHomeomorph_comap_of_isPurelyInseparable k K R).comp
+    (PrimeSpectrum.isHomeomorph_comap_of_bijective e.bijective)
 
 /-- The source's powers-field criterion: every element has a positive power in
     the base field exactly in the classified cases. -/

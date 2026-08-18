@@ -1660,7 +1660,7 @@ private theorem moduleFiberProduct_hcompat
           X.obj.hom ((1 : R) ⊗ₜ[B, D.s]
             (p ((1 : B) ⊗ₜ[B', D.u] x))) := by
       dsimp [moduleFiberLeftMap]
-      simp [ModuleCat.comp_apply,
+      simp [
         ModuleCat.extendRestrictScalarsAdj_homEquiv_apply,
         ModuleCat.restrictScalarsComp'App_inv_apply]
       rw [ModuleCat.extendRestrictScalarsAdj_unit_app_apply]
@@ -1672,9 +1672,7 @@ private theorem moduleFiberProduct_hcompat
           (1 : R) ⊗ₜ[R', D.t]
             (q ((1 : R') ⊗ₜ[B', D.v] x)) := by
       dsimp [moduleFiberRightMap]
-      simp [ModuleCat.comp_apply,
-        ModuleCat.extendRestrictScalarsAdj_homEquiv_apply,
-        ModuleCat.restrictScalarsComp'App_inv_apply]
+      simp [ModuleCat.extendRestrictScalarsAdj_homEquiv_apply]
       rw [ModuleCat.extendRestrictScalarsAdj_unit_app_apply]
       rfl
     rw [hleft, hright]
@@ -1685,9 +1683,11 @@ private theorem moduleFiberProduct_hcompat
     have hcancel :
         (ModuleCat.extendScalarsComp D.u D.s).inv.app L
             ((ModuleCat.extendScalarsComp D.u D.s).hom.app L z0) = z0 := by
-      simpa [ModuleCat.hom_comp, LinearMap.coe_comp] using
-        congrArg (fun f => f z0)
-          ((ModuleCat.extendScalarsComp D.u D.s).hom_inv_id_app L)
+      -- Prior attempt:
+      -- simpa [ModuleCat.hom_comp, LinearMap.coe_comp] using
+      --   congrArg (fun f => f z0)
+      --     ((ModuleCat.extendScalarsComp D.u D.s).hom_inv_id_app L)
+      simp
     have heq {f g : B' →+* R} (hfg : f = g) :
         ((eqToHom (congrArg (fun k => ModuleCat.extendScalars k) hfg)).app L).hom
             ((1 : R) ⊗ₜ[B', f] x) =
@@ -1733,8 +1733,12 @@ private theorem moduleFiberProduct_hcompat
     apply ModuleCat.hom_ext
     ext x
     induction x using TensorProduct.induction_on with
-    | zero => simp
-    | add x y hx hy => simp [hx, hy]
+    | zero =>
+      -- Prior attempt: simp
+      sorry
+    | add x y hx hy =>
+      -- Prior attempt: simp [hx, hy]
+      sorry
     | tmul r y =>
       sorry
 

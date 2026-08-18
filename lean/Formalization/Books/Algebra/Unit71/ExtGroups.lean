@@ -1128,7 +1128,7 @@ theorem isIso_resolution_ext_identity_map {R : Type u} [Ring R]
     (α : ResolutionMap F.resolution F.resolution (𝟙 M))
     (N : ModuleCat.{u} R) (i : ℕ) :
     IsIso (resolutionHomCohomologyMap α.hom N i) := by
-  sorry
+  exact isIso_resolution_ext_map_of_isIso F F (𝟙 M) α N i
 
 /-! ## Long exact sequences -/
 
@@ -1190,7 +1190,13 @@ vanishes on every Ext group. -/
 theorem ext_smul_eq_zero_of_annihilates_right {R : Type u} [CommRing R]
     (r : R) (M N : ModuleCat.{u} R) (hN : r ∈ Module.annihilator R N) (i : ℕ) :
     ∀ e : ExtGroup M N i, r • e = 0 := by
-  sorry
+  intro e
+  have hzero : r • (𝟙 N) = 0 := by
+    simp [← ModuleCat.lsmul_eq_smul_id,
+      Module.mem_annihilator_iff_lsmul_eq_zero.mp hN]
+  rw [CategoryTheory.Abelian.Ext.smul_eq_comp_mk₀, hzero,
+    CategoryTheory.Abelian.Ext.mk₀_zero]
+  exact CategoryTheory.Abelian.Ext.comp_zero e N 0 i (add_zero i)
 
 /-- If `r` belongs to the annihilator of `M`, scalar multiplication by `r`
 vanishes on every Ext group. -/

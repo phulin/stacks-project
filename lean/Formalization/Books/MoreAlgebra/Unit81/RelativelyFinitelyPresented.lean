@@ -139,7 +139,7 @@ private theorem moduleFinitePresentation_of_surjective_of_fg_ker
     exact ⟨y, by simpa [map] using hy⟩
   have hcomm : (fS.restrictScalars R).comp map = fR := by
     ext x
-    simp [fR, fS, map, Finsupp.linearCombination_apply]
+    simp [fR, fS, map]
   have hker_map : (LinearMap.ker map).FG := by
     dsimp [map]
     rw [Finsupp.ker_mapRange]
@@ -800,8 +800,9 @@ theorem relativelyFinitelyPresented_localize
         IsLocalization.Away.invSelf g' ^ k
     refine ⟨x, ?_⟩
     apply (IsLocalization.Away.algebraMap_isUnit g).pow k |>.mul_right_cancel
-    simp only [x, map_mul, map_pow]
+    simp only [x, map_mul]
     rw [IsLocalization.Away.lift_eq]
+    rw [map_pow]
     change ((algebraMap A N) (α p) * q (IsLocalization.Away.invSelf g') ^ k) *
       (algebraMap A N) g ^ k = z * (algebraMap A N) g ^ k
     rw [hp, mul_assoc, ← mul_pow, hqinv', one_pow, mul_one]
@@ -961,7 +962,7 @@ theorem relativelyFinitelyPresented_localize
   let f0 : M →ₗ[A] L := LocalizedModule.mkLinearMap (.powers g) M
   let f1 : M →ₗ[MvPolynomial (Fin n) Rf] L :=
     f0.restrictScalars (MvPolynomial (Fin n) Rf)
-  letI : IsLocalizedModule (.powers (α g')) f0 := by
+  let : IsLocalizedModule (.powers (α g')) f0 := by
     simpa only [hg'] using
       (inferInstance : IsLocalizedModule (.powers g) f0)
   have hloc : IsLocalizedModule (.powers g') f1 := by
@@ -976,7 +977,7 @@ theorem relativelyFinitelyPresented_localize
       simpa [Module.compHom, pN, q] using
         (show (algebraMap A N) (α x) • y = α x • y by
           rw [← IsScalarTower.algebraMap_smul A N]))
-  letI : Module.FinitePresentation (MvPolynomial (Fin n) Rf) M := hPM
+  let : Module.FinitePresentation (MvPolynomial (Fin n) Rf) M := hPM
   have hSN : Module.FinitePresentation (Localization.Away g') L := by
     apply FinitePresentation.of_isBaseChange f1
     exact IsLocalizedModule.isBaseChange _ _ f1
@@ -999,12 +1000,12 @@ theorem relativelyFinitelyPresented_localize
       apply RingHom.ext
       intro r
       rfl)
-  letI : Algebra.FinitePresentation Rf (MvPolynomial (Fin n) Rf) := inferInstance
-  letI : Algebra.FinitePresentation R Rf :=
+  let : Algebra.FinitePresentation Rf (MvPolynomial (Fin n) Rf) := inferInstance
+  let : Algebra.FinitePresentation R Rf :=
     IsLocalization.Away.finitePresentation f
-  letI : Algebra.FinitePresentation R (MvPolynomial (Fin n) Rf) :=
+  let : Algebra.FinitePresentation R (MvPolynomial (Fin n) Rf) :=
     Algebra.FinitePresentation.trans R Rf (MvPolynomial (Fin n) Rf)
-  letI : Algebra.FinitePresentation R (Localization.Away g') :=
+  let : Algebra.FinitePresentation R (Localization.Away g') :=
     Algebra.FinitePresentation.of_isLocalizationAway g'
   obtain ⟨m, β, hβ, hker⟩ :=
     (inferInstance : Algebra.FinitePresentation R (Localization.Away g')).out

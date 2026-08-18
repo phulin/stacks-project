@@ -257,6 +257,20 @@ theorem map_homotopic
       (((CosimplicialObject.whiskering C D).obj F).map b) := by
   sorry
 
+/- The componentwise construction also gives the original cylinder notion
+   whenever both source and target categories have finite products. -/
+theorem map_cylinderHomotopy
+    {C : Type u} [Category.{v} C] [HasFiniteProducts C]
+    {D : Type u'} [Category.{v'} D] [HasFiniteProducts D]
+    {U V : CosimplicialObject C} {a b : U ⟶ V}
+    (H : Nonempty (CylinderHomotopy a b)) (F : C ⥤ D) :
+    Nonempty (CylinderHomotopy
+      (((CosimplicialObject.whiskering C D).obj F).map a)
+      (((CosimplicialObject.whiskering C D).obj F).map b)) := by
+  rcases H with ⟨H⟩
+  exact degreewise_to_cylinderHomotopy
+    (mapDegreewiseHomotopy (cylinderHomotopy_to_degreewise H).some F)
+
 def contravariantSimplicialObject
     {C : Type u} [Category.{v} C] {D : Type u'} [Category.{v'} D]
     (F : C ⥤ Dᵒᵖ) (U : CosimplicialObject C) : SimplicialObject D where
@@ -405,13 +419,52 @@ theorem splitPushout_homotopy_equivalent_constant
 
 /-! ## The cosimplicial Dold--Kan homotopy interfaces -/
 
+/- The associated cochain complex only uses the preadditive structure.  The
+   source calls this the additive case; `HasFiniteBiproducts` is retained on
+   the theorem interfaces below to match that terminology. -/
+def associatedCochainBoundaryAdditive
+    {C : Type u} [Category.{v} C] [Preadditive C]
+    (U : CosimplicialObject C) (n : ℕ) :
+    U.obj ⦋n⦌ ⟶ U.obj ⦋n + 1⦌ :=
+  ∑ i : Fin (n + 2), (-1 : ℤ) ^ (i : ℕ) • U.δ i
+
+theorem associatedCochainBoundaryAdditive_comp
+    {C : Type u} [Category.{v} C] [Preadditive C]
+    (U : CosimplicialObject C) (n : ℕ) :
+    associatedCochainBoundaryAdditive U n ≫
+        associatedCochainBoundaryAdditive U (n + 1) = 0 := by
+  sorry
+
+def associatedCochainComplexAdditive
+    {C : Type u} [Category.{v} C] [Preadditive C]
+    (U : CosimplicialObject C) : CochainComplex C ℕ :=
+  CochainComplex.of
+    (fun n => U.obj ⦋n⦌)
+    (associatedCochainBoundaryAdditive U)
+    (associatedCochainBoundaryAdditive_comp U)
+
+theorem associatedCochainMapAdditive_comm
+    {C : Type u} [Category.{v} C] [Preadditive C]
+    {U V : CosimplicialObject C} (f : U ⟶ V) :
+    ∀ i j : ℕ, (ComplexShape.up ℕ).Rel i j →
+      f.app ⦋i⦌ ≫ (associatedCochainComplexAdditive V).d i j =
+        (associatedCochainComplexAdditive U).d i j ≫ f.app ⦋j⦌ := by
+  sorry
+
+def associatedCochainMapAdditive
+    {C : Type u} [Category.{v} C] [Preadditive C]
+    {U V : CosimplicialObject C} (f : U ⟶ V) :
+    associatedCochainComplexAdditive U ⟶ associatedCochainComplexAdditive V :=
+  { f := fun n => f.app ⦋n⦌
+    comm' := associatedCochainMapAdditive_comm f }
+
 theorem associatedCochainMap_homotopic
-    {C : Type u} [Category.{v} C] [Abelian C]
+    {C : Type u} [Category.{v} C] [Preadditive C] [HasFiniteBiproducts C]
     {U V : CosimplicialObject C} {a b : U ⟶ V}
     (H : Homotopic a b) :
     Nonempty (_root_.Homotopy
-      (cosimplicialAssociatedCochainMap a)
-      (cosimplicialAssociatedCochainMap b)) := by
+      (associatedCochainMapAdditive a)
+      (associatedCochainMapAdditive b)) := by
   sorry
 
 theorem normalizedCochainMap_homotopic
@@ -423,12 +476,12 @@ theorem normalizedCochainMap_homotopic
   sorry
 
 theorem associatedCochainMap_homotopy_equivalence
-    {C : Type u} [Category.{v} C] [Abelian C]
+    {C : Type u} [Category.{v} C] [Preadditive C] [HasFiniteBiproducts C]
     {U V : CosimplicialObject C} (a : U ⟶ V)
     (H : IsHomotopyEquivalence a) :
     Nonempty (_root_.HomotopyEquiv
-      (cosimplicialAssociatedCochainComplex U)
-      (cosimplicialAssociatedCochainComplex V)) := by
+      (associatedCochainComplexAdditive U)
+      (associatedCochainComplexAdditive V)) := by
   sorry
 
 theorem normalizedCochainMap_homotopy_equivalence

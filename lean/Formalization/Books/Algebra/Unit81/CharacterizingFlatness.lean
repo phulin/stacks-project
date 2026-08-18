@@ -158,7 +158,37 @@ theorem flat_factors_finitePresentation
   · intro h
     apply Module.Flat.of_forall_exists_factorization
     intro l f x hx
-    sorry
+    let S : Submodule R (Fin l →₀ R) := Submodule.span R ({f} : Set (Fin l →₀ R))
+    let Q : Type u := (Fin l →₀ R) ⧸ S
+    have hfree : Module.FinitePresentation R (Fin l →₀ R) := inferInstance
+    let _ : Module.FinitePresentation R Q :=
+      Module.finitePresentation_of_surjective (h := hfree) S.mkQ S.mkQ_surjective
+        (by
+          rw [Submodule.ker_mkQ]
+          dsimp [S]
+          exact Submodule.fg_span (Set.finite_singleton f))
+    have hS : S ≤ LinearMap.ker x := by
+      dsimp [S]
+      refine Submodule.span_le.2 ?_
+      intro y hy
+      rw [Set.mem_singleton_iff] at hy
+      subst y
+      exact LinearMap.mem_ker.mpr hx
+    let xbar : Q →ₗ[R] M := S.liftQ x hS
+    obtain ⟨n, a, g, hag⟩ := h Q xbar
+    refine ⟨n, a.comp S.mkQ, g, ?_, ?_⟩
+    · calc
+        x = xbar.comp S.mkQ := by
+          dsimp [xbar]
+          exact (S.liftQ_mkQ x hS).symm
+        _ = (g.comp a).comp S.mkQ := by rw [hag]
+        _ = g.comp (a.comp S.mkQ) := by simp [LinearMap.comp_assoc]
+    · have hfQ : S.mkQ f = 0 := by
+        rw [Submodule.mkQ_apply, Submodule.Quotient.mk_eq_zero]
+        dsimp [S]
+        exact Submodule.subset_span (by simp)
+      change a (S.mkQ f) = 0
+      simpa using congrArg a hfQ
 
 /-- Flatness is equivalent to lifting maps from finitely presented modules
 through every surjection by postcomposition on `Hom`.
@@ -186,7 +216,101 @@ theorem flat_iff_surjective_hom
     simp [LinearMap.comp_apply,
       ← LinearMap.congr_fun hg' (h' x), hφ]
   · intro h
-    sorry
+    apply Module.Flat.of_forall_exists_factorization
+    intro l f x hx
+    let S : Submodule R (Fin l →₀ R) := Submodule.span R ({f} : Set (Fin l →₀ R))
+    let Q : Type u := (Fin l →₀ R) ⧸ S
+    have hfree : Module.FinitePresentation R (Fin l →₀ R) := inferInstance
+    let _ : Module.FinitePresentation R Q :=
+      Module.finitePresentation_of_surjective (h := hfree) S.mkQ S.mkQ_surjective
+        (by
+          rw [Submodule.ker_mkQ]
+          dsimp [S]
+          exact Submodule.fg_span (Set.finite_singleton f))
+    have hS : S ≤ LinearMap.ker x := by
+      dsimp [S]
+      refine Submodule.span_le.2 ?_
+      intro y hy
+      rw [Set.mem_singleton_iff] at hy
+      subst y
+      exact LinearMap.mem_ker.mpr hx
+    let xbar : Q →ₗ[R] M := S.liftQ x hS
+    let N : Type (max u v) := M →₀ R
+    let q : N →ₗ[R] M := Finsupp.linearCombination R (id : M → M)
+    have hq : Function.Surjective q := by
+      dsimp [q, N]
+      simpa using (Finsupp.linearCombination_id_surjective R M)
+    have hpost : Function.Surjective (internalHomPostcomp (M := Q) q) :=
+      h Q N q hq
+    obtain ⟨b, hb⟩ := hpost xbar
+    classical
+    let B := LinearMap.range b
+    let _ : Module.Finite R B := Module.Finite.range b
+    obtain ⟨s, hs⟩ := Module.finite_def.mp (inferInstance : Module.Finite R B)
+    let T : Finset M := s.biUnion (fun z : B => z.1.support)
+    let S' : Set N := (fun z : B => (z : N)) '' (↑s : Set B)
+    have hS' : Submodule.span R S' ≤ Finsupp.supported R R (T : Set M) := by
+      refine Submodule.span_le.2 ?_
+      rintro z ⟨z', hz', rfl⟩
+      change (z' : N) ∈ Finsupp.supported R R (T : Set M)
+      rw [Finsupp.mem_supported]
+      intro m hm
+      refine Finset.mem_biUnion.mpr ⟨z', ?_, hm⟩
+      simpa using hz'
+    have hrange : ∀ q₀ : Q, b q₀ ∈ Submodule.span R S' := by
+      intro q₀
+      let z : B := ⟨b q₀, LinearMap.mem_range_self b q₀⟩
+      have hz : z ∈ Submodule.span R (↑s : Set B) := by
+        rw [hs]
+        exact Submodule.mem_top
+      have hz' : (z : N) ∈
+          Submodule.map (Submodule.subtype B) (Submodule.span R (↑s : Set B)) := by
+        exact ⟨z, hz, rfl⟩
+      rw [Submodule.map_span] at hz'
+      simpa [S', z] using hz'
+    have hbsupp : ∀ q₀ : Q, b q₀ ∈ Finsupp.supported R R (T : Set M) := by
+      intro q₀
+      exact hS' (hrange q₀)
+    let c : Q →ₗ[R] Finsupp.supported R R (T : Set M) :=
+      b.codRestrict _ hbsupp
+    let e := Finsupp.supportedEquivFinsupp (M := R) (R := R) (T : Set M)
+    let aQ : Q →ₗ[R] (T →₀ R) := e.toLinearMap.comp c
+    let gQ : (T →₀ R) →ₗ[R] N :=
+      (Submodule.subtype _).comp e.symm.toLinearMap
+    have hga : gQ.comp aQ = b := by
+      ext q₀
+      simp [gQ, aQ, c, e]
+    let k := Fintype.card T
+    let eT : T ≃ Fin k := Fintype.equivFin T
+    let d : (Fin k →₀ R) ≃ₗ[R] (T →₀ R) :=
+      Finsupp.domLCongr eT.symm
+    let aQ' : Q →ₗ[R] (Fin k →₀ R) := d.symm.toLinearMap.comp aQ
+    let gQ' : (Fin k →₀ R) →ₗ[R] N := gQ.comp d.toLinearMap
+    have hga' : gQ'.comp aQ' = b := by
+      apply LinearMap.ext
+      intro q₀
+      change gQ (d (d.symm (aQ q₀))) = b q₀
+      rw [d.apply_symm_apply]
+      exact LinearMap.congr_fun hga q₀
+    have hb' : q.comp b = xbar := by
+      apply LinearMap.ext
+      intro q₀
+      simpa [internalHomPostcomp_apply] using
+        congrArg (fun k : Q →ₗ[R] M => k q₀) hb
+    have hfQ : S.mkQ f = 0 := by
+      rw [Submodule.mkQ_apply, Submodule.Quotient.mk_eq_zero]
+      dsimp [S]
+      exact Submodule.subset_span (by simp)
+    refine ⟨k, aQ'.comp S.mkQ, q.comp gQ', ?_, ?_⟩
+    · calc
+        x = xbar.comp S.mkQ := by
+          dsimp [xbar]
+          exact (S.liftQ_mkQ x hS).symm
+        _ = (q.comp b).comp S.mkQ := by rw [hb']
+        _ = (q.comp (gQ'.comp aQ')).comp S.mkQ := by rw [hga']
+        _ = (q.comp gQ').comp (aQ'.comp S.mkQ) := by simp [LinearMap.comp_assoc]
+    · change aQ' (S.mkQ f) = 0
+      simpa using congrArg aQ' hfQ
 
 /-! ## Directed systems and Lazard's theorem -/
 

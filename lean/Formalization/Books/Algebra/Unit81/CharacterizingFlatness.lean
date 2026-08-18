@@ -151,7 +151,14 @@ theorem flat_factors_finitePresentation
         [Module.FinitePresentation R P] (f : P →ₗ[R] M),
       ∃ (n : ℕ) (h : P →ₗ[R] (Fin n →₀ R))
           (g : (Fin n →₀ R) →ₗ[R] M), f = g.comp h := by
-  sorry
+  constructor
+  · intro h P _ _ _ f
+    let _ : Module.Flat R M := h
+    exact Module.Flat.exists_factorization_of_finitePresentation f
+  · intro h
+    apply Module.Flat.of_forall_exists_factorization
+    intro l f x hx
+    sorry
 
 /-- Flatness is equivalent to lifting maps from finitely presented modules
 through every surjection by postcomposition on `Hom`.
@@ -176,7 +183,7 @@ theorem flat_iff_surjective_hom
     obtain ⟨g', hg'⟩ := Module.projective_lifting_property q g hq
     refine ⟨g'.comp h', ?_⟩
     ext x
-    simp [internalHomPostcomp_apply, LinearMap.comp_apply,
+    simp [LinearMap.comp_apply,
       ← LinearMap.congr_fun hg' (h' x), hφ]
   · intro h
     sorry

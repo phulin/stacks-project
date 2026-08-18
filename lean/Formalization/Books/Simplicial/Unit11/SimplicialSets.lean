@@ -142,23 +142,110 @@ theorem simplexOverLift_unique {n k l : ℕ}
   apply CategoryTheory.Over.OverMorphism.ext
   exact hχ
 
+private theorem simplexOverFiber_object_description_aux (n k : ℕ)
+    (x : Functor.Fiber (simplexOverProjection n)
+      (SimplexCategory.mk k)) :
+    ∃ ψ : SimplexCategory.mk k ⟶ SimplexCategory.mk n,
+      x.1 = CategoryTheory.Over.mk ψ := by
+  rcases x with ⟨⟨left, right, hom⟩, hx⟩
+  change left = SimplexCategory.mk k at hx
+  cases hx
+  refine ⟨hom, ?_⟩
+  rfl
+
 instance simplexOverFiber_isDiscrete (n k : ℕ) :
     IsDiscrete (Functor.Fiber (simplexOverProjection n)
       (SimplexCategory.mk k)) := by
-  sorry
+  refine { subsingleton := ?_, eq_of_hom := ?_ }
+  · intro X Y
+    constructor
+    intro f g
+    obtain ⟨ψ, hX⟩ := simplexOverFiber_object_description_aux n k X
+    obtain ⟨χ, hY⟩ := simplexOverFiber_object_description_aux n k Y
+    have hX' : X = (⟨CategoryTheory.Over.mk ψ, by rfl⟩ :
+        Functor.Fiber (simplexOverProjection n) (SimplexCategory.mk k)) :=
+      Subtype.ext hX
+    have hY' : Y = (⟨CategoryTheory.Over.mk χ, by rfl⟩ :
+        Functor.Fiber (simplexOverProjection n) (SimplexCategory.mk k)) :=
+      Subtype.ext hY
+    cases hX'
+    cases hY'
+    apply Functor.Fiber.hom_ext
+    apply CategoryTheory.Over.OverMorphism.ext
+    have hf := @CategoryTheory.IsHomLift.fac _ _ _ _
+      (simplexOverProjection n) _ _ _ _ (𝟙 (SimplexCategory.mk k)) f.1 f.2
+    simp [simplexOverProjection] at hf
+    change (𝟙 (SimplexCategory.mk k)) =
+      (𝟙 (SimplexCategory.mk k)) ≫ f.1.left at hf
+    have hfl : f.1.left = 𝟙 (SimplexCategory.mk k) := by
+      simpa using hf.symm
+    have hg := @CategoryTheory.IsHomLift.fac _ _ _ _
+      (simplexOverProjection n) _ _ _ _ (𝟙 (SimplexCategory.mk k)) g.1 g.2
+    simp [simplexOverProjection] at hg
+    change (𝟙 (SimplexCategory.mk k)) =
+      (𝟙 (SimplexCategory.mk k)) ≫ g.1.left at hg
+    have hgl : g.1.left = 𝟙 (SimplexCategory.mk k) := by
+      simpa using hg.symm
+    exact hfl.trans hgl.symm
+  · intro X Y f
+    obtain ⟨ψ, hX⟩ := simplexOverFiber_object_description_aux n k X
+    obtain ⟨χ, hY⟩ := simplexOverFiber_object_description_aux n k Y
+    have hX' : X = (⟨CategoryTheory.Over.mk ψ, by rfl⟩ :
+        Functor.Fiber (simplexOverProjection n) (SimplexCategory.mk k)) :=
+      Subtype.ext hX
+    have hY' : Y = (⟨CategoryTheory.Over.mk χ, by rfl⟩ :
+        Functor.Fiber (simplexOverProjection n) (SimplexCategory.mk k)) :=
+      Subtype.ext hY
+    cases hX'
+    cases hY'
+    apply Subtype.ext
+    congr
+    have hf := @CategoryTheory.IsHomLift.fac _ _ _ _
+      (simplexOverProjection n) _ _ _ _ (𝟙 (SimplexCategory.mk k)) f.1 f.2
+    simp [simplexOverProjection] at hf
+    change (𝟙 (SimplexCategory.mk k)) =
+      (𝟙 (SimplexCategory.mk k)) ≫ f.1.left at hf
+    have hfl : f.1.left = 𝟙 (SimplexCategory.mk k) := by
+      simpa using hf.symm
+    have hw := CategoryTheory.Over.w f.1
+    simpa [hfl] using hw.symm
 
 theorem simplexOverFiber_object_description (n k : ℕ)
     (x : Functor.Fiber (simplexOverProjection n)
       (SimplexCategory.mk k)) :
     ∃ ψ : SimplexCategory.mk k ⟶ SimplexCategory.mk n,
       x.1 = CategoryTheory.Over.mk ψ := by
-  sorry
+  exact simplexOverFiber_object_description_aux n k x
 
 theorem simplexOverFiber_objects (n k : ℕ) :
     Nonempty
       (Functor.Fiber (simplexOverProjection n) (SimplexCategory.mk k) ≃
         (Δ[n] : SSet.{u}) _⦋k⦌) := by
-  sorry
+  refine ⟨{
+    toFun := fun x =>
+      SSet.stdSimplex.objEquiv.symm
+        (eqToHom x.2.symm ≫ x.1.hom)
+    invFun := fun y =>
+      (⟨CategoryTheory.Over.mk (SSet.stdSimplex.objEquiv y), by rfl⟩ :
+        Functor.Fiber (simplexOverProjection n) (SimplexCategory.mk k))
+    left_inv := ?_
+    right_inv := ?_ }⟩
+  · intro x
+    rcases x with ⟨⟨left, right, hom⟩, hx⟩
+    change left = SimplexCategory.mk k at hx
+    cases hx
+    apply Subtype.ext
+    simp [simplexOverProjection]
+    congr
+    have htransport :
+        (eqToHom (by rfl) : SimplexCategory.mk k ⟶ SimplexCategory.mk k) =
+          𝟙 (SimplexCategory.mk k) := by simp
+    simp [htransport]
+  · intro y
+    simp [simplexOverProjection]
+    change SSet.stdSimplex.objEquiv.symm
+      ((𝟙 (SimplexCategory.mk k)) ≫ SSet.stdSimplex.objEquiv y) = y
+    simp
 
 /-! ## Products -/
 

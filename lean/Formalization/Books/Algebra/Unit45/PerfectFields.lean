@@ -583,21 +583,56 @@ theorem pthRootLevel_element_pow_mem_base
     (n : ℕ) (y : pthRootLevel k p n) :
     ∃ x : k,
       (y : PerfectClosure k p) ^ (p ^ n) = PerfectClosure.of k p x := by
-  sorry
+  rcases y with ⟨y, hy⟩
+  change ∃ x : k, y ^ (p ^ n) = PerfectClosure.of k p x
+  refine IntermediateField.adjoin_induction (F := k)
+    (p := fun z _ => ∃ x : k, z ^ (p ^ n) = PerfectClosure.of k p x) ?_ ?_ ?_ ?_ ?_ hy
+  · rintro z ⟨x, rfl⟩
+    exact ⟨x, by rw [← PerfectClosure.iterate_frobenius_mk k p n x, iterate_frobenius]⟩
+  · intro x
+    refine ⟨x ^ (p ^ n), ?_⟩
+    change (PerfectClosure.of k p x) ^ (p ^ n) = PerfectClosure.of k p (x ^ (p ^ n))
+    exact (map_pow (PerfectClosure.of k p) x (p ^ n)).symm
+  · rintro x z hx hz ⟨a, ha⟩ ⟨b, hb⟩
+    refine ⟨a + b, ?_⟩
+    rw [add_pow_char_pow, ha, hb, map_add]
+  · rintro x hx ⟨a, ha⟩
+    refine ⟨a⁻¹, ?_⟩
+    rw [inv_pow, ha]
+    exact (map_inv₀ (PerfectClosure.of k p) a).symm
+  · rintro x z hx hz ⟨a, ha⟩ ⟨b, hb⟩
+    refine ⟨a * b, ?_⟩
+    simpa only [mul_pow, ha, hb, map_mul]
 
 /-- Each finite root level is algebraic over its base field. -/
 theorem pthRootLevel_is_algebraic
     {k : Type u} [Field k] (p : ℕ) [Fact p.Prime] [CharP k p]
     (n : ℕ) :
     Algebra.IsAlgebraic k (pthRootLevel k p n) := by
-  sorry
+  let _ : ExpChar k p := ExpChar.prime Fact.out
+  let _ : IsPurelyInseparable k (pthRootLevel k p n) := by
+    rw [pthRootLevel,
+      IntermediateField.isPurelyInseparable_adjoin_iff_pow_mem k (PerfectClosure k p) p]
+    rintro _ ⟨x, rfl⟩
+    refine ⟨n, x, ?_⟩
+    change PerfectClosure.of k p x =
+      (PerfectClosure.mk k p (n, x)) ^ (p ^ n)
+    rw [← PerfectClosure.iterate_frobenius_mk k p n x, iterate_frobenius]
+  exact IsPurelyInseparable.isAlgebraic k _
 
 /-- Each finite root level is purely inseparable over its base field. -/
 theorem pthRootLevel_is_purelyInseparable
     {k : Type u} [Field k] (p : ℕ) [Fact p.Prime] [CharP k p]
     (n : ℕ) :
     IsPurelyInseparable k (pthRootLevel k p n) := by
-  sorry
+  let _ : ExpChar k p := ExpChar.prime Fact.out
+  rw [pthRootLevel,
+    IntermediateField.isPurelyInseparable_adjoin_iff_pow_mem k (PerfectClosure k p) p]
+  rintro _ ⟨x, rfl⟩
+  refine ⟨n, x, ?_⟩
+  change PerfectClosure.of k p x =
+    (PerfectClosure.mk k p (n, x)) ^ (p ^ n)
+  rw [← PerfectClosure.iterate_frobenius_mk k p n x, iterate_frobenius]
 
 /-- The finite root levels form an increasing tower inside the absolute
     perfect closure. -/

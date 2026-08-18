@@ -5,6 +5,8 @@ import Mathlib.RingTheory.FinitePresentation
 import Mathlib.RingTheory.FiniteType
 import Mathlib.RingTheory.Finiteness.Basic
 import Mathlib.RingTheory.Finiteness.ModuleFinitePresentation
+import Mathlib.RingTheory.Localization.Away.AdjoinRoot
+import Mathlib.RingTheory.Localization.BaseChange
 import Formalization.Books.Algebra.Unit06.FiniteType
 import Formalization.Books.Algebra.Unit14.BaseChange
 
@@ -196,6 +198,65 @@ private theorem moduleFinitePresentation_of_surjective_of_fg_ker
   refine ⟨s, ?_, hkerR⟩
   have hrange : LinearMap.range fR = ⊤ := LinearMap.range_eq_top.mpr hfR
   simpa [fR, Finsupp.range_linearCombination] using hrange
+
+private theorem moduleFinitePresentation_of_finite
+    {R S M : Type*} [CommRing R] [CommRing S]
+    [AddCommGroup M] [Module S M] (q : R →+* S) (hfinite : RingHom.Finite q)
+    (hM : letI : Module R M := Module.compHom M q
+      Module.FinitePresentation R M) :
+    Module.FinitePresentation S M := by
+  let : Algebra R S := q.toAlgebra
+  letI : Module.Finite R S := hfinite
+  let : Module R M := Module.compHom M q
+  let : IsScalarTower R S M := IsScalarTower.of_algebraMap_smul (fun _ _ => rfl)
+  letI : Module.FinitePresentation R M := hM
+  let fS : (s : Finset M) → (s →₀ S) →ₗ[S] M :=
+    fun s => Finsupp.linearCombination S ((↑) : s → M)
+  let fR : (s : Finset M) → (s →₀ S) →ₗ[R] M :=
+    fun s => (fS s).restrictScalars R
+  obtain ⟨s, hs, _⟩ := hM
+  have hsurjR : Function.Surjective
+      (Finsupp.linearCombination R ((↑) : s → M)) := by
+    rw [← LinearMap.range_eq_top, Finsupp.range_linearCombination]
+    simpa using hs
+  have hsurj : Function.Surjective (fR s) := by
+    intro m
+    obtain ⟨x, hx⟩ := hsurjR m
+    let y : s →₀ S := x.mapRange (algebraMap R S) (by simp)
+    refine ⟨y, ?_⟩
+    change Finsupp.linearCombination S ((↑) : s → M) y = m
+    simp only [Finsupp.linearCombination_apply, y]
+    rw [Finsupp.sum_mapRange_index (fun _ => by simp)]
+    simpa only [Finsupp.linearCombination_apply, algebraMap_smul] using hx
+  have hkerR : (LinearMap.ker (fR s)).FG := by
+    apply Module.FinitePresentation.fg_ker (fR s)
+    · exact hsurj
+  have hkerS : (LinearMap.ker (fS s)).FG := by
+    apply Submodule.FG.of_restrictScalars R
+    simpa [fR] using hkerR
+  apply Module.finitePresentation_of_surjective (fS s)
+  · exact hsurj
+  · exact hkerS
+
+private theorem moduleFinitePresentation_finite_iff
+    {R S M : Type*} [CommRing R] [CommRing S]
+    [AddCommGroup M] [Module S M] (q : R →+* S)
+    (hfinite : RingHom.Finite q) (hfp : RingHom.FinitePresentation q) :
+    (letI : Module R M := Module.compHom M q;
+      Module.FinitePresentation R M) ↔
+      Module.FinitePresentation S M := by
+  let : Algebra R S := q.toAlgebra
+  letI : Module.Finite R S := hfinite
+  let : Module R M := Module.compHom M q
+  let : IsScalarTower R S M := IsScalarTower.of_algebraMap_smul (fun _ _ => rfl)
+  constructor
+  · intro hM
+    exact moduleFinitePresentation_of_finite q hfinite hM
+  · intro hM
+    letI : Algebra.FinitePresentation R S := hfp
+    letI : Module.FinitePresentation R S :=
+      Module.FinitePresentation.of_finite_of_finitePresentation R S
+    exact Module.FinitePresentation.trans R M S
 
 /-- The counterexample in the introduction: finite presentation over the
 quotient does not imply finite presentation over the original polynomial
@@ -538,7 +599,144 @@ theorem relativelyFinitelyPresented_finite_extension_iff
     (letI : Module A M := Module.compHom M g;
       RelativelyFinitelyPresented f M) ↔
       RelativelyFinitelyPresented (g.comp f) M := by
-  sorry
+  let : Algebra R A := f.toAlgebra
+  let : Algebra R B := (g.comp f).toAlgebra
+  letI : Module A M := Module.compHom M g
+  change RelativelyFinitelyPresented f M ↔
+    RelativelyFinitelyPresented (g.comp f) M
+  constructor
+  · intro hrel
+    dsimp [RelativelyFinitelyPresented] at hrel
+    obtain ⟨n, α, hα, hPM⟩ := hrel
+    let P := MvPolynomial (Fin n) R
+    let pB : P →+* B := g.comp α.toRingHom
+    let : Algebra P B := pB.toAlgebra
+    have hfiniteP : RingHom.Finite pB := by
+      exact RingHom.Finite.comp hfinite
+        (RingHom.Finite.of_surjective α.toRingHom hα)
+    letI : Module.Finite P B := hfiniteP
+    letI : Module P M := Module.compHom M pB
+    have hPM' : Module.FinitePresentation P M := by
+      simpa [pB, P] using hPM
+    obtain ⟨S, _, _, _, _, _, q, hq⟩ :=
+      Module.Finite.exists_free_surjective P B
+    let : Algebra R S :=
+      ((algebraMap P S).comp (algebraMap R P)).toAlgebra
+    let : IsScalarTower R P S :=
+      IsScalarTower.of_algebraMap_eq' (by
+        apply RingHom.ext
+        intro r
+        rfl)
+    let : IsScalarTower R P B :=
+      IsScalarTower.of_algebraMap_eq' (by
+        apply RingHom.ext
+        intro r
+        rw [show algebraMap P B = pB from rfl]
+        change (g.comp f) r = g (α (algebraMap R P r))
+        rw [α.commutes]
+        rfl)
+    letI : Module S M := Module.compHom M q.toRingHom
+    have hmap : q.toRingHom.comp (algebraMap P S) = pB := by
+      apply RingHom.ext
+      intro x
+      change q (algebraMap P S x) = g (α x)
+      rw [q.commutes]
+      rfl
+    have hPSM :
+        (letI : Module P M := Module.compHom M (algebraMap P S);
+          Module.FinitePresentation P M) := by
+      have hmod : Module.compHom M
+          (q.toRingHom.comp (algebraMap P S)) = Module.compHom M pB := by
+        apply Module.ext'
+        intro x m
+        change (q.toRingHom.comp (algebraMap P S)) x • m = pB x • m
+        have hx := congrArg (fun k : P →+* B => k x) hmap
+        rw [hx]
+      change @Module.FinitePresentation P M _ _
+        (Module.compHom M (q.toRingHom.comp (algebraMap P S)))
+      rw [hmod]
+      exact hPM'
+    have hSM : Module.FinitePresentation S M :=
+      moduleFinitePresentation_of_finite (algebraMap P S) (by
+        rw [RingHom.finite_algebraMap]
+        infer_instance) hPSM
+    let qR : S →ₐ[R] B := q.restrictScalars R
+    have hmap : q.toRingHom.comp (algebraMap P S) = pB := by
+      apply RingHom.ext
+      intro x
+      change q (algebraMap P S x) = g (α x)
+      rw [q.commutes]
+      rfl
+    letI : Algebra.FinitePresentation R S :=
+      Algebra.FinitePresentation.trans R P S
+    obtain ⟨m, β, hβ, hkerβ⟩ :=
+      (inferInstance : Algebra.FinitePresentation R S).out
+    refine ⟨m, qR.comp β, hq.comp hβ, ?_⟩
+    exact moduleFinitePresentation_of_surjective_of_fg_ker
+      β.toRingHom hβ hkerβ hSM
+  · intro hrel
+    obtain ⟨n, α, hα⟩ :=
+      (Algebra.FiniteType.iff_quotient_mvPolynomial'').mp hf
+    let P := MvPolynomial (Fin n) R
+    let pB : P →+* B := g.comp α.toRingHom
+    let : Algebra P B := pB.toAlgebra
+    have hfiniteP : RingHom.Finite pB := by
+      exact RingHom.Finite.comp hfinite
+        (RingHom.Finite.of_surjective α.toRingHom hα)
+    letI : Module.Finite P B := hfiniteP
+    obtain ⟨S, _, _, _, _, _, q, hq⟩ :=
+      Module.Finite.exists_free_surjective P B
+    let : Algebra R S :=
+      ((algebraMap P S).comp (algebraMap R P)).toAlgebra
+    let : IsScalarTower R P S :=
+      IsScalarTower.of_algebraMap_eq' (by
+        apply RingHom.ext
+        intro r
+        rfl)
+    let : IsScalarTower R P B :=
+      IsScalarTower.of_algebraMap_eq' (by
+        apply RingHom.ext
+        intro r
+        rw [show algebraMap P B = pB from rfl]
+        change (g.comp f) r = g (α (algebraMap R P r))
+        rw [α.commutes]
+        rfl)
+    let qR : S →ₐ[R] B := q.restrictScalars R
+    have hmap : q.toRingHom.comp (algebraMap P S) = pB := by
+      apply RingHom.ext
+      intro x
+      change q (algebraMap P S x) = g (α x)
+      rw [q.commutes]
+      rfl
+    letI : Algebra.FinitePresentation R S :=
+      Algebra.FinitePresentation.trans R P S
+    letI : Module S M := Module.compHom M qR.toRingHom
+    have hfpRC : RingHom.FinitePresentation (algebraMap R S) := by
+      rw [RingHom.finitePresentation_algebraMap]
+      infer_instance
+    have hSM : Module.FinitePresentation S M := by
+      exact (relativelyFinitelyPresented_iff_surjective_from_finitelyPresented
+        (g.comp f) hg).mp hrel qR hq hfpRC
+    have hPM :
+        (letI : Module P M := Module.compHom M (algebraMap P S);
+          Module.FinitePresentation P M) := by
+      apply (moduleFinitePresentation_finite_iff (algebraMap P S) (by
+        rw [RingHom.finite_algebraMap]
+        infer_instance) (by
+        rw [RingHom.finitePresentation_algebraMap]
+        infer_instance)).mpr hSM
+    refine ⟨n, α, hα, ?_⟩
+    have hmod : Module.compHom M (algebraMap P S) =
+        Module.compHom M α.toRingHom := by
+      apply Module.ext'
+      intro x m
+      change (q.toRingHom.comp (algebraMap P S)) x • m = g (α x) • m
+      have hx := congrArg (fun k : P →+* B => k x) hmap
+      rw [hx]
+      rfl
+    change @Module.FinitePresentation P M _ _ (Module.compHom M α.toRingHom)
+    rw [← hmod]
+    exact hPM
 
 /-! ## Localization, base change, pullback, and composition -/
 
@@ -554,7 +752,133 @@ theorem relativelyFinitelyPresented_localize
       (((algebraMap A (Localization.Away g)).comp h).comp
         (algebraMap R (Localization.Away f)))
       (LocalizedModule.Away g M) := by
-  sorry
+  let Rf := Localization.Away f
+  let N := Localization.Away g
+  let L := LocalizedModule.Away g M
+  let : Algebra R Rf := (algebraMap R Rf).toAlgebra
+  let : Algebra Rf A := h.toAlgebra
+  let target : R →+* N :=
+    ((algebraMap A N).comp h).comp (algebraMap R Rf)
+  let : Algebra R N := target.toAlgebra
+  dsimp [RelativelyFinitelyPresented] at hM
+  obtain ⟨n, α, hα, hPM⟩ := hM
+  let : Algebra Rf (MvPolynomial (Fin n) Rf) := inferInstance
+  let : Algebra (MvPolynomial (Fin n) Rf) A := α.toAlgebra
+  let : IsScalarTower Rf (MvPolynomial (Fin n) Rf) A :=
+    IsScalarTower.of_algebraMap_eq' (by
+      apply RingHom.ext
+      intro x
+      exact (α.commutes x).symm)
+  let g' : MvPolynomial (Fin n) Rf := Classical.choose (hα g)
+  have hg' : α g' = g := Classical.choose_spec (hα g)
+  let pN : MvPolynomial (Fin n) Rf →+* N :=
+    (algebraMap A N).comp α.toRingHom
+  have hunit : IsUnit (pN g') := by
+    change IsUnit ((algebraMap A N) (α g'))
+    rw [hg']
+    exact IsLocalization.Away.algebraMap_isUnit g
+  let q : Localization.Away g' →+* N :=
+    IsLocalization.Away.lift g' hunit
+  have hqinv : q (IsLocalization.Away.invSelf g') * pN g' = 1 := by
+    calc
+      q (IsLocalization.Away.invSelf g') * pN g' =
+          q (IsLocalization.Away.invSelf g') *
+            q (algebraMap (MvPolynomial (Fin n) Rf) (Localization.Away g') g') := by
+        rw [IsLocalization.Away.lift_eq]
+      _ = q (IsLocalization.Away.invSelf g' *
+          algebraMap (MvPolynomial (Fin n) Rf) (Localization.Away g') g') := by
+        rw [q.map_mul]
+      _ = 1 := by
+        rw [mul_comm, IsLocalization.Away.mul_invSelf, map_one]
+  have hqinv' : q (IsLocalization.Away.invSelf g') *
+      (algebraMap A N) g = 1 := by
+    simpa [pN, hg'] using hqinv
+  have hq : Function.Surjective q := by
+    intro z
+    obtain ⟨k, a, ha⟩ := IsLocalization.Away.surj g z
+    obtain ⟨p, hp⟩ := hα a
+    let x : Localization.Away g' :=
+      algebraMap (MvPolynomial (Fin n) Rf) (Localization.Away g') p *
+        IsLocalization.Away.invSelf g' ^ k
+    refine ⟨x, ?_⟩
+    apply (IsLocalization.Away.algebraMap_isUnit g).pow k |>.mul_right_cancel
+    simp only [x, map_mul, IsLocalization.Away.lift_eq, map_pow]
+    rw [IsLocalization.Away.lift_eq]
+    change ((algebraMap A N) (α p) * q (IsLocalization.Away.invSelf g') ^ k) *
+      (algebraMap A N) g ^ k = z * (algebraMap A N) g ^ k
+    rw [hp, mul_assoc, ← mul_pow, hqinv', one_pow, mul_one]
+    exact ha.symm
+  let : Algebra (MvPolynomial (Fin n) Rf) N := pN.toAlgebra
+  let : Module (MvPolynomial (Fin n) Rf) M := Module.compHom M α.toRingHom
+  let : Module (MvPolynomial (Fin n) Rf) L := Module.compHom L α.toRingHom
+  let : IsScalarTower (MvPolynomial (Fin n) Rf) A M :=
+    IsScalarTower.of_algebraMap_smul (fun _ _ => rfl)
+  let : IsScalarTower (MvPolynomial (Fin n) Rf) A L :=
+    IsScalarTower.of_compHom _ _
+  let f0 : M →ₗ[A] L := LocalizedModule.mkLinearMap (.powers g) M
+  let f1 : M →ₗ[MvPolynomial (Fin n) Rf] L :=
+    f0.restrictScalars (MvPolynomial (Fin n) Rf)
+  letI : IsLocalizedModule (.powers (α g')) f0 := by
+    simpa only [hg'] using
+      (inferInstance : IsLocalizedModule (.powers g) f0)
+  have hloc : IsLocalizedModule (.powers g') f1 := by
+    exact IsLocalizedModule.restrictScalars_powers g' f0
+  let : Module (Localization.Away g') L := Module.compHom L q
+  let : IsScalarTower (MvPolynomial (Fin n) Rf) (Localization.Away g') L :=
+    IsScalarTower.of_algebraMap_smul (by
+      intro x y
+      have hx := congrArg (fun k :
+          MvPolynomial (Fin n) Rf →+* N => k x)
+        (IsLocalization.Away.lift_comp g' hunit)
+      simpa [Module.compHom, pN, q] using
+        (show (algebraMap A N) (α x) • y = α x • y by
+          rw [← IsScalarTower.algebraMap_smul A N]))
+  letI : Module.FinitePresentation (MvPolynomial (Fin n) Rf) M := hPM
+  have hSN : Module.FinitePresentation (Localization.Away g') L := by
+    apply FinitePresentation.of_isBaseChange f1
+    exact IsLocalizedModule.isBaseChange _ _ f1
+  let : Algebra R (MvPolynomial (Fin n) Rf) :=
+    ((algebraMap Rf (MvPolynomial (Fin n) Rf)).comp (algebraMap R Rf)).toAlgebra
+  let : Module R (MvPolynomial (Fin n) Rf) :=
+    Module.compHom (MvPolynomial (Fin n) Rf)
+      ((algebraMap Rf (MvPolynomial (Fin n) Rf)).comp (algebraMap R Rf))
+  let : IsScalarTower R Rf (MvPolynomial (Fin n) Rf) :=
+    IsScalarTower.of_algebraMap_eq' (by
+      apply RingHom.ext
+      intro r
+      change ((algebraMap Rf (MvPolynomial (Fin n) Rf)).comp
+          (algebraMap R Rf)) r =
+        ((algebraMap Rf (MvPolynomial (Fin n) Rf)).comp
+          (algebraMap R Rf)) r
+      rfl)
+  let : IsScalarTower R (MvPolynomial (Fin n) Rf) (Localization.Away g') :=
+    IsScalarTower.of_algebraMap_eq' (by
+      apply RingHom.ext
+      intro r
+      rfl)
+  letI : Algebra.FinitePresentation Rf (MvPolynomial (Fin n) Rf) := inferInstance
+  letI : Algebra.FinitePresentation R Rf :=
+    IsLocalization.Away.finitePresentation f
+  letI : Algebra.FinitePresentation R (MvPolynomial (Fin n) Rf) :=
+    Algebra.FinitePresentation.trans R Rf (MvPolynomial (Fin n) Rf)
+  letI : Algebra.FinitePresentation R (Localization.Away g') :=
+    Algebra.FinitePresentation.of_isLocalizationAway g'
+  obtain ⟨m, β, hβ, hker⟩ :=
+    (inferInstance : Algebra.FinitePresentation R (Localization.Away g')).out
+  let qR : Localization.Away g' →ₐ[R] N :=
+    { q with
+      commutes' := by
+        intro r
+        change q (algebraMap R (Localization.Away g') r) =
+          algebraMap R N r
+        rw [← IsScalarTower.algebraMap_apply R (MvPolynomial (Fin n) Rf)
+          (Localization.Away g')]
+        rw [IsLocalization.Away.lift_eq]
+        rfl }
+  dsimp [RelativelyFinitelyPresented]
+  refine ⟨m, qR.comp β, hq.comp hβ, ?_⟩
+  exact moduleFinitePresentation_of_surjective_of_fg_ker
+    β.toRingHom hβ hker hSN
 
 /-- Relative finite presentation is preserved by arbitrary base change.  The
 module is expressed with the earlier chapter's canonical extension-of-scalars

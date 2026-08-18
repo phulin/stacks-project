@@ -84,26 +84,13 @@ structure EllipticFiberProductRestriction {S S' : Scheme.{u}}
     (x : EllipticFiberProductPoint E E' T),
     restrict (v ≫ u) x = restrict v (restrict u x)
 
-/-- The strictification required before the triple-valued construction is a
-presheaf of sets.  Its construction is a separate stack-coherence result;
-the canonical pullback map above does not provide it definitionally. -/
-theorem exists_ellipticFiberProductRestriction
-    {S S' : Scheme.{u}} (E : ModuliPoint S) (E' : ModuliPoint S') :
-    Nonempty (EllipticFiberProductRestriction E E') := by
-  sorry
-
-noncomputable def ellipticFiberProductRestriction
-    {S S' : Scheme.{u}} (E : ModuliPoint S) (E' : ModuliPoint S') :
-    EllipticFiberProductRestriction E E' :=
-  Classical.choice (exists_ellipticFiberProductRestriction E E')
-
 /-! ### The presheaf in the key fact -/
 
 /-- The source's functor `Schᵒᵖ ⟶ Sets`, with its triples as values. -/
 def ellipticFiberProductPresheaf {S S' : Scheme.{u}}
-    (E : ModuliPoint S) (E' : ModuliPoint S') :
+    (E : ModuliPoint S) (E' : ModuliPoint S')
+    (R : EllipticFiberProductRestriction E E') :
     Scheme.{u}ᵒᵖ ⥤ Type u :=
-  let R := ellipticFiberProductRestriction E E'
   { obj := fun T => EllipticFiberProductPoint E E' T.unop
     map := fun {X Y} f =>
       TypeCat.ofHom (fun (x : EllipticFiberProductPoint E E' X.unop) =>
@@ -124,8 +111,10 @@ def ellipticFiberProductPresheaf {S S' : Scheme.{u}}
 /-- A representation of the fibre-product presheaf, including its two projections. -/
 structure FiberProductPresentation {S S' : Scheme.{u}}
     (E : ModuliPoint S) (E' : ModuliPoint S') where
+  /-- The strictification needed to make the displayed triples a presheaf. -/
+  restriction : EllipticFiberProductRestriction E E'
   scheme : Scheme.{u}
-  representing : (ellipticFiberProductPresheaf E E').RepresentableBy scheme
+  representing : (ellipticFiberProductPresheaf E E' restriction).RepresentableBy scheme
 
 /-- The universal point supplied by a representation, evaluated at the identity. -/
 noncomputable def FiberProductPresentation.universalPoint
@@ -134,7 +123,8 @@ noncomputable def FiberProductPresentation.universalPoint
     EllipticFiberProductPoint E E' P.scheme :=
   P.representing.homEquiv (𝟙 P.scheme)
 
-/-- The key fact: the triple-valued presheaf is represented by a scheme. -/
+/-- The key fact: the triple-valued presheaf, with its strictification data,
+is represented by a scheme. -/
 theorem exists_fiberProductPresentation {S S' : Scheme.{u}}
     (E : ModuliPoint S) (E' : ModuliPoint S') :
     Nonempty (FiberProductPresentation E E') := by
@@ -144,6 +134,12 @@ theorem exists_fiberProductPresentation {S S' : Scheme.{u}}
 noncomputable def fiberProductPresentation {S S' : Scheme.{u}}
     (E : ModuliPoint S) (E' : ModuliPoint S') : FiberProductPresentation E E' :=
   Classical.choice (exists_fiberProductPresentation E E')
+
+/-- The strictification supplied by the chosen representation of the fibre product. -/
+noncomputable def ellipticFiberProductRestriction
+    {S S' : Scheme.{u}} (E : ModuliPoint S) (E' : ModuliPoint S') :
+    EllipticFiberProductRestriction E E' :=
+  (fiberProductPresentation E E').restriction
 
 /-- The scheme denoted by `S ×ₘ S'` in the source. -/
 noncomputable def moduliFiberProductScheme {S S' : Scheme.{u}}

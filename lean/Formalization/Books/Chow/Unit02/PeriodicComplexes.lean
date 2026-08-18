@@ -774,7 +774,90 @@ theorem TwoPeriodicComplex.multiplicity_eq_moduleLength_sub
     (hN : IsFiniteLength R C.N) :
     C.multiplicity (C.hasFiniteLengthCohomology_of_finite_terms hM hN) =
       (moduleLengthNat R C.M hM : ℤ) - moduleLengthNat R C.N hN := by
-  sorry
+  let hC := C.hasFiniteLengthCohomology_of_finite_terms hM hN
+  have hkerφ : IsFiniteLength R (LinearMap.ker C.phi.hom) :=
+    IsFiniteLength.of_injective hM (Submodule.subtype_injective _)
+  have hkerψ : IsFiniteLength R (LinearMap.ker C.psi.hom) :=
+    IsFiniteLength.of_injective hN (Submodule.subtype_injective _)
+  have hrangeφ : IsFiniteLength R (LinearMap.range C.phi.hom) :=
+    IsFiniteLength.of_surjective hM C.phi.hom.surjective_rangeRestrict
+  have hrangeψ : IsFiniteLength R (LinearMap.range C.psi.hom) :=
+    IsFiniteLength.of_surjective hN C.psi.hom.surjective_rangeRestrict
+  have hMlen : Module.length R C.M =
+      Module.length R (LinearMap.ker C.phi.hom) +
+        Module.length R (LinearMap.range C.phi.hom) := by
+    exact Module.length_eq_add_of_exact
+      (LinearMap.ker C.phi.hom).subtype C.phi.hom.rangeRestrict
+      (Submodule.subtype_injective _) C.phi.hom.surjective_rangeRestrict (by
+        rw [LinearMap.exact_iff]
+        simp)
+  have hNlen : Module.length R C.N =
+      Module.length R (LinearMap.ker C.psi.hom) +
+        Module.length R (LinearMap.range C.psi.hom) := by
+    exact Module.length_eq_add_of_exact
+      (LinearMap.ker C.psi.hom).subtype C.psi.hom.rangeRestrict
+      (Submodule.subtype_injective _) C.psi.hom.surjective_rangeRestrict (by
+        rw [LinearMap.exact_iff]
+        simp)
+  have hH0len : Module.length R (LinearMap.ker C.phi.hom) =
+      Module.length R (LinearMap.range C.psiIntoKer) +
+        Module.length R C.H0 := by
+    exact Module.length_eq_add_of_exact
+      (LinearMap.range C.psiIntoKer).subtype
+      (Submodule.mkQ (LinearMap.range C.psiIntoKer))
+      (Submodule.subtype_injective _) (Submodule.mkQ_surjective _)
+      (LinearMap.exact_subtype_mkQ _)
+  have hH1len : Module.length R (LinearMap.ker C.psi.hom) =
+      Module.length R (LinearMap.range C.phiIntoKer) +
+        Module.length R C.H1 := by
+    exact Module.length_eq_add_of_exact
+      (LinearMap.range C.phiIntoKer).subtype
+      (Submodule.mkQ (LinearMap.range C.phiIntoKer))
+      (Submodule.subtype_injective _) (Submodule.mkQ_surjective _)
+      (LinearMap.exact_subtype_mkQ _)
+  have hrangeψ' : IsFiniteLength R (LinearMap.range C.psiIntoKer) :=
+    IsFiniteLength.of_surjective hN C.psiIntoKer.surjective_rangeRestrict
+  have hrangeφ' : IsFiniteLength R (LinearMap.range C.phiIntoKer) :=
+    IsFiniteLength.of_surjective hM C.phiIntoKer.surjective_rangeRestrict
+  have hlenψ :
+      Module.length R (LinearMap.range C.psiIntoKer) =
+        Module.length R (LinearMap.range C.psi.hom) := by
+    rw [show LinearMap.range C.psiIntoKer =
+        Submodule.comap (LinearMap.ker C.phi.hom).subtype
+          (LinearMap.range C.psi.hom) by
+      simpa [TwoPeriodicComplex.psiIntoKer] using
+        (LinearMap.range_codRestrict (LinearMap.ker C.phi.hom)
+          C.psi.hom (fun x => C.range_psi_le_ker_phi ⟨x, rfl⟩))]
+    exact (Submodule.comapSubtypeEquivOfLe C.range_psi_le_ker_phi).length_eq
+  have hlenφ :
+      Module.length R (LinearMap.range C.phiIntoKer) =
+        Module.length R (LinearMap.range C.phi.hom) := by
+    rw [show LinearMap.range C.phiIntoKer =
+        Submodule.comap (LinearMap.ker C.psi.hom).subtype
+          (LinearMap.range C.phi.hom) by
+      simpa [TwoPeriodicComplex.phiIntoKer] using
+        (LinearMap.range_codRestrict (LinearMap.ker C.psi.hom)
+          C.phi.hom (fun x => C.range_phi_le_ker_psi ⟨x, rfl⟩))]
+    exact (Submodule.comapSubtypeEquivOfLe C.range_phi_le_ker_psi).length_eq
+  have hMnat := congrArg ENat.toNat hMlen
+  have hNnat := congrArg ENat.toNat hNlen
+  have hH0nat := congrArg ENat.toNat hH0len
+  have hH1nat := congrArg ENat.toNat hH1len
+  rw [ENat.toNat_add (Module.length_ne_top_iff.mpr hkerφ)
+      (Module.length_ne_top_iff.mpr hrangeφ)] at hMnat
+  rw [ENat.toNat_add (Module.length_ne_top_iff.mpr hkerψ)
+      (Module.length_ne_top_iff.mpr hrangeψ)] at hNnat
+  rw [ENat.toNat_add (Module.length_ne_top_iff.mpr hrangeψ')
+      (Module.length_ne_top_iff.mpr hC.1)] at hH0nat
+  rw [ENat.toNat_add (Module.length_ne_top_iff.mpr hrangeφ')
+      (Module.length_ne_top_iff.mpr hC.2)] at hH1nat
+  have hlenψnat := congrArg ENat.toNat hlenψ
+  have hlenφnat := congrArg ENat.toNat hlenφ
+  change (moduleLengthNat R C.H0 hC.1 : ℤ) -
+      moduleLengthNat R C.H1 hC.2 =
+    (moduleLengthNat R C.M hM : ℤ) - moduleLengthNat R C.N hN
+  simp only [moduleLengthNat] at hMnat hNnat hH0nat hH1nat ⊢
+  omega
 
 theorem TwoOnePeriodicComplex.multiplicity_eq_zero
     {R : Type u} [Ring R]
@@ -782,7 +865,10 @@ theorem TwoOnePeriodicComplex.multiplicity_eq_zero
     (hM : IsFiniteLength R C.M) :
     C.multiplicity
         (C.toTwoPeriodic.hasFiniteLengthCohomology_of_finite_terms hM hM) = 0 := by
-  sorry
+  change C.toTwoPeriodic.multiplicity
+      (C.toTwoPeriodic.hasFiniteLengthCohomology_of_finite_terms hM hM) = 0
+  simpa [TwoOnePeriodicComplex.toTwoPeriodic] using
+    (TwoPeriodicComplex.multiplicity_eq_moduleLength_sub C.toTwoPeriodic hM hM)
 
 /-- The example `(M, 0, psi)` from the source. -/
 def TwoOnePeriodicComplex.zeroFirst
@@ -800,7 +886,49 @@ theorem TwoOnePeriodicComplex.zeroFirst_hasFiniteLengthCohomology_of_finite_kern
     (hker : IsFiniteLength R (moduleKernel psi))
     (hcoker : IsFiniteLength R (moduleCokernel psi)) :
     (TwoOnePeriodicComplex.zeroFirst M psi).HasFiniteLengthCohomology := by
-  sorry
+  let C₀ := TwoOnePeriodicComplex.zeroFirst M psi
+  let e₀ : (M : Type v) ≃ₗ[R] LinearMap.ker (0 : (M →ₗ[R] M)) :=
+    { toFun := fun x => ⟨x, by simp⟩
+      invFun := fun x => x
+      left_inv := by intro x; rfl
+      right_inv := by intro x; apply Subtype.ext; rfl
+      map_add' := by intro x y; rfl
+      map_smul' := by intro a x; rfl }
+  have he₀_comp :
+      (e₀ : M →ₗ[R] LinearMap.ker (0 : (M →ₗ[R] M))).comp psi.hom =
+        C₀.toTwoPeriodic.psiIntoKer := by
+    ext x
+    rfl
+  have he₀_range :
+      (LinearMap.range psi.hom).map
+          (e₀ : M →ₗ[R] LinearMap.ker (0 : (M →ₗ[R] M))) =
+        LinearMap.range C₀.toTwoPeriodic.psiIntoKer := by
+    rw [LinearMap.range_eq_map, ← Submodule.map_comp,
+      ← LinearMap.range_eq_map, he₀_comp]
+    rfl
+  have hmap := Submodule.Quotient.equiv
+    (LinearMap.range psi.hom)
+    (LinearMap.range C₀.toTwoPeriodic.psiIntoKer)
+    e₀ he₀_range
+  have hzero : IsFiniteLength R C₀.toTwoPeriodic.H0 := by
+    exact (hmap.isFiniteLength hcoker)
+  have hphi_range :
+      LinearMap.range C₀.toTwoPeriodic.phiIntoKer = ⊥ := by
+    apply LinearMap.range_eq_bot.mpr
+    ext x
+    rfl
+  have hker₀ : IsFiniteLength R (LinearMap.ker C₀.toTwoPeriodic.psi.hom) := by
+    change IsFiniteLength R (LinearMap.ker psi.hom)
+    exact hker
+  have hone : IsFiniteLength R C₀.toTwoPeriodic.H1 := by
+    change IsFiniteLength R
+      ((LinearMap.ker C₀.toTwoPeriodic.psi.hom) ⧸
+        LinearMap.range C₀.toTwoPeriodic.phiIntoKer)
+    rw [hphi_range]
+    exact (Submodule.quotEquivOfEqBot
+      (⊥ : Submodule R (LinearMap.ker C₀.toTwoPeriodic.psi.hom)) rfl).symm.isFiniteLength hker₀
+  change C₀.toTwoPeriodic.HasFiniteLengthCohomology
+  exact ⟨hzero, hone⟩
 
 theorem TwoOnePeriodicComplex.zeroFirst_multiplicity_eq_cokernel_sub_kernel
     {R : Type u} [Ring R]
@@ -812,7 +940,57 @@ theorem TwoOnePeriodicComplex.zeroFirst_multiplicity_eq_cokernel_sub_kernel
           M psi hker hcoker) =
       (moduleLengthNat R (moduleCokernel psi) hcoker : ℤ) -
         moduleLengthNat R (moduleKernel psi) hker := by
-  sorry
+  let C₀ := TwoOnePeriodicComplex.zeroFirst M psi
+  let hC := TwoOnePeriodicComplex.zeroFirst_hasFiniteLengthCohomology_of_finite_kernel_cokernel
+    M psi hker hcoker
+  let e₀ : (M : Type v) ≃ₗ[R] LinearMap.ker (0 : (M →ₗ[R] M)) :=
+    { toFun := fun x => ⟨x, by simp⟩
+      invFun := fun x => x
+      left_inv := by intro x; rfl
+      right_inv := by intro x; apply Subtype.ext; rfl
+      map_add' := by intro x y; rfl
+      map_smul' := by intro a x; rfl }
+  have he₀_comp :
+      (e₀ : M →ₗ[R] LinearMap.ker (0 : (M →ₗ[R] M))).comp psi.hom =
+        C₀.toTwoPeriodic.psiIntoKer := by
+    ext x
+    rfl
+  have he₀_range :
+      (LinearMap.range psi.hom).map
+          (e₀ : M →ₗ[R] LinearMap.ker (0 : (M →ₗ[R] M))) =
+        LinearMap.range C₀.toTwoPeriodic.psiIntoKer := by
+    rw [LinearMap.range_eq_map, ← Submodule.map_comp,
+      ← LinearMap.range_eq_map, he₀_comp]
+    rfl
+  have hmap := Submodule.Quotient.equiv
+    (LinearMap.range psi.hom)
+    (LinearMap.range C₀.toTwoPeriodic.psiIntoKer)
+    e₀ he₀_range
+  have hphi_range :
+      LinearMap.range C₀.toTwoPeriodic.phiIntoKer = ⊥ := by
+    apply LinearMap.range_eq_bot.mpr
+    ext x
+    rfl
+  have hlen₀ : Module.length R (moduleCokernel psi) =
+      Module.length R C₀.toTwoPeriodic.H0 := by
+    exact hmap.length_eq
+  have hlen₁ : Module.length R C₀.toTwoPeriodic.H1 =
+      Module.length R (moduleKernel psi) := by
+    change Module.length R
+        ((LinearMap.ker C₀.toTwoPeriodic.psi.hom) ⧸
+          LinearMap.range C₀.toTwoPeriodic.phiIntoKer) =
+      Module.length R (LinearMap.ker psi.hom)
+    rw [hphi_range]
+    exact (Submodule.quotEquivOfEqBot
+      (⊥ : Submodule R (LinearMap.ker C₀.toTwoPeriodic.psi.hom)) rfl).length_eq
+  have hnat₀ := congrArg ENat.toNat hlen₀
+  have hnat₁ := congrArg ENat.toNat hlen₁
+  change (moduleLengthNat R C₀.toTwoPeriodic.H0 hC.1 : ℤ) -
+      moduleLengthNat R C₀.toTwoPeriodic.H1 hC.2 =
+    (moduleLengthNat R (moduleCokernel psi) hcoker : ℤ) -
+      moduleLengthNat R (moduleKernel psi) hker
+  simp only [moduleLengthNat] at hnat₀ hnat₁ ⊢
+  omega
 
 theorem TwoOnePeriodicComplex.multiplicity_invariant_under_finite_kernel_cokernel
     {R : Type u} [Ring R]

@@ -2,6 +2,7 @@ import Mathlib.Algebra.Module.LocalizedModule.AtPrime
 import Mathlib.Algebra.Module.LocalizedModule.Exact
 import Mathlib.Algebra.Module.LocalizedModule.Submodule
 import Mathlib.Algebra.Module.Torsion.Basic
+import Mathlib.Data.ENat.BigOperators
 import Mathlib.RingTheory.Length
 import Mathlib.RingTheory.LocalRing.Length
 import Mathlib.RingTheory.LocalRing.ResidueField.Ideal
@@ -466,7 +467,7 @@ theorem compositionSeries_localized_multiplicity
             (Fin.sum_univ_castSucc
               (fun j : Fin (i.val + 1) => a (emb (Fin.succ i) j))).symm
   let etop' := LocalizedModule.map m₀.primeCompl
-    (Submodule.topEquiv : (⊤ : Submodule R M) →ₗ[R] M)
+    (Submodule.topEquiv : (⊤ : Submodule R M) ≃ₗ[R] M).toLinearMap
   have hetop' : Function.Bijective etop' := ⟨
     LocalizedModule.map_injective m₀.primeCompl _ (Submodule.topEquiv.injective),
     LocalizedModule.map_surjective m₀.primeCompl _ (Submodule.topEquiv.surjective)⟩
@@ -476,7 +477,11 @@ theorem compositionSeries_localized_multiplicity
       Module.length S (LocalizedModule.AtPrime m₀ M) =
         ∑ i : Fin s.length, a i := by
     rw [← etop.length_eq]
-    simpa [RelSeries.last, ht, emb, a] using hprefix (Fin.last s.length)
+    have htop : s (Fin.last s.length) = ⊤ := by
+      rw [← RelSeries.last, ht]
+    have h := hprefix (Fin.last s.length)
+    rw [htop] at h
+    simpa [emb, a] using h
   have hcard :
       (Nat.card {i : Fin s.length // m i = m₀} : ℕ∞) =
         ∑ i : Fin s.length, a i := by
@@ -486,7 +491,6 @@ theorem compositionSeries_localized_multiplicity
       (Finset.sum_boole (R := ℕ∞) (fun i : Fin s.length => m i = m₀)
         Finset.univ)
   rw [hcard, ← hlast]
-  rfl
 
 /-! ## Restriction along local maps -/
 
@@ -598,18 +602,40 @@ theorem length_pushdown
   have hlength :
       Module.length A M = ∑ i : Fin s.length, b i := by
     rw [← etop.length_eq]
-    simpa [RelSeries.last, ht, emb] using hprefix (Fin.last s.length)
+    have htop : s (Fin.last s.length) = ⊤ := by
+      rw [← RelSeries.last, ht]
+    have h := hprefix (Fin.last s.length)
+    rw [htop] at h
+    simpa [emb] using h
   have hmult (r : MaximalSpectrum B) :
       (Nat.card {i : Fin s.length // q i = r} : ℕ∞) =
         Module.length (Localization.AtPrime r.asIdeal)
           (LocalizedModule.AtPrime r.asIdeal M) := by
-    exact compositionSeries_localized_multiplicity s hs ht
-      (fun i => (q i).asIdeal) (fun i => (q i).isMaximal)
-      (fun i => by
-        let hsimple :=
-          (covBy_iff_quot_is_simple (s.step i).le).mp (s.step i)
-        exact (Classical.choose_spec
-          (isSimpleModule_iff_quot_maximal.mp hsimple)).2) r.asIdeal
+    have hcard :
+        (Nat.card {i : Fin s.length // (q i).asIdeal = r.asIdeal} : ℕ∞) =
+          (Nat.card {i : Fin s.length // q i = r} : ℕ∞) := by
+      let e :
+          {i : Fin s.length // (q i).asIdeal = r.asIdeal} ≃
+            {i : Fin s.length // q i = r} :=
+        { toFun := fun i =>
+            ⟨i.1, by
+              apply MaximalSpectrum.ext
+              exact i.2⟩
+          invFun := fun i =>
+            ⟨i.1, by
+              exact congrArg MaximalSpectrum.asIdeal i.2⟩
+          left_inv := by intro i; rfl
+          right_inv := by intro i; rfl }
+      simpa only [Nat.card_eq_fintype_card] using
+        congrArg (fun n : ℕ => (n : ℕ∞)) (Fintype.card_congr e)
+    exact hcard.symm.trans
+      (compositionSeries_localized_multiplicity s hs ht
+        (fun i => (q i).asIdeal) (fun i => (q i).isMaximal)
+        (fun i => by
+          let hsimple :=
+            (covBy_iff_quot_is_simple (s.step i).le).mp (s.step i)
+          exact (Classical.choose_spec
+            (isSimpleModule_iff_quot_maximal.mp hsimple)).2) r.asIdeal)
   have hfiber (r : MaximalSpectrum B) :
       ∑ i ∈ (Finset.univ.filter (fun i : Fin s.length => q i = r)),
           Module.length A (q i).asIdeal.ResidueField =
@@ -622,7 +648,10 @@ theorem length_pushdown
             Module.length A r.asIdeal.ResidueField := by
               apply Finset.sum_congr rfl
               intro i hi
-              simp only [(Finset.mem_filter.mp hi).2]
+              exact congrArg
+                (fun z : MaximalSpectrum B =>
+                  Module.length A z.asIdeal.ResidueField)
+                (Finset.mem_filter.mp hi).2
       _ = Module.length A r.asIdeal.ResidueField *
           (Nat.card {i : Fin s.length // q i = r} : ℕ∞) := by
             simp [Nat.card_eq_fintype_card, Fintype.card_subtype, mul_comm]
@@ -631,18 +660,36 @@ theorem length_pushdown
         ∑ r : MaximalSpectrum B,
           Module.length A r.asIdeal.ResidueField *
             (Nat.card {i : Fin s.length // q i = r} : ℕ∞) := by
-    simp only [b]
-    rw [← Finset.sum_fiberwise_eq_sum_filter
-      (Finset.univ : Finset (Fin s.length)) Finset.univ q
-      (fun i => Module.length A (q i).asIdeal.ResidueField)]
-    simp_rw [hfiber]
+    change
+      (∑ i : Fin s.length,
+          Module.length A (q i).asIdeal.ResidueField) = _
+    calc
+      (∑ i : Fin s.length,
+          Module.length A (q i).asIdeal.ResidueField) =
+          ∑ i ∈ (Finset.univ.filter
+            (fun i : Fin s.length =>
+              q i ∈ (Finset.univ : Finset (MaximalSpectrum B)))),
+            Module.length A (q i).asIdeal.ResidueField := by simp
+      _ = ∑ r : MaximalSpectrum B,
+            ∑ i ∈ (Finset.univ.filter (fun i : Fin s.length => q i = r)),
+              Module.length A (q i).asIdeal.ResidueField := by
+        simpa using
+          (Finset.sum_fiberwise_eq_sum_filter
+            (Finset.univ : Finset (Fin s.length))
+            (Finset.univ : Finset (MaximalSpectrum B)) q
+            (fun i => Module.length A (q i).asIdeal.ResidueField)
+          ).symm
+      _ = ∑ r : MaximalSpectrum B,
+            Module.length A r.asIdeal.ResidueField *
+              (Nat.card {i : Fin s.length // q i = r} : ℕ∞) := by
+        simp_rw [hfiber]
   have hlocal (r : MaximalSpectrum B) :
       IsLocalHom (algebraMap A r.asIdeal.ResidueField) := by
     constructor
     intro a ha
     by_contra hna
     have haM : a ∈ IsLocalRing.maximalIdeal A :=
-      (IsLocalRing.mem_maximalIdeal A a).2 hna
+      (IsLocalRing.mem_maximalIdeal a).2 hna
     have haq : algebraMap A B a ∈ r.asIdeal := by
       have : a ∈ r.asIdeal.comap (algebraMap A B) := by
         rw [h_over r]
@@ -654,13 +701,13 @@ theorem length_pushdown
     exact ha.ne_zero haz
   have hcoeff (r : MaximalSpectrum B) :
       Module.length A r.asIdeal.ResidueField < ⊤ := by
-    letI := hfinite r
-    letI := hlocal r
+    have := hfinite r
+    have := hlocal r
     have hres :
         Module.length (IsLocalRing.ResidueField A)
             (IsLocalRing.ResidueField r.asIdeal.ResidueField) < ⊤ := by
       rw [Module.length_eq_finrank]
-      exact ENat.coe_lt_top _
+      exact ENat.natCast_lt_top _
     calc
       Module.length A r.asIdeal.ResidueField =
           Module.length r.asIdeal.ResidueField r.asIdeal.ResidueField *
@@ -670,12 +717,13 @@ theorem length_pushdown
           r.asIdeal.ResidueField
       _ < ⊤ := by
         rw [Module.length_eq_one]
-        exact WithTop.mul_lt_top (by simp) hres
+        rw [lt_top_iff_ne_top]
+        simpa only [one_mul] using (ne_of_lt hres)
   have hMfinite : Module.length A M < ⊤ := by
     rw [hlength, hgroup]
     rw [ENat.sum_lt_top]
     intro r hr
-    exact WithTop.mul_lt_top (hcoeff r) (ENat.coe_lt_top _)
+    exact WithTop.mul_lt_top (hcoeff r) (ENat.natCast_lt_top _)
   constructor
   · calc
       Module.length A M = ∑ i : Fin s.length, b i := hlength

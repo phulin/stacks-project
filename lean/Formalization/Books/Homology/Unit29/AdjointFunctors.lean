@@ -317,7 +317,31 @@ theorem adjoint_faithful_iff_reflects_zero
     (hAdj : v ⊣ u) (hMono : PreservesMonomorphisms v) :
     Functor.Faithful v ↔
       ∀ B₀ : B, IsZero (v.obj B₀) → IsZero B₀ := by
-  sorry
+  constructor
+  · intro hFaithful B₀ hB₀
+    rw [IsZero.iff_id_eq_zero]
+    apply hFaithful.map_injective
+    rw [← v.map_id]
+    exact hB₀.eq_of_src _ _
+  · intro hReflectsZero
+    letI : PreservesMonomorphisms v := hMono
+    letI : PreservesEpimorphisms v :=
+      Functor.preservesEpimorphisms_of_adjunction hAdj
+    constructor
+    intro X Y f g hfg
+    have hsub : v.map (f - g) = 0 := by
+      rw [Functor.map_sub, hfg, sub_self]
+    have hsub' : f - g = 0 := by
+      let q := f - g
+      have hq : v.map q = 0 := hsub
+      have himage : v.map (Abelian.image.ι q) = 0 := by
+        apply zero_of_epi_comp (v.map (Abelian.factorThruImage q))
+        rw [← v.map_comp, Abelian.image.fac, hq, v.map_zero]
+      have hzero : IsZero (v.obj (Abelian.image q)) := by
+        exact hReflectsZero _ (IsZero.of_mono_eq_zero _ himage)
+      have himage' : Abelian.image.ι q = 0 := hzero.eq_of_src _ _
+      exact eq_zero_of_image_eq_zero himage'
+    exact sub_eq_zero.mp hsub'
 
 /- The zero-functor example from the source makes the need for the objectwise
    zero-reflection hypothesis explicit.  The two constant functors at the
@@ -333,7 +357,58 @@ theorem zero_functors_counterexample
         IsExact v₀ ∧
           ¬ Functor.Faithful v₀ ∧
             ¬ (∀ X : B, IsZero (v₀.obj X) → IsZero X) := by
-  sorry
+  let u₀ : A ⥤ B := (Functor.const A).obj (0 : B)
+  let v₀ : B ⥤ A := (Functor.const B).obj (0 : A)
+  change Nonempty (v₀ ⊣ u₀) ∧
+    PreservesMonomorphisms v₀ ∧
+      IsExact v₀ ∧
+        ¬ Functor.Faithful v₀ ∧
+          ¬ (∀ X : B, IsZero (v₀.obj X) → IsZero X)
+  have hAdj : Nonempty (v₀ ⊣ u₀) := by
+    refine ⟨Adjunction.mkOfHomEquiv ?_⟩
+    refine {
+      homEquiv := fun X Y => ?_
+      homEquiv_naturality_left_symm := ?_
+      homEquiv_naturality_right := ?_ }
+    · letI : Unique (v₀.obj X ⟶ Y) :=
+        ⟨0, fun f => (isZero_zero A).eq_of_src _ _⟩
+      letI : Unique (X ⟶ u₀.obj Y) :=
+        ⟨0, fun f => (isZero_zero B).eq_of_tgt _ _⟩
+      exact Equiv.ofUnique _ _
+    · intro X' X Y f g
+      exact (isZero_zero A).eq_of_src _ _
+    · intro X Y Y' f g
+      exact (isZero_zero B).eq_of_tgt _ _
+  have hMono : PreservesMonomorphisms v₀ := by
+    constructor
+    intro X Y f hf
+    dsimp [v₀]
+    infer_instance
+  have hZero : IsZero v₀ := Functor.isZero _ (fun X => isZero_zero _)
+  have hExact : IsExact v₀ := by
+    change PreservesFiniteLimits v₀ ∧ PreservesFiniteColimits v₀
+    constructor
+    · constructor
+      intro J _ _
+      exact v₀.preservesLimitsOfShape_of_isZero hZero J
+    · constructor
+      intro J _ _
+      exact v₀.preservesColimitsOfShape_of_isZero hZero J
+  have hNotFaithful : ¬ Functor.Faithful v₀ := by
+    intro hFaithful
+    obtain ⟨X, hX⟩ := hB
+    have hEq : v₀.map (𝟙 X) = v₀.map (0 : X ⟶ X) := by
+      rfl
+    have hId : (𝟙 X) = 0 := hFaithful.map_injective hEq
+    exact hX ((IsZero.iff_id_eq_zero X).2 hId)
+  have hNotReflects :
+      ¬ (∀ X : B, IsZero (v₀.obj X) → IsZero X) := by
+    intro hReflects
+    obtain ⟨X, hX⟩ := hB
+    apply hX
+    apply hReflects X
+    simpa [v₀] using (isZero_zero A)
+  exact ⟨hAdj, hMono, hExact, hNotFaithful, hNotReflects⟩
 
 /-! ### Functorial injective embeddings -/
 
@@ -346,7 +421,44 @@ theorem adjoint_functorial_injective_embeddings
     (hReflectsZero : ∀ B₀ : B, IsZero (v.obj B₀) → IsZero B₀)
     (hFunctorial : HasFunctorialInjectiveEmbeddings (C := A)) :
     HasFunctorialInjectiveEmbeddings (C := B) := by
-  sorry
+  letI : PreservesMonomorphisms v := hMono
+  letI : Functor.Faithful v :=
+    (adjoint_faithful_iff_reflects_zero u v hAdj hMono).2 hReflectsZero
+  letI : PreservesMonomorphisms u :=
+    Functor.preservesMonomorphisms_of_adjunction hAdj
+  obtain ⟨J, hJleft, hJmono, hJinjective⟩ := hFunctorial
+  let e : (J ⋙ Arrow.leftFunc) ≅ 𝟭 A := eqToIso hJleft
+  let J' : B ⥤ Arrow B where
+    obj X := Arrow.mk
+      (hAdj.unit.app X ≫
+        u.map (e.inv.app (v.obj X) ≫ (J.obj (v.obj X)).hom))
+    map {X Y} f := Arrow.homMk f
+      (u.map (J.map (v.map f)).right) (by
+        have hinside :
+            v.map f ≫ (e.inv.app (v.obj Y) ≫ (J.obj (v.obj Y)).hom) =
+              (e.inv.app (v.obj X) ≫ (J.obj (v.obj X)).hom) ≫
+                (J.map (v.map f)).right := by
+          rw [← Category.assoc, e.inv.naturality]
+          simp only [Functor.comp_map, Functor.id_map, Category.assoc]
+          rw [(J.map (v.map f)).w]
+        simp only [Category.assoc]
+        rw [hAdj.unit.naturality, ← u.map_comp, ← u.map_comp, hinside])
+    map_id X := by
+      apply Arrow.hom_ext <;> simp
+    map_comp f g := by
+      apply Arrow.hom_ext <;> simp
+  have hJ'left : J' ⋙ Arrow.leftFunc = 𝟭 B := by
+    apply Functor.ext <;> simp [J']
+  have hJ'mono : ∀ X : B, Mono (J'.obj X).hom := by
+    intro X
+    dsimp [J']
+    letI : Mono (J.obj (v.obj X)).hom := hJmono _
+    infer_instance
+  have hJ'injective : ∀ X : B, Injective (J'.obj X).right := by
+    intro X
+    dsimp [J']
+    exact Functor.injective_obj_of_injective u (hJinjective (v.obj X))
+  exact ⟨J', hJ'left, hJ'mono, hJ'injective⟩
 
 /-! ### A partially defined left adjoint -/
 

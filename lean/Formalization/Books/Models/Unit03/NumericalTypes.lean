@@ -2002,7 +2002,303 @@ theorem minimal_genus_ge_topological_genus (T : NumericalType) (genusValue : ℤ
     (hgenus : IsOfGenus T genusValue) (hminimal : IsMinimal T)
     (hn : 1 < T.n) :
     genusValue ≥ topologicalGenus T := by
-  sorry
+  classical
+  let k : Fin T.n → ℤ := fun i => -Classical.choose (T.w_dvd i i)
+  have hk_eq (i : Fin T.n) : T.a i i = -T.w i * k i := by
+    dsimp [k]
+    rw [Classical.choose_spec (T.w_dvd i i)]
+    ring
+  have hk_pos (i : Fin T.n) : 0 < k i := by
+    have hai := diagonal_negative T genusValue hgenus hn i
+    have hwi := T.w_pos i
+    rw [hk_eq] at hai
+    nlinarith
+  have hk_ge_two (i : Fin T.n) (hgi : T.g i = 0) : 2 ≤ k i := by
+    by_contra hnot
+    have hki : k i = 1 := by omega
+    apply hminimal
+    refine ⟨i, hgi, ?_⟩
+    rw [hk_eq, hki]
+    ring
+
+  let f : Fin T.n × Fin T.n → ℚ := fun p =>
+    (T.a p.1 p.2 : ℚ) * (T.m p.2 : ℚ) /
+      ((T.w p.1 : ℚ) * (T.m p.1 : ℚ))
+  have hki_formula (i : Fin T.n) :
+      (k i : ℚ) = (Finset.univ.erase i).sum (fun j => f (i, j)) := by
+    have hsplit := Finset.sum_erase_add
+      (s := (Finset.univ : Finset (Fin T.n)))
+      (f := fun j => T.a i j * T.m j) (Finset.mem_univ i)
+    have hrow :
+        (Finset.univ.erase i).sum (fun j => T.a i j * T.m j) +
+            T.a i i * T.m i = 0 := by
+      calc
+        (Finset.univ.erase i).sum (fun j => T.a i j * T.m j) +
+            T.a i i * T.m i =
+            (Finset.univ : Finset (Fin T.n)).sum
+              (fun j => T.a i j * T.m j) := hsplit
+        _ = 0 := T.row_sum i
+    have hrowQ := congrArg (fun z : ℤ => (z : ℚ)) hrow
+    push_cast at hrowQ
+    rw [hk_eq] at hrowQ
+    have hrowQ' :
+        (Finset.univ.erase i).sum
+            (fun j => (T.a i j : ℚ) * (T.m j : ℚ)) =
+          (T.w i : ℚ) * (k i : ℚ) * (T.m i : ℚ) := by
+      linarith
+    dsimp [f]
+    calc
+      (k i : ℚ) =
+          ((T.w i : ℚ) * (k i : ℚ) * (T.m i : ℚ)) /
+            ((T.w i : ℚ) * (T.m i : ℚ)) := by
+              field_simp
+      _ =
+          ((Finset.univ.erase i).sum
+            (fun j => (T.a i j : ℚ) * (T.m j : ℚ))) /
+            ((T.w i : ℚ) * (T.m i : ℚ)) := by rw [hrowQ']
+      _ = (Finset.univ.erase i).sum (fun j =>
+          (T.a i j : ℚ) * (T.m j : ℚ) /
+            ((T.w i : ℚ) * (T.m i : ℚ))) := by
+              rw [Finset.sum_div]
+
+  let P : Finset (Fin T.n × Fin T.n) := Finset.univ ×ˢ Finset.univ
+  let D : Finset (Fin T.n × Fin T.n) :=
+    P.filter (fun p => p.1 ≠ p.2)
+  let U : Finset (Fin T.n × Fin T.n) :=
+    P.filter (fun p => p.1 < p.2)
+  let L : Finset (Fin T.n × Fin T.n) :=
+    D.filter (fun p => ¬p.1 < p.2)
+  have hsplit : D.sum f = U.sum f + L.sum f := by
+    have hUeq : U = D.filter (fun p => p.1 < p.2) := by
+      ext p
+      simp only [U, D, Finset.mem_filter, P]
+      constructor
+      · rintro ⟨hp, hlt⟩
+        exact ⟨⟨hp, ne_of_lt hlt⟩, hlt⟩
+      · rintro ⟨⟨hp, hne⟩, hlt⟩
+        exact ⟨hp, hlt⟩
+    rw [hUeq]
+    have h := Finset.sum_filter_add_sum_filter_not
+      (s := D) (p := fun p : Fin T.n × Fin T.n => p.1 < p.2) (f := f)
+    have h' := h.symm
+    simpa only [L] using h'
+  have hL : L.sum f = U.sum (fun p => f (p.2, p.1)) := by
+    apply Finset.sum_bij (s := L) (t := U)
+      (f := f) (g := fun p => f (p.2, p.1)) (fun p _ => (p.2, p.1))
+    · intro p hp
+      have hpD : p ∈ D := (Finset.mem_filter.mp hp).1
+      have hpne : p.1 ≠ p.2 := (Finset.mem_filter.mp hpD).2
+      have hpnot : ¬p.1 < p.2 := (Finset.mem_filter.mp hp).2
+      have hlt : p.2 < p.1 :=
+        lt_of_le_of_ne (le_of_not_gt hpnot) (Ne.symm hpne)
+      simpa [U, P] using hlt
+    · intro p hp q hq heq
+      exact Prod.ext (congrArg Prod.snd heq) (congrArg Prod.fst heq)
+    · intro q hq
+      have hq' : q ∈ P.filter (fun p => p.1 < p.2) := by
+        simpa [U] using hq
+      have hlt : q.1 < q.2 := (Finset.mem_filter.mp hq').2
+      have hne : q.2 ≠ q.1 := ne_of_gt hlt
+      have hnlt : ¬q.2 < q.1 := not_lt_of_ge (le_of_lt hlt)
+      refine ⟨(q.2, q.1), ?_, ?_⟩
+      · simp only [L, Finset.mem_filter]
+        refine ⟨?_, hnlt⟩
+        simp only [D, Finset.mem_filter]
+        exact ⟨by simp [P], hne⟩
+      · rfl
+    · intro p hp
+      rfl
+  have hDpair : D.sum f = U.sum (fun p => f p + f (p.2, p.1)) := by
+    rw [hsplit, hL]
+    rw [← Finset.sum_add_distrib]
+
+  let Upos : Finset (Fin T.n × Fin T.n) :=
+    U.filter (fun p => 0 < T.a p.1 p.2)
+  have hUzero :
+      (U.filter (fun p => ¬0 < T.a p.1 p.2)).sum
+          (fun p => f p + f (p.2, p.1)) = 0 := by
+    apply Finset.sum_eq_zero
+    intro p hp
+    have hpU : p ∈ U := (Finset.mem_filter.mp hp).1
+    have hlt : p.1 < p.2 := by
+      simpa [U, P] using (Finset.mem_filter.mp hpU).2
+    have hnot : ¬0 < T.a p.1 p.2 := (Finset.mem_filter.mp hp).2
+    have hnonneg : 0 ≤ T.a p.1 p.2 := T.a_offdiag_nonneg (ne_of_lt hlt)
+    have haz : T.a p.1 p.2 = 0 := by omega
+    have haz' : T.a p.2 p.1 = 0 := by
+      rw [T.a_symmetric]
+      exact haz
+    simp [f, haz, haz']
+  have hDpos :
+      D.sum f = Upos.sum (fun p => f p + f (p.2, p.1)) := by
+    rw [hDpair]
+    have h := Finset.sum_filter_add_sum_filter_not
+      (s := U) (p := fun p : Fin T.n × Fin T.n => 0 < T.a p.1 p.2)
+      (f := fun p => f p + f (p.2, p.1))
+    have h' := h.symm
+    rw [hUzero, add_zero] at h'
+    simpa only [Upos] using h'
+
+  have hpair (p : Fin T.n × Fin T.n) (hp : p ∈ Upos) :
+      (2 : ℚ) ≤ f p + f (p.2, p.1) := by
+    have hpU : p ∈ U := (Finset.mem_filter.mp hp).1
+    have hlt : p.1 < p.2 := by
+      simpa [U, P] using (Finset.mem_filter.mp hpU).2
+    have hpos : 0 < T.a p.1 p.2 := (Finset.mem_filter.mp hp).2
+    have hpos' : 0 < T.a p.2 p.1 := by
+      rw [T.a_symmetric]
+      exact hpos
+    have hw1 : (0 : ℚ) < (T.w p.1 : ℚ) := by exact_mod_cast T.w_pos p.1
+    have hw2 : (0 : ℚ) < (T.w p.2 : ℚ) := by exact_mod_cast T.w_pos p.2
+    have hm1 : (0 : ℚ) < (T.m p.1 : ℚ) := by exact_mod_cast T.m_pos p.1
+    have hm2 : (0 : ℚ) < (T.m p.2 : ℚ) := by exact_mod_cast T.m_pos p.2
+    rcases T.w_dvd p.1 p.2 with ⟨c₁, hc₁⟩
+    rcases T.w_dvd p.2 p.1 with ⟨c₂, hc₂⟩
+    have hc₁pos : 0 < c₁ := by nlinarith [hpos, T.w_pos p.1]
+    have hc₂pos : 0 < c₂ := by nlinarith [hpos', T.w_pos p.2]
+    have hprod : f p * f (p.2, p.1) = (c₁ : ℚ) * c₂ := by
+      dsimp [f]
+      rw [hc₁, hc₂, T.a_symmetric p.2 p.1]
+      push_cast
+      field_simp
+      ring
+    have hprod' : (1 : ℚ) ≤ f p * f (p.2, p.1) := by
+      rw [hprod]
+      have hc₁' : (1 : ℚ) ≤ c₁ := by exact_mod_cast (show (1 : ℤ) ≤ c₁ by omega)
+      have hc₂' : (1 : ℚ) ≤ c₂ := by exact_mod_cast (show (1 : ℤ) ≤ c₂ by omega)
+      nlinarith
+    have hf1 : 0 < f p := by
+      dsimp [f]
+      positivity
+    have hf2 : 0 < f (p.2, p.1) := by
+      dsimp [f]
+      positivity
+    have hsq : (4 : ℚ) ≤ (f p + f (p.2, p.1)) ^ 2 := by
+      nlinarith [sq_nonneg (f p - f (p.2, p.1))]
+    nlinarith
+  have hDlower :
+      (2 : ℚ) * (Upos.card : ℚ) ≤ D.sum f := by
+    rw [hDpos]
+    calc
+      (2 : ℚ) * (Upos.card : ℚ) = Upos.sum (fun _ => (2 : ℚ)) := by simp
+      _ ≤ Upos.sum (fun p => f p + f (p.2, p.1)) := by
+        apply Finset.sum_le_sum
+        intro p hp
+        exact hpair p hp
+
+  let E : Finset (Fin T.n × Fin T.n) :=
+    U.filter (fun p => 0 < T.a p.1 p.2)
+  have hcard : Upos.card = Fintype.card
+      (Formalization.Books.Models.Unit02.positiveEdge T.a) := by
+    apply Finset.card_bij (fun e _ => e.1)
+    · intro e he
+      simp only [Upos, U, P, Finset.mem_filter]
+      exact ⟨by simp, e.2.1, e.2.2⟩
+    · intro e he e' he' heq
+      exact Subtype.ext heq
+    · intro p hp
+      have hpU : p ∈ U := (Finset.mem_filter.mp hp).1
+      have hlt : p.1 < p.2 := by
+        simpa [U, P] using (Finset.mem_filter.mp hpU).2
+      have hpos : 0 < T.a p.1 p.2 := (Finset.mem_filter.mp hp).2
+      let e : Formalization.Books.Models.Unit02.positiveEdge T.a :=
+        ⟨p, ⟨hlt, hpos⟩⟩
+      exact ⟨e, by simp, rfl⟩
+
+  have hsumk :
+      (∑ i : Fin T.n, (k i : ℚ)) = D.sum f := by
+    calc
+      (∑ i : Fin T.n, (k i : ℚ)) =
+          ∑ i : Fin T.n, (Finset.univ.erase i).sum (fun j => f (i, j)) := by
+            apply Finset.sum_congr rfl
+            intro i hi
+            exact hki_formula i
+      _ = D.sum f := by
+        dsimp [D, P]
+        rw [Finset.sum_filter]
+        rw [Finset.sum_product]
+        apply Finset.sum_congr rfl
+        intro i hi
+        rw [show (Finset.univ.erase i : Finset (Fin T.n)) =
+            Finset.univ.filter (fun j => j ≠ i) by ext j; simp]
+        rw [Finset.sum_filter]
+        apply Finset.sum_congr rfl
+        intro j hj
+        by_cases hji : j = i
+        · subst j
+          simp
+        · simp [hji, Ne.symm hji]
+  have hsumk_lower :
+      (2 : ℚ) * (Fintype.card
+        (Formalization.Books.Models.Unit02.positiveEdge T.a) : ℚ) ≤
+        ∑ i : Fin T.n, (k i : ℚ) := by
+    rw [hsumk]
+    rw [← hcard]
+    exact hDlower
+
+  have hgenusQ : (genusValue : ℚ) =
+      1 + ∑ i : Fin T.n,
+        ((T.m i : ℚ) * (T.w i : ℚ)) *
+          ((T.g i : ℚ) - 1 + (k i : ℚ) / 2) := by
+    have hformula := genus_formula T
+    rw [hgenus, genusExpression] at hformula
+    rw [← hformula]
+    apply congrArg (fun x : ℚ => 1 + x)
+    apply Finset.sum_congr rfl
+    intro i hi
+    rw [hk_eq]
+    push_cast
+    ring
+  have hb_nonneg (i : Fin T.n) :
+      (0 : ℚ) ≤ (T.g i : ℚ) - 1 + (k i : ℚ) / 2 := by
+    by_cases hgi : T.g i = 0
+    · have hki := hk_ge_two i hgi
+      rw [hgi]
+      norm_num
+      exact_mod_cast hki
+    · have hgi' : 1 ≤ T.g i := by omega
+      have hkp := hk_pos i
+      exact_mod_cast (show (0 : ℤ) ≤ T.g i - 1 + k i / 2 by
+        have : (0 : ℚ) ≤ (T.g i : ℚ) - 1 := by exact_mod_cast (by omega : (0 : ℤ) ≤ T.g i - 1)
+        positivity)
+  have hp_nonneg (i : Fin T.n) :
+      (1 : ℚ) ≤ (T.m i : ℚ) * (T.w i : ℚ) := by
+    have hm := T.m_pos i
+    have hw := T.w_pos i
+    exact_mod_cast (show (1 : ℤ) ≤ T.m i * T.w i by nlinarith)
+  have hsum_b :
+      (-(T.n : ℚ) +
+        (Fintype.card (Formalization.Books.Models.Unit02.positiveEdge T.a) : ℚ)) ≤
+      ∑ i : Fin T.n, ((T.g i : ℚ) - 1 + (k i : ℚ) / 2) := by
+    have hg_sum : (-(T.n : ℚ)) ≤ ∑ i : Fin T.n, ((T.g i : ℚ) - 1) := by
+      simp only [Finset.sum_sub_distrib, Finset.sum_const_zero]
+      have := Finset.sum_nonneg (fun i hi => T.g_nonneg i)
+      push_cast at this
+      linarith
+    have hk_sum :
+        (2 : ℚ) * (Fintype.card
+          (Formalization.Books.Models.Unit02.positiveEdge T.a) : ℚ) ≤
+        ∑ i : Fin T.n, (k i : ℚ) := hsumk_lower
+    rw [Finset.sum_add_distrib]
+    linarith
+  have hsum_prod :
+      (∑ i : Fin T.n, ((T.g i : ℚ) - 1 + (k i : ℚ) / 2)) ≤
+      ∑ i : Fin T.n,
+        ((T.m i : ℚ) * (T.w i : ℚ)) *
+          ((T.g i : ℚ) - 1 + (k i : ℚ) / 2) := by
+    apply Finset.sum_le_sum
+    intro i hi
+    have hb := hb_nonneg i
+    have hp := hp_nonneg i
+    nlinarith
+  have hgenus_lower :
+      (1 - (T.n : ℚ) +
+        (Fintype.card (Formalization.Books.Models.Unit02.positiveEdge T.a) : ℚ)) ≤
+      (genusValue : ℚ) := by
+    rw [hgenusQ]
+    linarith [hsum_b, hsum_prod]
+  dsimp [topologicalGenus]
+  exact_mod_cast hgenus_lower
 
 /-! The combined bound stated before the two component lemmas. -/
 theorem minimal_genus_ge_max_one_topological_genus (T : NumericalType)

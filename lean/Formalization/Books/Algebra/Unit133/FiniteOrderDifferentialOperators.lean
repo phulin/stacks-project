@@ -2091,7 +2091,168 @@ theorem principalParts_functoriality_exists
         (algebraMap B B').comp (algebraMap A B)) :
     Nonempty (PrincipalPartsFunctoriality (A := A) (A' := A') (B := B) (B' := B')
       (M := M) (M' := M')) := by
-  sorry
+  classical
+  let q : (M →₀ B) →ₗ[B] (M' →₀ B') :=
+    { toFun := fun z =>
+        Finsupp.mapRange (algebraMap B B') (by simp)
+          (Finsupp.mapDomain f z)
+      map_add' := by
+        intro x y
+        rw [Finsupp.mapDomain_add]
+        rw [Finsupp.mapRange_add (map_add (algebraMap B B'))]
+      map_smul' := by
+        intro b z
+        rw [Finsupp.mapDomain_smul]
+        rw [Finsupp.mapRange_smul' (f := algebraMap B B') b
+          (algebraMap B B' b) _ (by intro c; simp [smul_eq_mul])]
+        ext i
+        simp [Algebra.smul_def] }
+  have hqsingle (m : M) (c : B) :
+      q (Finsupp.single m c) =
+        Finsupp.single (f m) (algebraMap B B' c) := by
+    simp [q]
+  have hc (a : A) :
+      (algebraMap B B') ((algebraMap A B) a) =
+        (algebraMap A' B') ((algebraMap A A') a) := by
+    simpa using (DFunLike.congr_fun hcomm a).symm
+  have hfA (a : A) (m : M) :
+      f (a • m) = algebraMap A A' a • f m := by
+    rw [← IsScalarTower.algebraMap_smul B a m, hf]
+    rw [← IsScalarTower.algebraMap_smul B' (algebraMap A A' a) (f m)]
+    rw [hc]
+  have hqadd (m₁ m₂ : M) :
+      q (principalPartsAddRelation m₁ m₂) =
+        principalPartsAddRelation (f m₁) (f m₂) := by
+    change q (Finsupp.single (m₁ + m₂) 1 -
+      Finsupp.single m₁ 1 - Finsupp.single m₂ 1) = _
+    rw [map_sub, map_sub]
+    simp [q]
+    rfl
+  have hqscalar (a : A) (m : M) :
+      q (principalPartsScalarRelation a m) =
+        principalPartsScalarRelation (algebraMap A A' a) (f m) := by
+    change q ((algebraMap A B a) • Finsupp.single m 1 -
+      Finsupp.single (a • m) 1) = _
+    rw [map_sub, map_smul, hqsingle, hqsingle, hfA]
+    simp only [map_one]
+    change (algebraMap A B a) • Finsupp.single (f m) (1 : B') -
+        Finsupp.single (algebraMap A A' a • f m) (1 : B') =
+      (algebraMap A' B' (algebraMap A A' a)) •
+          Finsupp.single (f m) (1 : B') -
+        Finsupp.single (algebraMap A A' a • f m) (1 : B')
+    congr 1
+    ext i
+    by_cases hi : f m = i <;> simp [hi, Algebra.smul_def, hc]
+  have hqhigher (k : ℕ) (g : Fin (k + 1) → B) (m : M) :
+      q (principalPartsHigherRelation k g m) =
+        principalPartsHigherRelation k (fun i => algebraMap B B' (g i)) (f m) := by
+    unfold principalPartsHigherRelation
+    rw [map_sum]
+    apply Finset.sum_congr rfl
+    intro t ht
+    ext i
+    simp [q, Finsupp.mapDomain, Finsupp.mapRange, hf, Finset.prod_map]
+    by_cases hidx : (t.prod (fun x => algebraMap B B' (g x))) • f m = i
+    · simp [Finsupp.single_apply, hidx]
+    · simp [Finsupp.single_apply, hidx]
+  let L (k : ℕ) : (M →₀ B) →ₗ[B]
+      PrincipalParts (R := A') (S := B') (M := M') k :=
+    ((Submodule.mkQ (principalPartsRelationSubmodule
+      (R := A') (S := B') (M := M') k)).restrictScalars B).comp q
+  have hrel (k : ℕ) :
+      principalPartsRelationSubmodule (R := A) (S := B) (M := M) k ≤
+        LinearMap.ker (L k) := by
+    apply Submodule.span_le.2
+    intro x hx
+    rcases hx with hx | ⟨⟨g, m⟩, rfl⟩
+    · rcases hx with ⟨p, rfl⟩ | ⟨⟨a, m⟩, rfl⟩
+      · change L k (principalPartsAddRelation p.1 p.2) = 0
+        change Submodule.mkQ _ (q (principalPartsAddRelation p.1 p.2)) = 0
+        rw [Submodule.mkQ_apply, Submodule.Quotient.mk_eq_zero, hqadd]
+        apply Submodule.subset_span
+        change principalPartsAddRelation (f p.1) (f p.2) ∈
+          principalPartsRelationSet (R := A') (S := B') (M := M') k
+        exact Or.inl (Or.inl ⟨(f p.1, f p.2), rfl⟩)
+      · change L k (principalPartsScalarRelation a m) = 0
+        change Submodule.mkQ _ (q (principalPartsScalarRelation a m)) = 0
+        rw [Submodule.mkQ_apply, Submodule.Quotient.mk_eq_zero, hqscalar]
+        apply Submodule.subset_span
+        change principalPartsScalarRelation (algebraMap A A' a) (f m) ∈
+          principalPartsRelationSet (R := A') (S := B') (M := M') k
+        exact Or.inl (Or.inr ⟨(algebraMap A A' a, f m), rfl⟩)
+    · change L k (principalPartsHigherRelation k g m) = 0
+      change Submodule.mkQ _ (q (principalPartsHigherRelation k g m)) = 0
+      rw [Submodule.mkQ_apply, Submodule.Quotient.mk_eq_zero, hqhigher]
+      apply Submodule.subset_span
+      change principalPartsHigherRelation k
+          (fun i => algebraMap B B' (g i)) (f m) ∈
+        principalPartsRelationSet (R := A') (S := B') (M := M') k
+      exact Or.inr ⟨((fun i => algebraMap B B' (g i)), f m), rfl⟩
+  let mapLinear (k : ℕ) :
+      PrincipalParts (R := A) (S := B) (M := M) k →ₗ[B]
+        PrincipalParts (R := A') (S := B') (M := M') k :=
+    Submodule.liftQ _ (L k) (hrel k)
+  have hmap_generator (k : ℕ) (m : M) :
+      mapLinear k (principalPartsGenerator (R := A) (S := B) k m) =
+        principalPartsGenerator (R := A') (S := B') k (f m) := by
+    change mapLinear k (Submodule.mkQ _ (Finsupp.single m 1)) = _
+    simp [mapLinear, L, q]
+    rfl
+  have hmap_transition (k : ℕ) (x :
+      PrincipalParts (R := A) (S := B) (M := M) (k + 1)) :
+      mapLinear k (principalPartsTransition (R := A) (S := B) k x) =
+        principalPartsTransition (R := A') (S := B') k
+          (mapLinear (k + 1) x) := by
+    obtain ⟨z, rfl⟩ := Submodule.mkQ_surjective _ x
+    change mapLinear k (principalPartsTransition (R := A) (S := B) k
+        (Submodule.mkQ _ z)) = _
+    rfl
+  have htarget_smul (k : ℕ) (b : B)
+      (y : PrincipalParts (R := A') (S := B') (M := M') k) :
+      b • y = algebraMap B B' b • y := by
+    obtain ⟨z, rfl⟩ := Submodule.mkQ_surjective _ y
+    induction z using Finsupp.induction_linear with
+    | zero => simp
+    | add z w hz hw =>
+        calc
+          b • Submodule.mkQ _ (z + w) =
+              b • (Submodule.mkQ _ z + Submodule.mkQ _ w) := by rw [map_add]
+          _ = b • Submodule.mkQ _ z + b • Submodule.mkQ _ w := smul_add _ _ _
+          _ = algebraMap B B' b • Submodule.mkQ _ z +
+              algebraMap B B' b • Submodule.mkQ _ w :=
+            congrArg₂ (· + ·) hz hw
+          _ = algebraMap B B' b • (Submodule.mkQ _ z + Submodule.mkQ _ w) :=
+            (smul_add _ _ _).symm
+          _ = algebraMap B B' b • Submodule.mkQ _ (z + w) := by rw [map_add]
+    | single m c =>
+        simp [Algebra.smul_def]
+  have hmap_smul (k : ℕ) (b : B)
+      (x : PrincipalParts (R := A) (S := B) (M := M) k) :
+      mapLinear k (b • x) =
+        algebraMap B B' b • mapLinear k x := by
+    rw [(mapLinear k).map_smul]
+    exact htarget_smul k b (mapLinear k x)
+  refine ⟨{
+    f := f
+    f_smul := hf
+    commutes := hcomm
+    map := fun k => (mapLinear k).toAddMonoidHom
+    map_zero := by
+      intro k
+      exact (mapLinear k).map_zero
+    map_add := by
+      intro k x y
+      exact (mapLinear k).map_add x y
+    map_smul := by
+      intro k b x
+      exact hmap_smul k b x
+    map_generator := by
+      intro k m
+      exact hmap_generator k m
+    map_transition := by
+      intro k x
+      exact hmap_transition k x
+  }⟩
 
 def principalPartsFunctorialitySequenceCompatible
     (F : PrincipalPartsFunctoriality (A := A) (A' := A') (B := B) (B' := B')
@@ -2110,7 +2271,98 @@ theorem principalParts_functoriality_sequence_compatible
     (F : PrincipalPartsFunctoriality (A := A) (A' := A') (B := B) (B' := B')
       (M := M) (M' := M')) :
     principalPartsFunctorialitySequenceCompatible F := by
-  sorry
+  have hprojection (x :
+      PrincipalParts (R := A) (S := B) (M := M) 1) :
+      principalPartsProjection (R := A') (S := B') (M := M') 1
+          (F.map 1 x) =
+        F.f (principalPartsProjection (R := A) (S := B) (M := M) 1 x) := by
+    obtain ⟨z, rfl⟩ := Submodule.mkQ_surjective _ x
+    induction z using Finsupp.induction_linear with
+    | zero =>
+        simp [F.map_zero]
+    | add z w hz hw =>
+        simp only [map_add, F.map_add, hz, hw]
+    | single m c =>
+        rw [← Finsupp.smul_single_one m c]
+        rw [(Submodule.mkQ _).map_smul]
+        rw [F.map_smul]
+        change principalPartsProjection (R := A') (S := B') (M := M') 1
+            ((algebraMap B B') c •
+              F.map 1 (principalPartsGenerator (R := A) (S := B) 1 m)) =
+          F.f (principalPartsProjection (R := A) (S := B) (M := M) 1
+            (c • principalPartsGenerator (R := A) (S := B) 1 m))
+        rw [F.map_generator]
+        rw [map_smul, principalPartsProjection_on_generator]
+        rw [map_smul, principalPartsProjection_on_generator, F.f_smul]
+  have hpreimage (x :
+      (ModuleOfDifferentials A B) ⊗[B] M) :
+      ∃ y : (ModuleOfDifferentials A' B') ⊗[B'] M',
+        principalPartsSequenceLeft (R := A') (S := B') (M := M') y =
+          F.map 1 (principalPartsSequenceLeft (R := A) (S := B) (M := M) x) := by
+    apply (principalParts_sequence_exact (R := A') (S := B') (M := M')
+      (F.map 1 (principalPartsSequenceLeft
+        (R := A) (S := B) (M := M) x))).mp
+    rw [hprojection]
+    have hzero :
+        principalPartsProjection (R := A) (S := B) (M := M) 1
+            (principalPartsSequenceLeft (R := A) (S := B) (M := M) x) = 0 :=
+      (principalParts_sequence_exact (R := A) (S := B) (M := M)
+        (principalPartsSequenceLeft (R := A) (S := B) (M := M) x)).2 ⟨x, rfl⟩
+    rw [hzero, map_zero]
+  let chosen :
+      (ModuleOfDifferentials A B) ⊗[B] M →
+        (ModuleOfDifferentials A' B') ⊗[B'] M' :=
+    fun x => Classical.choose (hpreimage x)
+  have hchosen (x : (ModuleOfDifferentials A B) ⊗[B] M) :
+      principalPartsSequenceLeft (R := A') (S := B') (M := M') (chosen x) =
+        F.map 1 (principalPartsSequenceLeft (R := A) (S := B) (M := M) x) :=
+    Classical.choose_spec (hpreimage x)
+  let φ : (ModuleOfDifferentials A B) ⊗[B] M →+
+      (ModuleOfDifferentials A' B') ⊗[B'] M' :=
+    { toFun := chosen
+      map_zero' := by
+        apply principalParts_sequence_left_injective
+          (R := A') (S := B') (M := M')
+        have hzero := hchosen (0 :
+          (ModuleOfDifferentials A B) ⊗[B] M)
+        calc
+          principalPartsSequenceLeft (R := A') (S := B') (M := M') (chosen 0) =
+              F.map 1 (principalPartsSequenceLeft (R := A) (S := B) (M := M) 0) := hzero
+          _ = F.map 1 0 := by rw [map_zero]
+          _ = 0 := F.map_zero 1
+          _ = principalPartsSequenceLeft (R := A') (S := B') (M := M') 0 :=
+            (principalPartsSequenceLeft (R := A') (S := B') (M := M')).map_zero.symm
+      map_add' := by
+        intro x y
+        apply principalParts_sequence_left_injective
+          (R := A') (S := B') (M := M')
+        have hxy := hchosen (x + y)
+        have hx := hchosen x
+        have hy := hchosen y
+        calc
+          principalPartsSequenceLeft (R := A') (S := B') (M := M') (chosen (x + y)) =
+              F.map 1 (principalPartsSequenceLeft (R := A) (S := B) (M := M) (x + y)) := hxy
+          _ = F.map 1
+              (principalPartsSequenceLeft (R := A) (S := B) (M := M) x +
+                principalPartsSequenceLeft (R := A) (S := B) (M := M) y) := by
+              rw [map_add]
+          _ = F.map 1 (principalPartsSequenceLeft
+              (R := A) (S := B) (M := M) x) +
+              F.map 1 (principalPartsSequenceLeft
+                (R := A) (S := B) (M := M) y) := F.map_add 1 _ _
+          _ = principalPartsSequenceLeft (R := A') (S := B') (M := M') (chosen x) +
+              principalPartsSequenceLeft (R := A') (S := B') (M := M') (chosen y) :=
+            congrArg₂ (· + ·) hx.symm hy.symm
+          _ = principalPartsSequenceLeft (R := A') (S := B') (M := M')
+              (chosen x + chosen y) := ((principalPartsSequenceLeft
+                (R := A') (S := B') (M := M')).map_add _ _).symm }
+  have hφ (x : (ModuleOfDifferentials A B) ⊗[B] M) :
+      principalPartsSequenceLeft (R := A') (S := B') (M := M') (φ x) =
+        F.map 1 (principalPartsSequenceLeft (R := A) (S := B) (M := M) x) := by
+    simpa [φ] using hchosen x
+  refine ⟨φ, ?_, hprojection⟩
+  intro x
+  exact (hφ x).symm
 
 end PrincipalPartsFunctoriality
 
@@ -2155,7 +2407,7 @@ theorem principalParts_functoriality_composition_sequence_compatible
       (A := A) (A' := A') (A'' := A'') (B := B) (B' := B') (B'' := B'')
       (M := M) (M' := M') (M'' := M'') F G) :
     principalPartsFunctorialitySequenceCompatible C.composed := by
-  sorry
+  exact principalParts_functoriality_sequence_compatible C.composed
 
 end PrincipalPartsFunctorialityComposition
 

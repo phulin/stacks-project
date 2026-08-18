@@ -101,7 +101,6 @@ theorem hom_card_one_to (n : ℕ) :
           apply Finset.sum_congr rfl
           intro i hi
           have hi' : i < n + 1 := Finset.mem_range.mp hi
-          congr 1
           omega]
     rw [Finset.sum_add_distrib]
     have hreflect :
@@ -166,7 +165,7 @@ theorem every_simplex_morphism_is_generated
           subst m
           have hmono : Mono f := (SimplexCategory.mono_iff_injective).mpr hni
           refine ⟨𝟙 _, ?_, ?_⟩
-          · simpa [SimplexCategory.eq_id_of_mono f]
+          · simp [SimplexCategory.eq_id_of_mono f]
           · rw [SimplexCategoryGenRel.multiplicativeClosure_isGenerator_eq_top]
             exact MorphismProperty.top_apply (𝟙 _)
         · cases m with

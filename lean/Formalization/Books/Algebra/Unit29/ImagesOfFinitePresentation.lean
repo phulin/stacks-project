@@ -117,8 +117,9 @@ theorem exists_finitePresentation_ringHom_of_isConstructible
         Algebra.FinitePresentation.quotient
           ⟨(Set.finite_range i.1.g).toFinset, by simp⟩
       infer_instance
-    change Algebra.FinitePresentation R S
-    infer_instance
+    dsimp [φ]
+    apply (RingHom.finitePresentation_algebraMap (A := R) (B := S)).2
+    exact Algebra.FinitePresentation.pi _
   · rw [← PrimeSpectrum.iUnion_range_comap_comp_evalRingHom,
       PrimeSpectrum.ConstructibleSetData.toSet]
     simp_rw [← Finset.mem_coe, Set.biUnion_eq_iUnion]
@@ -132,7 +133,7 @@ theorem exists_finitePresentation_ringHom_of_isConstructible
     · rw [PrimeSpectrum.localization_away_comap_range _ f, ← PrimeSpectrum.comap_basicOpen,
         TopologicalSpace.Opens.coe_comap, ContinuousMap.coe_mk,
         Set.image_preimage_eq_inter_range,
-        PrimeSpectrum.range_comap_of_surjective _ _ Ideal.Quotient.mk_surjective,
+        range_comap_of_surjective _ _ Ideal.Quotient.mk_surjective,
         PrimeSpectrum.BasicConstructibleSetData.toSet, Set.sdiff_eq_compl_inter,
         PrimeSpectrum.basicOpen_eq_zeroLocus_compl, Ideal.mk_ker,
         PrimeSpectrum.zeroLocus_span]

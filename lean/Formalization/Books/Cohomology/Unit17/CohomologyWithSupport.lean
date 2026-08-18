@@ -25,10 +25,12 @@ open Formalization.Books.Cohomology.Unit02
 open Formalization.Books.Cohomology.Unit03
 open Formalization.Books.Categories.Unit23
 open Formalization.Books.Derived.Unit08
+open Formalization.Books.Derived.Unit11
 open Formalization.Books.Derived.Unit20
 open Formalization.Books.Derived.Unit22
 open Formalization.Books.Homology.Unit24
 open Formalization.Books.Modules.Unit06
+open Formalization.Books.Sheaves.Unit08
 open Formalization.Books.Sheaves.Unit22
 
 universe v
@@ -317,7 +319,31 @@ theorem sectionsWithSupport_rightDerivedComposition_iso
         (closedSupportSectionsFunctor Z hZ)
         (closedSupportSectionsFunctor_isLeftExact Z hZ)
         (abelianSheafGlobalSections (closedSubspace Z))
-        (abelianSheafGlobalSections_isLeftExact (closedSubspace Z))).obj K) := by
+          (abelianSheafGlobalSections_isLeftExact (closedSubspace Z))).obj K) := by
+  sorry
+
+/- The source also records that the spectral sequence is functorial in the
+   derived object.  The filtered-complex package supplies the page-level
+   morphism type; this family packages that assertion together with a
+   functorial choice of filtered complexes and Grothendieck data. -/
+structure SupportGrothendieckSpectralSequenceFamily
+    {X : TopCat.{v}} (Z : Set X) (hZ : IsClosed Z) where
+  complexes : DPlus (Ab X) ⥤ FilteredComplex AddCommGrpCat.{v}
+  spectralData : ∀ K : DPlus (Ab X),
+    GrothendieckSpectralSequenceData
+      (closedSupportSectionsFunctor Z hZ)
+      (closedSupportSectionsFunctor_isLeftExact Z hZ)
+      (abelianSheafGlobalSections (closedSubspace Z))
+      (abelianSheafGlobalSections_isLeftExact (closedSubspace Z))
+      K (complexes.obj K)
+  spectralMap : ∀ {K L : DPlus (Ab X)} (f : K ⟶ L),
+    Nonempty (FilteredComplexSpectralSequenceHom
+      (spectralData K).spectralSequence
+      (spectralData L).spectralSequence)
+
+theorem sectionsWithSupport_grothendieck_spectral_sequence_functorial
+    {X : TopCat.{v}} (Z : Set X) (hZ : IsClosed Z) :
+    Nonempty (SupportGrothendieckSpectralSequenceFamily Z hZ) := by
   sorry
 
 /-- The convergent Grothendieck spectral sequence

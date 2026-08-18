@@ -1,4 +1,6 @@
 import Mathlib.AlgebraicTopology.CechNerve
+import Mathlib.AlgebraicTopology.AlternatingFaceMapComplex
+import Mathlib.AlgebraicTopology.SimplicialObject.Homotopy
 import Mathlib.Algebra.Category.Ring.Colimits
 import Mathlib.Algebra.Category.ModuleCat.Basic
 import Mathlib.Algebra.Category.ModuleCat.Descent
@@ -40,6 +42,27 @@ the comparison with the indexed tensor-product presentation is recorded below. -
 def relativeTensorCosimplicialAlgebra (R A : Type u) [CommRing R] [CommRing A]
     [Algebra R A] : CosimplicialObject CommRingCat :=
   (Arrow.mk (CommRingCat.ofHom (algebraMap R A))).cechConerve
+
+/-- The transition map of the Amitsur cosimplicial algebra in its canonical
+Čech-conerve presentation.  This is the construction used for arbitrary
+simplex maps; the indexed pure-tensor formula below is a presentation theorem. -/
+def relativeTensorCosimplicialAlgebraMap (R A : Type u) [CommRing R] [CommRing A]
+    [Algebra R A] {n m : ℕ} (φ : SimplexCategory.mk n ⟶ SimplexCategory.mk m) :
+    (relativeTensorCosimplicialAlgebra R A).obj (SimplexCategory.mk n) ⟶
+      (relativeTensorCosimplicialAlgebra R A).obj (SimplexCategory.mk m) :=
+  (relativeTensorCosimplicialAlgebra R A).map φ
+
+def relativeTensorCosimplicialAlgebraFace (R A : Type u) [CommRing R] [CommRing A]
+    [Algebra R A] (n : ℕ) (i : Fin (n + 2)) :
+    (relativeTensorCosimplicialAlgebra R A).obj (SimplexCategory.mk n) ⟶
+      (relativeTensorCosimplicialAlgebra R A).obj (SimplexCategory.mk (n + 1)) :=
+  relativeTensorCosimplicialAlgebraMap R A (SimplexCategory.δ i)
+
+def relativeTensorCosimplicialAlgebraDegeneracy (R A : Type u) [CommRing R] [CommRing A]
+    [Algebra R A] (n : ℕ) (i : Fin (n + 1)) :
+    (relativeTensorCosimplicialAlgebra R A).obj (SimplexCategory.mk (n + 1)) ⟶
+      (relativeTensorCosimplicialAlgebra R A).obj (SimplexCategory.mk n) :=
+  relativeTensorCosimplicialAlgebraMap R A (SimplexCategory.σ i)
 
 theorem relativeTensorCosimplicialAlgebra_degree (R A : Type u)
     [CommRing R] [CommRing A] [Algebra R A] (n : ℕ) :
@@ -192,27 +215,45 @@ section Terms
 variable {R A N : Type u} [CommRing R] [CommRing A] [Algebra R A]
   [AddCommGroup N] [Module R N] [Module A N] [IsScalarTower R A N]
 
-/-- `N_{n,i}`, with `N` in position `i`. -/
-/- We use the normal form `N ⊗ A^(⊗n)`; commutativity and associativity
-of tensor products identify this with the source's `N_{n,i}` for every slot.
-The slot is retained in the interface because the reindexing maps act on it. -/
+/-- The tensor product of `n` copies of `A`, written recursively so that it
+can be used as the tail of the literal source presentation. -/
+def descentAllTensorModule (R A : Type u) [CommRing R] [CommRing A]
+    [Algebra R A] (n : ℕ) : ModuleCat R :=
+  ModuleCat.of R (relativeTensorPower R A n)
+
+/-- `N_{n,i}`, with `N` literally in position `i` and `A` in all other
+positions. -/
+def descentTermModule (R A N : Type u) [CommRing R] [CommRing A] [Algebra R A]
+    [AddCommGroup N] [Module R N] [Module A N] [IsScalarTower R A N] :
+    (n : ℕ) → Fin (n + 1) → ModuleCat R
+  | 0, _ => ModuleCat.of R N
+  | n + 1, ⟨0, _⟩ =>
+      ModuleCat.of R (TensorProduct R N (descentAllTensorModule R A n))
+  | n + 1, ⟨i + 1, hi⟩ =>
+      ModuleCat.of R (TensorProduct R A
+        (descentTermModule R A N n ⟨i, Nat.lt_of_succ_lt_succ hi⟩))
+
 abbrev descentTerm (R A N : Type u) [CommRing R] [CommRing A] [Algebra R A]
     [AddCommGroup N] [Module R N] [Module A N] [IsScalarTower R A N]
-    (n : ℕ) (_i : Fin (n + 1)) : Type u :=
-  TensorProduct R N (relativeTensorPower R A n)
-
-abbrev descentTermModule (R A N : Type u) [CommRing R] [CommRing A] [Algebra R A]
-    [AddCommGroup N] [Module R N] [Module A N] [IsScalarTower R A N]
-    (n : ℕ) (i : Fin (n + 1)) : ModuleCat R :=
-  ModuleCat.of R (descentTerm R A N n i)
+    (n : ℕ) (i : Fin (n + 1)) : Type u :=
+  descentTermModule R A N n i
 
 /-- The degree-zero normal form is canonically the original module. -/
 def descentTermZeroEquiv (R A N : Type u) [CommRing R] [CommRing A] [Algebra R A]
     [AddCommGroup N] [Module R N] [Module A N] [IsScalarTower R A N]
     (i : Fin 1) : descentTerm R A N 0 i ≃ₗ[R] N :=
-  (TensorProduct.congr (LinearEquiv.refl R N)
-    (PiTensorProduct.isEmptyEquiv (Fin 0) (R := R)
-      (s := fun _ : Fin 0 => A))).trans (TensorProduct.rid R N)
+  LinearEquiv.refl R N
+
+def descentUnitTensorPlaced (R A N : Type u) [CommRing R] [CommRing A]
+    [Algebra R A] [AddCommGroup N] [Module R N] [Module A N]
+    [IsScalarTower R A N] :
+    ∀ (n : ℕ) (i : Fin (n + 1)), N → descentTerm R A N n i
+  | 0, _, x => x
+  | n + 1, ⟨0, _⟩, x =>
+      TensorProduct.mk R N (relativeTensorPower R A n) x 1
+  | n + 1, ⟨i + 1, hi⟩, x =>
+      TensorProduct.mk R A (descentTerm R A N n ⟨i, Nat.lt_of_succ_lt_succ hi⟩) 1
+        (descentUnitTensorPlaced R A N n ⟨i, Nat.lt_of_succ_lt_succ hi⟩ x)
 
 theorem descentTransportMap_exists {n : ℕ} {i j : Fin (n + 1)}
     (D : DescentDatum (R := R) (A := A) (N := N)) (h : i ≤ j) :
@@ -226,7 +267,7 @@ noncomputable def descentTransportMap {n : ℕ} {i j : Fin (n + 1)}
 
 /-- The pure tensor with `x` in position `i` and units elsewhere. -/
 def descentUnitTensor {n : ℕ} (i : Fin (n + 1)) (x : N) : descentTerm R A N n i :=
-  TensorProduct.mk R N (relativeTensorPower R A n) x 1
+  descentUnitTensorPlaced R A N n i x
 
 theorem descentReindexMap_exists {n m : ℕ}
     (D : DescentDatum (R := R) (A := A) (N := N))
@@ -370,32 +411,26 @@ def DescentCochainComplexShape
   (∀ n : ℕ, Nonempty (K.X n ≅ descentCochainDegreeModule D n)) ∧
     DescentCochainComplexFirstCompatibility D K
 
-theorem descentCochainComplex_shape_exists
-    (D : DescentDatum (R := R) (A := A) (N := N)) :
-    Nonempty {K : CochainComplex (ModuleCat.{u, u} R) ℕ //
-      DescentCochainComplexShape D K} := by
-  sorry
+/-- The alternating coface complex of the cosimplicial module attached to `D`.
 
-noncomputable def descentCochainComplexChoice
-    (D : DescentDatum (R := R) (A := A) (N := N)) :
-    {K : CochainComplex (ModuleCat.{u, u} R) ℕ //
-      DescentCochainComplexShape D K} :=
-  Classical.choice (descentCochainComplex_shape_exists D)
-
+This uses Mathlib's source-faithful alternating-sum construction, so the higher
+differentials are actual alternating sums of all cofaces rather than a
+choice-backed complex with only its first differential specified. -/
 noncomputable def descentCochainComplex
     (D : DescentDatum (R := R) (A := A) (N := N)) :
     CochainComplex (ModuleCat.{u, u} R) ℕ :=
-  (descentCochainComplexChoice D).1
+  AlgebraicTopology.AlternatingCofaceMapComplex.obj
+    (descentCosimplicialModule D)
 
 theorem descentCochainComplex_shape
     (D : DescentDatum (R := R) (A := A) (N := N)) :
-    DescentCochainComplexShape D (descentCochainComplex D) :=
-  (descentCochainComplexChoice D).2
+    DescentCochainComplexShape D (descentCochainComplex D) := by
+  sorry
 
 theorem descentCochainComplex_first_compatibility
     (D : DescentDatum (R := R) (A := A) (N := N)) :
     DescentCochainComplexFirstCompatibility D (descentCochainComplex D) :=
-  (descentCochainComplexChoice D).2.2
+  (descentCochainComplex_shape D).2
 
 /-- The second differential in the source's displayed complex. -/
 noncomputable def descentSecondMap
@@ -501,6 +536,39 @@ noncomputable def descentCanonicalMap
     TensorProduct R A (descentH0 D) →ₗ[R] N :=
   Classical.choice (descentCanonicalMap_exists D)
 
+/-! The raw tensor model of the base change used in the proof of descent
+along a faithfully flat extension.  The associativity and commutativity
+equivalences in `TensorProduct` identify this model with the usual
+`(R' ⊗[R] N) ⊗[R'] (R' ⊗[R] A)` presentation. -/
+
+abbrev baseChangedAlgebra (R A R' : Type u) [CommRing R] [CommRing A]
+    [CommRing R'] [Algebra R A] [Algebra R R'] : Type u :=
+  TensorProduct R R' A
+
+abbrev baseChangedModule (R N R' : Type u) [CommRing R] [CommRing R']
+    [Algebra R R'] [AddCommGroup N] [Module R N] : Type u :=
+  TensorProduct R R' N
+
+/-- The specific base-changed comparison `id_{R'} ⊗ φ` in the raw tensor
+model. -/
+def baseChangedDescentComparison
+    {R A N R' : Type u} [CommRing R] [CommRing A] [CommRing R']
+    [Algebra R A] [Algebra R R'] [AddCommGroup N] [Module R N]
+    [Module A N] [IsScalarTower R A N]
+    (D : DescentDatum (R := R) (A := A) (N := N)) :
+    TensorProduct R R' (TensorProduct R N A) ≃ₗ[R]
+      TensorProduct R R' (TensorProduct R A N) :=
+  TensorProduct.congr (LinearEquiv.refl R R') D.comparison
+
+theorem baseChangedDescentComparison_tmul
+    {R A N R' : Type u} [CommRing R] [CommRing A] [CommRing R']
+    [Algebra R A] [Algebra R R'] [AddCommGroup N] [Module R N]
+    [Module A N] [IsScalarTower R A N]
+    (D : DescentDatum (R := R) (A := A) (N := N)) (r' : R') (n : N) (a : A) :
+    baseChangedDescentComparison D (r' ⊗ₜ[R] (n ⊗ₜ[R] a)) =
+      r' ⊗ₜ[R] D.comparison (n ⊗ₜ[R] a) := by
+  rfl
+
 def BaseChangedDescentDataEffective
     (R A R' : Type u) [CommRing R] [CommRing A] [CommRing R']
     [Algebra R A] [Algebra R R'] [Module.FaithfullyFlat R R'] : Prop :=
@@ -529,9 +597,15 @@ end Complexes
 
 /-! ## Effective descent proposition -/
 
+/-- The Eilenberg--Moore category for the extension/restriction adjunction.
+Its coalgebra objects are the canonical categorical form of descent data. -/
+abbrev DescentCoalgebraCategory (R A : Type u) [CommRing R] [CommRing A]
+    (f : R →+* A) :=
+  (ModuleCat.extendRestrictScalarsAdj.{u, u, u} f).toComonad.Coalgebra
+
 def DescentModulesEquivalence (R A : Type u) [CommRing R] [CommRing A]
     (f : R →+* A) : Prop :=
-  Nonempty (ComonadicLeftAdjoint (ModuleCat.extendScalars.{u, u, u} f))
+  Nonempty (ModuleCat.{u, u} R ≌ DescentCoalgebraCategory R A f)
 
 theorem effective_descent_for_modules (R A : Type u) [CommRing R] [CommRing A]
     [Algebra R A] [Module.FaithfullyFlat R A] {N : Type v} [AddCommGroup N]
@@ -601,8 +675,7 @@ theorem standardCover_extended_complex_exact (R : Type u) [CommRing R]
 theorem effective_descent_modules_equivalence (R A : Type u)
     [CommRing R] [CommRing A] (f : R →+* A) (hf : f.FaithfullyFlat) :
     DescentModulesEquivalence R A f := by
-  letI := comonadicExtendScalars hf
-  exact ⟨inferInstance⟩
+  sorry
 
 /-- A cosimplicial module over `A` is represented degreewise by modules over
 the degreewise rings, with transition maps obtained by extension of scalars. -/
@@ -621,5 +694,30 @@ def CartesianCosimplicialModule
     (M : CosimplicialModuleData A) : Prop :=
   ∀ n m (φ : SimplexCategory.mk n ⟶ SimplexCategory.mk m),
     CartesianTransition M φ
+
+/-! ## Homotopy and the category of abstract descent data -/
+
+/-- A homotopy between maps of cosimplicial objects, obtained from the
+standard simplicial homotopy notion across the simplicial/cosimplicial
+anti-equivalence. -/
+def CosimplicialHomotopy {C : Type u} [Category.{u} C]
+    {X Y : CosimplicialObject C} (f g : X ⟶ Y) : Prop :=
+  Nonempty (SimplicialObject.Homotopy
+    ((cosimplicialSimplicialEquiv C).functor.map f.op)
+    ((cosimplicialSimplicialEquiv C).functor.map g.op))
+
+/-- A homotopy equivalence of cosimplicial objects. -/
+structure CosimplicialHomotopyEquivalence {C : Type u} [Category.{u} C]
+    (X Y : CosimplicialObject C) where
+  hom : X ⟶ Y
+  inv : Y ⟶ X
+  homotopy_hom_inv : CosimplicialHomotopy (hom ≫ inv) (𝟙 X)
+  homotopy_inv_hom : CosimplicialHomotopy (inv ≫ hom) (𝟙 Y)
+
+theorem descent_data_category_equivalence (R A : Type u)
+    [CommRing R] [CommRing A] [Algebra R A] [Module.FaithfullyFlat R A]
+    : Nonempty (ModuleCat.{u, u} R ≌
+      DescentCoalgebraCategory R A (algebraMap R A)) := by
+  sorry
 
 end Formalization.Books.Descent.Unit03

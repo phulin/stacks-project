@@ -109,7 +109,7 @@ theorem quotientSemilinearMap_smul
     (s : R ⧸ I) (x : M ⧸ (I • (⊤ : Submodule R M))) :
     letI := hN.module
     g (s • x) = s • g x := by
-  letI := hN.module
+  let := hN.module
   obtain ⟨r, rfl⟩ := Ideal.Quotient.mk_surjective s
   exact g.map_smulₛₗ r x
 

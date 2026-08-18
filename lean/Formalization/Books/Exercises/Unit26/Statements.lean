@@ -98,11 +98,11 @@ private theorem fgmodule_shortExact_data
   let S' := S.map F
   have hExact : S'.Exact :=
     (ShortComplex.exact_map_iff_of_faithful S F).2 hS.exact
-  letI : Mono S.f := hS.mono_f
-  letI : Epi S.g := hS.epi_g
-  letI : CategoryTheory.Limits.PreservesLimitsOfShape
+  let : Mono S.f := hS.mono_f
+  let : Epi S.g := hS.epi_g
+  let : CategoryTheory.Limits.PreservesLimitsOfShape
       CategoryTheory.Limits.WalkingCospan F := by infer_instance
-  letI : CategoryTheory.Limits.PreservesColimitsOfShape
+  let : CategoryTheory.Limits.PreservesColimitsOfShape
       CategoryTheory.Limits.WalkingSpan F := by infer_instance
   have hf : Function.Injective S.f.hom.hom := by
     change Function.Injective (F.map S.f).hom
@@ -125,7 +125,7 @@ private theorem compHom_submodule_smul_compat
       s (q a) • (z : V) = a • (z : V)) :
     letI : Module S P := Module.compHom P s
     ∀ (a : R) (z : P), q a • z = a • z := by
-  letI : Module S P := Module.compHom P s
+  let : Module S P := Module.compHom P s
   intro a z
   apply Subtype.ext
   change s (q a) • (z : V) = a • (z : V)
@@ -242,25 +242,25 @@ private theorem finrank_kernel_component_quotient_eq_one
     letI : Module B (A ⧸ I) := Module.compHom (A ⧸ I) s
     let m : (A ⧸ I) →ₗ[A] (A ⧸ I) :=
       { toFun := fun z => a • z
-        map_add' := by intro z w; simp [add_smul]
+        map_add' := by intro z w; simp
         map_smul' := by
           intro c z
-          simpa only [smul_smul, RingHom.id_apply, mul_comm] }
+          simp only [smul_smul, RingHom.id_apply, mul_comm] }
     let Q : Type u := (A ⧸ I) ⧸ LinearMap.range m
     letI : Module B Q := Module.compHom Q s
     Module.finrank B Q = 1 := by
-  letI : Module A B := Module.compHom B q
-  letI : Module B A := Module.compHom A s
-  letI : Module B (A ⧸ I) := Module.compHom (A ⧸ I) s
-  letI : IsScalarTower B A (A ⧸ I) := SMul.comp.isScalarTower s
+  let : Module A B := Module.compHom B q
+  let : Module B A := Module.compHom A s
+  let : Module B (A ⧸ I) := Module.compHom (A ⧸ I) s
+  let : IsScalarTower B A (A ⧸ I) := SMul.comp.isScalarTower s
   let m : (A ⧸ I) →ₗ[A] (A ⧸ I) :=
     { toFun := fun z => a • z
-      map_add' := by intro z w; simp [add_smul]
+      map_add' := by intro z w; simp
       map_smul' := by
         intro c z
-        simpa only [smul_smul, RingHom.id_apply, mul_comm] }
+        simp only [smul_smul, RingHom.id_apply, mul_comm] }
   let Q : Type u := (A ⧸ I) ⧸ LinearMap.range m
-  letI : Module B Q := Module.compHom Q s
+  let : Module B Q := Module.compHom Q s
   have hm : m = 0 := by
     apply LinearMap.ext
     intro z
@@ -290,34 +290,34 @@ private theorem finrank_component_quotient_eq_zero_of_scalar_mem
     (hfinite :
       let m : (A ⧸ I) →ₗ[A] (A ⧸ I) :=
         { toFun := fun z => a • z
-          map_add' := by intro z w; simp [add_smul]
+          map_add' := by intro z w; simp
           map_smul' := by
             intro c z
-            simpa only [smul_smul, RingHom.id_apply, mul_comm] }
+            simp only [smul_smul, RingHom.id_apply, mul_comm] }
       let Q : Type u := (A ⧸ I) ⧸ LinearMap.range m
       letI : Module B Q := Module.compHom Q s
       Module.Finite B Q) :
     letI : Module B (A ⧸ I) := Module.compHom (A ⧸ I) s
     let m : (A ⧸ I) →ₗ[A] (A ⧸ I) :=
       { toFun := fun z => a • z
-        map_add' := by intro z w; simp [add_smul]
+        map_add' := by intro z w; simp
         map_smul' := by
           intro c z
-          simpa only [smul_smul, RingHom.id_apply, mul_comm] }
+          simp only [smul_smul, RingHom.id_apply, mul_comm] }
     let Q : Type u := (A ⧸ I) ⧸ LinearMap.range m
     letI : Module B Q := Module.compHom Q s
     Module.finrank B Q = 0 := by
-  letI : Module B A := Module.compHom A s
-  letI : Module B (A ⧸ I) := Module.compHom (A ⧸ I) s
-  letI : IsScalarTower B A (A ⧸ I) := SMul.comp.isScalarTower s
+  let : Module B A := Module.compHom A s
+  let : Module B (A ⧸ I) := Module.compHom (A ⧸ I) s
+  let : IsScalarTower B A (A ⧸ I) := SMul.comp.isScalarTower s
   let m : (A ⧸ I) →ₗ[A] (A ⧸ I) :=
     { toFun := fun z => a • z
-      map_add' := by intro z w; simp [add_smul]
+      map_add' := by intro z w; simp
       map_smul' := by
         intro c z
-        simpa only [smul_smul, RingHom.id_apply, mul_comm] }
+        simp only [smul_smul, RingHom.id_apply, mul_comm] }
   let Q : Type u := (A ⧸ I) ⧸ LinearMap.range m
-  letI : Module B Q := Module.compHom Q s
+  let : Module B Q := Module.compHom Q s
   have hzero : ∀ z : A ⧸ I, (b : B) • z = 0 := by
     intro z
     refine Submodule.Quotient.induction_on I z ?_
@@ -335,7 +335,7 @@ private theorem finrank_component_quotient_eq_zero_of_scalar_mem
     apply (Submodule.Quotient.mk_eq_zero (LinearMap.range m)).2
     rw [hzero]
     exact (LinearMap.range m).zero_mem
-  letI : Module.Finite B Q := by
+  let : Module.Finite B Q := by
     simpa [Q, m] using hfinite
   exact htor.finrank_eq_zero
 
@@ -368,13 +368,13 @@ private theorem finrank_quotient_add_of_exact
     letI : Module B (P ⧸ pP) := Module.compHom (P ⧸ pP) s
     Module.finrank B (N ⧸ pN) =
       Module.finrank B (M ⧸ pM) + Module.finrank B (P ⧸ pP) := by
-  letI : Module B A := Module.compHom A s
-  letI : Module B M := Module.compHom M s
-  letI : Module B N := Module.compHom N s
-  letI : Module B P := Module.compHom P s
-  letI : IsScalarTower B A M := SMul.comp.isScalarTower s
-  letI : IsScalarTower B A N := SMul.comp.isScalarTower s
-  letI : IsScalarTower B A P := SMul.comp.isScalarTower s
+  let : Module B A := Module.compHom A s
+  let : Module B M := Module.compHom M s
+  let : Module B N := Module.compHom N s
+  let : Module B P := Module.compHom P s
+  let : IsScalarTower B A M := SMul.comp.isScalarTower s
+  let : IsScalarTower B A N := SMul.comp.isScalarTower s
+  let : IsScalarTower B A P := SMul.comp.isScalarTower s
   let pM' : Submodule B M := pM.restrictScalars B
   let pN' : Submodule B N := pN.restrictScalars B
   let pP' : Submodule B P := pP.restrictScalars B
@@ -489,12 +489,12 @@ private theorem finrank_quotient_add_of_exact
       _ = Module.rank B (M ⧸ pM) + Module.rank B (P ⧸ pP) := by
         rw [← hrankM0, ← hrankP0, hrankPquot]
         ac_rfl
-  letI : Module B (M ⧸ pM) := Module.compHom (M ⧸ pM) s
-  letI : Module B (N ⧸ pN) := Module.compHom (N ⧸ pN) s
-  letI : Module B (P ⧸ pP) := Module.compHom (P ⧸ pP) s
-  letI : Module.Finite B (M ⧸ pM) := hfiniteM
-  letI : Module.Finite B (N ⧸ pN) := hfiniteN
-  letI : Module.Finite B (P ⧸ pP) := hfiniteP
+  let : Module B (M ⧸ pM) := Module.compHom (M ⧸ pM) s
+  let : Module B (N ⧸ pN) := Module.compHom (N ⧸ pN) s
+  let : Module B (P ⧸ pP) := Module.compHom (P ⧸ pP) s
+  let : Module.Finite B (M ⧸ pM) := hfiniteM
+  let : Module.Finite B (N ⧸ pN) := hfiniteN
+  let : Module.Finite B (P ⧸ pP) := hfiniteP
   apply Nat.cast_injective (R := Cardinal)
   rw [Nat.cast_add, Module.finrank_eq_rank, Module.finrank_eq_rank,
     Module.finrank_eq_rank]
@@ -513,51 +513,51 @@ private theorem finrank_multiplication_quotient_add
     (hfiniteM :
       let m : M →ₗ[A] M :=
         { toFun := fun z => a • z
-          map_add' := by intro z w; simp [add_smul]
+          map_add' := by intro z w; simp
           map_smul' := by
             intro c z
-            simpa only [smul_smul, RingHom.id_apply, mul_comm] }
+            simp only [smul_smul, RingHom.id_apply, mul_comm] }
       let Q : Type u := M ⧸ LinearMap.range m
       letI : Module B Q := Module.compHom Q s
       Module.Finite B Q)
     (hfiniteN :
       let m : N →ₗ[A] N :=
         { toFun := fun z => a • z
-          map_add' := by intro z w; simp [add_smul]
+          map_add' := by intro z w; simp
           map_smul' := by
             intro c z
-            simpa only [smul_smul, RingHom.id_apply, mul_comm] }
+            simp only [smul_smul, RingHom.id_apply, mul_comm] }
       let Q : Type u := N ⧸ LinearMap.range m
       letI : Module B Q := Module.compHom Q s
       Module.Finite B Q)
     (hfiniteP :
       let m : P →ₗ[A] P :=
         { toFun := fun z => a • z
-          map_add' := by intro z w; simp [add_smul]
+          map_add' := by intro z w; simp
           map_smul' := by
             intro c z
-            simpa only [smul_smul, RingHom.id_apply, mul_comm] }
+            simp only [smul_smul, RingHom.id_apply, mul_comm] }
       let Q : Type u := P ⧸ LinearMap.range m
       letI : Module B Q := Module.compHom Q s
       Module.Finite B Q) :
     let mM : M →ₗ[A] M :=
       { toFun := fun z => a • z
-        map_add' := by intro z w; simp [add_smul]
+        map_add' := by intro z w; simp
         map_smul' := by
           intro c z
-          simpa only [smul_smul, RingHom.id_apply, mul_comm] }
+          simp only [smul_smul, RingHom.id_apply, mul_comm] }
     let mN : N →ₗ[A] N :=
       { toFun := fun z => a • z
-        map_add' := by intro z w; simp [add_smul]
+        map_add' := by intro z w; simp
         map_smul' := by
           intro c z
-          simpa only [smul_smul, RingHom.id_apply, mul_comm] }
+          simp only [smul_smul, RingHom.id_apply, mul_comm] }
     let mP : P →ₗ[A] P :=
       { toFun := fun z => a • z
-        map_add' := by intro z w; simp [add_smul]
+        map_add' := by intro z w; simp
         map_smul' := by
           intro c z
-          simpa only [smul_smul, RingHom.id_apply, mul_comm] }
+          simp only [smul_smul, RingHom.id_apply, mul_comm] }
     letI : Module B (M ⧸ LinearMap.range mM) :=
       Module.compHom (M ⧸ LinearMap.range mM) s
     letI : Module B (N ⧸ LinearMap.range mN) :=
@@ -569,22 +569,22 @@ private theorem finrank_multiplication_quotient_add
         Module.finrank B (P ⧸ LinearMap.range mP) := by
   let mM : M →ₗ[A] M :=
     { toFun := fun z => a • z
-      map_add' := by intro z w; simp [add_smul]
+      map_add' := by intro z w; simp
       map_smul' := by
         intro c z
-        simpa only [smul_smul, RingHom.id_apply, mul_comm] }
+        simp only [smul_smul, RingHom.id_apply, mul_comm] }
   let mN : N →ₗ[A] N :=
     { toFun := fun z => a • z
-      map_add' := by intro z w; simp [add_smul]
+      map_add' := by intro z w; simp
       map_smul' := by
         intro c z
-        simpa only [smul_smul, RingHom.id_apply, mul_comm] }
+        simp only [smul_smul, RingHom.id_apply, mul_comm] }
   let mP : P →ₗ[A] P :=
     { toFun := fun z => a • z
-      map_add' := by intro z w; simp [add_smul]
+      map_add' := by intro z w; simp
       map_smul' := by
         intro c z
-        simpa only [smul_smul, RingHom.id_apply, mul_comm] }
+        simp only [smul_smul, RingHom.id_apply, mul_comm] }
   let pM : Submodule A M := LinearMap.range mM
   let pN : Submodule A N := LinearMap.range mN
   let pP : Submodule A P := LinearMap.range mP
@@ -592,12 +592,12 @@ private theorem finrank_multiplication_quotient_add
     intro z hz
     obtain ⟨w, rfl⟩ := hz
     refine ⟨f w, ?_⟩
-    simpa [mM, mN] using (f.map_smul a w).symm
+    simp [mM, mN]
   have hmapg : pN ≤ pP.comap g := by
     intro z hz
     obtain ⟨w, rfl⟩ := hz
     refine ⟨g w, ?_⟩
-    simpa [mN, mP] using (g.map_smul a w).symm
+    simp [mN, mP]
   have hTorsionN : ∀ z : N, z ∈ pN → s (b : B) • z = 0 := by
     intro z hz
     obtain ⟨w, rfl⟩ := hz
@@ -629,10 +629,10 @@ private def multiplicationQuotientFinrank
     [AddCommGroup M] [Module A M] (a : A) (s : B →+* A) : ℕ :=
   let m : M →ₗ[A] M :=
     { toFun := fun z => a • z
-      map_add' := by intro z w; simp [add_smul]
+      map_add' := by intro z w; simp
       map_smul' := by
         intro c z
-        simpa only [smul_smul, RingHom.id_apply, mul_comm] }
+        simp only [smul_smul, RingHom.id_apply, mul_comm] }
   let Q : Type u := M ⧸ LinearMap.range m
   @Module.finrank B Q (inferInstance : Semiring B)
     (inferInstance : AddCommMonoid Q) (Module.compHom Q s)
@@ -646,10 +646,10 @@ private theorem multiplicationQuotientFinrank_add
       ∀ (M : Type u) [AddCommGroup M] [Module A M] [Module.Finite A M],
         let m : M →ₗ[A] M :=
           { toFun := fun z => a • z
-            map_add' := by intro z w; simp [add_smul]
+            map_add' := by intro z w; simp
             map_smul' := by
               intro c z
-              simpa only [smul_smul, RingHom.id_apply, mul_comm] }
+              simp only [smul_smul, RingHom.id_apply, mul_comm] }
         let Q : Type u := M ⧸ LinearMap.range m
         letI : Module B Q := Module.compHom Q s
         Module.Finite B Q) :
@@ -685,14 +685,14 @@ private theorem node_multiplicationQuotientFinrank_add
         RingHom.ker q = Ideal.span {a} → q.comp s = RingHom.id B →
           let m : M →ₗ[A] M :=
             { toFun := fun z => a • z
-              map_add' := by intro z w; simp [add_smul]
+              map_add' := by intro z w; simp
               map_smul' := by
                 intro c z
-                simpa only [smul_smul, RingHom.id_apply, mul_comm] }
+                simp only [smul_smul, RingHom.id_apply, mul_comm] }
           let Q : Type u := M ⧸ LinearMap.range m
           letI : Module B Q := Module.compHom Q s
           Module.Finite B Q) :
-    ∀ (S : ShortComplex (FGModuleCat A)) (hS : S.ShortExact),
+    ∀ (S : ShortComplex (FGModuleCat A)) (_hS : S.ShortExact),
       multiplicationQuotientFinrank A B (S.X₂ : Type u) x sY =
           multiplicationQuotientFinrank A B (S.X₁ : Type u) x sY +
             multiplicationQuotientFinrank A B (S.X₃ : Type u) x sY ∧
@@ -731,10 +731,10 @@ private theorem eulerPoincareFunction_exists_of_multiplication_quotient
         RingHom.ker q = Ideal.span {a} → q.comp s = RingHom.id B →
           let m : M →ₗ[A] M :=
             { toFun := fun z => a • z
-              map_add' := by intro z w; simp [add_smul]
+              map_add' := by intro z w; simp
               map_smul' := by
                 intro c z
-                simpa only [smul_smul, RingHom.id_apply, mul_comm] }
+                simp only [smul_smul, RingHom.id_apply, mul_comm] }
           let Q : Type u := M ⧸ LinearMap.range m
           letI : Module B Q := Module.compHom Q s
           Module.Finite B Q)
@@ -798,10 +798,10 @@ private theorem multiplication_component_rank_values
         RingHom.ker q = Ideal.span {a} → q.comp s = RingHom.id B →
           let m : M →ₗ[A] M :=
             { toFun := fun z => a • z
-              map_add' := by intro z w; simp [add_smul]
+              map_add' := by intro z w; simp
               map_smul' := by
                 intro c z
-                simpa only [smul_smul, RingHom.id_apply, mul_comm] }
+                simp only [smul_smul, RingHom.id_apply, mul_comm] }
           let Q : Type u := M ⧸ LinearMap.range m
           letI : Module B Q := Module.compHom Q s
           Module.Finite B Q) :
@@ -860,10 +860,10 @@ private theorem eulerPoincareFunction_exists_from_multiplication_data
         RingHom.ker q = Ideal.span {a} → q.comp s = RingHom.id B →
           let m : M →ₗ[A] M :=
             { toFun := fun z => a • z
-              map_add' := by intro z w; simp [add_smul]
+              map_add' := by intro z w; simp
               map_smul' := by
                 intro c z
-                simpa only [smul_smul, RingHom.id_apply, mul_comm] }
+                simp only [smul_smul, RingHom.id_apply, mul_comm] }
           let Q : Type u := M ⧸ LinearMap.range m
           letI : Module B Q := Module.compHom Q s
           Module.Finite B Q) :
@@ -935,18 +935,18 @@ private theorem euler_formula_of_multiplication_sequence
     euler_value_of_fgmodule_shortExact A (LinearMap.ker m) V
       (LinearMap.range m) θ (Submodule.subtype (LinearMap.ker m))
       m.rangeRestrict hExact hS
-  letI : Module B (LinearMap.ker m) := Module.compHom (LinearMap.ker m) sY
-  letI : Module B (LinearMap.range m) := Module.compHom (LinearMap.range m) sX
+  let : Module B (LinearMap.ker m) := Module.compHom (LinearMap.ker m) sY
+  let : Module B (LinearMap.range m) := Module.compHom (LinearMap.range m) sX
   have hcompatK : ∀ (a : A) (z : LinearMap.ker m), qY a • z = a • z :=
     compHom_submodule_smul_compat (R := A) (S := B) (V := V)
       (P := LinearMap.ker m) sY qY hcompatK0
-  letI : Module.Finite B (LinearMap.ker m) :=
+  let : Module.Finite B (LinearMap.ker m) :=
     finite_of_scalar_compat (R := A) (S := B)
       (Q := LinearMap.ker m) qY hcompatK
   have hcompatI : ∀ (a : A) (z : LinearMap.range m), qX a • z = a • z :=
     compHom_submodule_smul_compat (R := A) (S := B) (V := V)
       (P := LinearMap.range m) sX qX hcompatI0
-  letI : Module.Finite B (LinearMap.range m) :=
+  let : Module.Finite B (LinearMap.range m) :=
     finite_of_scalar_compat (R := A) (S := B)
       (Q := LinearMap.range m) qX hcompatI
   have hK := branchY θ hcompatK
@@ -968,11 +968,11 @@ private theorem fgmodule_shortExact_finrank_add (k : Type u) [Field k]
   let S' := S.map F
   have hExact : S'.Exact :=
     (ShortComplex.exact_map_iff_of_faithful S F).2 hS.exact
-  letI : Mono S.f := hS.mono_f
-  letI : Epi S.g := hS.epi_g
-  letI : CategoryTheory.Limits.PreservesLimitsOfShape
+  let : Mono S.f := hS.mono_f
+  let : Epi S.g := hS.epi_g
+  let : CategoryTheory.Limits.PreservesLimitsOfShape
       CategoryTheory.Limits.WalkingCospan F := by infer_instance
-  letI : CategoryTheory.Limits.PreservesColimitsOfShape
+  let : CategoryTheory.Limits.PreservesColimitsOfShape
       CategoryTheory.Limits.WalkingSpan F := by infer_instance
   let f : (S.X₁ : Type u) →ₗ[k] (S.X₂ : Type u) := S.f.hom.hom
   let g : (S.X₂ : Type u) →ₗ[k] (S.X₃ : Type u) := S.g.hom.hom
@@ -1019,7 +1019,7 @@ theorem eulerPoincareFunction_field_formula (k : Type u) [Field k]
   let F := forget₂ (FGModuleCat k) (ModuleCat k)
   have hzero : φ (FGModuleCat.of k (Fin 0 → k)) = 0 := by
     let Z : Type u := Fin 0 → k
-    letI : Subsingleton Z := by
+    let : Subsingleton Z := by
       dsimp [Z]
       infer_instance
     let S : ShortComplex (FGModuleCat k) :=
@@ -1057,7 +1057,7 @@ theorem eulerPoincareFunction_field_formula (k : Type u) [Field k]
         φ (FGModuleCat.of k V) = φ (FGModuleCat.of k W) := by
     intro V W _ _ _ _ _ _ e
     let Z : Type u := Fin 0 → k
-    letI : Subsingleton Z := by
+    let : Subsingleton Z := by
       dsimp [Z]
       infer_instance
     let S : ShortComplex (FGModuleCat k) :=
@@ -1127,7 +1127,7 @@ theorem eulerPoincareFunction_field_formula (k : Type u) [Field k]
               φ (FGModuleCat.of k V) + φ (FGModuleCat.of k V) := by
             simpa [S] using h
           have hz : φ (FGModuleCat.of k V) = 0 := by omega
-          simpa [hz, hn]
+          simp [hz, hn]
         · have hnpos : 0 < Module.finrank k V := by
             rw [hV]
             exact Nat.pos_of_ne_zero hn
@@ -1245,7 +1245,7 @@ theorem eulerPoincareFunction_integer_classification :
       φ (FGModuleCat.of ℤ (Fin 0 → ℤ)) = 0 := by
     intro φ
     let Z : Type := Fin 0 → ℤ
-    letI : Subsingleton Z := by
+    let : Subsingleton Z := by
       dsimp [Z]
       infer_instance
     let S : ShortComplex (FGModuleCat ℤ) :=
@@ -1285,7 +1285,7 @@ theorem eulerPoincareFunction_integer_classification :
         φ (FGModuleCat.of ℤ V) = φ (FGModuleCat.of ℤ W) := by
     intro φ V W _ _ _ _ _ _ e
     let Z : Type := Fin 0 → ℤ
-    letI : Subsingleton Z := by
+    let : Subsingleton Z := by
       dsimp [Z]
       infer_instance
     let S : ShortComplex (FGModuleCat ℤ) :=
@@ -1327,8 +1327,8 @@ theorem eulerPoincareFunction_integer_classification :
         φ (FGModuleCat.of ℤ V) + φ (FGModuleCat.of ℤ W) := by
     intro φ V W _ _ _ _ _ _
     let P : Type := V × W
-    letI : Module ℤ P := Prod.instModule
-    letI : Module.Finite ℤ P := by infer_instance
+    let : Module ℤ P := Prod.instModule
+    let : Module.Finite ℤ P := by infer_instance
     let S : ShortComplex (FGModuleCat ℤ) :=
       ShortComplex.mk
         (FGModuleCat.ofHom (LinearMap.inl ℤ V W))
@@ -1381,14 +1381,14 @@ theorem eulerPoincareFunction_integer_classification :
         φ (FGModuleCat.of ℤ (DirectSum ι Q)) =
           ∑ i : ι, φ (FGModuleCat.of ℤ (Q i))) ?_ ?_ ?_ ι
     · intro α β _ e h Q hQadd hQmod hQfinite hQdirect φ
-      letI : Fintype α := Fintype.ofEquiv β e.symm
-      letI : ∀ i, AddCommGroup (Q i) := hQadd
-      letI : ∀ i, Module ℤ (Q i) := hQmod
-      letI : ∀ i, Module.Finite ℤ (Q i) := hQfinite
-      letI : ∀ i, AddCommGroup (Q (e i)) := fun i => hQadd (e i)
-      letI : ∀ i, Module ℤ (Q (e i)) := fun i => hQmod (e i)
-      letI : ∀ i, Module.Finite ℤ (Q (e i)) := fun i => hQfinite (e i)
-      letI : Module ℤ (DirectSum α (fun i => Q (e i))) :=
+      let : Fintype α := Fintype.ofEquiv β e.symm
+      let : ∀ i, AddCommGroup (Q i) := hQadd
+      let : ∀ i, Module ℤ (Q i) := hQmod
+      let : ∀ i, Module.Finite ℤ (Q i) := hQfinite
+      let : ∀ i, AddCommGroup (Q (e i)) := fun i => hQadd (e i)
+      let : ∀ i, Module ℤ (Q (e i)) := fun i => hQmod (e i)
+      let : ∀ i, Module.Finite ℤ (Q (e i)) := fun i => hQfinite (e i)
+      let : Module ℤ (DirectSum α (fun i => Q (e i))) :=
         @DirectSum.instModule ℤ Int.instSemiring α (fun i => Q (e i))
           (fun i => @AddCommGroup.toAddCommMonoid _ (hQadd (e i)))
           (fun i => hQmod (e i))
@@ -1420,9 +1420,9 @@ theorem eulerPoincareFunction_integer_classification :
               (fun i => @AddCommGroup.toAddCommMonoid _ (hQadd (e i)))
               (fun i => hQmod (e i)))
             (modM₂ := AddCommGroup.toIntModule _))
-      letI : Module ℤ (DirectSum α (fun i => Q (e i))) :=
+      let : Module ℤ (DirectSum α (fun i => Q (e i))) :=
         AddCommGroup.toIntModule _
-      letI : Module.Finite ℤ (DirectSum α (fun i => Q (e i))) := hfiniteDS
+      let : Module.Finite ℤ (DirectSum α (fun i => Q (e i))) := hfiniteDS
       have h' :=
         @h (fun i => Q (e i))
           (fun i => hQadd (e i))
@@ -1443,19 +1443,19 @@ theorem eulerPoincareFunction_integer_classification :
       have h := hsubzero φ (V := DirectSum PEmpty Q)
       simpa using h
     · intro α _ h Q hQadd hQmod hQfinite hQdirect φ
-      letI : ∀ i, AddCommGroup (Q i) := hQadd
-      letI : ∀ i, Module ℤ (Q i) := hQmod
-      letI : ∀ i, Module.Finite ℤ (Q i) := hQfinite
-      letI : ∀ i, AddCommGroup (Q (some i)) := fun i => hQadd (some i)
-      letI : ∀ i, Module ℤ (Q (some i)) := fun i => hQmod (some i)
-      letI : ∀ i, Module.Finite ℤ (Q (some i)) := fun i => hQfinite (some i)
-      letI : Module ℤ (DirectSum α (fun i => Q (some i))) :=
+      let : ∀ i, AddCommGroup (Q i) := hQadd
+      let : ∀ i, Module ℤ (Q i) := hQmod
+      let : ∀ i, Module.Finite ℤ (Q i) := hQfinite
+      let : ∀ i, AddCommGroup (Q (some i)) := fun i => hQadd (some i)
+      let : ∀ i, Module ℤ (Q (some i)) := fun i => hQmod (some i)
+      let : ∀ i, Module.Finite ℤ (Q (some i)) := fun i => hQfinite (some i)
+      let : Module ℤ (DirectSum α (fun i => Q (some i))) :=
         @DirectSum.instModule ℤ Int.instSemiring α (fun i => Q (some i))
           (fun i => @AddCommGroup.toAddCommMonoid _ (hQadd (some i)))
           (fun i => hQmod (some i))
-      letI : AddCommGroup (Q none) := hQadd none
-      letI : Module ℤ (Q none) := hQmod none
-      letI : Module.Finite ℤ (Q none) := hQfinite none
+      let : AddCommGroup (Q none) := hQadd none
+      let : Module ℤ (Q none) := hQmod none
+      let : Module.Finite ℤ (Q none) := hQfinite none
       have hfiniteDS :
           @Module.Finite ℤ (DirectSum α (fun i => Q (some i))) Int.instSemiring
             (@AddCommGroup.toAddCommMonoid _
@@ -1484,10 +1484,10 @@ theorem eulerPoincareFunction_integer_classification :
               (fun i => @AddCommGroup.toAddCommMonoid _ (hQadd (some i)))
               (fun i => hQmod (some i)))
             (modM₂ := AddCommGroup.toIntModule _))
-      letI : Module ℤ (DirectSum α (fun i => Q (some i))) :=
+      let : Module ℤ (DirectSum α (fun i => Q (some i))) :=
         AddCommGroup.toIntModule _
-      letI : Module.Finite ℤ (DirectSum α (fun i => Q (some i))) := hfiniteDS
-      letI : Module ℤ
+      let : Module.Finite ℤ (DirectSum α (fun i => Q (some i))) := hfiniteDS
+      let : Module ℤ
           (Q none × DirectSum α (fun i => Q (some i))) :=
         @Prod.instModule ℤ (Q none) (DirectSum α (fun i => Q (some i)))
           Int.instSemiring
@@ -1495,7 +1495,7 @@ theorem eulerPoincareFunction_integer_classification :
           (@AddCommGroup.toAddCommMonoid _
             (inferInstance : AddCommGroup (DirectSum α (fun i => Q (some i)))))
           (hQmod none) (AddCommGroup.toIntModule _)
-      letI : Module.Finite ℤ
+      let : Module.Finite ℤ
           (Q none × DirectSum α (fun i => Q (some i))) := by
         exact @Module.Finite.prod ℤ (Q none)
           (DirectSum α (fun i => Q (some i))) Int.instSemiring
@@ -1530,7 +1530,7 @@ theorem eulerPoincareFunction_integer_classification :
       φ (FGModuleCat.of ℤ (Fin n →₀ ℤ)) =
         integerEulerParameter φ * (n : ℤ) := by
     intro φ n
-    letI : Module.Finite ℤ (DirectSum (Fin n) (fun _ => ℤ)) :=
+    let : Module.Finite ℤ (DirectSum (Fin n) (fun _ => ℤ)) :=
       Module.Finite.instDirectSum _
     have h := hDS (Fin n) (fun _ => ℤ) φ
     change φ (FGModuleCat.of ℤ (Fin n →₀ ℤ)) =
@@ -1541,7 +1541,7 @@ theorem eulerPoincareFunction_integer_classification :
         hIso φ (finsuppLEquivDirectSum ℤ ℤ (Fin n))
       _ = ∑ i : Fin n, φ (FGModuleCat.of ℤ ℤ) := h
       _ = φ (FGModuleCat.of ℤ ℤ) * (n : ℤ) := by
-        simp [Finset.sum_const, nsmul_eq_mul, mul_comm]
+        simp [Finset.sum_const, mul_comm]
   have hcyclic : ∀ (φ : EulerPoincareFunction ℤ) (a : ℤ) (ha : a ≠ 0),
       φ (FGModuleCat.of ℤ (ℤ ⧸ ℤ ∙ a)) = 0 := by
     intro φ a ha
@@ -1549,12 +1549,11 @@ theorem eulerPoincareFunction_integer_classification :
     let Q : Type := ℤ ⧸ L
     let f : ℤ →ₗ[ℤ] ℤ := LinearMap.toSpanSingleton ℤ ℤ a
     let g : ℤ →ₗ[ℤ] Q := L.mkQ
-    letI : Module.Finite ℤ Q := by infer_instance
+    let : Module.Finite ℤ Q := by infer_instance
     have hcomp : g.comp f = 0 := by
-      ext x
+      ext
       apply (Submodule.Quotient.mk_eq_zero L).mpr
-      simpa [f, LinearMap.toSpanSingleton_apply, smul_eq_mul, L] using
-        (Submodule.mem_span_singleton_self a : a ∈ ℤ ∙ a)
+      simp [f, LinearMap.toSpanSingleton_apply, L]
     have hker : ∀ x, g x = 0 → x ∈ LinearMap.range f := by
       intro x hx
       have hxL : x ∈ L := (Submodule.Quotient.mk_eq_zero L).mp hx
@@ -1603,9 +1602,9 @@ theorem eulerPoincareFunction_integer_classification :
     intro φ ψ M
     obtain ⟨n, ι, fι, p, hp, powExp, ⟨eM⟩⟩ :=
       Module.equiv_free_prod_directSum (R := ℤ) (M := (M : Type))
-    letI : Fintype ι := fι
+    let : Fintype ι := fι
     let Q : ι → Type := fun i => ℤ ⧸ ℤ ∙ p i ^ powExp i
-    letI : Module.Finite ℤ (DirectSum ι Q) :=
+    let : Module.Finite ℤ (DirectSum ι Q) :=
       Module.Finite.instDirectSum Q
     have hvalue : ∀ θ : EulerPoincareFunction ℤ,
         θ (FGModuleCat.of ℤ (M : Type)) =
@@ -1636,18 +1635,18 @@ theorem eulerPoincareFunction_integer_classification :
     let S' := S.map F
     have hExact : S'.Exact :=
       (ShortComplex.exact_map_iff_of_faithful S F).2 hS.exact
-    letI : Mono S.f := hS.mono_f
-    letI : Epi S.g := hS.epi_g
-    letI : CategoryTheory.Limits.PreservesLimitsOfShape
+    let : Mono S.f := hS.mono_f
+    let : Epi S.g := hS.epi_g
+    let : CategoryTheory.Limits.PreservesLimitsOfShape
         CategoryTheory.Limits.WalkingCospan F := by infer_instance
-    letI : CategoryTheory.Limits.PreservesColimitsOfShape
+    let : CategoryTheory.Limits.PreservesColimitsOfShape
         CategoryTheory.Limits.WalkingSpan F := by infer_instance
     let f : (S.X₁ : Type) →ₗ[ℤ] (S.X₂ : Type) := S.f.hom.hom
     let g : (S.X₂ : Type) →ₗ[ℤ] (S.X₃ : Type) := S.g.hom.hom
-    letI : Module ℤ ((S.X₂ : Type) ⧸ g.ker) := Submodule.Quotient.module g.ker
-    letI : Module ℤ g.range := g.range.module
-    letI : Module ℤ g.ker := g.ker.module
-    letI : Module ℤ f.range := f.range.module
+    let : Module ℤ ((S.X₂ : Type) ⧸ g.ker) := Submodule.Quotient.module g.ker
+    let : Module ℤ g.range := g.range.module
+    let : Module ℤ g.ker := g.ker.module
+    let : Module ℤ f.range := f.range.module
     have hf : Function.Injective f := by
       change Function.Injective (F.map S.f).hom
       apply (ModuleCat.mono_iff_injective _).1
@@ -1783,7 +1782,7 @@ private def nodeMultiplicationData_exists
     · ext r
       simp [q0, r0]
     · intro i
-      fin_cases i <;> simp [q0, r0]
+      fin_cases i; simp [q0, r0]
   have hq0r0_apply (p : MvPolynomial (Fin 1) k) :
       q0 (r0 p) = p := by
     simpa using RingHom.congr_fun hq0r0 p
@@ -1925,7 +1924,7 @@ private def nodeMultiplicationData_exists
     change Ideal.Quotient.mk (nodePolynomialIdeal k)
       (MvPolynomial.X 0 * MvPolynomial.X 1) = 0
     apply Ideal.Quotient.eq_zero_iff_mem.mpr
-    exact Ideal.subset_span (by simp [nodePolynomialIdeal])
+    exact Ideal.subset_span (by simp)
   have hyx : y * x = 0 := by rw [mul_comm, hxy]
   have hIspan : nodeXIdeal k = Ideal.span {x} := by
     change Ideal.span {Ideal.Quotient.mk (nodePolynomialIdeal k)
@@ -2067,7 +2066,7 @@ private theorem eulerPoincareFunction_node_injective
             map_add' := by intro z w; simp
             map_smul' := by
               intro b z
-              simpa only [smul_smul, RingHom.id_apply, mul_comm] }
+              simp only [smul_smul, RingHom.id_apply, mul_comm] }
         let Q : Type u := M ⧸ LinearMap.range m
         letI : Module B Q := Module.compHom Q s
         Module.Finite B Q := by
@@ -2077,9 +2076,9 @@ private theorem eulerPoincareFunction_node_injective
         map_add' := by intro z w; simp
         map_smul' := by
           intro b z
-          simpa only [smul_smul, RingHom.id_apply, mul_comm] }
+          simp only [smul_smul, RingHom.id_apply, mul_comm] }
     let Q : Type u := M ⧸ LinearMap.range m
-    letI : Module B Q := Module.compHom Q s
+    let : Module B Q := Module.compHom Q s
     have hdiff (b : A) : b - s (q b) ∈ Ideal.span {a} := by
       rw [← hker, RingHom.mem_ker]
       have h := RingHom.congr_fun hqs (q b)
@@ -2108,7 +2107,7 @@ private theorem eulerPoincareFunction_node_injective
           map_add' := by intro m n; simp
           map_smul' := by
             intro a m
-            simpa only [smul_smul, RingHom.id_apply, mul_comm] }
+            simp only [smul_smul, RingHom.id_apply, mul_comm] }
       let Q : Type u := M ⧸ LinearMap.range my
       @Module.finrank B Q (inferInstance : Semiring B)
         (inferInstance : AddCommMonoid Q)
@@ -2121,7 +2120,7 @@ private theorem eulerPoincareFunction_node_injective
           map_add' := by intro m n; simp
           map_smul' := by
             intro a m
-            simpa only [smul_smul, RingHom.id_apply, mul_comm] }
+            simp only [smul_smul, RingHom.id_apply, mul_comm] }
       let Q : Type u := M ⧸ LinearMap.range mx
       @Module.finrank B Q (inferInstance : Semiring B)
         (inferInstance : AddCommMonoid Q)
@@ -2130,7 +2129,7 @@ private theorem eulerPoincareFunction_node_injective
       φ (FGModuleCat.of A (Fin 0 → A)) = 0 := by
     intro φ
     let Z : Type u := Fin 0 → A
-    letI : Subsingleton Z := by
+    let : Subsingleton Z := by
       dsimp [Z]
       infer_instance
     let F := forget₂ (FGModuleCat A) (ModuleCat A)
@@ -2175,7 +2174,7 @@ private theorem eulerPoincareFunction_node_injective
       φ (FGModuleCat.of A V) = φ (FGModuleCat.of A W) := by
     intro φ V W _ _ _ _ _ _ e
     let Z : Type u := Fin 0 → A
-    letI : Subsingleton Z := by
+    let : Subsingleton Z := by
       dsimp [Z]
       infer_instance
     let F := forget₂ (FGModuleCat A) (ModuleCat A)
@@ -2283,7 +2282,7 @@ private theorem eulerPoincareFunction_node_injective
           letI : Module.Finite A Q := Module.Finite.of_surjective g L.mkQ_surjective
           θ (FGModuleCat.of A Q) = 0 := by
       intro θ q hq p hp
-      letI : Module A B := Module.compHom B q
+      let : Module A B := Module.compHom B q
       let qLin : A →ₗ[A] B :=
         { toFun := q
           map_add' := by intro a b; simp
@@ -2291,10 +2290,10 @@ private theorem eulerPoincareFunction_node_injective
             intro a b
             change q (a * b) = q a • q b
             simp [smul_eq_mul] }
-      letI : Module.Finite A B := Module.Finite.of_surjective qLin hq
+      let : Module.Finite A B := Module.Finite.of_surjective qLin hq
       let L : Submodule B B := B ∙ p
       let Q : Type u := B ⧸ L
-      letI : Module A Q := Module.compHom Q q
+      let : Module A Q := Module.compHom Q q
       let f : B →ₗ[A] B :=
         { toFun := fun z => p * z
           map_add' := by intro z w; simp [mul_add]
@@ -2327,7 +2326,7 @@ private theorem eulerPoincareFunction_node_injective
         apply mul_left_cancel₀ hp
         simpa [f, smul_eq_mul] using hzw
       have hg : Function.Surjective g := L.mkQ_surjective
-      letI : Module.Finite A Q := Module.Finite.of_surjective g hg
+      let : Module.Finite A Q := Module.Finite.of_surjective g hg
       let F := forget₂ (FGModuleCat A) (ModuleCat A)
       let S : ShortComplex (FGModuleCat A) :=
         ShortComplex.mk
@@ -2374,19 +2373,19 @@ private theorem eulerPoincareFunction_node_injective
           θ (FGModuleCat.of A (DirectSum ι Q)) =
             ∑ i : ι, θ (FGModuleCat.of A (Q i))) ?_ ?_ ?_ ι
       · intro α β _ e h Q hQadd hQmod hQfinite hQdirect
-        letI : Fintype α := Fintype.ofEquiv β e.symm
-        letI : ∀ i, AddCommGroup (Q i) := hQadd
-        letI : ∀ i, Module A (Q i) := hQmod
-        letI : ∀ i, Module.Finite A (Q i) := hQfinite
-        letI : ∀ i, AddCommGroup (Q (e i)) := fun i => hQadd (e i)
-        letI : ∀ i, Module A (Q (e i)) := fun i => hQmod (e i)
-        letI : ∀ i, Module.Finite A (Q (e i)) := fun i => hQfinite (e i)
-        letI : Module A (DirectSum α (fun i => Q (e i))) :=
+        let : Fintype α := Fintype.ofEquiv β e.symm
+        let : ∀ i, AddCommGroup (Q i) := hQadd
+        let : ∀ i, Module A (Q i) := hQmod
+        let : ∀ i, Module.Finite A (Q i) := hQfinite
+        let : ∀ i, AddCommGroup (Q (e i)) := fun i => hQadd (e i)
+        let : ∀ i, Module A (Q (e i)) := fun i => hQmod (e i)
+        let : ∀ i, Module.Finite A (Q (e i)) := fun i => hQfinite (e i)
+        let : Module A (DirectSum α (fun i => Q (e i))) :=
           @DirectSum.instModule A (inferInstance : Semiring A) α
             (fun i => Q (e i))
             (fun i => @AddCommGroup.toAddCommMonoid _ (hQadd (e i)))
             (fun i => hQmod (e i))
-        letI : Module.Finite A (DirectSum α (fun i => Q (e i))) :=
+        let : Module.Finite A (DirectSum α (fun i => Q (e i))) :=
           @Module.Finite.instDirectSum A α (inferInstance : Semiring A)
             inferInstance (fun i => Q (e i))
             (fun i => @AddCommGroup.toAddCommMonoid _ (hQadd (e i)))
@@ -2406,26 +2405,26 @@ private theorem eulerPoincareFunction_node_injective
         have h' := hsubzero θ (V := DirectSum PEmpty Q)
         simpa using h'
       · intro α _ h Q hQadd hQmod hQfinite hQdirect
-        letI : ∀ i, AddCommGroup (Q i) := hQadd
-        letI : ∀ i, Module A (Q i) := hQmod
-        letI : ∀ i, Module.Finite A (Q i) := hQfinite
-        letI : ∀ i, AddCommGroup (Q (some i)) := fun i => hQadd (some i)
-        letI : ∀ i, Module A (Q (some i)) := fun i => hQmod (some i)
-        letI : ∀ i, Module.Finite A (Q (some i)) := fun i => hQfinite (some i)
-        letI : Module A (DirectSum α (fun i => Q (some i))) :=
+        let : ∀ i, AddCommGroup (Q i) := hQadd
+        let : ∀ i, Module A (Q i) := hQmod
+        let : ∀ i, Module.Finite A (Q i) := hQfinite
+        let : ∀ i, AddCommGroup (Q (some i)) := fun i => hQadd (some i)
+        let : ∀ i, Module A (Q (some i)) := fun i => hQmod (some i)
+        let : ∀ i, Module.Finite A (Q (some i)) := fun i => hQfinite (some i)
+        let : Module A (DirectSum α (fun i => Q (some i))) :=
           @DirectSum.instModule A (inferInstance : Semiring A) α
             (fun i => Q (some i))
             (fun i => @AddCommGroup.toAddCommMonoid _ (hQadd (some i)))
             (fun i => hQmod (some i))
-        letI : Module.Finite A (DirectSum α (fun i => Q (some i))) :=
+        let : Module.Finite A (DirectSum α (fun i => Q (some i))) :=
           @Module.Finite.instDirectSum A α (inferInstance : Semiring A)
             inferInstance (fun i => Q (some i))
             (fun i => @AddCommGroup.toAddCommMonoid _ (hQadd (some i)))
             (fun i => hQmod (some i)) (fun i => hQfinite (some i))
-        letI : AddCommGroup (Q none) := hQadd none
-        letI : Module A (Q none) := hQmod none
-        letI : Module.Finite A (Q none) := hQfinite none
-        letI : Module A (Q none × DirectSum α (fun i => Q (some i))) :=
+        let : AddCommGroup (Q none) := hQadd none
+        let : Module A (Q none) := hQmod none
+        let : Module.Finite A (Q none) := hQfinite none
+        let : Module A (Q none × DirectSum α (fun i => Q (some i))) :=
           @Prod.instModule A (Q none) (DirectSum α (fun i => Q (some i)))
             (inferInstance : Semiring A)
             (@AddCommGroup.toAddCommMonoid _ (hQadd none))
@@ -2433,7 +2432,7 @@ private theorem eulerPoincareFunction_node_injective
               (inferInstance : AddCommGroup (DirectSum α (fun i => Q (some i)))))
             (hQmod none)
             (inferInstance : Module A (DirectSum α (fun i => Q (some i))))
-        letI : Module.Finite A
+        let : Module.Finite A
             (Q none × DirectSum α (fun i => Q (some i))) := inferInstance
         have h' := h (fun i => Q (some i))
         have he :
@@ -2453,7 +2452,7 @@ private theorem eulerPoincareFunction_node_injective
               ∑ i : α, θ (FGModuleCat.of A (Q (some i))) := by rw [h']
           _ = ∑ i : Option α, θ (FGModuleCat.of A (Q i)) := by
             simp [Fintype.sum_option]
-    letI : Module A B := Module.compHom B qY
+    let : Module A B := Module.compHom B qY
     have hsurjY : Function.Surjective qY := by
       intro b
       refine ⟨sY b, ?_⟩
@@ -2466,7 +2465,7 @@ private theorem eulerPoincareFunction_node_injective
           intro a b
           change qY (a * b) = qY a • qY b
           simp [smul_eq_mul] }
-    letI : Module.Finite A B := Module.Finite.of_surjective qLinY hsurjY
+    let : Module.Finite A B := Module.Finite.of_surjective qLinY hsurjY
     have hbaseY : ∀ (θ : EulerPoincareFunction A),
         θ (FGModuleCat.of A (nodeXComponent k)) =
           θ (FGModuleCat.of A B) := by
@@ -2480,7 +2479,7 @@ private theorem eulerPoincareFunction_node_injective
         rw [← hkerfY]
         exact fY.quotKerEquivOfSurjective hsurjY
       exact hIso θ eY
-    letI : Module A B := Module.compHom B qX
+    let : Module A B := Module.compHom B qX
     have hsurjX : Function.Surjective qX := by
       intro b
       refine ⟨sX b, ?_⟩
@@ -2493,7 +2492,7 @@ private theorem eulerPoincareFunction_node_injective
           intro a b
           change qX (a * b) = qX a • qX b
           simp [smul_eq_mul] }
-    letI : Module.Finite A B := Module.Finite.of_surjective qLinX hsurjX
+    let : Module.Finite A B := Module.Finite.of_surjective qLinX hsurjX
     have hbaseX : ∀ (θ : EulerPoincareFunction A),
         θ (FGModuleCat.of A (nodeYComponent k)) =
           θ (FGModuleCat.of A B) := by
@@ -2516,7 +2515,7 @@ private theorem eulerPoincareFunction_node_injective
             θ (FGModuleCat.of A (nodeXComponent k)) *
               (Module.finrank B Q : ℤ) := by
       intro θ Q _ _ _ _ _ hcompat
-      letI : Module A B := Module.compHom B qY
+      let : Module A B := Module.compHom B qY
       have hsurjY : Function.Surjective qY := by
         intro b
         refine ⟨sY b, ?_⟩
@@ -2529,7 +2528,7 @@ private theorem eulerPoincareFunction_node_injective
             intro a b
             change qY (a * b) = qY a • qY b
             simp [smul_eq_mul] }
-      letI : Module.Finite A B := Module.Finite.of_surjective qLin hsurjY
+      let : Module.Finite A B := Module.Finite.of_surjective qLin hsurjY
       have hfiniteQuot : ∀ (p : B),
           let L : Submodule B B := B ∙ p
           let T : Type u := B ⧸ L
@@ -2538,7 +2537,7 @@ private theorem eulerPoincareFunction_node_injective
         intro p
         let L : Submodule B B := B ∙ p
         let T : Type u := B ⧸ L
-        letI : Module A T := Module.compHom T qY
+        let : Module A T := Module.compHom T qY
         let g : B →ₗ[A] T :=
           { toFun := L.mkQ
             map_add' := by intro z w; rfl

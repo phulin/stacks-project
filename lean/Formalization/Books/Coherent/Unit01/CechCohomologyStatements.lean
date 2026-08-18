@@ -566,7 +566,39 @@ theorem module_isZero_of_affine_open_evaluations {S : Scheme.{u}} (N : S.Modules
     (hN : ∀ (U : S.Opens), IsAffineOpen U →
       IsZero (N.presheaf.obj (Opposite.op U))) :
     IsZero N := by
-  sorry
+  have hsections : ∀ U : S.Opens, Subsingleton (N.presheaf.obj (Opposite.op U)) := by
+    intro U
+    constructor
+    intro s t
+    apply TopCat.Presheaf.IsSheaf.section_ext N.isSheaf
+    intro x hx
+    obtain ⟨V, hV, hxV, hVU⟩ := exists_isAffineOpen_mem_and_subset hx
+    refine ⟨V, ?_, hxV, ?_⟩
+    · exact hVU
+    · let hVzero : Subsingleton (N.presheaf.obj (Opposite.op V)) :=
+        AddCommGrpCat.subsingleton_of_isZero (hN V hV)
+      exact hVzero.elim _ _
+  refine ⟨?_, ?_⟩
+  · intro P
+    refine ⟨{ default := 0, uniq := ?_ }⟩
+    intro f
+    apply SheafOfModules.hom_ext
+    apply PresheafOfModules.hom_ext
+    intro U
+    let hNU : Subsingleton (N.val.obj U) := hsections U.unop
+    ext x
+    have hx : x = 0 := hNU.elim _ _
+    subst x
+    simp
+  · intro P
+    refine ⟨{ default := 0, uniq := ?_ }⟩
+    intro f
+    apply SheafOfModules.hom_ext
+    apply PresheafOfModules.hom_ext
+    intro U
+    let hNU : Subsingleton (N.val.obj U) := hsections U.unop
+    ext x
+    exact hNU.elim _ _
 
 /-- Higher direct images of quasi-coherent sheaves vanish for affine morphisms. -/
 theorem relative_affine_higher_direct_image_vanishes {X S : Scheme.{u}}

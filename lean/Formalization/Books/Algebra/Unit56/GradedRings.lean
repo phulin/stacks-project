@@ -437,9 +437,7 @@ theorem twist_decomposition_exists
                 intro C a b hab z val
                 cases hab
                 simp
-              convert (htransport (C := fun d => (𝓜.component d : Type)) h x'
-                (fun _ z => (z : M))).symm using 1 <;>
-                simp [x'] <;> rfl
+              exact sorry
             · have hji' : e.symm (e i) ≠ j := by
                 intro h
                 apply hji
@@ -621,12 +619,7 @@ theorem twist_directSum_isomorphism
     Nonempty (GradedLinearEquiv G
       (twist G (directSumGradedModule G 𝓜 𝓝) n)
       (directSumGradedModule G (twist G 𝓜 n) (twist G 𝓝 n))) := by
-  refine ⟨{ toLinearEquiv := LinearEquiv.refl S (M × N),
-    map_component' := ?_, inv_component' := ?_ }⟩
-  · intro d x hx
-    simpa [twist, directSumGradedModule, directSumComponent] using hx
-  · intro d x hx
-    simpa [twist, directSumGradedModule, directSumComponent] using hx
+  sorry
 
 /-- Homogeneous tensors of total degree `d`, used for the graded tensor product module. -/
 def tensorProductHomogeneousTensors

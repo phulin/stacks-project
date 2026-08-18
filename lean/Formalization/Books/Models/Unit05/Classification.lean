@@ -1,3 +1,4 @@
+import Mathlib.LinearAlgebra.Matrix.ToLinearEquiv
 import Formalization.Books.Models.Unit03.NumericalTypes
 
 /-!
@@ -379,7 +380,8 @@ def fiveProductRatio (D : LocalNumericalData 5) : ℚ :=
 theorem determinant_two_by_two_formula (D : LocalNumericalData 2)
     (hdiag : ∀ i, D.a i i = -2 * D.w i) (hsymm : ∀ i j, D.a i j = D.a j i) :
     Matrix.det D.a = 4 * D.w 0 * D.w 1 - D.a 0 1 ^ 2 := by
-  sorry
+  simp [Matrix.det_fin_two, hdiag, hsymm]
+  ring
 
 theorem determinant_three_by_three_formula (D : LocalNumericalData 3)
     (hdiag : ∀ i, D.a i i = -2 * D.w i) (hsymm : ∀ i j, D.a i j = D.a j i) :
@@ -387,7 +389,8 @@ theorem determinant_three_by_three_formula (D : LocalNumericalData 3)
       -8 * D.w 0 * D.w 1 * D.w 2 + 2 * D.a 0 1 ^ 2 * D.w 2 +
         2 * D.a 1 2 ^ 2 * D.w 0 + 2 * D.a 0 2 ^ 2 * D.w 1 +
         2 * D.a 0 1 * D.a 0 2 * D.a 1 2 := by
-  sorry
+  simp [Matrix.det_fin_three, hdiag, hsymm]
+  ring
 
 theorem determinant_four_by_four_formula (D : LocalNumericalData 4)
     (hdiag : ∀ i, D.a i i = -2 * D.w i) (hsymm : ∀ i j, D.a i j = D.a j i) :
@@ -431,14 +434,28 @@ theorem star_four_by_four_determinant_formula (D : LocalNumericalData 4)
 theorem singleton_minus_two_constraints (T : NumericalType) (genusValue : ℤ)
     (hgenus : IsOfGenus T genusValue) (hn : 1 < T.n) :
     ∀ i, IsMinusTwoIndex T i → T.w i ∣ T.a i i ∧ T.a i i < 0 := by
-  sorry
+  intro i hi
+  rcases hi with ⟨_, ha⟩
+  constructor
+  · rw [ha]
+    use -2
+    ring
+  · rw [ha]
+    nlinarith [T.w_pos i]
 
 theorem pair_singular_ratio_equation (D : LocalNumericalData 2)
     (hdiag : ∀ i, D.a i i = -2 * D.w i)
     (hsymm : ∀ i j, D.a i j = D.a j i)
     (hw : ∀ i, 0 < D.w i) (hdet : Matrix.det D.a = 0) :
     4 = edgeRatio D 0 1 := by
-  sorry
+  have hformula := determinant_two_by_two_formula D hdiag hsymm
+  rw [hformula] at hdet
+  have ha : D.a 0 1 ^ 2 = 4 * D.w 0 * D.w 1 := by omega
+  unfold edgeRatio
+  have hw0 : (D.w 0 : ℚ) ≠ 0 := by exact_mod_cast (ne_of_gt (hw 0))
+  have hw1 : (D.w 1 : ℚ) ≠ 0 := by exact_mod_cast (ne_of_gt (hw 1))
+  field_simp
+  exact_mod_cast ha.symm
 
 theorem pair_full_singular_cases (T : NumericalType) (hn : T.n = 2)
     (hall : ∀ i, IsMinusTwoIndex T i)
@@ -453,12 +470,24 @@ theorem triple_singular_ratio_equation (D : LocalNumericalData 3)
     (hw : ∀ i, 0 < D.w i) (hdet : Matrix.det D.a = 0) :
     4 = edgeRatio D 0 1 + edgeRatio D 1 2 + edgeRatio D 0 2 +
       tripleProductRatio D := by
-  sorry
+  rw [determinant_three_by_three_formula D hdiag hsymm] at hdet
+  unfold edgeRatio tripleProductRatio
+  have hw0 : (D.w 0 : ℚ) ≠ 0 := by exact_mod_cast (ne_of_gt (hw 0))
+  have hw1 : (D.w 1 : ℚ) ≠ 0 := by exact_mod_cast (ne_of_gt (hw 1))
+  have hw2 : (D.w 2 : ℚ) ≠ 0 := by exact_mod_cast (ne_of_gt (hw 2))
+  field_simp
+  norm_cast
+  ring_nf at hdet
+  linarith only [hdet]
 
 theorem triple_product_ratio_square (D : LocalNumericalData 3)
     (hw : ∀ i, 0 < D.w i) :
     (tripleProductRatio D) ^ 2 = edgeRatio D 0 1 * edgeRatio D 1 2 * edgeRatio D 0 2 := by
-  sorry
+  unfold tripleProductRatio edgeRatio
+  have hw0 : (D.w 0 : ℚ) ≠ 0 := by exact_mod_cast (ne_of_gt (hw 0))
+  have hw1 : (D.w 1 : ℚ) ≠ 0 := by exact_mod_cast (ne_of_gt (hw 1))
+  have hw2 : (D.w 2 : ℚ) ≠ 0 := by exact_mod_cast (ne_of_gt (hw 2))
+  field_simp
 
 theorem four_singular_ratio_equation (D : LocalNumericalData 4)
     (hdiag : ∀ i, D.a i i = -2 * D.w i)
@@ -473,7 +502,12 @@ theorem four_product_ratio_square (D : LocalNumericalData 4)
     (hw : ∀ i, 0 < D.w i) :
     (fourProductRatio D) ^ 2 =
       edgeRatio D 0 1 * edgeRatio D 1 2 * edgeRatio D 2 3 * edgeRatio D 0 3 := by
-  sorry
+  unfold fourProductRatio edgeRatio
+  have hw0 : (D.w 0 : ℚ) ≠ 0 := by exact_mod_cast (ne_of_gt (hw 0))
+  have hw1 : (D.w 1 : ℚ) ≠ 0 := by exact_mod_cast (ne_of_gt (hw 1))
+  have hw2 : (D.w 2 : ℚ) ≠ 0 := by exact_mod_cast (ne_of_gt (hw 2))
+  have hw3 : (D.w 3 : ℚ) ≠ 0 := by exact_mod_cast (ne_of_gt (hw 3))
+  field_simp
 
 theorem five_singular_ratio_equation (D : LocalNumericalData 5)
     (hdiag : ∀ i, D.a i i = -2 * D.w i)
@@ -491,34 +525,86 @@ theorem five_product_ratio_square (D : LocalNumericalData 5)
     (fiveProductRatio D) ^ 2 =
       edgeRatio D 0 1 * edgeRatio D 1 2 * edgeRatio D 2 3 *
         edgeRatio D 3 4 * edgeRatio D 0 4 := by
-  sorry
+  unfold fiveProductRatio edgeRatio
+  have hw0 : (D.w 0 : ℚ) ≠ 0 := by exact_mod_cast (ne_of_gt (hw 0))
+  have hw1 : (D.w 1 : ℚ) ≠ 0 := by exact_mod_cast (ne_of_gt (hw 1))
+  have hw2 : (D.w 2 : ℚ) ≠ 0 := by exact_mod_cast (ne_of_gt (hw 2))
+  have hw3 : (D.w 3 : ℚ) ≠ 0 := by exact_mod_cast (ne_of_gt (hw 3))
+  have hw4 : (D.w 4 : ℚ) ≠ 0 := by exact_mod_cast (ne_of_gt (hw 4))
+  field_simp
 
 theorem star_five_matrix_singular (r : ℤ) :
     Matrix.det (scalarMatrix (starMatrix 5 0 (constantVector (-2)) 1) r) = 0 := by
-  sorry
+  simp [scalarMatrix, starMatrix, constantVector, Matrix.det_succ_row_zero,
+    Fin.sum_univ_succ, Fin.succAbove]
+  ring
 
 theorem double_triple_matrix_singular (t : ℕ) (ht : 4 ≤ t) (r : ℤ) :
     Matrix.det (scalarMatrix (doubleTripleMatrix t) r) = 0 := by
-  sorry
+  apply (Matrix.exists_mulVec_eq_zero_iff).mpr
+  let v : Fin (t + 2) → ℤ := fun i =>
+    if i.val = 0 ∨ i.val = 1 ∨ i.val = t ∨ i.val = t + 1 then 1 else 2
+  refine ⟨v, ?_, ?_⟩
+  · intro hv
+    have h0 := congrFun hv (⟨0, by omega⟩ : Fin (t + 2))
+    simp [v] at h0
+  · funext i
+    simp [Matrix.mulVec, dotProduct, scalarMatrix, doubleTripleMatrix, v,
+      Fin.sum_univ_succ]
 
 theorem e6_matrix_determinant (r : ℤ) :
     Matrix.det (scalarMatrix (pathUntilLeafMatrix 6 4 2 5 (-2) 1) r) = 3 * r ^ 6 := by
-  sorry
+  simp [scalarMatrix, pathUntilLeafMatrix, Matrix.det_succ_row_zero,
+    Fin.sum_univ_succ, Fin.succAbove]
+  ring
 
 theorem e7_matrix_determinant (r : ℤ) :
     Matrix.det (scalarMatrix (pathUntilLeafMatrix 7 5 3 6 (-2) 1) r) = -2 * r ^ 7 := by
-  sorry
+  simp [scalarMatrix, pathUntilLeafMatrix, Matrix.det_succ_row_zero,
+    Fin.sum_univ_succ, Fin.succAbove]
+  ring
 
 /-! A genus-one consequence used repeatedly in the chapter's discussion. -/
 theorem all_minus_two_genus_one (T : NumericalType)
     (hall : ∀ i, IsMinusTwoIndex T i) :
     genus T = 1 := by
-  sorry
+  have hg : ∀ i, T.g i = 0 := fun i => (hall i).1
+  have ha : ∀ i, T.a i i = -2 * T.w i := fun i => (hall i).2
+  have hs : ∀ i, (T.m i : ℚ) *
+      ((T.w i : ℚ) * ((T.g i : ℚ) - 1) - (T.a i i : ℚ) / 2) = 0 := by
+    intro i
+    rw [hg i, ha i]
+    push_cast
+    ring
+  have hq : (genus T : ℚ) = (1 : ℚ) := by
+    rw [genus_formula]
+    simp [genusExpression, hs]
+  exact_mod_cast hq
 
 theorem minimal_genus_one_is_minus_two (T : NumericalType)
     (hminimal : IsMinimal T) (hgenus : genus T = 1) (hn : 1 < T.n) :
     ∀ i, IsMinusTwoIndex T i := by
-  sorry
+  have hnonneg : ∀ j, 0 ≤ genusContribution T j := by
+    intro j
+    by_contra h
+    have hneg : genusContribution T j < 0 := lt_of_not_ge h
+    exact hminimal ⟨j, minus_one_contribution T 1 hgenus hn hneg⟩
+  intro i
+  apply (minus_two_index_iff_not_positive_contribution T hminimal hn i).2
+  intro hpos
+  have hsum : 0 < ∑ j : Fin T.n, genusContribution T j := by
+    apply Finset.sum_pos'
+    · intro j hj
+      exact hnonneg j
+    · exact ⟨i, Finset.mem_univ i, hpos⟩
+  have hgenusQ : (genus T : ℚ) = (1 : ℚ) := by
+    exact_mod_cast hgenus
+  rw [genus_formula] at hgenusQ
+  unfold genusExpression at hgenusQ
+  have hsum' : 0 < ∑ j : Fin T.n,
+      (T.m j : ℚ) * ((T.w j : ℚ) * ((T.g j : ℚ) - 1) - (T.a j j : ℚ) / 2) := by
+    simpa [genusContribution] using hsum
+  linarith
 
 /-! The two-by-two classification (`A₂`, `B₂`, and `G₂`). -/
 theorem lemma_two_by_two (T : NumericalType) (S : MinusTwoSubgraph T 2)
@@ -602,7 +688,21 @@ theorem double_triple_full_genus_one {t : ℕ} (T : NumericalType)
     (S : MinusTwoSubgraph T (t + 2)) (ht : 4 ≤ t) (hn : T.n = t + 2)
     (hedges : hasDoubleTripleEdges (localData S)) :
     genus T = 1 := by
-  sorry
+  let f : Fin (t + 2) → Fin (t + 2) := fun i => Fin.cast hn (S.index i)
+  have hf : Function.Injective f := by
+    intro i j hij
+    apply S.index_injective
+    exact Fin.cast_injective hn hij
+  have hfs : Function.Surjective f := Finite.surjective_of_injective hf
+  have hall : ∀ j : Fin T.n, IsMinusTwoIndex T j := by
+    intro j
+    obtain ⟨i, hi⟩ := hfs (Fin.cast hn j)
+    have hij : S.index i = j := by
+      apply Fin.cast_injective hn
+      simpa [f] using hi
+    rw [← hij]
+    exact S.minus_two i
+  exact all_minus_two_genus_one T hall
 
 /-! The completed `E₆` pattern is not proper. -/
 theorem lemma_E6_completed (T : NumericalType) (S : MinusTwoSubgraph T 7)
@@ -612,7 +712,21 @@ theorem lemma_E6_completed (T : NumericalType) (S : MinusTwoSubgraph T 7)
 theorem e6_completed_full_genus_one (T : NumericalType) (S : MinusTwoSubgraph T 7)
     (hn : T.n = 7) (hedges : hasE6CompletedEdges (localData S)) :
     genus T = 1 := by
-  sorry
+  let f : Fin 7 → Fin 7 := fun i => Fin.cast hn (S.index i)
+  have hf : Function.Injective f := by
+    intro i j hij
+    apply S.index_injective
+    exact Fin.cast_injective hn hij
+  have hfs : Function.Surjective f := Finite.surjective_of_injective hf
+  have hall : ∀ j : Fin T.n, IsMinusTwoIndex T j := by
+    intro j
+    obtain ⟨i, hi⟩ := hfs (Fin.cast hn j)
+    have hij : S.index i = j := by
+      apply Fin.cast_injective hn
+      simpa [f] using hi
+    rw [← hij]
+    exact S.minus_two i
+  exact all_minus_two_genus_one T hall
 
 /-! The seven-index `E₇` configuration. -/
 theorem lemma_E7 (T : NumericalType) (S : MinusTwoSubgraph T 7)
@@ -644,7 +758,21 @@ theorem lemma_E8_completed (T : NumericalType) (S : MinusTwoSubgraph T 9)
 theorem e8_completed_full_genus_one (T : NumericalType) (S : MinusTwoSubgraph T 9)
     (hn : T.n = 9) (hedges : hasE8CompletedEdges (localData S)) :
     genus T = 1 := by
-  sorry
+  let f : Fin 9 → Fin 9 := fun i => Fin.cast hn (S.index i)
+  have hf : Function.Injective f := by
+    intro i j hij
+    apply S.index_injective
+    exact Fin.cast_injective hn hij
+  have hfs : Function.Surjective f := Finite.surjective_of_injective hf
+  have hall : ∀ j : Fin T.n, IsMinusTwoIndex T j := by
+    intro j
+    obtain ⟨i, hi⟩ := hfs (Fin.cast hn j)
+    have hij : S.index i = j := by
+      apply Fin.cast_injective hn
+      simpa [f] using hi
+    rw [← hij]
+    exact S.minus_two i
+  exact all_minus_two_genus_one T hall
 
 /-! The source's final “up to reordering” classification, stated with the
 proper subset represented by an ordered injection. -/

@@ -139,7 +139,7 @@ theorem exists_right_exact_R_linear_not_tensorProductFunctor :
           ¬ CommutesWithDirectSums F ∧
             ¬ ∃ N : ModuleCat ℤ, Nonempty (F ≅ tensorProductFunctor N) := by
   refine ⟨infiniteProductFunctor, ?_⟩
-  refine ⟨?_, ?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_⟩
   · constructor
     · refine { map_add := ?_ }
       intro X Y f g
@@ -288,7 +288,140 @@ theorem exists_right_exact_R_linear_not_tensorProductFunctor :
           )
     letI := hH
     exact preservesFiniteColimits_of_natIso q
-  · sorry
-  · sorry
+  · have hnotSums : ¬ CommutesWithDirectSums infiniteProductFunctor := by
+      classical
+      intro hSums
+      unfold CommutesWithDirectSums at hSums
+      let Z : ℕ → ModuleCat ℤ := fun _ => ModuleCat.of ℤ ℤ
+      let W : ℕ → ModuleCat ℤ := fun _ => infiniteProductFunctor.obj (ModuleCat.of ℤ ℤ)
+      letI : IsIso (sigmaComparison infiniteProductFunctor Z) := hSums ℕ Z
+      let e := ModuleCat.coprodIsoDirectSum Z
+      let x : infiniteProductFunctor.obj (∐ Z) := fun n => (Sigma.ι Z n).hom 1
+      have hx : ∃ y : (∐ W : ModuleCat ℤ),
+          (sigmaComparison infiniteProductFunctor Z).hom y = x := by
+        let eσ := asIso (sigmaComparison infiniteProductFunctor Z)
+        refine ⟨eσ.inv.hom x, ?_⟩
+        change (eσ.inv ≫ eσ.hom).hom x = x
+        rw [congrArg ModuleCat.Hom.hom eσ.inv_hom_id]
+        rfl
+      obtain ⟨y, hy⟩ := hx
+      let eW := ModuleCat.coprodIsoDirectSum W
+      let y' := eW.hom.hom y
+      have hsupport : ∃ i : ℕ, i ∉ y'.support := by
+        by_cases hs : y'.support.Nonempty
+        · let i := y'.support.max' hs + 1
+          refine ⟨i, ?_⟩
+          intro hi
+          have hle := y'.support.le_max' i hi
+          omega
+        · have hempty : y'.support = ∅ := Finset.not_nonempty_iff_eq_empty.mp hs
+          exact ⟨0, by rw [hempty]; simp⟩
+      obtain ⟨i, hi⟩ := hsupport
+      have hyi : y' i = 0 := by
+        exact DFinsupp.notMem_support_iff.mp hi
+      let p : (∐ Z) ⟶ ModuleCat.of ℤ ℤ :=
+        e.hom ≫ ModuleCat.ofHom (DirectSum.component ℤ ℕ (fun j => (Z j : Type)) i)
+      let q : ∀ j : ℕ, W j ⟶ infiniteProductFunctor.obj (ModuleCat.of ℤ ℤ) :=
+        fun j => by
+          dsimp [W]
+          exact infiniteProductFunctor.map (Sigma.ι Z j ≫ p)
+      have hqzero (j : ℕ) (hji : j ≠ i) : q j = 0 := by
+        apply ModuleCat.hom_ext
+        apply LinearMap.ext
+        intro z
+        funext n
+        change p.hom ((Sigma.ι Z j).hom (z n)) = 0
+        have hι := ModuleCat.ι_coprodIsoDirectSum_hom Z j
+        have hι' := congrArg (fun f => f.hom (z n)) hι
+        change e.hom.hom ((Sigma.ι Z j).hom (z n)) =
+          (DirectSum.lof ℤ ℕ (fun j => (Z j : Type)) j) (z n) at hι'
+        change (DirectSum.component ℤ ℕ (fun j => (Z j : Type)) i)
+          (e.hom.hom ((Sigma.ι Z j).hom (z n))) = 0
+        rw [hι']
+        simp [DirectSum.component.of, hji]
+      have hL (j : ℕ) (b : (W j : Type)) :
+          (eW.inv ≫ Sigma.desc q).hom
+              (DirectSum.lof ℤ ℕ (fun i => (W i : Type)) j b) = q j b := by
+        have hW := ModuleCat.lof_coprodIsoDirectSum_inv W j
+        have hW' := congrArg (fun f => f.hom b) hW
+        change eW.inv.hom ((DirectSum.lof ℤ ℕ (fun i => (W i : Type)) j) b) =
+          (Sigma.ι W j).hom b at hW'
+        change (Sigma.desc q).hom (eW.inv.hom
+            ((DirectSum.lof ℤ ℕ (fun i => (W i : Type)) j) b)) = q j b
+        rw [hW']
+        simp [q]
+      have hyrep : eW.inv.hom y' = y := by
+        have heW := congrArg (fun f : (∐ W : ModuleCat ℤ) ⟶ (∐ W : ModuleCat ℤ) =>
+          f.hom y) eW.hom_inv_id
+        change eW.inv.hom (eW.hom.hom y) = y at heW
+        simpa [y'] using heW
+      have hq : (Sigma.desc q).hom y = 0 := by
+        rw [← hyrep]
+        have hzero : y' i = 0 → (eW.inv ≫ Sigma.desc q).hom y' = 0 := by
+          induction y' using DirectSum.induction_on' with
+          | h0 => intro; simp
+          | hadd j b f hf hb ih =>
+            intro hv
+            have hji : j ≠ i := by
+              intro hji
+              subst j
+              have hb0 : b = 0 := by
+                simpa [DirectSum.of_apply, hf] using hv
+              exact hb hb0
+            have hfi : f i = 0 := by
+              simpa [DirectSum.of_apply, hji] using hv
+            rw [map_add]
+            change (eW.inv ≫ Sigma.desc q).hom
+                (DirectSum.lof ℤ ℕ (fun i => (W i : Type)) j b) +
+              (eW.inv ≫ Sigma.desc q).hom f = 0
+            rw [hL j b, hqzero j hji, ih hfi]
+            simp
+        exact hzero hyi
+      have hp : p = Sigma.desc (fun j => Sigma.ι Z j ≫ p) := by
+        apply (coproductIsCoproduct Z).hom_ext
+        intro j
+        simp
+      have hcomp :
+          sigmaComparison infiniteProductFunctor Z ≫
+              infiniteProductFunctor.map p = Sigma.desc q := by
+        rw [hp]
+        change sigmaComparison infiniteProductFunctor Z ≫
+            infiniteProductFunctor.map (Sigma.desc (fun j => Sigma.ι Z j ≫ p)) =
+          Sigma.desc (fun j => infiniteProductFunctor.map (Sigma.ι Z j ≫ p))
+        exact sigmaComparison_map_desc infiniteProductFunctor Z (ModuleCat.of ℤ ℤ)
+          (fun j => Sigma.ι Z j ≫ p)
+      have hcomp' := congrArg (fun f => f.hom y) hcomp
+      change (infiniteProductFunctor.map p).hom
+          ((sigmaComparison infiniteProductFunctor Z).hom y) =
+        (Sigma.desc q).hom y at hcomp'
+      rw [hq, hy] at hcomp'
+      have hxi := congrFun hcomp' i
+      have hcalc : (infiniteProductFunctor.map p).hom x i = 1 := by
+        change p.hom (x i) = 1
+        change p.hom ((Sigma.ι Z i).hom 1) = 1
+        have hι := ModuleCat.ι_coprodIsoDirectSum_hom Z i
+        have hι' := congrArg (fun f => f.hom 1) hι
+        change e.hom.hom ((Sigma.ι Z i).hom 1) =
+          (DirectSum.lof ℤ ℕ (fun j => (Z j : Type)) i) 1 at hι'
+        rw [show p.hom ((Sigma.ι Z i).hom 1) =
+          (DirectSum.component ℤ ℕ (fun j => (Z j : Type)) i)
+            (e.hom.hom ((Sigma.ι Z i).hom 1)) by rfl]
+        rw [hι']
+        simp [DirectSum.component.of]
+      exact one_ne_zero (hcalc.symm.trans hxi)
+    refine ⟨hnotSums, ?_⟩
+    intro hIso
+    obtain ⟨N, ⟨eIso⟩⟩ := hIso
+    have hSumsN : CommutesWithDirectSums (tensorProductFunctor N) :=
+      tensorProductFunctor_commutes_with_direct_sums N
+    have hSumsF : CommutesWithDirectSums infiniteProductFunctor := by
+      intro ι M
+      letI : IsIso (sigmaComparison (tensorProductFunctor N) M) := hSumsN ι M
+      letI : PreservesColimit (Discrete.functor M) (tensorProductFunctor N) :=
+        PreservesCoproduct.of_iso_comparison (tensorProductFunctor N) M
+      letI : PreservesColimit (Discrete.functor M) infiniteProductFunctor :=
+        preservesColimit_of_natIso _ eIso.symm
+      infer_instance
+    exact hnotSums hSumsF
 
 end Formalization.Books.Exercises.Unit04

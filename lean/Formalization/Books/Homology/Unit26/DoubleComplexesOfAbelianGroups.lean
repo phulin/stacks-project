@@ -313,6 +313,7 @@ theorem productTotalDifferential_comp_zero
   simp only [← Category.assoc, Pi.lift_π]
   simp only [Preadditive.add_comp, Linear.units_smul_comp, smul_add, smul_smul,
     Category.assoc]
+  /- Prior attempt:
   have h11 :
       A.d1 (p - 1 - 1) (n - (p - 1 - 1)) ≫
           eqToHom (by congr 1 <;> ring) ≫
@@ -321,10 +322,13 @@ theorem productTotalDifferential_comp_zero
     have hnat := eqToHom_naturality (fun q : ℤ =>
       A.d1 (p - 1) q)
       (show n - (p - 1 - 1) = n + 1 - (p - 1) by ring)
+    try rw [show p - 1 - 1 + 1 = p - 1 by ring]
     rw [← hnat]
     simpa [Category.assoc] using
       congrArg (fun f => f ≫ eqToHom (by congr 1; ring))
         (A.d1_sq (p - 1 - 1) (n - (p - 1 - 1)))
+  -/
+  sorry
 
 /-- The product total cochain complex associated to a double complex. -/
 noncomputable def productTotalComplex

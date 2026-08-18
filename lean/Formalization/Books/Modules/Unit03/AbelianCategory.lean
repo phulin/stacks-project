@@ -1,6 +1,7 @@
 import Formalization.Books.Modules.Unit02.Pathology
 import Formalization.Books.Categories.Unit23.ExactFunctors
 import Formalization.Books.Homology.Unit03.PreadditiveAndAdditiveCategories
+import Formalization.Books.Sheaves.Unit22.OpenImmersions
 import Mathlib.Algebra.Category.ModuleCat.Sheaf.Abelian
 import Mathlib.Algebra.Category.ModuleCat.Sheaf.Colimits
 import Mathlib.Algebra.Category.ModuleCat.Sheaf.Limits
@@ -49,41 +50,14 @@ abbrev sheafModuleSectionsMap {X : TopCat.{v}} (O : RingSheaf.{v, v} X)
     sheafModuleSections O F U ⟶ sheafModuleSections O G U :=
   (SheafOfModules.evaluation O (op U)).map φ
 
-/-! The stalk functor is assembled from Mathlib's canonical module structure
-on presheaf stalks.  This avoids a parallel sheaf-level construction: only
-the scalar compatibility needed to package the existing additive stalk map
-is recorded here. -/
+/-! Stalks use the canonical module structure from the earlier sheaves
+chapter.  The abbreviation keeps the source-facing name used throughout the
+Modules book without introducing a second stalk implementation. -/
 
-noncomputable def sheafModuleStalkAddMap {X : TopCat.{v}} {O : RingSheaf.{v, v} X}
-    {F G : Mod O} (φ : F ⟶ G) (x : X) :
-    TopCat.Presheaf.stalk (C := AddCommGrpCat.{v}) F.val.presheaf x ⟶
-      TopCat.Presheaf.stalk (C := AddCommGrpCat.{v}) G.val.presheaf x :=
-  (TopCat.Presheaf.stalkFunctor (C := AddCommGrpCat.{v}) x).map
-    ((PresheafOfModules.toPresheaf O.obj).map φ.val)
-
-theorem sheafModuleStalkAddMap_smul {X : TopCat.{v}} {O : RingSheaf.{v, v} X}
-    {F G : Mod O} (φ : F ⟶ G) (x : X)
-    (r : TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x) :
-    sheafModuleStalkAddMap φ x ≫
-        (ModuleCat.of (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x)
-          (↑(TopCat.Presheaf.stalk (C := AddCommGrpCat.{v}) G.val.presheaf x))).smul r =
-      (ModuleCat.of (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x)
-        (↑(TopCat.Presheaf.stalk (C := AddCommGrpCat.{v}) F.val.presheaf x))).smul r ≫
-        sheafModuleStalkAddMap φ x := by
-  sorry
-
-noncomputable def sheafModuleStalkFunctor {X : TopCat.{v}}
+abbrev sheafModuleStalkFunctor {X : TopCat.{v}}
     (O : RingSheaf.{v, v} X) (x : X) :
-    Mod O ⥤ ModuleCat.{v} (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x) where
-  obj F :=
-    ModuleCat.of (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x)
-      (↑(TopCat.Presheaf.stalk (C := AddCommGrpCat.{v}) F.val.presheaf x))
-  map φ := ModuleCat.homMk (sheafModuleStalkAddMap φ x)
-    (sheafModuleStalkAddMap_smul φ x)
-  map_id := by
-    sorry
-  map_comp := by
-    sorry
+    Mod O ⥤ ModuleCat.{v} (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x) :=
+  moduleStalkFunctor O x
 
 instance sheafModuleStalkFunctor_preservesZeroMorphisms {X : TopCat.{v}}
     (O : RingSheaf.{v, v} X) (x : X) :
@@ -389,81 +363,21 @@ theorem sheafModule_finite_direct_sums_are_presheaf_direct_sums
       colimit (Discrete.functor (fun i => (F i).val))) := by
   sorry
 
-/-! The module functors attached to a ringed-space morphism are the direct
-Mathlib sheaf-module constructions, with the source's names made explicit
-locally so this chapter does not introduce a second implementation. -/
+/-! The module functors attached to a ringed-space morphism use the canonical
+constructions from the earlier sheaves chapter, with the source's names
+retained for later Modules chapters. -/
 
-noncomputable def sheafModuleRingedSpacePushforward
+noncomputable abbrev sheafModuleRingedSpacePushforward
     {X Y : RingedSpace.{v}} (f : RingedSpaceHom X Y) :
     Mod X.structureSheaf ⥤ Mod Y.structureSheaf :=
-  SheafOfModules.pushforward (F := Opens.map f.continuous) f.sharp
+  ringedSpaceModulePushforward f
 
-noncomputable def sheafModuleRingedSpacePullback
+noncomputable abbrev sheafModuleRingedSpacePullback
     {X Y : RingedSpace.{v}} (f : RingedSpaceHom X Y)
     [((SheafOfModules.pushforward (F := Opens.map f.continuous)
       f.sharp).IsRightAdjoint)] :
     Mod Y.structureSheaf ⥤ Mod X.structureSheaf :=
-  SheafOfModules.pullback (F := Opens.map f.continuous) f.sharp
-
-/-! A small source-facing copy of the canonical open-extension construction.
-The presheaf is zero away from the open and is sheafified in the target. -/
-
-abbrev unit03OpenSubspace {X : TopCat.{v}} (U : Opens X) : TopCat.{v} :=
-  (Opens.toTopCat X).obj U
-
-abbrev unit03OpenInclusion {X : TopCat.{v}} (U : Opens X) :
-    unit03OpenSubspace U ⟶ X :=
-  Opens.inclusion' U
-
-noncomputable def unit03OpenPresheafExtensionByInitial
-    (C : Type u) [Category.{v} C] [HasInitial C]
-    {X : TopCat.{v}} (U : Opens X) :
-    TopCat.Presheaf C (unit03OpenSubspace U) ⥤ TopCat.Presheaf C X := by
-  classical
-  let j := Opens.map (unit03OpenInclusion U)
-  exact {
-    obj := fun F => {
-      obj := fun V => if V.unop ≤ U then F.obj (j.op.obj V) else ⊥_ C
-      map := by
-        intro V W i
-        by_cases hV : V.unop ≤ U
-        · have hW : W.unop ≤ U := by
-            exact (show W.unop ≤ V.unop from leOfHom i.unop).trans hV
-          exact eqToHom (by simp [hV]) ≫ F.map (j.op.map i) ≫
-            eqToHom (by simp [hW])
-        · exact eqToHom (by simp [hV]) ≫ initial.to _
-      map_id := by
-        intro V
-        sorry
-      map_comp := by
-        intro V W T i k
-        sorry
-    }
-    map := fun {F G} φ => {
-      app := fun V => if hV : V.unop ≤ U then
-          eqToHom (by simp [hV]) ≫ φ.app (j.op.obj V) ≫
-            eqToHom (by simp [hV])
-        else eqToHom (by simp [hV]) ≫ initial.to _
-      naturality := by
-        intro V W i
-        sorry
-      }
-    map_id := by
-      intro F
-      sorry
-    map_comp := by
-      intro F G H φ ψ
-      sorry
-  }
-
-noncomputable def unit03OpenAbelianSheafExtensionFunctor
-    {X : TopCat.{v}} (U : Opens X)
-    [HasWeakSheafify (Opens.grothendieckTopology X) AddCommGrpCat] :
-    TopCat.Sheaf AddCommGrpCat (unit03OpenSubspace U) ⥤
-      TopCat.Sheaf AddCommGrpCat X :=
-  TopCat.Sheaf.forget AddCommGrpCat (unit03OpenSubspace U) ⋙
-    unit03OpenPresheafExtensionByInitial AddCommGrpCat U ⋙
-      CategoryTheory.presheafToSheaf (Opens.grothendieckTopology X) AddCommGrpCat
+  ringedSpaceModulePullback f
 
 /-! ## Exactness of the standard geometric functors -/
 
@@ -498,7 +412,7 @@ theorem abelianSheafPullback_isExact {X Y : TopCat.{v}} (f : X ⟶ Y) :
 theorem unit03OpenAbelianSheafExtension_isExact {X : TopCat.{v}}
     (U : Opens X)
     [HasWeakSheafify (Opens.grothendieckTopology X) AddCommGrpCat] :
-    IsExact (unit03OpenAbelianSheafExtensionFunctor U) := by
+    IsExact (openAbelianSheafExtensionFunctor U) := by
   sorry
 
 /-! ## Sections of arbitrary direct sums on quasi-compact opens -/

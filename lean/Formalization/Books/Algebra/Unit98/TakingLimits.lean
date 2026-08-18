@@ -197,7 +197,7 @@ theorem limit_complete_pre {A : Type u} [CommRing A] (I : Ideal A)
   intro x
   apply Concrete.limit_ext F
   intro n
-  simp [r, c, q, AdicCompletion.eval_comp_of]
+  simp [r, c, q]
 
 /-- A compatible quotient system has the expected quotients and complete limit. -/
 theorem limit_complete {A : Type u} [CommRing A] (I : Ideal A)
@@ -444,8 +444,8 @@ theorem completionTensorCoordinate_naturality
           (φ.map i.unop)) =
       completionTensorCoordinate I (j.unop : ℕ) (hF j.unop)
         (φ.map j.unop) := by
-  letI : Module (A ⧸ I ^ (i.unop : ℕ)) (F.system.obj i) := (hF i.unop).module
-  letI : Module (A ⧸ I ^ (j.unop : ℕ)) (F.system.obj j) := (hF j.unop).module
+  let : Module (A ⧸ I ^ (i.unop : ℕ)) (F.system.obj i) := (hF i.unop).module
+  let : Module (A ⧸ I ^ (j.unop : ℕ)) (F.system.obj j) := (hF j.unop).module
   apply LinearMap.ext
   intro z
   induction z using TensorProduct.induction_on with
@@ -472,10 +472,22 @@ theorem completionTensorCoordinate_naturality
       have hmap_apply := congrArg (fun q => q m) hmap
       rw [LinearMap.comp_apply] at hmap_apply
       rw [hmap_apply]
+      have ha :
+          a.val i.unop ≡ a.val j.unop
+            [SMOD ((I ^ (j.unop : ℕ)) • (⊤ : Submodule A A))] :=
+        (a.property (leOfHom f.unop)).symm
+      have hmem : a.val i.unop - a.val j.unop ∈
+          (I ^ (j.unop : ℕ) : Ideal A) := by
+        have hmem' : a.val i.unop - a.val j.unop ∈
+            (I ^ (j.unop : ℕ)) • (⊤ : Submodule A A) :=
+          (SModEq.sub_mem
+            (U := (I ^ (j.unop : ℕ)) • (⊤ : Submodule A A))).mp ha
+        simpa only [Ideal.smul_eq_mul, Ideal.mul_top] using hmem'
       have hzero := @hF j.unop ((φ.map j.unop) m)
         ⟨a.val i.unop - a.val j.unop,
-          SModEq.sub_mem.mp (a.property (leOfHom f.unop))⟩
+          hmem⟩
       rw [← sub_eq_zero, ← sub_smul]
+      simpa using hzero
 
 /-- The map induced by a compatible graded system of maps after tensoring with `A'`. -/
 noncomputable def inducedTensorLimitMap

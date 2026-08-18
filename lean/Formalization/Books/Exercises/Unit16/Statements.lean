@@ -9,6 +9,7 @@ import Mathlib.RingTheory.Algebraic.LinearIndependent
 import Mathlib.RingTheory.Nullstellensatz
 import Mathlib.RingTheory.PowerSeries.Inverse
 import Mathlib.RingTheory.Spectrum.Prime.Topology
+import Formalization.Books.Algebra.Unit35.JacobsonRings
 
 import Formalization.Books.Exercises.Unit16.Core
 
@@ -494,6 +495,146 @@ theorem matrix_product_irreducible_components :
         {p : matrixProductClosedSet |
           (p : PrimeSpectrum matrixProductRing) ∈
             PrimeSpectrum.zeroLocus (matrixProductMiddleIdeal : Set matrixProductRing)}} := by
-  sorry
+  have h' : matrixProductIdeal.minimalPrimes =
+      ({matrixYZeroIdeal, matrixProductMiddleIdeal, matrixXZeroIdeal} : Set (Ideal matrixProductRing)) := by
+    simpa only [matrixProductIdeal, matrixProductEquations, matrixXZeroIdeal,
+      matrixYZeroIdeal, matrixProductMiddleIdeal, matrixXDeterminant, matrixYDeterminant,
+      Formalization.Books.Algebra.Unit35.matrixProductIdeal,
+      Formalization.Books.Algebra.Unit35.matrixPairProductEquations,
+      Formalization.Books.Algebra.Unit35.matrixProductRankTwoComponentIdeal,
+      Formalization.Books.Algebra.Unit35.matrixProductRankOneComponentIdeal,
+      Formalization.Books.Algebra.Unit35.matrixProductRankZeroComponentIdeal,
+      Formalization.Books.Algebra.Unit35.matrixPairDetX,
+      Formalization.Books.Algebra.Unit35.matrixPairDetY,
+      Formalization.Books.Algebra.Unit35.matrixPairX11,
+      Formalization.Books.Algebra.Unit35.matrixPairX12,
+      Formalization.Books.Algebra.Unit35.matrixPairX21,
+      Formalization.Books.Algebra.Unit35.matrixPairX22,
+      Formalization.Books.Algebra.Unit35.matrixPairY11,
+      Formalization.Books.Algebra.Unit35.matrixPairY12,
+      Formalization.Books.Algebra.Unit35.matrixPairY21,
+      Formalization.Books.Algebra.Unit35.matrixPairY22,
+      Formalization.Books.Algebra.Unit35.matrixPairVariable] using
+      (Formalization.Books.Algebra.Unit35.matrixProduct_minimalPrime_components (k := ℂ))
+  have hmin : matrixProductIdeal.minimalPrimes =
+      ({matrixXZeroIdeal, matrixYZeroIdeal, matrixProductMiddleIdeal} : Set (Ideal matrixProductRing)) := by
+    rw [h']
+    ext J
+    simp [or_comm, or_left_comm]
+  rw [irreducibleComponents_eq_maximals_closed]
+  let e : {p : Ideal matrixProductRing | p.IsPrime ∧ matrixProductIdeal ≤ p} ≃o
+      PrimeSpectrum.zeroLocus (matrixProductIdeal : Set matrixProductRing) :=
+    ⟨⟨fun x => ⟨⟨x.1, x.2.1⟩, x.2.2⟩,
+      fun x => ⟨x.1.1, x.1.2, x.2⟩, fun _ => rfl, fun _ => rfl⟩, .rfl⟩
+  let g := e.trans ((PrimeSpectrum.zeroLocusEquivIrreducibleCloseds
+      (matrixProductIdeal : Set matrixProductRing)).trans
+      (TopologicalSpace.IrreducibleCloseds.orderIsoSubtype'
+        (PrimeSpectrum.zeroLocus (matrixProductIdeal : Set matrixProductRing))).dual)
+  have g_apply (p : {p : Ideal matrixProductRing | p.IsPrime ∧ matrixProductIdeal ≤ p}) :
+      (g p).1 = {q : matrixProductClosedSet | p.1 ≤ (q : PrimeSpectrum matrixProductRing).asIdeal} := by
+    simp [g, e, PrimeSpectrum.zeroLocusEquivIrreducibleCloseds,
+      TopologicalSpace.IrreducibleCloseds.orderIsoSubtype',
+      TopologicalSpace.IrreducibleCloseds.equivSubtype',
+      irreducibleSetEquivPoints]
+    ext q
+    change q ∈ closure ({(⟨⟨p.1, p.2.1⟩, p.2.2⟩ :
+      PrimeSpectrum.zeroLocus (matrixProductIdeal : Set matrixProductRing))} :
+      Set (PrimeSpectrum.zeroLocus (matrixProductIdeal : Set matrixProductRing))) ↔ _
+    constructor
+    · intro hq
+      exact (PrimeSpectrum.le_iff_specializes _ _).mpr
+        ((subtype_specializes_iff _ _).mp ((specializes_iff_mem_closure).mpr hq))
+    · intro hq
+      have hs : (⟨⟨p.1, p.2.1⟩, p.2.2⟩ :
+          PrimeSpectrum.zeroLocus (matrixProductIdeal : Set matrixProductRing)) ⤳ q :=
+        (subtype_specializes_iff _ _).mpr ((PrimeSpectrum.le_iff_specializes _ _).mp hq)
+      exact (specializes_iff_mem_closure).mp hs
+  let hcomp := OrderIso.setOfPredMinimalIsoSetOfPredMaximal g
+  have hcomp_apply (p : matrixProductIdeal.minimalPrimes) :
+      (OrderDual.ofDual (hcomp p).1 : Set matrixProductClosedSet) =
+        {q : matrixProductClosedSet | p.1 ≤ (q : PrimeSpectrum matrixProductRing).asIdeal} := by
+    change (OrderDual.ofDual ((g (⟨p.1, p.2.1.1, p.2.1.2⟩ :
+      {p : Ideal matrixProductRing | p.IsPrime ∧ matrixProductIdeal ≤ p})).1) :
+        Set matrixProductClosedSet) = _
+    exact g_apply _
+  have hrange : {s : Set matrixProductClosedSet |
+      Maximal (fun x => IsClosed x ∧ IsIrreducible x) s} =
+      Set.range (fun p : matrixProductIdeal.minimalPrimes =>
+        (OrderDual.ofDual (hcomp p).1 : Set matrixProductClosedSet)) := by
+    ext C
+    constructor
+    · intro hC
+      let p := hcomp.symm ⟨C, hC⟩
+      refine ⟨p, ?_⟩
+      exact congrArg (fun z => (OrderDual.ofDual z.1 : Set matrixProductClosedSet))
+        (hcomp.apply_symm_apply ⟨C, hC⟩)
+    · rintro ⟨p, hpC⟩
+      rw [← hpC]
+      exact (hcomp p).2
+  rw [hrange]
+  change Set.range (fun p : matrixProductIdeal.minimalPrimes =>
+      (OrderDual.ofDual (hcomp p).1 : Set matrixProductClosedSet)) =
+    ({ {p : matrixProductClosedSet |
+          (p : PrimeSpectrum matrixProductRing) ∈
+            PrimeSpectrum.zeroLocus (matrixXZeroIdeal : Set matrixProductRing)},
+        {p : matrixProductClosedSet |
+          (p : PrimeSpectrum matrixProductRing) ∈
+            PrimeSpectrum.zeroLocus (matrixYZeroIdeal : Set matrixProductRing)},
+        {p : matrixProductClosedSet |
+          (p : PrimeSpectrum matrixProductRing) ∈
+            PrimeSpectrum.zeroLocus (matrixProductMiddleIdeal : Set matrixProductRing)}} :
+      Set (Set matrixProductClosedSet))
+  ext C
+  constructor
+  · rintro ⟨p, hpC⟩
+    rw [← hpC]
+    change (OrderDual.ofDual (hcomp p).1 : Set matrixProductClosedSet) ∈ _
+    have hp : p.1 = matrixXZeroIdeal ∨ p.1 = matrixYZeroIdeal ∨
+        p.1 = matrixProductMiddleIdeal := by
+      have hp' : p.1 ∈ ({matrixXZeroIdeal, matrixYZeroIdeal, matrixProductMiddleIdeal} :
+          Set (Ideal matrixProductRing)) := hmin ▸ p.2
+      simpa only [Set.mem_insert_iff, Set.mem_singleton_iff] using hp'
+    rcases hp with hp | hp | hp
+    · rw [hcomp_apply]
+      rw [hp]
+      simp only [Set.mem_insert_iff, Set.mem_singleton_iff]
+      exact Or.inl rfl
+    · rw [hcomp_apply]
+      rw [hp]
+      simp only [Set.mem_insert_iff, Set.mem_singleton_iff]
+      exact Or.inr (Or.inl rfl)
+    · rw [hcomp_apply]
+      rw [hp]
+      simp only [Set.mem_insert_iff, Set.mem_singleton_iff]
+      exact Or.inr (Or.inr rfl)
+  · intro hC
+    change C = {p : matrixProductClosedSet |
+          (p : PrimeSpectrum matrixProductRing) ∈
+            PrimeSpectrum.zeroLocus (matrixXZeroIdeal : Set matrixProductRing)} ∨
+        C = {p : matrixProductClosedSet |
+          (p : PrimeSpectrum matrixProductRing) ∈
+            PrimeSpectrum.zeroLocus (matrixYZeroIdeal : Set matrixProductRing)} ∨
+        C = {p : matrixProductClosedSet |
+          (p : PrimeSpectrum matrixProductRing) ∈
+            PrimeSpectrum.zeroLocus (matrixProductMiddleIdeal : Set matrixProductRing)} at hC
+    rcases hC with rfl | rfl | rfl
+    · have hx : matrixXZeroIdeal ∈ matrixProductIdeal.minimalPrimes := by
+        rw [hmin]
+        simp
+      refine ⟨⟨matrixXZeroIdeal, hx⟩, ?_⟩
+      simpa [PrimeSpectrum.mem_zeroLocus] using
+        (hcomp_apply (⟨matrixXZeroIdeal, hx⟩ : matrixProductIdeal.minimalPrimes))
+    · have hy : matrixYZeroIdeal ∈ matrixProductIdeal.minimalPrimes := by
+        rw [hmin]
+        simp
+      refine ⟨⟨matrixYZeroIdeal, hy⟩, ?_⟩
+      simpa [PrimeSpectrum.mem_zeroLocus] using
+        (hcomp_apply (⟨matrixYZeroIdeal, hy⟩ : matrixProductIdeal.minimalPrimes))
+    · have hm : matrixProductMiddleIdeal ∈ matrixProductIdeal.minimalPrimes := by
+        rw [hmin]
+        simp
+      refine ⟨⟨matrixProductMiddleIdeal, hm⟩, ?_⟩
+      simpa [PrimeSpectrum.mem_zeroLocus] using
+        (hcomp_apply (⟨matrixProductMiddleIdeal, hm⟩ : matrixProductIdeal.minimalPrimes))
 
 end Formalization.Books.Exercises.Unit16

@@ -20,8 +20,8 @@ import Mathlib.Topology.LocallyConstant.Basic
 # Commutative Algebra, Chapter 78: Finite projective modules
 
 The open-cover definitions in the source are recorded explicitly using basic
-opens of the spectrum.  Freeness at prime and maximal stalks, and the rank
-function, use Mathlib's canonical `Module.freeLocus` and `Module.rankAtStalk`.
+opens of the spectrum.  Freeness at prime and maximal stalks, and the fiber
+dimension function, use Mathlib's canonical `Module.freeLocus` and fiber API.
 -/
 
 namespace Formalization.Books.Algebra.Unit78
@@ -96,21 +96,19 @@ def FiniteFreeSummand
     ∃ p : (Fin n →₀ R) →ₗ[R] M,
       p.comp i = LinearMap.id
 
-/-- Mathlib's canonical rank-at-stalk function, used for the source's `ρ_M`. -/
+/-- The source's fiber-dimension function `ρ_M`. -/
 noncomputable def rankFunction
     (R M : Type*) [CommRing R] [AddCommGroup M] [Module R M] :
     PrimeSpectrum R → ℤ :=
-  fun p => Module.rankAtStalk M p
+  fun p => Module.finrank p.asIdeal.ResidueField (p.asIdeal.Fiber M)
 
-/-- The rank-at-stalk function agrees with the fiber dimension in the source. -/
+/-- The rank function is the fiber dimension from the source. -/
 theorem rankFunction_eq_fiber_finrank
     {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
-    [Module.Flat R M] [Module.Finite R M]
     (p : PrimeSpectrum R) :
     rankFunction R M p =
       (Module.finrank p.asIdeal.ResidueField (p.asIdeal.Fiber M) : ℤ) := by
-  simpa [rankFunction] using congrArg Int.ofNat
-    (Module.rankAtStalk_eq (R := R) (M := M) p)
+  rfl
 
 /-- The eight conditions in the finite-projective characterization. -/
 def finiteProjectiveConditions

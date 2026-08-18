@@ -43,8 +43,8 @@ theorem kummer_extension_is_galois_and_aut_embedding
           IsCyclic (Gal(L / K)) ∧
             Nat.card (Gal(L / K)) ∣ n := by
   classical
-  letI : NeZero n := ⟨Nat.ne_of_gt (lt_of_lt_of_le (by decide) hn)⟩
-  letI : NeZero (n : K) := hζ.neZero'
+  have hneN : NeZero n := ⟨Nat.ne_of_gt (lt_of_lt_of_le (by decide) hn)⟩
+  have hneK : NeZero (n : K) := hζ.neZero'
   have hn0 : n ≠ 0 := NeZero.ne n
   have hn0' : 0 ≠ n := fun h => hn0 h.symm
   let f : Polynomial K := X ^ n - C a
@@ -57,7 +57,7 @@ theorem kummer_extension_is_galois_and_aut_embedding
   have hf0 : f ≠ 0 := by
     intro hf
     have hcoeff := congrArg (fun g : Polynomial K => g.coeff 0) hf
-    simpa [f, ha, hn0'] using hcoeff
+    simp [f, ha, hn0'] at hcoeff
   have hbroot : b ∈ f.rootSet L := by
     rw [Polynomial.mem_rootSet_of_ne hf0]
     simp [f, hb]
@@ -69,7 +69,7 @@ theorem kummer_extension_is_galois_and_aut_embedding
   have htop : IntermediateField.adjoin K (f.rootSet L) = ⊤ := by
     apply top_unique
     simpa [hgen] using hle
-  letI : Polynomial.IsSplittingField K L f :=
+  have hsplitField : Polynomial.IsSplittingField K L f :=
     (isSplittingField_iff_intermediateField).mpr ⟨hsplit, by simpa [f] using htop⟩
   have hfsep : f.Separable := by
     simpa [f] using Polynomial.separable_X_pow_sub_C a (NeZero.ne (n : K)) ha
@@ -114,7 +114,7 @@ theorem kummer_extension_is_galois_and_aut_embedding
       map_one' := by
         apply rEquiv.injective
         apply rootsOfUnity.coe_injective
-        simp [g, η, hb0, NeZero.ne n]
+        simp [g, η, hb0]
       map_mul' := by
         intro σ τ
         apply rEquiv.injective
@@ -152,7 +152,7 @@ theorem kummer_extension_is_galois_and_aut_embedding
   have hfembed (σ : Gal(L / K)) :
       algebraMap K L (((f σ : rootsOfUnity n K) : Kˣ) : K) = σ b / b := by
     simpa [f] using hgembed σ
-  letI : IsCyclic (rootsOfUnity n K) := rootsOfUnity.isCyclic K n
+  have hcycRoots : IsCyclic (rootsOfUnity n K) := rootsOfUnity.isCyclic K n
   have hcyc : IsCyclic (Gal(L / K)) := isCyclic_of_injective f hf_inj
   let H : Subgroup (rootsOfUnity n K) := Subgroup.map f ⊤
   let ψ : Gal(L / K) → H := fun σ =>
@@ -192,15 +192,15 @@ theorem exists_kummer_generator_of_cyclic_galois
     {K L : Type*} [Field K] [Field L] [Algebra K L]
     [FiniteDimensional K L] [IsGalois K L]
     {n : ℕ} (hn : 2 ≤ n) {ζ : K} (hζ : IsPrimitiveRoot ζ n)
-    (hchar : ringChar K = 0 ∨ Nat.Coprime (ringChar K) n)
+    (_hchar : ringChar K = 0 ∨ Nat.Coprime (ringChar K) n)
     (hG : Nonempty (Gal(L / K) ≃* Multiplicative (ZMod n))) :
     ∃ z : L,
       z ^ n ∈ Set.range (algebraMap K L) ∧
         IntermediateField.adjoin K ({z} : Set L) = ⊤ := by
   classical
-  letI : NeZero n := ⟨Nat.ne_of_gt (lt_of_lt_of_le (by decide) hn)⟩
+  have hneN : NeZero n := ⟨Nat.ne_of_gt (lt_of_lt_of_le (by decide) hn)⟩
   let e : Gal(L / K) ≃* Multiplicative (ZMod n) := Classical.choice hG
-  letI : IsCyclic (Gal(L / K)) :=
+  have hcycGal : IsCyclic (Gal(L / K)) :=
     isCyclic_of_surjective e.symm e.symm.surjective
   have hcard : Nat.card (Gal(L / K)) = n := by
     rw [Nat.card_congr e.toEquiv]
@@ -229,8 +229,8 @@ theorem adjoin_primitive_prime_root_of_unity_is_galois
     IsGalois K (IntermediateField.adjoin K ({ζ} : Set Kbar)) ∧
       Module.finrank K (IntermediateField.adjoin K ({ζ} : Set Kbar)) ∣ p - 1 := by
   classical
-  letI : NeZero p := ⟨hp.ne_zero⟩
-  letI : Fact p.Prime := ⟨hp⟩
+  have hneP : NeZero p := ⟨hp.ne_zero⟩
+  have hfactP : Fact p.Prime := ⟨hp⟩
   have hpcast : (p : K) ≠ 0 := by
     intro hp0
     have hdiv : ringChar K ∣ p := (ringChar.spec K p).mp hp0
@@ -240,13 +240,13 @@ theorem adjoin_primitive_prime_root_of_unity_is_galois
       · exact (CharP.ringChar_ne_one : ringChar K ≠ 1) h
       · exact hchar h
     · simp [hzero, hp.ne_zero] at hdiv
-  letI : NeZero (p : K) := ⟨hpcast⟩
-  letI : NeZero (p : Kbar) := ⟨by
+  have hnePK : NeZero (p : K) := ⟨hpcast⟩
+  have hnePKbar : NeZero (p : Kbar) := ⟨by
     intro hp0
     apply hpcast
     apply (algebraMap K Kbar).injective
     simpa using hp0⟩
-  letI : IsCyclotomicExtension {p} K
+  have hcyclotomic : IsCyclotomicExtension {p} K
       (IntermediateField.adjoin K ({ζ} : Set Kbar)) :=
     hζ.intermediateField_adjoin_isCyclotomicExtension K
   let Kζ := IntermediateField.adjoin K ({ζ} : Set Kbar)
@@ -278,11 +278,11 @@ theorem adjoin_primitive_prime_root_of_unity_is_galois
     have hH : Nat.card H ∣ Nat.card ((ZMod p)ˣ) := Subgroup.card_subgroup_dvd_card H
     rw [Nat.card_congr (Equiv.ofBijective ψ hψ)]
     exact hH
-  letI : FiniteDimensional K Kζ := by
+  have hfinite : FiniteDimensional K Kζ := by
     dsimp [Kζ]
     exact IntermediateField.adjoin.finiteDimensional
       (Algebra.IsIntegral.isIntegral ζ)
-  letI : IsGalois K Kζ := IsCyclotomicExtension.isGalois {p} K Kζ
+  have hgalois : IsGalois K Kζ := IsCyclotomicExtension.isGalois {p} K Kζ
   refine ⟨inferInstance, ?_⟩
   rw [← IsGalois.card_aut_eq_finrank]
   calc
@@ -380,6 +380,7 @@ theorem subextension_of_kummer_is_generated_by_power
       let x : L' := (algebraMap K L' k)⁻¹ * c
       have hx : algebraMap L' L x = α ^ d := by
         dsimp [x]
+        change (algebraMap K L k)⁻¹ * algebraMap L' L c = α ^ d
         rw [← hprod]
         have hmapk0 : algebraMap K L k ≠ 0 := by
           intro hzero

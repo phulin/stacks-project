@@ -5,7 +5,10 @@ import Mathlib.Algebra.MvPolynomial.Eval
 import Mathlib.RingTheory.EuclideanDomain
 import Mathlib.RingTheory.FiniteType
 import Mathlib.RingTheory.Polynomial.Ideal
+import Mathlib.RingTheory.Polynomial.Quotient
 import Mathlib.RingTheory.Polynomial.GaussLemma
+import Mathlib.Data.Nat.Prime.Int
+import Mathlib.RingTheory.Ideal.Int
 import Mathlib.RingTheory.UniqueFactorizationDomain.Basic
 
 /-!
@@ -97,16 +100,99 @@ theorem int_quadratic_prime_spectra_reduction_correspondence (q : ℕ) (hq : Nat
 theorem int_polynomial_root_quotient_equiv (r : ℤ) :
     Nonempty ((IntPolynomial ⧸
       Ideal.span {Polynomial.X - Polynomial.C r}) ≃+* ℤ) := by
-  sorry
+  exact ⟨(Polynomial.quotientSpanXSubCAlgEquiv r).toRingEquiv⟩
 
 theorem int_quadratic_root_ideals_isPrime :
     (intQuadraticRootIdeal 2).IsPrime ∧
       (intQuadraticRootIdeal (-2)).IsPrime := by
-  sorry
+  have hprime (r : ℤ) :
+      (Ideal.span ({Polynomial.X - Polynomial.C r} : Set IntPolynomial)).IsPrime := by
+    exact Ideal.isPrime_span_singleton_of_prime
+      (UniqueFactorizationMonoid.irreducible_iff_prime.mp
+        (Polynomial.irreducible_X_sub_C r))
+  have hle2 : intQuadraticRelation ≤
+      Ideal.span ({Polynomial.X - Polynomial.C (2 : ℤ)} : Set IntPolynomial) := by
+    change Ideal.span ({Polynomial.X ^ 2 - Polynomial.C (4 : ℤ)} : Set IntPolynomial) ≤ _
+    rw [int_quadratic_factorization]
+    rw [Ideal.span_singleton_le_iff_mem]
+    exact (Ideal.span ({Polynomial.X - Polynomial.C (2 : ℤ)} : Set IntPolynomial)).mul_mem_right
+      (Polynomial.X + Polynomial.C 2) (Ideal.subset_span (by simp))
+  have hleNeg2 : intQuadraticRelation ≤
+      Ideal.span ({Polynomial.X - Polynomial.C (-2 : ℤ)} : Set IntPolynomial) := by
+    change Ideal.span ({Polynomial.X ^ 2 - Polynomial.C (4 : ℤ)} : Set IntPolynomial) ≤ _
+    rw [int_quadratic_factorization]
+    rw [Ideal.span_singleton_le_iff_mem]
+    exact (Ideal.span ({Polynomial.X - Polynomial.C (-2 : ℤ)} : Set IntPolynomial)).mul_mem_left
+      (Polynomial.X - Polynomial.C 2) (Ideal.subset_span (by simp [sub_eq_add_neg]))
+  have hmap2 : (intQuadraticRootIdeal 2).IsPrime := by
+    letI := hprime 2
+    have hk : RingHom.ker intQuadraticQuotientMap ≤
+        Ideal.span ({Polynomial.X - Polynomial.C (2 : ℤ)} : Set IntPolynomial) := by
+      change RingHom.ker (Ideal.Quotient.mk intQuadraticRelation) ≤ _
+      rw [Ideal.mk_ker]
+      exact hle2
+    have hm := Ideal.map_isPrime_of_surjective
+      (f := intQuadraticQuotientMap) Ideal.Quotient.mk_surjective hk
+    simpa [intQuadraticRootIdeal, Ideal.map_span] using hm
+  have hmapNeg2 : (intQuadraticRootIdeal (-2)).IsPrime := by
+    letI := hprime (-2)
+    have hk : RingHom.ker intQuadraticQuotientMap ≤
+        Ideal.span ({Polynomial.X - Polynomial.C (-2 : ℤ)} : Set IntPolynomial) := by
+      change RingHom.ker (Ideal.Quotient.mk intQuadraticRelation) ≤ _
+      rw [Ideal.mk_ker]
+      exact hleNeg2
+    have hm := Ideal.map_isPrime_of_surjective
+      (f := intQuadraticQuotientMap) Ideal.Quotient.mk_surjective hk
+    simpa [intQuadraticRootIdeal, Ideal.map_span] using hm
+  exact ⟨hmap2, hmapNeg2⟩
 
 theorem int_quadratic_prime_ideal_at_two_isPrime :
     (intQuadraticPrimeIdeal 2 0).IsPrime := by
-  sorry
+  let J : Ideal IntPolynomial :=
+    Ideal.span {Polynomial.C (2 : ℤ), Polynomial.X - Polynomial.C (0 : ℤ)}
+  have hcoeff : (Ideal.span ({(2 : ℤ)} : Set ℤ)).IsPrime := by
+    letI : Fact (Nat.Prime 2) := ⟨by decide⟩
+    exact (Int.ideal_span_isMaximal_of_prime 2).isPrime
+  have hcoeffDomain : IsDomain (ℤ ⧸ Ideal.span ({(2 : ℤ)} : Set ℤ)) :=
+    (Ideal.Quotient.isDomain_iff_prime _).mpr hcoeff
+  have hJdomain : IsDomain (IntPolynomial ⧸ J) := by
+    letI := hcoeffDomain
+    change IsDomain (IntPolynomial ⧸
+      Ideal.span {Polynomial.C (2 : ℤ), Polynomial.X - Polynomial.C (0 : ℤ)})
+    apply (Polynomial.quotientSpanCXSubCAlgEquiv (2 : ℤ) 0).toMulEquiv.isDomain
+  have hJprime : J.IsPrime := (Ideal.Quotient.isDomain_iff_prime J).mp hJdomain
+  have hrel : intQuadraticRelation ≤ J := by
+    have hX : Polynomial.X - Polynomial.C (0 : ℤ) ∈ J :=
+      Ideal.subset_span (by simp [J])
+    have hC : Polynomial.C (2 : ℤ) ∈ J := Ideal.subset_span (by simp [J])
+    have hxm : Polynomial.X - Polynomial.C (2 : ℤ) ∈ J := by
+      simpa using J.sub_mem hX hC
+    change Ideal.span ({Polynomial.X ^ 2 - Polynomial.C (4 : ℤ)} : Set IntPolynomial) ≤ J
+    rw [int_quadratic_factorization]
+    rw [Ideal.span_singleton_le_iff_mem]
+    exact J.mul_mem_right (Polynomial.X + Polynomial.C 2) hxm
+  letI := hJprime
+  have hk : RingHom.ker intQuadraticQuotientMap ≤ J := by
+    change RingHom.ker (Ideal.Quotient.mk intQuadraticRelation) ≤ J
+    rw [Ideal.mk_ker]
+    exact hrel
+  have hm := Ideal.map_isPrime_of_surjective
+    (f := intQuadraticQuotientMap) Ideal.Quotient.mk_surjective hk
+  have hmap : Ideal.map intQuadraticQuotientMap J = intQuadraticPrimeIdeal 2 0 := by
+    rw [Ideal.map_span]
+    congr 1
+    ext z
+    simp only [J, intQuadraticPrimeIdeal, Set.mem_insert_iff, Set.mem_singleton_iff,
+      Set.mem_image]
+    constructor
+    · rintro ⟨x, (rfl | rfl), h⟩
+      · exact Or.inl h.symm
+      · exact Or.inr h.symm
+    · rintro (h | h)
+      · exact ⟨Polynomial.C 2, Or.inl rfl, h.symm⟩
+      · exact ⟨Polynomial.X - Polynomial.C 0, Or.inr rfl, h.symm⟩
+  rw [← hmap]
+  exact hm
 
 theorem int_quadratic_prime_ideals_isPrime (q : ℕ) (hq : Nat.Prime q) (hq2 : 2 < q) :
     (intQuadraticPrimeIdeal q 2).IsPrime ∧
@@ -273,7 +359,26 @@ theorem bivariate_prime_contains_univariate_irreducible
 theorem bivariate_univariate_quotient_isPID
     (k : Type*) [Field k] (p : Polynomial k) (hp : Irreducible p) :
     IsDomain (BivariateQuotient p) ∧ IsPrincipalIdealRing (BivariateQuotient p) := by
-  sorry
+  let P : Ideal (Polynomial k) := Ideal.span {p}
+  have hP : P.IsMaximal := by
+    exact PrincipalIdealRing.isMaximal_of_irreducible hp
+  letI : P.IsMaximal := hP
+  letI : Field (Polynomial k ⧸ P) := Ideal.Quotient.field P
+  have hdom :
+      IsDomain (BivariatePolynomial k ⧸ Ideal.map Polynomial.C P) :=
+    Ideal.isDomain_map_C_quotient hP.isPrime
+  have hpid :
+      IsPrincipalIdealRing (BivariatePolynomial k ⧸ Ideal.map Polynomial.C P) :=
+    IsPrincipalIdealRing.of_surjective
+      (Ideal.polynomialQuotientEquivQuotientPolynomial P).toRingHom
+      (Ideal.polynomialQuotientEquivQuotientPolynomial P).surjective
+  have hmap : Ideal.map Polynomial.C P = bivariateUnivariateIdeal p := by
+    change Ideal.map Polynomial.C (Ideal.span ({p} : Set (Polynomial k))) =
+      Ideal.span ({Polynomial.C p} : Set (BivariatePolynomial k))
+    rw [Ideal.map_span]
+    simp
+  rw [hmap] at hdom hpid
+  exact ⟨hdom, hpid⟩
 
 /-- Prime ideals of the bivariate ring, with the zero ideal included. -/
 theorem prime_ideal_bivariate_cases (k : Type*) [Field k]
@@ -403,10 +508,70 @@ theorem affine_presentation_relation_mem_kernel :
   ring
 
 theorem affine_presentation_surjective : Function.Surjective affinePresentationMap := by
-  sorry
+  have hgen := affine_base_is_generated_by_A_and_B
+  have hsurj :
+      ∀ y : Polynomial ℚ,
+        y ∈ Algebra.adjoin ℚ ({(affineA : Polynomial ℚ), (affineB : Polynomial ℚ)} :
+          Set (Polynomial ℚ)) →
+          ∃ q : AffinePresentation, (affinePresentationMap q : Polynomial ℚ) = y := by
+    intro y hy
+    refine Algebra.adjoin_induction (R := ℚ) (A := Polynomial ℚ)
+      (s := {(affineA : Polynomial ℚ), (affineB : Polynomial ℚ)})
+      (p := fun y _ =>
+        ∃ q : AffinePresentation, (affinePresentationMap q : Polynomial ℚ) = y) ?_ ?_ ?_ ?_ hy
+    · intro y hy
+      rcases Set.mem_insert_iff.mp hy with rfl | hy
+      · refine ⟨affinePresentationA, ?_⟩
+        simp [affinePresentationMap, affinePresentationValues, affinePresentationA]
+      · have hy' : y = (affineB : Polynomial ℚ) := by simpa using hy
+        subst y
+        refine ⟨affinePresentationB, ?_⟩
+        simp [affinePresentationMap, affinePresentationValues, affinePresentationB]
+    · intro r
+      refine ⟨MvPolynomial.C r, ?_⟩
+      simp [affinePresentationMap, affinePresentationValues]
+    · intro x y hx hy hx' hy'
+      rcases hx' with ⟨p, hp⟩
+      rcases hy' with ⟨q, hq⟩
+      refine ⟨p + q, ?_⟩
+      simpa [map_add] using
+        congrArg₂ (fun u v : Polynomial ℚ => u + v) hp hq
+    · intro x y hx hy hx' hy'
+      rcases hx' with ⟨p, hp⟩
+      rcases hy' with ⟨q, hq⟩
+      refine ⟨p * q, ?_⟩
+      simpa [map_mul] using
+        congrArg₂ (fun u v : Polynomial ℚ => u * v) hp hq
+  intro x
+  have hx : (x : Polynomial ℚ) ∈
+      Algebra.adjoin ℚ ({(affineA : Polynomial ℚ), (affineB : Polynomial ℚ)} :
+        Set (Polynomial ℚ)) := by
+    rw [← hgen]
+    exact x.property
+  obtain ⟨q, hq⟩ := hsurj (x : Polynomial ℚ) hx
+  refine ⟨q, ?_⟩
+  apply Subtype.ext
+  exact hq
 
 theorem affine_base_not_isField : ¬ IsField affineBaseSubalgebra := by
-  sorry
+  intro h
+  letI := h
+  letI := h.toField
+  have hA : affineA ≠ 0 := by
+    intro hA
+    have hp : (Polynomial.X ^ 2 - Polynomial.X : Polynomial ℚ) = 0 :=
+      congrArg Subtype.val hA
+    have he := congrArg (fun p : Polynomial ℚ => Polynomial.eval 2 p) hp
+    norm_num at he
+  have hu : IsUnit affineA :=
+    (isUnit_iff_ne_zero (G₀ := affineBaseSubalgebra) (a := affineA)).mpr hA
+  let e0 : affineBaseSubalgebra →+* ℚ :=
+    (Polynomial.evalRingHom 0).comp affineBaseSubalgebra.val.toRingHom
+  have hu0 : IsUnit (e0 affineA) := RingHom.isUnit_map e0 hu
+  have hz : e0 affineA = 0 := by
+    simp [e0, affineA, affineBaseElement]
+  rw [hz] at hu0
+  exact not_isUnit_zero hu0
 
 theorem affine_presentation_relation_irreducible :
     Irreducible affinePresentationRelation := by
@@ -518,7 +683,9 @@ theorem affine_open_is_equalizer (a : ℚ) (ha0 : a ≠ 0) (ha1 : a ≠ 1) :
 theorem affine_open_isFiniteType (a : ℚ) (ha0 : a ≠ 0) (ha1 : a ≠ 1)
     (haHalf : a ≠ 1 / 2) :
     Algebra.FiniteType ℚ (AffineOpenRing a) := by
-  sorry
+  change Algebra.FiniteType ℚ (affineOpenSubalgebra a)
+  rw [affine_open_is_generated_by_three a ha0 ha1 haHalf]
+  exact Algebra.FiniteType.adjoin_of_finite (by simp)
 
 theorem affine_localization_evaluation_exists (a r : ℚ) (har : r ≠ a) :
     ∃ e : AffineAmbient a →+* ℚ,
@@ -566,12 +733,25 @@ theorem affine_evaluation_kernel_formulas (a : ℚ) :
 theorem affine_evaluation_at_zero_extends (a : ℚ) (ha0 : a ≠ 0) :
     ∃ e : AffineOpenRing a →+* ℚ,
       e.comp (affineBaseToOpen a) = affineEvaluation 0 := by
-  sorry
+  obtain ⟨e, he⟩ := affine_localization_evaluation_exists a 0 ha0.symm
+  refine ⟨e.comp (affineOpenSubalgebra a).val.toRingHom, ?_⟩
+  ext x
+  change e (affineLocalizationMap a (x : Polynomial ℚ)) = Polynomial.eval 0 (x : Polynomial ℚ)
+  simpa using congrArg (fun f : Polynomial ℚ →+* ℚ => f (x : Polynomial ℚ)) he
 
 theorem affine_evaluation_at_one_minus_a_extends (a : ℚ) (haHalf : a ≠ 1 / 2) :
     ∃ e : AffineOpenRing a →+* ℚ,
       e.comp (affineBaseToOpen a) = affineEvaluation (1 - a) := by
-  sorry
+  have har : 1 - a ≠ a := by
+    intro h
+    apply haHalf
+    linarith
+  obtain ⟨e, he⟩ := affine_localization_evaluation_exists a (1 - a) har
+  refine ⟨e.comp (affineOpenSubalgebra a).val.toRingHom, ?_⟩
+  ext x
+  change e (affineLocalizationMap a (x : Polynomial ℚ)) =
+    Polynomial.eval (1 - a) (x : Polynomial ℚ)
+  simpa using congrArg (fun f : Polynomial ℚ →+* ℚ => f (x : Polynomial ℚ)) he
 
 theorem affine_evaluation_at_a_does_not_extend (a : ℚ) (ha0 : a ≠ 0) (ha1 : a ≠ 1) :
     ¬ ∃ e : AffineOpenRing a →+* ℚ,
@@ -714,7 +894,20 @@ theorem affine_second_open_avoids_one_minus_a (a : ℚ)
     (ha0 : a ≠ 0) (ha1 : a ≠ 1) (haHalf : a ≠ 1 / 2) :
     affinePoint (1 - a) ∈
       (PrimeSpectrum.basicOpen (affineG a) : Set (PrimeSpectrum affineBaseSubalgebra)) := by
-  sorry
+  simp [PrimeSpectrum.basicOpen, affinePoint, affineMaximalIdeal, affineEvaluation,
+    affineG, affinePolynomialG, affineQuadratic, affineBaseElement,
+    Polynomial.eval_mul, Polynomial.eval_add, Polynomial.eval_sub,
+    Polynomial.eval_pow, Polynomial.eval_X, Polynomial.eval_C]
+  constructor
+  · intro h
+    have h' : a * (a - 1) = 0 := by
+      nlinarith [h]
+    rcases mul_eq_zero.mp h' with h0 | h1
+    · exact ha0 h0
+    · exact ha1 (by linarith)
+  · intro h
+    apply haHalf
+    linarith
 
 theorem affine_open_spectrum_range (a : ℚ) (ha0 : a ≠ 0) (ha1 : a ≠ 1)
     (haHalf : a ≠ 1 / 2) :

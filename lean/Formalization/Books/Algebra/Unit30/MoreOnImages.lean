@@ -409,16 +409,16 @@ theorem minimalPrime_in_spectrum_image_of_minimalPrime
 
 /-! ## Algebraic fraction fields -/
 
-/- The source's ``A ⊂ B`` is represented by an injective algebra map.  The
-fraction fields and their compatibility with the inclusion are kept explicit,
-so this interface also applies to any chosen fraction-field models. -/
+/- The source's ``A ⊂ B`` is forced by the displayed fraction-field and
+   scalar-tower assumptions.  These compatibilities are kept explicit, so this
+   interface also applies to any chosen fraction-field models. -/
 theorem ideal_comap_ne_bot_of_algebraic_fractionFields
     {A B K L : Type*} [CommRing A] [CommRing B] [IsDomain A] [IsDomain B]
     [Field K] [Field L] [Algebra A B] [Algebra A K] [Algebra A L]
     [Algebra B L] [Algebra K L] [IsFractionRing A K] [IsFractionRing B L]
     [IsScalarTower A B L] [IsScalarTower A K L]
     [Algebra.IsAlgebraic K L]
-    (hAB : Function.Injective (algebraMap A B)) (J : Ideal B) (hJ : J ≠ ⊥) :
+    (J : Ideal B) (hJ : J ≠ ⊥) :
     Ideal.comap (algebraMap A B) J ≠ (⊥ : Ideal A) := by
   obtain ⟨x, hxJ, hx0⟩ := J.ne_bot_iff.mp hJ
   have hxalgL : IsAlgebraic A (algebraMap B L x) :=
@@ -440,7 +440,6 @@ theorem image_proper_closed_not_dense_of_algebraic_fractionFields
     [Algebra B L] [Algebra K L] [IsFractionRing A K] [IsFractionRing B L]
     [IsScalarTower A B L] [IsScalarTower A K L]
     [Algebra.IsAlgebraic K L]
-    (hAB : Function.Injective (algebraMap A B))
     {Z : Set (PrimeSpectrum B)} (hZclosed : IsClosed Z)
     (hZproper : Z ≠ Set.univ) :
     ¬ Dense (PrimeSpectrum.comap (algebraMap A B) '' Z) := by
@@ -452,7 +451,7 @@ theorem image_proper_closed_not_dense_of_algebraic_fractionFields
   have hIne :
       Ideal.comap (algebraMap A B) J ≠ (⊥ : Ideal A) :=
     ideal_comap_ne_bot_of_algebraic_fractionFields
-      (A := A) (B := B) (K := K) (L := L) hAB J hJne
+      (A := A) (B := B) (K := K) (L := L) J hJne
   have hsub :
       PrimeSpectrum.comap (algebraMap A B) '' Z ⊆
         PrimeSpectrum.zeroLocus

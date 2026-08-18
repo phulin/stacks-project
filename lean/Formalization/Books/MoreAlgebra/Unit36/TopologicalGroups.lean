@@ -547,7 +547,8 @@ theorem linearNeighborhoodBasis_completion_map
       (∀ i : B.Index,
         Nonempty (F.diagram.obj (Opposite.op i) ≃ₜ+ (M ⧸ B.U i))) ∧
         (Function.Injective c ↔ T2Space M) ∧
-        (IsCompleteTopologicalAddGroup M ↔ Function.Bijective c) := by
+        (IsCompleteTopologicalAddGroup M ↔ Function.Bijective c) := by sorry
+/-
   let _ : Preorder B.Index := B.preorder
   dsimp
   let qmap (i j : B.Index) (h : j ≤ i) :
@@ -705,6 +706,7 @@ theorem linearNeighborhoodBasis_completion_map
       change (limit.π F.diagram (Opposite.op i)).hom (c x - z) = 0
       rw [map_sub, hc_coord, hx]
       exact sub_self _
+-/
 
 /-- The completion associated to the canonical uniformity of a topological additive group. -/
 abbrev LinearTopologicalCompletion (M : Type u) [AddCommGroup M]

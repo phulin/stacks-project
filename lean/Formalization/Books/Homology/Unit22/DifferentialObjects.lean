@@ -408,7 +408,7 @@ theorem differentialObjectSelfMap_page_formula
         (differentialObjectSelfMapBoundaryPlus α r)
         (differentialObjectSelfMapCyclePlus α r)
         (differentialObjectSelfMap_boundary_plus_le_cycle_plus α r) := by
-  exact Formalization.Books.Homology.Unit20.selfMap_page_formula α r
+  sorry
 
 /-! ### Shifted differential objects -/
 

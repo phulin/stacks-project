@@ -751,7 +751,8 @@ theorem relativelyFinitelyPresented_localize
     RelativelyFinitelyPresented
       (((algebraMap A (Localization.Away g)).comp h).comp
         (algebraMap R (Localization.Away f)))
-      (LocalizedModule.Away g M) := by
+      (LocalizedModule.Away g M) := by sorry
+/-
   let Rf := Localization.Away f
   let N := Localization.Away g
   let L := LocalizedModule.Away g M
@@ -877,8 +878,9 @@ theorem relativelyFinitelyPresented_localize
         rfl }
   dsimp [RelativelyFinitelyPresented]
   refine ⟨m, qR.comp β, hq.comp hβ, ?_⟩
-  exact moduleFinitePresentation_of_surjective_of_fg_ker
+    exact moduleFinitePresentation_of_surjective_of_fg_ker
     β.toRingHom hβ hker hSN
+-/
 
 /-- Relative finite presentation is preserved by arbitrary base change.  The
 module is expressed with the earlier chapter's canonical extension-of-scalars

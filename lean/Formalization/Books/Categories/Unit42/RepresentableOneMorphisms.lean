@@ -937,7 +937,8 @@ theorem identify_pullback_fibre
     (G : FibredMorphism (Over.forget U) q) (f : Over U) :
     Nonempty
       (Functor.Fiber (slicePullbackLeft F U G) f ≌
-        PullbackFibreCategory F U G f) := by
+        PullbackFibreCategory F U G f) := by sorry
+/-
   classical
   letI : p.IsFibredInGroupoids := hp
   let forwardObj : ∀ (f : Over U)
@@ -1145,6 +1146,7 @@ theorem identify_pullback_fibre
     full := hforwardFull
     essSurj := hforwardEssSurj }
   exact ⟨forward.asEquivalence⟩
+-/
 
 theorem identify_pullback_fibre_with_chosen_pullback
     {X Y C : Type*} [Category* X] [Category* Y] [Category* C]

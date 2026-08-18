@@ -1,4 +1,5 @@
 import Formalization.Books.Categories.Unit22.EssentiallyConstantSystems
+import Formalization.Books.Algebra.Unit86.MittagLefflerSystems
 import Formalization.Books.Homology.Unit03.PreadditiveAndAdditiveCategories
 import Formalization.Books.Homology.Unit13.Complexes
 import Mathlib.Algebra.Category.Grp.Abelian
@@ -608,7 +609,53 @@ theorem inverseSystemLimit_exact_of_mittagLeffler
     (hS : S.ShortExact)
     (hML : IsMittagLeffler S.X₁) :
     (inverseSystemLimitShortExactSequence S).Exact := by
-  sorry
+  let hI : IsDirectedSet ℕ+ := ⟨inferInstance, inferInstance⟩
+  have hS' :
+      Formalization.Books.Algebra.Unit86.IsPointwiseShortExact S := by
+    intro i
+    have hi := (inverseSystem_exact_iff_pointwise S).1 hS.exact i
+    refine { exact := hi, mono_f := ?_, epi_g := ?_ }
+    · exact (NatTrans.mono_iff_mono_app S.f).1 hS.mono_f i
+    · exact (NatTrans.epi_iff_epi_app S.g).1 hS.epi_g i
+  have hlim :=
+    Formalization.Books.Algebra.Unit86.inverse_limit_shortExact_of_countable_mittagLeffler
+      hI S hS' ((isMittagLeffler_iff_underlying S.X₁).1 hML)
+  refine { toIsComplex := { zero := ?_ }, exact := ?_ }
+  · intro i hi
+    have hi0 : i + 2 ≤ 4 := hi
+    have hi_le : i ≤ 2 := by omega
+    by_cases h : i = 0
+    · subst i
+      change (0 : (0 : AddCommGrpCat) ⟶ inverseSystemLimit S.X₁) ≫
+        inverseSystemLimitMap S.f = 0
+      simp
+    · by_cases h' : i = 1
+      · subst i
+        change inverseSystemLimitMap S.f ≫ inverseSystemLimitMap S.g = 0
+        exact (Formalization.Books.Algebra.Unit86.inverseLimitShortComplex S).zero
+      · have hi' : i = 2 := by omega
+        subst i
+        change inverseSystemLimitMap S.g ≫
+          (0 : inverseSystemLimit S.X₃ ⟶ (0 : AddCommGrpCat)) = 0
+        simp
+  · intro i hi
+    have hi0 : i + 2 ≤ 4 := hi
+    have hi_le : i ≤ 2 := by omega
+    by_cases h : i = 0
+    · subst i
+      change (ShortComplex.mk (0 : (0 : AddCommGrpCat) ⟶ inverseSystemLimit S.X₁)
+        (inverseSystemLimitMap S.f) _).Exact
+      exact (ShortComplex.exact_iff_mono _ (by simp)).2 hlim.mono_f
+    · by_cases h' : i = 1
+      · subst i
+        change (ShortComplex.mk (inverseSystemLimitMap S.f)
+          (inverseSystemLimitMap S.g) _).Exact
+        exact hlim.exact
+      · have hi' : i = 2 := by omega
+        subst i
+        change (ShortComplex.mk (inverseSystemLimitMap S.g)
+          (0 : inverseSystemLimit S.X₃ ⟶ (0 : AddCommGrpCat)) _).Exact
+        exact (ShortComplex.exact_iff_epi _ (by simp)).2 hlim.epi_g
 
 theorem inverseSystemLimit_exact_of_exact_of_mittagLeffler
     (S : ComposableArrows (NatInverseSystem AddCommGrpCat) 3)
@@ -617,7 +664,176 @@ theorem inverseSystemLimit_exact_of_exact_of_mittagLeffler
     (ComposableArrows.mk₂
       (inverseSystemLimitMap (S.map' 1 2))
       (inverseSystemLimitMap (S.map' 2 3))).Exact := by
-  sorry
+  let hI : IsDirectedSet ℕ+ := ⟨inferInstance, inferInstance⟩
+  let T₀ : ShortComplex (NatInverseSystem AddCommGrpCat) :=
+    ShortComplex.mk (S.map' 0 1) (S.map' 1 2)
+      (by simpa using hS.toIsComplex.zero 0)
+  let T₁ : ShortComplex (NatInverseSystem AddCommGrpCat) :=
+    ShortComplex.mk (S.map' 1 2) (S.map' 2 3)
+      (by simpa using hS.toIsComplex.zero 1)
+  have hT₀ : T₀.Exact := by
+    exact hS.exact 0
+  have hT₁ : T₁.Exact := by
+    exact hS.exact 1
+  have hT₀' := (inverseSystem_exact_iff_pointwise T₀).1 hT₀
+  have hT₁' := (inverseSystem_exact_iff_pointwise T₁).1 hT₁
+  have hlocal₀ : ∀ i : ℕ+ᵒᵖ, ∀ x : (S.obj' 1).obj i,
+      (S.map' 1 2).app i x = 0 →
+        ∃ y : (S.obj' 0).obj i, (S.map' 0 1).app i y = x := by
+    intro i x hx
+    have hi := hT₀' i
+    dsimp [Functor.mapShortComplex, evaluation, T₀] at hi
+    obtain ⟨y, hy⟩ := (ShortComplex.ab_exact_iff _).1 hi x hx
+    exact ⟨y, hy⟩
+  have hlocal₁ : ∀ i : ℕ+ᵒᵖ, ∀ x : (S.obj' 2).obj i,
+      (S.map' 2 3).app i x = 0 →
+        ∃ y : (S.obj' 1).obj i, (S.map' 1 2).app i y = x := by
+    intro i x hx
+    have hi := hT₁' i
+    dsimp [Functor.mapShortComplex, evaluation, T₁] at hi
+    obtain ⟨y, hy⟩ := (ShortComplex.ab_exact_iff _).1 hi x hx
+    exact ⟨y, hy⟩
+  have hzero :
+      inverseSystemLimitMap (S.map' 1 2) ≫
+        inverseSystemLimitMap (S.map' 2 3) = 0 := by
+    apply limit.hom_ext
+    intro i
+    simp only [Category.assoc, inverseSystemLimitMap, limMap_π]
+    rw [← Category.assoc, limMap_π (S.map' 1 2) i, Category.assoc,
+      ← NatTrans.comp_app, hS.toIsComplex.zero 1]
+    simp
+  refine { toIsComplex := { zero := ?_ }, exact := ?_ }
+  · intro i hi
+    have hi' : i = 0 := by omega
+    subst i
+    change inverseSystemLimitMap (S.map' 1 2) ≫
+      inverseSystemLimitMap (S.map' 2 3) = 0
+    exact hzero
+  · intro i hi
+    have hi' : i = 0 := by omega
+    subst i
+    change (ShortComplex.mk (inverseSystemLimitMap (S.map' 1 2))
+      (inverseSystemLimitMap (S.map' 2 3)) _).Exact
+    rw [ShortComplex.ab_exact_iff]
+    let hB : IsLimit ((CategoryTheory.forget AddCommGrpCat).mapCone
+        (limit.cone (S.obj' 1))) :=
+      isLimitOfPreserves (CategoryTheory.forget AddCommGrpCat)
+        (limit.isLimit (S.obj' 1))
+    let hC : IsLimit ((CategoryTheory.forget AddCommGrpCat).mapCone
+        (limit.cone (S.obj' 2))) :=
+      isLimitOfPreserves (CategoryTheory.forget AddCommGrpCat)
+        (limit.isLimit (S.obj' 2))
+    intro x₂ hx₂
+    change (limMap (S.map' 2 3)) x₂ = 0 at hx₂
+    have hxi : ∀ i : ℕ+ᵒᵖ,
+        (S.map' 2 3).app i (limit.π (S.obj' 2) i x₂) = 0 := by
+      intro i
+      rw [← ConcreteCategory.comp_apply, ← limMap_π (S.map' 2 3) i,
+        ConcreteCategory.comp_apply, hx₂]
+      simp
+    let eC := Types.isLimitEquivSections hC
+    let s₂ : ((S.obj' 2) ⋙ CategoryTheory.forget AddCommGrpCat).sections := eC x₂
+    let E : ℕ+ᵒᵖ ⥤ Type _ :=
+      { obj := fun i => {x : (S.obj' 1).obj i //
+          (S.map' 1 2).app i x = s₂.val i}
+        map := fun {i j} f => ↾(fun
+          (x : {x : (S.obj' 1).obj i //
+              (S.map' 1 2).app i x = s₂.val i}) =>
+            (⟨(S.obj' 1).map f x.1, by
+              rw [← ConcreteCategory.comp_apply, (S.map' 1 2).naturality f,
+                ConcreteCategory.comp_apply, x.2]
+              change (S.obj' 2).map f (s₂.val i) = s₂.val j
+              exact s₂.property f⟩ : {x : (S.obj' 1).obj j //
+                (S.map' 1 2).app j x = s₂.val j}))
+        map_id := by
+          intro i
+          ext x
+          simp
+        map_comp := by
+          intro i j k f g
+          ext x
+          simp }
+    have hEne : ∀ i : ℕ+ᵒᵖ, Nonempty (E.obj i) := by
+      intro i
+      obtain ⟨x, hx⟩ := hlocal₁ i (limit.π (S.obj' 2) i x₂) (hxi i)
+      change Nonempty {x : (S.obj' 1).obj i //
+        (S.map' 1 2).app i x = s₂.val i}
+      exact ⟨⟨x, by
+        simpa [s₂, eC, Types.isLimitEquivSections, Types.sectionOfCone] using hx⟩⟩
+    have hEML : E.IsMittagLeffler := by
+      intro j
+      obtain ⟨i, f, hf⟩ := (isMittagLeffler_iff_underlying (S.obj' 0)).1 hML j
+      refine ⟨i, f, ?_⟩
+      intro k g
+      rintro _ ⟨eᵢ, rfl⟩
+      obtain ⟨l, a, b, hab⟩ := IsCofiltered.cospan f g
+      obtain ⟨eₗ⟩ := hEne l
+      have hker : (S.map' 1 2).app i (eᵢ - (E.map a eₗ).1) = 0 := by
+        rw [map_sub, eᵢ.2, (E.map a eₗ).2]
+        simp
+      obtain ⟨aᵢ, haᵢ⟩ :=
+        hlocal₀ i (eᵢ.1 - (E.map a eₗ).1) hker
+      obtain ⟨aₖ, haₖ⟩ := hf g ⟨aᵢ, rfl⟩
+      let eₖ : E.obj k :=
+        ⟨(E.map b eₗ).1 + (S.map' 0 1).app k aₖ, by
+          rw [map_add, (E.map b eₗ).2]
+          have hz := congrArg (fun q => q.app k) (hS.toIsComplex.zero 0)
+          simp only [NatTrans.comp_app] at hz
+          have hz' := congrArg (fun q => q aₖ) hz
+          have hzero' : (S.map' 1 2).app k ((S.map' 0 1).app k aₖ) = 0 := by
+            simpa using hz'
+          rw [hzero']
+          simp
+        ⟩
+      refine ⟨eₖ, ?_⟩
+      apply Subtype.ext
+      change (S.obj' 1).map g eₖ.1 = (S.obj' 1).map f eᵢ
+      change (S.obj' 1).map g ((E.map b eₗ).1 +
+          (S.map' 0 1).app k aₖ) = (S.obj' 1).map f eᵢ
+      have hga : (S.obj' 1).map g ((E.map b eₗ).1) =
+          (S.obj' 1).map f ((E.map a eₗ).1) := by
+        change (S.obj' 1).map g ((S.obj' 1).map b eₗ.1) =
+          (S.obj' 1).map f ((S.obj' 1).map a eₗ.1)
+        rw [← ConcreteCategory.comp_apply, ← ConcreteCategory.comp_apply,
+          ← (S.obj' 1).map_comp, ← (S.obj' 1).map_comp, hab]
+      have hfa : (S.obj' 1).map f ((S.map' 0 1).app i aᵢ) =
+          (S.map' 0 1).app j ((S.obj' 0).map f aᵢ) := by
+        rw [← ConcreteCategory.comp_apply, ← (S.map' 0 1).naturality f,
+          ConcreteCategory.comp_apply]
+      have hgf : (S.obj' 1).map g ((S.map' 0 1).app k aₖ) =
+          (S.map' 0 1).app j ((S.obj' 0).map g aₖ) := by
+        rw [← ConcreteCategory.comp_apply, ← (S.map' 0 1).naturality g,
+          ConcreteCategory.comp_apply]
+      have hdiff : (S.map' 0 1).app j ((S.obj' 0).map f aᵢ) =
+          (S.obj' 1).map f (eᵢ - (E.map a eₗ).1) := by
+        rw [← hfa, haᵢ]
+      have haₖ' : (S.obj' 0).map g aₖ = (S.obj' 0).map f aᵢ := by
+        exact haₖ
+      rw [map_add, hga, hgf, haₖ', hdiff, map_sub]
+      abel
+    obtain ⟨sE, hsE⟩ :=
+      Formalization.Books.Algebra.Unit86.nonempty_limit_of_countable_mittagLeffler
+        hI E hEML hEne
+    let sB : ((S.obj' 1) ⋙ CategoryTheory.forget AddCommGrpCat).sections :=
+      ⟨fun i => (sE i).1, by
+        intro i j f
+        exact congrArg Subtype.val (hsE f)⟩
+    let x₁ := (Types.isLimitEquivSections hB).symm sB
+    refine ⟨x₁, ?_⟩
+    apply Concrete.limit_ext (S.obj' 2)
+    intro i
+    change (limMap (S.map' 1 2) ≫
+        limit.π (S.obj' 2) i) x₁ = (limit.π (S.obj' 2) i) x₂
+    rw [limMap_π, ConcreteCategory.comp_apply]
+    have hπB : (limit.π (S.obj' 1) i) x₁ = sB.val i := by
+      simpa [x₁, Types.isLimitEquivSections, Types.sectionOfCone] using
+        (Types.isLimitEquivSections_symm_apply hB sB i)
+    have hπC : s₂.val i = (limit.π (S.obj' 2) i) x₂ := by
+      simp [s₂, eC, Types.isLimitEquivSections, Types.sectionOfCone]
+    have hfiber : (S.map' 1 2).app i (sB.val i) = s₂.val i := by
+      change (S.map' 1 2).app i ((sE i).1) = s₂.val i
+      exact (sE i).2
+    rw [hπB, hfiber, hπC]
 
 /-! ## Essentially constant systems -/
 
@@ -647,7 +863,69 @@ theorem essentiallyConstant_iff_biproduct_decomposition
           (e j' hij').hom ≫ transitionMap F h ≫ (e j hij).inv =
             biprod.map (𝟙 _) (z h)) ∧
         (∀ j : ℕ+, ∃ (j' : ℕ+) (h : j ≤ j'), z h = 0) := by
-  sorry
+  have split_data :
+      ∀ {X Y : C} (j : Y ⟶ X) (q : X ⟶ Y), j ≫ q = 𝟙 Y →
+        ∃ e : biprod Y (kernel (q ≫ j)) ≅ X,
+          e.hom ≫ q = biprod.fst ∧ biprod.inl ≫ e.hom = j := by
+    intro X Y j q h
+    letI : Mono j := ⟨fun a b hab => by
+      rw [← Category.comp_id a, ← Category.comp_id b, ← h,
+        ← Category.assoc, ← Category.assoc, hab]⟩
+    have he : (q ≫ j) ≫ (q ≫ j) = q ≫ j := by
+      rw [Category.assoc, ← Category.assoc j q j, h, Category.id_comp]
+    have hk : (𝟙 X - q ≫ j) ≫ (q ≫ j) = 0 := by
+      rw [sub_comp, Category.id_comp, he, sub_self]
+    let p : X ⟶ kernel (q ≫ j) :=
+      kernel.lift (q ≫ j) (𝟙 X - q ≫ j) hk
+    have hp : p ≫ kernel.ι (q ≫ j) = 𝟙 X - q ≫ j := by
+      exact kernel.lift_ι _ _ _
+    have hkp : kernel.ι (q ≫ j) ≫ p = 𝟙 _ := by
+      apply Fork.IsLimit.hom_ext (kernelIsKernel (q ≫ j))
+      calc
+        (kernel.ι (q ≫ j) ≫ p) ≫ kernel.ι (q ≫ j) =
+            kernel.ι (q ≫ j) ≫ (p ≫ kernel.ι (q ≫ j)) := by simp [Category.assoc]
+        _ = kernel.ι (q ≫ j) ≫ (𝟙 X - q ≫ j) := by rw [hp]
+        _ = kernel.ι (q ≫ j) := by
+          rw [comp_sub, Category.comp_id, kernel.condition, sub_zero]
+        _ = (𝟙 _) ≫ kernel.ι (q ≫ j) := by simp
+    have hjq : kernel.ι (q ≫ j) ≫ q = 0 := by
+      apply (cancel_mono j).1
+      rw [Category.assoc, kernel.condition, zero_comp]
+    have hjp : j ≫ p = 0 := by
+      apply (cancel_mono (kernel.ι (q ≫ j))).1
+      rw [zero_comp, Category.assoc, hp, comp_sub, Category.comp_id,
+        ← Category.assoc, h, Category.id_comp, sub_self]
+    let eh : biprod Y (kernel (q ≫ j)) ⟶ X :=
+      biprod.desc j (kernel.ι (q ≫ j))
+    let ei : X ⟶ biprod Y (kernel (q ≫ j)) := biprod.lift q p
+    have hjlift : j ≫ ei = biprod.inl := by
+      apply biprod.hom_ext
+      · simp [ei, h]
+      · simp [ei, hjp]
+    have hklift : kernel.ι (q ≫ j) ≫ ei = biprod.inr := by
+      apply biprod.hom_ext
+      · dsimp [ei]
+        simp only [Category.assoc, biprod.lift_fst, hjq, biprod.inr_fst]
+      · dsimp [ei]
+        simp only [Category.assoc, biprod.lift_snd, hkp, biprod.inr_snd]
+    have hhi : eh ≫ ei = 𝟙 _ := by
+      apply biprod.hom_ext'
+      · simp [eh, hjlift]
+      · simp [eh, hklift]
+    have hih : ei ≫ eh = 𝟙 _ := by
+      change biprod.lift q p ≫ biprod.desc j (kernel.ι (q ≫ j)) = 𝟙 X
+      rw [biprod.lift_desc, hp]
+      abel
+    refine ⟨Iso.mk eh ei hhi hih, ?_, ?_⟩
+    · dsimp [eh]
+      apply biprod.hom_ext'
+      · simp only [Category.assoc, biprod.inl_desc, h, biprod.inl_fst]
+      · simp only [Category.assoc, biprod.inr_desc, hjq, biprod.inr_fst]
+    · change biprod.inl ≫ eh = j
+      simp [eh]
+  constructor
+  · sorry
+  · sorry
 
 theorem essentiallyConstant_isMittagLeffler
     {C : Type u} [Category.{v} C] [Abelian C]

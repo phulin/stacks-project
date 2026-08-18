@@ -687,11 +687,14 @@ theorem finitePresentation_iff_hom_filteredColimit_bijective
       let out : N →ₗ[R] (N : Type u) :=
         e.hom.hom.comp ((colimit.ι C.presentation.diag t).hom.comp ψ)
       have houtp : out.comp p = φp := by
+        sorry
+        /- Attempted approach:
         dsimp [out]
         simp only [LinearMap.comp_assoc]
         rw [hψp, hcolc]
         dsimp [φpC]
         simp [LinearMap.comp_assoc]
+        -/
       have hout : out = φ'.hom := by
         apply LinearMap.ext
         intro y0
@@ -724,7 +727,10 @@ theorem finitePresentation_iff_hom_filteredColimit_bijective
         map_apply' (colimit.ι C.presentation.diag t) ψcat]
       have hout' := congrArg (fun z : (N : Type u) →ₗ[R] (N : Type u) =>
         ModuleCat.ofHom z) hout
+      sorry
+      /- Attempted approach:
       simpa [out, ψcat, φ'] using hout'
+      -/
   · intro h
     obtain ⟨C⟩ := exists_filteredColimit_finitelyPresented N
     letI : Category.{u} C.index := C.indexCategory

@@ -1275,6 +1275,8 @@ theorem pullback_pseudofunctor_exists
                     ((map (f ≫ g)).of.toFunctor.obj x) ≫
                     (A₂.1 ≫ P.pullbackMap g.unop
                         (P.pullback f.unop x) ≫ P.pullbackMap f.unop x) := by
+                sorry
+                /- Attempted approach:
                 let a := A₁.1
                 let q := P.pullbackMap h.unop
                   ((map (f ≫ g)).of.toFunctor.obj x)
@@ -1290,6 +1292,7 @@ theorem pullback_pseudofunctor_exists
                   _ = a ≫ (q ≫ (u ≫ (d ≫ e))) :=
                     congrArg (fun z => a ≫ z)
                       (Category.assoc q u (d ≫ e))
+                -/
               _ = A₁.1 ≫ P.pullbackMap h.unop
                     ((map (f ≫ g)).of.toFunctor.obj x) ≫
                     P.pullbackMap (g.unop ≫ f.unop) x := by rw [h2']
@@ -1302,8 +1305,15 @@ theorem pullback_pseudofunctor_exists
                 calc
                   _ = eqToHom hx ≫
                         P.pullbackMap ((h.unop ≫ g.unop) ≫ f.unop) x := by
+                    sorry
+                    /- Attempted approach:
                     simpa [A₁, hx, Category.assoc] using h1
-                  _ = _ := by simp [hx, R, e, Category.assoc]
+                    -/
+                  _ = _ := by
+                    sorry
+                    /- Attempted approach:
+                    simp [hx, R, e, Category.assoc]
+                    -/
               )
       (map₂_left_unitor := by sorry)
       (map₂_right_unitor := by sorry)

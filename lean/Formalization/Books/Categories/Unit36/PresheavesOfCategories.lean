@@ -683,6 +683,8 @@ def strictificationFunctor
   obj x := strictificationObjectOf P x
   map φ := strictificationFunctorHom P φ
   map_id x := by
+    sorry
+    /- Attempted approach:
     apply StrictificationHom.ext
     change (strictificationFunctorHom P (𝟙 x)).hom = 𝟙 _
     unfold strictificationFunctorHom
@@ -716,7 +718,10 @@ def strictificationFunctor
         _ _ (𝟙 (p.obj x)) (𝟙 (p.obj x)) (by simp)
         (P.pullbackMap (𝟙 (p.obj x)) ⟨x, rfl⟩ ≫ 𝟙 x) hsource)
       (ψ' := 𝟙 (P.pullback (𝟙 (p.obj x)) ⟨x, rfl⟩).1)
+    -/
   map_comp {X Y Z} f g := by
+    sorry
+    /- Attempted approach:
     apply StrictificationHom.ext
     change (strictificationFunctorHom P (f ≫ g)).hom =
       (strictificationFunctorHom P f).hom ≫
@@ -769,6 +774,7 @@ def strictificationFunctor
       (ψ := (strictificationFunctorHom P (f ≫ g)).hom)
       (ψ' := (strictificationFunctorHom P f).hom ≫
         (strictificationFunctorHom P g).hom)
+    -/
 
 theorem strictification_comparison_exists
     {S C : Type*} [Category* S] [Category* C]

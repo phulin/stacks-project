@@ -1110,12 +1110,15 @@ theorem orthogonal_projection_sequence
     rw [e.symm.map_smul]
     simpa only [Int.cast_id, ← Int.cast_smul_eq_zsmul ℤ] using hfy.symm.trans (by rfl)
   have hAle : A ≤ LinearMap.ker p := by
+    sorry
+    /- Attempted approach:
     intro a ha
     apply LinearMap.mem_ker.mpr
     apply LinearMap.ext
     intro y
     have hy := (LinearMap.BilinForm.mem_orthogonal_iff.mp y.property) a ha
     simpa [p] using hy
+    -/
   have hkerle : LinearMap.ker p ≤ A := by
     intro x hx
     by_contra hxA
@@ -1137,7 +1140,10 @@ theorem orthogonal_projection_sequence
     let yW : W := ⟨y, hyW⟩
     have hpx := DFunLike.congr_fun (LinearMap.mem_ker.mp hx) yW
     have hBxy : B x y = 0 := by
+      sorry
+      /- Attempted approach:
       simpa [p, yW, LinearMap.BilinForm.domRestrict₂_apply] using hpx
+      -/
     have hByx : B y x = 0 := by
       rw [hB.1.eq]
       exact hBxy

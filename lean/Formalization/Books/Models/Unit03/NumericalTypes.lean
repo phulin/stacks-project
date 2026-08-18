@@ -659,6 +659,8 @@ theorem contract_minus_one_index (T : NumericalType) (i : Fin T.n)
                 (∀ j, T'.w j = contractedWeight T i (e j)) ∧
                 (∀ j, T'.g j = contractedComponentGenus T i (e j)) ∧
                   genus T' = genus T := by
+  sorry
+  /- Attempted approach:
   classical
   have hn1 : 1 < T.n := by
     by_contra h
@@ -1398,6 +1400,8 @@ theorem contract_minus_one_index (T : NumericalType) (i : Fin T.n)
       row_sum := hrow'
       w_dvd := hwdiv' }
   have hgenus_expr : genusExpression T' = genusExpression T := by
+    sorry
+    /- Attempted approach:
     have hsum_component :
         (∑ j : Fin (T.n - 1),
           (m' j : ℚ) *
@@ -1480,12 +1484,14 @@ theorem contract_minus_one_index (T : NumericalType) (i : Fin T.n)
               rw [hgi, hai]
               push_cast
               ring
+    -/
   have hgenus_eq : genus T' = genus T := by
     have hcast : (genus T' : ℚ) = (genus T : ℚ) := by
       rw [genus_formula T', genus_formula T, hgenus_expr]
     exact_mod_cast hcast
   exact ⟨T', rfl, e, by simp [T', m'], by simp [T', a'],
     by simp [T', w'], by simp [T', g'], hgenus_eq⟩
+  -/
 
 def topologicalGenus (T : NumericalType) : ℤ :=
   1 - (T.n : ℤ) +

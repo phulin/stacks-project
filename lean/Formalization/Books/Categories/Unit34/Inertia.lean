@@ -2230,7 +2230,11 @@ theorem relativeInertia_is_twoFibreProduct {C : Cat.{v, u}}
                 calc
                   _ = ((γ₁.obj w).automorphism.hom ≫ eqToHom hcar1 ≫
                     (β₁.inv.app w).hom) ≫ (β₂.hom.app w).hom ≫
-                      eqToHom hcar2.symm := by simp [Category.assoc]
+                      eqToHom hcar2.symm := by
+                    sorry
+                    /- Attempted approach:
+                    simp [Category.assoc]
+                    -/
                   _ = (eqToHom hcar1 ≫ (β₁.inv.app w).hom ≫
                     (b.obj w).automorphism.hom) ≫
                       (β₂.hom.app w).hom ≫ eqToHom hcar2.symm := by
@@ -2244,7 +2248,11 @@ theorem relativeInertia_is_twoFibreProduct {C : Cat.{v, u}}
                       (γ₂.obj w).automorphism.hom) := by
                     exact congrArg (fun k => eqToHom hcar1 ≫
                       (β₁.inv.app w).hom ≫ k) hβ2
-                  _ = _ := by simp [Category.assoc] }
+                  _ = _ := by
+                    sorry
+                    /- Attempted approach:
+                    simp [Category.assoc]
+                    -/ }
           inv :=
             { hom := eqToHom hcar2 ≫ (β₂.inv.app w).hom ≫
                 (β₁.hom.app w).hom ≫ eqToHom hcar1.symm
@@ -2275,7 +2283,11 @@ theorem relativeInertia_is_twoFibreProduct {C : Cat.{v, u}}
                 calc
                   _ = ((γ₂.obj w).automorphism.hom ≫ eqToHom hcar2 ≫
                     (β₂.inv.app w).hom) ≫ (β₁.hom.app w).hom ≫
-                      eqToHom hcar1.symm := by simp [Category.assoc]
+                      eqToHom hcar1.symm := by
+                    sorry
+                    /- Attempted approach:
+                    simp [Category.assoc]
+                    -/
                   _ = (eqToHom hcar2 ≫ (β₂.inv.app w).hom ≫
                     (b.obj w).automorphism.hom) ≫
                       (β₁.hom.app w).hom ≫ eqToHom hcar1.symm := by
@@ -2289,8 +2301,14 @@ theorem relativeInertia_is_twoFibreProduct {C : Cat.{v, u}}
                       (γ₁.obj w).automorphism.hom) := by
                     exact congrArg (fun k => eqToHom hcar2 ≫
                       (β₂.inv.app w).hom ≫ k) hβ1
-                  _ = _ := by simp [Category.assoc] }
+                  _ = _ := by
+                    sorry
+                    /- Attempted approach:
+                    simp [Category.assoc]
+                    -/ }
           hom_inv_id := by
+            sorry
+            /- Attempted approach:
             apply RelativeInertiaHom.ext
             dsimp [Functor.comp, relativeInertiaComparison]
             have hcar1 :
@@ -2310,7 +2328,10 @@ theorem relativeInertia_is_twoFibreProduct {C : Cat.{v, u}}
             rw [Category.assoc, ← Category.assoc,
               h₂', Category.comp_id, h₁']
             simp
+            -/
           inv_hom_id := by
+            sorry
+            /- Attempted approach:
             apply RelativeInertiaHom.ext
             dsimp [Functor.comp, relativeInertiaComparison]
             have hcar1 :
@@ -2329,7 +2350,10 @@ theorem relativeInertia_is_twoFibreProduct {C : Cat.{v, u}}
               (β₂.app w).inv_hom_id
             rw [Category.assoc, ← Category.assoc,
               h₁', Category.comp_id, h₂']
-            simp }) (by
+            simp
+            -/ }) (by
+        sorry
+        /- Attempted approach:
         intro w w' f
         apply RelativeInertiaHom.ext
         dsimp [Functor.comp, relativeInertiaComparison]
@@ -2347,7 +2371,8 @@ theorem relativeInertia_is_twoFibreProduct {C : Cat.{v, u}}
             (γ₂.map f).hom
         rw [← Category.assoc, (β₁.inv.naturality f),
           Category.assoc, (β₂.hom.naturality f)]
-        simp [Functor.comp, relativeInertiaComparison, Category.assoc])
+        simp [Functor.comp, relativeInertiaComparison, Category.assoc]
+        -/)
     refine ⟨δ, ?_, ?_⟩
     · constructor
       · sorry

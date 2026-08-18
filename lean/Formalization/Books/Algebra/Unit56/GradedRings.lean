@@ -57,7 +57,8 @@ abbrev IsHomogeneousElement (G : GradedRingData S) (x : S) : Prop :=
 theorem homogeneous_component_mem_irrelevantIdeal
     (G : GradedRingData S) {d : ℕ} :
     0 < d → ∀ x, x ∈ G.component d → x ∈ irrelevantIdeal G := by
-  sorry
+  intro hd x hx
+  exact HomogeneousIdeal.mem_irrelevant_of_mem (𝒜 := G.component) hd hx
 
 /-- A graded module is an internally decomposed module with homogeneous scalar action. -/
 structure GradedModuleData (G : GradedRingData S) (M : Type w)
@@ -81,11 +82,133 @@ def ringModuleComponent (G : GradedRingData S) (d : ℤ) : AddSubgroup S :=
 
 theorem ringModule_decomposition_exists (G : GradedRingData S) :
     Nonempty (DirectSum.Decomposition (ringModuleComponent G)) := by
-  sorry
+  let emb : ∀ n : ℕ, G.component n →+ ringModuleComponent G (n : ℤ) :=
+    fun n =>
+      { toFun := fun x => ⟨x, by simp [ringModuleComponent]⟩
+        map_zero' := by
+          ext
+          rfl
+        map_add' := by
+          intro x y
+          ext
+          rfl }
+  let φ : ∀ n : ℕ, G.component n →+ (⨁ d : ℤ, ringModuleComponent G d) :=
+    fun n => (DirectSum.of (fun d : ℤ => ringModuleComponent G d) (n : ℤ)).comp (emb n)
+  let decompose : S →+ (⨁ d : ℤ, ringModuleComponent G d) :=
+    (DirectSum.toAddMonoid φ).comp
+      (DirectSum.decomposeAddEquiv G.component).toAddMonoidHom
+  refine ⟨{ decompose' := decompose, left_inv := ?_, right_inv := ?_ }⟩
+  · have hcoe :
+        (DirectSum.coeAddMonoidHom (ringModuleComponent G)).comp (DirectSum.toAddMonoid φ) =
+          DirectSum.coeAddMonoidHom G.component := by
+      apply DirectSum.addHom_ext
+      intro n x
+      change
+        DirectSum.coeAddMonoidHom (ringModuleComponent G)
+            ((DirectSum.toAddMonoid φ)
+              (DirectSum.of (fun n : ℕ => G.component n) n x)) =
+          DirectSum.coeAddMonoidHom G.component
+            (DirectSum.of (fun n : ℕ => G.component n) n x)
+      rw [DirectSum.toAddMonoid_of, DirectSum.coeAddMonoidHom_of]
+      change DirectSum.coeAddMonoidHom (ringModuleComponent G) (φ n x) = (x : S)
+      change
+        DirectSum.coeAddMonoidHom (ringModuleComponent G)
+            ((DirectSum.of (fun d : ℤ => ringModuleComponent G d) (n : ℤ)).comp
+              (emb n) x) = (x : S)
+      rw [AddMonoidHom.comp_apply, DirectSum.coeAddMonoidHom_of]
+      rfl
+    intro x
+    change
+      ((DirectSum.coeAddMonoidHom (ringModuleComponent G)).comp
+        (DirectSum.toAddMonoid φ))
+        ((DirectSum.decomposeAddEquiv G.component).toAddMonoidHom x) = x
+    rw [hcoe]
+    exact (DirectSum.decomposeAddEquiv G.component).left_inv x
+  · have hright :
+        decompose.comp (DirectSum.coeAddMonoidHom (ringModuleComponent G)) =
+          AddMonoidHom.id _ := by
+      apply DirectSum.addHom_ext
+      intro d x
+      by_cases hd : 0 ≤ d
+      · have hx : (x : S) ∈ G.component d.toNat := by
+          simpa [ringModuleComponent, hd] using x.property
+        let y : G.component d.toNat := ⟨x, hx⟩
+        have hdec :
+            DirectSum.decompose G.component (x : S) =
+              DirectSum.of (fun n : ℕ => G.component n) d.toNat y := by
+          exact DirectSum.decompose_coe G.component y
+        have hdcast : (d.toNat : ℤ) = d := Int.toNat_of_nonneg hd
+        have hcomp :
+            ringModuleComponent G (d.toNat : ℤ) = ringModuleComponent G d :=
+          congrArg (ringModuleComponent G) hdcast
+        have coe_transport :
+            ∀ {i j : ℤ} (h : i = j) (z : ringModuleComponent G i),
+              ((h ▸ z : ringModuleComponent G j) : S) = (z : S) := by
+          intro i j h z
+          cases h
+          rfl
+        change
+          (DirectSum.toAddMonoid φ)
+              ((DirectSum.decomposeAddEquiv G.component).toAddMonoidHom
+                ((DirectSum.coeAddMonoidHom (ringModuleComponent G))
+                  (DirectSum.of (fun i : ℤ => ringModuleComponent G i) d x))) =
+            (DirectSum.of (fun i : ℤ => ringModuleComponent G i) d x)
+        simp only [DirectSum.coeAddMonoidHom_of]
+        change
+          (DirectSum.toAddMonoid φ) (DirectSum.decompose G.component (x : S)) =
+            (DirectSum.of (fun i : ℤ => ringModuleComponent G i) d x)
+        rw [hdec]
+        simp only [DirectSum.toAddMonoid_of]
+        change
+          DirectSum.of (fun i : ℤ => ringModuleComponent G i) (d.toNat : ℤ)
+              (emb d.toNat y) =
+            DirectSum.of (fun i : ℤ => ringModuleComponent G i) d x
+        apply DirectSum.ext
+        intro i
+        by_cases hi : i = d
+        · subst i
+          rw [DirectSum.of_eq_same]
+          rw [DirectSum.of_apply]
+          simp only [dif_pos hdcast]
+          apply Subtype.ext
+          exact (coe_transport hdcast (emb d.toNat y)).trans (by rfl)
+        · have hi' : i ≠ (d.toNat : ℤ) := by
+            intro hi'
+            exact hi (hi'.trans hdcast)
+          rw [DirectSum.of_eq_of_ne _ _ _ hi',
+            DirectSum.of_eq_of_ne _ _ _ hi]
+      · have hx : (x : S) = 0 := by
+          simpa [ringModuleComponent, hd] using x.property
+        have hx' : x = 0 := Subtype.ext hx
+        rw [hx']
+        simp [decompose]
+    intro x
+    simpa only [AddMonoidHom.comp_apply, AddMonoidHom.id_apply] using
+      DFunLike.congr_fun hright x
 
 theorem ringModule_gradedSMul (G : GradedRingData S) :
     SetLike.GradedSMul G.component (ringModuleComponent G) := by
-  sorry
+  refine { smul_mem := ?_ }
+  intro i j x y hx hy
+  change x • y ∈ ringModuleComponent G ((i : ℤ) + j)
+  by_cases hj : 0 ≤ j
+  · have hy' : (y : S) ∈ G.component j.toNat := by
+      simpa [ringModuleComponent, hj] using hy
+    have h := G.graded.mul_mem hx hy'
+    have hsum : 0 ≤ (i : ℤ) + j := add_nonneg (Int.natCast_nonneg i) hj
+    have hjcast : (j.toNat : ℤ) = j := Int.toNat_of_nonneg hj
+    have hcast : ((i + j.toNat : ℕ) : ℤ) = (i : ℤ) + j := by
+      simp [hjcast]
+    have hto : ((i : ℤ) + j).toNat = i + j.toNat := by
+      apply Int.ofNat_inj.mp
+      calc
+        (((i : ℤ) + j).toNat : ℤ) = (i : ℤ) + j := Int.toNat_of_nonneg hsum
+        _ = ((i + j.toNat : ℕ) : ℤ) := hcast.symm
+    simpa [ringModuleComponent, hsum, hto, smul_eq_mul] using h
+  · have hy0 : (y : S) = 0 := by
+      simpa [ringModuleComponent, hj] using hy
+    rw [hy0, smul_zero]
+    exact (ringModuleComponent G ((i : ℤ) + j)).zero_mem
 
 noncomputable def ringAsGradedModule (G : GradedRingData S) : GradedModuleData G S :=
   { component := ringModuleComponent G

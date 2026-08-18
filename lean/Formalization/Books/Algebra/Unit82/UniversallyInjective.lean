@@ -637,14 +637,49 @@ theorem splitSequence_universallyExact
     [AddCommGroup M] [Module R M] :
     universallyExact (splitSequenceInjection (R := R) (M := M))
       (splitSequenceProjection (R := R) (M := M)) := by
-  sorry
+  change Function.Injective (splitSequenceInjection (R := R) (M := M)) ∧
+    Function.Exact (splitSequenceInjection (R := R) (M := M))
+      (splitSequenceProjection (R := R) (M := M)) ∧
+    Function.Surjective (splitSequenceProjection (R := R) (M := M)) ∧
+    universallyInjective (splitSequenceInjection (R := R) (M := M))
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · intro x y h
+    exact congrArg Prod.fst h
+  · intro y
+    constructor
+    · intro hy
+      refine ⟨y.1, ?_⟩
+      apply Prod.ext
+      · rfl
+      · simpa [splitSequenceInjection, splitSequenceProjection] using hy.symm
+    · rintro ⟨x, rfl⟩
+      rfl
+  · intro y
+    exact ⟨(0, y), rfl⟩
+  · intro Q _ _
+    intro x y hxy
+    have hcomp : (LinearMap.fst R M M).comp
+        (splitSequenceInjection (R := R) (M := M)) = LinearMap.id := by
+      ext z
+      rfl
+    have h := congrArg
+      (fun z => (LinearMap.fst R M M).rTensor Q z) hxy
+    simpa [LinearMap.rTensor, TensorProduct.map_map, hcomp] using h
 
 /-- A split sequence built from a non-flat module has no flat terms. -/
 theorem splitSequence_nonflat
     {R : Type u} {M : Type v} [CommRing R]
     [AddCommGroup M] [Module R M] (hM : ¬ Module.Flat R M) :
     ¬ Module.Flat R M ∧ ¬ Module.Flat R (M × M) ∧ ¬ Module.Flat R M := by
-  sorry
+  refine ⟨hM, ?_, hM⟩
+  intro hprod
+  letI : Module.Flat R (M × M) := hprod
+  let i : M →ₗ[R] M × M := LinearMap.inl R M M
+  let r : M × M →ₗ[R] M := LinearMap.fst R M M
+  have hri : r.comp i = LinearMap.id := by
+    ext x
+    rfl
+  exact hM (Module.Flat.of_retract i r hri)
 
 /-- A nonzero torsion module over the integers gives the non-flat split
 sequence from the source's second example. -/
@@ -652,7 +687,30 @@ theorem splitSequence_nonflat_of_nontrivial_torsion
     {M : Type u} [AddCommGroup M] [Module ℤ M] [Nontrivial M]
     (hM : Submodule.torsion ℤ M = ⊤) :
     ¬ Module.Flat ℤ M ∧ ¬ Module.Flat ℤ (M × M) ∧ ¬ Module.Flat ℤ M := by
-  sorry
+  have hM' : ¬ Module.Flat ℤ M := by
+    intro hflat
+    letI : Module.Flat ℤ M := hflat
+    have htor : Submodule.torsion ℤ M = ⊥ := Module.Flat.torsion_eq_bot
+    obtain ⟨x, hx⟩ := exists_ne (0 : M)
+    have hxT : x ∈ Submodule.torsion ℤ M := by
+      rw [hM]
+      exact Submodule.mem_top
+    rw [htor] at hxT
+    exact hx (by simpa using hxT)
+  refine ⟨hM', ?_, hM'⟩
+  intro hprod
+  have hmod : (Prod.instModule : Module ℤ (M × M)) =
+      AddCommGroup.toIntModule (M × M) := Subsingleton.elim _ _
+  have hprod' : @Module.Flat ℤ (M × M) _ _ Prod.instModule :=
+    hmod.symm ▸ hprod
+  letI : Module ℤ (M × M) := Prod.instModule
+  letI : Module.Flat ℤ (M × M) := hprod'
+  let i : M →ₗ[ℤ] M × M := LinearMap.inl ℤ M M
+  let r : M × M →ₗ[ℤ] M := LinearMap.fst ℤ M M
+  have hri : r.comp i = LinearMap.id := by
+    ext x
+    rfl
+  exact hM' (Module.Flat.of_retract i r hri)
 
 /-! ## Permanence properties -/
 

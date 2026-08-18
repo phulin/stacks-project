@@ -4,6 +4,7 @@ import Mathlib.Algebra.Module.Torsion.Basic
 import Mathlib.RingTheory.Length
 import Mathlib.RingTheory.LocalRing.Length
 import Mathlib.RingTheory.LocalRing.ResidueField.Ideal
+import Mathlib.RingTheory.Nakayama
 import Mathlib.RingTheory.Spectrum.Maximal.Defs
 
 /-!
@@ -32,7 +33,10 @@ theorem finite_length_finite
     {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
     (hM : Module.length R M < ⊤) :
     Module.Finite R M := by
-  sorry
+  have hM' : Module.length R M ≠ ⊤ := ne_of_lt hM
+  have hfin : IsFiniteLength R M := Module.length_ne_top_iff.mp hM'
+  let _ : IsNoetherian R M := (isFiniteLength_iff_isNoetherian_isArtinian.mp hfin).1
+  infer_instance
 
 theorem length_additive
     {R M' M M'' : Type*} [CommRing R]
@@ -44,13 +48,50 @@ theorem length_additive
     Module.length R M = Module.length R M' + Module.length R M'' := by
   exact Module.length_eq_add_of_exact f g hf hg hfg
 
+private theorem exists_maximalIdeal_pow_smul_top_eq_bot_of_isFiniteLength
+    {R M : Type*} [CommRing R] [IsLocalRing R]
+    [AddCommGroup M] [Module R M]
+    (hfin : IsFiniteLength R M) :
+    ∃ n : ℕ, (IsLocalRing.maximalIdeal R) ^ n • (⊤ : Submodule R M) = ⊥ := by
+  let I : Ideal R := IsLocalRing.maximalIdeal R
+  induction hfin with
+  | of_subsingleton =>
+      refine ⟨0, ?_⟩
+      ext x
+      simp [show x = 0 from Subsingleton.elim x 0]
+  | @of_simple_quotient M _ _ N _ _ ih =>
+      obtain ⟨n, hn⟩ := ih
+      have hmax : (Module.annihilator R (M ⧸ N)).IsMaximal :=
+        IsSimpleModule.annihilator_isMaximal
+      have hquot' : (IsLocalRing.maximalIdeal R) •
+          (⊤ : Submodule R (M ⧸ N)) = ⊥ := by
+        rw [← IsLocalRing.eq_maximalIdeal hmax, ← Submodule.annihilator_top,
+          ← Submodule.le_annihilator_iff]
+      have hquot : I • (⊤ : Submodule R (M ⧸ N)) = ⊥ := by
+        simpa [I] using hquot'
+      have hIN : I • (⊤ : Submodule R M) ≤ N := by
+        rw [← N.ker_mkQ]
+        apply LinearMap.le_ker_iff_map.mpr
+        rw [Submodule.map_smul'', Submodule.map_top, LinearMap.range_eq_top.mpr
+          N.mkQ_surjective]
+        exact hquot
+      have hn' : I ^ n • N = ⊥ := by
+        have h := congrArg (fun P : Submodule R N => P.map N.subtype) hn
+        simpa only [Submodule.map_smul'', Submodule.map_subtype_top, Submodule.map_bot] using h
+      refine ⟨n + 1, le_antisymm ?_ bot_le⟩
+      rw [pow_succ, Submodule.mul_smul]
+      exact (smul_mono_right (I ^ n) hIN).trans_eq hn'
+
 theorem length_infinite_of_maximalIdeal_pow_smul_top_ne_bot
     {R M : Type*} [CommRing R] [IsLocalRing R]
     [AddCommGroup M] [Module R M]
     (hM : ∀ n : ℕ,
       (IsLocalRing.maximalIdeal R) ^ n • (⊤ : Submodule R M) ≠ ⊥) :
     Module.length R M = ⊤ := by
-  sorry
+  by_contra htop
+  have hfin : IsFiniteLength R M := Module.length_ne_top_iff.mp htop
+  obtain ⟨n, hn⟩ := exists_maximalIdeal_pow_smul_top_eq_bot_of_isFiniteLength hfin
+  exact hM n hn
 
 /- A ring map is represented directly, with the restricted scalar action
    supplied by `Module.compHom`. -/
@@ -59,7 +100,16 @@ theorem length_independent
     [AddCommGroup M] (f : R →+* S) [Module S M] :
     @Module.length S M _ _ (inferInstance : Module S M) ≤
       @Module.length R M _ _ (Module.compHom M f) := by
-  sorry
+  let _ : Algebra R S := f.toAlgebra
+  let _ : Module R M := Module.compHom M f
+  let _ : IsScalarTower R S M := IsScalarTower.of_compHom R S M
+  have h := Submodule.length_le_length_restrictScalars
+    (R := S) (M := M) R (⊤ : Submodule S M)
+  have htopR : (⊤ : Submodule S M).restrictScalars R = (⊤ : Submodule R M) := by
+    ext x
+    simp
+  rw [htopR] at h
+  simpa only [Module.length_top] using h
 
 theorem length_eq_of_surjective_ringHom
     {R S M : Type*} [CommRing R] [CommRing S]
@@ -67,7 +117,11 @@ theorem length_eq_of_surjective_ringHom
     [Module S M] :
     @Module.length R M _ _ (Module.compHom M f) =
       @Module.length S M _ _ (inferInstance : Module S M) := by
-  sorry
+  let _ : Algebra R S := f.toAlgebra
+  let _ : Module R M := Module.compHom M f
+  let _ : IsScalarTower R S M := IsScalarTower.of_compHom R S M
+  simpa only [RingHom.algebraMap_toAlgebra] using
+    (Module.length_eq_of_surjective (R := S) (S := R) (M := M) hf)
 
 /- If an ideal annihilates `M`, Mathlib's `IsTorsionBySet.module` supplies the
    canonical module structure over the quotient ring. -/

@@ -198,7 +198,26 @@ theorem algebraicFieldIntersection_not_isField
     {K L : Type u} [Field K] [Field L] [Algebra K L]
     [Algebra.IsAlgebraic K L] (B : ValuationSubring L) (hB : ¬ IsField B) :
     ¬ IsField (B.comap (algebraMap K L)) := by
-  sorry
+  intro hA
+  have hsurj : Function.Surjective
+      (algebraMap (B.comap (algebraMap K L)) K) :=
+    IsFractionRing.surjective_iff_isField.mpr hA
+  let C : Subalgebra K L :=
+    { B.toSubring with
+      algebraMap_mem' := fun k => by
+        obtain ⟨a, ha⟩ := hsurj k
+        have ha' : (a : K) = k := ha
+        rw [← ha']
+        exact a.property }
+  have hC : IsField C := Subalgebra.isField_of_algebraic C
+  let e : C ≃+* B :=
+    { toFun := fun a => ⟨a.1, a.2⟩
+      invFun := fun b => ⟨b.1, b.2⟩
+      left_inv := fun _ => rfl
+      right_inv := fun _ => rfl
+      map_mul' := fun _ _ => rfl
+      map_add' := fun _ _ => rfl }
+  exact hB (e.symm.toMulEquiv.isField hC)
 
 /-! ## Quotients, localizations, and residue fields -/
 
@@ -207,14 +226,40 @@ theorem quotient_valuationRing
     {A : Type u} [CommRing A] [IsDomain A] [ValuationRing A]
     (p : Ideal A) [p.IsPrime] :
     ValuationRing (A ⧸ p) := by
-  sorry
+  exact Function.Surjective.valuationRing (Ideal.Quotient.mk p) Ideal.Quotient.mk_surjective
 
 /-- Localization at a prime ideal preserves the valuation-ring property. -/
 theorem localizationAtPrime_valuationRing
     {A : Type u} [CommRing A] [IsDomain A] [ValuationRing A]
     (p : Ideal A) [p.IsPrime] :
     ValuationRing (Localization.AtPrime p) := by
-  sorry
+  letI : PreValuationRing (Localization.AtPrime p) := by
+    refine { cond' := ?_ }
+    intro x y
+    obtain ⟨a, s, rfl⟩ := IsLocalization.exists_mk'_eq p.primeCompl x
+    obtain ⟨b, t, rfl⟩ := IsLocalization.exists_mk'_eq p.primeCompl y
+    obtain ⟨c, hc | hc⟩ := ValuationRing.cond a b
+    · refine ⟨IsLocalization.mk' _ (c * s) t, Or.inl ?_⟩
+      apply IsLocalization.eq_mk'_iff_mul_eq.mpr
+      calc
+        _ = (IsLocalization.mk' _ a s * algebraMap A _ (s : A)) *
+              algebraMap A _ c := by
+          rw [mul_assoc, IsLocalization.mk'_spec, map_mul]
+          ac_rfl
+        _ = algebraMap A _ a * algebraMap A _ c := by
+          rw [IsLocalization.mk'_spec]
+        _ = algebraMap A _ b := by rw [← map_mul, hc]
+    · refine ⟨IsLocalization.mk' _ (c * t) s, Or.inr ?_⟩
+      apply IsLocalization.eq_mk'_iff_mul_eq.mpr
+      calc
+        _ = (IsLocalization.mk' _ b t * algebraMap A _ (t : A)) *
+              algebraMap A _ c := by
+          rw [mul_assoc, IsLocalization.mk'_spec, map_mul]
+          ac_rfl
+        _ = algebraMap A _ b * algebraMap A _ c := by
+          rw [IsLocalization.mk'_spec]
+        _ = algebraMap A _ a := by rw [← map_mul, hc]
+  exact { toPreValuationRing := inferInstance }
 
 /- The source also allows an arbitrary localization.  Mathlib's
    `ValuationRing` class requires a domain, so the unrestricted statement is
@@ -224,7 +269,31 @@ theorem localization_preValuationRing
     {A : Type u} [CommRing A] [IsDomain A] [ValuationRing A]
     (S : Submonoid A) :
     PreValuationRing (Localization S) := by
-  sorry
+  refine { cond' := ?_ }
+  intro x y
+  obtain ⟨a, s, rfl⟩ := IsLocalization.exists_mk'_eq S x
+  obtain ⟨b, t, rfl⟩ := IsLocalization.exists_mk'_eq S y
+  obtain ⟨c, hc | hc⟩ := ValuationRing.cond a b
+  · refine ⟨IsLocalization.mk' _ (c * s) t, Or.inl ?_⟩
+    apply IsLocalization.eq_mk'_iff_mul_eq.mpr
+    calc
+      _ = (IsLocalization.mk' _ a s * algebraMap A _ (s : A)) *
+            algebraMap A _ c := by
+        rw [mul_assoc, IsLocalization.mk'_spec, map_mul]
+        ac_rfl
+      _ = algebraMap A _ a * algebraMap A _ c := by
+        rw [IsLocalization.mk'_spec]
+      _ = algebraMap A _ b := by rw [← map_mul, hc]
+  · refine ⟨IsLocalization.mk' _ (c * t) s, Or.inr ?_⟩
+    apply IsLocalization.eq_mk'_iff_mul_eq.mpr
+    calc
+      _ = (IsLocalization.mk' _ b t * algebraMap A _ (t : A)) *
+            algebraMap A _ c := by
+        rw [mul_assoc, IsLocalization.mk'_spec, map_mul]
+        ac_rfl
+      _ = algebraMap A _ b * algebraMap A _ c := by
+        rw [IsLocalization.mk'_spec]
+      _ = algebraMap A _ a := by rw [← map_mul, hc]
 
 /-- Localization at any multiplicative set of non-zero-divisors preserves the
 valuation-ring property. -/

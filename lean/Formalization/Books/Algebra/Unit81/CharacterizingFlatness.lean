@@ -55,10 +55,86 @@ theorem flat_factors_free
       ∀ {n : ℕ} (f : (Fin n →₀ R) →ₗ[R] M)
         (N : Submodule R (Fin n →₀ R)),
         N ≤ LinearMap.ker f → N.FG →
-        ∃ (m : ℕ) (h : (Fin n →₀ R) →ₗ[R] (Fin m →₀ R))
+      ∃ (m : ℕ) (h : (Fin n →₀ R) →ₗ[R] (Fin m →₀ R))
           (g : (Fin m →₀ R) →ₗ[R] M),
           f = g.comp h ∧ N ≤ LinearMap.ker h] := by
-  sorry
+  tfae_have 1 ↔ 2 := by
+    constructor
+    · intro h n f x hx
+      obtain ⟨m, h', g, hfg, hx'⟩ :=
+        (Module.Flat.iff_forall_exists_factorization (R := R) (M := M)).1 h hx
+      exact ⟨m, h', g, by simpa using hfg, by simpa using hx'⟩
+    · intro h
+      refine (Module.Flat.iff_forall_exists_factorization (R := R) (M := M)).2 (by
+        intro n f x hx
+        obtain ⟨m, h', g, hfg, hx'⟩ := h x hx
+        exact ⟨m, h', g, by simpa using hfg, by simpa using hx'⟩)
+  tfae_have 1 ↔ 4 := by
+    constructor
+    · intro h n f N hN hNfg
+      let _ : Module.Finite R N := Module.Finite.of_fg hNfg
+      have hcomp : f.comp N.subtype = 0 := by
+        ext y
+        exact LinearMap.mem_ker.mp (hN y.property)
+      obtain ⟨m, h', g, hfg, hker⟩ :=
+        Module.Flat.exists_factorization_of_comp_eq_zero_of_free
+          (M := M) (K := N) (N := Fin n →₀ R) (f := N.subtype) (x := f) hcomp
+      refine ⟨m, h', g, by simpa using hfg, ?_⟩
+      intro y hy
+      apply LinearMap.mem_ker.mpr
+      have hy' := congrArg (fun k => k ⟨y, hy⟩) hker
+      simpa [LinearMap.comp_apply] using hy'
+    · intro h
+      refine (Module.Flat.iff_forall_exists_factorization (R := R) (M := M)).2 (by
+        intro n a x hx
+        obtain ⟨m, h', g, hfg, hker⟩ :=
+          h x (Submodule.span R ({a} : Set (Fin n →₀ R)))
+            (by
+              refine Submodule.span_le.2 ?_
+              intro y hy
+              rw [Set.mem_singleton_iff] at hy
+              subst y
+              exact hx)
+            (Submodule.fg_span (Set.finite_singleton a))
+        exact ⟨m, h', g, hfg, hker (Submodule.subset_span (by simp))⟩)
+  tfae_have 2 ↔ 3 := by
+    constructor
+    · intro hcond n m f N hN k hk hfac x hx
+      obtain ⟨g, hfg⟩ := hfac
+      have hxg : k x ∈ LinearMap.ker g := by
+        apply LinearMap.mem_ker.mpr
+        have hxg' := LinearMap.congr_fun hfg x
+        simpa [LinearMap.comp_apply, LinearMap.mem_ker.mp hx] using hxg'.symm
+      obtain ⟨m', h', g', hgg, hx'⟩ := hcond g hxg
+      refine ⟨m', h'.comp k, ?_, ?_⟩
+      · refine sup_le ?_ ?_
+        · intro y hy
+          apply LinearMap.mem_ker.mpr
+          simp [LinearMap.comp_apply, LinearMap.mem_ker.mp (hk hy)]
+        · refine Submodule.span_le.2 ?_
+          intro y hy
+          rw [Set.mem_singleton_iff] at hy
+          subst y
+          apply LinearMap.mem_ker.mpr
+          simpa [LinearMap.comp_apply] using LinearMap.mem_ker.mp hx'
+      · refine ⟨g', ?_⟩
+        calc
+          f = g.comp k := hfg
+          _ = (g'.comp h').comp k := by rw [hgg]
+          _ = g'.comp (h'.comp k) := by simp [LinearMap.comp_assoc]
+    · intro hcond n f x hx
+      have hN : (⊥ : Submodule R (Fin n →₀ R)) ≤ LinearMap.ker f := bot_le
+      have hid : (⊥ : Submodule R (Fin n →₀ R)) ≤
+          LinearMap.ker (LinearMap.id : (Fin n →₀ R) →ₗ[R] (Fin n →₀ R)) := bot_le
+      have hfac : ∃ g : (Fin n →₀ R) →ₗ[R] M,
+          f = g.comp (LinearMap.id : (Fin n →₀ R) →ₗ[R] (Fin n →₀ R)) :=
+        ⟨f, by simp⟩
+      obtain ⟨m', h', hker, ⟨g', hfg'⟩⟩ :=
+        hcond f ⊥ hN (LinearMap.id : (Fin n →₀ R) →ₗ[R] (Fin n →₀ R)) hid hfac hx
+      refine ⟨m', h', g', hfg', ?_⟩
+      apply hker
+      exact Submodule.mem_sup_right (Submodule.subset_span (by simp))
+  tfae_finish
 
 /-! ## Finitely presented sources and Hom lifting -/
 
@@ -91,7 +167,19 @@ theorem flat_iff_surjective_hom
         (N : Type z) [AddCommGroup N] [Module R N]
         (q : N →ₗ[R] M), Function.Surjective q →
         Function.Surjective (internalHomPostcomp (M := P) q) := by
-  sorry
+  constructor
+  · intro h P _ _ _ N _ _ q hq
+    let _ : Module.Flat R M := h
+    intro φ
+    obtain ⟨n, h', g, hφ⟩ :=
+      Module.Flat.exists_factorization_of_finitePresentation φ
+    obtain ⟨g', hg'⟩ := Module.projective_lifting_property q g hq
+    refine ⟨g'.comp h', ?_⟩
+    ext x
+    simp [internalHomPostcomp_apply, LinearMap.comp_apply,
+      ← LinearMap.congr_fun hg' (h' x), hφ]
+  · intro h
+    sorry
 
 /-! ## Directed systems and Lazard's theorem -/
 
@@ -127,6 +215,22 @@ theorem lazard
     {R : Type u} {M : Type v} [CommRing R]
     [AddCommGroup M] [Module R M] :
     Module.Flat R M ↔ Nonempty (DirectedFreeFiniteSystem (R := R) (M := M)) := by
-  sorry
+  constructor
+  · intro h
+    sorry
+  · intro ⟨s⟩
+    let : Preorder s.index := s.indexPreorder
+    let : Nonempty s.index := s.indexNonempty
+    let : IsDirectedOrder s.index := s.indexDirected
+    let : ∀ i, AddCommGroup (s.stage i) := s.stageAddCommGroup
+    let : ∀ i, Module R (s.stage i) := s.stageModule
+    let : DirectedSystem s.stage (s.map · · ·) := s.stageDirectedSystem
+    let hflat : Module.Flat R (DirectLimit s.stage s.map) :=
+      Formalization.Books.Algebra.Unit39.directLimit_flat s.map (fun i => by
+        let _ : Module.Free R (s.stage i) := s.free i
+        infer_instance)
+    let _ : Module.Flat R (DirectLimit s.stage s.map) := hflat
+    exact Module.Flat.of_linearEquiv (M := DirectLimit s.stage s.map)
+      s.targetIso.some.symm
 
 end Formalization.Books.Algebra.Unit81

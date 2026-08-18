@@ -1,3 +1,6 @@
+import Formalization.Books.Categories.Unit31.TwoFibreProducts
+import Formalization.Books.Algebra.Unit09.Localization
+import Formalization.Books.Algebra.Unit51.MoreNoetherianRings
 import Mathlib.Algebra.Algebra.Pi
 import Mathlib.Algebra.Category.ModuleCat.ChangeOfRings
 import Mathlib.Algebra.Category.ModuleCat.Limits
@@ -24,6 +27,7 @@ namespace Formalization.Books.MoreAlgebra.Unit05
 
 open CategoryTheory
 open CategoryTheory.Limits
+open Formalization.Books.Categories.Unit31
 open scoped ChangeOfRings
 
 universe u
@@ -97,10 +101,6 @@ theorem algebraPullback_product_finite
     {R A B C : Type*} [CommRing R] [CommRing A] [CommRing B] [CommRing C]
     [Algebra R A] [Algebra R B] [Algebra R C]
     (f : A →ₐ[R] B) (g : C →ₐ[R] B)
-    (hR : IsNoetherianRing R)
-    (hA : Algebra.FiniteType R A)
-    (hB : Algebra.FiniteType R B)
-    (hC : Algebra.FiniteType R C)
     (hf : Function.Surjective f)
     (hg : RingHom.Finite g.toRingHom) :
     (algebraPullbackToProduct f g).Finite := by
@@ -341,9 +341,7 @@ the underlying implementation of the earlier Categories construction. -/
 abbrev ModuleGluingCategory
     {R R' B B' : Type u} [CommRing R] [CommRing R'] [CommRing B] [CommRing B']
     (D : RingSquare R R' B B') :=
-  ObjectProperty.FullSubcategory
-    (fun ξ : Comma (ModuleCat.extendScalars D.s) (ModuleCat.extendScalars D.t) =>
-      IsIso ξ.hom)
+  IsoComma (ModuleCat.extendScalars D.s) (ModuleCat.extendScalars D.t)
 
 /-- The two module components of an object of `ModuleGluingCategory`.  These
 abbreviations keep projections out of binder positions, where Lean parses a
@@ -351,12 +349,12 @@ dotted projection as a binder name. -/
 abbrev moduleGluingLeftObj
     {R R' B B' : Type u} [CommRing R] [CommRing R'] [CommRing B] [CommRing B']
     (D : RingSquare R R' B B') (X : ModuleGluingCategory D) : ModuleCat.{u} B :=
-  X.obj.left
+  (isoCommaLeft (ModuleCat.extendScalars D.s) (ModuleCat.extendScalars D.t)).obj X
 
 abbrev moduleGluingRightObj
     {R R' B B' : Type u} [CommRing R] [CommRing R'] [CommRing B] [CommRing B']
     (D : RingSquare R R' B B') (X : ModuleGluingCategory D) : ModuleCat.{u} R' :=
-  X.obj.right
+  (isoCommaRight (ModuleCat.extendScalars D.s) (ModuleCat.extendScalars D.t)).obj X
 
 abbrev moduleGluingComparison
     {R R' B B' : Type u} [CommRing R] [CommRing R'] [CommRing B] [CommRing B']
@@ -365,14 +363,13 @@ abbrev moduleGluingComparison
         (moduleGluingLeftObj (D := D) (X := X)) ⟶
       (ModuleCat.extendScalars D.t).obj
         (moduleGluingRightObj (D := D) (X := X)) :=
-  X.obj.hom
+  (isoCommaComparison (ModuleCat.extendScalars D.s) (ModuleCat.extendScalars D.t)).app X
 
 theorem moduleGluingComparison_isIso
     {R R' B B' : Type u} [CommRing R] [CommRing R'] [CommRing B] [CommRing B']
     (D : RingSquare R R' B B') (X : ModuleGluingCategory D) :
     IsIso (moduleGluingComparison D X) := by
-  change IsIso X.obj.hom
-  exact X.property
+  exact isoComma_isIso_hom X
 
 /-- The canonical comparison between the two iterated extensions of scalars
 along a commutative square. -/

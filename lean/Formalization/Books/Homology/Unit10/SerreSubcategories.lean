@@ -393,8 +393,7 @@ theorem weak_serre_subcategory_is_abelian_and_inclusion_exact
           exact ShortComplex.exact_of_g_is_cokernel _
             (IsColimit.ofIsoColimit hk (Cofork.ext (Iso.refl _)))
         · change (ShortComplex.mk k.π (0 : k.pt ⟶ (0 : C)) (by simp)).Exact
-          letI : Epi k.π := Cofork.IsColimit.epi hk
-          exact (ShortComplex.exact_iff_epi _ (by simp)).2 inferInstance
+          exact (ShortComplex.exact_iff_epi _ (by simp)).2 (Cofork.IsColimit.epi hk)
         · change (ShortComplex.mk (0 : k.pt ⟶ (0 : C))
             (0 : (0 : C) ⟶ (0 : C)) (by simp)).Exact
           exact (ShortComplex.exact_iff_epi _ (by simp)).2 inferInstance
@@ -513,14 +512,6 @@ theorem serre_quotient_universal_property
     (G : C ⥤ₑ D) (hG : P ≤ Functor.kernel G.obj) :
     ∃! H : serreQuotient P ⥤ₑ D,
       serreQuotientFunctor P ⋙ H.obj = G.obj := by
-  letI : PreservesFiniteLimits G.obj := G.property.1
-  letI : PreservesFiniteColimits G.obj := G.property.2
-  letI : PreservesFiniteLimits (serreQuotientFunctor P) :=
-    ObjectProperty.SerreClassLocalization.preservesFiniteLimits
-      (serreQuotientFunctor P) P
-  letI : PreservesFiniteColimits (serreQuotientFunctor P) :=
-    ObjectProperty.SerreClassLocalization.preservesFiniteColimits
-      (serreQuotientFunctor P) P
   have hInv : P.isoModSerre.IsInvertedBy G.obj :=
     (ObjectProperty.isoModSerre_isInvertedBy_iff P G.obj).2 hG
   let H₀ : serreQuotient P ⥤ D :=
@@ -534,15 +525,13 @@ theorem serre_quotient_universal_property
   let H : serreQuotient P ⥤ₑ D := ⟨H₀, hH₀⟩
   refine ⟨H, ?_, ?_⟩
   · change serreQuotientFunctor P ⋙ H₀ = G.obj
-    simpa [H₀, serreQuotientFunctor, serreQuotient] using
-      (Localization.Construction.fac G.obj hInv)
+    exact Localization.Construction.fac G.obj hInv
   · intro H₁ h
     apply ObjectProperty.FullSubcategory.ext
     apply Localization.Construction.uniq
     have hFac : serreQuotientFunctor P ⋙ H.obj = G.obj := by
       change serreQuotientFunctor P ⋙ H₀ = G.obj
-      simpa [H₀, serreQuotientFunctor, serreQuotient] using
-        (Localization.Construction.fac G.obj hInv)
+      exact Localization.Construction.fac G.obj hInv
     exact h.trans hFac.symm
 
 noncomputable def inducedSerreQuotientFunctor
@@ -559,6 +548,49 @@ theorem inducedSerreQuotientFunctor_fac
     serreQuotientFunctor P ⋙ (inducedSerreQuotientFunctor P G hG).obj = G.obj :=
   (serre_quotient_universal_property P G hG).choose_spec.1
 
+private lemma faithful_of_map_eq_zero_of_serre_quotient
+    {D : Type u'} [Category.{v'} D] [Abelian D]
+    (P : ObjectProperty C) [P.IsSerreClass]
+    (F : serreQuotient P ⥤ D) [hF : F.Additive]
+    (h : ∀ ⦃X₁ X₂ : C⦄ (f : X₁ ⟶ X₂),
+      F.map ((serreQuotientFunctor P).map f) = 0 →
+        (serreQuotientFunctor P).map f = 0) :
+    F.Faithful := by
+  apply Functor.faithful_of_comp_cancel_zero_of_hasLeftCalculusOfFractions
+    (L := serreQuotientFunctor P) (W := P.isoModSerre) F
+  exact h
+
+private lemma induced_serre_quotient_faithful_of_kernel_eq
+    {D : Type u'} [Category.{v'} D] [Abelian D]
+    (P : ObjectProperty C) [P.IsSerreClass]
+    (G : C ⥤ₑ D) (hG : P ≤ Functor.kernel G.obj)
+    (hEq : P = Functor.kernel G.obj)
+    [hB : HasBinaryBiproducts (serreQuotient P)] :
+    (inducedSerreQuotientFunctor P G hG).obj.Faithful := by
+  let hAdd : (inducedSerreQuotientFunctor P G hG).obj.Additive :=
+    (exactFunctor_le_additiveFunctor (serreQuotient P) D)
+      _ (inducedSerreQuotientFunctor P G hG).property
+  apply faithful_of_map_eq_zero_of_serre_quotient
+    (P := P) (F := (inducedSerreQuotientFunctor P G hG).obj) (hF := hAdd)
+  intro X Y f hf
+  have hGmap : G.obj.map f = 0 := by
+    rw [← inducedSerreQuotientFunctor_fac P G hG]
+    simpa using hf
+  have hPimg : P (Abelian.image f) := by
+    rw [hEq]
+    have hGι : G.obj.map (Abelian.image.ι f) = 0 := by
+      apply (cancel_epi (G.obj.map (Abelian.factorThruImage f))).1
+      rw [← G.obj.map_comp, Abelian.image.fac, hGmap]
+      simp
+    have hKzero : IsZero (kernel (G.obj.map (Abelian.image.ι f))) :=
+      isZero_kernel_of_mono _
+    have hIso : kernel (G.obj.map (Abelian.image.ι f)) ≅
+        G.obj.obj (Abelian.image f) :=
+      kernelIsoOfEq hGι ≪≫ kernelZeroIsoSource
+    exact hKzero.of_iso hIso.symm
+  exact (ObjectProperty.SerreClassLocalization.map_eq_zero_iff
+    (serreQuotientFunctor P) P f).2 hPimg
+
 /-! ## Faithfulness of the induced functor -/
 
 theorem quotient_by_kernel_exact_functor_iff_faithful
@@ -567,37 +599,14 @@ theorem quotient_by_kernel_exact_functor_iff_faithful
     (G : C ⥤ₑ D) (hG : P ≤ Functor.kernel G.obj) :
     P = Functor.kernel G.obj ↔
       (inducedSerreQuotientFunctor P G hG).obj.Faithful := by
-  letI : Abelian (serreQuotient P) := serreQuotientAbelian P
-  letI : PreservesFiniteLimits G.obj := G.property.1
-  letI : PreservesFiniteColimits G.obj := G.property.2
   constructor
   · intro hEq
-    letI : (inducedSerreQuotientFunctor P G hG).obj.Additive :=
-      (exactFunctor_le_additiveFunctor (serreQuotient P) D)
-        _ (inducedSerreQuotientFunctor P G hG).property
-    apply Functor.faithful_of_comp_cancel_zero_of_hasLeftCalculusOfFractions
-      (L := serreQuotientFunctor P) (W := P.isoModSerre)
-      (inducedSerreQuotientFunctor P G hG).obj
-    intro X Y f hf
-    have hGmap : G.obj.map f = 0 := by
-      rw [← inducedSerreQuotientFunctor_fac P G hG]
-      simpa using hf
-    have hPimg : P (Abelian.image f) := by
-      rw [hEq]
-      have hGι : G.obj.map (Abelian.image.ι f) = 0 := by
-        apply (cancel_epi (G.obj.map (Abelian.factorThruImage f))).1
-        rw [← G.obj.map_comp, Abelian.image.fac, hGmap]
-        simp
-      have hKzero : IsZero (kernel (G.obj.map (Abelian.image.ι f))) :=
-        isZero_kernel_of_mono _
-      have hIso : kernel (G.obj.map (Abelian.image.ι f)) ≅
-          G.obj.obj (Abelian.image f) :=
-        kernelIsoOfEq hGι ≪≫ kernelZeroIsoSource
-      exact hKzero.of_iso hIso.symm
-    exact (ObjectProperty.SerreClassLocalization.map_eq_zero_iff
-      (serreQuotientFunctor P) P f).2 hPimg
+    let hAbelian : Abelian (serreQuotient P) := serreQuotientAbelian P
+    let hB : HasBinaryBiproducts (serreQuotient P) :=
+      @CategoryTheory.Abelian.hasBinaryBiproducts _ _ hAbelian
+    exact induced_serre_quotient_faithful_of_kernel_eq
+      (P := P) (G := G) (hG := hG) (hEq := hEq) (hB := hB)
   · intro hF
-    letI : (inducedSerreQuotientFunctor P G hG).obj.Faithful := hF
     apply le_antisymm hG
     intro X hX
     have hHX : IsZero ((inducedSerreQuotientFunctor P G hG).obj.obj
@@ -611,7 +620,7 @@ theorem quotient_by_kernel_exact_functor_iff_faithful
       rw [(inducedSerreQuotientFunctor P G hG).obj.map_id]
       exact hHX.eq_of_src _ _
     have hId' : (𝟙 ((serreQuotientFunctor P).obj X)) = 0 := by
-      apply (inducedSerreQuotientFunctor P G hG).obj.map_injective
+      apply hF.map_injective
       simpa using hId
     exact (ObjectProperty.SerreClassLocalization.isZero_obj_iff
       (serreQuotientFunctor P) P X).1

@@ -23,6 +23,11 @@ universe u v w
 
 noncomputable section
 
+/-! The introductory categorical definitions are already the canonical
+`Mono`, `IsIso`, and `Epi` predicates.  Their set-valued characterizations
+are built into the standard `Type` category API and are used by the
+stalkwise criteria below, so no parallel definitions are introduced here. -/
+
 /-! ## Exercises `mono-sheaves-sets`, `isomorphism-sheaves-sets`, and
 `epi-sheaves-sets` -/
 

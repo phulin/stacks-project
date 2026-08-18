@@ -4,6 +4,7 @@ import Formalization.Books.Sheaves.Unit08.AbelianSheaves
 import Formalization.Books.Sheaves.Unit11.Stalks
 import Formalization.Books.Sheaves.Unit15.AlgebraicStructures
 import Formalization.Books.Sheaves.Unit16.ExactnessAndPoints
+import Formalization.Books.Sheaves.Unit22.OpenImmersions
 import Mathlib.Data.ZMod.Basic
 import Mathlib.Algebra.Category.Grp.Zero
 import Mathlib.CategoryTheory.Sites.ConstantSheaf
@@ -41,113 +42,62 @@ noncomputable section
 
 /-! ## Open subspaces and extension by an initial object
 
-The open-immersion chapter has a transitive dependency on a currently
-unfinished module-presheaf file.  The constructions below are the same
-sectionwise initial-object construction, expressed directly with the stable
-topological-sheaf API needed by this chapter. -/
+The open-immersion constructions are reused from the earlier Sheaves API;
+this chapter only specializes them to the set- and abelian-group-valued
+cases needed by the exercises. -/
 
 abbrev openSubspace {X : TopCat.{v}} (U : Opens X) : TopCat.{v} :=
-  (Opens.toTopCat X).obj U
+  Formalization.Books.Sheaves.Unit22.openSubspace U
 
 abbrev openInclusion {X : TopCat.{v}} (U : Opens X) : openSubspace U ⟶ X :=
-  Opens.inclusion' U
+  Formalization.Books.Sheaves.Unit22.openInclusion U
 
 noncomputable abbrev openPresheafRestriction (C : Type u) [Category.{v} C]
     [HasColimits C] {X : TopCat.{v}} (U : Opens X) :
     TopCat.Presheaf C X ⥤ TopCat.Presheaf C (openSubspace U) :=
-  TopCat.Presheaf.pullback C (openInclusion U)
+  Formalization.Books.Sheaves.Unit22.openPresheafRestriction C U
 
 abbrev openSheafRestriction (C : Type u) [Category.{v} C]
     {X : TopCat.{v}} (U : Opens X) :
     TopCat.Sheaf C X ⥤ TopCat.Sheaf C (openSubspace U) :=
-  TopologicalSpace.Opens.sheafRestrict U
+  Formalization.Books.Sheaves.Unit22.openSheafRestriction C U
 
-noncomputable def openPresheafExtensionByInitial (C : Type u)
+noncomputable abbrev openPresheafExtensionByInitial (C : Type u)
     [Category.{v} C] [HasInitial C] {X : TopCat.{v}} (U : Opens X) :
-    TopCat.Presheaf C (openSubspace U) ⥤ TopCat.Presheaf C X := by
-  classical
-  let j := Opens.map (openInclusion U)
-  exact {
-    obj := fun F => {
-      obj := fun V => if V.unop ≤ U then F.obj (j.op.obj V) else ⊥_ C
-      map := by
-        intro V W i
-        by_cases hV : V.unop ≤ U
-        · have hW : W.unop ≤ U := by
-            exact (show W.unop ≤ V.unop from leOfHom i.unop).trans hV
-          exact eqToHom (by simp [hV]) ≫ F.map (j.op.map i) ≫
-            eqToHom (by simp [hW])
-        · exact eqToHom (by simp [hV]) ≫ initial.to _
-      map_id := by
-        sorry
-      map_comp := by
-        intro V W T i k
-        by_cases hV : V.unop ≤ U
-        · have hW : W.unop ≤ U := by
-            exact (show W.unop ≤ V.unop from leOfHom i.unop).trans hV
-          have hT : T.unop ≤ U := by
-            exact (show T.unop ≤ W.unop from leOfHom k.unop).trans hW
-          simp [hV, hW, hT, Functor.map_comp]
-        · simp [hV]
-    }
-    map := fun {F G} φ => {
-      app := fun V => if hV : V.unop ≤ U then
-          eqToHom (by simp [hV]) ≫ φ.app (j.op.obj V) ≫
-            eqToHom (by simp [hV])
-        else eqToHom (by simp [hV]) ≫ initial.to _
-      naturality := by
-        intro V W i
-        by_cases hV : V.unop ≤ U
-        · have hW : W.unop ≤ U := by
-            exact (show W.unop ≤ V.unop from leOfHom i.unop).trans hV
-          simp [hV, hW]
-        · simp [hV]
-      }
-    map_id := by
-      sorry
-    map_comp := by
-      sorry
-  }
+    TopCat.Presheaf C (openSubspace U) ⥤ TopCat.Presheaf C X :=
+  Formalization.Books.Sheaves.Unit22.openPresheafExtensionByInitial C U
 
-noncomputable def openSheafExtensionByInitial (C : Type u)
+noncomputable abbrev openSheafExtensionByInitial (C : Type u)
     [Category.{v} C] [HasInitial C] {X : TopCat.{v}} (U : Opens X)
     [HasWeakSheafify (Opens.grothendieckTopology X) C] :
     TopCat.Sheaf C (openSubspace U) ⥤ TopCat.Sheaf C X :=
-  TopCat.Sheaf.forget C (openSubspace U) ⋙
-    openPresheafExtensionByInitial C U ⋙
-    CategoryTheory.presheafToSheaf (Opens.grothendieckTopology X) C
+  Formalization.Books.Sheaves.Unit22.openSheafExtensionByInitial C U
 
 noncomputable abbrev openSetSheafExtensionByEmpty
     {X : TopCat.{v}} (U : Opens X)
     [HasWeakSheafify (Opens.grothendieckTopology X) (Type v)] :
     Sh.{v, v} (openSubspace U) ⥤ Sh.{v, v} X :=
-  openSheafExtensionByInitial (Type v) U
+  Formalization.Books.Sheaves.Unit22.openSetSheafExtensionByEmpty U
 
 noncomputable abbrev openAbelianSheafExtensionByZero
     {X : TopCat.{v}} (U : Opens X)
     [HasWeakSheafify (Opens.grothendieckTopology X) AddCommGrpCat] :
     Formalization.Books.Sheaves.Unit08.Ab.{v, v} (openSubspace U) ⥤
       Formalization.Books.Sheaves.Unit08.Ab.{v, v} X :=
-  openSheafExtensionByInitial AddCommGrpCat U
+  Formalization.Books.Sheaves.Unit22.openAbelianSheafExtensionByZero U
 
-theorem exists_openSheafExtensionAdjunction (C : Type u)
-    [Category.{v} C] [HasInitial C] {X : TopCat.{v}} (U : Opens X)
-    [HasWeakSheafify (Opens.grothendieckTopology X) C] :
-    Nonempty (openSheafExtensionByInitial C U ⊣ openSheafRestriction C U) := by
-  sorry
-
-noncomputable def openSheafExtensionAdjunction (C : Type u)
+noncomputable abbrev openSheafExtensionAdjunction (C : Type u)
     [Category.{v} C] [HasInitial C] {X : TopCat.{v}} (U : Opens X)
     [HasWeakSheafify (Opens.grothendieckTopology X) C] :
     openSheafExtensionByInitial C U ⊣ openSheafRestriction C U :=
-  Classical.choice (exists_openSheafExtensionAdjunction C U)
+  Formalization.Books.Sheaves.Unit22.openSheafExtensionAdjunction C U
 
 noncomputable abbrev openAbelianSheafExtensionAdjunction
     {X : TopCat.{v}} (U : Opens X)
     [HasWeakSheafify (Opens.grothendieckTopology X) AddCommGrpCat] :
     openAbelianSheafExtensionByZero U ⊣
       openSheafRestriction AddCommGrpCat U :=
-  openSheafExtensionAdjunction AddCommGrpCat U
+  Formalization.Books.Sheaves.Unit22.openAbelianSheafExtensionAdjunction U
 
 /-! ## Pushforward, pullback, and open immersions -/
 

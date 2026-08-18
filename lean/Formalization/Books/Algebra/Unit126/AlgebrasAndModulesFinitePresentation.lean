@@ -237,6 +237,154 @@ private lemma finite_presentation_localized_module {R : Type u} [CommRing R]
   refine ⟨ModuleCat.of R ((Fin n → R) ⧸ L), inferInstance, ?_⟩
   exact ⟨eQ.trans (eK.trans e.symm)⟩
 
+private lemma mem_span_of_eq {A M : Type*} [Semiring A] [AddCommMonoid M] [Module A M]
+    (t : Finset M) {K : Submodule A M}
+    (ht : Submodule.span A (t : Set M) = K) {x : M} (hx : x ∈ K) :
+    x ∈ Submodule.span A (t : Set M) := by
+  rw [ht]
+  exact hx
+
+private lemma quotient_span_sup_ker {R : Type u} [CommRing R]
+    (I : Ideal R) {n : ℕ}
+    (K : Submodule (R ⧸ I) (Fin n → (R ⧸ I)))
+    (t : Finset (Fin n → (R ⧸ I)))
+    (ht : Submodule.span (R ⧸ I) (t : Set (Fin n → (R ⧸ I))) = K)
+    (q : (Fin n → R) →ₗ[R] (Fin n → (R ⧸ I)))
+    (hq : Function.Surjective q)
+    (r : t → (Fin n → R)) (hr : ∀ x : t, q (r x) = x.1) :
+    Submodule.span R (Set.range r) ⊔ I • (⊤ : Submodule R (Fin n → R)) =
+      LinearMap.ker ((K.mkQ.restrictScalars R).comp q) := by
+  let L : Submodule R (Fin n → R) := Submodule.span R (Set.range r)
+  let T : Submodule R (Fin n → R) := I • (⊤ : Submodule R (Fin n → R))
+  let g : (Fin n → (R ⧸ I)) →ₗ[R] ((Fin n → (R ⧸ I)) ⧸ K) :=
+    K.mkQ.restrictScalars R
+  let f₀ : (Fin n → R) →ₗ[R] ((Fin n → (R ⧸ I)) ⧸ K) := g.comp q
+  have hLle : L ≤ (K.restrictScalars R).comap q := by
+    change Submodule.span R (Set.range r) ≤ (K.restrictScalars R).comap q
+    rw [Submodule.span_le]
+    rintro x ⟨y, rfl⟩
+    change q (r y) ∈ K.restrictScalars R
+    rw [hr y, ← ht]
+    exact Submodule.subset_span y.property
+  have hker : LinearMap.ker f₀ = (K.restrictScalars R).comap q := by
+    ext x
+    simp [f₀, g]
+  have hsup : L ⊔ T = LinearMap.ker f₀ := by
+    apply le_antisymm
+    · have hLle' : L ≤ LinearMap.ker f₀ := by
+        rw [hker]
+        exact hLle
+      refine sup_le hLle' ?_
+      refine Submodule.smul_le.2 ?_
+      intro a ha x hx
+      change f₀ (a • x) = 0
+      change g (q (a • x)) = 0
+      rw [q.map_smul]
+      change g ((Ideal.Quotient.mk I a) • q x) = 0
+      rw [Ideal.Quotient.eq_zero_iff_mem.mpr ha, zero_smul, map_zero]
+    · rw [hker]
+      intro x hx
+      have hxK : q x ∈ K := hx
+      have hxK' : q x ∈ Submodule.span (R ⧸ I)
+          (t : Set (Fin n → (R ⧸ I))) :=
+        mem_span_of_eq (A := R ⧸ I) (M := Fin n → (R ⧸ I)) t ht hxK
+      obtain ⟨c, hc⟩ :=
+        (Submodule.mem_span_range_iff_exists_fun (R ⧸ I)).mp hxK'
+      let d : t → R := fun y => Quotient.out (c y)
+      have hd (y : t) : Ideal.Quotient.mk I (d y) = c y := by
+        simp [d]
+      let z : Fin n → R := ∑ y, d y • r y
+      have hz : q z = q x := by
+        ext i
+        simp only [z, Finset.sum_apply, Finset.smul_sum, Pi.smul_apply, q, map_sum,
+          map_smul, hr, hd]
+        exact congrFun hc.symm i
+      have hxz : x - z ∈ T := by
+        have hxz' : q (x - z) = 0 := by rw [map_sub, hz, sub_self]
+        have hi : ∀ i, (x - z) i ∈ I := by
+          intro i
+          apply Ideal.Quotient.eq_zero_iff_mem.mp
+          have := congrFun hxz' i
+          exact this
+        have heq : x - z = ∑ i, (x - z) i • (Pi.single i 1) := by
+          ext i
+          simp
+        rw [heq]
+        apply Submodule.sum_mem
+        intro i hi'
+        exact Submodule.smul_mem T (hi i) Submodule.mem_top
+      have hzL : z ∈ L := by
+        rw [L]
+        apply Submodule.sum_mem
+        intro y hy
+        exact Submodule.smul_mem _ (Submodule.subset_span ⟨y, rfl⟩) Submodule.mem_top
+      exact (sub_add_cancel x z).symm ▸ add_mem_sup hzL hxz
+  simpa [L, T, f₀, g] using hsup
+
+private lemma finite_presentation_quotient_lift {R : Type u} [CommRing R]
+    (I : Ideal R) {P : Type u} [AddCommGroup P] [Module (R ⧸ I) P]
+    (hP : Module.FinitePresentation (R ⧸ I) P) :
+    ∃ Q : ModuleCat.{u} R,
+      Module.FinitePresentation R (Q : Type u) ∧
+        Nonempty
+          (((Q : Type u) ⧸ I • (⊤ : Submodule R (Q : Type u))) ≃ₗ[R ⧸ I] P) := by
+  classical
+  obtain ⟨n, K, e, hK⟩ := Module.FinitePresentation.exists_fin (R ⧸ I) P
+  obtain ⟨t, ht⟩ := hK
+  let q : (Fin n → R) →ₗ[R] (Fin n → (R ⧸ I)) :=
+    { toFun := fun x i => Ideal.Quotient.mk I (x i)
+      map_add' := by intro x y; ext i; simp
+      map_smul' := by intro r x; ext i; simp [Algebra.smul_def] }
+  have hq : Function.Surjective q := by
+    intro x
+    choose y hy using fun i => Ideal.Quotient.mk_surjective (x i)
+    refine ⟨fun i => y i, ?_⟩
+    ext i
+    exact hy i
+  let r : t → (Fin n → R) := fun x i => Quotient.out (x.1 i)
+  have hr (x : t) : q (r x) = x.1 := by
+    ext i
+    simp [q, r]
+  let L : Submodule R (Fin n → R) := Submodule.span R (Set.range r)
+  have hL : L.FG := by
+    exact Submodule.fg_span (Set.finite_range r)
+  let V := (Fin n → R)
+  let T : Submodule R V := I • (⊤ : Submodule R V)
+  let g : (Fin n → (R ⧸ I)) →ₗ[R] ((Fin n → (R ⧸ I)) ⧸ K) :=
+    K.mkQ.restrictScalars R
+  let f₀ : V →ₗ[R] ((Fin n → (R ⧸ I)) ⧸ K) := g.comp q
+  have hf₀ : Function.Surjective f₀ := by
+    intro y
+    obtain ⟨z, hz⟩ := K.mkQ_surjective y
+    obtain ⟨x, hx⟩ := hq z
+    refine ⟨x, ?_⟩
+    simp [f₀, g, hx, hz]
+  have hsup : L ⊔ T = LinearMap.ker f₀ := by
+    simpa [L, T, f₀, g] using
+      quotient_span_sup_ker I K t ht q hq r hr
+  let Q : ModuleCat.{u} R := ModuleCat.of R (V ⧸ L)
+  letI : Module.FinitePresentation R (Q : Type u) := by
+    exact Module.finitePresentation_of_free_of_surjective L.mkQ L.mkQ_surjective
+      (by simpa only [Submodule.ker_mkQ] using hL)
+  have hT : T.map L.mkQ = I • (⊤ : Submodule R (Q : Type u)) := by
+    change (I • (⊤ : Submodule R V)).map L.mkQ = I • (⊤ : Submodule R (Q : Type u))
+    rw [Submodule.map_smul'', Submodule.map_top, LinearMap.range_eq_top.mpr L.mkQ_surjective]
+  let e₁ : ((Q : Type u) ⧸ I • (⊤ : Submodule R (Q : Type u))) ≃ₗ[R]
+      V ⧸ (L ⊔ T) :=
+    (Submodule.quotEquivOfEq _ _ hT).symm.trans
+      (Submodule.quotientQuotientEquivQuotientSup L T)
+  let e₂ : (V ⧸ (L ⊔ T)) ≃ₗ[R] (V ⧸ LinearMap.ker f₀) :=
+    Submodule.quotEquivOfEq _ _ hsup
+  let e₃ : (V ⧸ LinearMap.ker f₀) ≃ₗ[R] ((Fin n → (R ⧸ I)) ⧸ K) :=
+    f₀.quotKerEquivOfSurjective hf₀
+  let eR : ((Q : Type u) ⧸ I • (⊤ : Submodule R (Q : Type u))) ≃ₗ[R]
+      ((Fin n → (R ⧸ I)) ⧸ K) := e₁.trans (e₂.trans e₃)
+  let eA : ((Q : Type u) ⧸ I • (⊤ : Submodule R (Q : Type u))) ≃ₗ[R ⧸ I]
+      ((Fin n → (R ⧸ I)) ⧸ K) :=
+    eR.extendScalarsOfSurjective Ideal.Quotient.mk_surjective
+  refine ⟨Q, inferInstance, ?_⟩
+  exact ⟨eA.trans e.symm⟩
+
 /-- Finite and finitely presented modules over `S⁻¹(R/I)` descend to `R`. -/
 theorem construct_fp_module {R : Type u} [CommRing R] (I : Ideal R) (S : Submonoid R) :
     (∀ M' : ModuleCat.{max u v} (localizedQuotientRing I S),
@@ -332,7 +480,46 @@ theorem construct_fp_module {R : Type u} [CommRing R] (I : Ideal R) (S : Submono
       eA.extendScalarsOfIsLocalization p T
     exact ⟨eQ.trans eT⟩
   · intro M' hM'
-    sorry
+    let A := R ⧸ I
+    let p := S.map (Ideal.Quotient.mk I)
+    let T := localizedQuotientRing I S
+    obtain ⟨P, hP, eP⟩ := finite_presentation_localized_module p
+      (N := (M' : Type (max u v))) (by simpa [A, p, T] using hM')
+    obtain ⟨Q, hQ, eQ⟩ := finite_presentation_quotient_lift I
+      (P := (P : Type u)) hP
+    obtain ⟨eP⟩ := eP
+    obtain ⟨eQ⟩ := eQ
+    let Q' : ModuleCat.{max u v} R :=
+      ModuleCat.of R (ULift.{v} (Q : Type u))
+    let eUL : (ULift.{v} (Q : Type u)) ≃ₗ[R] (Q : Type u) := ULift.moduleEquiv
+    have hUL :
+        (I • (⊤ : Submodule R (ULift.{v} (Q : Type u)))).map eUL.toLinearMap =
+          I • (⊤ : Submodule R (Q : Type u)) := by
+      rw [Submodule.map_smul'', Submodule.map_top]
+      simp [eUL]
+    let eQUL :
+        ((Q' : Type (max u v)) ⧸ I • (⊤ : Submodule R (Q' : Type (max u v)))) ≃ₗ[R]
+          ((Q : Type u) ⧸ I • (⊤ : Submodule R (Q : Type u))) :=
+      Submodule.Quotient.equiv _ _ eUL hUL
+    let eQULA :
+        ((Q' : Type (max u v)) ⧸ I • (⊤ : Submodule R (Q' : Type (max u v)))) ≃ₗ[R ⧸ I]
+          ((Q : Type u) ⧸ I • (⊤ : Submodule R (Q : Type u))) :=
+      eQUL.extendScalarsOfSurjective Ideal.Quotient.mk_surjective
+    letI : Module.FinitePresentation R (Q : Type u) := hQ
+    letI : Module.FinitePresentation R (Q' : Type (max u v)) :=
+      Module.FinitePresentation.of_equiv eUL.symm
+    let eQA :
+        ((Q' : Type (max u v)) ⧸ I • (⊤ : Submodule R (Q' : Type (max u v)))) ≃ₗ[R ⧸ I]
+          (P : Type u) := eQULA.trans eQ
+    let eQ' : LocalizedModule p
+        (Q' ⧸ I • (⊤ : Submodule R (Q' : Type (max u v)))) ≃ₗ[T]
+        LocalizedModule p (P : Type u) :=
+      IsLocalizedModule.mapEquiv p
+        (LocalizedModule.mkLinearMap p
+          (Q' ⧸ I • (⊤ : Submodule R (Q' : Type (max u v)))))
+        (LocalizedModule.mkLinearMap p (P : Type u)) T eQA
+    refine ⟨Q', inferInstance, ?_⟩
+    exact ⟨eQ'.trans eP⟩
 
 /-! ### Finite modules after localization -/
 
@@ -372,7 +559,11 @@ theorem construct_fp_module_from_stalk {R : Type u} [CommRing R]
         Module.FinitePresentation R (M' : Type v) ∧
           ∃ f : (M' : Type v) →ₗ[R] (M : Type v),
             Function.Bijective (LocalizedModule.map p.primeCompl f)) := by
-  sorry
+  constructor
+  · intro hM
+    exact (construct_fp_module_from_localization p.primeCompl M).1 hM
+  · intro hM
+    exact (construct_fp_module_from_localization p.primeCompl M).2 hM
 
 /-! ### Local isomorphisms and spreading out -/
 

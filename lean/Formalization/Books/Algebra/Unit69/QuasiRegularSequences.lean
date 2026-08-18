@@ -228,6 +228,15 @@ def IsQuasiRegular
     (R : Type u) [CommRing R] (f : List R) : Prop :=
   IsMQuasiRegular R R f
 
+/- A bijective canonical map is the actual module-level isomorphism used by the
+   source's associated-graded identification. -/
+noncomputable def quasiRegularCanonicalEquiv
+    (R : Type u) (M : Type v) [CommRing R] [AddCommGroup M] [Module R M]
+    (f : List R) (hf : IsMQuasiRegular R M f) :
+    quasiRegularSource R M f ≃ₗ[R ⧸ Ideal.ofList f]
+      quasiRegularTarget R M (Ideal.ofList f) :=
+  LinearEquiv.ofBijective (quasiRegularCanonicalMap R M f) hf
+
 theorem isMQuasiRegular_iff_of_perm
     {R : Type u} {M : Type v} [CommRing R] [AddCommGroup M] [Module R M]
     {f g : List R} (hfg : f.Perm g) :
@@ -245,16 +254,14 @@ theorem isQuasiRegular_of_isRegular
     (hf : RingTheory.Sequence.IsRegular R f) : IsQuasiRegular R f := by
   exact isMQuasiRegular_of_isRegular hf
 
-/-- In the ring case, quasi-regularity is precisely the polynomial description of the
-associated graded ring.  The displayed source/target linear equivalence is the usable
-module-level form of the textbook's equality. -/
-theorem quasiRegular_graded_ring_identification
+/-- In the ring case, quasi-regularity gives the module-level form of the textbook's
+associated-graded polynomial identification. -/
+noncomputable def quasiRegular_graded_ring_identification
     {R : Type u} [CommRing R] (f : List R)
     (hf : IsQuasiRegular R f) :
-    Nonempty
-      (quasiRegularSource R R f ≃ₗ[R ⧸ Ideal.ofList f]
-        quasiRegularTarget R R (Ideal.ofList f)) := by
-  sorry
+    quasiRegularSource R R f ≃ₗ[R ⧸ Ideal.ofList f]
+      quasiRegularTarget R R (Ideal.ofList f) :=
+  quasiRegularCanonicalEquiv R R f hf
 
 /-! ## Base change, localization, and truncation -/
 
@@ -295,6 +302,13 @@ theorem isMRegular_of_isMQuasiRegular_of_isLocal
     (hq : IsMQuasiRegular R M f) :
     RingTheory.Sequence.IsRegular M f := by
   sorry
+
+/-
+PRIOR ATTEMPT: The source remark refers to the Koszul complex and explicitly defers its
+definitions and examples to More on Algebra, Section 29.  The declarations below used an
+arbitrary family of homology types; they were not tied to the canonical Koszul complex of the
+sequence, so they did not provide valid interfaces for the source assertions.  The block is
+retained for review history and is intentionally not part of this chapter's API.
 
 /-! ## Koszul and `H₁` regularity -/
 
@@ -352,6 +366,7 @@ theorem koszul_regularities_not_reversible :
         (K : KoszulComplexData R R f),
         IsQuasiRegular R f → IsHOneRegular K) := by
   sorry
+-/
 
 /-! ## The join counterexample -/
 
@@ -403,13 +418,17 @@ theorem join_example_defining_relation (k : Type u) [Field k] :
       joinExampleWbar k * joinExampleXbar k := by
   sorry
 
+theorem join_example_z_relation (k : Type u) [Field k] (n : ℕ) :
+    joinExampleZbar k n =
+      joinExampleYbar k * joinExampleZbar k (n + 1) := by
+  sorry
+
 theorem join_example_x_is_non_zero_divisor (k : Type u) [Field k] :
     IsSMulRegular (joinExampleRing k) (joinExampleXbar k) := by
   sorry
 
 theorem join_example_ybar_is_quasiRegular (k : Type u) [Field k] :
-    IsMQuasiRegular (joinExampleRing k ⧸ Ideal.span {joinExampleXbar k})
-      (joinExampleRing k ⧸ Ideal.span {joinExampleXbar k})
+    IsQuasiRegular (joinExampleRing k ⧸ Ideal.span {joinExampleXbar k})
       [Ideal.Quotient.mk (Ideal.span {joinExampleXbar k}) (joinExampleYbar k)] := by
   sorry
 
@@ -417,8 +436,9 @@ theorem join_example_pair_is_not_quasiRegular (k : Type u) [Field k] :
     ¬ IsQuasiRegular (joinExampleRing k) [joinExampleXbar k, joinExampleYbar k] := by
   sorry
 
-theorem join_example_w_is_nonzero (k : Type u) [Field k] :
-    joinExampleWbar k ≠ 0 := by
+theorem join_example_wbar_mod_xy_is_nonzero (k : Type u) [Field k] :
+    Ideal.Quotient.mk (Ideal.span {joinExampleXbar k, joinExampleYbar k})
+        (joinExampleWbar k) ≠ 0 := by
   sorry
 
 /-! ## Quotienting by the separated part -/

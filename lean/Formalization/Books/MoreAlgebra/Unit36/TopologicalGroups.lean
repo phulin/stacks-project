@@ -512,7 +512,30 @@ structure LinearNeighborhoodBasis (M : Type u) [AddCommGroup M]
 theorem exists_linearNeighborhoodBasis (M : Type u) [AddCommGroup M]
     [TopologicalSpace M] [IsTopologicalAddGroup M] [IsLinearTopology ℤ M] :
     Nonempty (LinearNeighborhoodBasis M) := by
-  sorry
+  let I : Type u := {N : AddSubgroup M // IsOpen (N : Set M)}
+  refine ⟨⟨Iᵒᵈ, fun i => i.1, ?_, ?_, ?_, fun i => i.2⟩⟩
+  · intro i j hij
+    exact hij
+  · intro i j
+    refine ⟨(⟨(i : I).1 ⊓ (j : I).1, ?_⟩ : Iᵒᵈ), ?_, ?_⟩
+    · change IsOpen (((i : I).1 : Set M) ∩ ((j : I).1 : Set M))
+      exact i.2.inter j.2
+    · change (i : I).1 ⊓ (j : I).1 ≤ (i : I).1
+      exact inf_le_left
+    · change (i : I).1 ⊓ (j : I).1 ≤ (j : I).1
+      exact inf_le_right
+  · refine ⟨fun s => ?_⟩
+    constructor
+    · intro hs
+      rcases (IsLinearTopology.hasBasis_open_submodule ℤ).mem_iff.mp hs with
+        ⟨S, hS, hSs⟩
+      refine ⟨⟨S.toAddSubgroup, hS⟩, trivial, ?_⟩
+      exact hSs
+    · rintro ⟨i, -, his⟩
+      apply (IsLinearTopology.hasBasis_open_submodule ℤ).mem_iff.mpr
+      refine ⟨i.1.toIntSubmodule, ?_, ?_⟩
+      · simpa using i.2
+      · exact his
 
 theorem linearNeighborhoodBasis_completion_map
     (M : Type u) [AddCommGroup M] [TopologicalSpace M]
@@ -525,7 +548,163 @@ theorem linearNeighborhoodBasis_completion_map
         Nonempty (F.diagram.obj (Opposite.op i) ≃ₜ+ (M ⧸ B.U i))) ∧
         (Function.Injective c ↔ T2Space M) ∧
         (IsCompleteTopologicalAddGroup M ↔ Function.Bijective c) := by
-  sorry
+  let _ : Preorder B.Index := B.preorder
+  dsimp
+  let qmap (i j : B.Index) (h : j ≤ i) :
+      (M ⧸ B.U i) →+ (M ⧸ B.U j) :=
+    QuotientAddGroup.lift (N := B.U i)
+      (QuotientAddGroup.mk' (N := B.U j))
+      (by
+        intro x hx
+        simpa using (B.antitone h hx))
+  let D₀ : (B.Index)ᵒᵖ ⥤ ModuleCat ℤ :=
+    { obj := fun i => ModuleCat.of ℤ (M ⧸ B.U i.unop)
+      map := fun {i j} f =>
+        ModuleCat.ofHom (qmap i.unop j.unop
+          (CategoryTheory.leOfHom f.unop)).toIntLinearMap
+      map_id := by
+        intro i
+        ext x
+        refine QuotientAddGroup.induction_on x ?_
+        intro y
+        rfl
+      map_comp := by
+        intro i j k f g
+        ext x
+        refine QuotientAddGroup.induction_on x ?_
+        intro y
+        rfl }
+  let D : (B.Index)ᵒᵖ ⥤ TopologicalAbelianGroupCat :=
+    D₀ ⋙ TopModuleCat.withModuleTopology ℤ
+  have hmod : ∀ i : B.Index, moduleTopology ℤ (M ⧸ B.U i) = ⊥ := by
+    intro i
+    let hdata := bottom_module_topology_data (M ⧸ B.U i)
+    have hle : moduleTopology ℤ (M ⧸ B.U i) ≤ hdata.topology := by
+      exact @moduleTopology_le ℤ _ (M ⧸ B.U i) _ _ hdata.topology
+        hdata.continuousSMul hdata.continuousAdd
+    exact le_antisymm hle bot_le
+  have hquot : ∀ i : B.Index,
+      QuotientAddGroup.instTopologicalSpace (B.U i) = ⊥ := by
+    intro i
+    exact (quotient_add_group_is_discrete_of_open (B.U i) (B.isOpen i)).eq_bot
+  have hdisc : ∀ i : (B.Index)ᵒᵖ, DiscreteTopology (D.obj i) := by
+    intro i
+    change @DiscreteTopology (M ⧸ B.U i.unop)
+      (moduleTopology ℤ (M ⧸ B.U i.unop))
+    rw [hmod]
+    exact discreteTopology_bot _
+  let qhom (i : B.Index) : TopModuleCat.of ℤ M ⟶ D.obj (Opposite.op i) := by
+    letI : TopologicalSpace (M ⧸ B.U i) := moduleTopology ℤ (M ⧸ B.U i)
+    letI : IsModuleTopology ℤ (M ⧸ B.U i) := ⟨rfl⟩
+    letI : ContinuousSMul ℤ (M ⧸ B.U i) := inferInstance
+    letI : IsTopologicalAddGroup (M ⧸ B.U i) :=
+      IsModuleTopology.topologicalAddGroup ℤ (M ⧸ B.U i)
+    dsimp [D, D₀, TopModuleCat.withModuleTopology]
+    exact TopModuleCat.ofHom
+      { toLinearMap := (QuotientAddGroup.mk' (N := B.U i)).toIntLinearMap
+        cont := by
+          rw [hmod i, ← hquot i]
+          exact continuous_quotient_mk' }
+  have hne : Nonempty B.Index := by
+    rcases B.fundamental.mem_iff.mp
+        (univ_mem : (Set.univ : Set M) ∈ nhds (0 : M)) with
+      ⟨i, hi, his⟩
+    exact ⟨i⟩
+  let F : DiscreteInverseSystem B.Index :=
+    { diagram := D
+      directed := B.directed
+      nonempty := hne
+      discrete := hdisc }
+  let cone : Cone F.diagram :=
+    { pt := TopModuleCat.of ℤ M
+      π :=
+        { app := fun i => qhom i.unop
+          naturality := by
+            intro i j f
+            ext x
+            simp [Functor.const_obj_map]
+            dsimp [qhom, F, D, D₀, qmap]
+            change QuotientAddGroup.mk' (N := B.U j.unop) x =
+              qmap i.unop j.unop (CategoryTheory.leOfHom f.unop)
+                (QuotientAddGroup.mk' (N := B.U i.unop) x)
+            simp [qmap] } }
+  let cLinear : TopModuleCat.of ℤ M ⟶ inverseLimit F :=
+    limit.lift F.diagram cone
+  let c : M →ₜ+ inverseLimit F := cLinear.hom
+  have hq (i : B.Index) (x : M) :
+      (qhom i).hom x = QuotientAddGroup.mk' (N := B.U i) x := by
+    rfl
+  have hc_coord (i : B.Index) (x : M) :
+      (limit.π F.diagram (Opposite.op i)).hom (c x) =
+        QuotientAddGroup.mk' (N := B.U i) x := by
+    have hfac := limit.lift_π cone (Opposite.op i)
+    have hfac' := congrArg (fun q => q.hom x) hfac
+    change (limit.π F.diagram (Opposite.op i)).hom (cLinear.hom x) =
+      QuotientAddGroup.mk' (N := B.U i) x
+    dsimp [cLinear, cone] at hfac'
+    rw [hq] at hfac'
+    dsimp [cLinear, cone]
+    exact hfac'
+  have hequiv : ∀ i : B.Index,
+      Nonempty (F.diagram.obj (Opposite.op i) ≃ₜ+ (M ⧸ B.U i)) := by
+    intro i
+    letI : DiscreteTopology (F.diagram.obj (Opposite.op i)) := hdisc _
+    letI : DiscreteTopology (M ⧸ B.U i) :=
+      quotient_add_group_is_discrete_of_open (B.U i) (B.isOpen i)
+    exact ⟨{
+      toFun := id
+      invFun := id
+      left_inv := by intro x; rfl
+      right_inv := by intro x; rfl
+      map_add' := by intro x y; rfl
+      continuous_toFun := continuous_of_discreteTopology
+      continuous_invFun := continuous_of_discreteTopology }⟩
+  refine ⟨F, c, hequiv, ?_, ?_⟩
+  · constructor
+    · intro hinj
+      letI : T2Space (inverseLimit F) := (inverseLimit_is_complete F).2
+      exact T2Space.of_injective_continuous hinj c.continuous
+    · intro hT2
+      letI : T2Space M := hT2
+      intro x y hxy
+      have hzmem : ∀ i : B.Index, x - y ∈ B.U i := by
+        intro i
+        have hxi := hc_coord i x
+        have hyi := hc_coord i y
+        have hqxy : QuotientAddGroup.mk' (N := B.U i) x =
+            QuotientAddGroup.mk' (N := B.U i) y := by
+          have hpi := congrArg (fun z =>
+            (limit.π F.diagram (Opposite.op i)).hom z) hxy
+          exact hxi.symm.trans (hpi.trans hyi)
+        change (x : M ⧸ B.U i) = y at hqxy
+        exact QuotientAddGroup.eq_iff_sub_mem.mp hqxy
+      have hzclosure : (0 : M) ∈ closure ({x - y} : Set M) := by
+        exact (mem_closure_iff_nhds_basis (x := (0 : M))
+          (t := ({x - y} : Set M)) B.fundamental).2 (by
+            intro i hi
+            exact ⟨x - y, rfl, hzmem i⟩)
+      have hzsingleton : (0 : M) ∈ ({x - y} : Set M) :=
+        isClosed_singleton.closure_subset hzclosure
+      exact sub_eq_zero.mp (Set.mem_singleton_iff.mp hzsingleton).symm
+  have hdense : DenseRange c := by
+    change Dense (Set.range c)
+    rw [dense_iff_closure_eq]
+    ext z
+    constructor
+    · intro hz
+      trivial
+    · intro hz
+      apply (mem_closure_iff_nhds_basis
+        (inverseLimit_kernels_form_fundamental_system F).nhds_of_zero z).2
+      intro i hi
+      obtain ⟨x, hx⟩ :=
+        QuotientAddGroup.mk'_surjective
+          ((limit.π F.diagram (Opposite.op i)).hom z)
+      refine ⟨c x, ⟨x, rfl⟩, ?_⟩
+      change c x - z ∈ inverseLimitKernel F (Opposite.op i)
+      change (limit.π F.diagram (Opposite.op i)).hom (c x - z) = 0
+      rw [map_sub, hc_coord, hx]
+      exact sub_self _
 
 /-- The completion associated to the canonical uniformity of a topological additive group. -/
 abbrev LinearTopologicalCompletion (M : Type u) [AddCommGroup M]
@@ -556,13 +735,22 @@ theorem linearCompletion_completeSpace (M : Type u) [AddCommGroup M]
 theorem linearCompletion_t2Space (M : Type u) [AddCommGroup M]
     [TopologicalSpace M] [IsTopologicalAddGroup M] :
     T2Space (LinearTopologicalCompletion M) := by
-  sorry
+  let _ : UniformSpace M := IsTopologicalAddGroup.rightUniformSpace M
+  let _ : IsUniformAddGroup M := isUniformAddGroup_of_addCommGroup
+  infer_instance
 
 theorem linearCompletionMap_injective_iff_separated
     (M : Type u) [AddCommGroup M] [TopologicalSpace M]
     [IsTopologicalAddGroup M] :
     Function.Injective (linearCompletionMap M) ↔ T2Space M := by
-  sorry
+  letI : UniformSpace M := IsTopologicalAddGroup.rightUniformSpace M
+  letI : IsUniformAddGroup M := isUniformAddGroup_of_addCommGroup
+  constructor
+  · intro h
+    exact T2Space.of_injective_continuous h (linearCompletionMap M).continuous
+  · intro h
+    letI : T2Space M := h
+    exact UniformSpace.Completion.coe_injective M
 
 theorem isCompleteTopologicalAddGroup_iff_linearCompletionMap_bijective
     (M : Type u) [AddCommGroup M] [TopologicalSpace M]

@@ -39,9 +39,17 @@ presentation data for sheaves of modules. -/
 abbrev IsQuasiCoherent {X : RingedSpace.{v}} (F : Mod X.structureSheaf) : Prop :=
   SheafOfModules.IsQuasicoherent F
 
-/-- The terminology “locally presented” used in the source's explanation. -/
+/-- The pointwise local-presentation formulation used in the source's
+explanation of quasi-coherence. The underlying presentation is Mathlib's
+canonical `SheafOfModules.Presentation`, whose generators present the module
+and whose relations generate the kernel of the associated epimorphism. -/
+def HasLocalPresentation {X : RingedSpace.{v}} (F : Mod X.structureSheaf) : Prop :=
+  ∀ x : X, ∃ U : Opens X.carrier, x ∈ U ∧ hasPresentationOn F U
+
+/- The source calls this condition “locally presented” immediately after the
+definition of quasi-coherence. -/
 abbrev LocallyPresented {X : RingedSpace.{v}} (F : Mod X.structureSheaf) : Prop :=
-  IsQuasiCoherent F
+  HasLocalPresentation F
 
 /-- The full subcategory denoted by `QCoh(O_X)`. -/
 abbrev QCoh (X : RingedSpace.{v}) :=
@@ -59,7 +67,15 @@ theorem not_all_quasiCoherentCategoriesAbelian :
 
 theorem isQuasiCoherent_iff_locallyPresented
     {X : RingedSpace.{v}} (F : Mod X.structureSheaf) :
-    IsQuasiCoherent F ↔ LocallyPresented F := Iff.rfl
+    IsQuasiCoherent F ↔ LocallyPresented F := by
+  sorry
+
+/-! The first part of the source's generators-and-relations explanation. -/
+theorem locallyPresented_isLocallyGenerated
+    {X : RingedSpace.{v}} {F : Mod X.structureSheaf}
+    (hF : LocallyPresented F) :
+    locallyGenerated F := by
+  sorry
 
 /-- The generators-and-relations form of the local definition. -/
 theorem locallyPresented_has_generators_and_relations
@@ -260,6 +276,19 @@ noncomputable abbrev associatedSheafOfGlobalSections
     Mod X.structureSheaf :=
   associatedSheafModule (RingHom.id _) M
 
+/-! The free sheaves used in the counterexample are instances of the
+associated-sheaf construction. -/
+noncomputable abbrev associatedSheafFreeModule
+    (X : RingedSpace.{v}) (I : Type v) : Mod X.structureSheaf :=
+  associatedSheafModule (RingHom.id _)
+    ((ModuleCat.free (globalSectionsRing X)).obj I)
+
+theorem freeSheaf_associatedSheaf_iso
+    {X : RingedSpace.{v}} (I : Type v) :
+    Nonempty ((SheafOfModules.free I : Mod X.structureSheaf) ≅
+      associatedSheafFreeModule X I) := by
+  sorry
+
 theorem associatedSheaf_isQuasiCoherent
     {X : RingedSpace.{v}} {R : Type v} [Ring R]
     (α : R →+* globalSectionsRing X) (M : Type v)
@@ -342,6 +371,17 @@ theorem associatedPresentationMap_section
         (SheafOfModules.free P.generators : Mod X.structureSheaf)
       (associatedPresentationMap α P)) j = P.relationSection α j := by
   simp [associatedPresentationMap]
+
+/-! For every chosen module presentation, the associated sheaf has the same
+cokernel presentation. This is the presentation-independent construction
+asserted in the source's second description. -/
+theorem associatedPresentationMap_cokernel_iso
+    {X : RingedSpace.{v}} {R : Type v} [Ring R]
+    (α : R →+* globalSectionsRing X) {M : ModuleCat R}
+    (P : ModulePresentation M) :
+    Nonempty (cokernel (associatedPresentationMap α P) ≅
+      associatedSheafModule α M) := by
+  sorry
 
 /-- A one-point ringed space with structure ring `R`. -/
 noncomputable def onePointRingedSpace (R : Type v) [Ring R] : RingedSpace.{v} :=
@@ -435,6 +475,14 @@ def PointModuleDescription
       (onePointRingedSpaceHom α).sharp).IsRightAdjoint,
     Nonempty (pointModulePullback α h (onePointModule M) ≅
       associatedSheafModule α M)
+
+/-! The point-space/pullback construction is canonically the same associated
+sheaf as the presheaf construction. -/
+theorem associatedSheaf_point_description
+    {X : RingedSpace.{v}} {R : Type v} [Ring R]
+    (α : R →+* globalSectionsRing X) (M : ModuleCat R) :
+    PointModuleDescription α M := by
+  sorry
 
 /-- A source-facing name for the pullback description. -/
 abbrev PullbackDescription
@@ -693,7 +741,7 @@ def NotLocallyFiniteLinearCombination {X : RingedSpace.{v}}
     (φ : (SheafOfModules.free CountableIndex : Mod X.structureSheaf) ⟶
       (SheafOfModules.free CountablePairIndex : Mod X.structureSheaf))
     (U : ℕ → Opens X.carrier) : Prop :=
-  ∃ n j, 2 * n < j ∧
+  ∀ n j, 2 * n < j →
     ¬ HasFiniteFreeSupport X.structureSheaf (U n)
       (sheafModuleSectionsMap X.structureSheaf φ (U n)
         ((SheafOfModules.freeSection (R := X.structureSheaf)

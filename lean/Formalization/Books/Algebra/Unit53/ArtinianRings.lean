@@ -52,7 +52,19 @@ theorem product_localizations_of_finite_maximal_ideals
       (Ring.jacobson R)) :
     (∀ p : Ideal R, p.IsPrime → p.IsMaximal) ∧
       Nonempty (R ≃ₐ[R] MaximalSpectrum.PiLocalization R) := by
-  sorry
+  have hsInf : sInf {I : Ideal R | I.IsMaximal} ≤ nilradical R := by
+    rw [← Ring.jacobson_eq_sInf_isMaximal R]
+    intro x hx
+    exact (mem_nilradical).2 (hjac x hx)
+  have hdisc : DiscreteTopology (PrimeSpectrum R) :=
+    (PrimeSpectrum.discreteTopology_iff_finite_isMaximal_and_sInf_le_nilradical).2
+      ⟨(Set.finite_coe_iff).mp hmax, hsInf⟩
+  have hdim : Ring.KrullDimLE 0 R :=
+    (PrimeSpectrum.discreteTopology_iff_finite_and_krullDimLE_zero).mp hdisc |>.2
+  have hprime : ∀ p : Ideal R, p.IsPrime → p.IsMaximal := by
+    intro p hp
+    exact (Ring.krullDimLE_zero_iff.mp hdim) p hp
+  exact ⟨hprime, ⟨@MaximalSpectrum.toPiLocalizationEquiv R _ hdisc⟩⟩
 
 /- Hopkins--Levitzki supplies the source's Artinian/finite-length
    equivalence. -/
@@ -70,7 +82,26 @@ theorem finite_length_ring_properties
       (∀ p : Ideal R, p.IsPrime → p.IsMaximal) ∧
       Finite (MaximalSpectrum R) ∧
       Nonempty (R ≃ₐ[R] MaximalSpectrum.PiLocalization R) := by
-  sorry
+  have hArt : IsArtinianRing R := (artinian_iff_finite_length (R := R)).2 hR
+  have hN : IsNoetherianRing R :=
+    ((IsArtinianRing.tfae R R).out 2 1).mp hArt
+  have hmax : Set.Finite {I : Ideal R | I.IsMaximal} :=
+    @artinian_finite_maximal_ideals R _ hArt
+  have hjac₀ : IsNilpotent (Ring.jacobson R) :=
+    @artinian_jacobson_radical_is_nilpotent R _ hArt
+  have hjac : Formalization.Books.Algebra.Unit03.locallyNilpotentIdeal
+      (Ring.jacobson R) := by
+    obtain ⟨n, hn⟩ := hjac₀
+    intro x hx
+    refine ⟨n, ?_⟩
+    have hxpow : x ^ n ∈ (Ring.jacobson R) ^ n := Ideal.pow_mem_pow hx n
+    rw [hn] at hxpow
+    exact hxpow
+  have hprod := product_localizations_of_finite_maximal_ideals hmax hjac
+  haveI : Finite {I : Ideal R // I.IsMaximal} := Set.finite_coe_iff.mp hmax
+  have hfinite : Finite (MaximalSpectrum R) :=
+    Finite.of_equiv _ (MaximalSpectrum.equivSubtype R).symm
+  exact ⟨hArt, hN, hprod.1, hfinite, hprod.2⟩
 
 end
 

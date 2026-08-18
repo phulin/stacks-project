@@ -1,3 +1,5 @@
+import Formalization.Books.Sdga.Unit02.Core
+import Formalization.Books.Sdga.Unit02.Foundation
 import Formalization.Books.Sdga.Unit02.Conventions
 
 /-!

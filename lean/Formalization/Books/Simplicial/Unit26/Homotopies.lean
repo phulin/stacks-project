@@ -67,6 +67,11 @@ theorem pointSimplex_subsingleton (n : ℕ) :
   apply SSet.stdSimplex.objEquiv.injective
   exact Subsingleton.elim _ _
 
+theorem pointSimplex_finite_nonempty (n : ℕ) :
+    Finite ((Δ[0] : SSet.{u}) _⦋n⦌) ∧
+      Nonempty ((Δ[0] : SSet.{u}) _⦋n⦌) :=
+  Unit13.standardSimplex_finite_nonempty 0 n
+
 /-- The two vertex inclusions `Δ[0] ⟶ Δ[1]`. -/
 noncomputable def intervalVertex (ε : Fin 2) :
     (Δ[0] : SSet.{u}) ⟶ (Δ[1] : SSet.{u}) :=
@@ -186,6 +191,8 @@ noncomputable def cylinderHomotopyComponent
     H.h.app (op (SimplexCategory.mk n))
 
 /-- The degree-preserving component convention used in the source. -/
+/- This is the source's degree-preserving convention for a homotopy.  It is
+category-independent, unlike the cylinder presentation above. -/
 structure DegreewiseHomotopy
     {C : Type u} [Category.{v} C]
     {U V : SimplicialObject C} (a b : U ⟶ V) where
@@ -328,6 +335,17 @@ theorem homotopic_refl
     {C : Type u} [Category.{v} C] {U V : SimplicialObject C}
   (a : U ⟶ V) : Homotopic a a := by
   exact Relation.EqvGen.refl a
+
+theorem homotopic_symm
+    {C : Type u} [Category.{v} C] {U V : SimplicialObject C}
+    {a b : U ⟶ V} (h : Homotopic a b) : Homotopic b a := by
+  exact (homotopic_is_equivalence U V).symm h
+
+theorem homotopic_trans
+    {C : Type u} [Category.{v} C] {U V : SimplicialObject C}
+    {a b c : U ⟶ V} (hab : Homotopic a b) (hbc : Homotopic b c) :
+    Homotopic a c := by
+  exact (homotopic_is_equivalence U V).trans hab hbc
 
 theorem homotopicOfEq
     {C : Type u} [Category.{v} C] {U V : SimplicialObject C}

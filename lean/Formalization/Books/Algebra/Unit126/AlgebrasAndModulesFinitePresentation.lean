@@ -24,7 +24,7 @@ open scoped TensorProduct
 
 namespace Formalization.Books.Algebra.Unit126
 
-universe u v
+universe u v w
 
 noncomputable section
 
@@ -41,7 +41,7 @@ abbrev localizedQuotientModule {R : Type u} {M : Type v} [CommRing R]
   LocalizedModule (S.map (Ideal.Quotient.mk I)) (M ⧸ I • (⊤ : Submodule R M))
 
 /-- The ring map induced by localizing a ring map at a submonoid and its image. -/
-noncomputable def localizedRingHom {A B : Type u} [CommRing A] [CommRing B]
+noncomputable def localizedRingHom {A : Type u} {B : Type v} [CommRing A] [CommRing B]
     (f : A →+* B) (M : Submonoid A) :
     Localization M →+* Localization (M.map f) :=
   IsLocalization.map (Localization (M.map f)) f M.le_comap_map
@@ -126,7 +126,7 @@ theorem construct_fp_module_from_stalk {R : Type u} [CommRing R]
 
 /-- A finitely presented map which is an isomorphism at a prime spreads out
 to a product decomposition after inverting an element away from that prime. -/
-theorem local_isomorphism {R S : Type u} [CommRing R] [CommRing S]
+theorem local_isomorphism {R : Type u} {S : Type v} [CommRing R] [CommRing S]
     (f : R →+* S) (p : Ideal R) (q : Ideal S) [hp : p.IsPrime] [hq : q.IsPrime]
     (hpq : p = q.comap f) :
     letI : Algebra R S := f.toAlgebra
@@ -142,7 +142,8 @@ theorem local_isomorphism {R S : Type u} [CommRing R] [CommRing S]
 
 /-- An isomorphism between finite-presentation local rings spreads out to an
 isomorphism after inverting elements outside the corresponding primes. -/
-theorem isomorphic_local_rings {R S S' : Type u} [CommRing R] [CommRing S] [CommRing S']
+theorem isomorphic_local_rings {R : Type u} {S : Type v} {S' : Type w}
+    [CommRing R] [CommRing S] [CommRing S']
     (f : R →+* S) (f' : R →+* S') (q : Ideal S) (q' : Ideal S')
     [hq : q.IsPrime] [hq' : q'.IsPrime] :
     letI : Algebra R S := f.toAlgebra
@@ -182,7 +183,8 @@ theorem surjective_mod_locally_nilpotent {R S S' : Type*} [CommRing R] [CommRing
 /-- The localized quotient isomorphism in the next theorem is recorded by an
 equivalence whose values on quotient representatives are the canonical local
 map.  This avoids introducing a duplicate quotient-map definition. -/
-def localQuotientIsomorphism {R S S' : Type u} [CommRing R] [CommRing S] [CommRing S']
+def localQuotientIsomorphism {R : Type u} {S : Type v} {S' : Type w}
+    [CommRing R] [CommRing S] [CommRing S']
     [Algebra R S] [Algebra R S'] (f : S →ₐ[R] S') (I : Ideal R) (q : Ideal S)
     [q.IsPrime]
     (e : (Localization q.primeCompl ⧸
@@ -195,7 +197,8 @@ def localQuotientIsomorphism {R S S' : Type u} [CommRing R] [CommRing S] [CommRi
 
 /-- A surjective map satisfying the local quotient and flatness hypotheses is
 an isomorphism after inverting an element outside the chosen prime. -/
-theorem isomorphism_modulo_ideal {R S S' : Type u} [CommRing R] [CommRing S]
+theorem isomorphism_modulo_ideal {R : Type u} {S : Type v} {S' : Type w}
+    [CommRing R] [CommRing S]
     [CommRing S'] [Algebra R S] [Algebra R S'] (f : S →ₐ[R] S') (I : Ideal R)
     (q : Ideal S) [hq : q.IsPrime]
     (hIq : I.map (algebraMap R S) ≤ q)
@@ -216,7 +219,8 @@ theorem isomorphism_modulo_ideal {R S S' : Type u} [CommRing R] [CommRing S]
 
 /-- The quotient isomorphism in the final theorem is recorded by its action on
 canonical quotient representatives. -/
-def quotientIsomorphism {R S S' : Type u} [CommRing R] [CommRing S] [CommRing S']
+def quotientIsomorphism {R : Type u} {S : Type v} {S' : Type w}
+    [CommRing R] [CommRing S] [CommRing S']
     [Algebra R S] [Algebra R S'] (f : S →ₐ[R] S') (I : Ideal R)
     (e : (S ⧸ I.map (algebraMap R S)) ≃+* (S' ⧸ I.map (algebraMap R S'))) : Prop :=
   ∀ x : S,
@@ -224,7 +228,8 @@ def quotientIsomorphism {R S S' : Type u} [CommRing R] [CommRing S] [CommRing S'
 
 /-- Under the finite type, finite presentation, flatness, and local nilpotence
 hypotheses, an isomorphism modulo the ideal is an isomorphism. -/
-theorem isomorphism_modulo_locally_nilpotent {R S S' : Type u} [CommRing R] [CommRing S]
+theorem isomorphism_modulo_locally_nilpotent {R : Type u} {S : Type v} {S' : Type w}
+    [CommRing R] [CommRing S]
     [CommRing S'] [Algebra R S] [Algebra R S'] (f : S →ₐ[R] S') (I : Ideal R)
     (hI : Formalization.Books.Algebra.Unit03.locallyNilpotentIdeal I)
     (hquot : ∃ e : (S ⧸ I.map (algebraMap R S)) ≃+* (S' ⧸ I.map (algebraMap R S')),

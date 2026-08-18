@@ -139,7 +139,9 @@ private theorem moduleFinitePresentation_of_surjective_of_fg_ker
     exact ⟨y, by simpa [map] using hy⟩
   have hcomm : (fS.restrictScalars R).comp map = fR := by
     ext x
-    simp [fR, fS, map]
+    simp only [LinearMap.coe_comp, LinearMap.coe_restrictScalars, Function.comp_apply,
+      Finsupp.lsingle_apply, Finsupp.mapRange.linearMap_apply, Finsupp.mapRange_single,
+      Algebra.linearMap_apply, map_one, Finsupp.linearCombination_single, one_smul, fS, map, fR]
   have hker_map : (LinearMap.ker map).FG := by
     dsimp [map]
     rw [Finsupp.ker_mapRange]
@@ -802,7 +804,7 @@ theorem relativelyFinitelyPresented_localize
     apply (IsLocalization.Away.algebraMap_isUnit g).pow k |>.mul_right_cancel
     simp only [x, map_mul]
     rw [IsLocalization.Away.lift_eq]
-    rw [map_pow]
+    simp only [map_pow]
     change ((algebraMap A N) (α p) * q (IsLocalization.Away.invSelf g') ^ k) *
       (algebraMap A N) g ^ k = z * (algebraMap A N) g ^ k
     rw [hp, mul_assoc, ← mul_pow, hqinv', one_pow, mul_one]

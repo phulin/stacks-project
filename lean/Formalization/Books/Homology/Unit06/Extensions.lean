@@ -209,7 +209,6 @@ theorem pullback_extension_shortExact
         exact hk.symm
     · intro _ k hk l hl
       change k ≫ pullback.snd E.projection p = 0 at hk
-      change l = lift k hk
       dsimp [lift]
       refine hE.uniq (KernelFork.ofι (k ≫ pullback.fst E.projection p) _) l ?_
       intro j
@@ -218,8 +217,8 @@ theorem pullback_extension_shortExact
         rw [← hl, Category.assoc, pullback.lift_fst]
       · simp only [KernelFork.app_one, comp_zero]
   change S.ShortExact
-  letI : Epi E.projection := E.shortExact.epi_g
-  letI : Epi g := Abelian.epi_pullback_of_epi_f E.projection p
+  let : Epi E.projection := E.shortExact.epi_g
+  let : Epi g := Abelian.epi_pullback_of_epi_f E.projection p
   exact
     { exact := S.exact_of_f_is_kernel hK
       mono_f := mono_of_isLimit_fork hK
@@ -288,7 +287,6 @@ theorem pushout_extension_shortExact
           (hE.fac (CokernelCofork.ofπ (pushout.inr a E.inclusion ≫ k) _)
             WalkingParallelPair.one)
     · intro _ k hk l hl
-      change l = desc k hk
       dsimp [desc]
       refine hE.uniq (CokernelCofork.ofπ (pushout.inr a E.inclusion ≫ k) _) l ?_
       intro j
@@ -302,8 +300,8 @@ theorem pushout_extension_shortExact
           _ = pushout.inr a E.inclusion ≫ (g ≫ l) := by rw [Category.assoc]
           _ = pushout.inr a E.inclusion ≫ k := by rw [hl]
   change S.ShortExact
-  haveI : Mono E.inclusion := E.shortExact.mono_f
-  haveI : Mono f := Abelian.mono_pushout_of_mono_g a E.inclusion
+  have : Mono E.inclusion := E.shortExact.mono_f
+  have : Mono f := Abelian.mono_pushout_of_mono_g a E.inclusion
   exact
     { exact := S.exact_of_g_is_cokernel hC
       mono_f := inferInstance

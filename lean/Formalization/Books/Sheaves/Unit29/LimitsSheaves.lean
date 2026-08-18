@@ -58,7 +58,7 @@ theorem sheaf_has_limits {X : TopCat.{v}} {C : Type (v + 1)}
 theorem sheaf_has_colimits {X : TopCat.{v}}
     [HasWeakSheafify (Opens.grothendieckTopology X) (Type v)] :
     HasColimitsOfSize.{v, v} (TopCat.Sheaf (Type v) X) := by
-  sorry
+  exact CategoryTheory.Sheaf.instHasColimitsOfSize
 
 /-- The source's assertion that both limits and colimits exist. -/
 theorem sheaf_limits_and_colimits_exist {X : TopCat.{v}}
@@ -73,7 +73,10 @@ theorem exists_sheafLimitSectionsIso {X : TopCat.{v}} {J : Type v}
     Nonempty ((sheafLimit F).presheaf.obj (op U) ≅
       limit (F ⋙ TopCat.Sheaf.forget (Type v) X ⋙
         (evaluation (Opens X)ᵒᵖ (Type v)).obj (op U))) := by
-  sorry
+  let e := preservesLimitIso (TopCat.Sheaf.forget (Type v) X) F
+  exact ⟨((evaluation (Opens X)ᵒᵖ (Type v)).obj (op U)).mapIso e ≪≫
+    limitObjIsoLimitCompEvaluation
+      (F ⋙ TopCat.Sheaf.forget (Type v) X) (op U)⟩
 
 /-- A chosen sectionwise comparison isomorphism for a sheaf limit. -/
 noncomputable def sheafLimitSectionsIso {X : TopCat.{v}} {J : Type v}
@@ -91,7 +94,12 @@ theorem exists_sheafColimitSheafificationIso {X : TopCat.{v}}
     Nonempty ((sheafColimit F).presheaf ≅
         (CategoryTheory.presheafToSheaf (Opens.grothendieckTopology X) (Type v)).obj
         (colimit (F ⋙ TopCat.Sheaf.forget (Type v) X)) |>.1) := by
-  sorry
+  let G := F ⋙ TopCat.Sheaf.forget (Type v) X
+  let E := colimit.cocone G
+  let hE := colimit.isColimit G
+  let hc := CategoryTheory.Sheaf.isColimitSheafifyCocone E hE
+  exact ⟨(TopCat.Sheaf.forget (Type v) X).mapIso
+    (IsColimit.coconePointUniqueUpToIso (colimit.isColimit F) hc)⟩
 
 /-- A chosen sheaf-colimit/sheafification comparison isomorphism. -/
 noncomputable def sheafColimitSheafificationIso {X : TopCat.{v}}
@@ -113,7 +121,63 @@ theorem sheafForgetPreservesLimits {X : TopCat.{v}} {C : Type (v + 1)}
 theorem sheafForgetDoesNotPreserveAllColimits :
     ∃ (X : TopCat.{v}),
       ¬ PreservesColimits (TopCat.Sheaf.forget (Type v) X) := by
-  sorry
+  let X : TopCat.{v} := TopCat.of (CofiniteTopology (ULift.{v} ℕ))
+  refine ⟨X, ?_⟩
+  intro h
+  letI : PreservesColimits (TopCat.Sheaf.forget (Type v) X) := h
+  letI : HasLimits (TopCat.Sheaf (Type v) X) := sheaf_has_limits
+  letI : HasColimitsOfSize.{v, v} (TopCat.Sheaf (Type v) X) :=
+    CategoryTheory.Sheaf.instHasColimitsOfSize
+  let T : TopCat.Sheaf (Type v) X := limit (Functor.empty.{0} _)
+  let F : Discrete Bool ⥤ TopCat.Sheaf (Type v) X :=
+    Discrete.functor (fun _ => T)
+  let G : Discrete Bool ⥤ TopCat.Presheaf (Type v) X :=
+    F ⋙ TopCat.Sheaf.forget (Type v) X
+  let Q : TopCat.Presheaf (Type v) X :=
+    (Functor.const (Opens X)ᵒᵖ).obj (ULift.{v} Bool)
+  let leg (b : Bool) : T.presheaf ⟶ Q :=
+    { app := fun U => ConcreteCategory.ofHom
+        (⟨fun _ : T.presheaf.obj U => (ULift.up b : ULift.{v} Bool)⟩ :
+          TypeCat.Fun (T.presheaf.obj U) (Q.obj U))
+      naturality := by intros; ext; rfl }
+  let c : Cocone G :=
+    { pt := Q
+      ι := Discrete.natTrans (fun b => leg b.as) }
+  let hp := isColimitOfPreserves
+    (TopCat.Sheaf.forget (Type v) X) (colimit.isColimit F)
+  let d := hp.desc c
+  let U₀ : (Opens X)ᵒᵖ := op (⊥ : Opens X)
+  let z : T.presheaf.obj U₀ :=
+    ((Types.isTerminalEquivUnique _).toFun
+      (TopCat.Sheaf.isTerminalOfEmpty T)).default
+  let m₀ := ((TopCat.Sheaf.forget (Type v) X).map
+      (colimit.ι F (Discrete.mk false))).app U₀ z
+  let m₁ := ((TopCat.Sheaf.forget (Type v) X).map
+      (colimit.ι F (Discrete.mk true))).app U₀ z
+  have hm : m₀ = m₁ := by
+    let hu : Unique ((colimit F).presheaf.obj U₀) :=
+      (Types.isTerminalEquivUnique _).toFun
+        (TopCat.Sheaf.isTerminalOfEmpty (colimit F))
+    exact (hu.uniq m₀).trans (hu.uniq m₁).symm
+  have h₀ := congr_fun
+    (congrArg (fun q => q.app U₀) (hp.fac c (Discrete.mk false))) z
+  have h₁ := congr_fun
+    (congrArg (fun q => q.app U₀) (hp.fac c (Discrete.mk true))) z
+  rw [NatTrans.comp_app] at h₀ h₁
+  rw [types_comp] at h₀ h₁
+  have h₀' : d.app U₀ m₀ = ULift.up false := by
+    change d.app U₀ m₀ = ULift.up false at h₀
+    exact h₀
+  have h₁' : d.app U₀ m₁ = ULift.up true := by
+    change d.app U₀ m₁ = ULift.up true at h₁
+    exact h₁
+  have hfalse : ULift.up false = ULift.up true := by
+    calc
+      ULift.up false = d.app U₀ m₀ := h₀'.symm
+      _ = d.app U₀ m₁ := congrArg (d.app U₀) hm
+      _ = ULift.up true := h₁'
+  have : (false : Bool) = true := congrArg ULift.down hfalse
+  cases this
 
 /-- Sheaf inclusion need not preserve finite colimits. -/
 theorem sheafForgetDoesNotPreserveFiniteColimits :

@@ -234,15 +234,18 @@ def relativeTensorModuleDegeneracy (R A M : Type u) [CommRing R] [CommRing A]
     relativeTensorModule R A M (n + 1) →ₗ[R] relativeTensorModule R A M n :=
   relativeTensorModuleMap R A M (SimplexCategory.σ i)
 
-theorem relativeTensorCosimplicialModule_exists (R A M : Type u)
-    [CommRing R] [CommRing A] [Algebra R A] [AddCommGroup M] [Module R M] :
-    Nonempty (CosimplicialObject (ModuleCat R)) := by
-  sorry
-
 noncomputable def relativeTensorCosimplicialModule (R A M : Type u)
     [CommRing R] [CommRing A] [Algebra R A] [AddCommGroup M] [Module R M] :
-    CosimplicialObject (ModuleCat R) :=
-  Classical.choice (relativeTensorCosimplicialModule_exists R A M)
+    CosimplicialObject (ModuleCat R) where
+  obj n := ModuleCat.of R (relativeTensorModule R A M n.len)
+  map φ := ModuleCat.ofHom (relativeTensorModuleMap R A M φ)
+  map_id := by sorry
+  map_comp := by sorry
+
+theorem relativeTensorCosimplicialModule_exists (R A M : Type u)
+    [CommRing R] [CommRing A] [Algebra R A] [AddCommGroup M] [Module R M] :
+    Nonempty (CosimplicialObject.{u, u + 1} (ModuleCat R)) :=
+  ⟨relativeTensorCosimplicialModule R A M⟩
 
 /- The presentation condition records that the chosen cosimplicial module is
 the one obtained by tensoring the Amitsur algebra object with `M`, including
@@ -267,8 +270,9 @@ theorem relativeTensorCosimplicialModule_degree (R A M : Type u)
     [CommRing R] [CommRing A] [Algebra R A] [AddCommGroup M] [Module R M]
     (n : ℕ) :
     Nonempty ((relativeTensorCosimplicialModule R A M).obj (SimplexCategory.mk n) ≅
-      ModuleCat.of R (relativeTensorModule R A M n)) := by
-  sorry
+      ModuleCat.of R (relativeTensorModule R A M n)) :=
+  ⟨by simpa [relativeTensorCosimplicialModule] using
+      (Iso.refl (ModuleCat.of R (relativeTensorModule R A M n)))⟩
 
 /-! ## Descent data and their morphisms -/
 
@@ -590,21 +594,26 @@ theorem descentReindexMapSemilinear_unit {n m : ℕ}
       descentUnitTensor (β.toOrderHom i) x := by
   sorry
 
-theorem descentCosimplicialModule_exists
-    (D : DescentDatum (R := R) (A := A) (N := N)) :
-    Nonempty (CosimplicialObject (ModuleCat R)) := by
-  sorry
-
 noncomputable def descentCosimplicialModule
     (D : DescentDatum (R := R) (A := A) (N := N)) :
-    CosimplicialObject (ModuleCat R) :=
-  Classical.choice (descentCosimplicialModule_exists D)
+    CosimplicialObject (ModuleCat R) where
+  obj n := ModuleCat.of R (descentTerm R A N n.len
+    ⟨n.len, Nat.lt_succ_self n.len⟩)
+  map β := ModuleCat.ofHom (descentCosimplicialModuleMap D β)
+  map_id := by sorry
+  map_comp := by sorry
+
+theorem descentCosimplicialModule_exists
+    (D : DescentDatum (R := R) (A := A) (N := N)) :
+    Nonempty (CosimplicialObject.{u, u + 1} (ModuleCat R)) :=
+  ⟨descentCosimplicialModule D⟩
 
 theorem descentCosimplicialModule_degree
     (D : DescentDatum (R := R) (A := A) (N := N)) (n : ℕ) :
     Nonempty ((descentCosimplicialModule D).obj (SimplexCategory.mk n) ≅
       descentTermModule R A N n ⟨n, Nat.lt_succ_self n⟩) := by
-  sorry
+  exact ⟨by simpa [descentCosimplicialModule] using
+    (Iso.refl (descentTermModule R A N n ⟨n, Nat.lt_succ_self n⟩))⟩
 
 theorem descentCosimplicialModule_functorial
     {N' : Type u} [AddCommGroup N'] [Module R N'] [Module A N']
@@ -639,9 +648,9 @@ section Canonical
 variable {R A M : Type*} [CommRing R] [CommRing A] [Algebra R A]
   [AddCommGroup M] [Module R M]
 
-/- The comparison map for the canonical datum.  We use the commuted normal
-form `A ⊗[R] M` for the source's `M ⊗[R] A`; the resulting datum is canonically
-isomorphic to the displayed source convention. -/
+/-- The comparison map for the canonical datum.  We use the commuted normal
+form `A ⊗[R] M` for the source's `M ⊗[R] A`; the commutation equivalence is
+part of the canonical identification. -/
 def canonicalDescentComparison :
     TensorProduct R (TensorProduct R A M) A ≃ₗ[R]
       TensorProduct R A (TensorProduct R A M) :=
@@ -703,7 +712,7 @@ theorem canonicalDescentCosimplicialModule_degree (R A M : Type u)
     Nonempty ((descentCosimplicialModule
       (canonicalDescentDatum (R := R) (A := A) (M := M))).obj
         (SimplexCategory.mk n) ≅
-      ModuleCat.of R (TensorProduct R M (relativeTensorProduct R A n))) := by
+      ModuleCat.of R (relativeTensorModule R A M n)) := by
   sorry
 
 theorem canonicalDescentCosimplicialModule_iso (R A M : Type u)
@@ -810,7 +819,7 @@ theorem descent_complex_first_map (D : DescentDatum (R := R) (A := A) (N := N)) 
   rfl
 
 /-- The augmentation in the source's extended complex, in the canonical
-`A ⊗[R] M` normal form. -/
+`A ⊗[R] M` presentation. -/
 def canonicalAugmentationMap (M : Type u) [AddCommGroup M] [Module R M] :
     M →ₗ[R] TensorProduct R A M :=
   TensorProduct.mk R A M 1

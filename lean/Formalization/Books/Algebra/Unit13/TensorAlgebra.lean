@@ -353,9 +353,36 @@ theorem symmetricPowerQuotientMap_tprod
     [AddCommGroup M₁] [AddCommGroup M]
     [Module R M₁] [Module R M] (n : ℕ) (g : M₁ →ₗ[R] M)
     (x : ULift.{uR} (Fin n) → M₁) :
-    symmetricPowerQuotientMap n g (SymmetricPower.tprod R x) =
+      symmetricPowerQuotientMap n g (SymmetricPower.tprod R x) =
       SymmetricPower.tprod R (fun i => g (x i)) := by
-  sorry
+  let C : (⨂[R] _ : ULift.{uR} (Fin n), M₁) →ₗ[R]
+      symmetricPower R M n :=
+    (SymmetricPower.mk R (ULift.{uR} (Fin n)) M).comp
+      (PiTensorProduct.map (fun _ : ULift.{uR} (Fin n) => g))
+  have hC : addConGen (SymmetricPower.Rel R (ULift.{uR} (Fin n)) M₁) ≤
+      AddCon.ker C.toAddMonoidHom := by
+    apply AddCon.addConGen_le.2
+    intro x y hxy
+    cases hxy with
+    | perm e f =>
+        change C (PiTensorProduct.tprod R f) =
+          C (PiTensorProduct.tprod R (fun i => f (e i)))
+        dsimp [C]
+        rw [PiTensorProduct.map_tprod, PiTensorProduct.map_tprod]
+        exact (SymmetricPower.tprod_equiv (R := R) (M := M) e
+          (fun i => g (f i))).symm
+  change AddCon.lift (addConGen (SymmetricPower.Rel R (ULift.{uR} (Fin n)) M₁))
+      C.toAddMonoidHom hC
+      (AddCon.mk' _ (PiTensorProduct.tprod R x)) = _
+  calc
+    ((addConGen (SymmetricPower.Rel R (ULift.{uR} (Fin n)) M₁)).lift
+        C.toAddMonoidHom hC)
+        (AddCon.mk' _ (PiTensorProduct.tprod R x)) = C (PiTensorProduct.tprod R x) :=
+      AddCon.lift_coe hC _
+    _ = _ := by
+      dsimp [C]
+      rw [PiTensorProduct.map_tprod]
+      rfl
 
 /-- The map on exterior powers induced by a quotient map of modules. -/
 def exteriorPowerQuotientMap
@@ -599,7 +626,40 @@ theorem presentation_symmetric_exterior_power
         Function.Exact a b ∧ Function.Surjective b ∧
           (∀ x,
             b (exteriorPower.ιMulti R n x) =
-              exteriorPower.ιMulti R n (fun i => g (x i)))) := by sorry
+              exteriorPower.ιMulti R n (fun i => g (x i)))) := by
+  constructor
+  · refine ⟨symmetricPowerRelationMap f hn, symmetricPowerQuotientMap n g, ?_, ?_, ?_⟩
+    · rw [LinearMap.exact_iff]
+      exact (symmetricPower_relation_range_eq_kernel f g hfg hg hn).symm
+    · rw [← LinearMap.range_eq_top]
+      apply top_unique
+      rw [← symmetric_pure_tensor_span n]
+      apply Submodule.span_le.2
+      rintro _ ⟨x, rfl⟩
+      choose y hy using fun i : ULift (Fin n) => hg (x i)
+      refine ⟨SymmetricPower.tprod R y, ?_⟩
+      rw [symmetricPowerQuotientMap_tprod]
+      congr
+      funext i
+      exact hy i
+    · intro x
+      exact symmetricPowerQuotientMap_tprod n g x
+  · refine ⟨exteriorPowerRelationMap f hn, exteriorPowerQuotientMap n g, ?_, ?_, ?_⟩
+    · rw [LinearMap.exact_iff]
+      exact (exteriorPower_relation_range_eq_kernel f g hfg hg hn).symm
+    · rw [← LinearMap.range_eq_top]
+      apply top_unique
+      rw [← exterior_pure_tensor_span n]
+      apply Submodule.span_le.2
+      rintro _ ⟨x, rfl⟩
+      choose y hy using fun i : Fin n => hg (x i)
+      refine ⟨exteriorPower.ιMulti R n y, ?_⟩
+      rw [exteriorPowerQuotientMap_ιMulti]
+      congr
+      funext i
+      exact hy i
+    · intro x
+      exact exteriorPowerQuotientMap_ιMulti n g x
 /-
   classical
   let C : (⨂[R] _ : ULift.{_} (Fin n), M₁) →ₗ[R] symmetricPower R M n :=

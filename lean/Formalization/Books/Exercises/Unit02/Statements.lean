@@ -1,6 +1,7 @@
 import Formalization.Books.Exercises.Unit02.Core
 
 import Mathlib.Algebra.Module.FinitePresentation
+import Mathlib.Algebra.Category.ModuleCat.Limits
 import Mathlib.RingTheory.IntegralClosure.Algebra.Basic
 import Mathlib.RingTheory.Spectrum.Prime.Topology
 
@@ -370,7 +371,31 @@ theorem finitePresentation_iff_finite_free_cokernel
       ∃ n m : ℕ,
         ∃ f : ModuleCat.of R (Fin n → R) ⟶ ModuleCat.of R (Fin m → R),
           Nonempty (ModuleCat.of R M ≅ cokernel f) := by
-  sorry
+  constructor
+  · intro h
+    obtain ⟨n, m, f, g, hf, hg⟩ := Module.FinitePresentation.exists_fin' R M
+    let f' : ModuleCat.of R (Fin m → R) ⟶ ModuleCat.of R (Fin n → R) :=
+      ModuleCat.ofHom g
+    let g' : ModuleCat.of R (Fin n → R) ⟶ ModuleCat.of R M :=
+      ModuleCat.ofHom f
+    have hcol : IsColimit (CokernelCofork.ofπ (f := f') g' _) :=
+      ModuleCat.isColimitCokernelCofork f' g' hg hf
+    refine ⟨m, n, f', ?_⟩
+    exact ⟨hcol.coconePointUniqueUpToIso (colimit.isColimit _)⟩
+  · intro h
+    obtain ⟨n, m, f, ⟨e⟩⟩ := h
+    have hfg : ((LinearMap.range f.hom).mkQ.ker).FG := by
+      rw [Submodule.ker_mkQ]
+      exact Submodule.fg_range f.hom
+    haveI : Module.FinitePresentation R
+        ((Fin m → R) ⧸ f.hom.range) :=
+      Module.finitePresentation_of_free_of_surjective
+        (LinearMap.range f.hom).mkQ (Submodule.mkQ_surjective _)
+        hfg
+    let e' : ModuleCat.of R M ≅
+        ModuleCat.of R ((Fin m → R) ⧸ f.hom.range) :=
+      e ≪≫ ModuleCat.cokernelIsoRangeQuotient f
+    exact Module.FinitePresentation.of_equiv e'.toLinearEquiv.symm
 
 /-! ## Colimits of modules -/
 
@@ -386,12 +411,278 @@ theorem module_is_colimit_of_finitely_generated_submodules
   let h : DecidableEq (Submodule R M) := Classical.decEq _
   exact ⟨@Module.fgSystem.equiv R M _ _ _ h⟩
 
+private def fpEval {R M : Type u} [CommRing R] [AddCommGroup M] [Module R M]
+    {s : Finset M} : (s →₀ R) →ₗ[R] M :=
+  Finsupp.linearCombination R (fun x : s => (x : M))
+
+private def fpInclusion {R M : Type u} [CommRing R] [AddCommGroup M] [Module R M]
+    {s t : Finset M} (hst : s ≤ t) : (s →₀ R) →ₗ[R] (t →₀ R) :=
+  Finsupp.lmapDomain R R (fun x : s => (⟨x, hst x.2⟩ : t))
+
+private lemma fpEval_comp_fpInclusion {R M : Type u} [CommRing R] [AddCommGroup M]
+    [Module R M] {s t : Finset M} (hst : s ≤ t) :
+    fpEval (R := R) (M := M) (s := t) ∘ₗ fpInclusion hst =
+      fpEval (R := R) (M := M) (s := s) := by
+  classical
+  apply LinearMap.ext
+  intro x
+  induction x using Finsupp.induction_linear with
+  | zero => simp [fpEval]
+  | add x y hx hy =>
+      simp only [LinearMap.coe_comp, Function.comp_apply, map_add] at *
+      rw [hx, hy]
+  | single a b => simp [fpEval, fpInclusion]
+
+private abbrev fpIndex (R M : Type u) [CommRing R] [AddCommGroup M] [Module R M] :=
+  Σ s : Finset M, {K : Submodule R (s →₀ R) //
+    K.FG ∧ K ≤ LinearMap.ker (fpEval (R := R) (M := M) (s := s))}
+
+private def fpLE {R M : Type u} [CommRing R] [AddCommGroup M] [Module R M]
+    (i j : fpIndex R M) : Prop :=
+  ∃ hst : i.1 ≤ j.1,
+    (i.2.1.map (fpInclusion hst) : Submodule R (j.1 →₀ R)) ≤ j.2.1
+
+private instance fpIndexPreorder {R M : Type u} [CommRing R] [AddCommGroup M]
+    [Module R M] : Preorder (fpIndex R M) where
+  le := fpLE
+  lt i j := fpLE i j ∧ ¬ fpLE j i
+  le_refl i := ⟨le_rfl, by
+    rw [show fpInclusion (s := i.1) (t := i.1) le_rfl = LinearMap.id by
+      ext x; simp [fpInclusion]]
+    rw [Submodule.map_id]⟩
+  le_trans i j k hij hjk := by
+    rcases hij with ⟨hij, hijK⟩
+    rcases hjk with ⟨hjk, hjkK⟩
+    refine ⟨hij.trans hjk, ?_⟩
+    intro x hx
+    rcases hx with ⟨y, hy, rfl⟩
+    have hyj : fpInclusion hij y ∈ j.2.1 := hijK ⟨y, hy, rfl⟩
+    have hyk : fpInclusion hjk (fpInclusion hij y) ∈ k.2.1 :=
+      hjkK ⟨fpInclusion hij y, hyj, rfl⟩
+    convert hyk using 1
+    simp only [fpInclusion, LinearMap.coe_mk, AddHom.coe_mk, Finsupp.lmapDomain_apply]
+    rw [← Finsupp.mapDomain_comp]
+    apply Finsupp.mapDomain_congr
+    intro z hz
+    exact Subtype.ext rfl
+  lt_iff_le_not_ge := by
+    intro i j
+    rfl
+
+private abbrev fpQ {R M : Type u} [CommRing R] [AddCommGroup M] [Module R M]
+    (i : fpIndex R M) := (i.1 →₀ R) ⧸ i.2.1
+
+private def fpMap {R M : Type u} [CommRing R] [AddCommGroup M] [Module R M]
+    {i j : fpIndex R M} (hij : i ≤ j) : fpQ i →ₗ[R] fpQ j :=
+  i.2.1.mapQ j.2.1 (fpInclusion hij.choose)
+    (Submodule.map_le_iff_le_comap.mp hij.choose_spec)
+
+private lemma fpMap_id {R M : Type u} [CommRing R] [AddCommGroup M] [Module R M]
+    (i : fpIndex R M) : fpMap (R := R) (M := M) (le_refl i) = LinearMap.id := by
+  apply LinearMap.ext
+  intro x
+  induction x using Submodule.Quotient.induction_on with
+  | _ x =>
+      simp [fpMap, fpInclusion, Finsupp.lmapDomain_apply]
+      change Submodule.Quotient.mk (Finsupp.mapDomain (id : i.1 → i.1) x) =
+        Submodule.Quotient.mk x
+      rw [Finsupp.mapDomain_id]
+
+private lemma fpMap_comp {R M : Type u} [CommRing R] [AddCommGroup M] [Module R M]
+    {i j k : fpIndex R M} (hij : i ≤ j) (hjk : j ≤ k) :
+    fpMap (R := R) (M := M) (hij.trans hjk) =
+      (fpMap hjk).comp (fpMap hij) := by
+  apply LinearMap.ext
+  intro x
+  induction x using Submodule.Quotient.induction_on with
+  | _ x =>
+      simp only [fpMap, LinearMap.comp_apply, Submodule.mapQ_apply, fpInclusion,
+        LinearMap.coe_mk, AddHom.coe_mk, Finsupp.lmapDomain_apply]
+      congr 1
+      rw [← Finsupp.mapDomain_comp]
+      apply Finsupp.mapDomain_congr
+      intro z hz
+      exact Subtype.ext rfl
+
+private instance fpIndexNonempty {R M : Type u} [CommRing R] [AddCommGroup M]
+    [Module R M] : Nonempty (fpIndex R M) :=
+  ⟨⟨∅, ⟨⊥, Submodule.fg_bot, bot_le⟩⟩⟩
+
+private instance fpIndexDirected {R M : Type u} [CommRing R] [AddCommGroup M]
+    [Module R M] : IsDirectedOrder (fpIndex R M) where
+  directed i j := by
+    classical
+    let s : Finset M := i.1 ∪ j.1
+    have his : i.1 ≤ s := by simpa [s] using Finset.subset_union_left
+    have hjs : j.1 ≤ s := by simpa [s] using Finset.subset_union_right
+    let Ki : Submodule R (s →₀ R) := i.2.1.map (fpInclusion his)
+    let Kj : Submodule R (s →₀ R) := j.2.1.map (fpInclusion hjs)
+    let K : Submodule R (s →₀ R) := Ki ⊔ Kj
+    have hKfg : K.FG := by
+      exact (i.2.2.1.map (fpInclusion his)).sup (j.2.2.1.map (fpInclusion hjs))
+    have hKker : K ≤ LinearMap.ker (fpEval (R := R) (M := M) (s := s)) := by
+      apply sup_le
+      · rintro _ ⟨x, hx, rfl⟩
+        change fpEval (R := R) (M := M) (s := s) (fpInclusion his x) = 0
+        calc
+          fpEval (R := R) (M := M) (s := s) (fpInclusion his x) =
+              fpEval (R := R) (M := M) (s := i.1) x :=
+            DFunLike.congr_fun (fpEval_comp_fpInclusion his) x
+          _ = 0 := i.2.2.2 hx
+      · rintro _ ⟨x, hx, rfl⟩
+        change fpEval (R := R) (M := M) (s := s) (fpInclusion hjs x) = 0
+        calc
+          fpEval (R := R) (M := M) (s := s) (fpInclusion hjs x) =
+              fpEval (R := R) (M := M) (s := j.1) x :=
+            DFunLike.congr_fun (fpEval_comp_fpInclusion hjs) x
+          _ = 0 := j.2.2.2 hx
+    let k : fpIndex R M := ⟨s, ⟨K, hKfg, hKker⟩⟩
+    refine ⟨k, ?_, ?_⟩
+    · exact ⟨his, by exact le_sup_left⟩
+    · exact ⟨hjs, by exact le_sup_right⟩
+
+private def fpToM {R M : Type u} [CommRing R] [AddCommGroup M] [Module R M]
+    (i : fpIndex R M) : fpQ i →ₗ[R] M :=
+  i.2.1.liftQ (fpEval (R := R) (M := M) (s := i.1)) i.2.2.2
+
+private lemma fpToM_map {R M : Type u} [CommRing R] [AddCommGroup M]
+    [Module R M] {i j : fpIndex R M} (hij : i ≤ j) :
+    fpToM (R := R) (M := M) j ∘ₗ fpMap hij = fpToM i := by
+  apply LinearMap.ext
+  intro x
+  induction x using Submodule.Quotient.induction_on with
+  | _ x =>
+      simp only [fpToM, fpMap, LinearMap.comp_apply, Submodule.liftQ_apply,
+        Submodule.mapQ_apply, fpInclusion, LinearMap.coe_mk, AddHom.coe_mk,
+        Finsupp.lmapDomain_apply]
+      exact DFunLike.congr_fun (fpEval_comp_fpInclusion hij.choose) x
+
+private instance fpDirectedSystem {R M : Type u} [CommRing R] [AddCommGroup M]
+    [Module R M] :
+    DirectedSystem (fun i : fpIndex R M => fpQ i)
+      (fun _ _ h => fpMap (R := R) (M := M) h) where
+  map_self := by
+    intro i x
+    exact LinearMap.congr_fun (fpMap_id i) x
+  map_map := by
+    intro i j k hij hjk x
+    exact (LinearMap.congr_fun (fpMap_comp hij hjk) x).symm
+
+private def fpLimitToM {R M : Type u} [CommRing R] [AddCommGroup M]
+    [Module R M] [DecidableEq (fpIndex R M)] :
+    Module.DirectLimit (fun i : fpIndex R M => fpQ i)
+      (fun _ _ h => fpMap (R := R) (M := M) h) →ₗ[R] M :=
+  Module.DirectLimit.lift R (fpIndex R M) (fun i : fpIndex R M => fpQ i)
+    (fun _ _ h => fpMap (R := R) (M := M) h) (fun i => fpToM i)
+    (by
+      intro i j hij x
+      exact LinearMap.congr_fun (fpToM_map hij) x)
+
+private def fpAddRelation {R M : Type u} [CommRing R] [AddCommGroup M]
+    [Module R M] (i : fpIndex R M) (d : i.1 →₀ R)
+    (hd : fpEval (R := R) (M := M) d = 0) : fpIndex R M :=
+  ⟨i.1, ⟨i.2.1 ⊔ Submodule.span R ({d} : Set (i.1 →₀ R)),
+    i.2.2.1.sup (Submodule.fg_span_singleton d),
+    sup_le i.2.2.2 (Submodule.span_le.2 (by
+      rintro x (rfl : x = d)
+      exact hd))⟩⟩
+
+private lemma fpLE_fpAddRelation {R M : Type u} [CommRing R] [AddCommGroup M]
+    [Module R M] (i : fpIndex R M) (d : i.1 →₀ R)
+    (hd : fpEval (R := R) (M := M) d = 0) : i ≤ fpAddRelation i d hd := by
+  dsimp [fpLE, fpAddRelation]
+  refine ⟨le_rfl, ?_⟩
+  rw [show fpInclusion (s := i.1) (t := i.1) le_rfl = LinearMap.id by
+    ext x; simp [fpInclusion], Submodule.map_id]
+  exact le_sup_left
+
+private lemma fpFinitePresentation {R M : Type u} [CommRing R] [AddCommGroup M]
+    [Module R M] (i : fpIndex R M) : Module.FinitePresentation R (fpQ i) := by
+  exact Module.finitePresentation_of_free_of_surjective i.2.1.mkQ
+    (Submodule.mkQ_surjective _) (by
+      rw [Submodule.ker_mkQ]
+      exact i.2.2.1)
+
+private lemma fpLimitToM_surjective {R M : Type u} [CommRing R] [AddCommGroup M]
+    [Module R M] [DecidableEq (fpIndex R M)] :
+    Function.Surjective (fpLimitToM (R := R) (M := M)) := by
+  intro x
+  let i : fpIndex R M := ⟨{x}, ⟨⊥, Submodule.fg_bot, bot_le⟩⟩
+  let a : i.1 →₀ R := Finsupp.single ⟨x, by simp [i]⟩ 1
+  refine ⟨Module.DirectLimit.of R (fpIndex R M) (fun i => fpQ i)
+    (fun _ _ h => fpMap (R := R) (M := M) h) i (i.2.1.mkQ a), ?_⟩
+  rw [fpLimitToM, Module.DirectLimit.lift_of]
+  simp [fpToM, fpEval, i, a]
+
+private lemma fpLimitToM_injective {R M : Type u} [CommRing R] [AddCommGroup M]
+    [Module R M] [DecidableEq (fpIndex R M)] :
+    Function.Injective (fpLimitToM (R := R) (M := M)) := by
+  intro z w hzw
+  obtain ⟨i, x, y, hx, hy⟩ := Module.DirectLimit.exists_of₂ z w
+  rw [← hx, ← hy] at hzw
+  simp only [fpLimitToM, Module.DirectLimit.lift_of] at hzw
+  induction x using Submodule.Quotient.induction_on with
+  | _ x =>
+      induction y using Submodule.Quotient.induction_on with
+      | _ y =>
+          have hxy : fpEval (R := R) (M := M) (s := i.1) x =
+              fpEval (R := R) (M := M) (s := i.1) y := by
+            simpa [fpToM] using hzw
+          have hd : fpEval (R := R) (M := M) (s := i.1) (x - y) = 0 := by
+            rw [map_sub, hxy, sub_self]
+          let k : fpIndex R M := fpAddRelation i (x - y) hd
+          have hik : i ≤ k := fpLE_fpAddRelation i (x - y) hd
+          have hmap : fpMap hik (i.2.1.mkQ x) = fpMap hik (i.2.1.mkQ y) := by
+            simp only [fpMap, Submodule.mapQ_apply]
+            apply (Submodule.Quotient.eq _).2
+            rw [← map_sub]
+            have hdmem : x - y ∈ (fpAddRelation i (x - y) hd).2.1 := by
+              change x - y ∈ i.2.1 ⊔ Submodule.span R ({x - y} : Set (i.1 →₀ R))
+              exact Submodule.mem_sup_right
+                (Submodule.subset_span (Set.mem_singleton _))
+            have hident : fpInclusion hik.choose (x - y) = x - y := by
+              dsimp [k, fpAddRelation, fpLE, fpInclusion]
+              change Finsupp.mapDomain (id : i.1 → i.1) (x - y) = x - y
+              exact Finsupp.mapDomain_id
+            rw [hident]
+            exact hdmem
+          calc
+            z = Module.DirectLimit.of R (fpIndex R M) (fun i => fpQ i)
+                (fun _ _ h => fpMap (R := R) (M := M) h) i (i.2.1.mkQ x) := hx.symm
+            _ = Module.DirectLimit.of R (fpIndex R M) (fun i => fpQ i)
+                (fun _ _ h => fpMap (R := R) (M := M) h) k (fpMap hik (i.2.1.mkQ x)) := by
+              rw [Module.DirectLimit.of_f]
+            _ = Module.DirectLimit.of R (fpIndex R M) (fun i => fpQ i)
+                (fun _ _ h => fpMap (R := R) (M := M) h) k (fpMap hik (i.2.1.mkQ y)) :=
+              congrArg (Module.DirectLimit.of R (fpIndex R M) (fun i => fpQ i)
+                (fun _ _ h => fpMap (R := R) (M := M) h) k) hmap
+            _ = Module.DirectLimit.of R (fpIndex R M) (fun i => fpQ i)
+                (fun _ _ h => fpMap (R := R) (M := M) h) i (i.2.1.mkQ y) := by
+              rw [Module.DirectLimit.of_f]
+            _ = w := hy
+
 /-- Every module admits a directed-colimit presentation by finitely presented
 modules. -/
 theorem exists_directed_finitelyPresented_module_colimit
     {R M : Type u} [CommRing R] [AddCommGroup M] [Module R M] :
     Nonempty
       (DirectedFinitelyPresentedModuleColimit (ModuleCat.of R M)) := by
-  sorry
+  classical
+  letI : DecidableEq (fpIndex R M) := Classical.decEq _
+  let e : Module.DirectLimit (fun i : fpIndex R M => fpQ i)
+    (fun _ _ h => fpMap (R := R) (M := M) h) ≃ₗ[R] M :=
+    LinearEquiv.ofBijective (fpLimitToM (R := R) (M := M))
+      ⟨fpLimitToM_injective, fpLimitToM_surjective⟩
+  refine ⟨{
+    index := fpIndex R M
+    diagram := ModuleCat.directLimitDiagram (fun i : fpIndex R M => fpQ i)
+      (fun _ _ h => fpMap (R := R) (M := M) h)
+    finitelyPresented := ?_
+    comparison := ?_ }⟩
+  · intro i
+    exact fpFinitePresentation i
+  · exact ⟨(colimit.isColimit _).coconePointUniqueUpToIso
+      (ModuleCat.directLimitIsColimit (fun i : fpIndex R M => fpQ i)
+        (fun _ _ h => fpMap (R := R) (M := M) h)) ≪≫ e.toModuleIso⟩
 
 end Formalization.Books.Exercises.Unit02

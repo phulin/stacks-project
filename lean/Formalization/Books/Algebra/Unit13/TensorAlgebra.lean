@@ -4,6 +4,9 @@ import Mathlib.CategoryTheory.Filtered.Basic
 import Mathlib.LinearAlgebra.ExteriorAlgebra.Basis
 import Mathlib.LinearAlgebra.ExteriorAlgebra.Grading
 import Mathlib.LinearAlgebra.ExteriorPower.Basic
+import Mathlib.LinearAlgebra.Finsupp.LSum
+import Mathlib.LinearAlgebra.PiTensorProduct.Basis
+import Mathlib.LinearAlgebra.PiTensorProduct.Generators
 import Mathlib.LinearAlgebra.SymmetricAlgebra.Basis
 import Mathlib.LinearAlgebra.TensorAlgebra.Basis
 import Mathlib.LinearAlgebra.TensorAlgebra.ToTensorPower
@@ -162,12 +165,146 @@ theorem finite_free_symmetric_algebra_polynomial
     Nonempty (symmetricAlgebra R M ≃ₐ[R] MvPolynomial ι R) := by
   exact ⟨SymmetricAlgebra.equivMvPolynomial b⟩
 
+private noncomputable def symmetricPowerOrbitSet (J I : Type*) [DecidableEq J] :
+    Setoid (J → I) where
+  r p q := ∃ e : Equiv.Perm J, q = fun j => p (e j)
+  iseqv := {
+    refl := fun p => ⟨Equiv.refl _, rfl⟩
+    symm := by
+      rintro p q ⟨e, rfl⟩
+      exact ⟨e.symm, by ext j; simp⟩
+    trans := by
+      rintro p q r ⟨e, rfl⟩ ⟨f, rfl⟩
+      exact ⟨f.trans e, by ext j; rfl⟩ }
+
+private noncomputable def symmetricPowerCollapse
+    (R J I : Type*) [CommRing R] [DecidableEq J]
+    (q : (J → I) → Quotient (symmetricPowerOrbitSet J I)) :
+    ((J → I) →₀ R) →ₗ[R] (Quotient (symmetricPowerOrbitSet J I) →₀ R) :=
+  Finsupp.lsum R (fun p => Finsupp.lsingle (q p))
+
 /-- The symmetric and exterior powers of a free module are free. -/
 theorem free_symmetric_and_exterior_power
     {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
     [Module.Free R M] (n : ℕ) :
     Module.Free R (symmetricPower R M n) ∧ Module.Free R (exteriorPower R M n) := by
-  sorry
+  constructor
+  · classical
+    let J := ULift (Fin n)
+    let ⟨I, b⟩ := Module.Free.exists_basis R M
+    let S := symmetricPowerOrbitSet J I
+    let q : (J → I) → Quotient S := Quotient.mk'
+    let C : (⨂[R] _ : J, M) →ₗ[R] (Quotient S →₀ R) :=
+      (symmetricPowerCollapse R J I q).comp
+        (Basis.piTensorProduct (fun _ : J => b)).repr.toLinearMap
+    have hC (e : Equiv.Perm J) :
+        C.comp (PiTensorProduct.reindex R (fun _ : J => M) e).toLinearMap = C := by
+      apply (Basis.piTensorProduct (fun _ : J => b)).ext
+      intro p
+      simp only [C, LinearMap.comp_apply, LinearEquiv.coe_coe,
+        Basis.piTensorProduct_apply]
+      rw [PiTensorProduct.reindex_tprod,
+        ← Basis.piTensorProduct_apply, ← Basis.piTensorProduct_apply,
+        Module.Basis.repr_self, Module.Basis.repr_self]
+      simp only [symmetricPowerCollapse, Finsupp.lsum_single, q]
+      simp only [Finsupp.lsingle_apply]
+      apply congrArg (fun z : Quotient S => Finsupp.single z (1 : R))
+      apply Quotient.sound
+      exact ⟨e, by ext i; simp⟩
+
+    have hrel : addConGen (SymmetricPower.Rel R J M) ≤
+        AddCon.ker C.toAddMonoidHom := by
+      apply AddCon.addConGen_le.2
+      intro x y hxy
+      cases hxy with
+      | perm e f =>
+        have he := LinearMap.congr_fun (hC e.symm) (PiTensorProduct.tprod R f)
+        change C (PiTensorProduct.reindex R (fun _ : J => M) e.symm
+          (PiTensorProduct.tprod R f)) = C (PiTensorProduct.tprod R f) at he
+        rw [PiTensorProduct.reindex_tprod] at he
+        change C (PiTensorProduct.tprod R f) =
+          C (PiTensorProduct.tprod R (fun i => f (e i)))
+        exact he.symm
+
+    let D : SymmetricPower R J M →ₗ[R] (Quotient S →₀ R) :=
+      { toFun := AddCon.lift (addConGen (SymmetricPower.Rel R J M))
+          C.toAddMonoidHom hrel
+        map_add' := by
+          intro x y
+          exact map_add _ _ _
+        map_smul' := by
+          intro r x
+          refine AddCon.induction_on x ?_
+          intro t
+          change C (r • t) = r • C t
+          exact C.map_smul r t }
+
+    have hD (t : (⨂[R] _ : J, M)) :
+        D (SymmetricPower.mk R J M t) = C t := by
+      change AddCon.lift (addConGen (SymmetricPower.Rel R J M))
+        C.toAddMonoidHom hrel (AddCon.mk' _ t) = C t
+      exact AddCon.lift_coe hrel t
+
+    let v : Quotient S → SymmetricPower R J M := fun z =>
+      SymmetricPower.tprod R (fun j => b (Quotient.out z j))
+
+    have hv (z : Quotient S) : D (v z) = Finsupp.single z (1 : R) := by
+      change D (SymmetricPower.mk R J M
+        (PiTensorProduct.tprod R (fun j => b (Quotient.out z j)))) = _
+      rw [hD]
+      simp only [C, LinearMap.comp_apply, LinearEquiv.coe_coe,
+        Basis.piTensorProduct_apply]
+      rw [← Basis.piTensorProduct_apply, Module.Basis.repr_self]
+      simp only [symmetricPowerCollapse, Finsupp.lsum_single, q]
+      simp only [Finsupp.lsingle_apply]
+      congr 1
+      exact Quotient.out_eq z
+
+    have hli : LinearIndependent R v := by
+      apply LinearIndependent.of_comp D
+      rw [show D ∘ v = (fun z => Finsupp.single z (1 : R)) by
+        funext z; exact hv z]
+      exact
+        (Finsupp.basisSingleOne (R := R) (ι := Quotient S)).linearIndependent
+
+    have hspanT : Submodule.span R (Set.range (fun p : J → I =>
+        PiTensorProduct.tprod R (fun j => b (p j)))) = ⊤ := by
+      apply PiTensorProduct.submodule_span_eq_top
+      intro j
+      exact b.span_eq
+
+    have hspanBasis : Submodule.span R (Set.range (fun p : J → I =>
+        SymmetricPower.tprod R (fun j => b (p j)))) = ⊤ := by
+      rw [SymmetricPower.tprod, LinearMap.coe_compMultilinearMap]
+      change Submodule.span R (Set.range ((SymmetricPower.mk R J M) ∘
+        (fun p : J → I => PiTensorProduct.tprod R (fun j => b (p j))))) = ⊤
+      rw [Set.range_comp, Submodule.span_image, hspanT, Submodule.map_top,
+        SymmetricPower.range_mk]
+
+    have hspan : ⊤ ≤ Submodule.span R (Set.range v) := by
+      rw [← hspanBasis]
+      apply Submodule.span_mono
+      rintro _ ⟨p, rfl⟩
+      refine ⟨q p, ?_⟩
+      unfold v
+      have hq : S (Quotient.out (q p)) p := by
+        dsimp [q]
+        exact Quotient.mk_out p
+      rcases hq with ⟨e, he⟩
+      have hfirst : SymmetricPower.tprod R (fun j => b (p j)) =
+          SymmetricPower.tprod R (fun j => b (Quotient.out (q p) (e j))) := by
+        congr 1
+        funext j
+        exact congrArg (fun k : J → I => b (k j)) he
+      have ht : SymmetricPower.tprod R (fun j => b (p j)) =
+          SymmetricPower.tprod R (fun j => b (Quotient.out (q p) j)) := by
+        rw [hfirst]
+        exact SymmetricPower.tprod_equiv e
+          (fun j => b (Quotient.out (q p) j))
+      exact ht.symm
+
+    exact Module.Free.of_basis (Module.Basis.mk hli hspan)
+  · infer_instance
 
 /-! ## Presentations by relations -/
 
@@ -412,7 +549,10 @@ theorem wedgeTensorPowerMap_tprod
     wedgeTensorPowerMap (A := A) (B := B) (M := M) n
         (PiTensorProduct.tprod A x) =
       (exteriorPower.ιMulti B n) x := by
-  sorry
+  exact
+    letI : Module A (exteriorPower B M n) :=
+      Module.restrictScalars A B (exteriorPower B M n)
+    PiTensorProduct.lift.tprod _
 
 /-- The generators used in the kernel presentation of the exterior power. -/
 def wedgeKernelGenerators

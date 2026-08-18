@@ -1,6 +1,8 @@
 import Mathlib.Algebra.Homology.ShortComplex.ShortExact
 import Mathlib.Algebra.Module.FinitePresentation
+import Formalization.Books.Derived.Unit37.CompactObjects
 import Formalization.Books.MoreAlgebra.Unit56.DerivedCategoriesOfModules
+import Formalization.Books.MoreAlgebra.Unit57.ComputingTor
 import Formalization.Books.MoreAlgebra.Unit58.TensorProductsOfComplexes
 
 /-!
@@ -23,6 +25,7 @@ open Formalization.Books.Derived.Unit08
 open Formalization.Books.Derived.Unit11
 open Formalization.Books.Derived.Unit10
 open Formalization.Books.MoreAlgebra.Unit56
+open Formalization.Books.MoreAlgebra.Unit57
 open Formalization.Books.MoreAlgebra.Unit58
 open ComplexShape
 open HomologicalComplex
@@ -224,12 +227,12 @@ theorem exists_kFlatResolution
 
 /-! ## The filtered resolution remark -/
 
-/-- A direct sum of shifts of the tensor unit complex. -/
-noncomputable def IsDirectSumOfUnitShifts
+/-- A direct sum of shifts of the tensor unit complex, using the generic
+    construction from Derived Categories, Chapter 37. -/
+noncomputable abbrev IsDirectSumOfUnitShifts
     {R : Type u} [CommRing R] (X : Comp R) : Prop :=
-  ∃ (I : Type u) (k : I → ℤ),
-    Nonempty ((∐ fun i : I =>
-      (shiftFunctor (Comp R) (k i)).obj (tensorUnit R)) ≅ X)
+  Formalization.Books.Derived.Unit37.IsDirectSumOfShifts
+    (C := Comp R) (fun _ : ULift.{u} PUnit => tensorUnit R) X
 
 /-- A filtered complex whose successive inclusions split termwise and whose
 successive quotients are direct sums of shifts of `R`.  The indexing starts
@@ -238,6 +241,8 @@ structure SplitFreeFiltration
     {R : Type u} [CommRing R] (P : Comp R) where
   system : ℕ ⥤ Comp R
   exhaustive : Nonempty (colimit system ≅ P)
+  /-- The quotient `F₀/F₋₁`, with `F₋₁ = 0`, is free in the source's sense. -/
+  initial_piece : IsDirectSumOfUnitShifts (system.obj 0)
   inclusions_split : ∀ n : ℕ,
     termwiseSplitInjection
       (system.map (homOfLE (Nat.le_succ n)))
@@ -360,7 +365,7 @@ structure DerivedTensorProductData
     (R : Type u) [CommRing R]
     [HasDerivedCategory.{w} (ModuleCat.{u} R)] where
   functor : (D R × D R) ⥤ D R
-  exact_in_second : ∀ M : D R,
+  exact_in_first : ∀ M : D R,
     Nonempty (ExactTriangulatedFunctorData (tensorFunctorSlice functor M))
   represented : ∀ (X Y : D R),
     ∃ (K L : Comp R),
@@ -417,7 +422,24 @@ theorem derivedTensorFunctor_exact
     {R : Type u} [CommRing R]
     [HasDerivedCategory.{w} (ModuleCat.{u} R)] (M : D R) :
     Nonempty (ExactTriangulatedFunctorData (derivedTensorFunctor M)) :=
-  (derivedTensorProductData (R := R)).exact_in_second M
+  (derivedTensorProductData (R := R)).exact_in_first M
+
+/- The unbounded construction extends the bounded-above derived tensor
+   functor from the preceding chapter.  The inclusion of the bounded-above
+   derived category into the unbounded one is the canonical full-subcategory
+   inclusion supplied by Mathlib. -/
+theorem derivedTensor_extends_boundedAbove
+    {R : Type u} [CommRing R]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)]
+    (M : ModuleCat.{u} R) :
+    Nonempty (
+      (DerivedCategory.Minus.ι (C := ModuleCat.{u} R) ⋙
+        derivedTensorFunctor
+          ((DerivedCategory.Minus.ι (C := ModuleCat.{u} R)).obj
+            (moduleInDMinus R M))) ≅
+      (derivedTensorModuleFunctor R M ⋙
+        DerivedCategory.Minus.ι (C := ModuleCat.{u} R))) := by
+  sorry
 
 theorem derivedTensor_represented
     {R : Type u} [CommRing R]

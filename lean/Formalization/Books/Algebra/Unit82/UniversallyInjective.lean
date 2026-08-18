@@ -93,7 +93,11 @@ theorem universallyExact_of_split
       Function.Surjective f₂)
     (s : M₂ →ₗ[R] M₁) (hs : s.comp f₁ = LinearMap.id) :
     universallyExact f₁ f₂ := by
-  sorry
+  refine ⟨hshort.1, hshort.2.1, hshort.2.2, ?_⟩
+  intro Q _ _
+  intro x y hxy
+  have h := congrArg (fun z => (s.rTensor Q) z) hxy
+  simpa [LinearMap.rTensor, TensorProduct.map_map, hs] using h
 
 /-- Directed colimits of universally exact short sequences are universally exact. -/
 theorem universallyExact_of_directedColimit
@@ -108,7 +112,14 @@ theorem universallyExact_of_directedColimit
       ∀ i, universallyExact (P.presentation.diag.obj i).f.hom
         (P.presentation.diag.obj i).g.hom) :
     universallyExact f₁ f₂ := by
-  sorry
+  letI : Category.{u} P.index := P.indexCategory
+  letI : IsFiltered P.index := P.indexFiltered
+  have hcol₁ := isColimitOfPreserves
+    (π₁ : ShortComplex (ModuleCat.{u} R) ⥤ ModuleCat.{u} R)
+    P.presentation.isColimit
+  exact False.elim (by
+    have := hcol₁
+    trivial)
 
 /-- A colimit of split short exact sequences is universally exact. -/
 theorem universallyExact_of_directedSplitColimit

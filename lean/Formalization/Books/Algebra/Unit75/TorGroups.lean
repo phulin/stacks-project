@@ -473,7 +473,403 @@ theorem exists_tor_long_exact_sequence {R : Type u} [CommRing R]
       exact Module.Flat.lTensor_preserves_injective_linearMap S.f.hom
         hS.moduleCat_injective_f
     · exact LinearMap.lTensor_surjective _ hS.moduleCat_surjective_g
-  sorry
+  let e₀ : (tensorComplex F.complex S.X₁).X 0 ≅
+      ModuleCat.of R (TensorProduct R (F.complex.X 0) S.X₁) :=
+    eqToIso (by dsimp [tensorComplex])
+  let e₁ : (tensorComplex F.complex S.X₁).X 1 ≅
+      ModuleCat.of R (TensorProduct R (F.complex.X 1) S.X₁) :=
+    eqToIso (by dsimp [tensorComplex])
+  let b₁ : ModuleCat.of R (TensorProduct R (F.complex.X 0) S.X₁) ⟶
+      ModuleCat.of R (TensorProduct R M S.X₁) := by
+    exact ModuleCat.ofHom (LinearMap.rTensor S.X₁ F.resolution.augmentation.hom)
+  let a₁ : (tensorComplex F.complex S.X₁).cycles 0 ⟶
+      ModuleCat.of R (TensorProduct R M S.X₁) :=
+    (tensorComplex F.complex S.X₁).iCycles 0 ≫ e₀.hom ≫ b₁
+  have ha₁ : (tensorComplex F.complex S.X₁).toCycles 1 0 ≫ a₁ = 0 := by
+    change (tensorComplex F.complex S.X₁).toCycles 1 0 ≫
+      (tensorComplex F.complex S.X₁).iCycles 0 ≫ e₀.hom ≫ b₁ = 0
+    rw [← Category.assoc, HomologicalComplex.toCycles_i]
+    dsimp [e₀, b₁, tensorComplex]
+    apply ModuleCat.hom_ext
+    change (LinearMap.rTensor S.X₁ F.resolution.augmentation.hom).comp
+        (LinearMap.rTensor S.X₁ (F.complex.d 1 0).hom) = 0
+    rw [← LinearMap.rTensor_comp]
+    rw [show F.resolution.augmentation.hom.comp (F.complex.d 1 0).hom = 0 by
+      exact congrArg (fun q => q.hom) F.resolution.augmentation_condition]
+    rw [LinearMap.rTensor_zero]
+  let q₁' : cokernel ((tensorComplex F.complex S.X₁).toCycles 1 0) ⟶
+      ModuleCat.of R (TensorProduct R M S.X₁) :=
+    cokernel.desc ((tensorComplex F.complex S.X₁).toCycles 1 0) a₁ ha₁
+  have hq₁' : IsIso q₁' := by
+    have hex : Function.Exact (LinearMap.rTensor S.X₁ (F.complex.d 1 0).hom)
+        (LinearMap.rTensor S.X₁ F.resolution.augmentation.hom) := by
+      apply rTensor_exact (S.X₁ : Type u)
+      · exact (ShortComplex.ShortExact.moduleCat_exact_iff_function_exact
+          (ShortComplex.mk (F.complex.d 1 0) F.resolution.augmentation
+            F.resolution.augmentation_condition)).mp F.resolution.exact_zero
+      · exact (ModuleCat.epi_iff_surjective F.resolution.augmentation).mp
+          F.resolution.augmentation_epi
+    let C₁ : ShortComplex (ModuleCat R) :=
+      ShortComplex.mk ((tensorComplex F.complex S.X₁).toCycles 1 0) a₁ ha₁
+    let D₁ : ShortComplex (ModuleCat R) :=
+      ShortComplex.mk
+        (ModuleCat.ofHom (LinearMap.rTensor S.X₁ (F.complex.d 1 0).hom))
+        b₁ (by
+          apply ModuleCat.hom_ext
+          change (LinearMap.rTensor S.X₁ F.resolution.augmentation.hom).comp
+              (LinearMap.rTensor S.X₁ (F.complex.d 1 0).hom) = 0
+          rw [← LinearMap.rTensor_comp]
+          rw [show F.resolution.augmentation.hom.comp (F.complex.d 1 0).hom = 0 by
+            exact congrArg (fun q => q.hom) F.resolution.augmentation_condition]
+          rw [LinearMap.rTensor_zero])
+    have hD₁ : D₁.Exact := ModuleCat.shortComplex_exact D₁ hex
+    let i₁ : C₁ ≅ D₁ := ShortComplex.isoMk e₁
+      ((tensorComplex F.complex S.X₁).iCyclesIso 0 0 (by simp) (by simp) ≪≫ e₀)
+      (Iso.refl _)
+      (by
+        dsimp [C₁, D₁]
+        change e₁.hom ≫
+            ModuleCat.ofHom (LinearMap.rTensor S.X₁ (F.complex.d 1 0).hom) =
+          ((tensorComplex F.complex S.X₁).toCycles 1 0 ≫
+            (tensorComplex F.complex S.X₁).iCycles 0) ≫ e₀.hom
+        rw [HomologicalComplex.toCycles_i]
+        simp [e₀, e₁, tensorComplex])
+      (by
+        dsimp [C₁, D₁, a₁]
+        change ((tensorComplex F.complex S.X₁).iCycles 0 ≫ e₀.hom) ≫ b₁ =
+          ((tensorComplex F.complex S.X₁).iCycles 0 ≫ e₀.hom ≫ b₁) ≫ 𝟙 _
+        simp [Category.assoc])
+    have hC₁ : C₁.Exact := (ShortComplex.exact_iff_of_iso i₁).2 hD₁
+    have hmono : Mono q₁' := by
+      exact (ShortComplex.exact_iff_mono_cokernel_desc C₁).mp hC₁
+    haveI : Mono q₁' := hmono
+    haveI : Epi b₁ := (ModuleCat.epi_iff_surjective b₁).2 (by
+      change Function.Surjective (LinearMap.rTensor S.X₁ F.resolution.augmentation.hom)
+      exact LinearMap.rTensor_surjective _
+        ((ModuleCat.epi_iff_surjective F.resolution.augmentation).mp
+          F.resolution.augmentation_epi))
+    letI : IsIso ((tensorComplex F.complex S.X₁).iCycles 0) :=
+      (tensorComplex F.complex S.X₁).isIso_iCycles 0 0 (by simp) (by simp)
+    haveI : Epi a₁ := by
+      dsimp [a₁]
+      infer_instance
+    letI : Epi (cokernel.π ((tensorComplex F.complex S.X₁).toCycles 1 0) ≫ q₁') := by
+      rw [cokernel.π_desc]
+      infer_instance
+    haveI : Epi q₁' := epi_of_epi_fac
+      (f := cokernel.π ((tensorComplex F.complex S.X₁).toCycles 1 0))
+      (g := q₁') (h := a₁) (by simp [q₁'])
+    exact isIso_of_mono_of_epi q₁'
+  let hcol₁ := HomologicalComplex.homologyIsCokernel
+    (tensorComplex F.complex S.X₁) 1 0 (by simp)
+  let ccol₁ := cokernelIsCokernel ((tensorComplex F.complex S.X₁).toCycles 1 0)
+  let hcan₁ := colimit.isColimit (parallelPair
+    ((tensorComplex F.complex S.X₁).toCycles 1 0) 0)
+  let eHom₁ : (tensorComplex F.complex S.X₁).homology 0 ≅
+      cokernel ((tensorComplex F.complex S.X₁).toCycles 1 0) :=
+    hcol₁.coconePointUniqueUpToIso hcan₁ ≪≫
+      (ccol₁.coconePointUniqueUpToIso hcan₁).symm
+  let q₁Iso : (tensorComplex F.complex S.X₁).homology 0 ≅
+      ModuleCat.of R (TensorProduct R M S.X₁) := by
+    letI : IsIso q₁' := hq₁'
+    exact eHom₁ ≪≫ asIso q₁'
+  let q₁ := q₁Iso.hom
+  let tensorAug (N : ModuleCat R) :
+      (tensorComplex F.complex N).cycles 0 ⟶
+        ModuleCat.of R (TensorProduct R M N) :=
+    (tensorComplex F.complex N).iCycles 0 ≫
+      (eqToIso (by dsimp [tensorComplex])).hom ≫
+      ModuleCat.ofHom (LinearMap.rTensor N F.resolution.augmentation.hom)
+  let makeQ (N : ModuleCat R) :
+      { q : (tensorComplex F.complex N).homology 0 ≅
+          ModuleCat.of R (TensorProduct R M N) //
+        (tensorComplex F.complex N).homologyπ 0 ≫ q.hom = tensorAug N } := by
+    let e₀ : (tensorComplex F.complex N).X 0 ≅
+        ModuleCat.of R (TensorProduct R (F.complex.X 0) N) :=
+      eqToIso (by dsimp [tensorComplex])
+    let e₁ : (tensorComplex F.complex N).X 1 ≅
+        ModuleCat.of R (TensorProduct R (F.complex.X 1) N) :=
+      eqToIso (by dsimp [tensorComplex])
+    let b₁ : ModuleCat.of R (TensorProduct R (F.complex.X 0) N) ⟶
+        ModuleCat.of R (TensorProduct R M N) := by
+      exact ModuleCat.ofHom (LinearMap.rTensor N F.resolution.augmentation.hom)
+    let a₁ : (tensorComplex F.complex N).cycles 0 ⟶
+        ModuleCat.of R (TensorProduct R M N) :=
+      (tensorComplex F.complex N).iCycles 0 ≫ e₀.hom ≫ b₁
+    have ha₁ : (tensorComplex F.complex N).toCycles 1 0 ≫ a₁ = 0 := by
+      change (tensorComplex F.complex N).toCycles 1 0 ≫
+        (tensorComplex F.complex N).iCycles 0 ≫ e₀.hom ≫ b₁ = 0
+      rw [← Category.assoc, HomologicalComplex.toCycles_i]
+      dsimp [e₀, b₁, tensorComplex]
+      apply ModuleCat.hom_ext
+      change (LinearMap.rTensor N F.resolution.augmentation.hom).comp
+          (LinearMap.rTensor N (F.complex.d 1 0).hom) = 0
+      rw [← LinearMap.rTensor_comp]
+      rw [show F.resolution.augmentation.hom.comp (F.complex.d 1 0).hom = 0 by
+        exact congrArg (fun q => q.hom) F.resolution.augmentation_condition]
+      rw [LinearMap.rTensor_zero]
+    let q' : cokernel ((tensorComplex F.complex N).toCycles 1 0) ⟶
+        ModuleCat.of R (TensorProduct R M N) :=
+      cokernel.desc ((tensorComplex F.complex N).toCycles 1 0) a₁ ha₁
+    have hq' : IsIso q' := by
+      have hex : Function.Exact (LinearMap.rTensor N (F.complex.d 1 0).hom)
+          (LinearMap.rTensor N F.resolution.augmentation.hom) := by
+        apply rTensor_exact (N : Type u)
+        · exact (ShortComplex.ShortExact.moduleCat_exact_iff_function_exact
+            (ShortComplex.mk (F.complex.d 1 0) F.resolution.augmentation
+              F.resolution.augmentation_condition)).mp F.resolution.exact_zero
+        · exact (ModuleCat.epi_iff_surjective F.resolution.augmentation).mp
+            F.resolution.augmentation_epi
+      let C : ShortComplex (ModuleCat R) :=
+        ShortComplex.mk ((tensorComplex F.complex N).toCycles 1 0) a₁ ha₁
+      let D : ShortComplex (ModuleCat R) :=
+        ShortComplex.mk
+          (ModuleCat.ofHom (LinearMap.rTensor N (F.complex.d 1 0).hom))
+          b₁ (by
+            apply ModuleCat.hom_ext
+            change (LinearMap.rTensor N F.resolution.augmentation.hom).comp
+                (LinearMap.rTensor N (F.complex.d 1 0).hom) = 0
+            rw [← LinearMap.rTensor_comp]
+            rw [show F.resolution.augmentation.hom.comp (F.complex.d 1 0).hom = 0 by
+              exact congrArg (fun q => q.hom) F.resolution.augmentation_condition]
+            rw [LinearMap.rTensor_zero])
+      have hD : D.Exact := ModuleCat.shortComplex_exact D hex
+      let i : C ≅ D := ShortComplex.isoMk e₁
+        ((tensorComplex F.complex N).iCyclesIso 0 0 (by simp) (by simp) ≪≫ e₀)
+        (Iso.refl _)
+        (by
+          dsimp [C, D]
+          change e₁.hom ≫
+              ModuleCat.ofHom (LinearMap.rTensor N (F.complex.d 1 0).hom) =
+            ((tensorComplex F.complex N).toCycles 1 0 ≫
+              (tensorComplex F.complex N).iCycles 0) ≫ e₀.hom
+          rw [HomologicalComplex.toCycles_i]
+          simp [e₀, e₁, tensorComplex])
+        (by
+          dsimp [C, D, a₁]
+          change ((tensorComplex F.complex N).iCycles 0 ≫ e₀.hom) ≫ b₁ =
+            ((tensorComplex F.complex N).iCycles 0 ≫ e₀.hom ≫ b₁) ≫ 𝟙 _
+          simp [Category.assoc])
+      have hC : C.Exact := (ShortComplex.exact_iff_of_iso i).2 hD
+      have hmono : Mono q' :=
+        (ShortComplex.exact_iff_mono_cokernel_desc C).mp hC
+      haveI : Mono q' := hmono
+      haveI : Epi b₁ := (ModuleCat.epi_iff_surjective b₁).2 (by
+        change Function.Surjective (LinearMap.rTensor N F.resolution.augmentation.hom)
+        exact LinearMap.rTensor_surjective _
+          ((ModuleCat.epi_iff_surjective F.resolution.augmentation).mp
+            F.resolution.augmentation_epi))
+      letI : IsIso ((tensorComplex F.complex N).iCycles 0) :=
+        (tensorComplex F.complex N).isIso_iCycles 0 0 (by simp) (by simp)
+      haveI : Epi a₁ := by
+        dsimp [a₁]
+        infer_instance
+      letI : Epi (cokernel.π ((tensorComplex F.complex N).toCycles 1 0) ≫ q') := by
+        rw [cokernel.π_desc]
+        infer_instance
+      haveI : Epi q' := epi_of_epi_fac
+        (f := cokernel.π ((tensorComplex F.complex N).toCycles 1 0))
+        (g := q') (h := a₁) (by simp [q'])
+      exact isIso_of_mono_of_epi q'
+    let hcol := HomologicalComplex.homologyIsCokernel
+      (tensorComplex F.complex N) 1 0 (by simp)
+    let ccol := cokernelIsCokernel ((tensorComplex F.complex N).toCycles 1 0)
+    let hcan := colimit.isColimit (parallelPair
+      ((tensorComplex F.complex N).toCycles 1 0) 0)
+    let eHom : (tensorComplex F.complex N).homology 0 ≅
+        cokernel ((tensorComplex F.complex N).toCycles 1 0) :=
+      hcol.coconePointUniqueUpToIso hcan ≪≫
+        (ccol.coconePointUniqueUpToIso hcan).symm
+    letI : IsIso q' := hq'
+    refine ⟨eHom ≪≫ asIso q', ?_⟩
+    let s := CokernelCofork.ofπ a₁ ha₁
+    have hdesc :
+        (hcol.coconePointUniqueUpToIso hcan).hom ≫ hcan.desc s =
+          hcol.desc s := by
+      apply hcol.uniq
+      intro j
+      rw [← Category.assoc, hcol.comp_coconePointUniqueUpToIso_hom hcan j]
+      exact hcan.fac s j
+    have hdesc₂ :
+        (ccol.coconePointUniqueUpToIso hcan).inv ≫
+            cokernel.desc ((tensorComplex F.complex N).toCycles 1 0) a₁ ha₁ =
+          hcan.desc s := by
+      refine hcan.uniq s _ ?_
+      intro j
+      simp [hcan, ccol]
+      cases j <;> simp [s, ha₁]
+    have hq : (eHom ≪≫ asIso q').hom =
+        (hcol.coconePointUniqueUpToIso hcan).hom ≫ hcan.desc s := by
+      change
+        ((hcol.coconePointUniqueUpToIso hcan).hom ≫
+            (ccol.coconePointUniqueUpToIso hcan).inv) ≫
+          cokernel.desc ((tensorComplex F.complex N).toCycles 1 0) a₁ ha₁ =
+        (hcol.coconePointUniqueUpToIso hcan).hom ≫ hcan.desc s
+      rw [Category.assoc, hdesc₂, hdesc]
+    have hfac : (tensorComplex F.complex N).homologyπ 0 ≫
+        (hcol.coconePointUniqueUpToIso hcan).hom ≫ hcan.desc s = a₁ := by
+      calc
+        (tensorComplex F.complex N).homologyπ 0 ≫
+              (hcol.coconePointUniqueUpToIso hcan).hom ≫ hcan.desc s =
+            (tensorComplex F.complex N).homologyπ 0 ≫ hcol.desc s := by
+              exact congrArg (fun k => (tensorComplex F.complex N).homologyπ 0 ≫ k) hdesc
+        _ = a₁ := by
+          simpa [s, Cofork.app_one_eq_π, CokernelCofork.π_ofπ] using
+            hcol.fac s WalkingParallelPair.one
+    change (tensorComplex F.complex N).homologyπ 0 ≫
+        (eHom ≪≫ asIso q').hom = a₁
+    rw [hq, hfac]
+  let q₂Data := makeQ S.X₂
+  let q₂Iso := q₂Data.1
+  let q₂ := q₂Iso.hom
+  let e₂ : (tensorComplex F.complex S.X₂).X 0 ≅
+      ModuleCat.of R (TensorProduct R (F.complex.X 0) S.X₂) :=
+    eqToIso (by dsimp [tensorComplex])
+  let b₂ : ModuleCat.of R (TensorProduct R (F.complex.X 0) S.X₂) ⟶
+      ModuleCat.of R (TensorProduct R M S.X₂) :=
+    ModuleCat.ofHom (LinearMap.rTensor S.X₂ F.resolution.augmentation.hom)
+  let a₂ : (tensorComplex F.complex S.X₂).cycles 0 ⟶
+      ModuleCat.of R (TensorProduct R M S.X₂) :=
+    (tensorComplex F.complex S.X₂).iCycles 0 ≫ e₂.hom ≫ b₂
+  have hπq₁ : (tensorComplex F.complex S.X₁).homologyπ 0 ≫ q₁ = a₁ := by
+    let s₁ := CokernelCofork.ofπ a₁ ha₁
+    have hdesc :
+        (hcol₁.coconePointUniqueUpToIso hcan₁).hom ≫ hcan₁.desc s₁ =
+          hcol₁.desc s₁ := by
+      apply hcol₁.uniq
+      intro j
+      rw [← Category.assoc, hcol₁.comp_coconePointUniqueUpToIso_hom hcan₁ j]
+      exact hcan₁.fac s₁ j
+    have hdesc₂ :
+        (ccol₁.coconePointUniqueUpToIso hcan₁).inv ≫
+          cokernel.desc ((tensorComplex F.complex S.X₁).toCycles 1 0) a₁ ha₁ =
+            hcan₁.desc s₁ := by
+      refine hcan₁.uniq s₁ _ ?_
+      intro j
+      simp [hcan₁, ccol₁]
+      cases j <;> simp [s₁, ha₁]
+    have hq₁ : (eHom₁ ≪≫ asIso q₁').hom =
+        (hcol₁.coconePointUniqueUpToIso hcan₁).hom ≫ hcan₁.desc s₁ := by
+      change
+        ((hcol₁.coconePointUniqueUpToIso hcan₁).hom ≫
+            (ccol₁.coconePointUniqueUpToIso hcan₁).inv) ≫
+          cokernel.desc ((tensorComplex F.complex S.X₁).toCycles 1 0) a₁ ha₁ =
+        (hcol₁.coconePointUniqueUpToIso hcan₁).hom ≫ hcan₁.desc s₁
+      rw [Category.assoc, hdesc₂, hdesc]
+    have hfac₁ : (tensorComplex F.complex S.X₁).homologyπ 0 ≫
+        (hcol₁.coconePointUniqueUpToIso hcan₁).hom ≫ hcan₁.desc s₁ = a₁ := by
+      calc
+        (tensorComplex F.complex S.X₁).homologyπ 0 ≫
+              (hcol₁.coconePointUniqueUpToIso hcan₁).hom ≫ hcan₁.desc s₁ =
+            (tensorComplex F.complex S.X₁).homologyπ 0 ≫ hcol₁.desc s₁ := by
+              exact congrArg (fun k => (tensorComplex F.complex S.X₁).homologyπ 0 ≫ k) hdesc
+        _ = a₁ := by
+          simpa [s₁, Cofork.app_one_eq_π, CokernelCofork.π_ofπ] using
+            hcol₁.fac s₁ WalkingParallelPair.one
+    change (tensorComplex F.complex S.X₁).homologyπ 0 ≫
+        (eHom₁ ≪≫ asIso q₁').hom = a₁
+    rw [hq₁, hfac₁]
+  have hπq₂ : (tensorComplex F.complex S.X₂).homologyπ 0 ≫ q₂ = a₂ := by
+    change (tensorComplex F.complex S.X₂).homologyπ 0 ≫ q₂Data.1.hom =
+      tensorAug S.X₂
+    exact q₂Data.2
+  have hq12 :
+      HomologicalComplex.homologyMap (tensorComplexMapRight F.complex S.f) 0 ≫ q₂ =
+        q₁ ≫ ModuleCat.ofHom (tensorByMap M S.f) := by
+    apply (cancel_epi ((tensorComplex F.complex S.X₁).homologyπ 0)).1
+    rw [← Category.assoc, HomologicalComplex.homologyπ_naturality]
+    simp only [Category.assoc]
+    rw [hπq₂]
+    conv_rhs => rw [← Category.assoc]
+    rw [hπq₁]
+    dsimp [a₁, a₂]
+    rw [← Category.assoc, HomologicalComplex.cyclesMap_i]
+    simp only [Category.assoc]
+    change
+      (tensorComplex F.complex S.X₁).iCycles 0 ≫
+          ((tensorComplexMapRight F.complex S.f).f 0 ≫ e₂.hom ≫ b₂) =
+        (tensorComplex F.complex S.X₁).iCycles 0 ≫
+          (e₀.hom ≫ b₁ ≫ ModuleCat.ofHom (tensorByMap M S.f))
+    apply (cancel_epi ((tensorComplex F.complex S.X₁).iCycles 0)).2
+    simp [e₀, e₂, b₁, b₂, tensorComplexMapRight, tensorByMap, tensorComplex,
+      ModuleCat.hom_comp, LinearMap.rTensor_comp_lTensor,
+      LinearMap.lTensor_comp_rTensor]
+    apply ModuleCat.hom_ext
+    change
+      (LinearMap.rTensor (S.X₂ : Type u) F.resolution.augmentation.hom).comp
+          (LinearMap.lTensor (F.complex.X 0) S.f.hom) =
+        (LinearMap.lTensor M S.f.hom).comp
+          (LinearMap.rTensor (S.X₁ : Type u) F.resolution.augmentation.hom)
+    rw [LinearMap.rTensor_comp_lTensor, LinearMap.lTensor_comp_rTensor]
+  let H := HomologicalComplex.HomologySequence.snakeInput hT 1 0 (by simp)
+  refine ⟨
+    { map₁ := H.L₀.f.hom
+      map₂ := H.L₀.g.hom
+      connecting := (H.δ ≫ q₁).hom
+      map₁_eq := by rfl
+      map₂_eq := by rfl
+      exact₁ := by
+        exact (ShortComplex.ShortExact.moduleCat_exact_iff_function_exact H.L₀).mp H.L₀_exact
+      exact₂ := by
+        let q₁HIso : H.L₃.X₁ ≅ ModuleCat.of R (TensorProduct R M S.X₁) := by
+          change (tensorComplex F.complex S.X₁).homology 0 ≅
+            ModuleCat.of R (TensorProduct R M S.X₁)
+          exact q₁Iso
+        let E₂ : ShortComplex (ModuleCat R) :=
+          ShortComplex.mk H.L₀.g (H.δ ≫ q₁HIso.hom) (by
+            rw [← Category.assoc, H.L₀_g_δ, zero_comp])
+        let i₂ : H.L₁' ≅ E₂ :=
+          ShortComplex.isoMk (Iso.refl _) (Iso.refl _) q₁HIso
+            (by
+              dsimp [E₂, ShortComplex.SnakeInput.L₁']
+              simp [Category.assoc])
+            (by
+              dsimp [E₂, ShortComplex.SnakeInput.L₁']
+              simp [Category.assoc])
+        have hE₂ : E₂.Exact :=
+          (ShortComplex.exact_iff_of_iso i₂).1 H.L₁'_exact
+        change Function.Exact E₂.f E₂.g
+        exact (ShortComplex.ShortExact.moduleCat_exact_iff_function_exact E₂).mp hE₂
+      exact₃ := by
+        let q₁HIso : H.L₃.X₁ ≅ ModuleCat.of R (TensorProduct R M S.X₁) := by
+          change (tensorComplex F.complex S.X₁).homology 0 ≅
+            ModuleCat.of R (TensorProduct R M S.X₁)
+          exact q₁Iso
+        let q₂HIso : H.L₃.X₂ ≅ ModuleCat.of R (TensorProduct R M S.X₂) := by
+          change (tensorComplex F.complex S.X₂).homology 0 ≅
+            ModuleCat.of R (TensorProduct R M S.X₂)
+          exact q₂Iso
+        have hcomm : q₁HIso.hom ≫ ModuleCat.ofHom (tensorByMap M S.f) =
+            H.L₃.f ≫ q₂HIso.hom := by
+          symm
+          dsimp [H, q₁HIso, q₂Iso, q₂]
+          exact hq12
+        let E₃ : ShortComplex (ModuleCat R) :=
+          ShortComplex.mk (H.δ ≫ q₁HIso.hom)
+            (ModuleCat.ofHom (tensorByMap M S.f)) (by
+              rw [Category.assoc]
+              rw [hcomm, ← Category.assoc, H.δ_L₃_f, zero_comp])
+        let i₃ : H.L₂' ≅ E₃ :=
+          ShortComplex.isoMk (Iso.refl _) q₁HIso q₂HIso
+            (by
+              dsimp [E₃, ShortComplex.SnakeInput.L₂']
+              simp [Category.assoc])
+            (by
+              dsimp [E₃, ShortComplex.SnakeInput.L₂']
+              exact hcomm)
+        have hE₃ : E₃.Exact :=
+          (ShortComplex.exact_iff_of_iso i₃).1 H.L₂'_exact
+        change Function.Exact E₃.f E₃.g
+        exact (ShortComplex.ShortExact.moduleCat_exact_iff_function_exact E₃).mp hE₃
+      exact₄ := by
+        change Function.Exact (LinearMap.lTensor (M : Type u) S.f.hom)
+          (LinearMap.lTensor (M : Type u) S.g.hom)
+        apply lTensor_exact (M : Type u)
+        · exact (ShortComplex.ShortExact.moduleCat_exact_iff_function_exact S).mp hS.exact
+        · exact hS.moduleCat_surjective_g
+      terminal_surjective := by
+        change Function.Surjective (LinearMap.lTensor (M : Type u) S.g.hom)
+        exact LinearMap.lTensor_surjective _ hS.moduleCat_surjective_g }⟩
 
 /-! ## Double complexes and the two quotient complexes -/
 

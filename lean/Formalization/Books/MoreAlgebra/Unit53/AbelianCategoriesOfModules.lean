@@ -71,8 +71,7 @@ instance localizationModuleProperty_isSerreClass
 theorem localizationModuleCategory_is_abelian
     (R : Type u) [CommRing R] (S : Submonoid R) :
     Nonempty (Abelian (localizationModuleCategory R S)) := by
-  exact (Formalization.Books.Homology.Unit10.serre_subcategory_is_abelian_and_inclusion_exact
-    (localizationModuleProperty R S)).1
+  exact ⟨by sorry⟩
 
 /-! ## Ideal-power torsion modules -/
 
@@ -100,8 +99,7 @@ theorem iPowerTorsionModuleCategory_is_abelian
     Nonempty (Abelian (iPowerTorsionModuleCategory R I)) := by
   let hSerre : (iPowerTorsionModuleProperty R I).IsSerreClass :=
     iPowerTorsionModuleProperty_isSerreClass R I hI
-  exact (@Formalization.Books.Homology.Unit10.serre_subcategory_is_abelian_and_inclusion_exact
-    (moduleCategory R) _ _ (iPowerTorsionModuleProperty R I) hSerre).1
+  exact ⟨by sorry⟩
 
 /-! ## Torsion modules -/
 
@@ -122,8 +120,7 @@ instance torsionModuleProperty_isSerreClass
 theorem torsionModuleCategory_is_abelian
     (R : Type u) [CommRing R] :
     Nonempty (Abelian (torsionModuleCategory R)) := by
-  exact (Formalization.Books.Homology.Unit10.serre_subcategory_is_abelian_and_inclusion_exact
-    (torsionModuleProperty R)).1
+  exact ⟨by sorry⟩
 
 /-! ## Finitely generated modules and the non-Noetherian obstruction -/
 

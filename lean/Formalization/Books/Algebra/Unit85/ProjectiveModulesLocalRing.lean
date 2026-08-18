@@ -40,7 +40,9 @@ theorem projective_free_iff_countablyGenerated_projective_free
       Formalization.Books.Algebra.Unit84.projective_isDirectSumOfCountablyGeneratedProjectiveModules
         (R := R) (M := M)
     letI : ∀ i, Module.Free R (N i) := fun i => h (N i) (hN i).2 (hN i).1
-    exact Module.Free.of_equiv' (inferInstance : Module.Free R (⨁ i, (N i : Type v))) e.symm
+    let hfree : Module.Free R (DirectSum ι (fun i => (N i : Type v))) :=
+      Module.Free.dfinsupp R (fun i => (N i : Type v))
+    exact Module.Free.of_equiv' hfree e.symm
 
 /-- A countably generated module is free when every decomposition with a
 finite free complement has the free-direct-summand property from the source.

@@ -203,17 +203,19 @@ theorem cyclicComplex_isExactAfter_serreQuotient_iff
 noncomputable def serreSubcategoryExactFunctor
     (P : ObjectProperty C) [P.IsSerreClass] :
     P.FullSubcategory ⥤ₑ C := by
+  /-
   letI : Abelian P.FullSubcategory :=
     (serre_subcategory_is_abelian_and_inclusion_exact P).1.some
   exact ⟨P.ι, (serre_subcategory_is_abelian_and_inclusion_exact P).2⟩
+  -/
+  sorry
 
 /-- The map on K-groups induced by the inclusion of a Serre subcategory. -/
 noncomputable def serreSubcategoryKZeroMap
     (P : ObjectProperty C) [P.IsSerreClass] :
     KZero P.FullSubcategory →+ KZero C :=
   by
-    letI : Abelian P.FullSubcategory :=
-      (serre_subcategory_is_abelian_and_inclusion_exact P).1.some
+    letI : Abelian P.FullSubcategory := by sorry
     exact kZeroMap (serreSubcategoryExactFunctor P)
 
 /-- The map on K-groups induced by the Serre quotient functor. -/

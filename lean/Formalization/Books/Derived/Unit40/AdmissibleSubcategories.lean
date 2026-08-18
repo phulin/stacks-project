@@ -308,8 +308,7 @@ theorem prepare_adjoint_two_out_of_three
           HasRightDecomposition P T.obj₂) ∧
         (HasRightDecomposition P T.obj₂ ∧
         HasRightDecomposition P T.obj₃ →
-          HasRightDecomposition P T.obj₁) := by sorry
-/- Original nontrivial proof retained for later completion:
+          HasRightDecomposition P T.obj₁) := by
   let hP : P.IsStableUnderShift ℤ := inferInstance
   have horth := orthogonal_triangulated P hP
   letI : (rightOrthogonal P).IsClosedUnderIsomorphisms := horth.1.1
@@ -330,15 +329,18 @@ theorem prepare_adjoint_two_out_of_three
         change f ≫ 𝟙 X = 𝟙 A ≫ f
         simp) hc₂ hc₃
     haveI : IsIso φ.hom₁ := by
-      dsimp [φ]
+      change IsIso (𝟙 A)
       infer_instance
     haveI : IsIso φ.hom₂ := by
-      dsimp [φ]
+      change IsIso (𝟙 X)
       infer_instance
-    haveI : IsIso c := by
+    have hc : IsIso c := by
       change IsIso φ.hom₃
-      exact isIso₃_of_isIso₁₂ φ hD hD' inferInstance inferInstance
-    exact (rightOrthogonal P).prop_of_iso (asIso c) hB
+      apply isIso₃_of_isIso₁₂ φ hD hD'
+      · exact inferInstance
+      · exact inferInstance
+    letI : IsIso c := hc
+    exact (rightOrthogonal P).prop_of_iso (@asIso _ _ _ _ c hc) hB
   have first_case :
       ∀ {S : Triangle C}, S ∈ distTriang C →
         HasRightDecomposition P S.obj₁ →
@@ -347,8 +349,10 @@ theorem prepare_adjoint_two_out_of_three
     intro S hS hS₁ hS₂
     rcases hS₁ with ⟨A₁, B₁, f₁, g₁, h₁, hD₁, hA₁, hB₁⟩
     rcases hS₂ with ⟨A₂, B₂, f₂, g₂, h₂, hD₂, hA₂, hB₂⟩
-    obtain ⟨a, ha⟩ := ((pre_prepare_adjoint P hP hD₂).1 hB₂ A₁ hA₁).2
-      (f₁ ≫ S.mor₁)
+    have ha' := (((pre_prepare_adjoint P hP hD₂).1 hB₂ A₁ hA₁).2
+      (f₁ ≫ S.mor₁))
+    change ∃ a : A₁ ⟶ A₂, a ≫ f₂ = f₁ ≫ S.mor₁ at ha'
+    obtain ⟨a, ha⟩ := ha'
     obtain ⟨d⟩ := three_by_three_completion f₁ f₂ a S.mor₁ ha.symm
     have hB₀ : rightOrthogonal P d.Z :=
       transfer_right hD₁ d.row₀ hB₁
@@ -356,28 +360,55 @@ theorem prepare_adjoint_two_out_of_three
       transfer_right hD₂ d.row₁ hB₂
     obtain ⟨A₃, hA₃, ⟨eA⟩⟩ :=
       P.ext_of_isTriangulatedClosed₃' (Triangle.mk a d.a' d.a'') d.col₀ hA₁ hA₂
+    have eA' : d.X'' ≅ A₃ := by
+      simpa using eA
     have hB₃ : rightOrthogonal P d.Z'' :=
       (rightOrthogonal P).ext_of_isTriangulatedClosed₃
         (Triangle.mk d.c d.c' d.c'') d.col₂ hB₀ hB₁'
-    have hD₃ : Triangle.mk (eA.hom ≫ d.f'') d.g''
-        (d.h'' ≫ eA.inv⟦(1 : ℤ)⟧') ∈ distTriang C := by
-      exact isomorphic_distinguished _ d.row₂ _
-        (Triangle.isoMk _ _ eA (Iso.refl _) (Iso.refl _)
-          (by dsimp; simp) (by dsimp; simp) (by dsimp; simp))
+    have hD₃ : Triangle.mk (eA'.inv ≫ d.f'') d.g''
+        (d.h'' ≫ eA'.hom⟦(1 : ℤ)⟧') ∈ distTriang C := by
+      let U : Triangle C :=
+        { obj₁ := A₃
+          obj₂ := d.Y''
+          obj₃ := d.Z''
+          mor₁ := eA'.inv ≫ d.f''
+          mor₂ := d.g''
+          mor₃ := d.h'' ≫ eA'.hom⟦(1 : ℤ)⟧' }
+      let V : Triangle C :=
+        { obj₁ := d.X''
+          obj₂ := d.Y''
+          obj₃ := d.Z''
+          mor₁ := d.f''
+          mor₂ := d.g''
+          mor₃ := d.h'' }
+      have hV : V ∈ distTriang C := by
+        simpa [V, Triangle.mk] using d.row₂
+      have hU : U ∈ distTriang C := by
+        exact isomorphic_distinguished V hV U
+          (Triangle.isoMk U V eA'.symm (Iso.refl d.Y'') (Iso.refl d.Z'')
+            (by simp [U, V])
+            (by simp [U, V])
+            (by
+              simp only [U, V, Category.assoc, Iso.refl_hom, Category.id_comp]
+              rw [← Functor.map_comp, eA'.hom_inv_id, Functor.map_id,
+                Category.comp_id]))
+      simpa [U] using hU
     have hY : HasRightDecomposition P d.Y'' :=
-      ⟨A₃, d.Z'', eA.hom ≫ d.f'', d.g'', d.h'' ≫ eA.inv⟦(1 : ℤ)⟧',
+      ⟨A₃, d.Z'', eA'.inv ≫ d.f'', d.g'', d.h'' ≫ eA'.hom⟦(1 : ℤ)⟧',
         hD₃, hA₃, hB₃⟩
     obtain ⟨c, hc₂, hc₃⟩ := complete_distinguished_triangle_morphism
-      (Triangle.mk S.mor₁ d.b' d.b'') S d.col₁ hS (𝟙 _) (𝟙 _) (by
-        dsimp
+      (Triangle.mk S.mor₁ d.b' d.b'') S d.col₁ hS (𝟙 S.obj₁) (𝟙 S.obj₂) (by
+        change S.mor₁ ≫ 𝟙 S.obj₂ = 𝟙 S.obj₁ ≫ S.mor₁
         simp)
     let φ := Triangle.homMk (Triangle.mk S.mor₁ d.b' d.b'') S
-      (𝟙 _) (𝟙 _) c (by dsimp; simp) hc₂ hc₃
+      (𝟙 S.obj₁) (𝟙 S.obj₂) c (by
+        change S.mor₁ ≫ 𝟙 S.obj₂ = 𝟙 S.obj₁ ≫ S.mor₁
+        simp) hc₂ hc₃
     haveI : IsIso φ.hom₁ := by
-      dsimp [φ]
+      change IsIso (𝟙 S.obj₁)
       infer_instance
     haveI : IsIso φ.hom₂ := by
-      dsimp [φ]
+      change IsIso (𝟙 S.obj₂)
       infer_instance
     haveI : IsIso c := by
       change IsIso φ.hom₃
@@ -401,9 +432,9 @@ theorem prepare_adjoint_two_out_of_three
     rcases hX with ⟨A, B, f, g, h, hD, hA, hB⟩
     refine ⟨A, B, f ≫ e.hom, e.inv ≫ g, h, ?_, hA, hB⟩
     exact isomorphic_distinguished _ hD _
-      (Triangle.isoMk _ _ (Iso.refl _) e.symm (Iso.refl _)
+      (Triangle.isoMk _ _ (Iso.refl A) e.symm (Iso.refl B)
         (by
-          change (f ≫ e.hom) ≫ e.inv = f
+          change (f ≫ e.hom) ≫ e.inv = 𝟙 A ≫ f
           simp)
         (by
           change (e.inv ≫ g) ≫ 𝟙 B = e.inv ≫ g
@@ -421,7 +452,6 @@ theorem prepare_adjoint_two_out_of_three
   · intro h₂₃
     apply iso_right (shiftShiftNeg T.obj₁ (1 : ℤ))
     exact shift_right (first_case (rot_of_distTriang _ hT) h₂₃.1 h₂₃.2) (-1 : ℤ)
--/
 
 /-- Right-adjoint decompositions are closed under binary direct sums. -/
 theorem prepare_adjoint_biproduct

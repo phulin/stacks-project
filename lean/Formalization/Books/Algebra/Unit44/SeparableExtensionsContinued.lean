@@ -464,7 +464,14 @@ theorem isGeometricallyReduced_iff_finitePurelyInseparable_iff_pthRoot_iff_perfe
         IsReduced (AdjoinPthRoots k ⊗[k] S) := by
     constructor
     · intro h
-      sorry
+      have hS : IsReduced S := by
+        let _ : IsReduced (k ⊗[k] S) := h k
+        exact isReduced_of_injective
+          (Algebra.TensorProduct.includeRight : S →ₐ[k] k ⊗[k] S)
+          (Algebra.TensorProduct.includeRight_injective
+            (A := k) (B := S) (RingHom.injective (algebraMap k k)))
+      exact (isGeometricallyReduced_of_finitePurelyInseparable_baseChanges hS h)
+        (AdjoinPthRoots k)
     · intro hred k' _ _ _ _
       have hG := hred_to_geom hred
       unfold IsGeometricallyReduced at hG

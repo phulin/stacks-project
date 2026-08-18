@@ -31,7 +31,35 @@ theorem idempotent_spec_partition
         (PrimeSpectrum.basicOpen (1 - e) : Set (PrimeSpectrum R)) ∧
       (PrimeSpectrum.basicOpen e : Set (PrimeSpectrum R)) ∪
           (PrimeSpectrum.basicOpen (1 - e) : Set (PrimeSpectrum R)) = Set.univ := by
-  sorry
+  constructor
+  · rw [Set.disjoint_left]
+    intro p h₁ h₂
+    change e ∉ p.asIdeal at h₁
+    change 1 - e ∉ p.asIdeal at h₂
+    have hmul : e * (1 - e) ∈ p.asIdeal := by
+      have hzero : e * (1 - e) = 0 := by
+        calc
+          e * (1 - e) = e - e * e := by rw [mul_sub, mul_one]
+          _ = 0 := by rw [he.eq, sub_self]
+      rw [hzero]
+      exact p.asIdeal.zero_mem
+    exact (p.isPrime.mul_mem_iff_mem_or_mem.mp hmul).elim h₁ h₂
+  · ext p
+    change (e ∉ p.asIdeal ∨ 1 - e ∉ p.asIdeal) ↔ True
+    by_cases h : e ∈ p.asIdeal
+    · constructor
+      · intro _
+        trivial
+      · intro _
+        right
+        intro h'
+        exact p.asIdeal.ne_top_iff_one.mp p.isPrime.ne_top
+          (by simpa using p.asIdeal.add_mem h h')
+    · constructor
+      · intro _
+        trivial
+      · intro _
+        exact Or.inl h
 
 /-! ## Products of rings -/
 
@@ -68,13 +96,15 @@ theorem productSpectrumHomeomorph_inl_apply {R₁ : Type u} {R₂ : Type v}
     [CommRing R₁] [CommRing R₂] (p : PrimeSpectrum R₁) :
     productSpectrumHomeomorph (R₁ := R₁) (R₂ := R₂) (Sum.inl p) =
       productSpectrumMapLeft (R₁ := R₁) (R₂ := R₂) p := by
-  sorry
+  simp [productSpectrumHomeomorph, productSpectrumMapLeft,
+    PrimeSpectrum.primeSpectrumProdHomeo, PrimeSpectrum.primeSpectrumProd_symm_inl]
 
 theorem productSpectrumHomeomorph_inr_apply {R₁ : Type u} {R₂ : Type v}
     [CommRing R₁] [CommRing R₂] (p : PrimeSpectrum R₂) :
     productSpectrumHomeomorph (R₁ := R₁) (R₂ := R₂) (Sum.inr p) =
       productSpectrumMapRight (R₁ := R₁) (R₂ := R₂) p := by
-  sorry
+  simp [productSpectrumHomeomorph, productSpectrumMapRight,
+    PrimeSpectrum.primeSpectrumProdHomeo, PrimeSpectrum.primeSpectrumProd_symm_inr]
 
 /-! ## Clopen subsets and idempotents -/
 
@@ -101,7 +131,28 @@ theorem primeSpectrum_connected_iff_no_nontrivial_idempotents
     (R : Type u) [CommRing R] [Nontrivial R] :
     ConnectedSpace (PrimeSpectrum R) ↔
       ∀ e : R, IsIdempotentElem e → e = 0 ∨ e = 1 := by
-  sorry
+  constructor
+  · intro h e he
+    have hcl : IsClopen (PrimeSpectrum.basicOpen e : Set (PrimeSpectrum R)) :=
+      PrimeSpectrum.isClopen_iff.mpr ⟨e, he, rfl⟩
+    obtain ⟨_, hparts⟩ := connectedSpace_iff_clopen.mp h
+    rcases hparts _ hcl with h_empty | h_univ
+    · left
+      apply PrimeSpectrum.basicOpen_injOn_isIdempotentElem he IsIdempotentElem.zero
+      exact SetLike.ext' (by simpa using h_empty)
+    · right
+      apply PrimeSpectrum.basicOpen_injOn_isIdempotentElem he IsIdempotentElem.one
+      exact SetLike.ext' (by simpa using h_univ)
+  · intro h
+    apply connectedSpace_iff_clopen.mpr
+    refine ⟨inferInstance, ?_⟩
+    intro s hs
+    obtain ⟨e, he, rfl⟩ := PrimeSpectrum.isClopen_iff.mp hs
+    rcases h e he with rfl | rfl
+    · left
+      simp
+    · right
+      simp
 
 /-! ## Finitely generated idempotent ideals -/
 

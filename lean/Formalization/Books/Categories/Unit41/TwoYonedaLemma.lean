@@ -361,7 +361,59 @@ theorem twoYonedaPullbackNatTransApp_naturality
         twoYonedaPullbackNatTransApp p P U η g =
       twoYonedaPullbackNatTransApp p P U η f ≫
         twoYonedaPullbackFunctorMap p P U y k := by
-  sorry
+  have pullbackMap_fac {A B : C} (h : A ⟶ B)
+      {x y : Functor.Fiber p B} (φ : x ⟶ y) :
+      ((P.pullbackFunctor h).map φ).1 ≫ P.pullbackMap h y =
+        P.pullbackMap h x ≫ φ.1 := by
+    let : p.IsHomLift (𝟙 B) φ.1 := φ.2
+    let : p.IsStronglyCartesian h (P.pullbackMap h y) :=
+      P.pullbackMap_isStronglyCartesian h y
+    let : p.IsStronglyCartesian h (P.pullbackMap h x) :=
+      P.pullbackMap_isStronglyCartesian h x
+    have hφ' : p.IsHomLift h (P.pullbackMap h x ≫ φ.1) := by
+      exact IsHomLift.comp_lift_id_right' p h (P.pullbackMap h x) B φ.1
+    change
+      (@Functor.IsStronglyCartesian.map _ _ _ _ p _ _ _ _ h
+        (P.pullbackMap h y) _ _ _ (𝟙 A) h (by simp)
+        (P.pullbackMap h x ≫ φ.1) hφ') ≫ P.pullbackMap h y =
+        P.pullbackMap h x ≫ φ.1
+    exact Functor.IsStronglyCartesian.fac p h (P.pullbackMap h y)
+      (f' := h) (g := 𝟙 A) (by simp) (P.pullbackMap h x ≫ φ.1)
+  let mx := twoYonedaPullbackFunctorMap p P U x k
+  let my := twoYonedaPullbackFunctorMap p P U y k
+  let af := twoYonedaPullbackNatTransApp p P U η f
+  let ag := twoYonedaPullbackNatTransApp p P U η g
+  have hmx : p.IsHomLift k.left mx := by
+    dsimp [mx]
+    exact twoYonedaPullbackFunctorMap_isHomLift p P U x k
+  have hmy : p.IsHomLift k.left my := by
+    dsimp [my]
+    exact twoYonedaPullbackFunctorMap_isHomLift p P U y k
+  have haf : p.IsHomLift (𝟙 f.left) af := by
+    dsimp [af, twoYonedaPullbackNatTransApp]
+    exact ((P.pullbackFunctor f.hom).map η).2
+  have hag : p.IsHomLift (𝟙 g.left) ag := by
+    dsimp [ag, twoYonedaPullbackNatTransApp]
+    exact ((P.pullbackFunctor g.hom).map η).2
+  letI : p.IsHomLift k.left mx := hmx
+  letI : p.IsHomLift k.left my := hmy
+  letI : p.IsHomLift (𝟙 f.left) af := haf
+  letI : p.IsHomLift (𝟙 g.left) ag := hag
+  change mx ≫ ag = af ≫ my
+  apply Functor.IsStronglyCartesian.ext p (P.pullbackMap g.hom y)
+    k.left (mx ≫ ag) (af ≫ my)
+  calc
+    (mx ≫ ag) ≫ P.pullbackMap g.hom y =
+        mx ≫ (ag ≫ P.pullbackMap g.hom y) := by simp [Category.assoc]
+    _ = mx ≫ (P.pullbackMap g.hom x ≫ η.1) := by
+      rw [pullbackMap_fac g.hom η]
+    _ = P.pullbackMap f.hom x ≫ η.1 := by
+      rw [twoYonedaPullbackFunctorMap_fac p P U x k]
+    _ = af ≫ P.pullbackMap f.hom y :=
+      (pullbackMap_fac f.hom η).symm
+    _ = af ≫ (my ≫ P.pullbackMap g.hom y) := by
+      rw [twoYonedaPullbackFunctorMap_fac p P U y k]
+    _ = (af ≫ my) ≫ P.pullbackMap g.hom y := by simp [Category.assoc]
 
 def twoYonedaPullbackNatTrans
     {C : Type uC} [Category.{vC} C]
@@ -382,7 +434,20 @@ theorem twoYonedaPullbackNatTrans_isOver
     {x y : Functor.Fiber p U} (η : x ⟶ y) :
     (twoYonedaPostcomposition p U).IsHomLift (𝟙 (Over.forget U))
       (twoYonedaPullbackNatTrans p P U η) := by
-  sorry
+  apply IsHomLift.of_fac'
+    (twoYonedaPostcomposition p U)
+    (𝟙 (Over.forget U)) (twoYonedaPullbackNatTrans p P U η)
+    (twoYonedaPullbackFunctor_isOver p P U x)
+    (twoYonedaPullbackFunctor_isOver p P U y)
+  ext f
+  change p.map (twoYonedaPullbackNatTransApp p P U η f) = _
+  letI : p.IsHomLift (𝟙 f.left)
+      (twoYonedaPullbackNatTransApp p P U η f) := by
+    dsimp [twoYonedaPullbackNatTransApp]
+    exact ((P.pullbackFunctor f.hom).map η).2
+  simpa using
+    (IsHomLift.fac' p (𝟙 f.left)
+      (twoYonedaPullbackNatTransApp p P U η f))
 
 def twoYonedaPullbackMorphismMap
     {C : Type uC} [Category.{vC} C]
@@ -402,7 +467,12 @@ theorem twoYonedaPullbackMorphismMap_map_id
     (x : Functor.Fiber p U) :
     twoYonedaPullbackMorphismMap p P U (𝟙 x) =
       𝟙 (twoYonedaPullbackMorphism p P U x) := by
-  sorry
+  apply ObjectProperty.hom_ext
+  apply NatTrans.ext
+  intro f
+  dsimp [twoYonedaPullbackMorphismMap, twoYonedaPullbackNatTrans,
+    twoYonedaPullbackNatTransApp]
+  simp
 
 theorem twoYonedaPullbackMorphismMap_map_comp
     {C : Type uC} [Category.{vC} C]
@@ -412,7 +482,12 @@ theorem twoYonedaPullbackMorphismMap_map_comp
     twoYonedaPullbackMorphismMap p P U (η ≫ θ) =
       twoYonedaPullbackMorphismMap p P U η ≫
         twoYonedaPullbackMorphismMap p P U θ := by
-  sorry
+  apply ObjectProperty.hom_ext
+  apply NatTrans.ext
+  intro f
+  dsimp [twoYonedaPullbackMorphismMap, twoYonedaPullbackNatTrans,
+    twoYonedaPullbackNatTransApp]
+  simp
 
 /- The functor below is the inverse constructed in the source after choosing
    pullbacks.  Its functoriality is exactly the omitted verification in the

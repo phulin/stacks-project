@@ -508,12 +508,14 @@ theorem isNumericalPolynomial_of_sub
               (if j + 1 ≤ r then a (j + 1) else 0)) =
           ∑ j ∈ Finset.range r, integerBinomial n (j + 1) • a (j + 1) := by
       rw [Finset.sum_range_succ]
-      congr 1
-      · apply Finset.sum_congr rfl
-        intro j hj
-        have hj' : j + 1 ≤ r := by omega
-        simp [hj']
-      · simp
+      have hr : ¬ r + 1 ≤ r := by omega
+      simp only [hr, if_false, smul_zero, add_zero]
+      apply Finset.sum_congr rfl
+      intro j hj
+      have hj' : j + 1 ≤ r := by
+        have hjlt : j < r := Finset.mem_range.1 hj
+        omega
+      simp [hj']
     have hshift :
         (∑ j ∈ Finset.range (r + 1),
             integerBinomial n (j + 1) • b (j + 1)) =
@@ -523,6 +525,7 @@ theorem isNumericalPolynomial_of_sub
       change (∑ j ∈ Finset.range (r + 1),
           integerBinomial n (j + 1) •
             (a j + if j + 1 ≤ r then a (j + 1) else 0)) = _
+      simp_rw [smul_add]
       rw [Finset.sum_add_distrib, hcond]
     have hdecomp :
         (∑ j ∈ Finset.range (r + 2), integerBinomial n j • b j) =
@@ -530,21 +533,28 @@ theorem isNumericalPolynomial_of_sub
             ∑ j ∈ Finset.range (r + 1),
               integerBinomial n (j + 1) • b (j + 1) := by
       rw [show r + 2 = (r + 1) + 1 by omega, Finset.sum_range_succ']
+      abel
     have hz : integerBinomial n 0 • b 0 = d N + a 0 := by
       simp [b, integerBinomial, hn]
     rw [hdecomp, hz, hshift]
     simp_rw [hpascal, add_smul, Finset.sum_add_distrib]
-    rw [Finset.sum_range_succ']
+    have hfirst :
+        (∑ x ∈ Finset.range (r + 1), integerBinomial n x • a x) =
+          integerBinomial n 0 • a 0 +
+            ∑ x ∈ Finset.range r, integerBinomial n (x + 1) • a (x + 1) := by
+      rw [Finset.sum_range_succ']
+      abel
+    rw [hfirst]
     simp [integerBinomial, hn]
-    abel
+    abel_nf
   refine ⟨r + 1, b, ?_⟩
   filter_upwards [Filter.Ici_mem_atTop N] with n hn
-  have hn0 : 0 ≤ n := le_trans (hN.2) hn
+  have hn0 : 0 ≤ n := (hN n hn).2
   have hdn : d n = d N := hconst n hn
   have hgn : g n = f n - d N := by
-    dsimp [d] at hdn
-    rw [sub_eq_iff_eq_add] at hdn
-    exact hdn.symm
+    calc
+      g n = f n - d n := by dsimp [d]; abel
+      _ = f n - d N := by rw [hdn]
   rw [hsum n hn0]
   dsimp [d, g] at hgn ⊢
   rw [hgn]
@@ -604,6 +614,7 @@ theorem integer_valued_polynomial_is_numerical
               hqdegree, Nat.mul_one]
           have hlc : P.leadingCoeff = (P.comp q).leadingCoeff := by
             rw [Polynomial.leadingCoeff_comp hqdeg]
+            rw [Polynomial.leadingCoeff_X_sub_C]
             simp
           have hQdeg : Q.natDegree < P.natDegree := by
             by_cases hQ0 : Q = 0

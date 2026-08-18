@@ -1,6 +1,9 @@
+import Mathlib.Algebra.MvPolynomial.Basic
 import Mathlib.RingTheory.Artinian.Ring
+import Mathlib.RingTheory.Localization.AtPrime.Basic
 import Mathlib.RingTheory.RingHom.EssFiniteType
 import Mathlib.RingTheory.RingHom.FinitePresentation
+import Mathlib.RingTheory.LocalRing.MaximalIdeal.Defs
 import Mathlib.RingTheory.Spectrum.Maximal.Defs
 
 /-!
@@ -9,8 +12,8 @@ import Mathlib.RingTheory.Spectrum.Maximal.Defs
 The source's essentially finite type condition is Mathlib's canonical
 `RingHom.EssFiniteType` predicate.  Mathlib does not currently provide the
 analogous essentially finite presentation predicate, so the source's second
-definition is represented by the algebra-level `essFinitePresentation`
-predicate and its induced ring-hom predicate below.
+definition is represented by the explicit intermediate-algebra predicate
+below.
 -/
 
 namespace Formalization.Books.Algebra.Unit54
@@ -22,18 +25,22 @@ universe u v
 /- The source's first definition is exactly `RingHom.EssFiniteType`; no
    parallel predicate is introduced. -/
 
-/- The source's second definition is the localization of a finite-presented
-   subalgebra.  Passing to the image subalgebra is equivalent to the source's
-   presentation by a quotient, and gives a usable algebra-level interface. -/
+/- The source's second definition allows an arbitrary intermediate algebra:
+   its map to the target need not be injective before localization. -/
 def essFinitePresentation
-    (R S : Type*) [CommRing R] [CommRing S] [Algebra R S] : Prop :=
-  ∃ (A : Subalgebra R S) (M : Submonoid A),
-    Algebra.FinitePresentation R A ∧ IsLocalization M S
+    (R : Type u) (S : Type v) [CommRing R] [CommRing S] [Algebra R S] : Prop :=
+  ∃ (T : Type (max u v)) (hT : CommRing T),
+    letI : CommRing T := hT
+    ∃ (g : R →+* T) (M : Submonoid T) (q : T →+* S),
+      RingHom.FinitePresentation g ∧
+        q.comp g = algebraMap R S ∧
+          letI : Algebra T S := q.toAlgebra
+          IsLocalization M S
 
 /- The ring-hom version uses the algebra structure induced by the map, just as
    Mathlib's `RingHom.EssFiniteType` does. -/
 def RingHom.EssFinitePresentation
-    {R S : Type*} [CommRing R] [CommRing S] (f : R →+* S) : Prop :=
+    {R : Type u} {S : Type v} [CommRing R] [CommRing S] (f : R →+* S) : Prop :=
   letI : Algebra R S := f.toAlgebra
   essFinitePresentation R S
 
@@ -41,9 +48,10 @@ def RingHom.EssFinitePresentation
    is the source-facing form needed in the final lemma. -/
 def RingHom.IsLocalizationOfQuotient
     {A B : Type*} [CommRing A] [CommRing B] (f : A →+* B) : Prop :=
-  ∃ (I : Ideal A) (M : Submonoid (A ⧸ I)) (e : Localization M ≃+* B),
-    e.toRingHom.comp
-        ((algebraMap (A ⧸ I) (Localization M)).comp (Ideal.Quotient.mk I)) = f
+  ∃ (I : Ideal A) (M : Submonoid (A ⧸ I)) (q : (A ⧸ I) →+* B),
+    q.comp (Ideal.Quotient.mk I) = f ∧
+      letI : Algebra (A ⧸ I) B := q.toAlgebra
+      IsLocalization M B
 
 /-! ## Composition and base change -/
 

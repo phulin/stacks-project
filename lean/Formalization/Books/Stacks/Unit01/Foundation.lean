@@ -113,6 +113,74 @@ the standard `Pseudofunctor.DescentData` presentation, so later stack
 arguments can use Mathlib's descent-data functors directly.
 -/
 
+private theorem whisker_middle_three
+    {C : Type u} [Category.{v} C]
+    {X₀ X₁ X₂ X₃ X₄ X₅ X₆ X₇ : C}
+    {a₁ : X₀ ⟶ X₁} {a₂ : X₁ ⟶ X₂} {a₃ : X₂ ⟶ X₃}
+    {a₄ : X₃ ⟶ X₄} {a₅ : X₄ ⟶ X₅} {a₆ : X₅ ⟶ X₆}
+    {a₇ : X₆ ⟶ X₇} {b : X₂ ⟶ X₅} (h : a₃ ≫ a₄ ≫ a₅ = b) :
+    a₁ ≫ a₂ ≫ a₃ ≫ a₄ ≫ a₅ ≫ a₆ ≫ a₇ =
+      a₁ ≫ a₂ ≫ b ≫ a₆ ≫ a₇ := by
+  simpa only [Category.assoc] using congrArg
+    (fun k => (a₁ ≫ a₂) ≫ k ≫ (a₆ ≫ a₇)) h
+
+noncomputable def transportedDescentHom
+    {C : Type u} [Category.{v} C] {F G : FiberedCategory C}
+    (η : FiberedMorphism F G) {ι : Type t} {U : C} {X : ι → C}
+    {f : ∀ i, X i ⟶ U} (D : F.DescentData f) {Y : C} (q : Y ⟶ U)
+    {i₁ i₂ : ι} (f₁ : Y ⟶ X i₁) (f₂ : Y ⟶ X i₂)
+    (hf₁ : f₁ ≫ f i₁ = q := by cat_disch)
+    (hf₂ : f₂ ≫ f i₂ = q := by cat_disch) :
+    (G.map f₁.op.toLoc).toFunctor.obj
+          ((η.app (.mk (op (X i₁)))).toFunctor.obj (D.obj i₁)) ⟶
+      (G.map f₂.op.toLoc).toFunctor.obj
+          ((η.app (.mk (op (X i₂)))).toFunctor.obj (D.obj i₂)) :=
+  (η.naturality f₁.op.toLoc).inv.toNatTrans.app (D.obj i₁) ≫
+    (η.app (.mk (op Y))).toFunctor.map (D.hom q f₁ f₂ hf₁ hf₂) ≫
+      (η.naturality f₂.op.toLoc).hom.toNatTrans.app (D.obj i₂)
+
+private theorem transportedDescentHom_pullHom
+    {C : Type u} [Category.{v} C] {F G : FiberedCategory C}
+    (η : FiberedMorphism F G) {ι : Type t} {U : C} {X : ι → C}
+    {f : ∀ i, X i ⟶ U} (D : F.DescentData f)
+    {Y' Y : C} (g : Y' ⟶ Y) (q : Y ⟶ U) (q' : Y' ⟶ U)
+    (hq : g ≫ q = q') {i₁ i₂ : ι}
+    (f₁ : Y ⟶ X i₁) (f₂ : Y ⟶ X i₂)
+    (hf₁ : f₁ ≫ f i₁ = q) (hf₂ : f₂ ≫ f i₂ = q)
+    (gf₁ : Y' ⟶ X i₁) (gf₂ : Y' ⟶ X i₂)
+    (hgf₁ : g ≫ f₁ = gf₁) (hgf₂ : g ≫ f₂ = gf₂) :
+    Pseudofunctor.LocallyDiscreteOpToCat.pullHom
+        (transportedDescentHom η D q f₁ f₂ hf₁ hf₂) g gf₁ gf₂ =
+      transportedDescentHom η D q' gf₁ gf₂ := by
+  subst gf₁
+  subst gf₂
+  subst q'
+  dsimp [transportedDescentHom]
+  rw [← D.pullHom_hom g q (g ≫ q) (by simp) f₁ f₂ hf₁ hf₂
+    (g ≫ f₁) (g ≫ f₂) rfl rfl]
+  simp [Pseudofunctor.LocallyDiscreteOpToCat.pullHom,
+    Pseudofunctor.mapComp'_eq_mapComp, Functor.map_comp, Category.assoc]
+  rw [Pseudofunctor.StrongTrans.naturality_comp_inv_app η
+        f₁.op.toLoc g.op.toLoc (D.obj i₁),
+    Pseudofunctor.StrongTrans.naturality_comp_hom_app η
+        f₂.op.toLoc g.op.toLoc (D.obj i₂)]
+  simp only [Category.assoc, ← (η.app (.mk (op Y'))).toFunctor.map_comp_assoc,
+    Cat.Hom.inv_hom_id_toNatTrans_app]
+  have hF₁ :
+      (F.mapComp f₁.op.toLoc g.op.toLoc).inv.toNatTrans.app (D.obj i₁) ≫
+          (F.mapComp f₁.op.toLoc g.op.toLoc).hom.toNatTrans.app (D.obj i₁) ≫
+        (F.map g.op.toLoc).toFunctor.map (D.hom q f₁ f₂ hf₁ hf₂) ≫
+          𝟙 ((F.map f₂.op.toLoc ≫ F.map g.op.toLoc).toFunctor.obj (D.obj i₂)) =
+      (F.map g.op.toLoc).toFunctor.map (D.hom q f₁ f₂ hf₁ hf₂) := by
+    simp [← Category.assoc]
+  have hF₁' := congrArg ((η.app (.mk (op Y'))).toFunctor.map) hF₁
+  rw [hF₁']
+  have hηg := NatIso.naturality_1
+    (Cat.Hom.toNatIso (η.naturality g.op.toLoc))
+    (D.hom q f₁ f₂ hf₁ hf₂)
+  simp only [Cat.Hom.toNatIso, Cat.Hom.comp_toFunctor, Functor.comp_map] at hηg
+  exact (whisker_middle_three hηg).symm
+
 noncomputable def descentDataFunctor
     {C : Type u} [Category.{v} C] {F G : FiberedCategory C}
     (η : FiberedMorphism F G) {ι : Type t} {U : C} {X : ι → C}
@@ -120,47 +188,20 @@ noncomputable def descentDataFunctor
   obj D :=
     { obj i := (η.app (.mk (op (X i)))).toFunctor.obj (D.obj i)
       hom Y q i₁ i₂ f₁ f₂ hf₁ hf₂ :=
-        (η.naturality f₁.op.toLoc).inv.toNatTrans.app (D.obj i₁) ≫
-          (η.app (.mk (op Y))).toFunctor.map
-            (D.hom q f₁ f₂ hf₁ hf₂) ≫
-          (η.naturality f₂.op.toLoc).hom.toNatTrans.app (D.obj i₂)
+        transportedDescentHom η D q f₁ f₂ hf₁ hf₂
       pullHom_hom := by
         intro Y' Y g q q' hq i₁ i₂ f₁ f₂ hf₁ hf₂ gf₁ gf₂ hgf₁ hgf₂
-        subst gf₁
-        subst gf₂
-        subst q'
-        rw [← D.pullHom_hom g q (g ≫ q) (by simp) f₁ f₂ hf₁ hf₂
-          (g ≫ f₁) (g ≫ f₂) rfl rfl]
-        simp [Pseudofunctor.LocallyDiscreteOpToCat.pullHom,
-          Pseudofunctor.mapComp'_eq_mapComp,
-          Functor.map_comp, Category.assoc]
-        rw [Pseudofunctor.StrongTrans.naturality_comp_inv_app η
-              f₁.op.toLoc g.op.toLoc (D.obj i₁),
-          Pseudofunctor.StrongTrans.naturality_comp_hom_app η
-              f₂.op.toLoc g.op.toLoc (D.obj i₂)]
-        simp only [Category.assoc, ← (η.app (.mk (op Y'))).toFunctor.map_comp_assoc,
-          Cat.Hom.inv_hom_id_toNatTrans_app]
-        have hF₁ :
-            (F.mapComp f₁.op.toLoc g.op.toLoc).inv.toNatTrans.app (D.obj i₁) ≫
-                (F.mapComp f₁.op.toLoc g.op.toLoc).hom.toNatTrans.app (D.obj i₁) ≫
-              (F.map g.op.toLoc).toFunctor.map (D.hom q f₁ f₂ hf₁ hf₂) ≫
-                𝟙 ((F.map f₂.op.toLoc ≫ F.map g.op.toLoc).toFunctor.obj (D.obj i₂)) =
-            (F.map g.op.toLoc).toFunctor.map (D.hom q f₁ f₂ hf₁ hf₂) := by
-          simp [← Category.assoc]
-        have hF₁' := congrArg ((η.app (.mk (op Y'))).toFunctor.map) hF₁
-        rw [hF₁']
-        have hηg := NatIso.naturality_1
-          (Cat.Hom.toNatIso (η.naturality g.op.toLoc))
-          (D.hom q f₁ f₂ hf₁ hf₂)
-        simp only [Cat.Hom.toNatIso, Cat.Hom.comp_toFunctor, Functor.comp_map] at hηg
-        rw [reassoc_of% hηg]
+        exact transportedDescentHom_pullHom η D g q q' hq
+          f₁ f₂ hf₁ hf₂ gf₁ gf₂ hgf₁ hgf₂
       hom_self := by
         intros Y q i g hg
         have h := D.hom_self q g hg
+        dsimp [transportedDescentHom]
         rw [h]
         simp
       hom_comp := by
         intros Y q i₁ i₂ i₃ f₁ f₂ f₃ hf₁ hf₂ hf₃
+        dsimp [transportedDescentHom]
         simp only [Category.assoc, Cat.Hom.hom_inv_id_toNatTrans_app_assoc]
         rw [← (η.app (.mk (op Y))).toFunctor.map_comp_assoc]
         simpa only [Category.assoc] using
@@ -173,7 +214,7 @@ noncomputable def descentDataFunctor
     { hom i := (η.app (.mk (op (X i)))).toFunctor.map (φ.hom i)
       comm := by
         intros Y q i₁ i₂ f₁ f₂ hf₁ hf₂
-        dsimp
+        dsimp [transportedDescentHom]
         simp only [Category.assoc]
         change
           (G.map f₁.op.toLoc).toFunctor.map
@@ -231,6 +272,14 @@ noncomputable def descentDataFunctor
         simpa only [Functor.map_comp, Category.assoc] using congrArg (fun k =>
           (η.naturality f₁.op.toLoc).inv.toNatTrans.app (D₁.obj i₁) ≫ k ≫
             (η.naturality f₂.op.toLoc).hom.toNatTrans.app (D₂.obj i₂)) h₃ }
+  map_id D := by
+    apply Pseudofunctor.DescentData.hom_ext
+    intro i
+    simp
+  map_comp φ ψ := by
+    apply Pseudofunctor.DescentData.hom_ext
+    intro i
+    simp
 
 /- The transport functor is an equivalence whenever the fibred morphism is a
 fibrewise equivalence.  The proof is the descent-data version of transporting
@@ -281,7 +330,8 @@ theorem descentDataFunctor_is_equivalence
           rw [(η.app (.mk (op (X i₁)))).toFunctor.map_preimage (φ.hom i₁),
             (η.app (.mk (op (X i₂)))).toFunctor.map_preimage (φ.hom i₂)]
           simp only [Cat.Hom.inv_hom_id_toNatTrans_app]
-          simpa only [descentDataFunctor, Category.assoc, Category.comp_id,
+          simpa only [descentDataFunctor, transportedDescentHom,
+            Category.assoc, Category.comp_id,
             Functor.comp_obj, Cat.Hom.comp_toFunctor] using
             φ.comm q f₁ f₂ hf₁ hf₂ }
     refine ⟨ψ, ?_⟩

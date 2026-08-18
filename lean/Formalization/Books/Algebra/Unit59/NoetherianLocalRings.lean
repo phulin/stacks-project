@@ -127,7 +127,126 @@ theorem cumulativeHilbertFunction_eq_sum
     [Module.Finite R M] (n : ℕ) :
     cumulativeHilbertFunction R M n =
       ∑ i ∈ Finset.range (n + 1), hilbertFunction R M i := by
-  sorry
+  have hlength (P Q : Submodule R M) (hQP : Q ≤ P) :
+      Module.length R (M ⧸ Q) =
+        Module.length R (P ⧸ Submodule.comap P.subtype Q) +
+          Module.length R (M ⧸ P) := by
+    let K : Submodule R P := Submodule.comap P.subtype Q
+    have hker : K = LinearMap.ker (Q.mkQ.comp P.subtype) := by
+      ext x
+      simp [K]
+    let f : (P ⧸ K) →ₗ[R] (M ⧸ Q) :=
+      K.liftQ (Q.mkQ.comp P.subtype) hker.le
+    have hfker : LinearMap.ker f = ⊥ := by
+      exact Submodule.ker_liftQ_eq_bot' K (Q.mkQ.comp P.subtype) hker
+    have hf : Function.Injective f := LinearMap.ker_eq_bot.mp hfker
+    let g : (M ⧸ Q) →ₗ[R] (M ⧸ P) :=
+      Q.liftQ P.mkQ (by simpa [Submodule.ker_mkQ] using hQP)
+    have hg : Function.Surjective g := by
+      intro y
+      refine Submodule.Quotient.induction_on (p := P) y ?_
+      intro x
+      exact ⟨Q.mkQ x, rfl⟩
+    have hex : Function.Exact f g := by
+      rw [LinearMap.exact_iff]
+      simp [f, g, K, Submodule.range_liftQ, Submodule.ker_liftQ,
+        LinearMap.range_comp]
+    exact Module.length_eq_add_of_exact f g hf hg hex
+  have hstep (k : ℕ) :
+      Module.length R
+          (idealPowerCumulativeQuotient (IsLocalRing.maximalIdeal R) M (k + 1)) =
+        Module.length R
+            (idealPowerPiece (IsLocalRing.maximalIdeal R) M (k + 1)) +
+          Module.length R
+            (idealPowerCumulativeQuotient (IsLocalRing.maximalIdeal R) M k) := by
+    have hQP :
+        (IsLocalRing.maximalIdeal R) ^ ((k + 1) + 1) • (⊤ : Submodule R M) ≤
+          (IsLocalRing.maximalIdeal R) ^ (k + 1) • (⊤ : Submodule R M) := by
+      exact Submodule.smul_mono_left (Ideal.pow_le_pow_right (Nat.le_succ (k + 1)))
+    simpa [idealPowerCumulativeQuotient, idealPowerPiece] using
+      hlength
+        ((IsLocalRing.maximalIdeal R) ^ (k + 1) • (⊤ : Submodule R M))
+        ((IsLocalRing.maximalIdeal R) ^ ((k + 1) + 1) • (⊤ : Submodule R M)) hQP
+  have hpiece_fin (k : ℕ) :
+      IsFiniteLength R
+        (idealPowerPiece (IsLocalRing.maximalIdeal R) M k) := by
+    let P : Submodule R M := (IsLocalRing.maximalIdeal R) ^ k • (⊤ : Submodule R M)
+    let Q : Submodule R M :=
+      (IsLocalRing.maximalIdeal R) ^ (k + 1) • (⊤ : Submodule R M)
+    let K : Submodule R P := Submodule.comap P.subtype Q
+    change IsFiniteLength R (P ⧸ K)
+    have hkill : IsLocalRing.maximalIdeal R • (⊤ : Submodule R (P ⧸ K)) = ⊥ := by
+      have hmap : IsLocalRing.maximalIdeal R • (⊤ : Submodule R (P ⧸ K)) =
+          (IsLocalRing.maximalIdeal R • (⊤ : Submodule R P)).map K.mkQ := by
+        rw [Submodule.map_smul'', Submodule.map_top,
+          LinearMap.range_eq_top.mpr K.mkQ_surjective]
+      rw [hmap]
+      apply le_antisymm
+      · rw [Submodule.map_le_iff_le_comap, Submodule.comap_bot,
+          Submodule.ker_mkQ]
+        have hIP : IsLocalRing.maximalIdeal R • P ≤ Q := by
+          simpa [P, Q, pow_succ, Submodule.mul_smul, mul_comm]
+        intro x hx
+        exact hIP ((Submodule.mem_smul_top_iff _ P x).mp hx)
+      · exact bot_le
+    exact finiteLength_of_maximalIdeal_pow_smul_top_eq_bot ⟨1, by simpa using hkill⟩
+  have hcum_fin (k : ℕ) :
+      IsFiniteLength R
+        (idealPowerCumulativeQuotient (IsLocalRing.maximalIdeal R) M k) := by
+    let Q : Submodule R M :=
+      (IsLocalRing.maximalIdeal R) ^ (k + 1) • (⊤ : Submodule R M)
+    change IsFiniteLength R (M ⧸ Q)
+    have hkill :
+        (IsLocalRing.maximalIdeal R) ^ (k + 1) • (⊤ : Submodule R (M ⧸ Q)) = ⊥ := by
+      have hmap :
+          (IsLocalRing.maximalIdeal R) ^ (k + 1) • (⊤ : Submodule R (M ⧸ Q)) =
+            ((IsLocalRing.maximalIdeal R) ^ (k + 1) • (⊤ : Submodule R M)).map Q.mkQ := by
+        rw [Submodule.map_smul'', Submodule.map_top,
+          LinearMap.range_eq_top.mpr Q.mkQ_surjective]
+      rw [hmap]
+      apply le_antisymm
+      · rw [Submodule.map_le_iff_le_comap, Submodule.comap_bot,
+          Submodule.ker_mkQ]
+      · exact bot_le
+    exact finiteLength_of_maximalIdeal_pow_smul_top_eq_bot ⟨k + 1, hkill⟩
+  have hbase : cumulativeHilbertFunction R M 0 = hilbertFunction R M 0 := by
+    have hQP :
+        (IsLocalRing.maximalIdeal R) ^ (0 + 1) • (⊤ : Submodule R M) ≤
+          (IsLocalRing.maximalIdeal R) ^ 0 • (⊤ : Submodule R M) := by
+      exact Submodule.smul_mono_left (Ideal.pow_le_pow_right (Nat.le_succ 0))
+    have h := hlength
+      ((IsLocalRing.maximalIdeal R) ^ 0 • (⊤ : Submodule R M))
+      ((IsLocalRing.maximalIdeal R) ^ (0 + 1) • (⊤ : Submodule R M)) hQP
+    have hn := congrArg ENat.toNat h
+    simpa [cumulativeHilbertFunction, hilbertFunction, moduleLengthNat,
+      idealPowerCumulativeQuotient, idealPowerPiece, pow_zero] using hn
+  have hnat_step (k : ℕ) :
+      cumulativeHilbertFunction R M (k + 1) =
+        hilbertFunction R M (k + 1) + cumulativeHilbertFunction R M k := by
+    change (Module.length R
+        (idealPowerCumulativeQuotient (IsLocalRing.maximalIdeal R) M (k + 1))).toNat =
+      (Module.length R
+        (idealPowerPiece (IsLocalRing.maximalIdeal R) M (k + 1))).toNat +
+        (Module.length R
+          (idealPowerCumulativeQuotient (IsLocalRing.maximalIdeal R) M k)).toNat
+    rw [hstep k, ENat.toNat_add]
+    · exact Module.length_ne_top_iff.mpr
+        (hpiece_fin (k + 1))
+    · exact Module.length_ne_top_iff.mpr
+        (hcum_fin k)
+  induction n with
+  | zero =>
+      simpa using hbase
+  | succ n ih =>
+      calc
+        cumulativeHilbertFunction R M (Nat.succ n) =
+            hilbertFunction R M (n + 1) + cumulativeHilbertFunction R M n := by
+              simpa [Nat.succ_eq_add_one] using hnat_step n
+        _ = hilbertFunction R M (n + 1) +
+              ∑ i ∈ Finset.range (n + 1), hilbertFunction R M i := by rw [ih]
+        _ = ∑ i ∈ Finset.range (Nat.succ n + 1), hilbertFunction R M i := by
+          simp only [Nat.succ_eq_add_one, Finset.sum_range_succ]
+          ac_rfl
 
 /-! ## Ideals of definition and their Hilbert functions -/
 
@@ -187,7 +306,27 @@ theorem idealPowerPiece_isFiniteLength
     [IsNoetherianRing R] [AddCommGroup M] [Module R M]
     [Module.Finite R M] (I : Ideal R) (hI : IsIdealOfDefinition R I)
     (n : ℕ) :
-    IsFiniteLength R (idealPowerPiece I M n) := by sorry
+    IsFiniteLength R (idealPowerPiece I M n) := by
+  let P : Submodule R M := I ^ n • (⊤ : Submodule R M)
+  let Q : Submodule R M := I ^ (n + 1) • (⊤ : Submodule R M)
+  let K : Submodule R P := Submodule.comap P.subtype Q
+  change IsFiniteLength R (P ⧸ K)
+  have hkill : I • (⊤ : Submodule R (P ⧸ K)) = ⊥ := by
+    have hmap : I • (⊤ : Submodule R (P ⧸ K)) =
+        (I • (⊤ : Submodule R P)).map K.mkQ := by
+      rw [Submodule.map_smul'', Submodule.map_top,
+        LinearMap.range_eq_top.mpr K.mkQ_surjective]
+    rw [hmap]
+    apply le_antisymm
+    · rw [Submodule.map_le_iff_le_comap, Submodule.comap_bot,
+        Submodule.ker_mkQ]
+      have hIP : I • P ≤ Q := by
+        simpa [P, Q, pow_succ, Submodule.mul_smul, mul_comm]
+      intro x hx
+      exact hIP ((Submodule.mem_smul_top_iff I P x).mp hx)
+    · exact bot_le
+  exact finiteLength_of_pow_smul_top_eq_bot_of_isIdealOfDefinition I hI
+    ⟨1, by simpa using hkill⟩
 /-
   let P : Submodule R M := I ^ n • (⊤ : Submodule R M)
   let Q : Submodule R M := I ^ (n + 1) • (⊤ : Submodule R M)
@@ -216,7 +355,21 @@ theorem idealPowerCumulativeQuotient_isFiniteLength
     [IsNoetherianRing R] [AddCommGroup M] [Module R M]
     [Module.Finite R M] (I : Ideal R) (hI : IsIdealOfDefinition R I)
     (n : ℕ) :
-    IsFiniteLength R (idealPowerCumulativeQuotient I M n) := by sorry
+    IsFiniteLength R (idealPowerCumulativeQuotient I M n) := by
+  let Q : Submodule R M := I ^ (n + 1) • (⊤ : Submodule R M)
+  change IsFiniteLength R (M ⧸ Q)
+  have hkill : I ^ (n + 1) • (⊤ : Submodule R (M ⧸ Q)) = ⊥ := by
+    have hmap : I ^ (n + 1) • (⊤ : Submodule R (M ⧸ Q)) =
+        (I ^ (n + 1) • (⊤ : Submodule R M)).map Q.mkQ := by
+      rw [Submodule.map_smul'', Submodule.map_top,
+        LinearMap.range_eq_top.mpr Q.mkQ_surjective]
+    rw [hmap]
+    apply le_antisymm
+    · rw [Submodule.map_le_iff_le_comap, Submodule.comap_bot,
+        Submodule.ker_mkQ]
+    · exact bot_le
+  exact finiteLength_of_pow_smul_top_eq_bot_of_isIdealOfDefinition I hI
+    ⟨n + 1, hkill⟩
 /-
   let Q : Submodule R M := I ^ (n + 1) • (⊤ : Submodule R M)
   change IsFiniteLength R (M ⧸ Q)
@@ -250,7 +403,8 @@ theorem hilbertPowerCumulativeQuotient_isFiniteLength
     [Module.Finite R M] (n : ℕ) :
     IsFiniteLength R
       (idealPowerCumulativeQuotient (IsLocalRing.maximalIdeal R) M n) := by
-  sorry
+  exact idealPowerCumulativeQuotient_isFiniteLength (IsLocalRing.maximalIdeal R)
+    (maximalIdeal_isIdealOfDefinition R) n
 
 theorem idealCumulativeHilbertFunction_eq_sum
     {R : Type u} {M : Type v} [CommRing R]

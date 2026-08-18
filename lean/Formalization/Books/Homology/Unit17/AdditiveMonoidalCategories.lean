@@ -750,7 +750,51 @@ theorem graded_koszul_braiding_exists
     (F : Type u) [Field F] (V W : GradedVectorSpace F)
     [GradedObject.HasTensor V W] [GradedObject.HasTensor W V] :
     Nonempty (GradedKoszulBraiding F V W) := by
-  sorry
+  have hsign (p q : ℤ) : koszulSign F p q * koszulSign F q p = 1 := by
+    dsimp [koszulSign]
+    rw [← zpow_add₀ (neg_ne_zero.mpr one_ne_zero)]
+    rw [show p * q + q * p = 2 * (p * q) by ring, zpow_mul]
+    simp
+  let c : gradedTensor F V W ≅ gradedTensor F W V :=
+    { hom := fun k => GradedObject.Monoidal.tensorObjDesc (fun p q h =>
+          (koszulSign F p q • (β_ (V p) (W q)).hom) ≫
+            GradedObject.Monoidal.ιTensorObj W V q p k
+              (by simpa only [add_comm] using h))
+      inv := fun k => GradedObject.Monoidal.tensorObjDesc (fun p q h =>
+          (koszulSign F p q • (β_ (W p) (V q)).hom) ≫
+            GradedObject.Monoidal.ιTensorObj V W q p k
+              (by simpa only [add_comm] using h))
+      hom_inv_id := by
+        funext k
+        apply GradedObject.Monoidal.tensorObj_ext
+        intro p q h
+        dsimp
+        calc
+          _ = koszulSign F p q • koszulSign F q p •
+              GradedObject.Monoidal.ιTensorObj V W p q k h := by
+            cat_disch
+          _ = _ := by
+            simp [smul_smul, hsign]
+      inv_hom_id := by
+        funext k
+        apply GradedObject.Monoidal.tensorObj_ext
+        intro p q h
+        dsimp
+        calc
+          _ = koszulSign F p q • koszulSign F q p •
+              GradedObject.Monoidal.ιTensorObj W V p q k h := by
+            cat_disch
+          _ = _ := by
+            simp [smul_smul, hsign] }
+  exact ⟨⟨c, by
+    intro p q k h
+    simpa [c] using
+      (GradedObject.Monoidal.ι_tensorObjDesc
+        (X₁ := V) (X₂ := W) (A := gradedTensor F W V k) (k := k)
+        (fun p q h =>
+          (koszulSign F p q • (β_ (V p) (W q)).hom) ≫
+            GradedObject.Monoidal.ιTensorObj W V q p k
+              (by simpa only [add_comm] using h)) p q h)⟩⟩
 
 /-! ## Duals of graded vector spaces -/
 

@@ -54,6 +54,8 @@ inverse of the Lefschetz motive.
 -/
 class ChowMotiveCategory (k : Type u) [Field k] (M : Type v)
     [Category.{w} M]
+    [Formalization.Books.Homology.Unit03.AdditiveCategory M]
+    [CategoryTheory.Linear ℚ M]
     extends MonoidalCategory M, SymmetricCategory M, IsIdempotentComplete M where
   /-- The Lefschetz motive. -/
   lefschetzMotive : M
@@ -148,7 +150,9 @@ structure WeilCohomologyFactorization
     {k : Type u} [Field k]
     {C : Type v} [Category.{w} C] [Preadditive C]
     [CategoryTheory.Linear ℚ C] [CorrespondenceCategory k C]
-    {M : Type u'} [Category.{v'} M] [ChowMotiveCategory k M]
+    {M : Type u'} [Category.{v'} M]
+    [Formalization.Books.Homology.Unit03.AdditiveCategory M]
+    [CategoryTheory.Linear ℚ M] [ChowMotiveCategory k M]
     {F : Type w'} [Field F]
     (h : ChowMotiveFunctor C M) (H : WeilCohomologyFunctor C F) where
   /-- The realization functor on Chow motives. -/
@@ -166,7 +170,9 @@ line `F(1)`.
 -/
 structure TateMotiveRealization
     {k : Type u} [Field k]
-    {M : Type v} [Category.{w} M] [ChowMotiveCategory k M]
+    {M : Type v} [Category.{w} M]
+    [Formalization.Books.Homology.Unit03.AdditiveCategory M]
+    [CategoryTheory.Linear ℚ M] [ChowMotiveCategory k M]
     {F : Type u'} [Field F]
     (G : M ⥤ Formalization.Books.Homology.Unit17.GradedVectorSpace F) where
   /-- The realization of the Tate motive is the line in degree `-2`. -/
@@ -186,7 +192,9 @@ structure WeilCohomologyMotivicData
     {k : Type u} [Field k]
     {C : Type v} [Category.{w} C] [Preadditive C]
     [CategoryTheory.Linear ℚ C] [CorrespondenceCategory k C]
-    {M : Type u'} [Category.{v'} M] [ChowMotiveCategory k M]
+    {M : Type u'} [Category.{v'} M]
+    [Formalization.Books.Homology.Unit03.AdditiveCategory M]
+    [CategoryTheory.Linear ℚ M] [ChowMotiveCategory k M]
     {F : Type w'} [Field F]
     (h : ChowMotiveFunctor C M) (H : WeilCohomologyFunctor C F) where
   factorization : WeilCohomologyFactorization (k := k) h H

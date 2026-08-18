@@ -525,11 +525,11 @@ theorem which_elements_split [Module.FinitePresentation R M]
         by_cases hij : i = j
         · subst j
           simp [e]
-        · simp [e, hij, Ne.symm hij]
+        · simp [e, hij]
       calc
         algebraMap R K (A i j) =
             ∑ φ : T₀, (algebraMap R K) (c i φ) * a j (φ : M →ₗ[R] R) := by
-              simp [A, ψ, a, map_sum, smul_eq_mul]
+              simp [A, ψ, a, map_sum]
         _ = e i j := hq''
         _ = if i = j then 1 else 0 := hsingle
     have hdet : algebraMap R K A.det = 1 := by
@@ -559,7 +559,7 @@ theorem which_elements_split [Module.FinitePresentation R M]
         map_smul' := by
           intro r₀ m
           ext i
-          simp [A, mul_left_comm, Finset.mul_sum] }
+          simp [mul_left_comm, Finset.mul_sum] }
     let eF : (Fin r →₀ R) ≃ₗ[R] (Fin r → R) :=
       Finsupp.linearEquivFunOnFinite R R (Fin r)
     let g : M →ₗ[R] (Fin r →₀ R) := eF.symm.toLinearMap.comp gFun

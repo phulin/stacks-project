@@ -274,13 +274,267 @@ private instance stalkFunctorMapUnitToSheafifyIsIsoInstance
       (CategoryTheory.toSheafify (Opens.grothendieckTopology X) P)) :=
   TopCat.Presheaf.stalkFunctor_map_unit_toSheafify_isIso x (Type v) P
 
+private def coverPrelocalPredicate {X : TopCat.{v}} (A B : Opens X) :
+    TopCat.PrelocalPredicate (fun _ : X => ULift.{v} PUnit) where
+  pred := fun {U} _ => U ≤ A ∨ U ≤ B
+  res := by
+    intro U V i f h
+    rcases h with h | h
+    · exact Or.inl (i.le.trans h)
+    · exact Or.inr (i.le.trans h)
+
+private abbrev coverPresheaf {X : TopCat.{v}} (A B : Opens X) :
+    TopCat.Presheaf (Type v) X :=
+  TopCat.subpresheafToTypes (coverPrelocalPredicate A B)
+
+private def cofiniteCounterexampleSpace : TopCat.{v} :=
+  TopCat.of (CofiniteTopology (ULift.{v} ℕ))
+
+private def cofiniteCounterexamplePoint (n : ℕ) :
+    cofiniteCounterexampleSpace.carrier :=
+  CofiniteTopology.of (ULift.up n)
+
+private def cofiniteCounterexampleOpenA (n : ℕ) :
+    Opens cofiniteCounterexampleSpace :=
+  ⟨{x | x ≠ cofiniteCounterexamplePoint (2 * n)}, by
+    change IsOpen ({x : CofiniteTopology (ULift.{v} ℕ) |
+      x ≠ CofiniteTopology.of (ULift.up (2 * n))} :
+      Set (CofiniteTopology (ULift.{v} ℕ)))
+    rw [CofiniteTopology.isOpen_iff']
+    right
+    simpa only [Set.compl_setOf] using Set.finite_singleton
+      (CofiniteTopology.of (ULift.up (2 * n)))⟩
+
+private def cofiniteCounterexampleOpenB (n : ℕ) :
+    Opens cofiniteCounterexampleSpace :=
+  ⟨{x | x ≠ cofiniteCounterexamplePoint (2 * n + 1)}, by
+    change IsOpen ({x : CofiniteTopology (ULift.{v} ℕ) |
+      x ≠ CofiniteTopology.of (ULift.up (2 * n + 1))} :
+      Set (CofiniteTopology (ULift.{v} ℕ)))
+    rw [CofiniteTopology.isOpen_iff']
+    right
+    simpa only [Set.compl_setOf] using Set.finite_singleton
+      (CofiniteTopology.of (ULift.up (2 * n + 1)))⟩
+
+private theorem cofiniteCounterexampleOpenCover (n : ℕ) :
+    cofiniteCounterexampleOpenA n ⊔ cofiniteCounterexampleOpenB n = ⊤ := by
+  ext x
+  simp [cofiniteCounterexampleOpenA, cofiniteCounterexampleOpenB]
+  by_cases hx : x = cofiniteCounterexamplePoint (2 * n)
+  · right
+    intro hx'
+    have hpoint : cofiniteCounterexamplePoint (2 * n) =
+        cofiniteCounterexamplePoint (2 * n + 1) := hx.symm.trans hx'
+    have hnat : 2 * n = 2 * n + 1 := by
+      exact ULift.up.inj (CofiniteTopology.of.injective hpoint)
+    omega
+  · exact Or.inl hx
+
+private theorem cofiniteCounterexampleNoCover {U : Opens cofiniteCounterexampleSpace}
+    (x : cofiniteCounterexampleSpace) (hx : x ∈ U)
+    (hU : ∀ n, U ≤ cofiniteCounterexampleOpenA n ∨
+      U ≤ cofiniteCounterexampleOpenB n) : False := by
+  classical
+  have hfinite : ((U : Set cofiniteCounterexampleSpace)ᶜ).Finite := by
+    rcases (CofiniteTopology.isOpen_iff' (s := (U : Set cofiniteCounterexampleSpace))).1 U.2 with
+      h | h
+    · exfalso
+      have : x ∈ (∅ : Set cofiniteCounterexampleSpace) := by simpa [h] using hx
+      exact this.elim
+    · exact h
+  let p : ℕ → cofiniteCounterexampleSpace := cofiniteCounterexamplePoint
+  have hp_injective : Function.Injective p := by
+    intro n m hnm
+    exact ULift.up.inj (CofiniteTopology.of.injective hnm)
+  let f : ℕ → cofiniteCounterexampleSpace := fun n =>
+    if U ≤ cofiniteCounterexampleOpenA n then p (2 * n) else p (2 * n + 1)
+  have hf_injective : Function.Injective f := by
+    intro n m hnm
+    by_cases hn : U ≤ cofiniteCounterexampleOpenA n
+    · by_cases hm : U ≤ cofiniteCounterexampleOpenA m
+      · have hnm' : p (2 * n) = p (2 * m) := by
+          simpa only [f, if_pos hn, if_pos hm] using hnm
+        have : 2 * n = 2 * m := hp_injective hnm'
+        omega
+      · have hnm' : p (2 * n) = p (2 * m + 1) := by
+          simpa only [f, if_pos hn, if_neg hm] using hnm
+        have : 2 * n = 2 * m + 1 := hp_injective hnm'
+        omega
+    · by_cases hm : U ≤ cofiniteCounterexampleOpenA m
+      · have hnm' : p (2 * n + 1) = p (2 * m) := by
+          simpa only [f, if_neg hn, if_pos hm] using hnm
+        have : 2 * n + 1 = 2 * m := hp_injective hnm'
+        omega
+      · have hnm' : p (2 * n + 1) = p (2 * m + 1) := by
+          simpa only [f, if_neg hn, if_neg hm] using hnm
+        have : 2 * n + 1 = 2 * m + 1 := hp_injective hnm'
+        omega
+  have hf_mem : ∀ n, f n ∈ ((U : Set cofiniteCounterexampleSpace)ᶜ) := by
+    intro n
+    by_cases hn : U ≤ cofiniteCounterexampleOpenA n
+    · have hn' : p (2 * n) ∉ (U : Set cofiniteCounterexampleSpace) := by
+        intro h
+        have h' := hn h
+        simpa [p, cofiniteCounterexampleOpenA] using h'
+    · have hnB := (hU n).resolve_left hn
+      have hn' : p (2 * n + 1) ∉ (U : Set cofiniteCounterexampleSpace) := by
+        intro h
+        have h' := hnB h
+        simpa [p, cofiniteCounterexampleOpenB] using h'
+    · change p (2 * n) ∈ ((U : Set cofiniteCounterexampleSpace)ᶜ)
+      exact hn'
+    · change p (2 * n + 1) ∈ ((U : Set cofiniteCounterexampleSpace)ᶜ)
+      exact hn'
+  have hrange : (Set.range f).Infinite := Set.infinite_range_of_injective hf_injective
+  exact hrange (hfinite.subset (by
+    rintro _ ⟨n, rfl⟩
+    exact hf_mem n))
+
+private theorem coverPresheaf_stalk_subsingleton
+    {A B : Opens cofiniteCounterexampleSpace} (x : cofiniteCounterexampleSpace) :
+    Subsingleton ((coverPresheaf A B).stalk x) := by
+  dsimp [TopCat.Presheaf.stalk, coverPresheaf]
+  infer_instance
+
+private theorem coverPresheaf_stalk_nonempty
+    {A B : Opens cofiniteCounterexampleSpace}
+    (hcover : A ⊔ B = ⊤) (x : cofiniteCounterexampleSpace) :
+    Nonempty ((coverPresheaf A B).stalk x) := by
+  have hx : x ∈ A ∨ x ∈ B := by
+    have : x ∈ A ⊔ B := by simpa [hcover]
+    simpa only [Opens.mem_sup] using this
+  rcases hx with hx | hx
+  · let U : OpenNhds x := ⟨A, hx⟩
+    let f : ∀ y : A, ULift.{v} PUnit := fun _ => ULift.up PUnit.unit
+    have hf : (coverPrelocalPredicate A B).pred f := Or.inl le_rfl
+    exact ⟨(coverPresheaf A B).germ A x U.2 ⟨f, hf⟩⟩
+  · let U : OpenNhds x := ⟨B, hx⟩
+    let f : ∀ y : B, ULift.{v} PUnit := fun _ => ULift.up PUnit.unit
+    have hf : (coverPrelocalPredicate A B).pred f := Or.inr le_rfl
+    exact ⟨(coverPresheaf A B).germ B x U.2 ⟨f, hf⟩⟩
+
+private noncomputable abbrev terminalSheaf (X : TopCat.{v}) : TopCat.Sheaf (Type v) X :=
+  limit (Functor.empty.{0} _)
+
+private theorem terminalSheaf_stalk_subsingleton (X : TopCat.{v}) (x : X) :
+    Subsingleton ((terminalSheaf X).presheaf.stalk x) := by
+  dsimp [terminalSheaf, TopCat.Presheaf.stalk]
+  infer_instance
+
+private theorem terminalSheaf_stalk_nonempty (X : TopCat.{v}) (x : X) :
+    Nonempty ((terminalSheaf X).presheaf.stalk x) := by
+  let hu : Unique ((terminalSheaf X).presheaf.obj (op (⊤ : Opens X))) :=
+    (Types.isTerminalEquivUnique _).toFun
+      (TopCat.Sheaf.isTerminalOfEmpty (terminalSheaf X))
+  let z : (terminalSheaf X).presheaf.obj (op (⊤ : Opens X)) := hu.default
+  exact ⟨(terminalSheaf X).presheaf.germ (⊤ : Opens X) x (by simp) z⟩
+
+private theorem terminalSheaf_isTerminal (X : TopCat.{v}) :
+    IsTerminal (terminalSheaf X) := by
+  exact limit.isLimit (Functor.empty.{0} (TopCat.Sheaf (Type v) X))
+
+private theorem coverPresheaf_sheafification_to_terminal_isIso
+    {A B : Opens cofiniteCounterexampleSpace}
+    (hcover : A ⊔ B = ⊤) :
+    IsIso (((CategoryTheory.presheafToSheaf
+      (Opens.grothendieckTopology cofiniteCounterexampleSpace) (Type v)).obj
+        (coverPresheaf A B)) ⟶ terminalSheaf cofiniteCounterexampleSpace) := by
+  let P := coverPresheaf A B
+  let L := CategoryTheory.presheafToSheaf
+    (Opens.grothendieckTopology cofiniteCounterexampleSpace) (Type v)
+  let T := terminalSheaf cofiniteCounterexampleSpace
+  let f : L.obj P ⟶ T := (TopCat.Sheaf.isTerminalOfEmpty T).from _
+  change IsIso f
+  apply TopCat.Presheaf.isIso_of_stalkFunctor_map_iso f
+  letI : ∀ x : cofiniteCounterexampleSpace,
+      IsIso ((TopCat.Presheaf.stalkFunctor (Type v) x).map f.1) := fun x => by
+    let u := (TopCat.Presheaf.stalkFunctor (Type v) x).map
+      (CategoryTheory.toSheafify
+        (Opens.grothendieckTopology cofiniteCounterexampleSpace) P)
+    let g := (TopCat.Presheaf.stalkFunctor (Type v) x).map f.1
+    letI : Subsingleton (P.stalk x) := coverPresheaf_stalk_subsingleton x
+    letI : Unique (P.stalk x) where
+      default := Classical.choice (coverPresheaf_stalk_nonempty hcover x)
+      uniq := fun _ _ => Subsingleton.elim _ _
+    letI : Subsingleton T.presheaf.stalk x := terminalSheaf_stalk_subsingleton _ _
+    letI : Unique T.presheaf.stalk x where
+      default := Classical.choice (terminalSheaf_stalk_nonempty _ _)
+      uniq := fun _ _ => Subsingleton.elim _ _
+    letI : IsIso u := by infer_instance
+    letI : IsIso (u ≫ g) := by
+      rw [CategoryTheory.isIso_iff_bijective]
+      constructor
+      · intro a b h
+        exact Subsingleton.elim _ _
+      · intro b
+        exact ⟨default, Subsingleton.elim _ _⟩
+    exact IsIso.of_isIso_comp_left u g
+
+private noncomputable def coverPresheaf_sheafification_to_terminal_iso
+    {A B : Opens cofiniteCounterexampleSpace}
+    (hcover : A ⊔ B = ⊤) :
+    (CategoryTheory.presheafToSheaf
+      (Opens.grothendieckTopology cofiniteCounterexampleSpace) (Type v)).obj
+        (coverPresheaf A B) ≅ terminalSheaf cofiniteCounterexampleSpace := by
+  let L := CategoryTheory.presheafToSheaf
+    (Opens.grothendieckTopology cofiniteCounterexampleSpace) (Type v)
+  let T := terminalSheaf cofiniteCounterexampleSpace
+  let f : L.obj (coverPresheaf A B) ⟶ T :=
+    (TopCat.Sheaf.isTerminalOfEmpty T).from _
+  letI : IsIso f := by
+    exact coverPresheaf_sheafification_to_terminal_isIso hcover
+  exact asIso f
+
 /-- Sheafification does not preserve arbitrary limits in general. -/
 theorem sheafificationDoesNotPreserveAllLimits :
     ∃ (X : TopCat.{v}),
       ¬ PreservesLimits
         (CategoryTheory.presheafToSheaf
           (Opens.grothendieckTopology X) (Type v)) := by
-  sorry
+  refine ⟨cofiniteCounterexampleSpace, ?_⟩
+  let L := CategoryTheory.presheafToSheaf
+    (Opens.grothendieckTopology cofiniteCounterexampleSpace) (Type v)
+  intro h
+  letI : PreservesLimits L := h
+  let J := Discrete (ULift.{v} ℕ)
+  let F : J ⥤ TopCat.Presheaf (Type v) cofiniteCounterexampleSpace :=
+    Discrete.functor (fun n =>
+      coverPresheaf (cofiniteCounterexampleOpenA n.down)
+        (cofiniteCounterexampleOpenB n.down))
+  let Q := limit F
+  let x₀ := cofiniteCounterexamplePoint 0
+  have hQempty : IsEmpty Q.stalk x₀ := by
+    constructor
+    intro z
+    obtain ⟨U, zU, rfl⟩ := Types.jointly_surjective' z
+    let V : Opens cofiniteCounterexampleSpace := (unop U).1
+    have hxV : x₀ ∈ V := (unop U).2
+    have hUV : ∀ n, V ≤ cofiniteCounterexampleOpenA n ∨
+        V ≤ cofiniteCounterexampleOpenB n := by
+      intro n
+      let j : J := Discrete.mk (ULift.up n)
+      let eU := limitObjIsoLimitCompEvaluation F (op V)
+      let y := (limit.π
+        (F ⋙ (evaluation (Opens cofiniteCounterexampleSpace)ᵒᵖ (Type v)).obj (op V)) j)
+        (eU.hom zU)
+      simpa [F, j, coverPresheaf, coverPrelocalPredicate] using y.property
+    exact cofiniteCounterexampleNoCover V x₀ hxV hUV
+  let T := terminalSheaf cofiniteCounterexampleSpace
+  let e : ∀ j : J, L.obj (F.obj j) ≅ T := fun j =>
+    coverPresheaf_sheafification_to_terminal_iso
+      (cofiniteCounterexampleOpenCover j.as.down)
+  let c : Cone (F ⋙ L) :=
+    { pt := T
+      π := Discrete.natTrans (fun j => (e j).inv) }
+  let q : T ⟶ limit (F ⋙ L) := limit.lift (F ⋙ L) c
+  have htarget : Nonempty (limit (F ⋙ L)).presheaf.stalk x₀ := by
+    let zT := Classical.choice (terminalSheaf_stalk_nonempty cofiniteCounterexampleSpace x₀)
+    exact ⟨(TopCat.Presheaf.stalkFunctor (Type v) x₀).map q.1 zT⟩
+  let eLim := preservesLimitIso L F
+  let m := (TopCat.Presheaf.stalkFunctor (Type v) x₀).map eLim.hom.1
+  letI : IsIso m := by infer_instance
+  rcases htarget with ⟨y⟩
+  exact hQempty.false (inv m y)
 
 /-! ## Stalks -/
 

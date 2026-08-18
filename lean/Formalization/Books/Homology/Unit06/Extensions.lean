@@ -1133,6 +1133,97 @@ theorem pushout_pullbackClass_comm
   apply Quotient.sound
   exact pushout_pullback_extension_iso E a p
 
+private theorem pullback_extension_id_iso
+    {C : Type u} [Category.{v} C] [Abelian C]
+    {A B : C} (E : Extension C A B) :
+    Nonempty (pullbackExtension E (𝟙 B) ≅ E) := by
+  let m : ExtensionHom (pullbackExtension E (𝟙 B)) E :=
+    { middle := pullback.fst E.projection (𝟙 B)
+      comm_left := by
+        change pullback.lift E.inclusion 0 _ ≫ pullback.fst E.projection (𝟙 B) =
+          E.inclusion
+        rw [pullback.lift_fst]
+      comm_right := by
+        change pullback.fst E.projection (𝟙 B) ≫ E.projection =
+          pullback.snd E.projection (𝟙 B)
+        rw [pullback.condition, Category.comp_id] }
+  let n : ExtensionHom E (pullbackExtension E (𝟙 B)) :=
+    { middle := pullback.lift (𝟙 E.middle) E.projection (by simp)
+      comm_left := by
+        change E.inclusion ≫ pullback.lift (𝟙 E.middle) E.projection _ =
+          pullback.lift E.inclusion 0 _
+        apply pullback.hom_ext
+        · simp only [Category.assoc, pullback.lift_fst, Category.comp_id]
+        · simp only [Category.assoc, pullback.lift_snd]
+          rw [E.zero]
+      comm_right := by
+        change pullback.lift (𝟙 E.middle) E.projection _ ≫
+          pullback.snd E.projection (𝟙 B) = E.projection
+        rw [pullback.lift_snd] }
+  exact ⟨
+    { hom := m
+      inv := n
+      hom_inv_id := ExtensionHom.ext _ _ (by
+        change pullback.fst E.projection (𝟙 B) ≫
+          pullback.lift (𝟙 E.middle) E.projection _ = 𝟙 _
+        apply pullback.hom_ext
+        · simp only [Category.assoc, pullback.lift_fst, Category.comp_id,
+            Category.id_comp]
+        · simp only [Category.assoc, pullback.lift_snd, Category.id_comp]
+          rw [pullback.condition, Category.comp_id])
+      inv_hom_id := ExtensionHom.ext _ _ (by
+        change pullback.lift (𝟙 E.middle) E.projection _ ≫
+          pullback.fst E.projection (𝟙 B) = 𝟙 _
+        rw [pullback.lift_fst]) }⟩
+
+private theorem pushout_extension_id_iso
+    {C : Type u} [Category.{v} C] [Abelian C]
+    {A B : C} (E : Extension C A B) :
+    Nonempty (pushoutExtension E (𝟙 A) ≅ E) := by
+  let m : ExtensionHom (pushoutExtension E (𝟙 A)) E :=
+    { middle := pushout.desc E.inclusion (𝟙 E.middle) (by simp)
+      comm_left := by
+        change pushout.inl (𝟙 A) E.inclusion ≫
+            pushout.desc E.inclusion (𝟙 E.middle) _ = E.inclusion
+        rw [pushout.inl_desc]
+      comm_right := by
+        change pushout.desc E.inclusion (𝟙 E.middle) _ ≫ E.projection =
+          pushout.desc 0 E.projection _
+        apply pushout.hom_ext
+        · rw [← Category.assoc, pushout.inl_desc, E.zero, pushout.inl_desc]
+        · rw [← Category.assoc, pushout.inr_desc, Category.id_comp,
+            pushout.inr_desc] }
+  let n : ExtensionHom E (pushoutExtension E (𝟙 A)) :=
+    { middle := pushout.inr (𝟙 A) E.inclusion
+      comm_left := by
+        dsimp [pushoutExtension]
+        change E.inclusion ≫ pushout.inr (𝟙 A) E.inclusion =
+          pushout.inl (𝟙 A) E.inclusion
+        simpa using (pushout.condition :
+          𝟙 A ≫ pushout.inl (𝟙 A) E.inclusion =
+            E.inclusion ≫ pushout.inr (𝟙 A) E.inclusion).symm
+      comm_right := by
+        change pushout.inr (𝟙 A) E.inclusion ≫
+            pushout.desc 0 E.projection _ = E.projection
+        rw [pushout.inr_desc] }
+  exact ⟨
+    { hom := m
+      inv := n
+      hom_inv_id := ExtensionHom.ext _ _ (by
+        change pushout.desc E.inclusion (𝟙 E.middle) _ ≫
+          pushout.inr (𝟙 A) E.inclusion = 𝟙 _
+        apply pushout.hom_ext
+        · rw [← Category.assoc, pushout.inl_desc]
+          simpa using (pushout.condition :
+            𝟙 A ≫ pushout.inl (𝟙 A) E.inclusion =
+              E.inclusion ≫ pushout.inr (𝟙 A) E.inclusion).symm
+        · rw [← Category.assoc, pushout.inr_desc]
+          simp)
+      inv_hom_id := ExtensionHom.ext _ _ (by
+        change pushout.inr (𝟙 A) E.inclusion ≫
+          pushout.desc E.inclusion (𝟙 E.middle) _ = 𝟙 _
+        rw [pushout.inr_desc]) }⟩
+
 /-- The set-valued functor described in the chapter. -/
 noncomputable def extensionClassFunctor
     {C : Type u} [Category.{v} C] [Abelian C] :
@@ -1142,11 +1233,27 @@ noncomputable def extensionClassFunctor
   map_id := by
     intro X
     ext x
-    sorry
+    change extensionClassMap (𝟙 X.1) (𝟙 X.2.unop) x = x
+    change pullbackClass (𝟙 X.2.unop) (pushoutClass (𝟙 X.1) x) = x
+    refine Quotient.inductionOn x ?_
+    intro E
+    change extensionClass (pullbackExtension (pushoutExtension E (𝟙 X.1))
+      (𝟙 X.2.unop)) = extensionClass E
+    apply Quotient.sound
+    exact ⟨(pullback_extension_id_iso (pushoutExtension E (𝟙 X.1))).some.trans
+      (pushout_extension_id_iso E).some⟩
   map_comp := by
     intro X Y Z f g
     ext x
-    sorry
+    change extensionClassMap ((f ≫ g).1) ((f ≫ g).2.unop) x =
+      extensionClassMap g.1 g.2.unop (extensionClassMap f.1 f.2.unop x)
+    change pullbackClass ((f ≫ g).2.unop) (pushoutClass (f ≫ g).1 x) =
+      pullbackClass g.2.unop (pushoutClass g.1
+        (pullbackClass f.2.unop (pushoutClass f.1 x)))
+    rw [show (f ≫ g).1 = f.1 ≫ g.1 by rfl,
+      show (f ≫ g).2.unop = g.2.unop ≫ f.2.unop by rfl]
+    rw [pushout_pullbackClass_comm g.1 f.2.unop (pushoutClass f.1 x)]
+    rw [pullbackClass_comp, pushoutClass_comp]
 
 /-! ## The Baer sum -/
 
@@ -1170,9 +1277,202 @@ noncomputable def directSumExtension
   middle := E₁.middle ⊞ E₂.middle
   inclusion := biprod.map E₁.inclusion E₂.inclusion
   projection := biprod.map E₁.projection E₂.projection
-  zero := by sorry
+  zero := by
+    apply biprod.hom_ext'
+    · rw [← Category.assoc, biprod.inl_map E₁.inclusion E₂.inclusion,
+        Category.assoc, biprod.inl_map E₁.projection E₂.projection,
+        ← Category.assoc, E₁.zero, zero_comp]
+      simp
+    · rw [← Category.assoc, biprod.inr_map E₁.inclusion E₂.inclusion,
+        Category.assoc, biprod.inr_map E₁.projection E₂.projection,
+        ← Category.assoc, E₂.zero, zero_comp]
+      simp
   shortExact := by
-    sorry
+    let z : biprod.map E₁.inclusion E₂.inclusion ≫
+        biprod.map E₁.projection E₂.projection = 0 := by
+      apply biprod.hom_ext'
+      · rw [← Category.assoc, biprod.inl_map E₁.inclusion E₂.inclusion,
+          Category.assoc, biprod.inl_map E₁.projection E₂.projection,
+          ← Category.assoc, E₁.zero, zero_comp]
+        simp
+      · rw [← Category.assoc, biprod.inr_map E₁.inclusion E₂.inclusion,
+          Category.assoc, biprod.inr_map E₁.projection E₂.projection,
+          ← Category.assoc, E₂.zero, zero_comp]
+        simp
+    let S : ShortComplex C :=
+      ShortComplex.mk (biprod.map E₁.inclusion E₂.inclusion)
+        (biprod.map E₁.projection E₂.projection) z
+    have hK₁ := E₁.shortExact.fIsKernel
+    have hK₂ := E₂.shortExact.fIsKernel
+    letI : Mono E₁.inclusion := E₁.shortExact.mono_f
+    letI : Mono E₂.inclusion := E₂.shortExact.mono_f
+    letI : Epi E₁.projection := E₁.shortExact.epi_g
+    letI : Epi E₂.projection := E₂.shortExact.epi_g
+    have hExact : S.Exact := by
+      apply S.exact_of_f_is_kernel
+      let lift : ∀ s : KernelFork (biprod.map E₁.projection E₂.projection),
+          s.pt ⟶ A ⊞ A := fun s =>
+        biprod.lift
+          (hK₁.lift (KernelFork.ofι (s.ι ≫ biprod.fst) (by
+            calc
+              (s.ι ≫ biprod.fst) ≫ E₁.projection =
+                  s.ι ≫ (biprod.fst ≫ E₁.projection) := by rw [Category.assoc]
+              _ = s.ι ≫
+                  (biprod.map E₁.projection E₂.projection ≫ biprod.fst) := by
+                rw [biprod.map_fst]
+              _ = (s.ι ≫ biprod.map E₁.projection E₂.projection) ≫
+                  biprod.fst := by rw [Category.assoc]
+              _ = 0 := by rw [KernelFork.condition s, zero_comp])))
+          (hK₂.lift (KernelFork.ofι (s.ι ≫ biprod.snd) (by
+            calc
+              (s.ι ≫ biprod.snd) ≫ E₂.projection =
+                  s.ι ≫ (biprod.snd ≫ E₂.projection) := by rw [Category.assoc]
+              _ = s.ι ≫
+                  (biprod.map E₁.projection E₂.projection ≫ biprod.snd) := by
+                rw [biprod.map_snd]
+              _ = (s.ι ≫ biprod.map E₁.projection E₂.projection) ≫
+                  biprod.snd := by rw [Category.assoc]
+              _ = 0 := by rw [KernelFork.condition s, zero_comp])))
+      refine Fork.IsLimit.mk _ lift ?_ ?_
+      · intro s
+        apply biprod.hom_ext
+        · dsimp [lift]
+          dsimp [S]
+          simp only [Category.assoc, biprod.map_fst]
+          rw [← Category.assoc, biprod.lift_fst]
+          simpa only [KernelFork.ι_ofι, Fork.ι_ofι] using
+            (Fork.IsLimit.lift_ι (s := KernelFork.ofι E₁.inclusion E₁.zero)
+              (t := KernelFork.ofι (s.ι ≫ biprod.fst) _) hK₁)
+        · dsimp [lift]
+          dsimp [S]
+          simp only [Category.assoc, biprod.map_snd]
+          rw [← Category.assoc, biprod.lift_snd]
+          simpa only [KernelFork.ι_ofι, Fork.ι_ofι] using
+            (Fork.IsLimit.lift_ι (s := KernelFork.ofι E₂.inclusion E₂.zero)
+              (t := KernelFork.ofι (s.ι ≫ biprod.snd) _) hK₂)
+      · intro s m hm
+        change m ≫ biprod.map E₁.inclusion E₂.inclusion = s.ι at hm
+        apply biprod.hom_ext
+        · apply (cancel_mono E₁.inclusion).1
+          calc
+            (m ≫ biprod.fst) ≫ E₁.inclusion =
+                (m ≫ biprod.map E₁.inclusion E₂.inclusion) ≫ biprod.fst := by
+              calc
+                (m ≫ biprod.fst) ≫ E₁.inclusion =
+                    m ≫ (biprod.fst ≫ E₁.inclusion) := by rw [Category.assoc]
+                _ = m ≫
+                    (biprod.map E₁.inclusion E₂.inclusion ≫ biprod.fst) := by
+                  rw [biprod.map_fst]
+                _ = (m ≫ biprod.map E₁.inclusion E₂.inclusion) ≫
+                    biprod.fst := by rw [Category.assoc]
+            _ = s.ι ≫ biprod.fst := by rw [hm]
+            _ = (lift s ≫ biprod.fst) ≫ E₁.inclusion := by
+              dsimp [lift]
+              rw [biprod.lift_fst]
+              simpa only [KernelFork.ι_ofι, Fork.ι_ofι] using
+                (Fork.IsLimit.lift_ι (s := KernelFork.ofι E₁.inclusion E₁.zero)
+                  (t := KernelFork.ofι (s.ι ≫ biprod.fst) _) hK₁).symm
+        · apply (cancel_mono E₂.inclusion).1
+          calc
+            (m ≫ biprod.snd) ≫ E₂.inclusion =
+                (m ≫ biprod.map E₁.inclusion E₂.inclusion) ≫ biprod.snd := by
+              calc
+                (m ≫ biprod.snd) ≫ E₂.inclusion =
+                    m ≫ (biprod.snd ≫ E₂.inclusion) := by rw [Category.assoc]
+                _ = m ≫
+                    (biprod.map E₁.inclusion E₂.inclusion ≫ biprod.snd) := by
+                  rw [biprod.map_snd]
+                _ = (m ≫ biprod.map E₁.inclusion E₂.inclusion) ≫
+                    biprod.snd := by rw [Category.assoc]
+            _ = s.ι ≫ biprod.snd := by rw [hm]
+            _ = (lift s ≫ biprod.snd) ≫ E₂.inclusion := by
+              dsimp [lift]
+              rw [biprod.lift_snd]
+              simpa only [KernelFork.ι_ofι, Fork.ι_ofι] using
+                (Fork.IsLimit.lift_ι (s := KernelFork.ofι E₂.inclusion E₂.zero)
+                  (t := KernelFork.ofι (s.ι ≫ biprod.snd) _) hK₂).symm
+    have hmono : Mono (biprod.map E₁.inclusion E₂.inclusion) := by
+      constructor
+      intro Z g h w
+      apply biprod.hom_ext
+      · apply (cancel_mono E₁.inclusion).1
+        calc
+          (g ≫ biprod.fst) ≫ E₁.inclusion =
+              (g ≫ biprod.map E₁.inclusion E₂.inclusion) ≫ biprod.fst := by
+            calc
+              (g ≫ biprod.fst) ≫ E₁.inclusion =
+                  g ≫ (biprod.fst ≫ E₁.inclusion) := by rw [Category.assoc]
+              _ = g ≫
+                  (biprod.map E₁.inclusion E₂.inclusion ≫ biprod.fst) := by
+                rw [biprod.map_fst]
+              _ = (g ≫ biprod.map E₁.inclusion E₂.inclusion) ≫
+                  biprod.fst := by rw [Category.assoc]
+          _ = (h ≫ biprod.map E₁.inclusion E₂.inclusion) ≫ biprod.fst := by
+            rw [w]
+          _ = (h ≫ biprod.fst) ≫ E₁.inclusion := by
+            calc
+              (h ≫ biprod.map E₁.inclusion E₂.inclusion) ≫ biprod.fst =
+                  h ≫ (biprod.map E₁.inclusion E₂.inclusion ≫ biprod.fst) := by
+                rw [Category.assoc]
+              _ = h ≫ (biprod.fst ≫ E₁.inclusion) := by
+                rw [biprod.map_fst]
+              _ = (h ≫ biprod.fst) ≫ E₁.inclusion := by rw [Category.assoc]
+      · apply (cancel_mono E₂.inclusion).1
+        calc
+          (g ≫ biprod.snd) ≫ E₂.inclusion =
+              (g ≫ biprod.map E₁.inclusion E₂.inclusion) ≫ biprod.snd := by
+            calc
+              (g ≫ biprod.snd) ≫ E₂.inclusion =
+                  g ≫ (biprod.snd ≫ E₂.inclusion) := by rw [Category.assoc]
+              _ = g ≫
+                  (biprod.map E₁.inclusion E₂.inclusion ≫ biprod.snd) := by
+                rw [biprod.map_snd]
+              _ = (g ≫ biprod.map E₁.inclusion E₂.inclusion) ≫
+                  biprod.snd := by rw [Category.assoc]
+          _ = (h ≫ biprod.map E₁.inclusion E₂.inclusion) ≫ biprod.snd := by
+            rw [w]
+          _ = (h ≫ biprod.snd) ≫ E₂.inclusion := by
+            calc
+              (h ≫ biprod.map E₁.inclusion E₂.inclusion) ≫ biprod.snd =
+                  h ≫ (biprod.map E₁.inclusion E₂.inclusion ≫ biprod.snd) := by
+                rw [Category.assoc]
+              _ = h ≫ (biprod.snd ≫ E₂.inclusion) := by
+                rw [biprod.map_snd]
+              _ = (h ≫ biprod.snd) ≫ E₂.inclusion := by rw [Category.assoc]
+    have hepi : Epi (biprod.map E₁.projection E₂.projection) := by
+      constructor
+      intro Z g h w
+      apply biprod.hom_ext'
+      · apply (cancel_epi E₁.projection).1
+        calc
+          E₁.projection ≫ biprod.inl ≫ g =
+              (biprod.inl ≫ biprod.map E₁.projection E₂.projection) ≫ g := by
+            rw [biprod.inl_map, Category.assoc]
+          _ = biprod.inl ≫
+              (biprod.map E₁.projection E₂.projection ≫ g) := by
+            rw [Category.assoc]
+          _ = biprod.inl ≫
+              (biprod.map E₁.projection E₂.projection ≫ h) := by
+            rw [w]
+          _ = E₁.projection ≫ biprod.inl ≫ h := by
+            rw [← Category.assoc, biprod.inl_map, Category.assoc]
+      · apply (cancel_epi E₂.projection).1
+        calc
+          E₂.projection ≫ biprod.inr ≫ g =
+              (biprod.inr ≫ biprod.map E₁.projection E₂.projection) ≫ g := by
+            rw [biprod.inr_map, Category.assoc]
+          _ = biprod.inr ≫
+              (biprod.map E₁.projection E₂.projection ≫ g) := by
+            rw [Category.assoc]
+          _ = biprod.inr ≫
+              (biprod.map E₁.projection E₂.projection ≫ h) := by
+            rw [w]
+          _ = E₂.projection ≫ biprod.inr ≫ h := by
+            rw [← Category.assoc, biprod.inr_map, Category.assoc]
+    simpa [S] using (show S.ShortExact from
+      { exact := hExact
+        mono_f := hmono
+        epi_g := hepi })
 
 /-- The extension represented by the Baer sum construction. -/
 noncomputable def baerSumExtension

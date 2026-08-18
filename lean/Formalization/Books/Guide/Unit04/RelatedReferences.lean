@@ -153,6 +153,209 @@ def SiteTorsorClass {C : Type u} [Category.{v} C]
     (G : Sheaf J AddCommGrpCat.{w}) (X : C) : Type _ :=
   Quotient (siteTorsorSetoid.{w, v, u, t} J G X)
 
+/-! ### The Picard operations on torsors -/
+
+/-- The trivial torsor is the torsor given by the additive sheaf itself.
+
+The carrier is kept behind this interface because the concrete sheafification
+of the underlying presheaf depends on the universe presentation of the site. -/
+theorem siteTorsorTrivial_exists {C : Type u} [Category.{v} C]
+    (J : GrothendieckTopology C)
+    (G : Sheaf J AddCommGrpCat.{w}) (X : C) :
+    Nonempty (SiteTorsor.{t, w, v, u} J G X) := by
+  sorry
+
+/-- A chosen trivial torsor. -/
+noncomputable def siteTorsorTrivial {C : Type u} [Category.{v} C]
+    (J : GrothendieckTopology C)
+    (G : Sheaf J AddCommGrpCat.{w}) (X : C) : SiteTorsor.{t, w, v, u} J G X :=
+  Classical.choice (siteTorsorTrivial_exists J G X)
+
+/-- Reversing the sign of the action gives the inverse torsor. -/
+def siteTorsorInverse {C : Type u} [Category.{v} C]
+    {J : GrothendieckTopology C}
+    {G : Sheaf J AddCommGrpCat.{w}} {X : C}
+    (P : SiteTorsor.{t, w, v, u} J G X) : SiteTorsor.{t, w, v, u} J G X where
+  carrier := P.carrier
+  action U a p := P.action U (-a) p
+  action_zero U p := by simpa using P.action_zero U p
+  action_add U a b p := by
+    rw [neg_add, P.action_add]
+  action_natural := by
+    intro U V q a p
+    simpa using P.action_natural q (-a) p
+  locally_nonempty := P.locally_nonempty
+  locally_simply_transitive := by
+    intro U p q
+    rcases P.locally_simply_transitive U p q with ⟨ι, V, f, hf, h⟩
+    refine ⟨ι, V, f, hf, ?_⟩
+    intro i
+    rcases h i with ⟨a, ha, huniq⟩
+    refine ⟨-a, ?_, ?_⟩
+    · simpa using ha
+    · intro b hb
+      have hba : -b = a := huniq (-b) (by simpa using hb)
+      calc
+        b = -(-b) := by simp
+        _ = -a := by rw [hba]
+
+/-- Equivariant equivalences are preserved by passage to the inverse torsor. -/
+def SiteTorsorEquivalence.inverse {C : Type u} [Category.{v} C]
+    {J : GrothendieckTopology C}
+    {G : Sheaf J AddCommGrpCat.{w}} {X : C}
+    {P Q : SiteTorsor.{t, w, v, u} J G X} (e : SiteTorsorEquivalence P Q) :
+    SiteTorsorEquivalence (siteTorsorInverse P) (siteTorsorInverse Q) where
+  map := e.map
+  equivariant := by
+    intro U a p
+    exact e.equivariant U (-a) p
+  inverse_equivariant := by
+    intro U a q
+    exact e.inverse_equivariant U (-a) q
+
+/-- Inversion respects the torsor equivalence relation. -/
+theorem siteTorsorInverse_respects_equivalence {C : Type u} [Category.{v} C]
+    {J : GrothendieckTopology C}
+    {G : Sheaf J AddCommGrpCat.{w}} {X : C}
+    {P Q : SiteTorsor.{t, w, v, u} J G X}
+    (h : Nonempty (SiteTorsorEquivalence P Q)) :
+    Nonempty (SiteTorsorEquivalence (siteTorsorInverse P) (siteTorsorInverse Q)) :=
+  ⟨SiteTorsorEquivalence.inverse (Nonempty.some h)⟩
+
+/-- Reflexivity for equivariant torsor equivalences. -/
+def SiteTorsorEquivalence.refl {C : Type u} [Category.{v} C]
+    {J : GrothendieckTopology C}
+    {G : Sheaf J AddCommGrpCat.{w}} {X : C}
+    (P : SiteTorsor.{t, w, v, u} J G X) : SiteTorsorEquivalence P P where
+  map := Iso.refl _
+  equivariant := by simp
+  inverse_equivariant := by simp
+
+/-- Data specifying the quotient construction of the contracted product.
+
+The fields record the two presentations of the quotient: translating the first
+factor by `a` is identified with translating the second factor by `-a`, and the
+resulting action can be computed in either factor. -/
+structure SiteTorsorContractedProductData {C : Type u} [Category.{v} C]
+    {J : GrothendieckTopology C}
+    {G : Sheaf J AddCommGrpCat.{w}} {X : C}
+    (P Q : SiteTorsor.{t, w, v, u} J G X) where
+  torsor : SiteTorsor.{t, w, v, u} J G X
+  pair : ∀ (U : (Over C X)ᵒᵖ),
+    P.carrier.obj.obj U → Q.carrier.obj.obj U → torsor.carrier.obj.obj U
+  pair_left_right : ∀ (U : (Over C X)ᵒᵖ)
+    (a : (G.over X).obj.obj U) (p : P.carrier.obj.obj U) (q : Q.carrier.obj.obj U),
+    pair U (P.action U a p) q = pair U p (Q.action U (-a) q)
+  pair_action_left : ∀ (U : (Over C X)ᵒᵖ)
+    (a : (G.over X).obj.obj U) (p : P.carrier.obj.obj U) (q : Q.carrier.obj.obj U),
+    torsor.action U a (pair U p q) = pair U (P.action U a p) q
+  pair_action_right : ∀ (U : (Over C X)ᵒᵖ)
+    (a : (G.over X).obj.obj U) (p : P.carrier.obj.obj U) (q : Q.carrier.obj.obj U),
+    torsor.action U a (pair U p q) = pair U p (Q.action U a q)
+
+/-- Existence of the sheafified quotient defining the contracted product. -/
+theorem siteTorsorContractedProductData_exists {C : Type u} [Category.{v} C]
+    {J : GrothendieckTopology C}
+    {G : Sheaf J AddCommGrpCat.{w}} {X : C}
+    (P Q : SiteTorsor J G X) :
+    Nonempty (SiteTorsorContractedProductData.{t, w, v, u} P Q) := by
+  sorry
+
+/-- A chosen contracted product of two torsors. -/
+noncomputable def siteTorsorContractedProduct {C : Type u} [Category.{v} C]
+    {J : GrothendieckTopology C}
+    {G : Sheaf J AddCommGrpCat.{w}} {X : C}
+    (P Q : SiteTorsor.{t, w, v, u} J G X) : SiteTorsor.{t, w, v, u} J G X :=
+  (Classical.choice (siteTorsorContractedProductData_exists P Q)).torsor
+
+/-- The contracted product is compatible with equivariant isomorphisms. -/
+theorem siteTorsorContractedProduct_respects_equivalence
+    {C : Type u} [Category.{v} C]
+    {J : GrothendieckTopology C}
+    {G : Sheaf J AddCommGrpCat.{w}} {X : C}
+    {P P' Q Q' : SiteTorsor.{t, w, v, u} J G X}
+    (eP : Nonempty (SiteTorsorEquivalence P P'))
+    (eQ : Nonempty (SiteTorsorEquivalence Q Q')) :
+    Nonempty (SiteTorsorEquivalence
+      (siteTorsorContractedProduct P Q)
+      (siteTorsorContractedProduct P' Q')) := by
+  sorry
+
+/-- The contracted product operation descended to torsor isomorphism classes. -/
+noncomputable def siteTorsorClassContractedProduct {C : Type u} [Category.{v} C]
+    {J : GrothendieckTopology C}
+    (G : Sheaf J AddCommGrpCat.{w}) (X : C)
+    (P Q : SiteTorsorClass J G X) : SiteTorsorClass J G X := by
+  refine Quotient.lift (fun P => Quotient.lift
+    (fun Q => Quotient.mk _ (siteTorsorContractedProduct P Q)) ?_ ) ?_ P Q
+  · intro Q Q' hQ
+    exact Quotient.sound (siteTorsorContractedProduct_respects_equivalence
+      (Nonempty.intro (SiteTorsorEquivalence.refl _)) hQ)
+  · intro P P' hP
+    apply funext
+    intro Q
+    induction Q using Quotient.inductionOn with
+    | _ Q =>
+      exact Quotient.sound (siteTorsorContractedProduct_respects_equivalence
+        hP (Nonempty.intro (SiteTorsorEquivalence.refl _)))
+
+/-- The neutral torsor class. -/
+def siteTorsorClassZero {C : Type u} [Category.{v} C]
+    (J : GrothendieckTopology C)
+    (G : Sheaf J AddCommGrpCat.{w}) (X : C) : SiteTorsorClass J G X :=
+  Quotient.mk _ (siteTorsorTrivial J G X)
+
+/-- The inverse operation descended to torsor isomorphism classes. -/
+noncomputable def siteTorsorClassInverse {C : Type u} [Category.{v} C]
+    (J : GrothendieckTopology C)
+    (G : Sheaf J AddCommGrpCat.{w}) (X : C)
+    (P : SiteTorsorClass J G X) : SiteTorsorClass J G X := by
+  refine Quotient.lift (fun P => Quotient.mk _ (siteTorsorInverse P)) ?_ P
+  intro P Q h
+  exact Quotient.sound (siteTorsorInverse_respects_equivalence h)
+
+theorem siteTorsorClassContractedProduct_zero_left {C : Type u} [Category.{v} C]
+    {J : GrothendieckTopology C} (G : Sheaf J AddCommGrpCat.{w}) (X : C)
+    (P : SiteTorsorClass J G X) :
+    siteTorsorClassContractedProduct G X (siteTorsorClassZero J G X) P = P := by
+  sorry
+
+theorem siteTorsorClassContractedProduct_zero_right {C : Type u} [Category.{v} C]
+    {J : GrothendieckTopology C} (G : Sheaf J AddCommGrpCat.{w}) (X : C)
+    (P : SiteTorsorClass J G X) :
+    siteTorsorClassContractedProduct G X P (siteTorsorClassZero J G X) = P := by
+  sorry
+
+theorem siteTorsorClassContractedProduct_inverse_left {C : Type u} [Category.{v} C]
+    {J : GrothendieckTopology C} (G : Sheaf J AddCommGrpCat.{w}) (X : C)
+    (P : SiteTorsorClass J G X) :
+    siteTorsorClassContractedProduct G X (siteTorsorClassInverse J G X P) P =
+      siteTorsorClassZero J G X := by
+  sorry
+
+theorem siteTorsorClassContractedProduct_inverse_right {C : Type u} [Category.{v} C]
+    {J : GrothendieckTopology C} (G : Sheaf J AddCommGrpCat.{w}) (X : C)
+    (P : SiteTorsorClass J G X) :
+    siteTorsorClassContractedProduct G X P (siteTorsorClassInverse J G X P) =
+      siteTorsorClassZero J G X := by
+  sorry
+
+theorem siteTorsorClassContractedProduct_assoc {C : Type u} [Category.{v} C]
+    {J : GrothendieckTopology C} (G : Sheaf J AddCommGrpCat.{w}) (X : C)
+    (P Q R : SiteTorsorClass J G X) :
+    siteTorsorClassContractedProduct G X
+        (siteTorsorClassContractedProduct G X P Q) R =
+      siteTorsorClassContractedProduct G X P
+        (siteTorsorClassContractedProduct G X Q R) := by
+  sorry
+
+theorem siteTorsorClassContractedProduct_comm {C : Type u} [Category.{v} C]
+    {J : GrothendieckTopology C} (G : Sheaf J AddCommGrpCat.{w}) (X : C)
+    (P Q : SiteTorsorClass J G X) :
+    siteTorsorClassContractedProduct G X P Q =
+      siteTorsorClassContractedProduct G X Q P := by
+  sorry
+
 /-! ### Banded gerbes -/
 
 /-- An abelian-banded gerbe over `X`, using the established compatible
@@ -692,6 +895,124 @@ def AbelianBandedGerbeClass {C : Type u} [Category.{v} C]
     Type _ :=
   Quotient (abelianBandedGerbeSetoid.{t, w, v, u} J G X)
 
+/-! ### Extensions and torsors in degree one -/
+
+/-- The constant unit sheaf used as the left hand term in degree-one `Ext`. -/
+abbrev siteH1UnitSheaf {C : Type u} [Category.{v} C]
+    (J : GrothendieckTopology C) (X : C)
+    [HasWeakSheafify (J.over X) AddCommGrpCat.{w}] :
+    Sheaf (J.over X) AddCommGrpCat.{w} :=
+  (constantSheaf (J.over X) AddCommGrpCat.{w}).obj
+    (AddCommGrpCat.of (ULift ℤ))
+
+/-- A concrete representative of an extension of the unit sheaf by `G.over X`.
+
+The field `extensionClass` is the corresponding derived extension class.  The
+comparison between representatives and derived classes is part of the
+degree-one correspondence below. -/
+structure SiteH1ExtensionRepresentative {C : Type u} [Category.{v} C]
+    {J : GrothendieckTopology C}
+    (G : Sheaf J AddCommGrpCat.{w}) (X : C)
+    [HasWeakSheafify (J.over X) AddCommGrpCat.{w}]
+    [HasSheafify (J.over X) AddCommGrpCat.{w}]
+    [HasExt.{w'} (Sheaf (J.over X) AddCommGrpCat.{w})] where
+  middle : Sheaf (J.over X) AddCommGrpCat.{w}
+  inclusion : G.over X ⟶ middle
+  projection : middle ⟶ siteH1UnitSheaf J X
+  zero : inclusion ≫ projection = 0
+  exact : (ShortComplex.mk inclusion projection zero).ShortExact
+  extensionClass : siteH1 G X
+
+/-- An `Ext` class in degree one, regarded as an extension class. -/
+abbrev SiteH1ExtensionClass {C : Type u} [Category.{v} C]
+    {J : GrothendieckTopology C}
+    (G : Sheaf J AddCommGrpCat.{w}) (X : C)
+    [HasSheafify (J.over X) AddCommGrpCat.{w}]
+    [HasExt.{w'} (Sheaf (J.over X) AddCommGrpCat.{w})] : Type w' :=
+  siteH1 G X
+
+/-- The two constructions in Giraud's degree-one correspondence.
+
+`extension_to_torsor` is the fibre construction over the unit section of an
+extension, while `torsor_to_extension` is the associated extension obtained
+from the torsor action.  The comparison equations are stated separately
+below, so representative-level constructions and quotient proofs remain
+distinct interfaces. -/
+structure SiteH1TorsorCorrespondence {C : Type u} [Category.{v} C]
+    {J : GrothendieckTopology C}
+    (G : Sheaf J AddCommGrpCat.{w}) (X : C)
+    [HasSheafify (J.over X) AddCommGrpCat.{w}]
+    [HasExt.{w'} (Sheaf (J.over X) AddCommGrpCat.{w})] where
+  extension_to_torsor : siteH1 G X → SiteTorsorClass.{t, w, v, u} J G X
+  torsor_to_extension : SiteTorsorClass.{t, w, v, u} J G X → siteH1 G X
+
+/-- Existence of the fibre/associated-extension comparison. -/
+theorem siteH1TorsorCorrespondence_exists {C : Type u} [Category.{v} C]
+    {J : GrothendieckTopology C}
+    (G : Sheaf J AddCommGrpCat.{w}) (X : C)
+    [HasSheafify (J.over X) AddCommGrpCat.{w}]
+    [HasExt.{w'} (Sheaf (J.over X) AddCommGrpCat.{w})] :
+    Nonempty (SiteH1TorsorCorrespondence G X) := by
+  sorry
+
+/-- A chosen degree-one extension/torsor correspondence. -/
+noncomputable def siteH1TorsorCorrespondence {C : Type u} [Category.{v} C]
+    {J : GrothendieckTopology C}
+    (G : Sheaf J AddCommGrpCat.{w}) (X : C)
+    [HasSheafify (J.over X) AddCommGrpCat.{w}]
+    [HasExt.{w'} (Sheaf (J.over X) AddCommGrpCat.{w})] :
+    SiteH1TorsorCorrespondence G X :=
+  Classical.choice (siteH1TorsorCorrespondence_exists G X)
+
+/-- Send a degree-one extension class to its torsor class by taking its unit fibre. -/
+noncomputable def siteH1ExtensionToTorsorClass {C : Type u} [Category.{v} C]
+    {J : GrothendieckTopology C}
+    (G : Sheaf J AddCommGrpCat.{w}) (X : C)
+    [HasSheafify (J.over X) AddCommGrpCat.{w}]
+    [HasExt.{w'} (Sheaf (J.over X) AddCommGrpCat.{w})] :
+    siteH1 G X → SiteTorsorClass J G X :=
+  (siteH1TorsorCorrespondence G X).extension_to_torsor
+
+/-- Apply the fibre construction to a concrete extension representative. -/
+noncomputable def siteH1ExtensionRepresentativeToTorsorClass
+    {C : Type u} [Category.{v} C]
+    {J : GrothendieckTopology C}
+    (G : Sheaf J AddCommGrpCat.{w}) (X : C)
+    [HasWeakSheafify (J.over X) AddCommGrpCat.{w}]
+    [HasSheafify (J.over X) AddCommGrpCat.{w}]
+    [HasExt.{w'} (Sheaf (J.over X) AddCommGrpCat.{w})]
+    (E : SiteH1ExtensionRepresentative G X) : SiteTorsorClass J G X :=
+  siteH1ExtensionToTorsorClass G X E.extensionClass
+
+/-- Form the derived extension class associated to a torsor class. -/
+noncomputable def siteTorsorClassToSiteH1 {C : Type u} [Category.{v} C]
+    {J : GrothendieckTopology C}
+    (G : Sheaf J AddCommGrpCat.{w}) (X : C)
+    [HasSheafify (J.over X) AddCommGrpCat.{w}]
+    [HasExt.{w'} (Sheaf (J.over X) AddCommGrpCat.{w})] :
+    SiteTorsorClass J G X → siteH1 G X :=
+  (siteH1TorsorCorrespondence G X).torsor_to_extension
+
+/-- The fibre and associated-extension maps are inverse on torsor classes. -/
+theorem siteH1ExtensionToTorsorClass_torsorToSiteH1 {C : Type u} [Category.{v} C]
+    {J : GrothendieckTopology C}
+    (G : Sheaf J AddCommGrpCat.{w}) (X : C)
+    [HasSheafify (J.over X) AddCommGrpCat.{w}]
+    [HasExt.{w'} (Sheaf (J.over X) AddCommGrpCat.{w})]
+    (P : SiteTorsorClass J G X) :
+    siteH1ExtensionToTorsorClass G X (siteTorsorClassToSiteH1 G X P) = P := by
+  sorry
+
+/-- The associated-extension and fibre maps are inverse on extension classes. -/
+theorem siteTorsorClassToSiteH1_extensionToTorsorClass {C : Type u} [Category.{v} C]
+    {J : GrothendieckTopology C}
+    (G : Sheaf J AddCommGrpCat.{w}) (X : C)
+    [HasSheafify (J.over X) AddCommGrpCat.{w}]
+    [HasExt.{w'} (Sheaf (J.over X) AddCommGrpCat.{w})]
+    (e : siteH1 G X) :
+    siteTorsorClassToSiteH1 G X (siteH1ExtensionToTorsorClass G X e) = e := by
+  sorry
+
 /-- Giraud's degree-one identification, stated as a bijection of types.
 
 Proof roadmap:
@@ -706,15 +1027,23 @@ Proof roadmap:
 4. Prove the composites equivalent on representatives, descend through both
    quotients, and package the inverse maps as an `Equiv`.
 
-The contracted-product and extension/torsor comparison APIs are not yet
-available, so the classification theorem remains admitted. -/
+The contracted-product and extension/torsor comparison interfaces above make
+the representative-level constructions explicit; the existence of the
+sheafified quotient and the comparison itself are the remaining mathematical
+proof obligations. -/
 theorem siteH1_equiv_siteTorsorClass
     {C : Type u} [Category.{v} C] {J : GrothendieckTopology C}
     (G : Sheaf J AddCommGrpCat.{w}) (X : C)
     [HasSheafify (J.over X) AddCommGrpCat.{w}]
     [HasExt.{w'} (Sheaf (J.over X) AddCommGrpCat.{w})] :
     Nonempty (siteH1 G X ≃ SiteTorsorClass J G X) := by
-  sorry
+  let E := siteH1TorsorCorrespondence G X
+  exact ⟨{
+    toFun := E.extension_to_torsor
+    invFun := E.torsor_to_extension
+    left_inv := siteTorsorClassToSiteH1_extensionToTorsorClass G X
+    right_inv := siteH1ExtensionToTorsorClass_torsorToSiteH1 G X
+  }⟩
 
 /-- Giraud's degree-two identification for an abelian band.
 

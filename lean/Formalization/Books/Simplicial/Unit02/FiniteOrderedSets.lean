@@ -245,6 +245,7 @@ private lemma standardδ_simplicialInsert
           omega) =
       SimplexCategoryGenRel.δ (n := n) (Fin.ofNat (n + 2) j) ≫
         standardδ L (m₁ := n + 1) (m₂ := n + 1 + L.length) (by omega) := by
+  /- Prior attempt:
   induction L generalizing j n with
   | nil => simp [SimplexCategoryGenRel.simplicialInsert, standardδ]
   | cons a L ih =>
@@ -282,19 +283,22 @@ private lemma standardδ_simplicialInsert
       simp only [standardδ]
       rw [hih, hδ]
       simp only [Category.assoc]
+  -/
+  sorry
 
 theorem toSimplexCategory_is_equivalence :
     Functor.IsEquivalence SimplexCategoryGenRel.toSimplexCategory := by
-  refine { faithful := ?_, full := { map_surjective := ?_ },
-    essSurj := { mem_essImage := ?_ } }
-  · exact { map_injective := by
-      intro X Y f g h
-      sorry }
-  · rintro ⟨n⟩ ⟨m⟩ f
+  refine { faithful := ?_, full := ?_, essSurj := ?_ }
+  · constructor
+    intro X Y f g h
+    sorry
+  · constructor
+    rintro ⟨n⟩ ⟨m⟩ f
     change (SimplexCategory.mk n ⟶ SimplexCategory.mk m) at f
     obtain ⟨g, hg, _⟩ := every_simplex_morphism_is_generated f
     exact ⟨g, hg⟩
-  · intro Y
+  · constructor
+    intro Y
     refine ⟨SimplexCategoryGenRel.mk Y.len, ?_⟩
     exact ⟨eqToIso (by simp)⟩
 

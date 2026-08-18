@@ -84,9 +84,9 @@ theorem spectralSplit_iff_closedPointComponentMap_bijective
           by_cases hx₁ : x = (z₁ : X)
           · subst x
             refine Set.mem_iUnion.mpr ⟨ULift.up true, ?_⟩
-            simp [U, hneval]
+            simp [hneval]
           · refine Set.mem_iUnion.mpr ⟨ULift.up false, ?_⟩
-            simp [U, hx₁])
+            simp [hx₁])
       obtain ⟨n, V, hV, hdisj, hcover, hsub⟩ := h U hU
       have hz₁union : (z₁ : X) ∈ ⋃ j, V j := by
         rw [hcover]
@@ -119,12 +119,12 @@ theorem spectralSplit_iff_closedPointComponentMap_bijective
       exact ⟨z, (component_eq_of_specializes hsz).symm⟩
   · intro h
     classical
-    letI : CompactSpace (closedPoints X) :=
+    have : CompactSpace (closedPoints X) :=
       isCompact_iff_compactSpace.mp
         Formalization.Books.Topology.Unit12.isCompact_closedPoints
     have hcc : IsProfiniteSpace (ConnectedComponents X) :=
       Formalization.Books.Topology.Unit23.connectedComponents_isProfiniteSpace
-    letI : T2Space (ConnectedComponents X) :=
+    have : T2Space (ConnectedComponents X) :=
       (isProfiniteSpace_iff_hausdorff_quasiCompact_totallyDisconnected.mp hcc).1
     let f : closedPoints X → ConnectedComponents X :=
       closedPointComponentMap
@@ -200,7 +200,7 @@ theorem spectralSplit_of_closedPoints_closed_of_unique_specialization
     HasFiniteClopenRefinement X ∧
       Function.Bijective (closedPointComponentMap (X := X)) := by
   classical
-  letI : SpectralSpace (closedPoints X) :=
+  have : SpectralSpace (closedPoints X) :=
     Formalization.Books.Topology.Unit23.spectralSpace_subtype_of_isClosed hclosed
   have hclosed_singleton : ∀ z : closedPoints X,
       IsClosed ({z} : Set (closedPoints X)) := by
@@ -219,10 +219,10 @@ theorem spectralSplit_of_closedPoints_closed_of_unique_specialization
     ((Formalization.Books.Topology.Unit23.isProfiniteSpace_TFAE_spectral_separation_conditions
       (X := closedPoints X)).out 5 0).mp hclosed_singleton
   obtain ⟨P, ⟨e⟩⟩ := hprof
-  letI : T2Space (closedPoints X) := e.symm.t2Space
-  letI : CompactSpace (closedPoints X) := e.symm.compactSpace
-  letI : TotallyDisconnectedSpace (closedPoints X) := e.symm.totallyDisconnectedSpace
-  letI : TotallySeparatedSpace (closedPoints X) := inferInstance
+  have : T2Space (closedPoints X) := e.symm.t2Space
+  have : CompactSpace (closedPoints X) := e.symm.compactSpace
+  have : TotallyDisconnectedSpace (closedPoints X) := e.symm.totallyDisconnectedSpace
+  have : TotallySeparatedSpace (closedPoints X) := inferInstance
   have closedPoint_specializes (x : X) :
       ∃ z : closedPoints X, x ⤳ (z : X) := by
     obtain ⟨z, hz, hzclosed⟩ :=
@@ -314,8 +314,7 @@ theorem spectralSplit_of_closedPoints_closed_of_unique_specialization
         exact hz₁B hz₀B
       have hWc_eq : Wc = Wᶜ := by
         apply Set.Subset.antisymm
-        · intro x hx'
-          intro hx
+        · intro x hx' hx
           exact (Set.disjoint_left.1 hdisjoint) hx hx'
         · intro x hx
           have hx' : x ∈ W ∪ Wc := by

@@ -193,18 +193,14 @@ theorem mem_stratum_iff_vanishing_pattern
         (∀ f ∈ p.vanishing, f ∈ x.asIdeal) := by
   sorry
 
-def basicOpen {A : Type u} [CommRing A] (f : A) : Set (PrimeSpectrum A) :=
-  {x | f ∉ x.asIdeal}
-
-def zeroLocus {A : Type u} [CommRing A] (I : Ideal A) : Set (PrimeSpectrum A) :=
-  {x | ∀ a ∈ I, a ∈ x.asIdeal}
-
 /-- The displayed description of a stratum as `D(∏ E') ∩ V((E''))`. -/
 theorem stratum_eq_basicOpen_inter_zeroLocus
     {A : Type u} [CommRing A] {E : Finset A}
     (p : StratumPartition E) :
-    stratum p = basicOpen (p.nonvanishing.prod id) ∩
-      zeroLocus (Ideal.span (↑p.vanishing : Set A)) := by
+    stratum p =
+      (PrimeSpectrum.basicOpen (p.nonvanishing.prod id) :
+        Set (PrimeSpectrum A)) ∩
+        PrimeSpectrum.zeroLocus (Ideal.span (↑p.vanishing : Set A) : Set A) := by
   rfl
 
 theorem stratum_isConstructible
@@ -486,15 +482,30 @@ theorem wLocalSpectrum_is_limit_of_stage_schemes
     Nonempty (IsLimit (wLocalSpectrumStageCone (A := A))) := by
   sorry
 
-/-- The closed-point locus denoted `Z` in the source's inverse-limit formula. -/
-def wLocalClosedLocus {A : Type u} [CommRing A] :
-    Set (PrimeSpectrum (wLocalRing (A := A))) :=
-  closedPoints (PrimeSpectrum (wLocalRing (A := A)))
-
 noncomputable def wLocalRingMap {A : Type u} [CommRing A] :
     A →+* wLocalRing (A := A) :=
   (colimit.ι (stageFunctor (A := A)) ∅).hom.comp
     (stageFunctorBaseMap (A := A) ∅)
+
+/- The ring map corresponding to the projection from the inverse-limit
+   spectrum to the spectrum of a finite stage. -/
+noncomputable def wLocalStageRingMap {A : Type u} [CommRing A]
+    (E : Finset A) : stageRing E →+* wLocalRing (A := A) :=
+  (colimit.ι (stageFunctor (A := A)) E).hom.comp
+    (eqToHom ((stageFunctorData (A := A)).object_eq E).symm).hom
+
+/-- The closed subscheme locus `Z` in the source's inverse-limit formula. -/
+noncomputable def wLocalClosedLocus {A : Type u} [CommRing A] :
+    Set (PrimeSpectrum (wLocalRing (A := A))) :=
+  {x | ∀ E : Finset A,
+    PrimeSpectrum.comap (wLocalStageRingMap (A := A) E) x ∈
+      stageClosedLocusOnSpectrum E}
+
+theorem wLocalClosedLocus_eq_closedPoints
+    {A : Type u} [CommRing A] :
+    wLocalClosedLocus (A := A) =
+      closedPoints (PrimeSpectrum (wLocalRing (A := A))) := by
+  sorry
 
 theorem exists_wLocalRingMap {A : Type u} [CommRing A] :
     Nonempty (A →+* wLocalRing (A := A)) := by
@@ -663,8 +674,8 @@ theorem exists_indZariski_wLocal_with_closed_points
 
 def wLocalClosedPointIdeal {A : Type u} [CommRing A]
     (hA : IsWLocalAffine (A := A)) : Ideal A :=
-  sInf {I : Ideal A | closedPoints (PrimeSpectrum A) =
-    {x : PrimeSpectrum A | ∀ a ∈ I, a ∈ x.asIdeal}}
+  let _ := hA
+  PrimeSpectrum.vanishingIdeal (closedPoints (PrimeSpectrum A))
 
 theorem wLocalClosedPointIdeal_isRadical
     {A : Type u} [CommRing A] (hA : IsWLocalAffine (A := A)) :

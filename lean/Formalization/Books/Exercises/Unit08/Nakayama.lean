@@ -26,6 +26,28 @@ theorem generators_of_quotient_generators
       (Set.range (fun i => (I • (⊤ : Submodule A M)).mkQ (x i))) = ⊤)
     (hI : I ≤ Ring.jacobson A) :
     Submodule.span A (Set.range x) = ⊤ := by
-  sorry
+  apply le_antisymm le_top
+  apply Submodule.le_of_map_mkQ_le_map_mkQ_of_le_jacobson_bot
+    (N := (⊤ : Submodule A M))
+    (N' := Submodule.span A (Set.range x))
+    Module.Finite.fg_top
+    (by simpa only [Ideal.jacobson_bot] using hI)
+  have hmap :
+      Submodule.map (I • (⊤ : Submodule A M)).mkQ
+        (Submodule.span A (Set.range x)) = ⊤ := by
+    rw [Submodule.map_span]
+    have hset :
+        (I • (⊤ : Submodule A M)).mkQ '' Set.range x =
+          Set.range (fun i => (I • (⊤ : Submodule A M)).mkQ (x i)) := by
+      ext z
+      constructor
+      · rintro ⟨y, ⟨i, rfl⟩, rfl⟩
+        exact ⟨i, rfl⟩
+      · rintro ⟨i, rfl⟩
+        exact ⟨x i, ⟨i, rfl⟩, rfl⟩
+    rw [hset]
+    exact hx
+  rw [hmap]
+  exact le_top
 
 end Formalization.Books.Exercises.Unit08

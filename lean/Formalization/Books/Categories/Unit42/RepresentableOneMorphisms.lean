@@ -221,7 +221,7 @@ theorem slicePullbackLeft_isFibredInGroupoids
       have hsource_eq : hsource = hGa.trans hFx'.symm :=
         Subsingleton.elim _ _
       rw [hsource_eq, hGa_eq]
-      simp [fX, Category.assoc, eqToHom_trans]
+      simp [fX, Category.assoc]
     obtain ⟨χ, ⟨hχ, hχeq⟩, hχuniq⟩ :=
       Functor.IsStronglyCartesian.universal_property q
         (q.map (F.functor.map b)) (F.functor.map b)
@@ -806,8 +806,7 @@ theorem slicePullbackLeft_isFibredInGroupoids
         g ≫ f ≫ eqToHom hcodξ.symm =
           eqToHom hζP.symm ≫ p.map τ.hom.hom.right ≫ eqToHom hFxτ.symm := by
       rw [hτAmap] at hτwmap
-      simp [hζcod, hζP, hGτL', hGτR, hGτmap, hmapξ, hζmap,
-        hFτmap, hcodξ, Category.assoc] at hτwmap ⊢
+      simp [Category.assoc] at hτwmap ⊢
       exact hτwmap
     let gX : p.obj ζ.obj.obj.right ⟶ p.obj x' :=
       eqToHom hζP ≫ g
@@ -1510,7 +1509,7 @@ theorem identify_pullback_fibre
       simp only [Functor.comp_map] at hFmap hGmap
       simp only [Functor.map_comp] at hmmap
       rw [hGmap, hBmap, hAmap, hFmap, hleftmap] at hmmap
-      simp only [Category.assoc, Category.id_comp, Category.comp_id] at hmmap
+      simp only [Category.assoc, Category.id_comp] at hmmap
       simp only [eqToHom_trans] at hmmap
       convert hmmap using 1
     letI : p.IsHomLift (𝟙 f.left) m.1.hom.hom.right := hright

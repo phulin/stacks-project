@@ -995,11 +995,63 @@ noncomputable def principalPartsProjection (k : ℕ) :
 theorem principalPartsProjection_on_generator (k : ℕ) (m : M) :
     principalPartsProjection (R := R) (S := S) (M := M) k
         (principalPartsGenerator (R := R) (S := S) (M := M) k m) = m := by
-  sorry
+  change (principalPartsFreeEvaluation (S := S) (M := M))
+      (Finsupp.single m 1) = m
+  simp [principalPartsFreeEvaluation]
 
 theorem principalParts_zero_equiv_exists :
     Nonempty (PrincipalParts (R := R) (S := S) (M := M) 0 ≃ₗ[S] M) := by
-  sorry
+  classical
+  let u : M →ₗ[S] PrincipalParts (R := R) (S := S) (M := M) 0 :=
+    { toFun := principalPartsUniversalLinearMap (R := R) (S := S) (M := M) 0
+      map_add' :=
+        (principalPartsUniversalLinearMap (R := R) (S := S) (M := M) 0).map_add
+      map_smul' := by
+        intro s m
+        exact (principalPartsUniversalLinearMap_isDifferentialOperator
+          (R := R) (S := S) (M := M) 0) s m }
+  have hright : ∀ m : M,
+      principalPartsProjection (R := R) (S := S) (M := M) 0 (u m) = m := by
+    intro m
+    change principalPartsProjection (R := R) (S := S) (M := M) 0
+      (principalPartsUniversalLinearMap (R := R) (S := S) (M := M) 0 m) = m
+    rw [principalPartsUniversalLinearMap_apply,
+      principalPartsProjection_on_generator]
+  have hleft : ∀ x : PrincipalParts (R := R) (S := S) (M := M) 0,
+      u (principalPartsProjection (R := R) (S := S) (M := M) 0 x) = x := by
+    intro x
+    obtain ⟨x, rfl⟩ := Submodule.mkQ_surjective
+      (principalPartsRelationSubmodule (R := R) (S := S) (M := M) 0) x
+    induction x using Finsupp.induction_linear with
+    | zero => simp
+    | add x y hx hy =>
+        simp only [map_add]
+        rw [hx, hy]
+    | single m s =>
+        change u (principalPartsProjection (R := R) (S := S) (M := M) 0
+          (Submodule.mkQ _ (Finsupp.single m s))) =
+          Submodule.mkQ _ (Finsupp.single m s)
+        rw [← Finsupp.smul_single_one m s, map_smul, map_smul]
+        change u (s • principalPartsProjection (R := R) (S := S) (M := M) 0
+          (principalPartsGenerator (R := R) (S := S) (M := M) 0 m)) =
+          s • principalPartsGenerator (R := R) (S := S) (M := M) 0 m
+        rw [map_smul, principalPartsProjection_on_generator]
+        have hu : u m = principalPartsGenerator (R := R) (S := S) (M := M) 0 m := by
+          change principalPartsUniversalLinearMap (R := R) (S := S) (M := M) 0 m =
+            principalPartsGenerator (R := R) (S := S) (M := M) 0 m
+          rw [principalPartsUniversalLinearMap_apply]
+        rw [hu]
+  have hbij : Function.Bijective
+      (principalPartsProjection (R := R) (S := S) (M := M) 0) := by
+    constructor
+    · intro x y hxy
+      have h := congrArg u hxy
+      rw [hleft x, hleft y] at h
+      exact h
+    · intro m
+      exact ⟨u m, hright m⟩
+  exact ⟨LinearEquiv.ofBijective
+    (principalPartsProjection (R := R) (S := S) (M := M) 0) hbij⟩
 
 noncomputable def principalPartsZeroEquiv :
     PrincipalParts (R := R) (S := S) (M := M) 0 ≃ₗ[S] M :=

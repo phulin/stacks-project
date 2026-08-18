@@ -66,8 +66,8 @@ private lemma monic_quadratic_eq {p : Polynomial ℚ} (hm : p.Monic)
     exact_mod_cast hn3
   rw [Polynomial.coeff_add, Polynomial.coeff_add, Polynomial.coeff_X_pow,
     Polynomial.coeff_C_mul_X, Polynomial.coeff_C]
-  simp only [if_neg h2, if_neg h1, if_neg h0, add_zero]
-  exact Polynomial.coeff_eq_zero_of_degree_lt hlt
+  simpa [if_neg h2, if_neg h1, if_neg h0] using
+    (Polynomial.coeff_eq_zero_of_degree_lt hlt)
 
 private lemma quartic_plus_144_irreducible :
     Irreducible (Polynomial.X ^ 4 + Polynomial.C (144 : ℚ)) := by
@@ -103,7 +103,6 @@ private lemma quartic_plus_144_irreducible :
     have hrform := monic_quadratic_eq hr hrdeg
     rw [hqform, hrform] at hqr
     ring_nf at hqr
-    simp only [← Polynomial.C_mul] at hqr
     have hcc :
         Polynomial.X ^ 2 * Polynomial.C (q.coeff 1) * Polynomial.C (r.coeff 1) =
           Polynomial.C (q.coeff 1 * r.coeff 1) * Polynomial.X ^ 2 := by
@@ -115,8 +114,7 @@ private lemma quartic_plus_144_irreducible :
     have h2 := congrArg (fun u : Polynomial ℚ => u.coeff 2) hqr
     have h3 := congrArg (fun u : Polynomial ℚ => u.coeff 3) hqr
     simp only [p, Polynomial.coeff_add, Polynomial.coeff_C_mul,
-      Polynomial.coeff_mul_C,
-      Polynomial.coeff_X_pow, Polynomial.coeff_X, Polynomial.coeff_C] at h0 h1 h2 h3
+      Polynomial.coeff_C] at h0 h1 h2 h3
     norm_num at h0 h1 h2 h3
     by_cases ha : q.coeff 1 = 0
     · rw [ha] at h1 h2 h3
@@ -253,7 +251,7 @@ private lemma sourceSPolynomial_isEisenstein :
     simp only [Polynomial.neg_comp] at h''
     have heq : sourceBaseRelation.comp (Polynomial.X + Polynomial.C (1 : ℚ)) =
         Polynomial.X ^ 3 - 3 * Polynomial.X ^ 2 + 2 * Polynomial.X := by
-      simp [sourceBaseRelation, Polynomial.mul_comp, Polynomial.sub_comp]
+      simp [sourceBaseRelation]
       simp only [Polynomial.C_ofNat]
       ring
     rw [heq] at h''
@@ -356,7 +354,8 @@ private lemma sourceBaseIdeal_isPrime : sourceBaseIdeal.IsPrime := by
     apply sup_eq_left.mpr
     intro x hx
     change sourceBaseReindex x = 0 at hx
-    have hx' : sourceBaseReindex x = sourceBaseReindex 0 := by simpa using hx
+    have hx' : sourceBaseReindex x = sourceBaseReindex 0 :=
+      hx.trans (map_zero sourceBaseReindex).symm
     have : x = 0 := sourceBaseReindex.injective hx'
     simp [this]
   rw [hcomap] at hc
@@ -475,7 +474,7 @@ private lemma planeReindex_relation :
     planeYPolynomial
   rw [hrename]
   simp only [Polynomial.map_sub, Polynomial.map_pow, Polynomial.map_C,
-    Polynomial.map_mul, Polynomial.map_X, hfC]
+    Polynomial.map_mul, Polynomial.map_X]
   simp [f, MvPolynomial.uniqueAlgEquiv, planeYPolynomial,
     planeFirstPolynomial, planeSecondPolynomial]
 
@@ -550,7 +549,8 @@ private lemma planeIdeal_isPrime :
     apply sup_eq_left.mpr
     intro x hx
     change planeReindex x = 0 at hx
-    have hx' : planeReindex x = planeReindex 0 := by simpa using hx
+    have hx' : planeReindex x = planeReindex 0 :=
+      hx.trans (map_zero planeReindex).symm
     have : x = 0 := planeReindex.injective hx'
     simp [this]
   rw [hcomap] at hc

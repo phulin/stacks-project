@@ -175,7 +175,6 @@ theorem zeroDimensionalFlatIdeal_maximalIdeal_isPrime
   have hJprime : J.IsPrime := by
     rw [hJker]
     exact RingHom.ker_isPrime _
-  haveI : J.IsPrime := hJprime
   have hmem (v : zeroDimensionalFlatIdealVariables) :
       MvPolynomial.X v ∈ J :=
     Ideal.subset_span ⟨v, Set.mem_univ _, rfl⟩
@@ -216,7 +215,8 @@ theorem zeroDimensionalFlatIdeal_maximalIdeal_isPrime
           Ideal.map q J
         exact Ideal.mem_map_of_mem q (hmem _)
   rw [← hmap]
-  apply Ideal.map_isPrime_of_surjective (f := q) Ideal.Quotient.mk_surjective
+  apply Ideal.map_isPrime_of_surjective (f := q) (I := J) (H := hJprime)
+    Ideal.Quotient.mk_surjective
   simpa [q] using hLJ
 
 /-- Every prime ideal is the displayed ideal `(x_i,y_i)`. -/

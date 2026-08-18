@@ -24,6 +24,7 @@ noncomputable section
 
 open CategoryTheory
 open CategoryTheory.Limits
+open CategoryTheory.MonoidalCategory
 
 universe u v u' v' w w'
 
@@ -47,11 +48,21 @@ class CorrespondenceCategory (k : Type u) [Field k] (C : Type v)
 
 /--
 The symmetric monoidal Karoubian interface for the category `M_k` of Chow
-motives.  `IsIdempotentComplete` is Mathlib's canonical Karoubian condition.
+motives.  `IsIdempotentComplete` is Mathlib's canonical Karoubian condition;
+the two displayed isomorphisms record that the Tate motive is the tensor
+inverse of the Lefschetz motive.
 -/
 class ChowMotiveCategory (k : Type u) [Field k] (M : Type v)
     [Category.{w} M]
-    extends MonoidalCategory M, SymmetricCategory M, IsIdempotentComplete M
+    extends MonoidalCategory M, SymmetricCategory M, IsIdempotentComplete M where
+  /-- The Lefschetz motive. -/
+  lefschetzMotive : M
+  /-- The Tate motive, inverse to `lefschetzMotive` under tensor product. -/
+  tateMotive : M
+  /-- The Tate motive is a left tensor inverse of the Lefschetz motive. -/
+  tate_lefschetz_iso : tateMotive ⊗ lefschetzMotive ≅ 𝟙_ M
+  /-- The Tate motive is a right tensor inverse of the Lefschetz motive. -/
+  lefschetz_tate_iso : lefschetzMotive ⊗ tateMotive ≅ 𝟙_ M
 
 /-- The contravariant functor from smooth projective schemes to Chow motives. -/
 abbrev ChowMotiveFunctor (C : Type u) [Category.{v} C]
@@ -150,17 +161,17 @@ structure WeilCohomologyFactorization
 /-! ## The first two general-field conditions -/
 
 /--
-A chosen object of `M_k` representing the inverse Lefschetz (Tate) motive,
-together with its prescribed realization as the graded line `F(1)`.
+A realization of the inverse Lefschetz (Tate) motive in `M_k` as the graded
+line `F(1)`.
 -/
 structure TateMotiveRealization
     {k : Type u} [Field k]
     {M : Type v} [Category.{w} M] [ChowMotiveCategory k M]
     {F : Type u'} [Field F]
-    (G : M ⥤ Formalization.Books.Homology.Unit17.GradedVectorSpace F)
-    (T : M) where
+    (G : M ⥤ Formalization.Books.Homology.Unit17.GradedVectorSpace F) where
   /-- The realization of the Tate motive is the line in degree `-2`. -/
-  realization : G.obj T ≅ TateLine F
+  realization : G.obj
+      (ChowMotiveCategory.tateMotive (k := k) (M := M)) ≅ TateLine F
 
 /--
 The source's first two axioms for a general-field Weil cohomology: motivic
@@ -177,9 +188,9 @@ structure WeilCohomologyMotivicData
     [CategoryTheory.Linear ℚ C] [CorrespondenceCategory k C]
     {M : Type u'} [Category.{v'} M] [ChowMotiveCategory k M]
     {F : Type w'} [Field F]
-    (h : ChowMotiveFunctor C M) (H : WeilCohomologyFunctor C F) (T : M) where
+    (h : ChowMotiveFunctor C M) (H : WeilCohomologyFunctor C F) where
   factorization : WeilCohomologyFactorization (k := k) h H
-  tate : TateMotiveRealization (k := k) factorization.G T
+  tate : TateMotiveRealization (k := k) factorization.G
 
 /-!
 The introduction also warns that the literature does not use a universal

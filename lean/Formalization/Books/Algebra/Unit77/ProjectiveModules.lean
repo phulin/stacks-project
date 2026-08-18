@@ -1037,6 +1037,442 @@ theorem projective_of_projective_quotients_of_inf_eq_bot
     (hJ : Module.Projective (R ⧸ J)
       (M ⧸ (J • (⊤ : Submodule R M)))) :
     Module.Projective R M := by
-  sorry
+  classical
+  let F : Type u := (M : Type u) →₀ R
+  let p : F →ₗ[R] (M : Type u) := Finsupp.linearCombination R id
+  have hp : Function.Surjective p := by
+    exact Finsupp.linearCombination_id_surjective (M : Type u)
+  let IF : Submodule R F := I • (⊤ : Submodule R F)
+  let JF : Submodule R F := J • (⊤ : Submodule R F)
+  let IM : Submodule R M := I • (⊤ : Submodule R M)
+  let JM : Submodule R M := J • (⊤ : Submodule R M)
+  let K : Ideal R := I ⊔ J
+  let KF : Submodule R F := K • (⊤ : Submodule R F)
+  let KM : Submodule R M := K • (⊤ : Submodule R M)
+  have hsupF : KF = IF ⊔ JF := by
+    apply le_antisymm
+    · apply Submodule.smul_le.2
+      intro r hr x hx
+      rcases Submodule.mem_sup.mp hr with ⟨i, hi, j, hj, hij⟩
+      rw [← hij, add_smul]
+      exact Submodule.add_mem _
+        (Submodule.smul_mem_smul hi hx) (Submodule.smul_mem_smul hj hx)
+    · apply sup_le
+      · apply Submodule.smul_le.2
+        intro r hr x hx
+        exact Submodule.smul_mem_smul (Submodule.mem_sup_left hr) hx
+      · apply Submodule.smul_le.2
+        intro r hr x hx
+        exact Submodule.smul_mem_smul (Submodule.mem_sup_right hr) hx
+  have hsupM : KM = IM ⊔ JM := by
+    apply le_antisymm
+    · apply Submodule.smul_le.2
+      intro r hr x hx
+      rcases Submodule.mem_sup.mp hr with ⟨i, hi, j, hj, hij⟩
+      rw [← hij, add_smul]
+      exact Submodule.add_mem _
+        (Submodule.smul_mem_smul hi hx) (Submodule.smul_mem_smul hj hx)
+    · apply sup_le
+      · apply Submodule.smul_le.2
+        intro r hr x hx
+        exact Submodule.smul_mem_smul (Submodule.mem_sup_left hr) hx
+      · apply Submodule.smul_le.2
+        intro r hr x hx
+        exact Submodule.smul_mem_smul (Submodule.mem_sup_right hr) hx
+  have hIF_le_KF : IF ≤ KF := by
+    rw [hsupF]
+    exact le_sup_left
+  have hJF_le_KF : JF ≤ KF := by
+    rw [hsupF]
+    exact le_sup_right
+  have hIM_le_KM : IM ≤ KM := by
+    rw [hsupM]
+    exact le_sup_left
+  have hJM_le_KM : JM ≤ KM := by
+    rw [hsupM]
+    exact le_sup_right
+  have hpIF : (IF.map p) = IM := by
+    rw [IF, IM, Submodule.map_smul'', Submodule.map_top,
+      LinearMap.range_eq_top.mpr hp]
+  have hpI_le : IF ≤ LinearMap.ker (IM.mkQ.comp p) := by
+    apply Submodule.smul_le.2
+    intro r hr x hx
+    change IM.mkQ (p (r • x)) = 0
+    rw [map_smul, map_smul]
+    exact (Submodule.Quotient.mk_eq_zero IM).2
+      (Submodule.smul_mem_smul hr Submodule.mem_top)
+  let pI0 : (F ⧸ IF) →ₗ[R] (M ⧸ IM) :=
+    Submodule.mapQ IF IM p hpI_le
+  let pI : (F ⧸ IF) →ₗ[R ⧸ I] (M ⧸ IM) :=
+    pI0.extendScalarsOfSurjective Ideal.Quotient.mk_surjective
+  have hpI_mk (x : F) : pI (Submodule.Quotient.mk x) = IM.mkQ (p x) := by
+    rfl
+  have hpI : Function.Surjective pI := by
+    intro y
+    obtain ⟨x, rfl⟩ := Submodule.Quotient.mk_surjective IM y
+    obtain ⟨z, hz⟩ := hp x
+    refine ⟨Submodule.Quotient.mk z, ?_⟩
+    rw [hpI_mk, hz]
+  letI : Module.Projective (R ⧸ I) (M ⧸ IM) := hI
+  obtain ⟨f, hf⟩ :=
+    Module.projective_lifting_property pI (LinearMap.id : (M ⧸ IM) →ₗ[R ⧸ I] (M ⧸ IM)) hpI
+  let qF : (F ⧸ JF) →ₗ[R] (F ⧸ KF) :=
+    Submodule.mapQ JF KF LinearMap.id hJF_le_KF
+  have hqF_mk (x : F) : qF (Submodule.Quotient.mk x) = KF.mkQ x := by
+    rfl
+  let qFK : (F ⧸ IF) →ₗ[R] (F ⧸ KF) :=
+    Submodule.mapQ IF KF LinearMap.id hIF_le_KF
+  have hqFK_mk (x : F) : qFK (Submodule.Quotient.mk x) = KF.mkQ x := by
+    rfl
+  let qM : (M ⧸ JM) →ₗ[R] (M ⧸ KM) :=
+    Submodule.mapQ JM KM LinearMap.id hJM_le_KM
+  have hqM_mk (x : M) : qM (Submodule.Quotient.mk x) = KM.mkQ x := by
+    rfl
+  let qI : (M ⧸ IM) →ₗ[R] (M ⧸ KM) :=
+    Submodule.mapQ IM KM LinearMap.id hIM_le_KM
+  have hqI_mk (x : M) : qI (Submodule.Quotient.mk x) = KM.mkQ x := by
+    rfl
+  have hqFK_tor (r : R) (hr : r ∈ J) (z : F ⧸ IF) : r • qFK z = 0 := by
+    obtain ⟨x, rfl⟩ := Submodule.Quotient.mk_surjective IF z
+    rw [hqFK_mk, ← Submodule.Quotient.mk_smul]
+    exact (Submodule.Quotient.mk_eq_zero KF).2
+      (Submodule.smul_mem_smul (show r ∈ K from Submodule.mem_sup_right hr)
+        Submodule.mem_top)
+  let pJ0 : (F ⧸ JF) →ₗ[R] (M ⧸ JM) := by
+    apply Submodule.mapQ JF JM p
+    apply Submodule.smul_le.2
+    intro r hr x hx
+    change JM.mkQ (p (r • x)) = 0
+    rw [map_smul, map_smul]
+    exact (Submodule.Quotient.mk_eq_zero JM).2
+      (Submodule.smul_mem_smul hr Submodule.mem_top)
+  let pK0 : (F ⧸ KF) →ₗ[R] (M ⧸ KM) := by
+    apply Submodule.mapQ KF KM p
+    apply Submodule.smul_le.2
+    intro r hr x hx
+    change KM.mkQ (p (r • x)) = 0
+    rw [map_smul, map_smul]
+    exact (Submodule.Quotient.mk_eq_zero KM).2
+      (Submodule.smul_mem_smul hr Submodule.mem_top)
+  have hpcompat : pK0.comp qFK = qI.comp pI0 := by
+    apply LinearMap.ext
+    intro z
+    obtain ⟨x, rfl⟩ := Submodule.Quotient.mk_surjective IF z
+    rfl
+  let φ : (F ⧸ KF) × (M ⧸ JM) →ₗ[R] (M ⧸ KM) :=
+    (pK0.comp (LinearMap.fst R (F ⧸ KF) (M ⧸ JM))) -
+      (qM.comp (LinearMap.snd R (F ⧸ KF) (M ⧸ JM)))
+  let Bsub : Submodule R ((F ⧸ KF) × (M ⧸ JM)) := LinearMap.ker φ
+  have hKF_tor : Module.IsTorsionBySet R (F ⧸ KF) (J : Set R) := by
+    refine (Module.isTorsionBySet_quotient_iff KF (J : Set R)).2 ?_
+    intro x r hr
+    exact Submodule.smul_mem_smul (show r ∈ K from Submodule.mem_sup_right hr)
+      Submodule.mem_top
+  have hqmem : ∀ z : F ⧸ JF, (qF z, pJ0 z) ∈ Bsub := by
+    intro z
+    obtain ⟨x, rfl⟩ := Submodule.Quotient.mk_surjective JF z
+    change φ (qF (Submodule.Quotient.mk x), pJ0 (Submodule.Quotient.mk x)) = 0
+    rw [hqF_mk]
+    change pK0 (KF.mkQ x) - qM (JM.mkQ (p x)) = 0
+    rw [show pK0 (KF.mkQ x) = KM.mkQ (p x) by rfl, hqM_mk, sub_self]
+  let q0 : (F ⧸ JF) →ₗ[R] Bsub :=
+    (qF.prod pJ0).codRestrict Bsub (by intro z; exact hqmem z)
+  have hq0_surj : Function.Surjective q0 := by
+    intro b
+    obtain ⟨x, hx⟩ := Submodule.Quotient.mk_surjective KF b.1.1
+    obtain ⟨y, hy⟩ := Submodule.Quotient.mk_surjective JM b.1.2
+    have hxy : p x - p y ∈ KM := by
+      apply (Submodule.Quotient.mk_eq_zero KM).mp
+      have hb := LinearMap.mem_ker.mp b.2
+      change pK0 b.1.1 - qM b.1.2 = 0 at hb
+      change KM.mkQ (p x - p y) = 0
+      rw [map_sub]
+      calc
+        KM.mkQ (p x) - KM.mkQ (p y) =
+            pK0 (KF.mkQ x) - qM (JM.mkQ y) := by rfl
+        _ = pK0 b.1.1 - qM b.1.2 := by rw [hx, hy]
+        _ = 0 := hb
+    rw [hsupM] at hxy
+    obtain ⟨i, hi, j, hj, hij⟩ := Submodule.mem_sup.mp hxy
+    obtain ⟨u, hu, hpu⟩ := (Submodule.mem_map.mp (by
+      rw [hpIF]
+      exact hi))
+    let z : F := x - u
+    refine ⟨Submodule.Quotient.mk z, ?_⟩
+    apply Subtype.ext
+    apply Prod.ext
+    · rw [← hx]
+      apply (Submodule.Quotient.eq KF).2
+      change z - x ∈ KF
+      rw [z]
+      exact hIF_le_KF (Submodule.neg_mem IF hu)
+    · rw [← hy]
+      apply (Submodule.Quotient.eq JM).2
+      change p z - p y ∈ JM
+      rw [z, map_sub, hpu]
+      calc
+        p x - i - p y = (p x - p y) - i := by abel
+        _ = j := by rw [← hij]; abel
+        _ ∈ JM := hj
+  have hB_tor : Module.IsTorsionBySet R Bsub (J : Set R) := by
+    intro b r hr
+    apply Subtype.ext
+    apply Prod.ext
+    · obtain ⟨x, rfl⟩ := Submodule.Quotient.mk_surjective KF b.1.1
+      change r • KF.mkQ x = 0
+      rw [← Submodule.Quotient.mk_smul]
+      exact (Submodule.Quotient.mk_eq_zero KF).2
+        (Submodule.smul_mem_smul (show r ∈ K from Submodule.mem_sup_right hr)
+          Submodule.mem_top)
+    · obtain ⟨x, rfl⟩ := Submodule.Quotient.mk_surjective JM b.1.2
+      change r • JM.mkQ x = 0
+      rw [← Submodule.Quotient.mk_smul]
+      exact (Submodule.Quotient.mk_eq_zero JM).2
+        (Submodule.smul_mem_smul hr Submodule.mem_top)
+  letI : Module (R ⧸ J) (F ⧸ KF) := hKF_tor.module
+  letI : Module (R ⧸ J) Bsub := hB_tor.module
+  letI : IsScalarTower R (R ⧸ J) (F ⧸ KF) := hKF_tor.isScalarTower
+  letI : IsScalarTower R (R ⧸ J) Bsub := hB_tor.isScalarTower
+  let qbar : (F ⧸ JF) →ₗ[R ⧸ J] Bsub :=
+    q0.extendScalarsOfSurjective Ideal.Quotient.mk_surjective
+  have hqbar_surj : Function.Surjective qbar := hq0_surj
+  have hfK_le : JM ≤ LinearMap.ker
+      ((qFK.comp (f.restrictScalars R)).comp IM.mkQ) := by
+    apply Submodule.smul_le.2
+    intro r hr x hx
+    change qFK ((f.restrictScalars R) (IM.mkQ (r • x))) = 0
+    rw [map_smul, map_smul, map_smul]
+    exact hqFK_tor r hr _
+  let fK0 : (M ⧸ JM) →ₗ[R] (F ⧸ KF) :=
+    Submodule.mapQ JM KF ((qFK.comp (f.restrictScalars R)).comp IM.mkQ) hfK_le
+  let fK : (M ⧸ JM) →ₗ[R ⧸ J] (F ⧸ KF) :=
+    fK0.extendScalarsOfSurjective Ideal.Quotient.mk_surjective
+  have hfK_mk (x : M) : fK (Submodule.Quotient.mk x) = qFK (f (IM.mkQ x)) := by
+    rfl
+  have hfmem : ∀ y : M ⧸ JM, (fK y, y) ∈ Bsub := by
+    intro y
+    obtain ⟨x, rfl⟩ := Submodule.Quotient.mk_surjective JM y
+    change φ (fK (Submodule.Quotient.mk x), Submodule.Quotient.mk x) = 0
+    rw [hfK_mk]
+    change pK0 (qFK (f (IM.mkQ x))) - qM (Submodule.Quotient.mk x) = 0
+    have hpcompat_x := congrArg (fun z => z (f (IM.mkQ x))) hpcompat
+    rw [hpcompat_x]
+    have hf_x := congrArg (fun z => z (Submodule.Quotient.mk x)) hf
+    rw [show pI0 (f (IM.mkQ x)) = IM.mkQ x by simpa [pI] using hf_x,
+      hqI_mk, hqM_mk, sub_self]
+  let f' : (M ⧸ JM) →ₗ[R ⧸ J] Bsub :=
+    (fK.prod (LinearMap.id : (M ⧸ JM) →ₗ[R ⧸ J] (M ⧸ JM))).codRestrict Bsub
+      (by intro y; exact hfmem y)
+  letI : Module.Projective (R ⧸ J) (M ⧸ JM) := hJ
+  obtain ⟨g, hg⟩ := Module.projective_lifting_property qbar f' hqbar_surj
+  let ψ : (F ⧸ IF) × (F ⧸ JF) →ₗ[R] (F ⧸ KF) :=
+    (qFK.comp (LinearMap.fst R (F ⧸ IF) (F ⧸ JF))) -
+      (qF.comp (LinearMap.snd R (F ⧸ IF) (F ⧸ JF)))
+  let Csub : Submodule R ((F ⧸ IF) × (F ⧸ JF)) := LinearMap.ker ψ
+  have hCmem : ∀ x : M,
+      (f (IM.mkQ x), JM.mkQ (g (Submodule.Quotient.mk x))) ∈ Csub := by
+    intro x
+    have hgg := congrArg (fun z : Bsub => z.1.1)
+      (congrArg (fun z => z (Submodule.Quotient.mk x)) hg)
+    change ψ (f (IM.mkQ x), JM.mkQ (g (Submodule.Quotient.mk x))) = 0
+    change qFK (f (IM.mkQ x)) - qF (JM.mkQ (g (Submodule.Quotient.mk x))) = 0
+    have hfirst : qF (JM.mkQ (g (Submodule.Quotient.mk x))) =
+        qFK (f (IM.mkQ x)) := by
+      have hfirst' : qF (JM.mkQ (g (Submodule.Quotient.mk x))) =
+          fK (Submodule.Quotient.mk x) := by
+        simpa [qbar, q0, f'] using hgg
+      rw [hfirst', hfK_mk]
+    rw [hfirst, sub_self]
+  let hC : (M : Type u) →ₗ[R] Csub :=
+    (((f.restrictScalars R).comp IM.mkQ).prod ((g.restrictScalars R).comp JM.mkQ)).codRestrict Csub
+      (by intro x; exact hCmem x))
+  let r : F →ₗ[R] Csub := by
+    let r0 := IF.mkQ.prod JF.mkQ
+    exact r0.codRestrict Csub (by
+      intro x
+      change ψ (IF.mkQ x, JF.mkQ x) = 0
+      change KF.mkQ x - KF.mkQ x = 0
+      rfl)
+  have hItop : I • (⊤ : Submodule R R) = I := by
+    change (I : Ideal R) • (⊤ : Ideal R) = I
+    rw [Ideal.smul_eq_mul, Ideal.mul_top]
+  have hJtop : J • (⊤ : Submodule R R) = J := by
+    change (J : Ideal R) • (⊤ : Ideal R) = J
+    rw [Ideal.smul_eq_mul, Ideal.mul_top]
+  have hIF_coord : ∀ x : F, x ∈ IF ↔ ∀ i, x i ∈ I := by
+    intro x
+    constructor
+    · intro hx i
+      have hx' : x ∈ Finsupp.submodule (fun _ : (M : Type u) ↦ I •
+          (⊤ : Submodule R R)) := by
+        rw [Finsupp.submodule_smul, Finsupp.submodule_top]
+        simpa [IF] using hx
+      rw [hItop] at hx'
+      exact hx' i
+    · intro hx
+      have hx' : x ∈ Finsupp.submodule (fun _ : (M : Type u) ↦ I •
+          (⊤ : Submodule R R)) := by
+        intro i
+        rw [hItop]
+        exact hx i
+      rw [Finsupp.submodule_smul, Finsupp.submodule_top] at hx'
+      simpa [IF] using hx'
+  have hJF_coord : ∀ x : F, x ∈ JF ↔ ∀ i, x i ∈ J := by
+    intro x
+    constructor
+    · intro hx i
+      have hx' : x ∈ Finsupp.submodule (fun _ : (M : Type u) ↦ J •
+          (⊤ : Submodule R R)) := by
+        rw [Finsupp.submodule_smul, Finsupp.submodule_top]
+        simpa [JF] using hx
+      rw [hJtop] at hx'
+      exact hx' i
+    · intro hx
+      have hx' : x ∈ Finsupp.submodule (fun _ : (M : Type u) ↦ J •
+          (⊤ : Submodule R R)) := by
+        intro i
+        rw [hJtop]
+        exact hx i
+      rw [Finsupp.submodule_smul, Finsupp.submodule_top] at hx'
+      simpa [JF] using hx'
+  have hr_inj : Function.Injective r := by
+    intro x y hxy
+    have hxi : x - y ∈ IF := by
+      apply (Submodule.Quotient.eq IF).mp
+      exact congrArg (fun z : Csub => z.1.1) hxy
+    have hxj : x - y ∈ JF := by
+      apply (Submodule.Quotient.eq JF).mp
+      exact congrArg (fun z : Csub => z.1.2) hxy
+    apply Finsupp.ext
+    intro i
+    have hi : (x - y) i ∈ I := (hIF_coord (x - y)).mp hxi i
+    have hj : (x - y) i ∈ J := (hJF_coord (x - y)).mp hxj i
+    have : (x - y) i ∈ I ⊓ J := ⟨hi, hj⟩
+    rw [hIJ] at this
+    have hz : (x - y) i = 0 := Ideal.mem_bot.mp this
+    rw [sub_eq_zero] at hz
+    exact hz
+  have hr_surj : Function.Surjective r := by
+    intro c
+    obtain ⟨x, hx⟩ := Submodule.Quotient.mk_surjective IF c.1.1
+    obtain ⟨y, hy⟩ := Submodule.Quotient.mk_surjective JF c.1.2
+    have hxy : x - y ∈ KF := by
+      apply (Submodule.Quotient.mk_eq_zero KF).mp
+      have hc := LinearMap.mem_ker.mp c.2
+      change qFK c.1.1 - qF c.1.2 = 0 at hc
+      change KF.mkQ (x - y) = 0
+      rw [map_sub]
+      calc
+        KF.mkQ x - KF.mkQ y =
+            qFK (IF.mkQ x) - qF (JF.mkQ y) := by
+              rw [hqFK_mk, hqF_mk]
+        _ = qFK c.1.1 - qF c.1.2 := by rw [hx, hy]
+        _ = 0 := hc
+    rw [hsupF] at hxy
+    obtain ⟨i, hi, j, hj, hij⟩ := Submodule.mem_sup.mp hxy
+    let z : F := x - i
+    refine ⟨z, ?_⟩
+    apply Subtype.ext
+    apply Prod.ext
+    · rw [← hx]
+      apply (Submodule.Quotient.eq IF).2
+      change z - x ∈ IF
+      rw [z]
+      exact Submodule.neg_mem IF hi
+    · rw [← hy]
+      apply (Submodule.Quotient.eq JF).2
+      rw [z]
+      calc
+        x - i - y = (x - y) - i := by abel
+        _ = j := by rw [← hij]; abel
+        _ ∈ JF := hj
+  let e : F ≃ₗ[R] Csub := LinearEquiv.ofBijective r ⟨hr_inj, hr_surj⟩
+  let h0 : (M : Type u) →ₗ[R] F := e.symm.toLinearMap.comp hC
+  have hrh : r.comp h0 = hC := by
+    ext x
+    simp [h0, e]
+  have hfirst : IF.mkQ.comp h0 = IM.mkQ.comp f.restrictScalars R := by
+    apply LinearMap.ext
+    intro x
+    have hx := congrArg (fun z : Csub => z.1.1) (hrh x)
+    exact hx
+  have hsecond : JF.mkQ.comp h0 = JM.mkQ.comp g.restrictScalars R := by
+    apply LinearMap.ext
+    intro x
+    have hx := congrArg (fun z : Csub => z.1.2) (hrh x)
+    exact hx
+  let a : (M : Type u) →ₗ[R] (M : Type u) := p.comp h0
+  have haI : ∀ x, IM.mkQ (a x) = IM.mkQ x := by
+    intro x
+    change IM.mkQ (p (h0 x)) = IM.mkQ x
+    have hfirstx : IF.mkQ (h0 x) =
+        (f.restrictScalars R) (IM.mkQ x) := by
+      simpa [LinearMap.comp_apply] using congrArg (fun z => z x) hfirst
+    calc
+      IM.mkQ (p (h0 x)) = pI (IF.mkQ (h0 x)) := (hpI_mk (h0 x)).symm
+      _ = pI (f (IM.mkQ x)) := by rw [hfirstx]
+      _ = IM.mkQ x := by
+        simpa [LinearMap.comp_apply] using congrArg (fun z => z (IM.mkQ x)) hf
+  have haJ : ∀ x, JM.mkQ (a x) = JM.mkQ x := by
+    intro x
+    have hgj := congrArg (fun z : Bsub => z.1.2)
+      (congrArg (fun z => z (JM.mkQ x)) hg)
+    have hgj' : pJ0 (g (JM.mkQ x)) = JM.mkQ x := by
+      simpa [qbar, f', q0] using hgj
+    calc
+      JM.mkQ (p (h0 x)) = pJ0 (JF.mkQ (h0 x)) := by rfl
+      _ = pJ0 (g (JM.mkQ x)) := by
+        rw [congrArg (fun z => z x) hsecond]
+      _ = JM.mkQ x := hgj'
+  have hmul : I * J = (⊥ : Ideal R) := by
+    apply le_antisymm
+    · exact (Ideal.mul_le_inf (I := I) (J := J)).trans_eq hIJ
+    · exact bot_le
+  have haIM : ∀ x ∈ IM, a x = x := by
+    intro x hx
+    refine Submodule.smul_induction_on hx (fun r hr y _ => ?_) (fun x y hx hy => ?_)
+    · rw [map_smul]
+      have hyJ : a y - y ∈ JM := (Submodule.Quotient.eq JM).mp (haJ y)
+      have hz : r • (a y - y) = 0 := by
+        refine Submodule.smul_induction_on hyJ (fun s hs z _ => ?_) (fun z w hz hw => ?_)
+        · rw [← mul_smul]
+          have hrs : r * s = 0 := by
+            have : r * s ∈ I * J := Ideal.mul_mem_mul hr hs
+            rw [hmul] at this
+            exact Ideal.mem_bot.mp this
+          rw [hrs, zero_smul]
+        · rw [map_add, map_add, hz, hw, add_zero]
+      rw [smul_sub] at hz
+      exact sub_eq_zero.mp hz
+    · rw [map_add, hx, hy]
+  have hainj : Function.Injective a := by
+    intro x y hxy
+    have hz : a (x - y) = 0 := by
+      rw [map_sub, hxy, sub_self]
+    have hm : x - y ∈ IM := by
+      apply (Submodule.Quotient.mk_eq_zero IM).mp
+      rw [← haI, hz]
+      exact rfl
+    have := haIM (x - y) hm
+    rw [hz] at this
+    exact sub_eq_zero.mp this.symm
+  have hasurj : Function.Surjective a := by
+    intro y
+    have hm : y - a y ∈ IM := by
+      apply (Submodule.Quotient.eq IM).mp
+      rw [haI]
+      rfl
+    refine ⟨y + (y - a y), ?_⟩
+    rw [map_add, haIM _ hm]
+    abel
+  let ea : (M : Type u) ≃ₗ[R] (M : Type u) := LinearEquiv.ofBijective a ⟨hainj, hasurj⟩
+  letI : Module.Projective R F := inferInstance
+  let s : (M : Type u) →ₗ[R] F :=
+    (e.symm.toLinearMap.comp hC).comp ea.symm.toLinearMap
+  apply Module.Projective.of_split s p
+  ext x
+  change p (h0 (ea.symm x)) = x
+  change a (ea.symm x) = x
+  exact ea.right_inv x
 
 end Formalization.Books.Algebra.Unit77

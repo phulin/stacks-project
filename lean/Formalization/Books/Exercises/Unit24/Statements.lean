@@ -3,13 +3,16 @@ import Mathlib.Algebra.Polynomial.Bivariate
 import Mathlib.Algebra.Polynomial.SpecificDegree
 import Mathlib.Data.ZMod.Basic
 import Mathlib.Data.ZMod.QuotientRing
+import Mathlib.Analysis.Complex.Polynomial.Basic
 import Mathlib.FieldTheory.Finite.Basic
 import Mathlib.FieldTheory.IsAlgClosed.Basic
+import Mathlib.FieldTheory.IsAlgClosed.Spectrum
 import Mathlib.RingTheory.RingHom.Flat
 import Mathlib.RingTheory.Flat.Localization
 import Mathlib.RingTheory.PrincipalIdealDomain
 import Mathlib.RingTheory.Ideal.Int
 import Mathlib.RingTheory.Nullstellensatz
+import Mathlib.RingTheory.Spectrum.Prime.Jacobson
 
 /-!
 # Exercises, Chapter 24: Going up and going down
@@ -1869,7 +1872,262 @@ theorem exercise_images_case_three (k : Type u) [Field k] [IsAlgClosed k] :
 coordinates. -/
 theorem exercise_images_case_four :
     Set.range (PrimeSpectrum.comap cubicSquareMap) = cubicImageAnswer := by
-  sorry
+  let s : cubicCurveRing := Ideal.Quotient.mk cubicCurveIdeal (MvPolynomial.X 0)
+  let t : cubicCurveRing := Ideal.Quotient.mk cubicCurveIdeal (MvPolynomial.X 1)
+  have hcurve : s ^ 3 + t ^ 3 - 1 = 0 := by
+    apply Ideal.Quotient.eq_zero_iff_mem.mpr
+    exact Ideal.subset_span (by simp)
+  have h0 : cubicSquareMap (MvPolynomial.X 0) = s ^ 2 := by
+    simp [cubicSquareMap, s]
+  have h1 : cubicSquareMap (MvPolynomial.X 1) = t ^ 2 := by
+    simp [cubicSquareMap, t]
+  have hs : cubicSquareMap.IsIntegralElem s := by
+    refine ⟨Polynomial.X ^ 2 - Polynomial.C (MvPolynomial.X 0),
+      Polynomial.monic_X_pow_sub_C _ (by norm_num), ?_⟩
+    simp only [Polynomial.eval₂_sub, Polynomial.eval₂_pow,
+      Polynomial.eval₂_X, Polynomial.eval₂_C]
+    rw [h0]
+    ring
+  have ht : cubicSquareMap.IsIntegralElem t := by
+    refine ⟨Polynomial.X ^ 2 - Polynomial.C (MvPolynomial.X 1),
+      Polynomial.monic_X_pow_sub_C _ (by norm_num), ?_⟩
+    simp only [Polynomial.eval₂_sub, Polynomial.eval₂_pow,
+      Polynomial.eval₂_X, Polynomial.eval₂_C]
+    rw [h1]
+    ring
+  have h_integral : ∀ z : cubicCurveRing, cubicSquareMap.IsIntegralElem z := by
+    intro z
+    obtain ⟨p, rfl⟩ := Ideal.Quotient.mk_surjective z
+    induction p using MvPolynomial.induction_on with
+    | add p q hp hq => exact hp.add cubicSquareMap hq
+    | mul_X p i hp =>
+        fin_cases i
+        · exact hp.mul cubicSquareMap hs
+        · exact hp.mul cubicSquareMap ht
+    | C a =>
+        simpa [cubicSquareMap] using
+          (cubicSquareMap.isIntegralElem_map (x := MvPolynomial.C a))
+  have hfi : cubicSquareMap.IsIntegral := h_integral
+  have hclosed : IsClosed (Set.range (PrimeSpectrum.comap cubicSquareMap)) := by
+    have hc := PrimeSpectrum.isClosedMap_comap_of_isIntegral
+      cubicSquareMap hfi Set.univ isClosed_univ
+    simpa [Set.range] using hc
+  have hrel : cubicSquareMap cubicImageEquation = 0 := by
+    simp only [cubicImageEquation, map_sub, map_add, map_pow, map_one, map_mul]
+    rw [h0, h1]
+    have h4 : cubicSquareMap
+          (4 : Formalization.Books.Exercises.Unit16.polynomialRing ℂ 2) =
+          (4 : cubicCurveRing) := by
+      exact map_natCast cubicSquareMap 4
+    rw [h4]
+    have hab : s ^ 3 + t ^ 3 = 1 := sub_eq_zero.mp hcurve
+    have hdiff : 1 + (s ^ 2) ^ 3 - (t ^ 2) ^ 3 = 2 * s ^ 3 := by
+      calc
+        1 + (s ^ 2) ^ 3 - (t ^ 2) ^ 3 =
+            1 + (s ^ 3 - t ^ 3) * (s ^ 3 + t ^ 3) := by ring
+        _ = 1 + s ^ 3 - t ^ 3 := by rw [hab]; ring
+        _ = 2 * s ^ 3 := by rw [← hab]; ring
+    rw [hdiff]
+    ring
+  ext p
+  constructor
+  · rintro ⟨P, rfl⟩
+    simp only [cubicImageAnswer, PrimeSpectrum.mem_zeroLocus]
+    intro z hz
+    rcases Set.mem_singleton_iff.mp hz with rfl
+    change cubicSquareMap cubicImageEquation ∈ P.asIdeal
+    rw [hrel]
+    exact P.asIdeal.zero_mem
+  · intro hp
+    have hdense :
+        closure (cubicImageAnswer ∩ closedPoints
+            (PrimeSpectrum
+              (Formalization.Books.Exercises.Unit16.polynomialRing ℂ 2))) =
+          cubicImageAnswer := by
+      apply closure_inter_closedPoints
+      exact PrimeSpectrum.isClosed_zeroLocus _
+    have hclosedpoints :
+        cubicImageAnswer ∩ closedPoints
+            (PrimeSpectrum
+              (Formalization.Books.Exercises.Unit16.polynomialRing ℂ 2)) ⊆
+          Set.range (PrimeSpectrum.comap cubicSquareMap) := by
+      intro q hq
+      have hmax : q.asIdeal.IsMaximal :=
+        (PrimeSpectrum.isClosed_singleton_iff_isMaximal q).mp
+          (mem_closedPoints_iff.mp hq.2)
+      obtain ⟨α, hα⟩ :=
+        MvPolynomial.eq_vanishingIdeal_singleton_of_isMaximal (K := ℂ) hmax
+      have hqImage : q ∈ cubicImageAnswer := hq.1
+      have hfp : cubicImageEquation ∈ q.asIdeal := by
+        rw [cubicImageAnswer, PrimeSpectrum.mem_zeroLocus] at hqImage
+        exact hqImage (by simp)
+      have hfα : MvPolynomial.aeval α cubicImageEquation = 0 := by
+        rw [hα] at hfp
+        exact (MvPolynomial.mem_vanishingIdeal_singleton_iff α cubicImageEquation).mp hfp
+      let x : ℂ := α 0
+      let y : ℂ := α 1
+      have hfxy : (1 + x ^ 3 - y ^ 3) ^ 2 - 4 * x ^ 3 = 0 := by
+        simpa [cubicImageEquation, x, y] using hfα
+      let a : ℂ := (1 + x ^ 3 - y ^ 3) / 2
+      let b : ℂ := (1 - x ^ 3 + y ^ 3) / 2
+      have ha : a ^ 2 = x ^ 3 := by
+        dsimp [a]
+        calc
+          ((1 + x ^ 3 - y ^ 3) / 2) ^ 2 =
+              ((1 + x ^ 3 - y ^ 3) ^ 2 - 4 * x ^ 3) / 4 + x ^ 3 := by ring
+          _ = x ^ 3 := by rw [hfxy]; simp
+      have hb : b ^ 2 = y ^ 3 := by
+        dsimp [b]
+        calc
+          ((1 - x ^ 3 + y ^ 3) / 2) ^ 2 =
+              ((1 + x ^ 3 - y ^ 3) ^ 2 - 4 * x ^ 3) / 4 + y ^ 3 := by ring
+          _ = y ^ 3 := by rw [hfxy]; simp
+      let sv : ℂ := if x = 0 then 0 else a / x
+      let tv : ℂ := if y = 0 then 0 else b / y
+      have hsv2 : sv ^ 2 = x := by
+        dsimp [sv]
+        by_cases hx : x = 0
+        · have ha0 : a = 0 := by
+            apply (sq_eq_zero_iff.mp ?_)
+            simpa [hx] using ha
+          simp [hx]
+        · rw [if_neg hx]
+          field_simp [hx]
+          rw [ha]
+      have htv2 : tv ^ 2 = y := by
+        dsimp [tv]
+        by_cases hy : y = 0
+        · have hb0 : b = 0 := by
+            apply (sq_eq_zero_iff.mp ?_)
+            simpa [hy] using hb
+          simp [hy]
+        · rw [if_neg hy]
+          field_simp [hy]
+          rw [hb]
+      have hsv3 : sv ^ 3 = a := by
+        dsimp [sv]
+        by_cases hx : x = 0
+        · have ha0 : a = 0 := by
+            apply (sq_eq_zero_iff.mp ?_)
+            simpa [hx] using ha
+          rw [if_pos hx, ha0]
+          norm_num
+        · rw [if_neg hx]
+          field_simp [hx]
+          rw [← ha]
+          ring
+      have htv3 : tv ^ 3 = b := by
+        dsimp [tv]
+        by_cases hy : y = 0
+        · have hb0 : b = 0 := by
+            apply (sq_eq_zero_iff.mp ?_)
+            simpa [hy] using hb
+          rw [if_pos hy, hb0]
+          norm_num
+        · rw [if_neg hy]
+          field_simp [hy]
+          rw [← hb]
+          ring
+      let qsource :
+          Formalization.Books.Exercises.Unit16.polynomialRing ℂ 2 →+* ℂ :=
+        MvPolynomial.eval₂Hom (RingHom.id ℂ)
+          (fun i : Fin 2 => if i = 0 then sv else tv)
+      have hq0 : qsource (MvPolynomial.X 0) = sv := by
+        change MvPolynomial.eval₂Hom (RingHom.id ℂ)
+            (fun i : Fin 2 => if i = 0 then sv else tv)
+            (MvPolynomial.X 0) = sv
+        rw [MvPolynomial.eval₂Hom_X']
+        simp
+      have hq1 : qsource (MvPolynomial.X 1) = tv := by
+        change MvPolynomial.eval₂Hom (RingHom.id ℂ)
+            (fun i : Fin 2 => if i = 0 then sv else tv)
+            (MvPolynomial.X 1) = tv
+        rw [MvPolynomial.eval₂Hom_X']
+        simp
+      have hqideal : cubicCurveIdeal ≤ RingHom.ker qsource := by
+        apply Ideal.span_le.2
+        rintro z (rfl : z = _)
+        change qsource (MvPolynomial.X 0 ^ 3 + MvPolynomial.X 1 ^ 3 - 1) = 0
+        simp only [map_sub, map_add, map_pow, map_one]
+        rw [hq0, hq1, hsv3, htv3]
+        dsimp [a, b]
+        ring
+      let h : cubicCurveRing →+* ℂ :=
+        Ideal.Quotient.lift cubicCurveIdeal qsource
+          (fun a ha => by
+            change qsource a = 0
+            exact hqideal ha)
+      have hcomp : h.comp cubicSquareMap =
+          MvPolynomial.eval₂Hom (RingHom.id ℂ) α := by
+        apply MvPolynomial.ringHom_ext'
+        · ext z
+          change h (cubicSquareMap (MvPolynomial.C z)) =
+            MvPolynomial.eval₂Hom (RingHom.id ℂ) α (MvPolynomial.C z)
+          have hCmap :
+              h (Ideal.Quotient.mk cubicCurveIdeal (MvPolynomial.C z)) =
+                qsource (MvPolynomial.C z) := by
+            dsimp [h]
+          rw [show cubicSquareMap (MvPolynomial.C z) =
+              Ideal.Quotient.mk cubicCurveIdeal (MvPolynomial.C z) by
+            simp [cubicSquareMap]]
+          rw [hCmap]
+          simp [qsource]
+        · intro i
+          fin_cases i
+          · change h (cubicSquareMap (MvPolynomial.X 0)) =
+              MvPolynomial.eval₂Hom (RingHom.id ℂ) α (MvPolynomial.X 0)
+            rw [h0, map_pow]
+            have hsmap : h s = qsource (MvPolynomial.X 0) := by
+              dsimp [h, s]
+            rw [hsmap, hq0]
+            simpa [x] using hsv2
+          · change h (cubicSquareMap (MvPolynomial.X 1)) =
+              MvPolynomial.eval₂Hom (RingHom.id ℂ) α (MvPolynomial.X 1)
+            rw [h1, map_pow]
+            have htmap : h t = qsource (MvPolynomial.X 1) := by
+              dsimp [h, t]
+            rw [htmap, hq1]
+            simpa [y] using htv2
+      let P : PrimeSpectrum cubicCurveRing :=
+        ⟨RingHom.ker h, RingHom.ker_isPrime _⟩
+      refine ⟨P, ?_⟩
+      apply PrimeSpectrum.ext
+      change Ideal.comap cubicSquareMap (RingHom.ker h) = q.asIdeal
+      rw [hα]
+      apply Ideal.ext
+      intro z
+      constructor
+      · intro hz
+        change h (cubicSquareMap z) = 0 at hz
+        apply (MvPolynomial.mem_vanishingIdeal_singleton_iff α z).mpr
+        have hcompz := congrArg
+          (fun r :
+            Formalization.Books.Exercises.Unit16.polynomialRing ℂ 2 →+* ℂ => r z)
+          hcomp
+        calc
+          MvPolynomial.aeval α z =
+              (MvPolynomial.eval₂Hom (RingHom.id ℂ) α) z := by
+            simp [MvPolynomial.aeval_eq_eval₂Hom]
+          _ = h (cubicSquareMap z) := by
+            simpa only [RingHom.comp_apply] using hcompz.symm
+          _ = 0 := hz
+      · intro hz
+        have hz' : MvPolynomial.aeval α z = 0 :=
+          (MvPolynomial.mem_vanishingIdeal_singleton_iff α z).mp hz
+        have hcompz := congrArg
+          (fun r :
+            Formalization.Books.Exercises.Unit16.polynomialRing ℂ 2 →+* ℂ => r z)
+          hcomp
+        calc
+          h (cubicSquareMap z) =
+              (MvPolynomial.eval₂Hom (RingHom.id ℂ) α) z := by
+            simpa only [RingHom.comp_apply] using hcompz
+          _ = MvPolynomial.aeval α z := by
+            simp [MvPolynomial.aeval_eq_eval₂Hom]
+          _ = 0 := hz'
+    have hsubset := hclosed.closure_subset_iff.mpr hclosedpoints
+    rw [hdense] at hsubset
+    exact hsubset hp
 
 end Formalization.Books.Exercises.Unit24
 

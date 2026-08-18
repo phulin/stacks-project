@@ -48,7 +48,17 @@ theorem exists_artinReesWorks
     [IsNoetherianRing R] [Module.Finite R M] [Module.Finite R N]
     (I : Ideal R) (f : M →ₗ[R] N) :
     ∃ c : ℕ, ArtinReesWorks I f c := by
-  sorry
+  obtain ⟨c, hc⟩ := I.exists_pow_inf_eq_pow_smul (LinearMap.range f)
+  refine ⟨c, ?_⟩
+  intro n hn
+  rw [inf_comm, hc n hn]
+  refine Submodule.smul_le.mpr ?_
+  intro r hr x hx
+  rcases hx.2 with ⟨y, hy⟩
+  refine ⟨r • y, Submodule.smul_mem_smul hr ?_, ?_⟩
+  · exact Submodule.mem_top
+  · change f (r • y) = r • x
+    rw [map_smul, hy]
 
 /-- Equality modulo a submodule, expressed by equality after the canonical
 quotient map. -/

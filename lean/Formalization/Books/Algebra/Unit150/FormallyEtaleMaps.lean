@@ -294,9 +294,90 @@ theorem formallyEtale_differentialOperator_extension
     ∃! E : DifferentialOperator (R := R) (S := S')
         (M := principalPartsBaseChangeModule (S := S) (S' := S') M)
         (N := principalPartsBaseChangeModule (S := S) (S' := S') N) k,
-      ∀ m, E.1 (principalPartsBaseChangeMap (S := S) (S' := S') m) =
+    ∀ m, E.1 (principalPartsBaseChangeMap (S := S) (S' := S') m) =
         principalPartsBaseChangeMap (S := S) (S' := S') (D.1 m) := by
   sorry
+
+/-- The unique extension supplied by
+`formallyEtale_differentialOperator_extension`. -/
+noncomputable def formallyEtale_differentialOperatorExtension
+    {R S S' M N : Type u} [CommRing R] [CommRing S] [CommRing S']
+    [Algebra R S] [Algebra S S'] [Algebra R S'] [IsScalarTower R S S']
+    [AddCommGroup M] [AddCommGroup N]
+    [Module S M] [Module S N] [Module R M] [Module R N]
+    [IsScalarTower R S M] [IsScalarTower R S N]
+    (_hf : Algebra.FormallyEtale S S') (k : ℕ)
+    (D : DifferentialOperator (R := R) (S := S) (M := M) (N := N) k) :
+    letI : Module S' (principalPartsBaseChangeModule (S := S) (S' := S') M) :=
+      TensorProduct.leftModule
+    letI : Module S' (principalPartsBaseChangeModule (S := S) (S' := S') N) :=
+      TensorProduct.leftModule
+    letI : IsScalarTower R S'
+        (principalPartsBaseChangeModule (S := S) (S' := S') M) :=
+      by
+        refine IsScalarTower.of_algebraMap_smul ?_
+        intro r x
+        refine TensorProduct.induction_on x ?_ ?_ ?_
+        · simp
+        · intro s m
+          simp
+        · intro x y hx hy
+          simp [hx, hy]
+    letI : IsScalarTower R S'
+        (principalPartsBaseChangeModule (S := S) (S' := S') N) :=
+      by
+        refine IsScalarTower.of_algebraMap_smul ?_
+        intro r x
+        refine TensorProduct.induction_on x ?_ ?_ ?_
+        · simp
+        · intro s n
+          simp
+        · intro x y hx hy
+          simp [hx, hy]
+    DifferentialOperator (R := R) (S := S')
+      (M := principalPartsBaseChangeModule (S := S) (S' := S') M)
+      (N := principalPartsBaseChangeModule (S := S) (S' := S') N) k := by
+  exact Classical.choose (formallyEtale_differentialOperator_extension _hf k D)
+
+theorem formallyEtale_differentialOperatorExtension_spec
+    {R S S' M N : Type u} [CommRing R] [CommRing S] [CommRing S']
+    [Algebra R S] [Algebra S S'] [Algebra R S'] [IsScalarTower R S S']
+    [AddCommGroup M] [AddCommGroup N]
+    [Module S M] [Module S N] [Module R M] [Module R N]
+    [IsScalarTower R S M] [IsScalarTower R S N]
+    (_hf : Algebra.FormallyEtale S S') (k : ℕ)
+    (D : DifferentialOperator (R := R) (S := S) (M := M) (N := N) k) :
+    letI : Module S' (principalPartsBaseChangeModule (S := S) (S' := S') M) :=
+      TensorProduct.leftModule
+    letI : Module S' (principalPartsBaseChangeModule (S := S) (S' := S') N) :=
+      TensorProduct.leftModule
+    letI : IsScalarTower R S'
+        (principalPartsBaseChangeModule (S := S) (S' := S') M) :=
+      by
+        refine IsScalarTower.of_algebraMap_smul ?_
+        intro r x
+        refine TensorProduct.induction_on x ?_ ?_ ?_
+        · simp
+        · intro s m
+          simp
+        · intro x y hx hy
+          simp [hx, hy]
+    letI : IsScalarTower R S'
+        (principalPartsBaseChangeModule (S := S) (S' := S') N) :=
+      by
+        refine IsScalarTower.of_algebraMap_smul ?_
+        intro r x
+        refine TensorProduct.induction_on x ?_ ?_ ?_
+        · simp
+        · intro s n
+          simp
+        · intro x y hx hy
+          simp [hx, hy]
+    ∀ m, (formallyEtale_differentialOperatorExtension _hf k D).1
+        (principalPartsBaseChangeMap (S := S) (S' := S') m) =
+      principalPartsBaseChangeMap (S := S) (S' := S') (D.1 m) := by
+  exact (Classical.choose_spec
+    (formallyEtale_differentialOperator_extension _hf k D)).1
 
 /-- Extensions of two finite-order differential operators compose to the
 extension of their composite. -/

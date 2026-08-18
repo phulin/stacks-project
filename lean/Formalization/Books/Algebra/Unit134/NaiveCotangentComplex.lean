@@ -130,7 +130,7 @@ theorem canonical_kernel_is_generated_by_relations
               neg_mem hm
           rw [map_add]
           have hm := add_mem (add_mem hp hq) hrel
-          convert hm using 1 <;> abel
+          convert hm using 1; abel
       | mul_X p s hp =>
           have hrel : X ((canonicalPresentation R S) p) * X s -
                 X ((canonicalPresentation R S) p * s) ∈
@@ -142,7 +142,7 @@ theorem canonical_kernel_is_generated_by_relations
           rw [map_mul, canonicalPresentation_variable]
           have hm := add_mem
             (Ideal.mul_mem_right (X s) (Ideal.span (canonicalRelations R S)) hp) hrel
-          convert hm using 1 <;> ring_nf
+          convert hm using 1; ring_nf
     rw [Algebra.Generators.ker_eq_ker_aeval_val] at hp
     have hval : canonicalPresentation R S p = 0 := RingHom.mem_ker.mp hp
     have hz : X (0 : S) ∈ Ideal.span (canonicalRelations R S) := by
@@ -151,7 +151,7 @@ theorem canonical_kernel_is_generated_by_relations
       exact Or.inr ⟨0, by simp⟩
     have hm := add_mem (hnormal p) hz
     rw [hval] at hm
-    convert hm using 1 <;> abel
+    convert hm using 1; abel
 
 theorem canonical_cotangentComplex_on_conormal
     {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]
@@ -273,7 +273,7 @@ theorem finite_type_has_finite_generator_presentation
     {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]
     [Algebra.FiniteType R S] :
     ∃ n : ℕ, Nonempty (Presentation R S (Fin n)) := by
-  exact (Algebra.FiniteType.iff_exists_generators (R := R) (S := S)).mp inferInstance
+  simpa using (Algebra.FiniteType.iff_exists_generators (R := R) (S := S)).mp inferInstance
 
 /-! ## Functoriality and homotopy independence -/
 

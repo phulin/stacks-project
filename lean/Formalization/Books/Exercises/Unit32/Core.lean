@@ -234,7 +234,7 @@ noncomputable def realIdealSheafInclusion :
 
 /-- The additive-group part of a commutative ring, used to state the image
 condition for an ideal sheaf without crossing two forgetful functors. -/
-def commRingToAddCommGrp : CommRingCat ⥤ AddCommGrpCat where
+def commRingToAddCommGrp : CommRingCat.{v} ⥤ AddCommGrpCat.{v} where
   obj R := AddCommGrpCat.of (R : Type)
   map f := AddCommGrpCat.ofHom f.hom.toAddMonoidHom
   map_id R := by rfl

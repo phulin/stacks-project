@@ -241,6 +241,205 @@ normal-form calculation.
 theorem planeEquationQuotient_composition_series (k : Type u) [Field k] :
     ∃ s : CompositionSeries (Submodule (planeLocalRing k) (planeEquationQuotient k)),
       s.head = ⊥ ∧ s.last = ⊤ ∧ s.length = 9 := by
+  let A := planeLocalRing k
+  let I := planeEquationIdeal k
+  have hx : planeX k ∈ IsLocalRing.maximalIdeal A := by
+    change algebraMap (planePolynomialRing k) A
+      (MvPolynomial.X (0 : Fin 2)) ∈ IsLocalRing.maximalIdeal A
+    rw [IsLocalization.AtPrime.to_map_mem_maximal_iff
+      (S := A) (I := planeOriginIdeal k)]
+    exact Ideal.subset_span (by simp [planeOriginIdeal])
+  have hy : planeY k ∈ IsLocalRing.maximalIdeal A := by
+    change algebraMap (planePolynomialRing k) A
+      (MvPolynomial.X (1 : Fin 2)) ∈ IsLocalRing.maximalIdeal A
+    rw [IsLocalization.AtPrime.to_map_mem_maximal_iff
+      (S := A) (I := planeOriginIdeal k)]
+    exact Ideal.subset_span (by simp [planeOriginIdeal])
+  have hunit : IsUnit (1 - (-planeX k ^ 32964 * planeY k)) := by
+    have hpow : planeX k ^ 32964 ∈ IsLocalRing.maximalIdeal A :=
+      (IsLocalRing.maximalIdeal A).pow_mem_of_mem hx 32964 (by norm_num)
+    have hprod : planeY k * planeX k ^ 32964 ∈ IsLocalRing.maximalIdeal A :=
+      (IsLocalRing.maximalIdeal A).mul_mem_left _ hpow
+    have hneg : -planeX k ^ 32964 * planeY k ∈ IsLocalRing.maximalIdeal A := by
+      convert (IsLocalRing.maximalIdeal A).neg_mem hprod using 1 <;> ring
+    have hneg' : -planeX k ^ 32964 * planeY k ∈
+        IsLocalRing.maximalIdeal (planeLocalRing k) := hneg
+    have hnon : -planeX k ^ 32964 * planeY k ∈
+        (nonunits (planeLocalRing k) : Set (planeLocalRing k)) :=
+      (IsLocalRing.mem_maximalIdeal (R := planeLocalRing k) _).mp hneg'
+    have hu : IsUnit (1 - (-planeX k ^ 32964 * planeY k)) :=
+      IsLocalRing.isUnit_one_sub_self_of_mem_nonunits
+      (R := planeLocalRing k) (-planeX k ^ 32964 * planeY k)
+      hnon
+    exact hu
+  have hx3 : planeX k ^ 3 ∈ IsLocalRing.maximalIdeal A :=
+    (IsLocalRing.maximalIdeal A).pow_mem_of_mem hx 3 (by norm_num)
+  have hy3 : planeY k ^ 3 ∈ IsLocalRing.maximalIdeal A :=
+    (IsLocalRing.maximalIdeal A).pow_mem_of_mem hy 3 (by norm_num)
+  have hx999 : planeX k ^ 999 ∈ IsLocalRing.maximalIdeal A :=
+    (IsLocalRing.maximalIdeal A).pow_mem_of_mem hx 999 (by norm_num)
+  have hxy : planeX k ^ 2 * planeY k ^ 2 ∈ IsLocalRing.maximalIdeal A := by
+    exact (IsLocalRing.maximalIdeal A).mul_mem_left _
+      ((IsLocalRing.maximalIdeal A).pow_mem_of_mem hy 2 (by norm_num))
+  have hy100 : planeY k ^ 100 ∈ IsLocalRing.maximalIdeal A :=
+    (IsLocalRing.maximalIdeal A).pow_mem_of_mem hy 100 (by norm_num)
+  have hfmax : planeEquationF k ∈ IsLocalRing.maximalIdeal A := by
+    exact (IsLocalRing.maximalIdeal A).add_mem
+      ((IsLocalRing.maximalIdeal A).add_mem hx3 hxy) hy100
+  have hgmax : planeEquationG k ∈ IsLocalRing.maximalIdeal A := by
+    exact (IsLocalRing.maximalIdeal A).sub_mem hy3 hx999
+  have hIle : I ≤ IsLocalRing.maximalIdeal A := by
+    apply Ideal.span_le.2
+    intro z hz
+    rcases hz with (rfl | rfl) <;> assumption
+  have hIne : I ≠ ⊤ := ne_top_of_le_ne_top
+    (Ideal.IsMaximal.ne_top (IsLocalRing.maximalIdeal.isMaximal A)) hIle
+  let Q := A ⧸ I
+  let q : A →+* Q := Ideal.Quotient.mk I
+  letI : Nontrivial Q := Ideal.Quotient.nontrivial_iff.mpr hIne
+  letI : IsLocalRing Q := IsLocalRing.of_surjective' q q.surjective
+  have hqF : q (planeEquationF k) = 0 := by
+    apply Ideal.Quotient.eq_zero_iff_mem.mpr
+    exact Ideal.subset_span (by simp [planeEquationIdeal])
+  have hqG : q (planeEquationG k) = 0 := by
+    apply Ideal.Quotient.eq_zero_iff_mem.mpr
+    exact Ideal.subset_span (by simp [planeEquationIdeal])
+  let qX : Q := q (planeX k)
+  let qY : Q := q (planeY k)
+  have hG : qY ^ 3 = qX ^ 999 := by
+    have h := hqG
+    simp only [planeEquationG, map_sub, qX, qY] at h
+    exact sub_eq_zero.mp h
+  have hF : qX ^ 3 + qX ^ 2 * qY ^ 2 + qY ^ 100 = 0 := by
+    have h := hqF
+    simp only [planeEquationF, map_add, map_mul, qX, qY] at h
+    exact h
+  have hY100 : qY ^ 100 = qX ^ 32967 * qY := by
+    calc
+      qY ^ 100 = qY * (qY ^ 3) ^ 33 := by ring
+      _ = qY * (qX ^ 999) ^ 33 := by rw [hG]
+      _ = qY * qX ^ (999 * 33) := by rw [pow_mul]
+      _ = qX ^ 32967 * qY := by ring
+  have hrel : qX ^ 3 * (1 - (-qX ^ 32964 * qY)) + qX ^ 2 * qY ^ 2 = 0 := by
+    calc
+      qX ^ 3 * (1 - (-qX ^ 32964 * qY)) + qX ^ 2 * qY ^ 2 =
+          qX ^ 3 + qX ^ 2 * qY ^ 2 + qX ^ 3 * qX ^ 32964 * qY := by ring
+      _ = qX ^ 3 + qX ^ 2 * qY ^ 2 + qX ^ 32967 * qY := by
+        rw [← pow_add]
+      _ = qX ^ 3 + qX ^ 2 * qY ^ 2 + qY ^ 100 := by rw [hY100]
+      _ = 0 := hF
+  have huQ : IsUnit (q (1 - (-planeX k ^ 32964 * planeY k))) := hunit.map q
+  let U : Qˣ := huQ.unit
+  have hU : (U : Q) = 1 - (-qX ^ 32964 * qY) := by
+    change (huQ.unit : Q) = q (1 - (-planeX k ^ 32964 * planeY k))
+    exact huQ.unit_spec.symm
+  let v : Q := (↑(U⁻¹) : Q)
+  have hUv : (1 - (-qX ^ 32964 * qY)) * v = 1 := by
+    rw [← hU]
+    exact U.mul_inv
+  let a : Q := (-qY ^ 2) * v
+  have hXa : qX ^ 3 = qX ^ 2 * a := by
+    have hfirst : qX ^ 3 * (1 - (-qX ^ 32964 * qY)) = -(qX ^ 2 * qY ^ 2) :=
+      eq_neg_of_add_eq_zero_left hrel
+    calc
+      qX ^ 3 = qX ^ 3 * 1 := by ring
+      _ = qX ^ 3 * ((1 - (-qX ^ 32964 * qY)) * v) := by rw [hUv]
+      _ = (qX ^ 3 * (1 - (-qX ^ 32964 * qY))) * v := by ring
+      _ = (-(qX ^ 2 * qY ^ 2)) * v := by rw [hfirst]
+      _ = qX ^ 2 * a := by dsimp [a]; ring
+  have ha333 : a ^ 333 = qY ^ 666 * ((-v) ^ 333) := by
+    change ((-(qY ^ 2)) * v) ^ 333 = qY ^ 666 * ((-v) ^ 333)
+    calc
+      ((-(qY ^ 2)) * v) ^ 333 = (-(qY ^ 2)) ^ 333 * v ^ 333 :=
+        mul_pow _ _ _
+      _ = qY ^ 666 * ((-v) ^ 333) := by
+        have hodd : Odd (333 : ℕ) := by
+          exact ⟨166, by norm_num⟩
+        have hnegY : (-(qY ^ 2)) ^ 333 = -(qY ^ 666) := by
+          calc
+            (-(qY ^ 2)) ^ 333 = -(qY ^ 2) ^ 333 := hodd.neg_pow _
+            _ = -(qY ^ 666) := by rw [(pow_mul qY 2 333).symm]
+        have hnegv : (-v) ^ 333 = -(v ^ 333) := by
+          exact hodd.neg_pow v
+        rw [hnegY, hnegv]
+        ring
+  have hY3zero : qY ^ 3 = 0 := by
+    have h999 : qX ^ 999 = (qX ^ 2 * a) ^ 333 := by
+      rw [← hXa]
+      rw [← pow_mul]
+    have hcycle : qY ^ 3 = qY ^ 3 * (qX ^ 666 * qY ^ 663 * ((-v) ^ 333)) := by
+      calc
+        qY ^ 3 = qX ^ 999 := hG
+        _ = (qX ^ 2 * a) ^ 333 := h999
+        _ = qX ^ 666 * a ^ 333 := by
+          calc
+            (qX ^ 2 * a) ^ 333 = (qX ^ 2) ^ 333 * a ^ 333 :=
+              mul_pow _ _ _
+            _ = qX ^ 666 * a ^ 333 := by
+              rw [(pow_mul qX 2 333).symm]
+        _ = qY ^ 3 * (qX ^ 666 * qY ^ 663 * ((-v) ^ 333)) := by
+          rw [ha333]
+          have hYexp : qY ^ 666 = qY ^ 3 * qY ^ 663 := by
+            rw [← pow_add]
+          rw [hYexp]
+          ring
+    have hCmem : qX ^ 666 * qY ^ 663 * ((-v) ^ 333) ∈ IsLocalRing.maximalIdeal Q := by
+      have hyQ : qY ∈ IsLocalRing.maximalIdeal Q := by
+        apply (IsLocalRing.mem_maximalIdeal (R := Q) qY).mpr
+        intro hqunit
+        obtain ⟨b, hb⟩ := q.surjective (↑(hqunit.unit⁻¹) : Q)
+        have hybq : q (planeY k * b) = 1 := by
+          calc
+            q (planeY k * b) = q (planeY k) * q b := map_mul q _ _
+            _ = qY * q b := by rfl
+            _ = (↑hqunit.unit : Q) * ↑(hqunit.unit⁻¹) := by
+              rw [hqunit.unit_spec, hb]
+            _ = 1 := by simp
+        have hybI : planeY k * b - 1 ∈ I := by
+          apply Ideal.Quotient.eq_zero_iff_mem.mp
+          rw [map_sub, hybq, map_one]
+          simp
+        have hybmax : planeY k * b - 1 ∈ IsLocalRing.maximalIdeal A :=
+          hIle hybI
+        have hnegmax : 1 - planeY k * b ∈ IsLocalRing.maximalIdeal A := by
+          have := (IsLocalRing.maximalIdeal A).neg_mem hybmax
+          convert this using 1 <;> ring
+        have hprod : IsUnit (planeY k * b) := by
+          have hnon :=
+            (IsLocalRing.mem_maximalIdeal (R := A) (1 - planeY k * b)).mp hnegmax
+          simpa only [sub_sub_cancel] using
+            IsLocalRing.isUnit_one_sub_self_of_mem_nonunits
+              (R := A) (1 - planeY k * b) hnon
+        have hyunit : IsUnit (planeY k) :=
+          (Commute.all (planeY k) b).isUnit_mul_iff.mp hprod |>.1
+        exact (IsLocalRing.mem_maximalIdeal (R := A) (planeY k)).mp hy hyunit
+      have hxyQ : qX ^ 666 * qY ^ 663 ∈ IsLocalRing.maximalIdeal Q := by
+        exact (IsLocalRing.maximalIdeal Q).mul_mem_left _
+          ((IsLocalRing.maximalIdeal Q).pow_mem_of_mem hyQ 663 (by norm_num))
+      exact (IsLocalRing.maximalIdeal Q).mul_mem_right _ hxyQ
+    have hCunit : IsUnit (1 - (qX ^ 666 * qY ^ 663 * ((-v) ^ 333))) :=
+      IsLocalRing.isUnit_one_sub_self_of_mem_nonunits
+        (R := Q) (qX ^ 666 * qY ^ 663 * ((-v) ^ 333))
+        ((IsLocalRing.mem_maximalIdeal (R := Q)
+          (qX ^ 666 * qY ^ 663 * ((-v) ^ 333))).mp hCmem)
+    have hzero :
+        (1 - (qX ^ 666 * qY ^ 663 * ((-v) ^ 333))) * qY ^ 3 = 0 := by
+      have hdiff :
+          qY ^ 3 - (qX ^ 666 * qY ^ 663 * ((-v) ^ 333)) * qY ^ 3 =
+            qY ^ 3 * (qX ^ 666 * qY ^ 663 * ((-v) ^ 333)) -
+              (qX ^ 666 * qY ^ 663 * ((-v) ^ 333)) * qY ^ 3 :=
+        congrArg
+          (fun z : Q => z - (qX ^ 666 * qY ^ 663 * ((-v) ^ 333)) * qY ^ 3)
+          hcycle
+      calc
+        (1 - (qX ^ 666 * qY ^ 663 * ((-v) ^ 333))) * qY ^ 3 =
+            qY ^ 3 - (qX ^ 666 * qY ^ 663 * ((-v) ^ 333)) * qY ^ 3 := by
+              rw [sub_mul, one_mul]
+        _ = qY ^ 3 * (qX ^ 666 * qY ^ 663 * ((-v) ^ 333)) -
+              (qX ^ 666 * qY ^ 663 * ((-v) ^ 333)) * qY ^ 3 := hdiff
+        _ = 0 := by ring
+    apply hCunit.mul_left_cancel
+    simpa only [mul_zero] using hzero
   sorry
 
 /-- The local intersection quotient has length nine. -/

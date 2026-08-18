@@ -181,13 +181,44 @@ theorem objectClassPresheaf_obj_equiv
         SetoidObjectClasses (Functor.Fiber p U)) := by
   exact fibredSetoidObjectPresheaf_obj_equiv p hp U
 
+/- A fibred equivalence to a slice transports the discreteness of the slice
+   fibres back to setoidness of the source fibres.
+
+   Proof roadmap:
+
+   1. Unpack `h` and use its forward functor to the slice.  Its strict
+      equation over `C` supplies the `over` witness expected by
+      `equivalence_to_fibredInSets_gives_setoidFibres`.
+   2. Package the inverse functor and the vertical unit/counit isomorphisms as
+      `IsEquivalenceOverFunctor`; the cartesian-preservation fields are not
+      needed for the fibrewise equivalence itself.
+   3. Apply `equivalence_to_fibredInSets_gives_setoidFibres` with
+      `sliceProjection_isFibredInSets X` and retain its first component. -/
+theorem isCategoryFibredInSetoids_of_fibredEquivalence_slice
+    {S : Type uS} [Category.{vS} S]
+    {C : Type uC} [Category.{vC} C]
+    (p : S ⥤ C) (X : C)
+    (h : IsFibredEquivalenceOver p (Over.forget X)) :
+    IsCategoryFibredInSetoids p := by
+  sorry
+
 theorem isRepresentableCategoryFibredInGroupoids_iff_setoid_and_objectClassPresheaf
     {S : Type uS} [Category.{vS} S]
     {C : Type uC} [Category.{vC} C]
     (p : S ⥤ C) :
     IsRepresentableCategoryFibredInGroupoids p ↔
       HasRepresentableObjectClassPresheaf p := by
-  sorry
+  rw [isRepresentableCategoryFibredInGroupoids_iff_exists_slice_equivalence]
+  constructor
+  · rintro ⟨_, X, hX⟩
+    let hp := isCategoryFibredInSetoids_of_fibredEquivalence_slice p X hX
+    refine ⟨hp, ?_⟩
+    exact (fibredSetoidObjectPresheaf_isRepresentable_iff_exists_slice
+      p hp).2 ⟨X, hX⟩
+  · rintro ⟨hp, hrep⟩
+    refine ⟨hp.1, ?_⟩
+    exact (fibredSetoidObjectPresheaf_isRepresentable_iff_exists_slice
+      p hp).1 hrep
 
 /- An isomorphism of presentations includes the base-object isomorphism and
    a vertical comparison after transporting one slice along it. -/

@@ -1,5 +1,6 @@
 import Mathlib.RingTheory.Ideal.IdempotentFG
 import Mathlib.RingTheory.Localization.Away.Basic
+import Mathlib.RingTheory.Localization.Away.Lemmas
 import Mathlib.Topology.Connected.Basic
 import Formalization.Books.Algebra.Unit17.Spectrum
 import Formalization.Books.Algebra.Unit20.Nakayama
@@ -166,7 +167,24 @@ theorem fg_idempotent_ideal_components
       I = Ideal.span ({e} : Set R) ∧
       Nonempty ((R ⧸ I) ≃+* Localization.Away (1 - e)) ∧
       IsClopen (PrimeSpectrum.zeroLocus (I : Set R)) := by
-  sorry
+  have hI_idem : IsIdempotentElem I := by
+    change I * I = I
+    simpa [pow_two] using hI_sq.symm
+  obtain ⟨e, he, hIe⟩ := (I.isIdempotentElem_iff_of_fg hI_fg).mp hI_idem
+  have hspan : I = Ideal.span ({e} : Set R) := by
+    simpa [Ideal.submodule_span_eq] using hIe
+  refine ⟨e, he, hspan, ?_, ?_⟩
+  · rw [hspan]
+    have hloc : IsLocalization.Away (1 - e) (R ⧸ Ideal.span ({e} : Set R)) := by
+      have h := IsLocalization.Away.quotient_of_isIdempotentElem he.one_sub
+      rw [sub_sub_cancel] at h
+      exact h
+    let awayOneSub : Localization.Away (1 - e) ≃+* R ⧸ Ideal.span ({e} : Set R) :=
+      (@IsLocalization.algEquiv R _ (Submonoid.powers (1 - e))
+        (Localization.Away (1 - e)) _ _ _ (R ⧸ Ideal.span ({e} : Set R)) _ _ hloc).toRingEquiv
+    exact ⟨awayOneSub.symm⟩
+  · rw [hspan, PrimeSpectrum.zeroLocus_span]
+    exact PrimeSpectrum.isClopen_iff_zeroLocus.mpr ⟨e, he, rfl⟩
 
 /- The source announces a later reproof of the clopen/idempotent statement
    after the glueing-of-functions lemma.  The canonical equivalence above is

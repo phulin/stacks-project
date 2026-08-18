@@ -258,7 +258,200 @@ abbrev localizationModuleCategory {R : Type u} [CommRing R] (S : Submonoid R) :=
 theorem localization_module_category_equivalence {R : Type u} [CommRing R]
     (S : Submonoid R) :
     Nonempty (ModuleCat.{u} (localization S) ≌ localizationModuleCategory S) := by
-  sorry
+  have restricted_property :
+      ∀ N : ModuleCat.{u} (localization S),
+        localizationModuleProperty S
+          ((ModuleCat.restrictScalars (algebraMap R (localization S))).obj N) := by
+    intro N s
+    letI : Module R (N : Type u) :=
+      Module.compHom (N : Type u) (algebraMap R (localization S))
+    letI : IsScalarTower R (localization S) (N : Type u) :=
+      IsScalarTower.of_compHom R (localization S) (N : Type u)
+    let hloc : IsLocalizedModule S
+        (LinearMap.id : (N : Type u) →ₗ[R] (N : Type u)) :=
+      isLocalizedModule_id S (N : Type u) (localization S)
+    exact (Module.End.isUnit_iff _).mp (hloc.map_units s)
+  have localized_id (X : localizationModuleCategory S) :
+      IsLocalizedModule S
+        (LinearMap.id : (X.obj : Type u) →ₗ[R] (X.obj : Type u)) := by
+    refine { map_units := ?_, surj := ?_, exists_of_eq := ?_ }
+    · intro s
+      exact (Module.End.isUnit_iff _).mpr (X.property s)
+    · intro x
+      exact ⟨(x, 1), by simp⟩
+    · intro x y hxy
+      exact ⟨1, by simpa using hxy⟩
+  let F₀ : ModuleCat.{u} (localization S) ⥤ ModuleCat.{u} R :=
+    ModuleCat.restrictScalars (algebraMap R (localization S))
+  let F : ModuleCat.{u} (localization S) ⥤ localizationModuleCategory S :=
+    (localizationModuleProperty S).lift F₀ restricted_property
+  let G : localizationModuleCategory S ⥤ ModuleCat.{u} (localization S) :=
+    { obj := fun X => ModuleCat.of (localization S) (localizedModule S (X.obj : Type u))
+      map := fun f => ModuleCat.ofHom (LocalizedModule.map S f.hom.hom)
+      map_id := by
+        intro X
+        apply ModuleCat.hom_ext
+        simp
+      map_comp := by
+        intro X Y Z f g
+        apply ModuleCat.hom_ext
+        ext x
+        induction x using LocalizedModule.induction_on with
+        | _ m s => simp }
+  let unitComponent (N : ModuleCat.{u} (localization S)) :
+      N ≅ (G.obj (F.obj N)) := by
+    letI : Module R (N : Type u) :=
+      Module.compHom (N : Type u) (algebraMap R (localization S))
+    letI : IsScalarTower R (localization S) (N : Type u) :=
+      IsScalarTower.of_compHom R (localization S) (N : Type u)
+    letI : IsLocalizedModule S
+        (LinearMap.id : (N : Type u) →ₗ[R] (N : Type u)) :=
+      isLocalizedModule_id S (N : Type u) (localization S)
+    exact LinearEquiv.toModuleIso
+      ((IsLocalizedModule.iso S
+        (LinearMap.id : (N : Type u) →ₗ[R] (N : Type u))).extendScalarsOfIsLocalization
+          S (localization S)).symm
+  let counitComponent (X : localizationModuleCategory S) :
+      (G ⋙ F).obj X ≅ X := by
+    dsimp [F, G, F₀]
+    letI : IsLocalizedModule S
+        (LinearMap.id : (X.obj : Type u) →ₗ[R] (X.obj : Type u)) :=
+      localized_id X
+    let e0 := IsLocalizedModule.iso S
+      (LinearMap.id : (X.obj : Type u) →ₗ[R] (X.obj : Type u))
+    let eMap : ((G ⋙ F).obj X).obj →ₗ[R] X.obj :=
+      { toFun := e0
+        map_add' := by
+          intro x y
+          exact e0.map_add x y
+        map_smul' := by
+          intro r x
+          induction x using LocalizedModule.induction_on with
+          | _ m s =>
+            change e0 ((Localization.mk (S := S) r (1 : S) : localization S) •
+              LocalizedModule.mk m s) = r • e0 (LocalizedModule.mk m s)
+            rw [LocalizedModule.mk_smul_mk (S := S) r m 1 s]
+            simpa [← LocalizedModule.smul'_mk] using
+              e0.map_smul r (LocalizedModule.mk m s) }
+    apply (localizationModuleProperty S).isoMk
+    exact LinearEquiv.toModuleIso (LinearEquiv.ofBijective eMap e0.bijective)
+  let unit : 𝟭 (ModuleCat.{u} (localization S)) ≅ F ⋙ G :=
+    NatIso.ofComponents unitComponent (by
+      intro X Y f
+      have h :
+          (unitComponent X).inv ≫ (𝟭 (ModuleCat.{u} (localization S))).map f =
+            (F ⋙ G).map f ≫ (unitComponent Y).inv := by
+        letI : IsLocalizedModule S
+            (LinearMap.id : (F.obj X).obj →ₗ[R] (F.obj X).obj) :=
+          localized_id (F.obj X)
+        letI : IsLocalizedModule S
+            (LinearMap.id : (F.obj Y).obj →ₗ[R] (F.obj Y).obj) :=
+          localized_id (F.obj Y)
+        apply ModuleCat.hom_ext
+        ext x
+        dsimp [unitComponent, F, G, F₀]
+        have hmapid :
+            IsLocalizedModule.map S
+                (LinearMap.id : (F.obj X).obj →ₗ[R] (F.obj X).obj)
+                (LinearMap.id : (F.obj Y).obj →ₗ[R] (F.obj Y).obj)
+                (F.map f).hom.hom = (F.map f).hom.hom := by
+          apply IsLocalizedModule.linearMap_ext S
+            (f := (LinearMap.id : (F.obj X).obj →ₗ[R] (F.obj X).obj))
+            (f' := (LinearMap.id : (F.obj Y).obj →ₗ[R] (F.obj Y).obj))
+          simpa using
+            (IsLocalizedModule.map_comp (S := S)
+              (f := (LinearMap.id : (F.obj X).obj →ₗ[R] (F.obj X).obj))
+              (g := (LinearMap.id : (F.obj Y).obj →ₗ[R] (F.obj Y).obj))
+              (F.map f).hom.hom)
+        have hmap :=
+          congrArg (fun k => k x)
+            (IsLocalizedModule.map_iso_commute (S := S)
+            (f₀ := (LinearMap.id : (F.obj X).obj →ₗ[R] (F.obj X).obj))
+            (f₁ := (LinearMap.id : (F.obj Y).obj →ₗ[R] (F.obj Y).obj))
+              (F.map f).hom.hom)
+        rw [hmapid] at hmap
+        simp only [LinearMap.comp_apply] at hmap
+        have hmapcanon (z : LocalizedModule S (F.obj X).obj) :
+            IsLocalizedModule.map S
+                (LocalizedModule.mkLinearMap S (F.obj X).obj)
+                (LocalizedModule.mkLinearMap S (F.obj Y).obj)
+                (F.map f).hom.hom z =
+              LocalizedModule.map S (F.map f).hom.hom z := by
+          induction z using LocalizedModule.induction_on with
+          | _ m s =>
+            simpa using
+              (IsLocalizedModule.map_LocalizedModules (S := S)
+                (g := (F.map f).hom.hom) m s)
+        rw [hmapcanon] at hmap
+        change (F.map f).hom.hom
+            ((IsLocalizedModule.iso S
+              (LinearMap.id : (F.obj X).obj →ₗ[R] (F.obj X).obj)) x) =
+          IsLocalizedModule.iso S
+            (LinearMap.id : (F.obj Y).obj →ₗ[R] (F.obj Y).obj)
+            ((LocalizedModule.map S (F.map f).hom.hom) x)
+        exact hmap
+      apply (cancel_mono (unitComponent Y).inv).1
+      simp only [Category.assoc, Iso.hom_inv_id, Category.comp_id]
+      simpa only [Category.assoc, Iso.hom_inv_id_assoc] using
+        (congrArg (fun k => (unitComponent X).hom ≫ k) h))
+  let counit : G ⋙ F ≅ 𝟭 (localizationModuleCategory S) :=
+    NatIso.ofComponents counitComponent (by
+      intro X Y f
+      apply (localizationModuleProperty S).hom_ext
+      ext x
+      change localizedModule S (X.obj : Type u) at x
+      dsimp [counitComponent, F, G, F₀]
+      letI : IsLocalizedModule S
+          (LinearMap.id : (X.obj : Type u) →ₗ[R] (X.obj : Type u)) :=
+        localized_id X
+      letI : IsLocalizedModule S
+          (LinearMap.id : (Y.obj : Type u) →ₗ[R] (Y.obj : Type u)) :=
+        localized_id Y
+      have hmapid :
+          IsLocalizedModule.map S
+              (LinearMap.id : (X.obj : Type u) →ₗ[R] (X.obj : Type u))
+              (LinearMap.id : (Y.obj : Type u) →ₗ[R] (Y.obj : Type u))
+              f.hom.hom = f.hom.hom := by
+        apply IsLocalizedModule.linearMap_ext S
+          (f := (LinearMap.id : (X.obj : Type u) →ₗ[R] (X.obj : Type u)))
+          (f' := (LinearMap.id : (Y.obj : Type u) →ₗ[R] (Y.obj : Type u)))
+        simpa using
+          (IsLocalizedModule.map_comp (S := S)
+            (f := (LinearMap.id : (X.obj : Type u) →ₗ[R] (X.obj : Type u)))
+            (g := (LinearMap.id : (Y.obj : Type u) →ₗ[R] (Y.obj : Type u)))
+            f.hom.hom)
+      have hmap :=
+        congrArg (fun k => k x)
+          (IsLocalizedModule.map_iso_commute (S := S)
+            (f₀ := (LinearMap.id : (X.obj : Type u) →ₗ[R] (X.obj : Type u)))
+            (f₁ := (LinearMap.id : (Y.obj : Type u) →ₗ[R] (Y.obj : Type u)))
+            f.hom.hom)
+      rw [hmapid] at hmap
+      change (f.hom.hom)
+          ((IsLocalizedModule.iso S
+            (LinearMap.id : (X.obj : Type u) →ₗ[R] (X.obj : Type u))) x) =
+        IsLocalizedModule.iso S
+          (LinearMap.id : (Y.obj : Type u) →ₗ[R] (Y.obj : Type u))
+          ((IsLocalizedModule.map S
+            (LocalizedModule.mkLinearMap S (X.obj : Type u))
+            (LocalizedModule.mkLinearMap S (Y.obj : Type u)) f.hom.hom) x) at hmap
+      have hmapcanon (z : LocalizedModule S (X.obj : Type u)) :
+          IsLocalizedModule.map S
+              (LocalizedModule.mkLinearMap S (X.obj : Type u))
+              (LocalizedModule.mkLinearMap S (Y.obj : Type u))
+              f.hom.hom z = LocalizedModule.map S f.hom.hom z := by
+        induction z using LocalizedModule.induction_on with
+        | _ m s =>
+          simpa using
+            (IsLocalizedModule.map_LocalizedModules (S := S) (g := f.hom.hom) m s)
+      rw [hmapcanon] at hmap
+      change (IsLocalizedModule.iso S
+          (LinearMap.id : (Y.obj : Type u) →ₗ[R] (Y.obj : Type u)))
+          ((LocalizedModule.map S f.hom.hom) x) =
+        f.hom.hom ((IsLocalizedModule.iso S
+          (LinearMap.id : (X.obj : Type u) →ₗ[R] (X.obj : Type u))) x)
+      exact hmap.symm)
+  exact ⟨CategoryTheory.Equivalence.mk F G unit counit⟩
 
 /-! ## Standard examples -/
 
@@ -566,7 +759,284 @@ theorem localizedModule_is_colimit_of_stages {R : Type u} [CommRing R]
     (S : Submonoid R) (M : Type v) [AddCommGroup M] [Module R M] :
     Nonempty (colimit (localizationStageFunctor S M) ≅
       ModuleCat.of R (localizedModule S M)) := by
-  sorry
+  have power_le (f : LocalizationIndex S) :
+      Submonoid.powers (f.denominator : R) ≤ S := by
+    intro x hx
+    rcases (Submonoid.mem_powers_iff _ _).mp hx with ⟨e, rfl⟩
+    exact S.pow_mem f.denominator.property e
+  let stageMap (f : LocalizationIndex S) :
+      localizationStage S M f →ₗ[R] localizedModule S M :=
+    LocalizedModule.liftOfLE (Submonoid.powers (f.denominator : R)) S
+      (power_le f)
+  have stageMap_fraction (f : LocalizationIndex S) (m : M) (e : ℕ) :
+      stageMap f (localizationStageFraction S f m e) =
+        localizedModuleFraction S m
+          ⟨(f.denominator : R) ^ e, S.pow_mem f.denominator.property e⟩ := by
+    let sf : Submonoid.powers (f.denominator : R) :=
+      ⟨(f.denominator : R) ^ e,
+        (Submonoid.mem_powers_iff _ _).2 ⟨e, rfl⟩⟩
+    change stageMap f (LocalizedModule.mk m sf) = _
+    rw [IsLocalizedModule.mk_eq_mk']
+    simp [stageMap, IsLocalizedModule.liftOfLE_mk']
+    rw [← IsLocalizedModule.mk_eq_mk' (S := S)]
+    rfl
+  let stageCocone : Cocone (localizationStageFunctor S M) :=
+    { pt := ModuleCat.of R (localizedModule S M)
+      ι :=
+        { app := fun f => ModuleCat.ofHom (stageMap f)
+          naturality := by
+            intro f g h
+            apply ModuleCat.hom_ext
+            ext x
+            induction x using LocalizedModule.induction_on with
+            | _ m s =>
+              rcases (Submonoid.mem_powers_iff _ _).mp s.property with ⟨e, he⟩
+              have hs : s = ⟨(f.denominator : R) ^ e,
+                  (Submonoid.mem_powers_iff _ _).2 ⟨e, rfl⟩⟩ :=
+                Subtype.ext he.symm
+              rw [hs]
+              change stageMap g
+                  (localizationStageTransitionMap S f g (leOfHom h)
+                    (localizationStageFraction S f m e)) =
+                stageMap f (localizationStageFraction S f m e)
+              rw [localizationStageTransitionMap_formula
+                    (S := S) (f := f) (g := g) (hfg := leOfHom h),
+                  stageMap_fraction, stageMap_fraction]
+              let c : R := localizationStageTransitionCoefficient
+                (M := M) S f g (leOfHom h)
+              have hc : (g.denominator : R) = (f.denominator : R) * c := by
+                dsimp [c]
+                exact (localizationStage_transition_formula (M := M) S f g
+                  (leOfHom h)).choose_spec.1
+              apply LocalizedModule.mk_eq.mpr
+              refine ⟨1, ?_⟩
+              simp only [one_smul, Submonoid.smul_def]
+              rw [smul_smul, ← mul_pow, hc, mul_pow]
+              } }
+  classical
+  let transition (f g : LocalizationIndex S) (hfg : f ≤ g) :
+      localizationStage S M f →ₗ[R] localizationStage S M g :=
+    localizationStageTransitionMap S f g hfg
+  let G : LocalizationIndex S → Type (max u v) :=
+    fun f => localizationStage S M f
+  let stageMap' : (f : LocalizationIndex S) → G f →ₗ[R] localizedModule S M :=
+    fun f => stageMap f
+  let directLimit : Type (max u v) :=
+    Module.DirectLimit G transition
+  let stageCompat (f g : LocalizationIndex S) (hfg : f ≤ g)
+      (x : G f) :
+      stageMap' g (transition f g hfg x) = stageMap' f x := by
+    have hn := congrArg (fun k => k.hom x)
+      (stageCocone.ι.naturality (homOfLE hfg))
+    change stageMap' g (transition f g hfg x) = stageMap' f x at hn
+    exact hn
+  let directLimitMap : directLimit →ₗ[R] localizedModule S M :=
+    Module.DirectLimit.lift R (LocalizationIndex S) G transition
+      (fun f => stageMap' f) (by
+        intro f g hfg x
+        exact stageCompat f g hfg x)
+  have directLimitMap_of (f : LocalizationIndex S)
+      (x : G f) :
+      directLimitMap (Module.DirectLimit.of R (LocalizationIndex S) G transition f x) =
+        stageMap' f x := by
+    simpa only [directLimitMap, directLimit, G, transition,
+      Module.DirectLimit.lift_of]
+  let sourceEq (f : LocalizationIndex S) :
+      ModuleCat.of R (localizationStage S M f) =
+        (localizationStageFunctor S M).obj f := by
+    rfl
+  have sourceEq_hom (f : LocalizationIndex S) :
+      (eqToHom (sourceEq f)).hom = LinearMap.id := by
+    dsimp [sourceEq]
+    rfl
+  have sourceEq_symm_hom (f : LocalizationIndex S) :
+      (eqToHom (sourceEq f).symm).hom = LinearMap.id := by
+    dsimp [sourceEq]
+    rfl
+  let directLimitCocone : Cocone (localizationStageFunctor S M) :=
+    { pt := ModuleCat.of R directLimit
+      ι :=
+        { app := fun f =>
+            eqToHom (sourceEq f).symm ≫
+              ModuleCat.ofHom
+                (Module.DirectLimit.of R (LocalizationIndex S) G transition f)
+          naturality := by
+            intro f g h
+            apply ModuleCat.hom_ext
+            ext x
+            have htrans :
+                (eqToHom (sourceEq g).symm).hom
+                    (((localizationStageFunctor S M).map h).hom x) =
+                  transition f g (leOfHom h)
+                    ((eqToHom (sourceEq f).symm).hom x) := by
+              dsimp [sourceEq, transition, localizationStageFunctor]
+              rfl
+            change Module.DirectLimit.of R (LocalizationIndex S) G transition g
+                  ((eqToHom (sourceEq g).symm).hom
+                    (((localizationStageFunctor S M).map h).hom x)) =
+              Module.DirectLimit.of R (LocalizationIndex S) G transition f
+                ((eqToHom (sourceEq f).symm).hom x)
+            rw [htrans]
+            exact Module.DirectLimit.of_f } }
+  let directLimitDesc (t : Cocone (localizationStageFunctor S M)) :
+      ModuleCat.of R directLimit ⟶ t.pt :=
+      ModuleCat.ofHom
+      (Module.DirectLimit.lift R (LocalizationIndex S) G transition
+        (fun f =>
+          (eqToHom (sourceEq f) ≫ t.ι.app f).hom) (by
+          intro f g hfg x
+          have hn := congrArg
+              (fun k => k.hom ((eqToHom (sourceEq f)).hom x))
+            (t.ι.naturality (homOfLE hfg))
+          change (t.ι.app g).hom
+              ((eqToHom (sourceEq g)).hom (transition f g hfg x)) =
+            (t.ι.app f).hom ((eqToHom (sourceEq f)).hom x)
+          have htrans :
+              (eqToHom (sourceEq g)).hom (transition f g hfg x) =
+                ((localizationStageFunctor S M).map (homOfLE hfg)).hom
+                  ((eqToHom (sourceEq f)).hom x) := by
+            dsimp [sourceEq, transition, localizationStageFunctor]
+            rfl
+          rw [htrans]
+          rw [ModuleCat.comp_apply, ModuleCat.comp_apply] at hn
+          change (t.ι.app g).hom
+              ((localizationStageTransitionMap S f g hfg)
+                ((eqToHom (sourceEq f)).hom x)) =
+            (t.ι.app f).hom ((eqToHom (sourceEq f)).hom x) at hn
+          exact hn))
+  have directLimitIsColimit : IsColimit directLimitCocone := by
+    refine
+      { desc := fun t => directLimitDesc t
+        fac := by
+          intro t f
+          apply ModuleCat.hom_ext
+          ext x
+          dsimp [directLimitDesc, directLimitCocone]
+          rw [Module.DirectLimit.lift_of]
+          simp only [sourceEq_hom, sourceEq_symm_hom]
+          change (t.ι.app f).hom x = (t.ι.app f).hom x
+          rfl
+        uniq := by
+          intro t g hg
+          apply ModuleCat.hom_ext
+          apply Module.DirectLimit.hom_ext
+          intro f
+          apply LinearMap.ext
+          intro x
+          have hn := congrArg (fun k => k.hom x) (hg f)
+          dsimp [directLimitDesc, directLimitCocone] at hn ⊢
+          rw [Module.DirectLimit.lift_of]
+          change g.hom
+              ((Module.DirectLimit.of R (LocalizationIndex S) G transition f) x) =
+            (t.ι.app f).hom x at hn
+          change g.hom
+              ((Module.DirectLimit.of R (LocalizationIndex S) G transition f) x) =
+            (t.ι.app f).hom x
+          exact hn }
+  have kernel_eventual (f : LocalizationIndex S)
+      (z : localizationStage S M f) (hz : stageMap f z = 0) :
+      ∃ (g : LocalizationIndex S) (hfg : f ≤ g),
+        localizationStageTransitionMap S f g hfg z = 0 := by
+    induction z using LocalizedModule.induction_on with
+    | _ m s =>
+      rcases (Submonoid.mem_powers_iff _ _).mp s.property with ⟨e, he⟩
+      have hs : s = ⟨(f.denominator : R) ^ e,
+          (Submonoid.mem_powers_iff _ _).2 ⟨e, rfl⟩⟩ :=
+        Subtype.ext he.symm
+      rw [hs] at hz
+      change stageMap f (localizationStageFraction S f m e) = 0 at hz
+      rw [stageMap_fraction] at hz
+      change LocalizedModule.mk m
+          ⟨(f.denominator : R) ^ e,
+            S.pow_mem f.denominator.property e⟩ = 0 at hz
+      have hzero_mk : (0 : localizedModule S M) =
+          LocalizedModule.mk 0 (1 : S) :=
+        (LocalizedModule.zero_mk (S := S) (1 : S)).symm
+      rw [hzero_mk] at hz
+      rcases LocalizedModule.mk_eq.mp hz with ⟨u, hu⟩
+      let g : LocalizationIndex S :=
+        ⟨(f.denominator : R) * (u : R),
+          S.mul_mem f.denominator.property u.property⟩
+      have hfg : f ≤ g := by
+        refine ⟨(u : R), ?_⟩
+        rfl
+      refine ⟨g, hfg, ?_⟩
+      rw [hs]
+      change localizationStageTransitionMap S f g hfg
+          (localizationStageFraction S f m e) = 0
+      rw [localizationStageTransitionMap_formula]
+      let c : R := localizationStageTransitionCoefficient
+        (M := M) S f g hfg
+      have hc : (g.denominator : R) = (f.denominator : R) * c := by
+        dsimp [c]
+        exact (localizationStage_transition_formula (M := M) S f g hfg).choose_spec.1
+      change LocalizedModule.mk (c ^ e • m)
+          ⟨(g.denominator : R) ^ e,
+            (Submonoid.mem_powers_iff _ _).2 ⟨e, rfl⟩⟩ = 0
+      calc
+        LocalizedModule.mk (c ^ e • m)
+              ⟨(g.denominator : R) ^ e,
+                (Submonoid.mem_powers_iff _ _).2 ⟨e, rfl⟩⟩ =
+            LocalizedModule.mk
+                (S := Submonoid.powers (g.denominator : R)) (M := M) 0
+                (1 : Submonoid.powers (g.denominator : R)) := by
+          apply LocalizedModule.mk_eq.mpr
+          refine ⟨⟨(g.denominator : R),
+            (Submonoid.mem_powers_iff _ _).2 ⟨1, by simp⟩⟩, ?_⟩
+          simp only [one_smul, Submonoid.smul_def, mul_zero, smul_zero]
+          have hu' : (u : R) • m = 0 := by
+            simpa only [Submonoid.smul_def, one_smul, smul_zero] using hu
+          simpa [g, smul_smul, mul_assoc, mul_comm, mul_left_comm] using
+            congrArg (fun z : M => ((f.denominator : R) * c ^ e) • z) hu'
+        _ = 0 := LocalizedModule.zero_mk
+          (S := Submonoid.powers (g.denominator : R))
+          (M := M) (1 : Submonoid.powers (g.denominator : R))
+  have directLimitMap_surj : Function.Surjective directLimitMap := by
+    intro x
+    induction x using LocalizedModule.induction_on with
+    | _ m s =>
+      let f : LocalizationIndex S := ⟨s⟩
+      refine ⟨Module.DirectLimit.of R (LocalizationIndex S) G transition f
+          (localizationStageFraction S f m 1), ?_⟩
+      rw [directLimitMap_of]
+      rw [stageMap_fraction]
+      change LocalizedModule.mk m _ = LocalizedModule.mk m s
+      congr 1
+      apply Subtype.ext
+      simp [f]
+  have directLimitMap_inj : Function.Injective directLimitMap := by
+    intro x y hxy
+    obtain ⟨f, z, w, rfl, rfl⟩ :=
+      Module.DirectLimit.exists_of₂ (G := G) (f := transition) x y
+    have hzw : stageMap f z = stageMap f w := by
+      simpa [directLimitMap_of, stageMap'] using hxy
+    have hzero : stageMap f (z - w) = 0 := by
+      rw [map_sub, sub_eq_zero]
+      exact hzw
+    obtain ⟨g, hfg, hzero⟩ := kernel_eventual f (z - w) hzero
+    have hzw' : transition f g hfg z = transition f g hfg w := by
+      apply sub_eq_zero.mp
+      simpa [map_sub, transition] using hzero
+    calc
+      Module.DirectLimit.of R (LocalizationIndex S) G transition f z =
+          Module.DirectLimit.of R (LocalizationIndex S) G transition g
+            (transition f g hfg z) := by
+              symm
+              apply Module.DirectLimit.of_f
+      _ = Module.DirectLimit.of R (LocalizationIndex S) G transition g
+            (transition f g hfg w) := congrArg _ hzw'
+      _ = Module.DirectLimit.of R (LocalizationIndex S) G transition f w := by
+            apply Module.DirectLimit.of_f
+  let directLimitEquiv : directLimit ≃ₗ[R] localizedModule S M :=
+    LinearEquiv.ofBijective directLimitMap
+      ⟨directLimitMap_inj, directLimitMap_surj⟩
+  let directLimitModuleIso : ModuleCat.of R directLimit ≅
+      ModuleCat.of R (localizedModule S M) :=
+    LinearEquiv.toModuleIso directLimitEquiv
+  let colimitModuleIso : colimit (localizationStageFunctor S M) ≅
+      ModuleCat.of R directLimit :=
+    colimit.isoColimitCocone ⟨directLimitCocone, directLimitIsColimit⟩
+  exact ⟨colimitModuleIso ≪≫ directLimitModuleIso⟩
 
 /-! ## Products and iterated localization -/
 

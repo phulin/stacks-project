@@ -3,6 +3,7 @@ import Mathlib.Algebra.Homology.ShortComplex.ShortExact
 import Mathlib.Algebra.Module.Projective
 import Mathlib.LinearAlgebra.Dual.Defs
 import Mathlib.RingTheory.Ideal.Maps
+import Mathlib.RingTheory.Finiteness.Finsupp
 
 /-!
 # More on Algebra, Chapter 71: Modules which are close to being projective
@@ -128,7 +129,13 @@ projective module. -/
 theorem moduleProjective_iff_id_factorsThroughProjective
     (M : ModuleCat.{u} R) :
     Module.Projective R M ↔ FactorsThroughProjective (𝟙 M) := by
-  sorry
+  constructor
+  · intro hM
+    exact ⟨M, hM, 𝟙 M, 𝟙 M, by simp⟩
+  · rintro ⟨P, hP, f, g, h⟩
+    letI : Module.Projective R (P : Type u) := hP
+    apply Module.Projective.of_split f.hom g.hom
+    exact ModuleCat.hom_ext_iff.mp h
 
 /-- If the source module is finite, a factorization through a projective module
 can be chosen through a finite projective module. -/
@@ -136,7 +143,58 @@ theorem factorsThroughFiniteProjective_of_factorsThroughProjective
     {M N : ModuleCat.{u} R} [Module.Finite R M] {φ : M ⟶ N}
     (hφ : FactorsThroughProjective φ) :
     FactorsThroughFiniteProjective φ := by
-  sorry
+  classical
+  rcases (factorsThroughProjective_iff_factorsThroughFree φ).mp hφ with
+    ⟨P, hP, f, g, h⟩
+  letI : Module.Free R (P : Type u) := hP
+  let ι := Module.Free.ChooseBasisIndex R (P : Type u)
+  let b : Basis ι R (P : Type u) := Module.Free.chooseBasis R (P : Type u)
+  let k : (M : Type u) →ₗ[R] (ι →₀ R) :=
+    b.repr.toLinearMap.comp f.hom
+  obtain ⟨l, hl⟩ :=
+    (LinearMap.finsuppLinearMap_bijective_of_moduleFinite
+      (S := R) (R := R) (M := (M : Type u)) (N := R) (ι := ι)).2 k
+  let l' : l.support →₀ ((M : Type u) →ₗ[R] R) :=
+    Finsupp.lsubtypeDomain (l.support : Set ι) l
+  let k' : (M : Type u) →ₗ[R] l.support →₀ R :=
+    (LinearMap.finsuppLinearMap (S := R) :
+      (l.support →₀ ((M : Type u) →ₗ[R] R)) →
+        (M : Type u) →ₗ[R] l.support →₀ R) l'
+  let q : (l.support →₀ R) →ₗ[R] (P : Type u) :=
+    b.repr.symm.toLinearMap.comp
+      (Finsupp.lmapDomain R R (fun i : l.support => (i : ι)))
+  have hk' (x : (M : Type u)) : q (k' x) = f.hom x := by
+    apply b.repr.injective
+    change b.repr (b.repr.symm (Finsupp.mapDomain
+      (fun i : l.support => (i : ι)) (k' x))) = b.repr (f.hom x)
+    rw [b.repr.apply_symm_apply]
+    have hmap :
+        Finsupp.mapDomain (fun i : l.support => (i : ι)) (k' x) =
+          (LinearMap.finsuppLinearMap (S := R) :
+            (ι →₀ ((M : Type u) →ₗ[R] R)) →
+              (M : Type u) →ₗ[R] ι →₀ R) l x := by
+      ext i
+      by_cases hi : i ∈ l.support
+      · let j : l.support := ⟨i, hi⟩
+        have hji : (j : ι) = i := rfl
+        rw [← hji]
+        rw [Finsupp.mapDomain_apply Subtype.val_injective]
+        simp [l', j, k', LinearMap.finsuppLinearMap]
+      · have hli : l i = 0 := Finsupp.notMem_support_iff.mp hi
+        have hrange : i ∉ Set.range (fun j : l.support => (j : ι)) := by
+          rintro ⟨j, rfl⟩
+          exact hi j.property
+        rw [Finsupp.mapDomain_of_notMem_range (k' x) i hrange]
+        simp [LinearMap.finsuppLinearMap, hli]
+    rw [hmap]
+    simpa [k] using congrArg (fun z => z x) hl
+  refine ⟨ModuleCat.of R (l.support →₀ R), inferInstance,
+    inferInstance, ModuleCat.ofHom k', ModuleCat.ofHom (g.hom.comp q), ?_⟩
+  apply ModuleCat.hom_ext
+  ext x
+  change g.hom (q (k' x)) = φ.hom x
+  rw [hk']
+  simpa only [ModuleCat.comp_apply] using congrArg (fun z : M ⟶ N => z x) h
 
 end FactorThrough
 
@@ -156,7 +214,51 @@ theorem nearProjective_characterization (I : Ideal R) (M : ModuleCat.{u} R) :
       (∀ a : R, a ∈ I → FactorsThroughProjective (a • 𝟙 M)),
       (∀ a : R, a ∈ I → FactorsThroughFree (a • 𝟙 M)),
       ExtOneAnnihilatedByIdeal I M] := by
-  sorry
+  classical
+  tfae_have 1 ↔ 2 := by
+    constructor
+    · intro h a ha
+      exact (factorsThroughProjective_iff_factorsThroughFree _).mp (h a ha)
+    · intro h a ha
+      exact (factorsThroughProjective_iff_factorsThroughFree _).mpr (h a ha)
+  tfae_have 1 ↔ 3 := by
+    constructor
+    · intro h N a ha e
+      rcases h a ha with ⟨P, hP, f, g, hfg⟩
+      letI : Module.Projective R (P : Type u) := hP
+      have hcomp :
+          (CategoryTheory.Abelian.Ext.mk₀ (a • 𝟙 M)).comp e (zero_add 1) = 0 := by
+        rw [← hfg, ← CategoryTheory.Abelian.Ext.mk₀_comp_mk₀_assoc]
+        simp only [CategoryTheory.Abelian.Ext.eq_zero_of_projective,
+          CategoryTheory.Abelian.Ext.comp_zero]
+      simpa only [CategoryTheory.Abelian.Ext.mk₀_smul,
+        CategoryTheory.Abelian.Ext.smul_comp,
+        CategoryTheory.Abelian.Ext.mk₀_id_comp] using hcomp
+    · intro h a ha
+      let P : ModuleCat.{u} R := CategoryTheory.Projective.over M
+      let g : P ⟶ M := CategoryTheory.Projective.π M
+      let S : ShortComplex (ModuleCat.{u} R) :=
+        ShortComplex.mk (kernel.ι g) g (by simp)
+      have hS : S.ShortExact := by
+        refine { exact := ShortComplex.exact_of_f_is_kernel _ (kernelIsKernel g) }
+      have hzero : a • hS.extClass = 0 := h S.X₁ a ha hS.extClass
+      let x₃ : ExtGroup M S.X₃ 0 :=
+        CategoryTheory.Abelian.Ext.mk₀ (a • 𝟙 M)
+      have hx₃ : x₃.comp hS.extClass (zero_add 1) = 0 := by
+        simpa [x₃, CategoryTheory.Abelian.Ext.mk₀_smul,
+          CategoryTheory.Abelian.Ext.smul_comp] using hzero
+      obtain ⟨x₂, hx₂⟩ :=
+        CategoryTheory.Abelian.Ext.covariant_sequence_exact₃ M hS x₃
+          (zero_add 1) hx₃
+      obtain ⟨f, rfl⟩ :=
+        CategoryTheory.Abelian.Ext.homEquiv₀.symm.surjective x₂
+      have hfg : f ≫ S.g = a • 𝟙 M :=
+        CategoryTheory.Abelian.Ext.homEquiv₀.symm.injective (by simpa using hx₂)
+      have hPX : Module.Projective R (S.X₂ : Type u) := by
+        dsimp [S]
+        infer_instance
+      exact ⟨S.X₂, hPX, f, S.g, hfg⟩
+  tfae_finish
 
 /-- A module is `I`-projective when multiplication by every element of `I`
 factors through a projective module.  This notation is nonstandard. -/
@@ -168,7 +270,11 @@ theorem isIdealProjective_of_annihilated
     (I : Ideal R) (M : ModuleCat.{u} R)
     (hM : I ≤ Module.annihilator R M) :
     IsIdealProjective I M := by
-  sorry
+  intro a ha
+  have hzero : a • 𝟙 M = 0 := by
+    simp [← ModuleCat.lsmul_eq_smul_id,
+      Module.mem_annihilator_iff_lsmul_eq_zero.mp (hM ha)]
+  exact ⟨ModuleCat.of R R, inferInstance, 0, 0, by simp [hzero]⟩
 
 /-- In a short exact sequence, an `I`-projective quotient and a projective
 middle module imply that the left module is `I`-projective. -/

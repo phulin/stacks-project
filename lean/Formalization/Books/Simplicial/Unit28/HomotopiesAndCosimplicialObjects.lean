@@ -188,10 +188,16 @@ def oppositeCosimplicialObject
     SimplicialObject Cᵒᵖ where
   obj X := op (U.obj X.unop)
   map f := (U.map f.unop).op
-  map_id X := by simp
+  map_id X := by
+    change (U.map (𝟙 X.unop)).op = 𝟙 (op (U.obj X.unop))
+    rw [U.map_id]
+    rfl
   map_comp := by
     intro X Y Z f g
-    simp
+    change
+      (U.map (g.unop ≫ f.unop)).op =
+        (U.map f.unop).op ≫ (U.map g.unop).op
+    rw [U.map_comp, op_comp]
 
 def oppositeCosimplicialMap
     {C : Type u} [Category.{v} C] {U V : CosimplicialObject C}
@@ -199,6 +205,9 @@ def oppositeCosimplicialMap
       oppositeCosimplicialObject U where
   app X := (a.app X.unop).op
   naturality X Y f := by
+    change
+      (V.map f.unop).op ≫ (a.app Y.unop).op =
+        (a.app X.unop).op ≫ (U.map f.unop).op
     simpa [op_comp] using
       (congrArg (fun k => k.op) (a.naturality f.unop)).symm
 
@@ -253,10 +262,19 @@ def contravariantSimplicialObject
     (F : C ⥤ Dᵒᵖ) (U : CosimplicialObject C) : SimplicialObject D where
   obj X := unop (F.obj (U.obj X.unop))
   map f := (F.map (U.map f.unop)).unop
-  map_id X := by simp
+  map_id X := by
+    change
+      (F.map (U.map (𝟙 X.unop))).unop =
+        𝟙 (unop (F.obj (U.obj X.unop)))
+    rw [U.map_id, F.map_id]
+    rfl
   map_comp := by
     intro X Y Z f g
-    simp
+    change
+      (F.map (U.map (g.unop ≫ f.unop))).unop =
+        (F.map (U.map f.unop)).unop ≫
+          (F.map (U.map g.unop)).unop
+    rw [U.map_comp, F.map_comp, unop_comp]
 
 def contravariantSimplicialMap
     {C : Type u} [Category.{v} C] {D : Type u'} [Category.{v'} D]
@@ -264,17 +282,31 @@ def contravariantSimplicialMap
     contravariantSimplicialObject F V ⟶ contravariantSimplicialObject F U where
   app X := (F.map (a.app X.unop)).unop
   naturality X Y f := by
-    simpa using congrArg Quiver.Hom.unop (a.naturality f.unop)
+    change
+      (F.map (V.map f.unop)).unop ≫ (F.map (a.app Y.unop)).unop =
+        (F.map (a.app X.unop)).unop ≫ (F.map (U.map f.unop)).unop
+    have h := congrArg F.map (a.naturality f.unop)
+    simpa only [Functor.map_comp, unop_comp] using
+      congrArg (fun k => k.unop) h.symm
 
 def contravariantCosimplicialObject
     {C : Type u} [Category.{v} C] {D : Type u'} [Category.{v'} D]
     (F : C ⥤ Dᵒᵖ) (U : SimplicialObject C) : CosimplicialObject D where
   obj X := unop (F.obj (U.obj (op X)))
   map f := (F.map (U.map f.op)).unop
-  map_id X := by simp
+  map_id X := by
+    change
+      (F.map (U.map (𝟙 (op X)))).unop =
+        𝟙 (unop (F.obj (U.obj (op X))))
+    rw [U.map_id, F.map_id]
+    rfl
   map_comp := by
     intro X Y Z f g
-    simp
+    change
+      (F.map (U.map (g.op ≫ f.op))).unop =
+        (F.map (U.map f.op)).unop ≫
+          (F.map (U.map g.op)).unop
+    rw [U.map_comp, F.map_comp, unop_comp]
 
 def contravariantCosimplicialMap
     {C : Type u} [Category.{v} C] {D : Type u'} [Category.{v'} D]
@@ -282,7 +314,12 @@ def contravariantCosimplicialMap
     contravariantCosimplicialObject F V ⟶ contravariantCosimplicialObject F U where
   app X := (F.map (a.app (op X))).unop
   naturality X Y f := by
-    simpa using congrArg (fun k => k.unop) (a.naturality f.op)
+    change
+      (F.map (V.map f.op)).unop ≫ (F.map (a.app (op Y))).unop =
+        (F.map (a.app (op X))).unop ≫ (F.map (U.map f.op)).unop
+    have h := congrArg F.map (a.naturality f.op)
+    simpa only [Functor.map_comp, unop_comp] using
+      congrArg (fun k => k.unop) h.symm
 
 lemma functorialHomotopy
     {C : Type u} [Category.{v} C] {C' : Type u'} [Category.{v'} C']

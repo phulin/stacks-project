@@ -855,7 +855,7 @@ theorem strictification_comparison_exists
     over := by
       refine CategoryTheory.Functor.hext (fun x => rfl) ?_
       intro x y f
-      letI : p.IsHomLift (p.map f) (strictificationFunctorHom P f).hom :=
+      let : p.IsHomLift (p.map f) (strictificationFunctorHom P f).hom :=
         strictificationFunctorHom_isHomLift P f
       simpa [strictificationFunctor, strictificationProjection,
         StrictificationHom.base] using
@@ -892,17 +892,17 @@ theorem strictification_comparison_exists
           (@Functor.IsStronglyCartesian.comp _ _ _ _ p _ _ _ _
           _ _ (𝟙 (p.obj X)) (p.map φ) uX φ huX hφ)
       have hstrong : p.IsStronglyCartesian (p.map φ) h := by
-        letI : p.IsHomLift (p.map φ) h := hhomLift
-        letI : p.IsStronglyCartesian (p.map φ ≫ 𝟙 (p.obj Y))
+        let : p.IsHomLift (p.map φ) h := hhomLift
+        let : p.IsStronglyCartesian (p.map φ ≫ 𝟙 (p.obj Y))
             (h ≫ uY) := by simpa using hcompStrong
-        letI : p.IsStronglyCartesian (𝟙 (p.obj Y)) uY := huY
+        let : p.IsStronglyCartesian (𝟙 (p.obj Y)) uY := huY
         exact @Functor.IsStronglyCartesian.of_comp _ _ _ _ p _ _ _ _ _ _
           (p.map φ) (𝟙 (p.obj Y)) h uY huY
           (by simpa using hcompStrong) hhomLift
-      letI : p.IsStronglyCartesian (p.map φ) h := hstrong
-      letI : p.IsHomLift (p.map φ) h := hhomLift
+      let : p.IsStronglyCartesian (p.map φ) h := hstrong
+      let : p.IsHomLift (p.map φ) h := hhomLift
       let q := strictificationProjection P
-      letI : (strictificationProjection P).IsFibered :=
+      let : (strictificationProjection P).IsFibered :=
         strictificationProjection_isFibered P
       let κ : (strictificationFunctor P).obj X ⟶
           (strictificationFunctor P).obj Y := strictificationFunctorHom P φ
@@ -910,7 +910,7 @@ theorem strictification_comparison_exists
         dsimp [q, κ, strictificationProjection, StrictificationHom.base,
           h]
         exact (CategoryTheory.IsHomLift.fac p (p.map φ) h).symm
-      letI : q.IsHomLift (q.map κ) κ := by
+      let : q.IsHomLift (q.map κ) κ := by
         exact Functor.IsHomLift.map κ
       have hκstrong : (strictificationProjection P).IsStronglyCartesian
           (q.map κ) κ := by
@@ -974,7 +974,7 @@ theorem strictification_comparison_exists
               (Category.assoc _ _ _).symm
             _ = (𝟙 Z.V) ≫ g := congrArg (fun k => k ≫ g) hcancel
             _ = g := by simp
-        letI : q.IsHomLift g χ' := by
+        let : q.IsHomLift g χ' := by
           have h := (Functor.IsHomLift.map (p := q) χ')
           rw [hχbase] at h
           exact h
@@ -983,7 +983,7 @@ theorem strictification_comparison_exists
           exact hχfac
         refine ⟨χ', ⟨inferInstance, hχcomp⟩, ?_⟩
         intro χ'' hχ''
-        letI : q.IsHomLift g χ'' := hχ''.1
+        let : q.IsHomLift g χ'' := hχ''.1
         have hχ''map : g = q.map χ'' :=
           CategoryTheory.IsHomLift.eq_of_isHomLift q g χ''
         have hχ''p : p.IsHomLift g₀ χ''.hom := by
@@ -1022,8 +1022,8 @@ theorem strictification_comparison_exists
     inverse_preserves := by
       intro A B f hf
       let q := strictificationProjection P
-      letI : q.IsFibered := strictificationProjection_isFibered P
-      letI : q.IsStronglyCartesian (q.map f) f := hf
+      let : q.IsFibered := strictificationProjection_isFibered P
+      let : q.IsStronglyCartesian (q.map f) f := hf
       let eA := (strictificationPullback A).2
       let eB := (strictificationPullback B).2
       change p.obj ((strictificationInverse P).obj A) = A.V at eA
@@ -1041,10 +1041,10 @@ theorem strictification_comparison_exists
       change p.obj (P.pullback (𝟙 (p.obj Z)) xZ).1 = p.obj Z at eK
       let uZ := P.pullbackMap (𝟙 (p.obj Z)) xZ
       change (P.pullback (𝟙 (p.obj Z)) xZ).1 ⟶ Z at uZ
-      letI : p.IsStronglyCartesian (𝟙 (p.obj Z)) uZ :=
+      let : p.IsStronglyCartesian (𝟙 (p.obj Z)) uZ :=
         P.pullbackMap_isStronglyCartesian (𝟙 (p.obj Z)) xZ
       change p.IsHomLift (g ≫ p.map f.hom) τ at hτ
-      letI : p.IsHomLift (g ≫ p.map f.hom) τ := hτ
+      let : p.IsHomLift (g ≫ p.map f.hom) τ := hτ
       let G : q.obj K ⟶ q.obj A := by
         change p.obj Z ⟶ A.V
         exact g ≫ eqToHom eA
@@ -1076,7 +1076,7 @@ theorem strictification_comparison_exists
           (g ≫ eqToHom eA) ≫
               (eqToHom eA.symm ≫ p.map f.hom ≫ eqToHom eB) =
               (g ≫ p.map f.hom) ≫ eqToHom eB := by
-            simp [Category.assoc, hA]
+            simp [Category.assoc]
           _ = p.map τ ≫ eqToHom eB :=
             congrArg (fun k => k ≫ eqToHom eB) hτmap
           _ = eqToHom eK.symm ≫ p.map (uZ ≫ τ) ≫ eqToHom eB := by
@@ -1088,7 +1088,7 @@ theorem strictification_comparison_exists
       obtain ⟨χ, ⟨hχ, hχfac⟩, hχuniq⟩ :=
         @Functor.IsStronglyCartesian.universal_property _ _ _ _ q
           _ _ _ _ (q.map f) f hf _ _ G (G ≫ q.map f) rfl δ hδlift
-      letI : IsIso uZ :=
+      let : IsIso uZ :=
         Functor.IsStronglyCartesian.isIso_of_base_isIso p
           (𝟙 (p.obj Z)) uZ
       have huZmap : p.map uZ = eqToHom eK := by
@@ -1102,11 +1102,11 @@ theorem strictification_comparison_exists
       let vZ := (asIso uZ).inv
       have hvZmap : p.map vZ = eqToHom eK.symm := by
         have hv : p.map vZ ≫ p.map uZ = 𝟙 (p.obj Z) := by
-          simpa [vZ] using congrArg p.map (asIso uZ).inv_hom_id
+          simp [vZ]
         rw [huZmap] at hv
         apply (cancel_mono (eqToHom eK)).1
         simpa [Category.assoc] using hv
-      letI : q.IsHomLift G χ := hχ
+      let : q.IsHomLift G χ := hχ
       have hχmap : q.map χ = G :=
         (CategoryTheory.IsHomLift.eq_of_isHomLift q G χ).symm
       have hχmap' :
@@ -1146,7 +1146,7 @@ theorem strictification_comparison_exists
         exact hleft.trans ((asIso uZ).inv_hom_id_assoc τ)
       refine ⟨δp, ⟨hδplift, hδpcomp⟩, ?_⟩
       intro δ' hδ'
-      letI : p.IsHomLift g δ' := hδ'.1
+      let : p.IsHomLift g δ' := hδ'.1
       have hδ'map : p.map δ' = g :=
         (CategoryTheory.IsHomLift.eq_of_isHomLift p g δ').symm
       let χ' : K ⟶ A := { hom := uZ ≫ δ' }
@@ -1156,7 +1156,6 @@ theorem strictification_comparison_exists
         rw [Functor.map_comp, huZmap, hδ'map]
         simp [Category.assoc]
       have hχ'map : q.map χ' = G := by
-        change q.map χ' = G
         change eqToHom eK.symm ≫ p.map (uZ ≫ δ') ≫ eqToHom eA =
           g ≫ eqToHom eA
         exact hχ'map_base
@@ -1223,7 +1222,7 @@ theorem strictification_comparison_exists
           (fun X => (strictificationPullback
             (strictificationObjectOf P X)).2) ?_
         intro X Y f
-        letI : p.IsHomLift (p.map f)
+        let : p.IsHomLift (p.map f)
             (strictificationFunctorHom P f).hom :=
           strictificationFunctorHom_isHomLift P f
         let eX := (strictificationPullback (strictificationObjectOf P X)).2
@@ -1246,7 +1245,7 @@ theorem strictification_comparison_exists
         change p.obj (P.pullback (𝟙 (p.obj X)) xX).1 = p.obj X at eX
         let uX := P.pullbackMap (𝟙 (p.obj X)) xX
         change (P.pullback (𝟙 (p.obj X)) xX).1 ⟶ X at uX
-        letI : p.IsStronglyCartesian (𝟙 (p.obj X)) uX :=
+        let : p.IsStronglyCartesian (𝟙 (p.obj X)) uX :=
           P.pullbackMap_isStronglyCartesian (𝟙 (p.obj X)) xX
         have hfac := CategoryTheory.IsHomLift.fac p
           (𝟙 (p.obj X)) uX
@@ -1306,17 +1305,17 @@ theorem strictification_comparison_exists
             (𝟙 (p.obj ((strictificationInverse P).obj A))) xA
           let wB := P.pullbackMap
             (𝟙 (p.obj ((strictificationInverse P).obj B))) xB
-          letI : p.IsStronglyCartesian
+          let : p.IsStronglyCartesian
               (𝟙 (p.obj ((strictificationPullback A).1))) wA := by
             change p.IsStronglyCartesian
               (𝟙 (p.obj ((strictificationInverse P).obj A))) wA
             exact P.pullbackMap_isStronglyCartesian _ _
-          letI : p.IsStronglyCartesian
+          let : p.IsStronglyCartesian
               (𝟙 (p.obj ((strictificationPullback B).1))) wB := by
             change p.IsStronglyCartesian
               (𝟙 (p.obj ((strictificationInverse P).obj B))) wB
             exact P.pullbackMap_isStronglyCartesian _ _
-          letI : p.IsHomLift (p.map f.hom) f.hom := by
+          let : p.IsHomLift (p.map f.hom) f.hom := by
             apply CategoryTheory.IsHomLift.of_fac' p
               (p.map f.hom) f.hom rfl rfl
             simp
@@ -1332,8 +1331,8 @@ theorem strictification_comparison_exists
               (inferInstance : p.IsHomLift (p.map f.hom) f.hom)
           have hsource : p.IsHomLift (p.map f.hom) (wA ≫ f.hom) := by
             simpa using hsource0
-          letI : p.IsHomLift (p.map f.hom) (wA ≫ f.hom) := hsource
-          letI : p.IsHomLift
+          let : p.IsHomLift (p.map f.hom) (wA ≫ f.hom) := hsource
+          let : p.IsHomLift
               (p.map f.hom ≫ 𝟙 (p.obj ((strictificationPullback B).1)))
               (wA ≫ f.hom) := by
             simpa using hsource
@@ -1382,22 +1381,22 @@ theorem strictification_comparison_exists
         let eB0 : p.obj ((strictificationInverse P).obj B) = B.V := by
           change p.obj ((strictificationPullback B).1) = B.V
           exact (strictificationPullback B).2
-        letI : p.IsStronglyCartesian
+        let : p.IsStronglyCartesian
             (𝟙 (p.obj ((strictificationInverse P).obj A))) wA :=
           P.pullbackMap_isStronglyCartesian _ _
-        letI : p.IsStronglyCartesian
+        let : p.IsStronglyCartesian
             (𝟙 (p.obj ((strictificationInverse P).obj B))) wB :=
           P.pullbackMap_isStronglyCartesian _ _
         have hwA : p.map wA = eqToHom eA' := by
           have h := CategoryTheory.IsHomLift.fac' p
             (𝟙 (p.obj ((strictificationInverse P).obj A))) wA
-          convert h using 1 <;>
-            simp [eA', strictificationObjectOf, strictificationPullback]
+          convert h using 1 ;
+            simp
         have hwB : p.map wB = eqToHom eB' := by
           have h := CategoryTheory.IsHomLift.fac' p
             (𝟙 (p.obj ((strictificationInverse P).obj B))) wB
-          convert h using 1 <;>
-            simp [eB', strictificationObjectOf, strictificationPullback]
+          convert h using 1 ;
+            simp
         have hfacMap :
             p.map (strictificationFunctorHom P f.hom).hom ≫
                 p.map wB = p.map wA ≫ p.map f.hom := by
@@ -1460,14 +1459,14 @@ theorem strictification_comparison_exists
         let eA0 : p.obj ((strictificationInverse P).obj A) = A.V := by
           change p.obj ((strictificationPullback A).1) = A.V
           exact (strictificationPullback A).2
-        letI : p.IsStronglyCartesian
+        let : p.IsStronglyCartesian
             (𝟙 (p.obj ((strictificationInverse P).obj A))) wA :=
           P.pullbackMap_isStronglyCartesian _ _
         have hwA : p.map wA = eqToHom eA' := by
           have h := CategoryTheory.IsHomLift.fac' p
             (𝟙 (p.obj ((strictificationInverse P).obj A))) wA
-          convert h using 1 <;>
-            simp [eA', strictificationObjectOf, strictificationPullback]
+          convert h using 1 ;
+            simp
         dsimp [e, NatIso.ofComponents, component, comp,
           strictificationProjection, StrictificationHom.base]
         change eqToHom eA'.symm ≫ p.map wA ≫ eqToHom eA0 =

@@ -57,7 +57,48 @@ def integralOverIdealPolynomialMap
 theorem ideal_subset_integralClosureOfIdeal
     {R : Type*} [CommRing R] (I : Ideal R) :
     (I : Set R) ⊆ integralClosureOfIdeal I := by
-  sorry
+  cases subsingleton_or_nontrivial R with
+  | inl _ =>
+      intro x hx
+      refine ⟨0, ?_, ?_, ?_⟩
+      · exact Subsingleton.elim _ _
+      · simp
+      · intro i hi
+        have hi0 : i < 0 := by simpa only [Polynomial.natDegree_zero] using hi
+        exact (Nat.not_lt_zero i hi0).elim
+  | inr _ =>
+      rintro x hx
+      refine ⟨Polynomial.X - Polynomial.C x, Polynomial.monic_X_sub_C _, ?_, ?_⟩
+      · simp
+      · intro i hi
+        have hi' : i < 1 := by simpa using hi
+        have hi0 : i = 0 := Nat.eq_zero_of_le_zero (Nat.le_of_lt_succ hi')
+        subst i
+        simpa using I.neg_mem hx
+
+private lemma mem_integralOverIdealPolynomialSubalgebra_of_mem_pow
+    {R : Type*} [CommRing R] (I : Ideal R) {n : ℕ} {a : R}
+    (ha : a ∈ I ^ n) :
+    Polynomial.C a * Polynomial.X ^ n ∈ integralOverIdealPolynomialSubalgebra I := by
+  induction n generalizing a with
+  | zero =>
+      simpa using
+        (Subalgebra.algebraMap_mem (integralOverIdealPolynomialSubalgebra I) a)
+  | succ n ih =>
+      rw [pow_succ'] at ha
+      refine Submodule.smul_induction_on ha ?_ ?_
+      · intro r hr b hb
+        have hr' : Polynomial.C r * Polynomial.X ∈
+            integralOverIdealPolynomialSubalgebra I :=
+          Algebra.subset_adjoin ⟨r, hr, rfl⟩
+        have hb' := ih hb
+        have hprod := (integralOverIdealPolynomialSubalgebra I).mul_mem hr' hb'
+        convert hprod using 1
+        simp only [smul_eq_mul, map_mul, pow_succ]
+        ring
+      · intro x y hx hy
+        rw [map_add, add_mul]
+        exact (integralOverIdealPolynomialSubalgebra I).add_mem hx hy
 
 /-! ## Polynomial characterization -/
 
@@ -69,7 +110,81 @@ theorem integralOverIdeal_iff
     IsIntegralOverIdeal f I s ↔
       (integralOverIdealPolynomialMap f I).IsIntegralElem
         (Polynomial.C s * Polynomial.X) := by
-  sorry
+  constructor
+  · rintro ⟨p, hp, hp0, hcoeff⟩
+    have hcoeff' : ∀ i, i ≤ p.natDegree → p.coeff i ∈ I ^ (p.natDegree - i) := by
+      intro i hi
+      rcases lt_or_eq_of_le hi with hi | rfl
+      · exact hcoeff i hi
+      · rw [hp.coeff_natDegree]
+        simp
+    have hcoeff'' : ∀ i, p.coeff i ∈ I ^ (p.natDegree - i) := by
+      intro i
+      by_cases hi : i ≤ p.natDegree
+      · exact hcoeff' i hi
+      · rw [Polynomial.coeff_eq_zero_of_natDegree_lt (lt_of_not_ge hi)]
+        exact (I ^ (p.natDegree - i)).zero_mem
+    have hmem (i : ℕ) :
+        Polynomial.C (p.coeff i) * Polynomial.X ^ (p.natDegree - i) ∈
+          integralOverIdealPolynomialSubalgebra I :=
+      mem_integralOverIdealPolynomialSubalgebra_of_mem_pow (R := R) I
+        (n := p.natDegree - i) (a := p.coeff i) (hcoeff'' i)
+    let q : (integralOverIdealPolynomialSubalgebra I)[X] :=
+      ∑ i ∈ Finset.range (p.natDegree + 1),
+        Polynomial.C
+            (⟨Polynomial.C (p.coeff i) * Polynomial.X ^ (p.natDegree - i),
+              hmem i⟩ :
+              integralOverIdealPolynomialSubalgebra I) * Polynomial.X ^ i
+    have hqdeg : q.natDegree = p.natDegree := by
+      cases subsingleton_or_nontrivial R with
+      | inl hR =>
+          let _ : Subsingleton R := hR
+          rw [Subsingleton.eq_zero q, Polynomial.natDegree_zero,
+            Subsingleton.eq_zero p, Polynomial.natDegree_zero]
+      | inr _ =>
+          refine Polynomial.natDegree_eq_of_le_of_coeff_ne_zero
+            (Polynomial.natDegree_sum_le_of_forall_le _ _ ?_) ?_
+          · intro i hi
+            exact (Polynomial.natDegree_C_mul_X_pow_le _ _).trans
+              (Nat.le_of_lt_succ (Finset.mem_range.1 hi))
+          · have hqcoeff : q.coeff p.natDegree =
+                (1 : integralOverIdealPolynomialSubalgebra I) := by
+              apply Subtype.ext
+              simp [q, hp.coeff_natDegree]
+            rw [hqcoeff]
+            intro hzero
+            have hzero' : (1 : R[X]) = 0 := congrArg Subtype.val hzero
+            have hzero'' : (1 : R) = 0 := by
+              have := congrArg (fun p : R[X] => p.coeff 0) hzero'
+              simpa only [Polynomial.coeff_one, Polynomial.coeff_zero, if_true] using this
+            exact (one_ne_zero : (1 : R) ≠ 0) hzero''
+    have hqmonic : q.Monic := by
+      rw [Polynomial.Monic, Polynomial.leadingCoeff, hqdeg]
+      apply Subtype.ext
+      simp [q, hp.coeff_natDegree]
+    refine ⟨q, hqmonic, ?_⟩
+    simp [q, integralOverIdealPolynomialMap]
+  · intro h
+    let _ : Algebra R S := f.toAlgebra
+    let _ : Algebra R[X] S[X] := Polynomial.algebra R S
+    change ∃ p : R[X], p.Monic ∧ Polynomial.eval₂ f s p = 0 ∧
+      ∀ i, i < p.natDegree → p.coeff i ∈ I ^ (p.natDegree - i)
+    obtain ⟨p, hp, heval, hcoeff⟩ :=
+      Polynomial.exists_monic_aeval_eq_zero_forall_mem_pow_of_isIntegral
+        (R := R) (S := S) (I := I) (x := s) (by
+        change IsIntegral
+          (Algebra.adjoin R {Polynomial.C r * Polynomial.X | r ∈ I})
+          (Polynomial.C s * Polynomial.X)
+        rw [IsIntegral, Subalgebra.algebraMap_eq]
+        change ((Polynomial.mapRingHom f).comp
+          (Algebra.adjoin R {Polynomial.C r * Polynomial.X | r ∈ I}).val.toRingHom).IsIntegralElem
+          (Polynomial.C s * Polynomial.X) at h
+        simpa [Polynomial.algebraMap_def, RingHom.algebraMap_toAlgebra] using h)
+    refine ⟨p, hp, ?_, ?_⟩
+    · change Polynomial.eval₂ f s p = 0
+      exact heval
+    · intro i hi
+      exact hcoeff i
 
 /-! ## Closure properties -/
 
@@ -81,13 +196,50 @@ theorem integralOverIdeal_isSubmodule
     letI : Module R S := Module.compHom S f
     ∃ M : Submodule R S,
       ∀ s : S, s ∈ M ↔ IsIntegralOverIdeal f I s := by
-  sorry
+  let _ : Module R S := Module.compHom S f
+  let A := integralOverIdealPolynomialSubalgebra I
+  let g := integralOverIdealPolynomialMap f I
+  let M : Submodule R S :=
+    { carrier := {s | IsIntegralOverIdeal f I s}
+      zero_mem' := by
+        change IsIntegralOverIdeal f I 0
+        rw [integralOverIdeal_iff]
+        simpa using g.isIntegralElem_zero
+      add_mem' := by
+        intro s t hs ht
+        change IsIntegralOverIdeal f I s at hs
+        change IsIntegralOverIdeal f I t at ht
+        change IsIntegralOverIdeal f I (s + t)
+        rw [integralOverIdeal_iff] at hs ht ⊢
+        simpa [g, add_mul] using hs.add g ht
+      smul_mem' := by
+        intro r s hs
+        change IsIntegralOverIdeal f I s at hs
+        change IsIntegralOverIdeal f I (f r * s)
+        rw [integralOverIdeal_iff] at hs ⊢
+        have hr : g.IsIntegralElem
+            (g (algebraMap R A r)) := g.isIntegralElem_map
+        have hmul := hr.mul g hs
+        simpa [A, g, integralOverIdealPolynomialMap, smul_eq_mul, mul_assoc] using hmul }
+  refine ⟨M, ?_⟩
+  intro s
+  rfl
 
 /-- The preceding submodule is an ideal for the identity map. -/
 theorem integralClosureOfIdeal_isIdeal
     {R : Type*} [CommRing R] (I : Ideal R) :
     ∃ J : Ideal R, (J : Set R) = integralClosureOfIdeal I := by
-  sorry
+  obtain ⟨M, hM⟩ := integralOverIdeal_isSubmodule (RingHom.id R) I
+  let J : Ideal R :=
+    { carrier := M
+      zero_mem' := M.zero_mem
+      add_mem' := M.add_mem
+      smul_mem' := by
+        intro r x hx
+        simpa using M.smul_mem r hx }
+  refine ⟨J, ?_⟩
+  ext x
+  · exact hM x
 
 /-- Multiplication by an element integral over the base ring preserves
 integrality over the ideal. -/

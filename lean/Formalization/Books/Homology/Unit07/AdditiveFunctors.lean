@@ -661,7 +661,7 @@ theorem mapExtensionClassOfExact_zero
     change IsIso (biprod.lift (F.map biprod.fst) (F.map biprod.snd))
     rw [← F.mapBiprod_hom A B]
     infer_instance
-  letI : IsIso (F.biprodComparison A B) := hcomparison
+  let : IsIso (F.biprodComparison A B) := hcomparison
   change extensionClass (mapExtensionOfExact F hF (splitExtension A B)) =
     extensionClass (splitExtension (F.obj A) (F.obj B))
   let e : ExtensionHom (mapExtensionOfExact F hF (splitExtension A B))
@@ -677,10 +677,10 @@ theorem mapExtensionClassOfExact_zero
       comm_right := by
         change F.biprodComparison A B ≫ biprod.snd =
           F.map (biprod.snd : A ⊞ B ⟶ B)
-        simpa using F.biprodComparison_snd A B }
+        simp }
   let eInv : ExtensionHom (splitExtension (F.obj A) (F.obj B))
       (mapExtensionOfExact F hF (splitExtension A B)) :=
-    { middle := inv (F.biprodComparison A B)
+    { middle := inv (I := hcomparison) (F.biprodComparison A B)
       comm_left := by
         change biprod.inl ≫ inv (F.biprodComparison A B) =
           F.map (biprod.inl : A ⟶ A ⊞ B)
@@ -695,7 +695,8 @@ theorem mapExtensionClassOfExact_zero
         change inv (F.biprodComparison A B) ≫
             F.map (biprod.snd : A ⊞ B ⟶ B) = biprod.snd
         apply (cancel_epi (F.biprodComparison A B)).1
-        rw [IsIso.hom_inv_id, Category.id_comp, F.biprodComparison_snd] }
+        rw [← Category.assoc, IsIso.hom_inv_id (I := hcomparison), Category.id_comp,
+          F.biprodComparison_snd] }
   have hhom : e.middle ≫ eInv.middle = 𝟙 _ := by
     dsimp [e, eInv]
     exact IsIso.hom_inv_id (F.biprodComparison A B)

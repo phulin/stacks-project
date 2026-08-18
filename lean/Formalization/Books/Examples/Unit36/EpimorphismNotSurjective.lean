@@ -346,7 +346,7 @@ theorem target_y_one_ne_zero (k : Type u) [Field k] :
       lt_mul_of_one_lt_left (pow_pos (by decide : 0 < (4 : ℕ)) (N : ℕ))
         (by decide : 1 < (8 : ℕ))
     rw [pow_succ]
-    convert h using 1 <;> ring
+    convert h using 1; ring
   exact Polynomial.not_dvd_of_natDegree_lt (by simp) (by simpa using hlt) hdiv
 
 /-- The degree assigned to a source variable: `deg(xᵢ) = -1` and

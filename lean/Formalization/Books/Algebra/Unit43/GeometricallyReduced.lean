@@ -73,7 +73,7 @@ theorem isGeometricallyReduced_subalgebra
     (hS : IsGeometricallyReduced k S) :
     ∀ A : Subalgebra k S, IsGeometricallyReduced k A := by
   intro A K _ _
-  letI : IsReduced (K ⊗[k] S) := hS K
+  let _ : IsReduced (K ⊗[k] S) := hS K
   exact isReduced_of_injective (Algebra.TensorProduct.map 1 A.val)
     (Module.Flat.lTensor_preserves_injective_linearMap A.val.toLinearMap Subtype.val_injective)
 
@@ -164,7 +164,7 @@ theorem isGeometricallyReduced_directLimit
   have hdlzero := congrArg F.symm hzero
   rw [hφ i (y ^ n)] at hdlzero
   obtain ⟨j, hij, hjy⟩ := Module.DirectLimit.of.zero_exact hdlzero
-  letI : IsReduced (K ⊗[k] A j) := hA j K
+  let _ : IsReduced (K ⊗[k] A j) := hA j K
   let g : (K ⊗[k] A i) →ₐ[K] (K ⊗[k] A j) :=
     Algebra.TensorProduct.map (AlgHom.id K K) (f i j hij)
   have hpow : (g y) ^ n = 0 := by
@@ -180,10 +180,10 @@ theorem isGeometricallyReduced_localization
     (hR : IsGeometricallyReduced k R) (M : Submonoid R) :
     IsGeometricallyReduced k (Localization M) := by
   intro K _ _
-  letI : IsReduced (K ⊗[k] R) := hR K
+  let _ : IsReduced (K ⊗[k] R) := hR K
   let M' : Submonoid (K ⊗[k] R) :=
     M.map (Algebra.TensorProduct.includeRight (R := k) (A := K))
-  letI : IsReduced (Localization M') := inferInstance
+  let _ : IsReduced (Localization M') := inferInstance
   let e : (K ⊗[k] Localization M) ≃ₐ[K] Localization M' :=
     IsLocalization.tensorProductEquivOfMapIncludeRight k K M (Localization M)
       (Localization M')

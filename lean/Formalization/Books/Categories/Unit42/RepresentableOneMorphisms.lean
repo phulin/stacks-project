@@ -1390,7 +1390,10 @@ theorem rawDiagonalFunctor_mapsStronglyCartesian
     {X C : Type*} [Category* X] [Category* C]
     (p : X ⥤ C) (hp : p.IsFibredInGroupoids) :
     MapsStronglyCartesian p (twoProductBase p p) (rawDiagonalFunctor p) := by
-  sorry
+  intro a b φ _
+  exact fibredInGroupoids_all_morphisms_stronglyCartesian
+    (twoProductBase p p) (twoProductBase_isFibredInGroupoids p hp)
+    ((rawDiagonalFunctor p).map φ)
 
 def rawDiagonalMorphism
     {X C : Type*} [Category* X] [Category* C]

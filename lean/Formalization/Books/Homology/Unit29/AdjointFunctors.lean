@@ -1,6 +1,7 @@
 import Formalization.Books.Homology.Unit27.Injectives
 import Formalization.Books.Categories.Unit23.ExactFunctors
 import Mathlib.Algebra.Category.ModuleCat.ChangeOfRings
+import Mathlib.Algebra.Category.ModuleCat.ChangeOfRingsExact
 import Mathlib.CategoryTheory.Adjunction.PartialAdjoint
 import Mathlib.CategoryTheory.Preadditive.AdditiveFunctor
 import Mathlib.CategoryTheory.Preadditive.Injective.Preserves

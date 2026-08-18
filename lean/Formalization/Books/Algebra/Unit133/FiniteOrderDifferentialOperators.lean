@@ -2466,7 +2466,29 @@ def diagonalGenerator (g : S) : S ⊗[R] S :=
 theorem diagonalIdeal_eq_span_generators :
     diagonalIdeal (R := R) (S := S) =
       Ideal.span (Set.range (diagonalGenerator (R := R) (S := S))) := by
-  sorry
+  change KaehlerDifferential.ideal R S = _
+  rw [← KaehlerDifferential.span_range_eq_ideal]
+  apply le_antisymm
+  · rw [Ideal.span_le]
+    rintro _ ⟨g, rfl⟩
+    change (1 : S) ⊗ₜ[R] g - g ⊗ₜ[R] (1 : S) ∈
+      Ideal.span (Set.range (diagonalGenerator (R := R) (S := S)))
+    have hmem : diagonalGenerator (R := R) (S := S) g ∈
+        Ideal.span (Set.range (diagonalGenerator (R := R) (S := S))) :=
+      Ideal.subset_span ⟨g, rfl⟩
+    simpa [diagonalGenerator, sub_eq_add_neg, add_comm, add_left_comm, add_assoc]
+      using (neg_mem hmem)
+  · rw [Ideal.span_le]
+    rintro _ ⟨g, rfl⟩
+    change g ⊗ₜ[R] (1 : S) - (1 : S) ⊗ₜ[R] g ∈
+      Ideal.span (Set.range (fun s : S =>
+        (1 : S) ⊗ₜ[R] s - s ⊗ₜ[R] (1 : S)))
+    have hmem : (1 : S) ⊗ₜ[R] g - g ⊗ₜ[R] (1 : S) ∈
+        Ideal.span (Set.range (fun s : S =>
+          (1 : S) ⊗ₜ[R] s - s ⊗ₜ[R] (1 : S))) :=
+      Ideal.subset_span ⟨g, rfl⟩
+    simpa [diagonalGenerator, sub_eq_add_neg, add_comm, add_left_comm, add_assoc]
+      using (neg_mem hmem)
 
 def diagonalHigherRelation (k : ℕ) (g : Fin (k + 1) → S) (m : M) : S ⊗[R] M := by
   classical
@@ -2492,7 +2514,18 @@ theorem principalParts_diagonal_equiv_exists (k : ℕ) :
       ∀ m,
         e (principalPartsGenerator (R := R) (S := S) k m) =
           diagonalUniversalLinearMap (R := R) (S := S) (M := M) k m := by
-  sorry
+  let D : M →ₗ[R] DiagonalPrincipalParts (R := R) (S := S) (M := M) k :=
+    diagonalUniversalLinearMap (R := R) (S := S) (M := M) k
+  have hD : IsDifferentialOperator (R := R) (S := S) k D := by
+    apply isDifferentialOperator_of_principalPartsHigherEvaluation
+    intro g m
+    rw [principalPartsHigherEvaluation_eq_map]
+    simp only [principalPartsHigherEvaluationMap, principalPartsHigherRelation,
+      Finsupp.lsum_apply, Finset.smul_sum, Finsupp.smul_single',
+      smul_smul, mul_assoc, mul_comm, mul_left_comm]
+    trace_state
+    sorry
+  exact ⟨LinearEquiv.refl _, by intro m; rfl⟩
 
 noncomputable def principalPartsDiagonalEquiv (k : ℕ) :
     PrincipalParts (R := R) (S := S) (M := M) k ≃ₗ[S]

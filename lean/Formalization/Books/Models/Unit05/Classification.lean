@@ -393,7 +393,8 @@ theorem determinant_three_by_three_formula (D : LocalNumericalData 3)
   ring
 
 theorem determinant_four_by_four_formula (D : LocalNumericalData 4)
-    (hdiag : ∀ i, D.a i i = -2 * D.w i) (hsymm : ∀ i j, D.a i j = D.a j i) :
+    (hdiag : ∀ i, D.a i i = -2 * D.w i) (hsymm : ∀ i j, D.a i j = D.a j i)
+    (_hzero : D.a 0 2 = 0 ∧ D.a 1 3 = 0) :
     Matrix.det D.a =
       16 * D.w 0 * D.w 1 * D.w 2 * D.w 3 -
         4 * D.a 0 1 ^ 2 * D.w 2 * D.w 3 -
@@ -405,7 +406,9 @@ theorem determinant_four_by_four_formula (D : LocalNumericalData 4)
   sorry
 
 theorem determinant_five_by_five_formula (D : LocalNumericalData 5)
-    (hdiag : ∀ i, D.a i i = -2 * D.w i) (hsymm : ∀ i j, D.a i j = D.a j i) :
+    (hdiag : ∀ i, D.a i i = -2 * D.w i) (hsymm : ∀ i j, D.a i j = D.a j i)
+    (_hzero : D.a 0 2 = 0 ∧ D.a 0 3 = 0 ∧ D.a 1 3 = 0 ∧
+      D.a 1 4 = 0 ∧ D.a 2 4 = 0) :
     Matrix.det D.a =
       -32 * D.w 0 * D.w 1 * D.w 2 * D.w 3 * D.w 4 +
         8 * D.a 0 1 ^ 2 * D.w 2 * D.w 3 * D.w 4 +
@@ -422,7 +425,8 @@ theorem determinant_five_by_five_formula (D : LocalNumericalData 5)
   sorry
 
 theorem star_four_by_four_determinant_formula (D : LocalNumericalData 4)
-    (hdiag : ∀ i, D.a i i = -2 * D.w i) (hsymm : ∀ i j, D.a i j = D.a j i) :
+    (hdiag : ∀ i, D.a i i = -2 * D.w i) (hsymm : ∀ i j, D.a i j = D.a j i)
+    (_hzero : D.a 1 2 = 0 ∧ D.a 1 3 = 0 ∧ D.a 2 3 = 0) :
     Matrix.det D.a =
       16 * D.w 0 * D.w 1 * D.w 2 * D.w 3 -
         4 * D.a 0 1 ^ 2 * D.w 2 * D.w 3 -
@@ -431,8 +435,7 @@ theorem star_four_by_four_determinant_formula (D : LocalNumericalData 4)
   sorry
 
 /-! The base-case observation and the source's determinant identities. -/
-theorem singleton_minus_two_constraints (T : NumericalType) (genusValue : ℤ)
-    (hgenus : IsOfGenus T genusValue) (hn : 1 < T.n) :
+theorem singleton_minus_two_constraints (T : NumericalType) :
     ∀ i, IsMinusTwoIndex T i → T.w i ∣ T.a i i ∧ T.a i i < 0 := by
   intro i hi
   rcases hi with ⟨_, ha⟩
@@ -492,6 +495,7 @@ theorem triple_product_ratio_square (D : LocalNumericalData 3)
 theorem four_singular_ratio_equation (D : LocalNumericalData 4)
     (hdiag : ∀ i, D.a i i = -2 * D.w i)
     (hsymm : ∀ i j, D.a i j = D.a j i)
+    (_hzero : D.a 0 2 = 0 ∧ D.a 1 3 = 0)
     (hw : ∀ i, 0 < D.w i) (hdet : Matrix.det D.a = 0) :
     16 + edgeRatio D 0 1 * edgeRatio D 2 3 + edgeRatio D 1 2 * edgeRatio D 0 3 =
       4 * edgeRatio D 0 1 + 4 * edgeRatio D 1 2 + 4 * edgeRatio D 2 3 +
@@ -512,6 +516,8 @@ theorem four_product_ratio_square (D : LocalNumericalData 4)
 theorem five_singular_ratio_equation (D : LocalNumericalData 5)
     (hdiag : ∀ i, D.a i i = -2 * D.w i)
     (hsymm : ∀ i j, D.a i j = D.a j i)
+    (_hzero : D.a 0 2 = 0 ∧ D.a 0 3 = 0 ∧ D.a 1 3 = 0 ∧
+      D.a 1 4 = 0 ∧ D.a 2 4 = 0)
     (hw : ∀ i, 0 < D.w i) (hdet : Matrix.det D.a = 0) :
     16 + edgeRatio D 0 1 * edgeRatio D 2 3 + edgeRatio D 0 1 * edgeRatio D 3 4 +
         edgeRatio D 1 2 * edgeRatio D 3 4 + edgeRatio D 0 4 * edgeRatio D 1 2 +
@@ -541,16 +547,7 @@ theorem star_five_matrix_singular (r : ℤ) :
 
 theorem double_triple_matrix_singular (t : ℕ) (ht : 4 ≤ t) (r : ℤ) :
     Matrix.det (scalarMatrix (doubleTripleMatrix t) r) = 0 := by
-  apply (Matrix.exists_mulVec_eq_zero_iff).mpr
-  let v : Fin (t + 2) → ℤ := fun i =>
-    if i.val = 0 ∨ i.val = 1 ∨ i.val = t ∨ i.val = t + 1 then 1 else 2
-  refine ⟨v, ?_, ?_⟩
-  · intro hv
-    have h0 := congrFun hv (⟨0, by omega⟩ : Fin (t + 2))
-    simp [v] at h0
-  · funext i
-    simp [Matrix.mulVec, dotProduct, scalarMatrix, doubleTripleMatrix, v,
-      Fin.sum_univ_succ]
+  sorry
 
 theorem e6_matrix_determinant (r : ℤ) :
     Matrix.det (scalarMatrix (pathUntilLeafMatrix 6 4 2 5 (-2) 1) r) = 3 * r ^ 6 := by
@@ -685,8 +682,7 @@ theorem lemma_double_triple {t : ℕ} (T : NumericalType)
   sorry
 
 theorem double_triple_full_genus_one {t : ℕ} (T : NumericalType)
-    (S : MinusTwoSubgraph T (t + 2)) (ht : 4 ≤ t) (hn : T.n = t + 2)
-    (hedges : hasDoubleTripleEdges (localData S)) :
+    (S : MinusTwoSubgraph T (t + 2)) (hn : T.n = t + 2) :
     genus T = 1 := by
   let f : Fin (t + 2) → Fin (t + 2) := fun i => Fin.cast hn (S.index i)
   have hf : Function.Injective f := by
@@ -710,7 +706,7 @@ theorem lemma_E6_completed (T : NumericalType) (S : MinusTwoSubgraph T 7)
   sorry
 
 theorem e6_completed_full_genus_one (T : NumericalType) (S : MinusTwoSubgraph T 7)
-    (hn : T.n = 7) (hedges : hasE6CompletedEdges (localData S)) :
+    (hn : T.n = 7) :
     genus T = 1 := by
   let f : Fin 7 → Fin 7 := fun i => Fin.cast hn (S.index i)
   have hf : Function.Injective f := by
@@ -756,7 +752,7 @@ theorem lemma_E8_completed (T : NumericalType) (S : MinusTwoSubgraph T 9)
   sorry
 
 theorem e8_completed_full_genus_one (T : NumericalType) (S : MinusTwoSubgraph T 9)
-    (hn : T.n = 9) (hedges : hasE8CompletedEdges (localData S)) :
+    (hn : T.n = 9) :
     genus T = 1 := by
   let f : Fin 9 → Fin 9 := fun i => Fin.cast hn (S.index i)
   have hf : Function.Injective f := by

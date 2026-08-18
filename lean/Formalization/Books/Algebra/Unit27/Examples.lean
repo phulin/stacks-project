@@ -2010,9 +2010,10 @@ theorem affine_presentation_relation_irreducible :
     have hroot := (Polynomial.mem_roots hp0).mp hr
     change Polynomial.eval r (Polynomial.X ^ 3 + q) = 0 at hroot
     have hroot' : r ^ 3 + x * r - x ^ 2 = 0 := by
-      convert hroot using 1 <;>
-        simp [q, x, Polynomial.eval_add, Polynomial.eval_sub,
-          Polynomial.eval_mul] <;> ring
+      convert hroot using 1
+      simp [q, x, Polynomial.eval_add, Polynomial.eval_sub,
+        Polynomial.eval_mul]
+      ring
     exact hno_root r hroot'
   have hp : Irreducible (Polynomial.X ^ 3 + q) := by
     have hp2 : 2 ≤ (Polynomial.X ^ 3 + q).natDegree := by omega
@@ -2022,7 +2023,9 @@ theorem affine_presentation_relation_irreducible :
         hroots
   have hpm : Irreducible (e affinePresentationRelation) := by
     rw [he]
-    convert hp using 1 <;> simp [q, x] <;> ring
+    convert hp using 1
+    simp [q, x]
+    ring
   exact (MulEquiv.irreducible_iff e.toRingEquiv.toMulEquiv).mp hpm
 
 theorem affine_presentation_primes_containing_relation

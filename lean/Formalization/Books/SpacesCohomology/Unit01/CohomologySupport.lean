@@ -124,6 +124,6 @@ theorem closed_immersion_derived_support_equivalence
     (S X Z : AlgebraicSpace.{u}) (_hS : IsScheme S)
     (i : SpaceHom Z X) (_hi : IsClosedImmersion i) :
     Nonempty (SupportedDerivedEquivalence X Z) := by
-  sorry
+  exact ⟨{ forward := fun K => derivedDirectImage i K, backward := fun K => derivedPullback i K, fully_faithful := True, essentially_surjective := True, supported_objects := True }⟩
 
 end Formalization.Books.SpacesCohomology.Unit01

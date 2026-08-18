@@ -65,13 +65,33 @@ theorem KZero.classOf_shortExact
     {C : Type u} [Category.{v} C] [HasZeroMorphisms C] (r : KZeroRelation C) :
     KZero.classOf r.sequence.X₂ =
       KZero.classOf r.sequence.X₁ + KZero.classOf r.sequence.X₃ := by
-  sorry
+  change (QuotientAddGroup.mk' (KZeroRelations C)
+      (FreeAbelianGroup.of r.sequence.X₂)) =
+    (QuotientAddGroup.mk' (KZeroRelations C)
+      (FreeAbelianGroup.of r.sequence.X₁ + FreeAbelianGroup.of r.sequence.X₃));
+  apply (QuotientAddGroup.eq_iff_sub_mem).2;
+  have h : KZeroRelation.generator r ∈ KZeroRelations C :=
+    AddSubgroup.subset_closure (Set.mem_range.2 ⟨r, rfl⟩);
+  simpa [KZeroRelation.generator, sub_eq_add_neg, add_assoc, add_left_comm, add_comm] using h
 
 /-- The zero short exact sequence gives the zero class. -/
 theorem KZero.classOf_zero
     {C : Type u} [Category.{v} C] [Abelian C] :
     KZero.classOf (0 : C) = 0 := by
-  sorry
+  let S : ShortComplex C :=
+    ShortComplex.mk (0 : (0 : C) ⟶ (0 : C))
+      (0 : (0 : C) ⟶ (0 : C)) (by simp);
+  let hS : S.ShortExact :=
+    { exact := ShortComplex.exact_of_isZero_X₂ S (isZero_zero C)
+      mono_f := inferInstance
+      epi_g := inferInstance };
+  have h := KZero.classOf_shortExact
+    ({ sequence := S, shortExact := hS } : KZeroRelation C);
+  change (KZero.classOf (0 : C) =
+      KZero.classOf (0 : C) + KZero.classOf (0 : C)) at h;
+  exact (by
+    simpa only [add_sub_cancel_right, sub_self] using
+      (congrArg (fun z => z - KZero.classOf (0 : C)) h.symm))
 
 /-! ## Maps induced by exact functors -/
 
@@ -110,7 +130,7 @@ theorem kZeroMap_classOf
     {D : Type u'} [Category.{v'} D] [HasZeroMorphisms D]
     [Abelian C] [Abelian D] (F : C ⥤ₑ D) (A : C) :
     kZeroMap F (KZero.classOf A) = KZero.classOf (F.obj.obj A) := by
-  sorry
+  rfl
 
 /-! ## Cyclic complexes and their two cohomology objects -/
 
@@ -166,7 +186,8 @@ end CyclicComplex
 both canonical homology objects. -/
 theorem cyclicComplex_isExact_iff_isZero_H0_H1 (K : CyclicComplex C) :
     K.IsExact ↔ IsZero K.H0 ∧ IsZero K.H1 := by
-  sorry
+  simp only [CyclicComplex.IsExact, CyclicComplex.H0, CyclicComplex.H1,
+    ShortComplex.exact_iff_isZero_homology]
 
 /-! ## The Serre-subcategory exact sequence -/
 

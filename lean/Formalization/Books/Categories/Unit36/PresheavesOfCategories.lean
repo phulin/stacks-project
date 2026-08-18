@@ -20,7 +20,7 @@ open Opposite
 open Formalization.Books.Categories.Unit29
 open Formalization.Books.Categories.Unit33
 
-universe vC uC vS uS vD uD
+universe vC uC vS uS vF uF vD uD
 
 noncomputable section
 
@@ -193,13 +193,14 @@ def IsSplitFibredCategory
   {S : Type uS} [Category.{vS} S]
     (p : S ⥤ C) : Prop :=
   p.IsFibered ∧
-    ∃ F : Cᵒᵖ ⥤ Cat.{vS, uS},
+    ∃ F : Cᵒᵖ ⥤ Cat.{vF, uF},
       IsomorphicOverBase p (splitFibredProjection F)
 
 theorem splitFibredCategory_isSplit
   {C : Type uC} [Category.{vC} C]
     (F : Cᵒᵖ ⥤ Cat.{vS, uS}) :
-    IsSplitFibredCategory (splitFibredProjection F) := by
+    IsSplitFibredCategory.{vC, uC, _, _, vS, uS}
+      (splitFibredProjection F) := by
   constructor
   · exact splitFibredProjection_isFibered F
   · refine ⟨F, ?_⟩
@@ -219,9 +220,10 @@ def isStrictPullbackChoice
       P.pullbackFunctor f ⋙ P.pullbackFunctor g
 
 theorem isSplitFibredCategory_iff_exists_strictPullbackChoice
-    {S C : Type*} [Category* S] [Category* C]
+    {S : Type uS} [Category.{vS} S]
+    {C : Type uC} [Category.{vC} C]
     (p : S ⥤ C) [p.IsFibered] :
-    IsSplitFibredCategory p ↔
+    IsSplitFibredCategory.{vC, uC, vS, uS, vS, uS} p ↔
       ∃ P : PullbackChoice p, P.IsUnital ∧ isStrictPullbackChoice P := by
   sorry
 
@@ -542,9 +544,12 @@ theorem strictificationProjection_isFibered
   exact ⟨A, κ, hκstrong⟩
 
 theorem strictificationProjection_isSplit
-    {S C : Type*} [Category* S] [Category* C]
+    {S : Type uS} [Category.{vS} S]
+    {C : Type uC} [Category.{vC} C]
     {p : S ⥤ C} [p.IsFibered] (P : PullbackChoice p) :
-    IsSplitFibredCategory (strictificationProjection P) := by
+    IsSplitFibredCategory.{vC, uC, vS, max (max uC vC) uS, vS,
+      max (max uC vC) uS}
+      (strictificationProjection P) := by
   sorry
 
 theorem strictification_object_description

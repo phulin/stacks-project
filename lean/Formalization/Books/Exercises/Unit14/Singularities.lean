@@ -788,7 +788,80 @@ theorem ordinaryDoublePoint_normalForm_equiv_of_pairEquivalent
     Nonempty
       (ordinaryDoublePointNormalForm P ≃ₐ[k]
         ordinaryDoublePointNormalForm Q) := by
-  sorry
+  obtain ⟨σ, u, ℓ, hσ⟩ := h
+  let A : Matrix (Fin 2) (Fin 2) P.K :=
+    LinearMap.toMatrix' (ℓ : (Fin 2 → P.K) →ₗ[P.K] (Fin 2 → P.K))
+  let B : Matrix (Fin 2) (Fin 2) P.K :=
+    LinearMap.toMatrix' (ℓ.symm : (Fin 2 → P.K) →ₗ[P.K] (Fin 2 → P.K))
+  have hAB : A * B = 1 := by
+    change LinearMap.toMatrix' (ℓ : (Fin 2 → P.K) →ₗ[P.K] (Fin 2 → P.K)) *
+        LinearMap.toMatrix' (ℓ.symm : (Fin 2 → P.K) →ₗ[P.K] (Fin 2 → P.K)) = 1
+    rw [← LinearMap.toMatrix'_mul]
+    rw [show (ℓ : (Fin 2 → P.K) →ₗ[P.K] _) *
+          (ℓ.symm : (Fin 2 → P.K) →ₗ[P.K] _) = LinearMap.id by
+      ext x
+      simp, LinearMap.toMatrix'_id]
+  have hBA : B * A = 1 := by
+    change LinearMap.toMatrix' (ℓ.symm : (Fin 2 → P.K) →ₗ[P.K] (Fin 2 → P.K)) *
+        LinearMap.toMatrix' (ℓ : (Fin 2 → P.K) →ₗ[P.K] (Fin 2 → P.K)) = 1
+    rw [← LinearMap.toMatrix'_mul]
+    rw [show (ℓ.symm : (Fin 2 → P.K) →ₗ[P.K] _) *
+          (ℓ : (Fin 2 → P.K) →ₗ[P.K] _) = LinearMap.id by
+      ext x
+      simp, LinearMap.toMatrix'_id]
+  let ℓdual : (Fin 2 → P.K) ≃ₗ[P.K] (Fin 2 → P.K) :=
+    Matrix.toLin'OfInv (M := Matrix.transpose A) (M' := Matrix.transpose B)
+      (by rw [← Matrix.transpose_mul, hBA, Matrix.transpose_one])
+      (by rw [← Matrix.transpose_mul, hAB, Matrix.transpose_one])
+  have hdual (i j : Fin 2) :
+      ℓdual (Pi.single i 1) j = ℓ.symm (Pi.single j 1) i := by
+    simp [ℓdual, Matrix.toLin'OfInv, Matrix.toLin'_apply, B,
+      Matrix.mulVec, Matrix.transpose]
+  obtain ⟨⟨φ, hφX, hφC⟩⟩ := binaryQuadraticPair_linearCoordinate_lift P Q σ ℓdual
+  have hφC' (a : P.K) :
+      φ ((algebraMap P.K (MvPowerSeries (Fin 2) P.K)) a) =
+        MvPowerSeries.C (σ a) := by
+    exact hφC a
+  have h00 := hσ (ℓ.symm (Pi.single (0 : Fin 2) 1))
+  have h11 := hσ (ℓ.symm (Pi.single (1 : Fin 2) 1))
+  have h01 := hσ (ℓ.symm (Pi.single (0 : Fin 2) 1 + Pi.single (1 : Fin 2) 1))
+  simp [binaryQuadraticFormOfCoefficients, QuadraticMap.proj_apply] at h00 h11 h01
+  have hc00 := congrArg (MvPowerSeries.C : Q.K →+* MvPowerSeries (Fin 2) Q.K) h00
+  have hc11 := congrArg (MvPowerSeries.C : Q.K →+* MvPowerSeries (Fin 2) Q.K) h11
+  have hc01 := congrArg (MvPowerSeries.C : Q.K →+* MvPowerSeries (Fin 2) Q.K) h01
+  simp only [map_add, map_mul] at hc00 hc11 hc01
+  refine ⟨Ideal.quotientEquivAlg
+    (Ideal.span {binaryQuadraticPowerSeries P.coeffA P.coeffB P.coeffC})
+    (Ideal.span {binaryQuadraticPowerSeries Q.coeffA Q.coeffB Q.coeffC})
+    φ ?_⟩
+  change Ideal.span {binaryQuadraticPowerSeries Q.coeffA Q.coeffB Q.coeffC} =
+    Ideal.map (φ : _ →+* _) (Ideal.span {binaryQuadraticPowerSeries P.coeffA P.coeffB P.coeffC})
+  rw [Ideal.map_span, Set.image_singleton]
+  change Ideal.span {binaryQuadraticPowerSeries Q.coeffA Q.coeffB Q.coeffC} =
+    Ideal.span {φ (binaryQuadraticPowerSeries P.coeffA P.coeffB P.coeffC)}
+  have hq :
+      φ (binaryQuadraticPowerSeries P.coeffA P.coeffB P.coeffC) =
+        MvPowerSeries.C (σ (u : P.K)) *
+          binaryQuadraticPowerSeries Q.coeffA Q.coeffB Q.coeffC := by
+    unfold binaryQuadraticPowerSeries
+    simp only [Algebra.smul_def, map_add, map_mul, map_pow, hφC', hφX,
+      binaryQuadraticLiftCoordinate, Fin.sum_univ_two]
+    rw [hdual 0 0, hdual 0 1, hdual 1 0, hdual 1 1]
+    simp only [← MvPowerSeries.c_eq_algebraMap]
+    linear_combination hc00 * (MvPowerSeries.X (0 : Fin 2)) ^ 2 +
+      (hc01 - hc00 - hc11) *
+        (MvPowerSeries.X (0 : Fin 2) * MvPowerSeries.X (1 : Fin 2)) +
+      hc11 * (MvPowerSeries.X (1 : Fin 2)) ^ 2
+  rw [hq]
+  let uQ : Q.Kˣ := Units.map σ.toRingEquiv.toMonoidHom u
+  let v : (MvPowerSeries (Fin 2) Q.K)ˣ :=
+    Units.map MvPowerSeries.C.toMonoidHom uQ
+  have hv : (v : MvPowerSeries (Fin 2) Q.K) = MvPowerSeries.C (σ (u : P.K)) := by
+    rfl
+  have hi := principalIdeal_unitMultiple v
+    (binaryQuadraticPowerSeries Q.coeffA Q.coeffB Q.coeffC)
+  rw [hv] at hi
+  exact hi.symm
 
 theorem ordinaryDoublePoint_normalForm_cotangent_equiv
     {k : Type u} [Field k] (P Q : BinaryQuadraticPair k)

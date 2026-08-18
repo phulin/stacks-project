@@ -144,13 +144,16 @@ theorem isConstructible_image_of_localization
     (hE : IsConstructible E) :
     IsConstructible
       (PrimeSpectrum.comap (algebraMap R (Localization.Away f)) '' E) := by
-  sorry
+  exact PrimeSpectrum.isConstructible_comap_image
+    (RingHom.finitePresentation_algebraMap.mpr (IsLocalization.Away.finitePresentation f)) hE
 
 theorem isConstructible_image_of_fg_quotient
     {R : Type u} [CommRing R] (I : Ideal R) (hI : I.FG)
     {E : Set (PrimeSpectrum (R ⧸ I))} (hE : IsConstructible E) :
     IsConstructible (PrimeSpectrum.comap (Ideal.Quotient.mk I) '' E) := by
-  sorry
+  exact PrimeSpectrum.isConstructible_comap_image
+    (RingHom.FinitePresentation.of_surjective (Ideal.Quotient.mk I)
+      Ideal.Quotient.mk_surjective (by rw [Ideal.mk_ker]; exact hI)) hE
 
 /-! ## The affine line -/
 
@@ -164,7 +167,23 @@ theorem polynomial_spectrum_comap_isOpen_and_standardOpen_image_isCompactOpen
           IsOpen
             (PrimeSpectrum.comap (Polynomial.C : R →+* Polynomial R) ''
               (PrimeSpectrum.basicOpen f : Set (PrimeSpectrum (Polynomial R)))) := by
-  sorry
+  classical
+  refine ⟨Polynomial.isOpenMap_comap_C, fun f ↦ ?_⟩
+  rw [Polynomial.image_comap_C_basicOpen]
+  refine (PrimeSpectrum.isCompact_isOpen_iff.mpr ⟨f.support.image f.coeff, ?_⟩)
+  ext p
+  simp only [Set.mem_compl_iff, PrimeSpectrum.mem_zeroLocus, Finset.coe_image]
+  apply not_congr
+  constructor
+  · intro h a ha
+    obtain ⟨i, rfl⟩ := ha
+    by_cases hi : i ∈ f.support
+    · exact h ⟨i, hi, rfl⟩
+    · rw [Polynomial.notMem_support_iff.mp hi]
+      exact p.asIdeal.zero_mem
+  · intro h a ha
+    obtain ⟨i, hi, rfl⟩ := ha
+    exact h ⟨i, rfl⟩
 
 /-! ## Characteristic polynomials and the affine-line special case -/
 
@@ -190,7 +209,36 @@ theorem exists_fin_union_basicOpen_image_of_isUnit_leadingCoeff
           ((PrimeSpectrum.basicOpen f : Set (PrimeSpectrum (Polynomial R))) ∩
             PrimeSpectrum.zeroLocus ({g} : Set (Polynomial R))) =
         ⋃ i, (PrimeSpectrum.basicOpen (r i) : Set (PrimeSpectrum R)) := by
-  sorry
+  classical
+  let g' : Polynomial R := hg.unit⁻¹ • g
+  have hg' : g'.Monic := by
+    dsimp [g']
+    exact Polynomial.monic_of_isUnit_leadingCoeff_inv_smul hg
+  have hzero : PrimeSpectrum.zeroLocus ({g'} : Set (Polynomial R)) =
+      PrimeSpectrum.zeroLocus ({g} : Set (Polynomial R)) := by
+    ext q
+    simp only [PrimeSpectrum.mem_zeroLocus, singleton_subset_iff, g', Units.smul_def,
+      Algebra.smul_def]
+    change (Polynomial.C (↑hg.unit⁻¹ : R) * g ∈ q.asIdeal) ↔ g ∈ q.asIdeal
+    have hu : Polynomial.C (↑hg.unit⁻¹ : R) ∉ q.asIdeal := by
+      intro hq
+      exact q.isPrime.ne_top (Ideal.eq_top_of_isUnit_mem _ hq
+        ((hg.unit⁻¹).isUnit.map Polynomial.C))
+    exact Ideal.IsPrime.mul_mem_left_iff (I := q.asIdeal) hu
+  obtain ⟨t, ht⟩ := Polynomial.exists_image_comap_of_monic f g' hg'
+  have hdomain :
+      (PrimeSpectrum.basicOpen f : Set (PrimeSpectrum (Polynomial R))) ∩
+          PrimeSpectrum.zeroLocus ({g} : Set (Polynomial R)) =
+        PrimeSpectrum.zeroLocus ({g'} : Set (Polynomial R)) \ PrimeSpectrum.zeroLocus ({f} : Set (Polynomial R)) := by
+    rw [PrimeSpectrum.basicOpen_eq_zeroLocus_compl, hzero]
+    ext q
+    simp [and_comm]
+  refine ⟨t.card, fun i => (t.equivFin.symm i : R), ?_⟩
+  rw [hdomain, ht, ← (t : Set R).iUnion_of_singleton_coe,
+    PrimeSpectrum.zeroLocus_iUnion, Set.compl_iInter]
+  apply Set.iUnion_congr_of_surjective (t.equivFin) t.equivFin.surjective
+  intro x
+  simp
 
 /-! ## Chevalley's theorem -/
 

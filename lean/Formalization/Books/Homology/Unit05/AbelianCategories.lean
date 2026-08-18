@@ -553,7 +553,52 @@ theorem cocartesian_iff_exact
     IsPushout f g h k ↔
       (ComposableArrows.mk₃ (biprod.lift g (-f)) (biprod.desc k h)
         (0 : Z ⟶ (0 : C))).Exact := by
-  sorry
+  let sq : CommSq f g h k := ⟨comm⟩
+  constructor
+  · intro hpo
+    have hsc := hpo.flip.exact_shortComplex
+    change (ShortComplex.mk (biprod.lift g (-f)) (biprod.desc k h)
+        (by simp [comm])).Exact at hsc
+    have hepi := hpo.flip.epi_shortComplex_g
+    change Epi (biprod.desc k h) at hepi
+    refine ⟨?_, ?_⟩
+    · refine ⟨?_⟩
+      intro i hi
+      obtain rfl | rfl : i = 0 ∨ i = 1 := by omega
+      · dsimp
+        change biprod.lift g (-f) ≫ biprod.desc k h = 0
+        simp [comm]
+      · dsimp
+        change biprod.desc k h ≫ (0 : Z ⟶ (0 : C)) = 0
+        simp
+    · intro i hi
+      obtain rfl | rfl : i = 0 ∨ i = 1 := by omega
+      · change (ShortComplex.mk (biprod.lift g (-f)) (biprod.desc k h)
+          (by simp [comm])).Exact
+        exact hsc
+      · change (ShortComplex.mk (biprod.desc k h) (0 : Z ⟶ (0 : C))
+          (by simp)).Exact
+        exact (ShortComplex.exact_iff_epi _ rfl).2 hepi
+  · intro hex
+    have hepi : Epi (biprod.desc k h) := by
+      have h' := hex.exact 1
+      change (ShortComplex.mk (biprod.desc k h) (0 : Z ⟶ (0 : C))
+        (by simp)).Exact at h'
+      exact (ShortComplex.exact_iff_epi _ rfl).1 h'
+    let : Epi (biprod.desc k h) := hepi
+    have hsc : (ShortComplex.mk (biprod.lift g (-f)) (biprod.desc k h)
+        (by simp [comm])).Exact := by
+      have h' := hex.exact 0
+      change (ShortComplex.mk (biprod.lift g (-f)) (biprod.desc k h)
+        (by simp [comm])).Exact at h'
+      exact h'
+    have hpo : IsPushout g f k h := by
+      refine IsPushout.of_isColimit
+        (c := PushoutCocone.mk k h (by simpa [sq] using sq.flip.w)) ?_
+      simpa [sq] using
+        (sq.flip.isColimitEquivIsColimitCokernelCofork).symm
+          (by simpa [sq] using hsc.gIsCokernel)
+    exact hpo.flip
 
 theorem cartesian_kernel_map_isIso
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -574,14 +619,111 @@ theorem cartesian_epi_is_cocartesian
     {W X Y Z : C} {f : W ⟶ Y} {g : W ⟶ X} {h : Y ⟶ Z} {k : X ⟶ Z}
     (sq : IsPullback f g h k) [Epi k] :
     IsPushout f g h k ∧ Epi f := by
-  sorry
+  have hf : Epi f := by
+    apply Abelian.epi_fst_of_isLimit h k sq.isLimit
+  have hpb : IsPullback g (-f) k (-h) := by
+    let negIso : Y ≅ Y :=
+      { hom := -𝟙 Y
+        inv := -𝟙 Y
+        hom_inv_id := by simp
+        inv_hom_id := by simp }
+    apply sq.flip.of_iso (Iso.refl W) (Iso.refl X) negIso (Iso.refl Z)
+    · simp
+    · simp [negIso]
+    · simp
+    · simp [negIso]
+  have hsc : (ShortComplex.mk (biprod.lift g (-f)) (biprod.desc k h)
+      (by simp [sq.w])).Exact := by
+    simpa [CommSq.shortComplex'] using hpb.exact_shortComplex'
+  have hepi : Epi (biprod.desc k h) := by
+    exact epi_of_epi_fac (biprod.inl_desc k h)
+  have hex : (ComposableArrows.mk₃ (biprod.lift g (-f)) (biprod.desc k h)
+      (0 : Z ⟶ (0 : C))).Exact := by
+    refine ⟨?_, ?_⟩
+    · refine ⟨?_⟩
+      intro i hi
+      obtain rfl | rfl : i = 0 ∨ i = 1 := by omega
+      · dsimp
+        change biprod.lift g (-f) ≫ biprod.desc k h = 0
+        simp [sq.w]
+      · dsimp
+        change biprod.desc k h ≫ (0 : Z ⟶ (0 : C)) = 0
+        simp
+    · intro i hi
+      obtain rfl | rfl : i = 0 ∨ i = 1 := by omega
+      · change (ShortComplex.mk (biprod.lift g (-f)) (biprod.desc k h)
+          (by simp [sq.w])).Exact
+        exact hsc
+      · change (ShortComplex.mk (biprod.desc k h) (0 : Z ⟶ (0 : C))
+          (by simp)).Exact
+        exact (ShortComplex.exact_iff_epi _ rfl).2 hepi
+  refine ⟨(cocartesian_iff_exact f g h k sq.w).2 hex, hf⟩
 
 theorem cocartesian_mono_is_cartesian
     {C : Type u} [Category.{v} C] [Abelian C]
     {W X Y Z : C} {f : W ⟶ Y} {g : W ⟶ X} {h : Y ⟶ Z} {k : X ⟶ Z}
     (sq : IsPushout f g h k) [Mono g] :
     IsPullback f g h k ∧ Mono h := by
-  sorry
+  have hh : Mono h := by
+    apply Abelian.mono_inl_of_isColimit f g sq.isColimit
+  let S₁ : ShortComplex C :=
+    ShortComplex.mk (biprod.lift f (-g)) (biprod.desc h k)
+      (by simp [sq.w])
+  let S₂ : ShortComplex C :=
+    ShortComplex.mk (biprod.lift g f) (biprod.desc k (-h))
+      (by simp [sq.w])
+  have hsc : S₁.Exact := by
+    simpa [S₁, CommSq.shortComplex] using sq.exact_shortComplex
+  let negIsoX : X ≅ X :=
+    { hom := -𝟙 X
+      inv := -𝟙 X
+      hom_inv_id := by simp
+      inv_hom_id := by simp }
+  let negIsoZ : Z ≅ Z :=
+    { hom := -𝟙 Z
+      inv := -𝟙 Z
+      hom_inv_id := by simp
+      inv_hom_id := by simp }
+  let e : Y ⊞ X ≅ X ⊞ Y :=
+    biprod.braiding' Y X ≪≫ biprod.mapIso negIsoX (Iso.refl Y)
+  have hsc' : S₂.Exact := by
+    apply ShortComplex.exact_of_iso
+      (ShortComplex.isoMk (S₁ := S₁) (S₂ := S₂) (Iso.refl W) e negIsoZ
+        (by
+          dsimp [S₁, S₂]
+          apply biprod.hom_ext
+          · simp [e, negIsoX]
+          · simp [e, negIsoX])
+        (by
+          dsimp [S₁, S₂]
+          apply biprod.hom_ext'
+          · simp [e, negIsoX, negIsoZ]
+          · simp [e, negIsoX, negIsoZ]))
+    exact hsc
+  have hmono : Mono (biprod.lift g f) := by
+    exact mono_of_mono_fac (biprod.lift_fst g f)
+  let : Mono (biprod.lift g f) := hmono
+  have hex : (ComposableArrows.mk₃ (0 : (0 : C) ⟶ W)
+      (biprod.lift g f) (biprod.desc k (-h))).Exact := by
+    refine ⟨?_, ?_⟩
+    · refine ⟨?_⟩
+      intro i hi
+      obtain rfl | rfl : i = 0 ∨ i = 1 := by omega
+      · dsimp
+        change (0 : (0 : C) ⟶ W) ≫ biprod.lift g f = 0
+        simp
+      · dsimp
+        change biprod.lift g f ≫ biprod.desc k (-h) = 0
+        simp [sq.w]
+    · intro i hi
+      obtain rfl | rfl : i = 0 ∨ i = 1 := by omega
+      · change (ShortComplex.mk (0 : (0 : C) ⟶ W) (biprod.lift g f)
+          (by simp)).Exact
+        exact (ShortComplex.exact_iff_mono _ rfl).2 hmono
+      · change (ShortComplex.mk (biprod.lift g f) (biprod.desc k (-h))
+          (by simp [sq.w])).Exact
+        exact hsc'
+  refine ⟨(cartesian_iff_exact f g h k sq.w).2 hex, hh⟩
 
 theorem pullback_projection_surjective
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -660,7 +802,21 @@ theorem exact_kernel_sequence
       (inducedKernelMap f k α β h₁)
       (inducedKernelMap g l β γ h₂)
       (induced_kernel_maps_comp_zero hfg h₁ h₂)).Exact := by
-  sorry
+  rw [exact_iff_epi_refinement]
+  intro S c hc
+  have hcg : (c ≫ kernel.ι β) ≫ g = 0 := by
+    simpa [inducedKernelMap, Category.assoc] using
+      (congrArg (fun q => q ≫ kernel.ι γ) hc)
+  obtain ⟨T, d, e, hd, hde⟩ :=
+    (exact_iff_epi_refinement f g hfg).1 hrow (c ≫ kernel.ι β) hcg
+  have heα : e ≫ α = 0 := by
+    apply (cancel_mono k).1
+    rw [Category.assoc, ← h₁, ← Category.assoc, ← hde]
+    simp [Category.assoc]
+  let m : T ⟶ kernel α := kernel.lift α e heα
+  refine ⟨T, d, m, hd, ?_⟩
+  apply (cancel_mono (kernel.ι β)).1
+  simp [m, inducedKernelMap, Category.assoc, hde]
 
 theorem exact_cokernel_sequence
     {C : Type u} [Category.{v} C] [Abelian C]

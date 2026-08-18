@@ -505,12 +505,11 @@ theorem finitePresentation_iff_hom_filteredColimit_bijective
       ∀ (C : FilteredModuleColimit N),
         Function.Bijective (filteredModuleHomColimitMap C).hom := by
   constructor
-  · intro hfp
-    intro C
-    letI : Category.{u} C.index := C.indexCategory
-    letI : IsFiltered C.index := C.indexFiltered
-    letI : HasColimit C.presentation.diag := C.presentation.hasColimit
-    letI : Module.FinitePresentation R N := hfp
+  · intro hfp C
+    let _ : Category.{u} C.index := C.indexCategory
+    let _ : IsFiltered C.index := C.indexFiltered
+    let _ : HasColimit C.presentation.diag := C.presentation.hasColimit
+    let _ : Module.FinitePresentation R N := hfp
     constructor
     · exact (finite_iff_hom_filteredColimit_injective N).1 inferInstance C
     · intro φ
@@ -687,14 +686,21 @@ theorem finitePresentation_iff_hom_filteredColimit_bijective
       let out : N →ₗ[R] (N : Type u) :=
         e.hom.hom.comp ((colimit.ι C.presentation.diag t).hom.comp ψ)
       have houtp : out.comp p = φp := by
-        sorry
-        /- Attempted approach:
-        dsimp [out]
-        simp only [LinearMap.comp_assoc]
-        rw [hψp, hcolc]
-        dsimp [φpC]
-        simp [LinearMap.comp_assoc]
-        -/
+        calc
+          out.comp p = e.hom.hom.comp
+              ((colimit.ι C.presentation.diag t).hom.comp (ψ.comp p)) := by
+            simp [out, LinearMap.comp_assoc]
+          _ = e.hom.hom.comp
+              ((colimit.ι C.presentation.diag t).hom.comp r') := by rw [hψp]
+          _ = e.hom.hom.comp φpC := by rw [hcolc]
+          _ = φp := by
+            dsimp [φpC]
+            apply LinearMap.ext
+            intro z
+            change e.hom.hom (e.inv.hom (φp z)) = φp z
+            have hz := congrArg (fun k => k.hom (φp z)) e.inv_hom_id
+            change e.hom.hom (e.inv.hom (φp z)) = φp z at hz
+            exact hz
       have hout : out = φ'.hom := by
         apply LinearMap.ext
         intro y0
@@ -727,15 +733,13 @@ theorem finitePresentation_iff_hom_filteredColimit_bijective
         map_apply' (colimit.ι C.presentation.diag t) ψcat]
       have hout' := congrArg (fun z : (N : Type u) →ₗ[R] (N : Type u) =>
         ModuleCat.ofHom z) hout
-      sorry
-      /- Attempted approach:
-      simpa [out, ψcat, φ'] using hout'
-      -/
+      change ModuleCat.ofHom out = ModuleCat.ofHom (ModuleCat.Hom.hom φ)
+      exact hout'
   · intro h
     obtain ⟨C⟩ := exists_filteredColimit_finitelyPresented N
-    letI : Category.{u} C.index := C.indexCategory
-    letI : IsFiltered C.index := C.indexFiltered
-    letI : HasColimit C.presentation.diag := C.presentation.hasColimit
+    let _ : Category.{u} C.index := C.indexCategory
+    let _ : IsFiltered C.index := C.indexFiltered
+    let _ : HasColimit C.presentation.diag := C.presentation.hasColimit
     have hc := h C.toFilteredModuleColimit
     let idHom : (moduleHomFunctor N).obj N :=
       ModuleCat.ofHom (LinearMap.id : (N : Type u) →ₗ[R] (N : Type u))
@@ -786,7 +790,7 @@ theorem finitePresentation_iff_hom_filteredColimit_bijective
     have hgf : g.hom.comp fi.hom = LinearMap.id := by
       have hmap' := congrArg ModuleCat.Hom.hom hmap
       simpa [idHom, g, Category.assoc] using hmap'
-    letI : Module.FinitePresentation R (C.presentation.diag.obj i) :=
+    let _ : Module.FinitePresentation R (C.presentation.diag.obj i) :=
       C.finitelyPresented i
     have hker : Module.FinitePresentation R (LinearMap.ker g.hom) := by
       apply Module.finitePresentation_of_split_exact
@@ -794,7 +798,7 @@ theorem finitePresentation_iff_hom_filteredColimit_bijective
       · exact hgf
       · exact (Submodule.injective_subtype _)
       · exact LinearMap.exact_subtype_ker_map g.hom
-    letI : Module.FinitePresentation R (LinearMap.ker g.hom) := hker
+    let _ : Module.FinitePresentation R (LinearMap.ker g.hom) := hker
     have hkerfg : (LinearMap.ker g.hom).FG := Submodule.FG.of_finite
     have hg : Function.Surjective g.hom := by
       intro y

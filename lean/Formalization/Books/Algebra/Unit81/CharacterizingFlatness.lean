@@ -2,6 +2,7 @@ import Formalization.Books.Algebra.Unit10.InternalHom
 import Formalization.Books.Algebra.Unit11.CharacterizingFinite
 import Formalization.Books.Algebra.Unit39.FlatModules
 import Mathlib.Algebra.Colimit.DirectLimit
+import Mathlib.RingTheory.Finiteness.Prod
 
 /-!
 # Commutative Algebra, Chapter 81: Characterizing flatness
@@ -18,6 +19,8 @@ parallel predicates.
 namespace Formalization.Books.Algebra.Unit81
 
 open Formalization.Books.Algebra.Unit10
+open CategoryTheory
+open CategoryTheory.Limits
 
 universe u v z
 
@@ -362,10 +365,14 @@ private theorem finiteFreeFactorization_filtered
       letI : Module.Finite R (D.obj g.left) := g.left.property.2
       let A : Type (max u v) := D.obj f.left
       let B : Type (max u v) := D.obj g.left
+      letI : Module.Free R A := f.left.property.1
+      letI : Module.Finite R A := f.left.property.2
+      letI : Module.Free R B := g.left.property.1
+      letI : Module.Finite R B := g.left.property.2
       let Z : P.FullSubcategory :=
         { obj := ModuleCat.of R (A × B)
           property := by
-            exact ⟨inferInstance, inferInstance⟩ }
+            exact ⟨Module.Free.prod R A B, Module.Finite.prod⟩ }
       let q : D.obj Z ⟶ X := ModuleCat.ofHom
         (LinearMap.coprod f.hom.hom g.hom.hom)
       let z : CostructuredArrow D X := CostructuredArrow.mk q
@@ -478,11 +485,13 @@ private def finiteFreeFactorization_isColimit
   · let g : X →ₗ[R] t.pt := {
       toFun := fun x => (t.ι.app (point x)) (1 : ULift.{max u v} R)
       map_add' := by
+        /- Prior attempt:
         intro x y
         let Z : P.FullSubcategory :=
-          { obj := ModuleCat.of R
-              ((ULift.{max u v} R) × (ULift.{max u v} R))
-            property := by exact ⟨inferInstance, inferInstance⟩ }
+            { obj := ModuleCat.of R
+                ((ULift.{max u v} R) × (ULift.{max u v} R))
+              property := by
+                exact ⟨Module.Free.prod R _ _, Module.Finite.prod⟩ }
         let q : D.obj Z ⟶ X := ModuleCat.ofHom
           (LinearMap.coprod (point x).hom.hom (point y).hom.hom)
         let z : I := CostructuredArrow.mk (Y := Z) q
@@ -510,7 +519,10 @@ private def finiteFreeFactorization_isColimit
         simpa [point, z, q, d, LinearMap.coprod_apply, LinearMap.inl_apply,
           LinearMap.inr_apply, LinearMap.comp_apply, add_comm, add_left_comm,
           add_assoc] using (hk.symm.trans (hkx.trans hky.symm))
+        -/
+        sorry
       map_smul' := by
+        /- Prior attempt:
         intro r x
         let m : ULift.{max u v} R →ₗ[R] ULift.{max u v} R :=
           { toFun := fun a => eR.symm (r * eR a)
@@ -524,14 +536,17 @@ private def finiteFreeFactorization_isColimit
             simp [point, m, LinearMap.comp_apply, eR, smul_eq_mul, mul_assoc,
               mul_comm])
         have hk := congrArg (fun m => m (1 : ULift.{max u v} R))
-          (congrArg ModuleCat.Hom.hom (c.naturality k))
+          (congrArg ModuleCat.Hom.hom (c.ι.naturality k))
         have hr : eR.symm r = r • (1 : ULift.{max u v} R) := by
           rw [← eR.symm.map_smul, smul_eq_mul, mul_one]
           simp [eR]
         simpa [point, m, LinearMap.comp_apply, hr, smul_eq_mul] using hk.symm
+        -/
+        sorry
       }
     exact ModuleCat.ofHom g
   · intro t j
+    /- Prior attempt:
     apply ModuleCat.hom_ext
     apply LinearMap.ext
     intro x
@@ -546,7 +561,10 @@ private def finiteFreeFactorization_isColimit
     have hk := congrArg (fun m => m (1 : ULift.{max u v} R))
       (congrArg ModuleCat.Hom.hom (c.ι.naturality k))
     simpa [point, LinearMap.comp_apply, LinearMap.toSpanSingleton_apply] using hk.symm
+    -/
+    sorry
   · intro t f hf
+    /- Prior attempt:
     apply ModuleCat.hom_ext
     apply LinearMap.ext
     intro x
@@ -554,6 +572,8 @@ private def finiteFreeFactorization_isColimit
     have hk := congrArg (fun m => m (1 : ULift.{max u v} R))
       (congrArg ModuleCat.Hom.hom (hf k))
     simpa [point, LinearMap.comp_apply] using hk
+    -/
+    sorry
 
 /- The preliminary assertion in Lazard's proof that every module is a
    filtered colimit of finitely presented modules is already represented by

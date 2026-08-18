@@ -693,4 +693,22 @@ theorem localPrimePairs_iff_localizedTor_vanishing
     exact torIndependent_iff_localPrimePairs.mp
       (torIndependent_iff_localizedTor_vanishing.mpr h)
 
+/-- The two local formulations, together with the global definition, are
+equivalent.  The comparison identity in `tor_localization_identity` records
+the equality between the global localized Tor module and the localized Tor
+module over the local rings in the source's third formulation. -/
+theorem torIndependent_iff_localization_criteria
+    {R A B : Type u} [CommRing R] [CommRing A] [CommRing B]
+    [Algebra R A] [Algebra R B] :
+    TorIndependent R A B ↔
+      (∀ P : LocalPrimePair R A B, P.TorIndependent) ∧
+        (∀ S : TensorPrimePair R A B, ∀ i : ℕ,
+          0 < i → IsZero (localizedTor S i)) := by
+  constructor
+  · intro h
+    exact ⟨torIndependent_iff_localPrimePairs.mp h,
+      torIndependent_iff_localizedTor_vanishing.mp h⟩
+  · rintro ⟨hLocal, hLocalized⟩
+    exact torIndependent_iff_localPrimePairs.mpr hLocal
+
 end Formalization.Books.MoreAlgebra.Unit61

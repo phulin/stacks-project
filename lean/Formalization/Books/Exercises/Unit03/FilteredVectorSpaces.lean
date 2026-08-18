@@ -266,7 +266,66 @@ theorem filteredVectorSpaceCokernelCofork_isColimit
     {V W : Formalization.Books.Homology.Unit03.FilteredVectorSpace k}
     (f : V ⟶ W) :
     Nonempty (IsColimit (filteredVectorSpaceCokernelCofork f)) := by
-  sorry
+  let range_le_ker {Z : Formalization.Books.Homology.Unit03.FilteredVectorSpace k}
+      (a : W ⟶ Z) (ha : f ≫ a = 0) :
+      LinearMap.range f.1.hom ≤ LinearMap.ker a.1.hom := by
+    have ha' : f.1 ≫ a.1 = 0 := congrArg (fun g : V ⟶ Z => g.1) ha
+    have ha'' := congrArg
+      (fun g : V.underlying ⟶ Z.underlying => g.hom) ha'
+    change a.1.hom.comp f.1.hom = 0 at ha''
+    intro y hy
+    rcases hy with ⟨x, rfl⟩
+    rw [LinearMap.mem_ker]
+    have hx := congrArg
+      (fun g : V.underlying →ₗ[k] Z.underlying => g x) ha''
+    simpa only [LinearMap.comp_apply, LinearMap.zero_apply] using hx
+  let quotientLift {Z : Formalization.Books.Homology.Unit03.FilteredVectorSpace k}
+      (a : W ⟶ Z) (ha : f ≫ a = 0) :
+      (filteredVectorSpaceCokernelObject f).underlying ⟶ Z.underlying := by
+    exact ModuleCat.ofHom
+      ((LinearMap.range f.1.hom).liftQ a.1.hom (range_le_ker a ha))
+  refine ⟨CokernelCofork.IsColimit.ofπ (filteredVectorSpaceCokernelMap f)
+    (filteredVectorSpace_comp_cokernelMap f)
+    (fun {Z} a ha => by
+      refine ⟨quotientLift a ha, ?_⟩
+      intro i x hx
+      change x ∈ Submodule.map (LinearMap.range f.1.hom).mkQ
+        (W.filtration i) at hx
+      rcases hx with ⟨y, hy, rfl⟩
+      dsimp [quotientLift]
+      change (LinearMap.range f.1.hom).liftQ a.1.hom _
+        ((LinearMap.range f.1.hom).mkQ y) ∈ Z.filtration i
+      have hq := congrArg
+        (fun g : W.underlying →ₗ[k] Z.underlying => g y)
+        ((LinearMap.range f.1.hom).liftQ_mkQ a.1.hom (range_le_ker a ha))
+      rw [show (LinearMap.range f.1.hom).liftQ a.1.hom _
+          ((LinearMap.range f.1.hom).mkQ y) = a.1.hom y by
+        simpa only [LinearMap.comp_apply] using hq]
+      exact a.2 i y hy)
+    (fun {Z} a ha => by
+      apply Subtype.ext
+      apply ModuleCat.hom_ext
+      change (quotientLift a ha).hom.comp (LinearMap.range f.1.hom).mkQ = a.1.hom
+      dsimp [quotientLift]
+      exact (LinearMap.range f.1.hom).liftQ_mkQ a.1.hom _)
+    (fun {Z} a ha m hm => by
+      apply Subtype.ext
+      let q : W.underlying ⟶ (filteredVectorSpaceCokernelObject f).underlying :=
+        (filteredVectorSpaceCokernelMap f).1
+      letI : Epi q := by
+        dsimp [q, filteredVectorSpaceCokernelMap, filteredVectorSpaceCokernelObject]
+        apply (ModuleCat.epi_iff_range_eq_top _).2
+        simpa only [ModuleCat.hom_ofHom] using
+          (Submodule.range_mkQ (LinearMap.range f.1.hom))
+      apply (cancel_epi q).1
+      have hm' : q ≫ m.1 = a.1 := by
+        exact congrArg (fun g : W ⟶ Z => g.1) hm
+      rw [hm']
+      symm
+      apply ModuleCat.hom_ext
+      dsimp [q, quotientLift]
+      exact (LinearMap.range f.1.hom).liftQ_mkQ a.1.hom
+        (range_le_ker a ha))⟩
 
 /-! ## (3) The coimage/image counterexample -/
 
@@ -299,6 +358,52 @@ theorem filteredVectorSpace_counterexample
       ¬ IsIso
         (Abelian.coimageImageComparison
           (Formalization.Books.Homology.Unit03.filteredLineIdentity k)) := by
-  sorry
+  let : HasKernels
+      (Formalization.Books.Homology.Unit03.FilteredVectorSpace k) :=
+    Formalization.Books.Homology.Unit03.filtered_vector_space_has_kernels k
+  let : HasCokernels
+      (Formalization.Books.Homology.Unit03.FilteredVectorSpace k) :=
+    Formalization.Books.Homology.Unit03.filtered_vector_space_has_cokernels k
+  let F : Formalization.Books.Homology.Unit03.filteredLineV k ⟶
+      Formalization.Books.Homology.Unit03.filteredLineW k :=
+    Formalization.Books.Homology.Unit03.filteredLineIdentity k
+  have hsource :=
+    Formalization.Books.Homology.Unit03.filtered_vector_space_counterexample k
+  have hkzero : IsZero (kernel F) := hsource.1
+  have hczero : IsZero (cokernel F) := hsource.2.1
+  have hnotiso : ¬ IsIso F := hsource.2.2.1
+  have hcoi : Nonempty
+      (Abelian.coimage F ≅ Formalization.Books.Homology.Unit03.filteredLineV k) :=
+    hsource.2.2.2.1
+  have him : Nonempty
+      (Abelian.image F ≅ Formalization.Books.Homology.Unit03.filteredLineW k) :=
+    hsource.2.2.2.2.1
+  have hkι : kernel.ι F = 0 := hkzero.eq_of_src _ _
+  have hπ : cokernel.π F = 0 := hczero.eq_of_tgt _ _
+  have hcoiπ : IsIso (Abelian.coimage.π F) := by
+    change IsIso (cokernel.π (kernel.ι F))
+    let g : Abelian.coimage F ⟶ Formalization.Books.Homology.Unit03.filteredLineV k :=
+      cokernel.desc (kernel.ι F) (𝟙 _) (by rw [hkι, zero_comp])
+    refine ⟨⟨g, ?_⟩⟩
+    refine ⟨cokernel.π_desc (kernel.ι F) (𝟙 _) _, ?_⟩
+    apply (cancel_epi (cokernel.π (kernel.ι F))).1
+    simp [g, Category.assoc]
+  have himι : IsIso (Abelian.image.ι F) := by
+    change IsIso (kernel.ι (cokernel.π F))
+    let g : Formalization.Books.Homology.Unit03.filteredLineW k ⟶
+        Abelian.image F :=
+      kernel.lift (cokernel.π F) (𝟙 _) (by rw [hπ, comp_zero])
+    refine ⟨⟨g, ?_⟩⟩
+    refine ⟨?_, kernel.lift_ι (cokernel.π F) (𝟙 _)
+      (by rw [hπ, comp_zero])⟩
+    apply (cancel_mono (kernel.ι (cokernel.π F))).1
+    simp [g, Category.assoc]
+  refine ⟨hkzero, hczero, hnotiso, hcoi, him, ?_⟩
+  intro hcomp
+  letI : IsIso (Abelian.coimageImageComparison F) := hcomp
+  have hFiso : IsIso F := by
+    rw [← Formalization.Books.Homology.Unit03.coimage_image_factorization F]
+    infer_instance
+  exact hnotiso hFiso
 
 end Formalization.Books.Exercises.Unit03

@@ -61,7 +61,84 @@ theorem finitelyGeneratedTorsionFree_additive
     Nonempty
       (Formalization.Books.Homology.Unit03.AdditiveCategory
         (FinitelyGeneratedTorsionFreeModuleCat R)) := by
-  sorry
+  let zero : FinitelyGeneratedTorsionFreeModuleCat R :=
+    { obj := ModuleCat.of R PUnit
+      property := ⟨inferInstance, inferInstance⟩ }
+  let terminal : IsTerminal zero :=
+    IsTerminal.ofUniqueHom (fun X => ObjectProperty.homMk 0) (by
+      intro X m
+      apply ObjectProperty.hom_ext
+      apply ModuleCat.hom_ext
+      apply LinearMap.ext
+      intro x
+      exact Subsingleton.elim _ _)
+  let : HasTerminal (FinitelyGeneratedTorsionFreeModuleCat R) :=
+    terminal.hasTerminal
+  let : ∀ {X Y : FinitelyGeneratedTorsionFreeModuleCat R},
+      HasLimit (pair X Y) := by
+    intro X Y
+    let P := torsionFreeModuleDirectSum X Y
+    let fst : P ⟶ X :=
+      ObjectProperty.homMk
+        (ModuleCat.ofHom (LinearMap.fst R X.obj Y.obj))
+    let snd : P ⟶ Y :=
+      ObjectProperty.homMk
+        (ModuleCat.ofHom (LinearMap.snd R X.obj Y.obj))
+    refine ⟨⟨BinaryFan.mk fst snd, ?_⟩⟩
+    exact BinaryFan.IsLimit.mk (BinaryFan.mk fst snd)
+      (fun {Z} a b =>
+        ObjectProperty.homMk
+          (ModuleCat.ofHom (LinearMap.prod a.hom.hom b.hom.hom)))
+      (fun {Z} a b => by
+        apply ObjectProperty.hom_ext
+        apply ModuleCat.hom_ext
+        change (LinearMap.fst R X.obj Y.obj).comp
+            (LinearMap.prod a.hom.hom b.hom.hom) = a.hom.hom
+        exact LinearMap.fst_prod a.hom.hom b.hom.hom)
+      (fun {Z} a b => by
+        apply ObjectProperty.hom_ext
+        apply ModuleCat.hom_ext
+        change (LinearMap.snd R X.obj Y.obj).comp
+            (LinearMap.prod a.hom.hom b.hom.hom) = b.hom.hom
+        exact LinearMap.snd_prod a.hom.hom b.hom.hom)
+      (fun {Z} a b m h₁ h₂ => by
+        apply ObjectProperty.hom_ext
+        apply ModuleCat.hom_ext
+        apply LinearMap.ext
+        intro z
+        have h₁' : m.hom ≫ fst.hom = a.hom := by
+          exact congrArg (fun q : Z ⟶ X => q.hom) h₁
+        have h₂' : m.hom ≫ snd.hom = b.hom := by
+          exact congrArg (fun q : Z ⟶ Y => q.hom) h₂
+        have h₁'' : (LinearMap.fst R X.obj Y.obj).comp m.hom.hom =
+            a.hom.hom := by
+          have h := congrArg
+            (fun q : Z.obj ⟶ X.obj => q.hom) h₁'
+          change (LinearMap.fst R X.obj Y.obj).comp m.hom.hom = a.hom.hom at h
+          exact h
+        have h₂'' : (LinearMap.snd R X.obj Y.obj).comp m.hom.hom =
+            b.hom.hom := by
+          have h := congrArg
+            (fun q : Z.obj ⟶ Y.obj => q.hom) h₂'
+          change (LinearMap.snd R X.obj Y.obj).comp m.hom.hom = b.hom.hom at h
+          exact h
+        change m.hom.hom z = (a.hom.hom z, b.hom.hom z)
+        exact Prod.ext
+          (by
+            change (LinearMap.fst R X.obj Y.obj).comp m.hom.hom z = a.hom.hom z
+            simpa only [LinearMap.comp_apply] using
+              congrArg (fun q : Z.obj →ₗ[R] X.obj => q z) h₁'')
+          (by
+            change (LinearMap.snd R X.obj Y.obj).comp m.hom.hom z = b.hom.hom z
+            simpa only [LinearMap.comp_apply] using
+              congrArg (fun q : Z.obj →ₗ[R] Y.obj => q z) h₂''))
+  let hproducts : HasBinaryProducts (FinitelyGeneratedTorsionFreeModuleCat R) :=
+    @hasBinaryProducts_of_hasLimit_pair
+      (FinitelyGeneratedTorsionFreeModuleCat R) _ this
+  let hfinite : HasFiniteProducts (FinitelyGeneratedTorsionFreeModuleCat R) :=
+    @hasFiniteProducts_of_has_binary_and_terminal
+      (FinitelyGeneratedTorsionFreeModuleCat R) _ hproducts terminal.hasTerminal
+  exact ⟨{ toPreadditive := inferInstance, toHasFiniteProducts := hfinite }⟩
 
 /-! ## Kernels -/
 
@@ -89,7 +166,11 @@ theorem torsionFreeKernelι_comp
     {R : Type u} [CommRing R] [IsNoetherianRing R] [IsDomain R]
     {X Y : FinitelyGeneratedTorsionFreeModuleCat R} (f : X ⟶ Y) :
     torsionFreeKernelι f ≫ f = 0 := by
-  sorry
+  apply ObjectProperty.hom_ext
+  dsimp [torsionFreeKernel, torsionFreeKernelι, torsionFreeUnderlyingLinearMap]
+  apply ModuleCat.hom_ext
+  change f.hom.hom.comp (LinearMap.ker f.hom.hom).subtype = 0
+  exact LinearMap.comp_ker_subtype f.hom.hom
 
 def torsionFreeKernelFork
     {R : Type u} [CommRing R] [IsNoetherianRing R] [IsDomain R]

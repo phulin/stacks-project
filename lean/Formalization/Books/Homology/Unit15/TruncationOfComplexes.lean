@@ -584,9 +584,8 @@ private noncomputable def stupidTruncLEπ (K : ChainComplex C ℤ) (n : ℤ) :
         simp [ComplexShape.down, ComplexShape.down'] at hij'
       simp only [dif_pos hi, dif_neg hj]
       have hd : (degreeConcentrated (K.X n) n).d i j = 0 := by
-        simp [degreeConcentrated, Formalization.Books.Homology.Unit14.ChainComplex.concentrated,
-        Formalization.Books.Homology.Unit14.ChainComplex.shiftFunctor,
-        Formalization.Books.Homology.Unit13.chainComplexSingle] ; rfl
+        simp [degreeConcentrated,
+          Formalization.Books.Homology.Unit14.ChainComplex.concentrated] ; rfl
       rw [hd]
       simp
     · simp only [dif_neg hi]
@@ -1146,7 +1145,7 @@ noncomputable def stupidTruncGE (K : CochainComplex C ℤ) (n : ℤ) :
 private noncomputable def stupidTruncι_f {ι ι' : Type*}
     {c : ComplexShape ι} {c' : ComplexShape ι'}
     {C : Type*} [Category C] [HasZeroMorphisms C] [HasZeroObject C]
-    (K : HomologicalComplex C c') (e : c.Embedding c') [e.IsRelIff] (i' : ι') :
+    (K : HomologicalComplex C c') (e : c.Embedding c') [e.IsTruncGE] (i' : ι') :
     (HomologicalComplex.stupidTrunc K e).X i' ⟶ K.X i' :=
   by
     classical

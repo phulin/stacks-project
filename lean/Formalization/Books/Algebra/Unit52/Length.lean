@@ -1,9 +1,9 @@
 import Mathlib.Algebra.Module.LocalizedModule.AtPrime
+import Mathlib.Algebra.Module.LocalizedModule.Submodule
 import Mathlib.Algebra.Module.Torsion.Basic
 import Mathlib.RingTheory.Length
 import Mathlib.RingTheory.LocalRing.Length
 import Mathlib.RingTheory.LocalRing.ResidueField.Ideal
-import Mathlib.RingTheory.Localization.Module
 import Mathlib.RingTheory.Spectrum.Maximal.Defs
 
 /-!

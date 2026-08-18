@@ -288,6 +288,36 @@ abbrev outerSquare {C : Type u} [Bicategory.{w, v} C]
 
 end BaseChangeData
 
+private lemma strict_id_whisker_left_identity
+    {C : Type u} [Bicategory.{w, v} C] [Bicategory.Strict C]
+    {a b c : C} {f f' : a ⟶ b} (h : f ⟶ f') (g : b ⟶ c) :
+    𝟙 (f ≫ g) ≫ (h ▷ g) ≫ (Bicategory.leftUnitor (f' ≫ g)).inv ≫
+        (Bicategory.associator (𝟙 a) f' g).inv =
+      (h ▷ g) ≫
+        eqToHom (Bicategory.Strict.id_comp (f' ≫ g)).symm ≫
+        (𝟙 a ◁ 𝟙 (f' ≫ g)) ≫
+          eqToHom (Bicategory.Strict.assoc (𝟙 a) f' g).symm := by
+  have hleft :
+      eqToHom (Bicategory.Strict.id_comp (f' ≫ g)).symm =
+        (Bicategory.leftUnitor (f' ≫ g)).inv := by
+    rw [Bicategory.Strict.leftUnitor_eqToIso]
+    rfl
+  have hα :
+      eqToHom (Bicategory.Strict.assoc (𝟙 a) f' g).symm =
+        (Bicategory.associator (𝟙 a) f' g).inv := by
+    rw [Bicategory.Strict.associator_eqToIso]
+    rfl
+  rw [hleft, hα]
+  rw [Bicategory.id_whiskerLeft]
+  simp [Category.assoc]
+
+private lemma eqToHom_proof_irrel
+    {C : Type u} [CategoryStruct.{v} C] {X Y : C} (p q : X = Y) :
+    eqToHom p = eqToHom q := by
+  cases p
+  cases q
+  rfl
+
 /-- Base change along a 2-cartesian square gives an equivalence of dotted-arrow
 categories.
 
@@ -1143,14 +1173,50 @@ theorem dottedArrow_baseChange_equivalence
                 (Bicategory.leftUnitor A'.a).inv ▷ B.p := by
                   exact (Category.assoc _ _ _).symm
             _ = A'.beta ≫ (Bicategory.leftUnitor A'.a).inv ▷ B.p := by
-                  exact congrArg
-                    (fun t => t ≫ (Bicategory.leftUnitor A'.a).inv ▷ B.p) hβ
+              exact congrArg
+                (fun t => t ≫ (Bicategory.leftUnitor A'.a).inv ▷ B.p) hβ
             _ = _ := by
-              /- Prior attempt retained for later proof repair. -/
-              sorry
+              simp [BaseChangeData.leftSquare,
+                TwoCommutativeDiagram.strictAssocInv, outerDiagram,
+                Bicategory.Strict.associator_eqToIso,
+                Bicategory.Strict.leftUnitor_eqToIso, Category.assoc]
+              rfl
         right := by
-          /- Prior attempt retained for later proof repair. -/
-          sorry }
+          dsimp [leftToP, outerHom, TwoCommutativeDiagram.Hom.comp]
+          dsimp [P]
+          have hforward : (forward.map H).hom = H.hom ▷ B.q := by rfl
+          rw [hforward]
+          have hcomp := Bicategory.comp_whiskerRight H.hom
+            (Bicategory.leftUnitor A'.a).inv B.q
+          have hL := Bicategory.leftUnitor_inv_whiskerRight A'.a B.q
+          have h1 :
+              𝟙 (A.a ≫ B.q) ≫ (H.hom ≫ (Bicategory.leftUnitor A'.a).inv) ▷ B.q =
+                𝟙 (A.a ≫ B.q) ≫
+                  (H.hom ▷ B.q ≫ (Bicategory.leftUnitor A'.a).inv ▷ B.q) := by
+            exact congrArg (fun t => 𝟙 (A.a ≫ B.q) ≫ t) hcomp
+          have h2 :
+              𝟙 (A.a ≫ B.q) ≫
+                  (H.hom ▷ B.q ≫ (Bicategory.leftUnitor A'.a).inv ▷ B.q) =
+                𝟙 (A.a ≫ B.q) ≫
+                  (H.hom ▷ B.q ≫
+                    ((Bicategory.leftUnitor (A'.a ≫ B.q)).inv ≫
+                      (Bicategory.associator (𝟙 B.objT) A'.a B.q).inv)) := by
+            exact congrArg (fun t => 𝟙 (A.a ≫ B.q) ≫
+              (H.hom ▷ B.q ≫ t)) hL
+          exact h1.trans (h2.trans (by
+            have he :
+                eqToHom (Bicategory.Strict.id_comp (A'.a ≫ B.q)).symm =
+                  (Bicategory.leftUnitor (A'.a ≫ B.q)).inv := by
+              rw [Bicategory.Strict.leftUnitor_eqToIso]
+              rfl
+            convert (strict_id_whisker_left_identity H.hom B.q) using 1 <;>
+              simp only [he, BaseChangeData.leftSquare,
+              TwoCommutativeDiagram.strictAssocInv,
+              Bicategory.Strict.leftUnitor_eqToIso,
+              Bicategory.Strict.associator_eqToIso, Bicategory.id_whiskerLeft,
+              Bicategory.whiskerLeft_id, Bicategory.leftUnitor_naturality,
+              Iso.hom_inv_id_assoc, Iso.inv_hom_id_assoc, eqToHom_trans,
+              Category.id_comp, Category.assoc] <;> rfl)) }
       let τ₁ := TwoCommutativeDiagram.TwoHom.comp δ
         (liftMapHom (forward.map H))
       let τ₂ := TwoCommutativeDiagram.TwoHom.comp explicitMap

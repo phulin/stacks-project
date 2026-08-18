@@ -154,7 +154,24 @@ theorem basisSheafExtension_unique {X : TopCat.{v}} {ι : Type v}
     (eG : (basisRestrictionFunctor B hB).obj G ≅ P) :
     ∃! e : F ≅ G,
       (basisRestrictionFunctor B hB).mapIso e ≪≫ eG = eF := by
-  sorry
+  let R := basisRestrictionFunctor B hB
+  let hR : R.FullyFaithful := by
+    exact (basisSheafEquivalence B hB).fullyFaithfulFunctor
+  let q : R.obj F ≅ R.obj G := eF ≪≫ eG.symm
+  let e : F ≅ G := hR.preimageIso q
+  have he : R.mapIso e ≪≫ eG = eF := by
+    apply Iso.ext
+    change R.map (hR.preimage (eF.hom ≫ eG.inv)) ≫ eG.hom = eF.hom
+    rw [hR.map_preimage]
+    simp
+  refine ⟨e, he, ?_⟩
+  intro e' he'
+  apply Iso.ext
+  apply hR.map_injective
+  have h' := congrArg Iso.hom he'
+  have h := congrArg Iso.hom he
+  apply (cancel_mono eG.hom).1
+  exact h'.trans h.symm
 
 /-! ## Coverings and the sheaf condition -/
 
@@ -210,7 +227,101 @@ theorem basisSheafCondition_iff_cover_gluing {X : TopCat.{v}} {ι : Type v}
           ∃! t : P.obj (op i),
             ∀ j, ∃ h : B (U.member j) ≤ B i,
               P.map (InducedCategory.homMk (homOfLE h)).op t = s j := by
-  sorry
+  constructor
+  · intro h i U s hs
+    let i' : InducedCategory (Opens X) B := i
+    let member' : U.index → InducedCategory (Opens X) B := fun j => U.member j
+    let f : ∀ j : U.index, member' j ⟶ i' :=
+      fun j => InducedCategory.homMk (homOfLE (show
+        B (member' j) ≤ B i' from by
+        rw [← U.covers]
+        exact le_iSup (fun j => B (U.member j)) j))
+    have hf : Sieve.ofArrows member' f ∈
+        basisTopology B i := by
+      apply Functor.mem_restrictedTopology_of_functorPushforward_mem
+      rw [Sieve.ofArrows, ← Sieve.generate_map_eq_functorPushforward,
+        Presieve.map_ofArrows]
+      change _ ∈ (Opens.grothendieckTopology X) (B i)
+      intro x hx
+      have hx' : x ∈ iSup (fun j => B (member' j)) := by
+        rw [U.covers]
+        exact hx
+      obtain ⟨j, hxj⟩ := Opens.mem_iSup.mp hx'
+      exact ⟨B (member' j), (f j).hom,
+        ⟨B (member' j), 𝟙 _, (inducedFunctor B).map (f j),
+          Presieve.ofArrows.mk j, by simp⟩, hxj⟩
+    have hsf : Presieve.IsSheafFor P (Presieve.ofArrows member' f) := by
+      exact (Presieve.isSheafFor_iff_generate _).mpr (h _ hf)
+    rw [Presieve.isSheafFor_arrows_iff] at hsf
+    obtain ⟨t, ht, htuniq⟩ := hsf s
+      (fun j j' Z gj gj' hcomp => by
+        apply hs j j' Z gj.hom.le gj'.hom.le)
+    refine ⟨t, ?_, ?_⟩
+    · intro j
+      exact ⟨_, ht j⟩
+    · intro t' ht'
+      apply htuniq t'
+      intro j
+      obtain ⟨h', hh⟩ := ht' j
+      have hfj : f j = InducedCategory.homMk (homOfLE h') := by
+        apply InducedCategory.hom_ext
+        apply Subsingleton.elim
+      rw [hfj]
+      exact hh
+  · intro h
+    letI : (inducedFunctor B).IsCoverDense (Opens.grothendieckTopology X) :=
+      TopCat.Opens.coverDense_inducedFunctor hB
+    intro i S hS
+    obtain ⟨I, Y, f, rfl⟩ := S.exists_eq_ofArrows
+    have hS' : (Sieve.ofArrows Y f).functorPushforward (inducedFunctor B) ∈
+        Opens.grothendieckTopology X (B i) :=
+      (Functor.mem_restrictedTopology_iff).1 hS
+    rw [Sieve.ofArrows, ← Sieve.generate_map_eq_functorPushforward,
+      Presieve.map_ofArrows] at hS'
+    have hcover : iSup (fun j : I => B (Y j)) = B i := by
+      apply le_antisymm
+      · exact iSup_le fun j => (f j).hom.le
+      · intro x hx
+        rw [Opens.mem_iSup]
+        obtain ⟨V, iVU, ⟨W, iVW, iWU, hiWU, -⟩, hxV⟩ := hS' x hx
+        obtain ⟨j⟩ := hiWU
+        refine ⟨j, ?_⟩
+        exact iVW.le hxV
+    let U : BasisCover B i := ⟨I, Y, hcover⟩
+    have hsf : Presieve.IsSheafFor P (Presieve.ofArrows Y f) := by
+      rw [Presieve.isSheafFor_arrows_iff]
+      intro s hs
+      have hcompat :
+          ∀ (j j' : I) (k : ι) (hkj : B k ≤ B (Y j))
+            (hkj' : B k ≤ B (Y j')),
+            P.map (InducedCategory.homMk (homOfLE hkj)).op (s j) =
+              P.map (InducedCategory.homMk (homOfLE hkj')).op (s j') := by
+        intro j j' k hkj hkj'
+        exact hs j j' (k : basisIndex B)
+          (InducedCategory.homMk (homOfLE hkj))
+          (InducedCategory.homMk (homOfLE hkj'))
+          (by
+            apply InducedCategory.hom_ext
+            apply Subsingleton.elim)
+      obtain ⟨t, ht, htuniq⟩ := h i U s hcompat
+      refine ⟨t, ?_, ?_⟩
+      · intro j
+        obtain ⟨h', hh⟩ := ht j
+        have hfj : f j = InducedCategory.homMk (homOfLE h') := by
+          apply InducedCategory.hom_ext
+          apply Subsingleton.elim
+        rw [hfj]
+        exact hh
+      · intro t' ht'
+        apply htuniq t'
+        intro j
+        refine ⟨(f j).hom.le, ?_⟩
+        have hfj : f j = InducedCategory.homMk (homOfLE (f j).hom.le) := by
+          apply InducedCategory.hom_ext
+          apply Subsingleton.elim
+        rw [hfj]
+        exact ht' j
+    exact (Presieve.isSheafFor_iff_generate (Presieve.ofArrows Y f)).mp hsf
 
 /-- It is enough to test the basis sheaf condition on a cofinal cover system. -/
 theorem basisSheafCondition_iff_cofinal_cover_system {X : TopCat.{v}} {ι : Type v}
@@ -227,7 +338,183 @@ theorem basisSheafCondition_iff_cofinal_cover_system {X : TopCat.{v}} {ι : Type
           ∃! t : P.obj (op i),
             ∀ j, ∃ h : B (U.member j) ≤ B i,
               P.map (InducedCategory.homMk (homOfLE h)).op t = s j := by
-  sorry
+  constructor
+  · intro h
+    intro i U hUi s hs
+    exact (basisSheafCondition_iff_cover_gluing B hB P).1 h i U s hs
+  · intro h
+    apply (basisSheafCondition_iff_cover_gluing B hB P).2
+    have hom_eq : ∀ (a b : ι) (hab hab' : B a ≤ B b),
+        InducedCategory.homMk (homOfLE hab) =
+          InducedCategory.homMk (homOfLE hab') := by
+      intro a b hab hab'
+      apply InducedCategory.hom_ext
+      apply Subsingleton.elim
+    have map_comp_eq : ∀ (a b c : ι) (hab : B a ≤ B b) (hbc : B b ≤ B c)
+        (hac : B a ≤ B c) (x : P.obj (op c)),
+        P.map (InducedCategory.homMk (homOfLE hab)).op
+            (P.map (InducedCategory.homMk (homOfLE hbc)).op x) =
+          P.map (InducedCategory.homMk (homOfLE hac)).op x := by
+      intro a b c hab hbc hac x
+      rw [← comp_apply, ← P.map_comp, ← op_comp]
+      congr 1
+    intro i U s hs
+    obtain ⟨V, hVC, hVU⟩ := hC i U
+    obtain ⟨α, hα⟩ := hVU
+    let K : U.index → Type v := fun j =>
+      { k : ι // ∃ l : V.index, B k ≤ B (V.member l) ∧ B k ≤ B (U.member j) }
+    let W : ∀ j : U.index, BasisCover B (U.member j) := fun j =>
+      { index := K j
+        member := fun k => k.1
+        covers := by
+          apply le_antisymm
+          · apply iSup_le
+            intro k
+            exact k.2.choose_spec.2
+          · intro x hx
+            have hUi : B (U.member j) ≤ B i := by
+              rw [← U.covers]
+              exact le_iSup (fun j => B (U.member j)) j
+            have hxi : x ∈ B i := hUi hx
+            have hxi' : x ∈ iSup (fun l => B (V.member l)) := by
+              rw [V.covers]
+              exact hxi
+            obtain ⟨l, hxl⟩ := Opens.mem_iSup.mp hxi'
+            have hxint : x ∈ B (V.member l) ⊓ B (U.member j) := ⟨hxl, hx⟩
+            obtain ⟨T, hT, hxT, hTW⟩ :=
+              (Opens.isBasis_iff_nbhd.mp hB) hxint
+            obtain ⟨k, rfl⟩ := hT
+            rw [Opens.mem_iSup]
+            refine ⟨⟨k, ⟨l, ?_, ?_⟩⟩, hxT⟩
+            · exact hTW.trans inf_le_left
+            · exact hTW.trans inf_le_right }
+    let r : ∀ l : V.index, P.obj (op (V.member l)) :=
+      fun l => P.map (InducedCategory.homMk (homOfLE (hα l))).op (s (α l))
+    have hr : ∀ (l l' : V.index) (k : ι)
+        (hk : B k ≤ B (V.member l)) (hk' : B k ≤ B (V.member l')),
+        P.map (InducedCategory.homMk (homOfLE hk)).op (r l) =
+          P.map (InducedCategory.homMk (homOfLE hk')).op (r l') := by
+      intro l l' k hk hk'
+      have hs' := hs (α l) (α l') k (le_trans hk (hα l)) (le_trans hk' (hα l'))
+      calc
+        P.map (InducedCategory.homMk (homOfLE hk)).op (r l) =
+            P.map (InducedCategory.homMk (homOfLE (le_trans hk (hα l)))).op
+              (s (α l)) := by
+          simpa [r] using
+            (map_comp_eq k (V.member l) (U.member (α l)) hk (hα l) _ (s (α l)))
+        _ = P.map (InducedCategory.homMk (homOfLE (le_trans hk' (hα l')))).op
+              (s (α l')) := hs'
+        _ = P.map (InducedCategory.homMk (homOfLE hk')).op (r l') := by
+          simpa [r] using
+            (map_comp_eq k (V.member l') (U.member (α l')) hk' (hα l') _
+              (s (α l'))).symm
+    obtain ⟨t, htV, htuniqV⟩ := h i V hVC r hr
+    refine ⟨t, ?_, ?_⟩
+    · intro j
+      have hUi : B (U.member j) ≤ B i := by
+        rw [← U.covers]
+        exact le_iSup (fun j => B (U.member j)) j
+      obtain ⟨Q, hQC, hQW⟩ := hC (U.member j) (W j)
+      obtain ⟨β, hβ⟩ := hQW
+      have hβU : ∀ n : Q.index, B (Q.member n) ≤ B (U.member j) := by
+        intro n
+        exact le_trans (hβ n) (β n).property.choose_spec.2
+      let q : ∀ n : Q.index, P.obj (op (Q.member n)) :=
+        fun n => P.map (InducedCategory.homMk (homOfLE (hβU n))).op (s j)
+      have hq : ∀ (n n' : Q.index) (k : ι)
+          (hk : B k ≤ B (Q.member n)) (hk' : B k ≤ B (Q.member n')),
+          P.map (InducedCategory.homMk (homOfLE hk)).op (q n) =
+            P.map (InducedCategory.homMk (homOfLE hk')).op (q n') := by
+        intro n n' k hk hk'
+        calc
+          P.map (InducedCategory.homMk (homOfLE hk)).op (q n) =
+              P.map (InducedCategory.homMk (homOfLE (le_trans hk (hβU n)))).op
+                (s j) := by
+            simpa [q] using
+              (map_comp_eq k (Q.member n) (U.member j) hk (hβU n)
+                (le_trans hk (hβU n)) (s j))
+          _ = P.map (InducedCategory.homMk (homOfLE (le_trans hk' (hβU n')))).op
+                (s j) := by
+            rw [hom_eq k (U.member j) (le_trans hk (hβU n))
+              (le_trans hk' (hβU n'))]
+          _ = P.map (InducedCategory.homMk (homOfLE hk')).op (q n') := by
+            simpa [q] using
+              (map_comp_eq k (Q.member n') (U.member j) hk' (hβU n')
+                (le_trans hk' (hβU n')) (s j)).symm
+      obtain ⟨tj, htj, htjuniq⟩ := h (U.member j) Q hQC q hq
+      have hs_q : ∀ n, ∃ h : B (Q.member n) ≤ B (U.member j),
+          P.map (InducedCategory.homMk (homOfLE h)).op (s j) = q n := by
+        intro n
+        exact ⟨hβU n, rfl⟩
+      have ht_q : ∀ n, ∃ h : B (Q.member n) ≤ B (U.member j),
+          P.map (InducedCategory.homMk (homOfLE h)).op
+              (P.map (InducedCategory.homMk (homOfLE hUi)).op t) = q n := by
+        intro n
+        obtain ⟨l, hlV, hlU⟩ := (β n).property
+        obtain ⟨hVi, htVl⟩ := htV l
+        let hQV := le_trans (hβ n) hlV
+        let hQj := le_trans (hβ n) hlU
+        refine ⟨hQj, ?_⟩
+        have hs' := hs (α l) j (β n).val (le_trans hlV (hα l)) hlU
+        have hs'' := congrArg
+          (P.map (InducedCategory.homMk (homOfLE (hβ n))).op) hs'
+        calc
+          P.map (InducedCategory.homMk (homOfLE hQj)).op
+              (P.map (InducedCategory.homMk (homOfLE hUi)).op t) =
+              P.map (InducedCategory.homMk (homOfLE (le_trans hQj hUi))).op t :=
+                map_comp_eq _ _ _ hQj hUi (le_trans hQj hUi) _
+          _ = P.map (InducedCategory.homMk (homOfLE (le_trans hQV hVi))).op t := by
+            rw [hom_eq (Q.member n) i (le_trans hQj hUi) (le_trans hQV hVi)]
+          _ = P.map (InducedCategory.homMk (homOfLE hQV)).op
+              (P.map (InducedCategory.homMk (homOfLE hVi)).op t) :=
+                (map_comp_eq _ _ _ hQV hVi (le_trans hQV hVi) _).symm
+          _ = P.map (InducedCategory.homMk (homOfLE hQV)).op (r l) := by
+            rw [htVl]
+          _ = P.map (InducedCategory.homMk (homOfLE hQV)).op
+              (P.map (InducedCategory.homMk (homOfLE (hα l))).op (s (α l))) := by
+            rfl
+          _ = P.map (InducedCategory.homMk (homOfLE (le_trans hQV (hα l)))).op
+              (s (α l)) :=
+                map_comp_eq _ _ _ hQV (hα l) (le_trans hQV (hα l)) _
+          _ = P.map (InducedCategory.homMk
+              (homOfLE (le_trans (hβ n) (le_trans hlV (hα l))))).op
+              (s (α l)) := by
+            rw [hom_eq (Q.member n) (U.member (α l))
+              (le_trans hQV (hα l))
+              (le_trans (hβ n) (le_trans hlV (hα l)))]
+          _ = P.map (InducedCategory.homMk (homOfLE (hβ n))).op
+              (P.map (InducedCategory.homMk
+                (homOfLE (le_trans hlV (hα l)))).op (s (α l))) := by
+            exact (map_comp_eq _ _ _ (hβ n) (le_trans hlV (hα l))
+              (le_trans (hβ n) (le_trans hlV (hα l))) _).symm
+          _ = P.map (InducedCategory.homMk (homOfLE (hβ n))).op
+              (P.map (InducedCategory.homMk (homOfLE hlU)).op (s j)) := hs''
+          _ = P.map (InducedCategory.homMk
+              (homOfLE (le_trans (hβ n) hlU))).op (s j) :=
+            map_comp_eq _ _ _ (hβ n) hlU (le_trans (hβ n) hlU) _
+          _ = P.map (InducedCategory.homMk (homOfLE hQj)).op (s j) := by
+            rw [hom_eq (Q.member n) (U.member j)
+              (le_trans (hβ n) hlU) hQj]
+          _ = q n := by
+            rfl
+      have heqt := htjuniq
+        (P.map (InducedCategory.homMk (homOfLE hUi)).op t) ht_q
+      have heqs := htjuniq (s j) hs_q
+      exact ⟨hUi, heqt.trans heqs.symm⟩
+    · intro t' ht'
+      apply htuniqV t'
+      intro l
+      obtain ⟨hU, htU⟩ := ht' (α l)
+      refine ⟨le_trans (hα l) hU, ?_⟩
+      calc
+        P.map (InducedCategory.homMk (homOfLE (le_trans (hα l) hU))).op t' =
+            P.map (InducedCategory.homMk (homOfLE (hα l))).op
+              (P.map (InducedCategory.homMk (homOfLE hU)).op t') :=
+          (map_comp_eq _ _ _ (hα l) hU _ _).symm
+        _ = P.map (InducedCategory.homMk (homOfLE (hα l))).op (s (α l)) := by
+          rw [htU]
+        _ = r l := by
+          rfl
 
 /-- Every pair of basis members lying in a common basis member has a basis
 intersection. -/
@@ -264,7 +551,65 @@ theorem basisSheafCondition_iff_intersection_gluing
           ∃! t : P.obj (op i),
             ∀ j, ∃ h : B (U.member j) ≤ B i,
               P.map (InducedCategory.homMk (homOfLE h)).op t = s j := by
-  sorry
+  rw [basisSheafCondition_iff_cofinal_cover_system B hB C hC P]
+  constructor
+  have hom_eq : ∀ (a b : ι) (hab hab' : B a ≤ B b),
+      InducedCategory.homMk (homOfLE hab) =
+        InducedCategory.homMk (homOfLE hab') := by
+    intro a b hab hab'
+    apply InducedCategory.hom_ext
+    apply Subsingleton.elim
+  have map_comp_eq : ∀ (a b c : ι) (hab : B a ≤ B b) (hbc : B b ≤ B c)
+      (hac : B a ≤ B c) (x : P.obj (op c)),
+      P.map (InducedCategory.homMk (homOfLE hab)).op
+          (P.map (InducedCategory.homMk (homOfLE hbc)).op x) =
+        P.map (InducedCategory.homMk (homOfLE hac)).op x := by
+    intro a b c hab hbc hac x
+    rw [← comp_apply, ← P.map_comp, ← op_comp]
+    congr 1
+  · intro h i U hUC s hInt
+    apply h i U hUC s
+    intro j j' k hk hk'
+    have hj : B (U.member j) ≤ B i := by
+      rw [← U.covers]
+      exact le_iSup (fun j => B (U.member j)) j
+    have hj' : B (U.member j') ≤ B i := by
+      rw [← U.covers]
+      exact le_iSup (fun j => B (U.member j)) j'
+    obtain ⟨l, hl⟩ := hinter i (U.member j) (U.member j') hj hj'
+    have hkl : B k ≤ B l := by
+      rw [hl]
+      exact le_inf hk hk'
+    have heq := hInt j j' l hl
+    have heq' := congrArg
+      (P.map (InducedCategory.homMk (homOfLE hkl)).op) heq
+    have hL : B l ≤ B (U.member j) := by
+      rw [hl]
+      exact inf_le_left
+    have hR : B l ≤ B (U.member j') := by
+      rw [hl]
+      exact inf_le_right
+    calc
+      P.map (InducedCategory.homMk (homOfLE hk)).op (s j) =
+          P.map (InducedCategory.homMk (homOfLE (le_trans hkl hL))).op (s j) := by
+        rw [hom_eq k (U.member j) hk (le_trans hkl hL)]
+      _ = P.map (InducedCategory.homMk (homOfLE hkl)).op
+          (P.map (InducedCategory.homMk (homOfLE hL)).op (s j)) :=
+        (map_comp_eq _ _ _ hkl hL (le_trans hkl hL) _).symm
+      _ = P.map (InducedCategory.homMk (homOfLE hkl)).op
+          (P.map (InducedCategory.homMk (homOfLE hR)).op (s j')) := heq'
+      _ = P.map (InducedCategory.homMk (homOfLE (le_trans hkl hR))).op (s j') :=
+        map_comp_eq _ _ _ hkl hR (le_trans hkl hR) _
+      _ = P.map (InducedCategory.homMk (homOfLE hk')).op (s j') := by
+        rw [hom_eq k (U.member j') (le_trans hkl hR) hk']
+  · intro h i U hUC s hfull
+    apply h i U hUC s
+    intro j j' k hk
+    exact hfull j j' k (by
+      rw [hk]
+      exact inf_le_left) (by
+      rw [hk]
+      exact inf_le_right)
 
 /-! ## Stalks on a basis and condition (*) -/
 

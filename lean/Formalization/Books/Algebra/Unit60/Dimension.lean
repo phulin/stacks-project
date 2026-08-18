@@ -4,6 +4,7 @@ import Mathlib.RingTheory.KrullDimension.Zero
 import Mathlib.RingTheory.RegularLocalRing.Defs
 import Mathlib.RingTheory.Spectrum.Prime.Topology
 import Mathlib.RingTheory.Localization.AtPrime.Basic
+import Mathlib.Algebra.Polynomial.Roots
 
 /-!
 # Commutative Algebra, Chapter 60: Dimension
@@ -85,10 +86,118 @@ theorem noetherian_ringKrullDimLE_zero_iff_artinian
 
 /-! ## The invariant `d` and zero-dimensional rings -/
 
+private theorem numericalPolynomialDegree_eq_zero_of_eventually_eq
+    (f : ℤ → ℤ) (c : ℤ)
+    (hf : ∀ᶠ n : ℤ in Filter.atTop, f n = c)
+    (hnum : IsNumericalPolynomial f) (hc : c ≠ 0) :
+    numericalPolynomialDegree f = 0 := by
+  unfold numericalPolynomialDegree
+  let P := eventuallyRationalPolynomial f
+  have hP : ∀ᶠ n : ℤ in Filter.atTop, P.eval (n : ℚ) = (c : ℚ) := by
+    filter_upwards [eventuallyRationalPolynomial_spec f hnum, hf] with n hn hfn
+    rw [hn, hfn]
+  obtain ⟨N, hN⟩ := Filter.eventually_atTop.1 hP
+  have hinj : Function.Injective (fun k : ℕ => ((N + k : ℤ) : ℚ)) := by
+    intro i j hij
+    have hij' : (N + i : ℤ) = N + j := by
+      exact_mod_cast hij
+    omega
+  have hinf : Set.Infinite (Set.range (fun k : ℕ => ((N + k : ℤ) : ℚ))) :=
+    Set.infinite_range_of_injective hinj
+  have heq : P = Polynomial.C (c : ℚ) := by
+    apply Polynomial.eq_of_infinite_eval_eq P (Polynomial.C (c : ℚ))
+    refine hinf.mono ?_
+    rintro x ⟨k, rfl⟩
+    have hNk : N ≤ N + k := by omega
+    simpa [P, Polynomial.eval_C] using hN (N + k) hNk
+  simpa [P, heq, hc]
+
+private theorem d_eq_zero_iff_isFiniteLength
+    (R : Type u) [CommRing R] [IsLocalRing R] [IsNoetherianRing R] :
+    d R R = 0 ↔ IsFiniteLength R R := by
+  classical
+  by_cases hR : Nontrivial R
+  · letI : Nontrivial R := hR
+    constructor
+    · intro hd
+      by_contra hfin
+      have hnotArt : ¬ IsArtinianRing R := by
+        intro hArt
+        exact hfin
+          ((Formalization.Books.Algebra.Unit53.artinian_iff_finite_length
+            (R := R)).1 hArt)
+      have hpows : ∀ n : ℕ,
+          (IsLocalRing.maximalIdeal R) ^ n • (⊤ : Submodule R R) ≠ ⊥ := by
+        intro n hn
+        apply hnotArt
+        apply (isArtinianRing_iff_isNilpotent_maximalIdeal R).2
+        refine ⟨n, ?_⟩
+        simpa only [smul_eq_mul, Ideal.mul_top] using hn
+      have hdegree := d_eq_hilbertPolynomial_degree_add_one R R hpows
+      rw [hd] at hdegree
+      have hne : (hilbertPolynomial R R).degree + 1 ≠ (0 : WithBot ℕ) := by
+        intro hz
+        cases hdeg : (hilbertPolynomial R R).degree with
+        | bot => simp [hdeg] at hz
+        | coe n => simp [hdeg] at hz
+      exact hne hdegree.symm
+    · intro hfin
+      have hArt : IsArtinianRing R :=
+        (Formalization.Books.Algebra.Unit53.artinian_iff_finite_length
+          (R := R)).2 hfin
+      obtain ⟨n, hn⟩ :=
+        (isArtinianRing_iff_isNilpotent_maximalIdeal R).1 hArt
+      have hcum (k : ℕ) (hk : n ≤ k) :
+          cumulativeHilbertFunction R R k = moduleLengthNat (R := R) (M := R) := by
+        have hpow : (IsLocalRing.maximalIdeal R) ^ (k + 1) = (⊥ : Ideal R) := by
+          apply le_antisymm
+          · rw [← hn]
+            exact Ideal.pow_le_pow_right (Nat.le_succ_of_le hk)
+          · exact bot_le
+        have hsub :
+            (IsLocalRing.maximalIdeal R) ^ (k + 1) •
+                (⊤ : Submodule R R) = ⊥ := by
+          simpa only [smul_eq_mul, Ideal.mul_top, hpow]
+        change
+          (Module.length R
+              (R ⧸ ((IsLocalRing.maximalIdeal R) ^ (k + 1) •
+                (⊤ : Submodule R R)))).toNat =
+            (Module.length R R).toNat
+        rw [hsub]
+        exact congrArg ENat.toNat
+          ((AlgEquiv.quotientBot R R).toLinearEquiv.length_eq)
+      have hconst : ∀ᶠ z : ℤ in Filter.atTop,
+          cumulativeHilbertFunctionInteger R R z =
+            (moduleLengthNat (R := R) (M := R) : ℤ) := by
+        filter_upwards [Filter.eventually_ge_atTop (n : ℤ)] with z hz
+        have hz0 : 0 ≤ z := by omega
+        have hzn : n ≤ z.toNat := by omega
+        simp only [cumulativeHilbertFunctionInteger, natFunctionToInteger,
+          if_pos hz0, Int.toNat_of_nonneg hz0]
+        rw [hcum z.toNat hzn]
+      have hcpos : 0 < moduleLengthNat (R := R) (M := R) := by
+        unfold moduleLengthNat
+        apply ENat.toNat_pos
+        · exact ne_of_gt (Module.length_pos (R := R) (M := R))
+        · exact (Module.length_ne_top_iff.mpr hfin).ne
+      simpa [d, hR] using
+        (numericalPolynomialDegree_eq_zero_of_eventually_eq
+          cumulativeHilbertFunctionInteger R R
+          (moduleLengthNat (R := R) (M := R) : ℤ) hconst
+          (hilbert_functions_are_numerical R R).2 (by exact_mod_cast hcpos.ne'))
+  · letI : Subsingleton R := not_nontrivial_iff_subsingleton.mp hR
+    simp [d, hR, ringKrullDim_eq_bot_of_subsingleton]
+
 theorem local_ringKrullDim_eq_zero_iff_d_eq_zero
     (R : Type u) [CommRing R] [IsLocalRing R] [IsNoetherianRing R] :
     ringKrullDim R = 0 ↔ d R R = 0 := by
-  sorry
+  by_cases hR : Nontrivial R
+  · letI : Nontrivial R := hR
+    rw [noetherian_ringKrullDim_eq_zero_iff_artinian]
+    exact (Formalization.Books.Algebra.Unit53.artinian_iff_finite_length
+      (R := R)).trans d_eq_zero_iff_isFiniteLength.symm
+  · letI : Subsingleton R := not_nontrivial_iff_subsingleton.mp hR
+    simp [ringKrullDim_eq_bot_of_subsingleton, d, hR]
 
 /- The finite products in the source are represented through Mathlib's
    canonical finite product of localizations at maximal ideals.  The extra
@@ -157,7 +266,192 @@ theorem dimension_zero_ring_characterization
       , IsFiniteProductOfNilpotentMaximalLocalRings R
       , HasFinitelyManyMaximalIdealsAndNilpotentJacobsonRadical R
       , HasNoStrictPrimeInclusions R ] := by
-  sorry
+  have hArt_to_dim : IsArtinianRing R →
+      IsNoetherianRing R ∧ ringKrullDim R = 0 := by
+    intro hArt
+    letI : IsArtinianRing R := hArt
+    exact ⟨inferInstance, (noetherian_ringKrullDim_eq_zero_iff_artinian
+      (R := R)).2 hArt⟩
+  have hDim_to_art : IsNoetherianRing R ∧ ringKrullDim R = 0 →
+      IsArtinianRing R := by
+    rintro ⟨hN, hdim⟩
+    letI : IsNoetherianRing R := hN
+    exact (noetherian_ringKrullDim_eq_zero_iff_artinian (R := R)).1 hdim
+  have hArt_to_length : IsArtinianRing R → IsFiniteLength R R := by
+    exact fun hArt =>
+      (Formalization.Books.Algebra.Unit53.artinian_iff_finite_length
+        (R := R)).1 hArt
+  have hLength_to_art : IsFiniteLength R R → IsArtinianRing R := by
+    exact fun hLength =>
+      (Formalization.Books.Algebra.Unit53.artinian_iff_finite_length
+        (R := R)).2 hLength
+  have hArt_to_productArt : IsArtinianRing R →
+      IsFiniteProductOfArtinianLocalRings R := by
+    intro hArt
+    have hprops :=
+      Formalization.Books.Algebra.Unit53.finite_length_ring_properties
+        (hArt_to_length hArt)
+    letI : IsArtinianRing R := hArt
+    refine ⟨hprops.2.2.2.1, hprops.2.2.2.2, ?_⟩
+    intro q
+    exact IsArtinianRing.localization_artinian q.asIdeal.primeCompl _
+  have hProductArt_to_art : IsFiniteProductOfArtinianLocalRings R →
+      IsArtinianRing R := by
+    rintro ⟨hfinite, ⟨e⟩, hfactor⟩
+    letI : Finite (MaximalSpectrum R) := hfinite
+    letI : ∀ q : MaximalSpectrum R,
+        IsArtinianRing (Localization.AtPrime q.asIdeal) := hfactor
+    haveI : IsArtinianRing (MaximalSpectrum.PiLocalization R) := inferInstance
+    exact e.symm.toRingEquiv.isArtinianRing
+  have hArt_to_discrete : IsArtinianRing R →
+      IsNoetherianRing R ∧ IsFiniteDiscretePrimeSpectrum R := by
+    intro hArt
+    letI : IsArtinianRing R := hArt
+    exact ⟨inferInstance, ⟨inferInstance, inferInstance⟩⟩
+  have hDiscrete_to_art :
+      IsNoetherianRing R ∧ IsFiniteDiscretePrimeSpectrum R →
+        IsArtinianRing R := by
+    rintro ⟨hN, ⟨hfinite, hdiscrete⟩⟩
+    letI : IsNoetherianRing R := hN
+    have hdim : Ring.KrullDimLE 0 R :=
+      (PrimeSpectrum.discreteTopology_iff_finite_and_krullDimLE_zero.mp
+        hdiscrete).2
+    exact (isArtinianRing_iff_krullDimLE_zero).2 hdim
+  have hArt_to_productDim : IsArtinianRing R →
+      IsFiniteProductOfNoetherianZeroDimensionalLocalRings R := by
+    intro hArt
+    have hprops :=
+      Formalization.Books.Algebra.Unit53.finite_length_ring_properties
+        (hArt_to_length hArt)
+    letI : IsArtinianRing R := hArt
+    refine ⟨inferInstance, hprops.2.2.2.1, hprops.2.2.2.2, ?_⟩
+    intro q
+    have hloc : IsArtinianRing (Localization.AtPrime q.asIdeal) :=
+      IsArtinianRing.localization_artinian q.asIdeal.primeCompl _
+    exact (noetherian_ringKrullDim_eq_zero_iff_artinian
+      (R := Localization.AtPrime q.asIdeal)).2 hloc
+  have hProductDim_to_art :
+      IsFiniteProductOfNoetherianZeroDimensionalLocalRings R →
+        IsArtinianRing R := by
+    rintro ⟨hN, hfinite, ⟨e⟩, hdim⟩
+    letI : IsNoetherianRing R := hN
+    letI : Finite (MaximalSpectrum R) := hfinite
+    letI : ∀ q : MaximalSpectrum R,
+        IsArtinianRing (Localization.AtPrime q.asIdeal) := by
+      intro q
+      exact (noetherian_ringKrullDim_eq_zero_iff_artinian
+        (R := Localization.AtPrime q.asIdeal)).1 (hdim q)
+    haveI : IsArtinianRing (MaximalSpectrum.PiLocalization R) := inferInstance
+    exact e.symm.toRingEquiv.isArtinianRing
+  have hArt_to_productD : IsArtinianRing R →
+      IsFiniteProductOfDZeroLocalRings R := by
+    intro hArt
+    rcases hArt_to_productDim hArt with ⟨hN, hfinite, he, hdim⟩
+    refine ⟨hN, hfinite, he, ?_⟩
+    intro q
+    exact (local_ringKrullDim_eq_zero_iff_d_eq_zero
+      (Localization.AtPrime q.asIdeal)).mp (hdim q)
+  have hProductD_to_art : IsFiniteProductOfDZeroLocalRings R →
+      IsArtinianRing R := by
+    rintro ⟨hN, hfinite, ⟨e⟩, hd⟩
+    letI : IsNoetherianRing R := hN
+    letI : Finite (MaximalSpectrum R) := hfinite
+    letI : ∀ q : MaximalSpectrum R,
+        IsArtinianRing (Localization.AtPrime q.asIdeal) := by
+      intro q
+      have hdim := (local_ringKrullDim_eq_zero_iff_d_eq_zero
+        (Localization.AtPrime q.asIdeal)).2 (hd q)
+      exact (noetherian_ringKrullDim_eq_zero_iff_artinian
+        (R := Localization.AtPrime q.asIdeal)).1 hdim
+    haveI : IsArtinianRing (MaximalSpectrum.PiLocalization R) := inferInstance
+    exact e.symm.toRingEquiv.isArtinianRing
+  have hArt_to_productNil : IsArtinianRing R →
+      IsFiniteProductOfNilpotentMaximalLocalRings R := by
+    intro hArt
+    rcases hArt_to_productDim hArt with ⟨hN, hfinite, he, hdim⟩
+    refine ⟨hN, hfinite, he, ?_⟩
+    intro q
+    have hloc : IsArtinianRing (Localization.AtPrime q.asIdeal) :=
+      (noetherian_ringKrullDim_eq_zero_iff_artinian
+        (R := Localization.AtPrime q.asIdeal)).1 (hdim q)
+    exact (isArtinianRing_iff_isNilpotent_maximalIdeal
+      (Localization.AtPrime q.asIdeal)).1 hloc
+  have hProductNil_to_art : IsFiniteProductOfNilpotentMaximalLocalRings R →
+      IsArtinianRing R := by
+    rintro ⟨hN, hfinite, ⟨e⟩, hnil⟩
+    letI : IsNoetherianRing R := hN
+    letI : Finite (MaximalSpectrum R) := hfinite
+    letI : ∀ q : MaximalSpectrum R,
+        IsArtinianRing (Localization.AtPrime q.asIdeal) := by
+      intro q
+      exact (isArtinianRing_iff_isNilpotent_maximalIdeal
+        (Localization.AtPrime q.asIdeal)).2 (hnil q)
+    haveI : IsArtinianRing (MaximalSpectrum.PiLocalization R) := inferInstance
+    exact e.symm.toRingEquiv.isArtinianRing
+  have hArt_to_jacobson : IsArtinianRing R →
+      HasFinitelyManyMaximalIdealsAndNilpotentJacobsonRadical R := by
+    intro hArt
+    letI : IsArtinianRing R := hArt
+    exact ⟨inferInstance,
+      Formalization.Books.Algebra.Unit53.artinian_finite_maximal_ideals,
+      Formalization.Books.Algebra.Unit53.artinian_jacobson_radical_is_nilpotent⟩
+  have hJacobson_to_art :
+      HasFinitelyManyMaximalIdealsAndNilpotentJacobsonRadical R →
+        IsArtinianRing R := by
+    rintro ⟨hN, hfinite, hjac⟩
+    letI : IsNoetherianRing R := hN
+    have hjac' : Formalization.Books.Algebra.Unit03.locallyNilpotentIdeal
+        (Ring.jacobson R) := by
+      obtain ⟨n, hn⟩ := hjac
+      intro x hx
+      refine ⟨n, ?_⟩
+      have hxpow : x ^ n ∈ (Ring.jacobson R) ^ n :=
+        Ideal.pow_mem_pow hx n
+      rw [hn] at hxpow
+      exact hxpow
+    have hprod :=
+      Formalization.Books.Algebra.Unit53.product_localizations_of_finite_maximal_ideals
+        hfinite hjac'
+    exact (isArtinianRing_iff_krullDimLE_zero).2
+      (Ring.KrullDimLE.mk₀ hprod.1)
+  have hArt_to_noStrict : IsArtinianRing R → HasNoStrictPrimeInclusions R := by
+    intro hArt
+    letI : IsArtinianRing R := hArt
+    refine ⟨inferInstance, ?_⟩
+    intro p q hp hq hpq
+    letI : p.IsPrime := hp
+    have hpmax : p.IsMaximal := IsArtinianRing.isMaximal_of_isPrime p
+    exact hpq.ne (hpmax.eq_of_le hq.ne_top hpq.le)
+  have hNoStrict_to_art : HasNoStrictPrimeInclusions R → IsArtinianRing R := by
+    rintro ⟨hN, hnostrict⟩
+    letI : IsNoetherianRing R := hN
+    have hall : ∀ (p : Ideal R), p.IsPrime → p.IsMaximal := by
+      intro p hp
+      obtain ⟨m, hm, hpm⟩ := p.exists_le_maximal hp.ne_top
+      have hEq : p = m := by
+        by_contra hne
+        exact (hnostrict hp hm.isPrime) (lt_of_le_of_ne hpm hne)
+      simpa [hEq] using hm
+    exact (isArtinianRing_iff_krullDimLE_zero).2 (Ring.KrullDimLE.mk₀ hall)
+  tfae_have 1 → 2 := hArt_to_dim
+  tfae_have 2 → 1 := hDim_to_art
+  tfae_have 1 → 3 := hArt_to_length
+  tfae_have 3 → 1 := hLength_to_art
+  tfae_have 1 → 4 := hArt_to_productArt
+  tfae_have 4 → 1 := hProductArt_to_art
+  tfae_have 1 → 5 := hArt_to_discrete
+  tfae_have 5 → 1 := hDiscrete_to_art
+  tfae_have 1 → 6 := hArt_to_productDim
+  tfae_have 6 → 1 := hProductDim_to_art
+  tfae_have 1 → 7 := hArt_to_productD
+  tfae_have 7 → 1 := hProductD_to_art
+  tfae_have 1 → 8 := hArt_to_productNil
+  tfae_have 8 → 1 := hProductNil_to_art
+  tfae_have 1 → 9 := hArt_to_jacobson
+  tfae_have 9 → 1 := hJacobson_to_art
+  tfae_have 1 → 10 := hArt_to_noStrict
+  tfae_have 10 → 1 := hNoStrict_to_art
+  tfae_finish
 
 /-! ## Dimension one and general local dimension -/
 

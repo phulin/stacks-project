@@ -150,7 +150,7 @@ theorem shortExact_underlying_data
       exact (Submodule.Quotient.mk_eq_zero _).1 hy
     obtain ⟨x, hx⟩ := hyI
     exact ⟨x, hx⟩
-  let : CategoryTheory.Limits.HasZeroMorphisms
+  letI : CategoryTheory.Limits.HasZeroMorphisms
       (FiniteLengthEndomorphism.{u, v} R) :=
     CategoryTheory.Preadditive.preadditiveHasZeroMorphisms
   have zero_hom {A B : FiniteLengthEndomorphism.{u, v} R} :
@@ -174,7 +174,7 @@ theorem shortExact_underlying_data
   have hepi : Function.Surjective S.g.hom.hom :=
     underlying_surjective S.g (fun g h hgh => heg.left_cancellation g h hgh)
   have hexact : Function.Exact S.f.hom.hom S.g.hom.hom := by
-    let : Mono S.f := hmf
+    letI : Mono S.f := hmf
     let K : Submodule R S.X₂.carrier := LinearMap.ker S.g.hom.hom
     have hcomm : ∀ z : S.X₂.carrier,
         S.g.hom.hom (S.X₂.endomorphism.hom z) =

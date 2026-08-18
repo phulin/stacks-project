@@ -5,6 +5,7 @@ import Mathlib.RingTheory.Flat.Basic
 import Mathlib.RingTheory.Ideal.Maps
 import Mathlib.RingTheory.KrullDimension.Basic
 import Mathlib.RingTheory.LocalRing.Basic
+import Mathlib.RingTheory.MvPolynomial.Ideal
 
 /-!
 # Examples, Chapter 35: Zero dimensional local ring with nonzero flat ideal
@@ -89,13 +90,17 @@ theorem zeroDimensionalFlatIdeal_x_eq_y_mul_next_x
     (k : Type u) [Field k] (i : ℕ) :
     zeroDimensionalFlatIdealX k i =
       zeroDimensionalFlatIdealY k i * zeroDimensionalFlatIdealX k (i + 1) := by
-  sorry
+  change Ideal.Quotient.mk _ _ = Ideal.Quotient.mk _ _
+  rw [Ideal.Quotient.mk_eq_mk_iff_sub_mem]
+  exact Ideal.subset_span (Or.inl ⟨i, rfl⟩)
 
 @[simp]
 theorem zeroDimensionalFlatIdeal_y_sq_eq_zero
     (k : Type u) [Field k] (i : ℕ) :
     zeroDimensionalFlatIdealY k i ^ 2 = 0 := by
-  sorry
+  change (Ideal.Quotient.mk _ (MvPolynomial.X (zeroDimensionalFlatIdealYVar i))) ^ 2 = 0
+  rw [← map_pow, Ideal.Quotient.eq_zero_iff_mem]
+  exact Ideal.subset_span (Or.inr ⟨i, rfl⟩)
 
 /-- The product of the `y`-variables from `i` up to, but excluding, `j`. -/
 def zeroDimensionalFlatIdealTransitionProduct
@@ -108,7 +113,22 @@ theorem zeroDimensionalFlatIdeal_x_eq_transitionProduct_mul_x
     zeroDimensionalFlatIdealX k i =
       zeroDimensionalFlatIdealTransitionProduct k i j *
         zeroDimensionalFlatIdealX k j := by
-  sorry
+  refine Nat.le_induction ?_ ?_ j hij
+  · simp [zeroDimensionalFlatIdealTransitionProduct]
+  · intro n hn ih
+    calc
+      zeroDimensionalFlatIdealX k i =
+          zeroDimensionalFlatIdealTransitionProduct k i n *
+            zeroDimensionalFlatIdealX k n := ih
+      _ = zeroDimensionalFlatIdealTransitionProduct k i n *
+            (zeroDimensionalFlatIdealY k n *
+              zeroDimensionalFlatIdealX k (n + 1)) := by
+        rw [zeroDimensionalFlatIdeal_x_eq_y_mul_next_x k n]
+      _ = zeroDimensionalFlatIdealTransitionProduct k i (n + 1) *
+            zeroDimensionalFlatIdealX k (n + 1) := by
+        simp only [zeroDimensionalFlatIdealTransitionProduct]
+        rw [Finset.prod_Ico_succ_top hn]
+        ring
 
 /-! ## The unique prime and the candidate flat ideal -/
 
@@ -128,7 +148,76 @@ def zeroDimensionalFlatIdeal (k : Type u) [Field k] :
 theorem zeroDimensionalFlatIdeal_maximalIdeal_isPrime
     (k : Type u) [Field k] :
     (zeroDimensionalFlatIdealMaximalIdeal k).IsPrime := by
-  sorry
+  let J : Ideal (zeroDimensionalFlatIdealPolynomial k) :=
+    Ideal.span (MvPolynomial.X '' (Set.univ : Set zeroDimensionalFlatIdealVariables))
+  have hJker :
+      J = RingHom.ker
+        (MvPolynomial.constantCoeff :
+          zeroDimensionalFlatIdealPolynomial k →+* k) := by
+    ext p
+    rw [RingHom.mem_ker, MvPolynomial.mem_ideal_span_X_image]
+    constructor
+    · intro hp
+      rw [MvPolynomial.constantCoeff_eq]
+      by_contra h
+      have h0 : (0 : zeroDimensionalFlatIdealVariables →₀ ℕ) ∈ p.support := by
+        simpa [MvPolynomial.mem_support_iff] using h
+      obtain ⟨v, hv, hv0⟩ := hp 0 h0
+      exact hv0 (by simp)
+    · rw [MvPolynomial.constantCoeff_eq]
+      intro hp m hm
+      by_contra h
+      push Not at h
+      have hm0 : m = 0 := Finsupp.ext (fun i => h i (Set.mem_univ _))
+      have hm' : MvPolynomial.coeff m p ≠ 0 := by
+        simpa [MvPolynomial.mem_support_iff] using hm
+      exact hm' (hm0 ▸ hp)
+  have hJprime : J.IsPrime := by
+    rw [hJker]
+    exact RingHom.ker_isPrime _
+  haveI : J.IsPrime := hJprime
+  have hmem (v : zeroDimensionalFlatIdealVariables) :
+      MvPolynomial.X v ∈ J :=
+    Ideal.subset_span ⟨v, Set.mem_univ _, rfl⟩
+  have hLJ : zeroDimensionalFlatIdealRelationsIdeal k ≤ J := by
+    rw [zeroDimensionalFlatIdealRelationsIdeal]
+    apply Ideal.span_le.2
+    rintro z (⟨n, rfl⟩ | ⟨n, rfl⟩)
+    · simpa [zeroDimensionalFlatIdealRelation] using
+        J.sub_mem (hmem _) (J.mul_mem_left _ (hmem _))
+    · simpa [zeroDimensionalFlatIdealSquareRelation, pow_two] using
+        J.mul_mem_left _ (hmem _)
+  let q : zeroDimensionalFlatIdealPolynomial k →+*
+      zeroDimensionalFlatIdealRing k :=
+    Ideal.Quotient.mk _
+  have hmap : Ideal.map q J = zeroDimensionalFlatIdealMaximalIdeal k := by
+    apply le_antisymm
+    · rw [Ideal.map_le_iff_le_comap]
+      apply Ideal.span_le.2
+      rintro z ⟨v, -, rfl⟩
+      cases v with
+      | mk n b =>
+        cases b with
+        | false =>
+          change zeroDimensionalFlatIdealX k n ∈
+            zeroDimensionalFlatIdealMaximalIdeal k
+          exact Ideal.subset_span (Or.inl ⟨n, rfl⟩)
+        | true =>
+          change zeroDimensionalFlatIdealY k n ∈
+            zeroDimensionalFlatIdealMaximalIdeal k
+          exact Ideal.subset_span (Or.inr ⟨n, rfl⟩)
+    · rw [zeroDimensionalFlatIdealMaximalIdeal]
+      apply Ideal.span_le.2
+      rintro z (⟨n, rfl⟩ | ⟨n, rfl⟩)
+      · change q (MvPolynomial.X (zeroDimensionalFlatIdealXVar n)) ∈
+          Ideal.map q J
+        exact Ideal.mem_map_of_mem q (hmem _)
+      · change q (MvPolynomial.X (zeroDimensionalFlatIdealYVar n)) ∈
+          Ideal.map q J
+        exact Ideal.mem_map_of_mem q (hmem _)
+  rw [← hmap]
+  apply Ideal.map_isPrime_of_surjective (f := q) Ideal.Quotient.mk_surjective
+  simpa [q] using hLJ
 
 /-- Every prime ideal is the displayed ideal `(x_i,y_i)`. -/
 theorem zeroDimensionalFlatIdeal_unique_prime

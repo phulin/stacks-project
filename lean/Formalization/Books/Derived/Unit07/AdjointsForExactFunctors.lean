@@ -65,7 +65,28 @@ theorem fully_faithful_adjoint_kernel_zero_is_equivalence
     (hF : Nonempty F.FullyFaithful)
     (hG : ∀ X : D, Functor.kernel G X → IsZero X) :
     F.IsEquivalence := by
-  sorry
+  have hFull : F.Full := hF.some.full
+  have hFaithful : F.Faithful := hF.some.faithful
+  have hUnit : IsIso adj.unit :=
+    @Adjunction.unit_isIso_of_L_fully_faithful _ _ _ _ _ _ adj hFull hFaithful
+  have hUnitApp : ∀ X, IsIso (adj.unit.app X) := by
+    rw [← NatTrans.isIso_iff_isIso_app]
+    exact hUnit
+  have hCounit : ∀ Y, IsIso (adj.counit.app Y) := by
+    intro Y
+    obtain ⟨Z, f, g, hT⟩ := distinguished_cocone_triangle (adj.counit.app Y)
+    have hT' := G.map_distinguished (Triangle.mk (adj.counit.app Y) f g) hT
+    have hi : IsIso (G.map (adj.counit.app Y)) :=
+      @isIso_of_hom_comp_eq_id _ _ _ _
+        (adj.unit.app (G.obj Y)) (hUnitApp _) (G.map (adj.counit.app Y))
+        (adj.right_triangle_components Y)
+    exact (Triangle.isZero₃_iff_isIso₁ _ hT).1
+      (hG Z ((Triangle.isZero₃_iff_isIso₁ _ hT').2 hi))
+  refine { faithful := hFaithful, full := hFull, essSurj := ?_ }
+  refine { mem_essImage := ?_ }
+  intro Y
+  refine ⟨G.obj Y, ⟨?_⟩⟩
+  exact @asIso _ _ _ _ (adj.counit.app Y) (hCounit Y)
 
 end TriangulatedCategories
 

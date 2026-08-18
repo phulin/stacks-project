@@ -70,6 +70,7 @@ structure EtaleClosedAtPrimeData
   surjective : Function.Surjective (algebraMap R' A)
   pA : PrimeSpectrum A
   pA_eq_map : pA.asIdeal = p'.asIdeal.map (algebraMap R' A)
+  pA_over_p' : PrimeSpectrum.comap (algebraMap R' A) pA = p'
   pA_over_q :
     letI : Algebra R' (R' ⊗[R] S) := Algebra.TensorProduct.leftAlgebra
     PrimeSpectrum.comap
@@ -115,6 +116,8 @@ structure EtaleSeparatedUnramifiedData
   surjective : ∀ i, Function.Surjective (algebraMap R' (A i))
   pA : ∀ i, PrimeSpectrum (A i)
   pA_eq_map : ∀ i, (pA i).asIdeal = p'.asIdeal.map (algebraMap R' (A i))
+  pA_over_p' : ∀ i,
+    PrimeSpectrum.comap (algebraMap R' (A i)) (pA i) = p'
   noPrimeOver : ∀ qB : PrimeSpectrum B,
     PrimeSpectrum.comap (algebraMap R' B) qB ≠ p'
 

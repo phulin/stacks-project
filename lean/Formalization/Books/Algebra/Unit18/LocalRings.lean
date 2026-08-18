@@ -73,7 +73,12 @@ theorem prime_residueField_spectrum_maps_to_prime {R : Type u} [CommRing R]
     PrimeSpectrum.comap (algebraMap R (Localization.AtPrime p))
         (PrimeSpectrum.comap (IsLocalRing.residue (Localization.AtPrime p)) x) =
       (⟨p, inferInstance⟩ : PrimeSpectrum R) := by
-  sorry
+  rw [IsLocalRing.PrimeSpectrum.comap_residue]
+  apply PrimeSpectrum.ext
+  change
+    (IsLocalRing.maximalIdeal (Localization.AtPrime p)).comap
+        (algebraMap R (Localization.AtPrime p)) = p
+  exact Localization.AtPrime.under_maximalIdeal
 
 /-! ## Maps of localizations and residue fields -/
 
@@ -109,7 +114,11 @@ theorem local_ring_algebraMap_at_prime_not_local
     (p : Ideal R) [p.IsPrime]
     (hp : p ≠ IsLocalRing.maximalIdeal R) :
     ¬ IsLocalHom (algebraMap R (Localization.AtPrime p)) := by
-  sorry
+  intro h
+  apply hp
+  rw [← Localization.AtPrime.under_maximalIdeal (I := p)]
+  exact
+    ((IsLocalRing.local_hom_TFAE (algebraMap R (Localization.AtPrime p))).out 0 4).mp h
 
 /-! ## Characterizations -/
 
@@ -119,7 +128,57 @@ theorem characterize_local_ring {R : Type u} [CommRing R] :
         ∃! p : PrimeSpectrum R, IsClosed ({p} : Set (PrimeSpectrum R)),
         ∃ m : Ideal R, m.IsMaximal ∧ ∀ x : R, x ∉ m → IsUnit x,
         (0 : R) ≠ 1 ∧ ∀ x : R, IsUnit x ∨ IsUnit (1 - x) ] := by
-  sorry
+  tfae_have 1 → 2 := by
+    intro h
+    letI : IsLocalRing R := h
+    let p : PrimeSpectrum R := ⟨IsLocalRing.maximalIdeal R, inferInstance⟩
+    refine
+      ⟨p, (PrimeSpectrum.isClosed_singleton_iff_isMaximal p).mpr inferInstance, ?_⟩
+    intro q hq
+    apply PrimeSpectrum.ext
+    exact
+      IsLocalRing.eq_maximalIdeal
+        (PrimeSpectrum.isClosed_singleton_iff_isMaximal q |>.mp hq)
+  tfae_have 2 → 1 := by
+    rintro ⟨p, hp, huniq⟩
+    rw [localRing_iff_unique_maximalIdeal]
+    refine
+      ⟨p.asIdeal, (PrimeSpectrum.isClosed_singleton_iff_isMaximal p).mp hp, ?_⟩
+    intro I hI
+    let q : PrimeSpectrum R := ⟨I, hI.isPrime⟩
+    have hq : IsClosed ({q} : Set (PrimeSpectrum R)) :=
+      (PrimeSpectrum.isClosed_singleton_iff_isMaximal q).mpr hI
+    exact congrArg PrimeSpectrum.asIdeal (huniq q hq)
+  tfae_have 1 → 3 := by
+    intro h
+    letI : IsLocalRing R := h
+    exact
+      ⟨IsLocalRing.maximalIdeal R, inferInstance, fun x hx =>
+        IsLocalRing.notMem_maximalIdeal.mp hx⟩
+  tfae_have 3 → 4 := by
+    rintro ⟨m, hm, hu⟩
+    have h01 : (0 : R) ≠ 1 := by
+      intro h
+      apply hm.ne_top
+      apply m.eq_top_iff_one.mpr
+      rw [← h]
+      exact m.zero_mem
+    refine ⟨h01, ?_⟩
+    intro x
+    by_cases hx : x ∈ m
+    · right
+      apply hu
+      intro hmem
+      apply hm.ne_top
+      apply m.eq_top_iff_one.mpr
+      simpa using m.add_mem hx hmem
+    · exact Or.inl (hu x hx)
+  tfae_have 4 → 1 := by
+    intro h4
+    exact
+      @IsLocalRing.of_isUnit_or_isUnit_one_sub_self R _
+        (nontrivial_of_ne 0 1 h4.1) h4.2
+  tfae_finish
 
 theorem characterize_local_ring_map
     {R : Type u} {S : Type v} [CommRing R] [CommRing S]
@@ -130,7 +189,23 @@ theorem characterize_local_ring_map
           (IsLocalRing.maximalIdeal S : Set S),
         (IsLocalRing.maximalIdeal S).comap φ = IsLocalRing.maximalIdeal R,
         ∀ x : R, IsUnit (φ x) → IsUnit x ] := by
-  sorry
+  tfae_have 1 ↔ 2 := (IsLocalRing.local_hom_TFAE φ).out 0 1
+  tfae_have 1 ↔ 3 := (IsLocalRing.local_hom_TFAE φ).out 0 4
+  tfae_have 1 → 4 := by
+    intro h
+    letI : IsLocalHom φ := h
+    intro x hx
+    exact (isUnit_map_iff φ x).mp hx
+  tfae_have 4 → 1 := by
+    intro h
+    apply ((IsLocalRing.local_hom_TFAE φ).out 3 0).mp
+    intro x hx
+    change φ x ∈ IsLocalRing.maximalIdeal S
+    by_contra hnot
+    exact
+      (IsLocalRing.notMem_maximalIdeal.mpr
+        (h x (IsLocalRing.notMem_maximalIdeal.mp hnot))) hx
+  tfae_finish
 
 /-! ## The fundamental fibre diagram -/
 

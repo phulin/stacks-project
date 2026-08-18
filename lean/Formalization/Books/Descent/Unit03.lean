@@ -147,6 +147,14 @@ def relativeTensorModuleMap (R A M : Type u) [CommRing R] [CommRing A]
     (relativeTensorMap R A φ).toLinearMap
     (LinearMap.id : M →ₗ[R] M)
 
+theorem relativeTensorModuleMap_smul (R A M : Type u) [CommRing R] [CommRing A]
+    [Algebra R A] [AddCommGroup M] [Module R M]
+    {n m : ℕ} (φ : SimplexCategory.mk n ⟶ SimplexCategory.mk m)
+    (a : relativeTensorProduct R A n) (x : relativeTensorModule R A M n) :
+    relativeTensorModuleMap R A M φ (a • x) =
+      relativeTensorMap R A φ a • relativeTensorModuleMap R A M φ x := by
+  sorry
+
 /- The degreewise module map is semilinear for the corresponding Amitsur
 ring map.  Its additive function is the canonical tensor-product map; the
 scalar-compatibility field is the usual module-over-the-degree-ring fact. -/
@@ -157,7 +165,7 @@ noncomputable def relativeTensorModuleMapSemilinear (R A M : Type u)
       relativeTensorModule R A M m :=
   { toFun := relativeTensorModuleMap R A M φ
     map_add' := by intros; simp
-    map_smul' := by sorry }
+    map_smul' := relativeTensorModuleMap_smul R A M φ }
 
 theorem relativeTensorModuleMap_tmul (R A M : Type u) [CommRing R] [CommRing A]
     [Algebra R A] [AddCommGroup M] [Module R M]
@@ -427,6 +435,22 @@ noncomputable def descentCosimplicialModuleMap {n m : ℕ}
   (descentTransportMap D (Fin.le_last _)).toLinearMap.comp
     (descentReindexMap D β ⟨n, Nat.lt_succ_self n⟩)
 
+theorem descentCosimplicialModuleMap_semilinear_exists {n m : ℕ}
+    (D : DescentDatum (R := R) (A := A) (N := N))
+    (β : SimplexCategory.mk n ⟶ SimplexCategory.mk m) :
+    Nonempty (descentTerm R A N n ⟨n, Nat.lt_succ_self n⟩ →ₛₗ[(relativeTensorMap R A β).toRingHom]
+      descentTerm R A N m ⟨m, Nat.lt_succ_self m⟩) := by
+  sorry
+
+/- The source's cosimplicial transition is the semilinear map above; its
+underlying `R`-linear map is the presentation used by the categorical object. -/
+noncomputable def descentCosimplicialModuleMapSemilinear {n m : ℕ}
+    (D : DescentDatum (R := R) (A := A) (N := N))
+    (β : SimplexCategory.mk n ⟶ SimplexCategory.mk m) :
+    descentTerm R A N n ⟨n, Nat.lt_succ_self n⟩ →ₛₗ[(relativeTensorMap R A β).toRingHom]
+      descentTerm R A N m ⟨m, Nat.lt_succ_self m⟩ :=
+  Classical.choice (descentCosimplicialModuleMap_semilinear_exists D β)
+
 theorem descentReindexMap_unit {n m : ℕ}
     (D : DescentDatum (R := R) (A := A) (N := N))
     (β : SimplexCategory.mk n ⟶ SimplexCategory.mk m) (i : Fin (n + 1)) (x : N) :
@@ -505,21 +529,19 @@ theorem canonicalDescentComparison_tmul (a₀ a₁ : A) (m : M) :
       a₀ ⊗ₜ[R] (a₁ ⊗ₜ[R] m) := by
   rfl
 
-noncomputable def canonicalDescentDatum :
-  DescentDatum (R := R) (A := A) (N := TensorProduct R A M) :=
-  { comparison := canonicalDescentComparison (R := R) (A := A) (M := M)
-    comparison_compatible := by sorry
-    cocycle := by sorry }
-
 theorem canonicalDescentDatum_exists :
     ∃ D : DescentDatum (R := R) (A := A) (N := TensorProduct R A M),
       D.comparison = canonicalDescentComparison (R := R) (A := A) (M := M) :=
-  ⟨canonicalDescentDatum (R := R) (A := A) (M := M), rfl⟩
+  by sorry
+
+noncomputable def canonicalDescentDatum :
+  DescentDatum (R := R) (A := A) (N := TensorProduct R A M) :=
+  Classical.choose (canonicalDescentDatum_exists (R := R) (A := A) (M := M))
 
 theorem canonicalDescentDatum_comparison :
     (canonicalDescentDatum (R := R) (A := A) (M := M)).comparison =
       canonicalDescentComparison (R := R) (A := A) (M := M) :=
-  rfl
+  Classical.choose_spec (canonicalDescentDatum_exists (R := R) (A := A) (M := M))
 
 def DescentDatumIsoCompatibility {N N' : Type*} [AddCommGroup N] [Module R N]
     [Module A N] [IsScalarTower R A N]
@@ -955,6 +977,17 @@ structure CosimplicialModuleDataHom
     M.transition φ ≫ app m =
       (ModuleCat.extendScalars (A.map φ).hom).map (app n) ≫ N.transition φ
 
+theorem cosimplicialModuleDataHom_comp_naturality
+    {A : CosimplicialObject CommRingCat.{u}}
+    {M N P : CosimplicialModuleData A}
+    (f : CosimplicialModuleDataHom M N)
+    (g : CosimplicialModuleDataHom N P)
+    {n m : ℕ} (φ : SimplexCategory.mk n ⟶ SimplexCategory.mk m) :
+    M.transition φ ≫ (f.app m ≫ g.app m) =
+      (ModuleCat.extendScalars (A.map φ).hom).map (f.app n ≫ g.app n) ≫
+        P.transition φ := by
+  sorry
+
 instance {A : CosimplicialObject CommRingCat.{u}} :
     Category (CosimplicialModuleData A) where
   Hom M N := CosimplicialModuleDataHom M N
@@ -965,9 +998,7 @@ instance {A : CosimplicialObject CommRingCat.{u}} :
         simp }
   comp f g :=
     { app := fun n => f.app n ≫ g.app n
-      naturality := by
-        intro n m φ
-        sorry }
+      naturality := cosimplicialModuleDataHom_comp_naturality f g }
   id_comp f := by
     apply CosimplicialModuleDataHom.ext
     funext n

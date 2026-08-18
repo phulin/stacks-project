@@ -1152,7 +1152,7 @@ theorem twoVariableYIdeal_isPrime (k : Type u) [Field k] :
         _ = q * Polynomial.X := by
           rw [e.apply_symm_apply]
           dsimp [e, e₀, e₁]
-          simp [MvPolynomial.rename_X]
+          simp [MvPolynomial.rename_X, MvPolynomial.finSuccEquiv_X_zero]
         _ = e p := hq
     · intro p hp
       rcases Ideal.mem_span_singleton'.mp hp with ⟨q, hq⟩
@@ -1163,7 +1163,7 @@ theorem twoVariableYIdeal_isPrime (k : Type u) [Field k] :
         e q * Polynomial.X =
             e q * e (MvPolynomial.X (1 : Fin 2)) := by
               dsimp [e, e₀, e₁]
-              simp [MvPolynomial.rename_X]
+              simp [MvPolynomial.rename_X, MvPolynomial.finSuccEquiv_X_zero]
         _ = e (q * MvPolynomial.X (1 : Fin 2)) := by rw [map_mul]
         _ = e p := congrArg e hq
   have hcp :

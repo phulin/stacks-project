@@ -12,6 +12,7 @@ are nonzero in every degree.
 
 namespace Formalization.Books.Exercises.Unit11
 
+open CategoryTheory
 open Formalization.Books.Algebra.Unit71
 
 universe u
@@ -43,7 +44,214 @@ theorem dual_number_residue_ext_nonzero (k : Type u) [Field k] :
         Nonempty
           (ExtGroup (dualNumberResidueModule k)
             (dualNumberResidueModule k) i ≃+ k) := by
-  sorry
+  refine ⟨inferInstance, inferInstance, ?_⟩
+  let R := dualNumberRing k
+  let I := dualNumberNilpotentIdeal k
+  let M := dualNumberResidueModule k
+  let eps : R := DualNumber.eps
+  let f₀ : R →ₗ[R] R := LinearMap.mulLeft R eps
+  have heps : eps ∈ I := by
+    apply Ideal.subset_span
+    simp [I, eps]
+  have hIker : I ≤ LinearMap.ker f₀ := by
+    intro x hx
+    have hx' : x ∈ (Ideal.span {DualNumber.eps} :
+        Ideal (dualNumberRing k)) := by
+      simpa [I, dualNumberNilpotentIdeal] using hx
+    rcases (Ideal.mem_span_singleton'.mp hx') with ⟨c, hc⟩
+    change eps * x = 0
+    calc
+      eps * x = eps * (c * DualNumber.eps) := by rw [hc]
+      _ = (eps * c) * DualNumber.eps :=
+        (mul_assoc _ _ _).symm
+      _ = (c * eps) * DualNumber.eps := by
+        rw [(DualNumber.commute_eps_right c).eq.symm]
+      _ = c * (DualNumber.eps * DualNumber.eps) := by rw [mul_assoc]
+      _ = 0 := by simp
+  let f : M ⟶ ModuleCat.of R R :=
+    ModuleCat.ofHom (I.liftQ f₀ hIker)
+  let g : ModuleCat.of R R ⟶ M :=
+    ModuleCat.ofHom ((Ideal.Quotient.mkₐ R I).toLinearMap)
+  have hfg : f ≫ g = 0 := by
+    apply ModuleCat.hom_ext
+    apply LinearMap.ext
+    intro x
+    rcases x with ⟨x⟩
+    change Ideal.Quotient.mk I (eps * x) = 0
+    apply Ideal.Quotient.eq_zero_iff_mem.mpr
+    simpa [mul_comm] using I.mul_mem_left x heps
+  have hex : Function.Exact (I.liftQ f₀ hIker)
+      ((Ideal.Quotient.mkₐ R I).toLinearMap) := by
+    intro y
+    constructor
+    · intro hy
+      have hyI : y ∈ I := Ideal.Quotient.eq_zero_iff_mem.mp hy
+      have hy' : y ∈ (Ideal.span {DualNumber.eps} :
+          Ideal (dualNumberRing k)) := by
+        simpa [I, dualNumberNilpotentIdeal] using hyI
+      rcases (Ideal.mem_span_singleton'.mp hy') with ⟨c, hc⟩
+      refine ⟨Ideal.Quotient.mk I c, ?_⟩
+      change eps * c = y
+      calc
+        eps * c = c * DualNumber.eps := (DualNumber.commute_eps_right c).eq.symm
+        _ = y := hc
+    · rintro ⟨z, rfl⟩
+      change Ideal.Quotient.mk I (I.liftQ f₀ hIker z) = 0
+      apply Ideal.Quotient.eq_zero_iff_mem.mpr
+      rcases z with ⟨x⟩
+      change eps * x ∈ I
+      simpa [mul_comm] using I.mul_mem_left x heps
+  have hmono : Function.Injective (I.liftQ f₀ hIker) := by
+    intro x y hxy
+    obtain ⟨a, rfl⟩ := Ideal.Quotient.mk_surjective x
+    obtain ⟨b, rfl⟩ := Ideal.Quotient.mk_surjective y
+    have hab : eps * a = eps * b := by
+      change eps * a = eps * b at hxy
+      exact hxy
+    have habfst : a.fst = b.fst := by
+      have := congrArg TrivSqZeroExt.snd hab
+      change TrivSqZeroExt.snd (DualNumber.eps * a) =
+        TrivSqZeroExt.snd (DualNumber.eps * b) at this
+      simpa only [DualNumber.snd_mul, DualNumber.fst_eps, DualNumber.snd_eps,
+        zero_mul, one_mul, zero_add] using this
+    apply (Submodule.Quotient.eq I).mpr
+    have : eps ∣ a - b := by
+      rw [← DualNumber.fst_eq_zero_iff_eps_dvd]
+      simpa using sub_eq_zero.mpr habfst
+    change a - b ∈ (Ideal.span {DualNumber.eps} : Ideal (dualNumberRing k))
+    rcases this with ⟨c, hc⟩
+    apply Ideal.mem_span_singleton'.2
+    exact ⟨c, by simpa [mul_comm] using hc.symm⟩
+  have hepi : Function.Surjective ((Ideal.Quotient.mkₐ R I).toLinearMap) := by
+    exact Ideal.Quotient.mkₐ_surjective R I
+  let S : ShortComplex (ModuleCat R) :=
+    ShortComplex.mk f g hfg
+  have hS : S.ShortExact := ModuleCat.shortComplex_shortExact S hex hmono hepi
+  let fstHom : R →+* k :=
+    { toFun := fun x => x.fst
+      map_one' := by rfl
+      map_mul' := by intro x y; rfl
+      map_zero' := by rfl
+      map_add' := by intro x y; rfl }
+  have hfstI : ∀ x : R, x ∈ I → fstHom x = 0 := by
+    intro x hx
+    have hx' : x ∈ (Ideal.span {DualNumber.eps} : Ideal R) := by
+      simpa [I, dualNumberNilpotentIdeal] using hx
+    rcases (Ideal.mem_span_singleton'.mp hx') with ⟨c, hc⟩
+    change x.fst = 0
+    rw [← hc]
+    rw [TrivSqZeroExt.fst_mul, DualNumber.fst_eps, mul_zero]
+  let qfst : (R ⧸ I) →+* k := Ideal.Quotient.lift I fstHom hfstI
+  have hqfst_inj : Function.Injective qfst := by
+    intro x y hxy
+    obtain ⟨a, rfl⟩ := Ideal.Quotient.mk_surjective x
+    obtain ⟨b, rfl⟩ := Ideal.Quotient.mk_surjective y
+    have habfst : a.fst = b.fst := by
+      change a.fst = b.fst at hxy
+      exact hxy
+    apply (Submodule.Quotient.eq I).mpr
+    have hdiv : eps ∣ a - b := by
+      rw [← DualNumber.fst_eq_zero_iff_eps_dvd]
+      rw [TrivSqZeroExt.fst_sub]
+      exact sub_eq_zero.mpr habfst
+    rcases hdiv with ⟨c, hc⟩
+    apply Ideal.mem_span_singleton'.2
+    exact ⟨c, by simpa [mul_comm] using hc.symm⟩
+  let evalOne : ((M : Type u) →ₗ[R] (M : Type u)) →+ k :=
+    { toFun := fun h => qfst (h (Ideal.Quotient.mk I 1))
+      map_zero' := by simp
+      map_add' := by intro h g; simp }
+  have heval : Function.Bijective evalOne := by
+    constructor
+    · intro h g heq
+      apply LinearMap.ext
+      intro x
+      obtain ⟨a, rfl⟩ := Ideal.Quotient.mk_surjective x
+      have hone : h (Ideal.Quotient.mk I 1) = g (Ideal.Quotient.mk I 1) := by
+        apply hqfst_inj
+        exact heq
+      have hmk : Ideal.Quotient.mk I a = a • Ideal.Quotient.mk I 1 := by
+        change Ideal.Quotient.mk I a = Ideal.Quotient.mk I (a * 1)
+        simp
+      rw [hmk, map_smul, hone, map_smul]
+    · intro z
+      let hlin : (R ⧸ I) →ₗ[R] (R ⧸ I) :=
+        { toFun := fun x => (Ideal.Quotient.mk I (TrivSqZeroExt.inl z)) * x
+          map_add' := by intro x y; rw [mul_add]
+          map_smul' := by
+            intro r x
+            obtain ⟨a, rfl⟩ := Ideal.Quotient.mk_surjective x
+            change Ideal.Quotient.mk I (TrivSqZeroExt.inl z * (r * a)) =
+              Ideal.Quotient.mk I (r * (TrivSqZeroExt.inl z * a))
+            congr 1
+            simp [mul_assoc, mul_comm, mul_left_comm] }
+      refine ⟨hlin, ?_⟩
+      dsimp [evalOne, hlin]
+      rw [map_mul, map_one]
+      simp [qfst, fstHom]
+      rfl
+  let eLin : ((M : Type u) →ₗ[R] (M : Type u)) ≃+ k := AddEquiv.ofBijective evalOne heval
+  let e0 : ExtGroup M M 0 ≃+ k :=
+    CategoryTheory.Abelian.Ext.addEquiv₀.trans
+      (ModuleCat.homAddEquiv.trans eLin)
+  have hcomp : ∀ w : ModuleCat.of R R ⟶ M, f ≫ w = 0 := by
+    intro w
+    apply ModuleCat.hom_ext
+    apply LinearMap.ext
+    intro x
+    obtain ⟨a, rfl⟩ := Ideal.Quotient.mk_surjective x
+    change w (eps * a) = 0
+    rw [show eps * a = eps • a by rfl, map_smul]
+    obtain ⟨b, hb⟩ := Ideal.Quotient.mk_surjective (w a)
+    rw [← hb]
+    change Ideal.Quotient.mk I (eps * b) = 0
+    apply Ideal.Quotient.eq_zero_iff_mem.mpr
+    simpa [mul_comm] using I.mul_mem_left b heps
+  have hzero : ∀ z : ExtGroup (ModuleCat.of R R) M 0,
+      (CategoryTheory.Abelian.Ext.mk₀ f).comp z (zero_add 0) = 0 := by
+    intro z
+    rw [← CategoryTheory.Abelian.Ext.mk₀_addEquiv₀_apply z,
+      CategoryTheory.Abelian.Ext.mk₀_comp_mk₀,
+      CategoryTheory.Abelian.Ext.mk₀_eq_zero_iff]
+    exact hcomp (CategoryTheory.Abelian.Ext.addEquiv₀ z)
+  intro i
+  induction i with
+  | zero => exact ⟨e0⟩
+  | succ i ih =>
+    let α : ExtGroup M M i →+ ExtGroup M M (i + 1) :=
+      hS.extClass.precomp M (by simp [Nat.add_comm])
+    have hinj : Function.Injective α := by
+      intro x y hxy
+      have hx : α (x - y) = 0 := by simp [map_sub, hxy]
+      obtain ⟨z, hz⟩ :=
+        CategoryTheory.Abelian.Ext.contravariant_sequence_exact₁ hS M
+          (x - y) (by simp [Nat.add_comm]) hx
+      rcases i with _ | i
+      · have hz0 :
+            (CategoryTheory.Abelian.Ext.mk₀ f).comp z (zero_add 0) = 0 :=
+          hzero z
+        have hdiff : x - y = 0 := by
+          rw [← hz]
+          exact hz0
+        exact sub_eq_zero.mp hdiff
+      · have hz0 : z = 0 := by
+          apply (CategoryTheory.Abelian.Ext.subsingleton_of_projective
+            (ModuleCat.of R R) M i).elim
+        have hdiff : x - y = 0 := by simpa [hz0] using hz.symm
+        exact sub_eq_zero.mp hdiff
+    have hsurj : Function.Surjective α := by
+      intro z
+      have hz :
+          (CategoryTheory.Abelian.Ext.mk₀ S.g).comp z (zero_add (i + 1)) = 0 := by
+        exact CategoryTheory.Abelian.Ext.eq_zero_of_projective
+          ((CategoryTheory.Abelian.Ext.mk₀ S.g).comp z (zero_add (i + 1)))
+      obtain ⟨x, hx⟩ :=
+        CategoryTheory.Abelian.Ext.contravariant_sequence_exact₃ hS M z hz
+          (n₀ := i)
+          (by simp [Nat.add_comm])
+      exact ⟨x, by simpa [α] using hx⟩
+    rcases ih with ⟨ei⟩
+    exact ⟨(AddEquiv.ofBijective α ⟨hinj, hsurj⟩).symm.trans ei⟩
 
 end
 

@@ -1,9 +1,12 @@
 import Formalization.Books.Algebra.Unit71.ExtGroups
 import Mathlib.Algebra.Category.ModuleCat.Basic
 import Mathlib.Algebra.Homology.ExactSequence
+import Mathlib.Algebra.Homology.ShortComplex.ModuleCat
 import Mathlib.Algebra.MvPolynomial.Basic
 import Mathlib.Algebra.MvPolynomial.Eval
+import Mathlib.Algebra.MvPolynomial.Division
 import Mathlib.RingTheory.Ideal.Quotient.Operations
+import Mathlib.Tactic.IntervalCases
 
 /-!
 # Exercises, Chapter 11: Ext over a regular ring
@@ -55,7 +58,66 @@ theorem origin_residue_ring_isomorphic_to_field (k : Type u) [Field k] :
       e.toRingHom.comp
           (Ideal.Quotient.mkₐ (twoVariablePolynomialRing k) (originIdeal k)).toRingHom =
         originEvaluationAtZero k := by
-  sorry
+  let R := twoVariablePolynomialRing k
+  let f : R →+* k := originEvaluationAtZero k
+  have hmem : ∀ p : R, p - MvPolynomial.C (MvPolynomial.constantCoeff p) ∈ originIdeal k := by
+    intro p
+    induction p using MvPolynomial.induction_on with
+    | C a =>
+        rw [MvPolynomial.constantCoeff_C]
+        simpa only [sub_self] using (originIdeal k).zero_mem
+    | add p q hp hq =>
+        simpa [map_add, sub_add_sub_comm] using (Ideal.add_mem (originIdeal k) hp hq)
+    | mul_X p i hp =>
+        have hi : MvPolynomial.X i ∈ originIdeal k := by
+          apply Ideal.subset_span
+          fin_cases i <;> simp
+        have h := (originIdeal k).mul_mem_left p hi
+        have hc : MvPolynomial.constantCoeff (p * MvPolynomial.X i) = 0 := by
+          change MvPolynomial.coeff 0 (p * MvPolynomial.X i) = 0
+          rw [MvPolynomial.coeff_mul]
+          simp
+        rw [hc, map_zero, sub_zero]
+        exact h
+  have hker : RingHom.ker f = originIdeal k := by
+    apply le_antisymm
+    · intro p hp
+      have hp' := hmem p
+      have hc : MvPolynomial.constantCoeff p = 0 := by
+        simpa [f, originEvaluationAtZero, MvPolynomial.eval₂Hom_zero_apply] using hp
+      simpa [hc] using hp'
+    · refine Ideal.span_le.2 ?_
+      intro p hp
+      simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at hp
+      rcases hp with rfl | rfl
+      · change MvPolynomial.eval₂ (RingHom.id k) (fun _ : Fin 2 => 0)
+          (MvPolynomial.X 0) = 0
+        rw [MvPolynomial.eval₂_X]
+      · change MvPolynomial.eval₂ (RingHom.id k) (fun _ : Fin 2 => 0)
+          (MvPolynomial.X 1) = 0
+        rw [MvPolynomial.eval₂_X]
+  have hf : Function.Surjective f := by
+    intro a
+    refine ⟨MvPolynomial.C a, ?_⟩
+    change MvPolynomial.eval₂ (RingHom.id k) (fun _ : Fin 2 => 0) (MvPolynomial.C a) = a
+    rw [MvPolynomial.eval₂_C]
+    rfl
+  let e₀ : R ⧸ RingHom.ker f ≃+* k :=
+    RingHom.quotientKerEquivOfSurjective hf
+  let q : R ⧸ RingHom.ker f ≃+* R ⧸ originIdeal k :=
+    Ideal.quotientEquiv (RingHom.ker f) (originIdeal k) (RingEquiv.refl R) (by
+      simpa using hker.symm)
+  refine ⟨q.symm.trans e₀, ?_⟩
+  apply RingHom.ext
+  intro p
+  change e₀ (q.symm (Ideal.Quotient.mk (originIdeal k) p)) = f p
+  have hq : q.symm (Ideal.Quotient.mk (originIdeal k) p) =
+      Ideal.Quotient.mk (RingHom.ker f) p := by
+    dsimp [q]
+    rw [Ideal.quotientEquiv_symm_mk]
+    rfl
+  rw [hq]
+  simpa [e₀] using (RingHom.quotientKerEquivOfSurjective_apply_mk hf p)
 
 /-! ## The displayed Koszul complex -/
 
@@ -98,6 +160,128 @@ def koszulComplex (k : Type u) [Field k] :
     (ModuleCat.ofHom (koszulAugmentation k))
     (0 : originResidueModule k ⟶ (0 : ModuleCat (twoVariablePolynomialRing k)))
 
+private theorem koszul_first_injective (k : Type u) [Field k] :
+    Function.Injective (koszulFirstDifferential k) := by
+  intro a b hab
+  have hab' : MvPolynomial.X (1 : Fin 2) * a =
+      MvPolynomial.X (1 : Fin 2) * b := by
+    exact congrArg Prod.fst hab
+  exact mul_left_cancel₀ (MvPolynomial.X_ne_zero (R := k) (1 : Fin 2)) hab'
+
+private theorem koszul_middle_exact (k : Type u) [Field k] :
+    Function.Exact (koszulFirstDifferential k) (koszulSecondDifferential k) := by
+  let R := twoVariablePolynomialRing k
+  let x : R := MvPolynomial.X (0 : Fin 2)
+  let y : R := MvPolynomial.X (1 : Fin 2)
+  have hx : x ≠ 0 := by
+    change MvPolynomial.X (0 : Fin 2) ≠ 0
+    exact MvPolynomial.X_ne_zero (R := k) (0 : Fin 2)
+  intro z
+  constructor
+  · intro hz
+    rcases z with ⟨a, b⟩
+    change x * a + y * b = 0 at hz
+    have hdiv : x ∣ y * b := by
+      refine ⟨-a, ?_⟩
+      calc
+        y * b = -(x * a) := eq_neg_of_add_eq_zero_right hz
+        _ = x * (-a) := by ring
+    rcases (MvPolynomial.X_dvd_mul_iff.mp hdiv) with hxy | hb
+    · have h01 : (0 : Fin 2) = 1 := MvPolynomial.X_dvd_X.mp hxy
+      exact ((by decide : (0 : Fin 2) ≠ 1) h01).elim
+    · rcases hb with ⟨c, hc⟩
+      have hfactor : x * (a + y * c) = 0 := by
+        calc
+          x * (a + y * c) = x * a + y * (x * c) := by ring
+          _ = x * a + y * b := by rw [hc]
+          _ = 0 := hz
+      have hsum : a + y * c = 0 := (mul_eq_zero.mp hfactor).resolve_left hx
+      have ha : a = -(y * c) := eq_neg_of_add_eq_zero_left hsum
+      refine ⟨-c, ?_⟩
+      apply Prod.ext
+      · change y * (-c) = a
+        rw [mul_neg]
+        exact ha.symm
+      · change -x * (-c) = b
+        rw [neg_mul, mul_neg, neg_neg]
+        simpa [x] using hc.symm
+  · rintro ⟨c, hc⟩
+    rcases z with ⟨a, b⟩
+    have hca : y * c = a := congrArg Prod.fst hc
+    have hcb : -x * c = b := congrArg Prod.snd hc
+    change x * a + y * b = 0
+    rw [← hca, ← hcb]
+    ring
+
+private theorem koszul_range (k : Type u) [Field k] :
+    ∀ p : twoVariablePolynomialRing k, p ∈ originIdeal k →
+      ∃ z : twoVariablePolynomialRing k × twoVariablePolynomialRing k,
+        koszulSecondDifferential k z = p := by
+  let R := twoVariablePolynomialRing k
+  let x : R := MvPolynomial.X (0 : Fin 2)
+  let y : R := MvPolynomial.X (1 : Fin 2)
+  intro p hp
+  induction hp using Submodule.span_induction with
+  | mem p hp =>
+      simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at hp
+      rcases hp with rfl | rfl
+      · refine ⟨(1, 0), ?_⟩
+        change x * 1 + y * 0 = x
+        simp
+      · refine ⟨(0, 1), ?_⟩
+        change x * 0 + y * 1 = y
+        simp
+  | zero =>
+      exact ⟨0, by simp [koszulSecondDifferential]⟩
+  | add p q hp hq ihp ihq =>
+      rcases ihp with ⟨a, ha⟩
+      rcases ihq with ⟨b, hb⟩
+      change x * a.1 + y * a.2 = p at ha
+      change x * b.1 + y * b.2 = q at hb
+      refine ⟨(a.1 + b.1, a.2 + b.2), ?_⟩
+      change x * (a.1 + b.1) + y * (a.2 + b.2) = p + q
+      calc
+        x * (a.1 + b.1) + y * (a.2 + b.2) =
+            (x * a.1 + y * a.2) + (x * b.1 + y * b.2) := by ring
+        _ = p + q := by rw [ha, hb]
+  | smul r p hp ih =>
+      rcases ih with ⟨a, ha⟩
+      change x * a.1 + y * a.2 = p at ha
+      refine ⟨(r * a.1, r * a.2), ?_⟩
+      change x * (r * a.1) + y * (r * a.2) = r * p
+      calc
+        x * (r * a.1) + y * (r * a.2) = r * (x * a.1 + y * a.2) := by ring
+        _ = r * p := by rw [ha]
+
+private theorem koszul_second_comp_first (k : Type u) [Field k] :
+    (koszulSecondDifferential k).comp (koszulFirstDifferential k) = 0 := by
+  apply LinearMap.ext
+  intro z
+  change MvPolynomial.X (0 : Fin 2) * (MvPolynomial.X (1 : Fin 2) * z) +
+      MvPolynomial.X (1 : Fin 2) * (-MvPolynomial.X (0 : Fin 2) * z) = 0
+  ring
+
+private theorem koszul_x_mem (k : Type u) [Field k] :
+    MvPolynomial.X (0 : Fin 2) ∈ originIdeal k := by
+  apply Ideal.subset_span
+  simp [originIdeal]
+
+private theorem koszul_y_mem (k : Type u) [Field k] :
+    MvPolynomial.X (1 : Fin 2) ∈ originIdeal k := by
+  apply Ideal.subset_span
+  simp [originIdeal]
+
+private theorem koszul_second_mem_origin (k : Type u) [Field k]
+    (a b : twoVariablePolynomialRing k) :
+    MvPolynomial.X (0 : Fin 2) * a + MvPolynomial.X (1 : Fin 2) * b ∈
+      originIdeal k := by
+  have hxa : a * MvPolynomial.X (0 : Fin 2) ∈ originIdeal k :=
+    (originIdeal k).mul_mem_left a (koszul_x_mem k)
+  have hyb : b * MvPolynomial.X (1 : Fin 2) ∈ originIdeal k :=
+    (originIdeal k).mul_mem_left b (koszul_y_mem k)
+  have hadd := (originIdeal k).add_mem hxa hyb
+  simpa [mul_comm] using hadd
+
 /-- The displayed Koszul complex is exact, with the injectivity of the map
 `R → R × R` and the surjectivity of the map `R → R/(x,y)` exposed
 explicitly. -/
@@ -105,7 +289,101 @@ theorem koszulComplex_exact (k : Type u) [Field k] :
     (koszulComplex k).Exact ∧
       Mono ((koszulComplex k).map' 1 2) ∧
       Epi ((koszulComplex k).map' 3 4) := by
-  sorry
+  have hfirst := koszul_first_injective k
+  have hmiddle := koszul_middle_exact k
+  have hrange := koszul_range k
+  let S₀ : ShortComplex (ModuleCat (twoVariablePolynomialRing k)) :=
+    ShortComplex.mk
+      (0 : (0 : ModuleCat (twoVariablePolynomialRing k)) ⟶
+        ModuleCat.of (twoVariablePolynomialRing k) (twoVariablePolynomialRing k))
+      (ModuleCat.ofHom (koszulFirstDifferential k)) (by simp)
+  let S₁ : ShortComplex (ModuleCat (twoVariablePolynomialRing k)) :=
+    ShortComplex.moduleCatMk (koszulFirstDifferential k)
+      (koszulSecondDifferential k) (koszul_second_comp_first k)
+  let S₂ : ShortComplex (ModuleCat (twoVariablePolynomialRing k)) :=
+    ShortComplex.moduleCatMkOfKerLERange
+      (ModuleCat.ofHom (koszulSecondDifferential k))
+      (ModuleCat.ofHom (koszulAugmentation k))
+      (by
+        change LinearMap.range (koszulSecondDifferential k) ≤
+          LinearMap.ker (koszulAugmentation k)
+        intro p hp
+        rcases hp with ⟨z, rfl⟩
+        rcases z with ⟨a, b⟩
+        change koszulAugmentation k (koszulSecondDifferential k (a, b)) = 0
+        apply Ideal.Quotient.eq_zero_iff_mem.mpr
+        exact koszul_second_mem_origin k a b)
+  let S₃ : ShortComplex (ModuleCat (twoVariablePolynomialRing k)) :=
+    ShortComplex.mk
+      (ModuleCat.ofHom (koszulAugmentation k))
+      (0 : originResidueModule k ⟶
+        (0 : ModuleCat (twoVariablePolynomialRing k))) (by simp)
+  have hS₀ : S₀.Exact := by
+    rw [S₀.moduleCat_exact_iff]
+    intro a ha
+    refine ⟨0, ?_⟩
+    change koszulFirstDifferential k a = 0 at ha
+    have ha0 : a = 0 := hfirst (by simpa using ha)
+    change 0 = a
+    simp [ha0]
+  have hS₁ : S₁.Exact := by
+    rw [ShortComplex.ShortExact.moduleCat_exact_iff_function_exact S₁]
+    exact hmiddle
+  have hS₂ : S₂.Exact := by
+    rw [S₂.moduleCat_exact_iff]
+    intro p hp
+    have hp' : p ∈ originIdeal k := Ideal.Quotient.eq_zero_iff_mem.mp hp
+    exact hrange p hp'
+  have hS₃ : S₃.Exact := by
+    rw [S₃.moduleCat_exact_iff]
+    intro q _
+    rcases Ideal.Quotient.mk_surjective q with ⟨p, rfl⟩
+    exact ⟨p, rfl⟩
+  have hcomplex : (koszulComplex k).IsComplex := by
+    refine ⟨?_⟩
+    intro i hi
+    have hi' : i ≤ 3 := by omega
+    interval_cases i
+    · change (0 : (0 : ModuleCat (twoVariablePolynomialRing k)) ⟶
+        ModuleCat.of (twoVariablePolynomialRing k) (twoVariablePolynomialRing k)) ≫
+        ModuleCat.ofHom (koszulFirstDifferential k) = 0
+      simp
+    · change ModuleCat.ofHom (koszulFirstDifferential k) ≫
+        ModuleCat.ofHom (koszulSecondDifferential k) = 0
+      apply ModuleCat.hom_ext
+      apply LinearMap.ext
+      intro z
+      change MvPolynomial.X (0 : Fin 2) * (MvPolynomial.X (1 : Fin 2) * z) +
+          MvPolynomial.X (1 : Fin 2) * (-MvPolynomial.X (0 : Fin 2) * z) = 0
+      ring
+    · apply ModuleCat.hom_ext
+      apply LinearMap.ext
+      intro z
+      rcases z with ⟨a, b⟩
+      change Ideal.Quotient.mk (originIdeal k)
+          (MvPolynomial.X (0 : Fin 2) * a + MvPolynomial.X (1 : Fin 2) * b) = 0
+      apply Ideal.Quotient.eq_zero_iff_mem.mpr
+      exact koszul_second_mem_origin k a b
+    · change ModuleCat.ofHom (koszulAugmentation k) ≫
+        (0 : originResidueModule k ⟶
+          (0 : ModuleCat (twoVariablePolynomialRing k))) = 0
+      simp
+  have hexact : (koszulComplex k).Exact := by
+    refine ⟨hcomplex, ?_⟩
+    intro i hi
+    have hi' : i ≤ 3 := by omega
+    interval_cases i
+    · convert hS₀ using 1 <;> rfl
+    · convert hS₁ using 1 <;> rfl
+    · convert hS₂ using 1 <;> rfl
+    · convert hS₃ using 1 <;> rfl
+  refine ⟨hexact, ?_, ?_⟩
+  · apply CategoryTheory.ConcreteCategory.mono_of_injective
+    exact hfirst
+  · apply CategoryTheory.ConcreteCategory.epi_of_surjective
+    intro q
+    rcases Ideal.Quotient.mk_surjective q with ⟨p, rfl⟩
+    exact ⟨p, rfl⟩
 
 /-! ## The Ext computation -/
 

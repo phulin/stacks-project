@@ -1,5 +1,5 @@
-import Formalization.Books.Algebra.Unit131.Differentials
 import Formalization.Books.Algebra.Unit75.TorGroups
+import Formalization.Books.Algebra.Unit131.Differentials
 import Mathlib.RingTheory.Extension.Cotangent.BaseChange
 import Mathlib.RingTheory.Extension.Cotangent.LocalizationAway
 import Mathlib.RingTheory.Extension.ExtendScalars
@@ -494,15 +494,13 @@ noncomputable def surjectiveExtensionHom
 theorem jacobi_zariski_composition_is_null_homotopic
     {R S T ι σ : Type*} [CommRing R] [CommRing S] [CommRing T]
     [Algebra R S] [Algebra R T] [Algebra S T] [IsScalarTower R S T]
-    (Q : Algebra.Generators S T ι) (P : Algebra.Generators R S σ)
-    (f g : (Q.comp P).Hom (Algebra.Generators.self R T)) :
-    ∃ h : (Q.comp P).toExtension.CotangentSpace →ₗ[T]
-        (Algebra.Generators.self R T).toExtension.Cotangent,
-      Algebra.Extension.CotangentSpace.map f.toExtensionHom -
-          Algebra.Extension.CotangentSpace.map g.toExtensionHom =
-        (Algebra.Generators.self R T).toExtension.cotangentComplex ∘ₗ h := by
-  exact ⟨f.toExtensionHom.sub g.toExtensionHom,
-    Algebra.Extension.CotangentSpace.map_sub_map f.toExtensionHom g.toExtensionHom⟩
+    (Q : Algebra.Generators S T ι) (P : Algebra.Generators R S σ) :
+    ∃ h : T ⊗[S] P.toExtension.CotangentSpace →ₗ[T]
+        Q.toExtension.Cotangent,
+      Algebra.Extension.CotangentSpace.map (Q.ofComp P).toExtensionHom ∘ₗ
+          (Algebra.Extension.CotangentSpace.map (Q.toComp P).toExtensionHom).liftBaseChange T =
+        Q.toExtension.cotangentComplex ∘ₗ h := by
+  sorry
 
 /-! ## Surjections, applications, and base change -/
 
@@ -631,13 +629,10 @@ theorem principal_localization_cotangentSpace_equiv
 theorem naive_cotangent_localization_quasi_isomorphism
     {R B : Type*} [CommRing R] [CommRing B] [Algebra R B]
     (M : Submonoid B) :
-    (∃ f : Localization M ⊗[B] Algebra.H1Cotangent R B →ₗ[Localization M]
-        Algebra.H1Cotangent R (Localization M), Function.Bijective f) ∧
-      (∃ g : Localization M ⊗[B]
-          Formalization.Books.Algebra.Unit131.ModuleOfDifferentials R B →ₗ[
-            Localization M]
-          Formalization.Books.Algebra.Unit131.ModuleOfDifferentials R (Localization M),
-        Function.Bijective g) := by
+    Function.Bijective
+        ((Algebra.H1Cotangent.map R R B (Localization M)).liftBaseChange (Localization M)) ∧
+      Function.Bijective
+        ((KaehlerDifferential.map R R B (Localization M)).liftBaseChange (Localization M)) := by
   sorry
 
 /-! ## Cancellation and conormal modules -/

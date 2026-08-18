@@ -2,8 +2,6 @@ import Formalization.Books.Algebra.Unit127.ColimitsAndFinitePresentation
 import Mathlib.Algebra.Algebra.Subalgebra.Basic
 import Mathlib.FieldTheory.Separable
 import Mathlib.RingTheory.Algebraic.Defs
-import Mathlib.RingTheory.Etale.Basic
-import Mathlib.RingTheory.Flat.Basic
 import Mathlib.RingTheory.Flat.FaithfullyFlat.Basic
 import Mathlib.RingTheory.LocalRing.ResidueField.Basic
 import Mathlib.RingTheory.LocalRing.RingHom.Basic
@@ -23,6 +21,7 @@ namespace Formalization.Books.Algebra.Unit159
 
 open CategoryTheory
 open CategoryTheory.Limits
+open Formalization.Books.Categories.Unit21
 
 noncomputable section
 
@@ -183,11 +182,10 @@ structure DirectedBoundedFlatSubalgebraFamily
     (A B : Type u) [CommRing A] [CommRing B] [Algebra A B] where
   index : Type v
   [indexPreorder : Preorder index]
-  [indexNonempty : Nonempty index]
-  [indexDirected : IsDirectedOrder index]
+  directed : IsDirectedSet index
   stage : index → Subalgebra A B
   boundedFlat : ∀ i, BoundedFlatSubalgebra A B (stage i)
-  directed : ∀ i j, ∃ k, stage i ≤ stage k ∧ stage j ≤ stage k
+  stage_mono : Monotone stage
   cofinal : ∀ S : Subalgebra A B, BoundedFlatSubalgebra A B S →
     ∃ i, S ≤ stage i
   covers : ∀ b : B, ∃ i, b ∈ stage i

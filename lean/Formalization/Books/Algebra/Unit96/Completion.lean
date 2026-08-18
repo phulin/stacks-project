@@ -1259,7 +1259,6 @@ theorem completion_radical
       I.map (algebraMap R (ringCompletion I)) ≤ Ring.jacobson (ringCompletion I) ∧
       RingHom.ker (AdicCompletion.evalOneₐ I).toRingHom ≤
         Ring.jacobson (ringCompletion I) := by
-  /-
   classical
   let e1 : (R ⧸ I ^ 1 • (⊤ : Ideal R)) ≃+* (R ⧸ I) :=
     Ideal.quotEquivOfEq (show I ^ 1 • (⊤ : Ideal R) = I by simp [smul_eq_mul])
@@ -1410,8 +1409,6 @@ theorem completion_radical
     have hx0 : AdicCompletion.evalOneₐ I x = 0 := RingHom.mem_ker.mp hx
     rw [map_add, map_one, map_mul, hx0, zero_mul, zero_add]
     exact isUnit_one
-  -/
-  sorry
 
 /-! ## Finitely generated ideals and completeness -/
 
@@ -1519,7 +1516,54 @@ theorem surjective_to_completion_of_finite_generators
       s i n ≡ L [SMOD
         ((Ideal.span ({f i} : Set A)) ^ n • (⊤ : Submodule A M))] :=
     (AdicCompletion.of_surjective_iff.mp (hf i)).prec (hcauchy i)
-  sorry
+  choose L hL using hlim
+  have hfI (i : Fin r) : Ideal.span ({f i} : Set A) ≤ I := by
+    rw [hI]
+    exact Ideal.span_le.2 (fun x hx => by
+      rcases hx with rfl
+      exact Ideal.subset_span ⟨i, rfl⟩)
+  have hbi (i : Fin r) (n : ℕ) : b i n ∈ I ^ n • (⊤ : Submodule A M) := by
+    apply Submodule.smul_mono_left
+      ((Ideal.pow_le_pow_right (Nat.le_succ n)).trans
+        (Ideal.pow_right_mono (hfI i) n))
+    exact hb i n
+  have hsi (i : Fin r) (n : ℕ) :
+      s i n - L i ∈ I ^ n • (⊤ : Submodule A M) := by
+    apply Submodule.smul_mono_left (Ideal.pow_right_mono (hfI i) n)
+    exact SModEq.sub_mem.mp (hL i n)
+  have hsum (n : ℕ) :
+      (∑ i : Fin r, s i n) - ∑ i : Fin r, L i ∈
+        I ^ n • (⊤ : Submodule A M) := by
+    rw [← Finset.sum_sub_distrib]
+    exact Submodule.sum_mem _ (fun i _ => hsi i n)
+  have hz' (n : ℕ) : ∑ i : Fin r, b i n = a (n + 1) - a n := by
+    rw [hdfsum]
+    simp only [DFinsupp.lsum_apply_apply, DFinsupp.sumAddHom_apply,
+      LinearMap.toAddMonoidHom_coe]
+    change (z n).sum (fun _ xi => (xi : M)) = _
+    exact hz n
+  have htel (n : ℕ) : ∑ i : Fin r, s i n = a n - a 0 := by
+    induction n with
+    | zero => simp [s]
+    | succ n ih =>
+        calc
+          (∑ i : Fin r, s i (n + 1)) =
+              (∑ i : Fin r, s i n) + ∑ i : Fin r, b i n := by
+                simp [s, Finset.sum_range_succ, Finset.sum_add_distrib]
+          _ = (a n - a 0) + (a (n + 1) - a n) := by rw [ih, hz']
+          _ = a (n + 1) - a 0 := by abel
+  let x : M := a 0 + ∑ i : Fin r, L i
+  have hax (n : ℕ) : a n - x ∈ I ^ n • (⊤ : Submodule A M) := by
+    rw [show a n - x = (a n - a 0) - ∑ i : Fin r, L i by
+      simp [x, a]; abel, ← htel n]
+    exact hsum n
+  refine ⟨x, ?_⟩
+  intro n
+  have hnn : n ≤ r * (n + 1) :=
+    (Nat.le_succ n).trans (Nat.le_mul_of_pos_left (n + 1) hrpos)
+  exact (hg hnn).trans <| by
+    apply SModEq.sub_mem.mpr
+    simpa [a, x] using hax n
 
 theorem isAdicComplete_of_le_of_fg
     {R : Type u} [CommRing R] (I J : Ideal R)

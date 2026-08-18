@@ -2741,8 +2741,76 @@ private theorem sublist_weaklyRegular_of_polynomial_weaklyRegular
   have hgetj :
       (List.ofFn (fun q : Fin n => MvPolynomial.C (f q) * MvPolynomial.X q))[j] =
         MvPolynomial.C (f j) * MvPolynomial.X j := by
-    sorry
-  sorry
+    simp [j]
+  have hjnot : j ∉ xs := by
+    intro hjx
+    have hjx' : j ∈ (List.ofFn (fun q : Fin n => q)).take (j : ℕ) := by
+      simpa [xs] using hjx
+    have hjlt :=
+      (List.mem_take_iff_idxOf_lt (l := List.ofFn (fun q : Fin n => q))
+        (a := j) (by simp [j])).mp hjx'
+    have hjidx :
+        (List.ofFn (fun q : Fin n => q)).idxOf j = (j : ℕ) := by
+      have hget := List.get_idxOf hsourceNodup
+        (⟨(j : ℕ), by simp⟩ : Fin (List.ofFn (fun q : Fin n => q)).length)
+      simpa using hget
+    rw [hjidx] at hjlt
+    exact (Nat.lt_irrefl _ hjlt)
+  have hp' := hp
+  rw [htakej, Ideal.smul_eq_mul, Ideal.mul_top] at hp'
+  have hp'' :
+      IsSMulRegular
+        (MvPolynomial (Fin n) R ⧸
+          (Ideal.ofList
+            (xs.map (fun q => MvPolynomial.C (f q) * MvPolynomial.X q)) :
+            Submodule (MvPolynomial (Fin n) R) (MvPolynomial (Fin n) R)))
+        (MvPolynomial.C (f j) * MvPolynomial.X j) := by
+    simpa [j] using hp'
+  have hcoeff := (polynomial_smulRegular_quotient_iff f xs j hjnot).mp hp''
+  let lt : List (Fin n) := js.take (k : ℕ)
+  let t : Fin n →₀ ℕ :=
+    Finsupp.onFinset lt.toFinset (fun q => if q ∈ lt then 1 else 0) (by simp)
+  have ht (q : Fin n) : t q = if q ∈ lt then 1 else 0 := by
+    by_cases hq : q ∈ lt <;> simp [t, hq]
+  have hI : polynomialCoefficientIdeal f xs t = Ideal.ofList (List.map f lt) := by
+    apply le_antisymm
+    · apply Ideal.span_le.mpr
+      rintro r ⟨q, hqxs, hqt, rfl⟩
+      have hq : q ∈ lt := by
+        by_contra hq'
+        exact hqt (by simp [ht, hq'])
+      apply Ideal.subset_span
+      exact List.mem_map.mpr ⟨q, hq, rfl⟩
+    · apply Ideal.span_le.mpr
+      intro r hr
+      obtain ⟨q, hq, rfl⟩ := List.mem_map.mp hr
+      apply Ideal.subset_span
+      refine ⟨q, hprev_mem q ?_, ?_, rfl⟩
+      · simpa [lt] using hq
+      · rw [ht]
+        simp [hq]
+  have htarget :
+      IsSMulRegular (R ⧸ Ideal.ofList (List.map f lt)) (f j) := by
+    rw [← hI]
+    exact hcoeff t
+  have htop :
+      (Ideal.ofList (List.take (k : ℕ) (List.map f js)) : Submodule R R) •
+          (⊤ : Submodule R R) = Ideal.ofList (List.take (k : ℕ) (List.map f js)) := by
+    rw [Ideal.smul_eq_mul, Ideal.mul_top]
+  have htake_map :
+      List.map f (List.take (k : ℕ) js) = List.take (k : ℕ) (List.map f js) := by
+    have aux (r : ℕ) :
+        List.map f (List.take r js) = List.take r (List.map f js) := by
+      induction js generalizing r with
+      | nil => simp
+      | cons a as ih =>
+          cases r with
+          | zero => simp
+          | succ r => simp [ih]
+    exact aux (k : ℕ)
+  rw [htop]
+  rw [← htake_map]
+  simpa [lt, kk, j] using htarget
 
 theorem regular_sequence_polynomial_iff
     {R : Type u} [CommRing R] (n : ℕ) (f : Fin n → R)
@@ -2754,7 +2822,250 @@ theorem regular_sequence_polynomial_iff
             RingTheory.Sequence.IsRegular R ys),
         RingTheory.Sequence.IsRegular (MvPolynomial (Fin n) R)
           (List.ofFn (fun i => MvPolynomial.C (f i) * MvPolynomial.X i)) ] := by
-  sorry
+  have hpoly_ne :
+      Ideal.ofList
+          (List.ofFn (fun i => MvPolynomial.C (f i) * MvPolynomial.X i)) ≠
+        (⊤ : Ideal (MvPolynomial (Fin n) R)) := by
+    let ev : MvPolynomial (Fin n) R →+* R :=
+      MvPolynomial.eval₂Hom (RingHom.id R) (fun _ => 0)
+    have hker :
+        Ideal.ofList
+            (List.ofFn (fun i => MvPolynomial.C (f i) * MvPolynomial.X i)) ≤
+          RingHom.ker ev := by
+      apply Ideal.span_le.mpr
+      intro p hp
+      have hp' : p ∈ List.map
+          (fun i : Fin n => MvPolynomial.C (f i) * MvPolynomial.X i)
+          (List.finRange n) := by
+        simpa [List.ofFn_eq_map] using hp
+      obtain ⟨i, hi, rfl⟩ := List.mem_map.mp hp'
+      simp [ev]
+    intro htop
+    have h1 : (1 : MvPolynomial (Fin n) R) ∈
+        Ideal.ofList
+          (List.ofFn (fun i => MvPolynomial.C (f i) * MvPolynomial.X i)) := by
+      rw [htop]
+      simp
+    have hzero := hker h1
+    have hzero' : (1 : R) = 0 := by
+      simpa [ev] using hzero
+    apply hnotunit
+    apply le_antisymm le_top
+    intro r hr
+    rw [← mul_one r, hzero', mul_zero]
+    exact Ideal.zero_mem _
+  have ideal_sublist : ∀ {ys : List R}, ys.Sublist (List.ofFn f) →
+      Ideal.ofList ys ≤ Ideal.ofList (List.ofFn f) := by
+    intro ys hys
+    apply Ideal.span_le.mpr
+    intro r hr
+    apply Ideal.subset_span
+    exact hys.subset hr
+  have regular_of_weak_of_ne_top : ∀ (ys : List R),
+      RingTheory.Sequence.IsWeaklyRegular R ys →
+        Ideal.ofList ys ≠ (⊤ : Ideal R) →
+          RingTheory.Sequence.IsRegular R ys := by
+    intro ys hweak hne
+    apply (RingTheory.Sequence.isRegular_iff R ys).mpr
+    refine ⟨hweak, ?_⟩
+    intro htop
+    apply hne
+    rw [Ideal.smul_eq_mul, Ideal.mul_top] at htop
+    exact htop.symm
+  have regular_prefix {xs zs : List R}
+      (hreg : RingTheory.Sequence.IsRegular R (xs ++ zs)) :
+      RingTheory.Sequence.IsRegular R xs := by
+    rw [RingTheory.Sequence.isRegular_iff] at hreg ⊢
+    refine ⟨(RingTheory.Sequence.isWeaklyRegular_append_iff' R xs zs).mp hreg.1 |>.1, ?_⟩
+    intro htop
+    apply hreg.2
+    rw [Ideal.smul_eq_mul, Ideal.mul_top] at htop
+    rw [Ideal.smul_eq_mul, Ideal.mul_top, Ideal.ofList_append]
+    rw [← htop]
+    simp
+  have perm_move : ∀ (a : R) (ys zs : List R),
+      (a :: ys ++ zs).Perm (ys ++ a :: zs) := by
+    intro a ys zs
+    exact List.perm_cons_append_cons a (List.Perm.refl (ys ++ zs))
+  have sublist_perm_append : ∀ {ys xs : List R}, ys.Sublist xs →
+      ∃ zs, xs.Perm (ys ++ zs) := by
+    intro ys xs
+    induction xs generalizing ys with
+    | nil =>
+        intro hys
+        have hnil : ys = [] := List.eq_nil_of_sublist_nil hys
+        subst ys
+        exact ⟨[], List.Perm.refl _⟩
+    | cons a xs ih =>
+        intro hys
+        cases ys with
+        | nil => exact ⟨a :: xs, by simp⟩
+        | cons b ys =>
+            rcases (List.cons_sublist_cons').mp hys with hskip | ⟨hba, htail⟩
+            · obtain ⟨zs, hzs⟩ := ih hskip
+              refine ⟨a :: zs, ?_⟩
+              exact (List.Perm.cons a hzs).trans (perm_move a (b :: ys) zs)
+            · subst b
+              obtain ⟨zs, hzs⟩ := ih htail
+              exact ⟨zs, List.Perm.cons a hzs⟩
+  have swap_smulRegular : ∀ {M : Type u} [AddCommGroup M] [Module R M] (a b : R),
+      IsSMulRegular M a → IsSMulRegular M b →
+        IsSMulRegular (QuotSMulTop b M) a →
+          IsSMulRegular (QuotSMulTop a M) b := by
+    intro M _ _ a b ha hb hab
+    rw [isSMulRegular_iff_right_eq_zero_of_smul]
+    intro x hx
+    induction x using Submodule.Quotient.induction_on with
+    | _ x =>
+        have hmem : b • x ∈ a • (⊤ : Submodule R M) := by
+          exact (Submodule.Quotient.mk_eq_zero _).mp (by simpa using hx)
+        obtain ⟨y, _, hy⟩ :=
+          (Submodule.mem_smul_pointwise_iff_exists (b • x) a
+            (⊤ : Submodule R M)).mp hmem
+        have hay : a • (Submodule.Quotient.mk y : QuotSMulTop b M) = 0 := by
+          change (Submodule.Quotient.mk (a • y) : QuotSMulTop b M) = 0
+          rw [hy, Submodule.Quotient.mk_eq_zero]
+          exact (Submodule.mem_smul_pointwise_iff_exists _ _ _).mpr
+            ⟨x, Submodule.mem_top, rfl⟩
+        have hy0 : (Submodule.Quotient.mk y : QuotSMulTop b M) = 0 := by
+          apply hab
+          simpa only [smul_zero] using hay
+        obtain ⟨z, _, hz⟩ :=
+          (Submodule.mem_smul_pointwise_iff_exists y b
+            (⊤ : Submodule R M)).mp
+            ((Submodule.Quotient.mk_eq_zero _).mp hy0)
+        have hcancel : x = a • z := by
+          apply hb
+          change b • x = b • (a • z)
+          calc
+            b • x = a • y := hy.symm
+            _ = a • (b • z) := by rw [← hz]
+            _ = b • (a • z) := by rw [smul_comm]
+        rw [hcancel, Submodule.Quotient.mk_eq_zero]
+        exact (Submodule.mem_smul_pointwise_iff_exists _ _ _).mpr
+          ⟨z, Submodule.mem_top, rfl⟩
+  have swap_regular_tail : ∀ {M : Type u} [AddCommGroup M] [Module R M]
+      (a b : R) (rs : List R),
+      IsSMulRegular M a → IsSMulRegular M b →
+        IsSMulRegular (QuotSMulTop b M) a →
+          RingTheory.Sequence.IsRegular
+            (QuotSMulTop a (QuotSMulTop b M)) rs →
+            RingTheory.Sequence.IsRegular M (a :: b :: rs) := by
+    intro M _ _ a b rs ha hb hab hrest
+    have hba : IsSMulRegular (QuotSMulTop a M) b :=
+      swap_smulRegular (M := M) a b ha hb hab
+    have hrest' :
+        RingTheory.Sequence.IsRegular
+          (QuotSMulTop b (QuotSMulTop a M)) rs := by
+      exact ((regular_sequence_quot_smul_comm b a).isRegular_congr rs).mp hrest
+    apply (RingTheory.Sequence.isRegular_cons_iff M a (b :: rs)).mpr
+    refine ⟨ha, ?_⟩
+    exact (RingTheory.Sequence.isRegular_cons_iff
+      (QuotSMulTop a M) b rs).mpr ⟨hba, hrest'⟩
+  have sublist_skip : ∀ (a : R) {xs ys : List R}, xs.Sublist ys →
+      xs.Sublist (a :: ys) := by
+    intro a xs ys h
+    exact List.Sublist.cons a h
+  have perm_preserves_all_sublist_regular : ∀ {M : Type u}
+      [AddCommGroup M] [Module R M] {rs rs' : List R},
+      (∀ ys, ys.Sublist rs → RingTheory.Sequence.IsRegular M ys) →
+        rs.Perm rs' →
+          ∀ ys, ys.Sublist rs' → RingTheory.Sequence.IsRegular M ys := by
+    intro M _ _ rs rs' hsub hperm
+    revert hsub
+    induction hperm generalizing M with
+    | nil =>
+        intro hsub ys hys
+        have hnil : ys = [] := List.eq_nil_of_sublist_nil hys
+        subst ys
+        exact hsub [] (by simp)
+    | cons a h ih =>
+        intro hsub ys hys
+        cases ys with
+        | nil => exact hsub [] (by simp)
+        | cons b ys =>
+            rcases (List.cons_sublist_cons').mp hys with hskip | ⟨hba, htail⟩
+            ·
+              exact ih (fun zs hzs => hsub zs (sublist_skip a hzs))
+                (b :: ys) hskip
+            · subst b
+              have ha : IsSMulRegular M a :=
+                ((RingTheory.Sequence.isRegular_cons_iff M a []).mp
+                  (hsub [a] (by simp))).1
+              exact (RingTheory.Sequence.isRegular_cons_iff M a ys).mpr
+                ⟨ha, ih (M := QuotSMulTop a M)
+                  (fun zs hzs =>
+                    ((RingTheory.Sequence.isRegular_cons_iff M a zs).mp
+                      (hsub (a :: zs) (List.Sublist.cons_cons a hzs))).2)
+                  ys htail⟩
+    | swap a b rs =>
+        intro hsub ys hys
+        have ha : IsSMulRegular M a :=
+          ((RingTheory.Sequence.isRegular_cons_iff M a []).mp
+            (hsub [a] (by simp))).1
+        have hdrop : ∀ {tail : List R}, tail.Sublist (b :: rs) →
+            RingTheory.Sequence.IsRegular M (a :: tail) := by
+          intro tail htail0
+          cases tail with
+          | nil => exact hsub [a] (by simp)
+          | cons c tail =>
+              rcases (List.cons_sublist_cons').mp htail0 with hskip | ⟨hcb, htail⟩
+              · exact hsub (a :: c :: tail)
+                  (List.Sublist.cons b (List.Sublist.cons_cons a hskip))
+              · subst c
+                have hreg := hsub (b :: a :: tail)
+                  (List.Sublist.cons_cons b
+                    (List.Sublist.cons_cons a htail))
+                have hreg₁ :=
+                  (RingTheory.Sequence.isRegular_cons_iff M b (a :: tail)).mp hreg
+                have hreg₂ :=
+                  (RingTheory.Sequence.isRegular_cons_iff
+                    (QuotSMulTop b M) a tail).mp hreg₁.2
+                exact swap_regular_tail (M := M) a b tail ha hreg₁.1
+                  hreg₂.1 hreg₂.2
+        cases ys with
+        | nil => exact hsub [] (by simp)
+        | cons c ys =>
+            rcases (List.cons_sublist_cons').mp hys with hskip | ⟨hca, htail⟩
+            · rcases (List.cons_sublist_cons').mp hskip with hskipb | ⟨hcb, htailb⟩
+              · exact hsub (c :: ys)
+                  (sublist_skip b (sublist_skip a hskipb))
+              · subst c
+                exact hsub (b :: ys)
+                  (List.Sublist.cons_cons b (sublist_skip a htailb))
+            · subst c
+              exact hdrop htail
+    | trans h₁ h₂ ih₁ ih₂ =>
+        intro hsub ys hys
+        exact ih₂ (ih₁ hsub) ys hys
+  tfae_have 2 → 3 := by
+    intro h
+    have hw := polynomial_weaklyRegular_of_sublist n f (fun ys hys =>
+      ((RingTheory.Sequence.isRegular_iff R ys).mp (h ys hys)).1)
+    apply (RingTheory.Sequence.isRegular_iff _ _).mpr
+    refine ⟨hw, ?_⟩
+    intro htop
+    apply hpoly_ne
+    rw [Ideal.smul_eq_mul, Ideal.mul_top] at htop
+    exact htop.symm
+  tfae_have 3 → 2 := by
+    intro h ys hys
+    have hwpoly := (RingTheory.Sequence.isRegular_iff _ _).mp h |>.1
+    have hw := sublist_weaklyRegular_of_polynomial_weaklyRegular n f hwpoly ys hys
+    apply regular_of_weak_of_ne_top ys hw
+    intro htop
+    apply hnotunit
+    apply le_antisymm le_top
+    rw [← htop]
+    exact ideal_sublist hys
+  tfae_have 1 → 2 := by
+    intro h ys hys
+    obtain ⟨zs, hperm⟩ := sublist_perm_append hys
+    exact regular_prefix (h (ys ++ zs) hperm)
+  tfae_have 2 → 1 := by
+    intro h ys hperm
+    exact perm_preserves_all_sublist_regular h hperm ys (List.Sublist.refl _)
+  tfae_finish
 
 end
 

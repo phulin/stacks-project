@@ -375,7 +375,272 @@ theorem left_dual_of_biproduct_summand
     (e : X ≅ X₁ ⊞ X₂) :
     (∃ Y₁ : C, Nonempty (ExactPairing X₁ Y₁)) ∧
       (∃ Y₂ : C, Nonempty (ExactPairing X₂ Y₂)) := by
-  sorry
+  letI : ExactPairing (X₁ ⊞ X₂) Y := exactPairingCongrLeft e.symm
+  have hsummand {A : C} (i : A ⟶ X₁ ⊞ X₂) (p : X₁ ⊞ X₂ ⟶ A)
+      (hip : i ≫ p = 𝟙 A) :
+      ∃ B : C, Nonempty (ExactPairing A B) := by
+    letI : HasRightDual (X₁ ⊞ X₂) := ⟨Y⟩
+    let a : (X₁ ⊞ X₂) ⟶ (X₁ ⊞ X₂) := p ≫ i
+    have ha : a ≫ a = a := by
+      dsimp [a]
+      calc
+        (p ≫ i) ≫ (p ≫ i) = p ≫ (i ≫ p) ≫ i := by simp [Category.assoc]
+        _ = p ≫ (𝟙 A) ≫ i := by rw [hip]
+        _ = p ≫ i := by simp
+    let q : Y ⟶ Y := rightAdjointMate a
+    have hq_def : q =
+        (ρ_ Y).inv ≫ Y ◁ ExactPairing.coevaluation (X₁ ⊞ X₂) Y ≫
+          Y ◁ (a ▷ Y) ≫ (α_ Y (X₁ ⊞ X₂) Y).inv ≫
+            ExactPairing.evaluation (X₁ ⊞ X₂) Y ▷ Y ≫ (λ_ Y).hom := by
+      rfl
+    have hq : q ≫ q = q := by
+      change aᘁ ≫ aᘁ = aᘁ
+      rw [← comp_rightAdjointMate, ha]
+    obtain ⟨B, j, r, hjr, hrj⟩ := IsIdempotentComplete.idempotents_split Y q hq
+    letI : IsSplitMono j := IsSplitMono.mk' { retraction := r, id := hjr }
+    letI : IsSplitMono i := IsSplitMono.mk' { retraction := p, id := hip }
+    have htransport {U V W Z : C} [ExactPairing U V]
+        (iU : U ⟶ W) (pU : W ⟶ U) (iV : V ⟶ Z) (pV : Z ⟶ V) :
+        Z ◁ η_ U V ≫ Z ◁ (iU ⊗ₘ iV) ≫ (α_ Z W Z).inv ≫
+            (pV ▷ W) ▷ Z ≫ (α_ V W Z).hom ≫
+              V ◁ (pU ▷ Z) ≫ (α_ V U Z).inv ≫
+                ε_ U V ▷ Z ≫ (λ_ Z).hom ≫ pV =
+          Z ◁ η_ U V ≫ Z ◁ (iU ▷ V) ≫
+            (α_ Z W V).inv ≫ (pV ▷ W) ▷ V ≫
+              (α_ V W V).hom ≫ V ◁ (W ◁ iV) ≫
+                V ◁ (pU ▷ Z) ≫ (α_ V U Z).inv ≫
+                  ε_ U V ▷ Z ≫ (λ_ Z).hom ≫ pV := by
+      rw [MonoidalCategory.tensorHom_def]
+      simp only [MonoidalCategory.whiskerLeft_comp]
+      simp [Category.assoc]
+      rw [MonoidalCategory.associator_inv_naturality_right_assoc]
+      rw [MonoidalCategory.whisker_exchange_assoc]
+      rw [MonoidalCategory.associator_naturality_right_assoc]
+    have hmove {U V W Z : C} [ExactPairing U V]
+        (iU : U ⟶ W) (pU : W ⟶ U) (iV : V ⟶ Z) (pV : Z ⟶ V) :
+        Z ◁ η_ U V ≫ Z ◁ (iU ▷ V) ≫
+            (α_ Z W V).inv ≫ (pV ▷ W) ▷ V ≫
+              (α_ V W V).hom ≫ V ◁ (W ◁ iV) ≫
+                V ◁ (pU ▷ Z) ≫ (α_ V U Z).inv ≫
+                  ε_ U V ▷ Z ≫ (λ_ Z).hom ≫ pV =
+          Z ◁ η_ U V ≫ Z ◁ (iU ▷ V) ≫
+            (α_ Z W V).inv ≫ (pV ▷ W) ▷ V ≫
+              (α_ V W V).hom ≫ V ◁ (pU ▷ V ≫ U ◁ iV) ≫
+                (α_ V U Z).inv ≫ ε_ U V ▷ Z ≫
+                  (λ_ Z).hom ≫ pV := by
+      calc
+        _ = Z ◁ η_ U V ≫ Z ◁ (iU ▷ V) ≫
+            (α_ Z W V).inv ≫ (pV ▷ W) ▷ V ≫
+              (α_ V W V).hom ≫
+                (V ◁ (W ◁ iV) ≫ V ◁ (pU ▷ Z)) ≫
+                  (α_ V U Z).inv ≫ ε_ U V ▷ Z ≫
+                    (λ_ Z).hom ≫ pV := by simp [Category.assoc]
+        _ = Z ◁ η_ U V ≫ Z ◁ (iU ▷ V) ≫
+            (α_ Z W V).inv ≫ (pV ▷ W) ▷ V ≫
+              (α_ V W V).hom ≫
+                V ◁ (W ◁ iV ≫ pU ▷ Z) ≫
+                  (α_ V U Z).inv ≫ ε_ U V ▷ Z ≫
+                    (λ_ Z).hom ≫ pV := by
+          rw [← MonoidalCategory.whiskerLeft_comp]
+        _ = _ := by rw [MonoidalCategory.whisker_exchange]
+    have htensor {M N T : C} (f : 𝟙_ C ⟶ N ⊗ T) (g : M ⟶ T) :
+        M ◁ f ≫ g ▷ (N ⊗ T) = g ▷ (𝟙_ C) ≫ T ◁ f := by
+      calc
+        M ◁ f ≫ g ▷ (N ⊗ T) =
+            (𝟙 M ⊗ₘ f) ≫ (g ⊗ₘ 𝟙 (N ⊗ T)) := by
+              simp [MonoidalCategory.tensorHom_def]
+        _ = (𝟙 M ≫ g) ⊗ₘ (f ≫ 𝟙 (N ⊗ T)) := by
+              rw [MonoidalCategory.tensorHom_comp_tensorHom]
+        _ = g ⊗ₘ f := by simp
+        _ = g ▷ (𝟙_ C) ≫ T ◁ f := by rw [MonoidalCategory.tensorHom_def]
+    have houter {U V W Z : C} [ExactPairing U V]
+        (iU : U ⟶ W) (iV : V ⟶ Z) (pV : Z ⟶ V) :
+        Z ◁ η_ U V ≫ Z ◁ (iU ▷ V) ≫
+            (α_ Z W V).inv ≫ (pV ▷ W) ▷ V ≫
+              (α_ V W V).hom =
+          (pV ▷ (𝟙_ C)) ≫ V ◁ η_ U V ≫ V ◁ (iU ▷ V) ≫
+            (α_ V W V).inv ≫ (α_ V W V).hom := by
+      rw [← MonoidalCategory.whiskerLeft_comp_assoc]
+      rw [← MonoidalCategory.associator_inv_naturality_left_assoc pV W V]
+      calc
+        _ = (Z ◁ (η_ U V ≫ iU ▷ V) ≫
+            pV ▷ (W ⊗ V)) ≫
+              (α_ V W V).inv ≫ (α_ V W V).hom := by simp [Category.assoc]
+        _ = (pV ▷ (𝟙_ C) ≫
+            V ◁ (η_ U V ≫ iU ▷ V)) ≫
+              (α_ V W V).inv ≫ (α_ V W V).hom := by rw [htensor]
+        _ = _ := by simp [Category.assoc]
+    have hslide {U V W Z : C} [ExactPairing U V]
+        (iU : U ⟶ W) (pU : W ⟶ U)
+        (iV : V ⟶ Z) (pV : Z ⟶ V) :
+        Z ◁ η_ U V ≫ Z ◁ (iU ▷ V) ≫
+            (α_ Z W V).inv ≫ (pV ▷ W) ▷ V ≫
+              (α_ V W V).hom ≫ V ◁ (pU ▷ V) ≫
+                (α_ V U V).inv ≫ ε_ U V ▷ V ≫
+                  (𝟙_ C) ◁ iV ≫ (λ_ Z).hom ≫ pV =
+          (pV ▷ (𝟙_ C)) ≫
+            (V ◁ η_ U V ≫ V ◁ (iU ▷ V) ≫
+              (α_ V W V).inv ≫ ((𝟙 V ▷ W) ▷ V) ≫
+                (α_ V W V).hom ≫ V ◁ (pU ▷ V) ≫
+                  (α_ V U V).inv ≫ ε_ U V ▷ V ≫
+                    (λ_ V).hom) ≫ iV ≫ pV := by
+      calc
+        _ = (Z ◁ η_ U V ≫ Z ◁ (iU ▷ V) ≫
+            (α_ Z W V).inv ≫ (pV ▷ W) ▷ V ≫
+              (α_ V W V).hom) ≫
+          V ◁ (pU ▷ V) ≫ (α_ V U V).inv ≫
+            ε_ U V ▷ V ≫ (𝟙_ C) ◁ iV ≫ (λ_ Z).hom ≫ pV := by
+              simp [Category.assoc]
+        _ = ((pV ▷ (𝟙_ C)) ≫ V ◁ η_ U V ≫ V ◁ (iU ▷ V) ≫
+            (α_ V W V).inv ≫ (α_ V W V).hom) ≫
+          V ◁ (pU ▷ V) ≫ (α_ V U V).inv ≫
+            ε_ U V ▷ V ≫ (𝟙_ C) ◁ iV ≫ (λ_ Z).hom ≫ pV := by
+              rw [houter (iU := iU) (iV := iV) (pV := pV)]
+        _ = _ := by simp [Category.assoc, MonoidalCategory.leftUnitor_naturality]
+    have hassoc {V U Z : C} (iV : V ⟶ Z) :
+        V ◁ (U ◁ iV) ≫ (α_ V U Z).inv =
+          (α_ V U V).inv ≫ (V ⊗ U) ◁ iV := by
+      rw [MonoidalCategory.associator_inv_naturality_right V U iV]
+    have heval {V U Z : C} [ExactPairing U V] (iV : V ⟶ Z) :
+        (V ⊗ U) ◁ iV ≫ ExactPairing.evaluation U V ▷ Z =
+          ExactPairing.evaluation U V ▷ V ≫ (𝟙_ C) ◁ iV := by
+      rw [MonoidalCategory.whisker_exchange]
+    have heval_assoc {V U Z : C} [ExactPairing U V]
+        (iV : V ⟶ Z) (pV : Z ⟶ V) :
+        (α_ V U V).inv ≫ (V ⊗ U) ◁ iV ≫
+            ExactPairing.evaluation U V ▷ Z ≫ (λ_ Z).hom ≫ pV =
+          (α_ V U V).inv ≫ ExactPairing.evaluation U V ▷ V ≫
+            (𝟙_ C) ◁ iV ≫ (λ_ Z).hom ≫ pV := by
+      calc
+        _ = (α_ V U V).inv ≫
+            ((V ⊗ U) ◁ iV ≫ ExactPairing.evaluation U V ▷ Z) ≫
+              (λ_ Z).hom ≫ pV := by simp [Category.assoc]
+        _ = (α_ V U V).inv ≫
+            (ExactPairing.evaluation U V ▷ V ≫ (𝟙_ C) ◁ iV) ≫
+              (λ_ Z).hom ≫ pV := by rw [heval iV]
+        _ = _ := by simp [Category.assoc]
+    have hmate :
+        Y ◁ ExactPairing.coevaluation (X₁ ⊞ X₂) Y ≫
+            Y ◁ (p ▷ Y) ≫ (α_ Y A Y).inv ≫
+              ((𝟙 Y ▷ A) ▷ Y) ≫ (α_ Y A Y).hom ≫
+                Y ◁ (i ▷ Y) ≫ (α_ Y (X₁ ⊞ X₂) Y).inv ≫
+                  ExactPairing.evaluation (X₁ ⊞ X₂) Y ▷ Y ≫ (λ_ Y).hom =
+      (ρ_ Y).hom ≫ q := by
+      rw [hq_def]
+      simp [MonoidalCategory.tensorHom_def, Category.assoc,
+        ← MonoidalCategory.whiskerLeft_comp, ← MonoidalCategory.comp_whiskerRight, a]
+      simp [MonoidalCategory.whiskerLeft_comp, MonoidalCategory.comp_whiskerRight,
+        Category.assoc]
+    have hcoev :
+        ExactPairing.coevaluation (X₁ ⊞ X₂) Y ≫
+            (X₁ ⊞ X₂) ◁ q =
+          ExactPairing.coevaluation (X₁ ⊞ X₂) Y ≫ a ▷ Y := by
+      change ExactPairing.coevaluation (X₁ ⊞ X₂) Y ≫
+          (X₁ ⊞ X₂) ◁ rightAdjointMate a =
+        ExactPairing.coevaluation (X₁ ⊞ X₂) Y ≫ a ▷ Y
+      exact @coevaluation_comp_rightAdjointMate C _ _ (X₁ ⊞ X₂) (X₁ ⊞ X₂)
+        ⟨Y⟩ ⟨Y⟩ a
+    have hsnake_a :
+        ExactPairing.coevaluation (X₁ ⊞ X₂) Y ▷ (X₁ ⊞ X₂) ≫
+            (a ▷ Y) ▷ (X₁ ⊞ X₂) ≫
+              (α_ (X₁ ⊞ X₂) Y (X₁ ⊞ X₂)).hom ≫
+                (X₁ ⊞ X₂) ◁ ExactPairing.evaluation (X₁ ⊞ X₂) Y =
+          (λ_ (X₁ ⊞ X₂)).hom ≫ a ≫
+            (ρ_ (X₁ ⊞ X₂)).inv := by
+      rw [MonoidalCategory.associator_naturality_left_assoc]
+      rw [← MonoidalCategory.whisker_exchange]
+      calc
+        _ = (ExactPairing.coevaluation (X₁ ⊞ X₂) Y ▷ (X₁ ⊞ X₂) ≫
+              (α_ (X₁ ⊞ X₂) Y (X₁ ⊞ X₂)).hom ≫
+                (X₁ ⊞ X₂) ◁ ExactPairing.evaluation (X₁ ⊞ X₂) Y) ≫
+            a ▷ (𝟙_ C) := by simp only [Category.assoc]
+        _ = ((λ_ (X₁ ⊞ X₂)).hom ≫ (ρ_ (X₁ ⊞ X₂)).inv) ≫
+            a ▷ (𝟙_ C) := by rw [ExactPairing.evaluation_coevaluation]
+        _ = (λ_ (X₁ ⊞ X₂)).hom ≫ a ≫
+            (ρ_ (X₁ ⊞ X₂)).inv := by simp [Category.assoc]
+    have hright :
+        ExactPairing.coevaluation (X₁ ⊞ X₂) Y ▷ A ≫
+            (p ⊗ₘ r) ▷ A ≫ (α_ A B A).hom ≫
+              A ◁ (j ▷ A) ≫ A ◁ (Y ◁ i) ≫
+                A ◁ ExactPairing.evaluation (X₁ ⊞ X₂) Y ≫
+                  (ρ_ A).hom ≫ i =
+      (λ_ A).hom ≫ i := by
+      rw [MonoidalCategory.tensorHom_def]
+      rw [MonoidalCategory.comp_whiskerRight]
+      simp only [Category.assoc]
+      rw [MonoidalCategory.associator_naturality_middle_assoc]
+      rw [MonoidalCategory.associator_naturality_left_assoc]
+      rw [← MonoidalCategory.whiskerLeft_comp_assoc]
+      rw [← MonoidalCategory.comp_whiskerRight]
+      rw [hrj]
+      rw [← MonoidalCategory.whiskerLeft_comp_assoc]
+      rw [← MonoidalCategory.whisker_exchange_assoc]
+      rw [MonoidalCategory.whiskerLeft_comp_assoc]
+      rw [← MonoidalCategory.associator_naturality_middle_assoc]
+      rw [← MonoidalCategory.whisker_exchange_assoc]
+      rw [← MonoidalCategory.comp_whiskerRight_assoc]
+      rw [congrArg (fun f => f ▷ A) hcoev]
+      rw [← MonoidalCategory.associator_naturality_right_assoc]
+      rw [← MonoidalCategory.whisker_exchange_assoc]
+      rw [MonoidalCategory.comp_whiskerRight]
+      calc
+        _ = (𝟙_ C ◁ i) ≫
+            (ExactPairing.coevaluation (X₁ ⊞ X₂) Y ▷ (X₁ ⊞ X₂) ≫
+              a ▷ Y ▷ (X₁ ⊞ X₂) ≫
+                (α_ (X₁ ⊞ X₂) Y (X₁ ⊞ X₂)).hom ≫
+                  (X₁ ⊞ X₂) ◁ ExactPairing.evaluation (X₁ ⊞ X₂) Y) ≫
+              p ▷ 𝟙_ C ≫ (ρ_ A).hom ≫ i := by
+          simp only [Category.assoc]
+        _ = (𝟙_ C ◁ i) ≫
+            ((λ_ (X₁ ⊞ X₂)).hom ≫ a ≫ (ρ_ (X₁ ⊞ X₂)).inv) ≫
+              p ▷ 𝟙_ C ≫ (ρ_ A).hom ≫ i := by rw [hsnake_a]
+        _ = (λ_ A).hom ≫ i := by
+          simp [Category.assoc, MonoidalCategory.rightUnitor_naturality,
+            MonoidalCategory.leftUnitor_naturality, hip, ha]
+          have hi : i ≫ a = i := by
+            change i ≫ (p ≫ i) = i
+            rw [← Category.assoc, hip, Category.id_comp]
+          rw [← Category.assoc, hi]
+          rw [← Category.assoc, hip, Category.id_comp]
+    refine ⟨B, ⟨ExactPairing.mk
+      (ExactPairing.coevaluation (X₁ ⊞ X₂) Y ≫ (p ⊗ₘ r))
+      ((j ⊗ₘ i) ≫ ExactPairing.evaluation (X₁ ⊞ X₂) Y) ?_ ?_⟩⟩
+    · let lhs : B ⊗ 𝟙_ C ⟶ 𝟙_ C ⊗ B :=
+        B ◁ (ExactPairing.coevaluation (X₁ ⊞ X₂) Y ≫ (p ⊗ₘ r)) ≫
+          (α_ B A B).inv ≫ ((j ⊗ₘ i) ≫ ExactPairing.evaluation (X₁ ⊞ X₂) Y) ▷ B
+      let rhs : B ⊗ 𝟙_ C ⟶ 𝟙_ C ⊗ B := (ρ_ B).hom ≫ (λ_ B).inv
+      let k : 𝟙_ C ⊗ B ⟶ Y := (λ_ B).hom ≫ j
+      change lhs = rhs
+      apply (cancel_mono k (g := lhs) (h := rhs)).1
+      simp [lhs, rhs, k, MonoidalCategory.tensorHom_def, Category.assoc, hjr, hrj,
+        rightAdjointMate_comp_evaluation]
+      have ht := htransport (iU := p) (pU := i) (iV := r) (pV := j)
+      simp [MonoidalCategory.tensorHom_def, Category.assoc,
+        MonoidalCategory.whiskerLeft_comp, MonoidalCategory.comp_whiskerRight] at ht
+      rw [ht]
+      rw [hmove (iU := p) (pU := i) (iV := r) (pV := j)]
+      rw [MonoidalCategory.whiskerLeft_comp]
+      simp only [Category.assoc]
+      rw [MonoidalCategory.associator_inv_naturality_right_assoc Y (X₁ ⊞ X₂) r]
+      rw [heval_assoc r j]
+      rw [hslide (iU := p) (pU := i) (iV := r) (pV := j)]
+      rw [hmate]
+      simp [Category.assoc, hrj, hjr, MonoidalCategory.leftUnitor_naturality]
+      rw [← hrj]
+      simp only [← Category.assoc, hjr, Category.id_comp]
+    · let lhs : 𝟙_ C ⊗ A ⟶ A ⊗ 𝟙_ C :=
+        (ExactPairing.coevaluation (X₁ ⊞ X₂) Y ≫ (p ⊗ₘ r)) ▷ A ≫
+          (α_ A B A).hom ≫ A ◁ ((j ⊗ₘ i) ≫ ExactPairing.evaluation (X₁ ⊞ X₂) Y)
+      let rhs : 𝟙_ C ⊗ A ⟶ A ⊗ 𝟙_ C := (λ_ A).hom ≫ (ρ_ A).inv
+      let k : A ⊗ 𝟙_ C ⟶ X₁ ⊞ X₂ := (ρ_ A).hom ≫ i
+      change lhs = rhs
+      apply (cancel_mono k (g := lhs) (h := rhs)).1
+      simpa [lhs, rhs, k, MonoidalCategory.tensorHom_def, Category.assoc] using hright
+  constructor
+  · apply hsummand (biprod.inl : X₁ ⟶ X₁ ⊞ X₂) (biprod.fst : X₁ ⊞ X₂ ⟶ X₁)
+    simp
+  · apply hsummand (biprod.inr : X₂ ⟶ X₁ ⊞ X₂) (biprod.snd : X₁ ⊞ X₂ ⟶ X₂)
+    simp
 
 /- The Hom-set equalities and functorial Hom bijections displayed in the
    source proof are the chapter's existing `leftDualHomEquiv` API; the theorem

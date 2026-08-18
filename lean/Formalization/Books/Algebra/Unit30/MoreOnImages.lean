@@ -278,7 +278,55 @@ theorem domain_injective_dense_spectrum_image_conditions
         DenseRange (PrimeSpectrum.comap φ),
         ∃ q : PrimeSpectrum S,
           Ideal.comap φ q.asIdeal = (⊥ : Ideal R) ] := by
-  sorry
+  rw [List.tfae_cons_cons]
+  refine ⟨?_, ?_⟩
+  · constructor
+    · intro h
+      rw [PrimeSpectrum.denseRange_comap_iff_ker_le_nilRadical]
+      rw [RingHom.ker_eq_comap_bot, Ideal.comap_bot_of_injective φ h]
+      exact bot_le
+    · intro h
+      rw [PrimeSpectrum.denseRange_comap_iff_ker_le_nilRadical] at h
+      have hnil : nilradical R = (⊥ : Ideal R) :=
+        nilradical_eq_bot_iff.mpr inferInstance
+      rw [hnil] at h
+      intro x y hxy
+      have hxy0 : x - y ∈ RingHom.ker φ := by
+        change φ (x - y) = 0
+        rw [map_sub, hxy, sub_self]
+      have hz : x - y ∈ (⊥ : Ideal R) := h hxy0
+      apply sub_eq_zero.mp
+      simpa using hz
+  · rw [List.tfae_cons_cons]
+    refine ⟨?_, List.tfae_singleton _⟩
+    constructor
+    · intro h
+      have hinj : Function.Injective φ := by
+        rw [PrimeSpectrum.denseRange_comap_iff_ker_le_nilRadical] at h
+        have hnil : nilradical R = (⊥ : Ideal R) :=
+          nilradical_eq_bot_iff.mpr inferInstance
+        rw [hnil] at h
+        intro x y hxy
+        have hxy0 : x - y ∈ RingHom.ker φ := by
+          change φ (x - y) = 0
+          rw [map_sub, hxy, sub_self]
+        have hz : x - y ∈ (⊥ : Ideal R) := h hxy0
+        apply sub_eq_zero.mp
+        simpa using hz
+      have hbot : (⊥ : PrimeSpectrum R) ∈ Set.range (PrimeSpectrum.comap φ) := by
+        apply (PrimeSpectrum.mem_range_comap_iff φ).mpr
+        simpa only [PrimeSpectrum.asIdeal_bot, Ideal.map_bot] using
+          (Ideal.comap_bot_of_injective φ hinj)
+      rcases hbot with ⟨q, hq⟩
+      refine ⟨q, ?_⟩
+      simpa only [PrimeSpectrum.comap_asIdeal, PrimeSpectrum.asIdeal_bot] using
+        (congrArg PrimeSpectrum.asIdeal hq)
+    · rintro ⟨q, hq⟩
+      rw [PrimeSpectrum.denseRange_comap_iff_ker_le_nilRadical]
+      calc
+        RingHom.ker φ ≤ Ideal.comap φ q.asIdeal := Ideal.ker_le_comap φ
+        _ = ⊥ := hq
+        _ ≤ nilradical R := bot_le
 
 theorem injective_spectrum_image_contains_minimalPrimes
     {R S : Type*} [CommRing R] [CommRing S] (φ : R →+* S)
@@ -298,7 +346,44 @@ theorem spectrum_image_dense_kernel_nilpotent_conditions
         ∀ p : PrimeSpectrum R, p.asIdeal ∈ minimalPrimes R →
           p ∈ Set.range (PrimeSpectrum.comap φ),
         DenseRange (PrimeSpectrum.comap φ) ] := by
-  sorry
+  rw [List.tfae_cons_cons]
+  refine ⟨?_, ?_⟩
+  · constructor
+    · intro h
+      have hdense : DenseRange (PrimeSpectrum.comap φ) :=
+        (PrimeSpectrum.denseRange_comap_iff_ker_le_nilRadical φ).mpr (by
+          intro x hx
+          simpa only [mem_nilradical] using h x hx)
+      intro p hp
+      have hp' := (PrimeSpectrum.denseRange_comap_iff_minimalPrimes φ).mp hdense
+        p.asIdeal hp
+      rcases hp' with ⟨q, hq⟩
+      refine ⟨q, ?_⟩
+      apply PrimeSpectrum.ext
+      simpa only [PrimeSpectrum.comap_asIdeal] using
+        (congrArg PrimeSpectrum.asIdeal hq)
+    · intro h
+      have hdense : DenseRange (PrimeSpectrum.comap φ) :=
+        (PrimeSpectrum.denseRange_comap_iff_minimalPrimes φ).mpr (by
+          intro I hI
+          exact h ⟨I, hI.1.1⟩ hI)
+      intro x hx
+      have hx' := (PrimeSpectrum.denseRange_comap_iff_ker_le_nilRadical φ).mp hdense hx
+      simpa only [mem_nilradical] using hx'
+  · rw [List.tfae_cons_cons]
+    refine ⟨?_, List.tfae_singleton _⟩
+    constructor
+    · intro h
+      apply (PrimeSpectrum.denseRange_comap_iff_minimalPrimes φ).mpr
+      intro I hI
+      exact h ⟨I, hI.1.1⟩ hI
+    · intro h p hp
+      have hp' := (PrimeSpectrum.denseRange_comap_iff_minimalPrimes φ).mp h p.asIdeal hp
+      rcases hp' with ⟨q, hq⟩
+      refine ⟨q, ?_⟩
+      apply PrimeSpectrum.ext
+      simpa only [PrimeSpectrum.comap_asIdeal] using
+        (congrArg PrimeSpectrum.asIdeal hq)
 
 theorem minimalPrime_in_spectrum_image_of_minimalPrime
     {R S : Type*} [CommRing R] [CommRing S] (φ : R →+* S)
@@ -306,7 +391,21 @@ theorem minimalPrime_in_spectrum_image_of_minimalPrime
     (hpImage : p ∈ Set.range (PrimeSpectrum.comap φ)) :
     ∃ q : PrimeSpectrum S, q.asIdeal ∈ minimalPrimes S ∧
       PrimeSpectrum.comap φ q = p := by
-  sorry
+  obtain ⟨q, hq⟩ := hpImage
+  obtain ⟨r, hr, hrq⟩ :=
+    Ideal.exists_minimalPrimes_le (I := (⊥ : Ideal S)) (J := q.asIdeal) bot_le
+  let _ : r.IsPrime := hr.1.1
+  let _ : (Ideal.comap φ r).IsPrime := Ideal.comap_isPrime φ r
+  have hqp : Ideal.comap φ q.asIdeal = p.asIdeal := by
+    simpa only [PrimeSpectrum.comap_asIdeal] using
+      (congrArg PrimeSpectrum.asIdeal hq)
+  have hle : Ideal.comap φ r ≤ p.asIdeal :=
+    (Ideal.comap_mono hrq).trans_eq hqp
+  have heq : p.asIdeal = Ideal.comap φ r :=
+    (hp.2 ⟨inferInstance, bot_le⟩ hle).antisymm hle
+  refine ⟨⟨r, hr.1.1⟩, hr, ?_⟩
+  apply PrimeSpectrum.ext
+  exact heq.symm
 
 /-! ## Algebraic fraction fields -/
 
@@ -321,7 +420,17 @@ theorem ideal_comap_ne_bot_of_algebraic_fractionFields
     [Algebra.IsAlgebraic K L]
     (hAB : Function.Injective (algebraMap A B)) (J : Ideal B) (hJ : J ≠ ⊥) :
     Ideal.comap (algebraMap A B) J ≠ (⊥ : Ideal A) := by
-  sorry
+  obtain ⟨x, hxJ, hx0⟩ := J.ne_bot_iff.mp hJ
+  have hxalgL : IsAlgebraic A (algebraMap B L x) :=
+    (IsFractionRing.isAlgebraic_iff A K L).mpr
+      (Algebra.IsAlgebraic.isAlgebraic (R := K) (algebraMap B L x))
+  obtain ⟨p, hpne, hpx⟩ := hxalgL
+  have hxalgB : IsAlgebraic A x := by
+    refine ⟨p, hpne, ?_⟩
+    apply (IsFractionRing.injective B L)
+    rw [← Polynomial.aeval_algebraMap_apply]
+    simpa using hpx
+  exact Ideal.comap_ne_bot_of_algebraic_mem hx0 hxJ hxalgB
 
 /- The final sentence of the source lemma is recorded as its direct spectral
 consequence for a proper closed subset. -/

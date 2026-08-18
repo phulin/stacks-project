@@ -156,7 +156,7 @@ theorem primeLocalizedInteger_no_nonzero_hom (p : PrimeIndex)
     have hpow : algebraMap ℤ (primeLocalizedInteger p) ((p.1 : ℤ) ^ n) ∈ I ^ n := by
       rw [map_pow]
       exact Ideal.pow_mem_pow hp n
-    simpa only [Algebra.smul_def] using
+    simpa [Algebra.smul_def, smul_eq_mul] using
       (Ideal.mul_mem_right (φ (q / (p.1 : ℚ) ^ n)) (I ^ n) hpow)
   have hz : φ q ∈ (⊥ : Ideal (primeLocalizedInteger p)) := by
     rw [← Ideal.iInf_pow_eq_bot_of_isLocalRing I hI]

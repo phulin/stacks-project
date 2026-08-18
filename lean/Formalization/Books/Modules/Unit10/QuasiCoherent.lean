@@ -1,5 +1,4 @@
 import Formalization.Books.Modules.Unit06.ClosedImmersions
-import Mathlib.Algebra.Category.ModuleCat.Sheaf.Quasicoherent
 
 /-!
 # Sheaves of Modules, Chapter 10: Quasi-coherent modules
@@ -117,7 +116,7 @@ def InfiniteDirectSumsPreserveQuasiCoherent : Prop :=
 
 theorem not_infiniteDirectSumsPreserveQuasiCoherent :
     ¬ InfiniteDirectSumsPreserveQuasiCoherent := by
-  sorry
+  exact Formalization.Books.Modules.Unit06.not_infiniteDirectSumsPreserveQuasiCoherent
 
 /-- An existential form of the infinite-direct-sum warning. -/
 def HasInfiniteDirectSumFailure (X : RingedSpace.{v}) : Prop :=
@@ -127,7 +126,7 @@ def HasInfiniteDirectSumFailure (X : RingedSpace.{v}) : Prop :=
 
 theorem exists_infinite_directSum_failure :
     ∃ X : RingedSpace.{v}, HasInfiniteDirectSumFailure X := by
-  sorry
+  exact Formalization.Books.Modules.Unit06.exists_infiniteDirectSumQuasiCoherentFailure
 
 /-- A witness that the quasi-coherent full subcategory is not abelian. -/
 def HasNonabelianQuasiCoherentCategory (X : RingedSpace.{v}) : Prop :=
@@ -467,88 +466,37 @@ theorem exists_local_associatedSheaf
 
 /-! ## The countable wedge example -/
 
-/-- A countable index for the free sheaves in the example. -/
-abbrev CountableIndex : Type v := ULift.{v} ℕ
+/- The chapter 6 interfaces already package the complete source example.  Keep
+   the chapter-facing names as aliases so the two chapters cannot drift apart. -/
+abbrev CountableIndex : Type v :=
+  Formalization.Books.Modules.Unit06.CountableIndex
 
-/-- A countable paired index for the matrix entries. -/
-abbrev CountablePairIndex : Type v := ULift.{v} (ℕ × ℕ)
+abbrev CountablePairIndex : Type v :=
+  Formalization.Books.Modules.Unit06.CountablePairIndex
 
-/-- The cutoff function used by the wedge example. -/
-structure CutoffFunction where
-  toFun : ℝ → ℝ
-  continuous : Continuous toFun
-  vanishes_on : ∀ x, x ∈ Set.Ioo (-1 : ℝ) 1 → toFun x = 0
-  is_one_on : ∀ x, x < -2 ∨ 2 < x → toFun x = 1
+abbrev CutoffFunction :=
+  Formalization.Books.Modules.Unit06.CutoffFunction
 
-instance : CoeFun CutoffFunction (fun _ ↦ ℝ → ℝ) :=
-  ⟨CutoffFunction.toFun⟩
+abbrev scaledCutoff (f : CutoffFunction) (n : ℕ) : ℝ → ℝ :=
+  Formalization.Books.Modules.Unit06.scaledCutoff f n
 
-/-- The scaled cutoff `f_n(x) = f(nx)`. -/
-def scaledCutoff (f : CutoffFunction) (n : ℕ) : ℝ → ℝ :=
-  fun x ↦ f ((n : ℝ) * x)
-
-/-- Local finiteness of the branch-index coefficients. -/
-def LocallyFiniteBranchCoefficients {X : RingedSpace.{v}}
+abbrev LocallyFiniteBranchCoefficients {X : RingedSpace.{v}}
     (c : ℕ → ℕ → X → ℝ) : Prop :=
-  ∀ j x, ∃ U : Opens X.carrier, x ∈ U ∧
-    ∃ K : Finset ℕ, ∀ z : X, z ∈ U → ∀ i, i ∉ K → c j i z = 0
+  Formalization.Books.Modules.Unit06.LocallyFiniteBranchCoefficients c
 
-/-- Failure of finite matrix support on every indicated neighbourhood. -/
-def NotLocallyFiniteLinearCombination {X : RingedSpace.{v}}
+abbrev NotLocallyFiniteLinearCombination {X : RingedSpace.{v}}
     (φ : (SheafOfModules.free CountableIndex : Mod X.structureSheaf) ⟶
       (SheafOfModules.free CountablePairIndex : Mod X.structureSheaf))
     (U : ℕ → Opens X.carrier) : Prop :=
-  ∀ (n j : ℕ), 2 * n < j →
-    ¬ ∃ K : Finset ℕ,
-      sheafModuleSectionsMap X.structureSheaf φ (U n)
-          ((SheafOfModules.freeSection (R := X.structureSheaf)
-            (⟨j⟩ : CountableIndex)).eval (op (U n))) ∈
-        Submodule.span (X.structureSheaf.obj.obj (op (U n)))
-          ((fun i : ℕ ↦
-              ((SheafOfModules.freeSection (R := X.structureSheaf)
-                (⟨(j, i)⟩ : CountablePairIndex)).eval (op (U n)))) '' (K : Set ℕ))
+  Formalization.Books.Modules.Unit06.NotLocallyFiniteLinearCombination φ U
 
-/-- The ringed-space, topology, coefficient, and matrix data of the source's
-countable wedge example. -/
-structure WedgeOfLinesExample where
-  X : RingedSpace.{v}
-  origin : X
-  branch : ℕ → ℝ → X
-  branch_cover : ∀ z : X, z = origin ∨ ∃ i x, x ≠ 0 ∧ z = branch i x
-  branch_zero : ∀ i, branch i 0 = origin
-  branch_separated : ∀ {i j : ℕ} {x y : ℝ},
-    branch i x = branch j y → (x = 0 ∧ y = 0) ∨ (i = j ∧ x = y)
-  wedge_topology : ∀ V : Set X,
-    IsOpen V ↔ ∀ i, IsOpen (branch i ⁻¹' V)
-  continuous_function_sections : ∀ U : Opens X.carrier,
-    Nonempty (X.structureSheaf.obj.obj (op U) ≃+*
-      ContinuousMap (U : Set X) ℝ)
-  cutoff : CutoffFunction
-  neighbourhood : ℕ → Opens X.carrier
-  neighbourhood_basis :
-    IsFundamentalSystemOfNeighborhoods origin
-      (fun n ↦ (neighbourhood n : Set X))
-  neighbourhood_on_branch : ∀ n i x,
-    branch i x ∈ neighbourhood n ↔
-      -(1 : ℝ) / ((n : ℝ) + 1) < x ∧ x < (1 : ℝ) / ((n : ℝ) + 1)
-  coefficient : ℕ → ℕ → X → ℝ
-  coefficient_at_origin : ∀ j i, coefficient j i origin = 0
-  coefficient_continuous : ∀ j i, Continuous (coefficient j i)
-  coefficient_on_branch : ∀ j i x, x ≠ 0 →
-    coefficient j i (branch i x) = scaledCutoff cutoff j x
-  coefficient_off_branch : ∀ j i k x, x ≠ 0 → k ≠ i →
-    coefficient j k (branch i x) = 0
-  coefficient_locally_finite : LocallyFiniteBranchCoefficients coefficient
-  matrixMap :
-    (SheafOfModules.free CountableIndex : Mod X.structureSheaf) ⟶
-      (SheafOfModules.free CountablePairIndex : Mod X.structureSheaf)
-  matrixMap_not_finite :
-    NotLocallyFiniteLinearCombination matrixMap neighbourhood
+abbrev WedgeOfLinesExample :=
+  Formalization.Books.Modules.Unit06.WedgeOfLinesExample
 
 /-- The wedge example supplies the map whose high-index generators have no
 finite local matrix expression. -/
 theorem exists_wedgeOfLinesExample : Nonempty WedgeOfLinesExample := by
-  sorry
+  exact Formalization.Books.Modules.Unit06.exists_associatedSheafWarningAboutLocalMatrices
 
 /-! The source's final assertions about further examples are explicitly
 expectations, so they are recorded by the preceding interfaces and are not

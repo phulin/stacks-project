@@ -45,7 +45,7 @@ theorem fractionLocalizationAtTwo_flat :
 theorem fractionLocalizationAtTwo_not_free :
     ¬ Module.Free integersLocalizedAtTwo fractionLocalizationAtTwo := by
   intro hfree
-  letI : IsDomain integersLocalizedAtTwo :=
+  let : IsDomain integersLocalizedAtTwo :=
     IsLocalization.isDomain_of_atPrime integersLocalizedAtTwo integerTwoIdeal
   have htwo_ne_zero : (2 : integersLocalizedAtTwo) ≠ 0 := by
     intro h
@@ -55,7 +55,7 @@ theorem fractionLocalizationAtTwo_not_free :
     apply (show (2 : ℤ) ≠ 0 by norm_num)
     apply hinj
     simpa using h
-  letI : IsDomain fractionLocalizationAtTwo :=
+  let : IsDomain fractionLocalizationAtTwo :=
     IsLocalization.isDomain_of_le_nonZeroDivisors fractionLocalizationAtTwo
       (powers_le_nonZeroDivisors_of_noZeroDivisors htwo_ne_zero)
   have hunit : IsUnit (algebraMap integersLocalizedAtTwo fractionLocalizationAtTwo

@@ -291,7 +291,7 @@ theorem sixVariablePowerLift_flat (p : ℕ) (_hp : Nat.Prime p) :
 
 /-- Its reduction modulo `p` is the characteristic-`p` algebra in the source.
 -/
-theorem sixVariablePowerLift_specialFiber (p : ℕ) (hp : Nat.Prime p) :
+theorem sixVariablePowerLift_specialFiber (p : ℕ) :
     Nonempty (sixVariablePowerLiftSpecialFiber p ≃+* sixVariablePowerAlgebra p) := by
   let R₂ := ZMod (p ^ 2)
   let R₁ := ZMod p
@@ -317,7 +317,7 @@ theorem sixVariablePowerLift_specialFiber (p : ℕ) (hp : Nat.Prime p) :
         exact hz0
       obtain ⟨k, hk⟩ := hz'
       refine ⟨(k : R₂), ?_⟩
-      simpa [hk] using congrArg (fun w : ℤ => (w : R₂)) hk
+      simp [hk]
     · rintro ⟨a, ha⟩
       rw [ha, map_mul]
       have cp : c (p : R₂) = 0 := by
@@ -385,7 +385,7 @@ theorem exists_flat_zmodSquare_lift (p : ℕ) (hp : Nat.Prime p) :
           (principalSpecialFiber (R := ZMod (p ^ 2)) (B := B) (p : ZMod (p ^ 2))
             ≃+* sixVariablePowerAlgebra p) := by
   refine ⟨sixVariablePowerLift p, inferInstance, inferInstance, ?_⟩
-  exact ⟨sixVariablePowerLift_flat p hp, sixVariablePowerLift_specialFiber p hp⟩
+  exact ⟨sixVariablePowerLift_flat p hp, sixVariablePowerLift_specialFiber p⟩
 
 /-! ## The quadratic obstruction -/
 
@@ -421,7 +421,7 @@ theorem no_flat_sixVariableQuadratic_lift
   let R := ZMod (p ^ 2)
   let K : Ideal B := Ideal.span {algebraMap R B (p : R)}
   let π : B →+* (B ⧸ K) := Ideal.Quotient.mk K
-  letI : Module.Flat R B := hflat
+  let : Module.Flat R B := hflat
   have hscalar : ∀ a : R, (p : R) * a = 0 →
       ∃ c : R, a = (p : R) * c := by
     intro a ha
@@ -438,7 +438,7 @@ theorem no_flat_sixVariableQuadratic_lift
         (p : ℤ) * z = (p ^ 2 : ℤ) * k := hk
         _ = (p : ℤ) * ((p : ℤ) * k) := by ring
     refine ⟨(k : R), ?_⟩
-    simpa [hz, Int.cast_mul]
+    simp [hz, Int.cast_mul]
   have hdivide : ∀ y : B, (p : R) • y = 0 →
       ∃ z : B, y = (p : R) • z := by
     intro y hy
@@ -508,12 +508,11 @@ theorem no_flat_sixVariableQuadratic_lift
             _ = (algebraMap R B) (p : R) *
                 (algebraMap R B) ((p.choose k / p : ℕ) : R) := by
               have hpmap : (algebraMap R B) (p : R) = (p : B) := by
-                simpa [R] using (map_natCast (algebraMap R B) p)
+                simp [R]
               have hqmap : (algebraMap R B)
                   ((p.choose k / p : ℕ) : R) =
                     (p.choose k / p : B) := by
-                simpa [R] using (map_natCast (algebraMap R B)
-                  (p.choose k / p))
+                simp [R]
               rw [hpmap, hqmap]
               simp only [Nat.cast_mul]
         rw [hcast]
@@ -576,7 +575,6 @@ theorem no_flat_sixVariableQuadratic_lift
       dsimp [q, a, b, c]
       rw [map_add, map_add, map_mul, map_mul, map_mul,
         hx 0, hx 1, hx 2, hx 3, hx 4, hx 5]
-      change (y 0 * y 1 + y 2 * y 3 + y 4 * y 5) = 0
       exact Ideal.Quotient.eq_zero_iff_mem.mpr <| by
         change MvPolynomial.X 0 * MvPolynomial.X 1 +
             MvPolynomial.X 2 * MvPolynomial.X 3 +

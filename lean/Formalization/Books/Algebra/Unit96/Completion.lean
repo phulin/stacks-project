@@ -1962,7 +1962,7 @@ theorem finite_module_isAdicComplete_of_complete_ring
     (hR : IsAdicComplete I R)
     (hM : (⨅ n : ℕ, I ^ n • (⊤ : Submodule R M)) = ⊥) :
     IsAdicComplete I M := by
-  letI : IsAdicComplete I R := hR
+  have : IsAdicComplete I R := hR
   have hofR : Function.Surjective (AdicCompletion.of I R) :=
     AdicCompletion.of_surjective_iff.mpr hR.toIsPrecomplete
   have hof_smul (r : R) (m : M) :

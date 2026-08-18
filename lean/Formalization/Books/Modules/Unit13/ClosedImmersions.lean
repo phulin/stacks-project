@@ -298,6 +298,18 @@ noncomputable def moduleSectionsWithSupportFunctor_adjunction
   Classical.choice
     (Classical.choose_spec (exists_moduleSectionsWithSupportFunctor X Z hZ)).1
 
+/- The source displays the adjunction as the corresponding Hom equivalence;
+   expose that usable interface alongside the chosen adjunction. -/
+
+/-- The Hom correspondence for sections supported in `Z`. -/
+noncomputable abbrev moduleSectionsWithSupportFunctor_homEquiv
+    (X : RingedSpace.{v}) (Z : Set X) (hZ : IsClosed Z)
+    (G : Mod (ringedClosedSubspace X Z).structureSheaf)
+    (F : Mod X.structureSheaf) :
+    ((ringedSpaceModulePushforward (ringedClosedInclusion X Z)).obj G ⟶ F) ≃
+      (G ⟶ (moduleSectionsWithSupportFunctor X Z hZ).obj F) :=
+  (moduleSectionsWithSupportFunctor_adjunction X Z hZ).homEquiv G F
+
 /-- The chosen right adjoint realizes the largest supported submodule. -/
 theorem moduleSectionsWithSupportFunctor_obj_iso
     (X : RingedSpace.{v}) (Z : Set X) (hZ : IsClosed Z)

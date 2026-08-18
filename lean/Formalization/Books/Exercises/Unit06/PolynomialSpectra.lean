@@ -6,8 +6,6 @@ import Mathlib.RingTheory.Localization.Basic
 import Mathlib.RingTheory.Polynomial.Basic
 import Mathlib.RingTheory.Spectrum.Prime.Topology
 
-import Formalization.Books.Exercises.Unit06.SpecializationConnected
-
 /-!
 # Exercises, Chapter 6: Explicit polynomial spectra
 

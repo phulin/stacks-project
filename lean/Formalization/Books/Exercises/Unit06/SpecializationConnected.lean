@@ -1,7 +1,6 @@
 import Mathlib.Data.ZMod.Basic
+import Mathlib.RingTheory.Spectrum.Prime.Noetherian
 import Mathlib.Topology.Connected.Basic
-
-import Formalization.Books.Exercises.Unit06.NoetherianComponents
 
 /-!
 # Exercises, Chapter 6: Specialization and connected components

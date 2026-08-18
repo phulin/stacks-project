@@ -267,12 +267,19 @@ abbrev infiniteBooleanProductRing : Type := ℕ → ZMod 2
 private theorem infinite_boolean_product_mul_self (f : infiniteBooleanProductRing) :
     f * f = f := by
   ext i
-  have hi : f i .val < 2 := ZMod.val_lt (f i)
-  have hi' : f i .val ≤ 1 := Nat.lt_succ_iff.mp (by simpa using hi)
+  change f i * f i = f i
+  have hi : (f i).val < 2 := ZMod.val_lt (f i)
+  have hi' : (f i).val ≤ 1 := Nat.lt_succ_iff.mp (by simpa using hi)
   rcases Nat.le_one_iff_eq_zero_or_eq_one.mp hi' with hi' | hi'
-  · rw [← ZMod.natCast_zmod_val (f i), hi']
+  · have hzero : f i = 0 := by
+      rw [← ZMod.natCast_zmod_val (f i), hi']
+      simp
+    rw [hzero]
     simp
-  · rw [← ZMod.natCast_zmod_val (f i), hi']
+  · have hone : f i = 1 := by
+      rw [← ZMod.natCast_zmod_val (f i), hi']
+      simp
+    rw [hone]
     simp
 
 private theorem prime_ideal_is_maximal_of_mul_self_eq_self {R : Type u} [CommRing R]
@@ -294,7 +301,51 @@ theorem infinite_boolean_product_spectrum_warning :
     Infinite (PrimeSpectrum infiniteBooleanProductRing) ∧
       ∀ p : PrimeSpectrum infiniteBooleanProductRing,
         IsClosed ({p} : Set (PrimeSpectrum infiniteBooleanProductRing)) := by
-  sorry
+  let _ : Fact (Nat.Prime 2) := ⟨Nat.prime_two⟩
+  have hq : (⊥ : Ideal (ZMod 2)).IsPrime := by
+    refine ⟨?_, ?_⟩
+    · intro h
+      have hmem : (1 : ZMod 2) ∈ (⊥ : Ideal (ZMod 2)) := by
+        rw [h]
+        simp
+      exact one_ne_zero (by simpa only [Submodule.mem_bot] using hmem)
+    · intro a b hab
+      have hab' : a * b = 0 := by
+        simpa only [Submodule.mem_bot] using hab
+      have ha : a.val < 2 := ZMod.val_lt a
+      have hb : b.val < 2 := ZMod.val_lt b
+      have ha' : a.val ≤ 1 := Nat.lt_succ_iff.mp (by simpa using ha)
+      have hb' : b.val ≤ 1 := Nat.lt_succ_iff.mp (by simpa using hb)
+      rcases Nat.le_one_iff_eq_zero_or_eq_one.mp ha' with ha' | ha'
+      · left
+        rw [← ZMod.natCast_zmod_val a, ha']
+        simp
+      · rcases Nat.le_one_iff_eq_zero_or_eq_one.mp hb' with hb' | hb'
+        · right
+          rw [← ZMod.natCast_zmod_val b, hb']
+          simp
+        · exfalso
+          rw [← ZMod.natCast_zmod_val a, ha', ← ZMod.natCast_zmod_val b, hb'] at hab'
+          simp at hab'
+  let q : PrimeSpectrum (ZMod 2) := ⟨⊥, hq⟩
+  let p : ℕ → PrimeSpectrum infiniteBooleanProductRing :=
+    fun i => PrimeSpectrum.comap (Pi.evalRingHom (fun _ : ℕ => ZMod 2) i) q
+  have hp : Function.Injective p := by
+    intro i j hij
+    by_contra hne
+    let f : infiniteBooleanProductRing := Pi.single i 1
+    have hfi : f ∉ (p i).asIdeal := by
+      change Pi.evalRingHom (fun _ : ℕ => ZMod 2) i f ∉ (⊥ : Ideal (ZMod 2))
+      simp [f]
+    have hfj : f ∈ (p j).asIdeal := by
+      change Pi.evalRingHom (fun _ : ℕ => ZMod 2) j f ∈ (⊥ : Ideal (ZMod 2))
+      simp [f, hne]
+    exact hfi (hij ▸ hfj)
+  refine ⟨Infinite.of_injective p hp, ?_⟩
+  intro r
+  rw [spectrum_closed_point_iff_maximal]
+  exact prime_ideal_is_maximal_of_mul_self_eq_self r.asIdeal r.isPrime
+    infinite_boolean_product_mul_self
 
 /-- The same infinite product has a connected component which is not open,
 so the Noetherian openness conclusion cannot be extended to arbitrary rings. -/
@@ -302,6 +353,81 @@ theorem infinite_boolean_product_has_nonopen_connected_component :
     ∃ p : PrimeSpectrum infiniteBooleanProductRing,
       connectedComponent p = {p} ∧
         ¬ IsOpen (connectedComponent p) := by
-  sorry
+  let _ : Infinite (PrimeSpectrum infiniteBooleanProductRing) :=
+    infinite_boolean_product_spectrum_warning.1
+  let hcomp : ∀ x : PrimeSpectrum infiniteBooleanProductRing,
+      connectedComponent x = {x} := by
+    intro x
+    apply Set.Subset.antisymm
+    · intro y hy
+      by_contra hxy
+      have hmaxx : x.asIdeal.IsMaximal :=
+        prime_ideal_is_maximal_of_mul_self_eq_self x.asIdeal x.isPrime
+          infinite_boolean_product_mul_self
+      have hmaxy : y.asIdeal.IsMaximal :=
+        prime_ideal_is_maximal_of_mul_self_eq_self y.asIdeal y.isPrime
+          infinite_boolean_product_mul_self
+      have hnot : ¬ y.asIdeal ≤ x.asIdeal := by
+        intro hle
+        apply hxy
+        apply PrimeSpectrum.ext
+        exact hmaxy.eq_of_le hmaxx.ne_top hle
+      obtain ⟨f, hfy, hfx⟩ := Set.not_subset.mp hnot
+      have hmul : f * (1 - f) = 0 := by
+        rw [mul_sub, mul_one, infinite_boolean_product_mul_self, sub_self]
+      have hadd : f + (1 - f) = 1 := by
+        calc
+          f + (1 - f) = (1 - f) + f := add_comm _ _
+          _ = 1 := sub_add_cancel _ _
+      have hs : IsClopen (PrimeSpectrum.basicOpen f : Set
+          (PrimeSpectrum infiniteBooleanProductRing)) :=
+        PrimeSpectrum.isClopen_basicOpen_of_mul_add f (1 - f) hmul hadd
+      have hxf : x ∈ (PrimeSpectrum.basicOpen f : Set
+          (PrimeSpectrum infiniteBooleanProductRing)) := by
+        change f ∉ x.asIdeal
+        exact hfx
+      have hyf : y ∉ (PrimeSpectrum.basicOpen f : Set
+          (PrimeSpectrum infiniteBooleanProductRing)) := by
+        change ¬(f ∉ y.asIdeal)
+        exact fun h => h hfy
+      have hsubset : connectedComponent x ⊆ (PrimeSpectrum.basicOpen f : Set
+          (PrimeSpectrum infiniteBooleanProductRing)) := by
+        apply isPreconnected_connectedComponent.subset_left_of_subset_union
+          hs.2 hs.1.isOpen_compl disjoint_compl_right
+        · intro z hz
+          by_cases hzf : z ∈ (PrimeSpectrum.basicOpen f : Set
+              (PrimeSpectrum infiniteBooleanProductRing))
+          · exact Or.inl hzf
+          · exact Or.inr hzf
+        · exact ⟨x, mem_connectedComponent, hxf⟩
+      exact hyf (hsubset hy)
+    · exact Set.singleton_subset_iff.mpr mem_connectedComponent
+  have hex : ∃ p : PrimeSpectrum infiniteBooleanProductRing,
+      ¬ IsOpen ({p} : Set (PrimeSpectrum infiniteBooleanProductRing)) := by
+    by_contra h
+    push Not at h
+    obtain ⟨t, ht⟩ := (isCompact_univ : IsCompact
+      (Set.univ : Set (PrimeSpectrum infiniteBooleanProductRing))).elim_finite_subcover
+      (fun p => ({p} : Set (PrimeSpectrum infiniteBooleanProductRing))) h
+      (by
+        intro p hp
+        exact Set.mem_iUnion.mpr ⟨p, Set.mem_singleton p⟩)
+    have ht' : (Set.univ : Set (PrimeSpectrum infiniteBooleanProductRing)) ⊆
+        (t : Set (PrimeSpectrum infiniteBooleanProductRing)) := by
+      intro p hp
+      have hp' := ht hp
+      simp only [Set.mem_iUnion, Set.mem_singleton_iff] at hp'
+      rcases hp' with ⟨i, hi, rfl⟩
+      exact hi
+    have hsurj : Function.Surjective
+        (fun p : (t : Set (PrimeSpectrum infiniteBooleanProductRing)) => (p : PrimeSpectrum
+          infiniteBooleanProductRing)) := by
+      intro p
+      have hp : p ∈ (t : Set (PrimeSpectrum infiniteBooleanProductRing)) :=
+        ht' (Set.mem_univ p)
+      exact ⟨⟨p, hp⟩, rfl⟩
+    exact (Finite.of_surjective _ hsurj).false
+  obtain ⟨p, hp⟩ := hex
+  exact ⟨p, hcomp p, by simpa [hcomp p] using hp⟩
 
 end Formalization.Books.Exercises.Unit06

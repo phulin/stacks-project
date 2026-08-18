@@ -1,5 +1,6 @@
 import Formalization.Books.Algebra.Unit84.TransfiniteDevissage
 import Mathlib.RingTheory.Finiteness.Defs
+import Mathlib.LinearAlgebra.FreeModule.Finite.Basic
 import Mathlib.RingTheory.LocalRing.Defs
 
 /-!
@@ -43,6 +44,73 @@ theorem projective_free_iff_countablyGenerated_projective_free
     let hfree : Module.Free R (DirectSum ι (fun i => (N i : Type v))) :=
       Module.Free.dfinsupp R (fun i => (N i : Type v))
     exact Module.Free.of_equiv' hfree e.symm
+
+private theorem free_element_mem_finite_free_direct_summand
+    {R : Type u} {F : Type v} [CommRing R]
+    [AddCommGroup F] [Module R F] (hF : Module.Free R F) (x : F) :
+    ∃ Q : Submodule R F, x ∈ Q ∧ IsComplemented Q ∧
+      Module.Finite R Q ∧ Module.Free R Q := by
+  classical
+  let b := Module.Free.chooseBasis R F
+  let c := b.repr x
+  let s : Set (Module.Free.ChooseBasisIndex R F) := c.support
+  letI : Finite s := Finite.of_injective
+    (fun i : s => (⟨(i : Module.Free.ChooseBasisIndex R F), by simpa [s] using i.property⟩ : c.support))
+    (by intro i j hij; exact Subtype.ext (congrArg Subtype.val hij))
+  let Q : Submodule R F := Submodule.span R (b '' s)
+  refine ⟨Q, ?_, ?_, ?_, ?_⟩
+  · have hx : c.sum (fun i a => a • b i) = x := by
+      change c.sum (fun i a => a • b i) = x
+      exact b.repr.symm_apply_apply x
+    rw [← hx]
+    change c.sum (fun i a => a • b i) ∈ Q
+    apply Submodule.sum_mem
+    intro i hi
+    exact Submodule.smul_mem Q (c i)
+      (Submodule.subset_span ⟨i, hi, rfl⟩)
+  · refine ⟨Submodule.span R (b '' sᶜ), ?_⟩
+    exact b.linearIndependent.isCompl_span_image (Module.Basis.span_eq b)
+      isCompl_compl
+  · let v : s → Q := fun i =>
+      ⟨b i, Submodule.subset_span ⟨i, i.property, rfl⟩⟩
+    let bQ : Module.Basis s R Q := Module.Basis.mk (v := v) (by
+      apply LinearIndependent.of_comp Q.subtype
+      change LinearIndependent R (fun i : s => b (i : Module.Free.ChooseBasisIndex R F))
+      exact
+        b.linearIndependent.comp (fun i : s => (i : Module.Free.ChooseBasisIndex R F))
+          Subtype.val_injective) (by
+      intro y hy
+      change (y : F) ∈ Submodule.span R (b '' s) at hy
+      refine Submodule.span_induction (p := fun z hz =>
+        (⟨z, hz⟩ : Q) ∈ Submodule.span R (Set.range v)) ?_ ?_ ?_ ?_ y hy
+      · rintro z ⟨i, hi, rfl⟩
+        exact Submodule.subset_span ⟨⟨i, hi⟩, rfl⟩
+      · exact Submodule.zero_mem _
+      · intro z w hz hw
+        exact Submodule.add_mem _ hz hw
+      · intro a z hz
+        exact Submodule.smul_mem _ a hz)
+    exact Module.Finite.of_basis bQ
+  · let v : s → Q := fun i =>
+      ⟨b i, Submodule.subset_span ⟨i, i.property, rfl⟩⟩
+    let bQ : Module.Basis s R Q := Module.Basis.mk (v := v) (by
+      apply LinearIndependent.of_comp Q.subtype
+      change LinearIndependent R (fun i : s => b (i : Module.Free.ChooseBasisIndex R F))
+      exact
+        b.linearIndependent.comp (fun i : s => (i : Module.Free.ChooseBasisIndex R F))
+          Subtype.val_injective) (by
+      intro y hy
+      change (y : F) ∈ Submodule.span R (b '' s) at hy
+      refine Submodule.span_induction (p := fun z hz =>
+        (⟨z, hz⟩ : Q) ∈ Submodule.span R (Set.range v)) ?_ ?_ ?_ ?_ y hy
+      · rintro z ⟨i, hi, rfl⟩
+        exact Submodule.subset_span ⟨⟨i, hi⟩, rfl⟩
+      · exact Submodule.zero_mem _
+      · intro z w hz hw
+        exact Submodule.add_mem _ hz hw
+      · intro a z hz
+        exact Submodule.smul_mem _ a hz)
+    exact Module.Free.of_basis bQ
 
 /-- A countably generated module is free when every decomposition with a
 finite free complement has the free-direct-summand property from the source.

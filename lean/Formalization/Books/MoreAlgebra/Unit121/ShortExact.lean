@@ -19,6 +19,21 @@ particular, the sequence below is a short complex in the abelian category of pai
 commuting endomorphism data are retained by the morphisms themselves.
 -/
 
+/-!
+The determinant definitions are expressed through the underlying modules, whereas the
+short-exact hypothesis lives in the pair category.  This is the concrete bridge needed by
+the module-level composition-series argument; it is kept as an interface so that the
+categorical Abelian instance does not leak into downstream proofs.
+-/
+
+theorem shortExact_underlying_data
+    {R : Type u} [CommRing R] [IsLocalRing R]
+    {S : ShortComplex (FiniteLengthEndomorphism.{u, v} R)}
+    (hS : S.ShortExact) :
+    Function.Exact S.f.hom.hom S.g.hom.hom ∧
+      Function.Injective S.f.hom.hom ∧ Function.Surjective S.g.hom.hom := by
+  sorry
+
 theorem lemma_ses_det
     {R : Type u} [CommRing R] [IsLocalRing R]
     {S : ShortComplex (FiniteLengthEndomorphism.{u, v} R)}

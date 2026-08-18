@@ -731,6 +731,66 @@ private theorem okaCounterexampleMaximalIdeal_le_of_prime
   apply hP.mem_of_pow_mem 2
   simpa [okaCounterexampleX_sq_eq_zero]
 
+private abbrev okaCounterexampleTestVariables := Sum ℕ Unit
+
+private abbrev okaCounterexampleTestPolynomial (k : Type u) [CommSemiring k] :=
+  MvPolynomial (okaCounterexampleTestVariables) k
+
+private def okaCounterexampleTestSquareIdeal (k : Type u) [Field k] :
+    Ideal (okaCounterexampleTestPolynomial k) :=
+  Ideal.span (Set.range (fun i : okaCounterexampleTestVariables =>
+    (MvPolynomial.X i : okaCounterexampleTestPolynomial k) ^ 2))
+
+private abbrev okaCounterexampleTestRing (k : Type u) [Field k] :=
+  okaCounterexampleTestPolynomial k ⧸ okaCounterexampleTestSquareIdeal k
+
+private def okaCounterexampleTestX {k : Type u} [Field k]
+    (i : okaCounterexampleTestVariables) : okaCounterexampleTestRing k :=
+  Ideal.Quotient.mk (okaCounterexampleTestSquareIdeal k) (MvPolynomial.X i)
+
+private def okaCounterexampleTestTail {k : Type u} [Field k]
+    (N n : ℕ) : okaCounterexampleTestRing k :=
+  if n ≤ N then
+    (∏ i ∈ Finset.Icc (n + 1) N, okaCounterexampleTestX (k := k) (Sum.inl i)) *
+      okaCounterexampleTestX (k := k) (Sum.inr ())
+  else 0
+
+private theorem okaCounterexampleTestX_sq {k : Type u} [Field k]
+    (i : okaCounterexampleTestVariables) :
+    okaCounterexampleTestX i ^ 2 = 0 := by
+  change (Ideal.Quotient.mk (okaCounterexampleTestSquareIdeal k)
+      (MvPolynomial.X i)) ^ 2 = 0
+  apply Ideal.Quotient.eq_zero_iff_mem.mpr
+  exact Ideal.subset_span ⟨i, rfl⟩
+
+private theorem okaCounterexampleTestTail_sq {k : Type u} [Field k]
+    (N n : ℕ) : okaCounterexampleTestTail N n ^ 2 = 0 := by
+  unfold okaCounterexampleTestTail
+  split_ifs with hn
+  · rw [mul_pow, okaCounterexampleTestX_sq]
+    simp
+  · simp
+
+private theorem okaCounterexampleTestTail_succ {k : Type u} [Field k]
+    {N n : ℕ} (hn : n < N) :
+    okaCounterexampleTestX (Sum.inl (n + 1)) *
+        okaCounterexampleTestTail N (n + 1) =
+      okaCounterexampleTestTail N n := by
+  unfold okaCounterexampleTestTail
+  simp only [Nat.le_of_lt hn, ↓reduceIte]
+  have hset : Finset.Icc (n + 1) N =
+      insert (n + 1) (Finset.Icc (n + 2) N) := by
+    ext i
+    simp only [Finset.mem_Icc, Finset.mem_insert]
+    omega
+  rw [hset, Finset.prod_insert]
+  · simp [mul_assoc, mul_left_comm, mul_comm]
+  · simp
+
+private theorem okaCounterexampleTestTail_zero {k : Type u} [Field k]
+    (N n : ℕ) (hn : N < n) : okaCounterexampleTestTail N n = 0 := by
+  simp [okaCounterexampleTestTail, Nat.not_le.mpr hn]
+
 /-- The Oka-family counterexample attached to an uncountable indexing type.
 
 Proof roadmap:

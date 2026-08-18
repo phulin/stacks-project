@@ -1487,7 +1487,81 @@ theorem baerSumExtension_preserves_iso
     {A B : C} {E₁ E₁' E₂ E₂' : Extension C A B}
     (h₁ : Nonempty (E₁ ≅ E₁')) (h₂ : Nonempty (E₂ ≅ E₂')) :
     Nonempty (baerSumExtension E₁ E₂ ≅ baerSumExtension E₁' E₂') := by
-  sorry
+  rcases h₁ with ⟨e₁⟩
+  rcases h₂ with ⟨e₂⟩
+  let dHom : ExtensionHom (directSumExtension E₁ E₂) (directSumExtension E₁' E₂') :=
+    { middle := biprod.map e₁.hom.middle e₂.hom.middle
+      comm_left := by
+        dsimp [directSumExtension]
+        apply biprod.hom_ext
+        · rw [Category.assoc, biprod.map_fst, biprod.map_fst,
+            ← Category.assoc, biprod.map_fst, Category.assoc, e₁.hom.comm_left]
+        · rw [Category.assoc, biprod.map_snd, biprod.map_snd,
+            ← Category.assoc, biprod.map_snd, Category.assoc, e₂.hom.comm_left]
+      comm_right := by
+        dsimp [directSumExtension]
+        apply biprod.hom_ext'
+        · rw [← Category.assoc, biprod.inl_map, Category.assoc,
+            biprod.inl_map, ← Category.assoc, e₁.hom.comm_right,
+            biprod.inl_map]
+        · rw [← Category.assoc, biprod.inr_map, Category.assoc,
+            biprod.inr_map, ← Category.assoc, e₂.hom.comm_right,
+            biprod.inr_map] }
+  let dInv : ExtensionHom (directSumExtension E₁' E₂') (directSumExtension E₁ E₂) :=
+    { middle := biprod.map e₁.inv.middle e₂.inv.middle
+      comm_left := by
+        dsimp [directSumExtension]
+        apply biprod.hom_ext
+        · rw [Category.assoc, biprod.map_fst, biprod.map_fst,
+            ← Category.assoc, biprod.map_fst, Category.assoc, e₁.inv.comm_left]
+        · rw [Category.assoc, biprod.map_snd, biprod.map_snd,
+            ← Category.assoc, biprod.map_snd, Category.assoc, e₂.inv.comm_left]
+      comm_right := by
+        dsimp [directSumExtension]
+        apply biprod.hom_ext'
+        · rw [← Category.assoc, biprod.inl_map, Category.assoc,
+            biprod.inl_map, ← Category.assoc, e₁.inv.comm_right,
+            biprod.inl_map]
+        · rw [← Category.assoc, biprod.inr_map, Category.assoc,
+            biprod.inr_map, ← Category.assoc, e₂.inv.comm_right,
+            biprod.inr_map] }
+  have h₁' : e₁.hom.middle ≫ e₁.inv.middle = 𝟙 E₁.middle := by
+    exact congrArg (fun q : E₁ ⟶ E₁ => q.middle) e₁.hom_inv_id
+  have h₂' : e₂.hom.middle ≫ e₂.inv.middle = 𝟙 E₂.middle := by
+    exact congrArg (fun q : E₂ ⟶ E₂ => q.middle) e₂.hom_inv_id
+  have h₁'' : e₁.inv.middle ≫ e₁.hom.middle = 𝟙 E₁'.middle := by
+    exact congrArg (fun q : E₁' ⟶ E₁' => q.middle) e₁.inv_hom_id
+  have h₂'' : e₂.inv.middle ≫ e₂.hom.middle = 𝟙 E₂'.middle := by
+    exact congrArg (fun q : E₂' ⟶ E₂' => q.middle) e₂.inv_hom_id
+  have hdHomInv : dHom.middle ≫ dInv.middle = 𝟙 _ := by
+    dsimp [dHom, dInv, directSumExtension]
+    apply biprod.hom_ext'
+    · simp
+      rw [← Category.assoc, h₁', Category.id_comp]
+    · simp
+      rw [← Category.assoc, h₂', Category.id_comp]
+  have hdInvHom : dInv.middle ≫ dHom.middle = 𝟙 _ := by
+    dsimp [dHom, dInv, directSumExtension]
+    apply biprod.hom_ext'
+    · simp
+      rw [← Category.assoc, h₁'', Category.id_comp]
+    · simp
+      rw [← Category.assoc, h₂'', Category.id_comp]
+  have hd : Nonempty (directSumExtension E₁ E₂ ≅ directSumExtension E₁' E₂') :=
+    ⟨{ hom := dHom
+       inv := dInv
+       hom_inv_id := ExtensionHom.ext _ _ hdHomInv
+       inv_hom_id := ExtensionHom.ext _ _ hdInvHom }⟩
+  have hp :
+      Nonempty
+        (pushoutExtension (directSumExtension E₁ E₂) (biprodCodiagonal A) ≅
+          pushoutExtension (directSumExtension E₁' E₂') (biprodCodiagonal A)) :=
+    pushout_extension_preserves_iso (biprodCodiagonal A) hd
+  simpa [baerSumExtension] using
+    (pullback_extension_preserves_iso
+      (E := pushoutExtension (directSumExtension E₁ E₂) (biprodCodiagonal A))
+      (F := pushoutExtension (directSumExtension E₁' E₂') (biprodCodiagonal A))
+      (biprodDiagonal B) hp)
 
 /-- The Baer sum on extension classes. -/
 noncomputable def baerSumClass
@@ -1509,7 +1583,11 @@ noncomputable def splitExtension
   projection := biprod.snd
   zero := by simp
   shortExact := by
-    sorry
+    exact
+      { exact := (ShortComplex.mk biprod.inl biprod.snd (by simp)).exact_of_f_is_kernel
+          (biprod.isKernelSndKernelFork A B)
+        mono_f := inferInstance
+        epi_g := inferInstance }
 
 noncomputable def zeroExtClass
     {C : Type u} [Category.{v} C] [Abelian C] {A B : C} : Ext B A :=
@@ -1525,7 +1603,7 @@ theorem inverseExtension_preserves_iso
     {C : Type u} [Category.{v} C] [Abelian C]
     {A B : C} {E F : Extension C A B} (h : Nonempty (E ≅ F)) :
     Nonempty (inverseExtension E ≅ inverseExtension F) := by
-  sorry
+  exact pushout_extension_preserves_iso (-𝟙 A) h
 
 noncomputable def negExtClass
     {C : Type u} [Category.{v} C] [Abelian C]

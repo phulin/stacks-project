@@ -106,9 +106,8 @@ def sheafModuleAnnihilatedBy {X : RingedSpace.{v}}
     (ι : I ⟶ SheafOfModules.unit X.structureSheaf) : Prop :=
   ∀ U : Opens X.carrier,
     ∀ i : (I.val.obj (op U)), ∀ g : (G.val.obj (op U)),
-      (let a : X.structureSheaf.obj.obj (op U) := by
-        change X.structureSheaf.obj.obj (op U)
-        exact (ι.val.app (op U)).hom i
+      (let a : X.structureSheaf.obj.obj (op U) :=
+        (ι.val.app (op U)).hom i
        a • g) = 0
 
 /-- The essential-image predicate for a closed-immersion pushforward. -/
@@ -186,6 +185,26 @@ theorem moduleSectionsWithSupportInClosed_isSubmodule
         (F.val.obj (op U)),
       S.carrier = moduleSectionsWithSupportInClosed Z U := by
   sorry
+
+/- The sectionwise module in the source is represented by the canonical
+   submodule selected from the preceding closure statement. -/
+
+/-- The submodule of sections supported in `Z` on an open subset. -/
+noncomputable def moduleSectionsWithSupportInClosedSubmodule
+    {X : RingedSpace.{v}} (Z : Set X)
+    {F : Mod X.structureSheaf} (U : Opens X.carrier) :
+    Submodule (X.structureSheaf.obj.obj (op U)) (F.val.obj (op U)) :=
+  Classical.choose
+    (moduleSectionsWithSupportInClosed_isSubmodule (F := F) Z U)
+
+/-- The selected supported-section submodule has the source's carrier. -/
+theorem moduleSectionsWithSupportInClosedSubmodule_carrier
+    {X : RingedSpace.{v}} (Z : Set X)
+    {F : Mod X.structureSheaf} (U : Opens X.carrier) :
+    (moduleSectionsWithSupportInClosedSubmodule (F := F) Z U).carrier =
+      moduleSectionsWithSupportInClosed (F := F) Z U :=
+  Classical.choose_spec
+    (moduleSectionsWithSupportInClosed_isSubmodule (F := F) Z U)
 
 /-- A module subobject contains a section when that section lifts to it. -/
 def moduleSubsheafContainsSection {X : RingedSpace.{v}}

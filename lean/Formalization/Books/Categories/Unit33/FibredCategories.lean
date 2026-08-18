@@ -2795,7 +2795,7 @@ theorem ameliorate_fibred_morphism
           rw [Functor.map_comp, hmapζ, hFmapχright, hχrightmap]
           simp only [gX, Category.assoc]
           rw [hFa_cast]
-          simp [gY, Category.assoc]
+          simp [gY]
         have hχbase : (ameliorationBase F).IsHomLift g χ := by
           let hdomχ : (ameliorationBase F).obj ζ =
                 (structureFunctor Y.underlying).obj ζ.obj.left := by rfl

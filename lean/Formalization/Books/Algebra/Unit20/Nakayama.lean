@@ -36,7 +36,12 @@ theorem nakayama_part_one
     [AddCommGroup M] [Module R M] (I : Ideal R) [Module.Finite R M]
     (hIM : I • (⊤ : Submodule R M) = ⊤) :
     ∃ f : R, f - 1 ∈ I ∧ ∀ m : M, f • m = 0 := by
-  sorry
+  have hle : (⊤ : Submodule R M) ≤ I • (⊤ : Submodule R M) := by
+    rw [hIM]
+  obtain ⟨f, hf, hfm⟩ :=
+    Submodule.exists_sub_one_mem_and_smul_eq_zero_of_fg_of_le_smul I
+      (⊤ : Submodule R M) Module.Finite.fg_top hle
+  exact ⟨f, hf, fun m => hfm m (by simp)⟩
 
 /-- Nakayama, part (2): the Jacobson-radical version of part (1). -/
 theorem nakayama_part_two
@@ -45,7 +50,17 @@ theorem nakayama_part_two
     (hIM : I • (⊤ : Submodule R M) = ⊤)
     (hI : I ≤ Ring.jacobson R) :
     Subsingleton M := by
-  sorry
+  have hI' : I ≤ Ideal.jacobson (⊥ : Ideal R) := by
+    simpa only [Ideal.jacobson_bot] using hI
+  have htop : (⊤ : Submodule R M) = ⊥ :=
+    Submodule.eq_bot_of_le_smul_of_le_jacobson_bot I (⊤ : Submodule R M)
+      Module.Finite.fg_top hIM.symm.le hI'
+  refine ⟨fun x y => ?_⟩
+  have hx : x ∈ (⊥ : Submodule R M) := htop ▸ Submodule.mem_top
+  have hy : y ∈ (⊥ : Submodule R M) := htop ▸ Submodule.mem_top
+  have hx0 : x = 0 := by simpa using hx
+  have hy0 : y = 0 := by simpa using hy
+  exact hx0.trans hy0.symm
 
 /-- Nakayama, part (3): after adding `IN'` to `N`, localization at a scalar
 in `1 + I` makes `N` equal to the localized ambient module. -/
@@ -57,7 +72,17 @@ theorem nakayama_part_three
     ∃ f : R, f - 1 ∈ I ∧
       f • (⊤ : Submodule R M) ≤ N ∧
       N.localized (Submonoid.powers f) = ⊤ := by
-  sorry
+  obtain ⟨f, hf, hsmul⟩ :=
+    Submodule.exists_sub_one_mem_and_smul_le_of_fg_of_le_sup
+      (Submodule.FG.of_finite (N := N')) (le_top) (by rw [← hM])
+  refine ⟨f, hf, hsmul, ?_⟩
+  apply le_antisymm
+  · exact le_top
+  · simpa only [Submodule.localized, Submodule.localized'_top] using
+      (Submodule.localized'_le_localized'_of_smul_le
+        (Localization (Submonoid.powers f)) (Submonoid.powers f)
+        (LocalizedModule.mkLinearMap (Submonoid.powers f) M)
+        ⟨f, Submonoid.mem_powers f⟩ hsmul)
 
 /-- Nakayama, part (4): the Jacobson-radical version of part (3). -/
 theorem nakayama_part_four
@@ -67,7 +92,17 @@ theorem nakayama_part_four
     (hM : (⊤ : Submodule R M) = N ⊔ I • N')
     (hI : I ≤ Ring.jacobson R) :
     N = ⊤ := by
-  sorry
+  have hI' : I ≤ Ideal.jacobson (⊥ : Ideal R) := by
+    simpa only [Ideal.jacobson_bot] using hI
+  have hNN' : N' ≤ N ⊔ I • N' := by
+    rw [← hM]
+    exact le_top
+  have hsmul : I • N' ≤ N :=
+    Submodule.smul_le_of_le_smul_of_le_jacobson_bot
+      (Submodule.FG.of_finite (N := N')) hI' hNN'
+  apply top_unique
+  rw [hM]
+  exact sup_le le_rfl hsmul
 
 /-- Nakayama, part (5): surjectivity modulo `I` becomes surjectivity after
 localizing at some scalar in `1 + I`. -/

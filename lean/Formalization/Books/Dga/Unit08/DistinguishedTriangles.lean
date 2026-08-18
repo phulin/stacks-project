@@ -23,7 +23,14 @@ universe u
 
 namespace Formalization.Books.Dga.Unit08
 
-/-! ## Triangles in the homotopy category -/
+/-! ## Triangles in the homotopy category
+
+Mathlib's `Pretriangulated.Triangle` requires a `HasShift` instance on the
+ambient category.  The preceding DGA chapters provide the shift functor on
+differential graded modules, but not the induced coherent shift structure on
+the quotient category, so this source-facing structure records the same data
+without introducing a second shift infrastructure.
+-/
 
 /-- The quotient category `K(Mod_(A,d))` used by the source. -/
 abbrev DgmHomotopyCategory {R : Type u} [CommRing R]
@@ -51,17 +58,18 @@ structure DgmTriangle {R : Type u} [CommRing R]
     (DgmHomotopyQuotient A).obj (dgmShift obj₁ (1 : ℤ))
 
 /-- A triangle isomorphism, expressed using differential graded
-representatives of its three component isomorphisms in the homotopy
-category. -/
+  representatives of its three component homotopy equivalences in the
+  homotopy category.  The commutativity equations live in the quotient
+  category, as they do in the source. -/
 structure DgmTriangleIsomorphism {R : Type u} [CommRing R]
     {A : DifferentialGradedAlgebra R}
     (T U : DgmTriangle (A := A)) where
   e₁ : DifferentialGradedModuleHom T.obj₁ U.obj₁
   e₂ : DifferentialGradedModuleHom T.obj₂ U.obj₂
   e₃ : DifferentialGradedModuleHom T.obj₃ U.obj₃
-  e₁_iso : DgmHomotopyEquivalence e₁
-  e₂_iso : DgmHomotopyEquivalence e₂
-  e₃_iso : DgmHomotopyEquivalence e₃
+  e₁_iso : Formalization.Books.Dga.Unit07.DgmHomotopyEquivalence e₁
+  e₂_iso : Formalization.Books.Dga.Unit07.DgmHomotopyEquivalence e₂
+  e₃_iso : Formalization.Books.Dga.Unit07.DgmHomotopyEquivalence e₃
   comm₁ : T.mor₁ ≫ (DgmHomotopyQuotient A).map e₂ =
     (DgmHomotopyQuotient A).map e₁ ≫ U.mor₁
   comm₂ : T.mor₂ ≫ (DgmHomotopyQuotient A).map e₃ =

@@ -76,14 +76,40 @@ theorem affineBlowupRepresentative_eq_iff
     {n m : ℕ} {x y : R} (hx : x ∈ I ^ n) (hy : y ∈ I ^ m) :
     affineBlowupRepresentative a n x = affineBlowupRepresentative a m y ↔
       ∃ k : ℕ, a ^ k * (a ^ m * x - a ^ n * y) = 0 := by
-  sorry
+  rw [Localization.mk_eq_mk']
+  rw [IsLocalization.eq]
+  constructor
+  · rintro ⟨c, hc⟩
+    obtain ⟨k, rfl⟩ := (Submonoid.mem_powers_iff _ _).1 c.2
+    refine ⟨k, ?_⟩
+    rw [mul_sub, sub_eq_zero]
+    exact hc
+  · rintro ⟨k, hk⟩
+    refine ⟨⟨a ^ k, (Submonoid.mem_powers_iff _ _).2 ⟨k, rfl⟩⟩, ?_⟩
+    rw [mul_sub, sub_eq_zero] at hk
+    exact hk
 
 /-- Every valid numerator-denominator representative belongs to the chart. -/
 theorem affineBlowupRepresentative_mem
     {R : Type u} [CommRing R] (I : Ideal R) (a : R)
     {n : ℕ} {x : R} (hx : x ∈ I ^ n) :
     affineBlowupRepresentative a n x ∈ affineBlowup I a := by
-  sorry
+  have hrep (n : ℕ) (x : R) :
+      affineBlowupRepresentative a n x =
+          algebraMap R (Localization.Away a) x *
+          IsLocalization.Away.invSelf a ^ n := by
+    rw [affineBlowupRepresentative, Localization.mk_eq_mk',
+      IsLocalization.mk'_eq_mul_mk'_one]
+    simp [IsLocalization.Away.invSelf, ← IsLocalization.mk'_pow]
+  induction hx using Submodule.pow_induction_on_left' with
+  | algebraMap r =>
+      simpa [hrep] using (affineBlowup I a).algebraMap_mem r
+  | add x y i hx hy ihx ihy =>
+      simpa [hrep, add_mul] using (affineBlowup I a).add_mem ihx ihy
+  | mem_mul m hm i x hx ih =>
+      have hgen := (affineBlowupGenerator I a ⟨m, hm⟩).property
+      have hprod := (affineBlowup I a).mul_mem hgen ih
+      simpa [hrep, pow_succ, mul_assoc, mul_left_comm, mul_comm] using hprod
 
 /-- The ideal of elements killed by a power of `b`, represented canonically as
 the kernel of the localization map. -/
@@ -94,13 +120,36 @@ def powerTorsionIdeal (R : Type u) [CommRing R] (b : R) : Ideal R :=
 theorem mem_powerTorsionIdeal_iff
     {R : Type u} [CommRing R] (b x : R) :
     x ∈ powerTorsionIdeal R b ↔ ∃ n : ℕ, b ^ n * x = 0 := by
-  sorry
+  rw [powerTorsionIdeal, RingHom.mem_ker]
+  constructor
+  · intro hx
+    obtain ⟨s, hs⟩ :=
+      (IsLocalization.map_eq_zero_iff (Submonoid.powers b)
+        (Localization.Away b) x).mp hx
+    obtain ⟨n, hn⟩ := (Submonoid.mem_powers_iff _ _).mp s.2
+    exact ⟨n, by simpa [hn] using hs⟩
+  · rintro ⟨n, hn⟩
+    apply (IsLocalization.map_eq_zero_iff (Submonoid.powers b)
+      (Localization.Away b) x).mpr
+    refine ⟨⟨b ^ n, (Submonoid.mem_powers_iff _ _).2 ⟨n, rfl⟩⟩, ?_⟩
+    simpa using hn
 
 /-- The chosen denominator is regular in an affine blowup chart. -/
 theorem affineBlowup_isRegular
     {R : Type u} [CommRing R] (I : Ideal R) {a : R} (ha : a ∈ I) :
     IsRegular (algebraMap R (affineBlowup I a) a) := by
-  sorry
+  rw [isRegular_iff]
+  constructor
+  · intro x y hxy
+    apply Subtype.ext
+    apply (IsUnit.mul_right_inj (IsLocalization.Away.algebraMap_isUnit a)).mp
+    simpa only [Subalgebra.coe_algebraMap, IsScalarTower.algebraMap_apply] using
+      congrArg (fun z : affineBlowup I a => (z : Localization.Away a)) hxy
+  · intro x y hxy
+    apply Subtype.ext
+    apply (IsUnit.mul_left_inj (IsLocalization.Away.algebraMap_isUnit a)).mp
+    simpa only [Subalgebra.coe_algebraMap, IsScalarTower.algebraMap_apply] using
+      congrArg (fun z : affineBlowup I a => (z : Localization.Away a)) hxy
 
 theorem affineBlowup_map_ideal_eq_span
     {R : Type u} [CommRing R] (I : Ideal R) {a : R} (ha : a ∈ I) :

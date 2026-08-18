@@ -572,7 +572,7 @@ noncomputable def exteriorPowerRelationMap
         apply LinearMap.ext
         intro z
         apply Subtype.ext
-        simp [Algebra.smul_def, add_mul]
+        simp [add_mul]
       map_smul' := by
         intro r x
         apply LinearMap.ext
@@ -722,7 +722,7 @@ private theorem symmetricPowerRelationMap_tprod
   calc
     _ = C z (PiTensorProduct.tprod R x) := AddCon.lift_coe (hC z) _
     _ = _ := by
-      simp [C, H, F, SymmetricPower.tprod, symmetricPowerRelationSigma, σ, h₁]
+      simp [C, H, F, SymmetricPower.tprod, symmetricPowerRelationSigma, σ]
 
 /-- Focused image-equals-kernel interface for the symmetric presentation. -/
 theorem symmetricPower_relation_range_eq_kernel
@@ -764,9 +764,13 @@ theorem symmetricPower_relation_range_eq_kernel
               (TensorProduct.lift _
                 (z ⊗ₜ[R] SymmetricPower.tprod R r)) = 0
           rw [TensorProduct.lift.tmul]
+          /-
+          Prior attempt:
           dsimp only [symmetricPowerRelationMap]
+          -/
           sorry
-        rw [hpure, map_zero]
+        rw [hpure]
+        simp
       · intro x y hx hy
         change symmetricPowerQuotientMap n g
             (symmetricPowerRelationMap f hn
@@ -780,7 +784,8 @@ theorem symmetricPower_relation_range_eq_kernel
         change symmetricPowerQuotientMap n g
             (symmetricPowerRelationMap f hn
               (z ⊗ₜ[R] SymmetricPower.mk R (ULift.{_} (Fin (n - 1))) M₁ y)) = 0 at hy
-        rw [map_add, map_add, hx, hy, map_zero]
+        rw [hx, hy]
+        simp
     · intro y₁ y₂ hy₁ hy₂
       change symmetricPowerQuotientMap n g
           (symmetricPowerRelationMap f hn (y₁ + y₂)) = 0
@@ -789,7 +794,9 @@ theorem symmetricPower_relation_range_eq_kernel
           (symmetricPowerRelationMap f hn y₁) = 0 at hy₁
       change symmetricPowerQuotientMap n g
           (symmetricPowerRelationMap f hn y₂) = 0 at hy₂
-      rw [map_add, hy₁, hy₂, map_zero]
+      rw [hy₁, hy₂]
+      simp
+  · sorry
 
 /-- Focused image-equals-kernel interface for the exterior presentation. -/
 theorem exteriorPower_relation_range_eq_kernel

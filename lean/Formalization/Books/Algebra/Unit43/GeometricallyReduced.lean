@@ -3,19 +3,28 @@ import Formalization.Books.Algebra.Unit42.SeparableExtensions
 import Mathlib.Algebra.Algebra.Subalgebra.Basic
 import Mathlib.Algebra.Colimit.DirectLimit
 import Mathlib.Algebra.Polynomial.Basic
+import Mathlib.Algebra.Field.TransferInstance
+import Mathlib.Algebra.Algebra.Shrink
 import Mathlib.FieldTheory.IsAlgClosed.Basic
 import Mathlib.FieldTheory.PurelyInseparable.Basic
 import Mathlib.FieldTheory.Separable
 import Mathlib.LinearAlgebra.FiniteDimensional.Defs
 import Mathlib.LinearAlgebra.TensorProduct.DirectLimit
 import Mathlib.LinearAlgebra.TensorProduct.Finiteness
+import Mathlib.LinearAlgebra.TensorProduct.Basis
+import Mathlib.LinearAlgebra.TensorProduct.Pi
 import Mathlib.RingTheory.FiniteType
+import Mathlib.RingTheory.Ideal.MinimalPrime.Noetherian
 import Mathlib.RingTheory.Flat.Basic
 import Mathlib.RingTheory.Localization.AtPrime.Basic
 import Mathlib.RingTheory.Localization.BaseChange
 import Mathlib.RingTheory.Polynomial.Nilpotent
 import Mathlib.RingTheory.TensorProduct.Maps
+import Mathlib.RingTheory.TensorProduct.Pi
 import Mathlib.RingTheory.TensorProduct.MvPolynomial
+import Mathlib.RingTheory.AlgebraicIndependent.Adjoin
+import Mathlib.RingTheory.Etale.Field
+import Mathlib.RingTheory.Localization.FractionRing
 
 /-!
 # Commutative Algebra, Chapter 43: Geometrically reduced algebras
@@ -29,7 +38,7 @@ namespace Formalization.Books.Algebra.Unit43
 
 open scoped TensorProduct
 
-universe u v w
+universe u v w z
 
 noncomputable section
 
@@ -364,7 +373,67 @@ theorem exists_finiteType_subalgebras_of_nontrivial_idempotent_tensorProduct
       Algebra.FiniteType k R' ∧ Algebra.FiniteType k S' ∧
         ∃ e : R' ⊗[k] S',
           IsIdempotentElem e ∧ e ≠ 0 ∧ e ≠ 1 := by
-  sorry
+  classical
+  obtain ⟨e, he, hene, he1⟩ := h
+  obtain ⟨n, a, b, hab⟩ := TensorProduct.exists_sum_tmul_eq e
+  let R' : Subalgebra k R :=
+    Algebra.adjoin k (↑(Finset.univ.image a) : Set R)
+  let S' : Subalgebra k S :=
+    Algebra.adjoin k (↑(Finset.univ.image b) : Set S)
+  have hR' : Algebra.FiniteType k R' := by
+    apply (Subalgebra.fg_iff_finiteType R').mp
+    exact Subalgebra.fg_adjoin_finset _
+  have hS' : Algebra.FiniteType k S' := by
+    apply (Subalgebra.fg_iff_finiteType S').mp
+    exact Subalgebra.fg_adjoin_finset _
+  let y : R' ⊗[k] S' :=
+    ∑ j, (⟨a j, Algebra.subset_adjoin (by simp)⟩ ⊗ₜ[k]
+      ⟨b j, Algebra.subset_adjoin (by simp)⟩)
+  have hy : subalgebraTensorProductMap R' S' y = e := by
+    simp only [y, map_sum, subalgebraTensorProductMap,
+      Algebra.TensorProduct.map_tmul]
+    exact hab.symm
+  have hmap : Function.Injective (subalgebraTensorProductMap R' S') :=
+    subalgebraTensorProductMap_injective R' S'
+  have hyid : IsIdempotentElem y := by
+    change y * y = y
+    apply hmap
+    rw [map_mul, hy, he]
+  have hyne : y ≠ 0 := by
+    intro hyzero
+    apply hene
+    rw [← hy, hyzero, map_zero]
+  have hy1 : y ≠ 1 := by
+    intro hyone
+    apply he1
+    rw [← hy, hyone, map_one]
+  exact ⟨R', S', hR', hS', y, hyid, hyne, hy1⟩
+
+private theorem tensorProduct_piRightHom_injective
+    {k : Type u} {K : Type v} [Field k] [Field K] [Algebra k K]
+    {ι : Type w} {M : ι → Type*} [∀ i, AddCommMonoid (M i)]
+    [∀ i, Module k (M i)] :
+    Function.Injective (TensorProduct.piRightHom k K K M) := by
+  classical
+  let b := Module.Free.chooseBasis k K
+  have hcoord : ∀ (x : K ⊗[k] (∀ i, M i))
+      (i : Module.Free.ChooseBasisIndex k K) (j : ι),
+      (TensorProduct.equivFinsuppOfBasisLeft b x i) j =
+        (TensorProduct.equivFinsuppOfBasisLeft b
+          (TensorProduct.piRightHom k K K M x j) i) := by
+    intro x
+    refine x.induction_on ?_ ?_ ?_
+    · simp
+    · intro a f i j
+      simp [TensorProduct.piRightHom_tmul]
+    · intro x y hx hy i j
+      simp [hx, hy]
+  intro x y hxy
+  apply (TensorProduct.equivFinsuppOfBasisLeft b).injective
+  ext i j
+  rw [hcoord x i j, congrArg (fun z =>
+    (TensorProduct.equivFinsuppOfBasisLeft b z i)) (congrFun hxy j)]
+  exact (hcoord y i j).symm
 
 /-! ## Reduced base change -/
 
@@ -376,7 +445,308 @@ theorem isReduced_tensorProduct_of_isReduced_of_isGeometricallyReduced
     [Algebra k R] [Algebra k S]
     (hR : IsReduced R) (hS : IsGeometricallyReduced k S) :
     IsReduced (R ⊗[k] S) := by
-  sorry
+  classical
+  by_contra hnot
+  obtain ⟨R', S', hR', hS', hnot'⟩ :=
+    exists_finiteType_subalgebras_of_not_isReduced_tensorProduct hnot
+  let _ : Algebra.FiniteType k R' := hR'
+  let _ : IsReduced R' := isReduced_of_injective R'.val Subtype.val_injective
+  let _ : Small.{u} R' := Algebra.FiniteType.small (R := k) (S := R')
+  have hS'geom : IsGeometricallyReduced k S' :=
+    (isGeometricallyReduced_subalgebra hS) S'
+  have hNoeth : IsNoetherianRing R' :=
+    Algebra.FiniteType.isNoetherianRing k R'
+  let _ : IsNoetherianRing R' := hNoeth
+  have hminfin : (minimalPrimes R').Finite :=
+    minimalPrimes.finite_of_isNoetherianRing R'
+  let _ : Finite (minimalPrimes R') := hminfin.to_subtype
+  let _ : Finite (Formalization.Books.Algebra.Unit25.MinimalPrimeSpectrum R') :=
+    Finite.of_injective
+      (fun p : Formalization.Books.Algebra.Unit25.MinimalPrimeSpectrum R' =>
+        (⟨p.1.asIdeal, p.2⟩ : minimalPrimes R'))
+      (by
+        intro p q hpq
+        apply Subtype.ext
+        apply PrimeSpectrum.ext
+        exact congrArg Subtype.val hpq)
+  let _ : Fintype (Formalization.Books.Algebra.Unit25.MinimalPrimeSpectrum R') :=
+    Fintype.ofFinite _
+  let _ : ∀ p : Formalization.Books.Algebra.Unit25.MinimalPrimeSpectrum R',
+      IsField (Localization.AtPrime p.1.asIdeal) :=
+    fun p => Unit25.isField_localizationAt_minimalPrime_of_isReduced p
+  let f : R' →ₐ[k]
+      (∀ p : Formalization.Books.Algebra.Unit25.MinimalPrimeSpectrum R',
+        Localization.AtPrime p.1.asIdeal) :=
+    { toRingHom := Unit25.mapToMinimalPrimeLocalizations
+      commutes' := by
+        intro c
+        ext p
+        rfl }
+  have hf : Function.Injective f :=
+    by simpa [f] using (Unit25.mapToMinimalPrimeLocalizations_injective
+      (R := R'))
+  have hlocal : ∀ p : Formalization.Books.Algebra.Unit25.MinimalPrimeSpectrum R',
+      IsReduced (S' ⊗[k] Localization.AtPrime p.1.asIdeal) := by
+    intro p
+    let L := Localization.AtPrime p.1.asIdeal
+    let hfield : IsField L :=
+      Unit25.isField_localizationAt_minimalPrime_of_isReduced p
+    let _ : Field L := hfield.toField
+    let _ : Small.{u} L := small_of_surjective Localization.mkHom_surjective
+    let eL : Shrink L ≃ L := (equivShrink L).symm
+    let _ : Field (Shrink L) := eL.field
+    let ae : Shrink L ≃ₐ[k] L := Shrink.algEquiv k L
+    let _ : IsReduced (Shrink L ⊗[k] S') := hS'geom (Shrink L)
+    let m : (L ⊗[k] S') →ₐ[k] (Shrink L ⊗[k] S') :=
+      Algebra.TensorProduct.map ae.symm (AlgHom.id k S')
+    have hm : Function.Injective m := by
+      exact TensorProduct.map_injective_of_flat_flat ae.symm.toLinearMap
+        (LinearMap.id) ae.symm.injective Function.injective_id
+    have hLS : IsReduced (L ⊗[k] S') := isReduced_of_injective m hm
+    exact isReduced_of_injective
+      (Algebra.TensorProduct.comm k S' L)
+      (Algebra.TensorProduct.comm k S' L).injective
+  let g : (R' ⊗[k] S') →+*
+      (∀ p : Formalization.Books.Algebra.Unit25.MinimalPrimeSpectrum R',
+        S' ⊗[k] Localization.AtPrime p.1.asIdeal) :=
+    ((Algebra.TensorProduct.piRight k S' S'
+      (fun p : Formalization.Books.Algebra.Unit25.MinimalPrimeSpectrum R' =>
+        Localization.AtPrime p.1.asIdeal)).toRingEquiv.toRingHom.comp
+      (Algebra.TensorProduct.comm k
+        (∀ p : Formalization.Books.Algebra.Unit25.MinimalPrimeSpectrum R',
+          Localization.AtPrime p.1.asIdeal) S').toRingEquiv.toRingHom).comp
+      (Algebra.TensorProduct.map f (AlgHom.id k S')).toRingHom
+  have hmap : Function.Injective (Algebra.TensorProduct.map f (AlgHom.id k S')) :=
+    TensorProduct.map_injective_of_flat_flat f.toLinearMap (LinearMap.id)
+      hf Function.injective_id
+  have hg : Function.Injective g := by
+    intro x y hxy
+    apply hmap
+    apply (Algebra.TensorProduct.comm k
+      (∀ p : Formalization.Books.Algebra.Unit25.MinimalPrimeSpectrum R',
+        Localization.AtPrime p.1.asIdeal) S').injective
+    apply (Algebra.TensorProduct.piRight k S' S'
+      (fun p : Formalization.Books.Algebra.Unit25.MinimalPrimeSpectrum R' =>
+        Localization.AtPrime p.1.asIdeal)).injective
+    simpa [g] using hxy
+  have hred : IsReduced (R' ⊗[k] S') := isReduced_of_injective g hg
+  exact hnot' hred
+
+private theorem isGeometricallyReduced_intermediateField_of_algebraicIndependent
+    {k : Type u} {F : Type w} {ι : Type z} [Field k] [Field F] [Algebra k F]
+    (x : ι → F) (hx : AlgebraicIndependent k x) :
+    IsGeometricallyReduced k (IntermediateField.adjoin k (Set.range x)) := by
+  have hmv : IsGeometricallyReduced k (MvPolynomial ι k) := by
+    intro L _ _
+    let _ : IsReduced (L ⊗[k] k) :=
+      isReduced_of_injective (Algebra.TensorProduct.rid k L L)
+        (Algebra.TensorProduct.rid k L L).injective
+    let e : L ⊗[k] MvPolynomial ι k ≃ₐ[L]
+        MvPolynomial ι (L ⊗[k] k) := MvPolynomial.rTensorAlgEquiv
+    exact isReduced_of_injective e.toAlgHom e.injective
+  have hfr : IsGeometricallyReduced k (FractionRing (MvPolynomial ι k)) :=
+    isGeometricallyReduced_localization hmv (nonZeroDivisors _)
+  intro L _ _
+  let _ : IsReduced (L ⊗[k] FractionRing (MvPolynomial ι k)) := hfr L
+  let e := Algebra.TensorProduct.map (AlgHom.id L L)
+    hx.aevalEquivField.symm.toAlgHom
+  have he : Function.Injective e :=
+    TensorProduct.map_injective_of_flat_flat (LinearMap.id)
+      hx.aevalEquivField.symm.toLinearMap Function.injective_id
+      hx.aevalEquivField.symm.injective
+  exact isReduced_of_injective e he
+
+private theorem isGeometricallyReduced_of_finiteType_separablyGenerated
+    {k : Type u} {F : Type w} [Field k] [Field F] [Algebra k F]
+    [Algebra.EssFiniteType k F]
+    (hF : Formalization.Books.Algebra.Unit42.IsSeparablyGenerated k F) :
+    IsGeometricallyReduced k F := by
+  obtain ⟨r, x, y, htr, hx, hgen, hysep⟩ :=
+    Formalization.Books.Algebra.Unit42.exists_finite_generators_of_separably_generated hF
+  let A : IntermediateField k F := IntermediateField.adjoin k (Set.range x)
+  let _ : CommSemiring A := SubsemiringClass.toCommSemiring A
+  have hA : IsGeometricallyReduced k A :=
+    isGeometricallyReduced_intermediateField_of_algebraicIndependent x hx.1
+  have hgenA : IntermediateField.adjoin A ({y} : Set F) = ⊤ := by
+    apply (IntermediateField.restrictScalars_eq_top_iff (K := k)).mp
+    rw [IntermediateField.restrictScalars_adjoin_eq_sup]
+    rw [← IntermediateField.adjoin_union]
+    exact hgen
+  have hsepA : Algebra.IsSeparable A F := by
+    rw [← IntermediateField.isSeparable_top]
+    rw [← hgenA]
+    refine (IntermediateField.isSeparable_adjoin_iff_isSeparable A F).2 ?_
+    intro z hz
+    rw [Set.mem_singleton_iff.mp hz]
+    exact hysep
+  let _ : Module A F :=
+    @Algebra.toModule A F _ _ (inferInstance : Algebra A F)
+  have hFgeom : IsGeometricallyReduced A F := by
+    intro E _ _
+    let _ : Algebra.IsSeparable A F := hsepA
+    let _ : Algebra.EssFiniteType A F := Algebra.EssFiniteType.of_comp k A F
+    let _ : Algebra.FormallyUnramified A F :=
+      Algebra.FormallyUnramified.of_isSeparable A F
+    let _ : Algebra.FormallyUnramified E (E ⊗[A] F) := inferInstance
+    let _ : Algebra.EssFiniteType E (E ⊗[A] F) := inferInstance
+    exact Algebra.FormallyUnramified.isReduced_of_field E (E ⊗[A] F)
+  intro L _ _
+  let _ : Algebra A (L ⊗[k] A) := Algebra.TensorProduct.rightAlgebra
+  let _ : Module A (L ⊗[k] A) :=
+    @Algebra.toModule A (L ⊗[k] A) _ _ Algebra.TensorProduct.rightAlgebra
+  let _ : IsScalarTower A (L ⊗[k] A) (L ⊗[k] A) := inferInstance
+  let _ : SMulCommClass A (L ⊗[k] A) (L ⊗[k] A) := inferInstance
+  let _ : IsReduced (L ⊗[k] A) := hA L
+  let _ : Algebra A (A ⊗[k] L) := Algebra.TensorProduct.leftAlgebra
+  let _ : Module A (A ⊗[k] L) :=
+    @Algebra.toModule A (A ⊗[k] L) _ _ Algebra.TensorProduct.leftAlgebra
+  have hbase :=
+    isReduced_tensorProduct_of_isReduced_of_isGeometricallyReduced
+      (k := A) (R := L ⊗[k] A) (S := F) (hA L) hFgeom
+  let e₁ : ((L ⊗[k] A) ⊗[A] F) ≃ₐ[A]
+      F ⊗[A] (L ⊗[k] A) := Algebra.TensorProduct.comm A (L ⊗[k] A) F
+  let e₂ : (F ⊗[A] (L ⊗[k] A)) ≃ₐ[A]
+      F ⊗[A] (A ⊗[k] L) :=
+    Algebra.TensorProduct.congr (AlgEquiv.refl : F ≃ₐ[A] F)
+      (Algebra.TensorProduct.commRight k A L).symm
+  let e₃ : (F ⊗[A] (A ⊗[k] L)) ≃ₐ[F] F ⊗[k] L :=
+    Algebra.TensorProduct.cancelBaseChange k A F F L
+  let e₄ : (F ⊗[k] L) ≃ₐ[k] L ⊗[k] F := Algebra.TensorProduct.comm k F L
+  let e : ((L ⊗[k] A) ⊗[A] F) ≃+* (L ⊗[k] F) :=
+    e₁.toRingEquiv.trans (e₂.toRingEquiv.trans (e₃.toRingEquiv.trans e₄.toRingEquiv))
+  let _ : IsReduced ((L ⊗[k] A) ⊗[A] F) := hbase
+  exact isReduced_of_injective e.symm e.symm.injective
+
+private theorem isGeometricallyReduced_of_isSeparableExtension
+    {k : Type u} {K : Type w} [Field k] [Field K] [Algebra k K]
+    (hK : Formalization.Books.Algebra.Unit42.IsSeparableExtension k K) :
+    IsGeometricallyReduced k K := by
+  apply isGeometricallyReduced_of_finiteType_subalgebras
+  intro B hB
+  obtain ⟨s, hs⟩ := (Subalgebra.fg_iff_finiteType B).mpr hB
+  let L : IntermediateField k K := IntermediateField.adjoin k (s : Set K)
+  have hL : Algebra.EssFiniteType k L :=
+    (IntermediateField.essFiniteType_iff).2
+      (IntermediateField.fg_adjoin_finset s)
+  have hBmem : ∀ b : B, (b : K) ∈ L := by
+    intro b
+    have hb : (b : K) ∈ Algebra.adjoin k (s : Set K) := by
+      rw [hs]
+      exact b.property
+    change (b : K) ∈ IntermediateField.adjoin k (s : Set K)
+    exact (IntermediateField.algebra_adjoin_le_adjoin k (s : Set K)) hb
+  let f : B →ₐ[k] L :=
+    { toFun := fun b => ⟨(b : K), hBmem b⟩
+      map_one' := by ext; simp
+      map_mul' := by intro x y; ext; simp
+      map_zero' := by ext; simp
+      map_add' := by intro x y; ext; simp
+      commutes' := by intro c; ext; simp }
+  have hf : Function.Injective f := by
+    intro x y hxy
+    apply Subtype.ext
+    simpa [f] using congrArg Subtype.val hxy
+  have hBgeom : IsGeometricallyReduced k B := by
+    intro E _ _
+    let _ : IsReduced (E ⊗[k] L) :=
+      isGeometricallyReduced_of_finiteType_separablyGenerated
+        (hK L hL) E
+    have hfmap : Function.Injective (Algebra.TensorProduct.map (AlgHom.id k E) f) :=
+      TensorProduct.map_injective_of_flat_flat (LinearMap.id) f.toLinearMap
+        Function.injective_id hf
+    exact isReduced_of_injective _ hfmap
+  exact hBgeom
+
+private theorem isGeometricallyReduced_of_isSeparablyGenerated
+    {k : Type u} {K : Type w} [Field k] [Field K] [Algebra k K]
+    (hK : Formalization.Books.Algebra.Unit42.IsSeparablyGenerated k K) :
+    IsGeometricallyReduced k K := by
+  rcases hK with ⟨ι, x, hx, hsep⟩
+  let A : IntermediateField k K := IntermediateField.adjoin k (Set.range x)
+  let _ : CommSemiring A := SubsemiringClass.toCommSemiring A
+  have hAgeom : IsGeometricallyReduced k A :=
+    isGeometricallyReduced_intermediateField_of_algebraicIndependent x hx.1
+  let _ : Algebra.IsSeparable A K := by simpa [A] using hsep
+  apply isGeometricallyReduced_of_finiteType_subalgebras
+  intro B hB
+  obtain ⟨s, hs⟩ := (Subalgebra.fg_iff_finiteType B).mpr hB
+  let M : IntermediateField A K := IntermediateField.adjoin A (s : Set K)
+  let M₀ : IntermediateField k K := M.restrictScalars k
+  have hMfinite : Algebra.EssFiniteType A M :=
+    (IntermediateField.essFiniteType_iff).2
+      (IntermediateField.fg_adjoin_finset s)
+  have hMsep : Algebra.IsSeparable A M := by
+    refine (IntermediateField.isSeparable_adjoin_iff_isSeparable A K).2 ?_
+    intro z hz
+    exact Algebra.IsSeparable.isSeparable A z
+  have hMgeomA : IsGeometricallyReduced A M := by
+    intro E _ _
+    let _ : Algebra.IsSeparable A M := hMsep
+    let _ : Algebra.EssFiniteType A M := hMfinite
+    let _ : Algebra.FormallyUnramified A M :=
+      Algebra.FormallyUnramified.of_isSeparable A M
+    let _ : Algebra.FormallyUnramified E (E ⊗[A] M) := inferInstance
+    let _ : Algebra.EssFiniteType E (E ⊗[A] M) := inferInstance
+    exact Algebra.FormallyUnramified.isReduced_of_field E (E ⊗[A] M)
+  have hMgeom : IsGeometricallyReduced k M₀ := by
+    intro E _ _
+    let _ : IsReduced (E ⊗[k] A) := hAgeom E
+    let _ : Algebra A (E ⊗[k] A) := Algebra.TensorProduct.rightAlgebra
+    let _ : Module A (E ⊗[k] A) :=
+      @Algebra.toModule A (E ⊗[k] A) _ _ Algebra.TensorProduct.rightAlgebra
+    let _ : IsScalarTower A (E ⊗[k] A) (E ⊗[k] A) := inferInstance
+    let _ : SMulCommClass A (E ⊗[k] A) (E ⊗[k] A) := inferInstance
+    have hbase :=
+      isReduced_tensorProduct_of_isReduced_of_isGeometricallyReduced
+        (k := A) (R := E ⊗[k] A) (S := M) (hAgeom E) hMgeomA
+    let _ : Algebra A (A ⊗[k] E) := Algebra.TensorProduct.leftAlgebra
+    let _ : Module A (A ⊗[k] E) :=
+      @Algebra.toModule A (A ⊗[k] E) _ _ Algebra.TensorProduct.leftAlgebra
+    let e₁ : ((E ⊗[k] A) ⊗[A] M) ≃ₐ[A]
+        M ⊗[A] (E ⊗[k] A) := Algebra.TensorProduct.comm A (E ⊗[k] A) M
+    let e₂ : (M ⊗[A] (E ⊗[k] A)) ≃ₐ[A]
+        M ⊗[A] (A ⊗[k] E) :=
+      Algebra.TensorProduct.congr (AlgEquiv.refl : M ≃ₐ[A] M)
+        (Algebra.TensorProduct.commRight k A E).symm
+    let e₃ : (M ⊗[A] (A ⊗[k] E)) ≃ₐ[M] M ⊗[k] E :=
+      Algebra.TensorProduct.cancelBaseChange k A M M E
+    let e₄ : (M ⊗[k] E) ≃ₐ[k] E ⊗[k] M :=
+      Algebra.TensorProduct.comm k M E
+    let e : ((E ⊗[k] A) ⊗[A] M) ≃+* (E ⊗[k] M₀) :=
+      e₁.toRingEquiv.trans (e₂.toRingEquiv.trans
+        (e₃.toRingEquiv.trans e₄.toRingEquiv))
+    let _ : IsReduced ((E ⊗[k] A) ⊗[A] M) := hbase
+    exact isReduced_of_injective e.symm e.symm.injective
+  have hBmem : ∀ b : B, (b : K) ∈ M₀ := by
+    intro b
+    have hb : (b : K) ∈ Algebra.adjoin k (s : Set K) := by
+      rw [hs]
+      exact b.property
+    have hle : IntermediateField.adjoin k (s : Set K) ≤ M₀ := by
+      apply IntermediateField.adjoin_le_iff.mpr
+      intro z hz
+      exact IntermediateField.subset_adjoin A (s : Set K) hz
+    apply hle
+    exact (IntermediateField.algebra_adjoin_le_adjoin k (s : Set K)) hb
+  let f : B →ₐ[k] M₀ :=
+    { toFun := fun b => ⟨(b : K), hBmem b⟩
+      map_one' := by ext; simp
+      map_mul' := by intro x y; ext; simp
+      map_zero' := by ext; simp
+      map_add' := by intro x y; ext; simp
+      commutes' := by intro c; ext; simp }
+  have hf : Function.Injective f := by
+    intro x y hxy
+    apply Subtype.ext
+    simpa [f] using congrArg Subtype.val hxy
+  have hBgeom : IsGeometricallyReduced k B := by
+    intro E _ _
+    let _ : IsReduced (E ⊗[k] M₀) := hMgeom E
+    have hfmap : Function.Injective (Algebra.TensorProduct.map (AlgHom.id k E) f) :=
+      TensorProduct.map_injective_of_flat_flat (LinearMap.id) f.toLinearMap
+        Function.injective_id hf
+    exact isReduced_of_injective _ hfmap
+  exact hBgeom
 
 /-- A separable or separably generated field extension preserves reducedness
 after tensoring a reduced algebra. -/
@@ -387,7 +757,21 @@ theorem isReduced_tensorProduct_of_separable_extension
     (hK : Formalization.Books.Algebra.Unit42.IsSeparableExtension k K ∨
       Formalization.Books.Algebra.Unit42.IsSeparablyGenerated k K) :
     IsReduced (K ⊗[k] S) := by
-  sorry
+  rcases hK with hK | hK
+  · have hgeomK : IsGeometricallyReduced k K :=
+      isGeometricallyReduced_of_isSeparableExtension hK
+    let e := Algebra.TensorProduct.comm k S K
+    let _ : IsReduced (S ⊗[k] K) :=
+      isReduced_tensorProduct_of_isReduced_of_isGeometricallyReduced
+        (k := k) (R := S) (S := K) hS hgeomK
+    exact isReduced_of_injective e.symm e.symm.injective
+  · have hgeomK : IsGeometricallyReduced k K :=
+      isGeometricallyReduced_of_isSeparablyGenerated hK
+    let e := Algebra.TensorProduct.comm k S K
+    let _ : IsReduced (S ⊗[k] K) :=
+      isReduced_tensorProduct_of_isReduced_of_isGeometricallyReduced
+        (k := k) (R := S) (S := K) hS hgeomK
+    exact isReduced_of_injective e.symm e.symm.injective
 
 /-- The minimal-prime criterion for geometric reducedness. -/
 theorem isGeometricallyReduced_of_minimalPrime_localizations
@@ -396,7 +780,50 @@ theorem isGeometricallyReduced_of_minimalPrime_localizations
     (hmin : ∀ p : Formalization.Books.Algebra.Unit25.MinimalPrimeSpectrum S,
       IsGeometricallyReduced k (Localization.AtPrime p.1.asIdeal)) :
     IsGeometricallyReduced k S := by
-  sorry
+  classical
+  intro K _ _
+  let f : S →ₐ[k]
+      (∀ p : Formalization.Books.Algebra.Unit25.MinimalPrimeSpectrum S,
+        Localization.AtPrime p.1.asIdeal) :=
+    { toRingHom := Unit25.mapToMinimalPrimeLocalizations
+      commutes' := by
+        intro c
+        ext p
+        rfl }
+  have hf : Function.Injective f := by
+    simpa [f] using (Unit25.mapToMinimalPrimeLocalizations_injective (R := S))
+  let _ : ∀ p : Formalization.Books.Algebra.Unit25.MinimalPrimeSpectrum S,
+      IsReduced (K ⊗[k] Localization.AtPrime p.1.asIdeal) :=
+    fun p => hmin p K
+  let m : (K ⊗[k] S) →ₐ[k]
+      (K ⊗[k] (∀ p : Formalization.Books.Algebra.Unit25.MinimalPrimeSpectrum S,
+        Localization.AtPrime p.1.asIdeal)) :=
+    Algebra.TensorProduct.map (AlgHom.id k K) f
+  have hm : Function.Injective m :=
+    TensorProduct.map_injective_of_flat_flat (LinearMap.id) f.toLinearMap
+      Function.injective_id hf
+  let g : (K ⊗[k] S) →+*
+      (∀ p : Formalization.Books.Algebra.Unit25.MinimalPrimeSpectrum S,
+        K ⊗[k] Localization.AtPrime p.1.asIdeal) :=
+    (Algebra.TensorProduct.piRightHom k K K
+      (fun p : Formalization.Books.Algebra.Unit25.MinimalPrimeSpectrum S =>
+        Localization.AtPrime p.1.asIdeal)).toRingHom.comp m.toRingHom
+  have hpi : Function.Injective (TensorProduct.piRightHom k K K
+      (fun p : Formalization.Books.Algebra.Unit25.MinimalPrimeSpectrum S =>
+        Localization.AtPrime p.1.asIdeal)) :=
+    tensorProduct_piRightHom_injective
+  have hg : Function.Injective g := by
+    intro x y hxy
+    apply hm
+    apply hpi
+    change (TensorProduct.piRightHom k K K
+      (fun p : Formalization.Books.Algebra.Unit25.MinimalPrimeSpectrum S =>
+        Localization.AtPrime p.1.asIdeal) (m x)) =
+      TensorProduct.piRightHom k K K
+        (fun p : Formalization.Books.Algebra.Unit25.MinimalPrimeSpectrum S =>
+          Localization.AtPrime p.1.asIdeal) (m y) at hxy
+    exact hxy
+  exact isReduced_of_injective g hg
 
 /-! ## The separable-algebraic diagonal -/
 

@@ -33,7 +33,9 @@ structure EllipticFiberProductPoint {S S' : Scheme.{u}}
 
 The identification is transported through the chosen base-change
 presentations, including the associativity isomorphisms that compare an
-iterated pullback with the pullback along a composite. -/
+iterated pullback with the pullback along a composite.  This is the canonical
+map on the displayed representatives; it is not itself used as a strict
+presheaf map, since the coherence isomorphisms need not be identities. -/
 noncomputable def EllipticFiberProductPoint.restrict
     {S S' T T' : Scheme.{u}} {E : ModuliPoint S} {E' : ModuliPoint S'}
     (u : T' ⟶ T) (x : EllipticFiberProductPoint E E' T) :
@@ -59,19 +61,41 @@ theorem EllipticFiberProductPoint.restrict_toS'
     (x.restrict u).toS' = u ≫ x.toS' :=
   rfl
 
-/-- The chosen restrictions can be made coherently with identities. -/
-theorem EllipticFiberProductPoint.restrict_id
-    {S S' T : Scheme.{u}} {E : ModuliPoint S} {E' : ModuliPoint S'}
-    (x : EllipticFiberProductPoint E E' T) :
-    x.restrict (𝟙 T) = x := by
+/-!
+The source treats these triples as a presheaf of sets.  With the chosen
+pullback presentations above, the canonical restriction is only coherent up
+to the displayed elliptic-curve isomorphisms.  A strict presheaf therefore
+needs the strictification data explicitly; it must not be inferred from
+equality of `EllipticCurveIso` structures.
+-/
+structure EllipticFiberProductRestriction {S S' : Scheme.{u}}
+    (E : ModuliPoint S) (E' : ModuliPoint S') where
+  restrict : ∀ {T T' : Scheme.{u}} (u : T' ⟶ T),
+    EllipticFiberProductPoint E E' T → EllipticFiberProductPoint E E' T'
+  restrict_toS : ∀ {T T' : Scheme.{u}} (u : T' ⟶ T)
+    (x : EllipticFiberProductPoint E E' T),
+    (restrict u x).toS = u ≫ x.toS
+  restrict_toS' : ∀ {T T' : Scheme.{u}} (u : T' ⟶ T)
+    (x : EllipticFiberProductPoint E E' T),
+    (restrict u x).toS' = u ≫ x.toS'
+  restrict_id : ∀ {T : Scheme.{u}} (x : EllipticFiberProductPoint E E' T),
+    restrict (𝟙 T) x = x
+  restrict_comp : ∀ {T T' T'' : Scheme.{u}} (u : T' ⟶ T) (v : T'' ⟶ T')
+    (x : EllipticFiberProductPoint E E' T),
+    restrict (v ≫ u) x = restrict v (restrict u x)
+
+/-- The strictification required before the triple-valued construction is a
+presheaf of sets.  Its construction is a separate stack-coherence result;
+the canonical pullback map above does not provide it definitionally. -/
+theorem exists_ellipticFiberProductRestriction
+    {S S' : Scheme.{u}} (E : ModuliPoint S) (E' : ModuliPoint S') :
+    Nonempty (EllipticFiberProductRestriction E E') := by
   sorry
 
-/-- The chosen restrictions can be made coherently with composition. -/
-theorem EllipticFiberProductPoint.restrict_comp
-    {S S' T T' T'' : Scheme.{u}} {E : ModuliPoint S} {E' : ModuliPoint S'}
-    (u : T' ⟶ T) (v : T'' ⟶ T') (x : EllipticFiberProductPoint E E' T) :
-    x.restrict (v ≫ u) = (x.restrict u).restrict v := by
-  sorry
+noncomputable def ellipticFiberProductRestriction
+    {S S' : Scheme.{u}} (E : ModuliPoint S) (E' : ModuliPoint S') :
+    EllipticFiberProductRestriction E E' :=
+  Classical.choice (exists_ellipticFiberProductRestriction E E')
 
 /-! ### The presheaf in the key fact -/
 
@@ -79,21 +103,21 @@ theorem EllipticFiberProductPoint.restrict_comp
 def ellipticFiberProductPresheaf {S S' : Scheme.{u}}
     (E : ModuliPoint S) (E' : ModuliPoint S') :
     Scheme.{u}ᵒᵖ ⥤ Type u :=
+  let R := ellipticFiberProductRestriction E E'
   { obj := fun T => EllipticFiberProductPoint E E' T.unop
     map := fun {X Y} f =>
       TypeCat.ofHom (fun (x : EllipticFiberProductPoint E E' X.unop) =>
-        EllipticFiberProductPoint.restrict f.unop x)
+        R.restrict f.unop x)
     map_id := by
       intro T
       apply ConcreteCategory.hom_ext
       intro x
-      simpa using x.restrict_id
+      exact R.restrict_id x
     map_comp := by
       intro X Y Z f g
       apply ConcreteCategory.hom_ext
       intro x
-      simpa using
-        (EllipticFiberProductPoint.restrict_comp f.unop g.unop x) }
+      exact R.restrict_comp f.unop g.unop x }
 
 /-! ### Representability and the key fact -/
 

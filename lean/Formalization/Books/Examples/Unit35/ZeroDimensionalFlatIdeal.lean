@@ -219,23 +219,148 @@ theorem zeroDimensionalFlatIdeal_maximalIdeal_isPrime
     Ideal.Quotient.mk_surjective
   simpa [q] using hLJ
 
+private theorem zeroDimensionalFlatIdeal_maximalIdeal_isMaximal
+    (k : Type u) [Field k] :
+    (zeroDimensionalFlatIdealMaximalIdeal k).IsMaximal := by
+  let J : Ideal (zeroDimensionalFlatIdealPolynomial k) :=
+    Ideal.span (MvPolynomial.X '' (Set.univ : Set zeroDimensionalFlatIdealVariables))
+  have hJker :
+      J = RingHom.ker
+        (MvPolynomial.constantCoeff :
+          zeroDimensionalFlatIdealPolynomial k →+* k) := by
+    ext p
+    rw [RingHom.mem_ker, MvPolynomial.mem_ideal_span_X_image]
+    constructor
+    · intro hp
+      rw [MvPolynomial.constantCoeff_eq]
+      by_contra h
+      have h0 : (0 : zeroDimensionalFlatIdealVariables →₀ ℕ) ∈ p.support := by
+        simpa [MvPolynomial.mem_support_iff] using h
+      obtain ⟨v, hv, hv0⟩ := hp 0 h0
+      exact hv0 (by simp)
+    · rw [MvPolynomial.constantCoeff_eq]
+      intro hp m hm
+      by_contra h
+      push Not at h
+      have hm0 : m = 0 := Finsupp.ext (fun i => h i (Set.mem_univ _))
+      have hm' : MvPolynomial.coeff m p ≠ 0 := by
+        simpa [MvPolynomial.mem_support_iff] using hm
+      exact hm' (hm0 ▸ hp)
+  have hLJ : zeroDimensionalFlatIdealRelationsIdeal k ≤ J := by
+    rw [zeroDimensionalFlatIdealRelationsIdeal]
+    apply Ideal.span_le.2
+    rintro z (⟨n, rfl⟩ | ⟨n, rfl⟩)
+    · simpa [zeroDimensionalFlatIdealRelation] using
+        J.sub_mem (Ideal.subset_span ⟨_, Set.mem_univ _, rfl⟩)
+          (J.mul_mem_left _ (Ideal.subset_span ⟨_, Set.mem_univ _, rfl⟩))
+    · simpa [zeroDimensionalFlatIdealSquareRelation, pow_two] using
+        J.mul_mem_left _ (Ideal.subset_span ⟨_, Set.mem_univ _, rfl⟩)
+  let q : zeroDimensionalFlatIdealPolynomial k →+*
+      zeroDimensionalFlatIdealRing k :=
+    Ideal.Quotient.mk _
+  let φ : zeroDimensionalFlatIdealRing k →+* k :=
+    Ideal.Quotient.lift (zeroDimensionalFlatIdealRelationsIdeal k)
+      (MvPolynomial.constantCoeff : zeroDimensionalFlatIdealPolynomial k →+* k) (by
+        intro z hz
+        have hzJ : z ∈ J := hLJ hz
+        rw [hJker] at hzJ
+        exact RingHom.mem_ker.mp hzJ)
+  have hφsurj : Function.Surjective φ := by
+    intro a
+    refine ⟨Ideal.Quotient.mk (zeroDimensionalFlatIdealRelationsIdeal k)
+      (MvPolynomial.C a), ?_⟩
+    simp [φ]
+  have hmap : Ideal.map q J = zeroDimensionalFlatIdealMaximalIdeal k := by
+    apply le_antisymm
+    · rw [Ideal.map_le_iff_le_comap]
+      apply Ideal.span_le.2
+      rintro z ⟨v, -, rfl⟩
+      cases v with
+      | mk n b =>
+        cases b with
+        | false =>
+          change zeroDimensionalFlatIdealX k n ∈
+            zeroDimensionalFlatIdealMaximalIdeal k
+          exact Ideal.subset_span (Or.inl ⟨n, rfl⟩)
+        | true =>
+          change zeroDimensionalFlatIdealY k n ∈
+            zeroDimensionalFlatIdealMaximalIdeal k
+          exact Ideal.subset_span (Or.inr ⟨n, rfl⟩)
+    · rw [zeroDimensionalFlatIdealMaximalIdeal]
+      apply Ideal.span_le.2
+      rintro z (⟨n, rfl⟩ | ⟨n, rfl⟩)
+      · change q (MvPolynomial.X (zeroDimensionalFlatIdealXVar n)) ∈
+          Ideal.map q J
+        exact Ideal.mem_map_of_mem q (Ideal.subset_span ⟨_, Set.mem_univ _, rfl⟩)
+      · change q (MvPolynomial.X (zeroDimensionalFlatIdealYVar n)) ∈
+          Ideal.map q J
+        exact Ideal.mem_map_of_mem q (Ideal.subset_span ⟨_, Set.mem_univ _, rfl⟩)
+  have hker : RingHom.ker φ = zeroDimensionalFlatIdealMaximalIdeal k := by
+    apply le_antisymm
+    · intro z hz
+      induction z using Quotient.inductionOn' with | _ z =>
+        have hz' : MvPolynomial.constantCoeff z = 0 := by
+          rw [RingHom.mem_ker] at hz
+          change φ (Ideal.Quotient.mk (zeroDimensionalFlatIdealRelationsIdeal k) z) = 0 at hz
+          dsimp [φ] at hz
+          exact hz
+        have hzJ : z ∈ J := by
+          rw [hJker, RingHom.mem_ker]
+          exact hz'
+        have : q z ∈ Ideal.map q J := Ideal.mem_map_of_mem q hzJ
+        rw [hmap] at this
+        exact this
+    · rw [zeroDimensionalFlatIdealMaximalIdeal]
+      apply Ideal.span_le.2
+      rintro z (⟨n, rfl⟩ | ⟨n, rfl⟩)
+      · change φ (q (MvPolynomial.X (zeroDimensionalFlatIdealXVar n))) = 0
+        simp [φ, q]
+      · change φ (q (MvPolynomial.X (zeroDimensionalFlatIdealYVar n))) = 0
+        simp [φ, q]
+  rw [← hker]
+  exact RingHom.ker_isMaximal_of_surjective φ hφsurj
+
 /-- Every prime ideal is the displayed ideal `(x_i,y_i)`. -/
 theorem zeroDimensionalFlatIdeal_unique_prime
     (k : Type u) [Field k] (p : Ideal (zeroDimensionalFlatIdealRing k))
     (hp : p.IsPrime) :
     p = zeroDimensionalFlatIdealMaximalIdeal k := by
-  sorry
+  have hmax : (zeroDimensionalFlatIdealMaximalIdeal k).IsMaximal :=
+    zeroDimensionalFlatIdeal_maximalIdeal_isMaximal k
+  have hle : zeroDimensionalFlatIdealMaximalIdeal k ≤ p := by
+    rw [zeroDimensionalFlatIdealMaximalIdeal]
+    apply Ideal.span_le.2
+    rintro z (⟨n, rfl⟩ | ⟨n, rfl⟩)
+    · have hyn : zeroDimensionalFlatIdealY k n ∈ p := hp.mem_of_pow_mem 2 (by
+        rw [show zeroDimensionalFlatIdealY k n ^ 2 = 0 by
+          exact zeroDimensionalFlatIdeal_y_sq_eq_zero k n]
+        exact p.zero_mem)
+      rw [zeroDimensionalFlatIdeal_x_eq_y_mul_next_x k n]
+      simpa [mul_comm] using
+        p.mul_mem_left (zeroDimensionalFlatIdealX k (n + 1)) hyn
+    · exact hp.mem_of_pow_mem 2 (by
+        rw [show zeroDimensionalFlatIdealY k n ^ 2 = 0 by
+          exact zeroDimensionalFlatIdeal_y_sq_eq_zero k n]
+        exact p.zero_mem)
+  exact (hmax.eq_of_le hp.ne_top hle).symm
 
 /-- The quotient ring is zero-dimensional in the Krull-dimension sense. -/
 theorem zeroDimensionalFlatIdeal_ring_krullDimLE_zero
     (k : Type u) [Field k] :
     Ring.KrullDimLE 0 (zeroDimensionalFlatIdealRing k) := by
-  sorry
+  apply Ring.KrullDimLE.mk₀
+  intro p hp
+  rw [zeroDimensionalFlatIdeal_unique_prime k p hp]
+  exact zeroDimensionalFlatIdeal_maximalIdeal_isMaximal k
 
 /-- A local-ring instance for the constructed quotient. -/
 instance zeroDimensionalFlatIdeal_ring_isLocalRing_instance
     (k : Type u) [Field k] : IsLocalRing (zeroDimensionalFlatIdealRing k) := by
-  sorry
+  apply IsLocalRing.of_unique_max_ideal
+  refine ⟨zeroDimensionalFlatIdealMaximalIdeal k,
+    zeroDimensionalFlatIdeal_maximalIdeal_isMaximal k, ?_⟩
+  intro I hI
+  exact zeroDimensionalFlatIdeal_unique_prime k I hI.isPrime
 
 /-- The local-ring assertion for the constructed quotient. -/
 theorem zeroDimensionalFlatIdeal_ring_isLocalRing
@@ -246,7 +371,10 @@ theorem zeroDimensionalFlatIdeal_ring_isLocalRing
 theorem zeroDimensionalFlatIdeal_le_maximalIdeal
     (k : Type u) [Field k] :
     zeroDimensionalFlatIdeal k ≤ zeroDimensionalFlatIdealMaximalIdeal k := by
-  sorry
+  rw [zeroDimensionalFlatIdeal, zeroDimensionalFlatIdealMaximalIdeal]
+  apply Ideal.span_le.2
+  rintro z ⟨n, rfl⟩
+  exact Ideal.subset_span (Or.inl ⟨n, rfl⟩)
 
 /-- The source's ideal `I` is nonzero. -/
 theorem zeroDimensionalFlatIdeal_ne_bot

@@ -1,10 +1,8 @@
-import Mathlib.Algebra.DirectSum.Algebra
-import Mathlib.Algebra.Homology.ShortComplex.ModuleCat
 import Mathlib.Algebra.Module.GradedModule
 import Mathlib.LinearAlgebra.Quotient.Basic
 import Mathlib.LinearAlgebra.TensorProduct.Tower
 import Mathlib.RingTheory.Filtration
-import Mathlib.RingTheory.RingHom.Flat
+import Mathlib.RingTheory.Flat.Basic
 
 /-!
 # More on Algebra, Chapter 4: A comment on the Artin-Rees property
@@ -112,6 +110,7 @@ theorem approximate_complex
 
 /-! ## Associated graded modules -/
 
+/-- A subquotient of a submodule, written with the subtype as its carrier. -/
 abbrev submoduleQuotient
     {R M : Type*} [Ring R] [AddCommGroup M] [Module R M]
     (P Q : Submodule R M) : Type _ :=
@@ -292,30 +291,20 @@ theorem approximate_complex_graded
 
 /-! ## Flat base change -/
 
-/-- The image of a submodule after extension of scalars, represented using
-Mathlib's canonical `LinearMap.baseChange`. -/
-def baseChangeSubmodule
-    {A B M : Type*} [CommRing A] [CommRing B] [Algebra A B]
-    [AddCommGroup M] [Module A M]
-    (P : Submodule A M) : Submodule B (B ⊗[A] M) :=
-  LinearMap.range (LinearMap.baseChange B P.subtype)
-
 /-- Extension of scalars identifies the base change of `I^n M` with the
 corresponding power of `IB` acting on `B ⊗[A] M`. -/
-theorem baseChangeSubmodule_ideal_pow
+theorem submodule_baseChange_ideal_pow
     {A B M : Type*} [CommRing A] [CommRing B] [Algebra A B]
     [AddCommGroup M] [Module A M]
     (I : Ideal A) (n : ℕ) :
-    baseChangeSubmodule (B := B) (I ^ n • (⊤ : Submodule A M)) =
+    (I ^ n • (⊤ : Submodule A M)).baseChange B =
       (I.map (algebraMap A B)) ^ n •
         (⊤ : Submodule B (B ⊗[A] M)) := by
   sorry
 
 /-- Flat base change commutes with the preimage of an ideal-power submodule.
 This is the source's displayed kernel/preimage identity, with the tensor
-submodule written as `baseChangeSubmodule`.  The preceding image/preimage
-equality in the source is the canonical `Submodule.map_comap_eq` identity,
-so it needs no parallel local declaration. -/
+submodule written using Mathlib's canonical `Submodule.baseChange`. -/
 theorem flat_baseChange_preimage
     {A B M N : Type*} [CommRing A] [CommRing B] [Algebra A B]
     [AddCommGroup M] [Module A M]
@@ -325,8 +314,7 @@ theorem flat_baseChange_preimage
     Submodule.comap (LinearMap.baseChange B f)
         ((I.map (algebraMap A B)) ^ n •
           (⊤ : Submodule B (B ⊗[A] N))) =
-      baseChangeSubmodule (B := B)
-        (Submodule.comap f (I ^ n • (⊤ : Submodule A N))) := by
+      (Submodule.comap f (I ^ n • (⊤ : Submodule A N))).baseChange B := by
   sorry
 
 /-- A working Artin-Rees exponent remains valid after flat extension of the

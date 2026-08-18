@@ -374,16 +374,6 @@ def doubleTripleM (k : ℕ) : Fin k → ℤ :=
 def doubleTripleW (k : ℕ) : Fin k → ℤ :=
   constantVector 1
 
-def doubleTripleA (k : ℕ) : Matrix (Fin k) (Fin k) ℤ :=
-  fun i j =>
-    if i = j then -2
-    else if (i.val + 1 = j.val ∧ 1 ≤ i.val ∧ j.val ≤ k - 2) ∨
-        (j.val + 1 = i.val ∧ 1 ≤ j.val ∧ i.val ≤ k - 2) then 1
-    else if (i.val = 0 ∧ j.val = 2) ∨ (i.val = 2 ∧ j.val = 0) then 1
-    else if (i.val = k - 3 ∧ j.val = k - 1) ∨
-        (i.val = k - 1 ∧ j.val = k - 3) then 1
-    else 0
-
 def IsGenusOneNCycle (T : NumericalType) : Prop :=
   ∃ k : ℕ, 6 ≤ k ∧
     hasTypePattern (k := k) T
@@ -420,9 +410,9 @@ def IsGenusOneDnExtendedDown (T : NumericalType) : Prop :=
       (zeroGenusVector)
 
 def IsGenusOneDoubleTriple (T : NumericalType) : Prop :=
-  ∃ k : ℕ, 6 ≤ k ∧
-    hasTypePattern (k := k) T
-      (doubleTripleM k) (doubleTripleA k) (doubleTripleW k)
+  ∃ t : ℕ, 4 ≤ t ∧
+    hasTypePattern (k := t + 2) T
+      (doubleTripleM (t + 2)) (doubleTripleMatrix t) (doubleTripleW (t + 2))
       (zeroGenusVector)
 
 def e6CompletedMatrix : Matrix (Fin 7) (Fin 7) ℤ :=
@@ -719,16 +709,9 @@ theorem genus_one_normal_form_is_minimal_and_genus_one (T : NumericalType)
       (fun i => if i.val = 0 ∨ i.val = 3 then 1 else 2)
       (by
         intro i
-        by_cases hi0 : i.val = 0
-        · have hi : i = (0 : Fin 4) := Fin.ext hi0
-          simp [pathMatrixByEdge, hi0, hi]
-        · have hi : i ≠ (0 : Fin 4) := by
-            intro h
-            apply hi0
-            simpa [h]
-          by_cases hi3 : i.val = 3
-          · simp [pathMatrixByEdge, hi0, hi3, hi]
-          · simp [pathMatrixByEdge, hi0, hi3, hi]) h
+        by_cases hi0 : i.val = 0 <;>
+          by_cases hi3 : i.val = 3 <;>
+          simp [pathMatrixByEdge, hi0, hi3]) h
   · exact realize_zero
       (fun i => if i.val = 0 ∨ i.val = 3 then 1 else 2)
       (pathMatrixByEdge 4
@@ -742,7 +725,7 @@ theorem genus_one_normal_form_is_minimal_and_genus_one (T : NumericalType)
         (fun i => if i.val = 3 then -4 else -2)
         (fun i => if i.val = 3 then 2 else 1))
       (fun i => if i.val = 3 then 2 else 1)
-      (by intro i; simp [starMatrixByEdge, constantVector]) h
+      (by intro i; simp [starMatrixByEdge]) h
   · exact realize_zero
       (fun i => if i.val = 0 ∨ i.val = 3 then 2 else 1)
       (starMatrixByEdge 4 0
@@ -827,9 +810,10 @@ theorem genus_one_normal_form_is_minimal_and_genus_one (T : NumericalType)
     exact realize_zero (dnExtendedDownM k) (dnExtendedDownA k)
       (dnExtendedDownW k)
       (by intro i; simp [dnExtendedDownA, negativeTwoDiagonal, branchPathMatrix]) h
-  · rcases h with ⟨k, hk, h⟩
-    exact realize_zero (doubleTripleM k) (doubleTripleA k) (doubleTripleW k)
-      (by intro i; simp [doubleTripleA, doubleTripleW, constantVector]) h
+  · rcases h with ⟨t, ht, h⟩
+    exact realize_zero (doubleTripleM (t + 2)) (doubleTripleMatrix t)
+      (doubleTripleW (t + 2))
+      (by intro i; simp [doubleTripleMatrix, doubleTripleW, constantVector]) h
   · exact realize_zero
       (fun i => if i.val = 0 ∨ i.val = 3 ∨ i.val = 5 then 1
         else if i.val = 1 ∨ i.val = 4 ∨ i.val = 6 then 2 else 3)

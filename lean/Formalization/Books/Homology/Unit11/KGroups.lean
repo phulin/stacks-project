@@ -296,13 +296,513 @@ noncomputable def serreQuotientKZeroMap
     letI : Abelian (serreQuotient P) := serreQuotientAbelian P
     exact kZeroMap (serreQuotientExactFunctor P)
 
+private theorem kZero_classOf_biprod
+    {D : Type u'} [Category.{v'} D] [Abelian D] (X Y : D) :
+    KZero.classOf (X ⊞ Y) = KZero.classOf X + KZero.classOf Y := by
+  let S : ShortComplex D :=
+    ShortComplex.mk (biprod.inl : X ⟶ X ⊞ Y) (biprod.snd : X ⊞ Y ⟶ Y) (by simp)
+  let hS : S.ShortExact :=
+    (ShortComplex.Splitting.ofHasBinaryBiproduct X Y).shortExact
+  exact KZero.classOf_shortExact ({ sequence := S, shortExact := hS } : KZeroRelation D)
+
+private theorem kZero_subtraction_representation
+    {D : Type u'} [Category.{v'} D] [Abelian D] (x : KZero D) :
+    ∃ X Y : D, x = KZero.classOf X - KZero.classOf Y := by
+  obtain ⟨z, rfl⟩ := QuotientAddGroup.mk'_surjective (KZeroRelations D) x
+  induction z using FreeAbelianGroup.induction_on with
+  | zero =>
+      exact ⟨0, 0, by simp [KZero.classOf_zero]⟩
+  | of X =>
+      refine ⟨X, 0, ?_⟩
+      change KZero.classOf X = KZero.classOf X - KZero.classOf (0 : D)
+      rw [KZero.classOf_zero, sub_zero]
+  | neg X ih =>
+      obtain ⟨Y, Z, h⟩ := ih
+      refine ⟨Z, Y, ?_⟩
+      rw [map_neg, h]
+      abel
+  | add X Y ihX ihY =>
+      obtain ⟨A, B, hA⟩ := ihX
+      obtain ⟨C, E, hC⟩ := ihY
+      refine ⟨A ⊞ C, B ⊞ E, ?_⟩
+      rw [map_add, hA, hC, kZero_classOf_biprod, kZero_classOf_biprod]
+      abel
+
+private theorem serreQuotientKZeroMap_comp_serreSubcategoryKZeroMap_classOf
+    (P : ObjectProperty C) [P.IsSerreClass] (X : P.FullSubcategory) :
+    serreQuotientKZeroMap P (serreSubcategoryKZeroMap P (KZero.classOf X)) = 0 := by
+  have hBin : P.IsClosedUnderBinaryProducts :=
+    ObjectProperty.IsClosedUnderLimitsOfShape.mk' (P := P)
+      (J := Discrete WalkingPair) (by
+        rintro _ ⟨F, hF⟩
+        exact P.prop_of_iso
+          (IsLimit.conePointsIsoOfNatIso (BinaryBiproduct.isLimit _ _)
+            (limit.isLimit F) (diagramIsoPair F).symm)
+          (P.prop_biprod (hF _) (hF _)))
+  have hFinite : P.IsClosedUnderFiniteProducts :=
+    @ObjectProperty.IsClosedUnderFiniteProducts.mk' C _ P inferInstance inferInstance hBin
+  letI : Abelian P.FullSubcategory :=
+    @ObjectProperty.instAbelianFullSubcategoryOfContainsZeroOfIsClosedUnderKernelsOfIsClosedUnderCokernelsOfIsClosedUnderFiniteProducts
+      C _ P inferInstance inferInstance inferInstance inferInstance hFinite
+  letI : Abelian (serreQuotient P) := serreQuotientAbelian P
+  change kZeroMap (serreQuotientExactFunctor P)
+      (kZeroMap (serreSubcategoryExactFunctor P) (KZero.classOf X)) = 0
+  rw [kZeroMap_classOf, kZeroMap_classOf]
+  change KZero.classOf ((serreQuotientFunctor P).obj (P.ι.obj X)) = 0
+  rw [kZero_classOf_iso
+    ((ObjectProperty.SerreClassLocalization.isZero_obj_iff
+      (serreQuotientFunctor P) P (P.ι.obj X)).2 X.property).isoZero,
+    KZero.classOf_zero]
+
+private theorem shortExact_iso_of_iso₁₂
+    {D : Type u'} [Category.{v'} D] [Abelian D]
+    {S T : ShortComplex D} (hS : S.ShortExact) (hT : T.ShortExact)
+    (e₁ : S.X₁ ≅ T.X₁) (e₂ : S.X₂ ≅ T.X₂)
+    (comm₁₂ : e₁.hom ≫ T.f = S.f ≫ e₂.hom) :
+    ∃ e₃ : S.X₃ ≅ T.X₃, e₂.hom ≫ T.g = S.g ≫ e₃.hom := by
+  let c : CokernelCofork S.f := CokernelCofork.ofπ (e₂.hom ≫ T.g) (by
+    rw [← Category.assoc, ← comm₁₂, Category.assoc, T.zero, comp_zero])
+  let c' : CokernelCofork T.f := CokernelCofork.ofπ (e₂.inv ≫ S.g) (by
+    have h : T.f ≫ e₂.inv = e₁.inv ≫ S.f := by
+      rw [← cancel_epi e₁.hom]
+      calc
+        e₁.hom ≫ (T.f ≫ e₂.inv) = (e₁.hom ≫ T.f) ≫ e₂.inv := by
+          simp only [Category.assoc]
+        _ = (S.f ≫ e₂.hom) ≫ e₂.inv :=
+          congrArg (fun q => q ≫ e₂.inv) comm₁₂
+        _ = S.f := by simp
+        _ = e₁.hom ≫ (e₁.inv ≫ S.f) := by simp
+    rw [← Category.assoc, h, Category.assoc, S.zero, comp_zero])
+  let t : S.X₃ ⟶ T.X₃ := hS.gIsCokernel.desc c
+  let t' : T.X₃ ⟶ S.X₃ := hT.gIsCokernel.desc c'
+  have ht : S.g ≫ t = e₂.hom ≫ T.g := by
+    simpa [t, c] using hS.gIsCokernel.fac c WalkingParallelPair.one
+  have ht' : T.g ≫ t' = e₂.inv ≫ S.g := by
+    simpa [t', c'] using hT.gIsCokernel.fac c' WalkingParallelPair.one
+  letI : Epi S.g := hS.epi_g
+  letI : Epi T.g := hT.epi_g
+  have h₁ : t ≫ t' = 𝟙 _ := by
+    apply (cancel_epi S.g).1
+    rw [← Category.assoc, ht, Category.assoc, ht', ← Category.assoc,
+      e₂.hom_inv_id, Category.id_comp, Category.comp_id]
+  have h₂ : t' ≫ t = 𝟙 _ := by
+    apply (cancel_epi T.g).1
+    rw [← Category.assoc, ht', Category.assoc, ht, ← Category.assoc,
+      e₂.inv_hom_id, Category.id_comp, Category.comp_id]
+  exact ⟨{ hom := t, inv := t', hom_inv_id := h₁, inv_hom_id := h₂ }, ht.symm⟩
+
+private theorem serre_shortExact_lift
+    (P : ObjectProperty C) [P.IsSerreClass]
+    (S : ShortComplex (serreQuotient P)) (hS : S.ShortExact) :
+    ∃ (T : ShortComplex C) (hT : T.ShortExact),
+      Nonempty (T.map (serreQuotientFunctor P) ≅ S) := by
+  letI : Abelian (serreQuotient P) := serreQuotientAbelian P
+  letI : PreservesFiniteLimits (serreQuotientExactFunctor P).obj :=
+    (serreQuotientExactFunctor P).property.1
+  letI : PreservesFiniteColimits (serreQuotientExactFunctor P).obj :=
+    (serreQuotientExactFunctor P).property.2
+  obtain ⟨X, Y, f, hf, ⟨e⟩⟩ :=
+    (ObjectProperty.SerreClassLocalization.mono_iff
+      (serreQuotientFunctor P) P S.f).1 hS.mono_f
+  let T : ShortComplex C :=
+    ShortComplex.mk f (cokernel.π f) (cokernel.condition f)
+  have hT : T.ShortExact :=
+    ShortComplex.ShortExact.mk' (ShortComplex.exact_cokernel f) hf inferInstance
+  let e₁ : (T.map (serreQuotientFunctor P)).X₁ ≅ S.X₁ :=
+    Arrow.leftFunc.mapIso e
+  let e₂ : (T.map (serreQuotientFunctor P)).X₂ ≅ S.X₂ :=
+    Arrow.rightFunc.mapIso e
+  have he₁₂ : e₁.hom ≫ S.f =
+      (T.map (serreQuotientFunctor P)).f ≫ e₂.hom := by
+    exact e.hom.w
+  obtain ⟨e₃, he₃⟩ := shortExact_iso_of_iso₁₂
+    (hT.map_of_exact (serreQuotientExactFunctor P).obj) hS e₁ e₂ he₁₂
+  exact ⟨T, hT, ⟨ShortComplex.isoMk e₁ e₂ e₃ he₁₂ he₃⟩⟩
+
+private theorem kZero_classOf_sub_of_isoModSerre
+    (P : ObjectProperty C) [P.IsSerreClass]
+    {X Y : C} (f : X ⟶ Y) (hf : P.isoModSerre f) :
+    KZero.classOf X - KZero.classOf Y ∈
+      Set.range (serreSubcategoryKZeroMap P) := by
+  have h₀ : P (kernel f) :=
+    ((P.isoModSerre_iff f).1 hf).1
+  have h₁ : P (cokernel f) :=
+    ((P.isoModSerre_iff f).1 hf).2
+  let r₀ : KZeroRelation C :=
+    { sequence := ShortComplex.mk (kernel.ι f) (cokernel.π (kernel.ι f))
+        (cokernel.condition (kernel.ι f))
+      shortExact := ShortComplex.ShortExact.mk' (ShortComplex.exact_cokernel _)
+        inferInstance inferInstance }
+  let r₁ : KZeroRelation C :=
+    { sequence := ShortComplex.mk (Abelian.image.ι f)
+        (cokernel.π (Abelian.image.ι f)) (cokernel.condition _)
+      shortExact := ShortComplex.ShortExact.mk' (ShortComplex.exact_cokernel _)
+        inferInstance inferInstance }
+  have hr₀ := KZero.classOf_shortExact r₀
+  have hr₁ := KZero.classOf_shortExact r₁
+  have hcoim : KZero.classOf (cokernel (kernel.ι f)) =
+      KZero.classOf (Abelian.image f) :=
+    kZero_classOf_iso (Abelian.coimageIsoImage f)
+  have hcoker : P (cokernel (Abelian.image.ι f)) := by
+    exact P.prop_of_iso
+      (asIso (cokernel.map f _ (Abelian.factorThruImage f) (𝟙 _)
+        (by simp))) h₁
+  have hcalc : KZero.classOf X - KZero.classOf Y =
+      KZero.classOf (kernel f) - KZero.classOf (cokernel (Abelian.image.ι f)) := by
+    have hX : KZero.classOf X = KZero.classOf (kernel f) +
+        KZero.classOf (cokernel (kernel.ι f)) := by
+      simpa [r₀] using hr₀
+    have hY : KZero.classOf Y = KZero.classOf (Abelian.image f) +
+        KZero.classOf (cokernel (Abelian.image.ι f)) := by
+      simpa [r₁] using hr₁
+    change KZero.classOf X - KZero.classOf Y =
+      KZero.classOf (kernel f) - KZero.classOf (cokernel (Abelian.image.ι f))
+    rw [hX, hY, hcoim]
+    abel
+  have hBin : P.IsClosedUnderBinaryProducts :=
+    ObjectProperty.IsClosedUnderLimitsOfShape.mk' (P := P)
+      (J := Discrete WalkingPair) (by
+        rintro _ ⟨F, hF⟩
+        exact P.prop_of_iso
+          (IsLimit.conePointsIsoOfNatIso (BinaryBiproduct.isLimit _ _)
+            (limit.isLimit F) (diagramIsoPair F).symm)
+          (P.prop_biprod (hF _) (hF _)))
+  have hFinite : P.IsClosedUnderFiniteProducts :=
+    @ObjectProperty.IsClosedUnderFiniteProducts.mk' C _ P inferInstance inferInstance hBin
+  letI : Abelian P.FullSubcategory :=
+    @ObjectProperty.instAbelianFullSubcategoryOfContainsZeroOfIsClosedUnderKernelsOfIsClosedUnderCokernelsOfIsClosedUnderFiniteProducts
+      C _ P inferInstance inferInstance inferInstance inferInstance hFinite
+  refine ⟨KZero.classOf ⟨kernel f, h₀⟩ -
+      KZero.classOf ⟨cokernel (Abelian.image.ι f), hcoker⟩, ?_⟩
+  dsimp [serreSubcategoryKZeroMap]
+  rw [map_sub, kZeroMap_classOf, kZeroMap_classOf]
+  exact hcalc.symm
+
+private theorem kZero_classOf_sub_of_serre_iso
+    (P : ObjectProperty C) [P.IsSerreClass]
+    {X Y : C} (e : (serreQuotientFunctor P).obj X ≅
+      (serreQuotientFunctor P).obj Y) :
+    KZero.classOf X - KZero.classOf Y ∈
+      Set.range (serreSubcategoryKZeroMap P) := by
+  obtain ⟨φ, hφ⟩ := Localization.exists_leftFraction
+    (serreQuotientFunctor P) P.isoModSerre e.hom
+  haveI : IsIso ((serreQuotientFunctor P).map φ.s) :=
+    Localization.inverts (serreQuotientFunctor P) P.isoModSerre φ.s φ.hs
+  haveI : IsIso (φ.map (serreQuotientFunctor P)
+      (Localization.inverts (serreQuotientFunctor P) P.isoModSerre)) := by
+    rw [← hφ]
+    infer_instance
+  haveI : IsIso ((serreQuotientFunctor P).map φ.f) := by
+    letI : IsIso ((serreQuotientFunctor P).map φ.f ≫
+        inv ((serreQuotientFunctor P).map φ.s)) := by
+      change IsIso (φ.map (serreQuotientFunctor P)
+        (Localization.inverts (serreQuotientFunctor P) P.isoModSerre))
+      infer_instance
+    exact IsIso.of_isIso_comp_right
+      ((serreQuotientFunctor P).map φ.f)
+      (inv ((serreQuotientFunctor P).map φ.s))
+  have hf : P.isoModSerre φ.f :=
+    (ObjectProperty.SerreClassLocalization.isIso_map_iff
+      (serreQuotientFunctor P) P φ.f).1 inferInstance
+  obtain ⟨a, ha⟩ := kZero_classOf_sub_of_isoModSerre P φ.f hf
+  obtain ⟨b, hb⟩ := kZero_classOf_sub_of_isoModSerre P φ.s φ.hs
+  refine ⟨a - b, ?_⟩
+  rw [map_sub, ha, hb]
+  abel
+
+private theorem kZero_serre_range_of_quotient_zero
+    (P : ObjectProperty C) [P.IsSerreClass] (x : KZero C)
+    (hx : serreQuotientKZeroMap P x = 0) :
+    x ∈ Set.range (serreSubcategoryKZeroMap P) := by
+  letI : Abelian (serreQuotient P) := serreQuotientAbelian P
+  let R : AddSubgroup (KZero C) := (serreSubcategoryKZeroMap P).range
+  let qR : KZero C →+ KZero C ⧸ R := QuotientAddGroup.mk' R
+  have hq_range (y : KZero P.FullSubcategory) :
+      qR (serreSubcategoryKZeroMap P y) = 0 := by
+    rw [← AddMonoidHom.mem_ker, show qR.ker = R from QuotientAddGroup.ker_mk' R]
+    exact ⟨y, rfl⟩
+  have hq_iso : ∀ {A B : C},
+      (e : (serreQuotientFunctor P).obj A ≅
+        (serreQuotientFunctor P).obj B) →
+      qR (KZero.classOf A) = qR (KZero.classOf B) := by
+    intro A B e
+    obtain ⟨y, hy⟩ := kZero_classOf_sub_of_serre_iso P e
+    have hz : qR (KZero.classOf A - KZero.classOf B) = 0 := by
+      rw [← hy]
+      exact hq_range y
+    exact sub_eq_zero.mp (by simpa only [map_sub] using hz)
+  let φ : FreeAbelianGroup (serreQuotient P) →+ KZero C ⧸ R :=
+    FreeAbelianGroup.lift (fun A =>
+      qR (KZero.classOf ((serreQuotientFunctor P).objPreimage A)))
+  have hφ_rel (r : KZeroRelation (serreQuotient P)) : φ r.generator = 0 := by
+    obtain ⟨T, hT, ⟨e⟩⟩ := serre_shortExact_lift P r.sequence r.shortExact
+    let S := T.map (serreQuotientFunctor P)
+    letI : IsIso e.hom := Iso.isIso_hom e
+    let e₁ : S.X₁ ≅ r.sequence.X₁ := asIso e.hom.τ₁
+    let e₂ : S.X₂ ≅ r.sequence.X₂ := asIso e.hom.τ₂
+    let e₃ : S.X₃ ≅ r.sequence.X₃ := asIso e.hom.τ₃
+    have h₁ := hq_iso
+      (e₁ ≪≫
+        ((serreQuotientFunctor P).objObjPreimageIso r.sequence.X₁).symm)
+    have h₂ := hq_iso
+      (e₂ ≪≫
+        ((serreQuotientFunctor P).objObjPreimageIso r.sequence.X₂).symm)
+    have h₃ := hq_iso
+      (e₃ ≪≫
+        ((serreQuotientFunctor P).objObjPreimageIso r.sequence.X₃).symm)
+    have hTrel := KZero.classOf_shortExact
+      ({ sequence := T, shortExact := hT } : KZeroRelation C)
+    have hzero : qR (KZero.classOf T.X₂ - KZero.classOf T.X₁ -
+        KZero.classOf T.X₃) = 0 := by
+      rw [map_sub, map_sub, hTrel]
+      simp only [map_add, map_neg, sub_eq_add_neg]
+      abel
+    change qR (KZero.classOf ((serreQuotientFunctor P).objPreimage
+        r.sequence.X₂)) -
+      qR (KZero.classOf ((serreQuotientFunctor P).objPreimage
+        r.sequence.X₁)) -
+      qR (KZero.classOf ((serreQuotientFunctor P).objPreimage
+        r.sequence.X₃)) = 0
+    rw [← h₂, ← h₁, ← h₃]
+    exact hzero
+  let φq : KZero (serreQuotient P) →+ KZero C ⧸ R :=
+    QuotientAddGroup.lift (KZeroRelations (serreQuotient P)) φ (by
+      change AddSubgroup.closure
+        (Set.range (KZeroRelation.generator (C := serreQuotient P))) ≤ φ.ker
+      refine (AddSubgroup.closure_le (φ.ker)).2 ?_
+      rintro _ ⟨r, rfl⟩
+      change φ r.generator = 0
+      exact hφ_rel r)
+  have hclass (A : C) :
+      φq (serreQuotientKZeroMap P (KZero.classOf A)) =
+        qR (KZero.classOf A) := by
+    have hi := hq_iso
+      ((serreQuotientFunctor P).objObjPreimageIso
+        ((serreQuotientFunctor P).obj A)).symm
+    change φq (KZero.classOf ((serreQuotientFunctor P).obj A)) = _
+    change qR (KZero.classOf ((serreQuotientFunctor P).objPreimage
+        ((serreQuotientFunctor P).obj A))) = _
+    exact hi.symm
+  have hcomp : φq.comp (serreQuotientKZeroMap P) = qR := by
+    apply AddMonoidHom.ext
+    intro z
+    refine QuotientAddGroup.induction_on z ?_
+    intro w
+    induction w using FreeAbelianGroup.induction_on with
+    | zero => simp
+    | of A =>
+        change φq (serreQuotientKZeroMap P (KZero.classOf A)) =
+          qR (KZero.classOf A)
+        exact hclass A
+    | neg A ih =>
+        have hmk := (QuotientAddGroup.mk' (KZeroRelations C)).map_neg
+          (FreeAbelianGroup.of A)
+        change (φq.comp (serreQuotientKZeroMap P))
+            ((QuotientAddGroup.mk' (KZeroRelations C))
+              (-FreeAbelianGroup.of A)) =
+          qR ((QuotientAddGroup.mk' (KZeroRelations C))
+            (-FreeAbelianGroup.of A))
+        rw [hmk, map_neg, map_neg]
+        have ih' : (φq.comp (serreQuotientKZeroMap P))
+              ((QuotientAddGroup.mk' (KZeroRelations C))
+                (FreeAbelianGroup.of A)) =
+            qR ((QuotientAddGroup.mk' (KZeroRelations C))
+              (FreeAbelianGroup.of A)) := by
+          change (φq.comp (serreQuotientKZeroMap P))
+              (↑(FreeAbelianGroup.of A)) = qR (↑(FreeAbelianGroup.of A))
+          exact ih
+        rw [ih']
+    | add A B ihA ihB =>
+        have hmk := (QuotientAddGroup.mk' (KZeroRelations C)).map_add A B
+        change (φq.comp (serreQuotientKZeroMap P))
+            ((QuotientAddGroup.mk' (KZeroRelations C)) (A + B)) =
+          qR ((QuotientAddGroup.mk' (KZeroRelations C)) (A + B))
+        rw [hmk, map_add, map_add]
+        have hA : (φq.comp (serreQuotientKZeroMap P))
+              ((QuotientAddGroup.mk' (KZeroRelations C)) A) =
+            qR ((QuotientAddGroup.mk' (KZeroRelations C)) A) := ihA
+        have hB : (φq.comp (serreQuotientKZeroMap P))
+              ((QuotientAddGroup.mk' (KZeroRelations C)) B) =
+            qR ((QuotientAddGroup.mk' (KZeroRelations C)) B) := ihB
+        rw [hA, hB]
+  have hq_zero : qR x = 0 := by
+    rw [← hcomp]
+    simp [hx]
+  have hxR : x ∈ R := by
+    have hmem : x ∈ qR.ker := (AddMonoidHom.mem_ker).2 hq_zero
+    rw [show qR.ker = R from QuotientAddGroup.ker_mk' R] at hmem
+    exact hmem
+  exact hxR
+
 /-- The exact sequence of K-groups attached to a Serre subcategory, with the
 surjectivity at the quotient recorded as the final map to zero. -/
 theorem kZero_serre_exact_sequence
     (P : ObjectProperty C) [P.IsSerreClass] :
     Function.Exact (serreSubcategoryKZeroMap P) (serreQuotientKZeroMap P) ∧
       Function.Surjective (serreQuotientKZeroMap P) := by
-  sorry
+  refine ⟨?_, ?_⟩
+  · intro x
+    constructor
+    · intro hx
+      exact kZero_serre_range_of_quotient_zero P x hx
+    · rintro ⟨y, rfl⟩
+      have hBin : P.IsClosedUnderBinaryProducts :=
+        ObjectProperty.IsClosedUnderLimitsOfShape.mk' (P := P)
+          (J := Discrete WalkingPair) (by
+            rintro _ ⟨F, hF⟩
+            exact P.prop_of_iso
+              (IsLimit.conePointsIsoOfNatIso (BinaryBiproduct.isLimit _ _)
+                (limit.isLimit F) (diagramIsoPair F).symm)
+              (P.prop_biprod (hF _) (hF _)))
+      have hFinite : P.IsClosedUnderFiniteProducts :=
+        @ObjectProperty.IsClosedUnderFiniteProducts.mk' C _ P inferInstance inferInstance hBin
+      letI : Abelian P.FullSubcategory :=
+        @ObjectProperty.instAbelianFullSubcategoryOfContainsZeroOfIsClosedUnderKernelsOfIsClosedUnderCokernelsOfIsClosedUnderFiniteProducts
+          C _ P inferInstance inferInstance inferInstance inferInstance hFinite
+      obtain ⟨X, Y, h⟩ := kZero_subtraction_representation y
+      rw [h, map_sub, map_sub]
+      rw [serreQuotientKZeroMap_comp_serreSubcategoryKZeroMap_classOf,
+        serreQuotientKZeroMap_comp_serreSubcategoryKZeroMap_classOf, sub_self]
+  · letI : Abelian (serreQuotient P) := serreQuotientAbelian P
+    letI : (serreQuotientFunctor P).EssSurj :=
+      (serre_quotient_is_abelian_exact_essentially_surjective P).2.2.1
+    intro x
+    obtain ⟨A, B, h⟩ := kZero_subtraction_representation x
+    refine ⟨KZero.classOf ((serreQuotientFunctor P).objPreimage A) -
+      KZero.classOf ((serreQuotientFunctor P).objPreimage B), ?_⟩
+    change kZeroMap (serreQuotientExactFunctor P)
+        (KZero.classOf ((serreQuotientFunctor P).objPreimage A)) -
+      kZeroMap (serreQuotientExactFunctor P)
+        (KZero.classOf ((serreQuotientFunctor P).objPreimage B)) = x
+    rw [kZeroMap_classOf, kZeroMap_classOf]
+    change KZero.classOf ((serreQuotientFunctor P).obj
+        ((serreQuotientFunctor P).objPreimage A)) -
+      KZero.classOf ((serreQuotientFunctor P).obj
+        ((serreQuotientFunctor P).objPreimage B)) = x
+    rw [kZero_classOf_iso ((serreQuotientFunctor P).objObjPreimageIso A),
+      kZero_classOf_iso ((serreQuotientFunctor P).objObjPreimageIso B)]
+    exact h.symm
+
+private theorem kZero_classOf_cycles_eq_image_toCycles_add_homology
+    {S : ShortComplex C} :
+    KZero.classOf S.cycles =
+      KZero.classOf (Abelian.image S.toCycles) + KZero.classOf S.homology := by
+  let T : ShortComplex C :=
+    ShortComplex.mk S.toCycles S.homologyπ S.toCycles_comp_homologyπ
+  have hT : T.Exact := by
+    exact ShortComplex.exact_of_g_is_cokernel T S.homologyIsCokernel
+  let T' : ShortComplex C :=
+    ShortComplex.mk (Abelian.image.ι S.toCycles) S.homologyπ
+      (Abelian.image_ι_comp_eq_zero S.toCycles_comp_homologyπ)
+  have hT' : T'.Exact := by
+    exact (T.exact_iff_exact_image_ι).1 hT
+  have hSE : T'.ShortExact :=
+    ShortComplex.ShortExact.mk' hT' inferInstance inferInstance
+  have hrel := KZero.classOf_shortExact
+    ({ sequence := T', shortExact := hSE } : KZeroRelation C)
+  simpa [T, T'] using hrel
+
+private theorem kZero_classOf_image_toCycles_eq_image
+    {S : ShortComplex C} :
+    KZero.classOf (Abelian.image S.toCycles) =
+    KZero.classOf (Abelian.image S.f) := by
+  let e : Abelian.image S.toCycles ≅ Abelian.image S.f :=
+    Abelian.imageIsoImage S.toCycles ≪≫
+      image.isoStrongEpiMono (factorThruImage S.toCycles)
+        (Limits.image.ι S.toCycles ≫ S.iCycles) (by simp) ≪≫
+      (Abelian.imageIsoImage S.f).symm
+  exact kZero_classOf_iso e
+
+private theorem kZero_classOf_eq_kernel_add_image
+    {X Y : C} (f : X ⟶ Y) :
+    KZero.classOf X = KZero.classOf (kernel f) + KZero.classOf (Abelian.image f) := by
+  let r : KZeroRelation C :=
+    { sequence := ShortComplex.mk (kernel.ι f) (cokernel.π (kernel.ι f))
+        (cokernel.condition (kernel.ι f))
+      shortExact := ShortComplex.ShortExact.mk' (ShortComplex.exact_cokernel _)
+        inferInstance inferInstance }
+  have hr := KZero.classOf_shortExact r
+  have hcoim : KZero.classOf (cokernel (kernel.ι f)) =
+      KZero.classOf (Abelian.image f) :=
+    kZero_classOf_iso (Abelian.coimageIsoImage f)
+  simpa [r, hcoim] using hr
+
+private theorem kZero_classOf_cyclic_homology_sub
+    (K : CyclicComplex C) :
+    KZero.classOf K.H0 - KZero.classOf K.H1 = 0 := by
+  let S₀ : ShortComplex C := ShortComplex.mk K.φ K.ψ K.φψ
+  let S₁ : ShortComplex C := ShortComplex.mk K.ψ K.φ K.ψφ
+  have hM₀ := kZero_classOf_eq_kernel_add_image K.φ
+  have hM₁ := kZero_classOf_eq_kernel_add_image K.ψ
+  have hC₀ := kZero_classOf_cycles_eq_image_toCycles_add_homology (S := S₀)
+  have hC₁ := kZero_classOf_cycles_eq_image_toCycles_add_homology (S := S₁)
+  have hI₀ := kZero_classOf_image_toCycles_eq_image (S := S₀)
+  have hI₁ := kZero_classOf_image_toCycles_eq_image (S := S₁)
+  have hK₀ : KZero.classOf S₀.cycles = KZero.classOf (kernel K.ψ) :=
+    kZero_classOf_iso S₀.cyclesIsoKernel
+  have hK₁ : KZero.classOf S₁.cycles = KZero.classOf (kernel K.φ) :=
+    kZero_classOf_iso S₁.cyclesIsoKernel
+  have hH₀ : KZero.classOf S₀.homology =
+      KZero.classOf (kernel K.ψ) - KZero.classOf (Abelian.image K.φ) := by
+    calc
+      KZero.classOf S₀.homology =
+          (KZero.classOf (Abelian.image S₀.toCycles) + KZero.classOf S₀.homology) -
+            KZero.classOf (Abelian.image S₀.toCycles) := by abel
+      _ = KZero.classOf S₀.cycles - KZero.classOf (Abelian.image S₀.toCycles) := by
+        rw [hC₀]
+      _ = KZero.classOf (kernel K.ψ) - KZero.classOf (Abelian.image K.φ) := by
+        rw [hK₀, hI₀]
+  have hH₁ : KZero.classOf S₁.homology =
+      KZero.classOf (kernel K.φ) - KZero.classOf (Abelian.image K.ψ) := by
+    calc
+      KZero.classOf S₁.homology =
+          (KZero.classOf (Abelian.image S₁.toCycles) + KZero.classOf S₁.homology) -
+            KZero.classOf (Abelian.image S₁.toCycles) := by abel
+      _ = KZero.classOf S₁.cycles - KZero.classOf (Abelian.image S₁.toCycles) := by
+        rw [hC₁]
+      _ = KZero.classOf (kernel K.φ) - KZero.classOf (Abelian.image K.ψ) := by
+        rw [hK₁, hI₁]
+  have hM : KZero.classOf (kernel K.ψ) + KZero.classOf (Abelian.image K.ψ) =
+      KZero.classOf (kernel K.φ) + KZero.classOf (Abelian.image K.φ) :=
+    hM₁.symm.trans hM₀
+  have hEq : KZero.classOf (kernel K.ψ) - KZero.classOf (Abelian.image K.φ) =
+      KZero.classOf (kernel K.φ) - KZero.classOf (Abelian.image K.ψ) := by
+    calc
+      KZero.classOf (kernel K.ψ) - KZero.classOf (Abelian.image K.φ) =
+          (KZero.classOf (kernel K.ψ) + KZero.classOf (Abelian.image K.ψ)) -
+            (KZero.classOf (Abelian.image K.ψ) + KZero.classOf (Abelian.image K.φ)) := by
+              abel
+      _ = (KZero.classOf (kernel K.φ) + KZero.classOf (Abelian.image K.φ)) -
+            (KZero.classOf (Abelian.image K.ψ) + KZero.classOf (Abelian.image K.φ)) := by
+              rw [hM]
+      _ = KZero.classOf (kernel K.φ) - KZero.classOf (Abelian.image K.ψ) := by
+              abel
+  change KZero.classOf S₀.homology - KZero.classOf S₁.homology = 0
+  rw [hH₀, hH₁, hEq, sub_self]
+
+private theorem kZero_serreSubcategoryMap_classOf_cyclic_sub
+    (P : ObjectProperty C) [P.IsSerreClass] (K : CyclicComplex C)
+    (h₀ : P K.H0) (h₁ : P K.H1) :
+    serreSubcategoryKZeroMap P
+        (KZero.classOf ⟨K.H0, h₀⟩ - KZero.classOf ⟨K.H1, h₁⟩) = 0 := by
+  have hBin : P.IsClosedUnderBinaryProducts :=
+    ObjectProperty.IsClosedUnderLimitsOfShape.mk' (P := P)
+      (J := Discrete WalkingPair) (by
+        rintro _ ⟨F, hF⟩
+        exact P.prop_of_iso
+          (IsLimit.conePointsIsoOfNatIso (BinaryBiproduct.isLimit _ _)
+            (limit.isLimit F) (diagramIsoPair F).symm)
+          (P.prop_biprod (hF _) (hF _)))
+  have hFinite : P.IsClosedUnderFiniteProducts :=
+    @ObjectProperty.IsClosedUnderFiniteProducts.mk' C _ P inferInstance inferInstance hBin
+  letI : Abelian P.FullSubcategory :=
+    @ObjectProperty.instAbelianFullSubcategoryOfContainsZeroOfIsClosedUnderKernelsOfIsClosedUnderCokernelsOfIsClosedUnderFiniteProducts
+      C _ P inferInstance inferInstance inferInstance inferInstance hFinite
+  change kZeroMap (serreSubcategoryExactFunctor P)
+      (KZero.classOf ⟨K.H0, h₀⟩ - KZero.classOf ⟨K.H1, h₁⟩) = 0
+  rw [map_sub, kZeroMap_classOf, kZeroMap_classOf]
+  change KZero.classOf K.H0 - KZero.classOf K.H1 = 0
+  exact kZero_classOf_cyclic_homology_sub K
 
 /-- The source's characterization of the kernel of the inclusion map: its
 elements are differences of the two homology objects of a periodic complex

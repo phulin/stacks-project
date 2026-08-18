@@ -306,12 +306,31 @@ def SiteTorsorEquivalence.refl {C : Type u} [Category.{v} C]
   equivariant := by simp
   inverse_equivariant := by simp
 
-/-- Data specifying a contracted-product torsor candidate.
+/-! A balanced pairing is the representative-level input to a contracted
+product.  Its factorization property is recorded below rather than replacing
+the pairing by a merely class-level operation. -/
+structure SiteTorsorBalancedPairing {C : Type u} [Category.{v} C]
+    {J : GrothendieckTopology C}
+    {G : Sheaf J AddCommGrpCat.{w}} {X : C}
+    (P Q R : SiteTorsor.{t, w, v, u}) where
+  pair : ∀ (U : (Over C X)ᵒᵖ),
+    P.carrier.obj.obj U → Q.carrier.obj.obj U → R.carrier.obj.obj U
+  pair_natural : ∀ {U V : (Over C X)ᵒᵖ} (q : U ⟶ V)
+    (p : P.carrier.obj.obj U) (r : Q.carrier.obj.obj U),
+    R.carrier.obj.map q (pair U p r) =
+      pair V (P.carrier.obj.map q p) (Q.carrier.obj.map q r)
+  pair_left_right : ∀ (U : (Over C X)ᵒᵖ)
+    (a : (G.over X).obj.obj U) (p : P.carrier.obj.obj U) (q : Q.carrier.obj.obj U),
+    pair U (P.action U a p) q = pair U p (Q.action U (-a) q)
+  pair_action_left : ∀ (U : (Over C X)ᵒᵖ)
+    (a : (G.over X).obj.obj U) (p : P.carrier.obj.obj U) (q : Q.carrier.obj.obj U),
+    R.action U a (pair U p q) = pair U (P.action U a p) q
+  pair_action_right : ∀ (U : (Over C X)ᵒᵖ)
+    (a : (G.over X).obj.obj U) (p : P.carrier.obj.obj U) (q : Q.carrier.obj.obj U),
+    R.action U a (pair U p q) = pair U p (Q.action U (-a) q)
 
-The fields record a balanced pairing, compatibility with restriction in the
-slice, and the resulting action in either factor.  The quotient or universal
-property is not encoded by this structure; later declarations state the
-invariance and class-level consequences that use it. -/
+/-! The balanced pairing is required to be the contracted-product pairing,
+not just a map with the right equivariance identities. -/
 structure SiteTorsorContractedProductData {C : Type u} [Category.{v} C]
     {J : GrothendieckTopology C}
     {G : Sheaf J AddCommGrpCat.{w}} {X : C}
@@ -332,8 +351,13 @@ structure SiteTorsorContractedProductData {C : Type u} [Category.{v} C]
   pair_action_right : ∀ (U : (Over C X)ᵒᵖ)
     (a : (G.over X).obj.obj U) (p : P.carrier.obj.obj U) (q : Q.carrier.obj.obj U),
     torsor.action U a (pair U p q) = pair U p (Q.action U (-a) q)
+  universal : ∀ (R : SiteTorsor.{t, w, v, u} J G X)
+    (b : SiteTorsorBalancedPairing P Q R),
+    ∃! e : SiteTorsorEquivalence torsor R,
+      ∀ (U : (Over C X)ᵒᵖ) (p : P.carrier.obj.obj U) (q : Q.carrier.obj.obj U),
+        e.map.hom.hom.app U (pair U p q) = b.pair U p q
 
-/-- Existence of a contracted-product torsor with a balanced pairing. -/
+/-- Existence of a contracted-product torsor with a universal balanced pairing. -/
 theorem siteTorsorContractedProductData_exists {C : Type u} [Category.{v} C]
     {J : GrothendieckTopology C}
     {G : Sheaf J AddCommGrpCat.{w}} {X : C}
@@ -342,13 +366,22 @@ theorem siteTorsorContractedProductData_exists {C : Type u} [Category.{v} C]
     Nonempty (SiteTorsorContractedProductData.{t, w, v, u} P Q) := by
   sorry
 
-/-- A chosen contracted product of two torsors. -/
+/-! A chosen contracted-product datum. -/
+noncomputable def siteTorsorContractedProductData {C : Type u} [Category.{v} C]
+    {J : GrothendieckTopology C}
+    {G : Sheaf J AddCommGrpCat.{w}} {X : C}
+    [HasWeakSheafify (J.over X) (Type w)]
+    (P Q : SiteTorsor.{t, w, v, u} J G X) :
+    SiteTorsorContractedProductData P Q :=
+  Classical.choice (siteTorsorContractedProductData_exists P Q)
+
+/-! The torsor underlying the chosen contracted product. -/
 noncomputable def siteTorsorContractedProduct {C : Type u} [Category.{v} C]
     {J : GrothendieckTopology C}
     {G : Sheaf J AddCommGrpCat.{w}} {X : C}
     [HasWeakSheafify (J.over X) (Type w)]
     (P Q : SiteTorsor.{t, w, v, u} J G X) : SiteTorsor.{t, w, v, u} J G X :=
-  (Classical.choice (siteTorsorContractedProductData_exists P Q)).torsor
+  (siteTorsorContractedProductData P Q).torsor
 
 /-- The contracted product is compatible with equivariant isomorphisms. -/
 theorem siteTorsorContractedProduct_respects_equivalence

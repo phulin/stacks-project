@@ -124,7 +124,44 @@ noncomputable def descentDataFunctor
           (η.app (.mk (op Y))).toFunctor.map
             (D.hom q f₁ f₂ hf₁ hf₂) ≫
           (η.naturality f₂.op.toLoc).hom.toNatTrans.app (D.obj i₂)
-      pullHom_hom := by sorry
+      pullHom_hom := by
+        intro Y' Y g q q' hq i₁ i₂ f₁ f₂ hf₁ hf₂ gf₁ gf₂ hgf₁ hgf₂
+        subst gf₁
+        subst gf₂
+        subst q'
+        rw [← D.pullHom_hom g q (g ≫ q) (by simp) f₁ f₂ hf₁ hf₂
+          (g ≫ f₁) (g ≫ f₂) rfl rfl]
+        have hcomp₁ : (g ≫ f₁).op.toLoc = f₁.op.toLoc ≫ g.op.toLoc := by rfl
+        have hcomp₂ : (g ≫ f₂).op.toLoc = f₂.op.toLoc ≫ g.op.toLoc := by rfl
+        simp [hcomp₁, hcomp₂, Pseudofunctor.LocallyDiscreteOpToCat.pullHom,
+          Pseudofunctor.mapComp'_eq_mapComp,
+          Functor.map_comp, Category.assoc]
+        rw [Pseudofunctor.StrongTrans.naturality_comp_inv_app η
+              f₁.op.toLoc g.op.toLoc (D.obj i₁),
+          Pseudofunctor.StrongTrans.naturality_comp_hom_app η
+              f₂.op.toLoc g.op.toLoc (D.obj i₂)]
+        simp only [Category.assoc, ← (η.app (.mk (op Y'))).toFunctor.map_comp_assoc,
+          Cat.Hom.inv_hom_id_toNatTrans_app, Functor.map_id, Category.id_comp]
+        have hF₁ :
+            (F.mapComp f₁.op.toLoc g.op.toLoc).inv.toNatTrans.app (D.obj i₁) ≫
+                (F.mapComp f₁.op.toLoc g.op.toLoc).hom.toNatTrans.app (D.obj i₁) ≫
+              (F.map g.op.toLoc).toFunctor.map (D.hom q f₁ f₂ hf₁ hf₂) ≫
+                𝟙 ((F.map f₂.op.toLoc ≫ F.map g.op.toLoc).toFunctor.obj (D.obj i₂)) =
+            (F.map g.op.toLoc).toFunctor.map (D.hom q f₁ f₂ hf₁ hf₂) := by
+          simp [← Category.assoc]
+        have hF₁' := congrArg ((η.app (.mk (op Y'))).toFunctor.map) hF₁
+        rw [hF₁']
+        have hηg := NatIso.naturality_1
+          (Cat.Hom.toNatIso (η.naturality g.op.toLoc))
+          (D.hom q f₁ f₂ hf₁ hf₂)
+        simp only [Cat.Hom.toNatIso, Iso.symm_hom, Iso.symm_inv,
+          Cat.Hom.comp_toFunctor, Functor.comp_map, Category.assoc] at hηg
+        rw [reassoc_of% hηg]
+        simp [Pseudofunctor.StrongTrans.naturality_comp_hom_app,
+          Pseudofunctor.StrongTrans.naturality_comp_inv_app,
+          Pseudofunctor.mapComp'_inv_naturality_assoc,
+          Category.assoc, ← Functor.map_comp,
+          ← reassoc_of% Cat.Hom₂.comp_app]
       hom_self := by
         intros Y q i g hg
         have h := D.hom_self q g hg
@@ -197,11 +234,11 @@ noncomputable def descentDataFunctor
               (D₁.hom q f₁ f₂ hf₁ hf₂) ≫ k) h₂
         simp only [Category.assoc] at h₁' h₂'
         rw [h₁', h₂']
+        have h₃ := congrArg ((η.app (.mk (op Y))).toFunctor.map)
+          (φ.comm q f₁ f₂ hf₁ hf₂)
         simpa only [Functor.map_comp, Category.assoc] using congrArg (fun k =>
           (η.naturality f₁.op.toLoc).inv.toNatTrans.app (D₁.obj i₁) ≫ k ≫
-            (η.naturality f₂.op.toLoc).hom.toNatTrans.app (D₂.obj i₂))
-          (congrArg ((η.app (.mk (op Y))).toFunctor.map)
-            (φ.comm q f₁ f₂ hf₁ hf₂)) }
+            (η.naturality f₂.op.toLoc).hom.toNatTrans.app (D₂.obj i₂)) h₃ }
 
 /- The transport functor is an equivalence whenever the fibred morphism is a
 fibrewise equivalence.  The proof is the descent-data version of transporting
@@ -213,7 +250,61 @@ theorem descentDataFunctor_is_equivalence
     {ι : Type t} {U : C} {X : ι → C}
     (f : ∀ i, X i ⟶ U) :
     (descentDataFunctor η f).IsEquivalence := by
-  sorry
+  rcases hη with ⟨hff, hess⟩
+  letI (V : C) : (η.app (.mk (op V))).toFunctor.IsEquivalence := by
+    rcases hff V with ⟨h⟩
+    exact { faithful := h.faithful, full := h.full, essSurj := hess V }
+  constructor
+  · constructor
+    intro D₁ D₂ φ ψ h
+    apply Pseudofunctor.DescentData.hom_ext
+    intro i
+    apply (η.app (.mk (op (X i)))).toFunctor.map_injective
+    simpa only [descentDataFunctor] using congrArg (fun k => k.hom i) h
+  · constructor
+    intro D₁ D₂ φ
+    let ψ : D₁ ⟶ D₂ :=
+      { hom i := (η.app (.mk (op (X i)))).toFunctor.preimage (φ.hom i)
+        comm := by
+          intro Y q i₁ i₂ f₁ f₂ hf₁ hf₂
+          apply (η.app (.mk (op Y))).toFunctor.map_injective
+          simp only [Functor.map_comp, Category.assoc]
+          have h₁ := NatIso.naturality_1
+            (Cat.Hom.toNatIso (η.naturality f₁.op.toLoc)).symm
+              ((η.app (.mk (op (X i₁)))).toFunctor.preimage (φ.hom i₁))
+          have h₂ := NatIso.naturality_2
+            (Cat.Hom.toNatIso (η.naturality f₂.op.toLoc))
+              ((η.app (.mk (op (X i₂)))).toFunctor.preimage (φ.hom i₂))
+          have h₁' := h₁
+          have h₂' := h₂
+          simp only [Cat.Hom.toNatIso, Iso.symm_hom, Iso.symm_inv,
+            Cat.Hom.comp_toFunctor, Functor.comp_map, Category.assoc,
+            Cat.Hom.inv_hom_id_toNatTrans_app_assoc,
+            Cat.Hom.hom_inv_id_toNatTrans_app, Category.comp_id,
+            Functor.map_preimage] at h₁' h₂'
+          rw [← h₁', ← h₂']
+          apply (cancel_mono
+            ((η.naturality f₂.op.toLoc).hom.toNatTrans.app (D₂.obj i₂))).1
+          apply (cancel_epi
+            ((η.naturality f₁.op.toLoc).inv.toNatTrans.app (D₁.obj i₁))).1
+          simp only [Category.assoc,
+            Cat.Hom.inv_hom_id_toNatTrans_app_assoc,
+            Cat.Hom.hom_inv_id_toNatTrans_app_assoc,
+            Functor.map_preimage]
+          rw [(η.app (.mk (op (X i₁)))).toFunctor.map_preimage (φ.hom i₁),
+            (η.app (.mk (op (X i₂)))).toFunctor.map_preimage (φ.hom i₂)]
+          simp only [Cat.Hom.inv_hom_id_toNatTrans_app, Category.comp_id]
+          simpa only [descentDataFunctor, Category.assoc, Category.comp_id,
+            Functor.comp_obj, Cat.Hom.comp_toFunctor] using
+            φ.comm q f₁ f₂ hf₁ hf₂ }
+    refine ⟨ψ, ?_⟩
+    apply Pseudofunctor.DescentData.hom_ext
+    intro i
+    simpa only [descentDataFunctor] using
+      (η.app (.mk (op (X i)))).toFunctor.map_preimage (φ.hom i)
+  · constructor
+    intro D
+    sorry
 
 noncomputable def descentDataEquivalence
     {C : Type u} [Category.{v} C] {F G : FiberedCategory C}
@@ -315,9 +406,150 @@ noncomputable def pointwiseTwoFiberProductApex
     (fun {U V : Cᵒᵖ} q =>
       (pointwiseTwoFiberProductReindex f g (Discrete.mk q)).toCatHom)
     (fun U => by
-      sorry)
+      refine Cat.Hom.isoMk (NatIso.ofComponents (fun ξ => ?_) ?_)
+      · let eF := Cat.Hom.toNatIso (F.mapId (.mk U))
+        let eG := Cat.Hom.toNatIso (G.mapId (.mk U))
+        apply ObjectProperty.isoMk
+        exact Comma.isoMk (l := eF.app ξ.obj.left) (r := eG.app ξ.obj.right) (by
+          dsimp [pointwiseTwoFiberProductReindex, isoCommaMap, eF, eG]
+          simp only [Cat.Hom.toNatIso, Iso.symm_hom, Iso.symm_inv]
+          change
+            (f.app (.mk U)).toFunctor.map
+                ((F.mapId (.mk U)).hom.toNatTrans.app ξ.obj.left) ≫
+                ((𝟭 (IsoComma (f.app (.mk U)).toFunctor
+                    (g.app (.mk U)).toFunctor)).obj ξ).obj.hom =
+              ((f.naturality (𝟙 (.mk U))).hom.toNatTrans.app ξ.obj.left ≫
+                  (H.map (𝟙 (.mk U))).toFunctor.map ξ.obj.hom ≫
+                    (g.naturality (𝟙 (.mk U))).inv.toNatTrans.app ξ.obj.right) ≫
+                (g.app (.mk U)).toFunctor.map
+                  ((G.mapId (.mk U)).hom.toNatTrans.app ξ.obj.right)
+          simp [Pseudofunctor.StrongTrans.naturality_id_hom,
+            Pseudofunctor.StrongTrans.naturality_id_inv,
+            Pseudofunctor.StrongTrans.naturality_id_hom_app,
+            Pseudofunctor.StrongTrans.naturality_id_inv_app,
+            ← Functor.map_comp,
+            Category.assoc, ← reassoc_of% Cat.Hom₂.comp_app])
+      · intro ξ ζ h
+        apply ObjectProperty.hom_ext
+        apply Comma.hom_ext
+        · change
+            (F.map { as := 𝟙 U }).toFunctor.map h.hom.left ≫
+                (Cat.Hom.toNatIso (F.mapId (.mk U))).hom.app ζ.obj.left =
+              (Cat.Hom.toNatIso (F.mapId (.mk U))).hom.app ξ.obj.left ≫ h.hom.left
+          exact (Cat.Hom.toNatIso (F.mapId (.mk U))).hom.naturality h.hom.left
+        · change
+            (G.map { as := 𝟙 U }).toFunctor.map h.hom.right ≫
+                (Cat.Hom.toNatIso (G.mapId (.mk U))).hom.app ζ.obj.right =
+              (Cat.Hom.toNatIso (G.mapId (.mk U))).hom.app ξ.obj.right ≫ h.hom.right
+          exact (Cat.Hom.toNatIso (G.mapId (.mk U))).hom.naturality h.hom.right)
     (fun {U V W : Cᵒᵖ} q r => by
-      sorry)
+      refine Cat.Hom.isoMk (NatIso.ofComponents (fun ξ => ?_) ?_)
+      · apply ObjectProperty.isoMk
+        exact Comma.isoMk
+          (l := (Cat.Hom.toNatIso
+            (F.mapComp (Discrete.mk q) (Discrete.mk r))).app ξ.obj.left)
+          (r := (Cat.Hom.toNatIso
+            (G.mapComp (Discrete.mk q) (Discrete.mk r))).app ξ.obj.right) (by
+            dsimp [Functor.comp, pointwiseTwoFiberProductReindex, isoCommaMap]
+            simp only [Cat.Hom.toNatIso, Iso.symm_hom, Iso.symm_inv]
+            have hfcomp :=
+              Pseudofunctor.StrongTrans.naturality_comp_hom_app f
+                (Discrete.mk q) (Discrete.mk r) ξ.obj.left
+            have hgcomp :=
+              Pseudofunctor.StrongTrans.naturality_comp_inv_app g
+                (Discrete.mk q) (Discrete.mk r) ξ.obj.right
+            have hfarg :
+                f.naturality (Discrete.mk q ≫ Discrete.mk r) =
+                  f.naturality (Discrete.mk (q ≫ r)) := by
+              rfl
+            have hgarg :
+                g.naturality (Discrete.mk q ≫ Discrete.mk r) =
+                  g.naturality (Discrete.mk (q ≫ r)) := by
+              rfl
+            rw [← hfarg, ← hgarg]
+            rw [hfcomp, hgcomp]
+            have hH :
+                (H.mapComp (Discrete.mk q) (Discrete.mk r)).inv.toNatTrans.app
+                      ((f.app (.mk U)).toFunctor.obj ξ.obj.left) ≫
+                    (H.map (Discrete.mk (q ≫ r))).toFunctor.map ξ.obj.hom ≫
+                  (H.mapComp (Discrete.mk q) (Discrete.mk r)).hom.toNatTrans.app
+                    ((g.app (.mk U)).toFunctor.obj ξ.obj.right) =
+                (H.map (Discrete.mk r)).toFunctor.map
+                  ((H.map (Discrete.mk q)).toFunctor.map ξ.obj.hom) := by
+              simpa [Pseudofunctor.mapComp', Pseudofunctor.mapComp'_eq_mapComp] using
+                H.mapComp'_naturality_1 (Discrete.mk q) (Discrete.mk r)
+                  (Discrete.mk q ≫ Discrete.mk r) (by rfl) ξ.obj.hom
+            simp only [Functor.map_comp, Category.assoc]
+            have hH_assoc :
+                ((H.mapComp (Discrete.mk q) (Discrete.mk r)).inv.toNatTrans.app
+                      ((f.app (.mk U)).toFunctor.obj ξ.obj.left) ≫
+                    (H.map (Discrete.mk (q ≫ r))).toFunctor.map ξ.obj.hom ≫
+                      (H.mapComp (Discrete.mk q) (Discrete.mk r)).hom.toNatTrans.app
+                        ((g.app (.mk U)).toFunctor.obj ξ.obj.right)) ≫
+                  (H.map (Discrete.mk r)).toFunctor.map
+                      ((g.naturality (Discrete.mk q)).inv.toNatTrans.app ξ.obj.right) ≫
+                    (g.naturality (Discrete.mk r)).inv.toNatTrans.app
+                      ((G.map (Discrete.mk q)).toFunctor.obj ξ.obj.right) ≫
+                  (g.app (.mk W)).toFunctor.map
+                      ((G.mapComp (Discrete.mk q) (Discrete.mk r)).inv.toNatTrans.app
+                        ξ.obj.right) ≫
+                    (g.app (.mk W)).toFunctor.map
+                      ((G.mapComp (Discrete.mk q) (Discrete.mk r)).hom.toNatTrans.app
+                        ξ.obj.right) =
+                (H.map (Discrete.mk r)).toFunctor.map
+                    ((H.map (Discrete.mk q)).toFunctor.map ξ.obj.hom) ≫
+                  (H.map (Discrete.mk r)).toFunctor.map
+                      ((g.naturality (Discrete.mk q)).inv.toNatTrans.app ξ.obj.right) ≫
+                    (g.naturality (Discrete.mk r)).inv.toNatTrans.app
+                      ((G.map (Discrete.mk q)).toFunctor.obj ξ.obj.right) ≫
+                  (g.app (.mk W)).toFunctor.map
+                      ((G.mapComp (Discrete.mk q) (Discrete.mk r)).inv.toNatTrans.app
+                        ξ.obj.right) ≫
+                    (g.app (.mk W)).toFunctor.map
+                      ((G.mapComp (Discrete.mk q) (Discrete.mk r)).hom.toNatTrans.app
+                        ξ.obj.right) := by
+              rw [hH]
+            simp only [Category.assoc] at hH_assoc
+            have hH_assoc_left := hH_assoc
+            simp only [← Category.assoc] at hH_assoc_left ⊢
+            have hH_full := congrArg (fun k =>
+              (f.app (.mk W)).toFunctor.map
+                    ((F.mapComp (Discrete.mk q) (Discrete.mk r)).hom.toNatTrans.app
+                      ξ.obj.left) ≫
+                  (f.naturality (Discrete.mk r)).hom.toNatTrans.app
+                    ((F.map (Discrete.mk q)).toFunctor.obj ξ.obj.left) ≫
+                  (H.map (Discrete.mk r)).toFunctor.map
+                    ((f.naturality (Discrete.mk q)).hom.toNatTrans.app ξ.obj.left) ≫ k)
+              hH_assoc_left
+            simp only [← Category.assoc] at hH_full
+            rw [hH_full]
+            simp only [Category.assoc, ← Functor.map_comp,
+              Cat.Hom.inv_hom_id_toNatTrans_app, Functor.map_id, Category.comp_id]
+            simp
+            )
+      · intro ξ ζ h
+        apply ObjectProperty.hom_ext
+        apply Comma.hom_ext
+        · change
+            (F.map (Discrete.mk (q ≫ r))).toFunctor.map h.hom.left ≫
+                (Cat.Hom.toNatIso
+                  (F.mapComp (Discrete.mk q) (Discrete.mk r))).hom.app ζ.obj.left =
+              (Cat.Hom.toNatIso
+                (F.mapComp (Discrete.mk q) (Discrete.mk r))).hom.app ξ.obj.left ≫
+                (F.map (Discrete.mk r)).toFunctor.map
+                  ((F.map (Discrete.mk q)).toFunctor.map h.hom.left)
+          exact (Cat.Hom.toNatIso
+            (F.mapComp (Discrete.mk q) (Discrete.mk r))).hom.naturality h.hom.left
+        · change
+            (G.map (Discrete.mk (q ≫ r))).toFunctor.map h.hom.right ≫
+                (Cat.Hom.toNatIso
+                  (G.mapComp (Discrete.mk q) (Discrete.mk r))).hom.app ζ.obj.right =
+              (Cat.Hom.toNatIso
+                (G.mapComp (Discrete.mk q) (Discrete.mk r))).hom.app ξ.obj.right ≫
+                (G.map (Discrete.mk r)).toFunctor.map
+                  ((G.map (Discrete.mk q)).toFunctor.map h.hom.right)
+          exact (Cat.Hom.toNatIso
+            (G.mapComp (Discrete.mk q) (Discrete.mk r))).hom.naturality h.hom.right)
     (fun {U V W X : Cᵒᵖ} q r s => by
       sorry)
     (fun {U V : Cᵒᵖ} q => by

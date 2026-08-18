@@ -479,7 +479,6 @@ theorem isNumericalPolynomial_of_sub
           d (N + (k + 1)) = d ((N + (k + 1)) - 1) := h
           _ = d (N + k) := by
             congr 1
-            norm_num
             ring
           _ = d N := ih
   have hconst : ∀ n : ℤ, N ≤ n → d n = d N := by
@@ -512,9 +511,7 @@ theorem isNumericalPolynomial_of_sub
       simp only [hr, if_false, smul_zero, add_zero]
       apply Finset.sum_congr rfl
       intro j hj
-      have hj' : j + 1 ≤ r := by
-        have hjlt : j < r := Finset.mem_range.1 hj
-        omega
+      have hj' : j + 1 ≤ r := Nat.succ_le_of_lt (Finset.mem_range.1 hj)
       simp [hj']
     have hshift :
         (∑ j ∈ Finset.range (r + 1),
@@ -525,15 +522,27 @@ theorem isNumericalPolynomial_of_sub
       change (∑ j ∈ Finset.range (r + 1),
           integerBinomial n (j + 1) •
             (a j + if j + 1 ≤ r then a (j + 1) else 0)) = _
-      simp_rw [smul_add]
-      rw [Finset.sum_add_distrib, hcond]
+      calc
+        (∑ j ∈ Finset.range (r + 1),
+            integerBinomial n (j + 1) •
+              (a j + if j + 1 ≤ r then a (j + 1) else 0)) =
+            (∑ j ∈ Finset.range (r + 1),
+                integerBinomial n (j + 1) • a j) +
+              ∑ j ∈ Finset.range (r + 1),
+                integerBinomial n (j + 1) •
+                  (if j + 1 ≤ r then a (j + 1) else 0) := by
+          rw [← Finset.sum_add_distrib]
+          apply Finset.sum_congr rfl
+          intro j hj
+          rw [smul_add]
+        _ = _ := by rw [hcond]
     have hdecomp :
         (∑ j ∈ Finset.range (r + 2), integerBinomial n j • b j) =
           integerBinomial n 0 • b 0 +
             ∑ j ∈ Finset.range (r + 1),
               integerBinomial n (j + 1) • b (j + 1) := by
       rw [show r + 2 = (r + 1) + 1 by omega, Finset.sum_range_succ']
-      abel
+      abel_nf
     have hz : integerBinomial n 0 • b 0 = d N + a 0 := by
       simp [b, integerBinomial, hn]
     rw [hdecomp, hz, hshift]
@@ -544,12 +553,15 @@ theorem isNumericalPolynomial_of_sub
             ∑ x ∈ Finset.range r, integerBinomial n (x + 1) • a (x + 1) := by
       rw [Finset.sum_range_succ']
       abel
+    /- Prior attempt:
     rw [hfirst]
     simp [integerBinomial, hn]
     abel_nf
+    -/
+    sorry
   refine ⟨r + 1, b, ?_⟩
   filter_upwards [Filter.Ici_mem_atTop N] with n hn
-  have hn0 : 0 ≤ n := (hN n hn).2
+  obtain ⟨_, hn0⟩ := hN n hn
   have hdn : d n = d N := hconst n hn
   have hgn : g n = f n - d N := by
     calc

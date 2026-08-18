@@ -12,6 +12,10 @@ import Mathlib.RingTheory.Localization.BaseChange
 import Mathlib.RingTheory.LocalProperties.Submodule
 import Mathlib.RingTheory.Spectrum.Prime.RingHom
 import Mathlib.RingTheory.LocalRing.ResidueField.Fiber
+import Mathlib.RingTheory.Artinian.Ring
+import Mathlib.RingTheory.AdicCompletion.Algebra
+import Mathlib.RingTheory.SimpleModule.Basic
+import Mathlib.RingTheory.TensorProduct.Finite
 import Mathlib.RingTheory.TensorProduct.Maps
 import Mathlib.LinearAlgebra.TensorProduct.Vanishing
 import Mathlib.CategoryTheory.Limits.EpiMono
@@ -1796,6 +1800,79 @@ theorem exists_matrixTriple_associated_of_mem_epicenter
     simpa [t] using (Classical.choose_spec (hcol j)).symm
   · intro i
     simpa [t] using (Classical.choose_spec (hrow i)).symm
+
+private theorem nontrivial_tensorProduct_of_finite_ring
+    (R M : Type u) [CommRing R] [AddCommGroup M] [Module R M] [Finite R]
+    [Nontrivial M] : Nontrivial (M ⊗[R] M) := by
+  letI : IsArtinianRing R := isArtinian_of_finite
+  let J : Ideal R := Ring.jacobson R
+  have hJ : IsNilpotent J := by
+    rw [show J = Ring.jacobson R by rfl, ← Ideal.jacobson_bot]
+    exact IsArtinianRing.isNilpotent_jacobson_bot
+  have hJM : J • (⊤ : Submodule R M) ≠ ⊤ := by
+    intro h
+    obtain ⟨n, hn⟩ := hJ
+    have hpow : ∀ n : ℕ, J ^ n • (⊤ : Submodule R M) = ⊤ := by
+      intro n
+      induction n with
+      | zero => simp
+      | succ n ih =>
+          rw [pow_succ', ← Ideal.smul_eq_mul, Submodule.smul_assoc, ih, h]
+    have htopbot : (⊤ : Submodule R M) = ⊥ := by
+      rw [← hpow n, hn]
+      change (⊥ : Ideal R) • (⊤ : Submodule R M) = ⊥
+      rw [Submodule.bot_smul]
+    exact top_ne_bot htopbot
+  let Q : Type u := M ⧸ (J • (⊤ : Submodule R M))
+  letI : Nontrivial Q := by
+    exact Submodule.Quotient.nontrivial_iff.mpr hJM
+  letI : IsSemisimpleRing (R ⧸ J) := by
+    dsimp [J]
+    infer_instance
+  letI : IsSemisimpleModule (R ⧸ J) Q := inferInstance
+  letI : IsScalarTower R (R ⧸ J) Q := by
+    infer_instance
+  obtain ⟨L, hL, _⟩ :=
+    (eq_top_or_exists_le_coatom (⊥ : Submodule (R ⧸ J) Q)).resolve_left bot_ne_top
+  let T : Type u := Q ⧸ L
+  letI : IsSimpleModule (R ⧸ J) T := by
+    exact isSimpleModule_iff_isCoatom.mpr hL
+  letI : Nontrivial T := IsSimpleModule.nontrivial (R ⧸ J) T
+  letI : Module R T := Module.compHom T (Ideal.Quotient.mk J)
+  letI : IsScalarTower R (R ⧸ J) T :=
+    { smul_assoc := by
+        intro r a x
+        change (Ideal.Quotient.mk J r * a) • x =
+          (Ideal.Quotient.mk J r) • (a • x)
+        rw [mul_smul] }
+  let t : T := Classical.choose (exists_ne (0 : T))
+  have ht : t ≠ 0 := Classical.choose_spec (exists_ne (0 : T))
+  have hgen : Function.Surjective (LinearMap.toSpanSingleton R T t) := by
+    intro x
+    obtain ⟨a, ha⟩ := IsSimpleModule.toSpanSingleton_surjective (R ⧸ J) ht x
+    obtain ⟨r, hr⟩ := Ideal.Quotient.mk_surjective a
+    refine ⟨r, ?_⟩
+    change r • t = x
+    rw [← IsScalarTower.algebraMap_smul (R ⧸ J) r t,
+      Ideal.Quotient.algebraMap_eq J, hr]
+    simpa only [LinearMap.toSpanSingleton_apply] using ha
+  letI : Module.Finite R T :=
+    Module.Finite.of_surjective (LinearMap.toSpanSingleton R T t) hgen
+  let qT : Q →ₗ[R] T :=
+    { toFun := Submodule.mkQ L
+      map_add' := (Submodule.mkQ L).map_add
+      map_smul' := by
+        intro r x
+        rw [← IsScalarTower.algebraMap_smul (R ⧸ J) r x,
+          ← IsScalarTower.algebraMap_smul (R ⧸ J) r (Submodule.mkQ L x)]
+        exact (Submodule.mkQ L).map_smul _ _ }
+  let φ : M →ₗ[R] T :=
+    qT ∘ₗ Submodule.mkQ (J • (⊤ : Submodule R M))
+  have hφ : Function.Surjective φ := by
+    simpa [φ, Function.comp_def] using
+      (Submodule.mkQ_surjective L).comp
+        (Submodule.mkQ_surjective (J • (⊤ : Submodule R M)))
+  exact (TensorProduct.map_surjective hφ hφ).nontrivial
 
 /-- An epimorphism cannot increase the cardinality of the underlying ring. -/
 theorem cardinality_target_le_source_of_epimorphism

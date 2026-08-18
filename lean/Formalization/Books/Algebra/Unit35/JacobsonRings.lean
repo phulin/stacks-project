@@ -3,7 +3,6 @@ import Formalization.Books.Algebra.Unit31.NoetherianRings
 import Formalization.Books.Algebra.Unit34.HilbertNullstellensatz
 import Formalization.Books.Topology.Unit18.JacobsonSpaces
 import Mathlib.Algebra.MvPolynomial.Basic
-import Mathlib.Algebra.Group.Pi.Units
 import Mathlib.FieldTheory.Finite.Basic
 import Mathlib.LinearAlgebra.Matrix.GeneralLinearGroup.Basic
 import Mathlib.LinearAlgebra.Matrix.Rank
@@ -11,7 +10,6 @@ import Mathlib.RingTheory.DiscreteValuationRing.Basic
 import Mathlib.RingTheory.Ideal.MinimalPrime.Localization
 import Mathlib.RingTheory.Ideal.Int
 import Mathlib.RingTheory.Ideal.NatInt
-import Mathlib.RingTheory.Localization.Away.Lemmas
 import Mathlib.RingTheory.Localization.FractionRing
 import Mathlib.RingTheory.Spectrum.Maximal.Localization
 import Mathlib.RingTheory.Spectrum.Prime.Jacobson
@@ -508,11 +506,10 @@ theorem productOfFields_element_unit_mul_idempotent
   let u : ProductOfFields A k := fun a => if f a = 0 then 1 else f a
   change ∃ u e : ProductOfFields A k, IsUnit u ∧ IsIdempotentElem e ∧ f = u * e
   refine ⟨u, e, ?_, ?_, ?_⟩
-  · rw [Pi.isUnit_iff]
-    intro a
-    by_cases hfa : f a = 0
-    · simp [u, hfa]
-    · exact isUnit_iff_ne_zero.mpr (by simp [u, hfa])
+  · rw [isUnit_iff_exists_inv]
+    refine ⟨fun a => if f a = 0 then 1 else (f a)⁻¹, ?_⟩
+    funext a
+    by_cases hfa : f a = 0 <;> simp [u, hfa]
   · rw [isIdempotentElem_iff]
     funext a
     by_cases hfa : f a = 0 <;> simp [e, hfa]
@@ -555,7 +552,8 @@ theorem productOfFields_localization_identities
           (ProductOfFields A k ⧸ Ideal.span ({1 - e} : Set (ProductOfFields A k)))) := by
     let : IsLocalization.Away e
         (ProductOfFields A k ⧸ Ideal.span ({1 - e} : Set (ProductOfFields A k))) :=
-      IsLocalization.Away.quotient_of_isIdempotentElem he
+      IsLocalization.away_of_isIdempotentElem he Ideal.mk_ker
+        Ideal.Quotient.mk_surjective
     let awayE : Localization.Away e ≃+*
         (ProductOfFields A k ⧸ Ideal.span ({1 - e} : Set (ProductOfFields A k))) :=
       (IsLocalization.algEquiv (Submonoid.powers e)

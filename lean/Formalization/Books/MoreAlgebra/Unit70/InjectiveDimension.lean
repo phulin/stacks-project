@@ -148,6 +148,7 @@ structure InjectiveAmplitudeTruncationData
   truncationTermIso : ∀ (i : ℤ), a ≤ i → i < b →
     Nonempty (truncation.X i ≅ I.X i)
   kernel : ModuleCat.{u} R
+  kernelInjective : Injective kernel
   kernelIso : kernel ≅ CategoryTheory.Limits.kernel (I.d b (b + 1))
   triangle : Triangle (DerivedCategory (ModuleCat.{u} R))
   distinguished : triangle ∈ distTriang (DerivedCategory (ModuleCat.{u} R))
@@ -218,18 +219,21 @@ variable [HasDerivedCategory.{w} (ModuleCat.{u} R)]
 
 /-! ## The Dedekind-domain example
 
-The source says that `R/I` has projective dimension `1`.  The usable
-statement here is the canonical bound `≤ 1`: it is what the subsequent
-injective-dimension argument uses, and exact equality would fail for the
-nonzero ideal `I = ⊤`. -/
+The source says that `R/I` has projective dimension `1`.  We record that
+exact statement for proper nonzero ideals, and also record the canonical
+bound `≤ 1` used by the subsequent injective-dimension argument. -/
 
-/-- The source's Dedekind-domain example, including the finite-projective
-ideal assertion, the injective-dimension bound, Ext vanishing in degrees at
-least two, and the resulting bounded-derived decomposition interface. -/
+/-- The source's Dedekind-domain example, including finite projectivity of
+nonzero ideals, exact projective dimension for proper nonzero quotients, the
+injective-dimension bound, Ext vanishing in degrees at least two, and the
+resulting bounded-derived decomposition interface. -/
 theorem dedekind_domain_finite_injective_dimension
     :
     (∀ I : Ideal R, I ≠ ⊥ →
       Module.Finite R (I : Type u) ∧ Module.Projective R (I : Type u)) ∧
+    (∀ I : Ideal R, I ≠ ⊥ → I ≠ ⊤ →
+      CategoryTheory.projectiveDimension
+          (ModuleCat.of R (R ⧸ I)) = 1) ∧
     (∀ I : Ideal R, I ≠ ⊥ →
       CategoryTheory.HasProjectiveDimensionLE
         (ModuleCat.of R (R ⧸ I)) 1) ∧

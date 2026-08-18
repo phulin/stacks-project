@@ -1258,7 +1258,156 @@ theorem completion_radical
       I.map (algebraMap R (ringCompletion I)) ≤ Ring.jacobson (ringCompletion I) ∧
       RingHom.ker (AdicCompletion.evalOneₐ I).toRingHom ≤
         Ring.jacobson (ringCompletion I) := by
-  sorry
+  classical
+  let e1 : (R ⧸ I ^ 1 • (⊤ : Ideal R)) ≃+* (R ⧸ I) :=
+    Ideal.quotEquivOfEq (show I ^ 1 • (⊤ : Ideal R) = I by simp [smul_eq_mul])
+  have he1 (x : ringCompletion I) :
+      e1 (x.val 1) = AdicCompletion.evalOneₐ I x := by
+    dsimp [e1]
+    apply AdicCompletion.induction_on I R x
+    intro a
+    rw [← AdicCompletion.factorₐ_evalₐ_one, AdicCompletion.evalₐ_mk]
+    simp [Ideal.quotEquivOfEq]
+    change (Submodule.quotEquivOfEq _ _ _)
+      (Submodule.Quotient.mk (a 1)) = Submodule.Quotient.mk (a 1)
+    rw [Submodule.quotEquivOfEq_mk]
+  have hmul (m n : ℕ) (hmn : m ≤ n)
+      (a b : R ⧸ I ^ n • (⊤ : Submodule R R)) :
+      AdicCompletion.transitionMap I R hmn (a * b) =
+        AdicCompletion.transitionMap I R hmn a *
+          AdicCompletion.transitionMap I R hmn b := by
+    refine Quotient.inductionOn' a (fun a => ?_)
+    refine Quotient.inductionOn' b (fun b => ?_)
+    rfl
+  have hvalunit : ∀ (x : ringCompletion I), IsUnit (AdicCompletion.evalOneₐ I x) →
+      ∀ n, IsUnit (x.val n) := by
+    intro x hx n
+    by_cases hn : n = 0
+    · subst n
+      have htop : I ^ 0 • (⊤ : Submodule R R) = (⊤ : Submodule R R) := by simp
+      have hz : Subsingleton (R ⧸ I ^ 0 • (⊤ : Submodule R R)) := by
+        rw [htop]
+        infer_instance
+      exact @isUnit_of_subsingleton _ _ hz _
+    · let r : R := Quotient.out (x.val n)
+      have hr : (Submodule.Quotient.mk r : R ⧸ I ^ n • (⊤ : Submodule R R)) = x.val n :=
+        Quotient.out_eq _
+      rw [← hr]
+      have hcompat := x.property (show 1 ≤ n by omega)
+      rw [← hr] at hcompat
+      have hfirst :
+          e1 (AdicCompletion.transitionMap I R (show 1 ≤ n by omega)
+            (Submodule.Quotient.mk r)) = Ideal.Quotient.mk I r := by
+        change (Submodule.quotEquivOfEq (I ^ 1 • (⊤ : Submodule R R)) I
+            (show I ^ 1 • (⊤ : Submodule R R) = I by simp [smul_eq_mul]))
+          (Submodule.Quotient.mk (p := I ^ 1 • (⊤ : Submodule R R)) r) =
+            Submodule.Quotient.mk r
+        rw [Submodule.quotEquivOfEq_mk]
+      have hcompat' := congrArg e1 hcompat
+      have heq : Ideal.Quotient.mk I r = AdicCompletion.evalOneₐ I x := by
+        calc
+          Ideal.Quotient.mk I r =
+              e1 (AdicCompletion.transitionMap I R (show 1 ≤ n by omega)
+                (Submodule.Quotient.mk r)) := hfirst.symm
+          _ = e1 (x.val 1) := hcompat'
+          _ = AdicCompletion.evalOneₐ I x := he1 x
+      have hunit : IsUnit (Ideal.Quotient.mk I r) := by
+        rw [heq]
+        exact hx
+      have hpow : IsUnit (Ideal.Quotient.mk (I ^ n) r) :=
+        (Ideal.Quotient.isUnit_mk_pow_iff_isUnit_mk I hn).2 hunit
+      have hpow' : IsUnit (Submodule.Quotient.mk r :
+          R ⧸ I ^ n • (⊤ : Submodule R R)) := by
+        have hpow_eq : I ^ n • (⊤ : Ideal R) = I ^ n := by
+          rw [smul_eq_mul, Ideal.mul_top]
+        let e : (R ⧸ I ^ n • (⊤ : Ideal R)) ≃+* (R ⧸ I ^ n) :=
+          Ideal.quotEquivOfEq hpow_eq
+        have hu' := hpow.map e.symm.toRingHom
+        simp only [e] at hu'
+        exact hu'
+      exact hpow'
+  have hunit : ∀ x : ringCompletion I, IsUnit (AdicCompletion.evalOneₐ I x) →
+      IsUnit x := by
+    intro x hx
+    let invCoord : ∀ n, R ⧸ I ^ n • (⊤ : Submodule R R) :=
+      fun n => (isUnit_iff_exists_inv.mp (hvalunit x hx n)).choose
+    have invCoord_spec (n : ℕ) :
+        x.val n * invCoord n = 1 :=
+      (isUnit_iff_exists_inv.mp (hvalunit x hx n)).choose_spec
+    let y : ringCompletion I := {
+      val := invCoord
+      property := by
+        intro m n hmn
+        have hinv :
+            x.val m * AdicCompletion.transitionMap I R hmn (invCoord n) = 1 := by
+          calc
+            x.val m * AdicCompletion.transitionMap I R hmn (invCoord n) =
+                AdicCompletion.transitionMap I R hmn (x.val n) *
+                  AdicCompletion.transitionMap I R hmn (invCoord n) := by
+                    rw [x.property hmn]
+            _ = AdicCompletion.transitionMap I R hmn (x.val n * invCoord n) := by
+                  rw [hmul]
+            _ = AdicCompletion.transitionMap I R hmn 1 := by rw [invCoord_spec]
+            _ = 1 := by rfl
+        calc
+          AdicCompletion.transitionMap I R hmn (invCoord n) =
+              1 * AdicCompletion.transitionMap I R hmn (invCoord n) := by simp
+          _ = (x.val m * invCoord m) *
+                AdicCompletion.transitionMap I R hmn (invCoord n) := by
+                  rw [invCoord_spec]
+          _ = invCoord m * (x.val m *
+                AdicCompletion.transitionMap I R hmn (invCoord n)) := by ring
+          _ = invCoord m * 1 := by rw [hinv]
+          _ = invCoord m := by simp
+    }
+    have hxy : x * y = 1 := by
+      apply AdicCompletion.ext
+      intro n
+      change x.val n * invCoord n = 1
+      exact invCoord_spec n
+    exact isUnit_iff_exists_inv.mpr ⟨y, hxy⟩
+  have hmapker : I.map (algebraMap R (ringCompletion I)) ≤
+      RingHom.ker (AdicCompletion.evalOneₐ I).toRingHom := by
+    rw [Ideal.map_le_iff_le_comap]
+    intro r hr
+    change (AdicCompletion.evalOneₐ I).toRingHom
+      (algebraMap R (ringCompletion I) r) = 0
+    rw [← RingHom.comp_apply, AdicCompletion.evalOneₐ_comp_algebraMap_eq_mk]
+    exact Ideal.Quotient.eq_zero_iff_mem.mpr hr
+  have hmapunit : ∀ x : ringCompletion I,
+      x ∈ I.map (algebraMap R (ringCompletion I)) → IsUnit (1 + x) := by
+    intro x hx
+    apply hunit (1 + x)
+    have hx0 : AdicCompletion.evalOneₐ I x = 0 := RingHom.mem_ker.mp (hmapker hx)
+    rw [map_add, map_one, hx0, add_zero]
+    exact isUnit_one
+  have hradical : I.map (algebraMap R (ringCompletion I)) ≤
+      Ring.jacobson (ringCompletion I) := by
+    rw [← Ideal.jacobson_bot]
+    intro z hz
+    apply Ideal.mem_jacobson_bot.mpr
+    intro y
+    simpa [add_comm] using hmapunit (z * y)
+      ((I.map (algebraMap R (ringCompletion I))).mul_mem_right y hz)
+  refine ⟨hunit, ?_, hmapunit, hradical, ?_⟩
+  · intro r hr
+    apply hunit (1 + algebraMap R (ringCompletion I) r)
+    have hzero : AdicCompletion.evalOneₐ I
+        (algebraMap R (ringCompletion I) r) = 0 := by
+      change (AdicCompletion.evalOneₐ I).toRingHom
+        (algebraMap R (ringCompletion I) r) = 0
+      rw [← RingHom.comp_apply, AdicCompletion.evalOneₐ_comp_algebraMap_eq_mk]
+      exact Ideal.Quotient.eq_zero_iff_mem.mpr hr
+    rw [map_add, map_one, hzero, add_zero]
+    exact isUnit_one
+  · rw [← Ideal.jacobson_bot]
+    intro x hx
+    apply Ideal.mem_jacobson_bot.mpr
+    intro y
+    apply hunit (x * y + 1)
+    have hx0 : AdicCompletion.evalOneₐ I x = 0 := RingHom.mem_ker.mp hx
+    rw [map_add, map_one, map_mul, hx0, zero_mul]
+    simpa using (isUnit_one : IsUnit (1 : ringCompletion I))
 
 /-! ## Finitely generated ideals and completeness -/
 
@@ -1270,6 +1419,103 @@ theorem surjective_to_completion_of_finite_generators
     (hf : ∀ i : Fin r,
       Function.Surjective (AdicCompletion.of (Ideal.span ({f i} : Set A)) M)) :
     Function.Surjective (AdicCompletion.of I M) := by
+  classical
+  have hsup_pow : ∀ (s : Finset (Fin r)) (n : ℕ), s.Nonempty →
+      (s.sup (fun i => Ideal.span ({f i} : Set A))) ^ (s.card * n) ≤
+        s.sup (fun i => (Ideal.span ({f i} : Set A)) ^ n) := by
+    intro s n hs
+    induction s using Finset.induction_on with
+    | empty => exact (False.elim (by simpa using hs))
+    | @insert a s ha ih =>
+        by_cases hs' : s.Nonempty
+        · rw [Finset.sup_insert, Finset.sup_insert,
+            Finset.card_insert_of_notMem ha]
+          calc
+            (Ideal.span ({f a} : Set A) ⊔
+                s.sup (fun i => Ideal.span ({f i} : Set A))) ^
+                ((s.card + 1) * n) =
+                (Ideal.span ({f a} : Set A) ⊔
+                  s.sup (fun i => Ideal.span ({f i} : Set A))) ^
+                  (n + s.card * n) := by congr 1 <;> ring
+            _ ≤ (Ideal.span ({f a} : Set A)) ^ n ⊔
+                (s.sup (fun i => Ideal.span ({f i} : Set A))) ^ (s.card * n) :=
+              Ideal.sup_pow_add_le_pow_sup_pow
+            _ ≤ (Ideal.span ({f a} : Set A)) ^ n ⊔
+                s.sup (fun i => (Ideal.span ({f i} : Set A)) ^ n) :=
+              sup_le_sup_left (ih hs') _
+        · have hsempty : s = ∅ := Finset.not_nonempty_iff_eq_empty.mp hs'
+          subst s
+          simp
+  by_cases hr : r = 0
+  · subst r
+    have hIbot : I = (⊥ : Ideal A) := by
+      rw [hI]
+      simp
+    rw [hIbot]
+    exact AdicCompletion.of_surjective (I := (⊥ : Ideal A)) (M := M)
+  have hrpos : 0 < r := Nat.pos_of_ne_zero hr
+  let K (n : ℕ) : Ideal A :=
+    ⨆ i : Fin r, (Ideal.span ({f i} : Set A)) ^ n
+  have hI_pow (n : ℕ) :
+      I ^ (r * n) • (⊤ : Submodule A M) ≤ K n • (⊤ : Submodule A M) := by
+    apply Submodule.smul_mono_left
+    dsimp [K]
+    rw [hI, Ideal.span_range_eq_iSup]
+    simpa [Finset.sup_eq_iSup] using
+      hsup_pow Finset.univ n
+        ⟨⟨0, hrpos⟩, Finset.mem_univ _⟩
+  have hdfsum {p : Fin r → Submodule A M} (z : Π₀ i, p i) :
+      (∑ i : Fin r, (z i).1) =
+        DFinsupp.lsum ℕ (fun i => (p i).subtype) z := by
+    classical
+    simp [DFinsupp.lsum_apply_apply, DFinsupp.sumAddHom_apply]
+  rw [AdicCompletion.of_surjective_iff]
+  refine ⟨?_⟩
+  intro g hg
+  let a : ℕ → M := fun n => g (r * (n + 1))
+  let p : ℕ → Fin r → Submodule A M := fun n i =>
+    (Ideal.span ({f i} : Set A)) ^ n • (⊤ : Submodule A M)
+  have hchoose (n : ℕ) :
+      ∃ z : Π₀ i, p (n + 1) i,
+        z.sum (fun _ xi => (xi : M)) = a (n + 1) - a n := by
+    have hstep : r * (n + 1) ≤ r * ((n + 1) + 1) :=
+      Nat.mul_le_mul_left r (Nat.le_succ _)
+    have hdiffI : a (n + 1) - a n ∈
+        I ^ (r * (n + 1)) • (⊤ : Submodule A M) := by
+      simpa [a] using SModEq.sub_mem.mp (hg hstep).symm
+    have hdiffK := hI_pow (n + 1) hdiffI
+    have hdiffp : a (n + 1) - a n ∈ ⨆ i, p (n + 1) i := by
+      simpa [p, K, Submodule.iSup_smul] using hdiffK
+    exact (Submodule.mem_iSup_iff_exists_dfinsupp' (p (n + 1))
+      (a (n + 1) - a n)).mp hdiffp
+  choose z hz using hchoose
+  let b : Fin r → ℕ → M := fun i n => (z n i).1
+  have hb (i : Fin r) (n : ℕ) : b i n ∈ p (n + 1) i := (z n i).2
+  let s : Fin r → ℕ → M := fun i n => (∑ k ∈ Finset.range n, b i k)
+  have hsucc (i : Fin r) (n : ℕ) :
+      s i n ≡ s i (n + 1) [SMOD
+        ((Ideal.span ({f i} : Set A)) ^ n • (⊤ : Submodule A M))] := by
+    have hb' : b i n ∈
+        (Ideal.span ({f i} : Set A)) ^ n • (⊤ : Submodule A M) :=
+      (Submodule.smul_mono_left (Ideal.pow_le_pow_right (Nat.le_succ n))) (hb i n)
+    rw [SModEq.sub_mem]
+    convert Submodule.neg_mem _ hb' using 1 <;>
+      simp [s, Finset.sum_range_succ] <;> abel
+  have hcauchy (i : Fin r) : ∀ {m n : ℕ}, m ≤ n →
+      s i m ≡ s i n [SMOD
+        ((Ideal.span ({f i} : Set A)) ^ m • (⊤ : Submodule A M))] := by
+    intro m n hmn
+    induction n, hmn using Nat.le_induction with
+    | base => rfl
+    | succ n hmn ih =>
+        exact ih.trans
+          (SModEq.mono
+            (Submodule.smul_mono_left (Ideal.pow_le_pow_right hmn))
+            (hsucc i n))
+  have hlim (i : Fin r) : ∃ L : M, ∀ n : ℕ,
+      s i n ≡ L [SMOD
+        ((Ideal.span ({f i} : Set A)) ^ n • (⊤ : Submodule A M))] :=
+    (AdicCompletion.of_surjective_iff.mp (hf i)).prec (hcauchy i)
   sorry
 
 theorem isAdicComplete_of_le_of_fg
@@ -1285,7 +1531,119 @@ theorem completion_equiv_of_power_le
     (c d : ℕ) (hc : 0 < c) (hd : 0 < d)
     (hIJ : I ^ c ≤ J) (hJI : J ^ d ≤ I) :
     Nonempty (completion I M ≃ₗ[R] completion J M) := by
-  sorry
+  have hIpow (n : ℕ) : I ^ (c * n) • (⊤ : Submodule R M) ≤
+      J ^ n • (⊤ : Submodule R M) := by
+    apply Submodule.smul_mono_left
+    simpa [pow_mul] using (Ideal.pow_right_mono hIJ n)
+  have hJpow (n : ℕ) : J ^ (d * n) • (⊤ : Submodule R M) ≤
+      I ^ n • (⊤ : Submodule R M) := by
+    apply Submodule.smul_mono_left
+    simpa [pow_mul] using (Ideal.pow_right_mono hJI n)
+  let fI : ∀ n : ℕ,
+      completion I M →ₗ[R] M ⧸ (J ^ n • (⊤ : Submodule R M)) :=
+    fun n => Submodule.factor (hIpow n) ∘ₗ AdicCompletion.eval I M (c * n)
+  have hfI : ∀ {m n : ℕ} (hmn : m ≤ n),
+      AdicCompletion.transitionMap J M hmn ∘ₗ fI n = fI m := by
+    intro m n hmn
+    apply LinearMap.ext
+    intro x
+    have hcmn : c * m ≤ c * n := Nat.mul_le_mul_left c hmn
+    have hP : I ^ (c * n) • (⊤ : Submodule R M) ≤
+        I ^ (c * m) • (⊤ : Submodule R M) :=
+      Submodule.smul_mono_left (Ideal.pow_le_pow_right hcmn)
+    have hQ : J ^ n • (⊤ : Submodule R M) ≤
+        J ^ m • (⊤ : Submodule R M) :=
+      Submodule.smul_mono_left (Ideal.pow_le_pow_right hmn)
+    have hmaps :
+        (Submodule.factor hQ).comp (Submodule.factor (hIpow n)) =
+          (Submodule.factor (hIpow m)).comp (Submodule.factor hP) := by
+      rw [Submodule.factor_comp, Submodule.factor_comp]
+    change ((Submodule.factor hQ).comp (Submodule.factor (hIpow n)))
+        (x.val (c * n)) =
+      (Submodule.factor (hIpow m)) (x.val (c * m))
+    rw [hmaps, LinearMap.comp_apply]
+    exact congrArg (Submodule.factor (hIpow m)) (x.property hcmn)
+  let fJ : ∀ n : ℕ,
+      completion J M →ₗ[R] M ⧸ (I ^ n • (⊤ : Submodule R M)) :=
+    fun n => Submodule.factor (hJpow n) ∘ₗ AdicCompletion.eval J M (d * n)
+  have hfJ : ∀ {m n : ℕ} (hmn : m ≤ n),
+      AdicCompletion.transitionMap I M hmn ∘ₗ fJ n = fJ m := by
+    intro m n hmn
+    apply LinearMap.ext
+    intro x
+    have hdmn : d * m ≤ d * n := Nat.mul_le_mul_left d hmn
+    have hP : J ^ (d * n) • (⊤ : Submodule R M) ≤
+        J ^ (d * m) • (⊤ : Submodule R M) :=
+      Submodule.smul_mono_left (Ideal.pow_le_pow_right hdmn)
+    have hQ : I ^ n • (⊤ : Submodule R M) ≤
+        I ^ m • (⊤ : Submodule R M) :=
+      Submodule.smul_mono_left (Ideal.pow_le_pow_right hmn)
+    have hmaps :
+        (Submodule.factor hQ).comp (Submodule.factor (hJpow n)) =
+          (Submodule.factor (hJpow m)).comp (Submodule.factor hP) := by
+      rw [Submodule.factor_comp, Submodule.factor_comp]
+    change ((Submodule.factor hQ).comp (Submodule.factor (hJpow n)))
+        (x.val (d * n)) =
+      (Submodule.factor (hJpow m)) (x.val (d * m))
+    rw [hmaps, LinearMap.comp_apply]
+    exact congrArg (Submodule.factor (hJpow m)) (x.property hdmn)
+  let eIJ : completion I M →ₗ[R] completion J M :=
+    AdicCompletion.lift J fI hfI
+  let eJI : completion J M →ₗ[R] completion I M :=
+    AdicCompletion.lift I fJ hfJ
+  have hleft : ∀ x : completion I M, eJI (eIJ x) = x := by
+    intro x
+    apply AdicCompletion.ext
+    intro n
+    have hnd : n ≤ c * (d * n) := by
+      exact (Nat.le_mul_of_pos_right n hd).trans <| by
+        simpa [Nat.mul_comm] using Nat.le_mul_of_pos_left (d * n) hc
+    have hP : I ^ (c * (d * n)) • (⊤ : Submodule R M) ≤
+        I ^ n • (⊤ : Submodule R M) :=
+      Submodule.smul_mono_left (Ideal.pow_le_pow_right hnd)
+    have hmaps :
+        (Submodule.factor (hJpow n)).comp
+            (Submodule.factor (hIpow (d * n))) =
+          Submodule.factor hP := by
+      rw [Submodule.factor_comp]
+    change (Submodule.factor (hJpow n))
+        ((Submodule.factor (hIpow (d * n))) (x.val (c * (d * n)))) =
+      x.val n
+    change ((Submodule.factor (hJpow n)).comp
+        (Submodule.factor (hIpow (d * n)))) (x.val (c * (d * n))) =
+      x.val n
+    rw [hmaps]
+    exact x.property hnd
+  have hright : ∀ x : completion J M, eIJ (eJI x) = x := by
+    intro x
+    apply AdicCompletion.ext
+    intro n
+    have hnc : n ≤ d * (c * n) := by
+      exact (Nat.le_mul_of_pos_right n hc).trans <| by
+        simpa [Nat.mul_comm] using Nat.le_mul_of_pos_left (c * n) hd
+    have hP : J ^ (d * (c * n)) • (⊤ : Submodule R M) ≤
+        J ^ n • (⊤ : Submodule R M) :=
+      Submodule.smul_mono_left (Ideal.pow_le_pow_right hnc)
+    have hmaps :
+        (Submodule.factor (hIpow n)).comp
+            (Submodule.factor (hJpow (c * n))) =
+          Submodule.factor hP := by
+      rw [Submodule.factor_comp]
+    change (Submodule.factor (hIpow n))
+        ((Submodule.factor (hJpow (c * n))) (x.val (d * (c * n)))) =
+      x.val n
+    change ((Submodule.factor (hIpow n)).comp
+        (Submodule.factor (hJpow (c * n)))) (x.val (d * (c * n))) =
+      x.val n
+    rw [hmaps]
+    exact x.property hnc
+  refine ⟨{
+    toFun := eIJ
+    invFun := eJI
+    left_inv := hleft
+    right_inv := hright
+    map_add' := eIJ.map_add
+    map_smul' := eIJ.map_smul }⟩
 
 theorem isAdicComplete_iff_of_power_le
     {R : Type u} [CommRing R] (I J : Ideal R)

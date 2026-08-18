@@ -1099,7 +1099,7 @@ theorem exists_moduleSkyscraperSheafFunctor {X : TopCat.{v}}
       alpha A C (f ≫ g) = alpha A B f ≫ alpha B C g := by
     dsimp [alpha]
     rw [hk_comp A B C f g, S.map_comp]
-    simp [Category.assoc]
+    simp
   let F : ModuleCat.{v}
       (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x) ⥤ Mod O :=
     { obj := fun A => (D A).sheaf

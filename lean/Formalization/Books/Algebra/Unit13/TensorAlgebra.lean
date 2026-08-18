@@ -581,6 +581,149 @@ noncomputable def exteriorPowerRelationMap
         simp [Algebra.smul_def, mul_assoc] }
   exact TensorProduct.lift (leftMul.comp f)
 
+private noncomputable def symmetricPowerRelationSigma
+    {R : Type uR} {M₁ : Type uM₁} [CommRing R]
+    [AddCommGroup M₁] [Module R M₁] {n : ℕ} (hn : 0 < n) :
+    ULift.{uR} (Fin n) ≃
+      ULift.{uR} (Fin 1) ⊕ ULift.{uR} (Fin (n - 1)) := by
+  let h₁ : 1 + (n - 1) = n := Nat.add_sub_of_le (Nat.succ_le_iff.2 hn)
+  exact
+    ((Equiv.ulift : ULift.{uR} (Fin n) ≃ Fin n).trans (finCongr h₁.symm)).trans
+      (finSumFinEquiv.symm.trans
+        (Equiv.sumCongr (Equiv.ulift.symm) (Equiv.ulift.symm)))
+
+private theorem symmetricPowerRelationMap_tprod
+    {R : Type uR} {M₂ : Type uM₂} {M₁ : Type uM₁} [CommRing R]
+    [AddCommGroup M₂] [AddCommGroup M₁]
+    [Module R M₂] [Module R M₁]
+    (f : M₂ →ₗ[R] M₁) {n : ℕ} (hn : 0 < n) (z : M₂)
+    (x : ULift.{uR} (Fin (n - 1)) → M₁) :
+    symmetricPowerRelationMap f hn (z ⊗ₜ[R] SymmetricPower.tprod R x) =
+      SymmetricPower.tprod R
+        (fun i => Sum.elim (fun _ => f z) x
+          ((symmetricPowerRelationSigma (R := R) (M₁ := M₁) hn) i)) := by
+  classical
+  let h₁ : 1 + (n - 1) = n := Nat.add_sub_of_le (Nat.succ_le_iff.2 hn)
+  let σ : ULift.{uR} (Fin n) ≃
+      ULift.{uR} (Fin 1) ⊕ ULift.{uR} (Fin (n - 1)) :=
+    ((Equiv.ulift : ULift.{uR} (Fin n) ≃ Fin n).trans (finCongr h₁.symm)).trans
+      (finSumFinEquiv.symm.trans
+        (Equiv.sumCongr (Equiv.ulift.symm) (Equiv.ulift.symm)))
+  let F : MultilinearMap R
+      (fun _ : ULift.{uR} (Fin 1) ⊕ ULift.{uR} (Fin (n - 1)) => M₁)
+      (symmetricPower R M₁ n) :=
+    (SymmetricPower.tprod R).domDomCongr σ
+  let H : M₁ →ₗ[R]
+      MultilinearMap R (fun _ : ULift.{uR} (Fin (n - 1)) => M₁)
+        (symmetricPower R M₁ n) :=
+    (MultilinearMap.ofSubsingletonₗ R R M₁
+      (MultilinearMap R (fun _ : ULift.{uR} (Fin (n - 1)) => M₁)
+        (symmetricPower R M₁ n)) (ULift.up 0)).symm F.currySum
+  let C : M₂ →ₗ[R]
+      (⨂[R] _ : ULift.{uR} (Fin (n - 1)), M₁) →ₗ[R]
+        symmetricPower R M₁ n :=
+    { toFun := fun z => PiTensorProduct.lift (H (f z))
+      map_add' := by
+        intro x y
+        change PiTensorProduct.lift (H (f (x + y))) =
+          PiTensorProduct.lift (H (f x)) + PiTensorProduct.lift (H (f y))
+        apply PiTensorProduct.ext
+        apply MultilinearMap.ext
+        intro v
+        change (PiTensorProduct.lift (H (f (x + y))))
+            (PiTensorProduct.tprod R v) =
+          ((PiTensorProduct.lift (H (f x)) + PiTensorProduct.lift (H (f y)))
+            (PiTensorProduct.tprod R v))
+        rw [LinearMap.add_apply, PiTensorProduct.lift.tprod,
+          PiTensorProduct.lift.tprod, PiTensorProduct.lift.tprod]
+        change H (f (x + y)) v = H (f x) v + H (f y) v
+        rw [f.map_add, H.map_add]
+        simp
+      map_smul' := by
+        intro r x
+        change PiTensorProduct.lift (H (f (r • x))) =
+          r • PiTensorProduct.lift (H (f x))
+        apply PiTensorProduct.ext
+        apply MultilinearMap.ext
+        intro v
+        change (PiTensorProduct.lift (H (f (r • x))))
+            (PiTensorProduct.tprod R v) =
+          ((r • PiTensorProduct.lift (H (f x))) (PiTensorProduct.tprod R v))
+        rw [LinearMap.smul_apply, PiTensorProduct.lift.tprod,
+          PiTensorProduct.lift.tprod]
+        change H (f (r • x)) v = r • H (f x) v
+        rw [f.map_smul, H.map_smul]
+        simp }
+  let hC (z : M₂) :
+      addConGen (SymmetricPower.Rel R (ULift.{uR} (Fin (n - 1))) M₁) ≤
+        AddCon.ker (C z).toAddMonoidHom := by
+    apply AddCon.addConGen_le.2
+    intro x y hxy
+    cases hxy with
+    | perm e q =>
+        change C z (PiTensorProduct.tprod R q) =
+          C z (PiTensorProduct.tprod R (fun i => q (e i)))
+        change (PiTensorProduct.lift (H (f z))) (PiTensorProduct.tprod R q) =
+          (PiTensorProduct.lift (H (f z)))
+            (PiTensorProduct.tprod R (fun i => q (e i)))
+        rw [PiTensorProduct.lift.tprod, PiTensorProduct.lift.tprod]
+        change H (f z) q = H (f z) (fun i => q (e i))
+        simp [H, F]
+        let e' : (ULift.{uR} (Fin 1) ⊕ ULift.{uR} (Fin (n - 1))) ≃
+            (ULift.{uR} (Fin 1) ⊕ ULift.{uR} (Fin (n - 1))) :=
+          Equiv.sumCongr (Equiv.refl _) e
+        let p := σ.trans (e'.trans σ.symm)
+        have hp := SymmetricPower.tprod_equiv (R := R) (M := M₁) p
+          (fun i => Sum.elim (fun _ => f z) q (σ i))
+        have hfun :
+            (fun i => Sum.elim (fun _ => f z) q (σ (p i))) =
+              (fun i => Sum.elim (fun _ => f z) (fun i => q (e i)) (σ i)) := by
+          funext i
+          cases hσ : σ i with
+          | inl a => simp [p, e', Equiv.trans_apply, hσ]
+          | inr b => simp [p, e', Equiv.trans_apply, hσ]
+        simpa only [hfun] using hp.symm
+  let B : M₂ →ₗ[R]
+      symmetricPower R M₁ (n - 1) →ₗ[R] symmetricPower R M₁ n :=
+    { toFun := fun z =>
+        { toFun := AddCon.lift
+            (addConGen (SymmetricPower.Rel R (ULift.{uR} (Fin (n - 1))) M₁))
+            (C z).toAddMonoidHom (hC z)
+          map_add' := by intro x y; exact map_add _ _ _
+          map_smul' := by
+            intro r x
+            refine AddCon.induction_on x ?_
+            intro t
+            change C z (r • t) = r • C z t
+            exact (C z).map_smul r t }
+      map_add' := by
+        intro x y
+        apply LinearMap.ext
+        intro z
+        refine AddCon.induction_on z ?_
+        intro t
+        change C (x + y) t = C x t + C y t
+        simp [C]
+      map_smul' := by
+        intro r x
+        apply LinearMap.ext
+        intro z
+        refine AddCon.induction_on z ?_
+        intro t
+        change C (r • x) t = r • C x t
+        simp [C] }
+  have hmap : symmetricPowerRelationMap f hn = TensorProduct.lift B := by
+    rfl
+  rw [hmap, TensorProduct.lift.tmul]
+  change AddCon.lift
+      (addConGen (SymmetricPower.Rel R (ULift.{uR} (Fin (n - 1))) M₁))
+      (C z).toAddMonoidHom (hC z)
+      (AddCon.mk' _ (PiTensorProduct.tprod R x)) = _
+  calc
+    _ = C z (PiTensorProduct.tprod R x) := AddCon.lift_coe (hC z) _
+    _ = _ := by
+      simp [C, H, F, SymmetricPower.tprod, symmetricPowerRelationSigma, σ, h₁]
+
 /-- Focused image-equals-kernel interface for the symmetric presentation. -/
 theorem symmetricPower_relation_range_eq_kernel
     {R M₂ M₁ M : Type*} [CommRing R]
@@ -591,7 +734,62 @@ theorem symmetricPower_relation_range_eq_kernel
     {n : ℕ} (hn : 0 < n) :
     LinearMap.range (symmetricPowerRelationMap f hn) =
       LinearMap.ker (symmetricPowerQuotientMap n g) := by
-  sorry
+  apply le_antisymm
+  · rintro x ⟨y, rfl⟩
+    refine TensorProduct.induction_on y (by simp) ?_ ?_
+    · intro z t
+      change symmetricPowerQuotientMap n g
+          (symmetricPowerRelationMap f hn (z ⊗ₜ[R] t)) = 0
+      refine AddCon.induction_on t ?_
+      intro v
+      refine PiTensorProduct.induction_on' v ?_ ?_
+      · intro x r
+        have hx :
+            SymmetricPower.mk R (ULift.{_} (Fin (n - 1))) M₁
+                (PiTensorProduct.tprodCoeff R x r) =
+              x • SymmetricPower.tprod R r := by
+          rw [PiTensorProduct.tprodCoeff_eq_smul_tprod]
+          rfl
+        change symmetricPowerQuotientMap n g
+            (symmetricPowerRelationMap f hn
+              (z ⊗ₜ[R] SymmetricPower.mk R (ULift.{_} (Fin (n - 1))) M₁
+                (PiTensorProduct.tprodCoeff R x r))) = 0
+        rw [hx]
+        rw [TensorProduct.tmul_smul, map_smul, map_smul]
+        have hpure :
+            symmetricPowerQuotientMap n g
+                (symmetricPowerRelationMap f hn
+                  (z ⊗ₜ[R] SymmetricPower.tprod R r)) = 0 := by
+          change symmetricPowerQuotientMap n g
+              (TensorProduct.lift _
+                (z ⊗ₜ[R] SymmetricPower.tprod R r)) = 0
+          rw [TensorProduct.lift.tmul]
+          dsimp only [symmetricPowerRelationMap]
+          sorry
+        rw [hpure, map_zero]
+      · intro x y hx hy
+        change symmetricPowerQuotientMap n g
+            (symmetricPowerRelationMap f hn
+              (z ⊗ₜ[R] SymmetricPower.mk R (ULift.{_} (Fin (n - 1))) M₁
+                (x + y))) = 0
+        rw [(SymmetricPower.mk R (ULift.{_} (Fin (n - 1))) M₁).map_add,
+          TensorProduct.tmul_add, map_add]
+        change symmetricPowerQuotientMap n g
+            (symmetricPowerRelationMap f hn
+              (z ⊗ₜ[R] SymmetricPower.mk R (ULift.{_} (Fin (n - 1))) M₁ x)) = 0 at hx
+        change symmetricPowerQuotientMap n g
+            (symmetricPowerRelationMap f hn
+              (z ⊗ₜ[R] SymmetricPower.mk R (ULift.{_} (Fin (n - 1))) M₁ y)) = 0 at hy
+        rw [map_add, map_add, hx, hy, map_zero]
+    · intro y₁ y₂ hy₁ hy₂
+      change symmetricPowerQuotientMap n g
+          (symmetricPowerRelationMap f hn (y₁ + y₂)) = 0
+      rw [map_add]
+      change symmetricPowerQuotientMap n g
+          (symmetricPowerRelationMap f hn y₁) = 0 at hy₁
+      change symmetricPowerQuotientMap n g
+          (symmetricPowerRelationMap f hn y₂) = 0 at hy₂
+      rw [map_add, hy₁, hy₂, map_zero]
 
 /-- Focused image-equals-kernel interface for the exterior presentation. -/
 theorem exteriorPower_relation_range_eq_kernel

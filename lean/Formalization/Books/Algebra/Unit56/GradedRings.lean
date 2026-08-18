@@ -266,7 +266,119 @@ theorem graded_short_exact_iff_componentwise
           Function.Exact (componentAddHom G 𝓚 𝓜 f hf d)
             (componentAddHom G 𝓜 𝓝 g hg d) ∧
           Function.Surjective (componentAddHom G 𝓜 𝓝 g hg d)) := by
-  sorry
+  classical
+  have hmapf (x : K) :
+      DirectSum.coeAddMonoidHom 𝓜.component
+          (DirectSum.map (fun d => componentAddHom G 𝓚 𝓜 f hf d)
+            (DirectSum.decompose 𝓚.component x)) = f x := by
+    induction x using DirectSum.Decomposition.inductionOn
+      (ℳ := 𝓚.component) with
+    | zero => simp
+    | homogeneous x =>
+        simp [componentAddHom]
+    | add x y hx hy =>
+        simp [DirectSum.decompose_add, hx, hy]
+  have hmapg (x : M) :
+      DirectSum.coeAddMonoidHom 𝓝.component
+          (DirectSum.map (fun d => componentAddHom G 𝓜 𝓝 g hg d)
+            (DirectSum.decompose 𝓜.component x)) = g x := by
+    induction x using DirectSum.Decomposition.inductionOn
+      (ℳ := 𝓜.component) with
+    | zero => simp
+    | homogeneous x =>
+        simp [componentAddHom]
+    | add x y hx hy =>
+        simp [DirectSum.decompose_add, hx, hy]
+  have hcomponent_f (x : K) (d : ℤ) :
+      componentAddHom G 𝓚 𝓜 f hf d (DirectSum.decompose 𝓚.component x d) =
+        DirectSum.decompose 𝓜.component (f x) d := by
+    have h : DirectSum.decompose 𝓜.component (f x) =
+        DirectSum.map (fun d => componentAddHom G 𝓚 𝓜 f hf d)
+          (DirectSum.decompose 𝓚.component x) := by
+      rw [← hmapf x]
+      exact (DirectSum.decompose 𝓜.component).apply_symm_apply _
+    simpa using congrArg (fun z => z d) h.symm
+  have hcomponent_g (x : M) (d : ℤ) :
+      componentAddHom G 𝓜 𝓝 g hg d (DirectSum.decompose 𝓜.component x d) =
+        DirectSum.decompose 𝓝.component (g x) d := by
+    have h : DirectSum.decompose 𝓝.component (g x) =
+        DirectSum.map (fun d => componentAddHom G 𝓜 𝓝 g hg d)
+          (DirectSum.decompose 𝓜.component x) := by
+      rw [← hmapg x]
+      exact (DirectSum.decompose 𝓝.component).apply_symm_apply _
+    simpa using congrArg (fun z => z d) h.symm
+  constructor
+  · rintro ⟨hinj, hexact, hsurj⟩ d
+    refine ⟨?_, ?_, ?_⟩
+    · intro x y hxy
+      apply Subtype.ext
+      exact hinj (congrArg Subtype.val hxy)
+    · apply Function.Exact.of_comp_of_mem_range
+      · funext x
+        change componentAddHom G 𝓜 𝓝 g hg d
+            (componentAddHom G 𝓚 𝓜 f hf d x) = 0
+        apply Subtype.ext
+        change g (f (x : K)) = 0
+        exact hexact.apply_apply_eq_zero (x : K)
+      · intro x hx
+        rcases (hexact (x : M)).mp (congrArg Subtype.val hx) with ⟨y, hy⟩
+        refine ⟨DirectSum.decompose 𝓚.component y d, ?_⟩
+        apply Subtype.ext
+        calc
+          f (DirectSum.decompose 𝓚.component y d) =
+              (DirectSum.decompose 𝓜.component (f y) d : M) :=
+            congrArg Subtype.val (hcomponent_f y d)
+          _ = x := by
+            rw [hy]
+            exact DirectSum.decompose_of_mem_same 𝓜.component x.property
+    · intro y
+      rcases hsurj (y : N) with ⟨x, hx⟩
+      refine ⟨DirectSum.decompose 𝓜.component x d, ?_⟩
+      apply Subtype.ext
+      rw [hcomponent_g x d, hx]
+      exact DirectSum.decompose_of_mem_same 𝓝.component y.property
+  · intro h
+    have hcomp := fun d => h d
+    refine ⟨?_, ?_, ?_⟩
+    · intro x y hxy
+      apply (DirectSum.decompose 𝓚.component).injective
+      apply DirectSum.ext
+      intro d
+      apply (hcomp d).1
+      apply Subtype.ext
+      rw [hcomponent_f x d, hcomponent_f y d, hxy]
+    · apply LinearMap.exact_of_comp_of_mem_range
+      · apply LinearMap.ext
+        intro x
+        induction x using DirectSum.Decomposition.inductionOn
+          (ℳ := 𝓚.component) with
+        | zero => simp
+        | @homogeneous d x =>
+            exact congrArg Subtype.val
+              ((hcomp d).2.1.apply_apply_eq_zero x)
+        | add x y hx hy =>
+            simpa using congrArg₂ (· + ·) hx hy
+      · intro x hx
+        have hxcomp : ∀ d, (DirectSum.decompose 𝓜.component x d : M) ∈
+            LinearMap.range f := by
+          intro d
+          have hzero :
+              componentAddHom G 𝓜 𝓝 g hg d (DirectSum.decompose 𝓜.component x d) = 0 := by
+            rw [hcomponent_g x d, hx]
+            simp
+          rcases ((hcomp d).2.1 (DirectSum.decompose 𝓜.component x d)).mp hzero with
+            ⟨y, hy⟩
+          exact ⟨y, congrArg Subtype.val hy⟩
+        rw [← DirectSum.sum_support_decompose 𝓜.component x]
+        exact (LinearMap.range f).sum_mem (fun d _ => hxcomp d)
+    · intro y
+      have hycomp : ∀ d, (DirectSum.decompose 𝓝.component y d : N) ∈
+          LinearMap.range g := by
+        intro d
+        rcases (hcomp d).2.2 (DirectSum.decompose 𝓝.component y d) with ⟨x, hx⟩
+        exact ⟨x, congrArg Subtype.val hx⟩
+      rw [← DirectSum.sum_support_decompose 𝓝.component y]
+      exact (LinearMap.range g).sum_mem (fun d _ => hycomp d)
 
 /-! ## Twists and graded Hom -/
 
@@ -274,7 +386,80 @@ theorem graded_short_exact_iff_componentwise
 theorem twist_decomposition_exists
     (G : GradedRingData S) (𝓜 : GradedModuleData G M) (n : ℤ) :
     Nonempty (DirectSum.Decomposition (fun d : ℤ => 𝓜.component (n + d))) := by
-  sorry
+  classical
+  let e : ℤ ≃ ℤ :=
+    { toFun := fun d => d - n
+      invFun := fun d => n + d
+      left_inv := by
+        intro d
+        simp [sub_eq_add_neg]
+      right_inv := by
+        intro d
+        simp [sub_eq_add_neg] }
+  have he : (fun d : ℤ => 𝓜.component (e.symm d)) =
+      (fun d : ℤ => 𝓜.component (n + d)) := by
+    funext d
+    simp [e]
+  let decompose0 : M →+ (⨁ d : ℤ, 𝓜.component (e.symm d)) :=
+    (DirectSum.equivCongrLeft e).toAddMonoidHom.comp
+      (DirectSum.decomposeAddEquiv 𝓜.component).toAddMonoidHom
+  have hdecompose0 :
+      Nonempty (DirectSum.Decomposition (fun d : ℤ => 𝓜.component (e.symm d))) := by
+    refine ⟨{ decompose' := decompose0, left_inv := ?_, right_inv := ?_ }⟩
+    · intro x
+      induction x using DirectSum.Decomposition.inductionOn
+        (ℳ := 𝓜.component) with
+      | zero => simp [decompose0]
+      | @homogeneous i x =>
+          change DirectSum.coeAddMonoidHom
+              (fun d => 𝓜.component (e.symm d))
+              ((DirectSum.equivCongrLeft (β := fun i => 𝓜.component i) e)
+                (DirectSum.decompose 𝓜.component (x : M))) =
+            (x : M)
+          rw [DirectSum.decompose_coe]
+          let x' : 𝓜.component (e.symm (e i)) :=
+            ⟨x, by simp⟩
+          have hinput : DirectSum.of (fun i => 𝓜.component i) i x =
+              DirectSum.of (fun i => 𝓜.component i) (e.symm (e i)) x' := by
+            apply DirectSum.ext
+            intro j
+            by_cases hji : i = j
+            · subst j
+              rw [DirectSum.of_eq_same]
+              rw [DirectSum.of_apply]
+              simp only [dif_pos (e.symm_apply_apply i)]
+              apply Subtype.ext
+              have h : e.symm (e i) = i := e.symm_apply_apply i
+              have htransport :
+                  ∀ {C : ℤ → Type} {a b : ℤ} (hab : a = b) (z : C a)
+                    (val : ∀ d, C d → M),
+                    val b (hab ▸ z) = val a z := by
+                intro C a b hab z val
+                cases hab
+                simp
+              convert (htransport (C := fun d => (𝓜.component d : Type)) h x'
+                (fun _ z => (z : M))).symm using 1 <;>
+                simp [x'] <;> rfl
+            · have hji' : e.symm (e i) ≠ j := by
+                intro h
+                apply hji
+                calc
+                  i = e.symm (e i) := (e.symm_apply_apply i).symm
+                  _ = j := h
+              rw [DirectSum.of_eq_of_ne _ _ _ (Ne.symm hji),
+                DirectSum.of_eq_of_ne _ _ _ (Ne.symm hji')]
+          rw [hinput, DirectSum.equivCongrLeft_of]
+          simp [x']
+      | add x y hx hy =>
+          rw [map_add, map_add, hx, hy]
+    · intro x
+      induction x using DirectSum.induction_on with
+      | zero => simp [decompose0]
+      | add x y hx hy =>
+          rw [map_add, map_add, hx, hy]
+      | of i x =>
+          simp [decompose0]
+  exact he ▸ hdecompose0
 
 /-- The twist `M(n)`, with `M(n)_d = M_{n+d}`. -/
 noncomputable def twist (G : GradedRingData S) (𝓜 : GradedModuleData G M) (n : ℤ) :
@@ -335,7 +520,84 @@ def directSumComponent (G : GradedRingData S) (𝓜 : GradedModuleData G M)
 theorem directSum_decomposition_exists
     (G : GradedRingData S) (𝓜 : GradedModuleData G M) (𝓝 : GradedModuleData G N) :
     Nonempty (DirectSum.Decomposition (directSumComponent G 𝓜 𝓝)) := by
-  sorry
+  classical
+  let inl : ∀ d : ℤ, 𝓜.component d →+
+      directSumComponent G 𝓜 𝓝 d := fun d =>
+    { toFun := fun x => ⟨(x, 0), ⟨x.property, (𝓝.component d).zero_mem⟩⟩
+      map_zero' := by ext <;> simp
+      map_add' := by intro x y; ext <;> simp }
+  let inr : ∀ d : ℤ, 𝓝.component d →+
+      directSumComponent G 𝓜 𝓝 d := fun d =>
+    { toFun := fun y => ⟨(0, y), ⟨(𝓜.component d).zero_mem, y.property⟩⟩
+      map_zero' := by ext <;> simp
+      map_add' := by intro x y; ext <;> simp }
+  let left : (⨁ d : ℤ, 𝓜.component d) →+
+      (⨁ d : ℤ, directSumComponent G 𝓜 𝓝 d) := DirectSum.map inl
+  let right : (⨁ d : ℤ, 𝓝.component d) →+
+      (⨁ d : ℤ, directSumComponent G 𝓜 𝓝 d) := DirectSum.map inr
+  let decompose : (M × N) →+
+      (⨁ d : ℤ, directSumComponent G 𝓜 𝓝 d) :=
+    { toFun := fun x => left (DirectSum.decompose 𝓜.component x.1) +
+          right (DirectSum.decompose 𝓝.component x.2)
+      map_zero' := by
+        simp [left, right]
+      map_add' := by
+        intro x y
+        change left (DirectSum.decompose 𝓜.component (x.1 + y.1)) +
+            right (DirectSum.decompose 𝓝.component (x.2 + y.2)) =
+          (left (DirectSum.decompose 𝓜.component x.1) +
+            right (DirectSum.decompose 𝓝.component x.2)) +
+          (left (DirectSum.decompose 𝓜.component y.1) +
+            right (DirectSum.decompose 𝓝.component y.2))
+        simp only [DirectSum.decompose_add, map_add]
+        ac_rfl }
+  have hleft (x : M) :
+      DirectSum.coeAddMonoidHom (directSumComponent G 𝓜 𝓝)
+          (left (DirectSum.decompose 𝓜.component x)) = (x, 0) := by
+    induction x using DirectSum.Decomposition.inductionOn
+      (ℳ := 𝓜.component) with
+    | zero => simp [left]; rfl
+    | homogeneous x =>
+        simp [left, inl]
+    | add x y hx hy =>
+        simp [left, hx, hy]
+  have hright (y : N) :
+      DirectSum.coeAddMonoidHom (directSumComponent G 𝓜 𝓝)
+          (right (DirectSum.decompose 𝓝.component y)) = (0, y) := by
+    induction y using DirectSum.Decomposition.inductionOn
+      (ℳ := 𝓝.component) with
+    | zero => simp [right]; rfl
+    | homogeneous y =>
+        simp [right, inr]
+    | add x y hx hy =>
+        simp [right, hx, hy]
+  refine ⟨{ decompose' := decompose, left_inv := ?_, right_inv := ?_ }⟩
+  · intro x
+    change DirectSum.coeAddMonoidHom (directSumComponent G 𝓜 𝓝)
+      (left (DirectSum.decompose 𝓜.component x.1) +
+        right (DirectSum.decompose 𝓝.component x.2)) = x
+    rw [map_add, hleft x.1, hright x.2]
+    ext <;> simp
+  · intro x
+    induction x using DirectSum.induction_on with
+    | zero => simp [decompose, left, right]
+    | add x y hx hy =>
+        rw [map_add, map_add, hx, hy]
+      | of d x =>
+        rcases x with ⟨⟨x, y⟩, ⟨hx, hy⟩⟩
+        have hx' : x ∈ 𝓜.component d := by simpa using hx
+        have hy' : y ∈ 𝓝.component d := by simpa using hy
+        simp only [decompose, AddMonoidHom.coe_mk, DirectSum.coeAddMonoidHom_of]
+        change left (DirectSum.decompose 𝓜.component x) +
+            right (DirectSum.decompose 𝓝.component y) =
+          DirectSum.of (fun i => directSumComponent G 𝓜 𝓝 i) d
+            ⟨(x, y), ⟨hx', hy'⟩⟩
+        rw [DirectSum.decompose_of_mem 𝓜.component hx',
+          DirectSum.decompose_of_mem 𝓝.component hy']
+        simp [left, right, inl, inr]
+        rw [← (DirectSum.of (fun i => directSumComponent G 𝓜 𝓝 i) d).map_add]
+        congr 1
+        ext <;> simp
 
 theorem directSum_gradedSMul
     (G : GradedRingData S) (𝓜 : GradedModuleData G M) (𝓝 : GradedModuleData G N) :
@@ -359,7 +621,12 @@ theorem twist_directSum_isomorphism
     Nonempty (GradedLinearEquiv G
       (twist G (directSumGradedModule G 𝓜 𝓝) n)
       (directSumGradedModule G (twist G 𝓜 n) (twist G 𝓝 n))) := by
-  sorry
+  refine ⟨{ toLinearEquiv := LinearEquiv.refl S (M × N),
+    map_component' := ?_, inv_component' := ?_ }⟩
+  · intro d x hx
+    simpa [twist, directSumGradedModule, directSumComponent] using hx
+  · intro d x hx
+    simpa [twist, directSumGradedModule, directSumComponent] using hx
 
 /-- Homogeneous tensors of total degree `d`, used for the graded tensor product module. -/
 def tensorProductHomogeneousTensors

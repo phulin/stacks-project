@@ -1,0 +1,168 @@
+import Formalization.Books.Simplicial.Unit30
+import Formalization.Books.Simplicial.Unit23.SimplicialObjectsAndChainComplexes
+import Mathlib.Algebra.Category.Grp.Basic
+import Mathlib.Algebra.Homology.QuasiIso
+import Mathlib.AlgebraicTopology.ModelCategory.Instances
+import Mathlib.AlgebraicTopology.SimplicialSet.KanComplex
+
+/-!
+# Simplicial Methods, Chapter 31: Kan fibrations
+
+The horn `Λ[n, k]` is Mathlib's canonical `SSet.horn n k`, and the category
+with fibrations on simplicial sets is Mathlib's canonical Quillen structure.
+Consequently the source's Kan-fibration and Kan-complex definitions are
+recorded by the corresponding canonical properties rather than by parallel
+lifting predicates.  The remaining declarations give the closure results and
+the simplicial-group and simplicial-abelian-group applications from the source.
+-/
+
+noncomputable section
+
+namespace Formalization.Books.Simplicial.Unit31
+
+open CategoryTheory
+open CategoryTheory.Limits
+open Opposite
+open scoped _root_.Simplicial
+open SSet.modelCategoryQuillen
+
+universe u v w
+
+/-! ## Horns and the Kan lifting property -/
+
+/-- The source's Kan-fibration property, using Mathlib's canonical fibration
+class for simplicial sets (whose generating lifting maps are the horn
+inclusions). -/
+abbrev KanFibration {X Y : SSet.{u}} (f : X ⟶ Y) : Prop :=
+  HomotopicalAlgebra.Fibration f
+
+/-- The source's Kan-complex property, using Mathlib's canonical fibrant
+objects in simplicial sets. -/
+abbrev KanComplex (X : SSet.{u}) : Prop :=
+  SSet.KanComplex X
+
+/-- Every horn has a vertex. -/
+theorem horn_nonempty (n : ℕ) (k : Fin (n + 1)) :
+    Nonempty ((SSet.horn n k : SSet.{u}) _⦋0⦌) := by
+  sorry
+
+/-! The source's observation about the empty simplicial set is the vacuous
+lifting property.  We retain it as a theorem interface; the implication from
+trivial to ordinary Kan fibrations is the canonical inclusion of lifting
+classes already present in Chapter 30 and Mathlib's model-category API. -/
+
+theorem empty_to_kanFibration {Y : SSet.{u}} (f : (⊥_ SSet.{u}) ⟶ Y) :
+    KanFibration f := by
+  sorry
+
+theorem trivialKanFibration_kanFibration
+    {X Y : SSet.{u}} (f : X ⟶ Y)
+    (hf : Formalization.Books.Simplicial.Unit30.TrivialKanFibration f) :
+    KanFibration f := by
+  sorry
+
+/-! ## Closure properties -/
+
+/-- Kan fibrations are preserved by base change. -/
+theorem kanFibration_baseChange
+    {X Y Y' : SSet.{u}} (f : X ⟶ Y) (hf : KanFibration f)
+    (g : Y' ⟶ Y) :
+    KanFibration (pullback.fst f g) := by
+  sorry
+
+/-- The composite of Kan fibrations is a Kan fibration. -/
+theorem kanFibration_comp
+    {X Y Z : SSet.{u}} (f : X ⟶ Y) (g : Y ⟶ Z)
+    (hf : KanFibration f) (hg : KanFibration g) :
+    KanFibration (f ≫ g) := by
+  sorry
+
+/-- The projection from the inverse limit of a sequence of Kan fibrations to
+its zeroth term is a Kan fibration. -/
+theorem kanFibration_limit
+    (U : ℕᵒᵖ ⥤ SSet.{u})
+    (hU : ∀ n : ℕ,
+      KanFibration
+        (Formalization.Books.Simplicial.Unit30.inverseSequenceTransition U n)) :
+    KanFibration (limit.π U (op 0)) := by
+  sorry
+
+/-- Products of Kan fibrations are Kan fibrations. -/
+theorem kanFibration_product
+    {T : Type w} {X Y : T → SSet.{u}}
+    (hX : HasLimit (Discrete.functor X))
+    (hY : HasLimit (Discrete.functor Y))
+    (f : ∀ t, X t ⟶ Y t)
+    (hf : ∀ t, KanFibration (f t)) :
+    KanFibration
+      (Formalization.Books.Simplicial.Unit26.indexedProductMap hX hY f) := by
+  sorry
+
+/-! ## Simplicial groups -/
+
+/-- The underlying simplicial set of a simplicial group. -/
+def underlyingSimplicialGroup
+    (X : SimplicialObject CommGrpCat.{u}) : SSet.{u} :=
+  ((SimplicialObject.whiskering CommGrpCat (Type u)).obj
+    (CategoryTheory.forget CommGrpCat)).obj X
+
+/-- The underlying simplicial map of a map of simplicial groups. -/
+def underlyingSimplicialGroupMap
+    {X Y : SimplicialObject CommGrpCat.{u}} (f : X ⟶ Y) :
+    underlyingSimplicialGroup X ⟶ underlyingSimplicialGroup Y :=
+  ((SimplicialObject.whiskering CommGrpCat (Type u)).obj
+    (CategoryTheory.forget CommGrpCat)).map f
+
+/-- Every simplicial group is a Kan complex. -/
+theorem simplicialGroup_kanComplex
+    (X : SimplicialObject CommGrpCat.{u}) :
+    KanComplex (underlyingSimplicialGroup X) := by
+  sorry
+
+/-! ## Simplicial abelian groups -/
+
+/-- The underlying simplicial set of a simplicial abelian group. -/
+def underlyingSimplicialAbelianGroup
+    (X : SimplicialObject AddCommGrpCat.{u}) : SSet.{u} :=
+  ((SimplicialObject.whiskering AddCommGrpCat (Type u)).obj
+    (CategoryTheory.forget AddCommGrpCat)).obj X
+
+/-- The underlying simplicial map of a map of simplicial abelian groups. -/
+def underlyingSimplicialAbelianGroupMap
+    {X Y : SimplicialObject AddCommGrpCat.{u}} (f : X ⟶ Y) :
+    underlyingSimplicialAbelianGroup X ⟶ underlyingSimplicialAbelianGroup Y :=
+  ((SimplicialObject.whiskering AddCommGrpCat (Type u)).obj
+    (CategoryTheory.forget AddCommGrpCat)).map f
+
+/-- A termwise-surjective map of simplicial abelian groups is a Kan
+fibration on underlying simplicial sets. -/
+theorem termwiseSurjective_simplicialAbelianGroup_kanFibration
+    {X Y : SimplicialObject AddCommGrpCat.{u}} (f : X ⟶ Y)
+    (hf : ∀ n : ℕ,
+      Function.Surjective (f.app (op (SimplexCategory.mk n)))) :
+    KanFibration (underlyingSimplicialAbelianGroupMap f) := by
+  sorry
+
+/-- A termwise-surjective quasi-isomorphism of simplicial abelian groups is a
+trivial Kan fibration. -/
+theorem termwiseSurjective_quasiIso_simplicialAbelianGroup_trivialKanFibration
+    {X Y : SimplicialObject AddCommGrpCat.{u}} (f : X ⟶ Y)
+    (hf : ∀ n : ℕ,
+      Function.Surjective (f.app (op (SimplexCategory.mk n))))
+    (hquasi : QuasiIso
+      (Formalization.Books.Simplicial.Unit23.associatedChainComplexMap f)) :
+    Formalization.Books.Simplicial.Unit30.TrivialKanFibration
+      (underlyingSimplicialAbelianGroupMap f) := by
+  sorry
+
+/-- A homotopy equivalence of the underlying simplicial sets of simplicial
+abelian groups induces a quasi-isomorphism on the associated chain complexes. -/
+theorem homotopyEquivalence_simplicialAbelianGroup_quasiIso
+    {X Y : SimplicialObject AddCommGrpCat.{u}} (f : X ⟶ Y)
+    (hf : Formalization.Books.Simplicial.Unit26.IsHomotopyEquivalence
+      (underlyingSimplicialAbelianGroupMap f)) :
+    QuasiIso
+      (Formalization.Books.Simplicial.Unit23.associatedChainComplexMap f) := by
+  sorry
+
+end Formalization.Books.Simplicial.Unit31

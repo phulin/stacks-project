@@ -78,6 +78,16 @@ structure DgmTriangleIsomorphism {R : Type u} [CommRing R]
       (DgmHomotopyQuotient A).map (dgmShiftMap e₁ (1 : ℤ)) =
     (DgmHomotopyQuotient A).map e₃ ≫ U.mor₃
 
+/-- Two source-facing triangles are isomorphic when their displayed
+component maps give an isomorphism after passage to the homotopy category.
+The quotient-level isomorphism is represented by differential graded module
+maps, using the homotopy-equivalence interface from Chapter 7. -/
+def DgmTriangleIsomorphic
+    {R : Type u} [CommRing R]
+    {A : DifferentialGradedAlgebra R}
+    (T U : DgmTriangle (A := A)) : Prop :=
+  Nonempty (DgmTriangleIsomorphism T U)
+
 /-! ## The connecting map and associated triangle -/
 
 /-- All data needed to choose the connecting morphism supplied by the
@@ -144,9 +154,9 @@ theorem dgmAssociatedTriangle_independent_of_splittings
     {S : ShortComplex (DifferentialGradedModuleCategory A)}
     (hS : DgmAdmissibleShortExactSequence S)
     (c c' : DgmAdmissibleConnectingData hS) :
-    Nonempty (DgmTriangleIsomorphism
+    DgmTriangleIsomorphic
       (dgmAssociatedTriangleWithData hS c)
-      (dgmAssociatedTriangleWithData hS c')) := by
+      (dgmAssociatedTriangleWithData hS c') := by
   sorry
 
 /-! ## Distinguished triangles -/
@@ -159,6 +169,6 @@ def DgmDistinguishedTriangle
     (T : DgmTriangle (A := A)) : Prop :=
   ∃ (S : ShortComplex (DifferentialGradedModuleCategory A))
     (hS : DgmAdmissibleShortExactSequence S),
-    Nonempty (DgmTriangleIsomorphism (dgmAssociatedTriangle hS) T)
+    DgmTriangleIsomorphic (dgmAssociatedTriangle hS) T
 
 end Formalization.Books.Dga.Unit08

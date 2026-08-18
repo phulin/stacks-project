@@ -197,7 +197,11 @@ theorem limit_complete_pre {A : Type u} [CommRing A] (I : Ideal A)
   intro x
   apply Concrete.limit_ext F
   intro n
-  simp [r, c, q]
+  change (limit.π F n).hom
+      ((limit.lift F c).hom (AdicCompletion.of I (inverseLimitModule F) x)) =
+    (limit.π F n).hom x
+  rw [← ConcreteCategory.comp_apply, limit.lift_π]
+  rfl
 
 /-- A compatible quotient system has the expected quotients and complete limit. -/
 theorem limit_complete {A : Type u} [CommRing A] (I : Ideal A)
@@ -474,7 +478,7 @@ theorem completionTensorCoordinate_naturality
       rw [hmap_apply]
       have ha := (a.property (leOfHom f.unop)).symm
       have hmem : a.val i.unop - a.val j.unop ∈
-          I ^ (j.unop : ℕ) := by
+          (I ^ (j.unop : ℕ) : Ideal A) := by
         have hmem' : a.val i.unop - a.val j.unop ∈
             (I ^ (j.unop : ℕ)) • (⊤ : Submodule A A) :=
           (SModEq.sub_mem

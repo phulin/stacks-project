@@ -1147,7 +1147,10 @@ theorem principal_localization_cotangentSpace_equiv
     Nonempty ((principalLocalizationPresentation (T := T) g P).toExtension.CotangentSpace ≃ₗ[T]
       (Algebra.Generators.localizationAway T g).toExtension.CotangentSpace ×
         (T ⊗[S] P.toExtension.CotangentSpace)) := by
-  sorry
+  let Q := Algebra.Generators.localizationAway T g
+  change Nonempty ((Q.comp P).toExtension.CotangentSpace ≃ₗ[T]
+    Q.toExtension.CotangentSpace × T ⊗[S] P.toExtension.CotangentSpace)
+  exact ⟨Algebra.Generators.CotangentSpace.compEquiv Q P⟩
 
 theorem naive_cotangent_localization_quasi_isomorphism
     {R B : Type*} [CommRing R] [CommRing B] [Algebra R B]
@@ -1156,7 +1159,17 @@ theorem naive_cotangent_localization_quasi_isomorphism
         ((Algebra.H1Cotangent.map R R B (Localization M)).liftBaseChange (Localization M)) ∧
       Function.Bijective
         ((KaehlerDifferential.map R R B (Localization M)).liftBaseChange (Localization M)) := by
-  sorry
+  have h1 : IsLocalizedModule M
+      (Algebra.H1Cotangent.map R R B (Localization M)) := by
+    infer_instance
+  have h0 : IsLocalizedModule M
+      (KaehlerDifferential.map R R B (Localization M)) := by
+    infer_instance
+  exact ⟨
+    (isLocalizedModule_iff_isBaseChange M (Localization M)
+      (Algebra.H1Cotangent.map R R B (Localization M))).mp h1,
+    (isLocalizedModule_iff_isBaseChange M (Localization M)
+      (KaehlerDifferential.map R R B (Localization M))).mp h0⟩
 
 /-! ## Cancellation and conormal modules -/
 
@@ -1187,7 +1200,93 @@ theorem two_term_homotopy_cancellation
     [Module R A₁] [Module R A₀] [Module R B₁] [Module R B₀]
     (H : TwoTermHomotopyData R A₁ A₀ B₁ B₀) :
     Nonempty (TwoTermSum A₁ B₀ ≃ₗ[R] TwoTermSum B₁ A₀) := by
-  sorry
+  let F : TwoTermSum A₁ B₀ →ₗ[R] TwoTermSum B₁ A₀ :=
+    { toFun := fun x =>
+        (H.φ₁ x.1 - H.hB x.2, H.dA x.1 + H.ψ₀ x.2)
+      map_add' := by
+        intro x y
+        apply Prod.ext
+        · dsimp
+          rw [map_add, map_add]
+          abel
+        · dsimp
+          rw [map_add, map_add]
+          abel
+      map_smul' := by
+        intro c x
+        apply Prod.ext
+        · dsimp
+          rw [map_smul, smul_sub]
+        · dsimp
+          rw [map_smul, smul_add] }
+  let G : TwoTermSum B₁ A₀ →ₗ[R] TwoTermSum A₁ B₀ :=
+    { toFun := fun x =>
+        (H.ψ₁ x.1 + H.hA x.2, -H.dB x.1 + H.φ₀ x.2)
+      map_add' := by
+        intro x y
+        apply Prod.ext
+        · dsimp
+          rw [map_add, map_add]
+          abel
+        · dsimp
+          rw [map_add, map_add]
+          abel
+      map_smul' := by
+        intro c x
+        apply Prod.ext
+        · dsimp
+          rw [map_smul, smul_add]
+        · dsimp
+          rw [map_smul, smul_add] }
+  have hGF (x : TwoTermSum A₁ B₀) :
+      G (F x) = (x.1 + (-H.ψ₁ (H.hB x.2) + H.hA (H.ψ₀ x.2)), x.2) := by
+    ext
+    · simp [F, G, sub_eq_add_neg, add_assoc, add_comm]
+      have h := DFunLike.congr_fun H.left_one x.1
+      change x.1 - H.ψ₁ (H.φ₁ x.1) = H.hA (H.dA x.1) at h
+      rw [← h]
+      abel
+    · simp [F, G, sub_eq_add_neg, add_assoc, add_comm]
+      have hchain := DFunLike.congr_fun H.φ_chain x.1
+      change H.φ₀ (H.dA x.1) = H.dB (H.φ₁ x.1) at hchain
+      rw [hchain]
+      have h := DFunLike.congr_fun H.right_zero x.2
+      change x.2 - H.φ₀ (H.ψ₀ x.2) = H.dB (H.hB x.2) at h
+      rw [← h]
+      abel
+  have hFG (x : TwoTermSum B₁ A₀) :
+      F (G x) = (x.1 + (H.φ₁ (H.hA x.2) - H.hB (H.φ₀ x.2)), x.2) := by
+    ext
+    · simp [F, G, sub_eq_add_neg, add_assoc, add_comm]
+      have h := DFunLike.congr_fun H.right_one x.1
+      change x.1 - H.φ₁ (H.ψ₁ x.1) = H.hB (H.dB x.1) at h
+      rw [← h]
+      abel
+    · simp [F, G, sub_eq_add_neg, add_assoc, add_comm]
+      have hchain := DFunLike.congr_fun H.ψ_chain x.1
+      change H.ψ₀ (H.dB x.1) = H.dA (H.ψ₁ x.1) at hchain
+      rw [← hchain]
+      have h := DFunLike.congr_fun H.left_zero x.2
+      change x.2 - H.ψ₀ (H.φ₀ x.2) = H.dA (H.hA x.2) at h
+      rw [← h]
+      abel
+  have hFinj : Function.Injective F := by
+    intro x y hxy
+    have hxy' := congrArg G hxy
+    have h2 := congrArg Prod.snd hxy'
+    have h1 := congrArg Prod.fst hxy'
+    have h2' : x.2 = y.2 := by simpa [hGF] using h2
+    have h1' : x.1 = y.1 := by
+      simpa [hGF, h2'] using h1
+    exact Prod.ext h1' h2'
+  have hFsurj : Function.Surjective F := by
+    intro z
+    let y : TwoTermSum B₁ A₀ :=
+      (z.1 - (H.φ₁ (H.hA z.2) - H.hB (H.φ₀ z.2)), z.2)
+    refine ⟨G y, ?_⟩
+    rw [hFG]
+    simp [y, sub_eq_add_neg, add_assoc, add_left_comm, add_comm]
+  exact ⟨LinearEquiv.ofBijective F ⟨hFinj, hFsurj⟩⟩
 
 theorem conormal_module_equiv
     {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]

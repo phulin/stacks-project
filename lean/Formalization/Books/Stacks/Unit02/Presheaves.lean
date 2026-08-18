@@ -1,4 +1,4 @@
-import Formalization.Books.Stacks.Unit01.Presheaves
+import Formalization.Books.Stacks.Unit01.Setoids
 
 /-!
 # Stacks, Chapter 2: presheaves of morphisms associated to fibred categories
@@ -13,8 +13,8 @@ second pullback convention or a second definition of the morphism presheaf.
 The explicit `\alpha_{g,f}` terms in the source are the coherence isomorphisms
 used by `Pseudofunctor.presheafHom`; its `pullHom` identity and composition
 lemmas are the presheaf verification.  The source's final 2-fibre-product
-claim is represented by `TwoFiberProductPresentation`, whose fields record a
-setoid-valued fibred category and the associated isomorphism presheaf.
+claim is represented below by a presentation with the explicit fibre objects
+and the canonical object-isomorphism-class presheaf.
 -/
 
 namespace Formalization.Books.Stacks.Unit02
@@ -123,11 +123,82 @@ theorem isom_presheaf_is_morphism_presheaf_of_groupoid
   Formalization.Books.Stacks.Unit01.isom_presheaf_is_morphism_presheaf_of_groupoid
     hF x y
 
+/-! The objects displayed in the proof of the source's 2-fibre-product lemma.
+For `T : C/U`, these are an object over `T.left` together with the two
+specified isomorphisms to the pullbacks of `x` and `y`. -/
+
+structure TwoFiberProductObject
+    {C : Type u} [Category.{v} C]
+    (F : FiberedCategory C) {U : C} (x y : Fiber F U)
+    (T : Over C U) where
+  object : Fiber F T.left
+  alpha : object ≅ (F.map T.hom.op.toLoc).toFunctor.obj x
+  beta : object ≅ (F.map T.hom.op.toLoc).toFunctor.obj y
+
+structure TwoFiberProductHom
+    {C : Type u} [Category.{v} C]
+    {F : FiberedCategory C} {U : C} {x y : Fiber F U}
+    {T : Over C U} (A B : TwoFiberProductObject F x y T) where
+  hom : A.object ⟶ B.object
+  alpha_comm : hom ≫ B.alpha.hom = A.alpha.hom
+  beta_comm : hom ≫ B.beta.hom = A.beta.hom
+
+@[ext]
+lemma TwoFiberProductHom.ext
+    {C : Type u} [Category.{v} C]
+    {F : FiberedCategory C} {U : C} {x y : Fiber F U}
+    {T : Over C U} {A B : TwoFiberProductObject F x y T}
+    {f g : TwoFiberProductHom A B} (h : f.hom = g.hom) : f = g := by
+  cases f
+  cases g
+  cases h
+  rfl
+
+instance twoFiberProductObjectCategory
+    {C : Type u} [Category.{v} C]
+    {F : FiberedCategory C} {U : C} {x y : Fiber F U}
+    (T : Over C U) : Category (TwoFiberProductObject F x y T) where
+  Hom A B := TwoFiberProductHom A B
+  id A :=
+    { hom := 𝟙 A.object
+      alpha_comm := by simp
+      beta_comm := by simp }
+  comp f g :=
+    { hom := f.hom ≫ g.hom
+      alpha_comm := by
+        simp only [Category.assoc, g.alpha_comm, f.alpha_comm]
+      beta_comm := by
+        simp only [Category.assoc, g.beta_comm, f.beta_comm] }
+  id_comp f := by
+    apply TwoFiberProductHom.ext
+    simp
+  comp_id f := by
+    apply TwoFiberProductHom.ext
+    simp
+  assoc f g h := by
+    apply TwoFiberProductHom.ext
+    simp [Category.assoc]
+
+/-! This is the source-facing interface for the final lemma.  The
+`objectClassPresheafIso` field uses the established quotient-by-isomorphism
+construction from Chapter 1; `fibreEquivalence` prevents the apex from being
+an arbitrary setoid-valued replacement and records the displayed objects in
+the source proof. -/
+structure TwoFiberProductPresentation
+    {C : Type u} [Category.{v} C]
+    (F : FiberedCategory C) {U : C} (x y : Fiber F U) where
+  apex : FiberedCategory (Over C U)
+  isSetoid : FiberwiseSetoid apex
+  objectClassPresheafIso : ObjectClassPresheaf apex ≅ IsomorphismPresheaf F x y
+  fibreEquivalence : ∀ T : Over C U, Nonempty
+    (apex.obj (.mk (op T)) ≌ TwoFiberProductObject F x y T)
+
 theorem isom_as_two_fibre_product
     {C : Type u} [Category.{v} C]
     (F : FiberedCategory C) {U : C} (x y : Fiber F U) :
     Nonempty (TwoFiberProductPresentation F x y) :=
-  Formalization.Books.Stacks.Unit01.isom_as_two_fibre_product F x y
+  by
+    sorry
 
 /- The source's strict groupoid presentation remark is proof guidance: the
    preceding groupoid equivalence and the canonical induced presheaf map are

@@ -770,11 +770,6 @@ theorem faithfullyFlat_criteria
     exact not_subsingleton _ (Submodule.Quotient.subsingleton_iff.mpr hm_top)
   tfae_finish
 
-noncomputable def tensor_quotient_equiv_smul
-    {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M] (m : Ideal R) :
-    M ⊗[R] (R ⧸ m) ≃ₗ[R] M ⧸ (m • (⊤ : Submodule R M)) :=
-  TensorProduct.tensorQuotEquivQuotSMul M m
-
 theorem faithfullyFlat_ringHom_criteria
     {R S : Type*} [CommRing R] [CommRing S] (f : R →+* S)
     (hflat : RingHom.Flat f) :

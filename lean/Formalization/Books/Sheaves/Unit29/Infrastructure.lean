@@ -54,7 +54,7 @@ theorem sheaf_has_limits {X : TopCat.{v}} {C : Type (v + 1)}
 theorem sheaf_has_colimits {X : TopCat.{v}}
     [HasWeakSheafify (Opens.grothendieckTopology X) (Type v)] :
     HasColimitsOfSize.{v, v} (TopCat.Sheaf (Type v) X) := by
-  sorry
+  exact CategoryTheory.Sheaf.instHasColimitsOfSize
 
 /- The sectionwise formula for a limit of set-valued sheaves. -/
 theorem exists_sheafLimitSectionsIso {X : TopCat.{v}} {J : Type v}

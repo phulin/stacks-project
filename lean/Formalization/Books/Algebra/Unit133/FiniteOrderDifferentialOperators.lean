@@ -78,10 +78,13 @@ theorem isDifferentialOperator_add (k : ℕ) (D E : LinearMapOver R M N)
       simp only [LinearMap.add_apply, hD s m, hE s m, smul_add]
   | succ k ih =>
       intro D E hD hE s
-      simpa [differentialOperatorCommutator, LinearMap.add_comp, LinearMap.comp_add,
-        sub_eq_add_neg, add_assoc, add_comm, add_left_comm] using
-        (ih (differentialOperatorCommutator D s) (differentialOperatorCommutator E s)
-          (hD s) (hE s))
+      have hcomm :
+          differentialOperatorCommutator (D + E) s =
+            differentialOperatorCommutator D s + differentialOperatorCommutator E s := by
+        ext m
+        simp [differentialOperatorCommutator, sub_eq_add_neg, add_assoc, add_comm, add_left_comm]
+      rw [hcomm]
+      exact ih _ _ (hD s) (hE s)
 
 theorem isDifferentialOperator_smul (k : ℕ) (c : S) (D : LinearMapOver R M N)
     (hD : IsDifferentialOperator (R := R) (S := S) k D) :

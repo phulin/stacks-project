@@ -438,7 +438,169 @@ theorem exists_stableCompositionSeries
     {R : Type u} [CommRing R] [IsLocalRing R]
     (X : FiniteLengthEndomorphism.{u, v} R) :
     Nonempty (StableCompositionSeries X) := by
-  sorry
+  let φ := X.endomorphism.hom
+  let _ : IsNoetherian R X.carrier :=
+    (FiniteLengthEndomorphism.isNoetherian_and_isArtinian X).1
+  let _ : IsArtinian R X.carrier :=
+    (FiniteLengthEndomorphism.isNoetherian_and_isArtinian X).2
+  letI : PartialOrder (StableSubmodule φ) :=
+    PartialOrder.lift StableSubmodule.carrier (by
+      intro P Q h
+      cases P
+      cases Q
+      cases h
+      rfl)
+  letI : OrderBot (StableSubmodule φ) :=
+    { bot := { carrier := (⊥ : Submodule R X.carrier), stable := by simp }
+      bot_le := by intro P; exact (show (⊥ : Submodule R X.carrier) ≤ P.carrier from bot_le) }
+  letI : OrderTop (StableSubmodule φ) :=
+    { top := { carrier := (⊤ : Submodule R X.carrier), stable := by simp }
+      le_top := by intro P; exact (show P.carrier ≤ (⊤ : Submodule R X.carrier) from le_top) }
+  let e : StableSubmodule φ ↪o Submodule R X.carrier :=
+    OrderEmbedding.ofMapLEIff StableSubmodule.carrier (fun _ _ => Iff.rfl)
+  letI : WellFoundedLT (StableSubmodule φ) := e.wellFoundedLT
+  letI : WellFoundedGT (StableSubmodule φ) := e.dual.wellFoundedLT
+  obtain ⟨f, hf, n, hn, hstep⟩ :=
+    exists_covBy_seq_of_wellFoundedLT_wellFoundedGT (StableSubmodule φ)
+  let s : StableSubmoduleSeries φ :=
+    { length := n
+      toFun := fun i => f i
+      step := fun i => (hstep i i.2).1 }
+  have hs_head : s.head.carrier = (⊥ : Submodule R X.carrier) := by
+    change (f 0).carrier = (⊥ : Submodule R X.carrier)
+    exact congrArg StableSubmodule.carrier hf.eq_bot
+  have hs_last : s.last.carrier = (⊤ : Submodule R X.carrier) := by
+    change (f n).carrier = (⊤ : Submodule R X.carrier)
+    exact congrArg StableSubmodule.carrier hn.eq_top
+  have hsimple (i : Fin s.length) :
+      IsSimplePair (factorEnd s i) := by
+    let P := (s (Fin.castSucc i)).carrier
+    let U := (s (Fin.succ i)).carrier
+    let L : Submodule R U := Submodule.comap U.subtype P
+    have hPU : P ≤ U := le_of_lt (by simpa [P, U] using s.step i)
+    have hPUs : P < U := by
+      have hi := (hstep i (by simpa [s] using i.isLt)).1
+      change P < U at hi
+      exact hi
+    have hL_ne : L ≠ ⊤ := by
+      intro hL
+      apply hPUs.2
+      intro x hx
+      let y : U := ⟨x, hx⟩
+      have hyL : y ∈ L := by rw [hL]; exact Submodule.mem_top
+      exact hyL
+    obtain ⟨y, hy⟩ : ∃ y : U, y ∉ L := by
+      by_contra h
+      apply hL_ne
+      apply top_unique
+      intro y hy'
+      by_contra hyL
+      exact h ⟨y, hyL⟩
+    letI : Nontrivial (U ⧸ L) :=
+      ⟨⟨L.mkQ y, 0, by
+        intro hzero
+        exact hy ((Submodule.Quotient.mk_eq_zero _).mp hzero)⟩⟩
+    have hstable (N : Submodule R (U ⧸ L))
+        (hN : Submodule.map (factorEnd s i) N ≤ N) :
+        ∀ z : U, z ∈ Submodule.comap (L.mkQ) N →
+          restrictToStableSubmodule φ U (s (Fin.succ i)).stable z ∈
+            Submodule.comap (L.mkQ) N := by
+      intro z hz
+      change L.mkQ (restrictToStableSubmodule φ U (s (Fin.succ i)).stable z) ∈ N
+      apply hN
+      exact ⟨L.mkQ z, hz, by
+        change factorEnd s i (L.mkQ z) = L.mkQ
+          (restrictToStableSubmodule φ U (s (Fin.succ i)).stable z)
+        rfl⟩
+    unfold IsSimplePair
+    refine ⟨inferInstance, ?_⟩
+    intro N hN
+    let WU : Submodule R U := Submodule.comap (L.mkQ) N
+    let W : Submodule R X.carrier := Submodule.map U.subtype WU
+    have hWstable : Submodule.map φ W ≤ W := by
+      intro x hx
+      obtain ⟨y, hy, hxy⟩ := hx
+      obtain ⟨z, hz, hyz⟩ := hy
+      refine ⟨restrictToStableSubmodule φ U (s (Fin.succ i)).stable z,
+        hstable N hN z hz, ?_⟩
+      calc
+        U.subtype (restrictToStableSubmodule φ U (s (Fin.succ i)).stable z) =
+            φ (U.subtype z) := by rfl
+        _ = φ y := by rw [hyz]
+        _ = x := hxy
+    let W' : StableSubmodule φ := ⟨W, hWstable⟩
+    have hPW : P ≤ W := by
+      intro x hx
+      let z : U := ⟨x, hPU hx⟩
+      refine ⟨z, ?_, rfl⟩
+      change L.mkQ z ∈ N
+      have hzL : z ∈ L := by
+        change (z : X.carrier) ∈ P
+        exact hx
+      rw [show L.mkQ z = 0 by
+        exact (Submodule.Quotient.mk_eq_zero _).mpr hzL]
+      exact N.zero_mem
+    have hWU : W ≤ U := by
+      intro x hx
+      obtain ⟨z, hz, rfl⟩ := hx
+      exact z.property
+    have hcases := (covBy_iff_lt_and_eq_or_eq.mp (hstep i i.2)).2 W'
+      hPW hWU
+    rcases hcases with hWP | hWUQ
+    · have hpre : WU = L := by
+        ext z
+        constructor
+        · intro hz
+          have hzW : (z : X.carrier) ∈ W := ⟨z, hz, rfl⟩
+          have hcar : W = P := congrArg StableSubmodule.carrier hWP
+          rw [hcar] at hzW
+          exact hzW
+        · intro hz
+          change L.mkQ z ∈ N
+          rw [show L.mkQ z = 0 by
+            apply (Submodule.Quotient.mk_eq_zero _).mpr
+            exact hz]
+          exact N.zero_mem
+      left
+      apply eq_bot_iff.mpr
+      intro q hq
+      obtain ⟨z, rfl⟩ := L.mkQ_surjective q
+      have hz : z ∈ WU := by
+        change L.mkQ z ∈ N
+        exact hq
+      rw [hpre] at hz
+      have : z ∈ L := hz
+      rw [Submodule.mem_bot]
+      exact (Submodule.Quotient.mk_eq_zero _).mpr this
+    · have hpre : WU = ⊤ := by
+        apply top_unique
+        intro z hz
+        have hzW : (z : X.carrier) ∈ W := by
+          have hcar : W = U := congrArg StableSubmodule.carrier hWUQ
+          rw [hcar]
+          exact z.property
+        obtain ⟨z', hz', hzz'⟩ := hzW
+        have hz_eq : z' = z := Subtype.ext hzz'
+        exact hz_eq ▸ hz'
+      right
+      apply top_unique
+      intro q hq
+      obtain ⟨z, rfl⟩ := L.mkQ_surjective q
+      change L.mkQ z ∈ N
+      change z ∈ WU
+      exact hpre ▸ Submodule.mem_top
+  exact ⟨{
+    series := s
+    head_eq_bot := hs_head
+    last_eq_top := hs_last
+    simple_factor := fun i =>
+      simplePairData
+        ((X.finite_length.of_injective
+          (Submodule.injective_subtype _)).of_surjective
+            (Submodule.mkQ_surjective _))
+        (factorEnd s i)
+        (hsimple i)
+  }⟩
 
 noncomputable def stableCompositionSeries
     {R : Type u} [CommRing R] [IsLocalRing R]
@@ -485,7 +647,25 @@ theorem simplePair_residueFinrank_eq_length
     [AddCommGroup M] [Module R M] (hM : IsFiniteLength R M)
     {φ : Module.End R M} (D : SimplePairData R M φ) :
     residueFinrank D = finiteLengthNat R M hM := by
-  sorry
+  have hNoeth : IsNoetherian R M :=
+    (isFiniteLength_iff_isNoetherian_isArtinian.mp hM).1
+  let _ : Module.Finite R M := ⟨hNoeth.noetherian ⊤⟩
+  let _ : Module (R ⧸ IsLocalRing.maximalIdeal R) M := D.annihilated.module
+  let _ : Module.Finite (R ⧸ IsLocalRing.maximalIdeal R) M :=
+    Module.Finite.of_restrictScalars_finite R _ _
+  let _ : Field (R ⧸ IsLocalRing.maximalIdeal R) :=
+    Ideal.Quotient.field (IsLocalRing.maximalIdeal R)
+  change Module.finrank (R ⧸ IsLocalRing.maximalIdeal R) M =
+    (Module.length R M).toNat
+  have hlen : Module.length R M =
+      Module.length (R ⧸ IsLocalRing.maximalIdeal R) M :=
+    Module.length_eq_of_surjective (R := R ⧸ IsLocalRing.maximalIdeal R)
+      (S := R) (M := M) (IsLocalRing.maximalIdeal R).mkQ_surjective
+  have hlenQ : Module.length (R ⧸ IsLocalRing.maximalIdeal R) M =
+      (Module.finrank (R ⧸ IsLocalRing.maximalIdeal R) M : ℕ∞) :=
+    Module.length_eq_finrank _ _
+  rw [hlen, hlenQ]
+  simp
 
 /-! The following three interfaces record the Jordan--Hölder independence of the definitions. -/
 

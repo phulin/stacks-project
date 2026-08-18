@@ -1838,11 +1838,133 @@ theorem kGroups_prod
         (KPrimeZero R₁ × KPrimeZero R₂)) := by
   sorry
 
+private theorem kPrimeZeroClass_eq_length_smul_artinian_local
+    (R : Type u) [CommRing R] [IsArtinianRing R] [IsLocalRing R]
+    {M : Type u} [AddCommGroup M] [Module R M] [Module.Finite R M] :
+    kPrimeZeroClass (R := R) (M := M) =
+      ((Module.length R M).toNat : ℤ) •
+        kPrimeZeroClass (R := R) (M := R ⧸ IsLocalRing.maximalIdeal R) := by
+  let c : KPrimeZero R :=
+    kPrimeZeroClass (R := R) (M := R ⧸ IsLocalRing.maximalIdeal R)
+  have hfinite : IsFiniteLength R M := by
+    apply ((IsArtinianRing.tfae R M).out 0 3).mp
+    infer_instance
+  obtain ⟨s, hsbot, hstop⟩ :=
+    isFiniteLength_iff_exists_compositionSeries.mp hfinite
+  have hseries : ∀ (t : CompositionSeries (Submodule R M)),
+      t.head = ⊥ →
+        kPrimeZeroClass (R := R) (M := t.last) =
+          (t.length : ℤ) • c := by
+    intro t
+    induction t using RelSeries.inductionOn' with
+    | singleton x =>
+        intro hx
+        change kPrimeZeroClass (R := R) (M := x) = _
+        have hx' : x = (⊥ : Submodule R M) := by simpa using hx
+        rw [hx']
+        simpa [c] using (kPrimeZeroClass_subsingleton (R := R)
+          (M := (⊥ : Submodule R M)))
+    | snoc t x htx ih =>
+        intro ht
+        have ht' : t.head = ⊥ := by simpa using ht
+        let f : t.last →ₗ[R] x := Submodule.inclusion htx.le
+        let q : x →ₗ[R] (x ⧸ f.range) := f.range.mkQ
+        have hfrange : f.range = t.last.comap x.subtype := by
+          ext y
+          constructor
+          · rintro ⟨z, rfl⟩
+            exact z.property
+          · intro hy
+            exact ⟨⟨y, hy⟩, rfl⟩
+        have hexact :
+            kPrimeZeroClass (R := R) (M := x) =
+              kPrimeZeroClass (R := R) (M := t.last) +
+                kPrimeZeroClass (R := R) (M := x ⧸ f.range) :=
+          kPrimeZeroClass_exact f q
+            (Submodule.inclusion_injective _) f.range.mkQ_surjective
+            (LinearMap.exact_map_mkQ_range f)
+        have hsimple : IsSimpleModule R (x ⧸ f.range) := by
+          rw [hfrange]
+          exact (covBy_iff_quot_is_simple htx.le).mp htx
+        obtain ⟨I, hI, ⟨e⟩⟩ := isSimpleModule_iff_quot_maximal.mp hsimple
+        rw [IsLocalRing.eq_maximalIdeal hI] at e
+        have hres : kPrimeZeroClass (R := R) (M := x ⧸ f.range) = c := by
+          exact (kPrimeZeroClass_eq_of_linearEquiv e).trans (by rfl)
+        have hstep :
+            kPrimeZeroClass (R := R) (M := x) =
+              (t.snoc x htx).length • c := by
+          rw [hexact, ih ht', hres]
+          simp [RelSeries.snoc_length, add_smul, add_comm, add_left_comm,
+            add_assoc]
+        have hlast : (t.snoc x htx).last = x :=
+          RelSeries.last_snoc t x htx
+        exact (kPrimeZeroClass_eq_of_linearEquiv
+          (LinearEquiv.ofEq _ _ hlast)).trans hstep
+  have hlen := Module.length_compositionSeries s hsbot hstop
+  have hlenNat : s.length = (Module.length R M).toNat := by
+    simpa using congrArg ENat.toNat hlen
+  calc
+    kPrimeZeroClass (R := R) (M := M) =
+        kPrimeZeroClass (R := R) (M := s.last) := by
+      rw [hstop]
+      exact (kPrimeZeroClass_eq_of_linearEquiv
+        (Submodule.topEquiv : (⊤ : Submodule R M) ≃ₗ[R] M)).symm
+    _ = (s.length : ℤ) • c := hseries s hsbot
+    _ = ((Module.length R M).toNat : ℤ) • c := by rw [hlenNat]
+    _ = ((Module.length R M).toNat : ℤ) •
+        kPrimeZeroClass (R := R) (M := IsLocalRing.ResidueField R) := by
+      rfl
+
 /-- The length map is an isomorphism for an Artinian local ring. -/
 theorem kPrimeZeroLength_artinian_local_bijective
     (R : Type u) [CommRing R] [IsArtinianRing R] [IsLocalRing R] :
     Function.Bijective (kPrimeZeroLength (R := R)) := by
-  sorry
+  let c : KPrimeZero R :=
+    kPrimeZeroClass (R := R) (M := R ⧸ IsLocalRing.maximalIdeal R)
+  have hc : kPrimeZeroLength (R := R) c = 1 := by
+    let P := Classical.choose
+      (exists_finite_module_presentation
+        (R := R) (M := IsLocalRing.ResidueField R))
+    let e := Classical.choice
+      (Classical.choose_spec
+        (exists_finite_module_presentation
+          (R := R) (M := IsLocalRing.ResidueField R)))
+    change kPrimeZeroLength (R := R)
+      (kPrimeZeroClassOfPresentation P) = 1
+    rw [kPrimeZeroLength_apply_class, finitePresentationLength]
+    rw [e.length_eq]
+    rw [Module.length_eq_one_iff.mpr]
+    · rfl
+    apply (isSimpleModule_iff_quot_maximal).2
+    exact ⟨IsLocalRing.maximalIdeal R,
+      IsLocalRing.maximalIdeal.isMaximal R,
+      ⟨LinearEquiv.refl R (R ⧸ IsLocalRing.maximalIdeal R)⟩⟩
+  have hrepr (x : KPrimeZero R) :
+      x = (kPrimeZeroLength (R := R) x) • c := by
+    rcases kPrimeZero_generated x with ⟨n, P, z, hx⟩
+    calc
+      x = ∑ i, z i • kPrimeZeroClassOfPresentation (P i) := hx
+      _ = ∑ i, z i •
+          (((Module.length R (P i).module).toNat : ℤ) • c) := by
+        apply Finset.sum_congr rfl
+        intro i hi
+        rw [← kPrimeZeroClass_eq_of_presentation (P i),
+          kPrimeZeroClass_eq_length_smul_artinian_local]
+      _ = (∑ i, z i * (Module.length R (P i).module).toNat) • c := by
+        simp_rw [smul_smul]
+        rw [Finset.sum_smul]
+      _ = (kPrimeZeroLength (R := R) x) • c := by
+        rw [hx]
+        simp only [map_sum, map_zsmul, kPrimeZeroLength_apply_class,
+          finitePresentationLength, smul_eq_mul]
+  have hinj : Function.Injective (kPrimeZeroLength (R := R)) := by
+    intro x y hxy
+    rw [hrepr x, hrepr y, hxy]
+  have hsurj : Function.Surjective (kPrimeZeroLength (R := R)) := by
+    intro z
+    refine ⟨z • c, ?_⟩
+    simp [hc]
+  exact ⟨hinj, hsurj⟩
 
 /-- The rank map is an isomorphism for a local ring. -/
 theorem kZeroRank_local_bijective

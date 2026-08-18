@@ -254,7 +254,12 @@ noncomputable def simplicialPushout_isColimit
     (a : U ⟶ V) (b : U ⟶ W)
     (h : ∀ n : SimplexCategoryᵒᵖ, HasPushout (a.app n) (b.app n)) :
     IsColimit (simplicialPushoutCocone a b h) := by
-  sorry
+  refine evaluationJointlyReflectsColimits _ (fun n => ?_)
+  let _ : HasPushout (a.app n) (b.app n) := h n
+  refine (PushoutCocone.isColimitMapCoconeEquiv
+    (simplicialPushoutCocone a b h) ((evaluation _ _).obj n)).symm ?_
+  change IsColimit (PushoutCocone.mk _ _ _)
+  exact PushoutCocone.mkSelfIsColimit (colimit.isColimit (span (a.app n) (b.app n)))
 
 /-!
 The source writes the mapping property as a fibre product of hom-sets.  In

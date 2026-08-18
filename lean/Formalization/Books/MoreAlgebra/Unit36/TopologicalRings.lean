@@ -27,6 +27,12 @@ theorem topologicalRingHom_continuous
     Continuous f.1 := by
   exact f.2
 
+/-- The source's unbundled topological-module condition. -/
+abbrev IsTopologicalModule (R : Type u) (M : Type v) [CommRing R]
+    [TopologicalSpace R] [IsTopologicalRing R] [TopologicalSpace M]
+    [AddCommGroup M] [Module R M] :=
+  ContinuousAdd M ∧ ContinuousSMul R M
+
 /-- The ideal formulation of a linear topology on a ring. -/
 theorem linearlyTopologizedRing_iff_hasBasis_ideal
     (R : Type u) [CommRing R] [TopologicalSpace R] :
@@ -148,7 +154,8 @@ theorem iAdicModuleTopology_is_topological_module
     (M : Type v) [AddCommGroup M] [Module R M] :
     let _ : TopologicalSpace R := I.adicTopology
     let _ : TopologicalSpace M := I.adicModuleTopology M
-    IsTopologicalAddGroup M ∧ ContinuousSMul R M := by
+    let _ : NonarchimedeanRing R := I.nonarchimedean
+    IsTopologicalModule R M := by
   sorry
 
 theorem iAdicTopology_is_preAdic (R : Type u) [CommRing R] (I : Ideal R) :

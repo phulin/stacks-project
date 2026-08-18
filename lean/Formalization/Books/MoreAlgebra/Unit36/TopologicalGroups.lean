@@ -1,4 +1,4 @@
-import Formalization.Books.Topology.Unit29.TopologicalModules
+import Mathlib.Algebra.Category.ModuleCat.Topology.Basic
 import Mathlib.CategoryTheory.Abelian.Basic
 import Mathlib.Topology.Algebra.Group.Quotient
 import Mathlib.Topology.Algebra.GroupCompletion
@@ -19,7 +19,8 @@ noncomputable section
 This is the canonical Mathlib continuous additive homomorphism, with no parallel
 homomorphism structure introduced for the chapter. -/
 abbrev TopologicalAbelianGroupHom (G : Type u) (H : Type v)
-    [AddCommGroup G] [AddCommGroup H] [TopologicalSpace G] [TopologicalSpace H] :=
+    [AddCommGroup G] [AddCommGroup H] [TopologicalSpace G] [TopologicalSpace H]
+    [IsTopologicalAddGroup G] [IsTopologicalAddGroup H] :=
   G →ₜ+ H
 
 /-- The source's topological abelian group structure, using Mathlib's canonical class. -/
@@ -92,11 +93,6 @@ def IsCompleteSeparatedTopologicalAddGroupFor (M : Type u) (t : TopologicalSpace
     u.toTopologicalSpace = t ∧ @IsUniformAddGroup M u (inferInstance : AddGroup M) ∧
       @CompleteSpace M u ∧ @T2Space M t
 
-/-- The ring case of the preceding completeness convention. -/
-abbrev IsCompleteTopologicalRing (R : Type u) [AddCommGroup R]
-    [TopologicalSpace R] [IsTopologicalAddGroup R] : Prop :=
-  IsCompleteTopologicalAddGroup R
-
 /-- A discrete inverse system of topological abelian groups. -/
 structure DiscreteInverseSystem (I : Type u) [Preorder I] where
   diagram : Iᵒᵖ ⥤ TopologicalAbelianGroupCat.{u}
@@ -139,6 +135,7 @@ structure LinearNeighborhoodBasis (M : Type u) [AddCommGroup M]
   Index : Type u
   [preorder : Preorder Index]
   U : Index → AddSubgroup M
+  antitone : Antitone U
   directed : ∀ i j : Index, ∃ k : Index, i ≤ k ∧ j ≤ k
   fundamental :
     (nhds (0 : M)).HasBasis (fun _ : Index => True)
@@ -176,11 +173,12 @@ noncomputable def linearCompletionMap (M : Type u) [AddCommGroup M]
     [TopologicalSpace M] [IsTopologicalAddGroup M] :
     (let _ : UniformSpace M := IsTopologicalAddGroup.rightUniformSpace M
      let _ : IsUniformAddGroup M := isUniformAddGroup_of_addCommGroup
-     M →+ UniformSpace.Completion M) := by
+     M →ₜ+ UniformSpace.Completion M) := by
   letI : UniformSpace M := IsTopologicalAddGroup.rightUniformSpace M
   letI : IsUniformAddGroup M := isUniformAddGroup_of_addCommGroup
   dsimp
-  exact UniformSpace.Completion.toCompl
+  exact { UniformSpace.Completion.toCompl with
+    continuous_toFun := UniformSpace.Completion.continuous_toCompl }
 
 theorem linearCompletion_completeSpace (M : Type u) [AddCommGroup M]
     [TopologicalSpace M] [IsTopologicalAddGroup M] :

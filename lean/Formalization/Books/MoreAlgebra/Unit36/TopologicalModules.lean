@@ -10,11 +10,6 @@ universe u v
 
 noncomputable section
 
-/-- The source's unbundled topological-module condition. -/
-abbrev IsTopologicalModule (R : Type u) (M : Type v) [CommRing R]
-    [TopologicalSpace R] [TopologicalSpace M] [AddCommGroup M] [Module R M] :=
-  ContinuousAdd M ∧ ContinuousSMul R M
-
 /-- The source's continuous module maps, reusing the earlier canonical declaration. -/
 abbrev TopologicalModuleHom (R : Type u) (M N : Type v) [CommRing R]
     [TopologicalSpace R] [IsTopologicalRing R]

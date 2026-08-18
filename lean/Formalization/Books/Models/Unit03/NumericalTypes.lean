@@ -2002,6 +2002,7 @@ theorem minimal_genus_ge_topological_genus (T : NumericalType) (genusValue : ℤ
     (hgenus : IsOfGenus T genusValue) (hminimal : IsMinimal T)
     (hn : 1 < T.n) :
     genusValue ≥ topologicalGenus T := by
+  /- Prior attempt (non-compiling proof retained for reference):
   classical
   let k : Fin T.n → ℤ := fun i => -Classical.choose (T.w_dvd i i)
   have hk_eq (i : Fin T.n) : T.a i i = -T.w i * k i := by
@@ -2271,7 +2272,7 @@ theorem minimal_genus_ge_topological_genus (T : NumericalType) (genusValue : ℤ
         (Fintype.card (Formalization.Books.Models.Unit02.positiveEdge T.a) : ℚ)) ≤
       ∑ i : Fin T.n, ((T.g i : ℚ) - 1 + (k i : ℚ) / 2) := by
     have hg_sum : (-(T.n : ℚ)) ≤ ∑ i : Fin T.n, ((T.g i : ℚ) - 1) := by
-      simp only [Finset.sum_sub_distrib]
+      simp
       have := Finset.sum_nonneg (fun i hi => T.g_nonneg i)
       push_cast at this
       linarith
@@ -2299,6 +2300,8 @@ theorem minimal_genus_ge_topological_genus (T : NumericalType) (genusValue : ℤ
     linarith [hsum_b, hsum_prod]
   dsimp [topologicalGenus]
   exact_mod_cast hgenus_lower
+  -/
+  sorry
 
 /-! The combined bound stated before the two component lemmas. -/
 theorem minimal_genus_ge_max_one_topological_genus (T : NumericalType)

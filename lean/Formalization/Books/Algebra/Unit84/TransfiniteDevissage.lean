@@ -1158,6 +1158,60 @@ theorem isDirectSumOfCountablyGeneratedModules_iff_hasKaplanskyDevissage
     exact ⟨(directSumDevissage_decomposition K.toDirectSumDevissage).some |>.trans
       (DirectSum.lequivCongrLeft R eJ.symm)⟩
 
+private theorem isCountablyGenerated_of_surjective
+    {R : Type u} {X Y : Type v} [CommRing R]
+    [AddCommGroup X] [Module R X] [AddCommGroup Y] [Module R Y]
+    (f : X →ₗ[R] Y) (hf : Function.Surjective f)
+    (hX : Module.IsCountablyGenerated R X) :
+    Module.IsCountablyGenerated R Y := by
+  rcases hX with ⟨s, hs, hspan⟩
+  refine ⟨f '' s, hs.image f, ?_⟩
+  rw [← Submodule.map_span]
+  rw [hspan]
+  apply top_unique
+  rintro y -
+  rcases hf y with ⟨x, rfl⟩
+  exact ⟨x, trivial, rfl⟩
+
+private theorem isCountablyGenerated_directSum_of_countable
+    {R : Type u} {ι : Type v} {N : ι → Type v} [CommRing R]
+    [∀ i, AddCommGroup (N i)] [∀ i, Module R (N i)]
+    (hι : Set.Countable (Set.univ : Set ι))
+    (hN : ∀ i, Module.IsCountablyGenerated R (N i)) :
+    Module.IsCountablyGenerated R (⨁ i, N i) := by
+  classical
+  letI : Countable ι := Set.countable_univ_iff.mp hι
+  let s : Set (⨁ i, N i) :=
+    ⋃ i, DirectSum.lof R ι N i '' (Classical.choose (hN i))
+  have hs : s.Countable := by
+    dsimp [s]
+    apply Set.countable_iUnion
+    intro i
+    exact (Classical.choose_spec (hN i)).1.image _
+  refine ⟨s, hs, ?_⟩
+  apply top_unique
+  intro x hx
+  clear hx
+  change x ∈ Submodule.span R s
+  induction x using DirectSum.induction_on with
+  | zero => exact zero_mem _
+  | of i x =>
+      have hx : x ∈ Submodule.span R (Classical.choose (hN i)) :=
+        by rw [(Classical.choose_spec (hN i)).2]; trivial
+      have hmap : DirectSum.lof R ι N i x ∈
+          (Submodule.span R (Classical.choose (hN i))).map
+            (DirectSum.lof R ι N i) :=
+        Submodule.mem_map.mpr ⟨x, hx, rfl⟩
+      have hspan : DirectSum.lof R ι N i x ∈
+          Submodule.span R
+            (DirectSum.lof R ι N i '' (Classical.choose (hN i))) := by
+        rw [← Submodule.map_span]
+        exact hmap
+      exact (Submodule.span_mono (by
+        intro y hy
+        exact Set.mem_iUnion.2 ⟨i, hy⟩)) hspan
+  | add x y hx hy => exact (Submodule.span R s).add_mem hx hy
+
 /-! ## Direct summands and projective modules -/
 
 /-- A direct summand of a direct sum of countably generated modules is again a
@@ -1169,7 +1223,695 @@ theorem isDirectSumOfCountablyGeneratedModules_of_isComplemented
     (hP : ∃ Q : Submodule R M,
       IsComplemented Q ∧ Nonempty (P ≃ₗ[R] Q)) :
     IsDirectSumOfCountablyGeneratedModules (ModuleCat.of R P) := by
-  sorry
+  classical
+  rcases hM with ⟨ι, N, hN, ⟨eM⟩⟩
+  rcases hP with ⟨Q, ⟨C, hQC⟩, ⟨eP⟩⟩
+  let X : Type v := ⨁ i : ι, (N i : Type v)
+  let proj : M →ₗ[R] Q := Q.projectionOnto C hQC
+  let toQ : X →ₗ[R] Q := proj.comp eM.symm.toLinearMap
+  let toX : X →ₗ[R] X :=
+    eM.toLinearMap.comp ((Q.subtype.comp proj).comp eM.symm.toLinearMap)
+  have hproj (x : Q) : proj (x : M) = x := by
+    exact Submodule.projectionOnto_apply_left hQC x
+  have htoX_apply (x : X) :
+      toX x = eM (Q.subtype (toQ x)) := by
+    rfl
+  let gen : ∀ i : ι, Set (N i) := fun i => Classical.choose (hN i)
+  have hgen (i : ι) : Submodule.span R (gen i) = ⊤ :=
+    Classical.choose_spec (hN i) |>.2
+  let rel : ι → Set ι := fun i =>
+    ⋃ x ∈ gen i, (toX (DirectSum.lof R ι (fun i => (N i : Type v)) i x)).support
+  have hrel_countable (i : ι) : (rel i).Countable := by
+    dsimp [rel]
+    apply Set.Countable.biUnion (Classical.choose_spec (hN i) |>.1)
+    intro x hx
+    exact Finset.countable_toSet _
+  have hsupport (i : ι) (x : (N i : Type v))
+      (hx : x ∈ Submodule.span R (gen i)) :
+      ∀ j, j ∉ rel i → toX (DirectSum.lof R ι (fun i => (N i : Type v)) i x) j = 0 := by
+    refine Submodule.span_induction (s := gen i) (p := fun x _ =>
+      ∀ j, j ∉ rel i →
+        toX (DirectSum.lof R ι (fun i => (N i : Type v)) i x) j = 0) ?_ ?_ ?_ ?_ hx
+    · intro x hx j hj
+      by_contra hne
+      apply hj
+      exact Set.mem_iUnion.2 ⟨x, Set.mem_iUnion.2 ⟨hx,
+        DFinsupp.mem_support_iff.mpr hne⟩⟩
+    · intro j hj
+      simp
+    · intro x y hx hy ihx ihy j hj
+      have hlof : DirectSum.lof R ι (fun i => (N i : Type v)) i (x + y) =
+          DirectSum.lof R ι (fun i => (N i : Type v)) i x +
+            DirectSum.lof R ι (fun i => (N i : Type v)) i y := by
+        exact map_add _ _ _
+      rw [hlof, map_add]
+      change toX (DirectSum.lof R ι (fun i => (N i : Type v)) i x) j +
+          toX (DirectSum.lof R ι (fun i => (N i : Type v)) i y) j = 0
+      rw [ihx j hj, ihy j hj, add_zero]
+    · intro a x hx ih j hj
+      have hlof : DirectSum.lof R ι (fun i => (N i : Type v)) i (a • x) =
+          a • DirectSum.lof R ι (fun i => (N i : Type v)) i x := by
+        exact map_smul _ _ _
+      rw [hlof, map_smul]
+      change a • toX (DirectSum.lof R ι (fun i => (N i : Type v)) i x) j = 0
+      rw [ih j hj, smul_zero]
+  let reach : Set ι → ℕ → Set ι := fun A n =>
+    Nat.rec A (fun _ S => ⋃ i ∈ S, rel i) n
+  let closure : Set ι → Set ι := fun A => ⋃ n, reach A n
+  have hreach_countable : ∀ (A : Set ι), A.Countable →
+      ∀ n, (reach A n).Countable := by
+    intro A hA n
+    induction n with
+    | zero => simpa [reach] using hA
+    | succ n ih =>
+        dsimp [reach] at *
+        exact ih.biUnion (fun i hi => hrel_countable i)
+  have hclosure_singleton (i : ι) : (closure ({i} : Set ι)).Countable := by
+    dsimp [closure]
+    exact Set.countable_iUnion (fun n => hreach_countable _ (Set.countable_singleton i) n)
+  have hreach_mono {A B : Set ι} (hAB : A ⊆ B) :
+      ∀ n, reach A n ⊆ reach B n := by
+    intro n
+    induction n with
+    | zero => exact hAB
+    | succ n ih =>
+        intro j hj
+        dsimp [reach] at hj ⊢
+        rcases Set.mem_iUnion.1 hj with ⟨i, hi⟩
+        rcases Set.mem_iUnion.1 hi with ⟨hiA, hij⟩
+        exact Set.mem_iUnion.2 ⟨i, Set.mem_iUnion.2 ⟨ih hiA, hij⟩⟩
+  have hclosure_mono {A B : Set ι} (hAB : A ⊆ B) :
+      closure A ⊆ closure B := by
+    intro i hi
+    rcases Set.mem_iUnion.1 hi with ⟨n, hn⟩
+    exact Set.mem_iUnion.2 ⟨n, hreach_mono hAB n hn⟩
+  have hclosure_closed (A : Set ι) {i : ι} (hi : i ∈ closure A) :
+      rel i ⊆ closure A := by
+    intro j hj
+    rcases Set.mem_iUnion.1 hi with ⟨n, hn⟩
+    exact Set.mem_iUnion.2 ⟨n + 1, by
+      dsimp [reach]
+      exact Set.mem_iUnion.2 ⟨i, Set.mem_iUnion.2 ⟨hn, hj⟩⟩⟩
+  have hclosure_union_singleton (A : Set ι) (i : ι) :
+      closure (A ∪ {i}) ⊆ closure A ∪ closure ({i} : Set ι) := by
+    have hiter : ∀ n, reach (A ∪ {i}) n ⊆
+        closure A ∪ closure ({i} : Set ι) := by
+      intro n
+      induction n with
+      | zero =>
+          intro j hj
+          rcases hj with hj | hj
+          · exact Or.inl (Set.mem_iUnion.2 ⟨0, hj⟩)
+          · exact Or.inr (Set.mem_iUnion.2 ⟨0, hj⟩)
+      | succ n ih =>
+          intro j hj
+          dsimp [reach] at hj
+          rcases Set.mem_iUnion.1 hj with ⟨k, hk⟩
+          rcases Set.mem_iUnion.1 hk with ⟨hk', hkj⟩
+          rcases ih hk' with hkA | hki
+          · exact Or.inl (hclosure_closed A hkA hkj)
+          · exact Or.inr (hclosure_closed ({i} : Set ι) hki hkj)
+    intro j hj
+    rcases Set.mem_iUnion.1 hj with ⟨n, hn⟩
+    exact hiter n hn
+  have hclosure_anchor (A : Set ι) :
+      closure A ⊆ ⋃ j ∈ A, closure ({j} : Set ι) := by
+    have hreach_anchor : ∀ n, reach A n ⊆ ⋃ j ∈ A, closure ({j} : Set ι) := by
+      intro n
+      induction n with
+      | zero =>
+          intro j hj
+          have hjA : j ∈ A := by simpa [reach] using hj
+          exact Set.mem_iUnion.2 ⟨j,
+            Set.mem_iUnion.2 ⟨hjA,
+              Set.mem_iUnion.2 ⟨0, by simp [reach]⟩⟩⟩
+      | succ n ih =>
+          intro k hk
+          dsimp [reach] at hk
+          rcases Set.mem_iUnion.1 hk with ⟨j, hj⟩
+          rcases Set.mem_iUnion.1 hj with ⟨hjA, hkj⟩
+          rcases Set.mem_iUnion.1 (ih hjA) with ⟨a, ha⟩
+          rcases Set.mem_iUnion.1 ha with ⟨haA, hja⟩
+          exact Set.mem_iUnion.2 ⟨a,
+            Set.mem_iUnion.2 ⟨haA,
+              hclosure_closed ({a} : Set ι) hja hkj⟩⟩
+    intro i hi
+    rcases Set.mem_iUnion.1 hi with ⟨n, hn⟩
+    exact hreach_anchor n hn
+  have hfilter_preserve (A : Set ι) (hA : ∀ i ∈ A, rel i ⊆ A) (y : X) :
+      DFinsupp.filter (fun i => i ∈ A) (toX
+        (DFinsupp.filter (fun i => i ∈ A) y)) =
+        toX (DFinsupp.filter (fun i => i ∈ A) y) := by
+    induction y using DirectSum.induction_on with
+    | zero => simp
+    | add x y ihx ihy =>
+        have hxy := DFinsupp.filter_add (fun i => i ∈ A) x y
+        rw [hxy, map_add]
+        ext j
+        by_cases hj : j ∈ A
+        · simp [DFinsupp.filter_apply, hj]
+        · have hxj := congrArg (fun z : X => z j) ihx
+          have hyj := congrArg (fun z : X => z j) ihy
+          rw [DFinsupp.filter_apply, if_neg hj]
+          rw [DFinsupp.add_apply]
+          rw [← hxj, ← hyj]
+          simp [DFinsupp.filter_apply, hj]
+    | of i x =>
+        by_cases hi : i ∈ A
+        · have hxi := hsupport i x (by rw [hgen i]; trivial)
+          ext j
+          by_cases hj : j ∈ A
+          · simp [DFinsupp.filter_apply, hj]
+          · have hpj := hxi j
+              (fun hrel => hj (hA i hi hrel))
+            have hfilter_lof :
+                DFinsupp.filter (fun i => i ∈ A)
+                  (DirectSum.of (fun i => (N i : Type v)) i x) =
+                DirectSum.of (fun i => (N i : Type v)) i x := by
+              ext k
+              by_cases hk : k ∈ A
+              · simp [DFinsupp.filter_apply, hk]
+              · have hki : k ≠ i := by
+                  intro hki
+                  apply hk
+                  simpa [hki] using hi
+                simp [DFinsupp.filter_apply, hk,
+                  DirectSum.of_eq_of_ne (β := fun i => (N i : Type v)) i k x hki]
+            rw [hfilter_lof]
+            have hpj' :
+                toX (DirectSum.of (fun i => (N i : Type v)) i x) j = 0 := by
+              exact hpj
+            simp [DFinsupp.filter_apply, hj, hpj']
+        · ext j
+          have hzero :
+              DFinsupp.filter (fun i => i ∈ A)
+                (DirectSum.of (fun i => (N i : Type v)) i x) = 0 := by
+            ext k
+            by_cases hk : k ∈ A
+            · have hki : k ≠ i := by
+                intro hki
+                apply hi
+                simpa [hki] using hk
+              simp [DFinsupp.filter_apply, hk,
+                DirectSum.of_eq_of_ne (β := fun i => (N i : Type v)) i k x hki]
+            · simp [DFinsupp.filter_apply, hk]
+          rw [hzero]
+          simp
+  let T : Ordinal.{v} := Cardinal.ord (Cardinal.mk ι)
+  have hcard : Cardinal.mk T.ToType = Cardinal.mk ι := by
+    simp [T]
+  let eι : T.ToType ≃ ι := (Cardinal.eq.mp hcard).some
+  let S : Ordinal.{v} := T + 1
+  let base : Set.Iio S → Set ι := fun α =>
+    eι '' {i : T.ToType | (i : Ordinal) < α.1}
+  have hbase_mono : Monotone base := by
+    intro α β hαβ i hi
+    rcases hi with ⟨j, hj, rfl⟩
+    refine ⟨j, ?_, rfl⟩
+    change (j : Ordinal) < β.1
+    exact (show (j : Ordinal) < α.1 from hj).trans_le hαβ
+  let closedBase : Set.Iio S → Set ι := fun α => closure (base α)
+  let filt : Set.Iio S → X →ₗ[R] X := fun α =>
+    DFinsupp.filterLinearMap R (fun i => (N i : Type v))
+      (fun i => i ∈ closedBase α)
+  let stage : Set.Iio S → Submodule R Q := fun α =>
+    LinearMap.range (toQ.comp (filt α))
+  have hclosedBase (α : Set.Iio S) : ∀ i ∈ closedBase α, rel i ⊆ closedBase α := by
+    intro i hi
+    exact hclosure_closed (base α) hi
+  have hfilter_mono (A B : Set ι) (hAB : A ⊆ B) (x : X) :
+      DFinsupp.filter (fun i => i ∈ B)
+          (DFinsupp.filter (fun i => i ∈ A) x) =
+        DFinsupp.filter (fun i => i ∈ A) x := by
+    ext i
+    by_cases hi : i ∈ A
+    · simp [DFinsupp.filter_apply, hi, hAB hi]
+    · simp [DFinsupp.filter_apply, hi]
+  have hstage_mono : Monotone stage := by
+    intro α β hαβ q hq
+    rcases hq with ⟨x, rfl⟩
+    refine ⟨filt α x, ?_⟩
+    change toQ (filt β (filt α x)) = toQ (filt α x)
+    apply congrArg toQ
+    apply hfilter_mono
+    apply hclosure_mono
+    intro i hi
+    rcases hi with ⟨j, hj, rfl⟩
+    refine ⟨j, ?_, rfl⟩
+    change (j : Ordinal) < β.1
+    exact (show (j : Ordinal) < α.1 from hj).trans_le hαβ
+  have hstage_zero : stage ⟨0, by simp [S]⟩ = ⊥ := by
+    apply le_antisymm
+    · rintro q ⟨x, rfl⟩
+      have hclosure_empty : closure (∅ : Set ι) = ∅ := by
+        have hreach_empty : ∀ n, reach (∅ : Set ι) n = ∅ := by
+          intro n
+          induction n with
+          | zero => simp [reach]
+          | succ n ih => simp [reach, ih]
+        ext i
+        constructor
+        · intro hi
+          change i ∈ ⋃ n, reach (∅ : Set ι) n at hi
+          rcases Set.mem_iUnion.1 hi with ⟨n, hn⟩
+          rw [hreach_empty n] at hn
+          exact hn
+        · intro hi
+          simp at hi
+      have hzero : filt ⟨0, by simp [S]⟩ x = 0 := by
+        change DFinsupp.filter
+          (fun i => i ∈ closedBase ⟨0, by simp [S]⟩) x = 0
+        have hbase_zero :
+            base ⟨0, by simp [S]⟩ = ∅ := by
+          ext i
+          simp [base]
+        rw [show closedBase ⟨0, by simp [S]⟩ = ∅ by
+          dsimp [closedBase]
+          rw [hbase_zero, hclosure_empty]]
+        ext i
+        simp [DFinsupp.filter_apply]
+      change toQ (filt ⟨0, by simp [S]⟩ x) ∈ (⊥ : Submodule R Q)
+      rw [hzero]
+      simp
+    · exact bot_le
+  have hstage_ambient : ∀ α : Set.Iio S, IsComplemented (stage α) := by
+    intro α
+    let fQ : Q →ₗ[R] Q :=
+      toQ.comp ((filt α).comp (eM.toLinearMap.comp Q.subtype))
+    have hfQ_mem (x : Q) : fQ x ∈ stage α := by
+      refine ⟨eM (x : M), ?_⟩
+      rfl
+    let f : Q →ₗ[R] stage α := fQ.codRestrict (stage α) hfQ_mem
+    have hf (x : stage α) : f x = x := by
+      rcases x.property with ⟨y, hy⟩
+      apply Subtype.ext
+      have hfilter := hfilter_preserve (closedBase α) (hclosedBase α) y
+      have hyx : toX (filt α y) = eM (x : M) := by
+        rw [htoX_apply]
+        rw [show toQ (filt α y) = (x : Q) by exact hy]
+        rfl
+      have hfilter' : filt α (eM (x : M)) = eM (x : M) := by
+        change DFinsupp.filter (fun i => i ∈ closedBase α)
+            (eM (x : M)) = eM (x : M)
+        rw [← hyx]
+        exact hfilter
+      change toQ (filt α (eM (x : M))) = (x : Q)
+      rw [hfilter']
+      simpa [toQ] using hproj x
+    exact ⟨LinearMap.ker f, LinearMap.isCompl_of_proj hf⟩
+  have hfilter_lof_mem (α : Set.Iio S) (i : ι) (x : (N i : Type v))
+      (hi : i ∈ closedBase α) :
+      filt α (DirectSum.lof R ι (fun i => (N i : Type v)) i x) =
+        DirectSum.lof R ι (fun i => (N i : Type v)) i x := by
+    ext k
+    change (DFinsupp.filter (fun i => i ∈ closedBase α)
+      (DirectSum.lof R ι (fun i => (N i : Type v)) i x)) k =
+      (DirectSum.lof R ι (fun i => (N i : Type v)) i x) k
+    by_cases hki : k = i
+    · subst k
+      simp [DFinsupp.filter_apply, hi]
+    · by_cases hk : k ∈ closedBase α
+      · simp [DFinsupp.filter_apply, hk]
+      · have hz :
+            DirectSum.lof R ι (fun i => (N i : Type v)) i x k = 0 := by
+          rw [DirectSum.lof_eq_of]
+          exact DirectSum.of_eq_of_ne (β := fun i => (N i : Type v)) i k x hki
+        simp [DFinsupp.filter_apply, hk, hz]
+  have hfilter_lof_not_mem (α : Set.Iio S) (i : ι) (x : (N i : Type v))
+      (hi : i ∉ closedBase α) :
+      filt α (DirectSum.lof R ι (fun i => (N i : Type v)) i x) = 0 := by
+    ext k
+    change (DFinsupp.filter (fun i => i ∈ closedBase α)
+      (DirectSum.lof R ι (fun i => (N i : Type v)) i x)) k = 0
+    by_cases hki : k = i
+    · subst k
+      simp [DFinsupp.filter_apply, hi]
+    · by_cases hk : k ∈ closedBase α
+      · have hz :
+            DirectSum.lof R ι (fun i => (N i : Type v)) i x k = 0 := by
+          rw [DirectSum.lof_eq_of]
+          exact DirectSum.of_eq_of_ne (β := fun i => (N i : Type v)) i k x hki
+        simp [DFinsupp.filter_apply, hk, hz]
+      · simp [DFinsupp.filter_apply, hk]
+  have hstage_limit :
+      ∀ (α : Set.Iio S), Order.IsSuccLimit α.1 →
+        stage α = ⨆ β : Set.Iio α.1,
+          stage ⟨β.1, by
+            change β.1 < S
+            exact β.2.trans α.2⟩ := by
+    intro α hα
+    apply le_antisymm
+    · rintro q ⟨y, rfl⟩
+      induction y using DirectSum.induction_on with
+      | zero =>
+          change toQ (filt α 0) ∈ (⨆ β : Set.Iio α.1,
+            stage ⟨β.1, by
+              change β.1 < S
+              exact β.2.trans α.2⟩)
+          simp
+      | add x y ihx ihy =>
+          change toQ (filt α (x + y)) ∈ (⨆ β : Set.Iio α.1,
+            stage ⟨β.1, by
+              change β.1 < S
+              exact β.2.trans α.2⟩)
+          rw [map_add, map_add]
+          exact add_mem ihx ihy
+      | of i x =>
+          by_cases hi : i ∈ closedBase α
+          · change i ∈ closure (base α) at hi
+            rcases Set.mem_iUnion.1 (hclosure_anchor (base α) hi) with ⟨k, hk⟩
+            rcases Set.mem_iUnion.1 hk with ⟨hkbase, hik⟩
+            rcases hkbase with ⟨j, hj, rfl⟩
+            change (j : Ordinal) < α.1 at hj
+            let β : Set.Iio α.1 := ⟨(j : Ordinal) + 1, by
+              change (j : Ordinal) + 1 < α.1
+              simpa only [Order.succ_eq_add_one] using hα.succ_lt hj⟩
+            let βS : Set.Iio S := ⟨β.1, by
+              change β.1 < S
+              exact β.2.trans α.2⟩
+            have hjβ : eι j ∈ base βS := by
+              refine ⟨j, ?_, rfl⟩
+              exact ordinal_lt_add_one (j : Ordinal)
+            have hclosed : closure ({eι j} : Set ι) ⊆ closedBase βS := by
+              apply hclosure_mono
+              intro z hz
+              simpa only [Set.mem_singleton_iff] using hz ▸ hjβ
+            have hiβ : i ∈ closedBase βS := hclosed hik
+            have hβα : βS ≤ α := by
+              change βS.1 ≤ α.1
+              exact β.2.le
+            have hbaseβα : base βS ⊆ base α := hbase_mono hβα
+            have hclosedβα : closedBase βS ⊆ closedBase α :=
+              hclosure_mono hbaseβα
+            have hfilt :
+                filt α (DirectSum.lof R ι (fun i => (N i : Type v)) i x) =
+                  filt βS (DirectSum.lof R ι (fun i => (N i : Type v)) i x) := by
+              exact (hfilter_lof_mem α i x hi).trans
+                (hfilter_lof_mem βS i x hiβ).symm
+            apply (le_iSup (fun β : Set.Iio α.1 =>
+              stage ⟨β.1, by
+                change β.1 < S
+                exact β.2.trans α.2⟩) β)
+            refine ⟨DirectSum.lof R ι (fun i => (N i : Type v)) i x, ?_⟩
+            change toQ (filt βS (DirectSum.lof R ι
+              (fun i => (N i : Type v)) i x)) =
+              toQ (filt α (DirectSum.lof R ι
+                (fun i => (N i : Type v)) i x))
+            rw [hfilt]
+          · have hz := hfilter_lof_not_mem α i x hi
+            change toQ (filt α (DirectSum.lof R ι
+              (fun i => (N i : Type v)) i x)) ∈
+              (⨆ β : Set.Iio α.1,
+                stage ⟨β.1, by
+                  change β.1 < S
+                  exact β.2.trans α.2⟩)
+            rw [hz]
+            simp
+    · refine iSup_le fun β => ?_
+      rintro q ⟨y, rfl⟩
+      let βS : Set.Iio S := ⟨β.1, by
+        change β.1 < S
+        exact β.2.trans α.2⟩
+      refine ⟨filt βS y, ?_⟩
+      change toQ (filt α (filt βS y)) = toQ (filt βS y)
+      apply congrArg toQ
+      apply hfilter_mono
+      exact hclosure_mono (hbase_mono (show βS ≤ α by
+        change βS.1 ≤ α.1
+        exact β.2.le))
+  let αT : Set.Iio S := ⟨T, ordinal_lt_add_one T⟩
+  have hbase_top : base αT = Set.univ := by
+    ext i
+    constructor
+    · intro hi
+      trivial
+    · intro hi
+      let j : T.ToType := eι.symm i
+      refine ⟨j, ?_, ?_⟩
+      exact Ordinal.typein_lt_self j
+      exact eι.apply_symm_apply i
+  have hclosedBase_top : closedBase αT = Set.univ := by
+    apply Set.eq_univ_of_forall
+    intro i
+    change i ∈ closure (base αT)
+    rw [hbase_top]
+    exact Set.mem_iUnion.2 ⟨0, by simp [reach]⟩
+  have hfilter_top (x : X) : filt αT x = x := by
+    change DFinsupp.filter (fun i => i ∈ closedBase αT) x = x
+    rw [hclosedBase_top]
+    ext i
+    simp [DFinsupp.filter_apply]
+  have hstage_top : stage αT = ⊤ := by
+    apply top_unique
+    intro q hq
+    refine ⟨eM (q : M), ?_⟩
+    change toQ (filt αT (eM (q : M))) = q
+    rw [hfilter_top]
+    change proj (eM.symm (eM (q : M))) = q
+    simpa using hproj q
+  have hstage_union : (⨆ α : Set.Iio S, stage α) = ⊤ := by
+    apply top_unique
+    rw [← hstage_top]
+    exact le_iSup stage αT
+  let D : IncreasingDevissage (R := R) (M := (Q : Type v)) S :=
+    { stage := stage
+      monotone := hstage_mono
+      zero_lt := by
+        change (0 : Ordinal.{v}) < T + 1
+        exact Order.bot_lt_succ T
+      zero := hstage_zero
+      union_eq_top := hstage_union
+      limit := hstage_limit }
+  have hsucc : D.isSuccessorComplemented := by
+    apply (D.isSuccessorComplemented_iff_isAmbientlyComplemented).2
+    exact hstage_ambient
+  have hcount : ∀ α : SuccessorIndex S,
+      Module.IsCountablyGenerated R (D.successorQuotient α) := by
+    intro α
+    let β₀ : Set.Iio S := ⟨α.1, (ordinal_lt_add_one α.1).trans α.2⟩
+    let β₁ : Set.Iio S := ⟨α.1 + 1, α.2⟩
+    let W : Submodule R Q := stage β₁
+    let p : Submodule R W := D.successorSubmodule α
+    let A : Set ι := closedBase β₀
+    let B : Set ι := closedBase β₁
+    let hαT : α.1 < T := by
+      simpa only [Order.succ_eq_add_one] using Order.succ_lt_succ_iff.mp α.2
+    let iα : T.ToType := Ordinal.ToType.mk ⟨α.1, hαT⟩
+    have hiα : (iα : Ordinal) = α.1 := by simp [iα]
+    have hAB : A ⊆ B := by
+      dsimp [A, B]
+      exact hclosure_mono (hbase_mono (show β₀ ≤ β₁ from
+        (ordinal_lt_add_one α.1).le))
+    have hbase_succ : base β₁ ⊆ base β₀ ∪ {eι iα} := by
+      intro k hk
+      rcases hk with ⟨j, hj, rfl⟩
+      have hjle : (j : Ordinal) ≤ α.1 := by
+        apply Order.le_of_lt_succ
+        simpa [β₁] using hj
+      rcases lt_or_eq_of_le hjle with hjlt | hjEq
+      · exact Or.inl ⟨j, hjlt, rfl⟩
+      · have hjeq : j = iα := by
+          apply (Ordinal.ToType.mk.symm.injective)
+          apply Subtype.ext
+          simpa [hiα] using hjEq
+        subst j
+        exact Or.inr rfl
+    have hBsub : B ⊆ A ∪ closure ({eι iα} : Set ι) := by
+      dsimp [A, B]
+      exact (hclosure_mono hbase_succ).trans
+        (hclosure_union_singleton (base β₀) (eι iα))
+    let J : Set ι := B \ A
+    have hJsub : J ⊆ closure ({eι iα} : Set ι) := by
+      intro j hj
+      rcases hBsub hj.1 with hjA | hjC
+      · exact False.elim (hj.2 hjA)
+      · exact hjC
+    have hJcount : J.Countable :=
+      (hclosure_singleton (eι iα)).mono hJsub
+    let wmap : X →ₗ[R] W :=
+      (toQ.comp (filt β₁)).codRestrict W (fun x => ⟨x, rfl⟩)
+    let qmap : W →ₗ[R] (W ⧸ p) := Submodule.mkQ p
+    let qcoord : ∀ j : J, (N j.1 : Type v) →ₗ[R] (W ⧸ p) := fun j =>
+      qmap.comp (wmap.comp
+        (DirectSum.lof R ι (fun i => (N i : Type v)) j.1))
+    let g : (⨁ j : J, (N j.1 : Type v)) →ₗ[R] (W ⧸ p) :=
+      DirectSum.toModule R J (W ⧸ p) qcoord
+    let filterJ : X →ₗ[R] X :=
+      DFinsupp.filterLinearMap R (fun i => (N i : Type v)) (fun i => i ∈ J)
+    let qJ : X →ₗ[R] (W ⧸ p) := qmap.comp (wmap.comp filterJ)
+    have hfilter_set_lof (E : Set ι) (i : ι) (x : (N i : Type v))
+        (hi : i ∈ E) :
+        DFinsupp.filter (fun i => i ∈ E)
+            (DirectSum.lof R ι (fun i => (N i : Type v)) i x) =
+          DirectSum.lof R ι (fun i => (N i : Type v)) i x := by
+      ext k
+      by_cases hki : k = i
+      · subst k
+        simp [DFinsupp.filter_apply, hi]
+      · by_cases hk : k ∈ E
+        · simp [DFinsupp.filter_apply, hk]
+        · have hz :
+              DirectSum.lof R ι (fun i => (N i : Type v)) i x k = 0 := by
+            rw [DirectSum.lof_eq_of]
+            exact DirectSum.of_eq_of_ne
+              (β := fun i => (N i : Type v)) i k x hki
+          simp [DFinsupp.filter_apply, hk, hz]
+    have hfilter_set_lof_not_mem (E : Set ι) (i : ι) (x : (N i : Type v))
+        (hi : i ∉ E) :
+        DFinsupp.filter (fun i => i ∈ E)
+            (DirectSum.lof R ι (fun i => (N i : Type v)) i x) = 0 := by
+      ext k
+      by_cases hki : k = i
+      · subst k
+        simp [DFinsupp.filter_apply, hi]
+      · by_cases hk : k ∈ E
+        · have hz :
+              DirectSum.lof R ι (fun i => (N i : Type v)) i x k = 0 := by
+            rw [DirectSum.lof_eq_of]
+            exact DirectSum.of_eq_of_ne
+              (β := fun i => (N i : Type v)) i k x hki
+          simp [DFinsupp.filter_apply, hk, hz]
+        · simp [DFinsupp.filter_apply, hk]
+    have hfilter_add (y : X) :
+        filt β₁ y = filt β₀ y + filterJ y := by
+      ext i
+      rw [DFinsupp.add_apply]
+      by_cases hiB : i ∈ B
+      · by_cases hiA : i ∈ A
+        · have hiB' : i ∈ B := hiB
+          simp [filt, filterJ, DFinsupp.filterLinearMap,
+            DFinsupp.filter_apply, A, B, J, hiA, hiB']
+        · simp [filt, filterJ, DFinsupp.filterLinearMap,
+            DFinsupp.filter_apply, A, B, J, hiA, hiB]
+      · have hiA : i ∉ A := by
+          intro hiA
+          exact hiB (hAB hiA)
+        simp [filt, filterJ, DFinsupp.filterLinearMap,
+          DFinsupp.filter_apply, A, B, J, hiA, hiB]
+    have hfilter_J_mem (y : X) :
+        filt β₁ (filterJ y) = filterJ y := by
+      change DFinsupp.filter (fun i => i ∈ B)
+          (DFinsupp.filter (fun i => i ∈ J) y) =
+        DFinsupp.filter (fun i => i ∈ J) y
+      ext i
+      by_cases hi : i ∈ J
+      · have hiB : i ∈ B := hi.1
+        simp [DFinsupp.filter_apply, hi, hiB]
+      · simp [DFinsupp.filter_apply, hi]
+    have hqJ_range (y : X) : ∃ d, g d = qJ y := by
+      induction y using DirectSum.induction_on with
+      | zero => exact ⟨0, by simp [g, qJ]⟩
+      | add x y ihx ihy =>
+          rcases ihx with ⟨dx, hdx⟩
+          rcases ihy with ⟨dy, hdy⟩
+          refine ⟨dx + dy, ?_⟩
+          rw [map_add, map_add, hdx, hdy]
+      | of i x =>
+          by_cases hi : i ∈ J
+          · let j : J := ⟨i, hi⟩
+            have hcoord : qJ (DirectSum.lof R ι
+                (fun i => (N i : Type v)) i x) = qcoord j x := by
+              have hfilter' : filterJ (DirectSum.lof R ι
+                  (fun i => (N i : Type v)) i x) =
+                  DirectSum.lof R ι (fun i => (N i : Type v)) i x := by
+                change DFinsupp.filter (fun i => i ∈ J)
+                    (DirectSum.lof R ι (fun i => (N i : Type v)) i x) = _
+                ext k
+                by_cases hki : k = i
+                · subst k
+                  simp [DFinsupp.filter_apply, hi]
+                · by_cases hk : k ∈ J
+                  · simp [DFinsupp.filter_apply, hk]
+                  · have hz :
+                        DirectSum.lof R ι (fun i => (N i : Type v)) i x k = 0 := by
+                      rw [DirectSum.lof_eq_of]
+                      exact DirectSum.of_eq_of_ne
+                        (β := fun i => (N i : Type v)) i k x hki
+                    simp [DFinsupp.filter_apply, hk, hz]
+              change qmap (wmap (filterJ (DirectSum.lof R ι
+                  (fun i => (N i : Type v)) i x))) = qcoord j x
+              rw [hfilter']
+              rfl
+            refine ⟨DirectSum.lof R J (fun j => (N j.1 : Type v)) j x, ?_⟩
+            rw [DirectSum.toModule_lof]
+            rw [← DirectSum.lof_eq_of R ι (fun i => (N i : Type v)) i x]
+            exact hcoord.symm
+          · have hz := hfilter_set_lof_not_mem J i x hi
+            refine ⟨0, ?_⟩
+            have hfilter0 : filterJ (DirectSum.of (fun i => (N i : Type v)) i x) = 0 := by
+              change DFinsupp.filter (fun i => i ∈ J)
+                  (DirectSum.of (fun i => (N i : Type v)) i x) = 0
+              ext k
+              by_cases hki : k = i
+              · subst k
+                simp [DFinsupp.filter_apply, hi]
+              · by_cases hk : k ∈ J
+                · have hz0 :
+                      DirectSum.of (fun i => (N i : Type v)) i x k = 0 := by
+                    exact DirectSum.of_eq_of_ne
+                      (β := fun i => (N i : Type v)) i k x hki
+                  simp [DFinsupp.filter_apply, hk, hz0]
+                · simp [DFinsupp.filter_apply, hk]
+            change g 0 = qmap (wmap
+              (filterJ (DirectSum.of (fun i => (N i : Type v)) i x)))
+            rw [hfilter0]
+            simp
+    have hg_surj : Function.Surjective g := by
+      intro z
+      have hqmap : Function.Surjective qmap := Submodule.mkQ_surjective p
+      rcases hqmap z with ⟨w, rfl⟩
+      rcases w.property with ⟨y, hy⟩
+      have hfilt : filt β₁ (filt β₀ y) = filt β₀ y := by
+        change DFinsupp.filter (fun i => i ∈ B)
+            (DFinsupp.filter (fun i => i ∈ A) y) =
+          DFinsupp.filter (fun i => i ∈ A) y
+        exact hfilter_mono A B hAB y
+      have hw : toQ (filt β₀ y) ∈ W := by
+        change toQ (filt β₀ y) ∈ stage β₁
+        refine ⟨filt β₀ y, ?_⟩
+        change toQ (filt β₁ (filt β₀ y)) = toQ (filt β₀ y)
+        rw [hfilt]
+      have hp : (⟨toQ (filt β₀ y), hw⟩ : W) ∈ p := by
+        change toQ (filt β₀ y) ∈ stage β₀
+        exact ⟨y, rfl⟩
+      have hzero : qmap ⟨toQ (filt β₀ y), hw⟩ = 0 := by
+        change (Submodule.mkQ p) ⟨toQ (filt β₀ y), hw⟩ = 0
+        rw [Submodule.mkQ_apply, Submodule.Quotient.mk_eq_zero]
+        exact hp
+      have hw_map : w = wmap y := by
+        apply Subtype.ext
+        exact hy.symm
+      have hmap_add : wmap y =
+          (⟨toQ (filt β₀ y), hw⟩ : W) + wmap (filterJ y) := by
+        apply Subtype.ext
+        change toQ (filt β₁ y) =
+          toQ (filt β₀ y) + toQ (filt β₁ (filterJ y))
+        rw [hfilter_add y, map_add, hfilter_J_mem y]
+      have heq : qmap w = qJ y := by
+        rw [hw_map]
+        change qmap (wmap y) = qmap (wmap (filterJ y))
+        rw [hmap_add, map_add, hzero, zero_add]
+      rcases hqJ_range y with ⟨d, hd⟩
+      exact ⟨d, hd.trans heq.symm⟩
+    have hdomain : Module.IsCountablyGenerated R
+        (⨁ j : J, (N j.1 : Type v)) := by
+      apply isCountablyGenerated_directSum_of_countable
+        (hι := @Set.countable_univ J hJcount.to_subtype)
+      intro j
+      exact hN j.1
+    have hquot : Module.IsCountablyGenerated R (W ⧸ p) :=
+      isCountablyGenerated_of_surjective g hg_surj hdomain
+    change Module.IsCountablyGenerated R (W ⧸ p)
+    exact hquot
+  let K : KaplanskyDevissage (R := R) (M := (Q : Type v)) S :=
+    { toDirectSumDevissage :=
+        { toIncreasingDevissage := D
+          successor := hsucc }
+      countablyGenerated := by
+        intro α
+        exact hcount α }
+  exact (isDirectSumOfCountablyGeneratedModules_iff_hasKaplanskyDevissage
+    (ModuleCat.of R P)).2 ⟨S, ⟨kaplanskyDevissage_of_linearEquiv K eP.symm⟩⟩
 
 /- A complemented submodule, equivalently the image of a split idempotent,
    inherits the Kaplansky dévissage property.  The complemented submodule

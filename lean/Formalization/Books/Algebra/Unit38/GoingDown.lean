@@ -165,16 +165,14 @@ theorem integralOverIdeal_iff
       simp [q, hp.coeff_natDegree]
     refine ⟨q, hqmonic, ?_⟩
     simp only [q, Polynomial.eval₂_finsetSum, Polynomial.eval₂_mul,
-      Polynomial.eval₂_C, Polynomial.eval₂_X_pow, map_mul, map_pow,
-      RingHom.coe_comp, Function.comp_apply, Subalgebra.coe_val,
-      Polynomial.map_mul, Polynomial.map_C, Polynomial.map_X]
+      Polynomial.eval₂_C, Polynomial.eval₂_X_pow]
     have hterm (i : ℕ) (hi : i < p.natDegree + 1) :
         (integralOverIdealPolynomialMap f I)
             ⟨Polynomial.C (p.coeff i) * Polynomial.X ^ (p.natDegree - i), hmem i⟩ *
           (Polynomial.C s * Polynomial.X) ^ i =
         Polynomial.C (f (p.coeff i) * s ^ i) * Polynomial.X ^ p.natDegree := by
       have hi' : i ≤ p.natDegree := Nat.le_of_lt_succ hi
-      simp [integralOverIdealPolynomialMap, pow_add]
+      simp [integralOverIdealPolynomialMap]
       rw [mul_pow]
       calc
         Polynomial.C (f (p.coeff i)) * Polynomial.X ^ (p.natDegree - i) *
@@ -219,8 +217,7 @@ theorem integralOverIdeal_iff
           (Polynomial.C s * Polynomial.X) at h
         simpa [Polynomial.algebraMap_def, RingHom.algebraMap_toAlgebra] using h)
     refine ⟨p, hp, ?_, ?_⟩
-    · change Polynomial.eval₂ f s p = 0
-      exact heval
+    · exact heval
     · intro i hi
       exact hcoeff i
 /- Original nontrivial proof retained for later completion:
@@ -464,7 +461,7 @@ private lemma exists_lift_polynomial_of_monic
         exact ⟨0, by simp⟩
       · rw [hf.coeff_natDegree]
         exact ⟨1, by simp⟩
-  exact Polynomial.lifts_and_natDegree_eq_and_monic hf_lifts f
+  exact Polynomial.lifts_and_natDegree_eq_and_monic hf_lifts hf
 
 /- The second conclusion of the source lemma is stated over a subring of the
    field containing both sets of coefficients.  The coefficient set below is
@@ -502,14 +499,12 @@ theorem polynomial_divisor_coeff_mem_radical
     apply Ideal.subset_span
     refine ⟨j, ?_, ?_⟩
     · simpa [hq'natDegree] using hj
-    · have hcoeff := congrArg
-        (fun r : Polynomial T => (r.map (algebraMap T K)).coeff j) hq'map
-      simpa using hcoeff
+    · have hcoeff := congrArg (fun r : Polynomial K => r.coeff j) hq'map
+      simpa only [Polynomial.coeff_map, Algebra.algebraMap_ofSubsemiring_apply] using hcoeff
   have hcoeff : p'.coeff i = (⟨p.coeff i, hpT i hi⟩ : T) := by
     apply Subtype.ext
-    have hcoeff' := congrArg
-      (fun r : Polynomial T => (r.map (algebraMap T K)).coeff i) hp'map
-    simpa using hcoeff'
+    have hcoeff' := congrArg (fun r : Polynomial K => r.coeff i) hp'map
+    simpa only [Polynomial.coeff_map, Algebra.algebraMap_ofSubsemiring_apply] using hcoeff'
   rw [← hcoeff]
   exact Ideal.radical_mono hspan hrad
 
@@ -524,13 +519,13 @@ theorem minpoly_coeff_mem_range_of_isNormalDomain
     (hR : Formalization.Books.Algebra.Unit37.IsNormalDomain R)
     (g : S) (hg : IsIntegral R g) :
     ∀ i, (minpoly K g).coeff i ∈ Set.range (algebraMap R K) := by
-  letI : IsDomain R := hR.1
-  letI : IsIntegrallyClosed R := hR.2
-  letI : IsTorsionFree K S :=
-    (Module.isTorsionFree_iff_algebraMap_injective K S).mpr
+  let : IsDomain R := hR.1
+  let : IsIntegrallyClosed R := hR.2
+  let : Module.IsTorsionFree K S :=
+    Module.isTorsionFree_iff_algebraMap_injective.mpr
       (RingHom.injective (algebraMap K S))
-  letI : IsTorsionFree R S :=
-    Module.IsTorsionFree.trans_faithfulSMul R K
+  let : Module.IsTorsionFree R S :=
+    Module.IsTorsionFree.trans_faithfulSMul R K S
   intro i
   rw [minpoly.isIntegrallyClosed_eq_field_fractions' K hg]
   exact ⟨(minpoly R g).coeff i, by simp⟩
@@ -546,8 +541,8 @@ theorem goingDown_normal_integral
     {p p' : Ideal R} [p.IsPrime] [p'.IsPrime] (hpp : p ≤ p')
     (Q : Ideal S) [Q.IsPrime] [Q.LiesOver p'] :
     ∃ P : Ideal S, P ≤ Q ∧ P.IsPrime ∧ P.LiesOver p := by
-  letI : IsDomain R := hR.1
-  letI : IsIntegrallyClosed R := hR.2
+  let : IsDomain R := hR.1
+  let : IsIntegrallyClosed R := hR.2
   exact Ideal.exists_ideal_le_liesOver_of_le Q hpp
 
 end

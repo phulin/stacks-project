@@ -131,9 +131,7 @@ noncomputable def descentDataFunctor
         subst q'
         rw [← D.pullHom_hom g q (g ≫ q) (by simp) f₁ f₂ hf₁ hf₂
           (g ≫ f₁) (g ≫ f₂) rfl rfl]
-        have hcomp₁ : (g ≫ f₁).op.toLoc = f₁.op.toLoc ≫ g.op.toLoc := by rfl
-        have hcomp₂ : (g ≫ f₂).op.toLoc = f₂.op.toLoc ≫ g.op.toLoc := by rfl
-        simp [hcomp₁, hcomp₂, Pseudofunctor.LocallyDiscreteOpToCat.pullHom,
+        simp [Pseudofunctor.LocallyDiscreteOpToCat.pullHom,
           Pseudofunctor.mapComp'_eq_mapComp,
           Functor.map_comp, Category.assoc]
         rw [Pseudofunctor.StrongTrans.naturality_comp_inv_app η
@@ -141,7 +139,7 @@ noncomputable def descentDataFunctor
           Pseudofunctor.StrongTrans.naturality_comp_hom_app η
               f₂.op.toLoc g.op.toLoc (D.obj i₂)]
         simp only [Category.assoc, ← (η.app (.mk (op Y'))).toFunctor.map_comp_assoc,
-          Cat.Hom.inv_hom_id_toNatTrans_app, Functor.map_id, Category.id_comp]
+          Cat.Hom.inv_hom_id_toNatTrans_app]
         have hF₁ :
             (F.mapComp f₁.op.toLoc g.op.toLoc).inv.toNatTrans.app (D.obj i₁) ≫
                 (F.mapComp f₁.op.toLoc g.op.toLoc).hom.toNatTrans.app (D.obj i₁) ≫
@@ -154,14 +152,8 @@ noncomputable def descentDataFunctor
         have hηg := NatIso.naturality_1
           (Cat.Hom.toNatIso (η.naturality g.op.toLoc))
           (D.hom q f₁ f₂ hf₁ hf₂)
-        simp only [Cat.Hom.toNatIso, Iso.symm_hom, Iso.symm_inv,
-          Cat.Hom.comp_toFunctor, Functor.comp_map, Category.assoc] at hηg
+        simp only [Cat.Hom.toNatIso, Cat.Hom.comp_toFunctor, Functor.comp_map] at hηg
         rw [reassoc_of% hηg]
-        simp [Pseudofunctor.StrongTrans.naturality_comp_hom_app,
-          Pseudofunctor.StrongTrans.naturality_comp_inv_app,
-          Pseudofunctor.mapComp'_inv_naturality_assoc,
-          Category.assoc, ← Functor.map_comp,
-          ← reassoc_of% Cat.Hom₂.comp_app]
       hom_self := by
         intros Y q i g hg
         have h := D.hom_self q g hg
@@ -251,7 +243,7 @@ theorem descentDataFunctor_is_equivalence
     (f : ∀ i, X i ⟶ U) :
     (descentDataFunctor η f).IsEquivalence := by
   rcases hη with ⟨hff, hess⟩
-  letI (V : C) : (η.app (.mk (op V))).toFunctor.IsEquivalence := by
+  let (V : C) : (η.app (.mk (op V))).toFunctor.IsEquivalence := by
     rcases hff V with ⟨h⟩
     exact { faithful := h.faithful, full := h.full, essSurj := hess V }
   constructor
@@ -268,7 +260,7 @@ theorem descentDataFunctor_is_equivalence
         comm := by
           intro Y q i₁ i₂ f₁ f₂ hf₁ hf₂
           apply (η.app (.mk (op Y))).toFunctor.map_injective
-          simp only [Functor.map_comp, Category.assoc]
+          simp only [Functor.map_comp]
           have h₁ := NatIso.naturality_1
             (Cat.Hom.toNatIso (η.naturality f₁.op.toLoc)).symm
               ((η.app (.mk (op (X i₁)))).toFunctor.preimage (φ.hom i₁))
@@ -278,22 +270,17 @@ theorem descentDataFunctor_is_equivalence
           have h₁' := h₁
           have h₂' := h₂
           simp only [Cat.Hom.toNatIso, Iso.symm_hom, Iso.symm_inv,
-            Cat.Hom.comp_toFunctor, Functor.comp_map, Category.assoc,
-            Cat.Hom.inv_hom_id_toNatTrans_app_assoc,
-            Cat.Hom.hom_inv_id_toNatTrans_app, Category.comp_id,
-            Functor.map_preimage] at h₁' h₂'
+            Cat.Hom.comp_toFunctor, Functor.comp_map] at h₁' h₂'
           rw [← h₁', ← h₂']
           apply (cancel_mono
             ((η.naturality f₂.op.toLoc).hom.toNatTrans.app (D₂.obj i₂))).1
           apply (cancel_epi
             ((η.naturality f₁.op.toLoc).inv.toNatTrans.app (D₁.obj i₁))).1
           simp only [Category.assoc,
-            Cat.Hom.inv_hom_id_toNatTrans_app_assoc,
-            Cat.Hom.hom_inv_id_toNatTrans_app_assoc,
-            Functor.map_preimage]
+            Cat.Hom.inv_hom_id_toNatTrans_app_assoc]
           rw [(η.app (.mk (op (X i₁)))).toFunctor.map_preimage (φ.hom i₁),
             (η.app (.mk (op (X i₂)))).toFunctor.map_preimage (φ.hom i₂)]
-          simp only [Cat.Hom.inv_hom_id_toNatTrans_app, Category.comp_id]
+          simp only [Cat.Hom.inv_hom_id_toNatTrans_app]
           simpa only [descentDataFunctor, Category.assoc, Category.comp_id,
             Functor.comp_obj, Cat.Hom.comp_toFunctor] using
             φ.comm q f₁ f₂ hf₁ hf₂ }
@@ -425,8 +412,6 @@ noncomputable def pointwiseTwoFiberProductApex
                   ((G.mapId (.mk U)).hom.toNatTrans.app ξ.obj.right)
           simp [Pseudofunctor.StrongTrans.naturality_id_hom,
             Pseudofunctor.StrongTrans.naturality_id_inv,
-            Pseudofunctor.StrongTrans.naturality_id_hom_app,
-            Pseudofunctor.StrongTrans.naturality_id_inv_app,
             ← Functor.map_comp,
             Category.assoc, ← reassoc_of% Cat.Hom₂.comp_app])
       · intro ξ ζ h
@@ -476,9 +461,10 @@ noncomputable def pointwiseTwoFiberProductApex
                     ((g.app (.mk U)).toFunctor.obj ξ.obj.right) =
                 (H.map (Discrete.mk r)).toFunctor.map
                   ((H.map (Discrete.mk q)).toFunctor.map ξ.obj.hom) := by
-              simpa [Pseudofunctor.mapComp', Pseudofunctor.mapComp'_eq_mapComp] using
-                H.mapComp'_naturality_1 (Discrete.mk q) (Discrete.mk r)
-                  (Discrete.mk q ≫ Discrete.mk r) (by rfl) ξ.obj.hom
+              have hH' := H.mapComp'_naturality_1 (Discrete.mk q) (Discrete.mk r)
+                (Discrete.mk q ≫ Discrete.mk r) rfl ξ.obj.hom
+              rw [Pseudofunctor.mapComp'_eq_mapComp] at hH'
+              exact hH'
             simp only [Functor.map_comp, Category.assoc]
             have hH_assoc :
                 ((H.mapComp (Discrete.mk q) (Discrete.mk r)).inv.toNatTrans.app
@@ -524,7 +510,7 @@ noncomputable def pointwiseTwoFiberProductApex
             simp only [← Category.assoc] at hH_full
             rw [hH_full]
             simp only [Category.assoc, ← Functor.map_comp,
-              Cat.Hom.inv_hom_id_toNatTrans_app, Functor.map_id, Category.comp_id]
+              Cat.Hom.inv_hom_id_toNatTrans_app]
             simp
             )
       · intro ξ ζ h

@@ -55,7 +55,7 @@ theorem abelian_iff_coimage_image_comparison_isIso
     cases hpre
     exact Abelian.instIsIsoCoimageImageComparison f
   · intro h
-    letI : ∀ {X Y : C} (f : X ⟶ Y), IsIso (Abelian.coimageImageComparison f) := h
+    let : ∀ {X Y : C} (f : X ⟶ Y), IsIso (Abelian.coimageImageComparison f) := h
     exact ⟨Abelian.ofCoimageImageComparisonIsIso⟩
 
 theorem preadditive_opposite
@@ -274,7 +274,7 @@ theorem contravariant_hom_exact_iff
   have hJ : JointlyReflectIsomorphisms F := by
     constructor
     intro X Y q hq
-    letI : IsIso (coyoneda.map q) := by
+    let : IsIso (coyoneda.map q) := by
       rw [NatTrans.isIso_iff_isIso_app]
       intro N
       rw [isIso_iff_bijective]
@@ -296,13 +296,13 @@ theorem contravariant_hom_exact_iff
         (h.exact 1)
       change Epi g at h'
       exact h'
-    letI : Epi g := hEpi
+    let : Epi g := hEpi
     intro N
-    letI : Mono g.op := op_mono_of_epi g
+    let : Mono g.op := op_mono_of_epi g
     have htail : (ShortComplex.mk
         ((F N).map g.op) ((F N).map f.op)
         (by simp [F, ← Functor.map_comp, ← op_comp, hfg])).Exact := by
-      letI : Mono S.op.f := by
+      let : Mono S.op.f := by
         change Mono g.op
         exact op_mono_of_epi g
       exact hSop.map_of_mono_of_preservesKernel (F N) inferInstance inferInstance
@@ -319,13 +319,13 @@ theorem contravariant_hom_exact_iff
       exact htail.exact_toComposableArrows
   · intro h
     have hMono : Mono g.op := by
-      letI : ∀ N : C, Mono ((F N).map g.op) := fun N => by
+      let : ∀ N : C, Mono ((F N).map g.op) := fun N => by
         have hN := (h N).exact 0
         change (ShortComplex.mk (0 : (0 : AddCommGrpCat.{v}) ⟶
           (F N).obj (Opposite.op M₃)) ((F N).map g.op) zero_comp).Exact at hN
         exact (ShortComplex.exact_iff_mono _ rfl).1 hN
       apply hJ.jointlyReflectMonomorphisms.mono g.op
-    letI : Mono g.op := hMono
+    let : Mono g.op := hMono
     have hEpi : Epi g := unop_epi_of_mono g.op
     let S : ShortComplex C := ShortComplex.mk f g hfg
     let T := S.op
@@ -333,8 +333,8 @@ theorem contravariant_hom_exact_iff
       apply (ShortComplex.exact_iff_epi_kernel_lift (S := T)).2
       let u := kernel.lift f.op g.op (by simp [← op_comp, hfg])
       change Epi u
-      letI : ∀ N : C, IsIso ((F N).map u) := fun N => by
-        letI : Mono ((F N).map g.op) := by
+      let : ∀ N : C, IsIso ((F N).map u) := fun N => by
+        let : Mono ((F N).map g.op) := by
           exact inferInstance
         have hNtail : (ShortComplex.mk ((F N).map g.op) ((F N).map f.op)
             (by simp [F, ← Functor.map_comp, ← op_comp, hfg])).Exact := by
@@ -358,7 +358,7 @@ theorem contravariant_hom_exact_iff
         rw [heq]
         change IsIso e.inv
         infer_instance
-      haveI : IsIso u := hJ.isIso u
+      have : IsIso u := hJ.isIso u
       infer_instance
     have hS : S.Exact := hSop.unop
     refine ⟨?_, ?_⟩
@@ -390,7 +390,7 @@ theorem covariant_hom_exact_iff
   have hJ : JointlyReflectIsomorphisms G := by
     constructor
     intro X Y q hq
-    letI : IsIso ((yoneda : C ⥤ Cᵒᵖ ⥤ Type v).map q) := by
+    let : IsIso ((yoneda : C ⥤ Cᵒᵖ ⥤ Type v).map q) := by
       rw [NatTrans.isIso_iff_isIso_app]
       intro N
       rw [isIso_iff_bijective]
@@ -410,7 +410,7 @@ theorem covariant_hom_exact_iff
       have h' := h.exact 0
       change (ShortComplex.mk (0 : (0 : C) ⟶ M₁) f zero_comp).Exact at h'
       exact (ShortComplex.exact_iff_mono _ rfl).1 h'
-    letI : Mono f := hMono
+    let : Mono f := hMono
     intro N
     have htail : (ShortComplex.mk ((G N).map f) ((G N).map g)
         (by simp [G, ← Functor.map_comp, hfg])).Exact := by
@@ -427,13 +427,13 @@ theorem covariant_hom_exact_iff
       exact htail.exact_toComposableArrows
   · intro h
     have hMono : Mono f := by
-      letI : ∀ N : C, Mono ((G N).map f) := fun N => by
+      let : ∀ N : C, Mono ((G N).map f) := fun N => by
         have hN := (h N).exact 0
         change (ShortComplex.mk (0 : (0 : AddCommGrpCat.{v}) ⟶
           (G N).obj M₁) ((G N).map f) zero_comp).Exact at hN
         exact (ShortComplex.exact_iff_mono _ rfl).1 hN
       apply hJ.jointlyReflectMonomorphisms.mono f
-    letI : Mono f := hMono
+    let : Mono f := hMono
     let S : ShortComplex C := ShortComplex.mk f g hfg
     have hS : S.Exact := by
       apply (ShortComplex.exact_iff_epi_kernel_lift (S := S)).2

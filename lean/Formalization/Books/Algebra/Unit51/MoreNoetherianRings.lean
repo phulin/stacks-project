@@ -273,7 +273,29 @@ theorem powersIntersectionIdeal_mem_localizes_to_zero
     (I : Ideal R) {x : R} (hx : x ∈ powersIntersectionIdeal I)
     (p : Ideal R) [p.IsPrime] (hIp : I ≤ p) :
     ∃ g : R, g ∉ p ∧ algebraMap R (Localization.Away g) x = 0 := by
-  sorry
+  have hx' : x ∈ powersIntersectionSubmodule (M := R) I := by
+    change x ∈ ⨅ n : ℕ, I ^ n • (⊤ : Submodule R R)
+    rw [Submodule.mem_iInf]
+    intro n
+    simpa only [smul_eq_mul, Ideal.mul_top] using (Ideal.mem_iInf.mp hx n)
+  obtain ⟨g, hg, hlocal⟩ :=
+    powersIntersectionSubmodule_localizes_to_bot (M := R) I p hIp
+  refine ⟨g, hg, ?_⟩
+  have hxloc :
+      (LocalizedModule.mkLinearMap (Submonoid.powers g) R) x ∈
+        Submodule.localized (Submonoid.powers g)
+          (powersIntersectionSubmodule (M := R) I) := by
+    rw [Submodule.mem_localized']
+    exact ⟨x, hx', 1, by simp⟩
+  have hzero : (LocalizedModule.mkLinearMap (Submonoid.powers g) R) x = 0 := by
+    rw [hlocal] at hxloc
+    simpa using hxloc
+  have hxann : ∃ s : Submonoid.powers g, (s : R) * x = 0 := by
+    simpa only [Submonoid.smul_def, smul_eq_mul] using
+      (IsLocalizedModule.eq_zero_iff (Submonoid.powers g)
+        (LocalizedModule.mkLinearMap (Submonoid.powers g) R)).mp hzero
+  exact (IsLocalization.map_eq_zero_iff (Submonoid.powers g)
+    (Localization.Away g) x).2 hxann
 
 /-! ## Artin--Tate -/
 
@@ -284,7 +306,9 @@ theorem artin_tate
     [Algebra R S] [IsNoetherianRing R] [Algebra.FiniteType R S]
     (T : Subalgebra R S) [Module.Finite T S] :
     Algebra.FiniteType R T := by
-  sorry
+  rw [← Subalgebra.fg_iff_finiteType, ← T.fg_top]
+  exact fg_of_fg_of_fg R T S (inferInstance : Algebra.FiniteType R S).out
+    (inferInstance : Module.Finite T S).fg_top Subtype.val_injective
 
 end
 

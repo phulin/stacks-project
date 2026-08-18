@@ -383,7 +383,7 @@ theorem isSeparableExtension_of_isSeparablyGenerated
 changes, by `k^(1/p)`, by the perfect closure, or by an algebraic closure. -/
 theorem isGeometricallyReduced_iff_finitePurelyInseparable_iff_pthRoot_iff_perfectClosure_iff_algebraicClosure
     {k : Type u} {S : Type v} [Field k] [CommRing S] [Algebra k S] :
-    ((∀ (k' : Type w) [Field k'] [Algebra k k']
+    ((∀ (k' : Type u) [Field k'] [Algebra k k']
       [FiniteDimensional k k'] [IsPurelyInseparable k k'],
       IsReduced (k' ⊗[k] S)) ↔
         IsReduced (AdjoinPthRoots k ⊗[k] S)) ∧
@@ -458,7 +458,7 @@ theorem isGeometricallyReduced_iff_finitePurelyInseparable_iff_pthRoot_iff_perfe
         (isSeparableExtension_iff_frobenius_linearIndependent_iff_tensorProduct_reduced_iff_geometricallyReduced
           (k := k) (K := L) p hp.out.pos).2.2.mp hlocal'
   have hfinite_iff_root :
-      (∀ (k' : Type w) [Field k'] [Algebra k k']
+      (∀ (k' : Type u) [Field k'] [Algebra k k']
         [FiniteDimensional k k'] [IsPurelyInseparable k k'],
         IsReduced (k' ⊗[k] S)) ↔
         IsReduced (AdjoinPthRoots k ⊗[k] S) := by

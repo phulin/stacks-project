@@ -270,23 +270,27 @@ def LocalPrimePair.TorIndependent
     [Algebra R A] [Algebra R B] (P : LocalPrimePair R A B) : Prop :=
   TorIndependentVia P.rToAp P.rToBq
 
-/-- The localized form of the source's comparison identity, with the two
-localization maps and the equality of the resulting Tor objects exposed as
-a named interface. -/
+/-- A prime of `A ⊗[R] B`, together with its contractions and the local-ring
+maps from `R_𝔯` to `A_𝔭` and `B_𝔮`. -/
+structure TensorPrimePair
+    (R A B : Type u) [CommRing R] [CommRing A] [CommRing B]
+    [Algebra R A] [Algebra R B] extends LocalPrimePair R A B where
+  s : PrimeSpectrum (A ⊗[R] B)
+  aToTensor : A →+* (A ⊗[R] B)
+  bToTensor : B →+* (A ⊗[R] B)
+  pContraction : PrimeSpectrum.comap aToTensor s = toLocalPrimePair.p
+  qContraction : PrimeSpectrum.comap bToTensor s = toLocalPrimePair.q
+
+/-- The localized form of the source's comparison identity.  The `global`
+and `local` families denote respectively `Tor_i^R(A, B)_𝔰` and
+`Tor_i^{R_𝔯}(A_𝔭, B_𝔮)_𝔰`; making the common localized module category
+explicit resolves the source's shorthand `_𝔰`. -/
 structure LocalizedTorIdentity
     {R A B : Type u} [CommRing R] [CommRing A] [CommRing B]
-    [Algebra R A] [Algebra R B] (P : LocalPrimePair R A B) where
-  localized : ℕ → ModuleCat (Localization.AtPrime P.r.asIdeal)
-  globalToLocalized : ∀ i,
-    letI : Algebra (Localization.AtPrime P.r.asIdeal)
-        (Localization.AtPrime P.p.asIdeal) := P.rToAp.toAlgebra
-    letI : Algebra (Localization.AtPrime P.r.asIdeal)
-        (Localization.AtPrime P.q.asIdeal) := P.rToBq.toAlgebra
-    Nonempty (localized i ≅
-      Tor (ModuleCat.of (Localization.AtPrime P.r.asIdeal)
-          (Localization.AtPrime P.p.asIdeal))
-        (ModuleCat.of (Localization.AtPrime P.r.asIdeal)
-          (Localization.AtPrime P.q.asIdeal)) i)
+    [Algebra R A] [Algebra R B] (S : TensorPrimePair R A B) where
+  global : ℕ → ModuleCat (Localization.AtPrime S.s.asIdeal)
+  local : ℕ → ModuleCat (Localization.AtPrime S.s.asIdeal)
+  comparison : ∀ i, Nonempty (global i ≅ local i)
 
 /-- Tor independence is equivalent to Tor independence after localization at
 corresponding primes. -/
@@ -301,16 +305,16 @@ theorem torIndependent_iff_localPrimePairs
 source lemma. -/
 theorem tor_localization_identity
     {R A B : Type u} [CommRing R] [CommRing A] [CommRing B]
-    [Algebra R A] [Algebra R B] (P : LocalPrimePair R A B) :
-    Nonempty (LocalizedTorIdentity P) := by
+    [Algebra R A] [Algebra R B] (S : TensorPrimePair R A B) :
+    Nonempty (LocalizedTorIdentity S) := by
   sorry
 
 /-- A chosen localized Tor object supplied by the localization identity. -/
 noncomputable def localizedTor
     {R A B : Type u} [CommRing R] [CommRing A] [CommRing B]
-    [Algebra R A] [Algebra R B] (P : LocalPrimePair R A B) (i : ℕ) :
-    ModuleCat (Localization.AtPrime P.r.asIdeal) :=
-  (Classical.choice (tor_localization_identity P)).localized i
+    [Algebra R A] [Algebra R B] (S : TensorPrimePair R A B) (i : ℕ) :
+    ModuleCat (Localization.AtPrime S.s.asIdeal) :=
+  (Classical.choice (tor_localization_identity S)).global i
 
 /-- Vanishing of all prime-localized Tor modules is equivalent to Tor
 independence. -/
@@ -318,8 +322,8 @@ theorem torIndependent_iff_localizedTor_vanishing
     {R A B : Type u} [CommRing R] [CommRing A] [CommRing B]
     [Algebra R A] [Algebra R B] :
     TorIndependent R A B ↔
-      ∀ P : LocalPrimePair R A B, ∀ i : ℕ,
-        IsZero (localizedTor P i) := by
+      ∀ S : TensorPrimePair R A B, ∀ i : ℕ,
+        IsZero (localizedTor S i) := by
   sorry
 
 end Formalization.Books.MoreAlgebra.Unit61

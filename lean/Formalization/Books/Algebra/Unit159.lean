@@ -1,8 +1,10 @@
 import Formalization.Books.Algebra.Unit127.ColimitsAndFinitePresentation
+import Mathlib.Algebra.Algebra.Subalgebra.Basic
 import Mathlib.FieldTheory.Separable
 import Mathlib.RingTheory.Algebraic.Defs
 import Mathlib.RingTheory.Etale.Basic
 import Mathlib.RingTheory.Flat.Basic
+import Mathlib.RingTheory.Flat.FaithfullyFlat.Basic
 import Mathlib.RingTheory.LocalRing.ResidueField.Basic
 import Mathlib.RingTheory.LocalRing.RingHom.Basic
 import Mathlib.RingTheory.RingHom.Finite
@@ -63,10 +65,11 @@ theorem exists_flat_local_residueField_extension
 /-! ## Finite étale local systems -/
 
 /-- A directed system of finite étale local `R`-algebras, together with a
-local colimit and its prescribed residue field.  `presentation` is the
-canonical directed-colimit presentation; the remaining fields record the
-locality and finite-étale conditions on its stages and the residue-field
-identification. -/
+local colimit and its prescribed residue field.  `presentation` is a chosen
+directed-colimit presentation; the remaining fields record the locality and
+finite-étale conditions on its stages and the residue-field identification.
+The maximal-ideal equality records that the colimit has the local structure
+constructed in the source lemma. -/
 structure FiniteEtaleLocalAlgebraColimit
     {R A K : Type u}
     [CommRing R] [IsLocalRing R] [CommRing A] [Field K]
@@ -83,6 +86,9 @@ structure FiniteEtaleLocalAlgebraColimit
   stagesLocalMap :
     ∀ i, letI : Preorder presentation.index := presentation.indexPreorder
       IsLocalHom (presentation.diagram.obj i).hom.hom
+  stagesInjective :
+    ∀ i, letI : Preorder presentation.index := presentation.indexPreorder
+      Function.Injective (presentation.diagram.obj i).hom.hom
   stagesFiniteEtale :
     ∀ i, letI : Preorder presentation.index := presentation.indexPreorder
       RingHom.Finite (presentation.diagram.obj i).hom.hom ∧
@@ -169,10 +175,10 @@ def BoundedFlatSubalgebra
     (S : Subalgebra A B) : Prop :=
   Module.Flat A S ∧ Cardinal.mk S ≤ flatSubalgebraCardinal A
 
-/-- A filtered family of bounded flat subalgebras whose union is the target.
-The order relation between subalgebras supplies the canonical transition maps,
-so this is the concrete directed-union form of the corresponding filtered
-colimit. -/
+/-- A cofinal filtered family of bounded flat subalgebras whose union is the
+target.  The order relation between subalgebras supplies the canonical
+transition maps, so this is the concrete directed-union form of the
+corresponding filtered colimit. -/
 structure DirectedBoundedFlatSubalgebraFamily
     (A B : Type u) [CommRing A] [CommRing B] [Algebra A B] where
   index : Type v
@@ -182,6 +188,8 @@ structure DirectedBoundedFlatSubalgebraFamily
   stage : index → Subalgebra A B
   boundedFlat : ∀ i, BoundedFlatSubalgebra A B (stage i)
   directed : ∀ i j, ∃ k, stage i ≤ stage k ∧ stage j ≤ stage k
+  cofinal : ∀ S : Subalgebra A B, BoundedFlatSubalgebra A B S →
+    ∃ i, S ≤ stage i
   covers : ∀ b : B, ∃ i, b ∈ stage i
 
 /-- Every flat algebra is the filtered union (equivalently, filtered

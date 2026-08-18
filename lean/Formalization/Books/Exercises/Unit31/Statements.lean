@@ -1061,18 +1061,115 @@ theorem affine_line_cone_is_affine_variety :
 
 /-- The coordinate line is a cone. -/
 theorem affine_line_cone_is_cone : IsCone affineLineCone := by
-  sorry
+  rw [affineLineCone, MvPolynomial.zeroLocus_span]
+  intro x hx c f hf
+  have hx1 : x 1 = 0 := by
+    have h := hx (MvPolynomial.X (1 : Fin 2)) (by simp)
+    rw [MvPolynomial.aeval_X] at h
+    exact h
+  rw [Set.mem_singleton_iff.mp hf, MvPolynomial.aeval_X, hx1]
+  simp
 
 /-- The inverse coordinate function is regular on the punctured coordinate
 line. -/
 theorem affine_line_cone_inverse_is_regular :
     IsRegularFunction affineLineConePunctured affineLineConeInverse := by
-  sorry
+  intro z
+  have hline_zero : ∀ u : Fin 2 → ℂ, u ∈ affineLineCone → u 1 = 0 := by
+    intro u hu
+    have hu' := hu
+    rw [affineLineCone, MvPolynomial.zeroLocus_span] at hu'
+    have h := hu' (MvPolynomial.X (1 : Fin 2)) (by simp)
+    rw [MvPolynomial.aeval_X] at h
+    exact h
+  have hzero_of_mem : ∀ u : Fin 2 → ℂ, u ∈ affineLineCone →
+      MvPolynomial.aeval u (MvPolynomial.X (R := ℂ) (0 : Fin 2)) = 0 → u = 0 := by
+    intro u hu hu0
+    have hu1 : u 1 = 0 := hline_zero u hu
+    have hu0' : u 0 = 0 := by
+      simpa only [MvPolynomial.aeval_X] using hu0
+    funext i
+    fin_cases i
+    · exact hu0'
+    · exact hu1
+  refine ⟨affineLineConePunctured, z.2, ?_, ?_, (1 : MvPolynomial (Fin 2) ℂ),
+    MvPolynomial.X (0 : Fin 2), ?_, ?_⟩
+  · intro u hu
+    exact hu
+  · refine ⟨Ideal.span {MvPolynomial.X (0 : Fin 2)}, ?_⟩
+    ext u
+    constructor
+    · intro hu
+      refine ⟨hu, ?_⟩
+      intro hu0
+      apply hu.2
+      have hu0' := hu0
+      rw [MvPolynomial.zeroLocus_span] at hu0'
+      have h := hu0' (MvPolynomial.X (0 : Fin 2)) (by simp)
+      apply Set.mem_singleton_iff.mpr
+      exact hzero_of_mem u hu.1 h
+    · intro hu
+      exact hu.1
+  · intro u hu hu0
+    apply hu.2
+    apply Set.mem_singleton_iff.mpr
+    exact hzero_of_mem u hu.1 hu0
+  · intro u hu
+    simp [affineLineConeInverse, MvPolynomial.aeval_X]
 
 /-- The inverse coordinate function is not induced by an ambient polynomial. -/
 theorem affine_line_cone_inverse_not_polynomial :
     ¬ IsPolynomialRestriction affineLineConePunctured affineLineConeInverse := by
-  sorry
+  rintro ⟨f, hf⟩
+  let g : Fin 2 → Polynomial ℂ := ![Polynomial.X, 0]
+  let F : Polynomial ℂ := MvPolynomial.aeval g f
+  let q : Polynomial ℂ := Polynomial.X * F - 1
+  have hF (t : ℂ) : F.eval t = MvPolynomial.aeval ![t, 0] f := by
+    change Polynomial.evalRingHom t (MvPolynomial.aeval g f) = _
+    rw [MvPolynomial.map_aeval]
+    simp [g, MvPolynomial.aeval_eq_eval₂Hom]
+    have hcoeff : (Polynomial.evalRingHom t).comp Polynomial.C = RingHom.id ℂ := by
+      ext c
+      simp
+    have hvars : (fun i : Fin 2 => Polynomial.eval t (![Polynomial.X, 0] i)) =
+        ![t, 0] := by
+      funext i
+      fin_cases i <;> simp
+    rw [hcoeff, hvars]
+    rw [MvPolynomial.eval₂_id]
+  have hqroot : ∀ t : ℂ, t ≠ 0 → q.eval t = 0 := by
+    intro t ht
+    have ht_mem : ![t, 0] ∈ affineLineConePunctured := by
+      refine ⟨?_, ?_⟩
+      · rw [affineLineCone, MvPolynomial.zeroLocus_span]
+        intro p hp
+        have hp' : p = MvPolynomial.X (1 : Fin 2) := by simpa using hp
+        rw [hp']
+        simp
+      · intro hzero
+        have hcoord := congrFun (Set.mem_singleton_iff.mp hzero) (0 : Fin 2)
+        simpa using (ht (by simpa using hcoord))
+    have hval := hf ⟨![t, 0], ht_mem⟩
+    simp only [affineLineConeInverse] at hval
+    change (Polynomial.X * F - 1).eval t = 0
+    rw [Polynomial.eval_sub, Polynomial.eval_mul, Polynomial.eval_X, hF t,
+      ← hval]
+    simp [ht]
+  have hqzero : q = 0 := by
+    apply Polynomial.eq_zero_of_infinite_isRoot
+    have hrange : (Set.range (fun n : ℕ => (n + 1 : ℂ))).Infinite :=
+      Set.infinite_range_of_injective (by
+        intro m n h
+        have h' : (m : ℂ) = n := add_right_cancel h
+        exact_mod_cast h')
+    apply hrange.mono
+    intro t ht
+    rcases ht with ⟨n, rfl⟩
+    change q.eval ((n : ℂ) + 1) = 0
+    apply hqroot
+    exact_mod_cast Nat.succ_ne_zero n
+  have hq0 := congrArg (fun p : Polynomial ℂ => p.eval 0) hqzero
+  simp [q] at hq0
 
 /-- An explicit affine cone with a regular function on its puncture which is
 not induced by an ambient polynomial. -/
@@ -1092,7 +1189,78 @@ theorem isRegularFunction_add
     {φ ψ : Z → k} (hφ : IsRegularFunction Z φ)
     (hψ : IsRegularFunction Z ψ) :
     IsRegularFunction Z (φ + ψ) := by
-  sorry
+  classical
+  intro z
+  rcases hφ z with ⟨U, hzU, hU, hOpenU, f₁, g₁, hg₁, hfg₁⟩
+  rcases hψ z with ⟨V, hzV, hV, hOpenV, f₂, g₂, hg₂, hfg₂⟩
+  rcases hOpenU with ⟨J, hUJ⟩
+  rcases hOpenV with ⟨K, hVK⟩
+  let W := Z \ MvPolynomial.zeroLocus k (J * K)
+  have hWU : W ⊆ U := by
+    intro x hx
+    change x ∈ Z \ MvPolynomial.zeroLocus k (J * K) at hx
+    rw [hUJ]
+    refine ⟨hx.1, ?_⟩
+    intro hxJ
+    apply hx.2
+    rw [MvPolynomial.mem_zeroLocus_iff]
+    intro p hp
+    have hker : J * K ≤ RingHom.ker (MvPolynomial.aeval x).toRingHom := by
+      refine Ideal.mul_le.2 ?_
+      intro j hj k hk
+      have hj0 := (MvPolynomial.mem_zeroLocus_iff.mp hxJ) j hj
+      change MvPolynomial.aeval x (j * k) = 0
+      rw [map_mul, hj0, zero_mul]
+    exact hker hp
+  have hWV : W ⊆ V := by
+    intro x hx
+    change x ∈ Z \ MvPolynomial.zeroLocus k (J * K) at hx
+    rw [hVK]
+    refine ⟨hx.1, ?_⟩
+    intro hxK
+    apply hx.2
+    rw [MvPolynomial.mem_zeroLocus_iff]
+    intro p hp
+    have hker : J * K ≤ RingHom.ker (MvPolynomial.aeval x).toRingHom := by
+      refine Ideal.mul_le.2 ?_
+      intro j hj k hk
+      have hk0 := (MvPolynomial.mem_zeroLocus_iff.mp hxK) k hk
+      change MvPolynomial.aeval x (j * k) = 0
+      rw [map_mul, hk0, mul_zero]
+    exact hker hp
+  have hzW : z.1 ∈ W := by
+    change z.1 ∈ Z \ MvPolynomial.zeroLocus k (J * K)
+    have hzU' := hzU
+    rw [hUJ] at hzU'
+    have hzV' := hzV
+    rw [hVK] at hzV'
+    refine ⟨hU hzU, ?_⟩
+    intro hzprod
+    have hzJ := hzU'.2
+    rw [MvPolynomial.mem_zeroLocus_iff] at hzJ
+    push Not at hzJ
+    rcases hzJ with ⟨j, hj, hj0⟩
+    apply hzV'.2
+    rw [MvPolynomial.mem_zeroLocus_iff]
+    intro k hk
+    have hprod := (MvPolynomial.mem_zeroLocus_iff.mp hzprod) (j * k)
+      (Ideal.mul_mem_mul hj hk)
+    rw [map_mul] at hprod
+    exact (mul_eq_zero.mp hprod).resolve_left hj0
+  refine ⟨W, hzW, ?_, ?_, f₁ * g₂ + f₂ * g₁, g₁ * g₂, ?_, ?_⟩
+  · exact hWU.trans hU
+  · exact ⟨J * K, rfl⟩
+  · intro x hx
+    rw [map_mul]
+    exact mul_ne_zero (hg₁ x (hWU hx)) (hg₂ x (hWV hx))
+  · intro x hx
+    have h₁ := hfg₁ x (hWU hx)
+    have h₂ := hfg₂ x (hWV hx)
+    change φ ⟨x, hU (hWU hx)⟩ + ψ ⟨x, hV (hWV hx)⟩ = _
+    rw [h₁, h₂]
+    simp only [map_add, map_mul]
+    rw [div_add_div _ _ (hg₁ x (hWU hx)) (hg₂ x (hWV hx))]
+    ring
 
 /-- Regular functions are closed under multiplication. -/
 theorem isRegularFunction_mul

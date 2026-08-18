@@ -23,7 +23,7 @@ namespace Formalization.Books.Algebra.Unit57
 
 open Formalization.Books.Algebra.Unit56
 open DirectSum SetLike
-open scoped DirectSum Pointwise Polynomial
+open scoped BigOperators DirectSum Pointwise Polynomial
 
 universe u v w a
 
@@ -163,14 +163,9 @@ private lemma zgraded_comap_map (H : ZGradedRingData A)
     exact DirectSum.decompose_of_mem_same H.component z.2
   have hterm (a : A) (z : zDegreeZeroSubring H) (hz : z ∈ q) :
       (⟨π (a * (z : A)), SetLike.coe_mem _⟩ : zDegreeZeroSubring H) ∈ q := by
-    have hsub :
-        (⟨π (a * (z : A)), SetLike.coe_mem _⟩ : zDegreeZeroSubring H) =
-          ⟨π a * (z : A), SetLike.coe_mem _⟩ := by
-      apply Subtype.ext
-      exact hπ_mul
-    rw [hsub]
-    change (⟨π a, SetLike.coe_mem _⟩ : zDegreeZeroSubring H) * z ∈ q
-    exact Ideal.mul_mem_left q _ hz
+    convert Ideal.mul_mem_left q (⟨π a, SetLike.coe_mem _⟩ : zDegreeZeroSubring H) hz using 1
+    apply Subtype.ext
+    exact hπ_mul
   apply le_antisymm
   · intro x hx
     change e x ∈ Ideal.map e q at hx
@@ -181,20 +176,23 @@ private lemma zgraded_comap_map (H : ZGradedRingData A)
     simp only [Finsupp.linearCombination, Finsupp.coe_lsum, Finsupp.sum,
       LinearMap.coe_smulRight, LinearMap.id_coe, id_eq, smul_eq_mul] at hl
     have hsum :
-        (∑ y in l.support,
+        (∑ y ∈ l.support,
             (⟨π (l y * (y : A)), SetLike.coe_mem _⟩ : zDegreeZeroSubring H)) ∈ q := by
       exact q.sum_mem (fun y hy => by
         rcases y.2 with ⟨z, hz, hyz⟩
-        simpa [hyz] using hterm (l y) z hz)
+        convert hterm (l y) z hz using 1
+        apply Subtype.ext
+        rw [← hyz]
+        rfl)
     have heq :
-        (∑ y in l.support,
+        (∑ y ∈ l.support,
             (⟨π (l y * (y : A)), SetLike.coe_mem _⟩ : zDegreeZeroSubring H)) = x := by
       apply Subtype.ext
       calc
-        (↑(∑ y in l.support,
+        (↑(∑ y ∈ l.support,
             (⟨π (l y * (y : A)), SetLike.coe_mem _⟩ : zDegreeZeroSubring H)) : A) =
-            ∑ y in l.support, π (l y * (y : A)) := by simp
-        _ = π (∑ y in l.support, l y * (y : A)) := by
+            ∑ y ∈ l.support, π (l y * (y : A)) := by simp
+        _ = π (∑ y ∈ l.support, l y * (y : A)) := by
           simp only [map_sum]
         _ = π (e x) := congrArg π hl
         _ = e x := hπ_coe x
@@ -398,8 +396,7 @@ theorem zGradedPrime_homeomorph_degree_zero
         have hD : (d.toNat : ℤ) = d := Int.toNat_of_nonneg (le_of_lt hd)
         ring
       have hdeg : (GradedRing.proj H.component k x) ^ d.toNat * g ∈ H.component 0 := by
-        have hproj : GradedRing.proj H.component k x ∈ H.component k :=
-          p.2.mem_iff.mp hx k
+        have hproj : GradedRing.proj H.component k x ∈ H.component k := SetLike.coe_mem _
         have hmem := SetLike.mul_mem_graded
           (SetLike.pow_mem_graded d.toNat hproj) hg
         rw [nsmul_eq_mul, Int.toNat_of_nonneg (le_of_lt hd)] at hmem
@@ -456,8 +453,9 @@ theorem zGradedPrime_homeomorph_degree_zero
   have hdeg (i : ℤ) :
       (GradedRing.proj H.component i a) ^ d.toNat * g i ∈ H.component 0 := by
     have hidx : d * i + -(i * d) = 0 := by ring
+    have hproj : GradedRing.proj H.component i a ∈ H.component i := SetLike.coe_mem _
     have hmem := SetLike.mul_mem_graded
-      (SetLike.pow_mem_graded d.toNat (SetLike.coe_mem _)) (hg i)
+      (SetLike.pow_mem_graded d.toNat hproj) (hg i)
     rw [nsmul_eq_mul, hD] at hmem
     simpa [hidx] using hmem
   let b : ℤ → B := fun i =>

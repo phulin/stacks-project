@@ -544,7 +544,7 @@ theorem jordanHolderLattice_iso_subobjectQuotient
     exact h
   rcases he with hbad | ⟨_, _, ⟨i⟩⟩
   · exact False.elim (hbad.1 hPQ)
-  · exact ⟨i⟩
+  · simpa only [Prod.fst, Prod.snd] using (Nonempty.intro i)
 
 structure FiniteLengthFiltration
     {C : Type u} [Category.{v} C] [Abelian C] (A : C) where

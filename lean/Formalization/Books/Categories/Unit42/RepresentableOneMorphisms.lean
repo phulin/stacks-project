@@ -1621,6 +1621,8 @@ theorem identify_pullback_fibre
   exact ⟨forward.asEquivalence⟩
   -/
   sorry
+  /- prior attempt: the active construction below did not elaborate; it is
+     retained verbatim for later repair. -/
 /-
   classical
   letI : p.IsFibredInGroupoids := hp
@@ -1935,6 +1937,8 @@ theorem identify_pullback_fibre_with_chosen_pullback
   exact ⟨E.trans transport.asEquivalence⟩
   -/
   sorry
+  /- prior attempt: the active construction below did not elaborate; it is
+     retained verbatim for later repair. -/
 /-
   classical
   obtain ⟨e⟩ := sliceMorphism_isomorphic_to_chosenPullback U hq P G

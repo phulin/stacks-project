@@ -49,8 +49,12 @@ def IsFibredEquivalenceOverMap
   ∃ G : T ⥤ S,
     G ⋙ p = q ∧
       MapsStronglyCartesian q p G ∧
-      Nonempty (F.functor ⋙ G ≅ 𝟭 S) ∧
-      Nonempty (G ⋙ F.functor ≅ 𝟭 T)
+      (∃ e : F.functor ⋙ G ≅ 𝟭 S,
+        ∃ over : (F.functor ⋙ G) ⋙ p = (𝟭 S) ⋙ p,
+          IsNatIsoOver p e over) ∧
+      (∃ e : G ⋙ F.functor ≅ 𝟭 T,
+        ∃ over : (G ⋙ F.functor) ⋙ q = (𝟭 T) ⋙ q,
+          IsNatIsoOver q e over)
 
 theorem isFibredEquivalenceOver_iff_exists_fibredMorphism
     {S T C : Type*} [Category* S] [Category* T] [Category* C]

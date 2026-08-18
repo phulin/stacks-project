@@ -223,7 +223,7 @@ theorem isSplitFibredCategory_iff_exists_strictPullbackChoice
     {S : Type uS} [Category.{vS} S]
     {C : Type uC} [Category.{vC} C]
     (p : S ⥤ C) [p.IsFibered] :
-    IsSplitFibredCategory.{vC, uC, vS, uS, vS, uS} p ↔
+      IsSplitFibredCategory.{vC, uC, vS, uS, vS, uS} p ↔
       ∃ P : PullbackChoice p, P.IsUnital ∧ isStrictPullbackChoice P := by
   sorry
 

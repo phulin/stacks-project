@@ -65,7 +65,7 @@ private def finiteSubsetQuotientMap
       ModuleCat.of R (M ⧸ Submodule.span R (F : Set M)) :=
   ModuleCat.ofHom <|
     (Submodule.span R (E : Set M)).mapQ (Submodule.span R (F : Set M))
-      LinearMap.id (Submodule.span_mono fun x hx => hEF hx)
+      LinearMap.id (Submodule.span_mono fun _ hx => hEF hx)
 
 private abbrev finiteSubsetDiagram
     {R M : Type u} [CommRing R] [AddCommGroup M] [Module R M] :
@@ -92,10 +92,7 @@ private abbrev finiteSubsetDiagram
           (finiteSubsetQuotientMap (leOfHom hEF)).hom)
     rw [LinearMap.prodMap_comp]
     congr 1
-    simpa [finiteSubsetQuotientMap] using
-      (Submodule.mapQ_comp (Submodule.span R (E : Set M))
-        (Submodule.span R (F : Set M)) (Submodule.span R (G : Set M))
-        LinearMap.id LinearMap.id (leOfHom hEF) (leOfHom hFG))
+    simp [finiteSubsetQuotientMap]
 
 private abbrev finiteSubsetCocone
     {R M : Type u} [CommRing R] [AddCommGroup M] [Module R M] :
@@ -144,7 +141,7 @@ private def finiteSubsetCocone_isColimit
         (finiteSubsetDiagram (R := R) (M := M)).map (homOfLE hEF)
             (0, Submodule.mkQ (Submodule.span R (E : Set M)) y) = 0 := by
       change (0, _) = (0, _)
-      simp [finiteSubsetDiagram, finiteSubsetQuotientMap, F,
+      simp [finiteSubsetQuotientMap, F,
         Submodule.Quotient.mk_eq_zero, hy']
     have hnat := s.ι.naturality (homOfLE hEF)
     have hqzero : (s.ι.app E).hom (0, Submodule.mkQ (Submodule.span R (E : Set M)) y) = 0 := by
@@ -189,9 +186,9 @@ theorem finite_iff_hom_filteredColimit_injective
         Function.Injective (filteredModuleHomColimitMap C).hom := by
   constructor
   · intro h C
-    letI : Category.{u} C.index := C.indexCategory
-    letI : IsFiltered C.index := C.indexFiltered
-    letI : HasColimit C.presentation.diag := C.presentation.hasColimit
+    let : Category.{u} C.index := C.indexCategory
+    let : IsFiltered C.index := C.indexFiltered
+    let : HasColimit C.presentation.diag := C.presentation.hasColimit
     have map_apply {A B : ModuleCat R} (f : A ⟶ B) (g : N ⟶ A) :
         (moduleHomFunctor N).map f g = g ≫ f := by
       change (ihom N).map f g = _
@@ -358,9 +355,9 @@ theorem finite_iff_hom_filteredColimit_injective
         ι := finiteSubsetCocone.ι
         isColimit := finiteSubsetCocone_isColimit }
     let c := (⟨Finset (N : Type u), P⟩ : FilteredModuleColimit N)
-    letI : Category.{u} c.index := c.indexCategory
-    letI : IsFiltered c.index := c.indexFiltered
-    letI : HasColimit c.presentation.diag := c.presentation.hasColimit
+    let : Category.{u} c.index := c.indexCategory
+    let : IsFiltered c.index := c.indexFiltered
+    let : HasColimit c.presentation.diag := c.presentation.hasColimit
     have hc := h c
     let E0 : Finset (N : Type u) := ∅
     let q : N ⟶ c.presentation.diag.obj E0 :=
@@ -385,7 +382,7 @@ theorem finite_iff_hom_filteredColimit_injective
       c.presentation.isColimit E0
     have he' : colimit.ι c.presentation.diag E0 ≫ e.hom =
         c.presentation.ι.app E0 := by
-      simpa [e] using he
+      simp [e]
     have hpost := colimit.ι_post c.presentation.diag (moduleHomFunctor N) E0
     have hpost_apply :
         (colimit.post c.presentation.diag (moduleHomFunctor N)).hom'
@@ -525,8 +522,8 @@ theorem exists_filteredColimit_finitelyPresented
   let indexLE : Index → Index → Prop := fun a b =>
     ∃ hST : a.1 ≤ b.1, ∀ e ∈ a.2.1,
       extend a.1 b.1 hST e ∈ b.2.1
-  letI : LE Index := ⟨indexLE⟩
-  letI : Preorder Index := {
+  let : LE Index := ⟨indexLE⟩
+  let : Preorder Index := {
     le_refl := by
       intro a
       refine ⟨le_rfl, ?_⟩

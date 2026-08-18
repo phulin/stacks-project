@@ -200,7 +200,134 @@ theorem restrictedPowerSeries_exists_unique_coefficients
         ∀ (i : B.Index) (E : Fin r →₀ ℕ),
           Ideal.Quotient.mk (B.I i) (a E) =
             restrictedPowerSeriesCoefficient A B r x i E := by
-  sorry
+  classical
+  let q : ∀ i : B.Index, (Fin r →₀ ℕ) → A ⧸ B.I i := fun i =>
+    fun E => restrictedPowerSeriesCoefficient A B r x i E
+  have hq : ∀ (i j : B.Index) (hij : i ≤ j) (E : Fin r →₀ ℕ),
+      Ideal.Quotient.factor (B.antitone hij) (q j E) = q i E := by
+    intro i j hij E
+    have hlim := limit.w (restrictedPowerSeriesDiagram A B r) ((homOfLE hij).op)
+    have hlim' := congrArg (fun q => q.hom x) hlim
+    have hlim2 := hlim'
+    change (MvPolynomial.map (Ideal.Quotient.factor (B.antitone hij)))
+        (restrictedPowerSeriesProjection A B r j x) =
+      restrictedPowerSeriesProjection A B r i x at hlim2
+    have hcoeff := congrArg (fun p => MvPolynomial.coeff E p) hlim2
+    rw [MvPolynomial.coeff_map] at hcoeff
+    simpa [q, restrictedPowerSeriesCoefficient] using hcoeff
+  have hIndex : Nonempty B.Index := by
+    rcases B.fundamental.mem_iff.mp (univ_mem : (Set.univ : Set A) ∈ nhds 0) with
+      ⟨i, -, hi⟩
+    exact ⟨i⟩
+  have hupper : ∀ (s : Set B.Index), s.Finite → ∃ k, ∀ i ∈ s, i ≤ k := by
+    intro s hs
+    induction s, hs using Set.Finite.induction_on with
+    | empty =>
+        exact ⟨Classical.choice hIndex, by simp⟩
+    | @insert a s ha hs ih =>
+        obtain ⟨k, hk⟩ := ih
+        obtain ⟨l, hal, hkl⟩ := B.directed a k
+        refine ⟨l, ?_⟩
+        intro i hi
+        rcases Set.mem_insert_iff.mp hi with rfl | hi
+        · exact hal
+        · exact (hk i hi).trans hkl
+  have hfinite : ∀ (E : Fin r →₀ ℕ) (s : Set B.Index), s.Finite →
+      (⋂ i ∈ s, (Ideal.Quotient.mk (B.I i)) ⁻¹' {q i E}).Nonempty := by
+    intro E s hs
+    obtain ⟨k, hk⟩ := hupper s hs
+    obtain ⟨a, ha⟩ := Ideal.Quotient.mk_surjective (q k E)
+    refine ⟨a, ?_⟩
+    simp only [Set.mem_iInter]
+    intro i hi
+    change Ideal.Quotient.mk (B.I i) a = q i E
+    rw [← hq i k (hk i hi) E, ← ha]
+    have hmk := congrArg (fun f : A →+* A ⧸ B.I i => f a)
+      (Ideal.Quotient.factor_comp_mk (B.antitone (hk i hi)))
+    exact hmk.symm
+  have hAE : ∀ E : Fin r →₀ ℕ, ∃ a : A, ∀ i : B.Index,
+      Ideal.Quotient.mk (B.I i) a = q i E := by
+    intro E
+    let F : Filter A := ⨅ i : B.Index,
+      Filter.principal ((Ideal.Quotient.mk (B.I i)) ⁻¹' {q i E})
+    have hF : NeBot F := by
+      change NeBot (⨅ i : B.Index,
+        Filter.principal ((Ideal.Quotient.mk (B.I i)) ⁻¹' {q i E}))
+      apply (Filter.hasBasis_iInf_principal_finite
+        (fun i : B.Index => (Ideal.Quotient.mk (B.I i)) ⁻¹' {q i E})).neBot_iff.mpr
+      intro s hs
+      exact hfinite E s hs
+    letI : UniformSpace A := IsTopologicalAddGroup.rightUniformSpace A
+    letI : IsUniformAddGroup A := isUniformAddGroup_of_addCommGroup
+    letI : CompleteSpace A := hA.2.1
+    have hC : Cauchy F := by
+      refine (IsUniformAddGroup.cauchy_iff_tendsto F).2 ⟨hF, ?_⟩
+      refine (B.fundamental.tendsto_right_iff).2 ?_
+      intro i hi
+      have hmem : (Ideal.Quotient.mk (B.I i)) ⁻¹' {q i E} ∈ F := by
+        change (Ideal.Quotient.mk (B.I i)) ⁻¹' {q i E} ∈
+          (⨅ j : B.Index, Filter.principal
+            ((Ideal.Quotient.mk (B.I j)) ⁻¹' {q j E}))
+        exact mem_iInf_of_mem i (by simp)
+      have hprod :
+          ((Ideal.Quotient.mk (B.I i)) ⁻¹' {q i E}) ×ˢ
+            ((Ideal.Quotient.mk (B.I i)) ⁻¹' {q i E}) ∈ F ×ˢ F := by
+        exact prod_mem_prod hmem hmem
+      filter_upwards [hprod] with p hp
+      rcases hp with ⟨hp₁, hp₂⟩
+      apply Ideal.Quotient.eq_zero_iff_mem.mp
+      rw [map_sub, hp₂, hp₁, sub_self]
+    letI : NeBot F := hF
+    obtain ⟨a, ha⟩ := (cauchy_iff_exists_le_nhds (l := F)).mp hC
+    refine ⟨a, ?_⟩
+    intro i
+    have hmem : (Ideal.Quotient.mk (B.I i)) ⁻¹' {q i E} ∈ F := by
+      change (Ideal.Quotient.mk (B.I i)) ⁻¹' {q i E} ∈
+        (⨅ j : B.Index, Filter.principal
+          ((Ideal.Quotient.mk (B.I j)) ⁻¹' {q j E}))
+      exact mem_iInf_of_mem i (by simp)
+    have hclosed : IsClosed ((Ideal.Quotient.mk (B.I i)) ⁻¹' {q i E}) := by
+      have hIclosed : IsClosed (B.I i : Set A) :=
+        AddSubgroup.isClosed_of_isOpen (B.I i).toAddSubgroup (B.isOpen i)
+      letI : IsClosed ((B.I i).toAddSubgroup : Set A) := hIclosed
+      exact isClosed_singleton.preimage QuotientAddGroup.continuous_mk
+    have ha' : a ∈ (Ideal.Quotient.mk (B.I i)) ⁻¹' {q i E} :=
+      hclosed.mem_of_tendsto (f := id) (b := F) ha hmem
+    exact ha'
+  choose a ha using hAE
+  have hcoef : ∀ (i : B.Index) (E : Fin r →₀ ℕ),
+      Ideal.Quotient.mk (B.I i) (a E) =
+        restrictedPowerSeriesCoefficient A B r x i E := by
+    intro i E
+    exact ha E i
+  have hrestricted : IsRestrictedCoefficientFamily A B r a := by
+    intro i
+    let p := restrictedPowerSeriesProjection A B r i x
+    apply p.support.finite_toSet.subset
+    intro E hE
+    apply MvPolynomial.mem_support_iff.mpr
+    intro hzero
+    apply hE
+    apply Ideal.Quotient.eq_zero_iff_mem.mp
+    rw [hcoef i E]
+    simpa [restrictedPowerSeriesCoefficient, p] using hzero
+  refine ⟨a, ⟨hrestricted, hcoef⟩, ?_⟩
+  intro b hb
+  letI : T2Space A := hA.2.2
+  have hzero : ∀ z : A, (∀ i : B.Index, z ∈ B.I i) → z = 0 := by
+    intro z hz
+    by_contra hne
+    have hcomp : ({z} : Set A)ᶜ ∈ nhds (0 : A) := by
+      apply isClosed_singleton.isOpen_compl.mem_nhds
+      exact Ne.symm hne
+    rcases B.fundamental.mem_iff.mp hcomp with ⟨i, -, hi⟩
+    exact (by simpa [hne] using hi (hz i))
+  funext E
+  apply sub_eq_zero.mp
+  apply hzero (b E - a E)
+  intro i
+  apply Ideal.Quotient.eq_zero_iff_mem.mp
+  rw [map_sub, hb.2 i E, hcoef i E, sub_self]
 
 /-- The inverse-limit topology is complete and separated. -/
 theorem restrictedPowerSeries_complete_for_limit_topology
@@ -209,7 +336,101 @@ theorem restrictedPowerSeries_complete_for_limit_topology
     IsCompleteSeparatedTopologicalAddGroupFor
       (restrictedPowerSeries A B r)
       (restrictedPowerSeriesLimitTopology A B r) := by
-  sorry
+  classical
+  let D := restrictedPowerSeriesDiagram A B r
+  let M := restrictedPowerSeries A B r
+  let Q : B.Indexᵒᵖ → Type u := fun i => D.obj i
+  let g : M →+ ∀ i : B.Indexᵒᵖ, Q i :=
+    { toFun := fun x i => (limit.π D i).hom x
+      map_zero' := by
+        ext i
+        exact map_zero _
+      map_add' := by
+        intro x y
+        ext i
+        exact map_add _ _ _ }
+  letI : ∀ i : B.Indexᵒᵖ, TopologicalSpace (Q i) := fun _ => ⊥
+  letI : ∀ i : B.Indexᵒᵖ, UniformSpace (Q i) := fun _ => ⊥
+  letI : ∀ i : B.Indexᵒᵖ, DiscreteTopology (Q i) :=
+    fun _ => discreteTopology_bot _
+  let u : UniformSpace M := UniformSpace.comap g (inferInstance : UniformSpace (∀ i, Q i))
+  letI : UniformSpace M := u
+  have hu : IsUniformAddGroup M := by
+    refine ⟨?_⟩
+    apply uniformContinuous_comap' (f := (g : M → ∀ i : B.Indexᵒᵖ, Q i))
+    convert
+      (uniformContinuous_sub.comp
+        (((uniformContinuous_comap (f := (g : M → ∀ i : B.Indexᵒᵖ, Q i))).comp
+            uniformContinuous_fst).prodMk
+          ((uniformContinuous_comap (f := (g : M → ∀ i : B.Indexᵒᵖ, Q i))).comp
+            uniformContinuous_snd))) using 1
+    ext p
+    simp [Function.comp_def]
+  letI : IsUniformAddGroup M := hu
+  have htop : u.toTopologicalSpace = restrictedPowerSeriesLimitTopology A B r := by
+    change TopologicalSpace.induced g Pi.topologicalSpace = _
+    rw [induced_to_pi]
+    rfl
+  have hD : IsLimit ((forget CommRingCat).mapCone (limit.cone D)) :=
+    isLimitOfPreserves (forget CommRingCat) (limit.isLimit D)
+  have hinj : Function.Injective g := by
+    intro x y hxy
+    apply (Types.isLimitEquivSections hD).injective
+    ext i
+    exact congrFun hxy i
+  let S : Set (∀ i : B.Indexᵒᵖ, Q i) :=
+    ⋂ (i : B.Indexᵒᵖ) (j : B.Indexᵒᵖ) (f : i ⟶ j),
+      {z | (D.map f).hom (z i) = z j}
+  have hgrange : Set.range g = S := by
+    ext z
+    constructor
+    · rintro ⟨x, rfl⟩
+      simp only [S, Set.mem_iInter]
+      intro i j f
+      exact congrArg (fun q => q.hom x) (limit.w D f)
+    · intro hz
+      simp only [S, Set.mem_iInter] at hz
+      have hz' : ∀ (i j : B.Indexᵒᵖ) (f : i ⟶ j),
+          (D.map f).hom (z i) = z j := by
+        intro i j f
+        exact hz i j f
+      let c : Cone (D ⋙ forget CommRingCat) :=
+        { pt := PUnit.{u + 1}
+          π := { app := fun i => TypeCat.ofHom (fun _ : PUnit.{u + 1} => z i)
+                 naturality := by
+                   intro i j f
+                   ext x
+                   exact (hz' i j f).symm } }
+      refine ⟨hD.lift c (PUnit.unit : PUnit.{u + 1}), ?_⟩
+      funext i
+      simpa [g, c] using congrArg (fun q => q (PUnit.unit : PUnit.{u + 1})) (hD.fac c i)
+  have hSclosed : IsClosed S := by
+    apply isClosed_iInter
+    intro i
+    apply isClosed_iInter
+    intro j
+    apply isClosed_iInter
+    intro f
+    letI : ∀ i : B.Indexᵒᵖ, T2Space (D.obj i) := fun _ => by
+      infer_instance
+    apply isClosed_eq
+    · exact (continuous_of_discreteTopology :
+        Continuous ((D.map f).hom : Q i → Q j)).comp (continuous_apply i)
+    · exact continuous_apply j
+  have hprod : CompleteSpace (∀ i : B.Indexᵒᵖ, Q i) := by
+    infer_instance
+  letI : CompleteSpace (∀ i : B.Indexᵒᵖ, Q i) := hprod
+  have hrange : IsComplete (Set.range g) := by
+    rw [hgrange]
+    exact hSclosed.isComplete
+  have hcomplete : @CompleteSpace M u :=
+    (completeSpace_iff_isComplete_range ⟨rfl⟩).2 hrange
+  letI : TopologicalSpace M := u.toTopologicalSpace
+  have hT2 : @T2Space M (restrictedPowerSeriesLimitTopology A B r) := by
+    rw [← htop]
+    exact T2Space.of_injective_continuous hinj
+      (uniformContinuous_comap (f := (g : M → ∀ i : B.Indexᵒᵖ, Q i))).continuous
+  refine ⟨u, htop, hu, hcomplete, hT2⟩
 
 /-- The universal property: an algebra map from the polynomial ring to a
 complete linearly topologized target extends uniquely to a continuous ring map

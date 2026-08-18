@@ -79,12 +79,12 @@ private lemma pure_fin_common_multiplier
       · exact I.sub_mem (I.add_mem hy₀ hy) (I.mul_mem_left y₀ hy)
       · intro i
         refine Fin.cases ?_ (fun j => ?_) i
-        · change x 0 = (y₀ + y - y₀ * y) * x 0
+        ·
           calc
             x 0 = y₀ * x 0 := h₀
             _ = (y₀ + y - y₀ * y) * x 0 := by
               linear_combination -y * h₀
-        · change x j.succ = (y₀ + y - y₀ * y) * x j.succ
+        ·
           calc
             x j.succ = y * x j.succ := htail j
             _ = (y₀ + y - y₀ * y) * x j.succ := by
@@ -181,8 +181,10 @@ private lemma atPrime_condition_to_support
       refine ⟨⟨x, hxi⟩, ?_⟩
       intro r hr hrzero
       have hrx : r * x = 0 := by
-        simpa [smul_eq_mul] using congrArg Subtype.val hrzero
-      exact (p.isPrime.mem_or_mem (by simpa [hrx] using p.asIdeal.zero_mem)).elim hr hxp
+        have hrzero' := congrArg Subtype.val hrzero
+        simp [smul_eq_mul] at hrzero'
+        exact hrzero'
+      exact (p.isPrime.mem_or_mem (by simp [hrx])).elim hr hxp
     simp [hmem, PrimeSpectrum.mem_zeroLocus, hp]
 
 private lemma pure_multiplier_to_onePlus_kernel
@@ -261,7 +263,7 @@ private lemma quotient_localization_to_pure
     {R : Type u} [CommRing R] {I : Ideal R} {S : Submonoid R}
     (h : Nonempty ((R ⧸ I) ≃ₐ[R] Localization S)) : Ideal.Pure I := by
   obtain ⟨e⟩ := h
-  letI : Module.Flat R (Localization S) := IsLocalization.flat (Localization S) S
+  have : Module.Flat R (Localization S) := IsLocalization.flat (Localization S) S
   exact Module.Flat.of_linearEquiv e.toLinearEquiv
 
 private lemma support_to_atPrime_condition
@@ -311,7 +313,7 @@ theorem pure_ideal_characterization
   tfae_have 1 ↔ 2 := by
     constructor
     · intro h
-      letI : Ideal.Pure I := h
+      have : Ideal.Pure I := h
       intro J
       simpa [inf_comm] using Ideal.inf_eq_mul_of_pure I J
     · intro h
@@ -321,7 +323,7 @@ theorem pure_ideal_characterization
   tfae_have 1 ↔ 3 := by
     constructor
     · intro h
-      letI : Ideal.Pure I := h
+      have : Ideal.Pure I := h
       intro J hJ
       simpa [inf_comm] using Ideal.inf_eq_mul_of_pure I J
     · intro h
@@ -331,7 +333,7 @@ theorem pure_ideal_characterization
   tfae_have 1 ↔ 4 := by
     constructor
     · intro h x
-      letI : Ideal.Pure I := h
+      have : Ideal.Pure I := h
       simpa [inf_comm, mul_comm] using
         Ideal.inf_eq_mul_of_pure I (Ideal.span ({x} : Set R))
     · intro h
@@ -425,7 +427,7 @@ theorem pure_ideal_zeroLocus_isClosed_and_stableUnderGeneralization
       StableUnderGeneralization (PrimeSpectrum.zeroLocus (I : Set R)) := by
   constructor
   · exact PrimeSpectrum.isClosed_zeroLocus _
-  · letI : Module.Flat R (R ⧸ I) := hI
+  · have : Module.Flat R (R ⧸ I) := hI
     have hrange : Set.range (PrimeSpectrum.comap (Ideal.Quotient.mk I)) =
         PrimeSpectrum.zeroLocus (I : Set R) := by
       rw [range_comap_of_surjective _ (Ideal.Quotient.mk I)
@@ -662,7 +664,7 @@ theorem finitely_generated_pure_ideal_characterization
   tfae_have 1 ↔ 2 := by
     constructor
     · rintro ⟨hP, hFG⟩
-      letI : Ideal.Pure I := hP
+      have : Ideal.Pure I := hP
       exact (Ideal.isIdempotentElem_iff_of_fg I hFG).mp
         (Ideal.isIdempotentElem_of_pure I)
     · rintro ⟨e, he, hEq⟩
@@ -710,18 +712,18 @@ theorem finitely_generated_pure_ideal_characterization
   tfae_have 1 ↔ 4 := by
     constructor
     · rintro ⟨hP, hFG⟩
-      letI : Module.Flat R (R ⧸ I) := hP
-      letI : Module.FinitePresentation R (R ⧸ I) :=
+      have : Module.Flat R (R ⧸ I) := hP
+      have : Module.FinitePresentation R (R ⧸ I) :=
         Module.finitePresentation_of_surjective (Submodule.mkQ I)
           (Submodule.mkQ_surjective I) (by
             rw [Submodule.ker_mkQ]
             exact hFG)
       exact Module.Flat.projective_of_finitePresentation
     · intro hproj
-      letI : Module.Projective R (R ⧸ I) := hproj
-      letI : Module.Finite R (R ⧸ I) :=
+      have : Module.Projective R (R ⧸ I) := hproj
+      have : Module.Finite R (R ⧸ I) :=
         Module.Finite.of_surjective (Submodule.mkQ I) (Submodule.mkQ_surjective I)
-      letI : Module.FinitePresentation R (R ⧸ I) :=
+      have : Module.FinitePresentation R (R ⧸ I) :=
         Module.finitePresentation_of_projective R (R ⧸ I)
       have hFGker : (LinearMap.ker (Submodule.mkQ I)).FG :=
         Module.FinitePresentation.fg_ker (Submodule.mkQ I) (Submodule.mkQ_surjective I)

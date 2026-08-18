@@ -1187,11 +1187,11 @@ private theorem closedSubsetPushforward_unit_stalk_comp
                           (sheafificationAdjunction K C)).unit.app G₀.obj).app
                         (op U) ≫
                         TopCat.Presheaf.germ F₀.obj (f₀.obj U) z hU' := by
-                      exact hWg'.trans (by sorry)
+                      exact hWg'.trans (by simpa [Category.assoc])
                     _ = _ := by
                       simpa [F₀, sheafToPresheaf, hproof, Category.assoc,
                         Category.id_comp, Category.comp_id] using hcompunitUg
-              _ = _ := by sorry
+              _ = _ := by simp
   change m ≫ eS.hom = eP.hom
   exact hcomp
 

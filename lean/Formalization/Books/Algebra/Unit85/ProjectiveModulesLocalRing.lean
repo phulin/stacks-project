@@ -370,14 +370,16 @@ theorem projective_element_mem_free_direct_summand
       simp [uinv]
     have hbt : (b : Module.Free.ChooseBasisIndex R F) ∈ t := by
       exact Finset.mem_erase.mpr ⟨by simpa using hab.symm, b.property⟩
+    let f0 : Module.Free.ChooseBasisIndex R F → R := fun k =>
+      if hk : k ∈ s then B ⟨k, hk⟩ b else 0
     let β : {k : Module.Free.ChooseBasisIndex R F // k ∈ t} → R := fun k =>
       if hkb : (k : Module.Free.ChooseBasisIndex R F) = b then
         (1 - B b b) * uinv
-      else -f (k : Module.Free.ChooseBasisIndex R F) * uinv
+      else -f0 (k : Module.Free.ChooseBasisIndex R F) * uinv
     have hsumβ := Finset.sum_subtype (p := fun k => k ∈ t)
       (F := Finset.Subtype.fintype t) t (by intro k; simp)
       (fun k => c k * (if hkb : k = b then (1 - B b b) * uinv
-        else -f k * uinv))
+        else -f0 k * uinv))
     have hrel0 : c a * u = c b - Finset.sum t f := by
       calc
         c a * u = (Finset.sum t f + c a * u) - Finset.sum t f := by ring
@@ -386,19 +388,38 @@ theorem projective_element_mem_free_direct_summand
       rw [Finset.sum_mul]
     have hbeta : c b * uinv - Finset.sum t f * uinv =
         Finset.sum t (fun k => c k *
-          if hkb : k = b then (1 - B b b) * uinv else -f k * uinv) := by
+          if hkb : k = b then (1 - B b b) * uinv else -f0 k * uinv) := by
       rw [hmul]
       rw [← t.sum_erase_add _ hbt]
       rw [← t.sum_erase_add _ hbt]
-      have hsumeq : Finset.sum (t.erase b) (fun k => c k *
-          if hkb : k = b then (1 - B b b) * uinv else -f k * uinv) =
-          Finset.sum (t.erase b) (fun k => c k * (-f k * uinv)) := by
+      have hsumeq : Finset.sum (t.erase b) (fun k => f k * uinv) =
+          Finset.sum (t.erase b) (fun k => c k * (f0 k * uinv)) := by
         apply Finset.sum_congr rfl
         intro k hk
         have hkb' : k ≠ b := Finset.ne_of_mem_erase hk
-        simp [hkb']
+        have hks : k ∈ s := by
+          exact (Finset.mem_erase.mp (Finset.mem_erase.mp hk).2).2
+        simp [f, f0, hkb', hks, mul_assoc]
+      have hsumzero : Finset.sum (t.erase b) (fun k => c k *
+          if hkb : k = b then (1 - B b b) * uinv else -f0 k * uinv) =
+          Finset.sum (t.erase b) (fun k => c k * (-f0 k * uinv)) := by
+        apply Finset.sum_congr rfl
+        intro k hk
+        simp [Finset.ne_of_mem_erase hk]
+      have hsumneg : Finset.sum (t.erase b) (fun k => c k * (-f0 k * uinv)) =
+          -Finset.sum (t.erase b) (fun k => c k * (f0 k * uinv)) := by
+        calc
+          Finset.sum (t.erase b) (fun k => c k * (-f0 k * uinv)) =
+              Finset.sum (t.erase b) (fun k => -(c k * (f0 k * uinv))) := by
+            apply Finset.sum_congr rfl
+            intro k hk
+            ring
+          _ = -Finset.sum (t.erase b) (fun k => c k * (f0 k * uinv)) := by
+            rw [Finset.sum_neg_distrib]
       rw [hsumeq]
-      simp only [if_pos rfl]
+      rw [hsumzero]
+      rw [hsumneg]
+      simp only [dif_pos trivial]
       have hfb : f b = c b * B b b := by simp [f]
       rw [hfb]
       ring
@@ -411,12 +432,49 @@ theorem projective_element_mem_free_direct_summand
         _ = (c b - Finset.sum t f) * uinv := by rw [hrel0]
         _ = c b * uinv - Finset.sum t f * uinv := by rw [sub_mul]
         _ = Finset.sum t (fun k => c k *
-            if hkb : k = b then (1 - B b b) * uinv else -f k * uinv) := hbeta
+            if hkb : k = b then (1 - B b b) * uinv else -f0 k * uinv) := hbeta
         _ = Finset.sum (Finset.univ : Finset {k : Module.Free.ChooseBasisIndex R F //
             k ∈ t}) (fun k => c (k : Module.Free.ChooseBasisIndex R F) * β k) := by
           simpa [β] using hsumβ
     exact (hnoSub a β) hrel
-  sorry
+  have hBunit : IsUnit B.det :=
+    matrix_isUnit_det_of_isUnit_diag_of_nonunit_offdiag B hdiagB hoffB
+  have hAunit : IsUnit A.det := by
+    simpa [B] using hBunit
+  let eL : (s → R) ≃ₗ[R] (s → R) := Matrix.toLinearEquiv e A hAunit
+  have hLeq : L = eL.toLinearMap := by
+    apply (LinearMap.toMatrix e e).injective
+    rw [hL]
+    symm
+    change LinearMap.toMatrix e e (Matrix.toLin e e A) = A
+    exact LinearMap.toMatrix_toLin e e A
+  let r : P →ₗ[R] P := g.comp (eL.symm.toLinearMap.comp (d.comp i))
+  have hrange : ∀ y, r y ∈ LinearMap.range g := by
+    intro y
+    exact ⟨eL.symm (d (i y)), rfl⟩
+  have hrange_id : ∀ y ∈ LinearMap.range g, r y = y := by
+    rintro y ⟨z, rfl⟩
+    change g (eL.symm (d (i (g z)))) = g z
+    change g (eL.symm (L z)) = g z
+    rw [hLeq]
+    simp
+  let hproj : LinearMap.IsProj (LinearMap.range g) r :=
+    ⟨hrange, hrange_id⟩
+  have hg : Function.Injective g := by
+    intro z z' hzz
+    apply eL.injective
+    change eL.toLinearMap z = eL.toLinearMap z'
+    rw [← hLeq]
+    change d (i (g z)) = d (i (g z'))
+    rw [hzz]
+  have hfreeQ : Module.Free R (LinearMap.range g) :=
+    Module.Free.of_equiv' (Module.Free.of_basis e)
+      (LinearEquiv.ofInjective g hg)
+  have hxg : x = g (fun j => c j) := by
+    apply hi.injective
+    simpa [g, e] using hix
+  refine ⟨LinearMap.range g, ?_, ⟨LinearMap.ker r, hproj.isCompl⟩, hfreeQ⟩
+  exact ⟨fun j => c j, hxg.symm⟩
 
 /-- **Projective modules over local rings are free.** -/
 theorem projective_free_over_local_ring

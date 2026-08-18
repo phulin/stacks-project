@@ -127,10 +127,10 @@ theorem cosimplicialFibreProduct_obj
 
 /-!
 The source writes the map associated to `φ : [n] ⟶ [m]` as the map induced
-by the two maps of `V` and `W` over the map of `U`.  The following naturality
-equations are the stronger generic form: they characterize every map of the
-constructed pullback by its two projections, and hence specialize to all
-cofaces, codegeneracies, and other maps in `Δ`.
+by the two maps of `V` and `W` over the map of `U`.  Naturality gives the two
+projection equations, and the following uniqueness result records that these
+equations characterize the induced map by the degreewise pullback
+universal property.
 -/
 
 @[reassoc]
@@ -154,6 +154,32 @@ theorem cosimplicialFibreProduct_map_snd
         (cosimplicialFibreProductSnd a b h).app Y =
       (cosimplicialFibreProductSnd a b h).app X ≫ W.map f := by
   exact (cosimplicialFibreProductSnd a b h).naturality f
+
+/-- The map in degree `f` is the unique map into the degree-`Y` pullback whose
+projections are induced by the maps of `V` and `W`. -/
+theorem cosimplicialFibreProduct_map_is_unique
+    {C : Type u} [Category.{v} C]
+    {V W U : CosimplicialObject C} (a : V ⟶ U) (b : W ⟶ U)
+    (h : HasDegreewiseFibreProducts a b) {X Y : SimplexCategory}
+    (f : X ⟶ Y) :
+    ∃! lift : (cosimplicialFibreProduct a b h).obj X ⟶
+        (cosimplicialFibreProduct a b h).obj Y,
+      lift ≫ (cosimplicialFibreProductFst a b h).app Y =
+          (cosimplicialFibreProductFst a b h).app X ≫ V.map f ∧
+        lift ≫ (cosimplicialFibreProductSnd a b h).app Y =
+          (cosimplicialFibreProductSnd a b h).app X ≫ W.map f := by
+  let hY : IsPullback
+      ((cosimplicialFibreProductFst a b h).app Y)
+      ((cosimplicialFibreProductSnd a b h).app Y)
+      (a.app Y) (b.app Y) :=
+    IsPullback.of_isLimit (degreewiseFibreProductConeIsLimit a b h Y)
+  refine ⟨(cosimplicialFibreProduct a b h).map f, ?_, ?_⟩
+  · exact ⟨cosimplicialFibreProduct_map_fst a b h f,
+      cosimplicialFibreProduct_map_snd a b h f⟩
+  · intro lift hl
+    apply hY.hom_ext
+    · exact hl.1.trans (cosimplicialFibreProduct_map_fst a b h f).symm
+    · exact hl.2.trans (cosimplicialFibreProduct_map_snd a b h f).symm
 
 /-! ## The hom-set formula -/
 

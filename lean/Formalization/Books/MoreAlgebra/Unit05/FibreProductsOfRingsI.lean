@@ -102,23 +102,32 @@ theorem algebraPullback_to_product_injective
   intro x y hxy
   exact Subtype.ext hxy
 
-/-- The product ring is finite as a module over the fibre product, as used
-in the Artin--Tate argument. -/
-theorem algebraPullback_product_finite
+private noncomputable def algebraPullback_product_finite_aux
     {R A B C : Type*} [CommRing R] [CommRing A] [CommRing B] [CommRing C]
     [Algebra R A] [Algebra R B] [Algebra R C]
     (f : A →ₐ[R] B) (g : C →ₐ[R] B)
     (hf : Function.Surjective f)
     (hg : RingHom.Finite g.toRingHom) :
-    (algebraPullbackToProduct f g).Finite := by
+    Unit × PLift (@Module.Finite (AlgHom.pullback f g) (A × C) _ _
+      (@Algebra.toModule (AlgHom.pullback f g) (A × C) _ _
+        (algebraPullbackToProduct f g).toAlgebra)) := by
   classical
-  change Module.Finite (AlgHom.pullback f g) (A × C)
-  let D := AlgHom.pullback f g
-  letI : Algebra D A := (AlgHom.pullbackFst f g).toRingHom.toAlgebra
-  letI : Algebra D C := (AlgHom.pullbackSnd f g).toRingHom.toAlgebra
+  letI : Algebra (AlgHom.pullback f g) A :=
+    (AlgHom.pullbackFst f g).toRingHom.toAlgebra
+  letI : Algebra (AlgHom.pullback f g) C :=
+    (AlgHom.pullbackSnd f g).toRingHom.toAlgebra
   letI : Algebra C B := g.toRingHom.toAlgebra
-  letI : Module.Finite C B := hg
-  obtain ⟨n, l, hl⟩ := Module.Finite.exists_fin' C B
+  letI : Algebra (AlgHom.pullback f g) (A × C) :=
+    (algebraPullbackToProduct f g).toAlgebra
+  letI : Module.Finite C B := by
+    simpa only [RingHom.Finite] using hg
+  let D := AlgHom.pullback f g
+  let hfin := Module.Finite.exists_fin' C B
+  let n := Classical.choose hfin
+  let hfin' : ∃ l : (Fin n → C) →ₗ[C] B, Function.Surjective l :=
+    Classical.choose_spec hfin
+  let l := Classical.choose hfin'
+  have hl : Function.Surjective l := Classical.choose_spec hfin'
   choose x hx using fun i : Fin n => hf (l (Pi.single i 1))
   let q : (D × (Fin n → D)) →ₗ[D] A :=
     { toFun := fun z =>
@@ -137,9 +146,9 @@ theorem algebraPullback_product_finite
             (AlgHom.pullbackFst f g) d *
               ((AlgHom.pullbackFst f g) z.1 +
                 ∑ i, (AlgHom.pullbackFst f g) (z.2 i) * x i)
-        simp only [map_mul, Finset.mul_sum]
+        simp only [map_mul]
         rw [mul_add, Finset.mul_sum]
-        ring }
+        ring_nf }
   have hq : Function.Surjective q := by
     intro a
     obtain ⟨v, hv⟩ := hl (f a)
@@ -216,7 +225,19 @@ theorem algebraPullback_product_finite
     · exact hu
     · change s v = z.2
       simpa [s] using hv
-  exact Module.Finite.of_surjective qp hqp
+  exact ⟨(), ⟨Module.Finite.of_surjective qp hqp⟩⟩
+
+/-- The product ring is finite as a module over the fibre product, as used
+in the Artin--Tate argument. -/
+theorem algebraPullback_product_finite
+    {R A B C : Type*} [CommRing R] [CommRing A] [CommRing B] [CommRing C]
+    [Algebra R A] [Algebra R B] [Algebra R C]
+    (f : A →ₐ[R] B) (g : C →ₐ[R] B)
+    (hf : Function.Surjective f)
+    (hg : RingHom.Finite g.toRingHom) :
+    (algebraPullbackToProduct f g).Finite := by
+  change Module.Finite (AlgHom.pullback f g) (A × C)
+  exact (algebraPullback_product_finite_aux f g hf hg).2.down
 
 /-- The exact rows in the proof of the finite-type fibre-product lemma,
 with `I` represented by the canonical kernel ideal. -/
@@ -263,10 +284,7 @@ theorem algebraPullback_exact_rows
 /-! The source-facing finite-type lemma follows the proof-support interfaces
 above, which makes the Artin--Tate route available when its body is filled. -/
 
-/-- A finite-type fibre product of algebras in the hypotheses of the source
-lemma.  `AlgHom.pullback` is Mathlib's canonical fibre-product algebra, and
-`RingHom.Finite` is the established finite-module condition for `C → B`. -/
-theorem finiteType_algHom_pullback
+private noncomputable def finiteType_algHom_pullback_aux
     {R A B C : Type*} [CommRing R] [CommRing A] [CommRing B] [CommRing C]
     [Algebra R A] [Algebra R B] [Algebra R C]
     (f : A →ₐ[R] B) (g : C →ₐ[R] B)
@@ -276,7 +294,7 @@ theorem finiteType_algHom_pullback
     (hC : Algebra.FiniteType R C)
     (hf : Function.Surjective f)
     (hg : RingHom.Finite g.toRingHom) :
-    Algebra.FiniteType R (AlgHom.pullback f g) := by
+    PLift (Algebra.FiniteType R B ∧ Algebra.FiniteType R (AlgHom.pullback f g)) := by
   letI : Algebra (AlgHom.pullback f g) (A × C) :=
     (algebraPullbackToProduct f g).toAlgebra
   let tower : IsScalarTower R (AlgHom.pullback f g) (A × C) :=
@@ -296,8 +314,24 @@ theorem finiteType_algHom_pullback
       Function.Injective (algebraMap (AlgHom.pullback f g) (A × C)) := by
     simpa [RingHom.algebraMap_toAlgebra] using
       (algebraPullback_to_product_injective f g)
-  exact ⟨@fg_of_fg_of_fg R (AlgHom.pullback f g) (A × C) _ _ _ _ _ _ tower hR
-    hprod hmodule hinjective⟩
+  exact ⟨⟨hB, ⟨@fg_of_fg_of_fg R (AlgHom.pullback f g) (A × C) _ _ _ _ _ _
+    tower hR hprod hmodule hinjective⟩⟩⟩
+
+/-- A finite-type fibre product of algebras in the hypotheses of the source
+lemma.  `AlgHom.pullback` is Mathlib's canonical fibre-product algebra, and
+`RingHom.Finite` is the established finite-module condition for `C → B`. -/
+theorem finiteType_algHom_pullback
+    {R A B C : Type*} [CommRing R] [CommRing A] [CommRing B] [CommRing C]
+    [Algebra R A] [Algebra R B] [Algebra R C]
+    (f : A →ₐ[R] B) (g : C →ₐ[R] B)
+    (hR : IsNoetherianRing R)
+    (hA : Algebra.FiniteType R A)
+    (hB : Algebra.FiniteType R B)
+    (hC : Algebra.FiniteType R C)
+    (hf : Function.Surjective f)
+    (hg : RingHom.Finite g.toRingHom) :
+    Algebra.FiniteType R (AlgHom.pullback f g) := by
+  exact (finiteType_algHom_pullback_aux f g hR hA hB hC hf hg).down.2
 
 /-- The product of a family of algebra maps with varying codomains.  Mathlib
 provides `AlgHom.pi` for a common domain; this small componentwise map is the

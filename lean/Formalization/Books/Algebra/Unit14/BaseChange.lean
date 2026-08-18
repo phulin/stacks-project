@@ -1,5 +1,4 @@
 import Mathlib.Algebra.Category.ModuleCat.ChangeOfRings
-import Mathlib.Algebra.Category.ModuleCat.Monoidal.Closed
 import Mathlib.Algebra.Module.FinitePresentation
 import Mathlib.RingTheory.FiniteStability
 import Mathlib.RingTheory.TensorProduct.Finite
@@ -224,5 +223,23 @@ theorem homFromTensorProductEquiv_exists {R S M N P : Type u} [CommRing R] [Comm
         (ModuleCat.of S (TensorProduct S M N)) ⟶ ModuleCat.of R P) ≃
         (ModuleCat.of S M ⟶ ModuleCat.of S (N →ₗ[R] P))) := by
   sorry
+
+/- The source identifies these Hom spaces, so expose the equivalence itself in
+   addition to the existence form used to package its proof. -/
+noncomputable def homFromTensorProductEquiv {R S M N P : Type u} [CommRing R] [CommRing S]
+    [AddCommGroup M] [Module S M] [AddCommGroup N] [Module S N]
+    [AddCommGroup P] [Module R P] (f : R →+* S) :
+    letI : Algebra R S := f.toAlgebra
+    letI : Module R N := Module.compHom N f
+    letI : IsScalarTower R S N := SMul.comp.isScalarTower f
+    letI : Module S (N →ₗ[R] P) := homOfScalarsModule f
+    (((ModuleCat.restrictScalars f).obj
+      (ModuleCat.of S (TensorProduct S M N)) ⟶ ModuleCat.of R P) ≃
+      (ModuleCat.of S M ⟶ ModuleCat.of S (N →ₗ[R] P))) :=
+  letI : Algebra R S := f.toAlgebra
+  letI : Module R N := Module.compHom N f
+  letI : IsScalarTower R S N := SMul.comp.isScalarTower f
+  letI : Module S (N →ₗ[R] P) := homOfScalarsModule f
+  Classical.choice (homFromTensorProductEquiv_exists f)
 
 end Formalization.Books.Algebra.Unit14

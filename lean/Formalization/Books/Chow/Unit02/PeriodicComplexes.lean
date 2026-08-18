@@ -281,7 +281,7 @@ noncomputable instance twoPeriodicComplexes_are_abelian :
   let F := toHomologicalComplexFunctor (R := R)
   let hF : Functor.FullyFaithful F := Functor.FullyFaithful.ofFullyFaithful F
   letI : Preadditive (TwoPeriodicComplex R) := Preadditive.ofFullyFaithful hF
-  letI : Functor.IsEquivalence F :=
+  let _ : Functor.IsEquivalence F :=
     { faithful := by dsimp [F]; infer_instance
       full := by dsimp [F]; infer_instance
       essSurj := by dsimp [F]; infer_instance }

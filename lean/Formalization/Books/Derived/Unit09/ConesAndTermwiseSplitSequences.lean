@@ -782,7 +782,7 @@ theorem triangle_independent_splittings
       exact (σ' i).s
     let k : ∀ i : ℤ, (termwiseSplitShortComplex S).X₃.X i ⟶
         (termwiseSplitShortComplex S).X₁.X i := fun i =>
-      sσ' i ≫ rσ i - sσ i ≫ rσ' i
+      sσ' i ≫ rσ i - sσ i ≫ rσ i
     let dB : ∀ p : ℤ,
         (termwiseSplitShortComplex S).X₂.X p ⟶
           (termwiseSplitShortComplex S).X₂.X (p + 1) := fun p =>
@@ -918,6 +918,67 @@ theorem triangle_independent_splittings
         exact (σ' i).g_s
       have hfrσ'B (i : ℤ) : fS i ≫ rσ' i = 𝟙 _ := by
         exact (σ' i).f_r
+      have hfrσB (i : ℤ) : fS i ≫ rσ i = 𝟙 _ := by
+        exact (σ i).f_r
+      have hsgσB (i : ℤ) : sσ i ≫ gS i = 𝟙 _ := by
+        exact (σ i).s_g
+      have hrfσB (i : ℤ) : rσ i ≫ fS i =
+          𝟙 _ - gS i ≫ sσ i := by
+        exact (σ i).r_f
+      have hgsσB (i : ℤ) : gS i ≫ sσ i =
+          𝟙 _ - rσ i ≫ fS i := by
+        exact (σ i).g_s
+      have hfS (i : ℤ) : fS i ≫ dB i =
+          (termwiseSplitShortComplex S).X₁.d i (i + 1) ≫ fS (i + 1) := by
+        exact S.f.comm i (i + 1)
+      have hD0 :
+          (termwiseSplitShortComplex S).X₃.d p (p + 1) ≫
+              sσ (p + 1) ≫ rσ (p + 1) = 0 := by
+        calc
+          (termwiseSplitShortComplex S).X₃.d p (p + 1) ≫
+                sσ (p + 1) ≫ rσ (p + 1) =
+              sσ p ≫ gS p ≫
+                (termwiseSplitShortComplex S).X₃.d p (p + 1) ≫
+                  sσ (p + 1) ≫ rσ (p + 1) := by
+                    simpa only [Category.assoc, Category.id_comp] using
+                      (congrArg (fun z => z ≫
+                        (termwiseSplitShortComplex S).X₃.d p (p + 1) ≫
+                          sσ (p + 1) ≫ rσ (p + 1)) (hsgσB p)).symm
+          _ = sσ p ≫ dB p ≫ gS (p + 1) ≫
+                sσ (p + 1) ≫ rσ (p + 1) := by
+                  simpa only [Category.assoc] using
+                    congrArg (fun z => sσ p ≫ z ≫ sσ (p + 1) ≫ rσ (p + 1))
+                      (hgS p (p + 1))
+          _ = sσ p ≫ dB p ≫
+                (𝟙 _ - rσ (p + 1) ≫ fS (p + 1)) ≫ rσ (p + 1) := by
+                  simpa only [Category.assoc] using
+                    congrArg (fun z => sσ p ≫ dB p ≫ z ≫ rσ (p + 1))
+                      (hgsσB (p + 1))
+          _ = 0 := by
+                  simp [Preadditive.sub_comp, Preadditive.comp_sub, Category.assoc,
+                    hfrσB (p + 1)]
+      have hA0 :
+          sσ p ≫ rσ p ≫ (termwiseSplitShortComplex S).X₁.d p (p + 1) = 0 := by
+        calc
+          sσ p ≫ rσ p ≫ (termwiseSplitShortComplex S).X₁.d p (p + 1) =
+              sσ p ≫ rσ p ≫ (termwiseSplitShortComplex S).X₁.d p (p + 1) ≫
+                fS (p + 1) ≫ rσ (p + 1) := by
+                  rw [hfrσB (p + 1)]
+                  simp
+          _ = sσ p ≫ rσ p ≫ fS p ≫ dB p ≫ rσ (p + 1) := by
+                simpa only [Category.assoc] using
+                  congrArg (fun z => sσ p ≫ rσ p ≫ z ≫ rσ (p + 1))
+                    (hfS p).symm
+          _ = sσ p ≫ (𝟙 _ - gS p ≫ sσ p) ≫ dB p ≫ rσ (p + 1) := by
+                simpa only [Category.assoc] using
+                  congrArg (fun z => sσ p ≫ z ≫ dB p ≫ rσ (p + 1))
+                    (hrfσB p)
+          _ = 0 := by
+                simp only [Preadditive.comp_sub, Preadditive.sub_comp, Category.assoc]
+                apply sub_eq_zero.mpr
+                simpa only [Category.assoc, Category.id_comp] using
+                  (congrArg (fun z => z ≫ sσ p ≫ dB p ≫ rσ (p + 1))
+                    (hsgσB p)).symm
       have hD :
           (termwiseSplitShortComplex S).X₃.d p (p + 1) ≫
               sσ' (p + 1) ≫ rσ (p + 1) =
@@ -944,8 +1005,46 @@ theorem triangle_independent_splittings
                       (hgsσ'B (p + 1))
           _ = sσ' p ≫ dB p ≫ rσ (p + 1) -
                 sσ' p ≫ dB p ≫ rσ' (p + 1) := by
-                  sorry
-      sorry
+                  simp only [Preadditive.sub_comp, Preadditive.comp_sub, Category.assoc,
+                    Category.id_comp, Category.comp_id]
+                  dsimp [fS]
+                  rw [hfrσB (p + 1)]
+                  simp only [Category.comp_id]
+      have hrel :
+          sσ' p ≫ dB p ≫ rσ (p + 1) -
+              sσ' p ≫ rσ p ≫ (termwiseSplitShortComplex S).X₁.d p (p + 1) =
+            sσ p ≫ dB p ≫ rσ (p + 1) := by
+        calc
+          sσ' p ≫ dB p ≫ rσ (p + 1) -
+                sσ' p ≫ rσ p ≫ (termwiseSplitShortComplex S).X₁.d p (p + 1) =
+              sσ' p ≫ dB p ≫ rσ (p + 1) -
+                sσ' p ≫ rσ p ≫ (termwiseSplitShortComplex S).X₁.d p (p + 1) ≫
+                  fS (p + 1) ≫ rσ (p + 1) := by
+                    rw [hfrσB (p + 1)]
+                    simp
+          _ = sσ' p ≫ dB p ≫ rσ (p + 1) -
+                sσ' p ≫ rσ p ≫ fS p ≫ dB p ≫ rσ (p + 1) := by
+                  simpa only [Category.assoc] using
+                    congrArg (fun z =>
+                      sσ' p ≫ dB p ≫ rσ (p + 1) -
+                        sσ' p ≫ rσ p ≫ z ≫ rσ (p + 1)) (hfS p).symm
+          _ = (sσ' p ≫ dB p ≫ rσ (p + 1) -
+                (sσ' p ≫ dB p ≫ rσ (p + 1) -
+                  sσ' p ≫ gS p ≫ sσ p ≫ dB p ≫ rσ (p + 1))) := by
+                simpa only [Preadditive.comp_sub, Preadditive.sub_comp,
+                  Category.assoc, Category.id_comp, Category.comp_id] using
+                  congrArg (fun z =>
+                    sσ' p ≫ dB p ≫ rσ (p + 1) -
+                      sσ' p ≫ z ≫ dB p ≫ rσ (p + 1)) (hrfσB p)
+          _ = sσ p ≫ dB p ≫ rσ (p + 1) := by
+                rw [sub_sub_cancel]
+                simpa only [Category.assoc, Category.id_comp] using
+                  congrArg (fun z => z ≫ sσ p ≫ dB p ≫ rσ (p + 1))
+                    (hsgσ'B p)
+      simp [k, HomologicalComplex.XIsoOfEq, Preadditive.sub_comp,
+        Preadditive.comp_sub, Category.assoc, hD, hD0, hA0]
+      rw [← hrel]
+      abel
   refine ⟨⟨hh⟩, ?_⟩
   let q : BookComplex C ⥤ BookHomotopyCategory C :=
     HomotopyCategory.quotient C (ComplexShape.up ℤ)
@@ -1028,7 +1127,71 @@ theorem nilpotent
     (h₄ : (HomotopyCategory.quotient C (ComplexShape.up ℤ)).map b' ≫
       (HomotopyCategory.quotient C (ComplexShape.up ℤ)).map S₃.g = 0) :
     (HomotopyCategory.quotient C (ComplexShape.up ℤ)).map (b ≫ b') = 0 := by
-  sorry
+  let q : BookComplex C ⥤ BookHomotopyCategory C :=
+    HomotopyCategory.quotient C (ComplexShape.up ℤ)
+  have h₁' : q.map (S₁.f ≫ b) = 0 := by
+    simpa only [q, Functor.map_comp] using h₁
+  have h₂' : q.map (b ≫ S₂.g) = 0 := by
+    simpa only [q, Functor.map_comp] using h₂
+  have h₃' : q.map (S₂.f ≫ b') = 0 := by
+    simpa only [q, Functor.map_comp] using h₃
+  obtain ⟨H₁⟩ :=
+    (HomotopyCategory.quotient_map_eq_zero_iff (S₁.f ≫ b)).mp h₁'
+  obtain ⟨H₂⟩ :=
+    (HomotopyCategory.quotient_map_eq_zero_iff (b ≫ S₂.g)).mp h₂'
+  obtain ⟨H₃⟩ :=
+    (HomotopyCategory.quotient_map_eq_zero_iff (S₂.f ≫ b')).mp h₃'
+  have hmono₂ : termwiseSplitInjection S₂.f := by
+    intro n
+    change IsSplitMono (S₂.f.f n)
+    exact (S₂.splitting n).isSplitMono_f
+  have hepi₂ : termwiseSplitSurjection S₂.g := by
+    intro n
+    change IsSplitEpi (S₂.g.f n)
+    exact (S₂.splitting n).isSplitEpi_g
+  obtain ⟨b₀, hb₀, hb₀g⟩ :=
+    make_commute_map_surjection
+      (f := 𝟙 B₁) (a := b) (b := (0 : B₁ ⟶ D₂)) (g := S₂.g)
+      (by simpa using H₂.symm) hepi₂
+  obtain ⟨b'₀, hb'₀, hf₂b'₀⟩ :=
+    make_commute_map_injection
+      (f := S₂.f) (a := (0 : A₂ ⟶ B₃)) (b := b') (g := 𝟙 B₃)
+      (by simpa using H₃) hmono₂
+  have hb₀g' : b₀ ≫ S₂.g = 0 := by
+    simpa using hb₀g.symm
+  have hf₂b'₀' : S₂.f ≫ b'₀ = 0 := by
+    simpa using hf₂b'₀
+  have hcomp : b₀ ≫ b'₀ = 0 := by
+    ext n
+    change b₀.f n ≫ b'₀.f n = 0
+    have hright : b₀.f n ≫ S₂.g.f n = 0 := by
+      simpa using congrArg (fun z => z.f n) hb₀g'
+    have hleft : S₂.f.f n ≫ b'₀.f n = 0 := by
+      simpa using congrArg (fun z => z.f n) hf₂b'₀'
+    have hid :
+        termwiseSplitProjection S₂ n ≫ S₂.f.f n +
+            S₂.g.f n ≫ termwiseSplitSection S₂ n = 𝟙 _ := by
+      exact (S₂.splitting n).id
+    calc
+      b₀.f n ≫ b'₀.f n =
+          b₀.f n ≫ 𝟙 _ ≫ b'₀.f n := by simp
+      _ = b₀.f n ≫
+          (termwiseSplitProjection S₂ n ≫ S₂.f.f n +
+            S₂.g.f n ≫ termwiseSplitSection S₂ n) ≫ b'₀.f n := by
+          rw [hid]
+      _ = 0 := by
+        simp only [Preadditive.add_comp, Category.assoc] <;>
+          rw [hleft] <;>
+          simpa only [zero_add, Category.assoc, zero_comp, comp_zero] using
+            congrArg (fun z => z ≫ termwiseSplitSection S₂ n ≫ b'₀.f n) hright
+  have hqb : q.map b = q.map b₀ :=
+    HomotopyCategory.eq_of_homotopy _ _ hb₀.some
+  have hqb' : q.map b' = q.map b'₀ :=
+    HomotopyCategory.eq_of_homotopy _ _ hb'₀.some
+  change q.map (b ≫ b') = 0
+  rw [Functor.map_comp, hqb, hqb']
+  rw [← q.map_comp]
+  simpa using congrArg q.map hcomp
 
 theorem third_isomorphism
     {C : Type u} [Category.{v} C] [AdditiveCategory C]
@@ -1036,7 +1199,11 @@ theorem third_isomorphism
     {f₁ : K₁ ⟶ L₁} {f₂ : K₂ ⟶ L₂}
     (t : coneTriangleh f₁ ⟶ coneTriangleh f₂)
     [IsIso t.hom₁] [IsIso t.hom₂] : IsIso t.hom₃ := by
-  sorry
+  apply isIso₃_of_isIso₁₂ (C := BookHomotopyCategory C) t
+  · exact HomotopyCategory.mappingCone_triangleh_distinguished f₁
+  · exact HomotopyCategory.mappingCone_triangleh_distinguished f₂
+  · infer_instance
+  · infer_instance
 
 theorem triangle_morphism_isomorphism_of_first_two
     {C : Type u} [Category.{v} C] [AdditiveCategory C]

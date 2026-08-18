@@ -251,6 +251,7 @@ private lemma quotient_span_sup_ker {R : Type u} [CommRing R]
     (ht : Submodule.span (R ⧸ I) (t : Set (Fin n → (R ⧸ I))) = K)
     (q : (Fin n → R) →ₗ[R] (Fin n → (R ⧸ I)))
     (hq : Function.Surjective q)
+    (hqker : LinearMap.ker q = I • (⊤ : Submodule R (Fin n → R)))
     (r : t → (Fin n → R)) (hr : ∀ x : t, q (r x) = x.1) :
     Submodule.span R (Set.range r) ⊔ I • (⊤ : Submodule R (Fin n → R)) =
       LinearMap.ker ((K.mkQ.restrictScalars R).comp q) := by
@@ -288,37 +289,38 @@ private lemma quotient_span_sup_ker {R : Type u} [CommRing R]
       have hxK' : q x ∈ Submodule.span (R ⧸ I)
           (t : Set (Fin n → (R ⧸ I))) :=
         mem_span_of_eq (A := R ⧸ I) (M := Fin n → (R ⧸ I)) t ht hxK
+      have hxK'' : q x ∈ Submodule.span (R ⧸ I)
+          (Set.range (fun y : t => y.1)) := by
+        simpa [Subtype.range_val_subtype] using hxK'
       obtain ⟨c, hc⟩ :=
-        (Submodule.mem_span_range_iff_exists_fun (R ⧸ I)).mp hxK'
+        (Submodule.mem_span_range_iff_exists_fun (R ⧸ I) (α := t)
+          (M := Fin n → (R ⧸ I)) (v := fun y : t => y.1) (x := q x)).mp hxK''
       let d : t → R := fun y => Quotient.out (c y)
       have hd (y : t) : Ideal.Quotient.mk I (d y) = c y := by
         simp [d]
       let z : Fin n → R := ∑ y, d y • r y
       have hz : q z = q x := by
-        ext i
-        simp only [z, Finset.sum_apply, Finset.smul_sum, Pi.smul_apply, q, map_sum,
-          map_smul, hr, hd]
-        exact congrFun hc.symm i
+        calc
+          q z = ∑ y, d y • q (r y) := by
+            simp only [z, map_sum, LinearMap.map_smul]
+          _ = ∑ y, c y • y.1 := by
+            apply Finset.sum_congr rfl
+            intro y hy
+            rw [hr y, ← hd y]
+            rfl
+          _ = q x := hc
       have hxz : x - z ∈ T := by
         have hxz' : q (x - z) = 0 := by rw [map_sub, hz, sub_self]
-        have hi : ∀ i, (x - z) i ∈ I := by
-          intro i
-          apply Ideal.Quotient.eq_zero_iff_mem.mp
-          have := congrFun hxz' i
-          exact this
-        have heq : x - z = ∑ i, (x - z) i • (Pi.single i 1) := by
-          ext i
-          simp
-        rw [heq]
-        apply Submodule.sum_mem
-        intro i hi'
-        exact Submodule.smul_mem T (hi i) Submodule.mem_top
+        change x - z ∈ I • (⊤ : Submodule R (Fin n → R))
+        rw [← hqker]
+        exact LinearMap.mem_ker.mpr hxz'
       have hzL : z ∈ L := by
-        rw [L]
+        change z ∈ Submodule.span R (Set.range r)
         apply Submodule.sum_mem
         intro y hy
-        exact Submodule.smul_mem _ (Submodule.subset_span ⟨y, rfl⟩) Submodule.mem_top
-      exact (sub_add_cancel x z).symm ▸ add_mem_sup hzL hxz
+        exact Submodule.smul_mem _ (d y) (Submodule.subset_span ⟨y, rfl⟩)
+      rw [← sub_add_cancel x z]
+      simpa [add_comm] using (Submodule.add_mem_sup hzL hxz)
   simpa [L, T, f₀, g] using hsup
 
 private lemma finite_presentation_quotient_lift {R : Type u} [CommRing R]
@@ -361,11 +363,32 @@ private lemma finite_presentation_quotient_lift {R : Type u} [CommRing R]
     simp [f₀, g, hx, hz]
   have hsup : L ⊔ T = LinearMap.ker f₀ := by
     simpa [L, T, f₀, g] using
-      quotient_span_sup_ker I K t ht q hq r hr
+      quotient_span_sup_ker I K t ht q hq (by
+        apply le_antisymm
+        · intro x hx
+          have hxq : q x = 0 := LinearMap.mem_ker.mp hx
+          have hi : ∀ i, x i ∈ I := by
+            intro i
+            apply Ideal.Quotient.eq_zero_iff_mem.mp
+            simpa [q] using congrFun hxq i
+          have heq : x = ∑ i, x i • (Pi.single i 1) := by
+            ext i
+            rw [Finset.sum_apply, Finset.sum_eq_single i] <;> simp_all
+          rw [heq]
+          apply Submodule.sum_mem
+          intro i hi'
+          exact Submodule.smul_mem_smul (hi i) Submodule.mem_top
+        · refine Submodule.smul_le.2 ?_
+          intro a ha x hx
+          apply LinearMap.mem_ker.mpr
+          ext i
+          simp [q, Algebra.smul_def, Ideal.Quotient.eq_zero_iff_mem.mpr ha]) r hr
   let Q : ModuleCat.{u} R := ModuleCat.of R (V ⧸ L)
   letI : Module.FinitePresentation R (Q : Type u) := by
     exact Module.finitePresentation_of_free_of_surjective L.mkQ L.mkQ_surjective
-      (by simpa only [Submodule.ker_mkQ] using hL)
+      (by
+        rw [Submodule.ker_mkQ]
+        exact hL)
   have hT : T.map L.mkQ = I • (⊤ : Submodule R (Q : Type u)) := by
     change (I • (⊤ : Submodule R V)).map L.mkQ = I • (⊤ : Submodule R (Q : Type u))
     rw [Submodule.map_smul'', Submodule.map_top, LinearMap.range_eq_top.mpr L.mkQ_surjective]
@@ -424,7 +447,7 @@ theorem construct_fp_module {R : Type u} [CommRing R] (I : Ideal R) (S : Submono
       IsScalarTower.of_compHom R A (P : Type (max u v))
     letI : Module.Finite R (P : Type (max u v)) := Module.Finite.trans A (P : Type (max u v))
     let f : (P : Type (max u v)) →ₗ[A] (M' : Type (max u v)) := P.subtype
-    letI : IsLocalizedModule p f := by
+    let : IsLocalizedModule p f := by
       constructor
       · intro x
         have hu := (IsLocalization.map_units T x).map
@@ -505,8 +528,8 @@ theorem construct_fp_module {R : Type u} [CommRing R] (I : Ideal R) (S : Submono
         ((Q' : Type (max u v)) ⧸ I • (⊤ : Submodule R (Q' : Type (max u v)))) ≃ₗ[R ⧸ I]
           ((Q : Type u) ⧸ I • (⊤ : Submodule R (Q : Type u))) :=
       eQUL.extendScalarsOfSurjective Ideal.Quotient.mk_surjective
-    letI : Module.FinitePresentation R (Q : Type u) := hQ
-    letI : Module.FinitePresentation R (Q' : Type (max u v)) :=
+    let : Module.FinitePresentation R (Q : Type u) := hQ
+    let : Module.FinitePresentation R (Q' : Type (max u v)) :=
       Module.FinitePresentation.of_equiv eUL.symm
     let eQA :
         ((Q' : Type (max u v)) ⧸ I • (⊤ : Submodule R (Q' : Type (max u v)))) ≃ₗ[R ⧸ I]

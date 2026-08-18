@@ -524,7 +524,7 @@ theorem perfectClosure_is_purelyInseparable_and_perfect
 theorem perfectClosure_eq_bot_of_charZero
     (k : Type u) [Field k] [CharZero k] :
     perfectClosure k (AlgebraicClosure k) = ⊥ := by
-  sorry
+  exact perfectClosure.eq_bot_of_isSeparable k (AlgebraicClosure k)
 
 /-- Any two purely inseparable perfect extensions of a field are uniquely
     isomorphic as extensions of that field. -/
@@ -535,7 +535,18 @@ theorem perfectClosure_unique_up_to_unique_algEquiv
     [IsPurelyInseparable k k'] [IsPurelyInseparable k k'']
     [PerfectField k'] [PerfectField k''] :
     ∃ e : k' ≃ₐ[k] k'', ∀ e' : k' ≃ₐ[k] k'', e' = e := by
-  sorry
+  let e : k' →ₐ[k] k'' := Classical.arbitrary _
+  let E : k' ≃ₐ[k] k'' := AlgEquiv.ofBijective e ⟨e.injective, by
+    intro y
+    let f : k'' →ₐ[k] k' := Classical.arbitrary _
+    have h : e.comp f = AlgHom.id k k'' := Subsingleton.elim _ _
+    exact ⟨f y, congrArg (fun g : k'' →ₐ[k] k'' => g y) h⟩⟩
+  refine ⟨E, ?_⟩
+  intro e'
+  apply AlgEquiv.ext
+  intro x
+  have hEq : e'.toAlgHom = E.toAlgHom := Subsingleton.elim _ _
+  exact congrArg (fun g : k' →ₐ[k] k'' => g x) hEq
 
 /- Mathlib's absolute perfect closure presents the positive-characteristic
    levels `k^(1/p^n)` by representatives `PerfectClosure.mk (n, x)`. -/
@@ -562,7 +573,8 @@ theorem pthRootLevel_has_roots
     (n : ℕ) (x : k) :
     ∃ y : pthRootLevel k p n,
       (y : PerfectClosure k p) ^ (p ^ n) = PerfectClosure.of k p x := by
-  sorry
+  refine ⟨⟨PerfectClosure.mk k p (n, x), IntermediateField.subset_adjoin k _ ⟨x, rfl⟩⟩, ?_⟩
+  rw [← PerfectClosure.iterate_frobenius_mk k p n x, iterate_frobenius]
 
 /-- Every element of the finite root level has its `p^n`-th power in the base
     field. -/

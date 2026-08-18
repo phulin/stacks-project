@@ -250,7 +250,8 @@ structure QuasiFinitePartData
   [algebraRB : Algebra R B]
   finiteA : RingHom.Finite (algebraMap R A)
   decomposition : Nonempty (S ≃ₐ[R] A × B)
-  specialFiberZero : Subsingleton (B ⊗[R] IsLocalRing.ResidueField R)
+  specialFiberZero :
+    ∀ x : B ⊗[R] IsLocalRing.ResidueField R, x = 0
 
 def FiniteTypePartProperty
     (R : Type u) [CommRing R] [IsLocalRing R] : Prop :=
@@ -492,7 +493,7 @@ def TensorKernelMutuallyDominates
     (g : M →ₗ[R] N') (f : M →ₗ[R] N) : Prop :=
   TensorKernelDominates g f ∧ TensorKernelDominates f g
 
-/-- The module-theoretic Mittag--Leffler hypothesis used by the source's
+/- The module-theoretic Mittag--Leffler hypothesis used by the source's
 countably generated splitting theorem. -/
 def ModuleMittagLefflerCondition
     (R M : Type u) [CommRing R] [AddCommGroup M] [Module R M] : Prop :=

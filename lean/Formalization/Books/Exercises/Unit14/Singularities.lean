@@ -375,14 +375,130 @@ theorem linearCoordinateAlgHom_left_inverse
     (ℓ : (Fin 2 → K) ≃ₗ[K] (Fin 2 → K))
     (f : MvPowerSeries (Fin 2) K) :
     linearCoordinateAlgHom ℓ.symm (linearCoordinateAlgHom ℓ f) = f := by
-  sorry
+  classical
+  have hrepr (v : Fin 2 → K) :
+      ∑ j : Fin 2, v j • (Pi.single j 1) = v := by
+    funext j
+    fin_cases j <;> simp [Fin.sum_univ_two, Pi.single_apply]
+  have hlin (i : Fin 2) :
+      ∑ j : Fin 2, (ℓ (Pi.single i 1) j) • (ℓ.symm (Pi.single j 1)) =
+        Pi.single i 1 := by
+    calc
+      _ = ℓ.symm (∑ j : Fin 2, (ℓ (Pi.single i 1) j) • (Pi.single j 1)) := by
+        simp
+      _ = ℓ.symm (ℓ (Pi.single i 1)) := by rw [hrepr]
+      _ = Pi.single i 1 := ℓ.symm_apply_apply _
+  have hcomp (i : Fin 2) :
+      linearCoordinateAlgHom ℓ.symm (linearCoordinateSeries ℓ i) =
+        MvPowerSeries.X i := by
+    change MvPowerSeries.substAlgHom (linearCoordinateHasSubst ℓ.symm)
+      (linearCoordinateSeries ℓ i) = MvPowerSeries.X i
+    rw [MvPowerSeries.substAlgHom_apply]
+    change MvPowerSeries.subst (fun j : Fin 2 => linearCoordinateSeries ℓ.symm j)
+      (linearCoordinateSeries ℓ i) = MvPowerSeries.X i
+    rw [show linearCoordinateSeries ℓ i =
+        MvPowerSeries.C (ℓ (Pi.single i 1) 0) * MvPowerSeries.X 0 +
+          MvPowerSeries.C (ℓ (Pi.single i 1) 1) * MvPowerSeries.X 1 by
+          simp [linearCoordinateSeries, Fin.sum_univ_two],
+      MvPowerSeries.subst_add (linearCoordinateHasSubst ℓ.symm),
+      MvPowerSeries.subst_mul (linearCoordinateHasSubst ℓ.symm),
+      MvPowerSeries.subst_mul (linearCoordinateHasSubst ℓ.symm),
+      MvPowerSeries.subst_C,
+      MvPowerSeries.subst_X (linearCoordinateHasSubst ℓ.symm),
+      MvPowerSeries.subst_C,
+      MvPowerSeries.subst_X (linearCoordinateHasSubst ℓ.symm),
+      show linearCoordinateSeries ℓ.symm 0 =
+          MvPowerSeries.C (ℓ.symm (Pi.single 0 1) 0) * MvPowerSeries.X 0 +
+            MvPowerSeries.C (ℓ.symm (Pi.single 0 1) 1) * MvPowerSeries.X 1 by
+        simp [linearCoordinateSeries, Fin.sum_univ_two],
+      show linearCoordinateSeries ℓ.symm 1 =
+          MvPowerSeries.C (ℓ.symm (Pi.single 1 1) 0) * MvPowerSeries.X 0 +
+            MvPowerSeries.C (ℓ.symm (Pi.single 1 1) 1) * MvPowerSeries.X 1 by
+        simp [linearCoordinateSeries, Fin.sum_univ_two]]
+    have hcoeff (j : Fin 2) :
+        (ℓ (Pi.single i 1) 0) * (ℓ.symm (Pi.single 0 1) j) +
+            (ℓ (Pi.single i 1) 1) * (ℓ.symm (Pi.single 1 1) j) =
+          (Pi.single i 1 : Fin 2 → K) j := by
+      have hj := congrArg (fun v : Fin 2 → K => v j) (hlin i)
+      simpa [Fin.sum_univ_two, Pi.smul_apply, smul_eq_mul] using hj
+    have hC (x y : K) :
+        (MvPowerSeries.C x : MvPowerSeries (Fin 2) K) * MvPowerSeries.C y =
+          MvPowerSeries.C (x * y) := by
+      exact (map_mul (MvPowerSeries.C : K →+* MvPowerSeries (Fin 2) K) x y).symm
+    calc
+      _ = MvPowerSeries.C (ℓ (Pi.single i 1) 0) *
+            MvPowerSeries.C (ℓ.symm (Pi.single 0 1) 0) * MvPowerSeries.X (0 : Fin 2) +
+          MvPowerSeries.C (ℓ (Pi.single i 1) 0) *
+            MvPowerSeries.C (ℓ.symm (Pi.single 0 1) 1) * MvPowerSeries.X (1 : Fin 2) +
+          MvPowerSeries.C (ℓ (Pi.single i 1) 1) *
+            MvPowerSeries.C (ℓ.symm (Pi.single 1 1) 0) * MvPowerSeries.X (0 : Fin 2) +
+          MvPowerSeries.C (ℓ (Pi.single i 1) 1) *
+            MvPowerSeries.C (ℓ.symm (Pi.single 1 1) 1) * MvPowerSeries.X (1 : Fin 2) := by
+        rw [mul_add, mul_add]
+        ring
+      _ = MvPowerSeries.C
+            ((ℓ (Pi.single i 1) 0) * (ℓ.symm (Pi.single 0 1) 0)) *
+            MvPowerSeries.X (0 : Fin 2) +
+          MvPowerSeries.C
+            ((ℓ (Pi.single i 1) 0) * (ℓ.symm (Pi.single 0 1) 1)) *
+            MvPowerSeries.X (1 : Fin 2) +
+          MvPowerSeries.C
+            ((ℓ (Pi.single i 1) 1) * (ℓ.symm (Pi.single 1 1) 0)) *
+            MvPowerSeries.X (0 : Fin 2) +
+          MvPowerSeries.C
+            ((ℓ (Pi.single i 1) 1) * (ℓ.symm (Pi.single 1 1) 1)) *
+            MvPowerSeries.X (1 : Fin 2) := by
+        rw [hC, hC, hC, hC]
+      _ = (MvPowerSeries.C
+            ((ℓ (Pi.single i 1) 0) * (ℓ.symm (Pi.single 0 1) 0)) +
+          MvPowerSeries.C
+            ((ℓ (Pi.single i 1) 1) * (ℓ.symm (Pi.single 1 1) 0))) *
+            MvPowerSeries.X (0 : Fin 2) +
+          (MvPowerSeries.C
+            ((ℓ (Pi.single i 1) 0) * (ℓ.symm (Pi.single 0 1) 1)) +
+          MvPowerSeries.C
+            ((ℓ (Pi.single i 1) 1) * (ℓ.symm (Pi.single 1 1) 1))) *
+            MvPowerSeries.X (1 : Fin 2) := by
+        ring
+      _ = MvPowerSeries.C
+            ((ℓ (Pi.single i 1) 0) * (ℓ.symm (Pi.single 0 1) 0) +
+              (ℓ (Pi.single i 1) 1) * (ℓ.symm (Pi.single 1 1) 0)) *
+            MvPowerSeries.X (0 : Fin 2) +
+          MvPowerSeries.C
+            ((ℓ (Pi.single i 1) 0) * (ℓ.symm (Pi.single 0 1) 1) +
+              (ℓ (Pi.single i 1) 1) * (ℓ.symm (Pi.single 1 1) 1)) *
+            MvPowerSeries.X (1 : Fin 2) := by
+        rw [← map_add (MvPowerSeries.C : K →+* MvPowerSeries (Fin 2) K),
+          ← map_add (MvPowerSeries.C : K →+* MvPowerSeries (Fin 2) K)]
+      _ = MvPowerSeries.X i := by
+        rw [hcoeff 0, hcoeff 1]
+        fin_cases i <;> simp [Pi.single_apply]
+  have hfun :
+      (fun i : Fin 2 =>
+        MvPowerSeries.substAlgHom (linearCoordinateHasSubst ℓ.symm)
+          (linearCoordinateSeries ℓ i)) =
+        (MvPowerSeries.X : Fin 2 → MvPowerSeries (Fin 2) K) := by
+    funext i
+    exact hcomp i
+  rw [show linearCoordinateAlgHom ℓ.symm (linearCoordinateAlgHom ℓ f) =
+      MvPowerSeries.substAlgHom
+        ((linearCoordinateHasSubst ℓ).comp (linearCoordinateHasSubst ℓ.symm)) f by
+        exact MvPowerSeries.substAlgHom_comp_substAlgHom_apply
+          (linearCoordinateHasSubst ℓ) (linearCoordinateHasSubst ℓ.symm) f]
+  rw [MvPowerSeries.substAlgHom_apply]
+  change MvPowerSeries.subst
+      (fun i : Fin 2 =>
+        MvPowerSeries.substAlgHom (linearCoordinateHasSubst ℓ.symm)
+          (linearCoordinateSeries ℓ i)) f = f
+  rw [hfun]
+  exact congrFun MvPowerSeries.subst_self f
 
 theorem linearCoordinateAlgHom_right_inverse
     {K : Type v} [Field K]
     (ℓ : (Fin 2 → K) ≃ₗ[K] (Fin 2 → K))
     (f : MvPowerSeries (Fin 2) K) :
     linearCoordinateAlgHom ℓ (linearCoordinateAlgHom ℓ.symm f) = f := by
-  sorry
+  simpa using linearCoordinateAlgHom_left_inverse ℓ.symm f
 
 theorem linearCoordinateAlgHom_bijective
     {K : Type v} [Field K]
@@ -463,7 +579,24 @@ theorem binaryQuadraticPair_linearCoordinate_lift
           MvPowerSeries (Fin 2) Q.K //
         (∀ i, φ (MvPowerSeries.X i) = binaryQuadraticLiftCoordinate P Q e ℓ i) ∧
         (∀ a, φ (MvPowerSeries.C a) = MvPowerSeries.C (e a)) } := by
-  sorry
+  let φ :=
+    (linearCoordinateAlgEquiv ℓ).restrictScalars k |>.trans
+      (powerSeriesCoeffMapAlgEquiv e)
+  refine ⟨⟨φ, ?_⟩⟩
+  constructor
+  · intro i
+    simp [φ, binaryQuadraticLiftCoordinate, linearCoordinateAlgEquiv,
+      powerSeriesCoeffMapAlgEquiv, powerSeriesCoeffMapAlgHom]
+    simp [MvPowerSeries.mapAlgHom_apply, linearCoordinateSeries, Fin.sum_univ_two]
+  · intro a
+    simp [φ, powerSeriesCoeffMapAlgEquiv, powerSeriesCoeffMapAlgHom]
+    have hC :
+        linearCoordinateAlgEquiv ℓ (MvPowerSeries.C a) = MvPowerSeries.C a := by
+      rw [MvPowerSeries.c_eq_algebraMap]
+      exact (linearCoordinateAlgEquiv ℓ).commutes a
+    rw [hC]
+    rw [MvPowerSeries.mapAlgHom_apply, MvPowerSeries.map_C]
+    rfl
 
 /-- Equivalence of the pairs `(k', q)`, allowing a scalar multiple of the
 equation as well as a linear change of variables. -/
@@ -595,7 +728,30 @@ theorem IdealAlgebraEquivalence.cotangentMap_bijective
     {B : Type w} [CommRing B] [Algebra k B]
     {I : Ideal A} {J : Ideal B} (E : IdealAlgebraEquivalence (k := k) I J) :
     Function.Bijective E.cotangentMap := by
-  sorry
+  let E' : IdealAlgebraEquivalence (k := k) J I :=
+    { ringEquiv := E.ringEquiv.symm
+      map_ideal := by
+        calc
+          Ideal.map (E.ringEquiv.symm : B →+* A) J =
+              Ideal.map (E.ringEquiv.symm : B →+* A)
+                (Ideal.map (E.ringEquiv : A →+* B) I) := congrArg _ E.map_ideal.symm
+          _ = I := by
+            rw [Ideal.map_map]
+            rw [show (E.ringEquiv.symm : B →+* A).comp
+                (E.ringEquiv : A →+* B) = RingHom.id A from E.ringEquiv.toRingEquiv.symm_comp]
+            exact Ideal.map_id I }
+  have hleft (x : I.Cotangent) : E'.cotangentMap (E.cotangentMap x) = x := by
+    obtain ⟨x, rfl⟩ := I.toCotangent_surjective x
+    simp [E', IdealAlgebraEquivalence.cotangentMap]
+  have hright (x : J.Cotangent) : E.cotangentMap (E'.cotangentMap x) = x := by
+    obtain ⟨x, rfl⟩ := J.toCotangent_surjective x
+    simp [E', IdealAlgebraEquivalence.cotangentMap]
+  constructor
+  · intro x y h
+    have := congrArg E'.cotangentMap h
+    simpa [hleft] using this
+  · intro y
+    exact ⟨E'.cotangentMap y, hright y⟩
 
 /-- The induced linear equivalence on `I/I²` and `J/J²`. -/
 noncomputable def IdealAlgebraEquivalence.cotangentEquiv

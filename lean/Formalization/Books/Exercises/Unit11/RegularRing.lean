@@ -1,4 +1,4 @@
-import Formalization.Books.Algebra.Unit71
+import Formalization.Books.Algebra.Unit71.ExtGroups
 import Mathlib.Algebra.Category.ModuleCat.Basic
 import Mathlib.Algebra.Homology.ExactSequence
 import Mathlib.Algebra.MvPolynomial.Basic
@@ -98,14 +98,13 @@ def koszulComplex (k : Type u) [Field k] :
     (ModuleCat.ofHom (koszulAugmentation k))
     (0 : originResidueModule k ⟶ (0 : ModuleCat (twoVariablePolynomialRing k)))
 
-/-- The displayed Koszul complex is exact, including injectivity at its left
-endpoint and surjectivity at its right endpoint.  `ComposableArrows.Exact`
-only records exactness at the internal terms, so the endpoint properties are
-included explicitly. -/
+/-- The displayed Koszul complex is exact, with the injectivity of the map
+`R → R × R` and the surjectivity of the map `R → R/(x,y)` exposed
+explicitly. -/
 theorem koszulComplex_exact (k : Type u) [Field k] :
     (koszulComplex k).Exact ∧
-      Mono ((koszulComplex k).map' 0 1) ∧
-      Epi ((koszulComplex k).map' 4 5) := by
+      Mono ((koszulComplex k).map' 1 2) ∧
+      Epi ((koszulComplex k).map' 3 4) := by
   sorry
 
 /-! ## The Ext computation -/

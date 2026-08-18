@@ -1,4 +1,4 @@
-import Formalization.Books.Algebra.Unit71
+import Formalization.Books.Algebra.Unit71.ExtGroups
 import Mathlib.Data.Rat.Defs
 import Mathlib.Data.ZMod.Basic
 

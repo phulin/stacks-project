@@ -1,4 +1,5 @@
 import Formalization.Books.Algebra.Unit10.InternalHom
+import Formalization.Books.Algebra.Unit11.CharacterizingFinite
 import Formalization.Books.Algebra.Unit39.FlatModules
 import Mathlib.Algebra.Colimit.DirectLimit
 

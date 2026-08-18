@@ -3357,10 +3357,10 @@ noncomputable def contravariantBoundary
               · simp only [Category.assoc, pullback.lift_fst]
                 rw [← Category.assoc, hleft, Category.assoc,
                   ← pushout.condition]
-                simp [biprodCodiagonal, biprod.lift_eq, add_comp, comp_add,
+                simp [biprodCodiagonal, biprod.lift_eq, add_comp,
                   Category.assoc]
               · simp only [Category.assoc, pullback.lift_snd, E.zero,
-                  comp_zero, zero_comp, Category.comp_id]
+                  comp_zero]
             comm_right := by
               dsimp [mMiddle, F, pullbackExtension, P, pushoutExtension, G,
                 directSumExtensionVarying]

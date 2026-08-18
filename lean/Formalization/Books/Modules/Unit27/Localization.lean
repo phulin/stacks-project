@@ -147,7 +147,14 @@ theorem simple_invert
     {X : TopCat.{u}} {O : CommRingPresheaf X}
     (S : MultiplicativePresheaf O) :
     SimpleInvertAssertions S := by
-  sorry
+  constructor
+  · intro U s
+    change IsUnit (algebraMap (O.obj U) (Localization (S.obj U)) s)
+    exact IsLocalization.map_units (Localization (S.obj U)) s
+  · sorry
+  · sorry
+  · sorry
+  · sorry
 
 /-! ## Localization of presheaves of modules -/
 
@@ -196,8 +203,8 @@ theorem localizedModulePresheaf_fraction_restriction
         ModuleCat.of (Localization (S.obj V))
           (LocalizedModule (S.obj V) (F.obj V)),
         ∀ (t : F.obj U) (s : S.obj U),
-          eV.hom.hom ((localizedModulePresheaf S F).map i
-            (eU.inv.hom (LocalizedModule.mk t s))) =
+              eV.hom.hom ((localizedModulePresheaf S F).map i
+                (eU.inv.hom (LocalizedModule.mk t s))) =
             LocalizedModule.mk (F.map i t)
               ⟨(O.map i).hom s, S.map i s.property⟩ := by
   sorry

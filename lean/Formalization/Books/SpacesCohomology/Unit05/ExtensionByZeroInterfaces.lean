@@ -69,6 +69,12 @@ theorem extension_by_zero_product_tensor
         (constantSheaf (relativeProduct U₁ U₂ X f₁ f₂)))) := by
   sorry
 
+end TypedExtensionByZero
+
+section EtaleCoproduct
+
+variable [AlgebraicSpaceTheory.{u}] [AlgebraicSpaceCohomology.{u}]
+
 structure EtaleCoproductData {U₁ U₂ X : AlgebraicSpace.{u}}
     (f₁ : SpaceHom U₁ X) (f₂ : SpaceHom U₂ X) where
   carrier : AlgebraicSpace.{u}
@@ -77,18 +83,16 @@ structure EtaleCoproductData {U₁ U₂ X : AlgebraicSpace.{u}}
   map : SpaceHom carrier X
   coproduct_property : Prop
   sumSheaf : SheafObj X
-  sum_identification : Nonempty (SheafIso X
-    (extensionByZero map (constantSheaf carrier)) sumSheaf)
 
 theorem extension_by_zero_coproduct
-    (S U₁ U₂ X : AlgebraicSpace.{u}) (_hS : IsScheme S)
+    (S U₁ U₂ X : AlgebraicSpace.{u}) (hS : IsScheme S)
     (f₁ : SpaceHom U₁ X) (f₂ : SpaceHom U₂ X)
-    (_hf₁ : IsEtale f₁) (_hf₂ : IsEtale f₂)
+    (hf₁ : IsEtale f₁) (hf₂ : IsEtale f₂)
     (C : EtaleCoproductData f₁ f₂) :
     Nonempty (SheafIso X
       (extensionByZero C.map (constantSheaf C.carrier)) C.sumSheaf) := by
-  exact C.sum_identification
+  sorry
 
-end TypedExtensionByZero
+end EtaleCoproduct
 
 end Formalization.Books.SpacesCohomology.Unit01

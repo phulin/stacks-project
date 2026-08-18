@@ -7,6 +7,10 @@ import Mathlib.RingTheory.LocalRing.Module
 import Mathlib.RingTheory.Support
 import Mathlib.RingTheory.Spectrum.Prime.Module
 import Mathlib.RingTheory.TensorProduct.Basic
+import Mathlib.LinearAlgebra.Determinant
+import Mathlib.LinearAlgebra.Dimension.StrongRankCondition
+import Mathlib.LinearAlgebra.FiniteDimensional.Basic
+import Mathlib.LinearAlgebra.TensorProduct.Pi
 import Mathlib.LinearAlgebra.TensorProduct.Prod
 
 /-!
@@ -363,7 +367,19 @@ theorem support_element_iff
     p ∈ PrimeSpectrum.zeroLocus
       ((Formalization.Books.Algebra.Unit03.annihilatorOf m : Ideal R) : Set R) ↔
       (LocalizedModule.mkLinearMap p.asIdeal.primeCompl M) m ≠ 0 := by
-  sorry
+  rw [PrimeSpectrum.mem_zeroLocus]
+  change (∀ r : R, r ∈ Formalization.Books.Algebra.Unit03.annihilatorOf m →
+    r ∈ p.asIdeal) ↔ _
+  constructor
+  · intro h hm
+    obtain ⟨r, hr, hrm⟩ := (LocalizedModule.mem_ker_mkLinearMap_iff).mp
+      (LinearMap.mem_ker.mpr hm)
+    exact hr (h r
+      ((Formalization.Books.Algebra.Unit03.annihilatorOf_mem_iff m r).mpr hrm))
+  · intro h r hr
+    contrapose! h
+    apply (LocalizedModule.mem_ker_mkLinearMap_iff).mpr
+    exact ⟨r, h, (Formalization.Books.Algebra.Unit03.annihilatorOf_mem_iff m r).mp hr⟩
 
 /-! ### Finitely presented modules -/
 
@@ -373,7 +389,153 @@ theorem support_finitePresentation_constructible
     IsClosed (Module.support R M) ∧ IsCompact (Module.support R M)ᶜ := by
   constructor
   · exact Module.isClosed_support
-  · sorry
+  · classical
+    obtain ⟨n, m, f, g, hf, hgf⟩ := Module.FinitePresentation.exists_fin' R M
+    let A : Matrix (Fin n) (Fin m) R :=
+      LinearMap.toMatrix (Pi.basisFun R (Fin m)) (Pi.basisFun R (Fin n)) g
+    let minors : Finset R :=
+      (Finset.univ : Finset (Fin n ↪ Fin m)).image
+        (fun e : Fin n ↪ Fin m => (A.submatrix id (e : Fin n → Fin m)).det)
+    have hpoint (p : PrimeSpectrum R) :
+        p ∈ Module.support R M ↔
+          p ∈ PrimeSpectrum.zeroLocus (minors : Set R) := by
+      let K := p.asIdeal.ResidueField
+      have matrix_criterion :
+          ∀ {n m : ℕ} (A : Matrix (Fin n) (Fin m) K),
+            Function.Surjective A.mulVecLin ↔
+              ∃ e : Fin n ↪ Fin m, IsUnit (A.submatrix id e).det := by
+        intro n m A
+        constructor
+        · intro hA
+          have htop : Submodule.span K (Set.range A.col) = ⊤ := by
+            rw [← Matrix.range_mulVecLin, LinearMap.range_eq_top]
+            exact hA
+          letI : Module.Finite K (Submodule.span K (Set.range A.col)) := inferInstance
+          obtain ⟨v, hv, _, hvli⟩ :=
+            Submodule.exists_fun_fin_finrank_span_eq K (Set.range A.col)
+          have hfin : Module.finrank K (Submodule.span K (Set.range A.col)) = n := by
+            rw [htop]
+            simp
+          let v' : Fin n → (Fin n → K) :=
+            fun i => v (Fin.cast hfin.symm i)
+          have hv' : ∀ i, v' i ∈ Set.range A.col := by
+            intro i
+            exact hv (Fin.cast hfin.symm i)
+          have hv'li : LinearIndependent K v' := by
+            exact hvli.comp (Fin.cast hfin.symm) (Fin.cast_injective _)
+          choose e he using hv'
+          have hei : Function.Injective e := by
+            intro i j hij
+            apply hv'li.injective
+            rw [← he i, ← he j, hij]
+          have hLI : LinearIndependent K
+              (fun i => Matrix.transpose (A.submatrix id e) i) := by
+            have he' : (fun i => Matrix.transpose (A.submatrix id e) i) = v' := by
+              funext i
+              ext j
+              simpa [Matrix.col, Matrix.submatrix, Matrix.transpose_apply] using
+                congrFun (he i) j
+            rw [he']
+            exact hv'li
+          have hunit : IsUnit (A.submatrix id e) :=
+            Matrix.linearIndependent_cols_iff_isUnit.mp (by
+              simpa [Matrix.col] using hLI)
+          exact ⟨⟨e, hei⟩, (Matrix.isUnit_iff_isUnit_det _).mp hunit⟩
+        · rintro ⟨e, he⟩
+          let B : Matrix (Fin n) (Fin n) K := A.submatrix id e
+          have hdet : IsUnit B.det := by
+            simpa [B] using he
+          have hBtop : Submodule.span K (Set.range B.col) = ⊤ := by
+            rw [← Matrix.range_mulVecLin, LinearMap.range_eq_top]
+            rw [Matrix.coe_mulVecLin]
+            exact Matrix.mulVec_surjective_iff_isUnit.mpr
+              ((Matrix.isUnit_iff_isUnit_det _).mpr hdet)
+          rw [← LinearMap.range_eq_top, Matrix.range_mulVecLin]
+          apply le_antisymm le_top
+          rw [← hBtop]
+          exact Submodule.span_mono (R := K) (by
+            rintro x ⟨i, rfl⟩
+            exact ⟨e i, by rfl⟩)
+      let en := TensorProduct.piScalarRight R K K (Fin n)
+      let em := TensorProduct.piScalarRight R K K (Fin m)
+      let gPi : (Fin m → K) →ₗ[K] (Fin n → K) :=
+        en.toLinearMap.comp ((g.baseChange K).comp em.symm.toLinearMap)
+      have hfK : Function.Surjective (f.baseChange K) :=
+        LinearMap.baseChange_surjective K hf
+      have hgfK : Function.Exact (g.baseChange K) (f.baseChange K) := by
+        simpa only [LinearMap.baseChange_eq_ltensor] using
+          (lTensor_exact K hgf hf)
+      have hzero :
+          Subsingleton (K ⊗[R] M) ↔ Function.Surjective (g.baseChange K) := by
+        constructor
+        · intro hzero y
+          have hy : y ∈ LinearMap.ker (f.baseChange K) := by
+            rw [LinearMap.mem_ker]
+            exact Subsingleton.elim _ _
+          rw [hgfK.linearMap_ker_eq] at hy
+          exact LinearMap.mem_range.mp hy
+        · intro hsurj
+          constructor
+          intro y z
+          obtain ⟨x, rfl⟩ := hfK y
+          obtain ⟨x', rfl⟩ := hfK z
+          have hx : x ∈ LinearMap.ker (f.baseChange K) := by
+            rw [hgfK.linearMap_ker_eq]
+            exact LinearMap.mem_range.mpr (hsurj x)
+          have hx' : x' ∈ LinearMap.ker (f.baseChange K) := by
+            rw [hgfK.linearMap_ker_eq]
+            exact LinearMap.mem_range.mpr (hsurj x')
+          exact (LinearMap.mem_ker.mp hx).trans (LinearMap.mem_ker.mp hx').symm
+      have hsurj_pi :
+          Function.Surjective gPi ↔ Function.Surjective (g.baseChange K) := by
+        constructor
+        · intro hsurj y
+          obtain ⟨x, hx⟩ := hsurj (en y)
+          refine ⟨em.symm x, ?_⟩
+          apply en.injective
+          simpa [gPi] using hx
+        · intro hsurj y
+          obtain ⟨x, hx⟩ := hsurj (en.symm y)
+          refine ⟨em x, ?_⟩
+          simpa [gPi] using congrArg en hx
+      have hgPi : gPi = Matrix.mulVecLin (A.map (algebraMap R K)) := by
+        ext x i
+        simp [gPi, en, em, A, LinearMap.toMatrix_apply, Algebra.smul_def]
+      have hdet_map (e : Fin n ↪ Fin m) :
+          ((A.map (algebraMap R K)).submatrix id e).det =
+            algebraMap R K ((A.submatrix id e).det) := by
+        rw [Matrix.submatrix_map]
+        exact (RingHom.map_det (algebraMap R K) (A.submatrix id e)).symm
+      rw [Module.mem_support_iff_nontrivial_residueField_tensorProduct,
+        ← not_subsingleton_iff_nontrivial, hzero, ← hsurj_pi, hgPi,
+        matrix_criterion, PrimeSpectrum.mem_zeroLocus]
+      constructor
+      · intro h x hx
+        change x ∈ minors at hx
+        simp only [minors, Finset.mem_image, Finset.mem_univ, true_and] at hx
+        obtain ⟨e, rfl⟩ := hx
+        by_contra hnot
+        apply h
+        refine ⟨e, ?_⟩
+        rw [hdet_map]
+        apply isUnit_iff_ne_zero.mpr
+        simpa [K, Ideal.algebraMap_residueField_eq_zero] using hnot
+      · intro h hex
+        obtain ⟨e, he⟩ := hex
+        have he' : IsUnit (algebraMap R K ((A.submatrix id e).det)) := by
+          simpa [hdet_map e] using he
+        apply he'.ne_zero
+        rw [Ideal.algebraMap_residueField_eq_zero]
+        apply h
+        change (A.submatrix id e).det ∈ minors
+        exact Finset.mem_image.mpr ⟨e, Finset.mem_univ _, rfl⟩
+    have heq : Module.support R M = PrimeSpectrum.zeroLocus (minors : Set R) := by
+      ext p
+      exact hpoint p
+    have hco : (PrimeSpectrum.zeroLocus (minors : Set R))ᶜ =
+        (Module.support R M)ᶜ := by
+      rw [heq]
+    exact (PrimeSpectrum.isCompact_isOpen_iff.mpr ⟨minors, hco⟩).1
 
 /-! ### Quotients, submodules, and exact sequences -/
 

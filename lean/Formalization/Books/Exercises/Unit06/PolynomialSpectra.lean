@@ -1,11 +1,17 @@
 import Mathlib.Algebra.MvPolynomial.Basic
+import Mathlib.Algebra.Polynomial.Bivariate
 import Mathlib.Algebra.Polynomial.Div
 import Mathlib.Data.Nat.Prime.Basic
 import Mathlib.Data.ZMod.Basic
 import Mathlib.FieldTheory.IsAlgClosed.Basic
+import Mathlib.RingTheory.Ideal.UFD
+import Mathlib.RingTheory.KrullDimension.Field
+import Mathlib.RingTheory.KrullDimension.Polynomial
 import Mathlib.RingTheory.Localization.Basic
 import Mathlib.RingTheory.Localization.Ideal
 import Mathlib.RingTheory.Polynomial.Basic
+import Mathlib.RingTheory.Polynomial.Ideal
+import Mathlib.RingTheory.Nullstellensatz
 import Mathlib.RingTheory.Spectrum.Prime.Topology
 
 /-!
@@ -279,8 +285,144 @@ theorem two_variable_spectrum_prime_ideals_alg_closed
             Ideal.span
               ({MvPolynomial.X (0 : Fin 2) - MvPolynomial.C a,
                 MvPolynomial.X (1 : Fin 2) - MvPolynomial.C b} :
-                Set (twoVariablePolynomialRing k))) := by
-  sorry
+              Set (twoVariablePolynomialRing k))) := by
+  intro p
+  let _ : p.asIdeal.IsPrime := p.2
+  by_cases hpbot : p.asIdeal = (⊥ : Ideal (twoVariablePolynomialRing k))
+  · exact Or.inl hpbot
+  right
+  by_cases hpmax : p.asIdeal.IsMaximal
+  · obtain ⟨x, hx⟩ :=
+      MvPolynomial.eq_vanishingIdeal_singleton_of_isMaximal k hpmax
+    let a : k := x (0 : Fin 2)
+    let b : k := x (1 : Fin 2)
+    have hxvec : x = ![a, b] := by
+      funext i
+      fin_cases i <;> rfl
+    refine Or.inr ⟨a, b, ?_⟩
+    let e := Polynomial.Bivariate.equivMvPolynomial k
+    let I : Ideal (Polynomial (Polynomial k)) :=
+      Ideal.span
+        ({(Polynomial.C ((Polynomial.X : Polynomial k) - Polynomial.C a) :
+              Polynomial (Polynomial k)),
+          (Polynomial.X : Polynomial (Polynomial k)) -
+              Polynomial.C (Polynomial.C b)} :
+          Set (Polynomial (Polynomial k)))
+    have hmap : Ideal.map (e : Polynomial (Polynomial k) →+* twoVariablePolynomialRing k) I =
+        Ideal.span
+          ({MvPolynomial.X (0 : Fin 2) - MvPolynomial.C a,
+            MvPolynomial.X (1 : Fin 2) - MvPolynomial.C b} :
+          Set (twoVariablePolynomialRing k)) := by
+      rw [Ideal.map_span]
+      congr 1
+      ext q
+      constructor
+      · rintro ⟨q, hq, rfl⟩
+        simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at hq
+        rcases hq with rfl | rfl <;> simp [e]
+      · intro hq
+        simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at hq
+        rcases hq with rfl | rfl
+        · exact ⟨Polynomial.C Polynomial.X - Polynomial.C (Polynomial.C a),
+            by simp, by simp [e]⟩
+        · exact ⟨(Polynomial.X : Polynomial (Polynomial k)) -
+              Polynomial.C (Polynomial.C b), by simp, by simp [e]⟩
+    have heval (q : twoVariablePolynomialRing k) :
+        ((e.symm q).eval (Polynomial.C b)).eval a =
+          MvPolynomial.aeval ![a, b] q := by
+      let F : twoVariablePolynomialRing k →+* k :=
+        (Polynomial.evalRingHom a).comp
+          ((Polynomial.evalRingHom (Polynomial.C b)).comp
+            (e.symm : twoVariablePolynomialRing k →+* Polynomial (Polynomial k)))
+      have hF : F = (MvPolynomial.aeval (R := k) ![a, b]).toRingHom := by
+        apply MvPolynomial.ringHom_ext
+        · intro r
+          simp [F, e]
+        · intro i
+          fin_cases i <;> simp [F, e]
+      simpa [F] using congrArg (fun f => f q) hF
+    rw [hx]
+    apply le_antisymm
+    · intro q hq
+      have hq0 : MvPolynomial.aeval (R := k) x q = 0 :=
+        (MvPolynomial.mem_vanishingIdeal_singleton_iff x q).mp hq
+      rw [hxvec] at hq0
+      have hr : e.symm q ∈ I := by
+        change e.symm q ∈ Ideal.span
+          ({(Polynomial.C ((Polynomial.X : Polynomial k) - Polynomial.C a) :
+                Polynomial (Polynomial k)),
+            (Polynomial.X : Polynomial (Polynomial k)) -
+                Polynomial.C (Polynomial.C b)} :
+            Set (Polynomial (Polynomial k)))
+        rw [Polynomial.mem_span_C_X_sub_C_X_sub_C_iff_eval_eval_eq_zero]
+        calc
+          ((e.symm q).eval (Polynomial.C b)).eval a =
+              MvPolynomial.aeval (R := k) ![a, b] q := heval q
+          _ = 0 := hq0
+      rw [← hmap]
+      exact (Ideal.mem_map_iff_of_surjective e e.surjective).mpr
+        ⟨e.symm q, hr, e.apply_symm_apply q⟩
+    · intro q hq
+      apply (MvPolynomial.mem_vanishingIdeal_singleton_iff x q).2
+      rw [hxvec]
+      have hqmap : q ∈ Ideal.map (e : Polynomial (Polynomial k) →+* twoVariablePolynomialRing k) I := by
+        rw [hmap]
+        exact hq
+      obtain ⟨r, hr, hreq⟩ :=
+        (Ideal.mem_map_iff_of_surjective e e.surjective).mp hqmap
+      change r ∈ Ideal.span
+        ({(Polynomial.C ((Polynomial.X : Polynomial k) - Polynomial.C a) :
+              Polynomial (Polynomial k)),
+          (Polynomial.X : Polynomial (Polynomial k)) -
+              Polynomial.C (Polynomial.C b)} :
+          Set (Polynomial (Polynomial k))) at hr
+      rw [Polynomial.mem_span_C_X_sub_C_X_sub_C_iff_eval_eval_eq_zero] at hr
+      calc
+        MvPolynomial.aeval (R := k) ![a, b] q =
+            ((e.symm q).eval (Polynomial.C b)).eval a := (heval q).symm
+        _ = ((e.symm (e r)).eval (Polynomial.C b)).eval a := by
+          congr 2
+          exact congrArg e.symm hreq.symm
+        _ = ((r.eval (Polynomial.C b)).eval a) := by rw [e.symm_apply_apply]
+        _ = 0 := hr
+  · have hdim : ringKrullDim (twoVariablePolynomialRing k) = (2 : WithBot ℕ∞) := by
+      rw [MvPolynomial.ringKrullDim_of_isNoetherianRing]
+      simp [ringKrullDim_eq_zero_of_field]
+    let _ : FiniteRingKrullDim (twoVariablePolynomialRing k) :=
+      finiteRingKrullDim_iff_ne_bot_and_top.mpr ⟨by
+        rw [hdim]
+        exact WithBot.coe_ne_bot, by
+        rw [hdim]
+        change ((2 : ℕ∞) : WithBot ℕ∞) ≠ ⊤
+        intro h
+        exact (ENat.natCast_ne_top 2) (WithBot.coe_eq_top.mp h)⟩
+    have hle' : (p.asIdeal.height : WithBot ℕ∞) ≤ ringKrullDim (twoVariablePolynomialRing k) :=
+      Ideal.height_le_ringKrullDim_of_ne_top (I := p.asIdeal) Ideal.IsPrime.ne_top'
+    rw [hdim] at hle'
+    have hle : p.asIdeal.height ≤ 2 := WithBot.coe_le_coe.mp hle'
+    have hzero : p.asIdeal.height ≠ 0 := by
+      intro hh
+      exact hpbot (Ideal.height_eq_zero_iff_eq_bot.mp hh)
+    have hne : p.asIdeal.height ≠ 2 := by
+      intro hh
+      apply hpmax
+      apply Ideal.isMaximal_of_height_eq_ringKrullDim
+      exact (congrArg (fun n : ℕ∞ => (n : WithBot ℕ∞)) hh).trans hdim.symm
+    have hone : p.asIdeal.height = 1 := by
+      apply (Order.le_one_iff.mp (ENat.lt_two_iff.mp (lt_of_le_of_ne hle hne))).resolve_left
+      exact hzero
+    obtain ⟨f, hf⟩ := UniqueFactorizationMonoid.isPrincipal_of_height_eq_one hone
+    have hf0 : f ≠ 0 := by
+      intro hfzero
+      apply hpbot
+      rw [hf, hfzero]
+      simp
+    have hprime : (Ideal.span {f}).IsPrime := by
+      rw [show Ideal.span {f} = p.asIdeal by simpa using hf.symm]
+      exact inferInstance
+    exact Or.inl ⟨f,
+      ((Ideal.span_singleton_prime hf0).mp hprime).irreducible,
+      hf⟩
 
 /-- Closed subsets of affine 2-space are exactly the Zariski zero loci. -/
 theorem two_variable_spectrum_closed_sets (k : Type u) [Field k]
@@ -338,13 +480,39 @@ theorem integer_polynomial_generic_fiber_preimage :
       ({⟨⊥, by infer_instance⟩} : Set (PrimeSpectrum ℤ)) =
       {P : PrimeSpectrum integerPolynomialRing |
         Ideal.comap integerPolynomialBaseMap P.asIdeal = ⊥} := by
-  sorry
+  ext P
+  change integerPolynomialSpectrumMap P = (⟨⊥, by infer_instance⟩ : PrimeSpectrum ℤ) ↔
+    Ideal.comap integerPolynomialBaseMap P.asIdeal = ⊥
+  constructor
+  · intro h
+    simpa [integerPolynomialSpectrumMap] using
+      congrArg PrimeSpectrum.asIdeal h
+  · intro h
+    apply PrimeSpectrum.ext
+    simpa [integerPolynomialSpectrumMap] using h
 
 theorem integer_polynomial_generic_fiber_disjoint_iff
     (P : PrimeSpectrum integerPolynomialRing) :
     Disjoint (nonzeroIntegerImageSubmonoid : Set integerPolynomialRing) P.asIdeal ↔
       Ideal.comap integerPolynomialBaseMap P.asIdeal = ⊥ := by
-  sorry
+  exact ⟨
+    (fun h => by
+      apply le_antisymm ?_ bot_le
+      intro n hn
+      by_contra hn0
+      exact (Set.disjoint_left.1 h)
+        (show integerPolynomialBaseMap n ∈
+            (nonzeroIntegerImageSubmonoid : Set integerPolynomialRing) from
+          ⟨n, hn0, rfl⟩) hn),
+    (fun h => by
+      apply Set.disjoint_left.2
+      intro x hxS hxI
+      rcases hxS with ⟨n, hn, rfl⟩
+      apply hn
+      have hnI : n ∈ Ideal.comap integerPolynomialBaseMap P.asIdeal := hxI
+      rw [h] at hnI
+      exact hnI)
+    ⟩
 
 /-- The maximal ideals of `ℤ[y]` are the inverse images of irreducible
 polynomial ideals over residue fields `𝔽_p`. -/

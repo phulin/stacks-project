@@ -130,7 +130,7 @@ theorem characterize_local_ring {R : Type u} [CommRing R] :
         (0 : R) ≠ 1 ∧ ∀ x : R, IsUnit x ∨ IsUnit (1 - x) ] := by
   tfae_have 1 → 2 := by
     intro h
-    letI : IsLocalRing R := h
+    let : IsLocalRing R := h
     let p : PrimeSpectrum R := ⟨IsLocalRing.maximalIdeal R, inferInstance⟩
     refine
       ⟨p, (PrimeSpectrum.isClosed_singleton_iff_isMaximal p).mpr inferInstance, ?_⟩
@@ -151,7 +151,7 @@ theorem characterize_local_ring {R : Type u} [CommRing R] :
     exact congrArg PrimeSpectrum.asIdeal (huniq q hq)
   tfae_have 1 → 3 := by
     intro h
-    letI : IsLocalRing R := h
+    let : IsLocalRing R := h
     exact
       ⟨IsLocalRing.maximalIdeal R, inferInstance, fun x hx =>
         IsLocalRing.notMem_maximalIdeal.mp hx⟩
@@ -193,7 +193,7 @@ theorem characterize_local_ring_map
   tfae_have 1 ↔ 3 := (IsLocalRing.local_hom_TFAE φ).out 0 4
   tfae_have 1 → 4 := by
     intro h
-    letI : IsLocalHom φ := h
+    let : IsLocalHom φ := h
     intro x hx
     exact (isUnit_map_iff φ x).mp hx
   tfae_have 4 → 1 := by
@@ -242,7 +242,7 @@ theorem fundamentalDiagram_outerColumns_equiv
   let A := S ⧸ pS
   let Q := Sp ⧸ pS.map (algebraMap S Sp)
   let Mbar : Submonoid A := Algebra.algebraMapSubmonoid A p.primeCompl
-  letI : IsLocalization (M.map (Ideal.Quotient.mk pS)) Q := by
+  let : IsLocalization (M.map (Ideal.Quotient.mk pS)) Q := by
     apply
       IsLocalization.of_surjective M Sp (Ideal.Quotient.mk pS)
         Ideal.Quotient.mk_surjective
@@ -256,7 +256,7 @@ theorem fundamentalDiagram_outerColumns_equiv
     exact
       Algebra.algebraMapSubmonoid_map_eq p.primeCompl
         (Ideal.Quotient.mkₐ R pS)
-  letI : IsLocalization Mbar Q := by
+  let : IsLocalization Mbar Q := by
     change IsLocalization (Algebra.algebraMapSubmonoid A p.primeCompl) Q
     rw [← hM]
     exact inferInstance
@@ -405,7 +405,7 @@ theorem localFiber_localization_equiv_tensor
   let r := qbar.comap Algebra.TensorProduct.includeRight
   let Rp := Localization.AtPrime p
   let Sr := Localization.AtPrime r
-  letI : Algebra Rp Sr := Localization.AtPrime.algebraOfLiesOver p r
+  let : Algebra Rp Sr := Localization.AtPrime.algebraOfLiesOver p r
   have hI :
       (IsLocalRing.maximalIdeal Rp).map (algebraMap Rp Sr) =
         (p.map (algebraMap R S)).map (algebraMap S Sr) := by

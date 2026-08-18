@@ -203,10 +203,61 @@ theorem surjective_locallyNilpotentKernel
     (hf : Function.Surjective f) (hker : locallyNilpotentKernel f) :
     IsHomeomorph (PrimeSpectrum.comap f) ∧
       residueFieldMapsBijective f ∧
-        ∀ (R' : Type*) [CommRing R'] (g : R →+* R'),
+      ∀ (R' : Type*) [CommRing R'] (g : R →+* R'),
           Function.Surjective (baseChangeRingMap f g) ∧
             locallyNilpotentKernel (baseChangeRingMap f g) := by
-  sorry
+  let hker' : RingHom.ker f ≤ nilradical R := by
+    intro x hx
+    exact (mem_nilradical).2 (hker x hx)
+  refine ⟨PrimeSpectrum.isHomeomorph_comap f (fun x => ?_) hker', ?_, ?_⟩
+  · obtain ⟨y, rfl⟩ := hf x
+    exact ⟨1, by simp, y, by simp⟩
+  · intro q
+    exact RingHom.SurjectiveOnStalks.residueFieldMap_bijective
+      (RingHom.surjectiveOnStalks_of_surjective hf) _ _ rfl
+  · intro R' _ g
+    letI : Algebra R S := f.toAlgebra
+    letI : Algebra R R' := g.toAlgebra
+    constructor
+    · exact Algebra.TensorProduct.includeRight_surjective (T := R') hf
+    · intro x hx
+      let fa : R →ₐ[R] S := AlgHom.mk' f (by
+        intro c y
+        simpa [Algebra.smul_def, RingHom.algebraMap_toAlgebra] using f.map_mul c y)
+      let b : R ⊗[R] R' →ₐ[R] S ⊗[R] R' :=
+        Algebra.TensorProduct.map fa (AlgHom.id R R')
+      let a : R' →ₐ[R] R ⊗[R] R' := Algebra.TensorProduct.includeRight
+      have hbker : RingHom.ker b.toRingHom ≤ nilradical (R ⊗[R] R') := by
+        change RingHom.ker ((Algebra.TensorProduct.map fa (AlgHom.id R R')).toRingHom) ≤
+          nilradical (R ⊗[R] R')
+        have hEq : RingHom.ker ((Algebra.TensorProduct.map fa (AlgHom.id R R')).toRingHom) =
+            (RingHom.ker fa).map
+              (Algebra.TensorProduct.includeLeft : R →ₐ[R] R ⊗[R] R') := by
+          have hmap : RingHom.ker ((Algebra.TensorProduct.map fa (AlgHom.id R R')).toRingHom) =
+              RingHom.ker (Algebra.TensorProduct.map fa (AlgHom.id R R')) := by
+            ext y
+            rfl
+          rw [hmap]
+          exact Algebra.TensorProduct.rTensor_ker
+            (R := R) (S := R) (A := R) (B := S) (C := R') fa hf
+        rw [hEq]
+        rw [Ideal.map_le_iff_le_comap]
+        intro y hy
+        have hy' : IsNilpotent y := (mem_nilradical).1 (hker' hy)
+        exact (mem_nilradical).2 (hy'.map
+          (Algebra.TensorProduct.includeLeft : R →ₐ[R] R ⊗[R] R').toRingHom)
+      have hcomp : b.toRingHom.comp a.toRingHom = baseChangeRingMap f g := by
+        ext y
+        simp [b, a, fa, baseChangeRingMap]
+      have hax : a.toRingHom x ∈ RingHom.ker b.toRingHom := by
+        change b (a x) = 0
+        change (b.toRingHom.comp a.toRingHom) x = 0
+        rw [hcomp]
+        exact hx
+      have ha : Function.Injective a :=
+        (Algebra.TensorProduct.includeRight_bijective
+          (R := R) (A := R) (B := R') ⟨by intro x y h; exact h, by intro x; exact ⟨x, rfl⟩⟩).injective
+      exact (IsNilpotent.map_iff (f := a.toRingHom) ha).mp ((mem_nilradical).1 (hbker hax))
 
 /-- The powers criterion gives a homeomorphism on spectra and the source's
     powers-field description of all residue-field extensions. -/
@@ -214,7 +265,68 @@ theorem powerSurjective_locallyNilpotentKernel
     {R S : Type*} [CommRing R] [CommRing S] (f : R →+* S)
     (hpower : powerSurjective f) (hker : locallyNilpotentKernel f) :
     IsHomeomorph (PrimeSpectrum.comap f) ∧ residueFieldPowerProperties f := by
-  sorry
+  let hker' : RingHom.ker f ≤ nilradical R := by
+    intro x hx
+    exact (mem_nilradical).2 (hker x hx)
+  refine ⟨PrimeSpectrum.isHomeomorph_comap f (fun x => ?_) hker', ?_⟩
+  · simpa [powerSurjective] using hpower x
+  · intro q
+    letI : Algebra ((PrimeSpectrum.comap f q).asIdeal.ResidueField)
+        (q.asIdeal.ResidueField) := (residueFieldMap f q).toAlgebra
+    constructor
+    · intro z
+      obtain ⟨a, b, hb, hz⟩ :=
+        IsFractionRing.div_surjective (S ⧸ q.asIdeal) z
+      obtain ⟨y, hy⟩ := Ideal.Quotient.mk_surjective a
+      obtain ⟨w, hw⟩ := Ideal.Quotient.mk_surjective b
+      obtain ⟨n, hn, r, hr⟩ := hpower y
+      obtain ⟨m, hm, s, hs⟩ := hpower w
+      refine ⟨n * m, Nat.mul_pos hn hm, ?_⟩
+      refine ⟨algebraMap R ((PrimeSpectrum.comap f q).asIdeal.ResidueField) r ^ m /
+          algebraMap R ((PrimeSpectrum.comap f q).asIdeal.ResidueField) s ^ n, ?_⟩
+      have hY : residueFieldMap f q
+          (algebraMap R ((PrimeSpectrum.comap f q).asIdeal.ResidueField) r) =
+          algebraMap S (q.asIdeal.ResidueField) y ^ n := by
+        calc
+          residueFieldMap f q
+              (algebraMap R ((PrimeSpectrum.comap f q).asIdeal.ResidueField) r) =
+              algebraMap S (q.asIdeal.ResidueField) (f r) := by
+                simpa [residueFieldMap] using
+                  (Ideal.ResidueField.map_algebraMap
+                    (PrimeSpectrum.comap f q).asIdeal q.asIdeal f rfl r)
+          _ = algebraMap S (q.asIdeal.ResidueField) (y ^ n) := by rw [hr]
+          _ = algebraMap S (q.asIdeal.ResidueField) y ^ n := by rw [map_pow]
+      have hW : residueFieldMap f q
+          (algebraMap R ((PrimeSpectrum.comap f q).asIdeal.ResidueField) s) =
+          algebraMap S (q.asIdeal.ResidueField) w ^ m := by
+        calc
+          residueFieldMap f q
+              (algebraMap R ((PrimeSpectrum.comap f q).asIdeal.ResidueField) s) =
+              algebraMap S (q.asIdeal.ResidueField) (f s) := by
+                simpa [residueFieldMap] using
+                  (Ideal.ResidueField.map_algebraMap
+                    (PrimeSpectrum.comap f q).asIdeal q.asIdeal f rfl s)
+          _ = algebraMap S (q.asIdeal.ResidueField) (w ^ m) := by rw [hs]
+          _ = algebraMap S (q.asIdeal.ResidueField) w ^ m := by rw [map_pow]
+      have hz' : algebraMap S (q.asIdeal.ResidueField) y /
+          algebraMap S (q.asIdeal.ResidueField) w = z := by
+        simpa [Ideal.algebraMap_quotient_residueField_mk, ← hy, ← hw] using hz
+      calc
+        residueFieldMap f q
+              (algebraMap R ((PrimeSpectrum.comap f q).asIdeal.ResidueField) r ^ m /
+                algebraMap R ((PrimeSpectrum.comap f q).asIdeal.ResidueField) s ^ n) =
+            (algebraMap S (q.asIdeal.ResidueField) y ^ n) ^ m /
+              (algebraMap S (q.asIdeal.ResidueField) w ^ m) ^ n := by
+                rw [map_div₀, map_pow, map_pow, hY, hW]
+        _ = (algebraMap S (q.asIdeal.ResidueField) y /
+              algebraMap S (q.asIdeal.ResidueField) w) ^ (n * m) := by
+                rw [div_pow, pow_mul, pow_mul, Nat.mul_comm n m]
+        _ = z ^ (n * m) := by rw [hz']
+    · apply (fieldPowerProperty_iff_classification
+        (k := (PrimeSpectrum.comap f q).asIdeal.ResidueField)
+        (k' := q.asIdeal.ResidueField)).mp
+      exact ‹fieldPowerProperty (k := (PrimeSpectrum.comap f q).asIdeal.ResidueField)
+        (k' := q.asIdeal.ResidueField)›
 
 /-- The square-and-cube criterion gives a universal homeomorphism with
     residue-field isomorphisms. -/

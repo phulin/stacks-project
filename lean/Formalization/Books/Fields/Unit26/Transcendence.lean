@@ -1,4 +1,5 @@
 import Formalization.Books.Fields.Unit08.AlgebraicExtensions
+import Mathlib.Analysis.Complex.Polynomial.Basic
 import Mathlib.Analysis.SpecialFunctions.Exp
 import Mathlib.NumberTheory.Transcendental.Lindemann.AnalyticalPart
 import Mathlib.FieldTheory.LinearDisjoint
@@ -148,7 +149,19 @@ theorem finite_conjugate_norm_is_nonzero_integer
       algebraMap ℤ ℂ z =
         (finiteConjugateEmbeddings (F := ℚ) (K := K) (A := ℂ)).prod
           (fun σ => σ x) := by
-  sorry
+  have hnorm : IsIntegral ℤ (Algebra.norm ℚ x) :=
+    Algebra.isIntegral_norm (K := ℚ) hx
+  obtain ⟨z, hz⟩ := IsIntegrallyClosed.algebraMap_eq_of_integral hnorm
+  refine ⟨z, ?_, ?_⟩
+  · have hn : Algebra.norm ℚ x ≠ 0 :=
+      Algebra.norm_ne_zero_iff.mpr hx0
+    intro hz0
+    apply hn
+    rw [← hz, hz0]
+    simp
+  · rw [finite_conjugate_product_eq_algebra_norm]
+    rw [← hz]
+    exact (IsScalarTower.algebraMap_apply ℤ ℚ ℂ z).symm
 
 /-- The finite-conjugate norm cannot tend to zero along nonzero integral
     elements of a fixed finite number field. -/
@@ -160,7 +173,16 @@ theorem finite_conjugate_norm_tends_to_zero_contradiction
       ‖(finiteConjugateEmbeddings (F := ℚ) (K := K) (A := ℂ)).prod
         (fun σ => σ (x p))‖ < ε) :
     False := by
-  sorry
+  obtain ⟨p, hp⟩ := hsmall 1 zero_lt_one
+  obtain ⟨z, hz0, hz⟩ :=
+    finite_conjugate_norm_is_nonzero_integer (K := K) (x := x p) (hx p) (hx0 p)
+  have hp' : ‖algebraMap ℤ ℂ z‖ < (1 : ℝ) := by
+    rw [hz]
+    exact hp
+  have hle : (1 : ℝ) ≤ ‖algebraMap ℤ ℂ z‖ := by
+    simpa using (show (1 : ℝ) ≤ |(z : ℝ)| by
+      exact_mod_cast Int.one_le_abs hz0)
+  exact (not_lt_of_ge hle) hp'
 
 /-- The arithmetic/conjugate-norm conclusion needed for the exponential of a
     nonzero rational number.  Its proof combines

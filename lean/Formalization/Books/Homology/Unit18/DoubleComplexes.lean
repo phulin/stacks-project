@@ -550,13 +550,38 @@ theorem totalComplexPresentation_exists_of_diagonal_coproducts
 theorem totalComplexPresentation_exists_of_countable
     [HasCountableCoproducts C] (A : DoubleComplex C) :
     Nonempty (TotalComplexPresentation A) := by
-  sorry
+  apply totalComplexPresentation_exists_of_diagonal_coproducts A
+  intro n
+  exact ⟨getColimitCocone (Discrete.functor (fun p : ℤ => A.obj p (n - p)))⟩
 
 theorem totalComplexPresentation_exists_of_finite_support
     [HasFiniteBiproducts C]
     (A : DoubleComplex C) (hA : HasFiniteDiagonalSupport A) :
     Nonempty (TotalComplexPresentation A) := by
-  sorry
+  apply totalComplexPresentation_exists_of_diagonal_coproducts A
+  intro n
+  let S : Finset ℤ := (hA n).toFinset
+  let f : S → C := fun p => A.obj p.1 (n - p.1)
+  let c : Cofan (fun p : ℤ => A.obj p (n - p)) :=
+    Cofan.mk (⨁ f) (fun p =>
+      if hp : p ∈ S then biproduct.ι f ⟨p, hp⟩ else 0)
+  refine ⟨{ cocone := c, isColimit := ?_ }⟩
+  refine Cofan.IsColimit.mk c (fun t => biproduct.desc (fun p => t.inj p.1)) ?_ ?_
+  · intro t p
+    by_cases hp : p ∈ S
+    · simp [c, hp, f]
+    · have hz : IsZero (A.obj p (n - p)) := by
+        apply not_not.mp
+        intro hne
+        apply hp
+        exact (hA n).mem_toFinset.mpr hne
+      simp [c, hp]
+      exact hz.eq_of_src _ _
+  · intro t m hm
+    apply biproduct.hom_ext' _ _
+    intro p
+    have hm' := hm p.1
+    simpa [c, f, p.2] using hm'
 
 /-! ## Triple complexes and reassociation -/
 
@@ -619,7 +644,290 @@ def tripleTotalDifferential [HasCountableCoproducts C]
 theorem tripleTotalDifferential_comp_zero [HasCountableCoproducts C]
     (A : TripleComplex C) (n : ℤ) :
     tripleTotalDifferential A n ≫ tripleTotalDifferential A (n + 1) = 0 := by
-  sorry
+  apply Sigma.hom_ext
+  intro p
+  apply Sigma.hom_ext
+  intro q
+  let g : ∀ s : ℤ, A.obj p s (n - p - s) ⟶ tripleTotalTerm A (n + 1) :=
+    fun s =>
+      tripleD1Component A n p s ≫
+          Sigma.ι (fun t : ℤ => A.obj (p + 1) t
+            (n + 1 - (p + 1) - t)) s ≫
+          Sigma.ι (fun r : ℤ => ∐ fun t : ℤ => A.obj r t
+            (n + 1 - r - t)) (p + 1) +
+        tripleTotalSign₁ p s •
+          (tripleD2Component A n p s ≫
+            Sigma.ι (fun t : ℤ => A.obj p t (n + 1 - p - t)) (s + 1) ≫
+            Sigma.ι (fun r : ℤ => ∐ fun t : ℤ => A.obj r t
+              (n + 1 - r - t)) p) +
+        tripleTotalSign₂ p s •
+          (tripleD3Component A n p s ≫
+            Sigma.ι (fun t : ℤ => A.obj p t (n + 1 - p - t)) s ≫
+            Sigma.ι (fun r : ℤ => ∐ fun t : ℤ => A.obj r t
+              (n + 1 - r - t)) p)
+  have hp :
+      Sigma.ι (fun r : ℤ => ∐ fun s : ℤ => A.obj r s (n - r - s)) p ≫
+          tripleTotalDifferential A n =
+        Sigma.desc g := by
+    apply Sigma.hom_ext
+    intro s
+    dsimp [g, tripleTotalDifferential]
+    rw [Sigma.ι_desc]
+  have hpq := congrArg
+    (fun f => Sigma.ι (fun s : ℤ => A.obj p s (n - p - s)) q ≫ f) hp
+  have hnext (r s : ℤ) :
+      Sigma.ι (fun t : ℤ => A.obj r t (n + 1 - r - t)) s ≫
+          Sigma.ι (fun r' : ℤ => ∐ fun t : ℤ => A.obj r' t
+            (n + 1 - r' - t)) r ≫ tripleTotalDifferential A (n + 1) =
+        tripleD1Component A (n + 1) r s ≫
+            Sigma.ι (fun t : ℤ => A.obj (r + 1) t
+              (n + 1 + 1 - (r + 1) - t)) s ≫
+            Sigma.ι (fun r' : ℤ => ∐ fun t : ℤ => A.obj r' t
+              (n + 1 + 1 - r' - t)) (r + 1) +
+          tripleTotalSign₁ r s •
+            (tripleD2Component A (n + 1) r s ≫
+              Sigma.ι (fun t : ℤ => A.obj r t
+                (n + 1 + 1 - r - t)) (s + 1) ≫
+              Sigma.ι (fun r' : ℤ => ∐ fun t : ℤ => A.obj r' t
+                (n + 1 + 1 - r' - t)) r) +
+          tripleTotalSign₂ r s •
+            (tripleD3Component A (n + 1) r s ≫
+              Sigma.ι (fun t : ℤ => A.obj r t
+                (n + 1 + 1 - r - t)) s ≫
+              Sigma.ι (fun r' : ℤ => ∐ fun t : ℤ => A.obj r' t
+                (n + 1 + 1 - r' - t)) r) := by
+    dsimp [tripleTotalDifferential]
+    rw [Sigma.ι_desc]
+    dsimp [tripleTotalTerm]
+    rw [Sigma.ι_desc]
+  have h11 :
+      tripleD1Component A n p q ≫
+          tripleD1Component A (n + 1) (p + 1) q = 0 := by
+    dsimp [tripleD1Component]
+    simp [Category.assoc]
+    exact A.d1_sq p q (n + 1 + 1 - (p + 1 + 1) - q)
+  have h22 :
+      tripleD2Component A n p q ≫
+          tripleD2Component A (n + 1) p (q + 1) = 0 := by
+    dsimp [tripleD2Component]
+    simp only [Category.assoc]
+    rw [← eqToHom_naturality_assoc (fun r : ℤ => A.d2 p (q + 1) r)
+      (show n - p - q = n + 1 - p - (q + 1) by ring)]
+    simpa [Category.assoc] using
+      congrArg (fun f => f ≫ eqToHom (by congr 1; ring))
+        (A.d2_sq p q (n - p - q))
+  have h33 :
+      tripleD3Component A n p q ≫
+          tripleD3Component A (n + 1) p q = 0 := by
+    dsimp [tripleD3Component]
+    simp only [Category.assoc]
+    rw [← eqToHom_naturality_assoc (fun r : ℤ => A.d3 p q r)
+      (show n - p - q + 1 = n + 1 - p - q by ring)]
+    simpa [Category.assoc] using
+      congrArg (fun f => f ≫ eqToHom (by congr 1; ring))
+        (A.d3_sq p q (n - p - q))
+  have h12 :
+      tripleD1Component A n p q ≫
+          tripleD2Component A (n + 1) (p + 1) q =
+        tripleD2Component A n p q ≫
+          tripleD1Component A (n + 1) p (q + 1) := by
+    dsimp [tripleD1Component, tripleD2Component]
+    simp only [Category.assoc]
+    rw [← eqToHom_naturality_assoc (fun r : ℤ => A.d2 (p + 1) q r)
+      (show n - p - q = n + 1 - (p + 1) - q by ring)]
+    rw [← eqToHom_naturality_assoc (fun r : ℤ => A.d1 p (q + 1) r)
+      (show n - p - q = n + 1 - p - (q + 1) by ring)]
+    simpa [Category.assoc] using
+      congrArg (fun f => f ≫ eqToHom (by congr 1; ring))
+        (A.comm12 p q (n - p - q)).symm
+  have h13 :
+      tripleD1Component A n p q ≫
+          tripleD3Component A (n + 1) (p + 1) q =
+        tripleD3Component A n p q ≫
+          tripleD1Component A (n + 1) p q := by
+    dsimp [tripleD1Component, tripleD3Component]
+    simp only [Category.assoc]
+    rw [← eqToHom_naturality_assoc (fun r : ℤ => A.d3 (p + 1) q r)
+      (show n - p - q = n + 1 - (p + 1) - q by ring)]
+    rw [← eqToHom_naturality_assoc (fun r : ℤ => A.d1 p q r)
+      (show n - p - q + 1 = n + 1 - p - q by ring)]
+    simpa [Category.assoc] using
+      congrArg (fun f => f ≫ eqToHom (by congr 1; ring))
+        (A.comm13 p q (n - p - q)).symm
+  have h23 :
+      tripleD2Component A n p q ≫
+          tripleD3Component A (n + 1) p (q + 1) =
+        tripleD3Component A n p q ≫
+          tripleD2Component A (n + 1) p q := by
+    dsimp [tripleD2Component, tripleD3Component]
+    simp only [Category.assoc]
+    rw [← eqToHom_naturality_assoc (fun r : ℤ => A.d3 p (q + 1) r)
+      (show n - p - q = n + 1 - p - (q + 1) by ring)]
+    rw [← eqToHom_naturality_assoc (fun r : ℤ => A.d2 p q r)
+      (show n - p - q + 1 = n + 1 - p - q by ring)]
+    simpa [Category.assoc] using
+      congrArg (fun f => f ≫ eqToHom (by congr 1; ring))
+        (A.comm23 p q (n - p - q)).symm
+  have h11' :
+      tripleD1Component A n p q ≫
+          tripleD1Component A (n + 1) (p + 1) q ≫
+          Sigma.ι (fun t : ℤ => A.obj (p + 1 + 1) t
+            (n + 1 + 1 - (p + 1 + 1) - t)) q ≫
+          Sigma.ι (fun r : ℤ => ∐ fun t : ℤ => A.obj r t
+            (n + 1 + 1 - r - t)) (p + 1 + 1) = 0 := by
+    rw [← Category.assoc, h11, zero_comp]
+  have h22' :
+      tripleD2Component A n p q ≫
+          tripleD2Component A (n + 1) p (q + 1) ≫
+          Sigma.ι (fun t : ℤ => A.obj p t
+            (n + 1 + 1 - p - t)) (q + 1 + 1) ≫
+          Sigma.ι (fun r : ℤ => ∐ fun t : ℤ => A.obj r t
+            (n + 1 + 1 - r - t)) p = 0 := by
+    rw [← Category.assoc, h22, zero_comp]
+  have h33' :
+      tripleD3Component A n p q ≫
+          tripleD3Component A (n + 1) p q ≫
+          Sigma.ι (fun t : ℤ => A.obj p t
+            (n + 1 + 1 - p - t)) q ≫
+          Sigma.ι (fun r : ℤ => ∐ fun t : ℤ => A.obj r t
+            (n + 1 + 1 - r - t)) p = 0 := by
+    rw [← Category.assoc, h33, zero_comp]
+  have h12' :
+      tripleD1Component A n p q ≫
+          tripleD2Component A (n + 1) (p + 1) q ≫
+          Sigma.ι (fun t : ℤ => A.obj (p + 1) t
+            (n + 1 + 1 - (p + 1) - t)) (q + 1) ≫
+          Sigma.ι (fun r : ℤ => ∐ fun t : ℤ => A.obj r t
+            (n + 1 + 1 - r - t)) (p + 1) =
+        tripleD2Component A n p q ≫
+          tripleD1Component A (n + 1) p (q + 1) ≫
+          Sigma.ι (fun t : ℤ => A.obj (p + 1) t
+            (n + 1 + 1 - (p + 1) - t)) (q + 1) ≫
+          Sigma.ι (fun r : ℤ => ∐ fun t : ℤ => A.obj r t
+            (n + 1 + 1 - r - t)) (p + 1) := by
+    rw [← Category.assoc, h12]
+    simp only [Category.assoc]
+  have h13' :
+      tripleD1Component A n p q ≫
+          tripleD3Component A (n + 1) (p + 1) q ≫
+          Sigma.ι (fun t : ℤ => A.obj (p + 1) t
+            (n + 1 + 1 - (p + 1) - t)) q ≫
+          Sigma.ι (fun r : ℤ => ∐ fun t : ℤ => A.obj r t
+            (n + 1 + 1 - r - t)) (p + 1) =
+        tripleD3Component A n p q ≫
+          tripleD1Component A (n + 1) p q ≫
+          Sigma.ι (fun t : ℤ => A.obj (p + 1) t
+            (n + 1 + 1 - (p + 1) - t)) q ≫
+          Sigma.ι (fun r : ℤ => ∐ fun t : ℤ => A.obj r t
+            (n + 1 + 1 - r - t)) (p + 1) := by
+    rw [← Category.assoc, h13]
+    simp only [Category.assoc]
+  have h23' :
+      tripleD2Component A n p q ≫
+          tripleD3Component A (n + 1) p (q + 1) ≫
+          Sigma.ι (fun t : ℤ => A.obj p t
+            (n + 1 + 1 - p - t)) (q + 1) ≫
+          Sigma.ι (fun r : ℤ => ∐ fun t : ℤ => A.obj r t
+            (n + 1 + 1 - r - t)) p =
+        tripleD3Component A n p q ≫
+          tripleD2Component A (n + 1) p q ≫
+          Sigma.ι (fun t : ℤ => A.obj p t
+            (n + 1 + 1 - p - t)) (q + 1) ≫
+          Sigma.ι (fun r : ℤ => ∐ fun t : ℤ => A.obj r t
+            (n + 1 + 1 - r - t)) p := by
+    rw [← Category.assoc, h23]
+    simp only [Category.assoc]
+  have hs2p :
+      tripleTotalSign₂ (p + 1) q = -tripleTotalSign₂ p q := by
+    dsimp [tripleTotalSign₂]
+    rw [show p + 1 + q = (p + q) + 1 by ring]
+    simp [Int.negOnePow_succ]
+  have hs2q :
+      tripleTotalSign₂ p (q + 1) = -tripleTotalSign₂ p q := by
+    dsimp [tripleTotalSign₂]
+    rw [show p + (q + 1) = (p + q) + 1 by ring]
+    simp [Int.negOnePow_succ]
+  have hs2p_raw :
+      (p + 1 + q).negOnePow = -(p + q).negOnePow := by
+    rw [show p + 1 + q = (p + q) + 1 by ring]
+    simp [Int.negOnePow_succ]
+  have hs2q_raw :
+      (p + (q + 1)).negOnePow = -(p + q).negOnePow := by
+    rw [show p + (q + 1) = (p + q) + 1 by ring]
+    simp [Int.negOnePow_succ]
+  have hzero : g q ≫ tripleTotalDifferential A (n + 1) =
+      (0 : A.obj p q (n - p - q) ⟶
+        ∐ fun r : ℤ => ∐ fun s : ℤ => A.obj r s (n + 1 + 1 - r - s)) := by
+    let g' : ∀ s : ℤ, A.obj p s (n - p - s) ⟶
+        ∐ fun r : ℤ => ∐ fun t : ℤ => A.obj r t (n + 1 - r - t) :=
+      fun s => g s
+    let d' :
+        (∐ fun r : ℤ => ∐ fun s : ℤ => A.obj r s (n + 1 - r - s)) ⟶
+          ∐ fun r : ℤ => ∐ fun s : ℤ => A.obj r s (n + 1 + 1 - r - s) :=
+      tripleTotalDifferential A (n + 1)
+    have hnext' (r s : ℤ) :
+        Sigma.ι (fun t : ℤ => A.obj r t (n + 1 - r - t)) s ≫
+            Sigma.ι (fun r' : ℤ => ∐ fun t : ℤ => A.obj r' t
+              (n + 1 - r' - t)) r ≫ d' =
+          tripleD1Component A (n + 1) r s ≫
+              Sigma.ι (fun t : ℤ => A.obj (r + 1) t
+                (n + 1 + 1 - (r + 1) - t)) s ≫
+              Sigma.ι (fun r' : ℤ => ∐ fun t : ℤ => A.obj r' t
+                (n + 1 + 1 - r' - t)) (r + 1) +
+            tripleTotalSign₁ r s •
+              (tripleD2Component A (n + 1) r s ≫
+                Sigma.ι (fun t : ℤ => A.obj r t
+                  (n + 1 + 1 - r - t)) (s + 1) ≫
+                Sigma.ι (fun r' : ℤ => ∐ fun t : ℤ => A.obj r' t
+                  (n + 1 + 1 - r' - t)) r) +
+            tripleTotalSign₂ r s •
+              (tripleD3Component A (n + 1) r s ≫
+                Sigma.ι (fun t : ℤ => A.obj r t
+                  (n + 1 + 1 - r - t)) s ≫
+                Sigma.ι (fun r' : ℤ => ∐ fun t : ℤ => A.obj r' t
+                  (n + 1 + 1 - r' - t)) r) := by
+      simpa only [d', tripleTotalTerm] using hnext r s
+    change g' q ≫ d' = 0
+    simp only [g', g]
+    rw [Preadditive.add_comp, Preadditive.add_comp]
+    simp only [Linear.units_smul_comp, Category.assoc]
+    rw [hnext' (p + 1) q, hnext' p (q + 1), hnext' p q]
+    simp [tripleTotalSign₁, tripleTotalSign₂, Int.negOnePow_succ,
+      hs2p, hs2q, h11', h22', h33', h12', h13', h23', Category.assoc,
+      Linear.units_smul_comp, Linear.comp_units_smul]
+    rw [hs2p_raw, hs2q_raw]
+    simp only [Units.neg_smul, neg_smul, neg_one_smul, one_smul, smul_smul,
+      Int.units_mul_self, mul_comm]
+    rw [← smul_smul]
+    simp only [smul_neg]
+    abel
+  have hcomp := congrArg
+    (fun f => f ≫ tripleTotalDifferential A (n + 1)) hpq
+  rw [Sigma.ι_desc] at hcomp
+  erw [comp_zero, comp_zero]
+  dsimp [tripleTotalTerm] at hcomp hzero
+  have hassoc :
+      (Sigma.ι (fun s : ℤ => A.obj p s (n - p - s)) q ≫
+          (Sigma.ι (fun r : ℤ => ∐ fun s : ℤ => A.obj r s
+            (n - r - s)) p ≫ tripleTotalDifferential A n)) ≫
+          tripleTotalDifferential A (n + 1) =
+        Sigma.ι (fun s : ℤ => A.obj p s (n - p - s)) q ≫
+            (Sigma.ι (fun r : ℤ => ∐ fun s : ℤ => A.obj r s
+            (n - r - s)) p ≫
+            (tripleTotalDifferential A n ≫ tripleTotalDifferential A (n + 1))) := by
+    exact (Category.assoc
+      (Sigma.ι (fun s : ℤ => A.obj p s (n - p - s)) q)
+      (Sigma.ι (fun r : ℤ => ∐ fun s : ℤ => A.obj r s
+        (n - r - s)) p ≫ tripleTotalDifferential A n)
+      (tripleTotalDifferential A (n + 1))).trans
+      (congrArg
+        (fun f => Sigma.ι (fun s : ℤ => A.obj p s (n - p - s)) q ≫ f)
+        (Category.assoc
+          (Sigma.ι (fun r : ℤ => ∐ fun s : ℤ => A.obj r s
+            (n - r - s)) p)
+          (tripleTotalDifferential A n)
+          (tripleTotalDifferential A (n + 1))))
+  exact hassoc.symm.trans (hcomp.trans hzero)
 
 def tripleTotalComplex [HasCountableCoproducts C]
     (A : TripleComplex C) : CochainComplex C ℤ where
@@ -657,7 +965,10 @@ theorem tripleTotalComplex_component_formula [HasCountableCoproducts C]
           (tripleD3Component A n p q ≫
             Sigma.ι (fun s : ℤ => A.obj p s (n + 1 - p - s)) q ≫
             Sigma.ι (fun r : ℤ => ∐ fun s : ℤ => A.obj r s (n + 1 - r - s)) p) := by
-  sorry
+  classical
+  simp [tripleTotalComplex, tripleTotalDifferential, Cofan.mk_ι_app,
+    Discrete.functor_obj]
+  rfl
 
 def tripleTotalization [HasCountableCoproducts C]
     (A : TripleComplex C) : CochainComplex C ℤ :=

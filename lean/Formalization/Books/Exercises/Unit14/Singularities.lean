@@ -295,7 +295,113 @@ theorem homogeneousError_decomposition
         MvPowerSeries.IsHomogeneous B n ∧
           e = MvPowerSeries.X (0 : Fin 2) * A +
             MvPowerSeries.X (1 : Fin 2) * B := by
-  sorry
+  let A : twoVariablePowerSeries k :=
+    fun d => MvPowerSeries.coeff (d + Finsupp.single (0 : Fin 2) 1) e
+  let B : twoVariablePowerSeries k :=
+    fun d => if d (0 : Fin 2) = 0 then
+      MvPowerSeries.coeff (d + Finsupp.single (1 : Fin 2) 1) e else 0
+  refine ⟨A, B, ?_, ?_, ?_⟩
+  · intro d hd
+    dsimp [A] at hd
+    have hdeg := he hd
+    apply Nat.add_right_cancel (m := 1)
+    simpa only [map_add, Finsupp.weight_single, Pi.one_apply, one_smul] using hdeg
+  · intro d hd
+    change B d ≠ 0 at hd
+    by_cases h : d (0 : Fin 2) = 0
+    · simp only [B, if_pos h] at hd
+      have hdeg := he hd
+      apply Nat.add_right_cancel (m := 1)
+      simpa only [map_add, Finsupp.weight_single, Pi.one_apply, one_smul] using hdeg
+    · simp only [B, if_neg h] at hd
+      exact (hd rfl).elim
+  · ext d
+    by_cases h0 : d (0 : Fin 2) ≠ 0
+    · have h0le : Finsupp.single (0 : Fin 2) 1 ≤ d :=
+        Finsupp.single_le_iff.mpr (Nat.one_le_iff_ne_zero.mpr h0)
+      have h1 : (d - (Finsupp.single (1 : Fin 2) 1 : Fin 2 →₀ ℕ))
+          (0 : Fin 2) ≠ 0 := by
+        simpa using h0
+      simp only [map_add, MvPowerSeries.X_def]
+      rw [MvPowerSeries.coeff_monomial_mul, MvPowerSeries.coeff_monomial_mul]
+      have hx : MvPowerSeries.coeff
+          (d - Finsupp.single (0 : Fin 2) 1) A =
+          MvPowerSeries.coeff
+            ((d - Finsupp.single (0 : Fin 2) 1) +
+              Finsupp.single (0 : Fin 2) 1) e := by
+        rfl
+      have hy : MvPowerSeries.coeff
+          (d - (Finsupp.single (1 : Fin 2) 1 : Fin 2 →₀ ℕ)) B =
+          (if (d - (Finsupp.single (1 : Fin 2) 1 : Fin 2 →₀ ℕ))
+              (0 : Fin 2) = 0 then
+            MvPowerSeries.coeff
+              ((d - (Finsupp.single (1 : Fin 2) 1 : Fin 2 →₀ ℕ)) +
+                Finsupp.single (1 : Fin 2) 1) e else 0) := by
+        rfl
+      rw [if_pos h0le, hx, hy]
+      simp only [one_mul]
+      by_cases h1d : d (1 : Fin 2) ≠ 0
+      · have h1le : Finsupp.single (1 : Fin 2) 1 ≤ d :=
+          Finsupp.single_le_iff.mpr (Nat.one_le_iff_ne_zero.mpr h1d)
+        simp only [if_pos h1le, if_neg h1]
+        rw [Finsupp.sub_add_single_one_cancel (Nat.one_le_iff_ne_zero.mp
+          (Finsupp.single_le_iff.mp h0le))]
+        simp only [add_zero]
+      · have h1nle : ¬ Finsupp.single (1 : Fin 2) 1 ≤ d := by
+          intro hle
+          exact h1d (Nat.one_le_iff_ne_zero.mp (Finsupp.single_le_iff.mp hle))
+        simp only [if_neg h1nle]
+        rw [Finsupp.sub_add_single_one_cancel (Nat.one_le_iff_ne_zero.mp
+          (Finsupp.single_le_iff.mp h0le))]
+        simp only [add_zero]
+    · have h0eq : d (0 : Fin 2) = 0 := not_ne_iff.mp h0
+      by_cases h1 : d (1 : Fin 2) ≠ 0
+      · have h1le : Finsupp.single (1 : Fin 2) 1 ≤ d :=
+          Finsupp.single_le_iff.mpr (Nat.one_le_iff_ne_zero.mpr h1)
+        have hq0 : (d - (Finsupp.single (1 : Fin 2) 1 : Fin 2 →₀ ℕ))
+            (0 : Fin 2) = 0 := by
+          simp [h0eq]
+        have h0le : ¬ Finsupp.single (0 : Fin 2) 1 ≤ d := by
+          intro hle
+          exact h0 (Nat.one_le_iff_ne_zero.mp (Finsupp.single_le_iff.mp hle))
+        simp only [map_add, MvPowerSeries.X_def]
+        rw [MvPowerSeries.coeff_monomial_mul, MvPowerSeries.coeff_monomial_mul]
+        have hx : MvPowerSeries.coeff
+            (d - Finsupp.single (0 : Fin 2) 1) A =
+            MvPowerSeries.coeff
+              ((d - Finsupp.single (0 : Fin 2) 1) +
+                Finsupp.single (0 : Fin 2) 1) e := by
+          rfl
+        have hy : MvPowerSeries.coeff
+            (d - (Finsupp.single (1 : Fin 2) 1 : Fin 2 →₀ ℕ)) B =
+            (if (d - (Finsupp.single (1 : Fin 2) 1 : Fin 2 →₀ ℕ))
+                (0 : Fin 2) = 0 then
+              MvPowerSeries.coeff
+                ((d - (Finsupp.single (1 : Fin 2) 1 : Fin 2 →₀ ℕ)) +
+                  Finsupp.single (1 : Fin 2) 1) e else 0) := by
+          rfl
+        rw [if_neg h0le, if_pos h1le, hy, hq0]
+        simp only [one_mul, zero_add]
+        rw [Finsupp.sub_add_single_one_cancel (Nat.one_le_iff_ne_zero.mp
+          (Finsupp.single_le_iff.mp h1le))]
+        simp only [if_true]
+      · have h1eq : d (1 : Fin 2) = 0 := not_ne_iff.mp h1
+        have hd0 : d = 0 := by
+          ext i
+          fin_cases i <;> simp [h0eq, h1eq]
+        have he0 : MvPowerSeries.coeff d e = 0 := by
+          rw [hd0]
+          exact he.coeff_eq_zero (by simp)
+        have h0le : ¬ Finsupp.single (0 : Fin 2) 1 ≤ d := by
+          intro hle
+          exact h0 (Nat.one_le_iff_ne_zero.mp (Finsupp.single_le_iff.mp hle))
+        have h1le : ¬ Finsupp.single (1 : Fin 2) 1 ≤ d := by
+          intro hle
+          exact h1 (Nat.one_le_iff_ne_zero.mp (Finsupp.single_le_iff.mp hle))
+        simp only [map_add, MvPowerSeries.X_def]
+        rw [MvPowerSeries.coeff_monomial_mul, MvPowerSeries.coeff_monomial_mul]
+        rw [if_neg h0le, if_neg h1le]
+        simpa only [zero_add] using he0
 
 /-- One correction step in the maximal-ideal filtration. -/
 structure OneStepFiltrationImprovement
@@ -341,7 +447,7 @@ theorem compatibleCorrections_toPowerSeriesAutomorphism
     {k : Type u} [Field k]
     (C : CompatibleTangentToIdentityCorrections k) :
     Nonempty (TangentToIdentityAutomorphism k) := by
-  sorry
+  exact ⟨C.approximation 0⟩
 
 /-- The convergent two-variable formal Morse lemma for the node.
 

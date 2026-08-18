@@ -446,7 +446,7 @@ theorem graphBoundary_adjoint {n : ℕ} (A : Matrix (Fin n) (Fin n) ℤ) :
           rw [Finset.sum_sub_distrib, hsum, hsum]
         _ = (x (edgeSource e) - x (edgeTarget e)) *
             (edgeWeight e * y e) := by
-          simp [sub_mul, mul_sub, mul_assoc, mul_comm, mul_left_comm]
+          simp [sub_mul, mul_sub, mul_comm, mul_left_comm]
     _ = ∑ i : Fin n, ∑ e : positiveEdge A,
         x i * (if edgeSource e = i then edgeWeight e * y e
           else if edgeTarget e = i then -(edgeWeight e * y e) else 0) := by
@@ -530,8 +530,8 @@ theorem graph_kernel_quotient_torsion_free {n : ℕ}
     (A : Matrix (Fin n) (Fin n) ℤ) :
     Module.IsTorsionFree ℤ
       (edgeLattice A ⧸ LinearMap.ker (graphCoboundary A)) := by
-  letI : Module.IsTorsionFree ℤ (vertexLattice n) := inferInstance
-  letI : Module.IsTorsionFree ℤ (LinearMap.range (graphCoboundary A)) :=
+  let : Module.IsTorsionFree ℤ (vertexLattice n) := inferInstance
+  let : Module.IsTorsionFree ℤ (LinearMap.range (graphCoboundary A)) :=
     Subtype.coe_injective.moduleIsTorsionFree _ (by simp)
   refine Function.Injective.moduleIsTorsionFree
     (fun x : edgeLattice A ⧸ LinearMap.ker (graphCoboundary A) =>

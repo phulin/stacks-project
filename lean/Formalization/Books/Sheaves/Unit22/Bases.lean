@@ -988,7 +988,11 @@ theorem basisAlgebraicRestrictionFunctor_isEquivalence {C : Type u}
     [Category.{v} C] [HasLimits C] {X : TopCat.{v}} {ι : Type v}
     (B : ι → Opens X) (hB : Opens.IsBasis (Set.range B)) :
     (basisAlgebraicRestrictionFunctor (C := C) B hB).IsEquivalence := by
-  sorry
+  let : (inducedFunctor B).IsCoverDense (Opens.grothendieckTopology X) :=
+    TopCat.Opens.coverDense_inducedFunctor hB
+  change ((inducedFunctor B).sheafPushforwardContinuous C
+    (basisTopology B) (Opens.grothendieckTopology X)).IsEquivalence
+  infer_instance
 
 /-- Extension of a sheaf with values in an algebraic structure from a basis. -/
 noncomputable def basisAlgebraicExtension {C : Type u} [Category.{v} C]
@@ -1054,7 +1058,24 @@ theorem basisAlgebraicExtension_unique {C : Type u} [Category.{v} C]
     (eG : (basisAlgebraicRestrictionFunctor B hB).obj G ≅ P) :
     ∃! e : F ≅ G,
       (basisAlgebraicRestrictionFunctor B hB).mapIso e ≪≫ eG = eF := by
-  sorry
+  let R := basisAlgebraicRestrictionFunctor (C := C) B hB
+  let hR : R.FullyFaithful :=
+    (basisAlgebraicSheafEquivalence (C := C) B hB).fullyFaithfulFunctor
+  let q : R.obj F ≅ R.obj G := eF ≪≫ eG.symm
+  let e : F ≅ G := hR.preimageIso q
+  have he : R.mapIso e ≪≫ eG = eF := by
+    apply Iso.ext
+    change R.map (hR.preimage (eF.hom ≫ eG.inv)) ≫ eG.hom = eF.hom
+    rw [hR.map_preimage]
+    simp
+  refine ⟨e, he, ?_⟩
+  intro e' he'
+  apply Iso.ext
+  apply hR.map_injective
+  have h' := congrArg Iso.hom he'
+  have h := congrArg Iso.hom he
+  apply (cancel_mono eG.hom).1
+  exact h'.trans h.symm
 
 theorem basisAlgebraicExtension_stalk_eq {C : Type u} [Category.{v} C]
     {FC : C → C → Type*} {CC : C → Type v}
@@ -1069,7 +1090,39 @@ theorem basisAlgebraicExtension_stalk_eq {C : Type u} [Category.{v} C]
     (hP : BasisAlgebraicSheaf B (CategoryTheory.forget C) P) (x : X) :
     Nonempty ((basisAlgebraicExtension B hB P hP).presheaf.stalk x ≅
       basisAlgebraicStalk B P x) := by
-  sorry
+  haveI : IsFiltered ((basisNeighborhoodIndex B x)ᵒᵖ) :=
+    basisNeighborhoodIndex_isFiltered B hB x
+  haveI : (inducedFunctor B).IsCoverDense (Opens.grothendieckTopology X) :=
+    TopCat.Opens.coverDense_inducedFunctor hB
+  let E := basisAlgebraicExtension B hB P hP
+  let F : (basisNeighborhoodIndex B x)ᵒᵖ ⥤ (OpenNhds x)ᵒᵖ :=
+    { obj := fun i => op ⟨B i.unop.1, i.unop.2⟩
+      map := fun f => (homOfLE f.unop.hom.hom.le).op
+      map_id := by intro i; subsingleton
+      map_comp := by intro i j k f g; subsingleton }
+  have hF : F.Final := by
+    apply Functor.final_of_exists_of_isFiltered
+    · intro U
+      obtain ⟨V, ⟨k, hk, rfl⟩, hxV, hVU⟩ :=
+        (Opens.isBasis_iff_nbhd.mp hB) U.unop.2
+      refine ⟨op ⟨k, hxV⟩, ?_⟩
+      exact ⟨(homOfLE hVU).op⟩
+    · intro U V f g
+      exact ⟨V, 𝟙 _, by subsingleton⟩
+  let eR := basisAlgebraicExtensionRestrictionIso B hB P hP
+  let eP := (CategoryTheory.sheafToPresheaf (basisTopology B) C).mapIso eR.symm
+  let eQ := ((inducedFunctor B).sheafPushforwardContinuousCompSheafToPresheafIso
+    C (basisTopology B) (Opens.grothendieckTopology X)).app E
+  let e := eP ≪≫ eQ
+  let G := (OpenNhds.inclusion x).op ⋙ E.presheaf
+  let dIso := Functor.isoWhiskerLeft
+    (ObjectProperty.ι (fun i : basisIndex B => x ∈ B i)).op e
+  let cIso : colimit ((ObjectProperty.ι (fun i : basisIndex B => x ∈ B i)).op ⋙ P) ≅
+      colimit (F ⋙ G) :=
+    HasColimit.isoOfNatIso dIso
+  let fIso : colimit (F ⋙ G) ≅ colimit G :=
+    Functor.Final.colimitIso F G
+  exact ⟨(cIso ≪≫ fIso).symm⟩
 
 /-! ## Modules on a basis -/
 
@@ -1112,7 +1165,7 @@ theorem basisModuleStalk_underlying_iso {X : TopCat.{v}} {ι : Type v}
     {O : BasisRingPresheaf B} (F : BasisModulePresheaf B O) (x : X) :
     Nonempty (basisModuleStalk B F x ≃
       basisStalk B (F.presheaf ⋙ (CategoryTheory.forget AddCommGrpCat)) x) := by
-  sorry
+  exact basisAlgebraicStalk_underlying (C := AddCommGrpCat) B hB F.presheaf x
 
 /-- The canonical module structure on a basis module stalk, obtained from the
 filtered colimits of the ring and module diagrams. -/

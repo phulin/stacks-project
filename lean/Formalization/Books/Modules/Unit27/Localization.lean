@@ -178,8 +178,7 @@ noncomputable def ringSheafificationMap
     {X : TopCat.{u}} {O O' : CommRingPresheaf X} (φ : O ⟶ O') :
     Formalization.Books.Sheaves.Unit17.ringSheafification (ringPresheaf O) ⟶
       Formalization.Books.Sheaves.Unit17.ringSheafification (ringPresheaf O') :=
-  (CategoryTheory.presheafToSheaf (Opens.grothendieckTopology X)
-    RingCat).map (ringPresheafMap φ)
+  Formalization.Books.Sheaves.Unit17.ringSheafificationMap (ringPresheafMap φ)
 
 /-- The source's `S⁻¹ F`, represented by canonical presheaf extension of
 scalars along `O ⟶ S⁻¹ O`. -/
@@ -209,6 +208,23 @@ theorem localizedModulePresheaf_fraction_restriction
               ⟨(O.map i).hom s, S.map i s.property⟩ := by
   sorry
 
+/- This is the remaining algebraic transport after the generic sectionwise
+   comparison in Sheaves 6.  Unfold `localizedRingPresheaf` and identify the
+   target ring action with the canonical `Localization (S.obj U)` action;
+   the resulting tensor product is carried to `LocalizedModule` by
+   `LocalizedModule.equivTensorProduct`.  Keeping this coercion-heavy step
+   separate lets the presheaf proof use ordinary composition of isomorphisms. -/
+theorem extendScalars_localization_iso
+    {X : TopCat.{u}} {O : CommRingPresheaf X}
+    (S : MultiplicativePresheaf O) (F : ModulePresheaf O)
+    (U : (Opens X)ᵒᵖ) :
+    Nonempty
+      ((ModuleCat.extendScalars ((localizationPresheafMap S).app U).hom).obj
+          (ModuleCat.of (O.obj U) (F.obj U)) ≅
+        ModuleCat.of (Localization (S.obj U))
+          (LocalizedModule (S.obj U) (F.obj U))) := by
+  sorry
+
 /-- The sectionwise object of `S⁻¹ F` is canonically the usual localized
 module. -/
 theorem localizedModulePresheaf_section_iso
@@ -219,7 +235,11 @@ theorem localizedModulePresheaf_section_iso
       ((localizedModulePresheaf S F).obj U ≅
         ModuleCat.of (Localization (S.obj U))
           (LocalizedModule (S.obj U) (F.obj U))) := by
-  sorry
+  obtain ⟨e⟩ :=
+    Formalization.Books.Sheaves.Unit06.tensorProductPresheaf_obj_iso
+      (localizationPresheafMap S) F U
+  obtain ⟨e'⟩ := extendScalars_localization_iso S F U
+  exact ⟨e.symm ≪≫ e'⟩
 
 /-- The first displayed module identity in the source is definitionally the
 canonical `changeOfRingsCore`/tensor-product presheaf. -/
@@ -250,12 +270,13 @@ noncomputable abbrev localizedModuleTensorProductSheaf
 theorem simple_invert_module
     {X : TopCat.{u}} {O : CommRingPresheaf X}
     (S : MultiplicativePresheaf O) (F : ModulePresheaf O)
-    (hO : Presheaf.IsSheaf (Opens.grothendieckTopology X) O)
-    (hF : Presheaf.IsSheaf (Opens.grothendieckTopology X) F.presheaf) :
+    (_hO : Presheaf.IsSheaf (Opens.grothendieckTopology X) O)
+    (_hF : Presheaf.IsSheaf (Opens.grothendieckTopology X) F.presheaf) :
     Nonempty
       (localizedModuleSheafification S F ≅
         localizedModuleTensorProductSheaf S F) := by
-  sorry
+  exact Formalization.Books.Sheaves.Unit17.moduleSheafification_changeOfRings_iso
+    (ringPresheafMap (localizationPresheafMap S)) F
 
 end
 

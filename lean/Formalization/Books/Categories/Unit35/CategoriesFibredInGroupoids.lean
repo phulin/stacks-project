@@ -1579,9 +1579,13 @@ theorem fibredInGroupoids_fullyFaithful_iff_diagonal_isEquivalence
         canonicalFibredTwoFibreProduct_fibres_are_groupoids.{v, u, u, v}
           X X Y hX hX F F }
     have hpT : pT.IsFibredInGroupoids := by
-      simpa [P, pT, canonicalFibredTwoFibreProduct_diagram,
-        twoFibreProductOverDiagram] using
-        fibredInGroupoidsTwoFibreProduct_apex_isFibredInGroupoids P
+      have hbase :
+          (canonicalFibredTwoFibreProduct.{v, u, u, v} X X Y F F).diagram.base =
+            pT := by
+        rw [canonicalFibredTwoFibreProduct_diagram]
+        rfl
+      rw [← hbase]
+      exact fibredInGroupoidsTwoFibreProduct_apex_isFibredInGroupoids P
     have hDfibre : ∀ U : C,
         (fibreFunctor pX pT D rfl U).IsEquivalence := by
       intro U

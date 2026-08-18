@@ -1392,7 +1392,7 @@ def tripleTotalizationOrder12TermIso [HasCountableCoproducts C]
   let hom : tripleTotalizationOrder12Term A n ⟶ tripleTotalTerm A n :=
     Sigma.desc (fun s =>
       Sigma.desc (fun p =>
-        eqToHom (by congr 1 <;> ring) ≫
+        eqToHom (by congr 1; ring) ≫
           Sigma.ι (fun q : ℤ => A.obj p q (n - p - q)) (s - p) ≫
           Sigma.ι (fun r : ℤ => ∐ fun q : ℤ => A.obj r q (n - r - q)) p))
   let inv : tripleTotalTerm A n ⟶ tripleTotalizationOrder12Term A n :=
@@ -1462,14 +1462,14 @@ theorem tripleTotalization_associative_complex [HasCountableCoproducts C]
     tripleTotalTerm, tripleTotalDifferential]
   simp [Cofan.mk_ι_app, Category.assoc]
   have h1 :
-      eqToHom (by congr 1 <;> ring) ≫
+      eqToHom (by congr 1; ring) ≫
           tripleD1Component A n p (s - p) ≫
             Sigma.ι (fun q : ℤ => A.obj (p + 1) q
               (n + 1 - (p + 1) - q)) (s - p) ≫
             Sigma.ι (fun r : ℤ => ∐ fun q : ℤ => A.obj r q
               (n + 1 - r - q)) (p + 1) =
         tripleOrder12D1Component A n s p ≫
-          eqToHom (by congr 1 <;> ring) ≫
+          eqToHom (by congr 1; ring) ≫
             Sigma.ι (fun q : ℤ => A.obj (p + 1) q
               (n + 1 - (p + 1) - q)) (s + 1 - (p + 1)) ≫
             Sigma.ι (fun r : ℤ => ∐ fun q : ℤ => A.obj r q
@@ -1495,14 +1495,14 @@ theorem tripleTotalization_associative_complex [HasCountableCoproducts C]
     -/
     sorry
   have h2 :
-      eqToHom (by congr 1 <;> ring) ≫
+      eqToHom (by congr 1; ring) ≫
           tripleD2Component A n p (s - p) ≫
             Sigma.ι (fun q : ℤ => A.obj p q
               (n + 1 - p - q)) ((s - p) + 1) ≫
             Sigma.ι (fun r : ℤ => ∐ fun q : ℤ => A.obj r q
               (n + 1 - r - q)) p =
         tripleOrder12D2Component A n s p ≫
-          eqToHom (by congr 1 <;> ring) ≫
+          eqToHom (by congr 1; ring) ≫
             Sigma.ι (fun q : ℤ => A.obj p q
               (n + 1 - p - q)) ((s + 1) - p) ≫
             Sigma.ι (fun r : ℤ => ∐ fun q : ℤ => A.obj r q
@@ -1528,14 +1528,14 @@ theorem tripleTotalization_associative_complex [HasCountableCoproducts C]
     -/
     sorry
   have h3 :
-      eqToHom (by congr 1 <;> ring) ≫
+      eqToHom (by congr 1; ring) ≫
           tripleD3Component A n p (s - p) ≫
             Sigma.ι (fun q : ℤ => A.obj p q
               (n + 1 - p - q)) (s - p) ≫
             Sigma.ι (fun r : ℤ => ∐ fun q : ℤ => A.obj r q
               (n + 1 - r - q)) p =
         tripleOrder12D3Component A n s p ≫
-          eqToHom (by congr 1 <;> ring) ≫
+          eqToHom (by congr 1; ring) ≫
             Sigma.ι (fun q : ℤ => A.obj p q
               (n + 1 - p - q)) (s - p) ≫
             Sigma.ι (fun r : ℤ => ∐ fun q : ℤ => A.obj r q

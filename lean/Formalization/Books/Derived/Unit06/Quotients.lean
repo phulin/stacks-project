@@ -476,7 +476,21 @@ theorem quotient_universal_property
     (hH : P ≤ homologicalFunctorKernel H) :
     ∃! H' : quotientCategory P ⥤ A,
       quotientFunctor P ⋙ H' = H ∧ H'.IsHomological := by
-  sorry
+  letI : H.ShiftSequence ℤ := Functor.ShiftSequence.tautological H ℤ
+  let hInv : (quotientMorphismProperty P).IsInvertedBy H := by
+    intro X Y f hf
+    change P.isoClosure.trW f at hf
+    rw [ObjectProperty.trW_isoClosure] at hf
+    have hf' : (homologicalFunctorKernel H).trW f :=
+      ObjectProperty.trW_monotone hH _ hf
+    have hAll := (Functor.mem_homologicalKernel_trW_iff H f).1 hf'
+    exact (NatIso.isIso_map_iff (H.isoShiftZero ℤ) f).1 (hAll 0)
+  let H' : quotientCategory P ⥤ A := quotientFactor P H hInv
+  refine ⟨H', ⟨quotientFactor_fac P H hInv, ?_⟩, ?_⟩
+  · exact Formalization.Books.Derived.Unit05.homological_localizationFactor_isHomological H hInv
+  · intro H₁ h₁
+    exact quotientFactor_unique P H₁ H'
+      (h₁.1.trans (quotientFactor_fac P H hInv).symm)
 
 theorem quotient_universal_property_exact
     {D : Type*} [Category* D] [Preadditive D] [HasZeroObject D]
@@ -490,7 +504,24 @@ theorem quotient_universal_property_exact
       quotientFunctor P ⋙ F' = F ∧
         IsExactLocalizationFactor
           (S := quotientMorphismProperty P) F' := by
-  sorry
+  let hInv : (quotientMorphismProperty P).IsInvertedBy F := by
+    intro X Y f hf
+    change P.isoClosure.trW f at hf
+    rw [ObjectProperty.trW_isoClosure] at hf
+    obtain ⟨Z, g, h, hT, hZ⟩ := hf
+    let T := Triangle.mk f g h
+    have hFT : F.mapTriangle.obj T ∈ distTriang D :=
+      F.map_distinguished T hT
+    have hFZ : IsZero (F.obj Z) := hF Z hZ
+    have hFZ' : IsZero (F.mapTriangle.obj T).obj₃ :=
+      hFZ
+    exact (Triangle.isZero₃_iff_isIso₁ _ hFT).1 hFZ'
+  let F' : quotientCategory P ⥤ D := quotientFactor P F hInv
+  refine ⟨F', ⟨quotientFactor_fac P F hInv, ?_⟩, ?_⟩
+  · exact Formalization.Books.Derived.Unit05.exact_localizationFactor_isExact F hInv
+  · intro F₁ h₁
+    exact quotientFactor_unique P F₁ F'
+      (h₁.1.trans (quotientFactor_fac P F hInv).symm)
 
 end QuotientCategory
 

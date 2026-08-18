@@ -1,5 +1,7 @@
 import Formalization.Books.Topology.Unit24.LimitsOfSpectralSpaces
+import Formalization.Books.Topology.Unit03.HausdorffSpaces
 import Mathlib.CategoryTheory.Limits.Shapes.Pullback.IsPullback.Basic
+import Mathlib.Topology.Category.TopCat.Limits.Pullbacks
 import Mathlib.Topology.Category.TopCat.Basic
 import Mathlib.Topology.JacobsonSpace
 import Mathlib.Topology.Sets.OpenCover
@@ -1429,6 +1431,329 @@ theorem cartesianComponentSquare_silly
             IsWLocalMap sq.toX.hom ∧
               closedPoints (sq.Y : Type u) =
                 sq.toX.hom ⁻¹' closedPoints X) := by
-  sorry
+  classical
+  let T : Type u := (sq.T : Type u)
+  have hcc : IsProfiniteSpace (ConnectedComponents X) :=
+    Formalization.Books.Topology.Unit23.connectedComponents_isProfiniteSpace
+  obtain ⟨Pcc, ⟨ecc⟩⟩ := hcc
+  letI : T2Space (ConnectedComponents X) := ecc.symm.t2Space
+  letI : CompactSpace (ConnectedComponents X) := ecc.symm.compactSpace
+  letI : TotallyDisconnectedSpace (ConnectedComponents X) :=
+    ecc.symm.totallyDisconnectedSpace
+  obtain ⟨PT, ⟨eT0⟩⟩ := hT
+  let eT : T ≃ₜ (PT : Type u) := eT0
+  letI : T2Space T := eT.symm.t2Space
+  letI : CompactSpace T := eT.symm.compactSpace
+  letI : TotallyDisconnectedSpace T := eT.symm.totallyDisconnectedSpace
+  letI : PrespectralSpace T :=
+    PrespectralSpace.of_isTopologicalBasis isTopologicalBasis_isClopen
+      (fun U hU => hU.1.isCompact)
+  letI : SpectralSpace T :=
+    Formalization.Books.Topology.Unit23.spectralSpace_iff_source_conditions.mpr
+      ⟨inferInstance, inferInstance, inferInstance, inferInstance, inferInstance⟩
+  letI : SpectralSpace (T × X) :=
+    Formalization.Books.Topology.Unit23.spectralSpace_prod
+  let hPclosed : IsClosed ({p : T × X |
+      sq.toPi0.hom p.1 = ConnectedComponents.mk p.2} : Set (T × X)) :=
+    Formalization.Books.Topology.Unit03.isClosed_fiberProduct
+      sq.toPi0.hom ConnectedComponents.mk sq.toPi0.hom.continuous
+        ConnectedComponents.continuous_coe
+  let P : Type u := {p : T × X //
+      sq.toPi0.hom p.1 = ConnectedComponents.mk p.2}
+  letI : SpectralSpace P :=
+    Formalization.Books.Topology.Unit23.spectralSpace_subtype_of_isClosed hPclosed
+  let eY : (sq.Y : Type u) ≃ₜ P :=
+    TopCat.homeoOfIso
+      (sq.isPullback.isoPullback ≪≫
+        TopCat.pullbackIsoProdSubtype sq.toPi0
+          (connectedComponentsMapHom (X := X)))
+  have heY_t (y : (sq.Y : Type u)) :
+      (eY y).val.1 = sq.toT.hom y := by
+    change pullback.fst sq.toPi0 (connectedComponentsMapHom (X := X))
+        ((sq.isPullback.isoPullback).hom y) = sq.toT.hom y
+    exact congrArg (fun k => k.hom y)
+      (CategoryTheory.IsPullback.isoPullback_hom_fst sq.isPullback)
+  have heY_x (y : (sq.Y : Type u)) :
+      (eY y).val.2 = sq.toX.hom y := by
+    change pullback.snd sq.toPi0 (connectedComponentsMapHom (X := X))
+        ((sq.isPullback.isoPullback).hom y) = sq.toX.hom y
+    exact congrArg (fun k => k.hom y)
+      (CategoryTheory.IsPullback.isoPullback_hom_snd sq.isPullback)
+  have hYspectral : SpectralSpace (sq.Y : Type u) :=
+    Formalization.Books.Topology.Unit23.spectralSpace_iff_source_conditions.mpr
+      ⟨eY.isEmbedding.t0Space,
+        eY.symm.compactSpace,
+        eY.isOpenEmbedding.quasiSober,
+        (quasiSeparatedSpace_congr eY).mpr inferInstance,
+        PrespectralSpace.of_isInducing eY eY.isInducing
+          eY.isProperMap.isSpectralMap⟩
+  letI : SpectralSpace (sq.Y : Type u) := hYspectral
+  letI : CompactSpace (sq.Y : Type u) := hYspectral.toCompactSpace
+  have hfiber (t : T) :
+      IsConnected (sq.toT.hom ⁻¹' ({t} : Set T)) := by
+    obtain ⟨x, hx⟩ := ConnectedComponents.surjective_coe (sq.toPi0.hom t)
+    let S : Set P := {p | p.val.1 = t}
+    let Q : Set X := connectedComponent x
+    let ef : S ≃ₜ Q :=
+      { toFun := fun p =>
+          ⟨p.val.val.2, by
+            apply ConnectedComponents.coe_eq_coe'.mp
+            calc
+              ConnectedComponents.mk p.val.val.2 =
+                  sq.toPi0.hom p.val.val.1 := p.val.property.symm
+              _ = sq.toPi0.hom t := by rw [p.property]
+              _ = ConnectedComponents.mk x := hx.symm⟩
+        invFun := fun z =>
+          ⟨⟨⟨t, z.val⟩, by
+            exact hx.symm.trans (ConnectedComponents.coe_eq_coe'.mpr z.property).symm⟩, rfl⟩
+        left_inv := by
+          intro p
+          apply Subtype.ext
+          apply Subtype.ext
+          apply Prod.ext
+          · exact p.property.symm
+          · rfl
+        right_inv := by
+          intro z
+          rfl
+        continuous_toFun := by
+          apply Continuous.subtype_mk
+          exact continuous_snd.comp
+            (continuous_subtype_val.comp continuous_subtype_val)
+        continuous_invFun := by
+          apply Continuous.subtype_mk
+          apply Continuous.subtype_mk
+          exact continuous_const.prodMk continuous_subtype_val }
+    letI : ConnectedSpace Q := Subtype.connectedSpace isConnected_connectedComponent
+    letI : ConnectedSpace S := ef.symm.surjective.connectedSpace ef.symm.continuous
+    have hSconn : IsConnected S :=
+      isConnected_iff_connectedSpace.mpr inferInstance
+    have hpre : IsConnected (eY ⁻¹' S) :=
+      (eY.isConnected_preimage).mpr hSconn
+    have hEq : sq.toT.hom ⁻¹' ({t} : Set T) = eY ⁻¹' S := by
+      ext y
+      change sq.toT.hom y = t ↔ (eY y).val.1 = t
+      rw [heY_t]
+    rw [← hEq] at hpre
+    exact hpre
+  obtain ⟨g, hgcont, hgcomp⟩ :=
+    Formalization.Books.Topology.Unit07.continuous_map_factors_through_connectedComponents
+      sq.toT.hom.continuous
+  have hgbij : Function.Bijective g := by
+    constructor
+    · intro c₁ c₂ hgc
+      obtain ⟨y₁, rfl⟩ := ConnectedComponents.surjective_coe c₁
+      obtain ⟨y₂, rfl⟩ := ConnectedComponents.surjective_coe c₂
+      have hty : sq.toT.hom y₁ = sq.toT.hom y₂ := by
+        calc
+          sq.toT.hom y₁ = g (ConnectedComponents.mk y₁) := by
+            simpa [Function.comp_def] using congrFun hgcomp y₁ |>.symm
+          _ = g (ConnectedComponents.mk y₂) := hgc
+          _ = sq.toT.hom y₂ := by
+            simpa [Function.comp_def] using congrFun hgcomp y₂
+      apply ConnectedComponents.coe_eq_coe'.mpr
+      have hy₂fiber : y₂ ∈ sq.toT.hom ⁻¹' ({sq.toT.hom y₁} : Set T) := by
+        exact hty.symm
+      have hy₁fiber : y₁ ∈ sq.toT.hom ⁻¹' ({sq.toT.hom y₁} : Set T) :=
+        rfl
+      exact (hfiber _).isPreconnected.subset_connectedComponent hy₂fiber hy₁fiber
+    · intro t
+      obtain ⟨x, hx⟩ := ConnectedComponents.surjective_coe (sq.toPi0.hom t)
+      let p : P := ⟨⟨t, x⟩, hx.symm⟩
+      let y : (sq.Y : Type u) := eY.symm p
+      refine ⟨ConnectedComponents.mk y, ?_⟩
+      calc
+        g (ConnectedComponents.mk y) = sq.toT.hom y := by
+          simpa [Function.comp_def] using congrFun hgcomp y
+        _ = t := by
+          simpa [y, p] using (heY_t y).symm
+  have hGhomeo : IsHomeomorph g :=
+    (@isHomeomorph_iff_continuous_bijective
+      (ConnectedComponents (sq.Y : Type u)) T _ _ g inferInstance inferInstance).mpr
+      ⟨hgcont, hgbij⟩
+  let eCT : ConnectedComponents (sq.Y : Type u) ≃ₜ T :=
+    hGhomeo.homeomorph g
+  refine ⟨hYspectral, ⟨eCT.symm⟩, ?_⟩
+  intro hX
+  have hcomponent : ∀ {a b : X}, a ⤳ b →
+      ConnectedComponents.mk a = ConnectedComponents.mk b := by
+    intro a b hab
+    apply ConnectedComponents.coe_eq_coe.mpr
+    apply Formalization.Books.Topology.Unit07.connectedComponent_eq_of_mem
+    apply closure_minimal (singleton_subset_iff.mpr mem_connectedComponent)
+      (Formalization.Books.Topology.Unit07.connectedComponent_is_closed a)
+    exact specializes_iff_mem_closure.mp hab
+  have hcomm (y : (sq.Y : Type u)) :
+      sq.toPi0.hom (sq.toT.hom y) =
+        ConnectedComponents.mk (sq.toX.hom y) := by
+    simpa [connectedComponentsMapHom] using ConcreteCategory.congr_hom sq.isPullback.w y
+  have hclosed_of_closed_coordinate {z : (sq.Y : Type u)}
+      {x₀ : closedPoints X} (hzx : sq.toX.hom z = (x₀ : X)) :
+      z ∈ closedPoints (sq.Y : Type u) := by
+    rw [mem_closedPoints_iff]
+    rw [← closure_subset_iff_isClosed]
+    intro z' hz'
+    have hzspec : z ⤳ z' := specializes_iff_mem_closure.mpr hz'
+    have hxz' : sq.toX.hom z ⤳ sq.toX.hom z' :=
+      hzspec.map sq.toX.hom.continuous
+    have hx₀z' : (x₀ : X) = sq.toX.hom z' := by
+      have hz'x₀ : sq.toX.hom z' ∈ ({(x₀ : X)} : Set X) :=
+        x₀.property.closure_subset (by
+          rw [← hzx]
+          exact specializes_iff_mem_closure.mp hxz')
+      exact (Set.mem_singleton_iff.mp hz'x₀).symm
+    have htz : sq.toT.hom z = sq.toT.hom z' :=
+      specializes_iff_eq.mp
+        (hzspec.map sq.toT.hom.continuous)
+    apply eY.injective
+    apply Subtype.ext
+    apply Prod.ext
+    · calc
+        (eY z').val.1 = sq.toT.hom z' := heY_t z'
+        _ = sq.toT.hom z := htz.symm
+        _ = (eY z).val.1 := (heY_t z).symm
+    · calc
+        (eY z').val.2 = sq.toX.hom z' := heY_x z'
+        _ = (x₀ : X) := hx₀z'.symm
+        _ = sq.toX.hom z := hzx.symm
+        _ = (eY z).val.2 := (heY_x z).symm
+  have hcanonical (y : (sq.Y : Type u)) :
+      ∃ (x₀ : closedPoints X) (y₀ : (sq.Y : Type u)),
+        y ⤳ y₀ ∧ sq.toX.hom y₀ = (x₀ : X) := by
+    obtain ⟨x₀, hyx₀, -⟩ := hX.2.2 (sq.toX.hom y)
+    let p₀ : P := ⟨⟨sq.toT.hom y, x₀⟩,
+      (hcomm y).trans (hcomponent hyx₀)⟩
+    let y₀ : (sq.Y : Type u) := eY.symm p₀
+    refine ⟨x₀, y₀, ?_, ?_⟩
+    · apply eY.isInducing.specializes_iff.mp
+      rw [show eY y₀ = p₀ by simp [y₀]]
+      apply (subtype_specializes_iff _ _).mpr
+      change ((eY y).val.1, (eY y).val.2) ⤳
+        (sq.toT.hom y, (x₀ : X))
+      apply specializes_prod.mpr
+      constructor
+      · rw [heY_t y]
+      · rw [heY_x y]
+        exact hyx₀
+    · simpa [y₀, p₀] using (heY_x y₀).symm
+  have huniqueY : ∀ y : (sq.Y : Type u), ∃! z₀ : closedPoints (sq.Y : Type u),
+      y ⤳ (z₀ : (sq.Y : Type u)) := by
+    intro y
+    obtain ⟨x₀, y₀, hy₀, hy₀x⟩ := hcanonical y
+    have hy₀closed : y₀ ∈ closedPoints (sq.Y : Type u) :=
+      hclosed_of_closed_coordinate hy₀x
+    refine ⟨⟨y₀, hy₀closed⟩, hy₀, ?_⟩
+    intro z hz
+    obtain ⟨x₁, y₁, hz₀, hz₀x⟩ := hcanonical (z : (sq.Y : Type u))
+    have hy₁z : y₁ = (z : (sq.Y : Type u)) := by
+      apply Set.mem_singleton_iff.mp
+      exact z.property.closure_subset (specializes_iff_mem_closure.mp hz₀)
+    have hxy₁ : (sq.toX.hom y) ⤳ (x₁ : X) := by
+      have hzx₁ : (sq.toX.hom (z : (sq.Y : Type u))) ⤳ (x₁ : X) := by
+        rw [← hz₀x]
+        exact hz₀.map sq.toX.hom.continuous
+      exact (hz.map sq.toX.hom.continuous).trans hzx₁
+    obtain ⟨xstar, hystar, hxustar⟩ := hX.2.2 (sq.toX.hom y)
+    have hyx₀ : (sq.toX.hom y) ⤳ (x₀ : X) := by
+      rw [← hy₀x]
+      exact hy₀.map sq.toX.hom.continuous
+    have hx₁x₀ : (x₁ : X) = (x₀ : X) :=
+      congrArg Subtype.val ((hxustar x₁ hxy₁).trans (hxustar x₀ hyx₀).symm)
+    apply Subtype.ext
+    apply eY.injective
+    apply Subtype.ext
+    apply Prod.ext
+    · have hty : sq.toT.hom y = sq.toT.hom (z : (sq.Y : Type u)) :=
+        specializes_iff_eq.mp (hz.map sq.toT.hom.continuous)
+      have hty₀ : sq.toT.hom y = sq.toT.hom y₀ :=
+        specializes_iff_eq.mp (hy₀.map sq.toT.hom.continuous)
+      calc
+        (eY (z : (sq.Y : Type u))).val.1 =
+            sq.toT.hom (z : (sq.Y : Type u)) := heY_t _
+        _ = sq.toT.hom y := hty.symm
+        _ = sq.toT.hom y₀ := hty₀
+        _ = (eY y₀).val.1 := (heY_t y₀).symm
+    · calc
+        (eY (z : (sq.Y : Type u))).val.2 =
+            sq.toX.hom (z : (sq.Y : Type u)) := heY_x _
+        _ = (x₁ : X) := by
+          calc
+            sq.toX.hom (z : (sq.Y : Type u)) = sq.toX.hom y₁ :=
+              congrArg sq.toX.hom hy₁z.symm
+            _ = (x₁ : X) := hz₀x
+        _ = (x₀ : X) := hx₁x₀
+        _ = sq.toX.hom y₀ := hy₀x.symm
+        _ = (eY y₀).val.2 := (heY_x y₀).symm
+  have hclosed_eq :
+      closedPoints (sq.Y : Type u) =
+        sq.toX.hom ⁻¹' closedPoints X := by
+    ext y
+    constructor
+    · intro hy
+      rw [mem_closedPoints_iff] at hy
+      obtain ⟨x₀, y₀, hy₀, hy₀x⟩ := hcanonical y
+      have hy₀eq : y₀ = y := by
+        apply Set.mem_singleton_iff.mp
+        exact hy.closure_subset (specializes_iff_mem_closure.mp hy₀)
+      have hx₀eq : (x₀ : X) = sq.toX.hom y := by
+        calc
+          (x₀ : X) = sq.toX.hom y₀ := hy₀x.symm
+          _ = sq.toX.hom y := congrArg sq.toX.hom hy₀eq
+      simpa [hx₀eq] using x₀.property
+    · intro hy
+      change sq.toX.hom y ∈ closedPoints X at hy
+      let x₀ : closedPoints X := ⟨sq.toX.hom y, hy⟩
+      exact hclosed_of_closed_coordinate (x₀ := x₀) rfl
+  have hclosedY : IsClosed (closedPoints (sq.Y : Type u)) := by
+    rw [hclosed_eq]
+    exact hX.2.1.preimage sq.toX.hom.continuous
+  have hYwlocal : IsWLocalSpace (sq.Y : Type u) :=
+    ⟨hYspectral, hclosedY, huniqueY⟩
+  have hcompact_preimage {U : Set X} (hUopen : IsOpen U)
+      (hUcompact : IsCompact U) :
+      IsCompact (sq.toX.hom ⁻¹' U) := by
+    let W : Set P := {p : P | p.val.2 ∈ U}
+    have hTUcompact : IsCompact ((Set.univ : Set T) ×ˢ U) :=
+      isCompact_univ.prod hUcompact
+    have hW : IsCompact W := by
+      have hpre := Topology.IsInducing.isCompact_preimage
+        (f := (Subtype.val : P → T × X)) IsInducing.subtypeVal
+        (by simpa using hPclosed) hTUcompact
+      have hset :
+          (Subtype.val : P → T × X) ⁻¹' ((Set.univ : Set T) ×ˢ U) = W := by
+        ext p
+        dsimp [W]
+        simp only [Set.mem_preimage, Set.mem_prod, Set.mem_univ,
+          Set.mem_setOf_eq, true_and]
+        change p.val.2 ∈ U ↔ p.val.2 ∈ U
+        rfl
+      rw [← hset]
+      exact hpre
+    have himage : eY '' (sq.toX.hom ⁻¹' U) = W := by
+      ext p
+      constructor
+      · rintro ⟨y, hy, rfl⟩
+        change (eY y).val.2 ∈ U
+        change sq.toX.hom y ∈ U at hy
+        rw [heY_x y]
+        exact hy
+      · intro hp
+        refine ⟨eY.symm p, ?_, eY.apply_symm_apply p⟩
+        change sq.toX.hom (eY.symm p) ∈ U
+        rw [← heY_x (eY.symm p)]
+        change p.val.2 ∈ U at hp
+        simpa using hp
+    apply (eY.isEmbedding.isCompact_iff).mpr
+    rw [himage]
+    exact hW
+  have htoXspectral : IsSpectralMap sq.toX.hom :=
+    ⟨sq.toX.hom.continuous, fun _ hUopen hUcompact =>
+      hcompact_preimage hUopen hUcompact⟩
+  have hmaps : MapsTo sq.toX.hom
+      (closedPoints (sq.Y : Type u)) (closedPoints X) := by
+    intro y hy
+    rw [hclosed_eq] at hy
+    exact hy
+  exact ⟨hYwlocal, ⟨hYwlocal, hX, htoXspectral, hmaps⟩, hclosed_eq⟩
 
 end Formalization.Books.Proetale.Unit02

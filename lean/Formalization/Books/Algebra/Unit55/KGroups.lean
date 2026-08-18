@@ -1858,7 +1858,466 @@ theorem kZeroToKPrime_node_not_bijective
     not_isAddCyclic_prod_of_infinite_nontrivial (Additive (kˣ)) ℤ
   exact hnot hcyc
 
-/-- Product decomposition for both K-groups. -/
+private def prodIdem₁ {R₁ R₂ : Type u} [CommRing R₁] [CommRing R₂] : R₁ × R₂ :=
+  (1, 0)
+
+private def prodIdem₂ {R₁ R₂ : Type u} [CommRing R₁] [CommRing R₂] : R₁ × R₂ :=
+  (0, 1)
+
+private def prodEnd₁ {R₁ R₂ M : Type u} [CommRing R₁] [CommRing R₂]
+    [AddCommGroup M] [Module (R₁ × R₂) M] : M →ₗ[R₁ × R₂] M :=
+  LinearMap.lsmul (R₁ × R₂) M (prodIdem₁ (R₁ := R₁) (R₂ := R₂))
+
+private def prodEnd₂ {R₁ R₂ M : Type u} [CommRing R₁] [CommRing R₂]
+    [AddCommGroup M] [Module (R₁ × R₂) M] : M →ₗ[R₁ × R₂] M :=
+  LinearMap.lsmul (R₁ × R₂) M (prodIdem₂ (R₁ := R₁) (R₂ := R₂))
+
+private abbrev prodComponent₁ {R₁ R₂ M : Type u} [CommRing R₁] [CommRing R₂]
+    [AddCommGroup M] [Module (R₁ × R₂) M] : Type u :=
+  (prodEnd₁ (R₁ := R₁) (R₂ := R₂) (M := M)).range
+
+private abbrev prodComponent₂ {R₁ R₂ M : Type u} [CommRing R₁] [CommRing R₂]
+    [AddCommGroup M] [Module (R₁ × R₂) M] : Type u :=
+  (prodEnd₂ (R₁ := R₁) (R₂ := R₂) (M := M)).range
+
+private instance prodComponent₁.module {R₁ R₂ M : Type u} [CommRing R₁] [CommRing R₂]
+    [AddCommGroup M] [Module (R₁ × R₂) M] : Module R₁
+      (prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := M)) := by
+  let hact : DistribMulAction R₁
+      (prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := M)) :=
+    { smul := fun r x =>
+        ⟨((r, (0 : R₂)) : R₁ × R₂) • (x : M), by
+          rcases x.property with ⟨y, hy⟩
+          refine ⟨((r, (0 : R₂)) : R₁ × R₂) • y, ?_⟩
+          rw [← hy]
+          simp [prodEnd₁, prodIdem₁, smul_smul]⟩
+      one_smul := by
+        intro x
+        apply Subtype.ext
+        change (((1 : R₁), (0 : R₂)) : R₁ × R₂) • (x : M) = (x : M)
+        rcases x.property with ⟨y, hy⟩
+        rw [← hy]
+        simp [prodEnd₁, prodIdem₁, smul_smul]
+      mul_smul := by
+        intro r s x
+        apply Subtype.ext
+        change ((r * s, (0 : R₂)) : R₁ × R₂) • (x : M) =
+          ((r, (0 : R₂)) : R₁ × R₂) •
+            (((s, (0 : R₂)) : R₁ × R₂) • (x : M))
+        rw [smul_smul]
+        congr 1
+        ext <;> simp
+      smul_zero := by
+        intro r
+        apply Subtype.ext
+        change ((r, (0 : R₂)) : R₁ × R₂) • (0 : M) = 0
+        simp
+      smul_add := by
+        intro r x y
+        apply Subtype.ext
+        change ((r, (0 : R₂)) : R₁ × R₂) • ((x : M) + (y : M)) =
+          ((r, (0 : R₂)) : R₁ × R₂) • (x : M) +
+            ((r, (0 : R₂)) : R₁ × R₂) • (y : M)
+        simp [add_smul] }
+  exact { hact with
+    add_smul := by
+      intro r s x
+      apply Subtype.ext
+      change ((r + s, (0 : R₂)) : R₁ × R₂) • (x : M) =
+        ((r, (0 : R₂)) : R₁ × R₂) • (x : M) +
+          ((s, (0 : R₂)) : R₁ × R₂) • (x : M)
+      have h : ((r + s, (0 : R₂)) : R₁ × R₂) =
+          (r, (0 : R₂)) + (s, (0 : R₂)) := by
+        ext <;> simp
+      rw [h, add_smul]
+    zero_smul := by
+      intro x
+      apply Subtype.ext
+      change ((0 : R₁), (0 : R₂)) • (x : M) = 0
+      exact zero_smul (R₁ × R₂) (x : M) }
+
+private instance prodComponent₂.module {R₁ R₂ M : Type u} [CommRing R₁] [CommRing R₂]
+    [AddCommGroup M] [Module (R₁ × R₂) M] : Module R₂
+      (prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := M)) := by
+  let hact : DistribMulAction R₂
+      (prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := M)) :=
+    { smul := fun s x =>
+        ⟨((0 : R₁), s) • (x : M), by
+          rcases x.property with ⟨y, hy⟩
+          refine ⟨((0 : R₁), s) • y, ?_⟩
+          rw [← hy]
+          simp [prodEnd₂, prodIdem₂, smul_smul]⟩
+      one_smul := by
+        intro x
+        apply Subtype.ext
+        change (((0 : R₁), (1 : R₂)) : R₁ × R₂) • (x : M) = (x : M)
+        rcases x.property with ⟨y, hy⟩
+        rw [← hy]
+        simp [prodEnd₂, prodIdem₂, smul_smul]
+      mul_smul := by
+        intro r s x
+        apply Subtype.ext
+        change (((0 : R₁), r * s) : R₁ × R₂) • (x : M) =
+          (((0 : R₁), r) : R₁ × R₂) •
+            ((((0 : R₁), s) : R₁ × R₂) • (x : M))
+        rw [smul_smul]
+        congr 1
+        ext <;> simp
+      smul_zero := by
+        intro r
+        apply Subtype.ext
+        change (((0 : R₁), r) : R₁ × R₂) • (0 : M) = 0
+        simp
+      smul_add := by
+        intro r x y
+        apply Subtype.ext
+        change (((0 : R₁), r) : R₁ × R₂) • ((x : M) + (y : M)) =
+          (((0 : R₁), r) : R₁ × R₂) • (x : M) +
+            (((0 : R₁), r) : R₁ × R₂) • (y : M)
+        simp [add_smul] }
+  exact { hact with
+    add_smul := by
+      intro r s x
+      apply Subtype.ext
+      change (((0 : R₁), r + s) : R₁ × R₂) • (x : M) =
+        (((0 : R₁), r) : R₁ × R₂) • (x : M) +
+          (((0 : R₁), s) : R₁ × R₂) • (x : M)
+      have h : (((0 : R₁), r + s) : R₁ × R₂) =
+          ((0 : R₁), r) + ((0 : R₁), s) := by
+        ext <;> simp
+      rw [h, add_smul]
+    zero_smul := by
+      intro x
+      apply Subtype.ext
+      change (((0 : R₁), (0 : R₂)) : R₁ × R₂) • (x : M) = 0
+      exact zero_smul (R₁ × R₂) (x : M) }
+
+private def prodComponentMap₁ {R₁ R₂ M N : Type u} [CommRing R₁] [CommRing R₂]
+    [AddCommGroup M] [Module (R₁ × R₂) M] [AddCommGroup N] [Module (R₁ × R₂) N]
+    (f : M →ₗ[R₁ × R₂] N) :
+    prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := M) →ₗ[R₁]
+      prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := N) :=
+  { toFun := fun x =>
+      ⟨f (x : M), by
+        rcases x.property with ⟨y, hy⟩
+        refine ⟨f y, ?_⟩
+        rw [← hy]
+        simp [prodEnd₁, prodIdem₁, f.map_smul]⟩
+    map_add' := by
+      intro x y
+      apply Subtype.ext
+      change f ((x : M) + (y : M)) = f (x : M) + f (y : M)
+      exact f.map_add _ _
+    map_smul' := by
+      intro r x
+      apply Subtype.ext
+      change f (((r, (0 : R₂)) : R₁ × R₂) • (x : M)) =
+        ((r, (0 : R₂)) : R₁ × R₂) • f (x : M)
+      rw [f.map_smul] }
+
+private def prodComponentMap₂ {R₁ R₂ M N : Type u} [CommRing R₁] [CommRing R₂]
+    [AddCommGroup M] [Module (R₁ × R₂) M] [AddCommGroup N] [Module (R₁ × R₂) N]
+    (f : M →ₗ[R₁ × R₂] N) :
+    prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := M) →ₗ[R₂]
+      prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := N) :=
+  { toFun := fun x =>
+      ⟨f (x : M), by
+        rcases x.property with ⟨y, hy⟩
+        refine ⟨f y, ?_⟩
+        rw [← hy]
+        simp [prodEnd₂, prodIdem₂, f.map_smul]⟩
+    map_add' := by
+      intro x y
+      apply Subtype.ext
+      change f ((x : M) + (y : M)) = f (x : M) + f (y : M)
+      exact f.map_add _ _
+    map_smul' := by
+      intro r x
+      apply Subtype.ext
+      change f ((((0 : R₁), r) : R₁ × R₂) • (x : M)) =
+        (((0 : R₁), r) : R₁ × R₂) • f (x : M)
+      rw [f.map_smul] }
+
+private def prodModuleDecomp {R₁ R₂ M : Type u} [CommRing R₁] [CommRing R₂]
+    [AddCommGroup M] [Module (R₁ × R₂) M] :
+    M ≃ₗ[R₁ × R₂]
+      (prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := M) ×
+        prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := M)) :=
+  { toFun := fun x =>
+      (⟨prodEnd₁ x, ⟨x, rfl⟩⟩, ⟨prodEnd₂ x, ⟨x, rfl⟩⟩)
+    invFun := fun x => (x.1 : M) + (x.2 : M)
+    left_inv := by
+      intro x
+      change (((1 : R₁), (0 : R₂)) : R₁ × R₂) • x +
+        (((0 : R₁), (1 : R₂)) : R₁ × R₂) • x = x
+      rw [← add_smul]
+      have h : (((1 : R₁), (0 : R₂)) : R₁ × R₂) +
+          ((0 : R₁), (1 : R₂)) = (1, 1) := by
+        ext <;> simp
+      rw [h]
+      change (1 : R₁ × R₂) • x = x
+      exact one_smul (R₁ × R₂) x
+    right_inv := by
+      intro x
+      apply Prod.ext
+      · apply Subtype.ext
+        have h₁ : (((1 : R₁), (0 : R₂)) : R₁ × R₂) • (x.1 : M) =
+            (x.1 : M) := by
+          rcases x.1.property with ⟨y, hy⟩
+          rw [← hy]
+          simp [prodEnd₁, prodIdem₁, smul_smul]
+        have h₂ : (((1 : R₁), (0 : R₂)) : R₁ × R₂) • (x.2 : M) = 0 := by
+          rcases x.2.property with ⟨y, hy⟩
+          rw [← hy]
+          change (((1 : R₁), (0 : R₂)) : R₁ × R₂) •
+            (((0 : R₁), (1 : R₂)) : R₁ × R₂) • y = 0
+          rw [smul_smul]
+          have h : (((1 : R₁), (0 : R₂)) : R₁ × R₂) *
+              ((0 : R₁), (1 : R₂)) = 0 := by
+            ext <;> simp
+          rw [h]
+          exact zero_smul (R₁ × R₂) y
+        change (((1 : R₁), (0 : R₂)) : R₁ × R₂) •
+            ((x.1 : M) + (x.2 : M)) = (x.1 : M)
+        simp [smul_add, h₁, h₂]
+      · apply Subtype.ext
+        have h₁ : (((0 : R₁), (1 : R₂)) : R₁ × R₂) • (x.1 : M) = 0 := by
+          rcases x.1.property with ⟨y, hy⟩
+          rw [← hy]
+          change (((0 : R₁), (1 : R₂)) : R₁ × R₂) •
+            (((1 : R₁), (0 : R₂)) : R₁ × R₂) • y = 0
+          rw [smul_smul]
+          have h : (((0 : R₁), (1 : R₂)) : R₁ × R₂) *
+              ((1 : R₁), (0 : R₂)) = 0 := by
+            ext <;> simp
+          rw [h]
+          exact zero_smul (R₁ × R₂) y
+        have h₂ : (((0 : R₁), (1 : R₂)) : R₁ × R₂) • (x.2 : M) =
+            (x.2 : M) := by
+          rcases x.2.property with ⟨y, hy⟩
+          rw [← hy]
+          simp [prodEnd₂, prodIdem₂, smul_smul]
+        change (((0 : R₁), (1 : R₂)) : R₁ × R₂) •
+            ((x.1 : M) + (x.2 : M)) = (x.2 : M)
+        simp [smul_add, h₁, h₂]
+    map_add' := by
+      intro x y
+      apply Prod.ext <;> apply Subtype.ext
+      · change prodEnd₁ (x + y) = prodEnd₁ x + prodEnd₁ y
+        exact (prodEnd₁ (R₁ := R₁) (R₂ := R₂) (M := M)).map_add x y
+      · change prodEnd₂ (x + y) = prodEnd₂ x + prodEnd₂ y
+        exact (prodEnd₂ (R₁ := R₁) (R₂ := R₂) (M := M)).map_add x y
+    map_smul' := by
+      intro r x
+      apply Prod.ext <;> apply Subtype.ext
+      · change prodEnd₁ (r • x) = r • prodEnd₁ x
+        exact (prodEnd₁ (R₁ := R₁) (R₂ := R₂) (M := M)).map_smul r x
+      · change prodEnd₂ (r • x) = r • prodEnd₂ x
+        exact (prodEnd₂ (R₁ := R₁) (R₂ := R₂) (M := M)).map_smul r x }
+
+private theorem prodComponent₁.finite {R₁ R₂ M : Type u} [CommRing R₁] [CommRing R₂]
+    [AddCommGroup M] [Module (R₁ × R₂) M] [Module.Finite (R₁ × R₂) M] :
+    Module.Finite R₁ (prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := M)) := by
+  letI : Module.Finite (R₁ × R₂)
+      (prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := M)) := inferInstance
+  rcases Module.Finite.exists_fin (R := R₁ × R₂)
+      (M := prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := M)) with ⟨n, s, hs⟩
+  have hscalar (a : R₁ × R₂)
+      (x : prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := M)) :
+      a • x = a.1 • x := by
+    apply Subtype.ext
+    rcases x.property with ⟨y, hy⟩
+    change a • (x : M) = ((a.1, (0 : R₂)) : R₁ × R₂) • (x : M)
+    rw [← hy]
+    change a • (prodIdem₁ (R₁ := R₁) (R₂ := R₂) • y) =
+      ((a.1, (0 : R₂)) : R₁ × R₂) • (prodEnd₁ y)
+    change a • (prodIdem₁ (R₁ := R₁) (R₂ := R₂) • y) =
+      ((a.1, (0 : R₂)) : R₁ × R₂) •
+        (prodIdem₁ (R₁ := R₁) (R₂ := R₂) • y)
+    rw [smul_smul, smul_smul]
+    congr 1
+    ext <;> simp [prodIdem₁]
+  refine ⟨Submodule.fg_def.mpr ⟨Set.range s, Set.finite_range s, ?_⟩⟩
+  apply le_antisymm le_top
+  intro x hx
+  have hx' : x ∈ Submodule.span (R₁ × R₂) (Set.range s) := by
+    rw [hs]
+    exact Submodule.mem_top
+  refine Submodule.span_induction (p := fun z _ =>
+      z ∈ Submodule.span R₁ (Set.range s)) ?_ ?_ ?_ ?_ hx'
+  · intro z hz
+    exact Submodule.subset_span hz
+  · exact Submodule.zero_mem _
+  · intro x y hx hy hpx hpy
+    exact Submodule.add_mem _ hpx hpy
+  · intro a x hx hpx
+    rw [hscalar]
+    exact Submodule.smul_mem (Submodule.span R₁ (Set.range s)) a.1 hpx
+
+private theorem prodComponent₂.finite {R₁ R₂ M : Type u} [CommRing R₁] [CommRing R₂]
+    [AddCommGroup M] [Module (R₁ × R₂) M] [Module.Finite (R₁ × R₂) M] :
+    Module.Finite R₂ (prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := M)) := by
+  letI : Module.Finite (R₁ × R₂)
+      (prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := M)) := inferInstance
+  rcases Module.Finite.exists_fin (R := R₁ × R₂)
+      (M := prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := M)) with ⟨n, s, hs⟩
+  have hscalar (a : R₁ × R₂)
+      (x : prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := M)) :
+      a • x = a.2 • x := by
+    apply Subtype.ext
+    rcases x.property with ⟨y, hy⟩
+    change a • (x : M) = (((0 : R₁), a.2) : R₁ × R₂) • (x : M)
+    rw [← hy]
+    change a • (prodIdem₂ (R₁ := R₁) (R₂ := R₂) • y) =
+      (((0 : R₁), a.2) : R₁ × R₂) • (prodEnd₂ y)
+    change a • (prodIdem₂ (R₁ := R₁) (R₂ := R₂) • y) =
+      (((0 : R₁), a.2) : R₁ × R₂) •
+        (prodIdem₂ (R₁ := R₁) (R₂ := R₂) • y)
+    rw [smul_smul, smul_smul]
+    congr 1
+    ext <;> simp [prodIdem₂]
+  refine ⟨Submodule.fg_def.mpr ⟨Set.range s, Set.finite_range s, ?_⟩⟩
+  apply le_antisymm le_top
+  intro x hx
+  have hx' : x ∈ Submodule.span (R₁ × R₂) (Set.range s) := by
+    rw [hs]
+    exact Submodule.mem_top
+  refine Submodule.span_induction (p := fun z _ =>
+      z ∈ Submodule.span R₂ (Set.range s)) ?_ ?_ ?_ ?_ hx'
+  · intro z hz
+    exact Submodule.subset_span hz
+  · exact Submodule.zero_mem _
+  · intro x y hx hy hpx hpy
+    exact Submodule.add_mem _ hpx hpy
+  · intro a x hx hpx
+    rw [hscalar]
+    exact Submodule.smul_mem (Submodule.span R₂ (Set.range s)) a.2 hpx
+
+private theorem prodComponent₁.projective {R₁ R₂ : Type u} [CommRing R₁] [CommRing R₂]
+    (P : FiniteProjectivePresentation (R₁ × R₂)) :
+    Module.Projective R₁
+      (prodComponent₁ (R₁ := R₁) (R₂ := R₂)
+        (M := P.presentation.module)) := by
+  let F := Fin P.presentation.rank → (R₁ × R₂)
+  let eF : prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := F) ≃ₗ[R₁]
+      (Fin P.presentation.rank → R₁) :=
+    { toFun := fun x i => ((x : F) i).1
+      invFun := fun x =>
+        ⟨fun i => (x i, (0 : R₂)), by
+          refine ⟨fun i => (x i, (0 : R₂)), ?_⟩
+          ext i
+          change (((1 : R₁), (0 : R₂)) : R₁ × R₂) • (x i, (0 : R₂)) =
+            (x i, (0 : R₂))
+          simp
+        ⟩
+      left_inv := by
+        intro x
+        apply Subtype.ext
+        funext i
+        have hi := congrFun (congrArg (fun z => (z : F)) x.property) i
+        simpa [prodEnd₁, prodIdem₁] using hi
+      right_inv := by
+        intro x
+        rfl
+      map_add' := by
+        intro x y
+        funext i
+        rfl
+      map_smul' := by
+        intro r x
+        funext i
+        change (((r, (0 : R₂)) : R₁ × R₂) • (x : F) i).1 =
+          r • ((x : F) i).1
+        simp }
+  letI : Module.Projective R₁
+      (prodComponent₁ (R₁ := R₁) (R₂ := R₂) (M := F)) :=
+    Module.Projective.of_equiv' eF.symm
+  let q : F →ₗ[R₁ × R₂] P.presentation.module :=
+    Submodule.mkQ P.presentation.relations
+  obtain ⟨i, hi⟩ :=
+    (Module.Projective.iff_split_of_projective q
+      (Submodule.mkQ_surjective _)).mp P.projective
+  let q₁ := prodComponentMap₁ q
+  let i₁ := prodComponentMap₁ i
+  have hq₁ : Function.Surjective q₁ := by
+    intro x
+    rcases x.property with ⟨y, hy⟩
+    obtain ⟨z, rfl⟩ := Submodule.mkQ_surjective _ y
+    refine ⟨⟨prodEnd₁ z, ⟨z, rfl⟩⟩, ?_⟩
+    apply Subtype.ext
+    change q (prodEnd₁ z) = prodEnd₁ (q z)
+    simpa [prodEnd₁, prodIdem₁] using
+      q.map_smul (prodIdem₁ (R₁ := R₁) (R₂ := R₂)) z
+  apply Module.Projective.of_split i₁ q₁
+  apply LinearMap.ext
+  intro x
+  apply Subtype.ext
+  have h := LinearMap.congr_fun hi (x : P.presentation.module)
+  simpa [q₁, i₁, prodComponentMap₁] using h
+
+private theorem prodComponent₂.projective {R₁ R₂ : Type u} [CommRing R₁] [CommRing R₂]
+    (P : FiniteProjectivePresentation (R₁ × R₂)) :
+    Module.Projective R₂
+      (prodComponent₂ (R₁ := R₁) (R₂ := R₂)
+        (M := P.presentation.module)) := by
+  let F := Fin P.presentation.rank → (R₁ × R₂)
+  let eF : prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := F) ≃ₗ[R₂]
+      (Fin P.presentation.rank → R₂) :=
+    { toFun := fun x i => ((x : F) i).2
+      invFun := fun x =>
+        ⟨fun i => ((0 : R₁), x i), by
+          refine ⟨fun i => ((0 : R₁), x i), ?_⟩
+          ext i
+          change (((0 : R₁), (1 : R₂)) : R₁ × R₂) • ((0 : R₁), x i) =
+            ((0 : R₁), x i)
+          simp
+        ⟩
+      left_inv := by
+        intro x
+        apply Subtype.ext
+        funext i
+        have hi := congrFun (congrArg (fun z => (z : F)) x.property) i
+        simpa [prodEnd₂, prodIdem₂] using hi
+      right_inv := by
+        intro x
+        rfl
+      map_add' := by
+        intro x y
+        funext i
+        rfl
+      map_smul' := by
+        intro r x
+        funext i
+        change ((((0 : R₁), r) : R₁ × R₂) • ((x : F) i)).2 =
+          r • ((x : F) i).2
+        simp }
+  letI : Module.Projective R₂
+      (prodComponent₂ (R₁ := R₁) (R₂ := R₂) (M := F)) :=
+    Module.Projective.of_equiv' eF.symm
+  let q : F →ₗ[R₁ × R₂] P.presentation.module :=
+    Submodule.mkQ P.presentation.relations
+  obtain ⟨i, hi⟩ :=
+    (Module.Projective.iff_split_of_projective q
+      (Submodule.mkQ_surjective _)).mp P.projective
+  let q₂ := prodComponentMap₂ q
+  let i₂ := prodComponentMap₂ i
+  have hq₂ : Function.Surjective q₂ := by
+    intro x
+    rcases x.property with ⟨y, hy⟩
+    obtain ⟨z, rfl⟩ := Submodule.mkQ_surjective _ y
+    refine ⟨⟨prodEnd₂ z, ⟨z, rfl⟩⟩, ?_⟩
+    apply Subtype.ext
+    change q (prodEnd₂ z) = prodEnd₂ (q z)
+    simpa [prodEnd₂, prodIdem₂] using
+      q.map_smul (prodIdem₂ (R₁ := R₁) (R₂ := R₂)) z
+  apply Module.Projective.of_split i₂ q₂
+  apply LinearMap.ext
+  intro x
+  apply Subtype.ext
+  have h := LinearMap.congr_fun hi (x : P.presentation.module)
+  simpa [q₂, i₂, prodComponentMap₂] using h
+
+/- Product decomposition for both K-groups. -/
 theorem kGroups_prod
     {R₁ R₂ : Type u} [CommRing R₁] [CommRing R₂] :
     Nonempty (KZero (R₁ × R₂) ≃+ (KZero R₁ × KZero R₂)) ∧

@@ -201,7 +201,19 @@ theorem exists_purely_inseparable_base_change
     {k : Type u} {K : Type v} [Field k] [Field K] [Algebra k K]
     [Algebra.EssFiniteType k K] :
     Nonempty (PurelyInseparableBaseChange k K) := by
-  sorry
+  by_cases hzero : CharZero k
+  · letI : CharZero k := hzero
+    obtain ⟨s, hs, hsep⟩ :=
+      exists_isTranscendenceBasis_and_isSeparable_of_perfectField k K
+    let x : s → K := fun z => z
+    have hxrange : range x = (s : Set K) := by
+      ext z
+      simp [x]
+    let b : PurelyInseparableBaseChange k K :=
+      { base := k, top := K,
+        topSeparablyGenerated := ⟨s, x, hs, by rw [hxrange]; exact hsep⟩ }
+    exact ⟨b⟩
+  · sorry
 
 end
 

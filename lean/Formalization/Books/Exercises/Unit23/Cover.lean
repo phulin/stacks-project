@@ -35,7 +35,12 @@ theorem finite_module_of_basicOpenCover
       Module.Finite (Localization.Away (f i))
         (LocalizedModule.Away (f i) M)) :
     Module.Finite A M := by
-  sorry
+  refine Module.Finite.of_localizationSpan (Set.range f) ?_ ?_
+  · exact PrimeSpectrum.iSup_basicOpen_eq_top_iff.mp hcover.iSup_eq_top
+  · intro x
+    let i := Classical.choose x.property
+    have hi : f i = (x : A) := Classical.choose_spec x.property
+    exact hi ▸ hlocal i
 
 /-- Flatness of a module can be checked on a basic-open cover of the spectrum. -/
 theorem flat_module_of_basicOpenCover
@@ -47,7 +52,14 @@ theorem flat_module_of_basicOpenCover
       Module.Flat (Localization.Away (f i))
         (LocalizedModule.Away (f i) M)) :
     Module.Flat A M := by
-  sorry
+  refine Module.flat_of_localized_span A M (Set.range f) ?_ ?_
+  · exact PrimeSpectrum.iSup_basicOpen_eq_top_iff.mp hcover.iSup_eq_top
+  · intro x
+    let i := Classical.choose x.property
+    have hi : f i = (x : A) := Classical.choose_spec x.property
+    exact hi ▸ (Module.flat_iff_of_isLocalization
+      (S := Localization.Away (f i)) (p := Submonoid.powers (f i))
+      (LocalizedModule.Away (f i) M)).mp (hlocal i)
 
 /-!
 The source remark says that finite generation and flatness are local in this
@@ -66,7 +78,12 @@ theorem finitePresentation_module_of_basicOpenCover
       Module.FinitePresentation (Localization.Away (f i))
         (LocalizedModule.Away (f i) M)) :
     Module.FinitePresentation A M := by
-  sorry
+  refine Module.FinitePresentation.of_localizationSpan (Set.range f) ?_ ?_
+  · exact PrimeSpectrum.iSup_basicOpen_eq_top_iff.mp hcover.iSup_eq_top
+  · intro x
+    let i := Classical.choose x.property
+    have hi : f i = (x : A) := Classical.choose_spec x.property
+    exact hi ▸ hlocal i
 
 end
 

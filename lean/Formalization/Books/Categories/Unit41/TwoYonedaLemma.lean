@@ -724,7 +724,21 @@ theorem twoYonedaGroupoidRestriction_map_isOver
     {G H : twoYonedaGroupoidMorphismCategory p V} (η : G ⟶ H) :
     (twoYonedaPostcomposition p U).IsHomLift (𝟙 (Over.forget U))
       (Functor.whiskerLeft (Over.map f) η.1) := by
-  sorry
+  apply IsHomLift.of_fac'
+    (twoYonedaPostcomposition p U)
+    (𝟙 (Over.forget U))
+    (Functor.whiskerLeft (Over.map f) η.1)
+    (twoYonedaGroupoidRestriction_obj_isOver p f G)
+    (twoYonedaGroupoidRestriction_obj_isOver p f H)
+  ext X
+  change p.map (η.1.app ((Over.map f).obj X)) = _
+  letI : (twoYonedaPostcomposition p V).IsHomLift
+      (𝟙 (Over.forget V)) η.1 := η.2
+  have hfac := IsHomLift.fac' (twoYonedaPostcomposition p V)
+    (𝟙 (Over.forget V)) η.1
+  have hfacX := congrArg (fun t => t.app ((Over.map f).obj X)) hfac
+  simpa [twoYonedaPostcomposition, Formalization.Books.Categories.Unit28.postcompositionFunctor]
+    using hfacX
 
 def twoYonedaGroupoidRestrictionObj
     {C : Type uC} [Category.{vC} C]
@@ -751,7 +765,8 @@ theorem twoYonedaGroupoidRestrictionMap_map_id
     (G : twoYonedaGroupoidMorphismCategory p V) :
     twoYonedaGroupoidRestrictionMap p f (𝟙 G) =
       𝟙 (twoYonedaGroupoidRestrictionObj p f G) := by
-  sorry
+  apply Functor.Fiber.hom_ext
+  rfl
 
 theorem twoYonedaGroupoidRestrictionMap_map_comp
     {C : Type uC} [Category.{vC} C]
@@ -762,7 +777,8 @@ theorem twoYonedaGroupoidRestrictionMap_map_comp
     twoYonedaGroupoidRestrictionMap p f (η ≫ θ) =
       twoYonedaGroupoidRestrictionMap p f η ≫
         twoYonedaGroupoidRestrictionMap p f θ := by
-  sorry
+  apply Functor.Fiber.hom_ext
+  exact Functor.whiskerLeft_comp (Over.map f) η.1 θ.1
 
 /- For `f : U ⟶ V`, precomposition with `Over.map f` gives the restriction
    from the morphism category over `V` to the one over `U`. -/
@@ -787,7 +803,17 @@ theorem twoYonedaHomPresheaf_map_id
     (p : S ⥤ C) (U : C) :
     (twoYonedaGroupoidRestriction p (𝟙 U)).toCatHom =
       𝟙 (Cat.of (twoYonedaGroupoidMorphismCategory p U)) := by
-  sorry
+  apply Cat.ext
+  apply Functor.ext
+  · intro G
+    apply Subtype.ext
+    dsimp [twoYonedaGroupoidRestriction, twoYonedaGroupoidRestrictionObj]
+    simpa only [Over.mapId_eq, Functor.id_comp]
+  · intro G H η
+    apply Functor.Fiber.hom_ext
+    change Functor.whiskerLeft (Over.map (𝟙 U)) η.1 = η.1
+    simpa only [Over.mapId_eq] using
+      (Formalization.Books.Categories.Unit28.prewhisker_identity_functor η.1)
 
 theorem twoYonedaHomPresheaf_map_comp
     {C : Type uC} [Category.{vC} C]

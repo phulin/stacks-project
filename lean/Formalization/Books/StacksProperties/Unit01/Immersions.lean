@@ -825,6 +825,120 @@ structure UnionOpenSubstackData {S : Scheme.{u}}
   pointSet : Set.range (inducedPointMap union.inclusion) =
     ⋃ i, Set.range (inducedPointMap (members i).inclusion)
 
+def PresentationSetInvariant {S : Scheme.{u}}
+    {X : AlgebraicStack S} (p : StackPresentation X)
+    (U : Set p.source) : Prop :=
+  ∀ (u v : p.source), PresentationRelation p u v →
+    (u ∈ U ↔ v ∈ U)
+
+def presentationMemberOpenSet {S : Scheme.{u}}
+    {X : AlgebraicStack S} (p : StackPresentation X)
+    (U : OpenSubstack X) : Set p.source :=
+  p.toStackChart.map ⁻¹' Set.range (inducedPointMap U.inclusion)
+
+def presentationOpenUnion {S : Scheme.{u}}
+    {X : AlgebraicStack S} {p : StackPresentation X}
+    {I : Type u} (opens : I → Set p.source) : Set p.source :=
+  ⋃ i, opens i
+
+theorem presentationOpenUnion_isOpen {S : Scheme.{u}}
+    {X : AlgebraicStack S} {p : StackPresentation X}
+    {I : Type u} (opens : I → Set p.source)
+    (hopen : ∀ i, IsOpen (opens i)) :
+    IsOpen (presentationOpenUnion opens) := by
+  rw [presentationOpenUnion]
+  exact isOpen_iUnion hopen
+
+theorem presentationOpenUnion_invariant {S : Scheme.{u}}
+    {X : AlgebraicStack S} {p : StackPresentation X}
+    {I : Type u} (opens : I → Set p.source)
+    (hinvariant : ∀ i, PresentationSetInvariant p (opens i)) :
+    PresentationSetInvariant p (presentationOpenUnion opens) := by
+  intro u v huv
+  constructor
+  · intro hu
+    rcases Set.mem_iUnion.1 hu with ⟨i, hui⟩
+    exact Set.mem_iUnion.2 ⟨i, (hinvariant i u v huv).1 hui⟩
+  · intro hv
+    rcases Set.mem_iUnion.1 hv with ⟨i, hvi⟩
+    exact Set.mem_iUnion.2 ⟨i, (hinvariant i u v huv).2 hvi⟩
+
+structure SmoothPresentationOpenUnionData {S : Scheme.{u}}
+    {X : AlgebraicStack S} (I : Type u)
+    (members : I → OpenSubstack X) where
+  presentation : StackPresentation X
+  smooth : presentation.smooth
+  member : I → Set presentation.source
+  member_eq : ∀ i,
+    member i = presentationMemberOpenSet presentation (members i)
+  member_open : ∀ i, IsOpen (member i)
+  member_invariant : ∀ i, PresentationSetInvariant presentation (member i)
+  union : Set presentation.source
+  union_eq : union = presentationOpenUnion member
+  union_open : IsOpen union
+  union_invariant : PresentationSetInvariant presentation union
+
+def smoothPresentationOpenUnion {S : Scheme.{u}}
+    {X : AlgebraicStack S} (I : Type u)
+    (members : I → OpenSubstack X)
+    (p : StackPresentation X) (hsmooth : p.smooth)
+    (member : I → Set p.source)
+    (hmember_eq : ∀ i,
+      member i = presentationMemberOpenSet p (members i))
+    (hmember_open : ∀ i, IsOpen (member i))
+    (hmember_invariant : ∀ i, PresentationSetInvariant p (member i)) :
+    SmoothPresentationOpenUnionData I members :=
+  { presentation := p
+    smooth := hsmooth
+    member := member
+    member_eq := hmember_eq
+    member_open := hmember_open
+    member_invariant := hmember_invariant
+    union := presentationOpenUnion member
+    union_eq := rfl
+    union_open := presentationOpenUnion_isOpen member hmember_open
+    union_invariant := presentationOpenUnion_invariant member hmember_invariant }
+
+structure DescendedOpenUnionData {S : Scheme.{u}}
+    {X : AlgebraicStack S} {I : Type u}
+    {members : I → OpenSubstack X}
+    (D : SmoothPresentationOpenUnionData I members) where
+  source : AlgebraicStack S
+  inclusion : StackMorphism source X
+  chart : D.union → StackPoint source
+  chart_surjective : Function.Surjective chart
+  chart_compatible : ∀ x : D.union,
+    inducedPointMap inclusion (chart x) =
+      D.presentation.toStackChart.map x.1
+
+theorem descended_inclusion_representable {S : Scheme.{u}}
+    {X : AlgebraicStack S} {I : Type u}
+    {members : I → OpenSubstack X}
+    (D : SmoothPresentationOpenUnionData I members)
+    (E : DescendedOpenUnionData D) :
+    RepresentableByAlgebraicSpaces E.inclusion := by
+  sorry
+
+theorem descended_inclusion_base_change_open {S : Scheme.{u}}
+    {X : AlgebraicStack S} {I : Type u}
+    {members : I → OpenSubstack X}
+    (D : SmoothPresentationOpenUnionData I members)
+    (E : DescendedOpenUnionData D)
+    (W : AlgebraicSpace S) (w : SpaceToStackMorphism W X)
+    (bc : BaseChangeData E.inclusion W w) :
+    (RelativeOpenImmersionProperty S).property bc.projection := by
+  sorry
+
+theorem descended_inclusion_is_open_immersion {S : Scheme.{u}}
+    {X : AlgebraicStack S} {I : Type u}
+    {members : I → OpenSubstack X}
+    (D : SmoothPresentationOpenUnionData I members)
+    (E : DescendedOpenUnionData D) :
+    IsOpenImmersionStack E.inclusion := by
+  unfold IsOpenImmersionStack HasRelativeProperty
+  exact ⟨descended_inclusion_representable D E,
+    fun W w bc => descended_inclusion_base_change_open D E W w bc⟩
+
 /-- Arbitrary open substacks admit a union with the expected set of points.
 
 Proof roadmap:
@@ -832,19 +946,21 @@ Proof roadmap:
 1. Choose a smooth presentation of `X` and base-change every
    `(members i).inclusion` to it; representability and the open-immersion
    property turn these base changes into open subspaces of the presentation.
-2. Take the ordinary union of those invariant opens.  Prove invariance under
-   the presentation groupoid by pulling the union back along its source and
-   target maps and using invariance of each member.
+2. Take the ordinary union of those invariant opens.  The declarations
+   `presentationOpenUnion_isOpen` and `presentationOpenUnion_invariant` carry
+   out the set-theoretic part of this step.
 3. Descend the invariant open subspace along the smooth cover to an algebraic
-   stack, construct its morphism to `X`, and prove that morphism representable
-   by algebraic spaces and an open immersion after arbitrary base change.
+   stack, construct its morphism to `X`, and apply
+   `descended_inclusion_representable` and
+   `descended_inclusion_base_change_open`.
 4. Package the descended stack and inclusion as an `OpenSubstack X`.
 5. Check both inclusions in `pointSet`: membership in a member maps into the
    descended union, while any point of the descended union lifts locally to
    the presentation and hence lies in one of the component opens.
 
-The project currently lacks the invariant-open union construction and its
-representability/descent theorem, so this result is intentionally admitted.
+The actual stack construction and its point-set comparison remain admitted;
+the prerequisite interfaces above isolate the ordinary union and the two
+descent obligations needed by that construction.
 -/
 theorem union_open_substacks {S : Scheme.{u}}
     {X : AlgebraicStack S} (I : Type u)

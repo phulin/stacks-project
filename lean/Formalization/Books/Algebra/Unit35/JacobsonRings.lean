@@ -693,7 +693,7 @@ theorem idempotent_matrix_conjugate_to_diagonal
   sorry
 
 theorem idempotent_matrix_rank_orbits_are_components
-    (k : Type u) [Field k] (n : ℕ) (hk : IsAlgClosed k) :
+    (k : Type u) [Field k] (n : ℕ) :
     Nonempty (Fin (n + 1) ≃
       irreducibleComponents (PrimeSpectrum (IdempotentMatrixRing k n))) := by
   sorry

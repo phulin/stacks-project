@@ -168,9 +168,9 @@ theorem powersIntersectionSubmodule_eq_bot_of_le_jacobson
     [IsNoetherianRing R] [Module.Finite R M]
     (I : Ideal R) (hI : I ≤ Ring.jacobson R) :
     powersIntersectionSubmodule (M := M) I = ⊥ := by
-  simpa [powersIntersectionSubmodule, Ideal.jacobson_bot] using
-    (Ideal.iInf_pow_smul_eq_bot_of_le_jacobson (I := I) (M := M)
-      (by simpa only [Ideal.jacobson_bot] using hI))
+  change (⨅ n : ℕ, I ^ n • (⊤ : Submodule R M)) = ⊥
+  apply Ideal.iInf_pow_smul_eq_bot_of_le_jacobson
+  simpa only [Ideal.jacobson_bot] using hI
 
 /-- For every prime containing `I`, some localization of the power
 intersection vanishes. -/

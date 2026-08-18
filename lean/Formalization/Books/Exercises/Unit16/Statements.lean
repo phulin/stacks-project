@@ -215,7 +215,7 @@ theorem complex_polynomial_maximal_ideal_eq_coordinate
         | C a => simp
         | add p q hp hq =>
             rw [map_add, MvPolynomial.C_add]
-            convert Ideal.add_mem (polynomialCoordinateIdeal ℂ n α) hp hq using 1 <;>
+            convert Ideal.add_mem (polynomialCoordinateIdeal ℂ n α) hp hq using 1;
               abel
         | mul_X p i hp =>
             have hgen :
@@ -226,8 +226,8 @@ theorem complex_polynomial_maximal_ideal_eq_coordinate
               (MvPolynomial.X i) hp
             have h₂ := Ideal.mul_mem_left (polynomialCoordinateIdeal ℂ n α)
               (MvPolynomial.C (MvPolynomial.aeval α p)) hgen
-            convert Ideal.add_mem _ h₁ h₂ using 1 <;>
-              simp only [map_mul, MvPolynomial.aeval_X] <;>
+            convert Ideal.add_mem _ h₁ h₂ using 1;
+              simp only [map_mul, MvPolynomial.aeval_X];
               ring
       have hzero : MvPolynomial.aeval α p = 0 :=
         (MvPolynomial.mem_vanishingIdeal_singleton_iff α p).mp hp

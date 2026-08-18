@@ -363,16 +363,17 @@ theorem equivalence_to_fibredInSets_gives_setoidFibres
 
 /- The objectwise part of the source's quotient construction is exposed
    through a set-valued presheaf whose values are the object classes in
-   each fibre.  Compatibility with the fibred category is asserted by the
-   existential theorem below, rather than by this arbitrary choice. -/
+   each fibre.  The existential theorem records both the objectwise class
+   equivalences and the coherent equivalence to its set-presheaf category. -/
 theorem fibredSetoid_object_presheaf_exists
     {S : Type uS} [Category.{vS} S]
     {C : Type uC} [Category.{vC} C]
     (p : S ⥤ C) (hp : IsCategoryFibredInSetoids p) :
     ∃ F : Cᵒᵖ ⥤ Type uS,
-      ∀ U : C,
-        Nonempty (F.obj (Opposite.op U) ≃
-          SetoidObjectClasses (Functor.Fiber p U)) := by
+      IsFibredEquivalenceOver p (setPresheafProjection F) ∧
+        ∀ U : C,
+          Nonempty (F.obj (Opposite.op U) ≃
+            SetoidObjectClasses (Functor.Fiber p U)) := by
   sorry
 
 noncomputable def fibredSetoidObjectPresheaf
@@ -388,8 +389,33 @@ theorem fibredSetoidObjectPresheaf_obj_equiv
     (p : S ⥤ C) (hp : IsCategoryFibredInSetoids p) (U : C) :
     Nonempty
       ((fibredSetoidObjectPresheaf p hp).obj (Opposite.op U) ≃
-        SetoidObjectClasses (Functor.Fiber p U)) := by
-  exact (Classical.choose_spec (fibredSetoid_object_presheaf_exists p hp)) U
+      SetoidObjectClasses (Functor.Fiber p U)) := by
+  exact (Classical.choose_spec
+    (fibredSetoid_object_presheaf_exists p hp)).2 U
+
+theorem fibredSetoidObjectPresheaf_isFibredEquivalentToSetPresheaf
+    {S : Type uS} [Category.{vS} S]
+    {C : Type uC} [Category.{vC} C]
+    (p : S ⥤ C) (hp : IsCategoryFibredInSetoids p) :
+    IsFibredEquivalenceOver p
+      (setPresheafProjection (fibredSetoidObjectPresheaf p hp)) := by
+  exact (Classical.choose_spec
+    (fibredSetoid_object_presheaf_exists p hp)).1
+
+/- The objectwise equivalences above do not by themselves preserve pullback
+   along arrows of `C`.  The coherent form of the quotient construction is
+   the representability statement below: the chosen object-class presheaf is
+   representable exactly when the original fibred category is equivalent over
+   `C` to a slice.  This is the interface used by Unit 40 in place of making
+   arbitrary objectwise equivalence choices.
+ -/
+theorem fibredSetoidObjectPresheaf_isRepresentable_iff_exists_slice
+    {S : Type uS} [Category.{vS} S]
+    {C : Type uC} [Category.{vC} C]
+    (p : S ⥤ C) (hp : IsCategoryFibredInSetoids p) :
+    Functor.IsRepresentable (fibredSetoidObjectPresheaf p hp) ↔
+      ∃ X : C, IsFibredEquivalenceOver p (Over.forget X) := by
+  sorry
 
 abbrev setoidificationCategory
     {S : Type uS} [Category.{vS} S]

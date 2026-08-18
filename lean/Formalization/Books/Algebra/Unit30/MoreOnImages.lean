@@ -420,6 +420,338 @@ noncomputable def localizationAwayMulMap
         (S := Localization.Away (φ f * g))
         (x := φ f * g) (r := φ f) (dvd_mul_right (φ f) g))
 
+private theorem localizationAwayMulMap_finitePresentation_of_awayMap
+    {R S : Type*} [CommRing R] [CommRing S] (φ : R →+* S) (f : R) (g : S)
+    (h : RingHom.FinitePresentation (Localization.awayMap φ f)) :
+    RingHom.FinitePresentation (localizationAwayMulMap φ f g) := by
+  let A := Localization.Away (φ f)
+  let T := Localization.Away (algebraMap S A g)
+  letI : SMul S A := (inferInstance : Algebra S A).toSMul
+  letI : SMul A T := (inferInstance : Algebra A T).toSMul
+  letI : Algebra S T :=
+    ((algebraMap A T).comp (algebraMap S A)).toAlgebra
+  letI : SMul S T := (inferInstance : Algebra S T).toSMul
+  letI : IsScalarTower S A T :=
+    IsScalarTower.of_algebraMap_eq' rfl
+  letI : IsLocalization.Away (φ f * g) T :=
+    IsLocalization.Away.mul' A T (φ f) g
+  let e : T ≃ₐ[S] Localization.Away (φ f * g) :=
+    IsLocalization.algEquiv (Submonoid.powers (φ f * g)) T
+      (Localization.Away (φ f * g))
+  have hAT : RingHom.FinitePresentation (algebraMap A T) := by
+    rw [RingHom.finitePresentation_algebraMap]
+    infer_instance
+  have hcomp : RingHom.FinitePresentation
+      ((algebraMap A T).comp (Localization.awayMap φ f)) :=
+    hAT.comp h
+  have he : RingHom.FinitePresentation (e : T →+* Localization.Away (φ f * g)) :=
+    RingHom.FinitePresentation.of_bijective e.bijective
+  have hfinal : RingHom.FinitePresentation
+      ((e : T →+* Localization.Away (φ f * g)).comp
+        ((algebraMap A T).comp (Localization.awayMap φ f))) :=
+    he.comp hcomp
+  have heq : (e : T →+* Localization.Away (φ f * g)).comp
+      ((algebraMap A T).comp (Localization.awayMap φ f)) =
+      localizationAwayMulMap φ f g := by
+    apply IsLocalization.ringHom_ext (Submonoid.powers f)
+    ext a
+    simp only [RingHom.comp_apply]
+    have hleft : (Localization.awayMap φ f)
+        (algebraMap R (Localization.Away f) a) =
+        algebraMap S (Localization.Away (φ f)) (φ a) := by
+      simp [Localization.awayMap, IsLocalization.Away.map,
+        IsLocalization.map_eq]
+    have hright : localizationAwayMulMap φ f g
+        (algebraMap R (Localization.Away f) a) =
+        algebraMap S (Localization.Away (φ f * g)) (φ a) := by
+      simp [localizationAwayMulMap]
+    rw [hleft, hright]
+    change e ((algebraMap A T) ((algebraMap S A) (φ a))) =
+      algebraMap S (Localization.Away (φ f * g)) (φ a)
+    rw [← IsScalarTower.algebraMap_apply S A T]
+    exact e.commutes _
+  rw [← heq]
+  exact hfinal
+
+private theorem localizationAwayMulMap_one_finitePresentation_of_finitePresentation
+    {R S : Type*} [CommRing R] [CommRing S]
+    (φ : R →+* S) (hφ : RingHom.FinitePresentation φ) :
+    RingHom.FinitePresentation (localizationAwayMulMap φ 1 1) := by
+  let eR : R ≃ₐ[R] Localization.Away (1 : R) :=
+    IsLocalization.atOne R (Localization.Away (1 : R))
+  let eS : S ≃ₐ[S] Localization.Away (φ 1 * 1) :=
+    IsLocalization.atUnit S (Localization.Away (φ 1 * 1))
+      (φ 1 * 1) (by simp)
+  have heR : RingHom.FinitePresentation
+      (eR.symm : Localization.Away (1 : R) →+* R) :=
+    RingHom.FinitePresentation.of_bijective eR.symm.bijective
+  have heS : RingHom.FinitePresentation
+      (eS : S →+* Localization.Away (φ 1 * 1)) :=
+    RingHom.FinitePresentation.of_bijective eS.bijective
+  have hcomp : RingHom.FinitePresentation
+      ((eS : S →+* Localization.Away (φ 1 * 1)).comp
+        (φ.comp (eR.symm : Localization.Away (1 : R) →+* R))) :=
+    heS.comp (hφ.comp heR)
+  have heq : (eS : S →+* Localization.Away (φ 1 * 1)).comp
+      (φ.comp (eR.symm : Localization.Away (1 : R) →+* R)) =
+      localizationAwayMulMap φ 1 1 := by
+    apply IsLocalization.ringHom_ext (Submonoid.powers (1 : R))
+    ext r
+    simpa [eR, localizationAwayMulMap] using eS.commutes (φ r)
+  exact heq ▸ hcomp
+
+private theorem one_generator_local_fp_general
+    {R S : Type*} [CommRing R] [CommRing S] [IsDomain R] [IsDomain S]
+    (φ : R →+* S) (hφ : Function.Injective φ)
+    (x : S) (hev : Function.Surjective (Polynomial.eval₂RingHom φ x)) :
+    ∃ f : R, f ≠ 0 ∧ ∃ g : S, g ≠ 0 ∧
+      RingHom.FinitePresentation (localizationAwayMulMap φ f g) := by
+  classical
+  let K := FractionRing R
+  let L := FractionRing S
+  let γ := IsFractionRing.lift
+    (g := (algebraMap S L).comp φ)
+    (A := R) (K := K) (L := L)
+    (fun _a _b h => hφ (IsFractionRing.injective S L h))
+  let xL := algebraMap S L x
+  letI : Algebra K L := RingHom.toAlgebra γ
+  by_cases hxa : ∃ p : Polynomial K, p ≠ 0 ∧
+      Polynomial.eval₂ γ xL p = 0
+  · obtain ⟨m, hm, hmfp⟩ := one_generator_local_fp φ hφ x hev hxa
+    exact ⟨m, hm, 1, one_ne_zero,
+      localizationAwayMulMap_finitePresentation_of_awayMap φ m 1 hmfp⟩
+  · have hinj : Function.Injective (Polynomial.eval₂RingHom φ x) := by
+      have hcomp : (algebraMap S L).comp φ =
+          γ.comp (algebraMap R K) := by
+        apply RingHom.ext
+        intro y
+        change (algebraMap S L) (φ y) = γ (algebraMap R K y)
+        exact (IsFractionRing.lift_algebraMap
+          (A := R) (K := K) (L := L)
+          (g := (algebraMap S L).comp φ)
+          (fun a b h => hφ (IsFractionRing.injective S L h)) y).symm
+      intro p q hpq
+      by_contra hpq0
+      have hpqmap : p - q ≠ 0 := sub_ne_zero.mpr hpq0
+      have hroot : Polynomial.eval₂ γ xL
+          ((p - q).map (algebraMap R K)) = 0 := by
+        rw [Polynomial.eval₂_map, ← hcomp, ← Polynomial.hom_eval₂]
+        have := congrArg (algebraMap S L) (sub_eq_zero.mpr hpq)
+        simpa [γ, xL] using this
+      apply hxa
+      refine ⟨(p - q).map (algebraMap R K), ?_, hroot⟩
+      intro hzero
+      apply hpqmap
+      exact Polynomial.map_injective (algebraMap R K)
+        (IsFractionRing.injective R K) (by simpa using hzero)
+    have hEval : RingHom.FinitePresentation
+        (Polynomial.eval₂RingHom φ x) :=
+      RingHom.FinitePresentation.of_bijective ⟨hinj, hev⟩
+    have hC : RingHom.FinitePresentation
+        (Polynomial.C : R →+* Polynomial R) := by
+      change RingHom.FinitePresentation (algebraMap R (Polynomial R))
+      rw [RingHom.finitePresentation_algebraMap]
+      infer_instance
+    have hφfp : RingHom.FinitePresentation φ := by
+      have := hEval.comp hC
+      have heq : (Polynomial.eval₂RingHom φ x).comp
+          (Polynomial.C : R →+* Polynomial R) = φ := by
+        ext y
+        simp
+      rw [← heq]
+      exact this
+    exact ⟨1, one_ne_zero, 1, one_ne_zero,
+      localizationAwayMulMap_one_finitePresentation_of_finitePresentation φ hφfp⟩
+
+private theorem adjoin_insert_eval_surjective
+    {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]
+    (t : Finset S) (x : S)
+    (hgen : Algebra.adjoin R (insert x (↑t : Set S)) = ⊤) :
+    Function.Surjective
+      (Polynomial.eval₂RingHom
+        (algebraMap (Algebra.adjoin R (↑t : Set S)) S) x) := by
+  let A := Algebra.adjoin R (↑t : Set S)
+  have hgen' : Algebra.adjoin A ({x} : Set S) = ⊤ := by
+    apply Algebra.eq_top_iff.2
+    intro y
+    have hy : y ∈ Algebra.adjoin R (insert x (↑t : Set S)) := by
+      rw [hgen]
+      exact Algebra.mem_top
+    induction hy using Algebra.adjoin_induction with
+    | mem y hy =>
+        rcases hy with (rfl | hy)
+        · exact Algebra.subset_adjoin (Set.mem_singleton x)
+        · let ya : A := ⟨y, Algebra.subset_adjoin hy⟩
+          simpa using Subalgebra.algebraMap_mem (Algebra.adjoin A ({x} : Set S)) ya
+    | algebraMap r =>
+        rw [IsScalarTower.algebraMap_apply R A S]
+        exact Subalgebra.algebraMap_mem _ _
+    | add y z _ _ hy hz =>
+        exact Subalgebra.add_mem _ hy hz
+    | mul y z _ _ hy hz =>
+        exact Subalgebra.mul_mem _ hy hz
+  have hsurj_aeval : Function.Surjective
+      (Polynomial.aeval x : Polynomial A →ₐ[A] S) := by
+    rw [← AlgHom.range_eq_top, ← Algebra.adjoin_singleton_eq_range_aeval A x]
+    exact hgen'
+  simpa [Polynomial.aeval_def] using hsurj_aeval
+
+private theorem localizationAwayMulMap_comp_finitePresentation
+    {R : Type u} {A S : Type v} [CommRing R] [CommRing A] [CommRing S]
+    (φ : R →+* A) (ψ : A →+* S)
+    (f : R) (g a : A) (b : S)
+    (hf : f ≠ 0) (hg : g ≠ 0) (ha : a ≠ 0) (hb : b ≠ 0)
+    (hφ : Function.Injective φ) (hψ : Function.Injective ψ)
+    (h₁ : RingHom.FinitePresentation (localizationAwayMulMap φ f g))
+    (h₂ : RingHom.FinitePresentation (localizationAwayMulMap ψ a b)) :
+    RingHom.FinitePresentation
+      (localizationAwayMulMap (ψ.comp φ) f (ψ a * b * ψ g)) := by
+  let A₁ := Localization.Away (φ f * g)
+  let T₁ := Localization.Away (algebraMap A A₁ a)
+  have hA₁T₁ : RingHom.FinitePresentation (algebraMap A₁ T₁) := by
+    rw [RingHom.finitePresentation_algebraMap]
+    infer_instance
+  have h₁' : RingHom.FinitePresentation
+      ((algebraMap A₁ T₁).comp (localizationAwayMulMap φ f g)) :=
+    hA₁T₁.comp h₁
+  let A₂ := Localization.Away a
+  let T₂ := Localization.Away (algebraMap A A₂ (φ f * g))
+  let S₁ := Localization.Away (ψ a * b)
+  let T₃ := Localization.Away
+    ((localizationAwayMulMap ψ a b) (algebraMap A A₂ (φ f * g)))
+  have h₂' : RingHom.FinitePresentation
+      (IsLocalization.map T₃ (localizationAwayMulMap ψ a b)
+        (Submonoid.powers (algebraMap A A₂ (φ f * g))).le_comap_map) :=
+    RingHom.finitePresentation_localizationPreserves.away
+      (localizationAwayMulMap ψ a b) (algebraMap A A₂ (φ f * g)) T₂ T₃ h₂
+  letI : SMul A A₁ := (inferInstance : Algebra A A₁).toSMul
+  letI : SMul A₁ T₁ := (inferInstance : Algebra A₁ T₁).toSMul
+  letI : Algebra A T₁ :=
+    ((algebraMap A₁ T₁).comp (algebraMap A A₁)).toAlgebra
+  letI : SMul A T₁ := (inferInstance : Algebra A T₁).toSMul
+  letI : IsScalarTower A A₁ T₁ := IsScalarTower.of_algebraMap_eq' rfl
+  letI : SMul A A₂ := (inferInstance : Algebra A A₂).toSMul
+  letI : SMul A₂ T₂ := (inferInstance : Algebra A₂ T₂).toSMul
+  letI : Algebra A T₂ :=
+    ((algebraMap A₂ T₂).comp (algebraMap A A₂)).toAlgebra
+  letI : SMul A T₂ := (inferInstance : Algebra A T₂).toSMul
+  letI : IsScalarTower A A₂ T₂ := IsScalarTower.of_algebraMap_eq' rfl
+  letI : IsLocalization.Away (a * (φ f * g)) T₁ :=
+    IsLocalization.Away.mul A₁ T₁ (φ f * g) a
+  letI : IsLocalization.Away (a * (φ f * g)) T₂ :=
+    IsLocalization.Away.mul' A₂ T₂ a (φ f * g)
+  let e₁₂ : T₁ ≃ₐ[A] T₂ :=
+    IsLocalization.algEquiv (Submonoid.powers (a * (φ f * g))) T₁ T₂
+  have he₁₂ : RingHom.FinitePresentation (e₁₂ : T₁ →+* T₂) :=
+    RingHom.FinitePresentation.of_bijective e₁₂.bijective
+  letI : SMul S S₁ := (inferInstance : Algebra S S₁).toSMul
+  letI : SMul S₁ T₃ := (inferInstance : Algebra S₁ T₃).toSMul
+  letI : Algebra S T₃ :=
+    ((algebraMap S₁ T₃).comp (algebraMap S S₁)).toAlgebra
+  letI : SMul S T₃ := (inferInstance : Algebra S T₃).toSMul
+  letI : IsScalarTower S S₁ T₃ := IsScalarTower.of_algebraMap_eq' rfl
+  have hT₃ : (localizationAwayMulMap ψ a b)
+      (algebraMap A A₂ (φ f * g)) =
+      algebraMap S S₁ (ψ (φ f * g)) := by
+    have hψf : (localizationAwayMulMap ψ a b)
+        (algebraMap A A₂ (φ f)) =
+        algebraMap S (Localization.Away (ψ a * b)) (ψ (φ f)) := by
+      unfold localizationAwayMulMap
+      rw [IsLocalization.Away.lift_eq]
+      simp only [RingHom.comp_apply]
+    have hψg : (localizationAwayMulMap ψ a b)
+        (algebraMap A A₂ g) =
+        algebraMap S (Localization.Away (ψ a * b)) (ψ g) := by
+      unfold localizationAwayMulMap
+      rw [IsLocalization.Away.lift_eq]
+      simp only [RingHom.comp_apply]
+    rw [show algebraMap A A₂ (φ f * g) =
+        algebraMap A A₂ (φ f) * algebraMap A A₂ g by rw [map_mul]]
+    rw [map_mul, hψf, hψg, ψ.map_mul, ← map_mul]
+  letI : IsLocalization.Away
+      (algebraMap S S₁ (ψ (φ f * g))) T₃ := by
+    rw [← hT₃]
+    infer_instance
+  letI : IsLocalization.Away
+      ((ψ a * b) * ψ (φ f * g)) T₃ :=
+    IsLocalization.Away.mul' S₁ T₃ (ψ a * b) (ψ (φ f * g))
+  let P := Localization.Away ((ψ.comp φ) f * (ψ a * b * ψ g))
+  let e₃ : T₃ ≃ₐ[S] P := by
+    letI : IsLocalization.Away
+        ((ψ.comp φ) f * (ψ a * b * ψ g)) T₃ := by
+      simpa [P, mul_assoc, mul_comm, mul_left_comm, map_mul] using
+        (inferInstance : IsLocalization.Away
+          ((ψ a * b) * ψ (φ f * g)) T₃)
+    exact IsLocalization.algEquiv
+      (Submonoid.powers ((ψ.comp φ) f * (ψ a * b * ψ g))) T₃ P
+  have he₃ : RingHom.FinitePresentation (e₃ : T₃ →+* P) :=
+    RingHom.FinitePresentation.of_bijective e₃.bijective
+  have hcomp : RingHom.FinitePresentation
+      ((e₃ : T₃ →+* P).comp
+      ((IsLocalization.map T₃ (localizationAwayMulMap ψ a b)
+          (Submonoid.powers (algebraMap A A₂ (φ f * g))).le_comap_map).comp
+          ((e₁₂ : T₁ →+* T₂).comp
+            ((algebraMap A₁ T₁).comp (localizationAwayMulMap φ f g))))) :=
+    he₃.comp (h₂'.comp (he₁₂.comp h₁'))
+  have h₁base (x : R) :
+      ((algebraMap A₁ T₁).comp (localizationAwayMulMap φ f g))
+          (algebraMap R (Localization.Away f) x) =
+        algebraMap A T₁ (φ x) := by
+    have hx : (localizationAwayMulMap φ f g)
+        (algebraMap R (Localization.Away f) x) =
+        algebraMap A A₁ (φ x) := by
+      unfold localizationAwayMulMap
+      rw [IsLocalization.Away.lift_eq]
+      simp only [RingHom.comp_apply]
+      rfl
+    rw [RingHom.comp_apply, hx]
+    rw [← IsScalarTower.algebraMap_apply A A₁ T₁]
+  have h₂base (x : A) :
+      (IsLocalization.map T₃ (localizationAwayMulMap ψ a b)
+        (Submonoid.powers (algebraMap A A₂ (φ f * g))).le_comap_map)
+          (algebraMap A T₂ x) =
+        algebraMap S T₃ (ψ x) := by
+    have hx : (localizationAwayMulMap ψ a b)
+        (algebraMap A A₂ x) =
+        algebraMap S (Localization.Away (ψ a * b)) (ψ x) := by
+      unfold localizationAwayMulMap
+      rw [IsLocalization.Away.lift_eq]
+      simp only [RingHom.comp_apply]
+    rw [IsScalarTower.algebraMap_apply A A₂ T₂]
+    rw [IsLocalization.map_eq, hx]
+    change algebraMap S₁ T₃ (algebraMap S S₁ (ψ x)) =
+      algebraMap S T₃ (ψ x)
+    rw [← IsScalarTower.algebraMap_apply S S₁ T₃]
+  have h₁₂base (x : A) :
+      (e₁₂ : T₁ →+* T₂) (algebraMap A T₁ x) =
+        algebraMap A T₂ x := e₁₂.commutes x
+  have h₃base (x : S) :
+      (e₃ : T₃ →+* P) (algebraMap S T₃ x) =
+        algebraMap S P x := e₃.commutes x
+  have heq : (e₃ : T₃ →+* P).comp
+      ((IsLocalization.map T₃ (localizationAwayMulMap ψ a b)
+        (Submonoid.powers (algebraMap A A₂ (φ f * g))).le_comap_map).comp
+        ((e₁₂ : T₁ →+* T₂).comp
+          ((algebraMap A₁ T₁).comp (localizationAwayMulMap φ f g)))) =
+      localizationAwayMulMap (ψ.comp φ) f (ψ a * b * ψ g) := by
+    apply IsLocalization.ringHom_ext (Submonoid.powers f)
+    ext r
+    simp only [RingHom.comp_apply]
+    have hx₁ : (algebraMap A₁ T₁)
+        ((localizationAwayMulMap φ f g)
+          (algebraMap R (Localization.Away f) r)) =
+        algebraMap A T₁ (φ r) := by
+      change ((algebraMap A₁ T₁).comp (localizationAwayMulMap φ f g))
+        (algebraMap R (Localization.Away f) r) = _
+      exact h₁base r
+    rw [hx₁, h₁₂base (φ r), h₂base (φ r), h₃base (ψ (φ r))]
+    unfold localizationAwayMulMap
+    rw [IsLocalization.Away.lift_eq]
+    simp only [RingHom.comp_apply]
+    rfl
+  rw [← heq]
+  exact hcomp
+
 /-- A finite-type inclusion of domains becomes finitely presented after
 localizing the source and target at suitable nonzero elements. -/
 theorem exists_localization_away_finitePresentation

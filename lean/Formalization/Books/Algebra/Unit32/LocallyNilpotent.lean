@@ -1,5 +1,6 @@
 import Formalization.Books.Algebra.Unit03.BasicNotions
 import Mathlib.Algebra.MvPolynomial.Basic
+import Mathlib.Algebra.MvPolynomial.Division
 import Mathlib.Algebra.Ring.Parity
 import Mathlib.Data.Set.Function
 import Mathlib.RingTheory.Finiteness.Ideal
@@ -46,23 +47,102 @@ def locallyNilpotentExampleIdeal (k : Type u) [CommRing k] :
     (Ideal.span (Set.range fun n : ℕ =>
       (MvPolynomial.X n : MvPolynomial ℕ k)))
 
+private theorem locallyNilpotentIdeal_span_range
+    {R : Type u} [CommRing R] {ι : Type v} (f : ι → R)
+    (hf : ∀ i, IsNilpotent (f i)) :
+    Formalization.Books.Algebra.Unit03.locallyNilpotentIdeal
+      (Ideal.span (Set.range f)) := by
+  intro x hx
+  obtain ⟨c, hc⟩ :=
+    (Finsupp.mem_ideal_span_range_iff_exists_finsupp).mp hx
+  rw [← hc]
+  apply isNilpotent_sum
+  intro i hi
+  simpa [smul_eq_mul] using (hf i).smul (c i)
+
 theorem locallyNilpotentExample_not_mem_baseIdeal
     (k : Type u) [Field k] (n : ℕ) :
     (MvPolynomial.X (n + 1) : MvPolynomial ℕ k) ^ n ∉
       locallyNilpotentExampleBaseIdeal k := by
-  sorry
+  intro h
+  let φ : MvPolynomial ℕ k →+* MvPolynomial ℕ k :=
+    MvPolynomial.eval₂Hom (MvPolynomial.C : k →+* MvPolynomial ℕ k)
+      (fun i : ℕ => if i = n + 1 then MvPolynomial.X 0 else 0)
+  let J : Ideal (MvPolynomial ℕ k) :=
+    Ideal.span ({(MvPolynomial.X 0 : MvPolynomial ℕ k) ^ (n + 2)} : Set _)
+  have hle : locallyNilpotentExampleBaseIdeal k ≤ J.comap φ := by
+    rw [locallyNilpotentExampleBaseIdeal, Ideal.span_le]
+    rintro _ ⟨i, rfl⟩
+    change φ ((MvPolynomial.X i : MvPolynomial ℕ k) ^ (i + 1)) ∈ J
+    by_cases hi : i = n + 1
+    · subst i
+      simp [φ, J, Nat.add_assoc]
+    · simp [φ, J, hi]
+  have hmem : (MvPolynomial.X 0 : MvPolynomial ℕ k) ^ n ∈ J := by
+    simpa [J, φ, Ideal.mem_comap] using hle h
+  have hdvd :
+      (MvPolynomial.X 0 : MvPolynomial ℕ k) ^ (n + 2) ∣
+        (MvPolynomial.X 0 : MvPolynomial ℕ k) ^ n :=
+    (Ideal.mem_span_singleton.mp hmem)
+  rw [MvPolynomial.X_pow_eq_monomial, MvPolynomial.X_pow_eq_monomial]
+    at hdvd
+  rcases (MvPolynomial.monomial_dvd_monomial.mp hdvd) with ⟨hord, _⟩
+  rcases hord with hzero | hord
+  · exact one_ne_zero hzero
+  · simp at hord
 
 theorem locallyNilpotentExample_pow_ne_bot
     (k : Type u) [Field k] (n : ℕ) :
     (locallyNilpotentExampleIdeal k) ^ n ≠
       (⊥ : Ideal (MvPolynomial ℕ k ⧸ locallyNilpotentExampleBaseIdeal k)) := by
-  sorry
+  intro hzero
+  have hmemX :
+      Ideal.Quotient.mk (locallyNilpotentExampleBaseIdeal k)
+          (MvPolynomial.X (n + 1) : MvPolynomial ℕ k) ∈
+        locallyNilpotentExampleIdeal k := by
+    rw [locallyNilpotentExampleIdeal]
+    exact Ideal.mem_map_of_mem _ (Ideal.subset_span ⟨n + 1, rfl⟩)
+  have hmemPow :
+      (Ideal.Quotient.mk (locallyNilpotentExampleBaseIdeal k)
+          (MvPolynomial.X (n + 1) : MvPolynomial ℕ k)) ^ n ∈
+        (locallyNilpotentExampleIdeal k) ^ n :=
+    Ideal.pow_mem_pow hmemX n
+  have hz :
+      (Ideal.Quotient.mk (locallyNilpotentExampleBaseIdeal k)
+          (MvPolynomial.X (n + 1) : MvPolynomial ℕ k)) ^ n = 0 := by
+    apply Ideal.mem_bot.mp
+    rw [← hzero]
+    exact hmemPow
+  apply locallyNilpotentExample_not_mem_baseIdeal k n
+  apply Ideal.Quotient.eq_zero_iff_mem.mp
+  simpa only [map_pow] using hz
 
 theorem locallyNilpotent_not_nilpotent_example (k : Type u) [Field k] :
     Formalization.Books.Algebra.Unit03.locallyNilpotentIdeal
         (locallyNilpotentExampleIdeal k) ∧
       ¬ IsNilpotent (locallyNilpotentExampleIdeal k) := by
-  sorry
+  constructor
+  · have hset :
+        Ideal.Quotient.mk (locallyNilpotentExampleBaseIdeal k) ''
+            Set.range (fun i : ℕ => (MvPolynomial.X i : MvPolynomial ℕ k)) =
+          Set.range (fun i : ℕ =>
+            Ideal.Quotient.mk (locallyNilpotentExampleBaseIdeal k)
+              (MvPolynomial.X i : MvPolynomial ℕ k)) := by
+      ext z
+      constructor
+      · rintro ⟨x, ⟨i, rfl⟩, rfl⟩
+        exact ⟨i, rfl⟩
+      · rintro ⟨i, rfl⟩
+        exact ⟨MvPolynomial.X i, ⟨i, rfl⟩, rfl⟩
+    rw [locallyNilpotentExampleIdeal, Ideal.map_span, hset]
+    apply locallyNilpotentIdeal_span_range
+    intro i
+    refine ⟨i + 1, ?_⟩
+    rw [← map_pow]
+    exact Ideal.Quotient.eq_zero_iff_mem.mpr (Ideal.subset_span ⟨i, rfl⟩)
+  · intro hnil
+    rcases hnil with ⟨m, hm⟩
+    exact locallyNilpotentExample_pow_ne_bot k m hm
 
 /-! ## Basic consequences -/
 
@@ -70,7 +150,22 @@ theorem locallyNilpotentIdeal_map
     {R : Type u} {S : Type v} [CommRing R] [CommRing S] (φ : R →+* S) (I : Ideal R)
     (hI : Formalization.Books.Algebra.Unit03.locallyNilpotentIdeal I) :
     Formalization.Books.Algebra.Unit03.locallyNilpotentIdeal (I.map φ) := by
-  sorry
+  have hset :
+      φ '' (I : Set R) = Set.range (fun y : I => φ y) := by
+    ext z
+    constructor
+    · rintro ⟨y, hy, rfl⟩
+      exact ⟨⟨y, hy⟩, rfl⟩
+    · rintro ⟨y, rfl⟩
+      exact ⟨y, y.2, rfl⟩
+  have hspan :
+      I.map φ = Ideal.span (Set.range (fun y : I => φ y)) := by
+    change Ideal.span (φ '' (I : Set R)) = _
+    rw [hset]
+  rw [hspan]
+  apply locallyNilpotentIdeal_span_range
+  intro y
+  exact (hI y.1 y.2).map φ
 
 theorem isUnit_iff_isUnit_quotient_of_locallyNilpotent
     {R : Type u} [CommRing R] (I : Ideal R)

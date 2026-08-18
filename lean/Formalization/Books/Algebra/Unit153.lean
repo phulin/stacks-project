@@ -159,8 +159,7 @@ def EtaleRetractionProperty (R : Type u) [CommRing R] [IsLocalRing R] : Prop :=
     (_hA : Algebra.Etale R A) (q : PrimeSpectrum A)
     (hq : q.asIdeal.comap (algebraMap R A) = IsLocalRing.maximalIdeal R)
     (_hqResidue : ResidueFieldIdentification q hq),
-    ∃ f : A →ₐ[R] R,
-      PrimeSpectrum.comap f.toRingHom (maximalPrime R) = q
+    Nonempty (A →ₐ[R] R)
 
 /-- The unique étale retraction characterization in item (8). -/
 def UniqueEtaleRetractionProperty
@@ -340,7 +339,6 @@ structure MopUpData
   [commRingA : ∀ i, CommRing (A i)]
   [algebraRA : ∀ i, Algebra R (A i)]
   [localA : ∀ i, IsLocalRing (A i)]
-  [henselianA : ∀ i, HenselianLocalRing (A i)]
   B : Type u
   [commRingB : CommRing B]
   [algebraRB : Algebra R B]
@@ -373,6 +371,10 @@ structure StrictMopUpData
       ¬ RingHom.QuasiFiniteAt (algebraMap R B) q.asIdeal
   residueAlgebra : ∀ i,
     Algebra (IsLocalRing.ResidueField R) (IsLocalRing.ResidueField (A i))
+  residueAlgebraMap : ∀ (i : Fin n) (r : R),
+    algebraMap (IsLocalRing.ResidueField R)
+        (IsLocalRing.ResidueField (A i)) (IsLocalRing.residue R r) =
+      IsLocalRing.residue (A i) (algebraMap R (A i) r)
   residueFinite : ∀ i,
     Module.Finite (IsLocalRing.ResidueField R)
       (IsLocalRing.ResidueField (A i))
@@ -471,7 +473,10 @@ theorem strictly_henselian_solution_bijection
 
 /-! ## Countably generated Mittag--Leffler modules -/
 
-/-- Tensor-kernel domination, expanded in the source's module-theoretic form. -/
+/-- Tensor-kernel domination, expanded in the source's module-theoretic form.
+This is the module-theoretic interface used for Mittag--Lefflerness in the
+earlier module chapters, whose bundled predicate is not available through the
+focused imports of this chapter. -/
 def TensorKernelDominates
     {R M N N' : Type u} [CommRing R]
     [AddCommGroup M] [Module R M]
@@ -489,8 +494,8 @@ def TensorKernelMutuallyDominates
     (g : M →ₗ[R] N') (f : M →ₗ[R] N) : Prop :=
   TensorKernelDominates g f ∧ TensorKernelDominates f g
 
-/-- The canonical first characterization of a Mittag--Leffler module used by
-the earlier module chapter, written here at the theorem's universe. -/
+/-- The module-theoretic Mittag--Leffler hypothesis used by the source's
+countably generated splitting theorem. -/
 def ModuleMittagLefflerCondition
     (R M : Type u) [CommRing R] [AddCommGroup M] [Module R M] : Prop :=
   ∀ (P : Type u) [AddCommGroup P] [Module R P],

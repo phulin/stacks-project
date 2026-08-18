@@ -1573,13 +1573,14 @@ theorem fibredInGroupoids_fullyFaithful_iff_diagonal_isEquivalence
       groupoidFibredCategoryOver_isFibredInGroupoids X hX
     let _ : pY.IsFibredInGroupoids :=
       groupoidFibredCategoryOver_isFibredInGroupoids Y hY
-    let P : FibredInGroupoidsTwoFibreProduct F F := {
+    let P : FibredInGroupoidsTwoFibreProduct.{v, u, u, v} F F := {
       product := canonicalFibredTwoFibreProduct X X Y F F
       fibres_are_groupoids :=
-        canonicalFibredTwoFibreProduct_fibres_are_groupoids
-          X X Y hX hX hY F F }
+        canonicalFibredTwoFibreProduct_fibres_are_groupoids.{v, u, u, v}
+          X X Y hX hX F F }
     have hpT : pT.IsFibredInGroupoids := by
-      simpa [P, pT, canonicalFibredTwoFibreProduct_diagram] using
+      simpa [P, pT, canonicalFibredTwoFibreProduct_diagram,
+        twoFibreProductOverDiagram] using
         fibredInGroupoidsTwoFibreProduct_apex_isFibredInGroupoids P
     have hDfibre : ∀ U : C,
         (fibreFunctor pX pT D rfl U).IsEquivalence := by

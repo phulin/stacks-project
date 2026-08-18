@@ -1,4 +1,3 @@
-import Mathlib.Algebra.Category.Ring.Basic
 import Mathlib.Algebra.Ring.Prod
 import Mathlib.GroupTheory.Finiteness
 import Mathlib.RingTheory.Localization.Basic
@@ -41,7 +40,9 @@ theorem localization_closed_image_product
     (hfinite :
       IsNoetherianRing R ∨
         TopologicalSpace.NoetherianSpace (PrimeSpectrum R) ∨ S.FG) :
-    ∃ R' : CommRingCat.{u}, Nonempty (R ≃+* (Localization S × R')) := by
+    ∃ (R' : Type u) (hR' : CommRing R'),
+      letI : CommRing R' := hR'
+      Nonempty (R ≃+* (Localization S × R')) := by
   sorry
 
 end Formalization.Books.Algebra.Unit33

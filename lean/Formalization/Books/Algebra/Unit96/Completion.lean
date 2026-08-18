@@ -1201,7 +1201,9 @@ theorem completion_isAdicComplete_iff_kernel_eq_power
       have hLK : L ∈ completionKernel I M k := by
         have hsub := (completionKernel I M k).sub_mem (hbK k) hdiffK
         convert hsub using 1; abel
-      simpa [AdicCompletion.eval_apply] using LinearMap.mem_ker.mp hLK
+      have hLK' := LinearMap.mem_ker.mp hLK
+      simp [AdicCompletion.eval_apply] at hLK'
+      exact hLK'
     have hnconv := SModEq.sub_mem.mp (hL n)
     have hxn : x ∈ I ^ n • (⊤ : Submodule R (completion I M)) := by
       have hbn : b n = x := by simp [b]

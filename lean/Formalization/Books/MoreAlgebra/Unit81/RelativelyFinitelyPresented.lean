@@ -49,7 +49,7 @@ private theorem moduleFinitePresentation_of_surjective
     (hM : letI : Module R M := Module.compHom M q
       Module.FinitePresentation R M) :
     Module.FinitePresentation S M := by
-  letI : Module R M := Module.compHom M q
+  let : Module R M := Module.compHom M q
   obtain ⟨s, hs, hker⟩ := hM.out
   let fR : (s →₀ R) →ₗ[R] M := Finsupp.linearCombination R ((↑) : s → M)
   let fS : (s →₀ S) →ₗ[S] M := Finsupp.linearCombination S ((↑) : s → M)
@@ -96,7 +96,7 @@ private theorem moduleFinitePresentation_of_surjective
       rw [hy]
       exact x.property
     exact ⟨⟨y, by exact hyker⟩, Subtype.ext hy⟩
-  letI : Module.Finite R (LinearMap.ker fR) := Module.Finite.of_fg hkerR
+  let : Module.Finite R (LinearMap.ker fR) := Module.Finite.of_fg hkerR
   have hkerSfin : Module.Finite S (LinearMap.ker fS) :=
     Module.Finite.of_surjective mapKer hmapKer
   have hkerS : (LinearMap.ker fS).FG := Module.Finite.iff_fg.mp hkerSfin
@@ -138,9 +138,9 @@ theorem intro_counterexample
       (Module.compHom.toLinearMap (Ideal.Quotient.mk _))
       Ideal.Quotient.mk_surjective
   · intro h
-    letI : Module R (R ⧸ I) := Module.compHom (R ⧸ I) q
+    let : Module R (R ⧸ I) := Module.compHom (R ⧸ I) q
     let l : R →ₗ[R] (R ⧸ I) := Module.compHom.toLinearMap q
-    letI : Module.FinitePresentation R (R ⧸ I) := h
+    let : Module.FinitePresentation R (R ⧸ I) := h
     have hker : (LinearMap.ker l).FG :=
       Module.FinitePresentation.fg_ker l q.surjective
     have hI : I.FG := by
@@ -224,7 +224,7 @@ theorem relativelyFinitelyPresented_iff_all_presentations
           letI : Module (MvPolynomial (Fin n) R) M :=
             Module.compHom M α.toRingHom
           Module.FinitePresentation (MvPolynomial (Fin n) R) M := by
-  letI : Algebra R A := f.toAlgebra
+  let : Algebra R A := f.toAlgebra
   dsimp [RelativelyFinitelyPresented]
   constructor
   · rintro ⟨n, α, hα, hM⟩ m β hβ
@@ -276,15 +276,15 @@ theorem relativelyFinitelyPresented_iff_all_presentations
         rw [hpC, hcA']
       simpa only [AlgHom.comp_apply] using hcase
     have hpC : RingHom.FiniteType pToC.toRingHom := by
-      letI : Algebra (MvPolynomial (Fin n) R) C := pToC.toAlgebra
-      letI : IsScalarTower R (MvPolynomial (Fin n) R) C :=
+      let : Algebra (MvPolynomial (Fin n) R) C := pToC.toAlgebra
+      let : IsScalarTower R (MvPolynomial (Fin n) R) C :=
         IsScalarTower.of_algebraMap_eq' (by
           apply RingHom.ext
           intro r
           exact (pToC.commutes r).symm)
       change Algebra.FiniteType (MvPolynomial (Fin n) R) C
       exact Algebra.FiniteType.of_restrictScalars_finiteType R _ _
-    letI : Module C M := Module.compHom M cToA.toRingHom
+    let : Module C M := Module.compHom M cToA.toRingHom
     let modP : Module (MvPolynomial (Fin n) R) M :=
       Module.compHom M pToC.toRingHom
     let modPα : Module (MvPolynomial (Fin n) R) M :=
@@ -294,14 +294,14 @@ theorem relativelyFinitelyPresented_iff_all_presentations
       intro r x
       change cToA (pToC r) • x = α r • x
       rw [show cToA (pToC r) = α r from congrArg (fun g => g r) hpcA]
-    letI : Module (MvPolynomial (Fin n) R) M := modP
+    let : Module (MvPolynomial (Fin n) R) M := modP
     have hpcM : @Module.FinitePresentation (MvPolynomial (Fin n) R) M _ _ modP := by
       rw [hmodP]
       exact hM
     have hC : Module.FinitePresentation C M :=
       Formalization.Books.Algebra.Unit06.finitePresentation_module_over_finiteType
         pToC.toRingHom hpC hpcM
-    letI : Module (MvPolynomial (Fin m) R) M :=
+    let : Module (MvPolynomial (Fin m) R) M :=
       Module.compHom M β.toRingHom
     exact moduleFinitePresentation_of_surjective cToQ.toRingHom hcq_surj (by
       exact hC)
@@ -323,7 +323,7 @@ theorem relativelyFinitelyPresented_iff_surjective_from_finitelyPresented
           RingHom.FinitePresentation (algebraMap R A') →
             letI : Module A' M := Module.compHom M q.toRingHom
             Module.FinitePresentation A' M := by
-  letI : Algebra R A := f.toAlgebra
+  let : Algebra R A := f.toAlgebra
   dsimp [RelativelyFinitelyPresented]
   constructor
   · intro hrel A' _ _ q hq hfp
@@ -335,7 +335,7 @@ theorem relativelyFinitelyPresented_iff_surjective_from_finitelyPresented
       simpa [β'] using hβ
     have hcomp : Function.Surjective (q.comp β') := by
       exact hq.comp hβ'
-    letI : Module A' M := Module.compHom M q.toRingHom
+    let : Module A' M := Module.compHom M q.toRingHom
     have hall :=
       (relativelyFinitelyPresented_iff_all_presentations f hf).mp hrel
         n' (q.comp β') hcomp
@@ -348,7 +348,7 @@ theorem relativelyFinitelyPresented_iff_surjective_from_finitelyPresented
       intro r x
       change q (β' r) • x = q (β' r) • x
       rfl
-    letI : Module (MvPolynomial (Fin n') R) M := modPβ
+    let : Module (MvPolynomial (Fin n') R) M := modPβ
     have hall' : @Module.FinitePresentation
         (MvPolynomial (Fin n') R) M _ _ modPβ := by
       rw [← hmodP]
@@ -362,10 +362,9 @@ theorem relativelyFinitelyPresented_iff_surjective_from_finitelyPresented
 theorem relativelyFinitelyPresented.finitePresentation
     {R A M : Type*} [CommRing R] [CommRing A]
     [AddCommGroup M] [Module A M] (f : R →+* A)
-    (hf : RingHom.FiniteType f)
     (hM : RelativelyFinitelyPresented f M) :
     Module.FinitePresentation A M := by
-  letI : Algebra R A := f.toAlgebra
+  let : Algebra R A := f.toAlgebra
   dsimp [RelativelyFinitelyPresented] at hM
   obtain ⟨n, α, hα, hPM⟩ := hM
   exact moduleFinitePresentation_of_surjective α.toRingHom hα hPM

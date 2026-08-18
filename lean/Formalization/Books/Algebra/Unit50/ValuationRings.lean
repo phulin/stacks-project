@@ -175,7 +175,8 @@ theorem directLimit_isValuationRing
     letI : IsDomain (DirectLimit A f) := directLimit_isDomain f
     ValuationRing (DirectLimit A f) := by
   let hDomain : IsDomain (DirectLimit A f) := directLimit_isDomain f
-  exact { toPreValuationRing := directLimit_isPreValuationRing f }
+  exact @ValuationRing.mk (DirectLimit A f) _ hDomain
+    (directLimit_isPreValuationRing f)
 
 /-- The intersection of a valuation subring with a subfield is a valuation
 subring of that subfield. -/
@@ -233,8 +234,8 @@ theorem localizationAtPrime_valuationRing
     {A : Type u} [CommRing A] [IsDomain A] [ValuationRing A]
     (p : Ideal A) [p.IsPrime] :
     ValuationRing (Localization.AtPrime p) := by
-  let hPre : PreValuationRing (Localization.AtPrime p) := by
-    refine { cond' := ?_ }
+  refine { toPreValuationRing := ?_ }
+  · refine { cond' := ?_ }
     intro x y
     obtain ⟨a, s, rfl⟩ := IsLocalization.exists_mk'_eq p.primeCompl x
     obtain ⟨b, t, rfl⟩ := IsLocalization.exists_mk'_eq p.primeCompl y
@@ -259,7 +260,6 @@ theorem localizationAtPrime_valuationRing
         _ = algebraMap A _ b * algebraMap A _ c := by
           rw [IsLocalization.mk'_spec]
         _ = algebraMap A _ a := by rw [← map_mul, hc]
-  exact { toPreValuationRing := hPre }
 
 /- The source also allows an arbitrary localization.  Mathlib's
    `ValuationRing` class requires a domain, so the unrestricted statement is

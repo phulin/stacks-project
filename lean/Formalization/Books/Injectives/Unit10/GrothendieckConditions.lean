@@ -147,7 +147,7 @@ theorem ab5Star_cofilteredLimit_shortExact [Abelian C]
     [HasCofilteredLimits C] [AB5Star C] {J : Type v} [Category.{v} J]
     [IsCofiltered J] (S : ShortComplex (J ⥤ C)) (hS : S.ShortExact) :
     (S.map (lim : (J ⥤ C) ⥤ C)).ShortExact := by
-  simpa using (hS.map_of_exact (lim : (J ⥤ C) ⥤ C))
+  exact hS.map_of_exact (lim : (J ⥤ C) ⥤ C)
 
 /- Cofiltered limits are left exact as soon as they exist, without AB5*. -/
 theorem cofilteredLimit_leftExact {J : Type v} [Category.{v} J] [IsCofiltered J]

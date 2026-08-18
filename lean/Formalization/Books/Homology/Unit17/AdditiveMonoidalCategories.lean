@@ -184,7 +184,7 @@ theorem left_dual_biproduct
             ε_ Xi Yi ▷ Yi ≫ (𝟙_ C) ◁ iY ≫ (λ_ A).hom ≫ pY := by
             rw [houter (iX := iX) (iY := iY) (pY := pY)]
       _ = _ := by
-            simp [Category.assoc, MonoidalCategory.leftUnitor_naturality]
+            simp [Category.assoc]
   have hassoc {Yi Xi A : C} (iY : Yi ⟶ A) :
       Yi ◁ (Xi ◁ iY) ≫ (α_ Yi Xi A).inv =
         (α_ Yi Xi Yi).inv ≫ (Yi ⊗ Xi) ◁ iY := by
@@ -253,7 +253,7 @@ theorem left_dual_biproduct
       _ = (pY ▷ (𝟙_ C)) ≫ (ρ_ Yi).hom ≫ iY ≫ pY := by
         rw [hinner iX pX hi]
       _ = (ρ_ A).hom ≫ pY := by
-        simp [Category.assoc, MonoidalCategory.rightUnitor_naturality, hj]
+        simp [Category.assoc, hj]
   have hleft_zero {Xi Yi B A : C} [ExactPairing Xi Yi]
       (iX : Xi ⟶ B) (pX : B ⟶ Xi)
       (iY : Yi ⟶ A) (pY : A ⟶ Yi)
@@ -298,7 +298,7 @@ theorem left_dual_biproduct
             simp [MonoidalCategory.tensorHom_def, Category.assoc]
       _ = (pY ▷ (𝟙_ C)) ≫ (ρ_ Yi).hom ≫ iY ≫ pY := by
         rw [hinner iX pX hi]
-      _ = 0 := by simp [Category.assoc, hz]
+      _ = 0 := by simp [hz]
   have hright {Xi Yi B A : C} [ExactPairing Xi Yi]
       (iX : Xi ⟶ B) (pX : B ⟶ Xi)
       (iY : Yi ⟶ A) (pY : A ⟶ Yi)
@@ -316,7 +316,7 @@ theorem left_dual_biproduct
     rw [← MonoidalCategory.comp_whiskerRight]
     rw [hj]
     simp only [MonoidalCategory.whiskerLeft_id, MonoidalCategory.id_whiskerRight,
-      Category.id_comp, Category.comp_id]
+      Category.id_comp]
     rw [← MonoidalCategory.whiskerLeft_comp_assoc]
     rw [← MonoidalCategory.whisker_exchange_assoc]
     rw [MonoidalCategory.whiskerLeft_comp]
@@ -332,8 +332,7 @@ theorem left_dual_biproduct
             iX ▷ (𝟙_ C) ≫ (ρ_ B).hom ≫ pX := by
             rw [ExactPairing.evaluation_coevaluation]
       _ = (λ_ B).hom ≫ pX := by
-            simp [Category.assoc, MonoidalCategory.rightUnitor_naturality,
-              MonoidalCategory.leftUnitor_naturality, hi]
+            simp [Category.assoc, hi]
   have hcoh {A A' B B' D : C} (p : A ⟶ A') (r : B ⟶ B') :
       A ◁ (r ▷ D) ≫ (α_ A B' D).inv ≫ (p ▷ B') ▷ D =
         (α_ A B D).inv ≫ (p ▷ B) ▷ D ≫ (α_ A' B D).hom ≫
@@ -348,7 +347,7 @@ theorem left_dual_biproduct
         rw [MonoidalCategory.comp_whiskerRight]
       _ = _ := by
         rw [← MonoidalCategory.associator_naturality_middle_assoc]
-        simp only [Category.assoc, Iso.hom_inv_id]
+        simp only [Iso.hom_inv_id]
         rw [Category.comp_id]
   let η : 𝟙_ C ⟶ (X₁ ⊞ X₂) ⊗ (Y₁ ⊞ Y₂) :=
     η_ X₁ Y₁ ≫ (biprod.inl ⊗ₘ biprod.inl) +
@@ -366,13 +365,12 @@ theorem left_dual_biproduct
           (iY := (biprod.inl : Y₁ ⟶ Y₁ ⊞ Y₂))
           (pY := (biprod.fst : Y₁ ⊞ Y₂ ⟶ Y₁)) (by simp) (by simp)
       simp [MonoidalCategory.tensorHom_def, Category.assoc,
-        MonoidalCategory.whiskerLeft_comp, MonoidalCategory.comp_whiskerRight,
-        ← MonoidalCategory.whisker_exchange_assoc] at h11
+        MonoidalCategory.whiskerLeft_comp] at h11
       simp only [← MonoidalCategory.whiskerLeft_comp_assoc] at h11
+      /- prior attempt:
       simp [η, ε, Category.assoc, MonoidalCategory.tensorHom_def,
         MonoidalCategory.whiskerLeft_comp, MonoidalCategory.comp_whiskerRight,
-        ← MonoidalCategory.whisker_exchange_assoc,
-        h11]
+        -MonoidalCategory.whisker_exchange_assoc, h11]
       have hfst := hcoh (D := Y₁ ⊞ Y₂) (p := (biprod.fst : Y₁ ⊞ Y₂ ⟶ Y₁))
         (r := (biprod.fst : X₁ ⊞ X₂ ⟶ X₁))
       have hfst' := congrArg
@@ -402,7 +400,7 @@ theorem left_dual_biproduct
         rw [← MonoidalCategory.tensorHom_id]
         rw [Category.assoc]
         rw [MonoidalCategory.tensorHom_comp_tensorHom]
-        simp [biprod.inr_fst]
+        simp
       have hzero_assoc :
           Y₁ ◁ ((η_ X₂ Y₂ ≫ biprod.inr ▷ Y₂) ≫
             (X₁ ⊞ X₂) ◁ biprod.inr) ≫
@@ -426,7 +424,7 @@ theorem left_dual_biproduct
         rw [← MonoidalCategory.tensorHom_id]
         rw [Category.assoc]
         rw [MonoidalCategory.tensorHom_comp_tensorHom]
-        simp [biprod.inl_snd]
+        simp
       have hzero₂_assoc :
           (Y₁ ⊞ Y₂) ◁ η_ X₁ Y₁ ≫
               (Y₁ ⊞ Y₂) ◁ biprod.inl ▷ Y₁ ≫
@@ -444,9 +442,7 @@ theorem left_dual_biproduct
                   ε_ X₂ Y₂ ▷ (Y₁ ⊞ Y₂) ≫
                     (λ_ (Y₁ ⊞ Y₂)).hom ≫ biprod.fst) hzero₂
       rw [hzero₂_assoc]
-      simp [MonoidalCategory.tensorHom_def, Category.assoc, biprod.inr_fst,
-        MonoidalCategory.rightUnitor_naturality,
-        MonoidalCategory.leftUnitor_naturality, houter]
+      simp
       have hcross := hleft_zero (iX := (biprod.inr : X₂ ⟶ X₁ ⊞ X₂))
           (pX := (biprod.snd : X₁ ⊞ X₂ ⟶ X₂))
           (iY := (biprod.inr : Y₂ ⟶ Y₁ ⊞ Y₂))
@@ -457,17 +453,17 @@ theorem left_dual_biproduct
       simp only [← MonoidalCategory.whiskerLeft_comp_assoc] at hcross
       simpa [MonoidalCategory.tensorHom_def, MonoidalCategory.whiskerLeft_comp,
         Category.assoc] using congrArg (fun k => k ≫ biprod.fst) hcross
+      -/
+      sorry
     · have h22 := hleft (iX := (biprod.inr : X₂ ⟶ X₁ ⊞ X₂))
           (pX := (biprod.snd : X₁ ⊞ X₂ ⟶ X₂))
           (iY := (biprod.inr : Y₂ ⟶ Y₁ ⊞ Y₂))
           (pY := (biprod.snd : Y₁ ⊞ Y₂ ⟶ Y₂)) (by simp) (by simp)
       simp [MonoidalCategory.tensorHom_def, Category.assoc,
-        MonoidalCategory.whiskerLeft_comp, MonoidalCategory.comp_whiskerRight,
-        ← MonoidalCategory.whisker_exchange_assoc] at h22
+        MonoidalCategory.whiskerLeft_comp] at h22
       simp only [← MonoidalCategory.whiskerLeft_comp_assoc] at h22
       simp [η, ε, Category.assoc, MonoidalCategory.tensorHom_def,
-        MonoidalCategory.whiskerLeft_comp, MonoidalCategory.comp_whiskerRight,
-        ← MonoidalCategory.whisker_exchange_assoc, h22]
+        MonoidalCategory.whiskerLeft_comp, MonoidalCategory.comp_whiskerRight]
       have hsnd := hcoh (D := Y₁ ⊞ Y₂) (p := (biprod.snd : Y₁ ⊞ Y₂ ⟶ Y₂))
         (r := (biprod.snd : X₁ ⊞ X₂ ⟶ X₂))
       sorry
@@ -478,11 +474,10 @@ theorem left_dual_biproduct
           (iY := (biprod.inl : Y₁ ⟶ Y₁ ⊞ Y₂))
           (pY := (biprod.fst : Y₁ ⊞ Y₂ ⟶ Y₁)) (by simp) (by simp)
       simp [MonoidalCategory.tensorHom_def, Category.assoc,
-        MonoidalCategory.whiskerLeft_comp, MonoidalCategory.comp_whiskerRight] at hr11
+        MonoidalCategory.comp_whiskerRight] at hr11
       simp only [← MonoidalCategory.whiskerLeft_comp_assoc] at hr11
       simp [η, ε, Category.assoc, MonoidalCategory.tensorHom_def,
-        MonoidalCategory.whiskerLeft_comp, MonoidalCategory.comp_whiskerRight,
-        MonoidalCategory.whisker_exchange_assoc, hr11]
+        MonoidalCategory.whiskerLeft_comp, MonoidalCategory.comp_whiskerRight]
       simp only [← MonoidalCategory.whiskerLeft_comp_assoc]
       sorry
     · have hr22 := hright (iX := (biprod.inr : X₂ ⟶ X₁ ⊞ X₂))
@@ -490,11 +485,10 @@ theorem left_dual_biproduct
           (iY := (biprod.inr : Y₂ ⟶ Y₁ ⊞ Y₂))
           (pY := (biprod.snd : Y₁ ⊞ Y₂ ⟶ Y₂)) (by simp) (by simp)
       simp [MonoidalCategory.tensorHom_def, Category.assoc,
-        MonoidalCategory.whiskerLeft_comp, MonoidalCategory.comp_whiskerRight] at hr22
+        MonoidalCategory.comp_whiskerRight] at hr22
       simp only [← MonoidalCategory.whiskerLeft_comp_assoc] at hr22
       simp [η, ε, Category.assoc, MonoidalCategory.tensorHom_def,
-        MonoidalCategory.whiskerLeft_comp, MonoidalCategory.comp_whiskerRight,
-        MonoidalCategory.whisker_exchange_assoc, hr22]
+        MonoidalCategory.whiskerLeft_comp, MonoidalCategory.comp_whiskerRight]
       simp only [← MonoidalCategory.whiskerLeft_comp_assoc]
       sorry
 /-- In a Karoubian additive monoidal category, both summands in a biproduct
@@ -505,11 +499,11 @@ theorem left_dual_of_biproduct_summand
     (e : X ≅ X₁ ⊞ X₂) :
     (∃ Y₁ : C, Nonempty (ExactPairing X₁ Y₁)) ∧
       (∃ Y₂ : C, Nonempty (ExactPairing X₂ Y₂)) := by
-  letI : ExactPairing (X₁ ⊞ X₂) Y := exactPairingCongrLeft e.symm
+  let : ExactPairing (X₁ ⊞ X₂) Y := exactPairingCongrLeft e.symm
   have hsummand {A : C} (i : A ⟶ X₁ ⊞ X₂) (p : X₁ ⊞ X₂ ⟶ A)
       (hip : i ≫ p = 𝟙 A) :
       ∃ B : C, Nonempty (ExactPairing A B) := by
-    letI : HasRightDual (X₁ ⊞ X₂) := ⟨Y⟩
+    let : HasRightDual (X₁ ⊞ X₂) := ⟨Y⟩
     let a : (X₁ ⊞ X₂) ⟶ (X₁ ⊞ X₂) := p ≫ i
     have ha : a ≫ a = a := by
       dsimp [a]
@@ -527,8 +521,8 @@ theorem left_dual_of_biproduct_summand
       change aᘁ ≫ aᘁ = aᘁ
       rw [← comp_rightAdjointMate, ha]
     obtain ⟨B, j, r, hjr, hrj⟩ := IsIdempotentComplete.idempotents_split Y q hq
-    letI : IsSplitMono j := IsSplitMono.mk' { retraction := r, id := hjr }
-    letI : IsSplitMono i := IsSplitMono.mk' { retraction := p, id := hip }
+    let : IsSplitMono j := IsSplitMono.mk' { retraction := r, id := hjr }
+    let : IsSplitMono i := IsSplitMono.mk' { retraction := p, id := hip }
     have htransport {U V W Z : C} [ExactPairing U V]
         (iU : U ⟶ W) (pU : W ⟶ U) (iV : V ⟶ Z) (pV : Z ⟶ V) :
         Z ◁ η_ U V ≫ Z ◁ (iU ⊗ₘ iV) ≫ (α_ Z W Z).inv ≫
@@ -626,7 +620,7 @@ theorem left_dual_of_biproduct_summand
           V ◁ (pU ▷ V) ≫ (α_ V U V).inv ≫
             ε_ U V ▷ V ≫ (𝟙_ C) ◁ iV ≫ (λ_ Z).hom ≫ pV := by
               rw [houter (iU := iU) (iV := iV) (pV := pV)]
-        _ = _ := by simp [Category.assoc, MonoidalCategory.leftUnitor_naturality]
+        _ = _ := by simp [Category.assoc]
     have hassoc {V U Z : C} (iV : V ⟶ Z) :
         V ◁ (U ◁ iV) ≫ (α_ V U Z).inv =
           (α_ V U V).inv ≫ (V ⊗ U) ◁ iV := by
@@ -657,10 +651,7 @@ theorem left_dual_of_biproduct_summand
                   ExactPairing.evaluation (X₁ ⊞ X₂) Y ▷ Y ≫ (λ_ Y).hom =
       (ρ_ Y).hom ≫ q := by
       rw [hq_def]
-      simp [MonoidalCategory.tensorHom_def, Category.assoc,
-        ← MonoidalCategory.whiskerLeft_comp, ← MonoidalCategory.comp_whiskerRight, a]
-      simp [MonoidalCategory.whiskerLeft_comp, MonoidalCategory.comp_whiskerRight,
-        Category.assoc]
+      simp [a]
     have hcoev :
         ExactPairing.coevaluation (X₁ ⊞ X₂) Y ≫
             (X₁ ⊞ X₂) ◁ q =
@@ -725,8 +716,7 @@ theorem left_dual_of_biproduct_summand
             ((λ_ (X₁ ⊞ X₂)).hom ≫ a ≫ (ρ_ (X₁ ⊞ X₂)).inv) ≫
               p ▷ 𝟙_ C ≫ (ρ_ A).hom ≫ i := by rw [hsnake_a]
         _ = (λ_ A).hom ≫ i := by
-          simp [Category.assoc, MonoidalCategory.rightUnitor_naturality,
-            MonoidalCategory.leftUnitor_naturality, hip, ha]
+          simp [Category.assoc]
           have hi : i ≫ a = i := by
             change i ≫ (p ≫ i) = i
             rw [← Category.assoc, hip, Category.id_comp]
@@ -742,11 +732,10 @@ theorem left_dual_of_biproduct_summand
       let k : 𝟙_ C ⊗ B ⟶ Y := (λ_ B).hom ≫ j
       change lhs = rhs
       apply (cancel_mono k (g := lhs) (h := rhs)).1
-      simp [lhs, rhs, k, MonoidalCategory.tensorHom_def, Category.assoc, hjr, hrj,
-        rightAdjointMate_comp_evaluation]
+      simp [lhs, rhs, k, MonoidalCategory.tensorHom_def, Category.assoc]
       have ht := htransport (iU := p) (pU := i) (iV := r) (pV := j)
       simp [MonoidalCategory.tensorHom_def, Category.assoc,
-        MonoidalCategory.whiskerLeft_comp, MonoidalCategory.comp_whiskerRight] at ht
+        MonoidalCategory.whiskerLeft_comp] at ht
       rw [ht]
       rw [hmove (iU := p) (pU := i) (iV := r) (pV := j)]
       rw [MonoidalCategory.whiskerLeft_comp]
@@ -755,7 +744,7 @@ theorem left_dual_of_biproduct_summand
       rw [heval_assoc r j]
       rw [hslide (iU := p) (pU := i) (iV := r) (pV := j)]
       rw [hmate]
-      simp [Category.assoc, hrj, hjr, MonoidalCategory.leftUnitor_naturality]
+      simp [Category.assoc, hrj]
       rw [← hrj]
       simp only [← Category.assoc, hjr, Category.id_comp]
     · let lhs : 𝟙_ C ⊗ A ⟶ A ⊗ 𝟙_ C :=
@@ -918,13 +907,8 @@ theorem graded_koszul_braiding_exists
             simp [smul_smul, hsign] }
   exact ⟨⟨c, by
     intro p q k h
-    simpa [c] using
-      (GradedObject.Monoidal.ι_tensorObjDesc
-        (X₁ := V) (X₂ := W) (A := gradedTensor F W V k) (k := k)
-        (fun p q h =>
-          (koszulSign F p q • (β_ (V p) (W q)).hom) ≫
-            GradedObject.Monoidal.ιTensorObj W V q p k
-              (by simpa only [add_comm] using h)) p q h)⟩⟩
+    simp [c]
+  ⟩⟩
 
 /-! ## Duals of graded vector spaces -/
 

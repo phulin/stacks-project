@@ -7,8 +7,11 @@ import Mathlib.FieldTheory.IsAlgClosed.Basic
 import Mathlib.FieldTheory.PurelyInseparable.Basic
 import Mathlib.FieldTheory.Separable
 import Mathlib.LinearAlgebra.FiniteDimensional.Defs
+import Mathlib.LinearAlgebra.TensorProduct.DirectLimit
 import Mathlib.RingTheory.FiniteType
+import Mathlib.RingTheory.Flat.Basic
 import Mathlib.RingTheory.Localization.AtPrime.Basic
+import Mathlib.RingTheory.Localization.BaseChange
 import Mathlib.RingTheory.TensorProduct.Maps
 
 /-!
@@ -69,7 +72,10 @@ theorem isGeometricallyReduced_subalgebra
     {k : Type u} {S : Type v} [Field k] [CommRing S] [Algebra k S]
     (hS : IsGeometricallyReduced k S) :
     ∀ A : Subalgebra k S, IsGeometricallyReduced k A := by
-  sorry
+  intro A K _ _
+  letI : IsReduced (K ⊗[k] S) := hS K
+  exact isReduced_of_injective (Algebra.TensorProduct.map 1 A.val)
+    (Module.Flat.lTensor_preserves_injective_linearMap A.val.toLinearMap Subtype.val_injective)
 
 /-- If every finite-type `k`-subalgebra is geometrically reduced, then so is
 the ambient algebra. -/
@@ -78,7 +84,10 @@ theorem isGeometricallyReduced_of_finiteType_subalgebras
     (hS : ∀ A : Subalgebra k S, Algebra.FiniteType k A →
       IsGeometricallyReduced k A) :
     IsGeometricallyReduced k S := by
-  sorry
+  intro K _ _
+  apply IsReduced.tensorProduct_of_flat_of_forall_fg
+  intro B hB
+  exact (hS B ((Subalgebra.fg_iff_finiteType B).mp hB)) K
 
 /-- A directed colimit of geometrically reduced `k`-algebras is geometrically
 reduced. -/
@@ -90,7 +99,79 @@ theorem isGeometricallyReduced_directLimit
     [DirectedSystem A (f · · ·)]
     (hA : ∀ i, IsGeometricallyReduced k (A i)) :
     IsGeometricallyReduced k (DirectLimit A f) := by
-  sorry
+  classical
+  intro K _ _
+  let fL : ∀ i j, i ≤ j → A i →ₗ[k] A j := fun i j h => (f i j h).toLinearMap
+  letI : DirectedSystem A (fL · · ·) := {
+    map_self := fun {i} x => by
+      simpa [fL] using ((inferInstance : DirectedSystem A (fun i j h => f i j h)).map_self x)
+    map_map := fun {k j i} hij hjk x => by
+      simpa [fL] using ((inferInstance : DirectedSystem A (fun i j h => f i j h)).map_map hij hjk x) }
+  let ea : Module.DirectLimit A fL ≃ₗ[k] DirectLimit A f :=
+    Module.DirectLimit.linearEquiv (R := k) (ι := ι) (G := A) fL
+  let e := TensorProduct.directLimitRight fL K
+  let et := TensorProduct.congr (LinearEquiv.refl k K) ea
+  let F := e.symm.trans et
+  let φ : ∀ i, (K ⊗[k] A i) →ₐ[K] (K ⊗[k] DirectLimit A f) :=
+    fun i => Algebra.TensorProduct.map 1 (DirectLimit.Algebra.of A f i)
+  have hφ : ∀ i y,
+      F.symm (φ i y) = Module.DirectLimit.of k ι (fun i => K ⊗[k] A i)
+        (fun i j h => LinearMap.lTensor K (fL i j h)) i y := by
+    intro i y
+    refine y.induction_on ?_ ?_ ?_
+    · simp [F, et, e, φ]
+    · intro a b
+      have hbe : ea.symm (DirectLimit.Algebra.of A f i b) =
+          Module.DirectLimit.of k ι A fL i b := by
+        rfl
+      change e (a ⊗ₜ[k] ea.symm (DirectLimit.Algebra.of A f i b)) = _
+      rw [hbe]
+      simp [e]
+    · intro x y hx hy
+      rw [map_add, map_add, hx, hy, map_add]
+  have hφf : ∀ i j (hij : i ≤ j) (y : K ⊗[k] A i),
+      φ j (Algebra.TensorProduct.map (AlgHom.id K K) (f i j hij) y) = φ i y := by
+    intro i j hij y
+    refine y.induction_on ?_ ?_ ?_
+    · simp [φ]
+    · intro a b
+      simp [φ, DirectLimit.Algebra.of_f]
+    · intro x y hx hy
+      rw [map_add, map_add, hx, hy]
+      exact (map_add (φ i) x y).symm
+  have hrep : ∀ x : K ⊗[k] DirectLimit A f, ∃ i y, φ i y = x := by
+    intro x
+    refine x.induction_on ?_ ?_ ?_
+    · let i := Classical.arbitrary ι
+      exact ⟨i, 0, by simp [φ]⟩
+    · intro a b
+      obtain ⟨i, b, hb⟩ := DirectLimit.exists_eq_mk f b
+      refine ⟨i, a ⊗ₜ[k] b, ?_⟩
+      simp [φ, hb]
+    · rintro x y ⟨i, xi, hxi⟩ ⟨j, yj, hyj⟩
+      obtain ⟨l, hil, hjl⟩ := exists_ge_ge i j
+      refine ⟨l,
+        Algebra.TensorProduct.map (AlgHom.id K K) (f i l hil) xi +
+          Algebra.TensorProduct.map (AlgHom.id K K) (f j l hjl) yj, ?_⟩
+      rw [map_add, hφf, hφf, hxi, hyj]
+  constructor
+  intro x hx
+  obtain ⟨i, y, rfl⟩ := hrep x
+  obtain ⟨n, hn⟩ := hx
+  have hzero : φ i (y ^ n) = 0 := by
+    rw [map_pow]
+    exact hn
+  have hdlzero := congrArg F.symm hzero
+  rw [hφ i (y ^ n)] at hdlzero
+  obtain ⟨j, hij, hjy⟩ := Module.DirectLimit.of.zero_exact hdlzero
+  letI : IsReduced (K ⊗[k] A j) := hA j K
+  let g : (K ⊗[k] A i) →ₐ[K] (K ⊗[k] A j) :=
+    Algebra.TensorProduct.map (AlgHom.id K K) (f i j hij)
+  have hpow : (g y) ^ n = 0 := by
+    rw [← map_pow]
+    exact hjy
+  have hyj : g y = 0 := IsReduced.eq_zero _ ⟨n, hpow⟩
+  rw [← hφf i j hij y, hyj, map_zero]
 
 /-- Localizing a geometrically reduced algebra preserves geometric
 reducedness. -/
@@ -98,7 +179,15 @@ theorem isGeometricallyReduced_localization
     {k : Type u} {R : Type v} [Field k] [CommRing R] [Algebra k R]
     (hR : IsGeometricallyReduced k R) (M : Submonoid R) :
     IsGeometricallyReduced k (Localization M) := by
-  sorry
+  intro K _ _
+  letI : IsReduced (K ⊗[k] R) := hR K
+  let M' : Submonoid (K ⊗[k] R) :=
+    M.map (Algebra.TensorProduct.includeRight (R := k) (A := K))
+  letI : IsReduced (Localization M') := inferInstance
+  let e : (K ⊗[k] Localization M) ≃ₐ[K] Localization M' :=
+    IsLocalization.tensorProductEquivOfMapIncludeRight k K M (Localization M)
+      (Localization M')
+  exact isReduced_of_injective e.toAlgHom e.injective
 
 /-- Polynomial extension of a geometrically reduced algebra is geometrically
 reduced. -/

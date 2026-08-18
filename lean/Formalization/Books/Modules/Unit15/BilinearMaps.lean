@@ -238,11 +238,1935 @@ def IsSectionwiseBilinear {X : TopCat.{v}}
       (H.val.obj (op U) : Type v),
     ∀ x y, g x y = sectionMap f U x y
 
+private theorem pretest_product_sections_first {X : TopCat.{v}}
+    {O : RingSheaf.{v, v} X} (F G : Mod O) (U : Opens X)
+    (s : (F.val.obj (op U) : Type v))
+    (t : (G.val.obj (op U) : Type v)) :
+    (limit.π (pair (moduleSetSheaf F) (moduleSetSheaf G)) (Discrete.mk (WalkingPair.left))).hom.app
+        (op U)
+        ((sheafProductSectionsEquiv (moduleSetSheaf F) (moduleSetSheaf G) U).symm (s, t)) = s := by
+  let e₁ := (preservesLimitIso (TopCat.Sheaf.forget (Type v) X)
+    (pair (moduleSetSheaf F) (moduleSetSheaf G))).app (op U)
+  let e₁' := HasLimit.isoOfNatIso
+    ((Functor.isoWhiskerRight
+        (Discrete.natIsoFunctor
+          (F := pair (moduleSetSheaf F) (moduleSetSheaf G)))
+        (TopCat.Sheaf.forget (Type v) X)).trans
+      (Discrete.compNatIsoDiscrete
+        (fun j : WalkingPair =>
+          (pair (moduleSetSheaf F) (moduleSetSheaf G)).obj (Discrete.mk j))
+        (TopCat.Sheaf.forget (Type v) X)))
+  let e₂ := preservesLimitIso
+    ((evaluation ((Opens X)ᵒᵖ) (Type v)).obj (op U))
+    (Discrete.functor ((TopCat.Sheaf.forget (Type v) X).obj ∘ fun j : WalkingPair =>
+      (pair (moduleSetSheaf F) (moduleSetSheaf G)).obj (Discrete.mk j)))
+  let e₃ := HasLimit.isoOfNatIso (Discrete.compNatIsoDiscrete
+    (fun j : WalkingPair =>
+      (TopCat.Sheaf.forget (Type v) X).obj
+        ((pair (moduleSetSheaf F) (moduleSetSheaf G)).obj (Discrete.mk j)))
+    ((evaluation ((Opens X)ᵒᵖ) (Type v)).obj (op U)))
+  let e₄ := (Types.productIso (fun j : WalkingPair =>
+    ((evaluation ((Opens X)ᵒᵖ) (Type v)).obj (op U)).obj
+      ((TopCat.Sheaf.forget (Type v) X).obj
+        ((pair (moduleSetSheaf F) (moduleSetSheaf G)).obj (Discrete.mk j))))).toEquiv
+  let e₅ : (∀ j : WalkingPair,
+      ((evaluation ((Opens X)ᵒᵖ) (Type v)).obj (op U)).obj
+        ((TopCat.Sheaf.forget (Type v) X).obj
+          ((pair (moduleSetSheaf F) (moduleSetSheaf G)).obj (Discrete.mk j)))) ≃
+      (F.val.obj (op U) : Type v) × (G.val.obj (op U) : Type v) := {
+    toFun := fun s => (s WalkingPair.left, s WalkingPair.right)
+    invFun := fun p j => match j with
+      | WalkingPair.left => p.1
+      | WalkingPair.right => p.2
+    left_inv := by
+      intro s
+      funext j
+      cases j <;> rfl
+    right_inv := by
+      intro p
+      rcases p with ⟨p, q⟩
+      rfl }
+  let e := e₁.toEquiv.trans ((e₁'.app (op U)).toEquiv.trans
+    (e₂.toEquiv.trans (e₃.toEquiv.trans (e₄.trans e₅))))
+  have hcoord (q : (((TopCat.Sheaf.forget (Type v) X).obj
+      (limit (pair (moduleSetSheaf F) (moduleSetSheaf G)))).obj (op U) : Type v)) :
+      (e q).1 =
+        (limit.π (pair (moduleSetSheaf F) (moduleSetSheaf G))
+          (Discrete.mk WalkingPair.left)).hom.app (op U) q := by
+    change ((Types.productIso _).hom ≫ (↾fun s => s WalkingPair.left)) (_ ) = _
+    rw [Types.productIso_hom_comp_eval]
+    change
+      ((e₃.hom ≫ limit.π
+        (Discrete.functor (fun j : WalkingPair =>
+          ((evaluation ((Opens X)ᵒᵖ) (Type v)).obj (op U)).obj
+            ((TopCat.Sheaf.forget (Type v) X).obj
+              ((pair (moduleSetSheaf F) (moduleSetSheaf G)).obj
+                (Discrete.mk j)))))
+        (Discrete.mk WalkingPair.left))
+        (e₂.hom ((e₁'.app (op U)).hom (e₁.hom q)))) = _
+    have h₃ := HasLimit.isoOfNatIso_hom_π
+      (Discrete.compNatIsoDiscrete
+        (fun j : WalkingPair =>
+          (TopCat.Sheaf.forget (Type v) X).obj
+            ((pair (moduleSetSheaf F) (moduleSetSheaf G)).obj (Discrete.mk j)))
+        ((evaluation ((Opens X)ᵒᵖ) (Type v)).obj (op U)))
+      (Discrete.mk WalkingPair.left)
+    have h₃' :
+        e₃.hom ≫ limit.π
+            (Discrete.functor (fun j : WalkingPair =>
+              ((evaluation ((Opens X)ᵒᵖ) (Type v)).obj (op U)).obj
+                ((TopCat.Sheaf.forget (Type v) X).obj
+                  ((pair (moduleSetSheaf F) (moduleSetSheaf G)).obj
+                    (Discrete.mk j)))))
+            (Discrete.mk WalkingPair.left) =
+          limit.π
+              (Discrete.functor (fun j : WalkingPair =>
+                (TopCat.Sheaf.forget (Type v) X).obj
+                  ((pair (moduleSetSheaf F) (moduleSetSheaf G)).obj
+                    (Discrete.mk j))) ⋙
+                ((evaluation ((Opens X)ᵒᵖ) (Type v)).obj (op U)))
+              (Discrete.mk WalkingPair.left) ≫
+            (Discrete.compNatIsoDiscrete
+                (fun j : WalkingPair =>
+                  (TopCat.Sheaf.forget (Type v) X).obj
+                    ((pair (moduleSetSheaf F) (moduleSetSheaf G)).obj
+                      (Discrete.mk j)))
+                ((evaluation ((Opens X)ᵒᵖ) (Type v)).obj (op U))).hom.app
+              (Discrete.mk WalkingPair.left) := by
+      simpa [e₃, Function.comp_def] using h₃
+    rw [h₃']
+    have h₂ := preservesLimitIso_hom_π
+      ((evaluation ((Opens X)ᵒᵖ) (Type v)).obj (op U))
+      (Discrete.functor (fun j : WalkingPair =>
+        (TopCat.Sheaf.forget (Type v) X).obj
+          ((pair (moduleSetSheaf F) (moduleSetSheaf G)).obj (Discrete.mk j))))
+      (Discrete.mk WalkingPair.left)
+    have h₂' :
+        e₂.hom ≫
+            limit.π
+              (Discrete.functor (fun j : WalkingPair =>
+                (TopCat.Sheaf.forget (Type v) X).obj
+                  ((pair (moduleSetSheaf F) (moduleSetSheaf G)).obj
+                    (Discrete.mk j))) ⋙
+                ((evaluation ((Opens X)ᵒᵖ) (Type v)).obj (op U)))
+              (Discrete.mk WalkingPair.left) =
+          ((evaluation ((Opens X)ᵒᵖ) (Type v)).obj (op U)).map
+            (limit.π
+              (Discrete.functor (fun j : WalkingPair =>
+                (TopCat.Sheaf.forget (Type v) X).obj
+                  ((pair (moduleSetSheaf F) (moduleSetSheaf G)).obj
+                    (Discrete.mk j))))
+              (Discrete.mk WalkingPair.left)) := by
+      simpa [e₂, Function.comp_def] using h₂
+    have h₁ := HasLimit.isoOfNatIso_hom_π
+      ((Functor.isoWhiskerRight
+          (Discrete.natIsoFunctor
+            (F := pair (moduleSetSheaf F) (moduleSetSheaf G)))
+          (TopCat.Sheaf.forget (Type v) X)).trans
+        (Discrete.compNatIsoDiscrete
+          (fun j : WalkingPair =>
+            (pair (moduleSetSheaf F) (moduleSetSheaf G)).obj (Discrete.mk j))
+      (TopCat.Sheaf.forget (Type v) X)))
+      (Discrete.mk WalkingPair.left)
+    let c₁ :=
+      (Functor.isoWhiskerRight
+          (Discrete.natIsoFunctor
+            (F := pair (moduleSetSheaf F) (moduleSetSheaf G)))
+          (TopCat.Sheaf.forget (Type v) X)).trans
+        (Discrete.compNatIsoDiscrete
+          (fun j : WalkingPair =>
+            (pair (moduleSetSheaf F) (moduleSetSheaf G)).obj (Discrete.mk j))
+          (TopCat.Sheaf.forget (Type v) X))
+    have h₁' :
+        (e₁'.app (op U)).hom ≫
+            (limit.π
+              (Discrete.functor (fun j : WalkingPair =>
+                (TopCat.Sheaf.forget (Type v) X).obj
+                  ((pair (moduleSetSheaf F) (moduleSetSheaf G)).obj
+                    (Discrete.mk j))))
+              (Discrete.mk WalkingPair.left)).app (op U) =
+          (limit.π
+              (pair (moduleSetSheaf F) (moduleSetSheaf G) ⋙
+                TopCat.Sheaf.forget (Type v) X)
+              (Discrete.mk WalkingPair.left)).app (op U) ≫
+            (c₁.hom.app (Discrete.mk WalkingPair.left)).app (op U) := by
+      have h₁eval := congrArg (fun k => k.app (op U)) h₁
+      convert h₁eval using 1 <;>
+        simp [e₁', Function.comp_def, Discrete.compNatIsoDiscrete,
+          Discrete.natIso, NatIso.ofComponents, NatTrans.comp_app,
+          Functor.comp_obj] <;>
+        try rfl
+    have h₀ := preservesLimitIso_hom_π
+      (TopCat.Sheaf.forget (Type v) X)
+      (pair (moduleSetSheaf F) (moduleSetSheaf G))
+      (Discrete.mk WalkingPair.left)
+    have h₀' :
+        e₁.hom ≫
+            (limit.π
+              (pair (moduleSetSheaf F) (moduleSetSheaf G) ⋙
+                TopCat.Sheaf.forget (Type v) X)
+              (Discrete.mk WalkingPair.left)).app (op U) =
+          ((TopCat.Sheaf.forget (Type v) X).map
+            (limit.π (pair (moduleSetSheaf F) (moduleSetSheaf G))
+              (Discrete.mk WalkingPair.left))).app (op U) := by
+      have h₀eval := congrArg (fun k => k.app (op U)) h₀
+      rw [NatTrans.comp_app] at h₀eval
+      simpa [e₁] using h₀eval
+    have h_arrow :
+        e₁.hom ≫ (e₁'.app (op U)).hom ≫ e₂.hom ≫ e₃.hom ≫
+            limit.π
+                (Discrete.functor (fun j : WalkingPair =>
+                  ((evaluation ((Opens X)ᵒᵖ) (Type v)).obj (op U)).obj
+                    ((TopCat.Sheaf.forget (Type v) X).obj
+                      ((pair (moduleSetSheaf F) (moduleSetSheaf G)).obj
+                        (Discrete.mk j)))))
+                (Discrete.mk WalkingPair.left) =
+          (limit.π (pair (moduleSetSheaf F) (moduleSetSheaf G))
+            (Discrete.mk WalkingPair.left)).hom.app (op U) := by
+      change
+        (((e₁.hom ≫ (e₁'.app (op U)).hom) ≫ e₂.hom) ≫
+          (e₃.hom ≫
+            limit.π
+              (Discrete.functor (fun j : WalkingPair =>
+                ((evaluation ((Opens X)ᵒᵖ) (Type v)).obj (op U)).obj
+                  ((TopCat.Sheaf.forget (Type v) X).obj
+                    ((pair (moduleSetSheaf F) (moduleSetSheaf G)).obj
+                      (Discrete.mk j)))))
+              (Discrete.mk WalkingPair.left))) =
+          (limit.π (pair (moduleSetSheaf F) (moduleSetSheaf G))
+            (Discrete.mk WalkingPair.left)).hom.app (op U)
+      simp only [Category.assoc]
+      rw [h₃']
+      rw [← Category.assoc e₂.hom]
+      rw [h₂']
+      have h_eval :
+          ((evaluation ((Opens X)ᵒᵖ) (Type v)).obj (op U)).map
+              (limit.π
+                (Discrete.functor (fun j : WalkingPair =>
+                  (TopCat.Sheaf.forget (Type v) X).obj
+                    ((pair (moduleSetSheaf F) (moduleSetSheaf G)).obj
+                      (Discrete.mk j))))
+                (Discrete.mk WalkingPair.left)) =
+            (limit.π
+                (Discrete.functor (fun j : WalkingPair =>
+                  (TopCat.Sheaf.forget (Type v) X).obj
+                    ((pair (moduleSetSheaf F) (moduleSetSheaf G)).obj
+                      (Discrete.mk j))))
+                (Discrete.mk WalkingPair.left)).app (op U) := by
+        rfl
+      rw [h_eval]
+      rw [← Category.assoc (e₁'.app (op U)).hom]
+      rw [h₁']
+      simp only [Category.assoc]
+      rw [← Category.assoc e₁.hom]
+      rw [h₀']
+      have hforget :
+          (TopCat.Sheaf.forget (Type v) X).map
+              (limit.π (pair (moduleSetSheaf F) (moduleSetSheaf G))
+                (Discrete.mk WalkingPair.left)) =
+            (limit.π (pair (moduleSetSheaf F) (moduleSetSheaf G))
+              (Discrete.mk WalkingPair.left)).hom := by
+        rfl
+      rw [hforget]
+      simp only [c₁, Discrete.compNatIsoDiscrete, Discrete.natIso,
+        NatIso.ofComponents]
+      rfl
+    have h_arrow' := h_arrow
+    rw [h₃'] at h_arrow'
+    have hq := congrArg (fun k => k q) h_arrow'
+    change
+      (limit.π
+          (Discrete.functor (fun j : WalkingPair =>
+            (TopCat.Sheaf.forget (Type v) X).obj
+              ((pair (moduleSetSheaf F) (moduleSetSheaf G)).obj
+                (Discrete.mk j))) ⋙
+            ((evaluation ((Opens X)ᵒᵖ) (Type v)).obj (op U)))
+          (Discrete.mk WalkingPair.left) ≫
+        (Discrete.compNatIsoDiscrete
+          (fun j : WalkingPair =>
+            (TopCat.Sheaf.forget (Type v) X).obj
+              ((pair (moduleSetSheaf F) (moduleSetSheaf G)).obj
+                (Discrete.mk j)))
+          ((evaluation ((Opens X)ᵒᵖ) (Type v)).obj (op U))).hom.app
+          (Discrete.mk WalkingPair.left))
+        (e₂.hom ((e₁'.app (op U)).hom (e₁.hom q))) =
+      (limit.π (pair (moduleSetSheaf F) (moduleSetSheaf G))
+        (Discrete.mk WalkingPair.left)).hom.app (op U) q at hq
+    exact hq
+  have hp := congrArg Prod.fst (e.apply_symm_apply (s, t))
+  exact hcoord _ |>.symm.trans hp
+
+
+private theorem pretest_product_sections_second {X : TopCat.{v}}
+    {O : RingSheaf.{v, v} X} (F G : Mod O) (U : Opens X)
+    (s : (F.val.obj (op U) : Type v))
+    (t : (G.val.obj (op U) : Type v)) :
+    (limit.π (pair (moduleSetSheaf F) (moduleSetSheaf G))
+      (Discrete.mk WalkingPair.right)).hom.app (op U)
+      ((sheafProductSectionsEquiv (moduleSetSheaf F) (moduleSetSheaf G) U).symm
+        (s, t)) = t := by
+  let e₁ := (preservesLimitIso (TopCat.Sheaf.forget (Type v) X)
+    (pair (moduleSetSheaf F) (moduleSetSheaf G))).app (op U)
+  let e₁' := HasLimit.isoOfNatIso
+    ((Functor.isoWhiskerRight
+        (Discrete.natIsoFunctor
+          (F := pair (moduleSetSheaf F) (moduleSetSheaf G)))
+        (TopCat.Sheaf.forget (Type v) X)).trans
+      (Discrete.compNatIsoDiscrete
+        (fun j : WalkingPair =>
+          (pair (moduleSetSheaf F) (moduleSetSheaf G)).obj (Discrete.mk j))
+        (TopCat.Sheaf.forget (Type v) X)))
+  let e₂ := preservesLimitIso
+    ((evaluation ((Opens X)ᵒᵖ) (Type v)).obj (op U))
+    (Discrete.functor ((TopCat.Sheaf.forget (Type v) X).obj ∘ fun j : WalkingPair =>
+      (pair (moduleSetSheaf F) (moduleSetSheaf G)).obj (Discrete.mk j)))
+  let e₃ := HasLimit.isoOfNatIso (Discrete.compNatIsoDiscrete
+    (fun j : WalkingPair =>
+      (TopCat.Sheaf.forget (Type v) X).obj
+        ((pair (moduleSetSheaf F) (moduleSetSheaf G)).obj (Discrete.mk j)))
+    ((evaluation ((Opens X)ᵒᵖ) (Type v)).obj (op U)))
+  let e₄ := (Types.productIso (fun j : WalkingPair =>
+    ((evaluation ((Opens X)ᵒᵖ) (Type v)).obj (op U)).obj
+      ((TopCat.Sheaf.forget (Type v) X).obj
+        ((pair (moduleSetSheaf F) (moduleSetSheaf G)).obj (Discrete.mk j))))).toEquiv
+  let e₅ : (∀ j : WalkingPair,
+      ((evaluation ((Opens X)ᵒᵖ) (Type v)).obj (op U)).obj
+        ((TopCat.Sheaf.forget (Type v) X).obj
+          ((pair (moduleSetSheaf F) (moduleSetSheaf G)).obj (Discrete.mk j)))) ≃
+      (F.val.obj (op U) : Type v) × (G.val.obj (op U) : Type v) := {
+    toFun := fun s => (s WalkingPair.left, s WalkingPair.right)
+    invFun := fun p j => match j with
+      | WalkingPair.left => p.1
+      | WalkingPair.right => p.2
+    left_inv := by
+      intro s
+      funext j
+      cases j <;> rfl
+    right_inv := by
+      intro p
+      rcases p with ⟨p, q⟩
+      rfl }
+  let e := e₁.toEquiv.trans ((e₁'.app (op U)).toEquiv.trans
+    (e₂.toEquiv.trans (e₃.toEquiv.trans (e₄.trans e₅))))
+  have hcoord (q : (((TopCat.Sheaf.forget (Type v) X).obj
+      (limit (pair (moduleSetSheaf F) (moduleSetSheaf G)))).obj (op U) : Type v)) :
+      (e q).2 =
+        (limit.π (pair (moduleSetSheaf F) (moduleSetSheaf G))
+          (Discrete.mk WalkingPair.right)).hom.app (op U) q := by
+    change ((Types.productIso _).hom ≫ (↾fun s => s WalkingPair.right)) (_ ) = _
+    rw [Types.productIso_hom_comp_eval]
+    change
+      ((e₃.hom ≫ limit.π
+        (Discrete.functor (fun j : WalkingPair =>
+          ((evaluation ((Opens X)ᵒᵖ) (Type v)).obj (op U)).obj
+            ((TopCat.Sheaf.forget (Type v) X).obj
+              ((pair (moduleSetSheaf F) (moduleSetSheaf G)).obj
+                (Discrete.mk j)))))
+        (Discrete.mk WalkingPair.right))
+        (e₂.hom ((e₁'.app (op U)).hom (e₁.hom q)))) = _
+    have h₃ := HasLimit.isoOfNatIso_hom_π
+      (Discrete.compNatIsoDiscrete
+        (fun j : WalkingPair =>
+          (TopCat.Sheaf.forget (Type v) X).obj
+            ((pair (moduleSetSheaf F) (moduleSetSheaf G)).obj (Discrete.mk j)))
+        ((evaluation ((Opens X)ᵒᵖ) (Type v)).obj (op U)))
+      (Discrete.mk WalkingPair.right)
+    have h₃' :
+        e₃.hom ≫ limit.π
+            (Discrete.functor (fun j : WalkingPair =>
+              ((evaluation ((Opens X)ᵒᵖ) (Type v)).obj (op U)).obj
+                ((TopCat.Sheaf.forget (Type v) X).obj
+                  ((pair (moduleSetSheaf F) (moduleSetSheaf G)).obj
+                    (Discrete.mk j)))))
+            (Discrete.mk WalkingPair.right) =
+          limit.π
+              (Discrete.functor (fun j : WalkingPair =>
+                (TopCat.Sheaf.forget (Type v) X).obj
+                  ((pair (moduleSetSheaf F) (moduleSetSheaf G)).obj
+                    (Discrete.mk j))) ⋙
+                ((evaluation ((Opens X)ᵒᵖ) (Type v)).obj (op U)))
+              (Discrete.mk WalkingPair.right) ≫
+            (Discrete.compNatIsoDiscrete
+                (fun j : WalkingPair =>
+                  (TopCat.Sheaf.forget (Type v) X).obj
+                    ((pair (moduleSetSheaf F) (moduleSetSheaf G)).obj
+                      (Discrete.mk j)))
+                ((evaluation ((Opens X)ᵒᵖ) (Type v)).obj (op U))).hom.app
+              (Discrete.mk WalkingPair.right) := by
+      simpa [e₃, Function.comp_def] using h₃
+    rw [h₃']
+    have h₂ := preservesLimitIso_hom_π
+      ((evaluation ((Opens X)ᵒᵖ) (Type v)).obj (op U))
+      (Discrete.functor (fun j : WalkingPair =>
+        (TopCat.Sheaf.forget (Type v) X).obj
+          ((pair (moduleSetSheaf F) (moduleSetSheaf G)).obj (Discrete.mk j))))
+      (Discrete.mk WalkingPair.right)
+    have h₂' :
+        e₂.hom ≫
+            limit.π
+              (Discrete.functor (fun j : WalkingPair =>
+                (TopCat.Sheaf.forget (Type v) X).obj
+                  ((pair (moduleSetSheaf F) (moduleSetSheaf G)).obj
+                    (Discrete.mk j))) ⋙
+                ((evaluation ((Opens X)ᵒᵖ) (Type v)).obj (op U)))
+              (Discrete.mk WalkingPair.right) =
+          ((evaluation ((Opens X)ᵒᵖ) (Type v)).obj (op U)).map
+            (limit.π
+              (Discrete.functor (fun j : WalkingPair =>
+                (TopCat.Sheaf.forget (Type v) X).obj
+                  ((pair (moduleSetSheaf F) (moduleSetSheaf G)).obj
+                    (Discrete.mk j))))
+              (Discrete.mk WalkingPair.right)) := by
+      simpa [e₂, Function.comp_def] using h₂
+    have h₁ := HasLimit.isoOfNatIso_hom_π
+      ((Functor.isoWhiskerRight
+          (Discrete.natIsoFunctor
+            (F := pair (moduleSetSheaf F) (moduleSetSheaf G)))
+          (TopCat.Sheaf.forget (Type v) X)).trans
+        (Discrete.compNatIsoDiscrete
+          (fun j : WalkingPair =>
+            (pair (moduleSetSheaf F) (moduleSetSheaf G)).obj (Discrete.mk j))
+          (TopCat.Sheaf.forget (Type v) X)))
+      (Discrete.mk WalkingPair.right)
+    let c₁ :=
+      (Functor.isoWhiskerRight
+          (Discrete.natIsoFunctor
+            (F := pair (moduleSetSheaf F) (moduleSetSheaf G)))
+          (TopCat.Sheaf.forget (Type v) X)).trans
+        (Discrete.compNatIsoDiscrete
+          (fun j : WalkingPair =>
+            (pair (moduleSetSheaf F) (moduleSetSheaf G)).obj (Discrete.mk j))
+          (TopCat.Sheaf.forget (Type v) X))
+    have h₁' :
+        (e₁'.app (op U)).hom ≫
+            (limit.π
+              (Discrete.functor (fun j : WalkingPair =>
+                (TopCat.Sheaf.forget (Type v) X).obj
+                  ((pair (moduleSetSheaf F) (moduleSetSheaf G)).obj
+                    (Discrete.mk j))))
+              (Discrete.mk WalkingPair.right)).app (op U) =
+          (limit.π
+              (pair (moduleSetSheaf F) (moduleSetSheaf G) ⋙
+                TopCat.Sheaf.forget (Type v) X)
+              (Discrete.mk WalkingPair.right)).app (op U) ≫
+            (c₁.hom.app (Discrete.mk WalkingPair.right)).app (op U) := by
+      have h₁eval := congrArg (fun k => k.app (op U)) h₁
+      convert h₁eval using 1 <;>
+        simp [e₁', Function.comp_def, Discrete.compNatIsoDiscrete,
+          Discrete.natIso, NatIso.ofComponents, NatTrans.comp_app,
+          Functor.comp_obj] <;>
+        try rfl
+    have h₀ := preservesLimitIso_hom_π
+      (TopCat.Sheaf.forget (Type v) X)
+      (pair (moduleSetSheaf F) (moduleSetSheaf G))
+      (Discrete.mk WalkingPair.right)
+    have h₀' :
+        e₁.hom ≫
+            (limit.π
+              (pair (moduleSetSheaf F) (moduleSetSheaf G) ⋙
+                TopCat.Sheaf.forget (Type v) X)
+              (Discrete.mk WalkingPair.right)).app (op U) =
+          ((TopCat.Sheaf.forget (Type v) X).map
+            (limit.π (pair (moduleSetSheaf F) (moduleSetSheaf G))
+              (Discrete.mk WalkingPair.right))).app (op U) := by
+      have h₀eval := congrArg (fun k => k.app (op U)) h₀
+      rw [NatTrans.comp_app] at h₀eval
+      simpa [e₁] using h₀eval
+    have h_arrow :
+        e₁.hom ≫ (e₁'.app (op U)).hom ≫ e₂.hom ≫ e₃.hom ≫
+            limit.π
+                (Discrete.functor (fun j : WalkingPair =>
+                  ((evaluation ((Opens X)ᵒᵖ) (Type v)).obj (op U)).obj
+                    ((TopCat.Sheaf.forget (Type v) X).obj
+                      ((pair (moduleSetSheaf F) (moduleSetSheaf G)).obj
+                        (Discrete.mk j)))))
+                (Discrete.mk WalkingPair.right) =
+          (limit.π (pair (moduleSetSheaf F) (moduleSetSheaf G))
+            (Discrete.mk WalkingPair.right)).hom.app (op U) := by
+      change
+        (((e₁.hom ≫ (e₁'.app (op U)).hom) ≫ e₂.hom) ≫
+          (e₃.hom ≫
+            limit.π
+              (Discrete.functor (fun j : WalkingPair =>
+                ((evaluation ((Opens X)ᵒᵖ) (Type v)).obj (op U)).obj
+                  ((TopCat.Sheaf.forget (Type v) X).obj
+                    ((pair (moduleSetSheaf F) (moduleSetSheaf G)).obj
+                      (Discrete.mk j)))))
+              (Discrete.mk WalkingPair.right))) =
+          (limit.π (pair (moduleSetSheaf F) (moduleSetSheaf G))
+            (Discrete.mk WalkingPair.right)).hom.app (op U)
+      simp only [Category.assoc]
+      rw [h₃']
+      rw [← Category.assoc e₂.hom]
+      rw [h₂']
+      have h_eval :
+          ((evaluation ((Opens X)ᵒᵖ) (Type v)).obj (op U)).map
+              (limit.π
+                (Discrete.functor (fun j : WalkingPair =>
+                  (TopCat.Sheaf.forget (Type v) X).obj
+                    ((pair (moduleSetSheaf F) (moduleSetSheaf G)).obj
+                      (Discrete.mk j))))
+                (Discrete.mk WalkingPair.right)) =
+            (limit.π
+                (Discrete.functor (fun j : WalkingPair =>
+                  (TopCat.Sheaf.forget (Type v) X).obj
+                    ((pair (moduleSetSheaf F) (moduleSetSheaf G)).obj
+                      (Discrete.mk j))))
+                (Discrete.mk WalkingPair.right)).app (op U) := by
+        rfl
+      rw [h_eval]
+      rw [← Category.assoc (e₁'.app (op U)).hom]
+      rw [h₁']
+      simp only [Category.assoc]
+      rw [← Category.assoc e₁.hom]
+      rw [h₀']
+      have hforget :
+          (TopCat.Sheaf.forget (Type v) X).map
+              (limit.π (pair (moduleSetSheaf F) (moduleSetSheaf G))
+                (Discrete.mk WalkingPair.right)) =
+            (limit.π (pair (moduleSetSheaf F) (moduleSetSheaf G))
+              (Discrete.mk WalkingPair.right)).hom := by
+        rfl
+      rw [hforget]
+      simp only [c₁, Discrete.compNatIsoDiscrete, Discrete.natIso,
+        NatIso.ofComponents]
+      rfl
+    have h_arrow' := h_arrow
+    rw [h₃'] at h_arrow'
+    have hq := congrArg (fun k => k q) h_arrow'
+    change
+      (limit.π
+          (Discrete.functor (fun j : WalkingPair =>
+            (TopCat.Sheaf.forget (Type v) X).obj
+              ((pair (moduleSetSheaf F) (moduleSetSheaf G)).obj
+                (Discrete.mk j))) ⋙
+            ((evaluation ((Opens X)ᵒᵖ) (Type v)).obj (op U)))
+          (Discrete.mk WalkingPair.right) ≫
+        (Discrete.compNatIsoDiscrete
+          (fun j : WalkingPair =>
+            (TopCat.Sheaf.forget (Type v) X).obj
+              ((pair (moduleSetSheaf F) (moduleSetSheaf G)).obj
+                (Discrete.mk j)))
+          ((evaluation ((Opens X)ᵒᵖ) (Type v)).obj (op U))).hom.app
+          (Discrete.mk WalkingPair.right))
+        (e₂.hom ((e₁'.app (op U)).hom (e₁.hom q))) =
+      (limit.π (pair (moduleSetSheaf F) (moduleSetSheaf G))
+        (Discrete.mk WalkingPair.right)).hom.app (op U) q at hq
+    exact hq
+  have hp := congrArg Prod.snd (e.apply_symm_apply (s, t))
+  exact hcoord _ |>.symm.trans hp
+
+private theorem sheafHomProduct_app_eq {X : TopCat.{v}}
+    {O : RingSheaf.{v, v} X} {F G : Mod O}
+    (S : TopCat.Sheaf (Type v) X)
+    (a : S ⟶ moduleSetSheaf F) (b : S ⟶ moduleSetSheaf G)
+    (U : (Opens X)ᵒᵖ) (s : S.obj.obj U) :
+    (sheafHomProduct S a b).hom.app U s =
+      (sheafProductSectionsEquiv (moduleSetSheaf F) (moduleSetSheaf G)
+        U.unop).symm (a.hom.app U s, b.hom.app U s) := by
+  let e := sheafProductSectionsEquiv (moduleSetSheaf F)
+    (moduleSetSheaf G) U.unop
+  apply e.injective
+  change e ((sheafHomProduct S a b).hom.app U s) =
+    e (e.symm (a.hom.app U s, b.hom.app U s))
+  rw [e.apply_symm_apply]
+  apply Prod.ext
+  ·
+    have hcoord :
+        (limit.π (pair (moduleSetSheaf F) (moduleSetSheaf G))
+          (Discrete.mk WalkingPair.left)).hom.app U
+            ((sheafHomProduct S a b).hom.app U s) =
+          (e ((sheafHomProduct S a b).hom.app U s)).1 := by
+      rw [← e.symm_apply_apply ((sheafHomProduct S a b).hom.app U s)]
+      simpa [e] using pretest_product_sections_first F G U.unop
+        (e ((sheafHomProduct S a b).hom.app U s)).1
+        (e ((sheafHomProduct S a b).hom.app U s)).2
+    rw [← hcoord]
+    have hh := congrArg (fun k => (k.hom.app U) s)
+      (limit.lift_π (BinaryFan.mk a b)
+        (Discrete.mk WalkingPair.left))
+    change (ConcreteCategory.hom
+        ((limit.π (pair (moduleSetSheaf F) (moduleSetSheaf G))
+          (Discrete.mk WalkingPair.left)).hom.app U))
+        ((ConcreteCategory.hom
+          ((limit.lift (pair (moduleSetSheaf F) (moduleSetSheaf G))
+            (BinaryFan.mk a b)).hom.app U)) s) =
+      (ConcreteCategory.hom (a.hom.app U)) s at hh
+    exact hh
+  ·
+    have hcoord :
+        (limit.π (pair (moduleSetSheaf F) (moduleSetSheaf G))
+          (Discrete.mk WalkingPair.right)).hom.app U
+            ((sheafHomProduct S a b).hom.app U s) =
+          (e ((sheafHomProduct S a b).hom.app U s)).2 := by
+      rw [← e.symm_apply_apply ((sheafHomProduct S a b).hom.app U s)]
+      simpa [e] using pretest_product_sections_second F G U.unop
+        (e ((sheafHomProduct S a b).hom.app U s)).1
+        (e ((sheafHomProduct S a b).hom.app U s)).2
+    rw [← hcoord]
+    have hh := congrArg (fun k => (k.hom.app U) s)
+      (limit.lift_π (BinaryFan.mk a b)
+        (Discrete.mk WalkingPair.right))
+    change (ConcreteCategory.hom
+        ((limit.π (pair (moduleSetSheaf F) (moduleSetSheaf G))
+          (Discrete.mk WalkingPair.right)).hom.app U))
+        ((ConcreteCategory.hom
+          ((limit.lift (pair (moduleSetSheaf F) (moduleSetSheaf G))
+            (BinaryFan.mk a b)).hom.app U)) s) =
+      (ConcreteCategory.hom (b.hom.app U)) s at hh
+    exact hh
+
+private theorem sheafHomBilinearRule_app_eq {X : TopCat.{v}}
+    {O : RingSheaf.{v, v} X} {F G H : Mod O}
+    (f : ModuleSetMap F G H) (S : TopCat.Sheaf (Type v) X)
+    (a : S ⟶ moduleSetSheaf F) (b : S ⟶ moduleSetSheaf G)
+    (U : (Opens X)ᵒᵖ) (s : S.obj.obj U) :
+    (sheafHomBilinearRule f S a b).hom.app (op U.unop) s =
+      sectionMap f U.unop (a.hom.app U s) (b.hom.app U s) := by
+  change f.hom.app U ((sheafHomProduct S a b).hom.app U s) =
+    f.hom.app U
+      ((sheafProductSectionsEquiv (moduleSetSheaf F)
+        (moduleSetSheaf G) U.unop).symm
+        (a.hom.app U s, b.hom.app U s))
+  exact congrArg (fun q => f.hom.app U q)
+    (sheafHomProduct_app_eq S a b U s)
+
+private noncomputable def sheafHomAdd {X : TopCat.{v}}
+    {O : RingSheaf.{v, v} X} {F : Mod O}
+    (S : TopCat.Sheaf (Type v) X)
+    (a b : S ⟶ moduleSetSheaf F) : S ⟶ moduleSetSheaf F :=
+  ObjectProperty.homMk {
+    app := fun U => TypeCat.ofHom (fun s =>
+      (show (F.val.obj U : Type v) from a.hom.app U s) +
+        (show (F.val.obj U : Type v) from b.hom.app U s))
+    naturality := by
+      intro U V i
+      apply ConcreteCategory.hom_ext
+      intro s
+      change (show (F.val.obj V : Type v) from a.hom.app V (S.obj.map i s)) +
+          (show (F.val.obj V : Type v) from b.hom.app V (S.obj.map i s)) =
+        (F.val.map i).hom
+          ((show (F.val.obj U : Type v) from a.hom.app U s) +
+            (show (F.val.obj U : Type v) from b.hom.app U s))
+      calc
+        (show (F.val.obj V : Type v) from a.hom.app V (S.obj.map i s)) +
+            (show (F.val.obj V : Type v) from b.hom.app V (S.obj.map i s)) =
+            (show (F.val.obj V : Type v) from
+              (F.val.map i).hom (a.hom.app U s)) +
+              (show (F.val.obj V : Type v) from
+                (F.val.map i).hom (b.hom.app U s)) := by
+          exact congrArg₂ (fun p q => p + q)
+            (congrArg (fun k => (ConcreteCategory.hom k) s)
+              (a.hom.naturality i))
+            (congrArg (fun k => (ConcreteCategory.hom k) s)
+              (b.hom.naturality i))
+        _ = (show (F.val.obj V : Type v) from
+          (F.val.map i).hom
+            ((show (F.val.obj U : Type v) from a.hom.app U s) +
+              (show (F.val.obj U : Type v) from b.hom.app U s))) := by
+          rw [map_add]
+          rfl }
+
+private noncomputable def sheafHomZero {X : TopCat.{v}}
+    {O : RingSheaf.{v, v} X} {F : Mod O}
+    (S : TopCat.Sheaf (Type v) X) : S ⟶ moduleSetSheaf F :=
+  ObjectProperty.homMk {
+    app := fun U => TypeCat.ofHom (fun _ => (0 : (F.val.obj U : Type v)))
+    naturality := by
+      intro U V i
+      apply ConcreteCategory.hom_ext
+      intro s
+      change (0 : (F.val.obj V : Type v)) = (F.val.map i).hom 0
+      rw [map_zero]
+      rfl }
+
+private noncomputable def sheafHomNeg {X : TopCat.{v}}
+    {O : RingSheaf.{v, v} X} {F : Mod O}
+    (S : TopCat.Sheaf (Type v) X) (a : S ⟶ moduleSetSheaf F) :
+    S ⟶ moduleSetSheaf F :=
+  ObjectProperty.homMk {
+    app := fun U => TypeCat.ofHom (fun s =>
+      -(show (F.val.obj U : Type v) from a.hom.app U s))
+    naturality := by
+      intro U V i
+      apply ConcreteCategory.hom_ext
+      intro s
+      change -(show (F.val.obj V : Type v) from a.hom.app V (S.obj.map i s)) =
+        (F.val.map i).hom
+          (-(show (F.val.obj U : Type v) from a.hom.app U s))
+      rw [map_neg]
+      exact congrArg Neg.neg
+        (congrArg (fun k => (ConcreteCategory.hom k) s)
+          (a.hom.naturality i)) }
+
+private noncomputable def sheafHomSmul {X : TopCat.{v}}
+    {O : RingSheaf.{v, v} X} {F : Mod O}
+    (S : TopCat.Sheaf (Type v) X)
+    (r : S ⟶ ringSetSheaf O) (a : S ⟶ moduleSetSheaf F) :
+    S ⟶ moduleSetSheaf F :=
+  ObjectProperty.homMk {
+    app := fun U => TypeCat.ofHom (fun s =>
+      (show (O.obj.obj U : Type v) from r.hom.app U s) •
+        (show (F.val.obj U : Type v) from a.hom.app U s))
+    naturality := by
+      intro U V i
+      apply ConcreteCategory.hom_ext
+      intro s
+      change
+        (show (O.obj.obj V : Type v) from r.hom.app V (S.obj.map i s)) •
+            (show (F.val.obj V : Type v) from a.hom.app V (S.obj.map i s)) =
+          ((SheafOfModules.toSheaf O).obj F).obj.map i
+            ((show (O.obj.obj U : Type v) from r.hom.app U s) •
+              (show (F.val.obj U : Type v) from a.hom.app U s))
+      calc
+        (show (O.obj.obj V : Type v) from r.hom.app V (S.obj.map i s)) •
+              (show (F.val.obj V : Type v) from a.hom.app V (S.obj.map i s)) =
+            (show (O.obj.obj V : Type v) from (O.obj.map i).hom (r.hom.app U s)) •
+              (show (F.val.obj V : Type v) from (F.val.map i).hom (a.hom.app U s)) := by
+          exact congrArg₂ (fun p q => p • q)
+            (congrArg (fun k => (ConcreteCategory.hom k) s)
+              (r.hom.naturality i))
+            (congrArg (fun k => (ConcreteCategory.hom k) s)
+              (a.hom.naturality i))
+        _ = (show (F.val.obj V : Type v) from
+          (F.val.map i).hom
+            ((show (O.obj.obj U : Type v) from r.hom.app U s) •
+              (show (F.val.obj U : Type v) from a.hom.app U s))) := by
+          exact (PresheafOfModules.map_smul F.val i
+            (r.hom.app U s) (a.hom.app U s)).symm }
+
+private noncomputable def sheafRingHomAdd {X : TopCat.{v}}
+    {O : RingSheaf.{v, v} X} (S : TopCat.Sheaf (Type v) X)
+    (a b : S ⟶ ringSetSheaf O) : S ⟶ ringSetSheaf O :=
+  ObjectProperty.homMk {
+    app := fun U => TypeCat.ofHom (fun s =>
+      (show (O.obj.obj U : Type v) from a.hom.app U s) +
+        (show (O.obj.obj U : Type v) from b.hom.app U s))
+    naturality := by
+      intro U V i
+      apply ConcreteCategory.hom_ext
+      intro s
+      change (show (O.obj.obj V : Type v) from a.hom.app V (S.obj.map i s)) +
+          (show (O.obj.obj V : Type v) from b.hom.app V (S.obj.map i s)) =
+        (O.obj.map i).hom
+          ((show (O.obj.obj U : Type v) from a.hom.app U s) +
+            (show (O.obj.obj U : Type v) from b.hom.app U s))
+      calc
+        (show (O.obj.obj V : Type v) from a.hom.app V (S.obj.map i s)) +
+              (show (O.obj.obj V : Type v) from b.hom.app V (S.obj.map i s)) =
+            (O.obj.map i).hom (a.hom.app U s) +
+              (O.obj.map i).hom (b.hom.app U s) := by
+          exact congrArg₂ (fun p q => p + q)
+            (congrArg (fun k => (ConcreteCategory.hom k) s)
+              (a.hom.naturality i))
+            (congrArg (fun k => (ConcreteCategory.hom k) s)
+              (b.hom.naturality i))
+        _ = (O.obj.map i).hom
+            ((show (O.obj.obj U : Type v) from a.hom.app U s) +
+              (show (O.obj.obj U : Type v) from b.hom.app U s)) := by
+          rw [map_add] }
+
+private noncomputable def sheafRingHomZero {X : TopCat.{v}}
+    {O : RingSheaf.{v, v} X} (S : TopCat.Sheaf (Type v) X) :
+    S ⟶ ringSetSheaf O :=
+  ObjectProperty.homMk {
+    app := fun U => TypeCat.ofHom (fun _ => (0 : (O.obj.obj U : Type v)))
+    naturality := by
+      intro U V i
+      apply ConcreteCategory.hom_ext
+      intro s
+      change (0 : (O.obj.obj V : Type v)) = (O.obj.map i).hom 0
+      rw [map_zero] }
+
+private noncomputable def sheafRingHomNeg {X : TopCat.{v}}
+    {O : RingSheaf.{v, v} X} (S : TopCat.Sheaf (Type v) X)
+    (a : S ⟶ ringSetSheaf O) : S ⟶ ringSetSheaf O :=
+  ObjectProperty.homMk {
+    app := fun U => TypeCat.ofHom (fun s =>
+      -(show (O.obj.obj U : Type v) from a.hom.app U s))
+    naturality := by
+      intro U V i
+      apply ConcreteCategory.hom_ext
+      intro s
+      change -(show (O.obj.obj V : Type v) from a.hom.app V (S.obj.map i s)) =
+        (O.obj.map i).hom
+          (-(show (O.obj.obj U : Type v) from a.hom.app U s))
+      rw [map_neg]
+      exact congrArg Neg.neg
+        (congrArg (fun k => (ConcreteCategory.hom k) s)
+          (a.hom.naturality i)) }
+
+private noncomputable def sheafRingHomOne {X : TopCat.{v}}
+    {O : RingSheaf.{v, v} X} (S : TopCat.Sheaf (Type v) X) :
+    S ⟶ ringSetSheaf O :=
+  ObjectProperty.homMk {
+    app := fun U => TypeCat.ofHom (fun _ => (1 : (O.obj.obj U : Type v)))
+    naturality := by
+      intro U V i
+      apply ConcreteCategory.hom_ext
+      intro s
+      change (1 : (O.obj.obj V : Type v)) = (O.obj.map i).hom 1
+      rw [map_one] }
+
+private noncomputable def sheafRingHomMul {X : TopCat.{v}}
+    {O : RingSheaf.{v, v} X} (S : TopCat.Sheaf (Type v) X)
+    (a b : S ⟶ ringSetSheaf O) : S ⟶ ringSetSheaf O :=
+  ObjectProperty.homMk {
+    app := fun U => TypeCat.ofHom (fun s =>
+      (show (O.obj.obj U : Type v) from a.hom.app U s) *
+        (show (O.obj.obj U : Type v) from b.hom.app U s))
+    naturality := by
+      intro U V i
+      apply ConcreteCategory.hom_ext
+      intro s
+      change (show (O.obj.obj V : Type v) from a.hom.app V (S.obj.map i s)) *
+          (show (O.obj.obj V : Type v) from b.hom.app V (S.obj.map i s)) =
+        (O.obj.map i).hom
+          ((show (O.obj.obj U : Type v) from a.hom.app U s) *
+            (show (O.obj.obj U : Type v) from b.hom.app U s))
+      calc
+        (show (O.obj.obj V : Type v) from a.hom.app V (S.obj.map i s)) *
+              (show (O.obj.obj V : Type v) from b.hom.app V (S.obj.map i s)) =
+            (O.obj.map i).hom (a.hom.app U s) *
+              (O.obj.map i).hom (b.hom.app U s) := by
+          exact congrArg₂ (fun p q => p * q)
+            (congrArg (fun k => (ConcreteCategory.hom k) s)
+              (a.hom.naturality i))
+            (congrArg (fun k => (ConcreteCategory.hom k) s)
+              (b.hom.naturality i))
+        _ = (O.obj.map i).hom
+            ((show (O.obj.obj U : Type v) from a.hom.app U s) *
+              (show (O.obj.obj U : Type v) from b.hom.app U s)) := by
+          rw [map_mul] }
+
+private noncomputable def sheafHomAddCommGroup {X : TopCat.{v}}
+    {O : RingSheaf.{v, v} X} {F : Mod O} (S : TopCat.Sheaf (Type v) X) :
+    AddCommGroup (S ⟶ moduleSetSheaf F) := by
+  letI : Add (S ⟶ moduleSetSheaf F) := ⟨sheafHomAdd S⟩
+  letI : Zero (S ⟶ moduleSetSheaf F) := ⟨sheafHomZero S⟩
+  letI : Neg (S ⟶ moduleSetSheaf F) := ⟨sheafHomNeg S⟩
+  exact {
+  add := sheafHomAdd S
+  add_assoc := by
+    intro a b c
+    apply CategoryTheory.Sheaf.hom_ext
+    apply NatTrans.ext
+    funext U
+    apply ConcreteCategory.hom_ext
+    intro s
+    change
+      ((show (F.val.obj U : Type v) from
+          (sheafHomAdd S a b).hom.app U s) +
+        (show (F.val.obj U : Type v) from c.hom.app U s)) =
+      ((show (F.val.obj U : Type v) from a.hom.app U s) +
+        (show (F.val.obj U : Type v) from
+          (sheafHomAdd S b c).hom.app U s))
+    exact add_assoc _ _ _
+  zero := sheafHomZero S
+  zero_add := by
+    intro a
+    apply CategoryTheory.Sheaf.hom_ext
+    apply NatTrans.ext
+    funext U
+    apply ConcreteCategory.hom_ext
+    intro s
+    change (show (F.val.obj U : Type v) from
+        (sheafHomAdd S (sheafHomZero S) a).hom.app U s) =
+      (show (F.val.obj U : Type v) from a.hom.app U s)
+    change 0 + (show (F.val.obj U : Type v) from a.hom.app U s) = _
+    exact zero_add _
+  add_zero := by
+    intro a
+    apply CategoryTheory.Sheaf.hom_ext
+    apply NatTrans.ext
+    funext U
+    apply ConcreteCategory.hom_ext
+    intro s
+    change (show (F.val.obj U : Type v) from
+        (sheafHomAdd S a (sheafHomZero S)).hom.app U s) =
+      (show (F.val.obj U : Type v) from a.hom.app U s)
+    change (show (F.val.obj U : Type v) from a.hom.app U s) + 0 = _
+    exact add_zero _
+  neg := sheafHomNeg S
+  nsmul := nsmulRec
+  zsmul := zsmulRec
+  neg_add_cancel := by
+    intro a
+    apply CategoryTheory.Sheaf.hom_ext
+    apply NatTrans.ext
+    funext U
+    apply ConcreteCategory.hom_ext
+    intro s
+    change (show (F.val.obj U : Type v) from
+        (sheafHomAdd S (sheafHomNeg S a) a).hom.app U s) = 0
+    change -(show (F.val.obj U : Type v) from a.hom.app U s) +
+        (show (F.val.obj U : Type v) from a.hom.app U s) = 0
+    exact neg_add_cancel _
+  add_comm := by
+    intro a b
+    apply CategoryTheory.Sheaf.hom_ext
+    apply NatTrans.ext
+    funext U
+    apply ConcreteCategory.hom_ext
+    intro s
+    change (show (F.val.obj U : Type v) from a.hom.app U s) +
+          (show (F.val.obj U : Type v) from b.hom.app U s) =
+        (show (F.val.obj U : Type v) from b.hom.app U s) +
+          (show (F.val.obj U : Type v) from a.hom.app U s)
+    exact add_comm _ _ }
+
+private noncomputable def sheafRingHomAddCommGroup {X : TopCat.{v}}
+    {O : RingSheaf.{v, v} X} (S : TopCat.Sheaf (Type v) X) :
+    AddCommGroup (S ⟶ ringSetSheaf O) := by
+  letI : Add (S ⟶ ringSetSheaf O) := ⟨sheafRingHomAdd S⟩
+  letI : Zero (S ⟶ ringSetSheaf O) := ⟨sheafRingHomZero S⟩
+  letI : Neg (S ⟶ ringSetSheaf O) := ⟨sheafRingHomNeg S⟩
+  exact {
+    add := sheafRingHomAdd S
+    add_assoc := by
+      intro a b c
+      apply CategoryTheory.Sheaf.hom_ext
+      apply NatTrans.ext
+      funext U
+      apply ConcreteCategory.hom_ext
+      intro s
+      change
+        ((show (O.obj.obj U : Type v) from
+            (sheafRingHomAdd S a b).hom.app U s) +
+          (show (O.obj.obj U : Type v) from c.hom.app U s)) =
+        ((show (O.obj.obj U : Type v) from a.hom.app U s) +
+          (show (O.obj.obj U : Type v) from
+            (sheafRingHomAdd S b c).hom.app U s))
+      exact add_assoc _ _ _
+    zero := sheafRingHomZero S
+    zero_add := by
+      intro a
+      apply CategoryTheory.Sheaf.hom_ext
+      apply NatTrans.ext
+      funext U
+      apply ConcreteCategory.hom_ext
+      intro s
+      change (show (O.obj.obj U : Type v) from
+          (sheafRingHomAdd S (sheafRingHomZero S) a).hom.app U s) =
+        (show (O.obj.obj U : Type v) from a.hom.app U s)
+      change 0 + (show (O.obj.obj U : Type v) from a.hom.app U s) = _
+      exact zero_add _
+    add_zero := by
+      intro a
+      apply CategoryTheory.Sheaf.hom_ext
+      apply NatTrans.ext
+      funext U
+      apply ConcreteCategory.hom_ext
+      intro s
+      change (show (O.obj.obj U : Type v) from
+          (sheafRingHomAdd S a (sheafRingHomZero S)).hom.app U s) =
+        (show (O.obj.obj U : Type v) from a.hom.app U s)
+      change (show (O.obj.obj U : Type v) from a.hom.app U s) + 0 = _
+      exact add_zero _
+    neg := sheafRingHomNeg S
+    nsmul := nsmulRec
+    zsmul := zsmulRec
+    neg_add_cancel := by
+      intro a
+      apply CategoryTheory.Sheaf.hom_ext
+      apply NatTrans.ext
+      funext U
+      apply ConcreteCategory.hom_ext
+      intro s
+      change (show (O.obj.obj U : Type v) from
+          (sheafRingHomAdd S (sheafRingHomNeg S a) a).hom.app U s) = 0
+      change -(show (O.obj.obj U : Type v) from a.hom.app U s) +
+          (show (O.obj.obj U : Type v) from a.hom.app U s) = 0
+      exact neg_add_cancel _
+    add_comm := by
+      intro a b
+      apply CategoryTheory.Sheaf.hom_ext
+      apply NatTrans.ext
+      funext U
+      apply ConcreteCategory.hom_ext
+      intro s
+      change (show (O.obj.obj U : Type v) from a.hom.app U s) +
+            (show (O.obj.obj U : Type v) from b.hom.app U s) =
+          (show (O.obj.obj U : Type v) from b.hom.app U s) +
+            (show (O.obj.obj U : Type v) from a.hom.app U s)
+      exact add_comm _ _ }
+
+private noncomputable def sheafRingHomRing {X : TopCat.{v}}
+    {O : RingSheaf.{v, v} X} (S : TopCat.Sheaf (Type v) X) :
+    Ring (S ⟶ ringSetSheaf O) := by
+  letI : AddCommGroup (S ⟶ ringSetSheaf O) := sheafRingHomAddCommGroup S
+  letI : Mul (S ⟶ ringSetSheaf O) := ⟨sheafRingHomMul S⟩
+  letI : One (S ⟶ ringSetSheaf O) := ⟨sheafRingHomOne S⟩
+  exact {
+    add := sheafRingHomAdd S
+    add_assoc := add_assoc
+    zero := sheafRingHomZero S
+    zero_add := zero_add
+    add_zero := add_zero
+    neg := sheafRingHomNeg S
+    nsmul := nsmulRec
+    zsmul := zsmulRec
+    neg_add_cancel := neg_add_cancel
+    add_comm := add_comm
+    mul := sheafRingHomMul S
+    mul_assoc := by
+      intro a b c
+      apply CategoryTheory.Sheaf.hom_ext
+      apply NatTrans.ext
+      funext U
+      apply ConcreteCategory.hom_ext
+      intro s
+      change
+        ((show (O.obj.obj U : Type v) from
+            (sheafRingHomMul S a b).hom.app U s) *
+          (show (O.obj.obj U : Type v) from c.hom.app U s)) =
+        ((show (O.obj.obj U : Type v) from a.hom.app U s) *
+          (show (O.obj.obj U : Type v) from
+            (sheafRingHomMul S b c).hom.app U s))
+      exact mul_assoc _ _ _
+    one := sheafRingHomOne S
+    one_mul := by
+      intro a
+      apply CategoryTheory.Sheaf.hom_ext
+      apply NatTrans.ext
+      funext U
+      apply ConcreteCategory.hom_ext
+      intro s
+      change (show (O.obj.obj U : Type v) from
+          (sheafRingHomMul S (sheafRingHomOne S) a).hom.app U s) =
+        (show (O.obj.obj U : Type v) from a.hom.app U s)
+      change 1 * (show (O.obj.obj U : Type v) from a.hom.app U s) = _
+      exact one_mul _
+    mul_one := by
+      intro a
+      apply CategoryTheory.Sheaf.hom_ext
+      apply NatTrans.ext
+      funext U
+      apply ConcreteCategory.hom_ext
+      intro s
+      change (show (O.obj.obj U : Type v) from
+          (sheafRingHomMul S a (sheafRingHomOne S)).hom.app U s) =
+        (show (O.obj.obj U : Type v) from a.hom.app U s)
+      change (show (O.obj.obj U : Type v) from a.hom.app U s) * 1 = _
+      exact mul_one _
+    zero_mul := by
+      intro a
+      apply CategoryTheory.Sheaf.hom_ext
+      apply NatTrans.ext
+      funext U
+      apply ConcreteCategory.hom_ext
+      intro s
+      change (show (O.obj.obj U : Type v) from
+          (sheafRingHomMul S (sheafRingHomZero S) a).hom.app U s) = 0
+      change 0 * (show (O.obj.obj U : Type v) from a.hom.app U s) = 0
+      exact zero_mul _
+    mul_zero := by
+      intro a
+      apply CategoryTheory.Sheaf.hom_ext
+      apply NatTrans.ext
+      funext U
+      apply ConcreteCategory.hom_ext
+      intro s
+      change (show (O.obj.obj U : Type v) from
+          (sheafRingHomMul S a (sheafRingHomZero S)).hom.app U s) = 0
+      change (show (O.obj.obj U : Type v) from a.hom.app U s) * 0 = 0
+      exact mul_zero _
+    left_distrib := by
+      intro a b c
+      apply CategoryTheory.Sheaf.hom_ext
+      apply NatTrans.ext
+      funext U
+      apply ConcreteCategory.hom_ext
+      intro s
+      change (show (O.obj.obj U : Type v) from
+          (sheafRingHomMul S a (sheafRingHomAdd S b c)).hom.app U s) =
+        (show (O.obj.obj U : Type v) from
+          (sheafRingHomAdd S (sheafRingHomMul S a b)
+            (sheafRingHomMul S a c)).hom.app U s)
+      change (show (O.obj.obj U : Type v) from a.hom.app U s) *
+          ((show (O.obj.obj U : Type v) from b.hom.app U s) +
+            (show (O.obj.obj U : Type v) from c.hom.app U s)) =
+        (show (O.obj.obj U : Type v) from a.hom.app U s) *
+            (show (O.obj.obj U : Type v) from b.hom.app U s) +
+          (show (O.obj.obj U : Type v) from a.hom.app U s) *
+            (show (O.obj.obj U : Type v) from c.hom.app U s)
+      exact left_distrib _ _ _
+    right_distrib := by
+      intro a b c
+      apply CategoryTheory.Sheaf.hom_ext
+      apply NatTrans.ext
+      funext U
+      apply ConcreteCategory.hom_ext
+      intro s
+      change (show (O.obj.obj U : Type v) from
+          (sheafRingHomMul S (sheafRingHomAdd S a b) c).hom.app U s) =
+        (show (O.obj.obj U : Type v) from
+          (sheafRingHomAdd S (sheafRingHomMul S a c)
+            (sheafRingHomMul S b c)).hom.app U s)
+      change ((show (O.obj.obj U : Type v) from a.hom.app U s) +
+          (show (O.obj.obj U : Type v) from b.hom.app U s)) *
+            (show (O.obj.obj U : Type v) from c.hom.app U s) =
+        (show (O.obj.obj U : Type v) from a.hom.app U s) *
+            (show (O.obj.obj U : Type v) from c.hom.app U s) +
+          (show (O.obj.obj U : Type v) from b.hom.app U s) *
+            (show (O.obj.obj U : Type v) from c.hom.app U s)
+      exact right_distrib _ _ _ }
+
+private noncomputable def sheafHomModule {X : TopCat.{v}}
+    {O : RingSheaf.{v, v} X} {F : Mod O} (S : TopCat.Sheaf (Type v) X) :
+    (letI : Ring (S ⟶ ringSetSheaf O) := sheafRingHomRing S;
+      letI : AddCommGroup (S ⟶ moduleSetSheaf F) := sheafHomAddCommGroup S;
+      Module (S ⟶ ringSetSheaf O) (S ⟶ moduleSetSheaf F)) := by
+  letI : Ring (S ⟶ ringSetSheaf O) := sheafRingHomRing S
+  letI : AddCommGroup (S ⟶ moduleSetSheaf F) := sheafHomAddCommGroup S
+  letI : SMul (S ⟶ ringSetSheaf O) (S ⟶ moduleSetSheaf F) :=
+    ⟨sheafHomSmul S⟩
+  exact {
+    smul := sheafHomSmul S
+    one_smul := by
+      intro a
+      apply CategoryTheory.Sheaf.hom_ext
+      apply NatTrans.ext
+      funext U
+      apply ConcreteCategory.hom_ext
+      intro s
+      change (show (F.val.obj U : Type v) from
+          (sheafHomSmul S (sheafRingHomOne S) a).hom.app U s) =
+        (show (F.val.obj U : Type v) from a.hom.app U s)
+      change (1 : (O.obj.obj U : Type v)) •
+          (show (F.val.obj U : Type v) from a.hom.app U s) = _
+      exact one_smul _ _
+    mul_smul := by
+      intro r s a
+      apply CategoryTheory.Sheaf.hom_ext
+      apply NatTrans.ext
+      funext U
+      apply ConcreteCategory.hom_ext
+      intro t
+      change (show (F.val.obj U : Type v) from
+          (sheafHomSmul S (sheafRingHomMul S r s) a).hom.app U t) =
+        (show (F.val.obj U : Type v) from
+          (sheafHomSmul S r (sheafHomSmul S s a)).hom.app U t)
+      change ((show (O.obj.obj U : Type v) from r.hom.app U t) *
+          (show (O.obj.obj U : Type v) from s.hom.app U t)) •
+            (show (F.val.obj U : Type v) from a.hom.app U t) =
+        (show (O.obj.obj U : Type v) from r.hom.app U t) •
+          ((show (O.obj.obj U : Type v) from s.hom.app U t) •
+            (show (F.val.obj U : Type v) from a.hom.app U t))
+      exact mul_smul _ _ _
+    smul_add := by
+      intro r a b
+      apply CategoryTheory.Sheaf.hom_ext
+      apply NatTrans.ext
+      funext U
+      apply ConcreteCategory.hom_ext
+      intro t
+      change (show (F.val.obj U : Type v) from
+          (sheafHomSmul S r (sheafHomAdd S a b)).hom.app U t) =
+        (show (F.val.obj U : Type v) from
+          (sheafHomAdd S (sheafHomSmul S r a)
+            (sheafHomSmul S r b)).hom.app U t)
+      change (show (O.obj.obj U : Type v) from r.hom.app U t) •
+          ((show (F.val.obj U : Type v) from a.hom.app U t) +
+            (show (F.val.obj U : Type v) from b.hom.app U t)) =
+        (show (O.obj.obj U : Type v) from r.hom.app U t) •
+            (show (F.val.obj U : Type v) from a.hom.app U t) +
+          (show (O.obj.obj U : Type v) from r.hom.app U t) •
+            (show (F.val.obj U : Type v) from b.hom.app U t)
+      exact smul_add _ _ _
+    smul_zero := by
+      intro r
+      apply CategoryTheory.Sheaf.hom_ext
+      apply NatTrans.ext
+      funext U
+      apply ConcreteCategory.hom_ext
+      intro t
+      change (show (F.val.obj U : Type v) from
+          (sheafHomSmul S r (sheafHomZero S)).hom.app U t) = 0
+      change (show (O.obj.obj U : Type v) from r.hom.app U t) •
+          (0 : (F.val.obj U : Type v)) = 0
+      exact smul_zero _
+    add_smul := by
+      intro r s a
+      apply CategoryTheory.Sheaf.hom_ext
+      apply NatTrans.ext
+      funext U
+      apply ConcreteCategory.hom_ext
+      intro t
+      change (show (F.val.obj U : Type v) from
+          (sheafHomSmul S (sheafRingHomAdd S r s) a).hom.app U t) =
+        (show (F.val.obj U : Type v) from
+          (sheafHomAdd S (sheafHomSmul S r a)
+            (sheafHomSmul S s a)).hom.app U t)
+      change ((show (O.obj.obj U : Type v) from r.hom.app U t) +
+          (show (O.obj.obj U : Type v) from s.hom.app U t)) •
+            (show (F.val.obj U : Type v) from a.hom.app U t) =
+        (show (O.obj.obj U : Type v) from r.hom.app U t) •
+            (show (F.val.obj U : Type v) from a.hom.app U t) +
+          (show (O.obj.obj U : Type v) from s.hom.app U t) •
+            (show (F.val.obj U : Type v) from a.hom.app U t)
+      exact add_smul _ _ _
+    zero_smul := by
+      intro a
+      apply CategoryTheory.Sheaf.hom_ext
+      apply NatTrans.ext
+      funext U
+      apply ConcreteCategory.hom_ext
+      intro t
+      change (show (F.val.obj U : Type v) from
+          (sheafHomSmul S (sheafRingHomZero S) a).hom.app U t) = 0
+      change (0 : (O.obj.obj U : Type v)) •
+          (show (F.val.obj U : Type v) from a.hom.app U t) = 0
+      exact zero_smul _ _ }
+
 theorem isSectionwiseBilinear_iff_isHomCharacterization
     {X : TopCat.{v}} {O : RingSheaf.{v, v} X} {F G H : Mod O}
     (f : ModuleSetMap F G H) :
   IsSectionwiseBilinear f ↔ IsHomCharacterization f := by
-  sorry
+  constructor
+  · intro h S instR instF instG instH modF modG modH hp
+    unfold IsHomRuleBilinear
+    refine ⟨{
+      toFun := sheafHomBilinearRule f S
+      map_add_left' := ?_
+      map_smul_left' := ?_
+      map_add_right' := ?_
+      map_smul_right' := ?_ }, ?_⟩
+    · intro x y z
+      apply CategoryTheory.Sheaf.hom_ext
+      apply NatTrans.ext
+      funext U
+      apply ConcreteCategory.hom_ext
+      intro s
+      change f.hom.app U
+          ((sheafHomProduct S (x + y) z).hom.app U s) =
+        ((sheafHomBilinearRule f S x z +
+          sheafHomBilinearRule f S y z).hom.app U) s
+      rw [hp.2.2.1 _ _ U.unop s]
+      rw [sheafHomBilinearRule_app_eq f S x z U s,
+        sheafHomBilinearRule_app_eq f S y z U s]
+      rw [sheafHomProduct_app_eq S (x + y) z U s]
+      change sectionMap f U.unop ((x + y).hom.app U s) (z.hom.app U s) =
+        sectionMap f U.unop (x.hom.app U s) (z.hom.app U s) +
+        sectionMap f U.unop (y.hom.app U s) (z.hom.app U s)
+      obtain ⟨g, hg⟩ := h U.unop
+      have hxy :
+          (x + y).hom.app U s =
+            (show (F.val.obj (op U.unop) : Type v) from x.hom.app U s) +
+              (show (F.val.obj (op U.unop) : Type v) from y.hom.app U s) := by
+        simpa only [op_unop] using hp.1 x y U.unop s
+      calc
+        sectionMap f U.unop ((x + y).hom.app U s) (z.hom.app U s) =
+            g ((x + y).hom.app U s) (z.hom.app U s) :=
+          (hg _ _).symm
+        _ = g
+            ((show (F.val.obj (op U.unop) : Type v) from x.hom.app U s) +
+              (show (F.val.obj (op U.unop) : Type v) from y.hom.app U s))
+            (z.hom.app U s) := by
+          rw [hxy]
+        _ = g (x.hom.app U s) (z.hom.app U s) +
+            g (y.hom.app U s) (z.hom.app U s) :=
+          g.map_add_left' _ _ _
+        _ = sectionMap f U.unop (x.hom.app U s) (z.hom.app U s) +
+            sectionMap f U.unop (y.hom.app U s) (z.hom.app U s) := by
+          exact congrArg₂ (fun p q => p + q) (hg _ _) (hg _ _)
+    · intro r x z
+      apply CategoryTheory.Sheaf.hom_ext
+      apply NatTrans.ext
+      funext U
+      apply ConcreteCategory.hom_ext
+      intro s
+      change f.hom.app U
+          ((sheafHomProduct S (r • x) z).hom.app U s) =
+        ((r • sheafHomBilinearRule f S x z).hom.app U) s
+      rw [hp.2.2.2.2.2 r (sheafHomBilinearRule f S x z) U.unop s]
+      rw [sheafHomBilinearRule_app_eq f S x z U s]
+      rw [sheafHomProduct_app_eq S (r • x) z U s]
+      change sectionMap f U.unop ((r • x).hom.app U s) (z.hom.app U s) =
+        (show (O.obj.obj (op U.unop) : Type v) from r.hom.app U s) •
+          sectionMap f U.unop (x.hom.app U s) (z.hom.app U s)
+      obtain ⟨g, hg⟩ := h U.unop
+      have hxr :
+          (r • x).hom.app U s =
+            (show (O.obj.obj (op U.unop) : Type v) from r.hom.app U s) •
+              (show (F.val.obj (op U.unop) : Type v) from x.hom.app U s) := by
+        simpa only [op_unop] using hp.2.2.2.1 r x U.unop s
+      calc
+        sectionMap f U.unop ((r • x).hom.app U s) (z.hom.app U s) =
+            g ((r • x).hom.app U s) (z.hom.app U s) :=
+          (hg _ _).symm
+        _ = g
+            ((show (O.obj.obj (op U.unop) : Type v) from r.hom.app U s) •
+              (show (F.val.obj (op U.unop) : Type v) from x.hom.app U s))
+            (z.hom.app U s) := by
+          rw [hxr]
+        _ = (show (O.obj.obj (op U.unop) : Type v) from r.hom.app U s) •
+            g (x.hom.app U s) (z.hom.app U s) :=
+          g.map_smul_left' _ _ _
+        _ = (show (O.obj.obj (op U.unop) : Type v) from r.hom.app U s) •
+            sectionMap f U.unop (x.hom.app U s) (z.hom.app U s) := by
+          exact congrArg (fun q =>
+            (show (O.obj.obj (op U.unop) : Type v) from r.hom.app U s) • q)
+            (hg _ _)
+    · intro x y z
+      apply CategoryTheory.Sheaf.hom_ext
+      apply NatTrans.ext
+      funext U
+      apply ConcreteCategory.hom_ext
+      intro s
+      change f.hom.app U
+          ((sheafHomProduct S x (y + z)).hom.app U s) =
+        ((sheafHomBilinearRule f S x y +
+          sheafHomBilinearRule f S x z).hom.app U) s
+      rw [hp.2.2.1 _ _ U.unop s]
+      rw [sheafHomBilinearRule_app_eq f S x y U s,
+        sheafHomBilinearRule_app_eq f S x z U s]
+      rw [sheafHomProduct_app_eq S x (y + z) U s]
+      change sectionMap f U.unop (x.hom.app U s) ((y + z).hom.app U s) =
+        sectionMap f U.unop (x.hom.app U s) (y.hom.app U s) +
+        sectionMap f U.unop (x.hom.app U s) (z.hom.app U s)
+      obtain ⟨g, hg⟩ := h U.unop
+      have hyz :
+          (y + z).hom.app U s =
+            (show (G.val.obj (op U.unop) : Type v) from y.hom.app U s) +
+              (show (G.val.obj (op U.unop) : Type v) from z.hom.app U s) := by
+        simpa only [op_unop] using hp.2.1 y z U.unop s
+      calc
+        sectionMap f U.unop (x.hom.app U s) ((y + z).hom.app U s) =
+            g (x.hom.app U s) ((y + z).hom.app U s) :=
+          (hg _ _).symm
+        _ = g (x.hom.app U s)
+            ((show (G.val.obj (op U.unop) : Type v) from y.hom.app U s) +
+              (show (G.val.obj (op U.unop) : Type v) from z.hom.app U s)) := by
+          rw [hyz]
+        _ = g (x.hom.app U s) (y.hom.app U s) +
+            g (x.hom.app U s) (z.hom.app U s) :=
+          g.map_add_right' _ _ _
+        _ = sectionMap f U.unop (x.hom.app U s) (y.hom.app U s) +
+            sectionMap f U.unop (x.hom.app U s) (z.hom.app U s) := by
+          exact congrArg₂ (fun p q => p + q) (hg _ _) (hg _ _)
+    · intro r x y
+      apply CategoryTheory.Sheaf.hom_ext
+      apply NatTrans.ext
+      funext U
+      apply ConcreteCategory.hom_ext
+      intro s
+      change f.hom.app U
+          ((sheafHomProduct S x (r • y)).hom.app U s) =
+        ((r • sheafHomBilinearRule f S x y).hom.app U) s
+      rw [hp.2.2.2.2.2 r (sheafHomBilinearRule f S x y) U.unop s]
+      rw [sheafHomBilinearRule_app_eq f S x y U s]
+      rw [sheafHomProduct_app_eq S x (r • y) U s]
+      change sectionMap f U.unop (x.hom.app U s) ((r • y).hom.app U s) =
+        (show (O.obj.obj (op U.unop) : Type v) from r.hom.app U s) •
+          sectionMap f U.unop (x.hom.app U s) (y.hom.app U s)
+      obtain ⟨g, hg⟩ := h U.unop
+      have hyr :
+          (r • y).hom.app U s =
+            (show (O.obj.obj (op U.unop) : Type v) from r.hom.app U s) •
+              (show (G.val.obj (op U.unop) : Type v) from y.hom.app U s) := by
+        simpa only [op_unop] using hp.2.2.2.2.1 r y U.unop s
+      calc
+        sectionMap f U.unop (x.hom.app U s) ((r • y).hom.app U s) =
+            g (x.hom.app U s) ((r • y).hom.app U s) :=
+          (hg _ _).symm
+        _ = g (x.hom.app U s)
+            ((show (O.obj.obj (op U.unop) : Type v) from r.hom.app U s) •
+              (show (G.val.obj (op U.unop) : Type v) from y.hom.app U s)) := by
+          rw [hyr]
+        _ = (show (O.obj.obj (op U.unop) : Type v) from r.hom.app U s) •
+            g (x.hom.app U s) (y.hom.app U s) :=
+          g.map_smul_right' _ _ _
+        _ = (show (O.obj.obj (op U.unop) : Type v) from r.hom.app U s) •
+            sectionMap f U.unop (x.hom.app U s) (y.hom.app U s) := by
+          exact congrArg (fun q =>
+            (show (O.obj.obj (op U.unop) : Type v) from r.hom.app U s) • q)
+            (hg _ _)
+    · intro a b
+      rfl
+  · intro h U
+    let S : TopCat.Sheaf (Type v) X :=
+      ⟨(Opens.grothendieckTopology X).sheafify (CategoryTheory.yoneda.obj U),
+        (Opens.grothendieckTopology X).sheafify_isSheaf
+          (CategoryTheory.yoneda.obj U)⟩
+    letI : Ring (S ⟶ ringSetSheaf O) := sheafRingHomRing S
+    letI : AddCommGroup (S ⟶ moduleSetSheaf F) := sheafHomAddCommGroup S
+    letI : AddCommGroup (S ⟶ moduleSetSheaf G) := sheafHomAddCommGroup S
+    letI : AddCommGroup (S ⟶ moduleSetSheaf H) := sheafHomAddCommGroup S
+    letI : Module (S ⟶ ringSetSheaf O) (S ⟶ moduleSetSheaf F) :=
+      sheafHomModule S
+    letI : Module (S ⟶ ringSetSheaf O) (S ⟶ moduleSetSheaf G) :=
+      sheafHomModule S
+    letI : Module (S ⟶ ringSetSheaf O) (S ⟶ moduleSetSheaf H) :=
+      sheafHomModule S
+    have hp : IsPointwiseBilinearOperations (O := O) (F := F) (G := G)
+        (H := H) S := by
+      refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩ <;>
+        intro a b U' s <;> rfl
+    let xHom : (F.val.obj (op U) : Type v) → (S ⟶ moduleSetSheaf F) :=
+      fun x => ObjectProperty.homMk
+        ((Opens.grothendieckTopology X).sheafifyLift
+          (yonedaEquiv.symm x) (moduleSetSheaf F).property)
+    let yHom : (G.val.obj (op U) : Type v) → (S ⟶ moduleSetSheaf G) :=
+      fun y => ObjectProperty.homMk
+        ((Opens.grothendieckTopology X).sheafifyLift
+          (yonedaEquiv.symm y) (moduleSetSheaf G).property)
+    let rHom : (O.obj.obj (op U) : Type v) → (S ⟶ ringSetSheaf O) :=
+      fun r => ObjectProperty.homMk
+        ((Opens.grothendieckTopology X).sheafifyLift
+          (yonedaEquiv.symm r) (ringSetSheaf O).property)
+    have xHom_add (x₁ x₂ : (F.val.obj (op U) : Type v)) :
+        xHom (x₁ + x₂) = xHom x₁ + xHom x₂ := by
+      apply CategoryTheory.Sheaf.hom_ext
+      apply (Opens.grothendieckTopology X).sheafify_hom_ext
+        _ _ (moduleSetSheaf F).property
+      dsimp [xHom]
+      change
+        (Opens.grothendieckTopology X).toSheafify (CategoryTheory.yoneda.obj U) ≫
+            (Opens.grothendieckTopology X).sheafifyLift
+              (yonedaEquiv.symm (x₁ + x₂)) (moduleSetSheaf F).property = _
+      rw [CategoryTheory.GrothendieckTopology.toSheafify_sheafifyLift]
+      apply NatTrans.ext
+      funext V
+      apply ConcreteCategory.hom_ext
+      intro q
+      dsimp [CategoryTheory.yonedaEquiv]
+      change
+        (moduleSetSheaf F).obj.map q.op (x₁ + x₂) =
+          (xHom x₁ + xHom x₂).hom.app (op V.unop)
+            (show S.obj.obj (op V.unop) from
+              ((Opens.grothendieckTopology X).toSheafify
+                (CategoryTheory.yoneda.obj U)).app (op V.unop) q)
+      have hpoint := hp.1 (xHom x₁) (xHom x₂) V.unop
+        (show S.obj.obj (op V.unop) from
+          ((Opens.grothendieckTopology X).toSheafify
+            (CategoryTheory.yoneda.obj U)).app (op V.unop) q)
+      have hpoint' :
+          (xHom x₁ + xHom x₂).hom.app V
+              (show S.obj.obj V from
+                ((Opens.grothendieckTopology X).toSheafify
+                  (CategoryTheory.yoneda.obj U)).app V q) =
+            (show (F.val.obj (op V.unop) : Type v) from
+              (xHom x₁).hom.app V
+                (show S.obj.obj V from
+                  ((Opens.grothendieckTopology X).toSheafify
+                    (CategoryTheory.yoneda.obj U)).app V q)) +
+              (show (F.val.obj (op V.unop) : Type v) from
+                (xHom x₂).hom.app V
+                  (show S.obj.obj V from
+                    ((Opens.grothendieckTopology X).toSheafify
+                      (CategoryTheory.yoneda.obj U)).app V q)) := by
+        simpa only [op_unop] using hpoint
+      rw [hpoint']
+      have h1 :=
+        CategoryTheory.GrothendieckTopology.toSheafify_sheafifyLift
+          (J := Opens.grothendieckTopology X)
+          (P := CategoryTheory.yoneda.obj U) (Q := (moduleSetSheaf F).obj)
+          (yonedaEquiv.symm x₁) (moduleSetSheaf F).property
+      have h1V := congrArg (fun k => (ConcreteCategory.hom (k.app V)) q) h1
+      have hx1 :
+          (show (F.val.obj (op V.unop) : Type v) from
+            (xHom x₁).hom.app V
+              (show S.obj.obj V from
+                ((Opens.grothendieckTopology X).toSheafify
+                  (CategoryTheory.yoneda.obj U)).app V q)) =
+            (F.val.map q.op).hom x₁ := by
+        change
+          (ConcreteCategory.hom
+            (((Opens.grothendieckTopology X).toSheafify
+                (CategoryTheory.yoneda.obj U) ≫
+              (Opens.grothendieckTopology X).sheafifyLift
+                (yonedaEquiv.symm x₁) (moduleSetSheaf F).property).app V)) q =
+            (ConcreteCategory.hom ((yonedaEquiv.symm x₁).app V)) q
+        exact h1V
+      rw [hx1]
+      have h2 :=
+        CategoryTheory.GrothendieckTopology.toSheafify_sheafifyLift
+          (J := Opens.grothendieckTopology X)
+          (P := CategoryTheory.yoneda.obj U) (Q := (moduleSetSheaf F).obj)
+          (yonedaEquiv.symm x₂) (moduleSetSheaf F).property
+      have h2V := congrArg (fun k => (ConcreteCategory.hom (k.app V)) q) h2
+      have hx2 :
+          (show (F.val.obj (op V.unop) : Type v) from
+            (xHom x₂).hom.app V
+              (show S.obj.obj V from
+                ((Opens.grothendieckTopology X).toSheafify
+                  (CategoryTheory.yoneda.obj U)).app V q)) =
+            (F.val.map q.op).hom x₂ := by
+        change
+          (ConcreteCategory.hom
+            (((Opens.grothendieckTopology X).toSheafify
+                (CategoryTheory.yoneda.obj U) ≫
+              (Opens.grothendieckTopology X).sheafifyLift
+                (yonedaEquiv.symm x₂) (moduleSetSheaf F).property).app V)) q =
+            (ConcreteCategory.hom ((yonedaEquiv.symm x₂).app V)) q
+        exact h2V
+      rw [hx2]
+      have hmap (x : (F.val.obj (op U) : Type v)) :
+          (moduleSetSheaf F).obj.map q.op x =
+            (((SheafOfModules.toSheaf O).obj F).obj.map q.op).hom x := by
+        rfl
+      rw [hmap]
+      exact (((SheafOfModules.toSheaf O).obj F).obj.map q.op).hom.map_add _ _
+    have yHom_add (y₁ y₂ : (G.val.obj (op U) : Type v)) :
+        yHom (y₁ + y₂) = yHom y₁ + yHom y₂ := by
+      apply CategoryTheory.Sheaf.hom_ext
+      apply (Opens.grothendieckTopology X).sheafify_hom_ext
+        _ _ (moduleSetSheaf G).property
+      dsimp [yHom]
+      change
+        (Opens.grothendieckTopology X).toSheafify (CategoryTheory.yoneda.obj U) ≫
+            (Opens.grothendieckTopology X).sheafifyLift
+              (yonedaEquiv.symm (y₁ + y₂)) (moduleSetSheaf G).property = _
+      rw [CategoryTheory.GrothendieckTopology.toSheafify_sheafifyLift]
+      apply NatTrans.ext
+      funext V
+      apply ConcreteCategory.hom_ext
+      intro q
+      dsimp [CategoryTheory.yonedaEquiv]
+      change
+        (moduleSetSheaf G).obj.map q.op (y₁ + y₂) =
+          (yHom y₁ + yHom y₂).hom.app (op V.unop)
+            (show S.obj.obj (op V.unop) from
+              ((Opens.grothendieckTopology X).toSheafify
+                (CategoryTheory.yoneda.obj U)).app (op V.unop) q)
+      have hpoint := hp.2.1 (yHom y₁) (yHom y₂) V.unop
+        (show S.obj.obj (op V.unop) from
+          ((Opens.grothendieckTopology X).toSheafify
+            (CategoryTheory.yoneda.obj U)).app (op V.unop) q)
+      have hpoint' :
+          (yHom y₁ + yHom y₂).hom.app V
+              (show S.obj.obj V from
+                ((Opens.grothendieckTopology X).toSheafify
+                  (CategoryTheory.yoneda.obj U)).app V q) =
+            (show (G.val.obj (op V.unop) : Type v) from
+              (yHom y₁).hom.app V
+                (show S.obj.obj V from
+                  ((Opens.grothendieckTopology X).toSheafify
+                    (CategoryTheory.yoneda.obj U)).app V q)) +
+              (show (G.val.obj (op V.unop) : Type v) from
+                (yHom y₂).hom.app V
+                  (show S.obj.obj V from
+                    ((Opens.grothendieckTopology X).toSheafify
+                      (CategoryTheory.yoneda.obj U)).app V q)) := by
+        simpa only [op_unop] using hpoint
+      rw [hpoint']
+      have h1 :=
+        CategoryTheory.GrothendieckTopology.toSheafify_sheafifyLift
+          (J := Opens.grothendieckTopology X)
+          (P := CategoryTheory.yoneda.obj U) (Q := (moduleSetSheaf G).obj)
+          (yonedaEquiv.symm y₁) (moduleSetSheaf G).property
+      have h1V := congrArg (fun k => (ConcreteCategory.hom (k.app V)) q) h1
+      have hy1 :
+          (show (G.val.obj (op V.unop) : Type v) from
+            (yHom y₁).hom.app V
+              (show S.obj.obj V from
+                ((Opens.grothendieckTopology X).toSheafify
+                  (CategoryTheory.yoneda.obj U)).app V q)) =
+            (G.val.map q.op).hom y₁ := by
+        change
+          (ConcreteCategory.hom
+            (((Opens.grothendieckTopology X).toSheafify
+                (CategoryTheory.yoneda.obj U) ≫
+              (Opens.grothendieckTopology X).sheafifyLift
+                (yonedaEquiv.symm y₁) (moduleSetSheaf G).property).app V)) q =
+            (ConcreteCategory.hom ((yonedaEquiv.symm y₁).app V)) q
+        exact h1V
+      rw [hy1]
+      have h2 :=
+        CategoryTheory.GrothendieckTopology.toSheafify_sheafifyLift
+          (J := Opens.grothendieckTopology X)
+          (P := CategoryTheory.yoneda.obj U) (Q := (moduleSetSheaf G).obj)
+          (yonedaEquiv.symm y₂) (moduleSetSheaf G).property
+      have h2V := congrArg (fun k => (ConcreteCategory.hom (k.app V)) q) h2
+      have hy2 :
+          (show (G.val.obj (op V.unop) : Type v) from
+            (yHom y₂).hom.app V
+              (show S.obj.obj V from
+                ((Opens.grothendieckTopology X).toSheafify
+                  (CategoryTheory.yoneda.obj U)).app V q)) =
+            (G.val.map q.op).hom y₂ := by
+        change
+          (ConcreteCategory.hom
+            (((Opens.grothendieckTopology X).toSheafify
+                (CategoryTheory.yoneda.obj U) ≫
+              (Opens.grothendieckTopology X).sheafifyLift
+                (yonedaEquiv.symm y₂) (moduleSetSheaf G).property).app V)) q =
+            (ConcreteCategory.hom ((yonedaEquiv.symm y₂).app V)) q
+        exact h2V
+      rw [hy2]
+      have hmap (y : (G.val.obj (op U) : Type v)) :
+          (moduleSetSheaf G).obj.map q.op y =
+            (((SheafOfModules.toSheaf O).obj G).obj.map q.op).hom y := by
+        rfl
+      rw [hmap]
+      exact (((SheafOfModules.toSheaf O).obj G).obj.map q.op).hom.map_add _ _
+    have xHom_smul (r : (O.obj.obj (op U) : Type v))
+        (x : (F.val.obj (op U) : Type v)) :
+        xHom (r • x) = rHom r • xHom x := by
+      apply CategoryTheory.Sheaf.hom_ext
+      apply (Opens.grothendieckTopology X).sheafify_hom_ext
+        _ _ (moduleSetSheaf F).property
+      dsimp [xHom, rHom]
+      change
+        (Opens.grothendieckTopology X).toSheafify (CategoryTheory.yoneda.obj U) ≫
+            (Opens.grothendieckTopology X).sheafifyLift
+              (yonedaEquiv.symm (r • x)) (moduleSetSheaf F).property = _
+      rw [CategoryTheory.GrothendieckTopology.toSheafify_sheafifyLift]
+      apply NatTrans.ext
+      funext V
+      apply ConcreteCategory.hom_ext
+      intro q
+      dsimp [CategoryTheory.yonedaEquiv]
+      change
+        (moduleSetSheaf F).obj.map q.op (r • x) =
+          (rHom r • xHom x).hom.app (op V.unop)
+            (show S.obj.obj (op V.unop) from
+              ((Opens.grothendieckTopology X).toSheafify
+                (CategoryTheory.yoneda.obj U)).app (op V.unop) q)
+      have hpoint := hp.2.2.2.1 (rHom r) (xHom x) V.unop
+        (show S.obj.obj (op V.unop) from
+          ((Opens.grothendieckTopology X).toSheafify
+            (CategoryTheory.yoneda.obj U)).app (op V.unop) q)
+      have hpoint' :
+          (rHom r • xHom x).hom.app V
+              (show S.obj.obj V from
+                ((Opens.grothendieckTopology X).toSheafify
+                  (CategoryTheory.yoneda.obj U)).app V q) =
+            (show (O.obj.obj (op V.unop) : Type v) from
+              (rHom r).hom.app V
+                (show S.obj.obj V from
+                  ((Opens.grothendieckTopology X).toSheafify
+                    (CategoryTheory.yoneda.obj U)).app V q)) •
+              (show (F.val.obj (op V.unop) : Type v) from
+                (xHom x).hom.app V
+                  (show S.obj.obj V from
+                    ((Opens.grothendieckTopology X).toSheafify
+                      (CategoryTheory.yoneda.obj U)).app V q)) := by
+        simpa only [op_unop] using hpoint
+      rw [hpoint']
+      have hr :=
+        CategoryTheory.GrothendieckTopology.toSheafify_sheafifyLift
+          (J := Opens.grothendieckTopology X)
+          (P := CategoryTheory.yoneda.obj U) (Q := (ringSetSheaf O).obj)
+          (yonedaEquiv.symm r) (ringSetSheaf O).property
+      have hrV := congrArg (fun k => (ConcreteCategory.hom (k.app V)) q) hr
+      have hrv :
+          (show (O.obj.obj (op V.unop) : Type v) from
+            (rHom r).hom.app V
+              (show S.obj.obj V from
+                ((Opens.grothendieckTopology X).toSheafify
+                  (CategoryTheory.yoneda.obj U)).app V q)) =
+            (O.obj.map q.op).hom r := by
+        change
+          (ConcreteCategory.hom
+            (((Opens.grothendieckTopology X).toSheafify
+                (CategoryTheory.yoneda.obj U) ≫
+              (Opens.grothendieckTopology X).sheafifyLift
+                (yonedaEquiv.symm r) (ringSetSheaf O).property).app V)) q =
+            (ConcreteCategory.hom ((yonedaEquiv.symm r).app V)) q
+        exact hrV
+      rw [hrv]
+      have hf :=
+        CategoryTheory.GrothendieckTopology.toSheafify_sheafifyLift
+          (J := Opens.grothendieckTopology X)
+          (P := CategoryTheory.yoneda.obj U) (Q := (moduleSetSheaf F).obj)
+          (yonedaEquiv.symm x) (moduleSetSheaf F).property
+      have hfV := congrArg (fun k => (ConcreteCategory.hom (k.app V)) q) hf
+      have hfx :
+          (show (F.val.obj (op V.unop) : Type v) from
+            (xHom x).hom.app V
+              (show S.obj.obj V from
+                ((Opens.grothendieckTopology X).toSheafify
+                  (CategoryTheory.yoneda.obj U)).app V q)) =
+            (F.val.map q.op).hom x := by
+        change
+          (ConcreteCategory.hom
+            (((Opens.grothendieckTopology X).toSheafify
+                (CategoryTheory.yoneda.obj U) ≫
+              (Opens.grothendieckTopology X).sheafifyLift
+                (yonedaEquiv.symm x) (moduleSetSheaf F).property).app V)) q =
+            (ConcreteCategory.hom ((yonedaEquiv.symm x).app V)) q
+        exact hfV
+      rw [hfx]
+      have hmap (z : (F.val.obj (op U) : Type v)) :
+          (moduleSetSheaf F).obj.map q.op z =
+            (((SheafOfModules.toSheaf O).obj F).obj.map q.op).hom z := by
+        rfl
+      rw [hmap]
+      exact PresheafOfModules.map_smul F.val q.op r x
+    have yHom_smul (r : (O.obj.obj (op U) : Type v))
+        (y : (G.val.obj (op U) : Type v)) :
+        yHom (r • y) = rHom r • yHom y := by
+      apply CategoryTheory.Sheaf.hom_ext
+      apply (Opens.grothendieckTopology X).sheafify_hom_ext
+        _ _ (moduleSetSheaf G).property
+      dsimp [yHom, rHom]
+      change
+        (Opens.grothendieckTopology X).toSheafify (CategoryTheory.yoneda.obj U) ≫
+            (Opens.grothendieckTopology X).sheafifyLift
+              (yonedaEquiv.symm (r • y)) (moduleSetSheaf G).property = _
+      rw [CategoryTheory.GrothendieckTopology.toSheafify_sheafifyLift]
+      apply NatTrans.ext
+      funext V
+      apply ConcreteCategory.hom_ext
+      intro q
+      dsimp [CategoryTheory.yonedaEquiv]
+      change
+        (moduleSetSheaf G).obj.map q.op (r • y) =
+          (rHom r • yHom y).hom.app (op V.unop)
+            (show S.obj.obj (op V.unop) from
+              ((Opens.grothendieckTopology X).toSheafify
+                (CategoryTheory.yoneda.obj U)).app (op V.unop) q)
+      have hpoint := hp.2.2.2.2.1 (rHom r) (yHom y) V.unop
+        (show S.obj.obj (op V.unop) from
+          ((Opens.grothendieckTopology X).toSheafify
+            (CategoryTheory.yoneda.obj U)).app (op V.unop) q)
+      have hpoint' :
+          (rHom r • yHom y).hom.app V
+              (show S.obj.obj V from
+                ((Opens.grothendieckTopology X).toSheafify
+                  (CategoryTheory.yoneda.obj U)).app V q) =
+            (show (O.obj.obj (op V.unop) : Type v) from
+              (rHom r).hom.app V
+                (show S.obj.obj V from
+                  ((Opens.grothendieckTopology X).toSheafify
+                    (CategoryTheory.yoneda.obj U)).app V q)) •
+              (show (G.val.obj (op V.unop) : Type v) from
+                (yHom y).hom.app V
+                  (show S.obj.obj V from
+                    ((Opens.grothendieckTopology X).toSheafify
+                      (CategoryTheory.yoneda.obj U)).app V q)) := by
+        simpa only [op_unop] using hpoint
+      rw [hpoint']
+      have hr :=
+        CategoryTheory.GrothendieckTopology.toSheafify_sheafifyLift
+          (J := Opens.grothendieckTopology X)
+          (P := CategoryTheory.yoneda.obj U) (Q := (ringSetSheaf O).obj)
+          (yonedaEquiv.symm r) (ringSetSheaf O).property
+      have hrV := congrArg (fun k => (ConcreteCategory.hom (k.app V)) q) hr
+      have hrv :
+          (show (O.obj.obj (op V.unop) : Type v) from
+            (rHom r).hom.app V
+              (show S.obj.obj V from
+                ((Opens.grothendieckTopology X).toSheafify
+                  (CategoryTheory.yoneda.obj U)).app V q)) =
+            (O.obj.map q.op).hom r := by
+        change
+          (ConcreteCategory.hom
+            (((Opens.grothendieckTopology X).toSheafify
+                (CategoryTheory.yoneda.obj U) ≫
+              (Opens.grothendieckTopology X).sheafifyLift
+                (yonedaEquiv.symm r) (ringSetSheaf O).property).app V)) q =
+            (ConcreteCategory.hom ((yonedaEquiv.symm r).app V)) q
+        exact hrV
+      rw [hrv]
+      have hg :=
+        CategoryTheory.GrothendieckTopology.toSheafify_sheafifyLift
+          (J := Opens.grothendieckTopology X)
+          (P := CategoryTheory.yoneda.obj U) (Q := (moduleSetSheaf G).obj)
+          (yonedaEquiv.symm y) (moduleSetSheaf G).property
+      have hgV := congrArg (fun k => (ConcreteCategory.hom (k.app V)) q) hg
+      have hgy :
+          (show (G.val.obj (op V.unop) : Type v) from
+            (yHom y).hom.app V
+              (show S.obj.obj V from
+                ((Opens.grothendieckTopology X).toSheafify
+                  (CategoryTheory.yoneda.obj U)).app V q)) =
+            (G.val.map q.op).hom y := by
+        change
+          (ConcreteCategory.hom
+            (((Opens.grothendieckTopology X).toSheafify
+                (CategoryTheory.yoneda.obj U) ≫
+              (Opens.grothendieckTopology X).sheafifyLift
+                (yonedaEquiv.symm y) (moduleSetSheaf G).property).app V)) q =
+            (ConcreteCategory.hom ((yonedaEquiv.symm y).app V)) q
+        exact hgV
+      rw [hgy]
+      have hmap (z : (G.val.obj (op U) : Type v)) :
+          (moduleSetSheaf G).obj.map q.op z =
+            (((SheafOfModules.toSheaf O).obj G).obj.map q.op).hom z := by
+        rfl
+      rw [hmap]
+      exact PresheafOfModules.map_smul G.val q.op r y
+    let s0 : S.obj.obj (op U) :=
+      ((Opens.grothendieckTopology X).toSheafify
+        (CategoryTheory.yoneda.obj U)).app (op U) (𝟙 U)
+    let evH : (S ⟶ moduleSetSheaf H) → (H.val.obj (op U) : Type v) :=
+      fun a => a.hom.app (op U) s0
+    have x0 (x : (F.val.obj (op U) : Type v)) :
+        (xHom x).hom.app (op U) s0 = x := by
+      have hx :=
+        CategoryTheory.GrothendieckTopology.toSheafify_sheafifyLift
+          (J := Opens.grothendieckTopology X)
+          (P := CategoryTheory.yoneda.obj U) (Q := (moduleSetSheaf F).obj)
+          (yonedaEquiv.symm x) (moduleSetSheaf F).property
+      have hx0 := congrArg
+        (fun k => (ConcreteCategory.hom (k.app (op U))) (𝟙 U)) hx
+      change
+        (ConcreteCategory.hom
+          (((Opens.grothendieckTopology X).toSheafify
+              (CategoryTheory.yoneda.obj U) ≫
+            (Opens.grothendieckTopology X).sheafifyLift
+              (yonedaEquiv.symm x) (moduleSetSheaf F).property).app (op U)))
+            (𝟙 U) = x
+      exact hx0.trans (by
+        change CategoryTheory.yonedaEquiv
+            (F := (moduleSetSheaf F).obj) (yonedaEquiv.symm x) = x
+        exact Equiv.apply_symm_apply _ _)
+    have y0 (y : (G.val.obj (op U) : Type v)) :
+        (yHom y).hom.app (op U) s0 = y := by
+      have hy :=
+        CategoryTheory.GrothendieckTopology.toSheafify_sheafifyLift
+          (J := Opens.grothendieckTopology X)
+          (P := CategoryTheory.yoneda.obj U) (Q := (moduleSetSheaf G).obj)
+          (yonedaEquiv.symm y) (moduleSetSheaf G).property
+      have hy0 := congrArg
+        (fun k => (ConcreteCategory.hom (k.app (op U))) (𝟙 U)) hy
+      change
+        (ConcreteCategory.hom
+          (((Opens.grothendieckTopology X).toSheafify
+              (CategoryTheory.yoneda.obj U) ≫
+            (Opens.grothendieckTopology X).sheafifyLift
+              (yonedaEquiv.symm y) (moduleSetSheaf G).property).app (op U)))
+            (𝟙 U) = y
+      exact hy0.trans (by
+        change CategoryTheory.yonedaEquiv
+            (F := (moduleSetSheaf G).obj) (yonedaEquiv.symm y) = y
+        exact Equiv.apply_symm_apply _ _)
+    have r0 (r : (O.obj.obj (op U) : Type v)) :
+        (rHom r).hom.app (op U) s0 = r := by
+      have hr :=
+        CategoryTheory.GrothendieckTopology.toSheafify_sheafifyLift
+          (J := Opens.grothendieckTopology X)
+          (P := CategoryTheory.yoneda.obj U) (Q := (ringSetSheaf O).obj)
+          (yonedaEquiv.symm r) (ringSetSheaf O).property
+      have hr0 := congrArg
+        (fun k => (ConcreteCategory.hom (k.app (op U))) (𝟙 U)) hr
+      change
+        (ConcreteCategory.hom
+          (((Opens.grothendieckTopology X).toSheafify
+              (CategoryTheory.yoneda.obj U) ≫
+            (Opens.grothendieckTopology X).sheafifyLift
+              (yonedaEquiv.symm r) (ringSetSheaf O).property).app (op U)))
+            (𝟙 U) = r
+      exact hr0.trans (by
+        change CategoryTheory.yonedaEquiv
+            (F := (ringSetSheaf O).obj) (yonedaEquiv.symm r) = r
+        exact Equiv.apply_symm_apply _ _)
+    have hh := h S hp
+    rcases hh with ⟨g, hg⟩
+    have eval_rule (a : S ⟶ moduleSetSheaf F)
+        (b : S ⟶ moduleSetSheaf G) :
+        evH (g a b) =
+          sectionMap f U (a.hom.app (op U) s0) (b.hom.app (op U) s0) := by
+      calc
+        evH (g a b) = evH (sheafHomBilinearRule f S a b) :=
+          congrArg evH (hg a b)
+        _ = sectionMap f U (a.hom.app (op U) s0)
+              (b.hom.app (op U) s0) := by
+          change
+            (show (H.val.obj (op U) : Type v) from
+              (sheafHomBilinearRule f S a b).hom.app (op U) s0) = _
+          exact sheafHomBilinearRule_app_eq f S a b (op U) s0
+    refine ⟨{
+      toFun := fun x y => evH (g (xHom x) (yHom y))
+      map_add_left' := by
+        intro x₁ x₂ y
+        calc
+          evH (g (xHom (x₁ + x₂)) (yHom y)) =
+              evH (g (xHom x₁ + xHom x₂) (yHom y)) := by
+            rw [xHom_add]
+          _ = evH (g (xHom x₁) (yHom y)) +
+              evH (g (xHom x₂) (yHom y)) := by
+            calc
+              evH (g (xHom x₁ + xHom x₂) (yHom y)) =
+                  evH (g (xHom x₁) (yHom y) +
+                    g (xHom x₂) (yHom y)) :=
+                congrArg evH (g.map_add_left' _ _ _)
+              _ = evH (g (xHom x₁) (yHom y)) +
+                  evH (g (xHom x₂) (yHom y)) := by
+                change
+                  (show (H.val.obj (op U) : Type v) from
+                    (g (xHom x₁) (yHom y) +
+                      g (xHom x₂) (yHom y)).hom.app (op U) s0) =
+                    (show (H.val.obj (op U) : Type v) from
+                      (g (xHom x₁) (yHom y)).hom.app (op U) s0) +
+                    (show (H.val.obj (op U) : Type v) from
+                      (g (xHom x₂) (yHom y)).hom.app (op U) s0)
+                exact hp.2.2.1 (g (xHom x₁) (yHom y))
+                  (g (xHom x₂) (yHom y)) U s0
+      map_smul_left' := by
+        intro r x y
+        calc
+          evH (g (xHom (r • x)) (yHom y)) =
+              evH (g (rHom r • xHom x) (yHom y)) := by
+            rw [xHom_smul]
+          _ = evH (rHom r • g (xHom x) (yHom y)) :=
+            congrArg evH (g.map_smul_left' _ _ _)
+          _ = (show (O.obj.obj (op U) : Type v) from
+                (rHom r).hom.app (op U) s0) •
+              evH (g (xHom x) (yHom y)) := by
+            change
+              (show (H.val.obj (op U) : Type v) from
+                (rHom r • g (xHom x) (yHom y)).hom.app (op U) s0) =
+                (show (O.obj.obj (op U) : Type v) from
+                  (rHom r).hom.app (op U) s0) •
+                  (show (H.val.obj (op U) : Type v) from
+                    (g (xHom x) (yHom y)).hom.app (op U) s0)
+            exact hp.2.2.2.2.2 (rHom r) (g (xHom x) (yHom y)) U s0
+          _ = r • evH (g (xHom x) (yHom y)) := by
+            rw [r0]
+      map_add_right' := by
+        intro x y₁ y₂
+        calc
+          evH (g (xHom x) (yHom (y₁ + y₂))) =
+              evH (g (xHom x) (yHom y₁ + yHom y₂)) := by
+            rw [yHom_add]
+          _ = evH (g (xHom x) (yHom y₁)) +
+              evH (g (xHom x) (yHom y₂)) := by
+            calc
+              evH (g (xHom x) (yHom y₁ + yHom y₂)) =
+                  evH (g (xHom x) (yHom y₁) +
+                    g (xHom x) (yHom y₂)) :=
+                congrArg evH (g.map_add_right' _ _ _)
+              _ = evH (g (xHom x) (yHom y₁)) +
+                  evH (g (xHom x) (yHom y₂)) := by
+                change
+                  (show (H.val.obj (op U) : Type v) from
+                    (g (xHom x) (yHom y₁) +
+                      g (xHom x) (yHom y₂)).hom.app (op U) s0) =
+                    (show (H.val.obj (op U) : Type v) from
+                      (g (xHom x) (yHom y₁)).hom.app (op U) s0) +
+                    (show (H.val.obj (op U) : Type v) from
+                      (g (xHom x) (yHom y₂)).hom.app (op U) s0)
+                exact hp.2.2.1 (g (xHom x) (yHom y₁))
+                  (g (xHom x) (yHom y₂)) U s0
+      map_smul_right' := by
+        intro r x y
+        calc
+          evH (g (xHom x) (yHom (r • y))) =
+              evH (g (xHom x) (rHom r • yHom y)) := by
+            rw [yHom_smul]
+          _ = evH (rHom r • g (xHom x) (yHom y)) :=
+            congrArg evH (g.map_smul_right' _ _ _)
+          _ = (show (O.obj.obj (op U) : Type v) from
+                (rHom r).hom.app (op U) s0) •
+              evH (g (xHom x) (yHom y)) := by
+            change
+              (show (H.val.obj (op U) : Type v) from
+                (rHom r • g (xHom x) (yHom y)).hom.app (op U) s0) =
+                (show (O.obj.obj (op U) : Type v) from
+                  (rHom r).hom.app (op U) s0) •
+                  (show (H.val.obj (op U) : Type v) from
+                    (g (xHom x) (yHom y)).hom.app (op U) s0)
+            exact hp.2.2.2.2.2 (rHom r) (g (xHom x) (yHom y)) U s0
+          _ = r • evH (g (xHom x) (yHom y)) := by
+            rw [r0]
+      }, ?_⟩
+    intro x y
+    have he := eval_rule (xHom x) (yHom y)
+    simpa only [x0 x, y0 y] using he
 
 /-! The canonical module structure on a module stalk. -/
 noncomputable abbrev moduleStalk {X : TopCat.{v}}

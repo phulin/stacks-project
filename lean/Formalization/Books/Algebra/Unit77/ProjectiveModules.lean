@@ -459,8 +459,8 @@ theorem exists_projective_lift_of_isNilpotent
     rw [hdx]
     simpa using congrArg (fun f => f x) hp
   let Psub : Submodule R F := LinearMap.range e
-  letI : AddCommGroup (Psub : Type u) := inferInstance
-  letI : Module R (Psub : Type u) := inferInstance
+  let _ : AddCommGroup (Psub : Type u) := inferInstance
+  let _ : Module R (Psub : Type u) := inferInstance
   let P : ModuleCat.{u} R := ModuleCat.of R Psub
   let inc : Psub →ₗ[R] F := Psub.subtype
   let ret : F →ₗ[R] Psub := e.codRestrict Psub
@@ -750,8 +750,8 @@ theorem exists_finite_projective_lift_of_locallyNilpotent
     rw [hdx]
     simpa using congrArg (fun f => f x) hp
   let Psub : Submodule R F := LinearMap.range e
-  letI : AddCommGroup (Psub : Type u) := inferInstance
-  letI : Module R (Psub : Type u) := inferInstance
+  let _ : AddCommGroup (Psub : Type u) := inferInstance
+  let _ : Module R (Psub : Type u) := inferInstance
   let P : ModuleCat.{u} R := ModuleCat.of R Psub
   let inc : Psub →ₗ[R] F := Psub.subtype
   let ret : F →ₗ[R] Psub := e.codRestrict Psub

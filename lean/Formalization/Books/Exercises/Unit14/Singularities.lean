@@ -13,6 +13,7 @@ import Mathlib.RingTheory.MvPowerSeries.Basic
 import Mathlib.RingTheory.MvPowerSeries.Equiv
 import Mathlib.RingTheory.MvPowerSeries.Inverse
 import Mathlib.RingTheory.MvPowerSeries.Order
+import Mathlib.RingTheory.MvPowerSeries.PiTopology
 import Mathlib.RingTheory.MvPowerSeries.Substitution
 import Mathlib.RingTheory.LocalRing.RingHom.Basic
 
@@ -30,6 +31,10 @@ namespace Formalization.Books.Exercises.Unit14
 universe u v w
 
 noncomputable section
+
+open Filter
+open scoped Topology
+open scoped MvPowerSeries.WithPiTopology
 
 /-! ## The node and its cubic perturbations -/
 
@@ -113,6 +118,82 @@ noncomputable def TangentToIdentityAutomorphism.toAlgEquiv
         _ = g := s.left_inverse g,
       fun f => ⟨s.inverse.toAlgHom f, s.right_inverse f⟩⟩
 
+/-! ### Formal inversion and coefficientwise convergence interfaces -/
+
+/-- The formal inverse supplied by the tangent-to-the-identity inversion step.
+
+The statement is made at the level of the existing substitution homomorphisms,
+so a proof can use coefficient induction or the coefficientwise complete
+topology on `MvPowerSeries` without introducing a second substitution API. -/
+theorem tangentToIdentitySubstitution_exists_inverse
+    {k : Type u} [Field k] (s : TangentToIdentitySubstitution k) :
+    ∃ t : TangentToIdentitySubstitution k,
+      (∀ f, t.toAlgHom (s.toAlgHom f) = f) ∧
+        (∀ f, s.toAlgHom (t.toAlgHom f) = f) := by
+  sorry
+
+/-- Package the formal inverse of a tangent-to-the-identity substitution as an
+automorphism of the power-series ring. -/
+theorem tangentToIdentitySubstitution_toAutomorphism
+    {k : Type u} [Field k] (s : TangentToIdentitySubstitution k) :
+    Nonempty (TangentToIdentityAutomorphism k) := by
+  obtain ⟨t, hleft, hright⟩ := tangentToIdentitySubstitution_exists_inverse s
+  exact ⟨{ forward := s,
+            inverse := t,
+            left_inverse := hleft,
+            right_inverse := hright }⟩
+
+/-- Coefficientwise Cauchy compatibility for a sequence of two-variable
+power series. For each coefficient, all sufficiently late terms agree.
+
+This is the coefficient form of the filtration convergence needed below; it
+does not assume a topology on the coefficient field. -/
+def coefficientwiseCauchy
+    {k : Type u} [Field k]
+    (a : ℕ → twoVariablePowerSeries k) : Prop :=
+  ∀ d : Fin 2 →₀ ℕ, ∃ N : ℕ, ∀ n m : ℕ,
+    N ≤ n → N ≤ m →
+      MvPowerSeries.coeff d (a n) = MvPowerSeries.coeff d (a m)
+
+/-- The coefficientwise limit selected from a coefficientwise Cauchy
+sequence. The power-series API identifies a series with its coefficient
+function, so this is the concrete limit object used by the formal Morse
+interface. -/
+noncomputable def coefficientwiseLimit
+    {k : Type u} [Field k]
+    (a : ℕ → twoVariablePowerSeries k)
+    (ha : coefficientwiseCauchy a) : twoVariablePowerSeries k :=
+  fun d => MvPowerSeries.coeff d
+    (a (Classical.choose (ha d)))
+
+/-- The selected coefficientwise limit has the expected eventual-coefficient
+property. -/
+theorem coefficientwiseLimit_spec
+    {k : Type u} [Field k]
+    (a : ℕ → twoVariablePowerSeries k)
+    (ha : coefficientwiseCauchy a) :
+    ∀ d : Fin 2 →₀ ℕ, ∃ N : ℕ, ∀ n : ℕ, N ≤ n →
+      MvPowerSeries.coeff d (a n) =
+        MvPowerSeries.coeff d (coefficientwiseLimit a ha) := by
+  intro d
+  let N := Classical.choose (ha d)
+  refine ⟨N, fun n hn => ?_⟩
+  exact (Classical.choose_spec (ha d) n N hn le_rfl)
+
+/-- In the available pi topology, eventual coefficient stabilization is
+ordinary convergence. This records the precise Mathlib convergence API used
+for limits of the correction sequences. -/
+theorem coefficientwiseLimit_tendsto
+    {k : Type u} [Field k] [TopologicalSpace k] [DiscreteTopology k]
+    (a : ℕ → twoVariablePowerSeries k)
+    (ha : coefficientwiseCauchy a) :
+    Tendsto a atTop (𝓝 (coefficientwiseLimit a ha)) := by
+  rw [MvPowerSeries.WithPiTopology.tendsto_iff_coeff_tendsto]
+  intro d
+  simp only [nhds_discrete, tendsto_pure]
+  obtain ⟨N, hN⟩ := coefficientwiseLimit_spec a ha d
+  exact (eventually_ge_atTop N).mono hN
+
 /-- Tangency to the identity for an algebra automorphism of the formal power
 series ring. -/
 def IsTangentToIdentityAlgEquiv
@@ -194,6 +275,73 @@ def nodeEquation (k : Type u) [Field k] : twoVariablePowerSeries k :=
 def perturbedNodeEquation (k : Type u) [Field k]
     (δ : twoVariablePowerSeries k) : twoVariablePowerSeries k :=
   nodeEquation k + δ
+
+/-- Congruence for the maximal-ideal filtration on the two-variable formal
+power-series ring. -/
+def congruentModuloTwoVariableMaximalIdeal
+    {k : Type u} [Field k] (n : ℕ)
+    (f g : twoVariablePowerSeries k) : Prop :=
+  f - g ∈ twoVariableMaximalIdeal k ^ n
+
+/-- A homogeneous error can be split into the two coordinate directions.
+The homogeneous degrees are recorded explicitly because these coordinate
+corrections are what produce the next filtration step. -/
+theorem homogeneousError_decomposition
+    {k : Type u} [Field k]
+    (n : ℕ) (e : twoVariablePowerSeries k)
+    (he : MvPowerSeries.IsHomogeneous e (n + 1)) :
+    ∃ A B : twoVariablePowerSeries k,
+      MvPowerSeries.IsHomogeneous A n ∧
+        MvPowerSeries.IsHomogeneous B n ∧
+          e = MvPowerSeries.X (0 : Fin 2) * A +
+            MvPowerSeries.X (1 : Fin 2) * B := by
+  sorry
+
+/-- One correction step in the maximal-ideal filtration. -/
+structure OneStepFiltrationImprovement
+    (k : Type u) [Field k] (n : ℕ) (f : twoVariablePowerSeries k) where
+  correction : TangentToIdentitySubstitution k
+  correction_order :
+    ∀ i : Fin 2,
+      correction.coordinates i - MvPowerSeries.X i ∈
+        twoVariableMaximalIdeal k ^ (n - 1)
+  improved_error :
+    congruentModuloTwoVariableMaximalIdeal (n + 1)
+      (correction.toAlgHom f) (nodeEquation k)
+
+/-- An error starting in filtration degree `n` can be removed to one higher
+degree by a tangent-to-the-identity coordinate correction. -/
+theorem oneStep_filtration_improvement
+    {k : Type u} [Field k]
+    (n : ℕ) (hn : 3 ≤ n) (f : twoVariablePowerSeries k)
+    (hf : congruentModuloTwoVariableMaximalIdeal n f (nodeEquation k)) :
+    Nonempty (OneStepFiltrationImprovement k n f) := by
+  sorry
+
+/-- A sequence of already-inverted corrections whose coefficients stabilize at
+every coordinate and every monomial. The use of `coefficientwiseCauchy` makes
+the limiting construction independent of a guessed adic-completion API. -/
+structure CompatibleTangentToIdentityCorrections
+    (k : Type u) [Field k] where
+  approximation : ℕ → TangentToIdentityAutomorphism k
+  forward_cauchy :
+    ∀ i : Fin 2,
+      coefficientwiseCauchy
+        (fun n => (approximation n).forward.coordinates i)
+  inverse_cauchy :
+    ∀ i : Fin 2,
+      coefficientwiseCauchy
+        (fun n => (approximation n).inverse.coordinates i)
+
+/-- Compatible formal corrections have a limiting tangent-to-the-identity
+power-series automorphism. The proof uses coefficientwise limits (equivalently,
+the `MvPowerSeries.WithPiTopology` pi-topology) for the two coordinate maps
+and their inverses. -/
+theorem compatibleCorrections_toPowerSeriesAutomorphism
+    {k : Type u} [Field k]
+    (C : CompatibleTangentToIdentityCorrections k) :
+    Nonempty (TangentToIdentityAutomorphism k) := by
+  sorry
 
 /-- The convergent two-variable formal Morse lemma for the node.
 

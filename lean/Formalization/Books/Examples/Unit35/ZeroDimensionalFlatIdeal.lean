@@ -1347,23 +1347,26 @@ theorem zeroDimensionalFlatIdeal_x_annihilator
               intro z hz
               obtain ⟨n, hzn, hni⟩ := hlow z hz
               exact ⟨n, hzn, hni, hexp z hz⟩
-            push_neg at hexp
+            push Not at hexp
             obtain ⟨z, hz, hz1⟩ := hexp
             obtain ⟨n, hzn, hni⟩ := hlow z hz
             subst z
             have hmn0 : m (n, true) ≠ 0 := Finsupp.mem_support_iff.mp hz
             have hmn2 : 2 ≤ m (n, true) := by omega
             refine ⟨Finsupp.single (zeroDimensionalFlatIdealYVar n) 2, ?_, ?_⟩
-            · change Finsupp.single (zeroDimensionalFlatIdealYVar n) 2 ∈ bad
-              dsimp [bad]
+            · dsimp [bad]
               exact Or.inr ⟨n, rfl⟩
             · intro w
               by_cases hw : w = (n, true)
               · subst w
                 simpa [zeroDimensionalFlatIdealYVar] using hmn2
               · have hw' : ¬ (n, true) = w := fun h => hw h.symm
-                simp [Finsupp.single_apply, zeroDimensionalFlatIdealYVar, hw']
-          · push_neg at hlow
+                have hvar : zeroDimensionalFlatIdealYVar n ≠ w := by
+                  intro h
+                  apply hw'
+                  simpa [zeroDimensionalFlatIdealYVar] using h
+                simp [hvar]
+          · push Not at hlow
             obtain ⟨z, hz, hzl⟩ := hlow
             cases z with
             | mk n b =>
@@ -1373,8 +1376,7 @@ theorem zeroDimensionalFlatIdeal_x_annihilator
                       Finsupp.mem_support_iff.mp hz
                     refine ⟨Finsupp.single (zeroDimensionalFlatIdealXVar n) 1,
                       ?_, ?_⟩
-                    · change Finsupp.single (zeroDimensionalFlatIdealXVar n) 1 ∈ bad
-                      dsimp [bad]
+                    · dsimp [bad]
                       exact Or.inl (Or.inl ⟨n, rfl⟩)
                     · intro w
                       by_cases hw : w = (n, false)
@@ -1382,7 +1384,11 @@ theorem zeroDimensionalFlatIdeal_x_annihilator
                         simpa [zeroDimensionalFlatIdealXVar] using
                           (Nat.one_le_iff_ne_zero.mpr hmn0)
                       · have hw' : ¬ (n, false) = w := fun h => hw h.symm
-                        simp [Finsupp.single_apply, zeroDimensionalFlatIdealXVar, hw']
+                        have hvar : zeroDimensionalFlatIdealXVar n ≠ w := by
+                          intro h
+                          apply hw'
+                          simpa [zeroDimensionalFlatIdealXVar] using h
+                        simp [hvar]
                 | true =>
                     have hni : i ≤ n := by
                       by_contra hni
@@ -1392,8 +1398,7 @@ theorem zeroDimensionalFlatIdeal_x_annihilator
                       Finsupp.mem_support_iff.mp hz
                     refine ⟨Finsupp.single (zeroDimensionalFlatIdealYVar n) 1,
                       ?_, ?_⟩
-                    · change Finsupp.single (zeroDimensionalFlatIdealYVar n) 1 ∈ bad
-                      dsimp [bad]
+                    · dsimp [bad]
                       exact Or.inl (Or.inr ⟨⟨n, hni⟩, rfl⟩)
                     · intro w
                       by_cases hw : w = (n, true)
@@ -1401,7 +1406,11 @@ theorem zeroDimensionalFlatIdeal_x_annihilator
                         simpa [zeroDimensionalFlatIdealYVar] using
                           (Nat.one_le_iff_ne_zero.mpr hmn0)
                       · have hw' : ¬ (n, true) = w := fun h => hw h.symm
-                        simp [Finsupp.single_apply, zeroDimensionalFlatIdealYVar, hw']
+                        have hvar : zeroDimensionalFlatIdealYVar n ≠ w := by
+                          intro h
+                          apply hw'
+                          simpa [zeroDimensionalFlatIdealYVar] using h
+                        simp [hvar]
       exact hL hpL
   · exact hC
 

@@ -6,12 +6,11 @@ import Formalization.Books.Sheaves.Unit22.OpenImmersions
 /-!
 # Cohomology of Sheaves, Chapter 17: cohomology with support in a closed subset
 
-The source section introduces sections supported on a closed subset, their
-right-derived functors, the localization triangle, and the Grothendieck
-spectral sequence obtained by first forming the sheaf of supported sections.
-The canonical closed-immersion API from Modules 6 supplies the sheaf-valued
-functor; the declarations below add the source-facing global-section and
-derived-category interfaces.
+This file formalizes the precise assertions in the source section
+`Cohomology with support in a closed subset`.  The canonical Sections-with-
+support sheaf and its adjunction are supplied by Modules 6; this chapter
+records the global-sections, derived, localization, and spectral-sequence
+interfaces used by the source.
 -/
 
 noncomputable section
@@ -25,33 +24,23 @@ open TopologicalSpace
 open Formalization.Books.Cohomology.Unit02
 open Formalization.Books.Cohomology.Unit03
 open Formalization.Books.Categories.Unit23
-open Formalization.Books.Derived.Unit11
 open Formalization.Books.Derived.Unit08
 open Formalization.Books.Derived.Unit20
 open Formalization.Books.Derived.Unit22
 open Formalization.Books.Homology.Unit24
 open Formalization.Books.Modules.Unit06
-open Formalization.Books.Sheaves.Unit08
 open Formalization.Books.Sheaves.Unit22
 
 universe v
 
 namespace Formalization.Books.Cohomology.Unit17
 
-/-! ## Sections with support and their right-derived functors -/
+/-! ## `Γ_Z(X, F)` and its right-derived functors -/
 
-/-- The open complement of a closed subset. -/
-def supportComplement {X : TopCat.{v}} (Z : Set X) (hZ : IsClosed Z) : Opens X :=
-  ⟨Zᶜ, hZ.isOpen_compl⟩
-
-/-- The source's subset of global sections whose support is contained in `Z`.
-
-This is the underlying set of `Γ_Z(X, F)`; the subgroup statement is recorded
-below, while the categorical functor is transported through the canonical
-sheaf `H_Z(F)` supplied by the closed-immersion API.
--/
+/-- The subset of sections over `X` whose support is contained in `Z`. -/
 def sectionsWithSupportInClosedAtTop {X : TopCat.{v}} (Z : Set X)
-    {F : Ab X} : Set (F.presheaf.obj (op (⊤ : Opens X))) :=
+    (_hZ : IsClosed Z) {F : Ab X} :
+    Set (F.presheaf.obj (op (⊤ : Opens X))) :=
   abelianSectionsWithSupportInClosed Z (F := F) (⊤ : Opens X)
 
 /-- The supported global sections form an additive subgroup. -/
@@ -59,33 +48,33 @@ theorem sectionsWithSupportInClosedAtTop_isAddSubgroup
     {X : TopCat.{v}} (Z : Set X) (hZ : IsClosed Z) (F : Ab X) :
     ∃ H : AddSubgroup (F.presheaf.obj (op (⊤ : Opens X)) : Type v),
       (H : Set (F.presheaf.obj (op (⊤ : Opens X)) : Type v)) =
-        sectionsWithSupportInClosedAtTop Z (F := F) := by
+        sectionsWithSupportInClosedAtTop Z hZ (F := F) := by
   sorry
 
-/-- A chosen additive group realizing `Γ_Z(X, F)`. -/
+/-- A chosen additive group realizing the source's `Γ_Z(X, F)`. -/
 noncomputable def sectionsWithSupportInClosedGroup
     {X : TopCat.{v}} (Z : Set X) (hZ : IsClosed Z) (F : Ab X) :
-  AddCommGrpCat.{v} :=
-    by
+    AddCommGrpCat.{v} :=
   let H : AddSubgroup (F.presheaf.obj (op (⊤ : Opens X)) : Type v) :=
     Classical.choose (sectionsWithSupportInClosedAtTop_isAddSubgroup Z hZ F)
-  exact AddCommGrpCat.of H
+  AddCommGrpCat.of H
 
-/- The functor is the canonical composite `F ↦ Γ(Z, H_Z(F))`; the
-   carrier-level description above is identified with it by the source's
-   equality `Γ_Z(X,F) = Γ(Z,H_Z(F))`. -/
+/-- The functor `F ↦ Γ_Z(X, F)`, identified with global sections of `𝓗_Z(F)`.
+-/
 noncomputable def sectionsWithSupportFunctor {X : TopCat.{v}}
     (Z : Set X) (hZ : IsClosed Z) : Ab X ⥤ AddCommGrpCat.{v} :=
   closedSupportSectionsFunctor Z hZ ⋙
     abelianSheafGlobalSections (closedSubspace Z)
 
+/-- The subgroup presentation and the global-sections presentation of
+`Γ_Z(X, F)` are naturally isomorphic. -/
 theorem sectionsWithSupportFunctor_obj_iso
     {X : TopCat.{v}} (Z : Set X) (hZ : IsClosed Z) (F : Ab X) :
     Nonempty ((sectionsWithSupportInClosedGroup Z hZ F) ≅
       (sectionsWithSupportFunctor Z hZ).obj F) := by
   sorry
 
-/-- `Γ_Z(X,-)` is left exact. -/
+/-- `Γ_Z(X, -)` is left exact. -/
 theorem sectionsWithSupportFunctor_isLeftExact {X : TopCat.{v}}
     (Z : Set X) (hZ : IsClosed Z) :
     IsLeftExact (sectionsWithSupportFunctor Z hZ) := by
@@ -93,14 +82,13 @@ theorem sectionsWithSupportFunctor_isLeftExact {X : TopCat.{v}}
     (closedSupportSectionsFunctor_isLeftExact Z hZ)
     (abelianSheafGlobalSections_isLeftExact (closedSubspace Z))
 
-/-- The failure of exactness is a genuine general warning, not a failure of
-the left-exactness assertion. -/
+/-- The source's warning that supported sections are not exact in general. -/
 theorem sectionsWithSupportFunctor_not_exact_in_general :
     ∃ (X : TopCat.{v}) (Z : Set X) (hZ : IsClosed Z),
       ¬ IsExact (sectionsWithSupportFunctor Z hZ) := by
   sorry
 
-/-- The bounded-below right-derived functor `RΓ_Z(X,-)`. -/
+/-- The bounded-below right-derived functor `RΓ_Z(X, -)`. -/
 noncomputable def sectionsWithSupportRightDerivedFunctor
     {X : TopCat.{v}} (Z : Set X) (hZ : IsClosed Z) :
     DPlus (Ab X) ⥤ DPlus AddCommGrpCat.{v} :=
@@ -108,7 +96,7 @@ noncomputable def sectionsWithSupportRightDerivedFunctor
     (sectionsWithSupportFunctor Z hZ)
     (sectionsWithSupportFunctor_isLeftExact Z hZ)
 
-/-- The integer-indexed cohomology functor `R^qΓ_Z(X,-)`. -/
+/-- The integer-indexed higher supported-sections functor `R^qΓ_Z(X, -)`. -/
 noncomputable def sectionsWithSupportCohomologyFunctor
     {X : TopCat.{v}} (Z : Set X) (hZ : IsClosed Z) (q : ℤ) :
     Ab X ⥤ AddCommGrpCat.{v} :=
@@ -116,22 +104,21 @@ noncomputable def sectionsWithSupportCohomologyFunctor
     (sectionsWithSupportFunctor Z hZ)
     (sectionsWithSupportFunctor_isLeftExact Z hZ) q
 
-/-- The group `H^q_Z(X,F)`. -/
+/-- The group `H^q_Z(X, F)`. -/
 abbrev sectionsWithSupportCohomologyObject
     {X : TopCat.{v}} (Z : Set X) (hZ : IsClosed Z) (F : Ab X) (q : ℤ) :
     AddCommGrpCat.{v} :=
   (sectionsWithSupportCohomologyFunctor Z hZ q).obj F
 
-/-- Cohomology with support of a bounded-below derived object. -/
+/-- The cohomology object `H^q_Z(X, K)` of a bounded-below derived object. -/
 abbrev derivedSectionsWithSupportCohomologyObject
     {X : TopCat.{v}} (Z : Set X) (hZ : IsClosed Z)
     (K : DPlus (Ab X)) (q : ℤ) : AddCommGrpCat.{v} :=
   (DerivedCategory.Plus.homologyFunctor AddCommGrpCat q).obj
     ((sectionsWithSupportRightDerivedFunctor Z hZ).obj K)
 
-/-- Applying supported sections termwise to a bounded-below complex and then
-passing to the derived category.  This is the source's
-`Γ_Z(X, I^•)` computation interface. -/
+/-- Applying supported sections to a bounded-below complex and passing to the
+derived category. -/
 noncomputable def sectionsWithSupportOnComplexes
     {X : TopCat.{v}} (Z : Set X) (hZ : IsClosed Z) :
     CompPlus (Ab X) ⥤ DPlus AddCommGrpCat.{v} :=
@@ -139,43 +126,52 @@ noncomputable def sectionsWithSupportOnComplexes
     (sectionsWithSupportFunctor Z hZ)
     (sectionsWithSupportFunctor_isLeftExact Z hZ)
 
-/-- The source's injective-resolution computation interface. -/
+/-- A bounded-below termwise-injective complex representing `K` and computing
+the right-derived supported sections on `K`. -/
 def sectionsWithSupportComputedByInjectiveResolution
     {X : TopCat.{v}} (Z : Set X) (_hZ : IsClosed Z) (K : DPlus (Ab X)) : Prop :=
   ∃ I : CompPlus (Ab X),
-    isBoundedBelowInjectiveComplex I.1 ∧
+    IsTermwiseInjectiveComplex I ∧
       Nonempty ((DerivedCategory.Plus.Qh (C := Ab X)).obj
-        ((HomotopyCategory.Plus.quotient (Ab X)).obj I) ≅ K)
+        ((HomotopyCategory.Plus.quotient (Ab X)).obj I) ≅ K) ∧
+      Nonempty ((sectionsWithSupportOnComplexes Z _hZ).obj I ≅
+        (sectionsWithSupportRightDerivedFunctor Z _hZ).obj K)
 
 theorem sectionsWithSupport_computed_by_injective_resolution
     {X : TopCat.{v}} (Z : Set X) (hZ : IsClosed Z) (K : DPlus (Ab X)) :
     sectionsWithSupportComputedByInjectiveResolution Z hZ K := by
   sorry
 
-/-- Degree zero recovers the supported-sections functor. -/
+/-- Degree zero recovers `Γ_Z(X, -)`. -/
 theorem sectionsWithSupportCohomologyFunctor_zero
     {X : TopCat.{v}} (Z : Set X) (hZ : IsClosed Z) :
     Nonempty (sectionsWithSupportCohomologyFunctor Z hZ 0 ≅
       sectionsWithSupportFunctor Z hZ) := by
-  sorry
+  exact higherRightDerivedFunctor_zero_iso
+    (sectionsWithSupportFunctor Z hZ)
+    (sectionsWithSupportFunctor_isLeftExact Z hZ)
 
-/-! ## The restriction map and the localization triangle -/
+/-! ## The complement and the localization triangle -/
 
-/-- Restriction of global sections to the complement of `Z`. -/
+/-- The open complement of a closed subset. -/
+def supportComplement {X : TopCat.{v}} (Z : Set X) (hZ : IsClosed Z) : Opens X :=
+  ⟨Zᶜ, hZ.isOpen_compl⟩
+
+/-- Restriction of global sections to `X \ Z`. -/
 def restrictionToSupportComplement {X : TopCat.{v}} (Z : Set X)
     (hZ : IsClosed Z) (F : Ab X)
     (s : F.presheaf.obj (op (⊤ : Opens X))) :
     F.presheaf.obj (op (supportComplement Z hZ)) :=
   F.presheaf.map (homOfLE (show supportComplement Z hZ ≤ ⊤ by simp)).op s
 
-/-- For an injective sheaf, restriction to the complement is surjective and
-its kernel is exactly `Γ_Z(X,I)`. -/
+/-- For an injective sheaf, restriction to `X \ Z` is surjective and has
+kernel `Γ_Z(X, I)`. -/
 theorem injective_restriction_to_supportComplement
     {X : TopCat.{v}} (Z : Set X) (hZ : IsClosed Z) (I : Ab X)
     [Injective I] :
     Function.Surjective (restrictionToSupportComplement Z hZ I) ∧
       {s | restrictionToSupportComplement Z hZ I s = 0} =
-        sectionsWithSupportInClosedAtTop Z (F := I) := by
+        sectionsWithSupportInClosedAtTop Z hZ (F := I) := by
   sorry
 
 /-- The right-derived global-sections functor on `X`. -/
@@ -185,7 +181,8 @@ noncomputable def globalSectionsRightDerivedFunctor {X : TopCat.{v}} :
     (abelianSheafGlobalSections X)
     (abelianSheafGlobalSections_isLeftExact X)
 
-/-- Global sections on the complement, as a functor on sheaves on `X`. -/
+/-- Global sections on the complement, regarded as a functor on sheaves on
+`X`. -/
 noncomputable def supportComplementGlobalSectionsFunctor {X : TopCat.{v}}
     (Z : Set X) (hZ : IsClosed Z) : Ab X ⥤ AddCommGrpCat.{v} :=
   openSheafRestriction AddCommGrpCat (supportComplement Z hZ) ⋙
@@ -204,13 +201,13 @@ noncomputable def supportComplementRightDerivedFunctor
     (supportComplementGlobalSectionsFunctor Z hZ)
     (supportComplementGlobalSectionsFunctor_isLeftExact Z hZ)
 
-/-- A distinguished triangle with the three derived-section objects in the
-order `RΓ_Z(X,K) → RΓ(X,K) → RΓ(X\Z,K)`. -/
+/-- The distinguished triangle
+`RΓ_Z(X,K) → RΓ(X,K) → RΓ(X \ Z,K) → RΓ_Z(X,K)[1]`. -/
 structure SupportDistinguishedTriangleData
     {X : TopCat.{v}} (Z : Set X) (hZ : IsClosed Z) (K : DPlus (Ab X)) where
   triangle : Triangle (DPlus AddCommGrpCat.{v})
   obj₁ : triangle.obj₁ = (sectionsWithSupportRightDerivedFunctor Z hZ).obj K
-  obj₂ : triangle.obj₂ = (globalSectionsRightDerivedFunctor.obj K)
+  obj₂ : triangle.obj₂ = globalSectionsRightDerivedFunctor.obj K
   obj₃ : triangle.obj₃ = (supportComplementRightDerivedFunctor Z hZ).obj K
   distinguished : triangle ∈ distTriang (DPlus AddCommGrpCat.{v})
 
@@ -219,7 +216,7 @@ theorem support_distinguished_triangle
     Nonempty (SupportDistinguishedTriangleData Z hZ K) := by
   sorry
 
-/-- The finite windows of the long cohomology sequence attached to a support
+/-- A finite window of the long cohomology sequence associated to a support
 triangle. -/
 noncomputable def supportHomologySequenceWindow
     {X : TopCat.{v}} {Z : Set X} {hZ : IsClosed Z} {K : DPlus (Ab X)}
@@ -234,14 +231,14 @@ theorem support_long_exact_cohomology_sequence
       ∀ n : ℤ, (supportHomologySequenceWindow T n).Exact := by
   sorry
 
-/-! ## The sheaf of sections with support -/
+/-! ## The sheaf `𝓗_Z(F)` and the Grothendieck spectral sequence -/
 
-/-- The sheaf `H_Z(F)` of sections supported in `Z`, viewed on `Z`. -/
+/-- The sheaf `𝓗_Z(F)` of sections supported in `Z`, viewed on `Z`. -/
 noncomputable abbrev sectionsWithSupportSheaf {X : TopCat.{v}}
     (Z : Set X) (hZ : IsClosed Z) (F : Ab X) : Ab (closedSubspace Z) :=
   sectionsWithSupportInClosed Z hZ F
 
-/-- The source's sheaf-valued functor `𝓗_Z`. -/
+/-- The sheaf-valued functor `𝓗_Z`. -/
 noncomputable abbrev sectionsWithSupportSheafFunctor {X : TopCat.{v}}
     (Z : Set X) (hZ : IsClosed Z) : Ab X ⥤ Ab (closedSubspace Z) :=
   closedSupportSectionsFunctor Z hZ
@@ -251,7 +248,7 @@ theorem sectionsWithSupportSheafFunctor_isLeftExact
     IsLeftExact (sectionsWithSupportSheafFunctor Z hZ) := by
   exact closedSupportSectionsFunctor_isLeftExact Z hZ
 
-/-- The sheaf-valued supported-sections functor is not exact in general. -/
+/-- The source's warning that `𝓗_Z` is not exact in general. -/
 theorem sectionsWithSupportSheafFunctor_not_exact_in_general :
     ∃ (X : TopCat.{v}) (Z : Set X) (hZ : IsClosed Z),
       ¬ IsExact (sectionsWithSupportSheafFunctor Z hZ) := by
@@ -282,23 +279,27 @@ theorem sectionsWithSupportSheafCohomologyFunctor_zero
     {X : TopCat.{v}} (Z : Set X) (hZ : IsClosed Z) :
     Nonempty (sectionsWithSupportSheafCohomologyFunctor Z hZ 0 ≅
       closedSupportSectionsFunctor Z hZ) := by
-  sorry
+  exact higherRightDerivedFunctor_zero_iso
+    (closedSupportSectionsFunctor Z hZ)
+    (closedSupportSectionsFunctor_isLeftExact Z hZ)
 
-/-- The sheafwise description of supported sections on an open. -/
+/-- The sections with support in `Z` over an open `U`. -/
 def sectionsWithSupportOnOpen {X : TopCat.{v}} (Z : Set X)
-    {F : Ab X} (U : Opens X) : Set (F.presheaf.obj (op U)) :=
+    (_hZ : IsClosed Z) {F : Ab X} (U : Opens X) :
+    Set (F.presheaf.obj (op U)) :=
   abelianSectionsWithSupportInClosed Z (F := F) U
 
-/-! ## The Grothendieck spectral sequence and injectivity -/
+/-! ### Injectivity and the spectral sequence -/
 
-/-- The sheaf of supported sections carries injectives to injectives. -/
+/-- `𝓗_Z` sends injective abelian sheaves on `X` to injective sheaves on `Z`.
+-/
 theorem sectionsWithSupportSheaf_preserves_injective
     {X : TopCat.{v}} (Z : Set X) (hZ : IsClosed Z) (I : Ab X)
-    [Injective I] :
-    Injective ((sectionsWithSupportSheaf Z hZ I)) := by
+    [Injective I] : Injective (sectionsWithSupportSheaf Z hZ I) := by
   sorry
 
-/-- The acyclicity condition used by the Grothendieck spectral-sequence API. -/
+/-- The right-acyclicity condition for applying global sections on `Z` after
+`𝓗_Z`. -/
 theorem sectionsWithSupportSheaf_rightAcyclicOnInjectiveImages
     {X : TopCat.{v}} (Z : Set X) (hZ : IsClosed Z) :
     RightAcyclicOnInjectiveImages
@@ -307,8 +308,20 @@ theorem sectionsWithSupportSheaf_rightAcyclicOnInjectiveImages
       (abelianSheafGlobalSections_isLeftExact (closedSubspace Z)) := by
   sorry
 
+/-- The acyclicity comparison identifies the derived composite used by the
+Grothendieck package with `RΓ_Z(X, -)`. -/
+theorem sectionsWithSupport_rightDerivedComposition_iso
+    {X : TopCat.{v}} (Z : Set X) (hZ : IsClosed Z) (K : DPlus (Ab X)) :
+    Nonempty ((sectionsWithSupportRightDerivedFunctor Z hZ).obj K ≅
+      (rightDerivedCompositionFunctor
+        (closedSupportSectionsFunctor Z hZ)
+        (closedSupportSectionsFunctor_isLeftExact Z hZ)
+        (abelianSheafGlobalSections (closedSubspace Z))
+        (abelianSheafGlobalSections_isLeftExact (closedSubspace Z))).obj K) := by
+  sorry
+
 /-- The convergent Grothendieck spectral sequence
-`E₂^{p,q} = H^p(Z, 𝓗^q_Z(K)) ⇒ H^{p+q}_Z(X,K)`. -/
+`E₂^{p,q} = H^p(Z, 𝓗^q_Z(K) ) ⇒ H^{p+q}_Z(X,K)`. -/
 theorem sectionsWithSupport_grothendieck_spectral_sequence
     {X : TopCat.{v}} (Z : Set X) (hZ : IsClosed Z) (K : DPlus (Ab X)) :
     ∃ C : FilteredComplex AddCommGrpCat.{v},
@@ -317,7 +330,13 @@ theorem sectionsWithSupport_grothendieck_spectral_sequence
         (closedSupportSectionsFunctor_isLeftExact Z hZ)
         (abelianSheafGlobalSections (closedSubspace Z))
         (abelianSheafGlobalSections_isLeftExact (closedSubspace Z))
-        K C) := by
+        K C) ∧
+      Nonempty ((sectionsWithSupportRightDerivedFunctor Z hZ).obj K ≅
+        (rightDerivedCompositionFunctor
+          (closedSupportSectionsFunctor Z hZ)
+          (closedSupportSectionsFunctor_isLeftExact Z hZ)
+          (abelianSheafGlobalSections (closedSubspace Z))
+          (abelianSheafGlobalSections_isLeftExact (closedSubspace Z))).obj K) := by
   sorry
 
 end Formalization.Books.Cohomology.Unit17

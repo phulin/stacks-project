@@ -48,7 +48,8 @@ theorem exists_finite_polynomials_eq_polynomialZeroSet
   rcases hZ with ⟨S, rfl⟩
   obtain ⟨T, hT⟩ := Ideal.fg_of_isNoetherianRing (Ideal.span S)
   refine ⟨(T : Set (MvPolynomial (Fin n) k)), T.finite_toSet, ?_⟩
-  simp [polynomialZeroSet, hT]
+  simp only [polynomialZeroSet]
+  rw [hT]
 
 /-! ## Constructible sets -/
 

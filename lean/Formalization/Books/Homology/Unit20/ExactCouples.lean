@@ -338,7 +338,7 @@ theorem shiftedExactCouple_spectral_sequence
     {S T : C ≌ C} {A E : C}
     (D : ShiftedExactCouple C S T A E) :
     ∃ X : TranslatedSpectralSequenceData C, X.r₀ = 1 ∧
-      Nonempty (X.page 1 ≅ S.inverse.obj E) := by
+      Nonempty (X.page 1 ≅ E) := by
   sorry
 
 end Formalization.Books.Homology.Unit20

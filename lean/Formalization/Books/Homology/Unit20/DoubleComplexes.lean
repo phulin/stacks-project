@@ -414,19 +414,19 @@ theorem doubleComplex_first_quadrant_convergence
 def doubleComplexWeakSerreConclusion
     {C : Type u} [Category.{v} C] [Abelian C] [HasCountableCoproducts C]
     (A : DoubleComplex C) (P : ObjectProperty C) : Prop :=
-  (∀ n : ℤ, P (filteredComplexCohomology
-    (doubleComplexFirstFilteredTotal A) n)) ∧
-  (∀ n : ℤ, P (filteredComplexCohomology
-    (doubleComplexSecondFilteredTotal A) n))
+  ((∃ r : ℕ, ∀ p q : ℤ, P
+      ((doubleComplexFirstSpectralSequence A).page r (p, q))) →
+    ∀ n : ℤ, P (filteredComplexCohomology
+      (doubleComplexFirstFilteredTotal A) n)) ∧
+  ((∃ r : ℕ, ∀ p q : ℤ, P
+      ((doubleComplexSecondSpectralSequence A).page r (p, q))) →
+    ∀ n : ℤ, P (filteredComplexCohomology
+      (doubleComplexSecondFilteredTotal A) n))
 
 theorem doubleComplex_first_quadrant_weak_serre
     {C : Type u} [Category.{v} C] [Abelian C] [HasCountableCoproducts C]
     (A : DoubleComplex C) (hA : HasFiniteDiagonalSupport A)
-    (P : ObjectProperty C) [P.IsWeakSerreClass]
-    (hP : (∃ r : ℕ, ∀ p q : ℤ, P
-      ((doubleComplexFirstSpectralSequence A).page r (p, q))) ∧
-      ∃ r : ℕ, ∀ p q : ℤ, P
-        ((doubleComplexSecondSpectralSequence A).page r (p, q))) :
+    (P : ObjectProperty C) [P.IsWeakSerreClass] :
     doubleComplexWeakSerreConclusion A P := by
   sorry
 

@@ -261,31 +261,33 @@ theorem selfMap_boundary_preimage_le_cycle_preimage
     selfMapBoundaryPreimage α r ≤ selfMapCyclePreimage α r := by
   sorry
 
-def selfMapBoundaryPlus {C : Type u} [Category.{v} C] [Abelian C]
-    {A : PlainDifferentialObject C}
-    (α : PlainDifferentialInjectiveEndomorphism A) (r : ℕ) :
-    Subobject A.carrier :=
-  letI : Mono α.hom.hom := α.injective
-  selfMapBoundaryPreimage α r ⊔ Subobject.mk α.hom.hom
+noncomputable def selfMapQuotientImageSubobject
+    {C : Type u} [Category.{v} C] [Abelian C]
+    {X Q : C} (π : X ⟶ Q) (B : Subobject X) : Subobject Q :=
+  Subobject.mk (Abelian.image.ι (B.arrow ≫ π))
 
-def selfMapCyclePlus {C : Type u} [Category.{v} C] [Abelian C]
+noncomputable def selfMapBoundaryPlus {C : Type u} [Category.{v} C] [Abelian C]
     {A : PlainDifferentialObject C}
     (α : PlainDifferentialInjectiveEndomorphism A) (r : ℕ) :
-    Subobject A.carrier :=
-  letI : Mono α.hom.hom := α.injective
-  selfMapCyclePreimage α r ⊔ Subobject.mk α.hom.hom
+    Subobject (differentialSelfMapE₀ α) :=
+  selfMapQuotientImageSubobject (cokernel.π α.hom.hom)
+    (selfMapBoundaryPreimage α r)
+
+noncomputable def selfMapCyclePlus {C : Type u} [Category.{v} C] [Abelian C]
+    {A : PlainDifferentialObject C}
+    (α : PlainDifferentialInjectiveEndomorphism A) (r : ℕ) :
+    Subobject (differentialSelfMapE₀ α) :=
+  selfMapQuotientImageSubobject (cokernel.π α.hom.hom)
+    (selfMapCyclePreimage α r)
 
 theorem selfMap_boundary_plus_le_cycle_plus
     {C : Type u} [Category.{v} C] [Abelian C]
     {A : PlainDifferentialObject C}
     (α : PlainDifferentialInjectiveEndomorphism A) (r : ℕ) :
     selfMapBoundaryPlus α r ≤ selfMapCyclePlus α r := by
-  exact sup_le_sup (selfMap_boundary_preimage_le_cycle_preimage α r) le_rfl
-
-noncomputable def selfMapQuotientImageSubobject
-    {C : Type u} [Category.{v} C] [Abelian C]
-    {X Q : C} (π : X ⟶ Q) (B : Subobject X) : Subobject Q :=
-  Subobject.mk (Abelian.image.ι (B.arrow ≫ π))
+  /- prior attempt: exact sup_le_sup
+      (selfMap_boundary_preimage_le_cycle_preimage α r) le_rfl -/
+  sorry
 
 def selfMapBoundarySubobject {C : Type u} [Category.{v} C] [Abelian C]
     {A : PlainDifferentialObject C}
@@ -325,8 +327,7 @@ noncomputable def selfMapPageClassOfCycle
   by
     by_cases hr : r = 0
     · subst r
-      exact (z ≫ (selfMapCyclePlus α 0).arrow ≫ cokernel.π α.hom.hom) ≫
-        eqToHom (by rfl)
+      exact (z ≫ (selfMapCyclePlus α 0).arrow) ≫ eqToHom (by rfl)
     · exact (z ≫ cokernel.π (Subobject.ofLE (selfMapBoundaryPlus α r)
         (selfMapCyclePlus α r) (selfMap_boundary_plus_le_cycle_plus α r))) ≫
         eqToHom (by simp [selfMapPageComponent, hr, subquotientObject])
@@ -342,9 +343,10 @@ structure SelfMapPageDifferentialRule {C : Type u} [Category.{v} C]
     (z : T ⟶ (selfMapCyclePlus α r : C))
     (y : T ⟶ A.carrier)
     (yCycle : T ⟶ (selfMapCyclePlus α r : C))
-    (_hy : yCycle ≫ (selfMapCyclePlus α r).arrow = y)
-    (_h : z ≫ (selfMapCyclePlus α r).arrow ≫ A.d =
-      y ≫ selfMapAlphaPow α r),
+    (_hy : yCycle ≫ (selfMapCyclePlus α r).arrow =
+      y ≫ cokernel.π α.hom.hom)
+    (_h : z ≫ (selfMapCyclePlus α r).arrow ≫ differentialSelfMapD₀ α =
+      y ≫ selfMapAlphaPow α r ≫ cokernel.π α.hom.hom),
     selfMapPageClassOfCycle α r z ≫ differential =
       selfMapPageClassOfCycle α r yCycle
 

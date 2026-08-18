@@ -118,19 +118,6 @@ def filteredDifferentialDirectSumInjectiveSelfMap {C : Type u}
   hom := filteredDifferentialDirectSumAlphaHom K
   injective := filteredDifferentialDirectSumAlpha_mono K
 
-theorem filteredDifferentialAssociatedSpectralSequence_exists
-    {C : Type u} [Category.{v} C] [Abelian C] [HasCountableCoproducts C]
-    (_hExact : CountableDirectSumsExact C) (K : FilteredDifferentialObject C) :
-    Nonempty (PlainSpectralSequence C 0) := by
-  exact differentialSelfMap_starting_at_zero_exists
-    (filteredDifferentialDirectSumInjectiveSelfMap K)
-
-noncomputable def filteredDifferentialAssociatedSpectralSequence
-    {C : Type u} [Category.{v} C] [Abelian C] [HasCountableCoproducts C]
-    (hExact : CountableDirectSumsExact C) (K : FilteredDifferentialObject C) :
-    PlainSpectralSequence C 0 :=
-  Classical.choice (filteredDifferentialAssociatedSpectralSequence_exists hExact K)
-
 /-! ### The first two pages -/
 
 def filteredGradedDifferentialObject {C : Type u} [Category.{v} C]
@@ -229,6 +216,41 @@ theorem filteredDifferential_page_differentials_exists
     (K : FilteredDifferentialObject C) :
     Nonempty (FilteredDifferentialPageDifferentials K) := by
   sorry
+
+/-! The associated sequence is graded: its `p`th component is the page
+    quotient in filtration degree `p`, and its differential has degree `r`. -/
+structure FilteredDifferentialSpectralSequence
+    {C : Type u} [Category.{v} C] [Abelian C]
+    (K : FilteredDifferentialObject C) where
+  page : ℕ → GradedObject ℤ C
+  differential : ∀ r : ℕ,
+    page r ⟶ (gradedShift C (r : ℤ)).obj (page r)
+  square_zero : ∀ r : ℕ,
+    differential r ≫ (gradedShift C (r : ℤ)).map (differential r) = 0
+  page_differentials : ∀ r : ℕ, FilteredDifferentialPageDifferentials K
+  component_iso : ∀ (r : ℕ) (p : ℤ),
+    page r p ≅ filteredDifferentialPage K r p
+  differential_compatibility : ∀ (r : ℕ) (p : ℤ),
+    differential r p ≫ eqToHom (by
+      change page r (r + p) = page r (p + r)
+      congr 1 <;> ring) ≫ (component_iso r (p + r)).hom =
+      (component_iso r p).hom ≫ (page_differentials r).differential r p
+  zero_page : ∀ p : ℤ,
+    Nonempty (page 0 p ≅ filteredDifferentialE₀ K p)
+  first_page : ∀ p : ℤ,
+    Nonempty (page 1 p ≅ filteredDifferentialE₁ K p)
+
+theorem filteredDifferentialAssociatedSpectralSequence_exists
+    {C : Type u} [Category.{v} C] [Abelian C] [HasCountableCoproducts C]
+    (_hExact : CountableDirectSumsExact C) (K : FilteredDifferentialObject C) :
+    Nonempty (FilteredDifferentialSpectralSequence K) := by
+  sorry
+
+noncomputable def filteredDifferentialAssociatedSpectralSequence
+    {C : Type u} [Category.{v} C] [Abelian C] [HasCountableCoproducts C]
+    (hExact : CountableDirectSumsExact C) (K : FilteredDifferentialObject C) :
+    FilteredDifferentialSpectralSequence K :=
+  Classical.choice (filteredDifferentialAssociatedSpectralSequence_exists hExact K)
 
 theorem filteredDifferential_E₀_page
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -447,6 +469,15 @@ def filteredDifferentialLimit_graded_subquotient
     (K : FilteredDifferentialObject C) (L : FilteredDifferentialLimitData K) :
   Prop :=
   ∀ p : ℤ,
+    IsSubquotientOf
+      (X := gradedPiece (filteredDifferentialHomologyFilteredObject K) p)
+      (Y := filteredDifferentialLimitPage K L p)
+
+def filteredDifferentialLimit_graded_iso
+    {C : Type u} [Category.{v} C] [Abelian C]
+    (K : FilteredDifferentialObject C) (L : FilteredDifferentialLimitData K) :
+  Prop :=
+  ∀ p : ℤ,
     Nonempty
       (gradedPiece (filteredDifferentialHomologyFilteredObject K) p ≅
         filteredDifferentialLimitPage K L p)
@@ -455,7 +486,7 @@ def filteredDifferentialWeaklyConverges
     {C : Type u} [Category.{v} C] [Abelian C]
     (K : FilteredDifferentialObject C) : Prop :=
   ∃ L : FilteredDifferentialLimitData K,
-    filteredDifferentialLimit_graded_subquotient K L
+    filteredDifferentialLimit_graded_iso K L
 
 def filteredDifferentialAbuts
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -470,7 +501,7 @@ theorem filteredDifferentialWeakConvergence_iff
     (K : FilteredDifferentialObject C) :
     filteredDifferentialWeaklyConverges K ↔
       ∃ L : FilteredDifferentialLimitData K,
-        filteredDifferentialLimit_graded_subquotient K L := Iff.rfl
+        filteredDifferentialLimit_graded_iso K L := Iff.rfl
 
 def filteredDifferentialAbutmentCriterion
     {C : Type u} [Category.{v} C] [Abelian C]

@@ -458,6 +458,14 @@ def filteredComplexLimit_graded_subquotient
     {C : Type u} [Category.{v} C] [Abelian C]
     (K : FilteredComplex C) (L : FilteredComplexLimitData K) : Prop :=
   ∀ p q : ℤ,
+    IsSubquotientOf
+      (X := gradedPiece (filteredComplexCohomologyFilteredObject K (p + q)) p)
+      (Y := filteredComplexLimitPage K L p q)
+
+def filteredComplexLimit_graded_iso
+    {C : Type u} [Category.{v} C] [Abelian C]
+    (K : FilteredComplex C) (L : FilteredComplexLimitData K) : Prop :=
+  ∀ p q : ℤ,
     Nonempty
       (gradedPiece (filteredComplexCohomologyFilteredObject K (p + q)) p ≅
         filteredComplexLimitPage K L p q)
@@ -525,7 +533,7 @@ theorem filteredComplex_bounded_above_coregular
 
 def filteredComplexWeaklyConverges {C : Type u} [Category.{v} C]
     [Abelian C] (K : FilteredComplex C) : Prop :=
-  ∃ L : FilteredComplexLimitData K, filteredComplexLimit_graded_subquotient K L
+  ∃ L : FilteredComplexLimitData K, filteredComplexLimit_graded_iso K L
 
 def filteredComplexAbuts {C : Type u} [Category.{v} C] [Abelian C]
     (K : FilteredComplex C) : Prop :=
@@ -542,7 +550,7 @@ def filteredComplexConverges {C : Type u} [Category.{v} C] [Abelian C]
 theorem filteredComplex_weak_convergence_iff
     {C : Type u} [Category.{v} C] [Abelian C] (K : FilteredComplex C) :
     filteredComplexWeaklyConverges K ↔
-      ∃ L : FilteredComplexLimitData K, filteredComplexLimit_graded_subquotient K L := by
+      ∃ L : FilteredComplexLimitData K, filteredComplexLimit_graded_iso K L := by
   sorry
 
 theorem filteredComplex_abutment_iff
@@ -577,6 +585,18 @@ theorem filteredComplex_finite_filtration_converges_to_cohomology
     {C : Type u} [Category.{v} C] [Abelian C] (K : FilteredComplex C)
     (hK : FilteredComplexFiniteFiltration K) :
     filteredComplexConverges K := by
+  sorry
+
+/- The weak-Serre conclusion is part of the finite-filtration result in the
+   source: membership of one page in a weak Serre class propagates through
+   the finite filtration on each cohomology object. -/
+theorem filteredComplex_finite_filtration_weak_serre
+    {C : Type u} [Category.{v} C] [Abelian C] (K : FilteredComplex C)
+    (hK : FilteredComplexFiniteFiltration K)
+    (S : FilteredComplexSpectralSequence K) (r : ℕ)
+    (P : ObjectProperty C) [P.IsWeakSerreClass]
+    (hP : ∀ p q : ℤ, P (S.page r (p, q))) :
+    ∀ n : ℤ, P (filteredComplexCohomology K n) := by
   sorry
 
 def filteredComplexAlternatingSign (n : ℤ) : ℤ :=
@@ -621,7 +641,10 @@ structure FilteredComplexTrivialConvergenceHypotheses {C : Type u}
 theorem filteredComplex_trivial_convergence
     {C : Type u} [Category.{v} C] [Abelian C] (K : FilteredComplex C)
     (hK : FilteredComplexTrivialConvergenceHypotheses K) :
-    filteredComplexWeaklyConverges K ∧ filteredComplexAbuts K := by
+    ∃ S : FilteredComplexSpectralSequence K,
+      filteredComplexBounded S ∧
+      (∀ n : ℤ, (filteredComplexCohomologyFilteredObject K n).IsFinite) ∧
+      filteredComplexConverges K := by
   sorry
 
 end Formalization.Books.Homology.Unit20

@@ -648,7 +648,290 @@ theorem isomorphicOverBase_isFibredEquivalenceOver
     {p : S ⥤ C} {q : T ⥤ C}
     (h : IsomorphicOverBase p q) :
     IsFibredEquivalenceOver p q := by
-  sorry
+  rcases h with ⟨F, G, hF, hG, hFG, hGF⟩
+  refine ⟨F, G, hF, hG, ?_, ?_, ?_, ?_⟩
+  · intro a b φ hφ
+    letI : p.IsStronglyCartesian (p.map φ) φ := hφ
+    refine { toIsHomLift := ?_, universal_property' := ?_ }
+    · infer_instance
+    · intro a' g ψ hψ
+      have hGa : p.obj (G.obj a') = q.obj a' := Functor.congr_obj hG a'
+      have hFa : q.obj (F.obj a) = p.obj a := Functor.congr_obj hF a
+      have hFb : q.obj (F.obj b) = p.obj b := Functor.congr_obj hF b
+      have hGFa : p.obj (G.obj (F.obj a)) = q.obj (F.obj a) :=
+        Functor.congr_obj hG (F.obj a)
+      have hGFb : p.obj (G.obj (F.obj b)) = q.obj (F.obj b) :=
+        Functor.congr_obj hG (F.obj b)
+      have hFGa : G.obj (F.obj a) = a := by
+        simpa using congrArg (fun H : S ⥤ S => H.obj a) hFG
+      have hFGb : G.obj (F.obj b) = b := by
+        simpa using congrArg (fun H : S ⥤ S => H.obj b) hFG
+      have hψmap : q.map ψ = g ≫ q.map (F.map φ) := by
+        simpa using CategoryTheory.IsHomLift.fac' q
+          (g ≫ q.map (F.map φ)) ψ
+      have hGψ := Functor.congr_hom hG ψ
+      have hFφ := Functor.congr_hom hF φ
+      have hGψ' : p.map (G.map ψ) =
+          eqToHom hGa ≫ q.map ψ ≫ eqToHom hGFb.symm := by
+        simpa only [Functor.comp_map] using hGψ
+      have hFφ' : q.map (F.map φ) =
+          eqToHom hFa ≫ p.map φ ≫ eqToHom hFb.symm := by
+        simpa only [Functor.comp_map] using hFφ
+      have hFGbP : p.obj (G.obj (F.obj b)) = p.obj b := congrArg p.obj hFGb
+      let gS : p.obj (G.obj a') ⟶ p.obj a :=
+        eqToHom hGa ≫ g ≫ eqToHom hFa
+      let ψS : G.obj a' ⟶ b :=
+        G.map ψ ≫ eqToHom hFGb
+      have hψS : p.IsHomLift (gS ≫ p.map φ) ψS := by
+        apply CategoryTheory.IsHomLift.of_fac' p (gS ≫ p.map φ) ψS rfl rfl
+        dsimp [ψS]
+        rw [Functor.map_comp]
+        rw [hGψ', hψmap, hFφ']
+        have hloop :
+            eqToHom hFb.symm ≫ eqToHom hGFb.symm ≫
+              p.map (eqToHom hFGb) = 𝟙 (p.obj b) := by
+          rw [eqToHom_map]
+          simp only [eqToHom_trans]
+          congr 1
+        simp only [Category.assoc]
+        rw [hloop]
+        simp [gS]
+      have hmapS : p.map ψS = gS ≫ p.map φ := by
+        simpa using CategoryTheory.IsHomLift.fac' p (gS ≫ p.map φ) ψS
+      letI : p.IsHomLift (p.map ψS) ψS := hmapS ▸ hψS
+      obtain ⟨δ, ⟨hδ, hδeq⟩, hδuniq⟩ :=
+        Functor.IsStronglyCartesian.universal_property p
+          (p.map φ) φ gS (p.map ψS) hmapS ψS
+      have hGF_a : F.obj (G.obj a') = a' := by
+        simpa using congrArg (fun H : T ⥤ T => H.obj a') hGF
+      have hF_Ga : q.obj (F.obj (G.obj a')) = p.obj (G.obj a') :=
+        Functor.congr_obj hF (G.obj a')
+      have hGF_a_q : q.obj (F.obj (G.obj a')) = q.obj a' :=
+        congrArg q.obj hGF_a
+      have hFδ := Functor.congr_hom hF δ
+      have hFδ' : q.map (F.map δ) =
+          eqToHom hF_Ga ≫ p.map δ ≫ eqToHom hFa.symm := by
+        simpa only [Functor.comp_map] using hFδ
+      have hδmap : p.map δ = gS := by
+        simpa using CategoryTheory.IsHomLift.fac' p gS δ
+      let χ : a' ⟶ F.obj a :=
+        eqToHom hGF_a.symm ≫ F.map δ
+      have hχmap : q.map χ = g := by
+        dsimp [χ]
+        rw [Functor.map_comp, eqToHom_map, hFδ', hδmap]
+        simp [gS, Category.assoc, eqToHom_trans]
+      letI : q.IsHomLift g χ := by
+        apply CategoryTheory.IsHomLift.of_fac' q g χ rfl rfl
+        simpa using hχmap
+      have hGF_Fb : F.obj (G.obj (F.obj b)) = F.obj b := by
+        simpa using congrArg (fun H : T ⥤ T => H.obj (F.obj b)) hGF
+      have hGFψ := Functor.congr_hom hGF ψ
+      have hGFψ' : F.map (G.map ψ) =
+          eqToHom hGF_a ≫ ψ ≫ eqToHom hGF_Fb.symm := by
+        simpa only [Functor.comp_obj, Functor.id_obj, Functor.comp_map,
+          Functor.id_map] using hGFψ
+      have hχeq : χ ≫ F.map φ = ψ := by
+        dsimp [χ]
+        rw [Category.assoc, ← Functor.map_comp, hδeq]
+        dsimp [ψS]
+        rw [Functor.map_comp, hGFψ', eqToHom_map]
+        simp [Category.assoc, eqToHom_trans]
+      refine ⟨χ, ⟨inferInstance, hχeq⟩, ?_⟩
+      intro χ' hχ'
+      rcases hχ' with ⟨hχ'lift, hχ'eq⟩
+      letI : q.IsHomLift g χ' := hχ'lift
+      have hχ'map : q.map χ' = g := by
+        simpa using CategoryTheory.IsHomLift.fac' q g χ'
+      have hGχ' := Functor.congr_hom hG χ'
+      have hGχ'' : p.map (G.map χ') =
+          eqToHom hGa ≫ q.map χ' ≫ eqToHom hGFa.symm := by
+        simpa only [Functor.comp_map] using hGχ'
+      have hFGaP : p.obj (G.obj (F.obj a)) = p.obj a := congrArg p.obj hFGa
+      let δ' : G.obj a' ⟶ a :=
+        G.map χ' ≫ eqToHom hFGa
+      have hδ'map : p.map δ' = gS := by
+        dsimp [δ']
+        rw [Functor.map_comp, hGχ'', hχ'map, eqToHom_map]
+        simp [gS, Category.assoc, eqToHom_trans]
+      have hδ' : p.IsHomLift gS δ' := by
+        apply CategoryTheory.IsHomLift.of_fac' p gS δ' rfl rfl
+        simpa using hδ'map
+      have hFGφ := Functor.congr_hom hFG φ
+      have hFGφ' : G.map (F.map φ) =
+          eqToHom hFGa ≫ φ ≫ eqToHom hFGb.symm := by
+        simpa only [Functor.comp_obj, Functor.id_obj, Functor.comp_map,
+          Functor.id_map] using hFGφ
+      have hδ'eq : δ' ≫ φ = ψS := by
+        calc
+          δ' ≫ φ = G.map χ' ≫ eqToHom hFGa ≫ φ := by
+            simp [δ', Category.assoc]
+          _ = (G.map χ' ≫ G.map (F.map φ)) ≫ eqToHom hFGb := by
+            rw [hFGφ']
+            simp [Category.assoc, eqToHom_trans]
+          _ = G.map (χ' ≫ F.map φ) ≫ eqToHom hFGb := by
+            rw [Functor.map_comp]
+          _ = ψS := by rw [hχ'eq]
+      have hδeq' : δ' = δ := hδuniq δ' ⟨hδ', hδ'eq⟩
+      have hGF_Fa : F.obj (G.obj (F.obj a)) = F.obj a := by
+        simpa using congrArg (fun H : T ⥤ T => H.obj (F.obj a)) hGF
+      have hFGaF : F.obj (G.obj (F.obj a)) = F.obj a := congrArg F.obj hFGa
+      have hGFχ' := Functor.congr_hom hGF χ'
+      have hGFχ'' : F.map (G.map χ') =
+          eqToHom hGF_a ≫ χ' ≫ eqToHom hGF_Fa.symm := by
+        simpa only [Functor.comp_obj, Functor.id_obj, Functor.comp_map,
+          Functor.id_map] using hGFχ'
+      have hFδ'calc : eqToHom hGF_a.symm ≫ F.map δ' = χ' := by
+        dsimp [δ']
+        rw [Functor.map_comp, hGFχ'', eqToHom_map]
+        simp [Category.assoc, eqToHom_trans]
+      calc
+        χ' = eqToHom hGF_a.symm ≫ F.map δ' := hFδ'calc.symm
+        _ = eqToHom hGF_a.symm ≫ F.map δ := by rw [hδeq']
+        _ = χ := rfl
+  · intro a b φ hφ
+    letI : q.IsStronglyCartesian (q.map φ) φ := hφ
+    refine { toIsHomLift := ?_, universal_property' := ?_ }
+    · infer_instance
+    · intro a' g ψ hψ
+      have hGa : q.obj (F.obj a') = p.obj a' := Functor.congr_obj hF a'
+      have hFa : p.obj (G.obj a) = q.obj a := Functor.congr_obj hG a
+      have hFb : p.obj (G.obj b) = q.obj b := Functor.congr_obj hG b
+      have hGFa : q.obj (F.obj (G.obj a)) = p.obj (G.obj a) :=
+        Functor.congr_obj hF (G.obj a)
+      have hGFb : q.obj (F.obj (G.obj b)) = p.obj (G.obj b) :=
+        Functor.congr_obj hF (G.obj b)
+      have hFGa : F.obj (G.obj a) = a := by
+        simpa using congrArg (fun H : T ⥤ T => H.obj a) hGF
+      have hFGb : F.obj (G.obj b) = b := by
+        simpa using congrArg (fun H : T ⥤ T => H.obj b) hGF
+      have hψmap : p.map ψ = g ≫ p.map (G.map φ) := by
+        simpa using CategoryTheory.IsHomLift.fac' p
+          (g ≫ p.map (G.map φ)) ψ
+      have hGψ := Functor.congr_hom hF ψ
+      have hGφ := Functor.congr_hom hG φ
+      have hGψ' : q.map (F.map ψ) =
+          eqToHom hGa ≫ p.map ψ ≫ eqToHom hGFb.symm := by
+        simpa only [Functor.comp_map] using hGψ
+      have hGφ' : p.map (G.map φ) =
+          eqToHom hFa ≫ q.map φ ≫ eqToHom hFb.symm := by
+        simpa only [Functor.comp_map] using hGφ
+      have hFGbP : q.obj (F.obj (G.obj b)) = q.obj b := congrArg q.obj hFGb
+      let gS : q.obj (F.obj a') ⟶ q.obj a :=
+        eqToHom hGa ≫ g ≫ eqToHom hFa
+      let ψS : F.obj a' ⟶ b :=
+        F.map ψ ≫ eqToHom hFGb
+      have hψS : q.IsHomLift (gS ≫ q.map φ) ψS := by
+        apply CategoryTheory.IsHomLift.of_fac' q (gS ≫ q.map φ) ψS rfl rfl
+        dsimp [ψS]
+        rw [Functor.map_comp]
+        rw [hGψ', hψmap, hGφ']
+        have hloop :
+            eqToHom hFb.symm ≫ eqToHom hGFb.symm ≫
+              q.map (eqToHom hFGb) = 𝟙 (q.obj b) := by
+          rw [eqToHom_map]
+          simp only [eqToHom_trans]
+          congr 1
+        simp only [Category.assoc]
+        rw [hloop]
+        simp [gS]
+      have hmapS : q.map ψS = gS ≫ q.map φ := by
+        simpa using CategoryTheory.IsHomLift.fac' q (gS ≫ q.map φ) ψS
+      letI : q.IsHomLift (q.map ψS) ψS := hmapS ▸ hψS
+      obtain ⟨δ, ⟨hδ, hδeq⟩, hδuniq⟩ :=
+        Functor.IsStronglyCartesian.universal_property q
+          (q.map φ) φ gS (q.map ψS) hmapS ψS
+      have hGF_a : G.obj (F.obj a') = a' := by
+        simpa using congrArg (fun H : S ⥤ S => H.obj a') hFG
+      have hF_Ga : p.obj (G.obj (F.obj a')) = q.obj (F.obj a') :=
+        Functor.congr_obj hG (F.obj a')
+      have hGF_a_q : p.obj (G.obj (F.obj a')) = p.obj a' :=
+        congrArg p.obj hGF_a
+      have hGδ := Functor.congr_hom hG δ
+      have hGδ' : p.map (G.map δ) =
+          eqToHom hF_Ga ≫ q.map δ ≫ eqToHom hFa.symm := by
+        simpa only [Functor.comp_map] using hGδ
+      have hδmap : q.map δ = gS := by
+        simpa using CategoryTheory.IsHomLift.fac' q gS δ
+      let χ : a' ⟶ G.obj a :=
+        eqToHom hGF_a.symm ≫ G.map δ
+      have hχmap : p.map χ = g := by
+        dsimp [χ]
+        rw [Functor.map_comp, eqToHom_map, hGδ', hδmap]
+        simp [gS, Category.assoc, eqToHom_trans]
+      letI : p.IsHomLift g χ := by
+        apply CategoryTheory.IsHomLift.of_fac' p g χ rfl rfl
+        simpa using hχmap
+      have hFG_Fb : G.obj (F.obj (G.obj b)) = G.obj b := by
+        simpa using congrArg (fun H : S ⥤ S => H.obj (G.obj b)) hFG
+      have hFGψ := Functor.congr_hom hFG ψ
+      have hFGψ' : G.map (F.map ψ) =
+          eqToHom hGF_a ≫ ψ ≫ eqToHom hFG_Fb.symm := by
+        simpa only [Functor.comp_obj, Functor.id_obj, Functor.comp_map,
+          Functor.id_map] using hFGψ
+      have hχeq : χ ≫ G.map φ = ψ := by
+        dsimp [χ]
+        rw [Category.assoc, ← Functor.map_comp, hδeq]
+        dsimp [ψS]
+        rw [Functor.map_comp, hFGψ', eqToHom_map]
+        simp [Category.assoc, eqToHom_trans]
+      refine ⟨χ, ⟨inferInstance, hχeq⟩, ?_⟩
+      intro χ' hχ'
+      rcases hχ' with ⟨hχ'lift, hχ'eq⟩
+      letI : p.IsHomLift g χ' := hχ'lift
+      have hχ'map : p.map χ' = g := by
+        simpa using CategoryTheory.IsHomLift.fac' p g χ'
+      have hFχ' := Functor.congr_hom hF χ'
+      have hFχ'' : q.map (F.map χ') =
+          eqToHom hGa ≫ p.map χ' ≫ eqToHom hGFa.symm := by
+        simpa only [Functor.comp_obj, Functor.comp_map] using hFχ'
+      have hFGaP : q.obj (F.obj (G.obj a)) = q.obj a := congrArg q.obj hFGa
+      let δ' : F.obj a' ⟶ a :=
+        F.map χ' ≫ eqToHom hFGa
+      have hδ'map : q.map δ' = gS := by
+        dsimp [δ']
+        rw [Functor.map_comp, hFχ'', hχ'map, eqToHom_map]
+        simp [gS, Category.assoc, eqToHom_trans]
+      have hδ' : q.IsHomLift gS δ' := by
+        apply CategoryTheory.IsHomLift.of_fac' q gS δ' rfl rfl
+        simpa using hδ'map
+      have hGFφ := Functor.congr_hom hGF φ
+      have hGFφ' : F.map (G.map φ) =
+          eqToHom hFGa ≫ φ ≫ eqToHom hFGb.symm := by
+        simpa only [Functor.comp_obj, Functor.id_obj, Functor.comp_map,
+          Functor.id_map] using hGFφ
+      have hδ'eq : δ' ≫ φ = ψS := by
+        calc
+          δ' ≫ φ = F.map χ' ≫ eqToHom hFGa ≫ φ := by
+            simp [δ', Category.assoc]
+          _ = (F.map χ' ≫ F.map (G.map φ)) ≫ eqToHom hFGb := by
+            rw [hGFφ']
+            simp [Category.assoc, eqToHom_trans]
+          _ = F.map (χ' ≫ G.map φ) ≫ eqToHom hFGb := by
+            rw [Functor.map_comp]
+          _ = ψS := by rw [hχ'eq]
+      have hδeq' : δ' = δ := hδuniq δ' ⟨hδ', hδ'eq⟩
+      have hFG_Ga : G.obj (F.obj (G.obj a)) = G.obj a := by
+        simpa using congrArg (fun H : S ⥤ S => H.obj (G.obj a)) hFG
+      have hFGaG : G.obj (F.obj (G.obj a)) = G.obj a := congrArg G.obj hFGa
+      have hFGχ' := Functor.congr_hom hFG χ'
+      have hFGχ'' : G.map (F.map χ') =
+          eqToHom hGF_a ≫ χ' ≫ eqToHom hFG_Ga.symm := by
+        simpa only [Functor.comp_obj, Functor.id_obj, Functor.comp_map,
+          Functor.id_map] using hFGχ'
+      have hGδ'calc : eqToHom hGF_a.symm ≫ G.map δ' = χ' := by
+        dsimp [δ']
+        rw [Functor.map_comp, hFGχ'', eqToHom_map]
+        simp [Category.assoc, eqToHom_trans]
+      calc
+        χ' = eqToHom hGF_a.symm ≫ G.map δ' := hGδ'calc.symm
+        _ = eqToHom hGF_a.symm ≫ G.map δ := by rw [hδeq']
+        _ = χ := rfl
+  · refine ⟨eqToIso hFG, congrArg (fun H : S ⥤ S => H ⋙ p) hFG, ?_⟩
+    intro x
+    simp [eqToHom_map]
+  · refine ⟨eqToIso hGF, congrArg (fun H : T ⥤ T => H ⋙ q) hGF, ?_⟩
+    intro x
+    simp [eqToHom_map]
 
 /-- Fibred equivalences over a fixed base compose. -/
 theorem isFibredEquivalenceOver_trans
@@ -674,7 +957,61 @@ theorem isFibredEquivalenceOver_trans
   The only lengthy part is bookkeeping for reassociation of the whiskered
   natural isomorphisms; no new categorical construction is required.
   -/
-  sorry
+  rcases hpq with ⟨F, G, hF, hG, hpresF, hpresG, ⟨eFG, overFG, overFGv⟩,
+    ⟨eGF, overGF, overGFv⟩⟩
+  rcases hqr with ⟨H, K, hH, hK, hpresH, hpresK, ⟨eHK, overHK, overHKv⟩,
+    ⟨eKH, overKH, overKHv⟩⟩
+  let A : S ⥤ U := F ⋙ H
+  let B : U ⥤ S := K ⋙ G
+  have hA : A ⋙ r = p := by
+    dsimp [A]
+    calc
+      (F ⋙ H) ⋙ r = F ⋙ (H ⋙ r) := Functor.assoc F H r
+      _ = F ⋙ q := by rw [hH]
+      _ = p := hF
+  have hB : B ⋙ p = r := by
+    dsimp [B]
+    calc
+      (K ⋙ G) ⋙ p = K ⋙ (G ⋙ p) := Functor.assoc K G p
+      _ = K ⋙ q := by rw [hG]
+      _ = r := hK
+  have hpresA : MapsStronglyCartesian p r A := by
+    intro a b φ hφ
+    have h₁ := hpresF φ hφ
+    have h₂ := hpresH (F.map φ) h₁
+    simpa [A, Functor.comp_map] using h₂
+  have hpresB : MapsStronglyCartesian r p B := by
+    intro a b φ hφ
+    have h₁ := hpresK φ hφ
+    have h₂ := hpresG (K.map φ) h₁
+    simpa [B, Functor.comp_map] using h₂
+  let eA : A ⋙ B ≅ 𝟭 S :=
+    (Functor.associator (F ⋙ H) K G).symm ≪≫
+      Functor.isoWhiskerRight (Functor.associator F H K) G ≪≫
+      Functor.isoWhiskerRight (Functor.isoWhiskerLeft F eHK) G ≪≫
+      Functor.isoWhiskerRight (Functor.rightUnitor F) G ≪≫ eFG
+  let eB : B ⋙ A ≅ 𝟭 U :=
+    (Functor.associator (K ⋙ G) F H).symm ≪≫
+      Functor.isoWhiskerRight (Functor.associator K G F) H ≪≫
+      Functor.isoWhiskerRight (Functor.isoWhiskerLeft K eGF) H ≪≫
+      Functor.isoWhiskerRight (Functor.rightUnitor K) H ≪≫ eKH
+  refine ⟨A, B, hA, hB, hpresA, hpresB, ?_, ?_⟩
+  · have overA : (A ⋙ B) ⋙ p = (𝟭 S) ⋙ p := by
+      calc
+        (A ⋙ B) ⋙ p = A ⋙ (B ⋙ p) := Functor.assoc A B p
+        _ = A ⋙ r := congrArg (fun X : U ⥤ C => A ⋙ X) hB
+        _ = p := hA
+        _ = (𝟭 S) ⋙ p := (Functor.id_comp p).symm
+    refine ⟨eA, overA, ?_⟩
+    intro x
+    dsimp [eA]
+    simp only [Iso.trans_hom, NatTrans.comp_app,
+      Functor.associator_hom_app, Functor.isoWhiskerRight_hom,
+      Functor.whiskerRight_app, Functor.isoWhiskerLeft_hom,
+      Functor.whiskerLeft_app, Functor.rightUnitor_hom_app]
+    trace_state
+    sorry
+  · sorry
 
 /-- The source's comparison data for the strictification construction.  The
 first fields are the natural functor `\mathcal S \to \mathcal S'`, its

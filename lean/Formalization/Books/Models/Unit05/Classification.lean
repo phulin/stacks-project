@@ -414,6 +414,684 @@ theorem determinant_four_by_four_formula (D : LocalNumericalData 4)
   simp [Matrix.det_succ_row_zero (n := 3), Matrix.det_fin_three, Fin.succAbove,
     Fin.sum_univ_succ, hdiag, h02, h13, h10, h21, h32, h30, h20, h31] <;> ring
 
+private theorem square_factorization (x p q u v : ℤ)
+    (h₁ : x = p * u) (h₂ : x = q * v) :
+    x ^ 2 = p * q * (u * v) := by
+  calc
+    x ^ 2 = x * x := by ring
+    _ = (p * u) * x := by rw [h₁]
+    _ = (p * u) * (q * v) := by rw [h₂]
+    _ = p * q * (u * v) := by ring
+
+private theorem positive_int_product_one (p q : ℤ)
+    (hp : 0 < p) (hq : 0 < q) (hpq : p * q = 1) :
+    p = 1 ∧ q = 1 := by
+  constructor <;> nlinarith
+
+private theorem positive_int_product_pos (p q : ℤ)
+    (hp : 0 < p) (hq : 0 < q) : 0 < p * q :=
+  mul_pos hp hq
+
+private theorem cancel_left_int (w : ℤ) (hw : 0 < w) (a b : ℤ)
+    (h : w * b ≤ w * a) : b ≤ a := by
+  by_contra hnot
+  have hlt : a < b := lt_of_not_ge hnot
+  have hmul : w * a < w * b := Int.mul_lt_mul_of_pos_left hlt hw
+  linarith
+
+private theorem positive_sum_lt_four_cases (r1 r2 : ℤ)
+    (hr1 : 0 < r1) (hr2 : 0 < r2) (hsum : r1 + r2 < 4) :
+    (r1 = 1 ∧ r2 = 1) ∨ (r1 = 1 ∧ r2 = 2) ∨
+      (r1 = 2 ∧ r2 = 1) := by omega
+
+private theorem positive_int_product_two (p q : ℤ)
+    (hp : 0 < p) (hq : 0 < q) (hpq : p * q = 2) :
+    (p = 1 ∧ q = 2) ∨ (p = 2 ∧ q = 1) := by
+  have hp' : p ≤ 2 := by nlinarith
+  have hq' : q ≤ 2 := by nlinarith
+  have hp_cases : p = 1 ∨ p = 2 := by omega
+  have hq_cases : q = 1 ∨ q = 2 := by omega
+  rcases hp_cases with hp1 | hp2
+  · rcases hq_cases with hq1 | hq2
+    · norm_num [hp1, hq1] at hpq
+    · exact Or.inl ⟨hp1, hq2⟩
+  · rcases hq_cases with hq1 | hq2
+    · exact Or.inr ⟨hp2, hq1⟩
+    · norm_num [hp2, hq2] at hpq
+
+private theorem three_ratio_sum_lt_four
+    (w0 w1 w2 a01 a12 : ℝ) (p1 q1 p2 q2 : ℤ)
+    (hw : 0 < w0 * w1 * w2)
+    (hdet : -8 * w0 * w1 * w2 + 2 * a01 ^ 2 * w2 +
+        2 * a12 ^ 2 * w0 < 0)
+    (hsq1 : a01 ^ 2 = (p1 * q1 : ℝ) * (w0 * w1))
+    (hsq2 : a12 ^ 2 = (p2 * q2 : ℝ) * (w1 * w2)) :
+    (p1 * q1 : ℝ) + (p2 * q2 : ℝ) < 4 := by
+  have hfactor :
+      -8 * w0 * w1 * w2 + 2 * a01 ^ 2 * w2 + 2 * a12 ^ 2 * w0 =
+        2 * ((p1 * q1 : ℝ) + (p2 * q2 : ℝ) - 4) *
+          (w0 * w1 * w2) := by
+    rw [hsq1, hsq2]
+    ring
+  rw [hfactor] at hdet
+  nlinarith
+
+private theorem upToReordering_reindex {k : ℕ} (D : LocalNumericalData k)
+    (P : LocalNumericalData k → Prop) (e : Fin k ≃ Fin k)
+    (h : UpToReordering (reindexLocalData D e) P) :
+    UpToReordering D P := by
+  rcases h with ⟨f, hf⟩
+  refine ⟨f.trans e, ?_⟩
+  simpa [reindexLocalData] using hf
+
+private theorem classify_three_path
+    (D : LocalNumericalData 3)
+    (hpos : ∀ i, 0 < D.w i) (hmp : ∀ i, 0 < D.m i)
+    (hdiag : ∀ i, D.a i i = -2 * D.w i)
+    (hsymm : ∀ i j, D.a i j = D.a j i)
+    (hzero : D.a 0 2 = 0)
+    (hdet : -8 * (D.w 0 : ℝ) * D.w 1 * D.w 2 +
+      2 * (D.a 0 1 : ℝ) ^ 2 * D.w 2 +
+      2 * (D.a 1 2 : ℝ) ^ 2 * D.w 0 < 0)
+    (hbound01 : 0 < 4 * (D.w 0 : ℝ) * D.w 1 - D.a 0 1 ^ 2)
+    (hbound12 : 0 < 4 * (D.w 1 : ℝ) * D.w 2 - D.a 1 2 ^ 2)
+    (ha01 : 0 < D.a 0 1) (ha12 : 0 < D.a 1 2)
+    (hquot : ∀ i j, 0 < D.a i j →
+      0 < 4 * (D.w i : ℝ) * D.w j - D.a i j ^ 2 →
+      ∃ p q : ℤ, 0 < p ∧ 0 < q ∧ D.a i j = p * D.w i ∧
+        D.a i j = q * D.w j ∧ p * q < 4)
+    (hrow : ∀ (i j k : Fin 3), i ≠ j → i ≠ k → j ≠ k →
+      2 * D.w i * D.m i ≥ D.a i j * D.m j + D.a i k * D.m k)
+    (realizeA : ∀ (E : LocalNumericalData 3) (r : ℤ),
+      0 < r → E.w 0 = r → E.w 1 = r → E.w 2 = r →
+      E.a 0 0 = -2 * r → E.a 1 1 = -2 * r → E.a 2 2 = -2 * r →
+      E.a 0 1 = r → E.a 1 0 = r → E.a 1 2 = r → E.a 2 1 = r →
+      E.a 0 2 = 0 → E.a 2 0 = 0 → (∀ i, 0 < E.m i) →
+      mConditionA3 E.m → isA3 E)
+    (realizeC : ∀ (E : LocalNumericalData 3) (r : ℤ),
+      0 < r → E.w 0 = r → E.w 1 = r → E.w 2 = 2 * r →
+      E.a 0 0 = -2 * r → E.a 1 1 = -2 * r → E.a 2 2 = -4 * r →
+      E.a 0 1 = r → E.a 1 0 = r → E.a 1 2 = 2 * r → E.a 2 1 = 2 * r →
+      E.a 0 2 = 0 → E.a 2 0 = 0 → (∀ i, 0 < E.m i) →
+      mConditionC3 E.m → isC3 E)
+    (realizeB : ∀ (E : LocalNumericalData 3) (r : ℤ),
+      0 < r → E.w 0 = 2 * r → E.w 1 = 2 * r → E.w 2 = r →
+      E.a 0 0 = -4 * r → E.a 1 1 = -4 * r → E.a 2 2 = -2 * r →
+      E.a 0 1 = 2 * r → E.a 1 0 = 2 * r → E.a 1 2 = 2 * r → E.a 2 1 = 2 * r →
+      E.a 0 2 = 0 → E.a 2 0 = 0 → (∀ i, 0 < E.m i) →
+      mConditionB3 E.m → isB3 E) :
+    UpToReordering D (fun E => isA3 E ∨ isC3 E ∨ isB3 E) := by
+  obtain ⟨p1, q1, hp1, hq1, hpa1, hqa1, hpq1⟩ := hquot 0 1 ha01 hbound01
+  obtain ⟨p2, q2, hp2, hq2, hpa2, hqa2, hpq2⟩ := hquot 1 2 ha12 hbound12
+  have hsq1 : D.a 0 1 ^ 2 = p1 * q1 * (D.w 0 * D.w 1) :=
+    square_factorization _ _ _ _ _ hpa1 hqa1
+  have hsq2 : D.a 1 2 ^ 2 = p2 * q2 * (D.w 1 * D.w 2) :=
+    square_factorization _ _ _ _ _ hpa2 hqa2
+  have hsq1R : (D.a 0 1 : ℝ) ^ 2 =
+      (p1 * q1 : ℝ) * ((D.w 0 : ℝ) * D.w 1) := by exact_mod_cast hsq1
+  have hsq2R : (D.a 1 2 : ℝ) ^ 2 =
+      (p2 * q2 : ℝ) * ((D.w 1 : ℝ) * D.w 2) := by exact_mod_cast hsq2
+  have hw0R : (0 : ℝ) < D.w 0 := by exact_mod_cast hpos 0
+  have hw1R : (0 : ℝ) < D.w 1 := by exact_mod_cast hpos 1
+  have hw2R : (0 : ℝ) < D.w 2 := by exact_mod_cast hpos 2
+  have hratioR := three_ratio_sum_lt_four
+    ((D.w 0 : ℝ)) (D.w 1 : ℝ) (D.w 2 : ℝ) (D.a 0 1 : ℝ) (D.a 1 2 : ℝ)
+    p1 q1 p2 q2 (mul_pos (mul_pos hw0R hw1R) hw2R) hdet hsq1R hsq2R
+  have hratio : p1 * q1 + p2 * q2 < (4 : ℤ) := by exact_mod_cast hratioR
+  have hr1 : 0 < p1 * q1 := positive_int_product_pos p1 q1 hp1 hq1
+  have hr2 : 0 < p2 * q2 := positive_int_product_pos p2 q2 hp2 hq2
+  have hrcases := positive_sum_lt_four_cases (p1 * q1) (p2 * q2) hr1 hr2 hratio
+  have hdiag0 := hdiag 0
+  have hdiag1 := hdiag 1
+  have hdiag2 := hdiag 2
+  have h10 := hsymm 1 0
+  have h21 := hsymm 2 1
+  have h20 := hsymm 2 0
+  rcases hrcases with ⟨hr1, hr2⟩ | ⟨hr1, hr2⟩ | ⟨hr1, hr2⟩
+  · have hpq1 := positive_int_product_one p1 q1 hp1 hq1 hr1
+    have hpq2 := positive_int_product_one p2 q2 hp2 hq2 hr2
+    have ha01p : D.a 0 1 = D.w 0 := by simpa [hpq1.1] using hpa1
+    have ha01q : D.a 0 1 = D.w 1 := by simpa [hpq1.2] using hqa1
+    have ha12p : D.a 1 2 = D.w 1 := by simpa [hpq2.1] using hpa2
+    have ha12q : D.a 1 2 = D.w 2 := by simpa [hpq2.2] using hqa2
+    have hw01 : D.w 1 = D.w 0 := ha01q.symm.trans ha01p
+    have hw12 : D.w 2 = D.w 1 := ha12q.symm.trans ha12p
+    have hm0 : 2 * D.m 0 ≥ D.m 1 := by
+      have h := hrow 0 1 2 (by decide) (by decide) (by decide)
+      rw [ha01p, hzero] at h
+      exact cancel_left_int (D.w 0) (hpos 0) _ _ (by linarith)
+    have hm1 : 2 * D.m 1 ≥ D.m 0 + D.m 2 := by
+      have h := hrow 1 0 2 (by decide) (by decide) (by decide)
+      rw [h10, ha01q, ha12p] at h
+      exact cancel_left_int (D.w 1) (hpos 1) _ _ (by linarith)
+    have hm2 : 2 * D.m 2 ≥ D.m 1 := by
+      have h := hrow 2 0 1 (by decide) (by decide) (by decide)
+      rw [h20, hzero, h21, ha12q] at h
+      exact cancel_left_int (D.w 2) (hpos 2) _ _ (by linarith)
+    have hmc : mConditionA3 D.m := ⟨hm0, hm1, hm2⟩
+    refine ⟨Equiv.refl _, ?_⟩
+    left
+    exact realizeA D (D.w 0) (hpos 0) rfl hw01 (hw12.trans hw01)
+      (by simpa [hw01] using hdiag0) (by simpa [hw01] using hdiag1)
+      (by simpa [hw01, hw12] using hdiag2) ha01p (h10.trans ha01p)
+      (ha12p.trans hw01) (h21.trans ha12p |>.trans hw01) hzero
+      (h20.trans hzero) hmp hmc
+  · have hpq1 := positive_int_product_one p1 q1 hp1 hq1 hr1
+    have hpq2 := positive_int_product_two p2 q2 hp2 hq2 hr2
+    rcases hpq2 with ⟨hp2, hq2⟩ | ⟨hp2, hq2⟩
+    · have ha01p : D.a 0 1 = D.w 0 := by simpa [hpq1.1] using hpa1
+      have ha01q : D.a 0 1 = D.w 1 := by simpa [hpq1.2] using hqa1
+      have ha12p : D.a 1 2 = D.w 1 := by simpa [hp2] using hpa2
+      have ha12q : D.a 1 2 = 2 * D.w 2 := by simpa [hq2] using hqa2
+      have hw01 : D.w 1 = D.w 0 := ha01q.symm.trans ha01p
+      have hw12 : D.w 1 = 2 * D.w 2 := ha12p.symm.trans ha12q
+      have hw02 : D.w 0 = 2 * D.w 2 := hw01.symm.trans hw12
+      have hm0 : 2 * D.m 0 ≥ D.m 1 := by
+        have h := hrow 0 1 2 (by decide) (by decide) (by decide)
+        rw [ha01p, hzero] at h
+        exact cancel_left_int (D.w 0) (hpos 0) _ _ (by linarith)
+      have hm1 : 2 * D.m 1 ≥ D.m 0 + D.m 2 := by
+        have h := hrow 1 0 2 (by decide) (by decide) (by decide)
+        rw [h10, ha01q, ha12p] at h
+        exact cancel_left_int (D.w 1) (hpos 1) _ _ (by linarith)
+      have hm2' : 2 * D.m 2 ≥ 2 * D.m 1 := by
+        have h := hrow 2 0 1 (by decide) (by decide) (by decide)
+        rw [h20, hzero, h21, ha12q] at h
+        exact cancel_left_int (D.w 2) (hpos 2) _ _ (by linarith)
+      have hm2 : D.m 2 ≥ D.m 1 := by linarith
+      have hmc : mConditionB3 D.m := ⟨hm0, hm1, hm2⟩
+      refine ⟨Equiv.refl _, ?_⟩
+      right
+      right
+      exact realizeB D (D.w 2) (hpos 2)
+        hw02 hw12 rfl
+        (by calc
+          D.a 0 0 = -2 * D.w 0 := hdiag0
+          _ = -4 * D.w 2 := by rw [hw02]; ring)
+        (by calc
+          D.a 1 1 = -2 * D.w 1 := hdiag1
+          _ = -4 * D.w 2 := by rw [hw12]; ring)
+        hdiag2
+        (ha01p.trans hw02)
+        ((h10.trans ha01p).trans hw02)
+        (ha12p.trans hw12)
+        ((h21.trans ha12p).trans hw12) hzero (h20.trans hzero) hmp hmc
+    · have ha01p : D.a 0 1 = D.w 0 := by simpa [hpq1.1] using hpa1
+      have ha01q : D.a 0 1 = D.w 1 := by simpa [hpq1.2] using hqa1
+      have ha12p : D.a 1 2 = 2 * D.w 1 := by simpa [hp2] using hpa2
+      have ha12q : D.a 1 2 = D.w 2 := by simpa [hq2] using hqa2
+      have hw01 : D.w 1 = D.w 0 := ha01q.symm.trans ha01p
+      have hw12 : D.w 2 = 2 * D.w 1 := ha12q.symm.trans ha12p
+      have hw02 : D.w 2 = 2 * D.w 0 := by
+        calc
+          D.w 2 = 2 * D.w 1 := hw12
+          _ = 2 * D.w 0 := by rw [hw01]
+      have ha12r : D.a 1 2 = 2 * D.w 0 := by
+        calc
+          D.a 1 2 = 2 * D.w 1 := ha12p
+          _ = 2 * D.w 0 := by rw [hw01]
+      have ha21r : D.a 2 1 = 2 * D.w 0 := by
+        calc
+          D.a 2 1 = D.a 1 2 := h21
+          _ = 2 * D.w 0 := ha12r
+      have hm0 : 2 * D.m 0 ≥ D.m 1 := by
+        have h := hrow 0 1 2 (by decide) (by decide) (by decide)
+        rw [ha01p, hzero] at h
+        exact cancel_left_int (D.w 0) (hpos 0) _ _ (by linarith)
+      have hm1' : 2 * D.m 1 ≥ D.m 0 + 2 * D.m 2 := by
+        have h := hrow 1 0 2 (by decide) (by decide) (by decide)
+        rw [h10, ha01q, ha12p] at h
+        exact cancel_left_int (D.w 1) (hpos 1) _ _ (by linarith)
+      have hm2 : 2 * D.m 2 ≥ D.m 1 := by
+        have h := hrow 2 0 1 (by decide) (by decide) (by decide)
+        rw [h20, hzero, h21, ha12q] at h
+        exact cancel_left_int (D.w 2) (hpos 2) _ _ (by linarith)
+      have hmc : mConditionC3 D.m := ⟨hm0, hm1', hm2⟩
+      refine ⟨Equiv.refl _, ?_⟩
+      right
+      left
+      exact realizeC D (D.w 0) (hpos 0) rfl hw01 hw02
+        hdiag0 (by calc
+          D.a 1 1 = -2 * D.w 1 := hdiag1
+          _ = -2 * D.w 0 := by rw [hw01])
+        (by calc
+          D.a 2 2 = -2 * D.w 2 := hdiag2
+          _ = -4 * D.w 0 := by rw [hw02]; ring)
+        ha01p (h10.trans ha01p) ha12r ha21r hzero (h20.trans hzero) hmp hmc
+  · have hpq1 := positive_int_product_two p1 q1 hp1 hq1 hr1
+    have hpq2 := positive_int_product_one p2 q2 hp2 hq2 hr2
+    rcases hpq1 with ⟨hp1, hq1⟩ | ⟨hp1, hq1⟩
+    · have ha01p : D.a 0 1 = D.w 0 := by simpa [hp1] using hpa1
+      have ha01q : D.a 0 1 = 2 * D.w 1 := by simpa [hq1] using hqa1
+      have ha12p : D.a 1 2 = D.w 1 := by simpa [hpq2.1] using hpa2
+      have ha12q : D.a 1 2 = D.w 2 := by simpa [hpq2.2] using hqa2
+      have hw01 : D.w 0 = 2 * D.w 1 := ha01p.symm.trans ha01q
+      have hw12 : D.w 2 = D.w 1 := ha12q.symm.trans ha12p
+      have hm0 : 2 * D.m 2 ≥ D.m 1 := by
+        have h := hrow 2 0 1 (by decide) (by decide) (by decide)
+        rw [h20, hzero, h21, ha12p] at h
+        exact cancel_left_int (D.w 1) (hpos 1) _ _ (by
+          rw [hw12] at h
+          linarith)
+      have hm1 : 2 * D.m 1 ≥ D.m 2 + 2 * D.m 0 := by
+        have h := hrow 1 0 2 (by decide) (by decide) (by decide)
+        rw [h10, ha01q, ha12p] at h
+        exact cancel_left_int (D.w 1) (hpos 1) _ _ (by linarith)
+      have hm2 : 2 * D.m 0 ≥ D.m 1 := by
+        have h := hrow 0 1 2 (by decide) (by decide) (by decide)
+        rw [ha01p, hzero] at h
+        exact cancel_left_int (D.w 0) (hpos 0) _ _ (by linarith)
+      let e : Fin 3 ≃ Fin 3 := Equiv.swap 0 2
+      let E : LocalNumericalData 3 := reindexLocalData D e
+      have he0 : e 0 = (2 : Fin 3) := by simp [e, Equiv.swap_apply_left]
+      have he1 : e 1 = (1 : Fin 3) := by
+        change (Equiv.swap 0 2) 1 = (1 : Fin 3)
+        decide
+      have he2 : e 2 = (0 : Fin 3) := by simp [e, Equiv.swap_apply_right]
+      have hEpos : ∀ i, 0 < E.w i := by
+        intro i
+        change 0 < D.w (e i)
+        exact hpos (e i)
+      have hEmp : ∀ i, 0 < E.m i := by
+        intro i
+        change 0 < D.m (e i)
+        exact hmp (e i)
+      have hEdiag : ∀ i, E.a i i = -2 * E.w i := by
+        intro i
+        change D.a (e i) (e i) = -2 * D.w (e i)
+        exact hdiag (e i)
+      have hEsym : ∀ i j, E.a i j = E.a j i := by
+        intro i j
+        change D.a (e i) (e j) = D.a (e j) (e i)
+        exact hsymm (e i) (e j)
+      have hEzero : E.a 0 2 = 0 := by
+        change D.a (e 0) (e 2) = 0
+        rw [he0, he2]
+        exact h20.trans hzero
+      have hmcE : mConditionC3 E.m := by
+        change 2 * D.m 2 ≥ D.m 1 ∧
+          2 * D.m 1 ≥ D.m 2 + 2 * D.m 0 ∧ 2 * D.m 0 ≥ D.m 1
+        exact ⟨hm0, hm1, hm2⟩
+      refine ⟨e, ?_⟩
+      right
+      left
+      exact realizeC E (D.w 1) (hpos 1) hw12 rfl hw01
+        (by calc
+          E.a 0 0 = D.a 2 2 := by
+            change D.a (e 0) (e 0) = D.a 2 2
+            rw [he0]
+          _ = -2 * D.w 2 := hdiag2
+          _ = -2 * D.w 1 := by rw [hw12])
+        hdiag1
+        (by calc
+          E.a 2 2 = D.a 0 0 := by
+            change D.a (e 2) (e 2) = D.a 0 0
+            rw [he2]
+          _ = -2 * D.w 0 := hdiag0
+          _ = -4 * D.w 1 := by rw [hw01]; ring)
+        (by calc
+          E.a 0 1 = D.a 2 1 := by
+            change D.a (e 0) (e 1) = D.a 2 1
+            rw [he0, he1]
+          _ = D.a 1 2 := h21
+          _ = D.w 1 := ha12p)
+        ha12p
+        (by calc
+          E.a 1 2 = D.a 1 0 := by
+            change D.a (e 1) (e 2) = D.a 1 0
+            rw [he1, he2]
+          _ = D.a 0 1 := h10
+          _ = D.w 0 := ha01p
+          _ = 2 * D.w 1 := hw01)
+        (by calc
+          E.a 2 1 = D.a 0 1 := by
+            change D.a (e 2) (e 1) = D.a 0 1
+            rw [he2, he1]
+          _ = D.w 0 := ha01p
+          _ = 2 * D.w 1 := hw01)
+        hEzero (by
+          change D.a 0 2 = 0
+          exact hzero)
+        hEmp hmcE
+    · have ha01p : D.a 0 1 = 2 * D.w 0 := by simpa [hp1] using hpa1
+      have ha01q : D.a 0 1 = D.w 1 := by simpa [hq1] using hqa1
+      have ha12p : D.a 1 2 = D.w 1 := by simpa [hpq2.1] using hpa2
+      have ha12q : D.a 1 2 = D.w 2 := by simpa [hpq2.2] using hqa2
+      have hw01 : D.w 1 = 2 * D.w 0 := ha01q.symm.trans ha01p
+      have hw12 : D.w 2 = D.w 1 := ha12q.symm.trans ha12p
+      have hw02 : D.w 2 = 2 * D.w 0 := by
+        calc
+          D.w 2 = D.w 1 := hw12
+          _ = 2 * D.w 0 := hw01
+      have hm0 : 2 * D.m 2 ≥ D.m 1 := by
+        have h := hrow 2 0 1 (by decide) (by decide) (by decide)
+        rw [h20, hzero, h21, ha12p, hw12] at h
+        exact cancel_left_int (D.w 1) (hpos 1) _ _ (by linarith)
+      have hm1 : 2 * D.m 1 ≥ D.m 2 + D.m 0 := by
+        have h := hrow 1 0 2 (by decide) (by decide) (by decide)
+        rw [h10, ha01q, ha12p] at h
+        exact cancel_left_int (D.w 1) (hpos 1) _ _ (by linarith)
+      have hm2 : D.m 0 ≥ D.m 1 := by
+        have h := hrow 0 1 2 (by decide) (by decide) (by decide)
+        rw [ha01p, hzero] at h
+        exact cancel_left_int (D.w 0) (hpos 0) _ _ (by linarith)
+      let e : Fin 3 ≃ Fin 3 := Equiv.swap 0 2
+      let E : LocalNumericalData 3 := reindexLocalData D e
+      have he0 : e 0 = (2 : Fin 3) := by simp [e, Equiv.swap_apply_left]
+      have he1 : e 1 = (1 : Fin 3) := by
+        change (Equiv.swap 0 2) 1 = (1 : Fin 3)
+        decide
+      have he2 : e 2 = (0 : Fin 3) := by simp [e, Equiv.swap_apply_right]
+      have hEmp : ∀ i, 0 < E.m i := by
+        intro i
+        change 0 < D.m (e i)
+        exact hmp (e i)
+      have hmcE : mConditionB3 E.m := by
+        change 2 * D.m 2 ≥ D.m 1 ∧
+          2 * D.m 1 ≥ D.m 2 + D.m 0 ∧ D.m 0 ≥ D.m 1
+        exact ⟨hm0, hm1, hm2⟩
+      refine ⟨e, ?_⟩
+      right
+      right
+      exact realizeB E (D.w 0) (hpos 0)
+        (by calc
+          E.w 0 = D.w 2 := by
+            change D.w (e 0) = D.w 2
+            rw [he0]
+          _ = 2 * D.w 0 := hw02)
+        (by calc
+          E.w 1 = D.w 1 := by
+            change D.w (e 1) = D.w 1
+            rw [he1]
+          _ = 2 * D.w 0 := hw01)
+        (by
+          change D.w (e 2) = D.w 0
+          rw [he2])
+        (by calc
+          E.a 0 0 = D.a 2 2 := by
+            change D.a (e 0) (e 0) = D.a 2 2
+            rw [he0]
+          _ = -2 * D.w 2 := hdiag2
+          _ = -4 * D.w 0 := by rw [hw02]; ring)
+        (by calc
+          E.a 1 1 = D.a 1 1 := by
+            change D.a (e 1) (e 1) = D.a 1 1
+            rw [he1]
+          _ = -2 * D.w 1 := hdiag1
+          _ = -4 * D.w 0 := by rw [hw01]; ring)
+        hdiag0
+        (by calc
+          E.a 0 1 = D.a 2 1 := by
+            change D.a (e 0) (e 1) = D.a 2 1
+            rw [he0, he1]
+          _ = D.a 1 2 := h21
+          _ = D.w 1 := ha12p
+          _ = 2 * D.w 0 := hw01)
+        (by calc
+          E.a 1 0 = D.a 1 2 := by
+            change D.a (e 1) (e 0) = D.a 1 2
+            rw [he1, he0]
+          _ = D.w 1 := ha12p
+          _ = 2 * D.w 0 := hw01)
+        (by calc
+          E.a 1 2 = D.a 1 0 := by
+            change D.a (e 1) (e 2) = D.a 1 0
+            rw [he1, he2]
+          _ = D.a 0 1 := h10
+          _ = 2 * D.w 0 := ha01p)
+        (by calc
+          E.a 2 1 = D.a 0 1 := by
+            change D.a (e 2) (e 1) = D.a 0 1
+            rw [he2, he1]
+          _ = 2 * D.w 0 := ha01p)
+        (by
+          change D.a 2 0 = 0
+          exact h20.trans hzero)
+        (by
+          change D.a 0 2 = 0
+          exact hzero)
+        hEmp hmcE
+
+private theorem classify_three_two_edges
+    (D : LocalNumericalData 3)
+    (hpos : ∀ i, 0 < D.w i) (hmp : ∀ i, 0 < D.m i)
+    (hdiag : ∀ i, D.a i i = -2 * D.w i)
+    (hsymm : ∀ i j, D.a i j = D.a j i)
+    (hdet : -8 * (D.w 0 : ℝ) * D.w 1 * D.w 2 +
+      2 * (D.a 0 1 : ℝ) ^ 2 * D.w 2 +
+      2 * (D.a 1 2 : ℝ) ^ 2 * D.w 0 +
+      2 * (D.a 0 2 : ℝ) ^ 2 * D.w 1 +
+      2 * (D.a 0 1 : ℝ) * D.a 0 2 * D.a 1 2 < 0)
+    (hbound01 : 0 < 4 * (D.w 0 : ℝ) * D.w 1 - D.a 0 1 ^ 2)
+    (hbound02 : 0 < 4 * (D.w 0 : ℝ) * D.w 2 - D.a 0 2 ^ 2)
+    (ha01 : 0 < D.a 0 1) (ha02 : 0 < D.a 0 2)
+    (hzero : D.a 1 2 = 0)
+    (hquot : ∀ i j, 0 < D.a i j →
+      0 < 4 * (D.w i : ℝ) * D.w j - D.a i j ^ 2 →
+      ∃ p q : ℤ, 0 < p ∧ 0 < q ∧ D.a i j = p * D.w i ∧
+        D.a i j = q * D.w j ∧ p * q < 4)
+    (hrow : ∀ (i j k : Fin 3), i ≠ j → i ≠ k → j ≠ k →
+      2 * D.w i * D.m i ≥ D.a i j * D.m j + D.a i k * D.m k)
+    (realizeA : ∀ (E : LocalNumericalData 3) (r : ℤ),
+      0 < r → E.w 0 = r → E.w 1 = r → E.w 2 = r →
+      E.a 0 0 = -2 * r → E.a 1 1 = -2 * r → E.a 2 2 = -2 * r →
+      E.a 0 1 = r → E.a 1 0 = r → E.a 1 2 = r → E.a 2 1 = r →
+      E.a 0 2 = 0 → E.a 2 0 = 0 → (∀ i, 0 < E.m i) →
+      mConditionA3 E.m → isA3 E)
+    (realizeC : ∀ (E : LocalNumericalData 3) (r : ℤ),
+      0 < r → E.w 0 = r → E.w 1 = r → E.w 2 = 2 * r →
+      E.a 0 0 = -2 * r → E.a 1 1 = -2 * r → E.a 2 2 = -4 * r →
+      E.a 0 1 = r → E.a 1 0 = r → E.a 1 2 = 2 * r → E.a 2 1 = 2 * r →
+      E.a 0 2 = 0 → E.a 2 0 = 0 → (∀ i, 0 < E.m i) →
+      mConditionC3 E.m → isC3 E)
+    (realizeB : ∀ (E : LocalNumericalData 3) (r : ℤ),
+      0 < r → E.w 0 = 2 * r → E.w 1 = 2 * r → E.w 2 = r →
+      E.a 0 0 = -4 * r → E.a 1 1 = -4 * r → E.a 2 2 = -2 * r →
+      E.a 0 1 = 2 * r → E.a 1 0 = 2 * r → E.a 1 2 = 2 * r → E.a 2 1 = 2 * r →
+      E.a 0 2 = 0 → E.a 2 0 = 0 → (∀ i, 0 < E.m i) →
+      mConditionB3 E.m → isB3 E) :
+    UpToReordering D (fun E => isA3 E ∨ isC3 E ∨ isB3 E) := by
+  let e : Fin 3 ≃ Fin 3 := Equiv.swap 0 1
+  let E : LocalNumericalData 3 := reindexLocalData D e
+  have he0 : e 0 = (1 : Fin 3) := by simp [e, Equiv.swap_apply_left]
+  have he1 : e 1 = (0 : Fin 3) := by simp [e, Equiv.swap_apply_right]
+  have he2 : e 2 = (2 : Fin 3) := by
+    change (Equiv.swap 0 1) 2 = (2 : Fin 3)
+    decide
+  have hEpos : ∀ i, 0 < E.w i := by
+    intro i
+    change 0 < D.w (e i)
+    exact hpos (e i)
+  have hEmp : ∀ i, 0 < E.m i := by
+    intro i
+    change 0 < D.m (e i)
+    exact hmp (e i)
+  have hEdiag : ∀ i, E.a i i = -2 * E.w i := by
+    intro i
+    change D.a (e i) (e i) = -2 * D.w (e i)
+    exact hdiag (e i)
+  have hEsym : ∀ i j, E.a i j = E.a j i := by
+    intro i j
+    change D.a (e i) (e j) = D.a (e j) (e i)
+    exact hsymm (e i) (e j)
+  have hEzero : E.a 0 2 = 0 := by
+    change D.a (e 0) (e 2) = 0
+    rw [he0, he2]
+    exact hzero
+  have hEdet : -8 * (E.w 0 : ℝ) * E.w 1 * E.w 2 +
+      2 * (E.a 0 1 : ℝ) ^ 2 * E.w 2 +
+      2 * (E.a 1 2 : ℝ) ^ 2 * E.w 0 < 0 := by
+    change -8 * (D.w (e 0) : ℝ) * D.w (e 1) * D.w (e 2) +
+        2 * (D.a (e 0) (e 1) : ℝ) ^ 2 * D.w (e 2) +
+        2 * (D.a (e 1) (e 2) : ℝ) ^ 2 * D.w (e 0) < 0
+    rw [he0, he1, he2, hsymm 1 0]
+    have hdet' := hdet
+    rw [hzero] at hdet'
+    convert hdet' using 1 <;> ring
+  have hEbound01 : 0 < 4 * (E.w 0 : ℝ) * E.w 1 - E.a 0 1 ^ 2 := by
+    change 0 < 4 * (D.w (e 0) : ℝ) * D.w (e 1) - D.a (e 0) (e 1) ^ 2
+    rw [he0, he1, hsymm 1 0]
+    convert hbound01 using 1 <;> ring
+  have hEbound12 : 0 < 4 * (E.w 1 : ℝ) * E.w 2 - E.a 1 2 ^ 2 := by
+    change 0 < 4 * (D.w (e 1) : ℝ) * D.w (e 2) - D.a (e 1) (e 2) ^ 2
+    rw [he1, he2]
+    exact hbound02
+  have hEa01 : 0 < E.a 0 1 := by
+    change 0 < D.a (e 0) (e 1)
+    rw [he0, he1, hsymm 1 0]
+    exact ha01
+  have hEa12 : 0 < E.a 1 2 := by
+    change 0 < D.a (e 1) (e 2)
+    rw [he1, he2]
+    exact ha02
+  have hEquot : ∀ i j, 0 < E.a i j →
+      0 < 4 * (E.w i : ℝ) * E.w j - E.a i j ^ 2 →
+      ∃ p q : ℤ, 0 < p ∧ 0 < q ∧ E.a i j = p * E.w i ∧
+        E.a i j = q * E.w j ∧ p * q < 4 := by
+    intro i j hij hb
+    change 0 < D.a (e i) (e j) at hij
+    change 0 < 4 * (D.w (e i) : ℝ) * D.w (e j) - D.a (e i) (e j) ^ 2 at hb
+    obtain ⟨p, q, hp, hq, hpa, hqa, hpq⟩ := hquot (e i) (e j) hij hb
+    exact ⟨p, q, hp, hq, hpa, hqa, hpq⟩
+  have hErow : ∀ (i j k : Fin 3), i ≠ j → i ≠ k → j ≠ k →
+      2 * E.w i * E.m i ≥ E.a i j * E.m j + E.a i k * E.m k := by
+    intro i j k hij hik hjk
+    change 2 * D.w (e i) * D.m (e i) ≥
+      D.a (e i) (e j) * D.m (e j) + D.a (e i) (e k) * D.m (e k)
+    apply hrow (e i) (e j) (e k)
+    · intro h
+      exact hij (e.injective h)
+    · intro h
+      exact hik (e.injective h)
+    · intro h
+      exact hjk (e.injective h)
+  apply upToReordering_reindex D
+    (fun F => isA3 F ∨ isC3 F ∨ isB3 F) e
+  apply classify_three_path E hEpos hEmp hEdiag hEsym hEzero hEdet
+    hEbound01 hEbound12 hEa01 hEa12 hEquot hErow
+    realizeA realizeC realizeB
+
+private theorem classify_three_two_edges_right
+    (D : LocalNumericalData 3)
+    (hpos : ∀ i, 0 < D.w i) (hmp : ∀ i, 0 < D.m i)
+    (hdiag : ∀ i, D.a i i = -2 * D.w i)
+    (hsymm : ∀ i j, D.a i j = D.a j i)
+    (hdet : -8 * (D.w 0 : ℝ) * D.w 1 * D.w 2 +
+      2 * (D.a 0 1 : ℝ) ^ 2 * D.w 2 +
+      2 * (D.a 1 2 : ℝ) ^ 2 * D.w 0 +
+      2 * (D.a 0 2 : ℝ) ^ 2 * D.w 1 +
+      2 * (D.a 0 1 : ℝ) * D.a 0 2 * D.a 1 2 < 0)
+    (hbound02 : 0 < 4 * (D.w 0 : ℝ) * D.w 2 - D.a 0 2 ^ 2)
+    (hbound12 : 0 < 4 * (D.w 1 : ℝ) * D.w 2 - D.a 1 2 ^ 2)
+    (ha02 : 0 < D.a 0 2) (ha12 : 0 < D.a 1 2)
+    (hzero : D.a 0 1 = 0)
+    (hquot : ∀ i j, 0 < D.a i j →
+      0 < 4 * (D.w i : ℝ) * D.w j - D.a i j ^ 2 →
+      ∃ p q : ℤ, 0 < p ∧ 0 < q ∧ D.a i j = p * D.w i ∧
+        D.a i j = q * D.w j ∧ p * q < 4)
+    (hrow : ∀ (i j k : Fin 3), i ≠ j → i ≠ k → j ≠ k →
+      2 * D.w i * D.m i ≥ D.a i j * D.m j + D.a i k * D.m k)
+    (realizeA : ∀ (E : LocalNumericalData 3) (r : ℤ),
+      0 < r → E.w 0 = r → E.w 1 = r → E.w 2 = r →
+      E.a 0 0 = -2 * r → E.a 1 1 = -2 * r → E.a 2 2 = -2 * r →
+      E.a 0 1 = r → E.a 1 0 = r → E.a 1 2 = r → E.a 2 1 = r →
+      E.a 0 2 = 0 → E.a 2 0 = 0 → (∀ i, 0 < E.m i) →
+      mConditionA3 E.m → isA3 E)
+    (realizeC : ∀ (E : LocalNumericalData 3) (r : ℤ),
+      0 < r → E.w 0 = r → E.w 1 = r → E.w 2 = 2 * r →
+      E.a 0 0 = -2 * r → E.a 1 1 = -2 * r → E.a 2 2 = -4 * r →
+      E.a 0 1 = r → E.a 1 0 = r → E.a 1 2 = 2 * r → E.a 2 1 = 2 * r →
+      E.a 0 2 = 0 → E.a 2 0 = 0 → (∀ i, 0 < E.m i) →
+      mConditionC3 E.m → isC3 E)
+    (realizeB : ∀ (E : LocalNumericalData 3) (r : ℤ),
+      0 < r → E.w 0 = 2 * r → E.w 1 = 2 * r → E.w 2 = r →
+      E.a 0 0 = -4 * r → E.a 1 1 = -4 * r → E.a 2 2 = -2 * r →
+      E.a 0 1 = 2 * r → E.a 1 0 = 2 * r → E.a 1 2 = 2 * r → E.a 2 1 = 2 * r →
+      E.a 0 2 = 0 → E.a 2 0 = 0 → (∀ i, 0 < E.m i) →
+      mConditionB3 E.m → isB3 E) :
+    UpToReordering D (fun E => isA3 E ∨ isC3 E ∨ isB3 E) := by
+  let e : Fin 3 ≃ Fin 3 := Equiv.swap 1 2
+  let E : LocalNumericalData 3 := reindexLocalData D e
+  have he0 : e 0 = (0 : Fin 3) := by
+    change (Equiv.swap 1 2) 0 = (0 : Fin 3)
+    decide
+  have he1 : e 1 = (2 : Fin 3) := by
+    simp [e, Equiv.swap_apply_left]
+  have he2 : e 2 = (1 : Fin 3) := by
+    simp [e, Equiv.swap_apply_right]
+  have hEpos : ∀ i, 0 < E.w i := by
+    intro i
+    change 0 < D.w (e i)
+    exact hpos (e i)
+  have hEmp : ∀ i, 0 < E.m i := by
+    intro i
+    change 0 < D.m (e i)
+    exact hmp (e i)
+  have hEdiag : ∀ i, E.a i i = -2 * E.w i := by
+    intro i
+    change D.a (e i) (e i) = -2 * D.w (e i)
+    exact hdiag (e i)
+  have hEsym : ∀ i j, E.a i j = E.a j i := by
+    intro i j
+    change D.a (e i) (e j) = D.a (e j) (e i)
+    exact hsymm (e i) (e j)
+  have hEzero : E.a 0 2 = 0 := by
+    change D.a (e 0) (e 2) = 0
+    rw [he0, he2]
+    exact hzero
+  have hEdet : -8 * (E.w 0 : ℝ) * E.w 1 * E.w 2 +
+      2 * (E.a 0 1 : ℝ) ^ 2 * E.w 2 +
+      2 * (E.a 1 2 : ℝ) ^ 2 * E.w 0 < 0 := by
+    change -8 * (D.w (e 0) : ℝ) * D.w (e 1) * D.w (e 2) +
+        2 * (D.a (e 0) (e 1) : ℝ) ^ 2 * D.w (e 2) +
+        2 * (D.a (e 1) (e 2) : ℝ) ^ 2 * D.w (e 0) < 0
+    rw [he0, he1, he2, hsymm 2 1]
+    have hdet' := hdet
+    rw [hzero] at hdet'
+    convert hdet' using 1 <;> ring
+  have hEbound01 : 0 < 4 * (E.w 0 : ℝ) * E.w 1 - E.a 0 1 ^ 2 := by
+    change 0 < 4 * (D.w (e 0) : ℝ) * D.w (e 1) - D.a (e 0) (e 1) ^ 2
+    rw [he0, he1]
+    convert hbound02 using 1 <;> ring
+  have hEbound12 : 0 < 4 * (E.w 1 : ℝ) * E.w 2 - E.a 1 2 ^ 2 := by
+    change 0 < 4 * (D.w (e 1) : ℝ) * D.w (e 2) - D.a (e 1) (e 2) ^ 2
+    rw [he1, he2, hsymm 2 1]
+    convert hbound12 using 1 <;> ring
+  have hEa01 : 0 < E.a 0 1 := by
+    change 0 < D.a (e 0) (e 1)
+    rw [he0, he1]
+    exact ha02
+  have hEa12 : 0 < E.a 1 2 := by
+    change 0 < D.a (e 1) (e 2)
+    rw [he1, he2, hsymm 2 1]
+    exact ha12
+  have hEquot : ∀ i j, 0 < E.a i j →
+      0 < 4 * (E.w i : ℝ) * E.w j - E.a i j ^ 2 →
+      ∃ p q : ℤ, 0 < p ∧ 0 < q ∧ E.a i j = p * E.w i ∧
+        E.a i j = q * E.w j ∧ p * q < 4 := by
+    intro i j hij hb
+    change 0 < D.a (e i) (e j) at hij
+    change 0 < 4 * (D.w (e i) : ℝ) * D.w (e j) - D.a (e i) (e j) ^ 2 at hb
+    obtain ⟨p, q, hp, hq, hpa, hqa, hpq⟩ := hquot (e i) (e j) hij hb
+    exact ⟨p, q, hp, hq, hpa, hqa, hpq⟩
+  have hErow : ∀ (i j k : Fin 3), i ≠ j → i ≠ k → j ≠ k →
+      2 * E.w i * E.m i ≥ E.a i j * E.m j + E.a i k * E.m k := by
+    intro i j k hij hik hjk
+    change 2 * D.w (e i) * D.m (e i) ≥
+      D.a (e i) (e j) * D.m (e j) + D.a (e i) (e k) * D.m (e k)
+    apply hrow (e i) (e j) (e k)
+    · intro h
+      exact hij (e.injective h)
+    · intro h
+      exact hik (e.injective h)
+    · intro h
+      exact hjk (e.injective h)
+  apply upToReordering_reindex D
+    (fun F => isA3 F ∨ isC3 F ∨ isB3 F) e
+  apply classify_three_path E hEpos hEmp hEdiag hEsym hEzero hEdet
+    hEbound01 hEbound12 hEa01 hEa12 hEquot hErow
+    realizeA realizeC realizeB
+
 theorem determinant_five_by_five_formula (D : LocalNumericalData 5)
     (hdiag : ∀ i, D.a i i = -2 * D.w i) (hsymm : ∀ i j, D.a i j = D.a j i)
     (_hzero : D.a 0 2 = 0 ∧ D.a 0 3 = 0 ∧ D.a 1 3 = 0 ∧
@@ -2401,7 +3079,45 @@ theorem lemma_three_by_three (T : NumericalType) (S : MinusTwoSubgraph T 3)
         simpa [mul_assoc, mul_left_comm, mul_comm] using
           mul_le_mul_of_nonneg_right hs12 hw0
     nlinarith [hdetI, hs01', hs02', hs12', hprod]
-  sorry
+  rcases hedges with ⟨he01, he02⟩ | ⟨he01, he12⟩ | ⟨he02, he12⟩
+  · have ha01 : 0 < D.a 0 1 := hEdge 0 1 he01
+    have ha02 : 0 < D.a 0 2 := hEdge 0 2 he02
+    have ha12 : D.a 1 2 = 0 := by
+      have h := hnonneg 1 2 (by decide)
+      by_contra hne
+      have : 0 < D.a 1 2 := lt_of_le_of_ne h (Ne.symm hne)
+      exact htriangle ⟨ha01, ha02, this⟩
+    exact classify_three_two_edges D (local_w_pos S) (local_m_pos S)
+      hDdiag hDsym hdetI hbound01 hbound02 ha01 ha02 ha12 hquot hrow
+      realizeA3 realizeC3 realizeB3
+  · have ha01 : 0 < D.a 0 1 := hEdge 0 1 he01
+    have ha12 : 0 < D.a 1 2 := hEdge 1 2 he12
+    have ha02 : D.a 0 2 = 0 := by
+      have h := hnonneg 0 2 (by decide)
+      by_contra hne
+      have : 0 < D.a 0 2 := lt_of_le_of_ne h (Ne.symm hne)
+      exact htriangle ⟨ha01, this, ha12⟩
+    apply classify_three_path D (local_w_pos S) (local_m_pos S) hDdiag hDsym ha02
+    · simpa [ha02] using hdetI
+    · exact hbound01
+    · exact hbound12
+    · exact ha01
+    · exact ha12
+    · exact hquot
+    · exact hrow
+    · exact realizeA3
+    · exact realizeC3
+    · exact realizeB3
+  · have ha02 : 0 < D.a 0 2 := hEdge 0 2 he02
+    have ha12 : 0 < D.a 1 2 := hEdge 1 2 he12
+    have ha01 : D.a 0 1 = 0 := by
+      have h := hnonneg 0 1 (by decide)
+      by_contra hne
+      have : 0 < D.a 0 1 := lt_of_le_of_ne h (Ne.symm hne)
+      exact htriangle ⟨this, ha02, ha12⟩
+    exact classify_three_two_edges_right D (local_w_pos S) (local_m_pos S)
+      hDdiag hDsym hdetI hbound02 hbound12 ha02 ha12 ha01 hquot hrow
+      realizeA3 realizeC3 realizeB3
 
 /-! The four-by-four path classification. -/
 theorem lemma_four_by_four (T : NumericalType) (S : MinusTwoSubgraph T 4)

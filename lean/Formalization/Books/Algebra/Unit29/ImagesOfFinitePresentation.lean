@@ -144,16 +144,18 @@ theorem isConstructible_image_of_localization
     (hE : IsConstructible E) :
     IsConstructible
       (PrimeSpectrum.comap (algebraMap R (Localization.Away f)) '' E) := by
-  exact PrimeSpectrum.isConstructible_comap_image
-    (RingHom.finitePresentation_algebraMap.mpr (IsLocalization.Away.finitePresentation f)) hE
+  apply PrimeSpectrum.isConstructible_comap_image
+  · exact RingHom.finitePresentation_algebraMap.mpr (IsLocalization.Away.finitePresentation f)
+  · exact hE
 
 theorem isConstructible_image_of_fg_quotient
     {R : Type u} [CommRing R] (I : Ideal R) (hI : I.FG)
     {E : Set (PrimeSpectrum (R ⧸ I))} (hE : IsConstructible E) :
     IsConstructible (PrimeSpectrum.comap (Ideal.Quotient.mk I) '' E) := by
-  exact PrimeSpectrum.isConstructible_comap_image
-    (RingHom.FinitePresentation.of_surjective (Ideal.Quotient.mk I)
-      Ideal.Quotient.mk_surjective (by rw [Ideal.mk_ker]; exact hI)) hE
+  apply PrimeSpectrum.isConstructible_comap_image
+  · exact RingHom.FinitePresentation.of_surjective (Ideal.Quotient.mk I)
+      Ideal.Quotient.mk_surjective (by rw [Ideal.mk_ker]; exact hI)
+  · exact hE
 
 /-! ## The affine line -/
 
@@ -182,7 +184,7 @@ theorem polynomial_spectrum_comap_isOpen_and_standardOpen_image_isCompactOpen
     · rw [Polynomial.notMem_support_iff.mp hi]
       exact p.asIdeal.zero_mem
   · intro h a ha
-    obtain ⟨i, hi, rfl⟩ := ha
+    obtain ⟨i, -, rfl⟩ := ha
     exact h ⟨i, rfl⟩
 
 /-! ## Characteristic polynomials and the affine-line special case -/

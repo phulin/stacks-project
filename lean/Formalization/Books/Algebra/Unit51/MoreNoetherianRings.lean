@@ -3,6 +3,7 @@ import Mathlib.Algebra.Module.LocalizedModule.Submodule
 import Mathlib.RingTheory.Adjoin.Tower
 import Mathlib.RingTheory.Filtration
 import Mathlib.RingTheory.Localization.Away.Basic
+import Mathlib.RingTheory.LocalProperties.Basic
 
 /-!
 # Commutative Algebra, Chapter 51: More Noetherian rings
@@ -49,7 +50,14 @@ theorem artin_rees
     ∃ c : ℕ, 0 < c ∧ ∀ n ≥ c,
       I ^ n • (⊤ : Submodule R M) ⊓ N =
         I ^ (n - c) • (I ^ c • (⊤ : Submodule R M) ⊓ N) := by
-  sorry
+  obtain ⟨k, hk⟩ := I.exists_pow_inf_eq_pow_smul N
+  refine ⟨k + 1, Nat.zero_lt_succ k, ?_⟩
+  intro n hn
+  rw [hk n (le_trans (Nat.le_succ k) hn), hk (k + 1) (Nat.le_succ k)]
+  simp only [Nat.add_sub_cancel_left]
+  rw [smul_smul, ← pow_add]
+  congr 2
+  omega
 
 /-- Artin--Rees for an exact sequence `0 → K → M → N`, expressed using the
 range of the left map and the canonical `map`/`comap` operations. -/
@@ -69,7 +77,70 @@ theorem map_artin_rees
             I ^ (n - c) • Submodule.comap f (I ^ c • (⊤ : Submodule R N)) ∧
         LinearMap.range f ⊓ (I ^ n • (⊤ : Submodule R N)) ≤
           Submodule.map f (I ^ (n - c) • (⊤ : Submodule R M)) := by
-  sorry
+  obtain ⟨c, hc_pos, hc⟩ := artin_rees I (LinearMap.range f)
+  refine ⟨c, ?_⟩
+  intro n hn
+  have hmap :
+      I ^ (n - c) • (I ^ c • (⊤ : Submodule R N) ⊓ LinearMap.range f) ≤
+        Submodule.map f
+          (I ^ (n - c) • Submodule.comap f (I ^ c • (⊤ : Submodule R N))) := by
+    refine Submodule.smul_le.mpr ?_
+    intro r hr x hx
+    rcases hx.2 with ⟨y, hy⟩
+    refine ⟨r • y, Submodule.smul_mem_smul hr ?_, ?_⟩
+    · change f y ∈ I ^ c • (⊤ : Submodule R N)
+      rw [hy]
+      exact hx.1
+    change f (r • y) = r • x
+    rw [map_smul, hy]
+  have hpow :
+      I ^ (n - c) • (I ^ c • (⊤ : Submodule R N)) ≤
+        I ^ n • (⊤ : Submodule R N) := by
+    rw [smul_smul, ← pow_add, Nat.sub_add_cancel hn]
+  constructor
+  · apply le_antisymm
+    · intro x hx
+      have hfx : f x ∈ I ^ n • (⊤ : Submodule R N) := hx
+      have hfx' : f x ∈ I ^ n • (⊤ : Submodule R N) ⊓ LinearMap.range f :=
+        ⟨hfx, ⟨x, rfl⟩⟩
+      rw [hc n hn] at hfx'
+      rcases hmap hfx' with ⟨y, hy, hfy⟩
+      have hker : x - y ∈ LinearMap.ker f := by
+        change f (x - y) = 0
+        rw [map_sub, hfy, sub_self]
+      rw [hgf.linearMap_ker_eq] at hker
+      rcases hker with ⟨z, hz⟩
+      have hxy : x = g z + y := by
+        rw [hz, sub_add_cancel]
+      rw [hxy]
+      exact add_mem
+        ((le_sup_left : LinearMap.range g ≤
+          LinearMap.range g ⊔ I ^ (n - c) • Submodule.comap f (I ^ c • (⊤ : Submodule R N)))
+          ⟨z, rfl⟩)
+        ((le_sup_right : I ^ (n - c) • Submodule.comap f (I ^ c • (⊤ : Submodule R N)) ≤
+          LinearMap.range g ⊔ I ^ (n - c) • Submodule.comap f (I ^ c • (⊤ : Submodule R N))) hy)
+    · refine sup_le
+        (by
+          intro x hx
+          change f x ∈ I ^ n • (⊤ : Submodule R N)
+          rcases hx with ⟨z, rfl⟩
+          have hfg : f (g z) = 0 :=
+            DFunLike.congr_fun hgf.linearMap_comp_eq_zero z
+          rw [hfg]
+          exact zero_mem _)
+        (by
+          refine Submodule.smul_le.mpr ?_
+          intro r hr x hx
+          change f (r • x) ∈ I ^ n • (⊤ : Submodule R N)
+          rw [map_smul]
+          change f x ∈ I ^ c • (⊤ : Submodule R N) at hx
+          exact hpow (Submodule.smul_mem_smul hr hx))
+  · intro x hx
+    have hx' : x ∈ I ^ n • (⊤ : Submodule R N) ⊓ LinearMap.range f :=
+      ⟨hx.2, hx.1⟩
+    rw [hc n hn] at hx'
+    exact (Submodule.map_mono
+      (Submodule.smul_mono le_rfl le_top)) (hmap hx')
 
 /-! ## Krull intersection and localization -/
 
@@ -97,7 +168,9 @@ theorem powersIntersectionSubmodule_eq_bot_of_le_jacobson
     [IsNoetherianRing R] [Module.Finite R M]
     (I : Ideal R) (hI : I ≤ Ring.jacobson R) :
     powersIntersectionSubmodule (M := M) I = ⊥ := by
-  sorry
+  simpa [powersIntersectionSubmodule, Ideal.jacobson_bot] using
+    (Ideal.iInf_pow_smul_eq_bot_of_le_jacobson (I := I) (M := M)
+      (by simpa only [Ideal.jacobson_bot] using hI))
 
 /-- For every prime containing `I`, some localization of the power
 intersection vanishes. -/
@@ -108,7 +181,75 @@ theorem powersIntersectionSubmodule_localizes_to_bot
     (I : Ideal R) (p : Ideal R) [p.IsPrime] (hIp : I ≤ p) :
     ∃ f : R, f ∉ p ∧
       (powersIntersectionSubmodule (M := M) I).localized (Submonoid.powers f) = ⊥ := by
-  sorry
+  classical
+  let N₀ : Submodule R M := powersIntersectionSubmodule (M := M) I
+  let S := Localization.AtPrime p
+  let q := p.primeCompl
+  let J : Ideal S := I.map (algebraMap R S)
+  letI : Module.FinitePresentation R M := Module.finitePresentation_of_finite R M
+  have hJ : J ≠ ⊤ := by
+    apply ne_top_of_le_ne_top (b := IsLocalRing.maximalIdeal S)
+    · exact (IsLocalRing.maximalIdeal.isMaximal S).ne_top
+    · simpa [J, S, Localization.AtPrime.map_eq_maximalIdeal] using
+        (Ideal.map_mono hIp :
+          I.map (algebraMap R S) ≤ p.map (algebraMap R S))
+  have hkrull :
+      (⨅ n : ℕ, J ^ n • (⊤ : Submodule S (LocalizedModule q M))) = ⊥ :=
+    Ideal.iInf_pow_smul_eq_bot_of_isLocalRing J hJ
+  have hfull (m : M) (hm : m ∈ N₀) :
+      (LocalizedModule.mkLinearMap q M) m = 0 := by
+    have hm_n : ∀ n : ℕ, m ∈ I ^ n • (⊤ : Submodule R M) := by
+      intro n
+      change m ∈ (⨅ n : ℕ, I ^ n • (⊤ : Submodule R M)) at hm
+      rw [Submodule.mem_iInf] at hm
+      exact hm n
+    have hloc (n : ℕ) :
+        (LocalizedModule.mkLinearMap q M) m ∈
+          J ^ n • (⊤ : Submodule S (LocalizedModule q M)) := by
+      have hloc' :
+          (LocalizedModule.mkLinearMap q M) m ∈
+            (I ^ n • (⊤ : Submodule R M)).localized' S q
+              (LocalizedModule.mkLinearMap q M) := by
+        rw [Submodule.mem_localized']
+        exact ⟨m, hm_n n, 1, by simp⟩
+      simpa only [J, Submodule.localized'_smul, Ideal.localized'_eq_map,
+        Submodule.localized'_top, Ideal.map_pow] using hloc'
+    have hm_int :
+        (LocalizedModule.mkLinearMap q M) m ∈
+          (⨅ n : ℕ, J ^ n • (⊤ : Submodule S (LocalizedModule q M))) := by
+      rw [Submodule.mem_iInf]
+      exact hloc
+    rw [hkrull] at hm_int
+    simpa using hm_int
+  let f₀ : N₀ →ₗ[R] N₀.localized q := N₀.toLocalized q
+  have hcomp : f₀.comp (LinearMap.id : N₀ →ₗ[R] N₀) =
+      f₀.comp (0 : N₀ →ₗ[R] N₀) := by
+    ext x
+    have hx0 : f₀ x = 0 := by
+      apply Subtype.ext
+      dsimp [f₀, Submodule.toLocalized, Submodule.toLocalized',
+        Submodule.toLocalized₀]
+      exact hfull (x : M) x.property
+    simpa [LinearMap.coe_comp, Function.comp_apply] using hx0
+  obtain ⟨s, hs⟩ :=
+    Module.Finite.exists_smul_of_comp_eq_of_isLocalizedModule
+      q f₀ (LinearMap.id : N₀ →ₗ[R] N₀) (0 : N₀ →ₗ[R] N₀) hcomp
+  refine ⟨s, s.property, ?_⟩
+  apply le_antisymm
+  · intro x hx
+    change x = 0
+    rw [Submodule.mem_localized'] at hx
+    rcases hx with ⟨m, hm, t, rfl⟩
+    rw [IsLocalizedModule.mk'_eq_zero]
+    apply (IsLocalizedModule.eq_zero_iff (Submonoid.powers (s : R))
+      (LocalizedModule.mkLinearMap (Submonoid.powers (s : R)) M)).2
+    refine ⟨⟨s, Submonoid.mem_powers _⟩, ?_⟩
+    have hm0 := DFunLike.congr_fun hs (⟨m, hm⟩ : N₀)
+    change (s : R) • m = 0
+    simpa only [Submonoid.smul_def, LinearMap.smul_apply, LinearMap.id_apply,
+      LinearMap.zero_apply, Submodule.coe_smul, Submodule.coe_zero, smul_zero] using
+      congrArg Subtype.val hm0
+  · exact bot_le
 
 /-! ## The ideal-intersection remark -/
 

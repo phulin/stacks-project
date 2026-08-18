@@ -7,6 +7,9 @@ import Mathlib.Data.Finsupp.Basic
 import Mathlib.Data.Matrix.Basic
 import Mathlib.RingTheory.Localization.AtPrime.Basic
 import Mathlib.RingTheory.RingHom.FaithfullyFlat
+import Mathlib.RingTheory.Flat.FaithfullyFlat.Descent
+import Mathlib.RingTheory.Localization.BaseChange
+import Mathlib.RingTheory.LocalProperties.Submodule
 import Mathlib.RingTheory.Spectrum.Prime.RingHom
 import Mathlib.RingTheory.TensorProduct.Maps
 import Mathlib.CategoryTheory.Limits.EpiMono
@@ -199,7 +202,9 @@ theorem epimorphism_range_subtype
     {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S)
     (hf : Epi (CommRingCat.ofHom f)) :
     Epi (CommRingCat.ofHom f.range.subtype) := by
-  sorry
+  apply epimorphism_of_comp f.rangeRestrict f.range.subtype
+  change Epi (CommRingCat.ofHom f)
+  exact hf
 
 /-- Every localization map is an epimorphism, as used in the local criterion. -/
 theorem localization_epimorphism
@@ -221,7 +226,48 @@ theorem epimorphism_iff_localization_at_prime
           (Algebra.TensorProduct.includeLeftRingHom :
             Localization.AtPrime p.asIdeal →+*
               Localization.AtPrime p.asIdeal ⊗[R] S)) := by
-  sorry
+  letI : Algebra R S := f.toAlgebra
+  constructor
+  · intro hf p
+    let A := Localization.AtPrime p.asIdeal
+    exact (@CommRingCat.isPushout_tensorProduct R A S _ _ _
+      (inferInstance : Algebra R A) f.toAlgebra).epi_inl_of_epi hf
+  · intro h
+    apply ((epimorphism_iff_tensorProduct f).out 0 1).mpr
+    apply RingHom.ext
+    intro s
+    apply Module.eq_of_localization_maximal
+      (fun (P : Ideal R) [hP : P.IsMaximal] =>
+        letI : P.IsPrime := hP.isPrime
+        Localization.AtPrime P ⊗[R] (S ⊗[R] S))
+      (fun (P : Ideal R) [hP : P.IsMaximal] =>
+        letI : P.IsPrime := hP.isPrime
+        let A := Localization.AtPrime P
+        let N := S ⊗[R] S
+        letI : Algebra N (A ⊗[R] N) := Algebra.TensorProduct.rightAlgebra
+        (IsScalarTower.toAlgHom R N
+          (A ⊗[R] N)).toLinearMap)
+    intro P hP
+    let A := Localization.AtPrime P
+    let N := S ⊗[R] S
+    letI : Algebra N (A ⊗[R] N) := Algebra.TensorProduct.rightAlgebra
+    let a : (A ⊗[R] S) →+* (A ⊗[R] N) :=
+      (Algebra.TensorProduct.map (AlgHom.id R A)
+        ((Algebra.TensorProduct.includeLeft (R := R) (S := S) (A := S) (B := S)).restrictScalars R)).toRingHom
+    let b : (A ⊗[R] S) →+* (A ⊗[R] N) :=
+      (Algebra.TensorProduct.map (AlgHom.id R A)
+        (Algebra.TensorProduct.includeRight (R := R) (A := S) (B := S))).toRingHom
+    have hab_cat : CommRingCat.ofHom a = CommRingCat.ofHom b := by
+      apply (h ⟨P, hP.isPrime⟩).left_cancellation (CommRingCat.ofHom a)
+        (CommRingCat.ofHom b)
+      apply CommRingCat.hom_ext
+      change a.comp (Algebra.TensorProduct.includeLeftRingHom : A →+* A ⊗[R] S) =
+        b.comp (Algebra.TensorProduct.includeLeftRingHom : A →+* A ⊗[R] S)
+      simp [a, b]
+    have hab : a = b := congrArg (fun g => g.hom) hab_cat
+    have hab' := congrArg (fun g => g (1 ⊗ₜ[R] s)) hab
+    change (1 ⊗ₜ[R] (s ⊗ₜ[R] 1)) = (1 ⊗ₜ[R] (1 ⊗ₜ[R] s))
+    exact hab'
 
 /-- A ring map is surjective exactly when it is both finite and epic. -/
 theorem finite_epimorphism_iff_surjective
@@ -237,7 +283,30 @@ theorem isIso_of_faithfullyFlat_of_epimorphism
     {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S)
     (hf : Epi (CommRingCat.ofHom f)) (hff : RingHom.FaithfullyFlat f) :
     IsIso (CommRingCat.ofHom f) := by
-  sorry
+  letI : Algebra R S := f.toAlgebra
+  change Module.FaithfullyFlat R S at hff
+  letI : Module.FaithfullyFlat R S := hff
+  have hleft_or : IsIso (CommRingCat.ofHom
+      (Algebra.TensorProduct.includeLeftRingHom : S →+* S ⊗[R] S)) ∨
+      IsIso (CommRingCat.ofHom
+        (Algebra.TensorProduct.includeRight (R := R) (A := S) (B := S)).toRingHom) :=
+    ((epimorphism_iff_tensorProduct f).out 0 2).mp hf
+  have heq :
+      (Algebra.TensorProduct.includeLeftRingHom : S →+* S ⊗[R] S) =
+        (Algebra.TensorProduct.includeRight (R := R) (A := S) (B := S)).toRingHom :=
+    ((epimorphism_iff_tensorProduct f).out 0 1).mp hf
+  have hleft : IsIso (CommRingCat.ofHom
+      (Algebra.TensorProduct.includeLeftRingHom : S →+* S ⊗[R] S)) := by
+    rcases hleft_or with hl | hr
+    · exact hl
+    · rw [heq]
+      exact hr
+  have hleft' : Function.Bijective
+      (Algebra.TensorProduct.includeLeftRingHom : S →+* S ⊗[R] S) :=
+    (ConcreteCategory.isIso_iff_bijective _).mp hleft
+  apply (ConcreteCategory.isIso_iff_bijective (CommRingCat.ofHom f)).mpr
+  apply Module.FaithfullyFlat.bijective_of_tensorProduct (R := R) (S := S) (T := S)
+  simpa [Algebra.TensorProduct.algebraMap_def, RingHom.algebraMap_toAlgebra] using hleft'
 
 /-- An epimorphism out of a field has either a field target isomorphic to the
 source or a subsingleton target ring. -/
@@ -245,7 +314,14 @@ theorem epimorphism_from_field
     {k S : Type u} [Field k] [CommRing S] (f : k →+* S)
     (hf : Epi (CommRingCat.ofHom f)) :
     IsIso (CommRingCat.ofHom f) ∨ Subsingleton S := by
-  sorry
+  by_cases hS : Nontrivial S
+  · letI : Nontrivial S := hS
+    letI : Algebra k S := f.toAlgebra
+    apply Or.inl
+    apply isIso_of_faithfullyFlat_of_epimorphism f hf
+    change Module.FaithfullyFlat k S
+    infer_instance
+  · exact Or.inr (not_nontrivial_iff_subsingleton.mp hS)
 
 /-- An epimorphism induces an injective map on spectra and bijections on the
 corresponding residue fields. -/

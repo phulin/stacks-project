@@ -146,6 +146,7 @@ noncomputable def filtrationStepFunctor
     intro A B D f g
     apply (cancel_mono (D.filtration.obj p).arrow).1
     dsimp [filtrationStepMap, filtrationStep]
+    simp only [filteredHom_comp_hom]
     rw [Category.assoc, Subobject.factorThru_arrow, ← Category.assoc,
       Subobject.factorThru_arrow]
     rw [← Category.assoc, Subobject.factorThru_arrow]

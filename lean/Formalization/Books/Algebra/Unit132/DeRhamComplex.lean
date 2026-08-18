@@ -1039,7 +1039,143 @@ theorem deRhamExteriorPowerTensorMap_surjective
     {A B : Type*} [CommRing A] [CommRing B] [Algebra A B] (p : ℕ)
     (hp : 1 ≤ p) :
     Function.Surjective (deRhamExteriorPowerTensorMap (A := A) (B := B) p) := by
-  sorry
+  classical
+  cases p with
+  | zero => omega
+  | succ n =>
+      have coe_cast : ∀ {r s : ℕ} (h : r = s) (x : deRhamTerm A B r),
+          ((cast (congrArg (fun k => (deRhamTerm A B k : Type _)) h) x :
+            deRhamTerm A B s) : ExteriorAlgebra B (ModuleOfDifferentials A B)) =
+            (x : ExteriorAlgebra B (ModuleOfDifferentials A B)) := by
+        intro r s h x
+        cases h
+        rfl
+      have pure_succ_val : ∀ (r : ℕ) (ω : Fin (r + 1) → deRhamTerm A B 1),
+          (deRhamPureWedgeTerms (A := A) (B := B) (r + 1) ω :
+              ExteriorAlgebra B (ModuleOfDifferentials A B)) =
+            (deRhamWedge (A := A) (B := B) 1 r (ω 0)
+              (deRhamPureWedgeTerms (A := A) (B := B) r (Matrix.vecTail ω)) :
+              ExteriorAlgebra B (ModuleOfDifferentials A B)) := by
+        intro r ω
+        simp only [deRhamPureWedgeTerms]
+        apply coe_cast (Nat.add_comm 1 r)
+      have pure_cons_smul : ∀ (r : ℕ) (c : B) (x : deRhamTerm A B 1)
+          (ω : Fin r → deRhamTerm A B 1),
+          (deRhamPureWedgeTerms (A := A) (B := B) (r + 1)
+            (Fin.cons (c • x) ω) : ExteriorAlgebra B (ModuleOfDifferentials A B)) =
+            c • (deRhamPureWedgeTerms (A := A) (B := B) (r + 1)
+              (Fin.cons x ω) : ExteriorAlgebra B (ModuleOfDifferentials A B)) := by
+        intro r c x ω
+        rw [pure_succ_val, pure_succ_val]
+        change (↑(deRhamWedge (A := A) (B := B) 1 r (c • x)
+            (deRhamPureWedgeTerms (A := A) (B := B) r ω)) :
+            ExteriorAlgebra B (ModuleOfDifferentials A B)) =
+          c • (↑(deRhamWedge (A := A) (B := B) 1 r x
+            (deRhamPureWedgeTerms (A := A) (B := B) r ω)) :
+            ExteriorAlgebra B (ModuleOfDifferentials A B))
+        rw [map_smul]
+        rfl
+      have pure_univ : ∀ (r : ℕ) (b : Fin r → B),
+          (deRhamPureWedgeTerms (A := A) (B := B) r
+            (fun i => deRhamUniversalDifferential A B (b i)) :
+            ExteriorAlgebra B (ModuleOfDifferentials A B)) =
+            (exteriorPower.ιMulti B r
+              (fun i => universalDifferentialLinearMap A B (b i)) :
+              ExteriorAlgebra B (ModuleOfDifferentials A B)) := by
+        intro r
+        induction r with
+        | zero =>
+            intro b
+            simp [deRhamPureWedgeTerms, ExteriorAlgebra.ιMulti_zero_apply]
+        | succ r ih =>
+            intro b
+            rw [pure_succ_val]
+            have htail : Matrix.vecTail (fun i =>
+                deRhamUniversalDifferential A B (b i)) =
+                (fun i => deRhamUniversalDifferential A B ((Matrix.vecTail b) i)) := by
+              rfl
+            rw [htail]
+            have hpure : deRhamPureWedgeTerms (A := A) (B := B) r
+                (fun i => deRhamUniversalDifferential A B ((Matrix.vecTail b) i)) =
+                exteriorPower.ιMulti B r
+                  (fun i => universalDifferentialLinearMap A B ((Matrix.vecTail b) i)) := by
+              apply Subtype.ext
+              exact ih (Matrix.vecTail b)
+            rw [hpure]
+            simp [deRhamUniversalDifferential, deRhamDegreeOneEquivA,
+              deRhamDegreeOneEquiv, exteriorPower.oneEquiv, deRhamWedge,
+              ExteriorAlgebra.ιMulti_succ_apply, Matrix.vecTail, Function.comp_apply]
+            have hvec : (fun i : Fin r => universalDifferentialLinearMap A B (b i.succ)) =
+                (fun i : Fin (r + 1) => universalDifferentialLinearMap A B (b i)) ∘ Fin.succ := by
+              funext i
+              rfl
+            rw [hvec]
+      have hgen : ∀ (b₀ : B) (b : Fin (n + 1) → B),
+          deRhamGenerator (A := A) (B := B) (n + 1) b₀ b ∈
+            LinearMap.range (deRhamExteriorPowerTensorMap (A := A) (B := B) (n + 1)) := by
+        intro b₀ b
+        let ω : Fin (n + 1) → deRhamTerm A B 1 :=
+          Fin.cons (b₀ • deRhamUniversalDifferential A B (b 0))
+            (fun i => deRhamUniversalDifferential A B (b i.succ))
+        refine ⟨PiTensorProduct.tprod A ω, ?_⟩
+        change (Classical.choice
+          (deRhamExteriorPowerTensorMap_exists (A := A) (B := B) (n + 1))).1
+            (PiTensorProduct.tprod A ω) = _
+        rw [(Classical.choice
+          (deRhamExteriorPowerTensorMap_exists (A := A) (B := B) (n + 1))).2]
+        apply Subtype.ext
+        change (deRhamPureWedgeTerms (A := A) (B := B) (n + 1) ω :
+            ExteriorAlgebra B (ModuleOfDifferentials A B)) =
+          (deRhamGenerator (A := A) (B := B) (n + 1) b₀ b :
+            ExteriorAlgebra B (ModuleOfDifferentials A B))
+        have hfun : Fin.cons (deRhamUniversalDifferential A B (b 0))
+              (fun i => deRhamUniversalDifferential A B (b i.succ)) =
+            (fun i => deRhamUniversalDifferential A B (b i)) := by
+          funext i
+          refine Fin.cases ?_ (fun j => ?_) i <;> rfl
+        calc
+          (deRhamPureWedgeTerms (A := A) (B := B) (n + 1) ω :
+              ExteriorAlgebra B (ModuleOfDifferentials A B)) =
+            b₀ • (deRhamPureWedgeTerms (A := A) (B := B) (n + 1)
+              (Fin.cons (deRhamUniversalDifferential A B (b 0))
+                (fun i => deRhamUniversalDifferential A B (b i.succ))) :
+              ExteriorAlgebra B (ModuleOfDifferentials A B)) := by
+                dsimp [ω]
+                exact pure_cons_smul n b₀
+                  (deRhamUniversalDifferential A B (b 0))
+                  (fun i => deRhamUniversalDifferential A B (b i.succ))
+          _ = b₀ • (deRhamPureWedgeTerms (A := A) (B := B) (n + 1)
+              (fun i => deRhamUniversalDifferential A B (b i)) :
+              ExteriorAlgebra B (ModuleOfDifferentials A B)) := by
+                rw [hfun]
+          _ = b₀ • (exteriorPower.ιMulti B (n + 1)
+              (fun i => universalDifferentialLinearMap A B (b i)) :
+              ExteriorAlgebra B (ModuleOfDifferentials A B)) := by
+                rw [pure_univ (n + 1) b]
+          _ = (deRhamGenerator (A := A) (B := B) (n + 1) b₀ b :
+              ExteriorAlgebra B (ModuleOfDifferentials A B)) := by
+                rfl
+      intro y
+      have hy : y ∈ Submodule.span A
+          (deRhamGenerators (A := A) (B := B) (n + 1)) := by
+        rw [deRhamGenerators_span (A := A) (B := B) (n + 1)]
+        exact Submodule.mem_top
+      refine Submodule.span_induction (p := fun z _ =>
+          z ∈ LinearMap.range
+            (deRhamExteriorPowerTensorMap (A := A) (B := B) (n + 1))) ?_ ?_ ?_ ?_ hy
+      · rintro _ ⟨z, rfl⟩
+        rcases z with ⟨b₀, b⟩
+        exact hgen b₀ b
+      · exact ⟨0, by simp⟩
+      · intro x y hx hy ihx ihy
+        rcases ihx with ⟨u, hu⟩
+        rcases ihy with ⟨v, hv⟩
+        refine ⟨u + v, ?_⟩
+        simp [map_add, hu, hv]
+      · intro c x hx ih
+        rcases ih with ⟨u, hu⟩
+        refine ⟨c • u, ?_⟩
+        simp [map_smul, hu]
 
 theorem deRhamExteriorPowerTensorMap_on_pure_tensor
     {A B : Type*} [CommRing A] [CommRing B] [Algebra A B] (p : ℕ)

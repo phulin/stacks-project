@@ -1,5 +1,4 @@
 import Formalization.Books.Modules.Unit05.Supports
-import Formalization.Books.Modules.Unit08.LocallyGenerated
 import Mathlib.Algebra.Homology.ShortComplex.ShortExact
 
 /-!

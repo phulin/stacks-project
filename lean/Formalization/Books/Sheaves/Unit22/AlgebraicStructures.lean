@@ -316,7 +316,7 @@ theorem algebraicSheafPullback_stalk_formula
   let P := (algebraicPresheafPullback C f).obj G.presheaf
   let u := (TopCat.Presheaf.stalkFunctor C x).map
     (CategoryTheory.toSheafify (Opens.grothendieckTopology X) P)
-  let : IsIso u := TopCat.Presheaf.stalkFunctor_map_unit_toSheafify_isIso
+  letI : IsIso u := TopCat.Presheaf.stalkFunctor_map_unit_toSheafify_isIso
     (X := X) (p₀ := x) (C := C) P
   exact ⟨(algebraicPresheafPullbackStalkIso f G.presheaf x).trans <|
     (asIso u).trans <| (TopCat.Presheaf.stalkFunctor C x).mapIso e'.symm⟩

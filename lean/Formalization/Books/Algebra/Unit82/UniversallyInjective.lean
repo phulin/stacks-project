@@ -1,4 +1,5 @@
-import Formalization.Books.Algebra.Unit81.CharacterizingFlatness
+import Formalization.Books.Algebra.Unit10.InternalHom
+import Formalization.Books.Algebra.Unit39.FlatModules
 import Mathlib.Algebra.Algebra.RestrictScalars
 import Mathlib.Algebra.Homology.ShortComplex.Limits
 import Mathlib.Algebra.Homology.ShortComplex.ModuleCat
@@ -240,17 +241,21 @@ theorem universallyExact_of_directedSplitColimit
 
 /-! ## The finite-presentation criteria -/
 
-private theorem universallyExact_factor_finiteFree
+private theorem universallyExact_factor_finiteFree_aux
     {R : Type u} {M₁ M₂ : Type u} [CommRing R]
     [AddCommGroup M₁] [Module R M₁]
     [AddCommGroup M₂] [Module R M₂]
     {f₁ : M₁ →ₗ[R] M₂}
-    (h : universallyInjective f₁)
     {n m : ℕ}
     (a : (Fin n →₀ R) →ₗ[R] (Fin m →₀ R))
     (u : (Fin n →₀ R) →ₗ[R] M₁)
     (v : (Fin m →₀ R) →ₗ[R] M₂)
     (ha : v.comp a = f₁.comp u) :
+    Function.Injective (f₁.rTensor
+      ((Fin n →₀ R) ⧸ LinearMap.range
+        (Finsupp.linearCombination R (fun j =>
+          ∑ i, (a (Finsupp.single i 1)) j •
+            (Finsupp.single i (1 : R)))))) →
     ∃ w : (Fin m →₀ R) →ₗ[R] M₁, w.comp a = u := by
   let A : (Fin m →₀ R) →ₗ[R] (Fin n →₀ R) :=
     Finsupp.linearCombination R (fun j =>
@@ -303,7 +308,8 @@ private theorem universallyExact_factor_finiteFree
           exact ⟨Finsupp.single j 1, rfl⟩
         simpa [q, Submodule.mkQ_apply] using
           congrArg (fun z => v (Finsupp.single j 1) ⊗ₜ[R] z) hq
-  have htx0 : tx = 0 := (h Q) htx
+  intro hQ
+  have htx0 : tx = 0 := hQ htx
   let t0 : M₁ ⊗[R] (Fin n →₀ R) :=
     ∑ i, u (Finsupp.single i 1) ⊗ₜ[R] Finsupp.single i 1
   have ht0 : (LinearMap.lTensor M₁ q) t0 = tx := by
@@ -348,7 +354,76 @@ private theorem universallyExact_factor_finiteFree
     | add x y hx hy =>
         simp only [map_add, LinearMap.lTensor_add, hx, hy,
           Finset.sum_add_distrib, smul_add]
-  sorry
+  let w : (Fin m →₀ R) →ₗ[R] M₁ :=
+    Finsupp.linearCombination R (fun j =>
+      TensorProduct.rid R M₁
+        (LinearMap.lTensor M₁
+          (Finsupp.lapply j : (Fin m →₀ R) →ₗ[R] R) t))
+  have hcoord (i : Fin n) : w (a (Finsupp.single i 1)) =
+      u (Finsupp.single i 1) := by
+    have hc := hcontract t
+      ((Finsupp.lapply i : (Fin n →₀ R) →ₗ[R] R).comp A)
+    have hleft : TensorProduct.rid R M₁
+        (LinearMap.lTensor M₁
+          ((Finsupp.lapply i : (Fin n →₀ R) →ₗ[R] R).comp A) t) =
+        u (Finsupp.single i 1) := by
+      rw [LinearMap.lTensor_comp_apply, ht]
+      dsimp [t0]
+      simp [Finsupp.single_apply]
+    have hcoeff (j : Fin m) :
+        ((Finsupp.lapply i : (Fin n →₀ R) →ₗ[R] R).comp A)
+            (Finsupp.single j 1) = (a (Finsupp.single i 1)) j := by
+      simp [LinearMap.comp_apply, A, Finsupp.linearCombination_single,
+        Finsupp.single_apply]
+    have ha_exp : a (Finsupp.single i 1) =
+        ∑ j, (a (Finsupp.single i 1)) j • Finsupp.single j 1 := by
+      ext j
+      simp
+    calc
+      w (a (Finsupp.single i 1)) =
+          ∑ j, (a (Finsupp.single i 1)) j •
+            TensorProduct.rid R M₁
+              (LinearMap.lTensor M₁
+                (Finsupp.lapply j : (Fin m →₀ R) →ₗ[R] R) t) := by
+        rw [ha_exp]
+        simp only [map_sum, map_smul]
+        simp [w, Finsupp.linearCombination_single]
+      _ = ∑ j, ((Finsupp.lapply i : (Fin n →₀ R) →ₗ[R] R).comp A)
+          (Finsupp.single j 1) •
+          TensorProduct.rid R M₁
+            (LinearMap.lTensor M₁
+              (Finsupp.lapply j : (Fin m →₀ R) →ₗ[R] R) t) := by
+        apply Finset.sum_congr rfl
+        intro j hj
+        rw [hcoeff]
+      _ = TensorProduct.rid R M₁
+          (LinearMap.lTensor M₁
+            ((Finsupp.lapply i : (Fin n →₀ R) →ₗ[R] R).comp A) t) := hc.symm
+      _ = u (Finsupp.single i 1) := hleft
+  refine ⟨w, ?_⟩
+  apply Finsupp.lhom_ext'
+  intro i
+  apply LinearMap.ext
+  intro c
+  change w (a (Finsupp.single i c)) = u (Finsupp.single i c)
+  rw [← Finsupp.smul_single_one]
+  simp only [map_smul]
+  rw [hcoord]
+
+private theorem universallyExact_factor_finiteFree
+    {R : Type u} {M₁ M₂ : Type u} [CommRing R]
+    [AddCommGroup M₁] [Module R M₁]
+    [AddCommGroup M₂] [Module R M₂]
+    {f₁ : M₁ →ₗ[R] M₂}
+    (h : universallyInjective f₁)
+    {n m : ℕ}
+    (a : (Fin n →₀ R) →ₗ[R] (Fin m →₀ R))
+    (u : (Fin n →₀ R) →ₗ[R] M₁)
+    (v : (Fin m →₀ R) →ₗ[R] M₂)
+    (ha : v.comp a = f₁.comp u) :
+    ∃ w : (Fin m →₀ R) →ₗ[R] M₁, w.comp a = u := by
+  apply universallyExact_factor_finiteFree_aux a u v ha
+  exact h _
 
 /-- The six equivalent criteria for a short exact sequence to be universally
 exact.  Finite free modules are represented by finitely supported functions. -/
@@ -398,7 +473,47 @@ theorem universallyExact_iff_split_of_finitePresentation
       Function.Surjective f₂) :
     universallyExact f₁ f₂ ↔
       ∃ s : M₃ →ₗ[R] M₂, f₂.comp s = LinearMap.id := by
-  sorry
+  constructor
+  · intro hu
+    have hcrit := universallyExact_criteria f₁ f₂ hshort
+    have h5 := hcrit.out 0 4
+    obtain ⟨s, hs⟩ := (h5.mp hu) M₃ (LinearMap.id : M₃ →ₗ[R] M₃)
+    refine ⟨s, ?_⟩
+    ext x
+    simpa [Formalization.Books.Algebra.Unit10.internalHomPostcomp_apply] using
+      congrArg (fun g => g x) hs
+  · rintro ⟨s, hs⟩
+    let k : M₂ →ₗ[R] M₂ := LinearMap.id - s.comp f₂
+    have hk0 : f₂.comp k = 0 := by
+      ext x
+      dsimp [k]
+      have hx := congrArg (fun g => g (f₂ x)) hs
+      have hx' : f₂ (s (f₂ x)) = f₂ x := by
+        simpa [LinearMap.comp_apply] using hx
+      simp only [map_sub, hx']
+      exact sub_self (f₂ x)
+    let e : M₁ ≃ₗ[R] LinearMap.range f₁ :=
+      LinearEquiv.ofInjective f₁ hshort.1
+    have hk_mem (x : M₂) : k x ∈ LinearMap.range f₁ := by
+      exact (hshort.2.1 (k x)).mp (congrArg (fun g => g x) hk0)
+    let r : M₂ →ₗ[R] M₁ := e.symm.toLinearMap.comp
+      (k.codRestrict (LinearMap.range f₁) hk_mem)
+    have hfr : f₁.comp r = k := by
+      ext x
+      change f₁ (e.symm (k.codRestrict (LinearMap.range f₁) hk_mem x)) = k x
+      exact congrArg Subtype.val (e.apply_symm_apply _)
+    have hkf₁ : k.comp f₁ = f₁ := by
+      ext x
+      have hx := congrArg (fun g => g x) hshort.2.1.comp_eq_zero
+      have hx' : f₂ (f₁ x) = 0 := by simpa [Function.comp_apply] using hx
+      simp [k, LinearMap.comp_apply, hx']
+    have hrf : r.comp f₁ = LinearMap.id := by
+      ext x
+      apply hshort.1
+      have h₁ := congrArg (fun g => g (f₁ x)) hfr
+      have h₂ := congrArg (fun g => g x) hkf₁
+      exact h₁.trans h₂
+    exact universallyExact_of_split hshort r hrf
 
 /-- Flatness is equivalent to universal exactness of every exact sequence
 ending in the module. -/
@@ -412,7 +527,93 @@ theorem flat_iff_exact_ending_universallyExact
         (Function.Injective f₁ ∧ Function.Exact f₁ f₂ ∧
           Function.Surjective f₂) →
           universallyExact f₁ f₂ := by
-  sorry
+  constructor
+  · intro hflat M₁ M₂ _ _ _ _ f₁ f₂ hshort
+    letI : Module.Flat R M := hflat
+    refine ⟨hshort.1, hshort.2.1, hshort.2.2, ?_⟩
+    intro Q _ _
+    have hlinj : Function.Injective (f₁.lTensor Q) :=
+      LinearMap.lTensor_injective_of_exact_of_flat f₂ hshort.2.2 f₁ hshort.1
+        hshort.2.1 Q
+    let e₁ : TensorProduct R M₁ Q ≃ₗ[R] TensorProduct R Q M₁ :=
+      TensorProduct.comm R M₁ Q
+    let e₂ : TensorProduct R M₂ Q ≃ₗ[R] TensorProduct R Q M₂ :=
+      TensorProduct.comm R M₂ Q
+    have hcomm : e₂.toLinearMap.comp (f₁.rTensor Q) =
+        (f₁.lTensor Q).comp e₁.toLinearMap := by
+      apply TensorProduct.ext'
+      intro x y
+      rfl
+    intro x y hxy
+    apply e₁.injective
+    apply hlinj
+    have h := congrArg (fun z => e₂ z) hxy
+    change e₂ ((f₁.rTensor Q) x) = e₂ ((f₁.rTensor Q) y) at h
+    have hx' : e₂ ((f₁.rTensor Q) x) =
+        (f₁.lTensor Q) (e₁ x) := by
+      simpa [LinearMap.comp_apply] using congrArg (fun g => g x) hcomm
+    have hy' : e₂ ((f₁.rTensor Q) y) =
+        (f₁.lTensor Q) (e₁ y) := by
+      simpa [LinearMap.comp_apply] using congrArg (fun g => g y) hcomm
+    rw [hx', hy'] at h
+    exact h
+  · intro h
+    apply Module.Flat.of_forall_exists_factorization
+    intro l f x hx
+    let S : Submodule R (Fin l →₀ R) := Submodule.span R ({f} : Set (Fin l →₀ R))
+    let Q : Type u := (Fin l →₀ R) ⧸ S
+    have hfree : Module.FinitePresentation R (Fin l →₀ R) := inferInstance
+    letI : Module.FinitePresentation R Q :=
+      Module.finitePresentation_of_surjective (h := hfree) S.mkQ S.mkQ_surjective
+        (by
+          rw [Submodule.ker_mkQ]
+          dsimp [S]
+          exact Submodule.fg_span (Set.finite_singleton f))
+    have hS : S ≤ LinearMap.ker x := by
+      dsimp [S]
+      refine Submodule.span_le.2 ?_
+      intro y hy
+      rw [Set.mem_singleton_iff] at hy
+      subst y
+      exact LinearMap.mem_ker.mpr hx
+    let xbar : Q →ₗ[R] M := S.liftQ x hS
+    let N : Type u := M →₀ R
+    let q : N →ₗ[R] M := Finsupp.linearCombination R (id : M → M)
+    have hq : Function.Surjective q := by
+      dsimp [q, N]
+      simpa using (Finsupp.linearCombination_id_surjective R M)
+    let f₁ : (LinearMap.ker q) →ₗ[R] N := (LinearMap.ker q).subtype
+    have hshort : Function.Injective f₁ ∧ Function.Exact f₁ q ∧
+        Function.Surjective q := by
+      exact ⟨(LinearMap.ker q).injective_subtype,
+        LinearMap.exact_subtype_ker_map q, hq⟩
+    have hu := @h (LinearMap.ker q) N _ _ _ _ f₁ q hshort
+    have hcrit := universallyExact_criteria
+      (M₁ := LinearMap.ker q) (M₂ := N) (M₃ := M) f₁ q hshort
+    have hpost_all := (hcrit.out 0 4).mp hu
+    have hpost : Function.Surjective
+        (Formalization.Books.Algebra.Unit10.internalHomPostcomp
+          (M := Q) q) :=
+      hpost_all Q
+    obtain ⟨b, hb⟩ := hpost xbar
+    have hb' : q.comp b = xbar := by
+      change q.comp b = xbar at hb
+      exact hb
+    obtain ⟨k, a, y, hba⟩ := Module.Flat.exists_factorization_of_finitePresentation b
+    refine ⟨k, a.comp S.mkQ, q.comp y, ?_, ?_⟩
+    · calc
+        x = xbar.comp S.mkQ := by
+          dsimp [xbar]
+          exact (S.liftQ_mkQ x hS).symm
+        _ = (q.comp b).comp S.mkQ := by rw [hb']
+        _ = (q.comp (y.comp a)).comp S.mkQ := by rw [hba]
+        _ = (q.comp y).comp (a.comp S.mkQ) := by simp [LinearMap.comp_assoc]
+    · have hfQ : S.mkQ f = 0 := by
+        rw [Submodule.mkQ_apply, Submodule.Quotient.mk_eq_zero]
+        dsimp [S]
+        exact Submodule.subset_span (by simp)
+      change a (S.mkQ f) = 0
+      simpa using congrArg a hfQ
 
 /-! ## Split sequences and examples -/
 

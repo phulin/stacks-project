@@ -411,7 +411,73 @@ theorem int_polynomial_prime_ideal_candidates_isPrime (q : ℕ) (hq : Nat.Prime 
     (intPolynomialPrimeIdeal q).IsPrime ∧
       ∀ f : IntPolynomial, IsIntegerPolynomialLift q f →
         (intPolynomialPrimeAt q f).IsPrime := by
-  sorry
+  letI : Fact (Nat.Prime q) := ⟨hq⟩
+  constructor
+  · let I : Ideal ℤ := Ideal.span ({(q : ℤ)} : Set ℤ)
+    have hI : I.IsMaximal := by
+      exact Int.ideal_span_isMaximal_of_prime q
+    have hmap :
+        Ideal.map Polynomial.C I = intPolynomialPrimeIdeal q := by
+      simp [I, intPolynomialPrimeIdeal, Ideal.map_span]
+    have hdom :
+        IsDomain (IntPolynomial ⧸ Ideal.map Polynomial.C I) :=
+      Ideal.isDomain_map_C_quotient hI.isPrime
+    rw [hmap] at hdom
+    exact (Ideal.Quotient.isDomain_iff_prime _).mp hdom
+  · intro f hf
+    rcases hf with ⟨hf, hfred⟩
+    let I : Ideal ℤ := Ideal.span ({(q : ℤ)} : Set ℤ)
+    have hI : I.IsMaximal := by
+      exact Int.ideal_span_isMaximal_of_prime q
+    letI : I.IsMaximal := hI
+    letI : Field (ℤ ⧸ I) := Ideal.Quotient.field I
+    let M : Ideal IntPolynomial := Ideal.map Polynomial.C I
+    let ePoly := I.polynomialQuotientEquivQuotientPolynomial
+    have hfred' : (Ideal.span {intPolynomialReduction q f}).IsPrime := by
+      exact (Ideal.span_singleton_prime hfred.ne_zero).mpr
+        (UniqueFactorizationMonoid.irreducible_iff_prime.mp hfred)
+    have hmap :
+        Ideal.map (ePoly : Polynomial (ℤ ⧸ I) →+* (IntPolynomial ⧸ M))
+            (Ideal.span {intPolynomialReduction q f}) =
+          Ideal.span {Ideal.Quotient.mk M f} := by
+      rw [Ideal.map_span, Set.image_singleton]
+      have hgen : (ePoly : Polynomial (ℤ ⧸ I) →+* (IntPolynomial ⧸ M))
+          (intPolynomialReduction q f) =
+          Ideal.Quotient.mk M f := by
+        change ePoly (Polynomial.map (Ideal.Quotient.mk I) f) =
+          Ideal.Quotient.mk M f
+        exact Ideal.polynomialQuotientEquivQuotientPolynomial_map_mk I f
+      simpa only [hgen]
+    have hKprime :
+        (Ideal.span {Ideal.Quotient.mk M f}).IsPrime := by
+      rw [← hmap]
+      exact Ideal.map_isPrime_of_surjective ePoly.surjective
+        (by simp)
+    letI : IsDomain ((IntPolynomial ⧸ M) ⧸
+        Ideal.span {Ideal.Quotient.mk M f}) :=
+      (Ideal.Quotient.isDomain_iff_prime _).mpr hKprime
+    have hKmap :
+        Ideal.map (Ideal.Quotient.mk M) (Ideal.span {f}) =
+          Ideal.span {Ideal.Quotient.mk M f} := by
+      rw [Ideal.map_span]
+      simp
+    letI : IsDomain ((IntPolynomial ⧸ M) ⧸
+        Ideal.map (Ideal.Quotient.mk M) (Ideal.span {f})) := by
+      rw [hKmap]
+      infer_instance
+    have hdom : IsDomain (IntPolynomial ⧸ (M ⊔ Ideal.span {f})) := by
+      exact (DoubleQuot.quotQuotEquivQuotSup M (Ideal.span {f})).symm.toMulEquiv.isDomain _
+    have hsup : M ⊔ Ideal.span {f} = intPolynomialPrimeAt q f := by
+      simp only [M, intPolynomialPrimeAt, I, Ideal.map_span, Set.image_singleton]
+      change (Submodule.span IntPolynomial {Polynomial.C (q : ℤ)} ⊔
+          Submodule.span IntPolynomial {f}) =
+          Submodule.span IntPolynomial {Polynomial.C (q : ℤ), f}
+      rw [← Submodule.span_union]
+      apply congrArg (Submodule.span IntPolynomial)
+      ext z
+      simp [or_comm]
+    rw [hsup] at hdom
+    exact (Ideal.Quotient.isDomain_iff_prime _).mp hdom
 
 /-- The source classification, corrected to include the zero prime in each
 PID fiber and the zero prime over the generic point. -/

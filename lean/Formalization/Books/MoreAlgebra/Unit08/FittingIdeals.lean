@@ -369,13 +369,88 @@ theorem fittingIdeal_negOne_le
     {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
     [Module.Finite R M] :
     fittingIdealNegOne R M ≤ fittingIdeal R M 0 := by
-  sorry
+  exact bot_le
 
 theorem fittingIdeal_mono_succ
     {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
     [Module.Finite R M] (k : ℕ) :
     fittingIdeal R M k ≤ fittingIdeal R M (k + 1) := by
-  sorry
+  classical
+  have minorIdeal_zero
+      {n m : ℕ} (A : Matrix (Fin n) (Fin m) R) : minorIdeal A 0 = ⊤ := by
+    apply (Ideal.eq_top_iff_one _).mpr
+    apply Ideal.subset_span
+    refine ⟨∅, ∅, by simp, by simp, ?_⟩
+    simp [matrixMinor]
+  let h := Module.Finite.exists_fin' R M
+  let n := h.choose
+  let p := h.choose_spec.choose
+  let hp := h.choose_spec.choose_spec
+  unfold fittingIdeal
+  dsimp
+  refine iSup_le fun z => ?_
+  by_cases hkn : k < n
+  · unfold fittingIdealOfSurjection
+    let t := h.choose - (k + 1)
+    have hst : t + 1 = n - k := by
+      dsimp [t, n]
+      omega
+    have hmono :
+        minorIdeal (relationMatrix p z) (n - k) ≤
+          minorIdeal (relationMatrix p z) t := by
+      simpa only [hst] using minorIdeal_mono_succ (relationMatrix p z) t
+    refine hmono.trans ?_
+    apply Ideal.span_le.2
+    rintro x ⟨rows, cols, hrows, hcols, rfl⟩
+    let z' : Fin t → LinearMap.ker p :=
+      fun j => z (cols.orderIsoOfFin hcols j)
+    refine (le_iSup (fun w : Fin t → LinearMap.ker p =>
+      minorIdeal (relationMatrix p w) t) z') ?_
+    apply Ideal.subset_span
+    refine ⟨rows, Finset.univ, hrows, by simp [t], ?_⟩
+    dsimp [matrixMinor, relationMatrix, z']
+    apply congrArg Matrix.det
+    apply Matrix.ext
+    intro i j
+    dsimp [relationMatrix, z']
+    have hj : (Finset.univ.orderEmbOfFin (by simp) j : Fin t) = j := by
+      apply Fin.ext
+      simp [Finset.orderEmbOfFin_apply, Fin.sort_univ]
+    have hc :
+        cols.orderEmbOfFin hcols
+            ((Finset.univ.orderEmbOfFin (by simp) j : Fin t)) =
+          cols.orderEmbOfFin hcols j := by
+      rw [hj]
+    rw [hc]
+  · unfold fittingIdealOfSurjection
+    have hnk : h.choose ≤ k := by
+      exact Nat.le_of_not_gt (by simpa [n] using hkn)
+    have hk0 : h.choose - k = 0 := Nat.sub_eq_zero_of_le hnk
+    have hk1 : h.choose - (k + 1) = 0 :=
+      Nat.sub_eq_zero_of_le (le_trans hnk (Nat.le_succ _))
+    let z0 : Fin (h.choose - (k + 1)) → LinearMap.ker p :=
+      fun i => Fin.elim0 (hk1 ▸ i)
+    have hleft :
+        minorIdeal (relationMatrix p z) (h.choose - k) = ⊤ := by
+      calc
+        minorIdeal (relationMatrix p z) (h.choose - k) =
+            minorIdeal (relationMatrix p z) 0 :=
+          congrArg (fun s => minorIdeal (relationMatrix p z) s) hk0
+        _ = ⊤ := minorIdeal_zero _
+    have hright :
+        minorIdeal (relationMatrix p z0) (h.choose - (k + 1)) = ⊤ := by
+      calc
+        minorIdeal (relationMatrix p z0) (h.choose - (k + 1)) =
+            minorIdeal (relationMatrix p z0) 0 :=
+          congrArg (fun s => minorIdeal (relationMatrix p z0) s) hk1
+        _ = ⊤ := minorIdeal_zero _
+    calc
+      minorIdeal (relationMatrix p z) (h.choose - k) = ⊤ := hleft
+      _ = minorIdeal (relationMatrix p z0) (h.choose - (k + 1)) := hright.symm
+      _ ≤ ⨆ w : Fin (h.choose - (k + 1)) → LinearMap.ker p,
+          minorIdeal (relationMatrix p w) (h.choose - (k + 1)) :=
+        le_iSup (fun w : Fin (h.choose - (k + 1)) → LinearMap.ker p =>
+          minorIdeal (relationMatrix p w) (h.choose - (k + 1))) z0
 
 theorem exists_fittingIdeal_eq_top
     {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]

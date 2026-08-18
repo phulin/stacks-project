@@ -1105,7 +1105,7 @@ theorem tripleOrder12Differential_comp_zero [HasCountableCoproducts C]
         ((s + 1) - (p + 1), (n + 1) - (s + 1)) by
         congr 1 <;> ring)]
     simpa [Category.assoc] using
-      congrArg (fun f => f ≫ eqToHom (by congr 1; ring))
+      congrArg (fun f => f ≫ eqToHom (by congr 1 <;> ring))
         (A.d1_sq p (s - p) (n - s))
   have h22 :
       tripleOrder12D2Component A n s p ≫
@@ -1116,7 +1116,7 @@ theorem tripleOrder12Differential_comp_zero [HasCountableCoproducts C]
       (fun qr : ℤ × ℤ => A.d2 p qr.1 qr.2)
       (show ((s - p) + 1, n - s) =
         ((s + 1) - p, (n + 1) - (s + 1)) by
-        congr 1; ring)]
+        congr 1 <;> ring)]
     simpa [Category.assoc] using
       congrArg (fun f => f ≫ eqToHom (by congr 1 <;> ring))
         (A.d2_sq p (s - p) (n - s))
@@ -1142,7 +1142,7 @@ theorem tripleOrder12Differential_comp_zero [HasCountableCoproducts C]
       (fun qr : ℤ × ℤ => A.d2 (p + 1) qr.1 qr.2)
       (show (s - p, n - s) =
         ((s + 1) - (p + 1), (n + 1) - (s + 1)) by
-        congr 1 <;> ring)]
+        congr 1; ring)]
     rw [← eqToHom_naturality_assoc
       (fun qr : ℤ × ℤ => A.d1 p qr.1 qr.2)
       (show ((s - p) + 1, n - s) =
@@ -1456,7 +1456,7 @@ theorem tripleOrder12Differential_comp_zero [HasCountableCoproducts C]
       (fun r : ℤ => A.d3 p (s - p) r)
       (show n - s + 1 = n + 1 - s by ring)]
     simpa [Category.assoc] using
-      congrArg (fun f => f ≫ eqToHom (by congr 1 <;> ring))
+      congrArg (fun f => f ≫ eqToHom (by congr 1; ring))
         (A.d3_sq p (s - p) (n - s))
   have h12 :
       tripleOrder12D1Component A n s p ≫
@@ -1469,7 +1469,7 @@ theorem tripleOrder12Differential_comp_zero [HasCountableCoproducts C]
       (fun qr : ℤ × ℤ => A.d2 (p + 1) qr.1 qr.2)
       (show (s - p, n - s) =
         ((s + 1) - (p + 1), (n + 1) - (s + 1)) by
-        congr 1 <;> ring)]
+        congr 1; ring)]
     rw [← eqToHom_naturality_assoc
       (fun qr : ℤ × ℤ => A.d1 p qr.1 qr.2)
       (show ((s - p) + 1, n - s) =
@@ -1512,7 +1512,7 @@ theorem tripleOrder12Differential_comp_zero [HasCountableCoproducts C]
       (fun qr : ℤ × ℤ => A.d2 p qr.1 qr.2)
       (show (s - p, n - s + 1) =
         (s - p, n + 1 - s) by
-        congr 1 <;> ring)]
+        congr 1; ring)]
     rw [← Category.assoc, ← A.comm23 p (s - p) (n - s)]
     simp
   have h11' :
@@ -1602,10 +1602,10 @@ theorem tripleOrder12Differential_comp_zero [HasCountableCoproducts C]
       tripleTotalSign₂ p ((s + 1) - p) =
         -tripleTotalSign₂ p (s - p) := by
     dsimp [tripleTotalSign₂]
-    simp [Int.negOnePow_succ]
+    simp
   have hs_succ : (p + 1 + (s - p)).negOnePow = -s.negOnePow := by
     rw [show p + 1 + (s - p) = s + 1 by ring]
-    simp [Int.negOnePow_succ]
+    simp
   have hzero : g p ≫ tripleOrder12Differential A (n + 1) =
       (0 : A.obj p (s - p) (n - s) ⟶
         ∐ fun u : ℤ => ∐ fun r : ℤ => A.obj r (u - r)

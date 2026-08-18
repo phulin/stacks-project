@@ -446,7 +446,7 @@ theorem nakayama_localization
     LocalizedModule.mkLinearMap T (M ⧸ (I • (⊤ : Submodule R M)))
   let N : Submodule (R ⧸ I) (M ⧸ (I • (⊤ : Submodule R M))) :=
     Submodule.span (R ⧸ I) (Set.range v)
-  letI instFinite : Module.Finite (R ⧸ I)
+  haveI instFinite : Module.Finite (R ⧸ I)
       (M ⧸ (I • (⊤ : Submodule R M))) :=
     Module.Finite.of_restrictScalars_finite R (R ⧸ I)
       (M ⧸ (I • (⊤ : Submodule R M)))
@@ -907,10 +907,10 @@ theorem nakayama_localization_at_prime
           exact hz
         exact hz' (Ideal.Quotient.eq_zero_iff_mem.mpr hrp)
       exact ⟨r, hr, rfl⟩
-  letI instLocalization : IsLocalization T p.ResidueField :=
+  haveI instLocalization : IsLocalization T p.ResidueField :=
     hT ▸ (inferInstance : IsLocalization (nonZeroDivisors A) p.ResidueField)
   let Q := M ⧸ (p • (⊤ : Submodule R M))
-  letI : TensorProduct.CompatibleSMul R A p.ResidueField Q :=
+  haveI : TensorProduct.CompatibleSMul R A p.ResidueField Q :=
     TensorProduct.CompatibleSMul.of_algebraMap_surjective
       (M := p.ResidueField) (N := Q) (by
         change Function.Surjective (Ideal.Quotient.mk p)
@@ -1000,7 +1000,7 @@ theorem nakayama_localization_at_prime
     change (((u : A) * (t : A)) • y) ∈ N
     rw [← smul_smul, hu']
     exact N.smul_mem _ hz
-  letI instFiniteQ : Module.Finite A Q :=
+  haveI instFiniteQ : Module.Finite A Q :=
     Module.Finite.of_restrictScalars_finite R A Q
   let hfinQ : ∃ m : ℕ, ∃ y : Fin m → Q,
       Submodule.span A (Set.range y) = (⊤ : Submodule A Q) :=
@@ -1187,6 +1187,25 @@ private theorem residue_quotient_map_surjective
     simpa [neg_sub] using (mA • (⊤ : Submodule A B)).neg_mem hdiff'
   exact hdiff''
 
+private theorem local_ring_hom_surjective_of_residue_quotient_surjective
+    {A : Type u} {B : Type v} [CommRing A] [CommRing B]
+    [IsLocalRing A] [IsLocalRing B] [Algebra A B]
+    [IsLocalHom (algebraMap A B)] [Module.Finite A B]
+    (hres : Function.Surjective
+      ((IsLocalRing.maximalIdeal A • (⊤ : Submodule A A)).mapQ
+        (IsLocalRing.maximalIdeal A • (⊤ : Submodule A B))
+        (Algebra.linearMap A B)
+        (Submodule.smul_top_le_comap_smul_top
+          (IsLocalRing.maximalIdeal A) (Algebra.linearMap A B)))) :
+    Function.Surjective (algebraMap A B) := by
+  have hI : IsLocalRing.maximalIdeal A ≤ Ring.jacobson A := by
+    simpa only [Ideal.jacobson_bot] using
+      (IsLocalRing.maximalIdeal_le_jacobson (⊥ : Ideal A))
+  have hsurj : Function.Surjective (Algebra.linearMap A B) := by
+    exact nakayama_part_six (R := A) (M := B) (N := A)
+      (IsLocalRing.maximalIdeal A) (Algebra.linearMap A B) hres hI
+  exact hsurj
+
 /-- A local map satisfying the four hypotheses in the source is surjective.
 The cotangent spaces use Mathlib's canonical `Ideal.Cotangent` interface. -/
 theorem local_ring_hom_surjective_of_residueField_bijective_of_cotangent_surjective
@@ -1199,28 +1218,19 @@ theorem local_ring_hom_surjective_of_residueField_bijective_of_cotangent_surject
     (hcot : Function.Surjective
       (Ideal.mapCotangent (IsLocalRing.maximalIdeal A)
         (IsLocalRing.maximalIdeal B) (Algebra.ofId A B)
-        (by
+    (by
           change IsLocalRing.maximalIdeal A ≤
             (IsLocalRing.maximalIdeal B).comap (algebraMap A B)
           rw [IsLocalRing.maximalIdeal_comap]))) :
     Function.Surjective (algebraMap A B) := by
-  let mA : Ideal A := IsLocalRing.maximalIdeal A
-  let mB : Ideal B := IsLocalRing.maximalIdeal B
-  have hmap_eq : Ideal.map (algebraMap A B) mA = mB := by
-    change Ideal.map (algebraMap A B) (IsLocalRing.maximalIdeal A) =
-      IsLocalRing.maximalIdeal B
-    exact maximalIdeal_map_eq_of_cotangent_surjective hB hcot
-  let φ : A →ₗ[A] B := Algebra.linearMap A B
-  have hφ : Function.Surjective
-      ((mA • (⊤ : Submodule A A)).mapQ
-        (mA • (⊤ : Submodule A B)) φ
-        (Submodule.smul_top_le_comap_smul_top mA φ)) := by
-    change Function.Surjective
-      ((mA • (⊤ : Submodule A A)).mapQ
-        (mA • (⊤ : Submodule A B)) (Algebra.linearMap A B)
-        (Submodule.smul_top_le_comap_smul_top mA (Algebra.linearMap A B)))
-    exact residue_quotient_map_surjective mA mB hres hmap_eq rfl
-  exact nakayama_part_six mA φ hφ (IsLocalRing.maximalIdeal_le_jacobson A)
+  have hmap_eq :
+      Ideal.map (algebraMap A B) (IsLocalRing.maximalIdeal A) =
+        IsLocalRing.maximalIdeal B :=
+    maximalIdeal_map_eq_of_cotangent_surjective hB hcot
+  apply local_ring_hom_surjective_of_residue_quotient_surjective
+  exact residue_quotient_map_surjective
+    (IsLocalRing.maximalIdeal A) (IsLocalRing.maximalIdeal B)
+    hres hmap_eq rfl
 
 end
 

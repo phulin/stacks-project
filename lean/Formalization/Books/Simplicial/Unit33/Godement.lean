@@ -15,6 +15,7 @@ namespace Formalization.Books.Simplicial.Unit33
 
 open CategoryTheory
 open CategoryTheory.SimplicialObject
+open Opposite
 
 universe v u v' u'
 
@@ -100,7 +101,7 @@ def godementDegeneracy {C : Type u} [Category.{v} C]
   exact eqToHom (godementDegeneracy_domain_decomposition Y n j) ≫ raw ≫
     eqToHom (godementDegeneracy_codomain_decomposition Y n j).symm
 
-/-! ## The hypotheses and the five simplicial relations -/
+/-! ## The hypotheses and the canonical simplicial-object interface -/
 
 /-- The two unit equations and the coassociativity equation in Lemma 33.2. -/
 structure GodementEquations {C : Type u} [Category.{v} C]
@@ -119,40 +120,18 @@ def godementSimplicialDegeneracy {C : Type u} [Category.{v} C]
     godementDegree Y n ⟶ godementDegree Y (n + 1) :=
   godementDegeneracy Y s j
 
-/-- The five standard simplicial identities for a degree-indexed sequence.
-This is the source's generators-and-relations form of a simplicial object. -/
-structure SimplicialDegreeData {D : Type u} [Category.{v} D]
-    (X : ℕ → D) where
-  face : ∀ n, Fin (n + 2) → (X (n + 1) ⟶ X n)
-  degeneracy : ∀ n, Fin (n + 1) → (X n ⟶ X (n + 1))
-  face_face : ∀ {n} (i j : Fin (n + 2)) (hij : i ≤ j),
-    face (n + 1) j.succ ≫ face n i =
-      face (n + 1) i.castSucc ≫ face n j
-  face_degeneracy_of_le : ∀ {n} (i : Fin (n + 2)) (j : Fin (n + 1))
-      (hij : i ≤ j.castSucc),
-    degeneracy (n + 1) j.succ ≫ face (n + 1) i.castSucc =
-      face n i ≫ degeneracy n j
-  face_degeneracy_self : ∀ {n} (i : Fin (n + 1)),
-    degeneracy n i ≫ face n i.castSucc = 𝟙 (X n)
-  face_degeneracy_succ : ∀ {n} (i : Fin (n + 1)),
-    degeneracy n i ≫ face n i.succ = 𝟙 (X n)
-  face_degeneracy_of_gt : ∀ {n} (i : Fin (n + 3)) (j : Fin (n + 2))
-      (hji : j.succ < i),
-    degeneracy (n + 1) j ≫ face (n + 1) i =
-      face n (i.pred hji.ne_zero) ≫
-        degeneracy n (j.castLT
-          ((add_lt_add_iff_right 1).mp (lt_of_lt_of_le hji i.is_le)))
-  degeneracy_degeneracy : ∀ {n} (i j : Fin (n + 1)) (hij : i ≤ j),
-    degeneracy n j ≫ degeneracy (n + 1) i.castSucc =
-      degeneracy n i ≫ degeneracy (n + 1) j.succ
-
 structure GodementSimplicialData {C : Type u} [Category.{v} C]
     (Y : C ⥤ C) (d : Y ⟶ 𝟭 C) (s : Y ⟶ Y ⋙ Y) where
-  data : SimplicialDegreeData (fun n => godementDegree Y n)
+  object : SimplicialObject (C ⥤ C)
+  object_obj : ∀ n,
+    object.obj (op (SimplexCategory.mk n)) = godementDegree Y n
   face_def : ∀ n (j : Fin (n + 2)),
-    data.face n j = godementSimplicialFace Y d n j
+    eqToHom (object_obj (n + 1)).symm ≫ object.δ j ≫
+        eqToHom (object_obj n) = godementSimplicialFace Y d n j
   degeneracy_def : ∀ n (j : Fin (n + 1)),
-    data.degeneracy n j = godementSimplicialDegeneracy Y s n j
+    eqToHom (object_obj n).symm ≫ object.σ j ≫
+        eqToHom (object_obj (n + 1)) =
+      godementSimplicialDegeneracy Y s n j
 
 theorem godement_simplicial_data
     {C : Type u} [Category.{v} C] (Y : C ⥤ C)
@@ -164,7 +143,8 @@ theorem godement_simplicial_object
     {C : Type u} [Category.{v} C] (Y : C ⥤ C)
     (d : Y ⟶ 𝟭 C) (s : Y ⟶ Y ⋙ Y) (h : GodementEquations Y d s) :
     Nonempty (SimplicialObject (C ⥤ C)) := by
-  sorry
+  rcases godement_simplicial_data Y d s h with ⟨data⟩
+  exact ⟨data.object⟩
 
 /-- The augmentation transformation appearing in Lemma 33.2. -/
 def godementAugmentation {C : Type u} [Category.{v} C]
@@ -245,16 +225,40 @@ def godementWhiskeredAugmentationComponent
       (Functor.associator F (𝟭 C) G).hom ≫
       Functor.whiskerLeft F (Functor.rightUnitor G).hom
 
+/-! The functorial example carries the canonical degreewise maps above as an
+augmentation of the whiskered simplicial object. -/
+
+structure GodementWhiskeredAugmentationData
+    {A : Type u} {B : Type u'} {C : Type v}
+    [Category.{v'} A] [Category.{u} B] [Category.{v} C]
+    (F : A ⥤ C) (Y : C ⥤ C) (G : C ⥤ B)
+    (d : Y ⟶ 𝟭 C) (s : Y ⟶ Y ⋙ Y) where
+  component : ∀ n, godementWhiskeredDegree F Y G n ⟶ F ⋙ G
+  component_def : ∀ n,
+    component n = godementWhiskeredAugmentationComponent F Y G d n
+  face_naturality : ∀ {n} (i : Fin (n + 2)),
+    godementWhiskeredSimplicialFace F Y G d n i ≫ component n =
+      component (n + 1)
+  degeneracy_naturality : ∀ {n} (i : Fin (n + 1)),
+    godementWhiskeredSimplicialDegeneracy F Y G s n i ≫ component (n + 1) =
+      component n
+
 structure GodementWhiskeredSimplicialData
     {A : Type u} {B : Type u'} {C : Type v}
     [Category.{v'} A] [Category.{u} B] [Category.{v} C]
     (F : A ⥤ C) (Y : C ⥤ C) (G : C ⥤ B)
     (d : Y ⟶ 𝟭 C) (s : Y ⟶ Y ⋙ Y) where
-  data : SimplicialDegreeData (fun n => godementWhiskeredDegree F Y G n)
+  object : SimplicialObject (A ⥤ B)
+  object_obj : ∀ n,
+    object.obj (op (SimplexCategory.mk n)) = godementWhiskeredDegree F Y G n
   face_def : ∀ n (j : Fin (n + 2)),
-    data.face n j = godementWhiskeredSimplicialFace F Y G d n j
+    eqToHom (object_obj (n + 1)).symm ≫ object.δ j ≫
+        eqToHom (object_obj n) =
+      godementWhiskeredSimplicialFace F Y G d n j
   degeneracy_def : ∀ n (j : Fin (n + 1)),
-    data.degeneracy n j = godementWhiskeredSimplicialDegeneracy F Y G s n j
+    eqToHom (object_obj n).symm ≫ object.σ j ≫
+        eqToHom (object_obj (n + 1)) =
+      godementWhiskeredSimplicialDegeneracy F Y G s n j
 
 theorem godement_functorial
     {A : Type u} {B : Type u'} {C : Type v}
@@ -264,6 +268,24 @@ theorem godement_functorial
     Nonempty (GodementWhiskeredSimplicialData F Y G d s) ∧
       Nonempty (SimplicialObject (A ⥤ B)) := by
   sorry
+
+theorem godement_whiskered_augmentation_condition
+    {A : Type u} {B : Type u'} {C : Type v}
+    [Category.{v'} A] [Category.{u} B] [Category.{v} C]
+    (F : A ⥤ C) (Y : C ⥤ C) (G : C ⥤ B)
+    (d : Y ⟶ 𝟭 C) (s : Y ⟶ Y ⋙ Y) (h : GodementEquations Y d s) :
+    Nonempty (GodementWhiskeredAugmentationData F Y G d s) := by
+  sorry
+
+theorem godement_functorial_with_augmentation
+    {A : Type u} {B : Type u'} {C : Type v}
+    [Category.{v'} A] [Category.{u} B] [Category.{v} C]
+    (F : A ⥤ C) (Y : C ⥤ C) (G : C ⥤ B)
+    (d : Y ⟶ 𝟭 C) (s : Y ⟶ Y ⋙ Y) (h : GodementEquations Y d s) :
+    Nonempty (GodementWhiskeredSimplicialData F Y G d s) ∧
+      Nonempty (GodementWhiskeredAugmentationData F Y G d s) := by
+  exact ⟨(godement_functorial F Y G d s h).1,
+    godement_whiskered_augmentation_condition F Y G d s h⟩
 
 def godementZeroMap {A : Type u} {B : Type u'} {C : Type v}
     [Category.{v'} A] [Category.{u} B] [Category.{v} C]
@@ -434,6 +456,32 @@ def godementAfterMap {C : Type u} [Category.{v} C]
   (Functor.rightUnitor (godementDegree Y n)).inv ≫
     Functor.whiskerLeft (godementDegree Y n) f ≫
     (Functor.rightUnitor (godementDegree Y n)).hom
+
+/-! After transporting across the unitors, the two maps in the final source
+lemma are endomorphisms of each explicit degree. -/
+
+structure GodementSelfMorphism {C : Type u} [Category.{v} C]
+    (Y : C ⥤ C) (d : Y ⟶ 𝟭 C) (s : Y ⟶ Y ⋙ Y)
+    (f : 𝟭 C ⟶ 𝟭 C) (maps : ∀ n, godementDegree Y n ⟶ godementDegree Y n) where
+  face : ∀ {n} (j : Fin (n + 2)),
+    maps (n + 1) ≫ godementFace Y d (n := n + 1) j =
+      godementFace Y d (n := n + 1) j ≫ maps n
+  degeneracy : ∀ {n} (j : Fin (n + 1)),
+    maps n ≫ godementDegeneracy Y s (n := n) j =
+      godementDegeneracy Y s (n := n) j ≫ maps (n + 1)
+  augmentation : ∀ n,
+    maps n ≫ godementAugmentationComponent Y d n =
+      godementAugmentationComponent Y d n ≫ f
+
+theorem godement_before_after_maps
+    {C : Type u} [Category.{v} C] (Y : C ⥤ C)
+    (d : Y ⟶ 𝟭 C) (s : Y ⟶ Y ⋙ Y) (h : GodementEquations Y d s)
+    (f : 𝟭 C ⟶ 𝟭 C) :
+    Nonempty (GodementSelfMorphism Y d s f
+      (fun n => godementBeforeMap Y f n)) ∧
+    Nonempty (GodementSelfMorphism Y d s f
+      (fun n => godementAfterMap Y f n)) := by
+  sorry
 
 theorem godement_before_after_augmentation
     {C : Type u} [Category.{v} C] (Y : C ⥤ C)

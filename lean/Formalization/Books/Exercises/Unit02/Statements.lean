@@ -668,7 +668,7 @@ theorem exists_directed_finitelyPresented_module_colimit
     Nonempty
       (DirectedFinitelyPresentedModuleColimit (ModuleCat.of R M)) := by
   classical
-  letI : DecidableEq (fpIndex R M) := Classical.decEq _
+  let : DecidableEq (fpIndex R M) := Classical.decEq _
   let e : Module.DirectLimit (fun i : fpIndex R M => fpQ i)
     (fun _ _ h => fpMap (R := R) (M := M) h) ≃ₗ[R] M :=
     LinearEquiv.ofBijective (fpLimitToM (R := R) (M := M))

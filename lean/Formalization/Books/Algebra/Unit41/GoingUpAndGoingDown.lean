@@ -360,15 +360,17 @@ theorem unique_prime_over_localize_below
       exact ⟨r, hrp, rfl⟩
     rcases hcase with hgu | ⟨hgd, huniq⟩
     · obtain ⟨Q', hQQ', hQ'prime, hQ'over⟩ :=
-        letI : Algebra.HasGoingUp R S := hgu
-        Q.exists_ideal_ge_liesOver_of_le (p := Q.under R) (q := p) hQunder
+        @Ideal.exists_ideal_ge_liesOver_of_le R S _ _ _ hgu
+          (Q.under R) p (by infer_instance) Q (by infer_instance)
+          (by infer_instance) hQunder
       have hQ'eq : Q' = q := hunique Q' hQ'prime hQ'over
       apply hx
       rw [← hQ'eq]
       exact hQQ' (hspan (Ideal.mem_span_singleton_self x))
     · obtain ⟨Q', hQ'Q, hQ'prime, hQ'over⟩ :=
-        letI : Algebra.HasGoingDown R S := hgd
-        q.exists_ideal_le_liesOver_of_le (p := Q.under R) (q := p) hQunder
+        @Ideal.exists_ideal_le_liesOver_of_le R S _ _ _ hgd
+          (Q.under R) p (by infer_instance) (by infer_instance) q
+          (by infer_instance) (by infer_instance) hQunder
       have hQeq : Q' = Q := huniq (Q.under R) (Ideal.IsPrime.under R Q)
         Q' Q hQ'prime hQprime hQ'over (by infer_instance)
       apply hx

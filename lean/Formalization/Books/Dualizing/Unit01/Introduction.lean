@@ -39,6 +39,14 @@ structure SelfDualityData {A : Type u} [CommRing A]
       ((DerivedCategory.Plus.ι (C := ModuleCat.{u} A)).obj K)
   isIso : IsIso map
 
+/- The source names this morphism but does not construct it.  Keeping the
+   map in the witness makes that missing canonical-map API explicit while
+   retaining the exact derived-category condition used below. -/
+def HasSelfDualityData {A : Type u} [CommRing A]
+    [HasDerivedCategory.{w} (ModuleCat.{u} A)]
+    (K : DPlus (ModuleCat.{u} A)) : Prop :=
+  Nonempty (SelfDualityData K)
+
 /-! ## The definition from the source -/
 
 /-- A dualizing complex over a Noetherian ring.
@@ -52,7 +60,7 @@ def IsDualizingComplex {A : Type u} [CommRing A] [IsNoetherianRing A]
   HasFiniteCohomologyModules (R := A) K ∧
     HasFiniteInjectiveDimension (R := A)
       (K := (DerivedCategory.Plus.ι (C := ModuleCat.{u} A)).obj K) ∧
-    Nonempty (SelfDualityData K)
+    HasSelfDualityData K
 
 end
 

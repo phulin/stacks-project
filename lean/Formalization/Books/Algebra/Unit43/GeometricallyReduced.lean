@@ -1,12 +1,15 @@
-import Formalization.Books.Algebra.Unit12.TensorProducts
 import Formalization.Books.Algebra.Unit25.ZerodivisorsAndTotalRingsOfFractions
 import Formalization.Books.Algebra.Unit42.SeparableExtensions
 import Mathlib.Algebra.Algebra.Subalgebra.Basic
 import Mathlib.Algebra.Colimit.DirectLimit
 import Mathlib.Algebra.Polynomial.Basic
 import Mathlib.FieldTheory.IsAlgClosed.Basic
+import Mathlib.FieldTheory.PurelyInseparable.Basic
+import Mathlib.FieldTheory.Separable
+import Mathlib.LinearAlgebra.FiniteDimensional.Defs
 import Mathlib.RingTheory.FiniteType
 import Mathlib.RingTheory.Localization.AtPrime.Basic
+import Mathlib.RingTheory.TensorProduct.Maps
 
 /-!
 # Commutative Algebra, Chapter 43: Geometrically reduced algebras
@@ -40,7 +43,7 @@ def IsGeometricallyReduced (k : Type u) (S : Type v) [Field k] [CommRing S]
 /-- Reducedness after tensoring with an algebraic closure is enough to imply
 geometric reducedness. -/
 theorem isGeometricallyReduced_of_isReduced_algebraicClosure
-    {k : Type u} {S : Type v} {Ω : Type u}
+    {k : Type u} {S : Type v} {Ω : Type w}
     [Field k] [CommRing S] [Field Ω]
     [Algebra k S] [Algebra k Ω]
     [Algebra.IsAlgebraic k Ω] [IsAlgClosed Ω]
@@ -188,7 +191,7 @@ theorem isReduced_tensorProduct_of_isReduced_of_isGeometricallyReduced
 /-- A separable or separably generated field extension preserves reducedness
 after tensoring a reduced algebra. -/
 theorem isReduced_tensorProduct_of_separable_extension
-    {k S K : Type u} [Field k] [CommRing S] [Field K]
+    {k : Type u} {S : Type v} {K : Type w} [Field k] [CommRing S] [Field K]
     [Algebra k S] [Algebra k K]
     (hS : IsReduced S)
     (hK : Formalization.Books.Algebra.Unit42.IsSeparableExtension k K ∨
@@ -198,7 +201,7 @@ theorem isReduced_tensorProduct_of_separable_extension
 
 /-- The minimal-prime criterion for geometric reducedness. -/
 theorem isGeometricallyReduced_of_minimalPrime_localizations
-    {k S : Type u} [Field k] [CommRing S] [Algebra k S]
+    {k : Type u} {S : Type v} [Field k] [CommRing S] [Algebra k S]
     (hS : IsReduced S)
     (hmin : ∀ p : Formalization.Books.Algebra.Unit25.MinimalPrimeSpectrum S,
       IsGeometricallyReduced k (Localization.AtPrime p.1.asIdeal)) :
@@ -211,14 +214,14 @@ theorem isGeometricallyReduced_of_minimalPrime_localizations
    tensor-product product map for the two identity maps of `k'`. -/
 /-- The canonical multiplication map `k' ⊗[k] k' →ₐ[k] k'`. -/
 noncomputable def tensorProductMultiplication
-    {k k' : Type u} [Field k] [Field k'] [Algebra k k'] :
+    {k : Type u} {k' : Type v} [Field k] [Field k'] [Algebra k k'] :
     (k' ⊗[k] k') →ₐ[k] k' :=
   Algebra.TensorProduct.productMap (AlgHom.id k k') (AlgHom.id k k')
 
 /-- For a separable algebraic extension, the multiplication map from the
 diagonal tensor product is a localization map. -/
 theorem exists_tensorProductMultiplication_localization
-    {k k' : Type u} [Field k] [Field k'] [Algebra k k']
+    {k : Type u} {k' : Type v} [Field k] [Field k'] [Algebra k k']
     [Algebra.IsAlgebraic k k'] [Algebra.IsSeparable k k'] :
     ∃ M : Submonoid (k' ⊗[k] k'),
       letI : Algebra (k' ⊗[k] k') k' :=
@@ -231,7 +234,7 @@ theorem exists_tensorProductMultiplication_localization
 /-- Geometric reducedness is unchanged on replacing the base field by a
 separable algebraic extension. -/
 theorem isGeometricallyReduced_iff_of_separable_algebraic
-    {k k' A : Type u} [Field k] [Field k'] [CommRing A]
+    {k : Type u} {k' : Type v} {A : Type w} [Field k] [Field k'] [CommRing A]
     [Algebra k k'] [Algebra k' A] [Algebra k A]
     [IsScalarTower k k' A]
     [Algebra.IsAlgebraic k k'] [Algebra.IsSeparable k k'] :

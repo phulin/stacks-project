@@ -13,6 +13,8 @@ import Mathlib.RingTheory.KrullDimension.Zero
 import Mathlib.RingTheory.LocalProperties.Injective
 import Mathlib.RingTheory.LocalProperties.Reduced
 import Mathlib.RingTheory.RingHom.Flat
+import Mathlib.RingTheory.Artinian.Module
+import Mathlib.RingTheory.SimpleModule.InjectiveProjective
 
 /-!
 # Injective modules
@@ -556,7 +558,121 @@ theorem injective_iff_essential_extension_maps_trivial
     Module.Injective R M ↔
       ∀ (N : ModuleCat.{v} R) (f : ModuleCat.of R M ⟶ N),
         EssentialExtension f → Function.Surjective f.hom := by
-  sorry
+  constructor
+  · intro hM N f hf
+    rcases hf with ⟨hfmono, hfess⟩
+    have hf_inj : Function.Injective f.hom :=
+      (ModuleCat.mono_iff_injective f).mp hfmono
+    let S : Submodule R N := LinearMap.range f.hom
+    let e : M ≃ₗ[R] S :=
+      LinearEquiv.ofBijective f.hom.rangeRestrict
+        ⟨(LinearMap.injective_rangeRestrict_iff f.hom).2 hf_inj,
+          f.hom.surjective_rangeRestrict⟩
+    have heq :
+        e.toModuleIso.hom ≫ ModuleCat.ofHom S.subtype = f := by
+      apply ModuleCat.hom_ext
+      rfl
+    have hmk :
+        Subobject.mk f = Subobject.mk (ModuleCat.ofHom S.subtype) :=
+      Subobject.mk_eq_mk_of_comm f
+        (ModuleCat.ofHom S.subtype) e.toModuleIso heq
+    have hEssS : EssentialSubmodule S := by
+      apply (essentialSubmodule_iff_essentialExtension S).2
+      refine ⟨inferInstance, ?_⟩
+      intro P hP
+      rw [← hmk]
+      exact hfess P hP
+    obtain ⟨g, hgf⟩ := hM.out f.hom hf_inj (LinearMap.id)
+    have hker : LinearMap.ker g = ⊥ := by
+      apply (LinearMap.ker g).eq_bot_iff.mpr
+      intro x hx
+      by_contra hx0
+      obtain ⟨r, hrS, hr0⟩ :=
+        (essentialSubmodule_iff_smul S).1 hEssS x hx0
+      rcases hrS with ⟨m, hm⟩
+      have hzero : g (r • x) = 0 := by
+        rw [map_smul, LinearMap.mem_ker.mp hx, smul_zero]
+      have hzero' : g (f.hom m) = 0 := by
+        rw [hm]
+        exact hzero
+      have hm0 : m = 0 := by
+        simpa only [LinearMap.id_apply] using (hgf m).symm.trans hzero'
+      apply hr0
+      rw [← hm, hm0, map_zero]
+    intro y
+    refine ⟨g y, ?_⟩
+    have hyker : y - f.hom (g y) ∈ LinearMap.ker g := by
+      rw [LinearMap.mem_ker]
+      simp only [map_sub, hgf, LinearMap.id_apply, sub_self]
+    have hy0 : y - f.hom (g y) = 0 := by
+      have : y - f.hom (g y) ∈ (⊥ : Submodule R N) := hker ▸ hyker
+      simpa using this
+    exact (sub_eq_zero.mp hy0).symm
+  · intro htriv
+    let p : InjectivePresentation (ModuleCat.of R M) :=
+      ((ModuleCat.enoughInjectives R).presentation (ModuleCat.of R M)).some
+    have hp_inj : CategoryTheory.Injective p.J := p.injective
+    have hJ : Module.Injective R (p.J : Type v) :=
+      Module.injective_module_of_injective_object R (p.J : Type v)
+    let j : M →ₗ[R] (p.J : Type v) := p.f.hom
+    have hj : Function.Injective j :=
+      (ModuleCat.mono_iff_injective p.f).mp p.mono
+    let E : Submodule R (p.J : Type v) := LinearMap.range j
+    let e : M ≃ₗ[R] E :=
+      LinearEquiv.ofBijective j.rangeRestrict
+        ⟨(LinearMap.injective_rangeRestrict_iff j).2 hj,
+          j.surjective_rangeRestrict⟩
+    have hE : Module.Injective R E := by
+      apply (injective_iff_essential_extensions_trivial (R := R)
+        (I := (p.J : Type v)) E).2
+      intro E' hEE' hEss
+      let f : ModuleCat.of R M ⟶ ModuleCat.of R E' :=
+        ModuleCat.ofHom ((E.inclusion hEE').comp e.toLinearMap)
+      have heq :
+          e.toModuleIso.hom ≫ ModuleCat.ofHom (E.inclusion hEE') = f := by
+        apply ModuleCat.hom_ext
+        rfl
+      have hincl : Mono (ModuleCat.ofHom (E.inclusion hEE')) :=
+        ConcreteCategory.mono_of_injective _ (Submodule.inclusion_injective hEE')
+      have hf_inj : Function.Injective f.hom := by
+        intro x y hxy
+        apply e.injective
+        apply Subtype.ext
+        have hxy' := congrArg Subtype.val hxy
+        change (e x : (p.J : Type v)) = (e y : (p.J : Type v)) at hxy'
+        exact hxy'
+      have hmf : Mono f := ConcreteCategory.mono_of_injective _ hf_inj
+      have hmk :
+          Subobject.mk f =
+            Subobject.mk (ModuleCat.ofHom (E.inclusion hEE')) :=
+        Subobject.mk_eq_mk_of_comm f
+          (ModuleCat.ofHom (E.inclusion hEE')) e.toModuleIso heq
+      have hEssF : EssentialExtension f := by
+        rcases hEss with ⟨hmono, hess⟩
+        have := hmono
+        refine ⟨hmf, ?_⟩
+        intro P hP
+        rw [hmk]
+        exact hess P hP
+      have hsurj : Function.Surjective f.hom :=
+        htriv (ModuleCat.of R E') f hEssF
+      apply le_antisymm hEE'
+      intro y hy
+      obtain ⟨m, hm⟩ := hsurj ⟨y, hy⟩
+      have hval : (y : (p.J : Type v)) = (e m : (p.J : Type v)) := by
+        simpa [f] using (congrArg Subtype.val hm).symm
+      exact hval ▸ (e m).property
+    refine ⟨?_⟩
+    intro X Y _ _ _ _ i hi g
+    obtain ⟨h, hh⟩ := hE.out i hi (e.toLinearMap.comp g)
+    refine ⟨e.symm.toLinearMap.comp h, ?_⟩
+    intro x
+    calc
+      e.symm (h (i x)) = e.symm ((e.toLinearMap.comp g) x) :=
+        congrArg e.symm (hh x)
+      _ = g x := by
+        change e.symm (e (g x)) = g x
+        exact e.symm_apply_apply (g x)
 
 /-! ### A reduced ring and a minimal-prime localization -/
 
@@ -576,7 +692,28 @@ theorem minimal_prime_localization_injective
     {R : Type u} [CommRing R] [IsReduced R] (p : Ideal R) [p.IsPrime]
     (hp : IsMinimalPrime p) :
     Module.Injective R (Localization.AtPrime p) := by
-  sorry
+  let S := Localization.AtPrime p
+  let _ : IsField S := minimal_prime_localization_isField p hp
+  let _ : Field S := (minimal_prime_localization_isField p hp).toField
+  let _ : IsSemisimpleRing S := IsArtinianRing.isSemisimpleRing_of_isReduced S
+  let _ : Module.Injective S S := Module.injective_of_isSemisimpleRing S S
+  let hmod : (inferInstance : Module R (Localization.AtPrime p)) =
+      Module.compHom (Localization.AtPrime p) (algebraMap R (Localization.AtPrime p)) :=
+    Module.ext' (inferInstance : Module R (Localization.AtPrime p))
+      (Module.compHom (Localization.AtPrime p) (algebraMap R (Localization.AtPrime p))) (by
+        intro r s
+        exact (algebraMap_smul (R := R) (A := Localization.AtPrime p)
+          (M := Localization.AtPrime p) r s).symm)
+  let _ : Module R (Localization.AtPrime p) :=
+    Module.compHom (Localization.AtPrime p) (algebraMap R (Localization.AtPrime p))
+  have hI : @Module.Injective R _ (Localization.AtPrime p) _
+      (Module.compHom (Localization.AtPrime p) (algebraMap R (Localization.AtPrime p))) :=
+    injective_of_flat (algebraMap R (Localization.AtPrime p))
+      (RingHom.flat_algebraMap_iff.mpr
+        (IsLocalization.flat (Localization.AtPrime p) p.primeCompl))
+  have heq := congrArg (fun m : Module R (Localization.AtPrime p) =>
+      @Module.Injective R _ (Localization.AtPrime p) _ m) hmod
+  exact heq.mpr hI
 
 theorem hom_to_minimal_prime_localization_equiv
     {R : Type u} [CommRing R] [IsReduced R]
@@ -586,7 +723,82 @@ theorem hom_to_minimal_prime_localization_equiv
       ((M →ₗ[R] Localization.AtPrime p) ≃+
         (LocalizedModule p.primeCompl M →ₗ[Localization.AtPrime p]
           Localization.AtPrime p)) := by
-  sorry
+  have _hp : IsMinimalPrime p := hp
+  let A := Localization.AtPrime p
+  let hunit : ∀ s : p.primeCompl, IsUnit ((algebraMap R (Module.End R A)) s) := by
+    intro s
+    rw [Module.End.isUnit_iff]
+    constructor
+    · intro x y hxy
+      apply (IsLocalization.map_units A s).mul_right_injective
+      simpa [Algebra.smul_def] using hxy
+    · intro x
+      let hs := IsLocalization.map_units A s
+      refine ⟨hs.unit⁻¹.val * x, ?_⟩
+      have hmul : (algebraMap R A (s : R)) * (hs.unit⁻¹.val * x) = x := by
+        calc
+          (algebraMap R A (s : R)) * (hs.unit⁻¹.val * x) =
+              (hs.unit : A) * (hs.unit⁻¹.val * x) := by rw [hs.unit_spec]
+          _ = x := by simp [← mul_assoc]
+      simpa [Algebra.smul_def] using hmul
+  let fM := LocalizedModule.mkLinearMap p.primeCompl M
+  have hlift_add (f g : M →ₗ[R] A) :
+      IsLocalizedModule.lift p.primeCompl fM (f + g) hunit =
+        IsLocalizedModule.lift p.primeCompl fM f hunit +
+          IsLocalizedModule.lift p.primeCompl fM g hunit := by
+    apply IsLocalizedModule.ext p.primeCompl fM hunit
+    rw [IsLocalizedModule.lift_comp]
+    rw [LinearMap.add_comp, IsLocalizedModule.lift_comp, IsLocalizedModule.lift_comp]
+  let F : (M →ₗ[R] A) →+ (LocalizedModule p.primeCompl M →ₗ[A] A) :=
+    { toFun := fun f =>
+        (IsLocalizedModule.lift p.primeCompl fM f hunit).extendScalarsOfIsLocalization
+          p.primeCompl A
+      map_zero' := by
+        have hz : IsLocalizedModule.lift p.primeCompl fM 0 hunit = 0 := by
+          apply IsLocalizedModule.ext p.primeCompl fM hunit
+          rw [IsLocalizedModule.lift_comp]
+          simp
+        apply LinearMap.ext
+        intro x
+        exact congrArg (fun q : LocalizedModule p.primeCompl M →ₗ[R] A => q x) hz
+      map_add' := by
+        intro f g
+        apply LinearMap.ext
+        intro x
+        change (IsLocalizedModule.lift p.primeCompl fM (f + g) hunit) x = _
+        rw [hlift_add]
+        rfl }
+  let G : (LocalizedModule p.primeCompl M →ₗ[A] A) →+ (M →ₗ[R] A) :=
+    { toFun := fun g => (g.restrictScalars R).comp fM
+      map_zero' := by simp
+      map_add' := by
+        intro f g
+        ext x
+        simp }
+  have hGF (f : M →ₗ[R] A) : G (F f) = f := by
+    ext x
+    change (IsLocalizedModule.lift p.primeCompl fM f hunit) (fM x) = f x
+    exact IsLocalizedModule.lift_apply p.primeCompl fM f hunit x
+  have hFG (g : LocalizedModule p.primeCompl M →ₗ[A] A) : F (G g) = g := by
+    have hl : IsLocalizedModule.lift p.primeCompl fM (G g) hunit = g.restrictScalars R := by
+      apply IsLocalizedModule.ext p.primeCompl fM hunit
+      change (IsLocalizedModule.lift p.primeCompl fM ((g.restrictScalars R).comp fM) hunit).comp fM =
+        (g.restrictScalars R).comp fM
+      rw [IsLocalizedModule.lift_comp]
+    apply LinearMap.ext
+    intro x
+    change (IsLocalizedModule.lift p.primeCompl fM (G g) hunit) x = g x
+    rw [hl]
+    simp [LinearMap.restrictScalars_apply]
+  let E : (M →ₗ[R] A) ≃+ (LocalizedModule p.primeCompl M →ₗ[A] A) :=
+    { toFun := F
+      invFun := G
+      left_inv := hGF
+      right_inv := hFG
+      map_add' := by
+        intro f g
+        exact F.map_add f g }
+  exact ⟨E⟩
 
 /-! ### Noetherian sums, localization, and torsion -/
 
@@ -595,7 +807,88 @@ theorem directSum_injective
     {M : ι → Type v} [∀ i, AddCommGroup (M i)] [∀ i, Module R (M i)]
     [∀ i, Module.Injective R (M i)] [Small.{v} R] :
     Module.Injective R (DirectSum ι M) := by
-  sorry
+  classical
+  apply Module.Baer.injective
+  intro I g
+  obtain ⟨s, hs⟩ := I.fg_of_isNoetherianRing
+  let gi (i : ι) : I →ₗ[R] M i :=
+    (DirectSum.component R ι M i).comp g
+  choose h hh using fun i =>
+    Module.Injective.extension_property R (M i) I R I.subtype
+      Subtype.val_injective (gi i)
+  have hsI : ∀ x ∈ s, x ∈ I := by
+    intro x hx
+    rw [← hs]
+    exact Submodule.subset_span (by simpa using hx)
+  let t : Finset ι := s.attach.biUnion (fun x =>
+    (g ⟨x.1, hsI x.1 x.2⟩).support)
+  let x : DirectSum ι M := DFinsupp.mk t (fun i => h i 1)
+  have hxcomp (i : ι) :
+      DirectSum.component R ι M i x = if i ∈ t then h i 1 else 0 := by
+    by_cases hi : i ∈ t
+    · change (DFinsupp.mk t (fun i => h i 1)) i = _
+      simp only [DFinsupp.mk_apply]
+      split_ifs; rfl
+    · change (DFinsupp.mk t (fun i => h i 1)) i = _
+      simp only [DFinsupp.mk_apply]
+      split_ifs; rfl
+  let h' : R →ₗ[R] DirectSum ι M := LinearMap.toSpanSingleton R _ x
+  have hcomp : h'.comp I.subtype = g := by
+    apply LinearMap.ext
+    intro a
+    apply DirectSum.ext_component R
+    intro i
+    rw [LinearMap.comp_apply, LinearMap.toSpanSingleton_apply, map_smul]
+    by_cases hi : i ∈ t
+    · rw [hxcomp, if_pos hi]
+      calc
+        (Submodule.subtype I) a • h i 1 =
+            h i ((Submodule.subtype I) a • (1 : R)) := by
+              rw [map_smul]
+        _ = h i ((Submodule.subtype I) a) := by simp
+        _ = gi i a := DFunLike.congr_fun (hh i) a
+        _ = DirectSum.component R ι M i (g a) := rfl
+    · have hzero : gi i a = 0 := by
+        have ha : (a : R) ∈ Submodule.span R (↑s : Set R) := by
+          change (a : R) ∈ Ideal.span (↑s : Set R)
+          rw [hs]
+          exact a.property
+        have ha' : h i (a : R) = 0 := by
+          refine Submodule.span_induction
+            (p := fun z _ => h i z = 0)
+            (fun r hrs => by
+              have hti : i ∉ (g ⟨r, hsI r hrs⟩).support := by
+                intro hit
+                apply hi
+                simp only [t, Finset.mem_biUnion]
+                exact ⟨⟨r, hrs⟩, by simp, hit⟩
+              have hc : DirectSum.component R ι M i (g ⟨r, hsI r hrs⟩) = 0 := by
+                change (g ⟨r, hsI r hrs⟩) i = 0
+                exact DFinsupp.notMem_support_iff.mp hti
+              have hgi : gi i ⟨r, hsI r hrs⟩ = 0 := by
+                simpa [gi] using hc
+              calc
+                h i r = gi i ⟨r, hsI r hrs⟩ := by
+                  simpa [LinearMap.comp_apply] using
+                    DFunLike.congr_fun (hh i) ⟨r, hsI r hrs⟩
+                _ = 0 := hgi)
+            (by simp)
+            (fun r q hr hq hpr hpq => by
+              rw [map_add, hpr, hpq, add_zero])
+            (fun c r hr hpr => by
+              rw [map_smul, hpr, smul_zero])
+            ha
+        calc
+          gi i a = h i (a : R) := by
+            symm
+            simpa [LinearMap.comp_apply] using DFunLike.congr_fun (hh i) a
+          _ = 0 := ha'
+      rw [hxcomp, if_neg hi]
+      simp only [smul_zero]
+      simpa [gi] using hzero.symm
+  refine ⟨h', ?_⟩
+  intro r hr
+  exact DFunLike.congr_fun hcomp ⟨r, hr⟩
 
 theorem localization_injective
     {R : Type u} {E : Type v} [CommRing R] [AddCommGroup E] [Module R E]

@@ -3,8 +3,11 @@ import Mathlib.Algebra.Polynomial.Div
 import Mathlib.Algebra.Polynomial.Laurent
 import Mathlib.Data.PNat.Notation
 import Mathlib.RingTheory.KrullDimension.Basic
+import Mathlib.RingTheory.KrullDimension.Zero
 import Mathlib.RingTheory.LocalRing.Basic
+import Mathlib.RingTheory.Nilpotent.Basic
 import Mathlib.RingTheory.MvPolynomial.Ideal
+import Mathlib.Algebra.MvPolynomial.Nilpotent
 
 /-!
 # Examples, Chapter 36: An epimorphism of zero-dimensional rings which is not surjective
@@ -682,7 +685,11 @@ noncomputable def sourceTargetTensorMultiplication (k : Type u) [Field k] :
 target, as used in the source's epimorphism argument. -/
 theorem sourceTargetTensorProduct_isomorphic_to_target (k : Type u) [Field k] :
     Nonempty (sourceTargetTensorProduct k ≃ₐ[sourceRing k] targetRing k) := by
-  sorry
+  refine ⟨AlgEquiv.ofBijective (sourceTargetTensorMultiplication k) ?_⟩
+  constructor
+  · exact (sourceToTarget_isAlgebraEpi k).injective_lift_mul
+  · intro b
+    exact ⟨1 ⊗ₜ[sourceRing k] b, by simp [sourceTargetTensorMultiplication]⟩
 
 /-- The displayed ring map is an epimorphism in `CommRingCat`. -/
 theorem sourceToTarget_is_epi (k : Type u) [Field k] :
@@ -691,15 +698,105 @@ theorem sourceToTarget_is_epi (k : Type u) [Field k] :
 
 /-! ## Local zero-dimensional conclusion -/
 
+private lemma polynomial_sub_constant_mem_nilradical
+    {k Q σ : Type*} [Field k] [CommRing Q] [Algebra k Q]
+    (f : MvPolynomial σ k →+* Q)
+    (hf : f.comp (MvPolynomial.C : k →+* MvPolynomial σ k) = algebraMap k Q)
+    (hX : ∀ v : σ, IsNilpotent (f (MvPolynomial.X v))) :
+    ∀ p : MvPolynomial σ k,
+      f p - algebraMap k Q (MvPolynomial.constantCoeff p) ∈ nilradical Q := by
+  have hC (r : k) : f (MvPolynomial.C r) = algebraMap k Q r := by
+    exact RingHom.congr_fun hf r
+  intro p
+  induction p using MvPolynomial.induction_on with
+  | C r =>
+      simp [hC]
+  | add p q hp hq =>
+      rw [map_add, map_add]
+      simpa [sub_eq_add_neg, add_assoc, add_comm, add_left_comm] using
+        (nilradical Q).add_mem hp hq
+  | mul_X p v hp =>
+      rw [map_mul, map_mul, MvPolynomial.constantCoeff_X, mul_zero, map_zero,
+        sub_zero]
+      exact (nilradical Q).mul_mem_left _ (mem_nilradical.mpr (hX v))
+
+private lemma local_zero_dimensional_of_polynomial_quotient
+    {k Q σ : Type*} [Field k] [CommRing Q] [Algebra k Q]
+    [Nontrivial Q] (f : MvPolynomial σ k →+* Q)
+    (hf : f.comp (MvPolynomial.C : k →+* MvPolynomial σ k) = algebraMap k Q)
+    (hX : ∀ v : σ, IsNilpotent (f (MvPolynomial.X v)))
+    (hsurj : Function.Surjective f) :
+    IsLocalRing Q ∧ ringKrullDim Q = 0 := by
+  have hnil : ∀ x : Q, ¬ IsUnit x → IsNilpotent x := by
+    intro x hx
+    obtain ⟨p, rfl⟩ := hsurj x
+    by_cases hc : MvPolynomial.constantCoeff p = 0
+    · have hp := polynomial_sub_constant_mem_nilradical f hf hX p
+      rw [hc, map_zero, sub_zero] at hp
+      exact mem_nilradical.mp hp
+    · have hp := polynomial_sub_constant_mem_nilradical f hf hX p
+      have hu : IsUnit (algebraMap k Q (MvPolynomial.constantCoeff p)) :=
+        (isUnit_iff_ne_zero.mpr hc).map (algebraMap k Q)
+      have hu' : IsUnit (f p) := by
+        have hnil' : IsNilpotent
+            (f p - algebraMap k Q (MvPolynomial.constantCoeff p)) :=
+          mem_nilradical.mp hp
+        have := hnil'.isUnit_add_right_of_commute hu (Commute.all _ _)
+        simpa [sub_add_cancel] using this
+      exact (hx hu').elim
+  have hlocal : IsLocalRing Q := by
+    apply IsLocalRing.of_nonunits_add
+    intro a b ha hb hab
+    exact ((Commute.all _ _).isNilpotent_add (hnil a ha) (hnil b hb)).not_isUnit hab
+  have hnil_iff : ∀ x : Q, IsNilpotent x ↔ ¬ IsUnit x := by
+    intro x
+    exact ⟨fun hx => hx.not_isUnit, hnil x⟩
+  have hmax : (nilradical Q).IsMaximal :=
+    ((Ring.krullDimLE_zero_and_isLocalRing_tfae Q).out 2 3 rfl rfl).mp hnil_iff
+  letI : (nilradical Q).IsMaximal := hmax
+  have hdimLE : Ring.KrullDimLE 0 Q := Ring.KrullDimLE.of_isMaximal_nilradical Q
+  exact ⟨hlocal, (ringKrullDimZero_iff_ringKrullDim_eq_zero).mp hdimLE⟩
+
 /-- The source quotient is a local ring of Krull dimension zero. -/
 theorem sourceRing_is_local_zero_dimensional (k : Type u) [Field k] :
     IsLocalRing (sourceRing k) ∧ ringKrullDim (sourceRing k) = 0 := by
-  sorry
+  letI : Nontrivial (targetRing k) :=
+    ⟨⟨targetYElement k 1, 0, target_y_one_ne_zero k⟩⟩
+  letI : Nontrivial (sourceRing k) := (sourceToTarget k).domain_nontrivial
+  apply local_zero_dimensional_of_polynomial_quotient
+    (Q := sourceRing k) (σ := sourceVariable)
+    (Ideal.Quotient.mk (sourceRelationIdeal k))
+  · ext r
+    rfl
+  · intro v
+    rcases v with i | i
+    · refine ⟨nilpotenceExponent i, ?_⟩
+      apply Ideal.Quotient.eq_zero_iff_mem.mpr
+      simpa [sourceXElement, sourceX, sourceRelationIdeal] using
+        (Ideal.subset_span (Or.inl (Set.mem_range_self i)) :
+          sourceX k i ^ nilpotenceExponent i ∈ sourceRelationIdeal k)
+    · refine ⟨nilpotenceExponent i, ?_⟩
+      apply Ideal.Quotient.eq_zero_iff_mem.mpr
+      simpa [sourceZElement, sourceZ, sourceRelationIdeal] using
+        (Ideal.subset_span (Or.inr (Set.mem_range_self i)) :
+          sourceZ k i ^ nilpotenceExponent i ∈ sourceRelationIdeal k)
+  · exact Ideal.Quotient.mk_surjective
 
 /-- The target quotient is a local ring of Krull dimension zero. -/
 theorem targetRing_is_local_zero_dimensional (k : Type u) [Field k] :
     IsLocalRing (targetRing k) ∧ ringKrullDim (targetRing k) = 0 := by
-  sorry
+  letI : Nontrivial (targetRing k) :=
+    ⟨⟨targetYElement k 1, 0, target_y_one_ne_zero k⟩⟩
+  apply local_zero_dimensional_of_polynomial_quotient
+    (Q := targetRing k) (σ := targetVariable)
+    (Ideal.Quotient.mk (targetRelationIdeal k))
+  · ext r
+    rfl
+  · intro v
+    rcases v with i | i
+    · exact ⟨nilpotenceExponent i, target_x_power_eq_zero k i⟩
+    · exact ⟨nilpotenceExponent (i + 1), target_y_power_eq_zero k i⟩
+  · exact Ideal.Quotient.mk_surjective
 
 /-- The chapter's example: an epimorphism of local zero-dimensional rings
 which is not a surjection. -/

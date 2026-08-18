@@ -54,7 +54,37 @@ def RightOreCondition (S : MorphismProperty C) : Prop :=
 theorem localization_conditions_contains_isomorphisms
     {S : MorphismProperty C} [S.ContainsIdentities] [CompatibleWithTriangulation S] :
     MorphismProperty.isomorphisms C ≤ S := by
-  sorry
+  intro X Y f hf
+  let T₁ : Triangle C :=
+    Triangle.mk (0 : (0 : C) ⟶ X) (𝟙 X)
+      (0 : X ⟶ (shiftFunctor C (1 : ℤ)).obj (0 : C))
+  let T₂ : Triangle C :=
+    Triangle.mk (0 : (0 : C) ⟶ X) f
+      (0 : Y ⟶ (shiftFunctor C (1 : ℤ)).obj (0 : C))
+  have hT₁ : T₁ ∈ distTriang C := by
+    apply (Triangle.distinguished_iff_of_isZero₁ T₁ (isZero_zero _)).2
+    dsimp [T₁]
+    exact (inferInstance : IsIso (𝟙 X))
+  have hT₂ : T₂ ∈ distTriang C := by
+    apply (Triangle.distinguished_iff_of_isZero₁ T₂ (isZero_zero _)).2
+    dsimp [T₂]
+    exact hf
+  have hex : ∃ c : X ⟶ Y, S c ∧
+      𝟙 X ≫ c = 𝟙 X ≫ f ∧
+        (0 : X ⟶ (shiftFunctor C (1 : ℤ)).obj (0 : C)) ≫
+            (shiftFunctor C (1 : ℤ)).map (𝟙 (0 : C)) =
+          c ≫ (0 : Y ⟶ (shiftFunctor C (1 : ℤ)).obj (0 : C)) := by
+    obtain ⟨c, hc, h₂, h₃⟩ :=
+      MorphismProperty.IsCompatibleWithTriangulation.compatible_with_triangulation
+        T₁ T₂ hT₁ hT₂ (𝟙 (0 : C)) (𝟙 X) (S.id_mem _) (S.id_mem _) (by
+          change (0 : (0 : C) ⟶ X) ≫ 𝟙 X = 𝟙 (0 : C) ≫ (0 : (0 : C) ⟶ X)
+          simp)
+    refine ⟨c, hc, ?_, ?_⟩
+    · simpa only [T₁, T₂, Triangle.mk] using h₂
+    · simpa only [T₁, T₂, Triangle.mk] using h₃
+  obtain ⟨c, hc, h₂, h₃⟩ := hex
+  rw [Category.id_comp, Category.id_comp] at h₂
+  exact h₂ ▸ hc
 
 theorem localization_conditions_ms2
     {S : MorphismProperty C} [S.IsMultiplicative]
@@ -71,7 +101,11 @@ theorem ms5_iff_all_integer_shifts
     {S : MorphismProperty C} [S.IsMultiplicative]
     [CompatibleWithTriangulation S] :
     AllIntegerShifts S ↔ MorphismProperty.IsCompatibleWithShift S ℤ := by
-  sorry
+  constructor
+  · intro _
+    infer_instance
+  · intro _ X Y f hf n
+    exact MorphismProperty.shift S hf n
 
 end Compatibility
 

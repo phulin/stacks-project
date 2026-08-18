@@ -638,7 +638,7 @@ theorem local_example_maximal_ideal_is_maximal (k : Type u) [Field k] :
 
 /- The `letI` supplies the prime instance needed by the canonical `AtPrime` localization. -/
 noncomputable abbrev localExampleLocalizedRing (k : Type u) [Field k] : Type _ :=
-  letI : (localExampleMaximalIdeal k).IsMaximal :=
+  let : (localExampleMaximalIdeal k).IsMaximal :=
     local_example_maximal_ideal_is_maximal k
   Localization.AtPrime (localExampleMaximalIdeal k)
 
@@ -1345,7 +1345,7 @@ theorem local_example_after_localization (k : Type u) [Field k] :
               (fun _ : localExampleVariable => 0) := by
           apply MvPolynomial.ringHom_ext'
           · ext c'
-            simp [f, g, MvPolynomial.constantCoeff_eq,
+            simp [f, g,
               MvPolynomial.constantCoeff_C (Option ℕ)]
           · intro i
             rcases i with _ | _ | n
@@ -1353,7 +1353,7 @@ theorem local_example_after_localization (k : Type u) [Field k] :
                 MvPolynomial.eval₂Hom (RingHom.id k)
                   (fun _ : localExampleVariable => 0) (MvPolynomial.X .x)
               rw [hfx]
-              simp [g, MvPolynomial.constantCoeff_eq,
+              simp [g,
                 MvPolynomial.constantCoeff_X k]
             · change g (f (localExampleY k)) =
                 MvPolynomial.eval₂Hom (RingHom.id k)
@@ -1366,12 +1366,10 @@ theorem local_example_after_localization (k : Type u) [Field k] :
               rw [hfw n]
               by_cases hn : n ≤ N
               · rw [dif_pos hn]
-                simp [g, MvPolynomial.constantCoeff_eq,
-                  MvPolynomial.constantCoeff_C (Option ℕ),
+                simp [g,
                   MvPolynomial.constantCoeff_X k]
               · rw [dif_neg hn]
-                simp [g, MvPolynomial.constantCoeff_eq,
-                  MvPolynomial.constantCoeff_C (Option ℕ),
+                simp [g,
                   MvPolynomial.constantCoeff_X k]
         have heval : MvPolynomial.eval₂Hom (RingHom.id k)
               (fun _ : localExampleVariable => 0) p = 0 := by
@@ -1496,7 +1494,7 @@ private theorem faithfullyFlat_reflect_smulRegular
       simpa only [TensorProduct.AlgebraTensorModule.coe_lTensor] using hxy
     rw [← hC]
     dsimp [C]
-    simp only [LinearMap.comp_apply, LinearEquiv.symm_apply_apply]
+    simp only [LinearEquiv.symm_apply_apply]
     exact congrArg hf.equiv hxy'
   exact (Module.FaithfullyFlat.lTensor_injective_iff_injective R S
     (LinearMap.lsmul R M r)).mp hlt hmn
@@ -1535,8 +1533,8 @@ theorem regular_sequence_flat_local
     RingTheory.Sequence.IsRegular M xs ↔
       RingTheory.Sequence.IsRegular (S ⊗[R] M)
         (xs.map (algebraMap R S)) := by
-  haveI : Module.Flat R S := (RingHom.flat_algebraMap_iff.mp hflat)
-  letI : Module.FaithfullyFlat R S :=
+  have : Module.Flat R S := (RingHom.flat_algebraMap_iff.mp hflat)
+  let : Module.FaithfullyFlat R S :=
     Module.FaithfullyFlat.of_flat_of_isLocalHom
   constructor
   · intro h

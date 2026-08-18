@@ -58,6 +58,120 @@ noncomputable def filteredModuleHomColimitMap
   exact colimit.post C.presentation.diag (moduleHomFunctor N) ≫
     (moduleHomFunctor N).map e.hom
 
+private def finiteSubsetQuotientMap
+    {R M : Type u} [CommRing R] [AddCommGroup M] [Module R M]
+    {E F : Finset M} (hEF : E ≤ F) :
+    ModuleCat.of R (M ⧸ Submodule.span R (E : Set M)) ⟶
+      ModuleCat.of R (M ⧸ Submodule.span R (F : Set M)) :=
+  ModuleCat.ofHom <|
+    (Submodule.span R (E : Set M)).mapQ (Submodule.span R (F : Set M))
+      LinearMap.id (Submodule.span_mono fun x hx => hEF hx)
+
+private abbrev finiteSubsetDiagram
+    {R M : Type u} [CommRing R] [AddCommGroup M] [Module R M] :
+    Finset M ⥤ ModuleCat.{u} R where
+  obj E := ModuleCat.of R (M × (M ⧸ Submodule.span R (E : Set M)))
+  map := fun {E F} hEF =>
+    ModuleCat.ofHom <|
+      (LinearMap.id : M →ₗ[R] M).prodMap
+        (finiteSubsetQuotientMap (leOfHom hEF)).hom
+  map_id E := by
+    apply ModuleCat.hom_ext
+    change (LinearMap.id : M →ₗ[R] M).prodMap
+        (finiteSubsetQuotientMap (leOfHom (𝟙 E))).hom = LinearMap.id
+    simp only [finiteSubsetQuotientMap, Submodule.mapQ_id]
+    exact LinearMap.prodMap_id
+  map_comp := by
+    intro E F G hEF hFG
+    apply ModuleCat.hom_ext
+    change (LinearMap.id : M →ₗ[R] M).prodMap
+        (finiteSubsetQuotientMap (leOfHom (hEF ≫ hFG))).hom =
+      ((LinearMap.id : M →ₗ[R] M).prodMap
+          (finiteSubsetQuotientMap (leOfHom hFG)).hom).comp
+        ((LinearMap.id : M →ₗ[R] M).prodMap
+          (finiteSubsetQuotientMap (leOfHom hEF)).hom)
+    rw [LinearMap.prodMap_comp]
+    congr 1
+    simpa [finiteSubsetQuotientMap] using
+      (Submodule.mapQ_comp (Submodule.span R (E : Set M))
+        (Submodule.span R (F : Set M)) (Submodule.span R (G : Set M))
+        LinearMap.id LinearMap.id (leOfHom hEF) (leOfHom hFG))
+
+private abbrev finiteSubsetCocone
+    {R M : Type u} [CommRing R] [AddCommGroup M] [Module R M] :
+    Cocone (finiteSubsetDiagram (R := R) (M := M)) where
+  pt := ModuleCat.of R M
+  ι :=
+    { app := fun E =>
+        ModuleCat.ofHom <|
+          LinearMap.fst R M (M ⧸ Submodule.span R (E : Set M))
+      naturality := by
+        intro E F hEF
+        apply ModuleCat.hom_ext
+        ext x
+        change x.1 = x.1
+        rfl }
+
+private def finiteSubsetCocone_isColimit
+    {R M : Type u} [CommRing R] [AddCommGroup M] [Module R M] :
+    IsColimit (finiteSubsetCocone (R := R) (M := M)) := by
+  classical
+  refine
+    { desc := fun s => by
+        let l : M →ₗ[R] ↑((finiteSubsetDiagram (R := R) (M := M)).obj ∅) :=
+          { toFun := fun x => (x, 0)
+            map_add' := by intro x y; simp
+            map_smul' := by intro r x; simp }
+        exact ModuleCat.ofHom <|
+          (s.ι.app ∅).hom.comp l
+      fac := ?_
+      uniq := ?_ }
+  · intro s E
+    apply ModuleCat.hom_ext
+    apply LinearMap.ext
+    intro z
+    rcases z with ⟨x, q⟩
+    obtain ⟨y, rfl⟩ :=
+      (Submodule.span R (E : Set M)).mkQ_surjective q
+    let F : Finset M := insert y E
+    have hEF : E ≤ F := by
+      intro z hz
+      exact Finset.mem_insert_of_mem hz
+    have hy : y ∈ Submodule.span R (F : Set M) := by
+      apply Submodule.subset_span
+      simp [F]
+    have hy' : y ∈ Submodule.span R (insert y (E : Set M)) := by
+      simpa [F] using hy
+    have hzero :
+        (finiteSubsetDiagram (R := R) (M := M)).map (homOfLE hEF)
+            (0, Submodule.mkQ (Submodule.span R (E : Set M)) y) = 0 := by
+      change (0, _) = (0, _)
+      simp [finiteSubsetDiagram, finiteSubsetQuotientMap, F,
+        Submodule.Quotient.mk_eq_zero, hy']
+    have hnat := s.ι.naturality (homOfLE hEF)
+    have hqzero : (s.ι.app E).hom (0, Submodule.mkQ (Submodule.span R (E : Set M)) y) = 0 := by
+      have := congrArg (fun k => k.hom (0, Submodule.mkQ
+        (Submodule.span R (E : Set M)) y)) hnat
+      change (s.ι.app F).hom
+          (((finiteSubsetDiagram (R := R) (M := M)).map (homOfLE hEF)).hom
+            (0, Submodule.mkQ (Submodule.span R (E : Set M)) y)) =
+        (s.ι.app E).hom (0, Submodule.mkQ (Submodule.span R (E : Set M)) y) at this
+      rw [hzero] at this
+      simpa using this.symm
+    rw [show (x, Submodule.mkQ (Submodule.span R (E : Set M)) y) =
+        (x, 0) + (0, Submodule.mkQ (Submodule.span R (E : Set M)) y) by
+      simp]
+    change (s.ι.app ∅).hom (x, 0) =
+      (s.ι.app E).hom ((x, 0) +
+        (0, Submodule.mkQ (Submodule.span R (E : Set M)) y))
+    rw [map_add, hqzero, add_zero]
+    simpa using (congrArg (fun k => k.hom (x, 0))
+      (s.ι.naturality (homOfLE (show (∅ : Finset M) ≤ E by simp))))
+  · intro s m hm
+    apply ModuleCat.hom_ext
+    ext x
+    simpa using congrArg (fun k => k.hom (x, 0)) (hm ∅)
+
 /-- A finite module is characterized by injectivity of `Hom` on every filtered
 colimit, as in Lemma `lemma-characterize-finite-module-hom`. -/
 theorem finite_iff_hom_filteredColimit_injective
@@ -208,7 +322,7 @@ theorem finite_iff_hom_filteredColimit_injective
       intro k hk
       rw [show Pi.single k (z k) = z k • Pi.single k 1 by
         ext q
-        by_cases hq : q = k <;> simp [Pi.single_apply, hq]]
+        by_cases hq : q = k <;> simp [hq]]
       simp only [map_smul]
       rw [hbase k]
     have hstage_hom : fa.hom = gb.hom := by

@@ -198,7 +198,7 @@ def IsSectionwiseBilinear {X : TopCat.{v}}
 theorem isSectionwiseBilinear_iff_isHomCharacterization
     {X : TopCat.{v}} {O : RingSheaf.{v, v} X} {F G H : Mod O}
     (f : ModuleSetMap F G H) :
-    IsSectionwiseBilinear f ↔ IsHomCharacterization f := by
+  IsSectionwiseBilinear f ↔ IsHomCharacterization f := by
   sorry
 
 /-! The canonical module structure on a module stalk. -/

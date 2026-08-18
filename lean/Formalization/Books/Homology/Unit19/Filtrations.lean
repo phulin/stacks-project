@@ -299,7 +299,7 @@ instance filteredHasZeroObject {C : Type u} [Category.{v} C]
     additive-category interface is used rather than a parallel definition. -/
 theorem filteredCategory_additive_exists {C : Type u} [Category.{v} C] [Abelian C] :
     Nonempty (Formalization.Books.Homology.Unit03.AdditiveCategory (FilteredObject C)) := by
-  letI : HasFiniteProducts (FilteredObject C) := by
+  let : HasFiniteProducts (FilteredObject C) := by
       refine { out := ?_ }
       intro n
       refine ⟨fun F => ?_⟩
@@ -366,16 +366,14 @@ theorem filteredCategory_additive_exists {C : Type u} [Category.{v} C] [Abelian 
                   hpb.lift_snd _ _ _⟩
                 rw [Subobject.factorThru_arrow]
                 have hp := Limits.Pi.lift_π (fun k => (s.proj k).hom) j
-                simpa [h, π, p, q, Category.assoc] using
-                  congrArg (fun z => (s.pt.filtration.obj i).arrow ≫ z) hp
+                simp [h, π, p, q, Category.assoc]
               simpa [P] using (Subobject.factors_iff _ _).mp hP
             simpa [t] using l)
           (fun s j => by
             apply FilteredHom.ext _ _
             change (Limits.Pi.lift (fun k => (s.proj k).hom) ≫ π j) =
               (s.proj j).hom
-            simpa [π, p, q] using
-              (Limits.Pi.lift_π (fun k => (s.proj k).hom) j))
+            simp [π, q])
           (fun s m hm => by
             apply FilteredHom.ext _ _
             apply Limits.Pi.hom_ext _ _
@@ -448,7 +446,7 @@ theorem filteredKernelFork_isLimit_exists {C : Type u} [Category.{v} C] [Abelian
     refine ⟨hpb.lift u ((W.filtration.obj i).arrow ≫ k) ?_,
       hpb.lift_snd _ _ _⟩
     rw [Subobject.factorThru_arrow]
-    simp [k, hpb, Category.assoc]
+    simp [k, Category.assoc]
   refine ⟨KernelFork.IsLimit.ofι (filteredKernelι f) (filteredKernelι_comp f)
     lift ?_ ?_⟩
   · intro W g hg
@@ -460,7 +458,7 @@ theorem filteredKernelFork_isLimit_exists {C : Type u} [Category.{v} C] [Abelian
     simp [Category.assoc]
   · intro W g hg m hm
     apply FilteredHom.ext _ _
-    letI : Mono (filteredKernelι f).hom := by
+    let : Mono (filteredKernelι f).hom := by
       change Mono (Subobject.mk (kernel.ι f.hom)).arrow
       infer_instance
     apply (cancel_mono (filteredKernelι f).hom).mp

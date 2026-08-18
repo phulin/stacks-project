@@ -146,8 +146,8 @@ private theorem affine_curve_equation_prime : Prime affineCurveEquation := by
 
 /-- The displayed point lies on the displayed curve. -/
 theorem affine_curve_point_mem : affineCurvePoint ∈ affineCurve := by
-  (simp [affineCurve, MvPolynomial.zeroLocus_span, affineCurveEquation, affineCurvePoint];
-    norm_num)
+  simp only [affineCurve, MvPolynomial.zeroLocus_span, affineCurveEquation, affineCurvePoint]
+  norm_num
 
 /-- The displayed equation defines an affine variety over `ℂ`. -/
 theorem affine_curve_is_affine_variety :

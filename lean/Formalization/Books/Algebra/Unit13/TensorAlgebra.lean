@@ -34,7 +34,7 @@ open CategoryTheory.Limits
 open Formalization.Books.Algebra.Unit09
 open scoped DirectSum TensorProduct
 
-universe u v
+universe u v uR uM₂ uM₁ uM
 
 noncomputable section
 
@@ -309,6 +309,274 @@ theorem free_symmetric_and_exterior_power
   · infer_instance
 
 /-! ## Presentations by relations -/
+
+/-! The maps below separate the quotient functoriality from the relation
+insertion appearing in the presentation lemma. -/
+
+/-- The map on symmetric powers induced by a quotient map of modules. -/
+def symmetricPowerQuotientMap
+    {R : Type uR} {M₁ : Type uM₁} {M : Type uM} [CommRing R]
+    [AddCommGroup M₁] [AddCommGroup M]
+    [Module R M₁] [Module R M] (n : ℕ) (g : M₁ →ₗ[R] M) :
+    symmetricPower R M₁ n →ₗ[R] symmetricPower R M n := by
+  let C : (⨂[R] _ : ULift.{uR} (Fin n), M₁) →ₗ[R]
+      symmetricPower R M n :=
+    (SymmetricPower.mk R (ULift.{uR} (Fin n)) M).comp
+      (PiTensorProduct.map (fun _ : ULift.{uR} (Fin n) => g))
+  have hC : addConGen (SymmetricPower.Rel R (ULift.{uR} (Fin n)) M₁) ≤
+      AddCon.ker C.toAddMonoidHom := by
+    apply AddCon.addConGen_le.2
+    intro x y hxy
+    cases hxy with
+    | perm e f =>
+        change C (PiTensorProduct.tprod R f) =
+          C (PiTensorProduct.tprod R (fun i => f (e i)))
+        dsimp [C]
+        rw [PiTensorProduct.map_tprod, PiTensorProduct.map_tprod]
+        exact (SymmetricPower.tprod_equiv (R := R) (M := M) e
+          (fun i => g (f i))).symm
+  exact
+    { toFun := AddCon.lift
+        (addConGen (SymmetricPower.Rel R (ULift.{uR} (Fin n)) M₁))
+        C.toAddMonoidHom hC
+      map_add' := by intro x y; exact map_add _ _ _
+      map_smul' := by
+        intro r x
+        refine AddCon.induction_on x ?_
+        intro t
+        change C (r • t) = r • C t
+        exact C.map_smul r t }
+
+@[simp]
+theorem symmetricPowerQuotientMap_tprod
+    {R : Type uR} {M₁ : Type uM₁} {M : Type uM} [CommRing R]
+    [AddCommGroup M₁] [AddCommGroup M]
+    [Module R M₁] [Module R M] (n : ℕ) (g : M₁ →ₗ[R] M)
+    (x : ULift.{uR} (Fin n) → M₁) :
+    symmetricPowerQuotientMap n g (SymmetricPower.tprod R x) =
+      SymmetricPower.tprod R (fun i => g (x i)) := by
+  sorry
+
+/-- The map on exterior powers induced by a quotient map of modules. -/
+def exteriorPowerQuotientMap
+    {R : Type uR} {M₁ : Type uM₁} {M : Type uM} [CommRing R]
+    [AddCommGroup M₁] [AddCommGroup M]
+    [Module R M₁] [Module R M] (n : ℕ) (g : M₁ →ₗ[R] M) :
+    exteriorPower R M₁ n →ₗ[R] exteriorPower R M n :=
+  exteriorPower.map n g
+
+@[simp]
+theorem exteriorPowerQuotientMap_ιMulti
+    {R : Type uR} {M₁ : Type uM₁} {M : Type uM} [CommRing R]
+    [AddCommGroup M₁] [AddCommGroup M]
+    [Module R M₁] [Module R M] (n : ℕ) (g : M₁ →ₗ[R] M)
+    (x : Fin n → M₁) :
+    exteriorPowerQuotientMap n g (exteriorPower.ιMulti R n x) =
+      exteriorPower.ιMulti R n (fun i => g (x i)) := by
+  exact exteriorPower.map_apply_ιMulti g x
+
+/-- The symmetric relation-insertion map in the quotient presentation.
+
+The quotient lift is made explicit: the multilinear map inserts `f z` in
+one slot, while `AddCon.lift` descends it through the symmetric relations. -/
+noncomputable def symmetricPowerRelationMap
+    {R : Type uR} {M₂ : Type uM₂} {M₁ : Type uM₁} [CommRing R]
+    [AddCommGroup M₂] [AddCommGroup M₁]
+    [Module R M₂] [Module R M₁]
+    (f : M₂ →ₗ[R] M₁) {n : ℕ} (hn : 0 < n) :
+    TensorProduct R M₂ (symmetricPower R M₁ (n - 1)) →ₗ[R]
+      symmetricPower R M₁ n := by
+  classical
+  let h₁ : 1 + (n - 1) = n := Nat.add_sub_of_le (Nat.succ_le_iff.2 hn)
+  let σ : ULift.{uR} (Fin n) ≃
+      ULift.{uR} (Fin 1) ⊕ ULift.{uR} (Fin (n - 1)) :=
+    ((Equiv.ulift : ULift.{uR} (Fin n) ≃ Fin n).trans (finCongr h₁.symm)).trans
+      (finSumFinEquiv.symm.trans
+        (Equiv.sumCongr (Equiv.ulift.symm) (Equiv.ulift.symm)))
+  let F : MultilinearMap R
+      (fun _ : ULift.{uR} (Fin 1) ⊕ ULift.{uR} (Fin (n - 1)) => M₁)
+      (symmetricPower R M₁ n) :=
+    (SymmetricPower.tprod R).domDomCongr σ
+  let H : M₁ →ₗ[R]
+      MultilinearMap R (fun _ : ULift.{uR} (Fin (n - 1)) => M₁)
+        (symmetricPower R M₁ n) :=
+    (MultilinearMap.ofSubsingletonₗ R R M₁
+      (MultilinearMap R (fun _ : ULift.{uR} (Fin (n - 1)) => M₁)
+        (symmetricPower R M₁ n)) (ULift.up 0)).symm F.currySum
+  let C : M₂ →ₗ[R]
+      (⨂[R] _ : ULift.{uR} (Fin (n - 1)), M₁) →ₗ[R]
+        symmetricPower R M₁ n :=
+    { toFun := fun z => PiTensorProduct.lift (H (f z))
+      map_add' := by
+        intro x y
+        change PiTensorProduct.lift (H (f (x + y))) =
+          PiTensorProduct.lift (H (f x)) + PiTensorProduct.lift (H (f y))
+        apply PiTensorProduct.ext
+        apply MultilinearMap.ext
+        intro v
+        change (PiTensorProduct.lift (H (f (x + y))))
+            (PiTensorProduct.tprod R v) =
+          ((PiTensorProduct.lift (H (f x)) + PiTensorProduct.lift (H (f y)))
+            (PiTensorProduct.tprod R v))
+        rw [LinearMap.add_apply, PiTensorProduct.lift.tprod,
+          PiTensorProduct.lift.tprod, PiTensorProduct.lift.tprod]
+        change H (f (x + y)) v = H (f x) v + H (f y) v
+        rw [f.map_add, H.map_add]
+        simp
+      map_smul' := by
+        intro r x
+        change PiTensorProduct.lift (H (f (r • x))) =
+          r • PiTensorProduct.lift (H (f x))
+        apply PiTensorProduct.ext
+        apply MultilinearMap.ext
+        intro v
+        change (PiTensorProduct.lift (H (f (r • x))))
+            (PiTensorProduct.tprod R v) =
+          ((r • PiTensorProduct.lift (H (f x))) (PiTensorProduct.tprod R v))
+        rw [LinearMap.smul_apply, PiTensorProduct.lift.tprod,
+          PiTensorProduct.lift.tprod]
+        change H (f (r • x)) v = r • H (f x) v
+        rw [f.map_smul, H.map_smul]
+        simp }
+  let hC (z : M₂) :
+      addConGen (SymmetricPower.Rel R (ULift.{uR} (Fin (n - 1))) M₁) ≤
+        AddCon.ker (C z).toAddMonoidHom := by
+    apply AddCon.addConGen_le.2
+    intro x y hxy
+    cases hxy with
+    | perm e q =>
+        change C z (PiTensorProduct.tprod R q) =
+          C z (PiTensorProduct.tprod R (fun i => q (e i)))
+        change (PiTensorProduct.lift (H (f z))) (PiTensorProduct.tprod R q) =
+          (PiTensorProduct.lift (H (f z)))
+            (PiTensorProduct.tprod R (fun i => q (e i)))
+        rw [PiTensorProduct.lift.tprod, PiTensorProduct.lift.tprod]
+        change H (f z) q = H (f z) (fun i => q (e i))
+        simp [H, F]
+        let e' : (ULift.{uR} (Fin 1) ⊕ ULift.{uR} (Fin (n - 1))) ≃
+            (ULift.{uR} (Fin 1) ⊕ ULift.{uR} (Fin (n - 1))) :=
+          Equiv.sumCongr (Equiv.refl _) e
+        let p := σ.trans (e'.trans σ.symm)
+        have hp := SymmetricPower.tprod_equiv (R := R) (M := M₁) p
+          (fun i => Sum.elim (fun _ => f z) q (σ i))
+        have hfun :
+            (fun i => Sum.elim (fun _ => f z) q (σ (p i))) =
+              (fun i => Sum.elim (fun _ => f z) (fun i => q (e i)) (σ i)) := by
+          funext i
+          cases hσ : σ i with
+          | inl a => simp [p, e', Equiv.trans_apply, hσ]
+          | inr b => simp [p, e', Equiv.trans_apply, hσ]
+        simpa only [hfun] using hp.symm
+  let B : M₂ →ₗ[R]
+      symmetricPower R M₁ (n - 1) →ₗ[R] symmetricPower R M₁ n :=
+    { toFun := fun z =>
+        { toFun := AddCon.lift
+            (addConGen (SymmetricPower.Rel R (ULift.{uR} (Fin (n - 1))) M₁))
+            (C z).toAddMonoidHom (hC z)
+          map_add' := by intro x y; exact map_add _ _ _
+          map_smul' := by
+            intro r x
+            refine AddCon.induction_on x ?_
+            intro t
+            change C z (r • t) = r • C z t
+            exact (C z).map_smul r t }
+      map_add' := by
+        intro x y
+        apply LinearMap.ext
+        intro z
+        refine AddCon.induction_on z ?_
+        intro t
+        change C (x + y) t = C x t + C y t
+        simp [C]
+      map_smul' := by
+        intro r x
+        apply LinearMap.ext
+        intro z
+        refine AddCon.induction_on z ?_
+        intro t
+        change C (r • x) t = r • C x t
+        simp [C] }
+  exact TensorProduct.lift B
+
+/-- Exterior relation insertion is multiplication by the degree-one class
+corresponding to `f z`, followed by the tensor-product universal map. -/
+noncomputable def exteriorPowerRelationMap
+    {R : Type uR} {M₂ : Type uM₂} {M₁ : Type uM₁} [CommRing R]
+    [AddCommGroup M₂] [AddCommGroup M₁]
+    [Module R M₂] [Module R M₁]
+    (f : M₂ →ₗ[R] M₁) {n : ℕ} (hn : 0 < n) :
+    TensorProduct R M₂ (exteriorPower R M₁ (n - 1)) →ₗ[R]
+      exteriorPower R M₁ n := by
+  let h₁ : 1 + (n - 1) = n := Nat.add_sub_of_le (Nat.succ_le_iff.2 hn)
+  let leftMul : M₁ →ₗ[R]
+      exteriorPower R M₁ (n - 1) →ₗ[R] exteriorPower R M₁ n :=
+    { toFun := fun x =>
+        let hx : exteriorPower R M₁ 1 := (exteriorPower.oneEquiv R M₁).symm x
+        { toFun := fun y =>
+            ⟨(hx : ExteriorAlgebra R M₁) * (y : ExteriorAlgebra R M₁), by
+              simpa [h₁] using
+                (SetLike.mul_mem_graded
+                  (A := fun i : ℕ => exteriorPower R M₁ i)
+                  hx.property y.property)⟩
+          map_add' := by
+            intro y z
+            apply Subtype.ext
+            simp [mul_add]
+          map_smul' := by
+            intro r y
+            apply Subtype.ext
+            change (hx : ExteriorAlgebra R M₁) * (r • (y : ExteriorAlgebra R M₁)) =
+              r • ((hx : ExteriorAlgebra R M₁) * (y : ExteriorAlgebra R M₁))
+            rw [Algebra.smul_def, Algebra.smul_def]
+            calc
+              (hx : ExteriorAlgebra R M₁) *
+                    (algebraMap R (ExteriorAlgebra R M₁) r * (y : ExteriorAlgebra R M₁)) =
+                  ((hx : ExteriorAlgebra R M₁) *
+                    algebraMap R (ExteriorAlgebra R M₁) r) *
+                    (y : ExteriorAlgebra R M₁) := (mul_assoc _ _ _).symm
+              _ = (algebraMap R (ExteriorAlgebra R M₁) r *
+                    (hx : ExteriorAlgebra R M₁)) *
+                    (y : ExteriorAlgebra R M₁) := by rw [Algebra.commutes]
+              _ = algebraMap R (ExteriorAlgebra R M₁) r *
+                    ((hx : ExteriorAlgebra R M₁) * (y : ExteriorAlgebra R M₁)) :=
+                mul_assoc _ _ _ }
+      map_add' := by
+        intro x y
+        apply LinearMap.ext
+        intro z
+        apply Subtype.ext
+        simp [Algebra.smul_def, add_mul]
+      map_smul' := by
+        intro r x
+        apply LinearMap.ext
+        intro z
+        apply Subtype.ext
+        simp [Algebra.smul_def, mul_assoc] }
+  exact TensorProduct.lift (leftMul.comp f)
+
+/-- Focused image-equals-kernel interface for the symmetric presentation. -/
+theorem symmetricPower_relation_range_eq_kernel
+    {R M₂ M₁ M : Type*} [CommRing R]
+    [AddCommGroup M₂] [AddCommGroup M₁] [AddCommGroup M]
+    [Module R M₂] [Module R M₁] [Module R M]
+    (f : M₂ →ₗ[R] M₁) (g : M₁ →ₗ[R] M)
+    (hfg : Function.Exact f g) (hg : Function.Surjective g)
+    {n : ℕ} (hn : 0 < n) :
+    LinearMap.range (symmetricPowerRelationMap f hn) =
+      LinearMap.ker (symmetricPowerQuotientMap n g) := by
+  sorry
+
+/-- Focused image-equals-kernel interface for the exterior presentation. -/
+theorem exteriorPower_relation_range_eq_kernel
+    {R M₂ M₁ M : Type*} [CommRing R]
+    [AddCommGroup M₂] [AddCommGroup M₁] [AddCommGroup M]
+    [Module R M₂] [Module R M₁] [Module R M]
+    (f : M₂ →ₗ[R] M₁) (g : M₁ →ₗ[R] M)
+    (hfg : Function.Exact f g) (hg : Function.Surjective g)
+    {n : ℕ} (hn : 0 < n) :
+    LinearMap.range (exteriorPowerRelationMap f hn) =
+      LinearMap.ker (exteriorPowerQuotientMap n g) := by
+  sorry
 
 /-- The right-exact sequences for symmetric and exterior powers of a quotient. -/
 theorem presentation_symmetric_exterior_power

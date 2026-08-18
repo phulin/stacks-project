@@ -397,6 +397,18 @@ theorem siteTorsorContractedProduct_respects_equivalence
       (siteTorsorContractedProduct P' Q')) := by
   sorry
 
+/-- The representative-level comparison needed for the inverse law. -/
+theorem siteTorsorContractedProduct_inverse_left_representative
+    {C : Type u} [Category.{v} C]
+    {J : GrothendieckTopology C}
+    {G : Sheaf J AddCommGrpCat.{w}} {X : C}
+    [HasWeakSheafify (J.over X) (Type w)]
+    (P : SiteTorsor J G X) :
+    Nonempty (SiteTorsorEquivalence
+      (siteTorsorContractedProduct (siteTorsorInverse P) P)
+      (siteTorsorTrivial J G X)) := by
+  sorry
+
 /-- The contracted product operation descended to torsor isomorphism classes. -/
 noncomputable def siteTorsorClassContractedProduct {C : Type u} [Category.{v} C]
     {J : GrothendieckTopology C}
@@ -451,7 +463,13 @@ theorem siteTorsorClassContractedProduct_inverse_left {C : Type u} [Category.{v}
     (P : SiteTorsorClass J G X) :
     siteTorsorClassContractedProduct G X (siteTorsorClassInverse J G X P) P =
       siteTorsorClassZero J G X := by
-  sorry
+  induction P using Quotient.inductionOn with
+  | _ P =>
+    change Quotient.mk _ (siteTorsorContractedProduct
+        (siteTorsorInverse P) P) =
+      Quotient.mk _ (siteTorsorTrivial J G X)
+    apply Quotient.sound
+    exact siteTorsorContractedProduct_inverse_left_representative P
 
 theorem siteTorsorClassContractedProduct_inverse_right {C : Type u} [Category.{v} C]
     {J : GrothendieckTopology C} (G : Sheaf J AddCommGrpCat.{w}) (X : C)

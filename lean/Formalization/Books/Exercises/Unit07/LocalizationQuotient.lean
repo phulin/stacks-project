@@ -2,6 +2,7 @@ import Mathlib.Algebra.Ring.Prod
 import Mathlib.RingTheory.Ideal.Prod
 import Mathlib.RingTheory.Ideal.Quotient.Operations
 import Mathlib.RingTheory.Localization.Basic
+import Mathlib.RingTheory.Localization.Away.Lemmas
 
 /-!
 # Exercises, Chapter 7: Localization
@@ -46,6 +47,91 @@ theorem localization_is_quotient_example :
         Nonempty
           (localizationQuotientExampleQuotient ≃ₐ[localizationQuotientExampleRing]
             localizationQuotientExampleLocalization) := by
-  sorry
+  classical
+  have hbot : localizationQuotientExampleIdeal ≠
+      (⊥ : Ideal localizationQuotientExampleRing) := by
+    intro h
+    have hp : ((0, 1) : localizationQuotientExampleRing) ∈
+        localizationQuotientExampleIdeal := by
+      simp [localizationQuotientExampleIdeal]
+    rw [h] at hp
+    have hs := congrArg Prod.snd hp
+    norm_num at hs
+  have htop : localizationQuotientExampleIdeal ≠
+      (⊤ : Ideal localizationQuotientExampleRing) := by
+    intro h
+    have hp : ((1, 0) : localizationQuotientExampleRing) ∉
+        localizationQuotientExampleIdeal := by
+      simp [localizationQuotientExampleIdeal]
+    apply hp
+    rw [h]
+    trivial
+  have hideal : localizationQuotientExampleIdeal =
+      Ideal.span ({(0, 1)} : Set localizationQuotientExampleRing) := by
+    ext x
+    rcases x with ⟨a, b⟩
+    simp [localizationQuotientExampleIdeal, Ideal.mem_span_singleton']
+    constructor <;> intro h <;> exact h.symm
+  have hideal' : localizationQuotientExampleIdeal =
+      Ideal.span ({1 - (1, 0)} : Set localizationQuotientExampleRing) := by
+    rw [hideal]
+    congr 1
+  have hIJ : localizationQuotientExampleIdeal ≤
+      Ideal.span ({1 - (1, 0)} : Set localizationQuotientExampleRing) :=
+    hideal'.le
+  have hJI : Ideal.span ({1 - (1, 0)} : Set localizationQuotientExampleRing) ≤
+      localizationQuotientExampleIdeal := hideal'.ge
+  let f : localizationQuotientExampleQuotient →+*
+      (localizationQuotientExampleRing ⧸
+        Ideal.span ({1 - (1, 0)} : Set localizationQuotientExampleRing)) :=
+    Ideal.Quotient.lift localizationQuotientExampleIdeal
+      (Ideal.Quotient.mk _) (by
+        intro a ha
+        exact Ideal.Quotient.eq_zero_iff_mem.mpr (hIJ ha))
+  let g : (localizationQuotientExampleRing ⧸
+        Ideal.span ({1 - (1, 0)} : Set localizationQuotientExampleRing)) →+*
+      localizationQuotientExampleQuotient :=
+    Ideal.Quotient.lift _ (Ideal.Quotient.mk localizationQuotientExampleIdeal) (by
+      intro a ha
+      exact Ideal.Quotient.eq_zero_iff_mem.mpr (hJI ha))
+  have hfg : ∀ x : localizationQuotientExampleQuotient, g (f x) = x := by
+    intro x
+    obtain ⟨a, rfl⟩ := Ideal.Quotient.mk_surjective x
+    simp [f, g]
+  have hgf : ∀ x : localizationQuotientExampleRing ⧸
+      Ideal.span ({1 - (1, 0)} : Set localizationQuotientExampleRing), f (g x) = x := by
+    intro x
+    obtain ⟨a, rfl⟩ := Ideal.Quotient.mk_surjective x
+    simp [f, g]
+  have hfbij : Function.Bijective f := by
+    constructor
+    · intro x y hxy
+      have h := congrArg g hxy
+      simpa [hfg] using h
+    · intro y
+      exact ⟨g y, hgf y⟩
+  let fAlg : localizationQuotientExampleQuotient →ₐ[localizationQuotientExampleRing]
+      (localizationQuotientExampleRing ⧸
+        Ideal.span ({1 - (1, 0)} : Set localizationQuotientExampleRing)) :=
+    { f with
+      commutes' := by
+        intro r
+        rfl }
+  have eQ : localizationQuotientExampleQuotient ≃ₐ[localizationQuotientExampleRing]
+      (localizationQuotientExampleRing ⧸
+        Ideal.span ({1 - (1, 0)} : Set localizationQuotientExampleRing)) :=
+    AlgEquiv.ofBijective fAlg hfbij
+  have he : IsIdempotentElem ((1, 0) : localizationQuotientExampleRing) := by
+    rw [isIdempotentElem_iff]
+    norm_num
+  let hloc := IsLocalization.Away.quotient_of_isIdempotentElem he
+  let _ := hloc
+  have eSpan := IsLocalization.algEquiv
+    (Submonoid.powers ((1, 0) : localizationQuotientExampleRing))
+    (localizationQuotientExampleRing ⧸
+      Ideal.span ({1 - (1, 0)} : Set localizationQuotientExampleRing))
+    (Localization (Submonoid.powers ((1, 0) : localizationQuotientExampleRing)))
+  have e := eQ.trans eSpan
+  exact ⟨hbot, htop, ⟨e⟩⟩
 
 end Formalization.Books.Exercises.Unit07

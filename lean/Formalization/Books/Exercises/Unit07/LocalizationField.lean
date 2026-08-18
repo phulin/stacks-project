@@ -1,7 +1,9 @@
-import Mathlib.Algebra.Polynomial.RingDivision
+import Mathlib.Algebra.Polynomial.FieldDivision
 import Mathlib.RingTheory.Ideal.Maximal
+import Mathlib.RingTheory.Localization.Ideal
 import Mathlib.RingTheory.Localization.Away.Basic
 import Mathlib.RingTheory.Spectrum.Prime.Basic
+import Mathlib.RingTheory.UniqueFactorizationDomain.Defs
 
 /-!
 # Exercises, Chapter 7: Localization
@@ -62,6 +64,237 @@ theorem localization_field_example :
       (∃ p q r : PrimeSpectrum localizationFieldExampleRing,
         p ≠ q ∧ p ≠ r ∧ q ≠ r) ∧
         IsField localizationFieldPrincipalLocalization := by
-  sorry
+  classical
+  have hS0 : (0 : localizationFieldBaseRing) ∉ localizationFieldSubmonoid := by
+    intro h
+    exact (Ideal.mem_primeCompl_iff.mp h.1) (Ideal.zero_mem _)
+  have hSnonzero : localizationFieldSubmonoid ≤ nonZeroDivisors localizationFieldBaseRing := by
+    intro s hs
+    rw [mem_nonZeroDivisors_iff_ne_zero]
+    intro hs0
+    apply hS0
+    simpa [hs0] using hs
+  have hdomain : IsDomain localizationFieldExampleRing :=
+    IsLocalization.isDomain_of_le_nonZeroDivisors localizationFieldExampleRing hSnonzero
+  let _ : IsDomain localizationFieldExampleRing := hdomain
+  have hprodA : (Polynomial.X * (Polynomial.X - Polynomial.C (1 : ℚ)) :
+      localizationFieldBaseRing) ≠ 0 :=
+    mul_ne_zero Polynomial.X_ne_zero (Polynomial.X_sub_C_ne_zero _)
+  have hfne : localizationFieldExampleElement ≠ 0 := by
+    intro hf
+    apply hprodA
+    apply IsLocalization.injective localizationFieldExampleRing hSnonzero
+    simpa [localizationFieldExampleElement] using hf
+  have hprodunit : IsUnit (algebraMap localizationFieldBaseRing
+      localizationFieldPrincipalLocalization
+      (Polynomial.X * (Polynomial.X - Polynomial.C (1 : ℚ)))) := by
+    change IsUnit (algebraMap localizationFieldExampleRing
+      localizationFieldPrincipalLocalization localizationFieldExampleElement)
+    exact IsLocalization.map_units localizationFieldPrincipalLocalization
+      ⟨localizationFieldExampleElement, Submonoid.mem_powers _⟩
+  have hXunit : IsUnit (algebraMap localizationFieldBaseRing
+      localizationFieldPrincipalLocalization Polynomial.X) := by
+    apply isUnit_of_mul_isUnit_left
+    simpa only [map_mul] using hprodunit
+  have hXoneunit : IsUnit (algebraMap localizationFieldBaseRing
+      localizationFieldPrincipalLocalization
+      (Polynomial.X - Polynomial.C (1 : ℚ))) := by
+    apply isUnit_of_mul_isUnit_right
+    simpa only [map_mul] using hprodunit
+  have hpoly : ∀ p : localizationFieldBaseRing, p = 0 ∨
+      IsUnit (algebraMap localizationFieldBaseRing
+        localizationFieldPrincipalLocalization p) := by
+    intro p
+    refine UniqueFactorizationMonoid.induction_on_prime p ?_ ?_ ?_
+    · exact Or.inl rfl
+    · intro u hu
+      exact Or.inr (hu.map _)
+    · intro a p ha hp hpa
+      rcases hpa with rfl | hpa
+      · exact Or.inl (by simp)
+      · right
+        have hpunit : IsUnit (algebraMap localizationFieldBaseRing
+            localizationFieldPrincipalLocalization p) := by
+          by_cases hp0 : p ∈ localizationFieldOriginIdeal
+          · obtain ⟨q, hq⟩ := Ideal.mem_span_singleton'.mp hp0
+            have hqunit : IsUnit q := by
+              have hfact : Irreducible (q * Polynomial.X) := by
+                rw [hq]
+                exact hp.irreducible
+              rcases of_irreducible_mul hfact with hq' | hx'
+              · exact hq'
+              · exact (Polynomial.not_isUnit_X hx').elim
+            rw [← hq, map_mul]
+            exact (hqunit.map _).mul hXunit
+          · by_cases hp1 : p ∈ localizationFieldOneIdeal
+            · obtain ⟨q, hq⟩ := Ideal.mem_span_singleton'.mp hp1
+              have hqunit : IsUnit q := by
+                have hfact : Irreducible (q * (Polynomial.X - Polynomial.C (1 : ℚ))) := by
+                  rw [hq]
+                  exact hp.irreducible
+                rcases of_irreducible_mul hfact with hq' | hx'
+                · exact hq'
+                · exact ((Polynomial.not_isUnit_X_sub_C (1 : ℚ)) hx').elim
+              rw [← hq, map_mul]
+              exact (hqunit.map _).mul hXoneunit
+            · have hps : p ∈ localizationFieldSubmonoid := ⟨
+                Ideal.mem_primeCompl_iff.mpr hp0, Ideal.mem_primeCompl_iff.mpr hp1⟩
+              exact (IsUnit.map (algebraMap localizationFieldExampleRing
+                localizationFieldPrincipalLocalization)
+                (IsLocalization.map_units localizationFieldExampleRing ⟨p, hps⟩))
+        simpa only [map_mul] using hpunit.mul hpa
+  have hunitzero : ∀ z : localizationFieldPrincipalLocalization, IsUnit z ∨ z = 0 := by
+    intro z
+    obtain ⟨a, s, hs⟩ :=
+      IsLocalization.exists_mk'_eq (Submonoid.powers localizationFieldExampleElement) z
+    obtain ⟨b, t, ht⟩ := IsLocalization.exists_mk'_eq localizationFieldSubmonoid a
+    rcases hpoly b with hb | hb
+    · right
+      rw [← hs, ← ht]
+      simp [hb]
+    · left
+      rw [← hs, ← ht]
+      have hspec := congrArg (algebraMap localizationFieldExampleRing
+        localizationFieldPrincipalLocalization)
+        (IsLocalization.mk'_spec localizationFieldExampleRing b t)
+      have hspec' :
+          algebraMap localizationFieldExampleRing localizationFieldPrincipalLocalization
+              (IsLocalization.mk' localizationFieldExampleRing b t) *
+            algebraMap localizationFieldExampleRing localizationFieldPrincipalLocalization
+              (algebraMap localizationFieldBaseRing localizationFieldExampleRing t) =
+          algebraMap localizationFieldBaseRing localizationFieldPrincipalLocalization b := by
+        simpa only [map_mul,
+          IsScalarTower.algebraMap_apply localizationFieldBaseRing
+            localizationFieldExampleRing localizationFieldPrincipalLocalization] using hspec
+      have hinnerprod : IsUnit (
+          algebraMap localizationFieldExampleRing localizationFieldPrincipalLocalization
+              (IsLocalization.mk' localizationFieldExampleRing b t) *
+            algebraMap localizationFieldExampleRing localizationFieldPrincipalLocalization
+              (algebraMap localizationFieldBaseRing localizationFieldExampleRing t)) := by
+        rw [hspec']
+        exact hb
+      have hinner : IsUnit (algebraMap localizationFieldExampleRing
+          localizationFieldPrincipalLocalization (IsLocalization.mk'
+            localizationFieldExampleRing b t)) :=
+        isUnit_of_mul_isUnit_left hinnerprod
+      have houterprod : IsUnit (
+          IsLocalization.mk' localizationFieldPrincipalLocalization
+              (IsLocalization.mk' localizationFieldExampleRing b t) s *
+            algebraMap localizationFieldExampleRing localizationFieldPrincipalLocalization s) := by
+        rw [IsLocalization.mk'_spec]
+        exact hinner
+      exact isUnit_of_mul_isUnit_left houterprod
+  have _ : IsDomain localizationFieldPrincipalLocalization :=
+    Localization.Away.isDomain hfne
+  let _ : Field localizationFieldPrincipalLocalization :=
+    Field.ofIsUnitOrEqZero hunitzero
+  have hdisj0 : Disjoint (localizationFieldSubmonoid : Set localizationFieldBaseRing)
+      ((↑(⊥ : Ideal localizationFieldBaseRing)) : Set localizationFieldBaseRing) := by
+    rw [Set.disjoint_left]
+    intro x hxS hx0
+    have hx0' : x = 0 := by simpa using hx0
+    apply hS0
+    simpa [hx0'] using hxS
+  have hdisjX : Disjoint (localizationFieldSubmonoid : Set localizationFieldBaseRing)
+      ((↑localizationFieldOriginIdeal) : Set localizationFieldBaseRing) := by
+    rw [Set.disjoint_left]
+    intro x hxS hxX
+    exact (Ideal.mem_primeCompl_iff.mp hxS.1) hxX
+  have hdisjX1 : Disjoint (localizationFieldSubmonoid : Set localizationFieldBaseRing)
+      ((↑localizationFieldOneIdeal) : Set localizationFieldBaseRing) := by
+    rw [Set.disjoint_left]
+    intro x hxS hxX1
+    exact (Ideal.mem_primeCompl_iff.mp hxS.2) hxX1
+  have hp0 : (⊥ : Ideal localizationFieldBaseRing).IsPrime := by infer_instance
+  have hpX : localizationFieldOriginIdeal.IsPrime :=
+    localizationFieldOriginIdeal_isPrime
+  have hpX1 : localizationFieldOneIdeal.IsPrime :=
+    localizationFieldOneIdeal_isPrime
+  let p0 : PrimeSpectrum localizationFieldExampleRing :=
+    ⟨(⊥ : Ideal localizationFieldBaseRing).map
+        (algebraMap localizationFieldBaseRing localizationFieldExampleRing),
+      IsLocalization.isPrime_of_isPrime_disjoint localizationFieldSubmonoid
+        localizationFieldExampleRing _ hp0 hdisj0⟩
+  let pX : PrimeSpectrum localizationFieldExampleRing :=
+    ⟨localizationFieldOriginIdeal.map
+        (algebraMap localizationFieldBaseRing localizationFieldExampleRing),
+      IsLocalization.isPrime_of_isPrime_disjoint localizationFieldSubmonoid
+        localizationFieldExampleRing _ hpX hdisjX⟩
+  let pX1 : PrimeSpectrum localizationFieldExampleRing :=
+    ⟨localizationFieldOneIdeal.map
+        (algebraMap localizationFieldBaseRing localizationFieldExampleRing),
+      IsLocalization.isPrime_of_isPrime_disjoint localizationFieldSubmonoid
+        localizationFieldExampleRing _ hpX1 hdisjX1⟩
+  have hunder0 := IsLocalization.under_map_of_isPrime_disjoint
+    localizationFieldSubmonoid localizationFieldExampleRing hp0 hdisj0
+  have hunderX := IsLocalization.under_map_of_isPrime_disjoint
+    localizationFieldSubmonoid localizationFieldExampleRing hpX hdisjX
+  have hunderX1 := IsLocalization.under_map_of_isPrime_disjoint
+    localizationFieldSubmonoid localizationFieldExampleRing hpX1 hdisjX1
+  have hbotX : (⊥ : Ideal localizationFieldBaseRing) ≠ localizationFieldOriginIdeal := by
+    intro h
+    have hx : (Polynomial.X : localizationFieldBaseRing) ∈ (⊥ : Ideal localizationFieldBaseRing) := by
+      rw [h]
+      exact Ideal.subset_span (Set.mem_singleton _)
+    have hx' : (Polynomial.X : Polynomial ℚ) = 0 := by
+      change (Polynomial.X : Polynomial ℚ) = 0 at hx
+      exact hx
+    exact Polynomial.X_ne_zero hx'
+  have hbotX1 : (⊥ : Ideal localizationFieldBaseRing) ≠ localizationFieldOneIdeal := by
+    intro h
+    have hx : (Polynomial.X - Polynomial.C (1 : ℚ) :
+        localizationFieldBaseRing) ∈ (⊥ : Ideal localizationFieldBaseRing) := by
+      rw [h]
+      exact Ideal.subset_span (Set.mem_singleton _)
+    have hx' : (Polynomial.X - Polynomial.C (1 : ℚ) : Polynomial ℚ) = 0 := by
+      change (Polynomial.X - Polynomial.C (1 : ℚ) : Polynomial ℚ) = 0 at hx
+      exact hx
+    exact Polynomial.X_sub_C_ne_zero (1 : ℚ) hx'
+  have hXX1 : localizationFieldOriginIdeal ≠ localizationFieldOneIdeal := by
+    intro h
+    have hx : (Polynomial.X : localizationFieldBaseRing) ∈ localizationFieldOneIdeal := by
+      rw [← h]
+      exact Ideal.subset_span (Set.mem_singleton _)
+    obtain ⟨q, hq⟩ := Ideal.mem_span_singleton'.mp hx
+    have he := congrArg (fun p : localizationFieldBaseRing => p.eval 1) hq
+    simp at he
+  refine ⟨hdomain, ⟨p0, pX, pX1, ?_, ?_, ?_⟩,
+    Field.toIsField localizationFieldPrincipalLocalization⟩
+  · intro heq
+    have hc := congrArg (fun p : PrimeSpectrum localizationFieldExampleRing =>
+        p.asIdeal.under localizationFieldBaseRing)
+      heq
+    change ((⊥ : Ideal localizationFieldBaseRing).map
+        (algebraMap localizationFieldBaseRing localizationFieldExampleRing)).under
+          localizationFieldBaseRing =
+      (localizationFieldOriginIdeal.map
+        (algebraMap localizationFieldBaseRing localizationFieldExampleRing)).under
+          localizationFieldBaseRing at hc
+    rw [hunder0, hunderX] at hc
+    exact hbotX hc
+  · intro heq
+    have hc := congrArg (fun p : PrimeSpectrum localizationFieldExampleRing =>
+        p.asIdeal.under localizationFieldBaseRing)
+      heq
+    change ((⊥ : Ideal localizationFieldBaseRing).map
+        (algebraMap localizationFieldBaseRing localizationFieldExampleRing)).under
+          localizationFieldBaseRing =
+      (localizationFieldOneIdeal.map
+        (algebraMap localizationFieldBaseRing localizationFieldExampleRing)).under
+          localizationFieldBaseRing at hc
+    rw [hunder0, hunderX1] at hc
+    exact hbotX1 hc
+  · intro heq
+    have hc := congrArg (fun p : PrimeSpectrum localizationFieldExampleRing =>
+        p.asIdeal.under localizationFieldBaseRing)
+      heq
+    change (localizationFieldOriginIdeal.map
+        (algebraMap localizationFieldBaseRing localizationFieldExampleRing)).under
+          localizationFieldBaseRing =
+      (localizationFieldOneIdeal.map
+        (algebraMap localizationFieldBaseRing localizationFieldExampleRing)).under
+          localizationFieldBaseRing at hc
+    rw [hunderX, hunderX1] at hc
+    exact hXX1 hc
 
 end Formalization.Books.Exercises.Unit07

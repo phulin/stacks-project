@@ -36,7 +36,17 @@ theorem localize_at_prime_eq_zero_iff_annihilator_not_le
     (p : PrimeSpectrum A) (m : M) :
     (LocalizedModule.mkLinearMap p.asIdeal.primeCompl M) m = 0 ↔
       ¬ (Submodule.span A ({m} : Set M)).annihilator ≤ p.asIdeal := by
-  sorry
+  rw [← LinearMap.mem_ker]
+  rw [LocalizedModule.mem_ker_mkLinearMap_iff]
+  constructor
+  · rintro ⟨r, hr, hrm⟩ hle
+    exact hr (hle ((annihilator_of_element_mem_iff m r).mpr hrm))
+  · intro h
+    by_contra hzero
+    apply h
+    intro r hr
+    by_contra hrp
+    exact hzero ⟨r, hrp, (annihilator_of_element_mem_iff m r).mp hr⟩
 
 /-- An element is zero exactly when all of its prime-localized images are
 zero. -/

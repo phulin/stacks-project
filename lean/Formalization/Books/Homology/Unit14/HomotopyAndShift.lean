@@ -1147,7 +1147,20 @@ theorem cochainCohomologyShiftIso_natural
             ((CategoryTheory.shiftFunctor (CochainComplex C ℤ) k).map f) i =
       HomologicalComplex.homologyMap f (i + k) ≫
         (cochainCohomologyShiftIso B k i).hom := by
-  sorry
+  let E := (HomologicalComplex.homologyFunctor C (ComplexShape.up ℤ) 0).shiftIso
+    k i (i + k) (by lia)
+  have hE (K : CochainComplex C ℤ) :
+      (cochainCohomologyShiftIso K k i).hom = E.inv.app K := by
+    dsimp [cochainCohomologyShiftIso]
+    change inv (E.hom.app K) = E.inv.app K
+    exact IsIso.inv_eq_of_hom_inv_id (E.hom_inv_id_app K)
+  rw [hE A, hE B]
+  change E.inv.app A ≫
+      ((CategoryTheory.shiftFunctor (HomologicalComplex C (ComplexShape.up ℤ)) k) ⋙
+        HomologicalComplex.homologyFunctor C (ComplexShape.up ℤ) i).map f =
+    (HomologicalComplex.homologyFunctor C (ComplexShape.up ℤ) (i + k)).map f ≫
+      E.inv.app B
+  exact (E.inv.naturality f).symm
 
 /-- The cohomology-shift comparisons are compatible with two successive
 shifts and the canonical addition comparison of shift functors. -/
@@ -1159,7 +1172,14 @@ theorem cochainCohomologyShiftIso_coherent
       (cochainCohomologyShiftIso K (k + l) i).hom ≫
           HomologicalComplex.homologyMap
             ((shift_add (C := C) k l).hom.app K) i = e'.hom := by
-  sorry
+  let e := cochainCohomologyShiftIso K (k + l) i
+  let q := (HomologicalComplex.homologyFunctor C (ComplexShape.up ℤ) i).mapIso
+    ((shift_add (C := C) k l).app K)
+  refine ⟨e ≪≫ q, ?_⟩
+  change e.hom ≫
+      HomologicalComplex.homologyMap ((shift_add (C := C) k l).hom.app K) i =
+    (e ≪≫ q).hom
+  rfl
 
 end CochainComplex
 

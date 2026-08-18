@@ -55,8 +55,6 @@ theorem left_dual_biproduct
     {C : Type u} [Category.{v} C] [AdditiveMonoidalCategory C]
     {X₁ X₂ Y₁ Y₂ : C} [ExactPairing X₁ Y₁] [ExactPairing X₂ Y₂] :
     Nonempty (ExactPairing (X₁ ⊞ X₂) (Y₁ ⊞ Y₂)) := by
-      sorry
-/-
   have htransport {Xi Yi B A : C} [ExactPairing Xi Yi]
       (iX : Xi ⟶ B) (pX : B ⟶ Xi) (iY : Yi ⟶ A) (pY : A ⟶ Yi) :
       A ◁ η_ Xi Yi ≫ A ◁ (iX ⊗ₘ iY) ≫ (α_ A B A).inv ≫
@@ -398,7 +396,13 @@ theorem left_dual_biproduct
             (X₁ ⊞ X₂) ◁ biprod.inr) ≫
               Y₁ ◁ biprod.fst ▷ (Y₁ ⊞ Y₂) = 0 := by
         rw [← MonoidalCategory.whiskerLeft_comp]
-        simp [MonoidalCategory.tensorHom_def, Category.assoc, biprod.inr_fst]
+        rw [Category.assoc]
+        rw [← MonoidalCategory.tensorHom_def' (biprod.fst : X₁ ⊞ X₂ ⟶ X₁)
+          (biprod.inr : Y₂ ⟶ Y₁ ⊞ Y₂)]
+        rw [← MonoidalCategory.tensorHom_id]
+        rw [Category.assoc]
+        rw [MonoidalCategory.tensorHom_comp_tensorHom]
+        simp [biprod.inr_fst]
       have hzero_assoc :
           Y₁ ◁ ((η_ X₂ Y₂ ≫ biprod.inr ▷ Y₂) ≫
             (X₁ ⊞ X₂) ◁ biprod.inr) ≫
@@ -416,7 +420,13 @@ theorem left_dual_biproduct
         rw [← MonoidalCategory.whiskerLeft_comp_assoc]
         rw [← MonoidalCategory.whiskerLeft_comp_assoc]
         rw [← MonoidalCategory.whiskerLeft_comp]
-        simp [MonoidalCategory.tensorHom_def, Category.assoc, biprod.inl_snd]
+        rw [Category.assoc]
+        rw [← MonoidalCategory.tensorHom_def' (biprod.snd : X₁ ⊞ X₂ ⟶ X₂)
+          (biprod.inl : Y₁ ⟶ Y₁ ⊞ Y₂)]
+        rw [← MonoidalCategory.tensorHom_id]
+        rw [Category.assoc]
+        rw [MonoidalCategory.tensorHom_comp_tensorHom]
+        simp [biprod.inl_snd]
       have hzero₂_assoc :
           (Y₁ ⊞ Y₂) ◁ η_ X₁ Y₁ ≫
               (Y₁ ⊞ Y₂) ◁ biprod.inl ▷ Y₁ ≫
@@ -437,6 +447,16 @@ theorem left_dual_biproduct
       simp [MonoidalCategory.tensorHom_def, Category.assoc, biprod.inr_fst,
         MonoidalCategory.rightUnitor_naturality,
         MonoidalCategory.leftUnitor_naturality, houter]
+      have hcross := hleft_zero (iX := (biprod.inr : X₂ ⟶ X₁ ⊞ X₂))
+          (pX := (biprod.snd : X₁ ⊞ X₂ ⟶ X₂))
+          (iY := (biprod.inr : Y₂ ⟶ Y₁ ⊞ Y₂))
+          (pY := (biprod.snd : Y₁ ⊞ Y₂ ⟶ Y₂)) (by simp) (by simp)
+      simp [MonoidalCategory.tensorHom_def, Category.assoc,
+        MonoidalCategory.whiskerLeft_comp, MonoidalCategory.comp_whiskerRight,
+        ← MonoidalCategory.whisker_exchange_assoc] at hcross
+      simp only [← MonoidalCategory.whiskerLeft_comp_assoc] at hcross
+      simpa [MonoidalCategory.tensorHom_def, MonoidalCategory.whiskerLeft_comp,
+        Category.assoc] using congrArg (fun k => k ≫ biprod.fst) hcross
     · have h22 := hleft (iX := (biprod.inr : X₂ ⟶ X₁ ⊞ X₂))
           (pX := (biprod.snd : X₁ ⊞ X₂ ⟶ X₂))
           (iY := (biprod.inr : Y₂ ⟶ Y₁ ⊞ Y₂))
@@ -477,7 +497,6 @@ theorem left_dual_biproduct
         MonoidalCategory.whisker_exchange_assoc, hr22]
       simp only [← MonoidalCategory.whiskerLeft_comp_assoc]
       sorry
--/
 /-- In a Karoubian additive monoidal category, both summands in a biproduct
 decomposition of a left-dualizable object are left-dualizable. -/
 theorem left_dual_of_biproduct_summand

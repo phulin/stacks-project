@@ -1005,8 +1005,55 @@ theorem isFibredEquivalenceOver_trans
     refine ⟨eA, overA, ?_⟩
     intro x
     dsimp [eA]
-    sorry
-  · sorry
+    simp only [Functor.map_comp]
+    have hid1 := p.map_id (G.obj (K.obj (H.obj (F.obj x))))
+    have hid2 := p.map_id (G.obj (F.obj x))
+    have hGid1 := G.map_id (K.obj (H.obj (F.obj x)))
+    have hGid2 := G.map_id (F.obj x)
+    rw [hid1, hGid1, hid1, hGid2, hid2]
+    rw [Category.id_comp]
+    have hGmap :
+        p.map (G.map (eHK.hom.app (F.obj x))) =
+          eqToHom (Functor.congr_obj hG (K.obj (H.obj (F.obj x)))) ≫
+            q.map (eHK.hom.app (F.obj x)) ≫
+              eqToHom (Functor.congr_obj hG ((𝟭 T).obj (F.obj x))).symm := by
+      simpa only [Functor.comp_map] using
+        (Functor.congr_hom hG (eHK.hom.app (F.obj x)))
+    rw [hGmap]
+    change 𝟙 ((G ⋙ p).obj (K.obj (H.obj (F.obj x)))) ≫ _ = _
+    simp only [Category.id_comp]
+    simp only [Category.comp_id, Category.assoc]
+    rw [overHKv, overFGv]
+    simp only [Category.id_comp, Category.comp_id, Category.assoc, eqToHom_trans]
+  · have overB : (B ⋙ A) ⋙ r = (𝟭 U) ⋙ r := by
+      calc
+        (B ⋙ A) ⋙ r = B ⋙ (A ⋙ r) := Functor.assoc B A r
+        _ = B ⋙ p := congrArg (fun X : S ⥤ C => B ⋙ X) hA
+        _ = r := hB
+        _ = (𝟭 U) ⋙ r := (Functor.id_comp r).symm
+    refine ⟨eB, overB, ?_⟩
+    intro x
+    dsimp [eB]
+    simp only [Functor.map_comp]
+    have hid1 := r.map_id (H.obj (F.obj (G.obj (K.obj x))))
+    have hid2 := r.map_id (H.obj (K.obj x))
+    have hHid1 := H.map_id (F.obj (G.obj (K.obj x)))
+    have hHid2 := H.map_id (K.obj x)
+    rw [hid1, hHid1, hid1, hHid2, hid2]
+    rw [Category.id_comp]
+    have hHmap :
+        r.map (H.map (eGF.hom.app (K.obj x))) =
+          eqToHom (Functor.congr_obj hH (F.obj (G.obj (K.obj x)))) ≫
+            q.map (eGF.hom.app (K.obj x)) ≫
+              eqToHom (Functor.congr_obj hH ((𝟭 T).obj (K.obj x))).symm := by
+      simpa only [Functor.comp_map] using
+        (Functor.congr_hom hH (eGF.hom.app (K.obj x)))
+    rw [hHmap]
+    change 𝟙 ((H ⋙ r).obj (F.obj (G.obj (K.obj x)))) ≫ _ = _
+    simp only [Category.id_comp]
+    simp only [Category.comp_id, Category.assoc]
+    rw [overGFv, overKHv]
+    simp only [Category.id_comp, Category.comp_id, Category.assoc, eqToHom_trans]
 
 /-- The source's comparison data for the strictification construction.  The
 first fields are the natural functor `\mathcal S \to \mathcal S'`, its

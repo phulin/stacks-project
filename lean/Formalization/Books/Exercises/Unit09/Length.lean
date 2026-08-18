@@ -232,10 +232,24 @@ def planeEquationIdeal (k : Type u) [Field k] : Ideal (planeLocalRing k) :=
 abbrev planeEquationQuotient (k : Type u) [Field k] : Type u :=
   planeLocalRing k ⧸ planeEquationIdeal k
 
+/-- The finite normal-form calculation for the local-plane quotient.  The
+source computation gives nine successive simple factors; recording it as a
+composition series keeps the localization visible in the module being
+filtered and gives the proving stage a checked interface for the missing
+normal-form calculation.
+-/
+theorem planeEquationQuotient_composition_series (k : Type u) [Field k] :
+    ∃ s : CompositionSeries (Submodule (planeLocalRing k) (planeEquationQuotient k)),
+      s.head = ⊥ ∧ s.last = ⊤ ∧ s.length = 9 := by
+  sorry
+
 /-- The local intersection quotient has length nine. -/
 theorem local_plane_equation_quotient_length (k : Type u) [Field k] :
     Module.length (planeLocalRing k) (planeEquationQuotient k) = 9 := by
-  sorry
+  obtain ⟨s, hs_head, hs_last, hs_length⟩ :=
+    planeEquationQuotient_composition_series k
+  rw [← Module.length_compositionSeries s hs_head hs_last, hs_length]
+  norm_num
 
 end
 

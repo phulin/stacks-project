@@ -228,7 +228,7 @@ theorem epimorphism_iff_localization_at_prime
           (Algebra.TensorProduct.includeLeftRingHom :
             Localization.AtPrime p.asIdeal →+*
               Localization.AtPrime p.asIdeal ⊗[R] S)) := by
-  letI : Algebra R S := f.toAlgebra
+  let : Algebra R S := f.toAlgebra
   constructor
   · intro hf p
     let A := Localization.AtPrime p.asIdeal
@@ -334,7 +334,7 @@ theorem epimorphism_comap_injective_residueField_bijective
       ∀ q : PrimeSpectrum S,
         Function.Bijective
           (Ideal.ResidueField.map (PrimeSpectrum.comap f q).asIdeal q.asIdeal f rfl) := by
-  letI : Algebra R S := f.toAlgebra
+  let : Algebra R S := f.toAlgebra
   have hfiber : ∀ p : PrimeSpectrum R,
       Subsingleton (PrimeSpectrum (p.asIdeal.Fiber S)) := by
     intro p
@@ -357,7 +357,7 @@ theorem epimorphism_comap_injective_residueField_bijective
       have h₂ : (PrimeSpectrum.comap e q₂).asIdeal = (⊥ : Ideal A) :=
         Ideal.eq_bot_of_prime (I := (PrimeSpectrum.comap e q₂).asIdeal)
       exact h₁.trans h₂.symm
-    · letI : Subsingleton B := hsub
+    · let : Subsingleton B := hsub
       exact ⟨fun _ _ => Subsingleton.elim _ _⟩
   refine ⟨?_, ?_⟩
   · intro q₁ q₂ hq
@@ -369,7 +369,7 @@ theorem epimorphism_comap_injective_residueField_bijective
       change PrimeSpectrum.comap f q₂ = p
       rw [← hq]
     let e := PrimeSpectrum.preimageEquivFiber R S p
-    letI : Subsingleton (PrimeSpectrum (p.asIdeal.Fiber S)) := hfiber p
+    let : Subsingleton (PrimeSpectrum (p.asIdeal.Fiber S)) := hfiber p
     have heq : e ⟨q₁, hq₁⟩ = e ⟨q₂, hq₂⟩ :=
       Subsingleton.elim _ _
     simpa using congrArg e.symm heq
@@ -504,7 +504,7 @@ theorem tensor_sum_eq_zero_iff_relations
       simp only [map_sum, TensorProduct.finsuppScalarLeft_apply_tmul, zero_smul,
         Finsupp.single_zero, Finsupp.sum_single_index, one_smul,
         Finsupp.finsetSum_apply, Finsupp.single_apply, Finset.sum_ite_eq',
-        Finset.mem_coe, ↓reduceIte, LinearMap.rTensor_tmul,
+        LinearMap.rTensor_tmul,
         Finsupp.sum_apply, Finsupp.mem_support_iff, ne_eq, ite_not, en] at hknj
       have hright :
           (∑ kj ∈ ma,
@@ -572,8 +572,7 @@ theorem tensor_sum_eq_zero_iff_relations
         apply Finset.sum_congr rfl
         intro i hi
         simp [B, Finsupp.mapRange.linearMap_apply,
-          Finsupp.linearCombination_apply, Finsupp.sum_mapRange_index,
-          smul_smul, mul_comm, mul_left_comm, mul_assoc]
+          Finsupp.linearCombination_apply, smul_smul, mul_comm]
       exact hq.symm.trans (hB _).symm
     · intro i
       change 0 = b.uncurry.sum (fun ij c => if ij.1 = i then c • y ij.2 else 0)
@@ -596,8 +595,7 @@ theorem tensor_sum_eq_zero_iff_relations
                 simp [hai])
               (fun hnot => (hnot hi).elim)
           rw [hout]
-          simp only [if_pos rfl]
-          rfl
+          simp [Finsupp.sum]
         rw [hsum]
         rw [show b = ∑ kj ∈ ma,
           (c kj).sum
@@ -623,7 +621,7 @@ theorem tensor_sum_eq_zero_iff_relations
             rw [Finset.sum_ite_eq' (c kj).support i]
             simp [hi']
           rw [hci]
-          simp [G, Finsupp.linearCombination_apply, kj.1.2]
+          simp [G]
         · have hci :
               (c kj).sum
                 (fun i' r => Finsupp.single i' (r • (kj.1 : J →₀ R))) i = 0 := by
@@ -686,7 +684,7 @@ theorem tensor_sum_eq_zero_iff_relations
         rw [TensorProduct.tmul_sum]
         apply Finset.sum_congr rfl
         intro j hj
-        simp [TensorProduct.smul_tmul, TensorProduct.tmul_smul]
+        simp [TensorProduct.tmul_smul]
       _ = 0 := by
         simp only [Finsupp.sum]
         apply Finset.sum_eq_zero
@@ -705,7 +703,7 @@ theorem tensor_sum_eq_zero_iff_relations
               · exact hb₁.trans hb₂.symm
             · simp [h₂] at hb₂
             · simp [h₁] at hb₁
-            · simp [h₁, h₂] at hb₁
+            · simp [h₁] at hb₁
           calc
             ∑ j ∈ (a.curry i).support, (a.curry i) j • y j =
                 ∑ ij ∈ a.support.filter (fun ij => ij.1 = i), a ij • y ij.2 := by
@@ -759,7 +757,7 @@ theorem tensor_equalizer_iff_matrix_factorization
             ∑ i : Fin n, f (x i j) * y i = f r) ∧
           (∀ i : Fin n, ∃ r : R,
             ∑ j : Fin n, f (x i j) * z j = f r) := by
-  letI : Algebra R S := f.toAlgebra
+  let : Algebra R S := f.toAlgebra
   constructor
   · intro h
     classical
@@ -777,7 +775,7 @@ theorem tensor_equalizer_iff_matrix_factorization
       change (Finsupp.single none g - Finsupp.single (some g) 1).sum
         (fun j c => c ⊗ₜ[R] w j) = 0
       rw [Finsupp.sum_sub_index]
-      simp [Finsupp.sum_single_index, w, sub_eq_add_neg, h]
+      simp [Finsupp.sum_single_index, w, h]
       intro a b₁ b₂
       simp [TensorProduct.sub_tmul]
     obtain ⟨a, hm, ha⟩ :=
@@ -839,7 +837,7 @@ theorem tensor_equalizer_iff_matrix_factorization
           rcases Finset.mem_image.mp hbq with ⟨ij, hij, heq⟩
           have hbne : b.1 ≠ none := by
             simpa [heq] using (Finset.mem_filter.mp hij).2.2
-          simp [heq, hbne]
+          simp [hbne]
       · intro b hb hbn
         by_cases hb0 : b.1 = none
         · simp [hb0]
@@ -898,7 +896,7 @@ theorem tensor_equalizer_iff_matrix_factorization
           rcases Finset.mem_image.mp hbq with ⟨ij, hij, heq⟩
           have hbne : b.1 ≠ none := by
             simpa [heq] using (Finset.mem_filter.mp hij).2.2
-          simp [heq, hbne]
+          simp [hbne]
       · intro b hb hbn
         by_cases hb0 : b.1 = none
         · simp [hb0]
@@ -965,7 +963,7 @@ theorem tensor_equalizer_iff_matrix_factorization
           (a.support.filter (fun ij => ij.1 ≠ none)).filter (fun ij => ij.2 = v) =
             a.support.filter (fun ij => ij.2 = v ∧ ij.1 ≠ none) := by
         ext ij
-        simp [and_assoc, and_left_comm, and_comm]
+        simp [and_assoc, and_comm]
       rw [hfin]
     have hsplit_row (u : Option S) :
         (∑ ij ∈ a.support, if ij.1 = u then f (a ij) * ev ij.2 else 0) =
@@ -1020,7 +1018,7 @@ theorem tensor_equalizer_iff_matrix_factorization
           (a.support.filter (fun ij => ij.2 ≠ none)).filter (fun ij => ij.1 = u) =
             a.support.filter (fun ij => ij.1 = u ∧ ij.2 ≠ none) := by
         ext ij
-        simp [and_assoc, and_left_comm, and_comm]
+        simp [and_assoc, and_comm]
       rw [hfin]
     have hmall (v : Option S) :
         (∑ ij ∈ a.support, if ij.2 = v then f (a ij) * ev ij.1 else 0) = m v := by
@@ -1141,13 +1139,13 @@ theorem tensor_equalizer_iff_matrix_factorization
       intro i hi
       by_cases hi0 : i = none
       · simp [hi0]
-      · simp only [hi0, true_and, ↓reduceIte]
+      · simp only [hi0, ↓reduceIte]
         rw [Finset.mul_sum]
         apply Finset.sum_congr rfl
         intro j hj
         by_cases hj0 : j = none
         · simp [hi0, hj0]
-        · simp [hi0, hj0, mul_assoc, mul_left_comm, mul_comm]
+        · simp [hi0, hj0, mul_left_comm, mul_comm]
     have hcur (u : Option S) :
         (a.curry u).sum (fun j r => if j = none then 0 else f r * ev j) =
           ∑ ij ∈ a.support,
@@ -1168,7 +1166,7 @@ theorem tensor_equalizer_iff_matrix_factorization
           · exact hb₁.trans hb₂.symm
         · simp [h₂] at hb₂
         · simp [h₁] at hb₁
-        · simp [h₁, h₂] at hb₁
+        · simp [h₁] at hb₁
       apply Finset.sum_bij (fun j _ => (u, j))
       · intro j hj
         have hj' : j ∈ a.support.filterMap
@@ -1225,7 +1223,7 @@ theorem tensor_equalizer_iff_matrix_factorization
           · exact hb₁.trans hb₂.symm
         · simp [h₂] at hb₂
         · simp [h₁] at hb₁
-        · simp [h₁, h₂] at hb₁
+        · simp [h₁] at hb₁
       apply Finset.sum_bij (fun j _ => (u, j))
       · intro j hj
         have hj' : j ∈ a.support.filterMap
@@ -1321,7 +1319,7 @@ theorem tensor_equalizer_iff_matrix_factorization
         rw [Finset.mul_sum]
         apply Finset.sum_congr rfl
         intro j hj
-        simp [hi0, mul_assoc, mul_left_comm, mul_comm]
+        simp [hi0, mul_left_comm, mul_comm]
     have hweighted :
         (∑ ij ∈ a.support,
           if ij.1 ≠ none then f (a ij) * ev ij.1 * ev ij.2 else 0) = 0 := by
@@ -1386,7 +1384,7 @@ theorem tensor_equalizer_iff_matrix_factorization
         apply Finset.sum_congr rfl
         intro ij hij
         by_cases h2 : ij.2 = none
-        · by_cases h1 : ij.1 = none <;> simp [h1, h2, ev]
+        · by_cases h1 : ij.1 = none <;> simp [h1, h2]
         · simp [h2]
     have hT :
         (∑ ij ∈ a.support,
@@ -1522,7 +1520,7 @@ theorem tensor_equalizer_iff_matrix_factorization
               apply hne
               apply Subtype.ext
               exact hj0
-            simp [i₀, j₀, pK, yK, zK, ev, hj0]
+            simp [i₀, pK, yK, zK, ev, hj0]
           · simp [j₀, K, q]
         · intro i hi hne
           have hi0 : i.1 ≠ none := by
@@ -1546,7 +1544,7 @@ theorem tensor_equalizer_iff_matrix_factorization
             (∑ j : K with j.1 = none,
               f (pK i j) * yK i * zK j) = 0 := by
           rw [Finset.sum_eq_single j₀]
-          · simp [i₀, j₀, pK, yK, zK, ev, hi0]
+          · simp [j₀, pK, yK, zK, ev, hi0]
           · intro j hj hne
             have hj0 : j.1 ≠ none := by
               intro hj0
@@ -1782,7 +1780,7 @@ theorem exists_matrixTriple_associated_of_mem_epicenter
     {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S) {g : S}
     (hg : g ∈ epicenter f) :
     ∃ n : ℕ, ∃ t : MatrixTriple f n, matrixTripleAssociated f g t := by
-  letI : Algebra R S := f.toAlgebra
+  let : Algebra R S := f.toAlgebra
   have htensor :
       g ⊗ₜ[R] (1 : S) = (1 : S) ⊗ₜ[R] g :=
     (mem_epicenter f g).mp hg

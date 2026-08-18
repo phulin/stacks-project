@@ -63,7 +63,12 @@ instance sheafModuleStalkFunctor_preservesZeroMorphisms {X : TopCat.{v}}
     (O : RingSheaf.{v, v} X) (x : X) :
     (sheafModuleStalkFunctor O x).PreservesZeroMorphisms where
   map_zero F G := by
-    sorry
+    ext z
+    change (TopCat.Presheaf.stalkFunctor (AddCommGrpCat.{v}) x).map
+      ((PresheafOfModules.toPresheaf O.obj).map (0 : F.val ⟶ G.val)) z = 0
+    simp only [Functor.map_zero]
+    change 0 = 0
+    rfl
 
 /-- Mathlib's canonical preadditive structure is the sectionwise addition in
 the source. -/

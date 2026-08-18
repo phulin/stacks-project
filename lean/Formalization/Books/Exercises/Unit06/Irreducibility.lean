@@ -107,6 +107,46 @@ point in the subspace. -/
 theorem integer_closed_points_irreducible_no_generic :
     IsIrreducible integerClosedPoints ∧
       ¬ ∃ x, IsGenericPoint x integerClosedPoints := by
-  sorry
+  have hInf : integerClosedPoints.Infinite := by
+    let f : Nat.Primes → PrimeSpectrum ℤ := fun q =>
+      ⟨Ideal.span {(q.1 : ℤ)},
+        (Ideal.isPrime_int_iff.mpr (Or.inr ⟨q.1, q.2, rfl⟩))⟩
+    apply Set.infinite_of_injective_forall_mem (f := f)
+    · intro p q hpq
+      apply Subtype.ext
+      have hIdeal : Ideal.span {(p.1 : ℤ)} = Ideal.span {(q.1 : ℤ)} :=
+        congrArg PrimeSpectrum.asIdeal hpq
+      have hAssoc : Associated (p.1 : ℤ) (q.1 : ℤ) :=
+        Ideal.span_singleton_eq_span_singleton.mp hIdeal
+      have hNat : (p.1 : ℤ).natAbs = (q.1 : ℤ).natAbs :=
+        Int.associated_iff_natAbs.mp hAssoc
+      simpa using hNat
+    · intro q
+      change (f q).asIdeal ≠ (⊥ : Ideal ℤ)
+      intro hq
+      have hmem : (q.1 : ℤ) ∈ (f q).asIdeal := by
+        change (q.1 : ℤ) ∈ Ideal.span {(q.1 : ℤ)}
+        exact Ideal.subset_span (by simp)
+      rw [hq] at hmem
+      exact (Int.ofNat_ne_zero.mpr q.2.ne_zero) hmem
+  have hcl : closure integerClosedPoints = (Set.univ : Set (PrimeSpectrum ℤ)) := by
+    by_contra h
+    rcases (integer_spectrum_closed_sets (closure integerClosedPoints)).mp isClosed_closure with hU | ⟨hfin, _⟩
+    · exact h hU
+    · exact hInf (hfin.subset subset_closure)
+  constructor
+  · apply (irreducible_iff_closure_irreducible integerClosedPoints).mpr
+    rw [hcl]
+    exact IrreducibleSpace.isIrreducible_univ _
+  · rintro ⟨x, hx⟩
+    have hclosed : IsClosed integerClosedPoints := by
+      rw [← hx.def]
+      exact isClosed_closure
+    rcases (integer_spectrum_closed_sets integerClosedPoints).mp hclosed with hU | ⟨hfin, _⟩
+    · exact (by
+        have hg : integerGenericPoint ∉ integerClosedPoints := by
+          simp [integerClosedPoints, integerGenericPoint]
+        exact hg (hU ▸ mem_univ integerGenericPoint))
+    · exact hInf hfin
 
 end Formalization.Books.Exercises.Unit06

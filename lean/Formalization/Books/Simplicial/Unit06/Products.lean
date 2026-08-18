@@ -132,7 +132,7 @@ theorem simplicialProduct_face_fst
         (simplicialProductFst U V h).app (op (SimplexCategory.mk n)) =
       (simplicialProductFst U V h).app
           (op (SimplexCategory.mk (n + 1))) ≫ U.δ i := by
-  sorry
+  exact SimplicialObject.δ_naturality (simplicialProductFst U V h) i
 
 theorem simplicialProduct_face_snd
     {C : Type u} [Category.{v} C]
@@ -142,7 +142,7 @@ theorem simplicialProduct_face_snd
         (simplicialProductSnd U V h).app (op (SimplexCategory.mk n)) =
       (simplicialProductSnd U V h).app
           (op (SimplexCategory.mk (n + 1))) ≫ V.δ i := by
-  sorry
+  exact SimplicialObject.δ_naturality (simplicialProductSnd U V h) i
 
 theorem simplicialProduct_degeneracy_fst
     {C : Type u} [Category.{v} C]
@@ -153,7 +153,7 @@ theorem simplicialProduct_degeneracy_fst
           (op (SimplexCategory.mk (n + 1))) =
       (simplicialProductFst U V h).app
           (op (SimplexCategory.mk n)) ≫ U.σ i := by
-  sorry
+  exact SimplicialObject.σ_naturality (simplicialProductFst U V h) i
 
 theorem simplicialProduct_degeneracy_snd
     {C : Type u} [Category.{v} C]
@@ -164,7 +164,7 @@ theorem simplicialProduct_degeneracy_snd
           (op (SimplexCategory.mk (n + 1))) =
       (simplicialProductSnd U V h).app
           (op (SimplexCategory.mk n)) ≫ V.σ i := by
-  sorry
+  exact SimplicialObject.σ_naturality (simplicialProductSnd U V h) i
 
 /-! ## The presheaf-product universal property -/
 

@@ -1,6 +1,6 @@
-import Formalization.Books.Sheaves.Unit22.RingedSpaces
 import Formalization.Books.Sheaves.Unit15.AlgebraicStructures
 import Formalization.Books.Sheaves.Unit16.ExactnessAndPoints
+import Formalization.Books.Sheaves.Unit22.RingedSpaces
 import Mathlib.Algebra.Category.ModuleCat.Stalk
 import Mathlib.CategoryTheory.Monoidal.Ring
 import Mathlib.CategoryTheory.Monoidal.Cartesian.Mod
@@ -139,8 +139,9 @@ noncomputable def sheafHomBilinearRule {X : TopCat.{v}}
     S ⟶ moduleSetSheaf H :=
   sheafHomProduct S a b ≫ f
 
-/-! A pointwise Hom-set formulation of bilinearity.  The bracketed
-structures are the pointwise ring and module structures on the Hom sets. -/
+/-! A Hom-set formulation of bilinearity.  The bracketed structures are the
+algebraic structures on the Hom sets; `IsHomCharacterization` records the
+pointwise compatibility needed for this interface. -/
 def IsHomRuleBilinear {X : TopCat.{v}}
     {O : RingSheaf.{v, v} X} {F G H : Mod O}
     (f : ModuleSetMap F G H) (S : TopCat.Sheaf (Type v) X)
@@ -158,8 +159,49 @@ def IsHomRuleBilinear {X : TopCat.{v}}
       (S ⟶ moduleSetSheaf H),
     ∀ a b, g a b = sheafHomBilinearRule f S a b
 
+/-! The additive and scalar operations used by the Hom-set formulation are
+pointwise when evaluated on sections.  We record these compatibility
+conditions explicitly because the algebraic structures on Hom types are
+otherwise arbitrary Lean instances. -/
+def IsPointwiseAddModuleHom {X : TopCat.{v}}
+    {O : RingSheaf.{v, v} X} (F : Mod O)
+    (S : TopCat.Sheaf (Type v) X)
+    [Add (S ⟶ moduleSetSheaf F)] : Prop :=
+  ∀ (a b : S ⟶ moduleSetSheaf F) (U : Opens X)
+    (s : S.presheaf.obj (op U)),
+    (a + b).hom.app (op U) s =
+      (show (F.val.obj (op U) : Type v) from a.hom.app (op U) s) +
+        (show (F.val.obj (op U) : Type v) from b.hom.app (op U) s)
+
+def IsPointwiseSmulHom {X : TopCat.{v}}
+    {O : RingSheaf.{v, v} X} {F : Mod O}
+    (S : TopCat.Sheaf (Type v) X)
+    [SMul (S ⟶ ringSetSheaf O) (S ⟶ moduleSetSheaf F)] : Prop :=
+  ∀ (r : S ⟶ ringSetSheaf O) (a : S ⟶ moduleSetSheaf F)
+    (U : Opens X) (s : S.presheaf.obj (op U)),
+    (r • a).hom.app (op U) s =
+      (show (O.obj.obj (op U) : Type v) from r.hom.app (op U) s) •
+        (show (F.val.obj (op U) : Type v) from a.hom.app (op U) s)
+
+def IsPointwiseBilinearOperations {X : TopCat.{v}}
+    {O : RingSheaf.{v, v} X} {F G H : Mod O}
+    (S : TopCat.Sheaf (Type v) X)
+    [Add (S ⟶ moduleSetSheaf F)]
+    [Add (S ⟶ moduleSetSheaf G)]
+    [Add (S ⟶ moduleSetSheaf H)]
+    [SMul (S ⟶ ringSetSheaf O) (S ⟶ moduleSetSheaf F)]
+    [SMul (S ⟶ ringSetSheaf O) (S ⟶ moduleSetSheaf G)]
+    [SMul (S ⟶ ringSetSheaf O) (S ⟶ moduleSetSheaf H)] : Prop :=
+  IsPointwiseAddModuleHom F S ∧
+    IsPointwiseAddModuleHom G S ∧
+    IsPointwiseAddModuleHom H S ∧
+    IsPointwiseSmulHom (O := O) S (F := F) ∧
+    IsPointwiseSmulHom (O := O) S (F := G) ∧
+    IsPointwiseSmulHom (O := O) S (F := H)
+
 /-! The source's Hom-set characterization, quantified over all sheaves of
-sets and all explicit pointwise ring/module structures on the Hom types. -/
+sets and all Hom-set algebraic structures whose additive and scalar
+operations are identified with the pointwise section operations. -/
 def IsHomCharacterization {X : TopCat.{v}}
     {O : RingSheaf.{v, v} X} {F G H : Mod O}
     (f : ModuleSetMap F G H) : Prop :=
@@ -171,6 +213,7 @@ def IsHomCharacterization {X : TopCat.{v}}
       [Module (S ⟶ ringSetSheaf O) (S ⟶ moduleSetSheaf F)]
       [Module (S ⟶ ringSetSheaf O) (S ⟶ moduleSetSheaf G)]
       [Module (S ⟶ ringSetSheaf O) (S ⟶ moduleSetSheaf H)],
+      IsPointwiseBilinearOperations (O := O) (F := F) (G := G) (H := H) S →
       IsHomRuleBilinear f S
 
 /-! The map on sections induced by a map of sheaves of sets. -/

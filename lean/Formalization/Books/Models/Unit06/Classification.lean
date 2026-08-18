@@ -637,7 +637,35 @@ theorem genus_one_normal_form_is_minimal_and_genus_one (T : NumericalType)
       hasTypePattern (k := 1) T
           (constantVector 1) (fun _ _ => 0)
           (constantVector 1) (constantVector 1) →
-        IsMinimal T ∧ genus T = 1 := by sorry
+        IsMinimal T ∧ genus T = 1 := by
+    intro h
+    rcases h with ⟨h, _m, _w, _hm, _hw, _hmdata, ha, _hweight, hgenus⟩
+    have hA : ∀ i, T.a i i = 0 := by
+      intro i
+      have hi := congrFun (congrFun ha i) i
+      simpa [ambientDataAt, ambientData, scalarMatrix] using hi
+    have hG : ∀ i, T.g i = 1 := by
+      intro i
+      have hi := congrFun hgenus i
+      simpa [ambientGenusAt, constantVector] using hi
+    have hminimal : IsMinimal T := by
+      rintro ⟨i, hi⟩
+      rcases hi with ⟨hi_g, _⟩
+      have hgi := hG i
+      omega
+    have hsum :
+        (∑ i : Fin T.n, (T.m i : ℚ) *
+          ((T.w i : ℚ) * ((T.g i : ℚ) - 1) - (T.a i i : ℚ) / 2)) = 0 := by
+      apply Finset.sum_eq_zero
+      intro i hi
+      rw [hG i, hA i]
+      norm_num
+    have hq : (genus T : ℚ) = 1 := by
+      rw [genus_formula]
+      unfold genusExpression
+      rw [hsum]
+      norm_num
+    exact ⟨hminimal, by exact_mod_cast hq⟩
   have realize_zero :
       ∀ {k : ℕ} (mBase : Fin k → ℤ)
         (aBase : Matrix (Fin k) (Fin k) ℤ)

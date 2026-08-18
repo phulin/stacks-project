@@ -407,7 +407,64 @@ theorem disjoint_implies_product {R : Type u} [CommRing R]
       Nonempty ((V : Type u) ≃ₜ PrimeSpectrum (Localization.Away (1 - e))) ∧
       Nonempty (Localization.Away e ≃+* R ⧸ Ideal.span ({1 - e} : Set R)) ∧
       Nonempty (Localization.Away (1 - e) ≃+* R ⧸ Ideal.span ({e} : Set R)) := by
-  sorry
+  have hUcompl : Uᶜ = V := by
+    apply Set.Subset.antisymm
+    · intro p hp
+      have hp' : p ∈ U ∪ V := by
+        rw [hcover]
+        trivial
+      exact hp'.resolve_left hp
+    · intro p hp hpU
+      exact (Set.disjoint_left.1 hdisj) hpU hp
+  have hVcompl : Vᶜ = U := by
+    simpa only [compl_compl] using congrArg (fun s : Set (PrimeSpectrum R) => sᶜ)
+      hUcompl.symm
+  have hUclopen : IsClopen U :=
+    ⟨by rw [← hVcompl]; exact hV.isClosed_compl, hU⟩
+  obtain ⟨e, ⟨he, hUe⟩, -⟩ :=
+    Formalization.Books.Algebra.Unit21.existsUnique_idempotent_basicOpen_eq_of_isClopen
+      hUclopen
+  have hpartition := Formalization.Books.Algebra.Unit21.idempotent_spec_partition e he
+  have hbasic_compl :
+      (PrimeSpectrum.basicOpen e : Set (PrimeSpectrum R))ᶜ =
+        (PrimeSpectrum.basicOpen (1 - e) : Set (PrimeSpectrum R)) := by
+    apply Set.Subset.antisymm
+    · intro p hp
+      have hp' : p ∈
+          (PrimeSpectrum.basicOpen e : Set (PrimeSpectrum R)) ∪
+            (PrimeSpectrum.basicOpen (1 - e) : Set (PrimeSpectrum R)) := by
+        rw [hpartition.2]
+        trivial
+      exact hp'.resolve_left hp
+    · intro p hp hp0
+      exact (Set.disjoint_left.1 hpartition.1) hp0 hp
+  have hVe : V = (PrimeSpectrum.basicOpen (1 - e) : Set (PrimeSpectrum R)) := by
+    calc
+      V = Uᶜ := hUcompl.symm
+      _ = (PrimeSpectrum.basicOpen e : Set (PrimeSpectrum R))ᶜ := by rw [hUe]
+      _ = (PrimeSpectrum.basicOpen (1 - e) : Set (PrimeSpectrum R)) := hbasic_compl
+  letI : IsLocalization.Away e (R ⧸ Ideal.span ({1 - e} : Set R)) :=
+    IsLocalization.Away.quotient_of_isIdempotentElem he
+  letI : IsLocalization.Away (1 - e) (R ⧸ Ideal.span ({e} : Set R)) := by
+    have h := IsLocalization.Away.quotient_of_isIdempotentElem he.one_sub
+    rw [sub_sub_cancel] at h
+    exact h
+  let awayE : Localization.Away e ≃+* R ⧸ Ideal.span ({1 - e} : Set R) :=
+    (IsLocalization.algEquiv (Submonoid.powers e) (Localization.Away e)
+      (R ⧸ Ideal.span ({1 - e} : Set R))).toRingEquiv
+  let awayOneSub : Localization.Away (1 - e) ≃+* R ⧸ Ideal.span ({e} : Set R) :=
+    (IsLocalization.algEquiv (Submonoid.powers (1 - e))
+      (Localization.Away (1 - e)) (R ⧸ Ideal.span ({e} : Set R))).toRingEquiv
+  refine ⟨e, he, hUe, hVe, ?_, ?_, ?_, ⟨awayE⟩, ⟨awayOneSub⟩⟩
+  · let qprod : R ≃+* (R ⧸ Ideal.span ({1 - e} : Set R)) ×
+        (R ⧸ Ideal.span ({e} : Set R)) :=
+      (AlgEquiv.prodQuotientOfIsIdempotentElem R he.one_sub he
+        (by ring) (by simpa using he.one_sub_mul_self)).toRingEquiv
+    exact ⟨qprod.trans (RingEquiv.prodCongr awayE.symm awayOneSub.symm)⟩
+  · exact ⟨(Homeomorph.setCongr hUe).trans
+      (Formalization.Books.Algebra.Unit17.standardOpenSpectrumHomeomorph e).symm⟩
+  · exact ⟨(Homeomorph.setCongr hVe).trans
+      (Formalization.Books.Algebra.Unit17.standardOpenSpectrumHomeomorph (1 - e)).symm⟩
 
 /-! ## Injectivity on a standard-open cover -/
 
@@ -669,7 +726,74 @@ theorem glue_modules {R : Type u} [CommRing R] {n : ℕ}
               (F.carrier j) (gluedModuleProjection F D j m)) =
           LocalizedModule.mkLinearMap (standardCoverJointSubmonoid f i j)
             (F.carrier i) (gluedModuleProjection F D i m)) := by
-  sorry
+  constructor
+  · intro i
+    let g := gluedModuleProjection F D i
+    have hg : IsLocalizedModule (Submonoid.powers (f i)) g := by
+      constructor
+      · intro s
+        rw [← (Algebra.lsmul R (A := Localization.Away (f i)) R (F.carrier i)).commutes]
+        exact (IsLocalization.map_units (Localization.Away (f i)) s).map _
+      · sorry
+      · intro x y hxy
+        let z : gluedModule F D := x - y
+        have hz_i : gluedModuleProjection F D i z = 0 := by
+          change x.1 i - y.1 i = 0
+          exact sub_eq_zero.mpr hxy
+        have hkill : ∀ j : Fin n, ∃ b : ℕ,
+            (f i) ^ b • gluedModuleProjection F D j z = 0 := by
+          intro j
+          have hp := congrFun (LinearMap.mem_ker.mp z.property) (j, i)
+          rw [gluedModuleComparisonMap_apply] at hp
+          change LocalizedModule.mkLinearMap (standardCoverJointSubmonoid f j i)
+              (F.carrier j) (gluedModuleProjection F D j z) -
+            (D.ψ j i).toLinearMap.restrictScalars R
+              (LocalizedModule.mkLinearMap (standardCoverJointSubmonoid f j i)
+                (F.carrier i) (gluedModuleProjection F D i z)) = 0 at hp
+          have hzi' : LocalizedModule.mkLinearMap (standardCoverJointSubmonoid f j i)
+              (F.carrier i) (gluedModuleProjection F D i z) = 0 := by
+            rw [hz_i, map_zero]
+          rw [hzi'] at hp
+          simp only [map_zero, sub_zero] at hp
+          have hp0 : LocalizedModule.mkLinearMap
+              (standardCoverJointSubmonoid f j i) (F.carrier j)
+              (gluedModuleProjection F D j z) = 0 := by
+            exact hp
+          rcases LocalizedModule.mem_ker_mkLinearMap_iff.mp
+              (LinearMap.mem_ker.mpr hp0) with ⟨s, hs, hsz⟩
+          obtain ⟨sj, si, hsi⟩ :=
+            (Formalization.Books.Algebra.Unit09.localizationProduct_mem_iff
+              (Submonoid.powers (f j)) (Submonoid.powers (f i)) (s : R)).mp hs
+          obtain ⟨a, ha⟩ := (Submonoid.mem_powers_iff _ _).mp sj.property
+          obtain ⟨b, hb⟩ := (Submonoid.mem_powers_iff _ _).mp si.property
+          letI : IsLocalizedModule (Submonoid.powers (f j))
+              (LinearMap.id : F.carrier j →ₗ[R] F.carrier j) :=
+            isLocalizedModule_id (F.carrier j) (Localization.Away (f j))
+          refine ⟨b, ?_⟩
+          apply (IsLocalizedModule.smul_injective
+            (f := (LinearMap.id : F.carrier j →ₗ[R] F.carrier j)) sj)
+          simpa [hsi, ha, hb, Submonoid.smul_def, mul_smul] using hsz
+        choose b hb using hkill
+        let N : ℕ := ∑ j, b j
+        let c : Submonoid.powers (f i) :=
+          ⟨(f i) ^ N, (Submonoid.mem_powers_iff _ _).2 ⟨N, rfl⟩⟩
+        refine ⟨c, ?_⟩
+        apply Subtype.ext
+        funext j
+        change (f i) ^ N • x.1 j = (f i) ^ N • y.1 j
+        rw [← sub_eq_zero]
+        rw [← Nat.sub_add_cancel (Finset.single_le_sum (fun _ _ => Nat.zero_le _)
+          (Finset.mem_univ j)), pow_add, mul_smul, hb j, smul_zero]
+    let e :=
+      (IsLocalizedModule.iso (Submonoid.powers (f i)) g).extendScalarsOfIsLocalization
+        (Submonoid.powers (f i)) (Localization.Away (f i))
+    exact ⟨e, by
+      ext x
+      simp [e, g]
+      ⟩
+  · intro i j m
+    have hm := congrFun (LinearMap.mem_ker.mp m.property) (i, j)
+    exact (sub_eq_zero.mp hm).symm
 
 end
 

@@ -143,8 +143,8 @@ instance : HasZeroMorphisms (TwoPeriodicComplex R) where
    two-vertex periodic quiver with the two displayed relations.  Mathlib's
    `Abelian` class is the reusable interface for its kernels and cokernels;
    the existence assertion is left for the proof stage. -/
-theorem twoPeriodicComplexes_are_abelian :
-    Nonempty (Abelian (TwoPeriodicComplex R)) := by
+noncomputable instance twoPeriodicComplexes_are_abelian :
+    Abelian (TwoPeriodicComplex R) := by
   sorry
 
 end TwoPeriodicComplex

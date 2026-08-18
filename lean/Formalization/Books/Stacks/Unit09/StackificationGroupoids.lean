@@ -1,4 +1,4 @@
-import Formalization.Books.Stacks.Unit01.Stackification
+import Formalization.Books.Stacks.Unit08.Stackification
 
 /-!
 # Stacks, Chapter 1, Section 9: stackification in groupoids

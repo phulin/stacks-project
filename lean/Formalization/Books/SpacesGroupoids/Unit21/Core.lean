@@ -1,4 +1,4 @@
-import Formalization.Books.Stacks.Unit01.Foundation
+import Formalization.Books.Stacks.Unit02.Foundation
 import Mathlib.CategoryTheory.Bicategory.Functor.LocallyDiscrete
 import Mathlib.CategoryTheory.Bicategory.Modification.Pseudo
 import Mathlib.CategoryTheory.Comma.Over.Basic

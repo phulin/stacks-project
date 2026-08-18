@@ -1,4 +1,4 @@
-import Formalization.Books.Stacks.Unit01.Groupoids
+import Formalization.Books.Stacks.Unit05.Groupoids
 import Mathlib.CategoryTheory.IsomorphismClasses
 
 /-!
@@ -22,41 +22,6 @@ def StackInSetoids {C : Type u} [Category.{v} C]
 def StackInSets {C : Type u} [Category.{v} C]
     (F : FiberedCategory C) (J : GrothendieckTopology C) : Prop :=
   FiberwiseSet F ∧ Stack F J
-
-abbrev ObjectIsoSetoid (K : Type u) [Category.{v} K] : Setoid K :=
-  CategoryTheory.isIsomorphicSetoid K
-
-def ObjectIsomorphismClasses {C : Type u} [Category.{v} C]
-    (F : FiberedCategory C) (U : C) :=
-  Quotient (ObjectIsoSetoid (Fiber F U))
-
-def ObjectClassPresheaf {C : Type u} [Category.{v} C]
-    (F : FiberedCategory C) : Cᵒᵖ ⥤ Type w where
-  obj U := ObjectIsomorphismClasses F U.unop
-  map {U V} f := ↾(Quotient.map
-    (fun x => (F.map f.toLoc).toFunctor.obj x)
-    (by
-      intro x y h
-      rcases h with ⟨e⟩
-      exact ⟨(F.map f.toLoc).toFunctor.mapIso e⟩))
-  map_id := by
-    intro U
-    ext z
-    refine Quotient.inductionOn z ?_
-    intro x
-    apply Quotient.sound
-    exact ⟨(Cat.Hom.toNatIso (F.mapId (.mk U))).app x⟩
-  map_comp := by
-    intro U V W f g
-    ext z
-    refine Quotient.inductionOn z ?_
-    intro x
-    apply Quotient.sound
-    exact ⟨(Cat.Hom.toNatIso (F.mapComp f.toLoc g.toLoc)).app x⟩
-
-theorem object_class_presheaf_fibre {C : Type u} [Category.{v} C]
-    (F : FiberedCategory C) (U : C) :
-    (ObjectClassPresheaf F).obj (op U) = ObjectIsomorphismClasses F U := rfl
 
 def RelativePair {C : Type u} [Category.{v} C]
     {F G : FiberedCategory C} (η : FiberedMorphism F G) (U : C)

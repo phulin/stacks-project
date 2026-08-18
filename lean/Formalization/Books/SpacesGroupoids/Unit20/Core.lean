@@ -2,7 +2,7 @@ import Mathlib.AlgebraicGeometry.Sites.Fpqc
 import Mathlib.CategoryTheory.Bicategory.Functor.LocallyDiscrete
 import Mathlib.CategoryTheory.Bicategory.Modification.Pseudo
 import Mathlib.CategoryTheory.Sites.Over
-import Formalization.Books.Stacks.Unit01.Foundation
+import Formalization.Books.Stacks.Unit02.Foundation
 
 /-!
 # Groupoids in Algebraic Spaces, Chapter 20: quotient stacks (core)

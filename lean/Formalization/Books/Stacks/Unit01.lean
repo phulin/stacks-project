@@ -1,13 +1,6 @@
-import Formalization.Books.Stacks.Unit01.Foundation
-import Formalization.Books.Stacks.Unit01.Presheaves
-import Formalization.Books.Stacks.Unit01.Descent
-import Formalization.Books.Stacks.Unit01.Stacks
-import Formalization.Books.Stacks.Unit01.Groupoids
-import Formalization.Books.Stacks.Unit01.Setoids
-import Formalization.Books.Stacks.Unit01.Inertia
-import Formalization.Books.Stacks.Unit01.Stackification
-import Formalization.Books.Stacks.Unit01.StackificationGroupoids
-import Formalization.Books.Stacks.Unit01.InheritedTopology
-import Formalization.Books.Stacks.Unit01.Gerbes
-import Formalization.Books.Stacks.Unit01.Functoriality
-import Formalization.Books.Stacks.Unit01.Localization
+/-!
+# Stacks, Unit 1: Introduction
+
+The source unit is introductory prose and contains no mathematical declarations.
+The formal content of Sections 2–13 is owned by `Unit02` through `Unit13`.
+-/

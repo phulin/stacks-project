@@ -1,5 +1,6 @@
-import Formalization.Books.Stacks.Unit01.Presheaves
-import Formalization.Books.Stacks.Unit01.Descent
+import Formalization.Books.Stacks.Unit02.FoundationPresheaves
+import Formalization.Books.Stacks.Unit03.Descent
+import Formalization.Books.Stacks.Unit04.Foundation
 
 /-!
 # Stacks, Chapter 1, Section 4: stacks

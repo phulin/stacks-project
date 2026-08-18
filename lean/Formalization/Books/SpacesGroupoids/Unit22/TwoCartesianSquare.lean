@@ -6,7 +6,7 @@ import Mathlib.CategoryTheory.Sites.Descent.IsStack
 import Mathlib.AlgebraicGeometry.Sites.Fpqc
 import Mathlib.CategoryTheory.Sites.Over
 import Mathlib.CategoryTheory.Yoneda
-import Formalization.Books.Stacks.Unit01.Foundation
+import Formalization.Books.Stacks.Unit02.Foundation
 
 /-!
 # Groupoids in Algebraic Spaces, Chapter 22: the 2-cartesian square of a quotient stack

@@ -1,6 +1,6 @@
 import Mathlib.AlgebraicGeometry.Sites.Fpqc
 import Mathlib.CategoryTheory.Monoidal.Cartesian.Over
-import Formalization.Books.Stacks.Unit01.Foundation
+import Formalization.Books.Stacks.Unit02.Foundation
 
 set_option genSizeOf false
 set_option linter.all false

@@ -1,4 +1,4 @@
-import Formalization.Books.Stacks.Unit01.StackificationGroupoids
+import Formalization.Books.Stacks.Unit09.StackificationGroupoids
 import Mathlib.CategoryTheory.Sites.CoverLifting
 import Mathlib.CategoryTheory.FiberedCategory.Grothendieck
 

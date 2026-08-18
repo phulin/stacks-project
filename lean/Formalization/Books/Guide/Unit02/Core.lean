@@ -1,4 +1,4 @@
-import Formalization.Books.Stacks.Unit01.Stacks
+import Formalization.Books.Stacks.Unit04.Stacks
 
 /-!
 # A Guide to the Literature, Chapter 2: stack interfaces

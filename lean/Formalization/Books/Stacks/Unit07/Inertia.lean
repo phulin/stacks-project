@@ -1,4 +1,5 @@
-import Formalization.Books.Stacks.Unit01.Setoids
+import Formalization.Books.Stacks.Unit06.Setoids
+import Formalization.Books.Stacks.Unit07.Foundation
 
 /-!
 # Stacks, Chapter 1, Section 7: the inertia stack

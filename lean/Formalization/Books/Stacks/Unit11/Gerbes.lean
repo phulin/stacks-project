@@ -1,4 +1,4 @@
-import Formalization.Books.Stacks.Unit01.InheritedTopology
+import Formalization.Books.Stacks.Unit10.InheritedTopology
 import Mathlib.CategoryTheory.FiberedCategory.Fiber
 import Mathlib.Algebra.Category.Grp.Basic
 

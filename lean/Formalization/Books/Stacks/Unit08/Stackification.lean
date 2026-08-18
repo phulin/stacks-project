@@ -1,5 +1,6 @@
-import Formalization.Books.Stacks.Unit01.Inertia
-import Formalization.Books.Stacks.Unit01.Presheaves
+import Formalization.Books.Stacks.Unit07.Inertia
+import Formalization.Books.Stacks.Unit02.FoundationPresheaves
+import Formalization.Books.Stacks.Unit08.Foundation
 import Mathlib.CategoryTheory.Bicategory.Modification.Pseudo
 
 /-!

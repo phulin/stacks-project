@@ -1,3 +1,5 @@
+import Formalization.Books.Stacks.Unit02.Foundation
+import Formalization.Books.Stacks.Unit02.FoundationPresheaves
 import Formalization.Books.Stacks.Unit02.Presheaves
 
 /-!

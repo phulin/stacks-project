@@ -8,7 +8,7 @@ import Mathlib.NumberTheory.Padics.PadicIntegers
 import Mathlib.RingTheory.AdicCompletion.Basic
 import Mathlib.RingTheory.Noetherian.Basic
 import Formalization.Books.Examples.Unit10.CompleteModules
-import Formalization.Books.Stacks.Unit01.Setoids
+import Formalization.Books.Stacks.Unit06.Setoids
 import Formalization.Books.SpacesGroupoids.Unit20.QuotientStacks
 
 /-!

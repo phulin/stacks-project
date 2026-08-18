@@ -301,9 +301,11 @@ theorem tensor_differentials_commute
     (X : CochainComplex A ℤ) (Y : CochainComplex B ℤ) (p q : ℤ) :
     T.functor.map (Prod.mkHom (𝟙 (X.X p)) (Y.d q (q + 1))) ≫
         T.functor.map (Prod.mkHom (X.d p (p + 1)) (𝟙 (Y.X (q + 1)))) =
-      T.functor.map (Prod.mkHom (X.d p (p + 1)) (𝟙 (Y.X q))) ≫
+        T.functor.map (Prod.mkHom (X.d p (p + 1)) (𝟙 (Y.X q))) ≫
         T.functor.map (Prod.mkHom (𝟙 (X.X (p + 1))) (Y.d q (q + 1))) := by
-  sorry
+  rw [← T.functor.map_comp, ← T.functor.map_comp]
+  congr 1
+  ext <;> simp
 
 /-- The tensor-product double complex from the source example. -/
 def tensorProductDoubleComplex
@@ -342,7 +344,49 @@ def totalDifferential [HasCountableCoproducts C]
 theorem totalDifferential_comp_zero [HasCountableCoproducts C]
     (A : DoubleComplex C) (n : ℤ) :
     totalDifferential A n ≫ totalDifferential A (n + 1) = 0 := by
-  sorry
+  apply Sigma.hom_ext
+  intro p
+  have h11 :
+      totalD1Component A n p ≫ totalD1Component A (n + 1) (p + 1) = 0 := by
+    dsimp [totalD1Component]
+    simp [Category.assoc]
+    exact A.d1_sq p (n + 1 + 1 - (p + 1 + 1))
+  have h22 :
+      totalD2Component A n p ≫ totalD2Component A (n + 1) p = 0 := by
+    dsimp [totalD2Component]
+    simp only [Category.assoc]
+    rw [← eqToHom_naturality_assoc (fun q : ℤ => A.d2 p q)
+      (show n - p + 1 = n + 1 - p by ring)]
+    simpa [Category.assoc] using
+      congrArg (fun f => f ≫ eqToHom (by congr 1; ring))
+        (A.d2_sq p (n - p))
+  have hcomm :
+      totalD1Component A n p ≫ totalD2Component A (n + 1) (p + 1) =
+        totalD2Component A n p ≫ totalD1Component A (n + 1) p := by
+    dsimp [totalD1Component, totalD2Component]
+    simp only [Category.assoc]
+    rw [← eqToHom_naturality_assoc (fun q : ℤ => A.d2 (p + 1) q)
+      (show n - p = n + 1 - (p + 1) by ring)]
+    rw [← eqToHom_naturality_assoc (fun q : ℤ => A.d1 p q)
+      (show n - p + 1 = n + 1 - p by ring)]
+    simpa [Category.assoc] using
+      congrArg (fun f => f ≫ eqToHom (by congr 1; ring))
+        (A.comm p (n - p)).symm
+  have h11' :
+      totalD1Component A n p ≫ totalD1Component A (n + 1) (p + 1) ≫
+          Sigma.ι (fun r : ℤ => A.obj r (n + 1 + 1 - r)) (p + 1 + 1) = 0 := by
+    rw [← Category.assoc, h11, zero_comp]
+  have h22' :
+      totalD2Component A n p ≫ totalD2Component A (n + 1) p ≫
+          Sigma.ι (fun r : ℤ => A.obj r (n + 1 + 1 - r)) p = 0 := by
+    rw [← Category.assoc, h22, zero_comp]
+  have hcomm' :
+      totalD1Component A n p ≫ totalD2Component A (n + 1) (p + 1) ≫
+          Sigma.ι (fun r : ℤ => A.obj r (n + 1 + 1 - r)) (p + 1) =
+        totalD2Component A n p ≫ totalD1Component A (n + 1) p ≫
+          Sigma.ι (fun r : ℤ => A.obj r (n + 1 + 1 - r)) (p + 1) := by
+    rw [← Category.assoc, ← Category.assoc, hcomm]
+  simp [totalDifferential, Category.assoc, Int.negOnePow_succ, h11', h22', hcomm']
 
 /-- The associated simple/total cochain complex. -/
 def totalComplex [HasCountableCoproducts C]
@@ -374,7 +418,8 @@ theorem totalComplex_component_formula [HasCountableCoproducts C]
         p.negOnePow •
           (totalD2Component A n p ≫
             Sigma.ι (fun r : ℤ => A.obj r (n + 1 - r)) p) := by
-  sorry
+  classical
+  simp [totalComplex, totalDifferential]
 
 /-- Existence of all diagonal coproducts, without committing to a typeclass. -/
 def HasDiagonalCoproducts (A : DoubleComplex C) : Prop :=
@@ -407,7 +452,100 @@ structure TotalComplexPresentation (A : DoubleComplex C) where
 theorem totalComplexPresentation_exists_of_diagonal_coproducts
     (A : DoubleComplex C) (hA : HasDiagonalCoproducts A) :
     Nonempty (TotalComplexPresentation A) := by
-  sorry
+  classical
+  let diag : ∀ n : ℤ, ColimitCocone
+      (Discrete.functor (fun p : ℤ => A.obj p (n - p))) :=
+    fun n => Classical.choice (hA n)
+  let rawC : ∀ n : ℤ, Cocone (Discrete.functor (fun p : ℤ => A.obj p (n - p))) :=
+    fun n =>
+      { pt := (diag (n + 1)).cocone.pt
+        ι := Discrete.natTrans (fun p : Discrete ℤ => by
+          let i1 : A.obj p.as (n - p.as) ⟶ (diag (n + 1)).cocone.pt :=
+            totalD1Component A n p.as ≫
+              (diag (n + 1)).cocone.ι.app (Discrete.mk (p.as + 1))
+          let i2 : A.obj p.as (n - p.as) ⟶ (diag (n + 1)).cocone.pt :=
+            totalD2Component A n p.as ≫
+              (diag (n + 1)).cocone.ι.app (Discrete.mk p.as)
+          exact i1 + p.as.negOnePow • i2) }
+  let rawD : ∀ n : ℤ, (diag n).cocone.pt ⟶ (diag (n + 1)).cocone.pt :=
+    fun n => (diag n).isColimit.desc (rawC n)
+  let K : CochainComplex C ℤ := {
+    X := fun n => (diag n).cocone.pt,
+    d := fun n m => if h : n + 1 = m then h ▸ rawD n else 0,
+    shape := by
+      intro n m hnm
+      split_ifs with h
+      · exact (hnm h).elim
+      · rfl,
+    d_comp_d' := by
+      intro n m k hnm hmk
+      have hnm' : n + 1 = m := by
+        simpa only [ComplexShape.up_Rel] using hnm
+      have hmk' : m + 1 = k := by
+        simpa only [ComplexShape.up_Rel] using hmk
+      rw [dif_pos hnm', dif_pos hmk']
+      subst m
+      subst k
+      apply (diag n).isColimit.hom_ext
+      intro p
+      have h11 :
+          totalD1Component A n p.as ≫
+              totalD1Component A (n + 1) (p.as + 1) = 0 := by
+        dsimp [totalD1Component]
+        simp [Category.assoc]
+        exact A.d1_sq p.as (n + 1 + 1 - (p.as + 1 + 1))
+      have h22 :
+          totalD2Component A n p.as ≫
+              totalD2Component A (n + 1) p.as = 0 := by
+        dsimp [totalD2Component]
+        simp only [Category.assoc]
+        rw [← eqToHom_naturality_assoc (fun q : ℤ => A.d2 p.as q)
+          (show n - p.as + 1 = n + 1 - p.as by ring)]
+        simpa [Category.assoc] using
+          congrArg (fun f => f ≫ eqToHom (by congr 1; ring))
+            (A.d2_sq p.as (n - p.as))
+      have hcomm :
+          totalD1Component A n p.as ≫
+              totalD2Component A (n + 1) (p.as + 1) =
+            totalD2Component A n p.as ≫
+              totalD1Component A (n + 1) p.as := by
+        dsimp [totalD1Component, totalD2Component]
+        simp only [Category.assoc]
+        rw [← eqToHom_naturality_assoc (fun q : ℤ => A.d2 (p.as + 1) q)
+          (show n - p.as = n + 1 - (p.as + 1) by ring)]
+        rw [← eqToHom_naturality_assoc (fun q : ℤ => A.d1 p.as q)
+          (show n - p.as + 1 = n + 1 - p.as by ring)]
+        simpa [Category.assoc] using
+          congrArg (fun f => f ≫ eqToHom (by congr 1; ring))
+            (A.comm p.as (n - p.as)).symm
+      have h11' :
+          totalD1Component A n p.as ≫
+              totalD1Component A (n + 1) (p.as + 1) ≫
+              (diag (n + 1 + 1)).cocone.ι.app
+                (Discrete.mk (p.as + 1 + 1)) = 0 := by
+        rw [← Category.assoc, h11, zero_comp]
+      have h22' :
+          totalD2Component A n p.as ≫
+              totalD2Component A (n + 1) p.as ≫
+              (diag (n + 1 + 1)).cocone.ι.app
+                (Discrete.mk p.as) = 0 := by
+        rw [← Category.assoc, h22, zero_comp]
+      have hcomm' :
+          totalD1Component A n p.as ≫
+              totalD2Component A (n + 1) (p.as + 1) ≫
+              (diag (n + 1 + 1)).cocone.ι.app
+                (Discrete.mk (p.as + 1)) =
+            totalD2Component A n p.as ≫
+              totalD1Component A (n + 1) p.as ≫
+              (diag (n + 1 + 1)).cocone.ι.app
+                (Discrete.mk (p.as + 1)) := by
+        rw [← Category.assoc, ← Category.assoc, hcomm]
+      simp [rawD, rawC, Int.negOnePow_succ, h11', h22', hcomm']
+  }
+  let iso : ∀ n : ℤ, K.X n ≅ (diag n).cocone.pt := fun n => Iso.refl _
+  refine ⟨{ diagonal := diag, complex := K, term_iso := iso, differential_formula := ?_ }⟩
+  intro n p
+  simp [iso, K, rawD, rawC]
 
 theorem totalComplexPresentation_exists_of_countable
     [HasCountableCoproducts C] (A : DoubleComplex C) :

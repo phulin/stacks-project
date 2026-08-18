@@ -1,5 +1,6 @@
 import Formalization.Books.Sheaves.Unit20.SheafificationOfPresheavesOfModules
 import Formalization.Books.Sheaves.Unit22.Modules
+import Formalization.Books.Sheaves.Unit22.Skyscraper
 import Formalization.Books.Sheaves.Unit24.Modules
 import Formalization.Books.Sheaves.Unit25.RingedSpaces
 import Mathlib.Algebra.Category.ModuleCat.Stalk
@@ -83,8 +84,49 @@ theorem ringedSpaceModulePullback_formula {X Y : RingedSpace.{v}}
       ((ringedSpaceModulePullback f).obj G ≅
         Formalization.Books.Sheaves.Unit20.tensorProductSheaf
           (ringedSpacePullbackRingMap f)
-          ((ringedSpaceInverseImageModule f).obj G)) := by
-  sorry
+      ((ringedSpaceInverseImageModule f).obj G)) := by
+  let β := ringedSpacePullbackRingMap f
+  let adj₂ :
+      Formalization.Books.Sheaves.Unit17.sheafChangeOfRings β ⊣
+        SheafOfModules.pushforward (F := 𝟭 (Opens X)) β := by
+    exact (Formalization.Books.Sheaves.Unit17.sheafChangeOfRingsAdjunction β).ofNatIsoRight
+      (Iso.refl _)
+  have hβ :
+      (Formalization.Books.Sheaves.Unit24.sheafRingUnit
+        f.continuous Y.structureSheaf) ≫
+        (Formalization.Books.Sheaves.Unit24.sheafRingPushforward
+          f.continuous).map β = f.sharp := by
+    change
+      ((TopCat.Sheaf.pullbackPushforwardAdjunction RingCat f.continuous).homEquiv
+        Y.structureSheaf X.structureSheaf) β = f.sharp
+    exact ((TopCat.Sheaf.pullbackPushforwardAdjunction RingCat f.continuous).homEquiv
+      Y.structureSheaf X.structureSheaf).apply_symm_apply f.sharp
+  have eR :
+      SheafOfModules.pushforward (F := 𝟭 (Opens X)) β ⋙
+          SheafOfModules.pushforward (F := Opens.map f.continuous)
+            (Formalization.Books.Sheaves.Unit24.sheafRingUnit
+              f.continuous Y.structureSheaf) ≅
+        SheafOfModules.pushforward (F := Opens.map f.continuous) f.sharp := by
+    exact
+      (SheafOfModules.pushforwardComp
+        (F := Opens.map f.continuous) (G := 𝟭 (Opens X))
+        (Formalization.Books.Sheaves.Unit24.sheafRingUnit
+          f.continuous Y.structureSheaf) β) ≪≫
+        SheafOfModules.pushforwardCongr hβ
+  have eL :
+      (SheafOfModules.pullback
+        (Formalization.Books.Sheaves.Unit24.sheafRingUnit
+          f.continuous Y.structureSheaf) ⋙
+        Formalization.Books.Sheaves.Unit17.sheafChangeOfRings β) ≅
+        ringedSpaceModulePullback f :=
+    Adjunction.leftAdjointCompIso
+      (SheafOfModules.pullbackPushforwardAdjunction
+        (Formalization.Books.Sheaves.Unit24.sheafRingUnit
+          f.continuous Y.structureSheaf))
+      adj₂
+      (SheafOfModules.pullbackPushforwardAdjunction f.sharp)
+      eR
+  exact ⟨(eL.app G).symm⟩
 
 /-! ## Adjunction, composition, and module `f`-maps -/
 
@@ -262,7 +304,9 @@ theorem ringedSpaceModulePullback_stalk_formula
           (↑(TopCat.Presheaf.stalk (C := AddCommGrpCat.{v})
             ((ringedSpaceModulePullback f).obj G).val.presheaf x)) ≅
         ringedSpaceModulePullbackStalkTensor f G x) := by
-  sorry
+  let e := Classical.choice (ringedSpaceModulePullback_formula f G)
+  exact ⟨(Formalization.Books.Sheaves.Unit22.moduleStalkFunctor
+    X.structureSheaf x).mapIso e⟩
 
 end
 

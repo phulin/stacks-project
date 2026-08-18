@@ -468,8 +468,6 @@ theorem homFromTensorProductEquiv_exists {R S M N P : Type u} [CommRing R] [Comm
           change g (forward φ) (m ⊗ₜ[S] n) = φ.hom (m ⊗ₜ[S] n)
           exact (hg (forward φ) m n).trans (hforward φ m n)
         · intro x y hx hy
-          change (backward (forward φ)).hom ((x : X) + (y : X)) =
-            φ.hom ((x : X) + (y : X))
           calc
             (backward (forward φ)).hom ((x : X) + (y : X)) =
                 (backward (forward φ)).hom (x : X) +

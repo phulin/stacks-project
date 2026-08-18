@@ -443,9 +443,9 @@ theorem disjoint_implies_product {R : Type u} [CommRing R]
       V = Uᶜ := hUcompl.symm
       _ = (PrimeSpectrum.basicOpen e : Set (PrimeSpectrum R))ᶜ := by rw [hUe]
       _ = (PrimeSpectrum.basicOpen (1 - e) : Set (PrimeSpectrum R)) := hbasic_compl
-  letI : IsLocalization.Away e (R ⧸ Ideal.span ({1 - e} : Set R)) :=
+  let : IsLocalization.Away e (R ⧸ Ideal.span ({1 - e} : Set R)) :=
     IsLocalization.Away.quotient_of_isIdempotentElem he
-  letI : IsLocalization.Away (1 - e) (R ⧸ Ideal.span ({e} : Set R)) := by
+  let : IsLocalization.Away (1 - e) (R ⧸ Ideal.span ({e} : Set R)) := by
     have h := IsLocalization.Away.quotient_of_isIdempotentElem he.one_sub
     rw [sub_sub_cancel] at h
     exact h

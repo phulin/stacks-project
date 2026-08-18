@@ -108,8 +108,6 @@ private abbrev finiteSubsetCocone
       naturality := by
         intro E F hEF
         apply ModuleCat.hom_ext
-        ext x
-        change x.1 = x.1
         rfl }
 
 private def finiteSubsetCocone_isColimit
@@ -158,15 +156,25 @@ private def finiteSubsetCocone_isColimit
         (s.ι.app E).hom (0, Submodule.mkQ (Submodule.span R (E : Set M)) y) at this
       rw [hzero] at this
       simpa using this.symm
-    rw [show (x, Submodule.mkQ (Submodule.span R (E : Set M)) y) =
-        (x, 0) + (0, Submodule.mkQ (Submodule.span R (E : Set M)) y) by
+    dsimp [finiteSubsetCocone]
+    rw [show (x, Submodule.Quotient.mk y) =
+        (x, (0 : M ⧸ Submodule.span R (E : Set M))) +
+          ((0 : M), Submodule.Quotient.mk y) by
       simp]
-    change (s.ι.app ∅).hom (x, 0) =
-      (s.ι.app E).hom ((x, 0) +
-        (0, Submodule.mkQ (Submodule.span R (E : Set M)) y))
-    rw [map_add, hqzero, add_zero]
-    simpa using (congrArg (fun k => k.hom (x, 0))
-      (s.ι.naturality (homOfLE (show (∅ : Finset M) ≤ E by simp))))
+    have hqzero' :
+        (s.ι.app E).hom
+            ((0 : M), Submodule.Quotient.mk y) = 0 := by
+      simpa using hqzero
+    calc
+      (s.ι.app ∅).hom (x, 0) = (s.ι.app E).hom (x, 0) := by
+        symm
+        simpa using congrArg (fun k => k.hom (x, 0))
+          (s.ι.naturality (homOfLE (show (∅ : Finset M) ≤ E by simp)))
+      _ = (s.ι.app E).hom
+          ((x, (0 : M ⧸ Submodule.span R (E : Set M))) +
+            ((0 : M), Submodule.Quotient.mk y)) := by
+        rw [(s.ι.app E).hom.map_add, hqzero']
+        simp
   · intro s m hm
     apply ModuleCat.hom_ext
     ext x
@@ -345,7 +353,123 @@ theorem finite_iff_hom_filteredColimit_injective
         (colimit.isColimit (C.presentation.diag ⋙ moduleHomFunctor N)))).2
     exact ⟨s, a, b, hmaps⟩
   · intro h
-    sorry
+    let P : ColimitPresentation (Finset (N : Type u)) N :=
+      { diag := finiteSubsetDiagram (R := R) (M := (N : Type u))
+        ι := finiteSubsetCocone.ι
+        isColimit := finiteSubsetCocone_isColimit }
+    let c := (⟨Finset (N : Type u), P⟩ : FilteredModuleColimit N)
+    letI : Category.{u} c.index := c.indexCategory
+    letI : IsFiltered c.index := c.indexFiltered
+    letI : HasColimit c.presentation.diag := c.presentation.hasColimit
+    have hc := h c
+    let E0 : Finset (N : Type u) := ∅
+    let q : N ⟶ c.presentation.diag.obj E0 :=
+      ModuleCat.ofHom <|
+        (LinearMap.inr R (N : Type u)
+          ((N : Type u) ⧸ Submodule.span R (E0 : Set (N : Type u)))).comp
+          (Submodule.mkQ (Submodule.span R (E0 : Set (N : Type u))))
+    have hqι : q ≫ c.presentation.ι.app E0 = 0 := by
+      apply ModuleCat.hom_ext
+      change (LinearMap.fst R (N : Type u)
+          ((N : Type u) ⧸ Submodule.span R (E0 : Set (N : Type u)))).comp
+          ((LinearMap.inr R (N : Type u)
+            ((N : Type u) ⧸ Submodule.span R (E0 : Set (N : Type u)))).comp
+            (Submodule.mkQ (Submodule.span R (E0 : Set (N : Type u))))) = 0
+      apply LinearMap.ext
+      intro x
+      rfl
+    let e : colimit c.presentation.diag ≅ N :=
+      IsColimit.coconePointUniqueUpToIso (colimit.isColimit c.presentation.diag)
+        c.presentation.isColimit
+    have he := (colimit.isColimit c.presentation.diag).comp_coconePointUniqueUpToIso_hom
+      c.presentation.isColimit E0
+    have he' : colimit.ι c.presentation.diag E0 ≫ e.hom =
+        c.presentation.ι.app E0 := by
+      simpa [e] using he
+    have hpost := colimit.ι_post c.presentation.diag (moduleHomFunctor N) E0
+    have hpost_apply :
+        (colimit.post c.presentation.diag (moduleHomFunctor N)).hom'
+            ((colimit.ι (c.presentation.diag ⋙ moduleHomFunctor N) E0).hom q) =
+          (moduleHomFunctor N).map (colimit.ι c.presentation.diag E0) q := by
+      have hh := congrArg (fun k => k.hom q) hpost
+      change (colimit.post c.presentation.diag (moduleHomFunctor N)).hom'
+          ((colimit.ι (c.presentation.diag ⋙ moduleHomFunctor N) E0).hom q) =
+        (moduleHomFunctor N).map (colimit.ι c.presentation.diag E0) q at hh
+      exact hh
+    have map_apply {A B : ModuleCat R} (f : A ⟶ B) (g : N ⟶ A) :
+        (moduleHomFunctor N).map f g = g ≫ f := by
+      change (ihom N).map f g = _
+      exact ModuleCat.ihom_map_apply f g
+    have hzero : (moduleHomFunctor N).map (c.presentation.ι.app E0) q = 0 := by
+      change q ≫ c.presentation.ι.app E0 = 0
+      exact hqι
+    rw [map_apply] at hzero
+    have hq :
+        (filteredModuleHomColimitMap c).hom
+            ((colimit.ι (c.presentation.diag ⋙ moduleHomFunctor N) E0).hom q) = 0 := by
+      change ModuleCat.Hom.hom ((moduleHomFunctor N).map e.hom)
+        ((colimit.post c.presentation.diag (moduleHomFunctor N)).hom'
+          ((colimit.ι (c.presentation.diag ⋙ moduleHomFunctor N) E0).hom q)) = 0
+      rw [hpost_apply, map_apply, map_apply]
+      rw [Category.assoc, he']
+      exact hzero
+    have hqeq :
+        (filteredModuleHomColimitMap c).hom
+            ((colimit.ι (c.presentation.diag ⋙ moduleHomFunctor N) E0).hom q) =
+          (filteredModuleHomColimitMap c).hom
+            ((colimit.ι (c.presentation.diag ⋙ moduleHomFunctor N) E0).hom 0) := by
+      simpa using hq
+    have hqcol :
+        (colimit.ι (c.presentation.diag ⋙ moduleHomFunctor N) E0).hom q =
+          (colimit.ι (c.presentation.diag ⋙ moduleHomFunctor N) E0).hom 0 :=
+      hc hqeq
+    have hqcol' :
+        (ConcreteCategory.hom
+            (((forget (ModuleCat R)).mapCocone
+              (colimit.cocone (c.presentation.diag ⋙ moduleHomFunctor N))).ι.app E0)) q =
+          (ConcreteCategory.hom
+            (((forget (ModuleCat R)).mapCocone
+              (colimit.cocone (c.presentation.diag ⋙ moduleHomFunctor N))).ι.app E0)) 0 := by
+      change (colimit.ι (c.presentation.diag ⋙ moduleHomFunctor N) E0).hom q =
+        (colimit.ι (c.presentation.diag ⋙ moduleHomFunctor N) E0).hom 0
+      exact hqcol
+    obtain ⟨F, f, g, hfg⟩ :=
+      (Types.FilteredColimit.isColimit_eq_iff _
+        (isColimitOfPreserves (forget (ModuleCat R))
+          (colimit.isColimit (c.presentation.diag ⋙ moduleHomFunctor N)))).1 hqcol'
+    have hmk (x : (N : Type u)) :
+        Submodule.mkQ (Submodule.span R (F : Set (N : Type u))) x = 0 := by
+      have hfg0 :
+          (moduleHomFunctor N).map (c.presentation.diag.map f) q = 0 := by
+        change (ConcreteCategory.hom
+            (((c.presentation.diag ⋙ moduleHomFunctor N) ⋙ forget (ModuleCat R)).map f)) q =
+          (ConcreteCategory.hom
+            (((c.presentation.diag ⋙ moduleHomFunctor N) ⋙ forget (ModuleCat R)).map g)) 0 at hfg
+        simpa using hfg
+      have hfg' :
+          (moduleHomFunctor N).map (c.presentation.diag.map f) q =
+            (moduleHomFunctor N).map (c.presentation.diag.map g)
+              (0 : N ⟶ c.presentation.diag.obj E0) := by
+        calc
+          _ = 0 := hfg0
+          _ = _ := by rw [map_apply]; simp; rfl
+      have hfg'' :
+          q ≫ c.presentation.diag.map f =
+            (0 : N ⟶ c.presentation.diag.obj E0) ≫ c.presentation.diag.map g := by
+        rw [map_apply (c.presentation.diag.map f) q,
+          map_apply (c.presentation.diag.map g)
+            (0 : N ⟶ c.presentation.diag.obj E0)] at hfg'
+        exact hfg'
+      have hx := congrArg (fun z => z.hom x) hfg''
+      simpa [c, P, finiteSubsetDiagram, finiteSubsetQuotientMap, q,
+        Submodule.Quotient.mk_eq_zero] using hx
+    have htop : Submodule.span R (F : Set (N : Type u)) = ⊤ := by
+      apply top_unique
+      intro x _
+      exact (Submodule.Quotient.mk_eq_zero _).mp (hmk x)
+    refine ⟨?_⟩
+    rw [← htop]
+    exact Submodule.fg_span F.finite_toSet
 
 /-! ## Relations -/
 

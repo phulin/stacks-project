@@ -654,7 +654,130 @@ theorem differential_mod_power_ideal
       (Ideal.Quotient.factorPow I (Nat.le_succ n)).toAlgebra
     Function.Bijective
       (differentialModPowerMap (R := R) (S := S) I (n := n)) := by
-  sorry
+  dsimp
+  let S' := S ⧸ I ^ (n + 1)
+  let T := S ⧸ I ^ n
+  letI : Algebra S' T :=
+    (Ideal.Quotient.factorPow I (Nat.le_succ n)).toAlgebra
+  letI : Algebra S T := Algebra.compHom T (algebraMap S S')
+  letI : IsScalarTower S S' T := IsScalarTower.of_algebraMap_eq' rfl
+  letI : IsScalarTower S T T := by
+    constructor
+    intro r t x
+    change (algebraMap S T r * t) * x = algebraMap S T r * (t * x)
+    rw [mul_assoc]
+  let g : ModuleOfDifferentials R S →ₗ[S] ModuleOfDifferentials R S' :=
+    KaehlerDifferential.map R R S S'
+  let m₁ :=
+    @TensorProduct.AlgebraTensorModule.map
+      S T T (ModuleOfDifferentials R S) T (ModuleOfDifferentials R S')
+      _ _ _ _ _ _ (inferInstance : IsScalarTower S T T) _ _ _ _ _
+      (inferInstance : IsScalarTower S T T) _ _
+      (LinearMap.id) g
+  letI : IsScalarTower S' T T := by
+    constructor
+    intro r t x
+    change (algebraMap S' T r * t) * x = algebraMap S' T r * (t * x)
+    rw [mul_assoc]
+  let e₀ :=
+    @TensorProduct.AlgebraTensorModule.cancelBaseChange
+      S S' T T (ModuleOfDifferentials R S')
+      _ _ _ _ _ _ _ _ _ _ (inferInstance : IsScalarTower S T T) _ _ _ _
+      (inferInstance : IsScalarTower S' T T)
+  letI : TensorProduct.CompatibleSMul S S' S' (ModuleOfDifferentials R S') :=
+    TensorProduct.CompatibleSMul.of_algebraMap_surjective
+      (M := S') (N := ModuleOfDifferentials R S')
+      (show Function.Surjective (algebraMap S S') from Ideal.Quotient.mk_surjective)
+  let m₂ :=
+    TensorProduct.AlgebraTensorModule.map
+      (R := S') (A := T) (M := T)
+      (N := S' ⊗[S] ModuleOfDifferentials R S') (P := T)
+      (Q := ModuleOfDifferentials R S')
+      (LinearMap.id) (TensorProduct.lidOfCompatibleSMul S S'
+        (ModuleOfDifferentials R S')).toLinearMap
+  change Function.Bijective (m₂.comp (e₀.symm.toLinearMap.comp m₁))
+  let m₂' :=
+    TensorProduct.AlgebraTensorModule.map
+      (R := S') (A := T) (M := T)
+      (N := ModuleOfDifferentials R S') (P := T)
+      (Q := S' ⊗[S] ModuleOfDifferentials R S')
+      (LinearMap.id) (TensorProduct.lidOfCompatibleSMul S S'
+        (ModuleOfDifferentials R S')).symm.toLinearMap
+  have hm₂_left : Function.LeftInverse m₂' m₂ := by
+    intro z
+    induction z with
+    | zero => simp [m₂, m₂']
+    | tmul x y => simp [m₂, m₂']
+    | add x y hx hy => simp [m₂, m₂', hx, hy]
+  have hm₂ : Function.Bijective m₂ := by
+    refine ⟨hm₂_left.injective, ?_⟩
+    intro z
+    induction z with
+    | zero => exact ⟨0, by simp [m₂]⟩
+    | tmul x y =>
+        refine ⟨x ⊗ₜ[S'] (TensorProduct.lidOfCompatibleSMul S S'
+          (ModuleOfDifferentials R S')).symm y, ?_⟩
+        simp [m₂]
+    | add x y hx hy =>
+        obtain ⟨x', rfl⟩ := hx
+        obtain ⟨y', rfl⟩ := hy
+        exact ⟨x' + y', by simp [m₂, map_add]⟩
+  have hg : Function.Surjective g := by
+    dsimp [g]
+    exact KaehlerDifferential.map_surjective_of_surjective R R S S'
+      Ideal.Quotient.mk_surjective
+  have hm₁_surj : Function.Surjective m₁ := by
+    intro z
+    induction z with
+    | zero => exact ⟨0, by simp [m₁]⟩
+    | tmul x y =>
+        obtain ⟨y', hy'⟩ := hg y
+        refine ⟨x ⊗ₜ[S] y', ?_⟩
+        change x ⊗ₜ[S] g y' = x ⊗ₜ[S] y
+        rw [hy']
+    | add x y hx hy =>
+        obtain ⟨x', rfl⟩ := hx
+        obtain ⟨y', rfl⟩ := hy
+        exact ⟨x' + y', by simp [m₁, map_add]⟩
+  have hm₁_inj : Function.Injective m₁ := by
+    intro x y hxy
+    have hxy' : m₁ (x - y) = 0 := by
+      rw [map_sub, hxy, sub_self]
+    have hex : Function.Exact
+        (LinearMap.lTensor T (LinearMap.ker g).subtype) m₁ := by
+      exact lTensor_exact T (LinearMap.exact_subtype_ker_map g) hg
+    obtain ⟨z, hz⟩ := (hex _).mp hxy'
+    have hz0 :
+        (LinearMap.lTensor T (LinearMap.ker g).subtype) z = 0 := by
+      clear hz
+      induction z with
+      | zero => simp
+      | tmul t k =>
+          change t ⊗ₜ[S] (k : ModuleOfDifferentials R S) = 0
+          refine Submodule.smul_induction_on
+            (p := fun w : ModuleOfDifferentials R S => t ⊗ₜ[S] w = 0)
+            (differential_map_kernel_le_power_smul I k.property) ?_ ?_
+          · intro a ha v hv
+            change t ⊗ₜ[S] (a • v) = 0
+            rw [TensorProduct.tmul_smul]
+            have ha0 : algebraMap S T a = 0 := by
+              change algebraMap S' T (algebraMap S S' a) = 0
+              rw [← RingHom.mem_ker]
+              change algebraMap S S' a ∈
+                RingHom.ker (Ideal.Quotient.factorPow I (Nat.le_succ n))
+              rw [Ideal.Quotient.factor_ker]
+              exact Ideal.mem_map_of_mem _ ha
+            change (algebraMap S T a) • t ⊗ₜ[S] v = 0
+            simp [ha0]
+          · intro u v hu hv
+            simpa only [TensorProduct.tmul_add, hu, hv, add_zero]
+      | add u v hu hv =>
+          simpa only [map_add, hu, hv, add_zero]
+    apply sub_eq_zero.mp
+    rw [← hz]
+    exact hz0
+  have hm₁ : Function.Bijective m₁ := ⟨hm₁_inj, hm₁_surj⟩
+  exact hm₂.comp (e₀.symm.bijective.comp hm₁)
 
 /-! ## Base change and the diagonal -/
 

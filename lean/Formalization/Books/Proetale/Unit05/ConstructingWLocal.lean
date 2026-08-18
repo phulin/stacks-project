@@ -177,6 +177,8 @@ theorem exists_localizedPieceRingHom
     {A B : Type u} [CommRing A] [CommRing B]
     (f : A →+* B) (Z : LocallyClosedPiece A) (Z' : LocallyClosedPiece B)
     (h : MapsIntoLocallyClosedPiece f Z Z') :
+    letI : Algebra A (localizedPieceRing Z') :=
+      ((localizedPieceRingHom Z').comp f).toAlgebra
     ∃! g : localizedPieceRing Z →ₐ[A] localizedPieceRing Z',
       g.toRingHom.comp (localizedPieceRingHom Z) =
         (localizedPieceRingHom Z').comp f := by
@@ -285,6 +287,12 @@ noncomputable def stageRing {A : Type u} [CommRing A] (E : Finset A) : CommRingC
 /-- The disjoint-union presentation of the spectrum of `A_E`. -/
 def stageSpectrum {A : Type u} [CommRing A] (E : Finset A) : Type u :=
   Σ p : StratumPartition E, PrimeSpectrum (stratumFactor p)
+
+instance stageSpectrum.topologicalSpace
+    {A : Type u} [CommRing A] (E : Finset A) :
+    TopologicalSpace (stageSpectrum E) := by
+  unfold stageSpectrum
+  infer_instance
 
 def stageClosedLocus {A : Type u} [CommRing A] (E : Finset A) :
     Set (stageSpectrum E) :=
@@ -701,19 +709,19 @@ theorem exists_indZariski_wLocal_with_closed_points
 /-! ## Algebraic residue-field extensions over a w-local base -/
 
 def wLocalClosedPointIdeal {A : Type u} [CommRing A]
-    (hA : IsWLocalAffine (A := A)) : Ideal A :=
+    : Ideal A :=
   PrimeSpectrum.vanishingIdeal (closedPoints (PrimeSpectrum A))
 
 theorem wLocalClosedPointIdeal_isRadical
     {A : Type u} [CommRing A] (hA : IsWLocalAffine (A := A)) :
-    (wLocalClosedPointIdeal hA).IsRadical := by
+    (wLocalClosedPointIdeal (A := A)).IsRadical := by
   sorry
 
 theorem wLocalClosedPointIdeal_vanishing
     {A : Type u} [CommRing A] (hA : IsWLocalAffine (A := A)) :
     closedPoints (PrimeSpectrum A) =
       {x : PrimeSpectrum A |
-        ∀ a ∈ wLocalClosedPointIdeal hA, a ∈ x.asIdeal} := by
+        ∀ a ∈ wLocalClosedPointIdeal (A := A), a ∈ x.asIdeal} := by
   sorry
 
 theorem wLocal_algebraic_residue_extensions
@@ -721,12 +729,12 @@ theorem wLocal_algebraic_residue_extensions
     (hA : IsWLocalAffine (A := A)) (f : A →+* B)
     (hres : HasAlgebraicResidueExtensions f) :
     ({q : PrimeSpectrum B |
-        ∀ a ∈ Ideal.map f (wLocalClosedPointIdeal hA), a ∈ q.asIdeal} ⊆
+        ∀ a ∈ Ideal.map f (wLocalClosedPointIdeal (A := A)), a ∈ q.asIdeal} ⊆
       closedPoints (PrimeSpectrum B)) ∧
       ∃ C : CommRingCat, ∃ g : CommRingCat.of B ⟶ C,
         IsIndZariski g.hom ∧
-          Nonempty (B ⧸ Ideal.map f (wLocalClosedPointIdeal hA) ≃+*
-            C ⧸ Ideal.map g.hom (Ideal.map f (wLocalClosedPointIdeal hA))) ∧
+          Nonempty (B ⧸ Ideal.map f (wLocalClosedPointIdeal (A := A)) ≃+*
+            C ⧸ Ideal.map g.hom (Ideal.map f (wLocalClosedPointIdeal (A := A)))) ∧
           IsWLocalAffine (A := C) ∧
           IsWLocalRingMap (g.hom.comp f) ∧
           PrimeSpectrum.comap (g.hom.comp f) ⁻¹'

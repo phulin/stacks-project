@@ -14,6 +14,7 @@ import Mathlib.RingTheory.RingHom.Finite
 import Mathlib.RingTheory.RingHom.FinitePresentation
 import Mathlib.RingTheory.RingHom.FiniteType
 import Mathlib.RingTheory.RingHom.Integral
+import Mathlib.RingTheory.QuasiFinite.Basic
 import Mathlib.RingTheory.Spectrum.Prime.Topology
 import Formalization.Books.Algebra.Unit14.BaseChange
 
@@ -973,7 +974,12 @@ theorem finite_primeSpectrum_fiber
     {R S : Type*} [CommRing R] [CommRing S]
     (f : R →+* S) (hf : f.Finite) (p : PrimeSpectrum R) :
     {q : PrimeSpectrum S | PrimeSpectrum.comap f q = p}.Finite := by
-  sorry
+  let _ : Algebra R S := f.toAlgebra
+  let _ : Module.Finite R S := hf
+  rw [show {q : PrimeSpectrum S | PrimeSpectrum.comap f q = p} =
+      PrimeSpectrum.comap f ⁻¹' {p} by ext q; simp]
+  simpa only [RingHom.algebraMap_toAlgebra] using
+    (Algebra.QuasiFinite.finite_comap_preimage_singleton (R := R) (S := S) p)
 
 /-- Going up for integral ring maps. -/
 theorem integral_going_up
@@ -983,7 +989,16 @@ theorem integral_going_up
     (hpp' : p ≤ p') (q : Ideal S) [hq : q.IsPrime]
     (hqp : q.comap f = p) :
     ∃ q' : Ideal S, q ≤ q' ∧ q'.IsPrime ∧ q'.comap f = p' := by
-  sorry
+  have _hp : p.IsPrime := hp
+  have _hq : q.IsPrime := hq
+  let _ : Algebra R S := f.toAlgebra
+  let _ : Algebra.IsIntegral R S := ⟨hf⟩
+  have hle : q.comap (algebraMap R S) ≤ p' := by
+    rw [show q.comap (algebraMap R S) = q.comap f by rfl, hqp]
+    exact hpp'
+  obtain ⟨q', hqle, hqprime, hqcomap⟩ :=
+    Ideal.exists_ideal_over_prime_of_isIntegral (R := R) (S := S) p' q hle
+  exact ⟨q', hqle, hqprime, hqcomap⟩
 
 /-! ## Finite and finitely presented modules -/
 
@@ -997,7 +1012,34 @@ theorem finite_finitelyPresented_module_iff
     (letI : Module R M := Module.compHom M f;
       Module.FinitePresentation R M) ↔
       Module.FinitePresentation S M := by
-  sorry
+  let _ : Algebra R S := f.toAlgebra
+  let _ : Module R M := Module.compHom M f
+  let _ : IsScalarTower R S M :=
+    IsScalarTower.of_algebraMap_smul (fun _ _ => rfl)
+  let _ : Module.Finite R S := hfinite
+  let _ : Algebra.FinitePresentation R S := hfp
+  let _ : Module.FinitePresentation R S :=
+    Module.FinitePresentation.of_finite_of_finitePresentation R S
+  constructor
+  · intro hM
+    let _ : Module.FinitePresentation R M := hM
+    have hsourceR : Module.FinitePresentation R (S ⊗[R] M) :=
+      Module.FinitePresentation.trans R (S ⊗[R] M) S
+    let _ : Module.FinitePresentation R (S ⊗[R] M) := hsourceR
+    let fbase : S ⊗[R] M →ₗ[S] M :=
+      (LinearMap.id : M →ₗ[R] M).liftBaseChange S
+    have hfbase : Function.Surjective fbase := by
+      intro m
+      exact ⟨1 ⊗ₜ m, by simp [fbase]⟩
+    have hkerR : (LinearMap.ker (fbase.restrictScalars R)).FG :=
+      Module.FinitePresentation.fg_ker (fbase.restrictScalars R) hfbase
+    have hkerS : (LinearMap.ker fbase).FG := by
+      apply Submodule.FG.of_restrictScalars R
+      simpa only [LinearMap.ker_restrictScalars] using hkerR
+    exact Module.finitePresentation_of_surjective fbase hfbase hkerS
+  · intro hM
+    let _ : Module.FinitePresentation S M := hM
+    exact Module.FinitePresentation.trans R M S
 
 /-! ## The final short exact sequence -/
 
@@ -1046,7 +1088,13 @@ theorem ratioBothSubalgebra_eq_adjoin
     {R : Type u} [CommRing R] (x y : R) :
     ratioBothSubalgebra x y =
       Algebra.adjoin R ({ratioXY x y, ratioYX x y} : Set (ratioLocalization R x y)) := by
-  sorry
+  change Algebra.adjoin R ({ratioXY x y} : Set _) ⊔
+      Algebra.adjoin R ({ratioYX x y} : Set _) =
+    Algebra.adjoin R ({ratioXY x y, ratioYX x y} : Set _)
+  rw [← Algebra.adjoin_union]
+  apply congrArg (Algebra.adjoin R)
+  ext z
+  simp [or_comm]
 
 /-- Inclusion of `R[x/y]` into `R[x/y,y/x]`. -/
 noncomputable def ratioXYToBoth

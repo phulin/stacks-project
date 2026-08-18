@@ -51,10 +51,11 @@ theorem isSetoid_iff_isGroupoid_and_hom_subsingleton
     intro X Y
     constructor
     intro f g
-    letI : IsIso g := hgroup.all_isIso g
-    apply (cancel_mono g).1
-    rw [← hid X (f ≫ inv g)]
-    simp
+    let _ : IsIso g := hgroup.all_isIso g
+    have hcomp : f ≫ inv g = g ≫ inv g := by
+      rw [hid X (f ≫ inv g)]
+      simp
+    exact (cancel_mono (inv g)).1 hcomp
   · rintro ⟨hgroup, hhom⟩
     exact ⟨hgroup, fun X f => Subsingleton.elim _ _⟩
 
@@ -145,7 +146,9 @@ theorem isSetoid_object_classes_are_discrete
     IsDiscrete (SetoidObjectClasses C) := by
   refine ⟨?_, ?_⟩
   · intro X Y
-    exact Subsingleton.elim
+    constructor
+    intro f g
+    exact Subsingleton.elim f g
   · intro X Y f
     revert f
     refine Quotient.inductionOn X ?_
@@ -155,8 +158,8 @@ theorem isSetoid_object_classes_are_discrete
     apply setoidObjectClasses_eq_iff.mpr
     have hXY : Nonempty (X ⟶ Y) := by
       exact leOfHom f
-    letI : IsGroupoid C := hC.1
-    exact ⟨asIso (Classical.choice hXY)⟩
+    let f := Classical.choice hXY
+    exact ⟨@asIso _ _ _ _ f (hC.1.all_isIso f)⟩
 
 theorem isSetoid_skeleton_equivalence
     {C : Type*} [Category* C] (hC : IsSetoid C) :
@@ -164,12 +167,11 @@ theorem isSetoid_skeleton_equivalence
       IsDiscrete (Skeleton C) := by
   have hhom : ∀ X Y : C, Subsingleton (X ⟶ Y) :=
     (isSetoid_iff_isGroupoid_and_hom_subsingleton.mp hC).2
-  letI : IsGroupoid C := hC.1
   refine ⟨⟨skeletonEquivalence C⟩, ?_⟩
   apply (isDiscrete_iff_every_morphism_is_eqToHom).mpr
   intro X Y f
   let e : (fromSkeleton C).obj X ≅ (fromSkeleton C).obj Y :=
-    asIso ((fromSkeleton C).map f)
+    @asIso _ _ _ _ ((fromSkeleton C).map f) (hC.1.all_isIso _)
   have hXY : X = Y := skeleton_skeletal C
     ⟨(fromSkeleton C).preimageIso e⟩
   refine ⟨hXY, ?_⟩
@@ -184,13 +186,22 @@ theorem isSetoid_objectClasses_equivalence
     (isSetoid_iff_isGroupoid_and_hom_subsingleton.mp hC).2
   let F : SetoidObjectClasses C ⥤ C :=
     { obj := Quotient.out
-      map := fun {X Y} f => Classical.choice f.le
+      map := fun {X Y} f => by
+        let f' : ThinSkeleton.mk (Quotient.out X) ⟶
+            ThinSkeleton.mk (Quotient.out Y) :=
+          eqToHom (Quotient.out_eq X) ≫ f ≫
+            eqToHom (Quotient.out_eq Y).symm
+        have hXY : Nonempty (Quotient.out X ⟶ Quotient.out Y) := by
+          have hle := f'.le
+          change Nonempty (Quotient.out X ⟶ Quotient.out Y) at hle
+          exact hle
+        exact Classical.choice hXY
       map_id := by
         intro X
-        apply hhom
+        exact (hhom _ _).elim _ _
       map_comp := by
         intro X Y Z f g
-        apply hhom }
+        exact (hhom _ _).elim _ _ }
   let unitIso : 𝟭 (SetoidObjectClasses C) ≅ F ⋙ toThinSkeleton C :=
     NatIso.ofComponents
       (fun X => eqToIso (Quotient.out_eq X).symm)
@@ -202,10 +213,11 @@ theorem isSetoid_objectClasses_equivalence
       (fun X => Nonempty.some (Quotient.exact (Quotient.out_eq (ThinSkeleton.mk X))))
       (by
         intro X Y f
-        apply hhom)
-  letI : F.IsEquivalence :=
-    Functor.IsEquivalence.mk' F (toThinSkeleton C) unitIso counitIso
-  exact ⟨F.asEquivalence, isSetoid_object_classes_are_discrete hC⟩
+        exact (hhom _ _).elim _ _)
+  let hF : F.IsEquivalence :=
+    Functor.IsEquivalence.mk' (toThinSkeleton C) unitIso counitIso
+  exact ⟨⟨@Functor.asEquivalence _ _ _ _ F hF⟩,
+    isSetoid_object_classes_are_discrete hC⟩
 
 /-! ## Categories fibred in setoids -/
 
@@ -341,7 +353,10 @@ theorem categoriesFibredInSetoids_have_twoFibreProducts
           hcanonical.1 |>.2
       is_two_fibre_product :=
         twoFibreProductOver_is_twoFibreProduct F.underlying G.underlying }
-  refine ⟨{ product := product, product_diagram_is_canonical := rfl, ?_ }⟩
+  refine ⟨{
+    product := product
+    product_diagram_is_canonical := rfl
+    fibres_are_setoids := ?_ }⟩
   exact hcanonical.2
 
 /-! ## Equivalences with fibred-in-sets categories -/
@@ -350,7 +365,7 @@ theorem equivalence_to_fibredInSets_gives_setoidFibres
     {S S' C : Type*} [Category* S] [Category* S'] [Category* C]
     (p : S ⥤ C) (p' : S' ⥤ C) (G : S ⥤ S')
     (over : G ⋙ p' = p)
-    (hG : Nonempty G.IsEquivalence)
+    (hG : IsEquivalenceOverFunctor p p' G)
     (hp' : IsCategoryFibredInSets p') :
     IsCategoryFibredInSetoids p ∧
       ∀ U : C,
@@ -455,6 +470,9 @@ structure SetoidificationFunctorProperties
     ∀ {X Y : CategoriesFibredInSetoidsOver C}
       {f g : X ⟶ Y}, F.map f = F.map g →
         ∃! η : f ⟶ g, IsIso η
+  two_isomorphic_morphisms_have_equal_images :
+    ∀ {X Y : CategoriesFibredInSetoidsOver C}
+      {f g : X ⟶ Y}, (∃ η : f ⟶ g, IsIso η) → F.map f = F.map g
   lifts_morphisms :
     ∀ {X Y : CategoriesFibredInSetoidsOver C}
       (h : F.obj X ⟶ F.obj Y),

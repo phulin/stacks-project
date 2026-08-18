@@ -2747,7 +2747,74 @@ theorem differentialOperator_check_on_algebra_generators
     (hD : ∀ i, IsDifferentialOperator (R := A) (S := B) (k - 1)
       (differentialOperatorCommutator (R := A) (S := B) D (g i))) :
     IsDifferentialOperator (R := A) (S := B) k D := by
-  sorry
+  have hmulM (s : B) :
+      IsDifferentialOperator (R := A) (S := B) 0
+        (DistribSMul.toLinearMap A M s) := by
+    intro t m
+    simp [Algebra.smul_def, smul_smul, mul_comm]
+  have hmulN (s : B) :
+      IsDifferentialOperator (R := A) (S := B) 0
+        (DistribSMul.toLinearMap A N s) := by
+    intro t n
+    simp [Algebra.smul_def, smul_smul, mul_comm]
+  have hcomm_add (x y : B) :
+      differentialOperatorCommutator (R := A) (S := B) D (x + y) =
+        differentialOperatorCommutator (R := A) (S := B) D x +
+          differentialOperatorCommutator (R := A) (S := B) D y := by
+    ext m
+    simp [differentialOperatorCommutator, sub_eq_add_neg, add_assoc,
+      add_comm, add_left_comm]
+    abel
+  have hcomm_mul (x y : B) :
+      differentialOperatorCommutator (R := A) (S := B) D (x * y) =
+        (differentialOperatorCommutator (R := A) (S := B) D x).comp
+            (DistribSMul.toLinearMap A M y) +
+          (DistribSMul.toLinearMap A N x).comp
+            (differentialOperatorCommutator (R := A) (S := B) D y) := by
+    ext m
+    simp [differentialOperatorCommutator, sub_eq_add_neg, add_assoc,
+      add_comm, add_left_comm, mul_assoc]
+    abel
+  have hcomm_algebraMap (a : A) :
+      differentialOperatorCommutator (R := A) (S := B) D (algebraMap A B a) = 0 := by
+    ext m
+    simp [differentialOperatorCommutator,
+      IsScalarTower.algebraMap_smul B a m,
+      IsScalarTower.algebraMap_smul B a (D m)]
+  have hcomm_all : ∀ s : B,
+      IsDifferentialOperator (R := A) (S := B) (k - 1)
+        (differentialOperatorCommutator (R := A) (S := B) D s) := by
+    intro s
+    have hs : s ∈ Algebra.adjoin A (Set.range g) := by
+      rw [hg]
+      exact Submodule.mem_top
+    apply Algebra.adjoin_induction (R := A) (s := Set.range g)
+      (p := fun x _ => IsDifferentialOperator (R := A) (S := B) (k - 1)
+        (differentialOperatorCommutator (R := A) (S := B) D x)) hs
+    · intro x hx
+      rcases hx with ⟨i, rfl⟩
+      exact hD i
+    · intro a
+      rw [hcomm_algebraMap]
+      exact isDifferentialOperator_zero (R := A) (S := B) (k - 1)
+    · intro x y hx hy hpx hpy
+      rw [hcomm_add]
+      exact isDifferentialOperator_add (R := A) (S := B) (k - 1) _ _ hpx hpy
+    · intro x y hx hy hpx hpy
+      rw [hcomm_mul]
+      apply isDifferentialOperator_add (R := A) (S := B) (k - 1)
+      · simpa using differentialOperator_comp_isDifferentialOperator
+          (R := A) (S := B) 0 (k - 1)
+          (DistribSMul.toLinearMap A M y)
+          (differentialOperatorCommutator (R := A) (S := B) D x)
+          (hmulM y) hpx
+      · simpa using differentialOperator_comp_isDifferentialOperator
+          (R := A) (S := B) (k - 1) 0
+          (differentialOperatorCommutator (R := A) (S := B) D y)
+          (DistribSMul.toLinearMap A N x) hpy (hmulN x)
+  rw [← Nat.sub_add_cancel (Nat.one_le_iff_ne_zero.mp hk)]
+  intro s
+  exact hcomm_all s
 
 end DifferentialFormsAndGenerators
 

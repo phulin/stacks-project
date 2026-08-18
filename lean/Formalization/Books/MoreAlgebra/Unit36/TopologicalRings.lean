@@ -86,7 +86,38 @@ theorem isPreAdicTopologicalRing_iff_ideal_powers_open
       ∃ I : Ideal R,
         IsIdealOfDefinition R I ∧
           ∀ n : ℕ, 1 ≤ n → IsOpen ((I ^ n : Ideal R) : Set R) := by
-  sorry
+  constructor
+  · rintro ⟨I, hI, hbasis⟩
+    have hpow_mem : ∀ n : ℕ, ((I ^ n : Ideal R) : Set R) ∈ nhds (0 : R) := by
+      intro n
+      exact hbasis.mem_iff.mpr ⟨n, trivial, subset_rfl⟩
+    have hpow_open : ∀ n : ℕ, 1 ≤ n → IsOpen ((I ^ n : Ideal R) : Set R) := by
+      intro n hn
+      exact (I ^ n).toAddSubgroup.isOpen_of_mem_nhds (hpow_mem n)
+    have hIopen : IsOpen (I : Set R) := by
+      simpa using hpow_open 1 (by omega)
+    refine ⟨I, ?_, hpow_open⟩
+    refine ⟨hIopen, ?_⟩
+    intro U hU
+    obtain ⟨n, hn, hnU⟩ := hbasis.mem_iff.mp hU
+    exact ⟨n, hnU⟩
+  · intro h
+    obtain ⟨I, hI, hopen⟩ := h
+    refine ⟨I, hI, ?_⟩
+    refine ⟨fun U => ?_⟩
+    constructor
+    · intro hU
+      obtain ⟨n, hn⟩ := hI.2 U hU
+      exact ⟨n, trivial, hn⟩
+    · intro h
+      obtain ⟨n, htrivial, hnU⟩ := h
+      have hmem : ((I ^ n : Ideal R) : Set R) ∈ nhds (0 : R) := by
+        cases n with
+        | zero =>
+            simpa using (univ_mem : (Set.univ : Set R) ∈ nhds (0 : R))
+        | succ n =>
+            exact (hopen (n + 1) (by omega)).mem_nhds (Ideal.zero_mem _)
+      exact Filter.mem_of_superset hmem hnU
 
 theorem isAdicTopologicalRing_iff_ideal_powers_open
     (R : Type u) [CommRing R] [TopologicalSpace R] [IsTopologicalRing R]
@@ -96,7 +127,15 @@ theorem isAdicTopologicalRing_iff_ideal_powers_open
         IsIdealOfDefinition R I ∧
           (∀ n : ℕ, 1 ≤ n → IsOpen ((I ^ n : Ideal R) : Set R)) ∧
             IsCompleteTopologicalAddGroup R := by
-  sorry
+  constructor
+  · intro h
+    obtain ⟨hpre, hcomplete⟩ := h
+    obtain ⟨I, hI, hopen⟩ :=
+      (isPreAdicTopologicalRing_iff_ideal_powers_open R).mp hpre
+    exact ⟨I, hI, hopen, hcomplete⟩
+  · rintro ⟨I, hI, hopen, hcomplete⟩
+    exact ⟨(isPreAdicTopologicalRing_iff_ideal_powers_open R).mpr
+      ⟨I, hI, hopen⟩, hcomplete⟩
 
 theorem isPreAdicTopologicalRing_iff_preAdmissible_and_powers_open
     (R : Type u) [CommRing R] [TopologicalSpace R] [IsTopologicalRing R]

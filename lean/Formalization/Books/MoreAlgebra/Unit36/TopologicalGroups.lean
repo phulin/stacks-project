@@ -759,7 +759,50 @@ theorem isCompleteTopologicalAddGroup_iff_linearCompletionMap_bijective
     [IsTopologicalAddGroup M] :
     IsCompleteTopologicalAddGroup M ↔
       Function.Bijective (linearCompletionMap M) := by
-  sorry
+  letI : UniformSpace M := IsTopologicalAddGroup.rightUniformSpace M
+  letI : IsUniformAddGroup M := isUniformAddGroup_of_addCommGroup
+  change IsCompleteTopologicalAddGroup M ↔
+    Function.Bijective
+      (UniformSpace.Completion.toCompl : M →+ UniformSpace.Completion M)
+  constructor
+  · rintro ⟨hcomplete, hT2⟩
+    letI : CompleteSpace M := hcomplete
+    letI : T2Space M := hT2
+    have hinj : Function.Injective
+        (UniformSpace.Completion.toCompl : M →+ UniformSpace.Completion M) :=
+      UniformSpace.Completion.coe_injective M
+    have hind : IsUniformInducing
+        (UniformSpace.Completion.toCompl : M →+ UniformSpace.Completion M) :=
+      UniformSpace.Completion.isUniformInducing_coe M
+    have hrange : IsComplete (Set.range
+        (UniformSpace.Completion.toCompl : M →+ UniformSpace.Completion M)) :=
+      (completeSpace_iff_isComplete_range hind).mp hcomplete
+    have hclosed : IsClosed (Set.range
+        (UniformSpace.Completion.toCompl : M →+ UniformSpace.Completion M)) :=
+      IsComplete.isClosed hrange
+    have hdense : DenseRange
+        (UniformSpace.Completion.toCompl : M →+ UniformSpace.Completion M) :=
+      UniformSpace.Completion.denseRange_coe
+    have hsurj : Function.Surjective
+        (UniformSpace.Completion.toCompl : M →+ UniformSpace.Completion M) := by
+      intro y
+      have hy : y ∈ closure (Set.range
+          (UniformSpace.Completion.toCompl : M →+ UniformSpace.Completion M)) := by
+        rw [hdense.closure_range]
+        exact Set.mem_univ y
+      exact hclosed.closure_subset hy
+    exact ⟨hinj, hsurj⟩
+  · intro h
+    have hT2 : T2Space M := by
+      apply T2Space.of_injective_continuous h.1
+      exact UniformSpace.Completion.continuous_toCompl
+    letI : T2Space M := hT2
+    have hcomplete : CompleteSpace M := by
+      apply (completeSpace_iff_isComplete_range
+        (UniformSpace.Completion.isUniformInducing_coe M)).mpr
+      rw [h.2.range_eq]
+      exact (completeSpace_iff_isComplete_univ).mp inferInstance
+    exact ⟨hcomplete, hT2⟩
 
 end
 

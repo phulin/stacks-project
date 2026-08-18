@@ -409,7 +409,7 @@ theorem totalQuotientRing_equiv_pi_minimalPrime_localizations
           have hKeq : K = (r i).asIdeal := le_antisymm hKle hriK
           exact hxri (hKeq ▸ hxK)
       letI : Ring.KrullDimLE 0 A := Ring.KrullDimLE.mk₀ hmax
-      letI : DiscreteTopology (PrimeSpectrum A) :=
+      let : DiscreteTopology (PrimeSpectrum A) :=
         (PrimeSpectrum.discreteTopology_iff_finite_and_krullDimLE_zero).2
           ⟨inferInstance, inferInstance⟩
       exact ⟨(PrimeSpectrum.toPiLocalizationEquiv A).toRingEquiv.trans E.symm⟩

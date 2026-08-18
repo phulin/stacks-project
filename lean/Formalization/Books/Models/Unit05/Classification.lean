@@ -596,7 +596,691 @@ theorem star_five_matrix_singular (r : ℤ) :
 
 theorem double_triple_matrix_singular (t : ℕ) (ht : 4 ≤ t) (r : ℤ) :
     Matrix.det (scalarMatrix (doubleTripleMatrix t) r) = 0 := by
-  sorry
+  classical
+  let v : Fin (t + 2) → ℤ := fun i =>
+    if i.val ≤ 1 then 1 else if i.val < t then 2 else 1
+  have hkernel : Matrix.mulVec (doubleTripleMatrix t) v = 0 := by
+    funext i
+    rw [Matrix.mulVec_apply_eq_sum]
+    by_cases hi0 : i.val = 0
+    · have hi : i = 0 := by
+        apply Fin.ext
+        simpa using hi0
+      subst i
+      have hsum : (∑ j : Fin (t + 2), doubleTripleMatrix t 0 j * v j) =
+          -2 * v 0 + v 2 := by
+        calc
+          (∑ j : Fin (t + 2), doubleTripleMatrix t 0 j * v j) =
+              ∑ j, ((if j = 0 then -2 * v j else 0) +
+                (if j = 2 then v j else 0)) := by
+            apply Finset.sum_congr rfl
+            intro j hj
+            by_cases h0 : j = 0
+            · subst j
+              have h02 : ¬ (0 : Fin (t + 2)) = 2 := by
+                intro h
+                have hv := congrArg Fin.val h
+                have h2lt : 2 < t + 2 := by omega
+                have h2mod : 2 % (t + 2) = 2 := Nat.mod_eq_of_lt h2lt
+                norm_num at hv
+                rw [h2mod] at hv
+                omega
+              simp [doubleTripleMatrix, h02]
+            · by_cases h2 : j = 2
+              · subst j
+                simp [doubleTripleMatrix]
+                split <;> omega
+              · simp [doubleTripleMatrix, h0, h2]
+                have hj0 : j.val ≠ 0 := by
+                  intro hj
+                  apply h0
+                  apply Fin.ext
+                  simpa using hj
+                have hj2 : j.val ≠ 2 := by
+                  intro hj
+                  apply h2
+                  apply Fin.ext
+                  have h2lt : 2 < t + 2 := by omega
+                  have h2mod : 2 % (t + 2) = 2 := Nat.mod_eq_of_lt h2lt
+                  simpa [h2mod] using hj
+                have h0' : (0 : Fin (t + 2)) ≠ j := by
+                  intro h
+                  exact h0 h.symm
+                have ht1 : t - 1 ≠ 0 := by omega
+                have ht1' : 0 ≠ t - 1 := Ne.symm ht1
+                simp [doubleTripleMatrix, hj0, hj2, h0', ht1, ht1', ht]
+          _ = -2 * v 0 + v 2 := by
+            simp [Finset.sum_add_distrib]
+      rw [hsum]
+      have h2lt : 2 < t + 2 := by omega
+      have h2val : (2 : Fin (t + 2)).val = 2 := by
+        simp [Fin.coe_ofNat_eq_mod, Nat.mod_eq_of_lt h2lt]
+      have h2mod : 2 % (t + 2) = 2 := Nat.mod_eq_of_lt h2lt
+      have h2t : 2 < t := by omega
+      simp [v, ht, h2lt, h2val, h2mod, h2t]
+    · by_cases hi1 : i.val = 1
+      · have hi : i = 1 := by
+          apply Fin.ext
+          simpa using hi1
+        subst i
+        have hsum : (∑ j : Fin (t + 2), doubleTripleMatrix t 1 j * v j) =
+            -2 * v 1 + v 2 := by
+          calc
+            (∑ j : Fin (t + 2), doubleTripleMatrix t 1 j * v j) =
+                ∑ j, ((if j = 1 then -2 * v j else 0) +
+                  (if j = 2 then v j else 0)) := by
+              apply Finset.sum_congr rfl
+              intro j hj
+              by_cases h1 : j = 1
+              · subst j
+                have h12 : ¬ (1 : Fin (t + 2)) = 2 := by
+                  intro h
+                  have hv := congrArg Fin.val h
+                  have h2lt : 2 < t + 2 := by omega
+                  have h2mod : 2 % (t + 2) = 2 := Nat.mod_eq_of_lt h2lt
+                  norm_num at hv
+                  rw [h2mod] at hv
+                  omega
+                simp [doubleTripleMatrix, h12]
+              · by_cases h2 : j = 2
+                · subst j
+                  have h2lt : 2 < t + 2 := by omega
+                  have h2mod : 2 % (t + 2) = 2 := Nat.mod_eq_of_lt h2lt
+                  have h2le : 2 ≤ t := by omega
+                  have h12 : (1 : Fin (t + 2)) ≠ 2 := by
+                    intro h
+                    have hv := congrArg Fin.val h
+                    norm_num at hv
+                    rw [h2mod] at hv
+                    omega
+                  simp [doubleTripleMatrix, ht, h2mod, h2le, h12, h12.symm]
+                · have hj1 : j.val ≠ 1 := by
+                    intro hj'
+                    apply h1
+                    apply Fin.ext
+                    simpa using hj'
+                  have hj2 : j.val ≠ 2 := by
+                    intro hj'
+                    apply h2
+                    apply Fin.ext
+                    have h2lt : 2 < t + 2 := by omega
+                    have h2mod : 2 % (t + 2) = 2 := Nat.mod_eq_of_lt h2lt
+                    simpa [h2mod] using hj'
+                  have h2lt : 2 < t + 2 := by omega
+                  have h2mod : 2 % (t + 2) = 2 := Nat.mod_eq_of_lt h2lt
+                  have h0val : (0 : Fin (t + 2)).val = 0 := by simp
+                  have h1val : (1 : Fin (t + 2)).val = 1 := by
+                    simp [Fin.coe_ofNat_eq_mod, Nat.mod_eq_of_lt (by omega : 1 < t + 2)]
+                  have h2val : (2 : Fin (t + 2)).val = 2 := by
+                    simp [Fin.coe_ofNat_eq_mod, h2mod]
+                  have h2le : 2 ≤ t := by omega
+                  have h1rev : (1 : Fin (t + 2)) ≠ j := by
+                    intro h
+                    exact h1 h.symm
+                  have h2rev : (2 : Fin (t + 2)).val ≠ j.val := by
+                    intro h
+                    apply hj2
+                    symm
+                    simpa [h2val, h2mod] using h
+                  have h1j : (1 : Fin (t + 2)).val ≠ j.val := by
+                    intro h
+                    apply hj1
+                    symm
+                    exact h
+                  have h2rev' : 2 ≠ j.val := by
+                    simpa [h2mod] using h2rev
+                  have hbranch : ¬ (2 = j.val ∧ j.val ≤ t ∨
+                      j = 0 ∧ 1 ≤ j.val ∧ 1 ≤ t) := by
+                    intro h
+                    rcases h with h | h
+                    · exact h2rev' h.1
+                    · have := h.2.1
+                      have hj0 : j.val = 0 := by
+                        simpa using congrArg Fin.val h.1
+                      omega
+                  have hend : ¬ (1 = t - 1 ∧ j.val = t + 1 ∨
+                      t = 0 ∧ j.val = t - 1) := by
+                    intro h
+                    rcases h with h | h <;> omega
+                  simp [doubleTripleMatrix, h1, h2, hj1, hj2, ht, h2mod,
+                    h0val, h1val, h2val, h2le, h1rev, h2rev, h1j,
+                    hbranch, hend]
+            _ = -2 * v 1 + v 2 := by
+              simp [Finset.sum_add_distrib]
+        rw [hsum]
+        have h1val : (1 : Fin (t + 2)).val = 1 := by
+          simp [Fin.coe_ofNat_eq_mod, Nat.mod_eq_of_lt (by omega : 1 < t + 2)]
+        have h2lt : 2 < t + 2 := by omega
+        have h2mod : 2 % (t + 2) = 2 := Nat.mod_eq_of_lt h2lt
+        have h2t : 2 < t := by omega
+        simp [v, ht, h1val, h2mod, h2t]
+      · by_cases hi2 : i.val = 2
+        · have hi : i = 2 := by
+            apply Fin.ext
+            have h2lt : 2 < t + 2 := by omega
+            have h2mod : 2 % (t + 2) = 2 := Nat.mod_eq_of_lt h2lt
+            simpa [h2mod] using hi2
+          subst i
+          have hsum : (∑ j : Fin (t + 2), doubleTripleMatrix t 2 j * v j) =
+              -2 * v 2 + v 0 + v 1 + v 3 := by
+            calc
+              (∑ j : Fin (t + 2), doubleTripleMatrix t 2 j * v j) =
+                  ∑ j, ((if j = 2 then -2 * v j else 0) +
+                    (if j = 0 then v j else 0) +
+                    (if j = 1 then v j else 0) +
+                    (if j = 3 then v j else 0)) := by
+                apply Finset.sum_congr rfl
+                intro j hj
+                by_cases h2 : j = 2
+                · subst j
+                  have h23 : ¬ (2 : Fin (t + 2)) = 3 := by
+                    intro h
+                    have hv := congrArg Fin.val h
+                    have h2lt : 2 < t + 2 := by omega
+                    have h2mod : 2 % (t + 2) = 2 := Nat.mod_eq_of_lt h2lt
+                    have h3lt : 3 < t + 2 := by omega
+                    have h3mod : 3 % (t + 2) = 3 := Nat.mod_eq_of_lt h3lt
+                    norm_num at hv
+                    rw [h2mod, h3mod] at hv
+                    omega
+                  have h20 : ¬ (2 : Fin (t + 2)) = 0 := by
+                    intro h
+                    have hv := congrArg Fin.val h
+                    have h2lt : 2 < t + 2 := by omega
+                    have h2mod : 2 % (t + 2) = 2 := Nat.mod_eq_of_lt h2lt
+                    norm_num at hv
+                    rw [h2mod] at hv
+                    omega
+                  have h21 : ¬ (2 : Fin (t + 2)) = 1 := by
+                    intro h
+                    have hv := congrArg Fin.val h
+                    have h2lt : 2 < t + 2 := by omega
+                    have h2mod : 2 % (t + 2) = 2 := Nat.mod_eq_of_lt h2lt
+                    norm_num at hv
+                    rw [h2mod] at hv
+                    omega
+                  simp [doubleTripleMatrix, h23, h20, h21]
+                · by_cases h0 : j = 0
+                  · subst j
+                    have h2lt : 2 < t + 2 := by omega
+                    have h2mod : 2 % (t + 2) = 2 := Nat.mod_eq_of_lt h2lt
+                    have h3lt : 3 < t + 2 := by omega
+                    have h3mod : 3 % (t + 2) = 3 := Nat.mod_eq_of_lt h3lt
+                    have htpos : 0 < t := by omega
+                    have h03 : ¬ (0 : Fin (t + 2)) = 3 := by
+                      intro h
+                      have hv := congrArg Fin.val h
+                      norm_num at hv
+                      rw [h3mod] at hv
+                      omega
+                    simp [doubleTripleMatrix, h2mod, h3mod, htpos, ht, h03]
+                    split <;> omega
+                  · by_cases h1 : j = 1
+                    · subst j
+                      have h2lt : 2 < t + 2 := by omega
+                      have h2mod : 2 % (t + 2) = 2 := Nat.mod_eq_of_lt h2lt
+                      have h3lt : 3 < t + 2 := by omega
+                      have h3mod : 3 % (t + 2) = 3 := Nat.mod_eq_of_lt h3lt
+                      have h2le : 2 ≤ t := by omega
+                      have h13 : ¬ (1 : Fin (t + 2)) = 3 := by
+                        intro h
+                        have hv := congrArg Fin.val h
+                        norm_num at hv
+                        rw [h3mod] at hv
+                        omega
+                      simp [doubleTripleMatrix, ht, h2mod, h3mod, h2le, h13]
+                      split <;> omega
+                    · by_cases h3 : j = 3
+                      · subst j
+                        have h3lt : 3 < t + 2 := by omega
+                        have h3mod : 3 % (t + 2) = 3 := Nat.mod_eq_of_lt h3lt
+                        have h3le : 3 ≤ t := by omega
+                        have h2lt : 2 < t + 2 := by omega
+                        have h2mod : 2 % (t + 2) = 2 := Nat.mod_eq_of_lt h2lt
+                        have h23 : ¬ (2 : Fin (t + 2)) = 3 := by
+                          intro h
+                          have hv := congrArg Fin.val h
+                          norm_num at hv
+                          rw [h2mod, h3mod] at hv
+                          omega
+                        have h30 : ¬ (3 : Fin (t + 2)) = 0 := by
+                          intro h
+                          have hv := congrArg Fin.val h
+                          norm_num at hv
+                          rw [h3mod] at hv
+                          omega
+                        have h31 : ¬ (3 : Fin (t + 2)) = 1 := by
+                          intro h
+                          have hv := congrArg Fin.val h
+                          norm_num at hv
+                          rw [h3mod] at hv
+                          omega
+                        have h32 : ¬ (3 : Fin (t + 2)) = 2 := by
+                          intro h
+                          have hv := congrArg Fin.val h
+                          norm_num at hv
+                          rw [h2mod, h3mod] at hv
+                          omega
+                        simp [doubleTripleMatrix, ht, h2mod, h3mod, h3le,
+                          h23, h30, h31, h32]
+                      · have hj0 : j.val ≠ 0 := by
+                          intro hj'
+                          apply h0
+                          apply Fin.ext
+                          simpa using hj'
+                        have hj1 : j.val ≠ 1 := by
+                          intro hj'
+                          apply h1
+                          apply Fin.ext
+                          simpa using hj'
+                        have hj2 : j.val ≠ 2 := by
+                          intro hj'
+                          apply h2
+                          apply Fin.ext
+                          have h2lt : 2 < t + 2 := by omega
+                          have h2mod : 2 % (t + 2) = 2 := Nat.mod_eq_of_lt h2lt
+                          simpa [h2mod] using hj'
+                        have hj3 : j.val ≠ 3 := by
+                          intro hj'
+                          apply h3
+                          apply Fin.ext
+                          have h3lt : 3 < t + 2 := by omega
+                          have h3mod : 3 % (t + 2) = 3 := Nat.mod_eq_of_lt h3lt
+                          simpa [h3mod] using hj'
+                        have h3lt : 3 < t + 2 := by omega
+                        have h3mod : 3 % (t + 2) = 3 := Nat.mod_eq_of_lt h3lt
+                        have h3val : (3 : Fin (t + 2)).val = 3 := by
+                          simp [Fin.coe_ofNat_eq_mod, h3mod]
+                        have h2lt : 2 < t + 2 := by omega
+                        have h2mod : 2 % (t + 2) = 2 := Nat.mod_eq_of_lt h2lt
+                        have h2rev : (2 : Fin (t + 2)) ≠ j := by
+                          intro h
+                          exact h2 h.symm
+                        have hpath : ¬ (2 % (t + 2) + 1 = j.val ∧
+                            1 ≤ 2 % (t + 2) ∧ j.val ≤ t ∨
+                            j.val + 1 = 2 % (t + 2) ∧ 1 ≤ j.val ∧
+                              2 % (t + 2) ≤ t) := by
+                          rw [h2mod]
+                          intro h
+                          rcases h with h | h <;> omega
+                        have hend : ¬ (2 % (t + 2) = t - 1 ∧ j.val = t + 1 ∨
+                            2 % (t + 2) = t + 1 ∧ j.val = t - 1) := by
+                          rw [h2mod]
+                          intro h
+                          rcases h with h | h <;> omega
+                        have hbranch : ¬ (j.val = 3 ∧ 1 ≤ 2 ∧ j.val ≤ t ∨
+                            j.val + 1 = 2 ∧ 1 ≤ j.val ∧ 2 ≤ t ∨
+                            j.val = 0 ∧ 2 = 2 ∨
+                            2 = t - 1 ∧ j.val = t + 1) := by
+                          intro h
+                          rcases h with h | h | h | h <;> omega
+                        simp [doubleTripleMatrix, h0, h1, h2, h3, hj0, hj1,
+                          hj2, hj3, ht, h2mod, h3mod, h3val, h2rev, hpath,
+                          hend, hbranch]
+                        split <;> simp_all <;> omega
+              _ = -2 * v 2 + v 0 + v 1 + v 3 := by
+                simp [Finset.sum_add_distrib]
+          rw [hsum]
+          have h2lt : 2 < t + 2 := by omega
+          have h2mod : 2 % (t + 2) = 2 := Nat.mod_eq_of_lt h2lt
+          have h2val : (2 : Fin (t + 2)).val = 2 := by
+            simp [Fin.coe_ofNat_eq_mod, h2mod]
+          have h3lt : 3 < t + 2 := by omega
+          have h3mod : 3 % (t + 2) = 3 := Nat.mod_eq_of_lt h3lt
+          have h3val : (3 : Fin (t + 2)).val = 3 := by
+            simp [Fin.coe_ofNat_eq_mod, h3mod]
+          have h2t : 2 < t := by omega
+          have h3t : 3 < t := by omega
+          simp [v, ht, h2mod, h2val, h3mod, h3val, h2t, h3t]
+        · by_cases hit : i.val = t
+          · let it : Fin (t + 2) := ⟨t, by omega⟩
+            let im1 : Fin (t + 2) := ⟨t - 1, by omega⟩
+            have hi : i = it := by
+              apply Fin.ext
+              simpa [it] using hit
+            rw [hi]
+            have hsum : (∑ j : Fin (t + 2), doubleTripleMatrix t it j * v j) =
+                -2 * v it + v im1 := by
+              calc
+                (∑ j : Fin (t + 2), doubleTripleMatrix t it j * v j) =
+                    ∑ j, ((if j = it then -2 * v j else 0) +
+                      (if j = im1 then v j else 0)) := by
+                  apply Finset.sum_congr rfl
+                  intro j hj
+                  by_cases hjt : j = it
+                  · subst j
+                    simp [doubleTripleMatrix, it, im1]
+                    have hne : t ≠ t - 1 := by omega
+                    simp [hne]
+                  · by_cases hjm : j = im1
+                    · subst j
+                      simp [doubleTripleMatrix, it, im1]
+                      split <;> omega
+                    · have hjt' : j.val ≠ t := by
+                        intro h
+                        apply hjt
+                        apply Fin.ext
+                        simpa [it] using h
+                      have hjm' : j.val ≠ t - 1 := by
+                        intro h
+                        apply hjm
+                        apply Fin.ext
+                        simpa [im1] using h
+                      have hpath : ¬ ((t + 1 = j.val ∧ 1 ≤ t ∧ j.val ≤ t) ∨
+                          (j.val + 1 = t ∧ 1 ≤ j.val ∧ t ≤ t)) := by
+                        intro h
+                        rcases h with h | h <;> omega
+                      have hend : ¬ ((t = t - 1 ∧ j.val = t + 1) ∨
+                          (t - 1 = t + 1 ∧ j.val = t)) := by
+                        omega
+                      have hdiag : it ≠ j := by
+                        intro h
+                        exact hjt h.symm
+                      have hpath' : ¬ ((t + 1 = j.val ∧ 1 ≤ t ∧ j.val ≤ t) ∨
+                          (j.val + 1 = t ∧ 1 ≤ j.val)) := by
+                        intro h
+                        rcases h with h | h <;> omega
+                      have hspecial : ¬ (t = 0 ∧ j.val = 2 ∨
+                          t = 2 ∧ j = 0) := by
+                        intro h
+                        rcases h with h | h <;> omega
+                      have hend' : ¬ (t = t - 1 ∧ j.val = t + 1) := by
+                        omega
+                      simp [doubleTripleMatrix, it, im1, hjt, hjm, hjt', hjm',
+                        hpath, hend, hdiag, hpath', hspecial, hend', ht]
+                _ = -2 * v it + v im1 := by
+                  simp [Finset.sum_add_distrib]
+            rw [hsum]
+            have htle : ¬ t ≤ 2 := by omega
+            have htpos : 0 < t := by omega
+            simp [v, it, im1, ht, htle, htpos]
+          · by_cases hit1 : i.val = t + 1
+            · let it1 : Fin (t + 2) := ⟨t + 1, by omega⟩
+              let im1 : Fin (t + 2) := ⟨t - 1, by omega⟩
+              have hi : i = it1 := by
+                apply Fin.ext
+                simpa [it1] using hit1
+              rw [hi]
+              have hsum : (∑ j : Fin (t + 2), doubleTripleMatrix t it1 j * v j) =
+                  -2 * v it1 + v im1 := by
+                calc
+                  (∑ j : Fin (t + 2), doubleTripleMatrix t it1 j * v j) =
+                      ∑ j, ((if j = it1 then -2 * v j else 0) +
+                        (if j = im1 then v j else 0)) := by
+                    apply Finset.sum_congr rfl
+                    intro j hj
+                    by_cases hjt : j = it1
+                    · subst j
+                      simp [doubleTripleMatrix, it1, im1]
+                      have hne : t + 1 ≠ t - 1 := by omega
+                      simp [hne]
+                    · by_cases hjm : j = im1
+                      · subst j
+                        simp [doubleTripleMatrix, it1, im1]
+                        have hne : t + 1 ≠ t - 1 := by omega
+                        simp [hne]
+                      · have hjt' : j.val ≠ t + 1 := by
+                          intro h
+                          apply hjt
+                          apply Fin.ext
+                          simpa [it1] using h
+                        have hjm' : j.val ≠ t - 1 := by
+                          intro h
+                          apply hjm
+                          apply Fin.ext
+                          simpa [im1] using h
+                        have hpath : ¬ ((t + 2 = j.val ∧ 1 ≤ t + 1 ∧ j.val ≤ t) ∨
+                            (j.val + 1 = t + 1 ∧ 1 ≤ j.val ∧ t + 1 ≤ t)) := by
+                          intro h
+                          rcases h with h | h <;> omega
+                        have hend : ¬ ((t + 1 = t - 1 ∧ j.val = t + 1) ∨
+                            (t - 1 = t + 1 ∧ j.val = t + 1)) := by
+                          omega
+                        have hdiag : it1 ≠ j := by
+                          intro h
+                          exact hjt h.symm
+                        have hpath' : ¬ (t + 1 + 1 = j.val ∧ j.val ≤ t) := by
+                          intro h
+                          omega
+                        have hspecial : ¬ (t = 1 ∧ j = 0) := by
+                          intro h
+                          omega
+                        have hend' : ¬ (t + 1 = t - 1 ∧ j.val = t + 1) := by
+                          omega
+                        simp [doubleTripleMatrix, it1, im1, hjt, hjm, hjt', hjm',
+                          hpath, hend, hdiag, hpath', hspecial, hend', ht]
+                  _ = -2 * v it1 + v im1 := by
+                    simp [Finset.sum_add_distrib]
+              rw [hsum]
+              have htle : ¬ t ≤ 2 := by omega
+              have htpos : 0 < t := by omega
+              simp [v, it1, im1, ht, htle, htpos]
+            · by_cases hitm : i.val = t - 1
+              · let im1 : Fin (t + 2) := ⟨t - 1, by omega⟩
+                let im2 : Fin (t + 2) := ⟨t - 2, by omega⟩
+                let it : Fin (t + 2) := ⟨t, by omega⟩
+                let it1 : Fin (t + 2) := ⟨t + 1, by omega⟩
+                have hi : i = im1 := by
+                  apply Fin.ext
+                  simpa [im1] using hitm
+                rw [hi]
+                have hsum : (∑ j : Fin (t + 2), doubleTripleMatrix t im1 j * v j) =
+                    -2 * v im1 + v im2 + v it + v it1 := by
+                  calc
+                    (∑ j : Fin (t + 2), doubleTripleMatrix t im1 j * v j) =
+                        ∑ j, ((if j = im1 then -2 * v j else 0) +
+                          (if j = im2 then v j else 0) +
+                          (if j = it then v j else 0) +
+                          (if j = it1 then v j else 0)) := by
+                      apply Finset.sum_congr rfl
+                      intro j hj
+                      by_cases hjm1 : j = im1
+                      · subst j
+                        simp [doubleTripleMatrix, im1, im2, it, it1]
+                        split <;> omega
+                      · by_cases hjm2 : j = im2
+                        · subst j
+                          simp [doubleTripleMatrix, im1, im2, it, it1]
+                          split <;> omega
+                        · by_cases hjt : j = it
+                          · subst j
+                            simp [doubleTripleMatrix, im1, im2, it, it1]
+                            split <;> omega
+                          · by_cases hjt1 : j = it1
+                            · subst j
+                              simp [doubleTripleMatrix, im1, im2, it, it1]
+                              split <;> omega
+                            · have hjm1' : j.val ≠ t - 1 := by
+                                intro h
+                                apply hjm1
+                                apply Fin.ext
+                                simpa [im1] using h
+                              have hjm2' : j.val ≠ t - 2 := by
+                                intro h
+                                apply hjm2
+                                apply Fin.ext
+                                simpa [im2] using h
+                              have hjt' : j.val ≠ t := by
+                                intro h
+                                apply hjt
+                                apply Fin.ext
+                                simpa [it] using h
+                              have hjt1' : j.val ≠ t + 1 := by
+                                intro h
+                                apply hjt1
+                                apply Fin.ext
+                                simpa [it1] using h
+                              have hpath : ¬ ((t - 1 + 1 = j.val ∧
+                                  1 ≤ t - 1 ∧ j.val ≤ t) ∨
+                                  (j.val + 1 = t - 1 ∧ 1 ≤ j.val ∧ t - 1 ≤ t)) := by
+                                intro h
+                                rcases h with h | h <;> omega
+                              have hend : ¬ ((t - 1 = t - 1 ∧ j.val = t + 1) ∨
+                                  (t + 1 = t - 1 ∧ j.val = t - 1)) := by
+                                intro h
+                                rcases h with h | h <;> omega
+                              have hdiag : im1 ≠ j := by
+                                intro h
+                                exact hjm1 h.symm
+                              have hpath' : ¬ ((t - 1 + 1 = j.val ∧ j.val ≤ t) ∨
+                                  (j.val + 1 = t - 1 ∧ 1 ≤ j.val)) := by
+                                intro h
+                                rcases h with h | h <;> omega
+                              have hpath2 : ¬ ((t - 1 + 1 = j.val ∧
+                                  1 ≤ t - 1 ∧ j.val ≤ t) ∨
+                                  (j.val + 1 = t - 1 ∧ 1 ≤ j.val)) := by
+                                intro h
+                                rcases h with h | h <;> omega
+                              have hspecial : ¬ (t - 1 = 0 ∧ j.val = 2 ∨
+                                  t = 3 ∧ j = 0) := by
+                                intro h
+                                rcases h with h | h <;> omega
+                              simp [doubleTripleMatrix, im1, im2, it, it1,
+                                hjm1, hjm2, hjt, hjt1, hjm1', hjm2', hjt',
+                                hjt1', hpath, hpath2, hend, hdiag, hpath',
+                                hspecial, ht]
+                    _ = -2 * v im1 + v im2 + v it + v it1 := by
+                      simp [Finset.sum_add_distrib]
+                rw [hsum]
+                have htle : ¬ t ≤ 2 := by omega
+                have ht3 : ¬ t ≤ 3 := by omega
+                have htpos : 0 < t := by omega
+                simp [v, im1, im2, it, it1, ht, htle, ht3, htpos]
+              · have hi3 : 3 ≤ i.val := by omega
+                have hitwo : i.val ≤ t - 2 := by omega
+                let im : Fin (t + 2) := ⟨i.val - 1, by omega⟩
+                let ip : Fin (t + 2) := ⟨i.val + 1, by omega⟩
+                have hsum : (∑ j : Fin (t + 2), doubleTripleMatrix t i j * v j) =
+                    -2 * v i + v im + v ip := by
+                  calc
+                    (∑ j : Fin (t + 2), doubleTripleMatrix t i j * v j) =
+                        ∑ j, ((if j = i then -2 * v j else 0) +
+                          (if j = im then v j else 0) +
+                          (if j = ip then v j else 0)) := by
+                      apply Finset.sum_congr rfl
+                      intro j hj
+                      by_cases hji : j = i
+                      · subst j
+                        have him : i ≠ im := by
+                          intro h
+                          have hv := congrArg Fin.val h
+                          simp [im] at hv
+                          omega
+                        have hip : i ≠ ip := by
+                          intro h
+                          have hv := congrArg Fin.val h
+                          simp [ip] at hv
+                        simp [doubleTripleMatrix, him, hip]
+                      · by_cases hjm : j = im
+                        · subst j
+                          have hmi : im ≠ i := by
+                            intro h
+                            have hv := congrArg Fin.val h
+                            simp [im] at hv
+                            omega
+                          have hmip : im ≠ ip := by
+                            intro h
+                            have hv := congrArg Fin.val h
+                            simp [im, ip] at hv
+                          simp [doubleTripleMatrix, im, ip, hmi, hmip]
+                          split <;> omega
+                        · by_cases hjp : j = ip
+                          · subst j
+                            have hpi : ip ≠ i := by
+                              intro h
+                              have hv := congrArg Fin.val h
+                              simp [ip] at hv
+                            have hpim : ip ≠ im := by
+                              intro h
+                              have hv := congrArg Fin.val h
+                              simp [im, ip] at hv
+                              omega
+                            simp [doubleTripleMatrix, im, ip, hpi, hpim]
+                            split <;> omega
+                          · have hji' : j.val ≠ i.val := by
+                              intro h
+                              apply hji
+                              apply Fin.ext
+                              exact h
+                            have hjm' : j.val ≠ i.val - 1 := by
+                              intro h
+                              apply hjm
+                              apply Fin.ext
+                              simpa [im] using h
+                            have hjp' : j.val ≠ i.val + 1 := by
+                              intro h
+                              apply hjp
+                              apply Fin.ext
+                              simpa [ip] using h
+                            have hpath : ¬ ((i.val + 1 = j.val ∧
+                                1 ≤ i.val ∧ j.val ≤ t) ∨
+                                (j.val + 1 = i.val ∧ 1 ≤ j.val ∧ i.val ≤ t)) := by
+                              intro h
+                              rcases h with h | h <;> omega
+                            have hspecial : ¬ ((i.val = 0 ∧ j.val = 2) ∨
+                                (i.val = 2 ∧ j.val = 0)) := by
+                              intro h
+                              rcases h with h | h <;> omega
+                            have hend : ¬ ((i.val = t - 1 ∧ j.val = t + 1) ∨
+                                (i.val = t + 1 ∧ j.val = t - 1)) := by
+                              intro h
+                              rcases h with h | h <;> omega
+                            have hdiag : i ≠ j := by
+                              intro h
+                              exact hji h.symm
+                            have hi0' : i ≠ 0 := by
+                              intro h
+                              have hv := congrArg Fin.val h
+                              norm_num at hv
+                              have hi0val : i.val = 0 := by simpa using hv
+                              omega
+                            have hi2' : i ≠ 2 := by
+                              intro h
+                              have hv := congrArg Fin.val h
+                              have h2lt : 2 < t + 2 := by omega
+                              have h2mod : 2 % (t + 2) = 2 := Nat.mod_eq_of_lt h2lt
+                              have hi2val : i.val = 2 := by simpa [h2mod] using hv
+                              omega
+                            have hpath' : ¬ ((i.val + 1 = j.val ∧
+                                1 ≤ i.val ∧ j.val ≤ t) ∨
+                                (j.val + 1 = i.val ∧ 1 ≤ j.val ∧ i.val ≤ t)) := hpath
+                            simp [doubleTripleMatrix, im, ip, hji, hjm, hjp,
+                              hji', hjm', hjp', hpath, hpath', hspecial, hend,
+                              hi3, hitwo, hi0', hi2', hi2, hdiag]
+                    _ = -2 * v i + v im + v ip := by
+                      simp [Finset.sum_add_distrib]
+                rw [hsum]
+                have hi_le_one : ¬ i.val ≤ 1 := by omega
+                have hi_le_two : ¬ i.val ≤ 2 := by omega
+                have hi_lt_t : i.val < t := by omega
+                have him_ge_two : 2 ≤ i.val - 1 := by omega
+                have him_lt_t : i.val - 1 < t := by omega
+                have hip_lt_t : i.val + 1 < t := by omega
+                have hi0fin : i ≠ 0 := by
+                  intro h
+                  have hv := congrArg Fin.val h
+                  have hi0val : i.val = 0 := by simpa using hv
+                  omega
+                change -2 * v i + v im + v ip = 0
+                simp [v, im, ip, hi3, hitwo, hi_le_one, hi_le_two, hi_lt_t,
+                  him_ge_two, him_lt_t, hip_lt_t, hi0fin]
+  have hkernel' : Matrix.mulVec (scalarMatrix (doubleTripleMatrix t) r) v = 0 := by
+    funext i
+    rw [Matrix.mulVec_apply_eq_sum]
+    simp only [scalarMatrix]
+    rw [show (∑ x, (r * doubleTripleMatrix t i x) * v x) =
+        r * (∑ x, doubleTripleMatrix t i x * v x) by
+      rw [Finset.mul_sum]
+      apply Finset.sum_congr rfl
+      intro x hx
+      ring]
+    change r * (∑ x, doubleTripleMatrix t i x * v x) = 0
+    have hi := congrFun hkernel i
+    change (∑ x, doubleTripleMatrix t i x * v x) = 0 at hi
+    rw [hi]
+    simp
+  exact Matrix.det_eq_zero_of_mulVec_eq_zero_of_mem_nonZeroDivisors
+    (i := ⟨0, by omega⟩) hkernel' (by simp [v])
 
 theorem e6_matrix_determinant (r : ℤ) :
     Matrix.det (scalarMatrix (pathUntilLeafMatrix 6 4 2 5 (-2) 1) r) = 3 * r ^ 6 := by
@@ -656,7 +1340,531 @@ theorem minimal_genus_one_is_minus_two (T : NumericalType)
 theorem lemma_two_by_two (T : NumericalType) (S : MinusTwoSubgraph T 2)
     (hn : 2 < T.n) (hedge : 0 < (localData S).a 0 1) :
     UpToReordering (localData S) (fun D => isA2 D ∨ isB2 D ∨ isG2 D) := by
-  sorry
+  classical
+  let D := localData S
+  let i : Fin T.n := S.index 0
+  let j : Fin T.n := S.index 1
+  have hij : i ≠ j := by
+    intro h
+    have h01 : (0 : Fin 2) = 1 := S.index_injective h
+    norm_num at h01
+  have hAm : Matrix.mulVec (fun p q => (T.a p q : ℝ))
+      (fun p => (T.m p : ℝ)) = 0 := by
+    funext p
+    change (∑ q, (T.a p q : ℝ) * (T.m q : ℝ)) = 0
+    exact_mod_cast T.row_sum p
+  have hconnected : ¬ ∃ I : Set (Fin T.n), I.Nonempty ∧ I ≠ Set.univ ∧
+      ∀ ⦃p q⦄, p ∈ I → q ∉ I → (T.a p q : ℝ) = 0 := by
+    intro h
+    apply T.connected
+    rcases h with ⟨I, hI, hne, hcross⟩
+    refine ⟨I, hI, hne, ?_⟩
+    intro p q hp hq
+    exact_mod_cast hcross hp hq
+  have hreal := Formalization.Books.Models.Unit02.recurring_symmetric_real
+    (fun p q => (T.a p q : ℝ)) (fun p => (T.m p : ℝ))
+    (fun p q => by exact_mod_cast T.a_symmetric p q)
+    (by intro p q h; exact_mod_cast T.a_offdiag_nonneg h)
+    (by intro p; exact_mod_cast T.m_pos p) hAm hconnected
+  have hDdiag0 : D.a 0 0 = -2 * D.w 0 := by
+    simpa [D, localData] using (S.minus_two 0).2
+  have hDdiag1 : D.a 1 1 = -2 * D.w 1 := by
+    simpa [D, localData] using (S.minus_two 1).2
+  have hDedge : D.a 0 1 = T.a i j := by rfl
+  have hDwi : D.w 0 = T.w i := by rfl
+  have hDwj : D.w 1 = T.w j := by rfl
+  have hDsym : ∀ a b, D.a a b = D.a b a := by
+    intro a b
+    simpa [D] using local_a_symmetric S a b
+  have hwi : 0 < D.w 0 := local_w_pos S 0
+  have hwj : 0 < D.w 1 := local_w_pos S 1
+  have hai : T.a i i = -2 * T.w i := by
+    simpa [i] using (S.minus_two 0).2
+  have haj : T.a j j = -2 * T.w j := by
+    simpa [j] using (S.minus_two 1).2
+  have haij : 0 < T.a i j := by simpa [D, localData, i, j] using hedge
+  let x : Fin T.n → ℝ := fun k =>
+    if k = i then (T.a i j : ℝ) else if k = j then 2 * (T.w i : ℝ) else 0
+  have hquad := (hreal x).1
+  have hquad_formula :
+      (∑ k : Fin T.n, x k * Matrix.mulVec (fun p q => (T.a p q : ℝ)) x k) =
+        2 * (T.w i : ℝ) *
+          ((T.a i j : ℝ) ^ 2 - 4 * (T.w i : ℝ) * (T.w j : ℝ)) := by
+    dsimp [x]
+    let inner : Fin T.n → ℝ := fun k =>
+      ∑ l : Fin T.n, (T.a k l : ℝ) *
+        (if l = i then (T.a i j : ℝ) else if l = j then 2 * (T.w i : ℝ) else 0)
+    change (∑ k : Fin T.n,
+      (if k = i then (T.a i j : ℝ) else if k = j then 2 * (T.w i : ℝ) else 0) *
+      inner k) = 2 * (T.w i : ℝ) *
+        ((T.a i j : ℝ) ^ 2 - 4 * (T.w i : ℝ) * (T.w j : ℝ))
+    have hinner (k : Fin T.n) : inner k =
+        (T.a k i : ℝ) * (T.a i j : ℝ) +
+          (T.a k j : ℝ) * (2 * (T.w i : ℝ)) := by
+      dsimp [inner]
+      calc
+        (∑ l : Fin T.n, (T.a k l : ℝ) *
+            (if l = i then (T.a i j : ℝ) else if l = j then 2 * (T.w i : ℝ) else 0)) =
+            ∑ l : Fin T.n,
+              ((if l = i then (T.a k l : ℝ) * (T.a i j : ℝ) else 0) +
+                (if l = j then (T.a k l : ℝ) * (2 * (T.w i : ℝ)) else 0)) := by
+          apply Finset.sum_congr rfl
+          intro l hl
+          by_cases hli : l = i <;> by_cases hlj : l = j <;>
+            simp [hli, hlj, hij, hij.symm]
+        _ = _ := by
+          rw [Finset.sum_add_distrib]
+          simp [hij]
+    have houter :
+        (∑ k : Fin T.n,
+          (if k = i then (T.a i j : ℝ) else if k = j then 2 * (T.w i : ℝ) else 0) *
+            inner k) =
+          (T.a i j : ℝ) * inner i + (2 * (T.w i : ℝ)) * inner j := by
+      calc
+        (∑ k : Fin T.n,
+            (if k = i then (T.a i j : ℝ) else if k = j then 2 * (T.w i : ℝ) else 0) *
+              inner k) =
+            ∑ k : Fin T.n,
+              ((if k = i then (T.a i j : ℝ) * inner k else 0) +
+                (if k = j then (2 * (T.w i : ℝ)) * inner k else 0)) := by
+          apply Finset.sum_congr rfl
+          intro k hk
+          by_cases hki : k = i <;> by_cases hkj : k = j <;>
+            simp [hki, hkj, hij, hij.symm]
+        _ = _ := by
+          rw [Finset.sum_add_distrib]
+          simp [hij]
+    rw [houter, hinner i, hinner j]
+    have hAii : (T.a i i : ℝ) = -2 * (T.w i : ℝ) := by exact_mod_cast hai
+    have hAjj : (T.a j j : ℝ) = -2 * (T.w j : ℝ) := by exact_mod_cast haj
+    have hAji : (T.a j i : ℝ) = (T.a i j : ℝ) := by
+      exact_mod_cast T.a_symmetric j i
+    rw [hAii, hAjj, hAji]
+    ring
+  have hquad' : 2 * (T.w i : ℝ) *
+      ((T.a i j : ℝ) ^ 2 - 4 * (T.w i : ℝ) * (T.w j : ℝ)) ≤ 0 := by
+    rw [← hquad_formula]
+    exact hquad
+  have hdet_nonneg : 0 ≤ 4 * D.w 0 * D.w 1 - D.a 0 1 ^ 2 := by
+    have hq : 0 ≤ 4 * (T.w i : ℝ) * (T.w j : ℝ) -
+        (T.a i j : ℝ) ^ 2 := by
+      have hwiR : (0 : ℝ) < (T.w i : ℝ) := by exact_mod_cast T.w_pos i
+      nlinarith [hquad', hwiR]
+    exact_mod_cast hq
+  have hdet_pos : 0 < 4 * D.w 0 * D.w 1 - D.a 0 1 ^ 2 := by
+    have hdet_nonnegR : 0 ≤ 4 * (T.w i : ℝ) * (T.w j : ℝ) -
+        (T.a i j : ℝ) ^ 2 := by
+      exact_mod_cast hdet_nonneg
+    have hdet_posR : 0 < 4 * (T.w i : ℝ) * (T.w j : ℝ) -
+        (T.a i j : ℝ) ^ 2 := by
+      have hwiR : (0 : ℝ) < (T.w i : ℝ) := by exact_mod_cast T.w_pos i
+      by_contra hnot
+      have hzero : 4 * (T.w i : ℝ) * (T.w j : ℝ) -
+          (T.a i j : ℝ) ^ 2 = 0 := by
+        apply le_antisymm
+        · exact le_of_not_gt hnot
+        · exact hdet_nonnegR
+      have henergy :
+          (∑ k : Fin T.n, x k *
+            Matrix.mulVec (fun p q => (T.a p q : ℝ)) x k) = 0 := by
+        rw [hquad_formula]
+        nlinarith [hzero, hwiR]
+      rcases (hreal x).2.mp henergy with ⟨c, hcx⟩
+      have hijval : i.val ≠ j.val := by
+        intro h
+        exact hij (Fin.ext h)
+      let k : Fin T.n :=
+        if i.val = 0 then
+          if j.val = 1 then ⟨2, by omega⟩ else ⟨1, by omega⟩
+        else if i.val = 1 then
+          if j.val = 0 then ⟨2, by omega⟩ else ⟨0, by omega⟩
+        else if j.val = 0 then ⟨1, by omega⟩ else ⟨0, by omega⟩
+      have hki : k ≠ i := by
+        apply Fin.ne_of_val_ne
+        dsimp [k]
+        split_ifs <;> simp only [Fin.val_mk] at * <;> omega
+      have hkj : k ≠ j := by
+        apply Fin.ne_of_val_ne
+        dsimp [k]
+        split_ifs <;> simp only [Fin.val_mk] at * <;> omega
+      have hck := congrFun hcx k
+      have hck' : (0 : ℝ) = c * (T.m k : ℝ) := by
+        simpa [x, hki, hkj] using hck
+      have hmkR : (0 : ℝ) < (T.m k : ℝ) := by exact_mod_cast T.m_pos k
+      have hc0 : c = 0 := by nlinarith [hck', hmkR]
+      have hci := congrFun hcx i
+      have hci' : (T.a i j : ℝ) = c * (T.m i : ℝ) := by
+        simpa [x, hij] using hci
+      have haijR : (0 : ℝ) < (T.a i j : ℝ) := by exact_mod_cast haij
+      rw [hc0, zero_mul] at hci'
+      nlinarith [hci', haijR]
+    exact_mod_cast hdet_posR
+  have hdivi : D.w 0 ∣ D.a 0 1 := by
+    simpa [D, localData, i, j] using T.w_dvd i j
+  have hdivj : D.w 1 ∣ D.a 0 1 := by
+    have h := T.w_dvd j i
+    simpa [D, localData, i, j, T.a_symmetric j i] using h
+  let p : ℤ := D.a 0 1 / D.w 0
+  let q : ℤ := D.a 0 1 / D.w 1
+  have hp : 0 < p := by
+    dsimp [p]
+    exact Int.ediv_pos_of_pos_of_dvd (by simpa [D] using hedge) (le_of_lt hwi) hdivi
+  have hq : 0 < q := by
+    dsimp [q]
+    exact Int.ediv_pos_of_pos_of_dvd (by simpa [D] using hedge) (le_of_lt hwj) hdivj
+  have hpa : D.a 0 1 = p * D.w 0 := by
+    dsimp [p]
+    exact (Int.ediv_mul_cancel hdivi).symm
+  have hqa : D.a 0 1 = q * D.w 1 := by
+    dsimp [q]
+    exact (Int.ediv_mul_cancel hdivj).symm
+  have hwpq : 0 < D.w 0 * D.w 1 := mul_pos hwi hwj
+  have hpq_lt : p * q < 4 := by
+    have hsq : D.a 0 1 ^ 2 = p * q * (D.w 0 * D.w 1) := by
+      calc
+        D.a 0 1 ^ 2 = D.a 0 1 * D.a 0 1 := by ring
+        _ = (p * D.w 0) * D.a 0 1 := by rw [hpa]
+        _ = (p * D.w 0) * (q * D.w 1) := by rw [hqa]
+        _ = p * q * (D.w 0 * D.w 1) := by ring
+    have hlt : p * q * (D.w 0 * D.w 1) < 4 * (D.w 0 * D.w 1) := by
+      nlinarith [hdet_pos, hsq]
+    nlinarith [hlt, hwpq]
+  have hp_le : p ≤ 3 := by nlinarith [hp, hpq_lt]
+  have hq_le : q ≤ 3 := by nlinarith [hq, hpq_lt]
+  have hrow0T : T.a i i * T.m i + T.a i j * T.m j ≤ 0 := by
+    let rest : Finset (Fin T.n) :=
+      (Finset.univ.erase i).erase j
+    have hrest : 0 ≤ rest.sum (fun k => T.a i k * T.m k) := by
+      apply Finset.sum_nonneg
+      intro k hk
+      have hk' := Finset.mem_erase.mp hk
+      have hki := (Finset.mem_erase.mp hk'.2).1
+      have ha : 0 ≤ T.a i k := T.a_offdiag_nonneg hki.symm
+      have hm : 0 ≤ T.m k := le_of_lt (T.m_pos k)
+      exact mul_nonneg ha hm
+    have hs1 := Finset.sum_erase_add
+      (s := (Finset.univ : Finset (Fin T.n)))
+      (f := fun k => T.a i k * T.m k) (Finset.mem_univ i)
+    have hmem : j ∈ (Finset.univ : Finset (Fin T.n)).erase i := by
+      rw [Finset.mem_erase]
+      exact ⟨hij.symm, Finset.mem_univ _⟩
+    have hs2 := Finset.sum_erase_add
+      (s := (Finset.univ : Finset (Fin T.n)).erase i)
+      (f := fun k => T.a i k * T.m k) hmem
+    rw [T.row_sum i] at hs1
+    dsimp [rest] at hrest
+    linarith [hs1, hs2, hrest]
+  have hrow1T : T.a j j * T.m j + T.a j i * T.m i ≤ 0 := by
+    let rest : Finset (Fin T.n) :=
+      (Finset.univ.erase j).erase i
+    have hrest : 0 ≤ rest.sum (fun k => T.a j k * T.m k) := by
+      apply Finset.sum_nonneg
+      intro k hk
+      have hk' := Finset.mem_erase.mp hk
+      have hkj := (Finset.mem_erase.mp hk'.2).1
+      have ha : 0 ≤ T.a j k := T.a_offdiag_nonneg hkj.symm
+      have hm : 0 ≤ T.m k := le_of_lt (T.m_pos k)
+      exact mul_nonneg ha hm
+    have hs1 := Finset.sum_erase_add
+      (s := (Finset.univ : Finset (Fin T.n)))
+      (f := fun k => T.a j k * T.m k) (Finset.mem_univ j)
+    have hmem : i ∈ (Finset.univ : Finset (Fin T.n)).erase j := by
+      rw [Finset.mem_erase]
+      exact ⟨hij, Finset.mem_univ _⟩
+    have hs2 := Finset.sum_erase_add
+      (s := (Finset.univ : Finset (Fin T.n)).erase j)
+      (f := fun k => T.a j k * T.m k) hmem
+    rw [T.row_sum j] at hs1
+    dsimp [rest] at hrest
+    linarith [hs1, hs2, hrest]
+  have hrow0 : 2 * D.w 0 * D.m 0 ≥ D.a 0 1 * D.m 1 := by
+    have h := hrow0T
+    rw [hai] at h
+    have h' : 2 * T.w i * T.m i ≥ T.a i j * T.m j := by linarith [h]
+    change 2 * T.w i * T.m i ≥ T.a i j * T.m j
+    exact h'
+  have hrow1 : 2 * D.w 1 * D.m 1 ≥ D.a 0 1 * D.m 0 := by
+    have h := hrow1T
+    rw [haj, T.a_symmetric j i] at h
+    have h' : 2 * T.w j * T.m j ≥ T.a i j * T.m i := by linarith [h]
+    change 2 * T.w j * T.m j ≥ T.a i j * T.m i
+    exact h'
+  have hcancel_left : ∀ (w : ℤ), 0 < w → ∀ a b : ℤ,
+      w * b ≤ w * a → b ≤ a := by
+    intro w hw a b hab
+    by_contra hnot
+    have hlt : a < b := lt_of_not_ge hnot
+    have hmul : w * a < w * b := Int.mul_lt_mul_of_pos_left hlt hw
+    linarith
+  have realizeA : ∀ (E : LocalNumericalData 2) (r : ℤ),
+      0 < r → E.w 0 = r → E.w 1 = r → E.a 0 0 = -2 * r → E.a 1 1 = -2 * r →
+      E.a 0 1 = r → E.a 1 0 = r → (∀ i, 0 < E.m i) →
+      mConditionA2 E.m → isA2 E := by
+    intro E r hr hw0 hw1 haa0 haa1 hae01 hae10 hmp hmc
+    unfold isA2 realizesPattern
+    refine ⟨r, hr, ?_, ?_, hmp, hmc⟩
+    · ext a b
+      fin_cases a <;> fin_cases b <;>
+        simp [scalarMatrix, pathMatrix, constantVector, hw0, hw1, haa0,
+          haa1, hae01, hae10] <;> ring
+    · funext a
+      fin_cases a <;> simp [scalarVector, constantVector, hw0, hw1]
+  have realizeB : ∀ (E : LocalNumericalData 2) (r : ℤ),
+      0 < r → E.w 0 = r → E.w 1 = 2 * r → E.a 0 0 = -2 * r →
+      E.a 1 1 = -4 * r → E.a 0 1 = 2 * r → E.a 1 0 = 2 * r →
+      (∀ i, 0 < E.m i) → mConditionB2 E.m → isB2 E := by
+    intro E r hr hw0 hw1 haa0 haa1 hae01 hae10 hmp hmc
+    unfold isB2 realizesPattern
+    refine ⟨r, hr, ?_, ?_, hmp, hmc⟩
+    · ext a b
+      fin_cases a <;> fin_cases b <;>
+        simp [scalarMatrix, pathLastMatrix, lastVector, hw0, hw1, haa0,
+          haa1, hae01, hae10] <;> ring
+    · funext a
+      fin_cases a <;> simp [scalarVector, lastVector, hw0, hw1] <;> ring
+  have realizeG : ∀ (E : LocalNumericalData 2) (r : ℤ),
+      0 < r → E.w 0 = r → E.w 1 = 3 * r → E.a 0 0 = -2 * r →
+      E.a 1 1 = -6 * r → E.a 0 1 = 3 * r → E.a 1 0 = 3 * r →
+      (∀ i, 0 < E.m i) → mConditionG2 E.m → isG2 E := by
+    intro E r hr hw0 hw1 haa0 haa1 hae01 hae10 hmp hmc
+    unfold isG2 realizesPattern
+    refine ⟨r, hr, ?_, ?_, hmp, hmc⟩
+    · ext a b
+      fin_cases a <;> fin_cases b <;>
+        simp [scalarMatrix, pathLastMatrix, lastVector, hw0, hw1, haa0,
+          haa1, hae01, hae10] <;> ring
+    · funext a
+      fin_cases a <;> simp [scalarVector, lastVector, hw0, hw1] <;> ring
+  have hp_cases : p = 1 ∨ p = 2 ∨ p = 3 := by omega
+  rcases hp_cases with hp1 | hp23
+  · have hq_cases : q = 1 ∨ q = 2 ∨ q = 3 := by omega
+    rcases hq_cases with hq1 | hq23
+    · have ha0 : D.a 0 1 = D.w 0 := by simpa [hp1] using hpa
+      have ha1 : D.a 0 1 = D.w 1 := by simpa [hq1] using hqa
+      have hw_eq : D.w 0 = D.w 1 := ha0.symm.trans ha1
+      have haa1 : D.a 1 1 = -2 * D.w 0 := by
+        calc
+          D.a 1 1 = -2 * D.w 1 := hDdiag1
+          _ = -2 * D.w 0 := by rw [← hw_eq]
+      have hae10 : D.a 1 0 = D.w 0 := by
+        calc
+          D.a 1 0 = D.a 0 1 := hDsym 1 0
+          _ = D.w 0 := ha0
+      have hmc : mConditionA2 D.m := by
+        have h0 := hrow0
+        have h1 := hrow1
+        rw [ha0] at h0
+        rw [ha1] at h1
+        change 2 * D.m 0 ≥ D.m 1 ∧ 2 * D.m 1 ≥ D.m 0
+        constructor
+        · apply hcancel_left (D.w 0) hwi (2 * D.m 0) (D.m 1)
+          linarith
+        · apply hcancel_left (D.w 1) hwj (2 * D.m 1) (D.m 0)
+          linarith
+      refine ⟨Equiv.refl _, ?_⟩
+      left
+      change isA2 D
+      exact realizeA D (D.w 0) hwi rfl hw_eq.symm hDdiag0 haa1 ha0 hae10
+        (local_m_pos S) hmc
+    · rcases hq23 with hq2 | hq3
+      · have ha0 : D.a 0 1 = D.w 0 := by simpa [hp1] using hpa
+        have ha1 : D.a 0 1 = 2 * D.w 1 := by simpa [hq2] using hqa
+        have hw02 : D.w 0 = 2 * D.w 1 := ha0.symm.trans ha1
+        let e : Fin 2 ≃ Fin 2 := Equiv.swap 0 1
+        let E : LocalNumericalData 2 := reindexLocalData D e
+        have he0 : e 0 = (1 : Fin 2) := by
+          simp only [e, Equiv.swap_apply_left]
+        have he1 : e 1 = (0 : Fin 2) := by
+          simp only [e, Equiv.swap_apply_right]
+        have hEw0 : E.w 0 = D.w 1 := by
+          change D.w (e 0) = D.w 1
+          rw [he0]
+        have hEw1 : E.w 1 = 2 * D.w 1 := by
+          calc
+            E.w 1 = D.w 0 := by
+              change D.w (e 1) = D.w 0
+              rw [he1]
+            _ = 2 * D.w 1 := hw02
+        have hEaa0 : E.a 0 0 = -2 * D.w 1 := by
+          change D.a (e 0) (e 0) = -2 * D.w 1
+          rw [he0]
+          exact hDdiag1
+        have hEaa1 : E.a 1 1 = -4 * D.w 1 := by
+          calc
+            E.a 1 1 = D.a 0 0 := by
+              change D.a (e 1) (e 1) = D.a 0 0
+              rw [he1]
+            _ = -2 * D.w 0 := hDdiag0
+            _ = -4 * D.w 1 := by rw [hw02]; ring
+        have hEae01 : E.a 0 1 = 2 * D.w 1 := by
+          calc
+            E.a 0 1 = D.a 1 0 := by
+              change D.a (e 0) (e 1) = D.a 1 0
+              rw [he0, he1]
+            _ = D.a 0 1 := hDsym 1 0
+            _ = 2 * D.w 1 := ha1
+        have hEae10 : E.a 1 0 = 2 * D.w 1 := by
+          calc
+            E.a 1 0 = D.a 0 1 := by
+              change D.a (e 1) (e 0) = D.a 0 1
+              rw [he1, he0]
+            _ = 2 * D.w 1 := ha1
+        have hmpE : ∀ z, 0 < E.m z := by
+          intro z
+          change 0 < D.m (e z)
+          simpa [D] using local_m_pos S (e z)
+        have hm01 : D.m 1 ≥ D.m 0 := by
+          have h := hrow1
+          rw [ha1] at h
+          apply hcancel_left (D.w 1) hwj (D.m 1) (D.m 0)
+          linarith
+        have hm10 : 2 * D.m 0 ≥ D.m 1 := by
+          have h := hrow0
+          rw [ha0, hw02] at h
+          apply hcancel_left (D.w 1) hwj (2 * D.m 0) (D.m 1)
+          linarith
+        have hmcE : mConditionB2 E.m := by
+          change D.m (e 0) ≥ D.m (e 1) ∧ 2 * D.m (e 1) ≥ D.m (e 0)
+          rw [he0, he1]
+          exact And.intro hm01 hm10
+        refine ⟨e, ?_⟩
+        right
+        left
+        change isB2 E
+        exact realizeB E (D.w 1) hwj hEw0 hEw1 hEaa0 hEaa1 hEae01 hEae10
+          hmpE hmcE
+      · have ha0 : D.a 0 1 = D.w 0 := by simpa [hp1] using hpa
+        have ha1 : D.a 0 1 = 3 * D.w 1 := by simpa [hq3] using hqa
+        have hw03 : D.w 0 = 3 * D.w 1 := ha0.symm.trans ha1
+        let e : Fin 2 ≃ Fin 2 := Equiv.swap 0 1
+        let E : LocalNumericalData 2 := reindexLocalData D e
+        have he0 : e 0 = (1 : Fin 2) := by
+          simp only [e, Equiv.swap_apply_left]
+        have he1 : e 1 = (0 : Fin 2) := by
+          simp only [e, Equiv.swap_apply_right]
+        have hEw0 : E.w 0 = D.w 1 := by
+          change D.w (e 0) = D.w 1
+          rw [he0]
+        have hEw1 : E.w 1 = 3 * D.w 1 := by
+          calc
+            E.w 1 = D.w 0 := by
+              change D.w (e 1) = D.w 0
+              rw [he1]
+            _ = 3 * D.w 1 := hw03
+        have hEaa0 : E.a 0 0 = -2 * D.w 1 := by
+          change D.a (e 0) (e 0) = -2 * D.w 1
+          rw [he0]
+          exact hDdiag1
+        have hEaa1 : E.a 1 1 = -6 * D.w 1 := by
+          calc
+            E.a 1 1 = D.a 0 0 := by
+              change D.a (e 1) (e 1) = D.a 0 0
+              rw [he1]
+            _ = -2 * D.w 0 := hDdiag0
+            _ = -6 * D.w 1 := by rw [hw03]; ring
+        have hEae01 : E.a 0 1 = 3 * D.w 1 := by
+          calc
+            E.a 0 1 = D.a 1 0 := by
+              change D.a (e 0) (e 1) = D.a 1 0
+              rw [he0, he1]
+            _ = D.a 0 1 := hDsym 1 0
+            _ = 3 * D.w 1 := ha1
+        have hEae10 : E.a 1 0 = 3 * D.w 1 := by
+          calc
+            E.a 1 0 = D.a 0 1 := by
+              change D.a (e 1) (e 0) = D.a 0 1
+              rw [he1, he0]
+            _ = 3 * D.w 1 := ha1
+        have hmpE : ∀ z, 0 < E.m z := by
+          intro z
+          change 0 < D.m (e z)
+          simpa [D] using local_m_pos S (e z)
+        have hm01 : 2 * D.m 1 ≥ 3 * D.m 0 := by
+          have h := hrow1
+          rw [ha1] at h
+          apply hcancel_left (D.w 1) hwj (2 * D.m 1) (3 * D.m 0)
+          linarith
+        have hm10 : 2 * D.m 0 ≥ D.m 1 := by
+          have h := hrow0
+          rw [ha0, hw03] at h
+          apply hcancel_left (D.w 1) hwj (2 * D.m 0) (D.m 1)
+          linarith
+        have hmcE : mConditionG2 E.m := by
+          change 2 * D.m (e 0) ≥ 3 * D.m (e 1) ∧
+            2 * D.m (e 1) ≥ D.m (e 0)
+          rw [he0, he1]
+          exact And.intro hm01 hm10
+        refine ⟨e, ?_⟩
+        right
+        right
+        change isG2 E
+        exact realizeG E (D.w 1) hwj hEw0 hEw1 hEaa0 hEaa1 hEae01 hEae10
+          hmpE hmcE
+  · rcases hp23 with hp2 | hp3
+    · have ha0 : D.a 0 1 = 2 * D.w 0 := by simpa [hp2] using hpa
+      have hpq2 : 2 * q < 4 := by simpa [hp2] using hpq_lt
+      have hq1 : q = 1 := by omega
+      have ha1 : D.a 0 1 = D.w 1 := by simpa [hq1] using hqa
+      have hw1 : D.w 1 = 2 * D.w 0 := ha1.symm.trans ha0
+      have hm0 : D.m 1 ≤ D.m 0 := by
+        have h := hrow0
+        rw [ha0] at h
+        apply hcancel_left (D.w 0) hwi (D.m 0) (D.m 1)
+        linarith
+      have hm1 : 2 * D.m 1 ≥ D.m 0 := by
+        have h := hrow1
+        rw [ha1, hw1] at h
+        apply hcancel_left (D.w 0) hwi (2 * D.m 1) (D.m 0)
+        linarith
+      have hmc : mConditionB2 D.m := by
+        change D.m 0 ≥ D.m 1 ∧ 2 * D.m 1 ≥ D.m 0
+        exact ⟨hm0, hm1⟩
+      have haa1 : D.a 1 1 = -4 * D.w 0 := by
+        calc
+          D.a 1 1 = -2 * D.w 1 := hDdiag1
+          _ = -4 * D.w 0 := by rw [hw1]; ring
+      have hae10 : D.a 1 0 = 2 * D.w 0 := by
+        calc
+          D.a 1 0 = D.a 0 1 := hDsym 1 0
+          _ = 2 * D.w 0 := ha0
+      refine ⟨Equiv.refl _, ?_⟩
+      right
+      left
+      change isB2 D
+      exact realizeB D (D.w 0) hwi rfl hw1 hDdiag0 haa1 ha0 hae10
+        (local_m_pos S) hmc
+    · have ha0 : D.a 0 1 = 3 * D.w 0 := by simpa [hp3] using hpa
+      have hpq3 : 3 * q < 4 := by simpa [hp3] using hpq_lt
+      have hq1 : q = 1 := by omega
+      have ha1 : D.a 0 1 = D.w 1 := by simpa [hq1] using hqa
+      have hw1 : D.w 1 = 3 * D.w 0 := ha1.symm.trans ha0
+      have hm0 : 3 * D.m 1 ≤ 2 * D.m 0 := by
+        have h := hrow0
+        rw [ha0] at h
+        apply hcancel_left (D.w 0) hwi (2 * D.m 0) (3 * D.m 1)
+        linarith
+      have hm1 : 2 * D.m 1 ≥ D.m 0 := by
+        have h := hrow1
+        rw [ha1, hw1] at h
+        apply hcancel_left (D.w 0) hwi (2 * D.m 1) (D.m 0)
+        linarith
+      have hmc : mConditionG2 D.m := by
+        change 2 * D.m 0 ≥ 3 * D.m 1 ∧ 2 * D.m 1 ≥ D.m 0
+        exact ⟨hm0, hm1⟩
+      have haa1 : D.a 1 1 = -6 * D.w 0 := by
+        calc
+          D.a 1 1 = -2 * D.w 1 := hDdiag1
+          _ = -6 * D.w 0 := by rw [hw1]; ring
+      have hae10 : D.a 1 0 = 3 * D.w 0 := by
+        calc
+          D.a 1 0 = D.a 0 1 := hDsym 1 0
+          _ = 3 * D.w 0 := ha0
+      refine ⟨Equiv.refl _, ?_⟩
+      right
+      right
+      change isG2 D
+      exact realizeG D (D.w 0) hwi rfl hw1 hDdiag0 haa1 ha0 hae10
+        (local_m_pos S) hmc
 
 /-! The three-by-three classification (`A₃`, `C₃`, and `B₃`). -/
 theorem lemma_three_by_three (T : NumericalType) (S : MinusTwoSubgraph T 3)

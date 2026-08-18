@@ -168,7 +168,63 @@ theorem differentialOperator_comp_isDifferentialOperator
     (hD : IsDifferentialOperator (R := R) (S := S) k D)
     (hD' : IsDifferentialOperator (R := R) (S := S) k' D') :
     IsDifferentialOperator (R := R) (S := S) (k + k') (D'.comp D) := by
-  sorry
+  revert k' D D' hD hD'
+  induction k with
+  | zero =>
+      intro k'
+      induction k' with
+      | zero =>
+          intro D D' hD hD' s m
+          simp [hD s m, hD' s (D m)]
+      | succ k' ih =>
+          intro D D' hD hD' s
+          have hcomm :
+              differentialOperatorCommutator (D'.comp D) s =
+                D'.comp (differentialOperatorCommutator D s) +
+                  (differentialOperatorCommutator D' s).comp D := by
+            ext m
+            simp [differentialOperatorCommutator, sub_eq_add_neg,
+              add_assoc, add_comm, add_left_comm]
+          have hzero : differentialOperatorCommutator D s = 0 := by
+            ext m
+            simp [differentialOperatorCommutator, hD s m]
+          rw [hcomm, hzero, LinearMap.comp_zero, zero_add]
+          convert (ih D (differentialOperatorCommutator D' s) hD (hD' s)) using 1 <;>
+            simp
+  | succ k ih =>
+      intro k'
+      induction k' with
+      | zero =>
+          intro D D' hD hD' s
+          have hcomm :
+              differentialOperatorCommutator (D'.comp D) s =
+                D'.comp (differentialOperatorCommutator D s) +
+                  (differentialOperatorCommutator D' s).comp D := by
+            ext m
+            simp [differentialOperatorCommutator, sub_eq_add_neg,
+              add_assoc, add_comm, add_left_comm]
+          have hzero : differentialOperatorCommutator D' s = 0 := by
+            ext m
+            simp [differentialOperatorCommutator, hD' s m]
+          rw [hcomm, hzero]
+          simp only [LinearMap.zero_comp, add_zero]
+          simpa only [Nat.add_zero] using
+            (ih 0 (differentialOperatorCommutator D s) D' (hD s) hD')
+      | succ k' ih' =>
+          intro D D' hD hD' s
+          have hcomm :
+              differentialOperatorCommutator (D'.comp D) s =
+                D'.comp (differentialOperatorCommutator D s) +
+                  (differentialOperatorCommutator D' s).comp D := by
+            ext m
+            simp [differentialOperatorCommutator, sub_eq_add_neg,
+              add_assoc, add_comm, add_left_comm]
+          rw [hcomm]
+          apply isDifferentialOperator_add (R := R) (S := S) ((k + 1) + k')
+          · simpa [Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using
+              (ih (k' + 1) (differentialOperatorCommutator D s) D'
+                (hD s) hD')
+          · exact ih' D (differentialOperatorCommutator D' s) hD (hD' s)
 
 theorem differentialOperator_postcompose_isDifferentialOperator
     {N' : Type*} [AddCommGroup N'] [Module S N'] [Module R N']
@@ -177,7 +233,22 @@ theorem differentialOperator_postcompose_isDifferentialOperator
     (hD : IsDifferentialOperator (R := R) (S := S) k D) :
     IsDifferentialOperator (R := R) (S := S) k
       ((f.restrictScalars R).comp D) := by
-  sorry
+  revert D hD
+  induction k with
+  | zero =>
+      intro D hD
+      intro s m
+      simp [hD s m]
+  | succ k ih =>
+      intro D hD
+      intro s
+      have hcomm :
+          differentialOperatorCommutator ((f.restrictScalars R).comp D) s =
+            (f.restrictScalars R).comp (differentialOperatorCommutator D s) := by
+        ext m
+        simp [differentialOperatorCommutator]
+      rw [hcomm]
+      exact ih (differentialOperatorCommutator D s) (hD s)
 
 /- Bundled versions of the two operations used repeatedly below. -/
 def differentialOperatorComp
@@ -248,10 +319,228 @@ def principalPartsRelationSubmodule (k : ℕ) : Submodule S (M →₀ S) :=
 abbrev PrincipalParts (k : ℕ) : Type _ :=
   (M →₀ S) ⧸ principalPartsRelationSubmodule (R := R) (S := S) (M := M) k
 
+private theorem principalPartsHigherRelation_succ_eq (k : ℕ)
+    (g : Fin (k + 1 + 1) → S) (m : M) :
+    principalPartsHigherRelation (k + 1) g m =
+      g (Fin.last (k + 1)) •
+          principalPartsHigherRelation k (fun i => g i.castSucc) m -
+        principalPartsHigherRelation k (fun i => g i.castSucc)
+          (g (Fin.last (k + 1)) • m) := by
+  let g₀ : Fin (k + 1) → S := fun i => g i.castSucc
+  let a : S := g (Fin.last (k + 1))
+  let embed : Finset (Fin (k + 1)) × Bool →
+      Finset (Fin (k + 1 + 1)) := fun p =>
+    match p.2 with
+    | false => p.1.map Fin.castSuccEmb
+    | true => insert (Fin.last (k + 1)) (p.1.map Fin.castSuccEmb)
+  have hembed : Function.Bijective embed := by
+    constructor
+    · rintro ⟨p, b⟩ ⟨q, c⟩ h
+      cases b <;> cases c
+      · simp only [embed] at h
+        exact Prod.ext (Finset.map_injective Fin.castSuccEmb h) rfl
+      · exfalso
+        have hm := congrArg (fun t => Fin.last (k + 1) ∈ t) h
+        simpa [embed] using hm
+      · exfalso
+        have hm := congrArg (fun t => Fin.last (k + 1) ∈ t) h
+        simpa [embed] using hm
+      · simp only [embed] at h
+        apply Prod.ext
+        · apply Finset.ext
+          intro i
+          have hi := congrArg (fun t => i.castSucc ∈ t) h
+          simpa using hi
+        · rfl
+    · intro u
+      by_cases hu : Fin.last (k + 1) ∈ u
+      · let p := (u.erase (Fin.last (k + 1))).preimage
+            Fin.castSucc (Fin.castSucc_injective _).injOn
+        refine ⟨(p, true), ?_⟩
+        apply Finset.ext
+        intro i
+        cases i using Fin.lastCases with
+        | last => simp [embed, p, hu]
+        | cast i => simp [embed, p, hu]
+      · let p := u.preimage Fin.castSucc (Fin.castSucc_injective _).injOn
+        refine ⟨(p, false), ?_⟩
+        apply Finset.ext
+        intro i
+        cases i using Fin.lastCases with
+        | last => simp [embed, p, hu]
+        | cast i => simp [embed, p, hu]
+  let F : Finset (Fin (k + 1 + 1)) → M →₀ S := fun t =>
+    ((-1 : S) ^ t.card) •
+      (((Finset.univ \ t).prod g) •
+        Finsupp.single ((t.prod g) • m) 1)
+  have hcompFalse (x : Finset (Fin (k + 1))) :
+      (Finset.univ \ x.map Fin.castSuccEmb) =
+        insert (Fin.last (k + 1))
+          ((Finset.univ \ x).map Fin.castSuccEmb) := by
+    ext i
+    cases i using Fin.lastCases with
+    | last => simp
+    | cast i => simp
+  have hcompTrue (x : Finset (Fin (k + 1))) :
+      (Finset.univ \ insert (Fin.last (k + 1)) (x.map Fin.castSuccEmb)) =
+        (Finset.univ \ x).map Fin.castSuccEmb := by
+    ext i
+    cases i using Fin.lastCases with
+    | last => simp
+    | cast i => simp
+  have hsum := Fintype.sum_bijective embed hembed
+    (fun p => F (embed p)) F (fun _ => rfl)
+  have hfalse : (∑ x : Finset (Fin (k + 1)), F (embed (x, false))) =
+      a • principalPartsHigherRelation k g₀ m := by
+    simp [F, embed, principalPartsHigherRelation, g₀, a, hcompFalse,
+      Finset.smul_sum, Finsupp.smul_single', mul_assoc, mul_comm, mul_left_comm]
+  have htrue : (∑ x : Finset (Fin (k + 1)), F (embed (x, true))) =
+      -principalPartsHigherRelation k g₀ (a • m) := by
+    change (∑ x : Finset (Fin (k + 1)), F (embed (x, true))) =
+      -(∑ x : Finset (Fin (k + 1)), ((-1 : S) ^ x.card) •
+        (((Finset.univ \ x).prod g₀) •
+          Finsupp.single ((x.prod g₀) • (a • m)) 1))
+    rw [← Finset.sum_neg_distrib]
+    simp [F, embed, principalPartsHigherRelation, g₀, a, hcompTrue,
+      Finsupp.smul_single', pow_succ', smul_smul, mul_assoc, mul_comm,
+      mul_left_comm]
+  have hsum' := hsum.symm
+  rw [← Finset.univ_product_univ, Finset.sum_product] at hsum'
+  simp_rw [Fintype.sum_bool] at hsum'
+  rw [Finset.sum_add_distrib] at hsum'
+  rw [htrue, hfalse] at hsum'
+  simpa [F, principalPartsHigherRelation, sub_eq_add_neg, add_assoc,
+    add_comm, add_left_comm, g₀, a] using hsum'
+
 theorem principalParts_relation_succ_le (k : ℕ) :
     principalPartsRelationSubmodule (R := R) (S := S) (M := M) (k + 1) ≤
       principalPartsRelationSubmodule (R := R) (S := S) (M := M) k := by
-  sorry
+  apply Submodule.span_le.2
+  intro x hx
+  rcases hx with hx | ⟨⟨g, m⟩, rfl⟩
+  · rcases hx with ⟨p, rfl⟩ | ⟨⟨r, m⟩, rfl⟩
+    · apply Submodule.subset_span
+      change principalPartsAddRelation p.1 p.2 ∈
+        principalPartsRelationSet (R := R) (S := S) (M := M) k
+      apply Or.inl
+      apply Or.inl
+      exact ⟨p, rfl⟩
+    · apply Submodule.subset_span
+      change principalPartsScalarRelation r m ∈
+        principalPartsRelationSet (R := R) (S := S) (M := M) k
+      apply Or.inl
+      apply Or.inr
+      exact ⟨(r, m), rfl⟩
+  · let g₀ : Fin (k + 1) → S := fun i => g i.castSucc
+    let a : S := g (Fin.last (k + 1))
+    have h₁ : principalPartsHigherRelation k g₀ m ∈
+        principalPartsRelationSubmodule (R := R) (S := S) (M := M) k := by
+      apply Submodule.subset_span
+      change principalPartsHigherRelation k g₀ m ∈
+        principalPartsRelationSet (R := R) (S := S) (M := M) k
+      apply Or.inr
+      exact ⟨(g₀, m), rfl⟩
+    have h₂ : principalPartsHigherRelation k g₀ (a • m) ∈
+        principalPartsRelationSubmodule (R := R) (S := S) (M := M) k := by
+      apply Submodule.subset_span
+      change principalPartsHigherRelation k g₀ (a • m) ∈
+        principalPartsRelationSet (R := R) (S := S) (M := M) k
+      apply Or.inr
+      exact ⟨(g₀, a • m), rfl⟩
+    have hmem : a • principalPartsHigherRelation k g₀ m -
+          principalPartsHigherRelation k g₀ (a • m) ∈
+        principalPartsRelationSubmodule (R := R) (S := S) (M := M) k := by
+      exact Submodule.sub_mem _ (Submodule.smul_mem _ _ h₁) h₂
+    let embed : Finset (Fin (k + 1)) × Bool →
+        Finset (Fin (k + 1 + 1)) := fun p =>
+      match p.2 with
+      | false => p.1.map Fin.castSuccEmb
+      | true => insert (Fin.last (k + 1)) (p.1.map Fin.castSuccEmb)
+    have hembed : Function.Bijective embed := by
+      constructor
+      · rintro ⟨p, b⟩ ⟨q, c⟩ h
+        cases b <;> cases c
+        · simp only [embed] at h
+          exact Prod.ext (Finset.map_injective Fin.castSuccEmb h) rfl
+        · exfalso
+          have hm := congrArg (fun t => Fin.last (k + 1) ∈ t) h
+          simpa [embed] using hm
+        · exfalso
+          have hm := congrArg (fun t => Fin.last (k + 1) ∈ t) h
+          simpa [embed] using hm
+        · simp only [embed] at h
+          apply Prod.ext
+          · apply Finset.ext
+            intro i
+            have hi := congrArg (fun t => i.castSucc ∈ t) h
+            simpa using hi
+          · rfl
+      · intro u
+        by_cases hu : Fin.last (k + 1) ∈ u
+        · let p := (u.erase (Fin.last (k + 1))).preimage
+              Fin.castSucc (Fin.castSucc_injective _).injOn
+          refine ⟨(p, true), ?_⟩
+          apply Finset.ext
+          intro i
+          cases i using Fin.lastCases with
+          | last => simp [embed, p, hu]
+          | cast i => simp [embed, p, hu]
+        · let p := u.preimage Fin.castSucc (Fin.castSucc_injective _).injOn
+          refine ⟨(p, false), ?_⟩
+          apply Finset.ext
+          intro i
+          cases i using Fin.lastCases with
+          | last => simp [embed, p, hu]
+          | cast i => simp [embed, p, hu]
+    have hEq : principalPartsHigherRelation (k + 1) g m =
+        a • principalPartsHigherRelation k g₀ m -
+          principalPartsHigherRelation k g₀ (a • m) := by
+      let F : Finset (Fin (k + 1 + 1)) → M →₀ S := fun t =>
+        ((-1 : S) ^ t.card) •
+          (((Finset.univ \ t).prod g) •
+            Finsupp.single ((t.prod g) • m) 1)
+      have hcompFalse (x : Finset (Fin (k + 1))) :
+          (Finset.univ \ x.map Fin.castSuccEmb) =
+            insert (Fin.last (k + 1))
+              ((Finset.univ \ x).map Fin.castSuccEmb) := by
+        ext i
+        cases i using Fin.lastCases with
+        | last => simp
+        | cast i => simp
+      have hcompTrue (x : Finset (Fin (k + 1))) :
+          (Finset.univ \ insert (Fin.last (k + 1)) (x.map Fin.castSuccEmb)) =
+            (Finset.univ \ x).map Fin.castSuccEmb := by
+        ext i
+        cases i using Fin.lastCases with
+        | last => simp
+        | cast i => simp
+      have hsum := Fintype.sum_bijective embed hembed
+        (fun p => F (embed p)) F (fun _ => rfl)
+      have hfalse : (∑ x : Finset (Fin (k + 1)), F (embed (x, false))) =
+          a • principalPartsHigherRelation k g₀ m := by
+        simp [F, embed, principalPartsHigherRelation, g₀, a, hcompFalse,
+          Finset.smul_sum, Finsupp.smul_single', mul_assoc, mul_comm, mul_left_comm]
+      have htrue : (∑ x : Finset (Fin (k + 1)), F (embed (x, true))) =
+          -principalPartsHigherRelation k g₀ (a • m) := by
+        change (∑ x : Finset (Fin (k + 1)), F (embed (x, true))) =
+          -(∑ x : Finset (Fin (k + 1)), ((-1 : S) ^ x.card) •
+            (((Finset.univ \ x).prod g₀) •
+              Finsupp.single ((x.prod g₀) • (a • m)) 1))
+        rw [← Finset.sum_neg_distrib]
+        simp [F, embed, principalPartsHigherRelation, g₀, a, hcompTrue,
+          Finsupp.smul_single', pow_succ', smul_smul, mul_assoc, mul_comm,
+          mul_left_comm]
+      have hsum' := hsum.symm
+      rw [← Finset.univ_product_univ, Finset.sum_product] at hsum'
+      simp_rw [Fintype.sum_bool] at hsum'
+      rw [Finset.sum_add_distrib] at hsum'
+      rw [htrue, hfalse] at hsum'
+      simpa [F, principalPartsHigherRelation, sub_eq_add_neg, add_assoc,
+        add_comm, add_left_comm] using hsum'
+    change principalPartsHigherRelation (k + 1) g m ∈
+      principalPartsRelationSubmodule (R := R) (S := S) (M := M) k
+    rw [hEq]
+    exact hmem
 
 noncomputable def principalPartsTransition (k : ℕ) :
     PrincipalParts (R := R) (S := S) (M := M) (k + 1) →ₗ[S]
@@ -268,11 +557,156 @@ def principalPartsGenerator (k : ℕ) (m : M) :
     PrincipalParts (R := R) (S := S) (M := M) k :=
   Submodule.mkQ _ (Finsupp.single m 1)
 
+private def principalPartsHigherEvaluation
+    {Q : Type*} [AddCommGroup Q] [Module S Q] [Module R Q]
+    [IsScalarTower R S Q] (k : ℕ) (D : M →ₗ[R] Q)
+    (g : Fin (k + 1) → S) (m : M) : Q :=
+  ∑ t : Finset (Fin (k + 1)), ((-1 : S) ^ t.card) •
+    (((Finset.univ \ t).prod g) • D ((t.prod g) • m))
+
+private def principalPartsHigherEvaluationMap
+    {Q : Type*} [AddCommGroup Q] [Module S Q] [Module R Q]
+    [IsScalarTower R S Q] (D : M →ₗ[R] Q) : (M →₀ S) →ₗ[S] Q :=
+  Finsupp.lsum S (fun x : M => (LinearMap.id : S →ₗ[S] S).smulRight (D x))
+
+private theorem principalPartsHigherEvaluation_eq_map
+    {Q : Type*} [AddCommGroup Q] [Module S Q] [Module R Q]
+    [IsScalarTower R S Q] (k : ℕ) (D : M →ₗ[R] Q)
+    (g : Fin (k + 1) → S) (m : M) :
+    principalPartsHigherEvaluation (R := R) (S := S) k D g m =
+      principalPartsHigherEvaluationMap (R := R) (S := S) D
+        (principalPartsHigherRelation k g m) := by
+  simp [principalPartsHigherEvaluation, principalPartsHigherEvaluationMap,
+    principalPartsHigherRelation, Finsupp.lsum_apply, Finset.smul_sum,
+    Finsupp.smul_single', smul_smul, mul_assoc, mul_comm, mul_left_comm]
+
+private theorem principalPartsHigherEvaluation_succ
+    {Q : Type*} [AddCommGroup Q] [Module S Q] [Module R Q]
+    [IsScalarTower R S Q] (k : ℕ) (D : M →ₗ[R] Q) (s : S)
+    (g : Fin (k + 1) → S) (m : M) :
+    principalPartsHigherEvaluation (R := R) (S := S) (k + 1) D
+        (fun i => Fin.lastCases s g i) m =
+      s • principalPartsHigherEvaluation (R := R) (S := S) k D g m -
+        principalPartsHigherEvaluation (R := R) (S := S) k D g (s • m) := by
+  rw [principalPartsHigherEvaluation_eq_map,
+    principalPartsHigherRelation_succ_eq (R := R) (S := S) (M := M)]
+  simp only [map_sub, map_smul]
+  simp [principalPartsHigherEvaluation_eq_map]
+
+private theorem principalPartsHigherEvaluation_zero
+    {Q : Type*} [AddCommGroup Q] [Module S Q] [Module R Q]
+    [IsScalarTower R S Q] (D : M →ₗ[R] Q) (s : S) (m : M) :
+    principalPartsHigherEvaluation (R := R) (S := S) 0 D (fun _ => s) m =
+      s • D m - D (s • m) := by
+  let embed : Bool → Finset (Fin 1) := fun b =>
+    if b then {0} else ∅
+  have hembed : Function.Bijective embed := by
+    constructor
+    · intro b c h
+      cases b <;> cases c <;> simp [embed] at h ⊢
+    · intro t
+      by_cases ht : (0 : Fin 1) ∈ t
+      · refine ⟨true, ?_⟩
+        apply Finset.ext
+        intro i
+        cases i using Fin.lastCases with
+        | last => simp [embed, ht]
+        | cast i => exact Fin.elim0 i
+      · refine ⟨false, ?_⟩
+        apply Finset.ext
+        intro i
+        cases i using Fin.lastCases with
+        | last => simp [embed, ht]
+        | cast i => exact Fin.elim0 i
+  let F : Finset (Fin 1) → Q := fun t =>
+    ((-1 : S) ^ t.card) •
+      (((Finset.univ \ t).prod (fun _ => s)) •
+        D ((t.prod (fun _ => s)) • m))
+  have hsum := Fintype.sum_bijective embed hembed
+    (fun b => F (embed b)) F (fun _ => rfl)
+  have hsum' := hsum.symm
+  simp_rw [Fintype.sum_bool] at hsum'
+  simpa [F, embed, principalPartsHigherEvaluation, Finset.prod_const,
+    Finset.card_singleton, smul_smul, mul_assoc, mul_comm, mul_left_comm,
+    sub_eq_add_neg, add_comm, add_left_comm, add_assoc] using hsum'
+
+private theorem isDifferentialOperator_of_principalPartsHigherEvaluation
+    {Q : Type*} [AddCommGroup Q] [Module S Q] [Module R Q]
+    [IsScalarTower R S Q] (k : ℕ) (D : M →ₗ[R] Q)
+    (hD : ∀ (g : Fin (k + 1) → S) (m : M),
+      principalPartsHigherEvaluation (R := R) (S := S) k D g m = 0) :
+    IsDifferentialOperator (R := R) (S := S) k D := by
+  induction k generalizing D with
+  | zero =>
+      intro s m
+      have h := hD (fun _ => s) m
+      rw [principalPartsHigherEvaluation_zero] at h
+      exact (sub_eq_zero.mp h).symm
+  | succ k ih =>
+      intro s
+      apply ih
+      intro g m
+      have hcomm :
+          principalPartsHigherEvaluation (R := R) (S := S) k
+              (differentialOperatorCommutator D s) g m =
+            principalPartsHigherEvaluation (R := R) (S := S) k D g (s • m) -
+              s • principalPartsHigherEvaluation (R := R) (S := S) k D g m := by
+        simp [principalPartsHigherEvaluation, differentialOperatorCommutator,
+          Finset.smul_sum, smul_sub, smul_smul, mul_assoc, mul_comm, mul_left_comm]
+      have h := principalPartsHigherEvaluation_succ (R := R) (S := S) k D s g m
+      rw [hcomm, ← neg_sub, ← h, hD (fun i => Fin.lastCases s g i) m,
+        neg_zero]
+
 theorem principalParts_universal_linear_map_exists (k : ℕ) :
     ∃ u : M →ₗ[R] PrincipalParts (R := R) (S := S) (M := M) k,
       (∀ m, u m = principalPartsGenerator (R := R) (S := S) (M := M) k m) ∧
       IsDifferentialOperator (R := R) (S := S) k u := by
-  sorry
+  let q : (M →₀ S) →ₗ[S]
+      PrincipalParts (R := R) (S := S) (M := M) k :=
+    Submodule.mkQ _
+  let u : M →ₗ[R] PrincipalParts (R := R) (S := S) (M := M) k :=
+    { toFun := fun m => q (Finsupp.single m 1)
+      map_add' := by
+        intro m m'
+        rw [← q.map_add, eq_comm, ← sub_eq_zero, ← q.map_sub,
+          Submodule.mkQ_apply, Submodule.Quotient.mk_eq_zero]
+        have hrel : principalPartsAddRelation m m' ∈
+            principalPartsRelationSubmodule (R := R) (S := S) (M := M) k := by
+          apply Submodule.subset_span
+          change principalPartsAddRelation m m' ∈
+            principalPartsRelationSet (R := R) (S := S) (M := M) k
+          exact Or.inl (Or.inl ⟨(m, m'), rfl⟩)
+        simpa [principalPartsAddRelation, sub_eq_add_neg, add_assoc, add_comm,
+          add_left_comm] using (Submodule.neg_mem _ hrel)
+      map_smul' := by
+        intro r m
+        rw [← q.map_smul_of_tower, eq_comm, ← sub_eq_zero,
+          ← q.map_sub, Submodule.mkQ_apply, Submodule.Quotient.mk_eq_zero]
+        have hrel : principalPartsScalarRelation r m ∈
+            principalPartsRelationSubmodule (R := R) (S := S) (M := M) k := by
+          apply Submodule.subset_span
+          change principalPartsScalarRelation r m ∈
+            principalPartsRelationSet (R := R) (S := S) (M := M) k
+          exact Or.inl (Or.inr ⟨(r, m), rfl⟩)
+        simpa [principalPartsScalarRelation, sub_eq_add_neg, add_assoc, add_comm,
+          add_left_comm] using hrel }
+  have hq : principalPartsHigherEvaluationMap (R := R) (S := S) u = q := by
+    ext z
+    classical
+    simp [principalPartsHigherEvaluationMap, Finsupp.lsum_apply, u, q,
+      Finsupp.smul_single', smul_smul, mul_assoc, mul_comm, mul_left_comm]
+  refine ⟨u, ?_, ?_⟩
+  · intro m
+    rfl
+  · apply isDifferentialOperator_of_principalPartsHigherEvaluation
+    intro g m
+    rw [principalPartsHigherEvaluation_eq_map, hq]
+    change Submodule.mkQ _ (principalPartsHigherRelation k g m) = 0
+    rw [Submodule.mkQ_apply, Submodule.Quotient.mk_eq_zero]
+    apply Submodule.subset_span
+    change principalPartsHigherRelation k g m ∈
+      principalPartsRelationSet (R := R) (S := S) (M := M) k
+    exact Or.inr ⟨(g, m), rfl⟩
 
 noncomputable def principalPartsUniversalLinearMap (k : ℕ) :
     M →ₗ[R] PrincipalParts (R := R) (S := S) (M := M) k :=

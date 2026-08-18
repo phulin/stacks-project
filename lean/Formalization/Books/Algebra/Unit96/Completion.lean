@@ -1570,7 +1570,143 @@ theorem isAdicComplete_of_le_of_fg
     {M : Type v} [AddCommGroup M] [Module R M]
     (hIJ : I ≤ J) (hJ : IsAdicComplete J M) (hI : I.FG) :
     IsAdicComplete I M := by
-  sorry
+  classical
+  have hprincipal (f : R) (hf : f ∈ J) :
+      Function.Surjective (AdicCompletion.of (Ideal.span ({f} : Set R)) M) := by
+    rw [AdicCompletion.of_surjective_iff]
+    refine ⟨fun a ha => ?_⟩
+    have hspan : Ideal.span ({f} : Set R) ≤ J := by
+      exact Ideal.span_le.2 (fun x hx => by
+        rcases hx with rfl
+        exact hf)
+    have hJcauchy : ∀ {m n : ℕ}, m ≤ n →
+        a m ≡ a n [SMOD (J ^ m • (⊤ : Submodule R M))] := by
+      intro m n hmn
+      exact SModEq.mono
+        (Submodule.smul_mono_left (Ideal.pow_right_mono hspan m)) (ha hmn)
+    obtain ⟨L, hL⟩ := hJ.toIsPrecomplete.prec hJcauchy
+    let b : ℕ → M := fun n => a n - L
+    have hbJ (n : ℕ) : b n ∈ J ^ n • (⊤ : Submodule R M) := by
+      exact SModEq.sub_mem.mp (hL n)
+    have hdiff (n : ℕ) : ∃ z : M, b n - b (n + 1) = f ^ n • z := by
+      have hmem := SModEq.sub_mem.mp (ha (Nat.le_succ n))
+      rw [Ideal.span_singleton_pow] at hmem
+      have hrepr (w : M) (hw : w ∈ Ideal.span ({f ^ n} : Set R) •
+          (⊤ : Submodule R M)) : ∃ z : M, w = f ^ n • z := by
+        refine Submodule.smul_induction_on hw ?_ ?_
+        · intro r hr x hx
+          obtain ⟨c, hc⟩ := Ideal.mem_span_singleton'.mp hr
+          refine ⟨c • x, ?_⟩
+          rw [← hc, smul_smul]
+          exact congrArg (fun r : R => r • x) (mul_comm c (f ^ n))
+        · intro x y hx hy
+          rcases hx with ⟨x', hx'⟩
+          rcases hy with ⟨y', hy'⟩
+          refine ⟨x' + y', ?_⟩
+          rw [hx', hy', smul_add]
+      obtain ⟨z, hz⟩ := hrepr (a n - a (n + 1)) hmem
+      refine ⟨z, ?_⟩
+      simpa [b] using hz
+    choose z hz using hdiff
+    have hqstep (n k : ℕ) :
+        (∑ i ∈ Finset.range k, f ^ i • z (n + i)) ≡
+          (∑ i ∈ Finset.range (k + 1), f ^ i • z (n + i))
+            [SMOD (J ^ k • (⊤ : Submodule R M))] := by
+      rw [SModEq.sub_mem]
+      have hmem : f ^ k • z (n + k) ∈ J ^ k • (⊤ : Submodule R M) :=
+        Submodule.smul_mem_smul (Ideal.pow_mem_pow hf k) Submodule.mem_top
+      simpa [Finset.sum_range_succ] using (Submodule.neg_mem _ hmem)
+    have hqcauchy (n : ℕ) : ∀ {k l : ℕ}, k ≤ l →
+        (∑ i ∈ Finset.range k, f ^ i • z (n + i)) ≡
+          (∑ i ∈ Finset.range l, f ^ i • z (n + i))
+            [SMOD (J ^ k • (⊤ : Submodule R M))] := by
+      intro k l hkl
+      induction l, hkl using Nat.le_induction with
+      | base => rfl
+      | succ l hkl ih =>
+          exact ih.trans
+            (SModEq.mono
+              (Submodule.smul_mono_left (Ideal.pow_le_pow_right hkl))
+              (hqstep n l))
+    have htel (n k : ℕ) :
+        b n - b (n + k) = f ^ n • (∑ i ∈ Finset.range k, f ^ i • z (n + i)) := by
+      induction k with
+      | zero => simp
+      | succ k ih =>
+          calc
+            b n - b (n + (k + 1)) =
+                (b n - b (n + k)) + (b (n + k) - b (n + (k + 1))) := by
+                  have heq : n + (k + 1) = n + k + 1 := by omega
+                  rw [heq]
+                  abel
+            _ = f ^ n • (∑ i ∈ Finset.range k, f ^ i • z (n + i)) +
+                f ^ (n + k) • z (n + k) := by
+                  have hzk : b (n + k) - b (n + (k + 1)) =
+                      f ^ (n + k) • z (n + k) := by
+                    simpa [Nat.add_assoc] using hz (n + k)
+                  rw [ih, hzk]
+            _ = f ^ n •
+                ((∑ i ∈ Finset.range k, f ^ i • z (n + i)) +
+                  f ^ k • z (n + k)) := by
+                    rw [smul_add, pow_add, mul_smul]
+            _ = f ^ n • (∑ i ∈ Finset.range (k + 1), f ^ i • z (n + i)) := by
+              simp [Finset.sum_range_succ]
+    have hbn (n : ℕ) : b n ∈
+        (Ideal.span ({f} : Set R)) ^ n • (⊤ : Submodule R M) := by
+      obtain ⟨y, hy⟩ := hJ.toIsPrecomplete.prec (hqcauchy n)
+      have hbeq : b n = f ^ n • y := by
+        have hzero : b n - f ^ n • y = 0 := by
+          apply hJ.toIsHausdorff.haus
+          intro m
+          have hmy :
+              f ^ n • ((∑ i ∈ Finset.range m, f ^ i • z (n + i)) - y) ∈
+                J ^ (n + m) • (⊤ : Submodule R M) := by
+            have hmem := SModEq.sub_mem.mp (hy m)
+            have hpow : f ^ n ∈ J ^ n := Ideal.pow_mem_pow hf n
+            have hsmul : f ^ n •
+                ((∑ i ∈ Finset.range m, f ^ i • z (n + i)) - y) ∈
+                  J ^ n • (J ^ m • (⊤ : Submodule R M)) :=
+              Submodule.smul_mem_smul hpow hmem
+            simpa [← Submodule.mul_smul, ← pow_add] using hsmul
+          have hbm : b (n + m) ∈ J ^ (n + m) • (⊤ : Submodule R M) :=
+            hbJ (n + m)
+          have hsum : b n - f ^ n • y =
+              b (n + m) + f ^ n •
+                ((∑ i ∈ Finset.range m, f ^ i • z (n + i)) - y) := by
+            calc
+              b n - f ^ n • y =
+                  (b n - b (n + m)) + (b (n + m) - f ^ n • y) := by abel
+              _ = f ^ n • (∑ i ∈ Finset.range m, f ^ i • z (n + i)) +
+                  (b (n + m) - f ^ n • y) := by rw [htel]
+              _ = b (n + m) + f ^ n •
+                  ((∑ i ∈ Finset.range m, f ^ i • z (n + i)) - y) := by
+                    rw [smul_sub]
+                    abel
+          rw [hsum]
+          exact SModEq.zero.mpr (Submodule.add_mem _
+            ((Submodule.smul_mono_left (Ideal.pow_le_pow_right
+              (show m ≤ n + m by omega))) hbm)
+            ((Submodule.smul_mono_left (Ideal.pow_le_pow_right
+              (show m ≤ n + m by omega))) hmy))
+        exact sub_eq_zero.mp hzero
+      rw [hbeq]
+      exact Submodule.smul_mem_smul
+        (Ideal.pow_mem_pow (Ideal.mem_span_singleton_self f) n) Submodule.mem_top
+    refine ⟨L, ?_⟩
+    intro n
+    apply SModEq.sub_mem.mpr
+    simpa [b] using hbn n
+  refine { toIsHausdorff := ?_, toIsPrecomplete := ?_ }
+  · refine ⟨fun x hx => hJ.toIsHausdorff.haus x ?_⟩
+    intro n
+    exact SModEq.mono
+      (Submodule.smul_mono_left (Ideal.pow_right_mono hIJ n)) (hx n)
+  · obtain ⟨r, f, hIf⟩ := Submodule.fg_iff_exists_fin_generating_family.mp hI
+    apply AdicCompletion.of_surjective_iff.mp
+    apply surjective_to_completion_of_finite_generators R I M r f hIf.symm
+    intro i
+    apply hprincipal (f i)
+    exact hIJ (hIf ▸ Ideal.subset_span ⟨i, rfl⟩)
 
 theorem completion_equiv_of_power_le
     {R : Type u} [CommRing R] (I J : Ideal R)
@@ -1698,7 +1834,57 @@ theorem isAdicComplete_iff_of_power_le
     (c d : ℕ) (hc : 0 < c) (hd : 0 < d)
     (hIJ : I ^ c ≤ J) (hJI : J ^ d ≤ I) :
     IsAdicComplete I M ↔ IsAdicComplete J M := by
-  sorry
+  have hIpow (n : ℕ) : I ^ (c * n) • (⊤ : Submodule R M) ≤
+      J ^ n • (⊤ : Submodule R M) := by
+    apply Submodule.smul_mono_left
+    simpa [pow_mul] using (Ideal.pow_right_mono hIJ n)
+  have hJpow (n : ℕ) : J ^ (d * n) • (⊤ : Submodule R M) ≤
+      I ^ n • (⊤ : Submodule R M) := by
+    apply Submodule.smul_mono_left
+    simpa [pow_mul] using (Ideal.pow_right_mono hJI n)
+  constructor
+  · intro hI
+    refine { toIsHausdorff := ?_, toIsPrecomplete := ?_ }
+    · refine ⟨fun x hx => hI.toIsHausdorff.haus x ?_⟩
+      intro n
+      exact SModEq.mono (hJpow n) (hx (d * n))
+    · refine ⟨fun a ha => ?_⟩
+      let b : ℕ → M := fun n => a (d * n)
+      have hb : ∀ {m n : ℕ}, m ≤ n →
+          b m ≡ b n [SMOD (I ^ m • (⊤ : Submodule R M))] := by
+        intro m n hmn
+        exact SModEq.mono (hJpow m) (ha (Nat.mul_le_mul_left d hmn))
+      obtain ⟨L, hL⟩ := hI.toIsPrecomplete.prec hb
+      refine ⟨L, fun n => ?_⟩
+      have hle : n ≤ d * (c * n) := by
+        exact (Nat.le_mul_of_pos_right n hc).trans <| by
+          simpa [Nat.mul_comm] using Nat.le_mul_of_pos_left (c * n) hd
+      have h₁ := ha hle
+      have h₂ : a (d * (c * n)) ≡ L
+          [SMOD (J ^ n • (⊤ : Submodule R M))] := by
+        simpa [b] using SModEq.mono (hIpow n) (hL (c * n))
+      exact h₁.trans h₂
+  · intro hJ
+    refine { toIsHausdorff := ?_, toIsPrecomplete := ?_ }
+    · refine ⟨fun x hx => hJ.toIsHausdorff.haus x ?_⟩
+      intro n
+      exact SModEq.mono (hIpow n) (hx (c * n))
+    · refine ⟨fun a ha => ?_⟩
+      let b : ℕ → M := fun n => a (c * n)
+      have hb : ∀ {m n : ℕ}, m ≤ n →
+          b m ≡ b n [SMOD (J ^ m • (⊤ : Submodule R M))] := by
+        intro m n hmn
+        exact SModEq.mono (hIpow m) (ha (Nat.mul_le_mul_left c hmn))
+      obtain ⟨L, hL⟩ := hJ.toIsPrecomplete.prec hb
+      refine ⟨L, fun n => ?_⟩
+      have hle : n ≤ c * (d * n) := by
+        exact (Nat.le_mul_of_pos_right n hd).trans <| by
+          simpa [Nat.mul_comm] using Nat.le_mul_of_pos_left (d * n) hc
+      have h₁ := ha hle
+      have h₂ : a (c * (d * n)) ≡ L
+          [SMOD (I ^ n • (⊤ : Submodule R M))] := by
+        simpa [b] using SModEq.mono (hJpow n) (hL (d * n))
+      exact h₁.trans h₂
 
 /-! ## Complete quotients -/
 
@@ -1708,7 +1894,67 @@ theorem quotient_isAdicComplete_iff
     (hM : IsAdicComplete I M) (K : Submodule R M) :
     K = ⨅ n : ℕ, K ⊔ I ^ n • (⊤ : Submodule R M) ↔
       IsAdicComplete I (M ⧸ K) := by
-  sorry
+  have hcomap (n : ℕ) :
+      (I ^ n • (⊤ : Submodule R (M ⧸ K))).comap (Submodule.mkQ K) =
+        K ⊔ I ^ n • (⊤ : Submodule R M) := by
+    simpa [Submodule.ker_mkQ, sup_comm] using
+      (Submodule.comap_smul_top_of_surjective (I ^ n) (Submodule.mkQ K)
+        (Submodule.mkQ_surjective K))
+  have hofM : Function.Surjective (AdicCompletion.of I M) :=
+    AdicCompletion.of_surjective_iff.mpr hM.toIsPrecomplete
+  have hmap : Function.Surjective
+      (AdicCompletion.map I (Submodule.mkQ K)) :=
+    completion_map_surjective_of_surjective I (Submodule.mkQ K)
+      (Submodule.mkQ_surjective K)
+  have hofQ : Function.Surjective (AdicCompletion.of I (M ⧸ K)) := by
+    intro y
+    obtain ⟨x, hx⟩ := hmap y
+    obtain ⟨m, hm⟩ := hofM x
+    refine ⟨Submodule.mkQ K m, ?_⟩
+    calc
+      AdicCompletion.of I (M ⧸ K) (Submodule.mkQ K m) =
+          AdicCompletion.map I (Submodule.mkQ K) (AdicCompletion.of I M m) :=
+        (AdicCompletion.map_of I (Submodule.mkQ K) m).symm
+      _ = AdicCompletion.map I (Submodule.mkQ K) x := by rw [hm]
+      _ = y := hx
+  constructor
+  · intro hK
+    refine { toIsHausdorff := ?_, toIsPrecomplete :=
+      AdicCompletion.of_surjective_iff.mp hofQ }
+    refine ⟨fun x hx => ?_⟩
+    obtain ⟨m, rfl⟩ := Submodule.mkQ_surjective K x
+    have hm : ∀ n : ℕ, m ∈ K ⊔ I ^ n • (⊤ : Submodule R M) := by
+      intro n
+      have hxn : Submodule.mkQ K m ∈
+          I ^ n • (⊤ : Submodule R (M ⧸ K)) :=
+        SModEq.zero.mp (hx n)
+      have : m ∈
+          (I ^ n • (⊤ : Submodule R (M ⧸ K))).comap (Submodule.mkQ K) := hxn
+      rw [hcomap] at this
+      exact this
+    have hmI : m ∈ ⨅ n : ℕ, K ⊔ I ^ n • (⊤ : Submodule R M) :=
+      (Submodule.mem_iInf (fun n : ℕ => K ⊔ I ^ n •
+        (⊤ : Submodule R M))).2 hm
+    have hmK : m ∈ K := by
+      rw [hK]
+      exact hmI
+    exact (Submodule.Quotient.mk_eq_zero K).mpr hmK
+  · intro hQ
+    apply le_antisymm
+    · exact le_iInf (fun n => le_sup_left)
+    · intro m hm
+      have hxm : ∀ n : ℕ, Submodule.mkQ K m ∈
+          I ^ n • (⊤ : Submodule R (M ⧸ K)) := by
+        intro n
+        have : m ∈
+            (I ^ n • (⊤ : Submodule R (M ⧸ K))).comap (Submodule.mkQ K) := by
+          rw [hcomap]
+          exact (Submodule.mem_iInf (fun n : ℕ => K ⊔ I ^ n •
+            (⊤ : Submodule R M))).1 hm n
+        exact this
+      have hxzero : Submodule.mkQ K m = 0 :=
+        hQ.toIsHausdorff.haus _ (fun n => SModEq.zero.mpr (hxm n))
+      exact (Submodule.Quotient.mk_eq_zero K).mp hxzero
 
 theorem finite_module_isAdicComplete_of_complete_ring
     {R : Type u} [CommRing R] (I : Ideal R)
@@ -1716,7 +1962,43 @@ theorem finite_module_isAdicComplete_of_complete_ring
     (hR : IsAdicComplete I R)
     (hM : (⨅ n : ℕ, I ^ n • (⊤ : Submodule R M)) = ⊥) :
     IsAdicComplete I M := by
-  sorry
+  letI : IsAdicComplete I R := hR
+  have hofR : Function.Surjective (AdicCompletion.of I R) :=
+    AdicCompletion.of_surjective_iff.mpr hR.toIsPrecomplete
+  have hof_smul (r : R) (m : M) :
+      (AdicCompletion.of I R r) • AdicCompletion.of I M m =
+        AdicCompletion.of I M (r • m) := by
+    apply AdicCompletion.ext
+    intro n
+    rfl
+  have hspan (z : M ⊗[R] ringCompletion I) : ∃ m : M,
+      AdicCompletion.of I M m = completionTensorMap I M z := by
+    induction z using TensorProduct.induction_on with
+    | zero => exact ⟨0, by simp⟩
+    | tmul m a =>
+        obtain ⟨r, rfl⟩ := hofR a
+        refine ⟨r • m, ?_⟩
+        simp [completionTensorMap, completionTensorMapCanonical,
+          hof_smul]
+    | add z₁ z₂ hz₁ hz₂ =>
+        obtain ⟨m₁, hm₁⟩ := hz₁
+        obtain ⟨m₂, hm₂⟩ := hz₂
+        refine ⟨m₁ + m₂, ?_⟩
+        simp [hm₁, hm₂]
+  have hofM : Function.Surjective (AdicCompletion.of I M) := by
+    intro y
+    obtain ⟨z, hz⟩ := completion_tensor_map_surjective_of_finite I M y
+    obtain ⟨m, hm⟩ := hspan z
+    refine ⟨m, ?_⟩
+    exact hm.trans hz
+  have hHaus : IsHausdorff I M := by
+    refine ⟨fun x hx => ?_⟩
+    have hxbot : x ∈ (⊥ : Submodule R M) := by
+      rw [← hM]
+      exact (Submodule.mem_iInf (fun n : ℕ => I ^ n • (⊤ : Submodule R M))).2
+        (fun n => SModEq.zero.mp (hx n))
+    exact (Submodule.mem_bot _).mp hxbot
+  exact AdicCompletion.of_bijective_iff.mp ⟨AdicCompletion.of_injective_iff.mpr hHaus, hofM⟩
 
 theorem finite_of_complete_ring_of_finite_residue
     {R : Type u} [CommRing R] (I : Ideal R)

@@ -41,7 +41,7 @@ preservation of limits of every discrete diagram in the opposite category.
 -/
 def PreservesDirectSumsAsProducts
     (H : ContravariantCohomologicalFunctor (C := C)) : Prop :=
-  ∀ I : Type u, PreservesLimitsOfShape (Discrete I) H
+  ∀ I : Type (max u v), PreservesLimitsOfShape (Discrete I) H
 
 /-- Brown representability for the derived category of a Grothendieck
 abelian category. -/
@@ -62,7 +62,7 @@ theorem exact_right_adjoint
     [HasShift D' ℤ] [∀ n : ℤ, (shiftFunctor D' n).Additive]
     [Pretriangulated D'] [CategoryTheory.IsTriangulated D']
     (F : DerivedCategory C ⥤ D') [F.CommShift ℤ] [F.IsTriangulated]
-    (hF : ∀ I : Type u,
+    (hF : ∀ I : Type (max u v),
       PreservesColimitsOfShape (Discrete I) F) :
     Formalization.Books.Derived.Unit38.HasExactRightAdjoint F := by
   sorry

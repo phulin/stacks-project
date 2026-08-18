@@ -1,6 +1,8 @@
 import Mathlib.Algebra.Homology.ShortComplex.ShortExact
 import Mathlib.CategoryTheory.Abelian.Subobject
 import Mathlib.CategoryTheory.Noetherian
+import Mathlib.CategoryTheory.RegularCategory.Basic
+import Mathlib.Order.JordanHolder
 import Mathlib.Order.RelSeries
 
 /-!

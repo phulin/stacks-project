@@ -19,6 +19,7 @@ noncomputable section
 
 open CategoryTheory
 open CategoryTheory.Limits
+open scoped ZeroObject
 
 universe v u w
 

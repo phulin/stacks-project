@@ -296,7 +296,55 @@ theorem glue_maps_of_concrete_category (C : Type u) [Category.{v} C]
       (sheafRestriction C (U i)).obj G)
     (hφ : SheafMapGlueingCondition C U φ) :
     ∃! ψ : F ⟶ G, ∀ i, (sheafRestriction C (U i)).map ψ = φ i := by
-  sorry
+  let localMap (i : ι) :
+      ((Opens.grothendieckTopology X).overPullback C (U i)).obj F ⟶
+        ((Opens.grothendieckTopology X).overPullback C (U i)).obj G := by
+    let eF := (U i).isOpenEmbedding.sheafPullbackIso C
+    let eG := (U i).isOpenEmbedding.sheafPullbackIso C
+    exact (U i).sheafRestrictSheafEquivOver.inv.app F ≫
+      (U i).sheafEquivOver.inverse.map
+        (eF.inv.app F ≫ φ i ≫ eG.hom.app G) ≫
+        (U i).sheafRestrictSheafEquivOver.hom.app G
+  let H := CategoryTheory.sheafHom F G
+  let localSection (i : ι) : H.1.obj (op (U i)) := localMap i
+  have hlocal : TopCat.Presheaf.IsCompatible H.1 U localSection := by
+    intro i j
+    simpa [H, localSection, localMap] using hφ i j
+  have htop : (⊤ : Opens X) ≤ iSup U := by
+    rw [hU.iSup_eq_top]
+  obtain ⟨s₀, hs₀, hs₀_unique⟩ := TopCat.Sheaf.existsUnique_gluing' H U (⊤ : Opens X)
+    (fun i => homOfLE (show U i ≤ ⊤ from le_top)) htop localSection hlocal
+  let sec : H.1.sections :=
+    ⟨fun V => H.1.map (homOfLE le_top).op s₀, by
+      intro V W f
+      change H.1.map f
+          (H.1.map (homOfLE (show W.unop ≤ ⊤ from le_top)).op s₀) =
+        H.1.map (homOfLE (show V.unop ≤ ⊤ from le_top)).op s₀
+      rw [← ConcreteCategory.comp_apply, ← H.1.map_comp]
+      congr 1
+      simp⟩
+  let ψ : F ⟶ G := (CategoryTheory.sheafHomSectionsEquiv F G) sec
+  refine ⟨ψ, ?_, ?_⟩
+  · intro i
+    have hi := hs₀ i
+    simpa [ψ, sec, localSection, localMap] using hi
+  · intro ψ' hψ'
+    let sec' : H.1.sections :=
+      (CategoryTheory.sheafHomSectionsEquiv F G).symm ψ'
+    have hs' (i : ι) :
+        H.1.map (homOfLE (show U i ≤ ⊤ from le_top)).op (sec'.val (op ⊤)) =
+          localSection i := by
+      simpa [sec', localSection, localMap] using hψ' i
+    have htop_eq : sec'.val (op ⊤) = s₀ := by
+      apply hs₀_unique
+      exact hs'
+    have hsec_eq : sec' = sec := by
+      apply (Functor.sections_ext_iff).2
+      intro V
+      have hsec' := sec'.property (homOfLE le_top).op
+      have hsec := sec.property (homOfLE le_top).op
+      rw [← hsec', ← hsec, htop_eq]
+    simpa [ψ, sec'] using hsec_eq
 
 /-! The source's set-valued statement.  The general declaration above is only
 used as the reusable interface for the later algebraic variants. -/
@@ -678,7 +726,10 @@ theorem glueingSectionRestrict_compatible
     (s : GlueingSection D W) (i j : ι) :
     glueingSectionCompatibilityAt D W'
       (fun i => glueingSectionRestrictValue D h s i) i j := by
-  sorry
+  have hs := s.compatible i j
+  unfold glueingSectionCompatibilityAt at hs ⊢
+  dsimp [glueingSectionRestrictValue] at hs ⊢
+  
 
 /-- Restriction maps for the sectionwise construction of the glued sheaf. -/
 noncomputable def glueingSectionRestrict

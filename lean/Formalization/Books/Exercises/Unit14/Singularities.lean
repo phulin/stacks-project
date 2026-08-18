@@ -10,8 +10,11 @@ import Mathlib.RingTheory.LocalRing.Basic
 import Mathlib.RingTheory.LocalRing.Defs
 import Mathlib.RingTheory.LocalRing.MaximalIdeal.Basic
 import Mathlib.RingTheory.MvPowerSeries.Basic
+import Mathlib.RingTheory.MvPowerSeries.Equiv
+import Mathlib.RingTheory.MvPowerSeries.Inverse
 import Mathlib.RingTheory.MvPowerSeries.Order
 import Mathlib.RingTheory.MvPowerSeries.Substitution
+import Mathlib.RingTheory.LocalRing.RingHom.Basic
 
 /-!
 # Exercises, Chapter 14: Singularities
@@ -863,6 +866,97 @@ theorem ordinaryDoublePoint_normalForm_equiv_of_pairEquivalent
   rw [hv] at hi
   exact hi.symm
 
+private theorem twoVariableMaximalIdeal_eq_constantCoeff_ker
+    {K : Type v} [Field K] :
+    twoVariableMaximalIdeal K =
+      RingHom.ker (MvPowerSeries.constantCoeff :
+        MvPowerSeries (Fin 2) K →+* K) := by
+  apply le_antisymm
+  · change Ideal.span (Set.range (fun i : Fin 2 => MvPowerSeries.X i)) ≤ _
+    rw [Ideal.span_le]
+    rintro x ⟨i, rfl⟩
+    simp
+  · intro f hf
+    change MvPowerSeries.constantCoeff f = 0 at hf
+    let E := MvPowerSeries.finSuccEquiv K 1
+    let F := E f
+    have hF0 : MvPowerSeries.constantCoeff (PowerSeries.constantCoeff F) = 0 := by
+      rw [← MvPowerSeries.coeff_zero_eq_constantCoeff_apply,
+        ← PowerSeries.coeff_zero_eq_constantCoeff_apply]
+      rw [show F = MvPowerSeries.finSuccEquiv K 1 f by rfl,
+        MvPowerSeries.coeff_coeff_finSuccEquiv]
+      simpa using hf
+    have hdiv : MvPowerSeries.X (0 : Fin 1) ∣ PowerSeries.constantCoeff F := by
+      apply MvPowerSeries.X_dvd_iff.mpr
+      intro m hm
+      have hm0 : m = 0 := by
+        ext i
+        simpa using hm
+      subst m
+      simpa [MvPowerSeries.coeff_zero_eq_constantCoeff] using hF0
+    obtain ⟨H, hH⟩ := hdiv
+    have hsplit := PowerSeries.eq_X_mul_shift_add_const F
+    have hE0 : E.symm (PowerSeries.X : PowerSeries (MvPowerSeries (Fin 1) K)) =
+        MvPowerSeries.X (0 : Fin 2) := by
+      apply E.injective
+      simp [E]
+    have hE1 : E.symm (PowerSeries.C (MvPowerSeries.X (0 : Fin 1))) =
+        MvPowerSeries.X (1 : Fin 2) := by
+      apply E.injective
+      simpa [E] using
+        (MvPowerSeries.finSuccEquiv_X_succ (R := K) (n := 1)
+          (0 : Fin 1)).symm
+    have hdecomp :
+        f = MvPowerSeries.X (0 : Fin 2) * E.symm (PowerSeries.mk
+          (fun p => PowerSeries.coeff (p + 1) F)) +
+          MvPowerSeries.X (1 : Fin 2) * E.symm (PowerSeries.C H) := by
+      have hE0' : E (MvPowerSeries.X (0 : Fin 2)) =
+          (PowerSeries.X : PowerSeries (MvPowerSeries (Fin 1) K)) := by
+        simpa [E] using
+          (MvPowerSeries.finSuccEquiv_X_zero (R := K) (n := 1))
+      have hE1' : E (MvPowerSeries.X (1 : Fin 2)) =
+          PowerSeries.C (MvPowerSeries.X (0 : Fin 1)) := by
+        simpa [E] using
+          (MvPowerSeries.finSuccEquiv_X_succ (R := K) (n := 1)
+            (0 : Fin 1))
+      apply E.injective
+      change F = E (_)
+      calc
+        F = PowerSeries.X * PowerSeries.mk
+              (fun p => PowerSeries.coeff (p + 1) F) +
+            PowerSeries.C (PowerSeries.constantCoeff F) := hsplit
+        _ = E _ := by
+          rw [map_add, map_mul, map_mul, E.apply_symm_apply,
+            E.apply_symm_apply, hE0', hE1', hH, map_mul]
+    rw [hdecomp]
+    change _ ∈ Ideal.span (Set.range (fun i : Fin 2 => MvPowerSeries.X i))
+    apply add_mem
+    · apply Ideal.mul_mem_right (E.symm (PowerSeries.mk
+          (fun p => PowerSeries.coeff (p + 1) F))) _
+      exact Ideal.subset_span (show MvPowerSeries.X (0 : Fin 2) ∈
+        Set.range (fun i : Fin 2 => MvPowerSeries.X i) from ⟨0, rfl⟩)
+    · apply Ideal.mul_mem_right (E.symm (PowerSeries.C H)) _
+      exact Ideal.subset_span (show MvPowerSeries.X (1 : Fin 2) ∈
+        Set.range (fun i : Fin 2 => MvPowerSeries.X i) from ⟨1, rfl⟩)
+
+private theorem twoVariableMaximalIdeal_eq_maximalIdeal
+    {K : Type v} [Field K] :
+    twoVariableMaximalIdeal K =
+      IsLocalRing.maximalIdeal (MvPowerSeries (Fin 2) K) := by
+  rw [twoVariableMaximalIdeal_eq_constantCoeff_ker]
+  ext x
+  rw [IsLocalRing.mem_maximalIdeal, mem_nonunits_iff]
+  simp [MvPowerSeries.isUnit_iff_constantCoeff]
+
+private theorem map_maximalIdeal_of_algEquiv
+    {k : Type u} [Field k] {A : Type v} [CommRing A] [Algebra k A]
+    {B : Type w} [CommRing B] [Algebra k B]
+    [IsLocalRing A] [IsLocalRing B]
+    (e : A ≃ₐ[k] B) :
+    (IsLocalRing.maximalIdeal A).map (e : A ≃+* B) =
+      IsLocalRing.maximalIdeal B :=
+  IsLocalRing.map_ringEquiv_maximalIdeal e.toRingEquiv
+
 theorem ordinaryDoublePoint_normalForm_cotangent_equiv
     {k : Type u} [Field k] (P Q : BinaryQuadraticPair k)
     (e : ordinaryDoublePointNormalForm P ≃ₐ[k]
@@ -870,7 +964,96 @@ theorem ordinaryDoublePoint_normalForm_cotangent_equiv
     Nonempty
       (ordinaryDoublePointNormalFormCotangent P ≃ₗ[k]
         ordinaryDoublePointNormalFormCotangent Q) := by
-  sorry
+  have hqP0 :
+      MvPowerSeries.constantCoeff
+        (binaryQuadraticPowerSeries P.coeffA P.coeffB P.coeffC) = 0 := by
+    simp [binaryQuadraticPowerSeries]
+  have hqQ0 :
+      MvPowerSeries.constantCoeff
+        (binaryQuadraticPowerSeries Q.coeffA Q.coeffB Q.coeffC) = 0 := by
+    simp [binaryQuadraticPowerSeries]
+  have hPne :
+      Ideal.span {binaryQuadraticPowerSeries P.coeffA P.coeffB P.coeffC} ≠ ⊤ := by
+    intro h
+    have hu := Ideal.span_singleton_eq_top.mp h
+    have hc := MvPowerSeries.isUnit_constantCoeff
+      (binaryQuadraticPowerSeries P.coeffA P.coeffB P.coeffC) hu
+    rw [hqP0] at hc
+    exact not_isUnit_zero hc
+  have hQne :
+      Ideal.span {binaryQuadraticPowerSeries Q.coeffA Q.coeffB Q.coeffC} ≠ ⊤ := by
+    intro h
+    have hu := Ideal.span_singleton_eq_top.mp h
+    have hc := MvPowerSeries.isUnit_constantCoeff
+      (binaryQuadraticPowerSeries Q.coeffA Q.coeffB Q.coeffC) hu
+    rw [hqQ0] at hc
+    exact not_isUnit_zero hc
+  let : Nontrivial (ordinaryDoublePointNormalForm P) :=
+    Ideal.Quotient.nontrivial_iff.mpr hPne
+  let : Nontrivial (ordinaryDoublePointNormalForm Q) :=
+    Ideal.Quotient.nontrivial_iff.mpr hQne
+  let : IsLocalRing (ordinaryDoublePointNormalForm P) :=
+    IsLocalRing.of_surjective' (Ideal.Quotient.mk
+      (Ideal.span {binaryQuadraticPowerSeries P.coeffA P.coeffB P.coeffC}))
+      Ideal.Quotient.mk_surjective
+  let : IsLocalRing (ordinaryDoublePointNormalForm Q) :=
+    IsLocalRing.of_surjective' (Ideal.Quotient.mk
+      (Ideal.span {binaryQuadraticPowerSeries Q.coeffA Q.coeffB Q.coeffC}))
+      Ideal.Quotient.mk_surjective
+  have hPmap :
+      Ideal.map (Ideal.Quotient.mk
+        (Ideal.span {binaryQuadraticPowerSeries P.coeffA P.coeffB P.coeffC}))
+        (IsLocalRing.maximalIdeal (MvPowerSeries (Fin 2) P.K)) =
+        IsLocalRing.maximalIdeal (ordinaryDoublePointNormalForm P) := by
+    exact IsLocalRing.map_maximalIdeal_of_surjective _
+      Ideal.Quotient.mk_surjective
+  have hQmap :
+      Ideal.map (Ideal.Quotient.mk
+        (Ideal.span {binaryQuadraticPowerSeries Q.coeffA Q.coeffB Q.coeffC}))
+        (IsLocalRing.maximalIdeal (MvPowerSeries (Fin 2) Q.K)) =
+        IsLocalRing.maximalIdeal (ordinaryDoublePointNormalForm Q) := by
+    exact IsLocalRing.map_maximalIdeal_of_surjective _
+      Ideal.Quotient.mk_surjective
+  have hPmax : ordinaryDoublePointNormalFormMaximalIdeal P =
+      IsLocalRing.maximalIdeal (ordinaryDoublePointNormalForm P) := by
+    unfold ordinaryDoublePointNormalFormMaximalIdeal
+    rw [twoVariableMaximalIdeal_eq_maximalIdeal]
+    exact hPmap
+  have hQmax : ordinaryDoublePointNormalFormMaximalIdeal Q =
+      IsLocalRing.maximalIdeal (ordinaryDoublePointNormalForm Q) := by
+    unfold ordinaryDoublePointNormalFormMaximalIdeal
+    rw [twoVariableMaximalIdeal_eq_maximalIdeal]
+    exact hQmap
+  have hlocal :
+      (IsLocalRing.maximalIdeal (ordinaryDoublePointNormalForm P)).map
+        (e : ordinaryDoublePointNormalForm P ≃+*
+          ordinaryDoublePointNormalForm Q) =
+        IsLocalRing.maximalIdeal (ordinaryDoublePointNormalForm Q) :=
+    map_maximalIdeal_of_algEquiv e
+  have hemax :
+      Ideal.map (e : ordinaryDoublePointNormalForm P →+*
+        ordinaryDoublePointNormalForm Q)
+        (ordinaryDoublePointNormalFormMaximalIdeal P) =
+        ordinaryDoublePointNormalFormMaximalIdeal Q := by
+    have hPmax_map := congrArg
+      (fun I : Ideal (ordinaryDoublePointNormalForm P) =>
+        Ideal.map (e : ordinaryDoublePointNormalForm P →+*
+          ordinaryDoublePointNormalForm Q) I) hPmax
+    calc
+      Ideal.map (e : ordinaryDoublePointNormalForm P →+*
+          ordinaryDoublePointNormalForm Q)
+          (ordinaryDoublePointNormalFormMaximalIdeal P) =
+          Ideal.map (e : ordinaryDoublePointNormalForm P →+*
+            ordinaryDoublePointNormalForm Q)
+            (IsLocalRing.maximalIdeal (ordinaryDoublePointNormalForm P)) := hPmax_map
+      _ = IsLocalRing.maximalIdeal (ordinaryDoublePointNormalForm Q) := hlocal
+      _ = ordinaryDoublePointNormalFormMaximalIdeal Q := hQmax.symm
+  let E : IdealAlgebraEquivalence (k := k)
+      (ordinaryDoublePointNormalFormMaximalIdeal P)
+      (ordinaryDoublePointNormalFormMaximalIdeal Q) :=
+    { ringEquiv := e
+      map_ideal := hemax }
+  exact ⟨E.cotangentEquiv⟩
 
 /-- A ring is complete and local in the adic sense used for complete local
 rings. -/

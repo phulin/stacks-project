@@ -332,7 +332,105 @@ theorem presentation_symmetric_exterior_power
           (∀ x,
             b (exteriorPower.ιMulti R n x) =
               exteriorPower.ιMulti R n (fun i => g (x i)))) := by
-  sorry
+  classical
+  let C : (⨂[R] _ : ULift.{_} (Fin n), M₁) →ₗ[R] symmetricPower R M n :=
+    (SymmetricPower.mk R (ULift.{_} (Fin n)) M).comp
+      (PiTensorProduct.map (fun _ : ULift.{_} (Fin n) => g))
+  have hC : addConGen (SymmetricPower.Rel R (ULift.{_} (Fin n)) M₁) ≤
+      AddCon.ker C.toAddMonoidHom := by
+    apply AddCon.addConGen_le.2
+    intro x y hxy
+    cases hxy with
+    | perm e f =>
+        change C (PiTensorProduct.tprod R f) =
+          C (PiTensorProduct.tprod R (fun i => f (e i)))
+        dsimp [C]
+        rw [PiTensorProduct.map_tprod, PiTensorProduct.map_tprod]
+        exact (SymmetricPower.tprod_equiv (R := R) (M := M) e
+          (fun i => g (f i))).symm
+  let bₛ : symmetricPower R M₁ n →ₗ[R] symmetricPower R M n :=
+    { toFun := AddCon.lift (addConGen (SymmetricPower.Rel R (ULift.{_} (Fin n)) M₁))
+        C.toAddMonoidHom hC
+      map_add' := by intro x y; exact map_add _ _ _
+      map_smul' := by
+        intro r x
+        refine AddCon.induction_on x ?_
+        intro t
+        change C (r • t) = r • C t
+        exact C.map_smul r t }
+  have hbₛ_tprod (x : ULift (Fin n) → M₁) :
+      bₛ (SymmetricPower.tprod R x) =
+        SymmetricPower.tprod R (fun i => g (x i)) := by
+    change AddCon.lift (addConGen (SymmetricPower.Rel R (ULift.{_} (Fin n)) M₁))
+      C.toAddMonoidHom hC (↑(PiTensorProduct.tprod R x)) = _
+    rw [AddCon.lift_coe]
+    change C (PiTensorProduct.tprod R x) = _
+    simp only [C, LinearMap.comp_apply, PiTensorProduct.map_tprod,
+      SymmetricPower.mk, SymmetricPower.tprod]
+    rfl
+  have hbₛ_surj : Function.Surjective bₛ := by
+    rw [← LinearMap.range_eq_top]
+    apply top_unique
+    rw [← symmetric_pure_tensor_span n]
+    apply Submodule.span_le.2
+    rintro _ ⟨x, rfl⟩
+    choose y hy using fun i : ULift (Fin n) => hg (x i)
+    refine ⟨SymmetricPower.tprod R y, ?_⟩
+    rw [hbₛ_tprod]
+    congr 1
+    funext i
+    exact hy i
+  have h₁ : 1 + (n - 1) = n := Nat.add_sub_of_le (Nat.succ_le_iff.2 hn)
+  let σₛ : ULift.{_} (Fin n) ≃
+      ULift.{_} (Fin 1) ⊕ ULift.{_} (Fin (n - 1)) :=
+    ((Equiv.ulift : ULift.{_} (Fin n) ≃ Fin n).trans (finCongr h₁.symm)).trans
+      (finSumFinEquiv.symm.trans
+        (Equiv.sumCongr (Equiv.ulift.symm) (Equiv.ulift.symm)))
+  let Fₛ : MultilinearMap R
+      (fun _ : ULift.{_} (Fin 1) ⊕ ULift.{_} (Fin (n - 1)) => M₁)
+      (symmetricPower R M₁ n) :=
+    (SymmetricPower.tprod R).domDomCongr σₛ
+  let Hₛ : M₁ →ₗ[R]
+      MultilinearMap R (fun _ : ULift.{_} (Fin (n - 1)) => M₁)
+        (symmetricPower R M₁ n) :=
+    (MultilinearMap.ofSubsingletonₗ R R M₁
+      (MultilinearMap R (fun _ : ULift.{_} (Fin (n - 1)) => M₁)
+        (symmetricPower R M₁ n)) (ULift.up 0)).symm Fₛ.currySum
+  let Aₛ : M₂ →ₗ[R]
+      (symmetricPower R M₁ (n - 1) →ₗ[R] symmetricPower R M₁ n) :=
+    { toFun := fun z =>
+        { toFun := PiTensorProduct.lift (Hₛ (f z))
+          map_add' := by
+            intro x y
+            apply PiTensorProduct.ext
+            apply MultilinearMap.ext
+            intro v
+            simp [Hₛ]
+          map_smul' := by
+            intro r x
+            apply PiTensorProduct.ext
+            apply MultilinearMap.ext
+            intro v
+            simp [Hₛ] }
+      map_add' := by
+        intro x y
+        apply LinearMap.ext
+        intro z
+        apply PiTensorProduct.ext
+        apply MultilinearMap.ext
+        intro v
+        simp [Hₛ]
+      map_smul' := by
+        intro r x
+        apply LinearMap.ext
+        intro z
+        apply PiTensorProduct.ext
+        apply MultilinearMap.ext
+        intro v
+        simp [Hₛ] }
+  let aₛ : TensorProduct R M₂ (symmetricPower R M₁ (n - 1)) →ₗ[R]
+      symmetricPower R M₁ n := TensorProduct.lift Aₛ
+  refine ?_ 
 
 /-- Indices for the two distinguished slots in the generator-and-relation presentation. -/
 def positionPairs (n : ℕ) := {p : Fin n × Fin n // p.1 < p.2}

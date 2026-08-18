@@ -67,20 +67,174 @@ def IsOfGenus (T : NumericalType) (genusValue : ℤ) : Prop :=
 /-! The parity statement underlying the integrality of the genus. -/
 theorem genus_diagonal_parity (T : NumericalType) :
     Even ((Finset.univ : Finset (Fin T.n)).sum (fun i => T.a i i * T.m i)) := by
-  sorry
+  classical
+  refine ZMod.intCast_eq_zero_iff_even.mp ?_
+  have hrow : ∀ i, ∑ j, (T.m i : ZMod 2) * ((T.a i j : ZMod 2) * (T.m j : ZMod 2)) = 0 := by
+    intro i
+    have h := T.row_sum i
+    have h' : ∑ j, ((T.a i j * T.m j : ℤ) : ZMod 2) = 0 := by
+      simpa only [Int.cast_sum, Int.cast_zero] using congrArg (fun x : ℤ => (x : ZMod 2)) h
+    simpa [Finset.mul_sum, ← Int.cast_mul] using
+      congrArg (fun x : ZMod 2 => (T.m i : ZMod 2) * x) h'
+  have hsum : (Finset.univ : Finset (Fin T.n)).sum (fun i =>
+      (Finset.univ : Finset (Fin T.n)).sum (fun j =>
+        (T.m i : ZMod 2) * (T.a i j : ZMod 2) * (T.m j : ZMod 2))) = 0 := by
+    apply Finset.sum_eq_zero
+    intro i hi
+    simpa [mul_assoc] using hrow i
+  have hdouble : ((Finset.univ.product Finset.univ : Finset (Fin T.n × Fin T.n)).sum
+      (fun p => (T.m p.1 : ZMod 2) * (T.a p.1 p.2 : ZMod 2) * (T.m p.2 : ZMod 2))) = 0 := by
+    change ((Finset.univ ×ˢ Finset.univ).sum
+      (fun p => (T.m p.1 : ZMod 2) * (T.a p.1 p.2 : ZMod 2) * (T.m p.2 : ZMod 2))) = 0
+    rw [Finset.sum_product]
+    convert hsum using 1
+  let s : Finset (Fin T.n × Fin T.n) :=
+    (Finset.univ.product Finset.univ).filter (fun p => p.1 ≠ p.2)
+  have hoff : s.sum (fun p => (T.m p.1 : ZMod 2) * (T.a p.1 p.2 : ZMod 2) * (T.m p.2 : ZMod 2)) = 0 := by
+    apply Finset.sum_involution (s := s)
+      (f := fun p => (T.m p.1 : ZMod 2) * (T.a p.1 p.2 : ZMod 2) * (T.m p.2 : ZMod 2))
+      (fun p _ => (p.2, p.1))
+    · intro p hp
+      rw [T.a_symmetric p.1 p.2]
+      ring_nf
+      have htwo : (2 : ZMod 2) = 0 := by decide
+      rw [htwo, mul_zero]
+    · intro p hp hne heq
+      have hp' : p.1 ≠ p.2 := (Finset.mem_filter.mp hp).2
+      apply hp'
+      have h : p.2 = p.1 := by
+        simpa using congrArg Prod.fst heq
+      exact h.symm
+    · intro p hp
+      refine Finset.mem_filter.mpr ⟨?_, ?_⟩
+      · simp
+      · exact (Finset.mem_filter.mp hp).2.symm
+    · intro p hp
+      rfl
+  let d : Finset (Fin T.n × Fin T.n) :=
+    (Finset.univ.product Finset.univ).filter (fun p => ¬ p.1 ≠ p.2)
+  have hdiag : d.sum (fun p => (T.m p.1 : ZMod 2) * (T.a p.1 p.2 : ZMod 2) * (T.m p.2 : ZMod 2)) =
+      (Finset.univ : Finset (Fin T.n)).sum (fun i =>
+        (T.m i : ZMod 2) * (T.a i i : ZMod 2) * (T.m i : ZMod 2)) := by
+    apply Finset.sum_bij (s := d) (t := (Finset.univ : Finset (Fin T.n)))
+      (f := fun p => (T.m p.1 : ZMod 2) * (T.a p.1 p.2 : ZMod 2) * (T.m p.2 : ZMod 2))
+      (g := fun i => (T.m i : ZMod 2) * (T.a i i : ZMod 2) * (T.m i : ZMod 2))
+      (fun p _ => p.1)
+    · intro p hp
+      simp
+    · intro p₁ hp₁ p₂ hp₂ heq
+      have h₁ : p₁.1 = p₁.2 := Classical.not_not.mp (Finset.mem_filter.mp hp₁).2
+      have h₂ : p₂.1 = p₂.2 := Classical.not_not.mp (Finset.mem_filter.mp hp₂).2
+      apply Prod.ext heq
+      exact h₁.symm.trans (heq.trans h₂)
+    · intro i hi
+      refine ⟨(i, i), ?_, rfl⟩
+      simp [d]
+    · intro p hp
+      have heq : p.1 = p.2 := Classical.not_not.mp (Finset.mem_filter.mp hp).2
+      simpa [heq]
+  have hpartition :
+      (Finset.univ.product Finset.univ).sum
+          (fun p => (T.m p.1 : ZMod 2) * (T.a p.1 p.2 : ZMod 2) * (T.m p.2 : ZMod 2)) =
+        s.sum (fun p => (T.m p.1 : ZMod 2) * (T.a p.1 p.2 : ZMod 2) * (T.m p.2 : ZMod 2)) +
+        d.sum (fun p => (T.m p.1 : ZMod 2) * (T.a p.1 p.2 : ZMod 2) * (T.m p.2 : ZMod 2)) := by
+    dsimp [s, d]
+    rw [Finset.sum_filter_add_sum_filter_not]
+  have hdiag_zero : d.sum (fun p => (T.m p.1 : ZMod 2) * (T.a p.1 p.2 : ZMod 2) * (T.m p.2 : ZMod 2)) = 0 := by
+    have hzero :
+        s.sum (fun p => (T.m p.1 : ZMod 2) * (T.a p.1 p.2 : ZMod 2) * (T.m p.2 : ZMod 2)) +
+          d.sum (fun p => (T.m p.1 : ZMod 2) * (T.a p.1 p.2 : ZMod 2) * (T.m p.2 : ZMod 2)) = 0 := by
+      rw [← hpartition, hdouble]
+    rw [hoff, zero_add] at hzero
+    exact hzero
+  rw [Int.cast_sum]
+  rw [hdiag] at hdiag_zero
+  have hsq : (Finset.univ : Finset (Fin T.n)).sum (fun i =>
+      (T.m i : ZMod 2) * (T.a i i : ZMod 2) * (T.m i : ZMod 2)) =
+      (Finset.univ : Finset (Fin T.n)).sum (fun i =>
+        (T.a i i : ZMod 2) * (T.m i : ZMod 2)) := by
+    apply Finset.sum_congr rfl
+    intro i hi
+    by_cases hm : Even (T.m i)
+    · have hc : (T.m i : ZMod 2) = 0 := Even.intCast_zmod_two hm
+      simp [hc]
+    · have hc : (T.m i : ZMod 2) = 1 :=
+        Odd.intCast_zmod_two (Int.not_even_iff_odd.mp hm)
+      simp [hc]
+  rw [hsq] at hdiag_zero
+  simpa only [Int.cast_mul] using hdiag_zero
+
+private theorem genusNumerator_even (T : NumericalType) : Even (genusNumerator T) := by
+  unfold genusNumerator
+  rw [Finset.sum_sub_distrib]
+  have hfirst : Even ((Finset.univ : Finset (Fin T.n)).sum (fun i =>
+      2 * T.m i * T.w i * (T.g i - 1))) := by
+    induction (Finset.univ : Finset (Fin T.n)) using Finset.induction_on with
+    | empty => simp
+    | @insert i s hi ih =>
+      rw [Finset.sum_insert hi]
+      have hiEven : Even (2 * T.m i * T.w i * (T.g i - 1)) := by
+        simpa [mul_assoc] using
+          (even_two_mul (T.m i * T.w i * (T.g i - 1)))
+      exact hiEven.add ih
+  have hdiag : Even ((Finset.univ : Finset (Fin T.n)).sum (fun i => T.m i * T.a i i)) := by
+    simpa [mul_comm] using genus_diagonal_parity T
+  have htwo : Even (2 : ℤ) := by
+    exact ⟨1, by ring⟩
+  exact htwo.add (hfirst.sub hdiag)
 
 theorem genus_integral (T : NumericalType) :
     ∃ genusValue : ℤ, (genusValue : ℚ) = genusExpression T := by
-  sorry
+  have hN := genusNumerator_even T
+  rcases hN with ⟨k, hk⟩
+  refine ⟨k, ?_⟩
+  have hdiv : genusNumerator T / 2 = k := by
+    rw [hk]
+    omega
+  have hkgenus : k = genus T := by
+    dsimp [genus]
+    exact hdiv.symm
+  rw [hkgenus, genus, genusNumerator, genusExpression]
+  push_cast
+  have hquot :
+      (2 + (Finset.univ : Finset (Fin T.n)).sum
+        (fun i => 2 * T.m i * T.w i * (T.g i - 1) - T.m i * T.a i i)) / 2 = k := by
+    rw [show 2 + (Finset.univ : Finset (Fin T.n)).sum
+      (fun i => 2 * T.m i * T.w i * (T.g i - 1) - T.m i * T.a i i) = genusNumerator T by rfl, hk]
+    omega
+  rw [hquot]
+  have hkq := congrArg (fun z : ℤ => (z : ℚ)) hk
+  rw [genusNumerator] at hkq
+  push_cast at hkq
+  field_simp at hkq ⊢
+  simp only [div_eq_mul_inv]
+  rw [← Finset.sum_mul]
+  linarith
 
 theorem genus_formula (T : NumericalType) :
     (genus T : ℚ) = genusExpression T := by
-  sorry
+  have hN := genusNumerator_even T
+  rcases hN with ⟨k, hk⟩
+  have hdiv : genusNumerator T / 2 = k := by
+    rw [hk]
+    omega
+  have hkgenus : k = genus T := by
+    dsimp [genus]
+    exact hdiv.symm
+  rw [← hkgenus, genusExpression]
+  push_cast
+  have hkq := congrArg (fun z : ℤ => (z : ℚ)) hk
+  rw [genusNumerator] at hkq
+  push_cast at hkq
+  field_simp at hkq ⊢
+  simp only [div_eq_mul_inv]
+  rw [← Finset.sum_mul]
+  linarith
 
 /-! A numerical type can have negative genus in the irreducible case. -/
 theorem exists_negative_genus_numerical_type :
     ∃ T : NumericalType, genus T < 0 := by
-  sorry
+  refine ⟨{n := 1, hn := by norm_num, m := fun _ => 2, a := fun _ _ => 0, w := fun _ => 1, g := fun _ => 0, m_pos := by intro i; norm_num, w_pos := by intro i; norm_num, g_nonneg := by intro i; norm_num, a_symmetric := by intro i j; rfl, a_offdiag_nonneg := by intro i j h; norm_num, connected := by intro h; rcases h with ⟨I, hI, hne, hcross⟩; apply hne; apply Set.eq_univ_of_forall; intro i; rcases hI with ⟨x, hx⟩; simpa [Subsingleton.elim i x] using hx, row_sum := by intro i; simp, w_dvd := by intro i j; simp}, by norm_num [genus, genusNumerator]⟩
 
 /-! The complete one-index classification. -/
 theorem irreducible_numerical_type (T : NumericalType) (genusValue : ℤ)
@@ -107,7 +261,61 @@ theorem irreducible_numerical_type (T : NumericalType) (genusValue : ℤ)
 theorem diagonal_negative (T : NumericalType) (genusValue : ℤ)
     (hgenus : IsOfGenus T genusValue) (hn : 1 < T.n) :
     ∀ i, T.a i i < 0 := by
-  sorry
+  have hAm : Matrix.mulVec (fun i j => (T.a i j : ℝ)) (fun i => (T.m i : ℝ)) = 0 := by
+    funext i
+    change (∑ j, (T.a i j : ℝ) * (T.m j : ℝ)) = 0
+    have h := T.row_sum i
+    exact_mod_cast h
+  have hreal := Formalization.Books.Models.Unit02.recurring_symmetric_real
+    (fun i j => (T.a i j : ℝ)) (fun i => (T.m i : ℝ))
+    (fun i j => by exact_mod_cast T.a_symmetric i j)
+    (by intro i j h; exact_mod_cast T.a_offdiag_nonneg h)
+    (by intro i; exact_mod_cast T.m_pos i) hAm
+    (by
+      intro h
+      apply T.connected
+      rcases h with ⟨I, hI, hne, hcross⟩
+      refine ⟨I, hI, hne, ?_⟩
+      intro i j hi hj
+      exact_mod_cast hcross hi hj)
+  intro i
+  let x : Fin T.n → ℝ := fun j => if j = i then 1 else 0
+  have hquad := (hreal x).1
+  norm_num [x, Matrix.mulVec_apply_eq_sum] at hquad
+  change (∑ j, (T.a i j : ℝ) * x j) ≤ 0 at hquad
+  have hquad' : (T.a i i : ℝ) ≤ 0 := by
+    simpa [x] using hquad
+  have hle : T.a i i ≤ 0 := by exact_mod_cast hquad'
+  by_contra hnot
+  have hai : T.a i i = 0 := by omega
+  have henergy : (Finset.univ : Finset (Fin T.n)).sum
+      (fun j => x j * Matrix.mulVec (fun i j => (T.a i j : ℝ)) x j) = 0 := by
+    change (∑ j, x j * (∑ k, (T.a j k : ℝ) * x k)) = 0
+    simp [x, hai]
+  rcases (hreal x).2.mp henergy with ⟨c, hc⟩
+  have h1 : 1 < T.n := hn
+  have hi_lt : i.val < T.n := i.isLt
+  let j : Fin T.n := if i.val = 0 then ⟨1, h1⟩ else ⟨0, Nat.zero_lt_of_lt h1⟩
+  have hji : j ≠ i := by
+    apply Fin.ne_of_val_ne
+    by_cases hi0 : i.val = 0
+    · dsimp [j]
+      rw [if_pos hi0]
+      simp [hi0]
+    · dsimp [j]
+      rw [if_neg hi0]
+      intro h
+      exact hi0 h.symm
+  have hcj := congrFun hc j
+  have hc0 : c = 0 := by
+    simp [x, hji] at hcj
+    rcases hcj with hcj | hcj
+    · exact hcj
+    · have hmj : 0 < T.m j := T.m_pos j
+      exfalso
+      exact (ne_of_gt hmj) hcj
+  have hci := congrFun hc i
+  simpa [x, hc0] using hci
 
 /-! A negative genus contribution is exactly a `(-1)` component. -/
 theorem minus_one_contribution (T : NumericalType) (genusValue : ℤ)

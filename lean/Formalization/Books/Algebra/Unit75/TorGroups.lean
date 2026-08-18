@@ -109,6 +109,15 @@ noncomputable def tensorComplexMapRight {R : Type u} [CommRing R]
     ext x y
     rfl
 
+private theorem tensorComplexMap_id {R : Type u} [CommRing R]
+    (F : ModuleChainComplex R) (N : ModuleCat.{u} R) :
+    tensorComplexMap (𝟙 F) N = 𝟙 (tensorComplex F N) := by
+  apply HomologicalComplex.hom_ext
+  intro p
+  apply ModuleCat.hom_ext
+  simp [tensorComplexMap]
+  rfl
+
 /-- The map induced on a chosen resolution computation of Tor. -/
 noncomputable def resolutionTorMap {R : Type u} [CommRing R]
     {M₁ M₂ : ModuleCat.{u} R} (F : FreeResolution R M₁)
@@ -125,7 +134,48 @@ theorem resolutionTorMap_independent {R : Type u} [CommRing R]
     (α β : ResolutionMap F.resolution G.resolution φ)
     (N : ModuleCat.{u} R) (i : ℕ) :
     resolutionTorMap F G φ α N i = resolutionTorMap F G φ β N i := by
-  sorry
+  unfold resolutionTorMap
+  apply chain_homotopic_maps_equal_on_homology
+  rcases resolution_maps_homotopic F G.resolution φ α β with ⟨h⟩
+  refine ⟨(fun p q => ModuleCat.ofHom (LinearMap.rTensor N (h.hom p q).hom)), ?_, ?_⟩
+  · intro p q hpq
+    rw [h.zero p q hpq]
+    apply ModuleCat.hom_ext
+    simp only [ModuleCat.hom_ofHom, LinearMap.rTensor_zero, ModuleCat.hom_zero]
+    change (0 : _ ) = 0
+    rfl
+  · intro p
+    have hp := congrArg (fun q => ModuleCat.ofHom (LinearMap.rTensor N q.hom))
+      (h.comm p)
+    dsimp [tensorComplexMap]
+    rw [hp]
+    simp only [ModuleCat.hom_add, LinearMap.rTensor_add]
+    have hd : ModuleCat.ofHom
+          (LinearMap.rTensor N ((dNext (C := F.complex) (D := G.complex) p h.hom).hom)) =
+        dNext (C := tensorComplex F.complex N) (D := tensorComplex G.complex N) p
+          (fun p q => ModuleCat.ofHom (LinearMap.rTensor N (h.hom p q).hom)) := by
+      rw [dNext_nat F.complex G.complex p h.hom,
+        dNext_nat (tensorComplex F.complex N) (tensorComplex G.complex N) p
+          (fun p q => ModuleCat.ofHom (LinearMap.rTensor N (h.hom p q).hom))]
+      apply ModuleCat.hom_ext
+      cases p <;> simp [tensorComplex, ModuleCat.hom_comp, LinearMap.rTensor_comp]
+    have hv : ModuleCat.ofHom
+          (LinearMap.rTensor N ((prevD (C := F.complex) (D := G.complex) p h.hom).hom)) =
+        prevD (C := tensorComplex F.complex N) (D := tensorComplex G.complex N) p
+          (fun p q => ModuleCat.ofHom (LinearMap.rTensor N (h.hom p q).hom)) := by
+      have hp : (ComplexShape.down ℕ).Rel (p + 1) p := by simp
+      rw [prevD_eq h.hom hp,
+        prevD_eq (C := tensorComplex F.complex N) (D := tensorComplex G.complex N)
+          (fun p q => ModuleCat.ofHom (LinearMap.rTensor N (h.hom p q).hom)) hp]
+      apply ModuleCat.hom_ext
+      simp [tensorComplex, ModuleCat.hom_comp, LinearMap.rTensor_comp]
+    change (ModuleCat.ofHom
+          (LinearMap.rTensor N ((dNext (C := F.complex) (D := G.complex) p h.hom).hom)) +
+        ModuleCat.ofHom
+          (LinearMap.rTensor N ((prevD (C := F.complex) (D := G.complex) p h.hom).hom)) +
+        ModuleCat.ofHom (LinearMap.rTensor N (β.hom.f p).hom)) = _
+    rw [← hd, ← hv]
+    rfl
 
 /-- An isomorphism of modules induces an isomorphism on the computed Tor groups. -/
 theorem isIso_resolutionTorMap_of_isIso {R : Type u} [CommRing R]
@@ -134,7 +184,71 @@ theorem isIso_resolutionTorMap_of_isIso {R : Type u} [CommRing R]
     (α : ResolutionMap F.resolution G.resolution φ)
     (N : ModuleCat.{u} R) (i : ℕ) :
     IsIso (resolutionTorMap F G φ α N i) := by
-  sorry
+  let γ : ResolutionMap G.resolution F.resolution (inv φ) :=
+    Classical.choice (resolution_map_exists G F.resolution (inv φ))
+  let δ₁ : ResolutionMap F.resolution F.resolution (𝟙 M₁) :=
+    { hom := α.hom ≫ γ.hom
+      hom_f_zero_comp_augmentation := by
+        change (α.hom.f 0 ≫ γ.hom.f 0) ≫ F.resolution.augmentation = _
+        rw [Category.assoc, γ.hom_f_zero_comp_augmentation,
+          ← Category.assoc, α.hom_f_zero_comp_augmentation]
+        simp }
+  let δ₂ : ResolutionMap G.resolution G.resolution (𝟙 M₂) :=
+    { hom := γ.hom ≫ α.hom
+      hom_f_zero_comp_augmentation := by
+        change (γ.hom.f 0 ≫ α.hom.f 0) ≫ G.resolution.augmentation = _
+        rw [Category.assoc, α.hom_f_zero_comp_augmentation,
+          ← Category.assoc, γ.hom_f_zero_comp_augmentation]
+        simp }
+  let ε₁ : ResolutionMap F.resolution F.resolution (𝟙 M₁) :=
+    { hom := 𝟙 F.complex
+      hom_f_zero_comp_augmentation := by simp }
+  let ε₂ : ResolutionMap G.resolution G.resolution (𝟙 M₂) :=
+    { hom := 𝟙 G.complex
+      hom_f_zero_comp_augmentation := by simp }
+  have hδ₁ : resolutionTorMap F F (𝟙 M₁) δ₁ N i = 𝟙 (resolutionTor F N i) := by
+    rw [resolutionTorMap_independent F F (𝟙 M₁) δ₁ ε₁ N i]
+    change chainHomologyMap (tensorComplexMap ε₁.hom N) i = _
+    rw [show ε₁.hom = 𝟙 F.complex by rfl, tensorComplexMap_id F.complex N]
+    exact HomologicalComplex.homologyMap_id _ _
+  have hδ₂ : resolutionTorMap G G (𝟙 M₂) δ₂ N i = 𝟙 (resolutionTor G N i) := by
+    rw [resolutionTorMap_independent G G (𝟙 M₂) δ₂ ε₂ N i]
+    change chainHomologyMap (tensorComplexMap ε₂.hom N) i = _
+    rw [show ε₂.hom = 𝟙 G.complex by rfl, tensorComplexMap_id G.complex N]
+    exact HomologicalComplex.homologyMap_id _ _
+  have hcomp₁ : tensorComplexMap α.hom N ≫ tensorComplexMap γ.hom N =
+      tensorComplexMap δ₁.hom N := by
+    apply HomologicalComplex.hom_ext
+    intro p
+    apply ModuleCat.hom_ext
+    simp [tensorComplexMap, δ₁, ModuleCat.hom_comp, LinearMap.rTensor_comp]
+    rfl
+  have hcomp₂ : tensorComplexMap γ.hom N ≫ tensorComplexMap α.hom N =
+      tensorComplexMap δ₂.hom N := by
+    apply HomologicalComplex.hom_ext
+    intro p
+    apply ModuleCat.hom_ext
+    simp [tensorComplexMap, δ₂, ModuleCat.hom_comp, LinearMap.rTensor_comp]
+    rfl
+  have hleft : resolutionTorMap F G φ α N i ≫
+      resolutionTorMap G F (inv φ) γ N i = 𝟙 (resolutionTor F N i) := by
+    change HomologicalComplex.homologyMap (tensorComplexMap α.hom N) i ≫
+        HomologicalComplex.homologyMap (tensorComplexMap γ.hom N) i =
+      𝟙 (HomologicalComplex.homology (tensorComplex F.complex N) i)
+    rw [← HomologicalComplex.homologyMap_comp (tensorComplexMap α.hom N)
+      (tensorComplexMap γ.hom N) i, hcomp₁]
+    change resolutionTorMap F F (𝟙 M₁) δ₁ N i = 𝟙 (resolutionTor F N i)
+    exact hδ₁
+  have hright : resolutionTorMap G F (inv φ) γ N i ≫
+      resolutionTorMap F G φ α N i = 𝟙 (resolutionTor G N i) := by
+    change HomologicalComplex.homologyMap (tensorComplexMap γ.hom N) i ≫
+        HomologicalComplex.homologyMap (tensorComplexMap α.hom N) i =
+      𝟙 (HomologicalComplex.homology (tensorComplex G.complex N) i)
+    rw [← HomologicalComplex.homologyMap_comp (tensorComplexMap γ.hom N)
+      (tensorComplexMap α.hom N) i, hcomp₂]
+    change resolutionTorMap G G (𝟙 M₂) δ₂ N i = 𝟙 (resolutionTor G N i)
+    exact hδ₂
+  exact ⟨⟨resolutionTorMap G F (inv φ) γ N i, hleft, hright⟩⟩
 
 /-- A comparison map lifting an identity induces an isomorphism on Tor. -/
 theorem isIso_resolutionTorMap_identity {R : Type u} [CommRing R]
@@ -142,7 +256,16 @@ theorem isIso_resolutionTorMap_identity {R : Type u} [CommRing R]
     (α : ResolutionMap F.resolution F.resolution (𝟙 M))
     (N : ModuleCat.{u} R) (i : ℕ) :
     IsIso (resolutionTorMap F F (𝟙 M) α N i) := by
-  sorry
+  let ε : ResolutionMap F.resolution F.resolution (𝟙 M) :=
+    { hom := 𝟙 F.complex
+      hom_f_zero_comp_augmentation := by simp }
+  have hα : resolutionTorMap F F (𝟙 M) α N i = 𝟙 (resolutionTor F N i) := by
+    rw [resolutionTorMap_independent F F (𝟙 M) α ε N i]
+    change chainHomologyMap (tensorComplexMap ε.hom N) i = _
+    rw [show ε.hom = 𝟙 F.complex by rfl, tensorComplexMap_id F.complex N]
+    exact HomologicalComplex.homologyMap_id _ _
+  rw [hα]
+  infer_instance
 
 /-- The first-variable map on the chosen canonical Tor groups. -/
 noncomputable def torMapFirst {R : Type u} [CommRing R]
@@ -165,7 +288,21 @@ noncomputable def torMapSecond {R : Type u} [CommRing R]
 theorem torMapFirst_id {R : Type u} [CommRing R]
     {M N : ModuleCat.{u} R} (i : ℕ) :
     torMapFirst (𝟙 M) i = 𝟙 (Tor M N i) := by
-  sorry
+  unfold torMapFirst
+  dsimp
+  let F : FreeResolution R M := Classical.choice (exists_free_resolution M)
+  let G : FreeResolution R M := Classical.choice (exists_free_resolution M)
+  let α : ResolutionMap F.resolution G.resolution (𝟙 M) :=
+    Classical.choice (resolution_map_exists F G.resolution (𝟙 M))
+  change resolutionTorMap F G (𝟙 M) α N i = 𝟙 (resolutionTor F N i)
+  change resolutionTorMap F F (𝟙 M) α N i = 𝟙 (resolutionTor F N i)
+  let ε : ResolutionMap F.resolution F.resolution (𝟙 M) :=
+    { hom := 𝟙 F.complex
+      hom_f_zero_comp_augmentation := by simp }
+  rw [resolutionTorMap_independent F F (𝟙 M) α ε N i]
+  change chainHomologyMap (tensorComplexMap ε.hom N) i = _
+  rw [show ε.hom = 𝟙 F.complex by rfl, tensorComplexMap_id F.complex N]
+  exact HomologicalComplex.homologyMap_id _ _
 
 theorem torMapFirst_comp {R : Type u} [CommRing R]
     {M₁ M₂ M₃ N : ModuleCat.{u} R}

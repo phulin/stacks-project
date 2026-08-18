@@ -153,8 +153,8 @@ theorem dOnProj_eq_zero_component_union_positive
 
 theorem dOnProj_degree_zero_eq_iUnion_mul
     (𝒜 : ℕ → Submodule ℤ R) [GradedAlgebra 𝒜]
-    {g : R} (hg : g ∈ 𝒜 0) {ι : Type v} (f : ι → R)
-    (hf : ∀ i, ∃ n : ℕ, 0 < n ∧ f i ∈ 𝒜 n)
+    {g : R} (_hg : g ∈ 𝒜 0) {ι : Type v} (f : ι → R)
+    (_hf : ∀ i, ∃ n : ℕ, 0 < n ∧ f i ∈ 𝒜 n)
     (hspan : (HomogeneousIdeal.irrelevant 𝒜).toIdeal ≤
       Ideal.span (Set.range f)) :
     dOnProj 𝒜 g = ⋃ i, dPlus 𝒜 (g * f i) := by
@@ -178,9 +178,9 @@ theorem dPlus_isTopologicalBasis
     (𝒜 : ℕ → Submodule ℤ R) [GradedAlgebra 𝒜] :
     IsTopologicalBasis
       {U : Set (ProjPoints 𝒜) |
-        ∃ (n : ℕ) (hn : 0 < n) (f : R), f ∈ 𝒜 n ∧ U = dPlus 𝒜 f} := by
+        ∃ (n : ℕ) (_hn : 0 < n) (f : R), f ∈ 𝒜 n ∧ U = dPlus 𝒜 f} := by
   apply TopologicalSpace.isTopologicalBasis_of_isOpen_of_nhds
-  · rintro U ⟨n, hn, f, hf, rfl⟩
+  · rintro U ⟨n, _hn, f, _hf, rfl⟩
     exact isOpen_dPlus 𝒜 f
   · intro x U hx hU
     obtain ⟨V, ⟨r, rfl⟩, hxV, hVU⟩ :=
@@ -257,9 +257,9 @@ theorem infinitePolynomialProj_not_quasiCompact (k : Type u) [Field k] :
     letI : GradedAlgebra (InfinitePolynomialGrading k) := MvPolynomial.gradedAlgebra
     ¬ CompactSpace (ProjectiveSpectrum (InfinitePolynomialGrading k)) := by
   classical
-  letI : GradedAlgebra (InfinitePolynomialGrading k) := MvPolynomial.gradedAlgebra
+  let _ : GradedAlgebra (InfinitePolynomialGrading k) := MvPolynomial.gradedAlgebra
   intro hcompact
-  letI := hcompact
+  let _ := hcompact
   have hXrange : Set.range (MvPolynomial.X : ℕ → MvPolynomial ℕ k) =
       MvPolynomial.X '' (Set.univ : Set ℕ) := by
     ext p

@@ -190,14 +190,208 @@ theorem exists_injective_localizationAwayToAtPrime_of_noetherian
     {R : Type*} [CommRing R] [IsNoetherianRing R] (p : PrimeSpectrum R) :
     ∃ f : R, ∃ hf : f ∉ p.asIdeal,
       Function.Injective (localizationAwayToAtPrime p f hf) := by
-  sorry
+  classical
+  have hI : (RingHom.ker (algebraMap R (Localization.AtPrime p.asIdeal))).FG :=
+    IsNoetherian.noetherian _
+  obtain ⟨s, hs_span⟩ := hI
+  have hwit : ∀ x ∈ s, ∃ m : p.asIdeal.primeCompl, (m : R) * x = 0 := by
+    intro x hx
+    have hx0 : algebraMap R (Localization.AtPrime p.asIdeal) x = 0 :=
+      RingHom.mem_ker.mp (by
+        rw [← hs_span]
+        exact Ideal.subset_span hx)
+    have hx0' : IsLocalization.mk' (Localization.AtPrime p.asIdeal) x
+        (1 : p.asIdeal.primeCompl) = 0 := by
+      rw [IsLocalization.mk'_one]
+      exact hx0
+    exact (IsLocalization.mk'_eq_zero_iff (S := Localization.AtPrime p.asIdeal) x
+      (1 : p.asIdeal.primeCompl)).mp hx0'
+  have hwit' : ∀ x : s, ∃ m : p.asIdeal.primeCompl, (m : R) * (x : R) = 0 := by
+    intro x
+    exact hwit x x.property
+  choose m hm using hwit'
+  let f : R := s.attach.prod (fun x : s => (m x : R))
+  have hf : f ∉ p.asIdeal := by
+    intro h
+    have hprod : ∀ t : Finset s, t.prod (fun x => (m x : R)) ∉ p.asIdeal := by
+      intro t
+      induction t using Finset.induction_on with
+      | empty => exact p.asIdeal.ne_top_iff_one.mp p.isPrime.ne_top
+      | @insert x t hx ih =>
+          rw [Finset.prod_insert hx]
+          intro h
+          rcases p.isPrime.mem_or_mem h with h | h
+          · exact (m x).property h
+          · exact ih h
+    apply hprod s.attach
+    simpa [f] using h
+  have hgen : ∀ x ∈ s, f * x = 0 := by
+    intro x hx
+    let z : s := ⟨x, hx⟩
+    have hdiv : (m z : R) ∣ f := by
+      dsimp [f]
+      exact Finset.dvd_prod_of_mem (fun x : s => (m x : R)) (by simp [z])
+    obtain ⟨c, hc⟩ := hdiv
+    calc
+      f * x = ((m z : R) * c) * x := by rw [hc]
+      _ = (m z : R) * (c * x) := by rw [mul_assoc]
+      _ = c * ((m z : R) * (z : R)) := by dsimp [z]; ac_rfl
+      _ = 0 := by rw [hm z, mul_zero]
+  have hkill : ∀ x ∈ RingHom.ker (algebraMap R (Localization.AtPrime p.asIdeal)),
+      f * x = 0 := by
+    intro x hx
+    rw [← hs_span] at hx
+    refine Submodule.span_induction (p := fun z _ => f * z = 0) ?_ ?_ ?_ ?_ hx
+    · intro z hz
+      exact hgen z hz
+    · simp
+    · intro x y hx hy hpx hpy
+      rw [mul_add, hpx, hpy, add_zero]
+    · intro a x hx hpx
+      change f * (a * x) = 0
+      calc
+        f * (a * x) = a * (f * x) := by ac_rfl
+        _ = 0 := by rw [hpx, mul_zero]
+  refine ⟨f, hf, ?_⟩
+  have hcomp :
+      (localizationAwayToAtPrime p f hf).comp
+          (algebraMap R (Localization.Away f)) =
+        algebraMap R (Localization.AtPrime p.asIdeal) := by
+    ext r
+    simp [localizationAwayToAtPrime]
+  rw [IsLocalization.injective_iff_map_algebraMap_eq (Submonoid.powers f)]
+  intro x y
+  constructor
+  · intro h
+    exact congrArg (localizationAwayToAtPrime p f hf) h
+  · intro h
+    have hxy : algebraMap R (Localization.AtPrime p.asIdeal) x =
+        algebraMap R (Localization.AtPrime p.asIdeal) y :=
+      (RingHom.congr_fun hcomp x).symm.trans
+        (h.trans (RingHom.congr_fun hcomp y))
+    have hker : x - y ∈ RingHom.ker (algebraMap R (Localization.AtPrime p.asIdeal)) := by
+      rw [RingHom.mem_ker, map_sub, hxy, sub_self]
+    have hzero : f * (x - y) = 0 := hkill (x - y) hker
+    have hzero' :
+        IsLocalization.mk' (Localization.Away f) (x - y)
+            (1 : (Submonoid.powers f)) = 0 := by
+      apply (IsLocalization.mk'_eq_zero_iff
+        (S := Localization.Away f) (x - y) (1 : Submonoid.powers f)).2
+      exact ⟨⟨f, Submonoid.mem_powers f⟩, hzero⟩
+    have hmapzero : algebraMap R (Localization.Away f) (x - y) = 0 := by
+      rw [← IsLocalization.mk'_one (M := Submonoid.powers f) (S := Localization.Away f)]
+      exact hzero'
+    apply sub_eq_zero.mp
+    simpa only [map_sub] using hmapzero
 
 theorem exists_injective_localizationAwayToAtPrime_of_reduced
     {R : Type*} [CommRing R] [IsReduced R]
     (hmin : (minimalPrimes R).Finite) (p : PrimeSpectrum R) :
     ∃ f : R, ∃ hf : f ∉ p.asIdeal,
       Function.Injective (localizationAwayToAtPrime p f hf) := by
-  sorry
+  classical
+  let s : Finset (Ideal R) := hmin.toFinset
+  have hs_mem : ∀ q : Ideal R, q ∈ s ↔ q ∈ minimalPrimes R := by
+    intro q
+    simp [s]
+  let a : ∀ q : s, R := fun q =>
+    if hq : (q : Ideal R) ≤ p.asIdeal then 1
+    else Classical.choose (Set.not_subset.mp hq)
+  have ha : ∀ q : s, a q ∉ p.asIdeal := by
+    intro q
+    dsimp [a]
+    split_ifs with hq
+    · exact p.asIdeal.ne_top_iff_one.mp p.isPrime.ne_top
+    · exact (Classical.choose_spec (Set.not_subset.mp hq)).2
+  let f : R := s.attach.prod (fun q : s => a q)
+  have hf : f ∉ p.asIdeal := by
+    intro h
+    have hprod : ∀ t : Finset s, t.prod (fun q => a q) ∉ p.asIdeal := by
+      intro t
+      induction t using Finset.induction_on with
+      | empty => exact p.asIdeal.ne_top_iff_one.mp p.isPrime.ne_top
+      | @insert q t hqt ih =>
+          rw [Finset.prod_insert hqt]
+          intro h
+          rcases p.isPrime.mem_or_mem h with h | h
+          · exact ha q h
+          · exact ih h
+    apply hprod s.attach
+    simpa [f] using h
+  have hkill : ∀ x ∈ RingHom.ker (algebraMap R (Localization.AtPrime p.asIdeal)),
+      f * x = 0 := by
+    intro x hx
+    have hx0 : algebraMap R (Localization.AtPrime p.asIdeal) x = 0 :=
+      RingHom.mem_ker.mp hx
+    have hx0' : IsLocalization.mk' (Localization.AtPrime p.asIdeal) x
+        (1 : p.asIdeal.primeCompl) = 0 := by
+      rw [IsLocalization.mk'_one]
+      exact hx0
+    obtain ⟨m, hmx⟩ :=
+      (IsLocalization.mk'_eq_zero_iff (S := Localization.AtPrime p.asIdeal) x
+        (1 : p.asIdeal.primeCompl)).mp hx0'
+    have hnil : IsNilpotent (f * x) := by
+      rw [nilpotent_iff_mem_prime]
+      intro I hI
+      let _ : I.IsPrime := hI
+      obtain ⟨q, hqmin, hqle⟩ :=
+        Ideal.exists_minimalPrimes_le (I := (⊥ : Ideal R)) (J := I) bot_le
+      have hqs : q ∈ s := hs_mem q |>.mpr hqmin
+      let z : s := ⟨q, hqs⟩
+      by_cases hqP : q ≤ p.asIdeal
+      · have hmq : (m : R) ∉ q := by
+          intro hmq
+          exact m.property (hqP hmq)
+        have hzeroq : (m : R) * x ∈ q := by
+          rw [hmx]
+          exact q.zero_mem
+        have hxq : x ∈ q :=
+          (hqmin.isPrime.mem_or_mem hzeroq).resolve_left hmq
+        exact hqle (q.mul_mem_left f hxq)
+      · have haz : a z ∈ q := by
+          dsimp [a]
+          rw [dif_neg hqP]
+          exact (Classical.choose_spec (Set.not_subset.mp hqP)).1
+        have hdiv : a z ∣ f := by
+          dsimp [f]
+          exact Finset.dvd_prod_of_mem (fun q : s => a q) (by simp [z])
+        obtain ⟨c, hc⟩ := hdiv
+        have hfq : f ∈ q := by
+          rw [hc]
+          exact q.mul_mem_right c haz
+        exact hqle (by simpa [mul_comm] using q.mul_mem_left x hfq)
+    exact isNilpotent_iff_eq_zero.mp hnil
+  refine ⟨f, hf, ?_⟩
+  have hcomp :
+      (localizationAwayToAtPrime p f hf).comp
+          (algebraMap R (Localization.Away f)) =
+        algebraMap R (Localization.AtPrime p.asIdeal) := by
+    ext r
+    simp [localizationAwayToAtPrime]
+  rw [IsLocalization.injective_iff_map_algebraMap_eq (Submonoid.powers f)]
+  intro x y
+  constructor
+  · intro h
+    exact congrArg (localizationAwayToAtPrime p f hf) h
+  · intro h
+    have hxy : algebraMap R (Localization.AtPrime p.asIdeal) x =
+        algebraMap R (Localization.AtPrime p.asIdeal) y :=
+      (RingHom.congr_fun hcomp x).symm.trans
+        (h.trans (RingHom.congr_fun hcomp y))
+    have hker : x - y ∈ RingHom.ker (algebraMap R (Localization.AtPrime p.asIdeal)) := by
+      rw [RingHom.mem_ker, map_sub, hxy, sub_self]
+    have hzero : f * (x - y) = 0 := hkill (x - y) hker
+    have hzero' :
+        IsLocalization.mk' (Localization.Away f) (x - y)
+            (1 : (Submonoid.powers f)) = 0 := by
+      apply (IsLocalization.mk'_eq_zero_iff
+        (S := Localization.Away f) (x - y) (1 : Submonoid.powers f)).2
+      exact ⟨⟨f, Submonoid.mem_powers f⟩, hzero⟩
+    have hmapzero : algebraMap R (Localization.Away f) (x - y) = 0 := by
+      rw [← IsLocalization.mk'_one (M := Submonoid.powers f) (S := Localization.Away f)]
+      exact hzero'
+    apply sub_eq_zero.mp
+    simpa only [map_sub] using hmapzero
 
 /-! ## Surjective endomorphisms -/
 
@@ -207,7 +401,67 @@ theorem surjective_endomorphism_isomorphism
     {R : Type*} [CommRing R] [IsNoetherianRing R]
     (f : R →+* R) (hf : Function.Surjective f) :
     ∃ e : R ≃+* R, e.toRingHom = f := by
-  sorry
+  let g : Ideal R → Ideal R := fun I => Ideal.comap f I
+  have hg : Monotone g := by
+    intro I J hIJ
+    intro x hx
+    change x ∈ Ideal.comap f I at hx
+    change x ∈ Ideal.comap f J
+    exact hIJ hx
+  have hmono : Monotone (fun n : ℕ => (g^[n]) (⊥ : Ideal R)) :=
+    Monotone.monotone_iterate_of_le_map hg bot_le
+  let F : ℕ →o Ideal R :=
+    { toFun := fun n => (g^[n]) (⊥ : Ideal R)
+      monotone' := hmono }
+  obtain ⟨n, hn⟩ := monotone_stabilizes_iff_noetherian.mpr inferInstance F
+  have hstab : (g^[n]) (⊥ : Ideal R) = (g^[n.succ]) (⊥ : Ideal R) := by
+    simpa [F] using hn n.succ (Nat.le_succ n)
+  have hcomm : ∀ k (x : R), (f^[k]) (f x) = f ((f^[k]) x) := by
+    intro k
+    induction k with
+    | zero =>
+        intro x
+        rfl
+    | succ k ih =>
+        intro x
+        rw [Function.iterate_succ_apply' f k (f x),
+          Function.iterate_succ_apply' f k x, ih]
+  have hiter : ∀ k (x : R), x ∈ (g^[k]) (⊥ : Ideal R) ↔ (f^[k]) x = 0 := by
+    intro k
+    induction k with
+    | zero =>
+        intro x
+        simp
+    | succ k ih =>
+        intro x
+        rw [Function.iterate_succ_apply' g k (⊥ : Ideal R)]
+        change f x ∈ (g^[k]) (⊥ : Ideal R) ↔ (f^[k.succ]) x = 0
+        rw [ih, Function.iterate_succ_apply' f k x, hcomm]
+  have hker : RingHom.ker f = (⊥ : Ideal R) := by
+    apply le_antisymm
+    · intro x hx
+      obtain ⟨y, hy⟩ := hf.iterate n x
+      have hy' : y ∈ (g^[n.succ]) (⊥ : Ideal R) := by
+        apply (hiter n.succ y).2
+        rw [Function.iterate_succ_apply' f n y, hy]
+        exact RingHom.mem_ker.mp hx
+      have hyn : y ∈ (g^[n]) (⊥ : Ideal R) := by
+        rw [hstab]
+        exact hy'
+      have hyn' := (hiter n y).1 hyn
+      rw [hy] at hyn'
+      exact hyn'
+    · exact bot_le
+  have hinj : Function.Injective f := by
+    intro x y hxy
+    apply sub_eq_zero.mp
+    have hxy' : x - y ∈ RingHom.ker f := by
+      rw [RingHom.mem_ker, map_sub, hxy, sub_self]
+    have hxy'' : x - y ∈ (⊥ : Ideal R) := by
+      rw [← hker]
+      exact hxy'
+    simpa using hxy''
+  exact ⟨RingEquiv.ofBijective f ⟨hinj, hf⟩, rfl⟩
 
 end
 

@@ -7,10 +7,13 @@ import Mathlib.Algebra.Category.ModuleCat.Presheaf.Abelian
 # Cohomology of Sheaves, Chapter 7: locality of cohomology
 
 This file formalizes the precise statements in the source section
-`Locality of cohomology`.  Cohomology over an open is represented by the
-derived sections functor from Chapter 3.  Restriction maps are represented by
-the presheaf structure of the higher derived functor of the inclusion of
-sheaves of modules into presheaves of modules.
+`Locality of cohomology` (the open-cohomology lemma, the restriction presheaf,
+local vanishing, higher direct images and their localization, the
+bounded-below complex variants, and the derived-functor remark).  Cohomology
+over an open is represented by the derived sections functor from Chapter 3.
+Restriction maps are represented by the presheaf structure of the higher
+derived functor of the inclusion of sheaves of modules into presheaves of
+modules.
 -/
 
 noncomputable section
@@ -36,7 +39,7 @@ universe v u
 
 namespace Formalization.Books.Cohomology.Unit07
 
-/-! ## The cohomology of an open -/
+/-! ## Lemma `cohomology-of-open`: cohomology on an open -/
 
 noncomputable instance presheafModule_hasDerivedCategory
     (X : RingedSpace.{v}) :
@@ -96,7 +99,7 @@ theorem cohomology_of_open
       cohomologyOfRestrictedSheafAdditive X U F (p : ℤ)) := by
   sorry
 
-/-! ## The restriction presheaf `underline Hⁱ(F)` -/
+/-! ## Equation `restriction-mapping` and the restriction presheaf `underline Hⁱ(F)` -/
 
 /- The inclusion `i_X : Mod(O_X) ⥤ PMod(O_X)`. -/
 noncomputable def sheafModuleUnderlyingPresheafFunctor (X : RingedSpace.{v}) :
@@ -186,7 +189,7 @@ theorem cohomologyRestrictionMap_natural
         cohomologyRestrictionMap X G i h := by
   sorry
 
-/-! ## Locality of positive-degree classes -/
+/-! ## Lemma `kill-cohomology-class-on-covering` -/
 
 theorem cohomology_class_killed_on_open_cover
     (X : RingedSpace.{v}) (F : Mod X.structureSheaf)
@@ -199,7 +202,7 @@ theorem cohomology_class_killed_on_open_cover
         ∀ i, cohomologyRestrictionMapValue X F (n : ℤ) (hU i) ξ = 0 := by
   sorry
 
-/-! ## Higher direct images -/
+/-! ## Lemma `describe-higher-direct-images` -/
 
 noncomputable abbrev higherDirectImageScalarMap
     {X Y : RingedSpace.{v}} (f : RingedSpaceHom X Y)
@@ -262,7 +265,7 @@ theorem higherDirectImage_is_sheafification
       (ringedSpaceModuleHigherDirectImage f i).obj F) := by
   sorry
 
-/-! ## The same statements for bounded-below complexes -/
+/-! ## The bounded-below-complex variant of `describe-higher-direct-images` -/
 
 noncomputable def sectionsComplexCohomology
     (X : RingedSpace.{v}) (U : Opens X.carrier)
@@ -310,7 +313,7 @@ theorem higherDirectImageComplex_is_sheafification
         ((DerivedCategory.Plus.Q (C := Mod X.structureSheaf)).obj K)) := by
   sorry
 
-/-! ## Restriction of `f` and locality of higher direct images -/
+/-! ## Lemma `localize-higher-direct-images` -/
 
 noncomputable def ringedSpaceOpenRestrictionContinuous
     {X Y : RingedSpace.{v}} (f : RingedSpaceHom X Y)
@@ -391,7 +394,7 @@ theorem localize_higher_direct_image_complex
             (C := Mod X.structureSheaf)).obj K))) := by
   sorry
 
-/-! ## Derived-functor reformulation (the remark of the source) -/
+/-! ## Remark `daniel`: derived-functor reformulation -/
 
 noncomputable def modulePresheafSheafification (X : RingedSpace.{v}) :
     PMod X.structureSheaf.obj ⥤ Mod X.structureSheaf :=

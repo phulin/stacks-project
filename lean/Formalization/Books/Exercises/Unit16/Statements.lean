@@ -332,7 +332,8 @@ theorem power_series_counterexample_element_not_nilpotent
     ¬ IsNilpotent (powerSeriesCounterexampleElement k) := by
   rintro ⟨n, hn⟩
   have hc := congr_arg (PowerSeries.coeff n) hn
-  simp [powerSeriesCounterexampleElement] at hc
+  rw [powerSeriesCounterexampleElement, PowerSeries.coeff_X_pow_self] at hc
+  exact one_ne_zero hc
 
 /-- The unique maximal ideal description of formal power series over a field. -/
 theorem power_series_counterexample_maximal_ideal

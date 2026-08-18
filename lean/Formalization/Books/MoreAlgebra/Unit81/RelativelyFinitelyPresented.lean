@@ -751,7 +751,133 @@ theorem relativelyFinitelyPresented_localize
     RelativelyFinitelyPresented
       (((algebraMap A (Localization.Away g)).comp h).comp
         (algebraMap R (Localization.Away f)))
-      (LocalizedModule.Away g M) := by sorry
+      (LocalizedModule.Away g M) := by
+  let Rf := Localization.Away f
+  let N := Localization.Away g
+  let L := LocalizedModule.Away g M
+  let : Algebra Rf A := h.toAlgebra
+  let target : R →+* N :=
+    ((algebraMap A N).comp h).comp (algebraMap R Rf)
+  let : Algebra R N := target.toAlgebra
+  dsimp [RelativelyFinitelyPresented] at hM
+  obtain ⟨n, α, hα, hPM⟩ := hM
+  let : Algebra Rf (MvPolynomial (Fin n) Rf) := inferInstance
+  let : Algebra (MvPolynomial (Fin n) Rf) A := α.toAlgebra
+  let : IsScalarTower Rf (MvPolynomial (Fin n) Rf) A :=
+    IsScalarTower.of_algebraMap_eq' (by
+      apply RingHom.ext
+      intro x
+      exact (α.commutes x).symm)
+  let g' : MvPolynomial (Fin n) Rf := Classical.choose (hα g)
+  have hg' : α g' = g := Classical.choose_spec (hα g)
+  let pN : MvPolynomial (Fin n) Rf →+* N :=
+    (algebraMap A N).comp α.toRingHom
+  have hunit : IsUnit (pN g') := by
+    change IsUnit ((algebraMap A N) (α g'))
+    rw [hg']
+    exact IsLocalization.Away.algebraMap_isUnit g
+  let q : Localization.Away g' →+* N :=
+    IsLocalization.Away.lift g' hunit
+  have hqinv : q (IsLocalization.Away.invSelf g') * pN g' = 1 := by
+    calc
+      q (IsLocalization.Away.invSelf g') * pN g' =
+          q (IsLocalization.Away.invSelf g') *
+            q (algebraMap (MvPolynomial (Fin n) Rf) (Localization.Away g') g') := by
+        rw [IsLocalization.Away.lift_eq]
+      _ = q (IsLocalization.Away.invSelf g' *
+          algebraMap (MvPolynomial (Fin n) Rf) (Localization.Away g') g') := by
+        rw [q.map_mul]
+      _ = 1 := by
+        rw [mul_comm, IsLocalization.Away.mul_invSelf, map_one]
+  have hqinv' : q (IsLocalization.Away.invSelf g') *
+      (algebraMap A N) g = 1 := by
+    simpa [pN, hg'] using hqinv
+  have hq : Function.Surjective q := by
+    intro z
+    obtain ⟨k, a, ha⟩ := IsLocalization.Away.surj g z
+    obtain ⟨p, hp⟩ := hα a
+    let x : Localization.Away g' :=
+      algebraMap (MvPolynomial (Fin n) Rf) (Localization.Away g') p *
+        IsLocalization.Away.invSelf g' ^ k
+    refine ⟨x, ?_⟩
+    apply (IsLocalization.Away.algebraMap_isUnit g).pow k |>.mul_right_cancel
+    simp only [x, map_mul, IsLocalization.Away.lift_eq, map_pow]
+    rw [IsLocalization.Away.lift_eq]
+    change ((algebraMap A N) (α p) * q (IsLocalization.Away.invSelf g') ^ k) *
+      (algebraMap A N) g ^ k = z * (algebraMap A N) g ^ k
+    rw [hp, mul_assoc, ← mul_pow, hqinv', one_pow, mul_one]
+    exact ha.symm
+  let : Algebra (MvPolynomial (Fin n) Rf) N := pN.toAlgebra
+  let : Module (MvPolynomial (Fin n) Rf) M := Module.compHom M α.toRingHom
+  let : Module (MvPolynomial (Fin n) Rf) L := Module.compHom L α.toRingHom
+  let : IsScalarTower (MvPolynomial (Fin n) Rf) A M :=
+    IsScalarTower.of_algebraMap_smul (fun _ _ => rfl)
+  let : IsScalarTower (MvPolynomial (Fin n) Rf) A L :=
+    IsScalarTower.of_algebraMap_smul (by
+      intro x y
+      simpa only [Module.compHom] using
+        (show (algebraMap (MvPolynomial (Fin n) Rf) A x) • y = (α x) • y by
+          rfl))
+  let f0 : M →ₗ[A] L := LocalizedModule.mkLinearMap (.powers g) M
+  let f1 : M →ₗ[MvPolynomial (Fin n) Rf] L :=
+    f0.restrictScalars (MvPolynomial (Fin n) Rf)
+  letI : IsLocalizedModule (.powers (α g')) f0 := by
+    simpa only [hg'] using
+      (inferInstance : IsLocalizedModule (.powers g) f0)
+  have hloc : IsLocalizedModule (.powers g') f1 := by
+    exact IsLocalizedModule.restrictScalars_powers g' f0
+  let : Module (Localization.Away g') L := Module.compHom L q
+  let : IsScalarTower (MvPolynomial (Fin n) Rf) (Localization.Away g') L :=
+    IsScalarTower.of_algebraMap_smul (by
+      intro x y
+      have hx := congrArg (fun k :
+          MvPolynomial (Fin n) Rf →+* N => k x)
+        (IsLocalization.Away.lift_comp g' hunit)
+      dsimp only [Module.compHom]
+      rw [hx]
+      exact IsScalarTower.algebraMap_smul A N (α x) y)
+  letI : Module.FinitePresentation (MvPolynomial (Fin n) Rf) M := hPM
+  have hSN : Module.FinitePresentation (Localization.Away g') L := by
+    apply FinitePresentation.of_isBaseChange f1
+    exact IsLocalizedModule.isBaseChange _ _ f1
+  let : Algebra R (MvPolynomial (Fin n) Rf) :=
+    ((algebraMap Rf (MvPolynomial (Fin n) Rf)).comp (algebraMap R Rf)).toAlgebra
+  let : Module R (MvPolynomial (Fin n) Rf) :=
+    Module.compHom (MvPolynomial (Fin n) Rf)
+      ((algebraMap Rf (MvPolynomial (Fin n) Rf)).comp (algebraMap R Rf))
+  let : IsScalarTower R Rf (MvPolynomial (Fin n) Rf) :=
+    IsScalarTower.of_algebraMap_eq' (by
+      apply RingHom.ext
+      intro r
+      rfl)
+  let : IsScalarTower R (MvPolynomial (Fin n) Rf) (Localization.Away g') :=
+    IsScalarTower.of_algebraMap_eq' (by
+      apply RingHom.ext
+      intro r
+      rfl)
+  letI : Algebra.FinitePresentation Rf (MvPolynomial (Fin n) Rf) := inferInstance
+  letI : Algebra.FinitePresentation R Rf :=
+    IsLocalization.Away.finitePresentation f
+  letI : Algebra.FinitePresentation R (MvPolynomial (Fin n) Rf) :=
+    Algebra.FinitePresentation.trans R Rf (MvPolynomial (Fin n) Rf)
+  letI : Algebra.FinitePresentation R (Localization.Away g') :=
+    Algebra.FinitePresentation.of_isLocalizationAway g'
+  obtain ⟨m, β, hβ, hker⟩ :=
+    (inferInstance : Algebra.FinitePresentation R (Localization.Away g')).out
+  let qR : Localization.Away g' →ₐ[R] N :=
+    { q with
+      commutes' := by
+        intro r
+        change q (algebraMap R (Localization.Away g') r) =
+          algebraMap R N r
+        rw [IsScalarTower.algebraMap_apply R (MvPolynomial (Fin n) Rf)
+          (Localization.Away g')]
+        rw [IsLocalization.Away.lift_eq]
+        rfl }
+  dsimp [RelativelyFinitelyPresented]
+  refine ⟨m, qR.comp β, hq.comp hβ, ?_⟩
+  exact moduleFinitePresentation_of_surjective_of_fg_ker
+    β.toRingHom hβ hker hSN
 /-
   let Rf := Localization.Away f
   let N := Localization.Away g

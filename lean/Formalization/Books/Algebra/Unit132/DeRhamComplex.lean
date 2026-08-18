@@ -120,7 +120,53 @@ def deRhamGenerators
 theorem deRhamGenerators_span
     {A B : Type*} [CommRing A] [CommRing B] [Algebra A B] (p : ℕ) :
     Submodule.span A (deRhamGenerators (A := A) (B := B) p) = ⊤ := by
-  sorry
+  classical
+  let S : Submodule A (deRhamTerm A B p) :=
+    Submodule.span A (deRhamGenerators (A := A) (B := B) p)
+  have hB : Submodule.span B (deRhamGenerators (A := A) (B := B) p) = ⊤ := by
+    apply le_antisymm le_top
+    rw [← exteriorPower.ιMulti_span_of_span B p (ModuleOfDifferentials A B)
+      (KaehlerDifferential.span_range_derivation A B)]
+    apply Submodule.span_le.2
+    rintro _ ⟨x, hx, rfl⟩
+    let b : Fin p → B := fun i =>
+      Classical.choose (hx ⟨i, rfl⟩)
+    have hb : ∀ i : Fin p,
+        universalDifferentialLinearMap A B (b i) = x i := by
+      intro i
+      exact Classical.choose_spec (hx ⟨i, rfl⟩)
+    apply Submodule.subset_span
+    refine ⟨(1, b), ?_⟩
+    simp [deRhamGenerator, hb]
+  have hBsmul : ∀ (c : B) {x : deRhamTerm A B p}, x ∈ S → c • x ∈ S := by
+    intro c x hx
+    refine Submodule.span_induction (p := fun x _ => c • x ∈ S) ?_ ?_ ?_ ?_ hx
+    · rintro _ ⟨z, rfl⟩
+      rcases z with ⟨b₀, b⟩
+      apply Submodule.subset_span
+      refine ⟨(c * b₀, b), ?_⟩
+      simp [deRhamGenerator, smul_smul]
+    · simp
+    · intro x y hx hy ihx ihy
+      simpa [smul_add] using S.add_mem ihx ihy
+    · intro a x hx ih
+      change c • (a • x) ∈ S
+      rw [← IsScalarTower.algebraMap_smul B a x, smul_smul, mul_comm,
+        ← smul_smul, IsScalarTower.algebraMap_smul B a (c • x)]
+      exact S.smul_mem a ih
+  apply le_antisymm le_top
+  intro x _
+  have hxB : x ∈ Submodule.span B (deRhamGenerators (A := A) (B := B) p) := by
+    rw [hB]
+    exact Submodule.mem_top
+  refine Submodule.span_induction (p := fun x _ => x ∈ S) ?_ ?_ ?_ ?_ hxB
+  · intro y hy
+    exact Submodule.subset_span hy
+  · exact S.zero_mem
+  · intro x y hx hy ihx ihy
+    exact S.add_mem ihx ihy
+  · intro c x hx ih
+    exact hBsmul c ih
 
 /-! ## Exterior multiplication and the differential -/
 
@@ -211,7 +257,21 @@ theorem deRhamDifferential_unique
     (he : ∀ (b₀ : B) (b : Fin p → B),
       e (deRhamGenerator p b₀ b) = deRhamDifferentialGenerator p b₀ b) :
     d = e := by
-  sorry
+  have _hp : 1 ≤ p := hp
+  apply LinearMap.ext
+  intro x
+  have hx : x ∈ Submodule.span A (deRhamGenerators (A := A) (B := B) p) := by
+    rw [deRhamGenerators_span (A := A) (B := B) p]
+    exact Submodule.mem_top
+  refine Submodule.span_induction (p := fun x _ => d x = e x) ?_ ?_ ?_ ?_ hx
+  · rintro _ ⟨z, rfl⟩
+    rcases z with ⟨b₀, b⟩
+    rw [hd, he]
+  · rw [map_zero, map_zero]
+  · intro x y hx hy ihx ihy
+    rw [map_add, map_add, ihx, ihy]
+  · intro a x hx ih
+    rw [map_smul, map_smul, ih]
 
 /-! ## The factorization construction in positive degrees -/
 

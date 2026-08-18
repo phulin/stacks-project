@@ -1,7 +1,7 @@
 import Formalization.Books.Categories.Unit40.RepresentableCategoriesFibredInGroupoids
 import Formalization.Books.Categories.Unit41.TwoYonedaLemma
-import Formalization.Books.Categories.Unit04.Products
-import Formalization.Books.Categories.Unit06.FibreProducts
+import Mathlib.CategoryTheory.Limits.Shapes.BinaryProducts
+import Mathlib.CategoryTheory.Limits.Shapes.Pullback.IsPullback.Basic
 
 /-!
 # Categories, Chapter 42: Representable 1-morphisms
@@ -23,10 +23,9 @@ open Formalization.Books.Categories.Unit31
 open Formalization.Books.Categories.Unit33
 open Formalization.Books.Categories.Unit34
 open Formalization.Books.Categories.Unit35
+open Formalization.Books.Categories.Unit39
 open Formalization.Books.Categories.Unit40
 open Formalization.Books.Categories.Unit41
-
-universe uA vA uB vB uS vS uC vC
 
 noncomputable section
 
@@ -426,41 +425,18 @@ theorem representable_fibredMorphism_fibrewise_faithful
     ∀ U : C, (fibredMorphismFibreFunctor F U).Faithful := by
   sorry
 
-/- The source writes the values as isomorphism classes of pairs.  This
-   structure records the presheaf, its values, and its restriction maps
-   explicitly, while leaving the standard pullback construction available to
-   the proof of the criterion. -/
-structure RelativeFibrePresheafData
-    {X : Type uA} {Y : Type uB} {C : Type uC}
-    [Category.{vA} X] [Category.{vB} Y] [Category.{vC} C]
-    {p : X ⥤ C} {q : Y ⥤ C} (F : FibredMorphism p q) (U : C)
-    (hq : q.IsFibredInGroupoids)
-    (pullbacksY : FibredPullbackChoice q hq)
-    (y : Functor.Fiber q U) where
-  presheaf : (Over U)ᵒᵖ ⥤ Type (max (max (max uA uB) (max vA vB)) (max uC vC))
-  classEquiv : ∀ f : Over U,
-    presheaf.obj (op f) ≃ RelativeFibrePairClass F U hq pullbacksY y f
-  classRestriction : ∀ {f g : Over U} (_a : f ⟶ g),
-    RelativeFibrePairClass F U hq pullbacksY y g →
-      RelativeFibrePairClass F U hq pullbacksY y f
-  classRestriction_id : ∀ f x, classRestriction (𝟙 f) x = x
-  classRestriction_comp : ∀ {f g h : Over U} (a : f ⟶ g) (b : g ⟶ h) x,
-    classRestriction (a ≫ b) x =
-      classRestriction a (classRestriction b x)
-  classEquiv_natural : ∀ {f g : Over U} (a : f ⟶ g)
-    (x : presheaf.obj (op g)),
-    classEquiv f (presheaf.map (op a) x) =
-      classRestriction a (classEquiv g x)
-
-def RelativeFibrePresheafData.IsRepresentable
-    {X : Type uA} {Y : Type uB} {C : Type uC}
-    [Category.{vA} X] [Category.{vB} Y] [Category.{vC} C]
-    {p : X ⥤ C} {q : Y ⥤ C} {F : FibredMorphism p q} {U : C}
-    {hq : q.IsFibredInGroupoids}
-    {pullbacksY : FibredPullbackChoice q hq}
-    {y : Functor.Fiber q U}
-    (D : RelativeFibrePresheafData F U hq pullbacksY y) : Prop :=
-  Functor.IsRepresentable D.presheaf
+/- Faithfulness makes the fibres of the slice pullback setoids.  This is the
+   hypothesis needed by the established Unit 40 object-class presheaf, whose
+   values are the actual isomorphism classes of the pullback fibres. -/
+theorem slicePullback_isCategoryFibredInSetoids
+    {X Y C : Type*} [Category* X] [Category* Y] [Category* C]
+    {p : X ⥤ C} {q : Y ⥤ C}
+    (hp : p.IsFibredInGroupoids) (hq : q.IsFibredInGroupoids)
+    (F : FibredMorphism p q)
+    (hfaithful : ∀ V : C, (fibredMorphismFibreFunctor F V).Faithful)
+    (U : C) (G : FibredMorphism (Over.forget U) q) :
+    IsCategoryFibredInSetoids (slicePullbackLeft F U G) := by
+  sorry
 
 theorem criterion_for_representable_fibredMorphism
     {X Y C : Type*} [Category* X] [Category* Y] [Category* C]
@@ -469,8 +445,11 @@ theorem criterion_for_representable_fibredMorphism
     (F : FibredMorphism p q) (pullbacksY : FibredPullbackChoice q hq)
     (hfaithful : ∀ U : C, (fibredMorphismFibreFunctor F U).Faithful)
     (hpresheaf : ∀ (U : C) (y : Functor.Fiber q U),
-      ∃ D : RelativeFibrePresheafData F U hq pullbacksY y,
-        D.IsRepresentable) :
+      IsRepresentableObjectClassPresheaf
+        (slicePullbackLeft F U
+          (chosenPullbackMorphism q hq pullbacksY U y))
+        (slicePullback_isCategoryFibredInSetoids hp hq F hfaithful U
+          (chosenPullbackMorphism q hq pullbacksY U y))) :
     IsRepresentableFibredMorphism hp hq F := by
   sorry
 

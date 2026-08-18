@@ -668,14 +668,240 @@ theorem stupidTruncGE_components (K : ChainComplex C ℤ) (n : ℤ) :
 
 theorem stupidTruncGE_is_quotient (K : ChainComplex C ℤ) (n : ℤ) :
     HasEpimorphismOnto K (stupidTruncGE K n) := by
-  sorry
+  let e : (ComplexShape.down ℕ).Embedding (ComplexShape.down ℤ) :=
+    chainGEEmbedding n
+  let φ : K.restriction e ⟶ K.restriction e :=
+    HomologicalComplex.restrictionMap (𝟙 K) e
+  have hφ : e.HasLift φ := by
+    intro j hj i' hi'
+    exact (hj.false_of_isTruncLE).elim
+  let p : K ⟶ stupidTruncGE K n := e.liftExtend φ hφ
+  refine ⟨p, ?_⟩
+  apply HomologicalComplex.epi_of_epi_f
+  intro i
+  by_cases hi : ∃ k, e.f k = i
+  · obtain ⟨k, hk⟩ := hi
+    change Epi ((e.liftExtend φ hφ).f i)
+    rw [e.epi_liftExtend_f_iff φ hφ hk]
+    dsimp [φ, HomologicalComplex.restrictionMap]
+    infer_instance
+  · dsimp [p, stupidTruncGE, e]
+    apply (HomologicalComplex.isZero_stupidTrunc_X K (chainGEEmbedding n) i ?_).epi
+    intro k hk
+    exact hi ⟨k, hk⟩
 
 /-- The successive lower brutal truncation map is an epimorphism with the
 degree-`n` complex as its kernel. -/
 theorem stupidTruncGE_transition (K : ChainComplex C ℤ) (n : ℤ) :
     HasEpiKernelPresentation (stupidTruncGE K n) (stupidTruncGE K (n + 1))
       (degreeConcentrated (K.X n) n) := by
-  sorry
+  classical
+  let e0 : (ComplexShape.down ℕ).Embedding (ComplexShape.down ℤ) :=
+    chainGEEmbedding n
+  let e1 : (ComplexShape.down ℕ).Embedding (ComplexShape.down ℤ) :=
+    chainGEEmbedding (n + 1)
+  let A : ChainComplex C ℤ := stupidTruncGE K n
+  let B : ChainComplex C ℤ := stupidTruncGE K (n + 1)
+  let φ : A.restriction e1 ⟶ K.restriction e1 :=
+    { f := fun k =>
+        ((K.restriction e0).extendXIso e0 (i := k + 1) (i' := e1.f k) (by
+          dsimp [e0, e1, chainGEEmbedding, ComplexShape.Embedding.mk']
+          omega) ≪≫
+          K.restrictionXIso e0 (by
+            dsimp [e0, e1, chainGEEmbedding, ComplexShape.Embedding.mk']
+            omega)).hom
+      comm' := by
+        intro i j hij
+        simp only [ComplexShape.down_Rel] at hij
+        subst i
+        have h1 : e0.f (j + 2) = e1.f (j + 1) := by
+          dsimp [e0, e1, chainGEEmbedding, ComplexShape.Embedding.mk']
+          omega
+        have h0 : e0.f (j + 1) = e1.f j := by
+          dsimp [e0, e1, chainGEEmbedding, ComplexShape.Embedding.mk']
+          omega
+        dsimp [A, stupidTruncGE, e1, HomologicalComplex.stupidTrunc]
+        change
+          (((K.restriction e0).extendXIso e0 h1 ≪≫
+              K.restrictionXIso e0 h1).hom) ≫
+            K.d (e1.f (j + 1)) (e1.f j) =
+          ((K.restriction e0).extend e0).d
+              (e1.f (j + 1)) (e1.f j) ≫
+            (((K.restriction e0).extendXIso e0 h0 ≪≫
+              K.restrictionXIso e0 h0).hom)
+        rw [HomologicalComplex.extend_d_eq
+          (K.restriction e0) e0 h1 h0]
+        rw [HomologicalComplex.restriction_d_eq K e0 h1 h0]
+        simp only [Iso.trans_hom, Category.assoc, Iso.inv_hom_id_assoc,
+          Iso.inv_hom_id, Category.comp_id]
+      }
+  let hφ : e1.HasLift φ := by
+    intro j hj i' hi'
+    exact (hj.false_of_isTruncLE).elim
+  let f : A ⟶ B := e1.liftExtend φ hφ
+  have hf : Epi f := by
+    apply HomologicalComplex.epi_of_epi_f
+    intro i
+    by_cases hi : ∃ k, e1.f k = i
+    · obtain ⟨k, hk⟩ := hi
+      change Epi ((e1.liftExtend φ hφ).f i)
+      rw [e1.epi_liftExtend_f_iff φ hφ hk]
+      dsimp [φ]
+      exact epi_comp' (epi_iso_hom _) (epi_iso_hom _)
+    · dsimp [f, B, stupidTruncGE, e1]
+      apply (HomologicalComplex.isZero_stupidTrunc_X K
+        (chainGEEmbedding (n + 1)) i ?_).epi
+      intro k hk
+      exact hi ⟨k, hk⟩
+  let q_f : ∀ i : ℤ,
+      (degreeConcentrated (K.X n) n).X i ⟶ A.X i := fun i => by
+    change (degreeConcentrated (K.X n) n).X i ⟶
+      (HomologicalComplex.stupidTrunc K e0).X i
+    have hzero : e0.f 0 = n := by
+      dsimp [e0, chainGEEmbedding, ComplexShape.Embedding.mk']
+      omega
+    exact dite (i = n)
+      (fun hi => by
+        simpa [hi] using
+          ((degreeConcentratedAtIso (K.X n) n).hom ≫
+            (K.stupidTruncXIso e0 hzero).inv))
+      (fun _ => 0)
+  let q : degreeConcentrated (K.X n) n ⟶ A := by
+    refine { f := q_f, comm' := ?_ }
+    intro i j hij
+    dsimp [q_f, A, stupidTruncGE, e0]
+    by_cases hi : i = n
+    · have hj : j ≠ n := by
+        intro hj
+        have hij' := hij
+        rw [hi, hj] at hij'
+        simp [ComplexShape.down, ComplexShape.down'] at hij'
+      simp only [dif_pos hi, dif_neg hj]
+      have hd : (degreeConcentrated (K.X n) n).d i j = 0 := by
+        simp [degreeConcentrated,
+          Formalization.Books.Homology.Unit14.ChainComplex.concentrated,
+          Formalization.Books.Homology.Unit14.ChainComplex.shiftFunctor,
+          Formalization.Books.Homology.Unit13.chainComplexSingle]
+        rfl
+      have hz : IsZero ((HomologicalComplex.stupidTrunc K
+          (chainGEEmbedding n)).X j) := by
+        apply HomologicalComplex.isZero_stupidTrunc_X K (chainGEEmbedding n) j
+        intro k hk
+        have hij' := hij
+        simp only [ComplexShape.down_Rel] at hij'
+        dsimp [chainGEEmbedding, ComplexShape.Embedding.mk'] at hk
+        omega
+      rw [hd]
+      apply hz.eq_of_tgt
+    · simp only [dif_neg hi]
+      by_cases hj : j = n
+      · have hd : (degreeConcentrated (K.X n) n).d i j = 0 := by
+          simp [degreeConcentrated,
+            Formalization.Books.Homology.Unit14.ChainComplex.concentrated,
+            Formalization.Books.Homology.Unit14.ChainComplex.shiftFunctor,
+            Formalization.Books.Homology.Unit13.chainComplexSingle]
+          rfl
+        simp only [dif_pos hj, hd, zero_comp]
+      · simp only [dif_neg hj, comp_zero, zero_comp]
+  have hq : q ≫ f = 0 := by
+    ext i
+    change q_f i ≫ f.f i = 0
+    by_cases hi : i = n
+    · subst i
+      have hnot : ¬ ∃ k, e1.f k = n := by
+        intro h
+        obtain ⟨k, hk⟩ := h
+        dsimp [e1, chainGEEmbedding, ComplexShape.Embedding.mk'] at hk
+        omega
+      change q_f n ≫ (e1.liftExtend φ hφ).f n = 0
+      dsimp [ComplexShape.Embedding.liftExtend,
+        ComplexShape.Embedding.liftExtend.f]
+      rw [dif_neg hnot]
+      simp
+    · unfold q_f
+      split
+      · rename_i h
+        exact (hi h).elim
+      · change (0 : (degreeConcentrated (K.X n) n).X i ⟶ A.X i) ≫ f.f i = 0
+        simp
+  let S : ShortComplex (ChainComplex C ℤ) := ShortComplex.mk q f hq
+  have hS : S.Exact := by
+    apply HomologicalComplex.exact_of_degreewise_exact S
+    intro i
+    have hzero_i : q.f i ≫ f.f i = 0 := by
+      simpa using congrArg (fun z => z.f i) hq
+    change (ShortComplex.mk (q.f i) (f.f i) hzero_i).Exact
+    by_cases hi : i = n
+    · subst i
+      have hnot : ¬ ∃ k, e1.f k = n := by
+        intro h
+        obtain ⟨k, hk⟩ := h
+        dsimp [e1, chainGEEmbedding, ComplexShape.Embedding.mk'] at hk
+        omega
+      have hfi : f.f n = 0 := by
+        change (e1.liftExtend φ hφ).f n = 0
+        dsimp [ComplexShape.Embedding.liftExtend,
+          ComplexShape.Embedding.liftExtend.f]
+        rw [dif_neg hnot]
+      apply (ShortComplex.exact_iff_epi _ hfi).2
+      change Epi (q_f n)
+      unfold q_f
+      split
+      · change Epi (_ ≫ _)
+        exact epi_comp' (epi_iso_hom _) (epi_iso_inv _)
+      · rename_i h
+        exact (h rfl).elim
+    · by_cases hlt : i < n
+      · have hz : IsZero (A.X i) := by
+          apply HomologicalComplex.isZero_stupidTrunc_X K
+            (chainGEEmbedding n) i
+          intro k hk
+          dsimp [chainGEEmbedding, ComplexShape.Embedding.mk'] at hk
+          omega
+        exact ShortComplex.exact_of_isZero_X₂ _ hz
+      · have hi1 : ∃ k, e1.f k = i := by
+          refine ⟨Int.toNat (i - (n + 1)), ?_⟩
+          dsimp [e1, chainGEEmbedding, ComplexShape.Embedding.mk']
+          rw [Int.toNat_of_nonneg (by omega : 0 ≤ i - (n + 1))]
+          omega
+        have hqi : q.f i = 0 := by
+          change q_f i = 0
+          unfold q_f
+          split
+          · rename_i h
+            exact (hi h).elim
+          · rfl
+        apply (ShortComplex.exact_iff_mono _ hqi).2
+        change Mono ((e1.liftExtend φ hφ).f i)
+        obtain ⟨k, hk⟩ := hi1
+        rw [e1.mono_liftExtend_f_iff φ hφ hk]
+        dsimp [φ]
+        exact mono_comp' (mono_iso_hom _) (mono_iso_hom _)
+  have hqmono : Mono q := by
+    apply HomologicalComplex.mono_of_mono_f
+    intro i
+    by_cases hi : i = n
+    · subst i
+      change Mono (q_f n)
+      unfold q_f
+      split
+      · change Mono (_ ≫ _)
+        exact mono_comp' (mono_iso_hom _) (mono_iso_inv _)
+      · rename_i h
+        exact (h rfl).elim
+    · have hz : IsZero ((degreeConcentrated (K.X n) n).X i) := by
+        apply Formalization.Books.Homology.Unit14.ChainComplex.concentrated_isZero
+          (K.X n) (-n) i
+        simpa only [Int.neg_neg] using hi
+      change Mono (q_f i)
+      unfold q_f
+      split
+      · rename_i h
+        exact (hi h).elim
+      · exact hz.mono _
+  refine ⟨f, hf, ?_⟩
+  refine ⟨(kernelIsKernel f).conePointUniqueUpToIso ?_⟩
+  exact @CategoryTheory.ShortComplex.Exact.fIsKernel _ _ _ _ S hS hqmono
 
 /-! ### The third numbered item: canonical `τ ≥ n` -/
 
@@ -693,12 +919,29 @@ noncomputable def canonicalTruncGEι (K : ChainComplex C ℤ) (n : ℤ)
 theorem canonicalTruncGE_boundary (K : ChainComplex C ℤ) (n : ℤ)
     [∀ i, K.HasHomology i] :
     Nonempty ((canonicalTruncGE K n).X n ≅ K.cycles n) := by
-  sorry
+  refine ⟨HomologicalComplex.truncLEXIsoCycles K (chainGEEmbedding n) (i := 0) (by
+    dsimp [chainGEEmbedding, ComplexShape.Embedding.mk']
+    omega) ?_⟩
+  dsimp [ComplexShape.Embedding.BoundaryLE, chainGEEmbedding,
+    ComplexShape.Embedding.mk']
+  constructor
+  · have hnext : (ComplexShape.down ℤ).Rel (n + 0) (n - 1) := by
+      simp only [ComplexShape.down_Rel]
+      omega
+    rw [(ComplexShape.down ℤ).next_eq' hnext]
+    simp only [ComplexShape.down_Rel]
+    omega
+  · intro k hk
+    simp only [ComplexShape.down_Rel] at hk
+    omega
 
 theorem canonicalTruncGE_homology_above (K : ChainComplex C ℤ) (n i : ℤ)
     [∀ j, K.HasHomology j] (h : n ≤ i) :
     QuasiIsoAt (canonicalTruncGEι K n) i := by
-  sorry
+  obtain ⟨k, rfl⟩ := Int.le.dest h
+  simpa [canonicalTruncGE, canonicalTruncGEι] using
+    (HomologicalComplex.quasiIsoAt_ιTruncLE (j := k) K (chainGEEmbedding n) (by
+      simp [chainGEEmbedding, ComplexShape.Embedding.mk']))
 
 theorem canonicalTruncGE_homology_below (K : ChainComplex C ℤ) (n i : ℤ)
     [∀ j, K.HasHomology j] (h : i < n) :

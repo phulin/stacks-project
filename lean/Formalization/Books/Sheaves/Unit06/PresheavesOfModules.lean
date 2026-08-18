@@ -176,6 +176,36 @@ later consumer of that construction.  It is the missing computational API
 for Mathlib's abstract left-adjoint implementation of presheaf pullback.
 -/
 
+/- The sectionwise comparison is the shared prerequisite for localization
+   in Modules 27 and for the counterexample in Sheaves 20.
+
+   Proof roadmap:
+
+   1. Define restriction maps on the presheaf
+      `U ↦ extendScalars (α.app U).hom (G.obj U)` by transposing the obvious
+      restricted-scalar maps through `ModuleCat.extendRestrictScalarsAdj`.
+   2. Prove identity and composition after applying the adjunction's
+      `homEquiv`; there the equations reduce to the functoriality of `G` and
+      the naturality square for `α`.
+   3. Show this explicit presheaf functor is left adjoint to
+      `restrictionOfScalars α`, pointwise and naturally.
+   4. Use uniqueness of left adjoints to compare it with
+      `changeOfRingsCore α`; evaluate that natural isomorphism at `G` and `U`.
+
+   The construction should eventually be promoted to a natural isomorphism
+   of functors.  This objectwise statement is the smallest stable interface
+   needed by the current downstream chapters. -/
+theorem tensorProductPresheaf_obj_iso
+    {X : TopCat.{w}} {O O' : CommRingPresheaf X}
+    (α : O ⟶ O') (G : CommRingPresheafModule O) (U : (Opens X)ᵒᵖ) :
+    Nonempty
+      ((ModuleCat.extendScalars (α.app U).hom).obj
+          (ModuleCat.of (O.obj U) (G.obj U)) ≅
+        ModuleCat.of (O'.obj U)
+          ((tensorProductPresheaf
+            (commRingPresheafMorphismToRingPresheaf α) G).obj U)) := by
+  sorry
+
 /-- Change of rings for presheaves of modules commutes with passage to a
 stalk.  The source writes the left side in the symmetric order
 `F_x ⊗_{O_x} O'_x`; `ModuleCat.extendScalars` uses the canonically
@@ -183,24 +213,18 @@ isomorphic order `O'_x ⊗_{O_x} F_x`.
 
 Proof roadmap:
 
-1. Construct the explicit presheaf whose value on an open `U` is extension
-   of scalars of `F(U)` along `O(U) → O'(U)`.  Define its restriction maps
-   with `ModuleCat.extendRestrictScalarsAdj.homEquiv` and prove their identity
-   and composition laws, including the `restrictScalarsComp'` transports.
-2. Prove that this explicit construction is left adjoint to
-   `restrictionOfScalars α`, naturally in both module variables.  Uniqueness
-   of left adjoints then gives a natural isomorphism with the abstract
-   `tensorProductPresheaf α F` used here.
-3. Express both stalks as the filtered colimit over neighbourhoods of `x`.
-   Use the pointwise natural isomorphism from step 2 and the fact that tensor
+1. Use `tensorProductPresheaf_obj_iso` to replace every section by explicit
+   extension of scalars.
+2. Express both stalks as the filtered colimit over neighbourhoods of `x`.
+   Use the pointwise natural isomorphism and the fact that tensor
    product, as a left adjoint, preserves these colimits.
-4. Identify the colimits of the section rings and modules with `O.stalk x`,
+3. Identify the colimits of the section rings and modules with `O.stalk x`,
    `O'.stalk x`, and `F.stalk x`; transport the resulting isomorphism through
    the canonical `ModuleCat` stalk actions and verify `O'.stalk x`-linearity.
 
-The current blocker is step 1: the public `PresheafOfModules.pullback` API
-exposes only its adjunction, not an objectwise extension-of-scalars model or
-the restriction-map coherence needed by step 3.
+The current blocker is the sectionwise lemma above: the public
+`PresheafOfModules.pullback` API exposes only its adjunction, not an
+objectwise extension-of-scalars model or its restriction-map coherence.
 -/
 theorem tensorProductPresheaf_stalk_iso
     {X : TopCat.{w}} {O O' : CommRingPresheaf X}

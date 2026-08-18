@@ -1131,7 +1131,7 @@ theorem kGroups_field
           LinearEquiv.piCongrLeft k (fun _ : Option (Fin n) => k)
             (finSuccEquiv n) ≪≫ₗ LinearEquiv.piOptionEquivProd k
         rw [kZeroClass_eq_of_linearEquiv e, kZeroClass_prod, ih]
-        simp [add_smul, add_comm, add_left_comm, add_assoc]
+        simp [add_smul, add_comm]
   have hfreePrime (n : ℕ) :
       kPrimeZeroClass (R := k) (M := Fin n → k) =
         (n : ℤ) • kPrimeZeroClass (R := k) (M := k) := by
@@ -1144,7 +1144,7 @@ theorem kGroups_field
           LinearEquiv.piCongrLeft k (fun _ : Option (Fin n) => k)
             (finSuccEquiv n) ≪≫ₗ LinearEquiv.piOptionEquivProd k
         rw [kPrimeZeroClass_eq_of_linearEquiv e, kPrimeZeroClass_prod, ih]
-        simp [add_smul, add_comm, add_left_comm, add_assoc]
+        simp [add_smul, add_comm]
   have hclassZero (P : FiniteProjectivePresentation k) :
       kZeroClassOfPresentation P =
         (finiteProjectiveRank P : ℤ) •
@@ -1269,7 +1269,7 @@ theorem kGroups_field
       rw [kPrimeZeroClass_eq_of_presentation (P i),
         kPrimeZeroLength_apply_class] at hfield
       rw [hfield, hlen]
-      simp [smul_eq_mul]
+      rfl
     calc
       x = ∑ i, z i • kPrimeZeroClassOfPresentation (P i) := hx
       _ = ∑ i, z i • ((q i : ℤ) • c') := by

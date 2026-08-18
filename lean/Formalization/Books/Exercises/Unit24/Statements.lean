@@ -9,6 +9,7 @@ import Mathlib.RingTheory.RingHom.Flat
 import Mathlib.RingTheory.Flat.Localization
 import Mathlib.RingTheory.PrincipalIdealDomain
 import Mathlib.RingTheory.Ideal.Int
+import Mathlib.RingTheory.Nullstellensatz
 
 /-!
 # Exercises, Chapter 24: Going up and going down
@@ -927,7 +928,330 @@ going-up. -/
 theorem exercise_GU_GD_case_seven (k : Type u) [Field k] [IsAlgClosed k] :
     ¬ GoingUpProperty (idempotentLocalizationMap k) ∧
       GoingDownProperty (idempotentLocalizationMap k) := by
-  sorry
+  let A := Polynomial k
+  let R₂ := Formalization.Books.Exercises.Unit16.polynomialRing k 2
+  let I := idempotentPolynomialIdeal k
+  let C := idempotentQuotientRing k
+  let B := idempotentLocalizationRing k
+  let s := idempotentLocalizationElement k
+  let K := Localization.Away (Polynomial.X - Polynomial.C 1 : Polynomial k)
+  have hsne : (Polynomial.X - Polynomial.C 1 : Polynomial k) ≠ 0 := by
+    intro h
+    have h' := congrArg (fun f : Polynomial k => f.eval 0) h
+    simpa using h'
+  let _ : IsDomain K :=
+    IsLocalization.Away.isDomain (S := K)
+      (x := (Polynomial.X - Polynomial.C 1 : Polynomial k)) hsne
+  let r : R₂ →+* K :=
+    MvPolynomial.eval₂Hom (algebraMap k K)
+      (fun i : Fin 2 => if i = 0 then
+        algebraMap (Polynomial k) K Polynomial.X else 1)
+  have hr0 : r (MvPolynomial.X (0 : Fin 2)) =
+      algebraMap (Polynomial k) K Polynomial.X := by
+    change MvPolynomial.eval₂Hom (algebraMap k K)
+      (fun i : Fin 2 => if i = 0 then
+        algebraMap (Polynomial k) K Polynomial.X else 1)
+      (MvPolynomial.X (0 : Fin 2)) = _
+    rw [MvPolynomial.eval₂Hom_X']
+    simp
+  have hr1 : r (MvPolynomial.X (1 : Fin 2)) = 1 := by
+    change MvPolynomial.eval₂Hom (algebraMap k K)
+      (fun i : Fin 2 => if i = 0 then
+        algebraMap (Polynomial k) K Polynomial.X else 1)
+      (MvPolynomial.X (1 : Fin 2)) = _
+    rw [MvPolynomial.eval₂Hom_X']
+    simp
+  have hr : I ≤ RingHom.ker r := by
+    apply Ideal.span_le.2
+    rintro z (rfl : z = _)
+    change r (MvPolynomial.X (1 : Fin 2) ^ 2 - MvPolynomial.X (1 : Fin 2)) = 0
+    rw [map_sub, map_pow, hr1]
+    simp
+  let c : C →+* K := Ideal.Quotient.lift I r hr
+  have hc : c s = algebraMap (Polynomial k) K
+      (Polynomial.X - Polynomial.C 1) := by
+    change r (MvPolynomial.X (0 : Fin 2) * MvPolynomial.X (1 : Fin 2) - 1) = _
+    have hC : (algebraMap (Polynomial k) K) (Polynomial.C 1) = 1 := by
+      change (algebraMap (Polynomial k) K)
+        ((algebraMap k (Polynomial k)) (1 : k)) = 1
+      rw [← IsScalarTower.algebraMap_apply k (Polynomial k) K]
+      simp
+    calc
+      r (MvPolynomial.X (0 : Fin 2) * MvPolynomial.X (1 : Fin 2) - 1) =
+          r (MvPolynomial.X (0 : Fin 2)) * r (MvPolynomial.X (1 : Fin 2)) - r 1 := by
+            simp only [map_sub, map_mul, map_one]
+      _ = (algebraMap (Polynomial k) K) Polynomial.X - 1 := by
+        rw [hr0, hr1]
+        simp
+      _ = (algebraMap (Polynomial k) K) Polynomial.X -
+          (algebraMap (Polynomial k) K) (Polynomial.C 1) := by rw [hC]
+      _ = (algebraMap (Polynomial k) K)
+          (Polynomial.X - Polynomial.C 1) :=
+        (map_sub (algebraMap (Polynomial k) K) _ _).symm
+  have hunit : IsUnit (c s) := by
+    rw [hc]
+    exact IsLocalization.Away.algebraMap_isUnit _
+  let bmap : B →+* K := IsLocalization.Away.lift s hunit
+  let P : PrimeSpectrum B := ⟨RingHom.ker bmap, RingHom.ker_isPrime _⟩
+  have hcomp : bmap.comp (idempotentLocalizationMap k) =
+      algebraMap (Polynomial k) K := by
+    apply Polynomial.ringHom_ext'
+    · ext z
+      simp only [RingHom.comp_apply]
+      rw [show idempotentLocalizationMap k (Polynomial.C z) =
+          (algebraMap C B) ((Ideal.Quotient.mk I) (MvPolynomial.C z)) by
+            simp [idempotentLocalizationMap,
+              idempotentLocalizationCoefficientMap, C, B, I]]
+      rw [IsLocalization.Away.lift_eq]
+      change r (MvPolynomial.C z) = _
+      have hrC : r (MvPolynomial.C z) = algebraMap k K z := by
+        change MvPolynomial.eval₂Hom (algebraMap k K)
+          (fun i : Fin 2 => if i = 0 then
+            algebraMap (Polynomial k) K Polynomial.X else 1)
+          (MvPolynomial.C z) = _
+        rw [MvPolynomial.eval₂Hom_C]
+      rw [hrC]
+      exact IsScalarTower.algebraMap_apply k (Polynomial k) K z
+    · simp only [RingHom.comp_apply]
+      rw [show idempotentLocalizationMap k Polynomial.X =
+          (algebraMap C B) ((Ideal.Quotient.mk I)
+            (MvPolynomial.X (0 : Fin 2))) by
+            simp [idempotentLocalizationMap,
+              idempotentLocalizationCoefficientMap, C, B, I]]
+      rw [IsLocalization.Away.lift_eq]
+      change r (MvPolynomial.X (0 : Fin 2)) = _
+      exact hr0
+  have hinj : Function.Injective (algebraMap (Polynomial k) K) := by
+    exact IsLocalization.injective K
+      (powers_le_nonZeroDivisors_of_noZeroDivisors hsne)
+  have hP : LiesOver (idempotentLocalizationMap k) (⊥ : PrimeSpectrum (Polynomial k)) P := by
+    apply PrimeSpectrum.ext
+    rw [PrimeSpectrum.comap_asIdeal]
+    change Ideal.comap (idempotentLocalizationMap k) (RingHom.ker bmap) = ⊥
+    apply le_antisymm
+    · intro a ha
+      change bmap (idempotentLocalizationMap k a) = 0 at ha
+      have ha' : algebraMap (Polynomial k) K a = 0 := by
+        rw [← hcomp]
+        exact ha
+      have ha'' : a = 0 := hinj (by simpa using ha')
+      simpa using ha''
+    · exact bot_le
+  constructor
+  · intro hgu
+    rw [goingUpProperty_iff_primeSpectrum] at hgu
+    let p' : PrimeSpectrum (Polynomial k) :=
+      ⟨RingHom.ker (Polynomial.evalRingHom (1 : k)), RingHom.ker_isPrime _⟩
+    obtain ⟨Q, hQover, hPQ⟩ :=
+      hgu (p := (⊥ : PrimeSpectrum (Polynomial k))) (p' := p')
+        (by simp) (P := P) hP
+    have hx : (Polynomial.X - Polynomial.C 1 : Polynomial k) ∈ p'.asIdeal := by
+      change (Polynomial.X - Polynomial.C 1) ∈
+        RingHom.ker (Polynomial.evalRingHom (1 : k))
+      simp
+    have hQcomap : Ideal.comap (idempotentLocalizationMap k) Q.asIdeal =
+        p'.asIdeal := by
+      simpa only [PrimeSpectrum.comap_asIdeal] using
+        congrArg PrimeSpectrum.asIdeal hQover
+    have hxQ : idempotentLocalizationMap k
+        (Polynomial.X - Polynomial.C 1) ∈ Q.asIdeal := by
+      have hx' : (Polynomial.X - Polynomial.C 1) ∈
+          Ideal.comap (idempotentLocalizationMap k) Q.asIdeal := by
+        rw [hQcomap]
+        exact hx
+      exact hx'
+    have hyP : (algebraMap C B)
+        (Ideal.Quotient.mk I (MvPolynomial.X (1 : Fin 2))) - 1 ∈ P.asIdeal := by
+      change bmap ((algebraMap C B)
+        (Ideal.Quotient.mk I (MvPolynomial.X (1 : Fin 2))) - 1) = 0
+      rw [map_sub]
+      simp only [map_one]
+      rw [IsLocalization.Away.lift_eq]
+      change r (MvPolynomial.X (1 : Fin 2)) - 1 = 0
+      rw [hr1]
+      simp
+    have hyQ : (algebraMap C B)
+        (Ideal.Quotient.mk I (MvPolynomial.X (1 : Fin 2))) - 1 ∈ Q.asIdeal :=
+      hPQ hyP
+    have hxQ' : (algebraMap C B)
+        (Ideal.Quotient.mk I (MvPolynomial.X (0 : Fin 2))) - 1 ∈ Q.asIdeal := by
+      simpa [idempotentLocalizationMap] using hxQ
+    have hsQ : (algebraMap C B) s ∈ Q.asIdeal := by
+      have hmul := Q.asIdeal.mul_mem_right
+        ((algebraMap C B) (Ideal.Quotient.mk I
+          (MvPolynomial.X (0 : Fin 2)))) hyQ
+      have hadd := Q.asIdeal.add_mem hxQ' hmul
+      change (algebraMap C B) (Ideal.Quotient.mk I
+          (MvPolynomial.X (0 : Fin 2) * MvPolynomial.X (1 : Fin 2) - 1)) ∈
+        Q.asIdeal
+      simp only [map_sub, map_mul, map_one, map_add, map_neg]
+      convert hadd using 1 <;> ring
+    have hone := Q.asIdeal.mul_mem_right (IsLocalization.Away.invSelf s) hsQ
+    rw [IsLocalization.Away.mul_invSelf] at hone
+    exact Q.2.one_notMem hone
+  · let aToR : A →+* R₂ :=
+      Polynomial.eval₂RingHom (MvPolynomial.C : k →+* R₂)
+        (MvPolynomial.X (0 : Fin 2))
+    let _ : Algebra A R₂ := aToR.toAlgebra
+    let aToC : A →+* C := (Ideal.Quotient.mk I).comp aToR
+    let _ : Algebra A C := aToC.toAlgebra
+    let f : Polynomial A := Polynomial.X ^ 2 - Polynomial.X
+    let D := AdjoinRoot f
+    let rootC : C := Ideal.Quotient.mk I (MvPolynomial.X (1 : Fin 2))
+    have hroot : f.eval₂ (algebraMap A C) rootC = 0 := by
+      simp [f, Polynomial.eval₂_sub, Polynomial.eval₂_pow]
+      change (Ideal.Quotient.mk I)
+        (MvPolynomial.X (1 : Fin 2) ^ 2 - MvPolynomial.X (1 : Fin 2)) = 0
+      rw [Ideal.Quotient.eq_zero_iff_mem]
+      exact Ideal.subset_span (by simp [I])
+    let e : D →ₐ[A] C :=
+      AdjoinRoot.liftAlgHom f (Algebra.ofId A C) rootC hroot
+    let q : R₂ →+* D :=
+      MvPolynomial.eval₂Hom
+        ((AdjoinRoot.of f).comp (Polynomial.C : k →+* A))
+        (fun i : Fin 2 => if i = 0 then
+          AdjoinRoot.of f Polynomial.X else AdjoinRoot.root f)
+    have hq : I ≤ RingHom.ker q := by
+      apply Ideal.span_le.2
+      rintro z (rfl : z = _)
+      change q (MvPolynomial.X (1 : Fin 2) ^ 2 - MvPolynomial.X (1 : Fin 2)) = 0
+      rw [map_sub, map_pow]
+      have hq1 : q (MvPolynomial.X (1 : Fin 2)) = AdjoinRoot.root f := by
+        change MvPolynomial.eval₂Hom
+          ((AdjoinRoot.of f).comp (Polynomial.C : k →+* A))
+          (fun i : Fin 2 => if i = 0 then
+            AdjoinRoot.of f Polynomial.X else AdjoinRoot.root f)
+          (MvPolynomial.X (1 : Fin 2)) = _
+        rw [MvPolynomial.eval₂Hom_X']
+        simp
+      rw [hq1]
+      simpa [f] using (AdjoinRoot.eval₂_root f)
+    let gRing : C →+* D := Ideal.Quotient.lift I q hq
+    have hqC : ∀ z : k, q (MvPolynomial.C z) = AdjoinRoot.of f (Polynomial.C z) := by
+      intro z
+      change MvPolynomial.eval₂Hom
+        ((AdjoinRoot.of f).comp (Polynomial.C : k →+* A))
+        (fun i : Fin 2 => if i = 0 then
+          AdjoinRoot.of f Polynomial.X else AdjoinRoot.root f)
+        (MvPolynomial.C z) = _
+      rw [MvPolynomial.eval₂Hom_C]
+      rfl
+    have hqX : q (MvPolynomial.X (0 : Fin 2)) = AdjoinRoot.of f Polynomial.X := by
+      change MvPolynomial.eval₂Hom
+        ((AdjoinRoot.of f).comp (Polynomial.C : k →+* A))
+        (fun i : Fin 2 => if i = 0 then
+          AdjoinRoot.of f Polynomial.X else AdjoinRoot.root f)
+        (MvPolynomial.X (0 : Fin 2)) = _
+      rw [MvPolynomial.eval₂Hom_X']
+      simp
+    have hqY : q (MvPolynomial.X (1 : Fin 2)) = AdjoinRoot.root f := by
+      change MvPolynomial.eval₂Hom
+        ((AdjoinRoot.of f).comp (Polynomial.C : k →+* A))
+        (fun i : Fin 2 => if i = 0 then
+          AdjoinRoot.of f Polynomial.X else AdjoinRoot.root f)
+        (MvPolynomial.X (1 : Fin 2)) = _
+      rw [MvPolynomial.eval₂Hom_X']
+      simp
+    have haC : ∀ z : k, aToR (Polynomial.C z) = MvPolynomial.C z := by
+      intro z
+      change Polynomial.eval₂ (MvPolynomial.C : k →+* R₂)
+        (MvPolynomial.X (0 : Fin 2)) (Polynomial.C z) = _
+      rw [Polynomial.eval₂_C]
+    have haX : aToR Polynomial.X = MvPolynomial.X (0 : Fin 2) := by
+      change Polynomial.eval₂ (MvPolynomial.C : k →+* R₂)
+        (MvPolynomial.X (0 : Fin 2)) Polynomial.X = _
+      rw [Polynomial.eval₂_X]
+    have hcompA : gRing.comp aToC = AdjoinRoot.of f := by
+      apply Polynomial.ringHom_ext'
+      · ext z
+        change q (aToR (Polynomial.C z)) = AdjoinRoot.of f (Polynomial.C z)
+        rw [haC z, hqC z]
+      · change q (aToR Polynomial.X) = AdjoinRoot.of f Polynomial.X
+        rw [haX, hqX]
+    let g : C →ₐ[A] D :=
+      { gRing with
+        commutes' := by
+          intro a
+          change gRing (aToC a) = AdjoinRoot.of f a
+          exact congrArg (fun h => h a) hcompA }
+    have heof : ∀ a : A, e (AdjoinRoot.of f a) = aToC a := by
+      intro a
+      exact AdjoinRoot.liftAlgHom_of f (Algebra.ofId A C) rootC hroot a
+    have heroot : e (AdjoinRoot.root f) = rootC := by
+      exact AdjoinRoot.liftAlgHom_root f (Algebra.ofId A C) rootC hroot
+    have heg : e.comp g = AlgHom.id A C := by
+      apply Ideal.Quotient.algHom_ext A
+      apply AlgHom.coe_ringHom_injective
+      apply MvPolynomial.ringHom_ext'
+      · ext z
+        change e (gRing ((Ideal.Quotient.mk I) (MvPolynomial.C z))) =
+          (Ideal.Quotient.mk I) (MvPolynomial.C z)
+        change e (q (MvPolynomial.C z)) = _
+        rw [hqC z]
+        rw [heof]
+        change (Ideal.Quotient.mk I) (aToR (Polynomial.C z)) = _
+        rw [haC z]
+      · intro z
+        fin_cases z
+        · change e (gRing ((Ideal.Quotient.mk I)
+              (MvPolynomial.X (0 : Fin 2)))) =
+            (Ideal.Quotient.mk I) (MvPolynomial.X (0 : Fin 2))
+          change e (q (MvPolynomial.X (0 : Fin 2))) = _
+          rw [hqX]
+          rw [heof]
+          change (Ideal.Quotient.mk I) (aToR Polynomial.X) = _
+          rw [haX]
+        · change e (gRing ((Ideal.Quotient.mk I)
+              (MvPolynomial.X (1 : Fin 2)))) =
+            (Ideal.Quotient.mk I) (MvPolynomial.X (1 : Fin 2))
+          change e (q (MvPolynomial.X (1 : Fin 2))) = _
+          rw [hqY, heroot]
+    have hgroot : g (rootC) = AdjoinRoot.root f := by
+      change gRing ((Ideal.Quotient.mk I) (MvPolynomial.X (1 : Fin 2))) = _
+      change q (MvPolynomial.X (1 : Fin 2)) = _
+      exact hqY
+    have hge : g.comp e = AlgHom.id A D := by
+      apply AdjoinRoot.algHom_ext
+      change g (e (AdjoinRoot.root f)) = AdjoinRoot.root f
+      rw [heroot]
+      exact hgroot
+    let ee : D ≃ₐ[A] C := AlgEquiv.ofAlgHom e g heg hge
+    have hmonic0 :
+        (Polynomial.X ^ 2 - Polynomial.X : Polynomial A).Monic := by
+      apply Polynomial.monic_X_pow_sub
+      rw [Polynomial.degree_X]
+      norm_num
+    have hmonic : f.Monic := by
+      simpa [f] using hmonic0
+    let _ : Module.Free A D := hmonic.free_adjoinRoot
+    have hflatC : RingHom.Flat aToC := by
+      change RingHom.Flat (algebraMap A C)
+      rw [RingHom.flat_algebraMap_iff]
+      exact Module.Flat.of_linearEquiv ee.toLinearEquiv.symm
+    let aToB : A →+* B := (algebraMap C B).comp aToC
+    have hflatB : RingHom.Flat (algebraMap C B) := by
+      change RingHom.Flat (algebraMap C (Localization.Away s))
+      rw [RingHom.flat_algebraMap_iff]
+      exact IsLocalization.flat B (Submonoid.powers s)
+    have hflatAB : RingHom.Flat aToB :=
+      RingHom.Flat.comp hflatC hflatB
+    have hmap : idempotentLocalizationMap k = aToB := by
+      apply Polynomial.ringHom_ext'
+      · ext z
+        simp [idempotentLocalizationMap,
+          idempotentLocalizationCoefficientMap, aToB, aToC, aToR,
+          R₂, C, B, I]
+      · simp [idempotentLocalizationMap,
+          idempotentLocalizationCoefficientMap, aToB, aToC, aToR,
+          R₂, C, B, I]
+    rw [hmap]
+    change @Algebra.HasGoingDown A B _ _ aToB.toAlgebra
+    let _ : Algebra A B := aToB.toAlgebra
+    let _ : Module A B := Algebra.toModule
+    have _ : Module.Flat A B := by
+      rw [← RingHom.flat_algebraMap_iff]
+      exact hflatAB
+    exact Algebra.HasGoingDown.of_flat
 
 /-! ## Exercise `image` -/
 
@@ -954,19 +1278,592 @@ theorem image_basicOpen_polynomial_eq_iUnion_coefficients
 theorem exercise_images_case_one (k : Type u) [Field k] [IsAlgClosed k] :
     Set.range (PrimeSpectrum.comap (reciprocalImageMap k)) =
       reciprocalImageAnswer k := by
-  sorry
-
+  classical
+  ext p
+  constructor
+  · rintro ⟨P, rfl⟩
+    simp only [reciprocalImageAnswer, Set.mem_union, PrimeSpectrum.mem_basicOpen,
+      PrimeSpectrum.mem_zeroLocus]
+    by_contra h
+    push_neg at h
+    rcases h with ⟨hxneg, hsubneg⟩
+    have hx : MvPolynomial.X (0 : Fin 2) ∈
+        (PrimeSpectrum.comap (reciprocalImageMap k) P).asIdeal := by
+      change ¬ (MvPolynomial.X (0 : Fin 2) ∉
+        (PrimeSpectrum.comap (reciprocalImageMap k) P).asIdeal) at hxneg
+      exact not_not.mp hxneg
+    have hxP : reciprocalImageMap k (MvPolynomial.X (0 : Fin 2)) ∈ P.asIdeal := hx
+    have hyP : reciprocalImageMap k (MvPolynomial.X (1 : Fin 2)) ∈ P.asIdeal := by
+      simpa [reciprocalImageMap] using
+        P.asIdeal.mul_mem_right (MvPolynomial.X (1 : Fin 2)) hxP
+    have hy : MvPolynomial.X (1 : Fin 2) ∈
+        (PrimeSpectrum.comap (reciprocalImageMap k) P).asIdeal := hyP
+    apply hsubneg
+    intro z hz
+    rcases Set.mem_insert_iff.mp hz with rfl | hz
+    · exact hx
+    · rcases Set.mem_singleton_iff.mp hz with rfl
+      exact hy
+  · simp only [reciprocalImageAnswer, Set.mem_union, PrimeSpectrum.mem_basicOpen,
+      PrimeSpectrum.mem_zeroLocus]
+    intro hp
+    rcases hp with hp | hp
+    · let S := Localization.Away (MvPolynomial.X (R := k) (0 : Fin 2))
+      let q : Formalization.Books.Exercises.Unit16.polynomialRing k 2 →+* S :=
+        MvPolynomial.eval₂Hom (algebraMap k S)
+          (fun i : Fin 2 => if i = 0 then
+              algebraMap (Formalization.Books.Exercises.Unit16.polynomialRing k 2) S
+                (MvPolynomial.X (0 : Fin 2))
+            else
+              algebraMap (Formalization.Books.Exercises.Unit16.polynomialRing k 2) S
+                (MvPolynomial.X (1 : Fin 2)) *
+                IsLocalization.Away.invSelf (MvPolynomial.X (R := k) (0 : Fin 2)))
+      have hcomp : q.comp (reciprocalImageMap k) = algebraMap _ S := by
+        ext z
+        · simp [q, reciprocalImageMap]
+          exact (IsScalarTower.algebraMap_apply k
+            (Formalization.Books.Exercises.Unit16.polynomialRing k 2) S z).symm
+        · fin_cases z
+          · simp [q, reciprocalImageMap]
+          · simp [q, reciprocalImageMap]
+            calc
+              (algebraMap (Formalization.Books.Exercises.Unit16.polynomialRing k 2) S
+                  (MvPolynomial.X (0 : Fin 2))) *
+                  ((algebraMap (Formalization.Books.Exercises.Unit16.polynomialRing k 2) S
+                    (MvPolynomial.X (1 : Fin 2))) *
+                  IsLocalization.Away.invSelf (MvPolynomial.X (R := k) (0 : Fin 2))) =
+                (algebraMap (Formalization.Books.Exercises.Unit16.polynomialRing k 2) S
+                  (MvPolynomial.X (1 : Fin 2))) *
+                  ((algebraMap (Formalization.Books.Exercises.Unit16.polynomialRing k 2) S
+                    (MvPolynomial.X (0 : Fin 2))) *
+                    IsLocalization.Away.invSelf (MvPolynomial.X (R := k) (0 : Fin 2))) := by ring
+              _ = (algebraMap (Formalization.Books.Exercises.Unit16.polynomialRing k 2) S
+                  (MvPolynomial.X (1 : Fin 2))) * 1 := by
+                rw [IsLocalization.Away.mul_invSelf]
+              _ = (algebraMap (Formalization.Books.Exercises.Unit16.polynomialRing k 2) S
+                  (MvPolynomial.X (1 : Fin 2))) := by simp
+      have hp' : p ∈ (PrimeSpectrum.basicOpen
+          (MvPolynomial.X (R := k) (0 : Fin 2)) :
+          Set (PrimeSpectrum (Formalization.Books.Exercises.Unit16.polynomialRing k 2))) := hp
+      rw [← PrimeSpectrum.localization_away_comap_range S
+        (MvPolynomial.X (R := k) (0 : Fin 2))] at hp'
+      obtain ⟨P, hP⟩ := hp'
+      refine ⟨PrimeSpectrum.comap q P, ?_⟩
+      apply PrimeSpectrum.ext
+      change Ideal.comap (reciprocalImageMap k)
+          (Ideal.comap q P.asIdeal) = p.asIdeal
+      rw [Ideal.comap_comap, hcomp]
+      exact congrArg PrimeSpectrum.asIdeal hP
+    · have hx : MvPolynomial.X (0 : Fin 2) ∈ p.asIdeal := hp (by simp)
+      have hy : MvPolynomial.X (1 : Fin 2) ∈ p.asIdeal := hp (by simp)
+      let q : Formalization.Books.Exercises.Unit16.polynomialRing k 2 →+*
+          (Formalization.Books.Exercises.Unit16.polynomialRing k 2 ⧸ p.asIdeal) :=
+        Ideal.Quotient.mk p.asIdeal
+      have hq : q.comp (reciprocalImageMap k) = q := by
+        have hyq : q (MvPolynomial.X (1 : Fin 2)) = 0 := by
+          change Ideal.Quotient.mk p.asIdeal (MvPolynomial.X (1 : Fin 2)) = 0
+          rw [Ideal.Quotient.eq_zero_iff_mem]
+          exact hy
+        ext z
+        · simp [q, reciprocalImageMap]
+        · fin_cases z
+          · simp [q, reciprocalImageMap]
+          · simp [q, reciprocalImageMap, hyq]
+      refine ⟨p, ?_⟩
+      apply PrimeSpectrum.ext
+      rw [PrimeSpectrum.comap_asIdeal]
+      apply le_antisymm
+      · intro z hz
+        change reciprocalImageMap k z ∈ p.asIdeal at hz
+        have hz' : q (reciprocalImageMap k z) = 0 := by
+          change Ideal.Quotient.mk p.asIdeal (reciprocalImageMap k z) = 0
+          rw [Ideal.Quotient.eq_zero_iff_mem]
+          exact hz
+        have hqz := congrArg (fun r => r z) hq
+        have hz'' : q z = 0 := by
+          rw [← hqz]
+          exact hz'
+        change Ideal.Quotient.mk p.asIdeal z = 0 at hz''
+        exact Ideal.Quotient.eq_zero_iff_mem.mp hz''
+      · intro z hz
+        have hz' : q z = 0 := by
+          change Ideal.Quotient.mk p.asIdeal z = 0
+          rw [Ideal.Quotient.eq_zero_iff_mem]
+          exact hz
+        have hqz := congrArg (fun r => r z) hq
+        have hz'' : q (reciprocalImageMap k z) = 0 := by
+          change (q.comp (reciprocalImageMap k)) z = 0
+          rw [hqz]
+          exact hz'
+        change Ideal.Quotient.mk p.asIdeal (reciprocalImageMap k z) = 0 at hz''
+        rw [Ideal.Quotient.eq_zero_iff_mem] at hz''
+        exact hz''
 /-- Image computation (2): `Spec(k[x,y,a,b]/(ax-by-1)) → Spec(k[x,y])`. -/
 theorem exercise_images_case_two (k : Type u) [Field k] [IsAlgClosed k] :
     Set.range (PrimeSpectrum.comap (unitEquationMap k)) =
       unitEquationImageAnswer k := by
-  sorry
+  classical
+  ext p
+  constructor
+  · rintro ⟨P, rfl⟩
+    simp only [unitEquationImageAnswer, Set.mem_union, PrimeSpectrum.mem_basicOpen]
+    by_contra h
+    push_neg at h
+    rcases h with ⟨hxneg, hyneg⟩
+    have hx0 : MvPolynomial.X (0 : Fin 2) ∈
+        (PrimeSpectrum.comap (unitEquationMap k) P).asIdeal := by
+      change ¬ (MvPolynomial.X (0 : Fin 2) ∉
+        (PrimeSpectrum.comap (unitEquationMap k) P).asIdeal) at hxneg
+      exact not_not.mp hxneg
+    have hy0 : MvPolynomial.X (1 : Fin 2) ∈
+        (PrimeSpectrum.comap (unitEquationMap k) P).asIdeal := by
+      change ¬ (MvPolynomial.X (1 : Fin 2) ∉
+        (PrimeSpectrum.comap (unitEquationMap k) P).asIdeal) at hyneg
+      exact not_not.mp hyneg
+    have hx : Ideal.Quotient.mk (unitEquationIdeal k)
+        (MvPolynomial.X (0 : Fin 4)) ∈ P.asIdeal := by
+      change unitEquationMap k (MvPolynomial.X (0 : Fin 2)) ∈ P.asIdeal at hx0
+      simpa [unitEquationMap] using hx0
+    have hy : Ideal.Quotient.mk (unitEquationIdeal k)
+        (MvPolynomial.X (1 : Fin 4)) ∈ P.asIdeal := by
+      change unitEquationMap k (MvPolynomial.X (1 : Fin 2)) ∈ P.asIdeal at hy0
+      simpa [unitEquationMap] using hy0
+    have hxa : Ideal.Quotient.mk (unitEquationIdeal k)
+          (MvPolynomial.X (0 : Fin 4)) *
+        Ideal.Quotient.mk (unitEquationIdeal k) (MvPolynomial.X (2 : Fin 4)) ∈
+          P.asIdeal := by
+      exact P.asIdeal.mul_mem_right _ hx
+    have hyb : Ideal.Quotient.mk (unitEquationIdeal k)
+          (MvPolynomial.X (1 : Fin 4)) *
+        Ideal.Quotient.mk (unitEquationIdeal k) (MvPolynomial.X (3 : Fin 4)) ∈
+          P.asIdeal := by
+      exact P.asIdeal.mul_mem_right _ hy
+    have hrel : Ideal.Quotient.mk (unitEquationIdeal k)
+          (MvPolynomial.X (0 : Fin 4) * MvPolynomial.X (2 : Fin 4) -
+            MvPolynomial.X (1 : Fin 4) * MvPolynomial.X (3 : Fin 4) - 1) ∈ P.asIdeal := by
+      rw [show Ideal.Quotient.mk (unitEquationIdeal k)
+          (MvPolynomial.X (0 : Fin 4) * MvPolynomial.X (2 : Fin 4) -
+            MvPolynomial.X (1 : Fin 4) * MvPolynomial.X (3 : Fin 4) - 1) = 0 by
+        rw [Ideal.Quotient.eq_zero_iff_mem]
+        exact Ideal.subset_span (by simp)]
+      exact P.asIdeal.zero_mem
+    have hone : (1 : unitEquationRing k) ∈ P.asIdeal := by
+      have hsub : Ideal.Quotient.mk (unitEquationIdeal k)
+            (MvPolynomial.X (0 : Fin 4) * MvPolynomial.X (2 : Fin 4)) -
+          Ideal.Quotient.mk (unitEquationIdeal k)
+            (MvPolynomial.X (1 : Fin 4) * MvPolynomial.X (3 : Fin 4)) ∈
+          P.asIdeal := by
+        rw [map_mul, map_mul]
+        exact P.asIdeal.sub_mem hxa hyb
+      have := P.asIdeal.sub_mem hsub hrel
+      have heq :
+          (Ideal.Quotient.mk (unitEquationIdeal k)) (MvPolynomial.X (0 : Fin 4)) *
+              Ideal.Quotient.mk (unitEquationIdeal k) (MvPolynomial.X (2 : Fin 4)) -
+            Ideal.Quotient.mk (unitEquationIdeal k) (MvPolynomial.X (1 : Fin 4)) *
+              Ideal.Quotient.mk (unitEquationIdeal k) (MvPolynomial.X (3 : Fin 4)) -
+            Ideal.Quotient.mk (unitEquationIdeal k)
+              (MvPolynomial.X (0 : Fin 4) * MvPolynomial.X (2 : Fin 4) -
+                MvPolynomial.X (1 : Fin 4) * MvPolynomial.X (3 : Fin 4) - 1) = 1 := by
+        rw [map_sub, map_sub, map_mul, map_mul, map_one]
+        ring
+      have this' :
+          (Ideal.Quotient.mk (unitEquationIdeal k)) (MvPolynomial.X (0 : Fin 4)) *
+              Ideal.Quotient.mk (unitEquationIdeal k) (MvPolynomial.X (2 : Fin 4)) -
+            Ideal.Quotient.mk (unitEquationIdeal k) (MvPolynomial.X (1 : Fin 4)) *
+              Ideal.Quotient.mk (unitEquationIdeal k) (MvPolynomial.X (3 : Fin 4)) -
+            (Ideal.Quotient.mk (unitEquationIdeal k))
+              (MvPolynomial.X (0 : Fin 4) * MvPolynomial.X (2 : Fin 4) -
+                MvPolynomial.X (1 : Fin 4) * MvPolynomial.X (3 : Fin 4) - 1) ∈ P.asIdeal := by
+        convert this using 1 <;> simp only [map_sub, map_mul, map_one]
+      rw [heq] at this'
+      exact this'
+    exact P.2.one_notMem hone
+  · simp only [unitEquationImageAnswer, Set.mem_union, PrimeSpectrum.mem_basicOpen]
+    intro hp
+    rcases hp with hp | hp
+    · let S := Localization.Away (MvPolynomial.X (R := k) (0 : Fin 2))
+      let sourceToS : Formalization.Books.Exercises.Unit16.polynomialRing k 2 →+* S :=
+        algebraMap _ S
+      let q : Formalization.Books.Exercises.Unit16.polynomialRing k 4 →+* S :=
+        MvPolynomial.eval₂Hom (algebraMap k S)
+          (fun i : Fin 4 => if i = 0 then sourceToS (MvPolynomial.X 0)
+            else if i = 1 then sourceToS (MvPolynomial.X 1)
+            else if i = 2 then IsLocalization.Away.invSelf
+              (MvPolynomial.X (R := k)
+                (0 : Fin 2))
+            else 0)
+      have hq : unitEquationIdeal k ≤ RingHom.ker q := by
+        apply Ideal.span_le.2
+        rintro z (rfl : z = _)
+        change q (MvPolynomial.X (0 : Fin 4) * MvPolynomial.X (2 : Fin 4) -
+          MvPolynomial.X (1 : Fin 4) * MvPolynomial.X (3 : Fin 4) - 1) = 0
+        rw [map_sub, map_sub, map_mul, map_mul, map_one]
+        simp only [q, MvPolynomial.eval₂Hom_X', if_pos, if_neg, map_one]
+        simp only [if_neg (by decide : (2 : Fin 4) ≠ 0),
+          if_neg (by decide : (2 : Fin 4) ≠ 1),
+          if_neg (by decide : (3 : Fin 4) ≠ 0),
+          if_neg (by decide : (3 : Fin 4) ≠ 1),
+          if_neg (by decide : (3 : Fin 4) ≠ 2),
+          if_neg (by decide : (1 : Fin 4) ≠ 0), mul_zero, sub_zero]
+        change sourceToS (MvPolynomial.X (0 : Fin 2)) *
+            IsLocalization.Away.invSelf (MvPolynomial.X (R := k) (0 : Fin 2)) - 1 = 0
+        rw [show sourceToS (MvPolynomial.X (0 : Fin 2)) =
+            algebraMap (Formalization.Books.Exercises.Unit16.polynomialRing k 2) S
+              (MvPolynomial.X (0 : Fin 2)) by rfl,
+          IsLocalization.Away.mul_invSelf]
+        simp
+      let h : unitEquationRing k →+* S :=
+        Ideal.Quotient.lift (unitEquationIdeal k) q hq
+      have hcomp : h.comp (unitEquationMap k) = sourceToS := by
+        ext z
+        · simp [h, unitEquationMap, sourceToS, q]
+          exact (IsScalarTower.algebraMap_apply k
+            (Formalization.Books.Exercises.Unit16.polynomialRing k 2) S z).symm
+        · fin_cases z <;>
+            simp [h, unitEquationMap, sourceToS, q]
+      have hp' : p ∈ (PrimeSpectrum.basicOpen
+          (MvPolynomial.X (R := k) (0 : Fin 2)) :
+          Set (PrimeSpectrum (Formalization.Books.Exercises.Unit16.polynomialRing k 2))) := hp
+      rw [← PrimeSpectrum.localization_away_comap_range S
+        (MvPolynomial.X (R := k) (0 : Fin 2))] at hp'
+      obtain ⟨P, hP⟩ := hp'
+      refine ⟨PrimeSpectrum.comap h P, ?_⟩
+      apply PrimeSpectrum.ext
+      change Ideal.comap (unitEquationMap k)
+          (Ideal.comap h P.asIdeal) = p.asIdeal
+      rw [Ideal.comap_comap, hcomp]
+      exact congrArg PrimeSpectrum.asIdeal hP
+    · let S := Localization.Away (MvPolynomial.X (R := k) (1 : Fin 2))
+      let sourceToS : Formalization.Books.Exercises.Unit16.polynomialRing k 2 →+* S :=
+        algebraMap _ S
+      let q : Formalization.Books.Exercises.Unit16.polynomialRing k 4 →+* S :=
+        MvPolynomial.eval₂Hom (algebraMap k S)
+          (fun i : Fin 4 => if i = 0 then sourceToS (MvPolynomial.X 0)
+            else if i = 1 then sourceToS (MvPolynomial.X 1)
+            else if i = 2 then 0
+            else -(IsLocalization.Away.invSelf
+              (MvPolynomial.X (R := k)
+                (1 : Fin 2))))
+      have hq : unitEquationIdeal k ≤ RingHom.ker q := by
+        apply Ideal.span_le.2
+        rintro z (rfl : z = _)
+        change q (MvPolynomial.X (0 : Fin 4) * MvPolynomial.X (2 : Fin 4) -
+          MvPolynomial.X (1 : Fin 4) * MvPolynomial.X (3 : Fin 4) - 1) = 0
+        rw [map_sub, map_sub, map_mul, map_mul, map_one]
+        simp only [q, MvPolynomial.eval₂Hom_X', if_pos, if_neg, map_one]
+        simp only [if_neg (by decide : (2 : Fin 4) ≠ 0),
+          if_neg (by decide : (2 : Fin 4) ≠ 1),
+          if_neg (by decide : (3 : Fin 4) ≠ 0),
+          if_neg (by decide : (3 : Fin 4) ≠ 1),
+          if_neg (by decide : (3 : Fin 4) ≠ 2),
+          if_neg (by decide : (1 : Fin 4) ≠ 0), zero_mul, mul_zero]
+        rw [mul_neg,
+          show sourceToS (MvPolynomial.X (1 : Fin 2)) =
+            algebraMap (Formalization.Books.Exercises.Unit16.polynomialRing k 2) S
+              (MvPolynomial.X (1 : Fin 2)) by rfl,
+          IsLocalization.Away.mul_invSelf]
+        ring
+      let h : unitEquationRing k →+* S :=
+        Ideal.Quotient.lift (unitEquationIdeal k) q hq
+      have hcomp : h.comp (unitEquationMap k) = sourceToS := by
+        ext z
+        · simp [h, unitEquationMap, sourceToS, q]
+          exact (IsScalarTower.algebraMap_apply k
+            (Formalization.Books.Exercises.Unit16.polynomialRing k 2) S z).symm
+        · fin_cases z <;>
+            simp [h, unitEquationMap, sourceToS, q]
+      have hp' : p ∈ (PrimeSpectrum.basicOpen
+          (MvPolynomial.X (R := k) (1 : Fin 2)) :
+          Set (PrimeSpectrum (Formalization.Books.Exercises.Unit16.polynomialRing k 2))) := hp
+      rw [← PrimeSpectrum.localization_away_comap_range S
+        (MvPolynomial.X (R := k) (1 : Fin 2))] at hp'
+      obtain ⟨P, hP⟩ := hp'
+      refine ⟨PrimeSpectrum.comap h P, ?_⟩
+      apply PrimeSpectrum.ext
+      change Ideal.comap (unitEquationMap k)
+          (Ideal.comap h P.asIdeal) = p.asIdeal
+      rw [Ideal.comap_comap, hcomp]
+      exact congrArg PrimeSpectrum.asIdeal hP
 
 /-- Image computation (3): the localized cusp parameterization. -/
 theorem exercise_images_case_three (k : Type u) [Field k] [IsAlgClosed k] :
     Set.range (PrimeSpectrum.comap (cuspParameterMap k)) =
       cuspImageAnswer k := by
-  sorry
+  classical
+  let R₂ := Formalization.Books.Exercises.Unit16.polynomialRing k 2
+  let B := cuspParameterRing k
+  let x₀ : R₂ := MvPolynomial.X (0 : Fin 2)
+  let x₁ : R₂ := MvPolynomial.X (1 : Fin 2)
+  let d : Polynomial k := cuspParameterPolynomial k
+  let α : Fin 2 → k := fun _ => 0
+  ext p
+  constructor
+  · rintro ⟨P, rfl⟩
+    simp only [cuspImageAnswer, Set.mem_diff, PrimeSpectrum.mem_zeroLocus]
+    constructor
+    · intro z hz
+      rcases Set.mem_singleton_iff.mp hz with rfl
+      have hzero : cuspParameterMap k (cuspEquation k) = 0 := by
+        simp [cuspParameterMap, cuspEquation]
+        ring
+      change cuspParameterMap k (cuspEquation k) ∈ P.asIdeal
+      rw [hzero]
+      exact P.asIdeal.zero_mem
+    · intro h
+      have hx : cuspParameterMap k (x₀ - 1) ∈ P.asIdeal := h (by simp [x₀])
+      have hy : cuspParameterMap k (x₁ - 1) ∈ P.asIdeal := h (by simp [x₁])
+      have hx' :
+          (algebraMap (Polynomial k) B Polynomial.X) ^ 2 - 1 ∈ P.asIdeal := by
+        rw [map_sub] at hx
+        simpa [x₀, cuspParameterMap, cuspParameterCoefficientMap, B] using hx
+      have hy' :
+          (algebraMap (Polynomial k) B Polynomial.X) ^ 3 - 1 ∈ P.asIdeal := by
+        rw [map_sub] at hy
+        simpa [x₁, cuspParameterMap, cuspParameterCoefficientMap, B] using hy
+      have hmul :
+          (algebraMap (Polynomial k) B Polynomial.X) *
+              ((algebraMap (Polynomial k) B Polynomial.X) ^ 2 - 1) ∈
+            P.asIdeal :=
+        P.asIdeal.mul_mem_left (algebraMap (Polynomial k) B Polynomial.X) hx'
+      have ht : algebraMap (Polynomial k) B Polynomial.X - 1 ∈ P.asIdeal := by
+        have hsub := P.asIdeal.sub_mem hy' hmul
+        convert hsub using 1 <;> ring
+      have hd : (algebraMap (Polynomial k) B) d ∈ P.asIdeal := by
+        simpa [d, cuspParameterPolynomial] using ht
+      have hone := P.asIdeal.mul_mem_right
+        (IsLocalization.Away.invSelf d) hd
+      rw [IsLocalization.Away.mul_invSelf] at hone
+      exact P.2.one_notMem hone
+  · simp only [cuspImageAnswer, Set.mem_diff, PrimeSpectrum.mem_zeroLocus]
+    intro hp
+    have heq : cuspEquation k ∈ p.asIdeal := hp.1 (by simp)
+    have hnot : ¬ (x₀ - 1 ∈ p.asIdeal ∧ x₁ - 1 ∈ p.asIdeal) := by
+      intro hboth
+      apply hp.2
+      intro z hz
+      rcases Set.mem_insert_iff.mp hz with rfl | hz
+      · exact hboth.1
+      · rcases Set.mem_singleton_iff.mp hz with rfl
+        exact hboth.2
+    by_cases hx0 : x₀ ∈ p.asIdeal
+    · have heq' : x₁ ^ 2 - x₀ ^ 3 ∈ p.asIdeal := by
+        simpa [cuspEquation, x₀, x₁] using heq
+      have hx03 : x₀ ^ 3 ∈ p.asIdeal :=
+        p.asIdeal.pow_mem_of_mem hx0 3 (by norm_num)
+      have hx1sq : x₁ ^ 2 ∈ p.asIdeal := by
+        convert p.asIdeal.add_mem heq' hx03 using 1 <;> ring
+      have hx1 : x₁ ∈ p.asIdeal := p.2.mem_of_pow_mem 2 hx1sq
+      let J : Ideal R₂ := Ideal.span ({x₀, x₁} : Set R₂)
+      have hJp : J ≤ p.asIdeal := by
+        rw [Ideal.span_le]
+        rintro z hz
+        rcases Set.mem_insert_iff.mp hz with rfl | hz
+        · exact hx0
+        · rcases Set.mem_singleton_iff.mp hz with rfl
+          exact hx1
+      have hrep : ∀ f : R₂,
+          f - MvPolynomial.C (MvPolynomial.aeval α f) ∈ J := by
+        intro f
+        induction f using MvPolynomial.induction_on with
+        | C a => simp
+        | add f g hf hg =>
+            rw [map_add, MvPolynomial.C_add]
+            convert J.add_mem hf hg using 1 <;> abel
+        | mul_X f i hf =>
+            have hgen' : MvPolynomial.X i - MvPolynomial.C (α i) ∈ J := by
+              apply Ideal.subset_span
+              fin_cases i <;> simp [J, x₀, x₁, α]
+            have h₁ := J.mul_mem_left (MvPolynomial.X i) hf
+            have h₂ := J.mul_mem_left
+              (MvPolynomial.C (MvPolynomial.aeval α f)) hgen'
+            convert J.add_mem h₁ h₂ using 1
+            simp only [map_mul, MvPolynomial.aeval_X]
+            ring
+      let m₀ : Ideal R₂ := MvPolynomial.vanishingIdeal k ({α} : Set (Fin 2 → k))
+      have hm₀J : m₀ ≤ J := by
+        intro f hf
+        have hfzero : MvPolynomial.aeval α f = 0 := by
+          apply (MvPolynomial.mem_vanishingIdeal_singleton_iff α f).mp
+          exact hf
+        simpa [hfzero] using hrep f
+      have hJm₀ : J ≤ m₀ := by
+        rw [Ideal.span_le]
+        rintro z hz
+        rcases Set.mem_insert_iff.mp hz with rfl | hz
+        · change x₀ ∈ MvPolynomial.vanishingIdeal k ({α} : Set (Fin 2 → k))
+          exact (MvPolynomial.mem_vanishingIdeal_singleton_iff α x₀).2 (by
+            simp [x₀, α])
+        · rcases Set.mem_singleton_iff.mp hz with rfl
+          change x₁ ∈ MvPolynomial.vanishingIdeal k ({α} : Set (Fin 2 → k))
+          exact (MvPolynomial.mem_vanishingIdeal_singleton_iff α x₁).2 (by
+            simp [x₁, α])
+      have hm₀p : m₀ ≤ p.asIdeal := hm₀J.trans hJp
+      have hp_eq : m₀ = p.asIdeal :=
+        (inferInstance : m₀.IsMaximal).eq_of_le p.2.ne_top hm₀p
+      let e : Polynomial k →+* k := Polynomial.evalRingHom 0
+      have hunit : IsUnit (e d) := by
+        rw [show e d = -1 by simp [e, d, cuspParameterPolynomial]]
+        exact isUnit_iff_ne_zero.mpr (by simp)
+      let bmap : B →+* k := IsLocalization.Away.lift d hunit
+      let aeval₀ : R₂ →+* k := (MvPolynomial.aeval α).toRingHom
+      let P : PrimeSpectrum B := ⟨RingHom.ker bmap, RingHom.ker_isPrime _⟩
+      have hcomp : bmap.comp (cuspParameterMap k) = aeval₀ := by
+        apply MvPolynomial.ringHom_ext'
+        · ext z
+          simp [bmap, cuspParameterMap, cuspParameterCoefficientMap, e, α, d, B,
+            aeval₀]
+        · intro i
+          fin_cases i <;>
+            simp [bmap, cuspParameterMap, cuspParameterCoefficientMap, e, α, d, B,
+              aeval₀]
+      refine ⟨P, ?_⟩
+      apply PrimeSpectrum.ext
+      change Ideal.comap (cuspParameterMap k) (RingHom.ker bmap) = p.asIdeal
+      rw [← hp_eq]
+      apply le_antisymm
+      · intro f hf
+        change (bmap.comp (cuspParameterMap k)) f = 0 at hf
+        rw [hcomp] at hf
+        exact (MvPolynomial.mem_vanishingIdeal_singleton_iff α f).2 hf
+      · intro f hf
+        change (bmap.comp (cuspParameterMap k)) f = 0
+        rw [hcomp]
+        exact (MvPolynomial.mem_vanishingIdeal_singleton_iff α f).1 hf
+    · letI : p.asIdeal.IsPrime := p.2
+      let Q := R₂ ⧸ p.asIdeal
+      let F := FractionRing Q
+      let mkP : R₂ →+* Q := Ideal.Quotient.mk p.asIdeal
+      let q : R₂ →+* F := (algebraMap Q F).comp mkP
+      let qx : F := q x₀
+      let qy : F := q x₁
+      have hqinj : Function.Injective (algebraMap Q F) :=
+        IsFractionRing.injective Q F
+      have hmkx : mkP x₀ ≠ 0 := by
+        intro h
+        apply hx0
+        exact Ideal.Quotient.eq_zero_iff_mem.mp h
+      have hqxne : qx ≠ 0 := by
+        intro h
+        apply hmkx
+        apply hqinj
+        simpa [q, qx] using h
+      have hmkrel : mkP (cuspEquation k) = 0 := by
+        rw [Ideal.Quotient.eq_zero_iff_mem]
+        exact heq
+      have hrel : qy ^ 2 = qx ^ 3 := by
+        have hrel0 : q (cuspEquation k) = 0 := by
+          change algebraMap Q F (mkP (cuspEquation k)) = 0
+          rw [hmkrel]
+          simp
+        simpa [q, qx, qy, cuspEquation, x₀, x₁] using
+          (sub_eq_zero.mp (show qy ^ 2 - qx ^ 3 = 0 by
+            simpa [cuspEquation, x₀, x₁] using hrel0))
+      let u : F := qy / qx
+      have hu2 : u ^ 2 = qx := by
+        dsimp [u]
+        rw [div_pow]
+        apply (div_eq_iff (pow_ne_zero 2 hqxne)).2
+        convert hrel using 1 <;> ring
+      have hu3 : u ^ 3 = qy := by
+        calc
+          u ^ 3 = u * u ^ 2 := by ring
+          _ = (qy / qx) * qx := by rw [hu2]
+          _ = qy := div_mul_cancel₀ qy hqxne
+      let evalT : Polynomial k →+* F :=
+        Polynomial.eval₂RingHom (algebraMap k F) u
+      have hdn : evalT d ≠ 0 := by
+        intro hd
+        have hu1 : u = 1 := by
+          apply sub_eq_zero.mp
+          simpa [evalT, d, cuspParameterPolynomial] using hd
+        have hqx1 : qx = 1 := by
+          rw [← hu2, hu1]
+          simp
+        have hqy1 : qy = 1 := by
+          rw [← hu3, hu1]
+          simp
+        have hxm : x₀ - 1 ∈ p.asIdeal := by
+          apply Ideal.Quotient.eq_zero_iff_mem.mp
+          apply hqinj
+          simpa [q] using (show q (x₀ - 1) = 0 by
+            rw [map_sub, map_one]
+            change qx - 1 = 0
+            rw [hqx1]
+            simp)
+        have hym : x₁ - 1 ∈ p.asIdeal := by
+          apply Ideal.Quotient.eq_zero_iff_mem.mp
+          apply hqinj
+          simpa [q] using (show q (x₁ - 1) = 0 by
+            rw [map_sub, map_one]
+            change qy - 1 = 0
+            rw [hqy1]
+            simp)
+        exact hnot ⟨hxm, hym⟩
+      have hunit : IsUnit (evalT d) := isUnit_iff_ne_zero.mpr hdn
+      let bmap : B →+* F := IsLocalization.Away.lift d hunit
+      have hqC : ∀ z : k, q (MvPolynomial.C z) = algebraMap k F z := by
+        intro z
+        change algebraMap Q F (mkP (MvPolynomial.C z)) = algebraMap k F z
+        rw [show mkP (MvPolynomial.C z) = algebraMap k Q z by
+          change (Ideal.Quotient.mk p.asIdeal) ((algebraMap k R₂) z) = _
+          exact Ideal.Quotient.mk_algebraMap k p.asIdeal z]
+        exact IsScalarTower.algebraMap_apply k Q F z
+      have hcomp : bmap.comp (cuspParameterMap k) = q := by
+        apply MvPolynomial.ringHom_ext'
+        · ext z
+          simp only [RingHom.comp_apply]
+          simp only [cuspParameterMap, MvPolynomial.eval₂Hom_C]
+          change bmap ((algebraMap (Polynomial k) B) (Polynomial.C z)) =
+            q (MvPolynomial.C z)
+          change (IsLocalization.Away.lift d hunit)
+              ((algebraMap (Polynomial k) B) (Polynomial.C z)) =
+            q (MvPolynomial.C z)
+          rw [IsLocalization.Away.lift_eq]
+          change evalT (Polynomial.C z) = q (MvPolynomial.C z)
+          rw [hqC z]
+          simp [evalT]
+        · intro i
+          fin_cases i
+          ·
+            change bmap (cuspParameterMap k x₀) = q x₀
+            rw [show cuspParameterMap k x₀ =
+              (algebraMap (Polynomial k) B) (Polynomial.X ^ 2) by
+                simp [cuspParameterMap, x₀, B]]
+            change (IsLocalization.Away.lift d hunit)
+                ((algebraMap (Polynomial k) B) (Polynomial.X ^ 2)) = q x₀
+            rw [IsLocalization.Away.lift_eq]
+            change evalT (Polynomial.X ^ 2) = qx
+            simpa [evalT] using hu2
+          ·
+            change bmap (cuspParameterMap k x₁) = q x₁
+            rw [show cuspParameterMap k x₁ =
+              (algebraMap (Polynomial k) B) (Polynomial.X ^ 3) by
+                simp [cuspParameterMap, x₁, B]]
+            change (IsLocalization.Away.lift d hunit)
+                ((algebraMap (Polynomial k) B) (Polynomial.X ^ 3)) = q x₁
+            rw [IsLocalization.Away.lift_eq]
+            change evalT (Polynomial.X ^ 3) = qy
+            simpa [evalT] using hu3
+      let P : PrimeSpectrum B := ⟨RingHom.ker bmap, RingHom.ker_isPrime _⟩
+      refine ⟨P, ?_⟩
+      apply PrimeSpectrum.ext
+      change Ideal.comap (cuspParameterMap k) (RingHom.ker bmap) = p.asIdeal
+      apply le_antisymm
+      · intro f hf
+        change (bmap.comp (cuspParameterMap k)) f = 0 at hf
+        rw [hcomp] at hf
+        have hmk : mkP f = 0 := by
+          apply hqinj
+          simpa [q] using hf
+        exact Ideal.Quotient.eq_zero_iff_mem.mp hmk
+      · intro f hf
+        change (bmap.comp (cuspParameterMap k)) f = 0
+        rw [hcomp]
+        change algebraMap Q F (mkP f) = 0
+        rw [show mkP f = 0 by
+          rw [Ideal.Quotient.eq_zero_iff_mem]
+          exact hf]
+        simp
 
 /-- Image computation (4): the complex cubic curve mapped by squaring both
 coordinates. -/

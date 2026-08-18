@@ -5,9 +5,14 @@ import Mathlib.Algebra.Category.ModuleCat.ChangeOfRings
 import Mathlib.Algebra.Category.ModuleCat.ChangeOfRingsExact
 import Mathlib.CategoryTheory.Adjunction.PartialAdjoint
 import Mathlib.CategoryTheory.Preadditive.AdditiveFunctor
+import Mathlib.CategoryTheory.Preadditive.Basic
 import Mathlib.CategoryTheory.Preadditive.Injective.Preserves
 import Mathlib.Data.List.TFAE
 import Mathlib.RingTheory.RingHom.Flat
+import Mathlib.RingTheory.SimpleModule.InjectiveProjective
+import Mathlib.RingTheory.SimpleModule.WedderburnArtin
+import Mathlib.RingTheory.SimpleRing.Basic
+import Mathlib.Algebra.Field.ZMod
 
 /-!
 # Homological Algebra, Chapter 29: Injectives and adjoint functors
@@ -105,7 +110,39 @@ theorem change_of_rings_adjunction
     Nonempty (ModuleCat.extendScalars f ⊣ ModuleCat.restrictScalars f) ∧
       IsExact (ModuleCat.restrictScalars f) ∧
         IsRightExact (ModuleCat.extendScalars f) := by
-  sorry
+  constructor
+  · exact ⟨ModuleCat.extendRestrictScalarsAdj f⟩
+  · constructor
+    · constructor
+      · change PreservesFiniteLimits (ModuleCat.restrictScalars f)
+        exact inferInstance
+      · change PreservesFiniteColimits (ModuleCat.restrictScalars f)
+        exact inferInstance
+    · let _ : Algebra R S := f.toAlgebra
+      let _ : (ModuleCat.extendScalars f).Additive := by
+        constructor
+        intro X Y g h
+        apply ModuleCat.ExtendScalars.hom_ext
+        intro x
+        dsimp [ModuleCat.extendScalars, ModuleCat.ExtendScalars.map']
+        rw [LinearMap.baseChange_add]
+        rfl
+      apply (Functor.preservesFiniteColimits_iff_forall_exact_map_and_epi
+        (ModuleCat.extendScalars f)).2
+      intro C hC
+      have hExact : Function.Exact C.f.hom C.g.hom :=
+        (CategoryTheory.ShortComplex.ShortExact.moduleCat_exact_iff_function_exact C).1 hC.exact
+      have hTensor : Function.Exact
+          (C.f.hom.baseChange S) (C.g.hom.baseChange S) :=
+        lTensor_exact S hExact hC.moduleCat_surjective_g
+      have hMap : (C.map (ModuleCat.extendScalars f)).Exact := by
+        apply (CategoryTheory.ShortComplex.ShortExact.moduleCat_exact_iff_function_exact _).2
+        change Function.Exact (C.f.hom.baseChange S) (C.g.hom.baseChange S)
+        exact hTensor
+      refine ⟨hMap, ?_⟩
+      apply (ModuleCat.epi_iff_surjective _).2
+      change Function.Surjective (C.g.hom.baseChange S)
+      exact LinearMap.baseChange_surjective S hC.moduleCat_surjective_g
 
 /- The source's final change-of-rings conclusion is the canonical flatness
    criterion for the restriction functor on module categories. -/
@@ -123,9 +160,115 @@ theorem zmod_prime_change_of_rings_counterexample
       ¬ Injective
         ((ModuleCat.restrictScalars (Int.castRingHom (ZMod p))).obj
           (ModuleCat.of (ZMod p) (ZMod p))) ∧
-      ¬ Functor.PreservesInjectiveObjects
+        ¬ Functor.PreservesInjectiveObjects
         (ModuleCat.restrictScalars (Int.castRingHom (ZMod p))) := by
-  sorry
+  letI : Fact (Nat.Prime p) := ⟨hp⟩
+  letI : IsArtinianRing (ZMod p) := isArtinian_of_finite
+  have hfield : Module.Injective (ZMod p) (ZMod p) := by
+    apply Module.injective_of_isSemisimpleRing
+  have hinj : Injective (ModuleCat.of (ZMod p) (ZMod p)) :=
+    (Module.injective_iff_injective_object (ZMod p) (ZMod p)).mp hfield
+  have hnotMod : ¬ Module.Injective ℤ (ZMod p) := by
+    intro hZ'
+    let q : ℤ →ₗ[ℤ] ℤ := LinearMap.lsmul ℤ ℤ (p : ℤ)
+    have hq : Function.Injective q := by
+      intro x y hxy
+      apply (mul_left_cancel₀ (show (p : ℤ) ≠ 0 by exact_mod_cast hp.ne_zero))
+      simpa [q] using hxy
+    let g : ℤ →ₗ[ℤ] ZMod p := LinearMap.toSpanSingleton ℤ _ 1
+    obtain ⟨l, hl⟩ := hZ'.out q hq g
+    have hl₁ := hl 1
+    have hl₁' : l (p : ℤ) = (1 : ZMod p) := by
+      simpa [q, g]
+        using hl₁
+    have hlzero : l (p : ℤ) = 0 := by
+      calc
+        l (p : ℤ) = (p : ZMod p) • l 1 := by
+          simpa using (l.map_smul (p : ℤ) (1 : ℤ))
+        _ = 0 := by rw [ZMod.natCast_self, zero_smul]
+    have h01 : (0 : ZMod p) = 1 := hlzero.symm.trans hl₁'
+    exact zero_ne_one h01
+  have hnot : ¬ Injective
+      ((ModuleCat.restrictScalars (Int.castRingHom (ZMod p))).obj
+        (ModuleCat.of (ZMod p) (ZMod p))) := by
+    intro hZ
+    let M := (ModuleCat.restrictScalars (Int.castRingHom (ZMod p))).obj
+      (ModuleCat.of (ZMod p) (ZMod p))
+    have hZ' : Module.Injective ℤ M :=
+      (Module.injective_iff_injective_object ℤ M).mpr hZ
+    let q : ℤ →ₗ[ℤ] ℤ := LinearMap.lsmul ℤ ℤ (p : ℤ)
+    have hq : Function.Injective q := by
+      intro x y hxy
+      apply (mul_left_cancel₀ (show (p : ℤ) ≠ 0 by exact_mod_cast hp.ne_zero))
+      simpa [q] using hxy
+    let oneM : M := show ZMod p from 1
+    let g : ℤ →ₗ[ℤ] M := LinearMap.toSpanSingleton ℤ M oneM
+    obtain ⟨l, hl⟩ := hZ'.out q hq g
+    have hq1 : q 1 = (p : ℤ) := by simp [q]
+    have hg1 : g 1 = oneM := by
+      exact LinearMap.toSpanSingleton_apply_one ℤ M oneM
+    have hl₁ := hl 1
+    rw [hq1, hg1] at hl₁
+    have hlzero : l (p : ℤ) = 0 := by
+      calc
+        l (p : ℤ) = l (p • (1 : ℤ)) := by simp
+        _ = p • l 1 := by exact map_nsmul l p 1
+        _ = 0 := by
+          exact (show p • (l 1 : ZMod p) = 0 by
+            rw [← Nat.cast_smul_eq_nsmul (R := ZMod p), ZMod.natCast_self, zero_smul])
+    have hbad := hlzero.symm.trans hl₁
+    have hdown : (0 : ZMod p) = 1 :=
+      congrArg (fun x : M => (x : ZMod p)) hbad
+    exact zero_ne_one hdown
+  refine ⟨hinj, hnot, ?_⟩
+  intro hpres
+  let I : ModuleCat.{u_1} (ZMod p) :=
+    ModuleCat.of (ZMod p) (ULift.{u_1} (ZMod p))
+  have hI : Injective I := by
+    apply (Module.injective_iff_injective_object (ZMod p) (ULift.{u_1} (ZMod p))).mp
+    exact Module.ulift_injective_of_injective (R := ZMod p) (M := ZMod p)
+      (Module.injective_of_isSemisimpleRing (ZMod p) (ZMod p))
+  have hInot : ¬ Injective
+      ((ModuleCat.restrictScalars (Int.castRingHom (ZMod p))).obj I) := by
+    intro hU
+    have hU' : Module.Injective ℤ
+        ((ModuleCat.restrictScalars (Int.castRingHom (ZMod p))).obj I) :=
+      (Module.injective_iff_injective_object ℤ _).mpr hU
+    let q : ULift.{u_1} ℤ →ₗ[ℤ] ULift.{u_1} ℤ :=
+      LinearMap.lsmul ℤ (ULift.{u_1} ℤ) (p : ℤ)
+    have hq : Function.Injective q := by
+      intro x y hxy
+      apply ULift.ext
+      apply (mul_left_cancel₀ (show (p : ℤ) ≠ 0 by exact_mod_cast hp.ne_zero))
+      simpa [q] using congrArg ULift.down hxy
+    let U := (ModuleCat.restrictScalars (Int.castRingHom (ZMod p))).obj I
+    let oneU : U := ULift.up (1 : ZMod p)
+    let g₀ : ℤ →ₗ[ℤ] U := LinearMap.toSpanSingleton ℤ U oneU
+    let g : ULift.{u_1} ℤ →ₗ[ℤ] U := g₀.comp ULift.moduleEquiv.toLinearMap
+    obtain ⟨l, hl⟩ := hU'.out q hq g
+    have hl₁ := hl ⟨1⟩
+    have hq1 : q ⟨1⟩ = (⟨p⟩ : ULift.{u_1} ℤ) := by
+      apply ULift.ext
+      simp [q]
+    have hg1 : g ⟨1⟩ = oneU := by
+      simpa [g, g₀, oneU] using
+        (LinearMap.toSpanSingleton_apply_one ℤ U oneU)
+    rw [hq1, hg1] at hl₁
+    have hlzero : l ⟨p⟩ = 0 := by
+      calc
+        l ⟨p⟩ = l (p • (⟨1⟩ : ULift.{u_1} ℤ)) := by
+          congr 1
+          apply ULift.ext
+          simp
+        _ = p • l ⟨1⟩ := by exact map_nsmul l p ⟨1⟩
+        _ = 0 := by
+          exact (show p • (l ⟨1⟩ : ULift.{u_1} (ZMod p)) = 0 by
+            rw [← Nat.cast_smul_eq_nsmul (R := ZMod p), ZMod.natCast_self, zero_smul])
+    have hbad := hlzero.symm.trans hl₁
+    have hdown : (0 : ZMod p) = 1 :=
+      congrArg (fun x : U => ULift.down x) hbad
+    exact zero_ne_one hdown
+  exact hInot (hpres.injective_obj hI)
 
 /-! ### Enough injectives and faithfulness -/
 
@@ -137,7 +280,33 @@ theorem adjoint_enough_injectives
     (hEnough : EnoughInjectives A)
     (hReflectsZero : ∀ B₀ : B, IsZero (v.obj B₀) → IsZero B₀) :
     EnoughInjectives B := by
-  sorry
+  letI : PreservesMonomorphisms v := hMono
+  refine ⟨fun B₀ => ?_⟩
+  obtain ⟨p⟩ := hEnough.presentation (v.obj B₀)
+  let g : B₀ ⟶ u.obj p.J := (hAdj.homEquiv B₀ p.J) p.f
+  have hcomp : v.map (kernel.ι g) ≫ p.f = 0 := by
+    apply (hAdj.homEquiv (kernel g) p.J).injective
+    rw [hAdj.homEquiv_naturality_left]
+    simp only [hAdj.homEquiv_unit, Functor.map_zero, comp_zero]
+    change kernel.ι g ≫ g = 0
+    exact kernel.condition g
+  have hzero : v.map (kernel.ι g) = 0 := by
+    apply (cancel_mono p.f).1
+    simpa using hcomp
+  have hvmono : Mono (v.map (kernel.ι g)) :=
+    @PreservesMonomorphisms.preserves B _ A _ v hMono _ _ (kernel.ι g) inferInstance
+  letI : Mono (v.map (kernel.ι g)) := hvmono
+  have hkernel : IsZero (v.obj (kernel g)) := by
+    rw [IsZero.iff_id_eq_zero]
+    apply (cancel_mono (v.map (kernel.ι g))).1
+    simp [hzero]
+  have hkernel' : IsZero (kernel g) := hReflectsZero _ hkernel
+  exact ⟨{
+    J := u.obj p.J
+    injective := hAdj.map_injective p.J p.injective
+    f := g
+    mono := Preadditive.mono_of_isZero_kernel g hkernel'
+  }⟩
 
 /- In the presence of the adjunction and preservation of monomorphisms, the
    source's objectwise condition (4) is exactly faithfulness of `v`. -/

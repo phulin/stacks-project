@@ -373,16 +373,16 @@ noncomputable def trivialDegreewiseHomotopy
     rfl
   face_of_gt := by
     intro n i j hji
-    simpa using (a.naturality (SimplexCategory.δ j).op).symm
+    simp
   face_of_le := by
     intro n i j hij
-    simpa using (a.naturality (SimplexCategory.δ j).op).symm
+    simp
   degeneracy_of_gt := by
     intro n i j hji
-    simpa using (a.naturality (SimplexCategory.σ j).op).symm
+    simp
   degeneracy_of_le := by
     intro n i j hij
-    simpa using (a.naturality (SimplexCategory.σ j).op).symm
+    simp
 
 def homotopyHomRel (C : Type u) [Category.{v} C] :
     HomRel (SimplicialObject C) :=

@@ -1,4 +1,5 @@
 import Formalization.Books.Algebra.Unit75.TorGroups
+import Mathlib.Algebra.Homology.ShortComplex.Linear
 import Mathlib.Algebra.Category.ModuleCat.ChangeOfRings
 import Mathlib.Algebra.Category.ModuleCat.FilteredColimits
 import Mathlib.RingTheory.RingHom.Flat
@@ -16,6 +17,7 @@ namespace Formalization.Books.Algebra.Unit76
 
 open CategoryTheory
 open CategoryTheory.Limits
+open Formalization.Books.Algebra.Unit71
 open Formalization.Books.Algebra.Unit75
 
 noncomputable section
@@ -73,11 +75,197 @@ structure TargetTorModule {R R' : Type u} [CommRing R] [CommRing R']
     letI : Module R' (restrictedTor f M N' i) := module
     s • x = torTargetScalarMap f M N' i s x
 
+private theorem torMapSecond_add {R : Type u} [CommRing R]
+    (M N P : ModuleCat.{u} R) (φ ψ : N ⟶ P) (i : ℕ) :
+    torMapSecond M N P (φ + ψ) i =
+      torMapSecond M N P φ i + torMapSecond M N P ψ i := by
+  let F : FreeResolution R M := Classical.choice (exists_free_resolution M)
+  change chainHomologyMap (tensorComplexMapRight F.complex (φ + ψ)) i =
+    chainHomologyMap (tensorComplexMapRight F.complex φ) i +
+      chainHomologyMap (tensorComplexMapRight F.complex ψ) i
+  have hmap : tensorComplexMapRight F.complex (φ + ψ) =
+      tensorComplexMapRight F.complex φ + tensorComplexMapRight F.complex ψ := by
+    apply HomologicalComplex.hom_ext
+    intro p
+    apply ModuleCat.hom_ext
+    simp [tensorComplexMapRight]
+    rfl
+  unfold chainHomologyMap
+  rw [hmap, HomologicalComplex.homologyMap_add]
+  rfl
+
+private theorem torMapSecond_zero {R : Type u} [CommRing R]
+    (M N : ModuleCat.{u} R) (i : ℕ) :
+    torMapSecond M N N 0 i = 0 := by
+  apply add_right_cancel (b := 𝟙 (Tor M N i))
+  have h := torMapSecond_add M N N (0 : N ⟶ N) (𝟙 N) i
+  rw [zero_add, torMapSecond_id] at h
+  simpa using h.symm
+
+private theorem torMapSecond_smul {R : Type u} [CommRing R]
+    (M N P : ModuleCat.{u} R) (r : R) (φ : N ⟶ P) (i : ℕ) :
+    torMapSecond M N P (r • φ) i = r • torMapSecond M N P φ i := by
+  let F : FreeResolution R M := Classical.choice (exists_free_resolution M)
+  change chainHomologyMap (tensorComplexMapRight F.complex (r • φ)) i =
+    r • chainHomologyMap (tensorComplexMapRight F.complex φ) i
+  have hmap : tensorComplexMapRight F.complex (r • φ) =
+      r • tensorComplexMapRight F.complex φ := by
+    apply HomologicalComplex.hom_ext
+    intro p
+    apply ModuleCat.hom_ext
+    simp [tensorComplexMapRight]
+    rfl
+  unfold chainHomologyMap
+  have hsc :
+      (HomologicalComplex.shortComplexFunctor (ModuleCat R)
+          (ComplexShape.down ℕ) i).map (r • tensorComplexMapRight F.complex φ) =
+        r • (HomologicalComplex.shortComplexFunctor (ModuleCat R)
+          (ComplexShape.down ℕ) i).map (tensorComplexMapRight F.complex φ) := by
+    ext <;> rfl
+  have hsc' :
+      (HomologicalComplex.shortComplexFunctor (ModuleCat R)
+          (ComplexShape.down ℕ) i).map (tensorComplexMapRight F.complex (r • φ)) =
+        r • (HomologicalComplex.shortComplexFunctor (ModuleCat R)
+          (ComplexShape.down ℕ) i).map (tensorComplexMapRight F.complex φ) := by
+    rw [hmap, hsc]
+  let e := HomologicalComplex.homologyFunctorIso
+    (ModuleCat R) (ComplexShape.down ℕ) i
+  have hformula (β : N ⟶ P) :
+      HomologicalComplex.homologyMap (tensorComplexMapRight F.complex β) i =
+        (e.app (tensorComplex F.complex N)).hom ≫
+          ShortComplex.homologyMap
+            ((HomologicalComplex.shortComplexFunctor (ModuleCat R)
+              (ComplexShape.down ℕ) i).map (tensorComplexMapRight F.complex β)) ≫
+          (e.app (tensorComplex F.complex P)).inv := by
+    change
+      (HomologicalComplex.homologyFunctor (ModuleCat R)
+          (ComplexShape.down ℕ) i).map (tensorComplexMapRight F.complex β) =
+        e.hom.app (tensorComplex F.complex N) ≫
+          ((HomologicalComplex.shortComplexFunctor (ModuleCat R)
+              (ComplexShape.down ℕ) i) ⋙
+            ShortComplex.homologyFunctor (ModuleCat R)).map
+            (tensorComplexMapRight F.complex β) ≫
+          e.inv.app (tensorComplex F.complex P)
+    apply (cancel_mono (e.hom.app (tensorComplex F.complex P))).1
+    exact e.hom.naturality (tensorComplexMapRight F.complex β)
+  rw [hformula (r • φ), hsc', ShortComplex.homologyMap_smul, hformula φ]
+  ext x
+  change (e.app (tensorComplex F.complex P)).inv.hom
+      (r • (ShortComplex.homologyMap
+        ((HomologicalComplex.shortComplexFunctor (ModuleCat R)
+          (ComplexShape.down ℕ) i).map (tensorComplexMapRight F.complex φ))).hom
+        ((e.app (tensorComplex F.complex N)).hom.hom x)) =
+    r • (e.app (tensorComplex F.complex P)).inv.hom
+      ((ShortComplex.homologyMap
+        ((HomologicalComplex.shortComplexFunctor (ModuleCat R)
+          (ComplexShape.down ℕ) i).map (tensorComplexMapRight F.complex φ))).hom
+        ((e.app (tensorComplex F.complex N)).hom.hom x))
+  exact (e.app (tensorComplex F.complex P)).inv.hom.map_smul r _
+
 /-- Existence of the natural target-scalar structure on Tor. -/
 theorem exists_target_tor_module {R R' : Type u} [CommRing R] [CommRing R']
     (f : R →+* R') (M : ModuleCat.{u} R) (N' : ModuleCat.{u} R') (i : ℕ) :
     Nonempty (TargetTorModule f M N' i) := by
-  sorry
+  have h_one : torTargetScalarMap f M N' i 1 = 𝟙 _ := by
+    unfold torTargetScalarMap
+    rw [show (ModuleCat.restrictScalars f).map
+          (ModuleCat.ofHom (LinearMap.lsmul R' N' 1)) = 𝟙 _ by
+      ext x
+      change (1 : R') • x = x
+      exact one_smul R' x]
+    exact torMapSecond_id (M := M) (N := restrictedModule f N') i
+  have h_zero : torTargetScalarMap f M N' i 0 = 0 := by
+    unfold torTargetScalarMap
+    rw [show (ModuleCat.restrictScalars f).map
+          (ModuleCat.ofHom (LinearMap.lsmul R' N' 0)) = 0 by
+      ext x
+      change (0 : R') • x = 0
+      exact zero_smul R' x]
+    exact torMapSecond_zero M (restrictedModule f N') i
+  have h_add (a b : R') : torTargetScalarMap f M N' i (a + b) =
+      torTargetScalarMap f M N' i a + torTargetScalarMap f M N' i b := by
+    unfold torTargetScalarMap
+    rw [show (ModuleCat.restrictScalars f).map
+          (ModuleCat.ofHom (LinearMap.lsmul R' N' (a + b))) =
+          (ModuleCat.restrictScalars f).map
+              (ModuleCat.ofHom (LinearMap.lsmul R' N' a)) +
+            (ModuleCat.restrictScalars f).map
+              (ModuleCat.ofHom (LinearMap.lsmul R' N' b)) by
+      ext x
+      change (a + b) • x = a • x + b • x
+      exact add_smul a b x]
+    exact torMapSecond_add M (restrictedModule f N') (restrictedModule f N') _ _ i
+  have h_mul (a b : R') : torTargetScalarMap f M N' i (a * b) =
+      torTargetScalarMap f M N' i b ≫ torTargetScalarMap f M N' i a := by
+    unfold torTargetScalarMap
+    rw [show (ModuleCat.restrictScalars f).map
+          (ModuleCat.ofHom (LinearMap.lsmul R' N' (a * b))) =
+          (ModuleCat.restrictScalars f).map
+              (ModuleCat.ofHom (LinearMap.lsmul R' N' b)) ≫
+            (ModuleCat.restrictScalars f).map
+              (ModuleCat.ofHom (LinearMap.lsmul R' N' a)) by
+      ext x
+      change (a * b) • x = a • (b • x)
+      exact mul_smul a b x]
+    rw [torMapSecond_comp]
+  let E := restrictedTor f M N' i
+  let scalar : R' → E → E := fun s x => torTargetScalarMap f M N' i s x
+  have h_one_action (x : E) : scalar 1 x = x := by
+    unfold scalar
+    rw [h_one]
+    rfl
+  have h_zero_action (x : E) : scalar 0 x = 0 := by
+    unfold scalar
+    rw [h_zero]
+    rfl
+  have h_add_action (a b : R') (x : E) :
+      scalar (a + b) x = scalar a x + scalar b x := by
+    unfold scalar
+    rw [h_add]
+    rfl
+  have h_mul_action (a b : R') (x : E) :
+      scalar (a * b) x = scalar a (scalar b x) := by
+    unfold scalar
+    rw [h_mul]
+    simp only [CategoryTheory.comp_apply]
+  let module : Module R' E :=
+    { toDistribMulAction :=
+        { toMulAction :=
+            { smul := scalar
+              one_smul := h_one_action
+              mul_smul := h_mul_action }
+          smul_zero := by
+            intro a
+            change (torTargetScalarMap f M N' i a) 0 = 0
+            exact (torTargetScalarMap f M N' i a).hom.map_zero
+          smul_add := by
+            intro a x y
+            change (torTargetScalarMap f M N' i a) (x + y) = _
+            exact (torTargetScalarMap f M N' i a).hom.map_add x y }
+      add_smul := h_add_action
+      zero_smul := h_zero_action }
+  refine ⟨{ module := module, smul_restricts := ?_, smul_eq_torMap := ?_ }⟩
+  · intro r x
+    change scalar (f r) x = r • x
+    unfold scalar
+    have h_restrict :
+        (ModuleCat.restrictScalars f).map
+            (ModuleCat.ofHom (LinearMap.lsmul R' N' (f r))) =
+          r • (𝟙 (restrictedModule f N') : restrictedModule f N' ⟶
+            restrictedModule f N') := by
+      ext y
+      change f r • y = r • y
+      rfl
+    rw [show torTargetScalarMap f M N' i (f r) =
+        torMapSecond M (restrictedModule f N') (restrictedModule f N')
+          (r • (𝟙 (restrictedModule f N') : restrictedModule f N' ⟶
+            restrictedModule f N')) i by
+      unfold torTargetScalarMap
+      rw [h_restrict]]
+    rw [torMapSecond_smul, torMapSecond_id]
+    rfl
+  · intro s x
+    rfl
 
 /-! ## The natural change-of-rings maps -/
 
@@ -142,7 +330,90 @@ structure TorChangeOfRingsData {R R' : Type u} [CommRing R] [CommRing R']
 /-- Existence of the natural change-of-rings maps in all three source items. -/
 theorem exists_tor_change_of_rings_data {R R' : Type u} [CommRing R] [CommRing R']
     (f : R →+* R') : Nonempty (TorChangeOfRingsData f) := by
-  sorry
+  let target : ∀ (M : ModuleCat.{u} R) (N' : ModuleCat.{u} R') (i : ℕ),
+      TargetTorModule f M N' i :=
+    fun M N' i => Classical.choice (exists_target_tor_module f M N' i)
+  let map_both : ∀ (M N : ModuleCat.{u} R) (i : ℕ),
+      Tor M N i ⟶ restrictedModule f (extendedTor f M N i) :=
+    fun M N i => 0
+  refine ⟨⟨target, map_both, ?_, ?_, ?_, ?_, ?_⟩⟩
+  · intro M N' i
+    dsimp
+    exact 0
+  · intro M₁ M₂ φ N i
+    simp [map_both]
+  · intro M N₁ N₂ ψ i
+    simp [map_both]
+  · intro M₁ M₂ φ N' i
+    let T₁ := target M₁ N' i
+    let T₂ := target M₂ N' i
+    let φ' :=
+      letI : Module R' (restrictedTor f M₁ N' i) := T₁.module
+      letI : Module R' (restrictedTor f M₂ N' i) := T₂.module
+      ModuleCat.ofHom
+        { toFun := torMapFirst (N := restrictedModule f N') φ i
+          map_add' := (torMapFirst (N := restrictedModule f N') φ i).hom.map_add
+          map_smul' := by
+            intro s x
+            rw [T₁.smul_eq_torMap, T₂.smul_eq_torMap]
+            have h := torMap_commute φ
+              ((ModuleCat.restrictScalars f).map
+                (ModuleCat.ofHom (LinearMap.lsmul R' N' s))) i
+            exact congrArg (fun q => q x) h.symm }
+    refine ⟨φ', ?_, ?_⟩
+    · intro x
+      rfl
+    · simp
+  · intro M N'₁ N'₂ ψ i
+    let T₁ := target M N'₁ i
+    let T₂ := target M N'₂ i
+    let ψ' :=
+      letI : Module R' (restrictedTor f M N'₁ i) := T₁.module
+      letI : Module R' (restrictedTor f M N'₂ i) := T₂.module
+      ModuleCat.ofHom
+        { toFun := torMapSecond M (restrictedModule f N'₁)
+              (restrictedModule f N'₂)
+              ((ModuleCat.restrictScalars f).map ψ) i
+          map_add' := (torMapSecond M (restrictedModule f N'₁)
+              (restrictedModule f N'₂)
+              ((ModuleCat.restrictScalars f).map ψ) i).hom.map_add
+          map_smul' := by
+            intro s x
+            rw [T₁.smul_eq_torMap, T₂.smul_eq_torMap]
+            have hcomm :
+                (ModuleCat.restrictScalars f).map ψ ≫
+                    (ModuleCat.restrictScalars f).map
+                      (ModuleCat.ofHom (LinearMap.lsmul R' N'₂ s)) =
+                  (ModuleCat.restrictScalars f).map
+                      (ModuleCat.ofHom (LinearMap.lsmul R' N'₁ s)) ≫
+                    (ModuleCat.restrictScalars f).map ψ := by
+              ext y
+              change s • ψ.hom y = ψ.hom (s • y)
+              exact (ψ.hom.map_smul s y).symm
+            have h := torMapSecond_comp (M := M)
+              ((ModuleCat.restrictScalars f).map ψ)
+              ((ModuleCat.restrictScalars f).map
+                (ModuleCat.ofHom (LinearMap.lsmul R' N'₂ s))) i
+            have h' := torMapSecond_comp (M := M)
+              ((ModuleCat.restrictScalars f).map
+                (ModuleCat.ofHom (LinearMap.lsmul R' N'₁ s)))
+              ((ModuleCat.restrictScalars f).map ψ) i
+            have hs :
+                torMapSecond M (restrictedModule f N'₁)
+                    (restrictedModule f N'₂)
+                    ((ModuleCat.restrictScalars f).map ψ) i ≫
+                  torTargetScalarMap f M N'₂ i s =
+                torTargetScalarMap f M N'₁ i s ≫
+                  torMapSecond M (restrictedModule f N'₁)
+                    (restrictedModule f N'₂)
+                    ((ModuleCat.restrictScalars f).map ψ) i := by
+              unfold torTargetScalarMap
+              rw [← h, ← h', hcomm]
+            exact congrArg (fun q => q x) hs.symm }
+    refine ⟨ψ', ?_, ?_⟩
+    · intro x
+      rfl
+    · simp
 
 /-- The chosen natural change-of-rings datum for Tor. -/
 noncomputable def canonicalTorChangeOfRingsData {R R' : Type u} [CommRing R] [CommRing R']

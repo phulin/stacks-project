@@ -132,21 +132,103 @@ theorem dimension_is_length
     letI := hM.module
     Module.length R M = (Module.rank (R ⧸ m) M).toENat ∧
       (Module.length R M < ⊤ ↔ Module.Finite R M) := by
-  sorry
+  exact (letI := hM.module; letI := Ideal.Quotient.field m; by
+    have hlen : Module.length R M = Module.length (R ⧸ m) M :=
+      Module.length_eq_of_surjective (R := R ⧸ m) (S := R) (M := M) m.mkQ_surjective
+    have hleft : Module.length R M = (Module.rank (R ⧸ m) M).toENat := by
+      rw [hlen]
+      exact Module.length_eq_rank (R ⧸ m) M
+    refine ⟨hleft, ?_⟩
+    rw [show Module.length R M < ⊤ ↔ Module.length (R ⧸ m) M < ⊤ by rw [hlen]]
+    constructor
+    · intro h
+      have hfiniteQ : Module.Finite (R ⧸ m) M := finite_length_finite h
+      have hfiniteRQuot : Module.Finite R (R ⧸ m) :=
+        Module.Finite.of_surjective (Algebra.linearMap R (R ⧸ m)) m.mkQ_surjective
+      exact @Module.Finite.trans R (R ⧸ m) M _ _ _ _ _ _ _ hfiniteRQuot hfiniteQ
+    · intro h
+      have hfiniteQ : Module.Finite (R ⧸ m) M :=
+        @Module.Finite.of_restrictScalars_finite R (R ⧸ m) M _ _ _ _ _ _ _ h
+      have hlenQ : Module.length (R ⧸ m) M = Module.finrank (R ⧸ m) M :=
+        @Module.length_eq_finrank (R ⧸ m) M _ _ _ hfiniteQ
+      rw [hlenQ]
+      simp)
 
 theorem length_localize
     {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
     (S : Submonoid R) :
     Module.length (Localization S) (LocalizedModule S M) ≤
       Module.length R M := by
-  sorry
+  let gi := Submodule.localized'gi (Localization S) S (LocalizedModule.mkLinearMap S M)
+  let e : Submodule (Localization S) (LocalizedModule S M) ↪o Submodule R M :=
+    { toFun := fun N => Submodule.comap (LocalizedModule.mkLinearMap S M)
+          (N.restrictScalars R)
+      inj' := GaloisInsertion.u_injective gi
+      map_rel_iff' := GaloisInsertion.u_le_u_iff gi }
+  rw [← WithBot.coe_le_coe, Module.coe_length, Module.coe_length]
+  exact Order.krullDim_le_of_orderEmbedding e
 
 theorem length_finite_of_fg_maximalIdeal
     {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M]
     (m : Ideal R) (hm : m.IsMaximal) (hm_fg : m.FG) [Module.Finite R M]
     (n : ℕ) (hpow : m ^ n • (⊤ : Submodule R M) = ⊥) :
     Module.length R M < ⊤ := by
-  sorry
+  have aux : ∀ (N : Type _), ∀ [AddCommGroup N] [Module R N] [Module.Finite R N],
+      ∀ k : ℕ, m ^ k • (⊤ : Submodule R N) = ⊥ → IsFiniteLength R N := by
+    intro N _ _ _ k
+    induction k generalizing N with
+    | zero =>
+        intro hN
+        have htop : (⊤ : Submodule R N) = ⊥ := by simpa using hN
+        have hsub : Subsingleton N :=
+          ⟨fun x y => by
+            have hx : x ∈ (⊥ : Submodule R N) := by
+              rw [← htop]
+              exact Submodule.mem_top
+            have hy : y ∈ (⊥ : Submodule R N) := by
+              rw [← htop]
+              exact Submodule.mem_top
+            simpa using hx.trans hy.symm⟩
+        exact @IsFiniteLength.of_subsingleton R _ N _ _ hsub
+    | succ k ih =>
+        intro hN
+        let P : Submodule R N := m • (⊤ : Submodule R N)
+        have hPfg : P.FG :=
+          Submodule.FG.smul hm_fg Module.Finite.fg_top
+        have hPfin : Module.Finite R P := Module.Finite.of_fg hPfg
+        have hPpow : m ^ k • (⊤ : Submodule R P) = ⊥ := by
+          rw [eq_bot_iff]
+          intro x hx
+          have hxmap : (x : N) ∈
+              (m ^ k • (⊤ : Submodule R P)).map P.subtype := by
+            exact ⟨x, hx, rfl⟩
+          have hmap : (m ^ k • (⊤ : Submodule R P)).map P.subtype = ⊥ := by
+            rw [Submodule.map_smul'', Submodule.map_subtype_top]
+            simpa [P, pow_succ, Submodule.mul_smul] using hN
+          rw [hmap] at hxmap
+          have hxzero : (x : N) = 0 := by simpa using hxmap
+          exact Subtype.ext hxzero
+        have hPfinlen : IsFiniteLength R P :=
+          @ih P _ _ hPfin hPpow
+        have hQfin : Module.Finite R (N ⧸ P) :=
+          Module.Finite.of_surjective P.mkQ P.mkQ_surjective
+        have hQtorsion : Module.IsTorsionBySet R (N ⧸ P) m := by
+          simpa [P] using Module.isTorsionBySet_quotient_ideal_smul N m
+        have hQlt : Module.length R (N ⧸ P) < ⊤ :=
+          (@dimension_is_length R (N ⧸ P) _ _ _ m hm hQtorsion).2.mpr hQfin
+        have hQfinlen : IsFiniteLength R (N ⧸ P) :=
+          Module.length_ne_top_iff.mp (ne_of_lt hQlt)
+        have hPnoeth := (isFiniteLength_iff_isNoetherian_isArtinian.mp hPfinlen).1
+        have hPart := (isFiniteLength_iff_isNoetherian_isArtinian.mp hPfinlen).2
+        have hQnoeth := (isFiniteLength_iff_isNoetherian_isArtinian.mp hQfinlen).1
+        have hQart := (isFiniteLength_iff_isNoetherian_isArtinian.mp hQfinlen).2
+        exact isFiniteLength_iff_isNoetherian_isArtinian.mpr
+          ⟨(isNoetherian_iff_submodule_quotient P).mpr ⟨hPnoeth, hQnoeth⟩,
+            (isArtinian_iff_submodule_quotient P).mpr ⟨hPart, hQart⟩⟩
+  have hfin : IsFiniteLength R M :=
+    @aux M _ _ (inferInstance : Module.Finite R M) n hpow
+  rw [lt_top_iff_ne_top]
+  exact Module.length_ne_top_iff.mpr hfin
 
 /- The source's parenthetical Noetherian example is already supplied by
    `Ideal.fg_of_isNoetherianRing`, so this theorem keeps the stated FG
@@ -194,7 +276,21 @@ theorem compositionSeries_simple_factors
           ((s (Fin.succ i) ⧸
               Submodule.comap (s (Fin.succ i)).subtype (s (Fin.castSucc i)))
             ≃ₗ[R] R ⧸ m i) := by
-  sorry
+  classical
+  have hst : s.head = ⊥ ∧ s.last = ⊤ := ⟨hs, ht⟩
+  let m (i : Fin s.length) : Ideal R :=
+    Classical.choose
+      (isSimpleModule_iff_quot_maximal.mp
+        ((covBy_iff_quot_is_simple (s.step i).le).mp (s.step i)))
+  refine ⟨m, ?_⟩
+  intro i
+  have hi := (covBy_iff_quot_is_simple (s.step i).le).mp (s.step i)
+  have hmax := Classical.choose_spec
+    (isSimpleModule_iff_quot_maximal.mp hi)
+  refine ⟨?_, ?_, ?_⟩
+  · simpa using hi
+  · simpa [m] using hmax.1
+  · simpa [m] using hmax.2
 
 theorem localized_residueField
     {R : Type*} [CommRing R] (m m' : Ideal R)

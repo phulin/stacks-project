@@ -76,13 +76,70 @@ noncomputable def presheafColimitSectionsIso {X : TopCat.{v}} {J : Type v}
 /-- Stalks preserve finite limits of set-valued presheaves. -/
 theorem presheafStalkPreservesFiniteLimits {X : TopCat.{v}} (x : X) :
     PreservesFiniteLimits (TopCat.Presheaf.stalkFunctor (Type v) x) := by
-  sorry
+  dsimp [TopCat.Presheaf.stalkFunctor]
+  let : PreservesFiniteLimits
+      ((Functor.whiskeringLeft (OpenNhds x)ᵒᵖ (Opens X)ᵒᵖ (Type v)).obj
+        (OpenNhds.inclusion x).op) := by
+    infer_instance
+  let : PreservesFiniteLimits
+      (colim : ((OpenNhds x)ᵒᵖ ⥤ Type v) ⥤ Type v) := by
+    infer_instance
+  exact comp_preservesFiniteLimits _ _
 
 /-- Stalks do not preserve arbitrary limits in general. -/
 theorem presheafStalkDoesNotPreserveAllLimits :
     ∃ (X : TopCat.{v}) (x : X),
       ¬ PreservesLimits (TopCat.Presheaf.stalkFunctor (Type v) x) := by
-  sorry
+  let X : TopCat.{v} := TopCat.of (CofiniteTopology (ULift.{v} ℕ))
+  let x : X := CofiniteTopology.of ⟨0⟩
+  let G : Discrete (OpenNhds x) ⥤ TopCat.Presheaf (Type v) X :=
+    Discrete.functor (fun U => coyoneda.obj (op (op U.1)))
+  refine ⟨X, x, ?_⟩
+  intro h
+  let _ : PreservesLimits (TopCat.Presheaf.stalkFunctor (Type v) x) := h
+  have hp := isLimitOfPreserves
+    (TopCat.Presheaf.stalkFunctor (Type v) x) (limit.isLimit G)
+  let legs : ∀ U : Discrete (OpenNhds x), PUnit ⟶
+      (TopCat.Presheaf.stalkFunctor (Type v) x).obj (G.obj U) := fun U =>
+    ↾fun _ : PUnit => colimit.ι ((OpenNhds.inclusion x).op ⋙ G.obj U)
+      (op U.as) (𝟙 _)
+  let c : Cone (G ⋙ TopCat.Presheaf.stalkFunctor (Type v) x) :=
+    { pt := PUnit
+      π := Discrete.natTrans legs }
+  let a := hp.lift c PUnit.unit
+  obtain ⟨W, z, hz⟩ := Types.jointly_surjective' a
+  have hsmaller : ∀ W : OpenNhds x, ∃ U : OpenNhds x, U ≤ W ∧ ¬ W ≤ U := by
+    intro W
+    have hWc : (W.1 : Set X)ᶜ.Finite := by
+      exact (CofiniteTopology.isOpen_iff.mp W.1.isOpen) ⟨x, W.2⟩
+    have hWinf : (W.1 : Set X).Infinite := Set.infinite_of_finite_compl hWc
+    have hnot : ¬ (W.1 : Set X) ⊆ ({x} : Set X) := by
+      intro hsub
+      apply hWinf
+      exact (Set.finite_singleton x).subset hsub
+    obtain ⟨y, hyW, hyx⟩ := Set.not_subset.mp hnot
+    have hxy : x ≠ y := by
+      have hyx' : y ≠ x := by simpa [Set.mem_singleton_iff] using hyx
+      exact hyx'.symm
+    let U : OpenNhds x :=
+      ⟨⟨(W.1 : Set X) \ {y}, by
+          rw [CofiniteTopology.isOpen_iff']
+          right
+          rw [Set.compl_sdiff]
+          exact (Set.finite_singleton y).union hWc⟩,
+        ⟨W.2, by simpa [Set.mem_singleton_iff] using hxy⟩⟩
+    refine ⟨U, ?_, ?_⟩
+    · change (U.1 : Set X) ⊆ (W.1 : Set X)
+      intro z hz
+      exact hz.1
+    · intro hWU
+      change (W.1 : Set X) ⊆ (U.1 : Set X) at hWU
+      have hyU : y ∈ (U.1 : Set X) := hWU hyW
+      exact hyU.2 (by simp)
+  obtain ⟨U, hUW, hnWU⟩ := hsmaller W.unop
+  have q := (limit.π G (Discrete.mk U)).app (op W.unop.1) z
+  have hq : (op U.1 ⟶ op (W.unop.1)) := q
+  exact hnWU (leOfHom hq.unop)
 
 /-- The finite-diagram stalk/limit comparison. -/
 noncomputable def presheafFiniteLimitStalkIso {X : TopCat.{v}} {J : Type v}

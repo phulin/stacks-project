@@ -1,4 +1,6 @@
 import Mathlib.Algebra.Homology.ShortComplex.ModuleCat
+import Mathlib.Algebra.Homology.HomologySequence
+import Mathlib.RingTheory.Flat.CategoryTheory
 import Mathlib.LinearAlgebra.Eigenspace.Basic
 import Mathlib.LinearAlgebra.Semisimple
 import Mathlib.LinearAlgebra.TensorProduct.Map
@@ -446,6 +448,31 @@ segment. -/
 theorem exists_tor_long_exact_sequence {R : Type u} [CommRing R]
     (M : ModuleCat.{u} R) (S : ShortComplex (ModuleCat.{u} R))
     (hS : S.ShortExact) : Nonempty (TorLongExactSequence M S) := by
+  classical
+  let F : FreeResolution R M := Classical.choice (exists_free_resolution M)
+  let T : ShortComplex (HomologicalComplex (ModuleCat.{u} R) (ComplexShape.down ℕ)) :=
+    ShortComplex.mk (tensorComplexMapRight F.complex S.f) (tensorComplexMapRight F.complex S.g) (by
+      apply HomologicalComplex.hom_ext
+      intro i
+      apply ModuleCat.hom_ext
+      change ((S.g.hom).lTensor (F.complex.X i)).comp
+          ((S.f.hom).lTensor (F.complex.X i)) = 0
+      rw [← LinearMap.lTensor_comp]
+      rw [show (S.g.hom.comp S.f.hom) = 0 by
+        exact congrArg (fun q => q.hom) S.zero]
+      simp)
+  have hT : T.ShortExact := by
+    apply HomologicalComplex.shortExact_of_degreewise_shortExact
+    intro i
+    dsimp [T, tensorComplexMapRight]
+    apply ModuleCat.shortComplex_shortExact
+    · rw [← ShortComplex.ShortExact.moduleCat_exact_iff_function_exact]
+      letI : Module.Free R (F.complex.X i) := F.free i
+      exact Module.Flat.lTensor_shortComplex_exact (F.complex.X i) S hS.exact
+    · letI : Module.Free R (F.complex.X i) := F.free i
+      exact Module.Flat.lTensor_preserves_injective_linearMap S.f.hom
+        hS.moduleCat_injective_f
+    · exact LinearMap.lTensor_surjective _ hS.moduleCat_surjective_g
   sorry
 
 /-! ## Double complexes and the two quotient complexes -/
@@ -494,13 +521,31 @@ noncomputable def upDifferential {R : Type u} [CommRing R]
 theorem rightDifferential_comp_zero {R : Type u} [CommRing R]
     (A : DoubleComplex R) (j : ℕ) :
     rightDifferential A (j + 1) ≫ rightDifferential A j = 0 := by
-  sorry
+  change
+    (cokernel.map (A.d 0 (j + 1 + 1)) (A.d 0 (j + 1))
+        (A.delta 1 (j + 1)) (A.delta 0 (j + 1)) (A.comm 0 (j + 1)) ≫
+      cokernel.map (A.d 0 (j + 1)) (A.d 0 j)
+        (A.delta 1 j) (A.delta 0 j) (A.comm 0 j)) = 0
+  apply (cancel_epi (cokernel.π (A.d 0 (j + 1 + 1)))).1
+  rw [← Category.assoc, cokernel.π_desc, Category.assoc, cokernel.π_desc]
+  rw [← Category.assoc]
+  rw [A.delta_sq]
+  simp only [zero_comp, comp_zero]
 
 /-- Consecutive induced up differentials compose to zero. -/
 theorem upDifferential_comp_zero {R : Type u} [CommRing R]
     (A : DoubleComplex R) (i : ℕ) :
     upDifferential A (i + 1) ≫ upDifferential A i = 0 := by
-  sorry
+  change
+    (cokernel.map (A.delta (i + 1 + 1) 0) (A.delta (i + 1) 0)
+        (A.d (i + 1) 1) (A.d (i + 1) 0) (A.comm (i + 1) 0).symm ≫
+      cokernel.map (A.delta (i + 1) 0) (A.delta i 0)
+        (A.d i 1) (A.d i 0) (A.comm i 0).symm) = 0
+  apply (cancel_epi (cokernel.π (A.delta (i + 1 + 1) 0))).1
+  rw [← Category.assoc, cokernel.π_desc, Category.assoc, cokernel.π_desc]
+  rw [← Category.assoc]
+  rw [A.d_sq]
+  simp only [zero_comp, comp_zero]
 
 /-- The right quotient complex `R(A)_•`. -/
 noncomputable def rightComplex {R : Type u} [CommRing R]
@@ -624,7 +669,21 @@ theorem rightTermMap_comm {R : Type u} [CommRing R]
     {A B : DoubleComplex R} (Φ : DoubleComplexMap A B) (j : ℕ) :
     rightDifferential A j ≫ rightTermMap Φ j =
       rightTermMap Φ (j + 1) ≫ rightDifferential B j := by
-  sorry
+  change
+    (cokernel.map (A.d 0 (j + 1)) (A.d 0 j)
+        (A.delta 1 j) (A.delta 0 j) (A.comm 0 j) ≫
+      cokernel.map (A.d 0 j) (B.d 0 j)
+        (Φ.f 1 j) (Φ.f 0 j) (Φ.d_comm 0 j)) =
+    (cokernel.map (A.d 0 (j + 1)) (B.d 0 (j + 1))
+        (Φ.f 1 (j + 1)) (Φ.f 0 (j + 1)) (Φ.d_comm 0 (j + 1)) ≫
+      cokernel.map (B.d 0 (j + 1)) (B.d 0 j)
+        (B.delta 1 j) (B.delta 0 j) (B.comm 0 j))
+  apply (cancel_epi (cokernel.π (A.d 0 (j + 1)))).1
+  rw [← Category.assoc, cokernel.π_desc, Category.assoc, cokernel.π_desc]
+  conv_rhs => rw [← Category.assoc]
+  rw [cokernel.π_desc]
+  conv_rhs => rw [Category.assoc, cokernel.π_desc]
+  exact congrArg (fun q => q ≫ cokernel.π (B.d 0 j)) (Φ.delta_comm 0 j)
 
 /-- Naturality of the induced up differentials. -/
 theorem upTermMap_comm {R : Type u} [CommRing R]

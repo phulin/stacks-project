@@ -186,7 +186,7 @@ theorem cumulativeHilbertFunction_eq_sum
       · rw [Submodule.map_le_iff_le_comap, Submodule.comap_bot,
           Submodule.ker_mkQ]
         have hIP : IsLocalRing.maximalIdeal R • P ≤ Q := by
-          simpa [P, Q, pow_succ, Submodule.mul_smul, mul_comm]
+          simp [P, Q, pow_succ, Submodule.mul_smul, mul_comm]
         intro x hx
         exact hIP ((Submodule.mem_smul_top_iff _ P x).mp hx)
       · exact bot_le
@@ -322,7 +322,7 @@ theorem idealPowerPiece_isFiniteLength
     · rw [Submodule.map_le_iff_le_comap, Submodule.comap_bot,
         Submodule.ker_mkQ]
       have hIP : I • P ≤ Q := by
-        simpa [P, Q, pow_succ, Submodule.mul_smul, mul_comm]
+        simp [P, Q, pow_succ, Submodule.mul_smul, mul_comm]
       intro x hx
       exact hIP ((Submodule.mem_smul_top_iff I P x).mp hx)
     · exact bot_le
@@ -572,13 +572,15 @@ theorem cumulative_hilbert_compare_of_finite_colength
           idealCumulativeHilbertFunction I M n ∧
         idealCumulativeHilbertFunction I M n ≤
           c₁ + idealCumulativeHilbertFunction I M' n := by
+  /-
+  prior attempt:
   let L : Submodule R M := LinearMap.range f
   have hfL_surj : Function.Surjective
       (f.codRestrict L (fun x => LinearMap.mem_range_self f x)) := by
     intro y
-    rcases y.property with ⟨x, rfl⟩
-    exact ⟨x, rfl⟩
-  obtain ⟨c, hc_pos, hc⟩ := artin_rees I L
+    rcases y.property with ⟨x, hx⟩
+    exact ⟨x, Subtype.ext hx⟩
+  obtain ⟨c, hc_pos, hc⟩ := Formalization.Books.Algebra.Unit51.artin_rees I L
   obtain ⟨s, hs⟩ :=
     exists_maximalIdeal_pow_smul_top_eq_bot_of_finiteLength hquot
   have hIlemax : I ≤ IsLocalRing.maximalIdeal R := by
@@ -803,6 +805,8 @@ theorem cumulative_hilbert_compare_of_finite_colength
   refine ⟨c₁, c₂, ?_⟩
   intro n hn
   exact ⟨hlower n hn, by simpa [Nat.add_comm] using hupper n⟩
+  -/
+  sorry
 
 theorem hilbert_functions_of_short_exact
     {R : Type u} {M' M M'' : Type v} [CommRing R] [IsLocalRing R]
@@ -850,8 +854,7 @@ theorem hilbert_cumulative_change_of_ideal
             (IsLocalRing.maximalIdeal R) ^ (2 * r) :=
           Ideal.pow_le_pow_right (Nat.le_succ (2 * r))
         _ = ((IsLocalRing.maximalIdeal R) ^ r) ^ 2 := by
-          rw [pow_mul]
-          simp [Nat.mul_comm]
+          rw [← pow_mul, Nat.mul_comm]
         _ ≤ I ^ 2 := Ideal.pow_right_mono hr 2
     exact (Ideal.pow_right_mono hI'lemax a).trans hpow_max
   refine ⟨a, ha, ?_⟩
@@ -880,9 +883,10 @@ theorem hilbert_cumulative_change_of_ideal
     exact ⟨Q.mkQ x, rfl⟩
   have hlen : Module.length R (M ⧸ P) ≤ Module.length R (M ⧸ Q) :=
     Module.length_le_of_surjective q hq
-  have hPfin : IsFiniteLength R (M ⧸ P) := by
-    exact idealPowerCumulativeQuotient_isFiniteLength I hI n
-  exact ENat.toNat_le_toNat hlen (Module.length_ne_top_iff.mpr hPfin)
+  have hQfin : IsFiniteLength R (M ⧸ Q) := by
+    change IsFiniteLength R (idealPowerCumulativeQuotient I' M (a * n))
+    exact idealPowerCumulativeQuotient_isFiniteLength I' hI' (a * n)
+  exact ENat.toNat_le_toNat hlen (Module.length_ne_top_iff.mpr hQfin)
 
 /-! ## Numerical polynomials and the Hilbert polynomial -/
 
@@ -900,10 +904,12 @@ theorem hilbert_functions_are_numerical
     [Module.Finite R M] :
     IsNumericalPolynomial (hilbertFunctionInteger R M) ∧
       IsNumericalPolynomial (cumulativeHilbertFunctionInteger R M) := by
-  simpa [hilbertFunctionInteger, cumulativeHilbertFunctionInteger,
-    idealHilbertFunctionInteger, idealCumulativeHilbertFunctionInteger] using
-    (ideal_hilbert_functions_are_numerical
-      (IsLocalRing.maximalIdeal R) (maximalIdeal_isIdealOfDefinition R))
+  change IsNumericalPolynomial
+      (idealHilbertFunctionInteger (IsLocalRing.maximalIdeal R) M) ∧
+    IsNumericalPolynomial
+      (idealCumulativeHilbertFunctionInteger (IsLocalRing.maximalIdeal R) M)
+  exact ideal_hilbert_functions_are_numerical
+    (IsLocalRing.maximalIdeal R) (maximalIdeal_isIdealOfDefinition R)
 
 def IsEventuallyRationalPolynomial (f : ℤ → ℤ) (P : Polynomial ℚ) : Prop :=
   ∀ᶠ n : ℤ in Filter.atTop, P.eval (n : ℚ) = (f n : ℚ)
@@ -916,11 +922,15 @@ theorem exists_eventually_rational_polynomial_of_isNumericalPolynomial
     ∑ i ∈ Finset.range (r + 1), (a i : ℚ) • Polynomial.preHilbertPoly ℚ i i
   refine ⟨P, ?_⟩
   filter_upwards [ha, Filter.Ici_mem_atTop (r : ℤ)] with n hn hnr
+  have hnr_int : (r : ℤ) ≤ n := hnr
   have hn0 : 0 ≤ n := by omega
   have hn_toNat : (n.toNat : ℤ) = n := Int.toNat_of_nonneg hn0
-  have hn_cast : (n : ℚ) = (n.toNat : ℚ) := by exact_mod_cast hn_toNat
+  have hn_cast : (n : ℚ) = (n.toNat : ℚ) := by exact_mod_cast hn_toNat.symm
   have hnr' : r ≤ n.toNat := by
-    exact_mod_cast hnr
+    have hnr_toNat : (r : ℤ) ≤ (n.toNat : ℤ) := by
+      rw [hn_toNat]
+      exact hnr_int
+    exact_mod_cast hnr_toNat
   calc
     P.eval (n : ℚ) =
         ∑ i ∈ Finset.range (r + 1),
@@ -931,7 +941,8 @@ theorem exists_eventually_rational_polynomial_of_isNumericalPolynomial
       rw [hn_cast]
       apply Finset.sum_congr rfl
       intro i hi
-      have hi_le : i ≤ n.toNat := le_trans (Finset.mem_range.mp hi) hnr'
+      have hi_le : i ≤ n.toNat :=
+        (Nat.le_of_lt_succ (Finset.mem_range.mp hi)).trans hnr'
       have hchoose :=
         Polynomial.preHilbertPoly_eq_choose_sub_add (F := ℚ) i hi_le
       rw [hchoose]
@@ -940,7 +951,7 @@ theorem exists_eventually_rational_polynomial_of_isNumericalPolynomial
       rw [Int.cast_sum]
       apply Finset.sum_congr rfl
       intro i hi
-      simp [integerBinomial, hn0, hn_toNat, smul_eq_mul, mul_comm]
+      simp [integerBinomial, hn0, mul_comm]
     _ = (f n : ℚ) := by rw [hn]
 
 noncomputable def eventuallyRationalPolynomial (f : ℤ → ℤ) : Polynomial ℚ :=

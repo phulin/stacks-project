@@ -76,13 +76,15 @@ theorem affineBlowupRepresentative_eq_iff
     {n m : ℕ} {x y : R} (hx : x ∈ I ^ n) (hy : y ∈ I ^ m) :
     affineBlowupRepresentative a n x = affineBlowupRepresentative a m y ↔
       ∃ k : ℕ, a ^ k * (a ^ m * x - a ^ n * y) = 0 := by
+  simp only [affineBlowupRepresentative]
   rw [Localization.mk_eq_mk']
   rw [IsLocalization.eq]
   constructor
   · rintro ⟨c, hc⟩
-    obtain ⟨k, rfl⟩ := (Submonoid.mem_powers_iff _ _).1 c.2
+    obtain ⟨k, hk⟩ := (Submonoid.mem_powers_iff _ _).1 c.2
     refine ⟨k, ?_⟩
     rw [mul_sub, sub_eq_zero]
+    rw [← hk] at hc
     exact hc
   · rintro ⟨k, hk⟩
     refine ⟨⟨a ^ k, (Submonoid.mem_powers_iff _ _).2 ⟨k, rfl⟩⟩, ?_⟩
@@ -103,13 +105,13 @@ theorem affineBlowupRepresentative_mem
     simp [IsLocalization.Away.invSelf, ← IsLocalization.mk'_pow]
   induction hx using Submodule.pow_induction_on_left' with
   | algebraMap r =>
-      simpa [hrep] using (affineBlowup I a).algebraMap_mem r
+      simp [hrep]
   | add x y i hx hy ihx ihy =>
       simpa [hrep, add_mul] using (affineBlowup I a).add_mem ihx ihy
   | mem_mul m hm i x hx ih =>
       have hgen := (affineBlowupGenerator I a ⟨m, hm⟩).property
       have hprod := (affineBlowup I a).mul_mem hgen ih
-      simpa [hrep, pow_succ, mul_assoc, mul_left_comm, mul_comm] using hprod
+      simpa [hrep, affineBlowupGenerator, pow_succ, mul_assoc, mul_left_comm, mul_comm] using hprod
 
 /-- The ideal of elements killed by a power of `b`, represented canonically as
 the kernel of the localization map. -/
@@ -143,12 +145,12 @@ theorem affineBlowup_isRegular
   · intro x y hxy
     apply Subtype.ext
     apply (IsUnit.mul_right_inj (IsLocalization.Away.algebraMap_isUnit a)).mp
-    simpa only [Subalgebra.coe_algebraMap, IsScalarTower.algebraMap_apply] using
+    simpa [Subalgebra.coe_algebraMap, IsScalarTower.algebraMap_apply] using
       congrArg (fun z : affineBlowup I a => (z : Localization.Away a)) hxy
   · intro x y hxy
     apply Subtype.ext
     apply (IsUnit.mul_left_inj (IsLocalization.Away.algebraMap_isUnit a)).mp
-    simpa only [Subalgebra.coe_algebraMap, IsScalarTower.algebraMap_apply] using
+    simpa [Subalgebra.coe_algebraMap, IsScalarTower.algebraMap_apply] using
       congrArg (fun z : affineBlowup I a => (z : Localization.Away a)) hxy
 
 theorem affineBlowup_map_ideal_eq_span

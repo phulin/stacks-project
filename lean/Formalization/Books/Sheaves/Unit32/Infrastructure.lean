@@ -235,7 +235,14 @@ theorem closedAlgebraicSheafDirectImage_stalk_inside
     (F : TopCat.Sheaf C (closedSubspace Z)) (x : X) (hx : x ∈ Z) :
     Nonempty (((closedAlgebraicSheafDirectImage C Z hZ).obj F).presheaf.stalk x ≅
       F.presheaf.stalk ⟨x, hx⟩) := by
-  sorry
+  let hIso : IsIso (TopCat.Presheaf.stalkPushforward C
+      (closedInclusion Z) F.presheaf ⟨x, hx⟩) :=
+    TopCat.Presheaf.stalkPushforward.stalkPushforward_iso_of_isInducing
+      C hZ.isClosedEmbedding_subtypeVal.isInducing F.presheaf ⟨x, hx⟩
+  change Nonempty (((TopCat.Presheaf.pushforward C
+      (closedInclusion Z)).obj F.presheaf).stalk x ≅ F.presheaf.stalk ⟨x, hx⟩)
+  exact ⟨(@asIso _ _ _ _ (TopCat.Presheaf.stalkPushforward C
+      (closedInclusion Z) F.presheaf ⟨x, hx⟩) hIso)⟩
 
 /-- Inverse image followed by direct image is the identity for set-valued sheaves. -/
 theorem closedSetSheafRestriction_directImage_iso {X : TopCat.{v}} (Z : Set X)

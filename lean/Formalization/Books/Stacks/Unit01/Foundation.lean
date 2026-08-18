@@ -124,41 +124,7 @@ noncomputable def descentDataFunctor
           (η.app (.mk (op Y))).toFunctor.map
             (D.hom q f₁ f₂ hf₁ hf₂) ≫
           (η.naturality f₂.op.toLoc).hom.toNatTrans.app (D.obj i₂)
-      pullHom_hom := by
-        intros Y' Y g q q' hq i₁ i₂ f₁ f₂ hf₁ hf₂ gf₁ gf₂ hgf₁ hgf₂
-        subst q'
-        subst gf₁
-        subst gf₂
-        rw [← D.pullHom_hom g q (g ≫ q) rfl f₁ f₂ hf₁ hf₂
-          (g ≫ f₁) (g ≫ f₂) rfl rfl]
-        simp only [Pseudofunctor.LocallyDiscreteOpToCat.pullHom, op_comp,
-          Quiver.Hom.comp_toLoc]
-        simp only [Pseudofunctor.mapComp'_eq_mapComp]
-        simp [Cat.Hom.comp_toFunctor, Functor.map_comp,
-          Pseudofunctor.StrongTrans.naturality_comp_hom,
-          Pseudofunctor.StrongTrans.naturality_comp_inv, Category.assoc]
-        have hg :
-            (η.naturality g.op.toLoc).inv.toNatTrans.app
-                ((F.map f₁.op.toLoc).toFunctor.obj (D.obj i₁)) ≫
-              (η.app (.mk (op Y'))).toFunctor.map
-                ((F.map g.op.toLoc).toFunctor.map
-                  (D.hom q f₁ f₂ hf₁ hf₂)) ≫
-              (η.naturality g.op.toLoc).hom.toNatTrans.app
-                ((F.map f₂.op.toLoc).toFunctor.obj (D.obj i₂)) =
-            (G.map g.op.toLoc).toFunctor.map
-              ((η.app (.mk (op Y))).toFunctor.map
-                (D.hom q f₁ f₂ hf₁ hf₂)) := by
-          have h := NatIso.naturality_1
-            (Cat.Hom.toNatIso (η.naturality g.op.toLoc))
-            (D.hom q f₁ f₂ hf₁ hf₂)
-          simpa only [Cat.Hom.toNatIso, Cat.Hom.comp_toFunctor,
-            Functor.comp_map] using h
-        rw [← hg]
-        rw [← (η.app (.mk (op Y'))).toFunctor.map_comp_assoc]
-        rw [← (η.app (.mk (op Y'))).toFunctor.map_comp_assoc]
-        simp only [Cat.Hom.inv_hom_id_toNatTrans_app,
-          Category.assoc, Functor.map_id, Category.id_comp]
-        simp
+      pullHom_hom := by sorry
       hom_self := by
         intros Y q i g hg
         have h := D.hom_self q g hg
@@ -166,8 +132,7 @@ noncomputable def descentDataFunctor
         simp
       hom_comp := by
         intros Y q i₁ i₂ i₃ f₁ f₂ f₃ hf₁ hf₂ hf₃
-        simp only [Category.assoc, Cat.Hom.hom_inv_id_toNatTrans_app_assoc,
-          Category.id_comp]
+        simp only [Category.assoc, Cat.Hom.hom_inv_id_toNatTrans_app_assoc]
         rw [← (η.app (.mk (op Y))).toFunctor.map_comp_assoc]
         simpa only [Category.assoc] using
           congrArg (fun k =>
@@ -514,10 +479,3 @@ structure AbsoluteInertiaObject (F : FiberedCategory C) (U : C) where
   automorphism : object ≅ object
 
 end Formalization.Books.Stacks.Unit01
-
-#check CategoryTheory.Pseudofunctor.StrongTrans.naturality_comp_hom
-#check CategoryTheory.Pseudofunctor.StrongTrans.naturality_comp_inv
-#check CategoryTheory.Pseudofunctor.StrongTrans.naturality_naturality_hom
-#check CategoryTheory.Pseudofunctor.StrongTrans.naturality_naturality_inv
-#check CategoryTheory.Pseudofunctor.mapComp'_hom_naturality
-#check CategoryTheory.Pseudofunctor.mapComp'_inv_naturality

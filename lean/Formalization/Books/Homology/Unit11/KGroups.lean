@@ -342,10 +342,10 @@ private theorem serreQuotientKZeroMap_comp_serreSubcategoryKZeroMap_classOf
           (P.prop_biprod (hF _) (hF _)))
   have hFinite : P.IsClosedUnderFiniteProducts :=
     @ObjectProperty.IsClosedUnderFiniteProducts.mk' C _ P inferInstance inferInstance hBin
-  letI : Abelian P.FullSubcategory :=
+  let : Abelian P.FullSubcategory :=
     @ObjectProperty.instAbelianFullSubcategoryOfContainsZeroOfIsClosedUnderKernelsOfIsClosedUnderCokernelsOfIsClosedUnderFiniteProducts
       C _ P inferInstance inferInstance inferInstance inferInstance hFinite
-  letI : Abelian (serreQuotient P) := serreQuotientAbelian P
+  let : Abelian (serreQuotient P) := serreQuotientAbelian P
   change kZeroMap (serreQuotientExactFunctor P)
       (kZeroMap (serreSubcategoryExactFunctor P) (KZero.classOf X)) = 0
   rw [kZeroMap_classOf, kZeroMap_classOf]
@@ -380,8 +380,8 @@ private theorem shortExact_iso_of_iso₁₂
     simpa [t, c] using hS.gIsCokernel.fac c WalkingParallelPair.one
   have ht' : T.g ≫ t' = e₂.inv ≫ S.g := by
     simpa [t', c'] using hT.gIsCokernel.fac c' WalkingParallelPair.one
-  letI : Epi S.g := hS.epi_g
-  letI : Epi T.g := hT.epi_g
+  let : Epi S.g := hS.epi_g
+  let : Epi T.g := hT.epi_g
   have h₁ : t ≫ t' = 𝟙 _ := by
     apply (cancel_epi S.g).1
     rw [← Category.assoc, ht, Category.assoc, ht', ← Category.assoc,
@@ -395,12 +395,12 @@ private theorem shortExact_iso_of_iso₁₂
 private theorem serre_shortExact_lift
     (P : ObjectProperty C) [P.IsSerreClass]
     (S : ShortComplex (serreQuotient P)) (hS : S.ShortExact) :
-    ∃ (T : ShortComplex C) (hT : T.ShortExact),
+    ∃ (T : ShortComplex C) (_hT : T.ShortExact),
       Nonempty (T.map (serreQuotientFunctor P) ≅ S) := by
-  letI : Abelian (serreQuotient P) := serreQuotientAbelian P
-  letI : PreservesFiniteLimits (serreQuotientExactFunctor P).obj :=
+  let : Abelian (serreQuotient P) := serreQuotientAbelian P
+  let : PreservesFiniteLimits (serreQuotientExactFunctor P).obj :=
     (serreQuotientExactFunctor P).property.1
-  letI : PreservesFiniteColimits (serreQuotientExactFunctor P).obj :=
+  let : PreservesFiniteColimits (serreQuotientExactFunctor P).obj :=
     (serreQuotientExactFunctor P).property.2
   obtain ⟨X, Y, f, hf, ⟨e⟩⟩ :=
     (ObjectProperty.SerreClassLocalization.mono_iff
@@ -470,7 +470,7 @@ private theorem kZero_classOf_sub_of_isoModSerre
           (P.prop_biprod (hF _) (hF _)))
   have hFinite : P.IsClosedUnderFiniteProducts :=
     @ObjectProperty.IsClosedUnderFiniteProducts.mk' C _ P inferInstance inferInstance hBin
-  letI : Abelian P.FullSubcategory :=
+  let : Abelian P.FullSubcategory :=
     @ObjectProperty.instAbelianFullSubcategoryOfContainsZeroOfIsClosedUnderKernelsOfIsClosedUnderCokernelsOfIsClosedUnderFiniteProducts
       C _ P inferInstance inferInstance inferInstance inferInstance hFinite
   refine ⟨KZero.classOf ⟨kernel f, h₀⟩ -
@@ -487,14 +487,14 @@ private theorem kZero_classOf_sub_of_serre_iso
       Set.range (serreSubcategoryKZeroMap P) := by
   obtain ⟨φ, hφ⟩ := Localization.exists_leftFraction
     (serreQuotientFunctor P) P.isoModSerre e.hom
-  haveI : IsIso ((serreQuotientFunctor P).map φ.s) :=
+  have : IsIso ((serreQuotientFunctor P).map φ.s) :=
     Localization.inverts (serreQuotientFunctor P) P.isoModSerre φ.s φ.hs
-  haveI : IsIso (φ.map (serreQuotientFunctor P)
+  have : IsIso (φ.map (serreQuotientFunctor P)
       (Localization.inverts (serreQuotientFunctor P) P.isoModSerre)) := by
     rw [← hφ]
     infer_instance
-  haveI : IsIso ((serreQuotientFunctor P).map φ.f) := by
-    letI : IsIso ((serreQuotientFunctor P).map φ.f ≫
+  have : IsIso ((serreQuotientFunctor P).map φ.f) := by
+    let : IsIso ((serreQuotientFunctor P).map φ.f ≫
         inv ((serreQuotientFunctor P).map φ.s)) := by
       change IsIso (φ.map (serreQuotientFunctor P)
         (Localization.inverts (serreQuotientFunctor P) P.isoModSerre))
@@ -515,7 +515,7 @@ private theorem kZero_serre_range_of_quotient_zero
     (P : ObjectProperty C) [P.IsSerreClass] (x : KZero C)
     (hx : serreQuotientKZeroMap P x = 0) :
     x ∈ Set.range (serreSubcategoryKZeroMap P) := by
-  letI : Abelian (serreQuotient P) := serreQuotientAbelian P
+  let : Abelian (serreQuotient P) := serreQuotientAbelian P
   let R : AddSubgroup (KZero C) := (serreSubcategoryKZeroMap P).range
   let qR : KZero C →+ KZero C ⧸ R := QuotientAddGroup.mk' R
   have hq_range (y : KZero P.FullSubcategory) :
@@ -538,7 +538,7 @@ private theorem kZero_serre_range_of_quotient_zero
   have hφ_rel (r : KZeroRelation (serreQuotient P)) : φ r.generator = 0 := by
     obtain ⟨T, hT, ⟨e⟩⟩ := serre_shortExact_lift P r.sequence r.shortExact
     let S := T.map (serreQuotientFunctor P)
-    letI : IsIso e.hom := Iso.isIso_hom e
+    let : IsIso e.hom := Iso.isIso_hom e
     let e₁ : S.X₁ ≅ r.sequence.X₁ := asIso e.hom.τ₁
     let e₂ : S.X₂ ≅ r.sequence.X₂ := asIso e.hom.τ₂
     let e₃ : S.X₃ ≅ r.sequence.X₃ := asIso e.hom.τ₃
@@ -556,7 +556,7 @@ private theorem kZero_serre_range_of_quotient_zero
     have hzero : qR (KZero.classOf T.X₂ - KZero.classOf T.X₁ -
         KZero.classOf T.X₃) = 0 := by
       rw [map_sub, map_sub, hTrel]
-      simp only [map_add, map_neg, sub_eq_add_neg]
+      simp only [map_add, sub_eq_add_neg]
       abel
     change qR (KZero.classOf ((serreQuotientFunctor P).objPreimage
         r.sequence.X₂)) -
@@ -657,15 +657,15 @@ theorem kZero_serre_exact_sequence
               (P.prop_biprod (hF _) (hF _)))
       have hFinite : P.IsClosedUnderFiniteProducts :=
         @ObjectProperty.IsClosedUnderFiniteProducts.mk' C _ P inferInstance inferInstance hBin
-      letI : Abelian P.FullSubcategory :=
+      let : Abelian P.FullSubcategory :=
         @ObjectProperty.instAbelianFullSubcategoryOfContainsZeroOfIsClosedUnderKernelsOfIsClosedUnderCokernelsOfIsClosedUnderFiniteProducts
           C _ P inferInstance inferInstance inferInstance inferInstance hFinite
       obtain ⟨X, Y, h⟩ := kZero_subtraction_representation y
       rw [h, map_sub, map_sub]
       rw [serreQuotientKZeroMap_comp_serreSubcategoryKZeroMap_classOf,
         serreQuotientKZeroMap_comp_serreSubcategoryKZeroMap_classOf, sub_self]
-  · letI : Abelian (serreQuotient P) := serreQuotientAbelian P
-    letI : (serreQuotientFunctor P).EssSurj :=
+  · let : Abelian (serreQuotient P) := serreQuotientAbelian P
+    let : (serreQuotientFunctor P).EssSurj :=
       (serre_quotient_is_abelian_exact_essentially_surjective P).2.2.1
     intro x
     obtain ⟨A, B, h⟩ := kZero_subtraction_representation x
@@ -796,7 +796,7 @@ private theorem kZero_serreSubcategoryMap_classOf_cyclic_sub
           (P.prop_biprod (hF _) (hF _)))
   have hFinite : P.IsClosedUnderFiniteProducts :=
     @ObjectProperty.IsClosedUnderFiniteProducts.mk' C _ P inferInstance inferInstance hBin
-  letI : Abelian P.FullSubcategory :=
+  let : Abelian P.FullSubcategory :=
     @ObjectProperty.instAbelianFullSubcategoryOfContainsZeroOfIsClosedUnderKernelsOfIsClosedUnderCokernelsOfIsClosedUnderFiniteProducts
       C _ P inferInstance inferInstance inferInstance inferInstance hFinite
   change kZeroMap (serreSubcategoryExactFunctor P)
@@ -885,7 +885,7 @@ theorem kZero_serre_kernel
             (P.prop_biprod (hF _) (hF _)))
     have hFinite : P.IsClosedUnderFiniteProducts :=
       @ObjectProperty.IsClosedUnderFiniteProducts.mk' C _ P inferInstance inferInstance hBin
-    letI : Abelian P.FullSubcategory :=
+    let : Abelian P.FullSubcategory :=
       @ObjectProperty.instAbelianFullSubcategoryOfContainsZeroOfIsClosedUnderKernelsOfIsClosedUnderCokernelsOfIsClosedUnderFiniteProducts
         C _ P inferInstance inferInstance inferInstance inferInstance hFinite
     obtain ⟨A, B, hAB⟩ := kZero_subtraction_representation x

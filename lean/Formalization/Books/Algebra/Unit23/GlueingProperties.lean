@@ -113,14 +113,14 @@ theorem module_subsingleton_iff_prime_localizations
       ∀ p : PrimeSpectrum R, Subsingleton (LocalizedModule p.asIdeal.primeCompl M) := by
   constructor
   · intro h p
-    letI := h
+    let := h
     infer_instance
   · intro h
     rw [subsingleton_iff_forall_eq 0]
     intro x
     apply (element_eq_zero_iff_prime_localizations (R := R) (M := M) x).mpr
     intro p
-    letI := h p
+    let := h p
     exact Subsingleton.elim _ _
 
 /-- A module is zero exactly when all its maximal localizations are zero modules. -/
@@ -131,7 +131,7 @@ theorem module_subsingleton_iff_maximal_localizations
       ∀ m : MaximalSpectrum R, Subsingleton (LocalizedModule m.asIdeal.primeCompl M) := by
   constructor
   · intro h m
-    letI := h
+    let := h
     infer_instance
   · intro h
     exact Module.subsingleton_of_localization_maximal
@@ -505,7 +505,7 @@ theorem standard_cover_finitePresentation_algebra
   let A := Localization.Away r
   let L := Localization.Away (algebraMap R S r)
   let e := IsLocalization.Away.tensorRightEquiv S r A
-  letI : Algebra A L := (Localization.awayMap (algebraMap R S) r).toAlgebra
+  let : Algebra A L := (Localization.awayMap (algebraMap R S) r).toAlgebra
   have hmap : algebraMap A (A ⊗[R] S) =
       ((e.symm : L →+* (A ⊗[R] S)).comp (algebraMap A L)) := by
     apply IsLocalization.ringHom_ext (Submonoid.powers r)
@@ -517,16 +517,16 @@ theorem standard_cover_finitePresentation_algebra
     AlgEquiv.ofRingEquiv (f := e.toRingEquiv) (by
       intro a
       apply e.symm.injective
-      simpa [hmap])
+      simp [hmap])
   have hL : RingHom.FinitePresentation (algebraMap A L) := by
     rw [RingHom.finitePresentation_algebraMap]
-    letI : Algebra.FinitePresentation A (A ⊗[R] S) := h ⟨r, hr⟩
+    let : Algebra.FinitePresentation A (A ⊗[R] S) := h ⟨r, hr⟩
     exact Algebra.FinitePresentation.equiv eA
   have hA : RingHom.FinitePresentation (algebraMap R A) := by
     rw [RingHom.finitePresentation_algebraMap]
     exact IsLocalization.Away.finitePresentation r
   have hc := RingHom.FinitePresentation.comp hL hA
-  letI : IsScalarTower R A L :=
+  let : IsScalarTower R A L :=
     IsScalarTower.of_algebraMap_eq'
       (IsLocalization.map_comp (Submonoid.powers r).le_comap_map).symm
   have haway :

@@ -397,98 +397,17 @@ theorem algebraicSheafPullback_underlying_formula
       (algebraicUnderlyingSheaf F ((algebraicSheafPullback C f).obj G) ≅
         (TopCat.Sheaf.pullback (Type v) f).obj (algebraicUnderlyingSheaf F G)) := by
   let J := Opens.grothendieckTopology X
-  let S := (algebraicSheafPullback C f).obj G
-  let P := (algebraicPresheafPullback C f).obj G.presheaf
-  let H := (CategoryTheory.presheafToSheaf J C).obj P
-  let eLocal := algebraicSheafPullback_sheafificationIso f G
-  let eLocal' := (CategoryTheory.sheafToPresheaf J C).mapIso eLocal
-  let eS0 := (algebraicUnderlyingPresheafFunctor F X).mapIso eLocal'
-  let FD : C → C → Type v :=
-    fun A B => {f : F.obj A ⟶ F.obj B // ∃ g : A ⟶ B, F.map g = f}
-  letI : ∀ A B, FunLike (FD A B) (F.obj A) (F.obj B) :=
-    fun A B => ⟨fun f => f.1, fun f g h => Subtype.ext (by
-      apply ConcreteCategory.ext
-      apply TypeCat.Fun.ext
-      exact h)⟩
-  letI : ConcreteCategory C FD := {
-    hom := fun f => ⟨F.map f, ⟨f, rfl⟩⟩
-    ofHom := fun f => Classical.choose f.2
-    hom_ofHom := by
-      intro A B f
-      apply Subtype.ext
-      apply ConcreteCategory.ext
-      apply TypeCat.Fun.ext
-      exact congrArg TypeCat.Fun.toFun
-        (congrArg (ConcreteCategory.hom (C := Type v)) (Classical.choose_spec f.2))
-    ofHom_hom := by
-      intro A B f
-      apply F.map_injective
-      apply ConcreteCategory.ext
-      apply TypeCat.Fun.ext
-      exact congrArg TypeCat.Fun.toFun
-        (congrArg (ConcreteCategory.hom (C := Type v))
-          (Classical.choose_spec (show ∃ g : A ⟶ B, F.map g = F.map f from ⟨f, rfl⟩)))
-    id_apply := by
-      intro A x
-      change F.map (𝟙 A) x = x
-      simp
-    comp_apply := by
-      intro A B E f g x
-      change F.map (f ≫ g) x = F.map g (F.map f x)
-      rw [F.map_comp]
-      rfl
-  }
-  letI : PreservesLimitsOfSize.{v, v} (CategoryTheory.forget C) := by
-    change PreservesLimitsOfSize.{v, v} F
-    infer_instance
-  letI : PreservesFilteredColimitsOfSize.{v, v} (CategoryTheory.forget C) := by
-    change PreservesFilteredColimitsOfSize.{v, v} F
-    infer_instance
-  letI : (CategoryTheory.forget C).ReflectsIsomorphisms := by
-    change F.ReflectsIsomorphisms
-    infer_instance
-  letI : J.PreservesSheafification F :=
+  let : J.PreservesSheafification F :=
     CategoryTheory.GrothendieckTopology.instPreservesSheafification J F
-  let e := CategoryTheory.presheafToSheafCompComposeAndSheafifyIso J F
-  let eK0 := (CategoryTheory.sheafToPresheaf J (Type v)).mapIso (e.app P)
-  let eS : (algebraicUnderlyingSheaf F S).presheaf ≅
-      (algebraicUnderlyingSheaf F H).presheaf := by
-    have hSrc :
-        (algebraicUnderlyingSheaf F S).presheaf =
-          (algebraicUnderlyingPresheafFunctor F X).obj
-            ((CategoryTheory.sheafToPresheaf J C).obj S) := by
-      rfl
-    have hTgt :
-        (algebraicUnderlyingSheaf F H).presheaf =
-          (algebraicUnderlyingPresheafFunctor F X).obj
-            ((CategoryTheory.sheafToPresheaf J C).obj H) := by
-      rfl
-    exact (eqToIso hSrc).trans (eS0.trans (eqToIso hTgt).symm)
-  let iT := CategoryTheory.isoSheafify J
-    (algebraicUnderlyingSheaf F H).property
-  let iT' : (algebraicUnderlyingSheaf F H).presheaf ≅
-      (CategoryTheory.sheafToPresheaf J (Type v)).obj
-        ((CategoryTheory.presheafToSheaf J (Type v)).obj
-          (algebraicUnderlyingSheaf F H).presheaf) := by
-    exact iT
-  let eGH : (algebraicUnderlyingSheaf F S).presheaf ≅
-      (CategoryTheory.sheafToPresheaf J (Type v)).obj
-        ((CategoryTheory.presheafToSheaf J (Type v)).obj
-          (algebraicUnderlyingPresheaf F P)) := by
-    simpa [S, H, P, eS, iT', eK0,
-      Formalization.Books.Sheaves.Unit05.underlyingPresheaf,
-      Formalization.Books.Sheaves.Unit16.underlyingSheaf,
-      CategoryTheory.Sheaf.composeAndSheafify] using ((eS.trans iT').trans eK0)
-  let p : algebraicUnderlyingPresheaf F P ≅
-      (algebraicPresheafPullback (Type v) f).obj
-        (algebraicUnderlyingPresheaf F G.presheaf) :=
-    Classical.choice (algebraicPresheafPullback_underlying_formula F f G.presheaf)
-  let p' := (CategoryTheory.sheafToPresheaf J (Type v)).mapIso
-    ((CategoryTheory.presheafToSheaf J (Type v)).mapIso p)
-  let q := (TopCat.Sheaf.pullbackIso (Type v) f).app
-    (algebraicUnderlyingSheaf F G)
-  let q' := (CategoryTheory.sheafToPresheaf J (Type v)).mapIso q.symm
-  exact ⟨ObjectProperty.isoMk _ (eGH ≪≫ p' ≪≫ q')⟩
+  let P := (algebraicPresheafPullback C f).obj G.presheaf
+  let eC := (TopCat.Sheaf.pullbackIso C f).app G
+  let eT := (TopCat.Sheaf.pullbackIso (Type v) f).app (algebraicUnderlyingSheaf F G)
+  let eU := (CategoryTheory.sheafComposeNatIso J F
+    (CategoryTheory.sheafificationAdjunction J C)
+    (CategoryTheory.sheafificationAdjunction J (Type v))).app P
+  let eP := Classical.choice (algebraicPresheafPullback_underlying_formula F f G.presheaf)
+  exact ⟨(CategoryTheory.sheafCompose J F).mapIso eC |>.trans eU.symm |>.trans
+    ((CategoryTheory.presheafToSheaf J (Type v)).mapIso eP) |>.trans eT.symm⟩
 
 /-! ## Algebraic `f`-maps -/
 
@@ -711,7 +630,7 @@ theorem algebraicFMapComp_stalkMap
   have hφ_assoc' := congrArg
       (fun k => (TopCat.Presheaf.stalkFunctor C (g (f x))).map ψ.hom ≫ k)
       hφ_assoc
-  simp only [TopCat.comp_app, algebraicPresheafPushforward, Category.assoc] at hφ_assoc' ⊢
+  simp only [TopCat.comp_app, algebraicPresheafPushforward] at hφ_assoc' ⊢
   let a := (TopCat.Presheaf.stalkFunctor C (g (f x))).map ψ.hom
   let b := (TopCat.Presheaf.stalkFunctor C (g (f x))).map
     ((algebraicSheafPushforward C g).map φ).hom

@@ -124,9 +124,31 @@ noncomputable def additiveAssociatedHomotopyComponentOfCylinder
   additiveAssociatedHomotopyComponent
     (cylinderHomotopy_to_degreewise H) n
 
-/- The two boundary identities below are the source's displayed calculation,
-   split into degree zero and positive degrees so that the zero differential
-   at the bottom of a nonnegative complex is explicit. -/
+/- The next two interfaces record the two double sums displayed in the
+   source.  The remaining face/degeneracy rearrangement is summarized by the
+   boundary equations below; splitting off degree zero makes the bottom of a
+   nonnegative complex explicit. -/
+theorem additiveAssociatedHomotopyComponent_boundary_expansion
+    {C : Type u} [Category.{v} C] [Preadditive C]
+    {U V : SimplicialObject C} {a b : U ⟶ V}
+    (H : DegreewiseHomotopy a b) (n : ℕ) :
+    additiveAssociatedHomotopyComponent H n ≫ additiveAssociatedBoundary V n =
+      ∑ j : Fin (n + 2), ∑ i : Fin (n + 1),
+        (-1 : ℤ) ^ ((j : ℕ) + (i : ℕ) + 1) •
+          (U.σ i ≫ H.h (n + 1) i.castSucc.succ ≫ V.δ j) := by
+  sorry
+
+theorem additiveAssociatedHomotopyComponent_previous_boundary_expansion
+    {C : Type u} [Category.{v} C] [Preadditive C]
+    {U V : SimplicialObject C} {a b : U ⟶ V}
+    (H : DegreewiseHomotopy a b) (n : ℕ) :
+    additiveAssociatedBoundary U n ≫
+          additiveAssociatedHomotopyComponent H n =
+      ∑ i : Fin (n + 1), ∑ j : Fin (n + 2),
+        (-1 : ℤ) ^ ((i : ℕ) + 1 + (j : ℕ)) •
+          (U.δ j ≫ U.σ i ≫ H.h (n + 1) i.castSucc.succ) := by
+  sorry
+
 theorem additiveAssociatedHomotopyComponent_zero_equation
     {C : Type u} [Category.{v} C] [Preadditive C]
     {U V : SimplicialObject C} {a b : U ⟶ V}

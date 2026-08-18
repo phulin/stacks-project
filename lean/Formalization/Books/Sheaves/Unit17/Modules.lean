@@ -49,6 +49,14 @@ noncomputable def ringSheafificationUnit {X : TopCat.{v}}
     O ⟶ (ringSheafification O).obj :=
   CategoryTheory.toSheafify (Opens.grothendieckTopology X) O
 
+/-- Sheafification sends a morphism of ring presheaves to a morphism of ring
+sheaves. -/
+noncomputable def ringSheafificationMap {X : TopCat.{v}}
+    {O O' : RingPresheaf.{v, v} X} (α : O ⟶ O') :
+    ringSheafification O ⟶ ringSheafification O' :=
+  (CategoryTheory.presheafToSheaf (Opens.grothendieckTopology X)
+    RingCat).map α
+
 /-- The ring sheafification unit is locally injective. -/
 theorem ringSheafificationUnit_isLocallyInjective {X : TopCat.{v}}
     (O : RingPresheaf.{v, v} X) :
@@ -529,6 +537,36 @@ noncomputable def tensorProductSheaf {X : TopCat.{v}}
     SheafOfModules.{v} O₂ := by
   exact (PresheafOfModules.sheafification (𝟙 O₂.obj)).obj
     (sheafTensorProductPresheaf α G)
+
+/- Sheafification commutes with extension of scalars after sheafifying the
+   ring map.  This is the generic compatibility needed by Modules 27.
+
+   Proof roadmap:
+
+   1. Map `moduleSheafificationUnit F` through presheaf extension of scalars
+      and compose with the ring-sheafification comparison square for `α`.
+      This gives a morphism from `(changeOfRings α).obj F` into the
+      restricted underlying presheaf of the right-hand tensor product sheaf.
+   2. Extend it uniquely across `moduleSheafificationUnit` to construct the
+      forward sheaf morphism.
+   3. Construct the inverse by the same universal-property argument, using
+      the adjunction `exists_sheafChangeOfRingsAdjunction` and the original
+      sheafification unit of `F`.
+   4. Prove the two composites are identities after precomposition with the
+      relevant sheafification units.  Their universal properties then give
+      equality.
+
+   A convenient implementation may instead identify both sides as left
+   adjoints to the same restriction-of-scalars functor and invoke uniqueness
+   of left adjoints. -/
+theorem moduleSheafification_changeOfRings_iso
+    {X : TopCat.{v}} {O O' : RingPresheaf.{v, v} X}
+    (α : O ⟶ O') (F : PMod O) :
+    Nonempty
+      (moduleSheafification ((changeOfRings α).obj F) ≅
+        tensorProductSheaf (ringSheafificationMap α)
+          (moduleSheafification F)) := by
+  sorry
 
 /-- The sheaf change-of-rings functor. -/
 noncomputable def sheafChangeOfRings {X : TopCat.{v}}

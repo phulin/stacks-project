@@ -274,7 +274,7 @@ theorem basisSheafCondition_iff_cover_gluing {X : TopCat.{v}} {ι : Type v}
       rw [hfj]
       exact hh
   · intro h
-    letI : (inducedFunctor B).IsCoverDense (Opens.grothendieckTopology X) :=
+    let : (inducedFunctor B).IsCoverDense (Opens.grothendieckTopology X) :=
       TopCat.Opens.coverDense_inducedFunctor hB
     intro i S hS
     obtain ⟨I, Y, f, rfl⟩ := S.exists_eq_ofArrows
@@ -344,8 +344,7 @@ theorem basisSheafCondition_iff_cofinal_cover_system {X : TopCat.{v}} {ι : Type
             ∀ j, ∃ h : B (U.member j) ≤ B i,
               P.map (InducedCategory.homMk (homOfLE h)).op t = s j := by
   constructor
-  · intro h
-    intro i U hUi s hs
+  · intro h i U hUi s hs
     exact (basisSheafCondition_iff_cover_gluing B hB P).1 h i U s hs
   · intro h
     apply (basisSheafCondition_iff_cover_gluing B hB P).2

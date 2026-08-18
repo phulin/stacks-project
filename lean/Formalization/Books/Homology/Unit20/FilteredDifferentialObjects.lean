@@ -227,6 +227,18 @@ structure FilteredDifferentialSpectralSequence
     page r ⟶ (gradedShift C (r : ℤ)).obj (page r)
   square_zero : ∀ r : ℕ,
     differential r ≫ (gradedShift C (r : ℤ)).map (differential r) = 0
+  next_page : ∀ (r : ℕ) (p : ℤ), Nonempty
+    (page (r + 1) p ≅
+      subquotientObject
+        (Subobject.mk (Abelian.image.ι
+          (differential r (p - r) ≫
+            (eqToHom (by
+              change page r (r + (p - r)) = page r p
+              congr 1 <;> ring) :
+              (gradedShift C (r : ℤ)).obj (page r) (p - r) ⟶
+                page r p))))
+        (Subobject.mk (kernel.ι (differential r p)))
+        (by sorry))
   page_differentials : ∀ r : ℕ, FilteredDifferentialPageDifferentials K
   component_iso : ∀ (r : ℕ) (p : ℤ),
     page r p ≅ filteredDifferentialPage K r p

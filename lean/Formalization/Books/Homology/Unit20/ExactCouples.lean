@@ -145,26 +145,6 @@ theorem exactCoupleDerived_is_exact {C : Type u} [Category.{v} C] [Abelian C]
     Nonempty (ExactCouple C (exactCoupleDerivedA D) (exactCoupleDerivedE D)) := by
   exact ⟨exactCoupleDerived D⟩
 
-/-! ### The associated spectral sequence -/
-
-theorem exactCouple_associatedSpectralSequence_exists
-    {C : Type u} [Category.{v} C] [Abelian C]
-    {A E : C} (D : ExactCouple C A E) :
-    Nonempty (PlainSpectralSequence C 1) := by
-  sorry
-
-/-- The spectral sequence obtained by iterating derived exact couples. -/
-noncomputable def exactCoupleAssociatedSpectralSequence
-    {C : Type u} [Category.{v} C] [Abelian C]
-    {A E : C} (D : ExactCouple C A E) : PlainSpectralSequence C 1 :=
-  Classical.choice (exactCouple_associatedSpectralSequence_exists D)
-
-theorem exactCouple_associated_page_one
-    {C : Type u} [Category.{v} C] [Abelian C]
-    {A E : C} (D : ExactCouple C A E) :
-    Nonempty (plainPageObject (exactCoupleAssociatedSpectralSequence D) 1 ≅ E) := by
-  sorry
-
 /-- The recursive powers of `alpha`, avoiding any choice of a monoid API on
 endomorphism objects. -/
 def exactCoupleAlphaPow {C : Type u} [Category.{v} C] [Abelian C]
@@ -215,6 +195,29 @@ noncomputable def exactCouplePageComponent {C : Type u} [Category.{v} C]
     [Abelian C] {A E : C} (D : ExactCouple C A E) (n : ℕ) : C :=
   subquotientObject (exactCoupleBoundarySubobject D n)
     (exactCoupleCycleSubobject D n) (exactCouple_boundary_le_cycle D n)
+
+/-! ### The associated spectral sequence -/
+
+theorem exactCouple_associatedSpectralSequence_exists
+    {C : Type u} [Category.{v} C] [Abelian C]
+    {A E : C} (D : ExactCouple C A E) :
+    ∃ S : PlainSpectralSequence C 1,
+      Nonempty (plainPageObject S 1 ≅ E) ∧
+        ∀ n : ℕ,
+          Nonempty (plainPageObject S (n + 1 : ℤ) ≅
+            exactCouplePageComponent D n) := by
+  sorry
+
+noncomputable def exactCoupleAssociatedSpectralSequence
+    {C : Type u} [Category.{v} C] [Abelian C]
+    {A E : C} (D : ExactCouple C A E) : PlainSpectralSequence C 1 :=
+  Classical.choose (exactCouple_associatedSpectralSequence_exists D)
+
+theorem exactCouple_associated_page_one
+    {C : Type u} [Category.{v} C] [Abelian C]
+    {A E : C} (D : ExactCouple C A E) :
+    Nonempty (plainPageObject (exactCoupleAssociatedSpectralSequence D) 1 ≅ E) := by
+  sorry
 
 theorem exactCouple_associated_page_quotient
     {C : Type u} [Category.{v} C] [Abelian C]

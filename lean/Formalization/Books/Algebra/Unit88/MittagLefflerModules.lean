@@ -2,10 +2,14 @@ import Formalization.Books.Algebra.Unit82.UniversallyInjective
 import Formalization.Books.Algebra.Unit87.InverseSystems
 import Mathlib.Algebra.Category.ModuleCat.Colimits
 import Mathlib.Algebra.Category.ModuleCat.ChangeOfRings
+import Mathlib.Algebra.Category.ModuleCat.EpiMono
+import Mathlib.Algebra.Category.ModuleCat.Kernels
 import Mathlib.Algebra.DualNumber
+import Mathlib.Algebra.Homology.CommSq
 import Mathlib.RingTheory.Finiteness.Basic
 import Mathlib.RingTheory.Finiteness.ModuleFinitePresentation
 import Mathlib.LinearAlgebra.TensorProduct.Basic
+import Mathlib.LinearAlgebra.TensorProduct.RightExactness
 
 /-!
 # Commutative Algebra, Chapter 88: Mittag-Leffler modules
@@ -91,6 +95,297 @@ def mutuallyDominates
 
 /-- Tensor-kernel inclusion only needs to be tested on finitely presented
 modules. -/
+private structure GeneralFilteredColimit
+    {R : Type u} [CommRing R] (N : ModuleCat.{w} R) where
+  index : Type (max u w)
+  [indexCategory : Category.{max u w} index]
+  [indexFiltered : IsFiltered index]
+  presentation : ColimitPresentation index N
+  underlyingIsColimit :
+    IsColimit ((forget (ModuleCat.{w} R)).mapCocone presentation.ι)
+  finitelyPresented : ∀ i, Module.FinitePresentation R (presentation.diag.obj i)
+
+private theorem exists_generalFilteredColimit
+    {R : Type u} [CommRing R] (N : ModuleCat.{w} R) :
+    Nonempty (GeneralFilteredColimit N) := by
+  classical
+  let M := (N : Type w)
+  let embedding (S T : Finset M) (hST : S ≤ T) : S ↪ T :=
+    { toFun := fun s => ⟨s.1, hST s.2⟩
+      inj' := by
+        intro s t h
+        apply Subtype.ext
+        exact congrArg (fun z : T => (z : M)) h }
+  let extend (S T : Finset M) (hST : S ≤ T) :
+      (S →₀ R) →ₗ[R] (T →₀ R) :=
+    Finsupp.lmapDomain R R (embedding S T hST)
+  have extend_id (S : Finset M) (x : S →₀ R) :
+      extend S S le_rfl x = x := by
+    change Finsupp.mapDomain (embedding S S le_rfl) x = x
+    have he : (embedding S S le_rfl : S → S) = id := by
+      funext s
+      exact Subtype.ext rfl
+    rw [he, Finsupp.mapDomain_id]
+  have extend_comp (S T U : Finset M) (hST : S ≤ T) (hTU : T ≤ U)
+      (x : S →₀ R) :
+      extend T U hTU (extend S T hST x) = extend S U (hST.trans hTU) x := by
+    change Finsupp.mapDomain (embedding T U hTU)
+        (Finsupp.mapDomain (embedding S T hST) x) =
+      Finsupp.mapDomain (embedding S U (hST.trans hTU)) x
+    rw [← Finsupp.mapDomain_comp]
+    congr 1
+  let Index : Type (max u w) :=
+    Σ S : Finset M, {E : Finset (S →₀ R) //
+      ∀ e ∈ E, Finsupp.linearCombination R (fun s : S => (s : M)) e = 0}
+  let indexLE : Index → Index → Prop := fun a b =>
+    ∃ hST : a.1 ≤ b.1, ∀ e ∈ a.2.1,
+      extend a.1 b.1 hST e ∈ b.2.1
+  letI : LE Index := ⟨indexLE⟩
+  letI : Preorder Index := {
+    le_refl := by
+      intro a
+      refine ⟨le_rfl, ?_⟩
+      intro e he
+      simpa [extend_id] using he
+    le_trans := by
+      intro a b c hab hbc
+      rcases hab with ⟨habS, habE⟩
+      rcases hbc with ⟨hbcS, hbcE⟩
+      refine ⟨habS.trans hbcS, ?_⟩
+      intro e he
+      have he' := hbcE (extend a.1 b.1 habS e) (habE e he)
+      rw [extend_comp] at he'
+      exact he' }
+  have index_filtered : IsFiltered Index := by
+    let emptyIndex : Index := ⟨∅, ⟨∅, by simp⟩⟩
+    refine
+      { cocone_objs := ?_
+        cocone_maps := ?_
+        nonempty := ⟨emptyIndex⟩ }
+    · intro a b
+      let S : Finset M := a.1 ∪ b.1
+      have haS : a.1 ≤ S := by simp [S]
+      have hbS : b.1 ≤ S := by simp [S]
+      let Ea : Finset (S →₀ R) := a.2.1.image (extend a.1 S haS)
+      let Eb : Finset (S →₀ R) := b.2.1.image (extend b.1 S hbS)
+      let E : Finset (S →₀ R) := Ea ∪ Eb
+      have hrel : ∀ e ∈ E,
+          Finsupp.linearCombination R (fun s : S => (s : M)) e = 0 := by
+        intro e he
+        rcases Finset.mem_union.mp he with he | he
+        · rcases Finset.mem_image.mp he with ⟨e', he', rfl⟩
+          change Finsupp.linearCombination R (fun s : S => (s : M))
+              (Finsupp.mapDomain (embedding a.1 S haS) e') = 0
+          rw [Finsupp.linearCombination_mapDomain]
+          change Finsupp.linearCombination R (fun s : a.1 => (s : M)) e' = 0
+          exact a.2.2 e' he'
+        · rcases Finset.mem_image.mp he with ⟨e', he', rfl⟩
+          change Finsupp.linearCombination R (fun s : S => (s : M))
+              (Finsupp.mapDomain (embedding b.1 S hbS) e') = 0
+          rw [Finsupp.linearCombination_mapDomain]
+          change Finsupp.linearCombination R (fun s : b.1 => (s : M)) e' = 0
+          exact b.2.2 e' he'
+      let c : Index := ⟨S, ⟨E, hrel⟩⟩
+      have hac : a ≤ c := by
+        refine ⟨haS, ?_⟩
+        intro e he
+        exact Finset.mem_union_left _ (Finset.mem_image.mpr ⟨e, he, rfl⟩)
+      have hbc : b ≤ c := by
+        refine ⟨hbS, ?_⟩
+        intro e he
+        exact Finset.mem_union_right _ (Finset.mem_image.mpr ⟨e, he, rfl⟩)
+      exact ⟨c, homOfLE hac, homOfLE hbc, trivial⟩
+    · intro X Y f g
+      exact ⟨Y, 𝟙 _, by subsingleton⟩
+  let stage (a : Index) : ModuleCat.{w} R :=
+    ModuleCat.of R ((a.1 →₀ R) ⧸ Submodule.span R (a.2.1 : Set (a.1 →₀ R)))
+  have span_extend {a b : Index} (h : a ≤ b) :
+      Submodule.span R (a.2.1 : Set (a.1 →₀ R)) ≤
+        Submodule.comap (extend a.1 b.1 h.choose)
+          (Submodule.span R (b.2.1 : Set (b.1 →₀ R))) := by
+    rcases h with ⟨hST, hE⟩
+    rw [Submodule.span_le]
+    intro e he
+    change extend a.1 b.1 hST e ∈
+      Submodule.span R (b.2.1 : Set (b.1 →₀ R))
+    exact Submodule.subset_span (hE e he)
+  let stageMap {a b : Index} (h : a ≤ b) : stage a ⟶ stage b :=
+    ModuleCat.ofHom <|
+      Submodule.mapQ (Submodule.span R (a.2.1 : Set (a.1 →₀ R)))
+        (Submodule.span R (b.2.1 : Set (b.1 →₀ R)))
+        (extend a.1 b.1 h.choose) (span_extend h)
+  let D : Index ⥤ ModuleCat.{w} R := {
+    obj := stage
+    map := fun {a b} f => stageMap (leOfHom f)
+    map_id := by
+      intro a
+      apply ModuleCat.hom_ext
+      apply LinearMap.ext
+      intro x
+      obtain ⟨x, rfl⟩ := Submodule.mkQ_surjective _ x
+      let hS : a.1 ≤ a.1 := le_rfl
+      change Submodule.Quotient.mk (extend a.1 a.1 hS x) =
+        Submodule.Quotient.mk x
+      rw [extend_id]
+    map_comp := by
+      intro a b c f g
+      apply ModuleCat.hom_ext
+      apply LinearMap.ext
+      intro x
+      obtain ⟨x, rfl⟩ := Submodule.mkQ_surjective _ x
+      let hf : a ≤ b := leOfHom f
+      let hg : b ≤ c := leOfHom g
+      let hfg : a ≤ c := leOfHom (f ≫ g)
+      change Submodule.Quotient.mk (extend a.1 c.1 hfg.choose x) =
+        Submodule.Quotient.mk
+          (extend b.1 c.1 hg.choose (extend a.1 b.1 hf.choose x))
+      rw [extend_comp] }
+  let stageToN (a : Index) : stage a ⟶ N :=
+    ModuleCat.ofHom <|
+      Submodule.liftQ _
+        (Finsupp.linearCombination R (fun s : a.1 => (s : M)))
+        (by
+          rw [Submodule.span_le]
+          intro e he
+          exact a.2.2 e he)
+  let c : Cocone D := {
+    pt := N
+    ι :=
+      { app := stageToN
+        naturality := by
+          intro a b f
+          apply ModuleCat.hom_ext
+          apply LinearMap.ext
+          intro x
+          obtain ⟨x, rfl⟩ := Submodule.mkQ_surjective _ x
+          let hf : a ≤ b := leOfHom f
+          change Finsupp.linearCombination R (fun s : b.1 => (s : M))
+              (Finsupp.mapDomain (embedding a.1 b.1 hf.choose) x) =
+            Finsupp.linearCombination R (fun s : a.1 => (s : M)) x
+          rw [Finsupp.linearCombination_mapDomain]
+          rfl } }
+  have hc : IsColimit ((forget (ModuleCat.{w} R)).mapCocone c) := by
+    apply Types.FilteredColimit.isColimitOf'
+    · intro x
+      let S : Finset M := {x}
+      let a : Index := ⟨S, ⟨∅, by simp⟩⟩
+      let q : S →₀ R := Finsupp.single ⟨x, by simp [S]⟩ 1
+      refine ⟨a, Submodule.Quotient.mk q, ?_⟩
+      change x = Finsupp.linearCombination R (fun s : S => (s : M)) q
+      simp [q, S]
+    · intro a x y hxy
+      obtain ⟨x', hx'⟩ := Submodule.mkQ_surjective
+        (Submodule.span R (a.2.1 : Set (a.1 →₀ R))) x
+      obtain ⟨y', hy'⟩ := Submodule.mkQ_surjective
+        (Submodule.span R (a.2.1 : Set (a.1 →₀ R))) y
+      have hxy' :
+          stageToN a (Submodule.Quotient.mk x') =
+            stageToN a (Submodule.Quotient.mk y') := by
+        rw [← hx', ← hy'] at hxy
+        simpa [c] using hxy
+      have hrel :
+          Finsupp.linearCombination R (fun s : a.1 => (s : M)) (x' - y') = 0 := by
+        have hxy'' :
+            Finsupp.linearCombination R (fun s : a.1 => (s : M)) x' =
+              Finsupp.linearCombination R (fun s : a.1 => (s : M)) y' := by
+          change Finsupp.linearCombination R (fun s : a.1 => (s : M)) x' =
+            Finsupp.linearCombination R (fun s : a.1 => (s : M)) y' at hxy'
+          exact hxy'
+        rw [map_sub]
+        exact sub_eq_zero.mpr hxy''
+      let E : Finset (a.1 →₀ R) := insert (x' - y') a.2.1
+      have hE : ∀ e ∈ E,
+          Finsupp.linearCombination R (fun s : a.1 => (s : M)) e = 0 := by
+        intro e he
+        rcases Finset.mem_insert.mp he with rfl | he
+        · exact hrel
+        · exact a.2.2 e he
+      let b : Index := ⟨a.1, ⟨E, hE⟩⟩
+      have hab : a ≤ b := by
+        refine ⟨le_rfl, ?_⟩
+        intro e he
+        rw [extend_id]
+        exact Finset.mem_insert_of_mem he
+      refine ⟨b, homOfLE hab, ?_⟩
+      rw [← hx', ← hy']
+      change Submodule.Quotient.mk (extend a.1 b.1 hab.choose x') =
+        Submodule.Quotient.mk (extend a.1 b.1 hab.choose y')
+      rw [extend_id]
+      rw [extend_id]
+      rw [← sub_eq_zero]
+      change (Submodule.mkQ _ x') - (Submodule.mkQ _ y') = 0
+      rw [← map_sub]
+      apply (Submodule.Quotient.mk_eq_zero _).2
+      exact Submodule.subset_span (Finset.mem_insert_self _ _)
+  let P : ColimitPresentation Index N :=
+    { diag := D
+      ι := c.ι
+      isColimit := isColimitOfReflects (forget (ModuleCat.{w} R)) hc }
+  exact ⟨{
+    index := Index
+    indexCategory := inferInstance
+    indexFiltered := index_filtered
+    presentation := P
+    underlyingIsColimit := hc
+    finitelyPresented := by
+      intro a
+      change Module.FinitePresentation R
+        ((a.1 →₀ R) ⧸ Submodule.span R (a.2.1 : Set (a.1 →₀ R)))
+      apply Module.finitePresentation_of_surjective (Submodule.mkQ _)
+      · exact Submodule.mkQ_surjective _
+      · rw [Submodule.ker_mkQ]
+        exact Submodule.fg_span a.2.1.finite_toSet }⟩
+
+private lemma tensor_rep
+    {R : Type u} [CommRing R] {P : Type w} [AddCommGroup P] [Module R P]
+    {Q : ModuleCat.{w} R} (C : GeneralFilteredColimit Q) :
+    ∀ x : TensorProduct R P (Q : Type w),
+      ∃ (i : C.index) (y : TensorProduct R P
+          (C.presentation.diag.obj i : Type w)),
+        (C.presentation.ι.app i).hom.lTensor P y = x := by
+  intro x
+  induction x using TensorProduct.induction_on with
+  | zero =>
+      let i : C.index := IsFiltered.nonempty.some
+      exact ⟨i, 0, by simp⟩
+  | tmul p q =>
+      obtain ⟨i, qi, hqi⟩ :=
+        Types.jointly_surjective_of_isColimit C.underlyingIsColimit q
+      exact ⟨i, p ⊗ₜ qi, by simp [hqi]⟩
+  | add x y hx hy =>
+      obtain ⟨i, xi, hxi⟩ := hx
+      obtain ⟨j, yj, hyj⟩ := hy
+      obtain ⟨k, a, b, _⟩ := IsFilteredOrEmpty.cocone_objs i j
+      let yk := (C.presentation.diag.map a).hom.lTensor P xi +
+        (C.presentation.diag.map b).hom.lTensor P yj
+      refine ⟨k, yk, ?_⟩
+      dsimp [yk]
+      rw [map_add, ← hxi, ← hyj]
+      have ha0 : (C.presentation.ι.app k).hom.comp
+          (C.presentation.diag.map a).hom = (C.presentation.ι.app i).hom := by
+        simpa only [ModuleCat.comp_apply] using
+          congrArg ModuleCat.Hom.hom (C.presentation.ι.naturality a)
+      have hb0 : (C.presentation.ι.app k).hom.comp
+          (C.presentation.diag.map b).hom = (C.presentation.ι.app j).hom := by
+        simpa only [ModuleCat.comp_apply] using
+          congrArg ModuleCat.Hom.hom (C.presentation.ι.naturality b)
+      have ha := congrArg (fun t => t.lTensor P) ha0
+      have hb := congrArg (fun t => t.lTensor P) hb0
+      rw [LinearMap.lTensor_comp] at ha hb
+      rw [← ha, ← hb]
+
+private lemma eventually_zero
+    {R : Type u} [CommRing R] {Q : ModuleCat.{w} R}
+    (C : GeneralFilteredColimit Q) {i : C.index} (x : C.presentation.diag.obj i) :
+    (C.presentation.ι.app i).hom x = 0 →
+      ∃ (j : C.index) (h : i ⟶ j),
+        (C.presentation.diag.map h).hom x = 0 := by
+  intro hx
+  obtain ⟨j, h, _, hh⟩ :=
+    (Types.FilteredColimit.isColimit_eq_iff _ C.underlyingIsColimit).1
+      (hx.trans (by simp))
+  exact ⟨j, h, by simpa using hh⟩
+
 theorem dominates_iff_finitelyPresented
     {R : Type u} [CommRing R] {M N N' : Type w}
     [AddCommGroup M] [Module R M]
@@ -101,7 +396,45 @@ theorem dominates_iff_finitelyPresented
       ∀ (Q : Type (max u w)) [AddCommGroup Q] [Module R Q],
         Module.FinitePresentation R Q →
           LinearMap.ker (f.rTensor Q) ≤ LinearMap.ker (g.rTensor Q) := by
-  sorry
+  constructor
+  · intro h Q _ _ _
+    exact h Q
+  · intro h Q _ _ x hx
+    let C := (exists_generalFilteredColimit (ModuleCat.of R Q)).some
+    obtain ⟨i, y, hy⟩ := tensor_rep (P := M) C x
+    let z := (f.rTensor (C.presentation.diag.obj i : Type (max u w))) y
+    have hz : (C.presentation.ι.app i).hom z = 0 := by
+      have hc := LinearMap.lTensor_comp_rTensor f
+        (C.presentation.ι.app i).hom
+      have hc' := congrArg (fun t => t y) hc
+      rw [← hy, hx]
+      simpa [z] using hc'
+    obtain ⟨j, hij, hzj⟩ := eventually_zero C z hz
+    let yj := (C.presentation.diag.map hij).hom.lTensor M y
+    have hyj : (C.presentation.ι.app j).hom.lTensor M yj = x := by
+      have hc := congrArg (fun t => t.lTensor M)
+        (congrArg ModuleCat.Hom.hom (C.presentation.ι.naturality hij))
+      have hc' := congrArg (fun t => t y) hc
+      rw [LinearMap.lTensor_comp] at hc'
+      simpa [yj] using hc'.trans hy
+    have hfj : yj ∈ LinearMap.ker
+        (f.rTensor (C.presentation.diag.obj j : Type (max u w))) := by
+      apply LinearMap.mem_ker.mpr
+      have hc := LinearMap.rTensor_comp_lTensor f
+        (C.presentation.diag.map hij).hom
+      have hc' := congrArg (fun t => t y) hc
+      rw [LinearMap.comp_apply] at hc'
+      rw [← hc', hzj]
+      simp
+    have hgj := h (C.presentation.diag.obj j : Type (max u w))
+      (C.finitelyPresented j) hfj
+    apply LinearMap.mem_ker.mpr
+    have hc := LinearMap.lTensor_comp_rTensor g
+      (C.presentation.ι.app j).hom
+    have hc' := congrArg (fun t => t yj) hc
+    rw [← hyj, LinearMap.comp_apply] at hc'
+    rw [← hc', hgj]
+    simp
 
 /-- Domination is equivalent to universal injectivity of the map from the
 second leg into the pushout. -/
@@ -114,10 +447,136 @@ theorem dominates_iff_pushout_inr_universallyInjective
     dominates g f ↔
       universallyInjective
         ((pushout.inr (ModuleCat.ofHom f) (ModuleCat.ofHom g)).hom) := by
-  sorry
+  constructor
+  · intro hd Q _ _
+    intro x y hxy
+    apply sub_eq_zero.mp
+    let p := pushout (ModuleCat.ofHom f) (ModuleCat.ofHom g)
+    let d : M →ₗ[R] (N × N') := LinearMap.prod f (-g)
+    let π : (N × N') →ₗ[R] (p : Type w) :=
+      (biprod.desc (pushout.inl (ModuleCat.ofHom f) (ModuleCat.ofHom g))
+        (pushout.inr (ModuleCat.ofHom f) (ModuleCat.ofHom g))).hom
+    let S := ShortComplex.moduleCatMk d π (by
+      ext z <;> simp [d, π, LinearMap.prod_apply])
+    have hS : S.Exact := by
+      apply S.exact_of_g_is_cokernel
+      exact (pushoutIsPushout (ModuleCat.ofHom f) (ModuleCat.ofHom g)).
+        isColimitCokernelCofork
+    have hπ : Function.Surjective π := by
+      apply ModuleCat.epi_iff_surjective.mp
+      exact epi_of_isColimit_cofork
+        (pushoutIsPushout (ModuleCat.ofHom f) (ModuleCat.ofHom g)).
+          isColimitCokernelCofork
+    have hExact : Function.Exact d π :=
+      (S.moduleCat_exact_iff_function_exact).mp hS
+    have hπQ := TensorProduct.rTensor_exact Q hExact hπ
+    have hx0 : ((pushout.inr (ModuleCat.ofHom f) (ModuleCat.ofHom g)).hom.rTensor Q)
+        (x - y) = 0 := by
+      rw [map_sub, hxy, sub_self]
+    have hxπ : (π.rTensor Q)
+        ((LinearMap.inr R N N').rTensor Q (x - y)) = 0 := by
+      have heq :
+          (π.rTensor Q).comp ((LinearMap.inr R N N').rTensor Q) =
+            ((pushout.inr (ModuleCat.ofHom f) (ModuleCat.ofHom g)).hom.rTensor Q) := by
+        rw [← LinearMap.rTensor_comp]
+        rfl
+      rw [← LinearMap.comp_apply, heq, hx0]
+    obtain ⟨a, ha⟩ := hπQ hxπ
+    have hfa : (f.rTensor Q) a = 0 := by
+      have hfst := congrArg (fun z => (LinearMap.fst R N N').rTensor Q z) ha
+      simpa [d, LinearMap.prod_apply] using hfst
+    have hga : (g.rTensor Q) a = 0 := hd Q (LinearMap.mem_ker.mpr hfa)
+    have hsnd := congrArg (fun z => (LinearMap.snd R N N').rTensor Q z) ha
+    have hxy0 : x - y = 0 := by
+      simpa [d, LinearMap.prod_apply] using congrArg Neg.neg hsnd
+    exact hxy0
+  · intro hu Q _ _ x hx
+    have hpush := pushout.condition (ModuleCat.ofHom f) (ModuleCat.ofHom g)
+    have hpush' := congrArg ModuleCat.Hom.hom hpush
+    have hpushQ := congrArg (fun t => t.rTensor Q) hpush'
+    have hz :
+        ((pushout.inr (ModuleCat.ofHom f) (ModuleCat.ofHom g)).hom.rTensor Q)
+          ((g.rTensor Q) x) = 0 := by
+      have heq := congrArg (fun t => t x) hpushQ
+      rw [LinearMap.comp_apply, LinearMap.comp_apply, hx] at heq
+      simpa using heq
+    exact (hu Q).eq_of_sub_eq_zero (by simpa using hz)
 
 /-- If the cokernel of `f` is finitely presented, domination is the usual
 factorization relation. -/
+private lemma injective_of_universallyInjective
+    {R : Type u} [CommRing R] {M N : Type w}
+    [AddCommGroup M] [Module R M] [AddCommGroup N] [Module R N]
+    {f : M →ₗ[R] N}
+    (hu : universallyInjective f) : Function.Injective f := by
+  intro x y hxy
+  apply (TensorProduct.rid R N).injective
+  apply hu R
+  simp [hxy]
+
+private lemma pushout_inr_cokernel
+    {R : Type u} [CommRing R] {M N N' : Type w}
+    [AddCommGroup M] [Module R M]
+    [AddCommGroup N] [Module R N]
+    [AddCommGroup N'] [Module R N']
+    (f : M →ₗ[R] N) (g : M →ₗ[R] N') :
+    let ff := ModuleCat.ofHom f
+    let gg := ModuleCat.ofHom g
+    let p := pushout ff gg
+    let q : N →ₗ[R] (N ⧸ LinearMap.range f) := Submodule.mkQ _
+    let π : (p : Type w) →ₗ[R] (N ⧸ LinearMap.range f) :=
+      (pushout.desc (ModuleCat.ofHom q) 0 (by
+        ext x
+        simp [q])).hom
+    Function.Exact (ModuleCat.Hom.hom (pushout.inr ff gg)) π ∧
+      Function.Surjective π := by
+  dsimp
+  let ff := ModuleCat.ofHom f
+  let gg := ModuleCat.ofHom g
+  let p := pushout ff gg
+  let q : N →ₗ[R] (N ⧸ LinearMap.range f) := Submodule.mkQ _
+  let π : (p : Type w) →ₗ[R] (N ⧸ LinearMap.range f) :=
+    (pushout.desc (ModuleCat.ofHom q) 0 (by
+      ext x
+      simp [q])).hom
+  have hqcol := ModuleCat.cokernelIsColimit ff
+  let cπ : CokernelCofork (pushout.inr ff gg) :=
+    CokernelCofork.ofπ (ModuleCat.ofHom π) (by
+      ext x
+      simp [π])
+  have hcπ : IsColimit cπ := by
+    refine Cofork.IsColimit.mk _ ?_ ?_ ?_
+    · intro s
+      let k : N ⟶ s.pt := pushout.inl ff gg ≫ s.π
+      have hk : ff ≫ k = 0 := by
+        rw [← pushout.condition_assoc]
+        simp [k, s.condition]
+      exact hqcol.desc (CokernelCofork.ofπ k hk)
+    · intro s
+      apply (pushoutIsPushout ff gg).hom_ext
+      · simp [π]
+        exact Cofork.IsColimit.π_desc hqcol
+      · simp [π, s.condition]
+    · intro s m hm
+      haveI : Epi hqcol.π := epi_of_isColimit_cofork hqcol
+      apply (cancel_epi hqcol.π).1
+      calc
+        hqcol.π ≫ m = pushout.inl ff gg ≫ π ≫ m := by simp [π]
+        _ = pushout.inl ff gg ≫ s.π := by rw [hm]
+        _ = hqcol.π ≫ hqcol.desc
+            (CokernelCofork.ofπ (pushout.inl ff gg ≫ s.π) (by
+              rw [← pushout.condition_assoc]
+              simp [s.condition])) := by
+          symm
+          exact Cofork.IsColimit.π_desc hqcol
+  let S' := ShortComplex.moduleCatMk
+    (ModuleCat.Hom.hom (pushout.inr ff gg)) π (by
+      ext x
+      simp [π])
+  have hS' : S'.Exact := S'.exact_of_g_is_cokernel hcπ
+  exact ⟨(S'.moduleCat_exact_iff_function_exact).mp hS',
+    ModuleCat.epi_iff_surjective.mp (epi_of_isColimit_cofork hcπ)⟩
+
 theorem dominates_iff_factors_of_finitelyPresented_cokernel
     {R : Type u} [CommRing R] {M N N' : Type w}
     [AddCommGroup M] [Module R M]
@@ -127,7 +586,62 @@ theorem dominates_iff_factors_of_finitelyPresented_cokernel
     (h : Module.FinitePresentation R
       (N ⧸ LinearMap.range f)) :
     dominates g f ↔ ∃ h' : N →ₗ[R] N', g = h'.comp f := by
-  sorry
+  constructor
+  · rintro ⟨h', rfl⟩
+    intro Q _ _
+    intro x hx
+    apply LinearMap.mem_ker.mpr
+    simpa [LinearMap.rTensor_comp, hx]
+  · intro hd
+    haveI : Module.FinitePresentation R
+        (N ⧸ LinearMap.range f) := h
+    let ff := ModuleCat.ofHom f
+    let gg := ModuleCat.ofHom g
+    let p := pushout ff gg
+    let inl : N →ₗ[R] (p : Type w) := (pushout.inl ff gg).hom
+    let inr : N' →ₗ[R] (p : Type w) := (pushout.inr ff gg).hom
+    let q : N →ₗ[R] (N ⧸ LinearMap.range f) := Submodule.mkQ _
+    let π : (p : Type w) →ₗ[R] (N ⧸ LinearMap.range f) :=
+      (pushout.desc (ModuleCat.ofHom q) 0 (by
+        ext x
+        simp [q])).hom
+    have hc : Function.Exact inr π ∧ Function.Surjective π := by
+      simpa [ff, gg, p, inr, q, π] using pushout_inr_cokernel f g
+    have hu : universallyInjective inr := by
+      simpa [ff, gg, p, inr] using
+        (dominates_iff_pushout_inr_universallyInjective f g).1 hd
+    have hinj : Function.Injective inr :=
+      injective_of_universallyInjective hu
+    have huniv : universallyExact inr π :=
+      ⟨hinj, hc.1, hc.2, hu⟩
+    obtain ⟨s, hs⟩ :=
+      (universallyExact_iff_split_of_finitePresentation inr π
+        ⟨hinj, hc.1, hc.2⟩).1 huniv
+    have hker : LinearMap.ker π = LinearMap.range inr :=
+      (LinearMap.exact_iff.mp hc.1).symm
+    let t : (p : Type w) →ₗ[R] (p : Type w) := LinearMap.id - s.comp π
+    have ht (x : (p : Type w)) : t x ∈ LinearMap.range inr := by
+      rw [← hker]
+      apply LinearMap.mem_ker.mpr
+      simp [t, hs]
+    let tr : (p : Type w) →ₗ[R] LinearMap.range inr :=
+      t.codRestrict _ ht
+    let e : N' ≃ₗ[R] LinearMap.range inr :=
+      LinearEquiv.ofBijective inr.rangeRestrict
+        ⟨hinj, LinearMap.surjective_rangeRestrict _⟩
+    let r : (p : Type w) →ₗ[R] N' := e.symm.toLinearMap.comp tr
+    have hr : r.comp inr = LinearMap.id := by
+      ext x
+      simp [r, tr, t, e]
+    refine ⟨r.comp inl, ?_⟩
+    apply LinearMap.ext
+    intro x
+    change r (inl (f x)) = g x
+    have hcond := congrArg ModuleCat.Hom.hom (pushout.condition ff gg)
+    have hcond' := congrArg (fun z => z x) hcond
+    rw [hcond']
+    have hr' := congrArg (fun z => z (g x)) hr
+    simpa [LinearMap.comp_apply] using hr'
 
 /-! ## The five equivalent characterizations -/
 

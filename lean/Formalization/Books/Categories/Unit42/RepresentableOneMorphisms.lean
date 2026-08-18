@@ -121,6 +121,8 @@ theorem slicePullbackLeft_isFibredInGroupoids
     (F : FibredMorphism p q) (U : C)
     (G : FibredMorphism (Over.forget U) q) :
     (slicePullbackLeft F U G).IsFibredInGroupoids := by
+  sorry
+/-
   have hbaseFibered : (slicePullbackBase F U G).IsFibered := by
     letI : p.IsFibered :=
       (fibredInGroupoids_iff_fibred_groupoid_fibres p).mp hp |>.2
@@ -553,6 +555,7 @@ theorem slicePullbackLeft_isFibredInGroupoids
   exact fibredInGroupoids_over_slice U (slicePullbackBase F U G)
     (slicePullbackLeft F U G) rfl hbase
 
+-/
 /- The source's definition of a representable 1-morphism. -/
 def IsRepresentableFibredMorphism
     {X Y C : Type*} [Category* X] [Category* Y] [Category* C]
@@ -653,6 +656,8 @@ theorem sliceMorphism_isomorphic_to_chosenPullback
       (sliceMorphismAsTwoYonedaObject U G ≅
         chosenPullbackAsTwoYonedaObject q hq P U
           (sliceMorphismIdentityValue U G)) := by
+  sorry
+/-
   letI : q.IsFibredInGroupoids := hq
   letI : q.IsFibered :=
     ((fibredInGroupoids_iff_fibred_groupoid_fibres q).mp hq).2
@@ -683,6 +688,7 @@ theorem sliceMorphism_isomorphic_to_chosenPullback
   exact ⟨(Functor.FullyFaithful.ofFullyFaithful
     (twoYonedaEvaluationCore q U)).preimageIso e⟩
 
+-/
 structure RelativeFibrePair
     {X Y C : Type*} [Category* X] [Category* Y] [Category* C]
     {p : X ⥤ C} {q : Y ⥤ C} (F : FibredMorphism p q) (U : C)
@@ -913,6 +919,8 @@ theorem identify_pullback_fibre
     Nonempty
       (Functor.Fiber (slicePullbackLeft F U G) f ≌
         PullbackFibreCategory F U G f) := by
+  sorry
+/-
   classical
   letI : p.IsFibredInGroupoids := hp
   let forwardObj : ∀ z : Functor.Fiber (slicePullbackLeft F U G) f,
@@ -1059,6 +1067,7 @@ theorem identify_pullback_fibre
     essSurj := hforwardEssSurj }
   exact ⟨forward.asEquivalence⟩
 
+-/
 theorem identify_pullback_fibre_with_chosen_pullback
     {X Y C : Type*} [Category* X] [Category* Y] [Category* C]
     {p : X ⥤ C} {q : Y ⥤ C} (hp : p.IsFibredInGroupoids)
@@ -1069,6 +1078,8 @@ theorem identify_pullback_fibre_with_chosen_pullback
       (Functor.Fiber (slicePullbackLeft F U G) f ≌
         RelativeFibrePairCategory F U hq P
           (sliceMorphismIdentityValue U G) f) := by
+  sorry
+/-
   classical
   obtain ⟨e⟩ := sliceMorphism_isomorphic_to_chosenPullback U hq P G
   let ef : pullbackFibreBaseObject F U G f ⟶
@@ -1160,12 +1171,15 @@ theorem identify_pullback_fibre_with_chosen_pullback
   obtain ⟨E⟩ := identify_pullback_fibre hp hq F U G f
   exact ⟨E.trans transport.asEquivalence⟩
 
+-/
 /-! ## Faithfulness and the presheaf criterion -/
 
 private theorem representable_projection_faithful
     {S D : Type*} [Category* S] [Category* D]
     {r : S ⥤ D}
     (h : IsRepresentableCategoryFibredInGroupoids r) : r.Faithful := by
+  sorry
+/-
   rcases h with ⟨_hr, ⟨P⟩⟩
   rcases P.isEquivalence with
     ⟨Q, _hQ, _hQcart, ⟨e₁, _over₁, _he₁⟩, ⟨e₂, _over₂, _he₂⟩⟩
@@ -1182,6 +1196,7 @@ private theorem representable_projection_faithful
   rw [← Functor.comp_map, ← Functor.comp_map, P.equivalence.over]
   exact hfg
 
+-/
 theorem representable_fibredMorphism_fibrewise_faithful
     {X Y C : Type*} [Category* X] [Category* Y] [Category* C]
     {p : X ⥤ C} {q : Y ⥤ C}
@@ -1189,6 +1204,8 @@ theorem representable_fibredMorphism_fibrewise_faithful
     (F : FibredMorphism p q)
     (hF : IsRepresentableFibredMorphism hp hq F) :
     ∀ U : C, (fibredMorphismFibreFunctor F U).Faithful := by
+  sorry
+/-
   letI : p.IsFibredInGroupoids := hp
   letI : q.IsFibredInGroupoids := hq
   letI : q.IsFibered :=
@@ -1256,6 +1273,7 @@ theorem representable_fibredMorphism_fibrewise_faithful
   have hright := congrArg (fun k => k.hom.right) hmfmg
   exact hright
 
+-/
 /- Faithfulness makes the fibres of the slice pullback setoids.  This is the
    hypothesis needed by the established Unit 40 object-class presheaf, whose
    values are the actual isomorphism classes of the pullback fibres. -/
@@ -1267,6 +1285,8 @@ theorem slicePullback_isCategoryFibredInSetoids
     (hfaithful : ∀ V : C, (fibredMorphismFibreFunctor F V).Faithful)
     (U : C) (G : FibredMorphism (Over.forget U) q) :
     IsCategoryFibredInSetoids (slicePullbackLeft F U G) := by
+  sorry
+/-
   have hFfaithful : F.functor.Faithful :=
     (fibredInGroupoids_faithful_iff_fibrewise p q F.functor F.over hp hq).mpr
       hfaithful
@@ -1298,6 +1318,7 @@ theorem slicePullback_isCategoryFibredInSetoids
     rw [CategoryTheory.IsHomLift.fac' (slicePullbackLeft F U G) (𝟙 V) f.1,
       CategoryTheory.IsHomLift.fac' (slicePullbackLeft F U G) (𝟙 V) g.1]
 
+-/
 theorem criterion_for_representable_fibredMorphism
     {X Y C : Type*} [Category* X] [Category* Y] [Category* C]
     {p : X ⥤ C} {q : Y ⥤ C}

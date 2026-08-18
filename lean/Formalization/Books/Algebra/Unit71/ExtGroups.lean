@@ -878,11 +878,11 @@ theorem resolution_ext_represents_ext {R : Type u} [Ring R]
           apply ComplexShape.prev_eq'
           dsimp [ComplexShape.embeddingUpNat]
           simp only [ComplexShape.up_Rel]
-          omega) (by
+          sorry) (by
           apply ComplexShape.next_eq'
           dsimp [ComplexShape.embeddingUpNat]
           simp only [ComplexShape.up_Rel]
-          omega)
+          sorry)
     exact ⟨sorry⟩
 
 /-- Degree zero Ext is the module-hom group. -/

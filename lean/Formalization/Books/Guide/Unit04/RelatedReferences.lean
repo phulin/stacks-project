@@ -312,7 +312,7 @@ the pairing by a merely class-level operation. -/
 structure SiteTorsorBalancedPairing {C : Type u} [Category.{v} C]
     {J : GrothendieckTopology C}
     {G : Sheaf J AddCommGrpCat.{w}} {X : C}
-    (P Q R : SiteTorsor.{t, w, v, u}) where
+    (P Q R : SiteTorsor.{t, w, v, u} J G X) where
   pair : ∀ (U : (Over C X)ᵒᵖ),
     P.carrier.obj.obj U → Q.carrier.obj.obj U → R.carrier.obj.obj U
   pair_natural : ∀ {U V : (Over C X)ᵒᵖ} (q : U ⟶ V)

@@ -1186,9 +1186,10 @@ theorem exists_finite_flat_not_projective :
     letI : Module.Projective R M := hprojective
     letI : Module.Projective R M₀ :=
       Module.Projective.of_equiv' (ULift.moduleEquiv (R := R) (M := M₀))
-    let σ : R →+* R₀ := ULift.ringEquiv
-    let σ' : R₀ →+* R := ULift.ringEquiv.symm
-    letI : RingHomInvPair σ σ' := RingHomInvPair.of_ringEquiv ULift.ringEquiv
+    let σ : R →+* R₀ := ULift.ringEquiv.toRingHom
+    let σ' : R₀ →+* R := ULift.ringEquiv.symm.toRingHom
+    letI : RingHomInvPair σ σ' :=
+      RingHomInvPair.of_ringEquiv (ULift.ringEquiv : R ≃+* R₀)
     letI : RingHomInvPair σ' σ :=
       RingHomInvPair.symm σ σ'
     let e : M₀ ≃ₛₗ[σ] M₀ :=

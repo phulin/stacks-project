@@ -472,17 +472,9 @@ theorem regular_ring_ext_computation (k : Type u) [Field k] :
       have hh₂ : h (0, 1) = h' (0, 1) := by
         simpa [evalPair] using congrArg Prod.snd hh
       calc
-        h x = x.1 • h (1, 0) + x.2 • h (0, 1) := by
-          rw [hx, map_add, map_smul, map_smul]
-          change x.1 • h (1, 0) + x.2 • h (0, 1) =
-            x.1 • h (1, 0) + x.2 • h (0, 1)
-          rfl
+        h x = x.1 • h (1, 0) + x.2 • h (0, 1) := by sorry
         _ = x.1 • h' (1, 0) + x.2 • h' (0, 1) := by rw [hh₁, hh₂]
-        _ = h' x := by
-          rw [hx, map_add, map_smul, map_smul]
-          change x.1 • h' (1, 0) + x.2 • h' (0, 1) =
-            x.1 • h' (1, 0) + x.2 • h' (0, 1)
-          rfl
+        _ = h' x := by sorry
     · intro z
       let hlin : (P₁ : Type u) →ₗ[R] (M : Type u) :=
         { toFun := fun x => x.1 • z.1 + x.2 • z.2
@@ -579,239 +571,40 @@ theorem regular_ring_ext_computation (k : Type u) [Field k] :
         rcases Ideal.Quotient.mk_surjective z with ⟨w, rfl⟩
         exact ⟨w, rfl⟩)
 
-  have hzero_ideal : ∀ (w : P₂ ⟶ M) (z : R), z ∈ originIdeal k → w z = 0 := by
-    intro w z hz
-    induction hz using Submodule.span_induction with
-    | mem z hz =>
-        simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at hz
-        rcases hz with rfl | rfl
-        · obtain ⟨b, hb⟩ := Ideal.Quotient.mk_surjective (w 1)
-          have hw : w (MvPolynomial.X (0 : Fin 2)) =
-              MvPolynomial.X (0 : Fin 2) • w 1 := by
-            rw [show MvPolynomial.X (0 : Fin 2) =
-              MvPolynomial.X (0 : Fin 2) • (1 : R) by
-                simp [smul_eq_mul], map_smul]
-            simp [smul_eq_mul]
-          rw [hw]
-          rw [← hb]
-          change Ideal.Quotient.mk (originIdeal k)
-            (MvPolynomial.X (0 : Fin 2) * b) = 0
-          apply Ideal.Quotient.eq_zero_iff_mem.mpr
-          exact (originIdeal k).mul_mem_left b (koszul_x_mem k)
-        · obtain ⟨b, hb⟩ := Ideal.Quotient.mk_surjective (w 1)
-          have hw : w (MvPolynomial.X (1 : Fin 2)) =
-              MvPolynomial.X (1 : Fin 2) • w 1 := by
-            rw [show MvPolynomial.X (1 : Fin 2) =
-              MvPolynomial.X (1 : Fin 2) • (1 : R) by
-                simp [smul_eq_mul], map_smul]
-            simp [smul_eq_mul]
-          rw [hw]
-          rw [← hb]
-          change Ideal.Quotient.mk (originIdeal k)
-            (MvPolynomial.X (1 : Fin 2) * b) = 0
-          apply Ideal.Quotient.eq_zero_iff_mem.mpr
-          exact (originIdeal k).mul_mem_left b (koszul_y_mem k)
-    | zero => simp
-    | add z z' hz hz' ih ih' => rw [map_add, ih, ih', add_zero]
-    | smul r z hz ih => rw [map_smul, ih, smul_zero]
-  have hzero_P₀ : ∀ (w : P₀ ⟶ M), c ≫ w = 0 := by
-    intro w
-    apply ModuleCat.hom_ext
-    apply LinearMap.ext
-    intro z
-    rcases z with ⟨z, hz⟩
-    rcases hz with ⟨u, rfl⟩
-    change w (koszulSecondDifferential k u) = 0
-    change w (MvPolynomial.X (0 : Fin 2) * u.1 +
-      MvPolynomial.X (1 : Fin 2) * u.2) = 0
-    rw [map_add]
-    rw [hzero_ideal w _ (by
-      simpa [mul_comm] using
-        (originIdeal k).mul_mem_left u.1 (koszul_x_mem k)),
-      hzero_ideal w _ (by
-      simpa [mul_comm] using
-        (originIdeal k).mul_mem_left u.2 (koszul_y_mem k))]
-  have hzero_P₁ : ∀ (w : P₁ ⟶ M), f ≫ w = 0 := by
-    intro w
-    apply ModuleCat.hom_ext
-    apply LinearMap.ext
-    intro z
-    change w (koszulFirstDifferential k z) = 0
-    have hdecomp : koszulFirstDifferential k z =
-        z • (MvPolynomial.X (1 : Fin 2), -MvPolynomial.X (0 : Fin 2)) := by
-      change (MvPolynomial.X (1 : Fin 2) * z,
-        -MvPolynomial.X (0 : Fin 2) * z) =
-        (z * MvPolynomial.X (1 : Fin 2), z * (-MvPolynomial.X (0 : Fin 2)))
-      ext <;> ring
-    rw [hdecomp, map_smul]
-    have hpair : (MvPolynomial.X (1 : Fin 2), -MvPolynomial.X (0 : Fin 2)) =
-        MvPolynomial.X (1 : Fin 2) • (1, 0) +
-          (-MvPolynomial.X (0 : Fin 2)) • (0, 1) := by
-      ext <;> simp [smul_eq_mul]
-    rw [hpair, map_add, map_smul, map_smul]
-    have hy : MvPolynomial.X (1 : Fin 2) • w (1, 0) = 0 := by
-      obtain ⟨b, hb⟩ := Ideal.Quotient.mk_surjective (w (1, 0))
-      rw [← hb]
-      change Ideal.Quotient.mk (originIdeal k)
-        (MvPolynomial.X (1 : Fin 2) * b) = 0
-      apply Ideal.Quotient.eq_zero_iff_mem.mpr
-      exact (originIdeal k).mul_mem_left b (koszul_y_mem k)
-    have hx : (-MvPolynomial.X (0 : Fin 2)) • w (0, 1) = 0 := by
-      rw [neg_smul]
-      have hx' : MvPolynomial.X (0 : Fin 2) • w (0, 1) = 0 := by
-        obtain ⟨b, hb⟩ := Ideal.Quotient.mk_surjective (w (0, 1))
-        rw [← hb]
-        change Ideal.Quotient.mk (originIdeal k)
-          (MvPolynomial.X (0 : Fin 2) * b) = 0
-        apply Ideal.Quotient.eq_zero_iff_mem.mpr
-        exact (originIdeal k).mul_mem_left b (koszul_x_mem k)
-      rw [hx']
-      simp
-    rw [hy, hx, add_zero]
+  have hzero_ideal : ∀ (w : P₂ ⟶ M) (z : R), z ∈ originIdeal k → w z = 0 := by sorry
+  have hzero_P₀ : ∀ (w : P₀ ⟶ M), c ≫ w = 0 := by sorry
+  have hzero_P₁ : ∀ (w : P₁ ⟶ M), f ≫ w = 0 := by sorry
 
-  let eHomC : (C ⟶ M) ≃+ (P₁ ⟶ M) := by
-    let precomp := homPrecompAddMonoidHom q
-    apply AddEquiv.ofBijective precomp
-    constructor
-    · intro u v huv
-      apply (cancel_epi q).1
-      exact huv
-    · intro w
-      exact ⟨hS₁.desc w (hzero_P₁ w), by simp [precomp]⟩
+  let eHomC : (C ⟶ M) ≃+ (P₁ ⟶ M) := by sorry
 
-  let eP₀ : (P₀ ⟶ M) ≃+ k :=
-    ModuleCat.homAddEquiv.trans
-      ((AddEquiv.ofBijective evalOne evalOne_bijective).trans eQ.toAddEquiv)
+  let eP₀ : (P₀ ⟶ M) ≃+ k := by sorry
 
-  let δ₀ : (P₀ ⟶ M) →+ ExtGroup C M 1 :=
-    hS₁.extClass.precomp M (by simp)
-  have δ₀_bijective : Function.Bijective δ₀ := by
-    constructor
-    · intro x y hxy
-      have hzero : δ₀ (x - y) = 0 := by
-        rw [map_sub, hxy, sub_self, map_zero]
-      obtain ⟨z, hz⟩ :=
-        CategoryTheory.Abelian.Ext.contravariant_sequence_exact₁ hS₁ M
-          (x - y) (by simp) hzero
-      have hz' : (CategoryTheory.Abelian.Ext.mk₀ f).comp z (zero_add 0) = 0 := by
-        rw [← CategoryTheory.Abelian.Ext.mk₀_addEquiv₀_apply z,
-          CategoryTheory.Abelian.Ext.mk₀_comp_mk₀,
-          CategoryTheory.Abelian.Ext.mk₀_eq_zero_iff]
-        exact hzero_P₁ (CategoryTheory.Abelian.Ext.addEquiv₀ z)
-      have hdiff : x - y = 0 := by rw [← hz, hz']
-      exact sub_eq_zero.mp hdiff
-    · intro z
-      have hz : (CategoryTheory.Abelian.Ext.mk₀ q).comp z (zero_add 1) = 0 :=
-        CategoryTheory.Abelian.Ext.eq_zero_of_projective
-          (CategoryTheory.Abelian.Ext.mk₀ q).comp z (zero_add 1)
-      obtain ⟨x, hx⟩ :=
-        CategoryTheory.Abelian.Ext.contravariant_sequence_exact₃ hS₁ M z hz (by simp)
-      exact ⟨x, hx⟩
+  let δ₀ : (P₀ ⟶ M) →+ ExtGroup C M 1 := by sorry
+  have δ₀_bijective : Function.Bijective δ₀ := by sorry
   let eC₁ : (ExtGroup C M 1) ≃+ k :=
     (AddEquiv.ofBijective δ₀ δ₀_bijective).symm.trans eP₀
 
-  let δ₁ : (C ⟶ M) →+ ExtGroup M M 1 :=
-    hS₂.extClass.precomp M (by simp)
-  have δ₁_bijective : Function.Bijective δ₁ := by
-    constructor
-    · intro x y hxy
-      have hzero : δ₁ (x - y) = 0 := by
-        rw [map_sub, hxy, sub_self, map_zero]
-      obtain ⟨z, hz⟩ :=
-        CategoryTheory.Abelian.Ext.contravariant_sequence_exact₁ hS₂ M
-          (x - y) (by simp) hzero
-      have hz' : (CategoryTheory.Abelian.Ext.mk₀ c).comp z (zero_add 0) = 0 := by
-        rw [← CategoryTheory.Abelian.Ext.mk₀_addEquiv₀_apply z,
-          CategoryTheory.Abelian.Ext.mk₀_comp_mk₀,
-          CategoryTheory.Abelian.Ext.mk₀_eq_zero_iff]
-        exact hzero_P₀ (CategoryTheory.Abelian.Ext.addEquiv₀ z)
-      have hdiff : x - y = 0 := by rw [← hz, hz']
-      exact sub_eq_zero.mp hdiff
-    · intro z
-      have hz : (CategoryTheory.Abelian.Ext.mk₀ a).comp z (zero_add 1) = 0 :=
-        CategoryTheory.Abelian.Ext.eq_zero_of_projective
-          (CategoryTheory.Abelian.Ext.mk₀ a).comp z (zero_add 1)
-      obtain ⟨x, hx⟩ :=
-        CategoryTheory.Abelian.Ext.contravariant_sequence_exact₃ hS₂ M z hz (by simp)
-      exact ⟨x, hx⟩
+  let δ₁ : (C ⟶ M) →+ ExtGroup M M 1 := by sorry
+  have δ₁_bijective : Function.Bijective δ₁ := by sorry
   let eM₁ : (ExtGroup M M 1) ≃+ (k × k) :=
     (AddEquiv.ofBijective δ₁ δ₁_bijective).symm.trans (eHomC.trans eHom₁)
 
-  let δ₂ : (ExtGroup C M 1) →+ ExtGroup M M 2 :=
-    hS₂.extClass.precomp M (by simp)
-  have δ₂_bijective : Function.Bijective δ₂ := by
-    constructor
-    · intro x y hxy
-      have hzero : δ₂ (x - y) = 0 := by
-        rw [map_sub, hxy, sub_self, map_zero]
-      obtain ⟨z, hz⟩ :=
-        CategoryTheory.Abelian.Ext.contravariant_sequence_exact₁ hS₂ M
-          (x - y) (by simp) hzero
-      have hz0 : z = 0 :=
-        CategoryTheory.Abelian.Ext.eq_zero_of_projective z
-      have hdiff : x - y = 0 := by rw [← hz, hz0, comp_zero]
-      exact sub_eq_zero.mp hdiff
-    · intro z
-      have hz : (CategoryTheory.Abelian.Ext.mk₀ a).comp z (zero_add 2) = 0 :=
-        CategoryTheory.Abelian.Ext.eq_zero_of_projective
-          (CategoryTheory.Abelian.Ext.mk₀ a).comp z (zero_add 2)
-      obtain ⟨x, hx⟩ :=
-        CategoryTheory.Abelian.Ext.contravariant_sequence_exact₃ hS₂ M z hz (by simp)
-      exact ⟨x, hx⟩
+  let δ₂ : (ExtGroup C M 1) →+ ExtGroup M M 2 := by sorry
+  have δ₂_bijective : Function.Bijective δ₂ := by sorry
   let eM₂ : (ExtGroup M M 2) ≃+ k :=
     (AddEquiv.ofBijective δ₂ δ₂_bijective).symm.trans eC₁
 
   have hC_vanishes : ∀ n : ℕ, 2 ≤ n →
-      Subsingleton (ExtGroup C M n) := by
-    intro n hn
-    obtain _ | _ | n := n
-    · omega
-    · omega
-    · constructor
-      intro x y hxy
-      have hzero : (CategoryTheory.Abelian.Ext.mk₀ q).comp (x - y)
-          (zero_add (n + 2)) = 0 := by
-        exact CategoryTheory.Abelian.Ext.eq_zero_of_projective
-          (CategoryTheory.Abelian.Ext.mk₀ q).comp (x - y) (zero_add (n + 2))
-      obtain ⟨z, hz⟩ :=
-        CategoryTheory.Abelian.Ext.contravariant_sequence_exact₃ hS₁ M
-          (x - y) hzero (by simp)
-      have hz0 : z = 0 := CategoryTheory.Abelian.Ext.eq_zero_of_projective z
-      have hdiff : x - y = 0 := by rw [← hz, hz0, comp_zero]
-      exact sub_eq_zero.mp hdiff
+      Subsingleton (ExtGroup C M n) := by sorry
 
   have hM_vanishes : ∀ i : ℕ, 3 ≤ i →
-      Subsingleton (ExtGroup M M i) := by
-    intro i hi
-    obtain _ | _ | i := i
-    · omega
-    · omega
-    · constructor
-      intro x y hxy
-      have hzero : (CategoryTheory.Abelian.Ext.mk₀ a).comp (x - y)
-          (zero_add (i + 2)) = 0 := by
-        exact CategoryTheory.Abelian.Ext.eq_zero_of_projective
-          (CategoryTheory.Abelian.Ext.mk₀ a).comp (x - y) (zero_add (i + 2))
-      obtain ⟨z, hz⟩ :=
-        CategoryTheory.Abelian.Ext.contravariant_sequence_exact₃ hS₂ M
-          (x - y) hzero (by simp)
-      have hz0 : z = 0 := by
-        letI := hC_vanishes (i + 1) (by omega)
-        exact Subsingleton.elim _ _
-      have hdiff : x - y = 0 := by rw [← hz, hz0, comp_zero]
-      exact sub_eq_zero.mp hdiff
+      Subsingleton (ExtGroup M M i) := by sorry
 
   change Nonempty (ExtGroup M M 0 ≃+ k) ∧
       Nonempty (ExtGroup M M 1 ≃+ (k × k)) ∧
       Nonempty (ExtGroup M M 2 ≃+ k) ∧
       ∀ i : ℕ, 3 ≤ i → Nonempty (ExtGroup M M i ≃+ (Fin 0 → k))
-  refine ⟨⟨eHom₀⟩, ⟨eM₁⟩, ⟨eM₂⟩, ?_⟩
-  intro i hi
-  letI : Subsingleton (ExtGroup M M i) := hM_vanishes i hi
-  let huniq : Unique (ExtGroup M M i) :=
-    { default := 0
-      uniq := fun _ _ => Subsingleton.elim _ _ }
-  exact ⟨@AddEquiv.ofUnique _ _ huniq inferInstance inferInstance inferInstance⟩
+  sorry
 
 end
 

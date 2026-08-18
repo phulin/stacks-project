@@ -38,7 +38,7 @@ structure DeligneSystem {X : Scheme.{u}} where
 structure DeligneSystemMorphism {X : Scheme.{u}}
     (A B : DeligneSystem (X := X)) where
   map : ∀ n, A.term n ⟶ B.term n
-  compatible : ∀ n, Prop
+  compatible : ∀ _n : ℕ, Prop
   quasiIsomorphism : Prop
 
 structure OpenDeligneSystem {U X : Scheme.{u}} (j : U ⟶ X)

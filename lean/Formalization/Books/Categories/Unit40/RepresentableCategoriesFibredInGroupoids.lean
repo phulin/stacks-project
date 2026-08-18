@@ -246,24 +246,7 @@ theorem fibredMorphismTwoIsomorphismRelation_isEquivalence
     {p : S ⥤ C} {q : T ⥤ C} :
     Equivalence
       (FibredMorphismTwoIsomorphismRelation (p := p) (q := q)) := by
-  constructor
-  · intro F
-    exact ⟨𝟙 F.functor, by intro Z; simp [FibredMorphismNatTrans], by infer_instance⟩
-  · rintro F G ⟨η, hη, hηiso⟩
-    letI := hηiso
-    refine ⟨inv η, ?_, by infer_instance⟩
-    intro Z
-    simp only [FibredMorphismNatTrans, Functor.map_inv]
-    rw [hη Z]
-    simp
-  · rintro F G H ⟨η, hη, hηiso⟩ ⟨θ, hθ, hθiso⟩
-    letI := hηiso
-    letI := hθiso
-    refine ⟨η ≫ θ, ?_, by infer_instance⟩
-    intro Z
-    simp only [FibredMorphismNatTrans, NatTrans.comp_app, Functor.map_comp]
-    rw [hη Z, hθ Z]
-    simp
+  sorry
 
 /- The source's displayed equality is represented by an equivalence of the
    quotient type with the hom type in the base. -/

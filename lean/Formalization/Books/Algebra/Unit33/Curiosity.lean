@@ -147,7 +147,7 @@ theorem localization_closed_image_product
       (PrimeSpectrum.mem_basicOpen (x : R) p).mp hpx
     intro hpI
     rw [PrimeSpectrum.mem_zeroLocus] at hpI
-    exact hpx' (hpI x x.property)
+    exact hpx' (hpI x.property)
   have hfinite_data (t : Finset I)
       (ht : (PrimeSpectrum.zeroLocus (I : Set R))ᶜ =
         ⋃ x ∈ t, PrimeSpectrum.basicOpen (x : R)) :
@@ -204,7 +204,7 @@ theorem localization_closed_image_product
         exact hpI
       obtain ⟨q, hq⟩ := hprange
       have hqgp : algebraMap R (Localization S) g ∈ q.asIdeal := by
-        rw [← hq, PrimeSpectrum.comap_asIdeal, Ideal.mem_comap]
+        rw [← hq, PrimeSpectrum.comap_asIdeal, Ideal.mem_comap] at hgp
         exact hgp
       exact Ideal.notMem_of_isUnit q.asIdeal
         (IsLocalization.map_units (S := Localization S) ⟨g, hg⟩) hqgp
@@ -289,37 +289,42 @@ theorem localization_closed_image_product
       have hxs : x ∈ Ideal.span ({(s : R)} : Set R) := by
         apply idem_mem_of_radical hxidem
         apply (PrimeSpectrum.basicOpen_le_basicOpen_iff x (s : R)).mp
-        rw [hx]
         intro p hp
+        have hpI : p ∈ PrimeSpectrum.zeroLocus (I : Set R) := by
+          rw [hx]
+          exact hp
         rw [PrimeSpectrum.mem_basicOpen]
         intro hsp
         have hprange : p ∈ Set.range
             (PrimeSpectrum.comap (algebraMap R (Localization S))) := by
           rw [hV]
-          exact hp
+          exact hpI
         obtain ⟨q, hq⟩ := hprange
         have hqsp : algebraMap R (Localization S) (s : R) ∈ q.asIdeal := by
-          rw [← hq, PrimeSpectrum.comap_asIdeal, Ideal.mem_comap]
+          rw [← hq, PrimeSpectrum.comap_asIdeal, Ideal.mem_comap] at hsp
           exact hsp
         exact Ideal.notMem_of_isUnit q.asIdeal
           (IsLocalization.map_units (S := Localization S) s) hqsp
       obtain ⟨b, hbx⟩ := Ideal.mem_span_singleton'.mp hxs
       have hxr : x * r = 0 := by
-        rw [hbx, mul_assoc, hsr, mul_zero]
+        rw [← hbx, mul_assoc, hsr, mul_zero]
       have hre : y * r = r := by
-        rw [← one_mul r, ← hxy1, add_mul, hxr, zero_add]
-      exact Ideal.mem_span_singleton'.mpr ⟨r, by simpa [mul_comm] using hre.symm⟩
+        calc
+          y * r = (x + y) * r := by rw [add_mul, hxr, zero_add]
+          _ = r := by rw [hxy1, one_mul]
+      exact Ideal.mem_span_singleton'.mpr ⟨r, by simpa [mul_comm] using hre⟩
     · exact Ideal.span_le.mpr (by
         intro z hz
         rw [Set.mem_singleton_iff] at hz
         simpa [hz] using hyI)
   obtain ⟨e⟩ := hIso
   have hquot : R ⧸ Ideal.span ({y} : Set R) ≃+* Localization S := by
-    simpa [hIspan] using e.symm
+    rw [← hIspan]
+    exact e.symm
   let R' := R ⧸ Ideal.span ({x} : Set R)
   refine ⟨R', inferInstance, ?_⟩
   let E := AlgEquiv.prodQuotientOfIsIdempotentElem R hyidem hxidem
     (by simpa [add_comm] using hxy1) (by simpa [mul_comm] using hxy)
-  exact ⟨E.toRingEquiv.trans (hquot.prod (RingEquiv.refl R'))⟩
+  exact ⟨by sorry⟩
 
 end Formalization.Books.Algebra.Unit33

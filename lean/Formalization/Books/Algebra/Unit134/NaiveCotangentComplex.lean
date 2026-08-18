@@ -441,9 +441,11 @@ theorem exact_lTensor_h1Cotangentι_cotangentComplex_of_tor_vanishing
     [Algebra R S] [Algebra R T] [Algebra S T] [IsScalarTower R S T]
     (P : Algebra.Generators R S ι)
     (h₁ : IsZero (Formalization.Books.Algebra.Unit75.Tor
-      (ModuleCat.of S P.toExtension.toKaehler) (ModuleCat.of S T) 1))
+      (ModuleCat.of S (Formalization.Books.Algebra.Unit131.ModuleOfDifferentials R S))
+      (ModuleCat.of S T) 1))
     (h₂ : IsZero (Formalization.Books.Algebra.Unit75.Tor
-      (ModuleCat.of S P.toExtension.toKaehler) (ModuleCat.of S T) 2)) :
+      (ModuleCat.of S (Formalization.Books.Algebra.Unit131.ModuleOfDifferentials R S))
+      (ModuleCat.of S T) 2)) :
     Function.Exact
       (LinearMap.lTensor T P.toExtension.h1Cotangentι)
       (LinearMap.lTensor T P.toExtension.cotangentComplex) := by

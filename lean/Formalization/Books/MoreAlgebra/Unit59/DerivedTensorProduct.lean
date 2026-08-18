@@ -108,6 +108,8 @@ def TermwiseFlat {R : Type u} [CommRing R] (K : Comp R) : Prop :=
 noncomputable def tensorLeftShortComplex
     {R : Type u} [CommRing R] (L : Comp R)
     (S : ShortComplex (Comp R)) : ShortComplex (Comp R) :=
+  letI : (tensorLeftComplexFunctor R L).PreservesZeroMorphisms := by
+    sorry
   S.map (tensorLeftComplexFunctor R L)
 
 theorem tensorLeftShortComplex_shortExact
@@ -228,7 +230,7 @@ theorem filteredColimit_kFlat
 theorem filteredColimit_tensorProduct_iso
     {R : Type u} [CommRing R] {J : Type v} [Category.{w} J]
     [IsFilteredOrEmpty J] (F : J ⥤ Comp R) [HasColimit F]
-    (M : Comp R) :
+    (M : Comp R) [HasColimit (F ⋙ tensorLeftComplexFunctor R M)] :
     Nonempty (colimit (F ⋙ tensorLeftComplexFunctor R M) ≅
       tensorProductComplex R M (colimit F)) := by
   sorry

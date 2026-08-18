@@ -3145,7 +3145,7 @@ theorem baer_sum_functorial
     (x y : Ext B A) :
     extensionClassMap a p (x + y) =
       extensionClassMap a p x + extensionClassMap a p y := by
-  sorry
+  exact (extensionClassMapAddMonoidHom a p).map_add x y
 
 /-! ## The canonical six-term sequences -/
 
@@ -3185,8 +3185,32 @@ noncomputable def extPullbackHom
     ExtGroupObject B A ⟶ ExtGroupObject B' A :=
   AddCommGrpCat.ofHom
     { toFun := pullbackClass p
-      map_zero' := by sorry
-      map_add' := by sorry }
+      map_zero' := by
+        change pullbackClass p zeroExtClass = zeroExtClass
+        change extensionClass (pullbackExtension (splitExtension A B) p) =
+          extensionClass (splitExtension A B')
+        apply Quotient.sound
+        exact ⟨(pullback_extension_preserves_iso p
+          (pushout_extension_id_iso (splitExtension A B))).some.symm.trans
+          (extensionClassMap_zero_iso (𝟙 A) p).some⟩
+      map_add' := by
+        intro x y
+        refine Quotient.inductionOn₂ x y ?_
+        intro E₁ E₂
+        change extensionClass (pullbackExtension (baerSumExtension E₁ E₂) p) =
+          extensionClass
+            (baerSumExtension (pullbackExtension E₁ p)
+              (pullbackExtension E₂ p))
+        apply Quotient.sound
+        exact ⟨
+          (pullback_extension_preserves_iso p
+            (pushout_extension_id_iso (baerSumExtension E₁ E₂))).some.symm.trans
+            ((baerSum_extensionClassMap_iso E₁ E₂ (𝟙 A) p).some.trans
+              (baerSumExtension_preserves_iso
+                (pullback_extension_preserves_iso p
+                  (pushout_extension_id_iso E₁))
+                (pullback_extension_preserves_iso p
+                  (pushout_extension_id_iso E₂))).some)⟩ }
 
 noncomputable def extPushoutHom
     {C : Type u} [Category.{v} C] [Abelian C]

@@ -121,11 +121,12 @@ variable {C}
 
 theorem concentrated_at (A : C) (k : ℤ) [HasZeroObject C] :
     (concentrated C A k).X (-k) = A := by
-  sorry
+  simp [concentrated, shiftFunctor, Formalization.Books.Homology.Unit13.chainComplexSingle]
 
 theorem concentrated_isZero (A : C) (k n : ℤ) (hn : n ≠ -k) [HasZeroObject C] :
     IsZero ((concentrated C A k).X n) := by
-  sorry
+  unfold concentrated shiftFunctor Formalization.Books.Homology.Unit13.chainComplexSingle
+  exact HomologicalComplex.isZero_single_obj_X (ComplexShape.down ℤ) 0 A (n + k) (by omega)
 
 end ChainComplex
 
@@ -143,10 +144,54 @@ abbrev ChainHomologyShiftComparison (k i : ℤ) :=
     (shiftFunctor C k) ⋙
       HomologicalComplex.homologyFunctor C (ComplexShape.down ℤ) i
 
+noncomputable def chainShiftShortComplexFunctorIso (k i : ℤ) :
+    shiftFunctor C k ⋙
+        HomologicalComplex.shortComplexFunctor' C (ComplexShape.down ℤ) (i + 1) i (i - 1) ≅
+      HomologicalComplex.shortComplexFunctor' C (ComplexShape.down ℤ)
+        (i + k + 1) (i + k) (i + k - 1) :=
+  NatIso.ofComponents (fun K => by
+    dsimp [HomologicalComplex.shortComplexFunctor']
+    exact ShortComplex.isoMk
+      (k.negOnePow • shiftFunctorObjXIso K k (i + 1) (i + k + 1) (by lia))
+      (shiftFunctorObjXIso K k i (i + k) (by lia))
+      (k.negOnePow • shiftFunctorObjXIso K k (i - 1) (i + k - 1) (by lia))
+      (by
+        change (k.negOnePow • (K.XIsoOfEq _).hom) ≫ K.d (i + k + 1) (i + k) =
+          (k.negOnePow • K.d (i + 1 + k) (i + k)) ≫ 𝟙 _
+        simp only [Linear.units_smul_comp, XIsoOfEq_hom_comp_d, Category.comp_id])
+      (by
+        change 𝟙 _ ≫ K.d (i + k) (i + k - 1) =
+          (k.negOnePow • K.d (i + k) (i - 1 + k)) ≫
+            (k.negOnePow • (K.XIsoOfEq _).hom)
+        simp only [Category.id_comp, Linear.comp_units_smul, Linear.units_smul_comp,
+          smul_smul, Int.units_mul_self, one_smul, d_comp_XIsoOfEq_hom]))
+    (fun {X} {Y} f ↦ by
+      ext <;> simp [ShortComplex.isoMk, HomologicalComplex.shortComplexFunctor',
+        shiftFunctorObjXIso, shiftFunctor, add_comm, Units.smul_def,
+        Linear.comp_units_smul, Linear.units_smul_comp, XIsoOfEq_hom_naturality]
+      · change f.f _ ≫ (k.negOnePow • (Y.XIsoOfEq _).hom) =
+          (k.negOnePow • (X.XIsoOfEq _).hom) ≫ f.f _
+        simp [XIsoOfEq_hom_naturality, add_comm]
+      · change f.f _ ≫ (k.negOnePow • (Y.XIsoOfEq _).hom) =
+          (k.negOnePow • (X.XIsoOfEq _).hom) ≫ f.f _
+        simp [XIsoOfEq_hom_naturality, add_comm])
+
+noncomputable def chainHomologyShiftComparisonIso (k i : ℤ) :
+    ChainHomologyShiftComparison (C := C) k i :=
+  ((Functor.isoWhiskerLeft (shiftFunctor C k)
+      (HomologicalComplex.homologyFunctorIso' C (ComplexShape.down ℤ)
+        (j := i) (i := i + 1) (k := i - 1) (by simp) (by simp))) ≪≫
+    (Functor.associator _ _ _).symm ≪≫
+    Functor.isoWhiskerRight
+      (chainShiftShortComplexFunctorIso (C := C) k i)
+      (ShortComplex.homologyFunctor C) ≪≫
+    (HomologicalComplex.homologyFunctorIso' C (ComplexShape.down ℤ)
+      (j := i + k) (i := i + k + 1) (k := i + k - 1) (by simp) (by simp)).symm).symm
+
 /-- The source's functorial homology-shift comparison exists. -/
 theorem chain_homology_shift_comparison_exists (k i : ℤ) :
     Nonempty (ChainHomologyShiftComparison (C := C) k i) := by
-  sorry
+  exact ⟨chainHomologyShiftComparisonIso (C := C) k i⟩
 
 /-- The source-facing homology-shift identification for chain complexes.
 The shift functor is the explicit one above; the existence statement keeps
@@ -156,7 +201,7 @@ theorem chain_homology_shift_identification
     (K : ChainComplex C ℤ) (k i : ℤ) :
     Nonempty (K.homology (i + k) ≅
       ((shiftFunctor C k).obj K).homology i) := by
-  sorry
+  exact ⟨(chainHomologyShiftComparisonIso (C := C) k i).app K⟩
 
 /-- The homology-shift identification is functorial in the complex. -/
 theorem chain_homology_shift_functorial

@@ -698,7 +698,7 @@ theorem faithfullyFlat_iff_flat_and_tensor_zero
           α = 0 ↔ α.rTensor M = 0) := by
   constructor
   · intro h
-    letI := h
+    let := h
     refine ⟨inferInstance, ?_⟩
     intro N N' _ _ _ _ α
     exact Module.FaithfullyFlat.zero_iff_rTensor_zero R M α
@@ -722,17 +722,17 @@ theorem faithfullyFlat_criteria
   tfae_have 1 ↔ 2 := by
     constructor
     · intro h
-      letI := h
+      let := h
       intro N _ _ hN
-      letI := hN
+      let := hN
       exact inferInstance
     · intro h
       apply (Module.FaithfullyFlat.iff_flat_and_lTensor_faithful R M).2
       exact ⟨inferInstance, h⟩
   tfae_have 2 → 3 := by
     intro h p
-    letI : Nontrivial (ULift.{max u v, u} p.asIdeal.ResidueField) := inferInstance
-    letI : Nontrivial (M ⊗[R] ULift.{max u v, u} p.asIdeal.ResidueField) :=
+    let : Nontrivial (ULift.{max u v, u} p.asIdeal.ResidueField) := inferInstance
+    let : Nontrivial (M ⊗[R] ULift.{max u v, u} p.asIdeal.ResidueField) :=
       h (ULift.{max u v, u} p.asIdeal.ResidueField) inferInstance
     exact (TensorProduct.congr (LinearEquiv.refl R M)
       (ULift.moduleEquiv : ULift.{max u v, u} p.asIdeal.ResidueField ≃ₗ[R] p.asIdeal.ResidueField)).symm.toEquiv.nontrivial
@@ -746,7 +746,7 @@ theorem faithfullyFlat_criteria
     refine ⟨inferInstance, ?_⟩
     intro I hI
     obtain ⟨m, hm, hIm⟩ := I.exists_le_maximal hI
-    letI : m.IsMaximal := hm
+    let : m.IsMaximal := hm
     intro htop
     have hm_top : m • (⊤ : Submodule R M) = ⊤ := by
       apply top_unique
@@ -759,14 +759,14 @@ theorem faithfullyFlat_criteria
     let e' : M ⊗[R] (R ⧸ m) ≃ₗ[R] M ⊗[R] m.ResidueField :=
       TensorProduct.congr (LinearEquiv.refl R M) e
     have htensor : Nontrivial (M ⊗[R] (R ⧸ m)) := by
-      letI : Nontrivial (M ⊗[R] m.ResidueField) := h m
+      let : Nontrivial (M ⊗[R] m.ResidueField) := h m
       exact e'.toEquiv.nontrivial
     have hquot : Nontrivial (M ⧸ (m • (⊤ : Submodule R M))) := by
-      letI : Nontrivial (M ⊗[R] (R ⧸ m)) := htensor
-      letI : Nontrivial ((R ⧸ m) ⊗[R] M) :=
+      let : Nontrivial (M ⊗[R] (R ⧸ m)) := htensor
+      let : Nontrivial ((R ⧸ m) ⊗[R] M) :=
         (TensorProduct.comm R (R ⧸ m) M).toEquiv.nontrivial
       exact (TensorProduct.quotTensorEquivQuotSMul M m).toEquiv.symm.nontrivial
-    letI := hquot
+    let := hquot
     exact not_subsingleton _ (Submodule.Quotient.subsingleton_iff.mpr hm_top)
   tfae_finish
 
@@ -794,7 +794,7 @@ theorem faithfullyFlat_ringHom_criteria
     intro h p
     obtain ⟨m, hm, hpm⟩ := p.asIdeal.exists_le_maximal p.isPrime.ne_top
     obtain ⟨q, hq⟩ := h ⟨m, hm.isPrime⟩ hm
-    letI : q.asIdeal.LiesOver m := ⟨by
+    let : q.asIdeal.LiesOver m := ⟨by
       change m = Ideal.comap (algebraMap R S) q.asIdeal
       rw [RingHom.algebraMap_toAlgebra f]
       rw [← PrimeSpectrum.comap_asIdeal f q, hq]

@@ -68,13 +68,13 @@ intermediate `w_i |a_{ii}|` bound in that proof is likewise normalized to the
 target quantity `m_i |a_{ii}|` in `bound_wm`.
 -/
 
-/-! The `ell`-primary torsion subgroup of the Picard group of a numerical type. -/
+/-! The `ell`-torsion subgroup of the Picard group of a numerical type. -/
 def picardPrimaryTorsion (T : NumericalType) (ell : ℕ) :
     AddSubgroup (picardGroup T) :=
   AddSubgroup.torsionBy (picardGroup T) (ell : ℤ)
 
 /-!
-The dimension over `ZMod ell` of the `ell`-primary torsion subgroup of the
+The dimension over `ZMod ell` of the `ell`-torsion subgroup of the
 Picard group.  For a prime `ell`, this is the source's
 `dim_{F_ell} Pic(T)[ell]`.
 -/

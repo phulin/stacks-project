@@ -110,9 +110,10 @@ theorem presheaf_mor_map_fibred_categories_is_induced
     {C : Type u} [Category.{v} C]
     {F G : FiberedCategory C} (η : FiberedMorphism F G) {U : C}
     (x y : Fiber F U) :
-    IsInducedMorphismPresheafMap η x y
+      IsInducedMorphismPresheafMap η x y
       (Formalization.Books.Stacks.Unit01.presheaf_mor_map_fibred_categories η x y) := by
-  sorry
+  intro T f
+  rfl
 
 /-! ## Groupoids and the 2-fibre-product presentation -/
 

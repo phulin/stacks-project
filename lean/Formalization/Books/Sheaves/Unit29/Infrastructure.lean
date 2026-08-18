@@ -302,9 +302,11 @@ private def cofiniteCounterexampleOpenA (n : ℕ) :
       Set (CofiniteTopology (ULift.{v} ℕ)))
     rw [CofiniteTopology.isOpen_iff']
     right
-    convert Set.finite_singleton (CofiniteTopology.of (ULift.up (2 * n))) using 1
-    ext y
-    simp⟩
+    apply Set.Finite.subset
+      (Set.finite_singleton (CofiniteTopology.of (ULift.up (2 * n))))
+    intro y hy
+    change ¬ y ≠ CofiniteTopology.of (ULift.up (2 * n)) at hy
+    exact not_ne_iff.mp hy⟩
 
 private def cofiniteCounterexampleOpenB (n : ℕ) :
     Opens cofiniteCounterexampleSpace :=
@@ -314,9 +316,11 @@ private def cofiniteCounterexampleOpenB (n : ℕ) :
       Set (CofiniteTopology (ULift.{v} ℕ)))
     rw [CofiniteTopology.isOpen_iff']
     right
-    convert Set.finite_singleton (CofiniteTopology.of (ULift.up (2 * n + 1))) using 1
-    ext y
-    simp⟩
+    apply Set.Finite.subset
+      (Set.finite_singleton (CofiniteTopology.of (ULift.up (2 * n + 1))))
+    intro y hy
+    change ¬ y ≠ CofiniteTopology.of (ULift.up (2 * n + 1)) at hy
+    exact not_ne_iff.mp hy⟩
 
 private theorem cofiniteCounterexampleOpenCover (n : ℕ) :
     cofiniteCounterexampleOpenA n ⊔ cofiniteCounterexampleOpenB n = ⊤ := by
@@ -341,7 +345,8 @@ private theorem cofiniteCounterexampleNoCover {U : Opens cofiniteCounterexampleS
     rcases (CofiniteTopology.isOpen_iff' (s := (U : Set cofiniteCounterexampleSpace))).1 U.2 with
       h | h
     · exfalso
-      exact False.elim ((h ▸ hx) : x ∈ (∅ : Set cofiniteCounterexampleSpace))
+      have hx' : x ∈ (∅ : Set cofiniteCounterexampleSpace) := h ▸ hx
+      simp only [Set.mem_empty_iff_false] at hx'
     · exact h
   let p : ℕ → cofiniteCounterexampleSpace := cofiniteCounterexamplePoint
   have hp_injective : Function.Injective p := by
@@ -414,11 +419,13 @@ private theorem coverPresheaf_stalk_nonempty
     exact this
   rcases hx with hx | hx
   · let U : OpenNhds x := ⟨A, hx⟩
-    let f : ∀ y : A, ULift.{v} PUnit := fun _ => ULift.up PUnit.unit
+    let f : ∀ y : A, ULift.{v, v} PUnit.{v + 1} :=
+      fun _ => ULift.up PUnit.unit
     have hf : (coverPrelocalPredicate A B).pred f := Or.inl le_rfl
     exact ⟨(coverPresheaf A B).germ A x U.2 ⟨f, hf⟩⟩
   · let U : OpenNhds x := ⟨B, hx⟩
-    let f : ∀ y : B, ULift.{v} PUnit := fun _ => ULift.up PUnit.unit
+    let f : ∀ y : B, ULift.{v, v} PUnit.{v + 1} :=
+      fun _ => ULift.up PUnit.unit
     have hf : (coverPrelocalPredicate A B).pred f := Or.inr le_rfl
     exact ⟨(coverPresheaf A B).germ B x U.2 ⟨f, hf⟩⟩
 
@@ -503,9 +510,8 @@ private noncomputable def coverPresheaf_sheafification_to_terminal_iso
   let T := terminalSheaf cofiniteCounterexampleSpace
   let f : L.obj (coverPresheaf A B) ⟶ T :=
     (terminalSheaf_isTerminal _).from _
-  letI : IsIso f := by
-    exact coverPresheaf_sheafification_to_terminal_isIso hcover
-  exact asIso f
+  let hIso : IsIso f := coverPresheaf_sheafification_to_terminal_isIso hcover
+  exact @asIso _ _ _ _ f hIso
 
 /-- Sheafification does not preserve arbitrary limits in general. -/
 theorem sheafificationDoesNotPreserveAllLimits :

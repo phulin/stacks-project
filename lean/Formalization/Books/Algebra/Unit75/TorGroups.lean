@@ -4,6 +4,7 @@ import Mathlib.RingTheory.Flat.CategoryTheory
 import Mathlib.LinearAlgebra.Eigenspace.Basic
 import Mathlib.LinearAlgebra.Semisimple
 import Mathlib.LinearAlgebra.TensorProduct.Map
+import Mathlib.RingTheory.TensorProduct.Finite
 import Mathlib.RingTheory.Ideal.Quotient.Basic
 import Mathlib.RingTheory.Noetherian.Basic
 import Formalization.Books.Algebra.Unit39.FlatModules
@@ -1079,7 +1080,21 @@ theorem upTermMap_comm {R : Type u} [CommRing R]
     {A B : DoubleComplex R} (Φ : DoubleComplexMap A B) (i : ℕ) :
     upDifferential A i ≫ upTermMap Φ i =
       upTermMap Φ (i + 1) ≫ upDifferential B i := by
-  sorry
+  change
+    (cokernel.map (A.delta (i + 1) 0) (A.delta i 0)
+        (A.d i 1) (A.d i 0) (A.comm i 0).symm ≫
+      cokernel.map (A.delta i 0) (B.delta i 0)
+        (Φ.f i 1) (Φ.f i 0) (Φ.delta_comm i 0)) =
+    (cokernel.map (A.delta (i + 1) 0) (B.delta (i + 1) 0)
+        (Φ.f (i + 1) 1) (Φ.f (i + 1) 0) (Φ.delta_comm (i + 1) 0) ≫
+      cokernel.map (B.delta (i + 1) 0) (B.delta i 0)
+        (B.d i 1) (B.d i 0) (B.comm i 0).symm)
+  apply (cancel_epi (cokernel.π (A.delta (i + 1) 0))).1
+  rw [← Category.assoc, cokernel.π_desc, Category.assoc, cokernel.π_desc]
+  conv_rhs => rw [← Category.assoc]
+  rw [cokernel.π_desc]
+  conv_rhs => rw [Category.assoc, cokernel.π_desc]
+  exact congrArg (fun q => q ≫ cokernel.π (B.delta i 0)) (Φ.d_comm i 0)
 
 /-- The induced map on the right quotient complexes. -/
 noncomputable def rightComplexMap {R : Type u} [CommRing R]
@@ -1211,7 +1226,45 @@ theorem tor_finite_of_noetherian {R : Type u} [CommRing R]
     [IsNoetherianRing R] (M N : ModuleCat.{u} R)
     [Module.Finite R M] [Module.Finite R N] (p : ℕ) :
     Module.Finite R (Tor M N p) := by
-  sorry
+  let Ff : FiniteFreeResolution R M :=
+    Classical.choice (exists_finite_free_resolution M)
+  let C : ModuleChainComplex R :=
+    tensorComplex Ff.resolution.resolution.complex N
+  have hF (n : ℕ) : Module.Finite R
+      (Ff.resolution.resolution.complex.X n : Type u) := Ff.finite n
+  have hT (n : ℕ) : Module.Finite R
+      (TensorProduct R (Ff.resolution.resolution.complex.X n : Type u) (N : Type u)) := by
+    apply Module.Finite.tensorProduct
+  have hX (n : ℕ) : Module.Finite R (C.X n : Type u) := by
+    change Module.Finite R
+      (TensorProduct R (Ff.resolution.resolution.complex.X n : Type u) (N : Type u))
+    exact hT n
+  have hcycles (n : ℕ) : IsNoetherian R (C.cycles n : Type u) := by
+    let _ : IsNoetherian R (C.X n : Type u) :=
+      isNoetherian_of_isNoetherianRing_of_finite R _
+    apply isNoetherian_of_injective (R := R) (S := R) (C.iCycles n).hom
+    exact (ModuleCat.mono_iff_injective _).mp inferInstance
+  have hhomology (n : ℕ) : IsNoetherian R (C.homology n : Type u) := by
+    let _ : IsNoetherian R (C.cycles n : Type u) := hcycles n
+    apply isNoetherian_of_surjective (R := R) (S := R) (C.homologyπ n).hom
+    apply LinearMap.range_eq_top.mpr
+    change Function.Surjective (C.homologyπ n).hom
+    exact (ModuleCat.epi_iff_surjective _).mp inferInstance
+  let F : FreeResolution R M := Classical.choice (exists_free_resolution M)
+  let α : ResolutionMap F.resolution Ff.resolution.resolution (𝟙 M) :=
+    Classical.choice (resolution_map_exists F Ff.resolution.resolution (𝟙 M))
+  let _ : IsIso (resolutionTorMap F Ff.resolution (𝟙 M) α N p) :=
+    isIso_resolutionTorMap_of_isIso F Ff.resolution (𝟙 M) α N p
+  have hsource : Module.Finite R (resolutionTor F N p : Type u) := by
+    let _ : IsNoetherian R (resolutionTor Ff.resolution N p : Type u) := by
+      change IsNoetherian R (C.homology p : Type u)
+      exact hhomology p
+    apply Module.Finite.of_injective (R := R) (S := R)
+      (asIso (resolutionTorMap F Ff.resolution (𝟙 M) α N p)).hom.hom
+    exact (ModuleCat.mono_iff_injective _).mp inferInstance
+  unfold Tor
+  change Module.Finite R (resolutionTor F N p : Type u)
+  exact hsource
 
 /-! ## Flatness and Tor -/
 

@@ -171,7 +171,67 @@ theorem characterizeFinitePresentation {R S : Type u} [CommRing R] [CommRing S]
       [ f.FinitePresentation,
         DirectedHomComparisonBijective f,
         DirectedHomComparisonSurjective f ] := by
-  sorry
+  have hfp_to_bij : f.FinitePresentation → DirectedHomComparisonBijective f := by
+    intro hfp
+    unfold DirectedHomComparisonBijective DirectedHomComparisonSurjective
+      DirectedHomComparisonInjective
+    constructor
+    · intro I _ D hI c hc g
+      let _ : Nonempty I := hI.1
+      let _ : IsDirectedOrder I := hI.2
+      let _ : IsFiltered I := inferInstance
+      let _ : IsFinitelyPresentable (underRingHom f) :=
+        CommRingCat.isFinitelyPresentable_under (CommRingCat.of R) (underRingHom f) (by
+          convert hfp using 1 <;> rfl)
+      obtain ⟨i, q, hq⟩ := IsFinitelyPresentable.exists_hom_of_isColimit hc g
+      exact ⟨i, q, hq⟩
+    · intro I _ D hI c hc i j g h hgh
+      let _ : Nonempty I := hI.1
+      let _ : IsDirectedOrder I := hI.2
+      let _ : IsFiltered I := inferInstance
+      let _ : IsFinitelyPresentable (underRingHom f) :=
+        CommRingCat.isFinitelyPresentable_under (CommRingCat.of R) (underRingHom f) (by
+          convert hfp using 1 <;> rfl)
+      obtain ⟨k, u, v, huv⟩ := IsFinitelyPresentable.exists_eq_of_isColimit hc g h hgh
+      refine ⟨k, u.le, v.le, ?_⟩
+      change g ≫ D.map u = h ≫ D.map v
+      exact huv
+  have hsurj_to_fp : DirectedHomComparisonSurjective f → f.FinitePresentation := by
+    intro hsur
+    obtain ⟨D⟩ := (ringColimitFp f).1
+    let _ : Preorder D.index := D.indexPreorder
+    obtain ⟨i, q, hq⟩ :=
+      hsur D.index D.diagram D.directed D.cocone D.isColimit D.targetIso.inv
+    let p : R →+* (D.diagram.obj i).right := (D.diagram.obj i).hom.hom
+    let a : S →+* (D.diagram.obj i).right := q.right.hom
+    let b : (D.diagram.obj i).right →+* S :=
+      (D.cocone.ι.app i ≫ D.targetIso.hom).right.hom
+    have ha : a.comp f = p := by
+      simpa [p, a, underRingHom] using congrArg (fun z => z.hom) (Under.w q)
+    have hq' : q ≫ D.cocone.ι.app i ≫ D.targetIso.hom = 𝟙 _ := by
+      rw [← Category.assoc, hq, Iso.inv_hom_id]
+    have hba : b.comp a = RingHom.id S := by
+      convert congrArg (fun z => z.right.hom) hq' using 1 <;> rfl
+    have haft : a.FiniteType :=
+      RingHom.FiniteType.of_comp_finiteType (f := f) (by
+        rw [ha]
+        exact RingHom.FiniteType.of_finitePresentation (D.finitelyPresented i))
+    have hbfp : b.FinitePresentation :=
+      RingHom.FinitePresentation.of_comp_finiteType a
+        (by rw [hba]; exact RingHom.FinitePresentation.id S) haft
+    have hbp : (b.comp p).FinitePresentation :=
+      RingHom.FinitePresentation.comp hbfp (D.finitelyPresented i)
+    have hbf : b.comp p = f := by
+      calc
+        b.comp p = b.comp (a.comp f) := by rw [ha]
+        _ = (b.comp a).comp f := by rfl
+        _ = f := by rw [hba, RingHom.id_comp]
+    rw [← hbf]
+    exact hbp
+  rw [List.tfae_cons_cons]
+  refine ⟨⟨hfp_to_bij, fun h => hsurj_to_fp h.1⟩, ?_⟩
+  rw [List.tfae_cons_cons]
+  exact ⟨⟨fun h => h.1, fun h => hfp_to_bij (hsurj_to_fp h)⟩, List.tfae_singleton _⟩
 
 /-! ## Colimits restricted to a prescribed class of algebras -/
 

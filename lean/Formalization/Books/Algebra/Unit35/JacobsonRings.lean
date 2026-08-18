@@ -1138,7 +1138,11 @@ theorem countableTrickIdeal_isProper {k : Type u} [Field k] :
 theorem countableTrick_exists_maximalIdeal {k : Type u} [Field k] :
     ∃ m : MaximalSpectrum (CountableTrickRing k),
       countableTrickIdeal (k := k) ≤ m.asIdeal := by
-  sorry
+  obtain ⟨M, hM, hI⟩ := (Ideal.ne_top_iff_exists_maximal).mp
+    (countableTrickIdeal_isProper (k := k))
+  refine ⟨MaximalSpectrum.mk M hM, ?_⟩
+  intro x hx
+  exact hI hx
 
 theorem countableTrick_quotient_is_rational_function_field
     {k : Type u} [Field k]

@@ -408,7 +408,12 @@ theorem exists_stageRingHom
 noncomputable def stageRingHom
     {A : Type u} [CommRing A] {E₁ E₂ : Finset A} (h : E₁ ⊆ E₂) :
     stageRing E₁ ⟶ stageRing E₂ :=
-  Classical.choice (exists_stageRingHom h)
+  limit.lift (stratumFactorDiagram E₂)
+    { pt := stageRing E₁
+      π := Discrete.natTrans (fun p =>
+        limit.π (stratumFactorDiagram E₁)
+            (Discrete.mk (restrictPartition h p.as)) ≫
+          CommRingCat.ofHom (stratumTransition h p.as)) }
 
 theorem stageRingHom_commutes_with_base
     {A : Type u} [CommRing A] {E₁ E₂ : Finset A} (h : E₁ ⊆ E₂) :

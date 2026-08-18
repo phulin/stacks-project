@@ -444,6 +444,69 @@ theorem derivedCohomology_flat_baseChange
     Nonempty ((C.left i).obj M ≅ (C.right i).obj M) := by
   sorry
 
+/-- The cohomology models and their identifications can be chosen for every
+flat-base-change square.  This packages the source's assertion that the
+comparison isomorphisms are canonical, while leaving their proof to the
+theorem stage. -/
+theorem existsDerivedCohomologyBaseChange
+    {R A B R' A' B' : Type u}
+    [CommRing R] [CommRing A] [CommRing B] [CommRing R'] [CommRing A'] [CommRing B']
+    [Algebra R A] [Algebra R B] [Algebra R R']
+    [Algebra R' A'] [Algebra R' B']
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R')]
+    [HasDerivedCategory.{w} (ModuleCat.{u} A)]
+    [HasDerivedCategory.{w} (ModuleCat.{u} B)]
+    [HasDerivedCategory.{w} (ModuleCat.{u} A')]
+    [HasDerivedCategory.{w} (ModuleCat.{u} B')]
+    (S : FlatBaseChangeSquare (R := R) (A := A) (B := B)
+      (R' := R') (A' := A') (B' := B'))
+    (hR : RingHom.Flat (algebraMap R R'))
+    (hA : RingHom.Flat S.aBase) (hB : RingHom.Flat S.bBase) :
+    Nonempty (DerivedCohomologyBaseChange S) := by
+  sorry
+
+/-- A chosen package of the canonical cohomology comparison data. -/
+noncomputable def derivedCohomologyBaseChange
+    {R A B R' A' B' : Type u}
+    [CommRing R] [CommRing A] [CommRing B] [CommRing R'] [CommRing A'] [CommRing B']
+    [Algebra R A] [Algebra R B] [Algebra R R']
+    [Algebra R' A'] [Algebra R' B']
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R')]
+    [HasDerivedCategory.{w} (ModuleCat.{u} A)]
+    [HasDerivedCategory.{w} (ModuleCat.{u} B)]
+    [HasDerivedCategory.{w} (ModuleCat.{u} A')]
+    [HasDerivedCategory.{w} (ModuleCat.{u} B')]
+    (S : FlatBaseChangeSquare (R := R) (A := A) (B := B)
+      (R' := R') (A' := A') (B' := B'))
+    (hR : RingHom.Flat (algebraMap R R'))
+    (hA : RingHom.Flat S.aBase) (hB : RingHom.Flat S.bBase) :
+    DerivedCohomologyBaseChange S :=
+  Classical.choice (existsDerivedCohomologyBaseChange S hR hA hB)
+
+/-- The comparison isomorphism for the chosen cohomology models. -/
+theorem derivedCohomology_flat_baseChange_canonical
+    {R A B R' A' B' : Type u}
+    [CommRing R] [CommRing A] [CommRing B] [CommRing R'] [CommRing A'] [CommRing B']
+    [Algebra R A] [Algebra R B] [Algebra R R']
+    [Algebra R' A'] [Algebra R' B']
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R')]
+    [HasDerivedCategory.{w} (ModuleCat.{u} A)]
+    [HasDerivedCategory.{w} (ModuleCat.{u} B)]
+    [HasDerivedCategory.{w} (ModuleCat.{u} A')]
+    [HasDerivedCategory.{w} (ModuleCat.{u} B')]
+    (S : FlatBaseChangeSquare (R := R) (A := A) (B := B)
+      (R' := R') (A' := A') (B' := B'))
+    (hR : RingHom.Flat (algebraMap R R'))
+    (hA : RingHom.Flat S.aBase) (hB : RingHom.Flat S.bBase)
+    (i : ℤ) (M : Derived A) :
+    Nonempty (((derivedCohomologyBaseChange S hR hA hB).left i).obj M ≅
+      ((derivedCohomologyBaseChange S hR hA hB).right i).obj M) := by
+  exact derivedCohomology_flat_baseChange S hR hA hB
+    (derivedCohomologyBaseChange S hR hA hB) i M
+
 /-! ## Localization criterion -/
 
 /-- A pair of primes of `A` and `B` lying over the same prime of `R`, with
@@ -504,6 +567,28 @@ structure TensorPrimePair
     PrimeSpectrum.comap
         (Algebra.TensorProduct.includeRight.toRingHom : B →+* (A ⊗[R] B)) s =
       toLocalPrimePair.q
+
+/-- Every prime of `A ⊗[R] B` has the contractions used in the source's
+localization criterion.  The proof also records the induced equalities of
+prime spectra needed to construct the local maps. -/
+theorem existsTensorPrimePairForPrime
+    {R A B : Type u} [CommRing R] [CommRing A] [CommRing B]
+    [Algebra R A] [Algebra R B] (s : PrimeSpectrum (A ⊗[R] B)) :
+    Nonempty {S : TensorPrimePair R A B // S.s = s} := by
+  sorry
+
+/-- A chosen localization datum associated to a prime of the tensor product. -/
+noncomputable def tensorPrimePairOfPrime
+    {R A B : Type u} [CommRing R] [CommRing A] [CommRing B]
+    [Algebra R A] [Algebra R B] (s : PrimeSpectrum (A ⊗[R] B)) :
+    TensorPrimePair R A B :=
+  (Classical.choice (existsTensorPrimePairForPrime s)).1
+
+theorem tensorPrimePairOfPrime_eq
+    {R A B : Type u} [CommRing R] [CommRing A] [CommRing B]
+    [Algebra R A] [Algebra R B] (s : PrimeSpectrum (A ⊗[R] B)) :
+    (tensorPrimePairOfPrime s).s = s :=
+  (Classical.choice (existsTensorPrimePairForPrime s)).2
 
 namespace TensorPrimePair
 

@@ -2,6 +2,7 @@ import Formalization.Books.Algebra.Unit51.MoreNoetherianRings
 import Formalization.Books.Algebra.Unit52.Length
 import Formalization.Books.Algebra.Unit58.NoetherianGradedRings
 import Mathlib.Algebra.Polynomial.Eval.Defs
+import Mathlib.RingTheory.Polynomial.HilbertPoly
 import Mathlib.RingTheory.Finiteness.Ideal
 import Mathlib.RingTheory.HopkinsLevitzki
 import Mathlib.RingTheory.Ideal.Operations
@@ -899,7 +900,10 @@ theorem hilbert_functions_are_numerical
     [Module.Finite R M] :
     IsNumericalPolynomial (hilbertFunctionInteger R M) ∧
       IsNumericalPolynomial (cumulativeHilbertFunctionInteger R M) := by
-  sorry
+  simpa [hilbertFunctionInteger, cumulativeHilbertFunctionInteger,
+    idealHilbertFunctionInteger, idealCumulativeHilbertFunctionInteger] using
+    (ideal_hilbert_functions_are_numerical
+      (IsLocalRing.maximalIdeal R) (maximalIdeal_isIdealOfDefinition R))
 
 def IsEventuallyRationalPolynomial (f : ℤ → ℤ) (P : Polynomial ℚ) : Prop :=
   ∀ᶠ n : ℤ in Filter.atTop, P.eval (n : ℚ) = (f n : ℚ)
@@ -907,7 +911,37 @@ def IsEventuallyRationalPolynomial (f : ℤ → ℤ) (P : Polynomial ℚ) : Prop
 theorem exists_eventually_rational_polynomial_of_isNumericalPolynomial
     (f : ℤ → ℤ) (hf : IsNumericalPolynomial f) :
     ∃ P : Polynomial ℚ, IsEventuallyRationalPolynomial f P := by
-  sorry
+  rcases hf with ⟨r, a, ha⟩
+  let P : Polynomial ℚ :=
+    ∑ i ∈ Finset.range (r + 1), (a i : ℚ) • Polynomial.preHilbertPoly ℚ i i
+  refine ⟨P, ?_⟩
+  filter_upwards [ha, Filter.Ici_mem_atTop (r : ℤ)] with n hn hnr
+  have hn0 : 0 ≤ n := by omega
+  have hn_toNat : (n.toNat : ℤ) = n := Int.toNat_of_nonneg hn0
+  have hn_cast : (n : ℚ) = (n.toNat : ℚ) := by exact_mod_cast hn_toNat
+  have hnr' : r ≤ n.toNat := by
+    exact_mod_cast hnr
+  calc
+    P.eval (n : ℚ) =
+        ∑ i ∈ Finset.range (r + 1),
+          (a i : ℚ) * (Polynomial.preHilbertPoly ℚ i i).eval (n : ℚ) := by
+      simp [P, Polynomial.eval_finsetSum, Polynomial.eval_smul, smul_eq_mul]
+    _ = ∑ i ∈ Finset.range (r + 1),
+          (a i : ℚ) * (n.toNat.choose i : ℚ) := by
+      rw [hn_cast]
+      apply Finset.sum_congr rfl
+      intro i hi
+      have hi_le : i ≤ n.toNat := le_trans (Finset.mem_range.mp hi) hnr'
+      have hchoose :=
+        Polynomial.preHilbertPoly_eq_choose_sub_add (F := ℚ) i hi_le
+      rw [hchoose]
+      simp [Nat.sub_add_cancel hi_le]
+    _ = ((∑ i ∈ Finset.range (r + 1), integerBinomial n i • a i : ℤ) : ℚ) := by
+      rw [Int.cast_sum]
+      apply Finset.sum_congr rfl
+      intro i hi
+      simp [integerBinomial, hn0, hn_toNat, smul_eq_mul, mul_comm]
+    _ = (f n : ℚ) := by rw [hn]
 
 noncomputable def eventuallyRationalPolynomial (f : ℤ → ℤ) : Polynomial ℚ :=
   by
@@ -922,7 +956,11 @@ def numericalPolynomialDegree (f : ℤ → ℤ) : WithBot ℕ :=
 theorem eventuallyRationalPolynomial_spec
     (f : ℤ → ℤ) (hf : IsNumericalPolynomial f) :
     IsEventuallyRationalPolynomial f (eventuallyRationalPolynomial f) := by
-  sorry
+  classical
+  rw [eventuallyRationalPolynomial]
+  split_ifs with h
+  · exact Classical.choose_spec h
+  · exact False.elim (h (exists_eventually_rational_polynomial_of_isNumericalPolynomial f hf))
 
 noncomputable def hilbertPolynomial
     (R : Type u) (M : Type v) [CommRing R] [IsLocalRing R]

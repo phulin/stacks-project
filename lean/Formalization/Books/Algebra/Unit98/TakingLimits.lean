@@ -111,6 +111,9 @@ structure GradedQuotientPresentation {A : Type u} [CommRing A]
     {M N : Type w} [AddCommGroup M] [Module A M] [AddCommGroup N] [Module A N]
     (𝓜 : GradedModuleData G M) (𝓝 : GradedModuleData G N) (n : ℕ) where
   quotient : GradedModuleData G (M ⧸ (I ^ n • (⊤ : Submodule A M)))
+  projection_isGraded :
+    IsGradedLinearMap G 𝓜 quotient
+      (Submodule.mkQ (I ^ n • (⊤ : Submodule A M)))
   equivalence : GradedLinearEquiv G quotient 𝓝
 
 /-- A graded inverse-system step with its canonical quotient map. -/
@@ -122,6 +125,10 @@ structure GradedQuotientStep {A : Type u} [CommRing A]
       (F.system.obj (Opposite.op (n + 1)) ⧸
         (I ^ (n : ℕ) •
           (⊤ : Submodule A (F.system.obj (Opposite.op (n + 1))))) )
+  projection_isGraded :
+    IsGradedLinearMap G (F.grading (n + 1)) quotient
+      (Submodule.mkQ (I ^ (n : ℕ) •
+        (⊤ : Submodule A (F.system.obj (Opposite.op (n + 1))))))
   equivalence : GradedLinearEquiv G quotient (F.grading n)
   transition_eq :
     ModuleCat.ofHom

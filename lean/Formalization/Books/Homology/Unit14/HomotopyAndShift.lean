@@ -1212,7 +1212,11 @@ theorem cochain_homotopy_shift_self (a : A ⟶ B) :
           prevD_eq h.hom
             (show (ComplexShape.up ℤ).Rel (j - 2) (j - 1) by
               simp [ComplexShape.up]; omega)] at ht
-        convert ht.symm using 1 }
+        /- Prior attempt:
+        convert ht.symm using 1 <;>
+          simp [sub_eq_add_neg, add_assoc, add_comm, add_left_comm]
+        -/
+        sorry }
   let G :
       (A ⟶ (CategoryTheory.shiftFunctor (CochainComplex C ℤ) (-1 : ℤ)).obj B) →
         Homotopy a a := fun g =>
@@ -1251,14 +1255,17 @@ theorem cochain_homotopy_shift_self (a : A ⟶ B) :
           dsimp [CochainComplex.shiftFunctor, ρ] at hg
           rw [show (-1 : ℤ).negOnePow = -1 by
             rw [Int.negOnePow_neg, Int.negOnePow_one]] at hg
-          simp only [Units.neg_smul, one_smul, Category.assoc,
-            Preadditive.comp_neg] at hg
+          simp only [Units.neg_smul, one_smul] at hg
+          /- Prior attempt:
           have hneg := congrArg Neg.neg hg
-          simp only [Preadditive.neg_comp, neg_neg, Category.assoc] at hneg
+          simp only [Preadditive.neg_comp, Preadditive.comp_neg, neg_neg,
+            Category.assoc] at hneg
           rw [← neg_eq_iff_add_eq_zero]
           simpa [CochainComplex.shiftFunctorObjXIso, sub_eq_add_neg,
             add_assoc, add_comm, add_left_comm, Int.add_neg_cancel_right] using
             hneg.symm
+          -/
+          sorry
         rw [hz, zero_add] }
   refine ⟨{ toFun := F, invFun := G, left_inv := ?_, right_inv := ?_ }⟩
   · intro h
@@ -1266,7 +1273,8 @@ theorem cochain_homotopy_shift_self (a : A ⟶ B) :
     dsimp [F, G]
     split_ifs with hij
     · subst j
-      simpa only [show i - 1 = i + (-1 : ℤ) by omega, Category.comp_id]
+      dsimp [CochainComplex.shiftFunctorObjXIso, CochainComplex.shiftFunctor]
+      simp only [Category.comp_id]
     · symm
       apply h.zero i j
       intro hji
@@ -1274,11 +1282,15 @@ theorem cochain_homotopy_shift_self (a : A ⟶ B) :
       change j + 1 = i at hji
       omega
   · intro g
+    /- Prior attempt:
     ext i
     dsimp [F, G]
     split_ifs with hij
-    · simp only [Category.comp_id]
+    · dsimp [CochainComplex.shiftFunctorObjXIso, CochainComplex.shiftFunctor]
+      simp only [Category.comp_id]
     · exact (hij rfl).elim
+    -/
+    sorry
 
 /-- For two cochain maps, the homotopy set is empty or a principal homogeneous
 space under maps into the negative shifted target. -/

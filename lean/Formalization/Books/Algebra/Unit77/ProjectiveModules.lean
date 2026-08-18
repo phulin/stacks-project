@@ -4,6 +4,7 @@ import Formalization.Books.Algebra.Unit71.ExtGroups
 import Mathlib.Algebra.Module.FinitePresentation
 import Mathlib.Algebra.Module.Projective
 import Mathlib.Algebra.Module.Torsion.Basic
+import Mathlib.CategoryTheory.Abelian.Projective.Dimension
 import Mathlib.RingTheory.FiniteLength
 import Mathlib.RingTheory.Flat.Basic
 import Mathlib.RingTheory.Noetherian.Basic
@@ -113,6 +114,7 @@ theorem projective_of_ext_one_vanishes_on_finite_length_modules
 `I` is nilpotent. -/
 theorem exists_projective_lift_of_isNilpotent
     {R : Type u} [CommRing R] (I : Ideal R)
+    (hI : IsNilpotent I)
     (Pbar : ModuleCat.{u} (R ⧸ I))
     (hPbar : Module.Projective (R ⧸ I) Pbar)
     : ∃ P : ModuleCat.{u} R,

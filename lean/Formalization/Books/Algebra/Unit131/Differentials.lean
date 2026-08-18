@@ -6,6 +6,7 @@ import Mathlib.RingTheory.Kaehler.Basic
 import Mathlib.RingTheory.Kaehler.Polynomial
 import Mathlib.RingTheory.Kaehler.TensorProduct
 import Mathlib.RingTheory.Extension.Cotangent.Basic
+import Mathlib.RingTheory.Etale.Kaehler
 import Mathlib.LinearAlgebra.Basis.Basic
 import Mathlib.LinearAlgebra.FreeModule.Basic
 
@@ -96,7 +97,8 @@ theorem mapOfDifferentials_smul_universalDifferential
     mapOfDifferentials (R := R) (T := T) (A := A) (B := B)
         (a • universalDifferential R A b) =
       algebraMap A B a • universalDifferential T B (algebraMap A B b) := by
-  sorry
+  simpa only [LinearMap.map_smul, mapOfDifferentials_apply_universalDifferential,
+    IsScalarTower.algebraMap_smul]
 
 /-! ## Colimits and surjective maps -/
 
@@ -124,7 +126,175 @@ theorem mapOfDifferentials_ker_span
       Submodule.span A
         ((universalDifferential R A) ''
           {a : A | ∃ t : T, algebraMap A B a = algebraMap T B t}) := by
-  sorry
+  classical
+  let LA : (A →₀ A) →ₗ[A] ModuleOfDifferentials R A :=
+    Finsupp.linearCombination A (KaehlerDifferential.D R A)
+  let F : (A →₀ A) →ₗ[A] (B →₀ B) :=
+    (Finsupp.mapRange.linearMap (Algebra.linearMap A B)).comp
+      (Finsupp.lmapDomain A A (algebraMap A B))
+  let K : Submodule A (ModuleOfDifferentials R A) :=
+    Submodule.span A
+      ((KaehlerDifferential.D R A) ''
+        {a : A | ∃ t : T, algebraMap A B a = algebraMap T B t})
+  have hkerRR : LinearMap.ker (KaehlerDifferential.map R R A B) ≤ K := by
+    intro z hz
+    rw [KaehlerDifferential.ker_map_of_surjective R A B h] at hz
+    obtain ⟨x, hx, rfl⟩ := hz
+    rw [Finsupp.linearCombination_apply, Finsupp.sum]
+    rw [← Finset.sum_fiberwise_of_maps_to
+      (fun _ ↦ Finset.mem_image_of_mem (algebraMap A B))]
+    apply Submodule.sum_mem
+    intro c hc
+    have hsum : ∑ i ∈ x.support with algebraMap A B i = c, x i ∈
+        RingHom.ker (algebraMap A B) := by
+      simpa [Finsupp.mapDomain, Finsupp.sum, Finsupp.finsetSum_apply,
+        RingHom.mem_ker, Finsupp.single_apply, ← Finset.sum_filter] using
+        DFunLike.congr_fun hx c
+    obtain ⟨a, ha⟩ := h c
+    have hDadd : ∀ i : A,
+        (KaehlerDifferential.D R A) i =
+          (KaehlerDifferential.D R A) (i - a) +
+            (KaehlerDifferential.D R A) a := by
+      intro i
+      conv_lhs => rw [← sub_add_cancel i a]
+      rw [map_add]
+    have hdecomp :
+        (∑ i ∈ x.support with algebraMap A B i = c,
+            x i • (KaehlerDifferential.D R A) i) =
+          (∑ i ∈ x.support with algebraMap A B i = c,
+            x i • (KaehlerDifferential.D R A) (i - a)) +
+            (∑ i ∈ x.support with algebraMap A B i = c, x i) •
+              (KaehlerDifferential.D R A) a := by
+      calc
+        _ = ∑ i ∈ x.support with algebraMap A B i = c,
+            x i • ((KaehlerDifferential.D R A) (i - a) +
+              (KaehlerDifferential.D R A) a) := by
+          apply Finset.sum_congr rfl
+          intro i hi
+          rw [hDadd i, smul_add]
+        _ = _ := by
+          simp_rw [smul_add]
+          rw [Finset.sum_add_distrib, ← Finset.sum_smul]
+    have hfirst :
+        (∑ i ∈ x.support with algebraMap A B i = c,
+            x i • (KaehlerDifferential.D R A) (i - a)) ∈ K := by
+      apply Submodule.sum_mem
+      intro i hi
+      apply K.smul_mem
+      apply Submodule.subset_span
+      refine ⟨i - a, ?_, rfl⟩
+      refine ⟨0, ?_⟩
+      have hic : algebraMap A B i = c := (Finset.mem_filter.mp hi).2
+      simp [hic, ha]
+    have hsecond : ∀ (q a : A), q ∈ RingHom.ker (algebraMap A B) →
+        q • (KaehlerDifferential.D R A) a ∈ K := by
+      intro q a hq
+      have hgen : ∀ v : A, v ∈ RingHom.ker (algebraMap A B) →
+          (KaehlerDifferential.D R A) v ∈ K := by
+        intro v hv
+        exact Submodule.subset_span
+          ⟨v, ⟨0, by simp [RingHom.mem_ker.mp hv]⟩, rfl⟩
+      have hprod : (KaehlerDifferential.D R A) (q * a) ∈ K :=
+        hgen (q * a) (RingHom.mem_ker.mpr (by
+          simp [RingHom.mem_ker.mp hq]))
+      have hq' : a • (KaehlerDifferential.D R A) q ∈ K :=
+        K.smul_mem a (hgen q hq)
+      have hsub : (KaehlerDifferential.D R A) (q * a) -
+          a • (KaehlerDifferential.D R A) q ∈ K :=
+        K.sub_mem hprod hq'
+      simpa [Derivation.leibniz] using hsub
+    rw [hdecomp]
+    exact K.add_mem hfirst (hsecond _ _ hsum)
+  change LinearMap.ker (KaehlerDifferential.map R T A B) = K
+  rw [KaehlerDifferential.ker_map R T A B]
+  change Submodule.map LA
+    (Submodule.comap F (Submodule.restrictScalars A
+      (KaehlerDifferential.kerTotal T B))) = K
+  have lift_span :
+      ∀ w : B →₀ B, w ∈ Submodule.span B (Set.range fun t : T =>
+        Finsupp.single (algebraMap T B t) (1 : B)) →
+        ∃ r : A →₀ A, LA r ∈ K ∧ F r = w := by
+    intro w hw
+    refine Submodule.span_induction
+      (p := fun w _ => ∃ r : A →₀ A, LA r ∈ K ∧ F r = w) ?_ ?_ ?_ ?_ hw
+    · rintro _ ⟨t, rfl⟩
+      obtain ⟨a, ha⟩ := h (algebraMap T B t)
+      refine ⟨Finsupp.single a 1, ?_, ?_⟩
+      · apply Submodule.subset_span
+        exact ⟨a, ⟨t, ha⟩, by simp [LA]⟩
+      · simp [F, ha]
+    · exact ⟨0, by simp [LA, K], map_zero F⟩
+    · intro x y hx hy ⟨rx, hrx, hFx⟩ ⟨ry, hry, hFy⟩
+      refine ⟨rx + ry, ?_, ?_⟩
+      · simpa only [map_add] using K.add_mem hrx hry
+      · simp [map_add, hFx, hFy]
+    · intro c x hx ⟨rx, hrx, hFx⟩
+      obtain ⟨a, ha⟩ := h c
+      refine ⟨a • rx, ?_, ?_⟩
+      · simpa only [map_smul] using K.smul_mem a hrx
+      · rw [map_smul, hFx]
+        rw [← IsScalarTower.algebraMap_smul B a x, ha]
+  apply le_antisymm
+  · rintro z ⟨u, hu, rfl⟩
+    change F u ∈ Submodule.restrictScalars A
+      (KaehlerDifferential.kerTotal T B) at hu
+    rw [← KaehlerDifferential.kerTotal_map R T A B h] at hu
+    rcases Submodule.mem_sup.mp hu with ⟨v, hv, w, hw, huv⟩
+    rcases hv with ⟨q, hq, hvq⟩
+    have hw' : w ∈ Submodule.span B (Set.range fun t : T =>
+        Finsupp.single (algebraMap T B t) (1 : B)) := by
+      refine Submodule.span_induction (R := A) (M := B →₀ B)
+        (s := Set.range fun t : T =>
+          (Finsupp.single (algebraMap T B t) (1 : B) : B →₀ B))
+        (p := fun (w : B →₀ B) _ => w ∈
+          Submodule.span B (Set.range fun t : T =>
+            (Finsupp.single (algebraMap T B t) (1 : B) : B →₀ B))) ?_ ?_ ?_ ?_ hw
+      · rintro _ ⟨t, rfl⟩
+        exact Submodule.subset_span ⟨t, rfl⟩
+      · exact Submodule.zero_mem _
+      · intro x y hx hy ihx ihy
+        exact Submodule.add_mem _ ihx ihy
+      · intro a x hx ihx
+        rw [← IsScalarTower.algebraMap_smul B a x]
+        exact Submodule.smul_mem _ _ ihx
+    obtain ⟨r, hrK, hrF⟩ := lift_span w hw'
+    let k := u - q - r
+    have hkF : F k = 0 := by
+      simp only [k, map_sub]
+      rw [← huv, hvq, hrF]
+      abel
+    have hk : LA k ∈ LinearMap.ker (KaehlerDifferential.map R R A B) := by
+      rw [KaehlerDifferential.ker_map_of_surjective R A B h]
+      refine ⟨k, ?_, rfl⟩
+      exact hkF
+    have hqK : LA q = 0 := by
+      change q ∈ LinearMap.ker
+        (Finsupp.linearCombination A (KaehlerDifferential.D R A))
+      rw [KaehlerDifferential.kerTotal_eq R A]
+      exact hq
+    have hku : LA u = LA k + LA q + LA r := by
+      calc
+        LA u = LA (k + q + r) := by
+          congr 1
+          simp only [k, sub_sub_eq_add_sub, sub_eq_add_neg]
+          abel
+        _ = LA k + LA q + LA r := by
+          rw [map_add, map_add]
+    rw [hku]
+    have hqmem : LA q ∈ K := hqK ▸ K.zero_mem
+    exact K.add_mem (K.add_mem (hkerRR hk) hqmem) hrK
+  · change Submodule.span A
+      ((KaehlerDifferential.D R A) ''
+        {a : A | ∃ t : T, algebraMap A B a = algebraMap T B t}) ≤ _
+    rw [Submodule.span_le]
+    rintro _ ⟨a, ⟨t, ht⟩, rfl⟩
+    apply Submodule.mem_map.mpr
+    refine ⟨Finsupp.single a 1, ?_, ?_⟩
+    · change F (Finsupp.single a 1) ∈
+        Submodule.restrictScalars A (KaehlerDifferential.kerTotal T B)
+      rw [← KaehlerDifferential.kerTotal_eq T B]
+      simp [F, ht]
+    · simp [LA]
 
 /- If `i` lies in the kernel of `A →+* B`, the witness `t = 0` in the
    displayed generator set accounts for the source's parenthetical special
@@ -155,7 +325,68 @@ theorem localize_differentials_base
     [Algebra (Localization S) B] [IsScalarTower A (Localization S) B]
     (hS : ∀ s, s ∈ S → IsUnit (algebraMap A B s)) :
     Function.Bijective (KaehlerDifferential.map A (Localization S) B B) := by
-  sorry
+  have hDlocalized : ∀
+      (D : Derivation A B (ModuleOfDifferentials A B)) (t : Localization S),
+      D (algebraMap (Localization S) B t) = 0 := by
+    intro D t
+    let f : A →ₐ[A] B := Algebra.ofId A B
+    let hu : ∀ s : S, IsUnit (f s) := by
+      intro s
+      exact hS s.1 s.2
+    let g : Localization S →ₐ[A] B := IsLocalization.liftAlgHom hu
+    have hmap : (algebraMap (Localization S) B) = g.toRingHom := by
+      apply IsLocalization.ringHom_ext S
+      ext a
+      simp [g, IsScalarTower.algebraMap_apply A (Localization S) B]
+    rw [hmap]
+    obtain ⟨a, s, rfl⟩ := IsLocalization.exists_mk'_eq S t
+    have hDs : D (algebraMap A B s) = 0 := by
+      simp
+    let u : Bˣ := IsUnit.liftRight (f.toMonoidHom.domRestrict S) hu s
+    have huval : (u : B) = algebraMap A B s := by
+      change (IsUnit.liftRight (f.toMonoidHom.domRestrict S) hu s : B) = f s
+      exact IsUnit.coe_liftRight _ _ _
+    have hDu : D (u : B) = 0 := by
+      rw [huval]
+      exact hDs
+    have hDinv : D ((u⁻¹ : Bˣ) : B) = 0 := by
+      apply (hS s.1 s.2).smul_left_cancel.mp
+      calc
+        algebraMap A B s • D ((u⁻¹ : Bˣ) : B) =
+            D (algebraMap A B s * ((u⁻¹ : Bˣ) : B)) -
+              ((u⁻¹ : Bˣ) : B) • D (algebraMap A B s) := by
+          rw [D.leibniz]
+          abel
+        _ = algebraMap A B s • 0 := by
+          have huu : (u : B) * ((u⁻¹ : Bˣ) : B) = 1 := u.val_inv
+          rw [← huval, huu]
+          simp [hDu]
+    simp only [g, IsLocalization.liftAlgHom_apply]
+    change D (IsLocalization.lift hu (IsLocalization.mk' (Localization S) a s)) = 0
+    rw [IsLocalization.lift_mk']
+    change D (f a * ((u⁻¹ : Bˣ) : B)) = 0
+    rw [D.leibniz]
+    simp [f, hDs, hDinv]
+  constructor
+  · apply (injective_iff_map_eq_zero _).2
+    intro x hx
+    change x ∈ LinearMap.ker (mapOfDifferentials
+      (R := A) (T := Localization S) (A := B) (B := B)) at hx
+    rw [mapOfDifferentials_ker_span (R := A) (T := Localization S)
+      (A := B) (B := B) Function.surjective_id] at hx
+    refine Submodule.span_induction (p := fun x _ => x = 0) ?_ ?_ ?_ ?_ hx
+    · rintro _ ⟨b, ⟨t, ht⟩, rfl⟩
+      have hb : b = algebraMap (Localization S) B t := by
+        simpa using ht
+      rw [hb]
+      exact hDlocalized (KaehlerDifferential.D A B) t
+    · rfl
+    · intro x y _ _ hx hy
+      rw [hx, hy, add_zero]
+    · intro c x _ hx
+      rw [hx, smul_zero]
+  · exact mapOfDifferentials_surjective (R := A) (T := Localization S)
+      (A := B) (B := B) Function.surjective_id
 
 noncomputable def localizationDifferentialMap
     {A B : Type*} [CommRing A] [CommRing B] [Algebra A B]
@@ -206,7 +437,8 @@ theorem localize_differentials_top
     letI : SMulCommClass A B (Localization S) :=
       SMulCommClass.of_commMonoid A B (Localization S)
     IsLocalizedModule S (localizationDifferentialMap (A := A) (B := B) S) := by
-  sorry
+  dsimp [localizationDifferentialMap]
+  infer_instance
 
 theorem conormal_differential_exact
     {R A B : Type*} [CommRing R] [CommRing A] [CommRing B]

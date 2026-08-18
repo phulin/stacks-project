@@ -1687,6 +1687,267 @@ structure DirectedFinitePresentationApproximation
 
 /-! ## Local and nonlocal approximation theorems -/
 
+private def finiteSubsetSubringDiagram {T : Type u} [CommRing T] :
+    Finset T ⥤ CommRingCat where
+  obj E := CommRingCat.of (Subring.closure (E : Set T))
+  map := fun {E F} hEF => CommRingCat.ofHom {
+    toFun := fun x => ⟨x.1, Subring.closure_mono (leOfHom hEF) x.2⟩
+    map_one' := rfl
+    map_mul' := by intro x y; rfl
+    map_zero' := rfl
+    map_add' := by intro x y; rfl }
+  map_id := by
+    intro E
+    apply CommRingCat.hom_ext
+    ext x
+    rfl
+  map_comp := by
+    intro E F G hEF hFG
+    apply CommRingCat.hom_ext
+    ext x
+    rfl
+
+private def finiteSubsetSubringCocone {T : Type u} [CommRing T] :
+    Cocone (finiteSubsetSubringDiagram (T := T)) where
+  pt := CommRingCat.of T
+  ι := {
+    app := fun E => CommRingCat.ofHom {
+      toFun := fun x => x.1
+      map_one' := rfl
+      map_mul' := by intro x y; rfl
+      map_zero' := rfl
+      map_add' := by intro x y; rfl }
+    naturality := by
+      intro E F hEF
+      apply CommRingCat.hom_ext
+      ext x
+      rfl }
+
+private theorem finiteSubsetSubringCocone_isColimit {T : Type u} [CommRing T] :
+    IsColimit (finiteSubsetSubringCocone (T := T)) := by
+  classical
+  refine { desc := fun s => (CommRingCat.ofHom {
+      toFun := fun x => (s.ι.app {x}).hom
+        ⟨x, Subring.subset_closure (s := (↑({x} : Finset T) : Set T)) (by simp)⟩
+      map_one' := by
+        change (s.ι.app {1}).hom
+          (⟨1, Subring.subset_closure (s := (↑({1} : Finset T) : Set T))
+            (by simp)⟩ : Subring.closure (↑({1} : Finset T) : Set T)) = 1
+        have h1 : (⟨1, Subring.subset_closure (s := (↑({1} : Finset T) : Set T))
+            (by simp)⟩ : Subring.closure (↑({1} : Finset T) : Set T)) = 1 :=
+          Subtype.ext rfl
+        calc
+          (s.ι.app {1}).hom
+              (⟨1, Subring.subset_closure (s := (↑({1} : Finset T) : Set T))
+                (by simp)⟩ : Subring.closure (↑({1} : Finset T) : Set T)) =
+              (s.ι.app {1}).hom (1 : Subring.closure (↑({1} : Finset T) : Set T)) :=
+            congrArg (s.ι.app {1}).hom h1
+          _ = 1 := (s.ι.app {1}).hom.map_one
+      map_mul' := by
+        intro x y
+        let E : Finset T := {x, y, x * y}
+        have hx : x ∈ E := by simp [E]
+        have hy : y ∈ E := by simp [E]
+        have hxy : x * y ∈ (E : Set T) := by simp [E]
+        have hxS : x ∈ (↑({x} : Finset T) : Set T) := by simp
+        have hyS : y ∈ (↑({y} : Finset T) : Set T) := by simp
+        have hxyS : x * y ∈ (↑({x * y} : Finset T) : Set T) := by simp
+        have hx₀ : x ∈ (E : Set T) := by simp [E]
+        have hy₀ : y ∈ (E : Set T) := by simp [E]
+        let h₁ : ({x} : Finset T) ≤ E := by
+          intro z hz
+          simp only [Finset.mem_singleton.mp hz]
+          exact hx
+        let h₂ : ({y} : Finset T) ≤ E := by
+          intro z hz
+          simp only [Finset.mem_singleton.mp hz]
+          exact hy
+        have hx' : (s.ι.app E).hom
+              ⟨x, Subring.subset_closure (s := (E : Set T)) hx₀⟩ =
+            (s.ι.app {x}).hom ⟨x, Subring.subset_closure
+              (s := (↑({x} : Finset T) : Set T)) hxS⟩ := by
+          have h := congrArg (fun k => k.hom
+            (⟨x, Subring.subset_closure (s := (↑({x} : Finset T) : Set T)) hxS⟩))
+            (s.ι.naturality (homOfLE h₁))
+          change (s.ι.app E).hom
+              ⟨x, Subring.subset_closure (s := (E : Set T)) hx₀⟩ =
+            (s.ι.app {x}).hom
+              ⟨x, Subring.subset_closure
+                (s := (↑({x} : Finset T) : Set T)) hxS⟩ at h
+          exact h
+        have hy' : (s.ι.app E).hom
+              ⟨y, Subring.subset_closure (s := (E : Set T)) hy₀⟩ =
+            (s.ι.app {y}).hom ⟨y, Subring.subset_closure
+              (s := (↑({y} : Finset T) : Set T)) hyS⟩ := by
+          have h := congrArg (fun k => k.hom
+            (⟨y, Subring.subset_closure (s := (↑({y} : Finset T) : Set T)) hyS⟩))
+            (s.ι.naturality (homOfLE h₂))
+          change (s.ι.app E).hom
+              ⟨y, Subring.subset_closure (s := (E : Set T)) hy₀⟩ =
+            (s.ι.app {y}).hom
+              ⟨y, Subring.subset_closure
+                (s := (↑({y} : Finset T) : Set T)) hyS⟩ at h
+          exact h
+        have hxy' : (s.ι.app E).hom
+              ⟨x * y, Subring.subset_closure (s := (E : Set T)) hxy⟩ =
+            (s.ι.app {x * y}).hom
+              ⟨x * y, Subring.subset_closure
+                (s := (↑({x * y} : Finset T) : Set T)) hxyS⟩ := by
+          have h := congrArg (fun k => k.hom
+            (⟨x * y, Subring.subset_closure
+              (s := (↑({x * y} : Finset T) : Set T)) hxyS⟩))
+            (s.ι.naturality (homOfLE (show ({x * y} : Finset T) ≤ E by
+            intro z hz
+            simp only [Finset.mem_singleton.mp hz]
+            exact hxy)))
+          change (s.ι.app E).hom
+              ⟨x * y, Subring.subset_closure (s := (E : Set T)) hxy⟩ =
+            (s.ι.app {x * y}).hom
+              ⟨x * y, Subring.subset_closure
+                (s := (↑({x * y} : Finset T) : Set T)) hxyS⟩ at h
+          exact h
+        change (s.ι.app {x * y}).hom
+            ⟨x * y, Subring.subset_closure
+              (s := (↑({x * y} : Finset T) : Set T)) hxyS⟩ = _
+        have hmul : (⟨x * y, Subring.subset_closure (s := (E : Set T)) hxy⟩ :
+            (finiteSubsetSubringDiagram (T := T)).obj E) =
+            (⟨x, Subring.subset_closure (s := (E : Set T)) hx₀⟩ :
+              (finiteSubsetSubringDiagram (T := T)).obj E) *
+              ⟨y, Subring.subset_closure (s := (E : Set T)) hy₀⟩ := by
+          rfl
+        calc
+          (s.ι.app {x * y}).hom
+              ⟨x * y, Subring.subset_closure
+                (s := (↑({x * y} : Finset T) : Set T)) hxyS⟩ =
+              (s.ι.app E).hom
+                ⟨x * y, Subring.subset_closure (s := (E : Set T)) hxy⟩ := hxy'.symm
+          _ = (s.ι.app E).hom
+                ((⟨x, Subring.subset_closure (s := (E : Set T)) hx₀⟩ :
+                  (finiteSubsetSubringDiagram (T := T)).obj E) *
+                  ⟨y, Subring.subset_closure (s := (E : Set T)) hy₀⟩) := by rw [hmul]
+          _ = (s.ι.app E).hom
+                ⟨x, Subring.subset_closure (s := (E : Set T)) hx₀⟩ *
+                (s.ι.app E).hom
+                  ⟨y, Subring.subset_closure (s := (E : Set T)) hy₀⟩ :=
+              (s.ι.app E).hom.map_mul _ _
+          _ = _ := by rw [hx', hy']
+      map_zero' := by
+        change (s.ι.app {0}).hom
+          (⟨0, Subring.subset_closure (s := (↑({0} : Finset T) : Set T))
+            (by simp)⟩ : Subring.closure (↑({0} : Finset T) : Set T)) = 0
+        have h0 : (⟨0, Subring.subset_closure (s := (↑({0} : Finset T) : Set T))
+            (by simp)⟩ : Subring.closure (↑({0} : Finset T) : Set T)) = 0 :=
+          Subtype.ext rfl
+        calc
+          (s.ι.app {0}).hom
+              (⟨0, Subring.subset_closure (s := (↑({0} : Finset T) : Set T))
+                (by simp)⟩ : Subring.closure (↑({0} : Finset T) : Set T)) =
+              (s.ι.app {0}).hom (0 : Subring.closure (↑({0} : Finset T) : Set T)) :=
+            congrArg (s.ι.app {0}).hom h0
+          _ = 0 := (s.ι.app {0}).hom.map_zero
+      map_add' := by
+        intro x y
+        let E : Finset T := {x, y, x + y}
+        have hx : x ∈ E := by simp [E]
+        have hy : y ∈ E := by simp [E]
+        have h₁ : ({x} : Finset T) ≤ E := by
+          intro z hz
+          simp only [Finset.mem_singleton.mp hz]
+          exact hx
+        have h₂ : ({y} : Finset T) ≤ E := by
+          intro z hz
+          simp only [Finset.mem_singleton.mp hz]
+          exact hy
+        have hx₀ : x ∈ (E : Set T) := by simp [E]
+        have hy₀ : y ∈ (E : Set T) := by simp [E]
+        have hxy₀ : x + y ∈ (E : Set T) := by simp [E]
+        have hxS : x ∈ (↑({x} : Finset T) : Set T) := by simp
+        have hyS : y ∈ (↑({y} : Finset T) : Set T) := by simp
+        have hxyS : x + y ∈ (↑({x + y} : Finset T) : Set T) := by simp
+        have hxy : ({x + y} : Finset T) ≤ E := by
+          intro z hz
+          simp only [Finset.mem_singleton.mp hz]
+          exact hxy₀
+        have hx' : (s.ι.app E).hom
+              ⟨x, Subring.subset_closure (s := (E : Set T)) hx₀⟩ =
+            (s.ι.app {x}).hom ⟨x, Subring.subset_closure
+              (s := (↑({x} : Finset T) : Set T)) hxS⟩ := by
+          have h := congrArg (fun k => k.hom
+            (⟨x, Subring.subset_closure (s := (↑({x} : Finset T) : Set T)) hxS⟩))
+            (s.ι.naturality (homOfLE h₁))
+          change (s.ι.app E).hom
+              ⟨x, Subring.subset_closure (s := (E : Set T)) hx₀⟩ =
+            (s.ι.app {x}).hom
+              ⟨x, Subring.subset_closure
+                (s := (↑({x} : Finset T) : Set T)) hxS⟩ at h
+          exact h
+        have hy' : (s.ι.app E).hom
+              ⟨y, Subring.subset_closure (s := (E : Set T)) hy₀⟩ =
+            (s.ι.app {y}).hom ⟨y, Subring.subset_closure
+              (s := (↑({y} : Finset T) : Set T)) hyS⟩ := by
+          have h := congrArg (fun k => k.hom
+            (⟨y, Subring.subset_closure (s := (↑({y} : Finset T) : Set T)) hyS⟩))
+            (s.ι.naturality (homOfLE h₂))
+          change (s.ι.app E).hom
+              ⟨y, Subring.subset_closure (s := (E : Set T)) hy₀⟩ =
+            (s.ι.app {y}).hom
+              ⟨y, Subring.subset_closure
+                (s := (↑({y} : Finset T) : Set T)) hyS⟩ at h
+          exact h
+        have hxy' : (s.ι.app E).hom
+              ⟨x + y, Subring.subset_closure (s := (E : Set T)) hxy₀⟩ =
+            (s.ι.app {x + y}).hom
+              ⟨x + y, Subring.subset_closure
+                (s := (↑({x + y} : Finset T) : Set T)) hxyS⟩ := by
+          have h := congrArg (fun k => k.hom
+            (⟨x + y, Subring.subset_closure
+              (s := (↑({x + y} : Finset T) : Set T)) hxyS⟩))
+            (s.ι.naturality (homOfLE hxy))
+          change (s.ι.app E).hom
+              ⟨x + y, Subring.subset_closure (s := (E : Set T)) hxy₀⟩ =
+            (s.ι.app {x + y}).hom
+              ⟨x + y, Subring.subset_closure
+                (s := (↑({x + y} : Finset T) : Set T)) hxyS⟩ at h
+          exact h
+        change (s.ι.app {x + y}).hom
+            ⟨x + y, Subring.subset_closure
+              (s := (↑({x + y} : Finset T) : Set T)) hxyS⟩ = _
+        have hadd : (⟨x + y, Subring.subset_closure (s := (E : Set T)) hxy₀⟩ :
+            (finiteSubsetSubringDiagram (T := T)).obj E) =
+            (⟨x, Subring.subset_closure (s := (E : Set T)) hx₀⟩ :
+              (finiteSubsetSubringDiagram (T := T)).obj E) +
+              ⟨y, Subring.subset_closure (s := (E : Set T)) hy₀⟩ := by
+          rfl
+        calc
+          (s.ι.app {x + y}).hom
+              ⟨x + y, Subring.subset_closure
+                (s := (↑({x + y} : Finset T) : Set T)) hxyS⟩ =
+              (s.ι.app E).hom
+                ⟨x + y, Subring.subset_closure (s := (E : Set T)) hxy₀⟩ := hxy'.symm
+          _ = (s.ι.app E).hom
+                ((⟨x, Subring.subset_closure (s := (E : Set T)) hx₀⟩ :
+                  (finiteSubsetSubringDiagram (T := T)).obj E) +
+                  ⟨y, Subring.subset_closure (s := (E : Set T)) hy₀⟩) := by rw [hadd]
+          _ = (s.ι.app E).hom
+                ⟨x, Subring.subset_closure (s := (E : Set T)) hx₀⟩ +
+                (s.ι.app E).hom
+                  ⟨y, Subring.subset_closure (s := (E : Set T)) hy₀⟩ :=
+              (s.ι.app E).hom.map_add _ _
+          _ = _ := by rw [hx', hy']
+        }),
+    fac := by
+      intro s E
+      apply CommRingCat.hom_ext
+      ext x
+      have h := s.ι.naturality (homOfLE (show ({x} : Finset T) ≤ E by simp))
+      exact congrArg (fun k => k.hom ⟨x, Subring.subset_closure (by simp)⟩) h
+    uniq := by
+      intro s m hm
+      apply CommRingCat.hom_ext
+      ext x
+      simpa using congrArg (fun k => k.hom
+        ⟨x, Subring.subset_closure (by simp)⟩) (hm {x}) }
+
 /-- Every local homomorphism of local rings is a filtered colimit of local
 maps whose stages are essentially of finite type over the integers. -/
 theorem limitNoConditionLocal

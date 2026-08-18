@@ -13,7 +13,7 @@ import Mathlib.Topology.Spectral.Hom
 /-!
 # Sheaves on Spaces, Chapter 29: Limits and colimits of sheaves
 
-This file formalizes `books/sheaves.tex:3400-3714`.  Limits are taken in the
+This file formalizes `books/sheaves.tex:3400-3684`.  Limits are taken in the
 canonical category of sheaves, colimits are represented by sheafification of
 the pointwise presheaf colimit, and equalities of section or stalk objects are
 presented by canonical isomorphisms or equivalences.  The directed-colimit
@@ -192,6 +192,24 @@ def QuasiCompactOpen {X : TopCat.{v}} (U : Opens X) : Prop :=
 
 /-- The canonical map from a colimit of sections to sections of a sheaf
 colimit. -/
+noncomputable def directedColimitSectionsMapCore {X : TopCat.{v}} {I : Type v}
+    [Preorder I] [Nonempty I] [IsDirectedOrder I]
+    (F : I ⥤ TopCat.Sheaf (Type v) X) (U : Opens X) [HasColimit F]
+    [HasColimit (F ⋙ TopCat.Sheaf.forget (Type v) X ⋙
+      (evaluation (Opens X)ᵒᵖ (Type v)).obj (op U))] :
+    colimit (F ⋙ TopCat.Sheaf.forget (Type v) X ⋙
+      (evaluation (Opens X)ᵒᵖ (Type v)).obj (op U)) →
+      (sheafColimit F).presheaf.obj (op U) :=
+  colimit.desc
+    (F ⋙ TopCat.Sheaf.forget (Type v) X ⋙
+      (evaluation (Opens X)ᵒᵖ (Type v)).obj (op U))
+    (Functor.mapCocone
+      (TopCat.Sheaf.forget (Type v) X ⋙
+        (evaluation (Opens X)ᵒᵖ (Type v)).obj (op U))
+      (colimit.cocone F))
+
+/-- The canonical map from a colimit of sections to sections of a sheaf
+colimit exists. -/
 theorem exists_directedColimitSectionsMap {X : TopCat.{v}} {I : Type v}
     [Preorder I] [Nonempty I] [IsDirectedOrder I]
     (F : I ⥤ TopCat.Sheaf (Type v) X) (U : Opens X) [HasColimit F]
@@ -200,7 +218,7 @@ theorem exists_directedColimitSectionsMap {X : TopCat.{v}} {I : Type v}
     Nonempty (colimit (F ⋙ TopCat.Sheaf.forget (Type v) X ⋙
       (evaluation (Opens X)ᵒᵖ (Type v)).obj (op U)) →
       (sheafColimit F).presheaf.obj (op U)) := by
-  sorry
+  exact ⟨directedColimitSectionsMapCore F U⟩
 
 /-- A chosen canonical map from a colimit of sections to sections of a sheaf
 colimit. -/
@@ -212,7 +230,7 @@ noncomputable def directedColimitSectionsMap {X : TopCat.{v}} {I : Type v}
     colimit (F ⋙ TopCat.Sheaf.forget (Type v) X ⋙
       (evaluation (Opens X)ᵒᵖ (Type v)).obj (op U)) →
       (sheafColimit F).presheaf.obj (op U) :=
-  Classical.choice (exists_directedColimitSectionsMap F U)
+  directedColimitSectionsMapCore F U
 
 /-- All transition maps in a directed system are injective on sections. -/
 def DirectedSectionTransitionsInjective {X : TopCat.{v}} {I : Type v}
@@ -223,7 +241,7 @@ def DirectedSectionTransitionsInjective {X : TopCat.{v}} {I : Type v}
 /-- A finite open cover with quasi-compact pairwise intersections, cofinal
 among all open covers of `U`. -/
 def HasCofinalFiniteQuasiCompactOpenCover {X : TopCat.{v}} (U : Opens X) : Prop :=
-  ∀ (K : Type v) (_ : Finite K) (V : K → Opens X),
+  ∀ (K : Type v) (V : K → Opens X),
     (⨆ k, V k) = U →
       ∃ (J : Type v) (_ : Finite J) (W : J → Opens X),
         (⨆ j, W j) = U ∧

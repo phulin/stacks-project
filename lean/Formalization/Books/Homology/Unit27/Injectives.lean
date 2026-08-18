@@ -40,7 +40,73 @@ theorem injective_iff_characterizations
           (ShortComplex.mk f g h).ShortExact →
             Nonempty (ShortComplex.mk f g h).Splitting) ∧
         (∀ B : C, ∀ e : Ext B I, e = 0) := by
-  sorry
+  constructor
+  · intro hI
+    letI : Injective I := hI
+    refine ⟨?_, ?_⟩
+    · let hP : (preadditiveYoneda.obj I).PreservesEpimorphisms :=
+        (Injective.injective_iff_preservesEpimorphisms_preadditiveYoneda_obj I).mp hI
+      letI : (preadditiveYoneda.obj I).PreservesEpimorphisms := hP
+      letI : (preadditiveYoneda.obj I).PreservesHomology := by
+        apply Functor.preservesHomology_of_preservesEpis_and_kernels
+      change PreservesFiniteLimits (preadditiveYoneda.obj I) ∧
+        PreservesFiniteColimits (preadditiveYoneda.obj I)
+      exact ⟨inferInstance,
+        Functor.preservesFiniteColimits_of_preservesHomology _⟩
+    · refine ⟨?_, ?_⟩
+      · intro A B f g h hS
+        exact ⟨hS.splittingOfInjective⟩
+      · intro B e
+        refine Quotient.inductionOn e ?_
+        intro E
+        change extensionClass E = zeroExtClass
+        apply Quotient.sound
+        let s : E.toShortComplex.Splitting := E.shortExact.splittingOfInjective
+        dsimp [Extension.toShortComplex] at s
+        let i : E.middle ≅ I ⊞ B := s.isoBinaryBiproduct
+        let f : ExtensionHom E (splitExtension I B) :=
+          { middle := by simpa [splitExtension] using i.hom
+            comm_left := by
+              dsimp [splitExtension]
+              apply biprod.hom_ext
+              · dsimp [i, ShortComplex.Splitting.isoBinaryBiproduct]
+                simp only [Category.assoc, biprod.lift_fst]
+                simpa using s.f_r
+              · dsimp [i, ShortComplex.Splitting.isoBinaryBiproduct]
+                simp [E.zero]
+            comm_right := by
+              dsimp [splitExtension]
+              simp [i, s, Extension.toShortComplex] }
+        let g : ExtensionHom (splitExtension I B) E :=
+          { middle := by simpa [splitExtension] using i.inv
+            comm_left := by
+              dsimp [splitExtension]
+              dsimp [i, ShortComplex.Splitting.isoBinaryBiproduct]
+              simp
+            comm_right := by
+              dsimp [splitExtension]
+              apply biprod.hom_ext'
+              · dsimp [i, ShortComplex.Splitting.isoBinaryBiproduct]
+                simp [E.zero]
+              · dsimp [i, ShortComplex.Splitting.isoBinaryBiproduct]
+                simpa using s.s_g }
+        exact ⟨{ hom := f,
+                  inv := g,
+                  hom_inv_id := by
+                    apply ExtensionHom.ext
+                    change i.hom ≫ i.inv = 𝟙 E.middle
+                    exact i.hom_inv_id,
+                  inv_hom_id := by
+                    apply ExtensionHom.ext
+                    change i.inv ≫ i.hom = 𝟙 (I ⊞ B)
+                    exact i.inv_hom_id }⟩
+  · intro h
+    rcases h with ⟨hExact, _, _⟩
+    change PreservesFiniteLimits (preadditiveYoneda.obj I) ∧
+      PreservesFiniteColimits (preadditiveYoneda.obj I) at hExact
+    letI : PreservesFiniteColimits (preadditiveYoneda.obj I) := hExact.2
+    apply (Injective.injective_iff_preservesEpimorphisms_preadditiveYoneda_obj I).mpr
+    infer_instance
 
 /- Mathlib already provides the product instance used by the source lemma:
    arbitrary products of injective objects are injective whenever the product

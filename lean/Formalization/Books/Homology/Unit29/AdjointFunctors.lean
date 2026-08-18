@@ -3,6 +3,7 @@ import Formalization.Books.Categories.Unit23.ExactFunctors
 import Formalization.Books.Categories.Unit24.AdjointFunctors
 import Mathlib.Algebra.Category.ModuleCat.ChangeOfRings
 import Mathlib.Algebra.Category.ModuleCat.ChangeOfRingsExact
+import Mathlib.Algebra.Category.ModuleCat.EnoughInjectives
 import Mathlib.CategoryTheory.Adjunction.PartialAdjoint
 import Mathlib.CategoryTheory.Preadditive.AdditiveFunctor
 import Mathlib.CategoryTheory.Preadditive.Basic
@@ -150,7 +151,40 @@ theorem change_of_rings_preserves_injectives_iff_flat
     {R : Type u₁} {S : Type u₂} [CommRing R] [CommRing S] (f : R →+* S) :
     Functor.PreservesInjectiveObjects (ModuleCat.restrictScalars.{max u₁ u₂} f) ↔
       RingHom.Flat f := by
-  sorry
+  let _ : Algebra R S := f.toAlgebra
+  let F := ModuleCat.extendScalars.{u₁, u₂, max u₁ u₂} f
+  let G := ModuleCat.restrictScalars.{max u₁ u₂} f
+  have hAdj : F ⊣ G := ModuleCat.extendRestrictScalarsAdj.{u₁, u₁, u₂} f
+  constructor
+  · intro hG
+    letI : Functor.PreservesInjectiveObjects G := hG
+    have hMonoF : PreservesMonomorphisms F :=
+      Functor.preservesMonomorphisms_of_adjunction_of_preservesInjectiveObjects hAdj
+    have hMonoF' : ∀ {X Y : ModuleCat.{max u₁ u₂} R} (g : X ⟶ Y),
+        Mono g → Mono (F.map g) := by
+      intro X Y g hg
+      letI : Mono g := hg
+      exact hMonoF.preserves g
+    refine Module.Flat.iff_lTensor_preserves_injective_linearMap.mpr ?_
+    intro N N' _ _ _ _ g hg
+    let g' : ModuleCat.of R N ⟶ ModuleCat.of R N' := ModuleCat.ofHom g
+    have hg' : Mono g' := (ModuleCat.mono_iff_injective g').2 hg
+    have hFg : Mono (F.map g') := hMonoF' g' hg'
+    have hFg' : Function.Injective (F.map g') := (ModuleCat.mono_iff_injective _).1 hFg
+    change Function.Injective (g.baseChange S) at hFg'
+    rw [LinearMap.baseChange_eq_ltensor] at hFg'
+    exact hFg'
+  · intro hf
+    letI : Module.Flat R S := hf
+    have hMonoF : PreservesMonomorphisms F := by
+      constructor
+      intro X Y g hg
+      rw [ModuleCat.mono_iff_injective] at hg ⊢
+      change Function.Injective (g.hom.baseChange S)
+      rw [LinearMap.baseChange_eq_ltensor]
+      exact Module.Flat.lTensor_preserves_injective_linearMap g.hom hg
+    letI : PreservesMonomorphisms F := hMonoF
+    exact Functor.preservesInjectiveObjects_of_adjunction_of_preservesMonomorphisms hAdj
 
 /- The source's example is stated with an explicit primality hypothesis, since
    `ZMod p` is the field occurring in the example only for prime `p`. -/
@@ -160,13 +194,10 @@ theorem zmod_prime_change_of_rings_counterexample
       ¬ Injective
         ((ModuleCat.restrictScalars (Int.castRingHom (ZMod p))).obj
           (ModuleCat.of (ZMod p) (ZMod p))) ∧
-        ¬ Functor.PreservesInjectiveObjects
+      ¬ Functor.PreservesInjectiveObjects
         (ModuleCat.restrictScalars (Int.castRingHom (ZMod p))) := by
-  /-
-  Prior attempt: the checked ZMod counterexample proof is retained, but its
-  local proposition-valued instances trigger current style diagnostics.
-  haveI : Fact (Nat.Prime p) := ⟨hp⟩
-  haveI : IsArtinianRing (ZMod p) := isArtinian_of_finite
+  letI : Fact (Nat.Prime p) := ⟨hp⟩
+  letI : IsArtinianRing (ZMod p) := isArtinian_of_finite
   have hfield : Module.Injective (ZMod p) (ZMod p) := by
     apply Module.injective_of_isSemisimpleRing
   have hinj : Injective (ModuleCat.of (ZMod p) (ZMod p)) :=
@@ -272,8 +303,6 @@ theorem zmod_prime_change_of_rings_counterexample
       congrArg (fun x : U => ULift.down x) hbad
     exact zero_ne_one hdown
   exact hInot (hpres.injective_obj hI)
-  -/
-  sorry
 
 /-! ### Enough injectives and faithfulness -/
 
@@ -320,15 +349,14 @@ theorem adjoint_faithful_iff_reflects_zero
     (hAdj : v ⊣ u) (hMono : PreservesMonomorphisms v) :
     Functor.Faithful v ↔
       ∀ B₀ : B, IsZero (v.obj B₀) → IsZero B₀ := by
-  /-
-  Prior attempt: the direct proof below did not compile under the current
-  Mathlib functor-map and image universes; it is retained as proof evidence.
   constructor
   · intro hFaithful B₀ hB₀
     rw [IsZero.iff_id_eq_zero]
     apply hFaithful.map_injective
-    simpa only [Functor.map_id, Functor.map_zero] using
-      hB₀.eq_of_src (𝟙 (v.obj B₀)) 0
+    calc
+      v.map (𝟙 B₀) = 𝟙 (v.obj B₀) := v.map_id _
+      _ = 0 := hB₀.eq_of_src _ _
+      _ = v.map (0 : B₀ ⟶ B₀) := (v.map_zero B₀ B₀).symm
   · intro hReflectsZero
     haveI : PreservesMonomorphisms v := hMono
     haveI : PreservesEpimorphisms v :=
@@ -347,10 +375,12 @@ theorem adjoint_faithful_iff_reflects_zero
         IsZero.of_mono_eq_zero _ himage
       have hzero' : IsZero (Abelian.image q) := hReflectsZero _ hzero
       have himage' : Abelian.image.ι q = 0 := hzero'.eq_of_src _ _
-      exact eq_zero_of_image_eq_zero himage'
+      have himage'' : Abelian.image.ι (f - g) = 0 := by simpa [q] using himage'
+      calc
+        f - g = Abelian.factorThruImage (f - g) ≫ Abelian.image.ι (f - g) :=
+          (Abelian.image.fac (f - g)).symm
+        _ = 0 := by rw [himage'', comp_zero]
     exact sub_eq_zero.mp hsub'
-  -/
-  sorry
 
 /- The zero-functor example from the source makes the need for the objectwise
    zero-reflection hypothesis explicit.  The two constant functors at the
@@ -366,9 +396,6 @@ theorem zero_functors_counterexample
         IsExact v₀ ∧
             ¬ Functor.Faithful v₀ ∧
               ¬ (∀ X : B, IsZero (v₀.obj X) → IsZero X) := by
-  /-
-  Prior attempt: the checked construction is retained here, but its local
-  `Unique` instances used a non-compiling constructor shape.
   let u₀ : A ⥤ B := (Functor.const A).obj (0 : B)
   let v₀ : B ⥤ A := (Functor.const B).obj (0 : A)
   change Nonempty (v₀ ⊣ u₀) ∧
@@ -383,9 +410,9 @@ theorem zero_functors_counterexample
       homEquiv_naturality_left_symm := ?_
       homEquiv_naturality_right := ?_ }
     · letI : Unique (v₀.obj X ⟶ Y) :=
-        ⟨0, fun f => (isZero_zero A).eq_of_src _ _⟩
+        ⟨⟨0⟩, fun f => (isZero_zero A).eq_of_src _ _⟩
       letI : Unique (X ⟶ u₀.obj Y) :=
-        ⟨0, fun f => (isZero_zero B).eq_of_tgt _ _⟩
+        ⟨⟨0⟩, fun f => (isZero_zero B).eq_of_tgt _ _⟩
       exact Equiv.ofUnique _ _
     · intro X' X Y f g
       exact (isZero_zero A).eq_of_src _ _
@@ -421,8 +448,6 @@ theorem zero_functors_counterexample
     apply hReflects X
     simpa [v₀] using (isZero_zero A)
   exact ⟨hAdj, hMono, hExact, hNotFaithful, hNotReflects⟩
-  -/
-  sorry
 
 /-! ### Functorial injective embeddings -/
 

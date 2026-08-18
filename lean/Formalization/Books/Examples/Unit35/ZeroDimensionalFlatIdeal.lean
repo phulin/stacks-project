@@ -1,6 +1,8 @@
 import Mathlib.Algebra.Colimit.Module
 import Mathlib.Algebra.Field.Rat
 import Mathlib.Algebra.MvPolynomial.Basic
+import Mathlib.Algebra.MvPolynomial.Eval
+import Mathlib.Algebra.MonoidAlgebra.Basic
 import Mathlib.RingTheory.Flat.Basic
 import Mathlib.RingTheory.Ideal.Maps
 import Mathlib.RingTheory.KrullDimension.Basic
@@ -376,10 +378,266 @@ theorem zeroDimensionalFlatIdeal_le_maximalIdeal
   rintro z ⟨n, rfl⟩
   exact Ideal.subset_span (Or.inl ⟨n, rfl⟩)
 
+private abbrev zeroDimensionalFlatIdealTailMonoid := Option (Set ℕ)
+
+private noncomputable instance zeroDimensionalFlatIdealTailDecidableDisjoint
+    (a b : Set ℕ) : Decidable (Disjoint a b) := Classical.propDecidable (Disjoint a b)
+
+private noncomputable def zeroDimensionalFlatIdealTailMul
+    (a b : zeroDimensionalFlatIdealTailMonoid) :
+    zeroDimensionalFlatIdealTailMonoid :=
+  by
+    classical
+    exact match a, b with
+    | some a, some b => if Disjoint a b then some (a ∪ b) else none
+    | _, _ => none
+
+private theorem zeroDimensionalFlatIdealTailMul_none_left (a :
+    zeroDimensionalFlatIdealTailMonoid) :
+    zeroDimensionalFlatIdealTailMul none a = none := by
+  rfl
+
+private theorem zeroDimensionalFlatIdealTailMul_none_right (a :
+    zeroDimensionalFlatIdealTailMonoid) :
+    zeroDimensionalFlatIdealTailMul a none = none := by
+  cases a <;> rfl
+
+private noncomputable instance :
+    CommMonoid zeroDimensionalFlatIdealTailMonoid where
+  mul := zeroDimensionalFlatIdealTailMul
+  one := some ∅
+  mul_assoc := by
+    classical
+    intro a b c
+    change zeroDimensionalFlatIdealTailMul
+        (zeroDimensionalFlatIdealTailMul a b) c =
+      zeroDimensionalFlatIdealTailMul a
+        (zeroDimensionalFlatIdealTailMul b c)
+    cases a with
+    | none => rfl
+    | some a =>
+      cases b with
+      | none => rfl
+      | some b =>
+        cases c with
+        | none =>
+          simp only [zeroDimensionalFlatIdealTailMul_none_right]
+        | some c =>
+          by_cases hab : Disjoint a b
+          · by_cases hbc : Disjoint b c
+            · by_cases hac : Disjoint a c
+              · have hac' : Disjoint (a ∪ b) c :=
+                  Set.disjoint_union_left.2 ⟨hac, hbc⟩
+                have hab' : Disjoint a (b ∪ c) :=
+                  Set.disjoint_union_right.2 ⟨hab, hac⟩
+                simp [zeroDimensionalFlatIdealTailMul, hab, hbc, hac, hac', hab',
+                  Set.union_assoc]
+              · have hac' : ¬ Disjoint (a ∪ b) c := by
+                  intro h
+                  exact hac (h.mono_left Set.subset_union_left)
+                have hab' : ¬ Disjoint a (b ∪ c) := by
+                  intro h
+                  exact hac (h.mono_right Set.subset_union_right)
+                simp [zeroDimensionalFlatIdealTailMul, hab, hbc, hac, hac', hab']
+            · have hbc' : ¬ Disjoint (a ∪ b) c := by
+                intro h
+                exact hbc (h.mono_left Set.subset_union_right)
+              simp [zeroDimensionalFlatIdealTailMul, hab, hbc, hbc']
+          · have hab' : ¬ Disjoint a (b ∪ c) := by
+              intro h
+              exact hab (h.mono_right Set.subset_union_left)
+            by_cases hbc : Disjoint b c
+            · simp [zeroDimensionalFlatIdealTailMul, hab, hab', hbc]
+            · simp [zeroDimensionalFlatIdealTailMul, hab, hab', hbc]
+  one_mul := by
+    classical
+    intro a
+    cases a with
+    | none => rfl
+    | some a =>
+      change (if Disjoint (∅ : Set ℕ) a then some ((∅ : Set ℕ) ∪ a) else none) = some a
+      simp
+  mul_one := by
+    classical
+    intro a
+    cases a with
+    | none => rfl
+    | some a =>
+      change (if Disjoint a (∅ : Set ℕ) then some (a ∪ (∅ : Set ℕ)) else none) = some a
+      simp
+  mul_comm := by
+    classical
+    intro a b
+    change zeroDimensionalFlatIdealTailMul a b =
+      zeroDimensionalFlatIdealTailMul b a
+    cases a with
+    | none =>
+      cases b with
+      | none => rfl
+      | some b =>
+        rw [zeroDimensionalFlatIdealTailMul_none_left,
+          zeroDimensionalFlatIdealTailMul_none_right]
+    | some a =>
+      cases b with
+      | none =>
+        rw [zeroDimensionalFlatIdealTailMul_none_right,
+          zeroDimensionalFlatIdealTailMul_none_left]
+      | some b =>
+        by_cases h : Disjoint a b
+        · have h' : Disjoint b a := h.symm
+          simp [zeroDimensionalFlatIdealTailMul, h, h', Set.union_comm]
+        · have h' : ¬ Disjoint b a := by
+            intro hba
+            exact h hba.symm
+          simp [zeroDimensionalFlatIdealTailMul, h, h']
+
+private noncomputable def zeroDimensionalFlatIdealTailMul_some_some
+    (a b : Set ℕ) :
+    (some a : zeroDimensionalFlatIdealTailMonoid) * some b =
+      if Disjoint a b then some (a ∪ b) else none := by
+  classical
+  change zeroDimensionalFlatIdealTailMul (some a) (some b) = _
+  rfl
+
+private noncomputable def zeroDimensionalFlatIdealTailMulOp_none_right
+    (a : zeroDimensionalFlatIdealTailMonoid) :
+      a * (none : zeroDimensionalFlatIdealTailMonoid) =
+        (none : zeroDimensionalFlatIdealTailMonoid) := by
+  change zeroDimensionalFlatIdealTailMul a none = none
+  exact zeroDimensionalFlatIdealTailMul_none_right a
+
 /-- The source's ideal `I` is nonzero. -/
 theorem zeroDimensionalFlatIdeal_ne_bot
     (k : Type u) [Field k] : zeroDimensionalFlatIdeal k ≠ ⊥ := by
-  sorry
+  intro hI
+  classical
+  let A := MonoidAlgebra k zeroDimensionalFlatIdealTailMonoid
+  let N : Ideal A := Ideal.span
+    ({MonoidAlgebra.single none 1} : Set A)
+  let Q := A ⧸ N
+  let q : A →+* Q := Ideal.Quotient.mk N
+  let t : Set ℕ → Q := fun s => q (MonoidAlgebra.single (some s) 1)
+  have hmul (a b : Set ℕ) :
+      t a * t b = if Disjoint a b then t (a ∪ b) else 0 := by
+    by_cases h : Disjoint a b
+    · simp only [t]
+      rw [← q.map_mul, MonoidAlgebra.single_mul_single]
+      rw [if_pos h]
+      rw [zeroDimensionalFlatIdealTailMul_some_some]
+      rw [if_pos h]
+      simp [h]
+    · have hzero :
+          q (MonoidAlgebra.single none (1 : k)) = 0 := by
+        rw [Ideal.Quotient.eq_zero_iff_mem]
+        exact Ideal.subset_span (Set.mem_singleton _)
+      simp only [t]
+      rw [← q.map_mul, MonoidAlgebra.single_mul_single]
+      rw [if_neg h]
+      rw [zeroDimensionalFlatIdealTailMul_some_some, if_neg h]
+      simpa using hzero
+  have hdisjoint (n : ℕ) :
+      Disjoint ({n} : Set ℕ) (Set.Ici (n + 1)) := by
+    rw [Set.disjoint_singleton_left]
+    simp only [Set.mem_Ici]
+    omega
+  have hunion (n : ℕ) :
+      ({n} : Set ℕ) ∪ Set.Ici (n + 1) = Set.Ici n := by
+    ext m
+    simp only [Set.mem_union, Set.mem_singleton_iff, Set.mem_Ici]
+    omega
+  have hxy (n : ℕ) :
+      t ({n} : Set ℕ) * t (Set.Ici (n + 1)) = t (Set.Ici n) := by
+    rw [hmul, if_pos (hdisjoint n), hunion]
+  have hnotdisjoint (n : ℕ) : ¬ Disjoint ({n} : Set ℕ) ({n} : Set ℕ) := by
+    rw [Set.disjoint_singleton]
+    simp
+  have hyy (n : ℕ) : t ({n} : Set ℕ) ^ 2 = 0 := by
+    rw [pow_two, hmul, if_neg (hnotdisjoint n)]
+  let c : k →+* Q := (q.comp (algebraMap k A))
+  let v : zeroDimensionalFlatIdealVariables → Q := fun z =>
+    match z with
+    | (n, false) => t (Set.Ici n)
+    | (n, true) => t {n}
+  let φ : zeroDimensionalFlatIdealPolynomial k →+* Q :=
+    MvPolynomial.eval₂Hom c v
+  have hrel (n : ℕ) :
+      φ (zeroDimensionalFlatIdealRelation k n) = 0 := by
+    simp [φ, zeroDimensionalFlatIdealRelation, zeroDimensionalFlatIdealXVar,
+      zeroDimensionalFlatIdealYVar, v, hxy]
+  have hsq (n : ℕ) :
+      φ (zeroDimensionalFlatIdealSquareRelation k n) = 0 := by
+    simp [φ, zeroDimensionalFlatIdealSquareRelation, zeroDimensionalFlatIdealYVar,
+      v, hyy]
+  have hker : zeroDimensionalFlatIdealRelationsIdeal k ≤ RingHom.ker φ := by
+    rw [zeroDimensionalFlatIdealRelationsIdeal]
+    apply Ideal.span_le.2
+    rintro z (⟨n, rfl⟩ | ⟨n, rfl⟩)
+    · exact hrel n
+    · exact hsq n
+  have hker' : ∀ a, a ∈ zeroDimensionalFlatIdealRelationsIdeal k → φ a = 0 := by
+    intro a ha
+    exact RingHom.mem_ker.mp (hker ha)
+  let ψ : zeroDimensionalFlatIdealRing k →+* Q :=
+    Ideal.Quotient.lift (zeroDimensionalFlatIdealRelationsIdeal k) φ hker'
+  have hprop : ∀ p : A, p ∈ N →
+      ∀ s : zeroDimensionalFlatIdealTailMonoid, s ≠ none → p.coeff s = 0 := by
+    intro p hp
+    change p ∈ Ideal.span ({MonoidAlgebra.single none 1} : Set A) at hp
+    induction hp using Submodule.span_induction with
+    | mem p hp =>
+        intro s hs
+        rw [Set.mem_singleton_iff] at hp
+        subst p
+        simp [hs]
+    | zero =>
+        intro s hs
+        simp
+    | add p q hp hq hp' hq' =>
+        intro s hs
+        rw [MonoidAlgebra.coeff_add]
+        simp [hp' s hs, hq' s hs]
+    | smul r p hp hp' =>
+        intro s hs
+        classical
+        rw [smul_eq_mul]
+        rw [MonoidAlgebra.coeff_mul]
+        rw [Finsupp.sum]
+        apply Finset.sum_eq_zero
+        intro m₁ hm₁
+        rw [Finsupp.sum]
+        apply Finset.sum_eq_zero
+        intro m₂ hm₂
+        by_cases hm₂none : m₂ = none
+        · subst m₂
+          have hprod : m₁ * (none : zeroDimensionalFlatIdealTailMonoid) ≠ s := by
+            rw [zeroDimensionalFlatIdealTailMulOp_none_right]
+            exact Ne.symm hs
+          rw [if_neg hprod]
+        · simp [hp' m₂ hm₂none]
+  have hq_nonzero (s : Set ℕ) :
+      q (MonoidAlgebra.single (some s) 1) ≠ 0 := by
+    intro hzero
+    have hm : MonoidAlgebra.single (some s) (1 : k) ∈ N := by
+      rw [← Ideal.Quotient.eq_zero_iff_mem]
+      exact hzero
+    have hc := hprop _ hm (some s) (by simp)
+    simpa using hc
+  have hxzero : zeroDimensionalFlatIdealX k 0 = 0 := by
+    have hxmem : zeroDimensionalFlatIdealX k 0 ∈ (⊥ : Ideal (zeroDimensionalFlatIdealRing k)) := by
+      rw [← hI]
+      exact Ideal.subset_span (Set.mem_range_self 0)
+    exact hxmem
+  have hψx : ψ (zeroDimensionalFlatIdealX k 0) =
+      q (MonoidAlgebra.single (some (Set.Ici 0)) 1) := by
+    change ψ (Ideal.Quotient.mk (zeroDimensionalFlatIdealRelationsIdeal k)
+      (MvPolynomial.X (zeroDimensionalFlatIdealXVar 0))) = _
+    dsimp [ψ]
+    change (MvPolynomial.eval₂Hom c v)
+        (MvPolynomial.X (zeroDimensionalFlatIdealXVar 0)) = _
+    rw [MvPolynomial.eval₂Hom_X']
+    simp [v, t, zeroDimensionalFlatIdealXVar]
+  exact hq_nonzero (Set.Ici 0) (by
+    rw [← hψx, hxzero, map_zero])
 
 /-! ## The annihilator computation for `x_i` -/
 
@@ -396,7 +654,66 @@ theorem zeroDimensionalFlatIdeal_x_annihilator
     (Submodule.span (zeroDimensionalFlatIdealRing k)
         ({zeroDimensionalFlatIdealX k i} : Set (zeroDimensionalFlatIdealRing k))).annihilator =
       zeroDimensionalFlatIdealXAnnihilatorCandidate k i := by
-  sorry
+  apply le_antisymm
+  · sorry
+  · rw [zeroDimensionalFlatIdealXAnnihilatorCandidate]
+    apply Ideal.span_le.2
+    rintro z (⟨j, rfl⟩ | ⟨j, rfl⟩)
+    · change zeroDimensionalFlatIdealX k j ∈
+        (Submodule.span (zeroDimensionalFlatIdealRing k)
+          ({zeroDimensionalFlatIdealX k i} : Set (zeroDimensionalFlatIdealRing k))).annihilator
+      rw [Submodule.mem_annihilator_span_singleton]
+      change zeroDimensionalFlatIdealX k j * zeroDimensionalFlatIdealX k i = 0
+      have hxx (n : ℕ) : zeroDimensionalFlatIdealX k n *
+          zeroDimensionalFlatIdealX k n = 0 := by
+        calc
+          zeroDimensionalFlatIdealX k n * zeroDimensionalFlatIdealX k n =
+              (zeroDimensionalFlatIdealY k n *
+                zeroDimensionalFlatIdealX k (n + 1)) *
+                (zeroDimensionalFlatIdealY k n *
+                  zeroDimensionalFlatIdealX k (n + 1)) := by
+                    rw [← zeroDimensionalFlatIdeal_x_eq_y_mul_next_x k n]
+          _ = zeroDimensionalFlatIdealY k n ^ 2 *
+                (zeroDimensionalFlatIdealX k (n + 1) ^ 2) := by ring
+          _ = 0 := by simp
+      rcases le_total j i with hji | hij
+      · rw [zeroDimensionalFlatIdeal_x_eq_transitionProduct_mul_x k j i hji]
+        rw [show zeroDimensionalFlatIdealTransitionProduct k j i *
+            zeroDimensionalFlatIdealX k i * zeroDimensionalFlatIdealX k i =
+            zeroDimensionalFlatIdealTransitionProduct k j i *
+              (zeroDimensionalFlatIdealX k i * zeroDimensionalFlatIdealX k i) by ring]
+        rw [hxx i, mul_zero]
+      · rw [zeroDimensionalFlatIdeal_x_eq_transitionProduct_mul_x k i j hij]
+        rw [show zeroDimensionalFlatIdealX k j *
+            (zeroDimensionalFlatIdealTransitionProduct k i j *
+              zeroDimensionalFlatIdealX k j) =
+            (zeroDimensionalFlatIdealX k j * zeroDimensionalFlatIdealX k j) *
+              zeroDimensionalFlatIdealTransitionProduct k i j by ring]
+        rw [hxx j, zero_mul]
+    · change zeroDimensionalFlatIdealY k j.1 ∈
+        (Submodule.span (zeroDimensionalFlatIdealRing k)
+          ({zeroDimensionalFlatIdealX k i} : Set (zeroDimensionalFlatIdealRing k))).annihilator
+      rw [Submodule.mem_annihilator_span_singleton]
+      change zeroDimensionalFlatIdealY k j.1 * zeroDimensionalFlatIdealX k i = 0
+      have hyx (n : ℕ) : zeroDimensionalFlatIdealY k n *
+          zeroDimensionalFlatIdealX k n = 0 := by
+        calc
+          zeroDimensionalFlatIdealY k n * zeroDimensionalFlatIdealX k n =
+              zeroDimensionalFlatIdealY k n *
+                (zeroDimensionalFlatIdealY k n *
+                  zeroDimensionalFlatIdealX k (n + 1)) := by
+                    rw [zeroDimensionalFlatIdeal_x_eq_y_mul_next_x k n]
+          _ = zeroDimensionalFlatIdealY k n ^ 2 *
+                zeroDimensionalFlatIdealX k (n + 1) := by ring
+          _ = 0 := by simp
+      rw [zeroDimensionalFlatIdeal_x_eq_transitionProduct_mul_x k i j.1 j.2]
+      rw [show zeroDimensionalFlatIdealY k j.1 *
+          (zeroDimensionalFlatIdealTransitionProduct k i j.1 *
+            zeroDimensionalFlatIdealX k j.1) =
+          zeroDimensionalFlatIdealTransitionProduct k i j.1 *
+            (zeroDimensionalFlatIdealY k j.1 *
+              zeroDimensionalFlatIdealX k j.1) by ring]
+      rw [hyx, mul_zero]
 
 /-! ## The flat direct-limit module -/
 
@@ -415,7 +732,12 @@ theorem zeroDimensionalFlatIdeal_transitionMap_succ
     zeroDimensionalFlatIdealTransitionMap k i (i + 1) (Nat.le_succ i) =
       LinearMap.mulRight (zeroDimensionalFlatIdealRing k)
         (zeroDimensionalFlatIdealY k i) := by
-  sorry
+  apply LinearMap.ext
+  intro f
+  change f * (∏ n ∈ Finset.Ico i (i + 1), zeroDimensionalFlatIdealY k n) =
+    f * zeroDimensionalFlatIdealY k i
+  rw [Finset.prod_Ico_succ_top (Nat.le_refl i)]
+  simp
 
 /-- The source module `M`, represented by Mathlib's module direct limit. -/
 abbrev zeroDimensionalFlatIdealModule (k : Type u) [Field k] :=
@@ -437,7 +759,22 @@ theorem zeroDimensionalFlatIdeal_moduleGenerator_relation
     zeroDimensionalFlatIdealModuleGenerator k i =
       zeroDimensionalFlatIdealY k i •
         zeroDimensionalFlatIdealModuleGenerator k (i + 1) := by
-  sorry
+  change Module.DirectLimit.of (zeroDimensionalFlatIdealRing k) ℕ
+      (fun _ : ℕ => zeroDimensionalFlatIdealRing k)
+      (fun i j h => zeroDimensionalFlatIdealTransitionMap k i j h) i 1 =
+    zeroDimensionalFlatIdealY k i •
+      Module.DirectLimit.of (zeroDimensionalFlatIdealRing k) ℕ
+        (fun _ : ℕ => zeroDimensionalFlatIdealRing k)
+        (fun i j h => zeroDimensionalFlatIdealTransitionMap k i j h) (i + 1) 1
+  rw [← Module.DirectLimit.of_f (R := zeroDimensionalFlatIdealRing k)
+      (ι := ℕ) (G := fun _ : ℕ => zeroDimensionalFlatIdealRing k)
+      (f := fun i j h => zeroDimensionalFlatIdealTransitionMap k i j h)
+      (i := i) (j := i + 1) (hij := Nat.le_succ i) (x := 1)]
+  have htransition :
+      zeroDimensionalFlatIdealTransitionMap k i (i + 1) (Nat.le_succ i) 1 =
+        zeroDimensionalFlatIdealY k i • (1 : zeroDimensionalFlatIdealRing k) := by
+    simp [zeroDimensionalFlatIdealTransitionMap, zeroDimensionalFlatIdealTransitionProduct]
+  rw [htransition, map_smul]
 
 /-- Every element of `M` is represented by a scalar times one displayed
 generator. -/

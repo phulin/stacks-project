@@ -710,7 +710,7 @@ theorem resolution_ext_represents_ext {R : Type u} [Ring R]
     complex := F.complex
     projective := fun n => by
       let hfree := F.free n
-      letI := hfree
+      let := hfree
       infer_instance
     π := (ChainComplex.toSingle₀Equiv _ _).symm ⟨F.resolution.augmentation,
       F.resolution.augmentation_condition⟩
@@ -830,7 +830,7 @@ theorem resolution_ext_represents_ext {R : Type u} [Ring R]
         CochainComplex.HomComplex.δ_hom, CochainComplex.HomComplex.δ,
         AddEquiv.toAddCommGrpIso, AddCommGrpCat.ofHom, AddMonoidHom.comp,
         ConcreteCategory.ofHom]
-      simp only [AddCommGrpCat.hom_comp, AddMonoidHom.coe_comp, Function.comp_apply]
+      simp only
       change (CochainComplex.HomComplex.δ (n : ℤ) ((n : ℤ) + 1)
           (s n • CochainComplex.HomComplex.Cochain.toSingleMk
             ((P.cochainComplexXIso (-(n : ℤ)) n rfl).hom ≫ f)
@@ -853,10 +853,10 @@ theorem resolution_ext_represents_ext {R : Type u} [Ring R]
     invFun := e.inv.hom
     left_inv := by
       intro x
-      simpa using ConcreteCategory.congr_hom e.inv_hom_id x
+      simp
     right_inv := by
       intro y
-      simpa using ConcreteCategory.congr_hom e.hom_inv_id y
+      simp
     map_add' := by
       intro x y
       exact map_add e.hom.hom x y
@@ -898,9 +898,9 @@ theorem resolution_ext_represents_ext {R : Type u} [Ring R]
         exact (P.cochainComplex.isZero_of_isStrictlyLE 0 1 (by omega)).eq_of_src _ _
       · exact (HomologicalComplex.isZero_single_obj_X
           (ComplexShape.up ℤ) 0 N q hq).eq_of_tgt _ _
-    letI : Subsingleton (K.X (-1)) := hsub
+    let : Subsingleton (K.X (-1)) := hsub
     let hzero : IsZero (K.X (-1)) := AddCommGrpCat.isZero_of_subsingleton _
-    letI : IsZero (K.X (-1)) := hzero
+    let : IsZero (K.X (-1)) := hzero
     let φ : H.sc' 0 0 1 ⟶ K.sc' (-1) 0 1 := {
       τ₁ := 0
       τ₂ := by
@@ -926,11 +926,11 @@ theorem resolution_ext_represents_ext {R : Type u} [Ring R]
               (K.restrictionXIso ComplexShape.embeddingUpNat h1).inv by
           exact HomologicalComplex.restriction_d_eq K ComplexShape.embeddingUpNat h0 h1]
         simp }
-    letI : Epi φ.τ₁ := hzero.epi φ.τ₁
-    letI : IsIso φ.τ₂ := by
+    let : Epi φ.τ₁ := hzero.epi φ.τ₁
+    let : IsIso φ.τ₂ := by
       change IsIso ((K.restrictionXIso ComplexShape.embeddingUpNat h0).hom)
       infer_instance
-    letI : Mono φ.τ₃ := by
+    let : Mono φ.τ₃ := by
       change Mono ((K.restrictionXIso ComplexShape.embeddingUpNat h1).hom)
       infer_instance
     let ρ₀ : H.homology 0 ≅ K.homology (0 : ℤ) :=
@@ -1043,7 +1043,7 @@ theorem resolution_hom_maps_homotopic {R : Type u} [Ring R]
           rw [Homotopy.dNext_cochainComplex, Homotopy.prevD_succ_cochainComplex]
           dsimp [resolutionHomMap, resolutionHomComplex, resolutionHomDifferential,
             homPrecompAddMonoidHom]
-          simp only [if_pos rfl]
+          simp only
           change α.hom.f (i + 1) ≫ g =
             h.hom (i + 1) (i + 2) ≫ G.complex.d (i + 2) (i + 1) ≫ g +
               F.resolution.complex.d (i + 1) i ≫ h.hom i (i + 1) ≫ g +

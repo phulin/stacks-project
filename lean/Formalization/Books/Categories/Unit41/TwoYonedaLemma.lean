@@ -948,6 +948,33 @@ def twoYonedaAssociatedFunctor
     intro X Y Z f g
     exact twoYonedaAssociatedFunctorMap_map_comp p f g
 
+private theorem twoYonedaAssociatedFunctorMap_isHomLift
+    {C : Type uC} [Category.{vC} C]
+    {S : Type uS} [Category.{vS} S]
+    (p : S ⥤ C) [p.IsFibredInGroupoids]
+    {X Y : twoYonedaAssociatedCategory p} (f : X ⟶ Y) :
+    p.IsHomLift f.base (twoYonedaAssociatedFunctorMap p f) := by
+  let U := (Over.map f.base).obj (Over.mk (𝟙 X.base))
+  let V := Over.mk (𝟙 Y.base)
+  let GY : twoYonedaGroupoidMorphismCategory p Y.base :=
+    show twoYonedaGroupoidMorphismCategory p Y.base from Y.fiber
+  let k : U ⟶ V := Over.homMk f.base (by simp [U, V])
+  have hk : p.IsHomLift f.base (GY.1.map k) := by
+    apply IsHomLift.of_fac' p f.base (GY.1.map k)
+      (by simpa [U, GY] using Functor.congr_obj GY.2 U)
+      (by simpa [V, GY] using Functor.congr_obj GY.2 V)
+    simpa [U, V, k, GY] using Functor.congr_hom GY.2 k
+  letI : p.IsHomLift f.base (GY.1.map k) := hk
+  letI : p.IsHomLift (𝟙 X.base)
+      (Functor.Fiber.fiberInclusion.map
+        ((twoYonedaEvaluationCore p X.base).map f.fiber)) := inferInstance
+  simpa [twoYonedaAssociatedFunctorMap, U, V, k] using
+    (inferInstance : p.IsHomLift
+      (𝟙 X.base ≫ f.base)
+      (Functor.Fiber.fiberInclusion.map
+        ((twoYonedaEvaluationCore p X.base).map f.fiber) ≫
+        GY.1.map k))
+
 /-- The associated evaluation functor is over the base. -/
 theorem twoYonedaAssociatedFunctor_over
     {C : Type uC} [Category.{vC} C]
@@ -955,7 +982,13 @@ theorem twoYonedaAssociatedFunctor_over
     (p : S ⥤ C) [p.IsFibredInGroupoids] :
     twoYonedaAssociatedFunctor p ⋙ p =
       twoYonedaAssociatedProjection p := by
-  sorry
+  refine Functor.ext (fun X => ?_) (fun X Y f => ?_)
+  · change p.obj (((twoYonedaEvaluationCore p X.base).obj X.fiber).1) = X.base
+    exact ((twoYonedaEvaluationCore p X.base).obj X.fiber).2
+  · letI : p.IsHomLift f.base (twoYonedaAssociatedFunctorMap p f) := by
+      exact twoYonedaAssociatedFunctorMap_isHomLift p f
+    change p.map (twoYonedaAssociatedFunctorMap p f) = _
+    simpa using IsHomLift.fac' p f.base (twoYonedaAssociatedFunctorMap p f)
 
 /- The source identifies the fiber of the associated construction with the
    chosen value of the presheaf.  In the CoGrothendieck construction this is
@@ -981,7 +1014,29 @@ theorem twoYonedaAssociatedFunctor_isEquivalence
     {S : Type uS} [Category.{vS} S]
     (p : S ⥤ C) [p.IsFibredInGroupoids] :
     (twoYonedaAssociatedFunctor p).IsEquivalence := by
-  sorry
+  letI : (twoYonedaAssociatedProjection p).IsFibredInGroupoids :=
+    twoYonedaAssociatedProjection_isFibredInGroupoids p
+  let over := twoYonedaAssociatedFunctor_over p
+  apply (fibredInGroupoids_equivalence_iff_fibrewise
+    (twoYonedaAssociatedProjection p) p (twoYonedaAssociatedFunctor p)
+    over (inferInstance : (twoYonedaAssociatedProjection p).IsFibredInGroupoids)
+    (inferInstance : p.IsFibredInGroupoids)).mpr
+  intro U
+  let I := HasFibers.inducedFunctor (twoYonedaAssociatedProjection p) U
+  let G := fibreFunctor (twoYonedaAssociatedProjection p) p
+    (twoYonedaAssociatedFunctor p) over U
+  letI : I.IsEquivalence := inferInstance
+  have hcomp : I ⋙ G = twoYonedaAssociatedFiberFunctor p U := by
+    refine Functor.ext (fun A => ?_) (fun A B η => ?_)
+    · rfl
+    · apply Functor.Fiber.hom_ext
+      dsimp [I, G, twoYonedaAssociatedFiberFunctor, fibreFunctor,
+        twoYonedaAssociatedFunctorMap]
+      simp
+  letI : (I ⋙ G).IsEquivalence := by
+    rw [hcomp]
+    exact twoYonedaAssociatedFiberFunctor_isEquivalence p U
+  exact Functor.isEquivalence_of_comp_left I G
 
 /- The source's final appeal to the equivalence lemma is an equivalence in
    the 2-category of categories fibred in groupoids, not only an equivalence

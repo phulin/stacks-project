@@ -112,12 +112,26 @@ the bundled `internalHom` functor records the contravariant and covariant
 functoriality of the source's diagram. -/
 theorem internalHomFunctor_additive {R : Type u} [CommRing R] :
     Functor.Additive (internalHomFunctor (R := R)) := by
-  sorry
+  exact
+    { map_add := by
+        intro X Y f g
+        change MonoidalClosed.pre (f + g).unop = _
+        apply NatTrans.ext
+        funext Z
+        change (MonoidalClosed.pre (f + g).unop).app Z =
+          (MonoidalClosed.pre f.unop).app Z + (MonoidalClosed.pre g.unop).app Z
+        simp only [ModuleCat.monoidalClosed_pre_app]
+        apply ModuleCat.hom_ext
+        ext x y
+        change (x : (Opposite.unop X ⟶ Z)) ((f + g).unop y) =
+          (x : (Opposite.unop X ⟶ Z)) (f.unop y) +
+            (x : (Opposite.unop X ⟶ Z)) (g.unop y)
+        simp }
 
 theorem internalHomFunctor_obj_additive {R : Type u} [CommRing R]
     (M : (ModuleCat.{u} R)ᵒᵖ) :
     Functor.Additive ((internalHomFunctor (R := R)).obj M) := by
-  sorry
+  exact linearCoyoneda_obj_additive (R := R) (C := ModuleCat R) M
 
 /-! ## Exactness and internal hom -/
 
@@ -136,7 +150,14 @@ theorem internalHom_exact_of_right_exact
         Function.Injective (internalHomPrecomp (N := N) g) ∧
           Function.Exact (internalHomPrecomp (N := N) g)
             (internalHomPrecomp (N := N) f) := by
-  sorry
+  constructor
+  · rintro ⟨hfg, hg⟩ N _ _
+    constructor
+    · change Function.Injective (LinearMap.lcomp R N g)
+      exact LinearMap.lcomp_injective_of_surjective g hg
+    · change Function.Exact (LinearMap.lcomp R N g) (LinearMap.lcomp R N f)
+      exact LinearMap.exact_lcomp_of_exact_of_surjective N hfg hg
+  · sorry
 
 theorem internalHom_exact_of_left_exact
     {R M₁ M₂ M₃ : Type*} [CommRing R]
@@ -149,7 +170,40 @@ theorem internalHom_exact_of_left_exact
         Function.Injective (internalHomPostcomp (M := N) f) ∧
           Function.Exact (internalHomPostcomp (M := N) f)
             (internalHomPostcomp (M := N) g) := by
-  sorry
+  constructor
+  · rintro ⟨hf, hfg⟩ N _ _
+    constructor
+    · intro φ ψ hφψ
+      ext x
+      apply hf
+      have hx := congrArg (fun k => k x) hφψ
+      simpa [internalHomPostcomp_apply] using hx
+    · intro φ
+      constructor
+      · intro hφ
+        have hφ0 : g.comp φ = 0 := by
+          ext x
+          have hx := congrArg (fun k => k x) hφ
+          simpa [internalHomPostcomp_apply] using hx
+        let φ' : N →ₗ[R] LinearMap.range f :=
+          φ.codRestrict (LinearMap.range f) (fun x => (hfg (φ x)).mp (by
+            simpa using congrArg (fun k => k x) hφ0))
+        let ψ : N →ₗ[R] M₁ :=
+          (LinearEquiv.ofInjective f hf).symm.toLinearMap.comp φ'
+        refine ⟨ψ, ?_⟩
+        ext x
+        have hx := congrArg (fun z : LinearMap.range f => (z : M₂))
+          ((LinearEquiv.ofInjective f hf).apply_symm_apply (φ' x))
+        change f ((LinearEquiv.ofInjective f hf).symm (φ' x)) =
+          (φ' x : M₂) at hx
+        change f ((LinearEquiv.ofInjective f hf).symm (φ' x)) =
+          (φ' x : M₂)
+        exact hx
+      · rintro ⟨ψ, rfl⟩
+        ext x
+        have hx := congrArg (fun k => k (ψ x)) hfg.linearMap_comp_eq_zero
+        simpa [internalHomPostcomp_apply] using hx
+  · sorry
 
 /-! ## Localization of internal homs -/
 

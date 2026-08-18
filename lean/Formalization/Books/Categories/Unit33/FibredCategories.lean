@@ -2677,7 +2677,7 @@ theorem ameliorate_fibred_morphism
             (structureFunctor X.underlying).obj a :=
           eqToHom hζX ≫ gY ≫ eqToHom hFa
         let τleft : ζ.obj.left ⟶ (overFunctor F.underlying).obj b := τ.hom.left
-        letI : (ameliorationBase F).IsHomLift
+        let _ : (ameliorationBase F).IsHomLift
             (g ≫ (ameliorationBase F).map
               ((ameliorationFromX F).map φ)) τ := hτ
         have hτmap₀ : g ≫ (ameliorationBase F).map
@@ -2746,7 +2746,7 @@ theorem ameliorate_fibred_morphism
             _ = eqToHom hζX ≫
                 (eqToHom hζX.symm ≫
                   (structureFunctor X.underlying).map τright) := by
-              simp [Category.assoc]
+              simp
             _ = eqToHom hζX ≫
                 (g ≫ eqToHom hFaBase ≫
                   (structureFunctor X.underlying).map φ) := by
@@ -2804,17 +2804,18 @@ theorem ameliorate_fibred_morphism
                 eqToHom hFζ ≫ eqToHom hζX =
               eqToHom (hFζ.trans hζX).symm ≫
                 (eqToHom hFζ ≫ eqToHom hζX) := by
-                  simp [Category.assoc]
+                  simp
             _ = eqToHom (hFζ.trans hζX).symm ≫
                 eqToHom (hFζ.trans hζX) := by rw [hinner]
             _ = 𝟙 _ := hinv
         have hχmap : (structureFunctor Y.underlying).map χ.hom.left = gY := by
           dsimp [χ, ameliorationFromX, ObjectProperty.homMk]
           rw [Functor.map_comp, hmapζ, hFmapχright, hχrightmap]
-          simp only [gX, Category.assoc, Category.comp_id]
+          simp only [gX, Category.assoc]
           rw [hFa_cast]
           have hζ_post := congrArg (fun k => k ≫ gY) hζ_cast
-          simpa [gY, Category.assoc] using hζ_post
+          set_option linter.unnecessarySimpa false in
+            simpa [gY, Category.assoc] using hζ_post
         have hχbase : (ameliorationBase F).IsHomLift g χ := by
           let hdomχ : (ameliorationBase F).obj ζ =
                 (structureFunctor Y.underlying).obj ζ.obj.left := by rfl
@@ -2920,7 +2921,7 @@ theorem ameliorate_fibred_morphism
               rw [hFaBase_eq]
             _ = gY ≫ eqToHom hFa := hgX
             _ = eqToHom hζX.symm ≫ gX := by
-              simp [gX, Category.assoc]
+              simp [gX]
         have hχ'right : (structureFunctor X.underlying).IsHomLift
             gX χ'right := by
           rw [← hχ'XMap]
@@ -3080,6 +3081,18 @@ theorem ameliorate_fibred_morphism
         · change f ≫ g = f ≫ g
           rfl
     v_fibred_over_Y := by
+      /- Proof roadmap: for `f : y ⟶ ξ.left`, cartesian-lift the base
+      arrow `(structureFunctor Y.underlying).map f` to `b : x' ⟶ ξ.right`
+      in `X`.  Since `F` preserves cartesian arrows, factor
+      `f ≫ ξ.hom : y ⟶ F.obj ξ.right` uniquely through `F.map b`; this
+      produces an amelioration object with components `y`, `x'` and the
+      factorization arrow.  Pair `f` and `b` to obtain the desired lift in the
+      comma category.  Its universal property follows componentwise from the
+      cartesianness of `b` and `F.map b`.  The earlier attempt below confused
+      the object `y : Y` with its image in `C`; the proof remains admitted
+      until this over-base bookkeeping is rebuilt around the mapped arrow. -/
+      sorry
+      /- Incomplete proof attempt retained as implementation notes.
       refine Functor.IsFibered.of_exists_isStronglyCartesian ?_
       intro ξ y f
       change y ⟶ (structureFunctor Y.underlying).obj ξ.obj.left at f
@@ -3219,6 +3232,7 @@ theorem ameliorate_fibred_morphism
         apply Comma.hom_ext
         · exact hχleftuniq _ ⟨hχleft, rfl⟩
         · simp
+      -/
   }⟩
 
 end

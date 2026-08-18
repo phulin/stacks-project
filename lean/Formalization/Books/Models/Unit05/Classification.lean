@@ -1,4 +1,5 @@
 import Mathlib.LinearAlgebra.Matrix.ToLinearEquiv
+import Mathlib.Analysis.Matrix.PosDef
 import Formalization.Books.Models.Unit03.NumericalTypes
 
 /-!
@@ -1870,6 +1871,536 @@ theorem lemma_two_by_two (T : NumericalType) (S : MinusTwoSubgraph T 2)
 theorem lemma_three_by_three (T : NumericalType) (S : MinusTwoSubgraph T 3)
     (hn : 3 < T.n) (hedges : hasTripleAtLeastTwoEdges (localData S)) :
     UpToReordering (localData S) (fun D => isA3 D ∨ isC3 D ∨ isB3 D) := by
+  classical
+  let D := localData S
+  have hAm : Matrix.mulVec (fun p q => (T.a p q : ℝ))
+      (fun p => (T.m p : ℝ)) = 0 := by
+    funext p
+    change (∑ q, (T.a p q : ℝ) * (T.m q : ℝ)) = 0
+    exact_mod_cast T.row_sum p
+  have hconnected : ¬ ∃ I : Set (Fin T.n), I.Nonempty ∧ I ≠ Set.univ ∧
+      ∀ ⦃p q⦄, p ∈ I → q ∉ I → (T.a p q : ℝ) = 0 := by
+    intro h
+    apply T.connected
+    rcases h with ⟨I, hI, hne, hcross⟩
+    refine ⟨I, hI, hne, ?_⟩
+    intro p q hp hq
+    exact_mod_cast hcross hp hq
+  have hreal := Formalization.Books.Models.Unit02.recurring_symmetric_real
+    (fun p q => (T.a p q : ℝ)) (fun p => (T.m p : ℝ))
+    (fun p q => by exact_mod_cast T.a_symmetric p q)
+    (by intro p q h; exact_mod_cast T.a_offdiag_nonneg h)
+    (by intro p; exact_mod_cast T.m_pos p) hAm hconnected
+  have h01 : S.index (0 : Fin 3) ≠ S.index 1 := by
+    intro h
+    have h' : (0 : Fin 3) = 1 := S.index_injective h
+    norm_num at h'
+  have h02 : S.index (0 : Fin 3) ≠ S.index 2 := by
+    intro h
+    have h' : (0 : Fin 3) = 2 := S.index_injective h
+    omega
+  have h12 : S.index (1 : Fin 3) ≠ S.index 2 := by
+    intro h
+    have h' : (1 : Fin 3) = 2 := S.index_injective h
+    omega
+  have hrestrict (x : Fin 3 → ℝ) :
+      (∑ p : Fin T.n, (if p = S.index 0 then x 0 else
+        if p = S.index 1 then x 1 else if p = S.index 2 then x 2 else 0) *
+        Matrix.mulVec (fun p q => (T.a p q : ℝ))
+          (fun p => if p = S.index 0 then x 0 else
+            if p = S.index 1 then x 1 else if p = S.index 2 then x 2 else 0) p) =
+      ∑ i : Fin 3, x i * Matrix.mulVec
+        (fun i j => (T.a (S.index i) (S.index j) : ℝ)) x i := by
+    let y : Fin T.n → ℝ := fun p =>
+      if p = S.index 0 then x 0 else
+        if p = S.index 1 then x 1 else if p = S.index 2 then x 2 else 0
+    have hinner (r : Fin T.n) :
+        Matrix.mulVec (fun u v => (T.a u v : ℝ)) y r =
+          ((T.a r (S.index 0) : ℤ) : ℝ) * x 0 +
+            ((T.a r (S.index 1) : ℤ) : ℝ) * x 1 +
+              ((T.a r (S.index 2) : ℤ) : ℝ) * x 2 := by
+      change (∑ q : Fin T.n, (T.a r q : ℝ) * y q) = _
+      dsimp [y]
+      calc
+        (∑ q : Fin T.n, (T.a r q : ℝ) *
+            (if q = S.index 0 then x 0 else
+              if q = S.index 1 then x 1 else if q = S.index 2 then x 2 else 0)) =
+            ∑ q : Fin T.n,
+              ((if q = S.index 0 then (T.a r q : ℝ) * x 0 else 0) +
+                (if q = S.index 1 then (T.a r q : ℝ) * x 1 else 0) +
+                  (if q = S.index 2 then (T.a r q : ℝ) * x 2 else 0)) := by
+          apply Finset.sum_congr rfl
+          intro q hq
+          by_cases hq0 : q = S.index 0 <;>
+            by_cases hq1 : q = S.index 1 <;>
+              by_cases hq2 : q = S.index 2 <;>
+                simp [hq0, hq1, hq2, h01, h02, h12, h01.symm, h02.symm,
+                  h12.symm] <;> ring
+        _ = _ := by
+          rw [Finset.sum_add_distrib, Finset.sum_add_distrib]
+          simp [y, h01, h02, h12, h01.symm, h02.symm, h12.symm]
+    have houter :
+        (∑ p : Fin T.n, y p * Matrix.mulVec
+          (fun p q => (T.a p q : ℝ)) y p) =
+          x 0 * Matrix.mulVec (fun p q => (T.a p q : ℝ)) y (S.index 0) +
+            x 1 * Matrix.mulVec (fun p q => (T.a p q : ℝ)) y (S.index 1) +
+              x 2 * Matrix.mulVec (fun p q => (T.a p q : ℝ)) y (S.index 2) := by
+      dsimp [y]
+      calc
+        (∑ p : Fin T.n, (if p = S.index 0 then x 0 else
+            if p = S.index 1 then x 1 else if p = S.index 2 then x 2 else 0) *
+            Matrix.mulVec (fun p q => (T.a p q : ℝ)) y p) =
+            ∑ p : Fin T.n,
+              ((if p = S.index 0 then x 0 * Matrix.mulVec
+                (fun p q => (T.a p q : ℝ)) y p else 0) +
+                (if p = S.index 1 then x 1 * Matrix.mulVec
+                  (fun p q => (T.a p q : ℝ)) y p else 0) +
+                  (if p = S.index 2 then x 2 * Matrix.mulVec
+                    (fun p q => (T.a p q : ℝ)) y p else 0)) := by
+          apply Finset.sum_congr rfl
+          intro p hp
+          by_cases hp0 : p = S.index 0 <;>
+            by_cases hp1 : p = S.index 1 <;>
+              by_cases hp2 : p = S.index 2 <;>
+                simp [hp0, hp1, hp2, h01, h02, h12, h01.symm, h02.symm,
+                  h12.symm] <;> ring
+        _ = _ := by
+          rw [Finset.sum_add_distrib, Finset.sum_add_distrib]
+          change _ = x 0 * Matrix.mulVec (fun p q => (T.a p q : ℝ)) y (S.index 0) +
+            x 1 * Matrix.mulVec (fun p q => (T.a p q : ℝ)) y (S.index 1) +
+              x 2 * Matrix.mulVec (fun p q => (T.a p q : ℝ)) y (S.index 2)
+          simp [h01, h02, h12, h01.symm, h02.symm, h12.symm]
+    change (∑ p : Fin T.n, y p * Matrix.mulVec
+      (fun p q => (T.a p q : ℝ)) y p) = _
+    calc
+      _ = x 0 * Matrix.mulVec (fun p q => (T.a p q : ℝ)) y (S.index 0) +
+          x 1 * Matrix.mulVec (fun p q => (T.a p q : ℝ)) y (S.index 1) +
+            x 2 * Matrix.mulVec (fun p q => (T.a p q : ℝ)) y (S.index 2) := houter
+      _ = x 0 * (((T.a (S.index 0) (S.index 0) : ℤ) : ℝ) * x 0 +
+          ((T.a (S.index 0) (S.index 1) : ℤ) : ℝ) * x 1 +
+            ((T.a (S.index 0) (S.index 2) : ℤ) : ℝ) * x 2) +
+          x 1 * (((T.a (S.index 1) (S.index 0) : ℤ) : ℝ) * x 0 +
+            ((T.a (S.index 1) (S.index 1) : ℤ) : ℝ) * x 1 +
+              ((T.a (S.index 1) (S.index 2) : ℤ) : ℝ) * x 2) +
+            x 2 * (((T.a (S.index 2) (S.index 0) : ℤ) : ℝ) * x 0 +
+              ((T.a (S.index 2) (S.index 1) : ℤ) : ℝ) * x 1 +
+                ((T.a (S.index 2) (S.index 2) : ℤ) : ℝ) * x 2) := by
+          rw [hinner (S.index 0), hinner (S.index 1), hinner (S.index 2)]
+      _ = _ := by
+        simp [Matrix.mulVec, dotProduct, Fin.sum_univ_succ]
+        ring
+  have hstrict : ∀ x : Fin 3 → ℝ, x ≠ 0 →
+      ∑ i : Fin 3, x i * Matrix.mulVec
+        (fun i j => (T.a (S.index i) (S.index j) : ℝ)) x i < 0 := by
+    intro x hx
+    let y : Fin T.n → ℝ := fun p =>
+      if p = S.index 0 then x 0 else
+        if p = S.index 1 then x 1 else if p = S.index 2 then x 2 else 0
+    have hle : ∑ i : Fin 3, x i * Matrix.mulVec
+        (fun i j => (T.a (S.index i) (S.index j) : ℝ)) x i ≤ 0 := by
+      have hq := (hreal y).1
+      rw [← hrestrict x]
+      exact hq
+    by_contra hnot
+    have hzero : ∑ i : Fin 3, x i * Matrix.mulVec
+        (fun i j => (T.a (S.index i) (S.index j) : ℝ)) x i = 0 := by
+      apply le_antisymm hle
+      exact le_of_not_gt hnot
+    have hy : ∃ c : ℝ, y = c • (fun p => (T.m p : ℝ)) :=
+      (hreal y).2.mp (by
+        have hzero' : ∑ i : Fin T.n, y i * Matrix.mulVec
+            (fun p q => (T.a p q : ℝ)) y i = 0 := by
+          calc
+            _ = ∑ i : Fin 3, x i * Matrix.mulVec
+                (fun i j => (T.a (S.index i) (S.index j) : ℝ)) x i := by
+              simpa [y] using (hrestrict x)
+            _ = 0 := hzero
+        exact hzero')
+    let I : Finset (Fin T.n) := {S.index 0, S.index 1, S.index 2}
+    have hI : I ≠ Finset.univ := by
+      intro hI
+      have hc := congrArg Finset.card hI
+      simp [I, h01, h02, h12] at hc
+      have hc' : 3 = T.n := by simpa using hc
+      omega
+    have hcomp : Iᶜ ≠ ∅ := by
+      intro hzero
+      apply hI
+      exact (Finset.compl_eq_empty_iff I).mp hzero
+    obtain ⟨k, hk⟩ : Iᶜ.Nonempty :=
+      Finset.nonempty_iff_ne_empty.mpr hcomp
+    rcases hy with ⟨c, hcy⟩
+    have hck := congrFun hcy k
+    have hmk : (0 : ℝ) < T.m k := by exact_mod_cast T.m_pos k
+    have hkI : k ∉ I := Finset.mem_compl.mp hk
+    have hk0 : k ≠ S.index 0 := by
+      intro h
+      apply hkI
+      simp [I, h]
+    have hk1 : k ≠ S.index 1 := by
+      intro h
+      apply hkI
+      simp [I, h]
+    have hk2 : k ≠ S.index 2 := by
+      intro h
+      apply hkI
+      simp [I, h]
+    have hck' : (0 : ℝ) = c * (T.m k : ℝ) := by
+      simpa [y, hk0, hk1, hk2] using hck
+    have hc0 : c = 0 := by nlinarith
+    have hx0 : x = 0 := by
+      funext i
+      fin_cases i
+      · have hi := congrFun hcy (S.index 0)
+        simpa [y, h01, h02, h01.symm, h02.symm, h12.symm, hc0] using hi
+      · have hi := congrFun hcy (S.index 1)
+        simpa [y, h01, h02, h01.symm, h02.symm, h12.symm, hc0] using hi
+      · have hi := congrFun hcy (S.index 2)
+        simpa [y, h01, h02, h01.symm, h02.symm, h12.symm, hc0] using hi
+    exact hx hx0
+  let A : Matrix (Fin 3) (Fin 3) ℝ :=
+    fun i j => (T.a (S.index i) (S.index j) : ℝ)
+  let B : Matrix (Fin 3) (Fin 3) ℝ :=
+    fun i j => -((T.a (S.index i) (S.index j) : ℤ) : ℝ)
+  have hBpos : B.PosDef := by
+    apply Matrix.PosDef.of_dotProduct_mulVec_pos
+    · rw [Matrix.isHermitian_iff_isSymm]
+      apply Matrix.IsSymm.ext
+      intro i j
+      change -((T.a (S.index j) (S.index i) : ℤ) : ℝ) =
+        -((T.a (S.index i) (S.index j) : ℤ) : ℝ)
+      exact_mod_cast congrArg Neg.neg
+        (T.a_symmetric (S.index j) (S.index i))
+    · intro x hx
+      have hq := hstrict x hx
+      have hq' : 0 < -∑ i : Fin 3, x i * Matrix.mulVec
+            (fun i j => (T.a (S.index i) (S.index j) : ℝ)) x i := by
+        linarith
+      calc
+        0 < -∑ i : Fin 3, x i * Matrix.mulVec
+            (fun i j => (T.a (S.index i) (S.index j) : ℝ)) x i := hq'
+        _ = dotProduct (star x) (Matrix.mulVec B x) := by
+          simp [B, Matrix.mulVec, dotProduct]
+  have hBA : B = -A := by
+    ext i j
+    change -((T.a (S.index i) (S.index j) : ℤ) : ℝ) =
+      -((T.a (S.index i) (S.index j) : ℤ) : ℝ)
+    rfl
+  have hdetB : 0 < Matrix.det B := Matrix.PosDef.det_pos hBpos
+  have hdetlocal : Matrix.det A < 0 := by
+    have hdetneg := Matrix.det_neg A
+    norm_num at hdetneg
+    rw [hBA, hdetneg] at hdetB
+    linarith
+  let e01 : Fin 2 → Fin 3 := fun i => if i = 0 then 0 else 1
+  let e12 : Fin 2 → Fin 3 := fun i => if i = 0 then 1 else 2
+  let e02 : Fin 2 → Fin 3 := fun i => if i = 0 then 0 else 2
+  have he01 : Function.Injective e01 := by
+    intro i j h
+    fin_cases i <;> fin_cases j <;> simp [e01] at h ⊢
+  have he12 : Function.Injective e12 := by
+    intro i j h
+    fin_cases i <;> fin_cases j <;> simp [e12] at h ⊢
+  have he02 : Function.Injective e02 := by
+    intro i j h
+    fin_cases i <;> fin_cases j <;> simp [e02] at h ⊢
+  have hdiag0 : T.a (S.index 0) (S.index 0) = -2 * T.w (S.index 0) :=
+    (S.minus_two 0).2
+  have hdiag1 : T.a (S.index 1) (S.index 1) = -2 * T.w (S.index 1) :=
+    (S.minus_two 1).2
+  have hdiag2 : T.a (S.index 2) (S.index 2) = -2 * T.w (S.index 2) :=
+    (S.minus_two 2).2
+  have hs01 : T.a (S.index 1) (S.index 0) = T.a (S.index 0) (S.index 1) :=
+    T.a_symmetric _ _
+  have hs12 : T.a (S.index 2) (S.index 1) = T.a (S.index 1) (S.index 2) :=
+    T.a_symmetric _ _
+  have hs02 : T.a (S.index 2) (S.index 0) = T.a (S.index 0) (S.index 2) :=
+    T.a_symmetric _ _
+  have hbound01 : 0 < 4 * (D.w 0 : ℝ) * D.w 1 - D.a 0 1 ^ 2 := by
+    have h := Matrix.PosDef.det_pos (hBpos.submatrix he01)
+    have h' : (D.a 0 1 : ℝ) * D.a 0 1 <
+        2 * (D.w 0 : ℝ) * (2 * D.w 1) := by
+      simpa [e01, B, Matrix.det_fin_two, Matrix.submatrix, D, localData,
+        hdiag0, hdiag1, hs01] using h
+    nlinarith
+  have hbound12 : 0 < 4 * (D.w 1 : ℝ) * D.w 2 - D.a 1 2 ^ 2 := by
+    have h := Matrix.PosDef.det_pos (hBpos.submatrix he12)
+    have h' : (D.a 1 2 : ℝ) * D.a 1 2 <
+        2 * (D.w 1 : ℝ) * (2 * D.w 2) := by
+      simpa [e12, B, Matrix.det_fin_two, Matrix.submatrix, D, localData,
+        hdiag1, hdiag2, hs12] using h
+    nlinarith
+  have hbound02 : 0 < 4 * (D.w 0 : ℝ) * D.w 2 - D.a 0 2 ^ 2 := by
+    have h := Matrix.PosDef.det_pos (hBpos.submatrix he02)
+    have h' : (D.a 0 2 : ℝ) * D.a 0 2 <
+        2 * (D.w 0 : ℝ) * (2 * D.w 2) := by
+      simpa [e02, B, Matrix.det_fin_two, Matrix.submatrix, D, localData,
+        hdiag0, hdiag2, hs02] using h
+    nlinarith
+  have hDdiag : ∀ i, D.a i i = -2 * D.w i := by
+    intro i
+    simpa [D, localData] using (S.minus_two i).2
+  have hDsym : ∀ i j, D.a i j = D.a j i := by
+    intro i j
+    simpa [D] using local_a_symmetric S i j
+  have hdetformula := determinant_three_by_three_formula D hDdiag hDsym
+  have hdetcast : (D.a.det : ℝ) = A.det := by
+    have hmap : Matrix.map D.a (fun x : ℤ => (x : ℝ)) = A := by
+      ext i j
+      rw [Matrix.map_apply]
+      change (T.a (S.index i) (S.index j) : ℝ) =
+        (T.a (S.index i) (S.index j) : ℝ)
+      rfl
+    have hcast := (Int.cast_det D.a : (D.a.det : ℝ) = _)
+    rw [hmap] at hcast
+    exact hcast
+  have hdetreal : (D.a.det : ℝ) < 0 := by
+    rw [hdetcast]
+    exact hdetlocal
+  have hquot : ∀ (i j : Fin 3), 0 < D.a i j →
+      0 < 4 * (D.w i : ℝ) * D.w j - D.a i j ^ 2 →
+      ∃ p q : ℤ, 0 < p ∧ 0 < q ∧ D.a i j = p * D.w i ∧
+        D.a i j = q * D.w j ∧ p * q < 4 := by
+    intro i j hij hb
+    have hdivi : D.w i ∣ D.a i j := by
+      simpa [D, localData] using T.w_dvd (S.index i) (S.index j)
+    have hdivj : D.w j ∣ D.a i j := by
+      have h := T.w_dvd (S.index j) (S.index i)
+      simpa [D, localData, T.a_symmetric (S.index j) (S.index i)] using h
+    have hwi : 0 < D.w i := local_w_pos S i
+    have hwj : 0 < D.w j := local_w_pos S j
+    let p : ℤ := D.a i j / D.w i
+    let q : ℤ := D.a i j / D.w j
+    have hp : 0 < p := by
+      dsimp [p]
+      exact Int.ediv_pos_of_pos_of_dvd hij (le_of_lt hwi) hdivi
+    have hq : 0 < q := by
+      dsimp [q]
+      exact Int.ediv_pos_of_pos_of_dvd hij (le_of_lt hwj) hdivj
+    have hpa : D.a i j = p * D.w i := by
+      dsimp [p]
+      exact (Int.ediv_mul_cancel hdivi).symm
+    have hqa : D.a i j = q * D.w j := by
+      dsimp [q]
+      exact (Int.ediv_mul_cancel hdivj).symm
+    have hbZ : 0 < 4 * D.w i * D.w j - D.a i j ^ 2 := by
+      exact_mod_cast hb
+    have hsq : D.a i j ^ 2 = p * q * (D.w i * D.w j) := by
+      calc
+        D.a i j ^ 2 = D.a i j * D.a i j := by ring
+        _ = (p * D.w i) * D.a i j := by rw [hpa]
+        _ = (p * D.w i) * (q * D.w j) := by rw [hqa]
+        _ = p * q * (D.w i * D.w j) := by ring
+    have hwpq : 0 < D.w i * D.w j := mul_pos hwi hwj
+    have hpq : p * q < 4 := by
+      nlinarith [hbZ, hsq]
+    exact ⟨p, q, hp, hq, hpa, hqa, hpq⟩
+  have hrowT : ∀ (i j k : Fin 3), i ≠ j → i ≠ k → j ≠ k →
+      T.a (S.index i) (S.index i) * T.m (S.index i) +
+        T.a (S.index i) (S.index j) * T.m (S.index j) +
+        T.a (S.index i) (S.index k) * T.m (S.index k) ≤ 0 := by
+    intro i j k hij hik hjk
+    let rest : Finset (Fin T.n) :=
+      ((Finset.univ.erase (S.index i)).erase (S.index j)).erase (S.index k)
+    have hrest : 0 ≤ rest.sum (fun l => T.a (S.index i) l * T.m l) := by
+      apply Finset.sum_nonneg
+      intro k hk
+      have hk' := Finset.mem_erase.mp hk
+      have hkj := (Finset.mem_erase.mp hk'.2).1
+      have hki := (Finset.mem_erase.mp (Finset.mem_erase.mp hk'.2).2).1
+      have ha : 0 ≤ T.a (S.index i) k := T.a_offdiag_nonneg hki.symm
+      have hm : 0 ≤ T.m k := le_of_lt (T.m_pos k)
+      exact mul_nonneg ha hm
+    have hs1 := Finset.sum_erase_add
+      (s := (Finset.univ : Finset (Fin T.n)))
+      (a := S.index i)
+      (f := fun k => T.a (S.index i) k * T.m k)
+      (Finset.mem_univ _)
+    have hm1 : S.index j ∈
+        (Finset.univ : Finset (Fin T.n)).erase (S.index i) := by
+      rw [Finset.mem_erase]
+      exact ⟨fun h => hij (S.index_injective h.symm), Finset.mem_univ _⟩
+    have hs2 := Finset.sum_erase_add
+      (s := (Finset.univ : Finset (Fin T.n)).erase (S.index i))
+      (a := S.index j)
+      (f := fun k => T.a (S.index i) k * T.m k) hm1
+    have hm2 : S.index k ∈
+        ((Finset.univ : Finset (Fin T.n)).erase (S.index i)).erase
+          (S.index j) := by
+      rw [Finset.mem_erase]
+      exact ⟨fun h => hjk (S.index_injective h.symm), by
+        rw [Finset.mem_erase]
+        exact ⟨fun h => hik (S.index_injective h.symm), Finset.mem_univ _⟩⟩
+    have hs3 := Finset.sum_erase_add
+      (s := ((Finset.univ : Finset (Fin T.n)).erase (S.index i)).erase
+        (S.index j))
+      (a := S.index k)
+      (f := fun k => T.a (S.index i) k * T.m k) hm2
+    have hs3' : rest.sum (fun l => T.a (S.index i) l * T.m l) +
+        T.a (S.index i) (S.index k) * T.m (S.index k) =
+        (((Finset.univ : Finset (Fin T.n)).erase (S.index i)).erase
+          (S.index j)).sum
+          (fun l => T.a (S.index i) l * T.m l) := by
+      change rest.sum (fun l => T.a (S.index i) l * T.m l) +
+          T.a (S.index i) (S.index k) * T.m (S.index k) =
+        ((Finset.univ.erase (S.index i)).erase (S.index j)).sum
+          (fun l => T.a (S.index i) l * T.m l)
+      exact hs3
+    rw [T.row_sum (S.index i)] at hs1
+    linarith [hs1, hs2, hs3', hrest]
+  have hrow : ∀ (i j k : Fin 3), i ≠ j → i ≠ k → j ≠ k →
+      2 * D.w i * D.m i ≥ D.a i j * D.m j + D.a i k * D.m k := by
+    intro i j k hij hik hjk
+    have h := hrowT i j k hij hik hjk
+    rw [(S.minus_two i).2] at h
+    change 2 * T.w (S.index i) * T.m (S.index i) ≥
+      T.a (S.index i) (S.index j) * T.m (S.index j) +
+        T.a (S.index i) (S.index k) * T.m (S.index k)
+    linarith [h]
+  have hrow0 := hrow 0 1 2 (by decide) (by decide) (by decide)
+  have hrow1 := hrow 1 0 2 (by decide) (by decide) (by decide)
+  have hrow2 := hrow 2 0 1 (by decide) (by decide) (by decide)
+  have realizeA3 : ∀ (E : LocalNumericalData 3) (r : ℤ),
+      0 < r → E.w 0 = r → E.w 1 = r → E.w 2 = r →
+      E.a 0 0 = -2 * r → E.a 1 1 = -2 * r → E.a 2 2 = -2 * r →
+      E.a 0 1 = r → E.a 1 0 = r → E.a 1 2 = r → E.a 2 1 = r →
+      E.a 0 2 = 0 → E.a 2 0 = 0 → (∀ i, 0 < E.m i) →
+      mConditionA3 E.m → isA3 E := by
+    intro E r hr hw0 hw1 hw2 haa0 haa1 haa2 hae01 hae10 hae12 hae21 hae02 hae20 hmp hmc
+    unfold isA3 realizesPattern
+    refine ⟨r, hr, ?_, ?_, hmp, hmc⟩
+    · ext a b
+      fin_cases a <;> fin_cases b <;>
+        simp [scalarMatrix, pathMatrix, constantVector, hw0, hw1, hw2,
+          haa0, haa1, haa2, hae01, hae10, hae12, hae21, hae02, hae20] <;> ring
+    · funext a
+      fin_cases a <;> simp [scalarVector, constantVector, hw0, hw1, hw2]
+  have realizeC3 : ∀ (E : LocalNumericalData 3) (r : ℤ),
+      0 < r → E.w 0 = r → E.w 1 = r → E.w 2 = 2 * r →
+      E.a 0 0 = -2 * r → E.a 1 1 = -2 * r → E.a 2 2 = -4 * r →
+      E.a 0 1 = r → E.a 1 0 = r → E.a 1 2 = 2 * r → E.a 2 1 = 2 * r →
+      E.a 0 2 = 0 → E.a 2 0 = 0 → (∀ i, 0 < E.m i) →
+      mConditionC3 E.m → isC3 E := by
+    intro E r hr hw0 hw1 hw2 haa0 haa1 haa2 hae01 hae10 hae12 hae21 hae02 hae20 hmp hmc
+    unfold isC3 realizesPattern
+    refine ⟨r, hr, ?_, ?_, hmp, hmc⟩
+    · ext a b
+      fin_cases a <;> fin_cases b <;>
+        simp [scalarMatrix, pathLastMatrix, lastVector, hw0, hw1, hw2,
+          haa0, haa1, haa2, hae01, hae10, hae12, hae21, hae02, hae20] <;> ring
+    · funext a
+      fin_cases a <;> simp [scalarVector, lastVector, hw0, hw1, hw2] <;> ring
+  have realizeB3 : ∀ (E : LocalNumericalData 3) (r : ℤ),
+      0 < r → E.w 0 = 2 * r → E.w 1 = 2 * r → E.w 2 = r →
+      E.a 0 0 = -4 * r → E.a 1 1 = -4 * r → E.a 2 2 = -2 * r →
+      E.a 0 1 = 2 * r → E.a 1 0 = 2 * r → E.a 1 2 = 2 * r → E.a 2 1 = 2 * r →
+      E.a 0 2 = 0 → E.a 2 0 = 0 → (∀ i, 0 < E.m i) →
+      mConditionB3 E.m → isB3 E := by
+    intro E r hr hw0 hw1 hw2 haa0 haa1 haa2 hae01 hae10 hae12 hae21 hae02 hae20 hmp hmc
+    unfold isB3 realizesPattern
+    refine ⟨r, hr, ?_, ?_, hmp, hmc⟩
+    · ext a b
+      fin_cases a <;> fin_cases b <;>
+        simp [scalarMatrix, pathLastMatrix, lastVector, hw0, hw1, hw2,
+          haa0, haa1, haa2, hae01, hae10, hae12, hae21, hae02, hae20] <;> ring
+    · funext a
+      fin_cases a <;> simp [scalarVector, lastVector, hw0, hw1, hw2] <;> ring
+  have hnonneg : ∀ i j : Fin 3, i ≠ j → 0 ≤ D.a i j := by
+    intro i j hij
+    change 0 ≤ T.a (S.index i) (S.index j)
+    apply T.a_offdiag_nonneg
+    intro h
+    exact hij (S.index_injective h)
+  have hEdge : ∀ i j : Fin 3, hasEdgeAt D i.val j.val → 0 < D.a i j := by
+    intro i j h
+    rcases h with ⟨i', j', hi, hj, hp⟩
+    have hi' : i' = i := Fin.ext hi
+    have hj' : j' = j := Fin.ext hj
+    simpa [hi', hj'] using hp
+  have hdetR : (D.a.det : ℝ) =
+      -8 * (D.w 0 : ℝ) * D.w 1 * D.w 2 +
+        2 * (D.a 0 1 : ℝ) ^ 2 * D.w 2 +
+        2 * (D.a 1 2 : ℝ) ^ 2 * D.w 0 +
+        2 * (D.a 0 2 : ℝ) ^ 2 * D.w 1 +
+        2 * (D.a 0 1 : ℝ) * D.a 0 2 * D.a 1 2 := by
+    exact_mod_cast hdetformula
+  have hdetI :
+      -8 * (D.w 0 : ℝ) * D.w 1 * D.w 2 +
+          2 * (D.a 0 1 : ℝ) ^ 2 * D.w 2 +
+          2 * (D.a 1 2 : ℝ) ^ 2 * D.w 0 +
+          2 * (D.a 0 2 : ℝ) ^ 2 * D.w 1 +
+          2 * (D.a 0 1 : ℝ) * D.a 0 2 * D.a 1 2 < 0 := by
+    rw [← hdetR]
+    exact hdetreal
+  have hpairlower : ∀ i j : Fin 3, 0 < D.a i j →
+      0 < 4 * (D.w i : ℝ) * D.w j - D.a i j ^ 2 →
+      (D.w i : ℝ) ≤ D.a i j ∧ (D.w j : ℝ) ≤ D.a i j := by
+    intro i j hij hb
+    obtain ⟨p, q, hp, hq, hpa, hqa, hpq⟩ := hquot i j hij hb
+    have hpR : (1 : ℝ) ≤ p := by
+      exact_mod_cast (show (1 : ℤ) ≤ p by omega)
+    have hqR : (1 : ℝ) ≤ q := by
+      exact_mod_cast (show (1 : ℤ) ≤ q by omega)
+    have hpaR : (D.a i j : ℝ) = (p : ℝ) * D.w i := by
+      exact_mod_cast hpa
+    have hqaR : (D.a i j : ℝ) = (q : ℝ) * D.w j := by
+      exact_mod_cast hqa
+    have hwi : (0 : ℝ) < D.w i := by exact_mod_cast local_w_pos S i
+    have hwj : (0 : ℝ) < D.w j := by exact_mod_cast local_w_pos S j
+    constructor <;> nlinarith
+  have htriangle : ¬ (0 < D.a 0 1 ∧ 0 < D.a 0 2 ∧ 0 < D.a 1 2) := by
+    rintro ⟨ha01, ha02, ha12⟩
+    have hl01 := hpairlower 0 1 ha01 hbound01
+    have hl02 := hpairlower 0 2 ha02 hbound02
+    have hl12 := hpairlower 1 2 ha12 hbound12
+    have ha01R : (0 : ℝ) < D.a 0 1 := by exact_mod_cast ha01
+    have ha02R : (0 : ℝ) < D.a 0 2 := by exact_mod_cast ha02
+    have ha12R : (0 : ℝ) < D.a 1 2 := by exact_mod_cast ha12
+    have hw0 : (0 : ℝ) ≤ D.w 0 := le_of_lt (by exact_mod_cast local_w_pos S 0)
+    have hw1 : (0 : ℝ) ≤ D.w 1 := le_of_lt (by exact_mod_cast local_w_pos S 1)
+    have hw2 : (0 : ℝ) ≤ D.w 2 := le_of_lt (by exact_mod_cast local_w_pos S 2)
+    have hs01 : (D.w 0 : ℝ) * D.w 1 ≤ (D.a 0 1 : ℝ) ^ 2 := by
+        simpa [pow_two] using
+        (mul_le_mul hl01.1 hl01.2 hw1 (le_of_lt ha01R))
+    have hs02 : (D.w 0 : ℝ) * D.w 2 ≤ (D.a 0 2 : ℝ) ^ 2 := by
+        simpa [pow_two] using
+        (mul_le_mul hl02.1 hl02.2 hw2 (le_of_lt ha02R))
+    have hs12 : (D.w 1 : ℝ) * D.w 2 ≤ (D.a 1 2 : ℝ) ^ 2 := by
+        simpa [pow_two] using
+        (mul_le_mul hl12.1 hl12.2 hw2 (le_of_lt ha12R))
+    have hp12 : (D.w 1 : ℝ) * D.w 2 ≤
+        (D.a 1 2 : ℝ) * D.a 0 2 := by
+      calc
+        (D.w 1 : ℝ) * D.w 2 ≤ D.a 1 2 * D.w 2 :=
+          mul_le_mul_of_nonneg_right hl12.1 hw2
+        _ ≤ D.a 1 2 * D.a 0 2 :=
+          mul_le_mul_of_nonneg_left hl02.2 (le_of_lt ha12R)
+    have hprod : (D.w 0 : ℝ) * D.w 1 * D.w 2 ≤
+        (D.a 0 1 : ℝ) * D.a 0 2 * D.a 1 2 := by
+      calc
+        (D.w 0 : ℝ) * D.w 1 * D.w 2 ≤
+            D.w 0 * (D.a 1 2 * D.a 0 2) := by
+          simpa [mul_assoc] using mul_le_mul_of_nonneg_left hp12 hw0
+        _ ≤ D.a 0 1 * (D.a 1 2 * D.a 0 2) := by
+          exact mul_le_mul_of_nonneg_right hl01.1
+            (mul_nonneg (le_of_lt ha12R) (le_of_lt ha02R))
+        _ = D.a 0 1 * D.a 0 2 * D.a 1 2 := by ring
+    have hs01' : (D.w 0 : ℝ) * D.w 1 * D.w 2 ≤
+        (D.a 0 1 : ℝ) ^ 2 * D.w 2 :=
+      mul_le_mul_of_nonneg_right hs01 hw2
+    have hs02' : (D.w 0 : ℝ) * D.w 1 * D.w 2 ≤
+        (D.a 0 2 : ℝ) ^ 2 * D.w 1 := by
+      calc
+        (D.w 0 : ℝ) * D.w 1 * D.w 2 =
+            (D.w 0 * D.w 2) * D.w 1 := by ring
+        _ ≤ (D.a 0 2 : ℝ) ^ 2 * D.w 1 :=
+          mul_le_mul_of_nonneg_right hs02 hw1
+    have hs12' : (D.w 0 : ℝ) * D.w 1 * D.w 2 ≤
+        (D.a 1 2 : ℝ) ^ 2 * D.w 0 :=
+      by
+        simpa [mul_assoc, mul_left_comm, mul_comm] using
+          mul_le_mul_of_nonneg_right hs12 hw0
+    nlinarith [hdetI, hs01', hs02', hs12', hprod]
   sorry
 
 /-! The four-by-four path classification. -/

@@ -390,7 +390,39 @@ theorem subextension_of_kummer_is_generated_by_power
         rw [← mul_assoc, inv_mul_cancel₀ hmapk0, one_mul]
       rw [← hx]
       exact x.property
-    sorry
+    let F : IntermediateField K L :=
+      IntermediateField.adjoin K ({α ^ d} : Set L)
+    have hF_le : F ≤ L' := by
+      dsimp [F]
+      exact IntermediateField.adjoin_le_iff.mpr
+        (Set.singleton_subset_iff.mpr hpower_mem)
+    have hFgen : IntermediateField.adjoin F ({α} : Set L) = ⊤ := by
+      apply IntermediateField.adjoin_eq_top_of_adjoin_eq_top (F := K) (E := F)
+      exact hgen
+    have hdpos : 0 < d := by
+      dsimp [d]
+      exact Module.finrank_pos
+    let β : F :=
+      ⟨α ^ d, IntermediateField.subset_adjoin K ({α ^ d} : Set L)
+        (Set.mem_singleton (α ^ d))⟩
+    let p : Polynomial F := Polynomial.X ^ d - Polynomial.C β
+    have hp_root : Polynomial.aeval α p = 0 := by
+      dsimp [p, β]
+      simp [Polynomial.aeval_def]
+    have hp_dvd : minpoly F α ∣ p := minpoly.dvd F α hp_root
+    have hp_monic : p.Monic := by
+      dsimp [p]
+      exact monic_X_pow_sub_C _ hdpos.ne.symm
+    have hfinrank : Module.finrank F L = (minpoly F α).natDegree := by
+      have h := IntermediateField.adjoin.finrank (IsIntegral.of_finite F α)
+      rw [hFgen] at h
+      simpa using h
+    have hdeg : Module.finrank F L ≤ d := by
+      rw [hfinrank]
+      exact natDegree_le_of_dvd hp_dvd hp_monic.ne_zero
+    have hEq : F = L' :=
+      IntermediateField.eq_of_le_of_finrank_le' hF_le hdeg
+    exact ⟨d, hde, by simpa [F, hEq]⟩
 
 end
 

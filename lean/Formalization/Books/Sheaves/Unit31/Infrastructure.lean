@@ -90,7 +90,15 @@ theorem openSheafRestriction_formula (C : Type u) [Category.{v} C]
     [HasColimits C] {X : TopCat.{v}} (U : Opens X) (F : TopCat.Sheaf C X) :
     Nonempty (((openSheafRestriction C U).obj F).presheaf ≅
       (openPresheafRestriction C U).obj F.presheaf) := by
-  sorry
+  refine ⟨?_⟩
+  let H : IsOpenEmbedding (TopCat.Hom.hom (TopCat.ofHom ⟨_, continuous_subtype_val⟩)) :=
+    U.isOpenEmbedding
+  letI : H.functor.IsContinuous (Opens.grothendieckTopology (openSubspace U))
+      (Opens.grothendieckTopology X) := H.functor_isContinuous
+  exact (H.isOpenMap.functor.sheafPushforwardContinuousCompSheafToPresheafIso
+      C (Opens.grothendieckTopology (openSubspace U))
+      (Opens.grothendieckTopology X)).app F ≪≫
+    (H.isOpenMap.pullbackObjIso F.presheaf).symm
 
 /-- Sections of a sheaf restricted to an open subspace are the ambient
 sections over the corresponding image open. -/
@@ -109,7 +117,9 @@ theorem openSheafRestriction_stalk_iso (C : Type u) [Category.{v} C]
     (u : openSubspace U) :
     Nonempty (((openSheafRestriction C U).obj F).presheaf.stalk u ≅
       F.presheaf.stalk ((openInclusion U) u)) := by
-  sorry
+  rcases openSheafRestriction_formula C U F with ⟨e⟩
+  exact ⟨(TopCat.Presheaf.stalkFunctor C u).mapIso e ≪≫
+    (TopCat.Presheaf.stalkPullbackIso C (openInclusion U) F.presheaf u).symm⟩
 
 /-- Direct image is computed by inverse images of opens. -/
 @[simp] theorem openPresheafDirectImage_obj (C : Type u) [Category.{v} C]
@@ -124,14 +134,43 @@ theorem openPresheafRestriction_directImage_iso (C : Type u) [Category.{v} C]
     (F : TopCat.Presheaf C (openSubspace U)) :
     Nonempty ((openPresheafRestriction C U).obj
       ((openPresheafDirectImage C U).obj F) ≅ F) := by
-  sorry
+  refine ⟨?_⟩
+  let f := openInclusion U
+  let hf := U.isOpenEmbedding
+  have hfun : hf.functor ⋙ Opens.map f = 𝟭 _ := by
+    refine CategoryTheory.Functor.ext ?_ ?_
+    · intro V
+      exact TopologicalSpace.Opens.map_functor_eq' f hf V
+    · subsingleton
+  let e : hf.functor.op ⋙ (TopCat.Presheaf.pushforward C f).obj F ≅ F :=
+    eqToIso (by
+      dsimp [TopCat.Presheaf.pushforward]
+      change ((hf.functor ⋙ Opens.map f).op ⋙ F) = F
+      rw [hfun]
+      rfl)
+  exact (hf.isOpenMap.pullbackObjIso ((TopCat.Presheaf.pushforward C f).obj F)) ≪≫ e
 
 /-- Restriction followed by direct image is the identity on sheaves of an open subspace. -/
 theorem openSheafRestriction_directImage_iso {C : Type u} [Category.{v} C]
     {X : TopCat.{v}} (U : Opens X) (F : TopCat.Sheaf C (openSubspace U)) :
     Nonempty ((openSheafRestriction C U).obj
       ((openSheafDirectImage C U).obj F) ≅ F) := by
-  sorry
+  let f := openInclusion U
+  let hf := U.isOpenEmbedding
+  have hfun : hf.functor ⋙ Opens.map f = 𝟭 _ := by
+    refine CategoryTheory.Functor.ext ?_ ?_
+    · intro V
+      exact TopologicalSpace.Opens.map_functor_eq' f hf V
+    · subsingleton
+  have hobj :
+      (openSheafRestriction C U).obj ((openSheafDirectImage C U).obj F) = F := by
+    apply ObjectProperty.FullSubcategory.ext
+    dsimp [openSheafRestriction, openSheafDirectImage, TopCat.Sheaf.pushforward,
+      Functor.sheafPushforwardContinuous]
+    change ((hf.functor ⋙ Opens.map f).op ⋙ F.presheaf) = F.presheaf
+    rw [hfun]
+    rfl
+  exact ⟨eqToIso hobj⟩
 
 /-- Direct image along an open inclusion is fully faithful. -/
 theorem openSheafDirectImage_fullFaithful (C : Type u) [Category.{v} C]

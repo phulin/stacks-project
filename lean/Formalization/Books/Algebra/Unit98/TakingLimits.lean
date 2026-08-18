@@ -472,10 +472,7 @@ theorem completionTensorCoordinate_naturality
       have hmap_apply := congrArg (fun q => q m) hmap
       rw [LinearMap.comp_apply] at hmap_apply
       rw [hmap_apply]
-      have ha :
-          a.val i.unop ≡ a.val j.unop
-            [SMOD ((I ^ (j.unop : ℕ)) • (⊤ : Submodule A A))] :=
-        (a.property (leOfHom f.unop)).symm
+      have ha := (a.property (leOfHom f.unop)).symm
       have hmem : a.val i.unop - a.val j.unop ∈
           (I ^ (j.unop : ℕ) : Ideal A) := by
         have hmem' : a.val i.unop - a.val j.unop ∈

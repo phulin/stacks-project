@@ -4,6 +4,7 @@ import Mathlib.Algebra.Homology.ShortComplex.ShortExact
 import Mathlib.Algebra.Exact.Basic
 import Mathlib.CategoryTheory.Preadditive.AdditiveFunctor
 import Mathlib.GroupTheory.FreeAbelianGroup
+import Mathlib.Algebra.FreeAbelianGroup.Finsupp
 import Mathlib.GroupTheory.QuotientGroup.Defs
 
 /-!
@@ -804,6 +805,65 @@ private theorem kZero_serreSubcategoryMap_classOf_cyclic_sub
   change KZero.classOf K.H0 - KZero.classOf K.H1 = 0
   exact kZero_classOf_cyclic_homology_sub K
 
+private theorem kZeroRelations_signed_sum
+    {D : Type u'} [Category.{v'} D] [HasZeroMorphisms D]
+    (z : FreeAbelianGroup D) (hz : z ∈ KZeroRelations D) :
+    ∃ (rplus rminus : List (KZeroRelation D)),
+      z = (rplus.map KZeroRelation.generator).sum -
+        (rminus.map KZeroRelation.generator).sum := by
+  induction hz using AddSubgroup.closure_induction with
+  | mem x hx =>
+      obtain ⟨r, rfl⟩ := hx
+      refine ⟨[r], [], ?_⟩
+      simp
+  | zero =>
+      refine ⟨[], [], ?_⟩
+      simp
+  | add x y hx hy ihx ihy =>
+      obtain ⟨rplus, rminus, hplus⟩ := ihx
+      obtain ⟨splus, sminus, hminus⟩ := ihy
+      refine ⟨rplus ++ splus, rminus ++ sminus, ?_⟩
+      rw [hplus, hminus]
+      simp only [List.map_append, List.sum_append]
+      abel
+  | neg x hx ih =>
+      obtain ⟨rplus, rminus, h⟩ := ih
+      refine ⟨rminus, rplus, ?_⟩
+      rw [h]
+      abel
+
+private theorem freeAbelianGroup_list_count
+    {D : Type u'} [BEq D] [LawfulBEq D] (l : List D) (a : D) :
+    FreeAbelianGroup.coeff a (l.map FreeAbelianGroup.of).sum =
+      (l.count a : ℤ) := by
+  classical
+  induction l with
+  | nil => simp [FreeAbelianGroup.coeff]
+  | cons b l ih =>
+      have ih' := ih
+      change (FreeAbelianGroup.toFinsupp (l.map FreeAbelianGroup.of).sum) a =
+        (l.count a : ℤ) at ih'
+      change (FreeAbelianGroup.toFinsupp
+          (FreeAbelianGroup.of b + (l.map FreeAbelianGroup.of).sum)) a =
+        (List.count a (b :: l) : ℤ)
+      rw [map_add, FreeAbelianGroup.toFinsupp_of]
+      change (Finsupp.single b 1) a +
+          (FreeAbelianGroup.toFinsupp (l.map FreeAbelianGroup.of).sum) a = _
+      rw [ih']
+      rw [List.count_cons]
+      simp [Finsupp.single_apply]
+      abel
+
+private theorem freeAbelianGroup_list_perm_of_sum_eq
+    {D : Type u'} [BEq D] [LawfulBEq D] (l₁ l₂ : List D)
+    (h : (l₁.map FreeAbelianGroup.of).sum =
+      (l₂.map FreeAbelianGroup.of).sum) : l₁.Perm l₂ := by
+  apply (List.perm_iff_count).2
+  intro a
+  have hc := congrArg (FreeAbelianGroup.coeff a) h
+  rw [freeAbelianGroup_list_count, freeAbelianGroup_list_count] at hc
+  exact_mod_cast hc
+
 /-- The source's characterization of the kernel of the inclusion map: its
 elements are differences of the two homology objects of a periodic complex
 which becomes exact in the Serre quotient. -/
@@ -812,6 +872,36 @@ theorem kZero_serre_kernel
     (AddMonoidHom.ker (serreSubcategoryKZeroMap P) : Set (KZero P.FullSubcategory)) =
       {x | ∃ (K : CyclicComplex C) (h₀ : P K.H0) (h₁ : P K.H1),
         x = KZero.classOf ⟨K.H0, h₀⟩ - KZero.classOf ⟨K.H1, h₁⟩} := by
-  sorry
+  ext x
+  constructor
+  · intro hx
+    have hBin : P.IsClosedUnderBinaryProducts :=
+      ObjectProperty.IsClosedUnderLimitsOfShape.mk' (P := P)
+        (J := Discrete WalkingPair) (by
+          rintro _ ⟨F, hF⟩
+          exact P.prop_of_iso
+            (IsLimit.conePointsIsoOfNatIso (BinaryBiproduct.isLimit _ _)
+              (limit.isLimit F) (diagramIsoPair F).symm)
+            (P.prop_biprod (hF _) (hF _)))
+    have hFinite : P.IsClosedUnderFiniteProducts :=
+      @ObjectProperty.IsClosedUnderFiniteProducts.mk' C _ P inferInstance inferInstance hBin
+    letI : Abelian P.FullSubcategory :=
+      @ObjectProperty.instAbelianFullSubcategoryOfContainsZeroOfIsClosedUnderKernelsOfIsClosedUnderCokernelsOfIsClosedUnderFiniteProducts
+        C _ P inferInstance inferInstance inferInstance inferInstance hFinite
+    obtain ⟨A, B, hAB⟩ := kZero_subtraction_representation x
+    have hmap : serreSubcategoryKZeroMap P x = 0 := hx
+    rw [hAB] at hmap
+    have hAB' : KZero.classOf (P.ι.obj A) = KZero.classOf (P.ι.obj B) := by
+      change kZeroMap (serreSubcategoryExactFunctor P)
+          (KZero.classOf A - KZero.classOf B) = 0 at hmap
+      rw [map_sub, kZeroMap_classOf, kZeroMap_classOf] at hmap
+      exact sub_eq_zero.mp hmap
+    have hrel : FreeAbelianGroup.of (P.ι.obj A) -
+        FreeAbelianGroup.of (P.ι.obj B) ∈ KZeroRelations C := by
+      apply (QuotientAddGroup.eq_iff_sub_mem).mp
+      exact hAB'
+    sorry
+  · rintro ⟨K, h₀, h₁, rfl⟩
+    exact kZero_serreSubcategoryMap_classOf_cyclic_sub P K h₀ h₁
 
 end Formalization.Books.Homology.Unit11

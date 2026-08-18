@@ -169,7 +169,17 @@ theorem localization_additive_right
     [L.IsLocalization W] [hW : RightMultiplicativeSystem W] :
     ∃ hD : Formalization.Books.Homology.Unit03.AdditiveCategory D,
       @Functor.Additive C D _ _ _ hD.toPreadditive L := by
-  sorry
+  obtain ⟨p, hp, _⟩ :=
+    localization_preadditive_right (W := W) L hW
+  letI : Preadditive D := p
+  letI : Functor.Additive L := hp
+  letI : L.EssSurj := CategoryTheory.Localization.essSurj L W
+  have hprod : HasFiniteProducts D :=
+    Functor.hasFiniteProducts_of_additive_of_essSurj L
+  let hD : Formalization.Books.Homology.Unit03.AdditiveCategory D :=
+    { toPreadditive := p
+      toHasFiniteProducts := hprod }
+  exact ⟨hD, hp⟩
 
 theorem localization_additive
     {C : Type u} {D : Type*} [Category.{v} C] [Category* D]
@@ -179,7 +189,9 @@ theorem localization_additive
     (hW : LeftMultiplicativeSystem W ∨ RightMultiplicativeSystem W) :
     ∃ hD : Formalization.Books.Homology.Unit03.AdditiveCategory D,
       @Functor.Additive C D _ _ _ hD.toPreadditive L := by
-  sorry
+  rcases hW with hW | hW
+  · exact localization_additive_left (W := W) L
+  · exact localization_additive_right (W := W) L
 
 /-! ## The kernel of the localization functor -/
 
@@ -194,7 +206,56 @@ theorem localization_zero_iff
     (hW : MultiplicativeSystem W) (X : C) :
     (IsZero (L.obj X) ↔ ∃ Y : C, W (0 : X ⟶ Y)) ∧
       (IsZero (L.obj X) ↔ ∃ Z : C, W (0 : Z ⟶ X)) := by
-  sorry
+  letI : LeftMultiplicativeSystem W := hW.1
+  letI : RightMultiplicativeSystem W := hW.2
+  obtain ⟨hD, hL⟩ := localization_additive (W := W) L (Or.inl hW.1)
+  letI : Formalization.Books.Homology.Unit03.AdditiveCategory D := hD
+  letI : Functor.Additive L := hL
+  constructor
+  · constructor
+    · intro hX
+      have hid : L.map (𝟙 X) = L.map (0 : X ⟶ X) := by
+        rw [L.map_id, L.map_zero]
+        exact hX.eq_of_src _ _
+      obtain ⟨Y, s, hs, hsz⟩ :=
+        (MorphismProperty.map_eq_iff_postcomp (L := L) (W := W) (𝟙 X) 0).1 hid
+      have hs0 : s = 0 := by
+        simpa using hsz
+      refine ⟨Y, ?_⟩
+      rw [← hs0]
+      exact hs
+    · rintro ⟨Y, hs⟩
+      rw [IsZero.iff_id_eq_zero]
+      have hmap : L.map (0 : X ⟶ Y) = 0 := by
+        exact L.map_zero X Y
+      calc
+        𝟙 (L.obj X) =
+            L.map (0 : X ⟶ Y) ≫
+              (CategoryTheory.Localization.isoOfHom L W (0 : X ⟶ Y) hs).inv :=
+          (CategoryTheory.Localization.isoOfHom_hom_inv_id L W (0 : X ⟶ Y) hs).symm
+        _ = 0 := by rw [hmap, zero_comp]
+  · constructor
+    · intro hX
+      have hid : L.map (𝟙 X) = L.map (0 : X ⟶ X) := by
+        rw [L.map_id, L.map_zero]
+        exact hX.eq_of_tgt _ _
+      obtain ⟨Z, s, hs, hsz⟩ :=
+        (MorphismProperty.map_eq_iff_precomp (L := L) (W := W) (𝟙 X) 0).1 hid
+      have hs0 : s = 0 := by
+        simpa using hsz
+      refine ⟨Z, ?_⟩
+      rw [← hs0]
+      exact hs
+    · rintro ⟨Y, hs⟩
+      rw [IsZero.iff_id_eq_zero]
+      have hmap : L.map (0 : Y ⟶ X) = 0 := by
+        exact L.map_zero Y X
+      calc
+        𝟙 (L.obj X) =
+            (CategoryTheory.Localization.isoOfHom L W (0 : Y ⟶ X) hs).inv ≫
+              L.map (0 : Y ⟶ X) :=
+          (CategoryTheory.Localization.isoOfHom_inv_hom_id L W (0 : Y ⟶ X) hs).symm
+        _ = 0 := by rw [hmap, comp_zero]
 
 /-! ## Kernels, cokernels, and exactness -/
 
@@ -209,7 +270,53 @@ theorem localization_has_cokernels_of_left
       HasCokernels D ∧
         ∀ {X Y : C} (f : X ⟶ Y),
           PreservesColimit (parallelPair f 0) L := by
-  sorry
+  let hC : Formalization.Books.Homology.Unit03.AdditiveCategory C :=
+    { toPreadditive := inferInstance
+      toHasFiniteProducts := inferInstance }
+  letI : Formalization.Books.Homology.Unit03.AdditiveCategory C := hC
+  letI : LeftMultiplicativeSystem W := hW
+  obtain ⟨hD, hL⟩ := localization_additive_left (W := W) L
+  letI : Formalization.Books.Homology.Unit03.AdditiveCategory D := hD
+  letI : Functor.Additive L := hL
+  letI : PreservesFiniteColimits (leftLocalizationFunctor W) :=
+    left_localization_preserves_finite_colimits
+  let e := CategoryTheory.Localization.uniq (leftLocalizationFunctor W) L W
+  letI : PreservesFiniteColimits e.functor := inferInstance
+  letI : PreservesFiniteColimits ((leftLocalizationFunctor W) ⋙ e.functor) :=
+    comp_preservesFiniteColimits (leftLocalizationFunctor W) e.functor
+  have hpres : PreservesFiniteColimits L :=
+    preservesFiniteColimits_of_natIso
+      (CategoryTheory.Localization.compUniqFunctor
+        (leftLocalizationFunctor W) L W)
+  refine ⟨hD, ?_, ?_⟩
+  · exact ⟨fun f => by
+      obtain ⟨g, ⟨eg⟩⟩ :=
+        (CategoryTheory.Localization.essSurj_mapArrow L W).mem_essImage (Arrow.mk f)
+      letI : PreservesFiniteColimits L := hpres
+      have : HasColimit (parallelPair (L.map g.hom) 0) :=
+        ⟨_, (CokernelCofork.ofπ (cokernel.π g.hom)
+            (by simp)).mapIsColimit
+          (cokernelIsCokernel g.hom) L⟩
+      let e0 : (parallelPair f 0).obj WalkingParallelPair.zero ≅
+          (parallelPair (L.map g.hom) 0).obj WalkingParallelPair.zero := by
+        change Arrow.leftFunc.obj (Arrow.mk f) ≅
+          Arrow.leftFunc.obj (L.mapArrow.obj g)
+        exact Arrow.leftFunc.mapIso eg.symm
+      let e1 : (parallelPair f 0).obj WalkingParallelPair.one ≅
+          (parallelPair (L.map g.hom) 0).obj WalkingParallelPair.one := by
+        change Arrow.rightFunc.obj (Arrow.mk f) ≅
+          Arrow.rightFunc.obj (L.mapArrow.obj g)
+        exact Arrow.rightFunc.mapIso eg.symm
+      exact hasColimit_of_iso (show parallelPair f 0 ≅
+          parallelPair (L.map g.hom) 0 from
+        parallelPair.ext e0 e1
+          (by
+            dsimp [e0, e1]
+            exact eg.inv.w.symm)
+          (by dsimp [e0, e1]; rw [zero_comp, comp_zero]))⟩
+  · letI : PreservesFiniteColimits L := hpres
+    intro X Y f
+    exact inferInstance
 
 theorem localization_has_kernels_of_right
     {C : Type u} {D : Type*} [Category.{v} C] [Category* D]

@@ -58,22 +58,22 @@ private theorem finiteLength_of_maximalIdeal_pow_smul_top_eq_bot
   have hkill : K • (⊤ : Submodule R M) = ⊥ := by
     simpa [K] using hs
   by_cases hK : K = ⊤
-  · letI : Subsingleton M := by
+  · let : Subsingleton M := by
       constructor
       intro x y
       apply sub_eq_zero.mp
       have hx : x - y ∈ K • (⊤ : Submodule R M) := by
         rw [hK]
-        simpa using (show x - y ∈ (⊤ : Submodule R M) from Submodule.mem_top)
+        simp
       rw [hkill] at hx
       simpa using hx
     exact IsFiniteLength.of_subsingleton
   · let S := R ⧸ K
-    letI : Nontrivial S := Ideal.Quotient.nontrivial_iff.mpr hK
-    letI : IsLocalRing S :=
+    let : Nontrivial S := Ideal.Quotient.nontrivial_iff.mpr hK
+    let : IsLocalRing S :=
       IsLocalRing.of_surjective' (Ideal.Quotient.mk K)
         Ideal.Quotient.mk_surjective
-    letI : IsNoetherianRing S :=
+    let : IsNoetherianRing S :=
       isNoetherianRing_of_surjective R S (Ideal.Quotient.mk K)
         Ideal.Quotient.mk_surjective
     have hmap :
@@ -81,7 +81,7 @@ private theorem finiteLength_of_maximalIdeal_pow_smul_top_eq_bot
           IsLocalRing.maximalIdeal S :=
       IsLocalRing.map_maximalIdeal_of_surjective (Ideal.Quotient.mk K)
         Ideal.Quotient.mk_surjective
-    letI : IsSemiprimaryRing S :=
+    let : IsSemiprimaryRing S :=
       { isSemisimpleRing := by
           have hJac : Ring.jacobson S = IsLocalRing.maximalIdeal S :=
             IsLocalRing.ringJacobson_eq_maximalIdeal S
@@ -97,8 +97,8 @@ private theorem finiteLength_of_maximalIdeal_pow_smul_top_eq_bot
       change K ≤ Module.annihilator R M
       rw [← Submodule.annihilator_top, Submodule.le_annihilator_iff]
       exact hkill
-    letI : Module S M := htors.module
-    letI : Module.Finite S M := Module.Finite.of_restrictScalars_finite R S M
+    let : Module S M := htors.module
+    let : Module.Finite S M := Module.Finite.of_restrictScalars_finite R S M
     have hfinS : IsNoetherian S M := inferInstance
     have hArtS : IsArtinian S M :=
       (IsSemiprimaryRing.isNoetherian_iff_isArtinian (R := S) (M := M)).mp hfinS

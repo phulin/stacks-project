@@ -133,7 +133,7 @@ theorem real_sylow_fixed_field_spec
     exact P.is_maximal' (hG.to_subgroup ⊤) le_top
   refine ⟨?_, ?_, hPtop⟩
   · rw [hPtop, IsGalois.fixedField_top]
-    simpa using (show Odd (1 : ℕ) from ⟨0, by simp⟩)
+    exact ⟨0, by simp⟩
   · rw [hPtop, IsGalois.fixedField_top]
 
 /- The source's assertion that the only algebraic extensions of `ℝ` are `ℝ`

@@ -70,7 +70,7 @@ equality of `EllipticCurveIso` structures.
 -/
 structure EllipticFiberProductRestriction {S S' : Scheme.{u}}
     (E : ModuliPoint S) (E' : ModuliPoint S') where
-  restrict : ∀ {T T' : Scheme.{u}} (u : T' ⟶ T),
+  restrict : ∀ {T T' : Scheme.{u}} (_u : T' ⟶ T),
     EllipticFiberProductPoint E E' T → EllipticFiberProductPoint E E' T'
   restrict_toS : ∀ {T T' : Scheme.{u}} (u : T' ⟶ T)
     (x : EllipticFiberProductPoint E E' T),

@@ -115,8 +115,8 @@ theorem universallyExact_of_directedColimit
       ∀ i, universallyExact (P.presentation.diag.obj i).f.hom
         (P.presentation.diag.obj i).g.hom) :
     universallyExact f₁ f₂ := by
-  letI : Category.{u} P.index := P.indexCategory
-  letI : IsFiltered P.index := P.indexFiltered
+  let : Category.{u} P.index := P.indexCategory
+  let : IsFiltered P.index := P.indexFiltered
   have hc₁ : IsColimit ((ShortComplex.π₁ :
       ShortComplex (ModuleCat.{u} R) ⥤ ModuleCat.{u} R).mapCocone
         P.presentation.cocone) :=
@@ -166,16 +166,16 @@ theorem universallyExact_of_directedColimit
     exact h
   have hex : Function.Exact f₁ f₂ :=
     (ShortComplex.ShortExact.moduleCat_exact_iff_function_exact _).1 hexC
-  letI : ∀ i, Mono (S.f.app i) := fun i =>
+  let : ∀ i, Mono (S.f.app i) := fun i =>
     (ModuleCat.mono_iff_injective _).mpr (hstage i).1
-  letI : Mono S.f := NatTrans.mono_of_mono_app S.f
+  let : Mono S.f := NatTrans.mono_of_mono_app S.f
   have hmono : Mono (ModuleCat.ofHom f₁) :=
     CategoryTheory.Limits.colim.map_mono' S.f hc₁ hc₂ (ModuleCat.ofHom f₁)
       (fun i => by
         change (P.presentation.ι.app i).τ₁ ≫ ModuleCat.ofHom f₁ =
           (P.presentation.diag.obj i).f ≫ (P.presentation.ι.app i).τ₂
         exact (P.presentation.ι.app i).comm₁₂)
-  letI : ∀ i, Epi (S.g.app i) := fun i =>
+  let : ∀ i, Epi (S.g.app i) := fun i =>
     (ModuleCat.epi_iff_surjective _).mpr (hstage i).2.2.1
   have hepi : Epi (ModuleCat.ofHom f₂) :=
     CategoryTheory.Limits.colim.map_epi' S.g
@@ -189,11 +189,11 @@ theorem universallyExact_of_directedColimit
   intro Q _ _
   let T : ModuleCat.{u} R ⥤ ModuleCat.{u} R :=
     MonoidalCategory.tensorRight (ModuleCat.of R Q)
-  letI : ∀ i, Mono ((Functor.whiskerRight S.f T).app i) := fun i => by
+  let : ∀ i, Mono ((Functor.whiskerRight S.f T).app i) := fun i => by
     apply (ModuleCat.mono_iff_injective _).mpr
     change Function.Injective ((P.presentation.diag.obj i).f.hom.rTensor Q)
     exact (hstage i).2.2.2 Q
-  letI : Mono (Functor.whiskerRight S.f T) :=
+  let : Mono (Functor.whiskerRight S.f T) :=
     NatTrans.mono_of_mono_app (Functor.whiskerRight S.f T)
   let fT : (T.mapCocone (ShortComplex.π₁.mapCocone P.presentation.cocone)).pt ⟶
       (T.mapCocone (ShortComplex.π₂.mapCocone P.presentation.cocone)).pt := by
@@ -222,8 +222,8 @@ theorem universallyExact_of_directedSplitColimit
     {f₁ : M₁ →ₗ[R] M₂} {f₂ : M₂ →ₗ[R] M₃}
     (P : DirectedSplitExactColimitPresentation M₁ M₂ M₃ f₁ f₂) :
     universallyExact f₁ f₂ := by
-  letI : Category.{u} P.index := P.indexCategory
-  letI : IsFiltered P.index := P.indexFiltered
+  let : Category.{u} P.index := P.indexCategory
+  let : IsFiltered P.index := P.indexFiltered
   apply universallyExact_of_directedColimit P.toDirectedUniversallyExactColimitPresentation
   intro i
   have hsplit := P.stage_split (i := i)
@@ -350,9 +350,9 @@ private theorem universallyExact_factor_finiteFree_aux
         rw [Finset.sum_smul]
         apply Finset.sum_congr rfl
         intro j hj
-        simpa [smul_smul, mul_comm]
+        simp [smul_smul, mul_comm]
     | add x y hx hy =>
-        simp only [map_add, LinearMap.lTensor_add, hx, hy,
+        simp only [map_add, hx, hy,
           Finset.sum_add_distrib, smul_add]
   let w : (Fin m →₀ R) →ₗ[R] M₁ :=
     Finsupp.linearCombination R (fun j =>
@@ -529,7 +529,7 @@ theorem flat_iff_exact_ending_universallyExact
           universallyExact f₁ f₂ := by
   constructor
   · intro hflat M₁ M₂ _ _ _ _ f₁ f₂ hshort
-    letI : Module.Flat R M := hflat
+    let : Module.Flat R M := hflat
     refine ⟨hshort.1, hshort.2.1, hshort.2.2, ?_⟩
     intro Q _ _
     have hlinj : Function.Injective (f₁.lTensor Q) :=
@@ -563,7 +563,7 @@ theorem flat_iff_exact_ending_universallyExact
     let S : Submodule R (Fin l →₀ R) := Submodule.span R ({f} : Set (Fin l →₀ R))
     let Q : Type u := (Fin l →₀ R) ⧸ S
     have hfree : Module.FinitePresentation R (Fin l →₀ R) := inferInstance
-    letI : Module.FinitePresentation R Q :=
+    let : Module.FinitePresentation R Q :=
       Module.finitePresentation_of_surjective (h := hfree) S.mkQ S.mkQ_surjective
         (by
           rw [Submodule.ker_mkQ]

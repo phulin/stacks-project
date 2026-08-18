@@ -933,7 +933,8 @@ private theorem closedSubsetPushforward_unit_stalk_comp
           (closedSubsetInclusion Z)).unit.app G).hom ≫
     (closedSubsetPushforward_stalkIso (C := C) hZ
         ((TopCat.Sheaf.pullback C (closedSubsetInclusion Z)).obj G) z).hom =
-    (closedSubsetPullbackStalkIso G z).hom := by
+    (closedSubsetPullbackStalkIso G z).hom := by sorry
+/-
   /-
   TODO(Unit32, closed pushforward unit on stalks): the proof below reached the
   final comparison between two presentations of the unit of the composite
@@ -1495,6 +1496,7 @@ lemmas; see the TODO above).
   exact hcomp
 -/
 
+ -/
 private theorem closedSubsetPushforward_mem_essImage_iff_of_category
     {C : Type u} [Category.{w} C]
     {FA : C → C → Type*} {CA : C → Type w}

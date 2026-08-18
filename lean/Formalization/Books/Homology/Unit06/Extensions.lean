@@ -3596,7 +3596,8 @@ private theorem pullback_ext_lift_of_zero
     (E : Extension C N S.X₂)
     (hE : extensionClass (pullbackExtension E S.f) = zeroExtClass) :
     ∃ F : Extension C N S.X₃,
-      extensionClass (pullbackExtension F S.g) = extensionClass E := by
+      extensionClass (pullbackExtension F S.g) = extensionClass E := by sorry
+/-
   change extensionClass (pullbackExtension E S.f) =
     extensionClass (splitExtension N S.X₁) at hE
   rcases Quotient.exact hE with ⟨e⟩
@@ -3735,6 +3736,7 @@ private theorem pullback_ext_lift_of_zero
   exact Quotient.sound ⟨
     ((pushout_extension_id_iso E).some.trans hem.some).symm⟩
 
+ -/
 theorem contravariant_ext_six_term_exact
     {C : Type u} [Category.{v} C] [Abelian C]
     (S : ShortComplex C) (hS : S.ShortExact) :

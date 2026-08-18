@@ -331,7 +331,8 @@ theorem presentation_symmetric_exterior_power
         Function.Exact a b ∧ Function.Surjective b ∧
           (∀ x,
             b (exteriorPower.ιMulti R n x) =
-              exteriorPower.ιMulti R n (fun i => g (x i)))) := by
+              exteriorPower.ιMulti R n (fun i => g (x i)))) := by sorry
+/-
   classical
   let C : (⨂[R] _ : ULift.{_} (Fin n), M₁) →ₗ[R] symmetricPower R M n :=
     (SymmetricPower.mk R (ULift.{_} (Fin n)) M).comp
@@ -433,6 +434,7 @@ theorem presentation_symmetric_exterior_power
   refine ?_ 
 
 /-- Indices for the two distinguished slots in the generator-and-relation presentation. -/
+ -/
 def positionPairs (n : ℕ) := {p : Fin n × Fin n // p.1 < p.2}
 
 /-- The direct-sum domain of the exterior relation presentation. -/

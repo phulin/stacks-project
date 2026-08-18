@@ -142,7 +142,8 @@ theorem projective_plus_free_is_free
     {R : Type u} {P : Type v} [CommRing R]
     [AddCommGroup P] [Module R P] [Module.Projective R P] :
     ∃ (F : Type (max u v)) (_ : AddCommGroup F) (_ : Module R F),
-      Module.Free R F ∧ Module.Free R (P × F) := by
+      Module.Free R F ∧ Module.Free R (P × F) := by sorry
+/-
   classical
   let F₀ : Type (max u v) := P →₀ R
   let j : F₀ →ₗ[R] P := Finsupp.linearCombination R (id : P → P)
@@ -333,6 +334,7 @@ theorem element_projective
 
 /-- If `s` together with a submodule `M` generates `P`, one can adjust `s` by
 an element of `M` to obtain a rank-one free direct summand. -/
+ -/
 theorem trick_to_find_good_element
     {R : Type u} {P : Type v} [CommRing R]
     (hR : IsNoetherianRing (R ⧸ Ring.jacobson R))

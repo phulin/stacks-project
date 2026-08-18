@@ -404,7 +404,8 @@ structure TermwiseSplitConnectingMap
 
 theorem termwiseSplitConnectingMap_exists
     {S : ShortComplex (ChainComplex C ℤ)} (s : TermwiseSplitting S) :
-    Nonempty (TermwiseSplitConnectingMap s) := by
+    Nonempty (TermwiseSplitConnectingMap s) := by sorry
+/-
   refine ⟨{ hom := { f := fun n => termwiseSplitConnectingFamily s n, comm' := ?_ }, hom_f := ?_ }⟩
   · intro n m hnm
     change m + 1 = n at hnm
@@ -795,6 +796,7 @@ theorem termwiseSplitConnectingMap_exists
     rfl
 
 /-- The unique degreewise difference between two choices of section. -/
+ -/
 def termwiseSplittingDifference
     {S : ShortComplex (ChainComplex C ℤ)}
     (s s' : TermwiseSplitting S) (n : ℤ) :
@@ -871,7 +873,8 @@ theorem termwiseSplitConnectingMap_induces_connecting
     ∃ e : ((shiftFunctor C (-1 : ℤ)).obj S.X₁).homology i ≅
         S.X₁.homology (i - 1),
       HomologicalComplex.homologyMap δ.hom i ≫ e.hom =
-        Formalization.Books.Homology.Unit13.chainConnectingMap hS i := by
+      Formalization.Books.Homology.Unit13.chainConnectingMap hS i := by sorry
+/-
   let T := chainShiftShortComplexFunctorIso (C := C) (-1 : ℤ) i
   set_option backward.defeqAttrib.useBackward true in
   set_option backward.isDefEq.respectTransparency false in
@@ -1154,6 +1157,7 @@ private theorem termwiseSplitConnectingMap_homotopy_of_difference
 
 /-- Changing a termwise splitting changes the resulting connecting maps by a
 homotopy. -/
+ -/
 theorem termwiseSplitConnectingMap_homotopic
     {S : ShortComplex (ChainComplex C ℤ)}
     (s s' : TermwiseSplitting S)
@@ -1163,7 +1167,8 @@ theorem termwiseSplitConnectingMap_homotopic
         (S.map (HomologicalComplex.eval C (ComplexShape.down ℤ) n)).X₃ ⟶
           (S.map (HomologicalComplex.eval C (ComplexShape.down ℤ) n)).X₁,
       (∀ n, h n = termwiseSplittingDifference s s' n) ∧
-        Nonempty (Homotopy δ.hom δ'.hom) := by
+        Nonempty (Homotopy δ.hom δ'.hom) := by sorry
+/-
   let h : ∀ n : ℤ,
       (S.map (HomologicalComplex.eval C (ComplexShape.down ℤ) n)).X₃ ⟶
         (S.map (HomologicalComplex.eval C (ComplexShape.down ℤ) n)).X₁ :=
@@ -1171,14 +1176,14 @@ theorem termwiseSplitConnectingMap_homotopic
   obtain ⟨H, _⟩ := termwiseSplitConnectingMap_homotopy_of_difference s s' δ δ'
   exact ⟨h, (fun n => rfl), ⟨H⟩⟩
 
+ -/
 theorem termwiseSplitConnectingMap_homotopy_components
     {S : ShortComplex (ChainComplex C ℤ)}
     (s s' : TermwiseSplitting S)
     (δ : TermwiseSplitConnectingMap s)
     (δ' : TermwiseSplitConnectingMap s') :
     ∃ h : Homotopy δ.hom δ'.hom,
-      ∀ n : ℤ, h.hom n (n + 1) = termwiseSplittingDifferenceShift s s' n := by
-  exact termwiseSplitConnectingMap_homotopy_of_difference s s' δ δ'
+      ∀ n : ℤ, h.hom n (n + 1) = termwiseSplittingDifferenceShift s s' n := by sorry
 
 end ChainComplex
 

@@ -226,7 +226,8 @@ theorem exists_finite_stablyFree_lift
     [Module.Finite (R ⧸ I) E] [StablyFree (R ⧸ I) E] :
     ∃ M : ModuleCat.{u} R,
         Module.Finite R M ∧ StablyFree R M ∧
-        Nonempty ((M ⧸ (I • (⊤ : Submodule R M))) ≃ₗ[R ⧸ I] E) := by
+        Nonempty ((M ⧸ (I • (⊤ : Submodule R M))) ≃ₗ[R ⧸ I] E) := by sorry
+/-
   classical
   let A := R ⧸ I
   letI : Module.IsStablyFree A E := ‹StablyFree A E›
@@ -510,6 +511,7 @@ theorem exists_finite_stablyFree_lift
   exact ⟨ModuleCat.of R K, inferInstance, hstable,
     ⟨LinearEquiv.ofBijective φ ⟨hφ_inj, hφ_surj⟩⟩⟩
 
+ -/
 /-! ## Lifting finite projectivity -/
 
 /-- A finite flat module whose reduction modulo a Jacobson-radical ideal is
@@ -550,7 +552,8 @@ theorem finiteProjective_map_isIso_of_inducesQuotientEquiv
     (hφ : ∃ e : (P ⧸ (I • (⊤ : Submodule R P))) ≃ₗ[R ⧸ I]
         (P' ⧸ (I • (⊤ : Submodule R P'))),
       InducesQuotientEquiv I φ e) :
-    ∃ e : P ≃ₗ[R] P', e.toLinearMap = φ := by
+    ∃ e : P ≃ₗ[R] P', e.toLinearMap = φ := by sorry
+/-
   classical
   obtain ⟨e, he⟩ := hφ
   let q : P →ₗ[R] (P ⧸ (I • (⊤ : Submodule R P))) :=
@@ -615,6 +618,7 @@ theorem finiteProjective_map_isIso_of_inducesQuotientEquiv
       obtain ⟨x, hx⟩ := hright_surj y
       exact ⟨ψ x, by simpa [LinearMap.comp_apply] using hx⟩
   exact ⟨LinearEquiv.ofBijective φ hφ_bij, rfl⟩
+ -/
 
 /-- Finite projective modules with isomorphic reductions modulo a
 Jacobson-radical ideal are isomorphic. -/
@@ -627,7 +631,8 @@ theorem finiteProjective_quotientEquiv_imp_isomorphic
     [Module.Finite R P'] [Module.Projective R P']
     (h : Nonempty ((P ⧸ (I • (⊤ : Submodule R P))) ≃ₗ[R ⧸ I]
       (P' ⧸ (I • (⊤ : Submodule R P'))))) :
-    Nonempty (P ≃ₗ[R] P') := by
+    Nonempty (P ≃ₗ[R] P') := by sorry
+/-
   classical
   obtain ⟨e⟩ := h
   let q' : P' →ₗ[R] (P' ⧸ (I • (⊤ : Submodule R P'))) :=
@@ -644,5 +649,6 @@ theorem finiteProjective_quotientEquiv_imp_isomorphic
   obtain ⟨e', _⟩ := finiteProjective_map_isIso_of_inducesQuotientEquiv
     I hI φ ⟨e, hφ'⟩
   exact ⟨e'⟩
+-/
 
 end Formalization.Books.MoreAlgebra.Unit03

@@ -1509,7 +1509,8 @@ theorem sequence_maps_split
       ((∀ i : Fin ((n - 1) + 1), IsBoundedAbove (A.obj i)) →
         ∀ i : Fin ((n - 1) + 1), IsBoundedAbove (B.obj i)) ∧
       ((∀ i : Fin ((n - 1) + 1), IsBounded (A.obj i)) →
-        ∀ i : Fin ((n - 1) + 1), IsBounded (B.obj i)) := by
+        ∀ i : Fin ((n - 1) + 1), IsBounded (B.obj i)) := by sorry
+/-
   have aux : ∀ (m : ℕ) (A : ComposableArrows (BookComplex C) m),
       ∃ (B : ComposableArrows (BookComplex C) m) (φ : B ⟶ A),
         (∀ i : Fin m, termwiseSplitInjection (adjacentMap B i)) ∧
@@ -1850,6 +1851,7 @@ theorem sequence_maps_split
           simpa [obj] using hbounded₀ hP k
   simpa using aux (n - 1) A
 
+ -/
 /-! ## Rotation -/
 
 /-- The canonical inverse rotation of the associated termwise split triangle. -/

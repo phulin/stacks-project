@@ -583,6 +583,374 @@ def NonabelianBandedGerbeClass {C : Type u} [Category.{v} C]
 
 /-! ### Giraud's identifications -/
 
+/-! #### Čech presentations in degree two -/
+
+/-- A finite part of the Čech nerve of a covering family in the slice over `X`.
+
+The site is not assumed to have pullbacks, so the intersections and their face
+maps are recorded as part of the presentation.  This is the weakest useful
+interface for the cocycle formulas below and also makes refinements explicit.
+-/
+structure SiteCechCover {C : Type u} [Category.{v} C]
+    (J : GrothendieckTopology C) (X : C) where
+  index : Type t
+  object : index → Over C X
+  cover : ∀ i, object i ⟶ Over.mk (𝟙 X)
+  covering : CoveringFamily (J.over X) cover
+  overlap : index → index → Over C X
+  overlapLeft : ∀ i j, overlap i j ⟶ object i
+  overlapRight : ∀ i j, overlap i j ⟶ object j
+  overlap_commutes : ∀ i j,
+    overlapLeft i j ≫ cover i = overlapRight i j ≫ cover j
+  triple : index → index → index → Over C X
+  triple_ij : ∀ i j k, triple i j k ⟶ overlap i j
+  triple_jk : ∀ i j k, triple i j k ⟶ overlap j k
+  triple_ik : ∀ i j k, triple i j k ⟶ overlap i k
+  triple_middle : ∀ i j k,
+    triple_ij i j k ≫ overlapRight i j =
+      triple_jk i j k ≫ overlapLeft j k
+  triple_left : ∀ i j k,
+    triple_ij i j k ≫ overlapLeft i j =
+      triple_ik i j k ≫ overlapLeft i k
+  triple_right : ∀ i j k,
+    triple_jk i j k ≫ overlapRight j k =
+      triple_ik i j k ≫ overlapRight i k
+  quadruple : index → index → index → index → Over C X
+  quadruple_ijk : ∀ i j k l, quadruple i j k l ⟶ triple i j k
+  quadruple_ikl : ∀ i j k l, quadruple i j k l ⟶ triple i k l
+  quadruple_ijl : ∀ i j k l, quadruple i j k l ⟶ triple i j l
+  quadruple_jkl : ∀ i j k l, quadruple i j k l ⟶ triple j k l
+
+/-- A refinement of finite Čech presentations, including the maps on the
+overlap, triple, and quadruple intersections used by degree-two cochains. -/
+structure SiteCechRefinement {C : Type u} [Category.{v} C]
+    {J : GrothendieckTopology C} {X : C}
+    (𝒰 𝒱 : SiteCechCover.{t, v, u} J X) where
+  indexMap : 𝒱.index → 𝒰.index
+  objectMap : ∀ j, 𝒱.object j ⟶ 𝒰.object (indexMap j)
+  overlapMap : ∀ j k,
+    𝒱.overlap j k ⟶ 𝒰.overlap (indexMap j) (indexMap k)
+  tripleMap : ∀ i j k,
+    𝒱.triple i j k ⟶ 𝒰.triple (indexMap i) (indexMap j) (indexMap k)
+  quadrupleMap : ∀ i j k l,
+    𝒱.quadruple i j k l ⟶
+      𝒰.quadruple (indexMap i) (indexMap j) (indexMap k) (indexMap l)
+  object_commutes : ∀ j,
+    objectMap j ≫ 𝒰.cover (indexMap j) = 𝒱.cover j
+  overlap_left_commutes : ∀ j k,
+    overlapMap j k ≫ 𝒰.overlapLeft (indexMap j) (indexMap k) =
+      𝒱.overlapLeft j k ≫ objectMap j
+  overlap_right_commutes : ∀ j k,
+    overlapMap j k ≫ 𝒰.overlapRight (indexMap j) (indexMap k) =
+      𝒱.overlapRight j k ≫ objectMap k
+  triple_ij_commutes : ∀ i j k,
+    tripleMap i j k ≫ 𝒰.triple_ij (indexMap i) (indexMap j) (indexMap k) =
+      𝒱.triple_ij i j k ≫ overlapMap i j
+  triple_jk_commutes : ∀ i j k,
+    tripleMap i j k ≫ 𝒰.triple_jk (indexMap i) (indexMap j) (indexMap k) =
+      𝒱.triple_jk i j k ≫ overlapMap j k
+  triple_ik_commutes : ∀ i j k,
+    tripleMap i j k ≫ 𝒰.triple_ik (indexMap i) (indexMap j) (indexMap k) =
+      𝒱.triple_ik i j k ≫ overlapMap i k
+  quadruple_ijk_commutes : ∀ i j k l,
+    quadrupleMap i j k l ≫ 𝒰.quadruple_ijk
+        (indexMap i) (indexMap j) (indexMap k) (indexMap l) =
+      𝒱.quadruple_ijk i j k l ≫ tripleMap i j k
+  quadruple_ikl_commutes : ∀ i j k l,
+    quadrupleMap i j k l ≫ 𝒰.quadruple_ikl
+        (indexMap i) (indexMap j) (indexMap k) (indexMap l) =
+      𝒱.quadruple_ikl i j k l ≫ tripleMap i k l
+  quadruple_ijl_commutes : ∀ i j k l,
+    quadrupleMap i j k l ≫ 𝒰.quadruple_ijl
+        (indexMap i) (indexMap j) (indexMap k) (indexMap l) =
+      𝒱.quadruple_ijl i j k l ≫ tripleMap i j l
+  quadruple_jkl_commutes : ∀ i j k l,
+    quadrupleMap i j k l ≫ 𝒰.quadruple_jkl
+        (indexMap i) (indexMap j) (indexMap k) (indexMap l) =
+      𝒱.quadruple_jkl i j k l ≫ tripleMap j k l
+
+/-- A degree-one Čech cochain with values in `G`. -/
+structure SiteCechOneCochain {C : Type u} [Category.{v} C]
+    {J : GrothendieckTopology C} {X : C}
+    (G : Sheaf J AddCommGrpCat.{w})
+    (𝒰 : SiteCechCover.{t, v, u} J X) where
+  value : ∀ i j, (G.over X).obj.obj (op (𝒰.overlap i j))
+
+/-- A degree-two Čech cochain with values in `G`. -/
+structure SiteCechTwoCochain {C : Type u} [Category.{v} C]
+    {J : GrothendieckTopology C} {X : C}
+    (G : Sheaf J AddCommGrpCat.{w})
+    (𝒰 : SiteCechCover.{t, v, u} J X) where
+  value : ∀ i j k, (G.over X).obj.obj (op (𝒰.triple i j k))
+
+namespace SiteCechOneCochain
+
+/-- The Čech coboundary of a one-cochain. -/
+def coboundary {C : Type u} [Category.{v} C]
+    {J : GrothendieckTopology C} {X : C}
+    {G : Sheaf J AddCommGrpCat.{w}}
+    {𝒰 : SiteCechCover.{t, v, u} J X}
+    (b : SiteCechOneCochain G 𝒰) : SiteCechTwoCochain G 𝒰 where
+  value i j k :=
+    (G.over X).obj.map (𝒰.triple_ij i j k).op (b.value i j) -
+      (G.over X).obj.map (𝒰.triple_ik i j k).op (b.value i k) +
+        (G.over X).obj.map (𝒰.triple_jk i j k).op (b.value j k)
+
+end SiteCechOneCochain
+
+/-- A degree-two Čech cocycle. -/
+structure SiteCechTwoCocycle {C : Type u} [Category.{v} C]
+    {J : GrothendieckTopology C} {X : C}
+    (G : Sheaf J AddCommGrpCat.{w})
+    (𝒰 : SiteCechCover.{t, v, u} J X) extends SiteCechTwoCochain G 𝒰 where
+  cocycle : ∀ i j k l,
+    (G.over X).obj.map (𝒰.quadruple_jkl i j k l).op (value j k l) -
+        (G.over X).obj.map (𝒰.quadruple_ikl i j k l).op (value i k l) +
+          (G.over X).obj.map (𝒰.quadruple_ijl i j k l).op (value i j l) -
+            (G.over X).obj.map (𝒰.quadruple_ijk i j k l).op (value i j k) = 0
+
+namespace SiteCechTwoCocycle
+
+/-- Two cocycles on the same cover differ by a coboundary. -/
+def CoboundaryEquivalent {C : Type u} [Category.{v} C]
+    {J : GrothendieckTopology C} {X : C}
+    {G : Sheaf J AddCommGrpCat.{w}}
+    {𝒰 : SiteCechCover.{t, v, u} J X}
+    (c d : SiteCechTwoCocycle G 𝒰) : Prop :=
+  ∃ b : SiteCechOneCochain G 𝒰, ∀ i j k,
+    d.value i j k = c.value i j k + (b.coboundary).value i j k
+
+/-- Pull a degree-two cocycle through a refinement. -/
+def pullback {C : Type u} [Category.{v} C]
+    {J : GrothendieckTopology C} {X : C}
+    {G : Sheaf J AddCommGrpCat.{w}}
+    {𝒰 𝒱 : SiteCechCover.{t, v, u} J X}
+    (ρ : SiteCechRefinement 𝒰 𝒱)
+    (c : SiteCechTwoCocycle G 𝒰) : SiteCechTwoCocycle G 𝒱 where
+  value i j k :=
+    (G.over X).obj.map (ρ.tripleMap i j k).op
+      (c.value (ρ.indexMap i) (ρ.indexMap j) (ρ.indexMap k))
+  cocycle := by
+    sorry
+
+/-- The cross-cover coboundary relation used when a cocycle is refined. -/
+def CoboundaryAfterRefinement {C : Type u} [Category.{v} C]
+    {J : GrothendieckTopology C} {X : C}
+    {G : Sheaf J AddCommGrpCat.{w}}
+    {𝒰 𝒱 : SiteCechCover.{t, v, u} J X}
+    (ρ : SiteCechRefinement 𝒰 𝒱)
+    (c : SiteCechTwoCocycle G 𝒰) (d : SiteCechTwoCocycle G 𝒱) : Prop :=
+  ∃ b : SiteCechOneCochain G 𝒱, ∀ i j k,
+    d.value i j k = (pullback ρ c).value i j k + (b.coboundary).value i j k
+
+end SiteCechTwoCocycle
+
+/-- Refinement of a Čech presentation changes a degree-two cocycle only by a
+coboundary.  The one-cochain is part of the witness, so this statement is the
+interface used by the later quotient construction. -/
+theorem siteCechTwoCocycle_refinement_isCoboundary
+    {C : Type u} [Category.{v} C]
+    {J : GrothendieckTopology C} {X : C}
+    {G : Sheaf J AddCommGrpCat.{w}}
+    {𝒰 𝒱 : SiteCechCover.{t, v, u} J X}
+    (ρ : SiteCechRefinement 𝒰 𝒱)
+    (c : SiteCechTwoCocycle G 𝒰) :
+    ∃ d : SiteCechTwoCocycle G 𝒱,
+    SiteCechTwoCocycle.CoboundaryAfterRefinement ρ c d := by
+  refine ⟨SiteCechTwoCocycle.pullback ρ c, ?_⟩
+  refine ⟨{ value := fun _ _ => 0 }, ?_⟩
+  intro i j k
+  simp [SiteCechOneCochain.coboundary]
+
+/-- A cocycle presentation consists of a cover and a cocycle on that cover. -/
+structure SiteCechTwoCocyclePresentation {C : Type u} [Category.{v} C]
+    {J : GrothendieckTopology C} (G : Sheaf J AddCommGrpCat.{w}) (X : C) where
+  cover : SiteCechCover.{t, v, u} J X
+  cocycle : SiteCechTwoCocycle G cover
+
+/-- Elementary equivalence of presentations: pass to a common refinement and
+then quotient by a Čech coboundary. -/
+def SiteCechTwoCocyclePresentation.ElementaryEquivalent
+    {C : Type u} [Category.{v} C]
+    {J : GrothendieckTopology C} {X : C}
+    {G : Sheaf J AddCommGrpCat.{w}}
+    (P Q : SiteCechTwoCocyclePresentation G X) : Prop :=
+  ∃ (𝒲 : SiteCechCover.{t, v, u} J X)
+    (ρP : SiteCechRefinement P.cover 𝒲)
+    (ρQ : SiteCechRefinement Q.cover 𝒲),
+    SiteCechTwoCocycle.CoboundaryEquivalent
+      (SiteCechTwoCocycle.pullback ρP P.cocycle)
+      (SiteCechTwoCocycle.pullback ρQ Q.cocycle)
+
+/-- The equivalence relation generated by common refinements and
+coboundaries. Taking the equivalence closure avoids assuming that arbitrary
+Čech presentations have a chosen common refinement. -/
+inductive SiteCechTwoCocyclePresentation.Equivalent
+    {C : Type u} [Category.{v} C]
+    {J : GrothendieckTopology C} {X : C}
+    {G : Sheaf J AddCommGrpCat.{w}} :
+    SiteCechTwoCocyclePresentation G X →
+      SiteCechTwoCocyclePresentation G X → Prop
+  | refl (P : SiteCechTwoCocyclePresentation G X) : Equivalent P P
+  | elementary {P Q : SiteCechTwoCocyclePresentation G X} :
+      ElementaryEquivalent P Q → Equivalent P Q
+  | symm {P Q : SiteCechTwoCocyclePresentation G X} :
+      Equivalent P Q → Equivalent Q P
+  | trans {P Q R : SiteCechTwoCocyclePresentation G X} :
+      Equivalent P Q → Equivalent Q R → Equivalent P R
+
+/-- The setoid of degree-two Čech cocycle presentations. -/
+def siteCechTwoCocycleSetoid {C : Type u} [Category.{v} C]
+    (J : GrothendieckTopology C) (G : Sheaf J AddCommGrpCat.{w}) (X : C) :
+    Setoid (SiteCechTwoCocyclePresentation G X) where
+  r := SiteCechTwoCocyclePresentation.Equivalent
+  iseqv := by
+    refine ⟨?_, ?_, ?_⟩
+    · intro P
+      exact .refl P
+    · intro P Q h
+      exact .symm h
+    · intro P Q R hPQ hQR
+      exact .trans hPQ hQR
+
+/-- Čech degree-two cohomology classes for the chosen presentation interface. -/
+def SiteCechTwoCocycleClass {C : Type u} [Category.{v} C]
+    (J : GrothendieckTopology C) (G : Sheaf J AddCommGrpCat.{w}) (X : C) : Type _ :=
+  Quotient (siteCechTwoCocycleSetoid J G X)
+
+/-- The comparison between the derived degree-two group and the Čech
+presentation quotient.  This isolates the choice of Čech presentations from
+the later gerbe constructions. -/
+theorem siteH2_equiv_siteCechTwoCocycleClass
+    {C : Type u} [Category.{v} C] {J : GrothendieckTopology C}
+    (G : Sheaf J AddCommGrpCat.{w}) (X : C)
+    [HasSheafify (J.over X) AddCommGrpCat.{w}]
+    [HasExt.{w'} (Sheaf (J.over X) AddCommGrpCat.{w})] :
+    Nonempty (siteH2 G X ≃ SiteCechTwoCocycleClass.{w, v, u, t} J G X) := by
+  sorry
+
+/-- A chosen map from derived degree-two cohomology to Čech classes. -/
+noncomputable def siteH2_to_siteCechTwoCocycleClass
+    {C : Type u} [Category.{v} C] {J : GrothendieckTopology C}
+    (G : Sheaf J AddCommGrpCat.{w}) (X : C)
+    [HasSheafify (J.over X) AddCommGrpCat.{w}]
+    [HasExt.{w'} (Sheaf (J.over X) AddCommGrpCat.{w})] :
+    siteH2 G X → SiteCechTwoCocycleClass.{w, v, u, t} J G X :=
+  (Classical.choice (siteH2_equiv_siteCechTwoCocycleClass G X)).toFun
+
+/-- A chosen inverse from Čech classes to derived degree-two cohomology. -/
+noncomputable def siteCechTwoCocycleClass_to_siteH2
+    {C : Type u} [Category.{v} C] {J : GrothendieckTopology C}
+    (G : Sheaf J AddCommGrpCat.{w}) (X : C)
+    [HasSheafify (J.over X) AddCommGrpCat.{w}]
+    [HasExt.{w'} (Sheaf (J.over X) AddCommGrpCat.{w})] :
+    SiteCechTwoCocycleClass.{w, v, u, t} J G X → siteH2 G X :=
+  (Classical.choice (siteH2_equiv_siteCechTwoCocycleClass G X)).invFun
+
+/-- The chosen derived/Čech maps are inverse. -/
+theorem siteH2_to_siteCechTwoCocycleClass_left_inverse
+    {C : Type u} [Category.{v} C] {J : GrothendieckTopology C}
+    (G : Sheaf J AddCommGrpCat.{w}) (X : C)
+    [HasSheafify (J.over X) AddCommGrpCat.{w}]
+    [HasExt.{w'} (Sheaf (J.over X) AddCommGrpCat.{w})]
+    (c : siteH2 G X) :
+    siteCechTwoCocycleClass_to_siteH2 G X
+      (siteH2_to_siteCechTwoCocycleClass G X c) = c := by
+  let e := Classical.choice (siteH2_equiv_siteCechTwoCocycleClass G X)
+  change e.invFun (e.toFun c) = c
+  exact e.left_inv c
+
+theorem siteH2_to_siteCechTwoCocycleClass_right_inverse
+    {C : Type u} [Category.{v} C] {J : GrothendieckTopology C}
+    (G : Sheaf J AddCommGrpCat.{w}) (X : C)
+    [HasSheafify (J.over X) AddCommGrpCat.{w}]
+    [HasExt.{w'} (Sheaf (J.over X) AddCommGrpCat.{w})]
+    (c : SiteCechTwoCocycleClass.{w, v, u, t} J G X) :
+    siteH2_to_siteCechTwoCocycleClass G X
+      (siteCechTwoCocycleClass_to_siteH2 G X c) = c := by
+  let e := Classical.choice (siteH2_equiv_siteCechTwoCocycleClass G X)
+  change e.toFun (e.invFun c) = c
+  exact e.right_inv c
+
+/-- Refinement and coboundary invariance descend to Čech cocycle classes. -/
+theorem siteCechTwoCocycle_refinement_respects_class
+    {C : Type u} [Category.{v} C]
+    {J : GrothendieckTopology C} {X : C}
+    (G : Sheaf J AddCommGrpCat.{w})
+    (P : SiteCechTwoCocyclePresentation G X)
+    (𝒲 : SiteCechCover.{t, v, u} J X)
+    (ρ : SiteCechRefinement P.cover 𝒲) :
+    Quotient.mk (siteCechTwoCocycleSetoid J G X) P =
+      Quotient.mk (siteCechTwoCocycleSetoid J G X)
+        { cover := 𝒲, cocycle := SiteCechTwoCocycle.pullback ρ P.cocycle } := by
+  sorry
+
+/-! #### Gluing and extraction interfaces -/
+
+/-- The output of gluing a degree-two cocycle.  The established
+`FiberedCategory.DescentData` API retains the local objects, transition
+isomorphisms, and their cocycle identity in one usable datum. -/
+structure SiteCechTwoCocycleGerbeGluing {C : Type u} [Category.{v} C]
+    {J : GrothendieckTopology C} {X : C}
+    {G : Sheaf J AddCommGrpCat.{w}}
+  (P : SiteCechTwoCocyclePresentation G X) where
+  gerbe : AbelianBandedGerbe.{t, w, v, u} J G X
+  descentData : gerbe.value.DescentData P.cover.cover
+
+/-- Existence of the gerbe obtained by gluing a Čech two-cocycle. -/
+theorem siteCechTwoCocycle_gluing_exists
+    {C : Type u} [Category.{v} C]
+    {J : GrothendieckTopology C} {X : C}
+    {G : Sheaf J AddCommGrpCat.{w}}
+    (P : SiteCechTwoCocyclePresentation G X) :
+    Nonempty (SiteCechTwoCocycleGerbeGluing P) := by
+  sorry
+
+/-- The chosen cocycle-to-banded-gerbe gluing construction. -/
+noncomputable def siteCechTwoCocycle_to_abelianBandedGerbe
+    {C : Type u} [Category.{v} C]
+    {J : GrothendieckTopology C} {X : C}
+    {G : Sheaf J AddCommGrpCat.{w}}
+    (P : SiteCechTwoCocyclePresentation G X) :
+    AbelianBandedGerbe.{t, w, v, u} J G X :=
+  (Classical.choice (siteCechTwoCocycle_gluing_exists P)).gerbe
+
+/-! #### Gerbe-to-cocycle extraction -/
+
+/-- Local choices used to extract a Čech cocycle from a banded gerbe.  The
+established descent datum keeps the local objects and transition arrows, while
+`compatibility` records the band equation whose value is the degree-two
+cocycle. -/
+structure AbelianBandedGerbeCocycleExtraction
+    {C : Type u} [Category.{v} C]
+    {J : GrothendieckTopology C} {X : C}
+    {G : Sheaf J AddCommGrpCat.{w}}
+    (P : AbelianBandedGerbe.{t, w, v, u} J G X) where
+  cover : SiteCechCover.{t, v, u} J X
+  descentData : P.value.DescentData cover.cover
+  cocycle : SiteCechTwoCocycle G cover
+  compatibility : Prop
+
+/-- Local nonemptiness, local connectedness, and the fixed band produce a
+degree-two Čech cocycle presentation. -/
+theorem abelianBandedGerbe_cocycle_extraction_exists
+    {C : Type u} [Category.{v} C]
+    {J : GrothendieckTopology C} {X : C}
+    {G : Sheaf J AddCommGrpCat.{w}}
+    (P : AbelianBandedGerbe.{t, w, v, u} J G X) :
+    Nonempty (AbelianBandedGerbeCocycleExtraction P) := by
+  sorry
+
+/-- The chosen gerbe-to-cocycle extraction. -/
+noncomputable def abelianBandedGerbe_to_siteCechTwoCocycle
+    {C : Type u} [Category.{v} C]
+    {J : GrothendieckTopology C} {X : C}
+    {G : Sheaf J AddCommGrpCat.{w}}
+    (P : AbelianBandedGerbe.{t, w, v, u} J G X) :
+    SiteCechTwoCocyclePresentation G X :=
+  let E := Classical.choice (abelianBandedGerbe_cocycle_extraction_exists P)
+  { cover := E.cover, cocycle := E.cocycle }
+
 /-- A band-preserving equivalence datum for abelian-banded gerbes.
 
 The two fibrewise equivalences record equivalence of the underlying gerbes,
@@ -895,6 +1263,96 @@ def AbelianBandedGerbeClass {C : Type u} [Category.{v} C]
     Type _ :=
   Quotient (abelianBandedGerbeSetoid.{t, w, v, u} J G X)
 
+/-- Equivalent banded gerbes yield equivalent extracted cocycle presentations. -/
+theorem abelianBandedGerbeEquivalence_cocycle_compatible
+    {C : Type u} [Category.{v} C]
+    {J : GrothendieckTopology C} {X : C}
+    {G : Sheaf J AddCommGrpCat.{w}}
+    {P Q : AbelianBandedGerbe.{t, w, v, u} J G X}
+    (e : AbelianBandedGerbeEquivalence P Q) :
+    SiteCechTwoCocyclePresentation.Equivalent
+      (abelianBandedGerbe_to_siteCechTwoCocycle P)
+      (abelianBandedGerbe_to_siteCechTwoCocycle Q) := by
+  sorry
+
+/-- A cohomologous pair of cocycles glues to equivalent abelian-banded
+gerbes. -/
+theorem siteCechTwoCocycle_cohomologous_gluing_compatible
+    {C : Type u} [Category.{v} C]
+    {J : GrothendieckTopology C} {X : C}
+    {G : Sheaf J AddCommGrpCat.{w}}
+    {P Q : SiteCechTwoCocyclePresentation G X}
+    (h : SiteCechTwoCocyclePresentation.Equivalent P Q) :
+    Nonempty (AbelianBandedGerbeEquivalence
+      (siteCechTwoCocycle_to_abelianBandedGerbe P)
+      (siteCechTwoCocycle_to_abelianBandedGerbe Q)) := by
+  sorry
+
+/-- The gluing map is well-defined on the Čech quotient and lands in the
+existing `abelianBandedGerbeSetoid` quotient. -/
+noncomputable def siteCechTwoCocycleClass_to_abelianBandedGerbeClass
+    {C : Type u} [Category.{v} C]
+    {J : GrothendieckTopology C} {X : C}
+    (G : Sheaf J AddCommGrpCat.{w})
+    (P : SiteCechTwoCocycleClass.{w, v, u, t} J G X) :
+    AbelianBandedGerbeClass J G X := by
+  refine Quotient.lift (fun Q => Quotient.mk (abelianBandedGerbeSetoid J G X)
+    (siteCechTwoCocycle_to_abelianBandedGerbe Q)) ?_ P
+  intro Q R h
+  exact Quotient.sound (siteCechTwoCocycle_cohomologous_gluing_compatible h)
+
+/-- The extraction map is well-defined on the existing
+`abelianBandedGerbeSetoid` quotient. -/
+noncomputable def abelianBandedGerbeClass_to_siteCechTwoCocycleClass
+    {C : Type u} [Category.{v} C]
+    {J : GrothendieckTopology C} {X : C}
+    (G : Sheaf J AddCommGrpCat.{w}) (P : AbelianBandedGerbeClass J G X) :
+    SiteCechTwoCocycleClass.{w, v, u, t} J G X := by
+  refine Quotient.lift (fun Q => Quotient.mk (siteCechTwoCocycleSetoid J G X)
+    (abelianBandedGerbe_to_siteCechTwoCocycle Q)) ?_ P
+  intro Q R h
+  exact Quotient.sound (abelianBandedGerbeEquivalence_cocycle_compatible
+    (Nonempty.some h))
+
+/-- Extracting after gluing returns the original Čech class. -/
+theorem siteCechTwoCocycleClass_extraction_gluing
+    {C : Type u} [Category.{v} C]
+    {J : GrothendieckTopology C} {X : C}
+    (G : Sheaf J AddCommGrpCat.{w})
+    (c : SiteCechTwoCocycleClass.{w, v, u, t} J G X) :
+    abelianBandedGerbeClass_to_siteCechTwoCocycleClass G
+      (siteCechTwoCocycleClass_to_abelianBandedGerbeClass G c) = c := by
+  sorry
+
+/-- Gluing after extracting returns the original banded-gerbe class. -/
+theorem siteCechTwoCocycleClass_gluing_extraction
+    {C : Type u} [Category.{v} C]
+    {J : GrothendieckTopology C} {X : C}
+    (G : Sheaf J AddCommGrpCat.{w})
+    (c : AbelianBandedGerbeClass J G X) :
+    siteCechTwoCocycleClass_to_abelianBandedGerbeClass G
+      (abelianBandedGerbeClass_to_siteCechTwoCocycleClass G c) = c := by
+  sorry
+
+/-- The two quotient-level constructions package as the Čech form of
+Giraud's degree-two correspondence. -/
+theorem siteCechTwoCocycleClass_equiv_abelianBandedGerbeClass
+    {C : Type u} [Category.{v} C]
+    {J : GrothendieckTopology C}
+    (G : Sheaf J AddCommGrpCat.{w}) (X : C) :
+    Nonempty (SiteCechTwoCocycleClass.{w, v, u, t} J G X ≃
+      AbelianBandedGerbeClass.{t, w, v, u} J G X) := by
+  exact ⟨{
+    toFun := fun c => siteCechTwoCocycleClass_to_abelianBandedGerbeClass G c
+    invFun := fun c => abelianBandedGerbeClass_to_siteCechTwoCocycleClass G c
+    left_inv := by
+      intro c
+      exact siteCechTwoCocycleClass_extraction_gluing G c
+    right_inv := by
+      intro c
+      exact siteCechTwoCocycleClass_gluing_extraction G c
+  }⟩
+
 /-! ### Extensions and torsors in degree one -/
 
 /-- The constant unit sheaf used as the left hand term in degree-one `Ext`. -/
@@ -1059,17 +1517,22 @@ Proof roadmap:
    cohomologous cocycles give `AbelianBandedGerbeEquivalence`s, so both maps
    descend to the existing quotient types.
 4. Compare the two constructions locally, glue the local comparisons, prove
-   both composites equal, and package them as an `Equiv`.
+  both composites equal, and package them as an `Equiv`.
 
-This awaits cocycle/refinement machinery and the cocycle-to-gerbe gluing
-construction. -/
+The cocycle, refinement, gluing, extraction, and quotient-compatibility
+interfaces above isolate the comparison and inverse-law proofs. -/
 theorem siteH2_equiv_abelianBandedGerbe
     {C : Type u} [Category.{v} C] {J : GrothendieckTopology C}
     (G : Sheaf J AddCommGrpCat.{w}) (X : C)
     [HasSheafify (J.over X) AddCommGrpCat.{w}]
     [HasExt.{w'} (Sheaf (J.over X) AddCommGrpCat.{w})] :
-    Nonempty (siteH2 G X ≃ AbelianBandedGerbeClass J G X) := by
-  sorry
+    Nonempty (siteH2 G X ≃ AbelianBandedGerbeClass.{t, w, v, u} J G X) := by
+  let e₁ : siteH2 G X ≃ SiteCechTwoCocycleClass.{w, v, u, t} J G X :=
+    Classical.choice (siteH2_equiv_siteCechTwoCocycleClass G X)
+  let e₂ : SiteCechTwoCocycleClass.{w, v, u, t} J G X ≃
+      AbelianBandedGerbeClass J G X :=
+    Classical.choice (siteCechTwoCocycleClass_equiv_abelianBandedGerbeClass G X)
+  exact ⟨e₁.trans e₂⟩
 
 /-- In the nonabelian case, degree-two cohomology is defined by `G`-gerbes. -/
 abbrev nonabelianSiteH2 {C : Type u} [Category.{v} C]

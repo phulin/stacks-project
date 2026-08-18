@@ -2374,6 +2374,384 @@ theorem regular_sequence_powers_iff
 /- The source's polynomial proof uses the direct-sum decomposition indexed by multi-indices
   and the ideals `I_E`; these are proof-level bookkeeping for the final TFAE, not additional
   chapter-facing structures. -/
+private def polynomialCoefficientIdeal
+    {R : Type u} [CommRing R] {n : ℕ} (f : Fin n → R)
+    (xs : List (Fin n)) (m : Fin n →₀ ℕ) : Ideal R :=
+  Ideal.span {r | ∃ i ∈ xs, m i ≠ 0 ∧ r = f i}
+
+private theorem mvPolynomial_mem_ofList_C_mul_X_iff
+    {R : Type u} [CommRing R] {n : ℕ} (f : Fin n → R)
+    (xs : List (Fin n)) (p : MvPolynomial (Fin n) R) :
+    p ∈ Ideal.ofList
+        (xs.map (fun i => MvPolynomial.C (f i) * MvPolynomial.X i)) ↔
+      ∀ m, p.coeff m ∈ polynomialCoefficientIdeal f xs m := by
+  classical
+  constructor
+  · intro hp
+    change p ∈ Ideal.span {r |
+      r ∈ xs.map (fun i => MvPolynomial.C (f i) * MvPolynomial.X i)} at hp
+    induction hp using Submodule.span_induction with
+    | mem q hq =>
+        have hq' : q ∈ xs.map (fun i => MvPolynomial.C (f i) * MvPolynomial.X i) := hq
+        obtain ⟨i, hi, hqi⟩ := List.mem_map.mp hq'
+        subst q
+        intro m
+        by_cases hmi : Finsupp.single i 1 = m
+        · subst m
+          apply Ideal.subset_span
+          exact ⟨i, hi, by simp⟩
+        · rw [MvPolynomial.coeff_C_mul, MvPolynomial.coeff_X]
+          simp [hmi]
+    | zero =>
+        intro m
+        simp
+    | add q₁ q₂ _ _ hq₁ hq₂ =>
+        intro m
+        exact (polynomialCoefficientIdeal f xs m).add_mem (hq₁ m) (hq₂ m)
+    | smul q₀ q _ hq =>
+        intro m
+        change MvPolynomial.coeff m (q₀ * q) ∈ polynomialCoefficientIdeal f xs m
+        rw [MvPolynomial.coeff_mul]
+        apply Submodule.sum_mem _
+        intro z hz
+        have hsum : z.1 + z.2 = m := Finset.mem_antidiagonal.mp hz
+        have hle : polynomialCoefficientIdeal f xs z.2 ≤
+            polynomialCoefficientIdeal f xs m := by
+          apply Ideal.span_le.mpr
+          rintro r ⟨i, hi, hzi, rfl⟩
+          apply Ideal.subset_span
+          refine ⟨i, hi, ?_, rfl⟩
+          intro hmi
+          apply hzi
+          have hcoord := congrArg (fun w : Fin n →₀ ℕ => w i) hsum
+          simp only [Finsupp.add_apply] at hcoord
+          omega
+        exact (polynomialCoefficientIdeal f xs m).mul_mem_left
+          (MvPolynomial.coeff z.1 q₀) (hle (hq z.2))
+  · intro hp
+    rw [p.as_sum]
+    apply Submodule.sum_mem
+    intro m hm
+    let K : Ideal R :=
+      { carrier := {r | MvPolynomial.monomial m r ∈
+            Ideal.ofList (xs.map (fun i => MvPolynomial.C (f i) * MvPolynomial.X i))}
+        zero_mem' := by simp
+        add_mem' := by
+          intro a b ha hb
+          change MvPolynomial.monomial m (a + b) ∈
+            Ideal.ofList (xs.map (fun i => MvPolynomial.C (f i) * MvPolynomial.X i))
+          rw [map_add]
+          exact
+            (Ideal.ofList (xs.map (fun i => MvPolynomial.C (f i) * MvPolynomial.X i))).add_mem ha hb
+        smul_mem' := by
+          intro a b hb
+          change MvPolynomial.monomial m (a * b) ∈
+            Ideal.ofList (xs.map (fun i => MvPolynomial.C (f i) * MvPolynomial.X i))
+          have h :=
+            (Ideal.ofList (xs.map (fun i => MvPolynomial.C (f i) * MvPolynomial.X i))).mul_mem_left
+              (MvPolynomial.C a) hb
+          simpa [MvPolynomial.C_mul_monomial] using h }
+    have hIK : polynomialCoefficientIdeal f xs m ≤ K := by
+      apply Ideal.span_le.mpr
+      rintro r ⟨i, hi, hmi, rfl⟩
+      have hgen : MvPolynomial.C (f i) * MvPolynomial.X i ∈
+          Ideal.ofList (xs.map (fun j => MvPolynomial.C (f j) * MvPolynomial.X j)) :=
+        Ideal.subset_span (List.mem_map.mpr ⟨i, hi, rfl⟩)
+      have hmul :=
+        (Ideal.ofList (xs.map (fun j => MvPolynomial.C (f j) * MvPolynomial.X j))).mul_mem_right
+          (MvPolynomial.monomial (m - Finsupp.single i 1) 1) hgen
+      show MvPolynomial.monomial m (f i) ∈
+        Ideal.ofList (xs.map (fun j => MvPolynomial.C (f j) * MvPolynomial.X j))
+      have hsum : Finsupp.single i 1 + (m - Finsupp.single i 1) = m := by
+        rw [add_comm, Finsupp.sub_add_single_one_cancel hmi]
+      simpa [MvPolynomial.C_mul_monomial, MvPolynomial.X,
+        MvPolynomial.monomial_mul, hsum] using hmul
+    exact hIK (hp m)
+
+private theorem polynomial_smulRegular_quotient_iff
+    {R : Type u} [CommRing R] {n : ℕ} (f : Fin n → R)
+    (xs : List (Fin n)) (i : Fin n) (hi : i ∉ xs) :
+    IsSMulRegular
+        (MvPolynomial (Fin n) R ⧸
+          (Ideal.ofList
+            (xs.map (fun j => MvPolynomial.C (f j) * MvPolynomial.X j)) :
+            Submodule (MvPolynomial (Fin n) R) (MvPolynomial (Fin n) R)))
+        (MvPolynomial.C (f i) * MvPolynomial.X i) ↔
+      ∀ m, IsSMulRegular
+        (R ⧸ polynomialCoefficientIdeal f xs m) (f i) := by
+  classical
+  let P := MvPolynomial (Fin n) R
+  let J : Ideal P := Ideal.ofList
+    (xs.map (fun j => MvPolynomial.C (f j) * MvPolynomial.X j))
+  have hterm : MvPolynomial.C (f i) * MvPolynomial.X i =
+      MvPolynomial.monomial (Finsupp.single i 1) (f i) := by
+    simp [MvPolynomial.X, MvPolynomial.C_mul_monomial]
+  have hIeq (m : Fin n →₀ ℕ) :
+      polynomialCoefficientIdeal f xs (Finsupp.single i 1 + m) =
+        polynomialCoefficientIdeal f xs m := by
+    apply congrArg Ideal.span
+    ext r
+    constructor <;> rintro ⟨j, hj, hne, rfl⟩ <;>
+      refine ⟨j, hj, ?_, rfl⟩
+    · intro hm
+      apply hne
+      have hij : i ≠ j := by
+        intro hij
+        exact hi (hij ▸ hj)
+      simpa [Finsupp.add_apply, Finsupp.single_apply, hij] using hm
+    · intro hm
+      apply hne
+      have hij : i ≠ j := by
+        intro hij
+        exact hi (hij ▸ hj)
+      simpa [Finsupp.add_apply, Finsupp.single_apply, hij] using hm
+  constructor
+  · intro hreg
+    intro m
+    rw [isSMulRegular_iff_right_eq_zero_of_smul] at hreg ⊢
+    intro x hx
+    induction x using Submodule.Quotient.induction_on with
+    | _ x =>
+        have hxm : f i * x ∈ polynomialCoefficientIdeal f xs m := by
+          apply (Submodule.Quotient.mk_eq_zero _).mp
+          change (f i) • (Submodule.Quotient.mk x :
+            R ⧸ polynomialCoefficientIdeal f xs m) = 0
+          exact hx
+        let p : P := MvPolynomial.monomial m x
+        have hpJ :
+            (MvPolynomial.C (f i) * MvPolynomial.X i) * p ∈ J := by
+          apply (mvPolynomial_mem_ofList_C_mul_X_iff f xs _).mpr
+          intro k
+          by_cases hk : Finsupp.single i 1 + m = k
+          · subst k
+            rw [hIeq]
+            rw [hterm]
+            dsimp [p]
+            rw [MvPolynomial.coeff_monomial_mul]
+            simpa [p] using hxm
+          · rw [hterm]
+            dsimp [p]
+            rw [MvPolynomial.coeff_monomial_mul']
+            split_ifs with hle
+            · rw [MvPolynomial.coeff_monomial]
+              split_ifs with hkm
+              · exfalso
+                apply hk
+                rw [hkm, add_comm]
+                exact tsub_add_cancel_of_le hle
+              · simp [hkm]
+            · simp [hle]
+        have hzero := hreg (Submodule.Quotient.mk p)
+        have hzero' : (Submodule.Quotient.mk p : P ⧸ (J : Submodule P P)) = 0 :=
+          hzero (by
+            change Submodule.Quotient.mk ((MvPolynomial.C (f i) * MvPolynomial.X i) * p) = 0
+            exact (Submodule.Quotient.mk_eq_zero _).mpr hpJ)
+        have hpzero : p ∈ J := (Submodule.Quotient.mk_eq_zero _).mp hzero'
+        have hpcoeff := (mvPolynomial_mem_ofList_C_mul_X_iff f xs p).mp hpzero
+        simpa [p] using (Submodule.Quotient.mk_eq_zero _).mpr (hpcoeff m)
+  · intro hreg
+    rw [isSMulRegular_iff_right_eq_zero_of_smul]
+    intro x hx
+    induction x using Submodule.Quotient.induction_on with
+    | _ p =>
+        have hpJ :
+            (MvPolynomial.C (f i) * MvPolynomial.X i) * p ∈ J := by
+          apply (Submodule.Quotient.mk_eq_zero _).mp
+          change (MvPolynomial.C (f i) * MvPolynomial.X i) •
+            (Submodule.Quotient.mk p : P ⧸ (J : Submodule P P)) = 0
+          exact hx
+        have hpcoeff :=
+          (mvPolynomial_mem_ofList_C_mul_X_iff f xs
+            ((MvPolynomial.C (f i) * MvPolynomial.X i) * p)).mp hpJ
+        apply (Submodule.Quotient.mk_eq_zero _).mpr
+        apply (mvPolynomial_mem_ofList_C_mul_X_iff f xs p).mpr
+        intro m
+        have hcoeff := hpcoeff (Finsupp.single i 1 + m)
+        have hcoeff' :
+            f i * MvPolynomial.coeff m p ∈
+              polynomialCoefficientIdeal f xs m := by
+          rw [hIeq (m := m)] at hcoeff
+          simpa [MvPolynomial.C_mul_monomial, MvPolynomial.X,
+            MvPolynomial.coeff_monomial_mul] using hcoeff
+        let q : R ⧸ polynomialCoefficientIdeal f xs m :=
+          Submodule.Quotient.mk (MvPolynomial.coeff m p)
+        have hq : (f i) • q = 0 := by
+          change (Submodule.Quotient.mk (f i * MvPolynomial.coeff m p) :
+            R ⧸ polynomialCoefficientIdeal f xs m) = 0
+          exact (Submodule.Quotient.mk_eq_zero _).mpr hcoeff'
+        have hq' := (isSMulRegular_iff_right_eq_zero_of_smul.mp (hreg m)) q hq
+        exact (Submodule.Quotient.mk_eq_zero _).mp hq'
+
+private theorem polynomial_weaklyRegular_of_sublist
+    {R : Type u} [CommRing R] (n : ℕ) (f : Fin n → R)
+    (hsub : ∀ ys : List R, ys.Sublist (List.ofFn f) →
+      RingTheory.Sequence.IsWeaklyRegular R ys) :
+    RingTheory.Sequence.IsWeaklyRegular (MvPolynomial (Fin n) R)
+      (List.ofFn (fun i => MvPolynomial.C (f i) * MvPolynomial.X i)) := by
+  classical
+  rw [RingTheory.Sequence.isWeaklyRegular_iff_Fin]
+  intro k
+  let i : Fin n := ⟨k, by simpa using k.isLt⟩
+  let xs : List (Fin n) := (List.ofFn (fun j : Fin n => j)).take (i : ℕ)
+  have htake :
+      (List.ofFn (fun j : Fin n => MvPolynomial.C (f j) * MvPolynomial.X j)).take (i : ℕ) =
+        xs.map (fun j => MvPolynomial.C (f j) * MvPolynomial.X j) := by
+    simp [xs, List.ofFn_eq_map, List.map_take]
+  have hi : i ∉ xs := by
+    intro hi'
+    have hi'' : i ∈ (List.ofFn (fun j : Fin n => j)).take (i : ℕ) := by
+      simpa [xs] using hi'
+    have hi'lt :=
+      (List.mem_take_iff_idxOf_lt (l := List.ofFn (fun j : Fin n => j))
+        (a := i) (by simp [i])).mp hi''
+    have hnodup : (List.ofFn (fun j : Fin n => j)).Nodup := by
+      exact (List.nodup_ofFn).mpr (Function.injective_id)
+    have hidx : (List.ofFn (fun j : Fin n => j)).idxOf i = (i : ℕ) := by
+      have hget := List.get_idxOf hnodup
+        (⟨(i : ℕ), by simpa only [List.length_ofFn] using i.isLt⟩ :
+          Fin (List.ofFn (fun j : Fin n => j)).length)
+      simpa [i] using hget
+    rw [hidx] at hi'lt
+    exact (Nat.lt_irrefl _ hi'lt)
+  have hpoly :
+      IsSMulRegular
+        (MvPolynomial (Fin n) R ⧸
+          (Ideal.ofList
+            (xs.map (fun j => MvPolynomial.C (f j) * MvPolynomial.X j)) :
+            Submodule (MvPolynomial (Fin n) R) (MvPolynomial (Fin n) R)))
+        (MvPolynomial.C (f i) * MvPolynomial.X i) := by
+    apply (polynomial_smulRegular_quotient_iff f xs i hi).mpr
+    intro m
+    let filt := xs.filter (fun j => m j ≠ 0)
+    let ys := filt.map f
+    have hxs : xs.Sublist (List.ofFn (fun j : Fin n => j)) := by
+      exact List.take_sublist _ _
+    have hsucc : (xs ++ [i]).Sublist (List.ofFn (fun j : Fin n => j)) := by
+      have heq :
+          (List.ofFn (fun j : Fin n => j)).take ((i : ℕ) + 1) = xs ++ [i] := by
+        rw [List.take_succ_eq_append_getElem]
+        · have hget :
+              (List.ofFn (fun j : Fin n => j)).get
+                  (⟨(i : ℕ), by simpa only [List.length_ofFn] using i.isLt⟩ :
+                    Fin (List.ofFn (fun j : Fin n => j)).length) = i := by
+            rw [List.get_ofFn]
+            apply Fin.ext
+            rfl
+          simpa [xs] using hget
+        · simpa only [List.length_ofFn] using i.isLt
+      rw [← heq]
+      exact List.take_sublist _ _
+    have hfilt : (filt ++ [i]).Sublist (List.ofFn (fun j : Fin n => j)) := by
+      exact (List.filter_sublist.append (List.Sublist.refl _)).trans hsucc
+    have hys : (ys ++ [f i]).Sublist (List.ofFn f) := by
+      have hmap := hfilt.map f
+      simpa [ys, List.map_append, List.ofFn_eq_map] using hmap
+    have hreg := hsub (ys ++ [f i]) hys
+    have hri := hreg.regular_mod_prev ys.length (by simp)
+    have hI : polynomialCoefficientIdeal f xs m = Ideal.ofList ys := by
+      apply le_antisymm
+      · apply Ideal.span_le.mpr
+        rintro r ⟨j, hjxs, hjm, rfl⟩
+        apply Ideal.subset_span
+        apply List.mem_map.mpr
+        exact ⟨j, by simp [filt, hjxs, hjm], rfl⟩
+      · apply Ideal.span_le.mpr
+        intro r hr
+        obtain ⟨j, hj, rfl⟩ := List.mem_map.mp hr
+        have hj' := List.mem_filter.mp hj
+        apply Ideal.subset_span
+        exact ⟨j, List.filter_sublist.subset hj, by simpa using hj'.2, rfl⟩
+    have hri' :
+        IsSMulRegular (R ⧸ (Ideal.ofList ys • (⊤ : Submodule R R))) (f i) := by
+      rw [List.take_append_of_le_length (Nat.le_refl _)] at hri
+      rw [List.take_length] at hri
+      simpa using hri
+    rw [Ideal.smul_eq_mul, ← hI, Ideal.mul_top] at hri'
+    exact hri'
+  have htake' :
+      (List.ofFn (fun j : Fin n => MvPolynomial.C (f j) * MvPolynomial.X j)).take
+          (k : ℕ) = xs.map (fun j => MvPolynomial.C (f j) * MvPolynomial.X j) := by
+    simpa [i] using htake
+  have hget' :
+      (List.ofFn (fun j : Fin n => MvPolynomial.C (f j) * MvPolynomial.X j))[k] =
+        MvPolynomial.C (f i) * MvPolynomial.X i := by
+    change (List.ofFn (fun j : Fin n => MvPolynomial.C (f j) * MvPolynomial.X j)).get
+        k = MvPolynomial.C (f i) * MvPolynomial.X i
+    rw [List.get_ofFn]
+    congr 1
+    apply Fin.ext
+    rfl
+  rw [htake', Ideal.smul_eq_mul, Ideal.mul_top, hget']
+
+private theorem sublist_weaklyRegular_of_polynomial_weaklyRegular
+    {R : Type u} [CommRing R] (n : ℕ) (f : Fin n → R)
+    (hpoly : RingTheory.Sequence.IsWeaklyRegular (MvPolynomial (Fin n) R)
+      (List.ofFn (fun i => MvPolynomial.C (f i) * MvPolynomial.X i))) :
+    ∀ ys : List R, ys.Sublist (List.ofFn f) →
+      RingTheory.Sequence.IsWeaklyRegular R ys := by
+  classical
+  intro ys hys
+  have hsource : List.ofFn f =
+      (List.ofFn (fun j : Fin n => j)).map f := by
+    simp [List.ofFn_eq_map]
+  rw [hsource] at hys
+  obtain ⟨js, hjs, rfl⟩ := List.sublist_map_iff.mp hys
+  rw [RingTheory.Sequence.isWeaklyRegular_iff_Fin]
+  intro k
+  let kk : Fin js.length := ⟨k, by simpa using k.isLt⟩
+  let j : Fin n := js[kk]
+  let xs : List (Fin n) :=
+    (List.ofFn (fun q : Fin n => q)).take (j : ℕ)
+  have hsourcepair :
+      (List.ofFn (fun q : Fin n => q)).Pairwise (fun a b => a < b) := by
+    rw [List.pairwise_ofFn]
+    intro a b hab
+    exact hab
+  have hpair : js.Pairwise (fun a b => a < b) :=
+    hsourcepair.sublist hjs
+  have hsourceNodup : (List.ofFn (fun q : Fin n => q)).Nodup := by
+    exact (List.nodup_ofFn).mpr Function.injective_id
+  have hprev : ∀ q ∈ js.take (k : ℕ), q < j := by
+    intro q hq
+    have hqmem : q ∈ js := List.mem_of_mem_take hq
+    have hqidx : js.idxOf q < (k : ℕ) :=
+      (List.mem_take_iff_idxOf_lt hqmem).mp hq
+    have hqget :
+        js.get ⟨js.idxOf q, List.idxOf_lt_length_of_mem hqmem⟩ = q := by
+      exact List.idxOf_get (List.idxOf_lt_length_of_mem hqmem)
+    have hrel := (List.pairwise_iff_get.mp hpair)
+      ⟨js.idxOf q, List.idxOf_lt_length_of_mem hqmem⟩ kk hqidx
+    change q < js.get kk
+    rw [← hqget]
+    exact hrel
+  have hprev_mem : ∀ q ∈ js.take (k : ℕ), q ∈ xs := by
+    intro q hq
+    have hqsource : q ∈ List.ofFn (fun q : Fin n => q) :=
+      hjs.subset (List.mem_of_mem_take hq)
+    have hqidx :
+        (List.ofFn (fun q : Fin n => q)).idxOf q = (q : ℕ) := by
+      have hget := List.get_idxOf hsourceNodup
+        (⟨(q : ℕ), by simp⟩ : Fin (List.ofFn (fun q : Fin n => q)).length)
+      simpa using hget
+    apply (List.mem_take_iff_idxOf_lt hqsource).mpr
+    rw [hqidx]
+    exact hprev q hq
+  have hp := hpoly.regular_mod_prev (j : ℕ) (by simp [j])
+  have htakej :
+      (List.ofFn (fun q : Fin n => MvPolynomial.C (f q) * MvPolynomial.X q)).take
+          (j : ℕ) = xs.map (fun q => MvPolynomial.C (f q) * MvPolynomial.X q) := by
+    simp [xs, List.ofFn_eq_map, List.map_take]
+  have hgetj :
+      (List.ofFn (fun q : Fin n => MvPolynomial.C (f q) * MvPolynomial.X q))[j] =
+        MvPolynomial.C (f j) * MvPolynomial.X j := by
+    change (List.ofFn (fun q : Fin n => MvPolynomial.C (f q) * MvPolynomial.X q)).get j =
+      MvPolynomial.C (f j) * MvPolynomial.X j
+    rw [List.get_ofFn]
+    congr 1
+    apply Fin.ext
+    rfl
+  rw [htakej, Ideal.smul_eq_mul, Ideal.mul_top, hgetj] at hp
+
 theorem regular_sequence_polynomial_iff
     {R : Type u} [CommRing R] (n : ℕ) (f : Fin n → R)
     (hnotunit : Ideal.ofList (List.ofFn f) ≠ (⊤ : Ideal R)) :

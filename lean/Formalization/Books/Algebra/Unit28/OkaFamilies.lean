@@ -10,7 +10,9 @@ import Mathlib.RingTheory.Noetherian.OfPrime
 import Mathlib.RingTheory.PrincipalIdealDomainOfPrime
 import Mathlib.RingTheory.Spectrum.Prime.Noetherian
 import Mathlib.RingTheory.Spectrum.Prime.Topology
+import Mathlib.SetTheory.Cardinal.Arithmetic
 import Mathlib.SetTheory.Cardinal.Basic
+import Mathlib.Order.WellFounded
 
 namespace Formalization.Books.Algebra.Unit28
 
@@ -191,7 +193,96 @@ def generatedByAtMost {R : Type u} [CommRing R] (κ : Cardinal.{u}) : Set (Ideal
 theorem generatedByAtMost_isOka {R : Type u} [CommRing R]
     (κ : Cardinal.{u}) (hκ : Cardinal.aleph0 ≤ κ) :
     OkaFamily (generatedByAtMost (R := R) κ) := by
-  sorry
+  change Ideal.IsOka (fun I : Ideal R => ∃ s : Set R,
+    Cardinal.mk s ≤ κ ∧ Ideal.span s = I)
+  refine { top := ?_, oka := ?_ }
+  · refine ⟨{1}, ?_, by simp⟩
+    simpa using (Cardinal.nat_lt_aleph0 1).le.trans hκ
+  · intro I a hsup hcolon
+    obtain ⟨s, hsκ, hs⟩ := hsup
+    obtain ⟨t, htκ, ht⟩ := hcolon
+    have hdecomp : ∀ x : s, ∃ i : R, ∃ r : R,
+        i ∈ I ∧ (x : R) = i + r * a := by
+      intro x
+      have hx : (x : R) ∈ I ⊔ Ideal.span ({a} : Set R) := by
+        rw [← hs]
+        exact Ideal.subset_span x.property
+      obtain ⟨i, hi, z, hz, hxz⟩ := Submodule.mem_sup.mp hx
+      obtain ⟨r, hr⟩ := (Ideal.mem_span_singleton').mp hz
+      exact ⟨i, r, hi, by rw [← hxz, ← hr]⟩
+    choose b c hb hbc using hdecomp
+    let K : Ideal R := Ideal.span
+      (Set.range (fun x : t => a * (x : R)) ∪ Set.range b)
+    have hKI : K ≤ I := by
+      change Ideal.span
+        (Set.range (fun x : t => a * (x : R)) ∪ Set.range b) ≤ I
+      rw [Ideal.span_union]
+      apply sup_le
+      · refine Ideal.span_le.2 ?_
+        rintro _ ⟨x, rfl⟩
+        simpa [mul_comm] using
+          (mem_idealColonByElement (I := I) (a := a) (x := (x : R))).mp
+            ((show (x : R) ∈ idealColonByElement I a by
+              change (x : R) ∈ I.colon (Ideal.span ({a} : Set R) : Set R)
+              rw [← ht]
+              exact Ideal.subset_span x.property))
+      · refine Ideal.span_le.2 ?_
+        rintro _ ⟨x, rfl⟩
+        exact hb x
+    have hspan : ∀ x : R, x ∈ Ideal.span s →
+        ∃ k ∈ K, ∃ r : R, x = k + r * a := by
+      intro x hx
+      induction hx using Submodule.span_induction with
+      | mem x hx => exact ⟨b ⟨x, hx⟩, by exact Ideal.subset_span (Or.inr ⟨⟨x, hx⟩, rfl⟩), c ⟨x, hx⟩, hbc ⟨x, hx⟩⟩
+      | zero => exact ⟨0, K.zero_mem, 0, by simp⟩
+      | add x y hx hy hxK hyK =>
+          obtain ⟨kx, hkx, rx, hrx⟩ := hxK
+          obtain ⟨ky, hky, ry, hry⟩ := hyK
+          exact ⟨kx + ky, K.add_mem hkx hky, rx + ry, by
+            rw [hrx, hry]
+            simp only [add_mul]
+            ac_rfl⟩
+      | smul r x hx hxK =>
+          obtain ⟨kx, hkx, q, hq⟩ := hxK
+          exact ⟨r * kx, K.mul_mem_left r hkx, r * q, by
+            rw [smul_eq_mul, hq, mul_add, mul_assoc]⟩
+    have hle : I ≤ K := by
+      intro x hx
+      have hxspan : x ∈ Ideal.span s := by
+        rw [hs]
+        exact (show I ≤ I ⊔ Ideal.span ({a} : Set R) from le_sup_left) hx
+      obtain ⟨k, hk, r, hr⟩ := hspan x hxspan
+      have hka : k ∈ I := hKI hk
+      have hra : r * a ∈ I := by
+        have hsub := I.sub_mem hx hka
+        rw [hr] at hsub
+        simpa using hsub
+      have hrcolon : r ∈ idealColonByElement I a :=
+        (mem_idealColonByElement (I := I) (a := a) (x := r)).mpr hra
+      have hrt : r ∈ Ideal.span t := by rw [ht]; exact hrcolon
+      have harta : a * r ∈ K := by
+        refine Submodule.span_induction (p := fun q _ => a * q ∈ K) ?_ ?_ ?_ ?_ hrt
+        · intro x hx
+          exact Ideal.subset_span (Or.inl ⟨⟨x, hx⟩, rfl⟩)
+        · simpa using K.zero_mem
+        · intro x y hx hy hxK hyK
+          rw [mul_add]
+          exact K.add_mem hxK hyK
+        · intro q x hx hxK
+          simpa [smul_eq_mul, mul_assoc, mul_comm, mul_left_comm] using K.mul_mem_left q hxK
+      rw [hr]
+      exact K.add_mem hk (by simpa [mul_comm] using harta)
+    refine ⟨Set.range (fun x : t => a * (x : R)) ∪ Set.range b, ?_, ?_⟩
+    calc
+      Cardinal.mk (Set.range (fun x : t => a * (x : R)) ∪ Set.range b : Set R) ≤
+          Cardinal.mk (Set.range (fun x : t => a * (x : R)) : Set R) + Cardinal.mk (Set.range b : Set R) :=
+        Cardinal.mk_union_le _ _
+      _ ≤ Cardinal.mk t + Cardinal.mk s :=
+        add_le_add Cardinal.mk_range_le Cardinal.mk_range_le
+      _ ≤ κ + κ := add_le_add htκ hsκ
+      _ = κ := Cardinal.add_eq_self hκ
+    change K = I
+    exact le_antisymm hKI hle
 
 /-! ## Oka families from module properties -/
 
@@ -514,47 +605,319 @@ theorem radicalOfFiniteGeneratedIdeals_isOka {R : Type u} [CommRing R] :
   · intro I a hsup hcolon
     obtain ⟨n, f, hf⟩ := hsup
     obtain ⟨m, g, hg⟩ := hcolon
-    refine ⟨n * m, fun p => f p.1 * g p.2, ?_⟩
+    let e : (Fin n × Fin m) ≃ Fin (Fintype.card (Fin n × Fin m)) :=
+      Fintype.equivFin _
+    let F : Fin (Fintype.card (Fin n × Fin m)) → R :=
+      fun p => f (e.symm p).1 * g (e.symm p).2
+    refine ⟨Fintype.card (Fin n × Fin m), F, ?_⟩
     rw [radical_eq_radical_adjoin_mul_colon, Ideal.radical_mul, hf, hg,
       ← Ideal.radical_mul, Ideal.span_mul_span']
     congr 1
-    ext x
-    constructor
-    · rintro ⟨y, hy, z, hz, rfl⟩
+    apply le_antisymm
+    · refine Ideal.span_le.2 ?_
+      rintro x ⟨y, hy, z, hz, rfl⟩
       rcases hy with ⟨i, rfl⟩
       rcases hz with ⟨j, rfl⟩
-      exact ⟨⟨i, j⟩, rfl⟩
-    · rintro ⟨⟨i, j⟩, rfl⟩
-      exact ⟨f i, ⟨i, rfl⟩, g j, ⟨j, rfl⟩, rfl⟩
+      exact Ideal.subset_span ⟨e (i, j), by simp [F]⟩
+    · refine Ideal.span_le.2 ?_
+      rintro x ⟨p, rfl⟩
+      let q := e.symm p
+      exact Ideal.subset_span
+        ⟨f q.1, ⟨q.1, rfl⟩, g q.2, ⟨q.2, rfl⟩, by simp [F, q]⟩
 
 theorem sSup_not_radicalOfFiniteGeneratedIdeals {R : Type u} [CommRing R]
     (C : Set (Ideal R)) (hC : C.Nonempty) (hchain : IsChain (· ≤ ·) C)
     (hCnot : ∀ I ∈ C, I ∉ radicalOfFiniteGeneratedIdeals (R := R)) :
     sSup C ∉ radicalOfFiniteGeneratedIdeals (R := R) := by
-  sorry
+  classical
+  rintro ⟨n, f, hf⟩
+  have hpow : ∀ i : Fin n, ∃ k : ℕ, f i ^ k ∈ sSup C := by
+    intro i
+    apply Ideal.mem_radical_iff.mp
+    rw [hf]
+    exact Ideal.le_radical (Ideal.subset_span ⟨i, rfl⟩)
+  choose k hk using hpow
+  let G : Finset R := Finset.univ.image (fun i => f i ^ k i)
+  obtain ⟨M, hMC, hGM⟩ :=
+    hchain.directedOn.exists_mem_subset_of_finset_subset_biUnion hC (s := G) (by
+      intro x hx
+      simp only [Set.mem_iUnion, SetLike.mem_coe, exists_prop]
+      change x ∈ G at hx
+      rcases Finset.mem_image.mp hx with ⟨i, hi, rfl⟩
+      exact (Submodule.mem_sSup_of_directed hC hchain.directedOn).mp (hk i))
+  have hspan : Ideal.span (Set.range f) ≤ M.radical := by
+    refine Ideal.span_le.2 ?_
+    rintro _ ⟨i, rfl⟩
+    apply Ideal.mem_radical_iff.mpr
+    refine ⟨k i, ?_⟩
+    apply hGM
+    change f i ^ k i ∈ G
+    exact Finset.mem_image.mpr ⟨i, Finset.mem_univ i, rfl⟩
+  have hsuple : (sSup C).radical ≤ M.radical := by
+    rw [hf]
+    exact (Ideal.radical_mono hspan).trans_eq (Ideal.radical_idem M)
+  have hMle : M.radical ≤ (sSup C).radical :=
+    Ideal.radical_mono (le_sSup hMC)
+  have hspanle : (Ideal.span (Set.range f)).radical ≤ M.radical := by
+    rw [← hf]
+    exact hsuple
+  exact (hCnot M hMC) ⟨n, f, le_antisymm (hMle.trans_eq hf) hspanle⟩
 
 theorem exists_maximal_not_radicalOfFiniteGeneratedIdeals {R : Type u} [CommRing R]
     (h : ∃ I : Ideal R, I ∉ radicalOfFiniteGeneratedIdeals (R := R)) :
     ∃ M : Ideal R, Maximal
       (fun I : Ideal R => I ∉ radicalOfFiniteGeneratedIdeals (R := R)) M := by
-  sorry
+  rcases h with ⟨I, hI⟩
+  let S : Set (Ideal R) := {I | I ∉ radicalOfFiniteGeneratedIdeals (R := R)}
+  have hS : ∀ C ⊆ S, IsChain (· ≤ ·) C →
+      ∃ ub ∈ S, ∀ J ∈ C, J ≤ ub := by
+    intro C hCS hchain
+    rcases C.eq_empty_or_nonempty with rfl | hC
+    · exact ⟨I, hI, by simp⟩
+    · have hCnot : ∀ J ∈ C, J ∉ radicalOfFiniteGeneratedIdeals (R := R) :=
+        fun J hJ => hCS hJ
+      exact ⟨sSup C,
+        sSup_not_radicalOfFiniteGeneratedIdeals C hC hchain hCnot,
+        fun J hJ => le_sSup hJ⟩
+  exact zorn_le₀ S hS
 
 theorem primeSpectrum_noetherian_iff_radicalIdealACC {R : Type u} [CommRing R] :
     NoetherianSpace (PrimeSpectrum R) ↔ RadicalIdealACC (R := R) := by
-  sorry
+  constructor
+  · intro hN C hC hCrad hchain
+    have hWF : WellFoundedLT (Closeds (PrimeSpectrum R)) :=
+      ((noetherianSpace_TFAE (PrimeSpectrum R)).out 0 1).mp hN
+    let Z : Ideal R → Closeds (PrimeSpectrum R) := fun I =>
+      ⟨PrimeSpectrum.zeroLocus (I : Set R), PrimeSpectrum.isClosed_zeroLocus _⟩
+    let D : Set (Closeds (PrimeSpectrum R)) := Z '' C
+    obtain ⟨W, hWD, hWmin⟩ := hWF.exists_minimal D (by
+      rcases hC with ⟨I, hI⟩
+      exact ⟨Z I, ⟨I, hI, rfl⟩⟩)
+    rcases hWD with ⟨M, hMC, rfl⟩
+    refine ⟨M, hMC, ?_⟩
+    intro I hIC
+    by_cases hMI : M = I
+    · exact hMI.symm.le
+    rcases hchain hMC hIC hMI with hMI | hIM
+    · have hclosed : Z I ≤ Z M := by
+        exact PrimeSpectrum.zeroLocus_anti_mono_ideal hMI
+      have hZI : Z I ∈ D := ⟨I, hIC, rfl⟩
+      have heq : Z M = Z I := le_antisymm (hWmin hZI hclosed) hclosed
+      have heq' : PrimeSpectrum.zeroLocus (M : Set R) =
+          PrimeSpectrum.zeroLocus (I : Set R) :=
+        congrArg (fun W : Closeds (PrimeSpectrum R) => (W : Set (PrimeSpectrum R))) heq
+      have hrad : M.radical = I.radical := by
+        exact PrimeSpectrum.zeroLocus_eq_iff.mp heq'
+      have hEq : M = I := by
+        simpa [Z, (hCrad M hMC).radical, (hCrad I hIC).radical] using hrad
+      exact hEq.symm.le
+    · exact hIM
+  · intro hACC
+    have hmin : ∀ S : Set (Closeds (PrimeSpectrum R)), S.Nonempty →
+        ∃ Z, Minimal (· ∈ S) Z := by
+      intro S hS
+      let S' : Set ((Closeds (PrimeSpectrum R))ᵒᵈ) :=
+        OrderDual.toDual '' S
+      obtain ⟨Z, hZS', hZmax⟩ := zorn_le₀ S' (by
+        intro C hCS hchain
+        rcases C.eq_empty_or_nonempty with rfl | hC
+        · rcases hS with ⟨W, hW⟩
+          exact ⟨OrderDual.toDual W, ⟨W, hW, rfl⟩, by simp⟩
+        · let J : Set (Ideal R) := (PrimeSpectrum.closedsEmbedding R) '' C
+          have hJrad : ∀ I ∈ J, I.IsRadical := by
+            rintro I ⟨W, hW, rfl⟩
+            exact PrimeSpectrum.isRadical_vanishingIdeal _
+          have hJchain : IsChain (· ≤ ·) J := by
+            rintro I ⟨W, hW, rfl⟩ K ⟨V, hV, rfl⟩
+            intro hWV
+            have hWV' : W ≠ V := by
+              intro h
+              apply hWV
+              simpa [h]
+            rcases hchain hW hV hWV' with hWV | hVW
+            · exact Or.inl ((PrimeSpectrum.closedsEmbedding R).monotone hWV)
+            · exact Or.inr ((PrimeSpectrum.closedsEmbedding R).monotone hVW)
+          have hJnonempty : J.Nonempty := by
+            rcases hC with ⟨W, hW⟩
+            exact ⟨PrimeSpectrum.closedsEmbedding R W, ⟨W, hW, rfl⟩⟩
+          obtain ⟨M, hMJ, hMmax⟩ := hACC J hJnonempty hJrad hJchain
+          rcases hMJ with ⟨W, hW, rfl⟩
+          refine ⟨W, hCS hW, ?_⟩
+          intro V hV
+          exact (PrimeSpectrum.closedsEmbedding R).le_iff_le.mp
+            (hMmax _ ⟨V, hV, rfl⟩))
+      rcases hZS' with ⟨W, hW, rfl⟩
+      refine ⟨W, hW, ?_⟩
+      intro V hV hVW
+      exact hZmax ⟨V, hV, rfl⟩ hVW
+    have hWF : WellFoundedLT (Closeds (PrimeSpectrum R)) := by
+      refine ⟨WellFounded.intro (fun Z => ?_)⟩
+      by_contra hZ
+      let P : Closeds (PrimeSpectrum R) → Prop :=
+        fun W => ¬ Acc (· < ·) W ∧ W ≤ Z
+      obtain ⟨W, hWP, hWmin⟩ := hmin {W | P W} ⟨Z, hZ, le_rfl⟩
+      have hWacc : Acc (· < ·) W := Acc.intro W (fun V hVW => by
+        by_cases hVacc : Acc (· < ·) V
+        · exact hVacc
+        · exfalso
+          have hVP : P V := ⟨hVacc, (le_of_lt hVW).trans hWP.2⟩
+          exact (not_le_of_gt hVW) (hWmin hVP (le_of_lt hVW)))
+      exact hWP.1 hWacc
+    exact (noetherianSpace_TFAE (PrimeSpectrum R)).out 0 1 |>.mpr hWF
 
 theorem radicalIdealACC_iff_radicalOfFiniteGenerated {R : Type u} [CommRing R] :
     RadicalIdealACC (R := R) ↔
       ∀ I : Ideal R, I.IsRadical →
         I ∈ radicalOfFiniteGeneratedIdeals (R := R) := by
-  sorry
+  constructor
+  · intro hACC I hI
+    letI : NoetherianSpace (PrimeSpectrum R) :=
+      (primeSpectrum_noetherian_iff_radicalIdealACC (R := R)).mpr hACC
+    have hcompact : IsCompact
+        (PrimeSpectrum.zeroLocus (I : Set R))ᶜ :=
+      NoetherianSpace.isCompact _
+    let U : I → Set (PrimeSpectrum R) := fun f =>
+      (PrimeSpectrum.zeroLocus ({(f : R)} : Set R))ᶜ
+    have hUopen : ∀ f, IsOpen (U f) := by
+      intro f
+      exact (PrimeSpectrum.isClosed_zeroLocus _).isOpen_compl
+    have hcover : (PrimeSpectrum.zeroLocus (I : Set R))ᶜ ⊆ ⋃ f, U f := by
+      intro x hx
+      have hnot : ¬ ((I : Set R) ⊆ x.asIdeal) := by
+        intro hsub
+        exact hx ((PrimeSpectrum.mem_zeroLocus _ _).mpr hsub)
+      rcases not_subset.mp hnot with ⟨f, hfI, hfx⟩
+      refine Set.mem_iUnion.2 ⟨⟨f, hfI⟩, ?_⟩
+      intro hxf
+      apply hfx
+      exact (PrimeSpectrum.mem_zeroLocus _ _).mp hxf (by simp)
+    obtain ⟨t, ht⟩ := hcompact.elim_finite_subcover U hUopen hcover
+    let G : Set R := (fun f : I => (f : R)) '' (t : Set I)
+    have hzero : PrimeSpectrum.zeroLocus (I : Set R) =
+        PrimeSpectrum.zeroLocus G := by
+      apply Set.Subset.antisymm
+      · intro x hx
+        apply (PrimeSpectrum.mem_zeroLocus _ _).mpr
+        intro f hfG
+        rcases hfG with ⟨g, hg, rfl⟩
+        exact (PrimeSpectrum.mem_zeroLocus _ _).mp hx g.property
+      · intro x hxG
+        by_contra hxI
+        have hxcomp : x ∈ (PrimeSpectrum.zeroLocus (I : Set R))ᶜ := hxI
+        rcases Set.mem_iUnion.1 (ht hxcomp) with ⟨f, hxf⟩
+        rcases Set.mem_iUnion.1 hxf with ⟨hf, hxf⟩
+        apply hxf
+        apply (PrimeSpectrum.mem_zeroLocus _ _).mpr
+        intro y hy
+        have hyG : y ∈ G := ⟨f, hf, by simpa using hy.symm⟩
+        exact (PrimeSpectrum.mem_zeroLocus _ _).mp hxG hyG
+    have hrad : I.radical = (Ideal.span G).radical := by
+      apply PrimeSpectrum.zeroLocus_eq_iff.mp
+      exact hzero.trans (PrimeSpectrum.zeroLocus_span G).symm
+    classical
+    let e : G ≃ Fin (Fintype.card G) := Fintype.equivFin _
+    let f : Fin (Fintype.card G) → R := fun q => (e.symm q : R)
+    have hfrange : Set.range f = G := by
+      ext x
+      constructor
+      · rintro ⟨q, rfl⟩
+        exact (e.symm q).property
+      · intro hx
+        rcases hx with ⟨g, hg, rfl⟩
+        let gg : G := ⟨(g : R), ⟨g, hg, rfl⟩⟩
+        exact ⟨e gg, by simp [f, gg]⟩
+    refine ⟨Fintype.card G, f, ?_⟩
+    rw [hfrange]
+    exact hrad
+  · intro hfinite C hC hCrad hchain
+    classical
+    have hsup_rad : (sSup C).IsRadical := by
+      intro x hx
+      obtain ⟨n, hn⟩ := hx
+      obtain ⟨J, hJC, hJn⟩ :=
+        (Submodule.mem_sSup_of_directed hC hchain.directedOn).mp hn
+      exact (le_sSup hJC) ((hCrad J hJC) ⟨n, hJn⟩)
+    obtain ⟨n, f, hf⟩ := hfinite (sSup C) hsup_rad
+    have hpow : ∀ i : Fin n, ∃ k : ℕ, f i ^ k ∈ sSup C := by
+      intro i
+      apply Ideal.mem_radical_iff.mp
+      rw [hf]
+      exact Ideal.le_radical (Ideal.subset_span ⟨i, rfl⟩)
+    choose k hk using hpow
+    let G : Finset R := Finset.univ.image (fun i => f i ^ k i)
+    obtain ⟨M, hMC, hGM⟩ :=
+      hchain.directedOn.exists_mem_subset_of_finset_subset_biUnion hC (s := G) (by
+        intro x hx
+        simp only [Set.mem_iUnion, SetLike.mem_coe, exists_prop]
+        change x ∈ G at hx
+        rcases Finset.mem_image.mp hx with ⟨i, hi, rfl⟩
+        exact (Submodule.mem_sSup_of_directed hC hchain.directedOn).mp (hk i))
+    have hspan : Ideal.span (Set.range f) ≤ M := by
+      refine Ideal.span_le.2 ?_
+      rintro _ ⟨i, rfl⟩
+      exact (hCrad M hMC) (Ideal.mem_radical_iff.mpr ⟨k i,
+        hGM (by
+          change f i ^ k i ∈ G
+          exact Finset.mem_image.mpr ⟨i, Finset.mem_univ i, rfl⟩)⟩)
+    have hsup_le : sSup C ≤ M := by
+      rw [← (hsup_rad.radical : (sSup C).radical = sSup C), hf]
+      exact (Ideal.radical_mono hspan).trans_eq (hCrad M hMC).radical
+    exact ⟨M, hMC, fun J hJ => (le_sSup hJ).trans hsup_le⟩
 
 theorem primeSpectrum_noetherian_iff_prime_radical_finite {R : Type u} [CommRing R] :
     NoetherianSpace (PrimeSpectrum R) ↔
       ∀ P : Ideal R, P.IsPrime →
         ∃ n : ℕ, ∃ f : Fin n → R,
           P = (Ideal.span (Set.range f)).radical := by
-  sorry
+  constructor
+  · intro hN P hP
+    obtain ⟨n, f, hf⟩ :=
+      (radicalIdealACC_iff_radicalOfFiniteGenerated (R := R)).mp
+        ((primeSpectrum_noetherian_iff_radicalIdealACC (R := R)).mp hN) P hP.isRadical
+    exact ⟨n, f, by simpa [hP.radical] using hf⟩
+  · intro hprime
+    have hall : ∀ I : Ideal R,
+        I ∈ radicalOfFiniteGeneratedIdeals (R := R) :=
+      (radicalOfFiniteGeneratedIdeals_isOka (R := R)).forall_of_forall_prime
+        (fun I hI => exists_maximal_not_radicalOfFiniteGeneratedIdeals ⟨I, hI⟩)
+        (fun P hP => by
+          obtain ⟨n, f, hf⟩ := hprime P hP
+          exact ⟨n, f, by simpa [hP.radical] using hf⟩)
+    apply (primeSpectrum_noetherian_iff_radicalIdealACC (R := R)).mpr
+    intro C hC hCrad hchain
+    have hsup_rad : (sSup C).IsRadical := by
+      intro x hx
+      obtain ⟨n, hn⟩ := hx
+      obtain ⟨J, hJC, hJn⟩ :=
+        (Submodule.mem_sSup_of_directed hC hchain.directedOn).mp hn
+      exact (le_sSup hJC) ((hCrad J hJC) ⟨n, hJn⟩)
+    obtain ⟨n, f, hf⟩ := hall (sSup C)
+    classical
+    have hpow : ∀ i : Fin n, ∃ k : ℕ, f i ^ k ∈ sSup C := by
+      intro i
+      apply Ideal.mem_radical_iff.mp
+      rw [hf]
+      exact Ideal.le_radical (Ideal.subset_span ⟨i, rfl⟩)
+    choose k hk using hpow
+    let G : Finset R := Finset.univ.image (fun i => f i ^ k i)
+    obtain ⟨M, hMC, hGM⟩ :=
+      hchain.directedOn.exists_mem_subset_of_finset_subset_biUnion hC (s := G) (by
+        intro x hx
+        simp only [Set.mem_iUnion, SetLike.mem_coe, exists_prop]
+        change x ∈ G at hx
+        rcases Finset.mem_image.mp hx with ⟨i, hi, rfl⟩
+        exact (Submodule.mem_sSup_of_directed hC hchain.directedOn).mp (hk i))
+    have hspan : Ideal.span (Set.range f) ≤ M := by
+      refine Ideal.span_le.2 ?_
+      rintro _ ⟨i, rfl⟩
+      exact (hCrad M hMC) (Ideal.mem_radical_iff.mpr ⟨k i,
+        hGM (by
+          change f i ^ k i ∈ G
+          exact Finset.mem_image.mpr ⟨i, Finset.mem_univ i, rfl⟩)⟩)
+    have hsup_le : sSup C ≤ M := by
+      rw [← (hsup_rad.radical : (sSup C).radical = sSup C), hf]
+      exact (Ideal.radical_mono hspan).trans_eq (hCrad M hMC).radical
+    exact ⟨M, hMC, fun J hJ => (le_sSup hJ).trans hsup_le⟩
 
 end
 

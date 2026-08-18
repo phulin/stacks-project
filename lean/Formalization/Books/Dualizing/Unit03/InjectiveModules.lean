@@ -74,7 +74,6 @@ theorem injective_of_flat
         { toFun := fun x => s • gR x
           map_add' := by
             intro x y
-            change s • gR (x + y) = s • gR x + s • gR y
             rw [map_add, smul_add]
           map_smul' := by
             intro r x
@@ -271,9 +270,9 @@ theorem injective_iff_essential_extensions_trivial
     let e : E ≃ₗ[R] S :=
       LinearEquiv.ofBijective j.rangeRestrict
         ⟨(LinearMap.injective_rangeRestrict_iff j).2 hj, j.surjective_rangeRestrict⟩
-    letI : Mono (ModuleCat.ofHom j) :=
+    have : Mono (ModuleCat.ofHom j) :=
       ConcreteCategory.mono_of_injective _ hj
-    letI : Mono (ModuleCat.ofHom S.subtype) :=
+    have : Mono (ModuleCat.ofHom S.subtype) :=
       ConcreteCategory.mono_of_injective _ Subtype.val_injective
     have heq :
         e.toModuleIso.hom ≫ ModuleCat.ofHom S.subtype =
@@ -289,7 +288,7 @@ theorem injective_iff_essential_extensions_trivial
       apply (essentialSubmodule_iff_essentialExtension S).2
       unfold EssentialExtension at hEssExt ⊢
       rcases hEssExt with ⟨hmono, hess⟩
-      letI := hmono
+      have := hmono
       refine ⟨inferInstance, ?_⟩
       intro P hP
       rw [← hmk]
@@ -324,11 +323,11 @@ theorem injective_iff_essential_extensions_trivial
     have hxeq : x' = j (α x') := sub_eq_zero.mp hd0
     have hxeq' : x = (j (α x') : I) := congrArg Subtype.val hxeq
     rw [hxeq']
-    simpa [j] using (α x').property
+    exact (α x').property
   · intro htriv
     refine ⟨?_⟩
     intro X Y _ _ _ _ i hi g
-    letI : Fact (Function.Injective i) := ⟨hi⟩
+    have : Fact (Function.Injective i) := ⟨hi⟩
     let a := Module.Baer.extensionOfMax i g
     let ga : a.domain →ₗ[R] E :=
       { toFun := fun x => a.toLinearPMap x
@@ -368,11 +367,11 @@ theorem injective_iff_essential_extensions_trivial
         LinearEquiv.ofBijective jH.rangeRestrict
           ⟨(LinearMap.injective_rangeRestrict_iff jH).2 hjH,
             jH.surjective_rangeRestrict⟩
-      letI : Mono (ModuleCat.ofHom (E.inclusion hHE)) :=
+      have : Mono (ModuleCat.ofHom (E.inclusion hHE)) :=
         ConcreteCategory.mono_of_injective _ (Submodule.inclusion_injective hHE)
-      letI : Mono (ModuleCat.ofHom jH) :=
+      have : Mono (ModuleCat.ofHom jH) :=
         ConcreteCategory.mono_of_injective _ hjH
-      letI : Mono (ModuleCat.ofHom S.subtype) :=
+      have : Mono (ModuleCat.ofHom S.subtype) :=
         ConcreteCategory.mono_of_injective _ Subtype.val_injective
       have heq :
           e.toModuleIso.hom ≫ ModuleCat.ofHom S.subtype =
@@ -391,7 +390,7 @@ theorem injective_iff_essential_extensions_trivial
         have hcatS := (essentialSubmodule_iff_essentialExtension S).1 hS
         unfold EssentialExtension at hcatS ⊢
         rcases hcatS with ⟨hmono, hess⟩
-        letI := hmono
+        have := hmono
         refine ⟨inferInstance, ?_⟩
         intro P hP
         rw [hmk]
@@ -399,8 +398,7 @@ theorem injective_iff_essential_extensions_trivial
       have hKexists : ∃ K : Submodule R H, K ≠ ⊥ ∧ S ⊓ K = ⊥ := by
         by_contra hK
         apply hnotS
-        intro K hKne
-        intro hzero
+        intro K hKne hzero
         apply hK
         exact ⟨K, hKne, hzero⟩
       obtain ⟨K, hKne, hSK⟩ := hKexists

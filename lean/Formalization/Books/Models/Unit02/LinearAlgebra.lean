@@ -2178,7 +2178,48 @@ theorem graph_discriminant_product_annihilates {n : ℕ}
     (A : Matrix (Fin n) (Fin n) ℤ) :
     ∀ x : latticeDiscriminantQuotient (graphEdgePairing A),
       graphEdgeWeightProduct A • x = 0 := by
-  sorry
+  intro x
+  obtain ⟨φ, rfl⟩ := Submodule.Quotient.mk_surjective (LinearMap.range (graphEdgePairing A)) x
+  apply (Submodule.Quotient.mk_eq_zero (LinearMap.range (graphEdgePairing A))).mpr
+  let y : edgeLattice A := fun e =>
+    φ (Pi.single e (1 : ℤ)) * (Finset.univ.erase e).prod edgeWeight
+  refine ⟨y, ?_⟩
+  apply DFunLike.ext
+  intro z
+  simp [graphEdgePairing, weightedCoordinateForm, dotProductBilin,
+    Matrix.diagonal, Matrix.mulVecLin, Matrix.mulVec_apply_eq_sum, dotProduct, y]
+  have hprod (e : positiveEdge A) :
+      (Finset.univ.erase e).prod edgeWeight * edgeWeight e =
+        graphEdgeWeightProduct A :=
+    Finset.prod_erase_mul _ _ (Finset.mem_univ e)
+  have hsingle (e : positiveEdge A) :
+      (Pi.single e (z e) : edgeLattice A) =
+        z e • (Pi.single e (1 : ℤ)) := by
+    ext f
+    by_cases h : e = f <;> simp [h]
+  have hphi : φ z = ∑ e : positiveEdge A, z e * φ (Pi.single e (1 : ℤ)) := by
+    calc
+      φ z = φ (∑ e : positiveEdge A, Pi.single e (z e)) := by
+        rw [Finset.univ_sum_single]
+      _ = ∑ e : positiveEdge A, φ (Pi.single e (z e)) := by
+        rw [map_sum]
+      _ = ∑ e : positiveEdge A, z e * φ (Pi.single e (1 : ℤ)) := by
+        apply Finset.sum_congr rfl
+        intro e he
+        rw [hsingle e, map_smul]
+        rfl
+  have hleft :
+      (∑ e : positiveEdge A,
+        φ (Pi.single e (1 : ℤ)) * (Finset.univ.erase e).prod edgeWeight *
+          (edgeWeight e * z e)) =
+        ∑ e : positiveEdge A,
+          graphEdgeWeightProduct A * (z e * φ (Pi.single e (1 : ℤ))) := by
+    apply Finset.sum_congr rfl
+    intro e he
+    rw [← hprod e]
+    ring
+  rw [hphi, hleft]
+  exact (Finset.mul_sum _ _ _).symm
 
 theorem graph_cokernel_product_annihilated {n : ℕ}
     (A : Matrix (Fin n) (Fin n) ℤ)
@@ -2197,7 +2238,214 @@ theorem graph_laplacian_eq_neg_matrix {n : ℕ} (A : Matrix (Fin n) (Fin n) ℤ)
     (hoffdiag : ∀ ⦃i j⦄, i ≠ j → 0 ≤ A i j)
     (hrowsum : Matrix.mulVec A (1 : Fin n → ℤ) = 0) :
     (graphCoboundary A).comp (graphBoundary A) = -(Matrix.toLin' A) := by
-  sorry
+  classical
+  apply LinearMap.ext
+  intro x
+  funext i
+  simp [graphCoboundary_apply, graphBoundary_apply, Matrix.toLin'_apply,
+    Matrix.mulVec_apply_eq_sum]
+  have hsource (i : Fin n) :
+      (∑ e : positiveEdge A,
+        if edgeSource e = i then
+          edgeWeight e * (x (edgeSource e) - x (edgeTarget e)) else 0) =
+        ∑ j : Fin n, if i < j ∧ 0 < A i j then A i j * (x i - x j) else 0 := by
+    let s : Finset (positiveEdge A) :=
+      (Finset.univ : Finset (positiveEdge A)).filter (fun e => edgeSource e = i)
+    let t : Finset (Fin n) :=
+      (Finset.univ : Finset (Fin n)).filter (fun j => i < j ∧ 0 < A i j)
+    have hs :
+        (∑ e : positiveEdge A,
+          if edgeSource e = i then
+            edgeWeight e * (x (edgeSource e) - x (edgeTarget e)) else 0) =
+          ∑ e ∈ s, edgeWeight e * (x (edgeSource e) - x (edgeTarget e)) := by
+      dsimp [s]
+      change
+        (∑ e ∈ (Finset.univ : Finset (positiveEdge A)),
+          if edgeSource e = i then
+            edgeWeight e * (x (edgeSource e) - x (edgeTarget e)) else 0) =
+          ∑ e ∈
+            (Finset.univ : Finset (positiveEdge A)).filter
+              (fun e => edgeSource e = i),
+            edgeWeight e * (x (edgeSource e) - x (edgeTarget e))
+      rw [← Finset.sum_filter]
+    rw [hs]
+    rw [← Finset.sum_filter]
+    refine Finset.sum_bij
+      (s := (Finset.univ : Finset (positiveEdge A)).filter
+        (fun e => edgeSource e = i))
+      (t := (Finset.univ : Finset (Fin n)).filter
+        (fun j => i < j ∧ 0 < A i j))
+      (fun e _ => edgeTarget e) ?_ ?_ ?_ ?_
+    · intro e he
+      simp only [Finset.mem_filter, Finset.mem_univ, true_and] at he
+      simp only [Finset.mem_filter, Finset.mem_univ, true_and]
+      have hsrc : e.1.1 = i := by simpa [edgeSource] using he
+      exact ⟨by
+          change i < e.1.2
+          simpa [hsrc] using e.2.1,
+        by
+          change 0 < A i e.1.2
+          simpa [hsrc] using e.2.2⟩
+    · intro e₁ h₁ e₂ h₂ hEq
+      simp only [Finset.mem_filter, Finset.mem_univ, true_and] at h₁ h₂
+      apply Subtype.ext
+      apply Prod.ext
+      · simpa [edgeSource] using h₁.trans h₂.symm
+      · exact hEq
+    · intro j hj
+      simp only [Finset.mem_filter, Finset.mem_univ, true_and] at hj
+      let e : positiveEdge A := ⟨(i, j), hj⟩
+      refine ⟨e, ?_, ?_⟩
+      · simp only [Finset.mem_filter, Finset.mem_univ, true_and]
+        rfl
+      · rfl
+    · intro e he
+      simp only [Finset.mem_filter, Finset.mem_univ, true_and] at he
+      have he' : e.1.1 = i := by simpa [edgeSource] using he
+      simp [edgeSource, edgeTarget, edgeWeight, he']
+  have htarget (i : Fin n) :
+      (∑ e : positiveEdge A,
+        if edgeTarget e = i then
+          -(edgeWeight e * (x (edgeSource e) - x (edgeTarget e))) else 0) =
+        ∑ j : Fin n, if j < i ∧ 0 < A j i then
+          -(A j i * (x j - x i)) else 0 := by
+    let s : Finset (positiveEdge A) :=
+      (Finset.univ : Finset (positiveEdge A)).filter (fun e => edgeTarget e = i)
+    let t : Finset (Fin n) :=
+      (Finset.univ : Finset (Fin n)).filter (fun j => j < i ∧ 0 < A j i)
+    have hs :
+        (∑ e : positiveEdge A,
+          if edgeTarget e = i then
+            -(edgeWeight e * (x (edgeSource e) - x (edgeTarget e))) else 0) =
+          ∑ e ∈ s, -(edgeWeight e * (x (edgeSource e) - x (edgeTarget e))) := by
+      dsimp [s]
+      change
+        (∑ e ∈ (Finset.univ : Finset (positiveEdge A)),
+          if edgeTarget e = i then
+            -(edgeWeight e * (x (edgeSource e) - x (edgeTarget e))) else 0) =
+          ∑ e ∈
+            (Finset.univ : Finset (positiveEdge A)).filter
+              (fun e => edgeTarget e = i),
+            -(edgeWeight e * (x (edgeSource e) - x (edgeTarget e)))
+      rw [← Finset.sum_filter]
+    rw [hs]
+    rw [← Finset.sum_filter]
+    refine Finset.sum_bij
+      (s := (Finset.univ : Finset (positiveEdge A)).filter
+        (fun e => edgeTarget e = i))
+      (t := (Finset.univ : Finset (Fin n)).filter
+        (fun j => j < i ∧ 0 < A j i))
+      (fun e _ => edgeSource e) ?_ ?_ ?_ ?_
+    · intro e he
+      simp only [Finset.mem_filter, Finset.mem_univ, true_and] at he
+      simp only [Finset.mem_filter, Finset.mem_univ, true_and]
+      have htgt : e.1.2 = i := by simpa [edgeTarget] using he
+      exact ⟨by
+          change e.1.1 < i
+          simpa [htgt] using e.2.1,
+        by
+          change 0 < A e.1.1 i
+          simpa [htgt] using e.2.2⟩
+    · intro e₁ h₁ e₂ h₂ hEq
+      simp only [Finset.mem_filter, Finset.mem_univ, true_and] at h₁ h₂
+      apply Subtype.ext
+      apply Prod.ext
+      · exact hEq
+      · simpa [edgeTarget] using h₁.trans h₂.symm
+    · intro j hj
+      simp only [Finset.mem_filter, Finset.mem_univ, true_and] at hj
+      let e : positiveEdge A := ⟨(j, i), hj⟩
+      refine ⟨e, ?_, ?_⟩
+      · simp only [Finset.mem_filter, Finset.mem_univ, true_and]
+        rfl
+      · rfl
+    · intro e he
+      simp only [Finset.mem_filter, Finset.mem_univ, true_and] at he
+      have he' : e.1.2 = i := by simpa [edgeTarget] using he
+      simp [edgeSource, edgeTarget, edgeWeight, he']
+  have hsplit :
+      (∑ e : positiveEdge A,
+        if edgeSource e = i then
+          edgeWeight e * (x (edgeSource e) - x (edgeTarget e))
+        else if edgeTarget e = i then
+          -(edgeWeight e * (x (edgeSource e) - x (edgeTarget e))) else 0) =
+        (∑ e : positiveEdge A,
+          if edgeSource e = i then
+            edgeWeight e * (x (edgeSource e) - x (edgeTarget e)) else 0) +
+        (∑ e : positiveEdge A,
+          if edgeTarget e = i then
+            -(edgeWeight e * (x (edgeSource e) - x (edgeTarget e))) else 0) := by
+    rw [← Finset.sum_add_distrib]
+    apply Finset.sum_congr rfl
+    intro e he
+    by_cases hs : edgeSource e = i
+    · have ht : ¬ edgeTarget e = i := by
+        intro ht
+        exact (ne_of_lt e.2.1) (hs.trans ht.symm)
+      simp [hs, ht]
+    · by_cases ht : edgeTarget e = i <;> simp [hs, ht]
+  have hsource' (i : Fin n) :
+      (∑ j : Fin n, if i < j ∧ 0 < A i j then A i j * (x i - x j) else 0) =
+        ∑ j : Fin n, if i < j then A i j * (x i - x j) else 0 := by
+    apply Finset.sum_congr rfl
+    intro j hj
+    by_cases hij : i < j
+    · have hnonneg : 0 ≤ A i j := hoffdiag (ne_of_lt hij)
+      by_cases hpos : 0 < A i j
+      · simp [hij, hpos]
+      · have hz : A i j = 0 := le_antisymm (not_lt.mp hpos) hnonneg
+        simp [hij, hpos, hz]
+    · simp [hij]
+  have htarget' (i : Fin n) :
+      (∑ j : Fin n, if j < i ∧ 0 < A j i then
+          -(A j i * (x j - x i)) else 0) =
+        ∑ j : Fin n, if j < i then A i j * (x i - x j) else 0 := by
+    apply Finset.sum_congr rfl
+    intro j hj
+    by_cases hji : j < i
+    · have hnonneg : 0 ≤ A j i := hoffdiag (ne_of_lt hji)
+      by_cases hpos : 0 < A j i
+      · rw [hsymm j i]
+        have hpos' : 0 < A i j := by simpa [hsymm j i] using hpos
+        simp only [hji, hpos', and_self, if_true]
+        ring
+      · have hz : A j i = 0 := le_antisymm (not_lt.mp hpos) hnonneg
+        have hz' : A i j = 0 := by simpa [hsymm j i] using hz
+        simp [hji, hpos, hz, hz']
+    · simp [hji]
+  have hjoin :
+      (∑ j : Fin n, if i < j then A i j * (x i - x j) else 0) +
+          (∑ j : Fin n, if j < i then A i j * (x i - x j) else 0) =
+        ∑ j : Fin n, if j ≠ i then A i j * (x i - x j) else 0 := by
+    rw [← Finset.sum_add_distrib]
+    apply Finset.sum_congr rfl
+    intro j hj
+    by_cases hji : j = i
+    · simp [hji]
+    · rcases lt_or_gt_of_ne hji with hlt | hgt
+      · have hnot : ¬i < j := not_lt_of_ge (le_of_lt hlt)
+        simp [hji, hlt, hnot]
+      · have hnot : ¬j < i := not_lt_of_ge (le_of_lt hgt)
+        simp [hji, hgt, hnot]
+  rw [hsplit, hsource, htarget, hsource', htarget', hjoin]
+  have hrow : (∑ j : Fin n, A i j) = 0 := by
+    simpa [Matrix.mulVec_apply_eq_sum] using congrFun hrowsum i
+  have hdecomp :
+      (∑ j : Fin n, if j ≠ i then A i j * (x i - x j) else 0) =
+        (∑ j : Fin n, A i j * x i) - ∑ j : Fin n, A i j * x j := by
+    rw [← Finset.sum_sub_distrib]
+    apply Finset.sum_congr rfl
+    intro j hj
+    by_cases hji : j = i
+    · simp [hji]
+    · simp [hji, mul_sub]
+  have hfirst : (∑ j : Fin n, A i j * x i) = 0 := by
+    calc
+      (∑ j : Fin n, A i j * x i) = (∑ j : Fin n, A i j) * x i := by
+        rw [Finset.sum_mul]
+      _ = 0 := by rw [hrow, zero_mul]
+  rw [hdecomp, hfirst]
+  simp
 
 theorem graph_cokernel_equiv {n : ℕ} (A : Matrix (Fin n) (Fin n) ℤ)
     (hsymm : ∀ i j, A i j = A j i)
@@ -2235,7 +2483,121 @@ theorem graph_image_quotient_torsion_free {n : ℕ}
     (A : Matrix (Fin n) (Fin n) ℤ) :
     Module.IsTorsionFree ℤ
       (edgeLattice A ⧸ LinearMap.range (graphBoundary A)) := by
-  sorry
+  classical
+  let edgeRel : Fin n → Fin n → Prop := fun i j =>
+    ∃ e : positiveEdge A,
+      (edgeSource e = i ∧ edgeTarget e = j) ∨
+        (edgeSource e = j ∧ edgeTarget e = i)
+  let s : Setoid (Fin n) :=
+    { r := Relation.EqvGen edgeRel
+      iseqv := {
+        refl := fun x => Relation.EqvGen.refl x
+        symm := fun {x y} h => Relation.EqvGen.symm x y h
+        trans := fun {x y z} hxy hyz => Relation.EqvGen.trans x y z hxy hyz } }
+  let rep : Fin n → Fin n :=
+    fun i => Quotient.out (Quotient.mk' i)
+  have hrep (i : Fin n) : Relation.EqvGen edgeRel i (rep i) := by
+    have hq : (Quotient.mk' (rep i) : Quotient s) = Quotient.mk' i :=
+      Quotient.out_eq _
+    have h := @Quotient.exact (Fin n) s (rep i) i hq
+    change Relation.EqvGen edgeRel (rep i) i at h
+    exact Relation.EqvGen.symm (rep i) i h
+  have hrep_eq {i j : Fin n} (h : Relation.EqvGen edgeRel i j) :
+      rep i = rep j := by
+    apply congrArg Quotient.out
+    apply Quotient.sound
+    exact h
+  apply Module.IsTorsionFree.of_smul_eq_zero
+  intro k z hz
+  rcases z with ⟨v⟩
+  by_cases hk : k = 0
+  · exact Or.inl hk
+  right
+  have hv : k • v ∈ LinearMap.range (graphBoundary A) := by
+    apply (Submodule.Quotient.mk_eq_zero
+      (LinearMap.range (graphBoundary A))).mp
+    change (LinearMap.range (graphBoundary A)).mkQ (k • v) = 0
+    change k • (LinearMap.range (graphBoundary A)).mkQ v = 0 at hz
+    simpa only [map_smul] using hz
+  rcases hv with ⟨y, hy⟩
+  have hedge_dvd {i j : Fin n} (h : edgeRel i j) :
+      (k : ℤ) ∣ y i - y j := by
+    rcases h with ⟨e, hforward | hreverse⟩
+    · rcases hforward with ⟨hs, ht⟩
+      refine ⟨v e, ?_⟩
+      have he := congrFun hy e
+      rw [graphBoundary_apply] at he
+      simpa [smul_eq_mul, hs, ht] using he
+    · rcases hreverse with ⟨hs, ht⟩
+      refine ⟨-v e, ?_⟩
+      have he := congrFun hy e
+      rw [graphBoundary_apply] at he
+      have he' := congrArg Neg.neg he
+      simpa [smul_eq_mul, hs, ht, sub_eq_add_neg] using he'
+  have heqv_dvd : ∀ i j, Relation.EqvGen edgeRel i j →
+      (k : ℤ) ∣ y i - y j := by
+    intro i j h
+    induction h with
+    | refl i =>
+        exact ⟨0, by simp⟩
+    | rel i j h =>
+        exact hedge_dvd h
+    | symm i j h ih =>
+        rcases ih with ⟨q, hq⟩
+        refine ⟨-q, ?_⟩
+        calc
+          y j - y i = -(y i - y j) := by ring
+          _ = -(k * q) := by rw [hq]
+          _ = k * (-q) := by ring
+    | trans i j l h₁ h₂ ih₁ ih₂ =>
+        rcases ih₁ with ⟨q₁, hq₁⟩
+        rcases ih₂ with ⟨q₂, hq₂⟩
+        refine ⟨q₁ + q₂, ?_⟩
+        calc
+          y i - y l = (y i - y j) + (y j - y l) := by ring
+          _ = k * q₁ + k * q₂ := by rw [hq₁, hq₂]
+          _ = k * (q₁ + q₂) := by ring
+  have hdiv (i : Fin n) : ∃ q : ℤ, y i - y (rep i) = k * q :=
+    heqv_dvd i (rep i) (hrep i)
+  let w : vertexLattice n := fun i => Classical.choose (hdiv i)
+  have hw (i : Fin n) : y i - y (rep i) = k * w i :=
+    Classical.choose_spec (hdiv i)
+  have hrep_edge (e : positiveEdge A) :
+      rep (edgeSource e) = rep (edgeTarget e) := by
+    apply hrep_eq
+    apply Relation.EqvGen.rel
+    exact ⟨e, Or.inl ⟨rfl, rfl⟩⟩
+  have hboundary : graphBoundary A w = v := by
+    funext e
+    have he := congrFun hy e
+    rw [graphBoundary_apply] at he
+    have hs := hw (edgeSource e)
+    have ht := hw (edgeTarget e)
+    have hr := hrep_edge e
+    have hcoord :
+        k * (w (edgeSource e) - w (edgeTarget e)) = k * v e := by
+      calc
+        k * (w (edgeSource e) - w (edgeTarget e)) =
+            (y (edgeSource e) - y (rep (edgeSource e))) -
+              (y (edgeTarget e) - y (rep (edgeTarget e))) := by
+                rw [hs, ht]
+                ring
+        _ = y (edgeSource e) - y (edgeTarget e) := by rw [hr]; ring
+        _ = k * v e := by simpa [smul_eq_mul] using he
+    have hzero :
+        k * ((w (edgeSource e) - w (edgeTarget e)) - v e) = 0 := by
+      calc
+        k * ((w (edgeSource e) - w (edgeTarget e)) - v e) =
+            k * (w (edgeSource e) - w (edgeTarget e)) - k * v e := by ring
+        _ = 0 := sub_eq_zero.mpr hcoord
+    have hdiff :
+        (w (edgeSource e) - w (edgeTarget e)) - v e = 0 :=
+      (mul_eq_zero.mp hzero).resolve_left hk
+    rw [graphBoundary_apply]
+    exact sub_eq_zero.mp hdiff
+  apply (Submodule.Quotient.mk_eq_zero
+    (LinearMap.range (graphBoundary A))).mpr
+  exact ⟨w, hboundary⟩
 
 theorem graph_coboundary_kernel_finrank {n : ℕ}
     (A : Matrix (Fin n) (Fin n) ℤ)

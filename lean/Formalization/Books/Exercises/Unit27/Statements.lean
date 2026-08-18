@@ -1126,7 +1126,57 @@ theorem twoVariableXIdeal_isPrime (k : Type u) [Field k] :
 
 theorem twoVariableYIdeal_isPrime (k : Type u) [Field k] :
     (twoVariableYIdeal k).IsPrime := by
-  sorry
+  classical
+  let e₀ := MvPolynomial.finSuccEquiv k 1
+  let e₁ := MvPolynomial.renameEquiv k (Equiv.swap (0 : Fin 2) 1)
+  let e := e₁.trans e₀
+  have hprime :
+      (Ideal.span ({Polynomial.X} :
+        Set (Polynomial (MvPolynomial (Fin 1) k)))).IsPrime :=
+    (Ideal.span_singleton_prime Polynomial.X_ne_zero).mpr Polynomial.prime_X
+  have heq :
+      (Ideal.span ({Polynomial.X} :
+        Set (Polynomial (MvPolynomial (Fin 1) k)))).comap e.toRingHom =
+        Ideal.span ({MvPolynomial.X (1 : Fin 2)} :
+          Set (MvPolynomial (Fin 2) k)) := by
+    apply le_antisymm
+    · intro p hp
+      rcases Ideal.mem_span_singleton'.mp hp with ⟨q, hq⟩
+      apply Ideal.mem_span_singleton'.mpr
+      refine ⟨e.symm q, ?_⟩
+      apply e.injective
+      calc
+        e ((e.symm q) * MvPolynomial.X (1 : Fin 2)) =
+            e (e.symm q) * e (MvPolynomial.X (1 : Fin 2)) := by
+              rw [map_mul]
+        _ = q * Polynomial.X := by
+          rw [e.apply_symm_apply]
+          dsimp [e, e₀, e₁]
+          simp [MvPolynomial.rename_X]
+        _ = e p := hq
+    · intro p hp
+      rcases Ideal.mem_span_singleton'.mp hp with ⟨q, hq⟩
+      apply Ideal.mem_span_singleton'.mpr
+      refine ⟨e q, ?_⟩
+      change e q * Polynomial.X = e p
+      calc
+        e q * Polynomial.X =
+            e q * e (MvPolynomial.X (1 : Fin 2)) := by
+              dsimp [e, e₀, e₁]
+              simp [MvPolynomial.rename_X]
+        _ = e (q * MvPolynomial.X (1 : Fin 2)) := by rw [map_mul]
+        _ = e p := congrArg e hq
+  have hcp :
+      (Ideal.span ({Polynomial.X} :
+        Set (Polynomial (MvPolynomial (Fin 1) k)))).comap e.toRingHom |>.IsPrime := by
+    constructor
+    · exact Ideal.comap_ne_top _ hprime.1
+    · intro x y hxy
+      apply hprime.2
+      simpa only [Ideal.mem_comap, map_mul] using hxy
+  change (Ideal.span ({MvPolynomial.X (1 : Fin 2)} :
+    Set (MvPolynomial (Fin 2) k))).IsPrime
+  exact heq ▸ hcp
 
 theorem twoVariableParabolaIdeal_isPrime (k : Type u) [Field k] :
     (twoVariableParabolaIdeal k).IsPrime := by

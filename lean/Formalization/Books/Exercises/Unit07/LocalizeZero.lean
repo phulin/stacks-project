@@ -62,10 +62,11 @@ theorem element_eq_zero_iff_all_prime_localizations_eq_zero
   · rintro rfl p
     simp
   · intro h
-    exact Module.eq_zero_of_localization_maximal
-      (fun P _ ↦ LocalizedModule P.primeCompl M)
-      (fun P _ ↦ LocalizedModule.mkLinearMap P.primeCompl M) m
-      (fun P hP ↦ h ⟨P, hP.isPrime⟩)
+    refine Module.eq_zero_of_localization_maximal
+      (fun (P : Ideal A) _ ↦ LocalizedModule P.primeCompl M)
+      (fun (P : Ideal A) _ ↦ LocalizedModule.mkLinearMap P.primeCompl M) m ?_
+    intro P hP
+    exact h ⟨P, hP.isPrime⟩
 
 /-- An element is zero exactly when all of its maximal-localized images are
 zero. -/

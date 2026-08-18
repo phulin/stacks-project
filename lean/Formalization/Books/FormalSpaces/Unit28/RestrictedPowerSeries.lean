@@ -521,7 +521,6 @@ theorem iAdicPolynomialCompletion_is_restrictedPowerSeries_as_ring
     Nonempty
       (iAdicPolynomialCompletion A I r ≃+*
         iAdicRestrictedPowerSeries A I r) := by
-  /-
   classical
   let P := MvPolynomial (Fin r) A
   let J := polynomialExtensionIdeal A I r
@@ -531,26 +530,28 @@ theorem iAdicPolynomialCompletion_is_restrictedPowerSeries_as_ring
     simp [J, polynomialExtensionIdeal, Ideal.map_pow]
   let q : ∀ n : ℕ, (P ⧸ J ^ n) ≃+*
       MvPolynomial (Fin r) (A ⧸ I ^ n) := fun n =>
-    (MvPolynomial.quotientEquivQuotientMvPolynomial (I ^ n)).toRingEquiv.trans
-      (Ideal.quotientEquivAlgOfEq P (hpow n).symm).toRingEquiv
+    ((MvPolynomial.quotientEquivQuotientMvPolynomial (I ^ n)).toRingEquiv.trans
+      (Ideal.quotientEquivAlgOfEq P (hpow n).symm).toRingEquiv).symm
   let e : ∀ n : ℕ, (P ⧸ J ^ n) ≃+*
-      MvPolynomial (Fin r) (A ⧸ I ^ n) := fun n => (q n).symm
+      MvPolynomial (Fin r) (A ⧸ I ^ n) := fun n => q n
   have heC : ∀ (n : ℕ) (a : A),
       e n (Ideal.Quotient.mk (J ^ n) (MvPolynomial.C a)) =
         MvPolynomial.C (Ideal.Quotient.mk (I ^ n) a) := by
     intro n a
     apply (MvPolynomial.quotientEquivQuotientMvPolynomial (I ^ n)).injective
     change (MvPolynomial.quotientEquivQuotientMvPolynomial (I ^ n))
-        ((q n).symm (Ideal.Quotient.mk (J ^ n) (MvPolynomial.C a))) = _
-    simp [q, MvPolynomial.quotientEquivQuotientMvPolynomial]
+        (e n (Ideal.Quotient.mk (J ^ n) (MvPolynomial.C a))) = _
+    simp [q, e, MvPolynomial.quotientEquivQuotientMvPolynomial,
+      MvPolynomial.eval₂_C]
   have heX : ∀ (n : ℕ) (i : Fin r),
       e n (Ideal.Quotient.mk (J ^ n) (MvPolynomial.X i)) =
         MvPolynomial.X i := by
     intro n i
     apply (MvPolynomial.quotientEquivQuotientMvPolynomial (I ^ n)).injective
     change (MvPolynomial.quotientEquivQuotientMvPolynomial (I ^ n))
-        ((q n).symm (Ideal.Quotient.mk (J ^ n) (MvPolynomial.X i))) = _
-    simp [q, MvPolynomial.quotientEquivQuotientMvPolynomial]
+        (e n (Ideal.Quotient.mk (J ^ n) (MvPolynomial.X i))) = _
+    simp [q, e, MvPolynomial.quotientEquivQuotientMvPolynomial,
+      MvPolynomial.eval₂_X]
   have hcompat : ∀ {m n : ℕ} (hmn : m ≤ n),
       (MvPolynomial.map (Ideal.Quotient.factor (Ideal.pow_le_pow_right hmn))).comp
           (e n).toRingHom =
@@ -605,7 +606,50 @@ theorem iAdicPolynomialCompletion_is_restrictedPowerSeries_as_ring
     rw [hfac]
     exact congrArg (fun z => Submodule.factor hm z)
       (AdicCompletion.transitionMap_comp_eval_apply J P hmn x)
-  -/
+  letI : TopologicalSpace A := I.adicTopology
+  let B := iAdicOpenIdealBasis A I
+  let D := restrictedPowerSeriesDiagram A B r
+  let c : Cone D :=
+    { pt := CommRingCat.of (AdicCompletion J P)
+      π :=
+        { app := fun i =>
+            CommRingCat.ofHom
+              ((e i.unop.down).toRingHom.comp
+                (AdicCompletion.evalₐ J i.unop.down))
+          naturality := by
+            intro i j f
+            apply CommRingCat.hom_ext
+            apply RingHom.ext
+            intro x
+            have hmn : j.unop.down ≤ i.unop.down := by
+              exact CategoryTheory.le_of_op_hom f
+            change
+              e j.unop.down (AdicCompletion.evalₐ J j.unop.down x) =
+              MvPolynomial.map
+                  (Ideal.Quotient.factor
+                    (B.antitone
+                      (CategoryTheory.le_of_op_hom f)))
+                (e i.unop.down (AdicCompletion.evalₐ J i.unop.down x))
+            have hh := congrArg
+              (fun g : P ⧸ J ^ i.unop.down →+*
+                  MvPolynomial (Fin r) (A ⧸ I ^ j.unop.down) =>
+                g (AdicCompletion.evalₐ J i.unop.down x))
+              (hcompat (m := j.unop.down) (n := i.unop.down) hmn)
+            change
+              MvPolynomial.map
+                  (Ideal.Quotient.factor
+                    (B.antitone
+                      (CategoryTheory.le_of_op_hom f)))
+                (e i.unop.down (AdicCompletion.evalₐ J i.unop.down x)) =
+              e j.unop.down
+                (Ideal.Quotient.factorPow J hmn
+                  (AdicCompletion.evalₐ J i.unop.down x)) at hh
+            have hh' := hh
+            rw [heval hmn x] at hh'
+            exact hh'.symm } }
+  let φ : AdicCompletion J P →+*
+      iAdicRestrictedPowerSeries A I r :=
+    (limit.lift D c).hom
   sorry
 
 /-- The limit topology on the restricted power series side is always complete. -/

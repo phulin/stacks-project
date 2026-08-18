@@ -3,6 +3,7 @@ import Formalization.Books.Algebra.Unit31.NoetherianRings
 import Formalization.Books.Algebra.Unit34.HilbertNullstellensatz
 import Formalization.Books.Topology.Unit18.JacobsonSpaces
 import Mathlib.Algebra.MvPolynomial.Basic
+import Mathlib.Algebra.Group.Pi.Units
 import Mathlib.FieldTheory.Finite.Basic
 import Mathlib.LinearAlgebra.Matrix.GeneralLinearGroup.Basic
 import Mathlib.LinearAlgebra.Matrix.Rank
@@ -10,6 +11,7 @@ import Mathlib.RingTheory.DiscreteValuationRing.Basic
 import Mathlib.RingTheory.Ideal.MinimalPrime.Localization
 import Mathlib.RingTheory.Ideal.Int
 import Mathlib.RingTheory.Ideal.NatInt
+import Mathlib.RingTheory.Localization.Away.Lemmas
 import Mathlib.RingTheory.Localization.FractionRing
 import Mathlib.RingTheory.Spectrum.Maximal.Localization
 import Mathlib.RingTheory.Spectrum.Prime.Jacobson
@@ -405,7 +407,41 @@ theorem isJacobsonRing_of_domain_noetherian_nonzero_primes_maximal
     (hprime : ∀ P : Ideal R, P.IsPrime → P ≠ ⊥ → P.IsMaximal)
     (hinfinite : ({P : Ideal R | P.IsMaximal} : Set (Ideal R)).Infinite) :
     IsJacobsonRing R := by
-  sorry
+  rw [isJacobsonRing_iff_prime_eq]
+  intro P hP
+  by_cases hP0 : P = ⊥
+  · rw [hP0, Ideal.jacobson_bot, Ring.jacobson_eq_sInf_isMaximal]
+    apply le_antisymm
+    · intro x hx
+      by_contra hx0
+      have hfinite :
+          ({M : Ideal R | M.IsMaximal ∧ x ∈ M} : Set (Ideal R)).Finite := by
+        apply (Ideal.finite_minimalPrimes_of_isNoetherianRing R (Ideal.span {x})).subset
+        intro M hM
+        let _ : M.IsPrime := hM.1.isPrime
+        obtain ⟨Q, hQ, hQM⟩ :=
+          Ideal.exists_minimalPrimes_le (I := Ideal.span {x})
+            (M.span_singleton_le_iff_mem.mpr hM.2)
+        have hQprime : Q.IsPrime := hQ.isPrime
+        have hQne : Q ≠ ⊥ := by
+          intro hQ0
+          exact hx0 (by
+            have : x ∈ Q := hQ.le (Ideal.subset_span (by simp))
+            simpa [hQ0] using this)
+        have hQmax : Q.IsMaximal := hprime Q hQprime hQne
+        have hQM_eq : Q = M := hQmax.eq_of_le hM.1.ne_top hQM
+        exact hQM_eq ▸ hQ
+      have hnot : ∃ M : Ideal R, M.IsMaximal ∧ x ∉ M := by
+        by_contra h
+        push Not at h
+        exact hinfinite (hfinite.subset (by
+          intro M hM
+          exact ⟨hM, h M hM⟩))
+      obtain ⟨M, hM, hMx⟩ := hnot
+      exact hMx ((Ideal.mem_sInf.mp hx) hM)
+    · exact bot_le
+  · let _ : P.IsMaximal := hprime P hP hP0
+    exact Ideal.jacobson_eq_self_of_isMaximal
 
 /- The “unit times idempotent” property and the quotient-localization property
    used in the product-of-fields example.  The latter records surjectivity of
@@ -419,14 +455,69 @@ def LocalizationAwayIsQuotient (R : Type u) [CommRing R] : Prop :=
 theorem isJacobsonRing_of_localizationAwayIsQuotient
     {R : Type u} [CommRing R] (h : LocalizationAwayIsQuotient R) :
     IsJacobsonRing R := by
-  sorry
+  rw [isJacobsonRing_iff_prime_eq]
+  intro P hP
+  rw [Ideal.eq_jacobson_iff_notMem]
+  intro x hx
+  let S := Localization.Away x
+  let φ : R →+* S := algebraMap R S
+  have hsurj : Function.Surjective φ := by
+    simpa [φ, S] using h x
+  have hsub : ¬ Subsingleton S := by
+    intro hs
+    have hzero : (0 : R) ∈ Submonoid.powers x :=
+      (IsLocalization.subsingleton_iff (M := Submonoid.powers x) (S := S)).mp hs
+    rcases hzero with ⟨n, hn⟩
+    change x ^ n = 0 at hn
+    have hxpow : x ^ n ∈ P := by
+      rw [hn]
+      exact P.zero_mem
+    exact hx (hP.mem_of_pow_mem n hxpow)
+  let _ : Nontrivial S := not_subsingleton_iff_nontrivial.mp hsub
+  have hdisj : Disjoint (Submonoid.powers x : Set R) (P : Set R) := by
+    refine Set.disjoint_left.2 ?_
+    intro z hzpow hzP
+    rcases hzpow with ⟨n, rfl⟩
+    exact hx (hP.mem_of_pow_mem n hzP)
+  let Q : Ideal S := P.map φ
+  have hQprime : Q.IsPrime := by
+    exact IsLocalization.isPrime_of_isPrime_disjoint
+      (M := Submonoid.powers x) (S := S) P hP hdisj
+  obtain ⟨M, hM, hQM⟩ := Ideal.exists_le_maximal Q hQprime.ne_top
+  have hP_le : P ≤ Ideal.comap φ M := by
+    intro y hy
+    exact hQM (Ideal.mem_map_of_mem φ hy)
+  have hMmax : (Ideal.comap φ M).IsMaximal := by
+    let _ : M.IsMaximal := hM
+    exact Ideal.comap_isMaximal_of_surjective φ hsurj
+  refine ⟨Ideal.comap φ M, ⟨⟨hP_le, hMmax⟩, ?_⟩⟩
+  intro hxM
+  have hxM' : φ x ∈ M := hxM
+  have hunit : IsUnit (φ x) := by
+    simpa [φ] using (IsLocalization.Away.algebraMap_isUnit (R := R) (S := S) x)
+  exact hM.ne_top (Ideal.eq_top_of_isUnit_mem M hxM' hunit)
 
 abbrev ProductOfFields (A : Type u) (k : A → Type v) := ∀ a, k a
 
 theorem productOfFields_element_unit_mul_idempotent
     (A : Type u) (k : A → Type v) [∀ a, Field (k a)] :
     ∀ f : ProductOfFields A k, IsUnitMulIdempotent f := by
-  sorry
+  classical
+  intro f
+  let e : ProductOfFields A k := fun a => if f a = 0 then 0 else 1
+  let u : ProductOfFields A k := fun a => if f a = 0 then 1 else f a
+  change ∃ u e : ProductOfFields A k, IsUnit u ∧ IsIdempotentElem e ∧ f = u * e
+  refine ⟨u, e, ?_, ?_, ?_⟩
+  · rw [Pi.isUnit_iff]
+    intro a
+    by_cases hfa : f a = 0
+    · simp [u, hfa]
+    · exact isUnit_iff_ne_zero.mpr (by simp [u, hfa])
+  · rw [isIdempotentElem_iff]
+    funext a
+    by_cases hfa : f a = 0 <;> simp [e, hfa]
+  · funext a
+    by_cases hfa : f a = 0 <;> simp [u, e, hfa]
 
 theorem productOfFields_localization_identities
     (A : Type u) (k : A → Type v) [∀ a, Field (k a)]
@@ -440,7 +531,44 @@ theorem productOfFields_localization_identities
             (ProductOfFields A k ⧸ Ideal.span ({1 - e} : Set (ProductOfFields A k)))) ∧
         Function.Surjective
           (algebraMap (ProductOfFields A k) (Localization.Away f)) := by
-  sorry
+  classical
+  obtain ⟨u, e, hu, he, hfe⟩ :=
+    productOfFields_element_unit_mul_idempotent A k f
+  have hassoc : Associated f e := by
+    rw [hfe]
+    exact associated_unit_mul_left e u hu
+  have hbasic :
+      PrimeSpectrum.basicOpen f = PrimeSpectrum.basicOpen e := by
+    ext p
+    change f ∉ p.asIdeal ↔ e ∉ p.asIdeal
+    rw [hfe, Ideal.unit_mul_mem_iff_mem _ hu]
+  have haway : Nonempty (Localization.Away f ≃+* Localization.Away e) := by
+    let : IsLocalization.Away f (Localization.Away e) :=
+      IsLocalization.Away.of_associated hassoc.symm
+    let awayFE : Localization.Away f ≃+* Localization.Away e :=
+      (IsLocalization.algEquiv (Submonoid.powers f)
+        (Localization.Away f) (Localization.Away e)).toRingEquiv
+    exact ⟨awayFE⟩
+  have hquot :
+      Nonempty
+        (Localization.Away e ≃+*
+          (ProductOfFields A k ⧸ Ideal.span ({1 - e} : Set (ProductOfFields A k)))) := by
+    let : IsLocalization.Away e
+        (ProductOfFields A k ⧸ Ideal.span ({1 - e} : Set (ProductOfFields A k))) :=
+      IsLocalization.Away.quotient_of_isIdempotentElem he
+    let awayE : Localization.Away e ≃+*
+        (ProductOfFields A k ⧸ Ideal.span ({1 - e} : Set (ProductOfFields A k))) :=
+      (IsLocalization.algEquiv (Submonoid.powers e)
+        (Localization.Away e)
+        (ProductOfFields A k ⧸ Ideal.span ({1 - e} : Set (ProductOfFields A k)))).toRingEquiv
+    exact ⟨awayE⟩
+  have hsurj :
+      Function.Surjective
+        (algebraMap (ProductOfFields A k) (Localization.Away f)) := by
+    let : IsLocalization.Away e (Localization.Away f) :=
+      IsLocalization.Away.of_associated hassoc
+    exact IsLocalization.Away.algebraMap_surjective_of_isIdempotentElem e he
+  exact ⟨u, e, hu, he, hfe, hbasic, haway, hquot, hsurj⟩
 
 theorem productOfFields_isJacobson
     (A : Type u) [Infinite A] (k : A → Type v) [∀ a, Field (k a)] :

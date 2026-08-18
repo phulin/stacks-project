@@ -204,6 +204,25 @@ noncomputable def relativeTensorCosimplicialModule (R A M : Type u)
     CosimplicialObject (ModuleCat R) :=
   Classical.choice (relativeTensorCosimplicialModule_exists R A M)
 
+/- The presentation condition records that the chosen cosimplicial module is
+the one obtained by tensoring the Amitsur algebra object with `M`, including
+its transition maps. -/
+def RelativeTensorCosimplicialModulePresentation (R A M : Type u)
+    [CommRing R] [CommRing A] [Algebra R A] [AddCommGroup M] [Module R M]
+    (X : CosimplicialObject (ModuleCat R)) : Prop :=
+  ∃ e : ∀ n : ℕ,
+      X.obj (SimplexCategory.mk n) ≅
+        ModuleCat.of R (relativeTensorModule R A M n),
+    ∀ {n m : ℕ} (φ : SimplexCategory.mk n ⟶ SimplexCategory.mk m),
+      (e n).inv ≫ X.map φ ≫ (e m).hom =
+        ModuleCat.ofHom (relativeTensorModuleMap R A M φ)
+
+theorem relativeTensorCosimplicialModule_presentation (R A M : Type u)
+    [CommRing R] [CommRing A] [Algebra R A] [AddCommGroup M] [Module R M] :
+    RelativeTensorCosimplicialModulePresentation R A M
+      (relativeTensorCosimplicialModule R A M) := by
+  sorry
+
 theorem relativeTensorCosimplicialModule_degree (R A M : Type u)
     [CommRing R] [CommRing A] [Algebra R A] [AddCommGroup M] [Module R M]
     (n : ℕ) :
@@ -406,6 +425,17 @@ noncomputable def descentReindexMapSemilinear {n m : ℕ}
       descentTerm R A N m (β.toOrderHom i) :=
   Classical.choice (descentReindexMap_semilinear_exists D β i)
 
+/- The transition map on the normal form `N_{n,n}` is obtained by first
+reindexing the distinguished factor and then transporting it to the last
+position. -/
+noncomputable def descentCosimplicialModuleMap {n m : ℕ}
+    (D : DescentDatum (R := R) (A := A) (N := N))
+    (β : SimplexCategory.mk n ⟶ SimplexCategory.mk m) :
+    descentTerm R A N n ⟨n, Nat.lt_succ_self n⟩ →ₗ[R]
+      descentTerm R A N m ⟨m, Nat.lt_succ_self m⟩ :=
+  (descentTransportMap D (Fin.le_last _)).toLinearMap.comp
+    (descentReindexMap D β ⟨n, Nat.lt_succ_self n⟩)
+
 theorem descentReindexMap_unit {n m : ℕ}
     (D : DescentDatum (R := R) (A := A) (N := N))
     (β : SimplexCategory.mk n ⟶ SimplexCategory.mk m) (i : Fin (n + 1)) (x : N) :
@@ -443,6 +473,21 @@ theorem descentCosimplicialModule_functorial
     (D' : DescentDatum (R := R) (A := A) (N := N'))
     (f : DescentDatumHom D D') :
     Nonempty (descentCosimplicialModule D ⟶ descentCosimplicialModule D') := by
+  sorry
+
+def DescentCosimplicialModulePresentation
+    (D : DescentDatum (R := R) (A := A) (N := N))
+    (X : CosimplicialObject (ModuleCat R)) : Prop :=
+  ∃ e : ∀ n : ℕ,
+      X.obj (SimplexCategory.mk n) ≅
+        descentTermModule R A N n ⟨n, Nat.lt_succ_self n⟩,
+    ∀ {n m : ℕ} (β : SimplexCategory.mk n ⟶ SimplexCategory.mk m),
+      (e n).inv ≫ X.map β ≫ (e m).hom =
+        ModuleCat.ofHom (descentCosimplicialModuleMap D β)
+
+theorem descentCosimplicialModule_presentation
+    (D : DescentDatum (R := R) (A := A) (N := N)) :
+    DescentCosimplicialModulePresentation D (descentCosimplicialModule D) := by
   sorry
 
 end Terms

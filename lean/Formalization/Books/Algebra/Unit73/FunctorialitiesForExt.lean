@@ -1,5 +1,7 @@
 import Formalization.Books.Algebra.Unit71.ExtGroups
 import Mathlib.Algebra.Category.ModuleCat.ChangeOfRings
+import Mathlib.Algebra.Category.ModuleCat.ChangeOfRingsExact
+import Mathlib.Algebra.Homology.DerivedCategory.Ext.Map
 import Mathlib.RingTheory.RingHom.Flat
 
 /-!
@@ -169,6 +171,17 @@ theorem exists_target_ext_module {R R' : Type u} [CommRing R] [CommRing R']
   · intro s x
     rfl
 
+/-- The change-of-rings map on Ext, obtained by first applying restriction of
+scalars and then precomposing with the unit of the extension/restriction
+adjunction. -/
+noncomputable def changeOfRingsExtMap {R R' : Type u} [CommRing R] [CommRing R']
+    (f : R →+* R') (M : ModuleCat.{u} R) (N' : ModuleCat.{u} R') (i : ℕ) :
+    extendedExt f M N' i → restrictedExt f M N' i :=
+  fun x =>
+    (CategoryTheory.Abelian.Ext.mk₀
+      (ModuleCat.ExtendRestrictScalarsAdj.Unit.map f)).comp
+      (x.mapExactFunctor (ModuleCat.restrictScalars f)) (Nat.zero_add i)
+
 /-- A natural family of target-scalar structures and canonical
 `R'`-linear change-of-rings maps.  The two naturality fields make explicit the
 contravariance in `M` and covariance in `N'`. -/
@@ -181,6 +194,12 @@ structure ExtChangeOfRingsData {R R' : Type u} [CommRing R] [CommRing R']
     letI : Module R' (restrictedExt f M N' i) := T.module
     ModuleCat.of R' (extendedExt f M N' i) ⟶
       ModuleCat.of R' (restrictedExt f M N' i)
+  map_eq :
+    ∀ (M : ModuleCat.{u} R) (N' : ModuleCat.{u} R') (i : ℕ),
+      let T := target M N' i
+      letI : Module R' (restrictedExt f M N' i) := T.module
+      ∀ x : extendedExt f M N' i,
+        (map M N' i) x = changeOfRingsExtMap f M N' i x
   natural_in_first :
     ∀ {M₁ M₂ : ModuleCat.{u} R} (φ : M₁ ⟶ M₂)
       (N' : ModuleCat.{u} R') (i : ℕ),
@@ -216,23 +235,7 @@ structure ExtChangeOfRingsData {R R' : Type u} [CommRing R] [CommRing R']
 source item. -/
 theorem exists_ext_change_of_rings_data {R R' : Type u} [CommRing R] [CommRing R']
     (f : R →+* R') : Nonempty (ExtChangeOfRingsData f) := by
-  let target : ∀ (M : ModuleCat.{u} R) (N' : ModuleCat.{u} R') (i : ℕ),
-      TargetExtModule f M N' i :=
-    fun M N' i => Classical.choice (exists_target_ext_module f M N' i)
-  let map : ∀ (M : ModuleCat.{u} R) (N' : ModuleCat.{u} R') (i : ℕ),
-      let T := target M N' i
-      letI : Module R' (restrictedExt f M N' i) := T.module
-      ModuleCat.of R' (extendedExt f M N' i) ⟶
-        ModuleCat.of R' (restrictedExt f M N' i) :=
-    fun M N' i => by
-      let T := target M N' i
-      letI : Module R' (restrictedExt f M N' i) := T.module
-      exact ModuleCat.ofHom 0
-  refine ⟨{ target := target, map := map, natural_in_first := ?_, natural_in_second := ?_ }⟩
-  · intro M₁ M₂ φ N' i x
-    simp [map]
-  · intro M N'₁ N'₂ ψ i x
-    simp [map]
+  sorry
 
 /-- The chosen canonical change-of-rings family for the first source item. -/
 noncomputable def canonicalExtChangeOfRingsData {R R' : Type u} [CommRing R] [CommRing R']

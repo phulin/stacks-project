@@ -1740,13 +1740,169 @@ theorem zeroDimensionalFlatIdealModuleToIdeal_generator
     zeroDimensionalFlatIdealModuleToIdeal k
         (zeroDimensionalFlatIdealModuleGenerator k i) =
       zeroDimensionalFlatIdealGenerator k i := by
-  sorry
+  unfold zeroDimensionalFlatIdealModuleToIdeal zeroDimensionalFlatIdealModuleGenerator
+  rw [Module.DirectLimit.lift_of]
+  apply Subtype.ext
+  change (1 : zeroDimensionalFlatIdealRing k) * zeroDimensionalFlatIdealX k i =
+    zeroDimensionalFlatIdealX k i
+  exact one_mul _
 
 /-- The canonical map from the direct limit to `I` is bijective. -/
 theorem zeroDimensionalFlatIdealModuleToIdeal_bijective
     (k : Type u) [Field k] :
     Function.Bijective (zeroDimensionalFlatIdealModuleToIdeal k) := by
-  sorry
+  refine ⟨?_, ?_⟩
+  · intro x y hxy
+    have hcomp (a b c : ℕ) (hab : a ≤ b) (hbc : b ≤ c)
+        (z : zeroDimensionalFlatIdealRing k) :
+        zeroDimensionalFlatIdealTransitionMap k b c hbc
+            (zeroDimensionalFlatIdealTransitionMap k a b hab z) =
+          zeroDimensionalFlatIdealTransitionMap k a c (hab.trans hbc) z := by
+      simp only [zeroDimensionalFlatIdealTransitionMap,
+        LinearMap.mulRight_apply, zeroDimensionalFlatIdealTransitionProduct]
+      have hprod :
+          (∏ n ∈ Finset.Ico a b, zeroDimensionalFlatIdealY k n) *
+              (∏ n ∈ Finset.Ico b c, zeroDimensionalFlatIdealY k n) =
+            ∏ n ∈ Finset.Ico a c, zeroDimensionalFlatIdealY k n := by
+        rw [← Finset.prod_union (Finset.Ico_disjoint_Ico_consecutive a b c)]
+        rw [Finset.Ico_union_Ico_eq_Ico hab hbc]
+      calc
+        (z * (∏ n ∈ Finset.Ico a b, zeroDimensionalFlatIdealY k n)) *
+              (∏ n ∈ Finset.Ico b c, zeroDimensionalFlatIdealY k n) =
+            z * ((∏ n ∈ Finset.Ico a b, zeroDimensionalFlatIdealY k n) *
+              (∏ n ∈ Finset.Ico b c, zeroDimensionalFlatIdealY k n)) := by ring
+        _ = z * (∏ n ∈ Finset.Ico a c, zeroDimensionalFlatIdealY k n) := by
+          rw [hprod]
+    have hyx (n : ℕ) : zeroDimensionalFlatIdealY k n *
+        zeroDimensionalFlatIdealX k n = 0 := by
+      calc
+        zeroDimensionalFlatIdealY k n * zeroDimensionalFlatIdealX k n =
+            zeroDimensionalFlatIdealY k n *
+              (zeroDimensionalFlatIdealY k n *
+                zeroDimensionalFlatIdealX k (n + 1)) := by
+                  rw [zeroDimensionalFlatIdeal_x_eq_y_mul_next_x k n]
+        _ = zeroDimensionalFlatIdealY k n ^ 2 *
+              zeroDimensionalFlatIdealX k (n + 1) := by ring
+        _ = 0 := by simp
+    have hxgen (a n : ℕ) :
+        ∃ (j : ℕ) (haj : a ≤ j),
+          zeroDimensionalFlatIdealTransitionMap k a j haj
+              (zeroDimensionalFlatIdealX k n) = 0 := by
+      rcases le_total a n with han | hna
+      · refine ⟨n + 1, Nat.le_succ_of_le han, ?_⟩
+        simp only [zeroDimensionalFlatIdealTransitionMap,
+          LinearMap.mulRight_apply, zeroDimensionalFlatIdealTransitionProduct]
+        rw [Finset.prod_Ico_succ_top han]
+        calc
+          zeroDimensionalFlatIdealX k n *
+              ((∏ m ∈ Finset.Ico a n, zeroDimensionalFlatIdealY k m) *
+                zeroDimensionalFlatIdealY k n) =
+              (∏ m ∈ Finset.Ico a n, zeroDimensionalFlatIdealY k m) *
+                (zeroDimensionalFlatIdealY k n * zeroDimensionalFlatIdealX k n) := by ring
+          _ = 0 := by rw [hyx, mul_zero]
+      · refine ⟨a + 1, Nat.le_succ a, ?_⟩
+        simp only [zeroDimensionalFlatIdealTransitionMap,
+          LinearMap.mulRight_apply, zeroDimensionalFlatIdealTransitionProduct]
+        rw [Finset.prod_Ico_succ_top (le_refl a)]
+        simp only [Finset.Ico_self, Finset.prod_empty, one_mul]
+        rw [zeroDimensionalFlatIdeal_x_eq_transitionProduct_mul_x k n a hna]
+        calc
+          (zeroDimensionalFlatIdealTransitionProduct k n a *
+              zeroDimensionalFlatIdealX k a) * zeroDimensionalFlatIdealY k a =
+              zeroDimensionalFlatIdealTransitionProduct k n a *
+                (zeroDimensionalFlatIdealY k a *
+                  zeroDimensionalFlatIdealX k a) := by ring
+          _ = 0 := by rw [hyx, mul_zero]
+    have hygen (a n : ℕ) (han : a ≤ n) :
+        ∃ (j : ℕ) (haj : a ≤ j),
+          zeroDimensionalFlatIdealTransitionMap k a j haj
+              (zeroDimensionalFlatIdealY k n) = 0 := by
+      refine ⟨n + 1, Nat.le_succ_of_le han, ?_⟩
+      simp only [zeroDimensionalFlatIdealTransitionMap,
+        LinearMap.mulRight_apply, zeroDimensionalFlatIdealTransitionProduct]
+      rw [Finset.prod_Ico_succ_top han]
+      calc
+        zeroDimensionalFlatIdealY k n *
+            ((∏ m ∈ Finset.Ico a n, zeroDimensionalFlatIdealY k m) *
+              zeroDimensionalFlatIdealY k n) =
+            (∏ m ∈ Finset.Ico a n, zeroDimensionalFlatIdealY k m) *
+              (zeroDimensionalFlatIdealY k n ^ 2) := by ring
+        _ = 0 := by rw [zeroDimensionalFlatIdeal_y_sq_eq_zero, mul_zero]
+    have heventual (a : ℕ) (z : zeroDimensionalFlatIdealRing k)
+        (hz : z ∈ zeroDimensionalFlatIdealXAnnihilatorCandidate k a) :
+        ∃ (j : ℕ) (haj : a ≤ j),
+          zeroDimensionalFlatIdealTransitionMap k a j haj z = 0 := by
+      rw [zeroDimensionalFlatIdealXAnnihilatorCandidate] at hz
+      induction hz using Submodule.span_induction with
+      | mem z hz =>
+          rcases hz with (⟨n, rfl⟩ | ⟨n, rfl⟩)
+          · exact hxgen a n
+          · exact hygen a n.1 n.2
+      | zero =>
+          exact ⟨a, le_rfl, by simp [zeroDimensionalFlatIdealTransitionMap,
+            zeroDimensionalFlatIdealTransitionProduct]⟩
+      | add z w hz hw hz' hw' =>
+          obtain ⟨j, haj, hj⟩ := hz'
+          obtain ⟨l, hal, hl⟩ := hw'
+          refine ⟨max j l, le_max_of_le_left haj, ?_⟩
+          have hj' :
+              zeroDimensionalFlatIdealTransitionMap k a (max j l)
+                  (le_max_of_le_left haj) z = 0 := by
+            calc
+              _ = zeroDimensionalFlatIdealTransitionMap k j (max j l)
+                    (le_max_left _ _) (
+                      zeroDimensionalFlatIdealTransitionMap k a j haj z) := by
+                symm
+                simpa using hcomp a j (max j l) haj (le_max_left _ _) z
+              _ = 0 := by rw [hj]; simp
+          have hl' :
+              zeroDimensionalFlatIdealTransitionMap k a (max j l)
+                  (le_max_of_le_right hal) w = 0 := by
+            calc
+              _ = zeroDimensionalFlatIdealTransitionMap k l (max j l)
+                    (le_max_right _ _) (
+                      zeroDimensionalFlatIdealTransitionMap k a l hal w) := by
+                symm
+                simpa using hcomp a l (max j l) hal (le_max_right _ _) w
+              _ = 0 := by rw [hl]; simp
+          rw [map_add, hj', hl', add_zero]
+      | smul c z hz hz' =>
+          obtain ⟨j, haj, hj⟩ := hz'
+          refine ⟨j, haj, ?_⟩
+          rw [map_smul, hj, smul_zero]
+    apply sub_eq_zero.mp
+    obtain ⟨i, z, hz⟩ := Module.DirectLimit.exists_of (x - y)
+    have hmap : zeroDimensionalFlatIdealModuleToIdeal k (x - y) = 0 := by
+      rw [map_sub, hxy, sub_self]
+    rw [← hz] at hmap
+    have hstage : zeroDimensionalFlatIdealModuleStageMap k i z = 0 := by
+      simpa [zeroDimensionalFlatIdealModuleToIdeal] using hmap
+    have hprod : z * zeroDimensionalFlatIdealX k i = 0 := by
+      exact congrArg Subtype.val hstage
+    have hmem : z ∈
+        (Submodule.span (zeroDimensionalFlatIdealRing k)
+          ({zeroDimensionalFlatIdealX k i} : Set (zeroDimensionalFlatIdealRing k))).annihilator := by
+      rw [Submodule.mem_annihilator_span_singleton]
+      change z * zeroDimensionalFlatIdealX k i = 0
+      exact hprod
+    rw [zeroDimensionalFlatIdeal_x_annihilator k i] at hmem
+    obtain ⟨j, hij, hkill⟩ := heventual i z hmem
+    calc
+      x - y = Module.DirectLimit.of (zeroDimensionalFlatIdealRing k) ℕ
+          (fun _ : ℕ => zeroDimensionalFlatIdealRing k)
+          (fun i j h => zeroDimensionalFlatIdealTransitionMap k i j h) i z := hz.symm
+      _ = Module.DirectLimit.of (zeroDimensionalFlatIdealRing k) ℕ
+          (fun _ : ℕ => zeroDimensionalFlatIdealRing k)
+          (fun i j h => zeroDimensionalFlatIdealTransitionMap k i j h) j
+            (zeroDimensionalFlatIdealTransitionMap k i j hij z) := by
+              symm
+              exact Module.DirectLimit.of_f
+      _ = 0 := by rw [hkill]; simp
+  · intro a
+    obtain ⟨i, h, ha⟩ := zeroDimensionalFlatIdeal_element_representation k a
+    refine ⟨h • zeroDimensionalFlatIdealModuleGenerator k i, ?_⟩
+    rw [map_smul, zeroDimensionalFlatIdealModuleToIdeal_generator]
+    exact ha.symm
 
 /-- The source's isomorphism `M ≅ I`, made available as a linear equivalence. -/
 noncomputable def zeroDimensionalFlatIdealModuleToIdealEquiv
@@ -1761,13 +1917,14 @@ theorem zeroDimensionalFlatIdealModuleToIdealEquiv_generator
     zeroDimensionalFlatIdealModuleToIdealEquiv k
         (zeroDimensionalFlatIdealModuleGenerator k i) =
       zeroDimensionalFlatIdealGenerator k i := by
-  sorry
+  exact zeroDimensionalFlatIdealModuleToIdeal_generator k i
 
 /-- The ideal `I` is flat over the constructed ring. -/
 theorem zeroDimensionalFlatIdeal_flat
     (k : Type u) [Field k] :
     Module.Flat (zeroDimensionalFlatIdealRing k) (zeroDimensionalFlatIdeal k) := by
-  sorry
+  let _ := zeroDimensionalFlatIdeal_module_flat k
+  exact Module.Flat.of_linearEquiv (zeroDimensionalFlatIdealModuleToIdealEquiv k).symm
 
 /-! ## The annihilator computation for `e_i` and the final example -/
 

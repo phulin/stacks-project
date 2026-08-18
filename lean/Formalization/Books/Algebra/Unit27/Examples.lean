@@ -3375,7 +3375,178 @@ theorem affine_first_basic_open_homeomorph (a : ℚ) (ha0 : a ≠ 0) (ha1 : a �
             p ∈ (PrimeSpectrum.basicOpen (affineF1 a) :
               Set (PrimeSpectrum affineBaseSubalgebra))},
       ∀ p, (e p).1 = affineOpenSpectrumMap a p.1 := by
-  sorry
+  let bthird : affineBaseSubalgebra :=
+    affineB + algebraMap ℚ affineBaseSubalgebra (a * (1 - a) ^ 2)
+  have hu : affineLocalizationMap a (Polynomial.X - Polynomial.C a) *
+      affineDenominatorInverse a = 1 := by
+    change
+      (↑((IsLocalization.Away.algebraMap_isUnit (R := Polynomial ℚ)
+        (S := AffineAmbient a) (Polynomial.X - Polynomial.C a)).unit) :
+          AffineAmbient a) *
+        ↑((IsLocalization.Away.algebraMap_isUnit (R := Polynomial ℚ)
+          (S := AffineAmbient a) (Polynomial.X - Polynomial.C a)).unit⁻¹) = 1
+    simp
+  have hthird : affineOpenF1 a * affineOpenThird a =
+      affineBaseToOpen a bthird := by
+    apply Subtype.ext
+    change affineLocalizationMap a (affinePolynomialF1 a) *
+        affineOpenThirdGenerator a =
+      affineLocalizationMap a
+        ((Polynomial.X ^ 3 - Polynomial.X ^ 2) +
+          Polynomial.C (a * (1 - a) ^ 2))
+    rw [affinePolynomialF1, affineOpenThirdGenerator]
+    have hfactor :
+        affineLocalizationMap a (Polynomial.X - Polynomial.C a) *
+            (affineLocalizationMap a (Polynomial.C (a ^ 2 - a)) *
+              affineDenominatorInverse a + affineLocalizationMap a Polynomial.X) =
+          affineLocalizationMap a (Polynomial.C (a ^ 2 - a)) +
+            affineLocalizationMap a (Polynomial.X - Polynomial.C a) *
+              affineLocalizationMap a Polynomial.X := by
+      rw [mul_add]
+      have hfirst : affineLocalizationMap a (Polynomial.X - Polynomial.C a) *
+            (affineLocalizationMap a (Polynomial.C (a ^ 2 - a)) *
+              affineDenominatorInverse a) =
+          affineLocalizationMap a (Polynomial.C (a ^ 2 - a)) := by
+        calc
+          affineLocalizationMap a (Polynomial.X - Polynomial.C a) *
+                (affineLocalizationMap a (Polynomial.C (a ^ 2 - a)) *
+                  affineDenominatorInverse a) =
+              affineLocalizationMap a (Polynomial.C (a ^ 2 - a)) *
+                (affineLocalizationMap a (Polynomial.X - Polynomial.C a) *
+                  affineDenominatorInverse a) := by ring
+          _ = affineLocalizationMap a (Polynomial.C (a ^ 2 - a)) := by
+            rw [hu, mul_one]
+      rw [hfirst]
+    rw [map_mul, mul_assoc, hfactor, mul_add]
+    have hpoly :
+        Polynomial.C (a ^ 2 - a) * (Polynomial.X - Polynomial.C (1 - a)) +
+            (Polynomial.X - Polynomial.C (1 - a)) *
+              (Polynomial.X - Polynomial.C a) * Polynomial.X =
+          (Polynomial.X ^ 3 - Polynomial.X ^ 2) +
+            Polynomial.C (a * (1 - a) ^ 2) := by
+      simp
+      ring
+    convert congrArg (affineLocalizationMap a) hpoly using 1 <;>
+      simp only [map_mul, map_add] <;> ring
+  have hclears : ∀ z : AffineOpenRing a,
+      ∃ b : affineBaseSubalgebra, ∃ m : ℕ,
+        affineLocalizationMap a (b : Polynomial ℚ) =
+          affineLocalizationMap a (affineF1 a : Polynomial ℚ) ^ m * z.1 := by
+    intro z
+    have hz := z.2
+    change z.1 ∈ Algebra.adjoin ℚ
+      (Set.range (affineBaseImage a) ∪ {affineOpenThirdGenerator a}) at hz
+    refine Algebra.adjoin_induction (R := ℚ) (A := AffineAmbient a)
+      (s := Set.range (affineBaseImage a) ∪ {affineOpenThirdGenerator a})
+      (p := fun x _ => ∃ b : affineBaseSubalgebra, ∃ m : ℕ,
+        affineLocalizationMap a (b : Polynomial ℚ) =
+          affineLocalizationMap a (affineF1 a : Polynomial ℚ) ^ m * x)
+      ?_ ?_ ?_ ?_ hz
+    · intro x hx
+      rcases hx with hx | hx
+      · rcases hx with ⟨b, rfl⟩
+        refine ⟨b, 0, ?_⟩
+        simp [affineBaseImage, affineLocalizationMap]
+      · rcases Set.mem_singleton_iff.mp hx with rfl
+        refine ⟨bthird, 1, ?_⟩
+        have ht := congrArg Subtype.val hthird
+        simpa [affineOpenF1, affineOpenThird, affineBaseToOpen,
+          affineBaseImage, affineLocalizationMap, affineBaseElement,
+          bthird] using ht.symm
+    · intro c
+      refine ⟨algebraMap ℚ affineBaseSubalgebra c, 0, ?_⟩
+      simp only [pow_zero, one_mul]
+      change (algebraMap (Polynomial ℚ) (AffineAmbient a))
+          (algebraMap ℚ (Polynomial ℚ) c) = algebraMap ℚ (AffineAmbient a) c
+      exact (IsScalarTower.algebraMap_apply ℚ (Polynomial ℚ)
+        (AffineAmbient a) c).symm
+    · intro x y hx hy hx' hy'
+      rcases hx' with ⟨b₁, m₁, hb₁⟩
+      rcases hy' with ⟨b₂, m₂, hb₂⟩
+      refine ⟨b₁ * (affineF1 a) ^ m₂ + b₂ * (affineF1 a) ^ m₁,
+        m₁ + m₂, ?_⟩
+      change affineLocalizationMap a
+          ((b₁ : Polynomial ℚ) * (affineF1 a : Polynomial ℚ) ^ m₂ +
+            (b₂ : Polynomial ℚ) * (affineF1 a : Polynomial ℚ) ^ m₁) =
+        affineLocalizationMap a (affineF1 a : Polynomial ℚ) ^ (m₁ + m₂) *
+          (x + y)
+      rw [map_add, map_mul, map_mul, map_pow, map_pow, pow_add, hb₁, hb₂]
+      ring
+    · intro x y hx hy hx' hy'
+      rcases hx' with ⟨b₁, m₁, hb₁⟩
+      rcases hy' with ⟨b₂, m₂, hb₂⟩
+      refine ⟨b₁ * b₂, m₁ + m₂, ?_⟩
+      change affineLocalizationMap a ((b₁ : Polynomial ℚ) * (b₂ : Polynomial ℚ)) =
+        affineLocalizationMap a (affineF1 a : Polynomial ℚ) ^ (m₁ + m₂) *
+          (x * y)
+      rw [map_mul, pow_add, hb₁, hb₂]
+      ring
+  have hsurj : Function.Surjective
+      (Localization.awayMap (affineBaseToOpen a) (affineF1 a)) := by
+    rw [Localization.awayMap_surjective_iff]
+    intro z
+    rcases hclears z with ⟨b, m, hb⟩
+    refine ⟨b, m, ?_⟩
+    apply Subtype.ext
+    change affineLocalizationMap a (b : Polynomial ℚ) =
+      affineLocalizationMap a (affineF1 a : Polynomial ℚ) ^ m * z.1
+    exact hb
+  have hinj : Function.Injective
+      (Localization.awayMap (affineBaseToOpen a) (affineF1 a)) := by
+    rw [Localization.awayMap_injective_iff]
+    intro b hb
+    have hb0 : b = 0 := by
+      apply affine_base_to_open_injective a
+      simpa using hb
+    exact ⟨0, by simp [hb0]⟩
+  let eAway : AffineBaseAway a ≃+* AffineOpenAway a :=
+    RingEquiv.ofBijective _ ⟨hinj, hsurj⟩
+  let e :=
+    (Formalization.Books.Algebra.Unit17.standardOpenSpectrumHomeomorph
+      (affineOpenF1 a)).symm.trans
+      ((PrimeSpectrum.homeomorphOfRingEquiv eAway.symm).trans
+        (Formalization.Books.Algebra.Unit17.standardOpenSpectrumHomeomorph
+          (affineF1 a)))
+  refine ⟨e, ?_⟩
+  intro p
+  apply PrimeSpectrum.ext
+  let q :=
+    (Formalization.Books.Algebra.Unit17.standardOpenSpectrumHomeomorph
+      (affineOpenF1 a)).symm p
+  have hq :
+      Formalization.Books.Algebra.Unit17.standardOpenSpectrumHomeomorph
+          (affineOpenF1 a) q = p := by
+    exact (Formalization.Books.Algebra.Unit17.standardOpenSpectrumHomeomorph
+      (affineOpenF1 a)).apply_symm_apply p
+  change
+    ((Formalization.Books.Algebra.Unit17.standardOpenSpectrumHomeomorph
+      (affineF1 a))
+      ((PrimeSpectrum.homeomorphOfRingEquiv eAway.symm) q)).1.asIdeal =
+      (affineOpenSpectrumMap a p.1).asIdeal
+  rw [Formalization.Books.Algebra.Unit17.standardOpenSpectrumHomeomorph_apply]
+  change Ideal.comap (algebraMap affineBaseSubalgebra (AffineBaseAway a))
+      ((PrimeSpectrum.homeomorphOfRingEquiv eAway.symm q).asIdeal) =
+    (affineOpenSpectrumMap a p.1).asIdeal
+  change Ideal.comap (algebraMap affineBaseSubalgebra (AffineBaseAway a))
+      (Ideal.comap (eAway : AffineBaseAway a →+* AffineOpenAway a) q.asIdeal) =
+    (affineOpenSpectrumMap a p.1).asIdeal
+  rw [Ideal.comap_comap]
+  change Ideal.comap ((eAway : AffineBaseAway a →+* AffineOpenAway a).comp
+      (algebraMap affineBaseSubalgebra (AffineBaseAway a))) q.asIdeal =
+    (affineOpenSpectrumMap a p.1).asIdeal
+  have heq :
+      (eAway : AffineBaseAway a →+* AffineOpenAway a).comp
+          (algebraMap affineBaseSubalgebra (AffineBaseAway a)) =
+        (algebraMap (AffineOpenRing a) (AffineOpenAway a)).comp
+          (affineBaseToOpen a) := by
+    ext x
+    change (Localization.awayMap (affineBaseToOpen a) (affineF1 a))
+        (algebraMap affineBaseSubalgebra (AffineBaseAway a) x) = _
+    simp [Localization.awayMap, IsLocalization.Away.map,
+      IsLocalization.map_mk']
+    rfl
+  rw [heq, ← hq]
+  rfl
 
 theorem affine_quadratic_at_one_minus_a (a : ℚ) :
     (affineQuadratic a).eval (1 - a) = 0 ↔ a = 0 ∨ a = 1 := by
@@ -3419,7 +3590,191 @@ theorem affine_second_basic_open_homeomorph (a : ℚ) (ha0 : a ≠ 0) (ha1 : a �
             p ∈ (PrimeSpectrum.basicOpen (affineG a) :
               Set (PrimeSpectrum affineBaseSubalgebra))},
       ∀ p, (e p).1 = affineOpenSpectrumMap a p.1 := by
-  sorry
+  let bthird : affineBaseSubalgebra := affineBaseElement
+      (Polynomial.C (a ^ 2 - a) * affineQuadratic a +
+        affineQuadratic a * (Polynomial.X - Polynomial.C a) * Polynomial.X) (by
+        change Polynomial.aeval (0 : ℚ)
+            (Polynomial.C (a ^ 2 - a) * affineQuadratic a +
+              affineQuadratic a * (Polynomial.X - Polynomial.C a) * Polynomial.X) =
+          Polynomial.aeval (1 : ℚ)
+            (Polynomial.C (a ^ 2 - a) * affineQuadratic a +
+              affineQuadratic a * (Polynomial.X - Polynomial.C a) * Polynomial.X)
+        simp [affineQuadratic]
+        ring)
+  have hu : affineLocalizationMap a (Polynomial.X - Polynomial.C a) *
+      affineDenominatorInverse a = 1 := by
+    change
+      (↑((IsLocalization.Away.algebraMap_isUnit (R := Polynomial ℚ)
+        (S := AffineAmbient a) (Polynomial.X - Polynomial.C a)).unit) :
+          AffineAmbient a) *
+        ↑((IsLocalization.Away.algebraMap_isUnit (R := Polynomial ℚ)
+          (S := AffineAmbient a) (Polynomial.X - Polynomial.C a)).unit⁻¹) = 1
+    simp
+  have hthird : affineOpenG a * affineOpenThird a =
+      affineBaseToOpen a bthird := by
+    apply Subtype.ext
+    change affineLocalizationMap a (affinePolynomialG a) *
+        affineOpenThirdGenerator a =
+      affineLocalizationMap a
+        (Polynomial.C (a ^ 2 - a) * affineQuadratic a +
+          affineQuadratic a * (Polynomial.X - Polynomial.C a) * Polynomial.X)
+    rw [affinePolynomialG, affineOpenThirdGenerator, map_mul, mul_assoc]
+    have hfactor :
+        affineLocalizationMap a (Polynomial.X - Polynomial.C a) *
+            (affineLocalizationMap a (Polynomial.C (a ^ 2 - a)) *
+              affineDenominatorInverse a + affineLocalizationMap a Polynomial.X) =
+          affineLocalizationMap a (Polynomial.C (a ^ 2 - a)) +
+            affineLocalizationMap a (Polynomial.X - Polynomial.C a) *
+              affineLocalizationMap a Polynomial.X := by
+      rw [mul_add]
+      have hfirst : affineLocalizationMap a (Polynomial.X - Polynomial.C a) *
+            (affineLocalizationMap a (Polynomial.C (a ^ 2 - a)) *
+              affineDenominatorInverse a) =
+          affineLocalizationMap a (Polynomial.C (a ^ 2 - a)) := by
+        calc
+          affineLocalizationMap a (Polynomial.X - Polynomial.C a) *
+                (affineLocalizationMap a (Polynomial.C (a ^ 2 - a)) *
+                  affineDenominatorInverse a) =
+              affineLocalizationMap a (Polynomial.C (a ^ 2 - a)) *
+                (affineLocalizationMap a (Polynomial.X - Polynomial.C a) *
+                  affineDenominatorInverse a) := by ring
+          _ = affineLocalizationMap a (Polynomial.C (a ^ 2 - a)) := by
+            rw [hu, mul_one]
+      rw [hfirst]
+    rw [hfactor, mul_add]
+    have hpoly :
+        Polynomial.C (a ^ 2 - a) * affineQuadratic a +
+            affineQuadratic a * (Polynomial.X - Polynomial.C a) * Polynomial.X =
+          Polynomial.C (a ^ 2 - a) * affineQuadratic a +
+            affineQuadratic a * (Polynomial.X - Polynomial.C a) * Polynomial.X :=
+      rfl
+    convert congrArg (affineLocalizationMap a) hpoly using 1 <;>
+      simp only [map_mul, map_add] <;> ring
+  have hclears : ∀ z : AffineOpenRing a,
+      ∃ b : affineBaseSubalgebra, ∃ m : ℕ,
+        affineLocalizationMap a (b : Polynomial ℚ) =
+          affineLocalizationMap a (affineG a : Polynomial ℚ) ^ m * z.1 := by
+    intro z
+    have hz := z.2
+    change z.1 ∈ Algebra.adjoin ℚ
+      (Set.range (affineBaseImage a) ∪ {affineOpenThirdGenerator a}) at hz
+    refine Algebra.adjoin_induction (R := ℚ) (A := AffineAmbient a)
+      (s := Set.range (affineBaseImage a) ∪ {affineOpenThirdGenerator a})
+      (p := fun x _ => ∃ b : affineBaseSubalgebra, ∃ m : ℕ,
+        affineLocalizationMap a (b : Polynomial ℚ) =
+          affineLocalizationMap a (affineG a : Polynomial ℚ) ^ m * x)
+      ?_ ?_ ?_ ?_ hz
+    · intro x hx
+      rcases hx with hx | hx
+      · rcases hx with ⟨b, rfl⟩
+        refine ⟨b, 0, ?_⟩
+        simp [affineBaseImage, affineLocalizationMap]
+      · rcases Set.mem_singleton_iff.mp hx with rfl
+        refine ⟨bthird, 1, ?_⟩
+        have ht := congrArg Subtype.val hthird
+        simpa [affineOpenG, affineOpenThird, affineBaseToOpen,
+          affineBaseImage, affineLocalizationMap, affineBaseElement,
+          bthird] using ht.symm
+    · intro c
+      refine ⟨algebraMap ℚ affineBaseSubalgebra c, 0, ?_⟩
+      simp only [pow_zero, one_mul]
+      change (algebraMap (Polynomial ℚ) (AffineAmbient a))
+          (algebraMap ℚ (Polynomial ℚ) c) = algebraMap ℚ (AffineAmbient a) c
+      exact (IsScalarTower.algebraMap_apply ℚ (Polynomial ℚ)
+        (AffineAmbient a) c).symm
+    · intro x y hx hy hx' hy'
+      rcases hx' with ⟨b₁, m₁, hb₁⟩
+      rcases hy' with ⟨b₂, m₂, hb₂⟩
+      refine ⟨b₁ * (affineG a) ^ m₂ + b₂ * (affineG a) ^ m₁,
+        m₁ + m₂, ?_⟩
+      change affineLocalizationMap a
+          ((b₁ : Polynomial ℚ) * (affineG a : Polynomial ℚ) ^ m₂ +
+            (b₂ : Polynomial ℚ) * (affineG a : Polynomial ℚ) ^ m₁) =
+        affineLocalizationMap a (affineG a : Polynomial ℚ) ^ (m₁ + m₂) *
+          (x + y)
+      rw [map_add, map_mul, map_mul, map_pow, map_pow, pow_add, hb₁, hb₂]
+      ring
+    · intro x y hx hy hx' hy'
+      rcases hx' with ⟨b₁, m₁, hb₁⟩
+      rcases hy' with ⟨b₂, m₂, hb₂⟩
+      refine ⟨b₁ * b₂, m₁ + m₂, ?_⟩
+      change affineLocalizationMap a ((b₁ : Polynomial ℚ) * (b₂ : Polynomial ℚ)) =
+        affineLocalizationMap a (affineG a : Polynomial ℚ) ^ (m₁ + m₂) *
+          (x * y)
+      rw [map_mul, pow_add, hb₁, hb₂]
+      ring
+  have hsurj : Function.Surjective
+      (Localization.awayMap (affineBaseToOpen a) (affineG a)) := by
+    rw [Localization.awayMap_surjective_iff]
+    intro z
+    rcases hclears z with ⟨b, m, hb⟩
+    refine ⟨b, m, ?_⟩
+    apply Subtype.ext
+    change affineLocalizationMap a (b : Polynomial ℚ) =
+      affineLocalizationMap a (affineG a : Polynomial ℚ) ^ m * z.1
+    exact hb
+  have hinj : Function.Injective
+      (Localization.awayMap (affineBaseToOpen a) (affineG a)) := by
+    rw [Localization.awayMap_injective_iff]
+    intro b hb
+    have hb0 : b = 0 := by
+      apply affine_base_to_open_injective a
+      simpa using hb
+    exact ⟨0, by simp [hb0]⟩
+  let eAway : Localization.Away (affineG a) ≃+*
+      Localization.Away (affineOpenG a) :=
+    RingEquiv.ofBijective _ ⟨hinj, hsurj⟩
+  let e :=
+    (Formalization.Books.Algebra.Unit17.standardOpenSpectrumHomeomorph
+      (affineOpenG a)).symm.trans
+      ((PrimeSpectrum.homeomorphOfRingEquiv eAway.symm).trans
+        (Formalization.Books.Algebra.Unit17.standardOpenSpectrumHomeomorph
+          (affineG a)))
+  refine ⟨e, ?_⟩
+  intro p
+  apply PrimeSpectrum.ext
+  let q :=
+    (Formalization.Books.Algebra.Unit17.standardOpenSpectrumHomeomorph
+      (affineOpenG a)).symm p
+  have hq :
+      Formalization.Books.Algebra.Unit17.standardOpenSpectrumHomeomorph
+          (affineOpenG a) q = p := by
+    exact (Formalization.Books.Algebra.Unit17.standardOpenSpectrumHomeomorph
+      (affineOpenG a)).apply_symm_apply p
+  change
+    ((Formalization.Books.Algebra.Unit17.standardOpenSpectrumHomeomorph
+      (affineG a))
+      ((PrimeSpectrum.homeomorphOfRingEquiv eAway.symm) q)).1.asIdeal =
+      (affineOpenSpectrumMap a p.1).asIdeal
+  rw [Formalization.Books.Algebra.Unit17.standardOpenSpectrumHomeomorph_apply]
+  change Ideal.comap (algebraMap affineBaseSubalgebra
+      (Localization.Away (affineG a)))
+      ((PrimeSpectrum.homeomorphOfRingEquiv eAway.symm q).asIdeal) =
+    (affineOpenSpectrumMap a p.1).asIdeal
+  change Ideal.comap (algebraMap affineBaseSubalgebra
+      (Localization.Away (affineG a)))
+      (Ideal.comap (eAway : Localization.Away (affineG a) →+*
+        Localization.Away (affineOpenG a)) q.asIdeal) =
+    (affineOpenSpectrumMap a p.1).asIdeal
+  rw [Ideal.comap_comap]
+  change Ideal.comap ((eAway : Localization.Away (affineG a) →+*
+      Localization.Away (affineOpenG a)).comp
+      (algebraMap affineBaseSubalgebra (Localization.Away (affineG a))))
+      q.asIdeal = (affineOpenSpectrumMap a p.1).asIdeal
+  have heq :
+      (eAway : Localization.Away (affineG a) →+*
+          Localization.Away (affineOpenG a)).comp
+          (algebraMap affineBaseSubalgebra (Localization.Away (affineG a))) =
+        (algebraMap (AffineOpenRing a) (Localization.Away (affineOpenG a))).comp
+          (affineBaseToOpen a) := by
+    ext x
+    change (Localization.awayMap (affineBaseToOpen a) (affineG a))
+        (algebraMap affineBaseSubalgebra (Localization.Away (affineG a)) x) = _
+    simp [Localization.awayMap, IsLocalization.Away.map,
+      IsLocalization.map_mk']
+    rfl
+  rw [heq, ← hq]
+  rfl
 
 theorem affine_open_distinguished_opens_cover (a : ℚ) (ha0 : a ≠ 0) (ha1 : a ≠ 1)
     (haHalf : a ≠ 1 / 2) :

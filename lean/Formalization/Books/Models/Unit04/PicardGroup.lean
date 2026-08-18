@@ -146,7 +146,7 @@ def contractionP (T T' : NumericalType) (i : Fin T.n)
 theorem contraction_square (T T' : NumericalType) (i : Fin T.n)
     (e : Fin T'.n ≃ RemainingIndex T i)
     (hcontraction : IsContraction T T' i e)
-    (hi : IsMinusOneIndex T i := by assumption) :
+    (_hi : IsMinusOneIndex T i := by assumption) :
     (contractionP T T' i e).comp (Matrix.toLin' (picardMatrix T)) =
       (Matrix.toLin' (picardMatrix T')).comp (contractionQ T T' i e) := by
   sorry
@@ -267,9 +267,9 @@ theorem contract_picard_group (T T' : NumericalType) (i : Fin T.n)
     (hi : IsMinusOneIndex T i)
     (e : Fin T'.n ≃ RemainingIndex T i)
     (hcontraction : IsContraction T T' i e) :
-    Function.Injective (contractionPicardMap T T' i e hcontraction) ∧
+    Function.Injective (contractionPicardMap T T' i e hcontraction hi) ∧
       IsElementaryAbelianTwo
-        (moduleCokernel (contractionPicardMap T T' i e hcontraction)) := by
+        (moduleCokernel (contractionPicardMap T T' i e hcontraction hi)) := by
   sorry
 
 /-! In nonpositive genus the Picard group is isomorphic to the integers. -/

@@ -619,6 +619,7 @@ theorem stupidTruncLE_quotient (K : ChainComplex C ℤ) (n : ℤ) :
       change Epi (0 : _ ⟶ _)
       apply (Formalization.Books.Homology.Unit14.ChainComplex.concentrated_isZero
         (K.X n) (-n) i (by simp [degreeConcentrated]; omega)).epi
+  letI : Epi p := hp
   have hf : Mono f := by
     apply HomologicalComplex.mono_of_mono_f
     intro i

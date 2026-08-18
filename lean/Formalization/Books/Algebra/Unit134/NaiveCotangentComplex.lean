@@ -733,7 +733,122 @@ theorem conormal_exact_for_two_surjections
           (Algebra.Extension.Cotangent.map
           (surjectiveExtensionHom hRT hST)) d ∧
         Function.Surjective d := by
-  sorry
+  have hmapzero : KaehlerDifferential.map R R S T = 0 := by
+    apply LinearMap.ext
+    intro x
+    have hspan := KaehlerDifferential.span_range_derivation R S
+    have hx : x ∈ Submodule.span S (Set.range (KaehlerDifferential.D R S)) := by
+      rw [hspan]
+      trivial
+    refine Submodule.span_induction
+      (p := fun y _ => (KaehlerDifferential.map R R S T) y = 0)
+      ?_ ?_ ?_ ?_ hx
+    · rintro x ⟨s, rfl⟩
+      obtain ⟨r, hr⟩ := hRT (algebraMap S T s)
+      rw [KaehlerDifferential.map_D, ← hr]
+      simp
+    · simp
+    · intros x y _ _ hx hy
+      simp [map_add, hx, hy]
+    · intros a x _ hx
+      simp [map_smul, hx]
+  have hbase : KaehlerDifferential.mapBaseChange R S T = 0 := by
+    apply LinearMap.ext
+    intro x
+    induction x with
+    | zero => simp
+    | add x y hx hy => simp [hx, hy]
+    | tmul t x =>
+        obtain ⟨r, hr⟩ := hRT t
+        rw [← hr]
+        simp [KaehlerDifferential.mapBaseChange_tmul, hmapzero]
+  have hδ : Function.Surjective (Algebra.H1Cotangent.δ R S T) := by
+    intro z
+    apply (Algebra.H1Cotangent.exact_δ_mapBaseChange R S T z).mp
+    rw [hbase]
+    simp
+  let ERT := (surjectiveExtension hRT).h1CotangentEquivCotangent
+  let EST := (surjectiveExtension hST).h1CotangentEquivCotangent
+  let hmapidR : Algebra.H1Cotangent.map R R T T = LinearMap.id := by
+    change Algebra.Extension.H1Cotangent.map
+      ((Algebra.Generators.self R T).defaultHom
+        (Algebra.Generators.self R T)).toExtensionHom = _
+    rw [Algebra.Extension.H1Cotangent.map_eq]
+    exact Algebra.Extension.H1Cotangent.map_id
+  let hmapidS : Algebra.H1Cotangent.map S S T T = LinearMap.id := by
+    change Algebra.Extension.H1Cotangent.map
+      ((Algebra.Generators.self S T).defaultHom
+        (Algebra.Generators.self S T)).toExtensionHom = _
+    rw [Algebra.Extension.H1Cotangent.map_eq]
+    exact Algebra.Extension.H1Cotangent.map_id
+  have hRTEq :
+      ERT = Algebra.Extension.h1Cotangentι ∘ₗ
+        Algebra.Extension.H1Cotangent.map
+          (Algebra.Extension.defaultHom R T (surjectiveExtension hRT)) := by
+    have h := Algebra.Extension.h1CotangentEquivCotangent_comp_map
+      (surjectiveExtension hRT)
+    convert h using 1
+    simp only [hmapidR, LinearMap.comp_id]
+    rfl
+  have hSTE :
+      EST = Algebra.Extension.h1Cotangentι ∘ₗ
+        Algebra.Extension.H1Cotangent.map
+          (Algebra.Extension.defaultHom S T (surjectiveExtension hST)) := by
+    have h := Algebra.Extension.h1CotangentEquivCotangent_comp_map
+      (surjectiveExtension hST)
+    convert h using 1
+    simp only [hmapidS, LinearMap.comp_id]
+    rfl
+  have hcomp :
+      Algebra.Extension.Cotangent.map (surjectiveExtensionHom hRT hST) ∘ₗ ERT.toLinearMap =
+        EST.toLinearMap ∘ₗ Algebra.H1Cotangent.map R S T T := by
+    rw [hRTEq, hSTE]
+    rw [← LinearMap.comp_assoc, Algebra.Extension.Cotangent.map_comp_h1Cotangentι]
+    rw [LinearMap.comp_assoc]
+    ext x
+    simp only [LinearMap.comp_apply]
+    simp only [Algebra.H1Cotangent.map]
+    rw [← Algebra.Extension.H1Cotangent.map_comp_apply
+      (Algebra.Extension.defaultHom R T (surjectiveExtension hRT))
+      (surjectiveExtensionHom hRT hST)]
+    rw [← Algebra.Extension.H1Cotangent.map_comp_apply
+      ((Algebra.Generators.self R T).defaultHom
+        (Algebra.Generators.self S T)).toExtensionHom
+      (Algebra.Extension.defaultHom S T (surjectiveExtension hST))]
+    have hmapeq := Algebra.Extension.H1Cotangent.map_eq
+      ((surjectiveExtensionHom hRT hST).comp
+        (Algebra.Extension.defaultHom R T (surjectiveExtension hRT)))
+      ((Algebra.Extension.defaultHom S T (surjectiveExtension hST)).comp
+        ((Algebra.Generators.self R T).defaultHom
+          (Algebra.Generators.self S T)).toExtensionHom)
+    exact congrArg (fun z => Algebra.Extension.h1Cotangentι z)
+      (DFunLike.congr_fun hmapeq x)
+  let d := (Algebra.H1Cotangent.δ R S T).comp EST.symm.toLinearMap
+  refine ⟨d, ?_, ?_⟩
+  · have hcanon := (LinearEquiv.conj_exact_iff_exact
+        (Algebra.H1Cotangent.map R S T T)
+        (Algebra.H1Cotangent.δ R S T) EST).2
+        (Algebra.H1Cotangent.exact_map_δ R S T)
+    intro z
+    constructor
+    · intro hz
+      obtain ⟨y, hy⟩ := (hcanon z).mp hz
+      refine ⟨ERT y, ?_⟩
+      exact (DFunLike.congr_fun hcomp y).trans hy
+    · rintro ⟨y, hy⟩
+      apply (hcanon z).mpr
+      refine ⟨ERT.symm y, ?_⟩
+      calc
+        EST (Algebra.H1Cotangent.map R S T T (ERT.symm y)) =
+            Algebra.Extension.Cotangent.map (surjectiveExtensionHom hRT hST)
+              (ERT (ERT.symm y)) := (DFunLike.congr_fun hcomp (ERT.symm y)).symm
+        _ = z := by simpa using hy
+  · intro z
+    obtain ⟨y, hy⟩ := hδ z
+    refine ⟨EST y, ?_⟩
+    dsimp [d]
+    rw [EST.symm_apply_apply]
+    exact hy
 
 noncomputable def presentation_baseChange_cotangentSpace
     {R S T ι : Type*} [CommRing R] [CommRing S] [CommRing T]
@@ -790,7 +905,180 @@ theorem naive_cotangent_localization_of_base
     Subsingleton (Algebra.H1Cotangent A (Localization M)) ∧
       Subsingleton (Formalization.Books.Algebra.Unit131.ModuleOfDifferentials A
         (Localization M)) := by
-  sorry
+  exact ⟨Algebra.FormallyEtale.subsingleton_h1Cotangent,
+    Algebra.FormallyEtale.subsingleton_kaehlerDifferential⟩
+
+private noncomputable def naive_cotangent_localize_bottom_aux
+    {A B : Type*} [CommRing A] [CommRing B] [Algebra A B]
+    (M : Submonoid A) [Algebra (Localization M) B]
+    [IsScalarTower A (Localization M) B] :
+    Σ' (_ : IsLocalization (Algebra.algebraMapSubmonoid B M) B),
+      PLift (Function.Bijective (Algebra.H1Cotangent.map A (Localization M) B B) ∧
+        Function.Bijective (KaehlerDifferential.map A (Localization M) B B)) := by
+  have hbase := naive_cotangent_localization_of_base M
+  let M' := Algebra.algebraMapSubmonoid B M
+  let hLoc : IsLocalization M' B := by
+    apply IsLocalization.of_le_isUnit
+    rintro x ⟨a, ha, rfl⟩
+    change IsUnit ((algebraMap A B) a)
+    simpa only [IsScalarTower.algebraMap_apply A (Localization M) B] using
+      IsUnit.map (algebraMap (Localization M) B)
+        (IsLocalization.map_units (Localization M) ⟨a, ha⟩)
+  letI : Subsingleton (Formalization.Books.Algebra.Unit131.ModuleOfDifferentials
+      A (Localization M)) := hbase.2
+  letI : IsLocalization M' B := hLoc
+  refine ⟨hLoc, ?_⟩
+  have hzero : KaehlerDifferential.mapBaseChange A (Localization M) B = 0 := by
+    apply LinearMap.ext
+    intro x
+    have hx : x = 0 := Subsingleton.elim _ _
+    subst x
+    exact (KaehlerDifferential.mapBaseChange A (Localization M) B).map_zero
+  have hex := KaehlerDifferential.exact_mapBaseChange_map A (Localization M) B
+  have hinj : Function.Injective (KaehlerDifferential.map A (Localization M) B B) := by
+    intro x y hxy
+    have hz : KaehlerDifferential.map A (Localization M) B B (x - y) = 0 := by
+      simp [map_sub, hxy]
+    obtain ⟨z, hz⟩ := (hex (x - y)).mp hz
+    have hzero' : x - y = 0 := by
+      simpa [hzero] using hz.symm
+    exact sub_eq_zero.mp hzero'
+  let H := Algebra.H1Cotangent A B
+  let fL : H →ₗ[Localization M] H := LinearMap.id
+  have hlocL : IsLocalizedModule
+      (Algebra.algebraMapSubmonoid (Localization M) M) fL := by
+    constructor
+    · intro m
+      obtain ⟨_, ⟨a, ha, rfl⟩⟩ := m
+      exact IsUnit.map (algebraMap (Localization M) (Module.End (Localization M) H))
+        (IsLocalization.map_units (Localization M) ⟨a, ha⟩)
+    · intro y
+      exact ⟨⟨y, 1⟩, by simp [fL]⟩
+    · intro x y hxy
+      exact ⟨1, by simpa [fL] using hxy⟩
+  have hloc : IsLocalizedModule M (fL.restrictScalars A) :=
+    IsLocalizedModule.restrictScalars M fL
+  let f : H →ₗ[A] H := fL.restrictScalars A
+  have hbaseH' := (isLocalizedModule_iff_isBaseChange M (Localization M) f).mp hloc
+  change Function.Bijective (f.liftBaseChange (Localization M)) at hbaseH'
+  have hbaseH : Function.Bijective (f.liftBaseChange (Localization M)) := hbaseH'
+  let eLoc : Localization M' ≃ₐ[B] B :=
+    IsLocalization.algEquiv M' (Localization M') B
+  let eLocL : Localization M' ≃ₐ[Localization M] B :=
+    { eLoc with
+      commutes' := by
+        intro x
+        have hmap :
+            algebraMap (Localization M) (Localization M') =
+              (algebraMap B (Localization M')).comp (algebraMap (Localization M) B) := by
+          apply IsLocalization.ringHom_ext (R := A) (S := Localization M)
+            (P := Localization M') M
+          ext a
+          simp only [RingHom.comp_apply]
+          rw [← IsScalarTower.algebraMap_apply A (Localization M) (Localization M')]
+          rw [← IsScalarTower.algebraMap_apply A (Localization M) B]
+          rw [IsScalarTower.algebraMap_apply A B (Localization M')]
+        rw [hmap]
+        change eLoc (algebraMap B (Localization M') ((algebraMap (Localization M) B) x)) = _
+        exact eLoc.commutes _ }
+  let e : (Localization M) ⊗[A] B ≃ₐ[Localization M] B :=
+    (Localization.tensorRightAlgEquiv M B).trans
+      eLocL
+  have hkaehlerSurj : Function.Surjective (KaehlerDifferential.map A (Localization M) B B) :=
+    KaehlerDifferential.map_surjective A (Localization M) B
+  let eH : ((Localization M) ⊗[A] H) ≃ₗ[Localization M] H :=
+    LinearEquiv.ofBijective (f.liftBaseChange (Localization M)) hbaseH
+  let hb := Algebra.tensorH1CotangentOfFlat A B (Localization M)
+  letI : Algebra B ((Localization M) ⊗[A] B) := Algebra.TensorProduct.rightAlgebra
+  letI : Algebra ((Localization M) ⊗[A] B) B := e.toRingHom.toAlgebra
+  letI : IsScalarTower (Localization M) ((Localization M) ⊗[A] B) B :=
+    IsScalarTower.of_algebraMap_eq' e.toAlgHom.comp_algebraMap.symm
+  let eB : ((Localization M) ⊗[A] B) ≃ₐ[B] B :=
+    { e with
+      commutes' := by
+        intro b
+        change e (algebraMap B ((Localization M) ⊗[A] B) b) = b
+        rw [Algebra.TensorProduct.right_algebraMap_apply]
+        change eLocL (Localization.tensorRightAlgEquiv M B (1 ⊗ₜ[A] b)) = b
+        rw [Localization.tensorRightAlgEquiv_apply_one_tmul]
+        exact eLoc.commutes _ }
+  letI : IsScalarTower B ((Localization M) ⊗[A] B) B :=
+    IsScalarTower.of_algebraMap_eq' eB.toAlgHom.comp_algebraMap.symm
+  refine ⟨?_⟩
+  let he := Algebra.H1Cotangent.mapEquiv (Localization M)
+    ((Localization M) ⊗[A] B) B e
+  have hmap (x : Algebra.H1Cotangent A B) :
+      he (Algebra.H1Cotangent.map A (Localization M) B ((Localization M) ⊗[A] B) x) =
+        Algebra.H1Cotangent.map A (Localization M) B B x := by
+    change
+      Algebra.H1Cotangent.map (Localization M) (Localization M)
+          ((Localization M) ⊗[A] B) B
+          (Algebra.H1Cotangent.map A (Localization M) B ((Localization M) ⊗[A] B) x) = _
+    simp only [Algebra.H1Cotangent.map]
+    rw [← Algebra.Extension.H1Cotangent.map_comp_apply]
+    rw [Algebra.Extension.H1Cotangent.map_eq]
+  have hkey :
+      he.toLinearMap ∘ₗ hb.toLinearMap =
+        (Algebra.H1Cotangent.map A (Localization M) B B).restrictScalars (Localization M) ∘ₗ
+          eH.toLinearMap := by
+    ext y
+    simp [eH, f, fL]
+    rw [Algebra.tensorH1CotangentOfFlat_tmul]
+    simp [hmap]
+  have hkres :
+      Function.Bijective
+        ((Algebra.H1Cotangent.map A (Localization M) B B).restrictScalars (Localization M)) := by
+    let ec := hb.trans he
+    constructor
+    · intro x y hxy
+      obtain ⟨u, hu⟩ := eH.surjective x
+      obtain ⟨v, hv⟩ := eH.surjective y
+      have hku :
+          he (hb u) =
+            (Algebra.H1Cotangent.map A (Localization M) B B).restrictScalars
+              (Localization M) (eH u) := by
+        simpa only [LinearMap.coe_comp, Function.comp_apply, LinearEquiv.coe_coe] using
+          congrArg (fun F => F u) hkey
+      have hkv :
+          he (hb v) =
+            (Algebra.H1Cotangent.map A (Localization M) B B).restrictScalars
+              (Localization M) (eH v) := by
+        simpa only [LinearMap.coe_comp, Function.comp_apply, LinearEquiv.coe_coe] using
+          congrArg (fun F => F v) hkey
+      have huv : ec u = ec v := by
+        calc
+          ec u = he (hb u) := rfl
+          _ = (Algebra.H1Cotangent.map A (Localization M) B B).restrictScalars
+                (Localization M) (eH u) := hku
+          _ = (Algebra.H1Cotangent.map A (Localization M) B B).restrictScalars
+                (Localization M) x := by rw [hu]
+          _ = (Algebra.H1Cotangent.map A (Localization M) B B).restrictScalars
+                (Localization M) y := by rw [hxy]
+          _ = (Algebra.H1Cotangent.map A (Localization M) B B).restrictScalars
+                (Localization M) (eH v) := by rw [hv]
+          _ = he (hb v) := hkv.symm
+          _ = ec v := rfl
+      have huv' : u = v := ec.injective huv
+      calc
+        x = eH u := hu.symm
+        _ = eH v := congrArg eH huv'
+        _ = y := hv
+    · intro z
+      obtain ⟨u, hu⟩ := ec.surjective z
+      refine ⟨eH u, ?_⟩
+      have hku :
+          he (hb u) =
+            (Algebra.H1Cotangent.map A (Localization M) B B).restrictScalars
+              (Localization M) (eH u) := by
+        simpa only [LinearMap.coe_comp, Function.comp_apply, LinearEquiv.coe_coe] using
+          congrArg (fun F => F u) hkey
+      calc
+        (Algebra.H1Cotangent.map A (Localization M) B B).restrictScalars
+              (Localization M) (eH u) = he (hb u) := hku.symm
+        _ = ec u := rfl
+        _ = z := hu
+  refine ⟨?_, ⟨hinj, hkaehlerSurj⟩⟩
+  simpa only [LinearMap.coe_restrictScalars] using hkres
 
 theorem naive_cotangent_localize_bottom
     {A B : Type*} [CommRing A] [CommRing B] [Algebra A B]
@@ -798,7 +1086,7 @@ theorem naive_cotangent_localize_bottom
     [IsScalarTower A (Localization M) B] :
     Function.Bijective (Algebra.H1Cotangent.map A (Localization M) B B) ∧
       Function.Bijective (KaehlerDifferential.map A (Localization M) B B) := by
-  sorry
+  exact (naive_cotangent_localize_bottom_aux M).2.down
 
 /-! ## Principal and arbitrary localization -/
 
@@ -817,7 +1105,30 @@ theorem principal_localization_conormal_equiv
     Nonempty (((principalLocalizationPresentation (T := T) g P).toExtension.Cotangent) ≃ₗ[T]
       T ⊗[S] P.toExtension.Cotangent ×
         (Algebra.Generators.localizationAway T g).toExtension.Cotangent) := by
-  sorry
+  let Q := Algebra.Generators.localizationAway T g
+  let rel : (Q.comp P).Ring :=
+    MvPolynomial.rename Sum.inr f * MvPolynomial.X (Sum.inl ()) - 1
+  let x : (Q.comp P).toExtension.Cotangent :=
+    Algebra.Extension.Cotangent.mk ⟨rel, by
+      change (MvPolynomial.rename Sum.inr f * MvPolynomial.X (Sum.inl ()) - 1 :
+        MvPolynomial (Unit ⊕ ι) R) ∈
+        ((Algebra.Generators.localizationAway T g).comp P).ker
+      rw [Algebra.Generators.comp_localizationAway_ker g P f hf]
+      exact Ideal.mem_sup_right (Ideal.subset_span (by simp))⟩
+  have hx : Algebra.Extension.Cotangent.map (Q.ofComp P).toExtensionHom x =
+      Algebra.Generators.cMulXSubOneCotangent T g := by
+    rw [Algebra.Generators.cMulXSubOneCotangent_eq]
+    simp only [x, Algebra.Extension.Cotangent.map_mk]
+    rw [Algebra.Extension.Cotangent.mk_eq_mk_iff_sub_mem]
+    change (Q.ofComp P).toAlgHom rel -
+        (C g * X () - 1 : Q.Ring) ∈ Q.ker ^ 2
+    dsimp [rel]
+    rw [map_sub, map_mul, Algebra.Generators.toAlgHom_ofComp_rename]
+    simp [hf]
+  change Nonempty ((Q.comp P).toExtension.Cotangent ≃ₗ[T]
+    T ⊗[S] P.toExtension.Cotangent × Q.toExtension.Cotangent)
+  refine ⟨?_⟩
+  exact Algebra.Generators.cotangentCompLocalizationAwayEquiv g P hx
 
 theorem principal_localization_kernel_generated
     {R S T ι : Type*} [CommRing R] [CommRing S] [CommRing T]

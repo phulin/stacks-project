@@ -908,8 +908,7 @@ theorem contract_picard_group (T T' : NumericalType) (i : Fin T.n)
       change (picardMatrix T).mulVec b i = z i
       change (picardMatrix T).mulVec ((-(z i)) • Pi.single i 1) i = z i
       rw [Matrix.mulVec_smul, Matrix.mulVec_single]
-      simp [picardMatrix, hi.2, Int.ediv_neg,
-        Int.ediv_self (ne_of_gt (T.w_pos i))]
+      simp [picardMatrix, hi.2]
       have hai : -T.w i / T.w i = -1 := by
         simp [Int.neg_ediv, Int.ediv_self (ne_of_gt (T.w_pos i))]
       rw [hai]
@@ -954,7 +953,7 @@ theorem contract_picard_group (T T' : NumericalType) (i : Fin T.n)
         exact Int.mul_ediv_cancel_left _ (ne_of_gt (T.w_pos l))
       change (picardMatrix T).mulVec ((-(z i)) • Pi.single i 1) l = z l
       rw [Matrix.mulVec_smul, Matrix.mulVec_single]
-      simp [picardMatrix, hl, huquot]
+      simp [picardMatrix, huquot]
       linarith [hsum]
   constructor
   · intro x y hxy

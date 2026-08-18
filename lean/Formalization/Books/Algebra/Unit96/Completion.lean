@@ -2007,7 +2007,77 @@ theorem finite_of_complete_ring_of_finite_residue
     (hM : (⨅ n : ℕ, I ^ n • (⊤ : Submodule R M)) = ⊥)
     [Module.Finite (R ⧸ I) (M ⧸ (I • (⊤ : Submodule R M)))] :
     Module.Finite R M := by
-  sorry
+  let Q := M ⧸ (I • (⊤ : Submodule R M))
+  have hQfg : (⊤ : Submodule R Q).FG := by
+    have hfg := Submodule.FG.restrictScalars_of_surjective
+      (S := (⊤ : Submodule (R ⧸ I) Q))
+      (Module.finite_def.mp
+        (inferInstance : Module.Finite (R ⧸ I) Q))
+      (Ideal.Quotient.mk_surjective : Function.Surjective
+        (algebraMap R (R ⧸ I)))
+    simpa [Q] using hfg
+  obtain ⟨n, s, hs⟩ :=
+    Submodule.fg_iff_exists_fin_generating_family.mp hQfg
+  choose x hx using fun i => (Submodule.mkQ_surjective
+    (I • (⊤ : Submodule R M))) (s i)
+  let M' : Submodule R M := Submodule.span R (Set.range x)
+  have hfinM' : Module.Finite R M' :=
+    Module.Finite.span_of_finite R (Set.finite_range x)
+  have hM' : (⨅ n : ℕ, I ^ n • (⊤ : Submodule R M')) = ⊥ := by
+    apply le_antisymm
+    · intro z hz
+      apply (Submodule.mem_bot R).2
+      have hzM : (z : M) ∈ (⊥ : Submodule R M) := by
+        rw [← hM]
+        apply (Submodule.mem_iInf
+          (fun n : ℕ => I ^ n • (⊤ : Submodule R M))).2
+        intro n
+        have hz' : (z : M) ∈ I ^ n • M' :=
+          (Submodule.mem_smul_top_iff (I := I ^ n) M' z).mp
+            ((Submodule.mem_iInf
+              (fun n : ℕ => I ^ n • (⊤ : Submodule R M'))).1 hz n)
+        exact (show I ^ n • M' ≤ I ^ n • (⊤ : Submodule R M) from
+          smul_mono_right _ le_top) hz'
+      exact Subtype.ext ((Submodule.mem_bot R).mp hzM)
+    · exact bot_le
+  have hcomplete : IsAdicComplete I M' :=
+    @finite_module_isAdicComplete_of_complete_ring R _ I M' _ _ hfinM' hR hM'
+  let f : M' →ₗ[R] M := M'.subtype
+  have hmod : Function.Surjective
+      ((I • (⊤ : Submodule R M)).mkQ.comp f) := by
+    rw [← LinearMap.range_eq_top, ← hs]
+    apply le_antisymm
+    · rintro y ⟨z, rfl⟩
+      change (I • (⊤ : Submodule R M)).mkQ (z : M) ∈
+        Submodule.span R (Set.range s)
+      have hspan : ∀ (z : M), z ∈ Submodule.span R (Set.range x) →
+          (I • (⊤ : Submodule R M)).mkQ z ∈
+            Submodule.span R (Set.range s) := by
+        intro z hz
+        induction hz using Submodule.span_induction with
+        | mem y hy =>
+            obtain ⟨i, rfl⟩ := hy
+            rw [hx i]
+            exact Submodule.subset_span (Set.mem_range_self i)
+        | zero => simp
+        | add y z _ _ hy hz => simpa using add_mem hy hz
+        | smul r y _ hy => simpa using Submodule.smul_mem _ r hy
+      exact hspan (z : M) z.property
+    · apply Submodule.span_le.mpr
+      rintro y ⟨i, rfl⟩
+      exact ⟨⟨x i, Submodule.subset_span (Set.mem_range_self i)⟩, hx i⟩
+  have hHaus : IsHausdorff I M := by
+    refine ⟨fun z hz => ?_⟩
+    have hzbot : z ∈ (⊥ : Submodule R M) := by
+      rw [← hM]
+      exact (Submodule.mem_iInf
+        (fun n : ℕ => I ^ n • (⊤ : Submodule R M))).2
+        (fun n => SModEq.zero.mp (hz n))
+    exact (Submodule.mem_bot _).mp hzbot
+  have hf : Function.Surjective f :=
+    @surjective_of_mkQ_comp_surjective R _ I M' _ _ M _ _
+      hcomplete.toIsPrecomplete hHaus f hmod
+  exact Module.Finite.of_surjective (hM := hfinM') f hf
 
 end
 

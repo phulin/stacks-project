@@ -202,6 +202,31 @@ noncomputable def descentDataFunctor
     intro i
     simp
 
+/- Essential surjectivity is the only part of descent transport which is not
+   inherited pointwise from the fibre functors.
+
+   Proof roadmap:
+
+   1. For `D : G.DescentData f`, choose in every fibre an object `A i` and an
+      isomorphism `e i : η(A i) ≅ D.obj i` using fibrewise essential
+      surjectivity.
+   2. Conjugate each gluing morphism of `D` by the `e i` and by the naturality
+      isomorphisms of `η`.  Lift the resulting morphism through the full
+      fibre functor to define the gluing morphism of `A`.
+   3. Prove pullback compatibility, identities, and the cocycle condition by
+      applying the faithful fibre functor.  After `map_preimage`, these are
+      exactly the corresponding fields of `D`.
+   4. Assemble the `e i` into an isomorphism
+      `descentDataFunctor η f |>.obj A ≅ D`; its naturality is the equation
+      used when defining the lifted gluing maps. -/
+theorem descentDataFunctor_essSurj
+    {C : Type u} [Category.{v} C] {F G : FiberedCategory C}
+    (η : FiberedMorphism F G) (hη : FiberwiseEquivalence η)
+    {ι : Type t} {U : C} {X : ι → C}
+    (f : ∀ i, X i ⟶ U) :
+    (descentDataFunctor η f).EssSurj := by
+  sorry
+
 /- The transport functor is an equivalence whenever the fibred morphism is a
 fibrewise equivalence.  The proof is the descent-data version of transporting
 objects and gluing morphisms through the fibrewise full-faithful and
@@ -260,9 +285,7 @@ theorem descentDataFunctor_is_equivalence
     intro i
     simpa only [descentDataFunctor] using
       (η.app (.mk (op (X i)))).toFunctor.map_preimage (φ.hom i)
-  · constructor
-    intro D
-    sorry
+  · exact descentDataFunctor_essSurj η ⟨hff, hess⟩ f
 
 noncomputable def descentDataEquivalence
     {C : Type u} [Category.{v} C] {F G : FiberedCategory C}
@@ -272,6 +295,27 @@ noncomputable def descentDataEquivalence
   letI : (descentDataFunctor η f).IsEquivalence :=
     descentDataFunctor_is_equivalence η hη f
   exact (descentDataFunctor η f).asEquivalence
+
+/- The comparison is already present before choosing an inverse equivalence.
+
+   Proof roadmap:
+
+   * At a fibre object over `U`, both composites have component at `i` given
+     by applying `η` after pullback along `f i`, in opposite orders.
+   * Use `η.naturality (f i).op.toLoc` for the component isomorphism.
+   * Prove compatibility with every descent gluing map by the naturality of
+     those same isomorphisms; `transportedDescentHom` was defined in exactly
+     the conjugated form needed for this calculation.
+   * Finish with `Pseudofunctor.DescentData.hom_ext` componentwise. -/
+theorem descentDataFunctor_toDescentData_iso
+    {C : Type u} [Category.{v} C] {F G : FiberedCategory C}
+    (η : FiberedMorphism F G)
+    {ι : Type t} {U : C} {X : ι → C}
+    (f : ∀ i, X i ⟶ U) :
+    Nonempty
+      (F.toDescentData f ⋙ descentDataFunctor η f ≅
+        (η.app (.mk (op U))).toFunctor ⋙ G.toDescentData f) := by
+  sorry
 
 /- The comparison isomorphism records that transport commutes with the
 canonical descent-data functors from the fibre over `U`. -/
@@ -283,7 +327,6 @@ theorem descentDataEquivalence_toDescentData_iso
     Nonempty
       (F.toDescentData f ⋙ (descentDataEquivalence η hη f).functor ≅
         (η.app (.mk (op U))).toFunctor ⋙ G.toDescentData f) := by
-  sorry
+  exact descentDataFunctor_toDescentData_iso η f
 
 end Formalization.Books.Stacks.Unit01
-

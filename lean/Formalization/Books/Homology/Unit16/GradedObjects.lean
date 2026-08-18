@@ -361,7 +361,7 @@ def gradedTotalIsExact (C : Type u) [Category.{v} C] [Abelian C]
 /-- A package for the warning that countable direct sums need not be exact.
 The textbook gives the opposite of abelian sheaves on R as an example. -/
 structure NonExactGradedTotalExample where
-  carrier : Type u
+  carrier : Type (u + 1)
   category : Category.{u} carrier
   abelian : letI := category; Abelian carrier
   coproducts : letI := category; HasCountableCoproducts carrier

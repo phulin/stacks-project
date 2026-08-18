@@ -128,18 +128,18 @@ theorem essFinitePresentation_isStableUnderBaseChange :
   change essFinitePresentation R T at h
   rcases h with ⟨A, hA, g, M, q, hq, hcomp, hloc⟩
   let : CommRing A := hA
-  letI : Algebra R A := g.toAlgebra
-  letI : Algebra A T := q.toAlgebra
+  let : Algebra R A := g.toAlgebra
+  let : Algebra A T := q.toAlgebra
   let : IsScalarTower R A T := IsScalarTower.of_algebraMap_eq' (by
     rw [← hcomp]
     rfl)
   let qₐ : A →ₐ[R] T := IsScalarTower.toAlgHom R A T
   let q' : (S ⊗[R] A) →+* (S ⊗[R] T) :=
     (Algebra.TensorProduct.map (AlgHom.id S S) qₐ).toRingHom
-  letI : Algebra A (S ⊗[R] A) := Algebra.TensorProduct.rightAlgebra
-  letI : Algebra A (S ⊗[R] T) :=
+  let : Algebra A (S ⊗[R] A) := Algebra.TensorProduct.rightAlgebra
+  let : Algebra A (S ⊗[R] T) :=
     (Algebra.TensorProduct.includeRight.comp qₐ).toRingHom.toAlgebra
-  letI : Algebra (S ⊗[R] A) (S ⊗[R] T) := q'.toAlgebra
+  let : Algebra (S ⊗[R] A) (S ⊗[R] T) := q'.toAlgebra
   let : IsScalarTower A (S ⊗[R] A) (S ⊗[R] T) := by
     apply IsScalarTower.of_algebraMap_eq'
     exact congrArg AlgHom.toRingHom
@@ -157,9 +157,7 @@ theorem essFinitePresentation_isStableUnderBaseChange :
     infer_instance
   refine ⟨S ⊗[R] A, inferInstance, algebraMap S (S ⊗[R] A),
     M.map (Algebra.TensorProduct.includeRight (R := R) (A := S)), q', hq', ?_, hloc'⟩
-  simpa [q', RingHom.algebraMap_toAlgebra] using
-    congrArg AlgHom.toRingHom
-      (Algebra.TensorProduct.map_comp_includeLeft (AlgHom.id S S) qₐ)
+  simp [q', RingHom.algebraMap_toAlgebra]
 
 /-! ## Essentially finite type maps into Artinian local rings -/
 
@@ -242,7 +240,7 @@ private theorem isLocalizationOfQuotient_of_isLocalization
     (M : Submonoid P)
     (hloc : letI : Algebra P S := p.toAlgebra; IsLocalization M S) :
     RingHom.IsLocalizationOfQuotient p := by
-  letI : Algebra P S := p.toAlgebra
+  let : Algebra P S := p.toAlgebra
   let I : Ideal P := RingHom.ker p
   let hI : I ≤ RingHom.ker p := by
     intro x hx
@@ -252,7 +250,7 @@ private theorem isLocalizationOfQuotient_of_isLocalization
     ext x
     exact Ideal.Quotient.lift_mk I p hI
   have hqmk (x : P) : q (Ideal.Quotient.mk I x) = p x := DFunLike.congr_fun hcomp x
-  letI : Algebra (P ⧸ I) S := q.toAlgebra
+  let : Algebra (P ⧸ I) S := q.toAlgebra
   have hq : IsLocalization (M.map (Ideal.Quotient.mk I)) S := by
     rw [isLocalization_iff]
     constructor
@@ -284,7 +282,7 @@ private theorem isLocalizationOfQuotient_of_surjective
     (a : P →+* A) (ha : Function.Surjective a) (b : A →+* S) (M : Submonoid A)
     (hloc : letI : Algebra A S := b.toAlgebra; IsLocalization M S) :
     RingHom.IsLocalizationOfQuotient (b.comp a) := by
-  letI : Algebra A S := b.toAlgebra
+  let : Algebra A S := b.toAlgebra
   let I : Ideal P := RingHom.ker a
   let e : (P ⧸ I) ≃+* A := RingHom.quotientKerEquivOfSurjective ha
   let q : (P ⧸ I) →+* S := (algebraMap A S).comp e.toRingHom
@@ -293,7 +291,7 @@ private theorem isLocalizationOfQuotient_of_surjective
     change b (e (Ideal.Quotient.mk I x)) = b (a x)
     change b ((RingHom.quotientKerEquivOfSurjective ha) (Ideal.Quotient.mk I x)) = b (a x)
     exact congrArg b (RingHom.quotientKerEquivOfSurjective_apply_mk ha x)
-  letI : Algebra (P ⧸ I) S := q.toAlgebra
+  let : Algebra (P ⧸ I) S := q.toAlgebra
   have hq : IsLocalization (M.map e.symm) S := by
     convert IsLocalization.isLocalization_of_base_ringEquiv M S e.symm using 1
     apply Algebra.algebra_ext

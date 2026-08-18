@@ -93,7 +93,7 @@ def IsDiscreteFibredCategoryOver {C : Cat.{v, u}}
 
 def categoriesFibredInSetsObjectProperty {C : Cat.{v, u}} :
     ObjectProperty (FibredCategoryOver C) :=
-  fun X => IsCategoryFibredInSets (structureFunctor X.underlying)
+  IsDiscreteFibredCategoryOver
 
 theorem discreteFibredCategoryOver_isCategoryFibredInSets
     {C : Cat.{v, u}} (X : FibredCategoryOver C)

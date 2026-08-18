@@ -43,6 +43,37 @@ def IsBaseChangeRepresentative (k k' : Type*) [Field k] [Field k']
     Algebra.TensorProduct.rightAlgebra
   Nonempty ((A.carrier ⊗[k] k') ≃ₐ[k'] B.carrier)
 
+/-- A finite central division algebra, retaining the structures which make it
+usable as a field-relative central simple algebra. -/
+structure FiniteCentralDivisionAlgebra (k : Type u_k) [Field k] where
+  carrier : Type u_A
+  [divisionRing : DivisionRing carrier]
+  [algebra : Algebra k carrier]
+  [finite : FiniteDimensional k carrier]
+  [central : Algebra.IsCentral k carrier]
+
+/-- The canonical `CSA` represented by a finite central division algebra. -/
+def FiniteCentralDivisionAlgebra.toCSA
+    (k : Type u_k) [Field k] (D : FiniteCentralDivisionAlgebra k) :
+    CSA.{u_k, u_A} k := by
+  letI := D.divisionRing
+  letI := D.algebra
+  letI := D.finite
+  letI := D.central
+  exact { AlgCat.of k D.carrier with }
+
+/-- A Wedderburn--Artin presentation whose division factor keeps its actual
+`DivisionRing`, `Algebra`, finite-dimensional, central, and `CSA` structures. -/
+structure WedderburnDivisionRepresentative (k : Type u_k) (A : Type u_A)
+    [Field k] [Ring A] [Algebra k A] where
+  degree : ℕ
+  degree_pos : 0 < degree
+  division : FiniteCentralDivisionAlgebra k
+  csa : CSA.{u_k, u_A} k
+  csa_carrier : csa.carrier = division.carrier
+  equivalence : Nonempty
+    (A ≃ₐ[k] Matrix (Fin degree) (Fin degree) division.carrier)
+
 theorem similarity_is_equivalence (k : Type*) [Field k] :
     Equivalence (@IsBrauerEquivalent k _) :=
   IsBrauerEquivalent.is_eqv
@@ -153,6 +184,66 @@ private theorem matrix_division_similarity_iff_for_unique (k K K' : Type*) [Fiel
     exact ⟨(eK.symm.trans ((v.conjAlgEquiv k).trans (q.trans eK'))).unop⟩
   · rintro ⟨e⟩
     exact ⟨1, 1, one_ne_zero, one_ne_zero, ⟨e.mapMatrix⟩⟩
+
+private theorem matrix_division_factor_is_central (k A D : Type*) [Field k]
+    [Ring A] [Algebra k A] [FiniteDimensional k A]
+    [Algebra.IsCentral k A] [IsSimpleRing A] [DivisionRing D]
+    [Algebra k D] (n : ℕ) [NeZero n]
+    (e : A ≃ₐ[k] Matrix (Fin n) (Fin n) D) :
+    Algebra.IsCentral k D := by
+  constructor
+  intro x hx
+  have hxcomm : ∀ y : D, Commute x y := by
+    intro y
+    exact (Subalgebra.mem_center_iff.mp hx y).symm
+  have hxmat : Matrix.scalar (Fin n) x ∈ Set.center
+      (Matrix (Fin n) (Fin n) D) := by
+    rw [Semigroup.mem_center_iff]
+    intro M
+    exact (Matrix.scalar_commute x hxcomm M).eq.symm
+  obtain ⟨a, ha⟩ := e.surjective (Matrix.scalar (Fin n) x)
+  have hacenter : a ∈ Subalgebra.center k A := by
+    rw [Subalgebra.mem_center_iff]
+    intro b
+    have h := (Semigroup.mem_center_iff.mp hxmat) (e b)
+    have h' := congrArg e.symm h
+    rw [← ha] at h'
+    simpa using h'
+  obtain ⟨r, hr⟩ := Algebra.mem_bot.mp
+    (‹Algebra.IsCentral k A›.out hacenter)
+  apply Algebra.mem_bot.mpr
+  refine ⟨r, ?_⟩
+  apply (Matrix.scalar_inj (n := Fin n)).mp
+  calc
+    Matrix.scalar (Fin n) (algebraMap k D r) =
+        algebraMap k (Matrix (Fin n) (Fin n) D) r := by rfl
+    _ = e (algebraMap k A r) := by simp
+    _ = e a := by rw [hr]
+    _ = Matrix.scalar (Fin n) x := ha
+
+theorem wedderburn_artin_finite_central_division_representative
+    (k : Type u_k) (A : CSA.{u_k, u_A} k) :
+    Nonempty (WedderburnDivisionRepresentative k A.carrier) := by
+  classical
+  obtain ⟨n, hn, D, hD, hDalg, hDfinite, ⟨e⟩⟩ :=
+    wedderburn_artin_finite k A.carrier
+  letI : NeZero n := hn
+  letI : DivisionRing D := hD
+  letI : Algebra k D := hDalg
+  letI : FiniteDimensional k D := hDfinite
+  letI : Algebra.IsCentral k A.carrier := A.isCentral
+  letI : Algebra.IsCentral k D :=
+    matrix_division_factor_is_central k A.carrier D n e
+  let division : FiniteCentralDivisionAlgebra k :=
+    { carrier := D }
+  let representative : CSA.{u_k, u_A} k := division.toCSA
+  refine ⟨{
+    degree := n
+    degree_pos := Nat.pos_iff_ne_zero.mpr hn.out
+    division := division
+    csa := representative
+    csa_carrier := by rfl
+    equivalence := ⟨e⟩ }⟩
 
 theorem similarity_has_unique_division_representative (k : Type u_k) [Field k]
     (A : CSA.{u_k, u_A} k) :

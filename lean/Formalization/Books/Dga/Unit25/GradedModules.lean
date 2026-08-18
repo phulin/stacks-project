@@ -48,6 +48,8 @@ structure GradedRightModule where
     action m (a + a') = action m a + action m a'
   action_smul_left : ∀ {i j : ℤ} (r : R) (m : component i) (a : A j),
     action (r • m) a = r • action m a
+  action_smul_right : ∀ {i j : ℤ} (r : R) (m : component i) (a : A j),
+    action m (r • a) = r • action m a
   one_action : ∀ x : GradedMonoid component,
     gradedRightAction action x (1 : GradedMonoid A) = x
   mul_action : ∀ (x : GradedMonoid component) (a b : GradedMonoid A),
@@ -105,7 +107,6 @@ def GradedRightModuleHomogeneous
   {f : GradedRightModuleHomogeneousFamily L M n //
     IsGradedRightModuleMap L M f}
 
-omit [(i : ℤ) → Module R (A i)] [DirectSum.GAlgebra R A] in
 theorem gradedRightModuleHomogeneous_is_right_module_map
     {L M : GradedRightModule (R := R) (A := A)}
     {n : ℤ} (f : GradedRightModuleHomogeneous L M n)
@@ -124,9 +125,9 @@ theorem gradedRightModuleHomogeneous_is_right_module_map
 multiplication is standard; these proposition interfaces allow the direct-sum
 Hom module to use the canonical operations without hiding that fact in an
 unrelated definition. -/
-theorem gradedRightModuleHomogeneous_addCommGroup_nonempty
+def gradedRightModuleHomogeneousSubmodule
     (L M : GradedRightModule (R := R) (A := A)) (n : ℤ) :
-    Nonempty (AddCommGroup (GradedRightModuleHomogeneous L M n)) := by
+    Submodule R (GradedRightModuleHomogeneousFamily L M n) := by
   have hzero : ∀ {i j k : ℤ} (h : i + j = k) (a : A j),
       GradedRightModule.rightActionAt M h (0 : M.component i) a = 0 := by
     intro i j k h a
@@ -147,7 +148,7 @@ theorem gradedRightModuleHomogeneous_addCommGroup_nonempty
     intro i j k h r x a
     subst k
     exact M.action_smul_left r x a
-  let P : Submodule R (GradedRightModuleHomogeneousFamily L M n) :=
+  exact
     { carrier := {f | IsGradedRightModuleMap L M f}
       zero_mem' := by
         intro s i a m
@@ -167,18 +168,25 @@ theorem gradedRightModuleHomogeneous_addCommGroup_nonempty
         rw [hf]
         convert (hsmul (i := s.1.1 - i) (j := i) (k := s.1.1)
           (h := by omega) r _ a).symm using 1 <;> apply Subsingleton.elim }
-  change Nonempty (AddCommGroup P)
+
+theorem gradedRightModuleHomogeneous_addCommGroup_nonempty
+    (L M : GradedRightModule (R := R) (A := A)) (n : ℤ) :
+    Nonempty (AddCommGroup (GradedRightModuleHomogeneous L M n)) := by
+  change Nonempty
+    (AddCommGroup (gradedRightModuleHomogeneousSubmodule L M n))
   exact ⟨inferInstance⟩
 
 noncomputable instance gradedRightModuleHomogeneousAddCommGroup
     (L M : GradedRightModule (R := R) (A := A)) (n : ℤ) :
     AddCommGroup (GradedRightModuleHomogeneous L M n) :=
-  Classical.choice (gradedRightModuleHomogeneous_addCommGroup_nonempty L M n)
+  Submodule.addCommGroup (gradedRightModuleHomogeneousSubmodule L M n)
 
 theorem gradedRightModuleHomogeneous_module_nonempty
     (L M : GradedRightModule (R := R) (A := A)) (n : ℤ) :
     Nonempty (Module R (GradedRightModuleHomogeneous L M n)) := by
-  sorry
+  let P := gradedRightModuleHomogeneousSubmodule L M n
+  change Nonempty (@Module R P _ (inferInstance : AddCommMonoid P))
+  exact ⟨Submodule.module' P⟩
 
 noncomputable instance gradedRightModuleHomogeneousModule
     (L M : GradedRightModule (R := R) (A := A)) (n : ℤ) :

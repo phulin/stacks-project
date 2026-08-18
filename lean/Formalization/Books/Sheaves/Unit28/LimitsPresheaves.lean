@@ -2,6 +2,7 @@ import Mathlib.Topology.Sheaves.Limits
 import Mathlib.Topology.Sheaves.Stalks
 import Mathlib.CategoryTheory.Adjunction.Limits
 import Mathlib.CategoryTheory.Limits.FunctorCategory.Basic
+import Mathlib.CategoryTheory.Limits.FilteredColimitCommutesFiniteLimit
 import Mathlib.CategoryTheory.Limits.Preserves.FunctorCategory
 
 /-!
@@ -99,11 +100,11 @@ noncomputable def presheafFiniteLimitStalkIso {X : TopCat.{v}} {J : Type v}
 theorem presheafStalkPreservesColimits {X : TopCat.{v}} (x : X) :
     PreservesColimits (TopCat.Presheaf.stalkFunctor (Type v) x) := by
   dsimp [TopCat.Presheaf.stalkFunctor]
-  letI : PreservesColimits
+  let : PreservesColimits
       ((Functor.whiskeringLeft (OpenNhds x)ᵒᵖ (Opens X)ᵒᵖ (Type v)).obj
         (OpenNhds.inclusion x).op) := by
     infer_instance
-  letI : PreservesColimits (colim : ((OpenNhds x)ᵒᵖ ⥤ Type v) ⥤ Type v) := by
+  let : PreservesColimits (colim : ((OpenNhds x)ᵒᵖ ⥤ Type v) ⥤ Type v) := by
     infer_instance
   infer_instance
 

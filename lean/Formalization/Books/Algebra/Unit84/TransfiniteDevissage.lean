@@ -175,7 +175,7 @@ private theorem increasingDevissage_isInternal_of_isSuccessorComplemented
       intro hs0
       apply hne
       ext α
-      have hnot : α ∉ (f - g).support := by simpa [s, hs0]
+      have hnot : α ∉ (f - g).support := by simp [s, hs0]
       have hzeroDF : (f - g) α = 0 := by
         by_contra hne0
         exact hnot (DFinsupp.mem_support_iff.mpr hne0)
@@ -198,14 +198,14 @@ private theorem increasingDevissage_isInternal_of_isSuccessorComplemented
         have hαne : α ≠ β := by
           intro heq
           subst α
-          simpa using hα
+          simp at hα
         exact DFinsupp.mem_support_iff.mpr (by
           simpa [DFinsupp.erase_apply, hαne] using hα)
       have hαle : α ≤ β := Finset.le_max' s α hαs
       have hαlt : α < β := lt_of_le_of_ne hαle (by
         intro heq
         apply hβne
-        simpa [heq] using hα)
+        simp [heq] at hα)
       exact hE_le α β hαlt ((f - g).erase β α).property
     have hsum :
         DFinsupp.lsum ℕ (fun α => (E α).subtype) ((f - g).erase β) +
@@ -317,10 +317,10 @@ private theorem increasingDevissage_stage_eq_iSup_components
         have hstage0 : D.stage ⟨0, hα⟩ = ⊥ := by simpa using D.zero
         change D.stage ⟨0, hα⟩ = _
         rw [hstage0]
-        letI : IsEmpty {β : SuccessorIndex S // β.1 + 1 ≤ 0} :=
+        let : IsEmpty {β : SuccessorIndex S // β.1 + 1 ≤ 0} :=
           ⟨fun β => (not_le_of_gt (ordinal_lt_add_one β.1.1))
             (β.2.trans (bot_le : (0 : Ordinal) ≤ β.1.1))⟩
-        simpa only [iSup_of_empty]
+        simp only [iSup_of_empty]
     | succ α hα ih =>
         intro hα
         have hαs : α + 1 < S := by simpa only [Order.succ_eq_add_one] using hα
@@ -618,12 +618,12 @@ private theorem ordinalDirectSum_hasKaplanskyDevissage
     change (⊥ : Ordinal.{v}) < Order.succ T
     exact Order.bot_lt_succ T
   · ext x
-    simp only [stage, F, LinearMap.mem_range, DFinsupp.filterLinearMap_apply]
+    simp only [stage, F, LinearMap.mem_range]
     constructor
     · rintro ⟨y, hy⟩
       rw [← hy]
       ext i
-      simp [F, pred, DFinsupp.filterLinearMap, DFinsupp.filter_apply]
+      simp [pred, DFinsupp.filterLinearMap, DFinsupp.filter_apply]
     · intro hx
       exact ⟨0, by simpa [DFinsupp.filter_apply] using hx.symm⟩
   · apply top_unique
@@ -651,7 +651,7 @@ private theorem ordinalDirectSum_hasKaplanskyDevissage
             exact (Ordinal.ToType.mk.symm.le_iff_le).mpr hjmax
           have hjlt : (j : Ordinal) < (i : Ordinal) + 1 :=
             lt_of_le_of_lt hjmax' (ordinal_lt_add_one (i : Ordinal))
-          simp [β, hjlt, hzero])
+          simp [β, hjlt])
     · have hx0 : x = 0 := by
         ext i
         by_contra hi
@@ -690,7 +690,7 @@ private theorem ordinalDirectSum_hasKaplanskyDevissage
               have hjlt : (j : Ordinal) < (i : Ordinal) + 1 :=
                 lt_of_le_of_lt hjmax' (ordinal_lt_add_one (i : Ordinal))
               have hjltγ : (j : Ordinal) < γ.1 := by simpa [γ] using hjlt
-              simp [hjltγ, hzero]
+              simp [hjltγ]
         simpa [emb] using
           (le_iSup (fun δ : Set.Iio β.1 => stage (emb δ)) γ) hmem
       · have hz : F β y = 0 := by
@@ -730,8 +730,8 @@ private theorem ordinalDirectSum_hasKaplanskyDevissage
       · have hiγ : (i : Ordinal) < γ.1 := lt_of_lt_of_le hiβ hβγ
         simp [hiβ, hiγ]
       · by_cases hiγ : (i : Ordinal) < γ.1
-        · simp [hiβ, hiγ]
-        · simp [hiβ, hiγ]
+        · simp [hiβ]
+        · simp [hiβ]
     have hfilter_left (β γ : Set.Iio S) (hβγ : β ≤ γ) (x) :
         F β (F γ x) = F β x := by
       ext i
@@ -743,8 +743,8 @@ private theorem ordinalDirectSum_hasKaplanskyDevissage
       · have hiγ : (i : Ordinal) < γ.1 := lt_of_lt_of_le hiβ hβγ
         simp [hiβ, hiγ]
       · by_cases hiγ : (i : Ordinal) < γ.1
-        · simp [hiβ, hiγ]
-        · simp [hiβ, hiγ]
+        · simp [hiβ]
+        · simp [hiβ]
     have hle : stage β₀ ≤ stage β₁ := by
       rintro x ⟨y, rfl⟩
       refine ⟨F β₀ y, ?_⟩
@@ -784,8 +784,8 @@ private theorem ordinalDirectSum_hasKaplanskyDevissage
       · have hiγ : (i : Ordinal) < γ.1 := lt_of_lt_of_le hiβ hβγ
         simp [hiβ, hiγ]
       · by_cases hiγ : (i : Ordinal) < γ.1
-        · simp [hiβ, hiγ]
-        · simp [hiβ, hiγ]
+        · simp [hiβ]
+        · simp [hiβ]
     have hfilter_left (β γ : Set.Iio S) (hβγ : β ≤ γ) (x) :
         F β (F γ x) = F β x := by
       ext i
@@ -797,8 +797,8 @@ private theorem ordinalDirectSum_hasKaplanskyDevissage
       · have hiγ : (i : Ordinal) < γ.1 := lt_of_lt_of_le hiβ hβγ
         simp [hiβ, hiγ]
       · by_cases hiγ : (i : Ordinal) < γ.1
-        · simp [hiβ, hiγ]
-        · simp [hiβ, hiγ]
+        · simp [hiβ]
+        · simp [hiβ]
     have hle : stage β₀ ≤ stage β₁ := by
       rintro x ⟨y, rfl⟩
       refine ⟨F β₀ y, ?_⟩
@@ -843,7 +843,7 @@ private theorem ordinalDirectSum_hasKaplanskyDevissage
       by_cases hk : k = iα
       · subst k
         have hiβ₁ : (iα : Ordinal) < β₁.1 := by
-          simpa [β₁, hiα] using ordinal_lt_add_one α.1
+          simp [β₁, hiα]
         simp [hiβ₁]
       · by_cases hβ : (k : Ordinal) < β₁.1
         · simp [hβ]
@@ -857,7 +857,7 @@ private theorem ordinalDirectSum_hasKaplanskyDevissage
         (⟨DirectSum.lof R T.ToType
           (fun i => (N i : Type v)) iα n, hlof n⟩ : stage β₁) ∈ LinearMap.ker f := by
       have hnotβ₀ : ¬ (iα : Ordinal) < β₀.1 := by
-        simpa [β₀, hiα] using (show ¬ α.1 < α.1 from lt_irrefl _)
+        simp [β₀, hiα]
       apply LinearMap.mem_ker.mpr
       apply Subtype.ext
       apply Subtype.ext
@@ -871,8 +871,6 @@ private theorem ordinalDirectSum_hasKaplanskyDevissage
       change F β₀ (DirectSum.lof R T.ToType
         (fun i => (N i : Type v)) iα n) = 0
       rw [← hfix]
-      change F β₀ (F β₁ (DirectSum.lof R T.ToType
-        (fun i => (N i : Type v)) iα n)) = 0
       rw [hfilter_left β₀ β₁ hβ]
       ext k
       change (if (k : Ordinal) < β₀.1 then

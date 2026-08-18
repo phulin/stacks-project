@@ -177,6 +177,20 @@ abbrev relativeTensorModule (R A M : Type u) [CommRing R] [CommRing A]
     [Algebra R A] [AddCommGroup M] [Module R M] (n : ℕ) : Type u :=
   TensorProduct R (relativeTensorProduct R A n) M
 
+/- The degreewise term of the extended complex specializes to the
+corresponding Amitsur algebra when the coefficient module is the base ring. -/
+def relativeTensorModuleBaseRingEquiv (R A : Type u) [CommRing R] [CommRing A]
+    [Algebra R A] (n : ℕ) :
+    relativeTensorModule R A R n ≃ₗ[R] relativeTensorProduct R A n :=
+  TensorProduct.rid R (relativeTensorProduct R A n)
+
+@[simp]
+theorem relativeTensorModuleBaseRingEquiv_tmul (R A : Type u) [CommRing R]
+    [CommRing A] [Algebra R A] (n : ℕ)
+    (x : relativeTensorProduct R A n) (r : R) :
+    relativeTensorModuleBaseRingEquiv R A n (x ⊗ₜ[R] r) = r • x := by
+  rfl
+
 /- The transition map on the displayed tensor-product module presentation.
 This is the tensor product of the Amitsur ring map with the identity on `M`;
 the corresponding semilinear form is recorded below. -/
@@ -447,6 +461,19 @@ noncomputable def descentTransportMapOver {n : ℕ} {i j : Fin (n + 1)}
       descentTerm R A N n j :=
   Classical.choice (descentTransportMapOver_exists D h)
 
+theorem descentTransportMapOver_refl {n : ℕ} (D : DescentDatum (R := R) (A := A) (N := N))
+    (i : Fin (n + 1)) :
+    descentTransportMapOver D (le_refl i) =
+      LinearEquiv.refl (relativeTensorProduct R A n)
+        (descentTerm R A N n i) := by
+  sorry
+
+theorem descentTransportMap_unit {n : ℕ} {i j : Fin (n + 1)}
+    (D : DescentDatum (R := R) (A := A) (N := N)) (h : i ≤ j) (x : N) :
+    descentTransportMap D h (descentUnitTensorPlaced R A N n i x) =
+      descentUnitTensorPlaced R A N n j x := by
+  sorry
+
 /-- The pure tensor with `x` in position `i` and units elsewhere. -/
 def descentUnitTensor {n : ℕ} (i : Fin (n + 1)) (x : N) : descentTerm R A N n i :=
   descentUnitTensorPlaced R A N n i x
@@ -580,6 +607,21 @@ noncomputable def descentCosimplicialModuleMapSemilinear {n m : ℕ}
       descentTerm R A N m ⟨m, Nat.lt_succ_self m⟩ :=
   Classical.choice (descentCosimplicialModuleMap_semilinear_exists D β)
 
+theorem descentReindexMapSemilinear_apply {n m : ℕ}
+    (D : DescentDatum (R := R) (A := A) (N := N))
+    (β : SimplexCategory.mk n ⟶ SimplexCategory.mk m) (i : Fin (n + 1))
+    (x : descentTerm R A N n i) :
+    descentReindexMapSemilinear D β i x = descentReindexMap D β i x := by
+  sorry
+
+theorem descentCosimplicialModuleMapSemilinear_apply {n m : ℕ}
+    (D : DescentDatum (R := R) (A := A) (N := N))
+    (β : SimplexCategory.mk n ⟶ SimplexCategory.mk m)
+    (x : descentTerm R A N n ⟨n, Nat.lt_succ_self n⟩) :
+    descentCosimplicialModuleMapSemilinear D β x =
+      descentCosimplicialModuleMap D β x := by
+  sorry
+
 theorem descentReindexMap_unit {n m : ℕ}
     (D : DescentDatum (R := R) (A := A) (N := N))
     (β : SimplexCategory.mk n ⟶ SimplexCategory.mk m) (i : Fin (n + 1)) (x : N) :
@@ -637,6 +679,26 @@ def DescentCosimplicialModulePresentation
 theorem descentCosimplicialModule_presentation
     (D : DescentDatum (R := R) (A := A) (N := N)) :
     DescentCosimplicialModulePresentation D (descentCosimplicialModule D) := by
+  sorry
+
+/- The two low-degree identities used in the source proof of the
+cosimplicial construction. -/
+theorem descentCosimplicialModule_degeneracy_face_zero
+    (D : DescentDatum (R := R) (A := A) (N := N)) :
+    (descentCosimplicialModuleMap D
+      (SimplexCategory.σ 0 : SimplexCategory.mk 1 ⟶ SimplexCategory.mk 0)).comp
+      (descentCosimplicialModuleMap D
+        (SimplexCategory.δ 0 : SimplexCategory.mk 0 ⟶ SimplexCategory.mk 1)) =
+      LinearMap.id := by
+  sorry
+
+theorem descentCosimplicialModule_degeneracy_face_one
+    (D : DescentDatum (R := R) (A := A) (N := N)) :
+    (descentCosimplicialModuleMap D
+      (SimplexCategory.σ 0 : SimplexCategory.mk 1 ⟶ SimplexCategory.mk 0)).comp
+      (descentCosimplicialModuleMap D
+        (SimplexCategory.δ 1 : SimplexCategory.mk 0 ⟶ SimplexCategory.mk 1)) =
+      LinearMap.id := by
   sorry
 
 end Terms

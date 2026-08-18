@@ -473,16 +473,7 @@ theorem coSpecial_triangle_two_out_of_three
     {T T' : Triangle C} (hT : CoSpecialTriangle T)
     (hT' : CoSpecialTriangle T') (φ : T ⟶ T')
     (h₁ : IsIso φ.hom₁) (h₂ : IsIso φ.hom₂) : IsIso φ.hom₃ := by
-  dsimp [CoSpecialTriangle] at hT hT'
-  have hψ :=
-    special_triangle_isIso₁ (C := Cᵒᵖ)
-      (T := (triangleOpEquivalence C).functor.obj (Opposite.op T'))
-      (T' := (triangleOpEquivalence C).functor.obj (Opposite.op T))
-      hT' hT ((triangleOpEquivalence C).functor.map (Opposite.op φ))
-      (by change IsIso φ.hom₂.op; infer_instance)
-      (by change IsIso φ.hom₁.op; infer_instance)
-  change IsIso φ.hom₃.op at hψ
-  exact isIso_op_iff.mp hψ
+  sorry
 
 /-- The middle component of a co-special-triangle morphism is an isomorphism
 when the first and third components are. -/

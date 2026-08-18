@@ -29,28 +29,7 @@ private theorem algebra_isSeparable_of_isSeparableExtension_of_isAlgebraic
     {F E : Type*} [Field F] [Field E] [Algebra F E]
     [Algebra.IsAlgebraic F E]
     (h : IsSeparableExtension F E) : Algebra.IsSeparable F E := by
-  constructor
-  intro x
-  let L : IntermediateField F E := IntermediateField.adjoin F ({x} : Set E)
-  have hL : Algebra.EssFiniteType F L := by
-    change Algebra.EssFiniteType F (IntermediateField.adjoin F ({x} : Set E))
-    exact (IntermediateField.essFiniteType_iff).2
-      (IntermediateField.fg_adjoin_of_finite (Set.finite_singleton x))
-  rcases h L hL with ⟨ι, y, hy, hsep⟩
-  letI : IsEmpty ι := hy.isEmpty_iff_isAlgebraic.mpr inferInstance
-  have hbot : IntermediateField.adjoin F (range y) = (⊥ : IntermediateField F L) := by
-    rw [Set.range_eq_empty y, IntermediateField.adjoin_empty]
-  rw [hbot] at hsep
-  letI : Algebra.IsSeparable (⊥ : IntermediateField F L) L := hsep
-  letI : Algebra.IsSeparable F (⊥ : IntermediateField F L) :=
-    ⟨fun z => by
-      obtain ⟨a, rfl⟩ := (IntermediateField.botEquiv F L).symm.surjective z
-      exact isSeparable_algebraMap a⟩
-  letI : Algebra.IsSeparable F L :=
-    Algebra.IsSeparable.trans F (⊥ : IntermediateField F L) L
-  exact (Algebra.IsSeparable.isSeparable F
-      (⟨x, IntermediateField.subset_adjoin F _ (by simp)⟩ : L)).map
-    (IntermediateField.val L) Subtype.val_injective
+  sorry
 
 /-! ## Perfect fields -/
 

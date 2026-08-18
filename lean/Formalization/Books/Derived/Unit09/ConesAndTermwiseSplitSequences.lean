@@ -166,7 +166,8 @@ theorem map_from_cone
   · let z : Cochain K M (-1) := ((Cochain.equivHomotopy (f ≫ g) 0) H).1
     have hz : δ (-1) 0 z = Cochain.ofHom (f ≫ g) := by
       have hz' := ((Cochain.equivHomotopy (f ≫ g) 0) H).2
-      simpa [z] using hz'.symm
+      simp only [Cochain.ofHom_zero, add_zero] at hz'
+      exact hz'.symm
     refine ⟨CochainComplex.mappingCone.desc f z g hz, ?_⟩
     exact CochainComplex.mappingCone.inr_desc f z g hz
   · let z : Cochain K M (-1) := ((Cochain.equivHomotopy (f ≫ g) 0) H).1
@@ -188,7 +189,6 @@ theorem map_from_cone
         CochainComplex.mappingCone.triangle,
         Triangle.mk,
         CochainComplex.shiftFunctor_map_f', HomologicalComplex.XIsoOfEq,
-        Cochain.leftShift_v _ _ _ _ _ _ _ _ rfl,
         Cochain.rightShift_v _ _ _ _ _ _ _ _ rfl,
         shiftFunctorCompIsoId, CochainComplex.shiftFunctorAdd'_inv_app_f',
         CochainComplex.shiftFunctorZero_hom_app_f]
@@ -235,7 +235,7 @@ theorem make_commute_map_injection
   have hfr :
       (Cochain.ofHom f).comp (Cochain.ofHoms r) (zero_add 0) =
         Cochain.ofHom (𝟙 A) := by
-    ext n q hpq
+    ext n
     simp [Cochain.ofHom, Cochain.ofHoms, hr]
   have hzcomp :
       (Cochain.ofHom f).comp z (zero_add (-1)) = h := by
@@ -259,7 +259,7 @@ theorem make_commute_map_injection
     abel
   have hH : Cochain.ofHom (f ≫ b) =
       δ (-1) 0 h + Cochain.ofHom (a ≫ g) := by
-    simpa [h] using ((Cochain.equivHomotopy (f ≫ b) (a ≫ g)) H).2
+    exact ((Cochain.equivHomotopy (f ≫ b) (a ≫ g)) H).2.trans (by simp [h])
   have hδ :
       (Cochain.ofHom f).comp (δ (-1) 0 z) (zero_add 0) =
         δ (-1) 0 h := by
@@ -294,7 +294,7 @@ theorem make_commute_map_surjection
   have hsg :
       (Cochain.ofHoms s).comp (Cochain.ofHom g) (zero_add 0) =
         Cochain.ofHom (𝟙 D) := by
-    ext n q hpq
+    ext n
     simp [Cochain.ofHom, Cochain.ofHoms, hs]
   have hzcomp :
       z.comp (Cochain.ofHom g) (add_zero (-1)) = h := by
@@ -319,7 +319,7 @@ theorem make_commute_map_surjection
     abel
   have hH : Cochain.ofHom (f ≫ b) =
       δ (-1) 0 h + Cochain.ofHom (a ≫ g) := by
-    simpa [h] using ((Cochain.equivHomotopy (f ≫ b) (a ≫ g)) H).2
+    exact ((Cochain.equivHomotopy (f ≫ b) (a ≫ g)) H).2.trans (by simp [h])
   have hδ :
       (δ (-1) 0 z).comp (Cochain.ofHom g) (add_zero 0) =
         δ (-1) 0 h := by

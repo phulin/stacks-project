@@ -357,9 +357,9 @@ theorem free_augmented_complex_map_exists {R : Type u} [Ring R]
     (φ : M ⟶ N) :
     Nonempty (FreeAugmentedComplexMap F G φ) := by
   classical
-  letI : Epi G.augmentation := G.augmentation_epi
-  letI : Module.Free R (F.complex.X 0 : Type u) := F.free 0
-  letI : Projective (F.complex.X 0) :=
+  let : Epi G.augmentation := G.augmentation_epi
+  let : Module.Free R (F.complex.X 0 : Type u) := F.free 0
+  let : Projective (F.complex.X 0) :=
     ModuleCat.projective_of_free (Module.Free.chooseBasis R (F.complex.X 0 : Type u))
   let lift_zero : F.complex.X 0 ⟶ G.complex.X 0 :=
     Projective.factorThru (F.augmentation ≫ φ) G.augmentation
@@ -367,8 +367,8 @@ theorem free_augmented_complex_map_exists {R : Type u} [Ring R]
       lift_zero ≫ G.augmentation = F.augmentation ≫ φ := by
     dsimp [lift_zero]
     exact Projective.factorThru_comp _ _
-  letI : Module.Free R (F.complex.X 1 : Type u) := F.free 1
-  letI : Projective (F.complex.X 1) :=
+  let : Module.Free R (F.complex.X 1 : Type u) := F.free 1
+  let : Projective (F.complex.X 1) :=
     ModuleCat.projective_of_free (Module.Free.chooseBasis R (F.complex.X 1 : Type u))
   let lift_one : F.complex.X 1 ⟶ G.complex.X 1 :=
     G.exact_zero.liftFromProjective (F.complex.d 1 0 ≫ lift_zero) (by
@@ -781,7 +781,7 @@ theorem resolution_hom_maps_homotopic {R : Type u} [Ring R]
           rw [Homotopy.dNext_cochainComplex, Homotopy.prevD_succ_cochainComplex]
           dsimp [resolutionHomMap, resolutionHomComplex, resolutionHomDifferential,
             homPrecompAddMonoidHom]
-          simp only [if_pos rfl, if_true]
+          simp only [if_pos rfl]
           change α.hom.f (i + 1) ≫ g =
             h.hom (i + 1) (i + 2) ≫ G.complex.d (i + 2) (i + 1) ≫ g +
               F.resolution.complex.d (i + 1) i ≫ h.hom i (i + 1) ≫ g +

@@ -2,8 +2,10 @@ import Formalization.Books.Injectives.Unit12.KInjectivesInGrothendieckCategories
 import Formalization.Books.Homology.Unit15.TruncationOfComplexes
 import Formalization.Books.Homology.Unit20.FilteredComplexes
 import Mathlib.Algebra.Category.ModuleCat.AB
+import Mathlib.Algebra.Category.ModuleCat.Sheaf.Abelian
 import Mathlib.Algebra.Homology.DerivedCategory.Plus
 import Mathlib.CategoryTheory.Limits.Shapes.Countable
+import Mathlib.CategoryTheory.Sites.Sheaf
 import Mathlib.CategoryTheory.Yoneda
 
 /-!
@@ -25,7 +27,7 @@ open Formalization.Books.Homology.Unit19
 open Formalization.Books.Homology.Unit20
 open scoped BigOperators ZeroObject
 
-universe u v w u' v'
+universe u v w u' v' i
 
 namespace Formalization.Books.Injectives.Unit13
 
@@ -80,10 +82,14 @@ theorem module_category_is_grothendieck_abelian
     IsGrothendieckAbelian.{v} (ModuleCat.{v} R) := by
   infer_instance
 
-/- The source's examples, module categories and sheaves of modules on a
-   ringed site, are already supplied by the earlier Injectives chapters and
-   Mathlib category instances; this section introduces no duplicate example
-   categories. -/
+theorem sheaf_of_modules_is_grothendieck_abelian
+    {C : Type u} [Category.{u} C] {J : GrothendieckTopology C}
+    (R : Sheaf J RingCat.{u}) :
+    IsGrothendieckAbelian (SheafOfModules.{u} R) := by
+  sorry
+
+/- The source's examples are recorded using the canonical module and sheaf
+   categories rather than by introducing new category structures. -/
 
 structure DerivedHomKInjectiveComparison
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -112,19 +118,19 @@ noncomputable def derivedObjectOfComplex
 
 noncomputable def termwiseDirectSumComplex
     {C : Type u} [Category.{v} C] [Abelian C]
-    {I : Type w} [HasCoproductsOfShape I C]
+    {I : Type i} [HasCoproductsOfShape I C]
     (K : I → CochainComplex C ℤ) : CochainComplex C ℤ :=
   ∐ K
 
 noncomputable def termwiseProductComplex
     {C : Type u} [Category.{v} C] [Abelian C]
-    {I : Type w} [HasProductsOfShape I C]
+    {I : Type i} [HasProductsOfShape I C]
     (K : I → CochainComplex C ℤ) : CochainComplex C ℤ :=
   ∏ᶜ K
 
 noncomputable def derivedDirectSumCofan
     {C : Type u} [Category.{v} C] [Abelian C]
-    [HasDerivedCategory.{w} C] {I : Type w}
+    [HasDerivedCategory.{w} C] {I : Type i}
     [HasCoproductsOfShape I C]
     (K : I → CochainComplex C ℤ) :
     Cofan (fun i => derivedObjectOfComplex (K i)) :=
@@ -134,7 +140,7 @@ noncomputable def derivedDirectSumCofan
 
 noncomputable def derivedProductFan
     {C : Type u} [Category.{v} C] [Abelian C]
-    [HasDerivedCategory.{w} C] {I : Type w}
+    [HasDerivedCategory.{w} C] {I : Type i}
     [HasProductsOfShape I C]
     (K : I → CochainComplex C ℤ) :
     Fan (fun i => derivedObjectOfComplex (K i)) :=
@@ -152,7 +158,7 @@ theorem derived_direct_sums_and_products
 theorem derived_termwise_direct_sum_is_coproduct
     {C : Type u} [Category.{v} C] [Abelian C]
     [IsGrothendieckAbelian.{max u v} C]
-    [HasDerivedCategory.{w} C] {I : Type w}
+    [HasDerivedCategory.{w} C] {I : Type i}
     [HasCoproductsOfShape I C]
     (K : I → CochainComplex C ℤ) :
     Nonempty (IsColimit (derivedDirectSumCofan K)) := by
@@ -161,7 +167,7 @@ theorem derived_termwise_direct_sum_is_coproduct
 theorem derived_termwise_product_of_K_injectives_is_product
     {C : Type u} [Category.{v} C] [Abelian C]
     [IsGrothendieckAbelian.{max u v} C]
-    [HasDerivedCategory.{w} C] {I : Type w}
+    [HasDerivedCategory.{w} C] {I : Type i}
     [HasProductsOfShape I C]
     (K : I → CochainComplex C ℤ)
     (hK : ∀ i, (K i).IsKInjective) :
@@ -183,7 +189,7 @@ structure KInjectiveShiftedFamily
 
 structure DerivedShiftedFamilySumProduct
     {C : Type u} [Category.{v} C] [Abelian C]
-    [HasDerivedCategory.{0} C] [HasCoproductsOfShape ℤ C]
+    [HasDerivedCategory.{w} C] [HasCoproductsOfShape ℤ C]
     [HasProductsOfShape ℤ C]
     (M : ℤ → C)
     (F : @KInjectiveShiftedFamily C _ _ _ M) where
@@ -199,9 +205,18 @@ structure DerivedShiftedFamilySumProduct
 theorem derived_shifted_family_is_direct_sum_and_product
     {C : Type u} [Category.{v} C] [Abelian C]
     [IsGrothendieckAbelian.{max u v} C]
-    [HasDerivedCategory.{0} C] [AB4Star C]
+    [HasDerivedCategory.{w} C] [AB4Star C]
     (M : ℤ → C) (F : @KInjectiveShiftedFamily C _ _ _ M) :
     Nonempty (DerivedShiftedFamilySumProduct M F) := by
+  sorry
+
+theorem exists_derived_shifted_family_sum_product
+    {C : Type u} [Category.{v} C] [Abelian C]
+    [IsGrothendieckAbelian.{max u v} C]
+    [HasDerivedCategory.{w} C] [AB4Star C]
+    (M : ℤ → C) :
+    ∃ F : KInjectiveShiftedFamily M,
+      Nonempty (DerivedShiftedFamilySumProduct M F) := by
   sorry
 
 /-! ## Derived limits and right-derived functors -/
@@ -254,6 +269,8 @@ structure RightDerivedFunctorData
     [HasDerivedCategory.{w} A] [HasDerivedCategory.{w} B]
     (F : A ⥤ B) [F.Additive] where
   functor : DerivedCategory A ⥤ DerivedCategory B
+  comm_shift : functor.CommShift ℤ
+  is_triangulated : letI := comm_shift; Functor.IsTriangulated functor
   computes_on_KInjectives :
     ∀ (I : CochainComplex A ℤ), I.IsKInjective →
       Nonempty (functor.obj (derivedObjectOfComplex I) ≅
@@ -283,9 +300,6 @@ theorem rightDerived_commutes_with_derived_limits
   sorry
 
 /-! ## Filtered K-injective embeddings -/
-
-abbrev FilteredComplex (C : Type u) [Category.{v} C] [Abelian C] :=
-  Formalization.Books.Homology.Unit20.FilteredComplex C
 
 noncomputable def filteredComplexUnderlyingMap
     {C : Type u} [Category.{v} C] [Abelian C]

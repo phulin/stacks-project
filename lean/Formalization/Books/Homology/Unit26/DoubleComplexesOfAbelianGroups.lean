@@ -69,10 +69,12 @@ noncomputable def kernelOfCochainDifferential
 /-- The map on differential kernels induced by a map of cochain complexes. -/
 noncomputable def kernelOfCochainDifferentialMap
     {K L : AbelianGroupCochainComplex} (f : K ⟶ L) (q : ℤ) :
-  kernelOfCochainDifferential K q ⟶ kernelOfCochainDifferential L q :=
+    kernelOfCochainDifferential K q ⟶ kernelOfCochainDifferential L q :=
   kernel.lift (L.d q (q + 1))
     (kernel.ι (K.d q (q + 1)) ≫ f.f q) (by
-      sorry)
+      change (kernel.ι (K.d q (q + 1)) ≫ f.f q) ≫ L.d q (q + 1) = 0
+      rw [Category.assoc, f.comm q (q + 1), ← Category.assoc,
+        kernel.condition, zero_comp])
 
 /-- Maps on differential kernels preserve zero composites. -/
 theorem kernelOfCochainDifferentialMap_comp_zero
@@ -80,7 +82,18 @@ theorem kernelOfCochainDifferentialMap_comp_zero
     (hfg : f ≫ g = 0) (q : ℤ) :
     kernelOfCochainDifferentialMap f q ≫
         kernelOfCochainDifferentialMap g q = 0 := by
-  sorry
+  have hfg_q : f.f q ≫ g.f q = 0 := by
+    simpa only [HomologicalComplex.comp_f, HomologicalComplex.zero_f] using
+      congrArg (fun k => k.f q) hfg
+  apply (cancel_mono (kernel.ι (N.d q (q + 1)))).1
+  simp only [kernelOfCochainDifferentialMap, kernelOfCochainDifferential,
+    Category.assoc, kernel.lift_ι]
+  rw [← Category.assoc, kernel.lift_ι]
+  simp [Category.assoc, hfg_q]
+  change 0 =
+    (0 : kernel (K.d q (q + 1)) ⟶ kernel (N.d q (q + 1))) ≫
+      kernel.ι (N.d q (q + 1))
+  rw [zero_comp]
 
 /-- The categorical cokernel of the differential in degree `q`. -/
 noncomputable def cokernelOfCochainDifferential
@@ -93,7 +106,10 @@ noncomputable def cokernelOfCochainDifferentialMap
     cokernelOfCochainDifferential K q ⟶ cokernelOfCochainDifferential L q :=
   cokernel.desc (K.d q (q + 1))
     (f.f (q + 1) ≫ cokernel.π (L.d q (q + 1))) (by
-      sorry)
+      change K.d q (q + 1) ≫ f.f (q + 1) ≫
+        cokernel.π (L.d q (q + 1)) = 0
+      rw [← Category.assoc, ← f.comm q (q + 1), Category.assoc,
+        cokernel.condition, comp_zero])
 
 /-- Maps on differential cokernels preserve zero composites. -/
 theorem cokernelOfCochainDifferentialMap_comp_zero
@@ -101,7 +117,61 @@ theorem cokernelOfCochainDifferentialMap_comp_zero
     (hfg : f ≫ g = 0) (q : ℤ) :
     cokernelOfCochainDifferentialMap f q ≫
         cokernelOfCochainDifferentialMap g q = 0 := by
-  sorry
+  have hfg_q1 : f.f (q + 1) ≫ g.f (q + 1) = 0 := by
+    simpa only [HomologicalComplex.comp_f, HomologicalComplex.zero_f] using
+      congrArg (fun k => k.f (q + 1)) hfg
+  have hfcond : K.d q (q + 1) ≫ f.f (q + 1) ≫
+      cokernel.π (L.d q (q + 1)) = 0 := by
+    rw [← Category.assoc, ← f.comm q (q + 1), Category.assoc,
+      cokernel.condition, comp_zero]
+  have hgcond : L.d q (q + 1) ≫ g.f (q + 1) ≫
+      cokernel.π (N.d q (q + 1)) = 0 := by
+    rw [← Category.assoc, ← g.comm q (q + 1), Category.assoc,
+      cokernel.condition, comp_zero]
+  have hπf : cokernel.π (K.d q (q + 1)) ≫
+      cokernelOfCochainDifferentialMap f q =
+        f.f (q + 1) ≫ cokernel.π (L.d q (q + 1)) := by
+    change cokernel.π (K.d q (q + 1)) ≫
+      cokernel.desc (K.d q (q + 1))
+        (f.f (q + 1) ≫ cokernel.π (L.d q (q + 1))) hfcond = _
+    simp
+  have hπg : cokernel.π (L.d q (q + 1)) ≫
+      cokernelOfCochainDifferentialMap g q =
+        g.f (q + 1) ≫ cokernel.π (N.d q (q + 1)) := by
+    change cokernel.π (L.d q (q + 1)) ≫
+      cokernel.desc (L.d q (q + 1))
+        (g.f (q + 1) ≫ cokernel.π (N.d q (q + 1))) hgcond = _
+    simp
+  have hπg_comp :
+      f.f (q + 1) ≫
+          (cokernel.π (L.d q (q + 1)) ≫
+            cokernelOfCochainDifferentialMap g q) =
+        f.f (q + 1) ≫
+          (g.f (q + 1) ≫ cokernel.π (N.d q (q + 1))) := by
+    exact congrArg (fun k => f.f (q + 1) ≫ k) hπg
+  have hfg_π : f.f (q + 1) ≫ g.f (q + 1) ≫
+      cokernel.π (N.d q (q + 1)) = 0 := by
+    rw [← Category.assoc, hfg_q1, zero_comp]
+  have hfg_π_right : f.f (q + 1) ≫
+      (g.f (q + 1) ≫ cokernel.π (N.d q (q + 1))) = 0 := by
+    simpa only [Category.assoc] using hfg_π
+  apply (cancel_epi (cokernel.π (K.d q (q + 1)))).1
+  change (cokernel.π (K.d q (q + 1)) ≫
+      cokernelOfCochainDifferentialMap f q) ≫
+      cokernelOfCochainDifferentialMap g q =
+    cokernel.π (K.d q (q + 1)) ≫
+      (0 : cokernel (K.d q (q + 1)) ⟶ cokernel (N.d q (q + 1)))
+  rw [hπf]
+  change f.f (q + 1) ≫
+      (cokernel.π (L.d q (q + 1)) ≫
+        cokernelOfCochainDifferentialMap g q) =
+    cokernel.π (K.d q (q + 1)) ≫
+      (0 : cokernel (K.d q (q + 1)) ⟶ cokernel (N.d q (q + 1)))
+  rw [hπg_comp, hfg_π_right]
+  change 0 =
+    cokernel.π (K.d q (q + 1)) ≫
+      (0 : cokernel (K.d q (q + 1)) ⟶ cokernel (N.d q (q + 1)))
+  rw [comp_zero]
 
 /-! The index transport needed for the left-hand resolution convention. -/
 

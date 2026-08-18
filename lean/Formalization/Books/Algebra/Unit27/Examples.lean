@@ -3294,8 +3294,8 @@ theorem affine_away_rings_equivalent (a : ℚ) (ha0 : a ≠ 0) (ha1 : a ≠ 1)
             Polynomial.C (a * (1 - a) ^ 2) := by
       simp
       ring
-    convert congrArg (affineLocalizationMap a) hpoly using 1 <;>
-      simp only [map_mul, map_add] <;> ring
+    convert congrArg (affineLocalizationMap a) hpoly using 1 ;
+      simp only [map_mul, map_add] ; ring
   have hclears : ∀ z : AffineOpenRing a,
       ∃ b : affineBaseSubalgebra, ∃ m : ℕ,
         affineLocalizationMap a (b : Polynomial ℚ) =
@@ -3429,8 +3429,8 @@ theorem affine_first_basic_open_homeomorph (a : ℚ) (ha0 : a ≠ 0) (ha1 : a �
             Polynomial.C (a * (1 - a) ^ 2) := by
       simp
       ring
-    convert congrArg (affineLocalizationMap a) hpoly using 1 <;>
-      simp only [map_mul, map_add] <;> ring
+    convert congrArg (affineLocalizationMap a) hpoly using 1 ;
+      simp only [map_mul, map_add] ; ring
   have hclears : ∀ z : AffineOpenRing a,
       ∃ b : affineBaseSubalgebra, ∃ m : ℕ,
         affineLocalizationMap a (b : Polynomial ℚ) =
@@ -4096,8 +4096,8 @@ theorem affine_second_basic_open_homeomorph (a : ℚ) (ha0 : a ≠ 0) (ha1 : a �
           Polynomial.C (a ^ 2 - a) * affineQuadratic a +
             affineQuadratic a * (Polynomial.X - Polynomial.C a) * Polynomial.X :=
       rfl
-    convert congrArg (affineLocalizationMap a) hpoly using 1 <;>
-      simp only [map_mul, map_add] <;> ring
+    convert congrArg (affineLocalizationMap a) hpoly using 1 ;
+      simp only [map_mul, map_add] ; ring
   have hclears : ∀ z : AffineOpenRing a,
       ∃ b : affineBaseSubalgebra, ∃ m : ℕ,
         affineLocalizationMap a (b : Polynomial ℚ) =
@@ -4278,8 +4278,8 @@ theorem affine_open_distinguished_opens_cover (a : ℚ) (ha0 : a ≠ 0) (ha1 : a
             Polynomial.C (a * (1 - a) ^ 2) := by
       simp
       ring
-    convert congrArg (affineLocalizationMap a) hpoly using 1 <;>
-      simp only [map_mul, map_add] <;> ring
+    convert congrArg (affineLocalizationMap a) hpoly using 1 ;
+      simp only [map_mul, map_add] ; ring
   let I : Ideal (AffineOpenRing a) :=
     Ideal.span {affineOpenF1 a, affineOpenG a}
   have hF1 : affineOpenF1 a ∈ I := Ideal.subset_span (by simp)
@@ -4309,8 +4309,7 @@ theorem affine_open_distinguished_opens_cover (a : ℚ) (ha0 : a ≠ 0) (ha1 : a
     change affineLocalizationMap a (affinePolynomialF1 a) =
         affineLocalizationMap a (Polynomial.X ^ 2 - Polynomial.X) +
           algebraMap ℚ (AffineAmbient a) (a * (1 - a))
-    simp [affinePolynomialF1, affineOpenA, affineBaseToOpen,
-      affineLocalizationMap, hC']
+    simp [affinePolynomialF1, affineLocalizationMap, hC']
     ring
   have hgb :
       affineOpenG a =
@@ -4323,8 +4322,8 @@ theorem affine_open_distinguished_opens_cover (a : ℚ) (ha0 : a ≠ 0) (ha1 : a
           algebraMap ℚ (AffineAmbient a) (2 - a) *
             affineLocalizationMap a (Polynomial.X ^ 2 - Polynomial.X) +
           algebraMap ℚ (AffineAmbient a) (2 * a * (1 - a))
-    simp [affinePolynomialG, affineQuadratic, affineOpenA,
-      affineBaseToOpen, affineLocalizationMap, hC']
+    simp [affinePolynomialG, affineQuadratic,
+      affineLocalizationMap, hC']
     rw [h2]
     ring
   have hb :
@@ -4445,7 +4444,7 @@ theorem affine_open_spectrum_homeomorph_complement (a : ℚ)
   have hcover (p : PrimeSpectrum (AffineOpenRing a)) :
       p ∈ S1 ∨ p ∈ S2 := by
     by_contra h
-    push_neg at h
+    push Not at h
     have hle :
         Ideal.span {affineOpenF1 a, affineOpenG a} ≤ p.asIdeal := by
       apply Ideal.span_le.mpr

@@ -64,12 +64,25 @@ theorem projToPrimeSpectrum_injective
 theorem projToPrimeSpectrum_inducing
     (𝒜 : ℕ → Submodule ℤ R) [GradedAlgebra 𝒜] :
     IsInducing (projToPrimeSpectrum 𝒜) := by
-  sorry
+  refine ⟨?_⟩
+  rw [ProjectiveSpectrum.isTopologicalBasis_basic_opens 𝒜 |>.eq_generateFrom,
+    PrimeSpectrum.isTopologicalBasis_basic_opens.eq_generateFrom,
+    induced_generateFrom_eq]
+  congr 1
+  ext U
+  constructor
+  · rintro ⟨r, rfl⟩
+    refine ⟨(↑(PrimeSpectrum.basicOpen r) : Set _), ⟨r, rfl⟩, ?_⟩
+    rfl
+  · rintro ⟨U, ⟨r, hr⟩, hU⟩
+    refine ⟨r, ?_⟩
+    rw [← hU, ← hr]
+    rfl
 
 theorem projToPrimeSpectrum_isEmbedding
     (𝒜 : ℕ → Submodule ℤ R) [GradedAlgebra 𝒜] :
     IsEmbedding (projToPrimeSpectrum 𝒜) := by
-  sorry
+  exact ⟨projToPrimeSpectrum_inducing 𝒜, projToPrimeSpectrum_injective 𝒜⟩
 
 /-! ## 27.3. Degree-zero localization and standard closed/open sets -/
 
@@ -101,13 +114,21 @@ theorem isOpen_dPlus_of_positive_homogeneous
 theorem dPlus_mul
     (𝒜 : ℕ → Submodule ℤ R) [GradedAlgebra 𝒜] (f f' : R) :
     dPlus 𝒜 (f * f') = dPlus 𝒜 f ∩ dPlus 𝒜 f' := by
-  sorry
+  change (ProjectiveSpectrum.basicOpen 𝒜 (f * f') : Set (ProjectiveSpectrum 𝒜)) =
+    (ProjectiveSpectrum.basicOpen 𝒜 f : Set (ProjectiveSpectrum 𝒜)) ∩
+      (ProjectiveSpectrum.basicOpen 𝒜 f' : Set (ProjectiveSpectrum 𝒜))
+  rw [ProjectiveSpectrum.basicOpen_mul]
+  rfl
 
 theorem dOnProj_eq_iUnion_projections
     (𝒜 : ℕ → Submodule ℤ R) [GradedAlgebra 𝒜] (g : R) :
     dOnProj 𝒜 g =
       ⋃ n : ℕ, dPlus 𝒜 (GradedRing.proj 𝒜 n g) := by
-  sorry
+  change (ProjectiveSpectrum.basicOpen 𝒜 g : Set (ProjectiveSpectrum 𝒜)) =
+    ⋃ n : ℕ, (ProjectiveSpectrum.basicOpen 𝒜 (GradedRing.proj 𝒜 n g) :
+      Set (ProjectiveSpectrum 𝒜))
+  rw [ProjectiveSpectrum.basicOpen_eq_union_of_projection,
+    TopologicalSpace.Opens.coe_iSup]
 
 theorem dOnProj_eq_zero_component_union_positive
     (𝒜 : ℕ → Submodule ℤ R) [GradedAlgebra 𝒜] (g : R) :

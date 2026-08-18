@@ -1179,7 +1179,79 @@ private theorem isReduced_tensorProduct_of_isReduced_of_separable_algebraic_base
         (1 : K) ⊗ₜ[k] y by rfl]
       rw [Algebra.TensorProduct.tmul_mul_tmul]
       simp
-  sorry
+  let _ : IsReduced S₀ := by simpa [S₀] using hS
+  have hXred : IsReduced X := by
+    constructor
+    rintro x ⟨_ | n, e₀⟩
+    · simpa using congr_arg (· * x) e₀
+    obtain ⟨⟨y, m⟩, hx⟩ :=
+      IsLocalization.surj (Algebra.algebraMapSubmonoid S₀ M) x
+    dsimp only at hx
+    let hx' := congr_arg (· ^ n.succ) hx
+    simp only [mul_pow, e₀, zero_mul, ← map_pow] at hx'
+    rw [← (algebraMap S₀ X).map_zero] at hx'
+    obtain ⟨m', hm'⟩ :=
+      (IsLocalization.eq_iff_exists (Algebra.algebraMapSubmonoid S₀ M) X).mp hx'
+    apply_fun (· * (m' : S₀) ^ n) at hm'
+    simp only [mul_assoc, zero_mul, mul_zero] at hm'
+    rw [← mul_left_comm, ← pow_succ', ← mul_pow] at hm'
+    replace hm' := IsNilpotent.eq_zero ⟨_, hm'.symm⟩
+    rw [← (IsLocalization.map_units X m).mul_left_inj, hx, zero_mul,
+      IsLocalization.map_eq_zero_iff (Algebra.algebraMapSubmonoid S₀ M)]
+    exact ⟨m', by rw [← hm', mul_comm]⟩
+  let _ : IsReduced X := hXred
+  have hes : ∀ z : S₀, e (s0X z) = q z := by
+    intro z
+    change ((Algebra.TensorProduct.lift qD gD
+      (by intro x y; exact Commute.all _ _)).comp
+      (Algebra.TensorProduct.includeLeft : S₀ →ₐ[D] X)) z = qD z
+    exact congrArg (fun F => F z)
+      (Algebra.TensorProduct.lift_comp_includeLeft qD gD
+        (by intro x y; exact Commute.all _ _))
+  have hejK : ∀ x : K, e (jK x) = iK x := by
+    intro x
+    change e (s0X ((Algebra.TensorProduct.includeLeft : K →ₐ[k] S₀) x)) = iK x
+    rw [hes]
+    change ((Algebra.TensorProduct.lift iK iA
+      (by intro x y; exact Commute.all _ _)).comp
+      (Algebra.TensorProduct.includeLeft : K →ₐ[k] S₀)) x = iK x
+    exact congrArg (fun F => F x)
+      (Algebra.TensorProduct.lift_comp_includeLeft iK iA
+        (by intro x y; exact Commute.all _ _))
+  have hejA : ∀ y : A, e (jA y) = iA y := by
+    intro y
+    change e (s0X ((Algebra.TensorProduct.includeRight : A →ₐ[k] S₀) y)) = iA y
+    rw [hes]
+    change (((Algebra.TensorProduct.lift iK iA
+      (by intro x y; exact Commute.all _ _)).restrictScalars k).comp
+      (Algebra.TensorProduct.includeRight : A →ₐ[k] S₀)) y = iA y
+    exact congrArg (fun F => F y)
+      (Algebra.TensorProduct.lift_comp_includeRight iK iA
+        (by intro x y; exact Commute.all _ _))
+  have hep : e.toRingHom.comp p.toRingHom = RingHom.id T := by
+    apply RingHom.ext
+    intro z
+    refine TensorProduct.induction_on z ?_ ?_ ?_
+    · simp [e, p]
+    swap
+    · intro x y hx hy
+      simp only [map_add]
+      rw [hx, hy]
+    · intro x y
+      change e (p (x ⊗ₜ[k'] y)) = x ⊗ₜ[k'] y
+      rw [Algebra.TensorProduct.lift_tmul]
+      rw [map_mul, hejK x, hejA y]
+      change (x ⊗ₜ[k'] (1 : A)) * ((1 : K) ⊗ₜ[k'] y) = x ⊗ₜ[k'] y
+      rw [Algebra.TensorProduct.tmul_mul_tmul]
+      simp
+  have hp : Function.Injective p := by
+    intro x y hxy
+    have h := congrArg (fun z => e z) hxy
+    change (e.toRingHom.comp p.toRingHom) x =
+      (e.toRingHom.comp p.toRingHom) y at h
+    rw [hep] at h
+    exact h
+  exact isReduced_of_injective p hp
 
 /-! ## Changing a separable algebraic base field -/
 
@@ -1200,7 +1272,8 @@ theorem isGeometricallyReduced_iff_of_separable_algebraic
     have hS : IsReduced (K ⊗[k] A) :=
       isReduced_tensorProduct_of_isReduced_of_isGeometricallyReduced
         (k := k) (R := K) (S := A) inferInstance hA
-    sorry
+    exact isReduced_tensorProduct_of_isReduced_of_separable_algebraic_base_change
+      (k := k) (k' := k') (A := A) (K := K) hS
   · intro hA K _ _
     let hKsep' : IsReduced (k' ⊗[k] K) :=
       isReduced_tensorProduct_of_separable_extension

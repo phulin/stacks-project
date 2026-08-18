@@ -244,7 +244,9 @@ theorem categoriesFibredInSetsOver_is_locallyDiscrete
 theorem categoriesFibredInSetsOver_is_two_one_category
     (C : Cat.{v, u}) :
     IsTwoOneCategory (CategoriesFibredInSetsOver C) := by
-  sorry
+  intro X Y
+  letI : IsDiscrete (X ⟶ Y) := categoriesFibredInSetsOver_is_locallyDiscrete C X Y
+  infer_instance
 
 /-! ## 2-fibre products -/
 
@@ -262,7 +264,8 @@ theorem fibredInSetsTwoFibreProduct_apex_isCategoryFibredInSets
     {F : FibredCategoryOverHom X S} {G : FibredCategoryOverHom Y S}
     (P : FibredInSetsTwoFibreProduct F G) :
     IsCategoryFibredInSets P.product.diagram.base := by
-  sorry
+  exact (isCategoryFibredInSets_iff_isFibered_and_discreteFibres _).mpr
+    ⟨P.product.apex_fibred, P.fibres_are_discrete⟩
 
 theorem categoriesFibredInSets_have_twoFibreProducts
     {C : Cat.{v, u}} (X Y S : FibredCategoryOver C)
@@ -309,7 +312,11 @@ theorem setPresheaf_object_description
     (F : Cᵒᵖ ⥤ Type uS) (X : setPresheafCategory F) :
     ∃ x : F.obj (Opposite.op X.base),
       X = (⟨X.base, Discrete.mk x⟩ : setPresheafCategory F) := by
-  sorry
+  refine ⟨Discrete.as X.fiber, ?_⟩
+  cases X with
+  | mk base fiber =>
+    cases fiber
+    rfl
 
 /-- The morphism with prescribed base arrow and the corresponding equality in
 the set-valued presheaf.  The fibre component is the unique arrow in the

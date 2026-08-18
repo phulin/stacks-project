@@ -351,24 +351,24 @@ private theorem finiteFreeFactorization_filtered
   let P : ObjectProperty (ModuleCat.{max u v} R) := finiteFreeProperty (R := R)
   let D : P.FullSubcategory ⥤ ModuleCat.{max u v} R := P.ι
   let X : ModuleCat.{max u v} R := ModuleCat.of R (ULift.{u} M)
-  letI : Module.Flat R M := h
-  letI : Module.Flat R (ULift.{u} M) := inferInstance
-  letI : IsFilteredOrEmpty
+  let : Module.Flat R M := h
+  let : Module.Flat R (ULift.{u} M) := inferInstance
+  let : IsFilteredOrEmpty
       (CostructuredArrow D X) := by
     refine {
       cocone_objs := ?_
       cocone_maps := ?_ }
     · intro f g
-      letI : Module.Free R (D.obj f.left) := f.left.property.1
-      letI : Module.Finite R (D.obj f.left) := f.left.property.2
-      letI : Module.Free R (D.obj g.left) := g.left.property.1
-      letI : Module.Finite R (D.obj g.left) := g.left.property.2
+      let : Module.Free R (D.obj f.left) := f.left.property.1
+      let : Module.Finite R (D.obj f.left) := f.left.property.2
+      let : Module.Free R (D.obj g.left) := g.left.property.1
+      let : Module.Finite R (D.obj g.left) := g.left.property.2
       let A : Type (max u v) := D.obj f.left
       let B : Type (max u v) := D.obj g.left
-      letI : Module.Free R A := f.left.property.1
-      letI : Module.Finite R A := f.left.property.2
-      letI : Module.Free R B := g.left.property.1
-      letI : Module.Finite R B := g.left.property.2
+      let : Module.Free R A := f.left.property.1
+      let : Module.Finite R A := f.left.property.2
+      let : Module.Free R B := g.left.property.1
+      let : Module.Finite R B := g.left.property.2
       let Z : P.FullSubcategory :=
         { obj := ModuleCat.of R (A × B)
           property := by
@@ -382,12 +382,12 @@ private theorem finiteFreeFactorization_filtered
         (P.homMk (ModuleCat.ofHom (LinearMap.inr R A B)))
       refine ⟨z, left, right, trivial⟩
     · intro f g φ ψ
-      letI : Module.Free R (D.obj f.left) := f.left.property.1
-      letI : Module.Finite R (D.obj f.left) := f.left.property.2
-      letI : Module.Free R (D.obj g.left) := g.left.property.1
-      letI : Module.Finite R (D.obj g.left) := g.left.property.2
-      letI : Module.Finite R (f.left.obj : Type (max u v)) := f.left.property.2
-      letI : Module.Finite R (g.left.obj : Type (max u v)) := g.left.property.2
+      let : Module.Free R (D.obj f.left) := f.left.property.1
+      let : Module.Finite R (D.obj f.left) := f.left.property.2
+      let : Module.Free R (D.obj g.left) := g.left.property.1
+      let : Module.Finite R (D.obj g.left) := g.left.property.2
+      let : Module.Finite R (f.left.obj : Type (max u v)) := f.left.property.2
+      let : Module.Finite R (g.left.obj : Type (max u v)) := g.left.property.2
       have hcomp : g.hom.hom.comp (φ.left.hom.hom - ψ.left.hom.hom) = 0 := by
         have hφ := congrArg ModuleCat.Hom.hom (CostructuredArrow.w φ)
         have hψ := congrArg ModuleCat.Hom.hom (CostructuredArrow.w ψ)

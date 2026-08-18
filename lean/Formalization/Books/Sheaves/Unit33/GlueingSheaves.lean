@@ -1,8 +1,8 @@
 import Formalization.Books.Sheaves.Unit07.Sheaves
-import Formalization.Books.Sheaves.Unit10.SheavesOfModules
 import Mathlib.Algebra.Category.Grp.Colimits
 import Mathlib.Algebra.Category.Grp.FilteredColimits
 import Mathlib.Algebra.Category.Grp.Limits
+import Mathlib.Algebra.Category.ModuleCat.Sheaf
 import Mathlib.CategoryTheory.Sites.SheafHom
 import Mathlib.Topology.Sheaves.Functors
 import Mathlib.Topology.Sets.OpenCover
@@ -22,11 +22,21 @@ namespace Formalization.Books.Sheaves.Unit33
 
 open CategoryTheory CategoryTheory.Limits Opposite TopologicalSpace Topology
 open Formalization.Books.Sheaves.Unit07
-open Formalization.Books.Sheaves.Unit10
 
-universe u v
+universe u v w
 
 noncomputable section
+
+/-! The module-valued part uses Mathlib's canonical sheaf-of-modules
+construction directly.  These aliases have the same source-facing names as
+the earlier sheaf-module chapter, while avoiding a dependency on its
+presheaf-of-modules development. -/
+
+abbrev RingSheaf (X : TopCat.{v}) :=
+  CategoryTheory.Sheaf (Opens.grothendieckTopology X) (RingCat.{w})
+
+abbrev Mod {X : TopCat.{v}} (O : RingSheaf.{v, v} X) :=
+  _root_.SheafOfModules.{v} O
 
 abbrev openSubspace {X : TopCat.{v}} (U : Opens X) : TopCat.{v} :=
   (Opens.toTopCat X).obj U

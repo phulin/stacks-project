@@ -1036,8 +1036,6 @@ def tripleOrder12Differential [HasCountableCoproducts C]
 theorem tripleOrder12Differential_comp_zero [HasCountableCoproducts C]
     (A : TripleComplex C) (n : ℤ) :
     tripleOrder12Differential A n ≫ tripleOrder12Differential A (n + 1) = 0 := by
-  sorry
-/-
   apply Sigma.hom_ext
   intro s
   apply Sigma.hom_ext
@@ -1366,7 +1364,6 @@ theorem tripleOrder12Differential_comp_zero [HasCountableCoproducts C]
           (tripleOrder12Differential A n)
           (tripleOrder12Differential A (n + 1))))
   exact hassoc.symm.trans (hcomp.trans hzero)
--/
 
 def tripleTotalizationOrder12Complex [HasCountableCoproducts C]
     (A : TripleComplex C) : CochainComplex C ℤ where
@@ -1391,8 +1388,6 @@ def tripleTotalizationOrder12Complex [HasCountableCoproducts C]
 def tripleTotalizationOrder12TermIso [HasCountableCoproducts C]
     (A : TripleComplex C) (n : ℤ) :
     tripleTotalizationOrder12Term A n ≅ tripleTotalTerm A n := by
-  sorry
-/-
   let hom : tripleTotalizationOrder12Term A n ⟶ tripleTotalTerm A n :=
     Sigma.desc (fun s =>
       Sigma.desc (fun p =>
@@ -1430,7 +1425,6 @@ def tripleTotalizationOrder12TermIso [HasCountableCoproducts C]
       (fun t : ℤ => Sigma.ι (fun r : ℤ => A.obj p r (n - p - r)) t)
       (show q = p + q - p by ring)]
     simp
--/
 
 theorem tripleTotalization_associative [HasCountableCoproducts C]
     (A : TripleComplex C) (n : ℤ) :
@@ -1443,8 +1437,6 @@ theorem tripleTotalization_associative [HasCountableCoproducts C]
 theorem tripleTotalization_associative_complex [HasCountableCoproducts C]
     (A : TripleComplex C) :
     Nonempty (tripleTotalizationOrder12Complex A ≅ tripleTotalization A) := by
-  sorry
-/-
   classical
   let e : ∀ n : ℤ,
       (tripleTotalizationOrder12Complex A).X n ≅ (tripleTotalization A).X n :=
@@ -1495,8 +1487,65 @@ theorem tripleTotalization_associative_complex [HasCountableCoproducts C]
         (s - p, n + 1 - (p + 1) - (s - p)) by
         congr 1 <;> ring)).symm using 1 <;>
       simp [Category.assoc]
-
--/
+  have h2 :
+      eqToHom (by congr 1 <;> ring) ≫
+          tripleD2Component A n p (s - p) ≫
+            Sigma.ι (fun q : ℤ => A.obj p q
+              (n + 1 - p - q)) ((s - p) + 1) ≫
+            Sigma.ι (fun r : ℤ => ∐ fun q : ℤ => A.obj r q
+              (n + 1 - r - q)) p =
+        tripleOrder12D2Component A n s p ≫
+          eqToHom (by congr 1 <;> ring) ≫
+            Sigma.ι (fun q : ℤ => A.obj p q
+              (n + 1 - p - q)) ((s + 1) - p) ≫
+            Sigma.ι (fun r : ℤ => ∐ fun q : ℤ => A.obj r q
+              (n + 1 - r - q)) p := by
+    dsimp [tripleD2Component, tripleOrder12D2Component]
+    simp only [Category.assoc]
+    rw [← eqToHom_naturality_assoc
+      (fun r : ℤ => A.d2 p (s - p) r)
+      (show n - s = n - p - (s - p) by ring)]
+    convert (eqToHom_naturality
+      (fun qr : ℤ × ℤ =>
+        A.d2 p qr.1 qr.2 ≫
+          eqToHom (by congr 1 <;> ring) ≫
+          Sigma.ι (fun q : ℤ => A.obj p q
+            (n + 1 - p - q)) qr.1 ≫
+          Sigma.ι (fun r : ℤ => ∐ fun q : ℤ => A.obj r q
+            (n + 1 - r - q)) p)
+      (show ((s + 1) - p, n - s) =
+        (s - p, n + 1 - p - (s - p)) by
+        congr 1 <;> ring)).symm using 1 <;>
+      simp [Category.assoc]
+  have h3 :
+      eqToHom (by congr 1 <;> ring) ≫
+          tripleD3Component A n p (s - p) ≫
+            Sigma.ι (fun q : ℤ => A.obj p q
+              (n + 1 - p - q)) (s - p) ≫
+            Sigma.ι (fun r : ℤ => ∐ fun q : ℤ => A.obj r q
+              (n + 1 - r - q)) p =
+        tripleOrder12D3Component A n s p ≫
+          eqToHom (by congr 1 <;> ring) ≫
+            Sigma.ι (fun q : ℤ => A.obj p q
+              (n + 1 - p - q)) (s - p) ≫
+            Sigma.ι (fun r : ℤ => ∐ fun q : ℤ => A.obj r q
+              (n + 1 - r - q)) p := by
+    dsimp [tripleD3Component, tripleOrder12D3Component]
+    simp only [Category.assoc]
+    rw [← eqToHom_naturality_assoc
+      (fun r : ℤ => A.d3 p (s - p) r)
+      (show n - s = n - p - (s - p) by ring)]
+    convert (eqToHom_naturality
+      (fun r : ℤ =>
+        A.d3 p (s - p) r ≫
+          eqToHom (by congr 1 <;> ring) ≫
+          Sigma.ι (fun q : ℤ => A.obj p q
+            (n + 1 - p - q)) (s - p) ≫
+          Sigma.ι (fun r : ℤ => ∐ fun q : ℤ => A.obj r q
+            (n + 1 - r - q)) p)
+      (show n - s = n - p - (s - p) by ring)).symm using 1 <;>
+      simp [Category.assoc]
+  rw [h1, h2, h3]
 /-! ## Shifts -/
 
 def shiftedD1Component (A : DoubleComplex C) (a b p q : ℤ) :
@@ -1518,7 +1567,12 @@ theorem shifted_d1_sq (A : DoubleComplex C) (a b p q : ℤ) :
 
 theorem shifted_d2_sq (A : DoubleComplex C) (a b p q : ℤ) :
     shiftedD2Component A a b p q ≫ shiftedD2Component A a b p (q + 1) = 0 := by
-  sorry
+  dsimp [shiftedD2Component]
+  simp only [Category.assoc, Linear.units_smul_comp, Linear.comp_units_smul]
+  rw [← eqToHom_naturality_assoc (fun r : ℤ => A.d2 (p + a) r)
+    (show q + b + 1 = q + 1 + b by lia)]
+  simpa [Category.assoc, smul_smul, Int.units_mul_self] using
+    congrArg (fun f => f ≫ eqToHom (by congr 1; lia)) (A.d2_sq (p + a) (q + b))
 
 theorem shifted_comm (A : DoubleComplex C) (a b p q : ℤ) :
     shiftedD2Component A a b p q ≫ shiftedD1Component A a b p (q + 1) =

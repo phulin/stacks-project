@@ -1749,9 +1749,28 @@ def nodeEulerParameters (k : Type u) [Field k]
   (φ (FGModuleCat.of (nodeRing k) (nodeXComponent k)),
     φ (FGModuleCat.of (nodeRing k) (nodeYComponent k)))
 
-private theorem eulerPoincareFunction_node_injective
-    (k : Type u) [Field k] [IsAlgClosed k] :
-    Function.Injective (nodeEulerParameters (k := k)) := by
+private structure nodeMultiplicationData (k : Type u) [Field k] where
+  qY : nodeRing k →+* Polynomial k
+  qX : nodeRing k →+* Polynomial k
+  sY : Polynomial k →+* nodeRing k
+  sX : Polynomial k →+* nodeRing k
+  x : nodeRing k
+  y : nodeRing k
+  hkerY : RingHom.ker qY = nodeXIdeal k
+  hqYsY : qY.comp sY = RingHom.id (Polynomial k)
+  hkerX : RingHom.ker qX = nodeYIdeal k
+  hqXsX : qX.comp sX = RingHom.id (Polynomial k)
+  hxy : x * y = 0
+  hyx : y * x = 0
+  hkerY_span : RingHom.ker qY = Ideal.span ({x} : Set (nodeRing k))
+  hkerX_span : RingHom.ker qX = Ideal.span ({y} : Set (nodeRing k))
+  hIspan : nodeXIdeal k = Ideal.span ({x} : Set (nodeRing k))
+  hJspan : nodeYIdeal k = Ideal.span ({y} : Set (nodeRing k))
+  hsY_X : sY (Polynomial.X : Polynomial k) = y
+  hsX_X : sX (Polynomial.X : Polynomial k) = x
+
+private def nodeMultiplicationData_exists
+    (k : Type u) [Field k] : nodeMultiplicationData k := by
   classical
   let A := nodeRing k
   let B := Polynomial k
@@ -1816,10 +1835,6 @@ private theorem eulerPoincareFunction_node_injective
   have hkerY0 : RingHom.ker qY0 = Ideal.span {MvPolynomial.X 0} := by
     change RingHom.ker (e0.toRingHom.comp q0) = Ideal.span {MvPolynomial.X 0}
     rw [RingHom.ker_comp_of_injective q0 e0.injective, hker0]
-  have hsurjY0 : Function.Surjective qY0 := by
-    intro q
-    refine ⟨r0 (e0.symm q), ?_⟩
-    simp [qY0, hq0r0_apply]
   have hqY0_XY : qY0 (MvPolynomial.X 0 * MvPolynomial.X 1) = 0 := by
     simp [qY0, q0]
   have hle : nodePolynomialIdeal k ≤ RingHom.ker qY0 := by
@@ -1827,31 +1842,14 @@ private theorem eulerPoincareFunction_node_injective
     exact Ideal.span_le.2 (by simpa [RingHom.mem_ker] using hqY0_XY)
   let qY : A →+* Polynomial k :=
     Ideal.Quotient.lift (nodePolynomialIdeal k) qY0 hle
+  have hkerY : RingHom.ker qY = nodeXIdeal k := by
+    change RingHom.ker (Ideal.Quotient.lift (nodePolynomialIdeal k) qY0 hle) = _
+    rw [Ideal.ker_quotient_lift qY0 hle, hkerY0, Ideal.map_span]
+    simp [nodeXIdeal]
   have hqYmk (p : MvPolynomial (Fin 2) k) :
       qY (Ideal.Quotient.mk (nodePolynomialIdeal k) p) = qY0 p := by
     change qY0 p = qY0 p
     rfl
-  have hkerY : RingHom.ker qY = nodeXIdeal k := by
-    apply le_antisymm
-    · intro a ha
-      obtain ⟨p, rfl⟩ := Ideal.Quotient.mk_surjective a
-      change qY (Ideal.Quotient.mk (nodePolynomialIdeal k) p) = 0 at ha
-      rw [hqYmk] at ha
-      have hp : p ∈ Ideal.span {MvPolynomial.X 0} := by
-        rw [← hkerY0]
-        exact ha
-      rcases Ideal.mem_span_singleton'.mp hp with ⟨r, hr⟩
-      rw [nodeXIdeal]
-      apply Ideal.mem_span_singleton'.mpr
-      refine ⟨Ideal.Quotient.mk (nodePolynomialIdeal k) r, ?_⟩
-      exact congrArg (Ideal.Quotient.mk (nodePolynomialIdeal k)) hr
-    · rw [nodeXIdeal]
-      apply Ideal.span_le.2
-      intro z hz
-      rcases hz with rfl
-      change qY (Ideal.Quotient.mk (nodePolynomialIdeal k) (MvPolynomial.X 0)) = 0
-      rw [hqYmk]
-      simp [qY0, q0]
   let sY : Polynomial k →+* A :=
     (Ideal.Quotient.mk (nodePolynomialIdeal k)).comp
       (r0.comp e0.symm.toRingHom)
@@ -1891,10 +1889,6 @@ private theorem eulerPoincareFunction_node_injective
     rw [swap.apply_symm_apply]
     change e0 (q0 (r0 (e0.symm p))) = p
     rw [hq0r0_apply, e0.apply_symm_apply]
-  have hsurjX0 : Function.Surjective qX0 := by
-    intro p
-    refine ⟨sX0 p, ?_⟩
-    exact RingHom.congr_fun hqX0sX0 p
   have hqX0_XY : qX0 (MvPolynomial.X 0 * MvPolynomial.X 1) = 0 := by
     have hx0 : swap (MvPolynomial.X (0 : Fin 2)) = MvPolynomial.X 1 := by
       simp [swap, MvPolynomial.renameEquiv_apply]
@@ -1912,41 +1906,18 @@ private theorem eulerPoincareFunction_node_injective
     exact Ideal.span_le.2 (by simpa [RingHom.mem_ker] using hqX0_XY)
   let qX : A →+* Polynomial k :=
     Ideal.Quotient.lift (nodePolynomialIdeal k) qX0 hleX
-  have hqXmk (p : MvPolynomial (Fin 2) k) :
-      qX (Ideal.Quotient.mk (nodePolynomialIdeal k) p) = qX0 p := by
-    change qX0 p = qX0 p
-    rfl
   have hkerX : RingHom.ker qX = nodeYIdeal k := by
-    apply le_antisymm
-    · intro a ha
-      obtain ⟨p, rfl⟩ := Ideal.Quotient.mk_surjective a
-      change qX (Ideal.Quotient.mk (nodePolynomialIdeal k) p) = 0 at ha
-      rw [hqXmk] at ha
-      have hp : p ∈ Ideal.span {MvPolynomial.X 1} := by
-        rw [← hkerX0]
-        exact ha
-      rcases Ideal.mem_span_singleton'.mp hp with ⟨r, hr⟩
-      rw [nodeYIdeal]
-      apply Ideal.mem_span_singleton'.mpr
-      refine ⟨Ideal.Quotient.mk (nodePolynomialIdeal k) r, ?_⟩
-      exact congrArg (Ideal.Quotient.mk (nodePolynomialIdeal k)) hr
-    · rw [nodeYIdeal]
-      apply Ideal.span_le.2
-      intro z hz
-      rcases hz with rfl
-      change qX (Ideal.Quotient.mk (nodePolynomialIdeal k) (MvPolynomial.X 1)) = 0
-      rw [hqXmk]
-      have hx : MvPolynomial.X (1 : Fin 2) ∈ RingHom.ker qX0 := by
-        rw [hkerX0]
-        exact Ideal.subset_span (by simp)
-      exact (RingHom.mem_ker.mp hx)
+    change RingHom.ker (Ideal.Quotient.lift (nodePolynomialIdeal k) qX0 hleX) = _
+    rw [Ideal.ker_quotient_lift qX0 hleX, hkerX0, Ideal.map_span]
+    simp [nodeYIdeal]
   let sX : Polynomial k →+* A :=
-    (Ideal.Quotient.mk (nodePolynomialIdeal k)).comp sX0
+    (Ideal.Quotient.mk (nodePolynomialIdeal k)).comp
+      (sX0)
   have hqXsX : qX.comp sX = RingHom.id (Polynomial k) := by
     apply RingHom.ext
     intro p
     change qX (Ideal.Quotient.mk (nodePolynomialIdeal k) (sX0 p)) = p
-    rw [hqXmk]
+    change qX0 (sX0 p) = p
     exact RingHom.congr_fun hqX0sX0 p
   let x : A := Ideal.Quotient.mk (nodePolynomialIdeal k) (MvPolynomial.X 0)
   let y : A := Ideal.Quotient.mk (nodePolynomialIdeal k) (MvPolynomial.X 1)
@@ -1956,10 +1927,89 @@ private theorem eulerPoincareFunction_node_injective
     apply Ideal.Quotient.eq_zero_iff_mem.mpr
     exact Ideal.subset_span (by simp [nodePolynomialIdeal])
   have hyx : y * x = 0 := by rw [mul_comm, hxy]
+  have hIspan : nodeXIdeal k = Ideal.span {x} := by
+    change Ideal.span {Ideal.Quotient.mk (nodePolynomialIdeal k)
+      (MvPolynomial.X 0)} = Ideal.span {Ideal.Quotient.mk (nodePolynomialIdeal k)
+        (MvPolynomial.X 0)}
+    rfl
+  have hJspan : nodeYIdeal k = Ideal.span {y} := by
+    change Ideal.span {Ideal.Quotient.mk (nodePolynomialIdeal k)
+      (MvPolynomial.X 1)} = Ideal.span {Ideal.Quotient.mk (nodePolynomialIdeal k)
+        (MvPolynomial.X 1)}
+    rfl
+  have he0symm_X : e0.symm (Polynomial.X : Polynomial k) =
+      MvPolynomial.X 0 := by
+    apply e0.injective
+    simp [e0, e0a, eempty, MvPolynomial.finSuccEquiv_apply]
+  have hsY_X : sY (Polynomial.X : Polynomial k) = y := by
+    change (Ideal.Quotient.mk (nodePolynomialIdeal k))
+      (r0 (e0.symm Polynomial.X)) = y
+    rw [he0symm_X]
+    simp [y, r0]
+  have hsX_X : sX (Polynomial.X : Polynomial k) = x := by
+    change (Ideal.Quotient.mk (nodePolynomialIdeal k))
+      (sX0 Polynomial.X) = x
+    change (Ideal.Quotient.mk (nodePolynomialIdeal k))
+      (swap.symm (r0 (e0.symm Polynomial.X))) = x
+    rw [he0symm_X]
+    simp [x, r0, swap, MvPolynomial.renameEquiv_apply]
+  exact
+    { qY := qY
+      qX := qX
+      sY := sY
+      sX := sX
+      x := x
+      y := y
+      hkerY := hkerY
+      hqYsY := hqYsY
+      hkerX := hkerX
+      hqXsX := hqXsX
+      hxy := hxy
+      hyx := hyx
+      hkerY_span := by simpa [x, nodeXIdeal] using hkerY
+      hkerX_span := by simpa [y, nodeYIdeal] using hkerX
+      hIspan := hIspan
+      hJspan := hJspan
+      hsY_X := hsY_X
+      hsX_X := hsX_X }
+
+private theorem eulerPoincareFunction_node_injective
+    (k : Type u) [Field k] [IsAlgClosed k] :
+    Function.Injective (nodeEulerParameters (k := k)) := by
+  classical
+  let A := nodeRing k
+  let B := Polynomial k
+  let d := nodeMultiplicationData_exists k
+  let qY : A →+* B := d.qY
+  let qX : A →+* B := d.qX
+  let sY : B →+* A := d.sY
+  let sX : B →+* A := d.sX
+  let x : A := d.x
+  let y : A := d.y
+  have hkerY : RingHom.ker qY = nodeXIdeal k := by
+    change RingHom.ker d.qY = nodeXIdeal k
+    exact d.hkerY
+  have hqYsY : qY.comp sY = RingHom.id B := by
+    change d.qY.comp d.sY = RingHom.id (Polynomial k)
+    exact d.hqYsY
+  have hkerX : RingHom.ker qX = nodeYIdeal k := by
+    change RingHom.ker d.qX = nodeYIdeal k
+    exact d.hkerX
+  have hqXsX : qX.comp sX = RingHom.id B := by
+    change d.qX.comp d.sX = RingHom.id (Polynomial k)
+    exact d.hqXsX
+  have hxy : x * y = 0 := by
+    change d.x * d.y = 0
+    exact d.hxy
+  have hyx : y * x = 0 := by
+    change d.y * d.x = 0
+    exact d.hyx
   have hkerY_span : RingHom.ker qY = Ideal.span {x} := by
-    simpa [x, nodeXIdeal] using hkerY
+    change RingHom.ker d.qY = Ideal.span {d.x}
+    exact d.hkerY_span
   have hkerX_span : RingHom.ker qX = Ideal.span {y} := by
-    simpa [y, nodeYIdeal] using hkerX
+    change RingHom.ker d.qX = Ideal.span {d.y}
+    exact d.hkerX_span
   have hspan_smul :
       ∀ {V : Type u} [AddCommGroup V] [Module A V]
         {r a : A} {z : V}, r ∈ Ideal.span {a} → a • z = 0 → r • z = 0 := by
@@ -2050,22 +2100,6 @@ private theorem eulerPoincareFunction_node_injective
         exact ⟨c • z, by simp [m, smul_smul, mul_comm]⟩
       exact (sub_eq_zero.mp (by simpa only [sub_smul] using hz)).symm
     simpa [m, Q] using (finite_of_scalar_compat q hcompat)
-  have he0symm_X : e0.symm (Polynomial.X : Polynomial k) =
-      MvPolynomial.X 0 := by
-    apply e0.injective
-    simp [e0, e0a, eempty, MvPolynomial.finSuccEquiv_apply]
-  have hsY_X : sY (Polynomial.X : Polynomial k) = y := by
-    change (Ideal.Quotient.mk (nodePolynomialIdeal k))
-      (r0 (e0.symm Polynomial.X)) = y
-    rw [he0symm_X]
-    simp [y, r0]
-  have hsX_X : sX (Polynomial.X : Polynomial k) = x := by
-    change (Ideal.Quotient.mk (nodePolynomialIdeal k))
-      (sX0 Polynomial.X) = x
-    change (Ideal.Quotient.mk (nodePolynomialIdeal k))
-      (swap.symm (r0 (e0.symm Polynomial.X))) = x
-    rw [he0symm_X]
-    simp [x, r0, swap, MvPolynomial.renameEquiv_apply]
   let rankYValue :
       ∀ (M : Type u) [AddCommGroup M] [Module A M], ℕ :=
     fun M _ _ =>
@@ -3022,7 +3056,95 @@ private theorem eulerPoincareFunction_node_injective
 private theorem eulerPoincareFunction_node_surjective
     (k : Type u) [Field k] [IsAlgClosed k] :
     Function.Surjective (nodeEulerParameters (k := k)) := by
-  sorry
+  classical
+  let A := nodeRing k
+  let B := Polynomial k
+  let d := nodeMultiplicationData_exists k
+  let qY : A →+* B := d.qY
+  let qX : A →+* B := d.qX
+  let sY : B →+* A := d.sY
+  let sX : B →+* A := d.sX
+  let x : A := d.x
+  let y : A := d.y
+  have hkerY : RingHom.ker qY = nodeXIdeal k := by
+    change RingHom.ker d.qY = nodeXIdeal k
+    exact d.hkerY
+  have hqYsY : qY.comp sY = RingHom.id B := by
+    change d.qY.comp d.sY = RingHom.id (Polynomial k)
+    exact d.hqYsY
+  have hkerX : RingHom.ker qX = nodeYIdeal k := by
+    change RingHom.ker d.qX = nodeYIdeal k
+    exact d.hkerX
+  have hqXsX : qX.comp sX = RingHom.id B := by
+    change d.qX.comp d.sX = RingHom.id (Polynomial k)
+    exact d.hqXsX
+  have hxy : x * y = 0 := by
+    change d.x * d.y = 0
+    exact d.hxy
+  have hyx : y * x = 0 := by
+    change d.y * d.x = 0
+    exact d.hyx
+  have hIspan : nodeXIdeal k = Ideal.span {x} := by
+    change nodeXIdeal k = Ideal.span ({d.x} : Set (nodeRing k))
+    exact d.hIspan
+  have hJspan : nodeYIdeal k = Ideal.span {y} := by
+    change nodeYIdeal k = Ideal.span ({d.y} : Set (nodeRing k))
+    exact d.hJspan
+  let b : B⁰ := ⟨Polynomial.X, by
+    rw [mem_nonZeroDivisors_iff_ne_zero]
+    exact Polynomial.X_ne_zero⟩
+  have hsYb : sY (b : B) = y := by
+    simpa [b] using d.hsY_X
+  have hsXb : sX (b : B) = x := by
+    simpa [b] using d.hsX_X
+  have hfinite :
+      ∀ (M : Type u) [AddCommGroup M] [Module A M] [Module.Finite A M]
+        (a : A) (s : B →+* A) (q : A →+* B),
+        RingHom.ker q = Ideal.span {a} → q.comp s = RingHom.id B →
+          let m : M →ₗ[A] M :=
+            { toFun := fun z => a • z
+              map_add' := by intro z w; simp [add_smul]
+              map_smul' := by
+                intro c z
+                simpa only [smul_smul, RingHom.id_apply, mul_comm] }
+          let Q : Type u := M ⧸ LinearMap.range m
+          letI : Module B Q := Module.compHom Q s
+          Module.Finite B Q := by
+    intro M _ _ _ a s q hker hqs
+    let m : M →ₗ[A] M :=
+      { toFun := fun z => a • z
+        map_add' := by intro z w; simp [add_smul]
+        map_smul' := by
+          intro c z
+          simpa only [smul_smul, RingHom.id_apply, mul_comm] }
+    let Q : Type u := M ⧸ LinearMap.range m
+    letI : Module B Q := Module.compHom Q s
+    have hdiff (b : A) : b - s (q b) ∈ Ideal.span {a} := by
+      rw [← hker, RingHom.mem_ker]
+      have h := RingHom.congr_fun hqs (q b)
+      rw [map_sub]
+      have hs : q (s (q b)) = q b := by
+        simpa only [RingHom.comp_apply, RingHom.id_apply] using h
+      rw [hs]
+      simp
+    have hcompat (b : A) (z : Q) : q b • z = b • z := by
+      change s (q b) • z = b • z
+      obtain ⟨c, hc⟩ := Ideal.mem_span_singleton'.mp (hdiff b)
+      have hz : (b - s (q b)) • z = 0 := by
+        obtain ⟨z, rfl⟩ :=
+          Submodule.Quotient.mk_surjective (LinearMap.range m) z
+        rw [← Submodule.Quotient.mk_smul]
+        apply (Submodule.Quotient.mk_eq_zero (LinearMap.range m)).mpr
+        rw [← hc]
+        exact ⟨c • z, by simp [m, smul_smul, mul_comm]⟩
+      exact (sub_eq_zero.mp (by simpa only [sub_smul] using hz)).symm
+    simpa [m, Q] using (finite_of_scalar_compat q hcompat)
+  intro z
+  obtain ⟨φ, hφ⟩ := eulerPoincareFunction_exists_from_multiplication_data
+    A B (nodeXIdeal k) (nodeYIdeal k) x y sY sX b qY qX hxy hyx
+    hkerY hqYsY hkerX hqXsX hIspan hJspan hsYb hsXb hfinite z
+  refine ⟨φ, ?_⟩
+  simpa [nodeEulerParameters, nodeXComponent, nodeYComponent, A] using hφ
 
 /-- For an algebraically closed field, the two component values classify all
 Euler–Poincaré functions on the nodal ring. -/

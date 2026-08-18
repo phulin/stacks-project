@@ -47,7 +47,14 @@ theorem algebraPullback_exact
     Function.Exact
       (fun x : AlgHom.pullback f g => (x : A × C))
       (fun x : A × C => f x.1 - g x.2) := by
-  sorry
+  change ∀ x : A × C, f x.1 - g x.2 = 0 ↔
+    x ∈ Set.range (fun x : AlgHom.pullback f g => (x : A × C))
+  intro x
+  constructor
+  · intro h
+    exact Set.mem_range.mpr ⟨⟨x, sub_eq_zero.mp h⟩, rfl⟩
+  · rintro ⟨y, rfl⟩
+    exact sub_eq_zero.mpr y.property
 
 /- The proof's two exact rows use the kernel `I = ker(A → B)` and the
 canonical projections of the algebra pullback. -/
@@ -104,7 +111,112 @@ theorem algebraPullback_product_finite
     (hf : Function.Surjective f)
     (hg : RingHom.Finite g.toRingHom) :
     (algebraPullbackToProduct f g).Finite := by
-  sorry
+  classical
+  change Module.Finite (AlgHom.pullback f g) (A × C)
+  let D := AlgHom.pullback f g
+  letI : Algebra D A := (AlgHom.pullbackFst f g).toRingHom.toAlgebra
+  letI : Algebra D C := (AlgHom.pullbackSnd f g).toRingHom.toAlgebra
+  letI : Algebra C B := g.toRingHom.toAlgebra
+  letI : Module.Finite C B := hg
+  obtain ⟨n, l, hl⟩ := Module.Finite.exists_fin' C B
+  choose x hx using fun i : Fin n => hf (l (Pi.single i 1))
+  let q : (D × (Fin n → D)) →ₗ[D] A :=
+    { toFun := fun z =>
+        (AlgHom.pullbackFst f g) z.1 +
+          ∑ i, (AlgHom.pullbackFst f g) (z.2 i) * x i
+      map_add' := by
+        intro z w
+        simp only [Prod.fst_add, Prod.snd_add, Pi.add_apply, map_add, Finset.sum_add_distrib,
+          add_mul]
+        abel
+      map_smul' := by
+        intro d z
+        change
+          (AlgHom.pullbackFst f g) (d * z.1) +
+              ∑ i, (AlgHom.pullbackFst f g) (d * z.2 i) * x i =
+            (AlgHom.pullbackFst f g) d *
+              ((AlgHom.pullbackFst f g) z.1 +
+                ∑ i, (AlgHom.pullbackFst f g) (z.2 i) * x i)
+        simp only [map_mul, Finset.mul_sum]
+        rw [mul_add, Finset.mul_sum]
+        ring }
+  have hq : Function.Surjective q := by
+    intro a
+    obtain ⟨v, hv⟩ := hl (f a)
+    choose d hd using fun i : Fin n =>
+      AlgHom.surjective_pullbackSnd_of_surjective f g hf (v i)
+    have hsum : f (∑ i, (AlgHom.pullbackFst f g) (d i) * x i) = l v := by
+      calc
+        f (∑ i, (AlgHom.pullbackFst f g) (d i) * x i) =
+            ∑ i, g (v i) * l (Pi.single i 1) := by
+              rw [map_sum]
+              apply Finset.sum_congr rfl
+              intro i hi
+              have hdi :
+                  f ((AlgHom.pullbackFst f g) (d i)) = g (v i) := by
+                calc
+                  f ((AlgHom.pullbackFst f g) (d i)) =
+                      g ((AlgHom.pullbackSnd f g) (d i)) := (d i).property
+                  _ = g (v i) := by rw [hd i]
+              rw [map_mul, hdi, hx i]
+        _ = ∑ i, l (Pi.single i (v i)) := by
+              apply Finset.sum_congr rfl
+              intro i hi
+              have hsingle :
+                  (algebraMap C (Fin n → C)) (v i) * Pi.single i 1 =
+                    Pi.single i (v i) := by
+                ext j
+                by_cases hji : i = j <;> simp [hji]
+              have hm := (l.map_smul (v i) (Pi.single i 1)).symm
+              have hm' :
+                  (algebraMap C B) (v i) * l (Pi.single i 1) =
+                    l ((algebraMap C (Fin n → C)) (v i) * Pi.single i 1) := by
+                simpa only [Algebra.smul_def] using hm
+              rw [hsingle] at hm'
+              simpa [RingHom.algebraMap_toAlgebra] using hm'
+        _ = l (∑ i, Pi.single i (v i)) := by rw [map_sum]
+        _ = l v := by rw [Finset.univ_sum_single]
+    let k : D :=
+      ⟨(a - ∑ i, (AlgHom.pullbackFst f g) (d i) * x i, 0), by
+        change f (a - ∑ i, (AlgHom.pullbackFst f g) (d i) * x i) = g 0
+        rw [map_sub, hsum, hv]
+        simp⟩
+    refine ⟨(k, d), ?_⟩
+    change (a - ∑ i, (AlgHom.pullbackFst f g) (d i) * x i) +
+      ∑ i, (AlgHom.pullbackFst f g) (d i) * x i = a
+    exact sub_add_cancel _ _
+  let s : D →ₗ[D] C :=
+    { toFun := AlgHom.pullbackSnd f g
+      map_add' := by simp
+      map_smul' := by
+        intro d z
+        change (d : A × C).2 * (z : A × C).2 =
+          (d : A × C).2 * (z : A × C).2
+        rfl }
+  let qp : (D × (Fin n → D)) × D →ₗ[D] (A × C) :=
+    { toFun := fun z => (q z.1, s z.2)
+      map_add' := by
+        intro z w
+        change (q (z.1 + w.1), s (z.2 + w.2)) =
+          (q z.1 + q w.1, s z.2 + s w.2)
+        exact Prod.ext (q.map_add _ _) (s.map_add _ _)
+      map_smul' := by
+        intro d z
+        change (q (d • z.1), s (d • z.2)) =
+          ((AlgHom.pullbackFst f g) d * q z.1,
+            (AlgHom.pullbackSnd f g) d * s z.2)
+        exact Prod.ext (q.map_smul _ _) (s.map_smul _ _) }
+  have hqp : Function.Surjective qp := by
+    intro z
+    obtain ⟨u, hu⟩ := hq z.1
+    obtain ⟨v, hv⟩ :=
+      AlgHom.surjective_pullbackSnd_of_surjective f g hf z.2
+    refine ⟨(u, v), ?_⟩
+    apply Prod.ext
+    · exact hu
+    · change s v = z.2
+      simpa [s] using hv
+  exact Module.Finite.of_surjective qp hqp
 
 /-- The exact rows in the proof of the finite-type fibre-product lemma,
 with `I` represented by the canonical kernel ideal. -/
@@ -117,7 +229,36 @@ theorem algebraPullback_exact_rows
       Function.Exact (algebraPullbackKernelToPullback f g)
         (AlgHom.pullbackSnd f g) ∧
       Function.Surjective (AlgHom.pullbackSnd f g) := by
-  sorry
+  refine ⟨?_, hf, ?_, ?_⟩
+  · change ∀ a : A, f a = 0 ↔
+      a ∈ Set.range (algebraPullbackKernelToA f)
+    intro a
+    constructor
+    · intro ha
+      exact ⟨⟨a, ha⟩, rfl⟩
+    · rintro ⟨x, rfl⟩
+      change f (x : A) = 0
+      simpa [algebraPullbackKernel] using x.property
+  · change ∀ y : AlgHom.pullback f g,
+      (AlgHom.pullbackSnd f g) y = 0 ↔
+        y ∈ Set.range (algebraPullbackKernelToPullback f g)
+    intro y
+    constructor
+    · intro hy
+      change y.1.2 = 0 at hy
+      have ha : f ((AlgHom.pullbackFst f g) y) = 0 := by
+        change f y.1.1 = 0
+        calc
+          f y.1.1 = g y.1.2 := y.property
+          _ = 0 := by rw [hy]; simp
+      refine ⟨⟨(AlgHom.pullbackFst f g) y, ha⟩, ?_⟩
+      apply Subtype.ext
+      apply Prod.ext
+      · rfl
+      · exact hy.symm
+    · rintro ⟨x, rfl⟩
+      simp [algebraPullbackKernelToPullback]
+  · exact AlgHom.surjective_pullbackSnd_of_surjective f g hf
 
 /-! The source-facing finite-type lemma follows the proof-support interfaces
 above, which makes the Artin--Tate route available when its body is filled. -/
@@ -136,7 +277,27 @@ theorem finiteType_algHom_pullback
     (hf : Function.Surjective f)
     (hg : RingHom.Finite g.toRingHom) :
     Algebra.FiniteType R (AlgHom.pullback f g) := by
-  sorry
+  letI : Algebra (AlgHom.pullback f g) (A × C) :=
+    (algebraPullbackToProduct f g).toAlgebra
+  let tower : IsScalarTower R (AlgHom.pullback f g) (A × C) :=
+    IsScalarTower.of_algebraMap_eq' (by
+      ext r <;> simp [RingHom.algebraMap_toAlgebra, algebraPullbackToProduct])
+  letI : IsScalarTower R (AlgHom.pullback f g) (A × C) := tower
+  letI : Algebra.FiniteType R A := hA
+  letI : Algebra.FiniteType R B := hB
+  letI : Algebra.FiniteType R C := hC
+  have hfinite : Module.Finite (AlgHom.pullback f g) (A × C) :=
+    algebraPullback_product_finite f g hf hg
+  have hprod : (⊤ : Subalgebra R (A × C)).FG :=
+    (inferInstance : Algebra.FiniteType R (A × C)).out
+  have hmodule : (⊤ : Submodule (AlgHom.pullback f g) (A × C)).FG :=
+    hfinite.fg_top
+  have hinjective :
+      Function.Injective (algebraMap (AlgHom.pullback f g) (A × C)) := by
+    simpa [RingHom.algebraMap_toAlgebra] using
+      (algebraPullback_to_product_injective f g)
+  exact ⟨@fg_of_fg_of_fg R (AlgHom.pullback f g) (A × C) _ _ _ _ _ _ tower hR
+    hprod hmodule hinjective⟩
 
 /-- The product of a family of algebra maps with varying codomains.  Mathlib
 provides `AlgHom.pi` for a common domain; this small componentwise map is the

@@ -290,9 +290,9 @@ def gradedRightModuleHomogeneousComp
   ⟨gradedRightModuleHomogeneousCompFamily i j f g,
     gradedRightModuleHomogeneousCompFamily_is_map f g⟩
 
-theorem gradedRightModuleHomogeneousId_nonempty
+noncomputable def gradedRightModuleHomogeneousId
     (L : GradedRightModule (R := R) (A := A)) :
-    Nonempty (GradedRightModuleHomogeneous L L 0) := by
+    GradedRightModuleHomogeneous L L 0 := by
   have hcast_add :
       ∀ {i j : ℤ} (h : i = j) (x y : L.component i),
         cast (congrArg L.component h) (x + y) =
@@ -336,12 +336,12 @@ theorem gradedRightModuleHomogeneousId_nonempty
       (i := -(-p + i)) (j := p - i) (k := -(-p)) (l := p) (d := i)
       (hij := by omega) (hkl := by omega)
       (h1 := by omega) (h2 := by omega) m a
-  exact ⟨⟨f, hf⟩⟩
+  exact ⟨f, hf⟩
 
-noncomputable def gradedRightModuleHomogeneousId
+theorem gradedRightModuleHomogeneousId_nonempty
     (L : GradedRightModule (R := R) (A := A)) :
-    GradedRightModuleHomogeneous L L 0 :=
-  Classical.choice (gradedRightModuleHomogeneousId_nonempty L)
+    Nonempty (GradedRightModuleHomogeneous L L 0) :=
+  ⟨gradedRightModuleHomogeneousId L⟩
 
 /-- The totalization specification for the graded module category. -/
 def GradedModuleTotalizationSpec : Type _ :=

@@ -947,10 +947,8 @@ variable {R : Type u} {C : Type v}
 def IsDegreeZeroShiftRestriction
     (S : GradedShiftFamily R C)
     (T : LinearShiftFamily R (DegreeZero (inferInstance : GradedCategory R C))) : Prop :=
-  ∀ (n : ℤ) (X : DegreeZero (inferInstance : GradedCategory R C)),
-    (T.shift n).obj X =
-      DegreeZero.of (inferInstance : GradedCategory R C)
-        ((S.shift n).obj X.down)
+  ∀ (n : ℤ),
+    T.shift n = (S.graded n).degreeZero
 
 theorem degree_zero_shift_family_nonempty :
     Nonempty

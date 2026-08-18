@@ -99,7 +99,9 @@ theorem spectrum_surjective_radical_ideal_conditions_baseChange
             (I.map (algebraMap R' (R' ⊗[R] S))).radical = I.radical,
         ∀ I : Ideal R', I.IsRadical →
           Ideal.comap (algebraMap R' (R' ⊗[R] S))
-            (I.map (algebraMap R' (R' ⊗[R] S))) = I ] := by
+            (I.map (algebraMap R' (R' ⊗[R] S))) = I ] ∧
+      Function.Surjective
+        (PrimeSpectrum.comap (algebraMap R' (R' ⊗[R] S))) := by
   sorry
 
 /-! ## Dense images and minimal primes -/

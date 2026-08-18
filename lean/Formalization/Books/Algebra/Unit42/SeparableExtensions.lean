@@ -202,7 +202,7 @@ theorem exists_purely_inseparable_base_change
     [Algebra.EssFiniteType k K] :
     Nonempty (PurelyInseparableBaseChange k K) := by
   by_cases hzero : CharZero k
-  · letI : CharZero k := hzero
+  · let : CharZero k := hzero
     obtain ⟨s, hs, hsep⟩ :=
       exists_isTranscendenceBasis_and_isSeparable_of_perfectField k K
     let x : s → K := fun z => z

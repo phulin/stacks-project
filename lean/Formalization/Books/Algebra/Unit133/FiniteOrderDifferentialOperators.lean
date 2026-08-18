@@ -59,18 +59,50 @@ def IsDifferentialOperator
 
 theorem isDifferentialOperator_zero (k : ℕ) :
     IsDifferentialOperator (R := R) (S := S) k (0 : LinearMapOver R M N) := by
-  sorry
+  induction k with
+  | zero =>
+      intro s m
+      simp
+  | succ k ih =>
+      intro s
+      simpa [differentialOperatorCommutator] using ih
 
 theorem isDifferentialOperator_add (k : ℕ) (D E : LinearMapOver R M N)
     (hD : IsDifferentialOperator (R := R) (S := S) k D)
     (hE : IsDifferentialOperator (R := R) (S := S) k E) :
     IsDifferentialOperator (R := R) (S := S) k (D + E) := by
-  sorry
+  revert D E
+  induction k with
+  | zero =>
+      intro D E hD hE s m
+      simp only [LinearMap.add_apply, hD s m, hE s m, smul_add]
+  | succ k ih =>
+      intro D E hD hE s
+      simpa [differentialOperatorCommutator, LinearMap.add_comp, LinearMap.comp_add,
+        sub_eq_add_neg, add_assoc, add_comm, add_left_comm] using
+        (ih (differentialOperatorCommutator D s) (differentialOperatorCommutator E s)
+          (hD s) (hE s))
 
 theorem isDifferentialOperator_smul (k : ℕ) (c : S) (D : LinearMapOver R M N)
     (hD : IsDifferentialOperator (R := R) (S := S) k D) :
     IsDifferentialOperator (R := R) (S := S) k (c • D) := by
-  sorry
+  revert D
+  induction k with
+  | zero =>
+      intro D hD s m
+      simp [hD s m, smul_smul, mul_comm]
+  | succ k ih =>
+      intro D hD s
+      have hcomp :
+          DistribSMul.toLinearMap R N s ∘ₗ (c • D) =
+            c • DistribSMul.toLinearMap R N s ∘ₗ D := by
+        ext m
+        simp [smul_smul, mul_comm]
+      rw [show differentialOperatorCommutator (c • D) s =
+        c • differentialOperatorCommutator D s by
+        simp [differentialOperatorCommutator, LinearMap.smul_comp, LinearMap.comp_smul,
+          smul_sub, hcomp]]
+      exact ih _ (hD s)
 
 /- The space `Diff^k_{S/R}(M, N)`, as an actual `S`-submodule. -/
 def differentialOperatorSubmodule (k : ℕ) : Submodule S (LinearMapOver R M N) where
@@ -100,7 +132,21 @@ theorem mem_differentialOperatorSubmodule_iff (k : ℕ) (D : LinearMapOver R M N
 theorem differentialOperatorSubmodule_mono (k : ℕ) :
     differentialOperatorSubmodule (R := R) (S := S) (M := M) (N := N) k ≤
       differentialOperatorSubmodule (R := R) (S := S) (M := M) (N := N) (k + 1) := by
-  sorry
+  change ∀ D, IsDifferentialOperator (R := R) (S := S) k D →
+    IsDifferentialOperator (R := R) (S := S) (k + 1) D
+  induction k with
+  | zero =>
+      intro D hD
+      intro s
+      have hzero :
+          differentialOperatorCommutator D s = 0 := by
+        ext m
+        simp [differentialOperatorCommutator, hD s m]
+      rw [hzero]
+      exact isDifferentialOperator_zero (R := R) (S := S) (M := M) (N := N) 0
+  | succ k ih =>
+      intro D hD s
+      exact ih _ (hD s)
 
 theorem differentialOperatorSubmodule_zero_iff (D : LinearMapOver R M N) :
     D ∈ differentialOperatorSubmodule (R := R) (S := S) 0 ↔

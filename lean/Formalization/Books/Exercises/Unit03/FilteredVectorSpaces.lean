@@ -46,7 +46,93 @@ theorem filteredVectorSpace_additive
     Nonempty
       (Formalization.Books.Homology.Unit03.AdditiveCategory
         (Formalization.Books.Homology.Unit03.FilteredVectorSpace k)) := by
-  sorry
+  let zero : Formalization.Books.Homology.Unit03.FilteredVectorSpace k :=
+    { underlying := ModuleCat.of k PUnit
+      filtration := fun _ => ⊥
+      decreasing := by intro i; rfl }
+  let terminal : IsTerminal zero :=
+    IsTerminal.ofUniqueHom (fun X => 0) (by
+      intro X m
+      apply Subtype.ext
+      apply ModuleCat.hom_ext
+      apply LinearMap.ext
+      intro x
+      exact Subsingleton.elim _ _)
+  let : HasTerminal
+      (Formalization.Books.Homology.Unit03.FilteredVectorSpace k) :=
+    terminal.hasTerminal
+  let : ∀ {X Y : Formalization.Books.Homology.Unit03.FilteredVectorSpace k},
+      HasLimit (pair X Y) := by
+    intro X Y
+    let fst : filteredVectorSpaceDirectSum X Y ⟶ X :=
+      ⟨ModuleCat.ofHom (LinearMap.fst k X.underlying Y.underlying), by
+        intro i z hz
+        exact hz.1⟩
+    let snd : filteredVectorSpaceDirectSum X Y ⟶ Y :=
+      ⟨ModuleCat.ofHom (LinearMap.snd k X.underlying Y.underlying), by
+        intro i z hz
+        exact hz.2⟩
+    refine ⟨⟨BinaryFan.mk fst snd, ?_⟩⟩
+    exact BinaryFan.IsLimit.mk (BinaryFan.mk fst snd)
+      (fun {Z} a b =>
+        ⟨ModuleCat.ofHom (LinearMap.prod a.1.hom b.1.hom), by
+          intro i z hz
+          exact ⟨a.2 i z hz, b.2 i z hz⟩⟩)
+      (fun {Z} a b => by
+        apply Subtype.ext
+        apply ModuleCat.hom_ext
+        change (LinearMap.fst k X.underlying Y.underlying).comp
+            (LinearMap.prod a.1.hom b.1.hom) = a.1.hom
+        exact LinearMap.fst_prod a.1.hom b.1.hom)
+      (fun {Z} a b => by
+        apply Subtype.ext
+        apply ModuleCat.hom_ext
+        change (LinearMap.snd k X.underlying Y.underlying).comp
+            (LinearMap.prod a.1.hom b.1.hom) = b.1.hom
+        exact LinearMap.snd_prod a.1.hom b.1.hom)
+      (fun {Z} a b m h₁ h₂ => by
+        apply Subtype.ext
+        apply ModuleCat.hom_ext
+        apply LinearMap.ext
+        intro z
+        have h₁' : m.1 ≫
+            ModuleCat.ofHom (LinearMap.fst k X.underlying Y.underlying) = a.1 :=
+          congrArg (fun q : Z ⟶ X => q.1) h₁
+        have h₂' : m.1 ≫
+            ModuleCat.ofHom (LinearMap.snd k X.underlying Y.underlying) = b.1 :=
+          congrArg (fun q : Z ⟶ Y => q.1) h₂
+        have h₁'' :
+            (LinearMap.fst k X.underlying Y.underlying).comp m.1.hom = a.1.hom := by
+          have h := congrArg
+            (fun q : Z.underlying ⟶ X.underlying => q.hom) h₁'
+          change (LinearMap.fst k X.underlying Y.underlying).comp m.1.hom = a.1.hom at h
+          exact h
+        have h₂'' :
+            (LinearMap.snd k X.underlying Y.underlying).comp m.1.hom = b.1.hom := by
+          have h := congrArg
+            (fun q : Z.underlying ⟶ Y.underlying => q.hom) h₂'
+          change (LinearMap.snd k X.underlying Y.underlying).comp m.1.hom = b.1.hom at h
+          exact h
+        change m.1.hom z = (a.1.hom z, b.1.hom z)
+        exact Prod.ext
+          (by
+            change (LinearMap.fst k X.underlying Y.underlying).comp m.1.hom z = a.1.hom z
+            simpa only [LinearMap.comp_apply] using
+            congrArg (fun q : Z.underlying →ₗ[k] X.underlying => q z) h₁'')
+          (by
+            change (LinearMap.snd k X.underlying Y.underlying).comp m.1.hom z = b.1.hom z
+            simpa only [LinearMap.comp_apply] using
+            congrArg (fun q : Z.underlying →ₗ[k] Y.underlying => q z) h₂''))
+  let hproducts : HasBinaryProducts
+      (Formalization.Books.Homology.Unit03.FilteredVectorSpace k) :=
+    @hasBinaryProducts_of_hasLimit_pair
+      (Formalization.Books.Homology.Unit03.FilteredVectorSpace k) _ this
+  let hfinite : HasFiniteProducts
+      (Formalization.Books.Homology.Unit03.FilteredVectorSpace k) :=
+    @hasFiniteProducts_of_has_binary_and_terminal
+      (Formalization.Books.Homology.Unit03.FilteredVectorSpace k) _ hproducts
+      terminal.hasTerminal
+  exact ⟨{ toPreadditive := inferInstance, toHasFiniteProducts := hfinite }⟩
 
 /-! ## (2) Induced kernels and quotient cokernels -/
 
@@ -75,7 +161,10 @@ theorem filteredVectorSpaceKernelMap_comp
     {k : Type u} [Field k]
     {V W : Formalization.Books.Homology.Unit03.FilteredVectorSpace k}
     (f : V ⟶ W) : filteredVectorSpaceKernelMap f ≫ f = 0 := by
-  sorry
+  apply Subtype.ext
+  change ModuleCat.ofHom (LinearMap.ker f.1.hom).subtype ≫ f.1 = 0
+  apply ModuleCat.hom_ext
+  exact LinearMap.comp_ker_subtype f.1.hom
 
 def filteredVectorSpaceKernelFork
     {k : Type u} [Field k]
@@ -89,7 +178,50 @@ theorem filteredVectorSpaceKernelFork_isLimit
     {k : Type u} [Field k]
     {V W : Formalization.Books.Homology.Unit03.FilteredVectorSpace k}
     (f : V ⟶ W) : Nonempty (IsLimit (filteredVectorSpaceKernelFork f)) := by
-  sorry
+  let kernelLift {Z : Formalization.Books.Homology.Unit03.FilteredVectorSpace k}
+      (a : Z ⟶ V) (ha : a ≫ f = 0) :
+      Z.underlying ⟶ (filteredVectorSpaceKernelObject f).underlying := by
+    have ha' : a.1 ≫ f.1 = 0 := congrArg (fun g : Z ⟶ W => g.1) ha
+    have ha'' := congrArg
+      (fun g : Z.underlying ⟶ W.underlying => g.hom) ha'
+    change f.1.hom.comp a.1.hom = 0 at ha''
+    exact ModuleCat.ofHom
+      (LinearMap.codRestrict (LinearMap.ker f.1.hom) a.1.hom (fun z => by
+        rw [LinearMap.mem_ker]
+        have hz := congrArg
+          (fun g : Z.underlying →ₗ[k] W.underlying => g z) ha''
+        simpa only [LinearMap.comp_apply, LinearMap.zero_apply] using hz))
+  refine ⟨KernelFork.IsLimit.ofι (filteredVectorSpaceKernelMap f)
+    (filteredVectorSpaceKernelMap_comp f)
+    (fun {Z} a ha => by
+      refine ⟨kernelLift a ha, ?_⟩
+      intro i z hz
+      change a.1.hom z ∈ V.filtration i
+      exact a.2 i z hz)
+    (fun {Z} a ha => by
+      apply Subtype.ext
+      apply ModuleCat.hom_ext
+      change (LinearMap.ker f.1.hom).subtype.comp (kernelLift a ha).hom = a.1.hom
+      dsimp [kernelLift]
+      rfl)
+    (fun {Z} a ha m hm => by
+      apply Subtype.ext
+      apply ModuleCat.hom_ext
+      apply LinearMap.ext
+      intro z
+      apply Subtype.ext
+      have hm' : m.1 ≫
+          ModuleCat.ofHom (LinearMap.ker f.1.hom).subtype = a.1 :=
+        congrArg (fun g : Z ⟶ V => g.1) hm
+      have hm'' : (LinearMap.ker f.1.hom).subtype.comp m.1.hom = a.1.hom := by
+        have h := congrArg
+          (fun g : Z.underlying ⟶ V.underlying => g.hom) hm'
+        change (LinearMap.ker f.1.hom).subtype.comp m.1.hom = a.1.hom at h
+        exact h
+      change (LinearMap.ker f.1.hom).subtype (m.1.hom z) = a.1.hom z
+      have h := congrArg (fun g : Z.underlying →ₗ[k] V.underlying => g z) hm''
+      change (LinearMap.ker f.1.hom).subtype (m.1.hom z) = a.1.hom z at h
+      exact h)⟩
 
 /-- The quotient module of a filtered map with its quotient filtration. -/
 def filteredVectorSpaceCokernelObject
@@ -116,7 +248,10 @@ theorem filteredVectorSpace_comp_cokernelMap
     {k : Type u} [Field k]
     {V W : Formalization.Books.Homology.Unit03.FilteredVectorSpace k}
     (f : V ⟶ W) : f ≫ filteredVectorSpaceCokernelMap f = 0 := by
-  sorry
+  apply Subtype.ext
+  change f.1 ≫ ModuleCat.ofHom (LinearMap.range f.1.hom).mkQ = 0
+  apply ModuleCat.hom_ext
+  exact LinearMap.range_mkQ_comp f.1.hom
 
 def filteredVectorSpaceCokernelCofork
     {k : Type u} [Field k]

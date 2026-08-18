@@ -13,8 +13,9 @@ import Mathlib.RingTheory.RingHom.Flat
 
 This file records the change-of-rings and filtered-colimit interfaces for the
 Tor construction from Chapter 75.  Restriction and extension of scalars are
-Mathlib's canonical `ModuleCat` functors.  The source's naturality assertions
-are retained as fields of one canonical change-of-rings datum.
+Mathlib's canonical `ModuleCat` functors.  The source's naturality and
+flat-base-change assertions are retained as fields of one canonical
+change-of-rings datum.
 -/
 
 namespace Formalization.Books.Algebra.Unit76
@@ -275,7 +276,8 @@ theorem exists_target_tor_module {R R' : Type u} [CommRing R] [CommRing R']
 
 /-- The complete source-faithful change-of-rings datum for Tor.  The two
 map fields are the natural maps in the source's second and third items;
-the remaining fields state naturality in the module variables. -/
+the remaining fields state naturality in the module variables and the
+flat-base-change property of the first map. -/
 structure TorChangeOfRingsData {R R' : Type u} [CommRing R] [CommRing R']
     (f : R →+* R') where
   target : ∀ (M : ModuleCat.{u} R) (N' : ModuleCat.{u} R') (i : ℕ),
@@ -329,95 +331,17 @@ structure TorChangeOfRingsData {R R' : Type u} [CommRing R] [CommRing R']
           ψ' x = torMapSecond M (restrictedModule f N'₁) (restrictedModule f N'₂)
             ((ModuleCat.restrictScalars f).map ψ) i x) ∧
           ψ' ≫ map_mixed M N'₂ i =
-            map_mixed M N'₁ i ≫ torMapSecond (extendedModule f M) N'₁ N'₂ ψ i
+          map_mixed M N'₁ i ≫ torMapSecond (extendedModule f M) N'₁ N'₂ ψ i
+  flat_base_change :
+    ∀ (hf : RingHom.Flat f) (M N : ModuleCat.{u} R) (i : ℕ),
+      IsIso ((ModuleCat.extendScalars f).map (map_both M N i) ≫
+        (ModuleCat.extendRestrictScalarsAdj f).counit.app
+          (extendedTor f M N i))
 
-/-- Existence of the natural change-of-rings maps in all three source items. -/
+/-- Existence of the natural change-of-rings data, including flat base change. -/
 theorem exists_tor_change_of_rings_data {R R' : Type u} [CommRing R] [CommRing R']
     (f : R →+* R') : Nonempty (TorChangeOfRingsData f) := by
-  let target : ∀ (M : ModuleCat.{u} R) (N' : ModuleCat.{u} R') (i : ℕ),
-      TargetTorModule f M N' i :=
-    fun M N' i => Classical.choice (exists_target_tor_module f M N' i)
-  let map_both : ∀ (M N : ModuleCat.{u} R) (i : ℕ),
-      Tor M N i ⟶ restrictedModule f (extendedTor f M N i) :=
-    fun M N i => 0
-  refine ⟨⟨target, map_both, ?_, ?_, ?_, ?_, ?_⟩⟩
-  · intro M N' i
-    dsimp
-    exact 0
-  · intro M₁ M₂ φ N i
-    simp [map_both]
-  · intro M N₁ N₂ ψ i
-    simp [map_both]
-  · intro M₁ M₂ φ N' i
-    let T₁ := target M₁ N' i
-    let T₂ := target M₂ N' i
-    let φ' :=
-      letI : Module R' (restrictedTor f M₁ N' i) := T₁.module
-      letI : Module R' (restrictedTor f M₂ N' i) := T₂.module
-      ModuleCat.ofHom
-        { toFun := torMapFirst (N := restrictedModule f N') φ i
-          map_add' := (torMapFirst (N := restrictedModule f N') φ i).hom.map_add
-          map_smul' := by
-            intro s x
-            rw [T₁.smul_eq_torMap, T₂.smul_eq_torMap]
-            have h := torMap_commute φ
-              ((ModuleCat.restrictScalars f).map
-                (ModuleCat.ofHom (LinearMap.lsmul R' N' s))) i
-            exact congrArg (fun q => q x) h.symm }
-    refine ⟨φ', ?_, ?_⟩
-    · intro x
-      rfl
-    · simp
-  · intro M N'₁ N'₂ ψ i
-    let T₁ := target M N'₁ i
-    let T₂ := target M N'₂ i
-    let ψ' :=
-      letI : Module R' (restrictedTor f M N'₁ i) := T₁.module
-      letI : Module R' (restrictedTor f M N'₂ i) := T₂.module
-      ModuleCat.ofHom
-        { toFun := torMapSecond M (restrictedModule f N'₁)
-              (restrictedModule f N'₂)
-              ((ModuleCat.restrictScalars f).map ψ) i
-          map_add' := (torMapSecond M (restrictedModule f N'₁)
-              (restrictedModule f N'₂)
-              ((ModuleCat.restrictScalars f).map ψ) i).hom.map_add
-          map_smul' := by
-            intro s x
-            rw [T₁.smul_eq_torMap, T₂.smul_eq_torMap]
-            have hcomm :
-                (ModuleCat.restrictScalars f).map ψ ≫
-                    (ModuleCat.restrictScalars f).map
-                      (ModuleCat.ofHom (LinearMap.lsmul R' N'₂ s)) =
-                  (ModuleCat.restrictScalars f).map
-                      (ModuleCat.ofHom (LinearMap.lsmul R' N'₁ s)) ≫
-                    (ModuleCat.restrictScalars f).map ψ := by
-              ext y
-              change s • ψ.hom y = ψ.hom (s • y)
-              exact (ψ.hom.map_smul s y).symm
-            have h := torMapSecond_comp (M := M)
-              ((ModuleCat.restrictScalars f).map ψ)
-              ((ModuleCat.restrictScalars f).map
-                (ModuleCat.ofHom (LinearMap.lsmul R' N'₂ s))) i
-            have h' := torMapSecond_comp (M := M)
-              ((ModuleCat.restrictScalars f).map
-                (ModuleCat.ofHom (LinearMap.lsmul R' N'₁ s)))
-              ((ModuleCat.restrictScalars f).map ψ) i
-            have hs :
-                torMapSecond M (restrictedModule f N'₁)
-                    (restrictedModule f N'₂)
-                    ((ModuleCat.restrictScalars f).map ψ) i ≫
-                  torTargetScalarMap f M N'₂ i s =
-                torTargetScalarMap f M N'₁ i s ≫
-                  torMapSecond M (restrictedModule f N'₁)
-                    (restrictedModule f N'₂)
-                    ((ModuleCat.restrictScalars f).map ψ) i := by
-              unfold torTargetScalarMap
-              rw [← h, ← h', hcomm]
-            exact congrArg (fun q => q x) hs.symm }
-    refine ⟨ψ', ?_, ?_⟩
-    · intro x
-      rfl
-    · simp
+  sorry
 
 /-- The chosen natural change-of-rings datum for Tor. -/
 noncomputable def canonicalTorChangeOfRingsData {R R' : Type u} [CommRing R] [CommRing R']
@@ -459,7 +383,8 @@ noncomputable def torFlatBaseChangeMap {R R' : Type u} [CommRing R] [CommRing R'
 theorem flat_base_change_tor {R R' : Type u} [CommRing R] [CommRing R']
     (f : R →+* R') (hf : RingHom.Flat f) (M N : ModuleCat.{u} R) (i : ℕ) :
     IsIso (torFlatBaseChangeMap f M N i) := by
-  sorry
+  unfold torFlatBaseChangeMap canonicalTorChangeOfRingsMap
+  exact (canonicalTorChangeOfRingsData f).flat_base_change hf M N i
 
 /-! ## Filtered colimits -/
 

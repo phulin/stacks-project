@@ -210,13 +210,20 @@ theorem sheafModuleKernel_section_iso {X : TopCat.{v}} (O : RingSheaf.{v, v} X)
     {F G : Mod O} (φ : F ⟶ G) (U : Opens X) :
     Nonempty (sheafModuleSections O (sheafModuleKernel O φ) U ≅
       kernel (sheafModuleSectionsMap O φ U)) := by
-  sorry
+  exact ⟨PreservesKernel.iso (SheafOfModules.evaluation O (op U)) φ⟩
 
 theorem sheafModuleKernel_stalk_iso {X : TopCat.{v}} (O : RingSheaf.{v, v} X)
     {F G : Mod O} (φ : F ⟶ G) (x : X) :
     Nonempty ((sheafModuleStalkFunctor O x).obj (sheafModuleKernel O φ) ≅
       kernel ((sheafModuleStalkFunctor O x).map φ)) := by
-  sorry
+  letI : PreservesFiniteLimits (sheafModuleStalkFunctor O x) := by
+    apply preservesFiniteLimits_of_reflects_of_preserves
+      (sheafModuleStalkFunctor O x) (forget₂ _ AddCommGrpCat)
+    change PreservesFiniteLimits
+      (SheafOfModules.toSheaf O ⋙ TopCat.Sheaf.forget AddCommGrpCat X ⋙
+        TopCat.Presheaf.stalkFunctor AddCommGrpCat x)
+    infer_instance
+  exact ⟨PreservesKernel.iso (sheafModuleStalkFunctor O x) φ⟩
 
 noncomputable abbrev sheafModuleCokernel {X : TopCat.{v}} (O : RingSheaf.{v, v} X)
     {F G : Mod O} (φ : F ⟶ G) : Mod O :=
@@ -236,13 +243,21 @@ theorem sheafModuleCokernel_sheafification_iso {X : TopCat.{v}}
     (O : RingSheaf.{v, v} X) {F G : Mod O} (φ : F ⟶ G) :
     Nonempty (sheafModuleCokernel O φ ≅
       sheafModuleCokernelSheafification O φ) := by
-  sorry
+  let L := PresheafOfModules.sheafification (R₀ := O.obj) (𝟙 O.obj)
+  let adj := PresheafOfModules.sheafificationAdjunction (𝟙 O.obj)
+  let eF : L.obj F.val ≅ F := asIso (adj.counit.app F)
+  let eG : L.obj G.val ≅ G := asIso (adj.counit.app G)
+  let e : cokernel (L.map φ.val) ≅ cokernel φ :=
+    cokernel.mapIso φ eF eG (by
+      change L.map φ.val ≫ eG.hom = eF.hom ≫ φ
+      exact adj.counit.naturality φ)
+  exact ⟨e.symm ≪≫ (PreservesCokernel.iso L φ.val).symm⟩
 
 theorem sheafModuleCokernel_section_iso {X : TopCat.{v}} (O : RingSheaf.{v, v} X)
     {F G : Mod O} (φ : F ⟶ G) (U : Opens X) :
     Nonempty ((sheafModuleCokernelPresheaf O φ).obj (op U) ≅
       cokernel (sheafModuleSectionsMap O φ U)) := by
-  sorry
+  exact ⟨PreservesCokernel.iso (PresheafOfModules.evaluation O.obj (op U)) φ.val⟩
 
 theorem sheafModuleCokernel_stalk_iso {X : TopCat.{v}} (O : RingSheaf.{v, v} X)
     {F G : Mod O} (φ : F ⟶ G) (x : X) :

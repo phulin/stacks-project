@@ -145,7 +145,8 @@ def contractionP (T T' : NumericalType) (i : Fin T.n)
 /-! The contraction maps form the commutative square in the source proof. -/
 theorem contraction_square (T T' : NumericalType) (i : Fin T.n)
     (e : Fin T'.n ≃ RemainingIndex T i)
-    (hcontraction : IsContraction T T' i e) :
+    (hcontraction : IsContraction T T' i e)
+    (hi : IsMinusOneIndex T i := by assumption) :
     (contractionP T T' i e).comp (Matrix.toLin' (picardMatrix T)) =
       (Matrix.toLin' (picardMatrix T')).comp (contractionQ T T' i e) := by
   sorry
@@ -191,7 +192,7 @@ theorem contracted_weight_ratio_one_or_two (T T' : NumericalType)
 
 /-! Twice every target basis vector lies in the image of `p`. -/
 theorem contractionP_two_smul_basis_mem_range (T T' : NumericalType)
-    (i : Fin T.n) (hi : IsMinusOneIndex T i)
+    (i : Fin T.n)
     (e : Fin T'.n ≃ RemainingIndex T i)
     (hcontraction : IsContraction T T' i e) :
     ∀ j : Fin T'.n,
@@ -231,7 +232,8 @@ def contractionTargetMap (T T' : NumericalType) (i : Fin T.n)
 /-! The commutative square gives the relation needed to descend `p` to cokernels. -/
 theorem contraction_square_range (T T' : NumericalType) (i : Fin T.n)
     (e : Fin T'.n ≃ RemainingIndex T i)
-    (hcontraction : IsContraction T T' i e) :
+    (hcontraction : IsContraction T T' i e)
+    (hi : IsMinusOneIndex T i := by assumption) :
     LinearMap.range (Matrix.toLin' (picardMatrix T)) ≤
       LinearMap.ker (contractionTargetMap T T' i e) := by
   rintro x ⟨y, rfl⟩
@@ -240,7 +242,7 @@ theorem contraction_square_range (T T' : NumericalType) (i : Fin T.n)
   have hs : (contractionP T T' i e) ((Matrix.toLin' (picardMatrix T)) y) =
       (Matrix.toLin' (picardMatrix T')) ((contractionQ T T' i e) y) := by
     simpa only [LinearMap.comp_apply] using
-      LinearMap.congr_fun (contraction_square T T' i e hcontraction) y
+      LinearMap.congr_fun (contraction_square T T' i e hcontraction hi) y
   rw [hs]
   apply (Submodule.Quotient.mk_eq_zero _).mpr
   show (Matrix.toLin' (picardMatrix T')) ((contractionQ T T' i e) y) ∈
@@ -250,11 +252,12 @@ theorem contraction_square_range (T T' : NumericalType) (i : Fin T.n)
 /-! The homomorphism of Picard groups induced by contraction. -/
 def contractionPicardMap (T T' : NumericalType) (i : Fin T.n)
     (e : Fin T'.n ≃ RemainingIndex T i)
-    (hcontraction : IsContraction T T' i e) :
+    (hcontraction : IsContraction T T' i e)
+    (hi : IsMinusOneIndex T i := by assumption) :
     picardGroup T →ₗ[ℤ] picardGroup T' :=
   (LinearMap.range (Matrix.toLin' (picardMatrix T))).liftQ
     (contractionTargetMap T T' i e)
-    (contraction_square_range T T' i e hcontraction)
+    (contraction_square_range T T' i e hcontraction hi)
 
 /-!
 Contracting a `(-1)`-index gives an injection of Picard groups whose cokernel

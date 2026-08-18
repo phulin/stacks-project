@@ -1,7 +1,9 @@
 import Formalization.Books.Algebra.Unit17.Spectrum
 import Formalization.Books.Schemes.Unit03.OpenImmersions
+import Mathlib.CategoryTheory.ObjectProperty.FullSubcategory
 import Mathlib.AlgebraicGeometry.Morphisms.OpenImmersion
 import Mathlib.RingTheory.RingHom.Etale
+import Mathlib.RingTheory.LocalIso
 import Mathlib.RingTheory.RingHom.QuasiFinite
 import Mathlib.RingTheory.TensorProduct.Basic
 
@@ -27,16 +29,14 @@ noncomputable section
 /-! ## Definitions -/
 
 /--
-A ring map is a local isomorphism when every point of its target has a
-standard-open neighborhood whose induced affine-scheme map is an open
-immersion.
+Mathlib's `Algebra.IsLocalIso` is the canonical algebraic formulation of the
+source's local-isomorphism definition.  The wrapper below equips a bare ring
+homomorphism with its canonical algebra structure before using that predicate.
 -/
 def IsLocalIsomorphism {A B : Type u} [CommRing A] [CommRing B]
     (φ : A →+* B) : Prop :=
-  ∀ q : PrimeSpectrum B, ∃ g : B, g ∉ q.asIdeal ∧
-    IsOpenImmersion
-      (Spec.map
-        (CommRingCat.ofHom ((algebraMap B (Localization.Away g)).comp φ)))
+  letI : Algebra A B := φ.toAlgebra
+  Algebra.IsLocalIso A B
 
 /--
 A ring map identifies local rings when its canonical map between the local
@@ -209,11 +209,72 @@ def affineRingHomToTopOverHom
       (Spec.map (CommRingCat.ofHom φC)).base
     exact hspec)
 
+/- The source's category of `A`-algebras is the full subcategory of the
+   canonical under-category whose objects identify local rings. -/
+def affineAlgebraProperty (A : Type u) [CommRing A] :
+    ObjectProperty (Under (CommRingCat.of A)) :=
+  fun B => IdentifiesLocalRings B.hom.hom
+
+abbrev AffineAlgebrasWithIdentifiesLocalRings
+    (A : Type u) [CommRing A] :=
+  (affineAlgebraProperty A).FullSubcategory
+
+abbrev AffineTopologicalSpacesOverSpec
+    (A : Type u) [CommRing A] :=
+  CostructuredArrow (𝟭 TopCat)
+    (Spec (CommRingCat.of A)).toLocallyRingedSpace.toTopCat
+
+/- The object part of the source's functor is the affine spectrum, regarded
+   as a topological space over `Spec A`. -/
+def affineSpecTopObject
+    {A : Type u} [CommRing A]
+    (B : AffineAlgebrasWithIdentifiesLocalRings A) :
+    AffineTopologicalSpacesOverSpec A :=
+  CostructuredArrow.mk (Spec.map B.obj.hom).base
+
+/- The affine Spec construction on an algebra morphism, before packaging the
+   resulting assignments as a functor. -/
+def affineSpecTopMap
+    {A : Type u} [CommRing A]
+    {B C : AffineAlgebrasWithIdentifiesLocalRings A}
+    (f : B ⟶ C) : affineSpecTopObject C ⟶ affineSpecTopObject B :=
+  CostructuredArrow.homMk (Spec.map f.hom.right).base (by
+    have hcomp : B.obj.hom ≫ f.hom.right = C.obj.hom := Under.w f.hom
+    have hspec := congrArg (fun h => h.base) (show
+        Spec.map f.hom.right ≫ Spec.map B.obj.hom = Spec.map C.obj.hom by
+      rw [← Spec.map_comp, hcomp])
+    change (Spec.map f.hom.right).base ≫ (Spec.map B.obj.hom).base =
+      (Spec.map C.obj.hom).base
+    exact hspec)
+
+/- The actual functor named in the final statement of the source section. -/
+def affineSpecTopFunctor (A : Type u) [CommRing A] :
+    (AffineAlgebrasWithIdentifiesLocalRings A)ᵒᵖ ⥤
+      AffineTopologicalSpacesOverSpec A where
+  obj := fun B => affineSpecTopObject B.unop
+  map := fun f => affineSpecTopMap f.unop
+  map_id := by
+    intro B
+    apply CostructuredArrow.hom_ext
+    change (Spec.map (𝟙 B.unop.obj.right)).base = _
+    rfl
+  map_comp := by
+    intro B C D f g
+    apply CostructuredArrow.hom_ext
+    change (Spec.map (g.unop.hom.right ≫ f.unop.hom.right)).base = _
+    rw [Spec.map_comp]
+    rfl
+
 theorem spec_fullyFaithful_of_identifiesLocalRings
     {A B C : Type u} [CommRing A] [CommRing B] [CommRing C]
     (φB : A →+* B) (φC : A →+* C)
     (hB : IdentifiesLocalRings φB) (hC : IdentifiesLocalRings φC) :
     Function.Bijective (affineRingHomToTopOverHom φB φC) := by
+  sorry
+
+theorem affineSpecTopFunctor_fullyFaithful
+    (A : Type u) [CommRing A] :
+    Nonempty (affineSpecTopFunctor A).FullyFaithful := by
   sorry
 
 end

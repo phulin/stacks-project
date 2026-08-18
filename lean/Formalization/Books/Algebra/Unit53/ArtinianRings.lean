@@ -101,9 +101,9 @@ theorem finite_length_ring_properties
       (∀ p : Ideal R, p.IsPrime → p.IsMaximal) ∧
         Nonempty (R ≃ₐ[R] MaximalSpectrum.PiLocalization R) :=
     product_localizations_of_finite_maximal_ideals hmax hjac
-  haveI : Finite {I : Ideal R // I.IsMaximal} := Set.finite_coe_iff.mp hmax
   have hfinite : Finite (MaximalSpectrum R) :=
-    Finite.of_equiv _ (MaximalSpectrum.equivSubtype R).symm
+    @Finite.of_equiv (MaximalSpectrum R) {I : Ideal R // I.IsMaximal}
+      (Set.finite_coe_iff.mp hmax) (MaximalSpectrum.equivSubtype R).symm
   exact ⟨hArt, hN, hprod.1, hfinite, hprod.2⟩
 
 end

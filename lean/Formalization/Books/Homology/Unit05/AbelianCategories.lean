@@ -47,9 +47,9 @@ theorem abelian_iff_coimage_image_comparison_isIso
         IsIso (Abelian.coimageImageComparison f) := by
   constructor
   · rintro ⟨h⟩
-    letI : Abelian C := h
-    letI : HasFiniteBiproducts C := HasFiniteBiproducts.of_hasFiniteProducts
-    letI : HasBinaryBiproducts C := hasBinaryBiproducts_of_finite_biproducts C
+    let : Abelian C := h
+    let : HasFiniteBiproducts C := HasFiniteBiproducts.of_hasFiniteProducts
+    let : HasBinaryBiproducts C := hasBinaryBiproducts_of_finite_biproducts C
     intro X Y f
     have hpre : h.toPreadditive = (inferInstance : Preadditive C) := Subsingleton.elim _ _
     cases hpre
@@ -68,17 +68,17 @@ theorem additive_opposite_iff
       Nonempty (Formalization.Books.Homology.Unit03.AdditiveCategory Cᵒᵖ) := by
   constructor
   · rintro ⟨h⟩
-    letI : Formalization.Books.Homology.Unit03.AdditiveCategory C := h
-    letI : HasFiniteBiproducts C :=
+    let : Formalization.Books.Homology.Unit03.AdditiveCategory C := h
+    let : HasFiniteBiproducts C :=
       Formalization.Books.Homology.Unit03.additiveCategory_hasFiniteBiproducts C
     exact ⟨{ toPreadditive := inferInstance, toHasFiniteProducts := inferInstance }⟩
   · rintro ⟨h⟩
-    letI : Formalization.Books.Homology.Unit03.AdditiveCategory Cᵒᵖ := h
-    letI : Preadditive Cᵒᵖᵒᵖ := inferInstance
-    letI : Preadditive C :=
+    let : Formalization.Books.Homology.Unit03.AdditiveCategory Cᵒᵖ := h
+    let : Preadditive Cᵒᵖᵒᵖ := inferInstance
+    let : Preadditive C :=
       Preadditive.ofFullyFaithful (opOpEquivalence C).fullyFaithfulInverse
-    letI : HasFiniteCoproducts C := Limits.hasFiniteCoproducts_of_opposite
-    letI : HasFiniteBiproducts C := HasFiniteBiproducts.of_hasFiniteCoproducts
+    let : HasFiniteCoproducts C := Limits.hasFiniteCoproducts_of_opposite
+    let : HasFiniteBiproducts C := HasFiniteBiproducts.of_hasFiniteCoproducts
     exact ⟨{ toPreadditive := inferInstance, toHasFiniteProducts := inferInstance }⟩
 
 theorem abelian_opposite_iff
@@ -86,16 +86,16 @@ theorem abelian_opposite_iff
     Nonempty (Abelian C) ↔ Nonempty (Abelian Cᵒᵖ) := by
   constructor
   · rintro ⟨h⟩
-    letI : Abelian C := h
+    let : Abelian C := h
     exact ⟨inferInstance⟩
   · rintro ⟨h⟩
-    letI : Abelian Cᵒᵖ := h
-    letI : Abelian Cᵒᵖᵒᵖ := inferInstance
-    letI : Preadditive Cᵒᵖᵒᵖ := inferInstance
-    letI : Preadditive C :=
+    let : Abelian Cᵒᵖ := h
+    let : Abelian Cᵒᵖᵒᵖ := inferInstance
+    let : Preadditive Cᵒᵖᵒᵖ := inferInstance
+    let : Preadditive C :=
       Preadditive.ofFullyFaithful (opOpEquivalence C).fullyFaithfulInverse
-    letI : HasFiniteCoproducts C := Limits.hasFiniteCoproducts_of_opposite
-    letI : HasFiniteBiproducts C := HasFiniteBiproducts.of_hasFiniteCoproducts
+    let : HasFiniteCoproducts C := Limits.hasFiniteCoproducts_of_opposite
+    let : HasFiniteBiproducts C := HasFiniteBiproducts.of_hasFiniteCoproducts
     exact ⟨abelianOfEquivalence (opOp C)⟩
 
 theorem abelian_coimage_image_comparison_isIso
@@ -741,7 +741,7 @@ theorem exact_iff_epi_refinement
     {C : Type u} [Category.{v} C] [Abelian C]
     {X Y Z : C} (f : X ⟶ Y) (g : Y ⟶ Z) (hfg : f ≫ g = 0) :
     (ShortComplex.mk f g hfg).Exact ↔
-      ∀ {W : C} (h : W ⟶ Y) (hh : h ≫ g = 0),
+      ∀ {W : C} (h : W ⟶ Y) (_hh : h ≫ g = 0),
         ∃ (V : C) (k : V ⟶ W) (l : V ⟶ X),
           Epi k ∧ k ≫ h = l ≫ f := by
   rw [ShortComplex.exact_iff_exact_up_to_refinements]
@@ -867,10 +867,12 @@ theorem exact_cokernel_sequence
       have h := congrArg (fun q => q + d₃ ≫ (y ≫ β)) hx
       simpa only [comp_sub, sub_add_cancel] using h
     calc
-      d₃ ≫ (d₂ ≫ d₁ ≫ d) ≫ c =
+      (d₃ ≫ d₂ ≫ d₁ ≫ d) ≫ c =
           d₃ ≫ (d₂ ≫ d₁ ≫ e) ≫ cokernel.π β := by
             simp [Category.assoc, hde]
-      _ = (x ≫ k + d₃ ≫ (y ≫ β)) ≫ cokernel.π β := by rw [hx']
+      _ = (x ≫ k + d₃ ≫ (y ≫ β)) ≫ cokernel.π β := by
+        simpa [Category.assoc] using
+          congrArg (fun q => q ≫ cokernel.π β) hx'
       _ = (x ≫ k) ≫ cokernel.π β := by simp [Category.assoc]
       _ = (x ≫ cokernel.π α) ≫ inducedCokernelMap f k α β h₁ := by
         simp [inducedCokernelMap, Category.assoc]
@@ -918,9 +920,9 @@ theorem snake_connecting_morphism_exists_unique
     have h := hδ' (pullback.snd S.L₁.g S.v₀₁.τ₃)
       (pullback.fst S.L₁.g S.v₀₁.τ₃) (eqToHom e ≫ S.φ₁) pullback.condition
       (by
-        simp only [Category.assoc, eqToHom_trans, eqToHom_refl, eqToHom_map,
-          Category.comp_id]
-        simpa [ShortComplex.SnakeInput.φ₂] using S.φ₁_L₂_f)
+        simp only [Category.assoc, eqToHom_refl]
+        simp only [Category.id_comp]
+        exact S.φ₁_L₂_f)
     simpa [e] using h
 
 theorem snake_exact_sequence_exact

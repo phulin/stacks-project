@@ -644,6 +644,228 @@ genus one whenever it is realized by a `NumericalType`. -/
 theorem genus_one_normal_form_is_minimal_and_genus_one (T : NumericalType)
     (hpattern : IsGenusOneNormalForm T) :
     IsMinimal T ∧ genus T = 1 := by
-  sorry
+  have realize_item_one :
+      hasTypePattern (k := 1) T
+          (constantVector 1) (fun _ _ => 0)
+          (constantVector 1) (constantVector 1) →
+        IsMinimal T ∧ genus T = 1 := by
+    rintro ⟨h, m, w, hm, hw, _hmdata, ha, hweight, hgenus⟩
+    have hA : ∀ i, T.a i i = 0 := by
+      intro i
+      have h := congrFun (congrFun ha i) i
+      simpa [ambientDataAt, ambientData, scalarMatrix] using h
+    have hG : ∀ i, T.g i = 1 := by
+      intro i
+      have h := congrFun hgenus i
+      simpa [ambientGenusAt, constantVector] using h
+    constructor
+    · rintro ⟨i, hi⟩
+      have hi_g := hi.1
+      rw [hG i] at hi_g
+      omega
+    · have hsum :
+          (∑ i : Fin T.n, (T.m i : ℚ) *
+            ((T.w i : ℚ) * ((T.g i : ℚ) - 1) - (T.a i i : ℚ) / 2)) = 0 := by
+        apply Finset.sum_eq_zero
+        intro i hi
+        rw [hG i, hA i]
+        norm_num
+      have hq : (genus T : ℚ) = 1 := by
+        rw [genus_formula]
+        unfold genusExpression
+        rw [hsum]
+        norm_num
+      exact_mod_cast hq
+  have realize_zero :
+      ∀ {k : ℕ} (mBase : Fin k → ℤ)
+        (aBase : Matrix (Fin k) (Fin k) ℤ)
+        (wBase : Fin k → ℤ),
+        (∀ i, aBase i i = -2 * wBase i) →
+        hasTypePattern (k := k) T mBase aBase wBase zeroGenusVector →
+          IsMinimal T ∧ genus T = 1 := by
+    intro k mBase aBase wBase hdiag h
+    rcases h with ⟨h, m, w, hm, hw, _hmdata, ha, hweight, hgenus⟩
+    exact realizes_type_pattern_is_minimal_and_genus_one T h m w mBase aBase
+      wBase zeroGenusVector hm hw ha hweight hgenus hdiag
+      (by intro i; simp [zeroGenusVector, constantVector])
+  unfold IsGenusOneNormalForm at hpattern
+  rcases hpattern with h | h | h | h | h | h | h | h | h | h | h | h | h | h |
+    h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h |
+    h | h
+  · exact realize_item_one h
+  · exact realize_zero (constantVector 1) (cycleMatrix 2 (-2) 2 2)
+      (constantVector 1) (by intro i; simp [cycleMatrix, constantVector]) h
+  · exact realize_zero
+      (fun i => if i.val = 0 then 2 else 1)
+      (pathMatrixByEdge 2 (fun i => if i.val = 0 then -2 else -8) (fun _ => 4))
+      (fun i => if i.val = 0 then 1 else 4)
+      (by intro i; simp [pathMatrixByEdge]) h
+  · exact realize_zero (constantVector 1) (cycleMatrix 3 (-2) 1 1)
+      (constantVector 1) (by intro i; simp [cycleMatrix, constantVector]) h
+  · exact realize_zero
+      (fun i => if i.val = 1 then 2 else 1)
+      (pathMatrixByEdge 3
+        (fun i => if i.val = 2 then -6 else -2)
+        (fun i => if i.val = 0 then 1 else 3))
+      (fun i => if i.val = 2 then 3 else 1)
+      (by intro i; simp [pathMatrixByEdge]) h
+  · exact realize_zero
+      (fun i => if i.val = 2 then 3 else if i.val = 1 then 2 else 1)
+      (pathMatrixByEdge 3
+        (fun i => if i.val = 2 then -2 else -6) (fun _ => 3))
+      (fun i => if i.val = 2 then 1 else 3)
+      (by intro i; simp [pathMatrixByEdge]) h
+  · exact realize_zero
+      (fun i => if i.val < 2 then 2 else 1)
+      (pathMatrixByEdge 3
+        (fun i => if i.val = 0 then -2 else if i.val = 1 then -4 else -8)
+        (fun i => if i.val = 0 then 2 else 4))
+      (fun i => if i.val = 0 then 1 else if i.val = 1 then 2 else 4)
+      (by intro i; simp [pathMatrixByEdge]) h
+  · exact realize_zero (constantVector 1)
+      (pathMatrixByEdge 3 (fun i => if i.val = 1 then -4 else -2) (fun _ => 2))
+      (fun i => if i.val = 1 then 2 else 1)
+      (by intro i; simp [pathMatrixByEdge]) h
+  · exact realize_zero
+      (fun i => if i.val = 1 then 2 else 1)
+      (pathMatrixByEdge 3 (fun i => if i.val = 1 then -2 else -4) (fun _ => 2))
+      (fun i => if i.val = 1 then 1 else 2)
+      (by intro i; simp [pathMatrixByEdge]) h
+  · exact realize_zero (constantVector 1) (cycleMatrix 4 (-2) 1 1)
+      (constantVector 1) (by intro i; simp [cycleMatrix, constantVector]) h
+  · exact realize_zero
+      (fun i => if i.val < 3 then 2 else 1)
+      (pathMatrixByEdge 4
+        (fun i => if i.val = 0 then -2 else if i.val < 3 then -4 else -8)
+        (fun i => if i.val < 2 then 2 else 4))
+      (fun i => if i.val = 0 then 1 else if i.val < 3 then 2 else 4)
+      (by intro i; simp [pathMatrixByEdge]) h
+  · exact realize_zero (constantVector 1)
+      (pathMatrixByEdge 4
+        (fun i => if i.val = 0 then -2 else if i.val = 3 then -2 else -4)
+        (fun _ => 2))
+      (fun i => if i.val = 0 ∨ i.val = 3 then 1 else 2)
+      (by intro i; simp [pathMatrixByEdge]) h
+  · exact realize_zero
+      (fun i => if i.val = 0 ∨ i.val = 3 then 1 else 2)
+      (pathMatrixByEdge 4
+        (fun i => if i.val = 0 ∨ i.val = 3 then -4 else -2)
+        (fun i => if i.val = 0 ∨ i.val = 2 then 2 else 1))
+      (fun i => if i.val = 0 ∨ i.val = 3 then 2 else 1)
+      (by intro i; simp [pathMatrixByEdge]) h
+  · exact realize_zero
+      (fun i => if i.val = 0 then 2 else 1)
+      (starMatrixByEdge 4 0
+        (fun i => if i.val = 3 then -4 else -2)
+        (fun i => if i.val = 3 then 2 else 1))
+      (constantVector 1)
+      (by intro i; simp [starMatrixByEdge, constantVector]) h
+  · exact realize_zero
+      (fun i => if i.val = 0 ∨ i.val = 3 then 2 else 1)
+      (starMatrixByEdge 4 0
+        (fun i => if i.val = 3 then -2 else -4) (fun _ => 2))
+      (fun i => if i.val = 3 then 1 else 2)
+      (by intro i; simp [starMatrixByEdge]) h
+  · exact realize_zero (constantVector 1) (cycleMatrix 5 (-2) 1 1)
+      (constantVector 1) (by intro i; simp [cycleMatrix, constantVector]) h
+  · exact realize_zero
+      (fun i =>
+        if i.val = 0 ∨ i.val = 4 then 1
+        else if i.val = 1 ∨ i.val = 3 then 2 else 3)
+      (pathMatrixByEdge 5
+        (fun i => if i.val < 3 then -2 else -4)
+        (fun i => if i.val < 2 then 1 else 2))
+      (fun i => if i.val < 3 then 1 else 2)
+      (by intro i; simp [pathMatrixByEdge]) h
+  · exact realize_zero
+      (fun i => if i.val = 4 then 2 else i.val + 1)
+      (pathMatrixByEdge 5
+        (fun i => if i.val < 3 then -4 else -2)
+        (fun i => if i.val < 3 then 2 else 1))
+      (fun i => if i.val < 3 then 2 else 1)
+      (by intro i; simp [pathMatrixByEdge]) h
+  · exact realize_zero
+      (fun i => if i.val < 4 then 2 else 1)
+      (pathMatrixByEdge 5
+        (fun i => if i.val = 0 then -2 else if i.val < 4 then -4 else -8)
+        (fun i => if i.val < 3 then 2 else 4))
+      (fun i => if i.val = 0 then 1 else if i.val < 4 then 2 else 4)
+      (by intro i; simp [pathMatrixByEdge]) h
+  · exact realize_zero (constantVector 1)
+      (pathMatrixByEdge 5
+        (fun i => if i.val = 0 ∨ i.val = 4 then -2 else -4)
+        (fun _ => 2))
+      (fun i => if i.val = 0 ∨ i.val = 4 then 1 else 2)
+      (by intro i; simp [pathMatrixByEdge]) h
+  · exact realize_zero
+      (fun i => if i.val = 0 ∨ i.val = 4 then 1 else 2)
+      (pathMatrixByEdge 5
+        (fun i => if i.val = 0 ∨ i.val = 4 then -4 else -2)
+        (fun i => if i.val = 0 ∨ i.val = 3 then 2 else 1))
+      (fun i => if i.val = 0 ∨ i.val = 4 then 2 else 1)
+      (by intro i; simp [pathMatrixByEdge]) h
+  · exact realize_zero
+      (fun i => if i.val = 0 then 2 else 1)
+      (starMatrix 5 0 (constantVector (-2)) 1)
+      (constantVector 1)
+      (by intro i; simp [starMatrix, constantVector]) h
+  · exact realize_zero
+      (fun i => if i.val = 0 then 1 else if i.val < 3 then 2 else 1)
+      (branchPathMatrix 5 2 3 4
+        (fun i => if i.val = 0 then -4 else -2)
+        (fun i => if i.val = 0 then 2 else 1) 1)
+      (fun i => if i.val = 0 then 2 else 1)
+      (by intro i; simp [branchPathMatrix]) h
+  · exact realize_zero
+      (fun i => if i.val < 3 then 2 else 1)
+      (branchPathMatrix 5 2 3 4
+        (fun i => if i.val = 0 then -2 else -4) (fun _ => 2) 2)
+      (fun i => if i.val = 0 then 1 else 2)
+      (by intro i; simp [branchPathMatrix]) h
+  · rcases h with ⟨k, hk, h⟩
+    exact realize_zero (nCycleM k) (nCycleA k) (nCycleW k)
+      (by intro i; simp [nCycleA, nCycleW, cycleMatrix, constantVector]) h
+  · rcases h with ⟨k, hk, h⟩
+    exact realize_zero (upChainEqualUpM k) (upChainEqualUpA k)
+      (upChainEqualUpW k)
+      (by intro i; simp [upChainEqualUpA, negativeTwoDiagonal, pathMatrixByEdge]) h
+  · rcases h with ⟨k, hk, h⟩
+    exact realize_zero (upChainEqualDownM k) (upChainEqualDownA k)
+      (upChainEqualDownW k)
+      (by intro i; simp [upChainEqualDownA, negativeTwoDiagonal, pathMatrixByEdge]) h
+  · rcases h with ⟨k, hk, h⟩
+    exact realize_zero (downChainEqualUpM k) (downChainEqualUpA k)
+      (downChainEqualUpW k)
+      (by intro i; simp [downChainEqualUpA, negativeTwoDiagonal, pathMatrixByEdge]) h
+  · rcases h with ⟨k, hk, h⟩
+    exact realize_zero (dnExtendedUpM k) (dnExtendedUpA k) (dnExtendedUpW k)
+      (by intro i; simp [dnExtendedUpA, negativeTwoDiagonal, branchPathMatrix]) h
+  · rcases h with ⟨k, hk, h⟩
+    exact realize_zero (dnExtendedDownM k) (dnExtendedDownA k)
+      (dnExtendedDownW k)
+      (by intro i; simp [dnExtendedDownA, negativeTwoDiagonal, branchPathMatrix]) h
+  · rcases h with ⟨k, hk, h⟩
+    exact realize_zero (doubleTripleM k) (doubleTripleA k) (doubleTripleW k)
+      (by intro i; simp [doubleTripleA, doubleTripleW, constantVector]) h
+  · exact realize_zero
+      (fun i => if i.val = 0 ∨ i.val = 3 ∨ i.val = 5 then 1
+        else if i.val = 1 ∨ i.val = 4 ∨ i.val = 6 then 2 else 3)
+      e6CompletedMatrix (constantVector 1)
+      (by intro i; simp [e6CompletedMatrix, undirectedEdgeMatrix, constantVector]) h
+  · exact realize_zero
+      (fun i => if i.val = 0 ∨ i.val = 6 then 1
+        else if i.val = 1 ∨ i.val = 5 ∨ i.val = 7 then 2
+        else if i.val = 2 ∨ i.val = 4 then 3 else 4)
+      e7CompletedMatrix (constantVector 1)
+      (by intro i; simp [e7CompletedMatrix, undirectedEdgeMatrix, constantVector]) h
+  · exact realize_zero
+      (fun i => if i.val = 0 then 1
+        else if i.val = 1 ∨ i.val = 7 then 2
+        else if i.val = 2 ∨ i.val = 8 then 3
+        else if i.val = 3 then 4
+        else if i.val = 4 then 5
+        else if i.val = 6 then 4 else 6)
+      e8CompletedMatrix (constantVector 1)
+      (by intro i; simp [e8CompletedMatrix, undirectedEdgeMatrix, constantVector]) h
 
 end Formalization.Books.Models.Unit06

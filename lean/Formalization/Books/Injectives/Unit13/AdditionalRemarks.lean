@@ -487,6 +487,12 @@ structure ExtAbutmentData
   abutment_iso : ∀ n : ℤ,
     Nonempty (abutment n ≅ ExtGroupObject M N n)
 
+def filteredObjectOfDecreasingFiltration
+    {C : Type u} [Category.{v} C] (A : C)
+    (F : DecreasingFiltration C A) : FilteredObject C :=
+  { carrier := A
+    filtration := F }
+
 structure ExtSpectralSequenceData
     {D : Type u'} [Category.{v'} D] [Preadditive D] [HasShift D ℤ]
     (M N : D) (page_index : ℕ) (E₁ : ℤ → ℤ → AddCommGrpCat) where
@@ -497,6 +503,10 @@ structure ExtSpectralSequenceData
   bounded : ∀ (r : ℕ) (n : ℤ), ∃ a b : ℤ, ∀ p q : ℤ,
     p + q = n → (p < a ∨ b < p) → IsZero (sequence.page r (p, q))
   convergence : ExtAbutmentData M N
+  convergence_page : ∀ (n p : ℤ), ∃ r₀ : ℕ, ∀ r : ℕ, r₀ ≤ r →
+    Nonempty (sequence.page r (p, n - p) ≅
+      gradedPiece (filteredObjectOfDecreasingFiltration
+        (convergence.abutment n) (convergence.filtration n)) p)
 
 def ExtSpectralSequencePagewiseEquivalentTo
     {D : Type u'} [Category.{v'} D] [Preadditive D] [HasShift D ℤ]
@@ -675,10 +685,11 @@ theorem represent_inverse_system_by_filtered_complex
 
 structure BiFilteredComplex
     (C : Type u) [Category.{v} C] [Abelian C] where
+  underlying : CochainComplex C ℤ
   first : FilteredComplex C
   second : FilteredComplex C
-  same_underlying : Nonempty (filteredComplexUnderlying first ≅
-    filteredComplexUnderlying second)
+  first_underlying : filteredComplexUnderlying first = underlying
+  second_underlying : filteredComplexUnderlying second = underlying
 
 structure BiFilteredComplexRepresentsSystems
     {C : Type u} [Category.{v} C] [Abelian C]

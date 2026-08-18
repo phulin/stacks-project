@@ -413,7 +413,82 @@ theorem idealCumulativeHilbertFunction_eq_sum
     (n : ℕ) :
     idealCumulativeHilbertFunction I M n =
       ∑ i ∈ Finset.range (n + 1), idealHilbertFunction I M i := by
-  sorry
+  have hlength (P Q : Submodule R M) (hQP : Q ≤ P) :
+      Module.length R (M ⧸ Q) =
+        Module.length R (P ⧸ Submodule.comap P.subtype Q) +
+          Module.length R (M ⧸ P) := by
+    let K : Submodule R P := Submodule.comap P.subtype Q
+    have hker : K = LinearMap.ker (Q.mkQ.comp P.subtype) := by
+      ext x
+      simp [K]
+    let f : (P ⧸ K) →ₗ[R] (M ⧸ Q) :=
+      K.liftQ (Q.mkQ.comp P.subtype) hker.le
+    have hfker : LinearMap.ker f = ⊥ := by
+      exact Submodule.ker_liftQ_eq_bot' K (Q.mkQ.comp P.subtype) hker
+    have hf : Function.Injective f := LinearMap.ker_eq_bot.mp hfker
+    let g : (M ⧸ Q) →ₗ[R] (M ⧸ P) :=
+      Q.liftQ P.mkQ (by simpa [Submodule.ker_mkQ] using hQP)
+    have hg : Function.Surjective g := by
+      intro y
+      refine Submodule.Quotient.induction_on (p := P) y ?_
+      intro x
+      exact ⟨Q.mkQ x, rfl⟩
+    have hex : Function.Exact f g := by
+      rw [LinearMap.exact_iff]
+      simp [f, g, K, Submodule.range_liftQ, Submodule.ker_liftQ,
+        LinearMap.range_comp]
+    exact Module.length_eq_add_of_exact f g hf hg hex
+  have hstep (k : ℕ) :
+      Module.length R
+          (idealPowerCumulativeQuotient I M (k + 1)) =
+        Module.length R (idealPowerPiece I M (k + 1)) +
+          Module.length R (idealPowerCumulativeQuotient I M k) := by
+    have hQP :
+        I ^ ((k + 1) + 1) • (⊤ : Submodule R M) ≤
+          I ^ (k + 1) • (⊤ : Submodule R M) := by
+      exact Submodule.smul_mono_left (Ideal.pow_le_pow_right (Nat.le_succ (k + 1)))
+    simpa [idealPowerCumulativeQuotient, idealPowerPiece] using
+      hlength (I ^ (k + 1) • (⊤ : Submodule R M))
+        (I ^ ((k + 1) + 1) • (⊤ : Submodule R M)) hQP
+  have hpiece_fin (k : ℕ) : IsFiniteLength R (idealPowerPiece I M k) := by
+    exact idealPowerPiece_isFiniteLength I hI k
+  have hcum_fin (k : ℕ) :
+      IsFiniteLength R (idealPowerCumulativeQuotient I M k) := by
+    exact idealPowerCumulativeQuotient_isFiniteLength I hI k
+  have hbase : idealCumulativeHilbertFunction I M 0 = idealHilbertFunction I M 0 := by
+    have hQP :
+        I ^ (0 + 1) • (⊤ : Submodule R M) ≤
+          I ^ 0 • (⊤ : Submodule R M) := by
+      exact Submodule.smul_mono_left (Ideal.pow_le_pow_right (Nat.le_succ 0))
+    have h := hlength (I ^ 0 • (⊤ : Submodule R M))
+      (I ^ (0 + 1) • (⊤ : Submodule R M)) hQP
+    have hn := congrArg ENat.toNat h
+    simpa [idealCumulativeHilbertFunction, idealHilbertFunction,
+      moduleLengthNat, idealPowerCumulativeQuotient, idealPowerPiece, pow_zero] using hn
+  have hnat_step (k : ℕ) :
+      idealCumulativeHilbertFunction I M (k + 1) =
+        idealHilbertFunction I M (k + 1) +
+          idealCumulativeHilbertFunction I M k := by
+    change (Module.length R (idealPowerCumulativeQuotient I M (k + 1))).toNat =
+      (Module.length R (idealPowerPiece I M (k + 1))).toNat +
+        (Module.length R (idealPowerCumulativeQuotient I M k)).toNat
+    rw [hstep k, ENat.toNat_add]
+    · exact Module.length_ne_top_iff.mpr (hpiece_fin (k + 1))
+    · exact Module.length_ne_top_iff.mpr (hcum_fin k)
+  induction n with
+  | zero =>
+      simpa using hbase
+  | succ n ih =>
+      calc
+        idealCumulativeHilbertFunction I M (Nat.succ n) =
+            idealHilbertFunction I M (n + 1) +
+              idealCumulativeHilbertFunction I M n := by
+              simpa [Nat.succ_eq_add_one] using hnat_step n
+        _ = idealHilbertFunction I M (n + 1) +
+              ∑ i ∈ Finset.range (n + 1), idealHilbertFunction I M i := by rw [ih]
+        _ = ∑ i ∈ Finset.range (Nat.succ n + 1), idealHilbertFunction I M i := by
+          simp only [Nat.succ_eq_add_one, Finset.sum_range_succ]
+          ac_rfl
 
 /- The numerical-polynomial API is indexed by `ℤ`, whereas the source only
    defines these functions for nonnegative integers. -/
@@ -448,6 +523,41 @@ def Submodule.HasFiniteColength
     [AddCommGroup M] [Module R M] (N : Submodule R M) : Prop :=
   IsFiniteLength R (M ⧸ N)
 
+private theorem exists_maximalIdeal_pow_smul_top_eq_bot_of_finiteLength
+    {R : Type u} {M : Type v} [CommRing R] [IsLocalRing R]
+    [AddCommGroup M] [Module R M]
+    (hfin : IsFiniteLength R M) :
+    ∃ n : ℕ, (IsLocalRing.maximalIdeal R) ^ n • (⊤ : Submodule R M) = ⊥ := by
+  let I : Ideal R := IsLocalRing.maximalIdeal R
+  induction hfin with
+  | of_subsingleton =>
+      refine ⟨0, ?_⟩
+      ext x
+      simp [show x = 0 from Subsingleton.elim x 0]
+  | @of_simple_quotient M _ _ N _ _ ih =>
+      obtain ⟨n, hn⟩ := ih
+      have hmax : (Module.annihilator R (M ⧸ N)).IsMaximal :=
+        IsSimpleModule.annihilator_isMaximal
+      have hquot' : (IsLocalRing.maximalIdeal R) •
+          (⊤ : Submodule R (M ⧸ N)) = ⊥ := by
+        rw [← IsLocalRing.eq_maximalIdeal hmax, ← Submodule.annihilator_top,
+          ← Submodule.le_annihilator_iff]
+      have hquot : I • (⊤ : Submodule R (M ⧸ N)) = ⊥ := by
+        simpa [I] using hquot'
+      have hIN : I • (⊤ : Submodule R M) ≤ N := by
+        rw [← N.ker_mkQ]
+        apply LinearMap.le_ker_iff_map.mpr
+        rw [Submodule.map_smul'', Submodule.map_top,
+          LinearMap.range_eq_top.mpr N.mkQ_surjective]
+        exact hquot
+      have hn' : I ^ n • N = ⊥ := by
+        have h := congrArg (fun P : Submodule R N => P.map N.subtype) hn
+        simpa only [Submodule.map_smul'', Submodule.map_subtype_top,
+          Submodule.map_bot] using h
+      refine ⟨n + 1, le_antisymm ?_ bot_le⟩
+      rw [pow_succ, Submodule.mul_smul]
+      exact (smul_mono_right (I ^ n) hIN).trans_eq hn'
+
 theorem cumulative_hilbert_compare_of_finite_colength
     {R : Type u} {M' M : Type v} [CommRing R] [IsLocalRing R]
     [IsNoetherianRing R]
@@ -461,7 +571,237 @@ theorem cumulative_hilbert_compare_of_finite_colength
           idealCumulativeHilbertFunction I M n ∧
         idealCumulativeHilbertFunction I M n ≤
           c₁ + idealCumulativeHilbertFunction I M' n := by
-  sorry
+  let L : Submodule R M := LinearMap.range f
+  have hfL_surj : Function.Surjective
+      (f.codRestrict L (fun x => LinearMap.mem_range_self f x)) := by
+    intro y
+    rcases y.property with ⟨x, rfl⟩
+    exact ⟨x, rfl⟩
+  obtain ⟨c, hc_pos, hc⟩ := artin_rees I L
+  obtain ⟨s, hs⟩ :=
+    exists_maximalIdeal_pow_smul_top_eq_bot_of_finiteLength hquot
+  have hIlemax : I ≤ IsLocalRing.maximalIdeal R := by
+    rw [← hI]
+    exact Ideal.le_radical
+  have hkill : I ^ s • (⊤ : Submodule R (M ⧸ L)) = ⊥ := by
+    apply le_antisymm
+    · exact (Submodule.smul_mono_left (Ideal.pow_right_mono hIlemax s)).trans_eq hs
+    · exact bot_le
+  let c₂ : ℕ := c - 1
+  let c₁ : ℕ := moduleLengthNat (R := R) (M := M ⧸ L)
+  have hupper (n : ℕ) :
+      idealCumulativeHilbertFunction I M n ≤
+        c₁ + idealCumulativeHilbertFunction I M' n := by
+    let P : Submodule R M := I ^ (n + 1) • (⊤ : Submodule R M)
+    let P' : Submodule R M' := I ^ (n + 1) • (⊤ : Submodule R M')
+    have hPmap : P' ≤ Submodule.comap f P := by
+      change I ^ (n + 1) • (⊤ : Submodule R M') ≤
+        Submodule.comap f (I ^ (n + 1) • (⊤ : Submodule R M))
+      refine Submodule.smul_le.mpr ?_
+      intro r hr x hx
+      change f (r • x) ∈ I ^ (n + 1) • (⊤ : Submodule R M)
+      rw [map_smul]
+      exact Submodule.smul_mem_smul hr (Submodule.mem_top)
+    have hPker : P' ≤ LinearMap.ker (P.mkQ.comp f) := by
+      simpa [P, P', LinearMap.ker_comp, Submodule.ker_mkQ] using hPmap
+    let fbar : (M' ⧸ P') →ₗ[R] (M ⧸ P) := P'.liftQ (P.mkQ.comp f) hPker
+    let A : Submodule R (M ⧸ P) := LinearMap.range fbar
+    let fA : (M' ⧸ P') →ₗ[R] A :=
+      fbar.codRestrict A (fun x => LinearMap.mem_range_self fbar x)
+    have hfA : Function.Surjective fA := by
+      intro y
+      rcases y.property with ⟨x, hx⟩
+      exact ⟨x, Subtype.ext hx⟩
+    have hA : Module.length R A ≤ Module.length R (M' ⧸ P') :=
+      Module.length_le_of_surjective fA hfA
+    have hLker : L ≤ LinearMap.ker (A.mkQ.comp P.mkQ) := by
+      intro x hx
+      rcases hx with ⟨y, rfl⟩
+      rw [LinearMap.mem_ker]
+      rw [Submodule.Quotient.mk_eq_zero]
+      exact ⟨P'.mkQ y, rfl⟩
+    let qbar : (M ⧸ L) →ₗ[R] ((M ⧸ P) ⧸ A) :=
+      L.liftQ (A.mkQ.comp P.mkQ) hLker
+    have hqbar : Function.Surjective qbar := by
+      intro y
+      refine Submodule.Quotient.induction_on (p := L) y ?_
+      intro x
+      refine ⟨P.mkQ x, ?_⟩
+      rfl
+    have hres : Module.length R ((M ⧸ P) ⧸ A) ≤ Module.length R (M ⧸ L) :=
+      Module.length_le_of_surjective qbar hqbar
+    have hlen : Module.length R (M ⧸ P) =
+        Module.length R A + Module.length R ((M ⧸ P) ⧸ A) :=
+      Module.length_eq_add_of_exact A.subtype (M ⧸ P).mkQ
+        (Submodule.subtype_injective A) P.mkQ_surjective
+        (LinearMap.exact_subtype_mkQ A)
+    have hP'fin : IsFiniteLength R (M' ⧸ P') := by
+      exact idealPowerCumulativeQuotient_isFiniteLength I hI n
+    have hAfin : IsFiniteLength R A :=
+      IsFiniteLength.of_surjective hP'fin hfA
+    have hresfin : IsFiniteLength R ((M ⧸ P) ⧸ A) :=
+      IsFiniteLength.of_surjective hquot hqbar
+    have hnat : (Module.length R (M ⧸ P)).toNat ≤
+        (Module.length R (M' ⧸ P')).toNat +
+          (Module.length R (M ⧸ L)).toNat := by
+      have hlen' := congrArg ENat.toNat hlen
+      rw [ENat.toNat_add, ENat.toNat_add] at hlen'
+      · rw [hlen']
+        exact Nat.add_le_add
+          (ENat.toNat_le_toNat hA (Module.length_ne_top_iff.mpr hAfin))
+          (ENat.toNat_le_toNat hres (Module.length_ne_top_iff.mpr hresfin))
+      · exact Module.length_ne_top_iff.mpr hAfin
+      · exact Module.length_ne_top_iff.mpr hresfin
+      · exact Module.length_ne_top_iff.mpr hP'fin
+      · exact Module.length_ne_top_iff.mpr hquot
+    simpa [c₁, idealCumulativeHilbertFunction, moduleLengthNat,
+      idealPowerCumulativeQuotient, P, P', Nat.add_comm] using hnat
+  have hlower (n : ℕ) (hn : n ≥ c₂) :
+      c₁ + idealCumulativeHilbertFunction I M' (n - c₂) ≤
+        idealCumulativeHilbertFunction I M n := by
+    have hn' : c ≤ n + 1 := by
+      dsimp [c₂] at hn
+      omega
+    have har := hc (n + 1) hn'
+    have hkill_n : I ^ (n + 1) • (⊤ : Submodule R (M ⧸ L)) = ⊥ := by
+      apply le_antisymm
+      · exact (Submodule.smul_mono_left
+          (Ideal.pow_le_pow_right hn')).trans_eq hkill
+      · exact bot_le
+    let P : Submodule R M := I ^ (n + 1) • (⊤ : Submodule R M)
+    let K : Submodule R L := Submodule.comap L.subtype P
+    let P' : Submodule R M' := I ^ (n - c₂) • (⊤ : Submodule R M')
+    let B : Submodule R L := I ^ (n - c₂) • (⊤ : Submodule R L)
+    have hP_le_L : P ≤ L := by
+      rw [← L.ker_mkQ]
+      apply LinearMap.le_ker_iff_map.mpr
+      rw [Submodule.map_smul'', Submodule.map_top,
+        LinearMap.range_eq_top.mpr L.mkQ_surjective]
+      exact hkill_n
+    have hKB : K ≤ B := by
+      intro x hx
+      have hxM : (x : M) ∈ P ⊓ L := ⟨hx, x.property⟩
+      rw [har] at hxM
+      have hxB : (x : M) ∈
+          I ^ (n + 1 - c) • (L : Submodule R M) :=
+        (Submodule.smul_mono_right (I ^ (n + 1 - c)) inf_le_right) hxM
+      have hshift : n + 1 - c = n - c₂ := by
+        dsimp [c₂]
+        omega
+      have hxB' : (x : M) ∈ I ^ (n - c₂) • (L : Submodule R M) := by
+        simpa [hshift] using hxB
+      have hmapB : B.map L.subtype = I ^ (n - c₂) • (L : Submodule R M) := by
+        rw [Submodule.map_smul'', Submodule.map_subtype_top]
+      have : (x : M) ∈ B.map L.subtype := hmapB.symm ▸ hxB'
+      rcases this with ⟨y, hy, hxy⟩
+      exact Subtype.ext hxy.symm
+    let u : (L ⧸ K) →ₗ[R] (M ⧸ P) :=
+      K.liftQ (P.mkQ.comp L.subtype) (by
+        have hker : K = LinearMap.ker (P.mkQ.comp L.subtype) := by
+          ext x
+          simp [K]
+        exact hker.le)
+    have hu : Function.Injective u := by
+      apply LinearMap.ker_eq_bot.mp
+      exact Submodule.ker_liftQ_eq_bot' K (P.mkQ.comp L.subtype) (by
+        have hker : K = LinearMap.ker (P.mkQ.comp L.subtype) := by
+          ext x
+          simp [K]
+        exact hker)
+    let v : (M ⧸ P) →ₗ[R] (M ⧸ L) :=
+      P.liftQ L.mkQ (by simpa [Submodule.ker_mkQ] using hP_le_L)
+    have hv : Function.Surjective v := by
+      intro y
+      refine Submodule.Quotient.induction_on (p := L) y ?_
+      intro x
+      exact ⟨P.mkQ x, rfl⟩
+    have huv : Function.Exact u v := by
+      rw [LinearMap.exact_iff]
+      simp [u, v, K, Submodule.range_liftQ, Submodule.ker_liftQ,
+        LinearMap.range_comp]
+    have hlen : Module.length R (M ⧸ P) =
+        Module.length R (L ⧸ K) + Module.length R (M ⧸ L) :=
+      Module.length_eq_add_of_exact u v hu hv huv
+    let fL : M' →ₗ[R] L :=
+      f.codRestrict L (fun x => LinearMap.mem_range_self f x)
+    have hfL : Function.Bijective fL := by
+      refine ⟨?_, hfL_surj⟩
+      intro x y hxy
+      apply hf
+      exact Subtype.ext hxy
+    have hPmapB : P' ≤ LinearMap.ker (B.mkQ.comp fL) := by
+      have hmap : P'.map fL = B := by
+        rw [Submodule.map_smul'', Submodule.map_top,
+          LinearMap.range_eq_top.mpr hfL.2]
+      intro x hx
+      rw [LinearMap.mem_ker, Submodule.Quotient.mk_eq_zero]
+      rw [← hmap]
+      exact ⟨x, hx, rfl⟩
+    let fbar : (M' ⧸ P') →ₗ[R] (L ⧸ B) :=
+      P'.liftQ (B.mkQ.comp fL) hPmapB
+    have hfbar_surj : Function.Surjective fbar := by
+      intro y
+      refine Submodule.Quotient.induction_on (p := B) y ?_
+      intro x
+      rcases hfL.2 x with ⟨y, rfl⟩
+      exact ⟨P'.mkQ y, rfl⟩
+    have hfbar_inj : Function.Injective fbar := by
+      intro x y hxy
+      refine Submodule.Quotient.induction_on (p := P') x ?_ y hxy
+      intro x
+      refine Submodule.Quotient.induction_on (p := P') y ?_
+      intro y hxy
+      have hxy' : B.mkQ (fL x) = B.mkQ (fL y) := by
+        simpa [fbar] using hxy
+      have hmem : fL (x - y) ∈ B := by
+        have := Submodule.Quotient.eq.mp hxy'
+        simpa [map_sub] using this
+      have hmap : P'.map fL = B := by
+        rw [Submodule.map_smul'', Submodule.map_top,
+          LinearMap.range_eq_top.mpr hfL.2]
+      rw [← hmap] at hmem
+      rcases hmem with ⟨z, hz, hzy⟩
+      have hzxy : z = x - y := by
+        apply hf
+        exact Subtype.ext hzy
+      apply Submodule.Quotient.eq.mpr
+      rw [← hzxy]
+      exact hz
+    have hlen_fbar : Module.length R (M' ⧸ P') = Module.length R (L ⧸ B) :=
+      (LinearEquiv.ofBijective fbar ⟨hfbar_inj, hfbar_surj⟩).length_eq
+    let qB : (L ⧸ K) →ₗ[R] (L ⧸ B) :=
+      K.liftQ B.mkQ (by simpa [Submodule.ker_mkQ] using hKB)
+    have hqB : Function.Surjective qB := by
+      intro y
+      refine Submodule.Quotient.induction_on (p := B) y ?_
+      intro x
+      exact ⟨K.mkQ x, rfl⟩
+    have hlenB : Module.length R (L ⧸ B) ≤ Module.length R (L ⧸ K) :=
+      Module.length_le_of_surjective qB hqB
+    have hlenM' : Module.length R (M' ⧸ P') ≤ Module.length R (L ⧸ K) := by
+      rw [hlen_fbar]
+      exact hlenB
+    have hM'fin : IsFiniteLength R (M' ⧸ P') := by
+      exact idealPowerCumulativeQuotient_isFiniteLength I hI (n - c₂)
+    have hKfin : IsFiniteLength R (L ⧸ K) := by
+      exact IsFiniteLength.of_injective
+        (idealPowerCumulativeQuotient_isFiniteLength I hI n) hu
+    have hnat : (Module.length R (M' ⧸ P')).toNat +
+        (Module.length R (M ⧸ L)).toNat ≤
+          (Module.length R (M ⧸ P)).toNat := by
+      have hlen' := congrArg ENat.toNat hlen
+      rw [ENat.toNat_add] at hlen'
+      · rw [← hlen']
+        exact Nat.add_le_add
+          (ENat.toNat_le_toNat hlenM' (Module.length_ne_top_iff.mpr hKfin)) le_rfl
+      · exact Module.length_ne_top_iff.mpr hKfin
+      · exact Module.length_ne_top_iff.mpr hquot
+      · exact Module.length_ne_top_iff.mpr hM'fin
+    simpa [c₁, idealCumulativeHilbertFunction, moduleLengthNat,
+      idealPowerCumulativeQuotient, P, P', Nat.add_comm] using hnat
+  refine ⟨c₁, c₂, ?_⟩
+  intro n hn
+  exact ⟨hlower n hn, by simpa [Nat.add_comm] using hupper n⟩
 
 theorem hilbert_functions_of_short_exact
     {R : Type u} {M' M M'' : Type v} [CommRing R] [IsLocalRing R]
@@ -494,7 +834,54 @@ theorem hilbert_cumulative_change_of_ideal
     ∃ a : ℕ, 0 < a ∧ ∀ n : ℕ, 1 ≤ n →
       idealCumulativeHilbertFunction I M n ≤
         idealCumulativeHilbertFunction I' M (a * n) := by
-  sorry
+  obtain ⟨r, hr⟩ := exists_pow_maximalIdeal_le_of_isIdealOfDefinition I hI
+  have hI'lemax : I' ≤ IsLocalRing.maximalIdeal R := by
+    rw [← hI']
+    exact Ideal.le_radical
+  let a : ℕ := 2 * r + 1
+  have ha : 0 < a := by
+    dsimp [a]
+    omega
+  have hpow : I' ^ a ≤ I ^ 2 := by
+    have hpow_max : (IsLocalRing.maximalIdeal R) ^ (2 * r + 1) ≤ I ^ 2 := by
+      calc
+        (IsLocalRing.maximalIdeal R) ^ (2 * r + 1) ≤
+            (IsLocalRing.maximalIdeal R) ^ (2 * r) :=
+          Ideal.pow_le_pow_right (Nat.le_succ (2 * r))
+        _ = ((IsLocalRing.maximalIdeal R) ^ r) ^ 2 := by
+          rw [pow_mul]
+          simp [Nat.mul_comm]
+        _ ≤ I ^ 2 := Ideal.pow_right_mono hr 2
+    exact (Ideal.pow_right_mono hI'lemax a).trans hpow_max
+  refine ⟨a, ha, ?_⟩
+  intro n hn
+  have hpow_n : I' ^ (a * n + 1) ≤ I ^ (n + 1) := by
+    calc
+      I' ^ (a * n + 1) ≤ I' ^ (a * n) :=
+        Ideal.pow_le_pow_right (Nat.le_succ (a * n))
+      _ = (I' ^ a) ^ n := by
+        rw [pow_mul]
+      _ ≤ (I ^ 2) ^ n := Ideal.pow_right_mono hpow n
+      _ = I ^ (2 * n) := by rw [pow_mul]
+      _ ≤ I ^ (n + 1) := by
+        apply Ideal.pow_le_pow_right
+        omega
+  let Q : Submodule R M := I' ^ (a * n + 1) • (⊤ : Submodule R M)
+  let P : Submodule R M := I ^ (n + 1) • (⊤ : Submodule R M)
+  have hQP : Q ≤ P := by
+    exact Submodule.smul_mono_left hpow_n
+  let q : (M ⧸ Q) →ₗ[R] (M ⧸ P) :=
+    Q.liftQ P.mkQ (by simpa [Submodule.ker_mkQ] using hQP)
+  have hq : Function.Surjective q := by
+    intro y
+    refine Submodule.Quotient.induction_on (p := P) y ?_
+    intro x
+    exact ⟨Q.mkQ x, rfl⟩
+  have hlen : Module.length R (M ⧸ P) ≤ Module.length R (M ⧸ Q) :=
+    Module.length_le_of_surjective q hq
+  have hPfin : IsFiniteLength R (M ⧸ P) := by
+    exact idealPowerCumulativeQuotient_isFiniteLength I hI n
+  exact ENat.toNat_le_toNat hlen (Module.length_ne_top_iff.mpr hPfin)
 
 /-! ## Numerical polynomials and the Hilbert polynomial -/
 

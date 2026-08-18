@@ -309,13 +309,11 @@ theorem weak_serre_subcategory_is_abelian_and_inclusion_exact
         have hi' : i = 0 ∨ i = 1 ∨ i = 2 := by omega
         rcases hi' with rfl | rfl | rfl
         · change (ShortComplex.mk (𝟙 X) (0 : X ⟶ 0) (by simp)).Exact
-          exact (ShortComplex.exact_iff_epi _
-            rfl).2 inferInstance
+          exact (ShortComplex.exact_iff_epi _ rfl).2 inferInstance
         · dsimp [T]
           exact ShortComplex.exact_of_isZero_X₂ _ (isZero_zero C)
         · change (ShortComplex.mk (0 : 0 ⟶ X) (𝟙 X) (by simp)).Exact
-          exact (ShortComplex.exact_iff_mono _
-            rfl).2 inferInstance
+          exact (ShortComplex.exact_iff_mono _ rfl).2 inferInstance
     exact hWeak.prop_X₂_of_exact hT hX hX hX hX
   have hIso : P.IsClosedUnderIsomorphisms := by
     refine { of_iso := ?_ }
@@ -343,21 +341,64 @@ theorem weak_serre_subcategory_is_abelian_and_inclusion_exact
         · exact ShortComplex.exact_of_isZero_X₂ _ (isZero_zero C)
     exact hWeak.prop_X₂_of_exact hT hzero hX hzero hzero
   have hK : P.IsClosedUnderKernels := by
-    /- prior attempt:
     refine ⟨?_⟩
     intro Z hZ
     rcases hZ with ⟨f, k, hk, ⟨hX, hY⟩⟩
-    exact P.prop_of_isLimit_kernelFork hk hX hY
-    -/
-    sorry
+    let T := ComposableArrows.mk₄
+      (0 : (0 : C) ⟶ (0 : C)) (0 : (0 : C) ⟶ k.pt) k.ι f
+    have hT : T.Exact := by
+      refine ComposableArrows.Exact.mk
+        (ComposableArrows.IsComplex.mk (fun i hi => ?_)) ?_
+      · have hi' : i = 0 ∨ i = 1 ∨ i = 2 := by omega
+        rcases hi' with rfl | rfl | rfl
+        · change (0 : (0 : C) ⟶ (0 : C)) ≫ (0 : (0 : C) ⟶ k.pt) = 0
+          simp
+        · change (0 : (0 : C) ⟶ k.pt) ≫ k.ι = 0
+          simp
+        · change k.ι ≫ f = 0
+          exact k.condition
+      · intro i hi
+        have hi' : i = 0 ∨ i = 1 ∨ i = 2 := by omega
+        rcases hi' with rfl | rfl | rfl
+        · change (ShortComplex.mk (0 : (0 : C) ⟶ (0 : C))
+            (0 : (0 : C) ⟶ k.pt) (by simp)).Exact
+          exact (ShortComplex.exact_iff_epi _ (by simp)).2 inferInstance
+        · change (ShortComplex.mk (0 : (0 : C) ⟶ k.pt) k.ι (by simp)).Exact
+          exact (ShortComplex.exact_iff_mono _ (by simp)).2 (Fork.IsLimit.mono hk)
+        · change (ShortComplex.mk k.ι f k.condition).Exact
+          exact ShortComplex.exact_of_f_is_kernel _
+            (IsLimit.ofIsoLimit hk (Fork.ext (Iso.refl _)))
+    exact hWeak.prop_X₂_of_exact hT hzero hzero hX hY
   have hC : P.IsClosedUnderCokernels := by
-    /- prior attempt:
     refine ⟨?_⟩
     intro Z hZ
     rcases hZ with ⟨f, k, hk, ⟨hX, hY⟩⟩
-    exact P.prop_of_isColimit_cokernelCofork hk hX hY
-    -/
-    sorry
+    let T := ComposableArrows.mk₄ f k.π
+      (0 : k.pt ⟶ (0 : C)) (0 : (0 : C) ⟶ (0 : C))
+    have hT : T.Exact := by
+      refine ComposableArrows.Exact.mk
+        (ComposableArrows.IsComplex.mk (fun i hi => ?_)) ?_
+      · have hi' : i = 0 ∨ i = 1 ∨ i = 2 := by omega
+        rcases hi' with rfl | rfl | rfl
+        · change f ≫ k.π = 0
+          exact k.condition
+        · change k.π ≫ (0 : k.pt ⟶ (0 : C)) = 0
+          simp
+        · change (0 : k.pt ⟶ (0 : C)) ≫ (0 : (0 : C) ⟶ (0 : C)) = 0
+          simp
+      · intro i hi
+        have hi' : i = 0 ∨ i = 1 ∨ i = 2 := by omega
+        rcases hi' with rfl | rfl | rfl
+        · change (ShortComplex.mk f k.π k.condition).Exact
+          exact ShortComplex.exact_of_g_is_cokernel _
+            (IsColimit.ofIsoColimit hk (Cofork.ext (Iso.refl _)))
+        · change (ShortComplex.mk k.π (0 : k.pt ⟶ (0 : C)) (by simp)).Exact
+          letI : Epi k.π := Cofork.IsColimit.epi hk
+          exact (ShortComplex.exact_iff_epi _ (by simp)).2 inferInstance
+        · change (ShortComplex.mk (0 : k.pt ⟶ (0 : C))
+            (0 : (0 : C) ⟶ (0 : C)) (by simp)).Exact
+          exact (ShortComplex.exact_iff_epi _ (by simp)).2 inferInstance
+    exact hWeak.prop_X₂_of_exact hT hX hY hzero hzero
   have hExt : P.IsClosedUnderExtensions := by
     refine ⟨?_⟩
     intro S hS h₁ h₃
@@ -472,7 +513,37 @@ theorem serre_quotient_universal_property
     (G : C ⥤ₑ D) (hG : P ≤ Functor.kernel G.obj) :
     ∃! H : serreQuotient P ⥤ₑ D,
       serreQuotientFunctor P ⋙ H.obj = G.obj := by
-  sorry
+  letI : PreservesFiniteLimits G.obj := G.property.1
+  letI : PreservesFiniteColimits G.obj := G.property.2
+  letI : PreservesFiniteLimits (serreQuotientFunctor P) :=
+    ObjectProperty.SerreClassLocalization.preservesFiniteLimits
+      (serreQuotientFunctor P) P
+  letI : PreservesFiniteColimits (serreQuotientFunctor P) :=
+    ObjectProperty.SerreClassLocalization.preservesFiniteColimits
+      (serreQuotientFunctor P) P
+  have hInv : P.isoModSerre.IsInvertedBy G.obj :=
+    (ObjectProperty.isoModSerre_isInvertedBy_iff P G.obj).2 hG
+  let H₀ : serreQuotient P ⥤ D :=
+    Localization.Construction.lift G.obj hInv
+  have hH₀ : exactFunctor (serreQuotient P) D H₀ := by
+    apply (ObjectProperty.SerreClassLocalization.exactFunctor_comp_iff
+      (serreQuotientFunctor P) P H₀).mp
+    dsimp [H₀, serreQuotientFunctor, serreQuotient]
+    rw [Localization.Construction.fac]
+    exact G.property
+  let H : serreQuotient P ⥤ₑ D := ⟨H₀, hH₀⟩
+  refine ⟨H, ?_, ?_⟩
+  · change serreQuotientFunctor P ⋙ H₀ = G.obj
+    simpa [H₀, serreQuotientFunctor, serreQuotient] using
+      (Localization.Construction.fac G.obj hInv)
+  · intro H₁ h
+    apply ObjectProperty.FullSubcategory.ext
+    apply Localization.Construction.uniq
+    have hFac : serreQuotientFunctor P ⋙ H.obj = G.obj := by
+      change serreQuotientFunctor P ⋙ H₀ = G.obj
+      simpa [H₀, serreQuotientFunctor, serreQuotient] using
+        (Localization.Construction.fac G.obj hInv)
+    exact h.trans hFac.symm
 
 noncomputable def inducedSerreQuotientFunctor
     {D : Type u'} [Category.{v'} D] [Abelian D]
@@ -496,6 +567,54 @@ theorem quotient_by_kernel_exact_functor_iff_faithful
     (G : C ⥤ₑ D) (hG : P ≤ Functor.kernel G.obj) :
     P = Functor.kernel G.obj ↔
       (inducedSerreQuotientFunctor P G hG).obj.Faithful := by
-  sorry
+  letI : Abelian (serreQuotient P) := serreQuotientAbelian P
+  letI : PreservesFiniteLimits G.obj := G.property.1
+  letI : PreservesFiniteColimits G.obj := G.property.2
+  constructor
+  · intro hEq
+    letI : (inducedSerreQuotientFunctor P G hG).obj.Additive :=
+      (exactFunctor_le_additiveFunctor (serreQuotient P) D)
+        _ (inducedSerreQuotientFunctor P G hG).property
+    apply Functor.faithful_of_comp_cancel_zero_of_hasLeftCalculusOfFractions
+      (L := serreQuotientFunctor P) (W := P.isoModSerre)
+      (inducedSerreQuotientFunctor P G hG).obj
+    intro X Y f hf
+    have hGmap : G.obj.map f = 0 := by
+      rw [← inducedSerreQuotientFunctor_fac P G hG]
+      simpa using hf
+    have hPimg : P (Abelian.image f) := by
+      rw [hEq]
+      have hGι : G.obj.map (Abelian.image.ι f) = 0 := by
+        apply (cancel_epi (G.obj.map (Abelian.factorThruImage f))).1
+        rw [← G.obj.map_comp, Abelian.image.fac, hGmap]
+        simp
+      have hKzero : IsZero (kernel (G.obj.map (Abelian.image.ι f))) :=
+        isZero_kernel_of_mono _
+      have hIso : kernel (G.obj.map (Abelian.image.ι f)) ≅
+          G.obj.obj (Abelian.image f) :=
+        kernelIsoOfEq hGι ≪≫ kernelZeroIsoSource
+      exact hKzero.of_iso hIso.symm
+    exact (ObjectProperty.SerreClassLocalization.map_eq_zero_iff
+      (serreQuotientFunctor P) P f).2 hPimg
+  · intro hF
+    letI : (inducedSerreQuotientFunctor P G hG).obj.Faithful := hF
+    apply le_antisymm hG
+    intro X hX
+    have hHX : IsZero ((inducedSerreQuotientFunctor P G hG).obj.obj
+        ((serreQuotientFunctor P).obj X)) := by
+      change IsZero ((serreQuotientFunctor P ⋙
+        (inducedSerreQuotientFunctor P G hG).obj).obj X)
+      rw [inducedSerreQuotientFunctor_fac P G hG]
+      exact hX
+    have hId : (inducedSerreQuotientFunctor P G hG).obj.map
+        (𝟙 ((serreQuotientFunctor P).obj X)) = 0 := by
+      rw [(inducedSerreQuotientFunctor P G hG).obj.map_id]
+      exact hHX.eq_of_src _ _
+    have hId' : (𝟙 ((serreQuotientFunctor P).obj X)) = 0 := by
+      apply (inducedSerreQuotientFunctor P G hG).obj.map_injective
+      simpa using hId
+    exact (ObjectProperty.SerreClassLocalization.isZero_obj_iff
+      (serreQuotientFunctor P) P X).1
+      ((IsZero.iff_id_eq_zero ((serreQuotientFunctor P).obj X)).2 hId')
 
 end Formalization.Books.Homology.Unit10

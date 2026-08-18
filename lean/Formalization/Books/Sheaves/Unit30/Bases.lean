@@ -323,12 +323,6 @@ theorem basisConditionStarSections {X : TopCat.{v}} {ι : Type v}
           BasisLocallyRepresented B P (B i) s}) := by
   sorry
 
-/-- Extension off a basis in terms of families satisfying (*). -/
-noncomputable def basisSetExtensionByStalkFamilies {X : TopCat.{v}} {ι : Type v}
-    (B : ι → Opens X) (hB : Opens.IsBasis (Set.range B)) (P : BasisSheaf B) :
-    TopCat.Sheaf (Type v) X :=
-  basisSheafExtension B hB P
-
 /-- Extension preserves stalks. -/
 theorem basisExtension_stalk_eq {X : TopCat.{v}} {ι : Type v}
     (B : ι → Opens X) (hB : Opens.IsBasis (Set.range B)) (P : BasisSheaf B) (x : X) :
@@ -563,6 +557,15 @@ noncomputable def basisModuleStalkModule {X : TopCat.{v}} {ι : Type v}
     (CategoryTheory.Limits.colimit.isColimit _)
     (CategoryTheory.Limits.colimit.isColimit _)
 
+/-- The basis-module stalk as a bundled module over the basis-ring stalk. -/
+noncomputable def basisModuleStalkObject {X : TopCat.{v}} {ι : Type v}
+    (B : ι → Opens X) (hB : Opens.IsBasis (Set.range B))
+    {O : BasisRingPresheaf B} (F : BasisModulePresheaf B O) (x : X) :
+    ModuleCat (basisAlgebraicStalk (C := RingCat.{v}) B O x) := by
+  letI := basisModuleStalkModule B hB F x
+  exact ModuleCat.of (basisAlgebraicStalk (C := RingCat.{v}) B O x)
+    (basisModuleStalk B F x)
+
 /-- Restriction of a presheaf of modules to an induced basis category. -/
 def basisModuleRestriction {X : TopCat.{v}} {κ : Type v}
     (B : κ → Opens X) {O : RingSheaf.{v, v} X}
@@ -643,18 +646,6 @@ theorem basisModuleExtensionAction_map {X : TopCat.{v}} {ι : Type v}
         ((basisModuleExtension B hB O F hF).val.presheaf.map f.op m) := by
   exact (basisModuleExtension B hB O F hF).val.map_smul f.op r m
 
-/-- The extended action is the sectionwise module action. -/
-theorem basisModuleExtensionAction_isModule {X : TopCat.{v}} {ι : Type v}
-    (B : ι → Opens X) (hB : Opens.IsBasis (Set.range B))
-    (O : RingSheaf.{v, v} X)
-    (F : BasisModulePresheaf B ((inducedFunctor B).op ⋙ O.1))
-    (hF : BasisModuleSheaf B F) :
-    ∀ (U : Opens X) (r : O.1.obj (op U))
-      (m : (basisModuleExtension B hB O F hF).val.presheaf.obj (op U)),
-      basisModuleExtensionAction B hB O F hF U r m = r • m := by
-  intro U r m
-  rfl
-
 /-- Extension preserves the module stalks over the extended ring stalk. -/
 theorem basisModuleExtension_stalk_eq {X : TopCat.{v}} {ι : Type v}
     (B : ι → Opens X) (hB : Opens.IsBasis (Set.range B))
@@ -664,6 +655,22 @@ theorem basisModuleExtension_stalk_eq {X : TopCat.{v}} {ι : Type v}
     Nonempty (TopCat.Presheaf.stalk (C := Type v)
       ((basisModuleExtension B hB O F hF).val.presheaf ⋙
         (CategoryTheory.forget AddCommGrpCat)) x ≃ basisModuleStalk B F x) := by
+  sorry
+
+/-- Extension preserves the stalk as a module, after transporting scalars
+along the canonical comparison between the ordinary and basis ring stalks. -/
+theorem basisModuleExtension_stalk_module_iso {X : TopCat.{v}} {ι : Type v}
+    (B : ι → Opens X) (hB : Opens.IsBasis (Set.range B))
+    (O : RingSheaf.{v, v} X)
+    (F : BasisModulePresheaf B ((inducedFunctor B).op ⋙ O.1))
+    (hF : BasisModuleSheaf B F) (x : X) :
+    ∃ e : basisAlgebraicStalk (C := RingCat.{v}) B
+        ((inducedFunctor B).op ⋙ O.1) x ≅
+        TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x,
+      Nonempty ((ModuleCat.restrictScalars e.hom.hom).obj
+          ((Formalization.Books.Sheaves.Unit22.moduleStalkFunctor O x).obj
+            (basisModuleExtension B hB O F hF)) ≅
+        basisModuleStalkObject B hB F x) := by
   sorry
 
 /-- The category of sheaves of basis modules. -/
@@ -684,7 +691,7 @@ theorem basisModuleSheafEquivalence {X : TopCat.{v}} {ι : Type v}
 /-- A target-basis family of maps into inverse-image opens. -/
 structure BasisFMapData {X Y : TopCat.{v}} {κ : Type v}
     (f : X ⟶ Y) (Bᵧ : κ → Opens Y)
-    {C : Type v} [Category.{v} C]
+    {C : Type u} [Category.{v} C]
     (G : BasisAlgebraicPresheaf Bᵧ (C := C))
     (F : TopCat.Sheaf C X) where
   map : ∀ j, G.obj (op j) ⟶ F.presheaf.obj (op ((Opens.map f).obj (Bᵧ j)))
@@ -695,7 +702,7 @@ structure BasisFMapData {X Y : TopCat.{v}} {κ : Type v}
 /-- The source-facing target-basis data for an algebraic `f`-map. -/
 structure BasisFMapBelowData {X Y : TopCat.{v}} {κ : Type v}
     (f : X ⟶ Y) (Bᵧ : κ → Opens Y)
-    {C : Type v} [Category.{v} C]
+    {C : Type u} [Category.{v} C]
     (G : TopCat.Sheaf C Y) (F : TopCat.Sheaf C X) where
   map : ∀ j, G.presheaf.obj (op (Bᵧ j)) ⟶
     F.presheaf.obj (op ((Opens.map f).obj (Bᵧ j)))
@@ -713,12 +720,12 @@ def basisModuleRestrictionHom {X : TopCat.{v}} {κ : Type v}
 
 /-- A target-basis family uniquely determines an algebraic `f`-map. -/
 theorem basisFMap_below_unique {X Y : TopCat.{v}} {κ : Type v}
-    (f : X ⟶ Y) {C : Type v} [Category.{v} C]
+    (f : X ⟶ Y) {C : Type u} [Category.{v} C]
     (F : TopCat.Sheaf C X) (G : TopCat.Sheaf C Y)
     (Bᵧ : κ → Opens Y) (hBᵧ : Opens.IsBasis (Set.range Bᵧ))
     (φ : (inducedFunctor Bᵧ).op ⋙ G.presheaf ⟶
       (inducedFunctor Bᵧ).op ⋙ ((TopCat.Sheaf.pushforward C f).obj F).obj) :
-    ∃! ψ : G ⟶ (TopCat.Sheaf.pushforward C f).obj F,
+    ∃! ψ : AlgebraicFMap f G F,
       ((Functor.whiskeringLeft (basisIndex Bᵧ)ᵒᵖ (Opens Y)ᵒᵖ C).obj
         (inducedFunctor Bᵧ).op).map ψ.hom = φ := by
   sorry
@@ -726,11 +733,11 @@ theorem basisFMap_below_unique {X Y : TopCat.{v}} {κ : Type v}
 /-- The source's compatible target-basis family uniquely determines an
 algebraic `f`-map. -/
 theorem basisFMap_below_unique_of_data {X Y : TopCat.{v}} {κ : Type v}
-    (f : X ⟶ Y) {C : Type v} [Category.{v} C]
+    (f : X ⟶ Y) {C : Type u} [Category.{v} C]
     (F : TopCat.Sheaf C X) (G : TopCat.Sheaf C Y)
     (Bᵧ : κ → Opens Y) (hBᵧ : Opens.IsBasis (Set.range Bᵧ))
     (d : BasisFMapBelowData f Bᵧ G F) :
-    ∃! ψ : G ⟶ (TopCat.Sheaf.pushforward C f).obj F,
+    ∃! ψ : AlgebraicFMap f G F,
       ∀ j, ψ.hom.app (op (Bᵧ j)) = d.map j := by
   sorry
 
@@ -779,13 +786,13 @@ theorem basisFMapModule_below_unique_of_data {X Y : RingedSpace} {κ : Type v}
   sorry
 
 /-- Sections of a category-valued sheaf over an open. -/
-abbrev categorySheafSections {X : TopCat.{v}} {C : Type v} [Category.{v} C]
+abbrev categorySheafSections {X : TopCat.{v}} {C : Type u} [Category.{v} C]
     (G : TopCat.Sheaf C X) (U : Opens X) := G.presheaf.obj (op U)
 
 /-- A two-basis family of maps for an algebraic `f`-map. -/
 structure BasisFMapAboveBelowData {X Y : TopCat.{v}} {ι : Type v} {κ : Type v}
     (f : X ⟶ Y) (Bₓ : ι → Opens X) (Bᵧ : κ → Opens Y)
-    {C : Type v} [Category.{v} C]
+    {C : Type u} [Category.{v} C]
     (G : TopCat.Sheaf C Y) (F : TopCat.Sheaf C X) where
   app : ∀ (i : ι) (j : κ), Bₓ i ≤ (Opens.map f).obj (Bᵧ j) →
     Quiver.Hom (categorySheafSections G (Bᵧ j))
@@ -820,19 +827,19 @@ structure BasisModuleFMapAboveBelowData {X Y : RingedSpace.{v}}
 
 /-- The basis-above-and-below construction gives a unique algebraic `f`-map. -/
 theorem basisFMap_above_below_unique {X Y : TopCat.{v}} {ι : Type v} {κ : Type v}
-    (f : X ⟶ Y) {C : Type v} [Category.{v} C]
+    (f : X ⟶ Y) {C : Type u} [Category.{v} C]
     (F : TopCat.Sheaf C X) (G : TopCat.Sheaf C Y)
     (Bₓ : ι → Opens X) (hBₓ : Opens.IsBasis (Set.range Bₓ))
     (Bᵧ : κ → Opens Y) (hBᵧ : Opens.IsBasis (Set.range Bᵧ))
     (d : BasisFMapAboveBelowData f Bₓ Bᵧ G F) :
-    ∃! ψ : G ⟶ (TopCat.Sheaf.pushforward C f).obj F,
+    ∃! ψ : AlgebraicFMap f G F,
       ∀ (i : ι) (j : κ) (h : Bₓ i ≤ (Opens.map f).obj (Bᵧ j)),
         ψ.hom.app (op (Bᵧ j)) ≫ F.presheaf.map (homOfLE h).op = d.app i j h := by
   sorry
 
 /-- The stalk map obtained from two bases is the filtered colimit of local maps. -/
 def basisFMap_above_below_stalk_colimit {X Y : TopCat.{v}} {ι : Type v} {κ : Type v}
-    (f : X ⟶ Y) {C : Type v} [Category.{v} C] [HasColimits C]
+    (f : X ⟶ Y) {C : Type u} [Category.{v} C] [HasColimits C]
     (F : TopCat.Sheaf C X) (G : TopCat.Sheaf C Y)
     (Bₓ : ι → Opens X) (_hBₓ : Opens.IsBasis (Set.range Bₓ))
     (Bᵧ : κ → Opens Y) (_hBᵧ : Opens.IsBasis (Set.range Bᵧ))
@@ -842,6 +849,18 @@ def basisFMap_above_below_stalk_colimit {X Y : TopCat.{v}} {ι : Type v} {κ : T
       (hx : x ∈ Bₓ i) (hy : f x ∈ Bᵧ j),
       G.presheaf.germ (Bᵧ j) (f x) hy ≫ ξ =
         d.app i j hij ≫ F.presheaf.germ (Bₓ i) x hx
+
+/-- The stalk-colimit description holds for the map determined by the two
+bases. -/
+theorem basisFMap_above_below_stalk_colimit_holds
+    {X Y : TopCat.{v}} {ι : Type v} {κ : Type v}
+    (f : X ⟶ Y) {C : Type u} [Category.{v} C] [HasColimits C]
+    (F : TopCat.Sheaf C X) (G : TopCat.Sheaf C Y)
+    (Bₓ : ι → Opens X) (_hBₓ : Opens.IsBasis (Set.range Bₓ))
+    (Bᵧ : κ → Opens Y) (_hBᵧ : Opens.IsBasis (Set.range Bᵧ))
+    (d : BasisFMapAboveBelowData f Bₓ Bᵧ G F) (x : X) :
+    basisFMap_above_below_stalk_colimit f F G Bₓ _hBₓ Bᵧ _hBᵧ d x := by
+  sorry
 
 /-- The module-valued basis-above-and-below uniqueness statement. -/
 theorem basisFMapModule_above_below_unique {X Y : RingedSpace} {ι : Type v} {κ : Type v}

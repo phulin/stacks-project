@@ -1114,7 +1114,7 @@ theorem strict_iff_coimage_image_isIso {C : Type u} [Category.{v} C]
     simp only [Category.assoc, Subobject.underlyingIso_arrow, kernel.lift_ι]
   have hkl : k ≫ l = 0 := by
     apply FilteredHom.ext _ _
-    letI : Mono ι.hom := by
+    let : Mono ι.hom := by
       change Mono (Subobject.mk (kernel.ι n.hom)).arrow
       infer_instance
     apply (cancel_mono ι.hom).mp
@@ -1166,13 +1166,10 @@ theorem strict_iff_coimage_image_isIso {C : Type u} [Category.{v} C]
         φI.hom
   have hfork : (filteredKernelFork n).π.app WalkingParallelPair.zero = ι := by
     rfl
-  letI : Epi q₀ := epi_of_isColimit_cofork
+  let : Epi q₀ := epi_of_isColimit_cofork
     (filteredCokernelCofork_isColimit k)
   have hqQ : q₀ ≫ eQ₀.hom = Abelian.coimage.π f := by
-    simpa [q₀, eQ₀, φQ] using
-      CokernelCofork.π_mapOfIsColimit
-        (filteredCokernelCofork_isColimit k)
-        (Cofork.ofπ (Abelian.coimage.π f) (cokernel.condition _)) φQ.hom
+    simp [q₀, eQ₀, φQ]
   have hli' : l ≫ ι = f := by
     apply FilteredHom.ext _ _
     exact hli
@@ -1240,11 +1237,11 @@ theorem strict_iff_coimage_image_isIso {C : Type u} [Category.{v} C]
     change cokernel.π k.hom ≫ eQ.hom = cokernel.π (kernel.ι f.hom)
     exact IsColimit.comp_coconePointUniqueUpToIso_hom
       (cokernelIsCokernel k.hom) hck WalkingParallelPair.one
-  letI : Epi l.hom := hl0epi
+  let : Epi l.hom := hl0epi
   have hc0epi : Epi c₀.hom := by
     apply epi_of_epi_fac (f := q₀.hom) (g := c₀.hom) (h := l.hom)
     exact congrArg FilteredHom.hom hq₀c
-  haveI : Epi q₀.hom := by
+  have Epi_q₀_hom : Epi q₀.hom := by
     change Epi (cokernel.π k.hom)
     infer_instance
   let d := eQ.hom ≫ Abelian.factorThruCoimage f.hom
@@ -1265,11 +1262,11 @@ theorem strict_iff_coimage_image_isIso {C : Type u} [Category.{v} C]
   have hdmono : Mono d := by
     dsimp [d]
     infer_instance
-  letI : Mono d := hdmono
+  let : Mono d := hdmono
   have hc0mono : Mono c₀.hom := by
     exact mono_of_mono_fac hd
-  letI : Epi c₀.hom := hc0epi
-  letI : Mono c₀.hom := hc0mono
+  let : Epi c₀.hom := hc0epi
+  let : Mono c₀.hom := hc0mono
   have hc0iso : IsIso c₀.hom := isIso_of_mono_of_epi c₀.hom
   have exists_comp : ∀ {X Y Z : C} (a : X ⟶ Y) (b : Y ⟶ Z)
       (P : Subobject X),
@@ -1311,7 +1308,7 @@ theorem strict_iff_coimage_image_isIso {C : Type u} [Category.{v} C]
       ((filtered_surjective_iff_epi q₀).2 inferInstance)).2
     intro i
     rfl
-  letI : Mono ι.hom := by
+  let : Mono ι.hom := by
     change Mono (Subobject.mk (kernel.ι n.hom)).arrow
     infer_instance
   have histrict : Strict ι := by
@@ -1323,7 +1320,7 @@ theorem strict_iff_coimage_image_isIso {C : Type u} [Category.{v} C]
   have exists_top_of_epi : ∀ {X Y : C} (u : X ⟶ Y) [Epi u],
       (Subobject.«exists» u).obj (⊤ : Subobject X) = ⊤ := by
     intro X Y u hu
-    letI : Epi u := hu
+    let : Epi u := hu
     apply (Subobject.isIso_arrow_iff_eq_top _).mp
     let F := Subobject.imageFactorisation u (⊤ : Subobject X)
     let _ : Epi F.F.e := by
@@ -1493,7 +1490,7 @@ theorem strict_iff_coimage_image_isIso {C : Type u} [Category.{v} C]
     intro X Y u hu
     constructor
     · intro hs
-      letI : IsIso u.hom := hu
+      let : IsIso u.hom := hu
       have hstrict' := (strict_iff_induced_filtration u (by
         change Mono u.hom
         infer_instance)).mp hs
@@ -1514,10 +1511,10 @@ theorem strict_iff_coimage_image_isIso {C : Type u} [Category.{v} C]
         change inv u.hom ≫ u.hom = 𝟙 _
         simp
     · intro hu
-      letI : IsIso u := hu
+      let : IsIso u := hu
       have hu_mono : Mono u.hom :=
         (filtered_mono_iff_underlying_mono u).1 (by infer_instance)
-      letI : Mono u.hom := hu_mono
+      let : Mono u.hom := hu_mono
       apply (strict_iff_induced_filtration u hu_mono).2
       intro i
       let Xᵢ := X.filtration.obj i
@@ -1566,22 +1563,22 @@ theorem strict_iff_coimage_image_isIso {C : Type u} [Category.{v} C]
   constructor
   · intro hs
     have hc : Strict c₀ := hstep_iff.mpr hs
-    letI : IsIso c₀ := hstrictc.mp hc
-    letI : IsIso eQ₀.hom := heQiso
-    letI : IsIso eI₀.hom := heIiso
+    let : IsIso c₀ := hstrictc.mp hc
+    let : IsIso eQ₀.hom := heQiso
+    let : IsIso eI₀.hom := heIiso
     have hcomp' : IsIso (eQ₀.hom ≫ Abelian.coimageImageComparison f) := by
       rw [hrel]
       exact IsIso.comp_isIso' (hstrictc.mp hc) heIiso
-    letI : IsIso (eQ₀.hom ≫ Abelian.coimageImageComparison f) := hcomp'
+    let : IsIso (eQ₀.hom ≫ Abelian.coimageImageComparison f) := hcomp'
     exact IsIso.of_isIso_comp_left eQ₀.hom _
   · intro hi
     have hc : IsIso c₀ := by
-      letI : IsIso eQ₀.hom := heQiso
-      letI : IsIso eI₀.hom := heIiso
+      let : IsIso eQ₀.hom := heQiso
+      let : IsIso eI₀.hom := heIiso
       have hcomp' : IsIso (c₀ ≫ eI₀.hom) := by
         rw [← hrel]
         exact IsIso.comp_isIso' heQiso hi
-      letI : IsIso (c₀ ≫ eI₀.hom) := hcomp'
+      let : IsIso (c₀ ≫ eI₀.hom) := hcomp'
       exact @IsIso.of_isIso_comp_right (FilteredObject C) _ _ _ _ c₀ eI₀.hom
         heIiso hcomp'
     exact hstep_iff.mp (hstrictc.mpr hc)
@@ -1828,7 +1825,7 @@ theorem strict_composition_of_strict_of_mono {C : Type u} [Category.{v} C]
     [Abelian C] {A B D : FilteredObject C} (f : A ⟶ B) (g : B ⟶ D)
     (hf : Strict f) (hg : Strict g) (hgmono : FilteredInjective g) :
     Strict (f ≫ g) := by
-  letI : Mono g.hom := hgmono
+  let : Mono g.hom := hgmono
   have image_comp (X Y Z : C) (f₀ : X ⟶ Y) (g₀ : Y ⟶ Z)
       (P : Subobject X) :
       (Subobject.«exists» (f₀ ≫ g₀)).obj P =
@@ -1875,7 +1872,7 @@ theorem strict_composition_of_strict_of_epi {C : Type u} [Category.{v} C]
     [Abelian C] {A B D : FilteredObject C} (f : A ⟶ B) (g : B ⟶ D)
     (hf : Strict f) (hg : Strict g) (hfepi : FilteredSurjective f) :
     Strict (f ≫ g) := by
-  letI : Epi f.hom := hfepi
+  let : Epi f.hom := hfepi
   have image_comp (X Y Z : C) (f₀ : X ⟶ Y) (g₀ : Y ⟶ Z)
       (P : Subobject X) :
       (Subobject.«exists» (f₀ ≫ g₀)).obj P =
@@ -1931,6 +1928,7 @@ structure StrictCompositionFailure {C : Type u} [Category.{v} C]
   composite_nonzero : f.hom ≫ g.hom ≠ (0 : A.carrier ⟶ D.carrier)
   composite_not_strict : ¬ Strict (f ≫ g)
 
+@[instance_reducible]
 private noncomputable def fgModuleReprAbelian :
     Abelian (FGModuleRepr (ZMod 2)) := by
   let E : FGModuleRepr (ZMod 2) ≌ FGModuleCat.{0} (ZMod 2) :=
@@ -1942,6 +1940,7 @@ private noncomputable def fgModuleReprAbelian :
         Adjunction.hasLimitsOfShape_of_equivalence E.functor }
   exact abelianOfEquivalence E.functor
 
+@[instance_reducible]
 private noncomputable def uliftFgModuleReprAbelian :
     letI : Category.{0} (ULift.{u} (FGModuleRepr (ZMod 2))) :=
       CategoryTheory.uliftCategory _
@@ -1959,6 +1958,7 @@ private noncomputable def uliftFgModuleReprAbelian :
   exact abelianOfEquivalence
     (ULift.equivalence (C := FGModuleRepr (ZMod 2))).inverse
 
+@[instance_reducible]
 private noncomputable def uliftHomFgModuleReprAbelian :
     letI : Category.{0} (ULift.{u} (FGModuleRepr (ZMod 2))) :=
       CategoryTheory.uliftCategory _
@@ -1982,7 +1982,7 @@ private noncomputable def uliftHomFgModuleReprAbelian :
   exact abelianOfEquivalence
     (ULiftHom.equiv (C := ULift.{u} (FGModuleRepr (ZMod 2)))).inverse
 
-private noncomputable def uliftHomFgModuleReprUnit_ne_zero
+private theorem uliftHomFgModuleReprUnit_ne_zero
     : letI : Abelian (FGModuleRepr (ZMod 2)) := fgModuleReprAbelian
       letI : Preadditive (FGModuleRepr (ZMod 2)) :=
         fgModuleReprAbelian.toPreadditive
@@ -1997,29 +1997,29 @@ private noncomputable def uliftHomFgModuleReprUnit_ne_zero
         uliftHomFgModuleReprAbelian
     (𝟙 (ULiftHom.objUp (ULift.up (FGModuleRepr.ofFinite (ZMod 2) (ZMod 2)))) :
       _ ⟶ _) ≠ 0 := by
-  letI : Abelian (FGModuleRepr (ZMod 2)) := fgModuleReprAbelian
-  letI : Preadditive (FGModuleRepr (ZMod 2)) :=
+  let : Abelian (FGModuleRepr (ZMod 2)) := fgModuleReprAbelian
+  let : Preadditive (FGModuleRepr (ZMod 2)) :=
     fgModuleReprAbelian.toPreadditive
-  letI : Category.{0} (ULift.{u} (FGModuleRepr (ZMod 2))) :=
+  let : Category.{0} (ULift.{u} (FGModuleRepr (ZMod 2))) :=
     CategoryTheory.uliftCategory _
-  letI : Preadditive (ULift.{u} (FGModuleRepr (ZMod 2))) :=
+  let : Preadditive (ULift.{u} (FGModuleRepr (ZMod 2))) :=
     Preadditive.ofFullyFaithful
       (ULift.equivalence (C := FGModuleRepr (ZMod 2))).symm.fullyFaithfulFunctor
-  letI : Category.{v} (ULiftHom.{v} (ULift.{u} (FGModuleRepr (ZMod 2)))) :=
+  let : Category.{v} (ULiftHom.{v} (ULift.{u} (FGModuleRepr (ZMod 2)))) :=
     ULiftHom.category
-  letI : Preadditive (ULiftHom.{v} (ULift.{u} (FGModuleRepr (ZMod 2)))) :=
+  let : Preadditive (ULiftHom.{v} (ULift.{u} (FGModuleRepr (ZMod 2)))) :=
     Preadditive.ofFullyFaithful
       (ULiftHom.equiv
         (C := ULift.{u} (FGModuleRepr (ZMod 2)))).symm.fullyFaithfulFunctor
-  letI : (FGModuleRepr.embed (ZMod 2)).Additive :=
+  let : (FGModuleRepr.embed (ZMod 2)).Additive :=
     Functor.FullyFaithful.additive_ofFullyFaithful
       (FGModuleRepr.embed (ZMod 2)).asEquivalence.fullyFaithfulFunctor
-  letI : (ULift.equivalence
+  let : (ULift.equivalence
       (C := FGModuleRepr (ZMod 2))).inverse.Additive :=
     Functor.FullyFaithful.additive_ofFullyFaithful
       (ULift.equivalence
         (C := FGModuleRepr (ZMod 2))).symm.fullyFaithfulFunctor
-  letI : (ULiftHom.equiv
+  let : (ULiftHom.equiv
       (C := ULift.{u} (FGModuleRepr (ZMod 2)))).inverse.Additive :=
     Functor.FullyFaithful.additive_ofFullyFaithful
       (ULiftHom.equiv
@@ -2077,7 +2077,7 @@ private noncomputable def uliftHomFgModuleReprUnit_ne_zero
             ((ULiftHom.equiv
               (C := ULift.{u} (FGModuleRepr (ZMod 2)))).inverse.obj V))) :
           _ ⟶ _).hom)) x = x := by
-    simp [FGModuleCat.hom_hom_id, ModuleCat.hom_id, LinearMap.id_apply]
+    simp [ModuleCat.hom_id, LinearMap.id_apply]
   rw [hid_apply] at h''
   exact hx h''
 
@@ -2168,21 +2168,22 @@ private theorem diagonal_pullback_bot
       _ = 0 ≫ (Subobject.underlyingIso d).hom := by simp
   · exact bot_le
 
+set_option maxHeartbeats 2000000 in
 theorem exists_strict_composition_failure :
     ∃ (C : Type u) (_ : Category.{v} C) (_ : Abelian C),
       Nonempty (@StrictCompositionFailure C _ _) := by
-  letI : Abelian (FGModuleRepr (ZMod 2)) :=
+  let : Abelian (FGModuleRepr (ZMod 2)) :=
     fgModuleReprAbelian
-  letI : Preadditive (FGModuleRepr (ZMod 2)) :=
+  let : Preadditive (FGModuleRepr (ZMod 2)) :=
     fgModuleReprAbelian.toPreadditive
-  letI : Category.{0} (ULift.{u} (FGModuleRepr (ZMod 2))) :=
+  let : Category.{0} (ULift.{u} (FGModuleRepr (ZMod 2))) :=
     CategoryTheory.uliftCategory _
-  letI : Preadditive (ULift.{u} (FGModuleRepr (ZMod 2))) :=
+  let : Preadditive (ULift.{u} (FGModuleRepr (ZMod 2))) :=
     Preadditive.ofFullyFaithful
       (ULift.equivalence (C := FGModuleRepr (ZMod 2))).symm.fullyFaithfulFunctor
-  letI : Category.{v} (ULiftHom.{v} (ULift.{u} (FGModuleRepr (ZMod 2)))) :=
+  let : Category.{v} (ULiftHom.{v} (ULift.{u} (FGModuleRepr (ZMod 2)))) :=
     ULiftHom.category
-  letI : Abelian (ULiftHom.{v} (ULift.{u} (FGModuleRepr (ZMod 2)))) :=
+  let : Abelian (ULiftHom.{v} (ULift.{u} (FGModuleRepr (ZMod 2)))) :=
     uliftHomFgModuleReprAbelian
   let V : ULiftHom.{v} (ULift.{u} (FGModuleRepr (ZMod 2))) :=
     ULiftHom.objUp (ULift.up (FGModuleRepr.ofFinite (ZMod 2) (ZMod 2)))
@@ -2190,13 +2191,13 @@ theorem exists_strict_composition_failure :
   let u : V ⟶ W := biprod.inl
   let v : V ⟶ W := biprod.inr
   let d : V ⟶ W := biprod.lift (𝟙 V) (𝟙 V)
-  letI : Mono u := by
+  let : Mono u := by
     dsimp [u]
     exact mono_of_mono_fac (biprod.inl_fst)
-  letI : Mono v := by
+  let : Mono v := by
     dsimp [v]
     exact mono_of_mono_fac (biprod.inr_snd)
-  letI : Mono d := by
+  let : Mono d := by
     dsimp [d]
     exact mono_of_mono_fac (biprod.lift_fst _ _)
   let U : Subobject W := Subobject.mk u
@@ -2263,7 +2264,7 @@ theorem exists_strict_composition_failure :
       _ = biprod.fst ≫ biprod.inl ≫ q := by rw [hvr, comp_zero, add_zero]
       _ = p ≫ (U.arrow ≫ q) := by
         simp [p, U, u, Category.assoc]
-  letI : Epi (U.arrow ≫ q) := epi_of_epi_fac hfactor.symm
+  let : Epi (U.arrow ≫ q) := epi_of_epi_fac hfactor.symm
   have hqu : (Subobject.«exists» q).obj U =
       (⊤ : Subobject (cokernel Y.arrow)) := by
     apply (Subobject.isIso_arrow_iff_eq_top _).mp
@@ -2303,9 +2304,10 @@ theorem exists_strict_composition_failure :
   have hnotstrict : ¬ Strict (f₀ ≫ g₀) :=
     not_strict_of_bot_top (f₀ ≫ g₀) hnonzero hA0 hD0
   refine ⟨ULiftHom.{v} (ULift.{u} (FGModuleRepr (ZMod 2))),
-    inferInstance, inferInstance, ?_⟩
-  let S : StrictCompositionFailure
-      (C := ULiftHom.{v} (ULift.{u} (FGModuleRepr (ZMod 2)))) :=
+    ULiftHom.category, uliftHomFgModuleReprAbelian, ?_⟩
+  let S : @StrictCompositionFailure
+      (ULiftHom.{v} (ULift.{u} (FGModuleRepr (ZMod 2))))
+      ULiftHom.category uliftHomFgModuleReprAbelian :=
     { A := A₀, B := B₀, D := D₀, f := f₀, g := g₀,
       f_strict := strict_induced_iff X,
       g_strict := strict_quotient_iff q,

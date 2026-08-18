@@ -3649,7 +3649,8 @@ theorem truncated_polynomial_graded_quotient_exists (k : Type u) [Field k] :
     by_cases h11 : 1 ≤ d 1
     · refine ⟨Finsupp.single 0 1 + Finsupp.single 1 1, by simp [s], ?_⟩
       intro i
-      fin_cases i <;> simp <;> omega
+      fin_cases i <;> simp
+      all_goals omega
     have hd0 : d 0 = 0 ∨ d 0 = 1 := by omega
     rcases hd0 with hd0 | hd0
     · have hn' : n = 3 * d 1 := by omega

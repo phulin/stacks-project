@@ -1,4 +1,5 @@
 import Formalization.Books.Homology.Unit13.Complexes
+import Mathlib.Algebra.Torsor.Defs
 import Mathlib.Algebra.Homology.HomotopyCategory.ShiftSequence
 
 /-!
@@ -20,18 +21,6 @@ open ComplexShape
 universe v u
 
 namespace Formalization.Books.Homology.Unit14
-
-/-! ## A source-facing formulation of principal homogeneous spaces -/
-
-/-- A principal homogeneous space records a simply transitive additive action.
-This is the set-theoretic content of the source's “principal homogeneous
-space under a group” wording. -/
-structure PrincipalHomogeneousSpace (G P : Type*) [AddGroup G] where
-  nonempty : Nonempty P
-  translate : G → P → P
-  translate_zero : ∀ p, translate 0 p = p
-  translate_add : ∀ (g h : G) (p : P), translate (g + h) p = translate g (translate h p)
-  existsUnique : ∀ p q, ∃! g, translate g p = q
 
 /-! ## Chain-complex shifts -/
 
@@ -192,6 +181,11 @@ theorem chain_homology_shift_coherent
               ((shift_add (C := C) k l).hom.app K) i = e'.hom := by
   sorry
 
+end ChainComplex
+
+namespace ChainComplex
+
+variable {C : Type u} [Category.{v} C] [Preadditive C]
 variable {A B : ChainComplex C ℤ}
 
 /-- A self-homotopy is parametrized by a map into the shifted target. -/
@@ -203,9 +197,15 @@ theorem chain_homotopy_shift_self (a : A ⟶ B) :
 under the additive group of maps into the shifted target. -/
 theorem chain_homotopy_shift_principal (a b : A ⟶ B) :
     IsEmpty (Homotopy a b) ∨
-      Nonempty (PrincipalHomogeneousSpace (A ⟶ (shiftFunctor C 1).obj B)
+      Nonempty (AddTorsor (A ⟶ (shiftFunctor C 1).obj B)
         (Homotopy a b)) := by
   sorry
+
+end ChainComplex
+
+namespace ChainComplex
+
+variable {C : Type u} [Category.{v} C] [Abelian C]
 
 /-! ## Termwise split short exact sequences of chain complexes -/
 
@@ -402,7 +402,7 @@ theorem cochain_homotopy_shift_self (a : A ⟶ B) :
 space under maps into the negative shifted target. -/
 theorem cochain_homotopy_shift_principal (a b : A ⟶ B) :
     IsEmpty (Homotopy a b) ∨
-      Nonempty (PrincipalHomogeneousSpace
+      Nonempty (AddTorsor
         (A ⟶ (CategoryTheory.shiftFunctor (CochainComplex C ℤ) (-1 : ℤ)).obj B)
         (Homotopy a b)) := by
   sorry

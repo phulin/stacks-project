@@ -378,14 +378,14 @@ theorem sixVariablePowerLift_specialFiber (p : ℕ) :
 
 /-- The second exercise supplies a flat `ℤ/p²ℤ`-algebra lifting the displayed
 characteristic-`p` algebra. -/
-theorem exists_flat_zmodSquare_lift (p : ℕ) (hp : Nat.Prime p) :
+theorem exists_flat_zmodSquare_lift (p : ℕ) (_hp : Nat.Prime p) :
     ∃ (B : Type) (_ : CommRing B) (_ : Algebra (ZMod (p ^ 2)) B),
       Module.Flat (ZMod (p ^ 2)) B ∧
         Nonempty
           (principalSpecialFiber (R := ZMod (p ^ 2)) (B := B) (p : ZMod (p ^ 2))
             ≃+* sixVariablePowerAlgebra p) := by
   refine ⟨sixVariablePowerLift p, inferInstance, inferInstance, ?_⟩
-  exact ⟨sixVariablePowerLift_flat p hp, sixVariablePowerLift_specialFiber p⟩
+  exact ⟨sixVariablePowerLift_flat p _hp, sixVariablePowerLift_specialFiber p⟩
 
 /-! ## The quadratic obstruction -/
 
@@ -576,10 +576,6 @@ theorem no_flat_sixVariableQuadratic_lift
       rw [map_add, map_add, map_mul, map_mul, map_mul,
         hx 0, hx 1, hx 2, hx 3, hx 4, hx 5]
       exact Ideal.Quotient.eq_zero_iff_mem.mpr <| by
-        change MvPolynomial.X 0 * MvPolynomial.X 1 +
-            MvPolynomial.X 2 * MvPolynomial.X 3 +
-              MvPolynomial.X 4 * MvPolynomial.X 5 ∈
-            sixVariableQuadraticIdeal p (ZMod p)
         exact Ideal.subset_span (Or.inr rfl)
     have hπq : π q = 0 := by
       apply e.injective

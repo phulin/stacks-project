@@ -1,3 +1,4 @@
+import Formalization.Books.Algebra.Unit30.MoreOnImages
 import Mathlib.RingTheory.FiniteType
 import Mathlib.RingTheory.Jacobson.Ring
 import Mathlib.RingTheory.LocalRing.ResidueField.Ideal

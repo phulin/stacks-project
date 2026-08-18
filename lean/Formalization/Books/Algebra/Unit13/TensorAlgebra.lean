@@ -131,7 +131,7 @@ theorem exterior_generator_swap
     {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M] (x y : M) :
     ExteriorAlgebra.ι R x * ExteriorAlgebra.ι R y =
       -ExteriorAlgebra.ι R y * ExteriorAlgebra.ι R x := by
-  simpa [eq_neg_iff_add_eq_zero] using ExteriorAlgebra.ι_add_mul_swap x y
+  simp [eq_neg_iff_add_eq_zero, ExteriorAlgebra.ι_add_mul_swap]
 
 /-- Pure symmetric tensors span their symmetric power. -/
 theorem symmetric_pure_tensor_span
@@ -255,8 +255,7 @@ theorem free_symmetric_and_exterior_power
       change D (SymmetricPower.mk R J M
         (PiTensorProduct.tprod R (fun j => b (Quotient.out z j)))) = _
       rw [hD]
-      simp only [C, LinearMap.comp_apply, LinearEquiv.coe_coe,
-        Basis.piTensorProduct_apply]
+      simp only [C, LinearMap.comp_apply, LinearEquiv.coe_coe]
       rw [← Basis.piTensorProduct_apply, Module.Basis.repr_self]
       simp only [symmetricPowerCollapse, Finsupp.lsum_single, q]
       simp only [Finsupp.lsingle_apply]
@@ -322,11 +321,17 @@ theorem presentation_symmetric_exterior_power
     (∃ a : TensorProduct R M₂ (symmetricPower R M₁ (n - 1)) →ₗ[R]
         symmetricPower R M₁ n,
       ∃ b : symmetricPower R M₁ n →ₗ[R] symmetricPower R M n,
-        Function.Exact a b ∧ Function.Surjective b) ∧
+        Function.Exact a b ∧ Function.Surjective b ∧
+          (∀ x,
+            b (SymmetricPower.tprod R x) =
+              SymmetricPower.tprod R (fun i => g (x i)))) ∧
     (∃ a : TensorProduct R M₂ (exteriorPower R M₁ (n - 1)) →ₗ[R]
         exteriorPower R M₁ n,
       ∃ b : exteriorPower R M₁ n →ₗ[R] exteriorPower R M n,
-        Function.Exact a b ∧ Function.Surjective b) := by
+        Function.Exact a b ∧ Function.Surjective b ∧
+          (∀ x,
+            b (exteriorPower.ιMulti R n x) =
+              exteriorPower.ιMulti R n (fun i => g (x i)))) := by
   sorry
 
 /-- Indices for the two distinguished slots in the generator-and-relation presentation. -/
@@ -711,7 +716,7 @@ theorem algebra_colimit_iso
         (exteriorAlgebraFunctor R).obj (colimit M)) ∧
       Nonempty (colimit (M ⋙ symmetricAlgebraFunctor R) ≅
         (symmetricAlgebraFunctor R).obj (colimit M)) := by
-  letI : PreservesFilteredColimits (forget₂ (AlgCat.{u} R) (ModuleCat.{u} R)) :=
+  let : PreservesFilteredColimits (forget₂ (AlgCat.{u} R) (ModuleCat.{u} R)) :=
     { preserves_filtered_colimits := fun J =>
         { preservesColimit := fun {F} =>
             { preserves := fun {c} hc =>
@@ -722,7 +727,7 @@ theorem algebra_colimit_iso
                       forget₂ RingCat AddCommGrpCat).mapCocone c)
                   exact isColimitOfPreserves
                     (forget₂ (AlgCat R) RingCat ⋙ forget₂ RingCat AddCommGrpCat) hc⟩ } } }
-  letI : PreservesColimitsOfSize (AlgCat.tensorAlgebra R) :=
+  let : PreservesColimitsOfSize (AlgCat.tensorAlgebra R) :=
     (AlgCat.tensorAlgebraAdj R).leftAdjoint_preservesColimits
   constructor
   · exact ⟨(preservesColimitIso
@@ -743,7 +748,7 @@ theorem algebra_colimit_iso
         ModuleCat.homMk (AddCommGrpCat.ofHom f.toAddMonoidHom) (by
           intro r
           ext x
-          simpa [ModuleCat.smul] using (f.map_smul r x).symm)
+          simp [ModuleCat.smul])
       let genCocone : Cocone M :=
         { pt := (forget₂ (AlgCat R) (ModuleCat R)).obj C
           ι :=
@@ -883,7 +888,7 @@ theorem algebra_colimit_iso
         ModuleCat.homMk (AddCommGrpCat.ofHom f.toAddMonoidHom) (by
           intro r
           ext x
-          simpa [ModuleCat.smul] using (f.map_smul r x).symm)
+          simp [ModuleCat.smul])
       let genCocone : Cocone M :=
         { pt := (forget₂ (AlgCat R) (ModuleCat R)).obj C
           ι :=
@@ -950,7 +955,7 @@ theorem algebra_colimit_iso
           _ = (colimit.ι A k).hom (A.map fj yj) *
               (colimit.ι A k).hom (A.map fi xi) :=
             (colimit.ι A k).hom.map_mul _ _
-      letI : CommRing (C : Type u) :=
+      let : CommRing (C : Type u) :=
         { (inferInstance : Ring (C : Type u)) with mul_comm := hcomm }
       let g : symmetricAlgebra R ((colimit M : ModuleCat R) : Type u) →ₐ[R] C :=
         SymmetricAlgebra.lift (R := R) (A := (C : Type u)) hC
@@ -1134,14 +1139,14 @@ theorem algebra_localization_iso
         (Localization.mk 1 (1 : S) ⊗ₜ[R] m) by
           rw [localizedModuleMap_apply]
           exact he m 1]
-      simp [LinearMap.baseChange_tmul, Algebra.TensorProduct.includeRight]
+      simp [LinearMap.baseChange_tmul]
       rw [Localization.mk_one_eq_algebraMap, map_one]
     have h₂ : g.comp f = AlgHom.id (localization S)
         (localizedAlgebra (A := tensorAlgebra R M) S) := by
       apply Algebra.TensorProduct.ext_ring
       apply TensorAlgebra.hom_ext
       ext m
-      simp [f, fR, fgen, g, hmap, Algebra.TensorProduct.includeRight]
+      simp [f, fR, fgen, g, Algebra.TensorProduct.includeRight]
       simpa using LinearMap.congr_fun hmap m
     exact ⟨AlgEquiv.ofAlgHom f g h₁ h₂⟩
   · constructor
@@ -1154,9 +1159,7 @@ theorem algebra_localization_iso
           exteriorAlgebra (localization S) (localizedModule S M) :=
         ExteriorAlgebra.lift R ⟨fgen, by
           intro m
-          simpa [fgen] using
-            (ExteriorAlgebra.ι_sq_zero (R := localization S) (M := localizedModule S M)
-              (localizedModuleMap S M m))⟩
+          simp [fgen]⟩
       let f : localizedAlgebra (A := exteriorAlgebra R M) S →ₐ[localization S]
           exteriorAlgebra (localization S) (localizedModule S M) :=
         AlgHom.liftEquiv R (localization S) (exteriorAlgebra R M)
@@ -1212,14 +1215,14 @@ theorem algebra_localization_iso
           (Localization.mk 1 (1 : S) ⊗ₜ[R] m) by
             rw [localizedModuleMap_apply]
             exact he m 1]
-        simp [LinearMap.baseChange_tmul, Algebra.TensorProduct.includeRight]
+        simp [LinearMap.baseChange_tmul]
         rw [Localization.mk_one_eq_algebraMap, map_one]
       have h₂ : g.comp f = AlgHom.id (localization S)
           (localizedAlgebra (A := exteriorAlgebra R M) S) := by
         apply Algebra.TensorProduct.ext_ring
         apply ExteriorAlgebra.hom_ext
         ext m
-        simp [f, fR, fgen, g, hmap, Algebra.TensorProduct.includeRight]
+        simp [f, fR, fgen, g, Algebra.TensorProduct.includeRight]
         simpa using LinearMap.congr_fun hmap m
       exact ⟨AlgEquiv.ofAlgHom f g h₁ h₂⟩
     · let e := Formalization.Books.Algebra.Unit12.tensorProductLocalizationModuleEquiv S
@@ -1280,14 +1283,14 @@ theorem algebra_localization_iso
           (Localization.mk 1 (1 : S) ⊗ₜ[R] m) by
             rw [localizedModuleMap_apply]
             exact he m 1]
-        simp [LinearMap.baseChange_tmul, Algebra.TensorProduct.includeRight]
+        simp [LinearMap.baseChange_tmul]
         rw [Localization.mk_one_eq_algebraMap, map_one]
       have h₂ : g.comp f = AlgHom.id (localization S)
           (localizedAlgebra (A := symmetricAlgebra R M) S) := by
         apply Algebra.TensorProduct.ext_ring
         apply SymmetricAlgebra.algHom_ext
         ext m
-        simp [f, fR, fgen, g, hmap, Algebra.TensorProduct.includeRight]
+        simp [f, fR, fgen, g, Algebra.TensorProduct.includeRight]
         simpa using LinearMap.congr_fun hmap m
       exact ⟨AlgEquiv.ofAlgHom f g h₁ h₂⟩
 

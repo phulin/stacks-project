@@ -164,7 +164,7 @@ private lemma ideal_map_inf_of_flat
   let hR : (I × J) →ₗ[R] R :=
     { toFun := fun x => (x.1 : R) - (x.2 : R)
       map_add' := by intro x y; simp [sub_eq_add_neg, add_assoc, add_left_comm, add_comm]
-      map_smul' := by intro r x; simp [smul_sub, mul_sub] }
+      map_smul' := by intro r x; simp [mul_sub] }
   let f : (I × J) →ₗ[R] ↥(I ⊔ J) :=
     hR.codRestrict (I ⊔ J) (by
       intro x
@@ -215,7 +215,7 @@ private lemma ideal_map_inf_of_flat
         simpa only [map_add, LinearMap.sub_apply] using congrArg₂ (fun u v => u + v) hx hy
     | tmul s x =>
         simp [hR, lmap, lmapS, pI, pJ, Algebra.smul_def, sub_eq_add_neg,
-          mul_add, add_mul, mul_comm]
+          mul_add, mul_comm]
   have hdi :
       ((lmap I).comp (pI.lTensor S)).comp (d.lTensor S) = lmap (I ⊓ J) := by
     apply LinearMap.ext
@@ -340,16 +340,18 @@ theorem support_base_change
     Module.mem_support_iff_nontrivial_residueField_tensorProduct]
   let f : p.asIdeal.ResidueField →ₐ[R] q.asIdeal.ResidueField :=
     Ideal.ResidueField.mapₐ p.asIdeal q.asIdeal (Algebra.ofId R S) (by rfl)
-  letI : Algebra p.asIdeal.ResidueField q.asIdeal.ResidueField := f.toRingHom.toAlgebra
-  letI : IsScalarTower R p.asIdeal.ResidueField q.asIdeal.ResidueField :=
-    IsScalarTower.of_algebraMap_eq' (by
-      ext r
-      change algebraMap R q.asIdeal.ResidueField r = f (algebraMap R p.asIdeal.ResidueField r)
-      exact (f.commutes r).symm)
   let eS := TensorProduct.AlgebraTensorModule.cancelBaseChange R S
     q.asIdeal.ResidueField q.asIdeal.ResidueField M
-  let eP := TensorProduct.AlgebraTensorModule.cancelBaseChange R p.asIdeal.ResidueField
-    q.asIdeal.ResidueField q.asIdeal.ResidueField M
+  let eP :=
+    letI : Algebra p.asIdeal.ResidueField q.asIdeal.ResidueField := f.toRingHom.toAlgebra
+    letI : IsScalarTower R p.asIdeal.ResidueField q.asIdeal.ResidueField :=
+      IsScalarTower.of_algebraMap_eq' (by
+        ext r
+        change algebraMap R q.asIdeal.ResidueField r = f
+          (algebraMap R p.asIdeal.ResidueField r)
+        exact (f.commutes r).symm)
+    TensorProduct.AlgebraTensorModule.cancelBaseChange R p.asIdeal.ResidueField
+      q.asIdeal.ResidueField q.asIdeal.ResidueField M
   rw [eS.nontrivial_congr, ← eP.nontrivial_congr]
   rw [Module.FaithfullyFlat.nontrivial_tensorProduct_iff_right]
 

@@ -101,6 +101,22 @@ theorem baseChange_tensorProduct_iso
 def TermwiseFlat {R : Type u} [CommRing R] (K : Comp R) : Prop :=
   ∀ n : ℤ, Module.Flat R (K.X n : Type u)
 
+/- The exact sequence used in the proof of the short-exact-sequence
+   permanence result is the image of a short complex under tensoring on the
+   left.  Keeping this as a named construction makes the displayed sequence
+   in the source available to clients of this chapter. -/
+noncomputable def tensorLeftShortComplex
+    {R : Type u} [CommRing R] (L : Comp R)
+    (S : ShortComplex (Comp R)) : ShortComplex (Comp R) :=
+  S.map (tensorLeftComplexFunctor R L)
+
+theorem tensorLeftShortComplex_shortExact
+    {R : Type u} [CommRing R] (L : Comp R)
+    {S : ShortComplex (Comp R)} (hS : S.ShortExact)
+    (hflat : TermwiseFlat S.X₃) :
+    (tensorLeftShortComplex L S).ShortExact := by
+  sorry
+
 /-- Surjectivity of every component of a map of module complexes. -/
 def TermwiseSurjective {R : Type u} [CommRing R]
     {K L : Comp R} (f : K ⟶ L) : Prop :=
@@ -206,6 +222,15 @@ theorem filteredColimit_kFlat
     [IsFilteredOrEmpty J] (F : J ⥤ Comp R) [HasColimit F]
     (hF : ∀ j : J, IsKFlat (F.obj j)) :
     IsKFlat (colimit F) := by
+  sorry
+
+/- The termwise-colimit/tensor interchange displayed in the source. -/
+theorem filteredColimit_tensorProduct_iso
+    {R : Type u} [CommRing R] {J : Type v} [Category.{w} J]
+    [IsFilteredOrEmpty J] (F : J ⥤ Comp R) [HasColimit F]
+    (M : Comp R) :
+    Nonempty (colimit (F ⋙ tensorLeftComplexFunctor R M) ≅
+      tensorProductComplex R M (colimit F)) := by
   sorry
 
 /-- The sequential-colimit instance of filtered-colimit preservation. -/

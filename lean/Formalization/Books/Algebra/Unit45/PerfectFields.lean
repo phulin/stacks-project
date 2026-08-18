@@ -2,6 +2,7 @@ import Formalization.Books.Algebra.Unit44.SeparableExtensionsContinued
 import Mathlib.FieldTheory.Perfect
 import Mathlib.FieldTheory.PerfectClosure
 import Mathlib.FieldTheory.PurelyInseparable.PerfectClosure
+import Mathlib.RingTheory.Nilpotent.Lemmas
 
 /-!
 # Commutative Algebra, Chapter 45: Perfect fields
@@ -17,7 +18,7 @@ namespace Formalization.Books.Algebra.Unit45
 open Set
 open scoped TensorProduct
 
-universe u v
+universe u v w
 
 noncomputable section
 
@@ -34,7 +35,7 @@ open Formalization.Books.Algebra.Unit43
 theorem perfectField_iff_all_field_extensions_separable
     {k : Type u} [Field k] :
     PerfectField k ↔
-      ∀ (K : Type u) [Field K] [Algebra k K],
+      ∀ (K : Type v) [Field K] [Algebra k K],
         IsSeparableExtension k K := by
   sorry
 
@@ -56,7 +57,7 @@ theorem perfectField_iff_charZero_or_prime_root
 /-- The upper extension in a `PurelyInseparableBaseChange` is separable in the
     source's arbitrary-extension sense. -/
 def IsSeparableBaseChange
-    {k K : Type u} [Field k] [Field K] [Algebra k K]
+    {k : Type u} {K : Type v} [Field k] [Field K] [Algebra k K]
     (b : PurelyInseparableBaseChange k K) : Prop :=
   letI := b.baseField
   letI := b.topField
@@ -71,7 +72,7 @@ def IsSeparableBaseChange
 /-- The upper field of a base-change diagram is the compositum of the base
     field and the original extension inside the upper field. -/
 def IsCompositumBaseChange
-    {k K : Type u} [Field k] [Field K] [Algebra k K]
+    {k : Type u} {K : Type v} [Field k] [Field K] [Algebra k K]
     (b : PurelyInseparableBaseChange k K) : Prop :=
   letI := b.baseField
   letI := b.topField
@@ -88,7 +89,7 @@ def IsCompositumBaseChange
    equivalence, rather than by introducing a second reduced-ring definition. -/
 /-- The upper field is the reduced tensor product of the two lower fields. -/
 def IsReducedTensorProductBaseChange
-    {k K : Type u} [Field k] [Field K] [Algebra k K]
+    {k : Type u} {K : Type v} [Field k] [Field K] [Algebra k K]
     (b : PurelyInseparableBaseChange k K) : Prop :=
   letI := b.baseField
   letI := b.topField
@@ -105,7 +106,7 @@ def IsReducedTensorProductBaseChange
     inseparable base-change diagram with separable, compositum, and reduced
     tensor-product normalizations. -/
 theorem exists_make_separable_base_change
-    {k K : Type u} [Field k] [Field K] [Algebra k K]
+    {k : Type u} {K : Type v} [Field k] [Field K] [Algebra k K]
     [Algebra.EssFiniteType k K] :
     ∃ b : PurelyInseparableBaseChange k K,
       IsSeparableBaseChange b ∧
@@ -134,7 +135,7 @@ theorem perfectClosure_eq_bot_of_charZero
 /-- Any two purely inseparable perfect extensions of a field are uniquely
     isomorphic as extensions of that field. -/
 theorem perfectClosure_unique_up_to_unique_algEquiv
-    {k k' k'' : Type u}
+    {k : Type u} {k' : Type v} {k'' : Type w}
     [Field k] [Field k'] [Field k'']
     [Algebra k k'] [Algebra k k'']
     [IsPurelyInseparable k k'] [IsPurelyInseparable k k'']
@@ -203,7 +204,7 @@ theorem pthRootLevel_mono
 /-- The finite root level is uniquely determined, up to a unique isomorphism,
     by its algebraicity and its two `p^n`-power properties. -/
 theorem pthRootLevel_unique_up_to_unique_algEquiv
-    {k L : Type u} [Field k] [Field L] (p : ℕ) [Fact p.Prime] [CharP k p]
+    {k : Type u} {L : Type v} [Field k] [Field L] (p : ℕ) [Fact p.Prime] [CharP k p]
     [Algebra k L] (n : ℕ) (hn : 0 < n) [Algebra.IsAlgebraic k L]
     (hroot : ∀ x : k, ∃ y : L,
       y ^ (p ^ n) = algebraMap k L x)
@@ -253,7 +254,7 @@ theorem perfectClosure_is_union_of_finite_pth_root_levels
 /-- An algebraic purely inseparable extension embeds over the base into the
     canonical perfect closure inside an algebraic closure. -/
 theorem algebraic_purelyInseparable_extension_embeds_in_perfectClosure
-    {k E : Type u} [Field k] [Field E] [Algebra k E]
+    {k : Type u} {E : Type v} [Field k] [Field E] [Algebra k E]
     [Algebra.IsAlgebraic k E] [IsPurelyInseparable k E] :
     ∃ i : E →ₐ[k] AlgebraicClosure k,
       ∀ x : E, i x ∈ perfectClosure k (AlgebraicClosure k) := by
@@ -271,7 +272,7 @@ theorem isGeometricallyReduced_of_perfectField
 /-- The tensor product of two reduced algebras over a perfect field is
     reduced. -/
 theorem isReduced_tensorProduct_of_perfectField
-    {k : Type u} {R S : Type v} [Field k] [CommRing R] [CommRing S]
+    {k : Type u} {R : Type v} {S : Type w} [Field k] [CommRing R] [CommRing S]
     [Algebra k R] [Algebra k S] [PerfectField k]
     (hR : IsReduced R) (hS : IsReduced S) :
     IsReduced (R ⊗[k] S) := by

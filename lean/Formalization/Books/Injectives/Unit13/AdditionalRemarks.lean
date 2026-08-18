@@ -402,6 +402,11 @@ def IsBoundedBelowComplex
     (K : CochainComplex C ℤ) : Prop :=
   ∃ n : ℤ, ∀ m : ℤ, m < n → IsZero (K.X m)
 
+def IsBoundedAboveComplex
+    {C : Type u} [Category.{v} C] [HasZeroMorphisms C]
+    (K : CochainComplex C ℤ) : Prop :=
+  ∃ n : ℤ, ∀ m : ℤ, n < m → IsZero (K.X m)
+
 def IsBoundedAboveDerived
     {C : Type u} [Category.{v} C] [Abelian C]
     [HasDerivedCategory.{w} C] (K : DerivedCategory C) : Prop :=
@@ -487,9 +492,9 @@ def ExtSpectralSequencePagewiseEquivalent
 
 def ExtSpectralSequencePagewiseEquivalentTo
     {D : Type u'} [Category.{v'} D] [Preadditive D] [HasShift D ℤ]
-    {M N₁ N₂ : D} {r₁ r₂ : ℕ} {E₁ E₂ : ℤ → ℤ → AddCommGrpCat}
-    (S : ExtSpectralSequenceData M N₁ r₁ E₁)
-    (T : ExtSpectralSequenceData M N₂ r₂ E₂) : Prop :=
+    {M₁ M₂ N₁ N₂ : D} {r₁ r₂ : ℕ} {E₁ E₂ : ℤ → ℤ → AddCommGrpCat}
+    (S : ExtSpectralSequenceData M₁ N₁ r₁ E₁)
+    (T : ExtSpectralSequenceData M₂ N₂ r₂ E₂) : Prop :=
   ∀ (r : ℕ) (p q : ℤ), Nonempty
     (S.sequence.page r (p, q) ≅ T.sequence.page r (p, q))
 
@@ -567,6 +572,58 @@ theorem ext_spectral_sequence_stupid_filtration
     (hK : IsBoundedBelowComplex K) :
     Nonempty (ExtSpectralSequenceData M (derivedObjectOfComplex K) 1
       (fun p q => ExtGroupObject M (derivedSingleObject (K.X p)) q)) := by
+  sorry
+
+theorem ext_spectral_sequence_truncation_from_E₁
+    {C : Type u} [Category.{v} C] [Abelian C]
+    [IsGrothendieckAbelian.{max u v} C]
+    [HasDerivedCategory.{w} C]
+    (M : CochainComplex C ℤ) (K : DerivedCategory C)
+    (hM : IsBoundedAboveDerived (derivedObjectOfComplex M))
+    (hK : IsBoundedBelowDerived K) :
+    Nonempty (ExtSpectralSequenceData (derivedObjectOfComplex M) K 1
+      (fun p q => ExtGroupObject
+        (canonicalCohomologyPiece M p) K (2 * p + q))) := by
+  sorry
+
+theorem ext_spectral_sequence_truncation_from_E₂
+    {C : Type u} [Category.{v} C] [Abelian C]
+    [IsGrothendieckAbelian.{max u v} C]
+    [HasDerivedCategory.{w} C]
+    (M : CochainComplex C ℤ) (K : DerivedCategory C)
+    (hM : IsBoundedAboveDerived (derivedObjectOfComplex M))
+    (hK : IsBoundedBelowDerived K) :
+    Nonempty (ExtSpectralSequenceData (derivedObjectOfComplex M) K 2
+      (fun i j => ExtGroupObject
+        (canonicalCohomologyPiece M (-j)) K i)) := by
+  sorry
+
+theorem ext_spectral_sequence_truncation_from_independent_of_complex
+    {C : Type u} [Category.{v} C] [Abelian C]
+    [IsGrothendieckAbelian.{max u v} C]
+    [HasDerivedCategory.{w} C]
+    (M₁ M₂ : CochainComplex C ℤ) (K : DerivedCategory C)
+    (h₁₂ : Nonempty (derivedObjectOfComplex M₁ ≅
+      derivedObjectOfComplex M₂)) :
+    ∀ (S₁ : ExtSpectralSequenceData (derivedObjectOfComplex M₁) K 1
+        (fun p q => ExtGroupObject (canonicalCohomologyPiece M₁ p) K
+          (2 * p + q)))
+      (S₂ : ExtSpectralSequenceData (derivedObjectOfComplex M₂) K 1
+        (fun p q => ExtGroupObject (canonicalCohomologyPiece M₂ p) K
+          (2 * p + q))),
+      ExtSpectralSequencePagewiseEquivalentTo S₁ S₂ := by
+  sorry
+
+theorem ext_spectral_sequence_stupid_filtration_from
+    {C : Type u} [Category.{v} C] [Abelian C]
+    [IsGrothendieckAbelian.{max u v} C]
+    [HasDerivedCategory.{w} C]
+    (M : CochainComplex C ℤ) (K : DerivedCategory C)
+    (hM : IsBoundedAboveComplex M)
+    (hK : IsBoundedBelowDerived K) :
+    Nonempty (ExtSpectralSequenceData (derivedObjectOfComplex M) K 1
+      (fun p q => ExtGroupObject
+        (derivedSingleObject (M.X (-p))) K q)) := by
   sorry
 
 /-! ## Filtered and bifiltered representatives of inverse systems -/

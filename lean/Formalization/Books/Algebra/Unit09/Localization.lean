@@ -349,7 +349,97 @@ theorem localizationStage_transition_formula {R : Type u} [CommRing R]
         ∀ (m : M) (e : ℕ),
           φ (localizationStageFraction S f m e) =
             localizationStageFraction S g ((c ^ e) • m) e := by
-  sorry
+  obtain ⟨c, hc⟩ := hfg
+  refine ⟨c, hc, ?_⟩
+  let Sf := Submonoid.powers (f.denominator : R)
+  let Sg := Submonoid.powers (g.denominator : R)
+  let N := localizedModule Sg M
+  have hEnd : ∀ p : Sf, IsUnit (algebraMap R (Module.End R N) (p : R)) := by
+    intro p
+    rcases (Submonoid.mem_powers_iff _ _).mp p.property with ⟨n, hn⟩
+    rw [← hn]
+    have hg : Function.Bijective
+        (fun x : N => ((g.denominator : R) ^ n) • x) := by
+      have h := (Module.End.isUnit_iff _).mp
+        (IsLocalizedModule.map_units (LocalizedModule.mkLinearMap Sg M)
+          ⟨(g.denominator : R) ^ n,
+            (Submonoid.mem_powers_iff _ _).2 ⟨n, rfl⟩⟩)
+      have hfun :
+          (algebraMap R (Module.End R N) ((g.denominator : R) ^ n) : N → N) =
+            (fun x : N => ((g.denominator : R) ^ n) • x) := by
+        funext x
+        rw [Module.algebraMap_end_apply]
+      rw [hfun] at h
+      exact h
+    have hprod_fun :
+        (fun x : N => ((f.denominator : R) ^ n) •
+          ((c ^ n) • x)) =
+          (fun x : N => ((g.denominator : R) ^ n) • x) := by
+      funext x
+      rw [smul_smul, ← mul_pow, ← hc]
+    have hprod : Function.Bijective
+        (fun x : N => ((f.denominator : R) ^ n) •
+          ((c ^ n) • x)) := by
+      rw [hprod_fun]
+      exact hg
+    apply (Module.End.isUnit_iff _).mpr
+    have hscalar :
+        (algebraMap R (Module.End R N) ((f.denominator : R) ^ n) : N → N) =
+          (fun x : N => ((f.denominator : R) ^ n) • x) := by
+      funext x
+      rw [Module.algebraMap_end_apply]
+    rw [hscalar]
+    constructor
+    · intro x y hxy
+      apply hprod.1
+      simpa [smul_smul, mul_comm] using
+        congrArg (fun z : N => (c ^ n) • z) hxy
+    · intro y
+      obtain ⟨z, hz⟩ := hprod.2 y
+      exact ⟨(c ^ n) • z, hz⟩
+  let φ : localizationStage S M f →ₗ[R] localizationStage S M g :=
+    LocalizedModule.lift Sf (LocalizedModule.mkLinearMap Sg M) hEnd
+  refine ⟨φ, ?_⟩
+  intro m e
+  let sf : Sf :=
+    ⟨(f.denominator : R) ^ e,
+      (Submonoid.mem_powers_iff _ _).2 ⟨e, rfl⟩⟩
+  let sg : Sg :=
+    ⟨(g.denominator : R) ^ e,
+      (Submonoid.mem_powers_iff _ _).2 ⟨e, rfl⟩⟩
+  change φ (LocalizedModule.mk m sf) =
+    LocalizedModule.mk ((c ^ e) • m) sg
+  have hinj : Function.Injective
+      (fun x : N => ((f.denominator : R) ^ e) • x) :=
+    (Module.End.isUnit_iff _).mp (hEnd sf) |>.1
+  apply hinj
+  calc
+    ((f.denominator : R) ^ e) • φ (LocalizedModule.mk m sf) =
+        φ (((f.denominator : R) ^ e) • LocalizedModule.mk m sf) := by
+          rw [φ.map_smul]
+    _ = φ (LocalizedModule.mk m 1) := by
+      congr 1
+      rw [LocalizedModule.smul'_mk]
+      exact LocalizedModule.mk_cancel sf m
+    _ = LocalizedModule.mk m 1 := by
+      simp [φ]
+    _ = ((f.denominator : R) ^ e) •
+        LocalizedModule.mk ((c ^ e) • m) sg := by
+      symm
+      calc
+        ((f.denominator : R) ^ e) •
+            LocalizedModule.mk ((c ^ e) • m) sg =
+            LocalizedModule.mk
+              (((f.denominator : R) ^ e) • ((c ^ e) • m)) sg := by
+                rw [LocalizedModule.smul'_mk]
+        _ = LocalizedModule.mk (((g.denominator : R) ^ e) • m) sg := by
+          congr 1
+          rw [smul_smul, ← mul_pow, ← hc]
+        _ = ((g.denominator : R) ^ e) • LocalizedModule.mk m sg := by
+          rw [LocalizedModule.smul'_mk]
+        _ = LocalizedModule.mk m 1 := by
+          rw [LocalizedModule.smul'_mk]
+          exact LocalizedModule.mk_cancel sg m
 
 noncomputable def localizationStageTransitionCoefficient {R : Type u} [CommRing R]
     (S : Submonoid R) {M : Type v} [AddCommGroup M] [Module R M]
@@ -377,9 +467,99 @@ noncomputable def localizationStageFunctor {R : Type u} [CommRing R]
   map := fun {f g} h =>
     ModuleCat.ofHom (localizationStageTransitionMap S f g (leOfHom h))
   map_id := by
-    sorry
+    intro X
+    apply ModuleCat.hom_ext
+    ext x
+    induction x using LocalizedModule.induction_on with
+    | _ m s =>
+      rcases (Submonoid.mem_powers_iff _ _).mp s.property with ⟨e, he⟩
+      have hs : s = ⟨(X.denominator : R) ^ e,
+          (Submonoid.mem_powers_iff _ _).2 ⟨e, rfl⟩⟩ := Subtype.ext he.symm
+      rw [hs]
+      change localizationStageTransitionMap S X X le_rfl
+          (localizationStageFraction S X m e) =
+        localizationStageFraction S X m e
+      rw [localizationStageTransitionMap_formula
+        (S := S) (f := X) (g := X) (hfg := le_rfl)]
+      have hc :=
+        (localizationStage_transition_formula (M := M) S X X le_rfl).choose_spec.1
+      have hc' :
+          (X.denominator : R) *
+              localizationStageTransitionCoefficient (M := M) S X X le_rfl =
+            (X.denominator : R) := hc.symm
+      apply LocalizedModule.mk_eq.mpr
+      refine ⟨1, ?_⟩
+      simp only [one_smul, Submonoid.smul_def]
+      rw [smul_smul, ← mul_pow, hc']
   map_comp := by
-    sorry
+    intro X Y Z f g
+    apply ModuleCat.hom_ext
+    ext x
+    induction x using LocalizedModule.induction_on with
+    | _ m s =>
+      rcases (Submonoid.mem_powers_iff _ _).mp s.property with ⟨e, he⟩
+      have hs : s = ⟨(X.denominator : R) ^ e,
+          (Submonoid.mem_powers_iff _ _).2 ⟨e, rfl⟩⟩ := Subtype.ext he.symm
+      rw [hs]
+      change localizationStageTransitionMap S X Z (leOfHom (f ≫ g))
+          (localizationStageFraction S X m e) =
+        localizationStageTransitionMap S Y Z (leOfHom g)
+          (localizationStageTransitionMap S X Y (leOfHom f)
+            (localizationStageFraction S X m e))
+      rw [localizationStageTransitionMap_formula
+          (S := S) (f := X) (g := Z) (hfg := leOfHom (f ≫ g)),
+        localizationStageTransitionMap_formula
+          (S := S) (f := X) (g := Y) (hfg := leOfHom f),
+        localizationStageTransitionMap_formula
+          (S := S) (f := Y) (g := Z) (hfg := leOfHom g)]
+      let a : R := localizationStageTransitionCoefficient (M := M) S X Y (leOfHom f)
+      let b : R := localizationStageTransitionCoefficient (M := M) S Y Z (leOfHom g)
+      let c : R := localizationStageTransitionCoefficient (M := M) S X Z (leOfHom (f ≫ g))
+      change localizationStageFraction S Z (c ^ e • m) e =
+        localizationStageFraction S Z (b ^ e • a ^ e • m) e
+      have hcXY : (Y.denominator : R) = (X.denominator : R) * a := by
+        dsimp [a]
+        exact (localizationStage_transition_formula (M := M) S X Y
+          (leOfHom f)).choose_spec.1
+      have hcYZ : (Z.denominator : R) = (Y.denominator : R) * b := by
+        dsimp [b]
+        exact (localizationStage_transition_formula (M := M) S Y Z
+          (leOfHom g)).choose_spec.1
+      have hcXZ : (Z.denominator : R) = (X.denominator : R) * c := by
+        dsimp [c]
+        exact (localizationStage_transition_formula (M := M) S X Z
+          (leOfHom (f ≫ g))).choose_spec.1
+      have hbase : (X.denominator : R) * c = (X.denominator : R) * (a * b) := by
+        calc
+          (X.denominator : R) * c = (Z.denominator : R) := hcXZ.symm
+          _ = (Y.denominator : R) * b := hcYZ
+          _ = ((X.denominator : R) * a) * b := by rw [hcXY]
+          _ = (X.denominator : R) * (a * b) := by rw [mul_assoc]
+      have hrel : (Z.denominator : R) * c = (Z.denominator : R) * (a * b) := by
+        calc
+          (Z.denominator : R) * c = ((X.denominator : R) * c) * c := by rw [hcXZ]
+          _ = ((X.denominator : R) * (a * b)) * c := by rw [hbase]
+          _ = ((X.denominator : R) * c) * (a * b) := by ac_rfl
+          _ = (Z.denominator : R) * (a * b) := by rw [hcXZ.symm]
+      have hpow : (Z.denominator : R) ^ e * c ^ e =
+          (Z.denominator : R) ^ e * (a * b) ^ e := by
+        calc
+          (Z.denominator : R) ^ e * c ^ e =
+              ((Z.denominator : R) * c) ^ e := by rw [mul_pow]
+          _ = ((Z.denominator : R) * (a * b)) ^ e := by rw [hrel]
+          _ = (Z.denominator : R) ^ e * (a * b) ^ e := by rw [mul_pow]
+      have hscalar : (Z.denominator : R) ^ e * c ^ e =
+          ((Z.denominator : R) ^ e * b ^ e) * a ^ e := by
+        calc
+          (Z.denominator : R) ^ e * c ^ e =
+              (Z.denominator : R) ^ e * (a * b) ^ e := hpow
+          _ = (Z.denominator : R) ^ e * (a ^ e * b ^ e) := by rw [mul_pow]
+          _ = ((Z.denominator : R) ^ e * b ^ e) * a ^ e := by ac_rfl
+      apply LocalizedModule.mk_eq.mpr
+      refine ⟨1, ?_⟩
+      simp only [one_smul, Submonoid.smul_def]
+      simp only [smul_smul]
+      rw [hscalar, mul_assoc]
 
 theorem localizedModule_is_colimit_of_stages {R : Type u} [CommRing R]
     (S : Submonoid R) (M : Type v) [AddCommGroup M] [Module R M] :
@@ -700,6 +880,114 @@ theorem localizedModule_iterated_equiv {R : Type u} [CommRing R]
   letI : IsLocalizedModule P f := hSource
   exact ⟨IsLocalizedModule.linearEquiv P f (LocalizedModule.mkLinearMap P M)⟩
 
+private theorem localizedModule_iterated_isLocalized {R : Type u} [CommRing R]
+    (S S' : Submonoid R) {M : Type v} [AddCommGroup M] [Module R M] :
+    IsLocalizedModule (localizationProduct S S')
+      ((localizedModuleMap S (localizedModule S' M)).comp
+        (localizedModuleMap S' M)) := by
+  let inner := localizedModule S' M
+  let outer := localizedModule S inner
+  let P := localizationProduct S S'
+  let f : M →ₗ[R] outer :=
+    (localizedModuleMap S inner).comp (localizedModuleMap S' M)
+  have hS' : ∀ s' : S', Function.Bijective
+      (fun x : outer => (s' : R) • x) := by
+    intro s'
+    let q : inner →ₗ[R] inner :=
+      algebraMap R (Module.End R inner) (s' : R)
+    have hq : Function.Bijective q := by
+      exact (Module.End.isUnit_iff _).mp
+        (IsLocalizedModule.map_units (LocalizedModule.mkLinearMap S' M) s')
+    have hmap_eq :
+        (LocalizedModule.map S q).restrictScalars R =
+          algebraMap R (Module.End R outer) (s' : R) := by
+      ext z
+      induction z using LocalizedModule.induction_on with
+      | _ m s =>
+        change (LocalizedModule.map S q) (LocalizedModule.mk m s) =
+          (algebraMap R (Module.End R outer) (s' : R))
+            (LocalizedModule.mk m s)
+        rw [LocalizedModule.map_mk]
+        change LocalizedModule.mk ((s' : R) • m) s =
+          (s' : R) • LocalizedModule.mk m s
+        rw [LocalizedModule.smul'_mk]
+    have hmap_bij : Function.Bijective
+        ((LocalizedModule.map S q).restrictScalars R) := by
+      exact ⟨LocalizedModule.map_injective S q hq.1,
+        LocalizedModule.map_surjective S q hq.2⟩
+    rw [hmap_eq] at hmap_bij
+    have hscalar :
+        (fun x : outer => (s' : R) • x) =
+          (algebraMap R (Module.End R outer) (s' : R)) := by
+      funext x
+      simp [Module.algebraMap_end_apply]
+    rw [hscalar]
+    exact hmap_bij
+  have hEnd : ∀ p : P, IsUnit (algebraMap R (Module.End R outer) (p : R)) := by
+    intro p
+    rcases Submonoid.mem_sup.mp p.property with ⟨s, hs, s', hs', hp⟩
+    rw [← hp]
+    apply (Module.End.isUnit_iff _).mpr
+    have hs_bij : Function.Bijective (fun x : outer => (s : R) • x) := by
+      have hs_bij' := (Module.End.isUnit_iff _).mp
+        (IsLocalizedModule.map_units (LocalizedModule.mkLinearMap S inner) ⟨s, hs⟩)
+      have hs_fun :
+          (algebraMap R (Module.End R outer) (s : R) : outer → outer) =
+            (fun x : outer => (s : R) • x) := by
+        funext x
+        simp [outer, Module.algebraMap_end_apply]
+      rw [hs_fun] at hs_bij'
+      exact hs_bij'
+    have hs'_bij : Function.Bijective (fun x : outer => (s' : R) • x) :=
+      hS' ⟨s', hs'⟩
+    have hfun :
+        (algebraMap R (Module.End R outer) (s * s') : outer → outer) =
+          (fun x : outer => (s : R) • ((s' : R) • x)) := by
+      funext x
+      simp [Module.algebraMap_end_apply, smul_smul, mul_comm]
+    rw [hfun]
+    exact hs_bij.comp hs'_bij
+  have hSource : IsLocalizedModule P f := by
+    refine { map_units := hEnd, surj := ?_, exists_of_eq := ?_ }
+    · intro y
+      induction y using LocalizedModule.induction_on with
+      | _ z s =>
+        induction z using LocalizedModule.induction_on with
+        | _ m s' =>
+          refine ⟨⟨m, localizationProductElement S S' s s'⟩, ?_⟩
+          change ((s : R) * (s' : R)) •
+              LocalizedModule.mk (LocalizedModule.mk m s') s =
+            LocalizedModule.mk (LocalizedModule.mk m 1) 1
+          calc
+            ((s : R) * (s' : R)) •
+                LocalizedModule.mk (LocalizedModule.mk m s') s =
+                LocalizedModule.mk
+                  (((s : R) * (s' : R)) • LocalizedModule.mk m s') s := by
+              rw [LocalizedModule.smul'_mk]
+            _ =
+                LocalizedModule.mk
+                  ((s : R) • ((s' : R) • LocalizedModule.mk m s')) s := by
+              congr 1
+              rw [mul_smul]
+            _ = LocalizedModule.mk ((s' : R) • LocalizedModule.mk m s') 1 := by
+              exact LocalizedModule.mk_cancel s ((s' : R) • LocalizedModule.mk m s')
+            _ = LocalizedModule.mk (LocalizedModule.mk m 1) 1 := by
+              rw [LocalizedModule.smul'_mk (S := S')]
+              congr 1
+              exact LocalizedModule.mk_cancel s' m
+    · intro m₁ m₂ h
+      change LocalizedModule.mk (LocalizedModule.mk m₁ 1) 1 =
+        LocalizedModule.mk (LocalizedModule.mk m₂ 1) 1 at h
+      obtain ⟨s, hs⟩ := LocalizedModule.mk_eq.mp h
+      have hinner : LocalizedModule.mk (S := S') ((s : R) • m₁) (1 : S') =
+          LocalizedModule.mk (S := S') ((s : R) • m₂) (1 : S') := by
+        simpa [Submonoid.smul_def, ← LocalizedModule.smul'_mk] using hs
+      obtain ⟨s', hs'⟩ := LocalizedModule.mk_eq.mp hinner
+      refine ⟨localizationProductElement S S' s s', ?_⟩
+      simpa [localizationProductElement, Submonoid.smul_def, smul_smul,
+        mul_comm, mul_left_comm, mul_assoc] using hs'
+  exact hSource
+
 theorem localizedModule_iterated_equiv_formula {R : Type u} [CommRing R]
     (S S' : Submonoid R) {M : Type v} [AddCommGroup M] [Module R M] :
     ∃ e : localizedModule S (localizedModule S' M) ≃ₗ[R]
@@ -714,7 +1002,64 @@ theorem localizedModule_iterated_equiv_formula {R : Type u} [CommRing R]
             (localizationProductElement S S' s s')) =
           localizedModuleFraction S
             (localizedModuleFraction S' m s') s) := by
-  sorry
+  let P := localizationProduct S S'
+  let f : M →ₗ[R] localizedModule S (localizedModule S' M) :=
+    (localizedModuleMap S (localizedModule S' M)).comp
+      (localizedModuleMap S' M)
+  let g : M →ₗ[R] localizedModule P M := LocalizedModule.mkLinearMap P M
+  letI : IsLocalizedModule P f := localizedModule_iterated_isLocalized S S'
+  let e : localizedModule S (localizedModule S' M) ≃ₗ[R]
+      localizedModule P M := IsLocalizedModule.linearEquiv P f g
+  have he_mk : ∀ (m : M) (p : P),
+      e (IsLocalizedModule.mk' f m p) =
+        IsLocalizedModule.mk' g m p := by
+    intro m p
+    symm
+    apply (IsLocalizedModule.mk'_eq_iff (f := g)).mpr
+    have hsource : f m = (p : R) • IsLocalizedModule.mk' f m p :=
+      (IsLocalizedModule.mk'_eq_iff (f := f)).mp rfl
+    rw [← IsLocalizedModule.linearEquiv_apply P f g m]
+    change e (f m) = (p : R) • e (IsLocalizedModule.mk' f m p)
+    rw [← e.map_smul, hsource]
+  have hfrac : ∀ (m : M) (s : S) (s' : S'),
+      localizedModuleFraction S (localizedModuleFraction S' m s') s =
+        IsLocalizedModule.mk' f m (localizationProductElement S S' s s') := by
+    intro m s s'
+    symm
+    apply (IsLocalizedModule.mk'_eq_iff (f := f)).mpr
+    change LocalizedModule.mk (LocalizedModule.mk m 1) 1 =
+      ((s : R) * (s' : R)) •
+        LocalizedModule.mk (LocalizedModule.mk m s') s
+    symm
+    calc
+      ((s : R) * (s' : R)) •
+          LocalizedModule.mk (LocalizedModule.mk m s') s =
+          LocalizedModule.mk
+            (((s : R) * (s' : R)) • LocalizedModule.mk m s') s := by
+        rw [LocalizedModule.smul'_mk]
+      _ = LocalizedModule.mk
+          ((s : R) • ((s' : R) • LocalizedModule.mk m s')) s := by
+        congr 1
+        rw [mul_smul]
+      _ = LocalizedModule.mk ((s' : R) • LocalizedModule.mk m s') 1 := by
+        exact LocalizedModule.mk_cancel s ((s' : R) • LocalizedModule.mk m s')
+      _ = LocalizedModule.mk (LocalizedModule.mk m 1) 1 := by
+        rw [LocalizedModule.smul'_mk (S := S')]
+        congr 1
+        exact LocalizedModule.mk_cancel s' m
+  have hforward : ∀ (m : M) (s : S) (s' : S'),
+      e (localizedModuleFraction S
+          (localizedModuleFraction S' m s') s) =
+        localizedModuleFraction P m (localizationProductElement S S' s s') := by
+    intro m s s'
+    rw [hfrac, he_mk]
+    exact (IsLocalizedModule.mk_eq_mk' (S := P)
+      (localizationProductElement S S' s s') m).symm
+  refine ⟨e, hforward, ?_⟩
+  intro m s s'
+  apply e.injective
+  rw [e.apply_symm_apply]
+  exact (hforward m s s').symm
 
 /-! ## Functoriality and exactness -/
 

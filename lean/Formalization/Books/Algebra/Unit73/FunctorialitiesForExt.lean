@@ -1,7 +1,11 @@
 import Formalization.Books.Algebra.Unit71.ExtGroups
 import Mathlib.Algebra.Category.ModuleCat.ChangeOfRings
 import Mathlib.Algebra.Category.ModuleCat.ChangeOfRingsExact
+import Mathlib.Algebra.Category.ModuleCat.Descent
 import Mathlib.Algebra.Homology.DerivedCategory.Ext.Map
+import Mathlib.CategoryTheory.Functor.Derived.Adjunction
+import Mathlib.CategoryTheory.Functor.Derived.PointwiseLeftDerived
+import Mathlib.CategoryTheory.Functor.Derived.PointwiseRightDerived
 import Mathlib.RingTheory.RingHom.Flat
 
 /-!
@@ -235,7 +239,86 @@ structure ExtChangeOfRingsData {R R' : Type u} [CommRing R] [CommRing R']
 source item. -/
 theorem exists_ext_change_of_rings_data {R R' : Type u} [CommRing R] [CommRing R']
     (f : R →+* R') : Nonempty (ExtChangeOfRingsData f) := by
-  sorry
+  let target : ∀ (M : ModuleCat R) (N' : ModuleCat R') (i : ℕ),
+      TargetExtModule f M N' i :=
+    fun M N' i => Classical.choice (exists_target_ext_module f M N' i)
+  refine ⟨{
+    target := target
+    map := fun M N' i => by
+      let T := target M N' i
+      letI : Module R' (restrictedExt f M N' i) := T.module
+      exact ModuleCat.ofHom {
+        toFun := changeOfRingsExtMap f M N' i
+        map_add' := by
+          intro x y
+          simp [changeOfRingsExtMap, CategoryTheory.Abelian.Ext.comp_add]
+        map_smul' := by
+          intro s x
+          change
+            (CategoryTheory.Abelian.Ext.mk₀
+              (ModuleCat.ExtendRestrictScalarsAdj.Unit.map f)).comp
+                ((s • x).mapExactFunctor (ModuleCat.restrictScalars f))
+              (Nat.zero_add i) = _
+          rw [CategoryTheory.Abelian.Ext.smul_eq_comp_mk₀]
+          rw [CategoryTheory.Abelian.Ext.mapExactFunctor_comp]
+          rw [← CategoryTheory.Abelian.Ext.comp_assoc_of_third_deg_zero]
+          rw [CategoryTheory.Abelian.Ext.mapExactFunctor_mk₀]
+          exact (T.smul_eq_postcomp s _).symm }
+    map_eq := by
+      intro M N' i
+      dsimp
+      intro x
+      change changeOfRingsExtMap f M N' i x = _
+      rfl
+    natural_in_first := by
+      intro M₁ M₂ φ N' i
+      dsimp
+      intro x
+      have hunit := (ModuleCat.ExtendRestrictScalarsAdj.unit f).naturality φ
+      change φ ≫ (ModuleCat.ExtendRestrictScalarsAdj.unit f).app M₂ =
+        (ModuleCat.ExtendRestrictScalarsAdj.unit f).app M₁ ≫
+          (ModuleCat.restrictScalars f).map ((ModuleCat.extendScalars f).map φ) at hunit
+      change
+        (CategoryTheory.Abelian.Ext.mk₀
+          (ModuleCat.ExtendRestrictScalarsAdj.Unit.map f)).comp
+            (((CategoryTheory.Abelian.Ext.mk₀
+              ((ModuleCat.extendScalars f).map φ)).comp x
+                (Nat.zero_add i)).mapExactFunctor
+              (ModuleCat.restrictScalars f)) (Nat.zero_add i) =
+          (CategoryTheory.Abelian.Ext.mk₀ φ).comp
+            ((CategoryTheory.Abelian.Ext.mk₀
+              (ModuleCat.ExtendRestrictScalarsAdj.Unit.map f)).comp
+                (x.mapExactFunctor (ModuleCat.restrictScalars f))
+                (Nat.zero_add i)) (Nat.zero_add i)
+      rw [CategoryTheory.Abelian.Ext.mapExactFunctor_comp,
+        CategoryTheory.Abelian.Ext.mapExactFunctor_mk₀]
+      rw [← CategoryTheory.Abelian.Ext.comp_assoc_of_second_deg_zero]
+      rw [CategoryTheory.Abelian.Ext.mk₀_comp_mk₀]
+      change φ ≫ ModuleCat.ExtendRestrictScalarsAdj.Unit.map f =
+        ModuleCat.ExtendRestrictScalarsAdj.Unit.map f ≫
+          (ModuleCat.restrictScalars f).map ((ModuleCat.extendScalars f).map φ) at hunit
+      rw [← hunit]
+      rw [← CategoryTheory.Abelian.Ext.comp_assoc_of_second_deg_zero]
+      rw [CategoryTheory.Abelian.Ext.mk₀_comp_mk₀]
+    natural_in_second := by
+      intro M N'₁ N'₂ ψ i
+      dsimp
+      intro x
+      change
+        (CategoryTheory.Abelian.Ext.mk₀
+          (ModuleCat.ExtendRestrictScalarsAdj.Unit.map f)).comp
+            ((x.comp (CategoryTheory.Abelian.Ext.mk₀ ψ)
+              (Nat.add_zero i)).mapExactFunctor
+              (ModuleCat.restrictScalars f)) (Nat.zero_add i) =
+          ((CategoryTheory.Abelian.Ext.mk₀
+              (ModuleCat.ExtendRestrictScalarsAdj.Unit.map f)).comp
+                (x.mapExactFunctor (ModuleCat.restrictScalars f))
+                (Nat.zero_add i)).comp
+            (CategoryTheory.Abelian.Ext.mk₀
+              ((ModuleCat.restrictScalars f).map ψ)) (Nat.add_zero i)
+      rw [CategoryTheory.Abelian.Ext.mapExactFunctor_comp,
+        CategoryTheory.Abelian.Ext.mapExactFunctor_mk₀]
+      rw [← CategoryTheory.Abelian.Ext.comp_assoc_of_third_deg_zero] }⟩
 
 /-- The chosen canonical change-of-rings family for the first source item. -/
 noncomputable def canonicalExtChangeOfRingsData {R R' : Type u} [CommRing R] [CommRing R']
@@ -267,9 +350,33 @@ theorem canonicalExtChangeOfRingsMap_zero {R R' : Type u} [CommRing R] [CommRing
     Formalization.Books.Algebra.Unit71.extZeroLinearEquiv M (restrictedModule f N')
         (canonicalExtChangeOfRingsMap f M N' 0 x) =
       (ModuleCat.extendRestrictScalarsAdj f).homEquiv _ _
-        (Formalization.Books.Algebra.Unit71.extZeroLinearEquiv
+          (Formalization.Books.Algebra.Unit71.extZeroLinearEquiv
           (extendedModule f M) N' x) := by
-  sorry
+  dsimp [canonicalExtChangeOfRingsMap]
+  let D := canonicalExtChangeOfRingsData f
+  let T := D.target M N' 0
+  let _ : Module R' (restrictedExt f M N' 0) := T.module
+  change Formalization.Books.Algebra.Unit71.extZeroLinearEquiv M
+      (restrictedModule f N') ((D.map M N' 0) x) = _
+  rw [D.map_eq M N' 0 x]
+  have hmap : x.mapExactFunctor (ModuleCat.restrictScalars f) =
+      CategoryTheory.Abelian.Ext.mk₀
+        ((ModuleCat.restrictScalars f).map
+          (Formalization.Books.Algebra.Unit71.extZeroLinearEquiv
+            (extendedModule f M) N' x)) := by
+    rw [← CategoryTheory.Abelian.Ext.mk₀_linearEquiv₀_apply (R := R') x]
+    rw [CategoryTheory.Abelian.Ext.mapExactFunctor_mk₀]
+    simp [Formalization.Books.Algebra.Unit71.extZeroLinearEquiv]
+  simp [changeOfRingsExtMap, Formalization.Books.Algebra.Unit71.extZeroLinearEquiv,
+    hmap]
+  change CategoryTheory.Abelian.Ext.homEquiv₀
+      (CategoryTheory.Abelian.Ext.mk₀ _) = _
+  change (CategoryTheory.Abelian.Ext.homEquiv₀
+      (X := M) (Y := restrictedModule f N')).toFun
+        ((CategoryTheory.Abelian.Ext.homEquiv₀
+          (X := M) (Y := restrictedModule f N')).invFun _) = _
+  exact (CategoryTheory.Abelian.Ext.homEquiv₀
+    (X := M) (Y := restrictedModule f N')).right_inv _
 
 /-! ## The map obtained from the unit of extension and restriction of scalars -/
 
@@ -334,6 +441,47 @@ theorem flat_base_change_ext {R R' : Type u} [CommRing R] [CommRing R']
     let T := D.target M N' i
     letI : Module R' (restrictedExt f M N' i) := T.module
     IsIso (D.map M N' i) := by
-  sorry
+  dsimp
+  let D := canonicalExtChangeOfRingsData f
+  let T := D.target M N' i
+  let _ : Module R' (restrictedExt f M N' i) := T.module
+  change IsIso (D.map M N' i)
+  rw [ConcreteCategory.isIso_iff_bijective]
+  change Function.Bijective (fun x => D.map M N' i x)
+  letI : Algebra R R' := f.toAlgebra
+  letI : (ModuleCat.extendScalars f).Additive := by
+    constructor
+    intro X Y g h
+    change
+      ModuleCat.ofHom (LinearMap.baseChange R' (g.hom + h.hom)) =
+        ModuleCat.ofHom (LinearMap.baseChange R' g.hom) +
+          ModuleCat.ofHom (LinearMap.baseChange R' h.hom)
+    rw [LinearMap.baseChange_add]
+    rfl
+  letI : Limits.PreservesFiniteLimits (ModuleCat.extendScalars f) :=
+    ModuleCat.preservesFiniteLimits_extendScalars_of_flat hf
+  let inv : restrictedExt f M N' i → extendedExt f M N' i := fun x =>
+    (x.mapExactFunctor (ModuleCat.extendScalars f)).comp
+      (CategoryTheory.Abelian.Ext.mk₀
+        (ModuleCat.ExtendRestrictScalarsAdj.Counit.map f)) (Nat.add_zero i)
+  have hleft (x : extendedExt f M N' i) :
+      inv ((ConcreteCategory.hom (D.map M N' i)) x) = x := by
+    rw [D.map_eq M N' i x]
+    dsimp [inv, changeOfRingsExtMap]
+    rw [CategoryTheory.Abelian.Ext.mapExactFunctor_comp,
+      CategoryTheory.Abelian.Ext.mapExactFunctor_mk₀]
+    sorry
+  have hright (x : restrictedExt f M N' i) :
+      (ConcreteCategory.hom (D.map M N' i)) (inv x) = x := by
+    rw [D.map_eq M N' i]
+    dsimp [inv, changeOfRingsExtMap]
+    sorry
+  constructor
+  · intro x y h
+    have := congrArg inv h
+    rw [hleft x, hleft y] at this
+    exact this
+  · intro x
+    exact ⟨inv x, hright x⟩
 
 end Formalization.Books.Algebra.Unit73

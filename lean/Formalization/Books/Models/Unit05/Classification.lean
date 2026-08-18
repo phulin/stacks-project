@@ -517,7 +517,16 @@ theorem four_singular_ratio_equation (D : LocalNumericalData 4)
     16 + edgeRatio D 0 1 * edgeRatio D 2 3 + edgeRatio D 1 2 * edgeRatio D 0 3 =
       4 * edgeRatio D 0 1 + 4 * edgeRatio D 1 2 + 4 * edgeRatio D 2 3 +
         4 * edgeRatio D 0 3 + 2 * fourProductRatio D := by
-  sorry
+  rw [determinant_four_by_four_formula D hdiag hsymm _hzero] at hdet
+  unfold edgeRatio fourProductRatio
+  have hw0 : (D.w 0 : ℚ) ≠ 0 := by exact_mod_cast (ne_of_gt (hw 0))
+  have hw1 : (D.w 1 : ℚ) ≠ 0 := by exact_mod_cast (ne_of_gt (hw 1))
+  have hw2 : (D.w 2 : ℚ) ≠ 0 := by exact_mod_cast (ne_of_gt (hw 2))
+  have hw3 : (D.w 3 : ℚ) ≠ 0 := by exact_mod_cast (ne_of_gt (hw 3))
+  field_simp
+  norm_cast
+  ring_nf at hdet
+  linarith only [hdet]
 
 theorem four_product_ratio_square (D : LocalNumericalData 4)
     (hw : ∀ i, 0 < D.w i) :
@@ -541,7 +550,30 @@ theorem five_singular_ratio_equation (D : LocalNumericalData 5)
         edgeRatio D 0 4 * edgeRatio D 2 3 =
       4 * edgeRatio D 0 1 + 4 * edgeRatio D 1 2 + 4 * edgeRatio D 2 3 +
         4 * edgeRatio D 3 4 + 4 * edgeRatio D 0 4 + fiveProductRatio D := by
-  sorry
+  rcases _hzero with ⟨h02, h03, h13, h14, h24⟩
+  have h10 : D.a 1 0 = D.a 0 1 := hsymm 1 0
+  have h21 : D.a 2 1 = D.a 1 2 := hsymm 2 1
+  have h32 : D.a 3 2 = D.a 2 3 := hsymm 3 2
+  have h43 : D.a 4 3 = D.a 3 4 := hsymm 4 3
+  have h40 : D.a 4 0 = D.a 0 4 := hsymm 4 0
+  have h20 : D.a 2 0 = 0 := (hsymm 2 0).trans h02
+  have h30 : D.a 3 0 = 0 := (hsymm 3 0).trans h03
+  have h31 : D.a 3 1 = 0 := (hsymm 3 1).trans h13
+  have h41 : D.a 4 1 = 0 := (hsymm 4 1).trans h14
+  have h42 : D.a 4 2 = 0 := (hsymm 4 2).trans h24
+  simp [Matrix.det_succ_row_zero, Fin.succAbove, Fin.sum_univ_succ,
+    hdiag, h02, h03, h13, h14, h24, h10, h21, h32, h43, h40, h20, h30, h31,
+    h41, h42] at hdet
+  unfold edgeRatio fiveProductRatio
+  have hw0 : (D.w 0 : ℚ) ≠ 0 := by exact_mod_cast (ne_of_gt (hw 0))
+  have hw1 : (D.w 1 : ℚ) ≠ 0 := by exact_mod_cast (ne_of_gt (hw 1))
+  have hw2 : (D.w 2 : ℚ) ≠ 0 := by exact_mod_cast (ne_of_gt (hw 2))
+  have hw3 : (D.w 3 : ℚ) ≠ 0 := by exact_mod_cast (ne_of_gt (hw 3))
+  have hw4 : (D.w 4 : ℚ) ≠ 0 := by exact_mod_cast (ne_of_gt (hw 4))
+  field_simp
+  norm_cast
+  ring_nf at hdet
+  linarith only [hdet]
 
 theorem five_product_ratio_square (D : LocalNumericalData 5)
     (hw : ∀ i, 0 < D.w i) :

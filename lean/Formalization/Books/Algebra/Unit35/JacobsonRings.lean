@@ -571,23 +571,96 @@ theorem productOfFields_localization_identities
 theorem productOfFields_isJacobson
     (A : Type u) [Infinite A] (k : A → Type v) [∀ a, Field (k a)] :
     IsJacobsonRing (ProductOfFields A k) := by
-  sorry
+  apply isJacobsonRing_of_localizationAwayIsQuotient
+  intro f
+  obtain ⟨u, e, hu, he, hfe, hbasic, haway, hquot, hsurj⟩ :=
+    productOfFields_localization_identities A k f
+  exact hsurj
+
+private theorem localRing_with_two_prime_ideals_not_isJacobson_aux
+    {R : Type u} [CommRing R] [IsLocalRing R]
+    (h : ∃ p q : PrimeSpectrum R, p ≠ q) :
+    ¬ IsJacobsonRing R := by
+  intro hJ
+  rcases h with ⟨p, q, hpq⟩
+  have hpmax : p.asIdeal = IsLocalRing.maximalIdeal R := by
+    have hpJ : p.asIdeal.jacobson = p.asIdeal :=
+      IsJacobsonRing.out hJ p.2.isRadical
+    exact hpJ.symm.trans
+      (IsLocalRing.jacobson_eq_maximalIdeal p.asIdeal p.2.ne_top)
+  have hqmax : q.asIdeal = IsLocalRing.maximalIdeal R := by
+    have hqJ : q.asIdeal.jacobson = q.asIdeal :=
+      IsJacobsonRing.out hJ q.2.isRadical
+    exact hqJ.symm.trans
+      (IsLocalRing.jacobson_eq_maximalIdeal q.asIdeal q.2.ne_top)
+  apply hpq
+  apply PrimeSpectrum.ext
+  rw [hpmax, hqmax]
 
 theorem finite_maximal_domain_isJacobson_iff_isField
     {R : Type u} [CommRing R] [IsDomain R] [Finite (MaximalSpectrum R)] :
     IsJacobsonRing R ↔ IsField R := by
-  sorry
+  classical
+  constructor
+  · intro hJ
+    by_contra hfield
+    letI : Fintype (MaximalSpectrum R) := Fintype.ofFinite _
+    let x : MaximalSpectrum R → R := fun m =>
+      Classical.choose
+        (Submodule.exists_mem_ne_zero_of_ne_bot
+          (Ring.ne_bot_of_isMaximal_of_not_isField m.isMaximal hfield))
+    have hx_mem (m : MaximalSpectrum R) : x m ∈ m.asIdeal := by
+      exact (Classical.choose_spec
+        (Submodule.exists_mem_ne_zero_of_ne_bot
+          (Ring.ne_bot_of_isMaximal_of_not_isField m.isMaximal hfield))).1
+    have hx_ne (m : MaximalSpectrum R) : x m ≠ 0 := by
+      exact (Classical.choose_spec
+        (Submodule.exists_mem_ne_zero_of_ne_bot
+          (Ring.ne_bot_of_isMaximal_of_not_isField m.isMaximal hfield))).2
+    let z : R := ∏ m : MaximalSpectrum R, x m
+    have hz_ne : z ≠ 0 := by
+      dsimp [z]
+      exact Finset.prod_ne_zero_iff.mpr fun m _ => hx_ne m
+    have hz_mem (M : Ideal R) (hM : M.IsMaximal) : z ∈ M := by
+      let m : MaximalSpectrum R := ⟨M, hM⟩
+      change (∏ n : MaximalSpectrum R, x n) ∈ m.asIdeal
+      rw [← Finset.prod_erase_mul _ _ (Finset.mem_univ m)]
+      exact m.asIdeal.mul_mem_left _ (hx_mem m)
+    have hz_jac : z ∈ Ideal.jacobson (⊥ : Ideal R) := by
+      rw [Ideal.jacobson, Ideal.mem_sInf]
+      intro M hM
+      exact hz_mem M hM.2
+    have hz_bot : z ∈ (⊥ : Ideal R) := by
+      rw [← IsJacobsonRing.out hJ Ideal.isRadical_bot_of_noZeroDivisors]
+      exact hz_jac
+    exact hz_ne (by simpa using hz_bot)
+  · intro hfield
+    letI := hfield
+    rw [isJacobsonRing_iff_prime_eq]
+    intro P hP
+    have hbotmax : (⊥ : Ideal R).IsMaximal :=
+      (Ring.isField_iff_maximal_bot.mp hfield)
+    have hPbot : P = (⊥ : Ideal R) :=
+      (hbotmax.eq_of_le hP.ne_top bot_le).symm
+    rw [hPbot]
+    letI : (⊥ : Ideal R).IsMaximal := hbotmax
+    exact Ideal.jacobson_eq_self_of_isMaximal
 
 theorem discreteValuationRing_not_isJacobson
     {R : Type u} [CommRing R] [IsDomain R] [IsDiscreteValuationRing R] :
     ¬ IsJacobsonRing R := by
-  sorry
+  apply localRing_with_two_prime_ideals_not_isJacobson_aux
+  refine ⟨⟨⊥, Ideal.isPrime_bot⟩, (⊤ : PrimeSpectrum R), ?_⟩
+  intro h
+  apply IsDiscreteValuationRing.not_a_field R
+  have h' := congrArg PrimeSpectrum.asIdeal h
+  simpa using h'.symm
 
 theorem localRing_with_two_prime_ideals_not_isJacobson
     {R : Type u} [CommRing R] [IsLocalRing R]
     (h : ∃ p q : PrimeSpectrum R, p ≠ q) :
     ¬ IsJacobsonRing R := by
-  sorry
+  exact localRing_with_two_prime_ideals_not_isJacobson_aux h
 
 /-! ## Residue fields and cardinality -/
 

@@ -114,7 +114,7 @@ theorem characterize_nonJacobson_ring
       apply (Ideal.Quotient.eq_zero_iff_mem).mp
       simpa [fA] using hf
     exact hxf (hIle hmem)
-  haveI : Nontrivial A := Ideal.Quotient.nontrivial_iff.mpr hI_top
+  have : Nontrivial A := Ideal.Quotient.nontrivial_iff.mpr hI_top
   have hnot : ¬ Subsingleton (Localization.Away fA) := by
     intro hsub
     have hzero : (0 : A) ∈ Submonoid.powers fA :=
@@ -127,7 +127,7 @@ theorem characterize_nonJacobson_ring
       apply (Ideal.Quotient.eq_zero_iff_mem).mp
       simpa [fA] using hpowA
     exact hxf (x.2.mem_of_pow_mem n hpow)
-  haveI : Nontrivial (Localization.Away fA) :=
+  have : Nontrivial (Localization.Away fA) :=
     not_subsingleton_iff_nontrivial.mp hnot
   let S := Localization.Away fA
   obtain ⟨M, hM⟩ := Ideal.exists_maximal S
@@ -250,10 +250,10 @@ theorem characterize_nonJacobson_ring
       exact eq_zero_of_pow_eq_zero hn
     exact hpf (Ideal.Quotient.eq_zero_iff_mem.mp (hgf ▸ this))
   let B := Localization.Away (Ideal.Quotient.mk p.asIdeal f)
-  letI : IsLocalization (Submonoid.powers (g fA)) B := by
+  let : IsLocalization (Submonoid.powers (g fA)) B := by
     rw [hgf]
     infer_instance
-  letI : IsLocalization (Submonoid.map g (Submonoid.powers fA)) B := by
+  let : IsLocalization (Submonoid.map g (Submonoid.powers fA)) B := by
     rw [Submonoid.map_powers]
     infer_instance
   let φ : S →+* B :=
@@ -261,12 +261,12 @@ theorem characterize_nonJacobson_ring
   have hφ : Function.Surjective φ := by
     exact IsLocalization.map_surjective_of_surjective
       (M := Submonoid.powers fA) (S := S) (Q := B) hg
-  haveI : IsDomain (R ⧸ p.asIdeal) :=
+  have : IsDomain (R ⧸ p.asIdeal) :=
     (Ideal.Quotient.isDomain_iff_prime p.asIdeal).mpr p.2
   have hBdomain : IsDomain B :=
     IsLocalization.Away.isDomain B
       (Ideal.Quotient.eq_zero_iff_mem.not.mpr hpf)
-  letI : IsDomain B := hBdomain
+  let : IsDomain B := hBdomain
   have hBinj : Function.Injective (algebraMap (R ⧸ p.asIdeal) B) := by
     exact IsLocalization.injective _ (le_nonZeroDivisors_of_noZeroDivisors hgpowers)
   have hunderK : (RingHom.ker φ).under A = J := by
@@ -274,7 +274,7 @@ theorem characterize_nonJacobson_ring
     change φ (algebraMap A S a) = 0 ↔ a ∈ J
     have hφcomp : φ (algebraMap A S a) =
         algebraMap (R ⧸ p.asIdeal) B (g a) := by
-      simp [φ, IsLocalization.map_comp]
+      simp [φ]
     rw [hφcomp]
     constructor
     · intro hzero
@@ -285,7 +285,7 @@ theorem characterize_nonJacobson_ring
     · intro ha
       have hga : g a = 0 :=
         RingHom.mem_ker.mp (hgker.symm ▸ ha)
-      simpa [hga]
+      simp [hga]
   have hkerφ : RingHom.ker φ = M := by
     apply (IsLocalization.orderEmbedding (M := Submonoid.powers fA) (S := S)).injective
     exact hunderK.trans rfl
@@ -325,7 +325,7 @@ theorem jacobson_locally_closed_sets_infinite
     exact SetLike.not_le_iff_exists.mp hnle
   choose g hgq hgp using hchoice
   let G : R := ∏ q : ι, g q
-  letI : p.asIdeal.IsPrime := p.2
+  let : p.asIdeal.IsPrime := p.2
   have hGp : G ∉ p.asIdeal := by
     intro h
     change (∏ q : ι, g q) ∈ p.asIdeal at h
@@ -397,7 +397,7 @@ theorem integer_isJacobson : IsJacobsonRing ℤ := by
         omega
       exact hx0 ▸ Ideal.zero_mem _
     · exact bot_le
-  · letI : Fact (Nat.Prime p) := ⟨hp⟩
+  · let : Fact (Nat.Prime p) := ⟨hp⟩
     exact Ideal.jacobson_eq_self_of_isMaximal
 
 theorem isJacobsonRing_of_domain_noetherian_nonzero_primes_maximal
@@ -604,7 +604,7 @@ theorem finite_maximal_domain_isJacobson_iff_isField
   constructor
   · intro hJ
     by_contra hfield
-    letI : Fintype (MaximalSpectrum R) := Fintype.ofFinite _
+    let : Fintype (MaximalSpectrum R) := Fintype.ofFinite _
     let x : MaximalSpectrum R → R := fun m =>
       Classical.choose
         (Submodule.exists_mem_ne_zero_of_ne_bot
@@ -635,7 +635,7 @@ theorem finite_maximal_domain_isJacobson_iff_isField
       exact hz_jac
     exact hz_ne (by simpa using hz_bot)
   · intro hfield
-    letI := hfield
+    let := hfield
     rw [isJacobsonRing_iff_prime_eq]
     intro P hP
     have hbotmax : (⊥ : Ideal R).IsMaximal :=
@@ -643,7 +643,7 @@ theorem finite_maximal_domain_isJacobson_iff_isField
     have hPbot : P = (⊥ : Ideal R) :=
       (hbotmax.eq_of_le hP.ne_top bot_le).symm
     rw [hPbot]
-    letI : (⊥ : Ideal R).IsMaximal := hbotmax
+    let : (⊥ : Ideal R).IsMaximal := hbotmax
     exact Ideal.jacobson_eq_self_of_isMaximal
 
 theorem discreteValuationRing_not_isJacobson
@@ -687,7 +687,7 @@ theorem maximal_residueField_isMaximal_of_algebraic
         residueFieldAlgebraOfMap m.asIdeal q.asIdeal φ h
       Algebra.IsAlgebraic m.asIdeal.ResidueField q.asIdeal.ResidueField) :
     q.asIdeal.IsMaximal := by
-  letI : Algebra m.asIdeal.ResidueField q.asIdeal.ResidueField :=
+  let : Algebra m.asIdeal.ResidueField q.asIdeal.ResidueField :=
     residueFieldAlgebraOfMap m.asIdeal q.asIdeal φ h
   let A : Subalgebra m.asIdeal.ResidueField q.asIdeal.ResidueField :=
     { carrier := Set.range (algebraMap S q.asIdeal.ResidueField)
@@ -731,7 +731,8 @@ theorem maximal_residueField_isMaximal_of_algebraic
   obtain ⟨t, ht⟩ := b.property
   refine ⟨Ideal.Quotient.mk q.asIdeal t, ?_⟩
   apply Ideal.injective_algebraMap_quotient_residueField
-  exact congrArg Subtype.val hb
+  simpa [z, ht, Ideal.algebraMap_quotient_residueField_mk] using
+    congrArg Subtype.val hb
 
 theorem linear_operator_has_noninvertible_monic_polynomial
     {k V : Type u} [Field k] [AddCommGroup V] [Module k V] [Nontrivial V]

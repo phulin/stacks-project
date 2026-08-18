@@ -363,7 +363,7 @@ theorem triangle_morphism_isomorphism_of_first_two
 theorem same_up_to_isomorphisms_of_termwise_split
     {C : Type u} [Category.{v} C] [AdditiveCategory C]
     {A B D : BookComplex C} (S : TermwiseSplitExactSequence A B D) :
-    ∃ e : termwiseSplitTriangleh S ≅ coneTriangleh S.f,
+    ∃ e : coneTriangleh S.f ≅ termwiseSplitTriangleh S,
       e.hom.hom₁ = 𝟙 _ ∧ e.hom.hom₂ = 𝟙 _ := by
   sorry
 

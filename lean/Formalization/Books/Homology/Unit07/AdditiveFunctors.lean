@@ -502,7 +502,75 @@ theorem exact_iff_maps_short_exact
     {D : Type u'} [Category.{v'} D] [Abelian D]
     (F : C ⥤ D) :
     IsExact F ↔ mapsShortExact F := by
-  sorry
+  constructor
+  · intro hF
+    rcases hF with ⟨hL, hR⟩
+    let : F.Additive := left_or_right_exact_additive F (Or.inl hL)
+    let hleft : mapsShortExactOnLeft F :=
+      (left_exact_iff_maps_short_exact_on_left F).1 hL
+    let hright : mapsShortExactOnRight F :=
+      (right_exact_iff_maps_short_exact_on_right F).1 hR
+    intro S hS
+    let h := hleft S hS
+    let h' := hright S hS
+    refine ComposableArrows.Exact.mk
+      (ComposableArrows.IsComplex.mk (fun i hi => ?_)) ?_
+    · have hi' : i = 0 ∨ i = 1 ∨ i = 2 := by omega
+      rcases hi' with rfl | rfl | rfl
+      · change (0 : (0 : D) ⟶ F.obj S.X₁) ≫ F.map S.f = 0
+        simp
+      · change F.map S.f ≫ F.map S.g = 0
+        rw [← F.map_comp, S.zero, F.map_zero]
+      · change F.map S.g ≫ (0 : F.obj S.X₃ ⟶ (0 : D)) = 0
+        simp
+    · intro i hi
+      have hi' : i = 0 ∨ i = 1 ∨ i = 2 := by omega
+      rcases hi' with rfl | rfl | rfl
+      · have h0 := h.exact 0
+        change (ShortComplex.mk (0 : (0 : D) ⟶ F.obj S.X₁)
+          (F.map S.f) (by simp)).Exact at h0
+        exact h0
+      · have h1 := h.exact 1
+        change (ShortComplex.mk (F.map S.f) (F.map S.g) _).Exact
+        change (ShortComplex.mk (F.map S.f) (F.map S.g)
+          (by rw [← F.map_comp, S.zero, F.map_zero])).Exact at h1
+        exact h1
+      · have h2 := h'.exact 1
+        change (ShortComplex.mk (F.map S.g)
+          (0 : F.obj S.X₃ ⟶ (0 : D)) (by simp)).Exact at h2
+        exact h2
+  · intro h
+    constructor
+    · apply (left_exact_iff_maps_short_exact_on_left F).2
+      intro S hS
+      have h' := h S hS
+      have h0 := h'.exact 0
+      change (ShortComplex.mk (0 : (0 : D) ⟶ F.obj S.X₁)
+        (F.map S.f) (by simp)).Exact at h0
+      have h1 := h'.exact 1
+      change (ShortComplex.mk (F.map S.f) (F.map S.g)
+        (h'.toIsComplex.zero 1)).Exact at h1
+      apply ComposableArrows.exact_of_δ₀
+      · change (ComposableArrows.mk₂
+          (0 : (0 : D) ⟶ F.obj S.X₁) (F.map S.f)).Exact
+        exact h0.exact_toComposableArrows
+      · change (ComposableArrows.mk₂ (F.map S.f) (F.map S.g)).Exact
+        exact h1.exact_toComposableArrows
+    · apply (right_exact_iff_maps_short_exact_on_right F).2
+      intro S hS
+      have h' := h S hS
+      have h1 := h'.exact 1
+      change (ShortComplex.mk (F.map S.f) (F.map S.g)
+        (h'.toIsComplex.zero 1)).Exact at h1
+      have h2 := h'.exact 2
+      change (ShortComplex.mk (F.map S.g)
+        (0 : F.obj S.X₃ ⟶ (0 : D)) (by simp)).Exact at h2
+      apply ComposableArrows.exact_of_δ₀
+      · change (ComposableArrows.mk₂ (F.map S.f) (F.map S.g)).Exact
+        exact h1.exact_toComposableArrows
+      · change (ComposableArrows.mk₂
+          (F.map S.g) (0 : F.obj S.X₃ ⟶ (0 : D))).Exact
+        exact h2.exact_toComposableArrows
 
 /-! ## Exact functors and extension classes -/
 
@@ -532,7 +600,42 @@ theorem mapExtensionOfExact_preserves_iso
     {A B : C} (F : C ⥤ D) (hF : IsExact F)
     {E E' : Extension C A B} (h : Nonempty (E ≅ E')) :
     Nonempty (mapExtensionOfExact F hF E ≅ mapExtensionOfExact F hF E') := by
-  sorry
+  rcases h with ⟨e⟩
+  let eHom : ExtensionHom (mapExtensionOfExact F hF E)
+      (mapExtensionOfExact F hF E') :=
+    { middle := F.map e.hom.middle
+      comm_left := by
+        change F.map E.inclusion ≫ F.map e.hom.middle = F.map E'.inclusion
+        rw [← F.map_comp, e.hom.comm_left]
+      comm_right := by
+        change F.map e.hom.middle ≫ F.map E'.projection = F.map E.projection
+        rw [← F.map_comp, e.hom.comm_right] }
+  let eInv : ExtensionHom (mapExtensionOfExact F hF E')
+      (mapExtensionOfExact F hF E) :=
+    { middle := F.map e.inv.middle
+      comm_left := by
+        change F.map E'.inclusion ≫ F.map e.inv.middle = F.map E.inclusion
+        rw [← F.map_comp, e.inv.comm_left]
+      comm_right := by
+        change F.map e.inv.middle ≫ F.map E.projection = F.map E'.projection
+        rw [← F.map_comp, e.inv.comm_right] }
+  have hhom : e.hom.middle ≫ e.inv.middle = 𝟙 E.middle := by
+    exact congrArg (fun q : E ⟶ E => q.middle) e.hom_inv_id
+  have hinv : e.inv.middle ≫ e.hom.middle = 𝟙 E'.middle := by
+    exact congrArg (fun q : E' ⟶ E' => q.middle) e.inv_hom_id
+  have hmap_hom : eHom.middle ≫ eInv.middle = 𝟙 _ := by
+    dsimp [eHom, eInv]
+    change F.map e.hom.middle ≫ F.map e.inv.middle = 𝟙 (F.obj E.middle)
+    rw [← F.map_comp, hhom, F.map_id]
+  have hmap_inv : eInv.middle ≫ eHom.middle = 𝟙 _ := by
+    dsimp [eHom, eInv]
+    change F.map e.inv.middle ≫ F.map e.hom.middle = 𝟙 (F.obj E'.middle)
+    rw [← F.map_comp, hinv, F.map_id]
+  exact ⟨
+    { hom := eHom
+      inv := eInv
+      hom_inv_id := ExtensionHom.ext _ _ hmap_hom
+      inv_hom_id := ExtensionHom.ext _ _ hmap_inv }⟩
 
 noncomputable def mapExtensionClassOfExact
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -548,7 +651,63 @@ theorem mapExtensionClassOfExact_zero
     {D : Type u'} [Category.{v'} D] [Abelian D]
     {A B : C} (F : C ⥤ D) (hF : IsExact F) :
     mapExtensionClassOfExact F hF (0 : Ext B A) = 0 := by
-  sorry
+  let : PreservesFiniteLimits F := hF.1
+  let : PreservesFiniteColimits F := hF.2
+  let hadd : F.Additive := left_or_right_exact_additive F (Or.inl hF.1)
+  let : F.Additive := hadd
+  let : PreservesBinaryBiproducts F :=
+    preservesBinaryBiproducts_of_preservesBiproducts F
+  have hcomparison : IsIso (F.biprodComparison A B) := by
+    change IsIso (biprod.lift (F.map biprod.fst) (F.map biprod.snd))
+    rw [← F.mapBiprod_hom A B]
+    infer_instance
+  letI : IsIso (F.biprodComparison A B) := hcomparison
+  change extensionClass (mapExtensionOfExact F hF (splitExtension A B)) =
+    extensionClass (splitExtension (F.obj A) (F.obj B))
+  let e : ExtensionHom (mapExtensionOfExact F hF (splitExtension A B))
+      (splitExtension (F.obj A) (F.obj B)) :=
+    { middle := F.biprodComparison A B
+      comm_left := by
+        change F.map (biprod.inl : A ⟶ A ⊞ B) ≫ F.biprodComparison A B = biprod.inl
+        apply biprod.hom_ext
+        · rw [Category.assoc, F.biprodComparison_fst, ← F.map_comp]
+          simp
+        · rw [Category.assoc, F.biprodComparison_snd, ← F.map_comp]
+          simp
+      comm_right := by
+        change F.biprodComparison A B ≫ biprod.snd =
+          F.map (biprod.snd : A ⊞ B ⟶ B)
+        simpa using F.biprodComparison_snd A B }
+  let eInv : ExtensionHom (splitExtension (F.obj A) (F.obj B))
+      (mapExtensionOfExact F hF (splitExtension A B)) :=
+    { middle := inv (F.biprodComparison A B)
+      comm_left := by
+        change biprod.inl ≫ inv (F.biprodComparison A B) =
+          F.map (biprod.inl : A ⟶ A ⊞ B)
+        apply (cancel_mono (F.biprodComparison A B)).1
+        rw [Category.assoc, IsIso.inv_hom_id, Category.comp_id]
+        apply biprod.hom_ext
+        · rw [Category.assoc, F.biprodComparison_fst, ← F.map_comp]
+          simp
+        · rw [Category.assoc, F.biprodComparison_snd, ← F.map_comp]
+          simp
+      comm_right := by
+        change inv (F.biprodComparison A B) ≫
+            F.map (biprod.snd : A ⊞ B ⟶ B) = biprod.snd
+        apply (cancel_epi (F.biprodComparison A B)).1
+        rw [IsIso.hom_inv_id, Category.id_comp, F.biprodComparison_snd] }
+  have hhom : e.middle ≫ eInv.middle = 𝟙 _ := by
+    dsimp [e, eInv]
+    exact IsIso.hom_inv_id (F.biprodComparison A B)
+  have hinv : eInv.middle ≫ e.middle = 𝟙 _ := by
+    dsimp [e, eInv]
+    exact IsIso.inv_hom_id (F.biprodComparison A B)
+  apply Quotient.sound
+  exact ⟨
+    { hom := e
+      inv := eInv
+      hom_inv_id := ExtensionHom.ext _ _ hhom
+      inv_hom_id := ExtensionHom.ext _ _ hinv }⟩
 
 theorem mapExtensionClassOfExact_add
     {C : Type u} [Category.{v} C] [Abelian C]

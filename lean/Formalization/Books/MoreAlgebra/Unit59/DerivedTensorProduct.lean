@@ -666,9 +666,11 @@ theorem factor_through_kFlat
     {R : Type u} [CommRing R] {K L : Comp R} (a : K ⟶ L)
     (hK : IsKFlat K) :
     ∃ (N : Comp R) (b : K ⟶ N) (c : N ⟶ L),
-      IsKFlat N ∧ QuasiIso c ∧
-        Nonempty (Homotopy a (b ≫ c)) ∧
-        (TermwiseFlat K → TermwiseFlat N) := by
+      IsKFlat N ∧ QuasiIso c ∧ Nonempty (Homotopy a (b ≫ c)) ∧
+      (TermwiseFlat K →
+        ∃ (N' : Comp R) (b' : K ⟶ N') (c' : N' ⟶ L),
+          IsKFlat N' ∧ TermwiseFlat N' ∧ QuasiIso c' ∧
+            Nonempty (Homotopy a (b' ≫ c'))) := by
   sorry
 
 end Formalization.Books.MoreAlgebra.Unit59

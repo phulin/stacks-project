@@ -115,6 +115,37 @@ def additiveAssociatedHomotopyComponent
     (-1 : ℤ) ^ ((i : ℕ) + 1) •
       (U.σ i ≫ H.h (n + 1) i.castSucc.succ)
 
+/-- The component attached directly to a cylinder homotopy. -/
+noncomputable def additiveAssociatedHomotopyComponentOfCylinder
+    {C : Type u} [Category.{v} C] [AdditiveCategory C]
+    {U V : SimplicialObject C} {a b : U ⟶ V}
+    (H : CylinderHomotopy a b) (n : ℕ) :
+    U.obj (op ⦋n⦌) ⟶ V.obj (op ⦋n + 1⦌) :=
+  additiveAssociatedHomotopyComponent
+    (cylinderHomotopy_to_degreewise H) n
+
+/- The two boundary identities below are the source's displayed calculation,
+   split into degree zero and positive degrees so that the zero differential
+   at the bottom of a nonnegative complex is explicit. -/
+theorem additiveAssociatedHomotopyComponent_zero_equation
+    {C : Type u} [Category.{v} C] [Preadditive C]
+    {U V : SimplicialObject C} {a b : U ⟶ V}
+    (H : DegreewiseHomotopy a b) :
+    additiveAssociatedHomotopyComponent H 0 ≫ additiveAssociatedBoundary V 0 =
+      a.app (op ⦋0⦌) - b.app (op ⦋0⦌) := by
+  sorry
+
+theorem additiveAssociatedHomotopyComponent_succ_equation
+    {C : Type u} [Category.{v} C] [Preadditive C]
+    {U V : SimplicialObject C} {a b : U ⟶ V}
+    (H : DegreewiseHomotopy a b) (n : ℕ) :
+    additiveAssociatedHomotopyComponent H (n + 1) ≫
+          additiveAssociatedBoundary V (n + 1) +
+        additiveAssociatedBoundary U n ≫
+          additiveAssociatedHomotopyComponent H n =
+      a.app (op ⦋n + 1⦌) - b.app (op ⦋n + 1⦌) := by
+  sorry
+
 /-- The displayed formula gives a chain homotopy between the two associated
 chain maps.  The component equation is the source's
 `d_{n+1} s(h)_n + s(h)_{n-1} d_n = a_n - b_n` calculation. -/
@@ -150,6 +181,19 @@ theorem additiveAssociatedChainHomotopy_of_cylinder
       (additiveAssociatedChainComplexMap b)) := by
   exact additiveAssociatedChainHomotopy_of_degreewise
     (cylinderHomotopy_to_degreewise H)
+
+theorem additiveAssociatedChainHomotopy_of_cylinder_with_components
+    {C : Type u} [Category.{v} C] [AdditiveCategory C]
+    {U V : SimplicialObject C} {a b : U ⟶ V}
+    (H : CylinderHomotopy a b) :
+    ∃ K : _root_.Homotopy
+        (additiveAssociatedChainComplexMap a)
+        (additiveAssociatedChainComplexMap b),
+      ∀ n : ℕ,
+        K.hom n (n + 1) = additiveAssociatedHomotopyComponentOfCylinder H n := by
+  rcases additiveAssociatedChainHomotopy_exists
+      (cylinderHomotopy_to_degreewise H) with ⟨K, hK⟩
+  exact ⟨K, hK⟩
 
 /-! ## The source's homotopy and homotopy-equivalence assertions -/
 

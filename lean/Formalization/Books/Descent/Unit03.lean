@@ -478,6 +478,11 @@ noncomputable def canonicalDescentDatum :
   DescentDatum (R := R) (A := A) (N := TensorProduct R A M) :=
   Classical.choose (canonicalDescentDatum_exists (R := R) (A := A) (M := M))
 
+theorem canonicalDescentDatum_comparison :
+    (canonicalDescentDatum (R := R) (A := A) (M := M)).comparison =
+      canonicalDescentComparison (R := R) (A := A) (M := M) :=
+  Classical.choose_spec (canonicalDescentDatum_exists (R := R) (A := A) (M := M))
+
 def DescentDatumIsoCompatibility {N N' : Type*} [AddCommGroup N] [Module R N]
     [Module A N] [IsScalarTower R A N]
     [AddCommGroup N'] [Module R N'] [Module A N'] [IsScalarTower R A N']
@@ -627,15 +632,23 @@ theorem canonicalAugmentationMap_apply (M : Type u) [AddCommGroup M] [Module R M
     (m : M) : canonicalAugmentationMap (R := R) (A := A) M m =
       TensorProduct.mk R A M 1 m := rfl
 
-theorem canonicalAugmentation_exists (M : Type u) [AddCommGroup M] [Module R M] :
-    Nonempty (ModuleCat.of R M ⟶
-      (descentCochainComplex (canonicalDescentDatum (R := R) (A := A) (M := M))).X 0) := by
-  sorry
+noncomputable def canonicalDescentZeroIso (M : Type u) [AddCommGroup M] [Module R M] :
+    (descentCochainComplex (canonicalDescentDatum (R := R) (A := A) (M := M))).X 0 ≅
+      ModuleCat.of R (TensorProduct R A M) :=
+  Classical.choice (descentCosimplicialModule_degree
+    (canonicalDescentDatum (R := R) (A := A) (M := M)) 0)
 
 noncomputable def canonicalAugmentation (M : Type u) [AddCommGroup M] [Module R M] :
     ModuleCat.of R M ⟶
       (descentCochainComplex (canonicalDescentDatum (R := R) (A := A) (M := M))).X 0 :=
-  Classical.choice (canonicalAugmentation_exists (R := R) M)
+  ModuleCat.ofHom <|
+    (canonicalDescentZeroIso (R := R) (A := A) M).inv.hom.comp
+      (canonicalAugmentationMap (R := R) (A := A) M)
+
+theorem canonicalAugmentation_exists (M : Type u) [AddCommGroup M] [Module R M] :
+    Nonempty (ModuleCat.of R M ⟶
+      (descentCochainComplex (canonicalDescentDatum (R := R) (A := A) (M := M))).X 0) :=
+  ⟨canonicalAugmentation (R := R) (A := A) M⟩
 
 /-- Exactness of the extended canonical Amitsur complex, including its
 augmentation by `M`. -/
@@ -670,15 +683,32 @@ theorem exact_extended_descent_complex_of_faithfullyFlat
     ExtendedDescentComplexExact (R := R) (A := A) M := by
   sorry
 
-theorem descentCanonicalMap_exists
-    (D : DescentDatum (R := R) (A := A) (N := N)) :
-    Nonempty (TensorProduct R A (descentH0 D) →ₗ[R] N) := by
-  sorry
-
 noncomputable def descentCanonicalMap
     (D : DescentDatum (R := R) (A := A) (N := N)) :
     TensorProduct R A (descentH0 D) →ₗ[R] N :=
-  Classical.choice (descentCanonicalMap_exists D)
+  TensorProduct.lift
+    { toFun := fun a =>
+        { toFun := fun n => a • (n : N)
+          map_add' := by
+            intro n₁ n₂
+            simp [add_smul]
+          map_smul' := by
+            intro r n
+            exact smul_comm a r (n : N) }
+      map_add' := by
+        intro a₁ a₂
+        ext n
+        simp [add_smul]
+      map_smul' := by
+        intro r a
+        ext n
+        exact smul_assoc r a (n : N) }
+
+theorem descentCanonicalMap_on_pure
+    (D : DescentDatum (R := R) (A := A) (N := N)) (a : A)
+    (n : descentH0 D) :
+    descentCanonicalMap D (a ⊗ₜ[R] n) = a • (n : N) := by
+  rfl
 
 /-! The raw tensor model of the base change used in the proof of descent
 along a faithfully flat extension.  The associativity and commutativity

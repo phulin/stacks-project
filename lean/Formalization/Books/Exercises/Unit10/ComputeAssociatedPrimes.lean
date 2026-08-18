@@ -61,7 +61,7 @@ def planeDiagonalPrimeIdeal (k : Type u) [Field k] : Ideal (planePolynomialRing 
 
 private theorem associated_primes_span_mul_subset_union
     {R : Type*} [CommRing R] [IsDomain R] [IsNoetherianRing R]
-    (a b : R) (ha : a ≠ 0) (hb : b ≠ 0) :
+    (a b : R) (_ha : a ≠ 0) (hb : b ≠ 0) :
     associatedPrimes R (R ⧸ Ideal.span ({a * b} : Set R)) ⊆
       associatedPrimes R (R ⧸ Ideal.span ({a} : Set R)) ∪
         associatedPrimes R (R ⧸ Ideal.span ({b} : Set R)) := by
@@ -76,8 +76,8 @@ private theorem associated_primes_span_mul_subset_union
     have hxa : x = a := Set.mem_singleton_iff.mp hx
     subst x
     change b * a ∈ Ideal.span ({a * b} : Set R)
-    simpa [mul_comm] using
-      (Ideal.subset_span (Set.mem_singleton (a * b)))
+    rw [mul_comm b a]
+    exact Ideal.subset_span (Set.mem_singleton (a * b))
   have hqr : q ≤ r := by
     change Ideal.span ({a * b} : Set R) ≤ Ideal.span ({b} : Set R)
     rw [Ideal.span_le]
@@ -127,12 +127,12 @@ private theorem associated_primes_span_mul_subset_union
           (by simpa only [Submodule.mkQ_apply] using hy)
       rcases Ideal.mem_span_singleton.mp hx with ⟨c, hc⟩
       refine ⟨p.mkQ c, ?_⟩
-      simp only [f, Submodule.mapQ_apply, g, Submodule.mapQ_apply]
+      simp only [f]
       apply congrArg q.mkQ
       simpa [mul_comm] using hc.symm
     · rintro ⟨x, rfl⟩
       obtain ⟨z, rfl⟩ := p.mkQ_surjective x
-      simp only [f, g, Submodule.mapQ_apply]
+      simp only [f, g]
       change (Submodule.Quotient.mk (b * z) : R ⧸ r) = 0
       rw [Submodule.Quotient.mk_eq_zero]
       simpa [mul_comm] using r.mul_mem_left z
@@ -155,8 +155,8 @@ private theorem associated_primes_span_mul_left_subset
     have hxa : x = a := Set.mem_singleton_iff.mp hx
     subst x
     change b * a ∈ Ideal.span ({a * b} : Set R)
-    simpa [mul_comm] using
-      (Ideal.subset_span (Set.mem_singleton (a * b)))
+    rw [mul_comm b a]
+    exact Ideal.subset_span (Set.mem_singleton (a * b))
   let f : (R ⧸ p) →ₗ[R] (R ⧸ q) :=
     Submodule.mapQ (p : Submodule R R) (q : Submodule R R)
       (LinearMap.lsmul R R b) hpq
@@ -232,7 +232,7 @@ private theorem associated_primes_quotient_mul_subset
           (by simpa only [Submodule.mkQ_apply] using hy)
       obtain ⟨w, hw⟩ := hrange x hx
       refine ⟨p.mkQ w, ?_⟩
-      simp only [f, Submodule.mapQ_apply, g, Submodule.mapQ_apply]
+      simp only [f]
       have hw' : q.mkQ (x - a * w) = 0 :=
         (Submodule.Quotient.mk_eq_zero q).mpr hw
       have hw'' : q.mkQ x = q.mkQ (a * w) := by
@@ -240,7 +240,7 @@ private theorem associated_primes_quotient_mul_subset
       exact hw''.symm
     · rintro ⟨x, rfl⟩
       obtain ⟨z, rfl⟩ := p.mkQ_surjective x
-      simp only [f, g, Submodule.mapQ_apply]
+      simp only [f, g]
       change (Submodule.Quotient.mk (a * z) : R ⧸ r) = 0
       rw [Submodule.Quotient.mk_eq_zero]
       simpa [mul_comm] using r.mul_mem_left z ha
@@ -704,16 +704,16 @@ theorem associated_primes_space_relation_quotient (k : Type u) [Field k] :
   have hs1 (m : Fin 3 →₀ ℕ) (h : e0 + e1 ≤ m + e0) : e1 ≤ m := by
     intro i
     fin_cases i
-    · simp [e0, e1]
+    · simp [e1]
     · have hi := h (1 : Fin 3)
       simp [e0, e1] at hi ⊢
       exact hi
-    · simp [e0, e1]
+    · simp [e1]
   have hs2 (m : Fin 3 →₀ ℕ) (h : e2 ≤ m + e0) : e2 ≤ m := by
     intro i
     fin_cases i
-    · simp [e0, e2]
-    · simp [e0, e2]
+    · simp [e2]
+    · simp [e2]
     · have hi := h (2 : Fin 3)
       simp [e0, e2] at hi ⊢
       exact hi
@@ -791,7 +791,7 @@ theorem associated_primes_space_relation_quotient (k : Type u) [Field k] :
   have hx2y : x ^ 2 * y =
       MvPolynomial.monomial (2 • e0 + e1) (1 : k) := by
     rw [hx2, hy, MvPolynomial.monomial_mul]
-    simp [add_assoc]
+    simp
   have hxz : x * z = MvPolynomial.monomial (e0 + e2) (1 : k) := by
     rw [hx, hz, MvPolynomial.monomial_mul]
     simp
@@ -834,8 +834,8 @@ theorem associated_primes_space_relation_quotient (k : Type u) [Field k] :
   have hJs2 (m : Fin 3 →₀ ℕ) (h : e0 + e2 ≤ m + e0) : e2 ≤ m := by
     intro i
     fin_cases i
-    · simp [e0, e2]
-    · simp [e0, e2]
+    · simp [e2]
+    · simp [e2]
     · have hi := h (2 : Fin 3)
       simp [e0, e2] at hi ⊢
       exact hi
@@ -1035,10 +1035,10 @@ theorem associated_primes_space_relation_quotient (k : Type u) [Field k] :
     exact Subsingleton.elim a b
   have h0not : (0 : Fin 3) ∉ Set.range f := by
     rintro ⟨i, hi⟩
-    simpa [f] using hi
+    simp [f] at hi
   have h2not : (2 : Fin 3) ∉ Set.range f := by
     rintro ⟨i, h⟩
-    simpa [f] using h
+    simp [f] at h
   let ψ : R →+* MvPolynomial (Fin 1) k :=
     (MvPolynomial.killCompl hf).toRingHom
   have hψ0 : ψ x = 0 := by
@@ -1086,7 +1086,6 @@ theorem associated_primes_space_relation_quotient (k : Type u) [Field k] :
         m.mapDomain_comapDomain f hf hsub
       have hcoeff : p.coeff m ≠ 0 := MvPolynomial.mem_support_iff.mp hm
       have hp0 : (MvPolynomial.killCompl hf p).coeff s = 0 := by
-        change (MvPolynomial.killCompl hf p).coeff s = 0
         exact congrArg (fun q : MvPolynomial (Fin 1) k => q.coeff s) hp
       rw [MvPolynomial.coeff_killCompl] at hp0
       rw [hmap] at hp0
@@ -1224,7 +1223,7 @@ theorem associated_primes_space_relation_quotient (k : Type u) [Field k] :
           · have hi := hde' (0 : Fin 3)
             simp [e0, e1] at hi ⊢
             omega
-          · simp [e0, e1]
+          · simp [e0]
           · simp [e0]
         · refine ⟨e2, by simp [sP], ?_⟩
           intro i
@@ -1257,7 +1256,7 @@ theorem associated_primes_space_relation_quotient (k : Type u) [Field k] :
             omega
           · simp [e0, e2, addRightEmbedding_apply]
           · have hi := hde (2 : Fin 3)
-            simp [e0, e2, addRightEmbedding_apply, add_comm, add_assoc] at hi ⊢
+            simp [e0, e2, addRightEmbedding_apply, add_assoc] at hi ⊢
             omega
 
   have hcolonM : J.colon ({x ^ 2} : Set R) = M := by
@@ -1314,7 +1313,7 @@ theorem associated_primes_space_relation_quotient (k : Type u) [Field k] :
           intro i
           fin_cases i
           · have hi := hde (0 : Fin 3)
-            simp [e0, addRightEmbedding_apply, add_comm, add_assoc] at hi ⊢
+            simp [e0, addRightEmbedding_apply, add_comm] at hi ⊢
             omega
           · simp [e0, addRightEmbedding_apply]
           · simp [e0, addRightEmbedding_apply]
@@ -1324,7 +1323,7 @@ theorem associated_primes_space_relation_quotient (k : Type u) [Field k] :
           fin_cases i
           · simp [e0, e1, addRightEmbedding_apply]
           · have hi := hde (1 : Fin 3)
-            simp [e0, e1, addRightEmbedding_apply, add_comm, add_assoc] at hi ⊢
+            simp [e0, e1, addRightEmbedding_apply, add_comm] at hi ⊢
             exact hi
           · simp [e0, e1, addRightEmbedding_apply]
         · refine ⟨e0 + e2, by simp [sJ], ?_⟩
@@ -1334,7 +1333,7 @@ theorem associated_primes_space_relation_quotient (k : Type u) [Field k] :
           · simp [e0, e2, addRightEmbedding_apply]
           · simp [e0, e2, addRightEmbedding_apply]
           · have hi := hde (2 : Fin 3)
-            simp [e0, e2, addRightEmbedding_apply, add_comm, add_assoc] at hi ⊢
+            simp [e0, e2, addRightEmbedding_apply, add_comm] at hi ⊢
             exact hi
   have hAX : Xideal ∈ associatedPrimes R (R ⧸ J) := by
     rw [AssociatedPrimes.mem_iff, isAssociatedPrime_iff]

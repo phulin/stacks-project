@@ -224,6 +224,111 @@ theorem shortExact_underlying_data
       simpa [ModuleCat.comp_apply] using hz
   exact ⟨hexact, hmono, hepi⟩
 
+private theorem isSimplePair_transport
+    {R M N : Type*} [CommRing R]
+    [AddCommGroup M] [Module R M]
+    [AddCommGroup N] [Module R N]
+    {φ : Module.End R M} {ψ : Module.End R N}
+    (hφ : IsSimplePair φ) (e : M ≃ₗ[R] N)
+    (he : ∀ x, e (φ x) = ψ (e x)) : IsSimplePair ψ := by
+  constructor
+  · rcases hφ.1 with ⟨x, y, hxy⟩
+    refine ⟨e x, e y, ?_⟩
+    intro h
+    apply hxy
+    apply e.injective
+    simpa using h
+  · intro P hP
+    let Q : Submodule R M := P.comap (e : M →ₗ[R] N)
+    have hQ : Submodule.map φ Q ≤ Q := by
+      rintro _ ⟨x, hx, rfl⟩
+      change e (φ x) ∈ P
+      rw [he]
+      exact hP ⟨e x, hx, rfl⟩
+    rcases hφ.2 Q hQ with hQbot | hQtop
+    · left
+      ext y
+      constructor
+      · intro hy
+        let x : M := e.symm y
+        have hxQ : x ∈ Q := by
+          change e x ∈ P
+          simpa [x] using hy
+        have hx0 : x = 0 := by
+          apply (Submodule.mem_bot R).mp
+          rw [← hQbot]
+          exact hxQ
+        simpa [x] using congrArg e hx0
+      · intro hy
+        exact (Submodule.mem_bot R).mp hy ▸ P.zero_mem
+    · right
+      apply top_unique
+      intro y hy
+      have hyQ : e.symm y ∈ Q := by
+        rw [hQtop]
+        exact Submodule.mem_top
+      rw [← e.apply_symm_apply y]
+      exact hyQ
+
+private theorem simplePair_invariant_local
+    {R : Type u} [CommRing R] [IsLocalRing R]
+    {M N : Type v} [AddCommGroup M] [Module R M]
+    [AddCommGroup N] [Module R N]
+    {φ : Module.End R M} {ψ : Module.End R N}
+    (D : SimplePairData R M φ) (E : SimplePairData R N ψ)
+    (e : M ≃ₗ[R] N)
+    (he : ∀ x, e (φ x) = ψ (e x)) :
+    simpleDeterminant D = simpleDeterminant E ∧
+      simpleTrace D = simpleTrace E := by
+  let _ : Module (IsLocalRing.ResidueField R) M := D.annihilated.module
+  let _ : Module (IsLocalRing.ResidueField R) N := E.annihilated.module
+  let _ : Module.Finite (IsLocalRing.ResidueField R) M := D.finite_dimensional
+  let _ : Module.Finite (IsLocalRing.ResidueField R) N := E.finite_dimensional
+  let eK : M ≃ₗ[IsLocalRing.ResidueField R] N :=
+    { toFun := e
+      invFun := e.symm
+      left_inv := e.left_inv
+      right_inv := e.right_inv
+      map_add' := e.map_add
+      map_smul' := by
+        intro c x
+        obtain ⟨r, hr⟩ := IsLocalRing.residue_surjective (R := R) c
+        rw [← hr]
+        change e (IsLocalRing.residue R r • x) =
+          IsLocalRing.residue R r • e x
+        have hM : IsLocalRing.residue R r • x = r • x :=
+          D.annihilated.mk_smul r x
+        have hN : IsLocalRing.residue R r • e x = r • e x :=
+          E.annihilated.mk_smul r (e x)
+        rw [hM, hN]
+        exact e.map_smul r x }
+  have heK :
+      (eK : M →ₗ[IsLocalRing.ResidueField R] N) ∘ₗ
+          (D.residue_endomorphism ∘ₗ
+            (eK.symm : N →ₗ[IsLocalRing.ResidueField R] M)) =
+        E.residue_endomorphism := by
+    apply LinearMap.ext
+    intro x
+    change eK (D.residue_endomorphism.toFun (eK.symm x)) =
+      E.residue_endomorphism.toFun x
+    rw [D.residue_endomorphism_apply, E.residue_endomorphism_apply]
+    simpa [eK] using he (e.symm x)
+  have hdet := LinearMap.det_conj D.residue_endomorphism eK
+  rw [heK] at hdet
+  have heK' : eK.conj D.residue_endomorphism =
+      E.residue_endomorphism := by
+    apply LinearMap.ext
+    intro x
+    change eK (D.residue_endomorphism.toFun (eK.symm x)) =
+      E.residue_endomorphism.toFun x
+    rw [D.residue_endomorphism_apply, E.residue_endomorphism_apply]
+    simpa [eK] using he (e.symm x)
+  have htrace := LinearMap.trace_conj' D.residue_endomorphism eK
+  rw [heK'] at htrace
+  constructor
+  · exact hdet.symm
+  · exact htrace.symm
+
 
 theorem lemma_ses_det
     {R : Type u} [CommRing R] [IsLocalRing R]

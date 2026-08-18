@@ -264,6 +264,29 @@ theorem spectrum_connected_component_is_open_of_noetherian
 /-- The infinite product of copies of `𝔽₂` used in the source warning. -/
 abbrev infiniteBooleanProductRing : Type := ℕ → ZMod 2
 
+private theorem infinite_boolean_product_mul_self (f : infiniteBooleanProductRing) :
+    f * f = f := by
+  ext i
+  have hi : f i .val < 2 := ZMod.val_lt (f i)
+  have hi' : f i .val ≤ 1 := Nat.lt_succ_iff.mp (by simpa using hi)
+  rcases Nat.le_one_iff_eq_zero_or_eq_one.mp hi' with hi' | hi'
+  · rw [← ZMod.natCast_zmod_val (f i), hi']
+    simp
+  · rw [← ZMod.natCast_zmod_val (f i), hi']
+    simp
+
+private theorem prime_ideal_is_maximal_of_mul_self_eq_self {R : Type u} [CommRing R]
+    (I : Ideal R) (hI : I.IsPrime) (hmul : ∀ x : R, x * x = x) : I.IsMaximal := by
+  rw [Ideal.isMaximal_iff]
+  refine ⟨hI.one_notMem, ?_⟩
+  intro J x hIJ hxI hxJ
+  have hzero : x * (1 - x) = 0 := by
+    rw [mul_sub, mul_one, hmul, sub_self]
+  rcases hI.mem_or_mem_of_mul_eq_zero hzero with hx | hsub
+  · exact (hxI hx).elim
+  · have hsum : x + (1 - x) ∈ J := J.add_mem hxJ (hIJ hsub)
+    simpa using hsum
+
 /-- This infinite product has infinitely many points, all of which are
 closed; it is the source's counterexample to openness of components without
 Noetherian hypotheses. -/

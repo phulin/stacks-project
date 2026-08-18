@@ -172,6 +172,7 @@ The topology is supplied explicitly so this theorem does not install a
 global alternative topology on `Bool`. -/
 theorem indiscrete_bool_not_t0 :
     ¬ @T0Space Bool (⊤ : TopologicalSpace Bool) := by
-  sorry
+  intro h
+  exact Bool.noConfusion (h.t0 (inseparable_top false true))
 
 end Formalization.Books.Exercises.Unit06

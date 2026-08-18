@@ -128,7 +128,108 @@ end GradedPair
 theorem gradedPairEquivalence_exists (C : Type u) [Category.{v} C]
     [HasCountableCoproducts C] :
     Nonempty (GradedObject ℤ C ≌ GradedPair C) := by
-  sorry
+  let F : GradedObject ℤ C ⥤ GradedPair C :=
+    { obj := fun A =>
+        { carrier := ∐ A
+          component := A
+          decomposition := Iso.refl _ }
+      map := fun {A B} f =>
+        { carrierHom := Limits.Sigma.map (fun i => f i)
+          componentHom := fun i => f i
+          comm := by
+            intro i
+            simp }
+      map_id := by
+        intro A
+        apply GradedPair.hom_ext
+        · change Limits.Sigma.map (fun i => 𝟙 (A i)) = 𝟙 (∐ A)
+          exact Limits.Sigma.map_id (f := A)
+        · intro i
+          change 𝟙 (A i) = 𝟙 (A i)
+          rfl
+      map_comp := by
+        intro A B D f g
+        apply GradedPair.hom_ext
+        · exact (Limits.Sigma.map_comp_map (fun i => f i) (fun i => g i)).symm
+        · intro i
+          change f i ≫ g i = f i ≫ g i
+          rfl }
+  let G : GradedPair C ⥤ GradedObject ℤ C :=
+    { obj := fun A => A.component
+      map := fun {A B} f i => f.componentHom i
+      map_id := by
+        intro A
+        rfl
+      map_comp := by
+        intro A B D f g
+        rfl }
+  let unit : 𝟭 (GradedObject ℤ C) ≅ F ⋙ G :=
+    NatIso.ofComponents (fun A => Iso.refl A) (by
+      intro A B f
+      simp [F, G])
+  let counit : G ⋙ F ≅ 𝟭 (GradedPair C) :=
+    { hom :=
+        { app := fun A =>
+            { carrierHom := A.decomposition.hom
+              componentHom := fun i => 𝟙 _
+              comm := by
+                intro i
+                dsimp [F, G]
+                simp }
+          naturality := by
+            intro A B f
+            apply GradedPair.hom_ext
+            · apply Limits.Sigma.hom_ext
+              intro i
+              change Sigma.ι A.component i ≫
+                  Limits.Sigma.map (fun j => f.componentHom j) ≫ B.decomposition.hom =
+                Sigma.ι A.component i ≫ A.decomposition.hom ≫ f.carrierHom
+              simpa [Category.assoc] using (f.comm i).symm
+            · intro i
+              change f.componentHom i ≫ 𝟙 _ = 𝟙 _ ≫ f.componentHom i
+              simp }
+      inv :=
+        { app := fun A =>
+            { carrierHom := A.decomposition.inv
+              componentHom := fun i => 𝟙 _
+              comm := by
+                intro i
+                dsimp [F, G]
+                simp }
+          naturality := by
+            intro A B f
+            apply GradedPair.hom_ext
+            · change f.carrierHom ≫ B.decomposition.inv =
+                A.decomposition.inv ≫ Limits.Sigma.map (fun i => f.componentHom i)
+              apply (cancel_epi A.decomposition.hom).1
+              apply Limits.Sigma.hom_ext
+              intro i
+              change Sigma.ι A.component i ≫ A.decomposition.hom ≫ f.carrierHom ≫
+                  B.decomposition.inv =
+                Sigma.ι A.component i ≫ A.decomposition.hom ≫ A.decomposition.inv ≫
+                  Limits.Sigma.map (fun j => f.componentHom j)
+              simpa [Category.assoc] using
+                congrArg (fun q => q ≫ B.decomposition.inv) (f.comm i)
+            · intro i
+              change f.componentHom i ≫ 𝟙 _ = 𝟙 _ ≫ f.componentHom i
+              simp }
+      hom_inv_id := by
+        ext A
+        apply GradedPair.hom_ext
+        · change A.decomposition.hom ≫ A.decomposition.inv = 𝟙 _
+          simp
+        · intro i
+          change 𝟙 _ ≫ 𝟙 _ = 𝟙 _
+          simp
+      inv_hom_id := by
+        ext A
+        apply GradedPair.hom_ext
+        · change A.decomposition.inv ≫ A.decomposition.hom = 𝟙 _
+          simp
+        · intro i
+          change 𝟙 _ ≫ 𝟙 _ = 𝟙 _
+          simp }
+  exact ⟨{ functor := F, inverse := G, unitIso := unit, counitIso := counit }⟩
 
 noncomputable def gradedPairEquivalence (C : Type u) [Category.{v} C]
     [HasCountableCoproducts C] : GradedObject ℤ C ≌ GradedPair C :=
@@ -185,7 +286,15 @@ noncomputable instance gradedObjectAbelian {C : Type u} [Category.{v} C]
 theorem graded_kernel_component_iso_exists {C : Type u} [Category.{v} C] [Abelian C]
     {A B : GradedObject ℤ C} (f : A ⟶ B) (i : ℤ) :
     Nonempty ((kernel f) i ≅ kernel (f i)) := by
-  sorry
+  let hkernel : HasKernel f := inferInstance
+  letI : HasZeroMorphisms (ℤ → C) :=
+    (inferInstance : HasZeroMorphisms (GradedObject ℤ C))
+  letI : HasKernel f := hkernel
+  let E := piEquivalenceFunctorDiscrete ℤ C
+  let e₁ := PreservesKernel.iso E.functor f
+  let e₂ := PreservesKernel.iso
+    ((evaluation (Discrete ℤ) C).obj ⟨i⟩) (E.functor.map f)
+  exact ⟨(Functor.mapIso ((evaluation (Discrete ℤ) C).obj ⟨i⟩) e₁) ≪≫ e₂⟩
 
 noncomputable def graded_kernel_component_iso {C : Type u} [Category.{v} C] [Abelian C]
     {A B : GradedObject ℤ C} (f : A ⟶ B) (i : ℤ) :
@@ -196,7 +305,15 @@ noncomputable def graded_kernel_component_iso {C : Type u} [Category.{v} C] [Abe
 theorem graded_cokernel_component_iso_exists {C : Type u} [Category.{v} C] [Abelian C]
     {A B : GradedObject ℤ C} (f : A ⟶ B) (i : ℤ) :
     Nonempty ((cokernel f) i ≅ cokernel (f i)) := by
-  sorry
+  let hcokernel : HasCokernel f := inferInstance
+  letI : HasZeroMorphisms (ℤ → C) :=
+    (inferInstance : HasZeroMorphisms (GradedObject ℤ C))
+  letI : HasCokernel f := hcokernel
+  let E := piEquivalenceFunctorDiscrete ℤ C
+  let e₁ := PreservesCokernel.iso E.functor f
+  let e₂ := PreservesCokernel.iso
+    ((evaluation (Discrete ℤ) C).obj ⟨i⟩) (E.functor.map f)
+  exact ⟨(Functor.mapIso ((evaluation (Discrete ℤ) C).obj ⟨i⟩) e₁) ≪≫ e₂⟩
 
 noncomputable def graded_cokernel_component_iso {C : Type u} [Category.{v} C] [Abelian C]
     {A B : GradedObject ℤ C} (f : A ⟶ B) (i : ℤ) :
@@ -207,7 +324,32 @@ noncomputable def graded_cokernel_component_iso {C : Type u} [Category.{v} C] [A
 theorem graded_coimage_image_comparison_isIso {C : Type u} [Category.{v} C]
     [Abelian C] {A B : GradedObject ℤ C} (f : A ⟶ B) :
     IsIso (Abelian.coimageImageComparison f) := by
-  sorry
+  let E := piEquivalenceFunctorDiscrete ℤ C
+  let hKernels : HasKernels (GradedObject ℤ C) := inferInstance
+  let hCokernels : HasCokernels (GradedObject ℤ C) := inferInstance
+  letI : HasZeroMorphisms (ℤ → C) :=
+    (inferInstance : HasZeroMorphisms (GradedObject ℤ C))
+  letI : HasKernels (ℤ → C) := hKernels
+  letI : HasCokernels (ℤ → C) := hCokernels
+  letI : E.inverse.PreservesZeroMorphisms :=
+    { map_zero := by
+        intro X Y
+        funext j
+        rfl }
+  let arrowIso : Arrow.mk (E.inverse.map (E.functor.map f)) ≅ Arrow.mk f :=
+    Arrow.isoMk' _ _ (asIso (E.unitIso.inv.app A)) (asIso (E.unitIso.inv.app B))
+      (by
+        exact (E.unitIso.inv.naturality f).symm)
+  let iso₁ :=
+    Abelian.PreservesCoimageImageComparison.iso E.inverse (E.functor.map f)
+  let iso₂ : Arrow.mk (Abelian.coimageImageComparison
+      (E.inverse.map (E.functor.map f))) ≅
+      Arrow.mk (Abelian.coimageImageComparison f) := by
+    simpa only [Abelian.coimageImageComparisonFunctor, Arrow.mk] using
+      Abelian.coimageImageComparisonFunctor.mapIso arrowIso
+  let iso := iso₁ ≪≫ iso₂
+  rw [Arrow.isIso_iff_isIso_of_isIso iso.inv]
+  infer_instance
 
 /-! ### The warning about non-exact countable direct sums -/
 

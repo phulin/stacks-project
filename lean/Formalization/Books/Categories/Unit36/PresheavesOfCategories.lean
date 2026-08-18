@@ -651,7 +651,7 @@ theorem isomorphicOverBase_isFibredEquivalenceOver
   rcases h with ⟨F, G, hF, hG, hFG, hGF⟩
   refine ⟨F, G, hF, hG, ?_, ?_, ?_, ?_⟩
   · intro a b φ hφ
-    letI : p.IsStronglyCartesian (p.map φ) φ := hφ
+    let : p.IsStronglyCartesian (p.map φ) φ := hφ
     refine { toIsHomLift := ?_, universal_property' := ?_ }
     · infer_instance
     · intro a' g ψ hψ
@@ -698,7 +698,7 @@ theorem isomorphicOverBase_isFibredEquivalenceOver
         simp [gS]
       have hmapS : p.map ψS = gS ≫ p.map φ := by
         simpa using CategoryTheory.IsHomLift.fac' p (gS ≫ p.map φ) ψS
-      letI : p.IsHomLift (p.map ψS) ψS := hmapS ▸ hψS
+      let : p.IsHomLift (p.map ψS) ψS := hmapS ▸ hψS
       obtain ⟨δ, ⟨hδ, hδeq⟩, hδuniq⟩ :=
         Functor.IsStronglyCartesian.universal_property p
           (p.map φ) φ gS (p.map ψS) hmapS ψS
@@ -720,7 +720,7 @@ theorem isomorphicOverBase_isFibredEquivalenceOver
         dsimp [χ]
         rw [Functor.map_comp, eqToHom_map, hFδ', hδmap]
         simp [gS, Category.assoc, eqToHom_trans]
-      letI : q.IsHomLift g χ := by
+      let : q.IsHomLift g χ := by
         apply CategoryTheory.IsHomLift.of_fac' q g χ rfl rfl
         simpa using hχmap
       have hGF_Fb : F.obj (G.obj (F.obj b)) = F.obj b := by
@@ -739,7 +739,7 @@ theorem isomorphicOverBase_isFibredEquivalenceOver
       refine ⟨χ, ⟨inferInstance, hχeq⟩, ?_⟩
       intro χ' hχ'
       rcases hχ' with ⟨hχ'lift, hχ'eq⟩
-      letI : q.IsHomLift g χ' := hχ'lift
+      let : q.IsHomLift g χ' := hχ'lift
       have hχ'map : q.map χ' = g := by
         simpa using CategoryTheory.IsHomLift.fac' q g χ'
       have hGχ' := Functor.congr_hom hG χ'
@@ -789,7 +789,7 @@ theorem isomorphicOverBase_isFibredEquivalenceOver
         _ = eqToHom hGF_a.symm ≫ F.map δ := by rw [hδeq']
         _ = χ := rfl
   · intro a b φ hφ
-    letI : q.IsStronglyCartesian (q.map φ) φ := hφ
+    let : q.IsStronglyCartesian (q.map φ) φ := hφ
     refine { toIsHomLift := ?_, universal_property' := ?_ }
     · infer_instance
     · intro a' g ψ hψ
@@ -836,7 +836,7 @@ theorem isomorphicOverBase_isFibredEquivalenceOver
         simp [gS]
       have hmapS : q.map ψS = gS ≫ q.map φ := by
         simpa using CategoryTheory.IsHomLift.fac' q (gS ≫ q.map φ) ψS
-      letI : q.IsHomLift (q.map ψS) ψS := hmapS ▸ hψS
+      let : q.IsHomLift (q.map ψS) ψS := hmapS ▸ hψS
       obtain ⟨δ, ⟨hδ, hδeq⟩, hδuniq⟩ :=
         Functor.IsStronglyCartesian.universal_property q
           (q.map φ) φ gS (q.map ψS) hmapS ψS
@@ -858,7 +858,7 @@ theorem isomorphicOverBase_isFibredEquivalenceOver
         dsimp [χ]
         rw [Functor.map_comp, eqToHom_map, hGδ', hδmap]
         simp [gS, Category.assoc, eqToHom_trans]
-      letI : p.IsHomLift g χ := by
+      let : p.IsHomLift g χ := by
         apply CategoryTheory.IsHomLift.of_fac' p g χ rfl rfl
         simpa using hχmap
       have hFG_Fb : G.obj (F.obj (G.obj b)) = G.obj b := by
@@ -877,7 +877,7 @@ theorem isomorphicOverBase_isFibredEquivalenceOver
       refine ⟨χ, ⟨inferInstance, hχeq⟩, ?_⟩
       intro χ' hχ'
       rcases hχ' with ⟨hχ'lift, hχ'eq⟩
-      letI : p.IsHomLift g χ' := hχ'lift
+      let : p.IsHomLift g χ' := hχ'lift
       have hχ'map : p.map χ' = g := by
         simpa using CategoryTheory.IsHomLift.fac' p g χ'
       have hFχ' := Functor.congr_hom hF χ'

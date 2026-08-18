@@ -894,19 +894,276 @@ theorem localization_injective
     {R : Type u} {E : Type v} [CommRing R] [AddCommGroup E] [Module R E]
     [IsNoetherianRing R] [Small.{v} R] (S : Submonoid R) [Module.Injective R E] :
     Module.Injective (Localization S) (LocalizedModule S E) := by
-  sorry
+  exact Module.injective_of_isLocalizedModule S (LocalizedModule.mkLinearMap S E)
 
 theorem principal_power_torsion_injective
     {R I : Type*} [CommRing R] [AddCommGroup I] [Module R I]
     [IsNoetherianRing R] [Module.Injective R I] (f : R) :
     Module.Injective R (Submodule.torsion' R I (Submonoid.powers f)) := by
-  sorry
+  classical
+  let E : Submodule R I := Submodule.torsion' R I (Submonoid.powers f)
+  apply (injective_iff_essential_extensions_trivial (R := R) (I := I) E).2
+  intro E' hEE' hEss
+  apply le_antisymm hEE'
+  intro x hx
+  by_contra hnot
+  let j : E →ₗ[R] E' := E.inclusion hEE'
+  let S : Submodule R E' := LinearMap.range j
+  have hj : Function.Injective j := Submodule.inclusion_injective hEE'
+  let e : E ≃ₗ[R] S :=
+    LinearEquiv.ofBijective j.rangeRestrict
+      ⟨(LinearMap.injective_rangeRestrict_iff j).2 hj, j.surjective_rangeRestrict⟩
+  have : Mono (ModuleCat.ofHom j) := ConcreteCategory.mono_of_injective _ hj
+  have : Mono (ModuleCat.ofHom S.subtype) :=
+    ConcreteCategory.mono_of_injective _ Subtype.val_injective
+  have heq :
+      e.toModuleIso.hom ≫ ModuleCat.ofHom S.subtype = ModuleCat.ofHom j := by
+    apply ModuleCat.hom_ext
+    rfl
+  have hmk :
+      Subobject.mk (ModuleCat.ofHom j) =
+        Subobject.mk (ModuleCat.ofHom S.subtype) :=
+    Subobject.mk_eq_mk_of_comm (ModuleCat.ofHom j)
+      (ModuleCat.ofHom S.subtype) e.toModuleIso heq
+  have hEssS : EssentialSubmodule S := by
+    apply (essentialSubmodule_iff_essentialExtension S).2
+    unfold EssentialExtension at hEss ⊢
+    rcases hEss with ⟨hmono, hess⟩
+    have := hmono
+    refine ⟨inferInstance, ?_⟩
+    intro P hP
+    rw [← hmk]
+    exact hess P hP
+  let g : R →ₗ[R] I := LinearMap.toSpanSingleton R I x
+  let J : Ideal R := E.comap g
+  obtain ⟨s, hs⟩ := J.fg_of_isNoetherianRing
+  have hpow (a : R) (ha : a ∈ s) : ∃ n : ℕ, f ^ n • g a = 0 := by
+    have haJ : a ∈ J := by
+      rw [← hs]
+      exact Submodule.subset_span (by simpa using ha)
+    have haE : g a ∈ E := haJ
+    obtain ⟨b, hb⟩ := (Submodule.mem_torsion'_iff (R := R) (M := I)
+      (S := Submonoid.powers f) (g a)).mp haE
+    obtain ⟨n, hn⟩ := b.property
+    refine ⟨n, ?_⟩
+    change (b : R) • g a = 0 at hb
+    simpa [hn] using hb
+  let n₀ : {a : R // a ∈ s} → ℕ := fun a => Nat.find (hpow a.1 a.2)
+  let n : ℕ := s.attach.sup n₀
+  have hn₀ (a : {a : R // a ∈ s}) : n₀ a ≤ n := Finset.le_sup (s.mem_attach a)
+  have hgen (a : R) (ha : a ∈ s) : f ^ n • g a = 0 := by
+    let a' : {a : R // a ∈ s} := ⟨a, ha⟩
+    have hle : n₀ a' ≤ n := hn₀ a'
+    have ha0 : f ^ n₀ a' • g a = 0 := Nat.find_spec (hpow a ha)
+    rw [← Nat.sub_add_cancel hle, pow_add]
+    calc
+      (f ^ (n - n₀ a') * f ^ n₀ a') • g a =
+          f ^ (n - n₀ a') • (f ^ n₀ a' • g a) := by rw [smul_smul]
+      _ = 0 := by rw [ha0, smul_zero]
+  have hJ (a : R) (ha : a ∈ J) : f ^ n • g a = 0 := by
+    rw [← hs] at ha
+    refine Submodule.span_induction (p := fun z _ => f ^ n • g z = 0)
+      (fun r hr => hgen r (by simpa using hr))
+      (by simp)
+      (fun r q hr hq hpr hpq => by
+        rw [map_add, smul_add, hpr, hpq, add_zero])
+      (fun c r hr hpr => by
+        rw [map_smul]
+        have hpr' := congrArg (fun z : I => c • z) hpr
+        simpa [smul_smul, mul_comm] using hpr')
+      ha
+  have hzero_of_mem (a : R) (ha : a • (f ^ n • x) ∈ E) :
+      a • (f ^ n • x) = 0 := by
+    have haJ : a ∈ J := by
+      change a • x ∈ E
+      rw [Submodule.mem_torsion'_iff]
+      obtain ⟨b, hb⟩ := (Submodule.mem_torsion'_iff (R := R) (M := I)
+        (S := Submonoid.powers f) (a • (f ^ n • x))).mp ha
+      obtain ⟨m, hm⟩ := b.property
+      refine ⟨⟨f ^ (m + n), ⟨m + n, rfl⟩⟩, ?_⟩
+      change (f ^ (m + n) : R) • (a • x) = 0
+      change (b : R) • (a • (f ^ n • x)) = 0 at hb
+      simpa [← hm, smul_smul, pow_add, mul_comm, mul_left_comm, mul_assoc] using hb
+    simpa [g, smul_smul, mul_comm] using hJ a haJ
+  have hx'not : f ^ n • x ∉ E := by
+    intro hx'
+    rw [Submodule.mem_torsion'_iff] at hx'
+    obtain ⟨b, hb⟩ := hx'
+    obtain ⟨m, hm⟩ := b.property
+    apply hnot
+    rw [Submodule.mem_torsion'_iff]
+    refine ⟨⟨f ^ (m + n), ⟨m + n, rfl⟩⟩, ?_⟩
+    change (f ^ (m + n) : R) • x = 0
+    change (b : R) • (f ^ n • x) = 0 at hb
+    simpa [← hm, smul_smul, pow_add, mul_comm, mul_left_comm, mul_assoc] using hb
+  let x' : E' := ⟨f ^ n • x, E'.smul_mem (f ^ n) hx⟩
+  have hx'0 : x' ≠ 0 := by
+    intro hx0
+    apply hx'not
+    have hxval : (f ^ n • x : I) = 0 := congrArg Subtype.val hx0
+    rw [hxval]
+    exact E.zero_mem
+  obtain ⟨r, hrS, hr0⟩ := (essentialSubmodule_iff_smul S).1 hEssS x' hx'0
+  obtain ⟨y, hy⟩ := hrS
+  apply hr0
+  apply Subtype.ext
+  change r • (f ^ n • x) = 0
+  have hy' := congrArg Subtype.val hy
+  have hrmem : r • (f ^ n • x) ∈ E := by
+    rw [show r • (f ^ n • x) = (y : I) by simpa [j, x'] using hy'.symm]
+    exact y.property
+  exact hzero_of_mem r hrmem
 
 theorem ideal_power_torsion_injective
     {R I : Type*} [CommRing R] [AddCommGroup I] [Module R I]
     [IsNoetherianRing R] [Module.Injective R I] (J : Ideal R) :
     Module.Injective R (Ideal.primaryComponent I J) := by
-  sorry
+  classical
+  have hI : Module.Injective R I := by assumption
+  have hprimary (K : Ideal R) (f : R) :
+      Ideal.primaryComponent I (K ⊔ Ideal.span {f}) =
+        Ideal.primaryComponent I K ⊓
+          Submodule.torsion' R I (Submonoid.powers f) := by
+    ext x
+    constructor
+    · intro hx
+      rw [Ideal.primaryComponent_mem] at hx
+      obtain ⟨n, hx⟩ := hx
+      rw [Submodule.mem_torsionBySet_iff] at hx
+      constructor
+      · change x ∈ Ideal.primaryComponent I K
+        rw [Ideal.primaryComponent_mem]
+        refine ⟨n, ?_⟩
+        rw [Submodule.mem_torsionBySet_iff]
+        intro a
+        exact hx ⟨(a : R), (Ideal.pow_right_mono le_sup_left n) a.property⟩
+      · change x ∈ Submodule.torsion' R I (Submonoid.powers f)
+        rw [Submodule.mem_torsion'_iff]
+        refine ⟨⟨f ^ n, ⟨n, rfl⟩⟩, ?_⟩
+        have hf : f ^ n ∈ (K ⊔ Ideal.span {f}) ^ n :=
+          Ideal.pow_mem_pow (Ideal.mem_sup_right (Ideal.subset_span (by simp))) n
+        change f ^ n • x = 0
+        simpa using hx ⟨f ^ n, hf⟩
+    · rintro ⟨hxK, hxf⟩
+      change x ∈ Ideal.primaryComponent I (K ⊔ Ideal.span {f})
+      change x ∈ Ideal.primaryComponent I K at hxK
+      change x ∈ Submodule.torsion' R I (Submonoid.powers f) at hxf
+      rw [Ideal.primaryComponent_mem] at hxK ⊢
+      obtain ⟨n, hxK⟩ := hxK
+      rw [Submodule.mem_torsionBySet_iff] at hxK
+      rw [Submodule.mem_torsion'_iff] at hxf
+      obtain ⟨b, hb⟩ := hxf
+      obtain ⟨m, hm⟩ := b.property
+      refine ⟨n + m, ?_⟩
+      rw [Submodule.mem_torsionBySet_iff]
+      intro a
+      have ha : (a : R) ∈ K ^ n ⊔ (Ideal.span {f}) ^ m :=
+        (Ideal.sup_pow_add_le_pow_sup_pow (I := K) (J := Ideal.span {f})
+          (n := n) (m := m)) a.property
+      have hAnn : K ^ n ⊔ (Ideal.span {f}) ^ m ≤ Ideal.torsionOf R I x := by
+        apply sup_le
+        · intro c hc
+          exact (Ideal.mem_torsionOf_iff x c).2 (hxK ⟨c, hc⟩)
+        · rw [Ideal.span_singleton_pow]
+          apply Ideal.span_le.2
+          intro c hc
+          rcases Set.mem_singleton_iff.mp hc with rfl
+          change (b : R) • x = 0 at hb
+          simpa [← hm] using hb
+      exact (Ideal.mem_torsionOf_iff x (a : R)).1 (hAnn ha)
+
+  have htransfer {M N : Type u_2} [AddCommGroup M] [AddCommGroup N]
+      [Module R M] [Module R N] (e : M ≃ₗ[R] N) (hM : Module.Injective R M) :
+      Module.Injective R N := by
+    letI : Module.Injective R M := hM
+    constructor
+    intro X Y _ _ _ _ g hg k
+    obtain ⟨l, hl⟩ := Module.Injective.out g hg (e.symm.toLinearMap.comp k)
+    refine ⟨e.toLinearMap.comp l, ?_⟩
+    intro x
+    have hx := congrArg e (hl x)
+    simpa using hx
+
+  have hstep (E : Submodule R I) [Module.Injective R E] (f : R) :
+      Module.Injective R
+        ↥(E ⊓ Submodule.torsion' R I (Submonoid.powers f)) := by
+    let T : Submodule R E := Submodule.torsion' R E (Submonoid.powers f)
+    let φ : T →ₗ[R] I := E.subtype.comp T.subtype
+    have hφ : Function.Injective φ := by
+      intro x y hxy
+      apply Subtype.ext
+      apply Subtype.ext
+      exact hxy
+    have hrange : LinearMap.range φ =
+        E ⊓ Submodule.torsion' R I (Submonoid.powers f) := by
+      ext x
+      constructor
+      · rintro ⟨y, rfl⟩
+        constructor
+        · exact y.1.2
+        · change φ y ∈ Submodule.torsion' R I (Submonoid.powers f)
+          rw [Submodule.mem_torsion'_iff]
+          obtain ⟨a, ha⟩ := y.2
+          refine ⟨a, ?_⟩
+          change (a : R) • (y.1 : I) = 0
+          have ha' := congrArg Subtype.val ha
+          change (a : R) • (y.1 : I) = 0 at ha'
+          exact ha'
+      · rintro ⟨hxE, hxT⟩
+        change x ∈ Submodule.torsion' R I (Submonoid.powers f) at hxT
+        rw [Submodule.mem_torsion'_iff] at hxT
+        obtain ⟨a, ha⟩ := hxT
+        let y : T := ⟨⟨x, hxE⟩, ?_⟩
+        · exact ⟨y, by rfl⟩
+        · refine ⟨a, ?_⟩
+          apply Subtype.ext
+          exact ha
+    let e : T ≃ₗ[R] LinearMap.range φ :=
+      LinearEquiv.ofBijective φ.rangeRestrict
+        ⟨(LinearMap.injective_rangeRestrict_iff φ).2 hφ,
+          φ.surjective_rangeRestrict⟩
+    let eEq : (LinearMap.range φ) ≃ₗ[R]
+        ↥(E ⊓ Submodule.torsion' R I (Submonoid.powers f)) :=
+      { toFun := fun x => ⟨x, by rw [← hrange]; exact x.property⟩
+        invFun := fun x => ⟨x, by rw [hrange]; exact x.property⟩
+        left_inv := by intro x; rfl
+        right_inv := by intro x; rfl
+        map_add' := by intro x y; rfl
+        map_smul' := by intro a x; rfl }
+    have hT : Module.Injective R T :=
+      principal_power_torsion_injective (R := R) (I := E) f
+    exact htransfer (e.trans eEq) hT
+
+  obtain ⟨s, hs⟩ := J.fg_of_isNoetherianRing
+  have hfinite : ∀ s : Finset R,
+      Module.Injective R ↥(Ideal.primaryComponent I (Ideal.span (s : Set R))) := by
+    intro s
+    induction s using Finset.induction_on with
+    | empty =>
+        have hzero : Ideal.primaryComponent I (Ideal.span (∅ : Set R)) = ⊤ := by
+          apply top_unique
+          intro x _
+          rw [Ideal.primaryComponent_mem]
+          refine ⟨1, ?_⟩
+          rw [Submodule.mem_torsionBySet_iff]
+          intro a
+          have ha : (a : R) = 0 := by simpa using a.property
+          simp [ha]
+        rw [show Ideal.span (↑(∅ : Finset R) : Set R) = Ideal.span (∅ : Set R) by simp,
+          hzero]
+        exact htransfer (M := I) (N := (⊤ : Submodule R I))
+          (Submodule.topEquiv : (⊤ : Submodule R I) ≃ₗ[R] I).symm
+          hI
+    | @insert f s hfs ih =>
+        have hspan : Ideal.span ((↑(insert f s) : Set R)) =
+            Ideal.span (↑s : Set R) ⊔ Ideal.span {f} := by
+          rw [Finset.coe_insert, Ideal.span_insert, sup_comm]
+        rw [hspan, hprimary]
+        letI : Module.Injective R
+            ↥(Ideal.primaryComponent I (Ideal.span (↑s : Set R))) := ih
+        exact hstep _ f
+  rw [← hs]
+  exact hfinite s
 
 /-! ### Polynomial extensions -/
 
@@ -960,7 +1217,100 @@ theorem polynomial_hom_module_as_product
       (((ModuleCat.restrictScalars (algebraMap A (Polynomial A))).obj
           (polynomial_hom_module A E)) ≃ₗ[A]
         (ModuleCat.of A (ℕ → PolynomialModule A E))) := by
-  sorry
+  let M := PolynomialModule A E
+  letI : Module A (polynomial_hom_module A E) :=
+    ModuleCat.isModule
+      ((ModuleCat.restrictScalars (algebraMap A (Polynomial A))).obj
+        (polynomial_hom_module A E))
+  let q := ModuleCat.CoextendScalars.equiv (algebraMap A (Polynomial A))
+    ((ModuleCat.restrictScalars (algebraMap A (Polynomial A))).obj
+      (ModuleCat.of (Polynomial A) M))
+  let qP :
+      ((ModuleCat.restrictScalars (algebraMap A (Polynomial A))).obj
+          (ModuleCat.of (Polynomial A) (Polynomial A))) ≃ₗ[A] Polynomial A :=
+    { toFun := fun p => p
+      invFun := fun p => p
+      left_inv := by intro p; rfl
+      right_inv := by intro p; rfl
+      map_add' := by intro p r; rfl
+      map_smul' := by
+        intro a p
+        change Polynomial.C a * (show Polynomial A from p) =
+          a • (show Polynomial A from p)
+        rw [Polynomial.smul_eq_C_mul] }
+  let qM :
+      ((ModuleCat.restrictScalars (algebraMap A (Polynomial A))).obj
+          (ModuleCat.of (Polynomial A) M)) ≃ₗ[A] M :=
+    { toFun := fun m => m
+      invFun := fun m => m
+      left_inv := by intro m; rfl
+      right_inv := by intro m; rfl
+      map_add' := by intro m n; rfl
+      map_smul' := by
+        intro a m
+        change Polynomial.C a • (show M from m) = a • (show M from m)
+        rw [Polynomial.C_eq_algebraMap]
+        exact algebraMap_smul (Polynomial A) a (show M from m) }
+  let qA :
+      ((ModuleCat.coextendScalars (algebraMap A (Polynomial A))).obj
+        ((ModuleCat.restrictScalars (algebraMap A (Polynomial A))).obj
+          (ModuleCat.of (Polynomial A) M))) ≃ₗ[A]
+        ((ModuleCat.restrictScalars (algebraMap A (Polynomial A))).obj
+          (ModuleCat.of (Polynomial A) (Polynomial A)) →ₗ[A]
+            (ModuleCat.restrictScalars (algebraMap A (Polynomial A))).obj
+              (ModuleCat.of (Polynomial A) M)) :=
+    { toFun := q
+      invFun := q.symm
+      left_inv := q.left_inv
+      right_inv := q.right_inv
+      map_add' := q.map_add
+      map_smul' := by
+        intro a z
+        apply LinearMap.ext
+        intro p
+        change (a • z) p = a • (q z) p
+        change q (a • z) p = a • (q z) p
+        calc
+          q (a • z) p = q (Polynomial.C a • z) p := by
+            congr 1
+          _ = (Polynomial.C a • q z) p := by rw [q.map_smul]
+          _ = (q z) ((show Polynomial A from p) * Polynomial.C a) := by rfl
+          _ = (q z) (a • p) := by
+            congr 1
+            change (show Polynomial A from p) * (algebraMap A (Polynomial A)) a =
+              (algebraMap A (Polynomial A)) a * (show Polynomial A from p)
+            rw [mul_comm]
+          _ = a • (q z) p := (q z).map_smul a p
+          _ = (algebraMap A (Polynomial A)) a • (q z) p := by
+            exact ModuleCat.restrictScalars.smul_def
+              (algebraMap A (Polynomial A)) a ((q z) p) }
+  let ePoly :
+      ((ModuleCat.restrictScalars (algebraMap A (Polynomial A))).obj
+          (polynomial_hom_module A E)) ≃ₗ[A] (Polynomial A →ₗ[A] M) :=
+    qA.trans (LinearEquiv.arrowCongr qP qM)
+  let eCoeff : AddMonoidAlgebra A ℕ ≃ₗ[A] (ℕ →₀ A) :=
+    { toFun := AddMonoidAlgebra.coeff
+      invFun := AddMonoidAlgebra.ofCoeff
+      left_inv := by intro x; exact AddMonoidAlgebra.ofCoeff_coeff x
+      right_inv := by intro x; exact AddMonoidAlgebra.coeff_ofCoeff x
+      map_add' := by intro x y; rfl
+      map_smul' := by intro a x; rfl }
+  let eCoeffHom : (AddMonoidAlgebra A ℕ →ₗ[A] M) ≃ₗ[A]
+      ((ℕ →₀ A) →ₗ[A] M) :=
+    { toFun := fun g => g.comp eCoeff.symm.toLinearMap
+      invFun := fun g => g.comp eCoeff.toLinearMap
+      left_inv := by intro g; ext x; simp
+      right_inv := by intro g; ext x; simp
+      map_add' := by intro g h; ext x; simp
+      map_smul' := by intro a g; ext x; simp }
+  let eF :
+      (ℕ → M) ≃ₗ[A] (AddMonoidAlgebra A ℕ →ₗ[A] M) :=
+    (Finsupp.llift M A A ℕ).trans eCoeffHom.symm
+  let eC :
+      (AddMonoidAlgebra A ℕ →ₗ[A] M) ≃ₗ[A] (Polynomial A →ₗ[A] M) :=
+    LinearEquiv.arrowCongr (Polynomial.toFinsuppIsoLinear A).symm
+      (LinearEquiv.refl A M)
+  exact ⟨ePoly.trans (eF.trans eC).symm⟩
 
 theorem polynomial_short_exact
     (A E : Type u) [CommRing A] [AddCommGroup E] [Module A E] :

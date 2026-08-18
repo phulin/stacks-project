@@ -1005,11 +1005,6 @@ theorem isFibredEquivalenceOver_trans
     refine ⟨eA, overA, ?_⟩
     intro x
     dsimp [eA]
-    simp only [Iso.trans_hom, NatTrans.comp_app,
-      Functor.associator_hom_app, Functor.isoWhiskerRight_hom,
-      Functor.whiskerRight_app, Functor.isoWhiskerLeft_hom,
-      Functor.whiskerLeft_app, Functor.rightUnitor_hom_app]
-    trace_state
     sorry
   · sorry
 

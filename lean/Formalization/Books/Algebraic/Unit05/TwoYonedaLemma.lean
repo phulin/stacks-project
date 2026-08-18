@@ -133,7 +133,7 @@ theorem relativeTwoYonedaFromFibre_evaluation_iso
     Nonempty
       ((RelativeTwoYonedaEvaluation p U).obj
           ((RelativeTwoYonedaFromFibre p P U).obj x) ≅ x) := by
-  sorry
+  exact ⟨(Classical.choose (pullback_identity_iso p P U)).inv.app x⟩
 
 /-- With the standard unital normalization of pullbacks, evaluation recovers
 `x` literally at `U/U`. -/
@@ -144,7 +144,8 @@ theorem relativeTwoYonedaFromFibre_evaluation
     (x : RelativeFibre p U) :
     (RelativeTwoYonedaEvaluation p U).obj
         ((RelativeTwoYonedaFromFibre p P U).obj x) = x := by
-  sorry
+  change P.pullback (𝟙 U) x = x
+  exact hP U x
 
 /- The unnormalized wording "a unique 2-isomorphism" is made precise by
    prescribing its value under evaluation.  This is the usual uniqueness
@@ -159,10 +160,29 @@ theorem relativeTwoYoneda_existsUnique_normalizedIso
     (a : (RelativeTwoYonedaEvaluation p U).obj
         ((RelativeTwoYonedaFromFibre p P U).obj x) ≅ x) :
     ∃! η : (RelativeTwoYonedaFromFibre p P U).obj x ⟶ G,
-      IsIso η ∧
+        IsIso η ∧
         (RelativeTwoYonedaEvaluation p U).map η =
           a.hom ≫ eqToHom hG.symm := by
-  sorry
+  letI : (RelativeTwoYonedaEvaluation p U).IsEquivalence :=
+    relative_two_yoneda_equivalence p U
+  let η : (RelativeTwoYonedaFromFibre p P U).obj x ⟶ G :=
+    (RelativeTwoYonedaEvaluation p U).preimage
+      (a.hom ≫ eqToHom hG.symm)
+  have hη : (RelativeTwoYonedaEvaluation p U).map η =
+      a.hom ≫ eqToHom hG.symm :=
+    (RelativeTwoYonedaEvaluation p U).map_preimage _
+  refine ⟨η, ?_, ?_⟩
+  · constructor
+    · haveI : IsIso ((RelativeTwoYonedaEvaluation p U).map η) := by
+        rw [hη]
+        infer_instance
+      exact (Functor.FullyFaithful.ofFullyFaithful
+        (RelativeTwoYonedaEvaluation p U)).isIso_of_isIso_map η
+    · exact hη
+  · intro η' hη'
+    apply (Functor.FullyFaithful.ofFullyFaithful
+      (RelativeTwoYonedaEvaluation p U)).map_injective
+    exact hη'.2.trans hη.symm
 
 end
 

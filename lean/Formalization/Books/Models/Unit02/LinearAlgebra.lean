@@ -1852,7 +1852,302 @@ theorem coker
     Nonempty
       (Submodule.torsion ℤ (moduleCokernel (dstar.comp d)) ≃ₗ[ℤ]
         latticeDualQuotient B₁ (LinearMap.range d)) := by
-  sorry
+  classical
+  let f := dstar.comp d
+  letI : Module ℤ (L₀ ⧸ LinearMap.range f) :=
+    Submodule.Quotient.module (LinearMap.range f)
+  have hkerf : LinearMap.ker f = LinearMap.ker d := by
+    apply le_antisymm
+    · intro x hx
+      apply LinearMap.mem_ker.mpr
+      have hzero : B₁ (d x) (d x) = 0 := by
+        calc
+          B₁ (d x) (d x) = B₀ x (dstar (d x)) := hadj x (d x)
+          _ = 0 := by
+            have hfx : dstar (d x) = 0 := LinearMap.mem_ker.mp hx
+            rw [hfx]
+            simp
+      exact (by_contra fun hne => (ne_of_gt (hB₁.2 (d x) hne)) hzero)
+    · intro x hx
+      apply LinearMap.mem_ker.mpr
+      simp [f, LinearMap.mem_ker.mp hx]
+  let K : Submodule ℤ L₀ := B₀.orthogonal (LinearMap.ker d)
+  have hfrange : LinearMap.range f ≤ K := by
+    rintro _ ⟨x, rfl⟩
+    apply LinearMap.BilinForm.mem_orthogonal_iff.mpr
+    intro k hk
+    have h := hadj k (d x)
+    rw [LinearMap.mem_ker.mp hk, map_zero] at h
+    simpa [f] using h.symm
+  obtain ⟨e, he⟩ := hunimod
+  have heq : Function.Injective B₀ := by
+    intro x y hxy
+    apply e.injective
+    apply DFunLike.ext
+    intro z
+    rw [he, he]
+    exact DFunLike.congr_fun hxy z
+  letI : Module ℤ (LinearMap.range d) := (LinearMap.range d).module
+  letI : Module ℤ (L₀ ⧸ LinearMap.ker d) :=
+    Submodule.Quotient.module (LinearMap.ker d)
+  letI : Module ℤ K := K.module
+  let eD : (L₀ ⧸ LinearMap.ker d) ≃ₗ[ℤ] LinearMap.range d :=
+    d.quotKerEquivRange
+  let bK : K →ₗ[ℤ] (LinearMap.ker d).dualAnnihilator :=
+    (B₀.domRestrict K).codRestrict (LinearMap.ker d).dualAnnihilator (by
+      intro x
+      rw [Submodule.mem_dualAnnihilator]
+      intro k hk
+      have hx := LinearMap.BilinForm.mem_orthogonal_iff.mp x.property k hk
+      rw [hB₀.1.eq] at hx
+      exact hx)
+  let bQ : K →ₗ[ℤ] Module.Dual ℤ (L₀ ⧸ LinearMap.ker d) :=
+    (Submodule.dualQuotEquivDualAnnihilator (LinearMap.ker d)).symm.toLinearMap.comp bK
+  let F : K →ₗ[ℤ] Module.Dual ℤ (LinearMap.range d) :=
+    (eD.symm.toLinearMap.dualMap).comp bQ
+  let p : LinearMap.range d →ₗ[ℤ] Module.Dual ℤ (LinearMap.range d) :=
+    B₁.restrict (LinearMap.range d)
+  have hF_eval (x : K) (z : L₀) :
+      F x ⟨d z, LinearMap.mem_range_self d z⟩ = B₀ (x : L₀) z := by
+    change bQ x (eD.symm ⟨d z, LinearMap.mem_range_self d z⟩) = B₀ (x : L₀) z
+    have heDz : eD ((LinearMap.ker d).mkQ z) =
+        ⟨d z, LinearMap.mem_range_self d z⟩ := by
+      apply Subtype.ext
+      rfl
+    rw [← heDz, eD.symm_apply_apply]
+    change (Submodule.dualQuotEquivDualAnnihilator (LinearMap.ker d)).symm
+        (bK x) ((LinearMap.ker d).mkQ z) = B₀ (x : L₀) z
+    change (Submodule.dualQuotEquivDualAnnihilator (LinearMap.ker d)).symm
+        (bK x) (Submodule.Quotient.mk z) = B₀ (x : L₀) z
+    rw [Submodule.dualQuotEquivDualAnnihilator_symm_apply_mk]
+    rfl
+  have hF_inj : Function.Injective F := by
+    intro x y hxy
+    apply Subtype.ext
+    apply heq
+    apply DFunLike.ext
+    intro z
+    have hz := congrArg (fun ψ : Module.Dual ℤ (LinearMap.range d) =>
+      ψ ⟨d z, LinearMap.mem_range_self d z⟩) hxy
+    rw [hF_eval x z, hF_eval y z] at hz
+    exact hz
+  let fK : L₀ →ₗ[ℤ] K := f.codRestrict K
+    (fun z => hfrange (LinearMap.mem_range_self f z))
+  have hF_f (z : L₀) :
+      F (fK z) = p ⟨d z, LinearMap.mem_range_self d z⟩ := by
+    apply DFunLike.ext
+    intro y
+    obtain ⟨w, hw⟩ := y.property
+    have hy : y = ⟨d w, LinearMap.mem_range_self d w⟩ := by
+      apply Subtype.ext
+      exact hw.symm
+    rw [hy, hF_eval]
+    change B₀ (f z) w = B₁ (d z) (d w)
+    calc
+      B₀ (f z) w = B₀ w (dstar (d z)) := by
+        change B₀ (dstar (d z)) w = B₀ w (dstar (d z))
+        exact hB₀.1.eq _ _
+      _ = B₁ (d w) (d z) := (hadj w (d z)).symm
+      _ = B₁ (d z) (d w) := hB₁.1.eq _ _
+  have hF_surj : Function.Surjective F := by
+    intro ψ
+    let ψQ := eD.toLinearMap.dualMap ψ
+    let ψA := Submodule.dualQuotEquivDualAnnihilator (LinearMap.ker d) ψQ
+    obtain ⟨x, hx⟩ := e.surjective ψA
+    have hxK : x ∈ K := by
+      apply LinearMap.BilinForm.mem_orthogonal_iff.mpr
+      intro k hk
+      have hψA : ψA k = 0 := by
+        exact (Submodule.mem_dualAnnihilator ψA).mp ψA.property k hk
+      rw [hB₀.1.eq]
+      calc
+        B₀ x k = e x k := (he x k).symm
+        _ = ψA k := congrArg (fun φ : Module.Dual ℤ L₀ => φ k) hx
+        _ = 0 := hψA
+    refine ⟨⟨x, hxK⟩, ?_⟩
+    apply DFunLike.ext
+    intro y
+    change bQ ⟨x, hxK⟩ (eD.symm y) = ψ y
+    have hbK : bK ⟨x, hxK⟩ = ψA := by
+      apply Subtype.ext
+      apply DFunLike.ext
+      intro z
+      change B₀ x z = ψA z
+      exact (he x z).symm.trans
+        (congrArg (fun φ : Module.Dual ℤ L₀ => φ z) hx)
+    have hbx : bQ ⟨x, hxK⟩ = ψQ := by
+      apply DFunLike.ext
+      intro z
+      change (Submodule.dualQuotEquivDualAnnihilator (LinearMap.ker d)).symm
+          (bK ⟨x, hxK⟩) z = ψQ z
+      rw [hbK]
+      exact congrArg (fun φ : Module.Dual ℤ (L₀ ⧸ LinearMap.ker d) => φ z)
+        ((Submodule.dualQuotEquivDualAnnihilator (LinearMap.ker d)).symm_apply_apply ψQ)
+    rw [hbx]
+    change ψQ (eD.symm y) = ψ y
+    change ψ (eD (eD.symm y)) = ψ y
+    simp
+  let qF : K →ₗ[ℤ] latticeDualQuotient B₁ (LinearMap.range d) :=
+    (LinearMap.range p).mkQ.comp F
+  have hqF : Function.Surjective qF := by
+    intro z
+    obtain ⟨ψ, rfl⟩ := (LinearMap.range p).mkQ_surjective z
+    obtain ⟨x, hx⟩ := hF_surj ψ
+    refine ⟨x, ?_⟩
+    change (LinearMap.range p).mkQ (F x) = Submodule.Quotient.mk ψ
+    rw [hx]
+    rfl
+  have hqF_f : LinearMap.range fK ≤ LinearMap.ker qF := by
+    rintro _ ⟨z, rfl⟩
+    apply LinearMap.mem_ker.mpr
+    change (LinearMap.range p).mkQ (F (fK z)) = 0
+    rw [hF_f]
+    apply (Submodule.Quotient.mk_eq_zero (LinearMap.range p)).mpr
+    exact LinearMap.mem_range_self p _
+  have hqF_ker : LinearMap.ker qF = LinearMap.range fK := by
+    apply le_antisymm
+    · intro x hx
+      have hx' := LinearMap.mem_ker.mp hx
+      change (LinearMap.range p).mkQ (F x) = 0 at hx'
+      obtain ⟨w, hw⟩ := (Submodule.Quotient.mk_eq_zero
+        (LinearMap.range p)).mp hx'
+      obtain ⟨z, hz⟩ := w.property
+      have hw' : w = ⟨d z, LinearMap.mem_range_self d z⟩ := by
+        apply Subtype.ext
+        exact hz.symm
+      have hFz : F x = F (fK z) := by
+        calc
+          F x = p w := hw.symm
+          _ = p ⟨d z, LinearMap.mem_range_self d z⟩ := by rw [hw']
+          _ = F (fK z) := (hF_f z).symm
+      have hxy : x = fK z := hF_inj hFz
+      exact hxy ▸ LinearMap.mem_range_self fK z
+    · exact hqF_f
+  have hpker : LinearMap.ker p = ⊥ := by
+    apply le_antisymm
+    · intro x hx
+      by_contra hne
+      have hpos := hB₁.2 (x : L₁) (by
+        intro hzero
+        apply hne
+        exact Subtype.ext hzero)
+      have hzero : B₁ (x : L₁) (x : L₁) = 0 := by
+        have hx' := DFunLike.congr_fun (LinearMap.mem_ker.mp hx) x
+        exact hx'
+      linarith
+    · exact bot_le
+  have hp_smul : ∀ ψ : Module.Dual ℤ (LinearMap.range d),
+      ∃ n : ℤ, n ≠ 0 ∧ ∃ y : LinearMap.range d, n • ψ = p y := by
+    simpa [p] using
+      (exists_bilinForm_smul_eq (LinearMap.range d)
+        (B₁.restrict (LinearMap.range d)) (by simpa [p] using hpker))
+  have hTtors : Module.IsTorsion ℤ
+      (latticeDualQuotient B₁ (LinearMap.range d)) := by
+    intro t
+    obtain ⟨ψ, rfl⟩ := (LinearMap.range p).mkQ_surjective t
+    obtain ⟨n, hn, y, hy⟩ := hp_smul ψ
+    refine ⟨⟨n, mem_nonZeroDivisors_of_ne_zero hn⟩, ?_⟩
+    change (LinearMap.range p).mkQ (n • ψ) = 0
+    rw [hy]
+    exact (Submodule.Quotient.mk_eq_zero (LinearMap.range p)).mpr
+      (LinearMap.mem_range_self p y)
+  have hlift : LinearMap.range fK ≤ LinearMap.ker
+      ((LinearMap.range f).mkQ.comp K.subtype) := by
+    rintro _ ⟨z, rfl⟩
+    apply LinearMap.mem_ker.mpr
+    change (LinearMap.range f).mkQ (f z) = 0
+    exact (Submodule.Quotient.mk_eq_zero (LinearMap.range f)).mpr
+      (LinearMap.mem_range_self f z)
+  letI : Module ℤ (K ⧸ LinearMap.range fK) :=
+    Submodule.Quotient.module (LinearMap.range fK)
+  have hker_g : LinearMap.ker ((LinearMap.range f).mkQ.comp K.subtype) ≤
+      LinearMap.range fK := by
+    intro x hx
+    have hx' := LinearMap.mem_ker.mp hx
+    change (LinearMap.range f).mkQ (x : L₀) = 0 at hx'
+    obtain ⟨z, hz⟩ := (Submodule.Quotient.mk_eq_zero (LinearMap.range f)).mp hx'
+    apply LinearMap.mem_range.mpr
+    refine ⟨z, ?_⟩
+    apply Subtype.ext
+    exact hz
+  have hker_iKR : LinearMap.ker
+      ((LinearMap.range fK).liftQ ((LinearMap.range f).mkQ.comp K.subtype) hlift) = ⊥ := by
+    exact Submodule.ker_liftQ_eq_bot (LinearMap.range fK)
+      ((LinearMap.range f).mkQ.comp K.subtype) hlift hker_g
+  let iKR : (K ⧸ LinearMap.range fK) →ₗ[ℤ] moduleCokernel f :=
+    (LinearMap.range fK).liftQ ((LinearMap.range f).mkQ.comp K.subtype) hlift
+  have hiKR : Function.Injective iKR := by
+    exact LinearMap.ker_eq_bot.mp (by simpa [iKR] using hker_iKR)
+  let eK : (K ⧸ LinearMap.range fK) ≃ₗ[ℤ]
+      latticeDualQuotient B₁ (LinearMap.range d) :=
+    (Submodule.quotEquivOfEq (LinearMap.ker qF) (LinearMap.range fK) hqF_ker).symm.trans
+      (qF.quotKerEquivOfSurjective hqF)
+  have hKRtors : Module.IsTorsion ℤ (K ⧸ LinearMap.range fK) := by
+    intro x
+    obtain ⟨a, ha⟩ := hTtors (x := eK x)
+    refine ⟨a, ?_⟩
+    apply eK.injective
+    have hsmul_x := @Submonoid.smul_def ℤ (K ⧸ LinearMap.range fK) _
+      (DistribMulAction.toDistribSMul.toSMul) (nonZeroDivisors ℤ) a x
+    have hsmul_e := @Submonoid.smul_def ℤ
+      (latticeDualQuotient B₁ (LinearMap.range d)) _
+      (DistribMulAction.toDistribSMul.toSMul) (nonZeroDivisors ℤ) a (eK x)
+    exact (congrArg eK hsmul_x).trans
+      ((eK.map_smul (a : ℤ) x).trans
+        (hsmul_e.symm.trans (ha.trans eK.map_zero.symm)))
+  let iS : (K ⧸ LinearMap.range fK) →ₗ[ℤ]
+      Submodule.torsion ℤ (moduleCokernel f) :=
+    iKR.codRestrict (Submodule.torsion ℤ (moduleCokernel f)) (by
+      intro x
+      rw [Submodule.mem_torsion_iff]
+      obtain ⟨a, ha⟩ := hKRtors (x := x)
+      refine ⟨a, ?_⟩
+      have hsmul_x := @Submonoid.smul_def (ℤ) (K ⧸ LinearMap.range fK) _
+        (DistribMulAction.toDistribSMul.toSMul) (nonZeroDivisors ℤ) a x
+      have hsmul_c := @Submonoid.smul_def ℤ (moduleCokernel f) _
+        (DistribMulAction.toDistribSMul.toSMul) (nonZeroDivisors ℤ) a (iKR x)
+      exact hsmul_c.trans
+        ((iKR.map_smul (a : ℤ) x).symm.trans
+          ((congrArg iKR hsmul_x.symm).trans
+            ((congrArg iKR ha).trans iKR.map_zero))))
+  have hiS : Function.Injective iS := by
+    intro x y hxy
+    apply hiKR
+    have hxy' := congrArg (fun z : Submodule.torsion ℤ (moduleCokernel f) =>
+      (z : moduleCokernel f)) hxy
+    exact hxy'
+  have hiS_surj : Function.Surjective iS := by
+    intro s
+    obtain ⟨x, hx⟩ := (LinearMap.range f).mkQ_surjective (s : moduleCokernel f)
+    have hs := s.property
+    rw [Submodule.mem_torsion_iff] at hs
+    obtain ⟨a, ha⟩ := hs
+    have hsmul_s := @Submonoid.smul_def ℤ (moduleCokernel f) _
+      (DistribMulAction.toDistribSMul.toSMul) (nonZeroDivisors ℤ) a
+        (s : moduleCokernel f)
+    have hq := (LinearMap.range f).mkQ.map_smul (a : ℤ) x
+    rw [hx, ← hsmul_s, ha] at hq
+    obtain ⟨z, hz⟩ := (Submodule.Quotient.mk_eq_zero (LinearMap.range f)).mp hq
+    have haxK := hfrange (LinearMap.mem_range_self f z)
+    rw [hz] at haxK
+    have hxK : x ∈ K := by
+      apply LinearMap.BilinForm.mem_orthogonal_iff.mpr
+      intro k hk
+      have hka := LinearMap.BilinForm.mem_orthogonal_iff.mp haxK k hk
+      rw [(B₀ k).map_smul] at hka
+      exact (smul_eq_zero.mp hka).resolve_left (by simpa using a.property)
+    refine ⟨Submodule.Quotient.mk ⟨x, hxK⟩, ?_⟩
+    apply Subtype.ext
+    change (LinearMap.range f).mkQ x = (s : moduleCokernel f)
+    exact hx
+  let eS : (K ⧸ LinearMap.range fK) ≃ₗ[ℤ]
+      Submodule.torsion ℤ (moduleCokernel f) :=
+    LinearEquiv.ofBijective iS ⟨hiS, hiS_surj⟩
+  have hmod : (Submodule.Quotient.module (LinearMap.range f) :
+      Module ℤ (moduleCokernel f)) =
+      AddCommGroup.toIntModule (moduleCokernel f) := Subsingleton.elim _ _
+  rw [← hmod]
+  exact ⟨eS.symm.trans eK⟩
 
 /-! The cokernel of an integer matrix. -/
 abbrev matrixCokernel {n : ℕ} (A : Matrix (Fin n) (Fin n) ℤ) : Type _ :=

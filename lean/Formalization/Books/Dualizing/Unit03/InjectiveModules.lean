@@ -1045,7 +1045,6 @@ theorem ideal_power_torsion_injective
         change f ^ n • x = 0
         simpa using hx ⟨f ^ n, hf⟩
     · rintro ⟨hxK, hxf⟩
-      change x ∈ Ideal.primaryComponent I (K ⊔ Ideal.span {f})
       change x ∈ Ideal.primaryComponent I K at hxK
       change x ∈ Submodule.torsion' R I (Submonoid.powers f) at hxf
       rw [Ideal.primaryComponent_mem] at hxK ⊢
@@ -1075,7 +1074,7 @@ theorem ideal_power_torsion_injective
   have htransfer {M N : Type u_2} [AddCommGroup M] [AddCommGroup N]
       [Module R M] [Module R N] (e : M ≃ₗ[R] N) (hM : Module.Injective R M) :
       Module.Injective R N := by
-    letI : Module.Injective R M := hM
+    let _ : Module.Injective R M := hM
     constructor
     intro X Y _ _ _ _ g hg k
     obtain ⟨l, hl⟩ := Module.Injective.out g hg (e.symm.toLinearMap.comp k)
@@ -1159,7 +1158,7 @@ theorem ideal_power_torsion_injective
             Ideal.span (↑s : Set R) ⊔ Ideal.span {f} := by
           rw [Finset.coe_insert, Ideal.span_insert, sup_comm]
         rw [hspan, hprimary]
-        letI : Module.Injective R
+        let _ : Module.Injective R
             ↥(Ideal.primaryComponent I (Ideal.span (↑s : Set R))) := ih
         exact hstep _ f
   rw [← hs]
@@ -1218,7 +1217,7 @@ theorem polynomial_hom_module_as_product
           (polynomial_hom_module A E)) ≃ₗ[A]
         (ModuleCat.of A (ℕ → PolynomialModule A E))) := by
   let M := PolynomialModule A E
-  letI : Module A (polynomial_hom_module A E) :=
+  let _ : Module A (polynomial_hom_module A E) :=
     ModuleCat.isModule
       ((ModuleCat.restrictScalars (algebraMap A (Polynomial A))).obj
         (polynomial_hom_module A E))

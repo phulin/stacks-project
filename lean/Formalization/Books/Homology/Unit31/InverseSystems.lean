@@ -966,28 +966,935 @@ theorem essentiallyConstant_iff_biproduct_decomposition
     choose e₀ he₀q he₀inl he₀inr using hdata
     let Z (j : ℕ+) : C :=
       if hij : i₀ ≤ j then kernel (q j hij ≫ l j) else 0
+    have hZ : ∀ (j : ℕ+) (hij : i₀ ≤ j),
+        Z j = kernel (q j hij ≫ l j) := by
+      intro j hij
+      simp [Z, hij]
     let e : ∀ (j : ℕ+), i₀ ≤ j →
-        biprod (inverseSystemLimit F) (Z j) ≅ F.obj (Opposite.op j) :=
-      fun j hij => by
-        dsimp [Z]
-        rw [dif_pos hij]
-        exact e₀ j hij
-    trace_state
-  · sorry
+        @CategoryTheory.Iso C _
+          (@CategoryTheory.Limits.biprod C _ _ (inverseSystemLimit F) (Z j) _)
+          (F.obj (Opposite.op j)) :=
+      fun j hij =>
+        (biprod.mapIso (Iso.refl _) (eqToIso (hZ j hij))) ≪≫ e₀ j hij
+    have hq : ∀ {j j' : ℕ+} (hij : i₀ ≤ j) (h : j ≤ j'),
+        q j' (hij.trans h) = transitionMap F h ≫ q j hij := by
+      intro j j' hij h
+      have hmap : F.map (opHomOfLE (hij.trans h)) =
+          F.map (opHomOfLE h) ≫ F.map (opHomOfLE hij) := by
+        rw [← F.map_comp]
+        congr 1
+      dsimp [q, transitionMap]
+      rw [hmap]
+      simp only [Category.assoc]
+    have hl : ∀ {j j' : ℕ+} (h : j ≤ j'),
+        l j' ≫ transitionMap F h = l j := by
+      intro j j' h
+      dsimp [l, transitionMap]
+      rw [Category.assoc, c.w]
+    have hpcomm : ∀ {j j' : ℕ+} (hij : i₀ ≤ j) (h : j ≤ j'),
+        (q j' (hij.trans h) ≫ l j') ≫ transitionMap F h =
+          transitionMap F h ≫ (q j hij ≫ l j) := by
+      intro j j' hij h
+      rw [Category.assoc, hl h, hq hij h]
+      simp only [Category.assoc]
+    let z₀ : ∀ {j j' : ℕ+} (hij : i₀ ≤ j) (h : j ≤ j'),
+        kernel (q j' (hij.trans h) ≫ l j') ⟶ kernel (q j hij ≫ l j) :=
+      fun {j j'} hij h =>
+        kernel.lift (q j hij ≫ l j)
+          (kernel.ι (q j' (hij.trans h) ≫ l j') ≫ transitionMap F h) (by
+            calc
+              (kernel.ι (q j' (hij.trans h) ≫ l j') ≫ transitionMap F h) ≫
+                  (q j hij ≫ l j) =
+                  kernel.ι (q j' (hij.trans h) ≫ l j') ≫
+                    (transitionMap F h ≫ (q j hij ≫ l j)) := by
+                      simp only [Category.assoc]
+              _ = kernel.ι (q j' (hij.trans h) ≫ l j') ≫
+                    ((q j' (hij.trans h) ≫ l j') ≫ transitionMap F h) := by
+                      rw [hpcomm hij h]
+              _ = (kernel.ι (q j' (hij.trans h) ≫ l j') ≫
+                    (q j' (hij.trans h) ≫ l j')) ≫ transitionMap F h := by
+                      simp only [Category.assoc]
+              _ = 0 := by rw [kernel.condition, zero_comp])
+    let z : ∀ {j j' : ℕ+} (h : j ≤ j'), Z j' ⟶ Z j :=
+      fun {j j'} h => if hij : i₀ ≤ j then
+        (show Z j' ⟶ Z j from by
+          exact (eqToIso (hZ j' (hij.trans h))).hom ≫ z₀ hij h ≫
+            (eqToIso (hZ j hij)).inv)
+      else 0
+    refine ⟨i₀, Z, e, z, ?_, ?_⟩
+    · intro j j' hij hij' h
+      have heq_q : (e j hij).hom ≫ q j hij = biprod.fst := by
+        simp [e, he₀q j hij]
+      have heq_q' : (e j' hij').hom ≫ q j' hij' = biprod.fst := by
+        simp [e, he₀q j' hij']
+      have heq_inl : biprod.inl ≫ (e j hij).hom = l j := by
+        simp [e, he₀inl j hij]
+      have heq_inl' : biprod.inl ≫ (e j' hij').hom = l j' := by
+        simp [e, he₀inl j' hij']
+      let ιj : Z j ⟶ F.obj (Opposite.op j) :=
+        (eqToIso (hZ j hij)).hom ≫ kernel.ι (q j hij ≫ l j)
+      let ιj' : Z j' ⟶ F.obj (Opposite.op j') :=
+        (eqToIso (hZ j' (hij.trans h))).hom ≫
+          kernel.ι (q j' (hij.trans h) ≫ l j')
+      have heq_inr : biprod.inr ≫ (e j hij).hom = ιj := by
+        simp [e, ιj, he₀inr j hij]
+      have heq_inr' : biprod.inr ≫ (e j' hij').hom = ιj' := by
+        simp [e, ιj', he₀inr j' hij']
+      have hzcomp : z h ≫ ιj = ιj' ≫ transitionMap F h := by
+        simp only [z, dif_pos hij, ιj, ιj', Category.assoc]
+        simp [Category.assoc]
+        rw [kernel.lift_ι]
+      apply (cancel_mono (e j hij).hom).1
+      simp only [Category.assoc, Iso.inv_hom_id, Category.comp_id]
+      apply biprod.hom_ext'
+      · conv_lhs => rw [← Category.assoc]
+        conv_rhs => rw [← Category.assoc]
+        rw [heq_inl', hl h, biprod.inl_map]
+        simp only [Category.id_comp, Category.assoc]
+        rw [heq_inl]
+      · conv_lhs => rw [← Category.assoc]
+        conv_rhs => rw [← Category.assoc]
+        rw [heq_inr', biprod.inr_map]
+        simp only [Category.assoc]
+        rw [heq_inr]
+        exact hzcomp.symm
+    · intro j
+      by_cases hij : i₀ ≤ j
+      · obtain ⟨k, f, g, hfg⟩ := hfactor (Opposite.op j)
+        let j' : ℕ+ := k.unop
+        have hij' : i₀ ≤ j' := le_of_op_hom f
+        have hj' : j ≤ j' := le_of_op_hom g
+        let hij'' : i₀ ≤ j' := hij.trans hj'
+        refine ⟨j', hj', ?_⟩
+        have hf : f = opHomOfLE hij'' := Subsingleton.elim _ _
+        have hg : g = opHomOfLE hj' := Subsingleton.elim _ _
+        have hfg' : transitionMap F hj' = q j' hij'' ≫ l j := by
+          dsimp [transitionMap, q, l, j']
+          rw [← hg, hfg, hf]
+          simp
+        letI : Mono (l j') := ⟨fun a b hab => by
+          calc
+            a = a ≫ 𝟙 _ := by simp
+            _ = a ≫ (l j' ≫ q j' hij'') := by rw [hsplit]
+            _ = (a ≫ l j') ≫ q j' hij'' := by simp only [Category.assoc]
+            _ = (b ≫ l j') ≫ q j' hij'' := by rw [hab]
+            _ = b := by simp [Category.assoc, hsplit]⟩
+        have hqzero : kernel.ι (q j' hij'' ≫ l j') ≫ q j' hij'' = 0 := by
+          apply (cancel_mono (l j')).1
+          simp only [Category.assoc, kernel.condition, zero_comp]
+        let ιj : Z j ⟶ F.obj (Opposite.op j) :=
+          (eqToIso (hZ j hij)).hom ≫ kernel.ι (q j hij ≫ l j)
+        let ιj' : Z j' ⟶ F.obj (Opposite.op j') :=
+          (eqToIso (hZ j' hij'')).hom ≫
+            kernel.ι (q j' hij'' ≫ l j')
+        have hzcomp' : z hj' ≫ ιj = ιj' ≫ transitionMap F hj' := by
+          simp only [z, dif_pos hij, ιj, ιj', Category.assoc]
+          simp [Category.assoc]
+          rw [kernel.lift_ι]
+        apply (cancel_mono ιj).1
+        rw [hzcomp', hfg']
+        dsimp [ιj']
+        have hh := congrArg
+          (fun u => eqToHom (hZ j' hij'') ≫ u ≫ l j) hqzero
+        simpa only [Category.assoc, zero_comp, comp_zero] using hh
+      · refine ⟨j, le_rfl, ?_⟩
+        dsimp [z]
+        rw [dif_neg hij]
+  · intro hdecomp
+    rcases hdecomp with ⟨i, Z, e, z, hcompat, hzero⟩
+    letI : Nonempty ℕ+ := ⟨i⟩
+    letI : IsDirectedOrder ℕ+ := inferInstance
+    let l : ∀ j : ℕ+, inverseSystemLimit F ⟶ F.obj (Opposite.op j) :=
+      fun j => if hij : i ≤ j then
+        biprod.inl ≫ (e j hij).hom
+      else
+        biprod.inl ≫ (e i le_rfl).hom ≫ transitionMap F (le_of_not_ge hij)
+    have hcompat' : ∀ {j j' : ℕ+} (hij : i ≤ j) (hij' : i ≤ j') (h : j ≤ j'),
+        (e j' hij').hom ≫ transitionMap F h =
+          biprod.map (𝟙 _) (z h) ≫ (e j hij).hom := by
+      intro j j' hij hij' h
+      calc
+        (e j' hij').hom ≫ transitionMap F h =
+            ((e j' hij').hom ≫ transitionMap F h) ≫
+              (e j hij).inv ≫ (e j hij).hom := by simp [Category.assoc]
+        _ = biprod.map (𝟙 _) (z h) ≫ (e j hij).hom := by
+          have hh := congrArg (fun u => u ≫ (e j hij).hom)
+            (hcompat hij hij' h)
+          simpa only [Category.assoc, Iso.inv_hom_id, Category.comp_id] using hh
+    have hl : ∀ {j j' : ℕ+} (h : j ≤ j'),
+        l j' ≫ transitionMap F h = l j := by
+      intro j j' h
+      by_cases hj : i ≤ j
+      · have hj' : i ≤ j' := hj.trans h
+        dsimp [l]
+        rw [dif_pos hj', dif_pos hj]
+        rw [Category.assoc, hcompat' hj hj' h]
+        simp [Category.assoc]
+      · by_cases hj' : i ≤ j'
+        · have hji : j ≤ i := le_of_not_ge hj
+          dsimp [l]
+          rw [dif_pos hj', dif_neg hj]
+          have hcomp : transitionMap F h =
+              transitionMap F hj' ≫ transitionMap F hji := by
+            dsimp [transitionMap]
+            rw [← F.map_comp]
+            congr 1
+          rw [hcomp]
+          simp only [Category.assoc]
+          have hh := congrArg
+            (fun u => biprod.inl ≫ u ≫ transitionMap F hji)
+            (hcompat' le_rfl hj' hj')
+          simpa only [← Category.assoc, biprod.inl_map, Category.id_comp] using hh
+        · have hji : j ≤ i := le_of_not_ge hj
+          have hji' : j' ≤ i := le_of_not_ge hj'
+          dsimp [l]
+          rw [dif_neg hj', dif_neg hj]
+          simp only [Category.assoc]
+          have hh := congrArg
+            (fun u => biprod.inl ≫ (e i le_rfl).hom ≫ u)
+            (transitionMap_comp F hji' h)
+          simpa only [Category.assoc] using hh
+    let c : Cone F :=
+      { pt := inverseSystemLimit F
+        π :=
+          { app := fun j => l j.unop
+            naturality := by
+              intro j j' f
+              change (𝟙 _ : inverseSystemLimit F ⟶ inverseSystemLimit F) ≫ l j'.unop =
+                l j.unop ≫ F.map f
+              simp only [Category.id_comp]
+              have hf : f = opHomOfLE (le_of_op_hom f) := Subsingleton.elim _ _
+              rw [hf]
+              exact (hl (le_of_op_hom f)).symm } }
+    refine ⟨⟨⟨i⟩, inferInstance⟩, ?_⟩
+    refine ⟨c, ?_⟩
+    refine ⟨Opposite.op i, (e i le_rfl).inv ≫ biprod.fst, ?_, ?_⟩
+    · dsimp [c, l]
+      rw [dif_pos le_rfl]
+      simp
+    have hkill : ∀ {a b k : ℕ+} (hia : i ≤ a) (hab : a ≤ b)
+        (hbk : b ≤ k) (hz : z hab = 0),
+        transitionMap F (hab.trans hbk) =
+          (e k (hia.trans (hab.trans hbk))).inv ≫ biprod.fst ≫
+            biprod.inl ≫ (e a hia).hom := by
+      intro a b k hia hab hbk hz
+      let hka : a ≤ k := hab.trans hbk
+      let hik : i ≤ k := hia.trans hka
+      have hcomp : transitionMap F hka =
+          transitionMap F hbk ≫ transitionMap F hab := by
+        dsimp [transitionMap]
+        rw [← F.map_comp]
+        congr 1
+      have heq : (e k hik).hom ≫ transitionMap F hka =
+          biprod.fst ≫ biprod.inl ≫ (e a hia).hom := by
+        calc
+          (e k hik).hom ≫ transitionMap F hka =
+              (e k hik).hom ≫ transitionMap F hbk ≫ transitionMap F hab := by
+                rw [hcomp]
+          _ = biprod.map (𝟙 _) (z hbk) ≫ (e b (hia.trans hab)).hom ≫
+                transitionMap F hab := by
+                have hh := congrArg (fun u => u ≫ transitionMap F hab)
+                  (hcompat' (hia.trans hab) hik hbk)
+                simpa only [Category.assoc] using hh
+          _ = biprod.map (𝟙 _) (z hbk) ≫
+                (biprod.map (𝟙 _) (z hab) ≫ (e a hia).hom) := by
+                have hh := congrArg
+                  (fun u => biprod.map (𝟙 _) (z hbk) ≫ u)
+                  (hcompat' hia (hia.trans hab) hab)
+                simpa only [Category.assoc] using hh
+          _ = biprod.fst ≫ biprod.inl ≫ (e a hia).hom := by
+                rw [← Category.assoc]
+                have hmap :
+                    (biprod.map (𝟙 (inverseSystemLimit F)) (z hbk) :
+                        inverseSystemLimit F ⊞ Z k ⟶ inverseSystemLimit F ⊞ Z b) ≫
+                      (biprod.map (𝟙 (inverseSystemLimit F)) (z hab) :
+                        inverseSystemLimit F ⊞ Z b ⟶ inverseSystemLimit F ⊞ Z a) =
+                    (biprod.fst : inverseSystemLimit F ⊞ Z k ⟶ inverseSystemLimit F) ≫
+                      (biprod.inl : inverseSystemLimit F ⟶ inverseSystemLimit F ⊞ Z a) := by
+                  apply biprod.hom_ext
+                  · simp [Category.assoc]
+                  · simp [hz, Category.assoc]
+                rw [hmap]
+                simp only [Category.assoc]
+      calc
+        transitionMap F hka = 𝟙 _ ≫ transitionMap F hka := by simp
+        _ = ((e k hik).inv ≫ (e k hik).hom) ≫ transitionMap F hka := by simp
+        _ = (e k hik).inv ≫
+              ((e k hik).hom ≫ transitionMap F hka) := by simp only [Category.assoc]
+        _ = (e k hik).inv ≫
+              (biprod.fst ≫ biprod.inl ≫ (e a hia).hom) := by rw [heq]
+        _ = (e k hik).inv ≫ biprod.fst ≫ biprod.inl ≫ (e a hia).hom := by
+              simp only [Category.assoc]
+    · intro j
+      let j₀ : ℕ+ := j.unop
+      by_cases hij : i ≤ j₀
+      · obtain ⟨b, hab, hz⟩ := hzero j₀
+        obtain ⟨k, hik, hbk⟩ := directed_of (· ≤ ·) i b
+        have hbj : j₀ ≤ k := hab.trans hbk
+        have hg : Opposite.op k ⟶ j := by
+          exact opHomOfLE hbj
+        have hf : Opposite.op k ⟶ Opposite.op i := opHomOfLE hik
+        have hfac := hkill hij hab hbk hz
+        refine ⟨Opposite.op k, hf, hg, ?_⟩
+        sorry
+      · have hji : j₀ ≤ i := le_of_not_ge hij
+        obtain ⟨b, hib, hz⟩ := hzero i
+        obtain ⟨k, hik, hbk⟩ := directed_of (· ≤ ·) i b
+        have hbj : j₀ ≤ k := hji.trans hik
+        have hg : Opposite.op k ⟶ j := by
+          exact opHomOfLE hbj
+        have hf : Opposite.op k ⟶ Opposite.op i := opHomOfLE hik
+        have hfac := hkill le_rfl hib hbk hz
+        refine ⟨Opposite.op k, hf, hg, ?_⟩
+        sorry
 
 theorem essentiallyConstant_isMittagLeffler
     {C : Type u} [Category.{v} C] [Abelian C]
     (F : NatInverseSystem C)
     (hF : IsEssentiallyConstant F) :
     IsMittagLeffler F := by
-  sorry
+  rcases hF with ⟨hI, hF⟩
+  letI : Nonempty ℕ+ := hI.1
+  letI : IsDirectedOrder ℕ+ := hI.2
+  rcases hF with ⟨c, i, r, hr, hfactor⟩
+  have image_eq_of_factor : ∀ {X X' Y : C} (f : X ⟶ Y) (g : X' ⟶ Y)
+      (a : X ⟶ X') (b : X' ⟶ X), a ≫ g = f → b ≫ f = g →
+      imageSubobject f = imageSubobject g := by
+    intro X X' Y f g a b haf hbg
+    apply le_antisymm
+    · rw [← haf]
+      exact imageSubobject_comp_le a g
+    · rw [← hbg]
+      exact imageSubobject_comp_le b f
+  intro j
+  obtain ⟨k, f, g, hfg⟩ := hfactor (Opposite.op j)
+  let j' : ℕ+ := k.unop
+  have hj' : j ≤ j' := le_of_op_hom g
+  have hf : f = opHomOfLE (le_of_op_hom f) := Subsingleton.elim _ _
+  have hg : g = opHomOfLE hj' := Subsingleton.elim _ _
+  let t : F.obj (Opposite.op j') ⟶ F.obj (Opposite.op j) :=
+    F.map (opHomOfLE hj')
+  let u : F.obj (Opposite.op j') ⟶ F.obj i :=
+    F.map (opHomOfLE (le_of_op_hom f))
+  have hfg' : t = u ≫ r ≫ c.π.app (Opposite.op j) := by
+    dsimp [t, u, j']
+    rw [← hg, hfg, hf]
+  have hcone : c.π.app (Opposite.op j') ≫ t = c.π.app (Opposite.op j) := by
+    dsimp [t]
+    rw [c.w]
+  have himage : imageSubobject t =
+      imageSubobject (c.π.app (Opposite.op j)) := by
+    apply image_eq_of_factor t (c.π.app (Opposite.op j)) (u ≫ r)
+      (c.π.app (Opposite.op j'))
+    · simpa only [Category.assoc] using hfg'.symm
+    · exact hcone
+  refine ⟨j', hj', ?_⟩
+  intro k' h'
+  let t' : F.obj (Opposite.op k') ⟶ F.obj (Opposite.op j) :=
+    F.map (opHomOfLE (hj'.trans h'))
+  have hcomp : t' = F.map (opHomOfLE h') ≫ t := by
+    dsimp [t, t']
+    rw [← F.map_comp]
+    congr 1
+  have hcone' : c.π.app (Opposite.op k') ≫ t' =
+      c.π.app (Opposite.op j) := by
+    dsimp [t']
+    rw [c.w]
+  apply le_antisymm
+  · rw [himage]
+    rw [← hcone']
+    exact imageSubobject_comp_le (c.π.app (Opposite.op k')) t'
+  · have hcomp' : F.map (opHomOfLE (hj'.trans h')) =
+        F.map (opHomOfLE h') ≫ F.map (opHomOfLE hj') := by
+      rw [← F.map_comp]
+      congr 1
+    have hle := imageSubobject_comp_le (F.map (opHomOfLE h')) t
+    dsimp [t] at hle
+    rw [← hcomp'] at hle
+    exact hle
 
 theorem mittagLeffler_iff_of_essentiallyConstant_quotient
     (S : ShortComplex (NatInverseSystem AddCommGrpCat))
     (hS : S.ShortExact)
     (hC : IsEssentiallyConstant S.X₃) :
     IsMittagLeffler S.X₁ ↔ IsMittagLeffler S.X₂ := by
-  sorry
+  obtain ⟨i, Z, e, z, hcompat, hzero⟩ :=
+    (essentiallyConstant_iff_biproduct_decomposition S.X₃).1 hC
+  have hquot : ∀ {j j' : ℕ+} (hij : i ≤ j) (hij' : i ≤ j')
+      (h : j ≤ j'),
+      transitionMap S.X₃ h ≫ (e j hij).inv ≫ biprod.snd =
+        (e j' hij').inv ≫ biprod.snd ≫ z h := by
+    intro j j' hij hij' h
+    have hh := congrArg (fun q => q ≫ biprod.snd)
+      (hcompat hij hij' h)
+    apply (cancel_epi (e j' hij').hom).1
+    simpa only [Category.assoc, Iso.hom_inv_id_assoc, biprod.map_snd] using hh
+  have hstable_map : ∀ {j j' : ℕ+} (hij : i ≤ j)
+      (hij' : i ≤ j') (h : j ≤ j') (b : S.X₂.obj (Opposite.op j')),
+      ((S.g.app (Opposite.op j') ≫ (e j' hij').inv ≫ biprod.snd) b) = 0 →
+      (S.g.app (Opposite.op j) ≫ (e j hij).inv ≫ biprod.snd)
+        ((S.X₂.map (opHomOfLE h)) b) = 0 := by
+    intro j j' hij hij' h b hb
+    have hq' : S.X₃.map (opHomOfLE h) ≫ (e j hij).inv ≫ biprod.snd =
+        (e j' hij').inv ≫ biprod.snd ≫ z h := by
+      simpa [transitionMap] using hquot hij hij' h
+    rw [← ConcreteCategory.comp_apply, ← Category.assoc,
+      S.g.naturality (opHomOfLE h), Category.assoc,
+      ConcreteCategory.comp_apply]
+    rw [hq', ConcreteCategory.comp_apply]
+    have hb' := hb
+    simp only [ConcreteCategory.comp_apply] at hb'
+    have hb'' := congrArg (fun q => (z h) q) hb'
+    simpa only [ConcreteCategory.comp_apply, map_zero] using hb''
+  have hstable_decomp : ∀ {j : ℕ+} (hij : i ≤ j)
+      (x : S.X₃.obj (Opposite.op j)),
+      ((e j hij).inv ≫ biprod.snd) x = 0 →
+      (e j hij).inv x =
+        (biprod.inl : inverseSystemLimit S.X₃ ⟶
+          inverseSystemLimit S.X₃ ⊞ Z j)
+          ((biprod.fst : inverseSystemLimit S.X₃ ⊞ Z j ⟶
+            inverseSystemLimit S.X₃) ((e j hij).inv x)) := by
+    intro j hij x hx
+    let y := (e j hij).inv x
+    have ht := congrArg
+      (fun q : inverseSystemLimit S.X₃ ⊞ Z j ⟶
+          inverseSystemLimit S.X₃ ⊞ Z j => (ConcreteCategory.hom q) y)
+      (direct_sum_total (X := inverseSystemLimit S.X₃) (Y := Z j))
+    change
+      (ConcreteCategory.hom
+        (biprod.fst ≫ biprod.inl + biprod.snd ≫ biprod.inr :
+          (inverseSystemLimit S.X₃ ⊞ Z j) ⟶
+            (inverseSystemLimit S.X₃ ⊞ Z j))) y = y at ht
+    change
+      (ConcreteCategory.hom
+          (biprod.inl : inverseSystemLimit S.X₃ ⟶
+            inverseSystemLimit S.X₃ ⊞ Z j))
+          ((ConcreteCategory.hom
+            (biprod.fst : inverseSystemLimit S.X₃ ⊞ Z j ⟶
+              inverseSystemLimit S.X₃)) y) +
+        (ConcreteCategory.hom
+          (biprod.inr : Z j ⟶ inverseSystemLimit S.X₃ ⊞ Z j))
+          ((ConcreteCategory.hom
+            (biprod.snd : inverseSystemLimit S.X₃ ⊞ Z j ⟶ Z j)) y) = y at ht
+    have hz : (ConcreteCategory.hom
+        (biprod.snd : inverseSystemLimit S.X₃ ⊞ Z j ⟶ Z j)) y = 0 := by
+      simpa [y, ConcreteCategory.comp_apply] using hx
+    have hfst : (ConcreteCategory.hom
+        (biprod.fst : inverseSystemLimit S.X₃ ⊞ Z j ⟶
+          inverseSystemLimit S.X₃)) y =
+        (ConcreteCategory.hom
+          (biprod.fst : inverseSystemLimit S.X₃ ⊞ Z j ⟶
+            inverseSystemLimit S.X₃)) ((e j hij).inv x) := by rfl
+    rw [← hfst]
+    simpa [hz] using ht.symm
+  have hinl_map : ∀ {j j' : ℕ+} (hij : i ≤ j) (hij' : i ≤ j')
+      (h : j ≤ j') (l : (inverseSystemLimit S.X₃ : AddCommGrpCat)),
+      ((e j' hij').hom ≫ transitionMap S.X₃ h)
+          ((biprod.inl : (inverseSystemLimit S.X₃ : AddCommGrpCat) ⟶
+            (inverseSystemLimit S.X₃ : AddCommGrpCat) ⊞ Z j') l) =
+        (e j hij).hom
+          ((biprod.inl : (inverseSystemLimit S.X₃ : AddCommGrpCat) ⟶
+            (inverseSystemLimit S.X₃ : AddCommGrpCat) ⊞ Z j) l) := by
+    intro j j' hij hij' h l
+    have heq :
+        biprod.inl ≫ (e j' hij').hom ≫ transitionMap S.X₃ h =
+          biprod.inl ≫ (e j hij).hom := by
+      apply (cancel_mono (e j hij).inv).1
+      have hh := congrArg (fun q => biprod.inl ≫ q)
+        (hcompat hij hij' h)
+      simpa [Category.assoc] using hh
+    have heq' := congrArg (fun q => q l) heq
+    simpa only [ConcreteCategory.comp_apply] using heq'
+  have hquot_g : ∀ {j j' : ℕ+} (hij : i ≤ j) (hij' : i ≤ j')
+      (h : j ≤ j'),
+      S.X₂.map (opHomOfLE h) ≫ S.g.app (Opposite.op j) ≫
+          (e j hij).inv ≫ biprod.snd =
+        S.g.app (Opposite.op j') ≫ (e j' hij').inv ≫ biprod.snd ≫ z h := by
+    intro j j' hij hij' h
+    have hq' : S.X₃.map (opHomOfLE h) ≫ (e j hij).inv ≫ biprod.snd =
+        (e j' hij').inv ≫ biprod.snd ≫ z h := by
+      simpa [transitionMap] using hquot hij hij' h
+    calc
+      S.X₂.map (opHomOfLE h) ≫ S.g.app (Opposite.op j) ≫
+          (e j hij).inv ≫ biprod.snd =
+          S.g.app (Opposite.op j') ≫ S.X₃.map (opHomOfLE h) ≫
+            (e j hij).inv ≫ biprod.snd := by
+              have hn := congrArg
+                (fun q => q ≫ (e j hij).inv ≫ biprod.snd)
+                (S.g.naturality (opHomOfLE h))
+              simpa [Category.assoc] using hn
+      _ = S.g.app (Opposite.op j') ≫ (e j' hij').inv ≫
+          biprod.snd ≫ z h := by
+            rw [hq']
+  have hsurj : ∀ j : ℕ+ᵒᵖ, Function.Surjective (S.g.app j) := by
+    intro j
+    apply (AddCommGrpCat.epi_iff_surjective _).1
+    exact (NatTrans.epi_iff_epi_app S.g).1 hS.epi_g j
+  have hmono : ∀ j : ℕ+ᵒᵖ, Function.Injective (S.f.app j) := by
+    intro j
+    apply (AddCommGrpCat.mono_iff_injective _).1
+    exact (NatTrans.mono_iff_mono_app S.f).1 hS.mono_f j
+  have hlocal : ∀ j : ℕ+ᵒᵖ, ∀ x : S.X₂.obj j,
+      (S.g.app j) x = 0 →
+        ∃ y : S.X₁.obj j, (S.f.app j) y = x := by
+    intro j x hx
+    have hj := (inverseSystem_exact_iff_pointwise S).1 hS.exact j
+    dsimp [Functor.mapShortComplex, evaluation] at hj
+    obtain ⟨y, hy⟩ := (ShortComplex.ab_exact_iff _).1 hj x hx
+    exact ⟨y, hy⟩
+  have hstable_ml_of_A :
+      ∀ (hA : IsMittagLeffler S.X₁) (j : ℕ+) (hij : i ≤ j),
+        ∃ c : ℕ+, ∃ hjc : j ≤ c, ∃ hic : i ≤ c,
+          ∀ k : ℕ+, ∀ hck : c ≤ k,
+            ∀ b : S.X₂.obj (Opposite.op c),
+              (S.g.app (Opposite.op c) ≫ (e c hic).inv ≫ biprod.snd) b = 0 →
+                ∃ y : S.X₂.obj (Opposite.op k),
+                  (S.g.app (Opposite.op k) ≫ (e k (hic.trans hck)).inv ≫
+                    biprod.snd) y = 0 ∧
+                    (S.X₂.map (opHomOfLE hjc)) b =
+                      (S.X₂.map (opHomOfLE (hjc.trans hck))) y := by
+    intro hA j hij
+    have hA' := (isMittagLeffler_iff_underlying S.X₁).1 hA
+    obtain ⟨a, f, hf⟩ := hA' (Opposite.op j)
+    have hja : j ≤ a.unop := le_of_op_hom f
+    have hf' : f = opHomOfLE hja := Subsingleton.elim _ _
+    let ha : i ≤ a.unop := hij.trans hja
+    refine ⟨a.unop, hja, ha, ?_⟩
+    intro k hck b hb
+    let l : (inverseSystemLimit S.X₃ : AddCommGrpCat) :=
+      (biprod.fst : inverseSystemLimit S.X₃ ⊞ Z a.unop ⟶
+        inverseSystemLimit S.X₃)
+        ((e a.unop ha).inv ((S.g.app (Opposite.op a.unop)) b))
+    have hbdec : (S.g.app (Opposite.op a.unop)) b =
+        (e a.unop ha).hom
+          ((biprod.inl : inverseSystemLimit S.X₃ ⟶
+            inverseSystemLimit S.X₃ ⊞ Z a.unop) l) := by
+      have hh := congrArg (fun q => (e a.unop ha).hom q)
+        (hstable_decomp ha (S.g.app (Opposite.op a.unop) b) hb)
+      simpa [l] using hh
+    obtain ⟨b₀, hb₀⟩ := hsurj (Opposite.op k)
+      ((e k (ha.trans hck)).hom
+        ((biprod.inl : inverseSystemLimit S.X₃ ⟶
+          inverseSystemLimit S.X₃ ⊞ Z k) l))
+    have hgc : (S.g.app (Opposite.op a.unop))
+          ((S.X₂.map (opHomOfLE hck)) b₀) =
+        (S.g.app (Opposite.op a.unop)) b := by
+      calc
+        (S.g.app (Opposite.op a.unop))
+            ((S.X₂.map (opHomOfLE hck)) b₀) =
+            (S.X₃.map (opHomOfLE hck)) ((S.g.app (Opposite.op k)) b₀) := by
+              rw [← ConcreteCategory.comp_apply, S.g.naturality,
+                ConcreteCategory.comp_apply]
+        _ = (S.X₃.map (opHomOfLE hck))
+            ((e k (ha.trans hck)).hom
+              ((biprod.inl : inverseSystemLimit S.X₃ ⟶
+                inverseSystemLimit S.X₃ ⊞ Z k) l)) := by rw [hb₀]
+        _ = (e a.unop ha).hom
+            ((biprod.inl : inverseSystemLimit S.X₃ ⟶
+              inverseSystemLimit S.X₃ ⊞ Z a.unop) l) := by
+              exact hinl_map ha (ha.trans hck) hck l
+        _ = (S.g.app (Opposite.op a.unop)) b := hbdec.symm
+    obtain ⟨a_c, ha_c⟩ := hlocal (Opposite.op a.unop)
+      (b - (S.X₂.map (opHomOfLE hck)) b₀) (by
+        rw [map_sub, hgc, sub_self])
+    have harange : Set.range (S.X₁.map (opHomOfLE hja)) ⊆
+        Set.range (S.X₁.map (opHomOfLE (hja.trans hck))) := by
+      have hh := hf (opHomOfLE (hja.trans hck))
+      change Set.range (S.X₁.map f) ⊆
+        Set.range (S.X₁.map (opHomOfLE (hja.trans hck))) at hh
+      simpa [hf'] using hh
+    obtain ⟨a_k, ha_k⟩ := harange ⟨a_c, rfl⟩
+    let y := b₀ + (S.f.app (Opposite.op k)) a_k
+    have hy : (S.g.app (Opposite.op k) ≫
+        (e k (ha.trans hck)).inv ≫ biprod.snd) y = 0 := by
+      have hb₀' : (S.g.app (Opposite.op k) ≫
+          (e k (ha.trans hck)).inv ≫ biprod.snd) b₀ = 0 := by
+        have hq_inl : ((e k (ha.trans hck)).inv ≫ biprod.snd)
+            ((e k (ha.trans hck)).hom
+              ((biprod.inl : inverseSystemLimit S.X₃ ⟶
+                inverseSystemLimit S.X₃ ⊞ Z k) l)) = 0 := by
+          have hi : (e k (ha.trans hck)).hom ≫
+              (e k (ha.trans hck)).inv ≫ biprod.snd = biprod.snd := by
+            simp
+          have hi' := congrArg
+            (fun q => (ConcreteCategory.hom q)
+              ((biprod.inl : inverseSystemLimit S.X₃ ⟶
+                inverseSystemLimit S.X₃ ⊞ Z k) l)) hi
+          have hi'' :
+              (ConcreteCategory.hom
+                (biprod.snd : inverseSystemLimit S.X₃ ⊞ Z k ⟶ Z k))
+                  ((ConcreteCategory.hom (e k (ha.trans hck)).inv)
+                    ((ConcreteCategory.hom (e k (ha.trans hck)).hom)
+                      ((ConcreteCategory.hom
+                        (biprod.inl : inverseSystemLimit S.X₃ ⟶
+                          inverseSystemLimit S.X₃ ⊞ Z k)) l))) =
+                (ConcreteCategory.hom
+                  (biprod.snd : inverseSystemLimit S.X₃ ⊞ Z k ⟶ Z k))
+                  ((ConcreteCategory.hom
+                    (biprod.inl : inverseSystemLimit S.X₃ ⟶
+                      inverseSystemLimit S.X₃ ⊞ Z k)) l) := by
+            simpa only [ConcreteCategory.comp_apply] using hi'
+          have hzero :
+              (biprod.inl : inverseSystemLimit S.X₃ ⟶
+                inverseSystemLimit S.X₃ ⊞ Z k) ≫ biprod.snd = 0 :=
+            biprod.inl_snd
+          have hzero' := congrArg
+            (fun q => (ConcreteCategory.hom q) l) hzero
+          have hzero'' :
+              (ConcreteCategory.hom
+                (biprod.snd : inverseSystemLimit S.X₃ ⊞ Z k ⟶ Z k))
+                  ((ConcreteCategory.hom
+                    (biprod.inl : inverseSystemLimit S.X₃ ⟶
+                      inverseSystemLimit S.X₃ ⊞ Z k)) l) = 0 := by
+            change (ConcreteCategory.hom
+              (biprod.snd : inverseSystemLimit S.X₃ ⊞ Z k ⟶ Z k))
+                ((ConcreteCategory.hom
+                  (biprod.inl : inverseSystemLimit S.X₃ ⟶
+                    inverseSystemLimit S.X₃ ⊞ Z k)) l) = 0 at hzero'
+            exact hzero'
+          simpa only [ConcreteCategory.comp_apply] using hi''.trans hzero''
+        simpa [ConcreteCategory.comp_apply, hb₀] using hq_inl
+      have hf₀' : (S.g.app (Opposite.op k) ≫
+          (e k (ha.trans hck)).inv ≫ biprod.snd)
+          ((S.f.app (Opposite.op k)) a_k) = 0 := by
+        have hz := congrArg (fun q => q.app (Opposite.op k)) S.zero
+        simp only [NatTrans.comp_app] at hz
+        have hz' := congrArg (fun q => q a_k) hz
+        have hfg : (S.g.app (Opposite.op k))
+            ((S.f.app (Opposite.op k)) a_k) = 0 := by
+          simpa using hz'
+        simpa [ConcreteCategory.comp_apply, hfg]
+      have hb₀'' := hb₀'
+      have hf₀'' := hf₀'
+      simp only [ConcreteCategory.comp_apply] at hb₀'' hf₀''
+      simp [y, map_add, hb₀'', hf₀'']
+    refine ⟨y, hy, ?_⟩
+    have hfa : (S.X₂.map (opHomOfLE hja))
+          ((S.f.app (Opposite.op a.unop)) a_c) =
+        (S.f.app (Opposite.op j))
+          ((S.X₁.map (opHomOfLE hja)) a_c) := by
+      rw [← ConcreteCategory.comp_apply, ← S.f.naturality,
+        ConcreteCategory.comp_apply]
+    have hfk : (S.X₂.map (opHomOfLE (hja.trans hck)))
+          ((S.f.app (Opposite.op k)) a_k) =
+        (S.f.app (Opposite.op j))
+          ((S.X₁.map (opHomOfLE hja)) a_c) := by
+      rw [← ConcreteCategory.comp_apply, ← S.f.naturality,
+        ConcreteCategory.comp_apply, ha_k]
+    have hbc : (S.X₂.map (opHomOfLE hja))
+          ((S.X₂.map (opHomOfLE hck)) b₀) =
+        (S.X₂.map (opHomOfLE (hja.trans hck))) b₀ := by
+      rw [← ConcreteCategory.comp_apply, ← S.X₂.map_comp]
+      congr 1
+    have hdiff : (S.X₂.map (opHomOfLE hja))
+          ((S.f.app (Opposite.op a.unop)) a_c) =
+        (S.X₂.map (opHomOfLE hja)) b -
+          (S.X₂.map (opHomOfLE (hja.trans hck))) b₀ := by
+      rw [ha_c, map_sub, hbc]
+    rw [map_add, hfk, ← hfa]
+    rw [hdiff]
+    abel
+  have hstable_ml_of_B :
+      ∀ (hB : IsMittagLeffler S.X₂) (j : ℕ+) (hij : i ≤ j),
+        ∃ c : ℕ+, ∃ hjc : j ≤ c, ∃ hic : i ≤ c,
+          ∀ k : ℕ+, ∀ hck : c ≤ k,
+            ∀ b : S.X₂.obj (Opposite.op c),
+              (S.g.app (Opposite.op c) ≫ (e c hic).inv ≫ biprod.snd) b = 0 →
+                ∃ y : S.X₂.obj (Opposite.op k),
+                  (S.g.app (Opposite.op k) ≫ (e k (hic.trans hck)).inv ≫
+                    biprod.snd) y = 0 ∧
+                    (S.X₂.map (opHomOfLE hjc)) b =
+                      (S.X₂.map (opHomOfLE (hjc.trans hck))) y := by
+    intro hB j hij
+    have hB' := (isMittagLeffler_iff_underlying S.X₂).1 hB
+    obtain ⟨a, f, hf⟩ := hB' (Opposite.op j)
+    have hja : j ≤ a.unop := le_of_op_hom f
+    have hf' : f = opHomOfLE hja := Subsingleton.elim _ _
+    let ha : i ≤ a.unop := hij.trans hja
+    refine ⟨a.unop, hja, ha, ?_⟩
+    intro k hck b hb
+    obtain ⟨l, hl, hzl⟩ := hzero k
+    have hjl : j ≤ l := hja.trans (hck.trans hl)
+    obtain ⟨bₗ, hbₗ⟩ := hf (opHomOfLE hjl) ⟨b, rfl⟩
+    let y := (S.X₂.map (opHomOfLE hl)) bₗ
+    have hy : (S.g.app (Opposite.op k) ≫
+        (e k (ha.trans hck)).inv ≫ biprod.snd) y = 0 := by
+      have hq := congrArg (fun q => q bₗ)
+        (hquot_g (hij := ha.trans hck)
+          (hij' := ha.trans (hck.trans hl)) hl)
+      have hq' :
+          (S.g.app (Opposite.op k) ≫ (e k (ha.trans hck)).inv ≫
+            biprod.snd) ((S.X₂.map (opHomOfLE hl)) bₗ) = 0 := by
+        simpa [hzl, ConcreteCategory.comp_apply] using hq
+      simpa [y] using hq'
+    refine ⟨y, hy, ?_⟩
+    have hcomp : opHomOfLE (hja.trans (hck.trans hl)) =
+        opHomOfLE hl ≫ opHomOfLE hck ≫ opHomOfLE hja := by
+      apply Subsingleton.elim
+    have hbₗ' := hbₗ
+    change (S.X₂.map (opHomOfLE hjl)) bₗ =
+      (S.X₂.map f) b at hbₗ'
+    rw [hf'] at hbₗ'
+    change (S.X₂.map (opHomOfLE hja)) b =
+      (S.X₂.map (opHomOfLE (hja.trans hck)))
+        ((S.X₂.map (opHomOfLE hl)) bₗ)
+    have hmapcomp :
+        (S.X₂.map (opHomOfLE (hja.trans hck)))
+            ((S.X₂.map (opHomOfLE hl)) bₗ) =
+          (S.X₂.map (opHomOfLE hjl)) bₗ := by
+      rw [← ConcreteCategory.comp_apply, ← S.X₂.map_comp]
+      congr 1
+    rw [hmapcomp, hbₗ']
+  have hA_to_B : IsMittagLeffler S.X₁ → IsMittagLeffler S.X₂ := by
+    intro hA
+    apply (isMittagLeffler_iff_underlying S.X₂).2
+    intro j₀
+    obtain ⟨t, h₀t, hit⟩ := directed_of (· ≤ ·) j₀.unop i
+    obtain ⟨c, htc, hic, hc⟩ := hstable_ml_of_A hA t hit
+    obtain ⟨d, hcd, hzd⟩ := hzero c
+    have hid : i ≤ d := hic.trans hcd
+    have hj₀d : j₀.unop ≤ d := h₀t.trans (htc.trans hcd)
+    refine ⟨Opposite.op d, opHomOfLE hj₀d, ?_⟩
+    intro k g
+    have hj₀k : j₀.unop ≤ k.unop := le_of_op_hom g
+    have hg : g = opHomOfLE hj₀k := Subsingleton.elim _ _
+    rw [hg]
+    intro x hx
+    obtain ⟨b, rfl⟩ := hx
+    obtain ⟨l, hcl, hkl⟩ := directed_of (· ≤ ·) c k.unop
+    have htl : t ≤ l := htc.trans hcl
+    have hbc :
+        (S.g.app (Opposite.op c) ≫ (e c hic).inv ≫ biprod.snd)
+          ((S.X₂.map (opHomOfLE hcd)) b) = 0 := by
+      have hq := congrArg (fun q => q b)
+        (hquot_g (hij := hic) (hij' := hid) hcd)
+      simpa [hzd, ConcreteCategory.comp_apply] using hq
+    obtain ⟨yₗ, hyₗ, heqₗ⟩ := hc l hcl
+      ((S.X₂.map (opHomOfLE hcd)) b) hbc
+    let y := (S.X₂.map (opHomOfLE hkl)) yₗ
+    have heq₀ :
+        (S.X₂.map (opHomOfLE htc))
+            ((S.X₂.map (opHomOfLE hcd)) b) =
+          (S.X₂.map (opHomOfLE htl)) yₗ := by
+      rw [heqₗ]
+    have heq₁ :
+        (S.X₂.map (opHomOfLE h₀t))
+            ((S.X₂.map (opHomOfLE htc))
+              ((S.X₂.map (opHomOfLE hcd)) b)) =
+          (S.X₂.map (opHomOfLE h₀t))
+            ((S.X₂.map (opHomOfLE htl)) yₗ) := by
+      exact congrArg (fun q => (S.X₂.map (opHomOfLE h₀t)) q) heq₀
+    have heq₂ :
+        (S.X₂.map (opHomOfLE hj₀d)) b =
+          (S.X₂.map (opHomOfLE h₀t))
+            ((S.X₂.map (opHomOfLE htc))
+              ((S.X₂.map (opHomOfLE hcd)) b)) := by
+      calc
+        (S.X₂.map (opHomOfLE hj₀d)) b =
+            (S.X₂.map (opHomOfLE (h₀t.trans (htc.trans hcd)))) b := by
+              congr 1
+        _ = (S.X₂.map (opHomOfLE h₀t))
+            ((S.X₂.map (opHomOfLE htc))
+              ((S.X₂.map (opHomOfLE hcd)) b)) := by
+              rw [← ConcreteCategory.comp_apply, ← ConcreteCategory.comp_apply,
+                ← S.X₂.map_comp, ← S.X₂.map_comp]
+              congr 1
+    have heq₃ :
+        (S.X₂.map (opHomOfLE h₀t))
+            ((S.X₂.map (opHomOfLE htl)) yₗ) =
+          (S.X₂.map (opHomOfLE hj₀k)) y := by
+      calc
+        (S.X₂.map (opHomOfLE h₀t))
+              ((S.X₂.map (opHomOfLE htl)) yₗ) =
+            (S.X₂.map (opHomOfLE (h₀t.trans htl))) yₗ := by
+              rw [← ConcreteCategory.comp_apply, ← S.X₂.map_comp]
+              congr 1
+        _ = (S.X₂.map (opHomOfLE hj₀k))
+            ((S.X₂.map (opHomOfLE hkl)) yₗ) := by
+              rw [← ConcreteCategory.comp_apply, ← S.X₂.map_comp]
+              congr 1
+    refine ⟨y, ?_⟩
+    change (S.X₂.map (opHomOfLE hj₀k)) y =
+      (S.X₂.map (opHomOfLE hj₀d)) b
+    exact (heq₂.trans (heq₁.trans heq₃)).symm
+  have hstable_zero_of_map :
+      ∀ {t l : ℕ+} (hit : i ≤ t) (htl : t ≤ l)
+        (b : S.X₂.obj (Opposite.op l)),
+        (S.g.app (Opposite.op l) ≫ (e l (hit.trans htl)).inv ≫ biprod.snd) b = 0 →
+        (S.X₃.map (opHomOfLE htl)) ((S.g.app (Opposite.op l)) b) = 0 →
+        (S.g.app (Opposite.op l)) b = 0 := by
+    intro t l hit htl b hb hmap
+    let q : (inverseSystemLimit S.X₃ : AddCommGrpCat) :=
+      (biprod.fst : inverseSystemLimit S.X₃ ⊞ Z l ⟶
+        inverseSystemLimit S.X₃)
+        ((e l (hit.trans htl)).inv ((S.g.app (Opposite.op l)) b))
+    have hbdec : (S.g.app (Opposite.op l)) b =
+        (e l (hit.trans htl)).hom
+          ((biprod.inl : inverseSystemLimit S.X₃ ⟶
+            inverseSystemLimit S.X₃ ⊞ Z l) q) := by
+      have hh := congrArg (fun x => (e l (hit.trans htl)).hom x)
+        (hstable_decomp (hit.trans htl) (S.g.app (Opposite.op l) b) hb)
+      simpa [q] using hh
+    have hCeq : (S.X₃.map (opHomOfLE htl))
+          ((S.g.app (Opposite.op l)) b) =
+        (e t hit).hom
+          ((biprod.inl : inverseSystemLimit S.X₃ ⟶
+            inverseSystemLimit S.X₃ ⊞ Z t) q) := by
+      rw [hbdec]
+      exact hinl_map hit (hit.trans htl) htl q
+    have hqzero : (e t hit).hom
+          ((biprod.inl : inverseSystemLimit S.X₃ ⟶
+            inverseSystemLimit S.X₃ ⊞ Z t) q) = 0 := by
+      rw [← hCeq]
+      exact hmap
+    have hqzero' := congrArg
+      (fun x => (biprod.fst : inverseSystemLimit S.X₃ ⊞ Z t ⟶
+        inverseSystemLimit S.X₃) ((e t hit).inv x)) hqzero
+    have hqzero'' :
+        (biprod.fst : inverseSystemLimit S.X₃ ⊞ Z t ⟶
+          inverseSystemLimit S.X₃)
+            ((biprod.inl : inverseSystemLimit S.X₃ ⟶
+              inverseSystemLimit S.X₃ ⊞ Z t) q) = 0 := by
+      have hinv :
+          (e t hit).inv
+              ((e t hit).hom
+                ((biprod.inl : inverseSystemLimit S.X₃ ⟶
+                  inverseSystemLimit S.X₃ ⊞ Z t) q)) =
+            (biprod.inl : inverseSystemLimit S.X₃ ⟶
+              inverseSystemLimit S.X₃ ⊞ Z t) q := by
+        have hh := congrArg
+          (fun f => (ConcreteCategory.hom f)
+            ((biprod.inl : inverseSystemLimit S.X₃ ⟶
+              inverseSystemLimit S.X₃ ⊞ Z t) q))
+          (e t hit).hom_inv_id
+        simpa [ConcreteCategory.comp_apply] using hh
+      have hinv0 : (e t hit).inv (0 : S.X₃.obj (Opposite.op t)) = 0 := by
+        simpa only [map_zero]
+      rw [hinv, hinv0] at hqzero'
+      simpa only [map_zero] using hqzero'
+    have hq : q = 0 := by
+      have hfi :
+          (biprod.inl : inverseSystemLimit S.X₃ ⟶
+            inverseSystemLimit S.X₃ ⊞ Z t) ≫
+              (biprod.fst : inverseSystemLimit S.X₃ ⊞ Z t ⟶
+                inverseSystemLimit S.X₃) =
+            𝟙 (inverseSystemLimit S.X₃) := by simp
+      have hfi' := congrArg
+        (fun f => (ConcreteCategory.hom f)
+          q) hfi
+      have hfi'' :
+          (biprod.fst : inverseSystemLimit S.X₃ ⊞ Z t ⟶
+            inverseSystemLimit S.X₃)
+              ((biprod.inl : inverseSystemLimit S.X₃ ⟶
+                inverseSystemLimit S.X₃ ⊞ Z t) q) = q := by
+        simpa only [ConcreteCategory.comp_apply,
+          CategoryTheory.ConcreteCategory.id_apply] using hfi'
+      exact hfi''.symm.trans hqzero''
+    rw [hbdec, hq]
+    simp
+  have hB_to_A : IsMittagLeffler S.X₂ → IsMittagLeffler S.X₁ := by
+    intro hB
+    apply (isMittagLeffler_iff_underlying S.X₁).2
+    intro j₀
+    obtain ⟨t, h₀t, hit⟩ := directed_of (· ≤ ·) j₀.unop i
+    obtain ⟨c, htc, hic, hc⟩ := hstable_ml_of_B hB t hit
+    have hj₀c : j₀.unop ≤ c := h₀t.trans htc
+    refine ⟨Opposite.op c, opHomOfLE hj₀c, ?_⟩
+    intro k g
+    have hj₀k : j₀.unop ≤ k.unop := le_of_op_hom g
+    have hg : g = opHomOfLE hj₀k := Subsingleton.elim _ _
+    rw [hg]
+    intro x hx
+    obtain ⟨a_c, rfl⟩ := hx
+    obtain ⟨l, hcl, hkl⟩ := directed_of (· ≤ ·) c k.unop
+    have htl : t ≤ l := htc.trans hcl
+    have hfg : (S.g.app (Opposite.op c))
+        ((S.f.app (Opposite.op c)) a_c) = 0 := by
+      have hz := congrArg (fun q => q.app (Opposite.op c)) S.zero
+      simp only [NatTrans.comp_app] at hz
+      have hz' := congrArg (fun q => q a_c) hz
+      simpa using hz'
+    have hstable_c :
+        (S.g.app (Opposite.op c) ≫ (e c hic).inv ≫ biprod.snd)
+          ((S.f.app (Opposite.op c)) a_c) = 0 := by
+      have hz := congrArg (fun q => q.app (Opposite.op c)) S.zero
+      simp only [NatTrans.comp_app] at hz
+      have hz' := congrArg (fun q => q a_c) hz
+      simpa [ConcreteCategory.comp_apply, hfg]
+    obtain ⟨yₗ, hyₗ, heqₗ⟩ := hc l hcl
+      ((S.f.app (Opposite.op c)) a_c) hstable_c
+    have hmapzero :
+        (S.X₃.map (opHomOfLE htl))
+            ((S.g.app (Opposite.op l)) yₗ) = 0 := by
+      calc
+        (S.X₃.map (opHomOfLE htl))
+              ((S.g.app (Opposite.op l)) yₗ) =
+            (S.g.app (Opposite.op t))
+              ((S.X₂.map (opHomOfLE htl)) yₗ) := by
+                rw [← ConcreteCategory.comp_apply, ← S.g.naturality,
+                  ConcreteCategory.comp_apply]
+        _ = (S.g.app (Opposite.op t))
+              ((S.X₂.map (opHomOfLE htc))
+                ((S.f.app (Opposite.op c)) a_c)) := by
+                rw [heqₗ.symm]
+        _ = (S.X₃.map (opHomOfLE htc))
+              ((S.g.app (Opposite.op c))
+                ((S.f.app (Opposite.op c)) a_c)) := by
+                rw [← ConcreteCategory.comp_apply, S.g.naturality,
+                  ConcreteCategory.comp_apply]
+        _ = 0 := by rw [hfg]; simp
+    have hzero_l := hstable_zero_of_map hit htl yₗ hyₗ hmapzero
+    obtain ⟨aₗ, haₗ⟩ := hlocal (Opposite.op l) yₗ hzero_l
+    have hfa :
+        (S.X₂.map (opHomOfLE htc)) ((S.f.app (Opposite.op c)) a_c) =
+          (S.f.app (Opposite.op t))
+            ((S.X₁.map (opHomOfLE htc)) a_c) := by
+      rw [← ConcreteCategory.comp_apply, ← S.f.naturality,
+        ConcreteCategory.comp_apply]
+    have hfl :
+        (S.X₂.map (opHomOfLE htl)) yₗ =
+          (S.f.app (Opposite.op t))
+            ((S.X₁.map (opHomOfLE htl)) aₗ) := by
+      rw [← haₗ, ← ConcreteCategory.comp_apply, ← S.f.naturality,
+        ConcreteCategory.comp_apply]
+    have hat :
+        (S.X₁.map (opHomOfLE htc)) a_c =
+          (S.X₁.map (opHomOfLE htl)) aₗ := by
+      apply hmono (Opposite.op t)
+      rw [← hfa, heqₗ, hfl]
+    let a_k := (S.X₁.map (opHomOfLE hkl)) aₗ
+    refine ⟨a_k, ?_⟩
+    have heq₀ :
+        (S.X₁.map (opHomOfLE h₀t))
+            ((S.X₁.map (opHomOfLE htc)) a_c) =
+          (S.X₁.map (opHomOfLE h₀t))
+            ((S.X₁.map (opHomOfLE htl)) aₗ) :=
+      congrArg (fun q => (S.X₁.map (opHomOfLE h₀t)) q) hat
+    have heq₁ :
+        (S.X₁.map (opHomOfLE hj₀c)) a_c =
+          (S.X₁.map (opHomOfLE h₀t))
+            ((S.X₁.map (opHomOfLE htc)) a_c) := by
+      rw [← ConcreteCategory.comp_apply, ← S.X₁.map_comp]
+      congr 1
+    have heq₂ :
+        (S.X₁.map (opHomOfLE h₀t))
+            ((S.X₁.map (opHomOfLE htl)) aₗ) =
+          (S.X₁.map (opHomOfLE hj₀k)) a_k := by
+      calc
+        (S.X₁.map (opHomOfLE h₀t))
+              ((S.X₁.map (opHomOfLE htl)) aₗ) =
+            (S.X₁.map (opHomOfLE (h₀t.trans htl))) aₗ := by
+              rw [← ConcreteCategory.comp_apply, ← S.X₁.map_comp]
+              congr 1
+        _ = (S.X₁.map (opHomOfLE hj₀k)) a_k := by
+              rw [← ConcreteCategory.comp_apply, ← S.X₁.map_comp]
+              congr 1
+    change (S.X₁.map (opHomOfLE hj₀k)) a_k =
+      (S.X₁.map (opHomOfLE hj₀c)) a_c
+    exact (heq₁.trans (heq₀.trans heq₂)).symm
+  constructor
+  · exact hA_to_B
+  · exact hB_to_A
 
 /-! ## Cohomology of inverse systems of complexes -/
 
@@ -1013,6 +1920,323 @@ theorem inverseSystem_cohomology_zero_iso_limit
     Nonempty
       ((inverseSystemLimit K).homology 0 ≅
         inverseSystemLimit (inverseSystemCohomologySystem K 0)) := by
+  let A : ℤ → NatInverseSystem AddCommGrpCat :=
+    fun n => inverseSystemComplexComponent K n
+  let Z : ℤ → NatInverseSystem AddCommGrpCat :=
+    fun n => K ⋙ HomologicalComplex.cyclesFunctor
+      AddCommGrpCat (ComplexShape.up ℤ) n
+  let H : ℤ → NatInverseSystem AddCommGrpCat :=
+    fun n => inverseSystemCohomologySystem K n
+  let d : ∀ n : ℤ, A (n - 1) ⟶ A n := fun n =>
+    { app := fun i => (K.obj i).d (n - 1) n
+      naturality := by
+        intro i j f
+        exact (K.map f).comm' (n - 1) n (by
+          simp [ComplexShape.up, ComplexShape.up']) }
+  let dNext : ∀ n : ℤ, A n ⟶ A (n + 1) := fun n =>
+    { app := fun i => (K.obj i).d n (n + 1)
+      naturality := by
+        intro i j f
+        exact (K.map f).comm' n (n + 1) (by
+          simp [ComplexShape.up, ComplexShape.up']) }
+  let q : ∀ n : ℤ, A (n - 1) ⟶ Z n := fun n =>
+    { app := fun i => (K.obj i).toCycles (n - 1) n
+      naturality := by
+        intro i j f
+        apply (cancel_mono ((K.obj j).iCycles n)).1
+        dsimp [A, Z]
+        change
+          ((K.map f).f (n - 1) ≫
+              (K.obj j).toCycles (n - 1) n) ≫
+              (K.obj j).iCycles n =
+            ((K.obj i).toCycles (n - 1) n ≫
+              HomologicalComplex.cyclesMap (K.map f) n) ≫
+              (K.obj j).iCycles n
+        simp only [Category.assoc, HomologicalComplex.toCycles_i,
+          HomologicalComplex.cyclesMap_i]
+        rw [← Category.assoc, HomologicalComplex.toCycles_i]
+        exact (K.map f).comm' (n - 1) n (by
+          simp [ComplexShape.up, ComplexShape.up']) }
+  let ι : ∀ n : ℤ, Z n ⟶ A n := fun n =>
+    { app := fun i => (K.obj i).iCycles n
+      naturality := by
+        intro i j f
+        dsimp [A, Z]
+        exact HomologicalComplex.cyclesMap_i (K.map f) n }
+  let π : ∀ n : ℤ, Z n ⟶ H n := fun n =>
+    { app := fun i => (K.obj i).homologyπ n
+      naturality := by
+        intro i j f
+        dsimp [Z, H]
+        change
+          HomologicalComplex.cyclesMap (K.map f) n ≫
+              (K.obj j).homologyπ n =
+            (K.obj i).homologyπ n ≫
+              HomologicalComplex.homologyMap (K.map f) n
+        exact (HomologicalComplex.homologyπ_naturality (K.map f) n).symm }
+  have hqι (n : ℤ) : q n ≫ ι n = d n := by
+    apply NatTrans.ext
+    funext i
+    dsimp [q, ι, d]
+    exact HomologicalComplex.toCycles_i (K.obj i) (n - 1) n
+  have hιd (n : ℤ) : ι n ≫ dNext n = 0 := by
+    apply NatTrans.ext
+    funext i
+    dsimp [ι, dNext]
+    exact (HomologicalComplex.iCycles_d (K.obj i) n (n + 1))
+  have hqπ (n : ℤ) : q n ≫ π n = 0 := by
+    apply NatTrans.ext
+    funext i
+    dsimp [q, π, Z, H]
+    exact
+      (HomologicalComplex.toCycles_comp_homologyπ (K.obj i) (n - 1) n)
+  have hιd' (n : ℤ) : ι (n - 1) ≫ d n = 0 := by
+    apply NatTrans.ext
+    funext i
+    dsimp [ι, d]
+    exact HomologicalComplex.iCycles_d (K.obj i) (n - 1) n
+  let I : ℤ → NatInverseSystem AddCommGrpCat := fun n => image (d n)
+  let eI : ∀ n : ℤ, A (n - 1) ⟶ I n := fun n => factorThruImage (d n)
+  let mI : ∀ n : ℤ, I n ⟶ A n := fun n => image.ι (d n)
+  have hιMono (n : ℤ) : Mono (ι n) := by
+    rw [NatTrans.mono_iff_mono_app]
+    intro i
+    dsimp [ι]
+    exact Fork.IsLimit.mono (HomologicalComplex.cyclesIsKernel (K.obj i) n (n + 1)
+      ((ComplexShape.up ℤ).next_eq'
+        (by simp [ComplexShape.up, ComplexShape.up'])))
+  letI : ∀ n : ℤ, Mono (ι n) := hιMono
+  let rI : ∀ n : ℤ, I n ⟶ Z n := fun n =>
+    image.lift
+      { I := Z n
+        m := ι n
+        e := q n
+        fac := hqι n }
+  have heIr (n : ℤ) : eI n ≫ rI n = q n := by
+    simpa [eI, rI] using
+      (image.fac_lift (f := d n)
+        ({ I := Z n, m := ι n, e := q n, fac := hqι n } : MonoFactorisation (d n)))
+  have hrIm (n : ℤ) : rI n ≫ ι n = mI n := by
+    simpa [rI, mI] using
+      (image.lift_fac (f := d n)
+        ({ I := Z n, m := ι n, e := q n, fac := hqι n } : MonoFactorisation (d n)))
+  have heIm (n : ℤ) : eI n ≫ mI n = d n := by
+    exact image.fac _
+  let SIZ (n : ℤ) : ShortComplex (NatInverseSystem AddCommGrpCat) :=
+    ShortComplex.mk (rI n) (π n) (by
+      apply (cancel_epi (eI n)).1
+      rw [← Category.assoc, heIr n, hqπ n, comp_zero])
+  let SZI (n : ℤ) : ShortComplex (NatInverseSystem AddCommGrpCat) :=
+    ShortComplex.mk (ι (n - 1)) (eI n) (by
+      apply (cancel_mono (mI n)).1
+      rw [Category.assoc, heIm n, hιd' n, zero_comp])
+  have hSIZ (n : ℤ) : (SIZ n).Exact := by
+    rw [inverseSystem_exact_iff_pointwise]
+    intro i
+    let T₁ : ShortComplex AddCommGrpCat :=
+      ShortComplex.mk ((q n).app i) ((π n).app i) (by
+        simpa only [NatTrans.comp_app, zero_app] using
+          congrArg (fun x => x.app i) (hqπ n))
+    let T₂ : ShortComplex AddCommGrpCat :=
+      ShortComplex.mk ((rI n).app i) ((π n).app i) (by
+        simpa only [NatTrans.comp_app, zero_app] using
+          congrArg (fun x => x.app i) (SIZ n).zero)
+    have hT₁ : T₁.Exact := by
+      apply ShortComplex.exact_of_g_is_cokernel
+      exact cochainCohomologyIsCokernel (K.obj i) n
+    let φ : T₁ ⟶ T₂ :=
+      { τ₁ := (eI n).app i
+        τ₂ := 𝟙 _
+        τ₃ := 𝟙 _
+        comm₁₂ := by
+          dsimp [T₁, T₂]
+          change (eI n).app i ≫ (rI n).app i = (q n).app i
+          simpa only [NatTrans.comp_app] using
+            congrArg (fun x => x.app i) (heIr n)
+        comm₂₃ := by
+          dsimp [T₁, T₂]
+          simp }
+    exact (ShortComplex.exact_iff_of_epi_of_isIso_of_mono φ).1 hT₁
+  have hSZI (n : ℤ) : (SZI n).Exact := by
+    rw [inverseSystem_exact_iff_pointwise]
+    intro i
+    letI : Mono ((ι (n - 1)).app i) := by
+      dsimp [ι]
+      exact Fork.IsLimit.mono (HomologicalComplex.cyclesIsKernel (K.obj i) (n - 1) n
+        ((ComplexShape.up ℤ).next_eq'
+          (by simp [ComplexShape.up, ComplexShape.up'])))
+    let hcyc := (K.obj i).cyclesIsKernel (n - 1) n (by
+      exact (ComplexShape.up ℤ).next_eq'
+        (by simp [ComplexShape.up, ComplexShape.up']))
+    have hzker : (ι (n - 1)).app i ≫ (eI n).app i = 0 := by
+      apply (cancel_mono ((mI n).app i)).1
+      have he := congrArg (fun x => x.app i) (heIm n)
+      have hd := congrArg (fun x => x.app i) (hιd' n)
+      simp only [NatTrans.comp_app, zero_app] at he hd ⊢
+      rw [Category.assoc, he, hd, zero_comp]
+    have hker : IsLimit (KernelFork.ofι ((ι (n - 1)).app i)
+        hzker) := by
+      let lift : ∀ {W : AddCommGrpCat} (g : W ⟶ (A (n - 1)).obj i),
+          ((g ≫ (eI n).app i = 0) → (W ⟶ (Z (n - 1)).obj i)) :=
+        fun {W} g (hg : g ≫ (eI n).app i = 0) => by
+          have hem : (eI n).app i ≫ (mI n).app i = (d n).app i := by
+            simpa only [NatTrans.comp_app] using
+              congrArg (fun x => x.app i) (heIm n)
+          have hs : g ≫ (d n).app i = 0 := by
+            rw [← hem, ← Category.assoc, hg, zero_comp]
+          change W ⟶ (Z (n - 1)).obj i
+          exact hcyc.lift (KernelFork.ofι g hs)
+      have hfac : ∀ {W : AddCommGrpCat} (g : W ⟶ (A (n - 1)).obj i),
+          ∀ hg : (g ≫ (eI n).app i = 0),
+            ((lift g hg) ≫ (ι (n - 1)).app i = g) := by
+        intro W g hg
+        have hem : (eI n).app i ≫ (mI n).app i = (d n).app i := by
+          simpa only [NatTrans.comp_app] using
+            congrArg (fun x => x.app i) (heIm n)
+        have hs : g ≫ (d n).app i = 0 := by
+          rw [← hem, ← Category.assoc, hg, zero_comp]
+        dsimp [lift]
+        change hcyc.lift (KernelFork.ofι g hs) ≫
+          (ι (n - 1)).app i = g
+        exact Fork.IsLimit.lift_ι hcyc
+      refine KernelFork.IsLimit.ofι ((ι (n - 1)).app i) hzker
+        lift hfac ?_
+      intro W g hg m hm
+      apply (cancel_mono ((ι (n - 1)).app i)).1
+      calc
+        m ≫ (ι (n - 1)).app i = g := hm
+        _ = (lift g hg) ≫ (ι (n - 1)).app i := (hfac g hg).symm
+    change (ShortComplex.mk ((ι (n - 1)).app i) ((eI n).app i) _).Exact
+    exact ShortComplex.exact_of_f_is_kernel _ hker
+  have hSZI_short (n : ℤ) : (SZI n).ShortExact := by
+    refine { exact := hSZI n, mono_f := ?_, epi_g := ?_ }
+    · dsimp [SZI]
+      exact hιMono (n - 1)
+    · dsimp [SZI]
+      infer_instance
+  have hrMono (n : ℤ) : Mono (rI n) := by
+    apply mono_of_mono_fac (hrIm n)
+  have hSIZ_short (n : ℤ) : (SIZ n).ShortExact := by
+    refine { exact := hSIZ n, mono_f := hrMono n, epi_g := ?_ }
+    dsimp [SIZ]
+    rw [NatTrans.epi_iff_epi_app]
+    intro i
+    dsimp [π]
+    exact epi_of_isColimit_cofork (cochainCohomologyIsCokernel (K.obj i) n)
+  have hIminus : IsMittagLeffler (I (-1)) :=
+    inverseSystemLimit_mittagLeffler_quotient (SZI (-1))
+      (hSZI_short (-1)) hA₂
+  have hZminus : IsMittagLeffler (Z (-1)) :=
+    (mittagLeffler_iff_of_essentiallyConstant_quotient (SIZ (-1))
+      (hSIZ_short (-1)) hH₁).1 hIminus
+  have hI₀ : IsMittagLeffler (I 0) :=
+    inverseSystemLimit_mittagLeffler_quotient (SZI 0) (hSZI_short 0) hA₁
+  let hI : IsDirectedSet ℕ+ := ⟨inferInstance, inferInstance⟩
+  have hSZI₀' :
+      Formalization.Books.Algebra.Unit86.IsPointwiseShortExact (SZI 0) := by
+    intro i
+    have hi := (inverseSystem_exact_iff_pointwise (SZI 0)).1
+      (hSZI_short 0).exact i
+    refine { exact := hi, mono_f := ?_, epi_g := ?_ }
+    · exact (NatTrans.mono_iff_mono_app (SZI 0).f).1
+        (hSZI_short 0).mono_f i
+    · exact (NatTrans.epi_iff_epi_app (SZI 0).g).1
+        (hSZI_short 0).epi_g i
+  have hlimZI :=
+    Formalization.Books.Algebra.Unit86.inverse_limit_shortExact_of_countable_mittagLeffler
+      hI (SZI 0) hSZI₀'
+      ((isMittagLeffler_iff_underlying (SZI 0).X₁).1 hZminus)
+  letI : Epi (inverseSystemLimitMap (eI 0)) := by
+    change Epi (limMap (SZI 0).g)
+    exact hlimZI.epi_g
+  have hSIZ₀' :
+      Formalization.Books.Algebra.Unit86.IsPointwiseShortExact (SIZ 0) := by
+    intro i
+    have hi := (inverseSystem_exact_iff_pointwise (SIZ 0)).1
+      (hSIZ_short 0).exact i
+    refine { exact := hi, mono_f := ?_, epi_g := ?_ }
+    · exact (NatTrans.mono_iff_mono_app (SIZ 0).f).1
+        (hSIZ_short 0).mono_f i
+    · exact (NatTrans.epi_iff_epi_app (SIZ 0).g).1
+        (hSIZ_short 0).epi_g i
+  have hlimIZ :=
+    Formalization.Books.Algebra.Unit86.inverse_limit_shortExact_of_countable_mittagLeffler
+      hI (SIZ 0) hSIZ₀'
+      ((isMittagLeffler_iff_underlying (SIZ 0).X₁).1 hI₀)
+  letI : Epi (inverseSystemLimitMap (π 0)) := by
+    change Epi (limMap (SIZ 0).g)
+    exact hlimIZ.epi_g
+  have hzeroML : IsMittagLeffler (0 : NatInverseSystem AddCommGrpCat) := by
+    apply (isMittagLeffler_iff_underlying _).2
+    apply Functor.isMittagLeffler_of_surjective
+    intro i j f
+    intro y
+    refine ⟨0, ?_⟩
+    change PUnit.unit = y
+    cases y
+    rfl
+  let C₀ : ComposableArrows (NatInverseSystem AddCommGrpCat) 3 :=
+    ComposableArrows.mk₃ (0 : (0 : NatInverseSystem AddCommGrpCat) ⟶ I 0)
+      (rI 0) (π 0)
+  have hC₀ : C₀.Exact := by
+    refine { toIsComplex := { zero := ?_ }, exact := ?_ }
+    · intro i hi
+      obtain rfl | rfl : i = 0 ∨ i = 1 := by omega
+      · change (0 : (0 : NatInverseSystem AddCommGrpCat) ⟶ I 0) ≫ (rI 0) = 0
+        simp
+      · change (rI 0) ≫ (π 0) = 0
+        exact (SIZ 0).zero
+    · intro i hi
+      obtain rfl | rfl : i = 0 ∨ i = 1 := by omega
+      · change (ShortComplex.mk (0 : (0 : NatInverseSystem AddCommGrpCat) ⟶ I 0)
+          (rI 0) (by simp)).Exact
+        exact (ShortComplex.exact_iff_mono _ (by simp)).2 (hrMono 0)
+      · exact hSIZ 0
+  have hlimC₀ := inverseSystemLimit_exact_of_exact_of_mittagLeffler
+    C₀ hC₀ hzeroML
+  have hlim_eIr : inverseSystemLimitMap (eI 0) ≫
+      inverseSystemLimitMap (rI 0) = inverseSystemLimitMap (q 0) := by
+    apply limit.hom_ext
+    intro i
+    simp only [Category.assoc, inverseSystemLimitMap, limMap_π]
+    rw [← Category.assoc, limMap_π (eI 0) i, Category.assoc,
+      ← NatTrans.comp_app, heIr 0]
+  have hlimqπ : inverseSystemLimitMap (q 0) ≫
+      inverseSystemLimitMap (π 0) = 0 := by
+    apply limit.hom_ext
+    intro i
+    simp only [Category.assoc, inverseSystemLimitMap, limMap_π]
+    rw [← Category.assoc, limMap_π (q 0) i, Category.assoc,
+      ← NatTrans.comp_app]
+    rw [congrArg (fun x => x.app i) (hqπ 0)]
+    simp
+  let T₀ : ShortComplex AddCommGrpCat :=
+    ShortComplex.mk (inverseSystemLimitMap (rI 0))
+      (inverseSystemLimitMap (π 0)) (by
+        apply limit.hom_ext
+        intro i
+        simp only [Category.assoc, inverseSystemLimitMap, limMap_π]
+        rw [← Category.assoc, limMap_π (rI 0) i, Category.assoc,
+          ← NatTrans.comp_app]
+        rw [congrArg (fun x => x.app i) (SIZ 0).zero]
+        simp)
+  have hT₀ : T₀.Exact := by
+    have h := hlimC₀.exact' 0 1 2 (by omega) (by omega) (by omega)
+    dsimp [C₀] at h
+    convert h using 1 <;> congr 1 <;> simp [T₀, C₀]
+  let Tq : ShortComplex AddCommGrpCat :=
+    ShortComplex.mk (inverseSystemLimitMap (q 0))
+      (inverseSystemLimitMap (π 0)) hlimqπ
+  let φ : Tq ⟶ T₀ :=
+    { τ₁ := inverseSystemLimitMap (eI 0)
+      τ₂ := 𝟙 _
+      τ₃ := 𝟙 _
+      comm₁₂ := by
+        dsimp [Tq, T₀]
+        simpa only [Category.comp_id] using hlim_eIr
+      comm₂₃ := by simp [Tq, T₀] }
+  have hTq : Tq.Exact := by
+    exact (ShortComplex.exact_iff_of_epi_of_isIso_of_mono φ).2 hT₀
   sorry
 
 /-! ## Inverse systems over ordinals -/

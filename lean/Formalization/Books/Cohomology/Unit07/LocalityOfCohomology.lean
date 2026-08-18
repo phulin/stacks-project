@@ -162,7 +162,7 @@ theorem localCohomologyPresheafRestriction_natural
     localCohomologyPresheafRestriction X F i h ≫
         (ModuleCat.restrictScalars
           (X.structureSheaf.1.map (homOfLE h).op).hom).map
-          ((localCohomologyPresheafFunctor X i).map φ).app (op U) =
+          (((localCohomologyPresheafFunctor X i).map φ).app (op U)) =
       ((localCohomologyPresheafFunctor X i).map φ).app (op V) ≫
         localCohomologyPresheafRestriction X G i h := by
   exact presheafOfOModulesMorphism_naturality

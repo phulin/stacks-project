@@ -3283,13 +3283,472 @@ theorem lemma_four_by_four (T : NumericalType) (S : MinusTwoSubgraph T 4)
     UpToReordering (localData S) (fun D => isA4 D ∨ isC4 D ∨ isB4 D ∨ isF4 D) := by
   sorry
 
+private theorem d4_matrix_identity (D : LocalNumericalData 4)
+    (haa0 : D.a 0 0 = -2 * D.w 0) (haa1 : D.a 1 1 = -2 * D.w 1)
+    (haa2 : D.a 2 2 = -2 * D.w 2) (haa3 : D.a 3 3 = -2 * D.w 3)
+    (ha01 : D.a 0 1 = D.w 0) (ha02 : D.a 0 2 = D.w 0)
+    (ha03 : D.a 0 3 = D.w 0) (ha10 : D.a 1 0 = D.w 0)
+    (ha20 : D.a 2 0 = D.w 0) (ha30 : D.a 3 0 = D.w 0)
+    (ha12 : D.a 1 2 = 0) (ha13 : D.a 1 3 = 0)
+    (ha23 : D.a 2 3 = 0) (ha21 : D.a 2 1 = 0)
+    (ha31 : D.a 3 1 = 0) (ha32 : D.a 3 2 = 0)
+    (hw01 : D.w 0 = D.w 1) (hw02 : D.w 0 = D.w 2)
+    (hw03 : D.w 0 = D.w 3) :
+    D.a = scalarMatrix (starMatrix 4 0 (constantVector (-2)) 1) (D.w 0) := by
+  ext i j
+  fin_cases i <;> fin_cases j <;>
+    simp [scalarMatrix, starMatrix, constantVector, haa0, haa1, haa2, haa3,
+      ha01, ha02, ha03, ha10, ha20, ha30, ha12, ha13, ha23, ha21, ha31, ha32,
+      hw01.symm, hw02.symm, hw03.symm] <;> ring
+
+private theorem four_path_det_strict_ineq (D : LocalNumericalData 4)
+    (hdiag : ∀ i, D.a i i = -2 * D.w i)
+    (hsymm : ∀ i j, D.a i j = D.a j i)
+    (hzero : D.a 0 2 = 0 ∧ D.a 1 3 = 0)
+    (hw : ∀ i, 0 < D.w i)
+    (hdet : 0 < Matrix.det (Matrix.map D.a (fun x : ℤ => (x : ℝ))))
+    (r01 r12 r23 r03 s : ℝ)
+    (hsq01 : (D.a 0 1 : ℝ) ^ 2 = r01 * (D.w 0 * D.w 1))
+    (hsq12 : (D.a 1 2 : ℝ) ^ 2 = r12 * (D.w 1 * D.w 2))
+    (hsq23 : (D.a 2 3 : ℝ) ^ 2 = r23 * (D.w 2 * D.w 3))
+    (hsq03 : (D.a 0 3 : ℝ) ^ 2 = r03 * (D.w 0 * D.w 3))
+    (hprod : (D.a 0 1 : ℝ) * D.a 0 3 * D.a 1 2 * D.a 2 3 =
+      s * (D.w 0 * D.w 1 * D.w 2 * D.w 3)) :
+    4 * r01 + 4 * r12 + 4 * r23 + 4 * r03 + 2 * s <
+      16 + r01 * r23 + r12 * r03 := by
+  have hformula := determinant_four_by_four_formula D hdiag hsymm hzero
+  have hw1R : (0 : ℝ) < D.w 1 := by exact_mod_cast hw 1
+  have hw2R : (0 : ℝ) < D.w 2 := by exact_mod_cast hw 2
+  let A4 : Matrix (Fin 4) (Fin 4) ℝ := Matrix.map D.a (fun x : ℤ => (x : ℝ))
+  have hmap : Matrix.map D.a (fun x : ℤ => (x : ℝ)) = A4 := by rfl
+  have hcast := (Int.cast_det D.a : (D.a.det : ℝ) = _)
+  rw [hmap] at hcast
+  have hformulaR : A4.det =
+      16 * (D.w 0 : ℝ) * D.w 1 * D.w 2 * D.w 3 -
+        4 * (D.a 0 1 : ℝ) ^ 2 * D.w 2 * D.w 3 -
+        4 * (D.a 1 2 : ℝ) ^ 2 * D.w 0 * D.w 3 -
+        4 * (D.a 2 3 : ℝ) ^ 2 * D.w 0 * D.w 1 -
+        4 * (D.a 0 3 : ℝ) ^ 2 * D.w 1 * D.w 2 +
+        (D.a 0 1 : ℝ) ^ 2 * D.a 2 3 ^ 2 +
+        (D.a 1 2 : ℝ) ^ 2 * D.a 0 3 ^ 2 -
+        2 * D.a 0 1 * D.a 0 3 * D.a 1 2 * D.a 2 3 := by
+    simpa [hformula] using hcast.symm
+  rw [hformulaR, hsq01, hsq12, hsq23, hsq03] at hdet
+  have hcross : 2 * (D.a 0 1 : ℝ) * D.a 0 3 * D.a 1 2 * D.a 2 3 =
+      2 * (s * (D.w 0 * D.w 1 * D.w 2 * D.w 3)) := by
+    calc
+      2 * (D.a 0 1 : ℝ) * D.a 0 3 * D.a 1 2 * D.a 2 3 =
+          2 * ((D.a 0 1 : ℝ) * D.a 0 3 * D.a 1 2 * D.a 2 3) := by ring
+      _ = _ := by rw [hprod]
+  rw [hcross] at hdet
+  have hP : (0 : ℝ) < D.w 0 * D.w 1 * D.w 2 * D.w 3 := by
+    exact mul_pos (mul_pos (mul_pos (by exact_mod_cast hw 0)
+      (by exact_mod_cast hw 1)) (by exact_mod_cast hw 2)) (by exact_mod_cast hw 3)
+  have hfactor :
+      16 * (D.w 0 : ℝ) * D.w 1 * D.w 2 * D.w 3 -
+          4 * (r01 * (D.w 0 * D.w 1)) * D.w 2 * D.w 3 -
+        4 * (r12 * (D.w 1 * D.w 2)) * D.w 0 * D.w 3 -
+      4 * (r23 * (D.w 2 * D.w 3)) * D.w 0 * D.w 1 -
+    4 * (r03 * (D.w 0 * D.w 3)) * D.w 1 * D.w 2 +
+      (r01 * (D.w 0 * D.w 1)) * (r23 * (D.w 2 * D.w 3)) +
+    (r12 * (D.w 1 * D.w 2)) * (r03 * (D.w 0 * D.w 3)) -
+      2 * (s * (D.w 0 * D.w 1 * D.w 2 * D.w 3)) =
+      (16 + r01 * r23 + r12 * r03 - 4 * r01 - 4 * r12 -
+        4 * r23 - 4 * r03 - 2 * s) *
+          (D.w 0 * D.w 1 * D.w 2 * D.w 3) := by ring
+  rw [hfactor] at hdet
+  nlinarith
+
+private theorem no_four_positive_ratio
+    (r01 r12 r23 r03 s : ℤ)
+    (hr01 : 0 < r01) (hr12 : 0 < r12) (hr23 : 0 < r23) (hr03 : 0 < r03)
+    (hr01' : r01 < 4) (hr12' : r12 < 4) (hr23' : r23 < 4) (hr03' : r03 < 4)
+    (hs : 1 ≤ s)
+    (hineq : 4 * r01 + 4 * r12 + 4 * r23 + 4 * r03 + 2 * s <
+      16 + r01 * r23 + r12 * r03) : False := by
+  have hr01_le : r01 ≤ 3 := by omega
+  have hr12_le : r12 ≤ 3 := by omega
+  have hr23_le : r23 ≤ 3 := by omega
+  have hr03_le : r03 ≤ 3 := by omega
+  interval_cases r01 <;> interval_cases r12 <;> interval_cases r23 <;>
+    interval_cases r03 <;> omega
+
+private theorem no_triangle_from_det
+    (w0 w1 w2 a01 a02 a12 : ℝ)
+    (hw0 : 0 < w0) (hw1 : 0 < w1) (hw2 : 0 < w2)
+    (ha01 : 0 < a01) (ha02 : 0 < a02) (ha12 : 0 < a12)
+    (hl01 : w0 ≤ a01 ∧ w1 ≤ a01)
+    (hl02 : w0 ≤ a02 ∧ w2 ≤ a02)
+    (hl12 : w1 ≤ a12 ∧ w2 ≤ a12)
+    (hdet : -8 * w0 * w1 * w2 + 2 * a01 ^ 2 * w2 +
+      2 * a02 ^ 2 * w1 + 2 * a12 ^ 2 * w0 + 2 * a01 * a02 * a12 < 0) :
+    False := by
+  have hs01 : w0 * w1 * w2 ≤ a01 ^ 2 * w2 := by
+    have h := mul_le_mul hl01.1 hl01.2 (le_of_lt hw1) (le_of_lt ha01)
+    nlinarith
+  have hs02 : w0 * w1 * w2 ≤ a02 ^ 2 * w1 := by
+    have h := mul_le_mul hl02.1 hl02.2 (le_of_lt hw2) (le_of_lt ha02)
+    nlinarith
+  have hs12 : w0 * w1 * w2 ≤ a12 ^ 2 * w0 := by
+    have h := mul_le_mul hl12.1 hl12.2 (le_of_lt hw2) (le_of_lt ha12)
+    nlinarith
+  have hp12 : w1 * w2 ≤ a12 * a02 := by
+    calc
+      w1 * w2 ≤ a12 * w2 := mul_le_mul_of_nonneg_right hl12.1 (le_of_lt hw2)
+      _ ≤ a12 * a02 := mul_le_mul_of_nonneg_left hl02.2 (le_of_lt ha12)
+  have hprod : w0 * w1 * w2 ≤ a01 * a02 * a12 := by
+    calc
+      w0 * w1 * w2 ≤ w0 * (a12 * a02) := by
+        simpa [mul_assoc] using mul_le_mul_of_nonneg_left hp12 (le_of_lt hw0)
+      _ ≤ a01 * (a12 * a02) := mul_le_mul_of_nonneg_right hl01.1
+        (mul_nonneg (le_of_lt ha12) (le_of_lt ha02))
+      _ = a01 * a02 * a12 := by ring
+  nlinarith [hdet, hs01, hs02, hs12, hprod]
+
+private theorem five_path_det_strict_ineq (D : LocalNumericalData 5)
+    (hdiag : ∀ i, D.a i i = -2 * D.w i)
+    (hsymm : ∀ i j, D.a i j = D.a j i)
+    (hzero : D.a 0 2 = 0 ∧ D.a 0 3 = 0 ∧ D.a 1 3 = 0 ∧
+      D.a 1 4 = 0 ∧ D.a 2 4 = 0 ∧ D.a 0 4 = 0)
+    (hw : ∀ i, 0 < D.w i)
+    (hdet : Matrix.det (Matrix.map D.a (fun x : ℤ => (x : ℝ))) < 0)
+    (r01 r12 r23 r34 : ℝ)
+    (hsq01 : (D.a 0 1 : ℝ) ^ 2 = r01 * (D.w 0 * D.w 1))
+    (hsq12 : (D.a 1 2 : ℝ) ^ 2 = r12 * (D.w 1 * D.w 2))
+    (hsq23 : (D.a 2 3 : ℝ) ^ 2 = r23 * (D.w 2 * D.w 3))
+    (hsq34 : (D.a 3 4 : ℝ) ^ 2 = r34 * (D.w 3 * D.w 4)) :
+    4 * r01 + 4 * r12 + 4 * r23 + 4 * r34 <
+      16 + r01 * r23 + r01 * r34 + r12 * r34 := by
+  rcases hzero with ⟨h02, h03, h13, h14, h24, h04⟩
+  have h20 : D.a 2 0 = 0 := (hsymm 2 0).trans h02
+  have h30 : D.a 3 0 = 0 := (hsymm 3 0).trans h03
+  have h31 : D.a 3 1 = 0 := (hsymm 3 1).trans h13
+  have h41 : D.a 4 1 = 0 := (hsymm 4 1).trans h14
+  have h42 : D.a 4 2 = 0 := (hsymm 4 2).trans h24
+  have h10 : D.a 1 0 = D.a 0 1 := hsymm 1 0
+  have h21 : D.a 2 1 = D.a 1 2 := hsymm 2 1
+  have h32 : D.a 3 2 = D.a 2 3 := hsymm 3 2
+  have h43 : D.a 4 3 = D.a 3 4 := hsymm 4 3
+  have h40 : D.a 4 0 = D.a 0 4 := hsymm 4 0
+  have hformula : Matrix.det D.a =
+      -32 * D.w 0 * D.w 1 * D.w 2 * D.w 3 * D.w 4 +
+        8 * D.a 0 1 ^ 2 * D.w 2 * D.w 3 * D.w 4 +
+        8 * D.a 1 2 ^ 2 * D.w 0 * D.w 3 * D.w 4 +
+        8 * D.a 2 3 ^ 2 * D.w 0 * D.w 1 * D.w 4 +
+        8 * D.a 3 4 ^ 2 * D.w 0 * D.w 1 * D.w 2 -
+        2 * D.a 0 1 ^ 2 * D.a 2 3 ^ 2 * D.w 4 -
+        2 * D.a 0 1 ^ 2 * D.a 3 4 ^ 2 * D.w 2 -
+        2 * D.a 1 2 ^ 2 * D.a 3 4 ^ 2 * D.w 0 := by
+    simp [Matrix.det_succ_row_zero (n := 4),
+      Matrix.det_succ_row_zero (n := 3), Matrix.det_fin_three, Fin.succAbove,
+      Fin.sum_univ_succ, hdiag, h02, h03, h13, h14, h24, h20, h30, h31, h41,
+      h42, h04, h10, h21, h32, h43, h40, hsymm]
+    ring
+  have hcast := (Int.cast_det D.a : (D.a.det : ℝ) = _)
+  have hdetR : Matrix.det (Matrix.map D.a (fun x : ℤ => (x : ℝ))) =
+      -32 * (D.w 0 : ℝ) * D.w 1 * D.w 2 * D.w 3 * D.w 4 +
+        8 * (D.a 0 1 : ℝ) ^ 2 * D.w 2 * D.w 3 * D.w 4 +
+        8 * (D.a 1 2 : ℝ) ^ 2 * D.w 0 * D.w 3 * D.w 4 +
+        8 * (D.a 2 3 : ℝ) ^ 2 * D.w 0 * D.w 1 * D.w 4 +
+        8 * (D.a 3 4 : ℝ) ^ 2 * D.w 0 * D.w 1 * D.w 2 -
+        2 * (D.a 0 1 : ℝ) ^ 2 * (D.a 2 3 : ℝ) ^ 2 * D.w 4 -
+        2 * (D.a 0 1 : ℝ) ^ 2 * (D.a 3 4 : ℝ) ^ 2 * D.w 2 -
+        2 * (D.a 1 2 : ℝ) ^ 2 * (D.a 3 4 : ℝ) ^ 2 * D.w 0 := by
+    simpa [hformula] using hcast.symm
+  have hdet' :
+      -32 * (D.w 0 : ℝ) * D.w 1 * D.w 2 * D.w 3 * D.w 4 +
+        8 * (D.a 0 1 : ℝ) ^ 2 * D.w 2 * D.w 3 * D.w 4 +
+        8 * (D.a 1 2 : ℝ) ^ 2 * D.w 0 * D.w 3 * D.w 4 +
+        8 * (D.a 2 3 : ℝ) ^ 2 * D.w 0 * D.w 1 * D.w 4 +
+        8 * (D.a 3 4 : ℝ) ^ 2 * D.w 0 * D.w 1 * D.w 2 -
+        2 * (D.a 0 1 : ℝ) ^ 2 * (D.a 2 3 : ℝ) ^ 2 * D.w 4 -
+        2 * (D.a 0 1 : ℝ) ^ 2 * (D.a 3 4 : ℝ) ^ 2 * D.w 2 -
+        2 * (D.a 1 2 : ℝ) ^ 2 * (D.a 3 4 : ℝ) ^ 2 * D.w 0 < 0 := by
+    rw [← hdetR]
+    exact hdet
+  rw [hsq01, hsq12, hsq23, hsq34] at hdet'
+  have hP : (0 : ℝ) < D.w 0 * D.w 1 * D.w 2 * D.w 3 * D.w 4 := by
+    exact mul_pos (mul_pos (mul_pos (mul_pos (by exact_mod_cast hw 0)
+      (by exact_mod_cast hw 1)) (by exact_mod_cast hw 2))
+      (by exact_mod_cast hw 3)) (by exact_mod_cast hw 4)
+  have hfactor :
+      (-32 + 8 * r01 + 8 * r12 + 8 * r23 + 8 * r34 -
+        2 * r01 * r23 - 2 * r01 * r34 - 2 * r12 * r34) *
+          (D.w 0 * D.w 1 * D.w 2 * D.w 3 * D.w 4) =
+      -2 * (16 + r01 * r23 + r01 * r34 + r12 * r34 -
+        4 * r01 - 4 * r12 - 4 * r23 - 4 * r34) *
+          (D.w 0 * D.w 1 * D.w 2 * D.w 3 * D.w 4) := by ring
+  have hmul : -2 * (16 + r01 * r23 + r01 * r34 + r12 * r34 -
+      4 * r01 - 4 * r12 - 4 * r23 - 4 * r34) *
+      (D.w 0 * D.w 1 * D.w 2 * D.w 3 * D.w 4) < 0 := by
+    nlinarith [hdet', hfactor]
+  have hQ : 0 < 16 + r01 * r23 + r01 * r34 + r12 * r34 -
+      4 * r01 - 4 * r12 - 4 * r23 - 4 * r34 := by
+    by_contra hq
+    have hq0 : 16 + r01 * r23 + r01 * r34 + r12 * r34 -
+        4 * r01 - 4 * r12 - 4 * r23 - 4 * r34 ≤ 0 := le_of_not_gt hq
+    have hnon : 0 ≤ -2 * (16 + r01 * r23 + r01 * r34 + r12 * r34 -
+        4 * r01 - 4 * r12 - 4 * r23 - 4 * r34) *
+        (D.w 0 * D.w 1 * D.w 2 * D.w 3 * D.w 4) := by
+      apply mul_nonneg
+      · nlinarith
+      · exact le_of_lt hP
+    linarith
+  linarith
+
+private theorem five_path_det_strict_ineq_general (D : LocalNumericalData 5)
+    (hdiag : ∀ i, D.a i i = -2 * D.w i)
+    (hsymm : ∀ i j, D.a i j = D.a j i)
+    (hzero : D.a 0 2 = 0 ∧ D.a 0 3 = 0 ∧ D.a 1 3 = 0 ∧
+      D.a 1 4 = 0 ∧ D.a 2 4 = 0)
+    (hw : ∀ i, 0 < D.w i)
+    (hdet : Matrix.det (Matrix.map D.a (fun x : ℤ => (x : ℝ))) < 0)
+    (r01 r12 r23 r34 r04 s : ℝ)
+    (hsq01 : (D.a 0 1 : ℝ) ^ 2 = r01 * (D.w 0 * D.w 1))
+    (hsq12 : (D.a 1 2 : ℝ) ^ 2 = r12 * (D.w 1 * D.w 2))
+    (hsq23 : (D.a 2 3 : ℝ) ^ 2 = r23 * (D.w 2 * D.w 3))
+    (hsq34 : (D.a 3 4 : ℝ) ^ 2 = r34 * (D.w 3 * D.w 4))
+    (hsq04 : (D.a 0 4 : ℝ) ^ 2 = r04 * (D.w 0 * D.w 4))
+    (hprod : (D.a 0 1 : ℝ) * D.a 1 2 * D.a 2 3 * D.a 3 4 * D.a 0 4 =
+      s * (D.w 0 * D.w 1 * D.w 2 * D.w 3 * D.w 4)) :
+    4 * r01 + 4 * r12 + 4 * r23 + 4 * r34 + 4 * r04 + s <
+      16 + r01 * r23 + r01 * r34 + r12 * r34 + r04 * r12 + r04 * r23 := by
+  rcases hzero with ⟨h02, h03, h13, h14, h24⟩
+  have h20 : D.a 2 0 = 0 := (hsymm 2 0).trans h02
+  have h30 : D.a 3 0 = 0 := (hsymm 3 0).trans h03
+  have h31 : D.a 3 1 = 0 := (hsymm 3 1).trans h13
+  have h41 : D.a 4 1 = 0 := (hsymm 4 1).trans h14
+  have h42 : D.a 4 2 = 0 := (hsymm 4 2).trans h24
+  have h10 : D.a 1 0 = D.a 0 1 := hsymm 1 0
+  have h21 : D.a 2 1 = D.a 1 2 := hsymm 2 1
+  have h32 : D.a 3 2 = D.a 2 3 := hsymm 3 2
+  have h43 : D.a 4 3 = D.a 3 4 := hsymm 4 3
+  have h40 : D.a 4 0 = D.a 0 4 := hsymm 4 0
+  have hformula : Matrix.det D.a =
+      -32 * D.w 0 * D.w 1 * D.w 2 * D.w 3 * D.w 4 +
+        8 * D.a 0 1 ^ 2 * D.w 2 * D.w 3 * D.w 4 +
+        8 * D.a 1 2 ^ 2 * D.w 0 * D.w 3 * D.w 4 +
+        8 * D.a 2 3 ^ 2 * D.w 0 * D.w 1 * D.w 4 +
+        8 * D.a 3 4 ^ 2 * D.w 0 * D.w 1 * D.w 2 +
+        8 * D.a 0 4 ^ 2 * D.w 1 * D.w 2 * D.w 3 -
+        2 * D.a 0 1 ^ 2 * D.a 2 3 ^ 2 * D.w 4 -
+        2 * D.a 0 1 ^ 2 * D.a 3 4 ^ 2 * D.w 2 -
+        2 * D.a 1 2 ^ 2 * D.a 3 4 ^ 2 * D.w 0 -
+        2 * D.a 0 4 ^ 2 * D.a 1 2 ^ 2 * D.w 3 -
+        2 * D.a 0 4 ^ 2 * D.a 2 3 ^ 2 * D.w 1 +
+        2 * D.a 0 1 * D.a 1 2 * D.a 2 3 * D.a 3 4 * D.a 0 4 := by
+    simp [Matrix.det_succ_row_zero (n := 4),
+      Matrix.det_succ_row_zero (n := 3), Matrix.det_fin_three, Fin.succAbove,
+      Fin.sum_univ_succ, hdiag, h02, h03, h13, h14, h24, h20, h30, h31, h41,
+      h42, h10, h21, h32, h43, h40, hsymm]
+    ring
+  have hcast := (Int.cast_det D.a : (D.a.det : ℝ) = _)
+  have hdetR : Matrix.det (Matrix.map D.a (fun x : ℤ => (x : ℝ))) =
+      -32 * (D.w 0 : ℝ) * D.w 1 * D.w 2 * D.w 3 * D.w 4 +
+        8 * (D.a 0 1 : ℝ) ^ 2 * D.w 2 * D.w 3 * D.w 4 +
+        8 * (D.a 1 2 : ℝ) ^ 2 * D.w 0 * D.w 3 * D.w 4 +
+        8 * (D.a 2 3 : ℝ) ^ 2 * D.w 0 * D.w 1 * D.w 4 +
+        8 * (D.a 3 4 : ℝ) ^ 2 * D.w 0 * D.w 1 * D.w 2 +
+        8 * (D.a 0 4 : ℝ) ^ 2 * D.w 1 * D.w 2 * D.w 3 -
+        2 * (D.a 0 1 : ℝ) ^ 2 * (D.a 2 3 : ℝ) ^ 2 * D.w 4 -
+        2 * (D.a 0 1 : ℝ) ^ 2 * (D.a 3 4 : ℝ) ^ 2 * D.w 2 -
+        2 * (D.a 1 2 : ℝ) ^ 2 * (D.a 3 4 : ℝ) ^ 2 * D.w 0 -
+        2 * (D.a 0 4 : ℝ) ^ 2 * (D.a 1 2 : ℝ) ^ 2 * D.w 3 -
+        2 * (D.a 0 4 : ℝ) ^ 2 * (D.a 2 3 : ℝ) ^ 2 * D.w 1 +
+        2 * (D.a 0 1 : ℝ) * D.a 1 2 * D.a 2 3 * D.a 3 4 * D.a 0 4 := by
+    simpa [hformula] using hcast.symm
+  have hdet' :
+      -32 * (D.w 0 : ℝ) * D.w 1 * D.w 2 * D.w 3 * D.w 4 +
+        8 * (D.a 0 1 : ℝ) ^ 2 * D.w 2 * D.w 3 * D.w 4 +
+        8 * (D.a 1 2 : ℝ) ^ 2 * D.w 0 * D.w 3 * D.w 4 +
+        8 * (D.a 2 3 : ℝ) ^ 2 * D.w 0 * D.w 1 * D.w 4 +
+        8 * (D.a 3 4 : ℝ) ^ 2 * D.w 0 * D.w 1 * D.w 2 +
+        8 * (D.a 0 4 : ℝ) ^ 2 * D.w 1 * D.w 2 * D.w 3 -
+        2 * (D.a 0 1 : ℝ) ^ 2 * (D.a 2 3 : ℝ) ^ 2 * D.w 4 -
+        2 * (D.a 0 1 : ℝ) ^ 2 * (D.a 3 4 : ℝ) ^ 2 * D.w 2 -
+        2 * (D.a 1 2 : ℝ) ^ 2 * (D.a 3 4 : ℝ) ^ 2 * D.w 0 -
+        2 * (D.a 0 4 : ℝ) ^ 2 * (D.a 1 2 : ℝ) ^ 2 * D.w 3 -
+        2 * (D.a 0 4 : ℝ) ^ 2 * (D.a 2 3 : ℝ) ^ 2 * D.w 1 +
+        2 * (D.a 0 1 : ℝ) * D.a 1 2 * D.a 2 3 * D.a 3 4 * D.a 0 4 < 0 := by
+    rw [← hdetR]
+    exact hdet
+  rw [hsq01, hsq12, hsq23, hsq34, hsq04] at hdet'
+  have hcross : 2 * (D.a 0 1 : ℝ) * D.a 1 2 * D.a 2 3 * D.a 3 4 * D.a 0 4 =
+      2 * (s * (D.w 0 * D.w 1 * D.w 2 * D.w 3 * D.w 4)) := by
+    calc
+      _ = 2 * ((D.a 0 1 : ℝ) * D.a 1 2 * D.a 2 3 * D.a 3 4 * D.a 0 4) := by ring
+      _ = _ := by rw [hprod]
+  rw [hcross] at hdet'
+  have hP : (0 : ℝ) < D.w 0 * D.w 1 * D.w 2 * D.w 3 * D.w 4 := by
+    exact mul_pos (mul_pos (mul_pos (mul_pos (by exact_mod_cast hw 0)
+      (by exact_mod_cast hw 1)) (by exact_mod_cast hw 2))
+      (by exact_mod_cast hw 3)) (by exact_mod_cast hw 4)
+  have hfactor :
+      (-32 + 8 * r01 + 8 * r12 + 8 * r23 + 8 * r34 + 8 * r04 -
+        2 * r01 * r23 - 2 * r01 * r34 - 2 * r12 * r34 -
+        2 * r04 * r12 - 2 * r04 * r23 + 2 * s) *
+          (D.w 0 * D.w 1 * D.w 2 * D.w 3 * D.w 4) =
+      -2 * (16 + r01 * r23 + r01 * r34 + r12 * r34 + r04 * r12 + r04 * r23 -
+        4 * r01 - 4 * r12 - 4 * r23 - 4 * r34 - 4 * r04 - s) *
+          (D.w 0 * D.w 1 * D.w 2 * D.w 3 * D.w 4) := by ring
+  have hmul : -2 * (16 + r01 * r23 + r01 * r34 + r12 * r34 + r04 * r12 + r04 * r23 -
+      4 * r01 - 4 * r12 - 4 * r23 - 4 * r34 - 4 * r04 - s) *
+      (D.w 0 * D.w 1 * D.w 2 * D.w 3 * D.w 4) < 0 := by
+    linarith only [hdet', hfactor]
+  have hQ : 0 < 16 + r01 * r23 + r01 * r34 + r12 * r34 + r04 * r12 + r04 * r23 -
+      4 * r01 - 4 * r12 - 4 * r23 - 4 * r34 - 4 * r04 - s := by
+    by_contra hq
+    have hq0 : 16 + r01 * r23 + r01 * r34 + r12 * r34 + r04 * r12 + r04 * r23 -
+        4 * r01 - 4 * r12 - 4 * r23 - 4 * r34 - 4 * r04 - s ≤ 0 := le_of_not_gt hq
+    have hnon : 0 ≤ -2 * (16 + r01 * r23 + r01 * r34 + r12 * r34 + r04 * r12 + r04 * r23 -
+        4 * r01 - 4 * r12 - 4 * r23 - 4 * r04 - 4 * r34 - s) *
+        (D.w 0 * D.w 1 * D.w 2 * D.w 3 * D.w 4) := by
+      exact mul_nonneg (by linarith only [hq0]) (le_of_lt hP)
+    linarith only [hmul, hnon]
+  linarith only [hQ]
+
+private theorem no_five_positive_ratio
+    (r01 r12 r23 r34 r04 s : ℤ)
+    (hr01 : 0 < r01) (hr12 : 0 < r12) (hr23 : 0 < r23) (hr34 : 0 < r34)
+    (hr04 : 0 < r04) (hr01' : r01 < 4) (hr12' : r12 < 4)
+    (hr23' : r23 < 4) (hr34' : r34 < 4) (hr04' : r04 < 4)
+    (hs : 1 ≤ s)
+    (hineq : 4 * r01 + 4 * r12 + 4 * r23 + 4 * r34 + 4 * r04 + s <
+      16 + r01 * r23 + r01 * r34 + r12 * r34 + r04 * r12 + r04 * r23) : False := by
+  have hr01_le : r01 ≤ 3 := by omega
+  have hr12_le : r12 ≤ 3 := by omega
+  have hr23_le : r23 ≤ 3 := by omega
+  have hr34_le : r34 ≤ 3 := by omega
+  have hr04_le : r04 ≤ 3 := by omega
+  interval_cases r01 <;> interval_cases r12 <;> interval_cases r23 <;>
+    interval_cases r34 <;> interval_cases r04 <;> omega
+
+private theorem five_path_ratio_cases
+    (r01 r12 r23 r34 : ℤ)
+    (hr01 : 0 < r01) (hr12 : 0 < r12) (hr23 : 0 < r23) (hr34 : 0 < r34)
+    (hr01' : r01 < 4) (hr12' : r12 < 4) (hr23' : r23 < 4) (hr34' : r34 < 4)
+    (hineq : 4 * r01 + 4 * r12 + 4 * r23 + 4 * r34 <
+      16 + r01 * r23 + r01 * r34 + r12 * r34) :
+    (r01 = 1 ∧ r12 = 1 ∧ r23 = 1 ∧ r34 = 1) ∨
+      (r01 = 1 ∧ r12 = 1 ∧ r23 = 1 ∧ r34 = 2) ∨
+      (r01 = 2 ∧ r12 = 1 ∧ r23 = 1 ∧ r34 = 1) := by
+  have hr01_le : r01 ≤ 3 := by omega
+  have hr12_le : r12 ≤ 3 := by omega
+  have hr23_le : r23 ≤ 3 := by omega
+  have hr34_le : r34 ≤ 3 := by omega
+  interval_cases r01 <;> interval_cases r12 <;> interval_cases r23 <;>
+    interval_cases r34 <;> omega
+
+private theorem five_row_bound (T : NumericalType) (S : MinusTwoSubgraph T 5)
+    (i j k l o : Fin 5) (hij : i ≠ j) (hik : i ≠ k) (hil : i ≠ l) (hio : i ≠ o)
+    (hjk : j ≠ k) (hjl : j ≠ l) (hjo : j ≠ o) (hkl : k ≠ l)
+    (hko : k ≠ o) (hlo : l ≠ o) :
+    (localData S).a i i * (localData S).m i +
+        (localData S).a i j * (localData S).m j +
+        (localData S).a i k * (localData S).m k +
+        (localData S).a i l * (localData S).m l +
+        (localData S).a i o * (localData S).m o ≤ 0 := by
+  let rest : Finset (Fin T.n) :=
+    ((((Finset.univ.erase (S.index i)).erase (S.index j)).erase (S.index k)).erase
+      (S.index l)).erase (S.index o)
+  have hrest : 0 ≤ rest.sum (fun r => T.a (S.index i) r * T.m r) := by
+    apply Finset.sum_nonneg
+    intro r hr
+    have hri : r ≠ S.index i := by
+      exact (Finset.mem_erase.mp (Finset.mem_erase.mp (Finset.mem_erase.mp
+        (Finset.mem_erase.mp (Finset.mem_erase.mp hr).2).2).2).2).1
+    exact mul_nonneg (T.a_offdiag_nonneg (by intro h; exact hri h.symm))
+      (le_of_lt (T.m_pos r))
+  have hs1 := Finset.sum_erase_add (s := (Finset.univ : Finset (Fin T.n)))
+    (a := S.index i) (f := fun r => T.a (S.index i) r * T.m r) (Finset.mem_univ _)
+  have hs2 := Finset.sum_erase_add
+    (s := (Finset.univ : Finset (Fin T.n)).erase (S.index i))
+    (a := S.index j) (f := fun r => T.a (S.index i) r * T.m r)
+    (by rw [Finset.mem_erase]; exact ⟨by intro h; exact hij (S.index_injective h.symm),
+      Finset.mem_univ _⟩)
+  have hs3 := Finset.sum_erase_add
+    (s := ((Finset.univ : Finset (Fin T.n)).erase (S.index i)).erase (S.index j))
+    (a := S.index k) (f := fun r => T.a (S.index i) r * T.m r)
+    (by rw [Finset.mem_erase]; exact ⟨by intro h; exact hjk (S.index_injective h.symm),
+      by rw [Finset.mem_erase]; exact ⟨by intro h; exact hik (S.index_injective h.symm),
+        Finset.mem_univ _⟩⟩)
+  have hs4 := Finset.sum_erase_add
+    (s := (((Finset.univ : Finset (Fin T.n)).erase (S.index i)).erase
+      (S.index j)).erase (S.index k))
+    (a := S.index l) (f := fun r => T.a (S.index i) r * T.m r)
+    (by rw [Finset.mem_erase]; exact ⟨by intro h; exact hkl (S.index_injective h.symm),
+      by rw [Finset.mem_erase]; exact ⟨by intro h; exact hjl (S.index_injective h.symm),
+        by rw [Finset.mem_erase]; exact ⟨by intro h; exact hil (S.index_injective h.symm),
+          Finset.mem_univ _⟩⟩⟩)
+  have hs5 := Finset.sum_erase_add
+    (s := ((((Finset.univ : Finset (Fin T.n)).erase (S.index i)).erase
+      (S.index j)).erase (S.index k)).erase (S.index l))
+    (a := S.index o) (f := fun r => T.a (S.index i) r * T.m r)
+    (by rw [Finset.mem_erase]; exact ⟨by intro h; exact hlo (S.index_injective h.symm),
+      by rw [Finset.mem_erase]; exact ⟨by intro h; exact hko (S.index_injective h.symm),
+        by rw [Finset.mem_erase]; exact ⟨by intro h; exact hjo (S.index_injective h.symm),
+          by rw [Finset.mem_erase]; exact ⟨by intro h; exact hio (S.index_injective h.symm),
+            Finset.mem_univ _⟩⟩⟩⟩)
+  rw [T.row_sum (S.index i)] at hs1
+  dsimp [rest] at hrest
+  change T.a (S.index i) (S.index i) * T.m (S.index i) +
+      T.a (S.index i) (S.index j) * T.m (S.index j) +
+      T.a (S.index i) (S.index k) * T.m (S.index k) +
+      T.a (S.index i) (S.index l) * T.m (S.index l) +
+      T.a (S.index i) (S.index o) * T.m (S.index o) ≤ 0
+  linarith [hs1, hs2, hs3, hs4, hs5, hrest]
+
+private theorem positive_product_one (p q : ℤ) (hp : 0 < p) (hq : 0 < q)
+    (h : p * q = 1) : p = 1 ∧ q = 1 := by
+  have hq1 : 1 ≤ q := by omega
+  have hp1 : 1 ≤ p := by omega
+  have hp_le : p ≤ p * q := by
+    simpa only [mul_one] using mul_le_mul_of_nonneg_left hq1 (le_of_lt hp)
+  have hq_le : q ≤ p * q := by
+    simpa only [one_mul] using mul_le_mul_of_nonneg_right hp1 (le_of_lt hq)
+  omega
+
+private theorem positive_product_two (p q : ℤ) (hp : 0 < p) (hq : 0 < q)
+    (h : p * q = 2) : (p = 1 ∧ q = 2) ∨ (p = 2 ∧ q = 1) := by
+  have hq1 : 1 ≤ q := by omega
+  have hp1 : 1 ≤ p := by omega
+  have hp_le : p ≤ p * q := by
+    simpa only [mul_one] using mul_le_mul_of_nonneg_left hq1 (le_of_lt hp)
+  have hq_le : q ≤ p * q := by
+    simpa only [one_mul] using mul_le_mul_of_nonneg_right hp1 (le_of_lt hq)
+  have hp_cases : p = 1 ∨ p = 2 := by omega
+  rcases hp_cases with hp' | hp'
+  · left
+    refine ⟨hp', ?_⟩
+    rw [hp'] at h
+    norm_num at h
+    exact h
+  · right
+    refine ⟨hp', ?_⟩
+    rw [hp'] at h
+    norm_num at h
+    exact h
+
+private theorem cancel_pos_int (r : ℤ) (hr : 0 < r) (a b : ℤ)
+    (h : r * b ≤ r * a) : b ≤ a := by
+  by_contra hnot
+  have hlt : a < b := lt_of_not_ge hnot
+  have hmul : r * a < r * b := Int.mul_lt_mul_of_pos_left hlt hr
+  linarith
+
+private theorem realize_pattern5 (D : LocalNumericalData 5)
+    (C : Matrix (Fin 5) (Fin 5) ℤ) (v : Fin 5 → ℤ)
+    (mc : (Fin 5 → ℤ) → Prop) (r : ℤ) (hr : 0 < r)
+    (hmat : D.a = scalarMatrix C r) (hvec : D.w = scalarVector v r)
+    (hmp : ∀ i, 0 < D.m i) (hmc : mc D.m) :
+    realizesPattern D C v mc := ⟨r, hr, hmat, hvec, hmp, hmc⟩
+
 /-! The four-index three-arm classification (`D₄`). -/
 theorem lemma_D4 (T : NumericalType) (S : MinusTwoSubgraph T 4)
     (hn : 4 < T.n)
     (hedges : hasEdgeAt (localData S) 0 1 ∧ hasEdgeAt (localData S) 0 2 ∧
       hasEdgeAt (localData S) 0 3) :
     UpToReordering (localData S) (fun D => isD4 D) := by
-  /-
   classical
   let D := localData S
   have hDdiag : ∀ i, D.a i i = -2 * D.w i := by
@@ -3711,20 +4170,21 @@ theorem lemma_D4 (T : NumericalType) (S : MinusTwoSubgraph T 4)
   refine ⟨Equiv.refl _, ?_⟩
   unfold isD4 realizesPattern
   refine ⟨D.w 0, hDpos 0, ?_, ?_, ?_, ?_⟩
-  · ext i j
-    change D.a i j = D.w 0 * starMatrix 4 0 (constantVector (-2)) 1 i j
-    fin_cases i <;> fin_cases j <;>
-      simp [starMatrix, constantVector, haa0, haa1, haa2, haa3, ha01', ha02', ha03',
-        ha10', ha20', ha30', ha12', ha13', ha23', ha21', ha31', ha32',
-        hw01, hw02, hw03] <;> try ring
+  · exact d4_matrix_identity D haa0 haa1 haa2 haa3 ha01' ha02' ha03' ha10' ha20'
+      ha30' ha12' ha13' ha23' ha21' ha31' ha32' hw01 hw02 hw03
   · funext i
-    fin_cases i <;> simp [D, reindexLocalData, scalarVector, constantVector]
-  · exact local_m_pos S
+    simp only [reindexLocalData, Equiv.refl_apply, scalarVector, constantVector, mul_one]
+    change D.w i = D.w 0
+    fin_cases i
+    · rfl
+    · exact hw01.symm
+    · exact hw02.symm
+    · exact hw03.symm
+  · intro i
+    simpa [D, reindexLocalData] using local_m_pos S i
   · change 2 * D.m 0 ≥ D.m 1 + D.m 2 + D.m 3 ∧ 2 * D.m 1 ≥ D.m 0 ∧
       2 * D.m 2 ≥ D.m 0 ∧ 2 * D.m 3 ≥ D.m 0
     exact ⟨hm0, hm1, hm2, hm3⟩
-  -/
-  sorry
 
 /-! The five-by-five path classification. -/
 theorem lemma_five_by_five (T : NumericalType) (S : MinusTwoSubgraph T 5)
@@ -3732,7 +4192,526 @@ theorem lemma_five_by_five (T : NumericalType) (S : MinusTwoSubgraph T 5)
     (hedges : hasEdgeAt (localData S) 0 1 ∧ hasEdgeAt (localData S) 1 2 ∧
       hasEdgeAt (localData S) 2 3 ∧ hasEdgeAt (localData S) 3 4) :
     UpToReordering (localData S) (fun D => isA5 D ∨ isC5 D ∨ isB5 D) := by
-  sorry
+  classical
+  let D := localData S
+  have hDdiag : ∀ i, D.a i i = -2 * D.w i := by
+    intro i
+    change T.a (S.index i) (S.index i) = -2 * T.w (S.index i)
+    exact (S.minus_two i).2
+  have hDsym : ∀ i j, D.a i j = D.a j i := by
+    intro i j
+    simpa [D] using local_a_symmetric S i j
+  have hDpos : ∀ i, 0 < D.w i := local_w_pos S
+  have hDposR : ∀ i, (0 : ℝ) < D.w i := by
+    intro i
+    exact_mod_cast hDpos i
+  have hP : (0 : ℝ) < D.w 0 * D.w 1 * D.w 2 * D.w 3 * D.w 4 := by
+    exact mul_pos (mul_pos (mul_pos (mul_pos (hDposR 0) (hDposR 1))
+      (hDposR 2)) (hDposR 3)) (hDposR 4)
+  let B5 : Matrix (Fin 5) (Fin 5) ℝ := fun i j => -((D.a i j : ℤ) : ℝ)
+  have hBpos : B5.PosDef := by
+    simpa [B5, D, localData] using local_principal_neg_posDef T S (by omega) hn
+  have hnonneg : ∀ i j : Fin 5, i ≠ j → 0 ≤ D.a i j := by
+    intro i j hij
+    change 0 ≤ T.a (S.index i) (S.index j)
+    apply T.a_offdiag_nonneg
+    intro h
+    exact hij (S.index_injective h)
+  have hEdge : ∀ i j : Fin 5, hasEdgeAt D i.val j.val → 0 < D.a i j := by
+    intro i j h
+    rcases h with ⟨i', j', hi, hj, hp⟩
+    have hi' : i' = i := Fin.ext hi
+    have hj' : j' = j := Fin.ext hj
+    simpa [hi', hj'] using hp
+  have hlower : ∀ i j : Fin 5, 0 < D.a i j →
+      (D.w i : ℝ) ≤ D.a i j ∧ (D.w j : ℝ) ≤ D.a i j := by
+    intro i j hij
+    have hdivi : D.w i ∣ D.a i j := by
+      simpa [D, localData] using T.w_dvd (S.index i) (S.index j)
+    have hdivj : D.w j ∣ D.a i j := by
+      have h := T.w_dvd (S.index j) (S.index i)
+      simpa [D, localData, T.a_symmetric (S.index j) (S.index i)] using h
+    let p : ℤ := D.a i j / D.w i
+    let q : ℤ := D.a i j / D.w j
+    have hp : 0 < p := by
+      dsimp [p]
+      exact Int.ediv_pos_of_pos_of_dvd hij (le_of_lt (hDpos i)) hdivi
+    have hq : 0 < q := by
+      dsimp [q]
+      exact Int.ediv_pos_of_pos_of_dvd hij (le_of_lt (hDpos j)) hdivj
+    have hpa : D.a i j = p * D.w i := by
+      dsimp [p]
+      exact (Int.ediv_mul_cancel hdivi).symm
+    have hqa : D.a i j = q * D.w j := by
+      dsimp [q]
+      exact (Int.ediv_mul_cancel hdivj).symm
+    have hpR : (1 : ℝ) ≤ p := by exact_mod_cast (show (1 : ℤ) ≤ p by omega)
+    have hqR : (1 : ℝ) ≤ q := by exact_mod_cast (show (1 : ℤ) ≤ q by omega)
+    have hpaR : (D.a i j : ℝ) = (p : ℝ) * D.w i := by exact_mod_cast hpa
+    have hqaR : (D.a i j : ℝ) = (q : ℝ) * D.w j := by exact_mod_cast hqa
+    have hwiR : (0 : ℝ) < D.w i := by exact_mod_cast hDpos i
+    have hwjR : (0 : ℝ) < D.w j := by exact_mod_cast hDpos j
+    constructor <;> nlinarith
+  have hthree : ∀ (e : Fin 3 → Fin 5), Function.Injective e →
+      0 < D.a (e 0) (e 1) → 0 < D.a (e 0) (e 2) →
+      0 < D.a (e 1) (e 2) → False := by
+    intro e he ha01 ha02 ha12
+    let A3 : Matrix (Fin 3) (Fin 3) ℝ :=
+      fun i j => (D.a (e i) (e j) : ℝ)
+    have hB3 := Matrix.PosDef.det_pos (hBpos.submatrix he)
+    have hdetA3 : Matrix.det A3 < 0 := by
+      have hrel : B5.submatrix e e = -A3 := by
+        ext i j
+        rfl
+      have hneg := Matrix.det_neg A3
+      norm_num at hneg
+      rw [hrel, hneg] at hB3
+      linarith
+    have hdetformula : Matrix.det A3 =
+        -8 * (D.w (e 0) : ℝ) * D.w (e 1) * D.w (e 2) +
+          2 * (D.a (e 0) (e 1) : ℝ) ^ 2 * D.w (e 2) +
+          2 * (D.a (e 0) (e 2) : ℝ) ^ 2 * D.w (e 1) +
+          2 * (D.a (e 1) (e 2) : ℝ) ^ 2 * D.w (e 0) +
+          2 * (D.a (e 0) (e 1) : ℝ) * D.a (e 0) (e 2) * D.a (e 1) (e 2) := by
+      have h00 := hDdiag (e 0)
+      have h11 := hDdiag (e 1)
+      have h22 := hDdiag (e 2)
+      have h10 := hDsym (e 1) (e 0)
+      have h20 := hDsym (e 2) (e 0)
+      have h21 := hDsym (e 2) (e 1)
+      have h00R : (D.a (e 0) (e 0) : ℝ) = -2 * D.w (e 0) := by exact_mod_cast h00
+      have h11R : (D.a (e 1) (e 1) : ℝ) = -2 * D.w (e 1) := by exact_mod_cast h11
+      have h22R : (D.a (e 2) (e 2) : ℝ) = -2 * D.w (e 2) := by exact_mod_cast h22
+      have h10R : (D.a (e 1) (e 0) : ℝ) = D.a (e 0) (e 1) := by exact_mod_cast h10
+      have h20R : (D.a (e 2) (e 0) : ℝ) = D.a (e 0) (e 2) := by exact_mod_cast h20
+      have h21R : (D.a (e 2) (e 1) : ℝ) = D.a (e 1) (e 2) := by exact_mod_cast h21
+      rw [Matrix.det_fin_three]
+      simp [A3, h00R, h11R, h22R, h10R, h20R, h21R]
+      ring
+    have hdetI :
+        -8 * (D.w (e 0) : ℝ) * D.w (e 1) * D.w (e 2) +
+          2 * (D.a (e 0) (e 1) : ℝ) ^ 2 * D.w (e 2) +
+          2 * (D.a (e 0) (e 2) : ℝ) ^ 2 * D.w (e 1) +
+          2 * (D.a (e 1) (e 2) : ℝ) ^ 2 * D.w (e 0) +
+          2 * (D.a (e 0) (e 1) : ℝ) * D.a (e 0) (e 2) * D.a (e 1) (e 2) < 0 := by
+      rw [← hdetformula]
+      exact hdetA3
+    have hl01 := hlower (e 0) (e 1) ha01
+    have hl02 := hlower (e 0) (e 2) ha02
+    have hl12 := hlower (e 1) (e 2) ha12
+    have hw0 : (0 : ℝ) < D.w (e 0) := by exact_mod_cast hDpos (e 0)
+    have hw1 : (0 : ℝ) < D.w (e 1) := by exact_mod_cast hDpos (e 1)
+    have hw2 : (0 : ℝ) < D.w (e 2) := by exact_mod_cast hDpos (e 2)
+    have ha01' : (0 : ℝ) < D.a (e 0) (e 1) := by exact_mod_cast ha01
+    have ha02' : (0 : ℝ) < D.a (e 0) (e 2) := by exact_mod_cast ha02
+    have ha12' : (0 : ℝ) < D.a (e 1) (e 2) := by exact_mod_cast ha12
+    exact no_triangle_from_det _ _ _ _ _ _ hw0 hw1 hw2 ha01' ha02' ha12'
+      hl01 hl02 hl12 hdetI
+  rcases hedges with ⟨he01, he12, he23, he34⟩
+  have ha01 := hEdge 0 1 he01
+  have ha12 := hEdge 1 2 he12
+  have ha23 := hEdge 2 3 he23
+  have ha34 := hEdge 3 4 he34
+  let e012 : Fin 3 → Fin 5 := fun i => if i = 0 then 0 else if i = 1 then 1 else 2
+  let e123 : Fin 3 → Fin 5 := fun i => if i = 0 then 1 else if i = 1 then 2 else 3
+  let e234 : Fin 3 → Fin 5 := fun i => if i = 0 then 2 else if i = 1 then 3 else 4
+  have he012 : Function.Injective e012 := by
+    intro i j h
+    fin_cases i <;> fin_cases j <;> simp [e012] at h ⊢
+  have he123 : Function.Injective e123 := by
+    intro i j h
+    fin_cases i <;> fin_cases j <;> simp [e123] at h ⊢
+  have he234 : Function.Injective e234 := by
+    intro i j h
+    fin_cases i <;> fin_cases j <;> simp [e234] at h ⊢
+  have hzero02 : D.a 0 2 = 0 := by
+    have hnon : 0 ≤ D.a 0 2 := hnonneg 0 2 (by decide)
+    by_contra h
+    have hpos : 0 < D.a 0 2 := lt_of_le_of_ne hnon (Ne.symm h)
+    exact hthree e012 he012 (by simpa [e012] using ha01)
+      (by simpa [e012] using hpos) (by simpa [e012] using ha12)
+  have hzero13 : D.a 1 3 = 0 := by
+    have hnon : 0 ≤ D.a 1 3 := hnonneg 1 3 (by decide)
+    by_contra h
+    have hpos : 0 < D.a 1 3 := lt_of_le_of_ne hnon (Ne.symm h)
+    exact hthree e123 he123 (by simpa [e123] using ha12)
+      (by simpa [e123] using hpos) (by simpa [e123] using ha23)
+  have hzero24 : D.a 2 4 = 0 := by
+    have hnon : 0 ≤ D.a 2 4 := hnonneg 2 4 (by decide)
+    by_contra h
+    have hpos : 0 < D.a 2 4 := lt_of_le_of_ne hnon (Ne.symm h)
+    exact hthree e234 he234 (by simpa [e234] using ha23)
+      (by simpa [e234] using hpos) (by simpa [e234] using ha34)
+  have hrat (i j : Fin 5) (hij : 0 < D.a i j) :
+      ∃ p q : ℤ, 0 < p ∧ 0 < q ∧ D.a i j = p * D.w i ∧
+        D.a i j = q * D.w j ∧ p * q < 4 := by
+    have hdivi : D.w i ∣ D.a i j := by
+      simpa [D, localData] using T.w_dvd (S.index i) (S.index j)
+    have hdivj : D.w j ∣ D.a i j := by
+      have h := T.w_dvd (S.index j) (S.index i)
+      simpa [D, localData, T.a_symmetric (S.index j) (S.index i)] using h
+    let p : ℤ := D.a i j / D.w i
+    let q : ℤ := D.a i j / D.w j
+    have hp : 0 < p := by
+      dsimp [p]
+      exact Int.ediv_pos_of_pos_of_dvd hij (le_of_lt (hDpos i)) hdivi
+    have hq : 0 < q := by
+      dsimp [q]
+      exact Int.ediv_pos_of_pos_of_dvd hij (le_of_lt (hDpos j)) hdivj
+    have hpa : D.a i j = p * D.w i := by
+      dsimp [p]
+      exact (Int.ediv_mul_cancel hdivi).symm
+    have hqa : D.a i j = q * D.w j := by
+      dsimp [q]
+      exact (Int.ediv_mul_cancel hdivj).symm
+    have hne : i ≠ j := by
+      intro h
+      subst j
+      rw [hDdiag i] at hij
+      nlinarith [hDpos i]
+    let e : Fin 2 → Fin 5 := fun z => if z = 0 then i else j
+    have he : Function.Injective e := by
+      intro u v h
+      fin_cases u <;> fin_cases v <;> simp [e, hne, hne.symm] at h ⊢
+    have hdet := Matrix.PosDef.det_pos (hBpos.submatrix he)
+    have hdetraw : (D.a i j : ℝ) * D.a i j <
+        2 * D.w i * (2 * D.w j) := by
+      rw [Matrix.det_fin_two] at hdet
+      simpa [Matrix.submatrix, e, B5, hDdiag, hDsym] using hdet
+    have hdet' : 0 < 4 * (D.w i : ℝ) * D.w j - (D.a i j : ℝ) ^ 2 := by
+      nlinarith [hdetraw]
+    have hsq : D.a i j ^ 2 = p * q * (D.w i * D.w j) :=
+      square_factorization _ _ _ _ _ hpa hqa
+    have hwpq : 0 < D.w i * D.w j := mul_pos (hDpos i) (hDpos j)
+    have hsqR : (D.a i j : ℝ) ^ 2 = (p : ℝ) * q * (D.w i * D.w j) := by
+      exact_mod_cast hsq
+    have hwpqR : (0 : ℝ) < D.w i * D.w j := by exact_mod_cast hwpq
+    have hpqR : (p : ℝ) * q < 4 := by nlinarith [hdet', hsqR, hwpqR]
+    refine ⟨p, q, hp, hq, hpa, hqa, ?_⟩
+    exact_mod_cast hpqR
+  let e0123 : Fin 4 → Fin 5 := fun i =>
+    if i = 0 then 0 else if i = 1 then 1 else if i = 2 then 2 else 3
+  let e1234 : Fin 4 → Fin 5 := fun i =>
+    if i = 0 then 1 else if i = 1 then 2 else if i = 2 then 3 else 4
+  have he0123 : Function.Injective e0123 := by
+    intro i j h
+    fin_cases i <;> fin_cases j <;> simp [e0123] at h ⊢
+  have he1234 : Function.Injective e1234 := by
+    intro i j h
+    fin_cases i <;> fin_cases j <;> simp [e1234] at h ⊢
+  let E0 : LocalNumericalData 4 :=
+    { m := fun i => D.m (e0123 i)
+      a := fun i j => D.a (e0123 i) (e0123 j)
+      w := fun i => D.w (e0123 i) }
+  let E1 : LocalNumericalData 4 :=
+    { m := fun i => D.m (e1234 i)
+      a := fun i j => D.a (e1234 i) (e1234 j)
+      w := fun i => D.w (e1234 i) }
+  have hE0diag : ∀ i, E0.a i i = -2 * E0.w i := by
+    intro i
+    simpa [E0] using hDdiag (e0123 i)
+  have hE1diag : ∀ i, E1.a i i = -2 * E1.w i := by
+    intro i
+    simpa [E1] using hDdiag (e1234 i)
+  have hE0symm : ∀ i j, E0.a i j = E0.a j i := by
+    intro i j
+    simpa [E0] using hDsym (e0123 i) (e0123 j)
+  have hE1symm : ∀ i j, E1.a i j = E1.a j i := by
+    intro i j
+    simpa [E1] using hDsym (e1234 i) (e1234 j)
+  have hE0zero : E0.a 0 2 = 0 ∧ E0.a 1 3 = 0 := by
+    simpa [E0, e0123] using And.intro hzero02 hzero13
+  have hE1zero : E1.a 0 2 = 0 ∧ E1.a 1 3 = 0 := by
+    simpa [E1, e1234] using And.intro hzero13 hzero24
+  have hE0pos : ∀ i, 0 < E0.w i := by
+    intro i
+    simpa [E0] using hDpos (e0123 i)
+  have hE1pos : ∀ i, 0 < E1.w i := by
+    intro i
+    simpa [E1] using hDpos (e1234 i)
+  let A0 : Matrix (Fin 4) (Fin 4) ℝ := Matrix.map E0.a (fun x : ℤ => (x : ℝ))
+  let A1 : Matrix (Fin 4) (Fin 4) ℝ := Matrix.map E1.a (fun x : ℤ => (x : ℝ))
+  have hdetA0 : 0 < A0.det := by
+    have hdetB := Matrix.PosDef.det_pos (hBpos.submatrix he0123)
+    have hrel : B5.submatrix e0123 e0123 = -A0 := by
+      ext i j
+      rfl
+    have hneg := Matrix.det_neg A0
+    have hpow : (-1 : ℝ) ^ Fintype.card (Fin 4) = 1 := by
+      change (-1 : ℝ) ^ 4 = 1
+      norm_num
+    rw [hpow, one_mul] at hneg
+    rw [hrel, hneg] at hdetB
+    linarith
+  have hdetA1 : 0 < A1.det := by
+    have hdetB := Matrix.PosDef.det_pos (hBpos.submatrix he1234)
+    have hrel : B5.submatrix e1234 e1234 = -A1 := by
+      ext i j
+      rfl
+    have hneg := Matrix.det_neg A1
+    have hpow : (-1 : ℝ) ^ Fintype.card (Fin 4) = 1 := by
+      change (-1 : ℝ) ^ 4 = 1
+      norm_num
+    rw [hpow, one_mul] at hneg
+    rw [hrel, hneg] at hdetB
+    linarith
+  obtain ⟨p01, q01, hp01, hq01, hpa01, hqa01, hpq01⟩ := hrat 0 1 ha01
+  obtain ⟨p12, q12, hp12, hq12, hpa12, hqa12, hpq12⟩ := hrat 1 2 ha12
+  obtain ⟨p23, q23, hp23, hq23, hpa23, hqa23, hpq23⟩ := hrat 2 3 ha23
+  obtain ⟨p34, q34, hp34, hq34, hpa34, hqa34, hpq34⟩ := hrat 3 4 ha34
+  have hsq01 : D.a 0 1 ^ 2 = p01 * q01 * (D.w 0 * D.w 1) :=
+    square_factorization _ _ _ _ _ hpa01 hqa01
+  have hsq12 : D.a 1 2 ^ 2 = p12 * q12 * (D.w 1 * D.w 2) :=
+    square_factorization _ _ _ _ _ hpa12 hqa12
+  have hsq23 : D.a 2 3 ^ 2 = p23 * q23 * (D.w 2 * D.w 3) :=
+    square_factorization _ _ _ _ _ hpa23 hqa23
+  have hsq34 : D.a 3 4 ^ 2 = p34 * q34 * (D.w 3 * D.w 4) :=
+    square_factorization _ _ _ _ _ hpa34 hqa34
+  have hsq01R : (D.a 0 1 : ℝ) ^ 2 = (p01 * q01 : ℝ) * (D.w 0 * D.w 1) := by
+    exact_mod_cast hsq01
+  have hsq12R : (D.a 1 2 : ℝ) ^ 2 = (p12 * q12 : ℝ) * (D.w 1 * D.w 2) := by
+    exact_mod_cast hsq12
+  have hsq23R : (D.a 2 3 : ℝ) ^ 2 = (p23 * q23 : ℝ) * (D.w 2 * D.w 3) := by
+    exact_mod_cast hsq23
+  have hsq34R : (D.a 3 4 : ℝ) ^ 2 = (p34 * q34 : ℝ) * (D.w 3 * D.w 4) := by
+    exact_mod_cast hsq34
+  have hpa01R : (D.a 0 1 : ℝ) = (p01 : ℝ) * D.w 0 := by exact_mod_cast hpa01
+  have hpa12R : (D.a 1 2 : ℝ) = (p12 : ℝ) * D.w 1 := by exact_mod_cast hpa12
+  have hpa23R : (D.a 2 3 : ℝ) = (p23 : ℝ) * D.w 2 := by exact_mod_cast hpa23
+  have hpa34R : (D.a 3 4 : ℝ) = (p34 : ℝ) * D.w 3 := by exact_mod_cast hpa34
+  have hzero03 : D.a 0 3 = 0 := by
+    have hnon : 0 ≤ D.a 0 3 := hnonneg 0 3 (by decide)
+    by_contra h
+    have ha03 : 0 < D.a 0 3 := lt_of_le_of_ne hnon (Ne.symm h)
+    obtain ⟨p03, q03, hp03, hq03, hpa03, hqa03, hpq03⟩ := hrat 0 3 ha03
+    have hsq03 : D.a 0 3 ^ 2 = p03 * q03 * (D.w 0 * D.w 3) :=
+      square_factorization _ _ _ _ _ hpa03 hqa03
+    have hsq03R : (D.a 0 3 : ℝ) ^ 2 = (p03 * q03 : ℝ) * (D.w 0 * D.w 3) := by
+      exact_mod_cast hsq03
+    have hqa03R : (D.a 0 3 : ℝ) = (q03 : ℝ) * D.w 3 := by exact_mod_cast hqa03
+    have hprodD : (D.a 0 1 : ℝ) * D.a 0 3 * D.a 1 2 * D.a 2 3 =
+        (p01 * q03 * p12 * p23 : ℝ) * (D.w 0 * D.w 1 * D.w 2 * D.w 3) := by
+      rw [hpa01R, hqa03R, hpa12R, hpa23R]
+      push_cast
+      ring
+    have hineqR := four_path_det_strict_ineq E0 hE0diag hE0symm hE0zero hE0pos
+      hdetA0 (p01 * q01 : ℝ) (p12 * q12 : ℝ) (p23 * q23 : ℝ)
+      (p03 * q03 : ℝ) (p01 * q03 * p12 * p23 : ℝ)
+      (by simpa [E0, e0123] using hsq01R)
+      (by simpa [E0, e0123] using hsq12R)
+      (by simpa [E0, e0123] using hsq23R)
+      (by simpa [E0, e0123] using hsq03R)
+      (by simpa [E0, e0123] using hprodD)
+    have hineqI : 4 * (p01 * q01) + 4 * (p12 * q12) + 4 * (p23 * q23) +
+        4 * (p03 * q03) + 2 * (p01 * q03 * p12 * p23) <
+        16 + (p01 * q01) * (p23 * q23) + (p12 * q12) * (p03 * q03) := by
+      exact_mod_cast hineqR
+    have hs : 1 ≤ p01 * q03 * p12 * p23 := by
+      have hpos : 0 < p01 * q03 * p12 * p23 := by positivity
+      omega
+    exact no_four_positive_ratio (p01 * q01) (p12 * q12) (p23 * q23) (p03 * q03)
+      (p01 * q03 * p12 * p23) (mul_pos hp01 hq01) (mul_pos hp12 hq12)
+      (mul_pos hp23 hq23) (mul_pos hp03 hq03) hpq01 hpq12 hpq23 hpq03
+      hs hineqI
+
+  have hzero14 : D.a 1 4 = 0 := by
+    have hnon : 0 ≤ D.a 1 4 := hnonneg 1 4 (by decide)
+    by_contra h
+    have ha14 : 0 < D.a 1 4 := lt_of_le_of_ne hnon (Ne.symm h)
+    obtain ⟨p14, q14, hp14, hq14, hpa14, hqa14, hpq14⟩ := hrat 1 4 ha14
+    have hsq14 : D.a 1 4 ^ 2 = p14 * q14 * (D.w 1 * D.w 4) :=
+      square_factorization _ _ _ _ _ hpa14 hqa14
+    have hsq14R : (D.a 1 4 : ℝ) ^ 2 = (p14 * q14 : ℝ) * (D.w 1 * D.w 4) := by
+      exact_mod_cast hsq14
+    have hqa14R : (D.a 1 4 : ℝ) = (q14 : ℝ) * D.w 4 := by exact_mod_cast hqa14
+    have hprodD : (D.a 1 2 : ℝ) * D.a 1 4 * D.a 2 3 * D.a 3 4 =
+        (p12 * q14 * p23 * p34 : ℝ) * (D.w 1 * D.w 2 * D.w 3 * D.w 4) := by
+      rw [hpa12R, hqa14R, hpa23R, hpa34R]
+      push_cast
+      ring
+    have hineqR := four_path_det_strict_ineq E1 hE1diag hE1symm hE1zero hE1pos
+      hdetA1 (p12 * q12 : ℝ) (p23 * q23 : ℝ) (p34 * q34 : ℝ)
+      (p14 * q14 : ℝ) (p12 * q14 * p23 * p34 : ℝ)
+      (by simpa [E1, e1234] using hsq12R)
+      (by simpa [E1, e1234] using hsq23R)
+      (by simpa [E1, e1234] using hsq34R)
+      (by simpa [E1, e1234] using hsq14R)
+      (by simpa [E1, e1234] using hprodD)
+    have hineqI : 4 * (p12 * q12) + 4 * (p23 * q23) + 4 * (p34 * q34) +
+        4 * (p14 * q14) + 2 * (p12 * q14 * p23 * p34) <
+        16 + (p12 * q12) * (p34 * q34) + (p23 * q23) * (p14 * q14) := by
+      exact_mod_cast hineqR
+    have hs : 1 ≤ p12 * q14 * p23 * p34 := by
+      have hpos : 0 < p12 * q14 * p23 * p34 := by positivity
+      omega
+    exact no_four_positive_ratio (p12 * q12) (p23 * q23) (p34 * q34) (p14 * q14)
+      (p12 * q14 * p23 * p34) (mul_pos hp12 hq12) (mul_pos hp23 hq23)
+      (mul_pos hp34 hq34) (mul_pos hp14 hq14) hpq12 hpq23 hpq34 hpq14
+      hs hineqI
+
+  have hzero04 : D.a 0 4 = 0 := by
+    have hnon : 0 ≤ D.a 0 4 := hnonneg 0 4 (by decide)
+    by_contra h
+    have ha04 : 0 < D.a 0 4 := lt_of_le_of_ne hnon (Ne.symm h)
+    obtain ⟨p04, q04, hp04, hq04, hpa04, hqa04, hpq04⟩ := hrat 0 4 ha04
+    have hsq04 : D.a 0 4 ^ 2 = p04 * q04 * (D.w 0 * D.w 4) :=
+      square_factorization _ _ _ _ _ hpa04 hqa04
+    have hsq04R : (D.a 0 4 : ℝ) ^ 2 = (p04 * q04 : ℝ) * (D.w 0 * D.w 4) := by
+      exact_mod_cast hsq04
+    have hqa04R : (D.a 0 4 : ℝ) = (q04 : ℝ) * D.w 4 := by exact_mod_cast hqa04
+    have hprodD : (D.a 0 1 : ℝ) * D.a 1 2 * D.a 2 3 * D.a 3 4 * D.a 0 4 =
+        (p01 * p12 * p23 * p34 * q04 : ℝ) *
+          (D.w 0 * D.w 1 * D.w 2 * D.w 3 * D.w 4) := by
+      rw [hpa01R, hpa12R, hpa23R, hpa34R, hqa04R]
+      push_cast
+      ring
+    have hineqR := five_path_det_strict_ineq_general D hDdiag hDsym
+      ⟨hzero02, hzero03, hzero13, hzero14, hzero24⟩ (by exact hDpos)
+      (by
+        have hdetB := Matrix.PosDef.det_pos hBpos
+        have hneg := Matrix.det_neg (Matrix.map D.a (fun x : ℤ => (x : ℝ)))
+        have hpow : (-1 : ℝ) ^ Fintype.card (Fin 5) = -1 := by
+          change (-1 : ℝ) ^ 5 = -1
+          norm_num
+        rw [hpow, neg_one_mul] at hneg
+        have hrel : B5 = -Matrix.map D.a (fun x : ℤ => (x : ℝ)) := by
+          ext i j
+          rfl
+        rw [hrel, hneg] at hdetB
+        linarith)
+      (p01 * q01 : ℝ) (p12 * q12 : ℝ) (p23 * q23 : ℝ) (p34 * q34 : ℝ)
+      (p04 * q04 : ℝ) (p01 * p12 * p23 * p34 * q04 : ℝ)
+      hsq01R hsq12R hsq23R hsq34R hsq04R hprodD
+    have hineqI : 4 * (p01 * q01) + 4 * (p12 * q12) + 4 * (p23 * q23) +
+        4 * (p34 * q34) + 4 * (p04 * q04) + p01 * p12 * p23 * p34 * q04 <
+        16 + (p01 * q01) * (p23 * q23) + (p01 * q01) * (p34 * q34) +
+          (p12 * q12) * (p34 * q34) + (p04 * q04) * (p12 * q12) +
+          (p04 * q04) * (p23 * q23) := by
+      exact_mod_cast hineqR
+    have hs : 1 ≤ p01 * p12 * p23 * p34 * q04 := by
+      have hpos : 0 < p01 * p12 * p23 * p34 * q04 := by positivity
+      omega
+    exact no_five_positive_ratio (p01 * q01) (p12 * q12) (p23 * q23) (p34 * q34)
+      (p04 * q04) (p01 * p12 * p23 * p34 * q04)
+      (mul_pos hp01 hq01) (mul_pos hp12 hq12) (mul_pos hp23 hq23)
+      (mul_pos hp34 hq34) (mul_pos hp04 hq04) hpq01 hpq12 hpq23 hpq34 hpq04
+      hs hineqI
+
+  have hdetA5 : Matrix.det (Matrix.map D.a (fun x : ℤ => (x : ℝ))) < 0 := by
+    have hdetB := Matrix.PosDef.det_pos hBpos
+    have hneg := Matrix.det_neg (Matrix.map D.a (fun x : ℤ => (x : ℝ)))
+    have hpow : (-1 : ℝ) ^ Fintype.card (Fin 5) = -1 := by
+      change (-1 : ℝ) ^ 5 = -1
+      norm_num
+    rw [hpow, neg_one_mul] at hneg
+    have hrel : B5 = -Matrix.map D.a (fun x : ℤ => (x : ℝ)) := by
+      ext i j
+      rfl
+    rw [hrel, hneg] at hdetB
+    linarith
+  have hineqR := five_path_det_strict_ineq D hDdiag hDsym
+    ⟨hzero02, hzero03, hzero13, hzero14, hzero24, hzero04⟩ hDpos hdetA5
+    (p01 * q01 : ℝ) (p12 * q12 : ℝ) (p23 * q23 : ℝ) (p34 * q34 : ℝ)
+    (by simpa using hsq01R) (by simpa using hsq12R) (by simpa using hsq23R)
+    (by simpa using hsq34R)
+  have hineqI : 4 * (p01 * q01) + 4 * (p12 * q12) + 4 * (p23 * q23) +
+      4 * (p34 * q34) < 16 + (p01 * q01) * (p23 * q23) +
+        (p01 * q01) * (p34 * q34) + (p12 * q12) * (p34 * q34) := by
+    exact_mod_cast hineqR
+  have hratio_cases := five_path_ratio_cases (p01 * q01) (p12 * q12)
+    (p23 * q23) (p34 * q34) (mul_pos hp01 hq01) (mul_pos hp12 hq12)
+    (mul_pos hp23 hq23) (mul_pos hp34 hq34) hpq01 hpq12 hpq23 hpq34 hineqI
+
+  rcases hratio_cases with hA | hC | hB
+  · have hr01 : p01 * q01 = 1 := hA.1
+    have hr12 : p12 * q12 = 1 := hA.2.1
+    have hr23 : p23 * q23 = 1 := hA.2.2.1
+    have hr34 : p34 * q34 = 1 := hA.2.2.2
+    obtain ⟨hp01', hq01'⟩ := positive_product_one p01 q01 hp01 hq01 hr01
+    obtain ⟨hp12', hq12'⟩ := positive_product_one p12 q12 hp12 hq12 hr12
+    obtain ⟨hp23', hq23'⟩ := positive_product_one p23 q23 hp23 hq23 hr23
+    obtain ⟨hp34', hq34'⟩ := positive_product_one p34 q34 hp34 hq34 hr34
+    have hw01 : D.w 0 = D.w 1 := by
+      simpa [hp01', hq01'] using hpa01.symm.trans hqa01
+    have hw12 : D.w 1 = D.w 2 := by
+      simpa [hp12', hq12'] using hpa12.symm.trans hqa12
+    have hw23 : D.w 2 = D.w 3 := by
+      simpa [hp23', hq23'] using hpa23.symm.trans hqa23
+    have hw34 : D.w 3 = D.w 4 := by
+      simpa [hp34', hq34'] using hpa34.symm.trans hqa34
+    have ha01 : D.a 0 1 = D.w 0 := by simpa [hp01'] using hpa01
+    have ha12 : D.a 1 2 = D.w 0 := by simpa [hp12', hw01] using hpa12
+    have ha23 : D.a 2 3 = D.w 0 := by simpa [hp23', hw01, hw12] using hpa23
+    have ha34 : D.a 3 4 = D.w 0 := by simpa [hp34', hw01, hw12, hw23] using hpa34
+    have ha10 : D.a 1 0 = D.w 0 := by rw [hDsym 1 0, ha01]
+    have ha21 : D.a 2 1 = D.w 0 := by rw [hDsym 2 1, ha12]
+    have ha32 : D.a 3 2 = D.w 0 := by rw [hDsym 3 2, ha23]
+    have ha43 : D.a 4 3 = D.w 0 := by rw [hDsym 4 3, ha34]
+    have hz20 : D.a 2 0 = 0 := by rw [hDsym 2 0, hzero02]
+    have hz30 : D.a 3 0 = 0 := by rw [hDsym 3 0, hzero03]
+    have hz40 : D.a 4 0 = 0 := by rw [hDsym 4 0, hzero04]
+    have hz31 : D.a 3 1 = 0 := by rw [hDsym 3 1, hzero13]
+    have hz41 : D.a 4 1 = 0 := by rw [hDsym 4 1, hzero14]
+    have hz42 : D.a 4 2 = 0 := by rw [hDsym 4 2, hzero24]
+    have hm0 : 2 * D.m 0 ≥ D.m 1 := by
+      have hrow := five_row_bound T S 0 1 2 3 4 (by decide) (by decide) (by decide)
+        (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+      change D.a 0 0 * D.m 0 + D.a 0 1 * D.m 1 + D.a 0 2 * D.m 2 +
+        D.a 0 3 * D.m 3 + D.a 0 4 * D.m 4 ≤ 0 at hrow
+      rw [hDdiag 0, ha01, hzero02, hzero03, hzero04] at hrow
+      exact cancel_pos_int (D.w 0) (hDpos 0) _ _ (by nlinarith only [hrow])
+    have hm1 : 2 * D.m 1 ≥ D.m 0 + D.m 2 := by
+      have hrow := five_row_bound T S 1 0 2 3 4 (by decide) (by decide) (by decide)
+        (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+      change D.a 1 1 * D.m 1 + D.a 1 0 * D.m 0 + D.a 1 2 * D.m 2 +
+        D.a 1 3 * D.m 3 + D.a 1 4 * D.m 4 ≤ 0 at hrow
+      rw [hDdiag 1, ha10, ha12, hzero13, hzero14] at hrow
+      exact cancel_pos_int (D.w 0) (hDpos 0) _ _ (by
+        rw [← hw01] at hrow
+        nlinarith only [hrow])
+    have hm2 : 2 * D.m 2 ≥ D.m 1 + D.m 3 := by
+      have hrow := five_row_bound T S 2 0 1 3 4 (by decide) (by decide) (by decide)
+        (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+      change D.a 2 2 * D.m 2 + D.a 2 0 * D.m 0 + D.a 2 1 * D.m 1 +
+        D.a 2 3 * D.m 3 + D.a 2 4 * D.m 4 ≤ 0 at hrow
+      rw [hDdiag 2, hz20, ha21, ha23, hzero24] at hrow
+      exact cancel_pos_int (D.w 0) (hDpos 0) _ _ (by
+        rw [← hw12, ← hw01] at hrow
+        nlinarith only [hrow])
+    have hm3 : 2 * D.m 3 ≥ D.m 2 + D.m 4 := by
+      have hrow := five_row_bound T S 3 0 1 2 4 (by decide) (by decide) (by decide)
+        (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+      change D.a 3 3 * D.m 3 + D.a 3 0 * D.m 0 + D.a 3 1 * D.m 1 +
+        D.a 3 2 * D.m 2 + D.a 3 4 * D.m 4 ≤ 0 at hrow
+      rw [hDdiag 3, hz30, hz31, ha32, ha34] at hrow
+      exact cancel_pos_int (D.w 0) (hDpos 0) _ _ (by
+        rw [← hw23, ← hw12, ← hw01] at hrow
+        nlinarith only [hrow])
+    have hm4 : 2 * D.m 4 ≥ D.m 3 := by
+      have hrow := five_row_bound T S 4 0 1 2 3 (by decide) (by decide) (by decide)
+        (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+      change D.a 4 4 * D.m 4 + D.a 4 0 * D.m 0 + D.a 4 1 * D.m 1 +
+        D.a 4 2 * D.m 2 + D.a 4 3 * D.m 3 ≤ 0 at hrow
+      rw [hDdiag 4, hz40, hz41, hz42, ha43] at hrow
+      exact cancel_pos_int (D.w 0) (hDpos 0) _ _ (by
+        rw [← hw34, ← hw23, ← hw12, ← hw01] at hrow
+        nlinarith only [hrow])
+    have hmat : D.a = scalarMatrix (pathMatrix 5 (constantVector (-2)) 1) (D.w 0) := by
+      ext i j
+      fin_cases i <;> fin_cases j <;>
+        simp [scalarMatrix, pathMatrix, constantVector, hDdiag, ha01, ha12, ha23, ha34,
+          ha10, ha21, ha32, ha43, hzero02, hzero03, hzero04, hzero13, hzero14, hzero24,
+          hz20, hz30, hz40, hz31, hz41, hz42, hw01.symm, hw12.symm, hw23.symm,
+          hw34.symm] <;> ring
+    have hvec : D.w = scalarVector (constantVector 1) (D.w 0) := by
+      funext i
+      fin_cases i <;> simp [scalarVector, constantVector, hw01.symm, hw12.symm,
+        hw23.symm, hw34.symm]
+    refine ⟨Equiv.refl _, ?_⟩
+    exact Or.inl (realize_pattern5 D (pathMatrix 5 (constantVector (-2)) 1)
+      (constantVector 1) mConditionA5 (D.w 0) (hDpos 0) hmat hvec
+      (local_m_pos S) ⟨hm0, hm1, hm2, hm3, hm4⟩)
+  all_goals sorry
 
 /-! A proper subgraph cannot contain the fourfold star. -/
 theorem lemma_fourfold (T : NumericalType) (S : MinusTwoSubgraph T 5)

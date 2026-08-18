@@ -117,7 +117,11 @@ theorem mapsStronglyCartesian_to_discreteFibred
     MapsStronglyCartesian
       (structureFunctor X.underlying) (structureFunctor Y.underlying)
       (overFunctor F) := by
-  sorry
+  intro a b φ _hφ
+  exact fibredInGroupoids_all_morphisms_stronglyCartesian
+    (structureFunctor Y.underlying)
+    (discreteFibredCategoryOver_isCategoryFibredInSets Y hY).1
+    ((overFunctor F).map φ)
 
 /- A vertical natural transformation between functors into a discrete fibre
    is automatically invertible.  This is the source's observation that the
@@ -126,7 +130,30 @@ theorem discreteFibredCategoryOver_two_morphism_isIso
     {C : Cat.{v, u}} {X Y : FibredCategoryOver C}
     (hY : IsDiscreteFibredCategoryOver Y)
     {F G : FibredCategoryOverHom X Y} (η : F ⟶ G) : IsIso η := by
-  sorry
+  have hη : IsIso η.toNatTrans := by
+    rw [NatTrans.isIso_iff_isIso_app]
+    intro Z
+    let U := (structureFunctor X.underlying).obj Z
+    let z : Functor.Fiber (structureFunctor X.underlying) U := ⟨Z, rfl⟩
+    let _ : IsDiscrete (Functor.Fiber (structureFunctor Y.underlying) U) := hY U
+    change IsIso (Functor.Fiber.fiberInclusion.map
+      ((overMorphismFiberNatTrans η U).app z))
+    infer_instance
+  let e : overFunctor F.underlying ≅ overFunctor G.underlying :=
+    { hom := η.toNatTrans
+      inv := inv η.toNatTrans
+      hom_inv_id := by simp
+      inv_hom_id := by simp }
+  let E : F.underlying ≅ G.underlying :=
+    overNatIsoOfUnderlying e (by
+      intro Z
+      exact η.over Z)
+  let E' : F ≅ G := fibredHomIsoOfUnderlying E
+  have hE : E'.hom = η := by
+    apply OverNatTrans.ext
+    rfl
+  rw [← hE]
+  infer_instance
 
 /- The stronger locally-discrete form records the source's assertion that a
    vertical 2-morphism is an identity after identifying its source and target
@@ -136,7 +163,52 @@ theorem discreteFibredCategoryOver_two_morphism_is_eqToHom
     (hY : IsDiscreteFibredCategoryOver Y)
     {F G : FibredCategoryOverHom X Y} (η : F ⟶ G) :
     ∃ h : F = G, η = eqToHom h := by
-  sorry
+  have hη : IsIso η.toNatTrans := by
+    rw [NatTrans.isIso_iff_isIso_app]
+    intro Z
+    let U := (structureFunctor X.underlying).obj Z
+    let z : Functor.Fiber (structureFunctor X.underlying) U := ⟨Z, rfl⟩
+    let _ : IsDiscrete (Functor.Fiber (structureFunctor Y.underlying) U) := hY U
+    change IsIso (Functor.Fiber.fiberInclusion.map
+      ((overMorphismFiberNatTrans η U).app z))
+    infer_instance
+  letI : IsIso η.toNatTrans := hη
+  have hηcomp : ∀ Z : X.underlying.left,
+      ∃ h : (overFunctor F.underlying).obj Z =
+        (overFunctor G.underlying).obj Z,
+        η.toNatTrans.app Z = eqToHom h := by
+    intro Z
+    let U := (structureFunctor X.underlying).obj Z
+    let z : Functor.Fiber (structureFunctor X.underlying) U := ⟨Z, rfl⟩
+    let _ : IsDiscrete (Functor.Fiber (structureFunctor Y.underlying) U) := hY U
+    let hz := (hY U).eq_of_hom ((overMorphismFiberNatTrans η U).app z)
+    let hZ := congrArg (Functor.Fiber.fiberInclusion (p :=
+      structureFunctor Y.underlying) (S := U)).obj hz
+    have hz' : (overMorphismFiberNatTrans η U).app z = eqToHom hz :=
+      @Subsingleton.elim _ ((hY U).subsingleton _ _) _ _
+    refine ⟨hZ, ?_⟩
+    have := congrArg (Functor.Fiber.fiberInclusion (p :=
+      structureFunctor Y.underlying) (S := U)).map hz'
+    simpa only [eqToHom_map] using this
+  let e : overFunctor F.underlying ≅ overFunctor G.underlying :=
+    { hom := η.toNatTrans
+      inv := inv η.toNatTrans
+      hom_inv_id := by simp
+      inv_hom_id := by simp }
+  have hFG : F = G := by
+    apply FibredCategoryOverHom.ext
+    apply CategoryOver.Hom.ext
+    apply Over.OverMorphism.ext
+    apply Cat.ext
+    exact Functor.ext_of_iso e
+      (fun Z => (hηcomp Z).choose)
+      (fun Z => (hηcomp Z).choose_spec)
+  refine ⟨hFG, ?_⟩
+  subst G
+  apply OverNatTrans.ext
+  apply NatTrans.ext
+  funext Z
+  simpa using (hηcomp Z).choose_spec
 
 /-- The source-facing constructor for a 1-morphism over the base; the
 preservation field is automatic for a discrete-fibred target. -/
@@ -153,7 +225,21 @@ local discreteness of all its hom-categories. -/
 theorem categoriesFibredInSetsOver_is_locallyDiscrete
     (C : Cat.{v, u}) :
     Bicategory.IsLocallyDiscrete (CategoriesFibredInSetsOver C) := by
-  sorry
+  intro X Y
+  refine ⟨?_, ?_⟩
+  · intro F G η θ
+    apply Bicategory.InducedBicategory.hom₂_ext
+    obtain ⟨hη, hη'⟩ := discreteFibredCategoryOver_two_morphism_is_eqToHom
+      (X := X.obj) (Y := Y.obj) Y.property.2 η.hom
+    obtain ⟨hθ, hθ'⟩ := discreteFibredCategoryOver_two_morphism_is_eqToHom
+      (X := X.obj) (Y := Y.obj) Y.property.2 θ.hom
+    rw [hη', hθ']
+  · intro F G η
+    obtain ⟨h, hη⟩ := discreteFibredCategoryOver_two_morphism_is_eqToHom
+      (X := X.obj) (Y := Y.obj) Y.property.2 η.hom
+    refine ⟨Bicategory.InducedBicategory.hom_ext h, ?_⟩
+    apply Bicategory.InducedBicategory.hom₂_ext
+    simpa using hη
 
 theorem categoriesFibredInSetsOver_is_two_one_category
     (C : Cat.{v, u}) :

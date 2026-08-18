@@ -47,10 +47,10 @@ def pureIdealConditions {R : Type u} [CommRing R] (I : Ideal R) : List Prop :=
   [ Ideal.Pure I,
     ∀ J : Ideal R, J ⊓ I = I * J,
     ∀ J : Ideal R, J.FG → J ⊓ I = I * J,
-    ∀ x : R, Ideal.span ({x} : Set R) ⊓ I = I * Ideal.span ({x} : Set R),
-    ∀ x : R, x ∈ I → ∃ y : R, y ∈ I ∧ x = x * y,
+    ∀ x : R, Ideal.span ({x} : Set R) ⊓ I = Ideal.span ({x} : Set R) * I,
+    ∀ x : R, x ∈ I → ∃ y : R, y ∈ I ∧ x = y * x,
     ∀ (n : ℕ) (x : Fin n → R),
-      (∀ i : Fin n, x i ∈ I) → ∃ y : R, y ∈ I ∧ ∀ i : Fin n, x i = x i * y,
+      (∀ i : Fin n, x i ∈ I) → ∃ y : R, y ∈ I ∧ ∀ i : Fin n, x i = y * x i,
     ∀ p : PrimeSpectrum R,
       I.map (algebraMap R (Localization.AtPrime p.asIdeal)) = ⊥ ∨
         I.map (algebraMap R (Localization.AtPrime p.asIdeal)) = ⊤,

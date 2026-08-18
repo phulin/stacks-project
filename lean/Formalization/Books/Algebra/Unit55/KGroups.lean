@@ -107,6 +107,94 @@ noncomputable def kPrimeZeroClass
     (exists_finite_module_presentation (R := R) (M := M))
   kPrimeZeroClassOfPresentation P
 
+private theorem kPrimeZeroClassOfPresentation_eq_of_linearEquiv
+    {R : Type u} [CommRing R]
+    (P Q : FiniteModulePresentation R) (ePQ : P.module ≃ₗ[R] Q.module) :
+    kPrimeZeroClassOfPresentation P =
+      kPrimeZeroClassOfPresentation Q := by
+  let Z : FiniteModulePresentation R := ⟨0, ⊥⟩
+  let S : FiniteModuleShortExact R :=
+    { left := P
+      middle := Q
+      right := Z
+      leftToMiddle := ePQ.toLinearMap
+      middleToRight := 0
+      left_injective := ePQ.injective
+      middle_surjective := by
+        intro z
+        exact ⟨0, Subsingleton.elim _ _⟩
+      exact :=
+        (LinearMap.exact_zero_iff_surjective Z.module ePQ.toLinearMap).2
+          ePQ.surjective }
+  have hrel : kPrimeZeroCon R
+      (kPrimeZeroGenerator Q)
+      (kPrimeZeroGenerator P + kPrimeZeroGenerator Z) := by
+    change AddConGen.Rel
+      (fun x y : KPrimeZeroFree R =>
+        ∃ S : FiniteModuleShortExact R, kPrimeZeroRelation S x y)
+      (kPrimeZeroGenerator Q)
+      (kPrimeZeroGenerator P + kPrimeZeroGenerator Z)
+    exact AddConGen.Rel.of _ _ ⟨S, rfl, rfl⟩
+  have hq :
+      kPrimeZeroClassOfPresentation Q =
+        kPrimeZeroClassOfPresentation P +
+          kPrimeZeroClassOfPresentation Z := by
+    change (kPrimeZeroGenerator Q : KPrimeZero R) =
+      (kPrimeZeroGenerator P + kPrimeZeroGenerator Z : KPrimeZero R)
+    exact (kPrimeZeroCon R).eq.mpr hrel
+  let T : FiniteModuleShortExact R :=
+    { left := Z
+      middle := Z
+      right := Z
+      leftToMiddle := 0
+      middleToRight := 0
+      left_injective := by
+        intro z₁ z₂ _
+        exact Subsingleton.elim _ _
+      middle_surjective := by
+        intro z
+        exact ⟨0, Subsingleton.elim _ _⟩
+      exact :=
+        (LinearMap.exact_zero_iff_surjective Z.module
+          (0 : Z.module →ₗ[R] Z.module)).2 (by
+            intro z
+            exact ⟨0, Subsingleton.elim _ _⟩) }
+  have hrelZ : kPrimeZeroCon R
+      (kPrimeZeroGenerator Z)
+      (kPrimeZeroGenerator Z + kPrimeZeroGenerator Z) := by
+    change AddConGen.Rel
+      (fun x y : KPrimeZeroFree R =>
+        ∃ S : FiniteModuleShortExact R, kPrimeZeroRelation S x y)
+      (kPrimeZeroGenerator Z)
+      (kPrimeZeroGenerator Z + kPrimeZeroGenerator Z)
+    exact AddConGen.Rel.of _ _ ⟨T, rfl, rfl⟩
+  have hqZ :
+      kPrimeZeroClassOfPresentation Z =
+        kPrimeZeroClassOfPresentation Z +
+          kPrimeZeroClassOfPresentation Z := by
+    change (kPrimeZeroGenerator Z : KPrimeZero R) =
+      (kPrimeZeroGenerator Z + kPrimeZeroGenerator Z : KPrimeZero R)
+    exact (kPrimeZeroCon R).eq.mpr hrelZ
+  have hzero : kPrimeZeroClassOfPresentation Z = 0 := by
+    have hqZ' :
+        kPrimeZeroClassOfPresentation Z +
+            kPrimeZeroClassOfPresentation Z =
+          kPrimeZeroClassOfPresentation Z := hqZ.symm
+    calc
+      kPrimeZeroClassOfPresentation Z =
+          kPrimeZeroClassOfPresentation Z + 0 := (add_zero _).symm
+      _ = kPrimeZeroClassOfPresentation Z +
+            (kPrimeZeroClassOfPresentation Z -
+              kPrimeZeroClassOfPresentation Z) := by
+            rw [sub_self, add_zero]
+      _ = (kPrimeZeroClassOfPresentation Z +
+            kPrimeZeroClassOfPresentation Z) -
+            kPrimeZeroClassOfPresentation Z := by abel
+      _ = kPrimeZeroClassOfPresentation Z -
+            kPrimeZeroClassOfPresentation Z := by rw [hqZ']
+      _ = 0 := sub_self _
+  rw [hq, hzero, add_zero]
+
 /-- The chosen presentation does not affect the class, up to the
 linear-equivalence invariance supplied by the exact-sequence relations. -/
 theorem kPrimeZeroClass_eq_of_linearEquiv
@@ -116,7 +204,19 @@ theorem kPrimeZeroClass_eq_of_linearEquiv
     (e : M ≃ₗ[R] N) :
     kPrimeZeroClass (R := R) (M := M) =
       kPrimeZeroClass (R := R) (M := N) := by
-  sorry
+  let P := Classical.choose
+    (exists_finite_module_presentation (R := R) (M := M))
+  let Q := Classical.choose
+    (exists_finite_module_presentation (R := R) (M := N))
+  let eP := Classical.choice
+    (Classical.choose_spec
+      (exists_finite_module_presentation (R := R) (M := M)))
+  let eQ := Classical.choice
+    (Classical.choose_spec
+      (exists_finite_module_presentation (R := R) (M := N)))
+  let ePQ : P.module ≃ₗ[R] Q.module :=
+    eP.trans (e.trans eQ.symm)
+  exact kPrimeZeroClassOfPresentation_eq_of_linearEquiv P Q ePQ
 
 /-- Every class in K′₀ is an integer linear combination of module classes.
 The definition of the relation congruence records that the only imposed
@@ -126,7 +226,28 @@ theorem kPrimeZero_generated
     ∃ n : ℕ, ∃ P : Fin n → FiniteModulePresentation R,
       ∃ z : Fin n → ℤ,
         x = ∑ i, z i • kPrimeZeroClassOfPresentation (P i) := by
-  sorry
+  refine AddCon.induction_on x ?_
+  intro y
+  induction y using FreeAbelianGroup.induction_on with
+  | zero =>
+      refine ⟨0, (fun i => Fin.elim0 i), (fun i => Fin.elim0 i), ?_⟩
+      simp [kPrimeZeroClassOfPresentation]
+  | of P =>
+      refine ⟨1, (fun _ => P), (fun _ => 1), ?_⟩
+      simp only [Fin.sum_univ_one, one_smul]
+      exact (kPrimeZeroCon R).eq.mpr
+        ((kPrimeZeroCon R).refl (FreeAbelianGroup.of P))
+  | neg P ih =>
+      refine ⟨1, (fun _ => P), (fun _ => -1), ?_⟩
+      change (-(FreeAbelianGroup.of P) : KPrimeZero R) = _
+      simp [kPrimeZeroClassOfPresentation, kPrimeZeroGenerator]
+  | add y z ihy ihz =>
+      rcases ihy with ⟨n, P, a, hP⟩
+      rcases ihz with ⟨m, Q, b, hQ⟩
+      refine ⟨n + m, Fin.addCases P Q, Fin.addCases a b, ?_⟩
+      change (y : KPrimeZero R) + (z : KPrimeZero R) = _
+      rw [hP, hQ]
+      simp [Fin.sum_univ_add]
 
 /-- The exact-sequence relation for the classes of arbitrary finite modules. -/
 theorem kPrimeZeroClass_exact
@@ -140,7 +261,72 @@ theorem kPrimeZeroClass_exact
     kPrimeZeroClass (R := R) (M := M) =
       kPrimeZeroClass (R := R) (M := M') +
         kPrimeZeroClass (R := R) (M := M'') := by
-  sorry
+  let P' := Classical.choose
+    (exists_finite_module_presentation (R := R) (M := M'))
+  let P := Classical.choose
+    (exists_finite_module_presentation (R := R) (M := M))
+  let P'' := Classical.choose
+    (exists_finite_module_presentation (R := R) (M := M''))
+  let eP' := Classical.choice
+    (Classical.choose_spec
+      (exists_finite_module_presentation (R := R) (M := M')))
+  let eP := Classical.choice
+    (Classical.choose_spec
+      (exists_finite_module_presentation (R := R) (M := M)))
+  let eP'' := Classical.choice
+    (Classical.choose_spec
+      (exists_finite_module_presentation (R := R) (M := M'')))
+  let f' : P'.module →ₗ[R] P.module :=
+    eP.symm.toLinearMap.comp (f.comp eP'.toLinearMap)
+  let g' : P.module →ₗ[R] P''.module :=
+    eP''.symm.toLinearMap.comp (g.comp eP.toLinearMap)
+  have hf' : Function.Injective f' := by
+    intro x y hxy
+    apply eP'.injective
+    apply hf
+    simpa [f'] using congrArg (fun t => eP t) hxy
+  have hg' : Function.Surjective g' := by
+    intro y
+    obtain ⟨x, hx⟩ := hg (eP'' y)
+    refine ⟨eP.symm x, ?_⟩
+    simpa [g'] using congrArg (fun t => eP''.symm t) hx
+  have hcomm₁₂ :
+      f'.comp eP'.symm.toLinearMap =
+        eP.symm.toLinearMap.comp f := by
+    ext x
+    simp [f']
+  have hcomm₂₃ :
+      g'.comp eP.symm.toLinearMap =
+        eP''.symm.toLinearMap.comp g := by
+    ext x
+    simp [g']
+  have hfg' : Function.Exact f' g' :=
+    (LinearMap.exact_iff_of_surjective_of_bijective_of_injective
+      f g f' g' eP'.symm.toLinearMap eP.symm.toLinearMap
+      eP''.symm.toLinearMap hcomm₁₂ hcomm₂₃ eP'.symm.surjective
+      ⟨eP.symm.injective, eP.symm.surjective⟩ eP''.symm.injective).mp hfg
+  let S : FiniteModuleShortExact R :=
+    { left := P'
+      middle := P
+      right := P''
+      leftToMiddle := f'
+      middleToRight := g'
+      left_injective := hf'
+      middle_surjective := hg'
+      exact := hfg' }
+  have hrel : kPrimeZeroCon R
+      (kPrimeZeroGenerator P)
+      (kPrimeZeroGenerator P' + kPrimeZeroGenerator P'') := by
+    change AddConGen.Rel
+      (fun x y : KPrimeZeroFree R =>
+        ∃ S : FiniteModuleShortExact R, kPrimeZeroRelation S x y)
+      (kPrimeZeroGenerator P)
+      (kPrimeZeroGenerator P' + kPrimeZeroGenerator P'')
+    exact AddConGen.Rel.of _ _ ⟨S, rfl, rfl⟩
+  change kPrimeZeroClassOfPresentation P =
+    kPrimeZeroClassOfPresentation P' +
+      kPrimeZeroClassOfPresentation P''
+  exact (kPrimeZeroCon R).eq.mpr hrel
 
 /-- A finite projective module presentation. -/
 structure FiniteProjectivePresentation (R : Type u) [CommRing R] where
@@ -249,7 +435,28 @@ theorem kZero_generated
     ∃ n : ℕ, ∃ P : Fin n → FiniteProjectivePresentation R,
       ∃ z : Fin n → ℤ,
         x = ∑ i, z i • kZeroClassOfPresentation (P i) := by
-  sorry
+  refine AddCon.induction_on x ?_
+  intro y
+  induction y using FreeAbelianGroup.induction_on with
+  | zero =>
+      refine ⟨0, (fun i => Fin.elim0 i), (fun i => Fin.elim0 i), ?_⟩
+      simp [kZeroClassOfPresentation]
+  | of P =>
+      refine ⟨1, (fun _ => P), (fun _ => 1), ?_⟩
+      simp only [Fin.sum_univ_one, one_smul]
+      exact (kZeroCon R).eq.mpr
+        ((kZeroCon R).refl (FreeAbelianGroup.of P))
+  | neg P ih =>
+      refine ⟨1, (fun _ => P), (fun _ => -1), ?_⟩
+      change (-(FreeAbelianGroup.of P) : KZero R) = _
+      simp [kZeroClassOfPresentation, kZeroGenerator]
+  | add y z ihy ihz =>
+      rcases ihy with ⟨n, P, a, hP⟩
+      rcases ihz with ⟨m, Q, b, hQ⟩
+      refine ⟨n + m, Fin.addCases P Q, Fin.addCases a b, ?_⟩
+      change (y : KZero R) + (z : KZero R) = _
+      rw [hP, hQ]
+      simp [Fin.sum_univ_add]
 
 /-- The exact-sequence relation in K₀. -/
 theorem kZeroClass_exact

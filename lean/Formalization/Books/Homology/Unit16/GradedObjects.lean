@@ -476,7 +476,7 @@ theorem gradedPairKernel_is_componentwise {C : Type u} [Category.{v} C]
         comm := by
           intro i
           dsimp [gradedPairComponentwiseKernel]
-          simp [Category.assoc] }
+          simp }
     refine ⟨h, ?_, ?_⟩
     · apply GradedPair.hom_ext
       · change

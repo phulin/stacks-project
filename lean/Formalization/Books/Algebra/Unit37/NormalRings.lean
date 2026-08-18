@@ -9,6 +9,7 @@ import Mathlib.RingTheory.Polynomial.IsIntegral
 import Mathlib.RingTheory.PrincipalIdealDomain
 import Mathlib.Algebra.GCDMonoid.IntegrallyClosed
 import Mathlib.RingTheory.Spectrum.Maximal.Defs
+import Mathlib.RingTheory.LocalProperties.Reduced
 
 /-!
 # Commutative Algebra, Chapter 37: Normal rings
@@ -427,14 +428,147 @@ def IsNormalRing (R : Type*) [CommRing R] : Prop :=
 theorem normalRing_isReduced
     {R : Type*} [CommRing R] (hR : IsNormalRing R) :
     IsReduced R := by
-  sorry
+  apply isReduced_ofLocalizationMaximal
+  intro m hm
+  let : IsDomain (Localization.AtPrime m) := (hR ⟨m, hm.isPrime⟩).1
+  infer_instance
 
 /-- A normal ring is integrally closed in its total ring of fractions. -/
 theorem normalRing_isIntegrallyClosedIn_totalQuotientRing
     {R : Type*} [CommRing R] (hR : IsNormalRing R) :
     IsIntegrallyClosedIn R
       (Formalization.Books.Algebra.Unit09.totalQuotientRing R) := by
-  sorry
+  refine isIntegrallyClosedIn_iff.mpr ?_
+  refine ⟨IsFractionRing.injective R _, ?_⟩
+  intro x hx
+  let I : Ideal R :=
+    { carrier := {r | ∃ a : R, algebraMap R (FractionRing R) a =
+          algebraMap R (FractionRing R) r * x}
+      zero_mem' := by
+        refine ⟨0, ?_⟩
+        simp
+      add_mem' := by
+        intro a b ha hb
+        obtain ⟨a', ha'⟩ := ha
+        obtain ⟨b', hb'⟩ := hb
+        refine ⟨a' + b', ?_⟩
+        calc
+          algebraMap R (FractionRing R) (a' + b') =
+              algebraMap R (FractionRing R) a' +
+                algebraMap R (FractionRing R) b' := map_add _ _ _
+          _ = algebraMap R (FractionRing R) a * x +
+              algebraMap R (FractionRing R) b * x := by rw [ha', hb']
+          _ = algebraMap R (FractionRing R) (a + b) * x := by
+            rw [← add_mul, ← map_add]
+      smul_mem' := by
+        intro c r hr
+        obtain ⟨a, ha⟩ := hr
+        refine ⟨c * a, ?_⟩
+        simp only [smul_eq_mul, map_mul]
+        rw [ha]
+        ring }
+  obtain ⟨c, d, hxrep⟩ := IsLocalization.exists_mk'_eq (nonZeroDivisors R) x
+  have hlocal : ∀ (P : Ideal R) (_ : P.IsMaximal),
+      ∃ r : R, r ∉ P ∧ r ∈ I := by
+    intro P hP
+    let Rp := Localization.AtPrime P
+    let : IsDomain Rp := (hR ⟨P, hP.isPrime⟩).1
+    let Kp := FractionRing Rp
+    let : Field Kp := IsFractionRing.toField Rp
+    have hM : nonZeroDivisors R ≤
+        (nonZeroDivisors Rp).comap (algebraMap R Rp) := by
+      intro s hs
+      change algebraMap R Rp s ∈ nonZeroDivisors Rp
+      rw [mem_nonZeroDivisors_iff_ne_zero]
+      intro hzero'
+      obtain ⟨t, ht⟩ :=
+        (IsLocalization.map_eq_zero_iff P.primeCompl Rp s).mp hzero'
+      have ht0 : (t : R) = 0 :=
+        (mem_nonZeroDivisors_iff.mp hs).2 t ht
+      apply t.property
+      rw [ht0]
+      exact P.zero_mem
+    let f : FractionRing R →+* Kp :=
+      IsLocalization.map Kp (M := nonZeroDivisors R) (T := nonZeroDivisors Rp)
+        (algebraMap R Rp) hM
+    have hfx : IsIntegral Rp (f x) := by
+      exact IsIntegral.map_of_comp_eq (R := R) (S := FractionRing R)
+        (T := Rp) (U := Kp) (algebraMap R Rp) f
+        (by
+          change (algebraMap Rp Kp).comp (algebraMap R Rp) =
+            f.comp (algebraMap R (FractionRing R))
+          exact (IsLocalization.map_comp (Q := Kp) (g := algebraMap R Rp) hM).symm)
+        hx
+    obtain ⟨y, hy⟩ :=
+      (isIntegrallyClosed_iff Kp).mp (hR ⟨P, hP.isPrime⟩).2 hfx
+    have hycrossK :
+        algebraMap Rp Kp y *
+            algebraMap Rp Kp (algebraMap R Rp (d : R)) =
+          algebraMap Rp Kp (algebraMap R Rp c) := by
+      calc
+        algebraMap Rp Kp y *
+              algebraMap Rp Kp (algebraMap R Rp (d : R)) =
+            f x *
+              algebraMap Rp Kp (algebraMap R Rp (d : R)) := by rw [hy]
+        _ = algebraMap Rp Kp (algebraMap R Rp c) := by
+          rw [← hxrep]
+          rw [show f (IsLocalization.mk' (FractionRing R) c d) =
+              IsLocalization.mk' Kp (algebraMap R Rp c)
+                ⟨algebraMap R Rp (d : R), hM d.property⟩ from
+            IsLocalization.map_mk' (Q := Kp) hM c d]
+          exact IsLocalization.mk'_spec Kp (algebraMap R Rp c)
+            ⟨algebraMap R Rp (d : R), hM d.property⟩
+    have hycross : y * algebraMap R Rp (d : R) =
+        algebraMap R Rp c := by
+      apply IsFractionRing.injective Rp Kp
+      simpa only [map_mul] using hycrossK
+    obtain ⟨⟨a, s⟩, hys⟩ := IsLocalization.surj P.primeCompl y
+    have hcross' : algebraMap R Rp (a * (d : R)) =
+        algebraMap R Rp (c * (s : R)) := by
+      calc
+        algebraMap R Rp (a * (d : R)) =
+            algebraMap R Rp a * algebraMap R Rp (d : R) := map_mul _ _ _
+        _ = (y * algebraMap R Rp (s : R)) *
+              algebraMap R Rp (d : R) := by rw [hys]
+        _ = (y * algebraMap R Rp (d : R)) *
+              algebraMap R Rp (s : R) := by ring
+        _ = algebraMap R Rp c * algebraMap R Rp (s : R) := by rw [hycross]
+        _ = algebraMap R Rp (c * (s : R)) := by rw [map_mul]
+    obtain ⟨t, ht⟩ :=
+      (IsLocalization.eq_iff_exists (S := Rp) P.primeCompl).mp hcross'
+    have hts : (t : R) * (s : R) ∉ P := by
+      intro h
+      exact (P.primeCompl.mul_mem t.property s.property) h
+    refine ⟨(t : R) * (s : R), hts, ⟨(t : R) * a, ?_⟩⟩
+    rw [← hxrep]
+    have ht' : (t : R) * a * (d : R) =
+        (t : R) * (s : R) * c := by
+      calc
+        (t : R) * a * (d : R) = (t : R) * (a * (d : R)) := by ring
+        _ = (t : R) * ((c * (s : R))) := by rw [ht]
+        _ = (t : R) * (s : R) * c := by ring
+    rw [← IsLocalization.mk'_one (M := nonZeroDivisors R) (S := FractionRing R)]
+    conv_rhs =>
+      rw [← IsLocalization.mk'_one (M := nonZeroDivisors R) (S := FractionRing R)]
+    rw [← IsLocalization.mk'_mul (M := nonZeroDivisors R) (S := FractionRing R)]
+    rw [IsLocalization.mk'_eq_iff_eq']
+    simpa only [map_mul, one_mul, mul_one, map_one, Submonoid.coe_one] using
+      congrArg (algebraMap R (FractionRing R)) ht'
+  have hIone : (1 : R) ∈ I := by
+    apply Ideal.mem_of_localization_maximal
+    intro P hP
+    obtain ⟨r, hrP, hrI⟩ := hlocal P hP
+    have hur : IsUnit (algebraMap R (Localization.AtPrime P) r) :=
+      (IsLocalization.algebraMap_isUnit_iff P.primeCompl).2
+        ⟨r, hrP, dvd_rfl⟩
+    have hmem := Ideal.mem_map_of_mem (algebraMap R (Localization.AtPrime P)) hrI
+    have htop : Ideal.map (algebraMap R (Localization.AtPrime P)) I = ⊤ :=
+      Ideal.eq_top_of_isUnit_mem _ hmem hur
+    exact htop ▸ Set.mem_univ _
+  change ∃ a : R, algebraMap R (FractionRing R) a =
+    algebraMap R (FractionRing R) 1 * x at hIone
+  obtain ⟨a, ha⟩ := hIone
+  exact ⟨a, by simpa using ha⟩
 
 /-- A localization of a normal ring is a normal ring. -/
 theorem localization_isNormalRing
@@ -442,13 +576,78 @@ theorem localization_isNormalRing
     (M : Submonoid R) [Algebra R S] [IsLocalization M S]
     (hR : IsNormalRing R) :
     IsNormalRing S := by
-  sorry
+  intro q
+  have hloc : IsLocalization ((q.asIdeal.comap (algebraMap R S)).primeCompl)
+      (Localization.AtPrime q.asIdeal) :=
+    IsLocalization.isLocalization_isLocalization_atPrime_isLocalization
+      (M := M) (S := S) (T := Localization.AtPrime q.asIdeal)
+      (Hp := q.2) q.asIdeal
+  have hprime :
+      (q.asIdeal.comap (algebraMap R S)).IsPrime :=
+    (IsLocalization.isPrime_iff_isPrime_disjoint M S q.asIdeal).mp q.2 |>.1
+  let p : PrimeSpectrum R := ⟨q.asIdeal.comap (algebraMap R S), hprime⟩
+  let e : Localization.AtPrime p.asIdeal ≃ₐ[R] Localization.AtPrime q.asIdeal := by
+    letI := hloc
+    exact IsLocalization.algEquiv (q.asIdeal.comap (algebraMap R S)).primeCompl
+      (Localization.AtPrime (q.asIdeal.comap (algebraMap R S)))
+      (Localization.AtPrime q.asIdeal)
+  have hdomain : IsDomain (Localization.AtPrime q.asIdeal) :=
+    (e.toRingEquiv.isDomain_iff).mp (hR p).1
+  exact ⟨hdomain, (hR p).2.of_equiv e.toRingEquiv⟩
 
 /-- A polynomial ring over a normal ring is a normal ring. -/
 theorem polynomial_isNormalRing
     {R : Type*} [CommRing R] (hR : IsNormalRing R) :
     IsNormalRing (Polynomial R) := by
-  sorry
+  intro q
+  let p : Ideal R := q.asIdeal.comap (Polynomial.C : R →+* Polynomial R)
+  let : q.asIdeal.IsPrime := q.2
+  have hp : p.IsPrime := by
+    simpa [p] using
+      (Ideal.comap_isPrime (Polynomial.C : R →+* Polynomial R) q.asIdeal)
+  let pc : Submonoid (Polynomial R) :=
+    Submonoid.map Polynomial.C.toMonoidHom p.primeCompl
+  let Rp := Localization.AtPrime p
+  let A := Polynomial Rp
+  have hlocA : IsLocalization pc A := by
+    exact Polynomial.isLocalization p.primeCompl Rp
+  have hdisj : Disjoint (pc : Set (Polynomial R)) (q.asIdeal : Set (Polynomial R)) := by
+    simpa [pc, p] using!
+      Set.disjoint_image_left.mpr
+        (Set.disjoint_compl_left_iff_subset.mpr (fun _ a => a))
+  let Q : Ideal A := q.asIdeal.map (algebraMap (Polynomial R) A)
+  have hQ : Q.IsPrime := by
+    let := hlocA
+    exact IsLocalization.isPrime_of_isPrime_disjoint pc A q.asIdeal q.2 hdisj
+  have hcomap : Q.under (Polynomial R) = q.asIdeal := by
+    let := hlocA
+    exact IsLocalization.under_map_of_isPrime_disjoint pc A q.2 hdisj
+  have hnormalA : IsNormalDomain A :=
+    polynomial_isNormalDomain (R := Rp) (hR ⟨p, hp⟩)
+  have hnormalB : IsNormalDomain (Localization Q.primeCompl) := by
+    let : IsDomain A := hnormalA.1
+    let : IsIntegrallyClosed A := hnormalA.2
+    exact localization_isNormalDomain hnormalA Q.primeCompl
+      Q.primeCompl_le_nonZeroDivisors
+  let B := Localization Q.primeCompl
+  have hlocB : IsLocalization q.asIdeal.primeCompl B := by
+    let : Q.IsPrime := hQ
+    let := hlocA
+    have hlocB' :
+        IsLocalization (Q.under (Polynomial R)).primeCompl B := by
+      simpa only [Ideal.under_def] using
+        (IsLocalization.isLocalization_isLocalization_atPrime_isLocalization
+          (M := pc) (S := A) (T := B) Q)
+    simpa only [hcomap] using hlocB'
+  let T := Localization q.asIdeal.primeCompl
+  have e : T ≃ₐ[Polynomial R] B := by
+    let := hlocB
+    exact IsLocalization.algEquiv q.asIdeal.primeCompl T B
+  have hdomainT : IsDomain T :=
+    (e.toRingEquiv.isDomain_iff).mpr hnormalB.1
+  have hclosedT : IsIntegrallyClosed T :=
+    hnormalB.2.of_equiv e.symm.toRingEquiv
+  exact ⟨hdomainT, hclosedT⟩
 
 /-- A finite product of normal rings is a normal ring. -/
 theorem finite_product_isNormalRing

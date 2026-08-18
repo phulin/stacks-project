@@ -410,7 +410,7 @@ theorem support_finitePresentation_constructible
           have htop : Submodule.span K (Set.range A.col) = ⊤ := by
             rw [← Matrix.range_mulVecLin, LinearMap.range_eq_top]
             exact hA
-          letI : Module.Finite K (Submodule.span K (Set.range A.col)) := inferInstance
+          let _ : Module.Finite K (Submodule.span K (Set.range A.col)) := inferInstance
           obtain ⟨v, hv, _, hvli⟩ :=
             Submodule.exists_fun_fin_finrank_span_eq K (Set.range A.col)
           have hfin : Module.finrank K (Submodule.span K (Set.range A.col)) = n := by

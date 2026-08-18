@@ -1,6 +1,4 @@
-import Mathlib.Algebra.Homology.ShortComplex.HomologicalComplex
-import Mathlib.Algebra.Homology.Homotopy
-import Mathlib.LinearAlgebra.TensorProduct.Basic
+import Mathlib.Algebra.Homology.HomologicalComplex
 import Formalization.Books.Algebra.Unit13.TensorAlgebra
 import Formalization.Books.Algebra.Unit131.Differentials
 
@@ -444,14 +442,14 @@ theorem deRhamDegreeOneMap_on_universal_differential
   exact mapOfDifferentials_apply_universalDifferential
     (R := A) (T := A') (A := B) (B := B') b
 
-/-- The degreewise additive maps and their compatibility with the de Rham
+/-- The degreewise `A`-linear maps and their compatibility with the de Rham
 differentials.  The component formula records the induced exterior-power map
 in all degrees. -/
 structure DeRhamMapData
     {A A' B B' : Type*} [CommRing A] [CommRing A'] [CommRing B] [CommRing B']
     [Algebra A A'] [Algebra A B] [Algebra A B'] [Algebra A' B'] [Algebra B B']
     [IsScalarTower A B B'] [IsScalarTower A A' B'] [SMulCommClass A' B B'] where
-  component : ∀ p : ℕ, deRhamTerm A B p →+ deRhamTerm A' B' p
+  component : ∀ p : ℕ, deRhamTerm A B p →ₗ[A] deRhamTerm A' B' p
   component_on_generator :
     ∀ (p : ℕ) (b₀ : B) (b : Fin p → B),
       component p (deRhamGenerator p b₀ b) =
@@ -480,7 +478,7 @@ noncomputable def deRhamMapComponent
     {A A' B B' : Type*} [CommRing A] [CommRing A'] [CommRing B] [CommRing B']
     [Algebra A A'] [Algebra A B] [Algebra A B'] [Algebra A' B'] [Algebra B B']
     [IsScalarTower A B B'] [IsScalarTower A A' B'] [SMulCommClass A' B B']
-    (p : ℕ) : deRhamTerm A B p →+ deRhamTerm A' B' p :=
+    (p : ℕ) : deRhamTerm A B p →ₗ[A] deRhamTerm A' B' p :=
   (deRhamMapData (A := A) (A' := A') (B := B) (B' := B')).component p
 
 theorem deRhamMapComponent_on_generator
@@ -679,7 +677,7 @@ def quotientClosedOneForms
     {A B Ω : Type*} [CommRing A] [CommRing B] [Algebra A B]
     [AddCommGroup Ω] [Module B Ω]
     (π : ModuleOfDifferentials A B →ₗ[B] Ω) : Set (ModuleOfDifferentials A B) :=
-  {ω | exteriorPower.map 2 π
+  {ω | ω ∈ LinearMap.ker π ∧ exteriorPower.map 2 π
       (deRhamOneDifferential (A := A) (B := B) ω) = 0}
 
 /-- The source-facing rule for a quotient de Rham differential. -/

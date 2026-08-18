@@ -598,7 +598,7 @@ theorem pullback_composition_iso
             (P.pullbackMap f (P.pullback g x) ≫ P.pullbackMap g x) =
             inv ≫ (hom ≫
               (P.pullbackMap f (P.pullback g x) ≫ P.pullbackMap g x)) := by
-                simpa only [Category.assoc]
+                simp only [Category.assoc]
         _ = inv ≫ P.pullbackMap (f ≫ g) x := by rw [hhom]
         _ = P.pullbackMap f (P.pullback g x) ≫ P.pullbackMap g x := hinv
         _ = (𝟙 _ : _ ⟶ _) ≫
@@ -1092,7 +1092,7 @@ theorem pullback_pseudofunctor_exists
         simp
         ext x
         apply Functor.Fiber.hom_ext
-        simp [Category.assoc]
+        simp
         change Functor.Fiber p b₀.unop at x
         let L :=
           (mapComp (f ≫ g) h).hom.iso.hom.toNatTrans.app x ≫
@@ -1107,15 +1107,15 @@ theorem pullback_pseudofunctor_exists
           (eqToHom e).iso.hom.toNatTrans.app x
         change L.1 = Functor.Fiber.fiberInclusion.map R
         let k := P.pullbackMap (f ≫ g ≫ h).unop x
-        letI : p.IsStronglyCartesian (f ≫ g ≫ h).unop k :=
+        let : p.IsStronglyCartesian (f ≫ g ≫ h).unop k :=
           P.pullbackMap_isStronglyCartesian (f ≫ g ≫ h).unop x
         have hL : p.IsHomLift (𝟙 b₃.unop) L.1 := by
           exact L.2
-        letI : p.IsHomLift (𝟙 b₃.unop) L.1 := hL
+        let : p.IsHomLift (𝟙 b₃.unop) L.1 := hL
         have hR : p.IsHomLift (𝟙 b₃.unop)
             (Functor.Fiber.fiberInclusion.map R) := by
           exact R.2
-        letI : p.IsHomLift (𝟙 b₃.unop)
+        let : p.IsHomLift (𝟙 b₃.unop)
             (Functor.Fiber.fiberInclusion.map R) := hR
         apply @Functor.IsStronglyCartesian.ext _ _ _ _ p _ _ _ _
           (f ≫ g ≫ h).unop k (by infer_instance) _ _
@@ -1261,8 +1261,7 @@ theorem pullback_pseudofunctor_exists
                     ((map ((f ≫ g) ≫ h)).of.toFunctor.obj x) =
                   Functor.Fiber.fiberInclusion.obj
                     (P.pullback ((h.unop ≫ g.unop) ≫ f.unop) x) := by
-              simpa [map, obj, PullbackChoice.pullbackFunctor, Category.assoc]
-                using hx0
+              exact hx0
             calc
               _ = A₁.1 ≫ ((P.pullbackFunctor h.unop).map A₂).1 ≫
                     A₃.1 ≫ (A₄.1 ≫
@@ -1403,7 +1402,7 @@ theorem pullback_pseudofunctor_exists
         simp
         ext x
         apply Functor.Fiber.hom_ext
-        simp [Category.assoc]
+        simp
         dsimp [mapComp, mapId, map, obj, Functor.Fiber.fiberInclusion]
         let A := (mapComp (𝟙 b₀) f).hom.iso.hom.toNatTrans.app x ≫
           (map f).of.toFunctor.map
@@ -1413,7 +1412,7 @@ theorem pullback_pseudofunctor_exists
           (eqToHom (show map ((𝟙 b₀) ≫ f) = map f by simp)).iso.hom.toNatTrans.app x
         change Functor.Fiber.fiberInclusion.map A = _
         let k := P.pullbackMap f.unop x
-        letI : p.IsStronglyCartesian f.unop k :=
+        let : p.IsStronglyCartesian f.unop k :=
           P.pullbackMap_isStronglyCartesian f.unop x
         have hA : p.IsHomLift (𝟙 b₁.unop)
             (Functor.Fiber.fiberInclusion.map A) := A.2
@@ -1428,8 +1427,8 @@ theorem pullback_pseudofunctor_exists
         have hαinv :
             Functor.Fiber.fiberInclusion.map (α.symm.hom.app x) =
               P.pullbackMap (𝟙 b₀.unop) x := by
-          letI : IsIso (α.hom.app x) := NatIso.hom_app_isIso α x
-          letI : IsIso (Functor.Fiber.fiberInclusion.map (α.hom.app x)) :=
+          let : IsIso (α.hom.app x) := NatIso.hom_app_isIso α x
+          let : IsIso (Functor.Fiber.fiberInclusion.map (α.hom.app x)) :=
             (Functor.Fiber.fiberInclusion.mapIso (asIso (α.hom.app x))).isIso_hom
           apply (cancel_epi
             (Functor.Fiber.fiberInclusion.map (α.hom.app x))).1
@@ -1589,7 +1588,7 @@ theorem pullback_pseudofunctor_exists
         simp
         ext x
         apply Functor.Fiber.hom_ext
-        simp [Category.assoc]
+        simp
         dsimp [mapComp, mapId, map, obj, Functor.Fiber.fiberInclusion]
         let A := (mapComp f (𝟙 b₁)).hom.iso.hom.toNatTrans.app x ≫
           (mapId b₁).hom.iso.hom.toNatTrans.app
@@ -1599,7 +1598,7 @@ theorem pullback_pseudofunctor_exists
           (eqToHom (show map (f ≫ 𝟙 b₁) = map f by simp)).iso.hom.toNatTrans.app x
         change Functor.Fiber.fiberInclusion.map A = _
         let k := P.pullbackMap f.unop x
-        letI : p.IsStronglyCartesian f.unop k :=
+        let : p.IsStronglyCartesian f.unop k :=
           P.pullbackMap_isStronglyCartesian f.unop x
         have hA : p.IsHomLift (𝟙 b₁.unop)
             (Functor.Fiber.fiberInclusion.map A) := A.2
@@ -1616,8 +1615,8 @@ theorem pullback_pseudofunctor_exists
         have hαinv :
             Functor.Fiber.fiberInclusion.map (α.symm.hom.app y) =
               P.pullbackMap (𝟙 b₁.unop) y := by
-          letI : IsIso (α.hom.app y) := NatIso.hom_app_isIso α y
-          letI : IsIso (Functor.Fiber.fiberInclusion.map (α.hom.app y)) :=
+          let : IsIso (α.hom.app y) := NatIso.hom_app_isIso α y
+          let : IsIso (Functor.Fiber.fiberInclusion.map (α.hom.app y)) :=
             (Functor.Fiber.fiberInclusion.mapIso (asIso (α.hom.app y))).isIso_hom
           apply (cancel_epi
             (Functor.Fiber.fiberInclusion.map (α.hom.app y))).1
@@ -2717,7 +2716,7 @@ theorem fibred_categories_have_two_fibre_products
           (structureFunctor S.underlying).map ξ.obj.obj.hom ≫
           eqToHom hGa = 𝟙 ((structureFunctor X.underlying).obj ξ.obj.obj.left) := by
         rw [hξfac]
-        simp [hFa, hGa]
+        simp
       have hξleft : eqToHom hFa.symm ≫
           (structureFunctor S.underlying).map ξ.obj.obj.hom =
           eqToHom hGa.symm := by
@@ -2749,7 +2748,7 @@ theorem fibred_categories_have_two_fibre_products
           _ = eqToHom hFx' ≫ f ≫
                 (eqToHom hFa.symm ≫
                   (structureFunctor S.underlying).map ξ.obj.obj.hom) := by
-                  simp [Category.assoc, hFa]
+                  simp [Category.assoc]
           _ = eqToHom hFx' ≫ f ≫ eqToHom hGa.symm := by
                   rw [hξleft]
           _ = eqToHom hsource ≫

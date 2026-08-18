@@ -1,7 +1,7 @@
 import Formalization.Books.Algebra.Unit37.NormalRings
 import Mathlib.FieldTheory.Minpoly.IsIntegrallyClosed
+import Mathlib.RingTheory.IntegralClosure.Algebra.Ideal
 import Mathlib.RingTheory.IntegralClosure.GoingDown
-import Mathlib.RingTheory.Polynomial.Subring
 
 /-!
 # Commutative Algebra, Chapter 38: Going down for integral over normal
@@ -118,13 +118,24 @@ theorem polynomial_divisor_coeff_isIntegral
     (hp : p.Monic) (hq : q.Monic) (hdiv : p ∣ q)
     (T : Subring K)
     (hT : ∀ i, i < q.natDegree → q.coeff i ∈ (T : Set K)) :
-    ∀ i, IsIntegral T (p.coeff i) := by
+    ∀ i, i < p.natDegree → IsIntegral T (p.coeff i) := by
   sorry
 
-/- The source's second conclusion in this lemma is already exactly the
-canonical `Polynomial.coeff_mem_radical_span_coeff_of_dvd`, applied to the
-subring containing all coefficients.  We therefore reuse that declaration
-without introducing a parallel wrapper. -/
+/- The second conclusion of the source lemma is stated over a subring of the
+   field containing both sets of coefficients.  The coefficient set below is
+   the corresponding finite generating set, written without choosing an
+   enumeration of the coefficients. -/
+theorem polynomial_divisor_coeff_mem_radical
+    {K : Type*} [Field K] (p q : K[X])
+    (hp : p.Monic) (hq : q.Monic) (hdiv : p ∣ q)
+    (T : Subring K)
+    (hpT : ∀ i, i < p.natDegree → p.coeff i ∈ (T : Set K))
+    (hqT : ∀ i, i < q.natDegree → q.coeff i ∈ (T : Set K)) :
+    ∀ (i : ℕ) (hi : i < p.natDegree),
+      (⟨p.coeff i, hpT i hi⟩ : T) ∈
+        Ideal.radical (Ideal.span
+          {b : T | ∃ j, j < q.natDegree ∧ (b : K) = q.coeff j}) := by
+  sorry
 
 /-! ## Minimal polynomials over a normal domain -/
 

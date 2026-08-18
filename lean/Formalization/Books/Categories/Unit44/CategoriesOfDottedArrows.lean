@@ -638,7 +638,512 @@ theorem dottedArrow_baseChange_equivalence
           simp [TwoCommutativeDiagram.strictAssocHom,
             TwoCommutativeDiagram.strictAssocInv,
             Bicategory.Strict.leftUnitor_eqToIso, Category.assoc] }
-  sorry
+  let liftMapHom : ∀ {A A' : DottedArrowCategory (BaseChangeData.outerSquare B)},
+      (H : DottedArrow.Hom A A') →
+        TwoCommutativeDiagram.TwoHom (liftHom A)
+          (TwoCommutativeDiagram.Hom.comp (outerHom H) (liftHom A')) := by
+    intro A A' H
+    exact Classical.choose ((hP (outerDiagram A)).2 (liftHom A)
+      (TwoCommutativeDiagram.Hom.comp (outerHom H) (liftHom A')))
+  let sourceOuterTwoHom : ∀ {A A' : DottedArrowCategory (BaseChangeData.outerSquare B)},
+      (H : DottedArrow.Hom A A') →
+        TwoCommutativeDiagram.TwoHom
+          (TwoCommutativeDiagram.Hom.comp (sourceToOuter A) (outerHom H))
+          (sourceToOuter A') := by
+    intro A A' H
+    exact {
+      vertex := (Bicategory.rightUnitor B.j).hom
+      left := by
+        dsimp [sourceToOuter, outerHom, TwoCommutativeDiagram.Hom.comp]
+        simp [TwoCommutativeDiagram.strictAssocInv,
+          Bicategory.Strict.leftUnitor_eqToIso,
+          Bicategory.Strict.rightUnitor_eqToIso, Category.assoc]
+      right := by
+        dsimp [sourceToOuter, outerHom, TwoCommutativeDiagram.Hom.comp]
+        simp [TwoCommutativeDiagram.strictAssocInv,
+          Bicategory.Strict.leftUnitor_eqToIso,
+          Bicategory.Strict.rightUnitor_eqToIso, Category.assoc]
+        exact H.alpha_naturality }
+  let sourceLiftTwoHom : ∀ {A A' : DottedArrowCategory (BaseChangeData.outerSquare B)},
+      (H : DottedArrow.Hom A A') →
+        TwoCommutativeDiagram.TwoHom (liftToSource A) (liftToSource A') := by
+    intro A A' H
+    let η := liftMapHom H
+    dsimp [outerDiagram, outerHom] at η
+    let ηbar : (liftHom A).vertex ⟶ (liftHom A').vertex :=
+      η.vertex ≫ (Bicategory.leftUnitor (liftHom A').vertex).hom
+    let τ := TwoCommutativeDiagram.TwoHom.comp
+      (TwoCommutativeDiagram.TwoHom.whiskerLeft (sourceToOuter A) η)
+      (TwoCommutativeDiagram.TwoHom.comp
+        (TwoCommutativeDiagram.TwoHom.associatorInv
+          (sourceToOuter A) (outerHom H) (liftHom A'))
+        (TwoCommutativeDiagram.TwoHom.whiskerRight (sourceOuterTwoHom H)
+          (liftHom A')))
+    have hvertex : τ.vertex =
+        Bicategory.whiskerLeft B.j ηbar := by
+      dsimp [τ, TwoCommutativeDiagram.TwoHom.comp,
+        TwoCommutativeDiagram.TwoHom.whiskerLeft,
+        TwoCommutativeDiagram.TwoHom.whiskerRight,
+        TwoCommutativeDiagram.TwoHom.associatorInv, sourceToOuter,
+        sourceOuterTwoHom, outerHom]
+      change ((sourceToOuter A).vertex ◁ η.vertex) ≫
+          (Bicategory.associator (sourceToOuter A).vertex
+            (outerHom H).vertex (liftHom A').vertex).inv ≫
+        (sourceOuterTwoHom H).vertex ▷ (liftHom A').vertex =
+        B.j ◁ ηbar
+      dsimp [ηbar]
+      have hwhisk := Bicategory.whiskerLeft_comp B.j η.vertex
+        (Bicategory.leftUnitor (liftHom A').vertex).hom
+      rw [hwhisk]
+      dsimp [sourceToOuter, outerHom, sourceOuterTwoHom]
+      have htri := Bicategory.triangle_assoc_comp_right B.j
+        (liftHom A').vertex
+      exact congrArg (fun t => (B.j ◁ η.vertex) ≫ t) htri
+    exact {
+      vertex := Bicategory.whiskerLeft B.j ηbar
+      left := by
+        have hleft := τ.left
+        rw [hvertex] at hleft
+        dsimp [TwoCommutativeDiagram.Hom.comp, sourceToOuter] at hleft
+        convert hleft using 1 <;>
+          simp [liftToSource, TwoCommutativeDiagram.Hom.comp,
+            sourceToOuter, outerHom, TwoCommutativeDiagram.strictAssocInv,
+            Bicategory.Strict.associator_eqToIso,
+            Bicategory.Strict.leftUnitor_eqToIso,
+            Bicategory.Strict.rightUnitor_eqToIso, Category.assoc,
+            Category.id_comp]
+        all_goals rw [Category.id_comp]
+      right := by
+        have hright := τ.right
+        rw [hvertex] at hright
+        simpa [liftToSource, TwoCommutativeDiagram.Hom.comp,
+          sourceToOuter, outerHom, TwoCommutativeDiagram.strictAssocInv,
+          Bicategory.Strict.associator_eqToIso,
+          Bicategory.Strict.leftUnitor_eqToIso,
+          Bicategory.Strict.rightUnitor_eqToIso, Category.assoc,
+          Category.id_comp] using hright }
+  let inverse : DottedArrowCategory (BaseChangeData.outerSquare B) ⥤
+      DottedArrowCategory (BaseChangeData.leftSquare B) := {
+    obj := inverseObj
+    map := fun {A A'} H => by
+      let η := liftMapHom H
+      dsimp [outerDiagram, outerHom] at η
+      let ηbar : (liftHom A).vertex ⟶ (liftHom A').vertex :=
+        η.vertex ≫ (Bicategory.leftUnitor (liftHom A').vertex).hom
+      dsimp [inverseObj]
+      exact {
+        hom := ηbar
+        alpha_naturality := by
+          change (B.j ◁ ηbar) ≫ (comparisonHom A').vertex =
+            (comparisonHom A).vertex
+          let τ := sourceLiftTwoHom H
+          let κ := TwoCommutativeDiagram.TwoHom.comp τ (comparisonHom A')
+          letI : IsGroupoid (TwoCommutativeDiagram.Hom sourceDiagram P) :=
+            twoCommutativeDiagram_is_two_one hC sourceDiagram P
+          have hκ : κ = comparisonHom A := by
+            obtain ⟨u, hu, huuniq⟩ := (hP sourceDiagram).2
+              (liftToSource A) canonical
+            exact (huuniq κ (by infer_instance)).trans
+              (huuniq (comparisonHom A) (by infer_instance)).symm
+          have hκv := congrArg TwoCommutativeDiagram.TwoHom.vertex hκ
+          change κ.vertex = (comparisonHom A).vertex
+          exact hκv
+        beta_naturality := by
+          change (liftHom A).left ≫ ηbar ▷ B.p = (liftHom A').left
+          have hη := (liftMapHom H).left
+          dsimp [TwoCommutativeDiagram.Hom.comp] at hη
+          have hcomp :
+              (η.vertex ≫ (Bicategory.leftUnitor (liftHom A').vertex).hom) ▷ B.p =
+                η.vertex ▷ B.p ≫
+                  (Bicategory.leftUnitor (liftHom A').vertex).hom ▷ B.p :=
+            Bicategory.comp_whiskerRight η.vertex
+              (Bicategory.leftUnitor (liftHom A').vertex).hom B.p
+          calc
+            _ = (liftHom A).left ≫
+                (η.vertex ▷ B.p ≫
+                  (Bicategory.leftUnitor (liftHom A').vertex).hom ▷ B.p) := by
+                  dsimp [ηbar]
+                  exact congrArg (fun t => (liftHom A).left ≫ t) hcomp
+            _ = ((liftHom A).left ≫ η.vertex ▷ B.p) ≫
+                (Bicategory.leftUnitor (liftHom A').vertex).hom ▷ B.p := by
+                  exact (Category.assoc _ _ _).symm
+            _ = ((outerHom H).left ≫
+                Bicategory.whiskerLeft (outerHom H).vertex
+                  (liftHom A').left ≫
+                TwoCommutativeDiagram.strictAssocInv
+                (outerHom H).vertex (liftHom A').vertex B.p) ≫
+                (Bicategory.leftUnitor (liftHom A').vertex).hom ▷ B.p := by
+                  change (liftHom A).left ≫ η.vertex ▷ B.p =
+                    (outerHom H).left ≫
+                      Bicategory.whiskerLeft (outerHom H).vertex
+                        (liftHom A').left ≫
+                      TwoCommutativeDiagram.strictAssocInv
+                        (outerHom H).vertex (liftHom A').vertex B.p at hη
+                  exact congrArg
+                    (fun t => t ≫
+                      (Bicategory.leftUnitor (liftHom A').vertex).hom ▷ B.p) hη
+            _ = _ := by
+              dsimp [outerHom, outerDiagram]
+              change (eqToHom (Bicategory.Strict.id_comp B.y').symm ≫
+                (𝟙 B.objT ◁ (liftHom A').left) ≫
+                TwoCommutativeDiagram.strictAssocInv (𝟙 B.objT)
+                  (liftHom A').vertex B.p) ≫
+                (Bicategory.leftUnitor (liftHom A').vertex).hom ▷ B.p =
+                (liftHom A').left
+              have hassoc :
+                  TwoCommutativeDiagram.strictAssocInv (𝟙 B.objT)
+                      (liftHom A').vertex B.p =
+                    (Bicategory.associator (𝟙 B.objT)
+                      (liftHom A').vertex B.p).inv := by
+                simpa [TwoCommutativeDiagram.strictAssocInv] using
+                  congrArg Iso.inv
+                    (Bicategory.Strict.associator_eqToIso
+                      (𝟙 B.objT) (liftHom A').vertex B.p) |>.symm
+              have hassoc' :
+                  TwoCommutativeDiagram.strictAssocInv (𝟙 B.objT)
+                      (liftHom A').vertex B.p =
+                    (Bicategory.associator (𝟙 (outerDiagram A').vertex)
+                      (liftHom A').vertex B.p).inv := by
+                simpa [outerDiagram] using hassoc
+              rw [hassoc', Bicategory.leftUnitor_whiskerRight]
+              simp only [Category.assoc, Iso.inv_hom_id_assoc]
+              rw [Bicategory.leftUnitor_naturality]
+              simp [Bicategory.Strict.leftUnitor_eqToIso, Category.assoc] }
+    map_id := by
+      intro A
+      apply DottedArrow.Hom.ext
+      change (liftMapHom (𝟙 A)).vertex ≫
+          (Bicategory.leftUnitor (liftHom A).vertex).hom = 𝟙 _
+      let canonicalId : TwoCommutativeDiagram.TwoHom (liftHom A)
+          (TwoCommutativeDiagram.Hom.comp (outerHom (𝟙 A)) (liftHom A)) := by
+        dsimp [outerHom, TwoCommutativeDiagram.Hom.comp]
+        exact {
+          vertex := (Bicategory.leftUnitor (liftHom A).vertex).inv
+          left := by
+            dsimp [TwoCommutativeDiagram.strictAssocInv]
+            rw [Bicategory.leftUnitor_inv_whiskerRight]
+            rw [← Category.assoc]
+            rw [Bicategory.leftUnitor_inv_naturality]
+            simp [outerDiagram, Bicategory.Strict.associator_eqToIso,
+              Bicategory.Strict.leftUnitor_eqToIso,
+              Bicategory.Strict.rightUnitor_eqToIso, Category.assoc]
+          right := by
+            dsimp [TwoCommutativeDiagram.strictAssocInv]
+            rw [Bicategory.leftUnitor_inv_whiskerRight]
+            rw [← Category.assoc]
+            rw [Bicategory.leftUnitor_inv_naturality]
+            have hid :
+                (show DottedArrow.Hom A A from (𝟙 A)).hom = 𝟙 A.a := by rfl
+            rw [hid]
+            simp [outerDiagram, Bicategory.Strict.associator_eqToIso,
+              Bicategory.Strict.leftUnitor_eqToIso,
+              Bicategory.Strict.rightUnitor_eqToIso, Category.assoc,
+              DottedArrow.Hom.id] }
+      letI : IsGroupoid (TwoCommutativeDiagram.Hom (outerDiagram A) P) :=
+        twoCommutativeDiagram_is_two_one hC (outerDiagram A) P
+      have hη : liftMapHom (𝟙 A) = canonicalId := by
+        obtain ⟨u, hu, huuniq⟩ := (hP (outerDiagram A)).2
+          (liftHom A)
+          (TwoCommutativeDiagram.Hom.comp (outerHom (𝟙 A)) (liftHom A))
+        exact (huuniq (liftMapHom (𝟙 A)) (by infer_instance)).trans
+          (huuniq canonicalId (by infer_instance)).symm
+      have hηv := congrArg TwoCommutativeDiagram.TwoHom.vertex hη
+      rw [hηv]
+      dsimp [canonicalId]
+      change (Bicategory.leftUnitor (liftHom A).vertex).inv ≫
+          (Bicategory.leftUnitor (liftHom A).vertex).hom = 𝟙 _
+      exact (Bicategory.leftUnitor (liftHom A).vertex).inv_hom_id
+    map_comp := by
+      intro A A' A'' H K
+      let HK : DottedArrow.Hom A A'' := DottedArrow.Hom.comp H K
+      apply DottedArrow.Hom.ext
+      dsimp [CategoryStruct.comp, DottedArrow.Hom.comp]
+      change (liftMapHom (DottedArrow.Hom.comp H K)).vertex ≫
+          (Bicategory.leftUnitor (liftHom A'').vertex).hom =
+        ((liftMapHom H).vertex ≫
+          (Bicategory.leftUnitor (liftHom A').vertex).hom) ≫
+          (liftMapHom K).vertex ≫
+          (Bicategory.leftUnitor (liftHom A'').vertex).hom
+      let outerComp : TwoCommutativeDiagram.TwoHom
+          (TwoCommutativeDiagram.Hom.comp (outerHom H) (outerHom K))
+          (outerHom HK) := {
+        vertex := by
+          dsimp [outerHom, TwoCommutativeDiagram.Hom.comp]
+          exact (Bicategory.rightUnitor (𝟙 B.objT)).hom
+        left := by
+          dsimp [outerHom, TwoCommutativeDiagram.Hom.comp,
+            TwoCommutativeDiagram.strictAssocInv]
+          simp [Bicategory.Strict.associator_eqToIso,
+            Bicategory.Strict.leftUnitor_eqToIso,
+            Bicategory.Strict.rightUnitor_eqToIso, Category.assoc]
+        right := by
+          dsimp [outerHom, TwoCommutativeDiagram.Hom.comp,
+            TwoCommutativeDiagram.strictAssocInv]
+          simp [Bicategory.Strict.associator_eqToIso,
+            Bicategory.Strict.leftUnitor_eqToIso,
+            Bicategory.Strict.rightUnitor_eqToIso,
+            Bicategory.id_whiskerLeft, Category.assoc]
+          rw [Bicategory.id_whiskerLeft]
+          simp [Bicategory.Strict.leftUnitor_eqToIso, Category.assoc,
+            CategoryStruct.comp, DottedArrow.Hom.comp, HK] }
+      have hcoh :
+          ((outerHom H).vertex ◁ (liftMapHom K).vertex) ≫
+              (Bicategory.associator (outerHom H).vertex
+                (outerHom K).vertex (liftHom A'').vertex).inv ≫
+              outerComp.vertex ▷ (liftHom A'').vertex ≫
+              (Bicategory.leftUnitor (liftHom A'').vertex).hom =
+            (Bicategory.leftUnitor (liftHom A').vertex).hom ≫
+              (liftMapHom K).vertex ≫
+              (Bicategory.leftUnitor (liftHom A'').vertex).hom := by
+        dsimp [outerHom, outerComp]
+        have htri := Bicategory.triangle_assoc_comp_right
+          (𝟙 B.objT) (liftHom A'').vertex
+        have htri' := congrArg
+          (fun t => (𝟙 B.objT ◁ (liftMapHom K).vertex) ≫ t ≫
+            (Bicategory.leftUnitor (liftHom A'').vertex).hom) htri
+        have hwhisk := Bicategory.whiskerLeft_comp (𝟙 B.objT)
+          (liftMapHom K).vertex (Bicategory.leftUnitor (liftHom A'').vertex).hom
+        have hnat := Bicategory.leftUnitor_naturality
+          ((liftMapHom K).vertex ≫
+            (Bicategory.leftUnitor (liftHom A'').vertex).hom)
+        calc
+          _ = (𝟙 B.objT ◁ (liftMapHom K).vertex) ≫
+              (𝟙 B.objT ◁
+                (Bicategory.leftUnitor (liftHom A'').vertex).hom) ≫
+              (Bicategory.leftUnitor (liftHom A'').vertex).hom := by
+            simpa [Category.assoc] using htri'
+          _ = (𝟙 B.objT ◁
+                ((liftMapHom K).vertex ≫
+                  (Bicategory.leftUnitor (liftHom A'').vertex).hom)) ≫
+              (Bicategory.leftUnitor (liftHom A'').vertex).hom := by
+            rw [hwhisk]
+          _ = _ := by
+            simpa [Category.assoc] using hnat
+      let τ₁ := TwoCommutativeDiagram.TwoHom.comp
+        (liftMapHom H)
+        (TwoCommutativeDiagram.TwoHom.whiskerLeft (outerHom H)
+          (liftMapHom K))
+      let τ₂ := TwoCommutativeDiagram.TwoHom.comp
+        (TwoCommutativeDiagram.TwoHom.associatorInv
+          (outerHom H) (outerHom K) (liftHom A''))
+        (TwoCommutativeDiagram.TwoHom.whiskerRight outerComp
+          (liftHom A''))
+      let τ := TwoCommutativeDiagram.TwoHom.comp τ₁ τ₂
+      letI : IsGroupoid (TwoCommutativeDiagram.Hom (outerDiagram A) P) :=
+        twoCommutativeDiagram_is_two_one hC (outerDiagram A) P
+      have hη : liftMapHom HK = τ := by
+        obtain ⟨u, hu, huuniq⟩ := (hP (outerDiagram A)).2
+          (liftHom A)
+          (TwoCommutativeDiagram.Hom.comp
+            (outerHom HK) (liftHom A''))
+        exact (huuniq (liftMapHom HK) (by infer_instance)).trans
+          (huuniq τ (by infer_instance)).symm
+      have hηv := congrArg TwoCommutativeDiagram.TwoHom.vertex hη
+      calc
+        _ = τ.vertex ≫ (Bicategory.leftUnitor (liftHom A'').vertex).hom := by
+          rw [hηv]
+        _ = (liftMapHom H).vertex ≫
+            ((outerHom H).vertex ◁ (liftMapHom K).vertex) ≫
+              (Bicategory.associator (outerHom H).vertex
+                (outerHom K).vertex (liftHom A'')).inv ≫
+              outerComp.vertex ▷ (liftHom A'').vertex ≫
+              (Bicategory.leftUnitor (liftHom A'').vertex).hom := by
+          dsimp [τ, τ₁, τ₂, TwoCommutativeDiagram.TwoHom.comp,
+            TwoCommutativeDiagram.TwoHom.whiskerLeft,
+            TwoCommutativeDiagram.TwoHom.whiskerRight,
+            TwoCommutativeDiagram.TwoHom.associatorInv,
+            TwoCommutativeDiagram.Hom.comp]
+        _ = _ := by
+          rw [hcoh]
+          simp [Category.assoc] }
+  let leftToP : ∀ A : DottedArrowCategory (BaseChangeData.leftSquare B),
+      outerDiagram (forward.obj A) ⟶₂ P := by
+    intro A
+    exact {
+      vertex := A.a
+      left := A.beta
+      right := 𝟙 (A.a ≫ B.q)
+      commutes := by
+        dsimp [outerDiagram, forward, P, BaseChangeData.outerSquare]
+        simp }
+  let unitHom : ∀ A : DottedArrowCategory (BaseChangeData.leftSquare B),
+      A ⟶ inverse.obj (forward.obj A) := by
+    intro A
+    let δ := Classical.choose ((hP (outerDiagram (forward.obj A))).2
+      (leftToP A) (liftHom (forward.obj A)))
+    exact {
+      hom := δ.vertex
+      alpha_naturality := by
+        change (B.j ◁ δ.vertex) ≫
+            (comparisonHom (forward.obj A)).vertex = A.alpha
+        let sourceLeftToP := TwoCommutativeDiagram.Hom.comp
+          (sourceToOuter (forward.obj A)) (leftToP A)
+        let sourceComparison : TwoCommutativeDiagram.TwoHom
+            sourceLeftToP canonical := {
+          vertex := A.alpha
+          left := by
+            dsimp [sourceLeftToP, sourceToOuter, leftToP,
+              forward, TwoCommutativeDiagram.Hom.comp,
+              TwoCommutativeDiagram.strictAssocInv]
+            simpa [Category.assoc] using A.commutes
+          right := by
+            dsimp [sourceLeftToP, sourceToOuter, leftToP,
+              forward, TwoCommutativeDiagram.Hom.comp,
+              TwoCommutativeDiagram.strictAssocInv]
+            simp [Bicategory.Strict.associator_eqToIso,
+              Bicategory.Strict.leftUnitor_eqToIso,
+              Bicategory.Strict.rightUnitor_eqToIso, Category.assoc] }
+        let θ := TwoCommutativeDiagram.TwoHom.comp
+          (TwoCommutativeDiagram.TwoHom.whiskerLeft
+            (sourceToOuter (forward.obj A)) δ)
+          (comparisonHom (forward.obj A))
+        letI : IsGroupoid (TwoCommutativeDiagram.Hom sourceDiagram P) :=
+          twoCommutativeDiagram_is_two_one hC sourceDiagram P
+        have hθ : θ = sourceComparison := by
+          obtain ⟨u, hu, huuniq⟩ := (hP sourceDiagram).2
+            sourceLeftToP canonical
+          exact (huuniq θ (by infer_instance)).trans
+            (huuniq sourceComparison (by infer_instance)).symm
+        have hθv := congrArg TwoCommutativeDiagram.TwoHom.vertex hθ
+        simpa [θ, sourceComparison, sourceLeftToP,
+          sourceToOuter, TwoCommutativeDiagram.Hom.comp] using hθv
+      beta_naturality := by
+        change A.beta ≫ δ.vertex ▷ B.p = (liftHom (forward.obj A)).left
+        exact δ.left }
+  letI : IsGroupoid (DottedArrowCategory (BaseChangeData.leftSquare B)) :=
+    dottedArrowCategory_isGroupoid hC _
+  let unitIso : 𝟭 (DottedArrowCategory (BaseChangeData.leftSquare B)) ≅
+      forward ⋙ inverse :=
+    NatIso.ofComponents (fun A => asIso (unitHom A)) (by
+      intro A A' H
+      apply DottedArrow.Hom.ext
+      let δ := Classical.choose ((hP (outerDiagram (forward.obj A))).2
+        (leftToP A) (liftHom (forward.obj A)))
+      let δ' := Classical.choose ((hP (outerDiagram (forward.obj A'))).2
+        (leftToP A') (liftHom (forward.obj A')))
+      let explicitMap : TwoCommutativeDiagram.TwoHom (leftToP A)
+          (TwoCommutativeDiagram.Hom.comp
+            (outerHom (forward.map H)) (leftToP A')) := {
+        vertex := H.hom ≫ (Bicategory.leftUnitor A'.a).inv
+        left := by
+          dsimp [leftToP, outerHom, TwoCommutativeDiagram.Hom.comp]
+          simp [Bicategory.Strict.associator_eqToIso,
+            Bicategory.Strict.leftUnitor_eqToIso,
+            Bicategory.Strict.rightUnitor_eqToIso, Category.assoc,
+            H.beta_naturality]
+        right := by
+          dsimp [leftToP, outerHom, TwoCommutativeDiagram.Hom.comp,
+            forward]
+          simp [Bicategory.Strict.associator_eqToIso,
+            Bicategory.Strict.leftUnitor_eqToIso,
+            Bicategory.Strict.rightUnitor_eqToIso, Category.assoc,
+            Bicategory.comp_whiskerRight] }
+      let τ₁ := TwoCommutativeDiagram.TwoHom.comp δ
+        (liftMapHom (forward.map H))
+      let τ₂ := TwoCommutativeDiagram.TwoHom.comp explicitMap
+        (TwoCommutativeDiagram.TwoHom.whiskerLeft
+          (outerHom (forward.map H)) δ')
+      letI : IsGroupoid
+          (TwoCommutativeDiagram.Hom (outerDiagram (forward.obj A)) P) :=
+        twoCommutativeDiagram_is_two_one hC (outerDiagram (forward.obj A)) P
+      have hτ : τ₁ = τ₂ := by
+        obtain ⟨u, hu, huuniq⟩ :=
+          (hP (outerDiagram (forward.obj A))).2 (leftToP A)
+            (TwoCommutativeDiagram.Hom.comp
+              (outerHom (forward.map H)) (liftHom (forward.obj A')))
+        exact (huuniq τ₁ (by infer_instance)).trans
+          (huuniq τ₂ (by infer_instance)).symm
+      have hτv := congrArg TwoCommutativeDiagram.TwoHom.vertex hτ
+      change H.hom ≫ (unitHom A').hom =
+        (unitHom A).hom ≫ (inverse.map (forward.map H)).hom
+      simpa [unitHom, τ₁, τ₂, explicitMap,
+        TwoCommutativeDiagram.TwoHom.comp,
+        TwoCommutativeDiagram.TwoHom.whiskerLeft,
+        inverse, Functor.comp, Category.assoc,
+        Bicategory.leftUnitor_naturality] using hτv)
+  let counitHom : ∀ A : DottedArrowCategory (BaseChangeData.outerSquare B),
+      forward.obj (inverse.obj A) ⟶ A := by
+    intro A
+    let h := liftHom A
+    let r := inv h.right
+    exact {
+      hom := r
+      alpha_naturality := by
+        change B.j ◁ r ≫ A.alpha =
+          strictAssocInv B.j h.vertex B.q ≫
+            (comparisonHom A).vertex ▷ B.q
+        have hc := (comparisonHom A).right
+        dsimp [liftToSource, canonical] at hc
+        have hc' : inv A.alpha ≫ B.j ◁ h.right ≫
+              strictAssocInv B.j h.vertex B.q ≫
+              (comparisonHom A).vertex ▷ B.q =
+            𝟙 (B.x' ≫ B.q) := by
+          simpa [Category.assoc] using hc
+        have hmain : B.j ◁ h.right ≫
+              (strictAssocInv B.j h.vertex B.q ≫
+                (comparisonHom A).vertex ▷ B.q) = A.alpha := by
+          have hx := congrArg (fun t => A.alpha ≫ t) hc'
+          simpa [Category.assoc] using hx
+        have hx := congrArg (fun t => (B.j ◁ inv h.right) ≫ t) hmain
+        simpa [Bicategory.whiskerLeft_comp, Category.assoc] using hx.symm
+      beta_naturality := by
+        change (h.left ▷ B.g ≫
+              strictAssocHom h.vertex B.p B.g ≫
+              h.vertex ◁ B.phi ≫
+              strictAssocInv h.vertex B.q B.f) ≫ r ▷ B.f = A.beta
+        have hh := h.commutes
+        dsimp [outerDiagram, P, BaseChangeData.outerSquare] at hh
+        rw [hh]
+        rw [Bicategory.comp_whiskerRight]
+        simp [Category.assoc] }
+  letI : IsGroupoid (DottedArrowCategory (BaseChangeData.outerSquare B)) :=
+    dottedArrowCategory_isGroupoid hC _
+  let counitIso : inverse ⋙ forward ≅
+      𝟭 (DottedArrowCategory (BaseChangeData.outerSquare B)) :=
+    NatIso.ofComponents (fun A => asIso (counitHom A)) (by
+      intro A A' H
+      apply DottedArrow.Hom.ext
+      change ((liftMapHom H).vertex ≫
+          (Bicategory.leftUnitor (liftHom A').vertex).hom) ▷ B.q ≫
+          inv (liftHom A').right =
+        inv (liftHom A).right ≫ H.hom
+      have hη := (liftMapHom H).right
+      dsimp [outerHom, TwoCommutativeDiagram.Hom.comp] at hη
+      have hη' : (liftHom A).right ≫
+            ((liftMapHom H).vertex ≫
+              (Bicategory.leftUnitor (liftHom A').vertex).hom) ▷ B.q =
+          H.hom ≫ (liftHom A').right := by
+        simpa [Bicategory.comp_whiskerRight,
+          Bicategory.id_whiskerLeft,
+          TwoCommutativeDiagram.strictAssocInv,
+          Bicategory.Strict.leftUnitor_eqToIso,
+          Bicategory.Strict.rightUnitor_eqToIso, Category.assoc] using
+          congrArg (fun t => t ≫
+            (Bicategory.leftUnitor (liftHom A').vertex).hom ▷ B.q) hη
+      calc
+        _ = (inv (liftHom A).right ≫ (liftHom A).right) ≫
+            ((liftMapHom H).vertex ≫
+              (Bicategory.leftUnitor (liftHom A').vertex).hom) ▷ B.q ≫
+              inv (liftHom A').right := by simp
+        _ = inv (liftHom A).right ≫
+            ((liftHom A).right ≫
+              ((liftMapHom H).vertex ≫
+                (Bicategory.leftUnitor (liftHom A').vertex).hom) ▷ B.q) ≫
+              inv (liftHom A').right := by simp [Category.assoc]
+        _ = inv (liftHom A).right ≫
+            (H.hom ≫ (liftHom A').right) ≫
+              inv (liftHom A').right := by rw [hη']
+        _ = inv (liftHom A).right ≫ H.hom := by simp [Category.assoc])
+  exact ⟨Equivalence.mk'' forward inverse unitIso counitIso (by
+    intro A
+    apply DottedArrow.Hom.ext
+    let δ := Classical.choose ((hP (outerDiagram (forward.obj A))).2
+      (leftToP A) (liftHom (forward.obj A)))
+    have hδ := δ.right
+    change (unitHom A).hom ▷ B.q ≫
+        inv (liftHom (forward.obj A)).right = 𝟙 _
+    simpa [unitHom, leftToP, TwoCommutativeDiagram.Hom.comp,
+      Category.id_comp, Category.assoc] using hδ)⟩
 
 /-! ## Composition -/
 

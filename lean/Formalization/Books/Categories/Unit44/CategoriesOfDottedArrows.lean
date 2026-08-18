@@ -624,6 +624,20 @@ theorem dottedArrow_baseChange_equivalence
           simpa [P, Bicategory.id_whiskerRight,
             Bicategory.Strict.rightUnitor_eqToIso, Category.id_comp,
             Category.assoc] using hη.symm }
+  let outerHom : ∀ {A A' : DottedArrowCategory (BaseChangeData.outerSquare B)},
+      DottedArrow.Hom A A' → outerDiagram A ⟶₂ outerDiagram A' := by
+    intro A A' H
+    dsimp [outerDiagram]
+    exact
+      { vertex := 𝟙 B.objT
+        left := eqToHom (Bicategory.Strict.id_comp B.y').symm
+        right := H.hom ≫ eqToHom (Bicategory.Strict.id_comp A'.a).symm
+        commutes := by
+          dsimp
+          rw [← H.beta_naturality]
+          simp [TwoCommutativeDiagram.strictAssocHom,
+            TwoCommutativeDiagram.strictAssocInv,
+            Bicategory.Strict.leftUnitor_eqToIso, Category.assoc] }
   sorry
 
 /-! ## Composition -/

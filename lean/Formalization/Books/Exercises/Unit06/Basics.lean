@@ -173,6 +173,7 @@ global alternative topology on `Bool`. -/
 theorem indiscrete_bool_not_t0 :
     ¬ @T0Space Bool (⊤ : TopologicalSpace Bool) := by
   intro h
-  exact Bool.noConfusion (h.t0 (inseparable_top false true))
+  letI : TopologicalSpace Bool := ⊤
+  exact Bool.noConfusion (h.t0 (Inseparable.all false true))
 
 end Formalization.Books.Exercises.Unit06

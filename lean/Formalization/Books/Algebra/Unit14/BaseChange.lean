@@ -31,8 +31,8 @@ def baseChangeRingMap {R S R' : Type*} [CommRing R] [CommRing S] [CommRing R']
     letI : Algebra R S := f.toAlgebra
     letI : Algebra R R' := g.toAlgebra
     R' →+* S ⊗[R] R' := by
-  letI : Algebra R S := f.toAlgebra
-  letI : Algebra R R' := g.toAlgebra
+  let : Algebra R S := f.toAlgebra
+  let : Algebra R R' := g.toAlgebra
   letI : Semiring (S ⊗[R] R') := Algebra.TensorProduct.instSemiring
   letI : Ring (S ⊗[R] R') := Algebra.TensorProduct.instRing
   letI : Algebra (S ⊗[R] R') (S ⊗[R] R') := Algebra.id _
@@ -93,12 +93,12 @@ theorem baseChange_finite_module {R S R' M : Type*} [CommRing R] [CommRing S] [C
     letI : Algebra R R' := g.toAlgebra
     Module.Finite (S ⊗[R] R') (baseChangeModule (M := M) f g) := by
   classical
-  letI : Algebra R S := f.toAlgebra
-  letI : Algebra R R' := g.toAlgebra
+  let : Algebra R S := f.toAlgebra
+  let : Algebra R R' := g.toAlgebra
   let Pobj := (ModuleCat.extendScalars (baseChangeAlgebraMap f g)).obj (ModuleCat.of S M)
-  letI : AddCommMonoid (Pobj : Type _) := Pobj.isAddCommGroup.toAddCommMonoid
-  letI : Module (S ⊗[R] R') (Pobj : Type _) := Pobj.isModule
-  letI : Algebra S (S ⊗[R] R') := (baseChangeAlgebraMap f g).toAlgebra
+  let : AddCommMonoid (Pobj : Type _) := Pobj.isAddCommGroup.toAddCommMonoid
+  let : Module (S ⊗[R] R') (Pobj : Type _) := Pobj.isModule
+  let : Algebra S (S ⊗[R] R') := (baseChangeAlgebraMap f g).toAlgebra
   have hadd :
       (Algebra.TensorProduct.instSemiring (R := R) (A := S) (B := R')).toAddCommMonoid =
         ((ModuleCat.restrictScalars (baseChangeAlgebraMap f g)).obj
@@ -124,12 +124,12 @@ theorem baseChange_finite_presentation_module {R S R' M : Type*} [CommRing R] [C
     letI : Algebra R S := f.toAlgebra
     letI : Algebra R R' := g.toAlgebra
     Module.FinitePresentation (S ⊗[R] R') (baseChangeModule (M := M) f g) := by
-  letI : Algebra R S := f.toAlgebra
-  letI : Algebra R R' := g.toAlgebra
+  let : Algebra R S := f.toAlgebra
+  let : Algebra R R' := g.toAlgebra
   let Pobj := (ModuleCat.extendScalars (baseChangeAlgebraMap f g)).obj (ModuleCat.of S M)
-  letI : AddCommMonoid (Pobj : Type _) := Pobj.isAddCommGroup.toAddCommMonoid
-  letI : Module (S ⊗[R] R') (Pobj : Type _) := Pobj.isModule
-  letI : Algebra S (S ⊗[R] R') := Algebra.TensorProduct.leftAlgebra
+  let : AddCommMonoid (Pobj : Type _) := Pobj.isAddCommGroup.toAddCommMonoid
+  let : Module (S ⊗[R] R') (Pobj : Type _) := Pobj.isModule
+  let : Algebra S (S ⊗[R] R') := Algebra.TensorProduct.leftAlgebra
   have hadd :
       (Algebra.TensorProduct.instSemiring (R := R) (A := S) (B := R')).toAddCommMonoid =
         ((ModuleCat.restrictScalars (baseChangeAlgebraMap f g)).obj
@@ -147,10 +147,10 @@ theorem baseChange_finite_presentation_module {R S R' M : Type*} [CommRing R] [C
     have h := ModuleCat.restrictScalars.smul_def'
       (M := ModuleCat.of (S ⊗[R] R') (S ⊗[R] R'))
       (baseChangeAlgebraMap f g) a x
-    convert h.symm using 1 <;> rfl
+    convert h.symm using 1; rfl
   have hstd : Module.FinitePresentation (S ⊗[R] R')
       (TensorProduct S (S ⊗[R] R') M) := by
-    letI : Module (S ⊗[R] R') (TensorProduct S (S ⊗[R] R') M) :=
+    let : Module (S ⊗[R] R') (TensorProduct S (S ⊗[R] R') M) :=
       TensorProduct.leftModule
     obtain ⟨n, m, f₀, g₀, hf₀, hfg₀⟩ := Module.FinitePresentation.exists_fin' S M
     let e : ((S ⊗[R] R') ⊗[S] (Fin n → S)) ≃ₗ[S ⊗[R] R']
@@ -158,7 +158,7 @@ theorem baseChange_finite_presentation_module {R S R' M : Type*} [CommRing R] [C
       TensorProduct.piRight S (S ⊗[R] R') (S ⊗[R] R') (fun _ : Fin n => S) ≪≫ₗ
         LinearEquiv.piCongrRight (fun _ =>
           (Algebra.TensorProduct.rid S (S ⊗[R] R') (S ⊗[R] R')).toLinearEquiv)
-    letI : Module.FinitePresentation (S ⊗[R] R')
+    let : Module.FinitePresentation (S ⊗[R] R')
         ((S ⊗[R] R') ⊗[S] (Fin n → S)) := by
       apply Module.FinitePresentation.of_equiv e.symm
     apply Module.finitePresentation_of_surjective (f₀.baseChange (S ⊗[R] R'))
@@ -174,7 +174,7 @@ theorem baseChange_finite_presentation_module {R S R' M : Type*} [CommRing R] [C
     exact Submodule.fg_range _
   let U := (ModuleCat.restrictScalars (baseChangeAlgebraMap f g)).obj
     (ModuleCat.of (S ⊗[R] R') (S ⊗[R] R'))
-  letI : IsScalarTower S (S ⊗[R] R') (U : Type _) :=
+  let : IsScalarTower S (S ⊗[R] R') (U : Type _) :=
     IsScalarTower.of_compHom S (S ⊗[R] R') (U : Type _)
   let eU : (S ⊗[R] R') ≃ₗ[S ⊗[R] R'] (U : Type _) :=
     { toFun := fun x => x
@@ -185,7 +185,7 @@ theorem baseChange_finite_presentation_module {R S R' M : Type*} [CommRing R] [C
       map_smul' := by intro a x; rfl }
   let e : TensorProduct S (S ⊗[R] R') M ≃ₗ[S ⊗[R] R'] (Pobj : Type _) :=
     TensorProduct.AlgebraTensorModule.congr eU (LinearEquiv.refl S M)
-  letI : Module.FinitePresentation (S ⊗[R] R')
+  let : Module.FinitePresentation (S ⊗[R] R')
       (TensorProduct S (S ⊗[R] R') M) := hstd
   exact Module.FinitePresentation.of_equiv e
 
@@ -195,10 +195,10 @@ theorem baseChange_finite_type {R S R' : Type*} [CommRing R] [CommRing S] [CommR
     letI : Algebra R S := f.toAlgebra
     letI : Algebra R R' := g.toAlgebra
     (baseChangeRingMap f g).FiniteType := by
-  letI : Algebra R S := f.toAlgebra
-  letI : Algebra R R' := g.toAlgebra
-  letI : Algebra R' (S ⊗[R] R') := (baseChangeRingMap f g).toAlgebra
-  letI : Algebra.FiniteType R S := hf
+  let : Algebra R S := f.toAlgebra
+  let : Algebra R R' := g.toAlgebra
+  let : Algebra R' (S ⊗[R] R') := (baseChangeRingMap f g).toAlgebra
+  let : Algebra.FiniteType R S := hf
   rw [RingHom.FiniteType]
   exact Algebra.FiniteType.equiv (by infer_instance)
     (Algebra.TensorProduct.commRight R R' S)
@@ -209,10 +209,10 @@ theorem baseChange_finite_presentation {R S R' : Type*} [CommRing R] [CommRing S
     letI : Algebra R S := f.toAlgebra
     letI : Algebra R R' := g.toAlgebra
     (baseChangeRingMap f g).FinitePresentation := by
-  letI : Algebra R S := f.toAlgebra
-  letI : Algebra R R' := g.toAlgebra
-  letI : Algebra R' (S ⊗[R] R') := (baseChangeRingMap f g).toAlgebra
-  letI : Algebra.FinitePresentation R S := hf
+  let : Algebra R S := f.toAlgebra
+  let : Algebra R R' := g.toAlgebra
+  let : Algebra R' (S ⊗[R] R') := (baseChangeRingMap f g).toAlgebra
+  let : Algebra.FinitePresentation R S := hf
   rw [RingHom.FinitePresentation]
   exact Algebra.FinitePresentation.equiv (Algebra.TensorProduct.commRight R R' S)
 

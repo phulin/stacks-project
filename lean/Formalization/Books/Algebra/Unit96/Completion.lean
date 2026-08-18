@@ -1088,8 +1088,7 @@ theorem completion_isAdicComplete_iff_kernel_eq_power
       ∀ n : ℕ, 1 ≤ n →
         completionKernel I M n = I ^ n • (⊤ : Submodule R (completion I M)) := by
   constructor
-  · intro hM
-    intro n hn
+  · intro hM n hn
     apply le_antisymm
     intro x hx
     have hstep (m : ℕ) {z : completion I M}
@@ -1407,7 +1406,7 @@ theorem completion_radical
     intro y
     apply hunit (x * y + 1)
     have hx0 : AdicCompletion.evalOneₐ I x = 0 := RingHom.mem_ker.mp hx
-    rw [map_add, map_one, map_mul, hx0, zero_mul]
+    rw [map_add, map_one, map_mul, hx0, zero_mul, zero_add]
     exact isUnit_one
   -/
   sorry

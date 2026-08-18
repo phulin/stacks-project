@@ -1,6 +1,7 @@
 import Mathlib.AlgebraicTopology.CechNerve
 import Mathlib.Algebra.Category.Ring.Colimits
 import Mathlib.Algebra.Category.ModuleCat.Basic
+import Mathlib.Algebra.Category.ModuleCat.Descent
 import Mathlib.CategoryTheory.Abelian.Basic
 import Mathlib.Algebra.Homology.HomologicalComplex
 import Mathlib.LinearAlgebra.TensorProduct.Tower
@@ -263,6 +264,26 @@ theorem effective_descent_modules_inverse
     [Module R N] [Module A N] [IsScalarTower R A N]
     (D : DescentDatum (R := R) (A := A) (N := N)) :
     Nonempty (Submodule R N) := ⟨descentH0 D⟩
+
+/-- The canonical datum on `M ⊗[R] A` has the same associated cosimplicial
+module as `(A/R)_• ⊗[R] M`. -/
+def CanonicalDescentCosimplicialIdentification (R A M : Type*) : Prop := by
+  sorry
+
+theorem canonical_descent_cosimplicial_identification (R A M : Type*) :
+    CanonicalDescentCosimplicialIdentification R A M := by sorry
+
+/-- The source's assertion that extension of scalars and the degree-zero
+descent module are mutually inverse at the level of categories. -/
+def DescentModulesEquivalence (R A : Type u) [CommRing R] [CommRing A]
+    (f : R →+* A) : Prop :=
+  Nonempty (ComonadicLeftAdjoint (ModuleCat.extendScalars.{u, u, u} f))
+
+theorem effective_descent_modules_equivalence (R A : Type u)
+    [CommRing R] [CommRing A] (f : R →+* A) (hf : f.FaithfullyFlat) :
+    DescentModulesEquivalence R A f := by
+  letI := comonadicExtendScalars hf
+  exact ⟨inferInstance⟩
 
 def StandardCoverFaithfullyFlat (R : Type u) [CommRing R] {n : ℕ}
     (f : Fin n → R) : Prop := by

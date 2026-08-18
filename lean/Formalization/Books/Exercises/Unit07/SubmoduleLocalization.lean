@@ -23,6 +23,8 @@ theorem exists_submodule_localizing
     {M : Type v} [AddCommGroup M] [Module A M]
     (N : Submodule (Localization S) (LocalizedModule S M)) :
     ∃ N' : Submodule A M, N = N'.localized S := by
-  sorry
+  refine ⟨(N.restrictScalars A).comap (LocalizedModule.mkLinearMap S M), ?_⟩
+  exact ((Submodule.localized'gi (Localization S) S
+    (LocalizedModule.mkLinearMap S M)).l_u_eq N).symm
 
 end Formalization.Books.Exercises.Unit07

@@ -1,5 +1,6 @@
 import Mathlib.Algebra.Module.LocalizedModule.AtPrime
 import Mathlib.RingTheory.Ideal.Maps
+import Mathlib.RingTheory.LocalProperties.Submodule
 import Mathlib.RingTheory.Spectrum.Maximal.Defs
 import Mathlib.RingTheory.Spectrum.Prime.Basic
 
@@ -57,7 +58,14 @@ theorem element_eq_zero_iff_all_prime_localizations_eq_zero
     m = 0 ↔
       ∀ p : PrimeSpectrum A,
         (LocalizedModule.mkLinearMap p.asIdeal.primeCompl M) m = 0 := by
-  sorry
+  constructor
+  · rintro rfl p
+    simp
+  · intro h
+    exact Module.eq_zero_of_localization_maximal
+      (fun P _ ↦ LocalizedModule P.primeCompl M)
+      (fun P _ ↦ LocalizedModule.mkLinearMap P.primeCompl M) m
+      (fun P hP ↦ h ⟨P, hP.isPrime⟩)
 
 /-- An element is zero exactly when all of its maximal-localized images are
 zero. -/
@@ -68,7 +76,14 @@ theorem element_eq_zero_iff_all_maximal_localizations_eq_zero
     m = 0 ↔
       ∀ p : MaximalSpectrum A,
         (LocalizedModule.mkLinearMap p.asIdeal.primeCompl M) m = 0 := by
-  sorry
+  constructor
+  · rintro rfl p
+    simp
+  · intro h
+    exact Module.eq_zero_of_localization_maximal
+      (fun P _ ↦ LocalizedModule P.primeCompl M)
+      (fun P _ ↦ LocalizedModule.mkLinearMap P.primeCompl M) m
+      (fun P hP ↦ h ⟨P, hP⟩)
 
 /-- A module is zero exactly when all of its maximal-localized modules are
 zero. -/
@@ -78,6 +93,14 @@ theorem module_subsingleton_iff_all_maximal_localizations_subsingleton
     Subsingleton M ↔
       ∀ p : MaximalSpectrum A,
         Subsingleton (LocalizedModule.AtPrime p.asIdeal M) := by
-  sorry
+  constructor
+  · intro h p
+    let := h
+    infer_instance
+  · intro h
+    exact Module.subsingleton_of_localization_maximal
+      (fun P _ ↦ LocalizedModule P.primeCompl M)
+      (fun P _ ↦ LocalizedModule.mkLinearMap P.primeCompl M)
+      (fun P hP ↦ h ⟨P, hP⟩)
 
 end Formalization.Books.Exercises.Unit07

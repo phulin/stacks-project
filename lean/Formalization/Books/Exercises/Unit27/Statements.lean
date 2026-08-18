@@ -847,7 +847,12 @@ theorem blowupRestrictionMap_isHomeomorph
     {A : Type u} [CommRing A] {I : Ideal A}
     (P : BlowupPresentation I) :
     IsHomeomorph (blowupRestrictionMap P) := by
-  sorry
+  letI : GradedRing P.gradedPieces := P.graded
+  unfold blowupRestrictionMap
+  refine ⟨?_, ?_, ?_⟩
+  · exact ((blowupMap P).continuous.comp continuous_subtype_val).subtype_mk (fun x => x.2)
+  · sorry
+  · sorry
 
 theorem strictTransform_conditions
     {A : Type u} [CommRing A] {I : Ideal A}
@@ -902,7 +907,240 @@ def twoVariableParabolaIdeal (k : Type u) [Field k] :
 
 theorem twoVariableBlowupPresentation_exists (k : Type u) [Field k] :
     Nonempty (BlowupPresentation (twoVariableMaximalIdeal k)) := by
-  sorry
+  classical
+  let A := twoVariablePolynomialRing k
+  let I : Ideal A := twoVariableMaximalIdeal k
+  let B := blowupAlgebra I
+  let piece : ℕ → Submodule ℤ B := fun d =>
+    { carrier := {x | ∀ n, n ≠ d → x.1.coeff n = 0}
+      zero_mem' := by
+        intro n hn
+        simp
+      add_mem' := by
+        intro x y hx hy n hn
+        simp [hx n hn, hy n hn]
+      smul_mem' := by
+        intro c x hx n hn
+        simp [hx n hn] }
+  have hpiece_eq (d : ℕ) (x : B) (hx : x ∈ piece d) :
+      x.1 = Polynomial.monomial d (x.1.coeff d) := by
+    apply Polynomial.ext
+    intro n
+    by_cases h : n = d
+    · subst h
+      simp
+    · have h' : ¬ d = n := by
+        intro hdn
+        exact h hdn.symm
+      rw [Polynomial.coeff_monomial, if_neg h']
+      exact hx n h
+  have hpiece_spec (d : ℕ) (x : B) :
+      x ∈ piece d ↔
+        ∃ a : A, ∃ _ha : a ∈ I ^ d,
+          x.1 = Polynomial.monomial d a := by
+    constructor
+    · intro hx
+      refine ⟨x.1.coeff d, x.2 d, hpiece_eq d x hx⟩
+    · rintro ⟨a, ha, hx⟩
+      change ∀ n, n ≠ d → x.1.coeff n = 0
+      intro n hn
+      have h' : ¬ d = n := by
+        intro hdn
+        exact hn hdn.symm
+      rw [hx, Polynomial.coeff_monomial, if_neg h']
+  let component : ∀ d : ℕ, A → piece d := fun d a =>
+    if ha : a ∈ I ^ d then
+      ⟨reesHomogeneousElement I d ha, by
+        change ∀ n, n ≠ d → (Polynomial.monomial d a).coeff n = 0
+        intro n hn
+        have h' : ¬ d = n := by
+          intro hdn
+          exact hn hdn.symm
+        rw [Polynomial.coeff_monomial, if_neg h']⟩
+    else 0
+  have component_of_mem (d : ℕ) (a : A) (ha : a ∈ I ^ d) :
+      component d a =
+        ⟨reesHomogeneousElement I d ha, by
+          change ∀ n, n ≠ d → (Polynomial.monomial d a).coeff n = 0
+          intro n hn
+          have h' : ¬ d = n := by
+            intro hdn
+            exact hn hdn.symm
+          rw [Polynomial.coeff_monomial, if_neg h']⟩ := by
+    dsimp [component]
+    rw [dif_pos ha]
+  have component_add (d : ℕ) (a b : A) (ha : a ∈ I ^ d) (hb : b ∈ I ^ d) :
+      component d (a + b) = component d a + component d b := by
+    simp only [component_of_mem d (a + b) ((I ^ d).add_mem ha hb),
+      component_of_mem d a ha, component_of_mem d b hb]
+    apply Subtype.ext
+    rw [Submodule.coe_add]
+    change (reesHomogeneousElement I d ((I ^ d).add_mem ha hb) : B) =
+      (reesHomogeneousElement I d ha : B) + reesHomogeneousElement I d hb
+    apply Subtype.ext
+    apply Polynomial.ext
+    intro n
+    change (Polynomial.monomial d (a + b)).coeff n =
+      (Polynomial.monomial d a + Polynomial.monomial d b).coeff n
+    rw [Polynomial.coeff_add, Polynomial.coeff_monomial,
+      Polynomial.coeff_monomial, Polynomial.coeff_monomial]
+    by_cases h : d = n
+    · simp [h]
+    · simp [h]
+  have component_zero (d : ℕ) : component d 0 = 0 := by
+    dsimp [component]
+    rw [dif_pos (I ^ d).zero_mem]
+    apply Subtype.ext
+    apply Subtype.ext
+    simp [reesHomogeneousElement]
+  let decompose : B →+ DirectSum ℕ (fun d => piece d) :=
+    { toFun := fun x =>
+        Finsupp.sum x.1.toFinsupp.coeff
+          (fun d a => DirectSum.of (fun d => ↥(piece d)) d (component d a))
+      map_zero' := by
+        apply DirectSum.ext
+        intro n
+        change
+          (Finsupp.sum (0 : Polynomial A).toFinsupp.coeff
+            (fun d a => DirectSum.of (fun d => ↥(piece d)) d (component d a))) n = 0
+        have hzero : (0 : Polynomial A).toFinsupp.coeff = 0 := by
+          ext d
+          simp
+        rw [hzero]
+        exact congrArg (fun q => q n)
+          (Finsupp.sum_zero_index
+            (h := fun d a => DirectSum.of (fun d => ↥(piece d)) d (component d a)))
+      map_add' := by
+        intro x y
+        apply DirectSum.ext
+        intro n
+        have happly (z : B) :
+            (Finsupp.sum z.1.toFinsupp.coeff
+              (fun d a => DirectSum.of (fun d => ↥(piece d)) d (component d a))) n =
+                component n (z.1.coeff n) := by
+          rw [Finsupp.sum_eq_single n]
+          · rw [DirectSum.of_eq_same]
+            rfl
+          · intro b hb hbn
+            have hnb : n ≠ b := Ne.symm hbn
+            rw [DirectSum.of_eq_of_ne _ _ _ hnb]
+          · intro hnzero
+            rw [component_zero]
+            exact map_zero _
+        change
+          (Finsupp.sum ((x + y).1.toFinsupp.coeff)
+            (fun d a => DirectSum.of (fun d => ↥(piece d)) d (component d a))) n =
+            (Finsupp.sum x.1.toFinsupp.coeff
+              (fun d a => DirectSum.of (fun d => ↥(piece d)) d (component d a))) n +
+            (Finsupp.sum y.1.toFinsupp.coeff
+              (fun d a => DirectSum.of (fun d => ↥(piece d)) d (component d a))) n
+        rw [happly (x + y), happly x, happly y]
+        exact component_add n (x.1.coeff n) (y.1.coeff n) (x.2 n) (y.2 n)
+    }
+  have hdecompose_apply (x : B) (n : ℕ) :
+      decompose x n = component n (x.1.coeff n) := by
+    change
+      (Finsupp.sum x.1.toFinsupp.coeff
+        (fun d a => DirectSum.of (fun d => ↥(piece d)) d (component d a))) n =
+        component n (x.1.coeff n)
+    rw [Finsupp.sum_eq_single n]
+    · rw [DirectSum.of_eq_same, DirectSum.of_apply]
+      rfl
+    · intro b hb hbn
+      simp [hbn]
+    · rw [component_zero]
+      apply DirectSum.ext
+      intro i
+      by_cases hi : i = n
+      · subst i
+        rw [DirectSum.of_eq_same, DirectSum.of_apply]
+        simp
+      · rw [DirectSum.of_eq_of_ne _ _ _ hi]
+  have hdecompose_of (d : ℕ) (x : B) (hx : x ∈ piece d) :
+      decompose x = DirectSum.of (fun d => ↥(piece d)) d ⟨x, hx⟩ := by
+    apply DirectSum.ext
+    intro n
+    rw [hdecompose_apply]
+    by_cases h : n = d
+    · subst h
+      apply Subtype.ext
+      apply Subtype.ext
+      exact (hpiece_eq d x hx).symm
+    · simp [DirectSum.of_eq_of_ne, h]
+  have hgradedOne : SetLike.GradedOne piece := by
+    refine ⟨?_⟩
+    change ∀ n, n ≠ 0 → (1 : Polynomial A).coeff n = 0
+    intro n hn
+    simp [hn]
+  have hgradedMul : SetLike.GradedMul piece := by
+    refine ⟨?_⟩
+    intro i j x y hx hy
+    change ∀ n, n ≠ i + j → (x.1 * y.1).coeff n = 0
+    rw [hpiece_eq i x hx, hpiece_eq j y hy]
+    intro n hn
+    rw [Polynomial.coeff_mul, Polynomial.coeff_monomial_mul_monomial]
+    simp [hn]
+  letI : SetLike.GradedMonoid piece := ⟨hgradedOne, hgradedMul⟩
+  have hleft (x : B) :
+      DirectSum.coeAddMonoidHom piece (decompose x) = x := by
+    apply Subtype.ext
+    apply Polynomial.ext
+    intro n
+    change
+      (Finsupp.sum x.1.toFinsupp.coeff
+        (fun d a => DirectSum.of (fun d => ↥(piece d)) d (component d a))) n = _
+    rw [Finsupp.sum_eq_single n]
+    · rw [DirectSum.of_eq_same, DirectSum.of_apply]
+      rfl
+    · intro b hb hbn
+      simp [hbn]
+    · rw [component_zero]
+      simp
+  have hright (z : DirectSum ℕ (fun d => piece d)) :
+      decompose (DirectSum.coeAddMonoidHom piece z) = z := by
+    apply DirectSum.ext
+    intro n
+    rw [DirectSum.coeAddMonoidHom_eq_dfinsupp_sum]
+    rw [DFinsupp.sum_eq_single n]
+    · rw [hdecompose_of]
+      simp
+    · intro b hb hbn
+      rw [hdecompose_of]
+      simp [hbn]
+    · intro hnzero
+      rw [hdecompose_of]
+      simp
+  let graded : GradedRing piece :=
+    { toGradedMonoid := inferInstance
+      decompose' := decompose
+      left_inv := hleft
+      right_inv := hright }
+  let e : (piece 0) ≃+* A :=
+    { toFun := fun x => x.1.coeff 0
+      invFun := fun a =>
+        ⟨reesHomogeneousElement I 0 (by simp), by
+          change ∀ n, n ≠ 0 → (Polynomial.monomial 0 a).coeff n = 0
+          intro n hn
+          simp [hn]⟩
+      left_inv := by
+        intro x
+        apply Subtype.ext
+        apply Subtype.ext
+        exact (hpiece_eq 0 x x.2).symm
+      right_inv := by
+        intro a
+        simp }
+  refine ⟨
+    { gradedPieces := piece
+      graded := graded
+      degreeZeroEquiv := e
+      gradedPieces_spec := ?_
+      degreeZeroEquiv_spec := ?_ }⟩
+  · exact hpiece_spec
+  · intro a
+    apply Subtype.ext
+    apply Subtype.ext
+    simp [e, reesHomogeneousElement]
 /-
   classical
   let A := twoVariablePolynomialRing k
@@ -1180,7 +1418,61 @@ theorem twoVariableYIdeal_isPrime (k : Type u) [Field k] :
 
 theorem twoVariableParabolaIdeal_isPrime (k : Type u) [Field k] :
     (twoVariableParabolaIdeal k).IsPrime := by
-  sorry
+  classical
+  let e := MvPolynomial.finSuccEquiv k 1
+  let g : Polynomial (MvPolynomial (Fin 1) k) :=
+    Polynomial.X - Polynomial.C (MvPolynomial.X (0 : Fin 1)) ^ 2
+  have hprime : (Ideal.span ({g} : Set (Polynomial (MvPolynomial (Fin 1) k)))).IsPrime :=
+    (Ideal.span_singleton_prime (Polynomial.X_sub_C_ne_zero
+      (MvPolynomial.X (0 : Fin 1) ^ 2))).mpr (by
+        simpa [g] using
+          (Polynomial.prime_X_sub_C (MvPolynomial.X (0 : Fin 1) ^ 2)))
+  have heq :
+      (Ideal.span ({g} : Set (Polynomial (MvPolynomial (Fin 1) k)))).comap e.toRingHom =
+        Ideal.span ({MvPolynomial.X (0 : Fin 2) - MvPolynomial.X (1 : Fin 2) ^ 2} :
+          Set (MvPolynomial (Fin 2) k)) := by
+    apply le_antisymm
+    · intro p hp
+      rcases Ideal.mem_span_singleton'.mp hp with ⟨q, hq⟩
+      apply Ideal.mem_span_singleton'.mpr
+      refine ⟨e.symm q, ?_⟩
+      apply e.injective
+      calc
+        e ((e.symm q) *
+            (MvPolynomial.X (0 : Fin 2) - MvPolynomial.X (1 : Fin 2) ^ 2)) =
+            e (e.symm q) *
+              e (MvPolynomial.X (0 : Fin 2) - MvPolynomial.X (1 : Fin 2) ^ 2) := by
+                rw [map_mul]
+        _ = q * g := by
+          rw [e.apply_symm_apply]
+          simp [e, g, MvPolynomial.finSuccEquiv_X_zero,
+            MvPolynomial.finSuccEquiv_X_succ]
+        _ = e p := hq
+    · intro p hp
+      rcases Ideal.mem_span_singleton'.mp hp with ⟨q, hq⟩
+      apply Ideal.mem_span_singleton'.mpr
+      refine ⟨e q, ?_⟩
+      have he :
+          e (MvPolynomial.X (0 : Fin 2) - MvPolynomial.X (1 : Fin 2) ^ 2) = g := by
+        simp [e, g, MvPolynomial.finSuccEquiv_X_zero,
+          MvPolynomial.finSuccEquiv_X_succ]
+      calc
+        e q * g = e q * e
+            (MvPolynomial.X (0 : Fin 2) - MvPolynomial.X (1 : Fin 2) ^ 2) := by
+              rw [he]
+        _ = e (q * (MvPolynomial.X (0 : Fin 2) - MvPolynomial.X (1 : Fin 2) ^ 2)) := by
+              rw [map_mul]
+        _ = e p := congrArg e hq
+  have hcp :
+      (Ideal.span ({g} : Set (Polynomial (MvPolynomial (Fin 1) k)))).comap e.toRingHom |>.IsPrime := by
+    constructor
+    · exact Ideal.comap_ne_top _ hprime.1
+    · intro x y hxy
+      apply hprime.2
+      simpa only [Ideal.mem_comap, map_mul] using hxy
+  change (Ideal.span ({MvPolynomial.X (0 : Fin 2) - MvPolynomial.X (1 : Fin 2) ^ 2} :
+    Set (MvPolynomial (Fin 2) k))).IsPrime
+  exact heq ▸ hcp
 
 theorem twoVariableXStrictTransformData_exists (k : Type u) [Field k] :
     Nonempty (PrimeStrictTransformData (twoVariableBlowupPresentation k)

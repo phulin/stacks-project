@@ -304,7 +304,9 @@ theorem product_integralClosure_mem_iff
     [∀ i, Algebra (R i) (S i)] (s : ∀ i, S i) :
     s ∈ integralClosure (∀ i, R i) (∀ i, S i) ↔
       ∀ i, s i ∈ integralClosure (R i) (S i) := by
-  sorry
+  change (algebraMap (∀ i, R i) (∀ i, S i)).IsIntegralElem s ↔
+    ∀ i, (algebraMap (R i) (S i)).IsIntegralElem (s i)
+  exact product_isIntegral_iff (fun i => algebraMap (R i) (S i)) s
 
 /-- A product extension is integrally closed exactly when each factor is. -/
 theorem product_isIntegrallyClosedIn_iff
@@ -313,7 +315,67 @@ theorem product_isIntegrallyClosedIn_iff
     [∀ i, Algebra (R i) (S i)] :
     IsIntegrallyClosedIn (∀ i, R i) (∀ i, S i) ↔
       ∀ i, IsIntegrallyClosedIn (R i) (S i) := by
-  sorry
+  classical
+  constructor
+  · intro h i
+    refine ⟨?_, ?_⟩
+    · intro a b hab
+      let a' : ∀ j, R j := Function.update 0 i a
+      let b' : ∀ j, R j := Function.update 0 i b
+      have hab' : a' = b' := h.1 (by
+        funext j
+        by_cases hji : j = i
+        · subst j
+          change (algebraMap (R i) (S i)) (a' i) =
+            (algebraMap (R i) (S i)) (b' i)
+          simpa [a', b'] using hab
+        · change (algebraMap (R j) (S j)) (a' j) =
+            (algebraMap (R j) (S j)) (b' j)
+          simp [a', b', hji])
+      simpa [a', b'] using congr_fun hab' i
+    · intro x
+      constructor
+      · intro hx
+        let x' : ∀ j, S j := Function.update 0 i x
+        have hx' : IsIntegral (∀ j, R j) x' := by
+          rw [← mem_integralClosure_iff]
+          apply (product_integralClosure_mem_iff x').2
+          intro j
+          by_cases hji : j = i
+          · subst j
+            rw [mem_integralClosure_iff]
+            simpa [x'] using hx
+          · rw [mem_integralClosure_iff]
+            simpa [x', hji] using (isIntegral_zero (R := R j))
+        obtain ⟨y, hy⟩ := h.2.mp hx'
+        refine ⟨y i, ?_⟩
+        have hi := congr_fun hy i
+        change
+          (RingHom.pi (fun j => (algebraMap (R j) (S j)).comp
+            (Pi.evalRingHom R j)) y) i = x' i at hi
+        simpa [x'] using hi
+      · rintro ⟨y, rfl⟩
+        exact isIntegral_algebraMap
+  · intro h
+    refine ⟨?_, ?_⟩
+    · intro a b hab
+      funext i
+      apply (h i).1
+      have hi := congr_fun hab i
+      change (algebraMap (R i) (S i)) (a i) =
+        (algebraMap (R i) (S i)) (b i) at hi
+      exact hi
+    · intro x
+      constructor
+      · intro hx
+        have hx' := (product_isIntegral_iff (fun i => algebraMap (R i) (S i)) x).mp hx
+        choose y hy using fun i => (h i).2.mp (hx' i)
+        refine ⟨y, ?_⟩
+        funext i
+        change (algebraMap (R i) (S i)) (y i) = x i
+        exact hy i
+      · rintro ⟨y, rfl⟩
+        exact isIntegral_algebraMap
 
 /-- The integral-closure construction commutes with localization. -/
 theorem integralClosure_localization
@@ -329,7 +391,7 @@ theorem integralClosure_localization
     IsLocalization
       (Algebra.algebraMapSubmonoid (integralClosure R S) M)
       (integralClosure Rf Sf) := by
-  sorry
+  exact IsLocalization.integralClosure M
 
 /-- An element is integral exactly when its image in every prime localization
 is integral. -/
@@ -348,9 +410,316 @@ theorem isIntegral_iff_integral_at_prime
             (show p.asIdeal.primeCompl ≤
                 Submonoid.comap (f : R →* S)
                   (Submonoid.map (f : R →* S) p.asIdeal.primeCompl) from
-              p.asIdeal.primeCompl.le_comap_map)).IsIntegralElem
+            p.asIdeal.primeCompl.le_comap_map)).IsIntegralElem
           (algebraMap S (Localization (Submonoid.map (f : R →* S) p.asIdeal.primeCompl)) x) := by
-  sorry
+  constructor
+  · intro hx p
+    apply RingHom.IsIntegralElem.of_comp (R := R)
+      (f := algebraMap R (Localization p.asIdeal.primeCompl))
+    have hcomp :
+        (IsLocalization.map
+            (M := p.asIdeal.primeCompl)
+            (S := Localization p.asIdeal.primeCompl)
+            (P := S)
+            (T := Submonoid.map (f : R →* S) p.asIdeal.primeCompl)
+            (Q := Localization (Submonoid.map (f : R →* S) p.asIdeal.primeCompl))
+            f p.asIdeal.primeCompl.le_comap_map).comp
+            (algebraMap R (Localization p.asIdeal.primeCompl)) =
+          (algebraMap S (Localization (Submonoid.map (f : R →* S) p.asIdeal.primeCompl))).comp f := by
+      exact IsLocalization.map_comp _
+    rw [hcomp]
+    exact hx.map
+      (algebraMap S (Localization (Submonoid.map (f : R →* S) p.asIdeal.primeCompl)))
+  · intro h
+    classical
+    exact (letI := (f.toAlgebra : Algebra R S)
+    letI (P : Ideal R) [P.IsMaximal] :=
+      (OreLocalization.instAlgebra : Algebra R
+        (Localization (Submonoid.map (f : R →* S) P.primeCompl)))
+    letI (P : Ideal R) [P.IsMaximal] :=
+      (show IsScalarTower R S
+          (Localization (Submonoid.map (f : R →* S) P.primeCompl)) from
+        { smul_assoc := by
+            intro r s z
+            simp only [Algebra.smul_def, map_mul, mul_assoc]
+            rfl })
+    letI (P : Ideal R) [P.IsMaximal] :=
+      (by
+        rw [Algebra.algebraMapSubmonoid, RingHom.algebraMap_toAlgebra]
+        convert (inferInstance : IsLocalization
+          (Submonoid.map (f : R →* S) P.primeCompl)
+          (Localization (Submonoid.map (f : R →* S) P.primeCompl))) using 1
+        rfl : IsLocalization
+          (Algebra.algebraMapSubmonoid S P.primeCompl)
+          (Localization (Submonoid.map (f : R →* S) P.primeCompl)))
+    let localizedMap (P : Ideal R) [P.IsMaximal] :
+        S →ₗ[R] Localization (Submonoid.map (f : R →* S) P.primeCompl) :=
+      (IsScalarTower.toAlgHom R S
+        (Localization (Submonoid.map (f : R →* S) P.primeCompl))).toLinearMap
+    by
+      refine @Submodule.mem_of_localization_maximal R S _ _ _
+        (fun P [P.IsMaximal] => Localization (Submonoid.map (f : R →* S) P.primeCompl))
+        (by infer_instance) (by infer_instance) localizedMap
+        (by
+          intro P hP
+          apply isLocalizedModule_iff_isLocalization.mpr
+          infer_instance)
+        x (integralClosure R S).toSubmodule ?_
+      intro P hP
+      exact (letI :=
+      (IsLocalization.map
+        (M := P.primeCompl)
+        (S := Localization P.primeCompl)
+        (P := S)
+        (T := Submonoid.map (f : R →* S) P.primeCompl)
+        (Q := Localization (Submonoid.map (f : R →* S) P.primeCompl))
+        f
+        (P.primeCompl.le_comap_map : P.primeCompl ≤
+          Submonoid.comap (f : R →* S)
+            (Submonoid.map (f : R →* S) P.primeCompl))).toAlgebra
+        by
+    have hcomp :
+        (algebraMap (Localization.AtPrime P)
+            (Localization (Submonoid.map (f : R →* S) P.primeCompl))).comp
+            (algebraMap R (Localization.AtPrime P)) =
+          (algebraMap S
+            (Localization (Submonoid.map (f : R →* S) P.primeCompl))).comp f := by
+      exact IsLocalization.map_comp _
+    exact (letI := IsScalarTower.of_algebraMap_eq' (by
+        ext r
+        change algebraMap R
+            (Localization (Submonoid.map (f : R →* S) P.primeCompl)) r =
+          algebraMap (Localization.AtPrime P)
+            (Localization (Submonoid.map (f : R →* S) P.primeCompl))
+            (algebraMap R (Localization.AtPrime P) r)
+        have hr := congrArg (fun g : R →+*
+            Localization (Submonoid.map (f : R →* S) P.primeCompl) => g r) hcomp
+        calc
+          algebraMap R
+              (Localization (Submonoid.map (f : R →* S) P.primeCompl)) r =
+            algebraMap S
+              (Localization (Submonoid.map (f : R →* S) P.primeCompl))
+              (algebraMap R S r) :=
+            (IsScalarTower.algebraMap_apply R S
+              (Localization (Submonoid.map (f : R →* S) P.primeCompl)) r).symm
+          _ = algebraMap S
+              (Localization (Submonoid.map (f : R →* S) P.primeCompl)) (f r) := by
+            rfl
+          _ = algebraMap (Localization.AtPrime P)
+              (Localization (Submonoid.map (f : R →* S) P.primeCompl))
+              (algebraMap R (Localization.AtPrime P) r) := hr.symm)
+    let closureMap : integralClosure R S →+*
+        integralClosure (Localization.AtPrime P)
+          (Localization (Submonoid.map (f : R →* S) P.primeCompl)) :=
+      { toFun := fun y =>
+          ⟨algebraMap S
+              (Localization (Submonoid.map (f : R →* S) P.primeCompl)) y,
+            IsIntegral.map_of_comp_eq
+              (algebraMap R (Localization.AtPrime P))
+              (algebraMap S
+                (Localization (Submonoid.map (f : R →* S) P.primeCompl)))
+              hcomp y.property⟩
+        map_one' := by
+          apply Subtype.ext
+          exact map_one _
+        map_mul' := by
+          intro a b
+          apply Subtype.ext
+          change algebraMap S
+              (Localization (Submonoid.map (f : R →* S) P.primeCompl)) (a * b) =
+            algebraMap S
+              (Localization (Submonoid.map (f : R →* S) P.primeCompl)) a *
+              algebraMap S
+                (Localization (Submonoid.map (f : R →* S) P.primeCompl)) b
+          exact map_mul _ _ _
+        map_zero' := by
+          apply Subtype.ext
+          exact map_zero _
+        map_add' := by
+          intro a b
+          apply Subtype.ext
+          change algebraMap S
+              (Localization (Submonoid.map (f : R →* S) P.primeCompl)) (a + b) =
+            algebraMap S
+              (Localization (Submonoid.map (f : R →* S) P.primeCompl)) a +
+              algebraMap S
+                (Localization (Submonoid.map (f : R →* S) P.primeCompl)) b
+          exact map_add _ _ _ }
+    letI := closureMap.toAlgebra
+    let closureAlgebra : Algebra (integralClosure R S)
+        (Localization (Submonoid.map (f : R →* S) P.primeCompl)) :=
+      { smul := fun r z =>
+            algebraMap S
+              (Localization (Submonoid.map (f : R →* S) P.primeCompl)) (r : S) * z
+        algebraMap :=
+          (algebraMap S (Localization (Submonoid.map (f : R →* S) P.primeCompl))).comp
+            (integralClosure R S).val
+        commutes' := by
+          intro r z
+          change algebraMap S
+              (Localization (Submonoid.map (f : R →* S) P.primeCompl)) (r : S) * z =
+            z * algebraMap S
+              (Localization (Submonoid.map (f : R →* S) P.primeCompl)) (r : S)
+          exact mul_comm _ _
+        smul_def' := by
+          intro r z
+          rfl }
+    letI := closureAlgebra
+    letI := closureAlgebra.toSMul
+    letI :=
+      (inferInstance : Algebra (integralClosure (Localization.AtPrime P)
+        (Localization (Submonoid.map (f : R →* S) P.primeCompl)))
+        (Localization (Submonoid.map (f : R →* S) P.primeCompl))).toSMul
+    let p : PrimeSpectrum R := ⟨P, hP.isPrime⟩
+    let hxP : algebraMap S (Localization (Submonoid.map (f : R →* S) P.primeCompl)) x ∈
+        integralClosure (Localization.AtPrime P)
+          (Localization (Submonoid.map (f : R →* S) P.primeCompl)) := by
+      rw [mem_integralClosure_iff]
+      exact h p
+    letI := (by
+        refine ⟨⟨?_, ?_, ?_⟩⟩
+        · rintro ⟨_, a, ha, rfl⟩
+          convert!
+            (IsLocalization.map_units (S := Localization.AtPrime P) ⟨a, ha⟩).map
+              (algebraMap (Localization.AtPrime P)
+                (integralClosure (Localization.AtPrime P)
+                  (Localization (Submonoid.map (f : R →* S) P.primeCompl))))
+          apply Subtype.ext
+          change algebraMap S
+              (Localization (Submonoid.map (f : R →* S) P.primeCompl))
+              (algebraMap R S a) =
+            algebraMap (Localization.AtPrime P)
+              (Localization (Submonoid.map (f : R →* S) P.primeCompl))
+              (algebraMap R (Localization.AtPrime P) a)
+          simpa only [RingHom.comp_apply, RingHom.algebraMap_toAlgebra] using
+            (congrArg (fun g : R →+*
+              Localization (Submonoid.map (f : R →* S) P.primeCompl) => g a) hcomp).symm
+        · rintro ⟨s, hs⟩
+          obtain ⟨⟨y, hy, m₁, hm₁, rfl⟩, e⟩ :=
+            IsLocalization.surj (Algebra.algebraMapSubmonoid S P.primeCompl) s
+          simp only [← IsScalarTower.algebraMap_apply] at e
+          obtain ⟨⟨m₂, hm₂⟩, hm₂s⟩ :=
+            IsIntegral.exists_multiple_integral_of_isLocalization P.primeCompl _ hs
+          simp only [Submonoid.smul_def, Algebra.smul_def] at hm₂s
+          obtain ⟨m₃, hm₃, hm₃s⟩ :=
+            IsLocalization.exists_isIntegral_smul_of_isIntegral_map
+              (Sₘ := Localization (Submonoid.map (f : R →* S) P.primeCompl))
+              P.primeCompl (x := m₂ • y) <| by
+                simp only [Algebra.smul_def, map_mul, ← e, ← mul_assoc]
+                exact hm₂s.mul (.algebraMap (Algebra.IsIntegral.isIntegral _))
+          let z₂ : integralClosure R S :=
+            ⟨m₃ • m₂ • y, (mem_integralClosure_iff R S).2 hm₃s⟩
+          refine ⟨⟨z₂, _, _, mul_mem hm₁ (mul_mem hm₂ hm₃), rfl⟩, ?_⟩
+          apply (FaithfulSMul.algebraMap_injective
+            (integralClosure (Localization.AtPrime P)
+              (Localization (Submonoid.map (f : R →* S) P.primeCompl)))
+            (Localization (Submonoid.map (f : R →* S) P.primeCompl)))
+          have hmap (z : integralClosure (Localization.AtPrime P)
+              (Localization (Submonoid.map (f : R →* S) P.primeCompl))) :
+              algebraMap (integralClosure (Localization.AtPrime P)
+                (Localization (Submonoid.map (f : R →* S) P.primeCompl)))
+                (Localization (Submonoid.map (f : R →* S) P.primeCompl)) z = z := by
+            rfl
+          simp only [hmap]
+          simp only [RingHom.algebraMap_toAlgebra]
+          simp only [Subalgebra.coe_mul]
+          have hclosure (z : integralClosure R S) :
+              (closureMap z : Localization (Submonoid.map (f : R →* S) P.primeCompl)) =
+                algebraMap S
+                  (Localization (Submonoid.map (f : R →* S) P.primeCompl)) (z : S) := by
+            rfl
+          rw [hclosure]
+          rw [hclosure z₂]
+          simp only [RingHom.codRestrict_apply]
+          rw [map_mul, map_mul, map_mul]
+          change (s * (algebraMap S
+              (Localization (Submonoid.map (f : R →* S) P.primeCompl)) (f m₁) *
+              algebraMap S
+                (Localization (Submonoid.map (f : R →* S) P.primeCompl))
+                (f m₂ * f m₃)) =
+            algebraMap S
+              (Localization (Submonoid.map (f : R →* S) P.primeCompl)) (z₂ : S))
+          rw [map_mul]
+          have hf₁ : f m₁ = algebraMap R S m₁ := by rfl
+          have hf₂ : f m₂ = algebraMap R S m₂ := by rfl
+          have hf₃ : f m₃ = algebraMap R S m₃ := by rfl
+          rw [hf₁, hf₂, hf₃]
+          rw [← IsScalarTower.algebraMap_apply R S
+            (Localization (Submonoid.map (f : R →* S) P.primeCompl)) m₁,
+            ← IsScalarTower.algebraMap_apply R S
+              (Localization (Submonoid.map (f : R →* S) P.primeCompl)) m₂,
+            ← IsScalarTower.algebraMap_apply R S
+              (Localization (Submonoid.map (f : R →* S) P.primeCompl)) m₃]
+          rw [← mul_assoc]
+          rw [e]
+          change (algebraMap S
+              (Localization (Submonoid.map (f : R →* S) P.primeCompl)) y *
+              (algebraMap R
+                (Localization (Submonoid.map (f : R →* S) P.primeCompl)) m₂ *
+              algebraMap R
+                (Localization (Submonoid.map (f : R →* S) P.primeCompl)) m₃) =
+            algebraMap S
+              (Localization (Submonoid.map (f : R →* S) P.primeCompl)) (z₂ : S))
+          have hz₂ : (z₂ : S) = m₃ • m₂ • y := by rfl
+          rw [hz₂]
+          rw [IsScalarTower.algebraMap_apply R S
+            (Localization (Submonoid.map (f : R →* S) P.primeCompl)) m₂,
+            IsScalarTower.algebraMap_apply R S
+              (Localization (Submonoid.map (f : R →* S) P.primeCompl)) m₃]
+          simp only [Algebra.smul_def, map_mul]
+          ring
+        · rintro ⟨a, ha⟩ ⟨b, hb⟩ e
+          have he := congrArg
+            (algebraMap (integralClosure (Localization.AtPrime P)
+                (Localization (Submonoid.map (f : R →* S) P.primeCompl)))
+              (Localization (Submonoid.map (f : R →* S) P.primeCompl))) e
+          have he' : algebraMap S
+                (Localization (Submonoid.map (f : R →* S) P.primeCompl)) a =
+              algebraMap S
+                (Localization (Submonoid.map (f : R →* S) P.primeCompl)) b := by
+            change algebraMap S
+                (Localization (Submonoid.map (f : R →* S) P.primeCompl)) a =
+              algebraMap S
+                (Localization (Submonoid.map (f : R →* S) P.primeCompl)) b at he
+            exact he
+          obtain ⟨⟨_, m, hm, rfl⟩, hmab⟩ :=
+            (IsLocalization.eq_iff_exists
+              (Algebra.algebraMapSubmonoid S P.primeCompl) _).mp he'
+          refine ⟨⟨_, m, hm, rfl⟩, ?_⟩
+          apply Subtype.ext
+          simpa using hmab : IsLocalization
+            (Algebra.algebraMapSubmonoid (integralClosure R S) P.primeCompl)
+            (integralClosure (Localization.AtPrime P)
+              (Localization (Submonoid.map (f : R →* S) P.primeCompl))))
+    by
+      obtain ⟨w, hcm⟩ :=
+        IsLocalization.surj (Algebra.algebraMapSubmonoid (integralClosure R S) P.primeCompl)
+          (⟨algebraMap S (Localization (Submonoid.map (f : R →* S) P.primeCompl)) x, hxP⟩ :
+            integralClosure (Localization.AtPrime P)
+              (Localization (Submonoid.map (f : R →* S) P.primeCompl)))
+      obtain ⟨m, hm, hmw⟩ := w.2.property
+      let m' : P.primeCompl := ⟨m, hm⟩
+      rw [Submodule.mem_localized₀]
+      refine ⟨w.1, w.1.property, m', ?_⟩
+      change IsLocalizedModule.mk' (localizedMap P) (w.1 : S) m' =
+        algebraMap S (Localization (Submonoid.map (f : R →* S) P.primeCompl)) x
+      rw [← IsLocalization.mk'_algebraMap_eq_mk']
+      have hcm' := congrArg
+        (fun z : integralClosure (Localization.AtPrime P)
+            (Localization (Submonoid.map (f : R →* S) P.primeCompl)) =>
+          (z : Localization (Submonoid.map (f : R →* S) P.primeCompl))) hcm
+      rw [← hmw] at hcm'
+      have hclosure' (z : integralClosure R S) :
+          (closureMap z : Localization (Submonoid.map (f : R →* S) P.primeCompl)) =
+            algebraMap S
+              (Localization (Submonoid.map (f : R →* S) P.primeCompl)) (z : S) := by
+        rfl
+      simp only [Subalgebra.coe_mul, RingHom.algebraMap_toAlgebra] at hcm'
+      rw [hclosure'] at hcm'
+      rw [hclosure'] at hcm'
+      simpa only [Subalgebra.coe_mul, RingHom.algebraMap_toAlgebra,
+        RingHom.codRestrict_apply, IsLocalization.mk'_eq_iff_eq_mul]
+        using hcm'.symm)))
 
 /-! ## Base change and locality -/
 

@@ -1,6 +1,7 @@
 import Mathlib.Algebra.Module.GradedModule
 import Mathlib.RingTheory.FiniteType
 import Mathlib.RingTheory.GradedAlgebra.RingHom
+import Mathlib.RingTheory.GradedAlgebra.Homogeneous.Ideal
 import Mathlib.RingTheory.GradedAlgebra.Homogeneous.Submodule
 import Mathlib.RingTheory.IntegralClosure.Algebra.Basic
 import Mathlib.RingTheory.Nakayama
@@ -57,9 +58,9 @@ instance degreeZeroAlgebra (G : GradedRingData S) :
     Algebra (degreeZeroSubring G) S :=
   (SubringClass.subtype (degreeZeroSubring G)).toAlgebra
 
-/-- The irrelevant ideal, canonically as the kernel of the degree-zero projection. -/
-def irrelevantIdeal (G : GradedRingData S) : Ideal S :=
-  RingHom.ker (GradedRing.projZeroRingHom G.component)
+/-- The irrelevant ideal, using Mathlib's canonical homogeneous-ideal API. -/
+abbrev irrelevantIdeal (G : GradedRingData S) : Ideal S :=
+  (HomogeneousIdeal.irrelevant G.component).toIdeal
 
 /-- Homogeneous elements are Mathlib's `SetLike.IsHomogeneousElem`. -/
 abbrev IsHomogeneousElement (G : GradedRingData S) (x : S) : Prop :=

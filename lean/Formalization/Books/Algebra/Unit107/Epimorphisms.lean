@@ -290,9 +290,9 @@ theorem isIso_of_faithfullyFlat_of_epimorphism
     {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S)
     (hf : Epi (CommRingCat.ofHom f)) (hff : RingHom.FaithfullyFlat f) :
     IsIso (CommRingCat.ofHom f) := by
-  letI : Algebra R S := f.toAlgebra
+  let : Algebra R S := f.toAlgebra
   change Module.FaithfullyFlat R S at hff
-  letI : Module.FaithfullyFlat R S := hff
+  let : Module.FaithfullyFlat R S := hff
   have hleft_or : IsIso (CommRingCat.ofHom
       (Algebra.TensorProduct.includeLeftRingHom : S →+* S ⊗[R] S)) ∨
       IsIso (CommRingCat.ofHom
@@ -322,8 +322,8 @@ theorem epimorphism_from_field
     (hf : Epi (CommRingCat.ofHom f)) :
     IsIso (CommRingCat.ofHom f) ∨ Subsingleton S := by
   by_cases hS : Nontrivial S
-  · letI : Nontrivial S := hS
-    letI : Algebra k S := f.toAlgebra
+  · let : Nontrivial S := hS
+    let : Algebra k S := f.toAlgebra
     apply Or.inl
     apply isIso_of_faithfullyFlat_of_epimorphism f hf
     change Module.FaithfullyFlat k S
@@ -1804,7 +1804,7 @@ theorem exists_matrixTriple_associated_of_mem_epicenter
 private theorem nontrivial_tensorProduct_of_finite_ring
     (R M : Type u) [CommRing R] [AddCommGroup M] [Module R M] [Finite R]
     [Nontrivial M] : Nontrivial (M ⊗[R] M) := by
-  letI : IsArtinianRing R := isArtinian_of_finite
+  let : IsArtinianRing R := isArtinian_of_finite
   let J : Ideal R := Ring.jacobson R
   have hJ : IsNilpotent J := by
     rw [show J = Ring.jacobson R by rfl, ← Ideal.jacobson_bot]
@@ -1824,22 +1824,22 @@ private theorem nontrivial_tensorProduct_of_finite_ring
       rw [Submodule.bot_smul]
     exact top_ne_bot htopbot
   let Q : Type u := M ⧸ (J • (⊤ : Submodule R M))
-  letI : Nontrivial Q := by
+  let : Nontrivial Q := by
     exact Submodule.Quotient.nontrivial_iff.mpr hJM
-  letI : IsSemisimpleRing (R ⧸ J) := by
+  let : IsSemisimpleRing (R ⧸ J) := by
     dsimp [J]
     infer_instance
-  letI : IsSemisimpleModule (R ⧸ J) Q := inferInstance
-  letI : IsScalarTower R (R ⧸ J) Q := by
+  let : IsSemisimpleModule (R ⧸ J) Q := inferInstance
+  let : IsScalarTower R (R ⧸ J) Q := by
     infer_instance
   obtain ⟨L, hL, _⟩ :=
     (eq_top_or_exists_le_coatom (⊥ : Submodule (R ⧸ J) Q)).resolve_left bot_ne_top
   let T : Type u := Q ⧸ L
-  letI : IsSimpleModule (R ⧸ J) T := by
+  let : IsSimpleModule (R ⧸ J) T := by
     exact isSimpleModule_iff_isCoatom.mpr hL
-  letI : Nontrivial T := IsSimpleModule.nontrivial (R ⧸ J) T
-  letI : Module R T := Module.compHom T (Ideal.Quotient.mk J)
-  letI : IsScalarTower R (R ⧸ J) T :=
+  let : Nontrivial T := IsSimpleModule.nontrivial (R ⧸ J) T
+  let : Module R T := Module.compHom T (Ideal.Quotient.mk J)
+  let : IsScalarTower R (R ⧸ J) T :=
     { smul_assoc := by
         intro r a x
         change (Ideal.Quotient.mk J r * a) • x =
@@ -1856,20 +1856,20 @@ private theorem nontrivial_tensorProduct_of_finite_ring
     rw [← IsScalarTower.algebraMap_smul (R ⧸ J) r t,
       Ideal.Quotient.algebraMap_eq J, hr]
     simpa only [LinearMap.toSpanSingleton_apply] using ha
-  letI : Module.Finite R T :=
+  let : Module.Finite R T :=
     Module.Finite.of_surjective (LinearMap.toSpanSingleton R T t) hgen
   let qT : Q →ₗ[R] T :=
     { toFun := Submodule.mkQ L
       map_add' := (Submodule.mkQ L).map_add
       map_smul' := by
         intro r x
-        rw [← IsScalarTower.algebraMap_smul (R ⧸ J) r x,
-          ← IsScalarTower.algebraMap_smul (R ⧸ J) r (Submodule.mkQ L x)]
+        change L.mkQ (r • x) = r • L.mkQ x
+        rw [← IsScalarTower.algebraMap_smul (R ⧸ J) r x]
         exact (Submodule.mkQ L).map_smul _ _ }
   let φ : M →ₗ[R] T :=
     qT ∘ₗ Submodule.mkQ (J • (⊤ : Submodule R M))
   have hφ : Function.Surjective φ := by
-    simpa [φ, Function.comp_def] using
+    simpa [φ, qT, Q, Function.comp_def] using
       (Submodule.mkQ_surjective L).comp
         (Submodule.mkQ_surjective (J • (⊤ : Submodule R M)))
   exact (TensorProduct.map_surjective hφ hφ).nontrivial
@@ -1879,7 +1879,7 @@ theorem cardinality_target_le_source_of_epimorphism
     {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S)
     (hf : Epi (CommRingCat.ofHom f)) :
     Cardinal.mk S ≤ Cardinal.mk R := by
-  letI : Algebra R S := f.toAlgebra
+  let : Algebra R S := f.toAlgebra
   have huniq {g g' : S} {n : ℕ} {t : MatrixTriple f n}
       (hg : matrixTripleAssociated f g t)
       (hg' : matrixTripleAssociated f g' t) : g = g' := by
@@ -1944,7 +1944,7 @@ theorem cardinality_target_le_source_of_epimorphism
     exact huniq hg hg'
   classical
   by_cases hR : Infinite R
-  · letI : Infinite R := hR
+  · let : Infinite R := hR
     have hconst {ι : Type} [Fintype ι] :
         Cardinal.prod (fun _ : ι => Cardinal.mk R) ≤ Cardinal.mk R := by
       rw [Cardinal.prod_eq_of_fintype]
@@ -1997,7 +1997,7 @@ theorem cardinality_target_le_source_of_epimorphism
           simp only [Cardinal.mk_nat, Cardinal.lift_aleph0, Cardinal.lift_id]
           exact Cardinal.aleph0_mul_mk_eq (α := R)
     exact (Cardinal.mk_le_of_injective enc_injective).trans hsigma
-  · haveI : Finite R := not_infinite_iff_finite.mp hR
+  · have : Finite R := not_infinite_iff_finite.mp hR
     sorry
 
 /-- The finite-source case in the cardinality argument is in fact surjective. -/
@@ -2005,13 +2005,13 @@ theorem surjective_of_finite_source_of_epimorphism
     {R S : Type u} [CommRing R] [CommRing S] [Finite R] (f : R →+* S)
     (hf : Epi (CommRingCat.ofHom f)) :
     Function.Surjective f := by
-  letI : Algebra R S := f.toAlgebra
+  let : Algebra R S := f.toAlgebra
   have hcard : Cardinal.mk S ≤ Cardinal.mk R :=
     cardinality_target_le_source_of_epimorphism f hf
-  letI : Finite S :=
+  let : Finite S :=
     Cardinal.mk_lt_aleph0_iff.mp (hcard.trans_lt (Cardinal.lt_aleph0_of_finite R))
-  letI : Module.Finite R S := (Module.finite_iff_finite).mpr inferInstance
-  letI : Epi (CommRingCat.ofHom f) := hf
+  let : Module.Finite R S := (Module.finite_iff_finite).mpr inferInstance
+  let : Epi (CommRingCat.ofHom f) := hf
   have hfin : RingHom.Finite f := by
     change Module.Finite R S
     infer_instance

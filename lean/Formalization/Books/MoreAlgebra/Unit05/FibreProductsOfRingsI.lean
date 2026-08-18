@@ -1711,7 +1711,165 @@ theorem moduleFiberProductHomPairEquiv_exists
               moduleGluingLeftObj (D := D) (X := X)) ×
           ((ModuleCat.extendScalars D.v).obj L ⟶
             moduleGluingRightObj (D := D) (X := X)) //
-          p ∈ moduleCompatibleHomPairs D L X}) := by sorry
+          p ∈ moduleCompatibleHomPairs D L X}) := by
+  have hcompat :
+      ∀ (p : (ModuleCat.extendScalars D.u).obj L ⟶ X.obj.left)
+        (q : (ModuleCat.extendScalars D.v).obj L ⟶ X.obj.right),
+        (moduleBaseChangeComparison D).hom.app L ≫
+              (ModuleCat.extendScalars D.t).map q =
+            (ModuleCat.extendScalars D.s).map p ≫
+              moduleGluingComparison (D := D) (X := X) ↔
+          (ModuleCat.extendRestrictScalarsAdj D.u).homEquiv _ _ p ≫
+                moduleFiberLeftMap D X =
+            (ModuleCat.extendRestrictScalarsAdj D.v).homEquiv _ _ q ≫
+                moduleFiberRightMap D X := by
+    intro p q
+    constructor
+    · intro h
+      apply ModuleCat.hom_ext
+      ext x
+      have hleft :
+          ((ModuleCat.extendRestrictScalarsAdj D.u).homEquiv L
+              X.obj.left p ≫
+              moduleFiberLeftMap D X) x =
+            X.obj.hom ((1 : R) ⊗ₜ[B, D.s]
+              (p ((1 : B) ⊗ₜ[B', D.u] x))) := by
+        dsimp [moduleFiberLeftMap]
+        simp [ModuleCat.comp_apply,
+          ModuleCat.extendRestrictScalarsAdj_homEquiv_apply,
+          ModuleCat.restrictScalarsComp'App_inv_apply]
+        rw [ModuleCat.extendRestrictScalarsAdj_unit_app_apply]
+        rfl
+      have hright :
+          ((ModuleCat.extendRestrictScalarsAdj D.v).homEquiv L
+              X.obj.right q ≫
+              moduleFiberRightMap D X) x =
+            (1 : R) ⊗ₜ[R', D.t]
+              (q ((1 : R') ⊗ₜ[B', D.v] x)) := by
+        dsimp [moduleFiberRightMap]
+        simp [ModuleCat.comp_apply,
+          ModuleCat.extendRestrictScalarsAdj_homEquiv_apply,
+          ModuleCat.restrictScalarsComp'App_inv_apply]
+        rw [ModuleCat.extendRestrictScalarsAdj_unit_app_apply]
+        rfl
+      rw [hleft, hright]
+      let z0 : (ModuleCat.extendScalars (D.s.comp D.u)).obj L :=
+        ((1 : R) ⊗ₜ[B'] x)
+      let z : (ModuleCat.extendScalars D.u ⋙ ModuleCat.extendScalars D.s).obj L :=
+        (ModuleCat.extendScalarsComp D.u D.s).hom.app L z0
+      have hcancel :
+          (ModuleCat.extendScalarsComp D.u D.s).inv.app L
+              ((ModuleCat.extendScalarsComp D.u D.s).hom.app L z0) = z0 := by
+        simpa [ModuleCat.hom_comp, LinearMap.coe_comp] using
+          congrArg (fun f => f z0)
+            ((ModuleCat.extendScalarsComp D.u D.s).hom_inv_id_app L)
+      have heq {f g : B' →+* R} (hfg : f = g) :
+          ((eqToHom (congrArg (fun k => ModuleCat.extendScalars k) hfg)).app L).hom
+              ((1 : R) ⊗ₜ[B', f] x) =
+            (1 : R) ⊗ₜ[B', g] x := by
+        subst g
+        rfl
+      have heq' :
+          ((eqToHom (congrArg (fun k => ModuleCat.extendScalars k) D.comm)).app L).hom z0 =
+            (1 : R) ⊗ₜ[B', D.t.comp D.v] x := by
+        dsimp [z0]
+        exact heq D.comm
+      have hbase_z :
+          (moduleBaseChangeComparison D).hom.app L z =
+            (ModuleCat.extendScalarsComp D.v D.t).hom.app L
+              ((1 : R) ⊗ₜ[B', D.t.comp D.v] x) := by
+        dsimp [z, moduleBaseChangeComparison]
+        rw [hcancel]
+        dsimp [z0]
+        rw [heq']
+        rfl
+      have hx := congrArg (fun k => k.hom z) h
+      simp only [ModuleCat.hom_comp] at hx
+      simp only [LinearMap.comp_apply] at hx
+      rw [hbase_z] at hx
+      have hvt := ModuleCat.extendScalarsComp_hom_app_one_tmul D.v D.t L x
+      erw [hvt] at hx
+      simp only [ModuleCat.hom_comp, LinearMap.coe_comp, Function.comp_apply] at hx
+      change
+        X.obj.hom ((1 : R) ⊗ₜ[B, D.s]
+          (p ((1 : B) ⊗ₜ[B', D.u] x))) =
+          (1 : R) ⊗ₜ[R', D.t]
+          (q ((1 : R') ⊗ₜ[B', D.v] x))
+      change
+        ((ModuleCat.extendScalars D.t).map q).hom'
+            ((1 : R) ⊗ₜ[R', D.t] ((1 : R') ⊗ₜ[B', D.v] x)) =
+          X.obj.hom.hom'
+            (((ModuleCat.extendScalars D.s).map p).hom'
+              ((1 : R) ⊗ₜ[B, D.s] ((1 : B) ⊗ₜ[B', D.u] x))) at hx
+      exact hx.symm
+    · intro h
+      apply ModuleCat.hom_ext
+      ext x
+      simp [moduleFiberLeftMap, moduleFiberRightMap,
+        ModuleCat.extendRestrictScalarsAdj_homEquiv_apply] at *
+  let P :=
+      {p : ((L ⟶ (ModuleCat.restrictScalars D.u).obj
+              (moduleGluingLeftObj (D := D) (X := X))) ×
+          (L ⟶ (ModuleCat.restrictScalars D.v).obj
+            (moduleGluingRightObj (D := D) (X := X)))) //
+        p ∈ moduleCompatibleHomPairsAdjoint D L X}
+  let e0 : (L ⟶ moduleFiberProduct D X) ≃ P :=
+    Equiv.mk
+      (fun f =>
+        ⟨(f ≫ pullback.fst (moduleFiberLeftMap D X) (moduleFiberRightMap D X),
+          f ≫ pullback.snd (moduleFiberLeftMap D X) (moduleFiberRightMap D X)), by
+          change (f ≫ pullback.fst (moduleFiberLeftMap D X) (moduleFiberRightMap D X)) ≫
+              moduleFiberLeftMap D X =
+            (f ≫ pullback.snd (moduleFiberLeftMap D X) (moduleFiberRightMap D X)) ≫
+              moduleFiberRightMap D X
+          simp only [Category.assoc]
+          rw [pullback.condition]⟩)
+      (fun p => pullback.lift p.1.1 p.1.2 (by
+        change p.1.1 ≫ moduleFiberLeftMap D X =
+          p.1.2 ≫ moduleFiberRightMap D X
+        exact p.2))
+      (by
+        intro f
+        apply pullback.hom_ext
+        · rw [pullback.lift_fst]
+        · rw [pullback.lift_snd])
+      (by
+        intro p
+        apply Subtype.ext
+        apply Prod.ext
+        · change pullback.lift p.1.1 p.1.2 _ ≫
+            pullback.fst (moduleFiberLeftMap D X) (moduleFiberRightMap D X) = p.1.1
+          rw [pullback.lift_fst]
+        · change pullback.lift p.1.1 p.1.2 _ ≫
+            pullback.snd (moduleFiberLeftMap D X) (moduleFiberRightMap D X) = p.1.2
+          rw [pullback.lift_snd])
+  let e1 : P ≃
+      {p : ((ModuleCat.extendScalars D.u).obj L ⟶
+              moduleGluingLeftObj (D := D) (X := X)) ×
+          ((ModuleCat.extendScalars D.v).obj L ⟶
+            moduleGluingRightObj (D := D) (X := X)) //
+          p ∈ moduleCompatibleHomPairs D L X} :=
+    { toFun := fun p =>
+        ⟨((ModuleCat.extendRestrictScalarsAdj D.u).homEquiv _ _).symm p.1.1,
+          ((ModuleCat.extendRestrictScalarsAdj D.v).homEquiv _ _).symm p.1.2,
+          (hcompat _ _).mpr p.2⟩
+      invFun := fun p =>
+        ⟨((ModuleCat.extendRestrictScalarsAdj D.u).homEquiv _ _ p.1),
+          ((ModuleCat.extendRestrictScalarsAdj D.v).homEquiv _ _ p.2),
+          (hcompat _ _).mp p.2⟩
+      left_inv := by
+        intro p
+        apply Subtype.ext
+        apply Prod.ext
+        · exact (ModuleCat.extendRestrictScalarsAdj D.u).homEquiv.apply_symm_apply _
+        · exact (ModuleCat.extendRestrictScalarsAdj D.v).homEquiv.apply_symm_apply _
+      right_inv := by
+        intro p
+        apply Subtype.ext
+        apply Prod.ext
+        · exact (ModuleCat.extendRestrictScalarsAdj D.u).homEquiv.symm_apply_apply _
+        · exact (ModuleCat.extendRestrictScalarsAdj D.v).homEquiv.symm_apply_apply _ }
+  exact ⟨e0.trans e1⟩
 /- Original nontrivial proof retained for later completion:
   have hcompat :
       ∀ (p : (ModuleCat.extendScalars D.u).obj L ⟶ X.obj.left)

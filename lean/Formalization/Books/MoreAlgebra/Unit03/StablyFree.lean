@@ -5,6 +5,11 @@ import Mathlib.Algebra.Homology.ShortComplex.ShortExact
 import Mathlib.Algebra.Module.StablyFree.Basic
 import Mathlib.Algebra.Module.Torsion.Basic
 import Mathlib.RingTheory.Flat.Basic
+import Mathlib.RingTheory.Flat.EquationalCriterion
+import Mathlib.RingTheory.Flat.LocallyFree
+import Mathlib.RingTheory.LocalProperties.FinitePresentation
+import Mathlib.LinearAlgebra.TensorProduct.Quotient
+import Mathlib.RingTheory.LocalProperties.Projective
 import Mathlib.RingTheory.Finiteness.Prod
 import Mathlib.RingTheory.Jacobson.Radical
 import Mathlib.RingTheory.Nakayama
@@ -222,8 +227,6 @@ theorem exists_finite_stablyFree_lift
     ∃ M : ModuleCat.{u} R,
         Module.Finite R M ∧ StablyFree R M ∧
         Nonempty ((M ⧸ (I • (⊤ : Submodule R M))) ≃ₗ[R ⧸ I] E) := by
-  sorry
-/-
   classical
   let A := R ⧸ I
   letI : Module.IsStablyFree A E := ‹StablyFree A E›
@@ -506,7 +509,6 @@ theorem exists_finite_stablyFree_lift
     exact (Submodule.Quotient.mk_eq_zero IK).2 hmemK
   exact ⟨ModuleCat.of R K, inferInstance, hstable,
     ⟨LinearEquiv.ofBijective φ ⟨hφ_inj, hφ_surj⟩⟩⟩
--/
 
 /-! ## Lifting finite projectivity -/
 

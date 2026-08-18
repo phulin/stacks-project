@@ -81,7 +81,7 @@ theorem sheafModuleSectionsMap_add {X : TopCat.{v}} (O : RingSheaf.{v, v} X)
     {F G : Mod O} (φ ψ : F ⟶ G) (U : Opens X) :
     sheafModuleSectionsMap O (φ + ψ) U =
       sheafModuleSectionsMap O φ U + sheafModuleSectionsMap O ψ U := by
-  sorry
+  exact Functor.map_add _
 
 /-- The project additive-category interface for sheaves of modules. -/
 noncomputable instance sheafModule_additiveCategory {X : TopCat.{v}}
@@ -126,7 +126,17 @@ theorem sheafModule_zero_morphism_criteria {X : TopCat.{v}} (O : RingSheaf.{v, v
       sheafModuleFactorsThroughZero O φ ∧
         (∀ U : Opens X, sheafModuleSectionsMap O φ U = 0) ∧
         (∀ x : X, (sheafModuleStalkFunctor O x).map φ = 0) := by
-  sorry
+  constructor
+  · intro hφ
+    refine ⟨(sheafModuleFactorsThroughZero_iff O φ).2 hφ, ?_, ?_⟩
+    · intro U
+      rw [hφ]
+      exact (SheafOfModules.evaluation O (op U)).map_zero F G
+    · intro x
+      rw [hφ]
+      exact (sheafModuleStalkFunctor O x).map_zero F G
+  · rintro ⟨hφ, _, _⟩
+    exact (sheafModuleFactorsThroughZero_iff O φ).1 hφ
 
 /-! The source's binary direct sum is Mathlib's binary biproduct. -/
 
@@ -183,12 +193,18 @@ theorem sheafModuleKernel_universal {X : TopCat.{v}} (O : RingSheaf.{v, v} X)
     {F G : Mod O} (φ : F ⟶ G) :
     Nonempty (IsLimit
       (KernelFork.ofι (kernel.ι φ) (kernel.condition φ))) := by
-  sorry
+  exact ⟨kernelIsKernel φ⟩
 
 theorem sheafModuleKernel_factorization {X : TopCat.{v}} (O : RingSheaf.{v, v} X)
     {F G H : Mod O} (φ : F ⟶ G) (α : H ⟶ F) (hα : α ≫ φ = 0) :
     ∃! β : H ⟶ sheafModuleKernel O φ, β ≫ kernel.ι φ = α := by
-  sorry
+  refine ⟨kernel.lift φ α hα, kernel.lift_ι φ α hα, ?_⟩
+  intro β hβ
+  apply (kernelIsKernel φ).hom_ext
+  intro j
+  rcases j with (_ | _)
+  · simpa only [KernelFork.ι_ofι] using hβ.trans (kernel.lift_ι φ α hα).symm
+  · simp
 
 theorem sheafModuleKernel_section_iso {X : TopCat.{v}} (O : RingSheaf.{v, v} X)
     {F G : Mod O} (φ : F ⟶ G) (U : Opens X) :

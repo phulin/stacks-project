@@ -83,7 +83,153 @@ theorem finite_iff_hom_filteredColimit_injective
       Types.jointly_surjective_of_isColimit
         (isColimitOfPreserves (forget (ModuleCat R))
           (colimit.isColimit (C.presentation.diag ⋙ moduleHomFunctor N))) g
-    sorry
+    let e : colimit C.presentation.diag ≅ N :=
+      IsColimit.coconePointUniqueUpToIso (colimit.isColimit C.presentation.diag)
+        C.presentation.isColimit
+    rw [← hfi, ← hgj] at hfg
+    have map_apply' {A B : ModuleCat R} (f : A ⟶ B)
+        (g : (moduleHomFunctor N).obj A) :
+        (ModuleCat.Hom.hom ((moduleHomFunctor N).map f)) g =
+          ModuleCat.ofHom (f.hom.comp (ModuleCat.Hom.hom g)) := by
+      change (ihom N).map f g = _
+      exact ModuleCat.ihom_map_apply f g
+    change (ModuleCat.Hom.hom ((moduleHomFunctor N).map e.hom)) _ =
+      (ModuleCat.Hom.hom ((moduleHomFunctor N).map e.hom)) _ at hfg
+    rw [map_apply' e.hom, map_apply' e.hom] at hfg
+    have hi_map :
+        ModuleCat.Hom.hom
+            ((colimit.post C.presentation.diag (moduleHomFunctor N)).hom'
+              ((ConcreteCategory.hom (((forget (ModuleCat R)).mapCocone
+                (colimit.cocone (C.presentation.diag ⋙ moduleHomFunctor N))).ι.app i)) fi)) =
+          (colimit.ι C.presentation.diag i).hom.comp fi.hom := by
+      have hi := colimit.ι_post C.presentation.diag (moduleHomFunctor N) i
+      have hi'' := congrArg (fun q => q.hom (ModuleCat.ofHom fi.hom)) hi
+      rw [map_apply' (colimit.ι C.presentation.diag i) (ModuleCat.ofHom fi.hom)] at hi''
+      have hi''' := congrArg ModuleCat.Hom.hom hi''
+      change ModuleCat.Hom.hom
+          ((colimit.post C.presentation.diag (moduleHomFunctor N)).hom'
+            ((ConcreteCategory.hom (((forget (ModuleCat R)).mapCocone
+              (colimit.cocone (C.presentation.diag ⋙ moduleHomFunctor N))).ι.app i)) fi)) =
+        (colimit.ι C.presentation.diag i).hom.comp fi.hom at hi'''
+      exact hi'''
+    have hj_map :
+        ModuleCat.Hom.hom
+            ((colimit.post C.presentation.diag (moduleHomFunctor N)).hom'
+              ((ConcreteCategory.hom (((forget (ModuleCat R)).mapCocone
+                (colimit.cocone (C.presentation.diag ⋙ moduleHomFunctor N))).ι.app j)) gj)) =
+          (colimit.ι C.presentation.diag j).hom.comp gj.hom := by
+      have hj := colimit.ι_post C.presentation.diag (moduleHomFunctor N) j
+      have hj'' := congrArg (fun q => q.hom (ModuleCat.ofHom gj.hom)) hj
+      rw [map_apply' (colimit.ι C.presentation.diag j) (ModuleCat.ofHom gj.hom)] at hj''
+      have hj''' := congrArg ModuleCat.Hom.hom hj''
+      change ModuleCat.Hom.hom
+          ((colimit.post C.presentation.diag (moduleHomFunctor N)).hom'
+            ((ConcreteCategory.hom (((forget (ModuleCat R)).mapCocone
+              (colimit.cocone (C.presentation.diag ⋙ moduleHomFunctor N))).ι.app j)) gj)) =
+        (colimit.ι C.presentation.diag j).hom.comp gj.hom at hj'''
+      exact hj'''
+    rw [hi_map, hj_map] at hfg
+    let fi' : N ⟶ C.presentation.diag.obj i := fi
+    let gj' : N ⟶ C.presentation.diag.obj j := gj
+    have hcomp_cat :
+        ModuleCat.ofHom ((colimit.ι C.presentation.diag i).hom.comp fi'.hom) =
+          ModuleCat.ofHom ((colimit.ι C.presentation.diag j).hom.comp gj'.hom) := by
+      apply (cancel_mono e.hom).1
+      rw [← ModuleCat.ofHom_hom e.hom]
+      rw [← ModuleCat.ofHom_comp, ← ModuleCat.ofHom_comp]
+      exact hfg
+    have hcomp :
+        (colimit.ι C.presentation.diag i).hom.comp fi'.hom =
+          (colimit.ι C.presentation.diag j).hom.comp gj'.hom := by
+      have hcomp' := congrArg ModuleCat.Hom.hom hcomp_cat
+      simpa only [ModuleCat.hom_ofHom] using hcomp'
+    obtain ⟨n, gen, hgen⟩ := Module.Finite.exists_fin' R N
+    let x : Fin n → N := fun k => gen (Pi.single k 1)
+    have hx (k : Fin n) :
+        (colimit.ι C.presentation.diag i).hom (fi'.hom (x k)) =
+          (colimit.ι C.presentation.diag j).hom (gj'.hom (x k)) := by
+      exact congrArg (fun q : N →ₗ[R] ↑(colimit C.presentation.diag) => q (x k)) hcomp
+    have hk (k : Fin n) :
+        ∃ (l : C.index) (u : i ⟶ l) (v : j ⟶ l),
+          (C.presentation.diag.map u) (fi'.hom (x k)) =
+            (C.presentation.diag.map v) (gj'.hom (x k)) := by
+      exact (Types.FilteredColimit.isColimit_eq_iff _
+        (isColimitOfPreserves (forget (ModuleCat R))
+          (colimit.isColimit C.presentation.diag))).1 (hx k)
+    classical
+    choose l u v huv using hk
+    let O : Finset C.index := insert i (insert j (Finset.univ.image l))
+    have mi : i ∈ O := by simp [O]
+    have mj : j ∈ O := by simp [O]
+    have ml (k : Fin n) : l k ∈ O := by simp [O]
+    let H : Finset (Σ' (X Y : C.index) (_ : X ∈ O) (_ : Y ∈ O), X ⟶ Y) :=
+      Finset.univ.image (fun k =>
+        (⟨i, l k, mi, ml k, u k⟩ :
+          Σ' (X Y : C.index) (_ : X ∈ O) (_ : Y ∈ O), X ⟶ Y)) ∪
+      Finset.univ.image (fun k =>
+        (⟨j, l k, mj, ml k, v k⟩ :
+          Σ' (X Y : C.index) (_ : X ∈ O) (_ : Y ∈ O), X ⟶ Y))
+    obtain ⟨s, T, hT⟩ := IsFiltered.sup_exists O H
+    have huT (k : Fin n) : u k ≫ T (ml k) = T mi := by
+      apply hT mi (ml k)
+      apply Finset.mem_union_left
+      exact Finset.mem_image.mpr ⟨k, Finset.mem_univ _, rfl⟩
+    have hvT (k : Fin n) : v k ≫ T (ml k) = T mj := by
+      apply hT mj (ml k)
+      apply Finset.mem_union_right
+      exact Finset.mem_image.mpr ⟨k, Finset.mem_univ _, rfl⟩
+    let a : i ⟶ s := T mi
+    let b : j ⟶ s := T mj
+    have hab (k : Fin n) :
+        (C.presentation.diag.map a) (fi'.hom (x k)) =
+          (C.presentation.diag.map b) (gj'.hom (x k)) := by
+      have hh := congrArg (fun z => (C.presentation.diag.map (T (ml k))).hom z)
+        (huv k)
+      have hh' :
+          (C.presentation.diag.map (u k ≫ T (ml k))).hom (fi'.hom (x k)) =
+            (C.presentation.diag.map (v k ≫ T (ml k))).hom (gj'.hom (x k)) := by
+        simpa only [Functor.map_comp, ModuleCat.comp_apply] using hh
+      rw [huT k, hvT k] at hh'
+      exact hh'
+    let fa : N ⟶ C.presentation.diag.obj s := fi' ≫ C.presentation.diag.map a
+    let gb : N ⟶ C.presentation.diag.obj s := gj' ≫ C.presentation.diag.map b
+    have hbase (k : Fin n) :
+        (fa.hom.comp gen) (Pi.single k 1) =
+          (gb.hom.comp gen) (Pi.single k 1) := by
+      simpa only [fa, gb, ModuleCat.hom_comp, LinearMap.comp_apply, x] using hab k
+    have hgen_maps : fa.hom.comp gen = gb.hom.comp gen := by
+      apply LinearMap.ext
+      intro z
+      rw [show z = ∑ k : Fin n, Pi.single k (z k) by
+        ext k
+        simp]
+      simp only [map_sum]
+      apply Finset.sum_congr rfl
+      intro k hk
+      rw [show Pi.single k (z k) = z k • Pi.single k 1 by
+        ext q
+        by_cases hq : q = k <;> simp [Pi.single_apply, hq]]
+      simp only [map_smul]
+      rw [hbase k]
+    have hstage_hom : fa.hom = gb.hom := by
+      apply LinearMap.ext
+      intro z
+      obtain ⟨w, rfl⟩ := hgen z
+      have hz := congrArg (fun q => q w) hgen_maps
+      simpa only [LinearMap.comp_apply] using hz
+    have hstage : fa = gb := ModuleCat.hom_ext hstage_hom
+    have hmaps :
+        (moduleHomFunctor N).map (C.presentation.diag.map a) fi =
+          (moduleHomFunctor N).map (C.presentation.diag.map b) gj := by
+      change (moduleHomFunctor N).map (C.presentation.diag.map a) fi' =
+        (moduleHomFunctor N).map (C.presentation.diag.map b) gj'
+      rw [map_apply (C.presentation.diag.map a), map_apply (C.presentation.diag.map b)]
+      exact hstage
+    rw [← hfi, ← hgj]
+    apply (Types.FilteredColimit.isColimit_eq_iff _
+      (isColimitOfPreserves (forget (ModuleCat R))
+        (colimit.isColimit (C.presentation.diag ⋙ moduleHomFunctor N)))).2
+    exact ⟨s, a, b, hmaps⟩
   · intro h
     sorry
 

@@ -161,7 +161,15 @@ theorem rationalQuotientTensorProduct_subsingleton :
 
 theorem rationalQuotientTensorMap_not_injective :
     ¬Function.Injective rationalQuotientTensorMap := by
-  sorry
+  intro h
+  letI : Subsingleton (∀ n : ℕ+, TensorProduct ℤ ℚ (ZMod (n : ℕ))) :=
+    rationalQuotientTensorProduct_subsingleton
+  letI : Subsingleton (TensorProduct ℤ ℚ (∀ n : ℕ+, ZMod (n : ℕ))) :=
+    h.subsingleton
+  letI : Nontrivial (TensorProduct ℤ ℚ (∀ n : ℕ+, ZMod (n : ℕ))) :=
+    rationalQuotientTensorProduct_nontrivial
+  exact (not_subsingleton _) (inferInstance :
+    Subsingleton (TensorProduct ℤ ℚ (∀ n : ℕ+, ZMod (n : ℕ))))
 
 def integerFamily : ℕ+ → ModuleCat ℤ :=
   fun _ => ModuleCat.of ℤ ℤ
@@ -181,11 +189,78 @@ def commonDenominatorSequences {A : Type v} : Set (A → ℚ) :=
 theorem rationalIntegerProductTensorMap_range :
     Set.range rationalIntegerProductTensorMap =
       commonDenominatorSequences (A := ℕ+) := by
-  sorry
+  have hmap (q : ℚ) (z : ∀ _ : ℕ+, ℤ) :
+      rationalIntegerProductTensorMap (q ⊗ₜ[ℤ] z) =
+        fun a => (z a : ℚ) • q := by
+    ext a
+    simp [rationalIntegerProductTensorMap, integerProductTensorEquiv,
+      productTensorMap, Int.cast_smul_eq_zsmul]
+  ext x
+  constructor
+  · rintro ⟨y, rfl⟩
+    induction y using TensorProduct.induction_on with
+    | zero =>
+        refine ⟨1, one_ne_zero, ?_⟩
+        intro a
+        refine ⟨0, ?_⟩
+        simp [rationalIntegerProductTensorMap]
+    | tmul q z =>
+        have hq : q = (q.num : ℚ) / (q.den : ℚ) := by
+          simpa using q.num_div_den.symm
+        refine ⟨(q.den : ℤ), Int.natCast_ne_zero.mpr q.den_nz, ?_⟩
+        intro a
+        refine ⟨z a * q.num, ?_⟩
+        rw [hmap, hq]
+        simp [smul_eq_mul, div_eq_mul_inv, mul_assoc, mul_comm, mul_left_comm]
+    | add x y hx hy =>
+        rcases hx with ⟨m, hm, hx⟩
+        rcases hy with ⟨n, hn, hy⟩
+        rw [map_add]
+        refine ⟨m * n, mul_ne_zero hm hn, ?_⟩
+        intro a
+        obtain ⟨zx, hzx⟩ := hx a
+        obtain ⟨zy, hzy⟩ := hy a
+        refine ⟨zx * n + zy * m, ?_⟩
+        rw [hzx, hzy]
+        have hm' : (m : ℚ) ≠ 0 := by exact_mod_cast hm
+        have hn' : (n : ℚ) ≠ 0 := by exact_mod_cast hn
+        field_simp [hm', hn'] <;> ring
+  · rintro ⟨m, hm, hx⟩
+    choose z hz using hx
+    refine ⟨(1 / (m : ℚ)) ⊗ₜ[ℤ] z, ?_⟩
+    ext a
+    rw [hmap, hz a]
+    simp [smul_eq_mul, div_eq_mul_inv]
 
 theorem rationalIntegerProductTensorMap_not_surjective :
     ¬Function.Surjective rationalIntegerProductTensorMap := by
-  sorry
+  intro h
+  let x : ℕ+ → ℚ := fun n => 1 / (n : ℚ)
+  have hx : x ∈ commonDenominatorSequences (A := ℕ+) := by
+    rw [← rationalIntegerProductTensorMap_range]
+    rcases h x with ⟨y, hy⟩
+    exact ⟨y, hy⟩
+  rcases hx with ⟨m, hm, hx⟩
+  let N : ℕ := m.natAbs + 1
+  let n : ℕ+ := ⟨N, Nat.succ_pos _⟩
+  obtain ⟨z, hz⟩ := hx n
+  have hn0 : (N : ℚ) ≠ 0 := by
+    exact_mod_cast n.property.ne'
+  have hz' : (1 : ℚ) / (N : ℚ) = (z : ℚ) / (m : ℚ) := by
+    simpa [x, n, N] using hz
+  have hcross : (m : ℚ) = (z : ℚ) * (N : ℚ) := by
+    have hm0 : (m : ℚ) ≠ 0 := by exact_mod_cast hm
+    field_simp [hm0, hn0] at hz'
+    simpa [mul_comm] using hz'
+  have hcrossZ : m = z * (N : ℤ) := by
+    exact_mod_cast hcross
+  have hdvd : (N : ℤ) ∣ m := by
+    refine ⟨z, ?_⟩
+    rw [hcrossZ, mul_comm]
+  have hle : N ≤ m.natAbs := by
+    exact Nat.le_of_dvd (by omega) (Int.natCast_dvd.mp hdvd)
+  dsimp [N] at hle
+  omega
 
 /-! ## Finitely generated and finitely presented modules -/
 
@@ -200,7 +275,105 @@ theorem finite_generation_tensor_iff
         Function.Surjective (productTensorMap M (fun _ : A => Q)),
       ∀ (A : Type v), Function.Surjective (tensorModulePowerMap M (A := A))
     ] := by
-  sorry
+  classical
+  tfae_have 1 ↔ 2 := by
+    constructor
+    · intro h A Q
+      letI : Module.Finite R (M : Type w) := h
+      obtain ⟨n, f, hf⟩ := Module.Finite.exists_fin' R (M : Type w)
+      let g : Fin n → (M : Type w) := fun i => f (Pi.single i 1)
+      have hgen : ∀ m : (M : Type w), ∃ c : Fin n → R,
+          m = ∑ i, c i • g i := by
+        intro m
+        obtain ⟨c, hc⟩ := hf m
+        have hc' : c = ∑ i, c i • Pi.single i (1 : R) := by
+          calc
+            c = ∑ i, Pi.single i (c i) := (Finset.univ_sum_single c).symm
+            _ = ∑ i, c i • Pi.single i (1 : R) := by
+              apply Finset.sum_congr rfl
+              intro i hi
+              ext j
+              by_cases hij : i = j <;> simp [Pi.single_apply, hij]
+        refine ⟨c, ?_⟩
+        calc
+          m = f c := hc.symm
+          _ = f (∑ i, c i • Pi.single i (1 : R)) := congrArg f hc'
+          _ = ∑ i, c i • g i := by simp [g]
+      have hdecomp (a : A) (x : TensorProduct R (M : Type w) (Q a : Type z)) :
+          ∃ q : Fin n → (Q a : Type z),
+            x = ∑ i, g i ⊗ₜ[R] q i := by
+        induction x using TensorProduct.induction_on with
+        | zero =>
+            refine ⟨fun _ => 0, ?_⟩
+            simp
+        | tmul m q =>
+            obtain ⟨c, hc⟩ := hgen m
+            refine ⟨fun i => c i • q, ?_⟩
+            rw [hc, TensorProduct.sum_tmul]
+            apply Finset.sum_congr rfl
+            intro i hi
+            rw [TensorProduct.smul_tmul, ← TensorProduct.tmul_smul]
+        | add x y hx hy =>
+            obtain ⟨qx, hqx⟩ := hx
+            obtain ⟨qy, hqy⟩ := hy
+            refine ⟨fun i => qx i + qy i, ?_⟩
+            rw [hqx, hqy, ← Finset.sum_add_distrib]
+            apply Finset.sum_congr rfl
+            intro i hi
+            rw [TensorProduct.tmul_add]
+      intro y
+      choose q hq using fun a => hdecomp a (y a)
+      let t : TensorProduct R (M : Type w) (∀ a, (Q a : Type z)) :=
+        ∑ i, g i ⊗ₜ[R] (fun a => q a i)
+      refine ⟨t, ?_⟩
+      ext a
+      simpa [t, productTensorMap] using (hq a).symm
+  tfae_have 2 ↔ 3 := by
+    constructor
+    · intro h Q A
+      exact h A (fun _ => Q)
+    · intro h A Q
+      exact h Q A
+  tfae_have 3 ↔ 4 := by
+    constructor
+    · intro h A
+      simpa [tensorModulePowerMap] using
+        (LinearEquiv.surjective
+          (LinearEquiv.piCongrRight
+            (fun _ => TensorProduct.rid R (M : Type w)))).comp
+          (h (ModuleCat.of R R) A)
+    · intro h Q A
+      exact h (fun _ => Q)
+  tfae_have 4 ↔ 1 := by
+    constructor
+    · intro h
+      have hrepr (x : TensorProduct R (M : Type w) ((M : Type w) → R)) :
+          ∃ k (m : Fin k → (M : Type w)) (q : Fin k → ((M : Type w) → R)),
+            tensorModulePowerMap M x = fun y => ∑ i, q i y • m i := by
+        induction x using TensorProduct.induction_on with
+        | zero =>
+            refine ⟨0, (fun i => Fin.elim0 i), (fun i => Fin.elim0 i), ?_⟩
+            ext y
+            simp [tensorModulePowerMap]
+        | tmul m q =>
+            refine ⟨1, (fun _ => m), (fun _ => q), ?_⟩
+            ext y
+            simp [tensorModulePowerMap_tmul]
+        | add x y hx hy =>
+            obtain ⟨k, m, q, hx⟩ := hx
+            obtain ⟨l, m', q', hy⟩ := hy
+            refine ⟨k + l, Fin.addCases m m', Fin.addCases q q', ?_⟩
+            rw [map_add, hx, hy]
+            ext y
+            simp [Fin.sum_univ_add]
+      obtain ⟨x, hx⟩ := h (M : Type w) (fun y => y)
+      obtain ⟨k, m, q, hq⟩ := hrepr x
+      refine Module.Finite.of_surjective (Fintype.linearCombination R m) ?_
+      intro y
+      refine ⟨fun i => q i y, ?_⟩
+      rw [Fintype.linearCombination_apply]
+      exact (congrFun (hx.symm.trans hq) y).symm
+  tfae_finish
 
 /-- The four equivalent criteria for finite presentation from Proposition 89.2. -/
 theorem finite_presentation_tensor_iff

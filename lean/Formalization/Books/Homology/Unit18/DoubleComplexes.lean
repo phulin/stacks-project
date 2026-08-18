@@ -1105,7 +1105,7 @@ theorem tripleOrder12Differential_comp_zero [HasCountableCoproducts C]
         ((s + 1) - (p + 1), (n + 1) - (s + 1)) by
         congr 1 <;> ring)]
     simpa [Category.assoc] using
-      congrArg (fun f => f ≫ eqToHom (by congr 1 <;> ring))
+      congrArg (fun f => f ≫ eqToHom (by congr 1; ring))
         (A.d1_sq p (s - p) (n - s))
   have h22 :
       tripleOrder12D2Component A n s p ≫
@@ -1116,7 +1116,7 @@ theorem tripleOrder12Differential_comp_zero [HasCountableCoproducts C]
       (fun qr : ℤ × ℤ => A.d2 p qr.1 qr.2)
       (show ((s - p) + 1, n - s) =
         ((s + 1) - p, (n + 1) - (s + 1)) by
-        congr 1 <;> ring)]
+        congr 1; ring)]
     simpa [Category.assoc] using
       congrArg (fun f => f ≫ eqToHom (by congr 1 <;> ring))
         (A.d2_sq p (s - p) (n - s))
@@ -1129,7 +1129,7 @@ theorem tripleOrder12Differential_comp_zero [HasCountableCoproducts C]
       (fun r : ℤ => A.d3 p (s - p) r)
       (show n - s + 1 = n + 1 - s by ring)]
     simpa [Category.assoc] using
-      congrArg (fun f => f ≫ eqToHom (by congr 1 <;> ring))
+      congrArg (fun f => f ≫ eqToHom (by congr 1; ring))
         (A.d3_sq p (s - p) (n - s))
   have h12 :
       tripleOrder12D1Component A n s p ≫
@@ -1185,7 +1185,7 @@ theorem tripleOrder12Differential_comp_zero [HasCountableCoproducts C]
       (fun qr : ℤ × ℤ => A.d2 p qr.1 qr.2)
       (show (s - p, n - s + 1) =
         (s - p, n + 1 - s) by
-        congr 1 <;> ring)]
+        congr 1; ring)]
     rw [← Category.assoc, ← A.comm23 p (s - p) (n - s)]
     simp
   have h11' :
@@ -1327,13 +1327,11 @@ theorem tripleOrder12Differential_comp_zero [HasCountableCoproducts C]
     simp only [Linear.units_smul_comp, Category.assoc]
     rw [hnext' (s + 1) (p + 1), hnext' (s + 1) p, hnext' s p]
     simp [tripleTotalSign₁, tripleTotalSign₂, Int.negOnePow_succ,
-      hs1p, hs1q, hs2p, hs2q, h11', h22', h33', h12', h13', h23',
-      Category.assoc, Linear.units_smul_comp, Linear.comp_units_smul]
+      h11', h22', h33', h12', h13', h23', Linear.comp_units_smul]
     rw [hs1q_raw, hs2p_raw, hs2q_raw]
     simp only [Units.neg_smul, neg_smul, neg_one_smul, one_smul, smul_smul,
       Int.units_mul_self, mul_comm]
     rw [← smul_smul]
-    simp only [smul_neg]
     abel
   have hcomp := congrArg
     (fun f => f ≫ tripleOrder12Differential A (n + 1)) hps
@@ -1593,27 +1591,20 @@ theorem tripleOrder12Differential_comp_zero [HasCountableCoproducts C]
     simp [Int.negOnePow_succ]
   have hs1q :
       tripleTotalSign₁ p ((s + 1) - p) = tripleTotalSign₁ p (s - p) := by
-    dsimp [tripleTotalSign₁]
-    congr 1 <;> ring
+    rfl
   have hs2p :
       tripleTotalSign₂ (p + 1) ((s + 1) - (p + 1)) =
         -tripleTotalSign₂ p (s - p) := by
     dsimp [tripleTotalSign₂]
+    rw [show p + 1 + ((s + 1) - (p + 1)) = (p + (s - p)) + 1 by ring]
     simp [Int.negOnePow_succ]
   have hs2q :
       tripleTotalSign₂ p ((s + 1) - p) =
         -tripleTotalSign₂ p (s - p) := by
     dsimp [tripleTotalSign₂]
     simp [Int.negOnePow_succ]
-  have hs1q_raw :
-      (p + ((s + 1) - p)).negOnePow = (p + (s - p)).negOnePow := by
-    congr 1 <;> ring
-  have hs2p_raw :
-      ((p + 1) + ((s + 1) - (p + 1))).negOnePow =
-        -(p + (s - p)).negOnePow := by
-    simp [Int.negOnePow_succ]
-  have hs2q_raw :
-      (p + ((s + 1) - p)).negOnePow = -(p + (s - p)).negOnePow := by
+  have hs_succ : (p + 1 + (s - p)).negOnePow = -s.negOnePow := by
+    rw [show p + 1 + (s - p) = s + 1 by ring]
     simp [Int.negOnePow_succ]
   have hzero : g p ≫ tripleOrder12Differential A (n + 1) =
       (0 : A.obj p (s - p) (n - s) ⟶
@@ -1656,13 +1647,10 @@ theorem tripleOrder12Differential_comp_zero [HasCountableCoproducts C]
     simp only [Linear.units_smul_comp, Category.assoc]
     rw [hnext' (s + 1) (p + 1), hnext' (s + 1) p, hnext' s p]
     simp [tripleTotalSign₁, tripleTotalSign₂, Int.negOnePow_succ,
-      hs1p, hs1q, hs2p, hs2q, h11', h22', h33', h12', h13', h23',
-      Category.assoc, Linear.units_smul_comp, Linear.comp_units_smul]
-    rw [hs1q_raw, hs2p_raw, hs2q_raw]
-    simp only [Units.neg_smul, neg_smul, neg_one_smul, one_smul, smul_smul,
-      Int.units_mul_self, mul_comm]
+      h11', h22', h33', h12', h13', h23', Linear.comp_units_smul]
+    rw [hs_succ]
+    simp only [Units.neg_smul, smul_smul, mul_comm]
     rw [← smul_smul]
-    simp only [smul_neg]
     abel
   have hcomp := congrArg
     (fun f => f ≫ tripleOrder12Differential A (n + 1)) hps

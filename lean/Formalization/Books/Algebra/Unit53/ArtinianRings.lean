@@ -97,7 +97,10 @@ theorem finite_length_ring_properties
     have hxpow : x ^ n ∈ (Ring.jacobson R) ^ n := Ideal.pow_mem_pow hx n
     rw [hn] at hxpow
     exact hxpow
-  have hprod := product_localizations_of_finite_maximal_ideals hmax hjac
+  have hprod :
+      (∀ p : Ideal R, p.IsPrime → p.IsMaximal) ∧
+        Nonempty (R ≃ₐ[R] MaximalSpectrum.PiLocalization R) :=
+    product_localizations_of_finite_maximal_ideals hmax hjac
   haveI : Finite {I : Ideal R // I.IsMaximal} := Set.finite_coe_iff.mp hmax
   have hfinite : Finite (MaximalSpectrum R) :=
     Finite.of_equiv _ (MaximalSpectrum.equivSubtype R).symm

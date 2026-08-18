@@ -499,7 +499,6 @@ theorem complex_radical_compositum_degree :
       have he : 2 * (Real.pi : ℂ) * Complex.I / 8 =
           (Real.pi / 4 : ℝ) * Complex.I := by
         norm_num [div_eq_mul_inv]
-        push_cast
         ring
       rw [he, Complex.exp_ofReal_mul_I, Real.cos_pi_div_four,
         Real.sin_pi_div_four]
@@ -1076,7 +1075,7 @@ theorem normal_extension_tensor_product_map_bijective
   let S : IntermediateField F E := normalSeparablePart F E
   let I : IntermediateField F E := normalInseparablePart F E
   change Function.Bijective (S.toSubalgebra.mulMap I.toSubalgebra)
-  letI : IsPurelyInseparable F I :=
+  let hI : IsPurelyInseparable F I :=
     normal_fixedField_top_isPurelyInseparable (F := F) (E := E)
   have hld : S.LinearDisjoint I :=
     S.linearDisjoint_of_isPurelyInseparable_of_isSeparable I
@@ -1084,10 +1083,6 @@ theorem normal_extension_tensor_product_map_bijective
     exact normal_fixedField_top_sup_separableClosure_eq_top
       (F := F) (E := E)
   let A : Subalgebra F E := S.toSubalgebra ⊔ I.toSubalgebra
-  letI : Algebra.IsAlgebraic F A := by
-    apply Algebra.IsAlgebraic.of_injective (A.val : A →ₐ[F] E)
-    intro x y hxy
-    exact Subtype.ext hxy
   have hAinv : ∀ z : E, z ∈ A → z⁻¹ ∈ A := by
     intro z hz
     exact Subalgebra.inv_mem_of_algebraic A (x := (⟨z, hz⟩ : A))
@@ -1142,7 +1137,7 @@ theorem normal_extension_separable_inseparable_decomposition
   · infer_instance
   · infer_instance
   · exact normal_fixedField_top_isPurelyInseparable (F := F) (E := E)
-  · letI : Normal (normalInseparablePart F E) E :=
+  · let hN : Normal (normalInseparablePart F E) E :=
       Normal.tower_top_of_normal F (normalInseparablePart F E) E
     have hsup : normalSeparablePart F E ⊔ normalInseparablePart F E = ⊤ :=
       normal_fixedField_top_sup_separableClosure_eq_top (F := F) (E := E)
@@ -1168,7 +1163,7 @@ theorem normal_extension_separable_inseparable_decomposition
       (le_separableClosure_iff _ _ _).mp htop_sep
     have hsep : Algebra.IsSeparable (normalInseparablePart F E) E :=
       (IntermediateField.isSeparable_top _ _).mp hsep_top
-    letI : Algebra.IsSeparable (normalInseparablePart F E) E := hsep
+    let hsep' : Algebra.IsSeparable (normalInseparablePart F E) E := hsep
     exact ⟨⟩
   · exact ⟨normalExtensionTensorProductAlgEquiv (F := F) (E := E)⟩
 

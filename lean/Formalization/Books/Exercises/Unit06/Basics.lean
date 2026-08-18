@@ -171,7 +171,7 @@ theorem spectrum_is_t0 {A : Type u} [CommRing A] :
 The topology is supplied explicitly so this theorem does not install a
 global alternative topology on `Bool`. -/
 theorem indiscrete_bool_not_t0 :
-    ¬ @T0Space Bool (⊥ : TopologicalSpace Bool) := by
+    ¬ @T0Space Bool (⊤ : TopologicalSpace Bool) := by
   sorry
 
 end Formalization.Books.Exercises.Unit06

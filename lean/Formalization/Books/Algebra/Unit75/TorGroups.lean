@@ -4,6 +4,13 @@ import Mathlib.RingTheory.Flat.CategoryTheory
 import Mathlib.LinearAlgebra.Eigenspace.Basic
 import Mathlib.LinearAlgebra.Semisimple
 import Mathlib.LinearAlgebra.TensorProduct.Map
+import Mathlib.LinearAlgebra.TensorProduct.Basis
+import Mathlib.LinearAlgebra.TensorProduct.Matrix
+import Mathlib.LinearAlgebra.Dimension.Finrank
+import Mathlib.LinearAlgebra.Dimension.StrongRankCondition
+import Mathlib.Algebra.BigOperators.Intervals
+import Mathlib.Algebra.BigOperators.Fin
+import Mathlib.Tactic.Ring
 import Mathlib.RingTheory.TensorProduct.Finite
 import Mathlib.RingTheory.Ideal.Quotient.Basic
 import Mathlib.RingTheory.Noetherian.Basic
@@ -25,7 +32,7 @@ namespace Formalization.Books.Algebra.Unit75
 open CategoryTheory
 open CategoryTheory.Limits
 open Formalization.Books.Algebra.Unit71
-open scoped TensorProduct
+open scoped TensorProduct BigOperators
 
 noncomputable section
 
@@ -1326,7 +1333,420 @@ def tensorSwitch {k V : Type u} [CommRing k]
 
 theorem tensorSwitch_two_dimensional_not_identity {k : Type u} [Field k] :
     (tensorSwitch (k := k) (V := Fin 2 → k)).toLinearMap ≠ LinearMap.id := by
-  sorry
+  intro h
+  let x : Fin 2 → k := Pi.single 0 1
+  let y : Fin 2 → k := Pi.single 1 1
+  have h' := congrArg (fun f => f (x ⊗ₜ[k] y)) h
+  have hne : x ⊗ₜ[k] y ≠ y ⊗ₜ[k] x := by
+    intro hx
+    let p0 : (Fin 2 → k) →ₗ[k] k := LinearMap.proj 0
+    let p1 : (Fin 2 → k) →ₗ[k] k := LinearMap.proj 1
+    let q := (TensorProduct.lid k k).toLinearMap.comp
+      (TensorProduct.map p0 p1)
+    have hq := congrArg q hx
+    have h00 : p0 x = 1 := by simp [p0, x]
+    have h11 : p1 y = 1 := by simp [p1, y]
+    have h01 : p0 y = 0 := by simp [p0, y]
+    have h10 : p1 x = 0 := by simp [p1, x]
+    simpa [q, h00, h11, h01, h10] using hq
+  apply hne
+  simpa [tensorSwitch, x, y] using h'.symm
+
+private abbrev pairIndex (n : ℕ) := Fin n × Fin n
+private abbrev upperIndex (n : ℕ) := {p : pairIndex n // p.1 ≤ p.2}
+private abbrev strictIndex (n : ℕ) := {p : pairIndex n // p.1 < p.2}
+
+private def pairSwapFun {k : Type u} [Semiring k] (n : ℕ)
+    (x : pairIndex n → k) : pairIndex n → k :=
+  fun p => x (p.2, p.1)
+
+private def pairSwapMap {k : Type u} [Semiring k] (n : ℕ) :
+    (pairIndex n → k) →ₗ[k] (pairIndex n → k) :=
+  { toFun := pairSwapFun n
+    map_add' := by
+      intro x y
+      funext p
+      change (x + y) (p.2, p.1) = x (p.2, p.1) + y (p.2, p.1)
+      rfl
+    map_smul' := by
+      intro r x
+      funext p
+      change (r • x) (p.2, p.1) = r • x (p.2, p.1)
+      rfl }
+
+private def symFun {k : Type u} [Semiring k] (n : ℕ) (a : upperIndex n → k)
+    (p : pairIndex n) : k :=
+  if h : p.1 ≤ p.2 then a ⟨p, h⟩ else a ⟨(p.2, p.1), le_of_not_ge h⟩
+
+private def symMap {k : Type u} [Semiring k] (n : ℕ) :
+    (upperIndex n → k) →ₗ[k] (pairIndex n → k) :=
+  { toFun := symFun n
+    map_add' := by
+      intro a b
+      funext p
+      change symFun n (a + b) p = symFun n a p + symFun n b p
+      by_cases h : p.1 ≤ p.2 <;> simp [symFun, h, Pi.add_apply]
+    map_smul' := by
+      intro r a
+      funext p
+      change symFun n (r • a) p = r • symFun n a p
+      by_cases h : p.1 ≤ p.2 <;> simp [symFun, h, Pi.smul_apply] }
+
+private def symPart {k : Type u} [Semiring k] (n : ℕ) :
+    (pairIndex n → k) →ₗ[k] (upperIndex n → k) :=
+  { toFun := fun x p => x p.1 + x (p.1.2, p.1.1)
+    map_add' := by
+      intro x y
+      funext p
+      change (x + y) p.1 + (x + y) (p.1.2, p.1.1) =
+        (x p.1 + x (p.1.2, p.1.1)) + (y p.1 + y (p.1.2, p.1.1))
+      simp [add_assoc, add_left_comm, add_comm]
+    map_smul' := by
+      intro r x
+      funext p
+      change (r • x) p.1 + (r • x) (p.1.2, p.1.1) =
+        r • (x p.1 + x (p.1.2, p.1.1))
+      simp [smul_add, mul_add] }
+
+private def symLiftFun {k : Type u} [Field k] (n : ℕ) (hchar : (2 : k) ≠ 0)
+    (a : upperIndex n → k) (p : pairIndex n) : k :=
+  if h : p.1 ≤ p.2 then
+    if p.1 < p.2 then a ⟨p, h⟩ else (2 : k)⁻¹ • a ⟨p, h⟩
+  else 0
+
+private def symLift {k : Type u} [Field k] (n : ℕ) (hchar : (2 : k) ≠ 0) :
+    (upperIndex n → k) →ₗ[k] (pairIndex n → k) :=
+  { toFun := symLiftFun n hchar
+    map_add' := by
+      intro a b
+      funext p
+      change symLiftFun n hchar (a + b) p =
+        symLiftFun n hchar a p + symLiftFun n hchar b p
+      by_cases h : p.1 ≤ p.2
+      · by_cases hlt : p.1 < p.2
+        · simp [symLiftFun, h, hlt, Pi.add_apply]
+        · simp [symLiftFun, h, hlt, Pi.add_apply, smul_add]
+          ring
+      · simp [symLiftFun, h, Pi.add_apply]
+    map_smul' := by
+      intro r a
+      funext p
+      change symLiftFun n hchar (r • a) p = r • symLiftFun n hchar a p
+      by_cases h : p.1 ≤ p.2
+      · by_cases hlt : p.1 < p.2
+        · simp [symLiftFun, h, hlt, Pi.smul_apply]
+        · simp [symLiftFun, h, hlt, Pi.smul_apply, smul_smul, mul_comm]
+          ring
+      · simp [symLiftFun, h, Pi.smul_apply] }
+
+private def antiFun {k : Type u} [Ring k] (n : ℕ) (a : strictIndex n → k)
+    (p : pairIndex n) : k :=
+  if h : p.1 < p.2 then a ⟨p, h⟩ else
+    if h' : p.2 < p.1 then -a ⟨(p.2, p.1), h'⟩ else 0
+
+private def antiMap {k : Type u} [Ring k] (n : ℕ) :
+    (strictIndex n → k) →ₗ[k] (pairIndex n → k) :=
+  { toFun := antiFun n
+    map_add' := by
+      intro a b
+      funext p
+      change antiFun n (a + b) p = antiFun n a p + antiFun n b p
+      by_cases h : p.1 < p.2
+      · simp [antiFun, h, Pi.add_apply]
+      · by_cases h' : p.2 < p.1
+        · simp [antiFun, h, h', Pi.add_apply, neg_add]
+          ac_rfl
+        · simp [antiFun, h, h', Pi.add_apply]
+    map_smul' := by
+      intro r a
+      funext p
+      change antiFun n (r • a) p = r • antiFun n a p
+      by_cases h : p.1 < p.2
+      · simp [antiFun, h, Pi.smul_apply]
+      · by_cases h' : p.2 < p.1
+        · simp [antiFun, h, h', Pi.smul_apply, smul_neg]
+        · simp [antiFun, h, h', Pi.smul_apply] }
+
+private def antiPart {k : Type u} [Ring k] (n : ℕ) :
+    (pairIndex n → k) →ₗ[k] (strictIndex n → k) :=
+  { toFun := fun x p => x p.1 - x (p.1.2, p.1.1)
+    map_add' := by
+      intro x y
+      funext p
+      change (x + y) p.1 - (x + y) (p.1.2, p.1.1) =
+        (x p.1 - x (p.1.2, p.1.1)) + (y p.1 - y (p.1.2, p.1.1))
+      simp [sub_eq_add_neg, add_assoc, add_left_comm, add_comm]
+    map_smul' := by
+      intro r x
+      funext p
+      change (r • x) p.1 - (r • x) (p.1.2, p.1.1) =
+        r • (x p.1 - x (p.1.2, p.1.1))
+      simp [sub_eq_add_neg, smul_add, smul_neg, mul_add] }
+
+private def antiLiftFun {k : Type u} [Field k] (n : ℕ) (hchar : (2 : k) ≠ 0)
+    (a : strictIndex n → k) (p : pairIndex n) : k :=
+  if h : p.1 < p.2 then (2 : k)⁻¹ • a ⟨p, h⟩ else
+    if h' : p.2 < p.1 then -(2 : k)⁻¹ • a ⟨(p.2, p.1), h'⟩ else 0
+
+private def antiLift {k : Type u} [Field k] (n : ℕ) (hchar : (2 : k) ≠ 0) :
+    (strictIndex n → k) →ₗ[k] (pairIndex n → k) :=
+  { toFun := antiLiftFun n hchar
+    map_add' := by
+      intro a b
+      funext p
+      change antiLiftFun n hchar (a + b) p =
+        antiLiftFun n hchar a p + antiLiftFun n hchar b p
+      by_cases h : p.1 < p.2
+      · simp [antiLiftFun, h, Pi.add_apply, smul_add]
+        ring
+      · by_cases h' : p.2 < p.1
+        · simp [antiLiftFun, h, h', Pi.add_apply, smul_add, neg_add]
+          ring
+        · simp [antiLiftFun, h, h', Pi.add_apply]
+    map_smul' := by
+      intro r a
+      funext p
+      change antiLiftFun n hchar (r • a) p = r • antiLiftFun n hchar a p
+      by_cases h : p.1 < p.2
+      · simp [antiLiftFun, h, Pi.smul_apply, smul_smul]
+        ring
+      · by_cases h' : p.2 < p.1
+        · simp [antiLiftFun, h, h', Pi.smul_apply, smul_smul, smul_neg, mul_comm]
+          ring
+        · simp [antiLiftFun, h, h', Pi.smul_apply] }
+
+private lemma sum_fin_sub (n : ℕ) :
+    (∑ i : Fin n, (n - (i : ℕ))) = n * (n + 1) / 2 := by
+  have hsum : (∑ i : Fin n, (n - (i : ℕ))) =
+      Finset.sum (Finset.range n) (fun i => n - i) := by
+    rw [Finset.sum_fin_eq_sum_range]
+    apply Finset.sum_congr rfl
+    intro i hi
+    have hil : i < n := Finset.mem_range.mp hi
+    simp [hil]
+  rw [hsum]
+  calc
+    Finset.sum (Finset.range n) (fun i => n - i) =
+        Finset.sum (Finset.range n) (fun i => 1 + (n - 1 - i)) := by
+      apply Finset.sum_congr rfl
+      intro i hi
+      congr 1
+      have hil : i < n := Finset.mem_range.mp hi
+      omega
+    _ = n + Finset.sum (Finset.range n) (fun i => n - 1 - i) := by
+      rw [Finset.sum_add_distrib]
+      simp
+    _ = n + Finset.sum (Finset.range n) (fun i => i) := by
+      exact congrArg (fun x => n + x) (Finset.sum_range_reflect (fun i => i) n)
+    _ = n * (n + 1) / 2 := by
+      rw [Finset.sum_range_id]
+      have hdiv : 2 ∣ n * (n - 1) := (Nat.even_mul_pred_self n).two_dvd
+      have hdiv' : 2 ∣ n * (n + 1) := (Nat.even_mul_succ_self n).two_dvd
+      symm
+      rw [Nat.div_eq_iff_eq_mul_left (by decide) hdiv']
+      have hmul := Nat.mul_div_cancel' hdiv
+      have hiden : n * (n + 1) = n * (n - 1) + 2 * n := by
+        cases n with
+        | zero => simp
+        | succ n => simp; ring
+      calc
+        n * (n + 1) = n * (n - 1) + 2 * n := hiden
+        _ = 2 * n + n * (n - 1) := by ac_rfl
+        _ = 2 * n + 2 * (n * (n - 1) / 2) := by rw [hmul]
+        _ = (n + n * (n - 1) / 2) * 2 := by
+          rw [Nat.add_mul, Nat.mul_comm n 2]
+          simp [mul_comm]
+
+private theorem pair_plus_finrank {k : Type u} [Field k] (n : ℕ) (hchar : (2 : k) ≠ 0) :
+    Module.finrank k
+        (Module.End.eigenspace (pairSwapMap (k := k) n) (1 : k)) =
+      n * (n + 1) / 2 := by
+  let s := LinearMap.id + pairSwapMap (k := k) n
+  let e := symMap (k := k) n
+  have hsr : LinearMap.range s = LinearMap.range e := by
+    let q := symPart (k := k) n
+    let r := symLift (k := k) n hchar
+    have hse : s = e.comp q := by
+      ext x p
+      by_cases h : p.1 ≤ p.2
+      · simp [s, e, q, pairSwapMap, pairSwapFun, symMap, symFun, symPart, h]
+      · have h' : p.2 ≤ p.1 := le_of_not_ge h
+        simp [s, e, q, pairSwapMap, pairSwapFun, symMap, symFun, symPart, h, h', add_comm]
+    apply le_antisymm
+    · rintro _ ⟨x, rfl⟩
+      exact ⟨q x, by
+        have hx := congrArg (fun f => f x) hse
+        simpa [s, e, q] using hx.symm⟩
+    · rintro _ ⟨a, rfl⟩
+      refine ⟨r a, ?_⟩
+      ext p
+      rcases p with ⟨i, j⟩
+      by_cases h : i ≤ j
+      · by_cases hlt : i < j
+        · have h' : ¬j ≤ i := not_le_of_gt hlt
+          simp [s, r, e, pairSwapMap, pairSwapFun, symMap, symFun, symLift,
+            symLiftFun, h, hlt, h']
+        · have heq : i = j := le_antisymm h (le_of_not_gt hlt)
+          subst j
+          simp [s, r, e, pairSwapMap, pairSwapFun, symMap, symFun, symLift,
+            symLiftFun, hchar]
+          field_simp
+          ring
+      · have h' : j ≤ i := le_of_not_ge h
+        simp [s, r, e, pairSwapMap, pairSwapFun, symMap, symFun, symLift,
+          symLiftFun, h, h']
+  have heinj : Function.Injective e := by
+    intro a b hab
+    funext p
+    have hp := congrArg (fun x => x p) hab
+    simpa [e, symMap, symFun, p.property] using hp
+  have hseig : LinearMap.range s =
+      Module.End.eigenspace (pairSwapMap (k := k) n) (1 : k) := by
+    apply le_antisymm
+    · rintro _ ⟨x, rfl⟩
+      apply Module.End.mem_eigenspace_iff.mpr
+      simp [s, pairSwapMap, pairSwapFun, add_comm]
+      funext p
+      simp [pairSwapFun, add_comm]
+    · intro x hx
+      refine ⟨(2 : k)⁻¹ • x, ?_⟩
+      have hx' := Module.End.mem_eigenspace_iff.mp hx
+      have hx'' : pairSwapFun n x = x := by
+        simpa [pairSwapMap] using hx'
+      simp [s, pairSwapMap, pairSwapFun, hx'', smul_add, hchar]
+      ext p
+      simp [smul_eq_mul, hchar]
+      field_simp [hchar]
+      ring
+  rw [← hseig, hsr, LinearMap.finrank_range_of_inj heinj, Module.finrank_pi]
+  rw [Fintype.card_congr (by
+    let ec : upperIndex n ≃ Σ i : Fin n, {j : Fin n // i ≤ j} :=
+      { toFun := fun p => ⟨p.1.1, ⟨p.1.2, p.2⟩⟩
+        invFun := fun q => ⟨(q.1, q.2.1), q.2.2⟩
+        left_inv := by intro p; rfl
+        right_inv := by intro q; rfl }
+    exact ec), Fintype.card_sigma]
+  have hci (i : Fin n) : Fintype.card {j : Fin n // i ≤ j} = n - (i : ℕ) := by
+    rw [Fintype.card_subtype]
+    have heq : (Finset.filter (fun x : Fin n => i ≤ x) Finset.univ) =
+        Finset.Ici i := by
+      ext x
+      simp
+    rw [heq]
+    exact Fin.card_Ici i
+  simp_rw [hci]
+  exact sum_fin_sub n
+
+private theorem pair_minus_finrank {k : Type u} [Field k] (n : ℕ) (hchar : (2 : k) ≠ 0) :
+    Module.finrank k
+        (Module.End.eigenspace (pairSwapMap (k := k) n) (-1 : k)) =
+      n * (n - 1) / 2 := by
+  let e := antiMap (k := k) n
+  have heinj : Function.Injective e := by
+    intro a b hab
+    funext p
+    have hp := congrArg (fun x => x p.1) hab
+    simpa [e, antiMap, antiFun, p.property] using hp
+  have hde : LinearMap.range (LinearMap.id - pairSwapMap (k := k) n) =
+      LinearMap.range e := by
+    exact (show LinearMap.range (LinearMap.id - pairSwapMap (k := k) n) =
+        LinearMap.range (antiMap (k := k) n) from by
+      let d := LinearMap.id - pairSwapMap (k := k) n
+      let q := antiPart (k := k) n
+      let r := antiLift (k := k) n hchar
+      have hde' : d = e.comp q := by
+        ext x p
+        rcases p with ⟨i, j⟩
+        by_cases h : i < j
+        · simp [d, e, q, pairSwapMap, pairSwapFun, antiMap, antiFun, antiPart, h]
+        · by_cases h' : j < i
+          · simp [d, e, q, pairSwapMap, pairSwapFun, antiMap, antiFun, antiPart, h, h',
+              sub_eq_add_neg]
+          · have heq : i = j := le_antisymm (le_of_not_gt h') (le_of_not_gt h)
+            subst j
+            simp [d, e, q, pairSwapMap, pairSwapFun, antiMap, antiFun, antiPart]
+      apply le_antisymm
+      · rintro _ ⟨x, rfl⟩
+        exact ⟨q x, by
+          have hx := congrArg (fun f => f x) hde'
+          simpa [d, e, q] using hx.symm⟩
+      · rintro _ ⟨a, rfl⟩
+        refine ⟨r a, ?_⟩
+        ext p
+        rcases p with ⟨i, j⟩
+        by_cases h : i < j
+        · have h' : ¬j < i := not_lt_of_ge (le_of_lt h)
+          simp [d, r, e, pairSwapMap, pairSwapFun, antiMap, antiFun, antiLift,
+            antiLiftFun, h, h', hchar]
+          field_simp [hchar]
+          ring
+        · by_cases h' : j < i
+          · simp [d, r, e, pairSwapMap, pairSwapFun, antiMap, antiFun, antiLift,
+              antiLiftFun, h, h', hchar]
+            field_simp [hchar]
+            ring
+          · have heq : i = j := le_antisymm (le_of_not_gt h') (le_of_not_gt h)
+            subst j
+            simp [d, r, e, pairSwapMap, pairSwapFun, antiMap, antiFun, antiLift, antiLiftFun]
+      )
+  have hseig : LinearMap.range (LinearMap.id - pairSwapMap (k := k) n) =
+      Module.End.eigenspace (pairSwapMap (k := k) n) (-1 : k) := by
+    apply le_antisymm
+    · rintro _ ⟨x, rfl⟩
+      apply Module.End.mem_eigenspace_iff.mpr
+      simp [LinearMap.id, pairSwapMap, pairSwapFun, sub_eq_add_neg]
+      funext p
+      simp [pairSwapFun, sub_eq_add_neg, add_comm]
+    · intro x hx
+      refine ⟨(2 : k)⁻¹ • x, ?_⟩
+      have hx' := Module.End.mem_eigenspace_iff.mp hx
+      have hx'' : pairSwapFun n x = -x := by
+        simpa [pairSwapMap] using hx'
+      simp [LinearMap.id, pairSwapMap, pairSwapFun, hx'', smul_sub, hchar]
+      ext p
+      simp [smul_eq_mul, hchar]
+      field_simp [hchar]
+      ring
+  rw [← hseig, hde, LinearMap.finrank_range_of_inj heinj, Module.finrank_pi]
+  rw [Fintype.card_congr (by
+    let ec : strictIndex n ≃ Σ i : Fin n, {j : Fin n // i < j} :=
+      { toFun := fun p => ⟨p.1.1, ⟨p.1.2, p.2⟩⟩
+        invFun := fun q => ⟨(q.1, q.2.1), q.2.2⟩
+        left_inv := by intro p; rfl
+        right_inv := by intro q; rfl }
+    exact ec), Fintype.card_sigma]
+  have hci (i : Fin n) : Fintype.card {j : Fin n // i < j} = n - (i : ℕ) - 1 := by
+    rw [Fintype.card_subtype]
+    have heq : (Finset.filter (fun x : Fin n => i < x) Finset.univ) =
+        Finset.Ioi i := by
+      ext x
+      simp
+    rw [heq]
+    calc
+      (Finset.Ioi i).card = n - 1 - (i : ℕ) := Fin.card_Ioi i
+      _ = n - (i : ℕ) - 1 := by omega
+  simp_rw [hci]
+  have hsum : (∑ i : Fin n, (n - (i : ℕ) - 1)) =
+      n * (n - 1) / 2 := by
+    have hsum' : (∑ i : Fin n, (n - (i : ℕ) - 1)) =
+        Finset.sum (Finset.range n) (fun i => n - i - 1) := by
+      rw [Finset.sum_fin_eq_sum_range]
+      apply Finset.sum_congr rfl
+      intro i hi
+      have hil : i < n := Finset.mem_range.mp hi
+      simp [hil]
+    rw [hsum']
+    calc
+      Finset.sum (Finset.range n) (fun i => n - i - 1) =
+          Finset.sum (Finset.range n) (fun i => n - 1 - i) := by
+        apply Finset.sum_congr rfl
+        intro i hi
+        have hil : i < n := Finset.mem_range.mp hi
+        omega
+      _ = Finset.sum (Finset.range n) (fun i => i) :=
+        Finset.sum_range_reflect (fun i => i) n
+      _ = n * (n - 1) / 2 := Finset.sum_range_id n
+  exact hsum
 
 /- The source's eigenvalue count is recorded as eigenspace dimensions when
 the two eigenvalues are distinct. -/
@@ -1340,7 +1760,127 @@ theorem tensorSwitch_eigenspace_finrank {k : Type u} [Field k]
           (Module.End.eigenspace
             (tensorSwitch (k := k) (V := Fin n → k)).toLinearMap (-1 : k)) =
         n * (n - 1) / 2 := by
-  sorry
+  change Module.finrank k
+          (Module.End.eigenspace
+            (TensorProduct.comm k (Fin n → k) (Fin n → k)).toLinearMap (1 : k)) =
+        n * (n + 1) / 2 ∧
+      Module.finrank k
+          (Module.End.eigenspace
+            (TensorProduct.comm k (Fin n → k) (Fin n → k)).toLinearMap (-1 : k)) =
+        n * (n - 1) / 2
+  let b := Pi.basisFun k (Fin n)
+  let bt := b.tensorProduct b
+  let e := bt.equivFun
+  have hcoord (x : TensorProduct k (Fin n → k) (Fin n → k)) :
+      e ((TensorProduct.comm k (Fin n → k) (Fin n → k)) x) =
+        pairSwapFun n (e x) := by
+    have hm := TensorProduct.toMatrix_comm b b
+    ext p
+    change bt.repr ((TensorProduct.comm k (Fin n → k) (Fin n → k)) x) p =
+      bt.repr x (p.2, p.1)
+    have hv := LinearMap.toMatrix_mulVec_repr bt bt
+      ((TensorProduct.comm k (Fin n → k) (Fin n → k)).toLinearMap) x
+    have hp := congrArg (fun f => f p) hv
+    calc
+      bt.repr ((TensorProduct.comm k (Fin n → k) (Fin n → k)) x) p =
+          ((LinearMap.toMatrix bt bt)
+            (TensorProduct.comm k (Fin n → k) (Fin n → k)).toLinearMap).mulVec
+              (bt.repr x) p := hp.symm
+      _ = (bt.repr x) (p.2, p.1) := by
+        rw [hm]
+        simp [Matrix.mulVec, dotProduct, Matrix.submatrix, Matrix.one_apply, Prod.swap]
+  let Eplus := Module.End.eigenspace
+    (TensorProduct.comm k (Fin n → k) (Fin n → k)).toLinearMap (1 : k)
+  let Pplus := Module.End.eigenspace (pairSwapMap (k := k) n) (1 : k)
+  let eeplus : Eplus ≃ₗ[k] Pplus :=
+    { toFun := fun x =>
+        ⟨e x, by
+          apply Module.End.mem_eigenspace_iff.mpr
+          have hx := Module.End.mem_eigenspace_iff.mp x.property
+          have hs : pairSwapFun n (e x) = e x := by
+            calc
+              pairSwapFun n (e x) = e ((TensorProduct.comm k (Fin n → k) (Fin n → k)) x) :=
+                hcoord x |>.symm
+              _ = e ((1 : k) • x) := by
+                congr 1
+          simpa [pairSwapMap, hs]⟩
+      invFun := fun y =>
+        ⟨e.symm y, by
+          apply Module.End.mem_eigenspace_iff.mpr
+          apply e.injective
+          have hy := Module.End.mem_eigenspace_iff.mp y.property
+          have hc := hcoord (e.symm y)
+          calc
+            e ((TensorProduct.comm k (Fin n → k) (Fin n → k)) (e.symm y)) =
+                pairSwapFun n y := by simpa using hc
+            _ = (1 : k) • y := by simpa [pairSwapMap] using hy
+            _ = e ((1 : k) • e.symm y) := by simp⟩
+      left_inv := by
+        intro x
+        apply Subtype.ext
+        exact e.symm_apply_apply x
+      right_inv := by
+        intro y
+        apply Subtype.ext
+        exact e.apply_symm_apply y
+      map_add' := by
+        intro x y
+        apply Subtype.ext
+        simp
+      map_smul' := by
+        intro r x
+        apply Subtype.ext
+        simp }
+  let Eminus := Module.End.eigenspace
+    (TensorProduct.comm k (Fin n → k) (Fin n → k)).toLinearMap (-1 : k)
+  let Pminus := Module.End.eigenspace (pairSwapMap (k := k) n) (-1 : k)
+  let eeminus : Eminus ≃ₗ[k] Pminus :=
+    { toFun := fun x =>
+        ⟨e x, by
+          apply Module.End.mem_eigenspace_iff.mpr
+          have hx := Module.End.mem_eigenspace_iff.mp x.property
+          have hs : pairSwapFun n (e x) = -e x := by
+            calc
+              pairSwapFun n (e x) = e ((TensorProduct.comm k (Fin n → k) (Fin n → k)) x) :=
+                hcoord x |>.symm
+              _ = e ((-1 : k) • x) := by
+                congr 1
+              _ = -e x := by simp
+          simpa [pairSwapMap, hs]⟩
+      invFun := fun y =>
+        ⟨e.symm y, by
+          apply Module.End.mem_eigenspace_iff.mpr
+          apply e.injective
+          have hy := Module.End.mem_eigenspace_iff.mp y.property
+          have hc := hcoord (e.symm y)
+          calc
+            e ((TensorProduct.comm k (Fin n → k) (Fin n → k)) (e.symm y)) =
+                pairSwapFun n y := by simpa using hc
+            _ = (-1 : k) • y := by simpa [pairSwapMap] using hy
+            _ = e ((-1 : k) • e.symm y) := by simp⟩
+      left_inv := by
+        intro x
+        apply Subtype.ext
+        exact e.symm_apply_apply x
+      right_inv := by
+        intro y
+        apply Subtype.ext
+        exact e.apply_symm_apply y
+      map_add' := by
+        intro x y
+        apply Subtype.ext
+        simp
+      map_smul' := by
+        intro r x
+        apply Subtype.ext
+        simp }
+  constructor
+  · change Module.finrank k Eplus = n * (n + 1) / 2
+    rw [eeplus.finrank_eq]
+    simpa [Pplus] using pair_plus_finrank n hchar
+  · change Module.finrank k Eminus = n * (n - 1) / 2
+    rw [eeminus.finrank_eq]
+    simpa [Pminus] using pair_minus_finrank n hchar
 
 /- In characteristic two, the switch is not diagonalizable; semisimplicity is
 the canonical Mathlib interface for this finite-dimensional assertion. -/

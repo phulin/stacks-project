@@ -75,7 +75,490 @@ def TotalizationSpec : Type _ :=
       D.homogeneous_comp f g = homogeneousComp S i j f g)}
 
 theorem totalizationSpec_nonempty : Nonempty (TotalizationSpec S) := by
-  sorry
+  have hid_comp :
+      ∀ {X Y : C} {j : ℤ} (f : homogeneous S X Y j),
+        cast (congrArg (homogeneous S X Y) (show (0 : ℤ) + j = j by omega))
+            (homogeneousComp S (0 : ℤ) j (homogeneousId S X) f) = f := by
+    intro X Y j f
+    dsimp [homogeneousComp, homogeneousId]
+    rw [Functor.congr_hom S.shift_zero f]
+    apply eq_of_heq
+    simp only [Functor.id_map, Category.id_comp, Category.comp_id,
+      Category.assoc, eqToHom_trans, eqToHom_refl, cast_heq_iff_heq,
+      eqToHom_comp_heq_iff, heq_comp_eqToHom_iff]
+    exact comp_eqToHom_heq f _
+  have hcomp_id :
+      ∀ {X Y : C} {i : ℤ} (f : homogeneous S X Y i),
+        cast (congrArg (homogeneous S X Y) (show i + (0 : ℤ) = i by omega))
+            (homogeneousComp S i (0 : ℤ) f (homogeneousId S Y)) = f := by
+    intro X Y i f
+    dsimp [homogeneousComp, homogeneousId]
+    apply eq_of_heq
+    simp only [eqToHom_map, Category.assoc, eqToHom_trans, eqToHom_refl,
+      Category.comp_id, Category.id_comp, cast_heq_iff_heq,
+      eqToHom_comp_heq_iff, heq_comp_eqToHom_iff]
+    exact comp_eqToHom_heq f _
+  let total_comp :
+      ∀ {X Y Z : C},
+        DirectSum ℤ (fun n => homogeneous S X Y n) →
+          DirectSum ℤ (fun n => homogeneous S Y Z n) →
+            DirectSum ℤ (fun n => homogeneous S X Z n) :=
+    fun {X Y Z} f g =>
+      DirectSum.toModule R ℤ
+        ((DirectSum ℤ (fun n => homogeneous S Y Z n)) →ₗ[R]
+          DirectSum ℤ (fun n => homogeneous S X Z n))
+        (fun i =>
+          { toFun := fun fi =>
+              DirectSum.toModule R ℤ
+                (DirectSum ℤ (fun n => homogeneous S X Z n))
+                (fun j =>
+                  { toFun := fun gj =>
+                      DirectSum.lof R ℤ
+                        (fun n => homogeneous S X Z n) (i + j)
+                        (homogeneousComp S i j fi gj)
+                    map_add' := by
+                      intro gj gj'
+                      letI : Functor.Additive (S.shift i) := S.additive i
+                      have hcomp := congrArg
+                        (DirectSum.lof R ℤ
+                          (fun n => homogeneous S X Z n) (i + j))
+                        (show homogeneousComp S i j fi (gj + gj') =
+                            homogeneousComp S i j fi gj +
+                              homogeneousComp S i j fi gj' by
+                          simp [homogeneousComp])
+                      rw [hcomp]
+                      exact (DirectSum.lof R ℤ
+                        (fun n => homogeneous S X Z n) (i + j)).map_add _ _
+                    map_smul' := by
+                      intro r gj
+                      letI : Functor.Additive (S.shift i) := S.additive i
+                      letI : Functor.Linear R (S.shift i) := S.linear i
+                      have hcomp := congrArg
+                        (DirectSum.lof R ℤ
+                          (fun n => homogeneous S X Z n) (i + j))
+                        (show homogeneousComp S i j fi (r • gj) =
+                            r • homogeneousComp S i j fi gj by
+                          simp [homogeneousComp])
+                      rw [hcomp]
+                      exact (DirectSum.lof R ℤ
+                        (fun n => homogeneous S X Z n) (i + j)).map_smul _ _ })
+            map_add' := by
+              intro fi fi'
+              letI : Functor.Additive (S.shift i) := S.additive i
+              apply DirectSum.linearMap_ext
+              intro j
+              apply LinearMap.ext
+              intro gj'
+              simp only [LinearMap.comp_apply, LinearMap.add_apply]
+              simp only [DirectSum.toModule_lof]
+              dsimp
+              have hcomp := congrArg
+                (DirectSum.lof R ℤ
+                  (fun n => homogeneous S X Z n) (i + j))
+                (show homogeneousComp S i j (fi + fi') gj' =
+                    homogeneousComp S i j fi gj' +
+                      homogeneousComp S i j fi' gj' by
+                  simp [homogeneousComp])
+              rw [hcomp]
+              exact (DirectSum.lof R ℤ
+                (fun n => homogeneous S X Z n) (i + j)).map_add _ _
+            map_smul' := by
+              intro r fi
+              letI : Functor.Additive (S.shift i) := S.additive i
+              letI : Functor.Linear R (S.shift i) := S.linear i
+              apply DirectSum.linearMap_ext
+              intro j
+              apply LinearMap.ext
+              intro gj'
+              simp only [LinearMap.comp_apply, LinearMap.smul_apply]
+              simp only [DirectSum.toModule_lof]
+              dsimp
+              have hcomp := congrArg
+                (DirectSum.lof R ℤ
+                  (fun n => homogeneous S X Z n) (i + j))
+                (show homogeneousComp S i j (r • fi) gj' =
+                    r • homogeneousComp S i j fi gj' by
+                  simp [homogeneousComp])
+              rw [hcomp]
+              exact (DirectSum.lof R ℤ
+                (fun n => homogeneous S X Z n) (i + j)).map_smul _ _ }) f g
+  have hcomp_add_left :
+      ∀ {X Y Z : C}
+        (f f' : DirectSum ℤ (fun n => homogeneous S X Y n))
+        (g : DirectSum ℤ (fun n => homogeneous S Y Z n)),
+        total_comp (f + f') g = total_comp f g + total_comp f' g := by
+    intro X Y Z f f' g
+    simp [total_comp]
+  have hcomp_add_right :
+      ∀ {X Y Z : C}
+        (f : DirectSum ℤ (fun n => homogeneous S X Y n))
+        (g g' : DirectSum ℤ (fun n => homogeneous S Y Z n)),
+        total_comp f (g + g') = total_comp f g + total_comp f g' := by
+    intro X Y Z f g g'
+    simp [total_comp]
+  have hcomp_smul_left :
+      ∀ {X Y Z : C} (r : R)
+        (f : DirectSum ℤ (fun n => homogeneous S X Y n))
+        (g : DirectSum ℤ (fun n => homogeneous S Y Z n)),
+        total_comp (r • f) g = r • total_comp f g := by
+    intro X Y Z r f g
+    simp [total_comp]
+  have hcomp_smul_right :
+      ∀ {X Y Z : C} (r : R)
+        (f : DirectSum ℤ (fun n => homogeneous S X Y n))
+        (g : DirectSum ℤ (fun n => homogeneous S Y Z n)),
+        total_comp f (r • g) = r • total_comp f g := by
+    intro X Y Z r f g
+    simp [total_comp]
+  have hcomp_lof :
+      ∀ {X Y Z : C} {i j : ℤ}
+        (f : homogeneous S X Y i) (g : homogeneous S Y Z j),
+        total_comp
+            (DirectSum.lof R ℤ (fun n => homogeneous S X Y n) i f)
+            (DirectSum.lof R ℤ (fun n => homogeneous S Y Z n) j g) =
+          DirectSum.lof R ℤ (fun n => homogeneous S X Z n) (i + j)
+            (homogeneousComp S i j f g) := by
+    intro X Y Z i j f g
+    simp [total_comp]
+  have hid_lof :
+      ∀ {X Y : C} {j : ℤ} (f : homogeneous S X Y j),
+        total_comp
+            (DirectSum.lof R ℤ (fun n => homogeneous S X X n) 0
+              (homogeneousId S X))
+            (DirectSum.lof R ℤ (fun n => homogeneous S X Y n) j f) =
+          DirectSum.lof R ℤ (fun n => homogeneous S X Y n) j f := by
+    intro X Y j f
+    rw [hcomp_lof]
+    rw [DirectSum.lof_eq_of, DirectSum.lof_eq_of]
+    apply (DFinsupp.single_eq_single_iff _ _ _ _).2
+    left
+    constructor
+    · omega
+    · exact (cast_heq_iff_heq
+        (congrArg (homogeneous S X Y) (show (0 : ℤ) + j = j by omega)) _ _).mp
+        (heq_of_eq (hid_comp f))
+  have hcomp_id_lof :
+      ∀ {X Y : C} {i : ℤ} (f : homogeneous S X Y i),
+        total_comp
+            (DirectSum.lof R ℤ (fun n => homogeneous S X Y n) i f)
+            (DirectSum.lof R ℤ (fun n => homogeneous S Y Y n) 0
+              (homogeneousId S Y)) =
+          DirectSum.lof R ℤ (fun n => homogeneous S X Y n) i f := by
+    intro X Y i f
+    rw [hcomp_lof]
+    rw [DirectSum.lof_eq_of, DirectSum.lof_eq_of]
+    apply (DFinsupp.single_eq_single_iff _ _ _ _).2
+    left
+    constructor
+    · omega
+    · exact (cast_heq_iff_heq
+        (congrArg (homogeneous S X Y) (show i + (0 : ℤ) = i by omega)) _ _).mp
+        (heq_of_eq (hcomp_id f))
+  have hcomp_assoc :
+      ∀ {W X Y Z : C} {i j k : ℤ}
+        (f : homogeneous S W X i) (g : homogeneous S X Y j)
+        (h : homogeneous S Y Z k),
+        cast (congrArg (homogeneous S W Z)
+          (show (i + j) + k = i + (j + k) by omega))
+            (homogeneousComp S (i + j) k
+              (homogeneousComp S i j f g) h) =
+          homogeneousComp S i (j + k) f
+            (homogeneousComp S j k g h) := by
+    intro W X Y Z i j k f g h
+    dsimp [homogeneousComp]
+    simp only [Functor.map_comp]
+    rw [← Functor.comp_map]
+    rw [Functor.congr_hom (S.shift_comp i j) h]
+    apply eq_of_heq
+    simp only [cast_heq_iff_heq, Category.assoc, eqToHom_trans,
+      eqToHom_refl, Category.comp_id, Category.id_comp,
+      eqToHom_comp_heq_iff, heq_comp_eqToHom_iff,
+      comp_eqToHom_heq_iff, eqToHom_map, eqToHom_trans_assoc,
+      Functor.comp_obj, Functor.comp_map]
+    congr 1
+    · exact congrArg (fun n : ℤ => (S.shift n).obj Z) (by omega)
+    · congr 1
+      · exact congrArg (fun n : ℤ => (S.shift n).obj Z) (by omega)
+      · congr 1
+        · exact congrArg (fun n : ℤ => (S.shift n).obj Z) (by omega)
+        · exact (comp_eqToHom_heq _ _).trans
+            (comp_eqToHom_heq _ _).symm
+  refine ⟨
+    { homogeneous_id := fun X => homogeneousId S X
+      homogeneous_comp := fun f g => homogeneousComp S _ _ f g
+      total_comp := total_comp
+      total_comp_add_left := by
+        intro X Y Z f f' g
+        exact hcomp_add_left f f' g
+      total_comp_add_right := by
+        intro X Y Z f g g'
+        exact hcomp_add_right f g g'
+      total_comp_smul_left := by
+        intro X Y Z r f g
+        exact hcomp_smul_left r f g
+      total_comp_smul_right := by
+        intro X Y Z r f g
+        exact hcomp_smul_right r f g
+      total_comp_lof := by
+        intro X Y Z i j f g
+        exact hcomp_lof f g
+      total_comp_degree := by
+        intro X Y Z i j f g
+        rcases f.property with ⟨f', hf⟩
+        rcases g.property with ⟨g', hg⟩
+        refine ⟨homogeneousComp S i j f' g', ?_⟩
+        rw [← hf, ← hg]
+        simp [total_comp]
+      total_id := fun X => DirectSum.lof R ℤ
+        (fun n => homogeneous S X X n) 0 (homogeneousId S X)
+      total_id_eq_lof := by intro X; rfl
+      total_id_comp := by
+        intro X Y f
+        refine DirectSum.induction_on f ?_ ?_ ?_
+        · simp [total_comp]
+        · intro j g
+          exact hid_lof g
+        · intro f g hf hg
+          rw [hcomp_add_right, hf, hg]
+      total_comp_id := by
+        intro X Y f
+        refine DirectSum.induction_on f ?_ ?_ ?_
+        · simp [total_comp]
+        · intro i f
+          exact hcomp_id_lof f
+        · intro f g hf hg
+          rw [hcomp_add_left, hf, hg]
+      total_assoc := by
+        intro W X Y Z f g h
+        refine DirectSum.induction_on f ?_ ?_ ?_
+        · simp [total_comp]
+        · intro i f
+          refine DirectSum.induction_on g ?_ ?_ ?_
+          · simp [total_comp]
+          · intro j g
+            refine DirectSum.induction_on h ?_ ?_ ?_
+            · simp [total_comp]
+            · intro k h
+              change total_comp
+                  (total_comp
+                    (DirectSum.lof R ℤ
+                      (fun n => homogeneous S W X n) i f)
+                    (DirectSum.lof R ℤ
+                      (fun n => homogeneous S X Y n) j g))
+                  (DirectSum.lof R ℤ
+                    (fun n => homogeneous S Y Z n) k h) =
+                total_comp
+                  (DirectSum.lof R ℤ
+                    (fun n => homogeneous S W X n) i f)
+                  (total_comp
+                    (DirectSum.lof R ℤ
+                      (fun n => homogeneous S X Y n) j g)
+                    (DirectSum.lof R ℤ
+                      (fun n => homogeneous S Y Z n) k h))
+              rw [hcomp_lof, hcomp_lof, hcomp_lof, hcomp_lof]
+              rw [DirectSum.lof_eq_of, DirectSum.lof_eq_of]
+              apply (DFinsupp.single_eq_single_iff _ _ _ _).2
+              left
+              constructor
+              · omega
+              · exact (cast_heq_iff_heq
+                  (congrArg (homogeneous S W Z)
+                    (show (i + j) + k = i + (j + k) by omega)) _ _).mp
+                  (heq_of_eq (hcomp_assoc f g h))
+            · intro h h' hh hh'
+              change total_comp
+                  (total_comp
+                    (DirectSum.lof R ℤ
+                      (fun n => homogeneous S W X n) i f)
+                    (DirectSum.lof R ℤ
+                      (fun n => homogeneous S X Y n) j g))
+                  (h + h') =
+                total_comp
+                  (DirectSum.lof R ℤ
+                    (fun n => homogeneous S W X n) i f)
+                  (total_comp
+                    (DirectSum.lof R ℤ
+                      (fun n => homogeneous S X Y n) j g)
+                    (h + h'))
+              have hh0 :
+                  total_comp
+                      (total_comp
+                        (DirectSum.lof R ℤ
+                          (fun n => homogeneous S W X n) i f)
+                        (DirectSum.lof R ℤ
+                          (fun n => homogeneous S X Y n) j g)) h =
+                    total_comp
+                      (DirectSum.lof R ℤ
+                        (fun n => homogeneous S W X n) i f)
+                      (total_comp
+                        (DirectSum.lof R ℤ
+                          (fun n => homogeneous S X Y n) j g) h) := by
+                simpa only [DirectSum.lof_eq_of] using hh
+              have hh0' :
+                  total_comp
+                      (total_comp
+                        (DirectSum.lof R ℤ
+                          (fun n => homogeneous S W X n) i f)
+                        (DirectSum.lof R ℤ
+                          (fun n => homogeneous S X Y n) j g)) h' =
+                    total_comp
+                      (DirectSum.lof R ℤ
+                        (fun n => homogeneous S W X n) i f)
+                      (total_comp
+                        (DirectSum.lof R ℤ
+                          (fun n => homogeneous S X Y n) j g) h') := by
+                simpa only [DirectSum.lof_eq_of] using hh'
+              calc
+                total_comp
+                    (total_comp
+                      (DirectSum.lof R ℤ
+                          (fun n => homogeneous S W X n) i f)
+                      (DirectSum.lof R ℤ
+                          (fun n => homogeneous S X Y n) j g))
+                    (h + h') =
+                    total_comp
+                        (total_comp
+                          (DirectSum.lof R ℤ
+                              (fun n => homogeneous S W X n) i f)
+                          (DirectSum.lof R ℤ
+                              (fun n => homogeneous S X Y n) j g)) h +
+                      total_comp
+                        (total_comp
+                          (DirectSum.lof R ℤ
+                              (fun n => homogeneous S W X n) i f)
+                          (DirectSum.lof R ℤ
+                              (fun n => homogeneous S X Y n) j g)) h' :=
+                  hcomp_add_right _ _ _
+                _ =
+                    total_comp
+                      (DirectSum.lof R ℤ
+                        (fun n => homogeneous S W X n) i f)
+                        (total_comp
+                          (DirectSum.lof R ℤ
+                            (fun n => homogeneous S X Y n) j g) h) +
+                      total_comp
+                      (DirectSum.lof R ℤ
+                        (fun n => homogeneous S W X n) i f)
+                        (total_comp
+                          (DirectSum.lof R ℤ
+                            (fun n => homogeneous S X Y n) j g) h') := by
+                  rw [hh0, hh0']
+                _ = total_comp
+                      (DirectSum.lof R ℤ
+                        (fun n => homogeneous S W X n) i f)
+                    (total_comp
+                      (DirectSum.lof R ℤ
+                          (fun n => homogeneous S X Y n) j g) h +
+                      total_comp
+                        (DirectSum.lof R ℤ
+                            (fun n => homogeneous S X Y n) j g) h') := by
+                  symm
+                  apply hcomp_add_right
+                _ = total_comp
+                      (DirectSum.lof R ℤ
+                        (fun n => homogeneous S W X n) i f)
+                    (total_comp
+                      (DirectSum.lof R ℤ
+                        (fun n => homogeneous S X Y n) j g)
+                      (h + h')) := by
+                  exact congrArg
+                    (fun x => total_comp
+                        (DirectSum.lof R ℤ
+                          (fun n => homogeneous S W X n) i f) x)
+                    (hcomp_add_right
+                      (DirectSum.lof R ℤ
+                        (fun n => homogeneous S X Y n) j g) h h').symm
+          · intro g g' hg hg'
+            change total_comp
+                (total_comp
+                  (DirectSum.lof R ℤ
+                    (fun n => homogeneous S W X n) i f) (g + g')) h =
+              total_comp
+                (DirectSum.lof R ℤ
+                  (fun n => homogeneous S W X n) i f)
+                (total_comp (g + g') h)
+            have hg0 :
+                total_comp
+                    (total_comp
+                      (DirectSum.lof R ℤ
+                        (fun n => homogeneous S W X n) i f) g) h =
+                  total_comp
+                    (DirectSum.lof R ℤ
+                      (fun n => homogeneous S W X n) i f)
+                    (total_comp g h) := by
+              simpa only [DirectSum.lof_eq_of] using hg
+            have hg0' :
+                total_comp
+                    (total_comp
+                      (DirectSum.lof R ℤ
+                        (fun n => homogeneous S W X n) i f) g') h =
+                  total_comp
+                    (DirectSum.lof R ℤ
+                      (fun n => homogeneous S W X n) i f)
+                    (total_comp g' h) := by
+              simpa only [DirectSum.lof_eq_of] using hg'
+            calc
+              total_comp
+                  (total_comp
+                    (DirectSum.lof R ℤ
+                      (fun n => homogeneous S W X n) i f) (g + g')) h =
+                  total_comp
+                      (total_comp
+                        (DirectSum.lof R ℤ
+                          (fun n => homogeneous S W X n) i f) g +
+                        total_comp
+                        (DirectSum.lof R ℤ
+                            (fun n => homogeneous S W X n) i f) g') h := by
+                    rw [hcomp_add_right, hcomp_add_left]
+              _ = total_comp
+                    (total_comp
+                      (DirectSum.lof R ℤ
+                        (fun n => homogeneous S W X n) i f) g) h +
+                    total_comp
+                      (total_comp
+                        (DirectSum.lof R ℤ
+                          (fun n => homogeneous S W X n) i f) g') h := by
+                    apply hcomp_add_left
+              _ = total_comp
+                    (DirectSum.lof R ℤ
+                      (fun n => homogeneous S W X n) i f)
+                    (total_comp g h) +
+                    total_comp
+                      (DirectSum.lof R ℤ
+                        (fun n => homogeneous S W X n) i f)
+                      (total_comp g' h) := by
+                    rw [hg0, hg0']
+              _ = total_comp
+                    (DirectSum.lof R ℤ
+                      (fun n => homogeneous S W X n) i f)
+                    (total_comp g h + total_comp g' h) := by
+                    symm
+                    apply hcomp_add_right
+              _ = total_comp
+                    (DirectSum.lof R ℤ
+                      (fun n => homogeneous S W X n) i f)
+                    (total_comp (g + g') h) := by
+                    rw [hcomp_add_left]
+        · intro f f' hf hf'
+          calc
+            total_comp (total_comp (f + f') g) h =
+                total_comp (total_comp f g + total_comp f' g) h := by
+              rw [hcomp_add_left]
+            _ = total_comp (total_comp f g) h +
+                total_comp (total_comp f' g) h := by
+              apply hcomp_add_left
+            _ = total_comp f (total_comp g h) +
+                total_comp f' (total_comp g h) := by
+              rw [hf, hf']
+            _ = total_comp (f + f') (total_comp g h) := by
+              symm
+              apply hcomp_add_left }
+    , by
+      constructor
+      · intro X
+        rfl
+      · intro X Y Z i j f g
+        rfl⟩
 
 noncomputable def totalizationSpec : TotalizationSpec S :=
   Classical.choice (totalizationSpec_nonempty S)
@@ -102,7 +585,271 @@ theorem categoryData_homogeneous_comp {X Y Z : C} {i j : ℤ}
 
 theorem degree_zero_recovers :
     Nonempty (DegreeZero (gradedCategory S) ≌ C) := by
-  sorry
+  let homTo {A Y : C}
+      (f : directSumComponent R
+        (fun n => homogeneous S A Y n) 0) :
+      homogeneous S A Y 0 :=
+    Classical.choose f.2
+  let homFrom {A Y : C}
+      (f : homogeneous S A Y 0) :
+      directSumComponent R
+        (fun n => homogeneous S A Y n) 0 :=
+      ⟨DirectSum.lof R ℤ
+        (fun n => homogeneous S A Y n) 0 f,
+      ⟨f, rfl⟩⟩
+  let totalComp0 {A Y E : C}
+      (f : directSumComponent R
+        (fun n => homogeneous S A Y n) 0)
+      (g : directSumComponent R
+        (fun n => homogeneous S Y E n) 0) :
+      directSumComponent R
+        (fun n => homogeneous S A E n) 0 :=
+    ⟨(categoryData S).total_comp
+        (f : DirectSum ℤ (fun n => homogeneous S A Y n))
+        (g : DirectSum ℤ (fun n => homogeneous S Y E n)),
+      (categoryData S).total_comp_degree f g⟩
+  have homFrom_homTo {A Y : C}
+      (f : directSumComponent R
+        (fun n => homogeneous S A Y n) 0) :
+      homFrom (homTo f) = f := by
+    apply Subtype.ext
+    exact Classical.choose_spec f.2
+  have homTo_homFrom {A Y : C}
+      (f : homogeneous S A Y 0) :
+      homTo (homFrom f) = f := by
+    apply DirectSum.of_injective 0
+    simpa [DirectSum.lof_eq_of, homTo, homFrom] using
+      (Classical.choose_spec (homFrom f).2)
+  have homFrom_injective {A Y : C} :
+      Function.Injective (homFrom (A := A) (Y := Y)) := by
+    intro f g h
+    exact (homTo_homFrom f).symm.trans
+      ((congrArg (homTo (A := A) (Y := Y)) h).trans
+        (homTo_homFrom g))
+  let familyToMap {A Y : C}
+      (f : homogeneous S A Y 0) : A ⟶ Y :=
+    f ≫ eqToHom
+      (congrArg (fun F : C ⥤ C => F.obj Y) S.shift_zero)
+  let mapToFamily {A Y : C}
+      (f : A ⟶ Y) : homogeneous S A Y 0 :=
+    f ≫ eqToHom
+      (congrArg (fun F : C ⥤ C => F.obj Y) S.shift_zero).symm
+  have mapToFamily_familyToMap
+      {A Y : C} (f : homogeneous S A Y 0) :
+      mapToFamily (familyToMap f) = f := by
+    dsimp [mapToFamily, familyToMap]
+    simp
+  have familyToMap_mapToFamily
+      {A Y : C} (f : A ⟶ Y) :
+      familyToMap (mapToFamily f) = f := by
+    dsimp [mapToFamily, familyToMap]
+    simp
+  have hzero_id (A : C) :
+      mapToFamily (𝟙 A) = homogeneousId S A := by
+    dsimp [mapToFamily, homogeneousId]
+    simp
+  have hzero_comp {A Y E : C}
+      (f : homogeneous S A Y 0)
+      (g : homogeneous S Y E 0) :
+      homogeneousComp S 0 0 f g =
+        mapToFamily (familyToMap f ≫ familyToMap g) := by
+    dsimp [homogeneousComp, mapToFamily, familyToMap]
+    rw [Functor.congr_hom S.shift_zero g]
+    simp only [Functor.id_map, Category.assoc, Category.comp_id,
+      Category.id_comp, eqToHom_trans, eqToHom_refl]
+  have hsource_id (A : C) :
+      homFrom (mapToFamily (𝟙 A)) =
+        𝟙 (DegreeZero.of (gradedCategory S) (categoryObject S A)) := by
+    apply Subtype.ext
+    change DirectSum.lof R ℤ
+        (fun n => homogeneous S A A n) 0
+        (mapToFamily (𝟙 A)) =
+      (categoryData S).total_id A
+    rw [hzero_id, (categoryData S).total_id_eq_lof,
+      categoryData_homogeneous_id]
+  have hhom_comp {A Y E : C}
+      (f : directSumComponent R
+        (fun n => homogeneous S A Y n) 0)
+      (g : directSumComponent R
+        (fun n => homogeneous S Y E n) 0) :
+      homTo (totalComp0 f g) =
+        homogeneousComp S 0 0 (homTo f) (homTo g) := by
+    apply homFrom_injective
+    rw [homFrom_homTo]
+    rw [← homFrom_homTo f, ← homFrom_homTo g]
+    simp only [homTo_homFrom]
+    dsimp [totalComp0, homFrom]
+    apply Subtype.ext
+    change (categoryData S).total_comp
+        (DirectSum.lof R ℤ
+          (fun n => homogeneous S A Y n) 0 (homTo f))
+        (DirectSum.lof R ℤ
+          (fun n => homogeneous S Y E n) 0 (homTo g)) =
+      DirectSum.lof R ℤ
+        (fun n => homogeneous S A E n) 0
+        (homogeneousComp S 0 0 (homTo f) (homTo g))
+    rw [(categoryData S).total_comp_lof]
+    congr 1
+    exact categoryData_homogeneous_comp S _ _
+  have hsource_comp {A Y E : C}
+      (f : A ⟶ Y) (g : Y ⟶ E) :
+      homFrom (mapToFamily (f ≫ g)) =
+        totalComp0 (homFrom (mapToFamily f))
+          (homFrom (mapToFamily g)) := by
+    apply Subtype.ext
+    change DirectSum.lof R ℤ
+        (fun n => homogeneous S A E n) 0
+        (mapToFamily (f ≫ g)) =
+      (categoryData S).total_comp _ _
+    rw [(categoryData S).total_comp_lof]
+    congr 1
+    rw [categoryData_homogeneous_comp S]
+    rw [hzero_comp, familyToMap_mapToFamily,
+      familyToMap_mapToFamily]
+  let F :
+      DegreeZero (gradedCategory S) ⥤ C :=
+    { obj := fun X =>
+          (DegreeZero.obj (gradedCategory S) X).underlying
+      map := fun {X Y} f =>
+        familyToMap
+          (A := (DegreeZero.obj (gradedCategory S) X).underlying)
+          (Y := (DegreeZero.obj (gradedCategory S) Y).underlying)
+          (homTo f)
+      map_id := by
+        intro X
+        cases X with
+        | up X =>
+          cases X with
+          | mk A =>
+            change familyToMap (homTo
+                (𝟙 (DegreeZero.of (gradedCategory S)
+                  (categoryObject S A)))) = 𝟙 A
+            rw [← hsource_id A]
+            change familyToMap
+              (homTo (homFrom (mapToFamily (𝟙 A)))) = 𝟙 A
+            calc
+              familyToMap
+                  (homTo (homFrom (mapToFamily (𝟙 A)))) =
+                familyToMap (mapToFamily (𝟙 A)) := by
+                  congr 1
+                  exact homTo_homFrom (mapToFamily (𝟙 A))
+              _ = 𝟙 A := familyToMap_mapToFamily (𝟙 A)
+      map_comp := by
+        intro X Y Z f g
+        cases X with
+        | up X =>
+          cases X with
+          | mk A =>
+            cases Y with
+            | up Y =>
+              cases Y with
+              | mk Y =>
+                cases Z with
+                | up Z =>
+                  cases Z with
+                  | mk E =>
+                    change directSumComponent R
+                      (fun n => homogeneous S A Y n) 0 at f
+                    change directSumComponent R
+                      (fun n => homogeneous S Y E n) 0 at g
+                    change familyToMap (homTo (totalComp0 f g)) =
+                      familyToMap (homTo f) ≫ familyToMap (homTo g)
+                    rw [hhom_comp, hzero_comp,
+                      familyToMap_mapToFamily] }
+  let G :
+      C ⥤ DegreeZero (gradedCategory S) :=
+    { obj := fun A => DegreeZero.of (gradedCategory S)
+          (categoryObject S A)
+      map := fun f => homFrom (mapToFamily f)
+      map_id := by
+        intro A
+        exact hsource_id A
+      map_comp := by
+        intro A Y E f g
+        change homFrom (mapToFamily (f ≫ g)) =
+            totalComp0 (homFrom (mapToFamily f))
+              (homFrom (mapToFamily g))
+        exact hsource_comp f g }
+  let unitIso (X : DegreeZero (gradedCategory S)) :
+      X ≅ (F ⋙ G).obj X := by
+    cases X with
+    | up X =>
+      cases X with
+      | mk A =>
+        exact Iso.refl _
+  let counitIso (A : C) :
+      (G ⋙ F).obj A ≅ A := by
+    exact Iso.refl _
+  let unitNatIso :
+      𝟭 (DegreeZero (gradedCategory S)) ≅ F ⋙ G := by
+    refine NatIso.ofComponents
+        (fun X => unitIso X)
+        (fun {X Y} f => ?_)
+    cases X with
+    | up X =>
+      cases X with
+      | mk A =>
+        cases Y with
+        | up Y =>
+          cases Y with
+          | mk Y =>
+            change directSumComponent R
+              (fun n => homogeneous S A Y n) 0 at f
+            dsimp [unitIso, F, G]
+            apply Subtype.ext
+            change (categoryData S).total_comp f.1
+                ((categoryData S).total_id Y) =
+              (categoryData S).total_comp
+                ((categoryData S).total_id A)
+                ((homFrom (mapToFamily (familyToMap (homTo f))) :
+                  directSumComponent R
+                    (fun n => homogeneous S A Y n) 0) :
+                  DirectSum ℤ (fun n => homogeneous S A Y n))
+            rw [(categoryData S).total_comp_id,
+              (categoryData S).total_id_comp]
+            calc
+              (f : DirectSum ℤ (fun n => homogeneous S A Y n)) =
+                  (homFrom (homTo f) : DirectSum ℤ
+                    (fun n => homogeneous S A Y n)) :=
+                congrArg Subtype.val (homFrom_homTo f).symm
+              _ = (homFrom (mapToFamily (familyToMap (homTo f))) :
+                  DirectSum ℤ (fun n => homogeneous S A Y n)) := by
+                rw [mapToFamily_familyToMap]
+  let counitNatIso :
+      G ⋙ F ≅ 𝟭 C := by
+    refine NatIso.ofComponents (fun A => counitIso A) (fun {X Y} f => ?_)
+    simp [counitIso]
+    dsimp [F, G]
+    change familyToMap (homTo (homFrom (mapToFamily f))) ≫ 𝟙 Y =
+      𝟙 X ≫ f
+    rw [Category.comp_id, Category.id_comp, homTo_homFrom,
+      familyToMap_mapToFamily]
+  refine ⟨⟨F, G, unitNatIso, counitNatIso, ?_⟩⟩
+  · intro X
+    cases X with
+    | up X =>
+      cases X with
+      | mk A =>
+        change F.map (unitIso (DegreeZero.of
+          (gradedCategory S) (categoryObject S A))).hom ≫
+          (counitIso A).hom = 𝟙 A
+        have hunit :
+            (unitIso (DegreeZero.of (gradedCategory S)
+              (categoryObject S A))).hom =
+              𝟙 (DegreeZero.of (gradedCategory S)
+                (categoryObject S A)) := by
+          dsimp [unitIso]
+          rfl
+        have hmap :
+            F.map (unitIso (DegreeZero.of (gradedCategory S)
+              (categoryObject S A))).hom = 𝟙 A := by
+          rw [hunit]
+          exact F.map_id _
+        have hcount : (counitIso A).hom = 𝟙 A := by
+          rfl
+        rw [hmap, hcount]
+        dsimp [F]
+        exact Category.id_comp (𝟙 A)
 
 noncomputable def degree_zero_equivalence : DegreeZero (gradedCategory S) ≌ C :=
   Classical.choice (degree_zero_recovers S)

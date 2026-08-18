@@ -293,7 +293,50 @@ def gradedRightModuleHomogeneousComp
 theorem gradedRightModuleHomogeneousId_nonempty
     (L : GradedRightModule (R := R) (A := A)) :
     Nonempty (GradedRightModuleHomogeneous L L 0) := by
-  sorry
+  have hcast_add :
+      ∀ {i j : ℤ} (h : i = j) (x y : L.component i),
+        cast (congrArg L.component h) (x + y) =
+          cast (congrArg L.component h) x + cast (congrArg L.component h) y := by
+    intro i j h x y
+    subst j
+    rfl
+  have hcast_smul :
+      ∀ {i j : ℤ} (h : i = j) (r : R) (x : L.component i),
+        cast (congrArg L.component h) (r • x) =
+          r • cast (congrArg L.component h) x := by
+    intro i j h r x
+    subst j
+    rfl
+  have htransport_action :
+      ∀ {i j k l d : ℤ} (hij : i = j) (hkl : k = l)
+        (h1 : i + d = k) (h2 : j + d = l)
+        (m : L.component i) (a : A d),
+        cast (congrArg L.component hkl)
+            (gradedRightModuleRightActionAt L h1 m a) =
+          gradedRightModuleRightActionAt L h2
+            (cast (congrArg L.component hij) m) a := by
+    intro i j k l d hij hkl h1 h2 m a
+    subst j
+    subst l
+    rfl
+  let f : GradedRightModuleHomogeneousFamily L L 0 :=
+    fun s =>
+      { toFun := fun x => cast (congrArg L.component (by omega)) x
+        map_add' := by intro x y; exact hcast_add (by omega) x y
+        map_smul' := by intro r x; exact hcast_smul (by omega) r x }
+  have hf : IsGradedRightModuleMap L L f := by
+    intro s i a m
+    dsimp [f, IsGradedRightModuleMap]
+    rcases s with ⟨⟨p, q⟩, h⟩
+    have hq : q = -p := by omega
+    subst q
+    simp only [Prod.fst, Prod.snd, Subtype.coe_mk] at h ⊢
+    change L.component (-(-p + i)) at m
+    exact htransport_action
+      (i := -(-p + i)) (j := p - i) (k := -(-p)) (l := p) (d := i)
+      (hij := by omega) (hkl := by omega)
+      (h1 := by omega) (h2 := by omega) m a
+  exact ⟨⟨f, hf⟩⟩
 
 noncomputable def gradedRightModuleHomogeneousId
     (L : GradedRightModule (R := R) (A := A)) :

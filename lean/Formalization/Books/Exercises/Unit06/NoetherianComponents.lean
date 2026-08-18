@@ -23,6 +23,11 @@ namespace Formalization.Books.Exercises.Unit06
 
 /-! ## Noetherian and Artinian spaces -/
 
+/-- The source's descending-closed-set definition of a Noetherian space. -/
+theorem noetherian_space_iff_descending_closed {X : Type u} [TopologicalSpace X] :
+    NoetherianSpace X ↔ WellFoundedLT (TopologicalSpace.Closeds X) :=
+  (noetherianSpace_TFAE X).out 0 1
+
 /-- The source's Artinian condition: increasing chains of closed sets
 stabilize. -/
 abbrev ArtinianSpace (X : Type u) [TopologicalSpace X] : Prop :=

@@ -138,4 +138,12 @@ theorem infinite_boolean_product_spectrum_warning :
         IsClosed ({p} : Set (PrimeSpectrum infiniteBooleanProductRing)) := by
   sorry
 
+/-- The same infinite product has a connected component which is not open,
+so the Noetherian openness conclusion cannot be extended to arbitrary rings. -/
+theorem infinite_boolean_product_has_nonopen_connected_component :
+    ∃ p : PrimeSpectrum infiniteBooleanProductRing,
+      connectedComponent p = {p} ∧
+        ¬ IsOpen (connectedComponent p) := by
+  sorry
+
 end Formalization.Books.Exercises.Unit06

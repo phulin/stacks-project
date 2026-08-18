@@ -3,6 +3,7 @@ import Mathlib.Data.Nat.Prime.Basic
 import Mathlib.Data.ZMod.Basic
 import Mathlib.FieldTheory.IsAlgClosed.Basic
 import Mathlib.RingTheory.Localization.Basic
+import Mathlib.RingTheory.Localization.Ideal
 import Mathlib.RingTheory.Polynomial.Basic
 import Mathlib.RingTheory.Spectrum.Prime.Topology
 
@@ -113,6 +114,27 @@ def nonzeroPolynomialSubmonoid (k : Type u) [Field k] : Submonoid (Polynomial k)
 abbrev nonzeroPolynomialLocalization (k : Type u) [Field k] :=
   Localization (nonzeroPolynomialSubmonoid k)
 
+/-- The multiplicative subset of `k[x,y]` obtained by mapping the nonzero
+one-variable polynomials along the displayed inclusion. -/
+def nonzeroPolynomialImageSubmonoid (k : Type u) [Field k] :
+    Submonoid (twoVariablePolynomialRing k) :=
+  (nonzeroPolynomialSubmonoid k).map (polynomialXInclusion k)
+
+/-- The localization of `k[x,y]` used by the generic-fibre hint. -/
+abbrev nonzeroPolynomialFiberLocalization (k : Type u) [Field k] :=
+  Localization (nonzeroPolynomialImageSubmonoid k)
+
+/-- Prime ideals of the generic-fibre localization correspond to prime ideals
+of `k[x,y]` disjoint from the image of the nonzero polynomials in `k[x]`. -/
+noncomputable def polynomial_spectrum_generic_fiber_localization_order_iso
+    (k : Type u) [Field k] :
+    PrimeSpectrum (nonzeroPolynomialFiberLocalization k) ≃o
+      {p : PrimeSpectrum (twoVariablePolynomialRing k) //
+        Disjoint (nonzeroPolynomialImageSubmonoid k :
+          Set (twoVariablePolynomialRing k)) p.asIdeal} := by
+  exact IsLocalization.primeSpectrumOrderIso
+    (nonzeroPolynomialImageSubmonoid k) (nonzeroPolynomialFiberLocalization k)
+
 /-- The generic fibre of the displayed map is the locus where the induced
 prime of `k[x]` is zero. -/
 theorem polynomial_spectrum_generic_fiber_preimage (k : Type u) [Field k] :
@@ -120,6 +142,15 @@ theorem polynomial_spectrum_generic_fiber_preimage (k : Type u) [Field k] :
       ({polynomialGenericPoint k} : Set (PrimeSpectrum (oneVariablePolynomialRing k))) =
       {p : PrimeSpectrum (twoVariablePolynomialRing k) |
         Ideal.comap (polynomialXInclusion k) p.asIdeal = ⊥} := by
+  sorry
+
+/-- Disjointness from the image of the nonzero `k[x]` polynomials is the
+generic-fibre condition for the displayed spectrum map. -/
+theorem polynomial_spectrum_generic_fiber_disjoint_iff
+    (k : Type u) [Field k] (p : PrimeSpectrum (twoVariablePolynomialRing k)) :
+    Disjoint (nonzeroPolynomialImageSubmonoid k : Set (twoVariablePolynomialRing k))
+        p.asIdeal ↔
+      Ideal.comap (polynomialXInclusion k) p.asIdeal = ⊥ := by
   sorry
 
 /-- Over an algebraically closed field, the primes of `k[x,y]` are zero, a
@@ -160,6 +191,48 @@ def integerPolynomialBaseMap : ℤ →+* integerPolynomialRing :=
 def integerPolynomialSpectrumMap :
     PrimeSpectrum integerPolynomialRing → PrimeSpectrum ℤ :=
   PrimeSpectrum.comap integerPolynomialBaseMap
+
+/-- The nonzero integers used in the generic-fibre localization for
+`Spec(ℤ[y])`. -/
+def nonzeroIntegerSubmonoid : Submonoid ℤ where
+  carrier := {n | n ≠ 0}
+  one_mem' := one_ne_zero
+  mul_mem' := by
+    intro m n hm hn
+    exact mul_ne_zero hm hn
+
+/-- The image in `ℤ[y]` of the nonzero integers. -/
+def nonzeroIntegerImageSubmonoid : Submonoid integerPolynomialRing :=
+  (nonzeroIntegerSubmonoid.map integerPolynomialBaseMap)
+
+/-- The localization of `ℤ[y]` used by the final exercise's generic-fibre
+hint. -/
+abbrev nonzeroIntegerPolynomialFiberLocalization : Type :=
+  Localization nonzeroIntegerImageSubmonoid
+
+/-- Prime ideals of the generic-fibre localization of `ℤ[y]` correspond to
+prime ideals of `ℤ[y]` disjoint from the nonzero integers. -/
+noncomputable def integer_polynomial_generic_fiber_localization_order_iso :
+    PrimeSpectrum nonzeroIntegerPolynomialFiberLocalization ≃o
+      {P : PrimeSpectrum integerPolynomialRing //
+        Disjoint (nonzeroIntegerImageSubmonoid : Set integerPolynomialRing) P.asIdeal} := by
+  exact IsLocalization.primeSpectrumOrderIso
+    nonzeroIntegerImageSubmonoid nonzeroIntegerPolynomialFiberLocalization
+
+/-- The zero-prime fibre of `Spec(ℤ[y]) → Spec(ℤ)` is characterized by
+disjointness from the image of the nonzero integers. -/
+theorem integer_polynomial_generic_fiber_preimage :
+    integerPolynomialSpectrumMap ⁻¹'
+      ({⟨⊥, by infer_instance⟩} : Set (PrimeSpectrum ℤ)) =
+      {P : PrimeSpectrum integerPolynomialRing |
+        Ideal.comap integerPolynomialBaseMap P.asIdeal = ⊥} := by
+  sorry
+
+theorem integer_polynomial_generic_fiber_disjoint_iff
+    (P : PrimeSpectrum integerPolynomialRing) :
+    Disjoint (nonzeroIntegerImageSubmonoid : Set integerPolynomialRing) P.asIdeal ↔
+      Ideal.comap integerPolynomialBaseMap P.asIdeal = ⊥ := by
+  sorry
 
 /-- The maximal ideals of `ℤ[y]` are the inverse images of irreducible
 polynomial ideals over residue fields `𝔽_p`. -/

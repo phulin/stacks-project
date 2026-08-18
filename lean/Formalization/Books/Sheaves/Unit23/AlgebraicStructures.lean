@@ -403,7 +403,18 @@ theorem algebraicSheafPullback_underlying_formula
     Nonempty
       (algebraicUnderlyingSheaf U ((algebraicSheafPullback C f).obj G) ≅
         (TopCat.Sheaf.pullback (Type v) f).obj (algebraicUnderlyingSheaf U G)) := by
-  sorry
+  let J := Opens.grothendieckTopology X
+  letI : J.PreservesSheafification U :=
+    CategoryTheory.GrothendieckTopology.instPreservesSheafification J U
+  let P := (Formalization.Books.Sheaves.Unit22.algebraicPresheafPullback C f).obj G.presheaf
+  let eC := (TopCat.Sheaf.pullbackIso C f).app G
+  let eT := (TopCat.Sheaf.pullbackIso (Type v) f).app (algebraicUnderlyingSheaf U G)
+  let eU := (CategoryTheory.sheafComposeNatIso J U
+    (CategoryTheory.sheafificationAdjunction J C)
+    (CategoryTheory.sheafificationAdjunction J (Type v))).app P
+  let eP := Classical.choice (algebraicPresheafPullback_underlying_formula U f G.presheaf)
+  exact ⟨(CategoryTheory.sheafCompose J U).mapIso eC |>.trans eU.symm |>.trans
+    ((CategoryTheory.presheafToSheaf J (Type v)).mapIso eP) |>.trans eT.symm⟩
 
 /-! ## Algebraic `f`-maps -/
 

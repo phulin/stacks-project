@@ -656,8 +656,7 @@ theorem splitSequence_universallyExact
       rfl
   · intro y
     exact ⟨(0, y), rfl⟩
-  · intro Q _ _
-    intro x y hxy
+  · intro Q _ _ x y hxy
     have hcomp : (LinearMap.fst R M M).comp
         (splitSequenceInjection (R := R) (M := M)) = LinearMap.id := by
       ext z
@@ -673,7 +672,7 @@ theorem splitSequence_nonflat
     ¬ Module.Flat R M ∧ ¬ Module.Flat R (M × M) ∧ ¬ Module.Flat R M := by
   refine ⟨hM, ?_, hM⟩
   intro hprod
-  letI : Module.Flat R (M × M) := hprod
+  let : Module.Flat R (M × M) := hprod
   let i : M →ₗ[R] M × M := LinearMap.inl R M M
   let r : M × M →ₗ[R] M := LinearMap.fst R M M
   have hri : r.comp i = LinearMap.id := by
@@ -689,7 +688,7 @@ theorem splitSequence_nonflat_of_nontrivial_torsion
     ¬ Module.Flat ℤ M ∧ ¬ Module.Flat ℤ (M × M) ∧ ¬ Module.Flat ℤ M := by
   have hM' : ¬ Module.Flat ℤ M := by
     intro hflat
-    letI : Module.Flat ℤ M := hflat
+    let : Module.Flat ℤ M := hflat
     have htor : Submodule.torsion ℤ M = ⊥ := Module.Flat.torsion_eq_bot
     obtain ⟨x, hx⟩ := exists_ne (0 : M)
     have hxT : x ∈ Submodule.torsion ℤ M := by
@@ -703,8 +702,8 @@ theorem splitSequence_nonflat_of_nontrivial_torsion
       AddCommGroup.toIntModule (M × M) := Subsingleton.elim _ _
   have hprod' : @Module.Flat ℤ (M × M) _ _ Prod.instModule :=
     hmod.symm ▸ hprod
-  letI : Module ℤ (M × M) := Prod.instModule
-  letI : Module.Flat ℤ (M × M) := hprod'
+  let : Module ℤ (M × M) := Prod.instModule
+  let : Module.Flat ℤ (M × M) := hprod'
   let i : M →ₗ[ℤ] M × M := LinearMap.inl ℤ M M
   let r : M × M →ₗ[ℤ] M := LinearMap.fst ℤ M M
   have hri : r.comp i = LinearMap.id := by

@@ -1496,7 +1496,7 @@ theorem moduleSkyscraperStalkAwayFromSupport
     {x' : X} (h : ¬x ⤳ x') :
     Nonempty ((moduleStalkFunctor O x').obj
       (moduleSkyscraperSheaf O x A) ≅ 0) := by
-  sorry
+  exact (Classical.choice (exists_moduleSkyscraperSheaf O x A)).stalk_away h
 
 theorem moduleSkyscraperStalkAwayFromClosure
     {X : TopCat.{v}} (O : RingSheaf X) (x : X)

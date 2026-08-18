@@ -15,6 +15,7 @@ import Mathlib.RingTheory.LocalRing.ResidueField.Fiber
 import Mathlib.RingTheory.TensorProduct.Maps
 import Mathlib.LinearAlgebra.TensorProduct.Vanishing
 import Mathlib.CategoryTheory.Limits.EpiMono
+import Mathlib.SetTheory.Cardinal.Arithmetic
 import Mathlib.Tactic.TFAE
 
 /-!
@@ -1801,14 +1802,143 @@ theorem cardinality_target_le_source_of_epimorphism
     {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S)
     (hf : Epi (CommRingCat.ofHom f)) :
     Cardinal.mk S ≤ Cardinal.mk R := by
-  sorry
+  letI : Algebra R S := f.toAlgebra
+  have huniq {g g' : S} {n : ℕ} {t : MatrixTriple f n}
+      (hg : matrixTripleAssociated f g t)
+      (hg' : matrixTripleAssociated f g' t) : g = g' := by
+    rcases hg with ⟨y, z, hfac, hcol, hrow⟩
+    rcases hg' with ⟨y', z', hfac', hcol', hrow'⟩
+    calc
+      g = ∑ i : Fin n, ∑ j : Fin n, f (t.P i j) * y i * z j := hfac
+      _ = ∑ i : Fin n, y i * f (t.V i 0) := by
+        apply Finset.sum_congr rfl
+        intro i hi
+        rw [hrow i]
+        rw [Finset.mul_sum]
+        apply Finset.sum_congr rfl
+        intro j hj
+        ring
+      _ = ∑ i : Fin n, ∑ j : Fin n, f (t.P i j) * y i * z' j := by
+        apply Finset.sum_congr rfl
+        intro i hi
+        rw [hrow' i]
+        rw [Finset.mul_sum]
+        apply Finset.sum_congr rfl
+        intro j hj
+        ring
+      _ = ∑ j : Fin n, f (t.U 0 j) * z' j := by
+        rw [Finset.sum_comm]
+        apply Finset.sum_congr rfl
+        intro j hj
+        rw [hcol j]
+        rw [Finset.sum_mul]
+      _ = g' := by
+        rw [hfac']
+        rw [Finset.sum_comm]
+        apply Finset.sum_congr rfl
+        intro j hj
+        rw [hcol' j]
+        rw [Finset.sum_mul]
+  have hmem (g : S) : g ∈ epicenter f := by
+    apply (mem_epicenter f g).mpr
+    have heq :
+        (Algebra.TensorProduct.includeLeftRingHom : S →+* S ⊗[R] S) =
+          (Algebra.TensorProduct.includeRight (R := R) (A := S) (B := S)).toRingHom :=
+      ((epimorphism_iff_tensorProduct f).out 0 1).mp hf
+    exact congrArg (fun q => q g) heq
+  let nOf (g : S) : ℕ :=
+    Classical.choose (exists_matrixTriple_associated_of_mem_epicenter f (hmem g))
+  let tOf (g : S) : MatrixTriple f (nOf g) :=
+    Classical.choose
+      (Classical.choose_spec
+        (exists_matrixTriple_associated_of_mem_epicenter f (hmem g)))
+  have assocOf (g : S) : matrixTripleAssociated f g (tOf g) := by
+    exact Classical.choose_spec
+      (Classical.choose_spec
+        (exists_matrixTriple_associated_of_mem_epicenter f (hmem g)))
+  let enc : S → Σ n : ℕ, MatrixTriple f n := fun g => ⟨nOf g, tOf g⟩
+  have assocEnc (g : S) : matrixTripleAssociated f g (enc g).2 := by
+    simpa [enc] using assocOf g
+  have enc_injective : Function.Injective enc := by
+    intro g g' h
+    have hg := assocEnc g
+    have hg' := assocEnc g'
+    rw [← h] at hg'
+    exact huniq hg hg'
+  classical
+  by_cases hR : Infinite R
+  · letI : Infinite R := hR
+    have hconst {ι : Type} [Fintype ι] :
+        Cardinal.prod (fun _ : ι => Cardinal.mk R) ≤ Cardinal.mk R := by
+      rw [Cardinal.prod_eq_of_fintype]
+      simpa [Finset.prod_const] using
+        (Cardinal.power_nat_le (c := Cardinal.mk R) (n := Fintype.card ι)
+          (Cardinal.aleph0_le_mk R))
+    have hprod_le {ι : Type} [Fintype ι] {c : Cardinal} (hc : c ≤ Cardinal.mk R) :
+        Cardinal.prod (fun _ : ι => c) ≤ Cardinal.mk R := by
+      exact (Cardinal.prod_le_prod _ _ (fun _ => hc)).trans hconst
+    have htriple (n : ℕ) : Cardinal.mk (MatrixTriple f n) ≤ Cardinal.mk R := by
+      let encT : MatrixTriple f n →
+          (Fin n → Fin n → R) × (Fin 1 → Fin n → R) × (Fin n → Fin 1 → R) :=
+        fun t => (t.P, t.U, t.V)
+      have hinjT : Function.Injective encT := by
+        intro t t' h
+        have hP := congrArg Prod.fst h
+        have hU := congrArg (fun q => q.2.1) h
+        have hV := congrArg (fun q => q.2.2) h
+        cases t
+        cases t'
+        simp only [encT] at hP hU hV
+        cases hP
+        cases hU
+        cases hV
+        rfl
+      apply (Cardinal.mk_le_of_injective hinjT).trans
+      simp only [Cardinal.mk_prod, Cardinal.mk_pi, Cardinal.lift_id]
+      apply Cardinal.mul_le_of_le (Cardinal.aleph0_le_mk R)
+      · exact hprod_le hconst
+      · apply Cardinal.mul_le_of_le (Cardinal.aleph0_le_mk R)
+        · exact hprod_le hconst
+        · exact hprod_le hconst
+    have hsigma : Cardinal.mk (Σ n : ℕ, MatrixTriple f n) ≤ Cardinal.mk R := by
+      rw [Cardinal.mk_sigma]
+      calc
+        Cardinal.sum (fun n : ℕ => Cardinal.mk (MatrixTriple f n)) ≤
+            Cardinal.lift (Cardinal.mk ℕ) *
+              ⨆ n : ℕ, Cardinal.lift (Cardinal.mk (MatrixTriple f n)) :=
+          Cardinal.sum_le_lift_mk_mul_iSup_lift _
+        _ ≤ Cardinal.lift (Cardinal.mk ℕ) * Cardinal.lift (Cardinal.mk R) :=
+          by
+            have hi :
+                (⨆ n : ℕ, Cardinal.lift.{0, u} (Cardinal.mk (MatrixTriple f n))) ≤
+                  Cardinal.lift.{u, u} (Cardinal.mk R) :=
+              ciSup_le (fun n =>
+                by simpa only [Cardinal.lift_uzero, Cardinal.lift_id] using htriple n)
+            simpa [mul_comm] using
+              (mul_le_mul_right hi (Cardinal.lift.{u, 0} (Cardinal.mk ℕ)))
+        _ = Cardinal.mk R := by
+          simp only [Cardinal.mk_nat, Cardinal.lift_aleph0, Cardinal.lift_id]
+          exact Cardinal.aleph0_mul_mk_eq (α := R)
+    exact (Cardinal.mk_le_of_injective enc_injective).trans hsigma
+  · haveI : Finite R := not_infinite_iff_finite.mp hR
+    sorry
 
 /-- The finite-source case in the cardinality argument is in fact surjective. -/
 theorem surjective_of_finite_source_of_epimorphism
     {R S : Type u} [CommRing R] [CommRing S] [Finite R] (f : R →+* S)
     (hf : Epi (CommRingCat.ofHom f)) :
     Function.Surjective f := by
-  sorry
+  letI : Algebra R S := f.toAlgebra
+  have hcard : Cardinal.mk S ≤ Cardinal.mk R :=
+    cardinality_target_le_source_of_epimorphism f hf
+  letI : Finite S :=
+    Cardinal.mk_lt_aleph0_iff.mp (hcard.trans_lt (Cardinal.lt_aleph0_of_finite R))
+  letI : Module.Finite R S := (Module.finite_iff_finite).mpr inferInstance
+  letI : Epi (CommRingCat.ofHom f) := hf
+  have hfin : RingHom.Finite f := by
+    change Module.Finite R S
+    infer_instance
+  exact RingHom.surjective_of_epi_of_finite (CommRingCat.ofHom f) hfin
 
 /-- The ring-epimorphism criterion in terms of restriction of scalars on
 module categories. -/
@@ -1821,7 +1951,115 @@ theorem epimorphism_iff_restrictScalars_fullyFaithful
           Function.Bijective
             (F.map : (M ⟶ N) → (F.obj M ⟶ F.obj N)),
         Nonempty F.FullyFaithful ] := by
-  sorry
+  dsimp
+  tfae_have h12 : 1 ↔ 2 := by
+    letI : Algebra R S := f.toAlgebra
+    constructor
+    · intro h
+      have hepi : Algebra.IsEpi R S := (CommRingCat.epi_iff_epi).mp h
+      let F := ModuleCat.restrictScalars f
+      change ∀ (M N : ModuleCat S),
+        Function.Bijective (F.map : (M ⟶ N) → (F.obj M ⟶ F.obj N))
+      intro M N
+      constructor
+      · intro g k e
+        exact F.map_injective e
+      · intro g
+        letI : Module S (F.obj N) := inferInstanceAs (Module S N)
+        letI : SMulCommClass R S (F.obj N) := ModuleCat.sMulCommClass_mk f N
+        letI : IsScalarTower R S (F.obj N) :=
+          ⟨by
+            intro r s x
+            change (r • s) • x = r • (s • x)
+            rw [Algebra.smul_def, ModuleCat.restrictScalars.smul_def f r,
+              mul_smul]
+            rfl⟩
+        let sLinear : M →ₗ[S] N :=
+            { toFun := g.hom
+              map_add' := g.hom.map_add
+              map_smul' := by
+                intro s x
+                let x' : F.obj M := x
+                let hbilin : S →ₗ[R] S →ₗ[R] F.obj N :=
+                  { toFun := fun a =>
+                      { toFun := fun b => a • g.hom (b • x')
+                        map_add' := by
+                          intro b c
+                          rw [add_smul, map_add, smul_add]
+                        map_smul' := by
+                          intro r b
+                          change a • g.hom ((r • b) • x') =
+                            r • (a • g.hom (b • x'))
+                          rw [Algebra.smul_def]
+                          have har : algebraMap R S r = f r := rfl
+                          have hmb : (f r * b) • x' = r • (b • x') := by
+                            simp [smul_eq_mul, mul_smul,
+                              ModuleCat.restrictScalars.smul_def f r]
+                            rfl
+                          rw [har, hmb, map_smul]
+                          exact smul_comm a (f r) (g.hom (b • x')) }
+                    map_add' := by
+                      intro a b
+                      apply LinearMap.ext
+                      intro c
+                      dsimp
+                      change (a + b) • g.hom (c • x') =
+                        a • g.hom (c • x') + b • g.hom (c • x')
+                      rw [add_smul]
+                    map_smul' := by
+                      intro r a
+                      apply LinearMap.ext
+                      intro b
+                      dsimp
+                      rw [Algebra.smul_def, mul_smul]
+                      have har : algebraMap R S r = f r := rfl
+                      rw [har, ModuleCat.restrictScalars.smul_def f r]
+                      rfl }
+                have ht : 1 ⊗ₜ[R] s = s ⊗ₜ[R] (1 : S) :=
+                  (Algebra.isEpi_iff_forall_one_tmul_eq R S).mp hepi s
+                let L : (S ⊗[R] S) →ₗ[R] F.obj N := TensorProduct.lift hbilin
+                letI : Algebra S (S ⊗[R] S) :=
+                  (Algebra.TensorProduct.includeLeft (R := R) (S := S)
+                    (A := S) (B := S)).toRingHom.toAlgebra
+                let Ls : (S ⊗[R] S) →ₗ[S] F.obj N :=
+                  { toFun := L
+                    map_add' := L.map_add
+                    map_smul' := by
+                      intro a t
+                      induction t using TensorProduct.induction_on with
+                      | zero => simp
+                      | add t u ht hu => simp [ht, hu, add_smul]
+                      | tmul b c =>
+                          change (a * b) • g.hom (c • x') =
+                            a • (b • g.hom (c • x'))
+                          rw [mul_smul] }
+                have hrel := congrArg Ls ht
+                dsimp [Ls, L, hbilin] at hrel
+                change g.hom (s • (show F.obj M from x)) =
+                  s • g.hom (show F.obj M from x)
+                change (1 : S) • g.hom (s • x') =
+                  s • g.hom ((1 : S) • x') at hrel
+                simpa only [one_smul] using hrel }
+        refine ⟨ModuleCat.ofHom sLinear, ?_⟩
+        · apply ModuleCat.hom_ext
+          rfl
+        
+    · intro h
+      sorry
+  tfae_have h23 : 2 ↔ 3 := by
+    constructor
+    · intro h
+      let hF : (ModuleCat.restrictScalars f).FullyFaithful :=
+        { preimage := fun {M N} g => Classical.choose ((h M N).2 g)
+          map_preimage := fun {M N} g => Classical.choose_spec ((h M N).2 g)
+          preimage_map := fun {M N} g => by
+            apply (h M N).1
+            exact Classical.choose_spec ((h M N).2 ((ModuleCat.restrictScalars f).map g)) }
+      exact ⟨hF⟩
+    · rintro ⟨h⟩
+      intro M N
+      exact h.map_bijective M N
+  tfae_finish
 
 end
 

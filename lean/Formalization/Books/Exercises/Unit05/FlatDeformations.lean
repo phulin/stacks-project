@@ -71,12 +71,12 @@ theorem dualNumber_baseChange_is_deformation
     letI : Algebra (dualNumberRing k) (dualNumberBaseChange k A) :=
       dualNumberBaseChangeAlgebra k A
     IsFlatDualNumberDeformation k A (dualNumberBaseChange k A) := by
-  letI : Algebra (dualNumberRing k) (dualNumberBaseChange k A) :=
-    dualNumberBaseChangeAlgebra k A
+  refine (letI : Algebra (dualNumberRing k) (dualNumberBaseChange k A) :=
+    dualNumberBaseChangeAlgebra k A; ?_)
   dsimp only [IsFlatDualNumberDeformation]
   constructor
-  · letI : Module.Free k A := Module.Free.of_divisionRing k A
-    letI : Module.Flat k A := Module.Flat.of_free
+  · refine (letI : Module.Free k A := Module.Free.of_divisionRing k A; ?_)
+    refine (letI : Module.Flat k A := Module.Flat.of_free; ?_)
     exact Module.Flat.of_linearEquiv
       (Algebra.TensorProduct.commRight k (dualNumberRing k) A).symm.toLinearEquiv
   · let Iε : Ideal (dualNumberRing k) := Ideal.span {dualNumberEpsilon k}
@@ -124,7 +124,7 @@ theorem dualNumber_baseChange_is_deformation
     let e₁ : A ⊗[k] k ≃ₐ[k]
         A ⊗[k] (dualNumberRing k ⧸ RingHom.ker f) :=
       Algebra.TensorProduct.congr (AlgEquiv.refl : A ≃ₐ[k] A) q.symm
-    letI : CommRing (dualNumberBaseChange k A) := inferInstance
+    refine (letI : CommRing (dualNumberBaseChange k A) := inferInstance; ?_)
     let e₂ : A ⊗[k] (dualNumberRing k ⧸ RingHom.ker f) ≃ₐ[k]
         (dualNumberBaseChange k A) ⧸
           (RingHom.ker f).map
@@ -162,7 +162,7 @@ abbrev sixVariablePowerLiftSpecialFiber (p : ℕ) :=
     (p : ZMod (p ^ 2))
 
 /-- The displayed polynomial lift is flat over `ℤ/p²ℤ`. -/
-theorem sixVariablePowerLift_flat (p : ℕ) (hp : Nat.Prime p) :
+theorem sixVariablePowerLift_flat (p : ℕ) (_hp : Nat.Prime p) :
     Module.Flat (ZMod (p ^ 2)) (sixVariablePowerLift p) := by
   let R := ZMod (p ^ 2)
   change Module.Flat R
@@ -175,12 +175,12 @@ theorem sixVariablePowerLift_flat (p : ℕ) (hp : Nat.Prime p) :
         intro q r
         ext m
         by_cases hm : ∀ i : Fin 6, m i < p <;>
-          simp [Finsupp.filter_apply, hm, smul_eq_mul]
+          simp
       map_smul' := by
         intro a q
         ext m
         by_cases hm : ∀ i : Fin 6, m i < p <;>
-          simp [Finsupp.filter_apply, hm, smul_eq_mul] }
+          simp }
   have hgen :
       Ideal.span
           ((fun m : Fin 6 →₀ ℕ => MvPolynomial.monomial m (1 : R)) ''
@@ -200,10 +200,9 @@ theorem sixVariablePowerLift_flat (p : ℕ) (hp : Nat.Prime p) :
     change red q = 0 ↔ q ∈ sixVariablePowerIdeal p R
     rw [← hgen, MvPolynomial.mem_ideal_span_monomial_image]
     constructor
-    · intro hq
-      intro xi hxi
+    · intro hq xi hxi
       by_contra hno
-      push_neg at hno
+      push Not at hno
       have hgood : ∀ i : Fin 6, xi i < p := by
         intro i
         exact Nat.lt_of_not_ge (fun hpi =>
@@ -226,11 +225,11 @@ theorem sixVariablePowerLift_flat (p : ℕ) (hp : Nat.Prime p) :
         change (Finsupp.filter
           (fun m : Fin 6 →₀ ℕ => ∀ i : Fin 6, m i < p)
           (AddMonoidAlgebra.coeff q)) xi = 0
-        simp [Finsupp.filter_apply, hgood, hcoeff]
+        simp [hgood, hcoeff]
       · change (Finsupp.filter
           (fun m : Fin 6 →₀ ℕ => ∀ i : Fin 6, m i < p)
           (AddMonoidAlgebra.coeff q)) xi = 0
-        simp [Finsupp.filter_apply, hgood]
+        simp [hgood]
   let red' : MvPolynomial (Fin 6) R →ₗ[R] LinearMap.range red :=
     red.codRestrict (LinearMap.range red) (fun q => ⟨q, rfl⟩)
   have hred_surj : Function.Surjective red' := by
@@ -269,7 +268,7 @@ theorem sixVariablePowerLift_flat (p : ℕ) (hp : Nat.Prime p) :
         (fun m : Fin 6 →₀ ℕ => ∀ i : Fin 6, m i < p)
         (AddMonoidAlgebra.coeff q)) m
     by_cases hm : ∀ i : Fin 6, m i < p <;>
-      simp [Finsupp.filter_apply, hm]
+      simp [hm]
   let r : MvPolynomial (Fin 6) R →ₗ[R] LinearMap.range red := red'
   have hri : r.comp (LinearMap.range red).subtype = LinearMap.id := by
     apply LinearMap.ext
@@ -279,8 +278,8 @@ theorem sixVariablePowerLift_flat (p : ℕ) (hp : Nat.Prime p) :
     change red x = x
     rw [← hq]
     simpa [LinearMap.comp_apply] using congrArg (fun f => f q) hred_idem
-  letI : Module.Flat R (LinearMap.range red) :=
-    Module.Flat.of_retract (LinearMap.range red).subtype r hri
+  refine (letI : Module.Flat R (LinearMap.range red) :=
+    Module.Flat.of_retract (LinearMap.range red).subtype r hri; ?_)
   let equot :
       (MvPolynomial (Fin 6) R ⧸ (sixVariablePowerIdeal p R).restrictScalars R) ≃ₗ[R]
         LinearMap.range red :=

@@ -57,7 +57,7 @@ theorem polynomialXYIdeal_tensor_counterexample (k : Type u) [Field k] :
   · exact Submodule.injective_subtype (polynomialXYIdeal k)
   · let ev : twoVariablePolynomialRing k →+* k :=
       MvPolynomial.eval₂Hom (RingHom.id k) (fun _ => 0)
-    letI : Algebra (twoVariablePolynomialRing k) k := ev.toAlgebra
+    refine (letI : Algebra (twoVariablePolynomialRing k) k := ev.toAlgebra; ?_)
     let f₀ : (polynomialXYIdeal k : Type u) →ₗ[twoVariablePolynomialRing k] k :=
       { toFun := fun p => MvPolynomial.coeff (Finsupp.single (0 : Fin 2) 1) p.1
         map_add' := by
@@ -78,7 +78,7 @@ theorem polynomialXYIdeal_tensor_counterexample (k : Type u) [Field k] :
               (map_mul (MvPolynomial.constantCoeff : twoVariablePolynomialRing k →+*
                 k) q s)
           rw [← hab, mul_add, ← mul_assoc r a, ← mul_assoc r b, MvPolynomial.coeff_add]
-          simp [ev, MvPolynomial.eval₂Hom_zero_apply, MvPolynomial.coeff_mul_X', hcoeff] }
+          simp [ev, MvPolynomial.coeff_mul_X', hcoeff] }
     let f₁ : (polynomialXYIdeal k : Type u) →ₗ[twoVariablePolynomialRing k] k :=
       { toFun := fun p => MvPolynomial.coeff (Finsupp.single (1 : Fin 2) 1) p.1
         map_add' := by
@@ -98,14 +98,14 @@ theorem polynomialXYIdeal_tensor_counterexample (k : Type u) [Field k] :
             simpa only [MvPolynomial.constantCoeff_eq] using
               (map_mul (MvPolynomial.constantCoeff : twoVariablePolynomialRing k →+* k) q s)
           rw [← hab, mul_add, ← mul_assoc r a, ← mul_assoc r b, MvPolynomial.coeff_add]
-          simp [ev, MvPolynomial.eval₂Hom_zero_apply, MvPolynomial.coeff_mul_X', hcoeff] }
+          simp [ev, MvPolynomial.coeff_mul_X', hcoeff] }
     have hev : Function.Surjective (algebraMap (twoVariablePolynomialRing k) k) := by
       intro c
       refine ⟨MvPolynomial.C c, ?_⟩
       change ev (MvPolynomial.C c) = c
       simp [ev]
-    letI : Algebra.IsEpi (twoVariablePolynomialRing k) k :=
-      Algebra.isEpi_of_surjective_algebraMap _ _ hev
+    refine (letI : Algebra.IsEpi (twoVariablePolynomialRing k) k :=
+      Algebra.isEpi_of_surjective_algebraMap _ _ hev; ?_)
     let xI : (polynomialXYIdeal k : Type u) :=
       ⟨MvPolynomial.X (0 : Fin 2), Ideal.subset_span (by simp)⟩
     let yI : (polynomialXYIdeal k : Type u) :=
@@ -119,7 +119,7 @@ theorem polynomialXYIdeal_tensor_counterexample (k : Type u) [Field k] :
         simp
       have hm' := congrArg (TensorProduct.lid' (twoVariablePolynomialRing k) k k) hm
       have : (1 : k) = 0 := by
-        simpa [z, xI, yI, f₀, f₁] using hm'
+        simp [z, xI, yI, f₀, f₁] at hm'
       exact one_ne_zero this
     have hzmap : polynomialXYIdealTensorInclusion k z = 0 := by
       apply (TensorProduct.lid (twoVariablePolynomialRing k) (polynomialXYIdeal k)).injective
@@ -128,7 +128,7 @@ theorem polynomialXYIdeal_tensor_counterexample (k : Type u) [Field k] :
     intro hinj
     apply hz
     apply hinj
-    simpa [hzmap]
+    simp [hzmap]
 
 /-! ## The quotient `k[x,y]/(x,y)` -/
 
@@ -171,7 +171,7 @@ theorem polynomialXYQuotient_tensor_counterexample (k : Type u) [Field k] :
     have hmap : multiplicationByFirstVariableTensorQuotient k u = 0 := by
       apply e.injective
       simp [u, e, multiplicationByFirstVariableTensorQuotient, multiplicationByFirstVariable,
-        LinearMap.mulLeft, hx]
+        LinearMap.mulLeft]
       calc
         (MvPolynomial.X (0 : Fin 2) : twoVariablePolynomialRing k) •
             (1 : polynomialXYQuotient k) =
@@ -211,8 +211,8 @@ theorem polynomialXYQuotient_tensor_counterexample (k : Type u) [Field k] :
         have hevone : ev (1 : twoVariablePolynomialRing k) = 0 := by
           change (1 : twoVariablePolynomialRing k) ∈ RingHom.ker ev
           exact hsubset hmem
-        simpa [ev] using hevone
+        simp [ev] at hevone
       exact hone this
-    exact hu (hinj (by simpa [hmap]))
+    exact hu (hinj (by simp [hmap]))
 
 end Formalization.Books.Exercises.Unit05

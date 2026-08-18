@@ -1089,9 +1089,9 @@ theorem basisAlgebraicExtension_stalk_eq {C : Type u} [Category.{v} C]
     (hP : BasisAlgebraicSheaf B (CategoryTheory.forget C) P) (x : X) :
     Nonempty ((basisAlgebraicExtension B hB P hP).presheaf.stalk x ≅
       basisAlgebraicStalk B P x) := by
-  haveI : IsFiltered ((basisNeighborhoodIndex B x)ᵒᵖ) :=
+  have : IsFiltered ((basisNeighborhoodIndex B x)ᵒᵖ) :=
     basisNeighborhoodIndex_isFiltered B hB x
-  haveI : (inducedFunctor B).IsCoverDense (Opens.grothendieckTopology X) :=
+  have : (inducedFunctor B).IsCoverDense (Opens.grothendieckTopology X) :=
     TopCat.Opens.coverDense_inducedFunctor hB
   let E := basisAlgebraicExtension B hB P hP
   let F : (basisNeighborhoodIndex B x)ᵒᵖ ⥤ (OpenNhds x)ᵒᵖ :=

@@ -63,7 +63,7 @@ theorem weightedComplexMatrix_det {n : ℕ} (A : Matrix (Fin n) (Fin n) ℂ)
 /-! The weighted strict diagonal-dominance criterion. -/
 theorem recurring_weighted_diagonal_dominance {n : ℕ}
     (A : Matrix (Fin n) (Fin n) ℂ) (m : Fin n → ℝ)
-    (hm : ∀ i, 0 < m i)
+    (_hm : ∀ i, 0 < m i)
     (hdominant : ∀ i,
       norm (A i i * (m i : ℂ)) >
           (Finset.univ : Finset (Fin n)).sum
@@ -136,8 +136,8 @@ theorem recurring_symmetric_real_energy_identity {n : ℕ}
       -a * (b - c) ^ 2 =
         -(a * (b * b)) + (a * (c * b) + a * (c * b)) -
           a * (c * c) := by
-    simp [pow_two, sub_eq_add_neg, mul_add, add_mul,
-      mul_assoc, mul_comm, mul_left_comm,
+    simp [pow_two, sub_eq_add_neg, mul_add,
+      mul_comm,
       add_assoc, add_comm, add_left_comm]
   have hsum (i : Fin n) : ∑ j, A i j = 0 := by
     calc
@@ -346,11 +346,11 @@ theorem diagonal_matrix_primary_torsion_finrank_zero {n : ℕ}
     matrixPrimaryTorsionFinrank (Matrix.diagonal m) ell hell = 0 := by
   classical
   unfold matrixPrimaryTorsionFinrank
-  letI : Fact (Nat.Prime ell) := ⟨hell⟩
-  letI : NeZero ell := ⟨hell.ne_zero⟩
-  letI : Module (ZMod ell) (matrixPrimaryTorsion (Matrix.diagonal m) ell) :=
+  let _ : Fact (Nat.Prime ell) := ⟨hell⟩
+  let _ : NeZero ell := ⟨hell.ne_zero⟩
+  let _ : Module (ZMod ell) (matrixPrimaryTorsion (Matrix.diagonal m) ell) :=
     AddSubgroup.torsionBy.zmodModule
-  letI : Subsingleton (matrixPrimaryTorsion (Matrix.diagonal m) ell) := by
+  let _ : Subsingleton (matrixPrimaryTorsion (Matrix.diagonal m) ell) := by
     constructor
     intro x y
     apply Subtype.ext

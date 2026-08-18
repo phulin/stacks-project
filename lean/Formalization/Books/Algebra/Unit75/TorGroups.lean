@@ -1255,7 +1255,6 @@ theorem tor_finite_of_noetherian {R : Type u} [CommRing R]
     let _ : IsNoetherian R (C.cycles n : Type u) := hcycles n
     apply isNoetherian_of_surjective (R := R) (S := R) (C.homologyπ n).hom
     apply LinearMap.range_eq_top.mpr
-    change Function.Surjective (C.homologyπ n).hom
     exact (ModuleCat.epi_iff_surjective _).mp inferInstance
   let F : FreeResolution R M := Classical.choice (exists_free_resolution M)
   let α : ResolutionMap F.resolution Ff.resolution.resolution (𝟙 M) :=
@@ -1450,7 +1449,7 @@ theorem tensorSwitch_two_dimensional_not_identity {k : Type u} [Field k] :
     have h11 : p1 y = 1 := by simp [p1, y]
     have h01 : p0 y = 0 := by simp [p0, y]
     have h10 : p1 x = 0 := by simp [p1, x]
-    simpa [q, h00, h11, h01, h10] using hq
+    simp [q, h00, h11, h01, h10] at hq
   apply hne
   simpa [tensorSwitch, x, y] using h'.symm
 
@@ -1508,9 +1507,9 @@ private def symPart {k : Type u} [Semiring k] (n : ℕ) :
       funext p
       change (r • x) p.1 + (r • x) (p.1.2, p.1.1) =
         r • (x p.1 + x (p.1.2, p.1.1))
-      simp [smul_add, mul_add] }
+      simp [mul_add] }
 
-private def symLiftFun {k : Type u} [Field k] (n : ℕ) (hchar : (2 : k) ≠ 0)
+private def symLiftFun {k : Type u} [Field k] (n : ℕ) (_hchar : (2 : k) ≠ 0)
     (a : upperIndex n → k) (p : pairIndex n) : k :=
   if h : p.1 ≤ p.2 then
     if p.1 < p.2 then a ⟨p, h⟩ else (2 : k)⁻¹ • a ⟨p, h⟩
@@ -1527,9 +1526,9 @@ private def symLift {k : Type u} [Field k] (n : ℕ) (hchar : (2 : k) ≠ 0) :
       by_cases h : p.1 ≤ p.2
       · by_cases hlt : p.1 < p.2
         · simp [symLiftFun, h, hlt, Pi.add_apply]
-        · simp [symLiftFun, h, hlt, Pi.add_apply, smul_add]
+        · simp [symLiftFun, h, hlt, Pi.add_apply]
           ring
-      · simp [symLiftFun, h, Pi.add_apply]
+      · simp [symLiftFun, h]
     map_smul' := by
       intro r a
       funext p
@@ -1537,9 +1536,9 @@ private def symLift {k : Type u} [Field k] (n : ℕ) (hchar : (2 : k) ≠ 0) :
       by_cases h : p.1 ≤ p.2
       · by_cases hlt : p.1 < p.2
         · simp [symLiftFun, h, hlt, Pi.smul_apply]
-        · simp [symLiftFun, h, hlt, Pi.smul_apply, smul_smul, mul_comm]
+        · simp [symLiftFun, h, hlt, Pi.smul_apply]
           ring
-      · simp [symLiftFun, h, Pi.smul_apply] }
+      · simp [symLiftFun, h] }
 
 private def antiFun {k : Type u} [Ring k] (n : ℕ) (a : strictIndex n → k)
     (p : pairIndex n) : k :=
@@ -1556,9 +1555,9 @@ private def antiMap {k : Type u} [Ring k] (n : ℕ) :
       by_cases h : p.1 < p.2
       · simp [antiFun, h, Pi.add_apply]
       · by_cases h' : p.2 < p.1
-        · simp [antiFun, h, h', Pi.add_apply, neg_add]
-          ac_rfl
         · simp [antiFun, h, h', Pi.add_apply]
+          ac_rfl
+        · simp [antiFun, h, h']
     map_smul' := by
       intro r a
       funext p
@@ -1566,8 +1565,8 @@ private def antiMap {k : Type u} [Ring k] (n : ℕ) :
       by_cases h : p.1 < p.2
       · simp [antiFun, h, Pi.smul_apply]
       · by_cases h' : p.2 < p.1
-        · simp [antiFun, h, h', Pi.smul_apply, smul_neg]
-        · simp [antiFun, h, h', Pi.smul_apply] }
+        · simp [antiFun, h, h', Pi.smul_apply]
+        · simp [antiFun, h, h'] }
 
 private def antiPart {k : Type u} [Ring k] (n : ℕ) :
     (pairIndex n → k) →ₗ[k] (strictIndex n → k) :=
@@ -1583,9 +1582,9 @@ private def antiPart {k : Type u} [Ring k] (n : ℕ) :
       funext p
       change (r • x) p.1 - (r • x) (p.1.2, p.1.1) =
         r • (x p.1 - x (p.1.2, p.1.1))
-      simp [sub_eq_add_neg, smul_add, smul_neg, mul_add] }
+      simp [sub_eq_add_neg, mul_add] }
 
-private def antiLiftFun {k : Type u} [Field k] (n : ℕ) (hchar : (2 : k) ≠ 0)
+private def antiLiftFun {k : Type u} [Field k] (n : ℕ) (_hchar : (2 : k) ≠ 0)
     (a : strictIndex n → k) (p : pairIndex n) : k :=
   if h : p.1 < p.2 then (2 : k)⁻¹ • a ⟨p, h⟩ else
     if h' : p.2 < p.1 then -(2 : k)⁻¹ • a ⟨(p.2, p.1), h'⟩ else 0
@@ -1599,23 +1598,23 @@ private def antiLift {k : Type u} [Field k] (n : ℕ) (hchar : (2 : k) ≠ 0) :
       change antiLiftFun n hchar (a + b) p =
         antiLiftFun n hchar a p + antiLiftFun n hchar b p
       by_cases h : p.1 < p.2
-      · simp [antiLiftFun, h, Pi.add_apply, smul_add]
+      · simp [antiLiftFun, h, Pi.add_apply]
         ring
       · by_cases h' : p.2 < p.1
-        · simp [antiLiftFun, h, h', Pi.add_apply, smul_add, neg_add]
-          ring
         · simp [antiLiftFun, h, h', Pi.add_apply]
+          ring
+        · simp [antiLiftFun, h, h']
     map_smul' := by
       intro r a
       funext p
       change antiLiftFun n hchar (r • a) p = r • antiLiftFun n hchar a p
       by_cases h : p.1 < p.2
-      · simp [antiLiftFun, h, Pi.smul_apply, smul_smul]
+      · simp [antiLiftFun, h, Pi.smul_apply]
         ring
       · by_cases h' : p.2 < p.1
-        · simp [antiLiftFun, h, h', Pi.smul_apply, smul_smul, smul_neg, mul_comm]
+        · simp [antiLiftFun, h, h', Pi.smul_apply]
           ring
-        · simp [antiLiftFun, h, h', Pi.smul_apply] }
+        · simp [antiLiftFun, h, h'] }
 
 private lemma sum_fin_sub (n : ℕ) :
     (∑ i : Fin n, (n - (i : ℕ))) = n * (n + 1) / 2 := by
@@ -1632,7 +1631,6 @@ private lemma sum_fin_sub (n : ℕ) :
         Finset.sum (Finset.range n) (fun i => 1 + (n - 1 - i)) := by
       apply Finset.sum_congr rfl
       intro i hi
-      congr 1
       have hil : i < n := Finset.mem_range.mp hi
       omega
     _ = n + Finset.sum (Finset.range n) (fun i => n - 1 - i) := by
@@ -1673,7 +1671,7 @@ private theorem pair_plus_finrank {k : Type u} [Field k] (n : ℕ) (hchar : (2 :
       by_cases h : p.1 ≤ p.2
       · simp [s, e, q, pairSwapMap, pairSwapFun, symMap, symFun, symPart, h]
       · have h' : p.2 ≤ p.1 := le_of_not_ge h
-        simp [s, e, q, pairSwapMap, pairSwapFun, symMap, symFun, symPart, h, h', add_comm]
+        simp [s, e, q, pairSwapMap, pairSwapFun, symMap, symFun, symPart, h, add_comm]
     apply le_antisymm
     · rintro _ ⟨x, rfl⟩
       exact ⟨q x, by
@@ -1691,7 +1689,7 @@ private theorem pair_plus_finrank {k : Type u} [Field k] (n : ℕ) (hchar : (2 :
         · have heq : i = j := le_antisymm h (le_of_not_gt hlt)
           subst j
           simp [s, r, e, pairSwapMap, pairSwapFun, symMap, symFun, symLift,
-            symLiftFun, hchar]
+            symLiftFun]
           field_simp
           ring
       · have h' : j ≤ i := le_of_not_ge h
@@ -1707,7 +1705,7 @@ private theorem pair_plus_finrank {k : Type u} [Field k] (n : ℕ) (hchar : (2 :
     apply le_antisymm
     · rintro _ ⟨x, rfl⟩
       apply Module.End.mem_eigenspace_iff.mpr
-      simp [s, pairSwapMap, pairSwapFun, add_comm]
+      simp [s, pairSwapMap, add_comm]
       funext p
       simp [pairSwapFun, add_comm]
     · intro x hx
@@ -1715,9 +1713,9 @@ private theorem pair_plus_finrank {k : Type u} [Field k] (n : ℕ) (hchar : (2 :
       have hx' := Module.End.mem_eigenspace_iff.mp hx
       have hx'' : pairSwapFun n x = x := by
         simpa [pairSwapMap] using hx'
-      simp [s, pairSwapMap, pairSwapFun, hx'', smul_add, hchar]
+      simp [s, pairSwapMap, hx'', smul_add]
       ext p
-      simp [smul_eq_mul, hchar]
+      simp [smul_eq_mul]
       field_simp [hchar]
       ring
   rw [← hseig, hsr, LinearMap.finrank_range_of_inj heinj, Module.finrank_pi]
@@ -1778,35 +1776,35 @@ private theorem pair_minus_finrank {k : Type u} [Field k] (n : ℕ) (hchar : (2 
         rcases p with ⟨i, j⟩
         by_cases h : i < j
         · have h' : ¬j < i := not_lt_of_ge (le_of_lt h)
-          simp [d, r, e, pairSwapMap, pairSwapFun, antiMap, antiFun, antiLift,
-            antiLiftFun, h, h', hchar]
+          simp [r, pairSwapMap, pairSwapFun, antiMap, antiFun, antiLift,
+            antiLiftFun, h, h']
           field_simp [hchar]
           ring
         · by_cases h' : j < i
-          · simp [d, r, e, pairSwapMap, pairSwapFun, antiMap, antiFun, antiLift,
-              antiLiftFun, h, h', hchar]
+          · simp [r, pairSwapMap, pairSwapFun, antiMap, antiFun, antiLift,
+              antiLiftFun, h, h']
             field_simp [hchar]
             ring
           · have heq : i = j := le_antisymm (le_of_not_gt h') (le_of_not_gt h)
             subst j
-            simp [d, r, e, pairSwapMap, pairSwapFun, antiMap, antiFun, antiLift, antiLiftFun]
+            simp [r, pairSwapMap, pairSwapFun, antiMap, antiFun, antiLift, antiLiftFun]
       )
   have hseig : LinearMap.range (LinearMap.id - pairSwapMap (k := k) n) =
       Module.End.eigenspace (pairSwapMap (k := k) n) (-1 : k) := by
     apply le_antisymm
     · rintro _ ⟨x, rfl⟩
       apply Module.End.mem_eigenspace_iff.mpr
-      simp [LinearMap.id, pairSwapMap, pairSwapFun, sub_eq_add_neg]
+      simp [LinearMap.id, pairSwapMap]
       funext p
-      simp [pairSwapFun, sub_eq_add_neg, add_comm]
+      simp [pairSwapFun]
     · intro x hx
       refine ⟨(2 : k)⁻¹ • x, ?_⟩
       have hx' := Module.End.mem_eigenspace_iff.mp hx
       have hx'' : pairSwapFun n x = -x := by
         simpa [pairSwapMap] using hx'
-      simp [LinearMap.id, pairSwapMap, pairSwapFun, hx'', smul_sub, hchar]
+      simp [LinearMap.id, pairSwapMap, hx'']
       ext p
-      simp [smul_eq_mul, hchar]
+      simp [smul_eq_mul]
       field_simp [hchar]
       ring
   rw [← hseig, hde, LinearMap.finrank_range_of_inj heinj, Module.finrank_pi]
@@ -1906,7 +1904,7 @@ theorem tensorSwitch_eigenspace_finrank {k : Type u} [Field k]
               _ = e ((1 : k) • x) := by
                 exact congrArg e hx
               _ = e x := by simp
-          simpa [pairSwapMap, hs]⟩
+          simp [pairSwapMap, hs]⟩
       invFun := fun y =>
         ⟨e.symm y, by
           apply Module.End.mem_eigenspace_iff.mpr
@@ -1949,7 +1947,7 @@ theorem tensorSwitch_eigenspace_finrank {k : Type u} [Field k]
               _ = e ((-1 : k) • x) := by
                 congr 1
               _ = -e x := by simp
-          simpa [pairSwapMap, hs]⟩
+          simp [pairSwapMap, hs]⟩
       invFun := fun y =>
         ⟨e.symm y, by
           apply Module.End.mem_eigenspace_iff.mpr

@@ -7,6 +7,7 @@ import Mathlib.RingTheory.Localization.AtPrime.Basic
 import Mathlib.RingTheory.Localization.Away.Basic
 import Mathlib.RingTheory.Localization.Submodule
 import Mathlib.RingTheory.MvPowerSeries.Basic
+import Mathlib.RingTheory.MvPowerSeries.Equiv
 import Mathlib.RingTheory.Noetherian.Basic
 import Mathlib.RingTheory.Noetherian.OfPrime
 import Mathlib.RingTheory.Noetherian.Orzech
@@ -73,7 +74,7 @@ scaffolding; the chapter-level assertion is the theorem below. -/
 theorem mvPowerSeries_isNoetherian
     {R : Type*} [CommRing R] [IsNoetherianRing R] (n : ℕ) :
     IsNoetherianRing (MvPowerSeries (Fin n) R) := by
-  sorry
+  infer_instance
 
 /- The two examples in the source use the canonical Noetherian instances for
 fields and for `ℤ`. -/
@@ -138,7 +139,12 @@ theorem tensorProduct_isNoetherian_of_finiteType
     [Algebra R S] [Algebra R R'] [Algebra.FiniteType R R']
     [IsNoetherianRing S] :
     IsNoetherianRing (R' ⊗[R] S) := by
-  sorry
+  let _ : Algebra S (S ⊗[R] R') := Algebra.TensorProduct.leftAlgebra
+  let _ : IsNoetherianRing (S ⊗[R] R') :=
+    Algebra.FiniteType.isNoetherianRing S (S ⊗[R] R')
+  let _ : Algebra S (R' ⊗[R] S) := Algebra.TensorProduct.rightAlgebra
+  exact isNoetherianRing_of_ringEquiv (S ⊗[R] R')
+    (Algebra.TensorProduct.commRight R S R').toRingEquiv
 
 /- A finitely generated field extension preserves Noetherianity after tensoring
 with a Noetherian algebra. -/
@@ -147,7 +153,7 @@ theorem tensorProduct_isNoetherian_of_finiteType_fieldExtension
     [Algebra k R] [Algebra k K] [Algebra.FiniteType k K]
     [IsNoetherianRing R] :
     IsNoetherianRing (K ⊗[k] R) := by
-  sorry
+  exact tensorProduct_isNoetherian_of_finiteType (R := k) (S := R) (R' := K)
 
 /-! ## A subring of a local ring -/
 
@@ -168,7 +174,17 @@ theorem exists_injective_localizationAwayToAtPrime_of_domain
     {R : Type*} [CommRing R] [IsDomain R] (p : PrimeSpectrum R) :
     ∃ f : R, ∃ hf : f ∉ p.asIdeal,
       Function.Injective (localizationAwayToAtPrime p f hf) := by
-  sorry
+  refine ⟨(1 : R), p.asIdeal.ne_top_iff_one.mp p.isPrime.ne_top, ?_⟩
+  unfold localizationAwayToAtPrime Localization.awayLift IsLocalization.Away.lift
+  rw [IsLocalization.lift_injective_iff]
+  intro x y
+  have hAway : Function.Injective (algebraMap R (Localization.Away (1 : R))) :=
+    IsLocalization.injective _ (powers_le_nonZeroDivisors_of_noZeroDivisors one_ne_zero)
+  have hAtPrime : Function.Injective (algebraMap R (Localization.AtPrime p.asIdeal)) :=
+    FaithfulSMul.algebraMap_injective R (Localization.AtPrime p.asIdeal)
+  constructor <;> intro h <;> first
+    | exact congrArg (algebraMap R (Localization.AtPrime p.asIdeal)) (hAway h)
+    | exact congrArg (algebraMap R (Localization.Away (1 : R))) (hAtPrime h)
 
 theorem exists_injective_localizationAwayToAtPrime_of_noetherian
     {R : Type*} [CommRing R] [IsNoetherianRing R] (p : PrimeSpectrum R) :

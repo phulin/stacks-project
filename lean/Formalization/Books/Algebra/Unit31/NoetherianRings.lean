@@ -403,8 +403,7 @@ theorem surjective_endomorphism_isomorphism
     ∃ e : R ≃+* R, e.toRingHom = f := by
   let g : Ideal R → Ideal R := fun I => Ideal.comap f I
   have hg : Monotone g := by
-    intro I J hIJ
-    intro x hx
+    intro I J hIJ x hx
     change x ∈ Ideal.comap f I at hx
     change x ∈ Ideal.comap f J
     exact hIJ hx

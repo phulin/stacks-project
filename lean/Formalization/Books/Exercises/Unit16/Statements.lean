@@ -1,8 +1,11 @@
 import Mathlib.FieldTheory.IsAlgClosed.Spectrum
 import Mathlib.FieldTheory.RatFunc.AsPolynomial
 import Mathlib.Data.Complex.Basic
+import Mathlib.Analysis.Complex.Cardinality
+import Mathlib.Analysis.Complex.Polynomial.Basic
 import Mathlib.LinearAlgebra.Dimension.Basic
 import Mathlib.LinearAlgebra.FiniteDimensional.Basic
+import Mathlib.RingTheory.Algebraic.LinearIndependent
 import Mathlib.RingTheory.Nullstellensatz
 import Mathlib.RingTheory.PowerSeries.Inverse
 import Mathlib.RingTheory.Spectrum.Prime.Topology
@@ -26,13 +29,19 @@ open Set
 
 namespace Formalization.Books.Exercises.Unit16
 
+open scoped BigOperators
+
 /-! ## Exercise `uncountable` -/
 
 /-- The rational function field `ℂ(X)` has uncountable vector-space dimension
 over `ℂ`. -/
 theorem rational_function_field_uncountable_dimension :
     Cardinal.aleph0 < Module.rank ℂ (RatFunc ℂ) := by
-  sorry
+  have hcard : Cardinal.aleph0 < Cardinal.mk ℂ := by
+    rw [Cardinal.mk_complex]
+    exact Cardinal.aleph0_lt_continuum
+  exact hcard.trans_le
+    ((RatFunc.transcendental_X (K := ℂ)).linearIndependent_sub_inv.cardinal_le_rank)
 
 /-- Mathlib's spectrum agrees with the source's convention for a linear
 operator: `λ` is spectral precisely when `T - λ • id` is not a unit. -/
@@ -41,7 +50,7 @@ theorem linear_operator_spectrum_mem_iff
     (T : V →ₗ[ℂ] V) (z : ℂ) :
     z ∈ spectrum ℂ T ↔
       ¬ IsUnit (T - algebraMap ℂ (Module.End ℂ V) z) := by
-  sorry
+  rw [spectrum.mem_iff, IsUnit.sub_iff]
 
 /-- Every endomorphism of a nonzero finite- or countable-dimensional complex
 vector space has nonempty spectrum. -/
@@ -50,7 +59,121 @@ theorem linear_operator_spectrum_nonempty
     (T : V →ₗ[ℂ] V)
     (hV : Module.rank ℂ V ≤ Cardinal.aleph0) :
     (spectrum ℂ T).Nonempty := by
-  sorry
+  classical
+  by_contra hs
+  have hspec : ∀ z : ℂ, z ∉ spectrum ℂ T := by
+    intro z hz
+    exact hs ⟨z, hz⟩
+  have hunit (z : ℂ) : IsUnit (T - algebraMap ℂ (Module.End ℂ V) z) :=
+    IsUnit.sub_iff.mp (spectrum.notMem_iff.mp (hspec z))
+  have hp (z : ℂ) : Polynomial.aeval T (Polynomial.X - Polynomial.C z) =
+      T - algebraMap ℂ (Module.End ℂ V) z := by
+    simp
+  have hinv (z : ℂ) : (T - algebraMap ℂ (Module.End ℂ V) z) *
+      (↑((hunit z).unit⁻¹) : Module.End ℂ V) = 1 := by
+    calc
+      (T - algebraMap ℂ (Module.End ℂ V) z) *
+            (↑((hunit z).unit⁻¹) : Module.End ℂ V) =
+          (↑(hunit z).unit : Module.End ℂ V) *
+            (↑((hunit z).unit⁻¹) : Module.End ℂ V) := by
+        congr 1
+      _ = 1 := by simp
+  have hv : ∃ v : V, v ≠ 0 := exists_ne 0
+  let v : V := Classical.choose hv
+  have hv' : v ≠ 0 := Classical.choose_spec hv
+  let p : ℂ → Polynomial ℂ := fun z => Polynomial.X - Polynomial.C z
+  have hpa (z : ℂ) : Polynomial.aeval T (p z) =
+      T - algebraMap ℂ (Module.End ℂ V) z := hp z
+  let f : ℂ → V := fun z => (↑((hunit z).unit⁻¹) : Module.End ℂ V) v
+  have hli : LinearIndependent ℂ f := by
+    rw [linearIndependent_iff']
+    intro s m hm i hi
+    let q : Polynomial ℂ :=
+      ∑ j ∈ s, Polynomial.C (m j) * ∏ k ∈ s.erase j, p k
+    have hprod (j : ℂ) (hj : j ∈ s) :
+        (∏ k ∈ s, p k) = (∏ k ∈ s.erase j, p k) * p j := by
+      symm
+      exact Finset.prod_erase_mul s p hj
+    have hfactor (j : ℂ) (hj : j ∈ s) :
+        Polynomial.aeval T (∏ k ∈ s, p k) *
+            (↑((hunit j).unit⁻¹) : Module.End ℂ V) =
+          Polynomial.aeval T (∏ k ∈ s.erase j, p k) := by
+      rw [hprod j hj, map_mul, mul_assoc, hpa j, hinv j, mul_one]
+    have hmul : ∑ j ∈ s, m j •
+            (Polynomial.aeval T (∏ k ∈ s.erase j, p k)) v = 0 := by
+      calc
+        ∑ j ∈ s, m j • (Polynomial.aeval T (∏ k ∈ s.erase j, p k)) v =
+            ∑ j ∈ s, m j •
+              (Polynomial.aeval T (∏ k ∈ s, p k) *
+                (↑((hunit j).unit⁻¹) : Module.End ℂ V)) v := by
+          apply Finset.sum_congr rfl
+          intro j hj
+          rw [hfactor j hj]
+        _ = (Polynomial.aeval T (∏ k ∈ s, p k))
+              (∑ j ∈ s, m j • f j) := by
+          simp only [f, map_sum, map_smul, Module.End.mul_apply]
+        _ = 0 := by rw [hm]; simp
+    have hq : (Polynomial.aeval T q) v = 0 := by
+      simpa [q, Algebra.smul_def] using hmul
+    have hqunit (hq0 : q ≠ 0) : IsUnit (Polynomial.aeval T q) := by
+      have hrootunit : IsUnit
+          (Polynomial.aeval T (Multiset.map (fun x : ℂ =>
+            Polynomial.X - Polynomial.C x) q.roots).prod) := by
+        by_contra hn
+        obtain ⟨r, hr, _⟩ :=
+          spectrum.exists_mem_of_not_isUnit_aeval_prod hn
+        exact hspec r hr
+      rw [(IsAlgClosed.splits q).eq_prod_roots, map_mul]
+      exact IsUnit.mul
+        ((Polynomial.isUnit_C.mpr (isUnit_iff_ne_zero.mpr
+          (Polynomial.leadingCoeff_ne_zero.mpr hq0))).map (Polynomial.aeval T))
+        hrootunit
+    have hqzero : q = 0 := by
+      by_contra hq0
+      have hqu := hqunit hq0
+      apply hv'
+      calc
+        v = (1 : Module.End ℂ V) v := by simp
+        _ = ((↑(hqu.unit⁻¹) : Module.End ℂ V) *
+            (↑hqu.unit : Module.End ℂ V)) v := by simp
+        _ = ((↑(hqu.unit⁻¹) : Module.End ℂ V) *
+            Polynomial.aeval T q) v := by congr 1
+        _ = 0 := by rw [Module.End.mul_apply, hq]; simp
+    have h_eval : Polynomial.eval i q = 0 := by
+      rw [hqzero, Polynomial.eval_zero]
+    rw [Polynomial.eval_finsetSum] at h_eval
+    simp only [p, Polynomial.eval_mul, Polynomial.eval_prod, Polynomial.eval_sub,
+      Polynomial.eval_X, Polynomial.eval_C] at h_eval
+    have hrest : ∑ j ∈ s.erase i, m j *
+        ∏ k ∈ s.erase j, (i - k) = 0 := by
+      apply Finset.sum_eq_zero
+      intro j hj
+      have hij : i ∈ s.erase j := by
+        rw [Finset.mem_erase]
+        exact ⟨(Finset.ne_of_mem_erase hj).symm, hi⟩
+      rw [Finset.prod_eq_zero hij]
+      · exact mul_zero _
+      · exact sub_self i
+    have hbase :
+        m i * ∏ k ∈ s.erase i, (i - k) =
+          ∑ j ∈ s, m j * ∏ k ∈ s.erase j, (i - k) := by
+      rw [← Finset.sum_erase_add _ _ hi, hrest, zero_add]
+    have hprod_eq : m i * ∏ k ∈ s.erase i, (i - k) = 0 := by
+      rw [hbase, h_eval]
+    have hprod_ne : ∏ k ∈ s.erase i, (i - k) ≠ 0 := by
+      apply Finset.prod_ne_zero_iff.mpr
+      intro k hk
+      exact sub_ne_zero.mpr (Finset.ne_of_mem_erase hk).symm
+    exact (mul_eq_zero.mp hprod_eq).resolve_right hprod_ne
+  have hcard : Cardinal.aleph0 < Cardinal.mk ℂ := by
+    rw [Cardinal.mk_complex]
+    exact Cardinal.aleph0_lt_continuum
+  have hcard' : Cardinal.lift.{u} Cardinal.aleph0 <
+      Cardinal.lift.{u} (Cardinal.mk ℂ) := Cardinal.lift_lt.mpr hcard
+  have hrank : Cardinal.lift.{u} (Cardinal.mk ℂ) ≤
+      Cardinal.lift.{0} (Module.rank ℂ V) := hli.cardinal_lift_le_rank
+  exact (not_lt_of_ge hV) (by
+    simpa only [Cardinal.lift_aleph0, Cardinal.lift_id'] using hcard'.trans_le hrank)
 
 /-- A finite-type complex algebra which is a field has bijective structure
 map from `ℂ`. -/
@@ -58,7 +181,8 @@ theorem complex_finite_type_field_algebraMap_bijective
     {R : Type u} [Field R] [Algebra ℂ R]
     [Algebra.FiniteType ℂ R] :
     Function.Bijective (algebraMap ℂ R) := by
-  sorry
+  let _ : Module.Finite ℂ R := finite_of_finite_type_of_isJacobsonRing ℂ R
+  exact IsAlgClosed.algebraMap_bijective_of_isIntegral
 
 /-- Every maximal ideal of `ℂ[x₁, ..., xₙ]` is a coordinate maximal ideal. -/
 theorem complex_polynomial_maximal_ideal_eq_coordinate

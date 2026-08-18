@@ -139,7 +139,7 @@ theorem powersIntersectionIdeal_mem_localizes_to_zero
 /-- Artin--Tate: an `R`-subalgebra of a finite-type `R`-algebra over which the
 ambient algebra is finite is itself of finite type over `R`. -/
 theorem artin_tate
-    {R S : Type u} [CommRing R] [CommRing S]
+    {R : Type u} {S : Type v} [CommRing R] [CommRing S]
     [Algebra R S] [IsNoetherianRing R] [Algebra.FiniteType R S]
     (T : Subalgebra R S) [Module.Finite T S] :
     Algebra.FiniteType R T := by

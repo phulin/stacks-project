@@ -856,10 +856,13 @@ private theorem principalParts_factorization_unique_aux (k : ℕ) (N : Type*)
 
 theorem principalParts_universal_property_exists (k : ℕ) (N : Type*)
     [AddCommGroup N] [Module S N] [Module R N] [IsScalarTower R S N] :
-    Nonempty
-      (↥(differentialOperatorSubmodule (R := R) (S := S) (M := M) (N := N) k)
-        ≃ₗ[S]
-        (PrincipalParts (R := R) (S := S) (M := M) k →ₗ[S] N)) := by
+    ∃ e :
+        ↥(differentialOperatorSubmodule (R := R) (S := S) (M := M) (N := N) k)
+          ≃ₗ[S]
+          (PrincipalParts (R := R) (S := S) (M := M) k →ₗ[S] N),
+      ∀ D,
+        ((e D).restrictScalars R).comp
+            (principalPartsUniversalLinearMap (R := R) (S := S) (M := M) k) = D.1 := by
   classical
   let backward :
       (PrincipalParts (R := R) (S := S) (M := M) k →ₗ[S] N) →ₗ[S]
@@ -898,14 +901,28 @@ theorem principalParts_universal_property_exists (k : ℕ) (N : Type*)
     refine ⟨α, ?_⟩
     apply Subtype.ext
     exact hα
-  exact ⟨(LinearEquiv.ofBijective backward ⟨hinj, hsurj⟩).symm⟩
+  let e := LinearEquiv.ofBijective backward ⟨hinj, hsurj⟩
+  refine ⟨e.symm, ?_⟩
+  intro D
+  change (backward (e.symm D)).1 = D.1
+  exact congrArg Subtype.val (e.apply_symm_apply D)
 
 noncomputable def principalPartsHomEquiv (k : ℕ)
     (N : Type*) [AddCommGroup N] [Module S N] [Module R N] [IsScalarTower R S N] :
     differentialOperatorSubmodule (R := R) (S := S) (M := M) (N := N) k ≃ₗ[S]
       (PrincipalParts (R := R) (S := S) (M := M) k →ₗ[S] N) :=
-  Classical.choice
+  Classical.choose
     (principalParts_universal_property_exists (S := S) (M := M) k N)
+
+theorem principalPartsHomEquiv_factorization (k : ℕ) (N : Type*)
+    [AddCommGroup N] [Module S N] [Module R N] [IsScalarTower R S N]
+    (D : differentialOperatorSubmodule (R := R) (S := S) (M := M) (N := N) k) :
+    ((principalPartsHomEquiv (R := R) (S := S) (M := M) k N D).restrictScalars R).comp
+        (principalPartsUniversalLinearMap (R := R) (S := S) (M := M) k) = D.1 :=
+  by
+    simpa [principalPartsHomEquiv] using
+      (Classical.choose_spec
+        (principalParts_universal_property_exists (R := R) (S := S) (M := M) k N)) D
 
 theorem principalParts_factorization_unique (k : ℕ) (N : Type*)
     [AddCommGroup N] [Module S N] [Module R N] [IsScalarTower R S N]
@@ -923,7 +940,23 @@ theorem principalPartsHomEquiv_natural (k : ℕ)
     principalPartsHomEquiv (R := R) (S := S) (M := M) k N'
         (differentialOperatorPostcompose f D) =
       f.comp (principalPartsHomEquiv (R := R) (S := S) (M := M) k N D) := by
-  sorry
+  rcases principalParts_factorization_unique (R := R) (S := S) (M := M) k N'
+      (differentialOperatorPostcompose f D) with ⟨α, hα, huniq⟩
+  have hleft := principalPartsHomEquiv_factorization
+    (R := R) (S := S) (M := M) k N' (differentialOperatorPostcompose f D)
+  have hright :
+      ((f.comp (principalPartsHomEquiv (R := R) (S := S) (M := M) k N D)).restrictScalars R).comp
+          (principalPartsUniversalLinearMap (R := R) (S := S) (M := M) k) =
+        (differentialOperatorPostcompose f D).1 := by
+    ext m
+    have hD := principalPartsHomEquiv_factorization
+      (R := R) (S := S) (M := M) k N D
+    have hDm := congrArg (fun L : M →ₗ[R] N => L m) hD
+    change f ((principalPartsHomEquiv (R := R) (S := S) (M := M) k N D)
+      (principalPartsUniversalLinearMap (R := R) (S := S) (M := M) k m)) = f (D.1 m)
+    apply congrArg f
+    simpa only [LinearMap.comp_apply, LinearMap.restrictScalars_apply] using hDm
+  exact (huniq _ hleft).trans (huniq _ hright).symm
 
 /- The map to `M` obtained by sending `[m]` to `m`. -/
 noncomputable def principalPartsFreeEvaluation : (M →₀ S) →ₗ[S] M :=
@@ -1000,7 +1033,8 @@ theorem principalPartsProjection_on_generator (k : ℕ) (m : M) :
   simp [principalPartsFreeEvaluation]
 
 theorem principalParts_zero_equiv_exists :
-    Nonempty (PrincipalParts (R := R) (S := S) (M := M) 0 ≃ₗ[S] M) := by
+    ∃ e : PrincipalParts (R := R) (S := S) (M := M) 0 ≃ₗ[S] M,
+      e.toLinearMap = principalPartsProjection (R := R) (S := S) (M := M) 0 := by
   classical
   let u : M →ₗ[S] PrincipalParts (R := R) (S := S) (M := M) 0 :=
     { toFun := principalPartsUniversalLinearMap (R := R) (S := S) (M := M) 0
@@ -1051,16 +1085,18 @@ theorem principalParts_zero_equiv_exists :
     · intro m
       exact ⟨u m, hright m⟩
   exact ⟨LinearEquiv.ofBijective
-    (principalPartsProjection (R := R) (S := S) (M := M) 0) hbij⟩
+    (principalPartsProjection (R := R) (S := S) (M := M) 0) hbij, rfl⟩
 
 noncomputable def principalPartsZeroEquiv :
     PrincipalParts (R := R) (S := S) (M := M) 0 ≃ₗ[S] M :=
-  Classical.choice (principalParts_zero_equiv_exists (R := R) (S := S) (M := M))
+  Classical.choose (principalParts_zero_equiv_exists (R := R) (S := S) (M := M))
 
 theorem principalParts_zero_equiv_agrees_with_projection :
     (principalPartsZeroEquiv (R := R) (S := S) (M := M)).toLinearMap =
       principalPartsProjection (R := R) (S := S) (M := M) 0 := by
-  sorry
+  simpa [principalPartsZeroEquiv] using
+    (Classical.choose_spec
+      (principalParts_zero_equiv_exists (R := R) (S := S) (M := M)))
 
 end PrincipalParts
 

@@ -1,4 +1,5 @@
 import Mathlib.Algebra.MvPolynomial.Basic
+import Mathlib.Algebra.Polynomial.Div
 import Mathlib.Data.Nat.Prime.Basic
 import Mathlib.Data.ZMod.Basic
 import Mathlib.FieldTheory.IsAlgClosed.Basic
@@ -41,7 +42,11 @@ theorem polynomial_spectrum_prime_ideals (k : Type u) [Field k] :
       p.asIdeal = ⊥ ∨
         ∃ f : Polynomial k, f ≠ 0 ∧ Irreducible f ∧
           p.asIdeal = Ideal.span {f} := by
-  sorry
+  intro p
+  rcases (Ideal.isPrime_iff_of_isPrincipalIdealRing_of_noZeroDivisors).mp p.2 with
+    hbot | ⟨f, hf, h⟩
+  · exact Or.inl hbot
+  · exact Or.inr ⟨f, hf.ne_zero, hf.irreducible, h⟩
 
 /-- Over an algebraically closed field, the nonzero primes are the maximal
 ideals `(x - a)`. -/
@@ -52,7 +57,14 @@ theorem polynomial_spectrum_prime_ideals_alg_closed
         ∃ a : k,
           p.asIdeal =
             Ideal.span {Polynomial.X - Polynomial.C a} := by
-  sorry
+  intro p
+  rcases polynomial_spectrum_prime_ideals k p with hbot | ⟨f, hf0, hf, hp⟩
+  · exact Or.inl hbot
+  · obtain ⟨a, ha⟩ := IsAlgClosed.exists_root f (Polynomial.degree_pos_of_irreducible hf).ne'
+    refine Or.inr ⟨a, ?_⟩
+    rw [hp, Ideal.span_singleton_eq_span_singleton]
+    exact ((Polynomial.irreducible_X_sub_C a).associated_of_dvd hf
+      (Polynomial.dvd_iff_isRoot.mpr ha)).symm
 
 /-- The closed sets of `Spec(k[x])` are the whole space and finite sets of
 closed points. -/
@@ -60,7 +72,78 @@ theorem polynomial_spectrum_closed_sets (k : Type u) [Field k]
     (Z : Set (PrimeSpectrum (oneVariablePolynomialRing k))) :
     IsClosed Z ↔
       Z = Set.univ ∨ (Z.Finite ∧ polynomialGenericPoint k ∉ Z) := by
-  sorry
+  classical
+  constructor
+  · intro hZ
+    by_cases hg : polynomialGenericPoint k ∈ Z
+    · left
+      apply Set.eq_univ_of_forall
+      intro p
+      have hcl : closure ({polynomialGenericPoint k} : Set (PrimeSpectrum (oneVariablePolynomialRing k))) ⊆ Z :=
+        hZ.closure_subset_iff.mpr (Set.singleton_subset_iff.mpr hg)
+      apply hcl
+      rw [PrimeSpectrum.closure_singleton]
+      exact (PrimeSpectrum.mem_zeroLocus p (polynomialGenericPoint k).asIdeal).2 (by
+        change (⊥ : Ideal (oneVariablePolynomialRing k)) ≤ p.asIdeal
+        exact bot_le)
+    · right
+      rcases (PrimeSpectrum.isClosed_iff_zeroLocus Z).mp hZ with ⟨S, hSZ⟩
+      have hSf : ∃ f ∈ S, f ≠ 0 := by
+        by_contra h
+        apply hg
+        rw [hSZ]
+        apply (PrimeSpectrum.mem_zeroLocus (polynomialGenericPoint k) S).2
+        intro f hf
+        by_contra hf0
+        exact h ⟨f, hf, hf0⟩
+      obtain ⟨f, hfS, hf0⟩ := hSf
+      let hpoint : Polynomial k → PrimeSpectrum (oneVariablePolynomialRing k) := fun g =>
+        if hg : g ∈ UniqueFactorizationMonoid.factors f then
+          ⟨Ideal.span {g},
+            Ideal.isPrime_span_singleton_of_prime
+              (UniqueFactorizationMonoid.irreducible_of_factor g hg).prime⟩
+        else polynomialGenericPoint k
+      refine ⟨(UniqueFactorizationMonoid.factors f).toFinset.finite_toSet.image hpoint |>.subset ?_, hg⟩
+      intro p hpZ
+      have hpbot : p.asIdeal ≠ (⊥ : Ideal (oneVariablePolynomialRing k)) := by
+        intro hp
+        apply hg
+        have heq : p = polynomialGenericPoint k := by
+          apply PrimeSpectrum.ext
+          change p.asIdeal = (⊥ : Ideal (oneVariablePolynomialRing k))
+          exact hp
+        exact heq ▸ hpZ
+      rcases polynomial_spectrum_prime_ideals k p with hzero | ⟨g, hg0, hgi, hpg⟩
+      · exact (hpbot hzero).elim
+      · have hmem : f ∈ p.asIdeal :=
+          (PrimeSpectrum.mem_zeroLocus p S).1 (hSZ ▸ hpZ) hfS
+        have hga : g ∣ f := by
+          rw [hpg] at hmem
+          exact Ideal.mem_span_singleton.mp hmem
+        obtain ⟨q, hq, hgq⟩ :=
+          UniqueFactorizationMonoid.exists_mem_factors_of_dvd hf0 hgi hga
+        have hpq : p = hpoint q := by
+          apply PrimeSpectrum.ext
+          simp only [hpoint, dif_pos hq]
+          exact hpg.trans (Ideal.span_singleton_eq_span_singleton.mpr hgq)
+        refine ⟨q, ?_, hpq.symm⟩
+        simpa using hq
+  · rintro (rfl | ⟨hfin, hg⟩)
+    · exact isClosed_univ
+    · rw [← Set.biUnion_of_singleton Z]
+      exact hfin.isClosed_biUnion (fun p hp => by
+        apply (PrimeSpectrum.isClosed_singleton_iff_isMaximal p).2
+        have hpbot : p.asIdeal ≠ (⊥ : Ideal (oneVariablePolynomialRing k)) := by
+          intro hpzero
+          have heq : p = polynomialGenericPoint k := by
+            apply PrimeSpectrum.ext
+            change p.asIdeal = (⊥ : Ideal (oneVariablePolynomialRing k))
+            exact hpzero
+          exact hg (heq ▸ hp)
+        rcases polynomial_spectrum_prime_ideals k p with hzero | ⟨f, hf0, hf, hpf⟩
+        · exact (hpbot hzero).elim
+        · rw [hpf]
+          exact PrincipalIdealRing.isMaximal_of_irreducible hf)
 
 /-- The standard opens give the topology on `Spec(k[x])`. -/
 theorem polynomial_spectrum_standard_open_basis (k : Type u) [Field k] :

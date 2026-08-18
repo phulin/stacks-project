@@ -1,4 +1,5 @@
 import Mathlib.Algebra.Category.ModuleCat.Topology.Basic
+import Mathlib.CategoryTheory.ConcreteCategory.EpiMono
 import Mathlib.CategoryTheory.Abelian.Basic
 import Mathlib.Topology.Algebra.Group.Quotient
 import Mathlib.Topology.Algebra.GroupCompletion
@@ -42,10 +43,87 @@ theorem topologicalAbelianGroupCat_has_cokernels :
     HasCokernels (TopologicalAbelianGroupCat.{u}) := by
   infer_instance
 
+private structure BottomModuleTopologyData (X : Type u) [Add X] [SMul ℤ X] where
+  topology : TopologicalSpace X
+  continuousSMul : @ContinuousSMul ℤ X _ _ (⊥ : TopologicalSpace X)
+  continuousAdd : @ContinuousAdd X (⊥ : TopologicalSpace X) _
+
+private def bottom_module_topology_data
+    (X : Type u) [Add X] [SMul ℤ X] : BottomModuleTopologyData X := by
+  letI : TopologicalSpace X := ⊥
+  letI : DiscreteTopology X := discreteTopology_bot _
+  exact ⟨⊥, ⟨continuous_of_discreteTopology⟩, ⟨continuous_of_discreteTopology⟩⟩
+
+private theorem topologicalAbelianGroupCat_not_abelian_aux
+    [P : Preadditive (TopologicalAbelianGroupCat.{u})]
+    [N : IsNormalMonoCategory (TopologicalAbelianGroupCat.{u})] : False := by
+  let A : ModuleCat.{u} ℤ := ModuleCat.of ℤ (ULift.{u} ℤ)
+  let D : TopologicalAbelianGroupCat.{u} := (TopModuleCat.withModuleTopology ℤ).obj A
+  let I : TopologicalAbelianGroupCat.{u} :=
+    (TopModuleCat.indiscrete ℤ).obj ((forget₂ _ (ModuleCat ℤ)).obj D)
+  let f : D ⟶ I := (TopModuleCat.indiscreteAdj ℤ).unit.app D
+  let hfmono : Mono f := ConcreteCategory.mono_of_injective f (by
+    intro x y hxy
+    exact hxy)
+  let hfepi : Epi f := ConcreteCategory.epi_of_surjective f (by
+    intro y
+    exact ⟨y, rfl⟩)
+  have hnormal : NormalMono f :=
+    (IsNormalMonoCategory.normalMonoOfMono f).some
+  have hzero : hnormal.g = 0 := by
+    apply hfepi.left_cancellation
+    simpa using hnormal.w
+  obtain ⟨g, hgf⟩ := KernelFork.IsLimit.lift' hnormal.isLimit (𝟙 I) (by simp [hzero])
+  have hgf' : g ≫ f = 𝟙 I := hgf
+  have hfg : f ≫ g = 𝟙 D := by
+    apply hfmono.right_cancellation
+    simp [Category.assoc, hgf']
+  have hgid : ∀ x : I, g.hom x = x := by
+    intro x
+    have h := ConcreteCategory.congr_hom hgf' x
+    change g.hom x = x at h
+    exact h
+  have hDtop : D.topologicalSpace = ⊥ := by
+    change moduleTopology ℤ (ULift.{u} ℤ) = ⊥
+    let hdata := bottom_module_topology_data (ULift.{u} ℤ)
+    have hle : moduleTopology ℤ (ULift.{u} ℤ) ≤ hdata.topology := by
+      exact @moduleTopology_le ℤ _ (ULift.{u} ℤ) _ _ hdata.topology
+        hdata.continuousSMul hdata.continuousAdd
+    exact le_antisymm hle bot_le
+  have hopen : @IsOpen D D.topologicalSpace ({(0 : D)} : Set D) := by
+    rw [hDtop]
+    exact @isOpen_discrete (D : Type u) ⊥ (discreteTopology_bot _) _
+  have hpreopen : @IsOpen I I.topologicalSpace
+      (g.hom ⁻¹' ({(0 : D)} : Set D)) := g.hom.continuous.isOpen_preimage _ hopen
+  have hpre : g.hom ⁻¹' ({(0 : D)} : Set D) = ({(0 : I)} : Set I) := by
+    ext x
+    change g.hom x ∈ ({(0 : D)} : Set D) ↔ x ∈ ({(0 : I)} : Set I)
+    rw [hgid x]
+    exact Set.mem_singleton_iff
+  rw [hpre] at hpreopen
+  have hnot : ¬@IsOpen (I : Type u) I.topologicalSpace
+      ({(0 : I)} : Set I) := by
+    intro h
+    rcases (@IndiscreteTopology.isOpen_iff (I : Type u) I.topologicalSpace ⟨by rfl⟩ _).1 h with h | h
+    · have hz : (0 : I) ∈ (∅ : Set I) := h ▸ Set.mem_singleton (0 : I)
+      exact hz
+    · have hone : (ULift.up (1 : ℤ) : I) ∈ ({(0 : I)} : Set I) := by
+        rw [h]
+        trivial
+      have hne : (ULift.up (1 : ℤ) : I) ≠ 0 := by
+        intro hz
+        have hz' := congrArg ULift.down hz
+        change (1 : ℤ) = 0 at hz'
+        exact one_ne_zero hz'
+      exact hne (Set.mem_singleton_iff.mp hone)
+  exact hnot hpreopen
+
 /-- Topological abelian groups do not form an abelian category in general. -/
 theorem topologicalAbelianGroupCat_not_abelian :
     ¬ Nonempty (Abelian (TopologicalAbelianGroupCat.{u})) := by
-  sorry
+  rintro ⟨hA⟩
+  exact @topologicalAbelianGroupCat_not_abelian_aux
+    hA.toPreadditive hA.toIsNormalMonoCategory
 
 /-- An open subgroup has discrete quotient topology. -/
 theorem quotient_add_group_is_discrete_of_open

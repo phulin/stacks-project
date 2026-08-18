@@ -365,7 +365,8 @@ theorem linearCoordinateAlgHom_X
     {K : Type v} [Field K]
     (ℓ : (Fin 2 → K) ≃ₗ[K] (Fin 2 → K)) (i : Fin 2) :
     linearCoordinateAlgHom ℓ (MvPowerSeries.X i) = linearCoordinateSeries ℓ i := by
-  sorry
+  unfold linearCoordinateAlgHom
+  exact MvPowerSeries.substAlgHom_X _ i
 
 /-- The two linear-coordinate substitutions associated to inverse linear
 equivalences are inverse algebra homomorphisms. -/
@@ -374,7 +375,71 @@ theorem linearCoordinateAlgHom_left_inverse
     (ℓ : (Fin 2 → K) ≃ₗ[K] (Fin 2 → K))
     (f : MvPowerSeries (Fin 2) K) :
     linearCoordinateAlgHom ℓ.symm (linearCoordinateAlgHom ℓ f) = f := by
-  sorry
+  classical
+  have hrepr (v : Fin 2 → K) :
+      ∑ j : Fin 2, v j • (Pi.single j 1) = v := by
+    funext j
+    fin_cases j <;> simp [Fin.sum_univ_two, Pi.single_apply]
+  have hlin (i : Fin 2) :
+      ∑ j : Fin 2, (ℓ (Pi.single i 1) j) • (ℓ.symm (Pi.single j 1)) =
+        Pi.single i 1 := by
+    calc
+      _ = ℓ.symm (∑ j : Fin 2, (ℓ (Pi.single i 1) j) • (Pi.single j 1)) := by
+        simp
+      _ = ℓ.symm (ℓ (Pi.single i 1)) := by rw [hrepr]
+      _ = Pi.single i 1 := ℓ.symm_apply_apply _
+  have hcomp (i : Fin 2) :
+      linearCoordinateAlgHom ℓ.symm (linearCoordinateSeries ℓ i) =
+        MvPowerSeries.X i := by
+    change MvPowerSeries.substAlgHom (linearCoordinateHasSubst ℓ.symm)
+      (linearCoordinateSeries ℓ i) = MvPowerSeries.X i
+    simp only [MvPowerSeries.substAlgHom_apply, linearCoordinateSeries,
+      Fin.sum_univ_two, MvPowerSeries.subst_add, MvPowerSeries.subst_mul,
+      MvPowerSeries.subst_C,
+      MvPowerSeries.subst_X (linearCoordinateHasSubst ℓ.symm)]
+    have hcoeff (j : Fin 2) :
+        (ℓ (Pi.single i 1) 0) * (ℓ.symm (Pi.single 0 1) j) +
+            (ℓ (Pi.single i 1) 1) * (ℓ.symm (Pi.single 1 1) j) =
+          (Pi.single i 1 : Fin 2 → K) j := by
+      have hj := congrArg (fun v : Fin 2 → K => v j) (hlin i)
+      simpa [Fin.sum_univ_two, Pi.smul_apply, smul_eq_mul] using hj
+    have hC (x y : K) :
+        (MvPowerSeries.C x : MvPowerSeries (Fin 2) K) * MvPowerSeries.C y =
+          MvPowerSeries.C (x * y) := by
+      exact (map_mul (MvPowerSeries.C : K →+* MvPowerSeries (Fin 2) K) x y).symm
+    calc
+      _ = MvPowerSeries.C
+            ((ℓ (Pi.single i 1) 0) * (ℓ.symm (Pi.single 0 1) 0) +
+              (ℓ (Pi.single i 1) 1) * (ℓ.symm (Pi.single 1 1) 0)) *
+            MvPowerSeries.X 0 +
+          MvPowerSeries.C
+            ((ℓ (Pi.single i 1) 0) * (ℓ.symm (Pi.single 0 1) 1) +
+              (ℓ (Pi.single i 1) 1) * (ℓ.symm (Pi.single 1 1) 1)) *
+            MvPowerSeries.X 1 := by
+        rw [hC, hC, hC, hC]
+        ring
+      _ = MvPowerSeries.X i := by
+        rw [← map_add (MvPowerSeries.C : K →+* MvPowerSeries (Fin 2) K)]
+        simp [hcoeff, Pi.single_apply]
+  have hfun :
+      (fun i : Fin 2 =>
+        MvPowerSeries.substAlgHom (linearCoordinateHasSubst ℓ.symm)
+          (linearCoordinateSeries ℓ i)) =
+        (MvPowerSeries.X : Fin 2 → MvPowerSeries (Fin 2) K) := by
+    funext i
+    exact hcomp i
+  rw [show linearCoordinateAlgHom ℓ.symm (linearCoordinateAlgHom ℓ f) =
+      MvPowerSeries.substAlgHom
+        ((linearCoordinateHasSubst ℓ).comp (linearCoordinateHasSubst ℓ.symm)) f by
+        exact MvPowerSeries.substAlgHom_comp_substAlgHom_apply
+          (linearCoordinateHasSubst ℓ) (linearCoordinateHasSubst ℓ.symm) f]
+  rw [MvPowerSeries.substAlgHom_apply]
+  change MvPowerSeries.subst
+      (fun i : Fin 2 =>
+        MvPowerSeries.substAlgHom (linearCoordinateHasSubst ℓ.symm)
+          (linearCoordinateSeries ℓ i)) f = f
+  rw [hfun]
+  exact congrFun MvPowerSeries.subst_self f
 
 theorem linearCoordinateAlgHom_right_inverse
     {K : Type v} [Field K]
@@ -420,7 +485,17 @@ theorem powerSeriesCoeffMapAlgHom_bijective
     {L : Type w} [Field L] [Algebra k K] [Algebra k L]
     (e : K ≃ₐ[k] L) :
     Function.Bijective (powerSeriesCoeffMapAlgHom e) := by
-  sorry
+  let f := powerSeriesCoeffMapAlgHom e
+  let g := powerSeriesCoeffMapAlgHom e.symm
+  have hleft : Function.LeftInverse g f := by
+    intro p
+    ext n
+    simp [f, g, powerSeriesCoeffMapAlgHom, MvPowerSeries.mapAlgHom_apply]
+  have hright : Function.RightInverse g f := by
+    intro q
+    ext n
+    simp [f, g, powerSeriesCoeffMapAlgHom, MvPowerSeries.mapAlgHom_apply]
+  exact ⟨hleft.injective, hright.surjective⟩
 
 /-- The coefficientwise lift of a coefficient-field algebra equivalence. -/
 noncomputable def powerSeriesCoeffMapAlgEquiv
@@ -512,7 +587,23 @@ ideal. -/
 theorem binaryQuadraticPowerSeries_mem_twoVariableMaximalIdeal_sq
     {K : Type v} [Field K] (a b c : K) :
     binaryQuadraticPowerSeries a b c ∈ twoVariableMaximalIdeal K ^ 2 := by
-  sorry
+  let I := twoVariableMaximalIdeal K
+  have hX (i : Fin 2) : MvPowerSeries.X i ∈ I := by
+    exact Ideal.subset_span ⟨i, rfl⟩
+  have hXX (i j : Fin 2) :
+      MvPowerSeries.X i * MvPowerSeries.X j ∈ I ^ 2 := by
+    rw [pow_two]
+    exact Ideal.mul_mem_mul (hX i) (hX j)
+  have hsmul {z : MvPowerSeries (Fin 2) K} (r : K) (hz : z ∈ I ^ 2) :
+      r • z ∈ I ^ 2 := by
+    rw [Algebra.smul_def]
+    exact Ideal.mul_mem_left (I ^ 2) _ hz
+  change
+    a • MvPowerSeries.X (0 : Fin 2) ^ 2 +
+        b • (MvPowerSeries.X (0 : Fin 2) * MvPowerSeries.X (1 : Fin 2)) +
+          c • MvPowerSeries.X (1 : Fin 2) ^ 2 ∈ I ^ 2
+  exact add_mem (add_mem (hsmul a (by simpa [pow_two] using hXX 0 0)) (hsmul b (hXX 0 1)))
+    (hsmul c (by simpa [pow_two] using hXX 1 1))
 
 /-- The degree-two relation attached to the quadratic part of a normal form. -/
 def ordinaryDoublePointQuadraticRelation

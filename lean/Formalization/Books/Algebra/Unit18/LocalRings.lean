@@ -236,7 +236,43 @@ theorem fundamentalDiagram_outerColumns_equiv
         Localization
           (Algebra.algebraMapSubmonoid
             (S ⧸ p.map (algebraMap R S)) p.primeCompl)) := by
-  sorry
+  let pS : Ideal S := p.map (algebraMap R S)
+  let M : Submonoid S := Algebra.algebraMapSubmonoid S p.primeCompl
+  let Sp := Localization M
+  let A := S ⧸ pS
+  let Q := Sp ⧸ pS.map (algebraMap S Sp)
+  let Mbar : Submonoid A := Algebra.algebraMapSubmonoid A p.primeCompl
+  letI : IsLocalization (M.map (Ideal.Quotient.mk pS)) Q := by
+    apply
+      IsLocalization.of_surjective M Sp (Ideal.Quotient.mk pS)
+        Ideal.Quotient.mk_surjective
+        (Ideal.Quotient.mk (pS.map (algebraMap S Sp)))
+        Ideal.Quotient.mk_surjective
+    · rfl
+    · simp
+  have hM :
+      M.map (Ideal.Quotient.mk pS) =
+        Algebra.algebraMapSubmonoid A p.primeCompl := by
+    exact
+      Algebra.algebraMapSubmonoid_map_eq p.primeCompl
+        (Ideal.Quotient.mkₐ R pS)
+  letI : IsLocalization Mbar Q := by
+    change IsLocalization (Algebra.algebraMapSubmonoid A p.primeCompl) Q
+    rw [← hM]
+    exact inferInstance
+  have e : Q ≃ₐ[A] Localization Mbar :=
+    IsLocalization.algEquiv Mbar Q (Localization Mbar)
+  have e' :
+      p.Fiber S ≃+* Localization (Algebra.algebraMapSubmonoid A p.primeCompl) := by
+    simpa [pS, M, Sp, A, Q, Mbar] using
+      (fundamentalDiagram_fiberQuotientEquiv p).trans e.toRingEquiv
+  let e'' :
+      p.Fiber S ≃+*
+        Localization
+          (Algebra.algebraMapSubmonoid
+            (S ⧸ p.map (algebraMap R S)) p.primeCompl) := by
+    simpa [pS, A] using e'
+  exact Nonempty.intro e''
 
 theorem fundamentalDiagram_horizontal_spectrumHomeomorphs
     {R : Type u} {S : Type v} [CommRing R] [CommRing S] [Algebra R S]
@@ -321,7 +357,31 @@ theorem characterize_prime_in_image
         Nontrivial Squotₚ,
         p = pS.comap (algebraMap R S) ] := by
   dsimp
-  sorry
+  tfae_have 1 ↔ 2 := prime_in_image_iff_fiber_nontrivial p
+  tfae_have 2 ↔ 3 := by
+    exact
+      (fundamentalDiagram_fiberQuotientEquiv p).toEquiv.nontrivial_congr
+  tfae_have 3 ↔ 4 := by
+    let e₁ :
+        p.Fiber S ≃+*
+          Localization (Algebra.algebraMapSubmonoid S p.primeCompl) ⧸
+            (p.map (algebraMap R S)).map
+              (algebraMap S
+                (Localization (Algebra.algebraMapSubmonoid S p.primeCompl))) :=
+      fundamentalDiagram_fiberQuotientEquiv p
+    let e₂ :
+        p.Fiber S ≃+*
+          Localization
+            (Algebra.algebraMapSubmonoid
+              (S ⧸ p.map (algebraMap R S)) p.primeCompl) :=
+      Classical.choice (fundamentalDiagram_outerColumns_equiv p)
+    exact (e₁.symm.trans e₂).toEquiv.nontrivial_congr
+  tfae_have 1 ↔ 5 := by
+    simpa [eq_comm] using
+      (PrimeSpectrum.mem_range_comap_iff
+        (f := algebraMap R S)
+        (p := (⟨p, inferInstance⟩ : PrimeSpectrum R)))
+  tfae_finish
 
 /-! ## Local rings of fibres -/
 
@@ -342,7 +402,30 @@ theorem localFiber_localization_equiv_tensor
       (Localization.AtPrime qbar ≃+*
         (Localization.AtPrime (qbar.comap Algebra.TensorProduct.includeRight) ⊗[Localization.AtPrime p]
           p.ResidueField)) := by
-  sorry
+  let r := qbar.comap Algebra.TensorProduct.includeRight
+  let Rp := Localization.AtPrime p
+  let Sr := Localization.AtPrime r
+  letI : Algebra Rp Sr := Localization.AtPrime.algebraOfLiesOver p r
+  have hI :
+      (IsLocalRing.maximalIdeal Rp).map (algebraMap Rp Sr) =
+        (p.map (algebraMap R S)).map (algebraMap S Sr) := by
+    rw [← Localization.AtPrime.map_eq_maximalIdeal]
+    rw [Ideal.map_map, ← IsScalarTower.algebraMap_eq]
+    rw [IsScalarTower.algebraMap_eq R S Sr, ← Ideal.map_map]
+  have e₁ :
+      Localization.AtPrime qbar ≃ₐ[R]
+        Sr ⧸ (p.map (algebraMap R S)).map (algebraMap S Sr) :=
+    Ideal.Fiber.algEquivAux₂ p qbar
+  have e₀ :
+      (Sr ⧸ (p.map (algebraMap R S)).map (algebraMap S Sr)) ≃ₐ[Sr]
+        Sr ⧸ (IsLocalRing.maximalIdeal Rp).map (algebraMap Rp Sr) :=
+    Ideal.quotientEquivAlgOfEq Sr hI.symm
+  have e₂ :
+      (Sr ⧸ (IsLocalRing.maximalIdeal Rp).map (algebraMap Rp Sr)) ≃ₐ[Sr]
+        Sr ⊗[Rp] p.ResidueField :=
+    Algebra.TensorProduct.quotIdealMapEquivTensorQuot Sr
+      (IsLocalRing.maximalIdeal Rp)
+  exact ⟨e₁.toRingEquiv.trans (e₀.toRingEquiv.trans e₂.toRingEquiv)⟩
 
 theorem localFiber_localization_equiv_quotient
     {R : Type u} {S : Type v} [CommRing R] [CommRing S] [Algebra R S]

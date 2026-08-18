@@ -273,7 +273,7 @@ theorem exists_finiteType_subalgebras_of_not_isReduced_tensorProduct
       ⟨b j, Algebra.subset_adjoin (by simp)⟩)
   have hy : subalgebraTensorProductMap R' S' y = x := by
     simp only [y, map_sum, subalgebraTensorProductMap,
-      Algebra.TensorProduct.map_tmul, Subtype.coe_mk]
+      Algebra.TensorProduct.map_tmul]
     exact hab.symm
   have hmap : Function.Injective (subalgebraTensorProductMap R' S') :=
     subalgebraTensorProductMap_injective R' S'
@@ -329,11 +329,11 @@ theorem exists_finiteType_subalgebras_of_nonzero_zeroDivisor_tensorProduct
       ⟨d j, Algebra.subset_adjoin (by simp [sset])⟩)
   have hy : subalgebraTensorProductMap R' S' y = x := by
     simp only [y, map_sum, subalgebraTensorProductMap,
-      Algebra.TensorProduct.map_tmul, Subtype.coe_mk]
+      Algebra.TensorProduct.map_tmul]
     exact hab.symm
   have hw : subalgebraTensorProductMap R' S' w = z := by
     simp only [w, map_sum, subalgebraTensorProductMap,
-      Algebra.TensorProduct.map_tmul, Subtype.coe_mk]
+      Algebra.TensorProduct.map_tmul]
     exact hcd.symm
   have hmap : Function.Injective (subalgebraTensorProductMap R' S') :=
     subalgebraTensorProductMap_injective R' S'

@@ -360,7 +360,7 @@ private theorem twoYonedaMorphismCategory_map_isHomLift
   have hH : q.obj (H.1.obj X) = p.obj X :=
     congrArg (fun F : A ⥤ C => F.obj X) H.2
   apply IsHomLift.of_fac' q (𝟙 (p.obj X)) (η.1.app X) hG hH
-  letI : (twoYonedaPostcompositionGeneral q).IsHomLift (𝟙 p) η.1 := η.2
+  let : (twoYonedaPostcompositionGeneral q).IsHomLift (𝟙 p) η.1 := η.2
   have hfac := IsHomLift.fac' (twoYonedaPostcompositionGeneral q)
     (𝟙 p) η.1
   have hfacX := congrArg (fun t => t.app X) hfac
@@ -524,7 +524,7 @@ theorem twoYonedaGroupoidRestriction_map_isOver
     (twoYonedaGroupoidRestriction_obj_isOver p f H)
   ext X
   change p.map (η.1.app ((Over.map f).obj X)) = _
-  letI : (twoYonedaPostcomposition p V).IsHomLift
+  let : (twoYonedaPostcomposition p V).IsHomLift
       (𝟙 (Over.forget V)) η.1 := η.2
   have hfac := IsHomLift.fac' (twoYonedaPostcomposition p V)
     (𝟙 (Over.forget V)) η.1

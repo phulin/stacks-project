@@ -38,7 +38,7 @@ theorem formallyEtale_iff_lifting
           Function.Bijective
             ((Ideal.Quotient.mkₐ R I).comp :
               (S →ₐ[R] A) → S →ₐ[R] A ⧸ I) := by
-  letI : Algebra R S := f.toAlgebra
+  let : Algebra R S := f.toAlgebra
   exact Algebra.FormallyEtale.iff_comp_bijective
 
 /-- Formal étaleness is equivalent to formal smoothness and formal
@@ -68,7 +68,7 @@ theorem formallyEtale_iff_etale_of_finitePresentation
     {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S)
     (hfp : f.FinitePresentation) :
     f.FormallyEtale ↔ f.Etale := by
-  letI : Algebra R S := f.toAlgebra
+  let : Algebra R S := f.toAlgebra
   change Algebra.FormallyEtale R S ↔ Algebra.Etale R S
   constructor
   · intro h

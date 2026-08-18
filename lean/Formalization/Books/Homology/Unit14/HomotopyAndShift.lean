@@ -1192,7 +1192,93 @@ variable {A B : CochainComplex C ℤ}
 theorem cochain_homotopy_shift_self (a : A ⟶ B) :
     Nonempty (Homotopy a a ≃
       (A ⟶ (CategoryTheory.shiftFunctor (CochainComplex C ℤ) (-1 : ℤ)).obj B)) := by
-  sorry
+  let F : Homotopy a a →
+      (A ⟶ (CategoryTheory.shiftFunctor (CochainComplex C ℤ) (-1 : ℤ)).obj B) := fun h =>
+    { f := fun i => h.hom i (i + (-1 : ℤ))
+      comm' := by
+        intro i j hij
+        simp only [ComplexShape.up] at hij
+        change i + 1 = j at hij
+        have hi : i = j - 1 := by omega
+        subst i
+        dsimp [CochainComplex.shiftFunctor]
+        rw [show (-1 : ℤ).negOnePow = -1 by
+          rw [Int.negOnePow_neg, Int.negOnePow_one]]
+        simp only [Units.neg_smul, one_smul, Preadditive.comp_neg,
+          neg_eq_iff_add_eq_zero]
+        have ht := congrArg (fun z => z - a.f (j - 1)) (h.comm (j - 1))
+        rw [dNext_eq h.hom (show (ComplexShape.up ℤ).Rel (j - 1) j by
+              simp [ComplexShape.up]),
+          prevD_eq h.hom
+            (show (ComplexShape.up ℤ).Rel (j - 2) (j - 1) by
+              simp [ComplexShape.up]; omega)] at ht
+        convert ht.symm using 1 }
+  let G :
+      (A ⟶ (CategoryTheory.shiftFunctor (CochainComplex C ℤ) (-1 : ℤ)).obj B) →
+        Homotopy a a := fun g =>
+    { hom := fun i j => dite (j = i + (-1 : ℤ))
+          (fun h => g.f i ≫ (CochainComplex.shiftFunctorObjXIso B (-1) i j h).hom)
+          (fun _ => 0)
+      zero := by
+        intro i j hij
+        dsimp
+        split_ifs with h
+        · exfalso
+          apply hij
+          change j + 1 = i
+          omega
+        · rfl
+      comm := by
+        intro i
+        let H : ∀ i j, A.X i ⟶ B.X j := fun i j => dite
+          (j = i + (-1 : ℤ))
+          (fun h => g.f i ≫ (CochainComplex.shiftFunctorObjXIso B (-1) i j h).hom)
+          (fun _ => 0)
+        let hi : i = i + 1 + (-1 : ℤ) := by omega
+        let ρ :=
+          (CochainComplex.shiftFunctorObjXIso B (-1) (i + 1) i (by omega)).hom
+        have hg := congrArg (fun z => z ≫ ρ) (g.comm i (i + 1))
+        rw [dNext_eq H (show (ComplexShape.up ℤ).Rel i (i + 1) by simp),
+          prevD_eq H (show (ComplexShape.up ℤ).Rel (i + (-1 : ℤ)) i by
+            simp [ComplexShape.up])]
+        simp only [H, dif_pos hi, dif_pos rfl]
+        rw [Category.assoc]
+        have hz :
+            A.d i (i + 1) ≫ g.f (i + 1) ≫
+                (CochainComplex.shiftFunctorObjXIso B (-1) (i + 1) i (by omega)).hom +
+              g.f i ≫ (CochainComplex.shiftFunctorObjXIso B (-1) i
+                (i + (-1 : ℤ)) rfl).hom ≫ B.d (i + (-1 : ℤ)) i = 0 := by
+          dsimp [CochainComplex.shiftFunctor, ρ] at hg
+          rw [show (-1 : ℤ).negOnePow = -1 by
+            rw [Int.negOnePow_neg, Int.negOnePow_one]] at hg
+          simp only [Units.neg_smul, one_smul, Category.assoc,
+            Preadditive.comp_neg] at hg
+          have hneg := congrArg Neg.neg hg
+          simp only [Preadditive.neg_comp, neg_neg, Category.assoc] at hneg
+          rw [← neg_eq_iff_add_eq_zero]
+          simpa [CochainComplex.shiftFunctorObjXIso, sub_eq_add_neg,
+            add_assoc, add_comm, add_left_comm, Int.add_neg_cancel_right] using
+            hneg.symm
+        rw [hz, zero_add] }
+  refine ⟨{ toFun := F, invFun := G, left_inv := ?_, right_inv := ?_ }⟩
+  · intro h
+    ext i j
+    dsimp [F, G]
+    split_ifs with hij
+    · subst j
+      simpa only [show i - 1 = i + (-1 : ℤ) by omega, Category.comp_id]
+    · symm
+      apply h.zero i j
+      intro hji
+      apply hij
+      change j + 1 = i at hji
+      omega
+  · intro g
+    ext i
+    dsimp [F, G]
+    split_ifs with hij
+    · simp only [Category.comp_id]
+    · exact (hij rfl).elim
 
 /-- For two cochain maps, the homotopy set is empty or a principal homogeneous
 space under maps into the negative shifted target. -/

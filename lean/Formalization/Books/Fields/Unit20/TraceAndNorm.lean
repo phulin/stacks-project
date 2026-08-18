@@ -1,4 +1,5 @@
 import Mathlib.FieldTheory.PurelyInseparable.Basic
+import Mathlib.FieldTheory.PurelyInseparable.PerfectClosure
 import Mathlib.FieldTheory.IntermediateField.Adjoin.Basic
 import Mathlib.LinearAlgebra.Charpoly.Basic
 import Mathlib.RingTheory.Discriminant
@@ -120,7 +121,29 @@ theorem field_trace_and_norm_from_minpoly
       e * P.natDegree = Module.finrank K L ∧
         Algebra.norm K α = (-1 : K) ^ Module.finrank K L * (P.coeff 0) ^ e ∧
           Algebra.trace K L α = -(e : K) * P.nextCoeff := by
-  sorry
+  subst P
+  let F := IntermediateField.adjoin K ({α} : Set L)
+  let e : ℕ := Module.finrank F L
+  have hαint : IsIntegral K α := IsIntegral.of_finite K α
+  have hdeg : e * (minpoly K α).natDegree = Module.finrank K L := by
+    have hdim := Module.finrank_mul_finrank K F L
+    rw [IntermediateField.adjoin.finrank hαint] at hdim
+    simpa [e, F, Module.finrank, Nat.mul_comm] using hdim
+  have hdeg' : Module.finrank F L * (minpoly K α).natDegree = Module.finrank K L := by
+    simpa [e] using hdeg
+  refine ⟨e, hdeg, ?_, ?_⟩
+  · rw [Algebra.norm_eq_norm_adjoin K α]
+    let pb := IntermediateField.adjoin.powerBasis hαint
+    have hp := Algebra.PowerBasis.norm_gen_eq_coeff_zero_minpoly pb
+    have hgen : pb.gen = IntermediateField.AdjoinSimple.gen K α := by
+      rfl
+    have hdim : pb.dim = (minpoly K α).natDegree := by
+      rfl
+    have hcoeff : (minpoly K pb.gen).coeff 0 = (minpoly K α).coeff 0 := by
+      simp [pb, IntermediateField.minpoly_gen]
+    rw [← hgen, hp, hdim, hcoeff, mul_pow, ← pow_mul, Nat.mul_comm, hdeg']
+  · rw [_root_.trace_eq_finrank_mul_minpoly_nextCoeff (K := K) (L := L) α]
+    simp [e, F, mul_neg, mul_comm]
 
 /-! ## Restriction of scalars and towers -/
 
@@ -135,7 +158,18 @@ theorem trace_and_determinant_restrictScalars
         Algebra.trace K L (LinearMap.trace L V φ) ∧
       LinearMap.det (φ.restrictScalars K) =
         Algebra.norm K (LinearMap.det φ) := by
-  sorry
+  classical
+  let bK := Module.finBasis K L
+  let bV := Module.finBasis L V
+  refine ⟨?_, LinearMap.det_restrictScalars (R := K) (S := L) (A := V) (f := φ)⟩
+  rw [LinearMap.trace_eq_matrix_trace K (bK.smulTower' bV)]
+  rw [LinearMap.restrictScalars_toMatrix]
+  rw [Algebra.trace_eq_matrix_trace bK]
+  rw [LinearMap.trace_eq_matrix_trace L bV]
+  simp [Matrix.trace, Algebra.leftMulMatrix_apply]
+  rw [← Finset.univ_product_univ, Finset.sum_product]
+  simp only [Matrix.sum_apply]
+  rw [Finset.sum_comm]
 
 /-- Trace is transitive in a finite tower of field extensions. -/
 theorem field_trace_tower

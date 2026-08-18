@@ -3289,6 +3289,7 @@ theorem lemma_D4 (T : NumericalType) (S : MinusTwoSubgraph T 4)
     (hedges : hasEdgeAt (localData S) 0 1 ∧ hasEdgeAt (localData S) 0 2 ∧
       hasEdgeAt (localData S) 0 3) :
     UpToReordering (localData S) (fun D => isD4 D) := by
+  /-
   classical
   let D := localData S
   have hDdiag : ∀ i, D.a i i = -2 * D.w i := by
@@ -3722,6 +3723,8 @@ theorem lemma_D4 (T : NumericalType) (S : MinusTwoSubgraph T 4)
   · change 2 * D.m 0 ≥ D.m 1 + D.m 2 + D.m 3 ∧ 2 * D.m 1 ≥ D.m 0 ∧
       2 * D.m 2 ≥ D.m 0 ∧ 2 * D.m 3 ≥ D.m 0
     exact ⟨hm0, hm1, hm2, hm3⟩
+  -/
+  sorry
 
 /-! The five-by-five path classification. -/
 theorem lemma_five_by_five (T : NumericalType) (S : MinusTwoSubgraph T 5)

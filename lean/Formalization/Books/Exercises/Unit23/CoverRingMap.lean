@@ -1,7 +1,7 @@
-import Formalization.Books.Exercises.Unit23.Cover
-
 import Mathlib.RingTheory.RingHom.FiniteType
 import Mathlib.RingTheory.Localization.Away.Basic
+import Mathlib.RingTheory.Spectrum.Prime.Topology
+import Mathlib.Topology.Sets.OpenCover
 
 /-!
 # Exercises, Chapter 23: Glueing

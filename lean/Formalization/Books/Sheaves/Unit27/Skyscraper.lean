@@ -877,16 +877,11 @@ theorem exists_moduleSkyscraperSheafFunctor {X : TopCat.{v}}
         (TopCat.Presheaf.germ (D B).sheaf.val.presheaf U x hxU)) := by
     intro s t hst
     let eU :
-        (skyscraperPresheaf x (AddCommGrpCat.of (↑B))).obj
+      (skyscraperPresheaf x (AddCommGrpCat.of (↑B))).obj
             (Opposite.op U) ≅ AddCommGrpCat.of (↑B) :=
       { hom := eqToHom (by
-          change (skyscraperPresheaf x (AddCommGrpCat.of (↑B))).obj
-            (Opposite.op U) = AddCommGrpCat.of (↑B)
           simp [skyscraperPresheaf_obj, hxU])
         inv := eqToHom (by
-          change AddCommGrpCat.of (↑B) =
-            (skyscraperPresheaf x (AddCommGrpCat.of (↑B))).obj
-              (Opposite.op U)
           simp [skyscraperPresheaf_obj, hxU])
         hom_inv_id := by simp
         inv_hom_id := by simp }
@@ -1002,12 +997,8 @@ theorem exists_moduleSkyscraperSheafFunctor {X : TopCat.{v}}
       (g : AddCommGrpCat.of (↑A) ⟶ AddCommGrpCat.of (↑B)) :
       (TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map
           (S.map g) = (cS A).hom ≫ g ≫ (cS B).inv := by
-    letI : ∀ U : Opens X, Decidable (x ∈ U) := fun _ => Classical.dec _
+    let : ∀ U : Opens X, Decidable (x ∈ U) := fun _ => Classical.dec _
     apply (cancel_mono (cS B).hom).1
-    change
-      (TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map
-          (S.map g) ≫ (cS B).hom =
-        ((cS A).hom ≫ g ≫ (cS B).inv) ≫ (cS B).hom
     have hnat :=
       (skyscraperPresheafStalkAdjunction (p₀ := x)).counit.naturality g
     change
@@ -1476,16 +1467,6 @@ theorem moduleSkyscraperStalkAtSpecialization
             (TopCat.Presheaf.germ D.sheaf.val.presheaf W x' hyW))
             (rW • mW) := by
         rw [hmW0]
-        change
-          (ConcreteCategory.hom
-              (((moduleStalkFunctor O x').obj D.sheaf).smul
-                ((ConcreteCategory.hom
-                  (TopCat.Presheaf.germ O.obj W x' hyW)) rW)))
-              ((ConcreteCategory.hom
-                (TopCat.Presheaf.germ D.sheaf.val.presheaf W x' hyW)) mW) =
-            (ConcreteCategory.hom
-              (TopCat.Presheaf.germ D.sheaf.val.presheaf W x' hyW))
-              (rW • mW)
         exact (PresheafOfModules.germ_ringCat_smul D.sheaf.val x' W hyW rW mW).symm
       rw [hφm]
       dsimp [moduleStalkFunctor]
@@ -1525,7 +1506,7 @@ theorem moduleSkyscraperStalkAtSpecialization
       rw [hφaction]
       exact (PresheafOfModules.germ_ringCat_smul D.sheaf.val x W hxW rW mW).symm
     )
-  letI : ∀ U : Opens X, Decidable (x ∈ U) := fun _ => Classical.dec _
+  let : ∀ U : Opens X, Decidable (x ∈ U) := fun _ => Classical.dec _
   let cY := skyscraperPresheafStalkOfSpecializes
     (p₀ := x) (A := AddCommGrpCat.of (↑A)) h
   let cX := skyscraperPresheafStalkOfSpecializes
@@ -1554,7 +1535,7 @@ theorem moduleSkyscraperStalkAtSpecialization
           dsimp [cX]
           exact germ_skyscraperPresheafStalkOfSpecializes_hom
             (p₀ := x) (A := AddCommGrpCat.of (↑A)) (specializes_refl x) U _]
-  haveI : IsIso (TopCat.Presheaf.stalkSpecializes
+  have : IsIso (TopCat.Presheaf.stalkSpecializes
       (skyscraperPresheaf x (AddCommGrpCat.of (↑A))) h) := by
     rw [hSpec]
     infer_instance
@@ -1597,12 +1578,12 @@ theorem moduleSkyscraperStalkAtSpecialization
     have hq : φAdd = q.hom := by
       apply (cancel_mono eX.hom).1
       simpa [q, eX, eY, hSpecF, Iso.trans_hom, Iso.symm_hom, Category.assoc] using hnat
-    haveI : IsIso φAdd := by
+    have : IsIso φAdd := by
       rw [hq]
       dsimp [q]
       infer_instance
     exact inferInstance
-  letI := hφIso
+  let := hφIso
   let φIso : (moduleStalkFunctor O x').obj D.sheaf ≅
       (ModuleCat.restrictScalars fR).obj ((moduleStalkFunctor O x).obj D.sheaf) :=
     ModuleCat.isoMk (asIso φAdd) (by
@@ -1614,7 +1595,7 @@ theorem moduleSkyscraperStalkAtSpecialization
     apply (forget₂ (ModuleCat (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x'))
       AddCommGrpCat).map_injective
     rfl
-  haveI : IsIso φ := by
+  have : IsIso φ := by
     rw [← hφIso']
     infer_instance
   let p : (moduleStalkFunctor O x).obj D.sheaf ≅ A := by

@@ -651,7 +651,7 @@ theorem isomorphicOverBase_isFibredEquivalenceOver
   rcases h with ⟨F, G, hF, hG, hFG, hGF⟩
   refine ⟨F, G, hF, hG, ?_, ?_, ?_, ?_⟩
   · intro a b φ hφ
-    let : p.IsStronglyCartesian (p.map φ) φ := hφ
+    have : p.IsStronglyCartesian (p.map φ) φ := hφ
     refine { toIsHomLift := ?_, universal_property' := ?_ }
     · infer_instance
     · intro a' g ψ hψ
@@ -698,7 +698,7 @@ theorem isomorphicOverBase_isFibredEquivalenceOver
         simp [gS]
       have hmapS : p.map ψS = gS ≫ p.map φ := by
         simpa using CategoryTheory.IsHomLift.fac' p (gS ≫ p.map φ) ψS
-      let : p.IsHomLift (p.map ψS) ψS := hmapS ▸ hψS
+      have : p.IsHomLift (p.map ψS) ψS := hmapS ▸ hψS
       obtain ⟨δ, ⟨hδ, hδeq⟩, hδuniq⟩ :=
         Functor.IsStronglyCartesian.universal_property p
           (p.map φ) φ gS (p.map ψS) hmapS ψS
@@ -720,7 +720,7 @@ theorem isomorphicOverBase_isFibredEquivalenceOver
         dsimp [χ]
         rw [Functor.map_comp, eqToHom_map, hFδ', hδmap]
         simp [gS, Category.assoc, eqToHom_trans]
-      let : q.IsHomLift g χ := by
+      have : q.IsHomLift g χ := by
         apply CategoryTheory.IsHomLift.of_fac' q g χ rfl rfl
         simpa using hχmap
       have hGF_Fb : F.obj (G.obj (F.obj b)) = F.obj b := by
@@ -739,7 +739,7 @@ theorem isomorphicOverBase_isFibredEquivalenceOver
       refine ⟨χ, ⟨inferInstance, hχeq⟩, ?_⟩
       intro χ' hχ'
       rcases hχ' with ⟨hχ'lift, hχ'eq⟩
-      let : q.IsHomLift g χ' := hχ'lift
+      have : q.IsHomLift g χ' := hχ'lift
       have hχ'map : q.map χ' = g := by
         simpa using CategoryTheory.IsHomLift.fac' q g χ'
       have hGχ' := Functor.congr_hom hG χ'
@@ -789,7 +789,7 @@ theorem isomorphicOverBase_isFibredEquivalenceOver
         _ = eqToHom hGF_a.symm ≫ F.map δ := by rw [hδeq']
         _ = χ := rfl
   · intro a b φ hφ
-    let : q.IsStronglyCartesian (q.map φ) φ := hφ
+    have : q.IsStronglyCartesian (q.map φ) φ := hφ
     refine { toIsHomLift := ?_, universal_property' := ?_ }
     · infer_instance
     · intro a' g ψ hψ
@@ -836,7 +836,7 @@ theorem isomorphicOverBase_isFibredEquivalenceOver
         simp [gS]
       have hmapS : q.map ψS = gS ≫ q.map φ := by
         simpa using CategoryTheory.IsHomLift.fac' q (gS ≫ q.map φ) ψS
-      let : q.IsHomLift (q.map ψS) ψS := hmapS ▸ hψS
+      have : q.IsHomLift (q.map ψS) ψS := hmapS ▸ hψS
       obtain ⟨δ, ⟨hδ, hδeq⟩, hδuniq⟩ :=
         Functor.IsStronglyCartesian.universal_property q
           (q.map φ) φ gS (q.map ψS) hmapS ψS
@@ -858,7 +858,7 @@ theorem isomorphicOverBase_isFibredEquivalenceOver
         dsimp [χ]
         rw [Functor.map_comp, eqToHom_map, hGδ', hδmap]
         simp [gS, Category.assoc, eqToHom_trans]
-      let : p.IsHomLift g χ := by
+      have : p.IsHomLift g χ := by
         apply CategoryTheory.IsHomLift.of_fac' p g χ rfl rfl
         simpa using hχmap
       have hFG_Fb : G.obj (F.obj (G.obj b)) = G.obj b := by
@@ -877,7 +877,7 @@ theorem isomorphicOverBase_isFibredEquivalenceOver
       refine ⟨χ, ⟨inferInstance, hχeq⟩, ?_⟩
       intro χ' hχ'
       rcases hχ' with ⟨hχ'lift, hχ'eq⟩
-      let : p.IsHomLift g χ' := hχ'lift
+      have : p.IsHomLift g χ' := hχ'lift
       have hχ'map : p.map χ' = g := by
         simpa using CategoryTheory.IsHomLift.fac' p g χ'
       have hFχ' := Functor.congr_hom hF χ'
@@ -1022,9 +1022,8 @@ theorem isFibredEquivalenceOver_trans
     rw [hGmap]
     change 𝟙 ((G ⋙ p).obj (K.obj (H.obj (F.obj x)))) ≫ _ = _
     simp only [Category.id_comp]
-    simp only [Category.assoc]
     rw [overHKv, overFGv]
-    simp only [eqToHom_trans]
+    simp
   · have overB : (B ⋙ A) ⋙ r = (𝟭 U) ⋙ r := by
       calc
         (B ⋙ A) ⋙ r = B ⋙ (A ⋙ r) := Functor.assoc B A r
@@ -1051,9 +1050,8 @@ theorem isFibredEquivalenceOver_trans
     rw [hHmap]
     change 𝟙 ((H ⋙ r).obj (F.obj (G.obj (K.obj x)))) ≫ _ = _
     simp only [Category.id_comp]
-    simp only [Category.assoc]
     rw [overGFv, overKHv]
-    simp only [eqToHom_trans]
+    simp
 
 /-- The source's comparison data for the strictification construction.  The
 first fields are the natural functor `\mathcal S \to \mathcal S'`, its

@@ -92,15 +92,15 @@ theorem completion_not_exact_in_general :
   let M0 := ℚ
   let rhoK : R →+* K0 := ULift.ringEquiv.toRingHom
   let rhoM : R →+* M0 := (Int.castRingHom ℚ).comp rhoK
-  letI : Algebra R K0 := rhoK.toAlgebra
-  letI : Algebra R M0 := rhoM.toAlgebra
+  let : Algebra R K0 := rhoK.toAlgebra
+  let : Algebra R M0 := rhoM.toAlgebra
   let I : Ideal R := Ideal.span ({ULift.up (2 : ℤ)} : Set R)
   let K := ULift.{u_1} K0
   let M := ULift.{u_1} M0
   let rhoKU : R →+* K := (ULift.ringEquiv.symm.toRingHom).comp rhoK
   let rhoMU : R →+* M := (ULift.ringEquiv.symm.toRingHom).comp rhoM
-  letI : Algebra R K := rhoKU.toAlgebra
-  letI : Algebra R M := rhoMU.toAlgebra
+  let : Algebra R K := rhoKU.toAlgebra
+  let : Algebra R M := rhoMU.toAlgebra
   have hImapMU : Ideal.map rhoMU I = ⊤ := by
     change Ideal.map rhoMU (Ideal.span ({ULift.up (2 : ℤ)} : Set R)) = ⊤
     rw [Ideal.map_span]
@@ -191,7 +191,7 @@ theorem completion_not_exact_in_general :
     exact LinearMap.exact_map_mkQ_range f0
   have hg0 : Function.Surjective g0 := Submodule.mkQ_surjective _
   let P := ULift.{u_1} P0
-  letI : Module R P := ULift.module'
+  let : Module R P := ULift.module'
   let eK : K ≃ₗ[R] K0 := ULift.moduleEquiv
   let eM : M ≃ₗ[R] M0 := ULift.moduleEquiv
   let eP : P ≃ₗ[R] P0 := ULift.moduleEquiv
@@ -342,7 +342,7 @@ theorem completion_short_exact_of_flat
         refine ⟨y, ?_⟩
         have hy := (h2 0).choose_spec.choose_spec.2
         have hd := (h2 0).choose_spec.choose_spec.1
-        simpa [hy] using (Submodule.neg_mem _ hd)
+        simp
       have aS (n : ℕ)
           (an : {x : K // f x - b n ∈ (I ^ n • (⊤ : Submodule R M))}) :
           {x : K // f x - b (n + 1) ∈
@@ -981,7 +981,7 @@ theorem completion_exact_of_power_annihilated_quotient
     have hgker : f (a (n + c)) ∈ g.ker := by
       exact congrArg (fun k => k (a (n + c))) hfg.linearMap_comp_eq_zero
     obtain ⟨z, hz, hzf⟩ := hpreimage n hfa hgker
-    have hza : z = a (n + c) := hf (by simpa [hzf])
+    have hza : z = a (n + c) := hf (by simp [hzf])
     exact ⟨n + c, by omega, n, by omega, hza ▸ hz⟩
   have hexact_map : Function.Exact
       ((AdicCompletion.map I f).restrictScalars R :
@@ -1031,7 +1031,7 @@ theorem completion_exact_of_power_annihilated_quotient
         have hdiffker : f (a (n + 1) - a n) ∈ g.ker := by
           exact congrArg (fun k => k (a (n + 1) - a n)) hfg.linearMap_comp_eq_zero
         obtain ⟨z, hz, hzf⟩ := hpreimage n hdiff' hdiffker
-        have hza : z = a (n + 1) - a n := hf (by simpa [hzf])
+        have hza : z = a (n + 1) - a n := hf (by simp [hzf])
         have hneg : -z ∈ I ^ n • (⊤ : Submodule R K) := Submodule.neg_mem _ hz
         simpa [hza] using hneg
       let aa := AdicCompletion.AdicCauchySequence.mk I K a ha_cauchy
@@ -1123,7 +1123,7 @@ theorem completion_isAdicComplete_iff_kernel_eq_power
             rw [Submodule.map_smul'', Submodule.map_top]
             exact smul_mono_right _ le_top
           exact hmapof (Submodule.mem_map_of_mem ha)
-        convert hofa using 1 <;> abel
+        convert hofa using 1; abel
     let next (j : ℕ)
         (z : {z : completion I M // z ∈ completionKernel I M (n + j)}) :
         {z : completion I M // z ∈ completionKernel I M (n + j + 1)} := by
@@ -1152,7 +1152,7 @@ theorem completion_isAdicComplete_iff_kernel_eq_power
               I ^ (n + j) • (⊤ : Submodule R (completion I M)) :=
             Submodule.smul_mono_left (Ideal.pow_le_pow_right (by omega))
           have hlast := hmon (hcstep l)
-          convert Submodule.add_mem _ ih hlast using 1 <;> abel
+          convert Submodule.add_mem _ ih hlast using 1; abel
     have hcx (j : ℕ) :
         x - (cseq j).1 ∈ I ^ n • (⊤ : Submodule R (completion I M)) := by
       simpa [cseq] using hcchain (j := 0) (l := j) (Nat.zero_le j)
@@ -1177,7 +1177,7 @@ theorem completion_isAdicComplete_iff_kernel_eq_power
       · have hmn : m ≤ n := hmk.trans hkn
         simp only [b]
         rw [dif_pos hmn, dif_pos hkn]
-        simpa using (Submodule.zero_mem (I ^ m • (⊤ : Submodule R (completion I M))))
+        simp
       · have hnle : n ≤ k := Nat.le_of_not_ge hkn
         by_cases hmn : m ≤ n
         · have hmon : I ^ n • (⊤ : Submodule R (completion I M)) ≤
@@ -1201,7 +1201,7 @@ theorem completion_isAdicComplete_iff_kernel_eq_power
         (AdicCompletion.pow_smul_top_le_ker_eval (I := I) (M := M) k) hdiff
       have hLK : L ∈ completionKernel I M k := by
         have hsub := (completionKernel I M k).sub_mem (hbK k) hdiffK
-        convert hsub using 1 <;> abel
+        convert hsub using 1; abel
       simpa [AdicCompletion.eval_apply] using LinearMap.mem_ker.mp hLK
     have hnconv := SModEq.sub_mem.mp (hL n)
     have hxn : x ∈ I ^ n • (⊤ : Submodule R (completion I M)) := by
@@ -1407,7 +1407,7 @@ theorem completion_radical
     apply hunit (x * y + 1)
     have hx0 : AdicCompletion.evalOneₐ I x = 0 := RingHom.mem_ker.mp hx
     rw [map_add, map_one, map_mul, hx0, zero_mul]
-    simpa using (isUnit_one : IsUnit (1 : ringCompletion I))
+    exact isUnit_one
 
 /-! ## Finitely generated ideals and completeness -/
 
@@ -1425,7 +1425,7 @@ theorem surjective_to_completion_of_finite_generators
         s.sup (fun i => (Ideal.span ({f i} : Set A)) ^ n) := by
     intro s n hs
     induction s using Finset.induction_on with
-    | empty => exact (False.elim (by simpa using hs))
+    | empty => simp at hs
     | @insert a s ha ih =>
         by_cases hs' : s.Nonempty
         · rw [Finset.sup_insert, Finset.sup_insert,
@@ -1436,7 +1436,7 @@ theorem surjective_to_completion_of_finite_generators
                 ((s.card + 1) * n) =
                 (Ideal.span ({f a} : Set A) ⊔
                   s.sup (fun i => Ideal.span ({f i} : Set A))) ^
-                  (n + s.card * n) := by congr 1 <;> ring
+                  (n + s.card * n) := by congr 1; ring
             _ ≤ (Ideal.span ({f a} : Set A)) ^ n ⊔
                 (s.sup (fun i => Ideal.span ({f i} : Set A))) ^ (s.card * n) :=
               Ideal.sup_pow_add_le_pow_sup_pow
@@ -1499,8 +1499,7 @@ theorem surjective_to_completion_of_finite_generators
         (Ideal.span ({f i} : Set A)) ^ n • (⊤ : Submodule A M) :=
       (Submodule.smul_mono_left (Ideal.pow_le_pow_right (Nat.le_succ n))) (hb i n)
     rw [SModEq.sub_mem]
-    convert Submodule.neg_mem _ hb' using 1 <;>
-      simp [s, Finset.sum_range_succ] <;> abel
+    convert Submodule.neg_mem _ hb' using 1; simp [s, Finset.sum_range_succ]
   have hcauchy (i : Fin r) : ∀ {m n : ℕ}, m ≤ n →
       s i m ≡ s i n [SMOD
         ((Ideal.span ({f i} : Set A)) ^ m • (⊤ : Submodule A M))] := by

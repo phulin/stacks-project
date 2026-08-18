@@ -4,6 +4,7 @@ import Mathlib.Algebra.Module.LocalizedModule.Away
 import Mathlib.RingTheory.FinitePresentation
 import Mathlib.RingTheory.FiniteType
 import Mathlib.RingTheory.Finiteness.Basic
+import Mathlib.RingTheory.Finiteness.ModuleFinitePresentation
 import Formalization.Books.Algebra.Unit06.FiniteType
 import Formalization.Books.Algebra.Unit14.BaseChange
 
@@ -108,6 +109,93 @@ private theorem moduleFinitePresentation_of_surjective
     rw [hcomm]
     simpa [fRq] using hy
   exact Module.finitePresentation_of_surjective fS hfS hkerS
+
+private theorem moduleFinitePresentation_of_surjective_of_fg_ker
+    {R S M : Type*} [CommRing R] [CommRing S]
+    [AddCommGroup M] [Module S M] (q : R →+* S) (hq : Function.Surjective q)
+    (hker : (RingHom.ker q).FG) (hM : Module.FinitePresentation S M) :
+    letI : Module R M := Module.compHom M q
+    Module.FinitePresentation R M := by
+  let : Algebra R S := q.toAlgebra
+  let : Module R M := Module.compHom M q
+  let : IsScalarTower R S M := IsScalarTower.of_algebraMap_smul (fun _ _ => rfl)
+  obtain ⟨s, hs, hs'⟩ := hM.out
+  let fR : (s →₀ R) →ₗ[R] M := Finsupp.linearCombination R ((↑) : s → M)
+  let fS : (s →₀ S) →ₗ[S] M := Finsupp.linearCombination S ((↑) : s → M)
+  let map : (s →₀ R) →ₗ[R] (s →₀ S) :=
+    Finsupp.mapRange.linearMap (Algebra.linearMap R S)
+  have hmap : Function.Surjective map := by
+    have hq' : Function.Surjective (Algebra.linearMap R S) := by
+      intro x
+      obtain ⟨y, hy⟩ := hq x
+      refine ⟨y, ?_⟩
+      change q y = x
+      exact hy
+    intro x
+    obtain ⟨y, hy⟩ := Finsupp.mapRange_surjective
+      (Algebra.linearMap R S) (Algebra.linearMap R S).map_zero hq' x
+    exact ⟨y, by simpa [map] using hy⟩
+  have hcomm : (fS.restrictScalars R).comp map = fR := by
+    ext x
+    simp [fR, fS, map, Finsupp.linearCombination_apply,
+      Finsupp.mapRange.linearMap_apply, Finsupp.sum_mapRange_index]
+  have hker_map : (LinearMap.ker map).FG := by
+    dsimp [map]
+    rw [Finsupp.ker_mapRange]
+    rw [Finsupp.submodule_eq_iSup]
+    apply Submodule.fg_iSup
+    intro i
+    exact Submodule.FG.map (Finsupp.lsingle i) hker
+  have hkerS : (LinearMap.ker (fS.restrictScalars R)).FG := by
+    let N : Submodule S (s →₀ S) := LinearMap.ker fS
+    have hN : (N.restrictScalars R).FG :=
+      Submodule.FG.restrictScalars_of_surjective hs' hq
+    simpa [N] using hN
+  have hmapker : (LinearMap.ker fR).map map =
+      LinearMap.ker (fS.restrictScalars R) := by
+    apply le_antisymm
+    · rintro y ⟨x, hx, rfl⟩
+      have hxy := LinearMap.congr_fun hcomm x
+      calc
+        (fS.restrictScalars R) (map x) = fR x := hxy
+        _ = 0 := hx
+    · intro y hy
+      obtain ⟨x, hx⟩ := hmap y
+      refine ⟨x, ?_, hx⟩
+      have hxy := LinearMap.congr_fun hcomm x
+      calc
+        fR x = (fS.restrictScalars R) (map x) := hxy.symm
+        _ = (fS.restrictScalars R) y := by rw [hx]
+        _ = 0 := hy
+  have hker_le : LinearMap.ker map ≤ LinearMap.ker fR := by
+    intro x hx
+    have hxy := LinearMap.congr_fun hcomm x
+    change map x = 0 at hx
+    calc
+      fR x = (fS.restrictScalars R) (map x) := hxy.symm
+      _ = 0 := by simpa using congrArg (fS.restrictScalars R) hx
+  have hkerR : (LinearMap.ker fR).FG := by
+    apply Submodule.fg_of_fg_map_of_fg_inf_ker map
+    · rw [hmapker]
+      exact hkerS
+    · rw [inf_of_le_right hker_le]
+      exact hker_map
+  have hfS : Function.Surjective fS := by
+    rw [← LinearMap.range_eq_top, Finsupp.range_linearCombination]
+    simpa using hs
+  have hfR : Function.Surjective fR := by
+    intro m
+    obtain ⟨x, hx⟩ := hfS m
+    obtain ⟨y, hy⟩ := hmap x
+    refine ⟨y, ?_⟩
+    have hxy := LinearMap.congr_fun hcomm y
+    calc
+      fR y = (fS.restrictScalars R) (map y) := hxy.symm
+      _ = fS x := by rw [hy]; rfl
+      _ = m := hx
+  refine ⟨s, ?_, hkerR⟩
+  have hrange : LinearMap.range fR = ⊤ := LinearMap.range_eq_top.mpr hfR
+  simpa [fR, Finsupp.range_linearCombination] using hrange
 
 /-- The counterexample in the introduction: finite presentation over the
 quotient does not imply finite presentation over the original polynomial
@@ -356,7 +444,11 @@ theorem relativelyFinitelyPresented_iff_surjective_from_finitelyPresented
     exact moduleFinitePresentation_of_surjective β'.toRingHom hβ' (by
       exact hall')
   · intro hAll
-    sorry
+    obtain ⟨n, α, hα⟩ :=
+      (Algebra.FiniteType.iff_quotient_mvPolynomial'').mp hf
+    have hfp : RingHom.FinitePresentation (algebraMap R (MvPolynomial (Fin n) R)) := by
+      exact RingHom.finitePresentation_algebraMap.mpr inferInstance
+    exact ⟨n, α, hα, hAll α hα hfp⟩
 
 /-- A relatively finitely presented module is finitely presented over `A`. -/
 theorem relativelyFinitelyPresented.finitePresentation
@@ -378,14 +470,40 @@ theorem relativelyFinitelyPresented_iff_finitePresentation
     [AddCommGroup M] [Module A M] (f : R →+* A)
     (hf : RingHom.FinitePresentation f) :
     RelativelyFinitelyPresented f M ↔ Module.FinitePresentation A M := by
-  sorry
+  let : Algebra R A := f.toAlgebra
+  constructor
+  · intro hM
+    exact relativelyFinitelyPresented.finitePresentation f hM
+  · intro hM
+    have hfp : Algebra.FinitePresentation R A := hf
+    obtain ⟨n, α, hα, hker⟩ := hfp.out
+    refine ⟨n, α, hα, ?_⟩
+    exact moduleFinitePresentation_of_surjective_of_fg_ker
+      α.toRingHom hα hker hM
 
 /-- `A` is relatively finitely presented over `R` exactly when the algebra
 map `R → A` is finitely presented. -/
 theorem relativelyFinitelyPresented_self_iff
     {R A : Type*} [CommRing R] [CommRing A] (f : R →+* A) :
     RelativelyFinitelyPresented f A ↔ RingHom.FinitePresentation f := by
-  sorry
+  let : Algebra R A := f.toAlgebra
+  constructor
+  · intro hrel
+    dsimp [RelativelyFinitelyPresented] at hrel
+    obtain ⟨n, α, hα, hPA⟩ := hrel
+    let P := MvPolynomial (Fin n) R
+    let : Algebra P A := α.toAlgebra
+    let : IsScalarTower R P A := IsScalarTower.of_algebraMap_eq' (by
+      apply RingHom.ext
+      intro r
+      exact (α.commutes r).symm)
+    letI : Module.FinitePresentation P A := hPA
+    have hPfp : Algebra.FinitePresentation P A := inferInstance
+    have hRfp : Algebra.FinitePresentation R A :=
+      Algebra.FinitePresentation.trans R P A
+    exact hRfp
+  · intro hf
+    exact (relativelyFinitelyPresented_iff_finitePresentation f hf).mpr inferInstance
 
 /-- Over a Noetherian base, relative finite presentation reduces to finite
 generation over the finite-type algebra. -/
@@ -394,7 +512,19 @@ theorem relativelyFinitelyPresented_iff_finite
     [AddCommGroup M] [Module A M] (f : R →+* A)
     (hf : RingHom.FiniteType f) [IsNoetherianRing R] :
     RelativelyFinitelyPresented f M ↔ Module.Finite A M := by
-  sorry
+  let : Algebra R A := f.toAlgebra
+  letI : Algebra.FiniteType R A := hf
+  letI : IsNoetherianRing A := Algebra.FiniteType.isNoetherianRing R A
+  have hfp : RingHom.FinitePresentation f :=
+    (RingHom.FinitePresentation.of_finiteType).mp hf
+  constructor
+  · intro hrel
+    letI : Module.FinitePresentation A M :=
+      relativelyFinitelyPresented.finitePresentation f hrel
+    infer_instance
+  · intro hfinite
+    apply (relativelyFinitelyPresented_iff_finitePresentation f hfp).mpr
+    exact Module.finitePresentation_of_finite A M
 
 /-! ## Stability under finite maps -/
 

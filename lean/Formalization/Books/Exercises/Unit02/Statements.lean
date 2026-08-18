@@ -387,7 +387,7 @@ theorem finitePresentation_iff_finite_free_cokernel
     have hfg : ((LinearMap.range f.hom).mkQ.ker).FG := by
       rw [Submodule.ker_mkQ]
       exact Submodule.fg_range f.hom
-    haveI : Module.FinitePresentation R
+    have : Module.FinitePresentation R
         ((Fin m → R) ⧸ f.hom.range) :=
       Module.finitePresentation_of_free_of_surjective
         (LinearMap.range f.hom).mkQ (Submodule.mkQ_surjective _)

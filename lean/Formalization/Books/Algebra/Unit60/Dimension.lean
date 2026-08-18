@@ -494,7 +494,8 @@ theorem ringKrullDim_le_maximalIdeal_spanFinrank
 theorem ringKrullDim_le_cotangentSpace_finrank
     (R : Type u) [CommRing R] [IsLocalRing R] [IsNoetherianRing R] :
     ringKrullDim R ≤ Module.finrank (ResidueField R) (CotangentSpace R) := by
-  sorry
+  rw [← IsLocalRing.spanFinrank_maximalIdeal_eq_finrank_cotangentSpace R]
+  exact ringKrullDim_le_maximalIdeal_spanFinrank R
 
 /-! ## Systems of parameters and regular local rings -/
 
@@ -519,7 +520,52 @@ theorem isRegularLocalRing_iff_exists_regularSystemOfParameters
     IsRegularLocalRing R ↔
       ∃ x : Fin d₀ → R,
         IsSystemOfParameters R d₀ x ∧ IsRegularSystemOfParameters R d₀ x := by
-  sorry
+  constructor
+  · intro hreg
+    letI : IsRegularLocalRing R := hreg
+    have hspan : (maximalIdeal R).spanFinrank = d₀ := by
+      exact (isRegularLocalRing_iff R).mp hreg |>.trans hd
+    obtain ⟨s, hs_card, hs_span⟩ :=
+      (maximalIdeal R).fg_of_isNoetherianRing.exists_span_finset_card_eq_spanFinrank
+    have hs_card' : s.card = d₀ := hs_card.trans hspan
+    let e : s ≃ Fin d₀ := Finset.equivFinOfCardEq hs_card'
+    let x : Fin d₀ → R := fun i => e.symm i
+    have hxmem : ∀ i, x i ∈ maximalIdeal R := by
+      intro i
+      exact (e.symm i).property
+    have hrange : Set.range x = (s : Set R) := by
+      ext y
+      constructor
+      · rintro ⟨i, rfl⟩
+        exact (e.symm i).property
+      · intro hy
+        let y' : s := ⟨y, hy⟩
+        refine ⟨e y', ?_⟩
+        exact congrArg Subtype.val (e.symm_apply_apply y')
+    refine ⟨x, ⟨hxmem, ?_⟩, ⟨hxmem, ?_⟩⟩
+    · rw [hrange]
+      simpa using hs_span
+    · rw [hrange]
+      simpa using hs_span
+  · rintro ⟨x, hsys, hreg⟩
+    change (∀ i, x i ∈ maximalIdeal R) ∧
+      IsIdealOfDefinition R (Ideal.span (Set.range x)) at hsys
+    change (∀ i, x i ∈ maximalIdeal R) ∧
+      Ideal.span (Set.range x) = maximalIdeal R at hreg
+    have hgen : Ideal.span (Set.range x) = maximalIdeal R := hreg.2
+    have hspan_le : (maximalIdeal R).spanFinrank ≤ d₀ := by
+      rw [← hgen]
+      calc
+        (Ideal.span (Set.range x)).spanFinrank ≤ (Set.range x).ncard :=
+          Submodule.spanFinrank_span_le_ncard_of_finite (Set.toFinite _)
+        _ ≤ d₀ := by
+          simpa [Set.image_univ] using
+            (Set.ncard_image_le (f := x) (s := (Set.univ : Set (Fin d₀))))
+    apply (isRegularLocalRing_iff R).2
+    apply le_antisymm
+    · rw [hd]
+      exact hspan_le
+    · exact ringKrullDim_le_maximalIdeal_spanFinrank R
 
 theorem isRegularLocalRing_iff_cotangentSpace_finrank_eq_dimension
     (R : Type u) [CommRing R] [IsLocalRing R] [IsNoetherianRing R] :

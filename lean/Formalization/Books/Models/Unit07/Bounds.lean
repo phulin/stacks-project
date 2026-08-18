@@ -347,6 +347,79 @@ def picardPrimaryTorsionFinrank (T : NumericalType) (ell : ℕ)
     AddSubgroup.torsionBy.zmodModule
   Module.finrank (ZMod ell) (picardPrimaryTorsion T ell)
 
+private theorem torsion_finrank_le_of_injective
+    {G H : Type*} [AddCommGroup G] [AddCommGroup H]
+    (hG : Module.Finite ℤ G) (hH : Module.Finite ℤ H)
+    (f : G →ₗ[ℤ] H) (hf : Function.Injective f)
+    (ell : ℕ) (hell : Nat.Prime ell) :
+    letI : Fact (Nat.Prime ell) := ⟨hell⟩
+    letI : NeZero ell := ⟨hell.ne_zero⟩
+    letI : Module (ZMod ell) (AddSubgroup.torsionBy G (ell : ℤ)) :=
+      AddSubgroup.torsionBy.zmodModule
+    letI : Module (ZMod ell) (AddSubgroup.torsionBy H (ell : ℤ)) :=
+      AddSubgroup.torsionBy.zmodModule
+    Module.finrank (ZMod ell) (AddSubgroup.torsionBy G (ell : ℤ)) ≤
+      Module.finrank (ZMod ell) (AddSubgroup.torsionBy H (ell : ℤ)) := by
+  letI : Module.Finite ℤ G := hG
+  letI : Module.Finite ℤ H := hH
+  letI : IsNoetherian ℤ G := inferInstance
+  letI : IsNoetherian ℤ H := inferInstance
+  let P := AddSubgroup.torsionBy G (ell : ℤ)
+  let Q := AddSubgroup.torsionBy H (ell : ℤ)
+  letI : Module.Finite ℤ P.toIntSubmodule :=
+    Module.Finite.of_fg (IsNoetherian.noetherian _)
+  letI : Module.Finite ℤ Q.toIntSubmodule :=
+    Module.Finite.of_fg (IsNoetherian.noetherian _)
+  let eP : P.toIntSubmodule ≃ₗ[ℤ] P :=
+    { toFun := fun x => ⟨x.1, x.2⟩
+      invFun := fun x => ⟨x.1, x.2⟩
+      left_inv := by intro x; rfl
+      right_inv := by intro x; rfl
+      map_add' := by intro x y; rfl
+      map_smul' := by intro c x; rfl }
+  let eQ : Q.toIntSubmodule ≃ₗ[ℤ] Q :=
+    { toFun := fun x => ⟨x.1, x.2⟩
+      invFun := fun x => ⟨x.1, x.2⟩
+      left_inv := by intro x; rfl
+      right_inv := by intro x; rfl
+      map_add' := by intro x y; rfl
+      map_smul' := by intro c x; rfl }
+  letI : Module.Finite ℤ P := Module.Finite.equiv eP
+  letI : Module.Finite ℤ Q := Module.Finite.equiv eQ
+  let _ : Fact (Nat.Prime ell) := ⟨hell⟩
+  let _ : NeZero ell := ⟨hell.ne_zero⟩
+  let _ : Module (ZMod ell) P := AddSubgroup.torsionBy.zmodModule
+  let _ : Module (ZMod ell) Q := AddSubgroup.torsionBy.zmodModule
+  letI : Module.Finite (ZMod ell) P :=
+    Module.Finite.of_restrictScalars_finite ℤ (ZMod ell) P
+  letI : Module.Finite (ZMod ell) Q :=
+    Module.Finite.of_restrictScalars_finite ℤ (ZMod ell) Q
+  let F0 : P →+ Q :=
+    { toFun := fun x => ⟨f x.1, by
+        change (ell : ℤ) • f (x : G) = 0
+        have hx := congrArg f x.2
+        change f ((ell : ℤ) • (x : G)) = f 0 at hx
+        simpa only [map_smul, map_zero] using hx⟩
+      map_zero' := by
+        apply Subtype.ext
+        simp
+      map_add' := by
+        intro x y
+        apply Subtype.ext
+        simp }
+  let F : P →ₗ[ZMod ell] Q :=
+    { toFun := F0
+      map_add' := F0.map_add
+      map_smul' := by
+        intro c x
+        exact ZMod.map_smul F0 c x }
+  have hF : Function.Injective F := by
+    intro x y hxy
+    apply Subtype.ext
+    apply hf
+    exact congrArg Subtype.val hxy
+  exact LinearMap.finrank_le_finrank_of_injective hF
+
 /-!
 For a numerical type of genus at least two and a prime larger than the
 uniform coefficient bound, the Picard `ell`-torsion has the stated dimension
@@ -361,6 +434,147 @@ theorem bound_picard_group (T : NumericalType) (genusValue : ℤ)
       (IsMinimal T →
         (picardPrimaryTorsionFinrank T ell hell : ℤ) ≤ topologicalGenus T ∧
           topologicalGenus T ≤ genusValue) := by
-  sorry
+  induction hT : T.n using Nat.strong_induction_on generalizing T with
+  | h n ih =>
+    have hnT : T.n = n := hT
+    by_cases hminimal : IsMinimal T
+    · have hbound := bound_wm T genusValue hgenus hgenus_ge_two hminimal
+      have hm_lt : ∀ i, T.m i < (ell : ℤ) := by
+        intro i
+        by_cases hn : 1 < T.n
+        · have hdiag : T.a i i < 0 :=
+            (diagonal_negative T genusValue hgenus hn) i
+          have hprod := hbound i i
+          have habs : 1 ≤ |T.a i i| := by
+            rw [abs_of_neg hdiag]
+            omega
+          nlinarith [hell_bound, T.m_pos i]
+        · have hn1 : T.n = 1 := by
+            have hTpos := T.hn
+            omega
+          obtain ⟨ha, hform, _, _, _, hgt⟩ :=
+            irreducible_numerical_type T genusValue hn1 hgenus
+          obtain ⟨hg, hprod, _⟩ := hgt (by omega)
+          have hi : i = firstIndex T := by
+            apply Fin.ext
+            omega
+          have hwpos := T.w_pos (firstIndex T)
+          have hgle : 1 ≤ T.g (firstIndex T) - 1 := by omega
+          rw [hi]
+          have hmpos := T.m_pos (firstIndex T)
+          have hwge : 1 ≤ T.w (firstIndex T) := by omega
+          have hmw : T.m (firstIndex T) ≤
+              T.m (firstIndex T) * T.w (firstIndex T) := by
+            nlinarith
+          have hmwpos : 0 ≤
+              T.m (firstIndex T) * T.w (firstIndex T) := by
+            positivity
+          have hprodle :
+              T.m (firstIndex T) * T.w (firstIndex T) ≤
+                T.m (firstIndex T) * T.w (firstIndex T) *
+                  (T.g (firstIndex T) - 1) := by
+            have h := mul_le_mul_of_nonneg_left hgle hmwpos
+            simpa [mul_assoc] using h
+          have hmgen : T.m (firstIndex T) ≤ genusValue - 1 := by
+            calc
+              T.m (firstIndex T) ≤
+                  T.m (firstIndex T) * T.w (firstIndex T) := hmw
+              _ ≤ T.m (firstIndex T) * T.w (firstIndex T) *
+                  (T.g (firstIndex T) - 1) := hprodle
+              _ = genusValue - 1 := hprod
+          nlinarith [hell_bound]
+      have hcop : CoprimeToMatrixAndVector ell T.a T.m := by
+        constructor
+        · intro i j hij
+          have hprod := hbound i j
+          have hmpos := T.m_pos i
+          have ha_nonneg : 0 ≤ |T.a i j| := abs_nonneg _
+          have hmul : |T.a i j| ≤ T.m i * |T.a i j| := by
+            nlinarith
+          have hltZ : |T.a i j| < (ell : ℤ) := by
+            nlinarith [hell_bound]
+          have hltNatZ : (Int.natAbs (T.a i j) : ℤ) < (ell : ℤ) := by
+            simpa only [Int.natCast_natAbs] using hltZ
+          have hltNat : Int.natAbs (T.a i j) < ell := by
+            exact_mod_cast hltNatZ
+          exact Nat.coprime_of_lt_prime (Int.natAbs_ne_zero.mpr hij) hltNat hell
+        · intro i hmi
+          have hltZ := hm_lt i
+          have hltNatZ : (Int.natAbs (T.m i) : ℤ) < (ell : ℤ) := by
+            rw [Int.natCast_natAbs, abs_of_pos (T.m_pos i)]
+            exact hltZ
+          have hltNat : Int.natAbs (T.m i) < ell := by
+            exact_mod_cast hltNatZ
+          exact Nat.coprime_of_lt_prime (Int.natAbs_ne_zero.mpr hmi) hltNat hell
+      have hmatrix := recurring_symmetric_integer T.a T.m T.a_symmetric
+        T.a_offdiag_nonneg T.m_pos (by
+          funext i
+          exact T.row_sum i) T.connected ell hell hcop
+      have hpic := torsion_finrank_le_of_injective
+        (picard_group_finite_rank_one T).1
+        (by infer_instance : Module.Finite ℤ (matrixCokernel T.a))
+        (picardGroupToMatrixCokernel T)
+        (picardGroupToMatrixCokernel_injective T) ell hell
+      have hdim :
+          (picardPrimaryTorsionFinrank T ell hell : ℤ) ≤
+            (matrixPrimaryTorsionFinrank T.a ell hell : ℤ) := by
+        dsimp [picardPrimaryTorsionFinrank, matrixPrimaryTorsionFinrank]
+        exact_mod_cast hpic
+      have hmatrixZ :
+          (matrixPrimaryTorsionFinrank T.a ell hell : ℤ) ≤
+            ((positiveOffDiagonalEdgeCount T.a + 1 - T.n : ℕ) : ℤ) := by
+        exact_mod_cast hmatrix
+      have hcount : T.n ≤ positiveOffDiagonalEdgeCount T.a + 1 := by
+        have htopo := topological_genus_nonnegative T
+        dsimp [topologicalGenus] at htopo
+        omega
+      have hcast :
+          ((positiveOffDiagonalEdgeCount T.a + 1 - T.n : ℕ) : ℤ) =
+            topologicalGenus T := by
+        dsimp [topologicalGenus]
+        omega
+      have htopole : topologicalGenus T ≤ genusValue := by
+        by_cases hn : 1 < T.n
+        · exact minimal_genus_ge_topological_genus T genusValue hgenus hminimal hn
+        · have hn1 : T.n = 1 := by
+            have hTpos := T.hn
+            omega
+          have hcard : positiveOffDiagonalEdgeCount T.a = 0 := by
+            unfold positiveOffDiagonalEdgeCount
+            apply Fintype.card_eq_zero_iff.mpr
+            exact ⟨fun e => by omega⟩
+          simp [topologicalGenus, hn1, hcard]
+          omega
+      have hmain : (picardPrimaryTorsionFinrank T ell hell : ℤ) ≤ genusValue := by
+        rw [hcast] at hmatrixZ
+        linarith
+      exact ⟨hmain, fun _ => ⟨by linarith, htopole⟩⟩
+    · have hex : ∃ i, IsMinusOneIndex T i := by
+        by_contra h
+        apply hminimal
+        exact h
+      obtain ⟨i, hi⟩ := hex
+      obtain ⟨T', e, hcon⟩ := exists_contraction T i hi
+      have hlt : T'.n < T.n := by
+        rw [hcon.1]
+        have hTpos := T.hn
+        omega
+      have hgenus' : IsOfGenus T' genusValue :=
+        hcon.2.2.2.2.2.trans hgenus
+      have hltN : T'.n < n := by simpa [hnT] using hlt
+      have hrec := ih T'.n hltN T' hgenus' rfl
+      have hinj := (contract_picard_group T T' i hi e hcon).1
+      have htor := torsion_finrank_le_of_injective
+        (picard_group_finite_rank_one T).1
+        (picard_group_finite_rank_one T').1
+        (contractionPicardMap T T' i e hcon) hinj ell hell
+      have htorZ :
+          (picardPrimaryTorsionFinrank T ell hell : ℤ) ≤
+            (picardPrimaryTorsionFinrank T' ell hell : ℤ) := by
+        dsimp [picardPrimaryTorsionFinrank] at htor ⊢
+        exact_mod_cast htor
+      have hmain : (picardPrimaryTorsionFinrank T ell hell : ℤ) ≤ genusValue :=
+        htorZ.trans hrec.1
+      exact ⟨hmain, fun h => (hminimal h).elim⟩
 
 end Formalization.Books.Models.Unit07

@@ -4,7 +4,9 @@ import Mathlib.Data.ZMod.Basic
 import Mathlib.LinearAlgebra.BilinearForm.Orthogonal
 import Mathlib.LinearAlgebra.Dimension.Free
 import Mathlib.LinearAlgebra.Matrix.Determinant.Basic
+import Mathlib.LinearAlgebra.Matrix.Gershgorin
 import Mathlib.LinearAlgebra.Matrix.ToLin
+import Mathlib.RingTheory.Int.Basic
 
 /-!
 # Linear algebra
@@ -27,7 +29,18 @@ def offDiagonalNormSum {n : ℕ} {α : Type*} [Norm α]
 theorem recurring_diagonal_dominance {n : ℕ} (A : Matrix (Fin n) (Fin n) ℂ)
     (hdominant : ∀ i, norm (A i i) > offDiagonalNormSum A i) :
     Matrix.det A ≠ 0 := by
-  sorry
+  apply det_ne_zero_of_sum_row_lt_diag
+  intro i
+  have hsum :
+      (∑ j ∈ (Finset.univ : Finset (Fin n)).erase i, ‖A i j‖) =
+        (Finset.univ : Finset (Fin n)).sum
+          (fun j => if j ≠ i then ‖A i j‖ else 0) := by
+    rw [show (Finset.univ : Finset (Fin n)).erase i =
+        (Finset.univ : Finset (Fin n)).filter (fun j => j ≠ i) by
+      ext j
+      simp]
+    rw [Finset.sum_filter]
+  exact hsum ▸ hdominant i
 
 /-! The column-weighted matrix used in the proof of weighted diagonal dominance. -/
 def weightedComplexMatrix {n : ℕ} (A : Matrix (Fin n) (Fin n) ℂ) (m : Fin n → ℝ) :
@@ -53,10 +66,14 @@ theorem recurring_weighted_diagonal_dominance {n : ℕ}
     (hm : ∀ i, 0 < m i)
     (hdominant : ∀ i,
       norm (A i i * (m i : ℂ)) >
-        (Finset.univ : Finset (Fin n)).sum
+          (Finset.univ : Finset (Fin n)).sum
           (fun j => if j ≠ i then norm (A i j * (m j : ℂ)) else 0)) :
     Matrix.det A ≠ 0 := by
-  sorry
+  intro hA
+  apply (recurring_diagonal_dominance (weightedComplexMatrix A m) (by
+    intro i
+    simpa [offDiagonalNormSum, weightedComplexMatrix] using hdominant i))
+  rw [weightedComplexMatrix_det, hA, mul_zero]
 
 /-! The vector obtained by retaining the coordinates in a subset and weighting them by `m`. -/
 def weightedSubsetVector {n : ℕ} (m : Fin n → ℝ) (I : Set (Fin n)) : Fin n → ℝ :=
@@ -107,7 +124,78 @@ theorem recurring_symmetric_real_energy_identity {n : ℕ}
     symmetricRealOffDiagonalEnergy A x =
       2 * ((Finset.univ : Finset (Fin n)).sum
         (fun i => x i * (Matrix.mulVec A x) i)) := by
-  sorry
+  classical
+  unfold symmetricRealOffDiagonalEnergy
+  change (∑ p ∈ (Finset.univ : Finset (Fin n)) ×ˢ (Finset.univ : Finset (Fin n)),
+    if p.1 ≠ p.2 then -A p.1 p.2 * (x p.2 - x p.1) ^ 2 else 0) =
+    2 * ∑ i, x i * (A.mulVec x) i
+  rw [Finset.sum_product]
+  change (∑ i, ∑ j, if i ≠ j then -A i j * (x j - x i) ^ 2 else 0) =
+    2 * ∑ i, x i * (A.mulVec x) i
+  have hpoly (a b c : ℝ) :
+      -a * (b - c) ^ 2 =
+        -(a * (b * b)) + (a * (c * b) + a * (c * b)) -
+          a * (c * c) := by
+    simp [pow_two, sub_eq_add_neg, mul_add, add_mul,
+      mul_assoc, mul_comm, mul_left_comm,
+      add_assoc, add_comm, add_left_comm]
+  have hsum (i : Fin n) : ∑ j, A i j = 0 := by
+    calc
+      ∑ j, A i j =
+          ∑ j, ((if j = i then A i j else 0) +
+            (if j ≠ i then A i j else 0)) := by
+        apply Finset.sum_congr rfl
+        intro j hj
+        by_cases h : j = i <;> simp [h]
+      _ = (∑ j, if j = i then A i j else 0) +
+          ∑ j, if j ≠ i then A i j else 0 := by
+        rw [Finset.sum_add_distrib]
+      _ = A i i + ∑ j, if j ≠ i then A i j else 0 := by simp
+      _ = 0 := hrowsum i
+  have hdiag :
+      (∑ i, ∑ j, if i ≠ j then -A i j * (x j - x i) ^ 2 else 0) =
+        ∑ i, ∑ j, -A i j * (x j - x i) ^ 2 := by
+    apply Finset.sum_congr rfl
+    intro i hi
+    apply Finset.sum_congr rfl
+    intro j hj
+    by_cases h : i = j <;> simp [h]
+  rw [hdiag]
+  simp_rw [hpoly, Finset.sum_sub_distrib, Finset.sum_add_distrib,
+    Finset.sum_neg_distrib]
+  have hcol (j : Fin n) : ∑ i, A i j = 0 := by
+    calc
+      ∑ i, A i j = ∑ i, A j i := by
+        apply Finset.sum_congr rfl
+        intro i hi
+        exact hsymm i j
+      _ = 0 := hsum j
+  have hleft :
+      ∑ i, ∑ j, A i j * (x j * x j) = 0 := by
+    rw [Finset.sum_comm]
+    apply Finset.sum_eq_zero
+    intro j hj
+    rw [← Finset.sum_mul, hcol j, zero_mul]
+  have hright :
+      ∑ i, ∑ j, A i j * (x i * x i) = 0 := by
+    apply Finset.sum_eq_zero
+    intro i hi
+    rw [← Finset.sum_mul, hsum i, zero_mul]
+  have hcross :
+      ∑ i, ∑ j, A i j * (x i * x j) =
+        ∑ i, x i * ∑ j, A i j * x j := by
+    apply Finset.sum_congr rfl
+    intro i hi
+    calc
+      ∑ j, A i j * (x i * x j) =
+          ∑ j, x i * (A i j * x j) := by
+        apply Finset.sum_congr rfl
+        intro j hj
+        ac_rfl
+      _ = x i * ∑ j, A i j * x j := by
+        rw [Finset.mul_sum]
+  simp only [Matrix.mulVec_apply_eq_sum]
+  simp [hleft, hright, hcross, two_mul]
 
 /-! A connected symmetric recurring matrix is negative semidefinite with one-dimensional nullspace. -/
 theorem recurring_symmetric_real {n : ℕ} (A : Matrix (Fin n) (Fin n) ℝ)
@@ -256,7 +344,50 @@ theorem diagonal_matrix_primary_torsion_finrank_zero {n : ℕ}
     (m : Fin n → ℤ) (ell : ℕ) (hell : Nat.Prime ell)
     (hcoprime : ∀ i, Nat.Coprime ell (Int.natAbs (m i))) :
     matrixPrimaryTorsionFinrank (Matrix.diagonal m) ell hell = 0 := by
-  sorry
+  classical
+  unfold matrixPrimaryTorsionFinrank
+  letI : Fact (Nat.Prime ell) := ⟨hell⟩
+  letI : NeZero ell := ⟨hell.ne_zero⟩
+  letI : Module (ZMod ell) (matrixPrimaryTorsion (Matrix.diagonal m) ell) :=
+    AddSubgroup.torsionBy.zmodModule
+  letI : Subsingleton (matrixPrimaryTorsion (Matrix.diagonal m) ell) := by
+    constructor
+    intro x y
+    apply Subtype.ext
+    have hzero (q : matrixCokernel (Matrix.diagonal m))
+        (hq : q ∈ matrixPrimaryTorsion (Matrix.diagonal m) ell) : q = 0 := by
+      revert hq
+      refine Submodule.Quotient.induction_on
+        (LinearMap.range (Matrix.toLin' (Matrix.diagonal m))) q
+        (C := fun q => q ∈ matrixPrimaryTorsion (Matrix.diagonal m) ell → q = 0) ?_
+      intro z hz
+      change (ell : ℤ) • (Submodule.Quotient.mk z :
+        matrixCokernel (Matrix.diagonal m)) = 0 at hz
+      have hzrange :
+          (ell : ℤ) • z ∈ LinearMap.range (Matrix.toLin' (Matrix.diagonal m)) := by
+        exact (Submodule.Quotient.mk_eq_zero _).mp (by
+          simpa only [Submodule.Quotient.mk_smul] using hz)
+      obtain ⟨w, hw⟩ := hzrange
+      have hdiv : ∀ i, m i ∣ z i := by
+        intro i
+        have hcoord := congrFun hw i
+        have hdivell : m i ∣ (ell : ℤ) * z i := by
+          refine ⟨w i, ?_⟩
+          simpa [Matrix.toLin'_apply, Matrix.mulVec_apply_eq_sum, Matrix.diagonal] using
+            hcoord.symm
+        have hc : IsCoprime (m i) (ell : ℤ) := by
+          rw [Int.isCoprime_iff_nat_coprime]
+          simpa using (hcoprime i).symm
+        exact hc.dvd_of_dvd_mul_left hdivell
+      choose v hv using hdiv
+      apply (Submodule.Quotient.mk_eq_zero _).mpr
+      refine ⟨v, ?_⟩
+      apply funext
+      intro i
+      simpa [Matrix.toLin'_apply, Matrix.mulVec_apply_eq_sum, Matrix.diagonal] using
+        (hv i).symm
+    exact (hzero x x.property).trans (hzero y y.property).symm
+  exact Module.finrank_zero_of_subsingleton
 
 /-! The vertex and edge lattices of the positive off-diagonal graph. -/
 abbrev vertexLattice (n : ℕ) := Fin n → ℤ
@@ -524,7 +655,15 @@ theorem graph_cokernel_equiv {n : ℕ} (A : Matrix (Fin n) (Fin n) ℤ)
     Nonempty
       (moduleCokernel (Matrix.toLin' A) ≃ₗ[ℤ]
         moduleCokernel ((graphCoboundary A).comp (graphBoundary A))) := by
-  sorry
+  have heq :
+      (graphCoboundary A).comp (graphBoundary A) = -(Matrix.toLin' A) :=
+    graph_laplacian_eq_neg_matrix A hsymm hoffdiag hrowsum
+  have hrange :
+      LinearMap.range (Matrix.toLin' A) =
+        LinearMap.range ((graphCoboundary A).comp (graphBoundary A)) := by
+    rw [heq]
+    simp
+  exact ⟨Submodule.quotEquivOfEq _ _ hrange⟩
 
 theorem graph_kernel_quotient_torsion_free {n : ℕ}
     (A : Matrix (Fin n) (Fin n) ℤ) :

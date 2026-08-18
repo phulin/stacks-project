@@ -339,7 +339,9 @@ theorem fibred_groupoids_equivalent_to_split
       ∃ F : Cᵒᵖ ⥤
         CategoryTheory.Cat.{vS, max (max uC vC) uS},
         IsFibredEquivalenceOver p (splitFibredProjection F) :=
-    by sorry
+    by
+      let _ : p.IsFibered := hpib
+      exact fibred_category_equivalent_to_split p
   obtain ⟨F, hF⟩ := hsplit
   have hGroup : ∀ U : C, IsGroupoid (F.obj (Opposite.op U)) := by
     intro U

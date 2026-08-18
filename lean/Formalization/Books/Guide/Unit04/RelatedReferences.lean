@@ -43,7 +43,8 @@ abbrev siteH2 {C : Type u} [Category.{v} C]
 /-! ### Torsors -/
 
 /--
-A right torsor for an abelian sheaf on the slice site over `X`.
+A torsor for an abelian sheaf on the slice site over `X`, written with a
+left action.
 
 The action is written additively.  The last two fields express local
 nonemptiness and local simple transitivity with respect to covering families.
@@ -305,10 +306,12 @@ def SiteTorsorEquivalence.refl {C : Type u} [Category.{v} C]
   equivariant := by simp
   inverse_equivariant := by simp
 
-/-- Data specifying the quotient construction of the contracted product.
+/-- Data specifying a contracted-product torsor candidate.
 
-The fields record the two presentations of the quotient, compatibility with
-restriction in the slice, and the resulting action in either factor. -/
+The fields record a balanced pairing, compatibility with restriction in the
+slice, and the resulting action in either factor.  The quotient or universal
+property is not encoded by this structure; later declarations state the
+invariance and class-level consequences that use it. -/
 structure SiteTorsorContractedProductData {C : Type u} [Category.{v} C]
     {J : GrothendieckTopology C}
     {G : Sheaf J AddCommGrpCat.{w}} {X : C}
@@ -330,7 +333,7 @@ structure SiteTorsorContractedProductData {C : Type u} [Category.{v} C]
     (a : (G.over X).obj.obj U) (p : P.carrier.obj.obj U) (q : Q.carrier.obj.obj U),
     torsor.action U a (pair U p q) = pair U p (Q.action U (-a) q)
 
-/-- Existence of the sheafified quotient defining the contracted product. -/
+/-- Existence of a contracted-product torsor with a balanced pairing. -/
 theorem siteTorsorContractedProductData_exists {C : Type u} [Category.{v} C]
     {J : GrothendieckTopology C}
     {G : Sheaf J AddCommGrpCat.{w}} {X : C}
@@ -672,7 +675,7 @@ def NonabelianBandedGerbeClass {C : Type u} [Category.{v} C]
 
 /-! #### Čech presentations in degree two -/
 
-/-- A truncated part of the Čech nerve of a covering family in the slice over `X`.
+/-- A truncated Čech-style presentation of a covering family in the slice over `X`.
 
 The site is not assumed to have pullbacks, so the intersections and their face
 maps are recorded as part of the presentation.  This is the weakest useful
@@ -708,7 +711,7 @@ structure SiteCechCover {C : Type u} [Category.{v} C]
   quadruple_ijl : ∀ i j k l, quadruple i j k l ⟶ triple i j l
   quadruple_jkl : ∀ i j k l, quadruple i j k l ⟶ triple j k l
 
-/-- A refinement of finite Čech presentations, including the maps on the
+/-- A refinement of Čech presentations, including the maps on the
 overlap, triple, and quadruple intersections used by degree-two cochains. -/
 structure SiteCechRefinement {C : Type u} [Category.{v} C]
     {J : GrothendieckTopology C} {X : C}
@@ -1339,8 +1342,10 @@ theorem siteTorsorClassToSiteH1_extensionToTorsorClass {C : Type u} [Category.{v
 
 Proof roadmap:
 
-1. Define the contracted product of two `SiteTorsor`s, descend it through
-   `siteTorsorSetoid`, and identify the trivial torsor and inverse torsor.
+1. Define balanced-pairing data for the contracted product of two
+   `SiteTorsor`s, establish the required representative-level comparisons,
+   descend it through `siteTorsorSetoid`, and identify the trivial torsor and
+   inverse torsor.
 2. Relate this Picard-style group of torsor classes to extensions of the unit
    sheaf by `G.over X`, the model used by `CategoryTheory.Sheaf.H` in degree
    one.
@@ -1349,10 +1354,9 @@ Proof roadmap:
 4. Prove the composites equivalent on representatives, descend through both
    quotients, and package the inverse maps as an `Equiv`.
 
-The contracted-product and extension/torsor comparison interfaces above make
-the representative-level constructions explicit; the existence of the
-sheafified quotient and the comparison itself are the remaining mathematical
-proof obligations. -/
+The contracted-product and extension/torsor comparison interfaces above expose
+the representative-level data; the representative comparisons and the
+correspondence itself are the remaining mathematical proof obligations. -/
 theorem siteH1_equiv_siteTorsorClass
     {C : Type u} [Category.{v} C] {J : GrothendieckTopology C}
     (G : Sheaf J AddCommGrpCat.{w}) (X : C)

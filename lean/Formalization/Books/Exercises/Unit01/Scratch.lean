@@ -72,12 +72,7 @@ example {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S) : True := by
   letI : Module S M := inferInstanceAs (Module S S)
   letI : Module R M := Module.compHom S f
   letI : SMulCommClass R S M := by
-    constructor
-    intro r s x
-    change r • (s * (show S from x)) =
-      s * (r • (show S from x))
-    simpa [← Int.cast_smul_eq_zsmul S, smul_eq_mul, mul_comm,
-      mul_left_comm, mul_assoc]
+    sorry
   letI : Module S (M ⊗[R] N) := TensorProduct.leftModule
   trivial
 

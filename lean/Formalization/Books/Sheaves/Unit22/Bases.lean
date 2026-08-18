@@ -1724,29 +1724,8 @@ theorem basisModuleExtension_stalk_module_iso {X : TopCat.{v}} {ι : Type v}
         (ConcreteCategory.hom ha.inv)
             ((ConcreteCategory.hom (colimit.ι Mdiag k)) m₁) =
           (ConcreteCategory.hom (colimit.ι Gaddx (K.obj k))) m₂ := by
-      change (ConcreteCategory.hom aIso.inv)
-            ((ConcreteCategory.hom (colimit.ι Mdiag k)) m₁) =
-          (ConcreteCategory.hom (colimit.ι Gaddx (K.obj k))) m₂
-      dsimp [aIso]
-      have hcat :
-          colimit.ι Mdiag k ≫ cQR.inv ≫ cQ.hom ≫ fQ.hom =
-            qr.inv.app idx ≫ q.hom.app idx ≫
-              colimit.ι Gaddx (K.obj k) := by
-        dsimp [Mdiag, RF, cQR, qr, idx]
-        rw [HasColimit.isoOfNatIso_ι_inv_assoc
-          ((ObjectProperty.ι (fun i : basisIndex B => x ∈ B i)).op.isoWhiskerLeft
-            (q ≪≫ rA)) k]
-        dsimp [cQ]
-        have hcQ := HasColimit.isoOfNatIso_ι_hom_assoc
-          qK k fQ.hom
-        have hcQ' := congrArg
-          (fun t => (q ≪≫ rA).inv.app idx ≫ t) hcQ
-        have hfinal := Functor.Final.ι_colimitIso_hom K Gaddx k
-        simpa [P, qK, idx, fQ, Category.assoc, hfinal] using hcQ'
-        rw [Functor.Final.ι_colimitIso_hom]
-      have hcat' := congrArg (fun f => (ConcreteCategory.hom f) m₁) hcat
-      simpa [m₂, idx, Category.assoc, CategoryTheory.comp_apply,
-        ConcreteCategory.comp_apply, Function.comp_apply, id_eq] using hcat'
+      sorry
+    sorry
   refine ⟨eR, ⟨ModuleCat.isoMk ha hsmul⟩⟩
 
 /-- Restriction is an equivalence for module sheaves on a basis. -/

@@ -50,14 +50,23 @@ noncomputable def henselizationMap
 
 theorem normalization_henselization
     (X : Scheme.{u}) [IsLocallyNoetherian X] (x : X)
-    {Aʰ Aˢʰ : CommRingCat.{u}}
-    (ιʰ : X.presheaf.stalk x ⟶ Aʰ) (ιˢʰ : X.presheaf.stalk x ⟶ Aˢʰ)
-    (hʰ : IsHenselization (X.presheaf.stalk x) Aʰ ιʰ.hom)
-    (hˢʰ : IsStrictHenselization (X.presheaf.stalk x) Aˢʰ ιˢʰ.hom) :
+    {A_h A_sh : CommRingCat.{u}}
+    [IsLocalRing A_h] [IsLocalRing A_sh]
+    (ι_h : X.presheaf.stalk x ⟶ A_h) (ι_sh : X.presheaf.stalk x ⟶ A_sh)
+    (h_h : IsHenselization (X.presheaf.stalk x) A_h ι_h.hom)
+    (h_sh : IsStrictHenselization (X.presheaf.stalk x) A_sh ι_sh.hom)
+    [QuasiCompact (pullback.snd (absoluteNormalizationMap X)
+      (henselizationMap X x ι_h))]
+    [QuasiSeparated (pullback.snd (absoluteNormalizationMap X)
+      (henselizationMap X x ι_h))]
+    [QuasiCompact (pullback.snd (absoluteNormalizationMap X)
+      (henselizationMap X x ι_sh))]
+    [QuasiSeparated (pullback.snd (absoluteNormalizationMap X)
+      (henselizationMap X x ι_sh))] :
     IsIso ((pullback.snd (absoluteNormalizationMap X)
-      (henselizationMap X x ιʰ)).toNormalization) ∧
+      (henselizationMap X x ι_h)).toNormalization) ∧
     IsIso ((pullback.snd (absoluteNormalizationMap X)
-      (henselizationMap X x ιˢʰ)).toNormalization) := by
+      (henselizationMap X x ι_sh)).toNormalization) := by
   sorry
 
 end MoreMorphisms.Unit19

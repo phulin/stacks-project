@@ -52,7 +52,7 @@ multiplication is kept as explicit graded data; the two law predicates below
 are the algebraic compatibility conditions supplied by the differential
 graded algebra development. -/
 structure DifferentialGradedAlgebra where
-  complex : CochainComplex AddCommGrpCat ℤ
+  complex : CochainComplex AddCommGrpCat.{u} ℤ
   multiplication : ∀ n m : ℤ,
     complex.X n → complex.X m → complex.X (n + m)
   one : complex.X 0
@@ -81,9 +81,9 @@ def transportGraded {E : DifferentialGradedAlgebra.{u}} {n m : ℤ}
 def DifferentialGradedLeibniz (E : DifferentialGradedAlgebra.{u}) : Prop :=
   ∀ (n m : ℤ) (x : E.complex.X n) (y : E.complex.X m),
     E.complex.d (n + m) (n + m + 1) (E.multiplication n m x y) =
-      transportGraded (E := E) (by omega)
+      transportGraded (E := E) (n := n + (m + 1)) (m := n + m + 1) (by omega)
         (E.multiplication n (m + 1) x (E.complex.d m (m + 1) y)) +
-      transportGraded (E := E) (by omega)
+      transportGraded (E := E) (n := (n + 1) + m) (m := n + m + 1) (by omega)
         (n.negOnePow • E.multiplication (n + 1) m
           (E.complex.d n (n + 1) x) y)
 
@@ -107,7 +107,7 @@ underlying complex the Mathlib cochain Hom complex. -/
 def endomorphismDGA {X : Scheme.{u}} (K : CochainComplex X.Modules ℤ) :
     DifferentialGradedAlgebra where
   complex := CochainComplex.HomComplex K K
-  multiplication := fun n m x y => y.comp x (by omega)
+  multiplication := fun n m x y => x.comp y (by omega)
   one := Cochain.ofHom (𝟙 K)
 
 /-- The endomorphism Hom complex carries the differential graded algebra laws. -/
@@ -165,11 +165,11 @@ theorem lemma_tensor_with_QCoh_complex {X : Scheme.{u}}
 /-- Cohomology of the endomorphism DGA is the corresponding shifted Hom in the
 derived category. -/
 theorem endomorphism_cohomology_ext {X : Scheme.{u}}
-    [HasDerivedCategory.{v} X.Modules]
+    [HasDerivedCategory.{u} X.Modules]
     (K : CochainComplex X.Modules ℤ) [K.IsKInjective] (n : ℤ) :
-    (endomorphismDGA K).complex.homology n ≅
+    Nonempty ((endomorphismDGA K).complex.homology n ≅
       AddCommGrpCat.of
-        (DerivedCategory.Q.obj K ⟶ (DerivedCategory.Q.obj K)⟦n⟧) := by
+        (DerivedCategory.Q.obj K ⟶ (DerivedCategory.Q.obj K)⟦n⟧)) := by
   sorry
 
 /-- A quasi-compact and quasi-separated scheme has a quasi-coherent derived
@@ -186,9 +186,3 @@ theorem theorem_DQCoh_is_Ddga {X : Scheme.{u}}
 end
 
 end Formalization.Books.Perfect.Unit18
-
-example : MonoidalCategory (CochainComplex AddCommGrpCat ℤ) := inferInstance
-
-end
-
-end Books.Perfect.Unit18

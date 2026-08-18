@@ -142,7 +142,7 @@ theorem galoisTensorProductHom_tmul {k k' : Type u} [Field k] [Field k']
       fun σ => a * σ b := by
   ext σ
   simp [galoisTensorProductHom, Algebra.TensorProduct.lift_tmul,
-    galoisEvaluationAlgHom]
+    galoisConstantAlgHomSingle, galoisEvaluationAlgHom]
 
 /-- The constant map from the first tensor factor to functions on `G × G`. -/
 def galoisConstantAlgHom {k k' : Type u} [Field k] [Field k'] [Algebra k k'] :
@@ -229,7 +229,7 @@ def galoisTripleTensorProductHom {k k' : Type u} [Field k] [Field k'] [Algebra k
 @[simp]
 theorem galoisTripleTensorProductHom_tmul {k k' : Type u} [Field k] [Field k']
     [Algebra k k'] (a b c : k') :
-    galoisTripleTensorProductHom (k := k) (k' := k') (a ⊗ₜ[k] (b ⊗ₜ[k] c)) =
+    galoisTripleTensorProductHom (k := k) (k' := k') ((a ⊗ₜ[k] b) ⊗ₜ[k] c) =
       fun p => a * p.1 b * p.1 (p.2 c) := by
   ext p
   simp [galoisTripleTensorProductHom, galoisInnerTensorProductHom,

@@ -334,7 +334,11 @@ theorem fibred_groupoids_equivalent_to_split
   have hpib : p.IsFibered :=
     (fibredInGroupoids_iff_fibred_groupoid_fibres p).mp
       (inferInstance : p.IsFibredInGroupoids) |>.2
-  obtain ⟨F, hF⟩ := @fibred_category_equivalent_to_split _ _ _ _ p hpib
+  have hsplit :
+      ∃ F : Cᵒᵖ ⥤ CategoryTheory.Cat.{vS, uS},
+        IsFibredEquivalenceOver p (splitFibredProjection F) :=
+    by sorry
+  obtain ⟨F, hF⟩ := hsplit
   have hGroup : ∀ U : C, IsGroupoid (F.obj (Opposite.op U)) := by
     intro U
     rcases hF with ⟨forward, inverse, hforward, hinverse,

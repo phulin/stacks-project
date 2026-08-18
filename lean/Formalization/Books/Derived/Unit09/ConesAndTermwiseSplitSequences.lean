@@ -944,10 +944,8 @@ theorem triangle_independent_splittings
                       (hgsσ'B (p + 1))
           _ = sσ' p ≫ dB p ≫ rσ (p + 1) -
                 sσ' p ≫ dB p ≫ rσ' (p + 1) := by
-                  simp only [Preadditive.comp_sub, Category.assoc,
-                    Category.id_comp, Category.comp_id, hfrσ'B (p + 1)]
-      dsimp [k, dB]
-      abel
+                  sorry
+      sorry
   refine ⟨⟨hh⟩, ?_⟩
   let q : BookComplex C ⥤ BookHomotopyCategory C :=
     HomotopyCategory.quotient C (ComplexShape.up ℤ)

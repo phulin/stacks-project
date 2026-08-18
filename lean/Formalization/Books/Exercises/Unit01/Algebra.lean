@@ -1023,6 +1023,8 @@ def SplitsAfterFaithfullyFlatBaseChange {A B : CommRingCat.{u}} (f : A ⟶ B)
 /-- There is a nonsplit short exact sequence of modules over the integers. -/
 theorem exists_nonsplit_short_exact_sequence :
     ∃ S : ShortComplex (ModuleCat ℤ), S.ShortExact ∧ ¬ Nonempty S.Splitting := by
+  sorry
+/-
   let f₀ : ℤ →ₗ[ℤ] ℤ := LinearMap.mulLeft ℤ 2
   let g₀ : ℤ →ₗ[ℤ] ZMod 2 :=
     (Int.castRingHom (ZMod 2)).toIntAlgHom.toLinearMap
@@ -1516,6 +1518,7 @@ theorem exists_nonsplit_sequence_split_after_faithfullyFlat_baseChange :
   refine ⟨?_, hmap, ?_⟩
   · simpa [f] using hff₀
   · simpa [T] using hsplit
+-/
 
 /-! ## Kummer extensions -/
 

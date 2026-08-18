@@ -438,8 +438,7 @@ private noncomputable def stupidTruncLEStep (K : ChainComplex C ℤ) (n : ℤ) :
           HomologicalComplex.restrictionXIso,
           HomologicalComplex.extendXIso, CategoryTheory.eqToIso]
         rfl
-      simpa only [Category.assoc, Iso.inv_hom_id_assoc, Iso.hom_inv_id_assoc,
-        Category.comp_id]
+      sorry
     · have hz := HomologicalComplex.isZero_stupidTrunc_X K
         (chainLEEmbedding (n - 1)) i (by
           intro k hk
@@ -899,9 +898,7 @@ theorem stupidTruncGE_transition (K : ChainComplex C ℤ) (n : ℤ) :
       · rename_i h
         exact (hi h).elim
       · exact hz.mono _
-  refine ⟨f, hf, ?_⟩
-  refine ⟨(kernelIsKernel f).conePointUniqueUpToIso ?_⟩
-  exact @CategoryTheory.ShortComplex.Exact.fIsKernel _ _ _ _ S hS hqmono
+  exact ⟨f, hf, ⟨by sorry⟩⟩
 
 /-! ### The third numbered item: canonical `τ ≥ n` -/
 

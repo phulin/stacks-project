@@ -1,7 +1,7 @@
 import Mathlib.Topology.Category.TopCat.Basic
-import Mathlib.Topology.Category.TopCat.Limits
+import Mathlib.Topology.Category.TopCat.Limits.Basic
 import Mathlib.CategoryTheory.Comma.Basic
-import Mathlib.CategoryTheory.Limits.Shapes.Pullback
+import Mathlib.CategoryTheory.Limits.Shapes.Pullback.HasPullback
 
 /-!
 # Morphisms of Algebraic Spaces, Chapter 53: universal homeomorphisms

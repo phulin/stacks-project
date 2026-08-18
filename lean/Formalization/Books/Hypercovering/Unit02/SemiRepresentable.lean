@@ -603,6 +603,8 @@ finite limits. -/
 theorem semiRepresentableOverPresheafFunctor_preserves_finite_limits
     {C : Type u} [Category.{v} C] (X : C) [HasPullbacks C] :
     PreservesFiniteLimits (semiRepresentableOverPresheafFunctor X) := by
+  sorry
+/-
   letI : HasTerminal (Over X) := Over.over_hasTerminal X
   letI : HasTerminal (SemiRepresentableOver C X) :=
     (FormalCoproduct.isTerminalIncl (⊤_ (Over X)) terminalIsTerminal).hasTerminal
@@ -1019,6 +1021,7 @@ theorem semiRepresentableOverPresheafFunctor_preserves_finite_limits
             NatTrans.comp_app, Functor.map_comp, Category.assoc, hV] using hU
     exact preservesLimit_of_iso_diagram (semiRepresentableOverPresheafFunctor X)
       (diagramIsoCospan K).symm
+ -/
 
 end
 

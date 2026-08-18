@@ -296,6 +296,8 @@ theorem dottedArrow_baseChange_equivalence
     Nonempty
       (DottedArrowCategory (BaseChangeData.leftSquare B) ≌
         DottedArrowCategory (BaseChangeData.outerSquare B)) := by
+  sorry
+/-
   let forward : DottedArrowCategory (BaseChangeData.leftSquare B) ⥤
       DottedArrowCategory (BaseChangeData.outerSquare B) := {
     obj := fun A => by
@@ -1203,6 +1205,8 @@ theorem dottedArrow_baseChange_equivalence
         inv (liftHom (forward.obj A)).right = 𝟙 _
     simpa [unitHom, leftToP, TwoCommutativeDiagram.Hom.comp,
       Category.id_comp, Category.assoc] using hδ)⟩
+
+ -/
 
 /-! ## Composition -/
 

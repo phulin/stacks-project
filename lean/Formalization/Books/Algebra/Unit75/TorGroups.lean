@@ -1802,7 +1802,8 @@ theorem tensorSwitch_eigenspace_finrank {k : Type u} [Field k]
               pairSwapFun n (e x) = e ((TensorProduct.comm k (Fin n → k) (Fin n → k)) x) :=
                 hcoord x |>.symm
               _ = e ((1 : k) • x) := by
-                congr 1
+                exact congrArg e hx
+              _ = e x := by simp
           simpa [pairSwapMap, hs]⟩
       invFun := fun y =>
         ⟨e.symm y, by

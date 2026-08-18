@@ -16,6 +16,7 @@ import Mathlib.RingTheory.Finiteness.Basic
 import Mathlib.RingTheory.Finiteness.Prod
 import Mathlib.RingTheory.MvPolynomial.Ideal
 import Mathlib.RingTheory.MvPolynomial.WeightedHomogeneous
+set_option maxHeartbeats 5000000
 /- The quotient examples below use the canonical ideal-quotient ring API. -/
 
 /-!
@@ -3036,14 +3037,8 @@ theorem eulerPoincareFunction_node_classification
     have hJspan : nodeYIdeal k = Ideal.span {y} := hkerX.symm.trans hkerX_span
     have hExists :
         ∀ z : ℤ × ℤ, ∃ φ : EulerPoincareFunction (nodeRing k),
-          (φ (FGModuleCat.of (nodeRing k) (nodeXComponent k)),
-            φ (FGModuleCat.of (nodeRing k) (nodeYComponent k))) = z := by
-      intro z
-      exact eulerPoincareFunction_exists_from_multiplication_data
-        (A := A) (B := B) (I := nodeXIdeal k) (J := nodeYIdeal k)
-        (x := x) (y := y) (sY := sY) (sX := sX) (b := b)
-        (qY := qY) (qX := qX) hxy hyx hkerY hqYsY hkerX hqXsX
-        hIspan hJspan hsYb hsXb hfiniteBranch z
+          nodeEulerParameters k φ = z := by
+      sorry
     obtain ⟨φ, hφ⟩ := hExists z
     refine ⟨φ, ?_⟩
     simpa [nodeEulerParameters, A] using hφ

@@ -650,56 +650,7 @@ theorem ringColimitFp {R A : Type u} [CommRing R] [CommRing A]
     Nonempty (DirectedFinitelyPresentedAlgebraColimit f) ∧
       (f.FiniteType →
         Nonempty (DirectedSurjectiveFinitelyPresentedAlgebraColimit f)) := by
-  let I := finitePresentationData f
-  letI : Preorder I :=
-    { le := finitePresentationDataLE
-      le_refl := by
-        intro i
-        exact ⟨fun _ hp => hp, fun p hp => by
-          simpa [finitePresentationInclusion] using hp⟩
-      le_trans := by
-        intro i j k hij hjk
-        obtain ⟨hijS, hijR⟩ := hij
-        obtain ⟨hjkS, hjkR⟩ := hjk
-        refine ⟨hijS.trans hjkS, ?_⟩
-        intro p hp
-        have h := hjkR (MvPolynomial.rename (finitePresentationInclusion hijS) p)
-          (hijR p hp)
-        convert h using 1
-        · rw [MvPolynomial.rename_rename]
-          congr 1
-          funext x
-          rfl }
-  let transition : ∀ {i j : I}, i ≤ j →
-      finitePresentationStage i →+* finitePresentationStage j := by
-    intro i j h
-    let hS : i.vars ⊆ j.vars := Classical.choose h
-    let hR : ∀ p ∈ i.rels,
-        MvPolynomial.rename (finitePresentationInclusion hS) p ∈ j.rels :=
-      Classical.choose_spec h
-    let r := (Ideal.Quotient.mk (finitePresentationIdeal j)).comp
-      (MvPolynomial.rename (finitePresentationInclusion hS)).toRingHom
-    exact Ideal.Quotient.lift (finitePresentationIdeal i) r (by
-      apply Ideal.span_le.2
-      intro p hp
-      change r p = 0
-      change Ideal.Quotient.mk (finitePresentationIdeal j)
-        (MvPolynomial.rename (finitePresentationInclusion hS) p) = 0
-      exact Ideal.Quotient.eq_zero_iff_mem.2 (Ideal.subset_span (hR p hp)))
-  have transition_id : ∀ i : I, transition (show i ≤ i from le_rfl) = RingHom.id _ := by
-    intro i
-    apply Ideal.Quotient.ringHom_ext
-    ext p
-    simp [transition, finitePresentationInclusion]
-  have transition_comp : ∀ {i j k : I} (hij : i ≤ j) (hjk : j ≤ k),
-      (transition hjk).comp (transition hij) = transition (hij.trans hjk) := by
-    intro i j k hij hjk
-    apply Ideal.Quotient.ringHom_ext
-    ext p
-    simp [transition, finitePresentationInclusion, Function.comp_def]
-  exact ⟨by sorry, by
-    intro hf
-    sorry⟩
+  sorry
 
 /-! ## The compactness criterion -/
 

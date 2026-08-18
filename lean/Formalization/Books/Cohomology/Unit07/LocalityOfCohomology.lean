@@ -299,7 +299,7 @@ theorem presheafHigherDirectImageComplexObject_obj_iso
         (ModuleCat.restrictScalars
           (higherDirectImageScalarMap f V).hom).obj
           (sectionsComplexCohomology X
-            ((Opens.map f.continuous).obj V) K i))) := by
+            ((Opens.map f.continuous).obj V) K i)) := by
   sorry
 
 theorem higherDirectImageComplex_is_sheafification
@@ -369,6 +369,12 @@ theorem localize_higher_direct_image
       (openModuleRestrictionFunctor Y V).obj
         ((ringedSpaceModuleHigherDirectImage f i).obj F)) := by
   sorry
+
+instance openModuleRestrictionFunctor_preservesZeroMorphisms
+    (X : RingedSpace.{v}) (U : Opens X.carrier) :
+    (openModuleRestrictionFunctor X U).PreservesZeroMorphisms where
+  map_zero F G := by
+    sorry
 
 noncomputable def openRestrictionOnComplexes
     (X : RingedSpace.{v}) (U : Opens X.carrier) :

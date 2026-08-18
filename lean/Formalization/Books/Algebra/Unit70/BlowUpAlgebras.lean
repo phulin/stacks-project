@@ -73,7 +73,7 @@ def affineBlowupRepresentative {R : Type u} [CommRing R] (a : R)
 /-- The equality relation on the representatives used for an affine chart. -/
 theorem affineBlowupRepresentative_eq_iff
     {R : Type u} [CommRing R] (I : Ideal R) (a : R)
-    {n m : ℕ} {x y : R} (hx : x ∈ I ^ n) (hy : y ∈ I ^ m) :
+    {n m : ℕ} {x y : R} (_hx : x ∈ I ^ n) (_hy : y ∈ I ^ m) :
     affineBlowupRepresentative a n x = affineBlowupRepresentative a m y ↔
       ∃ k : ℕ, a ^ k * (a ^ m * x - a ^ n * y) = 0 := by
   simp only [affineBlowupRepresentative]
@@ -138,7 +138,7 @@ theorem mem_powerTorsionIdeal_iff
 
 /-- The chosen denominator is regular in an affine blowup chart. -/
 theorem affineBlowup_isRegular
-    {R : Type u} [CommRing R] (I : Ideal R) {a : R} (ha : a ∈ I) :
+    {R : Type u} [CommRing R] (I : Ideal R) {a : R} (_ha : a ∈ I) :
     IsRegular (algebraMap R (affineBlowup I a) a) := by
   rw [isRegular_iff]
   constructor

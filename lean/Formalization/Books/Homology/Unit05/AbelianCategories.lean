@@ -1,5 +1,6 @@
 import Formalization.Books.Homology.Unit04.KaroubianCategories
 import Mathlib.Algebra.Category.Grp.Zero
+import Mathlib.Algebra.Category.Grp.Abelian
 import Mathlib.Algebra.Homology.ExactSequence
 import Mathlib.Algebra.Homology.ShortComplex.HomologicalComplex
 import Mathlib.Algebra.Homology.ShortComplex.ShortExact
@@ -12,6 +13,8 @@ import Mathlib.CategoryTheory.Abelian.Transfer
 import Mathlib.CategoryTheory.Limits.Shapes.Pullback.IsPullback.Kernels
 import Mathlib.CategoryTheory.Preadditive.Transfer
 import Mathlib.CategoryTheory.Preadditive.Yoneda.Basic
+import Mathlib.CategoryTheory.Preadditive.Yoneda.Limits
+import Mathlib.CategoryTheory.Functor.ReflectsIso.Jointly
 
 /-!
 # Homological Algebra, Chapter 5: Abelian categories
@@ -42,7 +45,18 @@ theorem abelian_iff_coimage_image_comparison_isIso
     Nonempty (Abelian C) ↔
       ∀ {X Y : C} (f : X ⟶ Y),
         IsIso (Abelian.coimageImageComparison f) := by
-  sorry
+  constructor
+  · rintro ⟨h⟩
+    letI : Abelian C := h
+    letI : HasFiniteBiproducts C := HasFiniteBiproducts.of_hasFiniteProducts
+    letI : HasBinaryBiproducts C := hasBinaryBiproducts_of_finite_biproducts C
+    intro X Y f
+    have hpre : h.toPreadditive = (inferInstance : Preadditive C) := Subsingleton.elim _ _
+    cases hpre
+    exact Abelian.instIsIsoCoimageImageComparison f
+  · intro h
+    letI : ∀ {X Y : C} (f : X ⟶ Y), IsIso (Abelian.coimageImageComparison f) := h
+    exact ⟨Abelian.ofCoimageImageComparisonIsIso⟩
 
 theorem preadditive_opposite
     {C : Type u} [Category.{v} C] [Preadditive C] :
@@ -256,14 +270,217 @@ theorem contravariant_hom_exact_iff
     {M₁ M₂ M₃ : C} (f : M₁ ⟶ M₂) (g : M₂ ⟶ M₃) (hfg : f ≫ g = 0) :
     (ComposableArrows.mk₃ f g (0 : M₃ ⟶ (0 : C))).Exact ↔
       ∀ N : C, (contravariantHomSequence f g N).Exact := by
-  sorry
+  let F : ∀ N : C, Cᵒᵖ ⥤ AddCommGrpCat.{v} := fun N => preadditiveYoneda.obj N
+  have hJ : JointlyReflectIsomorphisms F := by
+    constructor
+    intro X Y q hq
+    letI : IsIso (coyoneda.map q) := by
+      rw [NatTrans.isIso_iff_isIso_app]
+      intro N
+      rw [isIso_iff_bijective]
+      change Function.Bijective (fun g : X.unop ⟶ N => q.unop ≫ g)
+      have h := ConcreteCategory.bijective_of_isIso ((F N).map q)
+      change Function.Bijective (fun g : X.unop ⟶ N => q.unop ≫ g) at h
+      exact h
+    exact Coyoneda.isIso q
+  constructor
+  · intro h
+    let S := ShortComplex.mk f g hfg
+    have hS : S.Exact := by
+      exact h.exact 0
+    have hSop : S.op.Exact := hS.op
+    have hEpi : Epi g := by
+      have h' := (ShortComplex.exact_iff_epi
+        ((ComposableArrows.mk₃ f g (0 : M₃ ⟶ (0 : C))).sc h.toIsComplex 1)
+        (by change (0 : M₃ ⟶ (0 : C)) = 0; rfl)).1
+        (h.exact 1)
+      change Epi g at h'
+      exact h'
+    letI : Epi g := hEpi
+    intro N
+    letI : Mono g.op := op_mono_of_epi g
+    have htail : (ShortComplex.mk
+        ((F N).map g.op) ((F N).map f.op)
+        (by simp [F, ← Functor.map_comp, ← op_comp, hfg])).Exact := by
+      letI : Mono S.op.f := by
+        change Mono g.op
+        exact op_mono_of_epi g
+      exact hSop.map_of_mono_of_preservesKernel (F N) inferInstance inferInstance
+    have hhead : (ShortComplex.mk (0 : (0 : AddCommGrpCat.{v}) ⟶
+        (F N).obj (Opposite.op M₃))
+        ((F N).map g.op) zero_comp).Exact := by
+      apply (ShortComplex.exact_iff_mono _ rfl).2
+      infer_instance
+    apply ComposableArrows.exact_of_δ₀
+    · change (ComposableArrows.mk₂ (0 : (0 : AddCommGrpCat.{v}) ⟶
+          (F N).obj (Opposite.op M₃)) ((F N).map g.op)).Exact
+      exact hhead.exact_toComposableArrows
+    · change (ComposableArrows.mk₂ ((F N).map g.op) ((F N).map f.op)).Exact
+      exact htail.exact_toComposableArrows
+  · intro h
+    have hMono : Mono g.op := by
+      letI : ∀ N : C, Mono ((F N).map g.op) := fun N => by
+        have hN := (h N).exact 0
+        change (ShortComplex.mk (0 : (0 : AddCommGrpCat.{v}) ⟶
+          (F N).obj (Opposite.op M₃)) ((F N).map g.op) zero_comp).Exact at hN
+        exact (ShortComplex.exact_iff_mono _ rfl).1 hN
+      apply hJ.jointlyReflectMonomorphisms.mono g.op
+    letI : Mono g.op := hMono
+    have hEpi : Epi g := unop_epi_of_mono g.op
+    let S : ShortComplex C := ShortComplex.mk f g hfg
+    let T := S.op
+    have hSop : T.Exact := by
+      apply (ShortComplex.exact_iff_epi_kernel_lift (S := T)).2
+      let u := kernel.lift f.op g.op (by simp [← op_comp, hfg])
+      change Epi u
+      letI : ∀ N : C, IsIso ((F N).map u) := fun N => by
+        letI : Mono ((F N).map g.op) := by
+          exact inferInstance
+        have hNtail : (ShortComplex.mk ((F N).map g.op) ((F N).map f.op)
+            (by simp [F, ← Functor.map_comp, ← op_comp, hfg])).Exact := by
+          have hN := (h N).exact 1
+          change (ShortComplex.mk ((F N).map g.op) ((F N).map f.op)
+            (by simp [F, ← Functor.map_comp, ← op_comp, hfg])).Exact at hN
+          exact hN
+        have hmap := hNtail.fIsKernel
+        let hkernel := KernelFork.mapIsLimit
+          (KernelFork.ofι (kernel.ι f.op) (kernel.condition f.op))
+          (kernelIsKernel f.op) (F N)
+        let e := IsLimit.conePointUniqueUpToIso hkernel hmap
+        have heq : (F N).map u = e.inv := by
+          apply (cancel_mono ((F N).map (kernel.ι f.op))).1
+          rw [← Functor.map_comp]
+          simp only [u, kernel.lift_ι]
+          change (F N).map g.op = e.inv ≫ (F N).map (kernel.ι f.op)
+          simpa using
+            (IsLimit.conePointUniqueUpToIso_inv_comp hkernel hmap
+              WalkingParallelPair.zero).symm
+        rw [heq]
+        change IsIso e.inv
+        infer_instance
+      haveI : IsIso u := hJ.isIso u
+      infer_instance
+    have hS : S.Exact := hSop.unop
+    refine ⟨?_, ?_⟩
+    ·
+      refine ⟨?_⟩
+      intro i hi
+      obtain rfl | rfl : i = 0 ∨ i = 1 := by omega
+      · dsimp
+        exact hfg
+      · dsimp
+        change g ≫ (0 : M₃ ⟶ (0 : C)) = 0
+        simp
+    · intro i hi
+      obtain rfl | rfl : i = 0 ∨ i = 1 := by omega
+      · change (ShortComplex.mk f g hfg).Exact
+        exact hS
+      · have h0 : (ShortComplex.mk g (0 : M₃ ⟶ (0 : C)) (by simp)).Exact :=
+          (ShortComplex.exact_iff_epi _ (by rfl)).2 hEpi
+        change (ShortComplex.mk g (0 : M₃ ⟶ (0 : C)) (by simp)).Exact
+        exact h0
 
 theorem covariant_hom_exact_iff
     {C : Type u} [Category.{v} C] [Abelian C]
     {M₁ M₂ M₃ : C} (f : M₁ ⟶ M₂) (g : M₂ ⟶ M₃) (hfg : f ≫ g = 0) :
     (ComposableArrows.mk₃ (0 : (0 : C) ⟶ M₁) f g).Exact ↔
       ∀ N : C, (covariantHomSequence f g N).Exact := by
-  sorry
+  let G : ∀ N : C, C ⥤ AddCommGrpCat.{v} :=
+    fun N => preadditiveCoyoneda.obj (Opposite.op N)
+  have hJ : JointlyReflectIsomorphisms G := by
+    constructor
+    intro X Y q hq
+    letI : IsIso ((yoneda : C ⥤ Cᵒᵖ ⥤ Type v).map q) := by
+      rw [NatTrans.isIso_iff_isIso_app]
+      intro N
+      rw [isIso_iff_bijective]
+      change Function.Bijective (fun g : N.unop ⟶ X => g ≫ q)
+      have h := ConcreteCategory.bijective_of_isIso ((G N.unop).map q)
+      change Function.Bijective (fun g : N.unop ⟶ X => g ≫ q) at h
+      exact h
+    exact Yoneda.isIso q
+  constructor
+  · intro h
+    let S := ShortComplex.mk f g hfg
+    have hS : S.Exact := by
+      have h' := h.exact 1
+      change (ShortComplex.mk f g hfg).Exact at h'
+      exact h'
+    have hMono : Mono f := by
+      have h' := h.exact 0
+      change (ShortComplex.mk (0 : (0 : C) ⟶ M₁) f zero_comp).Exact at h'
+      exact (ShortComplex.exact_iff_mono _ rfl).1 h'
+    letI : Mono f := hMono
+    intro N
+    have htail : (ShortComplex.mk ((G N).map f) ((G N).map g)
+        (by simp [G, ← Functor.map_comp, hfg])).Exact := by
+      exact hS.map_of_mono_of_preservesKernel (G N) inferInstance inferInstance
+    have hhead : (ShortComplex.mk (0 : (0 : AddCommGrpCat.{v}) ⟶
+        (G N).obj M₁) ((G N).map f) zero_comp).Exact := by
+      apply (ShortComplex.exact_iff_mono _ rfl).2
+      infer_instance
+    apply ComposableArrows.exact_of_δ₀
+    · change (ComposableArrows.mk₂ (0 : (0 : AddCommGrpCat.{v}) ⟶
+          (G N).obj M₁) ((G N).map f)).Exact
+      exact hhead.exact_toComposableArrows
+    · change (ComposableArrows.mk₂ ((G N).map f) ((G N).map g)).Exact
+      exact htail.exact_toComposableArrows
+  · intro h
+    have hMono : Mono f := by
+      letI : ∀ N : C, Mono ((G N).map f) := fun N => by
+        have hN := (h N).exact 0
+        change (ShortComplex.mk (0 : (0 : AddCommGrpCat.{v}) ⟶
+          (G N).obj M₁) ((G N).map f) zero_comp).Exact at hN
+        exact (ShortComplex.exact_iff_mono _ rfl).1 hN
+      apply hJ.jointlyReflectMonomorphisms.mono f
+    letI : Mono f := hMono
+    let S : ShortComplex C := ShortComplex.mk f g hfg
+    have hS : S.Exact := by
+      apply (ShortComplex.exact_iff_epi_kernel_lift (S := S)).2
+      let u := kernel.lift g f (by simp [hfg])
+      change Epi u
+      letI : ∀ N : C, IsIso ((G N).map u) := fun N => by
+        letI : Mono ((G N).map f) := by
+          exact inferInstance
+        have hNtail : (ShortComplex.mk ((G N).map f) ((G N).map g)
+            (by simp [G, ← Functor.map_comp, hfg])).Exact := by
+          have hN := (h N).exact 1
+          change (ShortComplex.mk ((G N).map f) ((G N).map g)
+            (by simp [G, ← Functor.map_comp, hfg])).Exact at hN
+          exact hN
+        have hmap := hNtail.fIsKernel
+        let hkernel := KernelFork.mapIsLimit
+          (KernelFork.ofι (kernel.ι g) (kernel.condition g))
+          (kernelIsKernel g) (G N)
+        let e := IsLimit.conePointUniqueUpToIso hkernel hmap
+        have heq : (G N).map u = e.inv := by
+          apply (cancel_mono ((G N).map (kernel.ι g))).1
+          rw [← Functor.map_comp]
+          simp only [u, kernel.lift_ι]
+          change (G N).map f = e.inv ≫ (G N).map (kernel.ι g)
+          simpa using
+            (IsLimit.conePointUniqueUpToIso_inv_comp hkernel hmap
+              WalkingParallelPair.zero).symm
+        rw [heq]
+        change IsIso e.inv
+        infer_instance
+      haveI : IsIso u := hJ.isIso u
+      infer_instance
+    refine ⟨?_, ?_⟩
+    · refine ⟨?_⟩
+      intro i hi
+      obtain rfl | rfl : i = 0 ∨ i = 1 := by omega
+      · dsimp
+        change (0 : (0 : C) ⟶ M₁) ≫ f = 0
+        simp
+      · dsimp
+        exact hfg
+    · intro i hi
+      obtain rfl | rfl : i = 0 ∨ i = 1 := by omega
+      · change (ShortComplex.mk (0 : (0 : C) ⟶ M₁) f (by simp)).Exact
+        exact (ShortComplex.exact_iff_mono _ rfl).2 hMono
+      · change (ShortComplex.mk f g hfg).Exact
+        exact hS
 
 /-! ## Cartesian and cocartesian squares -/
 
@@ -284,7 +501,50 @@ theorem cartesian_iff_exact
     IsPullback f g h k ↔
       (ComposableArrows.mk₃ (0 : (0 : C) ⟶ W)
         (biprod.lift g f) (biprod.desc k (-h))).Exact := by
-  sorry
+  let sq : CommSq g f k h := ⟨comm.symm⟩
+  constructor
+  · intro hpb
+    have hsc : (ShortComplex.mk (biprod.lift g f) (biprod.desc k (-h))
+        (by simp [comm])).Exact := by
+      simpa [CommSq.shortComplex'] using hpb.flip.exact_shortComplex'
+    have hmono : Mono (biprod.lift g f) := by
+      simpa [CommSq.shortComplex'] using hpb.flip.mono_shortComplex'_f
+    refine ⟨?_, ?_⟩
+    · refine ⟨?_⟩
+      intro i hi
+      obtain rfl | rfl : i = 0 ∨ i = 1 := by omega
+      · dsimp
+        change (0 : (0 : C) ⟶ W) ≫ biprod.lift g f = 0
+        simp
+      · dsimp
+        change biprod.lift g f ≫ biprod.desc k (-h) = 0
+        simp [comm]
+    · intro i hi
+      obtain rfl | rfl : i = 0 ∨ i = 1 := by omega
+      · change (ShortComplex.mk (0 : (0 : C) ⟶ W) (biprod.lift g f)
+          (by simp)).Exact
+        exact (ShortComplex.exact_iff_mono _ rfl).2 hmono
+      · change (ShortComplex.mk (biprod.lift g f) (biprod.desc k (-h))
+          (by simp [comm])).Exact
+        exact hsc
+  · intro hex
+    have hmono : Mono (biprod.lift g f) := by
+      have h' := hex.exact 0
+      change (ShortComplex.mk (0 : (0 : C) ⟶ W) (biprod.lift g f)
+        (by simp)).Exact at h'
+      exact (ShortComplex.exact_iff_mono _ rfl).1 h'
+    letI : Mono (biprod.lift g f) := hmono
+    have hsc : (ShortComplex.mk (biprod.lift g f) (biprod.desc k (-h))
+        (by simp [comm])).Exact := by
+      have h' := hex.exact 1
+      change (ShortComplex.mk (biprod.lift g f) (biprod.desc k (-h))
+        (by simp [comm])).Exact at h'
+      exact h'
+    apply IsPullback.flip
+    refine IsPullback.of_isLimit
+      (c := PullbackCone.mk g f (by simpa [sq] using sq.w)) ?_
+    simpa [sq] using
+      (sq.isLimitEquivIsLimitKernelFork).symm (by simpa [sq] using hsc.fIsKernel)
 
 theorem cocartesian_iff_exact
     {C : Type u} [Category.{v} C] [Abelian C]

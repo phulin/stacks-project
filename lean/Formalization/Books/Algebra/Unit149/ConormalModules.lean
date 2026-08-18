@@ -1,10 +1,9 @@
-import Formalization.Books.Algebra.Unit134.NaiveCotangentComplex
-import Formalization.Books.Algebra.Unit148.FormallyUnramifiedMaps
 import Mathlib.RingTheory.Extension.Cotangent.Basic
 import Mathlib.RingTheory.Extension.ExtendScalars
 import Mathlib.RingTheory.Ideal.Quotient.Operations
 import Mathlib.RingTheory.Ideal.Quotient.PowTransition
 import Mathlib.RingTheory.Localization.Basic
+import Mathlib.RingTheory.Unramified.Basic
 
 /-!
 # Commutative Algebra, Chapter 149: Conormal modules and universal thickenings
@@ -145,10 +144,13 @@ theorem universal_first_order_thickening_localize_base
     (M : Submonoid A) [IsLocalization M Aₘ]
     [IsLocalization (M.map (algebraMap A B)) Bₘ]
     (P : Algebra.Extension.{u} A B)
-    (hP : IsUniversalFirstOrderThickening P) :
+    (hP : IsUniversalFirstOrderThickening P)
+    [Algebra Aₘ (Localization (M.map (algebraMap A P.Ring)))] :
     ∃ Q : Algebra.Extension.{u} Aₘ Bₘ,
       IsUniversalFirstOrderThickening Q ∧
-        Nonempty (Bₘ ⊗[B] P.Cotangent ≃ₗ[Bₘ] Q.Cotangent) := by
+        Nonempty (Bₘ ⊗[B] P.Cotangent ≃ₗ[Bₘ] Q.Cotangent) ∧
+        Nonempty
+          (Q.Ring ≃ₐ[Aₘ] Localization (M.map (algebraMap A P.Ring))) := by
   sorry
 
 /-! ## Differentials -/

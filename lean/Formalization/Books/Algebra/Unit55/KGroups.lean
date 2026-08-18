@@ -1828,7 +1828,35 @@ concrete failure whenever the field is infinite. -/
 theorem kZeroToKPrime_node_not_bijective
     (k : Type u) [Field k] [Infinite k] :
     ¬ Function.Bijective (kZeroToKPrime (R := nodeRing k)) := by
-  sorry
+  intro hbij
+  obtain ⟨⟨e₀⟩, ⟨e₀'⟩⟩ := kGroups_node k
+  have e : (Additive (kˣ) × ℤ) ≃+ ℤ :=
+    e₀.symm.trans ((AddEquiv.ofBijective
+      (kZeroToKPrime (R := nodeRing k)) hbij).trans e₀')
+  have hnonzeroSet : ({0} : Set k)ᶜ.Infinite :=
+    Set.Finite.infinite_compl (Set.finite_singleton 0)
+  let eSub :
+      {x : k // x ≠ 0} ≃ {x : k // x ∈ ({0} : Set k)ᶜ} :=
+    { toFun := fun x => ⟨x.1, by
+        simpa only [Set.mem_compl_iff, Set.mem_singleton_iff] using x.2⟩
+      invFun := fun x => ⟨x.1, by
+        simpa only [Set.mem_compl_iff, Set.mem_singleton_iff] using x.2⟩
+      left_inv := by intro x; rfl
+      right_inv := by intro x; rfl }
+  let _ : Infinite {x : k // x ∈ ({0} : Set k)ᶜ} := hnonzeroSet.to_subtype
+  let _ : Infinite {x : k // x ≠ 0} :=
+    Infinite.of_injective eSub.symm eSub.symm.injective
+  let f : {x : k // x ≠ 0} → kˣ :=
+    fun x => Units.mk0 x x.2
+  let _ : Infinite kˣ :=
+    Infinite.of_injective f (by
+      intro x y hxy
+      exact Subtype.ext ((Units.mk0_inj x.2 y.2).mp hxy))
+  have hcyc : IsAddCyclic (Additive (kˣ) × ℤ) := by
+    apply isAddCyclic_of_surjective e.symm.toAddMonoidHom e.symm.surjective
+  have hnot : ¬ IsAddCyclic (Additive (kˣ) × ℤ) :=
+    not_isAddCyclic_prod_of_infinite_nontrivial (Additive (kˣ)) ℤ
+  exact hnot hcyc
 
 /-- Product decomposition for both K-groups. -/
 theorem kGroups_prod

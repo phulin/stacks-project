@@ -419,10 +419,10 @@ theorem subextension_of_kummer_is_generated_by_power
       simpa using h
     have hdeg : Module.finrank F L ≤ d := by
       rw [hfinrank]
-      exact natDegree_le_of_dvd hp_dvd hp_monic.ne_zero
+      simpa [p] using natDegree_le_of_dvd hp_dvd hp_monic.ne_zero
     have hEq : F = L' :=
       IntermediateField.eq_of_le_of_finrank_le' hF_le hdeg
-    exact ⟨d, hde, by simpa [F, hEq]⟩
+    exact ⟨d, hde, by simp [F, hEq]⟩
 
 end
 

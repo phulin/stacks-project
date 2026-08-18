@@ -8,11 +8,14 @@ import Mathlib.FieldTheory.PurelyInseparable.Basic
 import Mathlib.FieldTheory.Separable
 import Mathlib.LinearAlgebra.FiniteDimensional.Defs
 import Mathlib.LinearAlgebra.TensorProduct.DirectLimit
+import Mathlib.LinearAlgebra.TensorProduct.Finiteness
 import Mathlib.RingTheory.FiniteType
 import Mathlib.RingTheory.Flat.Basic
 import Mathlib.RingTheory.Localization.AtPrime.Basic
 import Mathlib.RingTheory.Localization.BaseChange
+import Mathlib.RingTheory.Polynomial.Nilpotent
 import Mathlib.RingTheory.TensorProduct.Maps
+import Mathlib.RingTheory.TensorProduct.MvPolynomial
 
 /-!
 # Commutative Algebra, Chapter 43: Geometrically reduced algebras
@@ -195,7 +198,23 @@ theorem isGeometricallyReduced_polynomial
     {k : Type u} {R : Type v} [Field k] [CommRing R] [Algebra k R]
     (hR : IsGeometricallyReduced k R) :
     IsGeometricallyReduced k (Polynomial R) := by
-  sorry
+  intro K _ _
+  let _ : IsReduced (K ⊗[k] R) := hR K
+  let e₁ : K ⊗[k] Polynomial R ≃ₐ[K] K ⊗[k] MvPolynomial Unit R :=
+    Algebra.TensorProduct.congr (AlgEquiv.refl : K ≃ₐ[K] K)
+      ((MvPolynomial.uniqueAlgEquiv R Unit).symm.restrictScalars k)
+  let e₂ : K ⊗[k] MvPolynomial Unit R ≃ₐ[K]
+      MvPolynomial Unit (K ⊗[k] R) :=
+    MvPolynomial.rTensorAlgEquiv
+  let e₃ : MvPolynomial Unit (K ⊗[k] R) ≃ₐ[K] Polynomial (K ⊗[k] R) :=
+    (MvPolynomial.uniqueAlgEquiv (K ⊗[k] R) Unit).restrictScalars K
+  let _ : IsReduced (Polynomial (K ⊗[k] R)) := by
+    constructor
+    intro p hp
+    have hp' := (Polynomial.isNilpotent_iff).mp hp
+    exact Polynomial.ext fun n => IsReduced.eq_zero _ (hp' n)
+  let e := e₁.trans (e₂.trans e₃)
+  exact isReduced_of_injective e.toAlgHom e.injective
 
 /- The localization item in the source's elementary list is represented by
    `isGeometricallyReduced_localization`, whose explicit `Submonoid` argument
@@ -221,7 +240,8 @@ theorem subalgebraTensorProductMap_injective
     [Algebra k R] [Algebra k S]
     (R' : Subalgebra k R) (S' : Subalgebra k S) :
     Function.Injective (subalgebraTensorProductMap R' S') := by
-  sorry
+  exact TensorProduct.map_injective_of_flat_flat
+    R'.val.toLinearMap S'.val.toLinearMap Subtype.val_injective Subtype.val_injective
 
 /-! ## Finite subalgebra reduction -/
 
@@ -235,7 +255,39 @@ theorem exists_finiteType_subalgebras_of_not_isReduced_tensorProduct
     ∃ (R' : Subalgebra k R) (S' : Subalgebra k S),
       Algebra.FiniteType k R' ∧ Algebra.FiniteType k S' ∧
         ¬ IsReduced (R' ⊗[k] S') := by
-  sorry
+  classical
+  obtain ⟨x, hxne, hxnil⟩ := exists_isNilpotent_of_not_isReduced h
+  obtain ⟨n, a, b, hab⟩ := TensorProduct.exists_sum_tmul_eq x
+  let R' : Subalgebra k R :=
+    Algebra.adjoin k (↑(Finset.univ.image a) : Set R)
+  let S' : Subalgebra k S :=
+    Algebra.adjoin k (↑(Finset.univ.image b) : Set S)
+  have hR' : Algebra.FiniteType k R' := by
+    apply (Subalgebra.fg_iff_finiteType R').mp
+    exact Subalgebra.fg_adjoin_finset _
+  have hS' : Algebra.FiniteType k S' := by
+    apply (Subalgebra.fg_iff_finiteType S').mp
+    exact Subalgebra.fg_adjoin_finset _
+  let y : R' ⊗[k] S' :=
+    ∑ j, (⟨a j, Algebra.subset_adjoin (by simp)⟩ ⊗ₜ[k]
+      ⟨b j, Algebra.subset_adjoin (by simp)⟩)
+  have hy : subalgebraTensorProductMap R' S' y = x := by
+    simp only [y, map_sum, subalgebraTensorProductMap,
+      Algebra.TensorProduct.map_tmul, Subtype.coe_mk]
+    exact hab.symm
+  have hmap : Function.Injective (subalgebraTensorProductMap R' S') :=
+    subalgebraTensorProductMap_injective R' S'
+  refine ⟨R', S', hR', hS', ?_⟩
+  intro hred
+  have hyne : y ≠ 0 := by
+    intro hyzero
+    apply hxne
+    rw [← hy, hyzero, map_zero]
+  have hynil : IsNilpotent y := by
+    apply (IsNilpotent.map_iff hmap).mp
+    rw [hy]
+    exact hxnil
+  exact hyne (hred.eq_zero y hynil)
 
 /-- A nonzero zero divisor in a tensor product is already present in a tensor
 product of finite-type subalgebras. -/
@@ -249,7 +301,56 @@ theorem exists_finiteType_subalgebras_of_nonzero_zeroDivisor_tensorProduct
         Algebra.FiniteType k R' ∧ Algebra.FiniteType k S' ∧
         ∃ x : R' ⊗[k] S',
           x ≠ 0 ∧ x ∉ nonZeroDivisors (R' ⊗[k] S') := by
-  sorry
+  classical
+  obtain ⟨x, hxne, hxzd⟩ := h
+  obtain ⟨z, hxz, hzne⟩ : ∃ z : R ⊗[k] S, x * z = 0 ∧ z ≠ 0 := by
+    rcases notMem_nonZeroDivisors_iff.mp hxzd with hz | hz
+    · rcases hz with ⟨z, hxz, hzne⟩
+      exact ⟨z, hxz, hzne⟩
+    · rcases hz with ⟨z, hzx, hzne⟩
+      exact ⟨z, by simpa [mul_comm] using hzx, hzne⟩
+  obtain ⟨n, a, b, hab⟩ := TensorProduct.exists_sum_tmul_eq x
+  obtain ⟨m, c, d, hcd⟩ := TensorProduct.exists_sum_tmul_eq z
+  let rset : Finset R := Finset.univ.image a ∪ Finset.univ.image c
+  let sset : Finset S := Finset.univ.image b ∪ Finset.univ.image d
+  let R' : Subalgebra k R := Algebra.adjoin k (↑rset : Set R)
+  let S' : Subalgebra k S := Algebra.adjoin k (↑sset : Set S)
+  have hR' : Algebra.FiniteType k R' := by
+    apply (Subalgebra.fg_iff_finiteType R').mp
+    exact Subalgebra.fg_adjoin_finset _
+  have hS' : Algebra.FiniteType k S' := by
+    apply (Subalgebra.fg_iff_finiteType S').mp
+    exact Subalgebra.fg_adjoin_finset _
+  let y : R' ⊗[k] S' :=
+    ∑ j, (⟨a j, Algebra.subset_adjoin (by simp [rset])⟩ ⊗ₜ[k]
+      ⟨b j, Algebra.subset_adjoin (by simp [sset])⟩)
+  let w : R' ⊗[k] S' :=
+    ∑ j, (⟨c j, Algebra.subset_adjoin (by simp [rset])⟩ ⊗ₜ[k]
+      ⟨d j, Algebra.subset_adjoin (by simp [sset])⟩)
+  have hy : subalgebraTensorProductMap R' S' y = x := by
+    simp only [y, map_sum, subalgebraTensorProductMap,
+      Algebra.TensorProduct.map_tmul, Subtype.coe_mk]
+    exact hab.symm
+  have hw : subalgebraTensorProductMap R' S' w = z := by
+    simp only [w, map_sum, subalgebraTensorProductMap,
+      Algebra.TensorProduct.map_tmul, Subtype.coe_mk]
+    exact hcd.symm
+  have hmap : Function.Injective (subalgebraTensorProductMap R' S') :=
+    subalgebraTensorProductMap_injective R' S'
+  have hyne : y ≠ 0 := by
+    intro hyzero
+    apply hxne
+    rw [← hy, hyzero, map_zero]
+  have hwne : w ≠ 0 := by
+    intro hwzero
+    apply hzne
+    rw [← hw, hwzero, map_zero]
+  have hyw : y * w = 0 := by
+    apply hmap
+    rw [map_mul, hy, hw, hxz, map_zero]
+  refine ⟨R', S', hR', hS', y, hyne, ?_⟩
+  rw [notMem_nonZeroDivisors_iff_left]
+  exact ⟨w, hyw, hwne⟩
 
 /-- A nontrivial idempotent in a tensor product is already present in a tensor
 product of finite-type subalgebras. -/

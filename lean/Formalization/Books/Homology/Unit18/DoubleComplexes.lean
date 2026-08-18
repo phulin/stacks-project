@@ -39,18 +39,6 @@ structure DoubleComplex (C : Type u) [Category.{v} C] [Preadditive C] where
   d2_sq : ∀ p q, d2 p q ≫ d2 p (q + 1) = 0
   comm : ∀ p q, d2 p q ≫ d1 p (q + 1) = d1 p q ≫ d2 (p + 1) q
 
-/-- The alternative convention mentioned in the source, in which the
-    elementary squares anticommute.  It is recorded separately so that the
-    commuting convention in `DoubleComplex` is not silently changed. -/
-structure AntiCommutingDoubleComplex
-    (C : Type u) [Category.{v} C] [Preadditive C] where
-  obj : ℤ → ℤ → C
-  d1 : ∀ p q, obj p q ⟶ obj (p + 1) q
-  d2 : ∀ p q, obj p q ⟶ obj p (q + 1)
-  d1_sq : ∀ p q, d1 p q ≫ d1 (p + 1) q = 0
-  d2_sq : ∀ p q, d2 p q ≫ d2 p (q + 1) = 0
-  anticomm : ∀ p q, d2 p q ≫ d1 p (q + 1) = -(d1 p q ≫ d2 (p + 1) q)
-
 /-- The horizontal cochain complex in a fixed second degree. -/
 def row (A : DoubleComplex C) (q : ℤ) : CochainComplex C ℤ where
   X p := A.obj p q
@@ -370,8 +358,13 @@ structure TotalComplexPresentation (A : DoubleComplex C) where
             eqToHom (by dsimp) +
         p.negOnePow •
           (totalD2Component A n p ≫
-            (diagonal (n + 1)).cocone.ι.app (Discrete.mk p) ≫
+              (diagonal (n + 1)).cocone.ι.app (Discrete.mk p) ≫
               eqToHom (by dsimp))
+
+theorem totalComplexPresentation_exists_of_diagonal_coproducts
+    (A : DoubleComplex C) (hA : HasDiagonalCoproducts A) :
+    Nonempty (TotalComplexPresentation A) := by
+  sorry
 
 theorem totalComplexPresentation_exists_of_countable
     [HasCountableCoproducts C] (A : DoubleComplex C) :
@@ -407,19 +400,19 @@ def tripleTotalSign₁ (p _q : ℤ) : ℤˣ := p.negOnePow
 
 def tripleTotalSign₂ (p q : ℤ) : ℤˣ := (p + q).negOnePow
 
-def tripleD1Component [HasCountableCoproducts C]
+def tripleD1Component
     (A : TripleComplex C) (n p q : ℤ) :
     A.obj p q (n - p - q) ⟶
       A.obj (p + 1) q (n + 1 - (p + 1) - q) :=
   A.d1 p q (n - p - q) ≫ eqToHom (by congr 1; lia)
 
-def tripleD2Component [HasCountableCoproducts C]
+def tripleD2Component
     (A : TripleComplex C) (n p q : ℤ) :
     A.obj p q (n - p - q) ⟶
       A.obj p (q + 1) (n + 1 - p - (q + 1)) :=
   A.d2 p q (n - p - q) ≫ eqToHom (by congr 1; lia)
 
-def tripleD3Component [HasCountableCoproducts C]
+def tripleD3Component
     (A : TripleComplex C) (n p q : ℤ) :
     A.obj p q (n - p - q) ⟶
       A.obj p q (n + 1 - p - q) :=
@@ -505,10 +498,83 @@ def tripleTotalizationOrder23Term [HasCountableCoproducts C]
     (A : TripleComplex C) (n : ℤ) : C :=
   ∐ fun p : ℤ => ∐ fun q : ℤ => A.obj p q (n - p - q)
 
+def tripleOrder12D1Component (A : TripleComplex C) (n s p : ℤ) :
+    A.obj p (s - p) (n - s) ⟶
+      A.obj (p + 1) ((s + 1) - (p + 1)) ((n + 1) - (s + 1)) :=
+  A.d1 p (s - p) (n - s) ≫ eqToHom (by
+    congr 1
+    all_goals omega)
+
+def tripleOrder12D2Component (A : TripleComplex C) (n s p : ℤ) :
+    A.obj p (s - p) (n - s) ⟶
+      A.obj p ((s + 1) - p) ((n + 1) - (s + 1)) :=
+  A.d2 p (s - p) (n - s) ≫ eqToHom (by
+    congr 1
+    all_goals omega)
+
+def tripleOrder12D3Component (A : TripleComplex C) (n s p : ℤ) :
+    A.obj p (s - p) (n - s) ⟶
+      A.obj p ((s) - p) ((n + 1) - s) :=
+  A.d3 p (s - p) (n - s) ≫ eqToHom (by
+    congr 1
+    all_goals omega)
+
+def tripleOrder12Differential [HasCountableCoproducts C]
+    (A : TripleComplex C) (n : ℤ) :
+    tripleTotalizationOrder12Term A n ⟶ tripleTotalizationOrder12Term A (n + 1) :=
+  Sigma.desc fun s =>
+    Sigma.desc fun p =>
+      (tripleOrder12D1Component A n s p ≫
+          Sigma.ι (fun r : ℤ =>
+            A.obj r ((s + 1) - r) ((n + 1) - (s + 1))) (p + 1) ≫
+          Sigma.ι (fun t : ℤ => ∐ fun r : ℤ =>
+            A.obj r (t - r) ((n + 1) - t)) (s + 1)) +
+        tripleTotalSign₁ p (s - p) •
+          (tripleOrder12D2Component A n s p ≫
+            Sigma.ι (fun r : ℤ =>
+              A.obj r ((s + 1) - r) ((n + 1) - (s + 1))) p ≫
+            Sigma.ι (fun t : ℤ => ∐ fun r : ℤ =>
+              A.obj r (t - r) ((n + 1) - t)) (s + 1)) +
+        tripleTotalSign₂ p (s - p) •
+          (tripleOrder12D3Component A n s p ≫
+            Sigma.ι (fun r : ℤ => A.obj r (s - r) ((n + 1) - s)) p ≫
+            Sigma.ι (fun t : ℤ => ∐ fun r : ℤ =>
+              A.obj r (t - r) ((n + 1) - t)) s)
+
+theorem tripleOrder12Differential_comp_zero [HasCountableCoproducts C]
+    (A : TripleComplex C) (n : ℤ) :
+    tripleOrder12Differential A n ≫ tripleOrder12Differential A (n + 1) = 0 := by
+  sorry
+
+def tripleTotalizationOrder12Complex [HasCountableCoproducts C]
+    (A : TripleComplex C) : CochainComplex C ℤ where
+  X n := tripleTotalizationOrder12Term A n
+  d n m := if h : n + 1 = m then h ▸ tripleOrder12Differential A n else 0
+  shape n m hnm := by
+    classical
+    split_ifs with h
+    · exact (hnm h).elim
+    · rfl
+  d_comp_d' n m k hnm hmk := by
+    classical
+    have hnm' : n + 1 = m := by
+      simpa only [ComplexShape.up_Rel] using hnm
+    have hmk' : m + 1 = k := by
+      simpa only [ComplexShape.up_Rel] using hmk
+    rw [dif_pos hnm', dif_pos hmk']
+    subst m
+    subst k
+    exact tripleOrder12Differential_comp_zero A n
+
 theorem tripleTotalization_associative [HasCountableCoproducts C]
     (A : TripleComplex C) (n : ℤ) :
     Nonempty (tripleTotalizationOrder12Term A n ≅ tripleTotalTerm A n) ∧
       Nonempty (tripleTotalizationOrder23Term A n ≅ tripleTotalTerm A n) := by
+  sorry
+
+theorem tripleTotalization_associative_complex [HasCountableCoproducts C]
+    (A : TripleComplex C) :
+    Nonempty (tripleTotalizationOrder12Complex A ≅ tripleTotalization A) := by
   sorry
 
 /-! ## Shifts -/
@@ -557,13 +623,37 @@ theorem totalizationShiftSign_second (p _q _a _b : ℤ) :
       totalizationShiftSign p q a b := by
   sorry
 
+structure TotalComplexShiftData [HasCountableCoproducts C]
+    (A : DoubleComplex C) (a b : ℤ) where
+  iso :
+      (CategoryTheory.shiftFunctor (CochainComplex C ℤ) (a + b)).obj
+          (totalComplex A) ≅
+        totalComplex (doubleComplexShift A a b)
+  component_formula : ∀ n p : ℤ,
+    Sigma.ι (fun r : ℤ => A.obj r (n + (a + b) - r)) p ≫ iso.hom.f n =
+      totalizationShiftSign p (n + (a + b) - p) a b •
+        (eqToHom (by
+          dsimp [doubleComplexShift]
+          congr 1 <;> ring) ≫
+          Sigma.ι (fun r : ℤ =>
+            (doubleComplexShift A a b).obj r (n - r)) (p - a))
+
+theorem totalComplex_shift_data_exists [HasCountableCoproducts C]
+    (A : DoubleComplex C) (a b : ℤ) :
+    Nonempty (TotalComplexShiftData A a b) := by
+  sorry
+
+noncomputable def totalComplexShiftData [HasCountableCoproducts C]
+    (A : DoubleComplex C) (a b : ℤ) : TotalComplexShiftData A a b :=
+  Classical.choice (totalComplex_shift_data_exists A a b)
+
 theorem totalComplex_shift_iso_exists [HasCountableCoproducts C]
     (A : DoubleComplex C) (a b : ℤ) :
     Nonempty (
       (CategoryTheory.shiftFunctor (CochainComplex C ℤ) (a + b)).obj
           (totalComplex A) ≅
         totalComplex (doubleComplexShift A a b)) := by
-  sorry
+  exact ⟨(totalComplexShiftData A a b).iso⟩
 
 theorem totalComplex_shift_component_formula [HasCountableCoproducts C]
     (A : DoubleComplex C) (a b n p : ℤ) :
@@ -578,7 +668,8 @@ theorem totalComplex_shift_component_formula [HasCountableCoproducts C]
             congr 1 <;> ring) ≫
             Sigma.ι (fun r : ℤ =>
               (doubleComplexShift A a b).obj r (n - r)) (p - a)) := by
-  sorry
+  exact ⟨(totalComplexShiftData A a b).iso,
+    (totalComplexShiftData A a b).component_formula n p⟩
 
 /-! ## Totalization of maps and homotopies -/
 
@@ -900,35 +991,123 @@ theorem second_totalized_splitting_formula
         Sigma.ι (fun r : ℤ => A.obj r (n + 1 - r)) (p + 1) := by
   sorry
 
+structure FirstConnectingMapData
+    {A B D : DoubleComplex C} (S : DoubleComplexShortExact A B D)
+    (s : FirstDirectionSplitting S) where
+  map : DoubleComplexMap D (doubleComplexShift A 0 1)
+  component_formula : ∀ p q : ℤ,
+    map.f p q = firstConnectingComponent S s p q ≫ eqToHom (by
+      dsimp [doubleComplexShift]
+      congr 1; ring)
+
+theorem firstConnectingMap_data_exists
+    {A B D : DoubleComplex C} (S : DoubleComplexShortExact A B D)
+    (s : FirstDirectionSplitting S) :
+    Nonempty (FirstConnectingMapData S s) := by
+  sorry
+
+noncomputable def firstConnectingMapData
+    {A B D : DoubleComplex C} (S : DoubleComplexShortExact A B D)
+    (s : FirstDirectionSplitting S) : FirstConnectingMapData S s :=
+  Classical.choice (firstConnectingMap_data_exists S s)
+
+theorem firstConnectingMap_component
+    {A B D : DoubleComplex C} (S : DoubleComplexShortExact A B D)
+    (s : FirstDirectionSplitting S) (p q : ℤ) :
+    (firstConnectingMapData S s).map.f p q =
+      firstConnectingComponent S s p q ≫ eqToHom (by
+        dsimp [doubleComplexShift]
+        congr 1; ring) :=
+  (firstConnectingMapData S s).component_formula p q
+
 theorem firstConnectingMap_exists
     {A B D : DoubleComplex C} (S : DoubleComplexShortExact A B D)
     (s : FirstDirectionSplitting S) :
-    Nonempty (DoubleComplexMap D (doubleComplexShift A 0 1)) := by
-  sorry
+    Nonempty (DoubleComplexMap D (doubleComplexShift A 0 1)) :=
+  ⟨(firstConnectingMapData S s).map⟩
 
 noncomputable def firstConnectingMap
     {A B D : DoubleComplex C} (S : DoubleComplexShortExact A B D)
     (s : FirstDirectionSplitting S) :
     DoubleComplexMap D (doubleComplexShift A 0 1) :=
-  Classical.choice (firstConnectingMap_exists S s)
+  (firstConnectingMapData S s).map
+
+theorem firstConnectingMap_formula
+    {A B D : DoubleComplex C} (S : DoubleComplexShortExact A B D)
+    (s : FirstDirectionSplitting S) (p q : ℤ) :
+    (firstConnectingMap S s).f p q =
+      firstConnectingComponent S s p q ≫ eqToHom (by
+        dsimp [doubleComplexShift]
+        congr 1; ring) := by
+  exact firstConnectingMap_component S s p q
+
+structure SecondConnectingMapData
+    {A B D : DoubleComplex C} (S : DoubleComplexShortExact A B D)
+    (s : SecondDirectionSplitting S) where
+  map : DoubleComplexMap D (doubleComplexShift A 1 0)
+  component_formula : ∀ p q : ℤ,
+    map.f p q = secondConnectingComponent S s p q ≫ eqToHom (by
+      dsimp [doubleComplexShift]
+      congr 1; ring)
+
+theorem secondConnectingMap_data_exists
+    {A B D : DoubleComplex C} (S : DoubleComplexShortExact A B D)
+    (s : SecondDirectionSplitting S) :
+    Nonempty (SecondConnectingMapData S s) := by
+  sorry
+
+noncomputable def secondConnectingMapData
+    {A B D : DoubleComplex C} (S : DoubleComplexShortExact A B D)
+    (s : SecondDirectionSplitting S) : SecondConnectingMapData S s :=
+  Classical.choice (secondConnectingMap_data_exists S s)
+
+theorem secondConnectingMap_component
+    {A B D : DoubleComplex C} (S : DoubleComplexShortExact A B D)
+    (s : SecondDirectionSplitting S) (p q : ℤ) :
+    (secondConnectingMapData S s).map.f p q =
+      secondConnectingComponent S s p q ≫ eqToHom (by
+        dsimp [doubleComplexShift]
+        congr 1; ring) :=
+  (secondConnectingMapData S s).component_formula p q
 
 theorem secondConnectingMap_exists
     {A B D : DoubleComplex C} (S : DoubleComplexShortExact A B D)
     (s : SecondDirectionSplitting S) :
-    Nonempty (DoubleComplexMap D (doubleComplexShift A 1 0)) := by
-  sorry
+    Nonempty (DoubleComplexMap D (doubleComplexShift A 1 0)) :=
+  ⟨(secondConnectingMapData S s).map⟩
 
 noncomputable def secondConnectingMap
     {A B D : DoubleComplex C} (S : DoubleComplexShortExact A B D)
     (s : SecondDirectionSplitting S) :
     DoubleComplexMap D (doubleComplexShift A 1 0) :=
-  Classical.choice (secondConnectingMap_exists S s)
+  (secondConnectingMapData S s).map
+
+theorem secondConnectingMap_formula
+    {A B D : DoubleComplex C} (S : DoubleComplexShortExact A B D)
+    (s : SecondDirectionSplitting S) (p q : ℤ) :
+    (secondConnectingMap S s).f p q =
+      secondConnectingComponent S s p q ≫ eqToHom (by
+        dsimp [doubleComplexShift]
+        congr 1; ring) := by
+  exact secondConnectingMap_component S s p q
 
 noncomputable def totalShiftIso [HasCountableCoproducts C]
     (A : DoubleComplex C) (a b : ℤ) :
     (CategoryTheory.shiftFunctor (CochainComplex C ℤ) (a + b)).obj
         (totalComplex A) ≅ totalComplex (doubleComplexShift A a b) :=
-  Classical.choice (totalComplex_shift_iso_exists A a b)
+  (totalComplexShiftData A a b).iso
+
+theorem totalShiftIso_component_formula [HasCountableCoproducts C]
+    (A : DoubleComplex C) (a b n p : ℤ) :
+    Sigma.ι (fun r : ℤ => A.obj r (n + (a + b) - r)) p ≫
+        (totalShiftIso A a b).hom.f n =
+      totalizationShiftSign p (n + (a + b) - p) a b •
+        (eqToHom (by
+          dsimp [doubleComplexShift]
+          congr 1 <;> ring) ≫
+          Sigma.ι (fun r : ℤ =>
+            (doubleComplexShift A a b).obj r (n - r)) (p - a)) := by
+  exact (totalComplexShiftData A a b).component_formula n p
 
 noncomputable def totalFirstConnectingMap
     [HasCountableCoproducts C]

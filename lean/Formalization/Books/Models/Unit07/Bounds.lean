@@ -23,7 +23,7 @@ def nonMinusTwoIndices (T : NumericalType) : Finset (Fin T.n) := by
 
 /-! The two bounds in the source's neighbour lemma. -/
 theorem bound_neighbours (T : NumericalType) (genusValue : ℤ)
-    (hgenus : IsOfGenus T genusValue) {i j : Fin T.n}
+    (_hgenus : IsOfGenus T genusValue) {i j : Fin T.n}
     (hij : 0 < T.a i j) :
     T.m i * T.a i j ≤ T.m j * |T.a j j| ∧
       T.m i * T.w i ≤ T.m j * |T.a j j| := by
@@ -189,7 +189,6 @@ theorem bound_heart (T : NumericalType) (genusValue : ℤ)
       have hmQ : (0 : ℚ) < T.m j := by exact_mod_cast T.m_pos j
       have hdiagQ : (T.a j j : ℚ) < 0 := by exact_mod_cast hdiag
       unfold genusContribution
-      push_cast
       nlinarith
     by_contra h
     have hgj_ge : genusValue ≤ T.g j := le_of_not_gt h
@@ -289,7 +288,6 @@ theorem bound_heart (T : NumericalType) (genusValue : ℤ)
       have hboundQ : (T.m j : ℚ) * (-(T.a j j : ℚ)) ≤
           6 * (genusValue : ℚ) - 6 := by
         unfold genusContribution at hle
-        push_cast at hle
         have hnonneg :
             0 ≤ (T.w j : ℚ) * ((T.g j : ℚ) - 1) :=
           mul_nonneg (le_of_lt hwQ) (by linarith)
@@ -360,15 +358,15 @@ private theorem torsion_finrank_le_of_injective
       AddSubgroup.torsionBy.zmodModule
     Module.finrank (ZMod ell) (AddSubgroup.torsionBy G (ell : ℤ)) ≤
       Module.finrank (ZMod ell) (AddSubgroup.torsionBy H (ell : ℤ)) := by
-  letI : Module.Finite ℤ G := hG
-  letI : Module.Finite ℤ H := hH
-  letI : IsNoetherian ℤ G := inferInstance
-  letI : IsNoetherian ℤ H := inferInstance
+  let : Module.Finite ℤ G := hG
+  let : Module.Finite ℤ H := hH
+  let : IsNoetherian ℤ G := inferInstance
+  let : IsNoetherian ℤ H := inferInstance
   let P := AddSubgroup.torsionBy G (ell : ℤ)
   let Q := AddSubgroup.torsionBy H (ell : ℤ)
-  letI : Module.Finite ℤ P.toIntSubmodule :=
+  let : Module.Finite ℤ P.toIntSubmodule :=
     Module.Finite.of_fg (IsNoetherian.noetherian _)
-  letI : Module.Finite ℤ Q.toIntSubmodule :=
+  let : Module.Finite ℤ Q.toIntSubmodule :=
     Module.Finite.of_fg (IsNoetherian.noetherian _)
   let eP : P.toIntSubmodule ≃ₗ[ℤ] P :=
     { toFun := fun x => ⟨x.1, x.2⟩
@@ -384,15 +382,15 @@ private theorem torsion_finrank_le_of_injective
       right_inv := by intro x; rfl
       map_add' := by intro x y; rfl
       map_smul' := by intro c x; rfl }
-  letI : Module.Finite ℤ P := Module.Finite.equiv eP
-  letI : Module.Finite ℤ Q := Module.Finite.equiv eQ
+  let : Module.Finite ℤ P := Module.Finite.equiv eP
+  let : Module.Finite ℤ Q := Module.Finite.equiv eQ
   let _ : Fact (Nat.Prime ell) := ⟨hell⟩
   let _ : NeZero ell := ⟨hell.ne_zero⟩
   let _ : Module (ZMod ell) P := AddSubgroup.torsionBy.zmodModule
   let _ : Module (ZMod ell) Q := AddSubgroup.torsionBy.zmodModule
-  letI : Module.Finite (ZMod ell) P :=
+  let : Module.Finite (ZMod ell) P :=
     Module.Finite.of_restrictScalars_finite ℤ (ZMod ell) P
-  letI : Module.Finite (ZMod ell) Q :=
+  let : Module.Finite (ZMod ell) Q :=
     Module.Finite.of_restrictScalars_finite ℤ (ZMod ell) Q
   let F0 : P →+ Q :=
     { toFun := fun x => ⟨f x.1, by

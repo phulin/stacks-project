@@ -467,9 +467,9 @@ theorem exists_tor_long_exact_sequence {R : Type u} [CommRing R]
     dsimp [T, tensorComplexMapRight]
     apply ModuleCat.shortComplex_shortExact
     · rw [← ShortComplex.ShortExact.moduleCat_exact_iff_function_exact]
-      letI : Module.Free R (F.complex.X i) := F.free i
+      let _ : Module.Free R (F.complex.X i) := F.free i
       exact Module.Flat.lTensor_shortComplex_exact (F.complex.X i) S hS.exact
-    · letI : Module.Free R (F.complex.X i) := F.free i
+    · let _ : Module.Free R (F.complex.X i) := F.free i
       exact Module.Flat.lTensor_preserves_injective_linearMap S.f.hom
         hS.moduleCat_injective_f
     · exact LinearMap.lTensor_surjective _ hS.moduleCat_surjective_g
@@ -542,21 +542,21 @@ theorem exists_tor_long_exact_sequence {R : Type u} [CommRing R]
     have hC₁ : C₁.Exact := (ShortComplex.exact_iff_of_iso i₁).2 hD₁
     have hmono : Mono q₁' := by
       exact (ShortComplex.exact_iff_mono_cokernel_desc C₁).mp hC₁
-    haveI : Mono q₁' := hmono
-    haveI : Epi b₁ := (ModuleCat.epi_iff_surjective b₁).2 (by
+    let _ : Mono q₁' := hmono
+    let _ : Epi b₁ := (ModuleCat.epi_iff_surjective b₁).2 (by
       change Function.Surjective (LinearMap.rTensor S.X₁ F.resolution.augmentation.hom)
       exact LinearMap.rTensor_surjective _
         ((ModuleCat.epi_iff_surjective F.resolution.augmentation).mp
           F.resolution.augmentation_epi))
-    letI : IsIso ((tensorComplex F.complex S.X₁).iCycles 0) :=
+    let _ : IsIso ((tensorComplex F.complex S.X₁).iCycles 0) :=
       (tensorComplex F.complex S.X₁).isIso_iCycles 0 0 (by simp) (by simp)
-    haveI : Epi a₁ := by
+    have : Epi a₁ := by
       dsimp [a₁]
       infer_instance
-    letI : Epi (cokernel.π ((tensorComplex F.complex S.X₁).toCycles 1 0) ≫ q₁') := by
+    let _ : Epi (cokernel.π ((tensorComplex F.complex S.X₁).toCycles 1 0) ≫ q₁') := by
       rw [cokernel.π_desc]
       infer_instance
-    haveI : Epi q₁' := epi_of_epi_fac
+    have : Epi q₁' := epi_of_epi_fac
       (f := cokernel.π ((tensorComplex F.complex S.X₁).toCycles 1 0))
       (g := q₁') (h := a₁) (by simp [q₁'])
     exact isIso_of_mono_of_epi q₁'
@@ -653,21 +653,21 @@ theorem exists_tor_long_exact_sequence {R : Type u} [CommRing R]
       have hC : C.Exact := (ShortComplex.exact_iff_of_iso i).2 hD
       have hmono : Mono q' :=
         (ShortComplex.exact_iff_mono_cokernel_desc C).mp hC
-      haveI : Mono q' := hmono
-      haveI : Epi b₁ := (ModuleCat.epi_iff_surjective b₁).2 (by
+      let _ : Mono q' := hmono
+      let _ : Epi b₁ := (ModuleCat.epi_iff_surjective b₁).2 (by
         change Function.Surjective (LinearMap.rTensor N F.resolution.augmentation.hom)
         exact LinearMap.rTensor_surjective _
           ((ModuleCat.epi_iff_surjective F.resolution.augmentation).mp
             F.resolution.augmentation_epi))
-      letI : IsIso ((tensorComplex F.complex N).iCycles 0) :=
+      let _ : IsIso ((tensorComplex F.complex N).iCycles 0) :=
         (tensorComplex F.complex N).isIso_iCycles 0 0 (by simp) (by simp)
-      haveI : Epi a₁ := by
+      have : Epi a₁ := by
         dsimp [a₁]
         infer_instance
-      letI : Epi (cokernel.π ((tensorComplex F.complex N).toCycles 1 0) ≫ q') := by
+      let _ : Epi (cokernel.π ((tensorComplex F.complex N).toCycles 1 0) ≫ q') := by
         rw [cokernel.π_desc]
         infer_instance
-      haveI : Epi q' := epi_of_epi_fac
+      have : Epi q' := epi_of_epi_fac
         (f := cokernel.π ((tensorComplex F.complex N).toCycles 1 0))
         (g := q') (h := a₁) (by simp [q'])
       exact isIso_of_mono_of_epi q'
@@ -785,15 +785,8 @@ theorem exists_tor_long_exact_sequence {R : Type u} [CommRing R]
     dsimp [a₁, a₂]
     rw [← Category.assoc, HomologicalComplex.cyclesMap_i]
     simp only [Category.assoc]
-    change
-      (tensorComplex F.complex S.X₁).iCycles 0 ≫
-          ((tensorComplexMapRight F.complex S.f).f 0 ≫ e₂.hom ≫ b₂) =
-        (tensorComplex F.complex S.X₁).iCycles 0 ≫
-          (e₀.hom ≫ b₁ ≫ ModuleCat.ofHom (tensorByMap M S.f))
     apply (cancel_epi ((tensorComplex F.complex S.X₁).iCycles 0)).2
-    simp [e₀, e₂, b₁, b₂, tensorComplexMapRight, tensorByMap, tensorComplex,
-      ModuleCat.hom_comp, LinearMap.rTensor_comp_lTensor,
-      LinearMap.lTensor_comp_rTensor]
+    simp [e₀, e₂, b₁, b₂, tensorComplexMapRight, tensorByMap, tensorComplex]
     apply ModuleCat.hom_ext
     change
       (LinearMap.rTensor (S.X₂ : Type u) F.resolution.augmentation.hom).comp
@@ -822,10 +815,10 @@ theorem exists_tor_long_exact_sequence {R : Type u} [CommRing R]
           ShortComplex.isoMk (Iso.refl _) (Iso.refl _) q₁HIso
             (by
               dsimp [E₂, ShortComplex.SnakeInput.L₁']
-              simp [Category.assoc])
+              simp)
             (by
               dsimp [E₂, ShortComplex.SnakeInput.L₁']
-              simp [Category.assoc])
+              simp)
         have hE₂ : E₂.Exact :=
           (ShortComplex.exact_iff_of_iso i₂).1 H.L₁'_exact
         change Function.Exact E₂.f E₂.g
@@ -853,7 +846,7 @@ theorem exists_tor_long_exact_sequence {R : Type u} [CommRing R]
           ShortComplex.isoMk (Iso.refl _) q₁HIso q₂HIso
             (by
               dsimp [E₃, ShortComplex.SnakeInput.L₂']
-              simp [Category.assoc])
+              simp)
             (by
               dsimp [E₃, ShortComplex.SnakeInput.L₂']
               exact hcomm)

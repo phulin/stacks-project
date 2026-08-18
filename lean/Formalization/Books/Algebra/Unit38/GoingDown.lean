@@ -448,6 +448,24 @@ theorem polynomial_divisor_coeff_isIntegral
     simpa [hq'map] using hdiv
   exact Polynomial.isIntegral_coeff_of_dvd q' p hq'monic hp hdiv' i
 
+private lemma exists_lift_polynomial_of_monic
+    {K : Type*} [Field K] (f : K[X]) (T : Subring K) (hf : f.Monic)
+    (hfT : ∀ i, i < f.natDegree → f.coeff i ∈ (T : Set K)) :
+    ∃ f' : T[X], f'.map (algebraMap T K) = f ∧
+      f'.natDegree = f.natDegree ∧ f'.Monic := by
+  have hf_lifts : f ∈ Polynomial.lifts (algebraMap T K) := by
+    rw [Polynomial.lifts_iff_coeff_lifts]
+    intro i
+    by_cases hi : i < f.natDegree
+    · exact ⟨⟨f.coeff i, hfT i hi⟩, rfl⟩
+    · have hle : f.natDegree ≤ i := Nat.le_of_not_gt hi
+      rcases lt_or_eq_of_le hle with hlt | rfl
+      · rw [Polynomial.coeff_eq_zero_of_natDegree_lt hlt]
+        exact ⟨0, by simp⟩
+      · rw [hf.coeff_natDegree]
+        exact ⟨1, by simp⟩
+  exact Polynomial.lifts_and_natDegree_eq_and_monic hf_lifts f
+
 /- The second conclusion of the source lemma is stated over a subring of the
    field containing both sets of coefficients.  The coefficient set below is
    the corresponding finite generating set, written without choosing an
@@ -462,7 +480,38 @@ theorem polynomial_divisor_coeff_mem_radical
       (⟨p.coeff i, hpT i hi⟩ : T) ∈
         Ideal.radical (Ideal.span
           {b : T | ∃ j, j < q.natDegree ∧ (b : K) = q.coeff j}) := by
-  sorry
+  obtain ⟨p', hp'map, hp'natDegree, hp'monic⟩ :=
+    exists_lift_polynomial_of_monic p T hp hpT
+  obtain ⟨q', hq'map, hq'natDegree, hq'monic⟩ :=
+    exists_lift_polynomial_of_monic q T hq hqT
+  have hmap_injective : Function.Injective (algebraMap T K) := by
+    exact T.subtype_injective
+  have hdiv' : p' ∣ q' := by
+    apply (Polynomial.map_dvd_map (algebraMap T K) hmap_injective hp'monic).mp
+    rw [hp'map, hq'map]
+    exact hdiv
+  intro i hi
+  have hrad := Polynomial.coeff_mem_radical_span_coeff_of_dvd q' p'
+    hq'monic hp'monic hdiv' i (by simpa [hp'natDegree] using hi.ne)
+  have hspan :
+      Ideal.span {q'.coeff j | j < q'.natDegree} ≤
+        Ideal.span
+          {b : T | ∃ j, j < q.natDegree ∧ (b : K) = q.coeff j} := by
+    apply Ideal.span_le.2
+    rintro a ⟨j, hj, rfl⟩
+    apply Ideal.subset_span
+    refine ⟨j, ?_, ?_⟩
+    · simpa [hq'natDegree] using hj
+    · have hcoeff := congrArg
+        (fun r : Polynomial T => (r.map (algebraMap T K)).coeff j) hq'map
+      simpa using hcoeff
+  have hcoeff : p'.coeff i = (⟨p.coeff i, hpT i hi⟩ : T) := by
+    apply Subtype.ext
+    have hcoeff' := congrArg
+      (fun r : Polynomial T => (r.map (algebraMap T K)).coeff i) hp'map
+    simpa using hcoeff'
+  rw [← hcoeff]
+  exact Ideal.radical_mono hspan hrad
 
 /-! ## Minimal polynomials over a normal domain -/
 
@@ -475,7 +524,16 @@ theorem minpoly_coeff_mem_range_of_isNormalDomain
     (hR : Formalization.Books.Algebra.Unit37.IsNormalDomain R)
     (g : S) (hg : IsIntegral R g) :
     ∀ i, (minpoly K g).coeff i ∈ Set.range (algebraMap R K) := by
-  sorry
+  letI : IsDomain R := hR.1
+  letI : IsIntegrallyClosed R := hR.2
+  letI : IsTorsionFree K S :=
+    (Module.isTorsionFree_iff_algebraMap_injective K S).mpr
+      (RingHom.injective (algebraMap K S))
+  letI : IsTorsionFree R S :=
+    Module.IsTorsionFree.trans_faithfulSMul R K
+  intro i
+  rw [minpoly.isIntegrallyClosed_eq_field_fractions' K hg]
+  exact ⟨(minpoly R g).coeff i, by simp⟩
 
 /-! ## Going down -/
 
@@ -488,7 +546,9 @@ theorem goingDown_normal_integral
     {p p' : Ideal R} [p.IsPrime] [p'.IsPrime] (hpp : p ≤ p')
     (Q : Ideal S) [Q.IsPrime] [Q.LiesOver p'] :
     ∃ P : Ideal S, P ≤ Q ∧ P.IsPrime ∧ P.LiesOver p := by
-  sorry
+  letI : IsDomain R := hR.1
+  letI : IsIntegrallyClosed R := hR.2
+  exact Ideal.exists_ideal_le_liesOver_of_le Q hpp
 
 end
 

@@ -365,6 +365,357 @@ private theorem splittingTensorSplitOppositeSimilarity (k : Type*) [Field k]
     exact ⟨eop⟩
   exact hOpOp.trans hOpp
 
+private theorem splitting_of_embedded_subfield_of_finrank
+    (k K k' : Type*) [Field k] [Ring K] [Algebra k K] [IsSimpleRing K]
+    [FiniteDimensional k K] [Algebra.IsCentral k K]
+    [Field k'] [Algebra k k'] [FiniteDimensional k k']
+    (f : k' →ₐ[k] K) (hf : Function.Injective f)
+    (hdim : Module.finrank k K = Module.finrank k k' ^ 2) :
+    Splits k K k' := by
+  letI moduleK : Module k' K :=
+    { smul := fun c x => x * f c
+      one_smul := by
+        intro x
+        change x * f 1 = x
+        simp
+      mul_smul := by
+        intro c d x
+        change x * f (c * d) = (x * f d) * f c
+        calc
+          x * f (c * d) = x * f (d * c) := by rw [mul_comm c d]
+          _ = x * (f d * f c) := by rw [map_mul]
+          _ = (x * f d) * f c := by
+            rw [mul_assoc]
+      smul_zero := by
+        intro c
+        exact zero_mul (f c)
+      smul_add := by
+        intro c x y
+        change (x + y) * f c = x * f c + y * f c
+        exact add_mul x y (f c)
+      add_smul := by
+        intro c d x
+        change x * f (c + d) = x * f c + x * f d
+        rw [map_add, mul_add]
+      zero_smul := by
+        intro x
+        change x * f 0 = 0
+        simp }
+  let towerK : IsScalarTower k k' K := by
+    refine ⟨?_⟩
+    intro r c x
+    change x * f (r • c) = r • (x * f c)
+    rw [Algebra.smul_def, Algebra.smul_def, map_mul, f.commutes]
+    calc
+      x * ((algebraMap k K) r * f c) = (x * (algebraMap k K r)) * f c := by
+        rw [← mul_assoc]
+      _ = ((algebraMap k K) r * x) * f c := by
+        rw [(Algebra.commutes r x).symm]
+      _ = (algebraMap k K) r * (x * f c) := by
+        rw [mul_assoc]
+  let : IsScalarTower k k' K := towerK
+  let : Module.Finite k' K :=
+    Module.Finite.of_restrictScalars_finite k k' K
+  let commKK : SMulCommClass k' k' K := by
+    exact ⟨by
+      intro c d x
+      change (x * f d) * f c = (x * f c) * f d
+      calc
+        (x * f d) * f c = x * (f d * f c) := by rw [mul_assoc]
+        _ = x * (f c * f d) := by
+          rw [← map_mul, ← map_mul, mul_comm c d]
+        _ = (x * f c) * f d := by rw [mul_assoc]⟩
+  let commK : SMulCommClass K k' K := by
+    exact ⟨by
+      intro a c x
+      change a * (x * f c) = (a * x) * f c
+      simp [mul_assoc]⟩
+  let left : K →ₐ[k] Module.End k' K :=
+    { toRingHom := @Module.toModuleEnd k' K K _ _ _ _ _ commK
+      commutes' := by
+        intro r
+        apply LinearMap.ext
+        intro x
+        dsimp only [Module.toModuleEnd, DistribSMul.toLinearMap]
+        rw [Module.algebraMap_end_apply]
+        change (algebraMap k K r) * x = r • x
+        simp [Algebra.smul_def] }
+  let scalar : k' →ₐ[k'] Module.End k' K :=
+    { toRingHom := @Module.toModuleEnd k' k' K _ _ _ _ _ commKK
+      commutes' := by
+        intro c
+        ext x
+        change c • x = c • x
+        rfl }
+  let hcomm : ∀ c a, Commute (scalar c) (left a) := by
+    intro c a
+    apply LinearMap.ext
+    intro x
+    change c • (a • x) = a • (c • x)
+    change (a * x) * f c = a * (x * f c)
+    rw [mul_assoc]
+  let eLift : (k' ⊗[k] K) →ₐ[k'] Module.End k' K :=
+    Algebra.TensorProduct.lift scalar left hcomm
+  let _ : Algebra k' (K ⊗[k] k') :=
+    Algebra.TensorProduct.rightAlgebra
+  let e : (K ⊗[k] k') →ₐ[k'] Module.End k' K :=
+    { toRingHom := eLift.toRingHom.comp
+        (Algebra.TensorProduct.comm k K k').toRingHom
+      commutes' := by
+        intro c
+        rw [Algebra.TensorProduct.right_algebraMap_apply]
+        change eLift (Algebra.TensorProduct.comm k K k'
+          (1 ⊗ₜ[k] c)) = algebraMap k' (Module.End k' K) c
+        rw [Algebra.TensorProduct.comm_tmul]
+        simpa [eLift] using scalar.commutes c }
+  let : IsSimpleRing (K ⊗[k] k') :=
+    tensor_product_simple_of_simple_algebras_left k K k'
+  have heinj : Function.Injective e := RingHom.injective e.toRingHom
+  have hfinK : Module.finrank k' K = Module.finrank k k' := by
+    apply Nat.mul_left_cancel (Module.finrank_pos (R := k) (M := k'))
+    calc
+      Module.finrank k k' * Module.finrank k' K = Module.finrank k K :=
+        Module.finrank_mul_finrank k k' K
+      _ = Module.finrank k k' ^ 2 := hdim
+      _ = Module.finrank k k' * Module.finrank k k' := by
+        rw [pow_two]
+  have hfin : Module.finrank k (K ⊗[k] k') =
+      Module.finrank k (Module.End k' K) := by
+    calc
+      Module.finrank k (K ⊗[k] k') =
+          Module.finrank k K * Module.finrank k k' := by
+        rw [Module.finrank_tensorProduct]
+      _ = Module.finrank k' K * Module.finrank k K := by
+        rw [hfinK, Nat.mul_comm]
+      _ = Module.finrank k (Module.End k' K) := by
+        symm
+        rw [Module.finrank_linearMap]
+  let eK := (e.restrictScalars k).toLinearMap
+  have hesurjK : Function.Surjective eK := by
+    apply (LinearMap.injective_iff_surjective_of_finrank_eq_finrank hfin).mp
+    intro x y hxy
+    apply heinj
+    simpa [eK] using hxy
+  have hesurj : Function.Surjective e.toLinearMap := by
+    intro y
+    obtain ⟨x, hxy⟩ := hesurjK y
+    exact ⟨x, by simpa [eK] using hxy⟩
+  let ee : (K ⊗[k] k') ≃ₐ[k'] Module.End k' K :=
+    AlgEquiv.ofBijective e ⟨heinj, hesurj⟩
+  let b := Module.Free.chooseBasis k' K
+  let m := Fintype.card (Module.Free.ChooseBasisIndex k' K)
+  let emat : (K ⊗[k] k') ≃ₐ[k'] Matrix (Fin m) (Fin m) k' :=
+    (ee.trans (algEquivMatrix b)).trans
+      (Matrix.reindexAlgEquiv k' k'
+        (Fintype.equivFin (Module.Free.ChooseBasisIndex k' K)))
+  refine ⟨m, ?_⟩
+  dsimp [SplitsInDegree]
+  exact ⟨emat⟩
+
+private def matrixTensorEquivForSplitting (k X Y : Type*) [CommSemiring k]
+    [Semiring X] [Algebra k X] [Semiring Y] [Algebra k Y] (n : ℕ) :
+    Matrix (Fin n) (Fin n) (X ⊗[k] Y) ≃ₐ[k]
+      Matrix (Fin n) (Fin n) X ⊗[k] Y :=
+  ((Algebra.TensorProduct.comm k X Y).mapMatrix).trans
+    (((Algebra.TensorProduct.congr (AlgEquiv.refl : Y ≃ₐ[k] Y)
+        (matrixEquivTensor (Fin n) k X)).trans
+      ((Algebra.TensorProduct.assoc k k k Y X
+          (Matrix (Fin n) (Fin n) k)).symm.trans
+        (matrixEquivTensor (Fin n) k (Y ⊗[k] X)).symm)).symm.trans
+      (Algebra.TensorProduct.comm k Y (Matrix (Fin n) (Fin n) X)))
+
+private theorem base_change_matrix_similarity_for_splitting (k k' : Type*) [Field k]
+    [Field k'] [Algebra k k'] (A A' : CSA k) (h : IsBrauerEquivalent A A') :
+    let _ : Algebra k' (A.carrier ⊗[k] k') :=
+      Algebra.TensorProduct.rightAlgebra
+    let _ : Algebra k' (A'.carrier ⊗[k] k') :=
+      Algebra.TensorProduct.rightAlgebra
+    ∃ n m : ℕ, n ≠ 0 ∧ m ≠ 0 ∧
+      Nonempty
+        (Matrix (Fin n) (Fin n) (A.carrier ⊗[k] k') ≃ₐ[k']
+          Matrix (Fin m) (Fin m) (A'.carrier ⊗[k] k')) := by
+  dsimp
+  let _ : Algebra k' (A.carrier ⊗[k] k') :=
+    Algebra.TensorProduct.rightAlgebra
+  let _ : Algebra k' (A'.carrier ⊗[k] k') :=
+    Algebra.TensorProduct.rightAlgebra
+  obtain ⟨n, m, hn, hm, ⟨e⟩⟩ := h
+  refine ⟨n, m, hn, hm, ?_⟩
+  let e' := Algebra.TensorProduct.congr e
+    (AlgEquiv.refl : k' ≃ₐ[k] k')
+  let gk : Matrix (Fin n) (Fin n) (A.carrier ⊗[k] k') ≃ₐ[k]
+      Matrix (Fin m) (Fin m) (A'.carrier ⊗[k] k') :=
+    (matrixTensorEquivForSplitting k A.carrier k' n).trans
+      (e'.trans (matrixTensorEquivForSplitting k A'.carrier k' m).symm)
+  let g : Matrix (Fin n) (Fin n) (A.carrier ⊗[k] k') ≃ₐ[k']
+      Matrix (Fin m) (Fin m) (A'.carrier ⊗[k] k') :=
+    AlgEquiv.ofBijective
+      { toFun := gk
+        map_one' := gk.map_one
+        map_mul' := gk.map_mul
+        map_zero' := gk.map_zero
+        map_add' := gk.map_add
+        commutes' := by
+          intro r
+          have hmtA :
+              matrixTensorEquivForSplitting k A.carrier k' n
+                  (Matrix.scalar (Fin n) ((1 : A.carrier) ⊗ₜ[k] r)) =
+                (1 : Matrix (Fin n) (Fin n) A.carrier) ⊗ₜ[k] r := by
+            let q : k' ⊗[k] Matrix (Fin n) (Fin n) A.carrier ≃ₐ[k]
+                Matrix (Fin n) (Fin n) (k' ⊗[k] A.carrier) :=
+              (Algebra.TensorProduct.congr (AlgEquiv.refl : k' ≃ₐ[k] k')
+                (matrixEquivTensor (Fin n) k A.carrier)).trans
+                ((Algebra.TensorProduct.assoc k k k k' A.carrier
+                    (Matrix (Fin n) (Fin n) k)).symm.trans
+                  (matrixEquivTensor (Fin n) k (k' ⊗[k] A.carrier)).symm)
+            have hq :
+                q ((r : k') ⊗ₜ[k]
+                  (1 : Matrix (Fin n) (Fin n) A.carrier)) =
+                  Matrix.scalar (Fin n) ((r : k') ⊗ₜ[k] (1 : A.carrier)) := by
+              change (matrixEquivTensor (Fin n) k (k' ⊗[k] A.carrier)).symm
+                  ((Algebra.TensorProduct.assoc k k k k' A.carrier
+                      (Matrix (Fin n) (Fin n) k)).symm
+                    (r ⊗ₜ[k]
+                      matrixEquivTensor (Fin n) k A.carrier
+                        (1 : Matrix (Fin n) (Fin n) A.carrier))) =
+                Matrix.scalar (Fin n) ((r : k') ⊗ₜ[k] (1 : A.carrier))
+              have hone :
+                  matrixEquivTensor (Fin n) k A.carrier
+                      (1 : Matrix (Fin n) (Fin n) A.carrier) =
+                    (1 : A.carrier) ⊗ₜ[k]
+                      (1 : Matrix (Fin n) (Fin n) k) := by
+                simpa [Algebra.TensorProduct.one_def] using
+                  (matrixEquivTensor (Fin n) k A.carrier).map_one
+              rw [hone]
+              simp only [Algebra.TensorProduct.assoc_symm_tmul,
+                matrixEquivTensor_apply_symm]
+              apply Matrix.ext
+              intro i j
+              by_cases hij : i = j <;>
+                simp [Matrix.map, Matrix.diagonal, Matrix.one_apply, hij]
+            have hscalar :
+                Matrix.scalar (Fin n) ((1 : A.carrier) ⊗ₜ[k] r) =
+                  (Algebra.TensorProduct.includeRight :
+                    k' →ₐ[k] A.carrier ⊗[k] k').mapMatrix
+                    (Matrix.scalar (Fin n) r) := by
+              apply Matrix.ext
+              intro i j
+              by_cases hij : i = j <;> simp [hij]
+            rw [hscalar]
+            change (Algebra.TensorProduct.comm k k'
+                (Matrix (Fin n) (Fin n) A.carrier))
+              (q.symm
+                ((Algebra.TensorProduct.comm k A.carrier k').mapMatrix
+                  ((Algebra.TensorProduct.includeRight :
+                    k' →ₐ[k] A.carrier ⊗[k] k').mapMatrix
+                    (Matrix.scalar (Fin n) r)))) =
+              (1 : Matrix (Fin n) (Fin n) A.carrier) ⊗ₜ[k] r
+            have hfirst :
+                (Algebra.TensorProduct.comm k A.carrier k').mapMatrix
+                    ((Algebra.TensorProduct.includeRight :
+                      k' →ₐ[k] A.carrier ⊗[k] k').mapMatrix
+                      (Matrix.scalar (Fin n) r)) =
+                  Matrix.scalar (Fin n) ((r : k') ⊗ₜ[k] (1 : A.carrier)) := by
+              apply Matrix.ext
+              intro i j
+              by_cases hij : i = j <;> simp [hij]
+            rw [hfirst]
+            have hq' :
+                q.symm (Matrix.scalar (Fin n)
+                  ((r : k') ⊗ₜ[k] (1 : A.carrier))) =
+                  (r : k') ⊗ₜ[k] (1 : Matrix (Fin n) (Fin n) A.carrier) := by
+              apply q.injective
+              simp [hq]
+            rw [hq']
+            simp [Algebra.TensorProduct.comm_tmul]
+          have hmtA' :
+              matrixTensorEquivForSplitting k A'.carrier k' m
+                  (Matrix.scalar (Fin m) ((1 : A'.carrier) ⊗ₜ[k] r)) =
+                (1 : Matrix (Fin m) (Fin m) A'.carrier) ⊗ₜ[k] r := by
+            let q : k' ⊗[k] Matrix (Fin m) (Fin m) A'.carrier ≃ₐ[k]
+                Matrix (Fin m) (Fin m) (k' ⊗[k] A'.carrier) :=
+              (Algebra.TensorProduct.congr (AlgEquiv.refl : k' ≃ₐ[k] k')
+                (matrixEquivTensor (Fin m) k A'.carrier)).trans
+                ((Algebra.TensorProduct.assoc k k k k' A'.carrier
+                    (Matrix (Fin m) (Fin m) k)).symm.trans
+                  (matrixEquivTensor (Fin m) k (k' ⊗[k] A'.carrier)).symm)
+            have hq :
+                q ((r : k') ⊗ₜ[k]
+                  (1 : Matrix (Fin m) (Fin m) A'.carrier)) =
+                  Matrix.scalar (Fin m) ((r : k') ⊗ₜ[k] (1 : A'.carrier)) := by
+              change (matrixEquivTensor (Fin m) k (k' ⊗[k] A'.carrier)).symm
+                  ((Algebra.TensorProduct.assoc k k k k' A'.carrier
+                      (Matrix (Fin m) (Fin m) k)).symm
+                    (r ⊗ₜ[k]
+                      matrixEquivTensor (Fin m) k A'.carrier
+                        (1 : Matrix (Fin m) (Fin m) A'.carrier))) =
+                Matrix.scalar (Fin m) ((r : k') ⊗ₜ[k] (1 : A'.carrier))
+              have hone :
+                  matrixEquivTensor (Fin m) k A'.carrier
+                      (1 : Matrix (Fin m) (Fin m) A'.carrier) =
+                    (1 : A'.carrier) ⊗ₜ[k]
+                      (1 : Matrix (Fin m) (Fin m) k) := by
+                simpa [Algebra.TensorProduct.one_def] using
+                  (matrixEquivTensor (Fin m) k A'.carrier).map_one
+              rw [hone]
+              simp only [Algebra.TensorProduct.assoc_symm_tmul,
+                matrixEquivTensor_apply_symm]
+              apply Matrix.ext
+              intro i j
+              by_cases hij : i = j <;>
+                simp [Matrix.map, Matrix.diagonal, Matrix.one_apply, hij]
+            have hscalar :
+                Matrix.scalar (Fin m) ((1 : A'.carrier) ⊗ₜ[k] r) =
+                  (Algebra.TensorProduct.includeRight :
+                    k' →ₐ[k] A'.carrier ⊗[k] k').mapMatrix
+                    (Matrix.scalar (Fin m) r) := by
+              apply Matrix.ext
+              intro i j
+              by_cases hij : i = j <;> simp [hij]
+            rw [hscalar]
+            change (Algebra.TensorProduct.comm k k'
+                (Matrix (Fin m) (Fin m) A'.carrier))
+              (q.symm
+                ((Algebra.TensorProduct.comm k A'.carrier k').mapMatrix
+                  ((Algebra.TensorProduct.includeRight :
+                    k' →ₐ[k] A'.carrier ⊗[k] k').mapMatrix
+                    (Matrix.scalar (Fin m) r)))) =
+              (1 : Matrix (Fin m) (Fin m) A'.carrier) ⊗ₜ[k] r
+            have hfirst :
+                (Algebra.TensorProduct.comm k A'.carrier k').mapMatrix
+                    ((Algebra.TensorProduct.includeRight :
+                      k' →ₐ[k] A'.carrier ⊗[k] k').mapMatrix
+                      (Matrix.scalar (Fin m) r)) =
+                  Matrix.scalar (Fin m) ((r : k') ⊗ₜ[k] (1 : A'.carrier)) := by
+              apply Matrix.ext
+              intro i j
+              by_cases hij : i = j <;> simp [hij]
+            rw [hfirst]
+            have hq' :
+                q.symm (Matrix.scalar (Fin m)
+                  ((r : k') ⊗ₜ[k] (1 : A'.carrier))) =
+                  (r : k') ⊗ₜ[k] (1 : Matrix (Fin m) (Fin m) A'.carrier) := by
+              apply q.injective
+              simp [hq]
+            rw [hq']
+            simp [Algebra.TensorProduct.comm_tmul]
+          change gk (Matrix.scalar (Fin n) ((1 : A.carrier) ⊗ₜ[k] r)) =
+            Matrix.scalar (Fin m) ((1 : A'.carrier) ⊗ₜ[k] r)
+          change (matrixTensorEquivForSplitting k A'.carrier k' m).symm
+            (e' (matrixTensorEquivForSplitting k A.carrier k' n
+              (Matrix.scalar (Fin n) ((1 : A.carrier) ⊗ₜ[k] r)))) =
+            Matrix.scalar (Fin m) ((1 : A'.carrier) ⊗ₜ[k] r)
+          rw [hmtA]
+          have he' :
+              e' ((1 : Matrix (Fin n) (Fin n) A.carrier) ⊗ₜ[k] r) =
+                (1 : Matrix (Fin m) (Fin m) A'.carrier) ⊗ₜ[k] r := by
+            simp [e']
+          rw [he', ← hmtA']
+          exact (matrixTensorEquivForSplitting k A'.carrier k' m).symm_apply_apply _
+        }
+      gk.bijective
+  exact ⟨g⟩
+
 theorem splitting_iff_similar_embedded_subfield
     (k : Type u_k) (k' : Type u_K) [Field k]
     [Field k'] [Algebra k k'] [FiniteDimensional k k']
@@ -628,7 +979,120 @@ theorem splitting_iff_similar_embedded_subfield
           (MulOpposite.opLinearEquiv k (M := C)).finrank_eq.symm
         _ = _ := hCdim
     exact ⟨B, hAB, f, hf, hBdim⟩
-  · sorry
+  · rintro ⟨B, hAB, f, hf, hBdim⟩
+    have hsplitB : Splits k B.carrier k' :=
+      splitting_of_embedded_subfield_of_finrank k B.carrier k' f hf hBdim
+    obtain ⟨d, hsplitB⟩ := hsplitB
+    let _ : Algebra k' (B.carrier ⊗[k] k') :=
+      Algebra.TensorProduct.rightAlgebra
+    dsimp [SplitsInDegree] at hsplitB
+    obtain ⟨eB⟩ := hsplitB
+    have hd0 : d ≠ 0 := by
+      intro hd
+      subst d
+      have hzero : (0 : B.carrier ⊗[k] k') = 1 := by
+        exact eB.injective (Subsingleton.elim _ _)
+      exact zero_ne_one hzero
+    obtain ⟨n, m, hn, hm, ⟨eAB⟩⟩ :=
+      base_change_matrix_similarity_for_splitting k k' A B hAB
+    let eBmat : Matrix (Fin m) (Fin m) (B.carrier ⊗[k] k') ≃ₐ[k']
+        Matrix (Fin (m * d)) (Fin (m * d)) k' :=
+      let ecomm : Matrix (Fin d) (Fin d) k' ⊗[k']
+          Matrix (Fin m) (Fin m) k' ≃ₐ[k']
+            Matrix (Fin m) (Fin m) k' ⊗[k'] Matrix (Fin d) (Fin d) k' :=
+        Algebra.TensorProduct.comm k'
+          (Matrix (Fin d) (Fin d) k') (Matrix (Fin m) (Fin m) k')
+      let ekron : Matrix (Fin m) (Fin m) k' ⊗[k']
+          Matrix (Fin d) (Fin d) k' ≃ₐ[k']
+            Matrix (Fin (m * d)) (Fin (m * d)) k' :=
+        (Matrix.kroneckerTMulAlgEquiv (Fin m) (Fin d) k' k' k' k').trans
+          (Algebra.TensorProduct.rid k' k' k').mapMatrix |>.trans
+            (Matrix.reindexAlgEquiv k' k' finProdFinEquiv)
+      ((eB.mapMatrix).trans (matrixEquivTensor (Fin m) k'
+        (Matrix (Fin d) (Fin d) k'))).trans (ecomm.trans ekron)
+    let _ : Algebra k' (A.carrier ⊗[k] k') :=
+      Algebra.TensorProduct.rightAlgebra
+    let hC := base_change_finite_central_simple k A.carrier k'
+    let C : CSA k' :=
+      { AlgCat.of k' (A.carrier ⊗[k] k') with
+        isCentral := hC.2.1
+        isSimple := hC.2.2
+        fin_dim := hC.1 }
+    let _ : Algebra.IsCentral k' (ULift.{u_A} k') :=
+      { out := by
+          intro x hx
+          refine ⟨x.down, ?_⟩
+          cases x
+          rfl }
+    let scalarLift : CSA.{u_K, max u_A u_K} k' :=
+      { AlgCat.of k' (ULift.{u_A} k') with }
+    let eLift : Matrix (Fin (m * d)) (Fin (m * d)) k' ≃ₐ[k']
+        Matrix (Fin (m * d)) (Fin (m * d)) (ULift.{u_A} k') :=
+      (ULift.algEquiv (R := k') (A := k')).symm.mapMatrix
+    have hrel : IsBrauerEquivalent C scalarLift := by
+      refine ⟨n, m * d, hn, Nat.mul_ne_zero hm hd0, ?_⟩
+      change Nonempty
+        (Matrix (Fin n) (Fin n) (A.carrier ⊗[k] k') ≃ₐ[k']
+          Matrix (Fin (m * d)) (Fin (m * d)) (ULift.{u_A} k'))
+      exact ⟨eAB.trans (eBmat.trans eLift)⟩
+    obtain ⟨p, q, hp, hq, ⟨hE⟩⟩ := hrel
+    let _ : IsSimpleRing C.carrier := C.isSimple
+    let _ : FiniteDimensional k' C.carrier := C.fin_dim
+    obtain ⟨s, hs, D, hD, hDalg, hDfinite, ⟨e⟩⟩ :=
+      wedderburn_artin_finite k' C.carrier
+    let _ : NeZero s := hs
+    let _ : Algebra.IsCentral k' C.carrier := C.isCentral
+    let _ : Algebra.IsCentral k' D :=
+      { out := by
+          intro x hx
+          have hxcomm : ∀ y : D, Commute x y := by
+            intro y
+            exact (Subalgebra.mem_center_iff.mp hx y).symm
+          have hxmat : Matrix.scalar (Fin s) x ∈ Set.center
+              (Matrix (Fin s) (Fin s) D) := by
+            rw [Semigroup.mem_center_iff]
+            intro M
+            exact (Matrix.scalar_commute x hxcomm M).eq.symm
+          obtain ⟨a, ha⟩ := e.surjective (Matrix.scalar (Fin s) x)
+          have hacenter : a ∈ Subalgebra.center k' C.carrier := by
+            rw [Subalgebra.mem_center_iff]
+            intro b
+            have h := (Semigroup.mem_center_iff.mp hxmat) (e b)
+            have h' := congrArg e.symm h
+            rw [← ha] at h'
+            simpa using h'
+          obtain ⟨r, hr⟩ :=
+            Algebra.mem_bot.mp (‹Algebra.IsCentral k' C.carrier›.out hacenter)
+          apply Algebra.mem_bot.mpr
+          refine ⟨r, ?_⟩
+          apply (Matrix.scalar_inj (n := Fin s)).mp
+          calc
+            Matrix.scalar (Fin s) (algebraMap k' D r) =
+                algebraMap k' (Matrix (Fin s) (Fin s) D) r := by rfl
+            _ = e (algebraMap k' C.carrier r) := by simp
+            _ = e a := by rw [hr]
+            _ = Matrix.scalar (Fin s) x := ha }
+    let eleft : Matrix (Fin p) (Fin p) C.carrier ≃ₐ[k']
+        Matrix (Fin (s * p)) (Fin (s * p)) D :=
+      ((e.mapMatrix).trans (matrixEquivTensor (Fin p) k'
+        (Matrix (Fin s) (Fin s) D))).trans
+        (((Matrix.kroneckerTMulAlgEquiv (Fin s) (Fin p) k' k' D k').trans
+          (Algebra.TensorProduct.rid k' k' D).mapMatrix).trans
+          (Matrix.reindexAlgEquiv k' D finProdFinEquiv))
+    have hmatrix : Nonempty
+        (Matrix (Fin (s * p)) (Fin (s * p)) D ≃ₐ[k']
+          Matrix (Fin q) (Fin q) (ULift.{u_A} k')) := by
+      exact ⟨eleft.symm.trans hE⟩
+    obtain ⟨eD⟩ := (matrix_division_similarity_iff k' D
+      (ULift.{u_A} k')).mp
+      ⟨s * p, q, Nat.mul_ne_zero hs.out hp, hq, hmatrix⟩
+    let eDK : D ≃ₐ[k'] k' :=
+      eD.trans (ULift.algEquiv (R := k') (A := k'))
+    let eC : C.carrier ≃ₐ[k'] Matrix (Fin s) (Fin s) k' :=
+      e.trans eDK.mapMatrix
+    refine ⟨s, ?_⟩
+    dsimp [SplitsInDegree]
+    exact ⟨eC⟩
 
 theorem maximal_subfield_splits (k K k' : Type*) [Field k]
     [DivisionRing K] [Algebra k K] [FiniteDimensional k K]
@@ -636,7 +1100,8 @@ theorem maximal_subfield_splits (k K k' : Type*) [Field k]
     [FiniteDimensional k k'] (f : k' →ₐ[k] K) (hf : Function.Injective f)
     (hmax : IsMaximalCommutativeSubalgebra k K (AlgHom.range f)) :
     Splits k K k' := by
-  sorry
+  exact splitting_of_embedded_subfield_of_finrank k K k' f hf
+    (maximal_subfield_dimension_square k K k' f hf hmax)
 
 theorem splitting_field_degree_dvd (k K k' : Type*) [Field k]
     [DivisionRing K] [Algebra k K] [FiniteDimensional k K]

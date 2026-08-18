@@ -490,7 +490,7 @@ def IsGenusOneE8Completed (T : NumericalType) : Prop :=
       else if i.val = 2 ∨ i.val = 8 then 3
       else if i.val = 3 then 4
       else if i.val = 4 then 5
-      else 6)
+      else if i.val = 6 then 4 else 6)
     e8CompletedMatrix
     (constantVector 1)
     zeroGenusVector

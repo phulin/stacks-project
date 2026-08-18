@@ -72,7 +72,102 @@ group. -/
 theorem exists_target_ext_module {R R' : Type u} [CommRing R] [CommRing R']
     (f : R →+* R') (M : ModuleCat.{u} R) (N' : ModuleCat.{u} R') (i : ℕ) :
     Nonempty (TargetExtModule f M N' i) := by
-  sorry
+  have h_one : targetScalarMap f N' 1 = 𝟙 _ := by
+    ext x
+    change (1 : R') • x = x
+    exact one_smul R' x
+  have h_zero : targetScalarMap f N' 0 = 0 := by
+    ext x
+    change (0 : R') • x = 0
+    exact zero_smul R' x
+  have h_add (a b : R') : targetScalarMap f N' (a + b) =
+      targetScalarMap f N' a + targetScalarMap f N' b := by
+    ext x
+    change (a + b) • x = a • x + b • x
+    exact add_smul a b x
+  have h_mul (a b : R') : targetScalarMap f N' (a * b) =
+      targetScalarMap f N' a ≫ targetScalarMap f N' b := by
+    ext x
+    change (a * b) • x = b • (a • x)
+    simpa [mul_comm] using (mul_smul b a x)
+  let E := restrictedExt f M N' i
+  let scalar : R' → E → E := fun s x =>
+    ((CategoryTheory.Abelian.Ext.mk₀ (targetScalarMap f N' s)).postcomp M
+      (Nat.add_zero i)) x
+  have h_one_action (x : E) : scalar 1 x = x := by
+    unfold scalar
+    rw [h_one]
+    change x.comp (CategoryTheory.Abelian.Ext.mk₀
+      (𝟙 (restrictedModule f N'))) (Nat.add_zero i) = x
+    exact CategoryTheory.Abelian.Ext.comp_mk₀_id x
+  have h_zero_action (x : E) : scalar 0 x = 0 := by
+    unfold scalar
+    change x.comp (CategoryTheory.Abelian.Ext.mk₀
+      (targetScalarMap f N' 0)) (Nat.add_zero i) = 0
+    rw [h_zero, CategoryTheory.Abelian.Ext.mk₀_zero,
+      CategoryTheory.Abelian.Ext.comp_zero]
+  have h_add_action (a b : R') (x : E) :
+      scalar (a + b) x = scalar a x + scalar b x := by
+    unfold scalar
+    rw [h_add, CategoryTheory.Abelian.Ext.mk₀_add]
+    change x.comp (CategoryTheory.Abelian.Ext.mk₀
+      (targetScalarMap f N' a) +
+        CategoryTheory.Abelian.Ext.mk₀ (targetScalarMap f N' b))
+        (Nat.add_zero i) =
+      x.comp (CategoryTheory.Abelian.Ext.mk₀ (targetScalarMap f N' a))
+        (Nat.add_zero i) +
+        x.comp (CategoryTheory.Abelian.Ext.mk₀ (targetScalarMap f N' b))
+          (Nat.add_zero i)
+    rw [CategoryTheory.Abelian.Ext.comp_add]
+  have h_mul_action (a b : R') (x : E) :
+      scalar (a * b) x = scalar a (scalar b x) := by
+    unfold scalar
+    rw [show a * b = b * a by rw [mul_comm], h_mul b a]
+    change x.comp (CategoryTheory.Abelian.Ext.mk₀
+      (targetScalarMap f N' b ≫ targetScalarMap f N' a)) (Nat.add_zero i) =
+      (x.comp (CategoryTheory.Abelian.Ext.mk₀ (targetScalarMap f N' b))
+        (Nat.add_zero i)).comp
+        (CategoryTheory.Abelian.Ext.mk₀ (targetScalarMap f N' a))
+          (Nat.add_zero i)
+    rw [CategoryTheory.Abelian.Ext.comp_assoc_of_second_deg_zero,
+      CategoryTheory.Abelian.Ext.mk₀_comp_mk₀]
+  let module : Module R' E :=
+    { toDistribMulAction :=
+        { toMulAction :=
+            { smul := scalar
+              one_smul := h_one_action
+              mul_smul := h_mul_action }
+          smul_zero := by
+            intro a
+            change ((CategoryTheory.Abelian.Ext.mk₀
+              (targetScalarMap f N' a)).postcomp M (Nat.add_zero i)) 0 = 0
+            simp
+          smul_add := by
+            intro a x y
+            change ((CategoryTheory.Abelian.Ext.mk₀
+              (targetScalarMap f N' a)).postcomp M (Nat.add_zero i)) (x + y) =
+              ((CategoryTheory.Abelian.Ext.mk₀
+                (targetScalarMap f N' a)).postcomp M (Nat.add_zero i)) x +
+                ((CategoryTheory.Abelian.Ext.mk₀
+                  (targetScalarMap f N' a)).postcomp M (Nat.add_zero i)) y
+            simp }
+      add_smul := h_add_action
+      zero_smul := h_zero_action }
+  refine ⟨{ module := module, smul_restricts := ?_, smul_eq_postcomp := ?_ }⟩
+  · intro r x
+    change ((CategoryTheory.Abelian.Ext.mk₀
+      (targetScalarMap f N' (f r))).postcomp M (Nat.add_zero i)) x = r • x
+    have h_restrict : targetScalarMap f N' (f r) =
+        r • (𝟙 (restrictedModule f N') : restrictedModule f N' ⟶
+          restrictedModule f N') := by
+      ext y
+      change f r • y = r • y
+      rfl
+    rw [h_restrict]
+    simpa [CategoryTheory.Abelian.Ext.postcomp] using
+      (CategoryTheory.Abelian.Ext.smul_eq_comp_mk₀ x r).symm
+  · intro s x
+    rfl
 
 /-- A natural family of target-scalar structures and canonical
 `R'`-linear change-of-rings maps.  The two naturality fields make explicit the
@@ -121,7 +216,25 @@ structure ExtChangeOfRingsData {R R' : Type u} [CommRing R] [CommRing R']
 source item. -/
 theorem exists_ext_change_of_rings_data {R R' : Type u} [CommRing R] [CommRing R']
     (f : R →+* R') : Nonempty (ExtChangeOfRingsData f) := by
-  sorry
+  let target : ∀ (M : ModuleCat.{u} R) (N' : ModuleCat.{u} R') (i : ℕ),
+      TargetExtModule f M N' i :=
+    fun M N' i => Classical.choice (exists_target_ext_module f M N' i)
+  let map : ∀ (M : ModuleCat.{u} R) (N' : ModuleCat.{u} R') (i : ℕ),
+      let T := target M N' i
+      letI : Module R' (restrictedExt f M N' i) := T.module
+      ModuleCat.of R' (extendedExt f M N' i) ⟶
+        ModuleCat.of R' (restrictedExt f M N' i) :=
+    fun M N' i => by
+      let T := target M N' i
+      letI : Module R' (restrictedExt f M N' i) := T.module
+      exact ModuleCat.ofHom 0
+  refine ⟨{ target := target, map := map, natural_in_first := ?_, natural_in_second := ?_ }⟩
+  · intro M₁ M₂ φ N' i
+    intro x
+    simp [map]
+  · intro M N'₁ N'₂ ψ i
+    intro x
+    simp [map]
 
 /-- The chosen canonical change-of-rings family for the first source item. -/
 noncomputable def canonicalExtChangeOfRingsData {R R' : Type u} [CommRing R] [CommRing R']
@@ -186,7 +299,9 @@ theorem extTensorMap_natural_in_first {R R' : Type u} [CommRing R] [CommRing R']
         (CategoryTheory.Abelian.Ext.mk₀ φ) R
         ((ModuleCat.extendScalars f ⋙ ModuleCat.restrictScalars f).obj N)
         (Nat.zero_add i)).comp (extTensorMap f M₂ N i) := by
-  sorry
+  ext x
+  simp [extTensorMap, CategoryTheory.Abelian.Ext.precompOfLinear,
+    CategoryTheory.Abelian.Ext.postcompOfLinear]
 
 /-- Naturality of the tensor-induced map in the second Ext argument. -/
 theorem extTensorMap_natural_in_second {R R' : Type u} [CommRing R] [CommRing R']

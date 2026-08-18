@@ -175,8 +175,23 @@ noncomputable def cosimplicialProduct_hom_equiv
         simp [cosimplicialProductLift, cosimplicialProduct]
         rw [f.1.naturality φ, f.2.naturality φ] }
   left_inv := by
-    sorry
+    intro f
+    ext X
+    simp [cosimplicialProductLift, cosimplicialProductFst,
+      cosimplicialProductSnd]
+    apply prod.hom_ext
+    · exact prod.lift_fst _ _
+    · exact prod.lift_snd _ _
   right_inv := by
-    sorry
+    intro f
+    apply Prod.ext
+    · apply NatTrans.ext
+      funext X
+      simp [cosimplicialProductLift, cosimplicialProductFst]
+      exact prod.lift_fst _ _
+    · apply NatTrans.ext
+      funext X
+      simp [cosimplicialProductLift, cosimplicialProductSnd]
+      exact prod.lift_snd _ _
 
 end Formalization.Books.Simplicial.Unit09

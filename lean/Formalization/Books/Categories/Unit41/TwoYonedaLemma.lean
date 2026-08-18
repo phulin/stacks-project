@@ -174,7 +174,47 @@ private theorem twoYonedaPullbackFunctorMap_isHomLift
     (p : S ⥤ C) [p.IsFibered] (P : PullbackChoice p) (U : C)
     (x : Functor.Fiber p U) {f g : Over U} (k : f ⟶ g) :
     p.IsHomLift k.left (twoYonedaPullbackFunctorMap p P U x k) := by
-  sorry
+  unfold twoYonedaPullbackFunctorMap twoYonedaPullbackFunctorObj
+  have h₁ : p.IsHomLift (𝟙 f.left)
+      (Functor.Fiber.fiberInclusion.map
+        (eqToHom (congrArg (fun h => P.pullback h x) (Over.w k).symm))) := by
+    exact (eqToHom (congrArg (fun h => P.pullback h x) (Over.w k).symm)).2
+  have h₂ : p.IsHomLift (𝟙 f.left)
+      (Functor.Fiber.fiberInclusion.map
+        ((twoYonedaPullbackCompositionIso p P k.left g.hom).hom.app x)) := by
+    exact ((twoYonedaPullbackCompositionIso p P k.left g.hom).hom.app x).2
+  have hp : p.IsHomLift k.left (P.pullbackMap k.left (P.pullback g.hom x)) :=
+    (P.pullbackMap_isStronglyCartesian k.left (P.pullback g.hom x)).toIsHomLift
+  have h₂p : p.IsHomLift k.left
+      (Functor.Fiber.fiberInclusion.map
+        ((twoYonedaPullbackCompositionIso p P k.left g.hom).hom.app x) ≫
+        P.pullbackMap k.left (P.pullback g.hom x)) := by
+    simpa [Functor.Fiber.fiberInclusion] using
+      (@IsHomLift.comp _ _ _ _ p
+        f.left f.left g.left
+        (Functor.Fiber.fiberInclusion.obj
+          ((P.pullbackFunctor (k.left ≫ g.hom)).obj x))
+        (Functor.Fiber.fiberInclusion.obj
+          ((P.pullbackFunctor g.hom ⋙ P.pullbackFunctor k.left).obj x))
+        (Functor.Fiber.fiberInclusion.obj (P.pullback g.hom x))
+        (𝟙 f.left) k.left
+        (Functor.Fiber.fiberInclusion.map
+          ((twoYonedaPullbackCompositionIso p P k.left g.hom).hom.app x))
+        (P.pullbackMap k.left (P.pullback g.hom x)) h₂ hp)
+  have hfinal : p.IsHomLift (𝟙 f.left ≫ k.left)
+      (Functor.Fiber.fiberInclusion.map
+        (eqToHom (congrArg (fun h => P.pullback h x) (Over.w k).symm)) ≫
+        (Functor.Fiber.fiberInclusion.map
+          ((twoYonedaPullbackCompositionIso p P k.left g.hom).hom.app x) ≫
+          P.pullbackMap k.left (P.pullback g.hom x))) := by
+    exact @IsHomLift.comp _ _ _ _ p _ _ _ _ _ _
+      (𝟙 f.left) k.left
+      (Functor.Fiber.fiberInclusion.map
+        (eqToHom (congrArg (fun h => P.pullback h x) (Over.w k).symm)))
+      (Functor.Fiber.fiberInclusion.map
+        ((twoYonedaPullbackCompositionIso p P k.left g.hom).hom.app x) ≫
+        P.pullbackMap k.left (P.pullback g.hom x)) h₁ h₂p
+  convert hfinal using 1 <;> simp [Category.id_comp, Functor.Fiber.fiberInclusion]
 
 private theorem twoYonedaPullbackFunctorMap_fac
     {C : Type uC} [Category.{vC} C]
@@ -183,7 +223,43 @@ private theorem twoYonedaPullbackFunctorMap_fac
     (x : Functor.Fiber p U) {f g : Over U} (k : f ⟶ g) :
     twoYonedaPullbackFunctorMap p P U x k ≫ P.pullbackMap g.hom x =
       P.pullbackMap f.hom x := by
-  sorry
+  unfold twoYonedaPullbackFunctorMap
+  have pullbackMap_eq_of_eq {R S : C} {a b : R ⟶ S} (h : a = b)
+      (z : Functor.Fiber p S) :
+      Functor.Fiber.fiberInclusion.map
+          (eqToHom (congrArg (fun q => P.pullback q z) h)) ≫
+        P.pullbackMap b z = P.pullbackMap a z := by
+    subst b
+    simp
+  let e := congrArg (fun h => P.pullback h x) (Over.w k).symm
+  have hcomp :
+      Functor.Fiber.fiberInclusion.map
+          ((twoYonedaPullbackCompositionIso p P k.left g.hom).hom.app x) ≫
+        P.pullbackMap k.left (P.pullback g.hom x) ≫
+        P.pullbackMap g.hom x =
+      P.pullbackMap (k.left ≫ g.hom) x :=
+    twoYonedaPullbackCompositionIso_hom_app p P k.left g.hom x
+  calc
+    (Functor.Fiber.fiberInclusion.map (eqToHom e) ≫
+        Functor.Fiber.fiberInclusion.map
+          ((twoYonedaPullbackCompositionIso p P k.left g.hom).hom.app x) ≫
+        P.pullbackMap k.left (P.pullback g.hom x)) ≫
+        P.pullbackMap g.hom x =
+      Functor.Fiber.fiberInclusion.map (eqToHom e) ≫
+        (Functor.Fiber.fiberInclusion.map
+          ((twoYonedaPullbackCompositionIso p P k.left g.hom).hom.app x) ≫
+          P.pullbackMap k.left (P.pullback g.hom x) ≫
+          P.pullbackMap g.hom x) := by
+            exact (Category.assoc _ _ _).trans
+              (congrArg
+                (fun m => Functor.Fiber.fiberInclusion.map (eqToHom e) ≫ m)
+                (Category.assoc _ _ _))
+    _ = Functor.Fiber.fiberInclusion.map (eqToHom e) ≫
+        P.pullbackMap (k.left ≫ g.hom) x := by
+      exact congrArg
+        (fun m => Functor.Fiber.fiberInclusion.map (eqToHom e) ≫ m) hcomp
+    _ = P.pullbackMap f.hom x := by
+      exact pullbackMap_eq_of_eq (Over.w k).symm x
 
 theorem twoYonedaPullbackFunctorMap_map_id
     {C : Type uC} [Category.{vC} C]
@@ -192,7 +268,26 @@ theorem twoYonedaPullbackFunctorMap_map_id
     (x : Functor.Fiber p U) (f : Over U) :
     twoYonedaPullbackFunctorMap p P U x (𝟙 f) =
       𝟙 (twoYonedaPullbackFunctorObj p P U x f) := by
-  sorry
+  unfold twoYonedaPullbackFunctorObj
+  have hmap : p.IsHomLift (𝟙 f.left)
+      (twoYonedaPullbackFunctorMap p P U x (𝟙 f)) := by
+    simpa using twoYonedaPullbackFunctorMap_isHomLift p P U x (𝟙 f)
+  have hid : p.IsHomLift (𝟙 f.left)
+      (𝟙 (Functor.Fiber.fiberInclusion.obj (P.pullback f.hom x))) :=
+    IsHomLift.id (P.pullback f.hom x).2
+  exact @Functor.IsStronglyCartesian.ext _ _ _ _ p
+    f.left U
+    (Functor.Fiber.fiberInclusion.obj (P.pullback f.hom x)) x.1
+    f.hom (P.pullbackMap f.hom x)
+    (P.pullbackMap_isStronglyCartesian f.hom x)
+    f.left (Functor.Fiber.fiberInclusion.obj (P.pullback f.hom x))
+    (𝟙 f.left)
+    (twoYonedaPullbackFunctorMap p P U x (𝟙 f))
+    (𝟙 (Functor.Fiber.fiberInclusion.obj (P.pullback f.hom x)))
+    hmap hid
+    (by
+      simpa only [twoYonedaPullbackFunctorObj, Category.id_comp] using
+        twoYonedaPullbackFunctorMap_fac p P U x (𝟙 f))
 
 theorem twoYonedaPullbackFunctorMap_map_comp
     {C : Type uC} [Category.{vC} C]

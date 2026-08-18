@@ -554,7 +554,6 @@ theorem hasColimit_biprod_iff
       B.bicone.fst ≫ B.bicone.inl
     have hα : α ≫ α = α := by
       ext i
-      dsimp [α]
       change (B.bicone.fst.app i ≫ B.bicone.inl.app i) ≫
           (B.bicone.fst.app i ≫ B.bicone.inl.app i) = _
       calc
@@ -847,13 +846,13 @@ theorem hasColimit_biprod_iff
                           have hFi :
                               B.bicone.fst.app i ≫ F.map f ≫ colimit.ι F j ≫ b.bicone.inl =
                                 B.bicone.fst.app i ≫ colimit.ι F i ≫ b.bicone.inl := by
-                            simpa only [Category.assoc] using
+                            simpa only [Functor.const_map_app, Category.assoc] using
                               congrArg (fun z => B.bicone.fst.app i ≫ z ≫ b.bicone.inl)
                                 (colimit.w F f)
                           have hGi :
                               B.bicone.snd.app i ≫ G.map f ≫ colimit.ι G j ≫ b.bicone.inr =
                                 B.bicone.snd.app i ≫ colimit.ι G i ≫ b.bicone.inr := by
-                            simpa only [Category.assoc] using
+                            simpa only [Functor.const_map_app, Category.assoc] using
                               congrArg (fun z => B.bicone.snd.app i ≫ z ≫ b.bicone.inr)
                                 (colimit.w G f)
                           simpa only [Category.assoc] using
@@ -1051,8 +1050,521 @@ theorem essentiallyConstantInd_biprod_iff
     [IsIdempotentComplete A]
     (F G : I ⥤ A) :
     IsEssentiallyConstantIndDiagram (pointwiseDirectSum F G) ↔
-      IsEssentiallyConstantIndDiagram F ∧
+    IsEssentiallyConstantIndDiagram F ∧
         IsEssentiallyConstantIndDiagram G := by
-  sorry
+  classical
+  let _ : HasBinaryBiproducts A :=
+    hasBinaryBiproducts_of_finite_biproducts (C := A)
+  let B : BinaryBiproductData F G := pointwiseBinaryBiproductData F G
+  change IsEssentiallyConstantIndDiagram B.bicone.pt ↔
+    IsEssentiallyConstantIndDiagram F ∧ IsEssentiallyConstantIndDiagram G
+  constructor
+  · intro h
+    obtain ⟨c, hc, hconst⟩ := essentiallyConstantInd_hasColimit h
+    let hc : IsColimit c := Classical.choice hc
+    let α : B.bicone.pt ⟶ B.bicone.pt := B.bicone.fst ≫ B.bicone.inl
+    have hinl_fst (i : I) :
+        B.bicone.inl.app i ≫ B.bicone.fst.app i = 𝟙 _ := by
+      exact congrArg (fun z => z.app i) B.bicone.inl_fst
+    have hinr_snd (i : I) :
+        B.bicone.inr.app i ≫ B.bicone.snd.app i = 𝟙 _ := by
+      exact congrArg (fun z => z.app i) B.bicone.inr_snd
+    have hα : α ≫ α = α := by
+      ext i
+      change (B.bicone.fst.app i ≫ B.bicone.inl.app i) ≫
+          (B.bicone.fst.app i ≫ B.bicone.inl.app i) = _
+      calc
+        _ = B.bicone.fst.app i ≫
+            (B.bicone.inl.app i ≫ B.bicone.fst.app i) ≫
+              B.bicone.inl.app i := by simp [Category.assoc]
+        _ = B.bicone.fst.app i ≫ B.bicone.inl.app i := by
+          rw [hinl_fst i]
+          simp
+    let cα : Cocone B.bicone.pt := { pt := c.pt, ι := α ≫ c.ι }
+    let q : c.pt ⟶ c.pt := hc.desc cα
+    have hqc (i : I) : c.ι.app i ≫ q = α.app i ≫ c.ι.app i := by
+      exact hc.fac cα i
+    have hq : q ≫ q = q := by
+      apply hc.hom_ext
+      intro i
+      have hαi : α.app i ≫ α.app i = α.app i := by
+        simpa only [NatTrans.comp_app] using congrArg (fun z => z.app i) hα
+      calc
+        c.ι.app i ≫ q ≫ q = (c.ι.app i ≫ q) ≫ q := by
+          simp only [Category.assoc]
+        _ = (α.app i ≫ c.ι.app i) ≫ q := by rw [hqc i]
+        _ = α.app i ≫ (c.ι.app i ≫ q) := by simp only [Category.assoc]
+        _ = α.app i ≫ (α.app i ≫ c.ι.app i) := by rw [hqc i]
+        _ = α.app i ≫ c.ι.app i := by
+          rw [← Category.assoc, hαi]
+        _ = c.ι.app i ≫ q := (hqc i).symm
+    let p := Formalization.Books.Homology.Unit03.idempotentComplement q
+    have hp : p ≫ p = p :=
+      (Formalization.Books.Homology.Unit03.idempotent_complement_relations q hq).2.2
+    obtain ⟨X, Z, b, e, he⟩ :=
+      (Formalization.Books.Homology.Unit04.karoubian_iff_idempotent_direct_sum_decomposition
+        (C := A)).mp ‹IsIdempotentComplete A› _ _ hp
+    have hqp : q = 𝟙 _ - p := by
+      simp [p, Formalization.Books.Homology.Unit03.idempotentComplement]
+    have hconj : e.inv ≫ q ≫ e.hom = b.bicone.fst ≫ b.bicone.inl := by
+      apply b.isBilimit.isLimit.hom_ext
+      intro j
+      rcases j with ⟨⟨⟩⟩
+      · change (e.inv ≫ q ≫ e.hom) ≫ b.bicone.fst =
+          (b.bicone.fst ≫ b.bicone.inl) ≫ b.bicone.fst
+        simp [hqp, Category.assoc, he]
+      · change (e.inv ≫ q ≫ e.hom) ≫ b.bicone.snd =
+          (b.bicone.fst ≫ b.bicone.inl) ≫ b.bicone.snd
+        simp [hqp, Category.assoc, he]
+    have hpconj : e.inv ≫ p ≫ e.hom = b.bicone.snd ≫ b.bicone.inr := by
+      apply b.isBilimit.isLimit.hom_ext
+      intro j
+      rcases j with ⟨⟨⟩⟩
+      · change (e.inv ≫ p ≫ e.hom) ≫ b.bicone.fst =
+          (b.bicone.snd ≫ b.bicone.inr) ≫ b.bicone.fst
+        simp [Category.assoc, he]
+      · change (e.inv ≫ p ≫ e.hom) ≫ b.bicone.snd =
+          (b.bicone.snd ≫ b.bicone.inr) ≫ b.bicone.snd
+        simp [Category.assoc, he]
+    have hXproj : e.hom ≫ b.bicone.fst ≫ b.bicone.inl ≫ e.inv = q := by
+      calc
+        e.hom ≫ b.bicone.fst ≫ b.bicone.inl ≫ e.inv =
+            e.hom ≫ (b.bicone.fst ≫ b.bicone.inl) ≫ e.inv := by
+              simp only [Category.assoc]
+        _ = e.hom ≫ (e.inv ≫ q ≫ e.hom) ≫ e.inv := by rw [hconj]
+        _ = q := by simp [Category.assoc]
+    have hZproj : e.hom ≫ b.bicone.snd ≫ b.bicone.inr ≫ e.inv = p := by
+      calc
+        e.hom ≫ b.bicone.snd ≫ b.bicone.inr ≫ e.inv =
+            e.hom ≫ (b.bicone.snd ≫ b.bicone.inr) ≫ e.inv := by
+              simp only [Category.assoc]
+        _ = e.hom ≫ (e.inv ≫ p ≫ e.hom) ≫ e.inv := by rw [hpconj]
+        _ = p := by simp [Category.assoc]
+    let dF : Cocone F :=
+      { pt := X
+        ι := B.bicone.inl ≫ c.ι ≫ (Functor.const I).map
+          (e.hom ≫ b.bicone.fst) }
+    let dG : Cocone G :=
+      { pt := Z
+        ι := B.bicone.inr ≫ c.ι ≫ (Functor.const I).map
+          (e.hom ≫ b.bicone.snd) }
+    rcases hconst with ⟨i, s, hs, hfactor⟩
+    let sF : X ⟶ F.obj i := b.bicone.inl ≫ e.inv ≫ s ≫ B.bicone.fst.app i
+    let sG : Z ⟶ G.obj i := b.bicone.inr ≫ e.inv ≫ s ≫ B.bicone.snd.app i
+    have hsF : sF ≫ dF.ι.app i = 𝟙 X := by
+      dsimp [sF, dF]
+      simp only [Category.assoc]
+      calc
+        b.bicone.inl ≫ e.inv ≫ s ≫ B.bicone.fst.app i ≫
+            B.bicone.inl.app i ≫ c.ι.app i ≫ e.hom ≫ b.bicone.fst =
+            b.bicone.inl ≫ e.inv ≫ s ≫ α.app i ≫ c.ι.app i ≫
+              e.hom ≫ b.bicone.fst := by simp [α, Category.assoc]
+        _ = b.bicone.inl ≫ e.inv ≫ s ≫ c.ι.app i ≫ q ≫
+              e.hom ≫ b.bicone.fst := by
+                simpa only [Category.assoc] using
+                  congrArg (fun z => b.bicone.inl ≫ e.inv ≫ s ≫ z ≫
+                    e.hom ≫ b.bicone.fst) (hqc i).symm
+        _ = b.bicone.inl ≫ e.inv ≫ q ≫ e.hom ≫ b.bicone.fst := by
+              have h := congrArg (fun z => b.bicone.inl ≫ e.inv ≫ z ≫ q ≫
+                e.hom ≫ b.bicone.fst) hs
+              simpa only [Category.assoc, Category.id_comp] using h
+        _ = 𝟙 X := by
+          calc
+            b.bicone.inl ≫ e.inv ≫ q ≫ e.hom ≫ b.bicone.fst =
+                b.bicone.inl ≫ (e.inv ≫ q ≫ e.hom) ≫ b.bicone.fst := by
+                  simp only [Category.assoc]
+            _ = 𝟙 X := by rw [hconj]; simp [Category.assoc]
+    have hsG : sG ≫ dG.ι.app i = 𝟙 Z := by
+      have hpc (i : I) : c.ι.app i ≫ p =
+          B.bicone.snd.app i ≫ B.bicone.inr.app i ≫ c.ι.app i := by
+        have hpc' : 𝟙 _ - B.bicone.fst.app i ≫ B.bicone.inl.app i =
+            B.bicone.snd.app i ≫ B.bicone.inr.app i := by
+          have ht' : B.bicone.fst.app i ≫ B.bicone.inl.app i +
+              B.bicone.snd.app i ≫ B.bicone.inr.app i = 𝟙 _ := by
+            simpa using congrArg (fun z => z.app i)
+              (CategoryTheory.Limits.IsBilimit.binary_total B.isBilimit)
+          rw [← ht']
+          abel
+        have hpq : p = 𝟙 _ - q := by
+          simp [p, Formalization.Books.Homology.Unit03.idempotentComplement]
+        rw [hpq, Preadditive.comp_sub]
+        simp only [Functor.const_obj_obj, Category.comp_id]
+        rw [hqc i]
+        simp only [α, NatTrans.comp_app]
+        calc
+          _ = (𝟙 _ - B.bicone.fst.app i ≫ B.bicone.inl.app i) ≫
+              c.ι.app i := by simp [Preadditive.sub_comp, Category.assoc]
+          _ = _ := by rw [hpc']; simp only [Category.assoc]
+      dsimp [sG, dG]
+      simp only [Category.assoc]
+      calc
+        b.bicone.inr ≫ e.inv ≫ s ≫ B.bicone.snd.app i ≫
+            B.bicone.inr.app i ≫ c.ι.app i ≫ e.hom ≫ b.bicone.snd =
+            b.bicone.inr ≫ e.inv ≫ s ≫ c.ι.app i ≫ p ≫
+              e.hom ≫ b.bicone.snd := by
+                simpa only [Category.assoc] using
+                  congrArg (fun z => b.bicone.inr ≫ e.inv ≫ s ≫ z ≫
+                    e.hom ≫ b.bicone.snd) (hpc i).symm
+        _ = b.bicone.inr ≫ e.inv ≫ p ≫ e.hom ≫ b.bicone.snd := by
+              have h := congrArg (fun z => b.bicone.inr ≫ e.inv ≫ z ≫ p ≫
+                e.hom ≫ b.bicone.snd) hs
+              simpa only [Category.assoc, Category.id_comp] using h
+        _ = 𝟙 Z := by
+          calc
+            b.bicone.inr ≫ e.inv ≫ p ≫ e.hom ≫ b.bicone.snd =
+                b.bicone.inr ≫ (e.inv ≫ p ≫ e.hom) ≫ b.bicone.snd := by
+                  simp only [Category.assoc]
+            _ = 𝟙 Z := by rw [hpconj]; simp [Category.assoc]
+    refine ⟨⟨dF, ⟨i, sF, hsF, ?_⟩⟩, ⟨dG, ⟨i, sG, hsG, ?_⟩⟩⟩
+    · intro j
+      rcases hfactor j with ⟨k, f, g, hfg⟩
+      refine ⟨k, f, g, ?_⟩
+      calc
+        F.map g = F.map g ≫ (𝟙 _) := by simp
+        _ = F.map g ≫ (B.bicone.inl.app k ≫ B.bicone.fst.app k) := by
+              rw [hinl_fst k]
+        _ = (F.map g ≫ B.bicone.inl.app k) ≫ B.bicone.fst.app k := by
+              simp only [Category.assoc]
+        _ = B.bicone.inl.app j ≫ B.bicone.pt.map g ≫
+            B.bicone.fst.app k := by
+              rw [B.bicone.inl.naturality g]
+              simp only [Category.assoc]
+        _ = B.bicone.inl.app j ≫ (c.ι.app j ≫ s ≫ B.bicone.pt.map f) ≫
+            B.bicone.fst.app k := by rw [hfg]
+        _ = B.bicone.inl.app j ≫ c.ι.app j ≫ s ≫ B.bicone.fst.app i ≫
+            F.map f := by
+              simp only [Category.assoc]
+              rw [B.bicone.fst.naturality f]
+        _ = dF.ι.app j ≫ sF ≫ F.map f := by
+          dsimp [dF, sF]
+          simp only [Category.assoc]
+          have hproj :
+              B.bicone.inl.app j ≫ c.ι.app j ≫ e.hom ≫ b.bicone.fst ≫
+                  b.bicone.inl ≫ e.inv ≫ s ≫ B.bicone.fst.app i ≫ F.map f =
+                B.bicone.inl.app j ≫ c.ι.app j ≫ q ≫ s ≫
+                  B.bicone.fst.app i ≫ F.map f := by
+            simpa only [Category.assoc] using congrArg
+              (fun z => B.bicone.inl.app j ≫ c.ι.app j ≫ z ≫ s ≫
+                B.bicone.fst.app i ≫ F.map f) hXproj
+          rw [hproj]
+          have hqcs :
+              B.bicone.inl.app j ≫ c.ι.app j ≫ q ≫ s ≫ B.bicone.fst.app i ≫
+                  F.map f =
+                B.bicone.inl.app j ≫ α.app j ≫ c.ι.app j ≫ s ≫
+                  B.bicone.fst.app i ≫ F.map f := by
+            simpa only [Category.assoc] using congrArg
+              (fun z => B.bicone.inl.app j ≫ z ≫ s ≫ B.bicone.fst.app i ≫
+                F.map f) (hqc j)
+          rw [hqcs]
+          dsimp [α]
+          simp only [Category.assoc]
+          have h := congrArg (fun z => z ≫ B.bicone.inl.app j ≫ c.ι.app j ≫ s ≫
+            B.bicone.fst.app i ≫ F.map f) (hinl_fst j)
+          simpa only [Category.assoc, Category.id_comp] using h.symm
+    · intro j
+      rcases hfactor j with ⟨k, f, g, hfg⟩
+      refine ⟨k, f, g, ?_⟩
+      calc
+        G.map g = G.map g ≫ (𝟙 _) := by simp
+        _ = G.map g ≫ (B.bicone.inr.app k ≫ B.bicone.snd.app k) := by
+              rw [hinr_snd k]
+        _ = (G.map g ≫ B.bicone.inr.app k) ≫ B.bicone.snd.app k := by
+              simp only [Category.assoc]
+        _ = B.bicone.inr.app j ≫ B.bicone.pt.map g ≫
+            B.bicone.snd.app k := by
+              rw [B.bicone.inr.naturality g]
+              simp only [Category.assoc]
+        _ = B.bicone.inr.app j ≫ (c.ι.app j ≫ s ≫ B.bicone.pt.map f) ≫
+            B.bicone.snd.app k := by rw [hfg]
+        _ = B.bicone.inr.app j ≫ c.ι.app j ≫ s ≫ B.bicone.snd.app i ≫
+            G.map f := by
+              simp only [Category.assoc]
+              rw [B.bicone.snd.naturality f]
+        _ = dG.ι.app j ≫ sG ≫ G.map f := by
+          dsimp [dG, sG]
+          simp only [Category.assoc]
+          have hproj :
+              B.bicone.inr.app j ≫ c.ι.app j ≫ e.hom ≫ b.bicone.snd ≫
+                  b.bicone.inr ≫ e.inv ≫ s ≫ B.bicone.snd.app i ≫ G.map f =
+                B.bicone.inr.app j ≫ c.ι.app j ≫ p ≫ s ≫ B.bicone.snd.app i ≫
+                  G.map f := by
+            simpa only [Category.assoc] using congrArg
+              (fun z => B.bicone.inr.app j ≫ c.ι.app j ≫ z ≫ s ≫
+                B.bicone.snd.app i ≫ G.map f) hZproj
+          rw [hproj]
+          have hpcj : c.ι.app j ≫ p =
+              B.bicone.snd.app j ≫ B.bicone.inr.app j ≫ c.ι.app j := by
+            have hpcj' : 𝟙 _ - B.bicone.fst.app j ≫ B.bicone.inl.app j =
+                B.bicone.snd.app j ≫ B.bicone.inr.app j := by
+              have ht : B.bicone.fst.app j ≫ B.bicone.inl.app j +
+                  B.bicone.snd.app j ≫ B.bicone.inr.app j = 𝟙 _ := by
+                simpa using congrArg (fun z => z.app j)
+                  (CategoryTheory.Limits.IsBilimit.binary_total B.isBilimit)
+              rw [← ht]
+              abel
+            have hpq : p = 𝟙 _ - q := by
+              simp [p, Formalization.Books.Homology.Unit03.idempotentComplement]
+            rw [hpq, Preadditive.comp_sub]
+            simp only [Functor.const_obj_obj, Category.comp_id]
+            rw [hqc j]
+            simp only [α, NatTrans.comp_app]
+            calc
+              _ = (𝟙 _ - B.bicone.fst.app j ≫ B.bicone.inl.app j) ≫
+                  c.ι.app j := by simp [Preadditive.sub_comp, Category.assoc]
+              _ = _ := by rw [hpcj']; simp only [Category.assoc]
+          have hpcs :
+              B.bicone.inr.app j ≫ c.ι.app j ≫ p ≫ s ≫ B.bicone.snd.app i ≫
+                  G.map f =
+                B.bicone.inr.app j ≫ B.bicone.snd.app j ≫
+                  B.bicone.inr.app j ≫ c.ι.app j ≫ s ≫ B.bicone.snd.app i ≫
+                    G.map f := by
+            simpa only [Category.assoc] using congrArg
+              (fun z => B.bicone.inr.app j ≫ z ≫ s ≫ B.bicone.snd.app i ≫
+                G.map f) (hpcj)
+          rw [hpcs]
+          have h := congrArg (fun z => z ≫ B.bicone.inr.app j ≫ c.ι.app j ≫ s ≫
+            B.bicone.snd.app i ≫ G.map f) (hinr_snd j)
+          simpa only [Category.assoc, Category.id_comp] using h.symm
+  · rintro ⟨hF, hG⟩
+    rcases hF with ⟨cF, iF, sF, hsF, hfactorF⟩
+    rcases hG with ⟨cG, iG, sG, hsG, hfactorG⟩
+    let b : BinaryBiproductData cF.pt cG.pt :=
+      getBinaryBiproductData cF.pt cG.pt
+    let c : Cocone B.bicone.pt :=
+      { pt := b.bicone.pt
+        ι :=
+          { app := fun i =>
+              (B.bicone.fst.app i ≫ cF.ι.app i ≫ b.bicone.inl) +
+                (B.bicone.snd.app i ≫ cG.ι.app i ≫ b.bicone.inr)
+            naturality := by
+              intro i j f
+              simp only [Preadditive.comp_add]
+              calc
+                B.bicone.pt.map f ≫ B.bicone.fst.app j ≫ cF.ι.app j ≫
+                    b.bicone.inl +
+                    B.bicone.pt.map f ≫ B.bicone.snd.app j ≫ cG.ι.app j ≫
+                    b.bicone.inr =
+                    (B.bicone.pt.map f ≫ B.bicone.fst.app j) ≫
+                        cF.ι.app j ≫ b.bicone.inl +
+                      (B.bicone.pt.map f ≫ B.bicone.snd.app j) ≫
+                        cG.ι.app j ≫ b.bicone.inr := by
+                          simp only [Category.assoc]
+                _ = (B.bicone.fst.app i ≫ F.map f) ≫
+                        cF.ι.app j ≫ b.bicone.inl +
+                      (B.bicone.snd.app i ≫ G.map f) ≫
+                        cG.ι.app j ≫ b.bicone.inr := by
+                          rw [B.bicone.fst.naturality f, B.bicone.snd.naturality f]
+                _ = B.bicone.fst.app i ≫ cF.ι.app i ≫ b.bicone.inl +
+                      B.bicone.snd.app i ≫ cG.ι.app i ≫ b.bicone.inr := by
+                          have hFi :
+                              B.bicone.fst.app i ≫ F.map f ≫ cF.ι.app j ≫
+                                  b.bicone.inl =
+                                B.bicone.fst.app i ≫ cF.ι.app i ≫
+                                  b.bicone.inl := by
+                            convert congrArg (fun z => B.bicone.fst.app i ≫ z ≫ b.bicone.inl)
+                              (cF.ι.naturality f) using 1
+                            all_goals simp
+                          have hGi :
+                              B.bicone.snd.app i ≫ G.map f ≫ cG.ι.app j ≫
+                                  b.bicone.inr =
+                                B.bicone.snd.app i ≫ cG.ι.app i ≫
+                                  b.bicone.inr := by
+                            convert congrArg (fun z => B.bicone.snd.app i ≫ z ≫ b.bicone.inr)
+                              (cG.ι.naturality f) using 1
+                            all_goals simp
+                          simpa only [Category.assoc] using congrArg₂ (fun x y => x + y) hFi hGi
+                _ = (B.bicone.fst.app i ≫ cF.ι.app i ≫ b.bicone.inl +
+                    B.bicone.snd.app i ≫ cG.ι.app i ≫ b.bicone.inr) ≫
+                    ((Functor.const I).obj b.bicone.pt).map f := by simp } }
+    obtain ⟨i, uF, uG, _⟩ := IsFilteredOrEmpty.cocone_objs iF iG
+    let sF' := sF ≫ F.map uF
+    let sG' := sG ≫ G.map uG
+    have hsF' : sF' ≫ cF.ι.app i = 𝟙 cF.pt := by
+      calc
+        sF' ≫ cF.ι.app i = sF ≫ F.map uF ≫ cF.ι.app i := by
+          simp [sF', Category.assoc]
+        _ = sF ≫ cF.ι.app iF := by
+          convert congrArg (fun z => sF ≫ z) (cF.ι.naturality uF) using 1
+          all_goals simp
+        _ = 𝟙 cF.pt := hsF
+    have hsG' : sG' ≫ cG.ι.app i = 𝟙 cG.pt := by
+      calc
+        sG' ≫ cG.ι.app i = sG ≫ G.map uG ≫ cG.ι.app i := by
+          simp [sG', Category.assoc]
+        _ = sG ≫ cG.ι.app iG := by
+          convert congrArg (fun z => sG ≫ z) (cG.ι.naturality uG) using 1
+          all_goals simp
+        _ = 𝟙 cG.pt := hsG
+    let s : c.pt ⟶ B.bicone.pt.obj i :=
+      (b.bicone.fst ≫ sF' ≫ B.bicone.inl.app i) +
+        (b.bicone.snd ≫ sG' ≫ B.bicone.inr.app i)
+    have hs : s ≫ c.ι.app i = 𝟙 c.pt := by
+      have hBif : B.bicone.inl.app i ≫ B.bicone.fst.app i = 𝟙 _ := by
+        exact congrArg (fun z => z.app i) B.bicone.inl_fst
+      have hBis : B.bicone.inl.app i ≫ B.bicone.snd.app i = 0 := by
+        exact congrArg (fun z => z.app i) B.bicone.inl_snd
+      have hBsf : B.bicone.inr.app i ≫ B.bicone.fst.app i = 0 := by
+        exact congrArg (fun z => z.app i) B.bicone.inr_fst
+      have hBss : B.bicone.inr.app i ≫ B.bicone.snd.app i = 𝟙 _ := by
+        exact congrArg (fun z => z.app i) B.bicone.inr_snd
+      have hFterm :
+          b.bicone.fst ≫ sF' ≫ B.bicone.inl.app i ≫ B.bicone.fst.app i ≫
+              cF.ι.app i ≫ b.bicone.inl =
+            b.bicone.fst ≫ sF' ≫ cF.ι.app i ≫ b.bicone.inl := by
+        simpa only [Category.assoc, Category.id_comp] using
+          congrArg (fun z => b.bicone.fst ≫ sF' ≫ z ≫ cF.ι.app i ≫ b.bicone.inl)
+            hBif
+      have hFcross :
+          b.bicone.snd ≫ sG' ≫ B.bicone.inr.app i ≫ B.bicone.fst.app i ≫
+              cF.ι.app i ≫ b.bicone.inl = 0 := by
+        simpa only [Category.assoc, zero_comp, comp_zero] using
+          congrArg (fun z => b.bicone.snd ≫ sG' ≫ z ≫ cF.ι.app i ≫ b.bicone.inl)
+            hBsf
+      have hGcross :
+          b.bicone.fst ≫ sF' ≫ B.bicone.inl.app i ≫ B.bicone.snd.app i ≫
+              cG.ι.app i ≫ b.bicone.inr = 0 := by
+        simpa only [Category.assoc, zero_comp, comp_zero] using
+          congrArg (fun z => b.bicone.fst ≫ sF' ≫ z ≫ cG.ι.app i ≫ b.bicone.inr)
+            hBis
+      have hGterm :
+          b.bicone.snd ≫ sG' ≫ B.bicone.inr.app i ≫ B.bicone.snd.app i ≫
+              cG.ι.app i ≫ b.bicone.inr =
+            b.bicone.snd ≫ sG' ≫ cG.ι.app i ≫ b.bicone.inr := by
+        simpa only [Category.assoc, Category.id_comp] using
+          congrArg (fun z => b.bicone.snd ≫ sG' ≫ z ≫ cG.ι.app i ≫ b.bicone.inr)
+            hBss
+      have hFid :
+          b.bicone.fst ≫ sF' ≫ cF.ι.app i ≫ b.bicone.inl =
+            b.bicone.fst ≫ b.bicone.inl := by
+        simpa only [Category.assoc, Category.id_comp] using
+          congrArg (fun z => b.bicone.fst ≫ z ≫ b.bicone.inl) hsF'
+      have hGid :
+          b.bicone.snd ≫ sG' ≫ cG.ι.app i ≫ b.bicone.inr =
+            b.bicone.snd ≫ b.bicone.inr := by
+        simpa only [Category.assoc, Category.id_comp] using
+          congrArg (fun z => b.bicone.snd ≫ z ≫ b.bicone.inr) hsG'
+      dsimp [s, c]
+      simp only [Preadditive.add_comp, Preadditive.comp_add, Category.assoc]
+      rw [hFterm, hFcross, hGcross, hGterm]
+      rw [hFid, hGid]
+      simp only [zero_add, add_zero]
+      exact CategoryTheory.Limits.IsBilimit.binary_total b.isBilimit
+    refine ⟨c, ⟨i, s, hs, ?_⟩⟩
+    intro j
+    rcases hfactorF j with ⟨kF, fF, gF, hFj⟩
+    rcases hfactorG j with ⟨kG, fG, gG, hGj⟩
+    let O : Finset I := {i, j, iF, iG, kF, kG}
+    let H : Finset (Σ' (X Y : I) (_ : X ∈ O) (_ : Y ∈ O), X ⟶ Y) :=
+      {⟨iF, i, by simp [O], by simp [O], uF⟩,
+        ⟨iF, kF, by simp [O], by simp [O], fF⟩,
+        ⟨j, kF, by simp [O], by simp [O], gF⟩,
+        ⟨iG, i, by simp [O], by simp [O], uG⟩,
+        ⟨iG, kG, by simp [O], by simp [O], fG⟩,
+        ⟨j, kG, by simp [O], by simp [O], gG⟩}
+    obtain ⟨k, T, hT⟩ := IsFiltered.sup_exists O H
+    let f : i ⟶ k := T (by simp [O])
+    let g : j ⟶ k := T (by simp [O])
+    have hTi : uF ≫ f = T (by simp [O]) := by
+      simpa only using hT (X := iF) (Y := i) (f := uF)
+        (by simp [O]) (by simp [O]) (by simp [H])
+    have hTfF : fF ≫ T (by simp [O]) = T (by simp [O]) := by
+      simpa only using hT (X := iF) (Y := kF) (f := fF)
+        (by simp [O]) (by simp [O]) (by simp [H])
+    have hTgF : gF ≫ T (by simp [O]) = g := by
+      simpa only using hT (X := j) (Y := kF) (f := gF)
+        (by simp [O]) (by simp [O]) (by simp [H])
+    have hTg : uG ≫ f = T (by simp [O]) := by
+      simpa only using hT (X := iG) (Y := i) (f := uG)
+        (by simp [O]) (by simp [O]) (by simp [H])
+    have hTfG : fG ≫ T (by simp [O]) = T (by simp [O]) := by
+      simpa only using hT (X := iG) (Y := kG) (f := fG)
+        (by simp [O]) (by simp [O]) (by simp [H])
+    have hTgG : gG ≫ T (by simp [O]) = g := by
+      simpa only using hT (X := j) (Y := kG) (f := gG)
+        (by simp [O]) (by simp [O]) (by simp [H])
+    have hfF : fF ≫ T (by simp [O]) = uF ≫ f := hTfF.trans hTi.symm
+    have hfG : fG ≫ T (by simp [O]) = uG ≫ f := hTfG.trans hTg.symm
+    have hFfinal : F.map g = cF.ι.app j ≫ sF' ≫ F.map f := by
+      calc
+        F.map g = F.map (gF ≫ T (by simp [O])) := by rw [hTgF]
+        _ = F.map gF ≫ F.map (T (by simp [O])) := by rw [F.map_comp]
+        _ = cF.ι.app j ≫ sF ≫ F.map fF ≫ F.map (T (by simp [O])) := by
+          rw [hFj]
+          simp only [Category.assoc]
+        _ = cF.ι.app j ≫ sF ≫ F.map (fF ≫ T (by simp [O])) := by
+          rw [F.map_comp]
+        _ = cF.ι.app j ≫ sF ≫ F.map (uF ≫ f) := by rw [hfF]
+        _ = cF.ι.app j ≫ sF' ≫ F.map f := by
+          simp [sF', F.map_comp, Category.assoc]
+    have hGfinal : G.map g = cG.ι.app j ≫ sG' ≫ G.map f := by
+      calc
+        G.map g = G.map (gG ≫ T (by simp [O])) := by rw [hTgG]
+        _ = G.map gG ≫ G.map (T (by simp [O])) := by rw [G.map_comp]
+        _ = cG.ι.app j ≫ sG ≫ G.map fG ≫ G.map (T (by simp [O])) := by
+          rw [hGj]
+          simp only [Category.assoc]
+        _ = cG.ι.app j ≫ sG ≫ G.map (fG ≫ T (by simp [O])) := by
+          rw [G.map_comp]
+        _ = cG.ι.app j ≫ sG ≫ G.map (uG ≫ f) := by rw [hfG]
+        _ = cG.ι.app j ≫ sG' ≫ G.map f := by
+          simp [sG', G.map_comp, Category.assoc]
+    refine ⟨k, f, g, ?_⟩
+    apply (BinaryBiproduct.isLimit (F.obj k) (G.obj k)).hom_ext
+    intro t
+    rcases t with ⟨⟨⟩⟩
+    · change B.bicone.pt.map g ≫ B.bicone.fst.app k =
+        (c.ι.app j ≫ s ≫ B.bicone.pt.map f) ≫ B.bicone.fst.app k
+      rw [B.bicone.fst.naturality g]
+      dsimp [c, s]
+      simp only [Preadditive.add_comp,
+        Preadditive.comp_add, Category.assoc]
+      rw [hFfinal]
+      simp
+      have hBif : B.bicone.inl.app i ≫ B.bicone.fst.app i = 𝟙 _ := by
+        exact congrArg (fun z => z.app i) B.bicone.inl_fst
+      have hBsf : B.bicone.inr.app i ≫ B.bicone.fst.app i = 0 := by
+        exact congrArg (fun z => z.app i) B.bicone.inr_fst
+      have hFproj :
+          B.bicone.fst.app j ≫ cF.ι.app j ≫ sF' ≫ B.bicone.inl.app i ≫
+              B.bicone.fst.app i ≫ F.map f =
+            B.bicone.fst.app j ≫ cF.ι.app j ≫ sF' ≫ F.map f := by
+        simpa only [Category.assoc, Category.id_comp] using
+          congrArg (fun z => B.bicone.fst.app j ≫ cF.ι.app j ≫ sF' ≫ z ≫ F.map f)
+            hBif
+      have hFcross :
+          B.bicone.snd.app j ≫ cG.ι.app j ≫ sG' ≫ B.bicone.inr.app i ≫
+              B.bicone.fst.app i ≫ F.map f = 0 := by
+        simpa only [Category.assoc, zero_comp, comp_zero] using
+          congrArg (fun z => B.bicone.snd.app j ≫ cG.ι.app j ≫ sG' ≫ z ≫ F.map f)
+            hBsf
+      rw [hFproj, hFcross]
+      simp only [add_zero]
+    · change B.bicone.pt.map g ≫ B.bicone.snd.app k =
+        (c.ι.app j ≫ s ≫ B.bicone.pt.map f) ≫ B.bicone.snd.app k
+      rw [B.bicone.snd.naturality g]
+      dsimp [c, s]
+      simp only [Preadditive.add_comp,
+        Preadditive.comp_add, Category.assoc]
+      rw [hGfinal]
+      simp
+      have hBis : B.bicone.inl.app i ≫ B.bicone.snd.app i = 0 := by
+        exact congrArg (fun z => z.app i) B.bicone.inl_snd
+      have hBss : B.bicone.inr.app i ≫ B.bicone.snd.app i = 𝟙 _ := by
+        exact congrArg (fun z => z.app i) B.bicone.inr_snd
+      have hGcross :
+          B.bicone.fst.app j ≫ cF.ι.app j ≫ sF' ≫ B.bicone.inl.app i ≫
+              B.bicone.snd.app i ≫ G.map f = 0 := by
+        simpa only [Category.assoc, zero_comp, comp_zero] using
+          congrArg (fun z => B.bicone.fst.app j ≫ cF.ι.app j ≫ sF' ≫ z ≫ G.map f)
+            hBis
+      have hGproj :
+          B.bicone.snd.app j ≫ cG.ι.app j ≫ sG' ≫ B.bicone.inr.app i ≫
+              B.bicone.snd.app i ≫ G.map f =
+            B.bicone.snd.app j ≫ cG.ι.app j ≫ sG' ≫ G.map f := by
+        simpa only [Category.assoc, Category.id_comp] using
+          congrArg (fun z => B.bicone.snd.app j ≫ cG.ι.app j ≫ sG' ≫ z ≫ G.map f)
+            hBss
+      rw [hGcross, hGproj]
+      simp only [zero_add]
 
 end Formalization.Books.Homology.Unit30

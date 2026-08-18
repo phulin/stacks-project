@@ -120,7 +120,7 @@ theorem map_between_finite
               localizedSurjectiveLocus φ →
             Function.Surjective (localizedMapAway φ f) := by
   let C := N ⧸ LinearMap.range φ
-  letI : Module.Finite R C := by
+  let : Module.Finite R C := by
     dsimp [C]
     infer_instance
   let q : N →ₗ[R] C := (LinearMap.range φ).mkQ
@@ -223,13 +223,13 @@ theorem map_between_finitely_presented
     let B := Localization.AtPrime q.asIdeal
     let hpow : Submonoid.powers g ≤ q.asIdeal.primeCompl :=
       Submonoid.powers_le.mpr hqg
-    letI : Algebra A B :=
+    let : Algebra A B :=
       IsLocalization.localizationAlgebraOfSubmonoidLe A B
         (Submonoid.powers g) q.asIdeal.primeCompl hpow
-    letI : IsScalarTower R A B :=
+    let : IsScalarTower R A B :=
       IsLocalization.localization_isScalarTower_of_submonoid_le A B
         (Submonoid.powers g) q.asIdeal.primeCompl hpow
-    letI : IsLocalization (q.asIdeal.primeCompl.map (algebraMap R A)) B :=
+    let : IsLocalization (q.asIdeal.primeCompl.map (algebraMap R A)) B :=
       IsLocalization.isLocalization_of_submonoid_le
         (S := A) (T := B) (Submonoid.powers g) q.asIdeal.primeCompl hpow
     let eM₀ := LocalizedModule.equivTensorProduct (Submonoid.powers g) M
@@ -254,9 +254,7 @@ theorem map_between_finitely_presented
         have hea : ea (LocalizedModule.mk m s) = LocalizedModule.mk (φ m) s := by
           change (LocalizedModule.map (Submonoid.powers g) φ) (LocalizedModule.mk m s) = _
           exact LocalizedModule.map_mk (Submonoid.powers g) φ m s
-        simp [eM, eN, eM₀, eN₀, ea, LocalizedModule.map_mk,
-          IsLocalizedModule.map_mk', LocalizedModule.equivTensorProduct_apply_mk,
-          LinearMap.baseChange_tmul, AlgebraTensorModule.cancelBaseChange_tmul, hea]
+        simp [eM, eN, eM₀, eN₀, ea, LinearMap.baseChange_tmul, hea]
         rw [LocalizedModule.equivTensorProduct_apply_mk,
           LocalizedModule.equivTensorProduct_apply_mk]
         simp [AlgebraTensorModule.cancelBaseChange_tmul]
@@ -287,7 +285,7 @@ theorem map_between_finitely_presented
           (LocalizedModule.mkLinearMap q.asIdeal.primeCompl M) x
       simp only [Function.uncurry_apply_pair]
       rw [← IsLocalizedModule.mk_eq_mk']
-      simp [eMq, eNq, LocalizedModule.map_mk, IsLocalizedModule.map_mk',
+      simp [eMq, eNq, LocalizedModule.map_mk,
         LocalizedModule.equivTensorProduct_apply_mk, LinearMap.baseChange_tmul]
     have hqbij : Function.Bijective (LocalizedModule.map q.asIdeal.primeCompl φ) := by
       have heq' :
@@ -365,8 +363,8 @@ theorem cokernel_flat
             (PrimeSpectrum.basicOpen f : Set (PrimeSpectrum R)) ⊆
                 fiberIsomorphismLocus φ →
               Function.Bijective (localizedMapAway φ f) := by
-  letI : Module.FinitePresentation R P₁ := Module.finitePresentation_of_projective R P₁
-  letI : Module.FinitePresentation R P₂ := Module.finitePresentation_of_projective R P₂
+  let : Module.FinitePresentation R P₁ := Module.finitePresentation_of_projective R P₁
+  let : Module.FinitePresentation R P₂ := Module.finitePresentation_of_projective R P₂
   have hsplit (q : PrimeSpectrum R)
       (hq : Function.Injective (fiberMapAtPrime φ q)) :
       ∃ r, r ∘ₗ localizedMapAtPrime φ q = LinearMap.id := by
@@ -381,17 +379,17 @@ theorem cokernel_flat
         (K ⊗[R] P₂) :=
       (LocalizedModule.equivTensorProduct q.asIdeal.primeCompl P₂).baseChange Rp K _ _ ≪≫ₗ
         AlgebraTensorModule.cancelBaseChange R Rp K K P₂
-    letI : Module.Finite Rp (LocalizedModule q.asIdeal.primeCompl P₁) :=
+    let : Module.Finite Rp (LocalizedModule q.asIdeal.primeCompl P₁) :=
       Module.Finite.of_isLocalizedModule q.asIdeal.primeCompl
         (Rₚ := Rp) (LocalizedModule.mkLinearMap q.asIdeal.primeCompl P₁)
-    letI : Module.Finite Rp (LocalizedModule q.asIdeal.primeCompl P₂) :=
+    let : Module.Finite Rp (LocalizedModule q.asIdeal.primeCompl P₂) :=
       Module.Finite.of_isLocalizedModule q.asIdeal.primeCompl
         (Rₚ := Rp) (LocalizedModule.mkLinearMap q.asIdeal.primeCompl P₂)
-    letI : Module.Projective Rp (LocalizedModule q.asIdeal.primeCompl P₂) :=
+    let : Module.Projective Rp (LocalizedModule q.asIdeal.primeCompl P₂) :=
       Module.projective_of_isLocalizedModule q.asIdeal.primeCompl
         (LocalizedModule.mkLinearMap q.asIdeal.primeCompl P₂)
-    letI : Module.Flat Rp (LocalizedModule q.asIdeal.primeCompl P₂) := inferInstance
-    letI : Module.Free Rp (LocalizedModule q.asIdeal.primeCompl P₂) :=
+    let : Module.Flat Rp (LocalizedModule q.asIdeal.primeCompl P₂) := inferInstance
+    let : Module.Free Rp (LocalizedModule q.asIdeal.primeCompl P₂) :=
       Module.free_of_flat_of_isLocalRing
     have he :
         e₂.toLinearMap ∘ₗ l.baseChange K =
@@ -405,9 +403,8 @@ theorem cokernel_flat
         simp only [Function.uncurry_apply_pair]
         rw [← IsLocalizedModule.mk_eq_mk']
         simp [e₁, e₂, l, localizedMapAtPrime, fiberMapAtPrime,
-          LocalizedModule.map_mk, IsLocalizedModule.map_mk',
-          LocalizedModule.equivTensorProduct_apply_mk, LinearMap.baseChange_tmul,
-          AlgebraTensorModule.cancelBaseChange_tmul]
+          LocalizedModule.map_mk, LinearMap.baseChange_tmul]
+        rw [LinearEquiv.baseChange_tmul, LinearEquiv.baseChange_tmul]
         rw [LocalizedModule.equivTensorProduct_apply_mk,
           LocalizedModule.equivTensorProduct_apply_mk]
         simp [AlgebraTensorModule.cancelBaseChange_tmul]
@@ -443,9 +440,9 @@ theorem cokernel_flat
           (LocalizedModule.mkLinearMap q.asIdeal.primeCompl (LinearMap.ker φ)) x
       simp only [Function.uncurry_apply_pair]
       rw [← IsLocalizedModule.mk_eq_mk']
-      rw [LocalizedModule.map_mk, LocalizedModule.map_mk]
       have hm : φ m = 0 := LinearMap.mem_ker.mp m.property
-      simp [j, localizedMapAtPrime, IsLocalizedModule.map_mk', hm]
+      simp [LinearMap.comp_apply, j, localizedMapAtPrime,
+        LocalizedModule.map_mk, hm]
     have hi := hlocal q hq
     refine ⟨fun x y => ?_⟩
     apply hj
@@ -475,9 +472,10 @@ theorem cokernel_flat
         _ = s.1 • rR (localizedMapAtPrime φ q (f₁ x)) := by rw [hmap]
         _ = s.1 • f₁ x := by
           have hx := DFunLike.congr_fun hr (f₁ x)
-          simpa [LinearMap.comp_apply] using
-            congrArg (fun y : LocalizedModule q.asIdeal.primeCompl P₂ ↦
-              (s.1 : R) • rR y) hx
+          have hx' :
+              rR (localizedMapAtPrime φ q (f₁ x)) = f₁ x := by
+            simpa [rR, LinearMap.comp_apply] using hx
+          rw [hx']
         _ = f₁ ((s.1 • LinearMap.id) x) := by simp
     obtain ⟨t, ht⟩ :=
       Module.Finite.exists_smul_of_comp_eq_of_isLocalizedModule
@@ -496,17 +494,45 @@ theorem cokernel_flat
       have hdK : algebraMap R K d ≠ 0 := by
         intro hdK
         exact hd' ((Ideal.algebraMap_residueField_eq_zero.mp hdK))
-      have ht' := congrArg (fun k : P₁ →ₗ[R] P₁ => k.baseChange K) ht
+      have ht0 :
+          (t.1 : R) • (l ∘ₗ φ) =
+            (t.1 : R) • ((s.1 : R) • LinearMap.id) := by
+        simpa only [Submonoid.smul_def, LinearMap.smul_comp] using ht
+      have ht' := congrArg (fun k : P₁ →ₗ[R] P₁ => k.baseChange K) ht0
       have hleft :
-          ((algebraMap R K d)⁻¹ • l.baseChange K) ∘ₗ
+          ((algebraMap R K (s.1 : R))⁻¹ • l.baseChange K) ∘ₗ
               fiberMapAtPrime φ q' = LinearMap.id := by
         apply LinearMap.ext
         intro x
         have hx := LinearMap.congr_fun ht' x
-        simpa [d, fiberMapAtPrime, LinearMap.baseChange_comp, LinearMap.baseChange_smul,
-          mul_smul, LinearMap.comp_apply, hdK, inv_mul_cancel₀] using
-          congrArg (fun z => (algebraMap R K d)⁻¹ • z) hx
-      exact Function.LeftInverse.injective (DFunLike.congr_fun hleft)
+        have hx' :
+            (algebraMap R K (t.1 : R)) •
+                (LinearMap.baseChange K l) ((LinearMap.baseChange K φ) x) =
+              (algebraMap R K (t.1 : R)) •
+                ((algebraMap R K (s.1 : R)) • x) := by
+          simpa only [LinearMap.smul_comp, LinearMap.baseChange_comp,
+            LinearMap.baseChange_smul,
+            LinearMap.baseChange_id, LinearMap.comp_apply, LinearMap.smul_apply,
+            LinearMap.id_apply, algebraMap_smul K] using hx
+        have htK : algebraMap R K (t.1 : R) ≠ 0 := by
+          intro h
+          apply hdK
+          simp [d, h]
+        have hsK : algebraMap R K (s.1 : R) ≠ 0 := by
+          intro h
+          apply hdK
+          simp [d, h]
+        simpa only [fiberMapAtPrime, LinearMap.comp_apply, smul_smul,
+          LinearMap.smul_apply, LinearMap.id_apply, mul_assoc, mul_one,
+          inv_mul_cancel₀ htK, inv_mul_cancel_left₀ htK,
+          inv_mul_cancel₀ hsK, one_smul] using
+          congrArg (fun z => (algebraMap R K (s.1 : R))⁻¹ •
+            (algebraMap R K (t.1 : R))⁻¹ • z) hx'
+      exact Function.LeftInverse.injective
+        (f := fiberMapAtPrime φ q')
+        (g := fun y => ((algebraMap R K (s.1 : R))⁻¹ • l.baseChange K) y) (by
+          intro x
+          simpa [LinearMap.comp_apply] using DFunLike.congr_fun hleft x)
     · exact hd
   refine ⟨hopen_injective, ?_, ?_, ?_, ?_, ?_⟩
   all_goals sorry

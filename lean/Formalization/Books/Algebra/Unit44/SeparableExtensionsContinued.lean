@@ -19,7 +19,7 @@ namespace Formalization.Books.Algebra.Unit44
 open Set
 open scoped TensorProduct
 
-universe u v
+universe u v w
 
 noncomputable section
 
@@ -34,7 +34,7 @@ open Formalization.Books.Algebra.Unit43
    such a basis rather than a chosen basis. -/
 /-- A separating transcendence basis for a field extension. -/
 def IsSeparatingTranscendenceBasis
-    (k K : Type u) {ι : Type v} (x : ι → K)
+    (k : Type u) (K : Type v) {ι : Type w} (x : ι → K)
     [Field k] [Field K] [Algebra k K] : Prop :=
   IsTranscendenceBasis k x ∧
     Algebra.IsSeparable (IntermediateField.adjoin k (range x)) K
@@ -42,14 +42,14 @@ def IsSeparatingTranscendenceBasis
 /-- The mini-separability argument produces a separating transcendence basis
 by omitting one element from the displayed finite generating family. -/
 theorem exists_isSeparatingTranscendenceBasis_of_mini_separability
-    {k K : Type u} [Field k] [Field K] [Algebra k K]
+    {k : Type u} {K : Type v} [Field k] [Field K] [Algebra k K]
     (p n : ℕ) (hp : 1 < p) [CharP k p]
     (x : Fin (n + 1) → K)
     (hbasis : IsTranscendenceBasis k (fun i : Fin n => x i.castSucc))
     (hgen : IntermediateField.adjoin k (range x) = ⊤)
-    (hpow : ∀ {m : ℕ} (a : Fin m → K),
-      LinearIndependent k a →
-        LinearIndependent k (fun i => (a i) ^ p)) :
+    (hpow : ∀ (s : Finset K),
+      LinearIndepOn k id (s : Set K) →
+        LinearIndepOn k (· ^ p) (s : Set K)) :
     ∃ j : Fin (n + 1),
       IsSeparatingTranscendenceBasis k K
         (fun i : Fin n => x (Fin.succAbove j i)) := by
@@ -63,15 +63,15 @@ the field's exponential characteristic. -/
 Frobenius linear-independence test, reducedness after the canonical
 `p`-th-root base change, and geometric reducedness are equivalent. -/
 theorem isSeparableExtension_iff_frobenius_linearIndependent_iff_tensorProduct_reduced_iff_geometricallyReduced
-    {k K : Type u} [Field k] [Field K] [Algebra k K]
+    {k : Type u} {K : Type v} [Field k] [Field K] [Algebra k K]
     (p : ℕ) (hp : 0 < p) [CharP k p] :
     (IsSeparableExtension k K ↔
-      (∀ {m : ℕ} (a : Fin m → K),
-        LinearIndependent k a →
-          LinearIndependent k (fun i => (a i) ^ p))) ∧
-      ((∀ {m : ℕ} (a : Fin m → K),
-        LinearIndependent k a →
-          LinearIndependent k (fun i => (a i) ^ p)) ↔
+      (∀ (s : Finset K),
+        LinearIndepOn k id (s : Set K) →
+          LinearIndepOn k (· ^ p) (s : Set K))) ∧
+      ((∀ (s : Finset K),
+        LinearIndepOn k id (s : Set K) →
+          LinearIndepOn k (· ^ p) (s : Set K)) ↔
         IsReduced (K ⊗[k] AdjoinPthRoots k)) ∧
       (IsReduced (K ⊗[k] AdjoinPthRoots k) ↔
         IsGeometricallyReduced k K) := by
@@ -79,7 +79,7 @@ theorem isSeparableExtension_iff_frobenius_linearIndependent_iff_tensorProduct_r
 
 /-- A separably generated field extension is separable. -/
 theorem isSeparableExtension_of_isSeparablyGenerated
-    {k K : Type u} [Field k] [Field K] [Algebra k K]
+    {k : Type u} {K : Type v} [Field k] [Field K] [Algebra k K]
     (hK : IsSeparablyGenerated k K) :
     IsSeparableExtension k K := by
   sorry
@@ -94,7 +94,7 @@ theorem isSeparableExtension_of_isSeparablyGenerated
 changes, by `k^(1/p)`, by the perfect closure, or by an algebraic closure. -/
 theorem isGeometricallyReduced_iff_finitePurelyInseparable_iff_pthRoot_iff_perfectClosure_iff_algebraicClosure
     {k : Type u} {S : Type v} [Field k] [CommRing S] [Algebra k S] :
-    ((∀ (k' : Type u) [Field k'] [Algebra k k']
+    ((∀ (k' : Type w) [Field k'] [Algebra k k']
       [FiniteDimensional k k'] [IsPurelyInseparable k k'],
       IsReduced (k' ⊗[k] S)) ↔
         IsReduced (AdjoinPthRoots k ⊗[k] S)) ∧

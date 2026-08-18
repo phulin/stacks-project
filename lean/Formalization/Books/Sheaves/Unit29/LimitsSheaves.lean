@@ -124,9 +124,9 @@ theorem sheafForgetDoesNotPreserveAllColimits :
   let X : TopCat.{v} := TopCat.of (CofiniteTopology (ULift.{v} ℕ))
   refine ⟨X, ?_⟩
   intro h
-  letI : PreservesColimits (TopCat.Sheaf.forget (Type v) X) := h
-  letI : HasLimits (TopCat.Sheaf (Type v) X) := sheaf_has_limits
-  letI : HasColimitsOfSize.{v, v} (TopCat.Sheaf (Type v) X) :=
+  let : PreservesColimits (TopCat.Sheaf.forget (Type v) X) := h
+  let : HasLimits (TopCat.Sheaf (Type v) X) := sheaf_has_limits
+  let : HasColimitsOfSize.{v, v} (TopCat.Sheaf (Type v) X) :=
     CategoryTheory.Sheaf.instHasColimitsOfSize
   let T : TopCat.Sheaf (Type v) X := limit (Functor.empty.{0} _)
   let F : Discrete Bool ⥤ TopCat.Sheaf (Type v) X :=

@@ -160,6 +160,13 @@ noncomputable def ringedClosedInclusion (X : RingedSpace.{v}) (Z : Set X) :
     (TopCat.Sheaf.pullbackPushforwardAdjunction RingCat
       (Formalization.Books.Sheaves.Unit22.closedInclusion Z)).unit.app X.structureSheaf
 
+/-- The restricted structure sheaf gives the closed immersion used to view
+supported sections as modules on the closed subspace. -/
+theorem ringedClosedInclusion_isClosedImmersion
+    (X : RingedSpace.{v}) (Z : Set X) (hZ : IsClosed Z) :
+    IsClosedImmersion (ringedClosedInclusion X Z) := by
+  sorry
+
 /-- A module section is supported in a closed subset. -/
 def moduleSectionSupportedInClosed {X : RingedSpace.{v}} (Z : Set X)
     {F : Mod X.structureSheaf} (U : Opens X.carrier)

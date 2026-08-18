@@ -1,12 +1,15 @@
 import Mathlib.Algebra.Category.CommAlgCat.Basic
 import Mathlib.Algebra.Category.ModuleCat.Basic
 import Mathlib.Algebra.Module.LocalizedModule.AtPrime
+import Mathlib.Algebra.Module.LocalizedModule.Int
+import Mathlib.Algebra.Module.LocalizedModule.Submodule
 import Mathlib.Algebra.Module.Torsion.Basic
 import Mathlib.RingTheory.Finiteness.Descent
 import Mathlib.RingTheory.Ideal.Quotient.Operations
 import Mathlib.RingTheory.Localization.Algebra
 import Mathlib.RingTheory.Localization.AtPrime.Basic
 import Mathlib.RingTheory.Localization.Away.Basic
+import Mathlib.RingTheory.Localization.BaseChange
 import Formalization.Books.Algebra.Unit03.BasicNotions
 import Formalization.Books.Algebra.Unit14.BaseChange
 
@@ -55,7 +58,25 @@ theorem finite_type_descends {R S R' : Type*} [CommRing R] [CommRing S] [CommRin
     letI : Algebra R R' := g.toAlgebra
     RingHom.FiniteType f ↔
       RingHom.FiniteType (Formalization.Books.Algebra.Unit14.baseChangeRingMap f g) := by
-  sorry
+  letI : Algebra R S := f.toAlgebra
+  letI : Algebra R R' := g.toAlgebra
+  letI : Algebra R' (S ⊗[R] R') :=
+    Algebra.TensorProduct.rightAlgebra
+  constructor
+  · intro hf
+    exact Formalization.Books.Algebra.Unit14.baseChange_finite_type f g hf
+  · intro h
+    change RingHom.FiniteType (algebraMap R' (S ⊗[R] R')) at h
+    rw [RingHom.finiteType_algebraMap] at h
+    letI : Algebra R' (R' ⊗[R] S) := Algebra.TensorProduct.leftAlgebra
+    have hff' : Module.FaithfullyFlat R R' := by
+      rw [← RingHom.faithfullyFlat_algebraMap_iff]
+      exact hff
+    letI := hff'
+    have h' : Algebra.FiniteType R' (R' ⊗[R] S) :=
+      Algebra.FiniteType.equiv h (Algebra.TensorProduct.commRight R R' S).symm
+    letI := h'
+    exact Algebra.FiniteType.of_finiteType_tensorProduct_of_faithfullyFlat R'
 
 /-- Finite presentation descends and ascends along a faithfully flat base change. -/
 theorem finite_presentation_descends {R S R' : Type*} [CommRing R] [CommRing S] [CommRing R']
@@ -64,9 +85,157 @@ theorem finite_presentation_descends {R S R' : Type*} [CommRing R] [CommRing S] 
     letI : Algebra R R' := g.toAlgebra
     RingHom.FinitePresentation f ↔
       RingHom.FinitePresentation (Formalization.Books.Algebra.Unit14.baseChangeRingMap f g) := by
-  sorry
+  letI : Algebra R S := f.toAlgebra
+  letI : Algebra R R' := g.toAlgebra
+  letI : Algebra R' (S ⊗[R] R') :=
+    Algebra.TensorProduct.rightAlgebra
+  constructor
+  · intro hf
+    exact Formalization.Books.Algebra.Unit14.baseChange_finite_presentation f g hf
+  · intro h
+    change RingHom.FinitePresentation (algebraMap R' (S ⊗[R] R')) at h
+    rw [RingHom.finitePresentation_algebraMap] at h
+    letI : Algebra R' (R' ⊗[R] S) := Algebra.TensorProduct.leftAlgebra
+    have hff' : Module.FaithfullyFlat R R' := by
+      rw [← RingHom.faithfullyFlat_algebraMap_iff]
+      exact hff
+    letI := hff'
+    letI : Algebra.FinitePresentation R' (S ⊗[R] R') := h
+    have h' : Algebra.FinitePresentation R' (R' ⊗[R] S) :=
+      Algebra.FinitePresentation.equiv (Algebra.TensorProduct.commRight R R' S).symm
+    letI := h'
+    exact Algebra.FinitePresentation.of_finitePresentation_tensorProduct_of_faithfullyFlat R'
 
 /-! ### Finite modules over localized quotients -/
+
+private lemma finite_localized_submodule {R : Type u} [CommRing R]
+    (S : Submonoid R) {M : Type v} [AddCommGroup M] [Module R M]
+    (hM : Module.Finite (Localization S) (LocalizedModule S M)) :
+    ∃ P : Submodule R M, Module.Finite R (P : Type v) ∧
+      Function.Bijective (LocalizedModule.map S P.subtype) := by
+  classical
+  obtain ⟨s, hs⟩ := hM
+  have hrep (y : s) : ∃ x : M, ∃ t : S,
+      IsLocalizedModule.mk' (LocalizedModule.mkLinearMap S M) x t = y.1 := by
+    obtain ⟨⟨x, t⟩, hx⟩ :=
+      IsLocalizedModule.mk'_surjective S (LocalizedModule.mkLinearMap S M) y.1
+    exact ⟨x, t, hx⟩
+  choose m t hm using hrep
+  let sm : Finset M := s.attach.image m
+  let P : Submodule R M := Submodule.span R (sm : Set M)
+  have hmP (y : s) : m y ∈ P := by
+    apply Submodule.subset_span
+    simp [P, sm]
+  have hsurj : Function.Surjective (LocalizedModule.map S P.subtype) := by
+    apply LinearMap.range_eq_top.mp
+    apply le_antisymm
+    · exact le_top
+    · rw [← hs]
+      refine (Submodule.span_le (R := Localization S)).2 ?_
+      intro y hy
+      let y' : s := ⟨y, hy⟩
+      refine ⟨LocalizedModule.mk ⟨m y', hmP y'⟩ (t y'), ?_⟩
+      rw [LocalizedModule.map_mk]
+      rw [IsLocalizedModule.mk_eq_mk']
+      simpa [Submodule.subtype] using hm y'
+  exact ⟨P, Module.Finite.span_finset (R := R) sm,
+    ⟨LocalizedModule.map_injective S P.subtype P.subtype_injective, hsurj⟩⟩
+
+private lemma finite_presentation_localized_module {R : Type u} [CommRing R]
+    (S : Submonoid R) {N : Type (max u v)} [AddCommGroup N]
+    [Module (Localization S) N]
+    (hN : Module.FinitePresentation (Localization S) N) :
+    ∃ P : ModuleCat.{u} R,
+      Module.FinitePresentation R (P : Type u) ∧
+        Nonempty (LocalizedModule S (P : Type u) ≃ₗ[Localization S] N) := by
+  classical
+  obtain ⟨n, K, e, hK⟩ := Module.FinitePresentation.exists_fin (Localization S) N
+  obtain ⟨t, ht⟩ := hK
+  let bR := Finsupp.linearEquivFunOnFinite R R (Fin n)
+  let bT := Finsupp.linearEquivFunOnFinite (Localization S) (Localization S) (Fin n)
+  let j0 : (Fin n →₀ R) →ₗ[R] (Fin n →₀ Localization S) :=
+    Finsupp.mapRange.linearMap (Algebra.linearMap R (Localization S))
+  let j : (Fin n → R) →ₗ[R] (Fin n → Localization S) :=
+    { toFun := fun x i => algebraMap R (Localization S) (x i)
+      map_add' := by intro x y; ext i; simp
+      map_smul' := by
+        intro r x
+        ext i
+        conv_rhs => rw [Algebra.smul_def]
+        simp [Pi.smul_apply, map_mul] }
+  letI : IsLocalizedModule S j := by
+    have h' := IsLocalizedModule.of_linearEquiv_right S j0 bR.symm
+    letI : IsLocalizedModule S (j0.comp bR.symm.toLinearMap) := h'
+    have h := IsLocalizedModule.of_linearEquiv S
+      (j0.comp bR.symm.toLinearMap) (bT.restrictScalars R)
+    convert h using 1
+    apply LinearMap.ext
+    intro x
+    funext i
+    simp [j, j0, bR, bT]
+  have hrep (x : t) : ∃ y : Fin n → R, ∃ s : S,
+      IsLocalizedModule.mk' j y s = x.1 := by
+    obtain ⟨⟨y, s⟩, hy⟩ := IsLocalizedModule.mk'_surjective S j x.1
+    exact ⟨y, s, hy⟩
+  choose r d hr using hrep
+  let L : Submodule R (Fin n → R) := Submodule.span R (Set.range r)
+  have hrel : L.localized' (Localization S) S j = K := by
+    change (Submodule.span R (Set.range r)).localized' (Localization S) S j = K
+    rw [Submodule.localized'_span, ← ht]
+    apply le_antisymm
+    · refine (Submodule.span_le (R := Localization S)).2 ?_
+      rintro y ⟨z, ⟨x, rfl⟩, rfl⟩
+      have hzx := IsLocalizedModule.mk'_eq_iff.mp (hr x)
+      rw [Submonoid.smul_def, ← algebraMap_smul (Localization S)] at hzx
+      rw [hzx]
+      exact Submodule.smul_mem _ (algebraMap R (Localization S) (d x))
+        (Submodule.subset_span x.2)
+    · refine (Submodule.span_le (R := Localization S)).2 ?_
+      intro y hy
+      let x : t := ⟨y, hy⟩
+      have hxy := IsLocalizedModule.mk'_eq_iff.mp (hr x)
+      rw [Submonoid.smul_def, ← algebraMap_smul (Localization S)] at hxy
+      let u := IsLocalization.map_units (Localization S) (d x)
+      have hu : u.unit⁻¹.val • j (r x) = (x : Fin n → Localization S) := by
+        rw [hxy]
+        have hval : u.unit.val = algebraMap R (Localization S) (d x) := u.unit_spec
+        have hs : algebraMap R (Localization S) (d x) •
+            (x : Fin n → Localization S) = u.unit.val • (x : Fin n → Localization S) :=
+          congrArg (fun z : Localization S => z • (x : Fin n → Localization S)) hval.symm
+        rw [hs]
+        ext i
+        simp only [Pi.smul_apply, smul_eq_mul]
+        calc
+          u.unit⁻¹.val * (u.unit.val * (x : Fin n → Localization S) i) =
+              (u.unit⁻¹.val * u.unit.val) * (x : Fin n → Localization S) i := by
+                exact (mul_assoc _ _ _).symm
+          _ = (x : Fin n → Localization S) i := by
+            simpa only [mul_assoc] using
+              (Units.inv_mul_cancel_left u.unit ((x : Fin n → Localization S) i))
+      have hgen : j (r x) ∈ Submodule.span (Localization S)
+          (j '' Set.range r) := by
+        apply Submodule.subset_span
+        exact ⟨r x, ⟨x, rfl⟩, rfl⟩
+      have hmem := Submodule.smul_mem _ u.unit⁻¹.val hgen
+      simpa [x, hu] using hmem
+  let q : (Fin n → R) →ₗ[R] ((Fin n → R) ⧸ L) := L.mkQ
+  have hq : Function.Surjective q := L.mkQ_surjective
+  have hL : L.FG := by
+    exact Submodule.fg_span (Set.finite_range r)
+  letI : Module.FinitePresentation R ((Fin n → R) ⧸ L) :=
+    Module.finitePresentation_of_free_of_surjective q hq (by simpa [q] using hL)
+  let eQ0 : LocalizedModule S ((Fin n → R) ⧸ L) ≃ₗ[R]
+      ((Fin n → Localization S) ⧸ L.localized' (Localization S) S j) :=
+    IsLocalizedModule.linearEquiv S (LocalizedModule.mkLinearMap S ((Fin n → R) ⧸ L))
+      (L.toLocalizedQuotient' (Localization S) S j)
+  let eQ : LocalizedModule S ((Fin n → R) ⧸ L) ≃ₗ[Localization S]
+      ((Fin n → Localization S) ⧸ L.localized' (Localization S) S j) :=
+    eQ0.extendScalarsOfIsLocalization S (Localization S)
+  let eK : ((Fin n → Localization S) ⧸ L.localized' (Localization S) S j) ≃ₗ[Localization S]
+      ((Fin n → Localization S) ⧸ K) := by
+    exact Submodule.quotEquivOfEq _ _ hrel
+  refine ⟨ModuleCat.of R ((Fin n → R) ⧸ L), inferInstance, ?_⟩
+  exact ⟨eQ.trans (eK.trans e.symm)⟩
 
 /-- Finite and finitely presented modules over `S⁻¹(R/I)` descend to `R`. -/
 theorem construct_fp_module {R : Type u} [CommRing R] (I : Ideal R) (S : Submonoid R) :
@@ -84,7 +253,86 @@ theorem construct_fp_module {R : Type u} [CommRing R] (I : Ideal R) (S : Submono
             Nonempty
               (localizedQuotientModule I S (M := (M : Type (max u v))) ≃ₗ[
                 localizedQuotientRing I S] (M' : Type (max u v)))) := by
-  sorry
+  constructor
+  · intro M' hM'
+    let A := R ⧸ I
+    let p := S.map (Ideal.Quotient.mk I)
+    let T := localizedQuotientRing I S
+    letI : Module A (M' : Type (max u v)) :=
+      Module.compHom (M' : Type (max u v)) (algebraMap A T)
+    letI : IsScalarTower A T (M' : Type (max u v)) :=
+      IsScalarTower.of_compHom A T (M' : Type (max u v))
+    letI : SMulCommClass T A (M' : Type (max u v)) := by
+      constructor
+      intro t a x
+      change t • ((algebraMap A T a) • x) = a • (t • x)
+      rw [← mul_smul, mul_comm, mul_smul]
+      rfl
+    obtain ⟨s, hs⟩ := hM'
+    let P : Submodule A (M' : Type (max u v)) := Submodule.span A (s : Set (M' : Type (max u v)))
+    letI : Module.Finite A (P : Type (max u v)) := Module.Finite.span_finset (R := A) s
+    letI : Module R (P : Type (max u v)) := Module.compHom (P : Type (max u v)) (algebraMap R A)
+    letI : IsScalarTower R A (P : Type (max u v)) :=
+      IsScalarTower.of_compHom R A (P : Type (max u v))
+    letI : Module.Finite R (P : Type (max u v)) := Module.Finite.trans A (P : Type (max u v))
+    let f : (P : Type (max u v)) →ₗ[A] (M' : Type (max u v)) := P.subtype
+    letI : IsLocalizedModule p f := by
+      constructor
+      · intro x
+        have hu := (IsLocalization.map_units T x).map
+          ((Module.toModuleEnd A (S := T) (M' : Type (max u v))) :
+            T →+* Module.End A (M' : Type (max u v)))
+        have hmap :
+            (Module.toModuleEnd A (S := T) (M' : Type (max u v)))
+                (algebraMap A T (x : A)) =
+              algebraMap A (Module.End A (M' : Type (max u v))) (x : A) := by
+          ext z
+          rfl
+        rw [hmap] at hu
+        exact hu
+      · intro y
+        have hy : y ∈ Submodule.span T (s : Set (M' : Type (max u v))) := by
+          rw [hs]
+          trivial
+        obtain ⟨c, hc⟩ := multiple_mem_span_of_mem_localization_span p T
+          (s : Set (M' : Type (max u v))) y hy
+        change c.1 • y ∈ P at hc
+        refine ⟨⟨⟨(c.1 : A) • y, hc⟩, c⟩, ?_⟩
+        simp [f, Submonoid.smul_def]
+      · intro x y hxy
+        refine ⟨1, ?_⟩
+        apply Subtype.ext
+        simpa [f] using hxy
+    refine ⟨ModuleCat.of R (P : Type (max u v)), inferInstance, ?_⟩
+    have hI : I • (⊤ : Submodule R (P : Type (max u v))) = ⊥ := by
+      apply le_antisymm
+      · refine Submodule.smul_le.2 ?_
+        intro r hr x hx
+        have hr0 : algebraMap R A r = 0 := Ideal.Quotient.eq_zero_iff_mem.mpr hr
+        change (algebraMap R A r) • (x : P) = 0
+        rw [hr0, zero_smul]
+      · exact bot_le
+    let qR :
+        (P ⧸ I • (⊤ : Submodule R (P : Type (max u v)))) ≃ₗ[R]
+          (P : Type (max u v)) :=
+      Submodule.quotEquivOfEqBot _ hI
+    let qA :
+        (P ⧸ I • (⊤ : Submodule R (P : Type (max u v)))) ≃ₗ[A]
+          (P : Type (max u v)) :=
+      qR.extendScalarsOfSurjective Ideal.Quotient.mk_surjective
+    let eQ :
+        LocalizedModule p (P ⧸ I • (⊤ : Submodule R (P : Type (max u v)))) ≃ₗ[T]
+          LocalizedModule p (P : Type (max u v)) :=
+      IsLocalizedModule.mapEquiv p
+        (LocalizedModule.mkLinearMap p (P ⧸ I • (⊤ : Submodule R (P : Type (max u v)))))
+        (LocalizedModule.mkLinearMap p (P : Type (max u v))) T qA
+    let eA : LocalizedModule p (P : Type (max u v)) ≃ₗ[A] (M' : Type (max u v)) :=
+      IsLocalizedModule.linearEquiv p (LocalizedModule.mkLinearMap p (P : Type (max u v))) f
+    let eT : LocalizedModule p (P : Type (max u v)) ≃ₗ[T] (M' : Type (max u v)) :=
+      eA.extendScalarsOfIsLocalization p T
+    exact ⟨eQ.trans eT⟩
+  · intro M' hM'
+    sorry
 
 /-! ### Finite modules after localization -/
 
@@ -101,7 +349,11 @@ theorem construct_fp_module_from_localization {R : Type u} [CommRing R]
         Module.FinitePresentation R (M' : Type v) ∧
           ∃ f : (M' : Type v) →ₗ[R] (M : Type v),
             Function.Bijective (LocalizedModule.map S f)) := by
-  sorry
+  constructor
+  · intro hM
+    obtain ⟨P, hP, hbij⟩ := finite_localized_submodule S hM
+    exact ⟨ModuleCat.of R (P : Type v), hP, P.subtype, hbij⟩
+  · sorry
 
 /-! ### The stalk case -/
 

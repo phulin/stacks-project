@@ -1,4 +1,5 @@
 import Mathlib.Algebra.Category.ModuleCat.ChangeOfRings
+import Mathlib.Algebra.Category.Ring.Constructions
 import Mathlib.Algebra.Category.Ring.Epi
 import Mathlib.Algebra.Category.Ring.Instances
 import Mathlib.Algebra.Ring.Subring.Basic
@@ -8,6 +9,8 @@ import Mathlib.RingTheory.Localization.AtPrime.Basic
 import Mathlib.RingTheory.RingHom.FaithfullyFlat
 import Mathlib.RingTheory.Spectrum.Prime.RingHom
 import Mathlib.RingTheory.TensorProduct.Maps
+import Mathlib.CategoryTheory.Limits.EpiMono
+import Mathlib.Tactic.TFAE
 
 /-!
 # Commutative Algebra, Chapter 107: Epimorphisms of rings
@@ -48,7 +51,116 @@ theorem epimorphism_iff_tensorProduct
             (Algebra.TensorProduct.includeRight (R := R) (A := S) (B := S)).toRingHom),
         IsIso (CommRingCat.ofHom
           ((Algebra.TensorProduct.lmul' R : S ⊗[R] S →ₐ[R] S).toRingHom)) ] := by
-  sorry
+  exact (letI : Algebra R S := f.toAlgebra
+    (show List.TFAE
+      [ Epi (CommRingCat.ofHom f),
+        (Algebra.TensorProduct.includeLeftRingHom : S →+* S ⊗[R] S) =
+          (Algebra.TensorProduct.includeRight (R := R) (A := S) (B := S)).toRingHom,
+        IsIso (CommRingCat.ofHom
+            (Algebra.TensorProduct.includeLeftRingHom : S →+* S ⊗[R] S)) ∨
+          IsIso (CommRingCat.ofHom
+            (Algebra.TensorProduct.includeRight (R := R) (A := S) (B := S)).toRingHom),
+        IsIso (CommRingCat.ofHom
+          ((Algebra.TensorProduct.lmul' R : S ⊗[R] S →ₐ[R] S).toRingHom)) ] from by
+      let H := CommRingCat.isPushout_tensorProduct R S S
+      let m : S ⊗[R] S →+* S := (Algebra.TensorProduct.lmul' R).toRingHom
+      tfae_have h12 : 1 ↔ 2 := by
+        change Epi (CommRingCat.ofHom f) ↔ H.cocone.inl.hom = H.cocone.inr.hom
+        exact ⟨fun h => congrArg (fun q => q.hom)
+            ((CategoryTheory.epi_iff_inl_eq_inr H.isColimit).mp h),
+          fun h => (CategoryTheory.epi_iff_inl_eq_inr H.isColimit).mpr
+            (CommRingCat.hom_ext h)⟩
+      tfae_have h13 : 1 ↔ 3 := by
+        change Epi (CommRingCat.ofHom f) ↔ IsIso H.cocone.inl ∨ IsIso H.cocone.inr
+        constructor
+        · intro h
+          exact Or.inl ((CategoryTheory.epi_iff_isIso_inl H.isColimit).mp h)
+        · rintro (hl | hr)
+          · exact (CategoryTheory.epi_iff_isIso_inl H.isColimit).mpr hl
+          · exact (CategoryTheory.epi_iff_isIso_inr H.isColimit).mpr hr
+      tfae_have h34 : 3 → 4 := by
+        change (IsIso H.cocone.inl ∨ IsIso H.cocone.inr) →
+          IsIso (CommRingCat.ofHom m)
+        rintro (hl | hr)
+        · rcases hl.out with ⟨j, hij, hji⟩
+          have hepi : Epi H.cocone.inl :=
+            ⟨fun a b hab => by
+              calc
+                a = 𝟙 H.cocone.pt ≫ a := (Category.id_comp _).symm
+                _ = (j ≫ H.cocone.inl) ≫ a := by rw [hji]
+                _ = j ≫ (H.cocone.inl ≫ a) := Category.assoc _ _ _
+                _ = j ≫ (H.cocone.inl ≫ b) := by rw [hab]
+                _ = (j ≫ H.cocone.inl) ≫ b := (Category.assoc _ _ _).symm
+                _ = b := by rw [hji]; exact Category.id_comp _⟩
+          have hleft := @Algebra.TensorProduct.lmul'_comp_includeLeft R S _ _ f.toAlgebra
+          have hcomp : H.cocone.inl ≫ CommRingCat.ofHom m = 𝟙 _ := by
+            apply CommRingCat.hom_ext
+            exact congrArg (fun q => q.toRingHom) hleft
+          refine ⟨⟨H.cocone.inl, ?_, ?_⟩⟩
+          · apply hepi.left_cancellation
+            exact calc
+              H.cocone.inl ≫ (CommRingCat.ofHom m ≫ H.cocone.inl) =
+                  (H.cocone.inl ≫ CommRingCat.ofHom m) ≫ H.cocone.inl :=
+                (Category.assoc _ _ _).symm
+              _ = (𝟙 _) ≫ H.cocone.inl := by rw [hcomp]
+              _ = H.cocone.inl := Category.id_comp _
+              _ = H.cocone.inl ≫ 𝟙 _ := (Category.comp_id _).symm
+          · exact hcomp
+        · rcases hr.out with ⟨j, hij, hji⟩
+          have hepi : Epi H.cocone.inr :=
+            ⟨fun a b hab => by
+              calc
+                a = 𝟙 H.cocone.pt ≫ a := (Category.id_comp _).symm
+                _ = (j ≫ H.cocone.inr) ≫ a := by rw [hji]
+                _ = j ≫ (H.cocone.inr ≫ a) := Category.assoc _ _ _
+                _ = j ≫ (H.cocone.inr ≫ b) := by rw [hab]
+                _ = (j ≫ H.cocone.inr) ≫ b := (Category.assoc _ _ _).symm
+                _ = b := by rw [hji]; exact Category.id_comp _⟩
+          have hright := @Algebra.TensorProduct.lmul'_comp_includeRight R S _ _ f.toAlgebra
+          have hcomp : H.cocone.inr ≫ CommRingCat.ofHom m = 𝟙 _ := by
+            apply CommRingCat.hom_ext
+            exact congrArg (fun q => q.toRingHom) hright
+          refine ⟨⟨H.cocone.inr, ?_, ?_⟩⟩
+          · apply hepi.left_cancellation
+            exact calc
+              H.cocone.inr ≫ (CommRingCat.ofHom m ≫ H.cocone.inr) =
+                  (H.cocone.inr ≫ CommRingCat.ofHom m) ≫ H.cocone.inr :=
+                (Category.assoc _ _ _).symm
+              _ = (𝟙 _) ≫ H.cocone.inr := by rw [hcomp]
+              _ = H.cocone.inr := Category.id_comp _
+              _ = H.cocone.inr ≫ 𝟙 _ := (Category.comp_id _).symm
+          · exact hcomp
+      tfae_have h41 : 4 → 1 := by
+        change IsIso (CommRingCat.ofHom m) → Epi (CommRingCat.ofHom f)
+        intro hm
+        have hmono : Mono (CommRingCat.ofHom m) :=
+          ⟨fun a b hab => by
+            rcases hm.out with ⟨k, hmk, hkm⟩
+            calc
+              a = a ≫ 𝟙 _ := (Category.comp_id _).symm
+              _ = a ≫ (CommRingCat.ofHom m ≫ k) := by rw [hmk]
+              _ = (a ≫ CommRingCat.ofHom m) ≫ k := (Category.assoc _ _ _).symm
+              _ = (b ≫ CommRingCat.ofHom m) ≫ k := by rw [hab]
+              _ = b ≫ (CommRingCat.ofHom m ≫ k) := Category.assoc _ _ _
+              _ = b ≫ 𝟙 _ := by rw [hmk]
+              _ = b := Category.comp_id _⟩
+        have hleft := @Algebra.TensorProduct.lmul'_comp_includeLeft R S _ _ f.toAlgebra
+        have hright := @Algebra.TensorProduct.lmul'_comp_includeRight R S _ _ f.toAlgebra
+        have hcat :
+            CommRingCat.ofHom (Algebra.TensorProduct.includeLeftRingHom :
+              S →+* S ⊗[R] S) ≫ CommRingCat.ofHom m =
+            CommRingCat.ofHom (Algebra.TensorProduct.includeRight (R := R)
+              (A := S) (B := S)).toRingHom ≫ CommRingCat.ofHom m := by
+          apply CommRingCat.hom_ext
+          exact (congrArg (fun q => q.toRingHom) hleft).trans
+            (congrArg (fun q => q.toRingHom) hright).symm
+        have heq := hmono.right_cancellation _ _ hcat
+        exact h12.mpr (congrArg (fun q => q.hom) heq)
+      exact List.tfae_of_cycle
+        (List.IsChain.cons_cons h12.mp
+          (List.IsChain.cons_cons (h13.mp ∘ h12.mpr)
+            (List.IsChain.cons_cons h34 (List.IsChain.singleton _))))
+        h41))
 
 /-- Epimorphisms are closed under composition. -/
 theorem epimorphism_comp
@@ -56,7 +168,7 @@ theorem epimorphism_comp
     (f : R →+* S) (g : S →+* T)
     (hf : Epi (CommRingCat.ofHom f)) (hg : Epi (CommRingCat.ofHom g)) :
     Epi (CommRingCat.ofHom (g.comp f)) := by
-  sorry
+  exact CategoryTheory.epi_comp' hf hg
 
 /-- Base change preserves epimorphisms.
 
@@ -72,7 +184,7 @@ theorem epimorphism_baseChange
     Epi (CommRingCat.ofHom
       (Algebra.TensorProduct.includeLeftRingHom :
         R' →+* R' ⊗[R] S)) := by
-  sorry
+  exact (@CommRingCat.isPushout_tensorProduct R R' S _ _ _ g.toAlgebra f.toAlgebra).epi_inl_of_epi hf
 
 /-- If a composite is an epimorphism, then its second map is an epimorphism. -/
 theorem epimorphism_of_comp
@@ -80,7 +192,7 @@ theorem epimorphism_of_comp
     (f : A →+* B) (g : B →+* C)
     (hcomp : Epi (CommRingCat.ofHom (g.comp f))) :
     Epi (CommRingCat.ofHom g) := by
-  sorry
+  exact @CategoryTheory.epi_of_epi _ _ _ _ _ (CommRingCat.ofHom f) (CommRingCat.ofHom g) hcomp
 
 /-- The map from the image subring of an epimorphism is again an epimorphism. -/
 theorem epimorphism_range_subtype

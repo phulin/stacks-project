@@ -102,7 +102,7 @@ theorem isGeometricallyReduced_directLimit
   classical
   intro K _ _
   let fL : ∀ i j, i ≤ j → A i →ₗ[k] A j := fun i j h => (f i j h).toLinearMap
-  letI : DirectedSystem A (fL · · ·) := {
+  let _ : DirectedSystem A (fL · · ·) := {
     map_self := fun {i} x => by
       simpa [fL] using ((inferInstance : DirectedSystem A (fun i j h => f i j h)).map_self x)
     map_map := fun {k j i} hij hjk x => by
@@ -135,7 +135,7 @@ theorem isGeometricallyReduced_directLimit
     refine y.induction_on ?_ ?_ ?_
     · simp [φ]
     · intro a b
-      simp [φ, DirectLimit.Algebra.of_f]
+      simp [φ]
     · intro x y hx hy
       rw [map_add, map_add, hx, hy]
       exact (map_add (φ i) x y).symm

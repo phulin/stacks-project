@@ -3,7 +3,9 @@ import Mathlib.Algebra.MvPolynomial.Division
 import Mathlib.RingTheory.Ideal.AssociatedPrime.Basic
 import Mathlib.RingTheory.Ideal.Quotient.Noetherian
 import Mathlib.RingTheory.Ideal.Quotient.Operations
+import Mathlib.RingTheory.MvPolynomial.Ideal
 import Mathlib.RingTheory.Polynomial.Basic
+import Mathlib.RingTheory.Polynomial.Quotient
 import Mathlib.RingTheory.PrincipalIdealDomain
 
 /-!
@@ -99,7 +101,129 @@ theorem square_example_prime_is_prime (k : Type u) [Field k] :
 /-- The square of `p` is zero in the displayed quotient ring. -/
 theorem square_example_prime_square_eq_bot (k : Type u) [Field k] :
     (squareExamplePrimeIdeal k) ^ 2 = (⊥ : Ideal (squareExampleRing k)) := by
-  sorry
+  rw [squareExamplePrimeIdeal, Ideal.span_singleton_pow]
+  rw [Ideal.span_singleton_eq_bot]
+  apply Ideal.Quotient.eq_zero_iff_mem.mpr
+  change squareExampleXPolynomial k ^ 2 ∈ squareExampleRelationIdeal k
+  exact Ideal.subset_span (by simp)
+
+private theorem square_example_x_kernel (k : Type u) [Field k] :
+    LinearMap.ker (LinearMap.lsmul (squareExampleRing k) (squareExampleRing k)
+      (squareExampleX k)) =
+      (squareExampleExtraPrimeIdeal k : Submodule (squareExampleRing k)
+        (squareExampleRing k)) := by
+  have hx2 : squareExampleX k ^ 2 = 0 := by
+    apply Ideal.Quotient.eq_zero_iff_mem.mpr
+    exact Ideal.subset_span (by simp [squareExampleRelationIdeal])
+  have hxy : squareExampleX k * squareExampleY k = 0 := by
+    apply Ideal.Quotient.eq_zero_iff_mem.mpr
+    exact Ideal.subset_span (by simp [squareExampleRelationIdeal])
+  have hx_mul : squareExampleX k * squareExampleX k = 0 := by
+    simpa [pow_two] using hx2
+  ext r
+  constructor
+  · intro hr
+    obtain ⟨t, rfl⟩ := Ideal.Quotient.mk_surjective r
+    change (Ideal.Quotient.mk (squareExampleRelationIdeal k)
+      (squareExampleXPolynomial k)) *
+        (Ideal.Quotient.mk (squareExampleRelationIdeal k) t) = 0 at hr
+    rw [← map_mul] at hr
+    have hmem : squareExampleXPolynomial k * t ∈
+        Ideal.span ({squareExampleXPolynomial k ^ 2,
+          squareExampleXPolynomial k * squareExampleYPolynomial k} :
+          Set (squareExamplePolynomialRing k)) := by
+      exact Ideal.Quotient.eq_zero_iff_mem.mp hr
+    rcases Ideal.mem_span_pair.mp hmem with ⟨a, b, hab⟩
+    have ht : a * squareExampleXPolynomial k + b * squareExampleYPolynomial k = t := by
+      apply mul_left_cancel₀ (MvPolynomial.X_prime.ne_zero :
+        squareExampleXPolynomial k ≠ 0)
+      calc
+        squareExampleXPolynomial k *
+            (a * squareExampleXPolynomial k + b * squareExampleYPolynomial k) =
+            a * squareExampleXPolynomial k ^ 2 +
+              b * (squareExampleXPolynomial k * squareExampleYPolynomial k) := by ring
+        _ = squareExampleXPolynomial k * t := hab
+    change Ideal.Quotient.mk (squareExampleRelationIdeal k) t ∈
+      Ideal.span ({squareExampleX k, squareExampleY k} : Set (squareExampleRing k))
+    rw [Ideal.mem_span_pair]
+    refine ⟨Ideal.Quotient.mk (squareExampleRelationIdeal k) a,
+      Ideal.Quotient.mk (squareExampleRelationIdeal k) b, ?_⟩
+    simpa only [map_add, map_mul, squareExampleX, squareExampleY] using
+      congrArg (Ideal.Quotient.mk (squareExampleRelationIdeal k)) ht
+  · intro hr
+    change squareExampleX k * r = 0
+    change r ∈ Ideal.span ({squareExampleX k, squareExampleY k} :
+      Set (squareExampleRing k)) at hr
+    rcases Ideal.mem_span_pair.mp hr with ⟨a, b, hab⟩
+    rw [← hab, mul_add]
+    simp [mul_assoc, mul_comm, mul_left_comm, hx_mul, hxy]
+
+private theorem square_example_y_kernel (k : Type u) [Field k] :
+    LinearMap.ker (LinearMap.lsmul (squareExampleRing k) (squareExampleRing k)
+      (squareExampleY k)) =
+      (squareExamplePrimeIdeal k : Submodule (squareExampleRing k)
+        (squareExampleRing k)) := by
+  have hxy : squareExampleX k * squareExampleY k = 0 := by
+    apply Ideal.Quotient.eq_zero_iff_mem.mpr
+    exact Ideal.subset_span (by simp [squareExampleRelationIdeal])
+  have hyx : squareExampleY k * squareExampleX k = 0 := by
+    simpa [mul_comm] using hxy
+  have hprime : (Ideal.span ({squareExampleXPolynomial k} :
+      Set (squareExamplePolynomialRing k))).IsPrime :=
+    Ideal.isPrime_span_singleton_of_prime MvPolynomial.X_prime
+  have hrel_le : squareExampleRelationIdeal k ≤
+      Ideal.span ({squareExampleXPolynomial k} :
+        Set (squareExamplePolynomialRing k)) := by
+    rw [squareExampleRelationIdeal, Ideal.span_le]
+    intro z hz
+    simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at hz
+    rcases hz with rfl | rfl
+    · exact (Ideal.span ({squareExampleXPolynomial k} :
+        Set (squareExamplePolynomialRing k))).mul_mem_left _
+        (Ideal.subset_span (by simp))
+    · exact (Ideal.span ({squareExampleXPolynomial k} :
+        Set (squareExamplePolynomialRing k))).mul_mem_right _
+        (Ideal.subset_span (by simp))
+  have hy_not : squareExampleYPolynomial k ∉
+      Ideal.span ({squareExampleXPolynomial k} :
+        Set (squareExamplePolynomialRing k)) := by
+    have hset : Ideal.span ({squareExampleXPolynomial k} :
+        Set (squareExamplePolynomialRing k)) =
+        Ideal.span (MvPolynomial.X '' ({0} : Set (Fin 2))) := by
+      apply congrArg Ideal.span
+      ext z
+      simp [squareExampleXPolynomial]
+    rw [hset, MvPolynomial.mem_ideal_span_X_image]
+    intro h
+    obtain ⟨i, hi, hmi⟩ := h (Finsupp.single (1 : Fin 2) 1) (by
+      simp [squareExampleYPolynomial])
+    rcases hi with rfl
+    simp at hmi
+  ext r
+  constructor
+  · intro hr
+    obtain ⟨t, rfl⟩ := Ideal.Quotient.mk_surjective r
+    change (Ideal.Quotient.mk (squareExampleRelationIdeal k)
+      (squareExampleYPolynomial k)) *
+        (Ideal.Quotient.mk (squareExampleRelationIdeal k) t) = 0 at hr
+    rw [← map_mul] at hr
+    have hmem : squareExampleYPolynomial k * t ∈
+        Ideal.span ({squareExampleXPolynomial k} :
+          Set (squareExamplePolynomialRing k)) :=
+      hrel_le (Ideal.Quotient.eq_zero_iff_mem.mp hr)
+    have ht := (hprime.mem_or_mem hmem).resolve_left hy_not
+    rcases Ideal.mem_span_singleton.mp ht with ⟨c, hc⟩
+    change Ideal.Quotient.mk (squareExampleRelationIdeal k) t ∈
+      Ideal.span ({squareExampleX k} : Set (squareExampleRing k))
+    rw [Ideal.mem_span_singleton]
+    refine ⟨Ideal.Quotient.mk (squareExampleRelationIdeal k) c, ?_⟩
+    simpa only [map_mul, squareExampleX] using
+      congrArg (Ideal.Quotient.mk (squareExampleRelationIdeal k)) hc
+  · intro hr
+    change squareExampleY k * r = 0
+    change r ∈ Ideal.span ({squareExampleX k} : Set (squareExampleRing k)) at hr
+    rcases Ideal.mem_span_singleton.mp hr with ⟨c, hc⟩
+    rw [hc, ← mul_assoc, hyx, zero_mul]
 
 /-- The example has exactly one associated prime besides `p`. -/
 theorem square_example_associated_primes (k : Type u) [Field k] :
@@ -107,6 +231,174 @@ theorem square_example_associated_primes (k : Type u) [Field k] :
         (squareExamplePrimeSquareQuotient k) =
       ({squareExamplePrimeIdeal k, squareExampleExtraPrimeIdeal k} :
         Set (Ideal (squareExampleRing k))) := by
-  sorry
+  have hp_ass : associatedPrimes (squareExampleRing k)
+      (squareExampleRing k ⧸ squareExamplePrimeIdeal k) =
+      ({squareExamplePrimeIdeal k} : Set (Ideal (squareExampleRing k))) := by
+    simpa [(square_example_prime_is_prime k).radical] using
+      (associatedPrimes.eq_singleton_of_isPrimary
+        (square_example_prime_is_prime k).isPrimary)
+  have hqprime : (squareExampleExtraPrimeIdeal k).IsPrime := by
+    let P : Ideal (squareExamplePolynomialRing k) :=
+      Ideal.span ({squareExampleXPolynomial k, squareExampleYPolynomial k} :
+        Set (squareExamplePolynomialRing k))
+    let hP : P.IsPrime := by
+      let e := MvPolynomial.finSuccEquiv k 1
+      let K : Ideal (Polynomial (MvPolynomial (Fin 1) k)) :=
+        Ideal.span ({Polynomial.C (MvPolynomial.X (0 : Fin 1)), Polynomial.X} :
+          Set (Polynomial (MvPolynomial (Fin 1) k)))
+      have hmap : Ideal.map (e : squareExamplePolynomialRing k →+*
+          Polynomial (MvPolynomial (Fin 1) k)) P = K := by
+        simp only [P, K, Ideal.map_span]
+        apply congrArg Ideal.span
+        ext z
+        simp only [Set.mem_image, Set.mem_insert_iff, Set.mem_singleton_iff]
+        constructor
+        · rintro ⟨x, (rfl | rfl), rfl⟩
+          · right
+            simpa [e, squareExampleXPolynomial] using
+              (MvPolynomial.finSuccEquiv_X_zero (R := k) (n := 1))
+          · left
+            simpa [e, squareExampleYPolynomial] using
+              (MvPolynomial.finSuccEquiv_X_succ (R := k) (n := 1)
+                (j := (0 : Fin 1)))
+        · intro hz
+          rcases hz with rfl | rfl
+          · exact ⟨_, Or.inr rfl,
+              (MvPolynomial.finSuccEquiv_X_succ (R := k) (n := 1)
+                (j := (0 : Fin 1)))⟩
+          · exact ⟨_, Or.inl rfl,
+              (MvPolynomial.finSuccEquiv_X_zero (R := k) (n := 1))⟩
+      let ep : (Polynomial (MvPolynomial (Fin 1) k) ⧸ K) ≃ₐ[k]
+          (MvPolynomial (Fin 1) k ⧸ Ideal.span
+            ({MvPolynomial.X (0 : Fin 1)} : Set (MvPolynomial (Fin 1) k))) := by
+        have hJ : K = Ideal.span
+            ({Polynomial.C (MvPolynomial.X (0 : Fin 1)),
+              Polynomial.X - Polynomial.C (0 : MvPolynomial (Fin 1) k)} :
+              Set (Polynomial (MvPolynomial (Fin 1) k))) := by
+          simp [K]
+        exact hJ ▸
+          ((Polynomial.quotientSpanCXSubCAlgEquiv
+            (MvPolynomial.X (0 : Fin 1)) 0).restrictScalars k)
+      letI : IsDomain (MvPolynomial (Fin 1) k ⧸ Ideal.span
+          ({MvPolynomial.X (0 : Fin 1)} : Set (MvPolynomial (Fin 1) k))) :=
+        (Ideal.Quotient.isDomain_iff_prime _).mpr
+          (Ideal.isPrime_span_singleton_of_prime
+            (MvPolynomial.X_prime : Prime (MvPolynomial.X (0 : Fin 1))))
+      have hKprime : K.IsPrime := by
+        letI : IsDomain (Polynomial (MvPolynomial (Fin 1) k) ⧸ K) :=
+          ep.toRingEquiv.toMulEquiv.isDomain _
+        exact (Ideal.Quotient.isDomain_iff_prime K).mp inferInstance
+      letI : IsDomain (squareExamplePolynomialRing k ⧸ P) :=
+        ((Ideal.quotientEquivAlg P K e hmap.symm).trans ep).toRingEquiv.toMulEquiv.isDomain _
+      exact (Ideal.Quotient.isDomain_iff_prime P).mp inferInstance
+    have hIP : squareExampleRelationIdeal k ≤ P := by
+      rw [squareExampleRelationIdeal, Ideal.span_le]
+      intro f hf
+      simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at hf
+      rcases hf with rfl | rfl
+      · exact P.mul_mem_left _ (Ideal.subset_span (by simp [P]))
+      · exact P.mul_mem_right _ (Ideal.subset_span (by simp [P]))
+    have hmap : Ideal.map (Ideal.Quotient.mk (squareExampleRelationIdeal k)) P =
+        squareExampleExtraPrimeIdeal k := by
+      simp only [P, squareExampleExtraPrimeIdeal, Ideal.map_span]
+      apply congrArg Ideal.span
+      ext z
+      simp only [Set.mem_image, Set.mem_insert_iff, Set.mem_singleton_iff]
+      constructor
+      · rintro ⟨x, (rfl | rfl), rfl⟩
+        · left
+          simpa [squareExampleX, squareExampleXPolynomial]
+        · right
+          simpa [squareExampleY, squareExampleYPolynomial]
+      · intro hz
+        rcases hz with rfl | rfl
+        · exact ⟨_, Or.inl rfl, rfl⟩
+        · exact ⟨_, Or.inr rfl, rfl⟩
+    rw [← hmap]
+    exact @Ideal.isPrime_map_quotientMk_of_isPrime _ _ _ _ P hP hIP
+  have hq_ass : associatedPrimes (squareExampleRing k)
+      (squareExampleRing k ⧸ squareExampleExtraPrimeIdeal k) =
+      ({squareExampleExtraPrimeIdeal k} : Set (Ideal (squareExampleRing k))) := by
+    simpa [hqprime.radical] using
+      (associatedPrimes.eq_singleton_of_isPrimary hqprime.isPrimary)
+  let fx : (squareExampleRing k ⧸ squareExampleExtraPrimeIdeal k) →ₗ[ squareExampleRing k]
+      squareExampleRing k :=
+    (squareExampleExtraPrimeIdeal k : Submodule (squareExampleRing k)
+      (squareExampleRing k)).liftQ
+      (LinearMap.lsmul (squareExampleRing k) (squareExampleRing k)
+        (squareExampleX k)) (by rw [square_example_x_kernel k])
+  let fy : (squareExampleRing k ⧸ squareExamplePrimeIdeal k) →ₗ[ squareExampleRing k]
+      squareExampleRing k :=
+    (squareExamplePrimeIdeal k : Submodule (squareExampleRing k)
+      (squareExampleRing k)).liftQ
+      (LinearMap.lsmul (squareExampleRing k) (squareExampleRing k)
+        (squareExampleY k)) (by rw [square_example_y_kernel k])
+  have hfx : Function.Injective fx := by
+    apply LinearMap.ker_eq_bot.mp
+    dsimp [fx]
+    exact Submodule.ker_liftQ_eq_bot' _ _ (square_example_x_kernel k).symm
+  have hfy : Function.Injective fy := by
+    apply LinearMap.ker_eq_bot.mp
+    dsimp [fy]
+    exact Submodule.ker_liftQ_eq_bot' _ _ (square_example_y_kernel k).symm
+  let g : squareExampleRing k →ₗ[squareExampleRing k]
+      (squareExampleRing k ⧸ squareExamplePrimeIdeal k) :=
+    (squareExamplePrimeIdeal k : Submodule (squareExampleRing k)
+      (squareExampleRing k)).mkQ
+  have hfg : Function.Exact fx g := by
+    intro z
+    constructor
+    · intro hz
+      change (squareExamplePrimeIdeal k).mkQ z = 0 at hz
+      have hz' : z ∈ squareExamplePrimeIdeal k :=
+        (Submodule.Quotient.mk_eq_zero _).mp hz
+      rcases Ideal.mem_span_singleton.mp hz' with ⟨c, hc⟩
+      refine ⟨(squareExampleExtraPrimeIdeal k).mkQ c, ?_⟩
+      change squareExampleX k * c = z
+      exact hc.symm
+    · rintro ⟨w, rfl⟩
+      obtain ⟨c, rfl⟩ := (squareExampleExtraPrimeIdeal k).mkQ_surjective w
+      change (Submodule.Quotient.mk (squareExampleX k * c) :
+        squareExampleRing k ⧸ squareExamplePrimeIdeal k) = 0
+      rw [Submodule.Quotient.mk_eq_zero]
+      have hx : squareExampleX k ∈ squareExamplePrimeIdeal k := by
+        rw [squareExamplePrimeIdeal]
+        exact Ideal.subset_span (by simp)
+      exact (squareExamplePrimeIdeal k).mul_mem_right c hx
+  have hupper : associatedPrimes (squareExampleRing k) (squareExampleRing k) ⊆
+      ({squareExamplePrimeIdeal k, squareExampleExtraPrimeIdeal k} :
+        Set (Ideal (squareExampleRing k))) := by
+    intro P hP
+    have hP' := (associatedPrimes.subset_union_of_exact hfx hfg) hP
+    rw [hq_ass, hp_ass] at hP'
+    rcases hP' with hq | hp
+    · exact Set.mem_insert_iff.mpr (Or.inr hq)
+    · exact Set.mem_insert_iff.mpr (Or.inl hp)
+  have hp_mem : squareExamplePrimeIdeal k ∈
+      associatedPrimes (squareExampleRing k) (squareExampleRing k) := by
+    have h : squareExamplePrimeIdeal k ∈
+        associatedPrimes (squareExampleRing k)
+          (squareExampleRing k ⧸ squareExamplePrimeIdeal k) := by
+      rw [hp_ass]
+      simp
+    exact associatedPrimes.subset_of_injective hfy h
+  have hq_mem : squareExampleExtraPrimeIdeal k ∈
+      associatedPrimes (squareExampleRing k) (squareExampleRing k) := by
+    have h : squareExampleExtraPrimeIdeal k ∈
+        associatedPrimes (squareExampleRing k)
+          (squareExampleRing k ⧸ squareExampleExtraPrimeIdeal k) := by
+      rw [hq_ass]
+      simp
+    exact associatedPrimes.subset_of_injective hfx h
+  have hR : associatedPrimes (squareExampleRing k)
+      (squareExamplePrimeSquareQuotient k) =
+      associatedPrimes (squareExampleRing k) (squareExampleRing k) := by
+    exact LinearEquiv.AssociatedPrimes.eq (Submodule.quotEquivOfEqBot
+      ((squareExamplePrimeIdeal k) ^ 2)
+      (square_example_prime_square_eq_bot k))
+  rw [hR]
+  exact Set.Subset.antisymm hupper (by
+    simpa only [Set.insert_subset_iff, Set.singleton_subset_iff] using
+      And.intro hp_mem hq_mem)
 
 end Formalization.Books.Exercises.Unit10

@@ -217,14 +217,14 @@ theorem surjective_locallyNilpotentKernel
     exact RingHom.SurjectiveOnStalks.residueFieldMap_bijective
       (RingHom.surjectiveOnStalks_of_surjective hf) _ _ rfl
   · intro R' _ g
-    letI : Algebra R S := f.toAlgebra
-    letI : Algebra R R' := g.toAlgebra
+    let : Algebra R S := f.toAlgebra
+    let : Algebra R R' := g.toAlgebra
     constructor
     · exact Algebra.TensorProduct.includeRight_surjective (T := R') hf
     · intro x hx
       let fa : R →ₐ[R] S := AlgHom.mk' f (by
         intro c y
-        simpa [Algebra.smul_def, RingHom.algebraMap_toAlgebra] using f.map_mul c y)
+        simp [Algebra.smul_def, RingHom.algebraMap_toAlgebra])
       let b : R ⊗[R] R' →ₐ[R] S ⊗[R] R' :=
         Algebra.TensorProduct.map fa (AlgHom.id R R')
       let a : R' →ₐ[R] R ⊗[R] R' := Algebra.TensorProduct.includeRight
@@ -272,10 +272,12 @@ theorem powerSurjective_locallyNilpotentKernel
   refine ⟨PrimeSpectrum.isHomeomorph_comap f (fun x => ?_) hker', ?_⟩
   · simpa [powerSurjective] using hpower x
   · intro q
-    letI : Algebra ((PrimeSpectrum.comap f q).asIdeal.ResidueField)
+    let : Algebra ((PrimeSpectrum.comap f q).asIdeal.ResidueField)
         (q.asIdeal.ResidueField) := (residueFieldMap f q).toAlgebra
-    constructor
-    · intro z
+    have hfield : fieldPowerProperty
+        (k := (PrimeSpectrum.comap f q).asIdeal.ResidueField)
+        (k' := q.asIdeal.ResidueField) := by
+      intro z
       obtain ⟨a, b, hb, hz⟩ :=
         IsFractionRing.div_surjective (S ⧸ q.asIdeal) z
       obtain ⟨y, hy⟩ := Ideal.Quotient.mk_surjective a
@@ -321,13 +323,11 @@ theorem powerSurjective_locallyNilpotentKernel
                 rw [map_div₀, map_pow, map_pow, hY, hW]
         _ = (algebraMap S (q.asIdeal.ResidueField) y /
               algebraMap S (q.asIdeal.ResidueField) w) ^ (n * m) := by
-                rw [div_pow, pow_mul, pow_mul, Nat.mul_comm n m]
+                rw [div_pow, ← pow_mul, ← pow_mul, Nat.mul_comm m n]
         _ = z ^ (n * m) := by rw [hz']
-    · apply (fieldPowerProperty_iff_classification
-        (k := (PrimeSpectrum.comap f q).asIdeal.ResidueField)
-        (k' := q.asIdeal.ResidueField)).mp
-      exact ‹fieldPowerProperty (k := (PrimeSpectrum.comap f q).asIdeal.ResidueField)
-        (k' := q.asIdeal.ResidueField)›
+    exact ⟨hfield, (fieldPowerProperty_iff_classification
+      (k := (PrimeSpectrum.comap f q).asIdeal.ResidueField)
+      (k' := q.asIdeal.ResidueField)).mp hfield⟩
 
 /-- The square-and-cube criterion gives a universal homeomorphism with
     residue-field isomorphisms. -/
@@ -359,7 +359,7 @@ theorem pPowerFieldGenerated_iff
     (p : ℕ) (hp : p.Prime) :
     pPowerFieldGenerated (k := k) (k' := k') p ↔
       Function.Surjective (algebraMap k k') ∨
-        ∃ hk : CharP k p, ∃ hk' : CharP k' p, IsPurelyInseparable k k' := by
+        ∃ _hk : CharP k p, ∃ _hk' : CharP k' p, IsPurelyInseparable k k' := by
   classical
   let T : Set k' := {x : k' | ∃ n : ℕ, 0 < n ∧
     x ^ (p ^ n) ∈ (algebraMap k k').range ∧
@@ -389,8 +389,8 @@ theorem pPowerFieldGenerated_iff
         have hx : x ∈ (⊥ : IntermediateField k k') := htop trivial
         exact hx
       have hchar : CharP k p := (Algebra.charP_iff k k' p).mpr hchar'
-      letI : CharP k p := hchar
-      letI : ExpChar k p := ExpChar.prime hp
+      let : CharP k p := hchar
+      let : ExpChar k p := ExpChar.prime hp
       have hpureAdjoin : IsPurelyInseparable k (IntermediateField.adjoin k T) :=
         (IntermediateField.isPurelyInseparable_adjoin_iff_pow_mem k k' p).2
           (fun x hx ↦ by
@@ -399,7 +399,7 @@ theorem pPowerFieldGenerated_iff
       have hpureTop : IsPurelyInseparable k (⊤ : IntermediateField k k') := by
         rw [← hgen]
         exact hpureAdjoin
-      letI : IsPurelyInseparable k (⊤ : IntermediateField k k') := hpureTop
+      let : IsPurelyInseparable k (⊤ : IntermediateField k k') := hpureTop
       exact Or.inr ⟨hchar, hchar', IntermediateField.topEquiv.isPurelyInseparable⟩
   · rintro (hsurj | ⟨hk, hk', hpure⟩)
     · apply top_unique
@@ -408,10 +408,10 @@ theorem pPowerFieldGenerated_iff
       obtain ⟨z, hz⟩ := hsurj ((p : k') * x)
       exact IntermediateField.subset_adjoin k _ ⟨1, by simp, ⟨y, by simpa using hy⟩,
         ⟨z, by simpa using hz⟩⟩
-    · letI : CharP k p := hk
-      letI : CharP k' p := hk'
-      letI : ExpChar k p := ExpChar.prime hp
-      letI : IsPurelyInseparable k k' := hpure
+    · let : CharP k p := hk
+      let : CharP k' p := hk'
+      let : ExpChar k p := ExpChar.prime hp
+      let : IsPurelyInseparable k k' := hpure
       apply top_unique
       intro x _
       obtain ⟨n, y, hy⟩ := IsPurelyInseparable.pow_mem k p x
@@ -424,7 +424,7 @@ theorem pPowerFieldGenerated_iff
         subst n
         exact IntermediateField.subset_adjoin k _ ⟨1, by simp, ⟨y ^ p, by
           rw [map_pow, hy]
-          simp⟩, ⟨0, by simp [CharP.cast_eq_zero k' p]⟩⟩
+          simp⟩, ⟨0, by simp⟩⟩
 
 /-- The `p`-power ring-map criterion, including its residue-field statement
     and stability under arbitrary base change. -/

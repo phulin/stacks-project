@@ -959,11 +959,11 @@ theorem relativeInertia_equivalent_to_diagonal_product {C : Cat.{v, u}}
           exact {
             hom := RelativeInertiaHom.mk a.automorphism.hom (by
               dsimp [Functor.comp, forward, inverse]
-              simp [Category.assoc, ObjectProperty.isoMk, Comma.isoMk,
+              simp [ObjectProperty.isoMk, Comma.isoMk,
                 fibredCategoryDiagonalFunctor, isoCommaDiagonal])
             inv := RelativeInertiaHom.mk a.automorphism.inv (by
               dsimp [Functor.comp, forward, inverse]
-              simp [Category.assoc, ObjectProperty.isoMk, Comma.isoMk,
+              simp [ObjectProperty.isoMk, Comma.isoMk,
                 fibredCategoryDiagonalFunctor, isoCommaDiagonal])
             hom_inv_id := by
               apply RelativeInertiaHom.ext
@@ -1017,8 +1017,7 @@ theorem relativeInertia_equivalent_to_diagonal_product {C : Cat.{v, u}}
                     simpa [fibredCategoryDiagonalFunctor, isoCommaDiagonal,
                       Category.assoc] using h'
                   · simp [Functor.comp, forward, inverse, fibredCategoryDiagonalFunctor,
-                      isoCommaDiagonal, rIso, ObjectProperty.isoMk, Comma.isoMk,
-                      Category.assoc]))
+                      isoCommaDiagonal, rIso, ObjectProperty.isoMk, Comma.isoMk]))
           exact ObjectProperty.isoMk _ eInner) (by
           intro z z' f
           dsimp [Functor.comp, forward, inverse]
@@ -2089,7 +2088,7 @@ theorem relativeInertia_is_twoFibreProduct {C : Cat.{v, u}}
           (φ.hom.app w).hom ≫
             (overFunctor F.underlying).map (b.obj w).automorphism.hom := by
         simpa only [Category.id_comp] using hcomm
-      letI : IsIso (φ.hom.app w).hom := IsIso.mk' ⟨
+      let : IsIso (φ.hom.app w).hom := IsIso.mk' ⟨
         (φ.inv.app w).hom,
         by
           have h := congrArg (fun k => k.hom) (φ.inv_hom_id_app w)
@@ -2163,8 +2162,7 @@ theorem relativeInertia_is_twoFibreProduct {C : Cat.{v, u}}
     rw [hβw]
     apply RelativeInertiaHom.ext
     dsimp [NatIso.ofComponents]
-    simp [CategoryStruct.comp, relativeInertiaCategory, Functor.map_id,
-      Category.assoc]
+    simp [CategoryStruct.comp]
     change (φ.hom.app w).hom ≫ 𝟙 _ =
       (φ.hom.app w).hom ≫
         (overFunctor F.underlying).map
@@ -2176,7 +2174,7 @@ theorem relativeInertia_is_twoFibreProduct {C : Cat.{v, u}}
     cases hcarrier
     have hid : (𝟙 (b.obj w) : b.obj w ⟶ b.obj w).hom = 𝟙 _ := by
       rfl
-    simp only [hid, Category.assoc, Category.comp_id]
+    simp only [hid, Category.comp_id]
     change (φ.hom.app w).hom =
       (φ.hom.app w).hom ≫
         ((inertiaFunctoriality F).map (𝟙 (b.obj w))).hom ≫ 𝟙 _

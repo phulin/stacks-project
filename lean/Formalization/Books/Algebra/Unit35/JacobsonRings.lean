@@ -781,7 +781,7 @@ theorem linear_operator_has_noninvertible_monic_polynomial
     have hpv : (Polynomial.aeval T p) v = 0 := by
       have hm' := congrArg (Polynomial.aeval T (s.prod fun l =>
         (Polynomial.X - Polynomial.C l))) hm
-      simp only [map_sum, map_smul, Module.End.mul_apply, map_zero] at hm'
+      simp only [map_sum, map_smul, map_zero] at hm'
       have hm'' :
           (s.sum (fun j => m j •
             (Polynomial.aeval T ((s.erase j).prod fun l =>
@@ -803,7 +803,7 @@ theorem linear_operator_has_noninvertible_monic_polynomial
             s.sum fun j => m j •
               (Polynomial.aeval T ((s.erase j).prod fun l =>
                 (Polynomial.X - Polynomial.C l))) v := by
-          simp [p, map_sum, map_mul, Algebra.smul_def, Module.End.mul_apply]
+          simp [p, map_sum, map_mul, Module.End.mul_apply]
         _ = 0 := hm''
     have h2 : ∀ j ∈ s.erase i,
         m j * ((s.erase j).prod fun l : k => i - l) = 0 := by
@@ -838,7 +838,7 @@ theorem linear_operator_has_noninvertible_monic_polynomial
       (Module.End.isUnit_iff _).mp hpu |>.1
     apply hv
     apply hp_inj
-    simpa [hpv]
+    simp [hpv]
   exact (not_lt_of_ge hli.cardinal_le_rank) hcard
 
 private theorem algebraic_of_small_generators
@@ -849,12 +849,12 @@ private theorem algebraic_of_small_generators
     rw [Algebra.adjoin_range_eq_range_aeval]
     exact (AlgHom.range_eq_top _).mpr P.aeval_val_surjective
   by_cases hJ : Finite J
-  · letI := hJ
-    letI : Algebra.FiniteType k L := P.finiteType
-    letI : Module.Finite k L := finite_of_finite_type_of_isJacobsonRing k L
+  · let _ := hJ
+    let _ : Algebra.FiniteType k L := P.finiteType
+    let _ : Module.Finite k L := finite_of_finite_type_of_isJacobsonRing k L
     exact Algebra.IsAlgebraic.of_finite k L
   · have hJ' : Infinite J := not_finite_iff_infinite.mp hJ
-    letI := hJ'
+    let _ := hJ'
     have h0 : Cardinal.aleph0 < Cardinal.mk k :=
       lt_of_le_of_lt (Cardinal.aleph0_le_mk J) hcard
     have hrank : Module.rank k L < Cardinal.mk k := by
@@ -880,7 +880,7 @@ private theorem algebraic_of_small_generators
     intro hinj
     apply hQ.ne_zero
     apply hinj
-    simpa [hzero]
+    simp [hzero]
 
 private theorem residueField_algebraic_of_small_generators
     {k S I : Type u} [Field k] [CommRing S] [Algebra k S]
@@ -894,9 +894,9 @@ private theorem residueField_algebraic_of_small_generators
     apply (AlgHom.range_eq_top _).mp
     rw [← Algebra.adjoin_range_eq_range_aeval, hgen])
   intro m
-  letI : Algebra k m.asIdeal.ResidueField :=
+  let _ : Algebra k m.asIdeal.ResidueField :=
     residueFieldAlgebraOfBaseAlgebra (k := k) m.asIdeal
-  letI : IsScalarTower k S m.asIdeal.ResidueField :=
+  let _ : IsScalarTower k S m.asIdeal.ResidueField :=
     IsScalarTower.of_algebraMap_eq' (by ext; rfl)
   let y : I → m.asIdeal.ResidueField :=
     fun i => algebraMap S m.asIdeal.ResidueField (x i)
@@ -939,8 +939,8 @@ private theorem localization_residueField_algebraic_of_small_generators
   let R := S ⧸ p.asIdeal
   let fR : R := Ideal.Quotient.mk p.asIdeal f
   let A := Localization.Away fR
-  letI : Field A := hfield.toField
-  letI : Algebra k R := inferInstance
+  let _ : Field A := hfield.toField
+  let _ : Algebra k R := inferInstance
   let Q : Algebra.Generators k R I :=
     Algebra.Generators.ofSurjective (fun i => Ideal.Quotient.mk p.asIdeal (P.val i)) (by
       intro z
@@ -963,10 +963,10 @@ private theorem localization_residueField_algebraic_of_small_generators
       _ < Cardinal.mk k := hcard
   have hAalg : Algebra.IsAlgebraic k A :=
     algebraic_of_small_generators G hcardG
-  letI : Algebra.IsAlgebraic k A := hAalg
-  letI : Algebra k p.asIdeal.ResidueField :=
+  let _ : Algebra.IsAlgebraic k A := hAalg
+  let _ : Algebra k p.asIdeal.ResidueField :=
     residueFieldAlgebraOfBaseAlgebra (k := k) p.asIdeal
-  letI : IsScalarTower k R p.asIdeal.ResidueField :=
+  let _ : IsScalarTower k R p.asIdeal.ResidueField :=
     IsScalarTower.of_algebraMap_eq' (by ext; rfl)
   have hfκ : algebraMap R p.asIdeal.ResidueField fR ≠ 0 := by
     intro hfκ
@@ -981,14 +981,14 @@ private theorem localization_residueField_algebraic_of_small_generators
     IsLocalization.Away.liftAlgHom (R := R) (S := A)
       (P := p.asIdeal.ResidueField) (f := Algebra.ofId R p.asIdeal.ResidueField)
       fR (isUnit_iff_ne_zero.mpr hfκ)
-  letI : Algebra A p.asIdeal.ResidueField := e.toAlgebra
-  letI : IsScalarTower k A p.asIdeal.ResidueField :=
+  let _ : Algebra A p.asIdeal.ResidueField := e.toAlgebra
+  let _ : IsScalarTower k A p.asIdeal.ResidueField :=
     IsScalarTower.of_algebraMap_eq' (by
       ext a
       change algebraMap R p.asIdeal.ResidueField (algebraMap k R a) =
         e (algebraMap k A a)
       rw [IsScalarTower.algebraMap_apply k R A, e.commutes])
-  letI : IsFractionRing A p.asIdeal.ResidueField :=
+  let _ : IsFractionRing A p.asIdeal.ResidueField :=
     IsFractionRing.isFractionRing_of_isDomain_of_isLocalization
       (Submonoid.powers fR) A p.asIdeal.ResidueField
   have hκalg : Algebra.IsAlgebraic k p.asIdeal.ResidueField :=
@@ -1056,8 +1056,8 @@ theorem uncountable_nullstellensatz
     rw [← Algebra.adjoin_range_eq_range_aeval, hgen])
   refine ⟨residueField_algebraic_of_small_generators x hgen hcard, ?_⟩
   by_cases hI : Finite I
-  · letI := hI
-    letI : Algebra.FiniteType k S := P.finiteType
+  · let _ := hI
+    let _ : Algebra.FiniteType k S := P.finiteType
     exact finiteType_algebra_over_field_isJacobson (k := k) (A := S)
   · have hI' : Infinite I := not_finite_iff_infinite.mp hI
     by_contra hS
@@ -1082,8 +1082,8 @@ theorem baseChange_uncountable_nullstellensatz
     exact (AlgHom.range_eq_top _).mpr P.aeval_val_surjective
   refine ⟨residueField_algebraic_of_small_generators P.val hgen hcard, ?_⟩
   by_cases hS : Finite S
-  · letI := hS
-    letI : Algebra.FiniteType K (K ⊗[k] S) := P.finiteType
+  · let _ := hS
+    let _ : Algebra.FiniteType K (K ⊗[k] S) := P.finiteType
     exact finiteType_algebra_over_field_isJacobson (k := K)
       (A := K ⊗[k] S)
   · have hS' : Infinite S := not_finite_iff_infinite.mp hS
@@ -1120,7 +1120,7 @@ theorem countableTrickIdeal_isProper {k : Type u} [Field k] :
       φ (countableTrickRelation i) = 0 := by
     have hi : algebraMap (Polynomial k) F i.1 ≠ 0 :=
       fun h => i.2 (hmap (by simpa using h))
-    simpa [φ, countableTrickRelation, mul_inv_cancel₀ hi]
+    simp [φ, countableTrickRelation, mul_inv_cancel₀ hi]
   intro htop
   have hle : countableTrickIdeal (k := k) ≤ RingHom.ker φ := by
     rw [countableTrickIdeal]
@@ -1132,7 +1132,8 @@ theorem countableTrickIdeal_isProper {k : Type u} [Field k] :
     rw [htop]
     simp
   have hzero : φ 1 = 0 := hle hone
-  simpa [φ] using hzero
+  rw [map_one] at hzero
+  exact one_ne_zero hzero
 
 theorem countableTrick_exists_maximalIdeal {k : Type u} [Field k] :
     ∃ m : MaximalSpectrum (CountableTrickRing k),

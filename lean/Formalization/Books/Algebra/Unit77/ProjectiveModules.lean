@@ -907,7 +907,124 @@ theorem projective_of_flat_of_isNilpotent_of_quotient_projective
     [Module.Flat R M]
     (hMbar : Module.Projective (R ⧸ I)
       (M ⧸ (I • (⊤ : Submodule R M)))) :
-    Module.Projective R M := by sorry
+    Module.Projective R M := by
+  classical
+  let A := R ⧸ I
+  let M0 : Type u := M
+  let IM : Submodule R M0 := I • (⊤ : Submodule R M0)
+  obtain ⟨P, hP, hPE⟩ :=
+    exists_projective_lift_of_isNilpotent I hI
+      (ModuleCat.of A (M0 ⧸ IM)) hMbar
+  obtain ⟨e⟩ := hPE
+  let IP : Submodule R (P : Type u) := I • (⊤ : Submodule R (P : Type u))
+  let mQ : M0 →ₗ[R] (M0 ⧸ IM) := IM.mkQ
+  let g : (P : Type u) →ₗ[R] (M0 ⧸ IM) :=
+    e.toLinearMap.restrictScalars R |>.comp IP.mkQ
+  obtain ⟨q, hq⟩ :=
+    Module.projective_lifting_property mQ g IM.mkQ_surjective
+  have hqmem : IP ≤ LinearMap.ker (mQ.comp q) := by
+    intro x hx
+    refine Submodule.smul_induction_on hx (fun r hr y _ => ?_) (fun x y hx hy => ?_)
+    · change mQ (q (r • y)) = 0
+      rw [map_smul, map_smul]
+      have hr0 : I.mkQ r = 0 := (Submodule.Quotient.mk_eq_zero I).2 hr
+      have hr0' : Ideal.Quotient.mk I r = 0 :=
+        Ideal.Quotient.eq_zero_iff_mem.mpr hr
+      rw [← IsScalarTower.algebraMap_smul A r, Ideal.Quotient.algebraMap_eq,
+        hr0', zero_smul]
+    · change mQ (q (x + y)) = 0
+      rw [map_add, map_add]
+      have hx0 : mQ (q x) = 0 := LinearMap.mem_ker.mp hx
+      have hy0 : mQ (q y) = 0 := LinearMap.mem_ker.mp hy
+      rw [hx0, hy0, add_zero]
+  have hIPmap : IP ≤ IM.comap q := by
+    intro x hx
+    change q x ∈ IM
+    exact (Submodule.Quotient.mk_eq_zero IM).mp
+      (LinearMap.mem_ker.mp (hqmem hx))
+  let qbar0 : (P : Type u) ⧸ IP →ₗ[R] (M0 ⧸ IM) :=
+    Submodule.mapQ IP IM q hIPmap
+  let qbar : (P : Type u) ⧸ IP →ₗ[A] (M0 ⧸ IM) :=
+    LinearMap.extendScalarsOfSurjective I.mkQ_surjective qbar0
+  have hqbar_mk (x : P) : qbar (Submodule.Quotient.mk x) = mQ (q x) := by
+    rfl
+  have hqbar_eq : qbar = e.toLinearMap := by
+    apply LinearMap.ext
+    intro x
+    obtain ⟨y, rfl⟩ := Submodule.mkQ_surjective IP x
+    have hqred := congrArg (fun f => f y) hq
+    change qbar (Submodule.Quotient.mk y) = e (Submodule.Quotient.mk y)
+    rw [hqbar_mk]
+    exact hqred
+  have hqbar_surj : Function.Surjective qbar := by
+    rw [hqbar_eq]
+    exact e.surjective
+  have hqsurj : Function.Surjective q := by
+    apply Formalization.Books.Algebra.Unit20.nakayama_part_eleven I q
+    exact hqbar_surj
+    exact hI
+  have hqbar_inj : Function.Injective qbar := by
+    rw [hqbar_eq]
+    exact e.injective
+  have hqbarR : Function.Injective (qbar.restrictScalars R) := hqbar_inj
+  let eP := TensorProduct.quotTensorEquivQuotSMul (P : Type u) I
+  let eM := TensorProduct.quotTensorEquivQuotSMul M0 I
+  have hcomm : eM.toLinearMap.comp (q.lTensor A) =
+      (qbar.restrictScalars R).comp eP.toLinearMap := by
+    apply TensorProduct.ext'
+    intro a x
+    obtain ⟨r, rfl⟩ := I.mkQ_surjective a
+    change TensorProduct.quotTensorEquivQuotSMul M0 I
+        (Ideal.Quotient.mk I r ⊗ₜ[R] q x) =
+      qbar (TensorProduct.quotTensorEquivQuotSMul (P : Type u) I
+        (Ideal.Quotient.mk I r ⊗ₜ[R] x))
+    rw [TensorProduct.quotTensorEquivQuotSMul_mk_tmul,
+      TensorProduct.quotTensorEquivQuotSMul_mk_tmul, hqbar_mk]
+    simp
+    rfl
+  have hlt_inj : Function.Injective (q.lTensor A) := by
+    intro x y hxy
+    apply eP.injective
+    apply hqbarR
+    calc
+      (qbar.restrictScalars R) (eP x) = eM (q.lTensor A x) := by
+        simpa [LinearMap.comp_apply] using congrArg (fun f => f x) hcomm.symm
+      _ = eM (q.lTensor A y) := congrArg eM hxy
+      _ = (qbar.restrictScalars R) (eP y) := by
+        simpa [LinearMap.comp_apply] using congrArg (fun f => f y) hcomm
+  have hltker : Subsingleton (LinearMap.ker (q.lTensor A)) := by
+    have hbot : LinearMap.ker (q.lTensor A) = ⊥ :=
+      LinearMap.ker_eq_bot.mpr hlt_inj
+    rw [hbot]
+    infer_instance
+  have htensorK : Subsingleton
+      (TensorProduct R A (LinearMap.ker q)) := by
+    let ek := LinearMap.kerLTensorEquivOfSurjective q hqsurj A
+    constructor
+    intro x y
+    apply ek.symm.injective
+    exact Subsingleton.elim _ _
+  have hKquot : Subsingleton
+      (LinearMap.ker q ⧸ (I • (⊤ : Submodule R (LinearMap.ker q)))) := by
+    let ek := TensorProduct.quotTensorEquivQuotSMul (LinearMap.ker q) I
+    constructor
+    intro x y
+    apply ek.symm.injective
+    exact htensorK.elim _ _
+  have hKtop : I • (⊤ : Submodule R (LinearMap.ker q)) = ⊤ :=
+    (Submodule.Quotient.subsingleton_iff.mp hKquot)
+  have hKsub : Subsingleton (LinearMap.ker q) :=
+    Formalization.Books.Algebra.Unit20.nakayama_part_nine I hKtop hI
+  have hqinj : Function.Injective q := by
+    intro x y hxy
+    have hdiff : q (x - y) = 0 := by
+      rw [map_sub, hxy, sub_self]
+    have hk : (⟨x - y, hdiff⟩ : LinearMap.ker q) = 0 :=
+      Subsingleton.elim _ _
+    have hzero : x - y = 0 := congrArg Subtype.val hk
+    exact sub_eq_zero.mp hzero
+  exact @Module.Projective.of_equiv' R _ M0 _ _ (P : Type u) _ _ hP
+    (LinearEquiv.ofBijective q ⟨hqinj, hqsurj⟩)
 /-
   classical
   let A := R ⧸ I

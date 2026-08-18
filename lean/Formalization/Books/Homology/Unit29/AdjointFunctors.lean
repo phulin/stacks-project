@@ -1,5 +1,6 @@
 import Formalization.Books.Homology.Unit27.Injectives
 import Formalization.Books.Categories.Unit23.ExactFunctors
+import Formalization.Books.Categories.Unit24.AdjointFunctors
 import Mathlib.Algebra.Category.ModuleCat.ChangeOfRings
 import Mathlib.Algebra.Category.ModuleCat.ChangeOfRingsExact
 import Mathlib.CategoryTheory.Adjunction.PartialAdjoint
@@ -49,7 +50,50 @@ theorem adjoint_preserve_injectives
       (EnoughInjectives A →
         List.TFAE [PreservesMonomorphisms v, IsExact v,
           Functor.PreservesInjectiveObjects u]) := by
-  sorry
+  have hCol : PreservesFiniteColimits v := by
+    constructor
+    intro J _ _
+    exact hAdj.leftAdjoint_preservesColimits.preservesColimitsOfShape
+  have hMonoOfExact : IsExact v → PreservesMonomorphisms v := by
+    intro h
+    exact @preservesMonomorphisms_of_preservesLimitsOfShape _ _ _ _ v
+      (h.1.preservesFiniteLimits WalkingCospan)
+  have hExactOfMono : PreservesMonomorphisms v → IsExact v := by
+    intro h
+    refine ⟨?_, hCol⟩
+    apply (Functor.preservesFiniteLimits_tfae v).out 0 3 |>.1
+    intro S hS
+    have hMap : ∀ (S : ShortComplex B), S.ShortExact →
+        (S.map v).Exact ∧ Epi (v.map S.g) :=
+      ((Functor.preservesFiniteColimits_tfae v).out 3 0).1 hCol
+    have hS' := hMap S hS
+    have hMonoS : Mono S.f := hS.mono_f
+    exact ⟨hS'.1,
+      @PreservesMonomorphisms.preserves B _ A _ v h _ _ S.f hMonoS⟩
+  have hExactInjective : IsExact v → Functor.PreservesInjectiveObjects u := by
+    intro h
+    refine ⟨?_⟩
+    intro I hI
+    exact @Adjunction.map_injective B _ A _ v u hAdj (hMonoOfExact h) I hI
+  refine ⟨⟨hExactOfMono, hMonoOfExact⟩, hExactInjective, ?_⟩
+  intro hEnough
+  have hEnough' : EnoughInjectives A := hEnough
+  apply List.tfae_of_forall (IsExact v)
+  intro p hp
+  rcases List.mem_cons.mp hp with hp | hp
+  · subst p
+    exact ⟨hExactOfMono, hMonoOfExact⟩
+  rcases List.mem_cons.mp hp with hp | hp
+  · subst p
+    exact Iff.rfl
+  have hp := List.mem_singleton.mp hp
+  subst p
+  constructor
+  · exact fun h =>
+      hExactOfMono
+        (@Functor.preservesMonomorphisms_of_adjunction_of_preservesInjectiveObjects
+          B _ A _ hEnough' v u hAdj h)
+  · exact hExactInjective
 
 /-! ### Change of rings -/
 

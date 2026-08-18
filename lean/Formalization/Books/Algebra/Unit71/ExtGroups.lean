@@ -55,6 +55,16 @@ structure FiniteFreeResolution (R : Type u) [Ring R] (M : ModuleCat.{u} R) where
   resolution : FreeResolution R M
   finite : ∀ n, Module.Finite R (resolution.resolution.complex.X n)
 
+/-- A complex of free modules augmented to a module.
+
+This is the source-facing hypothesis in the comparison lemma: unlike a
+`FreeResolution`, the complex itself is not required to be exact. -/
+structure FreeAugmentedComplex (R : Type u) [Ring R] (M : ModuleCat.{u} R) where
+  complex : ModuleChainComplex R
+  augmentation : complex.X 0 ⟶ M
+  augmentation_condition : complex.d 1 0 ≫ augmentation = 0
+  free : ∀ n, Module.Free R (complex.X n)
+
 /-- A projective resolution supplies the preceding source-facing resolution
 data. -/
 noncomputable def projectiveResolutionToResolution {R : Type u} [Ring R]
@@ -99,6 +109,21 @@ theorem exists_free_resolution {R : Type u} [Ring R] (M : ModuleCat.{u} R) :
 theorem exists_finite_free_resolution {R : Type u} [Ring R]
     [IsNoetherianRing R] (M : ModuleCat.{u} R) [Module.Finite R M] :
     Nonempty (FiniteFreeResolution R M) := by
+  sorry
+
+/-- A comparison map from a free augmented complex to a resolution. -/
+structure FreeAugmentedComplexMap {R : Type u} [Ring R]
+    {M N : ModuleCat.{u} R} (F : FreeAugmentedComplex R M) (G : Resolution R N)
+    (φ : M ⟶ N) where
+  hom : F.complex ⟶ G.complex
+  hom_f_zero_comp_augmentation : hom.f 0 ≫ G.augmentation = F.augmentation ≫ φ
+
+/-- An augmented complex of free modules admits a comparison map to any
+resolution. -/
+theorem free_augmented_complex_map_exists {R : Type u} [Ring R]
+    {M N : ModuleCat.{u} R} (F : FreeAugmentedComplex R M) (G : Resolution R N)
+    (φ : M ⟶ N) :
+    Nonempty (FreeAugmentedComplexMap F G φ) := by
   sorry
 
 /- A map of resolutions is a map of complexes compatible with the augmentation. -/
@@ -185,6 +210,14 @@ def CochainHomotopic {R : Type u} [Ring R] {F G : ModuleCochainComplex R}
 def AdditiveCochainHomotopic
     {F G : CochainComplex (AddCommGrpCat.{u}) ℕ} (α β : F ⟶ G) : Prop :=
   Nonempty (Homotopy α β)
+
+/-- Any two comparison maps from an augmented free complex to a resolution
+are homotopic. -/
+theorem free_augmented_complex_maps_homotopic {R : Type u} [Ring R]
+    {M N : ModuleCat.{u} R} (F : FreeAugmentedComplex R M) (G : Resolution R N)
+    (φ : M ⟶ N) (α β : FreeAugmentedComplexMap F G φ) :
+    ChainHomotopic α.hom β.hom := by
+  sorry
 
 theorem chain_homotopic_maps_equal_on_homology {R : Type u} [Ring R]
     {F G : ModuleChainComplex R} {α β : F ⟶ G} (h : ChainHomotopic α β) (i : ℕ) :
@@ -323,8 +356,9 @@ theorem ext_module_negative {R : Type u} [CommRing R]
     (M N : ModuleCat.{u} R) {i : ℤ} (hi : i < 0) : ExtModuleZ M N i = 0 := by
   simp [ExtModuleZ, not_le_of_gt hi]
 
-/-- A chosen free-resolution computation is canonically identified with the
-derived-category Ext group. -/
+/-- A chosen free-resolution computation is additively equivalent to the
+derived-category Ext group. The `Nonempty` wrapper records existence without
+choosing a comparison equivalence. -/
 theorem resolution_ext_represents_ext {R : Type u} [Ring R]
     {M N : ModuleCat.{u} R} (F : FreeResolution R M) (i : ℕ) :
     Nonempty (ResolutionExt F N i ≃+ ExtGroup M N i) := by
@@ -386,14 +420,14 @@ theorem isIso_resolution_ext_identity_map {R : Type u} [Ring R]
 
 /-! ## Long exact sequences -/
 
-/-- The five consecutive terms in the covariant long exact Ext sequence. -/
+/-- The five-arrow segment of the covariant long exact Ext sequence. -/
 noncomputable def extCovariantSequence {R : Type u} [Ring R]
     (S : ShortComplex (ModuleCat.{u} R)) (hS : S.ShortExact)
     (M : ModuleCat.{u} R) (i : ℕ) :
     ComposableArrows (AddCommGrpCat.{u}) 5 :=
   CategoryTheory.Abelian.Ext.covariantSequence M hS i (i + 1) rfl
 
-/-- Exactness of every five-term segment in the covariant long exact sequence. -/
+/-- Exactness of every five-arrow segment in the covariant long exact sequence. -/
 theorem extCovariantSequence_exact {R : Type u} [Ring R]
     (S : ShortComplex (ModuleCat.{u} R)) (hS : S.ShortExact)
     (M : ModuleCat.{u} R) (i : ℕ) :
@@ -410,7 +444,7 @@ theorem ext_covariant_initial_injective {R : Type u} [Ring R]
   exact CategoryTheory.Abelian.Ext.postcomp_mk₀_injective_of_mono
     (hf := hS.mono_f) M S.f
 
-/-- The five consecutive terms in the contravariant long exact Ext sequence. -/
+/-- The five-arrow segment of the contravariant long exact Ext sequence. -/
 noncomputable def extContravariantSequence {R : Type u} [Ring R]
     (S : ShortComplex (ModuleCat.{u} R)) (hS : S.ShortExact)
     (N : ModuleCat.{u} R) (i : ℕ) :
@@ -418,7 +452,7 @@ noncomputable def extContravariantSequence {R : Type u} [Ring R]
   CategoryTheory.Abelian.Ext.contravariantSequence hS N i (i + 1)
     (by simp [Nat.add_comm])
 
-/-- Exactness of every five-term segment in the contravariant long exact sequence. -/
+/-- Exactness of every five-arrow segment in the contravariant long exact sequence. -/
 theorem extContravariantSequence_exact {R : Type u} [Ring R]
     (S : ShortComplex (ModuleCat.{u} R)) (hS : S.ShortExact)
     (N : ModuleCat.{u} R) (i : ℕ) :
@@ -439,19 +473,17 @@ theorem ext_contravariant_initial_injective {R : Type u} [Ring R]
 
 /-! ## Annihilation and Noetherian finiteness -/
 
-/-- A scalar annihilates a module. -/
-def Annihilates {R : Type u} [Ring R] (r : R) (M : ModuleCat.{u} R) : Prop :=
-  ∀ m : M, r • m = 0
-
-/-- If `rN = 0`, scalar multiplication by `r` vanishes on every Ext group. -/
+/-- If `r` belongs to the annihilator of `N`, scalar multiplication by `r`
+vanishes on every Ext group. -/
 theorem ext_smul_eq_zero_of_annihilates_right {R : Type u} [CommRing R]
-    (r : R) (M N : ModuleCat.{u} R) (hN : Annihilates r N) (i : ℕ) :
+    (r : R) (M N : ModuleCat.{u} R) (hN : r ∈ Module.annihilator R N) (i : ℕ) :
     ∀ e : ExtGroup M N i, r • e = 0 := by
   sorry
 
-/-- If `rM = 0`, scalar multiplication by `r` vanishes on every Ext group. -/
+/-- If `r` belongs to the annihilator of `M`, scalar multiplication by `r`
+vanishes on every Ext group. -/
 theorem ext_smul_eq_zero_of_annihilates_left {R : Type u} [CommRing R]
-    (r : R) (M N : ModuleCat.{u} R) (hM : Annihilates r M) (i : ℕ) :
+    (r : R) (M N : ModuleCat.{u} R) (hM : r ∈ Module.annihilator R M) (i : ℕ) :
     ∀ e : ExtGroup M N i, r • e = 0 := by
   sorry
 

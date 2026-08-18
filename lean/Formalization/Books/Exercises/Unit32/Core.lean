@@ -82,8 +82,12 @@ noncomputable def openPresheafExtensionByInitial (C : Type u)
         intro V
         by_cases hV : V.unop ≤ U
         · simp [hV]
-        · simp only [if_neg hV]
-          apply (initialIsInitial : IsInitial (⊥_ C)).hom_ext
+        · split_ifs with h
+          have hI : IsInitial
+              (if V.unop ≤ U then F.obj (j.op.obj V) else ⊥_ C) := by
+            rw [if_neg hV]
+            exact initialIsInitial
+          exact hI.hom_ext _ _
       map_comp := by
         intro V W T i k
         by_cases hV : V.unop ≤ U

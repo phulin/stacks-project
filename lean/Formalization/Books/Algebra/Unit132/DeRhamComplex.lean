@@ -879,8 +879,154 @@ theorem deRhamExteriorPowerTensorMap_exists
       {q : PiTensorProduct A (fun _ : Fin p => deRhamTerm A B 1) →ₗ[A]
           deRhamTerm A B p //
         ∀ ω, q (PiTensorProduct.tprod A ω) =
-          deRhamPureWedgeTerms (A := A) (B := B) p ω} := by
-  sorry
+      deRhamPureWedgeTerms (A := A) (B := B) p ω} := by
+  classical
+  have tail_update_zero : ∀ (n : ℕ) (ω : Fin (n + 1) → deRhamTerm A B 1)
+      (x : deRhamTerm A B 1),
+      Matrix.vecTail (Function.update ω 0 x) = Matrix.vecTail ω := by
+    intro n ω x
+    funext i
+    simp [Matrix.vecTail]
+  have tail_update_succ : ∀ (n : ℕ) (ω : Fin (n + 1) → deRhamTerm A B 1)
+      (i : Fin n) (x : deRhamTerm A B 1),
+      Matrix.vecTail (Function.update ω i.succ x) =
+        Function.update (Matrix.vecTail ω) i x := by
+    intro n ω i x
+    funext j
+    by_cases h : i = j
+    · subst h
+      simp [Matrix.vecTail]
+    · simp [Matrix.vecTail, Ne.symm h]
+  have coe_cast : ∀ {n m : ℕ} (h : n = m) (x : deRhamTerm A B n),
+      ((cast (congrArg (fun k => (deRhamTerm A B k : Type _)) h) x :
+        deRhamTerm A B m) : ExteriorAlgebra B (ModuleOfDifferentials A B)) =
+        (x : ExteriorAlgebra B (ModuleOfDifferentials A B)) := by
+    intro n m h x
+    cases h
+    rfl
+  have coe_smul : ∀ {n : ℕ} (c : B) (x : deRhamTerm A B n),
+      ((c • x : deRhamTerm A B n) : ExteriorAlgebra B (ModuleOfDifferentials A B)) =
+        c • (x : ExteriorAlgebra B (ModuleOfDifferentials A B)) := by
+    intro n c x
+    rfl
+  have pure_succ_val : ∀ (n : ℕ) (ω : Fin (n + 1) → deRhamTerm A B 1),
+      (deRhamPureWedgeTerms (A := A) (B := B) (n + 1) ω :
+          ExteriorAlgebra B (ModuleOfDifferentials A B)) =
+        (deRhamWedge (A := A) (B := B) 1 n (ω 0)
+          (deRhamPureWedgeTerms (A := A) (B := B) n (Matrix.vecTail ω)) :
+          ExteriorAlgebra B (ModuleOfDifferentials A B)) := by
+    intro n ω
+    simp only [deRhamPureWedgeTerms]
+    apply coe_cast (Nat.add_comm 1 n)
+  have pure_add : ∀ (n : ℕ) (ω : Fin n → deRhamTerm A B 1)
+      (i : Fin n) (x y : deRhamTerm A B 1),
+      deRhamPureWedgeTerms (A := A) (B := B) n
+          (Function.update ω i (x + y)) =
+        deRhamPureWedgeTerms (A := A) (B := B) n
+            (Function.update ω i x) +
+          deRhamPureWedgeTerms (A := A) (B := B) n
+            (Function.update ω i y) := by
+    intro n
+    induction n with
+    | zero => intro ω i; exact Fin.elim0 i
+    | succ n ih =>
+        intro ω i x y
+        refine Fin.cases ?_ (fun j => ?_) i
+        · apply Subtype.ext
+          change (↑(deRhamPureWedgeTerms (A := A) (B := B) (n + 1)
+              (Function.update ω 0 (x + y))) :
+              ExteriorAlgebra B (ModuleOfDifferentials A B)) =
+            (↑(deRhamPureWedgeTerms (A := A) (B := B) (n + 1)
+                (Function.update ω 0 x)) : ExteriorAlgebra B (ModuleOfDifferentials A B)) +
+            ↑(deRhamPureWedgeTerms (A := A) (B := B) (n + 1)
+                (Function.update ω 0 y))
+          rw [pure_succ_val, pure_succ_val, pure_succ_val,
+            tail_update_zero, tail_update_zero, tail_update_zero]
+          simp [deRhamWedge, Function.update]
+        · apply Subtype.ext
+          change (↑(deRhamPureWedgeTerms (A := A) (B := B) (n + 1)
+              (Function.update ω j.succ (x + y))) :
+              ExteriorAlgebra B (ModuleOfDifferentials A B)) =
+            (↑(deRhamPureWedgeTerms (A := A) (B := B) (n + 1)
+                (Function.update ω j.succ x)) :
+                ExteriorAlgebra B (ModuleOfDifferentials A B)) +
+            ↑(deRhamPureWedgeTerms (A := A) (B := B) (n + 1)
+                (Function.update ω j.succ y))
+          rw [pure_succ_val, pure_succ_val, pure_succ_val,
+            tail_update_succ, tail_update_succ, tail_update_succ,
+            ih (Matrix.vecTail ω) j x y]
+          have hzero : (0 : Fin (n + 1)) ≠ j.succ := by
+            intro h
+            exact Fin.succ_ne_zero j h.symm
+          simp [deRhamWedge, Function.update, hzero]
+          rw [mul_add]
+  have pure_smul : ∀ (n : ℕ) (ω : Fin n → deRhamTerm A B 1)
+      (i : Fin n) (c : A) (x : deRhamTerm A B 1),
+      deRhamPureWedgeTerms (A := A) (B := B) n
+          (Function.update ω i (c • x)) =
+        c • deRhamPureWedgeTerms (A := A) (B := B) n
+          (Function.update ω i x) := by
+    intro n
+    induction n with
+    | zero => intro ω i; exact Fin.elim0 i
+    | succ n ih =>
+        intro ω i c x
+        refine Fin.cases ?_ (fun j => ?_) i
+        · rw [← IsScalarTower.algebraMap_smul B c
+            (deRhamPureWedgeTerms (A := A) (B := B) (n + 1)
+              (Function.update ω 0 x))]
+          apply Subtype.ext
+          change (↑(deRhamPureWedgeTerms (A := A) (B := B) (n + 1)
+              (Function.update ω 0 (c • x))) :
+              ExteriorAlgebra B (ModuleOfDifferentials A B)) =
+            (↑((algebraMap A B c) • deRhamPureWedgeTerms (A := A) (B := B) (n + 1)
+                (Function.update ω 0 x)) : ExteriorAlgebra B (ModuleOfDifferentials A B))
+          rw [coe_smul, pure_succ_val, pure_succ_val, tail_update_zero, tail_update_zero]
+          simp [deRhamWedge, Function.update]
+        · rw [← IsScalarTower.algebraMap_smul B c
+            (deRhamPureWedgeTerms (A := A) (B := B) (n + 1)
+              (Function.update ω j.succ x))]
+          apply Subtype.ext
+          change (↑(deRhamPureWedgeTerms (A := A) (B := B) (n + 1)
+              (Function.update ω j.succ (c • x))) :
+              ExteriorAlgebra B (ModuleOfDifferentials A B)) =
+            (↑((algebraMap A B c) • deRhamPureWedgeTerms (A := A) (B := B) (n + 1)
+                (Function.update ω j.succ x)) :
+                ExteriorAlgebra B (ModuleOfDifferentials A B))
+          rw [coe_smul, pure_succ_val, pure_succ_val, tail_update_succ, tail_update_succ,
+            ih (Matrix.vecTail ω) j c x]
+          have hzero : (0 : Fin (n + 1)) ≠ j.succ := by
+            intro h
+            exact Fin.succ_ne_zero j h.symm
+          simp [deRhamWedge, Function.update, hzero]
+  let f : MultilinearMap A (fun _ : Fin p => deRhamTerm A B 1)
+      (deRhamTerm A B p) :=
+    { toFun := deRhamPureWedgeTerms (A := A) (B := B) p
+      map_update_add' := by
+        intro _ ω i x y
+        have update_eq_update : ∀ z : deRhamTerm A B 1,
+            Function.update ω i z =
+              @Function.update (Fin p) (fun _ => deRhamTerm A B 1)
+                (instDecidableEqFin p) ω i z := by
+          intro z
+          funext k
+          by_cases h : k = i <;> simp [Function.update, h]
+        rw [update_eq_update, update_eq_update, update_eq_update]
+        exact pure_add p ω i x y
+      map_update_smul' := by
+        intro _ ω i c x
+        have update_eq_update : ∀ z : deRhamTerm A B 1,
+            Function.update ω i z =
+              @Function.update (Fin p) (fun _ => deRhamTerm A B 1)
+                (instDecidableEqFin p) ω i z := by
+          intro z
+          funext k
+          by_cases h : k = i <;> simp [Function.update, h]
+        rw [update_eq_update, update_eq_update]
+        exact pure_smul p ω i c x }
+  refine ⟨⟨PiTensorProduct.lift f, ?_⟩⟩
+  intro ω
+  simp [f]
 
 noncomputable def deRhamExteriorPowerTensorMap
     {A B : Type*} [CommRing A] [CommRing B] [Algebra A B] (p : ℕ) :

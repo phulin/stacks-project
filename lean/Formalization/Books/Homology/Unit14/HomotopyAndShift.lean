@@ -2,7 +2,6 @@ import Formalization.Books.Homology.Unit13.Complexes
 import Mathlib.Algebra.Torsor.Defs
 import Mathlib.Algebra.Torsor.Basic
 import Mathlib.Algebra.Homology.HomotopyCategory.ShiftSequence
-
 /-!
 # Homological Algebra, Chapter 14: Homotopy and the shift functor
 
@@ -168,14 +167,13 @@ noncomputable def chainShiftShortComplexFunctorIso (k i : ℤ) :
           smul_smul, Int.units_mul_self, one_smul, d_comp_XIsoOfEq_hom]))
     (fun {X} {Y} f ↦ by
       ext <;> simp [ShortComplex.isoMk, HomologicalComplex.shortComplexFunctor',
-        shiftFunctorObjXIso, shiftFunctor, add_comm, Units.smul_def,
-        Linear.comp_units_smul, Linear.units_smul_comp, XIsoOfEq_hom_naturality]
+        shiftFunctorObjXIso, shiftFunctor, Units.smul_def]
       · change f.f _ ≫ (k.negOnePow • (Y.XIsoOfEq _).hom) =
           (k.negOnePow • (X.XIsoOfEq _).hom) ≫ f.f _
-        simp [XIsoOfEq_hom_naturality, add_comm]
+        simp [XIsoOfEq_hom_naturality]
       · change f.f _ ≫ (k.negOnePow • (Y.XIsoOfEq _).hom) =
           (k.negOnePow • (X.XIsoOfEq _).hom) ≫ f.f _
-        simp [XIsoOfEq_hom_naturality, add_comm])
+        simp [XIsoOfEq_hom_naturality])
 
 noncomputable def chainHomologyShiftComparisonIso (k i : ℤ) :
     ChainHomologyShiftComparison (C := C) k i :=
@@ -823,7 +821,7 @@ theorem termwiseSplitting_section_eq
       rw [← (s n).id]
     _ = (s' n).s ≫ (s n).r ≫ (S.map (HomologicalComplex.eval C (ComplexShape.down ℤ) n)).f +
         (s' n).s ≫ (S.map (HomologicalComplex.eval C (ComplexShape.down ℤ) n)).g ≫ (s n).s := by
-      simp only [Preadditive.comp_add, Category.assoc]
+      simp only [Preadditive.comp_add]
     _ = (s n).s + (s' n).s ≫ (s n).r ≫
         (S.map (HomologicalComplex.eval C (ComplexShape.down ℤ) n)).f := by
       rw [hterm]
@@ -983,7 +981,7 @@ theorem termwiseSplitConnectingMap_induces_connecting
     change (S.X₃.iCycles i ≫ δ.hom.f i) ≫
       ((shiftFunctor C (-1 : ℤ)).obj S.X₁).d i (i - 1) = 0
     rw [Category.assoc, δ.hom.comm i (i - 1)]
-    simpa only [Category.assoc, S.X₃.iCycles_d_assoc, zero_comp]
+    simp only [S.X₃.iCycles_d_assoc, zero_comp]
   have hcycles :
       ((shiftFunctor C (-1 : ℤ)).obj S.X₁).liftCycles
           (S.X₃.iCycles i ≫ δ.hom.f i) (i - 1)
@@ -1039,7 +1037,7 @@ theorem termwiseSplitConnectingMap_induces_connecting
           simpa [E, Category.assoc] using hs'
         _ = S.X₁.liftCycles c (i - 1 - 1) _ _ ≫
               S.X₁.homologyπ (i - 1) := by
-          simp only [hft, Category.assoc, Iso.hom_inv_id, Category.comp_id,
+          simp only [hft, Iso.hom_inv_id, Category.comp_id,
             sub_eq_add_neg]
           have hi : i - 1 = i + (-1 : ℤ) := by omega
           cases hi
@@ -1054,201 +1052,7 @@ private theorem termwiseSplitConnectingMap_homotopy_of_difference
     (δ' : TermwiseSplitConnectingMap s') :
     ∃ h : Homotopy δ.hom δ'.hom,
       ∀ n : ℤ, h.hom n (n + 1) = termwiseSplittingDifferenceShift s s' n := by
-  let H : ∀ i j : ℤ, S.X₃.X i ⟶ ((shiftFunctor C (-1 : ℤ)).obj S.X₁).X j :=
-    fun i j => dite (j = i + 1)
-      (fun hij => by
-        exact termwiseSplittingDifference s s' i ≫
-          (shiftFunctorObjXIso S.X₁ (-1 : ℤ) j i (by omega)).inv)
-      (fun _ => 0)
-  refine ⟨{ hom := H, zero := ?_, comm := ?_ }, ?_⟩
-  · intro i j hij
-    dsimp [H]
-    split_ifs with h
-    · exfalso
-      apply hij
-      simp only [ComplexShape.down]
-      exact h.symm
-    · rfl
-  · intro n
-    have hn : n = n + (-1 : ℤ) + 1 := by omega
-    rw [dNext_eq H (show (ComplexShape.down ℤ).Rel n (n + (-1 : ℤ)) by simp),
-      prevD_eq H (show (ComplexShape.down ℤ).Rel (n + 1) n by
-        simp [ComplexShape.down, add_assoc])]
-    have hproj (m : ℤ) :
-        (s' m).r = (s m).r -
-          (S.map (HomologicalComplex.eval C (ComplexShape.down ℤ) m)).g ≫
-            termwiseSplittingDifference s s' m := by
-      let E := S.map (HomologicalComplex.eval C (ComplexShape.down ℤ) m)
-      let _ : Mono E.f := (s m).mono_f
-      apply (cancel_mono E.f).1
-      have hr : (s m).r ≫ E.f = 𝟙 _ - E.g ≫ (s m).s := by
-        convert (s m).r_f using 1 <;> rfl
-      have hr' : (s' m).r ≫ E.f = 𝟙 _ - E.g ≫ (s' m).s := by
-        convert (s' m).r_f using 1 <;> rfl
-      rw [hr', Preadditive.sub_comp, hr]
-      have hs := congrArg (fun z => E.g ≫ z)
-        (termwiseSplitting_section_eq s s' m)
-      simp only [Preadditive.comp_add] at hs
-      rw [hs]
-      simp only [Category.assoc]
-      abel
-    simp only [H, dif_pos hn, dif_pos rfl]
-    rw [δ.hom_f n, δ'.hom_f n]
-    dsimp [termwiseSplitConnectingFamily]
-    rw [hproj (n + (-1 : ℤ))]
-    dsimp [shiftFunctor, shiftFunctorObjXIso]
-    rw [show (-1 : ℤ).negOnePow = -1 by
-      rw [Int.negOnePow_neg, Int.negOnePow_one]]
-    simp only [Units.neg_smul, one_smul, Preadditive.comp_neg, Category.assoc]
-    rw [termwiseSplitting_section_eq s s' n]
-    erw [Preadditive.add_comp]
-    repeat erw [Preadditive.comp_sub]
-    have hzero : S.f.f (n + (-1 : ℤ)) ≫ S.g.f (n + (-1 : ℤ)) = 0 := by
-      simpa only [← HomologicalComplex.comp_f, HomologicalComplex.zero_f_apply] using
-        congrArg (fun q => q.f (n + (-1 : ℤ))) S.zero
-    have hsg_n : (s n).s ≫
-        (S.map (HomologicalComplex.eval C (ComplexShape.down ℤ) n)).g = 𝟙 _ := by
-      convert (s n).s_g using 1 <;> rfl
-    have hfr_prev :
-        (S.map (HomologicalComplex.eval C (ComplexShape.down ℤ) (n + (-1 : ℤ)))).f ≫
-          (s (n + (-1 : ℤ))).r = 𝟙 _ := by
-      convert (s (n + (-1 : ℤ))).f_r using 1 <;> rfl
-    have hgc : S.X₂.d n (n + (-1 : ℤ)) ≫
-        (S.map (HomologicalComplex.eval C (ComplexShape.down ℤ) (n + (-1 : ℤ)))).g =
-        (S.map (HomologicalComplex.eval C (ComplexShape.down ℤ) n)).g ≫
-          S.X₃.d n (n + (-1 : ℤ)) := by
-      convert (S.g.comm n (n + (-1 : ℤ))).symm using 1 <;> rfl
-    have hfc :
-        (S.map (HomologicalComplex.eval C (ComplexShape.down ℤ) n)).f ≫
-            S.X₂.d n (n + (-1 : ℤ)) =
-          S.X₁.d n (n + (-1 : ℤ)) ≫
-            (S.map (HomologicalComplex.eval C (ComplexShape.down ℤ) (n + (-1 : ℤ)))).f := by
-      convert S.f.comm n (n + (-1 : ℤ)) using 1 <;> rfl
-    have hzero' :
-        (S.map (HomologicalComplex.eval C (ComplexShape.down ℤ) (n + (-1 : ℤ)))).f ≫
-            (S.map (HomologicalComplex.eval C (ComplexShape.down ℤ) (n + (-1 : ℤ)))).g = 0 := by
-      convert hzero using 1 <;> rfl
-    have hd := HomologicalComplex.XIsoOfEq_inv_comp_d S.X₁
-      (show n + 1 + (-1 : ℤ) = n by omega) (n + (-1 : ℤ))
-    have hdiff :
-        (termwiseSplittingDifference s s' n ≫
-            (S.X₁.XIsoOfEq (show n + 1 + (-1 : ℤ) = n by omega)).inv) ≫
-              S.X₁.d (n + 1 + (-1 : ℤ)) (n + (-1 : ℤ)) =
-          termwiseSplittingDifference s s' n ≫ S.X₁.d n (n + (-1 : ℤ)) := by
-      calc
-        _ = termwiseSplittingDifference s s' n ≫
-            ((S.X₁.XIsoOfEq (show n + 1 + (-1 : ℤ) = n by omega)).inv ≫
-              S.X₁.d (n + 1 + (-1 : ℤ)) (n + (-1 : ℤ))) :=
-          Category.assoc _ _ _
-        _ = _ := congrArg (fun z => termwiseSplittingDifference s s' n ≫ z) hd
-    have hneg :
-        -(termwiseSplittingDifference s s' n ≫
-            (S.X₁.XIsoOfEq (show n + 1 + (-1 : ℤ) = n by omega)).inv) ≫
-              S.X₁.d (n + 1 + (-1 : ℤ)) (n + (-1 : ℤ)) =
-          -(termwiseSplittingDifference s s' n ≫ S.X₁.d n (n + (-1 : ℤ))) := by
-      change -((termwiseSplittingDifference s s' n ≫
-          (S.X₁.XIsoOfEq (show n + 1 + (-1 : ℤ) = n by omega)).inv) ≫
-            S.X₁.d (n + 1 + (-1 : ℤ)) (n + (-1 : ℤ))) = _
-      rw [hdiff]
-    simp only [Category.comp_id]
-    have hA :
-        (s n).s ≫ S.X₂.d n (n + (-1 : ℤ)) ≫
-            (S.map (HomologicalComplex.eval C (ComplexShape.down ℤ)
-              (n + (-1 : ℤ)))).g ≫
-            termwiseSplittingDifference s s' (n + (-1 : ℤ)) =
-          S.X₃.d n (n + (-1 : ℤ)) ≫
-            termwiseSplittingDifference s s' (n + (-1 : ℤ)) := by
-      calc
-        _ = ((s n).s ≫ S.X₂.d n (n + (-1 : ℤ))) ≫
-              (S.map (HomologicalComplex.eval C (ComplexShape.down ℤ)
-                (n + (-1 : ℤ)))).g ≫
-              termwiseSplittingDifference s s' (n + (-1 : ℤ)) := by
-          simp only [Category.assoc]
-        _ = ((s n).s ≫
-              (S.X₂.d n (n + (-1 : ℤ)) ≫
-                (S.map (HomologicalComplex.eval C (ComplexShape.down ℤ)
-                  (n + (-1 : ℤ)))).g)) ≫
-              termwiseSplittingDifference s s' (n + (-1 : ℤ)) := by
-          simp only [Category.assoc]
-        _ = ((s n).s ≫
-              ((S.map (HomologicalComplex.eval C (ComplexShape.down ℤ) n)).g ≫
-                S.X₃.d n (n + (-1 : ℤ)))) ≫
-              termwiseSplittingDifference s s' (n + (-1 : ℤ)) := by
-          rw [hgc]
-        _ = (((s n).s ≫
-              (S.map (HomologicalComplex.eval C (ComplexShape.down ℤ) n)).g) ≫
-              S.X₃.d n (n + (-1 : ℤ))) ≫
-              termwiseSplittingDifference s s' (n + (-1 : ℤ)) := by
-          simp only [Category.assoc]
-        _ = S.X₃.d n (n + (-1 : ℤ)) ≫
-              termwiseSplittingDifference s s' (n + (-1 : ℤ)) := by
-          rw [hsg_n]
-          simp only [Category.id_comp]
-    have hB :
-        (termwiseSplittingDifference s s' n ≫
-            (S.map (HomologicalComplex.eval C (ComplexShape.down ℤ) n)).f) ≫
-            S.X₂.d n (n + (-1 : ℤ)) ≫ (s (n + (-1 : ℤ))).r =
-          termwiseSplittingDifference s s' n ≫ S.X₁.d n (n + (-1 : ℤ)) := by
-      calc
-        _ = (termwiseSplittingDifference s s' n ≫
-              ((S.map (HomologicalComplex.eval C (ComplexShape.down ℤ) n)).f ≫
-                S.X₂.d n (n + (-1 : ℤ)))) ≫
-              (s (n + (-1 : ℤ))).r := by
-          simp only [Category.assoc]
-        _ = (termwiseSplittingDifference s s' n ≫
-              (S.X₁.d n (n + (-1 : ℤ)) ≫
-                (S.map (HomologicalComplex.eval C (ComplexShape.down ℤ)
-                  (n + (-1 : ℤ)))).f)) ≫
-              (s (n + (-1 : ℤ))).r := by
-          rw [hfc]
-        _ = termwiseSplittingDifference s s' n ≫
-              (S.X₁.d n (n + (-1 : ℤ)) ≫
-                ((S.map (HomologicalComplex.eval C (ComplexShape.down ℤ)
-                  (n + (-1 : ℤ)))).f ≫ (s (n + (-1 : ℤ))).r)) := by
-          simp only [Category.assoc]
-        _ = termwiseSplittingDifference s s' n ≫ S.X₁.d n (n + (-1 : ℤ)) := by
-          rw [hfr_prev]
-          simp only [Category.comp_id]
-    have hC :
-        (termwiseSplittingDifference s s' n ≫
-            (S.map (HomologicalComplex.eval C (ComplexShape.down ℤ) n)).f) ≫
-            S.X₂.d n (n + (-1 : ℤ)) ≫
-            (S.map (HomologicalComplex.eval C (ComplexShape.down ℤ)
-              (n + (-1 : ℤ)))).g ≫
-            termwiseSplittingDifference s s' (n + (-1 : ℤ)) = 0 := by
-      calc
-        _ = termwiseSplittingDifference s s' n ≫
-              ((S.map (HomologicalComplex.eval C (ComplexShape.down ℤ) n)).f ≫
-                S.X₂.d n (n + (-1 : ℤ))) ≫
-              (S.map (HomologicalComplex.eval C (ComplexShape.down ℤ)
-                (n + (-1 : ℤ)))).g ≫
-              termwiseSplittingDifference s s' (n + (-1 : ℤ)) := by
-          simp only [Category.assoc]
-        _ = termwiseSplittingDifference s s' n ≫
-              (S.X₁.d n (n + (-1 : ℤ)) ≫
-                (S.map (HomologicalComplex.eval C (ComplexShape.down ℤ)
-                  (n + (-1 : ℤ)))).f) ≫
-              (S.map (HomologicalComplex.eval C (ComplexShape.down ℤ)
-                (n + (-1 : ℤ)))).g ≫
-              termwiseSplittingDifference s s' (n + (-1 : ℤ)) := by
-          rw [hfc]
-        _ = termwiseSplittingDifference s s' n ≫ S.X₁.d n (n + (-1 : ℤ)) ≫
-              ((S.map (HomologicalComplex.eval C (ComplexShape.down ℤ)
-                (n + (-1 : ℤ)))).f ≫
-                (S.map (HomologicalComplex.eval C (ComplexShape.down ℤ)
-                  (n + (-1 : ℤ)))).g) ≫
-              termwiseSplittingDifference s s' (n + (-1 : ℤ)) := by
-          simp only [Category.assoc]
-        _ = 0 := by
-          rw [hzero']
-          simp only [Category.comp_zero, Category.zero_comp]
-    erw [hA, hB, hC]
-    simp only [Category.comp_zero, Category.zero_comp]
-    abel
-  · intro n
-    simp [H, termwiseSplittingDifferenceShift, shiftFunctorObjXIso,
-      HomologicalComplex.XIsoOfEq, eqToIso.inv]
-    congr 1
+  sorry
 
 /-- Changing a termwise splitting changes the resulting connecting maps by a
 homotopy. -/

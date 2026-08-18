@@ -825,6 +825,27 @@ structure UnionOpenSubstackData {S : Scheme.{u}}
   pointSet : Set.range (inducedPointMap union.inclusion) =
     ⋃ i, Set.range (inducedPointMap (members i).inclusion)
 
+/-- Arbitrary open substacks admit a union with the expected set of points.
+
+Proof roadmap:
+
+1. Choose a smooth presentation of `X` and base-change every
+   `(members i).inclusion` to it; representability and the open-immersion
+   property turn these base changes into open subspaces of the presentation.
+2. Take the ordinary union of those invariant opens.  Prove invariance under
+   the presentation groupoid by pulling the union back along its source and
+   target maps and using invariance of each member.
+3. Descend the invariant open subspace along the smooth cover to an algebraic
+   stack, construct its morphism to `X`, and prove that morphism representable
+   by algebraic spaces and an open immersion after arbitrary base change.
+4. Package the descended stack and inclusion as an `OpenSubstack X`.
+5. Check both inclusions in `pointSet`: membership in a member maps into the
+   descended union, while any point of the descended union lifts locally to
+   the presentation and hence lies in one of the component opens.
+
+The project currently lacks the invariant-open union construction and its
+representability/descent theorem, so this result is intentionally admitted.
+-/
 theorem union_open_substacks {S : Scheme.{u}}
     {X : AlgebraicStack S} (I : Type u)
     (members : I → OpenSubstack X) :

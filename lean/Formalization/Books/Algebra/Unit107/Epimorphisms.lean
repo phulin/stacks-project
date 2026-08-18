@@ -257,7 +257,7 @@ theorem epimorphism_iff_localization_at_prime
     intro P hP
     let A := Localization.AtPrime P
     let N := S ⊗[R] S
-    letI : Algebra N (A ⊗[R] N) := Algebra.TensorProduct.rightAlgebra
+    let : Algebra N (A ⊗[R] N) := Algebra.TensorProduct.rightAlgebra
     let a : (A ⊗[R] S) →+* (A ⊗[R] N) :=
       (Algebra.TensorProduct.map (AlgHom.id R A)
         ((Algebra.TensorProduct.includeLeft (R := R) (S := S) (A := S) (B := S)).restrictScalars R)).toRingHom

@@ -10,7 +10,7 @@ import Mathlib.LinearAlgebra.Charpoly.Basic
 import Mathlib.LinearAlgebra.Determinant
 import Mathlib.LinearAlgebra.Trace
 import Mathlib.RingTheory.Length
-import Mathlib.RingTheory.LocalRing.ResidueField.Ideal
+import Mathlib.RingTheory.LocalRing.ResidueField.Basic
 
 /-!
 This file records the category of finite-length endomorphisms and the linear-algebraic

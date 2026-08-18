@@ -171,20 +171,44 @@ theorem isUnit_iff_isUnit_quotient_of_locallyNilpotent
     {R : Type u} [CommRing R] (I : Ideal R)
     (hI : Formalization.Books.Algebra.Unit03.locallyNilpotentIdeal I) (x : R) :
     IsUnit x ↔ IsUnit (Ideal.Quotient.mk I x) := by
-  sorry
+  constructor
+  · intro h
+    exact h.map (Ideal.Quotient.mk I)
+  · intro h
+    obtain ⟨y, hy⟩ := isUnit_iff_exists_inv.mp h
+    obtain ⟨y, rfl⟩ := Ideal.Quotient.mk_surjective y
+    have hxy : Ideal.Quotient.mk I (x * y) = 1 := by
+      simpa only [map_mul] using hy
+    have hz : 1 - x * y ∈ I := by
+      apply Ideal.Quotient.eq_zero_iff_mem.mp
+      rw [map_sub, map_one, hxy, sub_self]
+    have hunit : IsUnit (x * y) := by
+      simpa only [sub_sub_cancel] using (hI (1 - x * y) hz).isUnit_one_sub
+    exact isUnit_of_mul_isUnit_left hunit
 
 /- The source's Noetherian power assertion and its stated consequence. -/
 theorem exists_pow_le_of_le_radical_of_noetherian
     {R : Type u} [CommRing R] [IsNoetherianRing R]
     (I J : Ideal R) (hJ : J ≤ I.radical) :
     ∃ n : ℕ, J ^ n ≤ I := by
-  sorry
+  exact Ideal.exists_pow_le_of_le_radical_of_fg hJ (Ideal.FG.of_isNoetherianRing J)
 
 theorem locallyNilpotentIdeal_iff_isNilpotent_of_noetherian
     {R : Type u} [CommRing R] [IsNoetherianRing R] (I : Ideal R) :
     Formalization.Books.Algebra.Unit03.locallyNilpotentIdeal I ↔
       IsNilpotent I := by
-  sorry
+  constructor
+  · intro hI
+    obtain ⟨n, hn⟩ :=
+      exists_pow_le_of_le_radical_of_noetherian (⊥ : Ideal R) I (by
+        intro x hx
+        exact hI x hx)
+    exact ⟨n, le_bot_iff.mp hn⟩
+  · rintro ⟨n, hn⟩ x hx
+    refine ⟨n, ?_⟩
+    apply Ideal.mem_bot.mp
+    rw [← Ideal.zero_eq_bot, ← hn]
+    exact Ideal.pow_mem_pow hx n
 
 /-! ## Lifting idempotents -/
 
@@ -198,7 +222,30 @@ theorem quotient_idempotentMap_bijective
     {R : Type u} [CommRing R] (I : Ideal R)
     (hI : Formalization.Books.Algebra.Unit03.locallyNilpotentIdeal I) :
     Function.Bijective (quotientIdempotentMap I) := by
-  sorry
+  have hker :
+      ∀ x ∈ RingHom.ker (Ideal.Quotient.mk I), IsNilpotent x := by
+    intro x hx
+    apply hI x
+    rw [RingHom.mem_ker] at hx
+    exact Ideal.Quotient.eq_zero_iff_mem.mp hx
+  constructor
+  · rintro ⟨e₁, he₁⟩ ⟨e₂, he₂⟩ h
+    have h' : Ideal.Quotient.mk I e₁ = Ideal.Quotient.mk I e₂ := by
+      simpa [quotientIdempotentMap] using congrArg Subtype.val h
+    apply Subtype.ext
+    apply eq_of_isNilpotent_sub_of_isIdempotentElem he₁ he₂
+    apply hI (e₁ - e₂)
+    apply Ideal.Quotient.eq_zero_iff_mem.mp
+    rw [map_sub, h', sub_self]
+  · rintro ⟨e, he⟩
+    obtain ⟨e₀, rfl⟩ := Ideal.Quotient.mk_surjective e
+    obtain ⟨e', he', hmap⟩ :=
+      exists_isIdempotentElem_eq_of_ker_isNilpotent
+        (Ideal.Quotient.mk I) hker (Ideal.Quotient.mk I e₀)
+        ⟨e₀, rfl⟩ he
+    refine ⟨⟨e', he'⟩, ?_⟩
+    apply Subtype.ext
+    simpa [quotientIdempotentMap] using hmap
 
 /- The displayed Newton step in the source's second proof is recorded as a
 usable identity. -/

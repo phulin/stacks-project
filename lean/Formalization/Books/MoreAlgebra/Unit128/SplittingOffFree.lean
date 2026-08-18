@@ -411,7 +411,7 @@ theorem which_elements_split [Module.FinitePresentation R M]
       rw [Finset.sum_eq_single i]
       · simp [mul_comm]
       · intro j hj hji
-        simp [hji, Ne.symm hji]
+        simp [Ne.symm hji]
       · intro hi
         exact (hi (Finset.mem_univ i)).elim
     have hci : algebraMap R (residueField x) d * c i = 0 := by
@@ -493,7 +493,7 @@ theorem which_elements_split [Module.FinitePresentation R M]
       rw [Finset.sum_eq_single φ]
       · simp [flip]
       · intro ψ hψ hψφ
-        simp [hψφ, Ne.symm hψφ]
+        simp [hψφ]
       · intro hnot
         exact (hnot (Finset.mem_univ φ)).elim
     have hsurj : Function.Surjective mat := by
@@ -525,11 +525,11 @@ theorem which_elements_split [Module.FinitePresentation R M]
         by_cases hij : i = j
         · subst j
           simp [e]
-        · simp [e, Pi.single_apply, hij, Ne.symm hij]
+        · simp [e, hij, Ne.symm hij]
       calc
         algebraMap R K (A i j) =
             ∑ φ : T₀, (algebraMap R K) (c i φ) * a j (φ : M →ₗ[R] R) := by
-              simp [A, ψ, a, map_sum, map_smul, smul_eq_mul]
+              simp [A, ψ, a, map_sum, smul_eq_mul]
         _ = e i j := hq''
         _ = if i = j then 1 else 0 := hsingle
     have hdet : algebraMap R K A.det = 1 := by
@@ -543,7 +543,7 @@ theorem which_elements_split [Module.FinitePresentation R M]
           rw [hA]
           by_cases hij : i = j
           · subst j; simp
-          · simp [Matrix.one_apply, hij, Ne.symm hij]
+          · simp [hij]
         _ = 1 := Matrix.det_one
     have hdet_not_mem : A.det ∉ x.asIdeal := by
       intro hdet_mem
@@ -559,7 +559,7 @@ theorem which_elements_split [Module.FinitePresentation R M]
         map_smul' := by
           intro r₀ m
           ext i
-          simp [A, mul_assoc, mul_comm, mul_left_comm, Finset.mul_sum] }
+          simp [A, mul_left_comm, Finset.mul_sum] }
     let eF : (Fin r →₀ R) ≃ₗ[R] (Fin r → R) :=
       Finsupp.linearEquivFunOnFinite R R (Fin r)
     let g : M →ₗ[R] (Fin r →₀ R) := eF.symm.toLinearMap.comp gFun
@@ -568,9 +568,9 @@ theorem which_elements_split [Module.FinitePresentation R M]
       have h := congrFun (congrFun (Matrix.adjugate_mul A) i) j
       have hone : (1 : Matrix (Fin r) (Fin r) R) i j =
           if i = j then 1 else 0 := by
-        by_cases hij : i = j
-        · subst j; simp
-        · simp [Matrix.one_apply, hij, Ne.symm hij]
+          by_cases hij : i = j
+          · subst j; simp
+          · simp [hij]
       simpa [Matrix.mul_apply, smul_eq_mul, hone] using h
     have hg : g.comp (Finsupp.linearCombination R s) = A.det • LinearMap.id := by
       apply LinearMap.ext
@@ -594,7 +594,7 @@ theorem which_elements_split [Module.FinitePresentation R M]
           rw [Finset.sum_eq_single i]
           · simp [mul_comm]
           · intro j hj hji
-            simp [hji, Ne.symm hji]
+            simp [Ne.symm hji]
           · intro hi
             exact (hi (Finset.mem_univ i)).elim
     exact ⟨A.det, hdet_not_mem, directSummand_of_smul_left_inverse A.det s g hg⟩

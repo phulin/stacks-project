@@ -92,7 +92,36 @@ theorem irreducibleClosedSets_through_prime_correspond_localization
     Nonempty
       ({Z : Set (PrimeSpectrum R) // IsClosed Z ∧ IsIrreducible Z ∧ p ∈ Z} ≃
         PrimeSpectrum (Localization.AtPrime p.asIdeal)) := by
-  sorry
+  let e : Set.Iic p ≃
+      {Z : Set (PrimeSpectrum R) // IsClosed Z ∧ IsIrreducible Z ∧ p ∈ Z} :=
+    { toFun := fun q =>
+        ⟨PrimeSpectrum.zeroLocus (q.1.asIdeal : Set R),
+          PrimeSpectrum.isClosed_zeroLocus _,
+          by
+            rw [← PrimeSpectrum.closure_singleton q.1]
+            exact isIrreducible_singleton.closure,
+          (PrimeSpectrum.mem_zeroLocus p _).2 q.2⟩
+      invFun := fun Z =>
+        ⟨⟨PrimeSpectrum.vanishingIdeal Z.1,
+            (PrimeSpectrum.isIrreducible_iff_vanishingIdeal_isPrime.mp Z.2.2.1)⟩,
+          (PrimeSpectrum.mem_zeroLocus p _).1 <|
+            (PrimeSpectrum.zeroLocus_vanishingIdeal_eq_closure Z.1).symm ▸ by
+              rw [Z.2.1.closure_eq]
+              exact Z.2.2.2⟩
+      left_inv := fun q => by
+        apply Subtype.ext
+        apply PrimeSpectrum.ext
+        dsimp
+        change PrimeSpectrum.vanishingIdeal
+            (PrimeSpectrum.zeroLocus (q.1.asIdeal : Set R)) = q.1.asIdeal
+        rw [PrimeSpectrum.vanishingIdeal_zeroLocus_eq_radical]
+        exact q.1.2.radical
+      right_inv := fun Z => by
+        apply Subtype.ext
+        exact (PrimeSpectrum.zeroLocus_vanishingIdeal_eq_closure Z.1).trans
+          Z.2.1.closure_eq }
+  exact ⟨e.symm.trans (IsLocalization.AtPrime.primeSpectrumOrderIso
+    (Localization.AtPrime p.asIdeal) p.asIdeal).symm⟩
 
 /-- Irreducible components through a prime correspond to minimal primes of the
 localization at that prime. -/
@@ -103,7 +132,54 @@ theorem irreducibleComponents_through_prime_correspond_minimalPrimes_localizatio
           C ∈ irreducibleComponents (PrimeSpectrum R) ∧ p ∈ C} ≃
         {q : PrimeSpectrum (Localization.AtPrime p.asIdeal) //
           q.asIdeal ∈ minimalPrimes (Localization.AtPrime p.asIdeal)}) := by
-  sorry
+  let e :
+      {C : Set (PrimeSpectrum R) //
+          C ∈ irreducibleComponents (PrimeSpectrum R) ∧ p ∈ C} ≃
+        {q : Set.Iic p // q.1.asIdeal ∈ minimalPrimes R} :=
+    { toFun := fun C =>
+        ⟨⟨⟨PrimeSpectrum.vanishingIdeal C.1,
+              PrimeSpectrum.isIrreducible_iff_vanishingIdeal_isPrime.mp C.2.1.1⟩,
+            (PrimeSpectrum.mem_zeroLocus p _).1 <|
+              (PrimeSpectrum.zeroLocus_vanishingIdeal_eq_closure C.1).symm ▸ by
+                rw [(Formalization.Books.Topology.Unit08.irreducibleComponent_isClosed C.2.1).closure_eq]
+                exact C.2.2⟩,
+          (PrimeSpectrum.vanishingIdeal_mem_minimalPrimes).2 <|
+            (Formalization.Books.Topology.Unit08.irreducibleComponent_isClosed C.2.1).closure_eq ▸ C.2.1⟩
+      invFun := fun q =>
+        ⟨PrimeSpectrum.zeroLocus (q.1.1.asIdeal : Set R),
+          (PrimeSpectrum.zeroLocus_ideal_mem_irreducibleComponents).2 <| by
+            rw [q.1.1.2.radical]
+            exact q.2,
+          (PrimeSpectrum.mem_zeroLocus p _).2 q.1.2⟩
+      left_inv := fun C => by
+        apply Subtype.ext
+        exact (PrimeSpectrum.zeroLocus_vanishingIdeal_eq_closure C.1).trans
+          (Formalization.Books.Topology.Unit08.irreducibleComponent_isClosed C.2.1).closure_eq
+      right_inv := fun q => by
+        apply Subtype.ext
+        apply PrimeSpectrum.ext
+        dsimp
+        rw [PrimeSpectrum.vanishingIdeal_zeroLocus_eq_radical]
+        exact q.1.1.2.radical }
+  let o := IsLocalization.AtPrime.primeSpectrumOrderIso
+    (Localization.AtPrime p.asIdeal) p.asIdeal
+  let m :
+      {q : Set.Iic p // q.1.asIdeal ∈ minimalPrimes R} ≃
+        {q : PrimeSpectrum (Localization.AtPrime p.asIdeal) //
+          q.asIdeal ∈ minimalPrimes (Localization.AtPrime p.asIdeal)} :=
+    { toFun := fun q =>
+        ⟨o.symm q.1, by
+          have h := IsLocalization.minimalPrimes_map p.asIdeal.primeCompl
+            (Localization.AtPrime p.asIdeal) (⊥ : Ideal R)
+          simpa [o] using (show q.1.asIdeal ∈ minimalPrimes R from q.2)⟩
+      invFun := fun q =>
+        ⟨o q.1, by
+          have h := IsLocalization.minimalPrimes_map p.asIdeal.primeCompl
+            (Localization.AtPrime p.asIdeal) (⊥ : Ideal R)
+          simpa [o] using (show q.1.asIdeal ∈ minimalPrimes R from ?_)⟩
+      left_inv := fun q => by simp [o]
+      right_inv := fun q => by simp [o] }
+  exact ⟨e.trans m⟩
 
 /-! ### A standard open avoiding a minimal prime -/
 

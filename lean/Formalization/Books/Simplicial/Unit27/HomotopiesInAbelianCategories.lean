@@ -6,10 +6,10 @@ import Mathlib.Algebra.Homology.Homotopy
 /-!
 # Simplicial Methods, Chapter 27: Homotopies in abelian categories
 
-This file records the chain-homotopy calculation attached to a simplicial
-homotopy.  The additive Moore complex is defined here because the source
-works first in an additive category, while the earlier normalized complex
-API is available under the stronger abelian hypothesis.
+This file records the chain-homotopy calculation attached to Section 27 of
+the source.  The additive Moore complex is defined here because the source
+starts with an additive category, while the earlier normalized complex API
+is available under the stronger abelian hypothesis.
 -/
 
 noncomputable section
@@ -26,7 +26,14 @@ open scoped _root_.Simplicial
 
 universe v u
 
-/-! ## The additive Moore complex `s(U)` -/
+/-! ## The additive Moore complex `s(U)`
+
+The source's preceding construction is stated for abelian categories, but its
+alternating-face formula only needs a preadditive category.  We retain that
+more general construction here so that the opening hypothesis of this section
+is represented faithfully; normalization remains restricted to abelian
+categories below.
+-/
 
 /-- The alternating face differential in the additive Moore complex. -/
 def additiveAssociatedBoundary
@@ -109,7 +116,8 @@ def additiveAssociatedHomotopyComponent
       (U.σ i ≫ H.h (n + 1) i.castSucc.succ)
 
 /-- The displayed formula gives a chain homotopy between the two associated
-chain maps. -/
+chain maps.  The component equation is the source's
+`d_{n+1} s(h)_n + s(h)_{n-1} d_n = a_n - b_n` calculation. -/
 theorem additiveAssociatedChainHomotopy_exists
     {C : Type u} [Category.{v} C] [Preadditive C]
     {U V : SimplicialObject C} {a b : U ⟶ V}
@@ -145,6 +153,7 @@ theorem additiveAssociatedChainHomotopy_of_cylinder
 
 /-! ## The source's homotopy and homotopy-equivalence assertions -/
 
+/-- A simplicial homotopy induces a homotopy of additive Moore complexes. -/
 theorem additiveAssociatedChainMap_homotopic
     {C : Type u} [Category.{v} C] [AdditiveCategory C]
     {U V : SimplicialObject C} {a b : U ⟶ V}

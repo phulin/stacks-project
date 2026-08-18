@@ -25,6 +25,33 @@ noncomputable section
 open Formalization.Books.Algebra.Unit42
 open Formalization.Books.Algebra.Unit43
 
+private theorem algebra_isSeparable_of_isSeparableExtension_of_isAlgebraic
+    {F E : Type*} [Field F] [Field E] [Algebra F E]
+    [Algebra.IsAlgebraic F E]
+    (h : IsSeparableExtension F E) : Algebra.IsSeparable F E := by
+  constructor
+  intro x
+  let L : IntermediateField F E := IntermediateField.adjoin F ({x} : Set E)
+  have hL : Algebra.EssFiniteType F L := by
+    change Algebra.EssFiniteType F (IntermediateField.adjoin F ({x} : Set E))
+    exact (IntermediateField.essFiniteType_iff).2
+      (IntermediateField.fg_adjoin_of_finite (Set.finite_singleton x))
+  rcases h L hL with ⟨ι, y, hy, hsep⟩
+  letI : IsEmpty ι := hy.isEmpty_iff_isAlgebraic.mpr inferInstance
+  have hbot : IntermediateField.adjoin F (range y) = (⊥ : IntermediateField F L) := by
+    rw [Set.range_eq_empty y, IntermediateField.adjoin_empty]
+  rw [hbot] at hsep
+  letI : Algebra.IsSeparable (⊥ : IntermediateField F L) L := hsep
+  letI : Algebra.IsSeparable F (⊥ : IntermediateField F L) :=
+    ⟨fun z => by
+      obtain ⟨a, rfl⟩ := (IntermediateField.botEquiv F L).symm.surjective z
+      exact isSeparable_algebraMap a⟩
+  letI : Algebra.IsSeparable F L :=
+    Algebra.IsSeparable.trans F (⊥ : IntermediateField F L) L
+  exact (Algebra.IsSeparable.isSeparable F
+      (⟨x, IntermediateField.subset_adjoin F _ (by simp)⟩ : L)).map
+    (IntermediateField.val L) Subtype.val_injective
+
 /-! ## Perfect fields -/
 
 /- The source defines perfection by separability of every field extension.
@@ -47,7 +74,33 @@ theorem perfectField_iff_charZero_or_prime_root
       CharZero k ∨
         ∃ p : ℕ, p.Prime ∧ CharP k p ∧
           ∀ x : k, ∃ y : k, y ^ p = x := by
-  sorry
+  constructor
+  · intro h
+    by_cases hzero : CharZero k
+    · exact Or.inl hzero
+    · obtain _ | ⟨p, hp, hpk⟩ := CharP.exists' k
+      · exact (hzero ‹CharZero k›).elim
+      right
+      refine ⟨p, hp.out, hpk, ?_⟩
+      let _ : PerfectField k := h
+      let _ : Fact p.Prime := hp
+      let _ : CharP k p := hpk
+      let _ : ExpChar k p := ExpChar.prime hp.out
+      intro x
+      rcases (surjective_frobenius k p) x with ⟨y, hy⟩
+      exact ⟨y, by change y ^ p = x; exact hy⟩
+  · rintro (hzero | ⟨p, hp, hpk, hroot⟩)
+    · let _ : CharZero k := hzero
+      exact inferInstance
+    · let _ : Fact p.Prime := ⟨hp⟩
+      let _ : CharP k p := hpk
+      let _ : ExpChar k p := ExpChar.prime hp
+      letI : PerfectRing k p :=
+        PerfectRing.ofSurjective k p (by
+          intro x
+          rcases hroot x with ⟨y, hy⟩
+          exact ⟨y, by change y ^ p = x; exact hy⟩)
+      exact PerfectRing.toPerfectField k p
 
 /-! ## Making a finitely generated extension separable -/
 
@@ -111,7 +164,21 @@ theorem exists_make_separable_base_change
     ∃ b : PurelyInseparableBaseChange k K,
       IsSeparableBaseChange b ∧
         IsCompositumBaseChange b ∧ IsReducedTensorProductBaseChange b := by
-  sorry
+  obtain ⟨b⟩ := exists_purely_inseparable_base_change (k := k) (K := K)
+  letI := b.baseField
+  letI := b.topField
+  letI := b.baseAlgebra
+  letI := b.topAlgebra
+  letI := b.topOverK
+  letI := b.topOverBase
+  letI := b.baseTower
+  letI := b.topTower
+  refine ⟨b, ?_, ?_, ?_⟩
+  · simp only [IsSeparableBaseChange]
+    exact Formalization.Books.Algebra.Unit44.isSeparableExtension_of_isSeparablyGenerated
+      b.topSeparablyGenerated
+  · sorry
+  · sorry
 
 /-! ## Perfect closures -/
 
@@ -123,7 +190,9 @@ theorem perfectClosure_is_purelyInseparable_and_perfect
     (k : Type u) [Field k] :
     IsPurelyInseparable k (perfectClosure k (AlgebraicClosure k)) ∧
       PerfectField (perfectClosure k (AlgebraicClosure k)) := by
-  sorry
+  constructor
+  · infer_instance
+  · infer_instance
 
 /-- In characteristic zero the canonical perfect closure is the base field,
     represented as the bottom intermediate field. -/

@@ -7,8 +7,11 @@ import Mathlib.RingTheory.FiniteType
 import Mathlib.RingTheory.Polynomial.Ideal
 import Mathlib.RingTheory.Polynomial.Quotient
 import Mathlib.RingTheory.Polynomial.GaussLemma
+import Mathlib.RingTheory.Polynomial.Resultant.Basic
+import Mathlib.Algebra.Polynomial.Lifts
 import Mathlib.Data.Nat.Prime.Int
 import Mathlib.RingTheory.Ideal.Int
+import Mathlib.RingTheory.Ideal.NatInt
 import Mathlib.RingTheory.UniqueFactorizationDomain.Basic
 
 /-!
@@ -362,7 +365,116 @@ theorem prime_spectrum_int_quadratic_cases (p : PrimeSpectrum IntQuadraticRing) 
       ∃ q : ℕ, Nat.Prime q ∧ 2 < q ∧
         (p.asIdeal = intQuadraticPrimeIdeal q 2 ∨
           p.asIdeal = intQuadraticPrimeIdeal q (-2)) := by
-  sorry
+  let P : Ideal IntPolynomial := p.asIdeal.comap intQuadraticQuotientMap
+  have hP : P.IsPrime := by
+    exact Ideal.comap_isPrime intQuadraticQuotientMap p.asIdeal
+  have hrel : intQuadraticRelation ≤ P := by
+    change intQuadraticRelation ≤ p.asIdeal.comap intQuadraticQuotientMap
+    have hk : RingHom.ker intQuadraticQuotientMap ≤
+        p.asIdeal.comap intQuadraticQuotientMap := Ideal.ker_le_comap
+    simpa [intQuadraticQuotientMap, P, Ideal.mk_ker] using hk
+  have hprod :
+      (Polynomial.X - Polynomial.C (2 : ℤ)) *
+          (Polynomial.X + Polynomial.C (2 : ℤ)) ∈ P := by
+    rw [← int_quadratic_factorization]
+    exact hrel (Ideal.subset_span (by simp [intQuadraticRelation]))
+  have hmap_quot : Ideal.map intQuadraticQuotientMap P = p.asIdeal := by
+    exact Ideal.map_comap_of_surjective intQuadraticQuotientMap
+      Ideal.Quotient.mk_surjective p.asIdeal
+  have hroot (r : ℤ) (hr : Polynomial.X - Polynomial.C r ∈ P) :
+      p.asIdeal = intQuadraticRootIdeal r ∨
+        (∃ q : ℕ, Nat.Prime q ∧
+          p.asIdeal = intQuadraticPrimeIdeal q r) := by
+    let e : IntPolynomial →+* ℤ := Polynomial.evalRingHom r
+    have he : Function.Surjective e := by
+      intro z
+      exact ⟨Polynomial.C z, by simp [e]⟩
+    have hker : RingHom.ker e ≤ P := by
+      rw [show RingHom.ker e = Ideal.span {Polynomial.X - Polynomial.C r} by
+        simpa [e] using Polynomial.ker_evalRingHom r]
+      exact Ideal.span_le.2 (by
+        intro x hx
+        simpa only [Set.mem_singleton_iff] using hx ▸ hr)
+    have hQ : (P.map e).IsPrime := by
+      letI : P.IsPrime := hP
+      exact Ideal.map_isPrime_of_surjective he hker
+    have hP_eq : P = (P.map e).comap e := by
+      rw [Ideal.comap_map_of_surjective' e he P, sup_eq_left.mpr hker]
+    rcases (Ideal.isPrime_int_iff.mp hQ) with hQ0 | ⟨q, hq, hQq⟩
+    · left
+      have hProot : P = Ideal.span {Polynomial.X - Polynomial.C r} := by
+        calc
+          P = (P.map e).comap e := hP_eq
+          _ = (⊥ : Ideal ℤ).comap e := by rw [hQ0]
+          _ = RingHom.ker e := rfl
+          _ = Ideal.span {Polynomial.X - Polynomial.C r} := by
+            simpa [e] using Polynomial.ker_evalRingHom r
+      calc
+        p.asIdeal = Ideal.map intQuadraticQuotientMap P := hmap_quot.symm
+        _ = Ideal.map intQuadraticQuotientMap
+            (Ideal.span {Polynomial.X - Polynomial.C r}) := by rw [hProot]
+        _ = intQuadraticRootIdeal r := by
+          simp [intQuadraticRootIdeal, Ideal.map_span]
+    · right
+      let J : Ideal IntPolynomial :=
+        Ideal.span {Polynomial.C (q : ℤ), Polynomial.X - Polynomial.C r}
+      have hJker : RingHom.ker e ≤ J := by
+        rw [show RingHom.ker e = Ideal.span {Polynomial.X - Polynomial.C r} by
+          simpa [e] using Polynomial.ker_evalRingHom r]
+        change Ideal.span {Polynomial.X - Polynomial.C r} ≤
+          Ideal.span {Polynomial.C (q : ℤ), Polynomial.X - Polynomial.C r}
+        exact Ideal.span_le.2 (by
+          intro x hx
+          rcases Set.mem_singleton_iff.mp hx with rfl
+          exact Ideal.subset_span (by simp))
+      have hJmap : J.map e = Ideal.span {(q : ℤ)} := by
+        simp [J, e, Ideal.map_span]
+      have hJcomap : J = (Ideal.span {(q : ℤ)} : Ideal ℤ).comap e := by
+        calc
+          J = J ⊔ RingHom.ker e := (sup_eq_left.mpr hJker).symm
+          _ = (J.map e).comap e :=
+            (Ideal.comap_map_of_surjective' e he J).symm
+          _ = (Ideal.span {(q : ℤ)} : Ideal ℤ).comap e := by rw [hJmap]
+      have hPq : P = J := by
+        calc
+          P = (P.map e).comap e := hP_eq
+          _ = (Ideal.span {(q : ℤ)} : Ideal ℤ).comap e := by rw [hQq]
+          _ = J := hJcomap.symm
+      have hmapJ : Ideal.map intQuadraticQuotientMap J =
+          intQuadraticPrimeIdeal q r := by
+        rw [Ideal.map_span]
+        congr 1
+        ext z
+        simp only [Set.mem_insert_iff, Set.mem_singleton_iff, Set.mem_image]
+        constructor
+        · rintro ⟨x, (rfl | rfl), hz⟩
+          · exact Or.inl hz.symm
+          · exact Or.inr hz.symm
+        · rintro (hz | hz)
+          · exact ⟨Polynomial.C q, Or.inl rfl, hz.symm⟩
+          · exact ⟨Polynomial.X - Polynomial.C r, Or.inr rfl, hz.symm⟩
+      exact ⟨q, hq, by
+        calc
+        p.asIdeal = Ideal.map intQuadraticQuotientMap P := hmap_quot.symm
+        _ = Ideal.map intQuadraticQuotientMap J := by rw [hPq]
+        _ = intQuadraticPrimeIdeal q r := hmapJ⟩
+  rcases hP.mem_or_mem hprod with hminus | hplus
+  · rcases hroot 2 hminus with hroot | ⟨q, hq, hqroot⟩
+    · exact Or.inl hroot
+    · rcases eq_or_ne q 2 with rfl | hq2
+      · exact Or.inr (Or.inr (Or.inl (by simpa [intQuadraticPrimeIdeal] using hqroot)))
+      · right; right; right
+        have : 2 < q := lt_of_le_of_ne hq.two_le (Ne.symm hq2)
+        exact ⟨q, hq, this, Or.inl hqroot⟩
+  · have hplus' : Polynomial.X - Polynomial.C (-2 : ℤ) ∈ P := by
+      simpa [sub_eq_add_neg] using hplus
+    rcases hroot (-2) hplus' with hroot | ⟨q, hq, hqroot⟩
+    · exact Or.inr (Or.inl hroot)
+    · rcases eq_or_ne q 2 with rfl | hq2
+      · exact Or.inr (Or.inr (Or.inl (by simpa [intQuadraticPrimeIdeal] using hqroot)))
+      · right; right; right
+        have : 2 < q := lt_of_le_of_ne hq.two_le (Ne.symm hq2)
+        exact ⟨q, hq, this, Or.inr hqroot⟩
 
 /-! ## `Spec(ℤ[x])` -/
 
@@ -489,13 +601,168 @@ theorem prime_ideal_int_polynomial_cases (P : Ideal IntPolynomial) (hP : P.IsPri
         (P = intPolynomialPrimeIdeal q ∨
           ∃ f : IntPolynomial, 0 < f.natDegree ∧ IsIntegerPolynomialLift q f ∧
             P = intPolynomialPrimeAt q f))) := by
-  sorry
+  have hcontraction : (P.comap Polynomial.C).IsPrime :=
+    int_polynomial_prime_contraction_isPrime P hP
+  have hzero_case : P.comap Polynomial.C = ⊥ →
+      P = ⊥ ∨ ∃ f : IntPolynomial, 0 < f.natDegree ∧ Irreducible f ∧
+        P = Ideal.span {f} := by
+    intro hcon
+    by_cases hbot : P = ⊥
+    · exact Or.inl hbot
+    right
+    letI : UniqueFactorizationMonoid IntPolynomial := int_polynomial_isUFD
+    obtain ⟨f, hfP, hfprime⟩ := hP.exists_mem_prime_of_ne_bot hbot
+    have hfdeg : 0 < f.natDegree := by
+      apply Nat.pos_of_ne_zero
+      intro hfdeg
+      have hfC : f = Polynomial.C (f.coeff 0) :=
+        Polynomial.eq_C_of_natDegree_eq_zero hfdeg
+      have hc : f.coeff 0 ∈ P.comap Polynomial.C := by
+        change Polynomial.C (f.coeff 0) ∈ P
+        rw [← hfC]
+        exact hfP
+      rw [hcon] at hc
+      apply hfprime.ne_zero
+      rw [hfC, show f.coeff 0 = 0 by simpa using hc]
+      simp
+    have hfprim : f.IsPrimitive := hfprime.irreducible.isPrimitive (Nat.ne_of_gt hfdeg)
+    have hfQ : Irreducible (f.map (Int.castRingHom ℚ)) :=
+      int_polynomial_irreducible_maps_to_ratios f hfdeg hfprime.irreducible
+    have hdvd (g : IntPolynomial) (hgP : g ∈ P) : f ∣ g := by
+      rcases dvd_or_isCoprime (f.map (Int.castRingHom ℚ))
+          (g.map (Int.castRingHom ℚ)) hfQ with hdvd | hcop
+      · exact hfprim.dvd_of_fraction_map_dvd_fraction_map hdvd
+      · have hresQ : Polynomial.resultant (f.map (Int.castRingHom ℚ))
+            (g.map (Int.castRingHom ℚ)) ≠ 0 := by
+          intro hres
+          exact (Polynomial.resultant_eq_zero_iff.mp hres).2 hcop
+        have hres : Polynomial.resultant f g f.natDegree g.natDegree ≠ 0 := by
+          intro hres
+          apply hresQ
+          simpa [Polynomial.resultant_map_map] using
+            congrArg (Int.castRingHom ℚ) hres
+        obtain ⟨a, b, ha, hb, hab⟩ :=
+          Polynomial.exists_mul_add_mul_eq_C_resultant f g
+            (m := f.natDegree) (n := g.natDegree) le_rfl le_rfl (by
+              exact Or.inl (Nat.ne_of_gt hfdeg))
+        have hC : Polynomial.C (Polynomial.resultant f g f.natDegree g.natDegree) ∈ P := by
+          rw [← hab]
+          exact P.add_mem (P.mul_mem_right a hfP) (P.mul_mem_right b hgP)
+        have hresmem : Polynomial.resultant f g f.natDegree g.natDegree ∈
+            P.comap Polynomial.C := hC
+        rw [hcon] at hresmem
+        exfalso
+        exact hres (by simpa using hresmem)
+    refine ⟨f, hfdeg, hfprime.irreducible, ?_⟩
+    apply le_antisymm
+    · intro g hgP
+      exact Ideal.mem_span_singleton.mpr (hdvd g hgP)
+    · exact Ideal.span_le.2 (fun x hx => by
+        simpa only [Set.mem_singleton_iff] using hx ▸ hfP)
+  rcases Ideal.isPrime_int_iff.mp hcontraction with hzero | ⟨q, hq, hqcon⟩
+  · exact Or.inl ⟨hzero, hzero_case hzero⟩
+  · right
+    haveI : Fact (Nat.Prime q) := ⟨hq⟩
+    let I : Ideal ℤ := Ideal.span ({(q : ℤ)} : Set ℤ)
+    let M : Ideal IntPolynomial := Ideal.map Polynomial.C I
+    have hqcon' : P.comap Polynomial.C = I := by simpa [I] using hqcon
+    have hMle : M ≤ P := by
+      apply (Ideal.map_le_iff_le_comap).2
+      simpa [hqcon']
+    let mkM : IntPolynomial →+* (IntPolynomial ⧸ M) := Ideal.Quotient.mk M
+    have hQprime : (P.map mkM).IsPrime := by
+      letI : P.IsPrime := hP
+      apply Ideal.map_isPrime_of_surjective Ideal.Quotient.mk_surjective
+      change RingHom.ker (Ideal.Quotient.mk M) ≤ P
+      rw [Ideal.mk_ker]
+      exact hMle
+    letI : I.IsMaximal := Int.ideal_span_isMaximal_of_prime q
+    letI : Field (ℤ ⧸ I) := Ideal.Quotient.field I
+    let ePoly := I.polynomialQuotientEquivQuotientPolynomial
+    let K : Ideal (Polynomial (ℤ ⧸ I)) :=
+      (P.map mkM).comap (ePoly : Polynomial (ℤ ⧸ I) →+* (IntPolynomial ⧸ M))
+    have hKprime : K.IsPrime := by
+      exact Ideal.comap_isPrime (ePoly : Polynomial (ℤ ⧸ I) →+* (IntPolynomial ⧸ M))
+        (P.map mkM)
+    have hKmap : Ideal.map
+        (ePoly : Polynomial (ℤ ⧸ I) →+* (IntPolynomial ⧸ M)) K = P.map mkM := by
+      exact Ideal.map_comap_of_surjective
+        (ePoly : Polynomial (ℤ ⧸ I) →+* (IntPolynomial ⧸ M))
+        ePoly.surjective (P.map mkM)
+    rcases (Ideal.isPrime_iff_of_isPrincipalIdealRing_of_noZeroDivisors.mp hKprime) with hK0 |
+      ⟨g, hgprime, hKg⟩
+    · have hPmap : P.map mkM = ⊥ := by
+        rw [← hKmap, hK0]
+        simp
+      have hP_eq : P = (P.map mkM).comap mkM := by
+        rw [Ideal.comap_map_of_surjective' mkM Ideal.Quotient.mk_surjective P,
+          sup_eq_left.mpr hMle]
+      have hPM : P = M := by
+        calc
+          P = (P.map mkM).comap mkM := hP_eq
+          _ = (⊥ : Ideal (IntPolynomial ⧸ M)).comap mkM := by rw [hPmap]
+          _ = RingHom.ker mkM := rfl
+          _ = M := by rw [Ideal.mk_ker]
+      exact Or.inl (by simpa [intPolynomialPrimeIdeal, M, I, Ideal.map_span] using hPM)
+    · let g₀ : Polynomial (ℤ ⧸ I) := g * Polynomial.C (g.leadingCoeff)⁻¹
+      have hg0 : g₀.Monic := by
+        exact Polynomial.monic_mul_leadingCoeff_inv hgprime.ne_zero
+      have hgirr : Irreducible g :=
+        UniqueFactorizationMonoid.irreducible_iff_prime.mpr hgprime
+      have hg0irr : Irreducible g₀ := by
+        rw [show g₀ = g * Polynomial.C (g.leadingCoeff)⁻¹ by rfl]
+        exact (irreducible_mul_isUnit (isUnit_C.mpr
+          (inv_ne_zero (leadingCoeff_ne_zero.mpr hgprime.ne_zero)))).mpr hgirr
+      have hspan : Ideal.span ({g₀} : Set (Polynomial (ℤ ⧸ I))) = Ideal.span {g} := by
+        rw [show g₀ = g * Polynomial.C (g.leadingCoeff)⁻¹ by rfl]
+        exact Ideal.span_singleton_mul_right_unit
+          (isUnit_C.mpr (inv_ne_zero (leadingCoeff_ne_zero.mpr hgprime.ne_zero))) g
+      have hglift : g₀ ∈ Polynomial.lifts (Ideal.Quotient.mk I) :=
+        Polynomial.mem_lifts_of_surjective Ideal.Quotient.mk_surjective g₀
+      obtain ⟨f, hfm, hfd, hfmonic⟩ :=
+        Polynomial.lifts_and_natDegree_eq_and_monic hglift hg0
+      have hfdeg : 0 < f.natDegree := by
+        simpa [hfd] using hg0irr.natDegree_pos
+      have hfred : Irreducible (intPolynomialReduction q f) := by
+        simpa [intPolynomialReduction, I, hfm] using hg0irr
+      have hfirr : Irreducible f := by
+        exact hfmonic.irreducible_of_irreducible_map (Ideal.Quotient.mk I) hfred
+      have hgen : ePoly g₀ = Ideal.Quotient.mk M f := by
+        rw [← hfm]
+        exact Ideal.polynomialQuotientEquivQuotientPolynomial_map_mk I f
+      let J : Ideal IntPolynomial := Ideal.span {Polynomial.C (q : ℤ), f}
+      have hMJ : M ≤ J := by
+        simp [M, I, J, Ideal.map_span]
+      have hJmap : J.map mkM = P.map mkM := by
+        rw [← hKmap, hKg, ← hspan, Ideal.map_span, Ideal.map_span]
+        simp only [Set.image_singleton]
+        rw [← hgen]
+        simp [J, M, I, Ideal.map_span]
+      have hP_eq : P = (P.map mkM).comap mkM := by
+        rw [Ideal.comap_map_of_surjective' mkM Ideal.Quotient.mk_surjective P,
+          sup_eq_left.mpr hMle]
+      have hJ_eq : J = (J.map mkM).comap mkM := by
+        rw [Ideal.comap_map_of_surjective' mkM Ideal.Quotient.mk_surjective J,
+          sup_eq_left.mpr hMJ]
+      have hPJ : P = J := by
+        calc
+          P = (P.map mkM).comap mkM := hP_eq
+          _ = (J.map mkM).comap mkM := by rw [hJmap]
+          _ = J := hJ_eq.symm
+      exact Or.inr ⟨f, hfdeg, ⟨hfirr, hfred⟩, by
+        simpa [intPolynomialPrimeAt, J] using hPJ⟩
 
 theorem int_polynomial_prime_ideal_is_zero_or_principal (P : Ideal IntPolynomial)
     (hP : P.IsPrime) (hcontraction : P.comap Polynomial.C = ⊥) :
     P = ⊥ ∨ ∃ f : IntPolynomial, 0 < f.natDegree ∧ Irreducible f ∧
       P = Ideal.span {f} := by
-  sorry
+  rcases prime_ideal_int_polynomial_cases P hP with hzero | hq
+  · exact hzero.2
+  · rcases hq with ⟨q, hq, hqcon, hcases⟩
+    exfalso
+    have hspan : (Ideal.span {(q : ℤ)} : Ideal ℤ) = ⊥ := by
+      rw [← hqcon, hcontraction]
+    exact (Ideal.span_singleton_eq_bot.not.mpr (by exact_mod_cast hq.ne_zero)) hspan
 
 theorem int_polynomial_prime_ideal_over_prime_is_zero_or_principal
     (P : Ideal IntPolynomial) (hP : P.IsPrime) (q : ℕ) (hq : Nat.Prime q)

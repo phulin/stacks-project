@@ -136,7 +136,7 @@ theorem finite_subalgebra_of_integral_elements
     intro x hx
     exact Algebra.subset_adjoin hx
   · rintro ⟨A, hA, hmem⟩ x hx
-    letI := hA
+    let hA := hA
     exact IsIntegral.of_mem_of_fg A Submodule.FG.of_finite x (hmem x hx)
 
 /-- Finite is equivalent to integral and finite type. -/
@@ -155,14 +155,14 @@ theorem finite_iff_finite_integral_generators
   classical
   constructor
   · intro h
-    letI := h
+    let h := h
     obtain ⟨s, hs⟩ := (inferInstance : Algebra.FiniteType R S).out
     exact ⟨s, hs, fun x hx => Algebra.IsIntegral.isIntegral x⟩
   · rintro ⟨s, hs, hintegral⟩
     have hfin : Module.Finite R (Algebra.adjoin R (s : Set S)) :=
       Module.Finite.of_fg (fg_adjoin_of_finite s.finite_toSet hintegral)
     rw [hs] at hfin
-    letI := hfin
+    let hfin := hfin
     exact Module.Finite.equiv (Subalgebra.topEquiv (R := R) (A := S)).toLinearEquiv
 
 /-- Integrality is transitive in an algebra tower. -/
@@ -234,7 +234,7 @@ theorem product_isIntegral_iff
       exact (hp i).mul (Polynomial.monic_X_pow _)
     have hq_coeff (i : ι) : (q i).coeff N = 1 := by
       by_cases hRi : Nontrivial (R i)
-      · letI := hRi
+      · let hRi := hRi
         have hdegree : (q i).natDegree = N := by
           dsimp [q]
           rw [(hp i).natDegree_mul (Polynomial.monic_X_pow _),
@@ -242,7 +242,7 @@ theorem product_isIntegral_iff
           exact Nat.add_sub_of_le (hdeg_le i)
         rw [← hdegree]
         exact (hq_monic i).coeff_natDegree
-      · letI := not_nontrivial_iff_subsingleton.mp hRi
+      · let hRi := not_nontrivial_iff_subsingleton.mp hRi
         exact Subsingleton.elim _ _
     have hq_root (i : ι) :
         Polynomial.eval₂ (f i) (s i) (q i) = 0 := by
@@ -264,14 +264,14 @@ theorem product_isIntegral_iff
         ((Polynomial.piEquiv R).apply_symm_apply q)
       have hqi : (q i).coeff n = 0 := by
         by_cases hRi : Nontrivial (R i)
-        · letI := hRi
+        · let hRi := hRi
           have hdegree : (q i).natDegree = N := by
             dsimp [q]
             rw [(hp i).natDegree_mul (Polynomial.monic_X_pow _),
               Polynomial.natDegree_X_pow]
             exact Nat.add_sub_of_le (hdeg_le i)
           exact Polynomial.coeff_eq_zero_of_natDegree_lt (hdegree.trans_lt hn)
-        · letI := not_nontrivial_iff_subsingleton.mp hRi
+        · let hRi := not_nontrivial_iff_subsingleton.mp hRi
           exact Subsingleton.elim _ _
       have hi' : (p'.map (Pi.evalRingHom R i)).coeff n = (q i).coeff n := by
         change (p'.map (Pi.evalRingHom R i)).coeff n = (q i).coeff n at hi

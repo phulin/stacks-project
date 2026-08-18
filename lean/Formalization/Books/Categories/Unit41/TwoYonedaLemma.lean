@@ -519,13 +519,33 @@ theorem twoYonedaEvaluationCore_obj_isFiber
     p.obj (G.1.obj (Over.mk (𝟙 U))) = U := by
   exact Functor.congr_obj G.2 (Over.mk (𝟙 U))
 
+private theorem twoYonedaMorphismCategory_map_isHomLift
+    {A : Type uS} [Category.{vS} A]
+    {B : Type uT} [Category.{vT} B]
+    {C : Type uC} [Category.{vC} C]
+    (p : A ⥤ C) (q : B ⥤ C)
+    {G H : twoYonedaMorphismCategory p q} (η : G ⟶ H) (X : A) :
+    q.IsHomLift (𝟙 (p.obj X)) (η.1.app X) := by
+  have hG : q.obj (G.1.obj X) = p.obj X :=
+    congrArg (fun F : A ⥤ C => F.obj X) G.2
+  have hH : q.obj (H.1.obj X) = p.obj X :=
+    congrArg (fun F : A ⥤ C => F.obj X) H.2
+  apply IsHomLift.of_fac' q (𝟙 (p.obj X)) (η.1.app X) hG hH
+  letI : (twoYonedaPostcompositionGeneral q).IsHomLift (𝟙 p) η.1 := η.2
+  have hfac := IsHomLift.fac' (twoYonedaPostcompositionGeneral q)
+    (𝟙 p) η.1
+  have hfacX := congrArg (fun t => t.app X) hfac
+  simpa [twoYonedaPostcompositionGeneral, Formalization.Books.Categories.Unit28.postcompositionFunctor]
+    using hfacX
+
 theorem twoYonedaEvaluationCore_map_isHomLift
     {C : Type uC} [Category.{vC} C]
     {S : Type uS} [Category.{vS} S]
     (p : S ⥤ C) (U : C)
     {G H : twoYonedaOverCategory p U} (η : G ⟶ H) :
     p.IsHomLift (𝟙 U) (η.1.app (Over.mk (𝟙 U))) := by
-  sorry
+  simpa using twoYonedaMorphismCategory_map_isHomLift
+    (Over.forget U) p η (Over.mk (𝟙 U))
 
 def twoYonedaEvaluationCoreObj
     {C : Type uC} [Category.{vC} C]
@@ -592,7 +612,30 @@ theorem twoYonedaMorphismCategory_isGroupoid
     (p : A ⥤ C) (q : B ⥤ C)
     (hq : q.IsFibredInGroupoids) :
     IsGroupoid (twoYonedaMorphismCategory p q) := by
-  sorry
+  let hgroup : ∀ V : C, IsGroupoid (Functor.Fiber q V) :=
+    (fibredInGroupoids_iff_fibred_groupoid_fibres q).mp hq |>.1
+  constructor
+  intro G H η
+  have hηiso : IsIso η.1 := by
+    apply NatTrans.isIso_of_isIso_app
+    intro X
+    let hηX := twoYonedaMorphismCategory_map_isHomLift p q η X
+    letI : q.IsHomLift (𝟙 (p.obj X)) (η.1.app X) := hηX
+    let k := Functor.Fiber.homMk q (p.obj X) (η.1.app X)
+    letI : IsIso k := (hgroup (p.obj X)).all_isIso k
+    change IsIso (Functor.Fiber.fiberInclusion.map k)
+    exact (Functor.Fiber.fiberInclusion.mapIso (asIso k)).isIso_hom
+  letI : IsIso η.1 := hηiso
+  letI : (twoYonedaPostcompositionGeneral q).IsHomLift (𝟙 p) (inv η.1) :=
+    IsHomLift.lift_id_inv_isIso (twoYonedaPostcompositionGeneral q) p η.1
+  let ηinv : H ⟶ G := ⟨inv η.1, inferInstance⟩
+  refine ⟨ηinv, ?_, ?_⟩
+  · apply Functor.Fiber.hom_ext
+    change η.1 ≫ inv η.1 = 𝟙 _
+    simp
+  · apply Functor.Fiber.hom_ext
+    change inv η.1 ≫ η.1 = 𝟙 _
+    simp
 
 /-! ## The groupoid case -/
 
@@ -644,7 +687,21 @@ theorem twoYoneda_groupoid_equivalence
     {S : Type uS} [Category.{vS} S]
     (p : S ⥤ C) [p.IsFibredInGroupoids] (U : C) :
     (twoYonedaEvaluationCore p U).IsEquivalence := by
-  sorry
+  let hP : ∀ G : twoYonedaOverCategory p U,
+      twoYonedaPreservesCartesian p U G := by
+    intro G
+    exact twoYonedaGroupoidMorphism_preservesCartesian p U G
+  letI : (twoYonedaPreservesCartesian p U).ι.EssSurj := by
+    constructor
+    intro G
+    refine ⟨⟨G, hP G⟩, ?_⟩
+    exact ⟨Iso.refl G⟩
+  letI : (twoYonedaPreservesCartesian p U).ι.IsEquivalence := {}
+  letI : (twoYonedaEvaluation p U).IsEquivalence :=
+    twoYoneda_fibred_equivalence p U
+  exact Functor.isEquivalence_of_comp_left
+    (twoYonedaPreservesCartesian p U).ι
+    (twoYonedaEvaluationCore p U)
 
 /-! ## The alternative presheaf construction -/
 

@@ -189,7 +189,52 @@ theorem complex_polynomial_maximal_ideal_eq_coordinate
     (n : ℕ) (m : Ideal (polynomialRing ℂ n)) (hm : m.IsMaximal) :
     ∃ α : Fin n → ℂ,
       m = polynomialCoordinateIdeal ℂ n α := by
-  sorry
+  obtain ⟨α, hα⟩ :=
+    MvPolynomial.eq_vanishingIdeal_singleton_of_isMaximal (K := ℂ) hm
+  have hcoord :
+      MvPolynomial.vanishingIdeal ℂ ({α} : Set (Fin n → ℂ)) =
+        polynomialCoordinateIdeal ℂ n α := by
+    have hgenzero :
+        polynomialCoordinateIdeal ℂ n α ≤
+          MvPolynomial.vanishingIdeal ℂ ({α} : Set (Fin n → ℂ)) := by
+      rw [polynomialCoordinateIdeal, Ideal.span_le]
+      rintro _ ⟨i, rfl⟩
+      change MvPolynomial.X i - MvPolynomial.C (α i) ∈
+        MvPolynomial.vanishingIdeal ℂ ({α} : Set (Fin n → ℂ))
+      rw [MvPolynomial.mem_vanishingIdeal_singleton_iff]
+      simp
+    apply Ideal.ext
+    intro p
+    constructor
+    · intro hp
+      have hrep : ∀ q : polynomialRing ℂ n,
+          q - MvPolynomial.C (MvPolynomial.aeval α q) ∈
+            polynomialCoordinateIdeal ℂ n α := by
+        intro q
+        induction q using MvPolynomial.induction_on with
+        | C a => simp
+        | add p q hp hq =>
+            rw [map_add, MvPolynomial.C_add]
+            convert Ideal.add_mem (polynomialCoordinateIdeal ℂ n α) hp hq using 1 <;>
+              abel
+        | mul_X p i hp =>
+            have hgen :
+                MvPolynomial.X i - MvPolynomial.C (α i) ∈
+                  polynomialCoordinateIdeal ℂ n α := by
+              exact Ideal.subset_span ⟨i, rfl⟩
+            have h₁ := Ideal.mul_mem_left (polynomialCoordinateIdeal ℂ n α)
+              (MvPolynomial.X i) hp
+            have h₂ := Ideal.mul_mem_left (polynomialCoordinateIdeal ℂ n α)
+              (MvPolynomial.C (MvPolynomial.aeval α p)) hgen
+            convert Ideal.add_mem _ h₁ h₂ using 1 <;>
+              simp only [map_mul, MvPolynomial.aeval_X] <;>
+              ring
+      have hzero : MvPolynomial.aeval α p = 0 :=
+        (MvPolynomial.mem_vanishingIdeal_singleton_iff α p).mp hp
+      simpa [hzero] using hrep p
+    · intro hp
+      exact hgenzero hp
+  exact ⟨α, hα.trans hcoord⟩
 
 /-! ## Remark `HNSS` -/
 
@@ -200,7 +245,13 @@ theorem polynomial_maximal_ideal_quotient_finite_field_extension
     (m : Ideal (polynomialRing k n)) (hm : m.IsMaximal) :
     IsField (polynomialRing k n ⧸ m) ∧
       Module.Finite k (polynomialRing k n ⧸ m) := by
-  sorry
+  have hfield : IsField (polynomialRing k n ⧸ m) :=
+    (Ideal.Quotient.maximal_ideal_iff_isField_quotient m).mp hm
+  constructor
+  · exact hfield
+  · let _ : m.IsMaximal := hm
+    let _ : Field (polynomialRing k n ⧸ m) := Ideal.Quotient.field m
+    exact finite_of_finite_type_of_isJacobsonRing k (polynomialRing k n ⧸ m)
 
 /-- The same finite-field-extension conclusion for maximal ideals of any
 finite-type algebra over a field. -/
@@ -209,7 +260,13 @@ theorem finite_type_maximal_ideal_quotient_finite_field_extension
     [Algebra.FiniteType k R]
     (m : Ideal R) (hm : m.IsMaximal) :
     IsField (R ⧸ m) ∧ Module.Finite k (R ⧸ m) := by
-  sorry
+  have hfield : IsField (R ⧸ m) :=
+    (Ideal.Quotient.maximal_ideal_iff_isField_quotient m).mp hm
+  constructor
+  · exact hfield
+  · let _ : m.IsMaximal := hm
+    let _ : Field (R ⧸ m) := Ideal.Quotient.field m
+    exact finite_of_finite_type_of_isJacobsonRing k (R ⧸ m)
 
 /-! ## Exercise `Hilbert-Nullstellensatz` -/
 
@@ -226,7 +283,17 @@ theorem finite_type_exists_maximal_ideal_not_mem
     {k R : Type u} [Field k] [CommRing R] [Algebra k R]
     [Algebra.FiniteType k R] (f : R) (hf : ¬ IsNilpotent f) :
     ∃ m : Ideal R, m.IsMaximal ∧ f ∉ m := by
-  sorry
+  let _ : IsJacobsonRing R := isJacobsonRing_of_finiteType (A := k) (B := R)
+  have hnotradical : f ∉ (⊥ : Ideal R).radical := by
+    rw [Ideal.mem_radical_iff]
+    simpa [IsNilpotent] using hf
+  have hnotjacobson : f ∉ (⊥ : Ideal R).jacobson := by
+    rw [← Ideal.radical_eq_jacobson (⊥ : Ideal R)]
+    exact hnotradical
+  rw [Ideal.jacobson, Ideal.mem_sInf] at hnotjacobson
+  push Not at hnotjacobson
+  obtain ⟨m, hm, hfm⟩ := hnotjacobson
+  exact ⟨m, hm.2, hfm⟩
 
 /-! ### The non-finite-type counterexample -/
 

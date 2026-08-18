@@ -474,7 +474,77 @@ theorem jordanHolderLattice_iso_subobjectQuotient
     {P Q R T : Subobject A} (hPQ : P ≤ Q) (hRT : R ≤ T)
     (h : JordanHolderLattice.Iso (P, Q) (R, T)) :
     Nonempty (subobjectQuotient P Q hPQ ≅ subobjectQuotient R T hRT) := by
-  sorry
+  let e : (Subobject A × Subobject A) → (Subobject A × Subobject A) → Prop :=
+    fun x y =>
+      (¬x.1 ≤ x.2 ∧ ¬y.1 ≤ y.2) ∨
+        (∃ hx : x.1 ≤ x.2, ∃ hy : y.1 ≤ y.2,
+          Nonempty (subobjectQuotient x.1 x.2 hx ≅ subobjectQuotient y.1 y.2 hy))
+  have he : e (P, Q) (R, T) := by
+    apply JordanHolderLattice.Iso.rel e
+    · intro x
+      rcases x with ⟨x₁, x₂⟩
+      by_cases hx : x₁ ≤ x₂
+      · exact Or.inr ⟨hx, hx, ⟨Iso.refl _⟩⟩
+      · exact Or.inl ⟨hx, hx⟩
+    · intro x y hxy
+      rcases hxy with ⟨hxy, hyx⟩ | ⟨hx, hy, ⟨i⟩⟩
+      · exact Or.inl ⟨hyx, hxy⟩
+      · exact Or.inr ⟨hy, hx, ⟨i.symm⟩⟩
+    · intro x y z hxy hyz
+      rcases hxy with ⟨hxy, hyx⟩ | ⟨hx, hy, ⟨i⟩⟩
+      · rcases hyz with ⟨hyz, hzy⟩ | ⟨hy, hz, _⟩
+        · exact Or.inl ⟨hxy, hzy⟩
+        · exact False.elim (hyx hy)
+      · rcases hyz with ⟨hyz, hzy⟩ | ⟨_, hz, ⟨j⟩⟩
+        · exact False.elim (hyz hy)
+        · exact Or.inr ⟨hx, hz, ⟨i ≪≫ j⟩⟩
+    · intro x y hm
+      change x ⋖ x ⊔ y at hm
+      have hiy : x ⊓ y ⋖ y := inf_covBy_of_covBy_sup_left hm
+      have hsq :
+          IsPullback (Subobject.ofLE (x ⊓ y) y inf_le_right)
+            (Subobject.ofLE (x ⊓ y) x inf_le_left)
+            (Subobject.ofLE y (x ⊔ y) le_sup_right)
+            (Subobject.ofLE x (x ⊔ y) le_sup_left) := by
+        apply IsPullback.mk'
+        · simp [Subobject.ofLE_comp_ofLE]
+        · intro W a b hab hab'
+          exact (Subobject.inf_isPullback x y).flip.hom_ext
+            (by simpa using hab) (by simpa using hab')
+        · intro W a b hab
+          have hab' : a ≫ y.arrow = b ≫ x.arrow := by
+            simpa only [Category.assoc, Subobject.ofLE_arrow] using
+              congrArg (fun k => k ≫ (x ⊔ y).arrow) hab
+          rcases (Subobject.inf_isPullback x y).flip.exists_lift a b hab' with
+            ⟨l, hl₁, hl₂⟩
+          exact ⟨l, by simpa using hl₁, by simpa using hl₂⟩
+      let φ := cokernel.map
+        (Subobject.ofLE (x ⊓ y) y inf_le_right)
+        (Subobject.ofLE x (x ⊔ y) le_sup_left)
+        (Subobject.ofLE (x ⊓ y) x inf_le_left)
+        (Subobject.ofLE y (x ⊔ y) le_sup_right)
+        (by simp [Subobject.ofLE_comp_ofLE])
+      have hφmono : Mono φ := by
+        dsimp [φ]
+        exact Abelian.mono_cokernel_map_of_isPullback hsq
+      letI : Simple (cokernel (Subobject.ofLE x (x ⊔ y) le_sup_left)) := by
+        change Simple (subobjectQuotient x (x ⊔ y) le_sup_left)
+        exact (simple_subobjectQuotient_iff_covBy le_sup_left).mpr hm
+      letI : Simple (cokernel (Subobject.ofLE (x ⊓ y) y inf_le_right)) := by
+        change Simple (subobjectQuotient (x ⊓ y) y inf_le_right)
+        exact (simple_subobjectQuotient_iff_covBy inf_le_right).mpr hiy
+      have hφne : φ ≠ 0 := by
+        intro hφzero
+        have hsourcezero : IsZero (cokernel (Subobject.ofLE (x ⊓ y) y inf_le_right)) :=
+          @IsZero.of_mono_eq_zero _ _ _ _ _ φ hφmono hφzero
+        exact (Simple.not_isZero (cokernel (Subobject.ofLE (x ⊓ y) y inf_le_right)))
+          hsourcezero
+      letI : IsIso φ := isIso_of_mono_of_nonzero hφne
+      exact Or.inr ⟨le_sup_left, inf_le_right, ⟨(asIso φ).symm⟩⟩
+    exact h
+  rcases he with hbad | ⟨_, _, ⟨i⟩⟩
+  · exact False.elim (hbad.1 hPQ)
+  · exact ⟨i⟩
 
 structure FiniteLengthFiltration
     {C : Type u} [Category.{v} C] [Abelian C] (A : C) where

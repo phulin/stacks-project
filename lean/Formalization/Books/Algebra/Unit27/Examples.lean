@@ -2,6 +2,12 @@ import Formalization.Books.Algebra.Unit17.Spectrum
 import Mathlib.Algebra.Algebra.Subalgebra.Basic
 import Mathlib.Algebra.Algebra.Subalgebra.Lattice
 import Mathlib.Algebra.MvPolynomial.Eval
+import Mathlib.Algebra.MvPolynomial.Equiv
+import Mathlib.Algebra.MvPolynomial.NoZeroDivisors
+import Mathlib.Algebra.Polynomial.SpecificDegree
+import Mathlib.RingTheory.KrullDimension.NonZeroDivisors
+import Mathlib.RingTheory.KrullDimension.Polynomial
+import Mathlib.RingTheory.KrullDimension.Field
 import Mathlib.RingTheory.EuclideanDomain
 import Mathlib.RingTheory.FiniteType
 import Mathlib.RingTheory.Polynomial.Ideal
@@ -1878,25 +1884,260 @@ theorem affine_base_not_isField : ¬ IsField affineBaseSubalgebra := by
 
 theorem affine_presentation_relation_irreducible :
     Irreducible affinePresentationRelation := by
-  sorry
+  let x : MvPolynomial (Fin 1) ℚ := MvPolynomial.X 0
+  have hno_root : ∀ r : MvPolynomial (Fin 1) ℚ,
+      r ^ 3 + x * r - x ^ 2 ≠ 0 := by
+    intro r
+    by_cases hd0 : r.totalDegree = 0
+    · have hc : r = MvPolynomial.C (MvPolynomial.coeff 0 r) :=
+        (MvPolynomial.totalDegree_eq_zero_iff_eq_C).mp hd0
+      rw [hc]
+      intro hz
+      have hsdeg :
+          ((MvPolynomial.C (MvPolynomial.coeff 0 r)) ^ 3 +
+            x * MvPolynomial.C (MvPolynomial.coeff 0 r)).totalDegree ≤ 1 := by
+        calc
+          ((MvPolynomial.C (MvPolynomial.coeff 0 r)) ^ 3 +
+              x * MvPolynomial.C (MvPolynomial.coeff 0 r)).totalDegree ≤
+              max ((MvPolynomial.C (MvPolynomial.coeff 0 r)) ^ 3).totalDegree
+                (x * MvPolynomial.C (MvPolynomial.coeff 0 r)).totalDegree :=
+            MvPolynomial.totalDegree_add _ _
+          _ ≤ 1 := by
+            exact max_le
+              (by
+                calc
+                  ((MvPolynomial.C (MvPolynomial.coeff 0 r)) ^ 3).totalDegree ≤
+                      3 * (MvPolynomial.C (MvPolynomial.coeff 0 r)).totalDegree :=
+                    MvPolynomial.totalDegree_pow _ _
+                  _ ≤ 1 := by simp)
+              (by
+                calc
+                  (x * MvPolynomial.C (MvPolynomial.coeff 0 r)).totalDegree ≤
+                      x.totalDegree + (MvPolynomial.C (MvPolynomial.coeff 0 r)).totalDegree :=
+                    MvPolynomial.totalDegree_mul _ _
+                  _ ≤ 1 := by simp [x])
+      have heq :
+          (MvPolynomial.C (MvPolynomial.coeff 0 r)) ^ 3 +
+              x * MvPolynomial.C (MvPolynomial.coeff 0 r) = x ^ 2 :=
+        sub_eq_zero.mp hz
+      rw [heq, show (x ^ 2).totalDegree = 2 by simp [x]] at hsdeg
+      omega
+    · have hdpos : 0 < r.totalDegree := Nat.pos_of_ne_zero hd0
+      have hr0 : r ≠ 0 := by
+        intro hr
+        apply hd0
+        simp [hr]
+      have hpow :
+          (r ^ 3).totalDegree =
+            r.totalDegree + r.totalDegree + r.totalDegree := by
+        rw [show r ^ 3 = r * r * r by ring]
+        rw [MvPolynomial.totalDegree_mul_of_isDomain (mul_ne_zero hr0 hr0) hr0,
+          MvPolynomial.totalDegree_mul_of_isDomain hr0 hr0]
+      have hxr :
+          (x * r).totalDegree = x.totalDegree + r.totalDegree :=
+        MvPolynomial.totalDegree_mul_of_isDomain (by simp [x]) hr0
+      have hlt : (x * r).totalDegree < (r ^ 3).totalDegree := by
+        rw [hpow, hxr]
+        simp [x]
+        omega
+      have hsum :
+          (r ^ 3 + x * r).totalDegree =
+            r.totalDegree + r.totalDegree + r.totalDegree := by
+        calc
+          (r ^ 3 + x * r).totalDegree = (r ^ 3).totalDegree :=
+            MvPolynomial.totalDegree_add_eq_left_of_totalDegree_lt hlt
+          _ = r.totalDegree + r.totalDegree + r.totalDegree := hpow
+      have hx2 : (x ^ 2).totalDegree = 2 := by simp [x]
+      have hlt2 : (x ^ 2).totalDegree < (r ^ 3 + x * r).totalDegree := by
+        rw [hx2, hsum]
+        omega
+      have hfinal :
+          (r ^ 3 + x * r - x ^ 2).totalDegree =
+            r.totalDegree + r.totalDegree + r.totalDegree := by
+        calc
+          (r ^ 3 + x * r - x ^ 2).totalDegree =
+              (r ^ 3 + x * r).totalDegree := by
+            rw [sub_eq_add_neg]
+            apply MvPolynomial.totalDegree_add_eq_left_of_totalDegree_lt
+            rw [MvPolynomial.totalDegree_neg, hx2, hsum]
+            omega
+          _ = r.totalDegree + r.totalDegree + r.totalDegree := hsum
+      intro hz
+      rw [hz] at hfinal
+      simp at hfinal
+      omega
+  let e : AffinePresentation ≃ₐ[ℚ]
+      Polynomial (MvPolynomial (Fin 1) ℚ) :=
+    MvPolynomial.finSuccEquiv ℚ 1
+  have he : e affinePresentationRelation =
+      Polynomial.X ^ 3 +
+        Polynomial.C (MvPolynomial.X 0) * Polynomial.X -
+          Polynomial.C (MvPolynomial.X 0) ^ 2 := by
+    simp only [affinePresentationRelation, map_sub, map_add, map_pow, map_mul]
+    have hA : e affinePresentationA = Polynomial.X := by
+      simp [e, affinePresentationA, MvPolynomial.finSuccEquiv_X_zero]
+    have hB : e affinePresentationB =
+        Polynomial.C (MvPolynomial.X 0) := by
+      change MvPolynomial.finSuccEquiv ℚ 1
+          (MvPolynomial.X (0 : Fin 1).succ) =
+        Polynomial.C (MvPolynomial.X 0)
+      exact MvPolynomial.finSuccEquiv_X_succ
+    rw [hA, hB]
+    ring
+  let q : Polynomial (MvPolynomial (Fin 1) ℚ) :=
+    Polynomial.C x * Polynomial.X - Polynomial.C (x ^ 2)
+  have hmul : (Polynomial.C x * Polynomial.X).natDegree ≤
+      (Polynomial.C x).natDegree + Polynomial.X.natDegree :=
+    Polynomial.natDegree_mul_le
+  have hqdeg : q.natDegree ≤ 1 := by
+    have hsub := Polynomial.natDegree_sub_le_of_le
+      (p := Polynomial.C x * Polynomial.X) (q := Polynomial.C (x ^ 2))
+      (m := 1) (n := 1) (by simpa using hmul) (by simp)
+    simpa [q] using hsub
+  have hqdegree : q.degree < 3 := by
+    exact lt_of_le_of_lt (Polynomial.degree_le_of_natDegree_le hqdeg) (by norm_num)
+  have hp_monic : (Polynomial.X ^ 3 + q).Monic := by
+    exact Polynomial.monic_X_pow_add hqdegree
+  have hpdeg : (Polynomial.X ^ 3 + q).natDegree = 3 := by
+    have h := Polynomial.natDegree_add_eq_left_of_natDegree_lt
+      (p := Polynomial.X ^ 3) (q := q)
+      (lt_of_le_of_lt hqdeg (by norm_num))
+    simpa only [Polynomial.natDegree_X_pow, Nat.mul_one] using h
+  have hp0 : Polynomial.X ^ 3 + q ≠ 0 := hp_monic.ne_zero
+  have hroots : (Polynomial.X ^ 3 + q).roots = 0 := by
+    apply Multiset.eq_zero_of_forall_notMem
+    intro r hr
+    have hroot := (Polynomial.mem_roots hp0).mp hr
+    change Polynomial.eval r (Polynomial.X ^ 3 + q) = 0 at hroot
+    have hroot' : r ^ 3 + x * r - x ^ 2 = 0 := by
+      convert hroot using 1 <;>
+        simp [q, x, Polynomial.eval_add, Polynomial.eval_sub,
+          Polynomial.eval_mul] <;> ring
+    exact hno_root r hroot'
+  have hp : Irreducible (Polynomial.X ^ 3 + q) := by
+    have hp2 : 2 ≤ (Polynomial.X ^ 3 + q).natDegree := by omega
+    have hp3 : (Polynomial.X ^ 3 + q).natDegree ≤ 3 := by omega
+    exact
+      (hp_monic.irreducible_iff_roots_eq_zero_of_degree_le_three hp2 hp3).mpr
+        hroots
+  have hpm : Irreducible (e affinePresentationRelation) := by
+    rw [he]
+    convert hp using 1 <;> simp [q, x] <;> ring
+  exact (MulEquiv.irreducible_iff e.toRingEquiv.toMulEquiv).mp hpm
 
 theorem affine_presentation_primes_containing_relation
     (P : Ideal AffinePresentation) (hP : P.IsPrime)
     (hrel : Ideal.span {affinePresentationRelation} ≤ P) :
     P = Ideal.span {affinePresentationRelation} ∨ P.IsMaximal := by
-  sorry
+  let I : Ideal AffinePresentation :=
+    Ideal.span {affinePresentationRelation}
+  let f : AffinePresentation →+* (AffinePresentation ⧸ I) :=
+    Ideal.Quotient.mk I
+  have hrel0 : affinePresentationRelation ≠ 0 :=
+    affine_presentation_relation_irreducible.ne_zero
+  have hIprime : I.IsPrime := by
+    apply (Ideal.span_singleton_prime hrel0).mpr
+    exact UniqueFactorizationMonoid.irreducible_iff_prime.mp
+      affine_presentation_relation_irreducible
+  let := hIprime
+  have hdim :
+      ringKrullDim (AffinePresentation ⧸ I) + 1 ≤
+        ringKrullDim AffinePresentation := by
+    apply ringKrullDim_quotient_succ_le_of_nonZeroDivisor
+    exact mem_nonZeroDivisors_iff_ne_zero.mpr hrel0
+  have hdim' : ringKrullDim (AffinePresentation ⧸ I) + 1 ≤ 2 := by
+    simpa [MvPolynomial.ringKrullDim_of_isNoetherianRing,
+      ringKrullDim_eq_zero_of_field ℚ] using hdim
+  have hdim1 : ringKrullDim (AffinePresentation ⧸ I) ≤ 1 := by
+    induction hq : ringKrullDim (AffinePresentation ⧸ I) using WithBot.recBotCoe with
+    | bot => exact bot_le
+    | coe a =>
+      induction a using ENat.recTopCoe with
+      | top =>
+        rw [hq] at hdim'
+        have hdim'' : (⊤ : ℕ∞) + 1 ≤ 2 :=
+          WithBot.coe_le_coe.mp hdim'
+        simp at hdim''
+      | coe n =>
+        rw [hq] at hdim'
+        have hdim'' : (n : ℕ∞) + 1 ≤ 2 :=
+          WithBot.coe_le_coe.mp hdim'
+        have hlt : (n : ℕ∞) < 2 :=
+          ENat.add_one_le_natCast_iff.mp hdim''
+        have hnat : n < 2 :=
+          ENat.natCast_lt_natCast.mp hlt
+        have hnat' : n ≤ 1 := by omega
+        exact WithBot.coe_le_coe.mpr (WithTop.coe_le_coe.mpr hnat')
+  let := (Ring.krullDimLE_iff.mpr hdim1)
+  have hPbar : (P.map f).IsPrime := by
+    let := hP
+    apply Ideal.map_isPrime_of_surjective (f := f) Ideal.Quotient.mk_surjective
+    rw [Ideal.mk_ker]
+    exact hrel
+  have hcomap : (P.map f).comap f = P := by
+    rw [Ideal.comap_map_of_surjective f Ideal.Quotient.mk_surjective]
+    have hk : Ideal.comap f (⊥ : Ideal (AffinePresentation ⧸ I)) = I := by
+      rw [← RingHom.ker_eq_comap_bot]
+      simp [f]
+    rw [hk, sup_eq_left.mpr hrel]
+  by_cases hPI : P = I
+  · exact Or.inl hPI
+  · right
+    have hPbar_ne_bot : P.map f ≠ ⊥ := by
+      intro hzero
+      apply hPI
+      calc
+        P = (P.map f).comap f := hcomap.symm
+        _ = (⊥ : Ideal (AffinePresentation ⧸ I)).comap f := by rw [hzero]
+        _ = I := by
+          rw [← RingHom.ker_eq_comap_bot]
+          simp [f]
+    have hPbarmax : (P.map f).IsMaximal :=
+      Ideal.IsPrime.isMaximal_of_ne_bot (R := AffinePresentation ⧸ I)
+        hPbar hPbar_ne_bot
+    have hPmax : P.IsMaximal := by
+      simpa only [hcomap] using
+        (Ideal.comap_isMaximal_of_surjective
+          (f := f) (K := P.map f) (H := hPbarmax)
+          Ideal.Quotient.mk_surjective)
+    exact hPmax
 
 theorem affine_presentation_kernel :
     RingHom.ker affinePresentationMap.toRingHom =
       Ideal.span {affinePresentationRelation} := by
-  sorry
+  have hrelker :
+      Ideal.span {affinePresentationRelation} ≤
+        RingHom.ker affinePresentationMap.toRingHom := by
+    apply Ideal.span_le.mpr
+    intro x hx
+    rcases Set.mem_singleton_iff.mp hx with rfl
+    exact affine_presentation_relation_mem_kernel
+  have hkerprime :
+      (RingHom.ker affinePresentationMap.toRingHom).IsPrime :=
+    RingHom.ker_isPrime _
+  rcases affine_presentation_primes_containing_relation
+      (RingHom.ker affinePresentationMap.toRingHom) hkerprime hrelker with hEq | hMax
+  · exact hEq
+  · exfalso
+    apply affine_base_not_isField
+    have hfield :
+        IsField (AffinePresentation ⧸ RingHom.ker affinePresentationMap.toRingHom) :=
+      (Ideal.Quotient.maximal_ideal_iff_isField_quotient
+        (RingHom.ker affinePresentationMap.toRingHom)).mp hMax
+    let e := RingHom.quotientKerEquivOfSurjective
+      (f := affinePresentationMap.toRingHom) affine_presentation_surjective
+    exact e.symm.toMulEquiv.isField hfield
 
 /-- The induced presentation isomorphism has the direction determined by the
 surjective map `ℚ[A,B] → R`: the quotient is isomorphic to `R`. -/
 theorem affine_presentation_quotient_equiv :
     Nonempty ((AffinePresentation ⧸ Ideal.span {affinePresentationRelation}) ≃+*
       affineBaseSubalgebra) := by
-  sorry
+  refine ⟨?_⟩
+  rw [← affine_presentation_kernel]
+  exact
+    (Ideal.quotientKerAlgEquivOfSurjective
+      affine_presentation_surjective).toRingEquiv
 
 /-- The ambient ring `ℚ[z, 1/(z-a)]`. -/
 abbrev AffineAmbient (a : ℚ) :=

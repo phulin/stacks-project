@@ -128,6 +128,64 @@ theorem relativeTensorDegeneracy_zero_pure (R A : Type u) [CommRing R] [CommRing
       PiTensorProduct.tprod R (fun _ : Fin 1 => x 0 * x 1) := by
   sorry
 
+/-! ## Modules over the Amitsur terms -/
+
+/-- The degree-`n` module obtained by tensoring an `R`-module with the
+`(n + 1)`-fold Amitsur tensor power. -/
+abbrev relativeTensorModule (R A M : Type u) [CommRing R] [CommRing A]
+    [Algebra R A] [AddCommGroup M] [Module R M] (n : ℕ) : Type u :=
+  TensorProduct R (relativeTensorProduct R A n) M
+
+/-- The transition map on the displayed tensor-product module presentation.
+Its pure-tensor formula is recorded separately so the chosen cosimplicial
+object can remain the canonical categorical presentation above. -/
+theorem relativeTensorModuleMap_exists (R A M : Type u) [CommRing R] [CommRing A]
+    [Algebra R A] [AddCommGroup M] [Module R M]
+    {n m : ℕ} (φ : SimplexCategory.mk n ⟶ SimplexCategory.mk m) :
+    Nonempty (relativeTensorModule R A M n →ₗ[R] relativeTensorModule R A M m) := by
+  sorry
+
+noncomputable def relativeTensorModuleMap (R A M : Type u) [CommRing R] [CommRing A]
+    [Algebra R A] [AddCommGroup M] [Module R M]
+    {n m : ℕ} (φ : SimplexCategory.mk n ⟶ SimplexCategory.mk m) :
+    relativeTensorModule R A M n →ₗ[R] relativeTensorModule R A M m :=
+  Classical.choice (relativeTensorModuleMap_exists R A M φ)
+
+theorem relativeTensorModuleMap_tmul (R A M : Type u) [CommRing R] [CommRing A]
+    [Algebra R A] [AddCommGroup M] [Module R M]
+    {n m : ℕ} (φ : SimplexCategory.mk n ⟶ SimplexCategory.mk m)
+    (a : relativeTensorProduct R A n) (m' : M) :
+    relativeTensorModuleMap R A M φ (a ⊗ₜ[R] m') =
+      relativeTensorMap R A φ a ⊗ₜ[R] m' := by
+  sorry
+
+def relativeTensorModuleFace (R A M : Type u) [CommRing R] [CommRing A]
+    [Algebra R A] [AddCommGroup M] [Module R M] (n : ℕ) (i : Fin (n + 2)) :
+    relativeTensorModule R A M n →ₗ[R] relativeTensorModule R A M (n + 1) :=
+  relativeTensorModuleMap R A M (SimplexCategory.δ i)
+
+def relativeTensorModuleDegeneracy (R A M : Type u) [CommRing R] [CommRing A]
+    [Algebra R A] [AddCommGroup M] [Module R M] (n : ℕ) (i : Fin (n + 1)) :
+    relativeTensorModule R A M (n + 1) →ₗ[R] relativeTensorModule R A M n :=
+  relativeTensorModuleMap R A M (SimplexCategory.σ i)
+
+theorem relativeTensorCosimplicialModule_exists (R A M : Type u)
+    [CommRing R] [CommRing A] [Algebra R A] [AddCommGroup M] [Module R M] :
+    Nonempty (CosimplicialObject (ModuleCat R)) := by
+  sorry
+
+noncomputable def relativeTensorCosimplicialModule (R A M : Type u)
+    [CommRing R] [CommRing A] [Algebra R A] [AddCommGroup M] [Module R M] :
+    CosimplicialObject (ModuleCat R) :=
+  Classical.choice (relativeTensorCosimplicialModule_exists R A M)
+
+theorem relativeTensorCosimplicialModule_degree (R A M : Type u)
+    [CommRing R] [CommRing A] [Algebra R A] [AddCommGroup M] [Module R M]
+    (n : ℕ) :
+    Nonempty ((relativeTensorCosimplicialModule R A M).obj (SimplexCategory.mk n) ≅
+      ModuleCat.of R (relativeTensorModule R A M n)) := by
+  sorry
+
 /-! ## Descent data and their morphisms -/
 
 section DescentData
@@ -333,6 +391,12 @@ def canonicalDescentComparison :
   (TensorProduct.assoc R A M A).trans
     (TensorProduct.congr (LinearEquiv.refl R A) (TensorProduct.comm R M A))
 
+theorem canonicalDescentComparison_tmul (a₀ a₁ : A) (m : M) :
+    canonicalDescentComparison (R := R) (A := A) (M := M)
+        ((a₀ ⊗ₜ[R] m) ⊗ₜ[R] a₁) =
+      a₀ ⊗ₜ[R] (a₁ ⊗ₜ[R] m) := by
+  rfl
+
 theorem canonicalDescentDatum_exists :
     ∃ D : DescentDatum (R := R) (A := A) (N := TensorProduct R A M),
       D.comparison = canonicalDescentComparison (R := R) (A := A) (M := M) := by
@@ -376,6 +440,14 @@ theorem canonicalDescentCosimplicialModule_degree (R A M : Type u)
       (canonicalDescentDatum (R := R) (A := A) (M := M))).obj
         (SimplexCategory.mk n) ≅
       ModuleCat.of R (TensorProduct R M (relativeTensorProduct R A n))) := by
+  sorry
+
+theorem canonicalDescentCosimplicialModule_iso (R A M : Type u)
+    [CommRing R] [CommRing A] [Algebra R A]
+    [AddCommGroup M] [Module R M] :
+    Nonempty (descentCosimplicialModule
+      (canonicalDescentDatum (R := R) (A := A) (M := M)) ≅
+      relativeTensorCosimplicialModule R A M) := by
   sorry
 
 /-! ## Complexes, exactness, and effectivity -/
@@ -581,6 +653,27 @@ def BaseChangedDescentDataEffective
         ∀ D' : DescentDatum (R := R') (A := A') (N := N'),
           DescentDatum.IsEffective.{u, u, u, u} D'
 
+/-- Every descent datum for the base-changed algebra `R' ⊗[R] A` is effective.
+This is the hypothesis in the source's faithfully-flat base-change lemma. -/
+def BaseChangedAllDescentDataEffective
+    (R A R' : Type u) [CommRing R] [CommRing A] [CommRing R']
+    [Algebra R A] [Algebra R R'] [Module.FaithfullyFlat R R'] : Prop :=
+  let A' := TensorProduct R R' A
+  letI : Algebra R' A' := Algebra.TensorProduct.leftAlgebra
+  ∀ (N' : Type u) (_ : AddCommGroup N') (_ : Module R' N')
+    (_ : Module A' N') (_ : IsScalarTower R' A' N'),
+    ∀ D' : DescentDatum (R := R') (A := A') (N := N'),
+      DescentDatum.IsEffective.{u, u, u, u} D'
+
+theorem descent_descends_of_baseChange
+    {R A N : Type u} [CommRing R] [CommRing A] [Algebra R A]
+    [AddCommGroup N] [Module R N] [Module A N] [IsScalarTower R A N]
+    [Module.FaithfullyFlat R A]
+    (D : DescentDatum (R := R) (A := A) (N := N))
+    (R' : Type u) [CommRing R'] [Algebra R R'] [Module.FaithfullyFlat R R']
+    (h : BaseChangedAllDescentDataEffective R A R') : D.IsEffective := by
+  sorry
+
 theorem recognize_effective_descent
     (D : DescentDatum (R := R) (A := A) (N := N))
     [Module.FaithfullyFlat R A] :
@@ -636,6 +729,22 @@ theorem effective_descent_modules_inverse
     [Module R N] [Module A N] [IsScalarTower R A N]
     (D : DescentDatum (R := R) (A := A) (N := N)) :
     descentInverseModule D = descentH0 D := rfl
+
+/-- The three clauses of the source's effective-descent proposition.  The
+categorical equivalence is expressed using Mathlib's Eilenberg--Moore
+category for the extension/restriction comonad, and the inverse is the
+degree-zero equalizer. -/
+theorem proposition_descent_module (R A : Type u)
+    [CommRing R] [CommRing A] [Algebra R A] [Module.FaithfullyFlat R A] :
+    (∀ (N : Type u) (_ : AddCommGroup N) (_ : Module R N) (_ : Module A N)
+      (_ : IsScalarTower R A N),
+      ∀ D : DescentDatum (R := R) (A := A) (N := N), D.IsEffective) ∧
+      DescentModulesEquivalence R A (algebraMap R A) ∧
+      (∀ (N : Type u) (_ : AddCommGroup N) (_ : Module R N) (_ : Module A N)
+        (_ : IsScalarTower R A N)
+        (D : DescentDatum (R := R) (A := A) (N := N)),
+        descentInverseModule D = descentH0 D) := by
+  sorry
 
 /-! ## Standard covers -/
 
@@ -695,24 +804,103 @@ def CartesianCosimplicialModule
   ∀ n m (φ : SimplexCategory.mk n ⟶ SimplexCategory.mk m),
     CartesianTransition M φ
 
+/-- Morphisms of the degreewise module data used in the cartesian-module
+formulation of descent. -/
+@[ext]
+structure CosimplicialModuleDataHom
+    {A : CosimplicialObject CommRingCat.{u}}
+    (M N : CosimplicialModuleData A) where
+  app : ∀ n : ℕ, M.obj n ⟶ N.obj n
+  naturality : ∀ {n m : ℕ} (φ : SimplexCategory.mk n ⟶ SimplexCategory.mk m),
+    M.transition φ ≫ app m =
+      (ModuleCat.extendScalars (A.map φ).hom).map (app n) ≫ N.transition φ
+
+instance {A : CosimplicialObject CommRingCat.{u}} :
+    Category (CosimplicialModuleData A) where
+  Hom M N := CosimplicialModuleDataHom M N
+  id M :=
+    { app := fun n => 𝟙 (M.obj n)
+      naturality := by
+        intro n m φ
+        simp }
+  comp f g :=
+    { app := fun n => f.app n ≫ g.app n
+      naturality := by
+        intro n m φ
+        sorry }
+  id_comp f := by
+    apply CosimplicialModuleDataHom.ext
+    funext n
+    simp
+  comp_id f := by
+    apply CosimplicialModuleDataHom.ext
+    funext n
+    simp
+  assoc f g h := by
+    apply CosimplicialModuleDataHom.ext
+    funext n
+    simp [Category.assoc]
+
+/-- The category of cartesian degreewise modules over a cosimplicial algebra. -/
+def cartesianModuleProperty (A : CosimplicialObject CommRingCat.{u}) :
+    ObjectProperty (CosimplicialModuleData A) :=
+  fun M => CartesianCosimplicialModule M
+
+abbrev CartesianModuleCategory (A : CosimplicialObject CommRingCat.{u}) :=
+  (cartesianModuleProperty A).FullSubcategory
+
 /-! ## Homotopy and the category of abstract descent data -/
 
 /-- A homotopy between maps of cosimplicial objects, obtained from the
 standard simplicial homotopy notion across the simplicial/cosimplicial
 anti-equivalence. -/
-def CosimplicialHomotopy {C : Type u} [Category.{u} C]
+def CosimplicialHomotopy {C : Type v} [Category.{u} C]
     {X Y : CosimplicialObject C} (f g : X ⟶ Y) : Prop :=
   Nonempty (SimplicialObject.Homotopy
     ((cosimplicialSimplicialEquiv C).functor.map f.op)
     ((cosimplicialSimplicialEquiv C).functor.map g.op))
 
 /-- A homotopy equivalence of cosimplicial objects. -/
-structure CosimplicialHomotopyEquivalence {C : Type u} [Category.{u} C]
+structure CosimplicialHomotopyEquivalence {C : Type v} [Category.{u} C]
     (X Y : CosimplicialObject C) where
   hom : X ⟶ Y
   inv : Y ⟶ X
   homotopy_hom_inv : CosimplicialHomotopy (hom ≫ inv) (𝟙 X)
   homotopy_inv_hom : CosimplicialHomotopy (inv ≫ hom) (𝟙 Y)
+
+/-- The constant cosimplicial algebra used in the source's homotopy remark. -/
+def constantCosimplicialAlgebra (R : Type u) [CommRing R] :
+    CosimplicialObject CommRingCat :=
+  (Functor.const SimplexCategory).obj (CommRingCat.of R)
+
+theorem relativeTensorCosimplicialAlgebra_homotopy_equivalence_of_section
+    (R A : Type u) [CommRing R] [CommRing A] [Algebra R A]
+    (σ : A →+* R) (hσ : (algebraMap R A).comp σ = RingHom.id A) :
+    Nonempty (CosimplicialHomotopyEquivalence
+      (relativeTensorCosimplicialAlgebra R A)
+      (constantCosimplicialAlgebra R)) := by
+  sorry
+
+theorem cartesian_modules_homotopy_invariant
+    {X Y : CosimplicialObject CommRingCat.{u}}
+    (e : CosimplicialHomotopyEquivalence X Y) :
+    (∀ M : CosimplicialModuleData X, CartesianCosimplicialModule M →
+      ∃ N : CosimplicialModuleData Y, CartesianCosimplicialModule N) ∧
+    (∀ N : CosimplicialModuleData Y, CartesianCosimplicialModule N →
+      ∃ M : CosimplicialModuleData X, CartesianCosimplicialModule M) := by
+  sorry
+
+theorem descent_data_cartesian_equivalence (R A : Type u)
+    [CommRing R] [CommRing A] [Algebra R A] :
+    Nonempty (DescentCoalgebraCategory R A (algebraMap R A) ≌
+      CartesianModuleCategory (relativeTensorCosimplicialAlgebra R A)) := by
+  sorry
+
+theorem cartesian_modules_homotopy_category_equivalence
+    {X Y : CosimplicialObject CommRingCat.{u}}
+    (e : CosimplicialHomotopyEquivalence X Y) :
+    Nonempty (CartesianModuleCategory X ≌ CartesianModuleCategory Y) := by
+  sorry
 
 theorem descent_data_category_equivalence (R A : Type u)
     [CommRing R] [CommRing A] [Algebra R A] [Module.FaithfullyFlat R A]

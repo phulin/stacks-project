@@ -141,7 +141,7 @@ noncomputable def sectionsWithSupportOnComplexes
 
 /-- The source's injective-resolution computation interface. -/
 def sectionsWithSupportComputedByInjectiveResolution
-    {X : TopCat.{v}} (Z : Set X) (hZ : IsClosed Z) (K : DPlus (Ab X)) : Prop :=
+    {X : TopCat.{v}} (Z : Set X) (_hZ : IsClosed Z) (K : DPlus (Ab X)) : Prop :=
   ∃ I : CompPlus (Ab X),
     isBoundedBelowInjectiveComplex I.1 ∧
       Nonempty ((DerivedCategory.Plus.Qh (C := Ab X)).obj

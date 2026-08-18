@@ -91,12 +91,27 @@ abbrev blowupAlgebra {A : Type u} [CommRing A] (I : Ideal A) :=
 def quotientIdeal {A : Type u} [CommRing A] (I p : Ideal A) : Ideal (A ⧸ p) :=
   Ideal.map (Ideal.Quotient.mk p) I
 
+/- A homogeneous Rees element makes the source's formula
+   `P_d = I^d ∩ p` usable without introducing a second Rees algebra. -/
+def reesHomogeneousElement {A : Type u} [CommRing A] (I : Ideal A)
+    (d : ℕ) {a : A} (ha : a ∈ I ^ d) : blowupAlgebra I :=
+  ⟨Polynomial.monomial d a, reesAlgebra.monomial_mem.mpr ha⟩
+
 /- A grading and a degree-zero ring identification are the precise data needed
-   to apply Mathlib's canonical Proj construction to a Rees algebra. -/
+   to apply Mathlib's canonical Proj construction to a Rees algebra.  The two
+   compatibility fields make this a presentation of the canonical Rees
+   grading, rather than an unrelated grading on the same ambient ring. -/
 structure BlowupPresentation {A : Type u} [CommRing A] (I : Ideal A) where
   gradedPieces : ℕ → Submodule ℤ (blowupAlgebra I)
   graded : GradedRing gradedPieces
   degreeZeroEquiv : (gradedPieces 0) ≃+* A
+  gradedPieces_spec : ∀ (d : ℕ) (x : blowupAlgebra I),
+    x ∈ gradedPieces d ↔
+      ∃ a : A, ∃ _ha : a ∈ I ^ d,
+        x.1 = Polynomial.monomial d a
+  degreeZeroEquiv_spec : ∀ a : A,
+    ((degreeZeroEquiv.symm a : gradedPieces 0) : blowupAlgebra I) =
+      algebraMap A (blowupAlgebra I) a
 
 abbrev blowupProjPoints {A : Type u} [CommRing A] {I : Ideal A}
     (P : BlowupPresentation I) : Type u :=
@@ -179,6 +194,12 @@ structure BlowupQuotientMapData {A : Type u} [CommRing A]
     letI : GradedRing Q.gradedPieces := Q.graded
     HomogeneousIdeal.irrelevant Q.gradedPieces ≤
       (HomogeneousIdeal.irrelevant P.gradedPieces).map map
+  map_on_rees :
+    letI : GradedRing P.gradedPieces := P.graded
+    letI : GradedRing Q.gradedPieces := Q.graded
+    ∀ (d : ℕ) (a : A) (ha : a ∈ I ^ d),
+      (map (reesHomogeneousElement I d ha)).1 =
+        Polynomial.monomial d (Ideal.Quotient.mk p a)
 
 noncomputable def blowupQuotientProjMap {A : Type u} [CommRing A]
     {I p : Ideal A} {P : BlowupPresentation I}
@@ -199,11 +220,5 @@ noncomputable def blowupStrictTransformIdeal {A : Type u} [CommRing A]
   letI : GradedRing P.gradedPieces := P.graded
   letI : GradedRing Q.gradedPieces := Q.graded
   (⊥ : HomogeneousIdeal Q.gradedPieces).comap F.map
-
-/- A homogeneous Rees element makes the source's formula
-   `P_d = I^d ∩ p` usable without introducing a second Rees algebra. -/
-def reesHomogeneousElement {A : Type u} [CommRing A] (I : Ideal A)
-    (d : ℕ) {a : A} (ha : a ∈ I ^ d) : blowupAlgebra I :=
-  ⟨Polynomial.monomial d a, reesAlgebra.monomial_mem.mpr ha⟩
 
 end Formalization.Books.Exercises.Unit27

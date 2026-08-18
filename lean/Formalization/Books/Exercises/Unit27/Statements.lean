@@ -190,12 +190,29 @@ abbrev oneVariablePolynomialGrading (A : Type u) [CommRing A] :
   MvPolynomial.homogeneousSubmodule (Fin 1) A
 
 theorem oneVariableDegreeZeroEquiv_exists (A : Type u) [CommRing A] :
-    Nonempty ((oneVariablePolynomialGrading A 0) ≃+* A) := by
+    Nonempty {
+      e : (oneVariablePolynomialGrading A 0) ≃+* A //
+        ∀ a : A,
+          ((e.symm a : oneVariablePolynomialGrading A 0) :
+              oneVariablePolynomialRing A) = MvPolynomial.C a } := by
   sorry
+
+noncomputable def oneVariableDegreeZeroEquivData (A : Type u) [CommRing A] :
+    {e : (oneVariablePolynomialGrading A 0) ≃+* A //
+      ∀ a : A,
+        ((e.symm a : oneVariablePolynomialGrading A 0) :
+            oneVariablePolynomialRing A) = MvPolynomial.C a} :=
+  Classical.choice (oneVariableDegreeZeroEquiv_exists A)
 
 noncomputable def oneVariableDegreeZeroEquiv (A : Type u) [CommRing A] :
     (oneVariablePolynomialGrading A 0) ≃+* A :=
-  Classical.choice (oneVariableDegreeZeroEquiv_exists A)
+  (oneVariableDegreeZeroEquivData A).1
+
+theorem oneVariableDegreeZeroEquiv_spec (A : Type u) [CommRing A] (a : A) :
+    (((oneVariableDegreeZeroEquiv A).symm a : oneVariablePolynomialGrading A 0) :
+        oneVariablePolynomialRing A) =
+      MvPolynomial.C a := by
+  exact (oneVariableDegreeZeroEquivData A).2 a
 
 noncomputable def oneVariableProjScheme (A : Type u) [CommRing A] : Scheme :=
   letI : GradedAlgebra (oneVariablePolynomialGrading A) := MvPolynomial.gradedAlgebra

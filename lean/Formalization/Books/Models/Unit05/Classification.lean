@@ -2452,7 +2452,7 @@ theorem lemma_two_by_two (T : NumericalType) (S : MinusTwoSubgraph T 2)
         simp [scalarMatrix, pathLastMatrix, haa0,
           haa1, hae01, hae10] <;> ring
     · funext a
-      fin_cases a <;> simp [scalarVector, lastVector, hw0, hw1] ; ring
+      fin_cases a ; simp [scalarVector, lastVector, hw0, hw1] ; ring
   have realizeG : ∀ (E : LocalNumericalData 2) (r : ℤ),
       0 < r → E.w 0 = r → E.w 1 = 3 * r → E.a 0 0 = -2 * r →
       E.a 1 1 = -6 * r → E.a 0 1 = 3 * r → E.a 1 0 = 3 * r →
@@ -2465,7 +2465,7 @@ theorem lemma_two_by_two (T : NumericalType) (S : MinusTwoSubgraph T 2)
         simp [scalarMatrix, pathLastMatrix, haa0,
           haa1, hae01, hae10] <;> ring
     · funext a
-      fin_cases a <;> simp [scalarVector, lastVector, hw0, hw1] ; ring
+      fin_cases a ; simp [scalarVector, lastVector, hw0] ; ring
   have hp_cases : p = 1 ∨ p = 2 ∨ p = 3 := by omega
   rcases hp_cases with hp1 | hp23
   · have hq_cases : q = 1 ∨ q = 2 ∨ q = 3 := by omega
@@ -3115,7 +3115,7 @@ theorem lemma_three_by_three (T : NumericalType) (S : MinusTwoSubgraph T 3)
         simp [scalarMatrix, pathLastMatrix,
           haa0, haa1, haa2, hae01, hae10, hae12, hae21, hae02, hae20] <;> ring
     · funext a
-      fin_cases a <;> simp [scalarVector, lastVector, hw0, hw1, hw2] ; ring
+      fin_cases a ; simp [scalarVector, lastVector, hw0, hw1, hw2] ; ring
   have realizeB3 : ∀ (E : LocalNumericalData 3) (r : ℤ),
       0 < r → E.w 0 = 2 * r → E.w 1 = 2 * r → E.w 2 = r →
       E.a 0 0 = -4 * r → E.a 1 1 = -4 * r → E.a 2 2 = -2 * r →

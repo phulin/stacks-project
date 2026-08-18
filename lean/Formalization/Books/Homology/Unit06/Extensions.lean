@@ -1051,17 +1051,17 @@ theorem pushout_pullback_extension_iso
         change mMiddle ≫ fR = gL ≫ 𝟙 B'
         rw [hm_g, Category.comp_id] }
   have hmono : Mono mMiddle := by
-    letI : Mono (pushoutExtension (pullbackExtension E p) a).toShortComplex.f :=
+    let : Mono (pushoutExtension (pullbackExtension E p) a).toShortComplex.f :=
       (pushoutExtension (pullbackExtension E p) a).shortExact.mono_f
-    letI : Mono (pullbackExtension (pushoutExtension E a) p).toShortComplex.f :=
+    let : Mono (pullbackExtension (pushoutExtension E a) p).toShortComplex.f :=
       (pullbackExtension (pushoutExtension E a) p).shortExact.mono_f
-    letI : Mono φ.τ₁ := by
+    let : Mono φ.τ₁ := by
       dsimp [φ]
       constructor
       intro Z g h w
       rw [← Category.comp_id g, ← Category.comp_id h]
       exact w
-    letI : Mono φ.τ₃ := by
+    let : Mono φ.τ₃ := by
       dsimp [φ]
       constructor
       intro Z g h w
@@ -1070,17 +1070,17 @@ theorem pushout_pullback_extension_iso
     apply ShortComplex.mono_τ₂_of_exact_of_mono φ
     exact (pushoutExtension (pullbackExtension E p) a).shortExact.exact
   have hepi : Epi mMiddle := by
-    letI : Epi (pushoutExtension (pullbackExtension E p) a).toShortComplex.g :=
+    let : Epi (pushoutExtension (pullbackExtension E p) a).toShortComplex.g :=
       (pushoutExtension (pullbackExtension E p) a).shortExact.epi_g
-    letI : Epi (pullbackExtension (pushoutExtension E a) p).toShortComplex.g :=
+    let : Epi (pullbackExtension (pushoutExtension E a) p).toShortComplex.g :=
       (pullbackExtension (pushoutExtension E a) p).shortExact.epi_g
-    letI : Epi φ.τ₁ := by
+    let : Epi φ.τ₁ := by
       dsimp [φ]
       constructor
       intro Z g h w
       rw [← Category.id_comp g, ← Category.id_comp h]
       exact w
-    letI : Epi φ.τ₃ := by
+    let : Epi φ.τ₃ := by
       dsimp [φ]
       constructor
       intro Z g h w
@@ -1088,9 +1088,9 @@ theorem pushout_pullback_extension_iso
       exact w
     apply ShortComplex.epi_τ₂_of_exact_of_epi φ
     exact (pullbackExtension (pushoutExtension E a) p).shortExact.exact
-  letI : Mono mMiddle := hmono
-  letI : Epi mMiddle := hepi
-  letI : IsIso mMiddle := isIso_of_mono_of_epi mMiddle
+  let : Mono mMiddle := hmono
+  let : Epi mMiddle := hepi
+  let : IsIso mMiddle := isIso_of_mono_of_epi mMiddle
   let invMiddle : pullback gQ p ⟶ pushout a iP := inv mMiddle
   let m : ExtensionHom (pushoutExtension (pullbackExtension E p) a)
       (pullbackExtension (pushoutExtension E a) p) :=
@@ -1304,10 +1304,10 @@ noncomputable def directSumExtension
         (biprod.map E₁.projection E₂.projection) z
     have hK₁ := E₁.shortExact.fIsKernel
     have hK₂ := E₂.shortExact.fIsKernel
-    letI : Mono E₁.inclusion := E₁.shortExact.mono_f
-    letI : Mono E₂.inclusion := E₂.shortExact.mono_f
-    letI : Epi E₁.projection := E₁.shortExact.epi_g
-    letI : Epi E₂.projection := E₂.shortExact.epi_g
+    let : Mono E₁.inclusion := E₁.shortExact.mono_f
+    let : Mono E₂.inclusion := E₂.shortExact.mono_f
+    let : Epi E₁.projection := E₁.shortExact.epi_g
+    let : Epi E₂.projection := E₂.shortExact.epi_g
     have hExact : S.Exact := by
       apply S.exact_of_f_is_kernel
       let lift : ∀ s : KernelFork (biprod.map E₁.projection E₂.projection),
@@ -1678,17 +1678,17 @@ private theorem pushout_pullback_extension_morphism_iso
           gP ≫ 𝟙 B
         rw [hm_f, Category.comp_id] }
   have hmono : Mono mMiddle := by
-    letI : Mono (pushoutExtension E e.left).toShortComplex.f :=
+    let : Mono (pushoutExtension E e.left).toShortComplex.f :=
       (pushoutExtension E e.left).shortExact.mono_f
-    letI : Mono (pullbackExtension F e.right).toShortComplex.f :=
+    let : Mono (pullbackExtension F e.right).toShortComplex.f :=
       (pullbackExtension F e.right).shortExact.mono_f
-    letI : Mono φ.τ₁ := by
+    let : Mono φ.τ₁ := by
       dsimp [φ]
       constructor
       intro Z g h w
       rw [← Category.comp_id g, ← Category.comp_id h]
       exact w
-    letI : Mono φ.τ₃ := by
+    let : Mono φ.τ₃ := by
       dsimp [φ]
       constructor
       intro Z g h w
@@ -1697,17 +1697,17 @@ private theorem pushout_pullback_extension_morphism_iso
     apply ShortComplex.mono_τ₂_of_exact_of_mono φ
     exact (pushoutExtension E e.left).shortExact.exact
   have hepi : Epi mMiddle := by
-    letI : Epi (pushoutExtension E e.left).toShortComplex.g :=
+    let : Epi (pushoutExtension E e.left).toShortComplex.g :=
       (pushoutExtension E e.left).shortExact.epi_g
-    letI : Epi (pullbackExtension F e.right).toShortComplex.g :=
+    let : Epi (pullbackExtension F e.right).toShortComplex.g :=
       (pullbackExtension F e.right).shortExact.epi_g
-    letI : Epi φ.τ₁ := by
+    let : Epi φ.τ₁ := by
       dsimp [φ]
       constructor
       intro Z g h w
       rw [← Category.id_comp g, ← Category.id_comp h]
       exact w
-    letI : Epi φ.τ₃ := by
+    let : Epi φ.τ₃ := by
       dsimp [φ]
       constructor
       intro Z g h w
@@ -1715,9 +1715,9 @@ private theorem pushout_pullback_extension_morphism_iso
       exact w
     apply ShortComplex.epi_τ₂_of_exact_of_epi φ
     exact (pullbackExtension F e.right).shortExact.exact
-  letI : Mono mMiddle := hmono
-  letI : Epi mMiddle := hepi
-  letI : IsIso mMiddle := isIso_of_mono_of_epi mMiddle
+  let : Mono mMiddle := hmono
+  let : Epi mMiddle := hepi
+  let : IsIso mMiddle := isIso_of_mono_of_epi mMiddle
   let invMiddle : pullback F.projection e.right ⟶
       pushout e.left E.inclusion := inv mMiddle
   let m : ExtensionHom (pushoutExtension E e.left)
@@ -1784,8 +1784,8 @@ private theorem baerSumExtension_comm
       comm_left := by
         dsimp [sA, sM, directSumExtension]
         apply biprod.hom_ext
-        · simp [biprodCodiagonal, biprod.desc_eq, Category.assoc, add_comp, comp_add]
-        · simp [biprodCodiagonal, biprod.desc_eq, Category.assoc, add_comp, comp_add]
+        · simp [biprod.desc_eq, Category.assoc, add_comp, comp_add]
+        · simp [biprod.desc_eq, Category.assoc, add_comp, comp_add]
       comm_right := by
         dsimp [sB, sM, directSumExtension]
         apply biprod.hom_ext'
@@ -1807,8 +1807,8 @@ private theorem baerSumExtension_comm
     simp [biprod.desc_eq, Category.assoc, add_comp, comp_add, add_comm]
   have hsB : biprodDiagonal B ≫ sB = biprodDiagonal B := by
     dsimp [sB, biprodDiagonal]
-    simp [biprod.lift_desc, biprod.lift_eq, biprod.desc_eq,
-      Category.assoc, add_comp, comp_add, add_comm]
+    simp [biprod.lift_eq, biprod.desc_eq,
+      add_comp, comp_add, add_comm]
   have h₄' : Nonempty
       (pullbackExtension
           (pushoutExtension (directSumExtension E₁ E₂)
@@ -1845,13 +1845,13 @@ private theorem baerSumExtension_add_zero
       comm_left := by
         dsimp [l, m, j, S, directSumExtension, splitExtension]
         apply biprod.hom_ext'
-        · simp [biprodCodiagonal, biprod.desc_eq, Category.assoc, add_comp, comp_add]
-        · simp [biprodCodiagonal, biprod.desc_eq, Category.assoc, add_comp, comp_add]
+        · simp [biprodCodiagonal, biprod.desc_eq, add_comp, comp_add]
+        · simp [biprodCodiagonal, biprod.desc_eq, add_comp, comp_add]
       comm_right := by
         dsimp [m, j, r, S, directSumExtension, splitExtension]
         apply biprod.hom_ext'
-        · simp [biprod.desc_eq, Category.assoc, add_comp, comp_add, E.zero]
-        · simp [biprod.desc_eq, Category.assoc, add_comp, comp_add, E.zero] }
+        · simp
+        · simp [Category.assoc, E.zero] }
   have h₀ := pushout_pullback_extension_morphism_iso e
   have h₁ := pullback_extension_preserves_iso (biprodDiagonal B) h₀
   have h₂ := pullback_extension_comp_iso E r (biprodDiagonal B)
@@ -1916,10 +1916,10 @@ private noncomputable def directSumExtensionVarying
         (biprod.map E₁.projection E₂.projection) z
     have hK₁ := E₁.shortExact.fIsKernel
     have hK₂ := E₂.shortExact.fIsKernel
-    letI : Mono E₁.inclusion := E₁.shortExact.mono_f
-    letI : Mono E₂.inclusion := E₂.shortExact.mono_f
-    letI : Epi E₁.projection := E₁.shortExact.epi_g
-    letI : Epi E₂.projection := E₂.shortExact.epi_g
+    let : Mono E₁.inclusion := E₁.shortExact.mono_f
+    let : Mono E₂.inclusion := E₂.shortExact.mono_f
+    let : Epi E₁.projection := E₁.shortExact.epi_g
+    let : Epi E₂.projection := E₂.shortExact.epi_g
     have hExact : S.Exact := by
       apply S.exact_of_f_is_kernel
       let lift : ∀ s : KernelFork (biprod.map E₁.projection E₂.projection),
@@ -2139,11 +2139,9 @@ private def directSumExtensionAssocMorphism
         · apply biprod.hom_ext'
           · apply biprod.hom_ext
             · simp [Category.assoc, biprod.inl_map, biprod.inr_map,
-                biprod.lift_eq, biprod.lift_fst, biprod.lift_snd,
-                biprod.map_fst, biprod.map_snd]
+                biprod.lift_eq]
             · simp [Category.assoc, biprod.inl_map, biprod.inr_map,
-                biprod.lift_eq, biprod.lift_fst, biprod.lift_snd,
-                biprod.map_fst, biprod.map_snd]
+                biprod.lift_eq]
           · apply biprod.hom_ext
             · simp [Category.assoc]
             · simp [Category.assoc]
@@ -2250,7 +2248,7 @@ private def directSumPullbackMorphism
           rw [pullback.lift_snd]
           simp only [Category.assoc]
           rw [pullback.lift_snd]
-          simp only [comp_zero, zero_comp, Category.comp_id]
+          simp only [comp_zero, zero_comp]
       · apply pullback.hom_ext
         · simp only [Category.assoc]
           rw [hm_fst]
@@ -2436,10 +2434,10 @@ private theorem baerSumExtension_assoc
   have hs : cA ≫ s = s := by
     dsimp [cA, s, u, σ, biprodCyclic, biprodCodiagonal]
     simp [biprod.lift_eq, biprod.desc_eq, Category.assoc, add_comp,
-      comp_add, add_comm, add_left_comm, add_assoc]
+      comp_add, add_comm, add_left_comm]
   have hr : r ≫ cB = r := by
     dsimp [r, t, δ, cB, biprodCyclic, biprodDiagonal]
-    simp [biprod.lift_eq, biprod.desc_eq, Category.assoc, add_comp,
+    simp [biprod.lift_eq, Category.assoc, add_comp,
       comp_add, add_comm]
   have hC : Nonempty
       (pushoutExtension D₁₂₃ s ≅
@@ -2528,7 +2526,7 @@ private theorem inverse_baerSumExtension_iso
     dsimp [d]
     rw [Category.assoc, sub_comp, comp_sub]
     rw [hfirst, hsecond, sub_self]
-  letI : Mono E.inclusion := E.shortExact.mono_f
+  let : Mono E.inclusion := E.shortExact.mono_f
   let kA : rMiddle ⟶ A :=
     E.shortExact.fIsKernel.lift (KernelFork.ofι d hd)
   have hkA : kA ≫ E.inclusion = d := by
@@ -2541,28 +2539,26 @@ private theorem inverse_baerSumExtension_iso
     rw [← Category.assoc (pullback.lift D.inclusion 0 _) (pullback.fst D.projection δ)
       (dS - dF), pullback.lift_fst]
     rw [comp_sub]
-    simp [dS, dF, D, directSumExtensionVarying, Category.assoc, biprod.inl_map,
-      biprod.lift_eq, add_comp, comp_add]
+    simp [dS, dF, D, directSumExtensionVarying]
   have hd_inr : biprod.inr ≫ rInclusion ≫ d = E.inclusion := by
     dsimp [d, rInclusion]
     rw [← Category.assoc (pullback.lift D.inclusion 0 _) (pullback.fst D.projection δ)
       (dS - dF), pullback.lift_fst]
     rw [comp_sub]
-    simp [dS, dF, D, directSumExtensionVarying, Category.assoc, biprod.inr_map,
-      biprod.lift_eq, add_comp, comp_add]
+    simp [dS, dF, D, directSumExtensionVarying]
   let hleft : rInclusion ≫ kA = w := by
     apply biprod.hom_ext'
     · apply (cancel_mono E.inclusion).1
       simp only [Category.assoc]
       rw [hkA]
       rw [hd_inl]
-      simp [w, v, σ, biprodCodiagonal, biprod.desc_eq, Category.assoc,
+      simp [w, v, σ, biprodCodiagonal, biprod.desc_eq,
         add_comp, comp_add]
     · apply (cancel_mono E.inclusion).1
       simp only [Category.assoc]
       rw [hkA]
       rw [hd_inr]
-      simp [w, v, σ, biprodCodiagonal, biprod.desc_eq, Category.assoc,
+      simp [w, v, σ, biprodCodiagonal, biprod.desc_eq,
         add_comp, comp_add]
   let kR : rMiddle ⟶ A ⊞ B := biprod.lift kA rProjection
   have hrzero : rInclusion ≫ rProjection = 0 := by
@@ -2609,16 +2605,16 @@ private theorem inverse_baerSumExtension_iso
         exact hm_right }
   let φ := m.toShortComplexHom
   have hmono : Mono mMiddle := by
-    letI : Mono P.toShortComplex.f := P.shortExact.mono_f
-    letI : Mono (splitExtension A B).toShortComplex.f :=
+    let : Mono P.toShortComplex.f := P.shortExact.mono_f
+    let : Mono (splitExtension A B).toShortComplex.f :=
       (splitExtension A B).shortExact.mono_f
-    letI : Mono φ.τ₁ := by
+    let : Mono φ.τ₁ := by
       dsimp [φ]
       constructor
       intro Z g h w
       rw [← Category.comp_id g, ← Category.comp_id h]
       exact w
-    letI : Mono φ.τ₃ := by
+    let : Mono φ.τ₃ := by
       dsimp [φ]
       constructor
       intro Z g h w
@@ -2627,16 +2623,16 @@ private theorem inverse_baerSumExtension_iso
     apply ShortComplex.mono_τ₂_of_exact_of_mono φ
     exact P.shortExact.exact
   have hepi : Epi mMiddle := by
-    letI : Epi P.toShortComplex.g := P.shortExact.epi_g
-    letI : Epi (splitExtension A B).toShortComplex.g :=
+    let : Epi P.toShortComplex.g := P.shortExact.epi_g
+    let : Epi (splitExtension A B).toShortComplex.g :=
       (splitExtension A B).shortExact.epi_g
-    letI : Epi φ.τ₁ := by
+    let : Epi φ.τ₁ := by
       dsimp [φ]
       constructor
       intro Z g h w
       rw [← Category.id_comp g, ← Category.id_comp h]
       exact w
-    letI : Epi φ.τ₃ := by
+    let : Epi φ.τ₃ := by
       dsimp [φ]
       constructor
       intro Z g h w
@@ -2644,9 +2640,9 @@ private theorem inverse_baerSumExtension_iso
       exact w
     apply ShortComplex.epi_τ₂_of_exact_of_epi φ
     exact (splitExtension A B).shortExact.exact
-  letI : Mono mMiddle := hmono
-  letI : Epi mMiddle := hepi
-  letI : IsIso mMiddle := isIso_of_mono_of_epi mMiddle
+  let : Mono mMiddle := hmono
+  let : Epi mMiddle := hepi
+  let : IsIso mMiddle := isIso_of_mono_of_epi mMiddle
   let invMiddle : A ⊞ B ⟶ pushout w rInclusion := inv mMiddle
   let n : ExtensionHom (splitExtension A B)
       (pushoutExtension (pullbackExtension D δ) w) :=
@@ -2783,26 +2779,26 @@ private def directSumPullbackMorphismRight
       · apply pullback.hom_ext
         · simp only [Category.assoc]
           rw [hm_fst, pullback.lift_fst]
-          simp [biprod.inl_map, Category.assoc]
+          simp [biprod.inl_map]
         · simp only [Category.assoc]
           rw [hm_snd, pullback.lift_snd]
-          simp [biprod.inl_map, Category.assoc, E₂.zero]
+          simp [biprod.inl_map]
           rw [← Category.assoc, E₁.zero, zero_comp]
       · apply pullback.hom_ext
         · simp only [Category.assoc]
           rw [hm_fst, pullback.lift_fst]
-          simp [biprod.inr_map, Category.assoc]
+          simp [biprod.inr_map]
           rw [← Category.assoc, pullback.lift_fst]
         · simp only [Category.assoc]
           rw [hm_snd, pullback.lift_snd]
-          simp [biprod.inr_map, Category.assoc, E₁.zero]
+          simp [biprod.inr_map]
           rw [← Category.assoc, pullback.lift_snd]
           rw [zero_comp]
     comm_right := by
       dsimp [directSumExtensionVarying, pullbackExtension]
       apply biprod.hom_ext'
-      · simp [Category.assoc, hm_snd]
-      · simp [Category.assoc, hm_snd]
+      · simp [hm_snd]
+      · simp [hm_snd]
         }
 private theorem directSum_pushout_iso_right
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -2943,8 +2939,8 @@ private theorem baerSum_extensionClassMap_iso
   have hm : m₁ ≫ m₂ ≫ σ' = σ ≫ a := by
     dsimp [m₁, m₂, σ, σ', biprodCodiagonal]
     apply biprod.hom_ext'
-    · simp [Category.assoc, add_comp, comp_add]
-    · simp [Category.assoc, add_comp, comp_add]
+    · simp
+    · simp
   have hPush₁ : Nonempty
       (pushoutExtension D m₁ ≅
         directSumExtensionVarying G₁ E₂) := by
@@ -3060,10 +3056,10 @@ private theorem extensionClassMap_zero_iso
       right := p
       comm_left := by
         dsimp [splitExtension]
-        simp [Category.assoc]
+        simp
       comm_right := by
         dsimp [splitExtension]
-        simp [Category.assoc] }
+        simp }
   have hPB : Nonempty
       (splitExtension A B' ≅ pullbackExtension (splitExtension A B) p) := by
     have h := pushout_pullback_extension_morphism_iso ePB
@@ -3074,10 +3070,10 @@ private theorem extensionClassMap_zero_iso
       right := 𝟙 B'
       comm_left := by
         dsimp [splitExtension]
-        simp [Category.assoc]
+        simp
       comm_right := by
         dsimp [splitExtension]
-        simp [Category.assoc] }
+        simp }
   have hPO : Nonempty
       (pushoutExtension (splitExtension A B') a ≅ splitExtension A' B') := by
     have h := pushout_pullback_extension_morphism_iso ePO

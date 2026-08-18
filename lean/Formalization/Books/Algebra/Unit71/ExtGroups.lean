@@ -706,7 +706,184 @@ choosing a comparison equivalence. -/
 theorem resolution_ext_represents_ext {R : Type u} [Ring R]
     {M N : ModuleCat.{u} R} (F : FreeResolution R M) (i : ℕ) :
     Nonempty (ResolutionExt F N i ≃+ ExtGroup M N i) := by
-  sorry
+  let P : CategoryTheory.ProjectiveResolution M := {
+    complex := F.complex
+    projective := fun n => by
+      let hfree := F.free n
+      letI := hfree
+      infer_instance
+    π := (ChainComplex.toSingle₀Equiv _ _).symm ⟨F.resolution.augmentation,
+      F.resolution.augmentation_condition⟩
+    quasiIso := by
+      refine ⟨fun n => ?_⟩
+      cases n with
+      | zero =>
+        rw [ChainComplex.quasiIsoAt₀_iff, ShortComplex.quasiIso_iff_of_zeros']
+        · exact ⟨F.resolution.exact_zero, F.resolution.augmentation_epi⟩
+        · change F.complex.d 0 0 = 0
+          exact F.complex.shape 0 0 (by simp only [ComplexShape.down_Rel]; omega)
+        · rfl
+        · rfl
+      | succ n =>
+        rw [quasiIsoAt_iff_exactAt']
+        · rw [HomologicalComplex.exactAt_iff' _ (n + 2) (n + 1) n (by simp) (by simp)]
+          exact F.resolution.exact_succ n
+        · exact ChainComplex.exactAt_succ_single_obj _ _
+  }
+  let s : ℕ → ℤˣ := Nat.rec 1 (fun n u => ((n : ℤ) + 1).negOnePow * u)
+  have hscalar (n : ℕ) (x : ℤˣ)
+      (z : CochainComplex.HomComplex.Cochain P.cochainComplex
+        ((CochainComplex.singleFunctor (ModuleCat R) 0).obj N) (n : ℤ)) :
+      (CochainComplex.HomComplex.Cochain.toSingleEquiv
+        (X := N) (K := P.cochainComplex)
+        (p := -(n : ℤ)) (q := 0) (n := (n : ℤ)) (by omega)) (x • z) =
+      x • (CochainComplex.HomComplex.Cochain.toSingleEquiv
+        (X := N) (K := P.cochainComplex)
+        (p := -(n : ℤ)) (q := 0) (n := (n : ℤ)) (by omega)) z := by
+    rw [Units.smul_def, Units.smul_def]
+    change (CochainComplex.HomComplex.Cochain.toSingleEquiv
+      (X := N) (K := P.cochainComplex)
+      (p := -(n : ℤ)) (q := 0) (n := (n : ℤ)) (by omega)).toAddMonoidHom
+        ((x : ℤ) • z) =
+      (x : ℤ) • (CochainComplex.HomComplex.Cochain.toSingleEquiv
+        (X := N) (K := P.cochainComplex)
+        (p := -(n : ℤ)) (q := 0) (n := (n : ℤ)) (by omega)).toAddMonoidHom z
+    rw [AddMonoidHom.map_zsmul]
+  have hscalar_symm (n : ℕ) (x : ℤˣ)
+      (z : P.cochainComplex.X (-(n : ℤ)) ⟶ N) :
+      (CochainComplex.HomComplex.Cochain.toSingleEquiv
+        (X := N) (K := P.cochainComplex)
+        (p := -(n : ℤ)) (q := 0) (n := (n : ℤ)) (by omega)).symm (x • z) =
+      x • (CochainComplex.HomComplex.Cochain.toSingleEquiv
+        (X := N) (K := P.cochainComplex)
+        (p := -(n : ℤ)) (q := 0) (n := (n : ℤ)) (by omega)).symm z := by
+    apply (CochainComplex.HomComplex.Cochain.toSingleEquiv
+      (X := N) (K := P.cochainComplex)
+      (p := -(n : ℤ)) (q := 0) (n := (n : ℤ)) (by omega)).injective
+    rw [AddEquiv.apply_symm_apply, hscalar n x]
+    simp
+  let e (n : ℕ) :
+      (F.complex.X n ⟶ N) ≃+
+        ((CochainComplex.HomComplex P.cochainComplex
+          ((CochainComplex.singleFunctor (ModuleCat R) 0).obj N)).restriction
+          ComplexShape.embeddingUpNat).X n := {
+    toFun := fun f =>
+      s n • (CochainComplex.HomComplex.Cochain.toSingleEquiv
+        (X := N) (K := P.cochainComplex)
+        (p := -(n : ℤ)) (q := 0) (n := (n : ℤ)) (by omega)).symm
+        ((P.cochainComplexXIso (-(n : ℤ)) n rfl).hom ≫ f)
+    invFun := fun f =>
+      (P.cochainComplexXIso (-(n : ℤ)) n rfl).inv ≫
+        (CochainComplex.HomComplex.Cochain.toSingleEquiv
+          (X := N) (K := P.cochainComplex)
+          (p := -(n : ℤ)) (q := 0) (n := (n : ℤ)) (by omega))
+          ((s n)⁻¹ • (show CochainComplex.HomComplex.Cochain P.cochainComplex
+            ((CochainComplex.singleFunctor (ModuleCat R) 0).obj N) (n : ℤ) from f))
+    left_inv := by
+      intro f
+      dsimp
+      rw [hscalar n (s n)⁻¹, hscalar n (s n)]
+      rw [smul_smul, inv_mul_cancel, one_smul]
+      rw [AddEquiv.apply_symm_apply]
+      simp [← Category.assoc]
+    right_inv := by
+      intro f
+      change CochainComplex.HomComplex.Cochain P.cochainComplex
+        ((CochainComplex.singleFunctor (ModuleCat R) 0).obj N) (n : ℤ) at f
+      dsimp
+      change s n •
+        (CochainComplex.HomComplex.Cochain.toSingleEquiv
+          (X := N) (K := P.cochainComplex)
+          (p := -(n : ℤ)) (q := 0) (n := (n : ℤ)) (by omega)).symm
+          ((P.cochainComplexXIso (-(n : ℤ)) n rfl).hom ≫
+            (P.cochainComplexXIso (-(n : ℤ)) n rfl).inv ≫
+              (CochainComplex.HomComplex.Cochain.toSingleEquiv
+                (X := N) (K := P.cochainComplex)
+                (p := -(n : ℤ)) (q := 0) (n := (n : ℤ)) (by omega))
+                ((s n)⁻¹ • f)) = f
+      rw [hscalar n (s n)⁻¹]
+      rw [← Category.assoc, Iso.hom_inv_id, Category.id_comp]
+      rw [hscalar_symm n (s n)⁻¹]
+      rw [smul_smul, mul_inv_cancel, one_smul]
+      rw [AddEquiv.symm_apply_apply]
+    map_add' := by
+      intro f g
+      simp [Preadditive.comp_add, smul_add]
+      rfl
+  }
+  let H :=
+    (CochainComplex.HomComplex P.cochainComplex
+      ((CochainComplex.singleFunctor (ModuleCat R) 0).obj N)).restriction
+      ComplexShape.embeddingUpNat
+  let θ : resolutionHomComplex F.complex N ≅ H :=
+    HomologicalComplex.Hom.isoOfComponents (fun n => (e n).toAddCommGrpIso) (by
+      intro n j hnj
+      have hnj' : n + 1 = j := by
+        simpa only [ComplexShape.up_Rel] using hnj
+      subst hnj'
+      apply AddCommGrpCat.hom_ext
+      apply AddMonoidHom.ext
+      intro f
+      change F.complex.X n ⟶ N at f
+      dsimp [e, H, resolutionHomComplex, resolutionHomDifferential,
+        HomologicalComplex.restriction, CochainComplex.HomComplex,
+        CochainComplex.HomComplex.δ_hom, CochainComplex.HomComplex.δ,
+        AddEquiv.toAddCommGrpIso, AddCommGrpCat.ofHom, AddMonoidHom.comp,
+        ConcreteCategory.ofHom]
+      simp only [AddCommGrpCat.hom_comp, AddMonoidHom.coe_comp, Function.comp_apply]
+      change (CochainComplex.HomComplex.δ (n : ℤ) ((n : ℤ) + 1)
+          (s n • CochainComplex.HomComplex.Cochain.toSingleMk
+            ((P.cochainComplexXIso (-(n : ℤ)) n rfl).hom ≫ f)
+            (by omega))) =
+        (s (n + 1) • CochainComplex.HomComplex.Cochain.toSingleMk
+          ((P.cochainComplexXIso (-((n : ℤ) + 1)) (n + 1) rfl).hom ≫
+            F.complex.d (n + 1) n ≫ f) (by omega))
+      rw [CochainComplex.HomComplex.δ_units_smul]
+      rw [CochainComplex.HomComplex.Cochain.δ_toSingleMk _ _ _
+        (-((n : ℤ) + 1)) (by omega)]
+      rw [P.cochainComplex_d (-((n : ℤ) + 1)) (-(n : ℤ)) (n + 1) n rfl rfl]
+      simp only [Category.assoc, Iso.inv_hom_id_assoc]
+      rw [smul_smul]
+      congr 1
+      rw [show s (n + 1) = ((n : ℤ) + 1).negOnePow * s n by rfl]
+      exact mul_comm _ _)
+  let isoAddEquiv {X Y : AddCommGrpCat.{u}} (e : X ≅ Y) :
+      (X : Type u) ≃+ (Y : Type u) := {
+    toFun := e.hom.hom
+    invFun := e.inv.hom
+    left_inv := by
+      intro x
+      simpa using ConcreteCategory.congr_hom e.inv_hom_id x
+    right_inv := by
+      intro y
+      simpa using ConcreteCategory.congr_hom e.hom_inv_id y
+    map_add' := by
+      intro x y
+      exact map_add e.hom.hom x y
+  }
+  by_cases hi0 : i = 0
+  · subst i
+    exact ⟨sorry⟩
+  · have hi : 0 < i := Nat.pos_of_ne_zero hi0
+    let K := CochainComplex.HomComplex P.cochainComplex
+      ((CochainComplex.singleFunctor (ModuleCat R) 0).obj N)
+    let ρ : H.homology i ≅ K.homology (i : ℤ) :=
+      K.restrictionHomologyIso ComplexShape.embeddingUpNat
+        (i - 1) i (i + 1) (by
+          apply ComplexShape.prev_eq'
+          simp only [ComplexShape.up_Rel]
+          omega) (by
+          apply ComplexShape.next_eq'
+          simp only [ComplexShape.up_Rel]) (by rfl) (by rfl) (by rfl) (by
+          apply ComplexShape.prev_eq'
+          dsimp [ComplexShape.embeddingUpNat]
+          simp only [ComplexShape.up_Rel]
+          omega) (by
+          apply ComplexShape.next_eq'
+          dsimp [ComplexShape.embeddingUpNat]
+          simp only [ComplexShape.up_Rel]
+          omega)
+    exact ⟨sorry⟩
 
 /-- Degree zero Ext is the module-hom group. -/
 noncomputable def extZeroLinearEquiv {R : Type u} [CommRing R]

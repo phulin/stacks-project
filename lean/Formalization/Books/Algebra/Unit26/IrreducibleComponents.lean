@@ -1,6 +1,6 @@
-import Formalization.Books.Algebra.Unit25.ZerodivisorsAndTotalRingsOfFractions
 import Formalization.Books.Topology.Unit08.IrreducibleComponents
 import Formalization.Books.Topology.Unit22.ProfiniteSpaces
+import Mathlib.RingTheory.Ideal.MinimalPrime.Localization
 import Mathlib.RingTheory.Localization.AtPrime.Basic
 import Mathlib.RingTheory.Spectrum.Prime.Topology
 
@@ -9,9 +9,8 @@ import Mathlib.RingTheory.Spectrum.Prime.Topology
 
 The canonical Mathlib notions `PrimeSpectrum.zeroLocus`, `IsIrreducible`,
 `irreducibleComponents`, and `IsProfiniteSpace` are used for the statements in
-this chapter.  The unfinished ninth item in the final source list is recorded
-in the accompanying formalization report rather than translated into a
-mathematical proposition.
+this chapter.  The unfinished ninth item in the final source list is not
+translated into a mathematical proposition below.
 -/
 
 namespace Formalization.Books.Algebra.Unit26

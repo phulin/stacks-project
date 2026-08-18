@@ -407,7 +407,383 @@ structure TermwiseSplitConnectingMap
 theorem termwiseSplitConnectingMap_exists
     {S : ShortComplex (ChainComplex C ℤ)} (s : TermwiseSplitting S) :
     Nonempty (TermwiseSplitConnectingMap s) := by
-  sorry
+  refine ⟨{ hom := { f := fun n => termwiseSplitConnectingFamily s n, comm' := ?_ }, hom_f := ?_ }⟩
+  · intro n m hnm
+    change m + 1 = n at hnm
+    have hm : m = n + (-1 : ℤ) := by lia
+    subst m
+    clear hnm
+    have hmono : Mono (S.f.f (n + (-1 : ℤ) + (-1 : ℤ))) :=
+      (s (n + (-1 : ℤ) + (-1 : ℤ))).mono_f
+    let _ : Mono (S.f.f (n + (-1 : ℤ) + (-1 : ℤ))) := hmono
+    apply (cancel_mono (S.f.f (n + (-1 : ℤ) + (-1 : ℤ)))).1
+    dsimp [shiftFunctor, termwiseSplitConnectingFamily]
+    rw [show (-1 : ℤ).negOnePow = -1 by
+      rw [Int.negOnePow_neg, Int.negOnePow_one]]
+    simp only [Units.neg_smul, one_smul, Preadditive.comp_neg, Category.assoc]
+    simp only [Preadditive.neg_comp, Category.assoc]
+    rw [← S.f.comm (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ))]
+    rw [neg_eq_iff_eq_neg, eq_neg_iff_add_eq_zero]
+    have hrf₁ : (s (n + (-1 : ℤ))).r ≫ S.f.f (n + (-1 : ℤ)) =
+        𝟙 _ - S.g.f (n + (-1 : ℤ)) ≫ (s (n + (-1 : ℤ))).s := by
+      convert (s (n + (-1 : ℤ))).r_f using 1 <;> rfl
+    have hrf₂ : (s (n + (-1 : ℤ) + (-1 : ℤ))).r ≫
+        S.f.f (n + (-1 : ℤ) + (-1 : ℤ)) =
+        𝟙 _ - S.g.f (n + (-1 : ℤ) + (-1 : ℤ)) ≫
+          (s (n + (-1 : ℤ) + (-1 : ℤ))).s := by
+      convert (s (n + (-1 : ℤ) + (-1 : ℤ))).r_f using 1 <;> rfl
+    have h₁ :
+        ((s n).s ≫ S.X₂.d n (n + (-1 : ℤ)) ≫ (s (n + (-1 : ℤ))).r) ≫
+            S.f.f (n + (-1 : ℤ)) ≫ S.X₂.d (n + (-1 : ℤ))
+              (n + (-1 : ℤ) + (-1 : ℤ)) =
+        ((s n).s ≫ S.X₂.d n (n + (-1 : ℤ))) ≫
+            (𝟙 _ - S.g.f (n + (-1 : ℤ)) ≫ (s (n + (-1 : ℤ))).s) ≫
+              S.X₂.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ)) := by
+      have hassoc :
+          (s n).s ≫ S.X₂.d n (n + (-1 : ℤ)) ≫ (s (n + (-1 : ℤ))).r =
+            ((s n).s ≫ S.X₂.d n (n + (-1 : ℤ))) ≫ (s (n + (-1 : ℤ))).r :=
+        Category.assoc' _ _ _
+      rw [hassoc]
+      calc
+        (((s n).s ≫ S.X₂.d n (n + (-1 : ℤ))) ≫ (s (n + (-1 : ℤ))).r) ≫
+              S.f.f (n + (-1 : ℤ)) ≫ S.X₂.d (n + (-1 : ℤ))
+                (n + (-1 : ℤ) + (-1 : ℤ)) =
+            ((((s n).s ≫ S.X₂.d n (n + (-1 : ℤ))) ≫
+              (s (n + (-1 : ℤ))).r) ≫ S.f.f (n + (-1 : ℤ))) ≫
+                S.X₂.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ)) := by
+          exact (Category.assoc _ _ _).symm
+        _ = (((s n).s ≫ S.X₂.d n (n + (-1 : ℤ))) ≫
+              ((s (n + (-1 : ℤ))).r ≫ S.f.f (n + (-1 : ℤ)))) ≫
+                S.X₂.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ)) := by
+          exact congrArg (fun z => z ≫ S.X₂.d (n + (-1 : ℤ))
+            (n + (-1 : ℤ) + (-1 : ℤ)))
+            (Category.assoc ((s n).s ≫ S.X₂.d n (n + (-1 : ℤ)))
+              (s (n + (-1 : ℤ))).r (S.f.f (n + (-1 : ℤ))))
+        _ = (((s n).s ≫ S.X₂.d n (n + (-1 : ℤ))) ≫
+              (𝟙 _ - S.g.f (n + (-1 : ℤ)) ≫ (s (n + (-1 : ℤ))).s)) ≫
+                S.X₂.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ)) := by
+          exact congrArg (fun z => (((s n).s ≫ S.X₂.d n (n + (-1 : ℤ))) ≫ z) ≫
+            S.X₂.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ))) hrf₁
+        _ = ((s n).s ≫ S.X₂.d n (n + (-1 : ℤ))) ≫
+            (𝟙 _ - S.g.f (n + (-1 : ℤ)) ≫ (s (n + (-1 : ℤ))).s) ≫
+              S.X₂.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ)) := by
+          exact Category.assoc _ _ _
+    have h₂ :
+        S.X₃.d n (n + (-1 : ℤ)) ≫
+            ((s (n + (-1 : ℤ))).s ≫ S.X₂.d (n + (-1 : ℤ))
+              (n + (-1 : ℤ) + (-1 : ℤ)) ≫
+              (s (n + (-1 : ℤ) + (-1 : ℤ))).r) ≫
+              S.f.f (n + (-1 : ℤ) + (-1 : ℤ)) =
+        S.X₃.d n (n + (-1 : ℤ)) ≫
+            ((s (n + (-1 : ℤ))).s ≫ S.X₂.d (n + (-1 : ℤ))
+              (n + (-1 : ℤ) + (-1 : ℤ))) ≫
+              (𝟙 _ - S.g.f (n + (-1 : ℤ) + (-1 : ℤ)) ≫
+                (s (n + (-1 : ℤ) + (-1 : ℤ))).s) := by
+      have hassoc :
+          (s (n + (-1 : ℤ))).s ≫ S.X₂.d (n + (-1 : ℤ))
+              (n + (-1 : ℤ) + (-1 : ℤ)) ≫
+              (s (n + (-1 : ℤ) + (-1 : ℤ))).r =
+            ((s (n + (-1 : ℤ))).s ≫ S.X₂.d (n + (-1 : ℤ))
+              (n + (-1 : ℤ) + (-1 : ℤ))) ≫
+              (s (n + (-1 : ℤ) + (-1 : ℤ))).r :=
+        Category.assoc' _ _ _
+      let p := (s (n + (-1 : ℤ))).s ≫
+        S.X₂.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ))
+      let q := S.X₃.d n (n + (-1 : ℤ))
+      let r := (s (n + (-1 : ℤ) + (-1 : ℤ))).r
+      let f := S.f.f (n + (-1 : ℤ) + (-1 : ℤ))
+      let d := (𝟙 _ - S.g.f (n + (-1 : ℤ) + (-1 : ℤ)) ≫
+        (s (n + (-1 : ℤ) + (-1 : ℤ))).s)
+      calc
+        S.X₃.d n (n + (-1 : ℤ)) ≫
+            ((s (n + (-1 : ℤ))).s ≫ S.X₂.d (n + (-1 : ℤ))
+              (n + (-1 : ℤ) + (-1 : ℤ)) ≫
+              (s (n + (-1 : ℤ) + (-1 : ℤ))).r) ≫
+              S.f.f (n + (-1 : ℤ) + (-1 : ℤ)) =
+            q ≫ ((p ≫ r) ≫ f) := by
+          exact congrArg (fun z => q ≫ z ≫ f) hassoc
+        _ = q ≫ (p ≫ (r ≫ f)) := by
+          exact congrArg (fun z => q ≫ z) (Category.assoc p r f)
+        _ = q ≫ (p ≫ d) := by
+          have hr : r ≫ f = d := by
+            exact hrf₂
+          exact congrArg (fun z => q ≫ (p ≫ z)) hr
+        _ = q ≫ p ≫ d := by rfl
+    erw [h₁, h₂]
+    have hA :
+        (((s n).s ≫ S.X₂.d n (n + (-1 : ℤ))) ≫
+          (𝟙 _ - S.g.f (n + (-1 : ℤ)) ≫ (s (n + (-1 : ℤ))).s)) ≫
+            S.X₂.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ)) =
+        ((s n).s ≫ S.X₂.d n (n + (-1 : ℤ))) ≫
+            S.X₂.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ)) -
+          (((s n).s ≫ S.X₂.d n (n + (-1 : ℤ))) ≫
+            (S.g.f (n + (-1 : ℤ)) ≫ (s (n + (-1 : ℤ))).s)) ≫
+            S.X₂.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ)) := by
+      have hsub :
+          (𝟙 _ -
+            S.g.f (n + (-1 : ℤ)) ≫ (s (n + (-1 : ℤ))).s) ≫
+              S.X₂.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ)) =
+            𝟙 _ ≫
+                S.X₂.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ)) -
+              (S.g.f (n + (-1 : ℤ)) ≫ (s (n + (-1 : ℤ))).s) ≫
+                S.X₂.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ)) :=
+        Preadditive.sub_comp _ _ _
+      have hcomp :
+          ((s n).s ≫ S.X₂.d n (n + (-1 : ℤ))) ≫
+              (𝟙 _ ≫
+                S.X₂.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ)) -
+                (S.g.f (n + (-1 : ℤ)) ≫ (s (n + (-1 : ℤ))).s) ≫
+                  S.X₂.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ))) =
+            (((s n).s ≫ S.X₂.d n (n + (-1 : ℤ))) ≫
+              (𝟙 _ ≫
+                S.X₂.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ)))) -
+              ((s n).s ≫ S.X₂.d n (n + (-1 : ℤ))) ≫
+                ((S.g.f (n + (-1 : ℤ)) ≫ (s (n + (-1 : ℤ))).s) ≫
+                  S.X₂.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ))) :=
+        Preadditive.comp_sub _ _ _
+      rw [Category.assoc, hsub, hcomp]
+      simp only [Category.id_comp]
+      exact congrArg (fun z =>
+        ((s n).s ≫ S.X₂.d n (n + (-1 : ℤ))) ≫
+            S.X₂.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ)) - z)
+        (Category.assoc ((s n).s ≫ S.X₂.d n (n + (-1 : ℤ)))
+          (S.g.f (n + (-1 : ℤ)) ≫ (s (n + (-1 : ℤ))).s)
+          (S.X₂.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ)))).symm
+    have hA' := hA
+    simp only [Category.assoc] at hA'
+    rw [hA']
+    have hq := Preadditive.comp_sub
+      ((s (n + (-1 : ℤ))).s ≫
+        S.X₂.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ)))
+      (𝟙 _)
+        (S.g.f (n + (-1 : ℤ) + (-1 : ℤ)) ≫
+        (s (n + (-1 : ℤ) + (-1 : ℤ))).s)
+    erw [hq]
+    have houter := Preadditive.comp_sub
+      (S.X₃.d n (n + (-1 : ℤ)))
+      (((s (n + (-1 : ℤ))).s ≫
+        S.X₂.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ))) ≫ 𝟙 _)
+      (((s (n + (-1 : ℤ))).s ≫
+        S.X₂.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ))) ≫
+        (S.g.f (n + (-1 : ℤ) + (-1 : ℤ)) ≫
+          (s (n + (-1 : ℤ) + (-1 : ℤ))).s))
+    erw [houter]
+    simp only [Category.comp_id]
+    have hzero₂ :
+        ((s n).s ≫ S.X₂.d n (n + (-1 : ℤ))) ≫
+            S.X₂.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ)) = 0 := by
+      calc
+        ((s n).s ≫ S.X₂.d n (n + (-1 : ℤ))) ≫
+              S.X₂.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ)) =
+            (s n).s ≫
+              (S.X₂.d n (n + (-1 : ℤ)) ≫
+                S.X₂.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ))) :=
+          Category.assoc _ _ _
+        _ = (s n).s ≫ 0 := by
+          exact congrArg (fun z => (s n).s ≫ z)
+            (S.X₂.d_comp_d n (n + (-1 : ℤ))
+              (n + (-1 : ℤ) + (-1 : ℤ)))
+        _ = 0 := comp_zero
+    have hsg₁ : (s n).s ≫ S.g.f n = 𝟙 _ := by
+      convert (s n).s_g using 1; rfl
+    have hsg₂ : (s (n + (-1 : ℤ))).s ≫ S.g.f (n + (-1 : ℤ)) = 𝟙 _ := by
+      convert (s (n + (-1 : ℤ))).s_g using 1; rfl
+    have hsg₁' : (s n).s ≫ S.g.f n = 𝟙 (S.X₃.X n) := by
+      convert hsg₁ using 1; rfl
+    have hsg₂' : (s (n + (-1 : ℤ))).s ≫
+        S.g.f (n + (-1 : ℤ)) = 𝟙 (S.X₃.X (n + (-1 : ℤ))) := by
+      convert hsg₂ using 1; rfl
+    have hA₂ :
+        (((s n).s ≫ S.X₂.d n (n + (-1 : ℤ))) ≫
+          S.g.f (n + (-1 : ℤ)) ≫ (s (n + (-1 : ℤ))).s) ≫
+            S.X₂.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ)) =
+          S.X₃.d n (n + (-1 : ℤ)) ≫
+            ((s (n + (-1 : ℤ))).s ≫
+              S.X₂.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ))) := by
+      have hcomm :
+          ((((s n).s ≫ S.X₂.d n (n + (-1 : ℤ))) ≫
+              S.g.f (n + (-1 : ℤ))) ≫ (s (n + (-1 : ℤ))).s) ≫
+                S.X₂.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ)) =
+            ((((s n).s ≫ S.g.f n) ≫ S.X₃.d n (n + (-1 : ℤ))) ≫
+              (s (n + (-1 : ℤ))).s) ≫
+                S.X₂.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ)) := by
+        calc
+          _ = (((s n).s ≫
+              (S.X₂.d n (n + (-1 : ℤ)) ≫ S.g.f (n + (-1 : ℤ)))) ≫
+                (s (n + (-1 : ℤ))).s) ≫
+              S.X₂.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ)) := by
+            exact congrArg (fun z => (z ≫ (s (n + (-1 : ℤ))).s) ≫
+              S.X₂.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ)))
+              (Category.assoc (s n).s (S.X₂.d n (n + (-1 : ℤ)))
+                (S.g.f (n + (-1 : ℤ))))
+          _ = (((s n).s ≫
+              (S.g.f n ≫ S.X₃.d n (n + (-1 : ℤ)))) ≫
+                (s (n + (-1 : ℤ))).s) ≫
+              S.X₂.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ)) := by
+            exact congrArg (fun z => (((s n).s ≫ z) ≫
+              (s (n + (-1 : ℤ))).s) ≫
+                S.X₂.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ)))
+              (S.g.comm n (n + (-1 : ℤ))).symm
+          _ = _ := by
+            exact congrArg (fun z => (z ≫ (s (n + (-1 : ℤ))).s) ≫
+              S.X₂.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ)))
+              (Category.assoc (s n).s (S.g.f n)
+                (S.X₃.d n (n + (-1 : ℤ)))).symm
+      have hunit := congrArg (fun z => (((z ≫ S.X₃.d n (n + (-1 : ℤ))) ≫
+          (s (n + (-1 : ℤ))).s) ≫
+            S.X₂.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ)))) hsg₁'
+      have hid :
+          (((𝟙 (S.X₃.X n) ≫ S.X₃.d n (n + (-1 : ℤ))) ≫
+              (s (n + (-1 : ℤ))).s) ≫
+                S.X₂.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ))) =
+            S.X₃.d n (n + (-1 : ℤ)) ≫
+              ((s (n + (-1 : ℤ))).s ≫
+                S.X₂.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ))) := by
+        simp only [Category.id_comp]
+        exact Category.assoc _ _ _
+      have hassoc :
+          ((s n).s ≫ S.X₂.d n (n + (-1 : ℤ))) ≫
+              S.g.f (n + (-1 : ℤ)) ≫ (s (n + (-1 : ℤ))).s =
+            (((s n).s ≫ S.X₂.d n (n + (-1 : ℤ))) ≫
+              S.g.f (n + (-1 : ℤ))) ≫ (s (n + (-1 : ℤ))).s :=
+        Category.assoc' _ _ _
+      rw [hassoc]
+      exact hcomm.trans (hunit.trans hid)
+    have hzero₃ :
+        S.X₃.d n (n + (-1 : ℤ)) ≫
+            S.X₃.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ)) = 0 := by
+      exact S.X₃.d_comp_d n (n + (-1 : ℤ))
+        (n + (-1 : ℤ) + (-1 : ℤ))
+    have hB₂' :
+        S.X₃.d n (n + (-1 : ℤ)) ≫
+            ((s (n + (-1 : ℤ))).s ≫
+              S.X₂.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ))) ≫
+            S.g.f (n + (-1 : ℤ) + (-1 : ℤ)) ≫
+              (s (n + (-1 : ℤ) + (-1 : ℤ))).s =
+            S.X₃.d n (n + (-1 : ℤ)) ≫
+            S.X₃.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ)) ≫
+              (s (n + (-1 : ℤ) + (-1 : ℤ))).s := by
+      have hcomm := congrArg (fun z =>
+          (((S.X₃.d n (n + (-1 : ℤ)) ≫ (s (n + (-1 : ℤ))).s) ≫ z) ≫
+            (s (n + (-1 : ℤ) + (-1 : ℤ))).s))
+        (S.g.comm (n + (-1 : ℤ))
+          (n + (-1 : ℤ) + (-1 : ℤ))).symm
+      have hunit := congrArg (fun z =>
+          (((S.X₃.d n (n + (-1 : ℤ)) ≫ z) ≫
+            S.X₃.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ))) ≫
+              (s (n + (-1 : ℤ) + (-1 : ℤ))).s)) hsg₂'
+      have hunit' :
+          (((S.X₃.d n (n + (-1 : ℤ)) ≫ (s (n + (-1 : ℤ))).s) ≫
+              (S.g.f (n + (-1 : ℤ)) ≫
+                S.X₃.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ)))) ≫
+                (s (n + (-1 : ℤ) + (-1 : ℤ))).s) =
+            (((S.X₃.d n (n + (-1 : ℤ)) ≫
+              𝟙 (S.X₃.X (n + (-1 : ℤ)))) ≫
+                S.X₃.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ))) ≫
+                  (s (n + (-1 : ℤ) + (-1 : ℤ))).s) := by
+        calc
+          _ = ((((S.X₃.d n (n + (-1 : ℤ)) ≫
+              (s (n + (-1 : ℤ))).s) ≫ S.g.f (n + (-1 : ℤ))) ≫
+                S.X₃.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ))) ≫
+                  (s (n + (-1 : ℤ) + (-1 : ℤ))).s) := by
+            exact congrArg (fun z => z ≫
+              (s (n + (-1 : ℤ) + (-1 : ℤ))).s)
+              (Category.assoc (S.X₃.d n (n + (-1 : ℤ)) ≫
+                (s (n + (-1 : ℤ))).s)
+                (S.g.f (n + (-1 : ℤ)))
+                (S.X₃.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ)))).symm
+          _ = (((S.X₃.d n (n + (-1 : ℤ)) ≫
+              ((s (n + (-1 : ℤ))).s ≫ S.g.f (n + (-1 : ℤ)))) ≫
+                S.X₃.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ))) ≫
+                  (s (n + (-1 : ℤ) + (-1 : ℤ))).s) := by
+            exact congrArg (fun z => (z ≫
+              S.X₃.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ))) ≫
+                (s (n + (-1 : ℤ) + (-1 : ℤ))).s)
+              (Category.assoc (S.X₃.d n (n + (-1 : ℤ)))
+                (s (n + (-1 : ℤ))).s
+                (S.g.f (n + (-1 : ℤ))))
+          _ = _ := hunit
+      have hassoc :
+          S.X₃.d n (n + (-1 : ℤ)) ≫
+              ((s (n + (-1 : ℤ))).s ≫
+                S.X₂.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ))) ≫
+              S.g.f (n + (-1 : ℤ) + (-1 : ℤ)) ≫
+                (s (n + (-1 : ℤ) + (-1 : ℤ))).s =
+            (((S.X₃.d n (n + (-1 : ℤ)) ≫
+              (s (n + (-1 : ℤ))).s) ≫
+                S.X₂.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ))) ≫
+                  S.g.f (n + (-1 : ℤ) + (-1 : ℤ))) ≫
+                    (s (n + (-1 : ℤ) + (-1 : ℤ))).s := by
+        calc
+          _ = (S.X₃.d n (n + (-1 : ℤ)) ≫
+              ((s (n + (-1 : ℤ))).s ≫
+                S.X₂.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ)))) ≫
+              (S.g.f (n + (-1 : ℤ) + (-1 : ℤ)) ≫
+                (s (n + (-1 : ℤ) + (-1 : ℤ))).s) := by
+            exact (Category.assoc _ _ _).symm
+          _ = ((S.X₃.d n (n + (-1 : ℤ)) ≫
+              ((s (n + (-1 : ℤ))).s ≫
+                S.X₂.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ)))) ≫
+              S.g.f (n + (-1 : ℤ) + (-1 : ℤ))) ≫
+                (s (n + (-1 : ℤ) + (-1 : ℤ))).s := by
+            exact Category.assoc' _ _ _
+          _ = _ := by
+            exact congrArg (fun z =>
+              (z ≫ S.g.f (n + (-1 : ℤ) + (-1 : ℤ))) ≫
+                (s (n + (-1 : ℤ) + (-1 : ℤ))).s)
+              (Category.assoc'
+                (S.X₂.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ)))
+                (s (n + (-1 : ℤ))).s
+                (S.X₃.d n (n + (-1 : ℤ))))
+      rw [hassoc]
+      calc
+        _ = ((S.X₃.d n (n + (-1 : ℤ)) ≫
+              (s (n + (-1 : ℤ))).s) ≫
+              (S.X₂.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ)) ≫
+                S.g.f (n + (-1 : ℤ) + (-1 : ℤ)))) ≫
+                  (s (n + (-1 : ℤ) + (-1 : ℤ))).s := by
+          exact congrArg (fun z => z ≫
+            (s (n + (-1 : ℤ) + (-1 : ℤ))).s)
+            (Category.assoc'
+              (S.g.f (n + (-1 : ℤ) + (-1 : ℤ)))
+              (S.X₂.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ)))
+              (S.X₃.d n (n + (-1 : ℤ)) ≫ (s (n + (-1 : ℤ))).s)).symm
+        _ = (((S.X₃.d n (n + (-1 : ℤ)) ≫
+              𝟙 (S.X₃.X (n + (-1 : ℤ)))) ≫
+              S.X₃.d (n + (-1 : ℤ))
+                (n + (-1 : ℤ) + (-1 : ℤ))) ≫
+                  (s (n + (-1 : ℤ) + (-1 : ℤ))).s) := by
+          exact hcomm.trans hunit'
+        _ = _ := by
+          simp only [Category.comp_id]
+          exact Category.assoc _ _ _
+    have hB₂ :
+        S.X₃.d n (n + (-1 : ℤ)) ≫
+            ((s (n + (-1 : ℤ))).s ≫
+              S.X₂.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ))) ≫
+            S.g.f (n + (-1 : ℤ) + (-1 : ℤ)) ≫
+              (s (n + (-1 : ℤ) + (-1 : ℤ))).s = 0 := by
+      calc
+        _ = (S.X₃.d n (n + (-1 : ℤ)) ≫
+              S.X₃.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ))) ≫
+              (s (n + (-1 : ℤ) + (-1 : ℤ))).s := by
+          rw [hB₂']
+          exact (Category.assoc _ _ _).symm
+        _ = 0 ≫ (s (n + (-1 : ℤ) + (-1 : ℤ))).s := by
+          exact congrArg (fun z => z ≫ (s (n + (-1 : ℤ) + (-1 : ℤ))).s)
+            hzero₃
+        _ = 0 := zero_comp
+    erw [hzero₂, hA₂]
+    erw [hB₂]
+    change 0 - (S.X₃.d n (n + (-1 : ℤ)) ≫
+      ((s (n + (-1 : ℤ))).s ≫
+        S.X₂.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ)))) +
+      (S.X₃.d n (n + (-1 : ℤ)) ≫
+        ((s (n + (-1 : ℤ))).s ≫
+          S.X₂.d (n + (-1 : ℤ)) (n + (-1 : ℤ) + (-1 : ℤ))) - 0) = 0
+    simp
+  · intro n
+    rfl
 
 /-- The unique degreewise difference between two choices of section. -/
 def termwiseSplittingDifference
@@ -435,7 +811,27 @@ theorem termwiseSplitting_section_eq
     (s' n).s = (s n).s +
       termwiseSplittingDifference s s' n ≫
         (S.map (HomologicalComplex.eval C (ComplexShape.down ℤ) n)).f := by
-  sorry
+  have hterm :
+      (s' n).s ≫ (S.map (HomologicalComplex.eval C (ComplexShape.down ℤ) n)).g ≫
+        (s n).s = (s n).s := by
+    rw [← Category.assoc, (s' n).s_g, Category.id_comp]
+  dsimp [termwiseSplittingDifference]
+  calc
+    (s' n).s = (s' n).s ≫ 𝟙 _ := by simp
+    _ = (s' n).s ≫ ((s n).r ≫ (S.map (HomologicalComplex.eval C (ComplexShape.down ℤ) n)).f +
+        (S.map (HomologicalComplex.eval C (ComplexShape.down ℤ) n)).g ≫ (s n).s) := by
+      rw [← (s n).id]
+    _ = (s' n).s ≫ (s n).r ≫ (S.map (HomologicalComplex.eval C (ComplexShape.down ℤ) n)).f +
+        (s' n).s ≫ (S.map (HomologicalComplex.eval C (ComplexShape.down ℤ) n)).g ≫ (s n).s := by
+      simp only [Preadditive.comp_add, Category.assoc]
+    _ = (s n).s + (s' n).s ≫ (s n).r ≫
+        (S.map (HomologicalComplex.eval C (ComplexShape.down ℤ) n)).f := by
+      rw [hterm]
+      abel
+    _ = (s n).s + ((s' n).s ≫ (s n).r) ≫
+        (S.map (HomologicalComplex.eval C (ComplexShape.down ℤ) n)).f := by
+      congr 1
+      exact Category.assoc' _ _ _
 
 theorem termwiseSplitting_difference_unique
     {S : ShortComplex (ChainComplex C ℤ)}
@@ -445,7 +841,18 @@ theorem termwiseSplitting_difference_unique
     (hh : (s' n).s = (s n).s + h ≫
       (S.map (HomologicalComplex.eval C (ComplexShape.down ℤ) n)).f) :
     h = termwiseSplittingDifference s s' n := by
-  sorry
+  let _ : Mono (S.map (HomologicalComplex.eval C (ComplexShape.down ℤ) n)).f := (s n).mono_f
+  apply (cancel_mono (S.map (HomologicalComplex.eval C (ComplexShape.down ℤ) n)).f).1
+  calc
+    h ≫ (S.map (HomologicalComplex.eval C (ComplexShape.down ℤ) n)).f =
+        ((s n).s + h ≫ (S.map (HomologicalComplex.eval C (ComplexShape.down ℤ) n)).f) -
+          (s n).s := by abel
+    _ = (s' n).s - (s n).s := by rw [← hh]
+    _ = ((s n).s + termwiseSplittingDifference s s' n ≫
+        (S.map (HomologicalComplex.eval C (ComplexShape.down ℤ) n)).f) - (s n).s := by
+      exact congrArg (fun z => z - (s n).s) (termwiseSplitting_section_eq s s' n)
+    _ = termwiseSplittingDifference s s' n ≫
+        (S.map (HomologicalComplex.eval C (ComplexShape.down ℤ) n)).f := by abel
 
 /-- The map obtained from a termwise splitting induces the canonical
 connecting morphism after the homology-shift identification. -/
@@ -456,7 +863,184 @@ theorem termwiseSplitConnectingMap_induces_connecting
         S.X₁.homology (i - 1),
       HomologicalComplex.homologyMap δ.hom i ≫ e.hom =
         Formalization.Books.Homology.Unit13.chainConnectingMap hS i := by
-  sorry
+  let T := chainShiftShortComplexFunctorIso (C := C) (-1 : ℤ) i
+  set_option backward.defeqAttrib.useBackward true in
+  set_option backward.isDefEq.respectTransparency false in
+  have test_condition
+      (K : ChainComplex C ℤ) {A : C}
+      (f : A ⟶ ((shiftFunctor C (-1 : ℤ)).obj K).X i)
+      (hf : f ≫ ((shiftFunctor C (-1 : ℤ) ⋙
+        shortComplexFunctor' C (ComplexShape.down ℤ) (i + 1) i (i - 1)).obj K).g = 0) :
+      (f ≫ (T.app K).hom.τ₂) ≫
+        ((shortComplexFunctor' C (ComplexShape.down ℤ)
+          (i + (-1 : ℤ) + 1) (i + (-1 : ℤ)) (i + (-1 : ℤ) - 1)).obj K).g = 0 := by
+    have hcomm := (T.app K).hom.comm₂₃
+    rw [Category.assoc, hcomm]
+    rw [← Category.assoc, hf, zero_comp]
+  set_option backward.defeqAttrib.useBackward true in
+  set_option backward.isDefEq.respectTransparency false in
+  have hshift
+      (K : ChainComplex C ℤ) {A : C}
+      (f : A ⟶ ((shiftFunctor C (-1 : ℤ)).obj K).X i)
+      (hf : f ≫ ((shiftFunctor C (-1 : ℤ) ⋙
+        shortComplexFunctor' C (ComplexShape.down ℤ) (i + 1) i (i - 1)).obj K).g = 0) :
+      ((shiftFunctor C (-1 : ℤ)).obj K).liftCycles f (i - 1)
+          (by simp only [ChainComplex.next]) (by
+            simpa [HomologicalComplex.shortComplexFunctor', shiftFunctor] using hf) ≫
+        ((shiftFunctor C (-1 : ℤ)).obj K).homologyπ i =
+      K.liftCycles (f ≫ (T.app K).hom.τ₂) (i + (-1 : ℤ) - 1)
+          (by simp only [ChainComplex.next]) (by
+            have hcond := test_condition K f hf
+            simpa [HomologicalComplex.shortComplexFunctor'] using hcond) ≫
+        K.homologyπ (i + (-1 : ℤ)) ≫
+          (chainHomologyShiftComparisonIso (C := C) (-1 : ℤ) i).hom.app K := by
+    dsimp [T, chainHomologyShiftComparisonIso]
+    simp [HomologicalComplex.homologyFunctorIso', HomologicalComplex.natIsoSc',
+      HomologicalComplex.homologyFunctorIso, HomologicalComplex.liftCycles,
+      HomologicalComplex.homologyπ, chainShiftShortComplexFunctorIso,
+      ShortComplex.isoMk, Category.assoc]
+  let E := chainHomologyShiftComparisonIso (C := C) (-1 : ℤ) i
+  refine ⟨(E.app S.X₁).symm, ?_⟩
+  change HomologicalComplex.homologyMap δ.hom i ≫ (E.app S.X₁).inv =
+    hS.δ i (i - 1) (by simp [ComplexShape.down, ComplexShape.down'])
+  set_option backward.defeqAttrib.useBackward true in
+  set_option backward.isDefEq.respectTransparency false in
+  apply (cancel_epi (S.X₃.homologyπ i)).1
+  let a : S.X₃.cycles i ⟶ S.X₃.X i := S.X₃.iCycles i
+  let b : S.X₃.cycles i ⟶ S.X₂.X i := a ≫ (s i).s
+  let c : S.X₃.cycles i ⟶ S.X₁.X (i - 1) :=
+    a ≫ (s i).s ≫ S.X₂.d i (i - 1) ≫ (s (i - 1)).r
+  have hxc :
+      c ≫ S.f.f (i - 1) =
+        a ≫ (s i).s ≫ S.X₂.d i (i - 1) := by
+    dsimp [c, b, a]
+    have hrf : (s (i - 1)).r ≫ S.f.f (i - 1) =
+        𝟙 _ - S.g.f (i - 1) ≫ (s (i - 1)).s := by
+      convert (s (i - 1)).r_f using 1 <;> rfl
+    have hzero :
+        (S.X₃.iCycles i ≫ (s i).s ≫ S.X₂.d i (i - 1)) ≫
+            S.g.f (i - 1) ≫ (s (i - 1)).s = 0 := by
+      have hsg : (s i).s ≫ S.g.f i = 𝟙 (S.X₃.X i) := by
+        convert (s i).s_g using 1 <;> rfl
+      have hsg' :
+          (S.X₃.iCycles i ≫ (s i).s) ≫ S.g.f i =
+            S.X₃.iCycles i ≫ 𝟙 (S.X₃.X i) := by
+        rw [Category.assoc, hsg]
+      calc
+        (S.X₃.iCycles i ≫ (s i).s ≫ S.X₂.d i (i - 1)) ≫
+            S.g.f (i - 1) ≫ (s (i - 1)).s =
+            S.X₃.iCycles i ≫ (s i).s ≫
+              (S.X₂.d i (i - 1) ≫ S.g.f (i - 1)) ≫
+                (s (i - 1)).s := by simp only [Category.assoc']
+        _ = S.X₃.iCycles i ≫ (s i).s ≫
+              (S.g.f i ≫ S.X₃.d i (i - 1)) ≫
+                (s (i - 1)).s := by
+          exact congrArg (fun z =>
+            S.X₃.iCycles i ≫ (s i).s ≫ z ≫ (s (i - 1)).s)
+            (S.g.comm i (i - 1)).symm
+        _ = 0 := by
+          have hcomp := congrArg (fun z =>
+            z ≫ S.X₃.d i (i - 1) ≫ (s (i - 1)).s) hsg'
+          simpa only [Category.assoc, Category.id_comp, Category.comp_id,
+            S.X₃.iCycles_d_assoc, zero_comp] using hcomp
+    simp only [Category.assoc]
+    rw [hrf]
+    simp only [Preadditive.comp_sub, Category.comp_id]
+    have hzero' :
+        S.X₃.iCycles i ≫ (s i).s ≫ S.X₂.d i (i - 1) ≫
+          S.g.f (i - 1) ≫ (s (i - 1)).s = 0 := by
+      simpa only [Category.assoc] using hzero
+    rw [hzero']
+    simp only [sub_zero]
+  have hδ := hS.δ_eq (i := i) (j := i - 1)
+      (by simp [ComplexShape.down, ComplexShape.down'])
+      a (by
+        dsimp [a]
+        exact S.X₃.iCycles_d i (i - 1))
+      b (by
+        dsimp [b, a]
+        have hsg : (s i).s ≫ S.g.f i = 𝟙 (S.X₃.X i) := by
+          convert (s i).s_g using 1 <;> rfl
+        simp only [Category.assoc, hsg, Category.comp_id])
+      c (by
+        dsimp [c, b, a]
+        exact hxc)
+      (i - 1 - 1) (by simp only [ChainComplex.next])
+  have hla :
+      S.X₃.liftCycles a (i - 1) (by simp only [ChainComplex.next])
+        (by dsimp [a]; exact S.X₃.iCycles_d i (i - 1)) =
+        𝟙 (S.X₃.cycles i) := by
+    apply (cancel_mono (S.X₃.iCycles i)).1
+    simp [a]
+  have hδ' := hδ
+  rw [hla] at hδ'
+  simp only [Category.id_comp] at hδ'
+  have hf :
+      (S.X₃.iCycles i ≫ δ.hom.f i) ≫
+        ((shiftFunctor C (-1 : ℤ) ⋙
+          shortComplexFunctor' C (ComplexShape.down ℤ) (i + 1) i (i - 1)).obj S.X₁).g = 0 := by
+    change (S.X₃.iCycles i ≫ δ.hom.f i) ≫
+      ((shiftFunctor C (-1 : ℤ)).obj S.X₁).d i (i - 1) = 0
+    rw [Category.assoc, δ.hom.comm i (i - 1)]
+    simpa only [Category.assoc, S.X₃.iCycles_d_assoc, zero_comp]
+  have hcycles :
+      ((shiftFunctor C (-1 : ℤ)).obj S.X₁).liftCycles
+          (S.X₃.iCycles i ≫ δ.hom.f i) (i - 1)
+          (by simp only [ChainComplex.next]) (by
+            simpa [HomologicalComplex.shortComplexFunctor', shiftFunctor] using hf) =
+        HomologicalComplex.cyclesMap δ.hom i := by
+    apply (cancel_mono (((shiftFunctor C (-1 : ℤ)).obj S.X₁).iCycles i)).1
+    rw [HomologicalComplex.liftCycles_i]
+    simpa only [Category.assoc] using
+      (HomologicalComplex.cyclesMap_i δ.hom i).symm
+  have hft :
+      (S.X₃.iCycles i ≫ δ.hom.f i) ≫ (T.app S.X₁).hom.τ₂ = c := by
+    rw [δ.hom_f i]
+    dsimp [T, chainShiftShortComplexFunctorIso,
+      termwiseSplitConnectingFamily, shiftFunctorObjXIso, shiftFunctor]
+    simpa [c, a, sub_eq_add_neg]
+  have hnat := HomologicalComplex.homologyπ_naturality δ.hom i
+  calc
+    S.X₃.homologyπ i ≫ HomologicalComplex.homologyMap δ.hom i ≫
+          (E.app S.X₁).inv =
+        HomologicalComplex.cyclesMap δ.hom i ≫
+          ((shiftFunctor C (-1 : ℤ)).obj S.X₁).homologyπ i ≫
+            (E.app S.X₁).inv := by
+      simpa only [Category.assoc] using
+        congrArg (fun z => z ≫ (E.app S.X₁).inv) hnat
+    _ = ((shiftFunctor C (-1 : ℤ)).obj S.X₁).liftCycles
+          (S.X₃.iCycles i ≫ δ.hom.f i) (i - 1)
+          (by simp only [ChainComplex.next]) (by
+            simpa [HomologicalComplex.shortComplexFunctor', shiftFunctor] using hf) ≫
+          ((shiftFunctor C (-1 : ℤ)).obj S.X₁).homologyπ i ≫
+            (E.app S.X₁).inv := by rw [hcycles]
+    _ = S.X₃.homologyπ i ≫ hS.δ i (i - 1)
+          (by simp [ComplexShape.down, ComplexShape.down']) := by
+      have hs := hshift S.X₁ (S.X₃.iCycles i ≫ δ.hom.f i) hf
+      have hs' := congrArg (fun z => z ≫ (E.app S.X₁).inv) hs
+      calc
+        _ = ((shiftFunctor C (-1 : ℤ)).obj S.X₁).liftCycles
+              (S.X₃.iCycles i ≫ δ.hom.f i) (i - 1)
+              (by simp only [ChainComplex.next]) (by
+                simpa [HomologicalComplex.shortComplexFunctor', shiftFunctor] using hf) ≫
+            ((shiftFunctor C (-1 : ℤ)).obj S.X₁).homologyπ i ≫
+              (E.app S.X₁).inv := rfl
+        _ = S.X₁.liftCycles
+              ((S.X₃.iCycles i ≫ δ.hom.f i) ≫ (T.app S.X₁).hom.τ₂)
+              (i + (-1 : ℤ) - 1) (by simp only [ChainComplex.next]) (by
+                have hcond := test_condition S.X₁
+                  (S.X₃.iCycles i ≫ δ.hom.f i) hf
+                simpa [HomologicalComplex.shortComplexFunctor'] using hcond) ≫
+            S.X₁.homologyπ (i + (-1 : ℤ)) ≫
+              (E.app S.X₁).hom ≫ (E.app S.X₁).inv := by
+          simpa only [Category.assoc] using hs'
+        _ = S.X₁.liftCycles c (i - 1 - 1) _ _ ≫
+              S.X₁.homologyπ (i - 1) := by
+          rw [hft]
+          simp only [sub_eq_add_neg]
+          simp only [Category.assoc, Iso.hom_inv_id, Category.comp_id]
+        _ = S.X₃.homologyπ i ≫ hS.δ i (i - 1)
+              (by simp [ComplexShape.down, ComplexShape.down']) := hδ'.symm
 
 /-- Changing a termwise splitting changes the resulting connecting maps by a
 homotopy. -/

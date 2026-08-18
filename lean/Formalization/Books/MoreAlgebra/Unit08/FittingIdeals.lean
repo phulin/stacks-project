@@ -58,20 +58,243 @@ theorem minorIdeal_mono_succ
     {R : Type*} [CommRing R] {n m : ℕ}
     (A : Matrix (Fin n) (Fin m) R) (r : ℕ) :
     minorIdeal A (r + 1) ≤ minorIdeal A r := by
-  sorry
+  classical
+  apply Ideal.span_le.2
+  rintro x ⟨rows, cols, hrows, hcols, rfl⟩
+  let erows : Fin (r + 1) → Fin n := fun i => rows.orderIsoOfFin hrows i
+  let ecols : Fin (r + 1) → Fin m := fun i => cols.orderIsoOfFin hcols i
+  let row0 : Fin n := erows 0
+  let rows' := rows.erase row0
+  have hrow0 : row0 ∈ rows := Finset.orderEmbOfFin_mem rows hrows 0
+  have hrows' : rows'.card = r := by
+    dsimp [rows']
+    rw [Finset.card_erase_of_mem hrow0]
+    omega
+  have herows : (fun i : Fin r => erows (Fin.succ i)) =
+      (fun i => (rows'.orderIsoOfFin hrows' i : Fin n)) := by
+    apply Finset.orderEmbOfFin_unique hrows'
+    · intro i
+      apply Finset.mem_erase.mpr
+      constructor
+      · intro h
+        apply (Fin.succ_ne_zero i)
+        apply (rows.orderIsoOfFin hrows).injective
+        apply Subtype.ext
+        exact (show erows (Fin.succ i) = erows 0 from h)
+      · exact Finset.orderEmbOfFin_mem rows hrows (Fin.succ i)
+    · intro i k hik
+      exact (rows.orderIsoOfFin hrows).strictMono (by simpa using hik)
+  change (A.submatrix erows ecols).det ∈ minorIdeal A r
+  rw [Matrix.det_succ_row_zero]
+  apply Ideal.sum_mem
+  intro j hj
+  let cols' := cols.erase (ecols j)
+  have hcolj : ecols j ∈ cols := Finset.orderEmbOfFin_mem cols hcols j
+  have hcols' : cols'.card = r := by
+    dsimp [cols']
+    rw [Finset.card_erase_of_mem hcolj]
+    omega
+  have hecols : (fun i : Fin r => ecols (j.succAbove i)) =
+      (fun i => (cols'.orderIsoOfFin hcols' i : Fin m)) := by
+    apply Finset.orderEmbOfFin_unique hcols'
+    · intro i
+      apply Finset.mem_erase.mpr
+      constructor
+      · intro h
+        apply (Fin.succAbove_ne j i)
+        apply (cols.orderIsoOfFin hcols).injective
+        apply Subtype.ext
+        exact (show ecols (j.succAbove i) = ecols j from h)
+      · exact Finset.orderEmbOfFin_mem cols hcols (j.succAbove i)
+    · intro i k hik
+      exact (cols.orderIsoOfFin hcols).strictMono
+        ((Fin.succAboveOrderEmb j).strictMono hik)
+  apply Ideal.mul_mem_left
+  apply Ideal.subset_span
+  refine ⟨rows', cols', hrows', hcols', ?_⟩
+  dsimp [matrixMinor]
+  rw [Matrix.submatrix_submatrix]
+  apply congrArg Matrix.det
+  congr 1
 
 theorem minorIdeal_firstRows
     {R : Type*} [CommRing R] {n n' m r : ℕ}
     (B : Matrix (Fin (n + n')) (Fin m) R) :
     minorIdeal B (r + n') ≤
       minorIdeal (B.submatrix (Fin.castAdd n') id) r := by
-  sorry
+  have oneRow :
+      ∀ {q m r : ℕ} (D : Matrix (Fin (q + 1)) (Fin m) R),
+        minorIdeal D (r + 1) ≤
+          minorIdeal (D.submatrix (Fin.castAdd 1) id) r := by
+    intro q m r D
+    apply Ideal.span_le.2
+    rintro x ⟨rows, cols, hrows, hcols, rfl⟩
+    let erows : Fin (r + 1) → Fin (q + 1) :=
+      fun i => rows.orderIsoOfFin hrows i
+    let ecols : Fin (r + 1) → Fin m :=
+      fun i => cols.orderIsoOfFin hcols i
+    have hrows_ne : rows.Nonempty := by
+      exact ⟨erows 0, Finset.orderEmbOfFin_mem rows hrows 0⟩
+    let rowMax : Fin (q + 1) := rows.max' hrows_ne
+    let rows0 := rows.erase rowMax
+    have hrowMax : rowMax ∈ rows := Finset.max'_mem rows hrows_ne
+    have hrows0 : rows0.card = r := by
+      dsimp [rows0]
+      rw [Finset.card_erase_of_mem hrowMax]
+      omega
+    have hrowlast : erows (Fin.last r) = rowMax := by
+      convert Finset.orderEmbOfFin_last hrows (by omega : 0 < r + 1) using 1
+      apply congrArg (fun z : Fin (r + 1) => (rows.orderEmbOfFin hrows) z)
+      apply Fin.ext
+      rfl
+    let rowsA := rows0.preimage Fin.castSucc (Fin.castSucc_injective _).injOn
+    have hmap : rowsA.map Fin.castSuccEmb = rows0 := by
+      apply Finset.ext
+      intro i
+      constructor
+      · intro hi
+        rcases Finset.mem_map.mp hi with ⟨a, ha, rfl⟩
+        simpa [rowsA] using ha
+      · intro hi
+        have hlt : i.val < q := by
+          by_contra hq
+          have hiq : q ≤ i.val := Nat.le_of_not_gt hq
+          have hi_last : i = Fin.last q := by
+            apply Fin.ext
+            have : i.val = q := by omega
+            exact this
+          subst i
+          have hle : Fin.last q ≤ rowMax :=
+            Finset.le_max' rows _ (Finset.erase_subset rowMax rows hi)
+          have heq : rowMax = Fin.last q :=
+            Fin.le_antisymm (Fin.le_last _) hle
+          exact (Finset.mem_erase.mp hi).1 heq.symm
+        refine Finset.mem_map.mpr ⟨⟨i.val, hlt⟩, ?_, ?_⟩
+        · simpa [rowsA] using hi
+        · apply Fin.ext
+          rfl
+    have hrowsA : rowsA.card = r := by
+      have hcardmap : rowsA.card = rows0.card := by
+        simpa using congrArg Finset.card hmap
+      exact hcardmap.trans hrows0
+    have hrowdel :
+        (fun i : Fin r => erows ((Fin.last r).succAbove i)) =
+          (fun i => (rows0.orderIsoOfFin hrows0 i : Fin (q + 1))) := by
+      apply Finset.orderEmbOfFin_unique hrows0
+      · intro i
+        apply Finset.mem_erase.mpr
+        constructor
+        · intro h
+          apply (Fin.succAbove_ne (Fin.last r) i)
+          apply (rows.orderIsoOfFin hrows).injective
+          have hh : erows ((Fin.last r).succAbove i) = erows (Fin.last r) := by
+            rw [hrowlast]
+            exact h
+          dsimp [erows] at hh ⊢
+          exact Subtype.ext hh
+        · exact Finset.orderEmbOfFin_mem rows hrows
+            ((Fin.last r).succAbove i)
+      · intro i k hik
+        exact (rows.orderIsoOfFin hrows).strictMono
+          ((Fin.succAboveOrderEmb (Fin.last r)).strictMono hik)
+    have hrowA :
+        (fun i : Fin r => (Fin.castSucc (rowsA.orderIsoOfFin hrowsA i) :
+          Fin (q + 1))) =
+          (fun i => (rows0.orderIsoOfFin hrows0 i : Fin (q + 1))) := by
+      apply Finset.orderEmbOfFin_unique hrows0
+      · intro i
+        rw [← hmap]
+        exact Finset.mem_map.mpr ⟨_, Finset.orderEmbOfFin_mem rowsA hrowsA i, rfl⟩
+      · intro i k hik
+        exact Fin.castSuccOrderEmb.strictMono
+          ((rowsA.orderIsoOfFin hrowsA).strictMono hik)
+    have hrow :
+        (fun i : Fin r => erows ((Fin.last r).succAbove i)) =
+          (fun i : Fin r =>
+            (Fin.castSucc (rowsA.orderIsoOfFin hrowsA i) : Fin (q + 1))) :=
+      hrowdel.trans hrowA.symm
+    change (D.submatrix erows ecols).det ∈
+      minorIdeal (D.submatrix (Fin.castAdd 1) id) r
+    rw [Matrix.det_succ_row (n := r) _ (Fin.last r)]
+    apply Ideal.sum_mem
+    intro j hj
+    let cols' := cols.erase (ecols j)
+    have hcolj : ecols j ∈ cols :=
+      Finset.orderEmbOfFin_mem cols hcols j
+    have hcols' : cols'.card = r := by
+      dsimp [cols']
+      rw [Finset.card_erase_of_mem hcolj]
+      omega
+    have hecols : (fun i : Fin r => ecols (j.succAbove i)) =
+        (fun i => (cols'.orderIsoOfFin hcols' i : Fin m)) := by
+      apply Finset.orderEmbOfFin_unique hcols'
+      · intro i
+        apply Finset.mem_erase.mpr
+        constructor
+        · intro h
+          apply (Fin.succAbove_ne j i)
+          apply (cols.orderIsoOfFin hcols).injective
+          apply Subtype.ext
+          exact (show ecols (j.succAbove i) = ecols j from h)
+        · exact Finset.orderEmbOfFin_mem cols hcols (j.succAbove i)
+      · intro i k hik
+        exact (cols.orderIsoOfFin hcols).strictMono
+          ((Fin.succAboveOrderEmb j).strictMono hik)
+    apply Ideal.mul_mem_left
+    apply Ideal.subset_span
+    refine ⟨rowsA, cols', hrowsA, hcols', ?_⟩
+    dsimp [matrixMinor]
+    rw [Matrix.submatrix_submatrix]
+    apply congrArg Matrix.det
+    apply Matrix.ext
+    intro i k
+    simp only [Matrix.submatrix_apply, Function.comp_apply]
+    exact congrArg₂ D (congrFun hrow i) (congrFun hecols k)
+  induction n' generalizing n r with
+  | zero =>
+      exact le_refl _
+  | succ n' ih =>
+      have h₁ :
+          minorIdeal B (r + (n' + 1)) ≤
+            minorIdeal (B.submatrix (Fin.castAdd 1) id) (r + n') := by
+        convert oneRow (q := n + n') (m := m) (r := r + n') B using 1;
+          simp [Nat.add_assoc]
+      have h₂ :
+          minorIdeal (B.submatrix (Fin.castAdd 1) id) (r + n') ≤
+            minorIdeal
+              ((B.submatrix (Fin.castAdd 1) id).submatrix (Fin.castAdd n') id) r := by
+        exact ih (B := B.submatrix (Fin.castAdd 1) id)
+      have hmat :
+          ((B.submatrix (Fin.castAdd 1) id).submatrix (Fin.castAdd n') id) =
+            B.submatrix (Fin.castAdd (n' + 1)) id := by
+        apply Matrix.ext
+        intro i j
+        rfl
+      exact h₁.trans (hmat ▸ h₂)
 
 theorem minorIdeal_left_mul
     {R : Type*} [CommRing R] {n m r : ℕ}
     (C : Matrix (Fin n) (Fin n) R) (A : Matrix (Fin n) (Fin m) R) :
     minorIdeal (C * A) r ≤ minorIdeal A r := by
-  sorry
+  classical
+  apply Ideal.span_le.2
+  rintro x ⟨rows, cols, hrows, hcols, rfl⟩
+  let erows : Fin r → Fin n := fun i => rows.orderIsoOfFin hrows i
+  let ecols : Fin r → Fin m := fun j => cols.orderIsoOfFin hcols j
+  have hprod :
+      (C * A).submatrix erows ecols =
+        (C.submatrix erows id) * (A.submatrix id ecols) := by
+    apply Matrix.ext
+    intro i j
+    simp [Matrix.mul_apply, Matrix.submatrix_apply, erows, ecols]
+  change ((C * A).submatrix erows ecols).det ∈ minorIdeal A r
+  rw [hprod, Formalization.Books.Algebra.Unit03.cauchyBinet]
+  apply Ideal.sum_mem
+  intro S hS
+  apply Ideal.mul_mem_left
+  apply Ideal.subset_span
+  refine ⟨S.1, cols, S.2, hcols, ?_⟩
+  rfl
 
 theorem minorIdeal_blockDiagonal
     {R : Type*} [CommRing R] {n₁ n₂ m₁ m₂ r : ℕ}
@@ -83,7 +306,7 @@ theorem minorIdeal_blockDiagonal
             (0 : Matrix (Fin n₁) (Fin m₂) R)
             (0 : Matrix (Fin n₂) (Fin m₁) R) A₂)) r =
       ⨆ r₁ : ℕ, ⨆ r₂ : ℕ, ⨆ (_h : r₁ + r₂ = r),
-        minorIdeal A₁ r₁ * minorIdeal A₂ r₂ := by
+      minorIdeal A₁ r₁ * minorIdeal A₂ r₂ := by
   sorry
 
 /-- The matrix whose columns are a chosen finite family of relations. -/

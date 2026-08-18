@@ -39,7 +39,156 @@ theorem sPlus_generated_iff
     (Algebra.adjoin (degreeZeroSubring G) (Set.range f) =
         (⊤ : Subalgebra (degreeZeroSubring G) S)) ↔
       Ideal.span (Set.range f) = irrelevantIdeal G := by
-  sorry
+  let I : Ideal S := Ideal.span (Set.range f)
+  let p₀ : S →+* S := GradedRing.projZeroRingHom G.component
+  have hf₀ : ∀ i, p₀ (f i) = 0 := by
+    intro i
+    change GradedRing.proj G.component 0 (f i) = 0
+    exact (HomogeneousIdeal.mem_irrelevant_iff (𝒜 := G.component) (f i)).mp (hf i).2
+  have hI₀ : I ≤ RingHom.ker p₀ := by
+    change Ideal.span (Set.range f) ≤ RingHom.ker p₀
+    refine Ideal.span_le.mpr ?_
+    rintro x ⟨i, rfl⟩
+    exact hf₀ i
+  have hP :
+      ∃ P : Subalgebra (degreeZeroSubring G) S,
+        (∀ i, f i ∈ P) ∧
+          (∀ x, x ∈ irrelevantIdeal G → x ∈ P → ∃ y ∈ I, x = y) := by
+    let P : Subalgebra (degreeZeroSubring G) S :=
+      { carrier := {x | ∃ y, y ∈ I ∧ ∃ z : degreeZeroSubring G, x = y + (z : S)}
+        add_mem' := by
+          rintro x y ⟨x₁, hx₁, z, rfl⟩ ⟨y₁, hy₁, w, rfl⟩
+          refine ⟨x₁ + y₁, I.add_mem hx₁ hy₁, z + w, ?_⟩
+          simp only [Subring.coe_add]
+          abel
+        mul_mem' := by
+          rintro x y ⟨x₁, hx₁, z, rfl⟩ ⟨y₁, hy₁, w, rfl⟩
+          have hxy : x₁ * y₁ ∈ I := by
+            change x₁ • y₁ ∈ I
+            exact I.smul_mem x₁ hy₁
+          have hxw : x₁ * (w : S) ∈ I := by
+            simpa [mul_comm] using I.smul_mem (w : S) hx₁
+          have hzy : (z : S) * y₁ ∈ I := by
+            exact I.smul_mem (z : S) hy₁
+          refine ⟨x₁ * y₁ + x₁ * (w : S) + (z : S) * y₁,
+            I.add_mem (I.add_mem hxy hxw) hzy, z * w, ?_⟩
+          simp only [Subring.coe_mul]
+          ring
+        algebraMap_mem' := by
+          intro z
+          exact ⟨0, I.zero_mem, z, by
+            rw [Algebra.algebraMap_ofSubring]
+            simp⟩ }
+    refine ⟨P, ?_, ?_⟩
+    · intro i
+      exact ⟨f i, Ideal.subset_span ⟨i, rfl⟩, 0, by simp⟩
+    · intro x hxIrrelevant hxP
+      have hx := hxP
+      rcases hx with ⟨y, hy, z, hxy⟩
+      have hy₀ : p₀ y = 0 := hI₀ hy
+      have hxzero : (z : S) = 0 := by
+        have hx₀ : p₀ x = 0 := by
+          change GradedRing.proj G.component 0 x = 0
+          exact (HomogeneousIdeal.mem_irrelevant_iff (𝒜 := G.component) x).mp hxIrrelevant
+        have hz₀ : p₀ (z : S) = (z : S) := by
+          change (DirectSum.decompose G.component (z : S) 0 : S) = (z : S)
+          exact DirectSum.decompose_of_mem_same G.component z.property
+        rw [hxy, map_add, hy₀, hz₀] at hx₀
+        simpa only [zero_add] using hx₀
+      exact ⟨y, hy, by simpa [hxy, hxzero]⟩
+  constructor
+  · intro hgen
+    apply le_antisymm
+    · change I ≤ irrelevantIdeal G
+      change I ≤ RingHom.ker p₀
+      exact hI₀
+    · intro x hx
+      rcases hP with ⟨P, hfP, hPsub⟩
+      have hle : Algebra.adjoin (degreeZeroSubring G) (Set.range f) ≤ P :=
+        Algebra.adjoin_le (s := Set.range f) (S := P) (by
+          rintro y ⟨i, rfl⟩
+          exact hfP i)
+      have hxP : x ∈ P := hle (by rw [hgen]; trivial)
+      rcases hPsub x hx hxP with ⟨y, hy, hxy⟩
+      simpa only [hxy] using hy
+  · intro hspan
+    have hcomp : ∀ n : ℕ, ∀ x : S, x ∈ G.component n →
+        x ∈ Algebra.adjoin (degreeZeroSubring G) (Set.range f) := by
+      intro n
+      induction n using Nat.strong_induction_on with
+      | h n ih =>
+          intro x hx
+          by_cases hn : n = 0
+          · subst n
+            have hmem :=
+              (Algebra.adjoin (degreeZeroSubring G) (Set.range f)).algebraMap_mem
+                (⟨x, hx⟩ : degreeZeroSubring G)
+            change x ∈ Algebra.adjoin (degreeZeroSubring G) (Set.range f) at hmem
+            exact hmem
+          · have hxI : x ∈ I := by
+              change x ∈ Ideal.span (Set.range f)
+              exact hspan.symm ▸
+                (HomogeneousIdeal.mem_irrelevant_of_mem
+                  (𝒜 := G.component) (i := n) (x := x)
+                  (Nat.pos_of_ne_zero hn) hx)
+            have hspan_ind : ∀ k : ℕ,
+                (DirectSum.decompose G.component x k : S) ∈
+                  Algebra.adjoin (degreeZeroSubring G) (Set.range f) :=
+              by
+                refine Submodule.span_induction
+                  (R := S) (M := S) (s := Set.range f) (x := x)
+                  (p := fun y _ => ∀ k : ℕ,
+                    (DirectSum.decompose G.component y k : S) ∈
+                      Algebra.adjoin (degreeZeroSubring G) (Set.range f)) ?_ ?_ ?_ ?_ hxI
+                · rintro y ⟨i, rfl⟩ k
+                  rcases (hf i).1 with ⟨d, hd⟩
+                  by_cases hdk : d = k
+                  · subst k
+                    rw [DirectSum.decompose_of_mem_same G.component hd]
+                    exact Algebra.subset_adjoin ⟨i, rfl⟩
+                  · rw [DirectSum.decompose_of_mem_ne G.component hd hdk]
+                    exact (Algebra.adjoin (degreeZeroSubring G) (Set.range f)).zero_mem
+                · intro k
+                  exact (Algebra.adjoin (degreeZeroSubring G) (Set.range f)).zero_mem
+                · intro y z hy hz py pz k
+                  rw [DirectSum.decompose_add]
+                  exact (Algebra.adjoin (degreeZeroSubring G) (Set.range f)).add_mem
+                    (py k) (pz k)
+                · intro a y hy py k
+                  rcases hy with ⟨i, rfl⟩
+                  rcases hf i with ⟨⟨d, hd⟩, hi⟩
+                  by_cases hd0 : d = 0
+                  · have hzero : f i = 0 := by
+                      have hi₀ := (HomogeneousIdeal.mem_irrelevant_iff
+                        (𝒜 := G.component) (f i)).mp hi
+                      rw [DirectSum.decompose_of_mem_same G.component hd] at hi₀
+                      exact hi₀
+                    simp [hzero]
+                  · by_cases hdk : d ≤ k
+                    · have hlt : k - d < k :=
+                        Nat.sub_lt (lt_of_lt_of_le (Nat.pos_of_ne_zero hd0) hdk)
+                          (Nat.pos_of_ne_zero hd0)
+                      have ha : (DirectSum.decompose G.component a (k - d) : S) ∈
+                          Algebra.adjoin (degreeZeroSubring G) (Set.range f) :=
+                        ih (k - d) hlt _ (DirectSum.decompose G.component a (k - d)).property
+                      rw [DirectSum.coe_decompose_mul_of_right_mem_of_le
+                        G.component hd hdk]
+                      exact (Algebra.adjoin (degreeZeroSubring G) (Set.range f)).mul_mem
+                        ha (Algebra.subset_adjoin ⟨i, rfl⟩)
+                    · have hzero := DirectSum.coe_decompose_mul_of_right_mem_of_not_le
+                        G.component hd hdk
+                      simp [hzero]
+            rw [DirectSum.decompose_of_mem_same G.component hx] at hspan_ind
+            exact hspan_ind n
+    apply le_antisymm le_top
+    intro x hx
+    exact DirectSum.Decomposition.inductionOn (ℳ := G.component)
+      (motive := fun x => x ∈ Algebra.adjoin (degreeZeroSubring G) (Set.range f))
+      (by exact (Algebra.adjoin (degreeZeroSubring G) (Set.range f)).zero_mem)
+      (by intro i y; exact hcomp i y y.property)
+      (by intro x y hx hy
+          exact (Algebra.adjoin (degreeZeroSubring G) (Set.range f)).add_mem hx hy)
+      x
 
 theorem graded_noetherian_iff (G : GradedRingData S) :
     IsNoetherianRing S ↔
@@ -84,7 +233,8 @@ theorem numericalPolynomial_comp_addMonoidHom
     {A A' : Type v} [AddCommGroup A] [AddCommGroup A']
     (φ : A →+ A') (f : ℤ → A) (hf : IsNumericalPolynomial f) :
     IsNumericalPolynomial (fun n => φ (f n)) := by
-  sorry
+  rcases hf with ⟨r, a, ha⟩
+  refine ⟨r, fun i => φ (a i), ha.mono (fun n hn => by simpa [hn])⟩
 
 theorem isNumericalPolynomial_of_sub
     {A : Type v} [AddCommGroup A] (f : ℤ → A)

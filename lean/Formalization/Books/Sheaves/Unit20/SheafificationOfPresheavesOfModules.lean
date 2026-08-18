@@ -245,29 +245,92 @@ noncomputable abbrev sheafTensorProductPresheaf {X : TopCat.{v}}
     (α : O₁ ⟶ O₂) (G : SheafOfModules.{v} O₁) : PMod O₂.obj :=
   Formalization.Books.Sheaves.Unit17.sheafTensorProductPresheaf α G
 
-/-- The source's warning that the presheaf tensor product need not itself be a
+/- The source's warning that the presheaf tensor product need not itself be a
 sheaf.
-
-Proof roadmap:
-
-1. expose a natural sectionwise isomorphism identifying the value on an open
-   `U` with extension of scalars
-   `O₂(U) ⊗[O₁(U)] G(U)`; this belongs with the presheaf change-of-rings API in
-   Unit 06;
-2. construct a sheaf on a finite space whose two-open gluing diagram contains
-   a non-pure equalizer over `ℤ`;
-3. extend scalars along `ℤ → ℤ/2`, where tensoring destroys that equalizer;
-4. transport the failed gluing condition through the sectionwise isomorphism.
 
 The theorem lives here, rather than in Unit 17, because the assertion occurs
 in the source's discussion of sheafifying presheaves of modules. -/
+/-- On commutative ring sheaves, the sections of the presheaf tensor product
+are the expected sectionwise extensions of scalars.  This is the precise
+bridge from the presheaf computation in Unit 06 to the counterexample below. -/
+theorem commRingSheafTensorProductPresheaf_obj_iso
+    {X : TopCat.{v}}
+    {O₁ O₂ : Formalization.Books.Sheaves.Unit17.CommRingSheaf X}
+    (α : O₁ ⟶ O₂)
+    (G : CommRingPresheafModule O₁.obj)
+    (U : (Opens X)ᵒᵖ) :
+    Nonempty
+      ((ModuleCat.extendScalars (α.hom.app U).hom).obj
+          (ModuleCat.of (O₁.obj.obj U) (G.obj U)) ≅
+        ModuleCat.of (O₂.obj.obj U)
+          ((tensorProductPresheaf
+            (commRingPresheafMorphismToRingPresheaf α.hom) G).obj U)) := by
+  exact tensorProductPresheaf_obj_iso α.hom G U
+
+/- The only non-formal part of the warning is the construction of one
+   counterexample.  A proof can be organized as follows.
+
+   1. Use the finite space with opens `∅`, `U`, `V`, `U ∩ V`, and `U ∪ V`.
+      Define a sheaf of `ℤ`-modules whose gluing map over the cover `{U, V}`
+      realizes the inclusion `2ℤ → ℤ` as an equalizer.  Verify the sheaf
+      condition by enumerating the covers of this finite lattice.
+   2. Take the constant commutative ring sheaves associated to `ℤ` and
+      `ZMod 2`, with their quotient morphism, and equip the module sheaf from
+      step 1 with its evident `ℤ`-action.
+   3. For each of the five opens, rewrite the tensor-product presheaf using
+      `commRingSheafTensorProductPresheaf_obj_iso`.  Naturality of that
+      comparison identifies the gluing fork for `{U, V}` with the result of
+      tensoring the fork from step 1 by `ZMod 2`.
+   4. The image of `2ℤ → ℤ` after this scalar extension is zero, so the
+      resulting fork is not limiting.  Apply the equalizer-products
+      characterization of the sheaf condition to the cover `{U, V}`.
+
+   Keeping this construction in a separate lemma makes the final logical
+   assembly below independent of the chosen finite-space presentation. -/
+theorem exists_commRingSheaf_tensorProductPresheaf_failed_gluing :
+    ∃ (X : TopCat.{v})
+      (O₁ O₂ : Formalization.Books.Sheaves.Unit17.CommRingSheaf X)
+      (α : O₁ ⟶ O₂)
+      (G : Formalization.Books.Sheaves.Unit17.CommRingSheafModule O₁)
+      (U : ULift.{v} (Fin 2) → Opens X),
+      ¬ Nonempty (IsLimit
+        (TopCat.Presheaf.SheafConditionEqualizerProducts.fork
+          (sheafTensorProductPresheaf
+            (Formalization.Books.Sheaves.Unit17.commRingSheafMorphismToRingSheaf
+              α) G).presheaf U)) := by
+  sorry
+
+/-- A failed equalizer-products diagram gives the commutative-ring
+counterexample in the form needed by the final theorem. -/
+theorem exists_commRingSheaf_tensorProductPresheaf_not_isSheaf :
+    ∃ (X : TopCat.{v})
+      (O₁ O₂ : Formalization.Books.Sheaves.Unit17.CommRingSheaf X)
+      (α : O₁ ⟶ O₂)
+      (G : Formalization.Books.Sheaves.Unit17.CommRingSheafModule O₁),
+      ¬ Presheaf.IsSheaf (Opens.grothendieckTopology X)
+        (sheafTensorProductPresheaf
+          (Formalization.Books.Sheaves.Unit17.commRingSheafMorphismToRingSheaf
+            α) G).presheaf := by
+  obtain ⟨X, O₁, O₂, α, G, U, hU⟩ :=
+    exists_commRingSheaf_tensorProductPresheaf_failed_gluing
+  refine ⟨X, O₁, O₂, α, G, ?_⟩
+  intro hG
+  apply hU
+  exact (TopCat.Presheaf.isSheaf_iff_isSheafEqualizerProducts _).mp hG U
+
+/-- Extension of scalars on sheaves of modules cannot in general be computed
+without sheafifying its underlying tensor-product presheaf. -/
 theorem tensorProductPresheaf_not_always_isSheaf :
     ¬ ∀ {X : TopCat.{v}}
       {O₁ O₂ : Sheaf (Opens.grothendieckTopology X) RingCat.{v}}
       (α : O₁ ⟶ O₂) (G : SheafOfModules.{v} O₁),
       Presheaf.IsSheaf (Opens.grothendieckTopology X)
         (sheafTensorProductPresheaf α G).presheaf := by
-  sorry
+  intro h
+  obtain ⟨X, O₁, O₂, α, G, hnot⟩ :=
+    exists_commRingSheaf_tensorProductPresheaf_not_isSheaf
+  exact hnot (h
+    (Formalization.Books.Sheaves.Unit17.commRingSheafMorphismToRingSheaf α) G)
 
 /-- The tensor product sheaf, defined by sheafifying the presheaf tensor. -/
 noncomputable abbrev tensorProductSheaf {X : TopCat.{v}}

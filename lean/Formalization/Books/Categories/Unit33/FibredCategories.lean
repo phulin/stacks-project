@@ -557,7 +557,7 @@ theorem pullback_composition_iso
             (P.pullbackMap f (P.pullback g x) ≫ P.pullbackMap g x) =
             inv ≫ (hom ≫
               (P.pullbackMap f (P.pullback g x) ≫ P.pullbackMap g x)) := by
-                simp [Category.assoc]
+                simpa only [Category.assoc]
         _ = inv ≫ P.pullbackMap (f ≫ g) x := by rw [hhom]
         _ = P.pullbackMap f (P.pullback g x) ≫ P.pullbackMap g x := hinv
         _ = (𝟙 _ : _ ⟶ _) ≫
@@ -1012,10 +1012,299 @@ theorem pullback_pseudofunctor_exists
     · apply CoreHom.ext
       apply Iso.ext
       exact e.inv_hom_id
+  have mapComp_fac : ∀ {U V W : Cᵒᵖ} (f : U ⟶ V) (g : V ⟶ W)
+      (x : Functor.Fiber p U.unop),
+      Functor.Fiber.fiberInclusion.map
+          ((mapComp f g).hom.iso.hom.toNatTrans.app x) ≫
+        P.pullbackMap g.unop (P.pullback f.unop x) ≫
+          P.pullbackMap f.unop x =
+        P.pullbackMap (f ≫ g).unop x := by
+    intro U V W f g x
+    dsimp [mapComp, map, obj]
+    exact (Classical.choose_spec
+      (pullback_composition_iso p P g.unop f.unop)).1 x
+  have pullback_map_fac {A B : C} (q : A ⟶ B)
+      {x y : Functor.Fiber p B} (φ : x ⟶ y) :
+      ((P.pullbackFunctor q).map φ).1 ≫ P.pullbackMap q y =
+        P.pullbackMap q x ≫ φ.1 := by
+    let : p.IsHomLift (𝟙 B) φ.1 := φ.2
+    let : p.IsStronglyCartesian q (P.pullbackMap q y) :=
+      P.pullbackMap_isStronglyCartesian q y
+    let : p.IsStronglyCartesian q (P.pullbackMap q x) :=
+      P.pullbackMap_isStronglyCartesian q x
+    have hφ' : p.IsHomLift q (P.pullbackMap q x ≫ φ.1) := by
+      exact IsHomLift.comp_lift_id_right' p q (P.pullbackMap q x) B φ.1
+    change
+      (@Functor.IsStronglyCartesian.map _ _ _ _ p _ _ _ _ q
+        (P.pullbackMap q y) _ _ _ (𝟙 A) q (by simp)
+        (P.pullbackMap q x ≫ φ.1) hφ') ≫ P.pullbackMap q y =
+        P.pullbackMap q x ≫ φ.1
+    exact Functor.IsStronglyCartesian.fac p q (P.pullbackMap q y)
+      (f' := q) (g := 𝟙 A) (by simp) (P.pullbackMap q x ≫ φ.1)
   let value : PseudofunctorFromCategory Cᵒᵖ
       (AssociatedTwoOneCategory (Cat.{v₁, u₁})) :=
     LocallyDiscrete.mkPseudofunctor obj map mapId mapComp
-      (map₂_associator := by sorry)
+      (map₂_associator := by
+        intro b₀ b₁ b₂ b₃ f g h
+        apply CoreHom.ext
+        apply Iso.ext
+        simp
+        ext x
+        apply Functor.Fiber.hom_ext
+        simp [Category.assoc]
+        change Functor.Fiber p b₀.unop at x
+        let L :=
+          (mapComp (f ≫ g) h).hom.iso.hom.toNatTrans.app x ≫
+            (map h).of.toFunctor.map
+              ((mapComp f g).hom.iso.hom.toNatTrans.app x) ≫
+            (mapComp g h).inv.iso.hom.toNatTrans.app
+              ((map f).of.toFunctor.obj x) ≫
+            (mapComp f (g ≫ h)).inv.iso.hom.toNatTrans.app x
+        let e : map ((f ≫ g) ≫ h) = map (f ≫ g ≫ h) := by simp
+        let R : (map ((f ≫ g) ≫ h)).of.toFunctor.obj x ⟶
+            (map (f ≫ g ≫ h)).of.toFunctor.obj x :=
+          (eqToHom e).iso.hom.toNatTrans.app x
+        change L.1 = Functor.Fiber.fiberInclusion.map R
+        let k := P.pullbackMap (f ≫ g ≫ h).unop x
+        letI : p.IsStronglyCartesian (f ≫ g ≫ h).unop k :=
+          P.pullbackMap_isStronglyCartesian (f ≫ g ≫ h).unop x
+        have hL : p.IsHomLift (𝟙 b₃.unop) L.1 := by
+          exact L.2
+        letI : p.IsHomLift (𝟙 b₃.unop) L.1 := hL
+        have hR : p.IsHomLift (𝟙 b₃.unop)
+            (Functor.Fiber.fiberInclusion.map R) := by
+          exact R.2
+        letI : p.IsHomLift (𝟙 b₃.unop)
+            (Functor.Fiber.fiberInclusion.map R) := hR
+        apply @Functor.IsStronglyCartesian.ext _ _ _ _ p _ _ _ _
+          (f ≫ g ≫ h).unop k (by infer_instance) _ _
+          (𝟙 b₃.unop) L.1 _ hL hR
+        dsimp [L, R, k]
+        let A₁ := (mapComp (f ≫ g) h).hom.iso.hom.toNatTrans.app x
+        let A₂ := (mapComp f g).hom.iso.hom.toNatTrans.app x
+        let A₃ := (mapComp g h).inv.iso.hom.toNatTrans.app
+          ((map f).of.toFunctor.obj x)
+        let A₄ := (mapComp f (g ≫ h)).inv.iso.hom.toNatTrans.app x
+        change Functor.Fiber.fiberInclusion.map
+              (A₁ ≫ (map h).of.toFunctor.map A₂ ≫ A₃ ≫ A₄) ≫
+            P.pullbackMap ((h.unop ≫ g.unop) ≫ f.unop) x =
+          Functor.Fiber.fiberInclusion.map R ≫
+            P.pullbackMap ((h.unop ≫ g.unop) ≫ f.unop) x
+        dsimp [map, obj, Functor.Fiber.fiberInclusion]
+        dsimp [Functor.Fiber.fiberCategory] at *
+        have hcomp :
+            (A₁ ≫ (P.pullbackFunctor h.unop).map A₂ ≫ A₃ ≫ A₄).1 =
+              A₁.1 ≫ ((P.pullbackFunctor h.unop).map A₂).1 ≫
+                A₃.1 ≫ A₄.1 := by rfl
+        calc
+          _ = (A₁ ≫ (P.pullbackFunctor h.unop).map A₂ ≫ A₃ ≫ A₄).1 ≫
+              P.pullbackMap ((h.unop ≫ g.unop) ≫ f.unop) x := by rfl
+          _ = (A₁.1 ≫ ((P.pullbackFunctor h.unop).map A₂).1 ≫
+                A₃.1 ≫ A₄.1) ≫
+              P.pullbackMap ((h.unop ≫ g.unop) ≫ f.unop) x := by rw [hcomp]
+          _ = _ := by
+            have h1 := mapComp_fac (f ≫ g) h x
+            have h2 := mapComp_fac f g x
+            have h3 := mapComp_fac g h ((map f).of.toFunctor.obj x)
+            have h4 := mapComp_fac f (g ≫ h) x
+            have h1' := h1
+            have h2' :
+                A₂.1 ≫ P.pullbackMap g.unop
+                    (P.pullback f.unop x) ≫ P.pullbackMap f.unop x =
+                  P.pullbackMap (g.unop ≫ f.unop) x := by
+              simpa [A₂, map, obj, Functor.Fiber.fiberInclusion,
+                Category.assoc] using h2
+            have h3' :
+                ((mapComp g h).hom.iso.hom.toNatTrans.app
+                    ((map f).of.toFunctor.obj x)).1 ≫
+                    P.pullbackMap h.unop
+                      (P.pullback g.unop ((map f).of.toFunctor.obj x)) ≫
+                    P.pullbackMap g.unop ((map f).of.toFunctor.obj x) =
+                  P.pullbackMap (h.unop ≫ g.unop)
+                    ((map f).of.toFunctor.obj x) := by
+              simpa [map, obj, Functor.Fiber.fiberInclusion,
+                Category.assoc] using h3
+            have h4' :
+                ((mapComp f (g ≫ h)).hom.iso.hom.toNatTrans.app x).1 ≫
+                    P.pullbackMap (g ≫ h).unop
+                      (P.pullback f.unop x) ≫
+                    P.pullbackMap f.unop x =
+                  P.pullbackMap ((h.unop ≫ g.unop) ≫ f.unop) x := by
+              simpa [map, obj, Functor.Fiber.fiberInclusion,
+                Category.assoc] using h4
+            have h4inv :
+                A₄.1 ≫ P.pullbackMap ((h.unop ≫ g.unop) ≫ f.unop) x =
+                  P.pullbackMap (h.unop ≫ g.unop)
+                      ((map f).of.toFunctor.obj x) ≫
+                    P.pullbackMap f.unop x := by
+              rw [← h4']
+              have hc :
+                  A₄.1 ≫
+                      ((mapComp f (g ≫ h)).hom.iso.hom.toNatTrans.app x).1 =
+                    𝟙 _ := by
+                have hc' := congrArg (fun z =>
+                    Functor.Fiber.fiberInclusion.map z)
+                  ((Classical.choose
+                    (pullback_composition_iso p P (g ≫ h).unop f.unop)).inv_hom_id_app
+                      x)
+                change A₄.1 ≫
+                    ((mapComp f (g ≫ h)).hom.iso.hom.toNatTrans.app x).1 =
+                  𝟙 _ at hc'
+                exact hc'
+              rw [← Category.assoc, hc, Category.id_comp]
+              rfl
+            have h3inv :
+                A₃.1 ≫ P.pullbackMap (h.unop ≫ g.unop)
+                      ((map f).of.toFunctor.obj x) =
+                  P.pullbackMap h.unop
+                      (P.pullback g.unop ((map f).of.toFunctor.obj x)) ≫
+                    P.pullbackMap g.unop ((map f).of.toFunctor.obj x) := by
+              rw [← h3']
+              have hc :
+                  A₃.1 ≫
+                      ((mapComp g h).hom.iso.hom.toNatTrans.app
+                        ((map f).of.toFunctor.obj x)).1 =
+                    𝟙 _ := by
+                have hc' := congrArg (fun z =>
+                    Functor.Fiber.fiberInclusion.map z)
+                  ((Classical.choose
+                    (pullback_composition_iso p P h.unop g.unop)).inv_hom_id_app
+                      ((map f).of.toFunctor.obj x))
+                change A₃.1 ≫
+                    ((mapComp g h).hom.iso.hom.toNatTrans.app
+                      ((map f).of.toFunctor.obj x)).1 =
+                  𝟙 _ at hc'
+                exact hc'
+              rw [← Category.assoc, hc, Category.id_comp]
+              rfl
+            have hb := pullback_map_fac h.unop A₂
+            have h3inv_assoc :
+                A₃.1 ≫ P.pullbackMap (h.unop ≫ g.unop)
+                      ((map f).of.toFunctor.obj x) ≫
+                    P.pullbackMap f.unop x =
+                  (P.pullbackMap h.unop
+                      (P.pullback g.unop ((map f).of.toFunctor.obj x)) ≫
+                    P.pullbackMap g.unop ((map f).of.toFunctor.obj x)) ≫
+                    P.pullbackMap f.unop x := by
+              calc
+                _ = (A₃.1 ≫ P.pullbackMap (h.unop ≫ g.unop)
+                      ((map f).of.toFunctor.obj x)) ≫
+                    P.pullbackMap f.unop x := (Category.assoc _ _ _).symm
+                _ = _ := congrArg (fun z => z ≫ P.pullbackMap f.unop x) h3inv
+            change
+              (A₁.1 ≫ ((P.pullbackFunctor h.unop).map A₂).1 ≫
+                  A₃.1 ≫ A₄.1) ≫
+                  P.pullbackMap ((h.unop ≫ g.unop) ≫ f.unop) x =
+                Functor.Fiber.fiberInclusion.map R ≫
+                  P.pullbackMap ((h.unop ≫ g.unop) ≫ f.unop) x
+            have hx :
+                Functor.Fiber.fiberInclusion.obj
+                    ((map ((f ≫ g) ≫ h)).of.toFunctor.obj x) =
+                  Functor.Fiber.fiberInclusion.obj
+                    (P.pullback ((h.unop ≫ g.unop) ≫ f.unop) x) := by
+              simp [map, obj, PullbackChoice.pullbackFunctor, Category.assoc]
+            calc
+              _ = A₁.1 ≫ ((P.pullbackFunctor h.unop).map A₂).1 ≫
+                    A₃.1 ≫ (A₄.1 ≫
+                      P.pullbackMap ((h.unop ≫ g.unop) ≫ f.unop) x) := by
+                let t := P.pullbackMap ((h.unop ≫ g.unop) ≫ f.unop) x
+                let a := A₁.1
+                let b := ((P.pullbackFunctor h.unop).map A₂).1
+                let c := A₃.1
+                let d := A₄.1
+                change
+                  (a ≫ b ≫ c ≫ d) ≫ t = a ≫ b ≫ c ≫ (d ≫ t)
+                have hleft :
+                    a ≫ (b ≫ (c ≫ d)) = ((a ≫ b) ≫ c) ≫ d := by
+                  exact
+                    ((Category.assoc a b (c ≫ d)).symm).trans
+                      ((Category.assoc (a ≫ b) c d).symm)
+                calc
+                  _ = (((a ≫ b) ≫ c) ≫ d) ≫ t :=
+                    congrArg (fun z => z ≫ t) hleft
+                  _ = ((a ≫ b) ≫ c) ≫ (d ≫ t) :=
+                    Category.assoc ((a ≫ b) ≫ c) d t
+                  _ = (a ≫ b) ≫ (c ≫ (d ≫ t)) :=
+                    Category.assoc (a ≫ b) c (d ≫ t)
+                  _ = a ≫ (b ≫ (c ≫ (d ≫ t))) :=
+                    Category.assoc a b (c ≫ (d ≫ t))
+              _ = A₁.1 ≫ ((P.pullbackFunctor h.unop).map A₂).1 ≫
+                    A₃.1 ≫
+                      (P.pullbackMap (h.unop ≫ g.unop)
+                          ((map f).of.toFunctor.obj x) ≫
+                        P.pullbackMap f.unop x) := by
+                rw [h4inv]
+                rfl
+              _ = A₁.1 ≫ ((P.pullbackFunctor h.unop).map A₂).1 ≫
+                    (P.pullbackMap h.unop
+                        (P.pullback g.unop ((map f).of.toFunctor.obj x)) ≫
+                      P.pullbackMap g.unop ((map f).of.toFunctor.obj x)) ≫
+                    P.pullbackMap f.unop x := by
+                exact congrArg
+                  (fun z => A₁.1 ≫ ((P.pullbackFunctor h.unop).map A₂).1 ≫ z)
+                  h3inv_assoc
+              _ = A₁.1 ≫
+                    (P.pullbackMap h.unop
+                        ((map (f ≫ g)).of.toFunctor.obj x) ≫ A₂.1) ≫
+                      P.pullbackMap g.unop ((map f).of.toFunctor.obj x) ≫
+                    P.pullbackMap f.unop x := by
+                let a := A₁.1
+                let b := ((P.pullbackFunctor h.unop).map A₂).1
+                let c := P.pullbackMap h.unop
+                  (P.pullback g.unop ((map f).of.toFunctor.obj x))
+                let d := P.pullbackMap g.unop ((map f).of.toFunctor.obj x)
+                let e := P.pullbackMap f.unop x
+                let q := P.pullbackMap h.unop
+                  ((map (f ≫ g)).of.toFunctor.obj x)
+                have hb' : b ≫ c = q ≫ A₂.1 := by
+                  change b ≫ c = q ≫ A₂.1 at hb
+                  exact hb
+                change
+                  a ≫ (b ≫ ((c ≫ d) ≫ e)) =
+                    a ≫ ((q ≫ A₂.1) ≫ (d ≫ e))
+                have hbcde :
+                    b ≫ ((c ≫ d) ≫ e) = (b ≫ c) ≫ (d ≫ e) := by
+                  exact
+                    (congrArg (fun z => b ≫ z) (Category.assoc c d e)).trans
+                      ((Category.assoc b c (d ≫ e)).symm)
+                calc
+                  _ = a ≫ ((b ≫ c) ≫ (d ≫ e)) :=
+                    congrArg (fun z => a ≫ z) hbcde
+                  _ = _ := congrArg (fun z => a ≫ z ≫ d ≫ e) hb'
+              _ = A₁.1 ≫ P.pullbackMap h.unop
+                    ((map (f ≫ g)).of.toFunctor.obj x) ≫
+                    (A₂.1 ≫ P.pullbackMap g.unop
+                        (P.pullback f.unop x) ≫ P.pullbackMap f.unop x) := by
+                let a := A₁.1
+                let q := P.pullbackMap h.unop
+                  ((map (f ≫ g)).of.toFunctor.obj x)
+                let u := A₂.1
+                let d := P.pullbackMap g.unop ((map f).of.toFunctor.obj x)
+                let e := P.pullbackMap f.unop x
+                change
+                  (a ≫ (q ≫ u)) ≫ (d ≫ e) =
+                    a ≫ (q ≫ (u ≫ (d ≫ e)))
+                calc
+                  _ = a ≫ ((q ≫ u) ≫ (d ≫ e)) :=
+                    Category.assoc a (q ≫ u) (d ≫ e)
+                  _ = a ≫ (q ≫ (u ≫ (d ≫ e))) :=
+                    congrArg (fun z => a ≫ z)
+                      (Category.assoc q u (d ≫ e))
+              _ = A₁.1 ≫ P.pullbackMap h.unop
+                    ((map (f ≫ g)).of.toFunctor.obj x) ≫
+                    P.pullbackMap (g.unop ≫ f.unop) x := by rw [h2']
+              _ = _ := by
+                change Functor.Fiber.fiberInclusion.map A₁ ≫
+                    P.pullbackMap h.unop (P.pullback (f ≫ g).unop x) ≫
+                    P.pullbackMap (f ≫ g).unop x =
+                  Functor.Fiber.fiberInclusion.map R ≫
+                    P.pullbackMap ((h.unop ≫ g.unop) ≫ f.unop) x
+                calc
+                  _ = eqToHom hx ≫
+                        P.pullbackMap ((h.unop ≫ g.unop) ≫ f.unop) x := by
+                    simpa [A₁, hx, Category.assoc] using h1
+                  _ = _ := by simp [hx, R, e, Category.assoc]
+              )
       (map₂_left_unitor := by sorry)
       (map₂_right_unitor := by sorry)
   refine ⟨{ value := value, object_fibre := ?_, map_pullback := ?_ }⟩

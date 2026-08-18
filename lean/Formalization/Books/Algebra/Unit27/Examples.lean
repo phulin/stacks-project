@@ -1362,11 +1362,11 @@ theorem bivariate_prime_contains_univariate_irreducible
     k P hP hnprincipal
   have hpair : ∃ i j : Fin n, ¬Associated (f i) (f j) := by
     by_contra h
-    push_neg at h
+    push Not at h
     by_cases hn : n = 0
     · apply hnprincipal 0
       subst n
-      simpa [hPspan]
+      simp [hPspan]
     · have hnpos : 0 < n := Nat.pos_of_ne_zero hn
       let i₀ : Fin n := ⟨0, hnpos⟩
       have hspan : Ideal.span (Set.range f) =
@@ -1442,7 +1442,7 @@ theorem prime_ideal_bivariate_cases (k : Type*) [Field k]
         (P = bivariateUnivariateIdeal p ∨
             ∃ f : BivariatePolynomial k, BivariateQuotientIrreducible p f ∧
             P = bivariateTwoGeneratorIdeal (Polynomial.C p) f)) := by
-  letI : UniqueFactorizationMonoid (BivariatePolynomial k) := bivariate_isUFD k
+  have : UniqueFactorizationMonoid (BivariatePolynomial k) := bivariate_isUFD k
   by_cases hzero : P = ⊥
   · exact Or.inl hzero
   by_cases hprincipal : ∃ f : BivariatePolynomial k,
@@ -1471,12 +1471,12 @@ theorem prime_ideal_bivariate_cases (k : Type*) [Field k]
       rcases (Ideal.mem_span_singleton.mp hx) with ⟨c, hc⟩
       rw [hc]
       exact P.mul_mem_right c hpP
-    letI : P.IsPrime := hP
+    have : P.IsPrime := hP
     have hQ : (P.map qmk).IsPrime :=
       Ideal.isPrime_map_quotientMk_of_isPrime hI
     obtain ⟨hdom, hpid⟩ := bivariate_univariate_quotient_isPID k p hp
-    letI : IsDomain (BivariateQuotient p) := hdom
-    letI : IsPrincipalIdealRing (BivariateQuotient p) := hpid
+    have : IsDomain (BivariateQuotient p) := hdom
+    have : IsPrincipalIdealRing (BivariateQuotient p) := hpid
     rcases (Ideal.isPrime_iff_of_isPrincipalIdealRing_of_noZeroDivisors
       (P := P.map qmk)).mp hQ with
       hQbot | ⟨q, hq, hQq⟩

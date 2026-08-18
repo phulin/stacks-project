@@ -35,7 +35,27 @@ theorem isRetrocompact_iff_isCompact_iff_finite_union_basicOpen_iff_exists_fg_id
           U = ⋃ f ∈ s, (PrimeSpectrum.basicOpen f : Set (PrimeSpectrum R))) ∧
           ∃ I : Ideal R, I.FG ∧
             (PrimeSpectrum.zeroLocus (I : Set R))ᶜ = U := by
-  sorry
+  constructor
+  · intro h
+    have hcomp : IsCompact U :=
+      (QuasiSeparatedSpace.isRetrocompact_iff_isCompact hU).mp h
+    have hfin := PrimeSpectrum.isCompact_isOpen_iff.mp ⟨hcomp, hU⟩
+    have hideal := PrimeSpectrum.isCompact_isOpen_iff_ideal.mp ⟨hcomp, hU⟩
+    refine ⟨hcomp, ?_, hideal⟩
+    obtain ⟨s, hs⟩ := hfin
+    refine ⟨s, ?_⟩
+    rw [← hs]
+    ext p
+    simp only [Set.mem_compl_iff, PrimeSpectrum.mem_zeroLocus, SetLike.mem_coe,
+      Set.subset_def, Set.mem_iUnion, Finset.mem_coe, PrimeSpectrum.mem_basicOpen]
+    constructor
+    · intro hp
+      push_neg at hp
+      exact ⟨hp.choose, hp.choose_spec.1, hp.choose_spec.2⟩
+    · rintro ⟨i, hi, hpi⟩ hsub
+      exact hpi (hsub i hi)
+  · rintro ⟨hcomp, -, -⟩
+    exact (QuasiSeparatedSpace.isRetrocompact_iff_isCompact hU).mpr hcomp
 
 /-
 Mathlib's `IsSpectralMap` is the canonical Lean interface for a continuous
@@ -48,7 +68,20 @@ theorem affine_map_quasiCompact_and_constructible_preimage
     IsSpectralMap (PrimeSpectrum.comap φ) ∧
       ∀ E : Set (PrimeSpectrum R), IsConstructible E →
         IsConstructible (PrimeSpectrum.comap φ ⁻¹' E) := by
-  sorry
+  classical
+  have hφ : IsSpectralMap (PrimeSpectrum.comap φ) := by
+    refine ⟨PrimeSpectrum.continuous_comap φ, ?_⟩
+    intro U hUopen hUcomp
+    obtain ⟨s, hs⟩ := PrimeSpectrum.isCompact_isOpen_iff.mp ⟨hUcomp, hUopen⟩
+    rw [← hs, Set.preimage_compl, PrimeSpectrum.preimage_comap_zeroLocus]
+    apply (PrimeSpectrum.isCompact_isOpen_iff.mpr ⟨s.image φ, ?_⟩).1
+    simp only [Finset.coe_image, Set.image_image]
+  refine ⟨hφ, ?_⟩
+  intro E hE
+  exact hE.preimage hφ.continuous fun U hUopen hUretro ↦ by
+      exact (QuasiSeparatedSpace.isRetrocompact_iff_isCompact
+        (hUopen.preimage hφ.continuous)).mpr
+        (hφ.isCompact_preimage_of_isOpen hUopen hUretro.isCompact)
 
 /-!
 The source's finite union of sets `D(f) ∩ V(g₁, ..., gₘ)` is exactly
@@ -70,7 +103,39 @@ theorem exists_finitePresentation_ringHom_of_isConstructible
     ∃ (S : Type u) (_ : CommRing S) (φ : R →+* S),
       RingHom.FinitePresentation φ ∧
         Set.range (PrimeSpectrum.comap φ) = T := by
-  sorry
+  obtain ⟨s, rfl⟩ := PrimeSpectrum.exists_constructibleSetData_iff.mpr hT
+  let S := Π i : s,
+    Localization.Away (Ideal.Quotient.mk (Ideal.span (Set.range i.1.g)) i.1.f)
+  let φ : R →+* S := algebraMap R S
+  refine ⟨S, inferInstance, φ, ?_, ?_⟩
+  · letI : ∀ i : s,
+      Algebra.FinitePresentation R
+        (Localization.Away (Ideal.Quotient.mk (Ideal.span (Set.range i.1.g)) i.1.f)) := by
+      intro i
+      letI : Algebra.FinitePresentation R
+          (R ⧸ Ideal.span (Set.range i.1.g)) :=
+        Algebra.FinitePresentation.quotient
+          ⟨(Set.finite_range i.1.g).toFinset, by simp⟩
+      infer_instance
+    change Algebra.FinitePresentation R S
+    infer_instance
+  · rw [← PrimeSpectrum.iUnion_range_comap_comp_evalRingHom,
+      PrimeSpectrum.ConstructibleSetData.toSet]
+    simp_rw [← Finset.mem_coe, Set.biUnion_eq_iUnion]
+    congr! with _ _ C
+    let I := Ideal.span (Set.range C.1.g)
+    let f := Ideal.Quotient.mk I C.1.f
+    trans PrimeSpectrum.comap (Ideal.Quotient.mk I) ''
+        (Set.range (PrimeSpectrum.comap (algebraMap _ (Localization.Away f))))
+    · rw [← Set.range_comp]
+      rfl
+    · rw [PrimeSpectrum.localization_away_comap_range _ f, ← PrimeSpectrum.comap_basicOpen,
+        TopologicalSpace.Opens.coe_comap, ContinuousMap.coe_mk,
+        Set.image_preimage_eq_inter_range,
+        PrimeSpectrum.range_comap_of_surjective _ _ Ideal.Quotient.mk_surjective,
+        PrimeSpectrum.BasicConstructibleSetData.toSet, Set.sdiff_eq_compl_inter,
+        PrimeSpectrum.basicOpen_eq_zeroLocus_compl, Ideal.mk_ker,
+        PrimeSpectrum.zeroLocus_span]
 
 theorem isConstructible_image_of_localization
     {R : Type u} [CommRing R] (f : R)

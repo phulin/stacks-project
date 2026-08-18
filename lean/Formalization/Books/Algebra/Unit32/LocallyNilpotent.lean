@@ -282,7 +282,9 @@ theorem idempotent_sub_odd_pow_eq
     | succ n ih =>
         calc
           (e₁ - e₂) ^ (2 * (n + 1) + 1) =
-              (e₁ - e₂) ^ ((2 * n + 1) + 2) := by congr 1 <;> omega
+              (e₁ - e₂) ^ ((2 * n + 1) + 2) := by
+                have h : 2 * (n + 1) + 1 = (2 * n + 1) + 2 := by omega
+                rw [h]
           _ = (e₁ - e₂) ^ (2 * n + 1) * (e₁ - e₂) ^ 2 := by rw [pow_add]
           _ = (e₁ - e₂) * (e₁ - e₂) ^ 2 := by rw [ih]
           _ = (e₁ - e₂) ^ 3 := by ring

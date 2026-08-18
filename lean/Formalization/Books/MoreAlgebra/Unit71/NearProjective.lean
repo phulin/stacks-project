@@ -1,7 +1,5 @@
 import Formalization.Books.Algebra.Unit71.ExtGroups
-import Mathlib.Algebra.Category.ModuleCat.Projective
 import Mathlib.Algebra.Homology.ShortComplex.ShortExact
-import Mathlib.Algebra.Module.FinitePresentation
 import Mathlib.Algebra.Module.Projective
 import Mathlib.LinearAlgebra.Dual.Defs
 import Mathlib.RingTheory.Ideal.Maps

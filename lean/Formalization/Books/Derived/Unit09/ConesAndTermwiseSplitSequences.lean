@@ -377,6 +377,8 @@ theorem same_up_to_isomorphisms_of_map
 
 /-! ## Simultaneous termwise split replacements -/
 
+/- The parameter of `ComposableArrows` counts arrows, whereas the source's
+   sequence lemma counts its objects. -/
 def adjacentMap
     {C : Type u} [Category.{v} C] [AdditiveCategory C]
     {n : ℕ} (F : ComposableArrows (BookComplex C) n) (i : Fin n) :
@@ -388,17 +390,17 @@ def adjacentMap
 
 theorem sequence_maps_split
     {C : Type u} [Category.{v} C] [AdditiveCategory C]
-    {n : ℕ} (A : ComposableArrows (BookComplex C) n) :
-    ∃ (B : ComposableArrows (BookComplex C) n) (φ : B ⟶ A),
-      (∀ i : Fin n, termwiseSplitInjection (adjacentMap B i)) ∧
-      (∀ i : Fin (n + 1),
+    {n : ℕ} (hn : 0 < n) (A : ComposableArrows (BookComplex C) (n - 1)) :
+    ∃ (B : ComposableArrows (BookComplex C) (n - 1)) (φ : B ⟶ A),
+      (∀ i : Fin (n - 1), termwiseSplitInjection (adjacentMap B i)) ∧
+      (∀ i : Fin ((n - 1) + 1),
         HomologicalComplex.homotopyEquivalences C (ComplexShape.up ℤ) (φ.app i)) ∧
-      ((∀ i : Fin (n + 1), IsBoundedBelow (A.obj i)) →
-        ∀ i : Fin (n + 1), IsBoundedBelow (B.obj i)) ∧
-      ((∀ i : Fin (n + 1), IsBoundedAbove (A.obj i)) →
-        ∀ i : Fin (n + 1), IsBoundedAbove (B.obj i)) ∧
-      ((∀ i : Fin (n + 1), IsBounded (A.obj i)) →
-        ∀ i : Fin (n + 1), IsBounded (B.obj i)) := by
+      ((∀ i : Fin ((n - 1) + 1), IsBoundedBelow (A.obj i)) →
+        ∀ i : Fin ((n - 1) + 1), IsBoundedBelow (B.obj i)) ∧
+      ((∀ i : Fin ((n - 1) + 1), IsBoundedAbove (A.obj i)) →
+        ∀ i : Fin ((n - 1) + 1), IsBoundedAbove (B.obj i)) ∧
+      ((∀ i : Fin ((n - 1) + 1), IsBounded (A.obj i)) →
+        ∀ i : Fin ((n - 1) + 1), IsBounded (B.obj i)) := by
   sorry
 
 /-! ## Rotation -/

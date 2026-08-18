@@ -37,6 +37,14 @@ abbrev PrimeIdealChain (R : Type u) [CommRing R] := LTSeries (PrimeSpectrum R)
 /- `Ideal.height` is the canonical height of a prime ideal, and agrees with
    the order height of the corresponding point of the prime spectrum. -/
 
+theorem ringKrullDim_eq_iSup_prime_height
+    {R : Type u} [CommRing R] :
+    ringKrullDim R =
+      ⨆ p : PrimeSpectrum R, (p.asIdeal.height : WithBot ℕ∞) := by
+  change Order.krullDim (PrimeSpectrum R) = _
+  simpa only [PrimeSpectrum.height_eq_orderHeight] using
+    (Order.krullDim_eq_iSup_height (α := PrimeSpectrum R))
+
 theorem ringKrullDim_le_iff_prime_height_le
     {R : Type u} [CommRing R] (n : WithBot ℕ∞) :
     ringKrullDim R ≤ n ↔
@@ -48,6 +56,19 @@ theorem ringKrullDim_le_iff_maximal_height_le
     ringKrullDim R ≤ n ↔
       ∀ ⦃m : Ideal R⦄, m.IsMaximal → m.height ≤ n :=
   ringKrullDim_le_iff_isMaximal_height_le n
+
+theorem ringKrullDim_eq_iSup_maximal_height
+    {R : Type u} [CommRing R] :
+    ringKrullDim R =
+      ⨆ m : MaximalSpectrum R, (m.asIdeal.height : WithBot ℕ∞) := by
+  apply le_antisymm
+  · rw [ringKrullDim_le_iff_maximal_height_le]
+    intro m hm
+    exact le_iSup (fun q : MaximalSpectrum R =>
+      (q.asIdeal.height : WithBot ℕ∞)) ⟨m, hm⟩
+  · refine iSup_le fun m => ?_
+    exact (ringKrullDim_le_iff_prime_height_le (R := R) (ringKrullDim R)).mp
+      le_rfl m.isMaximal.isPrime
 
 /- The zero ring is handled separately by Mathlib: its empty spectrum has
    dimension `⊥`.  The source's dimension-zero equivalences therefore use the

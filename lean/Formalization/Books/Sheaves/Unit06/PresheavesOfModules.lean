@@ -181,11 +181,11 @@ Its underlying module is the canonical `O₂(U) ⊗[O₁(U)] G(U)` extension
 of scalars supplied by `ModuleCat.extendScalars`. -/
 noncomputable abbrev sectionwiseExtensionOfScalars
     {X : TopCat.{w}} {O₁ O₂ : CommRingPresheaf X}
-    (α : O₁ ⟶ O₂)
+  (α : O₁ ⟶ O₂)
     (G : PMod (O₁ ⋙ (forget₂ CommRingCat RingCat))) (U : Opens X) :
     ModuleCat (O₂.obj (op U)) :=
   (ModuleCat.extendScalars (α.app (op U)).hom).obj
-    (ModuleCat.of (O₁.obj (op U)) (G.obj (op U)))
+    (G.obj (op U))
 
 /-- The tensor-product presheaf has the displayed sectionwise extension of
 scalars.  This is the pointwise comparison for Mathlib's canonical

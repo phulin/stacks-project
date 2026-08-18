@@ -96,6 +96,16 @@ theorem hasFinitePresentationOn_iff_hasExactFinitePresentationOn
 generators and finite relations in `SheafOfModules.Presentation.IsFinite`;
 the local finite-cokernel interface above packages both clauses together. -/
 
+/-- Source-facing form of the two clauses following the definition: locally,
+the sheaf has finitely many generators and the kernel of their presentation
+map has finitely many generators as well. -/
+theorem finitePresentation_hasLocalFiniteGeneratorsAndRelations
+    {X : RingedSpace.{v}} {F : Mod X.structureSheaf}
+    (hF : IsFinitePresentation F) :
+    ∀ x : X, ∃ U : Opens X.carrier, x ∈ U ∧
+      HasFiniteGeneratorsAndRelationsOn F U := by
+  sorry
+
 /-! ## Lemma `lemma-finite-presentation-quasi-coherent` -/
 
 /-- Every module of finite presentation is quasi-coherent. -/
@@ -134,6 +144,12 @@ theorem kernel_surjection_finiteType_finiteType
     (hF : IsFinitePresentation F) :
     finiteType (kernel θ) := by
   sorry
+
+/- The displayed map in the source proof,
+`(β ∘ χ, 1 - β ∘ α)`, is the local biproduct map which factors through the
+kernel of the given finite-free surjection.  It is an intermediate witness
+for the preceding finite-type conclusion rather than an additional global
+interface. -/
 
 /-! ## Lemma `lemma-pullback-finite-presentation` -/
 

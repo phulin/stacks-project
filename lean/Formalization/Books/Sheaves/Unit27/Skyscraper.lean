@@ -1677,6 +1677,258 @@ noncomputable abbrev algebraicStalkSkyscraperHomEquiv
       (F ⟶ algebraicSkyscraperSheaf x A) :=
   (algebraicStalkSkyscraperAdjunction x).homEquiv F A
 
+private noncomputable def moduleHomOfStalkLinear
+    {X : TopCat.{v}} (O : RingSheaf X) (x : X)
+    {F D : Mod O}
+    {A : ModuleCat.{v} (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x)}
+    (eD0 : D.val.presheaf ≅
+      (abelianSkyscraperSheaf x (AddCommGrpCat.of (↑A))).presheaf)
+    (h : F.val.presheaf ⟶ D.val.presheaf)
+    (φ : (moduleStalkFunctor O x).obj F ⟶
+      (moduleStalkFunctor O x).obj D)
+    (hφ : (TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map h =
+      (forget₂ (ModuleCat (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x))
+        AddCommGrpCat).map φ) :
+    F ⟶ D := by
+  letI : ∀ U : Opens X, Decidable (x ∈ U) := fun _ => Classical.dec _
+  let eD : D.val.presheaf ≅ skyscraperPresheaf x (AddCommGrpCat.of (↑A)) := by
+    simpa [abelianSkyscraperSheaf, skyscraperSheaf] using eD0
+  have germ_injective (U : Opens X) (hxU : x ∈ U) :
+      Function.Injective (ConcreteCategory.hom
+        (TopCat.Presheaf.germ D.val.presheaf U x hxU)) := by
+    intro s t hst
+    let eU :
+        (skyscraperPresheaf x (AddCommGrpCat.of (↑A))).obj
+            (Opposite.op U) ≅ AddCommGrpCat.of (↑A) :=
+      { hom := eqToHom (by simp [skyscraperPresheaf_obj, hxU])
+        inv := eqToHom (by simp [skyscraperPresheaf_obj, hxU])
+        hom_inv_id := by simp
+        inv_hom_id := by simp }
+    have hst' :
+        (ConcreteCategory.hom
+            (TopCat.Presheaf.germ
+              (skyscraperPresheaf x (AddCommGrpCat.of (↑A))) U x hxU))
+            ((ConcreteCategory.hom (eD.hom.app (Opposite.op U))) s) =
+          (ConcreteCategory.hom
+            (TopCat.Presheaf.germ
+              (skyscraperPresheaf x (AddCommGrpCat.of (↑A))) U x hxU))
+            ((ConcreteCategory.hom (eD.hom.app (Opposite.op U))) t) := by
+      calc
+        _ = (ConcreteCategory.hom
+              ((TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map eD.hom))
+              ((ConcreteCategory.hom
+                (TopCat.Presheaf.germ D.val.presheaf U x hxU)) s) := by
+          exact (TopCat.Presheaf.stalkFunctor_map_germ_apply U x hxU
+            eD.hom s).symm
+        _ = (ConcreteCategory.hom
+              ((TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map eD.hom))
+              ((ConcreteCategory.hom
+                (TopCat.Presheaf.germ D.val.presheaf U x hxU)) t) := by
+          exact congrArg (fun z =>
+            (ConcreteCategory.hom
+              ((TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map eD.hom)) z) hst
+        _ = _ := by
+          exact TopCat.Presheaf.stalkFunctor_map_germ_apply U x hxU eD.hom t
+    have hcU :
+        TopCat.Presheaf.germ
+            (skyscraperPresheaf x (AddCommGrpCat.of (↑A))) U x hxU ≫
+          (skyscraperPresheafStalkOfSpecializes x
+            (AddCommGrpCat.of (↑A)) (specializes_refl x)).hom = eU.hom := by
+      change
+        TopCat.Presheaf.germ
+            (skyscraperPresheaf x (AddCommGrpCat.of (↑A))) U x hxU ≫
+          (skyscraperPresheafStalkOfSpecializes x
+            (AddCommGrpCat.of (↑A)) (specializes_refl x)).hom =
+          eqToHom (if_pos hxU)
+      have hh :=
+        (germ_skyscraperPresheafStalkOfSpecializes_hom
+          (p₀ := x) (A := AddCommGrpCat.of (↑A))
+          (specializes_refl x) U hxU)
+      simpa [eU, skyscraperPresheaf_obj, hxU] using hh
+    have hst'' := congrArg (fun z => (ConcreteCategory.hom
+      (skyscraperPresheafStalkOfSpecializes x
+        (AddCommGrpCat.of (↑A)) (specializes_refl x)).hom) z) hst'
+    have hst''' :
+        (ConcreteCategory.hom eU.hom)
+            ((ConcreteCategory.hom (eD.hom.app (Opposite.op U))) s) =
+          (ConcreteCategory.hom eU.hom)
+            ((ConcreteCategory.hom (eD.hom.app (Opposite.op U))) t) := by
+      calc
+        _ = (ConcreteCategory.hom
+              (skyscraperPresheafStalkOfSpecializes x
+                (AddCommGrpCat.of (↑A)) (specializes_refl x)).hom)
+              ((ConcreteCategory.hom
+                (TopCat.Presheaf.germ
+                  (skyscraperPresheaf x (AddCommGrpCat.of (↑A)))
+                  U x hxU))
+                ((ConcreteCategory.hom (eD.hom.app (Opposite.op U))) s)) := by
+          change
+            (ConcreteCategory.hom ((eD.hom.app (Opposite.op U)) ≫ eU.hom)) s =
+              (ConcreteCategory.hom
+                ((eD.hom.app (Opposite.op U)) ≫
+                  TopCat.Presheaf.germ
+                    (skyscraperPresheaf x (AddCommGrpCat.of (↑A))) U x hxU ≫
+                    (skyscraperPresheafStalkOfSpecializes x
+                      (AddCommGrpCat.of (↑A)) (specializes_refl x)).hom)) s
+          have hhcomp := congrArg
+            (fun z => (eD.hom.app (Opposite.op U)) ≫ z) hcU
+          simpa only [ConcreteCategory.comp_apply] using
+            congrArg (fun z => (ConcreteCategory.hom z) s) hhcomp.symm
+        _ = _ := by
+          change
+            (ConcreteCategory.hom
+              (skyscraperPresheafStalkOfSpecializes x
+                (AddCommGrpCat.of (↑A)) (specializes_refl x)).hom)
+                ((ConcreteCategory.hom
+                  (TopCat.Presheaf.germ
+                    (skyscraperPresheaf x (AddCommGrpCat.of (↑A)))
+                    U x hxU))
+                  ((ConcreteCategory.hom (eD.hom.app (Opposite.op U))) s)) =
+              (ConcreteCategory.hom
+                (skyscraperPresheafStalkOfSpecializes x
+                  (AddCommGrpCat.of (↑A)) (specializes_refl x)).hom)
+                ((ConcreteCategory.hom
+                  (TopCat.Presheaf.germ
+                    (skyscraperPresheaf x (AddCommGrpCat.of (↑A)))
+                    U x hxU))
+                  ((ConcreteCategory.hom (eD.hom.app (Opposite.op U))) t))
+          exact hst''
+        _ = (ConcreteCategory.hom eU.hom)
+                ((ConcreteCategory.hom (eD.hom.app (Opposite.op U))) t) := by
+          change
+            (ConcreteCategory.hom
+              ((eD.hom.app (Opposite.op U)) ≫
+                TopCat.Presheaf.germ
+                  (skyscraperPresheaf x (AddCommGrpCat.of (↑A))) U x hxU ≫
+                (skyscraperPresheafStalkOfSpecializes x
+                  (AddCommGrpCat.of (↑A)) (specializes_refl x)).hom)) t =
+              (ConcreteCategory.hom eU.hom)
+                ((ConcreteCategory.hom (eD.hom.app (Opposite.op U))) t)
+          have hhcomp := congrArg
+            (fun z => (eD.hom.app (Opposite.op U)) ≫ z) hcU
+          simpa only [ConcreteCategory.comp_apply] using
+            congrArg (fun z => (ConcreteCategory.hom z) t) hhcomp
+    have hst'''' :
+        (ConcreteCategory.hom (eD.hom.app (Opposite.op U))) s =
+          (ConcreteCategory.hom (eD.hom.app (Opposite.op U))) t := by
+      have hz := congrArg (fun z => (ConcreteCategory.hom eU.inv) z) hst'''
+      change
+        (ConcreteCategory.hom (eU.hom ≫ eU.inv))
+            ((ConcreteCategory.hom (eD.hom.app (Opposite.op U))) s) =
+        (ConcreteCategory.hom (eU.hom ≫ eU.inv))
+            ((ConcreteCategory.hom (eD.hom.app (Opposite.op U))) t) at hz
+      rw [Iso.hom_inv_id] at hz
+      exact hz
+    have hz := congrArg
+      (fun z => (ConcreteCategory.hom ((eD.app (Opposite.op U)).inv)) z)
+      hst''''
+    change
+      (ConcreteCategory.hom
+        ((eD.hom.app (Opposite.op U)) ≫ eD.inv.app (Opposite.op U))) s =
+        (ConcreteCategory.hom
+          ((eD.hom.app (Opposite.op U)) ≫ eD.inv.app (Opposite.op U))) t at hz
+    rw [eD.hom_inv_id_app (Opposite.op U)] at hz
+    exact hz
+  refine ⟨PresheafOfModules.homMk h ?_⟩
+  intro U r m
+  by_cases hxU : x ∈ U.unop
+  · apply germ_injective U.unop hxU
+    let s : ↑(TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x) :=
+      (ConcreteCategory.hom
+        (TopCat.Presheaf.germ O.obj U.unop x hxU)) r
+    let ma : ↑(TopCat.Presheaf.stalk (C := AddCommGrpCat.{v})
+        F.val.presheaf x) :=
+      (ConcreteCategory.hom
+        (TopCat.Presheaf.germ F.val.presheaf U.unop x hxU)) m
+    have h₁ :
+        (ConcreteCategory.hom
+          (TopCat.Presheaf.germ D.val.presheaf U.unop x hxU))
+            (h.app U (r • m)) =
+          (ConcreteCategory.hom
+            ((TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map h))
+            (TopCat.Presheaf.germ F.val.presheaf U.unop x hxU (r • m)) := by
+      symm
+      exact TopCat.Presheaf.stalkFunctor_map_germ_apply U.unop x hxU h
+        (r • m)
+    have h₂ :
+        (ConcreteCategory.hom
+            ((TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map h))
+            (TopCat.Presheaf.germ F.val.presheaf U.unop x hxU (r • m)) =
+          (ConcreteCategory.hom φ) (s • ma) := by
+      change
+        (ConcreteCategory.hom
+            ((TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map h))
+            (TopCat.Presheaf.germ F.val.presheaf U.unop x hxU (r • m)) =
+          (ConcreteCategory.hom φ) (s • ma)
+      rw [hφ, PresheafOfModules.germ_ringCat_smul]
+      rfl
+    have h₃ :
+        (ConcreteCategory.hom φ) (s • ma) =
+          (ConcreteCategory.hom
+            (((moduleStalkFunctor O x).obj D).smul s))
+            ((ConcreteCategory.hom φ) ma) := by
+      change φ.hom (s • ma) = s • φ.hom ma
+      exact φ.hom.map_smul s ma
+    have hφhom : ∀ z,
+        (ConcreteCategory.hom φ) z =
+          (ConcreteCategory.hom
+            ((forget₂ (ModuleCat (TopCat.Presheaf.stalk
+              (C := RingCat.{v}) O.obj x)) AddCommGrpCat).map φ)) z := by
+      intro z
+      rfl
+    have h₄ :
+        (ConcreteCategory.hom
+            (((moduleStalkFunctor O x).obj D).smul s))
+            ((ConcreteCategory.hom φ) ma) =
+          (ConcreteCategory.hom
+            (((moduleStalkFunctor O x).obj D).smul s))
+            ((ConcreteCategory.hom
+              (TopCat.Presheaf.germ D.val.presheaf U.unop x hxU))
+              (h.app U m)) := by
+      have hh := TopCat.Presheaf.stalkFunctor_map_germ_apply U.unop x hxU h m
+      rw [hφ] at hh
+      have hh' := congrArg
+        (fun z => (ConcreteCategory.hom
+          (((moduleStalkFunctor O x).obj D).smul s)) z) hh
+      change
+        (ConcreteCategory.hom
+          (((moduleStalkFunctor O x).obj D).smul s))
+            ((ConcreteCategory.hom φ) ma) =
+          (ConcreteCategory.hom
+            (((moduleStalkFunctor O x).obj D).smul s))
+            ((ConcreteCategory.hom
+              (TopCat.Presheaf.germ D.val.presheaf U.unop x hxU))
+              (h.app U m)) at hh'
+      simpa [ma] using hh'
+    have h₅ :
+          (ConcreteCategory.hom
+            (((moduleStalkFunctor O x).obj D).smul s))
+            ((ConcreteCategory.hom
+              (TopCat.Presheaf.germ D.val.presheaf U.unop x hxU))
+              (h.app U m)) =
+          (ConcreteCategory.hom
+            (TopCat.Presheaf.germ D.val.presheaf U.unop x hxU))
+            (r • h.app U m) := by
+      symm
+      let m0 : F.val.presheaf.obj U := m
+      have hsmul (z : ↑((moduleStalkFunctor O x).obj D)) :
+          (ConcreteCategory.hom
+            (((moduleStalkFunctor O x).obj D).smul s)) z = s • z := by
+        rfl
+      have hs :=
+        (PresheafOfModules.germ_ringCat_smul D.val x U.unop hxU r
+          (h.app U m0))
+      exact hs.trans (hsmul _).symm
+    exact h₁.trans (h₂.trans (h₃.trans (h₄.trans h₅)))
+  · let eTop : D.val.presheaf.obj U ≅ ⊤_ AddCommGrpCat :=
+      eD.app U ≪≫ eqToIso (by simp [skyscraperPresheaf_obj, hxU])
+    letI : Subsingleton (↑(D.val.presheaf.obj U)) := by
+      exact AddCommGrpCat.subsingleton_of_isZero
+        ((isZero_zero AddCommGrpCat).of_iso
+          (eTop ≪≫ (HasZeroObject.zeroIsoTerminal :
+            (0 : AddCommGrpCat) ≅ ⊤_ AddCommGrpCat).symm))
+    exact Subsingleton.elim _ _
+
 /-- Existence of the module stalk/skyscraper adjunction. -/
 theorem exists_moduleStalkSkyscraperAdjunction {X : TopCat.{v}}
     (O : RingSheaf X) (x : X) :

@@ -1,12 +1,18 @@
 import Formalization.Books.Algebra.Unit03.BasicNotions
 import Formalization.Books.Algebra.Unit10.InternalHom
+import Formalization.Books.Algebra.Unit32.LocallyNilpotent
 import Formalization.Books.Algebra.Unit71.ExtGroups
+import Formalization.Books.Algebra.Unit20.Nakayama
 import Mathlib.Algebra.Module.FinitePresentation
 import Mathlib.Algebra.Module.Projective
 import Mathlib.Algebra.Module.Torsion.Basic
 import Mathlib.CategoryTheory.Abelian.Projective.Dimension
+import Mathlib.LinearAlgebra.Quotient.Basic
 import Mathlib.RingTheory.FiniteLength
 import Mathlib.RingTheory.Flat.Basic
+import Mathlib.RingTheory.Flat.Equalizer
+import Mathlib.LinearAlgebra.TensorProduct.Quotient
+import Mathlib.RingTheory.Ideal.Finsupp
 import Mathlib.RingTheory.LocalProperties.Projective
 import Mathlib.RingTheory.LocalRing.Module
 import Mathlib.RingTheory.LocalRing.ResidueField.Ideal
@@ -352,7 +358,259 @@ theorem exists_projective_lift_of_isNilpotent
     : ∃ P : ModuleCat.{u} R,
         Module.Projective R P ∧
           Nonempty ((P ⧸ (I • (⊤ : Submodule R P))) ≃ₗ[R ⧸ I] Pbar) := by
-  sorry
+  classical
+  let A := R ⧸ I
+  let F : Type u := (Pbar : Type u) →₀ R
+  let Fbar : Type u := (Pbar : Type u) →₀ A
+  let q : F →ₗ[R] Fbar :=
+    Finsupp.mapRange.linearMap (I.mkQ : R →ₗ[R] A)
+  have hq : Function.Surjective q := by
+    intro y
+    obtain ⟨x, hx⟩ :=
+      (Finsupp.mapRange_surjective (α := (Pbar : Type u))
+        (I.mkQ : R → R ⧸ I) (by simp) I.mkQ_surjective) y
+    exact ⟨x, by simpa [q, F, Fbar, A] using hx⟩
+  have hkerq : LinearMap.ker q = I • (⊤ : Submodule R F) := by
+    change LinearMap.ker
+        (Finsupp.mapRange.linearMap (α := (Pbar : Type u))
+          (I.mkQ : R →ₗ[R] A)) = I • (⊤ : Submodule R F)
+    rw [Finsupp.ker_mapRange]
+    rw [show LinearMap.ker (I.mkQ : R →ₗ[R] A) = I from Submodule.ker_mkQ I]
+    calc
+      Finsupp.submodule (fun _ : (Pbar : Type u) => I) =
+          Finsupp.submodule (fun _ => I • (⊤ : Submodule R R)) := by simp
+      _ = I • Finsupp.submodule (fun _ : (Pbar : Type u) => (⊤ : Submodule R R)) :=
+        Finsupp.submodule_smul R (Pbar : Type u)
+          (fun _ : (Pbar : Type u) => (⊤ : Submodule R R)) I
+      _ = I • (⊤ : Submodule R F) := by rw [Finsupp.submodule_top]
+  let sbar : Fbar →ₗ[A] Pbar := Finsupp.linearCombination A id
+  have hsbar : Function.Surjective sbar := by
+    simpa [sbar] using (Finsupp.linearCombination_id_surjective (R := A) Pbar)
+  obtain ⟨ibar, hibar⟩ :=
+    (Module.Projective.iff_split_of_projective sbar hsbar).mp hPbar
+  let pbar : Module.End A Fbar := ibar.comp sbar
+  have hpbar : pbar.comp pbar = pbar := by
+    apply LinearMap.ext
+    intro x
+    change ibar (sbar (ibar (sbar x))) = ibar (sbar x)
+    have hx : sbar (ibar (sbar x)) = sbar x := by
+      simpa using congrArg (fun f : Pbar →ₗ[A] Pbar => f (sbar x)) hibar
+    rw [hx]
+  let pbarR : Fbar →ₗ[R] Fbar := pbar.restrictScalars R
+  obtain ⟨p, hp⟩ := Module.projective_lifting_property q (pbarR.comp q) hq
+  let d : Module.End R F := p * p - p
+  have hpbarR : pbarR.comp pbarR = pbarR := by
+    simpa [pbarR] using
+      congrArg (fun f : Module.End A Fbar => f.restrictScalars R) hpbar
+  have hdq : q.comp d = 0 := by
+    apply LinearMap.ext
+    intro x
+    dsimp [d]
+    change q (p (p x) - p x) = 0
+    rw [map_sub]
+    have hx : q (p x) = pbarR (q x) := by
+      simpa using congrArg (fun f : F →ₗ[R] Fbar => f x) hp
+    have hpx : q (p (p x)) = pbarR (q (p x)) := by
+      simpa using congrArg (fun f : F →ₗ[R] Fbar => f (p x)) hp
+    rw [hpx, hx]
+    apply sub_eq_zero.mpr
+    simpa [LinearMap.comp_apply] using congrArg (fun z => z (q x)) hpbarR
+  have hdmem (x : F) : d x ∈ I • (⊤ : Submodule R F) := by
+    rw [← hkerq, LinearMap.mem_ker]
+    exact congrArg (fun f => f x) hdq
+  have hdmap (k : ℕ) {x : F} (hx : x ∈ I ^ k • (⊤ : Submodule R F)) :
+      d x ∈ I ^ (k + 1) • (⊤ : Submodule R F) := by
+    refine Submodule.smul_induction_on hx (fun r hr y _ => ?_) (fun x y hx hy => ?_)
+    · rw [map_smul]
+      simpa [pow_succ, Submodule.mul_smul] using
+        (Submodule.smul_mem_smul hr (hdmem y))
+    · rw [map_add]
+      exact Submodule.add_mem _ hx hy
+  have hdnil : IsNilpotent d := by
+    obtain ⟨n, hn⟩ := hI
+    refine ⟨n, ?_⟩
+    apply LinearMap.ext
+    intro x
+    have hpow : ∀ k : ℕ, (d ^ k) x ∈ I ^ k • (⊤ : Submodule R F) := by
+      intro k
+      induction k with
+      | zero => simp
+      | succ k ih =>
+          simpa [pow_succ', Module.End.mul_eq_comp] using hdmap k ih
+    have := hpow n
+    rw [hn] at this
+    simpa using this
+  obtain ⟨e, he, s, a, hes⟩ :=
+    Formalization.Books.Algebra.Unit32.exists_idempotent_lift_polynomial p hdnil
+  have heqred : q.comp e = pbarR.comp q := by
+    apply LinearMap.ext
+    intro x
+    have hxe : e = p + d *
+        (∑ ij ∈ s, (a ij : Module.End R F) * p ^ ij.1 * d ^ ij.2) := by
+      simpa [d, pow_two, Module.End.mul_eq_comp] using hes
+    rw [hxe]
+    change q (p x + d
+      ((∑ ij ∈ s, (a ij : Module.End R F) * p ^ ij.1 * d ^ ij.2) x)) = _
+    rw [map_add]
+    have hdx : q (d
+        ((∑ ij ∈ s, (a ij : Module.End R F) * p ^ ij.1 * d ^ ij.2) x)) = 0 := by
+      simpa using congrArg (fun f => f
+        ((∑ ij ∈ s, (a ij : Module.End R F) * p ^ ij.1 * d ^ ij.2) x)) hdq
+    rw [hdx]
+    simpa using congrArg (fun f => f x) hp
+  let Psub : Submodule R F := LinearMap.range e
+  letI : AddCommGroup (Psub : Type u) := inferInstance
+  letI : Module R (Psub : Type u) := inferInstance
+  let P : ModuleCat.{u} R := ModuleCat.of R Psub
+  let inc : Psub →ₗ[R] F := Psub.subtype
+  let ret : F →ₗ[R] Psub := e.codRestrict Psub
+    (fun x => LinearMap.mem_range_self e x)
+  have hret : ret.comp inc = LinearMap.id := by
+    apply LinearMap.ext
+    intro x
+    apply Subtype.ext
+    have he' : e.comp e = e := by
+      change e * e = e
+      exact he
+    obtain ⟨y, hy⟩ := x.property
+    change e (x : F) = (x : F)
+    calc
+      e (x : F) = e (e y) := by rw [hy]
+      _ = e y := by simpa [LinearMap.comp_apply] using congrArg (fun f => f y) he'
+      _ = (x : F) := hy
+  have hproj : Module.Projective R Psub :=
+    Module.Projective.of_split inc ret hret
+  have hqPmem : I • (⊤ : Submodule R Psub) ≤
+      LinearMap.ker (q.comp inc) := by
+    intro x hx
+    refine Submodule.smul_induction_on hx (fun r hr y _ => ?_) (fun x y hx hy => ?_)
+    · change q (inc (r • y)) = 0
+      rw [map_smul, map_smul]
+      have hr0 : I.mkQ r = 0 := (Submodule.Quotient.mk_eq_zero I).2 hr
+      have hr0' : Ideal.Quotient.mk I r = 0 :=
+        Ideal.Quotient.eq_zero_iff_mem.mpr hr
+      rw [← IsScalarTower.algebraMap_smul A r, Ideal.Quotient.algebraMap_eq,
+        hr0', zero_smul]
+    · change q (inc (x + y)) = 0
+      rw [map_add, map_add]
+      have hx0 : q (inc x) = 0 := LinearMap.mem_ker.mp hx
+      have hy0 : q (inc y) = 0 := LinearMap.mem_ker.mp hy
+      rw [hx0, hy0, add_zero]
+  let qP0 : ((Psub : Type u) ⧸ (I • (⊤ : Submodule R (Psub : Type u)))) →ₗ[R] Fbar :=
+    ((⊥ : Submodule R Fbar).quotEquivOfEqBot rfl).toLinearMap.comp
+      (Submodule.mapQ (I • (⊤ : Submodule R (Psub : Type u)))
+        (⊥ : Submodule R Fbar) (q.comp inc) hqPmem)
+  let qP : ((Psub : Type u) ⧸ (I • (⊤ : Submodule R (Psub : Type u)))) →ₗ[A] Fbar :=
+    LinearMap.extendScalarsOfSurjective I.mkQ_surjective qP0
+  have hqP_mk (x : Psub) :
+      qP (Submodule.Quotient.mk x) = q (inc x) := by
+    rfl
+  have hret_mem (x : F) (hx : x ∈ I • (⊤ : Submodule R F)) :
+      ret x ∈ I • (⊤ : Submodule R Psub) := by
+    refine Submodule.smul_induction_on hx (fun r hr y _ => ?_) (fun x y hx hy => ?_)
+    · rw [map_smul]
+      exact Submodule.smul_mem_smul hr Submodule.mem_top
+    · rw [map_add]
+      exact Submodule.add_mem _ hx hy
+  have he_on (x : Psub) : e (inc x) = inc x := by
+    have he' : e.comp e = e := by
+      change e * e = e
+      exact he
+    obtain ⟨y, hy⟩ := x.property
+    change e (x : F) = (x : F)
+    calc
+      e (x : F) = e (e y) := by rw [hy]
+      _ = e y := by simpa [LinearMap.comp_apply] using congrArg (fun f => f y) he'
+      _ = (x : F) := hy
+  let φ : ((Psub : Type u) ⧸ (I • (⊤ : Submodule R (Psub : Type u)))) →ₗ[A] Pbar :=
+    sbar.comp qP
+  have hφ_surj : Function.Surjective φ := by
+    intro y
+    obtain ⟨x, hx⟩ := hq (ibar y)
+    let z : Psub := ⟨e x, LinearMap.mem_range_self e x⟩
+    refine ⟨Submodule.Quotient.mk z, ?_⟩
+    change sbar (qP (Submodule.Quotient.mk z)) = y
+    rw [hqP_mk]
+    have hred := congrArg (fun f => f x) heqred
+    change sbar (q (e x)) = y
+    have hred' : q (e x) = pbarR (q x) := by simpa using hred
+    rw [hred', hx]
+    have hpibar : pbar (ibar y) = ibar y := by
+      change ibar (sbar (ibar y)) = ibar y
+      rw [show sbar (ibar y) = y by
+        simpa using congrArg (fun f : Pbar →ₗ[A] Pbar => f y) hibar]
+    change sbar (pbar (ibar y)) = y
+    rw [hpibar]
+    simpa using congrArg (fun f : Pbar →ₗ[A] Pbar => f y) hibar
+  have hφ_inj : Function.Injective φ := by
+    intro x y hxy
+    obtain ⟨x, rfl⟩ :=
+      (Submodule.Quotient.mk_surjective (I • (⊤ : Submodule R (Psub : Type u)))) x
+    obtain ⟨y, rfl⟩ :=
+      (Submodule.Quotient.mk_surjective (I • (⊤ : Submodule R (Psub : Type u)))) y
+    change sbar (qP (Submodule.Quotient.mk x)) =
+      sbar (qP (Submodule.Quotient.mk y)) at hxy
+    rw [hqP_mk x, hqP_mk y] at hxy
+    have hxy' : sbar (q (inc x)) = sbar (q (inc y)) := hxy
+    have hps : pbar (q (inc x)) = pbar (q (inc y)) := by
+      simpa [pbar, LinearMap.comp_apply] using congrArg ibar hxy'
+    have hqx : q (inc x) = pbarR (q (inc x)) := by
+      have hred := congrArg (fun f => f (inc x)) heqred
+      have hred' : q (e (inc x)) = pbarR (q (inc x)) := by simpa using hred
+      rw [he_on x] at hred'
+      exact hred'
+    have hqy : q (inc y) = pbarR (q (inc y)) := by
+      have hred := congrArg (fun f => f (inc y)) heqred
+      have hred' : q (e (inc y)) = pbarR (q (inc y)) := by simpa using hred
+      rw [he_on y] at hred'
+      exact hred'
+    have hqxy : q (inc x - inc y) = 0 := by
+      rw [map_sub]
+      calc
+        q (inc x) - q (inc y) =
+            pbarR (q (inc x)) - pbarR (q (inc y)) :=
+              congrArg₂ (fun a b : Fbar => a - b) hqx hqy
+        _ = 0 := by
+          have hpsR : pbarR (q (inc x)) = pbarR (q (inc y)) := by
+            change pbar (q (inc x)) = pbar (q (inc y))
+            exact hps
+          rw [hpsR, sub_self]
+    have hmemF : inc x - inc y ∈ I • (⊤ : Submodule R F) := by
+      rw [← hkerq, LinearMap.mem_ker]
+      exact hqxy
+    have hmemP : x - y ∈ I • (⊤ : Submodule R Psub) := by
+      have hmem := hret_mem (inc x - inc y) hmemF
+      have hmem' : ret (inc (x - y)) ∈ I • (⊤ : Submodule R Psub) := by
+        simpa only [map_sub] using hmem
+      have hret' : ret (inc (x - y)) = x - y := by
+        simpa [LinearMap.comp_apply] using congrArg (fun f => f (x - y)) hret
+      rw [hret'] at hmem'
+      exact hmem'
+    rw [← sub_eq_zero]
+    change Submodule.Quotient.mk (x - y) = 0
+    exact (Submodule.Quotient.mk_eq_zero _).2 hmemP
+  refine ⟨P, ?_, ?_⟩
+  · exact hproj
+  · exact ⟨LinearEquiv.ofBijective φ ⟨hφ_inj, hφ_surj⟩⟩
+
+private theorem isNilpotent_ideal_span_finset
+    {R : Type u} [CommRing R] (s : Finset R)
+    (hs : ∀ x ∈ s, IsNilpotent x) :
+    IsNilpotent (Ideal.span (s : Set R)) := by
+  classical
+  induction s using Finset.induction_on with
+  | empty =>
+      refine ⟨1, ?_⟩
+      simp
+  | @insert a s ha ih =>
+      obtain ⟨n, hn⟩ := hs a (Finset.mem_insert_self a s)
+      obtain ⟨m, hm⟩ := ih (fun x hx => hs x (Finset.mem_insert_of_mem hx))
+      have ha_span : (Ideal.span ({a} : Set R)) ^ n = ⊥ := by
+        rw [Ideal.span_singleton_pow, hn]
+        simp
+      refine ⟨n + m, le_antisymm ?_ bot_le⟩
+      rw [Finset.coe_insert, Ideal.span_insert]
+      exact (Ideal.sup_pow_add_le_pow_sup_pow.trans (by rw [ha_span, hm]; simp))
 
 /- The source calls an ideal locally nilpotent when each of its elements is
 nilpotent; this is the earlier chapter's canonical `locallyNilpotentIdeal`. -/
@@ -366,9 +624,280 @@ theorem exists_finite_projective_lift_of_locallyNilpotent
     [Module.Finite (R ⧸ I) Pbar]
     (hPbar : Module.Projective (R ⧸ I) Pbar) :
     ∃ P : ModuleCat.{u} R,
-      Module.Finite R P ∧ Module.Projective R P ∧
+        Module.Finite R P ∧ Module.Projective R P ∧
         Nonempty ((P ⧸ (I • (⊤ : Submodule R P))) ≃ₗ[R ⧸ I] Pbar) := by
-  sorry
+  classical
+  let A := R ⧸ I
+  obtain ⟨n, sbar, hsbar⟩ := Module.Finite.exists_fin' A Pbar
+  let F : Type u := Fin n → R
+  let Fbar : Type u := Fin n → A
+  let q : F →ₗ[R] Fbar :=
+    LinearMap.piMap (fun _ : Fin n => (I.mkQ : R →ₗ[R] A))
+  have hq : Function.Surjective q := by
+    intro y
+    choose x hx using fun i : Fin n => I.mkQ_surjective (y i)
+    refine ⟨x, ?_⟩
+    ext i
+    change I.mkQ (x i) = y i
+    exact hx i
+  obtain ⟨ibar, hibar⟩ :=
+    (Module.Projective.iff_split_of_projective sbar hsbar).mp hPbar
+  let pbar : Module.End A Fbar := ibar.comp sbar
+  have hpbar : pbar.comp pbar = pbar := by
+    apply LinearMap.ext
+    intro x
+    change ibar (sbar (ibar (sbar x))) = ibar (sbar x)
+    have hx : sbar (ibar (sbar x)) = sbar x := by
+      simpa using congrArg (fun f : Pbar →ₗ[A] Pbar => f (sbar x)) hibar
+    rw [hx]
+  let pbarR : Fbar →ₗ[R] Fbar := pbar.restrictScalars R
+  obtain ⟨p, hp⟩ := Module.projective_lifting_property q (pbarR.comp q) hq
+  let d : Module.End R F := p * p - p
+  have hpbarR : pbarR.comp pbarR = pbarR := by
+    simpa [pbarR] using
+      congrArg (fun f : Module.End A Fbar => f.restrictScalars R) hpbar
+  have hdq : q.comp d = 0 := by
+    apply LinearMap.ext
+    intro x
+    dsimp [d]
+    change q (p (p x) - p x) = 0
+    rw [map_sub]
+    have hx : q (p x) = pbarR (q x) := by
+      simpa using congrArg (fun f : F →ₗ[R] Fbar => f x) hp
+    have hpx : q (p (p x)) = pbarR (q (p x)) := by
+      simpa using congrArg (fun f : F →ₗ[R] Fbar => f (p x)) hp
+    rw [hpx, hx]
+    apply sub_eq_zero.mpr
+    simpa [LinearMap.comp_apply] using congrArg (fun z => z (q x)) hpbarR
+  have hcoeff (ij : Fin n × Fin n) :
+      (d (Pi.single ij.2 1)) ij.1 ∈ I := by
+    have h := congrArg
+      (fun f : F →ₗ[R] Fbar => (f (Pi.single ij.2 1)) ij.1) hdq
+    change I.mkQ ((d (Pi.single ij.2 1)) ij.1) = 0 at h
+    exact (Submodule.Quotient.mk_eq_zero I).mp h
+  let t : Finset R :=
+    Finset.univ.image (fun ij : Fin n × Fin n => (d (Pi.single ij.2 1)) ij.1)
+  let J : Ideal R := Ideal.span (t : Set R)
+  have ht : ∀ x ∈ t, IsNilpotent x := by
+    intro x hx
+    rcases Finset.mem_image.mp hx with ⟨ij, -, rfl⟩
+    exact hI _ (hcoeff ij)
+  have hvec {v : F} (hv : ∀ i, v i ∈ J) :
+      v ∈ J • (⊤ : Submodule R F) := by
+    rw [show v = (∑ i : Fin n, v i • Pi.single i 1) by
+      ext k
+      simp [Finset.sum_apply, Pi.single_apply]]
+    apply Submodule.sum_mem
+    intro i hi
+    exact Submodule.smul_mem_smul (hv i) Submodule.mem_top
+  have hdy (x : F) : d x ∈ J • (⊤ : Submodule R F) := by
+    have hx : x = (∑ j : Fin n, x j • Pi.single j 1) := by
+      ext k
+      simp [Finset.sum_apply, Pi.single_apply]
+    rw [hx, map_sum]
+    apply Submodule.sum_mem
+    intro j hj
+    rw [map_smul]
+    exact (J • (⊤ : Submodule R F)).smul_mem (x j) (hvec (fun i => by
+      change (d (Pi.single j 1)) i ∈ J
+      apply Ideal.subset_span
+      exact Finset.mem_image.mpr ⟨(i, j), Finset.mem_univ _, rfl⟩))
+  have hdmap (k : ℕ) {x : F} (hx : x ∈ J ^ k • (⊤ : Submodule R F)) :
+      d x ∈ J ^ (k + 1) • (⊤ : Submodule R F) := by
+    refine Submodule.smul_induction_on hx (fun r hr y _ => ?_) (fun x y hx hy => ?_)
+    · rw [map_smul]
+      rw [pow_succ, Submodule.mul_smul]
+      exact Submodule.smul_mem_smul hr (hdy y)
+    · rw [map_add]
+      exact Submodule.add_mem _ hx hy
+  have hdnil : IsNilpotent d := by
+    obtain ⟨n, hn⟩ := isNilpotent_ideal_span_finset t ht
+    refine ⟨n, ?_⟩
+    apply LinearMap.ext
+    intro x
+    have hpow : ∀ k : ℕ, (d ^ k) x ∈ J ^ k • (⊤ : Submodule R F) := by
+      intro k
+      induction k with
+      | zero =>
+          have hone : (1 : R) ∈ J ^ 0 := by
+            simp only [pow_zero]
+            change (1 : R) ∈ (1 : Ideal R)
+            simp
+          simpa only [pow_zero, Module.End.one_apply, one_smul] using
+            (Submodule.smul_mem_smul hone
+              (Submodule.mem_top : x ∈ (⊤ : Submodule R F)))
+      | succ k ih =>
+          simpa [pow_succ', Module.End.mul_eq_comp] using hdmap k ih
+    have := hpow n
+    rw [hn] at this
+    simpa using this
+  obtain ⟨e, he, s, a, hes⟩ :=
+    Formalization.Books.Algebra.Unit32.exists_idempotent_lift_polynomial p hdnil
+  have heqred : q.comp e = pbarR.comp q := by
+    apply LinearMap.ext
+    intro x
+    have hxe : e = p + d *
+        (∑ ij ∈ s, (a ij : Module.End R F) * p ^ ij.1 * d ^ ij.2) := by
+      simpa [d, pow_two, Module.End.mul_eq_comp] using hes
+    rw [hxe]
+    change q (p x + d
+      ((∑ ij ∈ s, (a ij : Module.End R F) * p ^ ij.1 * d ^ ij.2) x)) = _
+    rw [map_add]
+    have hdx : q (d
+        ((∑ ij ∈ s, (a ij : Module.End R F) * p ^ ij.1 * d ^ ij.2) x)) = 0 := by
+      simpa using congrArg (fun f => f
+        ((∑ ij ∈ s, (a ij : Module.End R F) * p ^ ij.1 * d ^ ij.2) x)) hdq
+    rw [hdx]
+    simpa using congrArg (fun f => f x) hp
+  let Psub : Submodule R F := LinearMap.range e
+  letI : AddCommGroup (Psub : Type u) := inferInstance
+  letI : Module R (Psub : Type u) := inferInstance
+  let P : ModuleCat.{u} R := ModuleCat.of R Psub
+  let inc : Psub →ₗ[R] F := Psub.subtype
+  let ret : F →ₗ[R] Psub := e.codRestrict Psub
+    (fun x => LinearMap.mem_range_self e x)
+  have hret : ret.comp inc = LinearMap.id := by
+    apply LinearMap.ext
+    intro x
+    apply Subtype.ext
+    have he' : e.comp e = e := by
+      change e * e = e
+      exact he
+    obtain ⟨y, hy⟩ := x.property
+    change e (x : F) = (x : F)
+    calc
+      e (x : F) = e (e y) := by rw [hy]
+      _ = e y := by simpa [LinearMap.comp_apply] using congrArg (fun f => f y) he'
+      _ = (x : F) := hy
+  have hproj : Module.Projective R Psub :=
+    Module.Projective.of_split inc ret hret
+  have hqPmem : I • (⊤ : Submodule R Psub) ≤
+      LinearMap.ker (q.comp inc) := by
+    intro x hx
+    refine Submodule.smul_induction_on hx (fun r hr y _ => ?_) (fun x y hx hy => ?_)
+    · change q (inc (r • y)) = 0
+      rw [map_smul, map_smul]
+      have hr0 : I.mkQ r = 0 := (Submodule.Quotient.mk_eq_zero I).2 hr
+      have hr0' : Ideal.Quotient.mk I r = 0 :=
+        Ideal.Quotient.eq_zero_iff_mem.mpr hr
+      rw [← IsScalarTower.algebraMap_smul A r, Ideal.Quotient.algebraMap_eq,
+        hr0', zero_smul]
+    · change q (inc (x + y)) = 0
+      rw [map_add, map_add]
+      have hx0 : q (inc x) = 0 := LinearMap.mem_ker.mp hx
+      have hy0 : q (inc y) = 0 := LinearMap.mem_ker.mp hy
+      rw [hx0, hy0, add_zero]
+  have hmem_of_qzero {z : F} (hz : q z = 0) :
+      z ∈ I • (⊤ : Submodule R F) := by
+    rw [show z = (∑ i : Fin n, z i • Pi.single i 1) by
+      ext k
+      simp [Finset.sum_apply, Pi.single_apply]]
+    apply Submodule.sum_mem
+    intro i hi
+    have hzi := congrFun hz i
+    change I.mkQ (z i) = 0 at hzi
+    exact Submodule.smul_mem_smul ((Submodule.Quotient.mk_eq_zero I).mp hzi)
+      Submodule.mem_top
+  let qP0 : ((Psub : Type u) ⧸ (I • (⊤ : Submodule R (Psub : Type u)))) →ₗ[R] Fbar :=
+    ((⊥ : Submodule R Fbar).quotEquivOfEqBot rfl).toLinearMap.comp
+      (Submodule.mapQ (I • (⊤ : Submodule R (Psub : Type u)))
+        (⊥ : Submodule R Fbar) (q.comp inc) hqPmem)
+  let qP : ((Psub : Type u) ⧸ (I • (⊤ : Submodule R (Psub : Type u)))) →ₗ[A] Fbar :=
+    LinearMap.extendScalarsOfSurjective I.mkQ_surjective qP0
+  have hqP_mk (x : Psub) :
+      qP (Submodule.Quotient.mk x) = q (inc x) := by
+    rfl
+  have hret_mem (x : F) (hx : x ∈ I • (⊤ : Submodule R F)) :
+      ret x ∈ I • (⊤ : Submodule R Psub) := by
+    refine Submodule.smul_induction_on hx (fun r hr y _ => ?_) (fun x y hx hy => ?_)
+    · rw [map_smul]
+      exact Submodule.smul_mem_smul hr Submodule.mem_top
+    · rw [map_add]
+      exact Submodule.add_mem _ hx hy
+  have he_on (x : Psub) : e (inc x) = inc x := by
+    have he' : e.comp e = e := by
+      change e * e = e
+      exact he
+    obtain ⟨y, hy⟩ := x.property
+    change e (x : F) = (x : F)
+    calc
+      e (x : F) = e (e y) := by rw [hy]
+      _ = e y := by simpa [LinearMap.comp_apply] using congrArg (fun f => f y) he'
+      _ = (x : F) := hy
+  let φ : ((Psub : Type u) ⧸ (I • (⊤ : Submodule R (Psub : Type u)))) →ₗ[A] Pbar :=
+    sbar.comp qP
+  have hφ_surj : Function.Surjective φ := by
+    intro y
+    obtain ⟨x, hx⟩ := hq (ibar y)
+    let z : Psub := ⟨e x, LinearMap.mem_range_self e x⟩
+    refine ⟨Submodule.Quotient.mk z, ?_⟩
+    change sbar (qP (Submodule.Quotient.mk z)) = y
+    rw [hqP_mk]
+    have hred := congrArg (fun f => f x) heqred
+    change sbar (q (e x)) = y
+    have hred' : q (e x) = pbarR (q x) := by simpa using hred
+    rw [hred', hx]
+    have hpibar : pbar (ibar y) = ibar y := by
+      change ibar (sbar (ibar y)) = ibar y
+      rw [show sbar (ibar y) = y by
+        simpa using congrArg (fun f : Pbar →ₗ[A] Pbar => f y) hibar]
+    change sbar (pbar (ibar y)) = y
+    rw [hpibar]
+    simpa using congrArg (fun f : Pbar →ₗ[A] Pbar => f y) hibar
+  have hφ_inj : Function.Injective φ := by
+    intro x y hxy
+    obtain ⟨x, rfl⟩ :=
+      (Submodule.Quotient.mk_surjective (I • (⊤ : Submodule R (Psub : Type u)))) x
+    obtain ⟨y, rfl⟩ :=
+      (Submodule.Quotient.mk_surjective (I • (⊤ : Submodule R (Psub : Type u)))) y
+    change sbar (qP (Submodule.Quotient.mk x)) =
+      sbar (qP (Submodule.Quotient.mk y)) at hxy
+    rw [hqP_mk x, hqP_mk y] at hxy
+    have hxy' : sbar (q (inc x)) = sbar (q (inc y)) := hxy
+    have hps : pbar (q (inc x)) = pbar (q (inc y)) := by
+      simpa [pbar, LinearMap.comp_apply] using congrArg ibar hxy'
+    have hqx : q (inc x) = pbarR (q (inc x)) := by
+      have hred := congrArg (fun f => f (inc x)) heqred
+      have hred' : q (e (inc x)) = pbarR (q (inc x)) := by simpa using hred
+      rw [he_on x] at hred'
+      exact hred'
+    have hqy : q (inc y) = pbarR (q (inc y)) := by
+      have hred := congrArg (fun f => f (inc y)) heqred
+      have hred' : q (e (inc y)) = pbarR (q (inc y)) := by simpa using hred
+      rw [he_on y] at hred'
+      exact hred'
+    have hqxy : q (inc x - inc y) = 0 := by
+      rw [map_sub]
+      calc
+        q (inc x) - q (inc y) =
+            pbarR (q (inc x)) - pbarR (q (inc y)) :=
+              congrArg₂ (fun a b : Fbar => a - b) hqx hqy
+        _ = 0 := by
+          have hpsR : pbarR (q (inc x)) = pbarR (q (inc y)) := by
+            change pbar (q (inc x)) = pbar (q (inc y))
+            exact hps
+          rw [hpsR, sub_self]
+    have hmemF : inc x - inc y ∈ I • (⊤ : Submodule R F) := by
+      exact hmem_of_qzero hqxy
+    have hmemP : x - y ∈ I • (⊤ : Submodule R Psub) := by
+      have hmem := hret_mem (inc x - inc y) hmemF
+      have hmem' : ret (inc (x - y)) ∈ I • (⊤ : Submodule R Psub) := by
+        simpa only [map_sub] using hmem
+      have hret' : ret (inc (x - y)) = x - y := by
+        simpa [LinearMap.comp_apply] using congrArg (fun f => f (x - y)) hret
+      rw [hret'] at hmem'
+      exact hmem'
+    rw [← sub_eq_zero]
+    change Submodule.Quotient.mk (x - y) = 0
+    exact (Submodule.Quotient.mk_eq_zero _).2 hmemP
+  have hret_surj : Function.Surjective ret := by
+    intro x
+    refine ⟨inc x, ?_⟩
+    simpa [LinearMap.comp_apply] using congrArg (fun f => f x) hret
+  have hfinite : Module.Finite R Psub :=
+    Module.Finite.of_surjective ret hret_surj
+  refine ⟨P, hfinite, hproj, ?_⟩
+  exact ⟨LinearEquiv.ofBijective φ ⟨hφ_inj, hφ_surj⟩⟩
 
 /-- A flat module whose reduction modulo a nilpotent ideal is projective is
 projective. -/
@@ -379,7 +908,124 @@ theorem projective_of_flat_of_isNilpotent_of_quotient_projective
     (hMbar : Module.Projective (R ⧸ I)
       (M ⧸ (I • (⊤ : Submodule R M)))) :
     Module.Projective R M := by
-  sorry
+  classical
+  let A := R ⧸ I
+  let M0 : Type u := M
+  let IM : Submodule R M0 := I • (⊤ : Submodule R M0)
+  obtain ⟨P, hP, hPE⟩ :=
+    exists_projective_lift_of_isNilpotent I hI
+      (ModuleCat.of A (M0 ⧸ IM)) hMbar
+  obtain ⟨e⟩ := hPE
+  let IP : Submodule R (P : Type u) := I • (⊤ : Submodule R (P : Type u))
+  let mQ : M0 →ₗ[R] (M0 ⧸ IM) := IM.mkQ
+  let g : (P : Type u) →ₗ[R] (M0 ⧸ IM) :=
+    e.toLinearMap.restrictScalars R |>.comp IP.mkQ
+  obtain ⟨q, hq⟩ :=
+    Module.projective_lifting_property mQ g IM.mkQ_surjective
+  have hqmem : IP ≤ LinearMap.ker (mQ.comp q) := by
+    intro x hx
+    refine Submodule.smul_induction_on hx (fun r hr y _ => ?_) (fun x y hx hy => ?_)
+    · change mQ (q (r • y)) = 0
+      rw [map_smul, map_smul]
+      have hr0 : I.mkQ r = 0 := (Submodule.Quotient.mk_eq_zero I).2 hr
+      have hr0' : Ideal.Quotient.mk I r = 0 :=
+        Ideal.Quotient.eq_zero_iff_mem.mpr hr
+      rw [← IsScalarTower.algebraMap_smul A r, Ideal.Quotient.algebraMap_eq,
+        hr0', zero_smul]
+    · change mQ (q (x + y)) = 0
+      rw [map_add, map_add]
+      have hx0 : mQ (q x) = 0 := LinearMap.mem_ker.mp hx
+      have hy0 : mQ (q y) = 0 := LinearMap.mem_ker.mp hy
+      rw [hx0, hy0, add_zero]
+  have hIPmap : IP ≤ IM.comap q := by
+    intro x hx
+    change q x ∈ IM
+    exact (Submodule.Quotient.mk_eq_zero IM).mp
+      (LinearMap.mem_ker.mp (hqmem hx))
+  let qbar0 : (P : Type u) ⧸ IP →ₗ[R] (M0 ⧸ IM) :=
+    Submodule.mapQ IP IM q hIPmap
+  let qbar : (P : Type u) ⧸ IP →ₗ[A] (M0 ⧸ IM) :=
+    LinearMap.extendScalarsOfSurjective I.mkQ_surjective qbar0
+  have hqbar_mk (x : P) : qbar (Submodule.Quotient.mk x) = mQ (q x) := by
+    rfl
+  have hqbar_eq : qbar = e.toLinearMap := by
+    apply LinearMap.ext
+    intro x
+    obtain ⟨y, rfl⟩ := Submodule.mkQ_surjective IP x
+    have hqred := congrArg (fun f => f y) hq
+    change qbar (Submodule.Quotient.mk y) = e (Submodule.Quotient.mk y)
+    rw [hqbar_mk]
+    exact hqred
+  have hqbar_surj : Function.Surjective qbar := by
+    rw [hqbar_eq]
+    exact e.surjective
+  have hqsurj : Function.Surjective q := by
+    apply Formalization.Books.Algebra.Unit20.nakayama_part_eleven I q
+    exact hqbar_surj
+    exact hI
+  have hqbar_inj : Function.Injective qbar := by
+    rw [hqbar_eq]
+    exact e.injective
+  have hqbarR : Function.Injective (qbar.restrictScalars R) := hqbar_inj
+  let eP := TensorProduct.quotTensorEquivQuotSMul (P : Type u) I
+  let eM := TensorProduct.quotTensorEquivQuotSMul M0 I
+  have hcomm : eM.toLinearMap.comp (q.lTensor A) =
+      (qbar.restrictScalars R).comp eP.toLinearMap := by
+    apply TensorProduct.ext'
+    intro a x
+    obtain ⟨r, rfl⟩ := I.mkQ_surjective a
+    change TensorProduct.quotTensorEquivQuotSMul M0 I
+        (Ideal.Quotient.mk I r ⊗ₜ[R] q x) =
+      qbar (TensorProduct.quotTensorEquivQuotSMul (P : Type u) I
+        (Ideal.Quotient.mk I r ⊗ₜ[R] x))
+    rw [TensorProduct.quotTensorEquivQuotSMul_mk_tmul,
+      TensorProduct.quotTensorEquivQuotSMul_mk_tmul, hqbar_mk]
+    simp
+    rfl
+  have hlt_inj : Function.Injective (q.lTensor A) := by
+    intro x y hxy
+    apply eP.injective
+    apply hqbarR
+    calc
+      (qbar.restrictScalars R) (eP x) = eM (q.lTensor A x) := by
+        simpa [LinearMap.comp_apply] using congrArg (fun f => f x) hcomm.symm
+      _ = eM (q.lTensor A y) := congrArg eM hxy
+      _ = (qbar.restrictScalars R) (eP y) := by
+        simpa [LinearMap.comp_apply] using congrArg (fun f => f y) hcomm
+  have hltker : Subsingleton (LinearMap.ker (q.lTensor A)) := by
+    have hbot : LinearMap.ker (q.lTensor A) = ⊥ :=
+      LinearMap.ker_eq_bot.mpr hlt_inj
+    rw [hbot]
+    infer_instance
+  have htensorK : Subsingleton
+      (TensorProduct R A (LinearMap.ker q)) := by
+    let ek := LinearMap.kerLTensorEquivOfSurjective q hqsurj A
+    constructor
+    intro x y
+    apply ek.symm.injective
+    exact Subsingleton.elim _ _
+  have hKquot : Subsingleton
+      (LinearMap.ker q ⧸ (I • (⊤ : Submodule R (LinearMap.ker q)))) := by
+    let ek := TensorProduct.quotTensorEquivQuotSMul (LinearMap.ker q) I
+    constructor
+    intro x y
+    apply ek.symm.injective
+    exact htensorK.elim _ _
+  have hKtop : I • (⊤ : Submodule R (LinearMap.ker q)) = ⊤ :=
+    (Submodule.Quotient.subsingleton_iff.mp hKquot)
+  have hKsub : Subsingleton (LinearMap.ker q) :=
+    Formalization.Books.Algebra.Unit20.nakayama_part_nine I hKtop hI
+  have hqinj : Function.Injective q := by
+    intro x y hxy
+    have hdiff : q (x - y) = 0 := by
+      rw [map_sub, hxy, sub_self]
+    have hk : (⟨x - y, hdiff⟩ : LinearMap.ker q) = 0 :=
+      Subsingleton.elim _ _
+    have hzero : x - y = 0 := congrArg Subtype.val hk
+    exact sub_eq_zero.mp hzero
+  letI : Module.Projective R (P : Type u) := hP
+  exact Module.Projective.of_equiv'
+    (LinearEquiv.ofBijective q ⟨hqinj, hqsurj⟩)
 
 /-- Projectivity modulo two ideals with zero intersection implies
 projectivity over the original ring. -/

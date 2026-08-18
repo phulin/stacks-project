@@ -312,7 +312,7 @@ theorem filteredVectorSpaceCokernelCofork_isColimit
       apply Subtype.ext
       let q : W.underlying ⟶ (filteredVectorSpaceCokernelObject f).underlying :=
         (filteredVectorSpaceCokernelMap f).1
-      letI : Epi q := by
+      let : Epi q := by
         dsimp [q, filteredVectorSpaceCokernelMap, filteredVectorSpaceCokernelObject]
         apply (ModuleCat.epi_iff_range_eq_top _).2
         simpa only [ModuleCat.hom_ofHom] using
@@ -387,7 +387,7 @@ theorem filteredVectorSpace_counterexample
     refine ⟨⟨g, ?_⟩⟩
     refine ⟨cokernel.π_desc (kernel.ι F) (𝟙 _) _, ?_⟩
     apply (cancel_epi (cokernel.π (kernel.ι F))).1
-    simp [g, Category.assoc]
+    simp [g]
   have himι : IsIso (Abelian.image.ι F) := by
     change IsIso (kernel.ι (cokernel.π F))
     let g : Formalization.Books.Homology.Unit03.filteredLineW k ⟶
@@ -400,7 +400,7 @@ theorem filteredVectorSpace_counterexample
     simp [g, Category.assoc]
   refine ⟨hkzero, hczero, hnotiso, hcoi, him, ?_⟩
   intro hcomp
-  letI : IsIso (Abelian.coimageImageComparison F) := hcomp
+  let : IsIso (Abelian.coimageImageComparison F) := hcomp
   have hFiso : IsIso F := by
     rw [← Formalization.Books.Homology.Unit03.coimage_image_factorization F]
     infer_instance

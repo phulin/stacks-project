@@ -863,7 +863,86 @@ theorem resolution_ext_represents_ext {R : Type u} [Ring R]
   }
   by_cases hi0 : i = 0
   · subst i
-    exact ⟨sorry⟩
+    let K := CochainComplex.HomComplex P.cochainComplex
+      ((CochainComplex.singleFunctor (ModuleCat R) 0).obj N)
+    have hprev : (ComplexShape.up ℕ).prev 0 = 0 := by
+      apply ComplexShape.prev_eq_self'
+      intro k hk
+      simp only [ComplexShape.up_Rel] at hk
+      omega
+    have hnext : (ComplexShape.up ℕ).next 0 = 1 := by
+      apply ComplexShape.next_eq'
+      simp only [ComplexShape.up_Rel]
+      omega
+    have hprevInt : (ComplexShape.up ℤ).prev 0 = -1 := by
+      apply ComplexShape.prev_eq'
+      simp only [ComplexShape.up_Rel]
+      omega
+    have hnextInt : (ComplexShape.up ℤ).next 0 = 1 := by
+      apply ComplexShape.next_eq'
+      simp only [ComplexShape.up_Rel]
+      omega
+    have h0 : ComplexShape.embeddingUpNat.f 0 = (0 : ℤ) := by
+      dsimp [ComplexShape.embeddingUpNat, ComplexShape.Embedding.mk']
+    have h1 : ComplexShape.embeddingUpNat.f 1 = (1 : ℤ) := by
+      dsimp [ComplexShape.embeddingUpNat, ComplexShape.Embedding.mk']
+    have hsub : Subsingleton (K.X (-1)) := by
+      constructor
+      intro x y
+      apply CochainComplex.HomComplex.Cochain.ext
+      intro p q hpq
+      by_cases hq : q = 0
+      · subst q
+        have hp : p = 1 := by omega
+        subst p
+        exact (P.cochainComplex.isZero_of_isStrictlyLE 0 1 (by omega)).eq_of_src _ _
+      · exact (HomologicalComplex.isZero_single_obj_X
+          (ComplexShape.up ℤ) 0 N q hq).eq_of_tgt _ _
+    letI : Subsingleton (K.X (-1)) := hsub
+    let hzero : IsZero (K.X (-1)) := AddCommGrpCat.isZero_of_subsingleton _
+    letI : IsZero (K.X (-1)) := hzero
+    let φ : H.sc' 0 0 1 ⟶ K.sc' (-1) 0 1 := {
+      τ₁ := 0
+      τ₂ := by
+        change H.X 0 ⟶ K.X 0
+        exact (K.restrictionXIso ComplexShape.embeddingUpNat h0).hom
+      τ₃ := by
+        change H.X 1 ⟶ K.X 1
+        exact (K.restrictionXIso ComplexShape.embeddingUpNat h1).hom
+      comm₁₂ := by
+        change 0 ≫ K.d (-1) 0 = H.d 0 0 ≫
+          (K.restrictionXIso ComplexShape.embeddingUpNat h0).hom
+        rw [show H.d 0 0 = 0 by
+          dsimp [H]
+          apply K.shape
+          simp only [ComplexShape.up_Rel]
+          omega]
+        simp
+      comm₂₃ := by
+        change (K.restrictionXIso ComplexShape.embeddingUpNat h0).hom ≫ K.d 0 1 =
+          H.d 0 1 ≫ (K.restrictionXIso ComplexShape.embeddingUpNat h1).hom
+        rw [show H.d 0 1 =
+            (K.restrictionXIso ComplexShape.embeddingUpNat h0).hom ≫ K.d 0 1 ≫
+              (K.restrictionXIso ComplexShape.embeddingUpNat h1).inv by
+          exact HomologicalComplex.restriction_d_eq K ComplexShape.embeddingUpNat h0 h1]
+        simp }
+    letI : Epi φ.τ₁ := hzero.epi φ.τ₁
+    letI : IsIso φ.τ₂ := by
+      change IsIso ((K.restrictionXIso ComplexShape.embeddingUpNat h0).hom)
+      infer_instance
+    letI : Mono φ.τ₃ := by
+      change Mono ((K.restrictionXIso ComplexShape.embeddingUpNat h1).hom)
+      infer_instance
+    let ρ₀ : H.homology 0 ≅ K.homology (0 : ℤ) :=
+      (HomologicalComplex.homologyIsoSc' H 0 0 1 hprev hnext).trans <|
+        (asIso (ShortComplex.homologyMap φ)).trans <|
+          (HomologicalComplex.homologyIsoSc' K (-1) 0 1 hprevInt hnextInt).symm
+    exact ⟨
+      (isoAddEquiv (HomologicalComplex.homologyMapIso θ 0)).trans <|
+        (isoAddEquiv ρ₀).trans <|
+          (CochainComplex.HomComplex.homologyAddEquiv P.cochainComplex
+            ((CochainComplex.singleFunctor (ModuleCat R) 0).obj N) (0 : ℤ)).trans <|
+            (P.extAddEquivCohomologyClass (Y := N) (n := 0)).symm⟩
   · have hi : 0 < i := Nat.pos_of_ne_zero hi0
     let K := CochainComplex.HomComplex P.cochainComplex
       ((CochainComplex.singleFunctor (ModuleCat R) 0).obj N)
@@ -878,12 +957,18 @@ theorem resolution_ext_represents_ext {R : Type u} [Ring R]
           apply ComplexShape.prev_eq'
           dsimp [ComplexShape.embeddingUpNat]
           simp only [ComplexShape.up_Rel]
-          sorry) (by
+          dsimp [ComplexShape.Embedding.mk']
+          omega) (by
           apply ComplexShape.next_eq'
           dsimp [ComplexShape.embeddingUpNat]
           simp only [ComplexShape.up_Rel]
-          sorry)
-    exact ⟨sorry⟩
+          dsimp [ComplexShape.Embedding.mk'])
+    exact ⟨
+      (isoAddEquiv (HomologicalComplex.homologyMapIso θ i)).trans <|
+        (isoAddEquiv ρ).trans <|
+          (CochainComplex.HomComplex.homologyAddEquiv P.cochainComplex
+            ((CochainComplex.singleFunctor (ModuleCat R) 0).obj N) (i : ℤ)).trans <|
+            (P.extAddEquivCohomologyClass (Y := N) (n := i)).symm⟩
 
 /-- Degree zero Ext is the module-hom group. -/
 noncomputable def extZeroLinearEquiv {R : Type u} [CommRing R]

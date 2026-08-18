@@ -2056,75 +2056,6 @@ private theorem eulerPoincareFunction_node_injective
       _ = 0 := by
         rw [hyx]
         exact zero_smul A w
-  have hfiniteBranch :
-      ∀ (M : Type u) [AddCommGroup M] [Module A M] [Module.Finite A M]
-        (a : A) (s : B →+* A) (q : A →+* B)
-        (hker : RingHom.ker q = Ideal.span {a})
-        (hqs : q.comp s = RingHom.id B),
-        let m : M →ₗ[A] M :=
-          { toFun := fun z => a • z
-            map_add' := by intro z w; simp
-            map_smul' := by
-              intro b z
-              simp only [smul_smul, RingHom.id_apply, mul_comm] }
-        let Q : Type u := M ⧸ LinearMap.range m
-        letI : Module B Q := Module.compHom Q s
-        Module.Finite B Q := by
-    intro M _ _ _ a s q hker hqs
-    let m : M →ₗ[A] M :=
-      { toFun := fun z => a • z
-        map_add' := by intro z w; simp
-        map_smul' := by
-          intro b z
-          simp only [smul_smul, RingHom.id_apply, mul_comm] }
-    let Q : Type u := M ⧸ LinearMap.range m
-    let : Module B Q := Module.compHom Q s
-    have hdiff (b : A) : b - s (q b) ∈ Ideal.span {a} := by
-      rw [← hker, RingHom.mem_ker]
-      have h := RingHom.congr_fun hqs (q b)
-      rw [map_sub]
-      have hs : q (s (q b)) = q b := by
-        simpa only [RingHom.comp_apply, RingHom.id_apply] using h
-      rw [hs]
-      simp
-    have hcompat (b : A) (z : Q) : q b • z = b • z := by
-      change s (q b) • z = b • z
-      obtain ⟨c, hc⟩ := Ideal.mem_span_singleton'.mp (hdiff b)
-      have hz : (b - s (q b)) • z = 0 := by
-        obtain ⟨z, rfl⟩ :=
-          (Submodule.Quotient.mk_surjective (LinearMap.range m)) z
-        rw [← Submodule.Quotient.mk_smul]
-        apply (Submodule.Quotient.mk_eq_zero (LinearMap.range m)).mpr
-        rw [← hc]
-        exact ⟨c • z, by simp [m, smul_smul, mul_comm]⟩
-      exact (sub_eq_zero.mp (by simpa only [sub_smul] using hz)).symm
-    simpa [m, Q] using (finite_of_scalar_compat q hcompat)
-  let rankYValue :
-      ∀ (M : Type u) [AddCommGroup M] [Module A M], ℕ :=
-    fun M _ _ =>
-      let my : M →ₗ[A] M :=
-        { toFun := fun m => y • m
-          map_add' := by intro m n; simp
-          map_smul' := by
-            intro a m
-            simp only [smul_smul, RingHom.id_apply, mul_comm] }
-      let Q : Type u := M ⧸ LinearMap.range my
-      @Module.finrank B Q (inferInstance : Semiring B)
-        (inferInstance : AddCommMonoid Q)
-        (Module.compHom Q sX)
-  let rankXValue :
-      ∀ (M : Type u) [AddCommGroup M] [Module A M], ℕ :=
-    fun M _ _ =>
-      let mx : M →ₗ[A] M :=
-        { toFun := fun m => x • m
-          map_add' := by intro m n; simp
-          map_smul' := by
-            intro a m
-            simp only [smul_smul, RingHom.id_apply, mul_comm] }
-      let Q : Type u := M ⧸ LinearMap.range mx
-      @Module.finrank B Q (inferInstance : Semiring B)
-        (inferInstance : AddCommMonoid Q)
-        (Module.compHom Q sY)
   have hzero : ∀ (φ : EulerPoincareFunction A),
       φ (FGModuleCat.of A (Fin 0 → A)) = 0 := by
     intro φ
@@ -2630,9 +2561,6 @@ private theorem eulerPoincareFunction_node_injective
         change (∏ j, p j ^ e j) • z i = 0
         rw [← Finset.prod_erase_mul _ _ (Finset.mem_univ i), mul_smul, hi,
           smul_zero]
-      have htorsionDSzero :
-          Module.finrank B (DirectSum ι (fun i => B ⧸ B ∙ p i ^ e i)) = 0 :=
-        htorsionDS.finrank_eq_zero
       have hfree :
           θ (FGModuleCat.of A (Fin n →₀ B)) =
             (n : ℤ) * θ (FGModuleCat.of A B) := by
@@ -2870,9 +2798,6 @@ private theorem eulerPoincareFunction_node_injective
         change (∏ j, p j ^ e j) • z i = 0
         rw [← Finset.prod_erase_mul _ _ (Finset.mem_univ i), mul_smul, hi,
           smul_zero]
-      have htorsionDSzero :
-          Module.finrank B (DirectSum ι (fun i => B ⧸ B ∙ p i ^ e i)) = 0 :=
-        htorsionDS.finrank_eq_zero
       have hfree :
           θ (FGModuleCat.of A (Fin n →₀ B)) =
             (n : ℤ) * θ (FGModuleCat.of A B) := by

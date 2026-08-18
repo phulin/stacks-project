@@ -219,7 +219,13 @@ theorem isCategoryFibredInSetoids_iff_isFibered_and_setoidFibres
     {S C : Type*} [Category* S] [Category* C] (p : S ⥤ C) :
     IsCategoryFibredInSetoids p ↔
       p.IsFibered ∧ ∀ U : C, IsSetoid (Functor.Fiber p U) := by
-  sorry
+  constructor
+  · rintro ⟨hp, hsetoid⟩
+    have h := (fibredInGroupoids_iff_fibred_groupoid_fibres p).mp hp
+    exact ⟨h.2, hsetoid⟩
+  · rintro ⟨hfibred, hsetoid⟩
+    refine ⟨(fibredInGroupoids_iff_fibred_groupoid_fibres p).mpr ?_, hsetoid⟩
+    exact ⟨fun U => (hsetoid U).1, hfibred⟩
 
 /-! ## The fixed-base 2-category -/
 
@@ -272,7 +278,17 @@ theorem setoidFibredCategoryOver_two_morphism_isIso
 theorem categoriesFibredInSetoidsOver_is_two_one_category
     (C : Cat.{v, u}) :
     IsTwoOneCategory (CategoriesFibredInSetoidsOver C) := by
-  sorry
+  intro X Y
+  refine ⟨fun {F G} η => ?_⟩
+  let _ : IsIso η.hom := setoidFibredCategoryOver_two_morphism_isIso
+    (X := X.obj) (Y := Y.obj) Y.property η.hom
+  refine ⟨⟨inv η.hom⟩, ?_, ?_⟩
+  · apply Bicategory.InducedBicategory.hom₂_ext
+    change η.hom ≫ inv η.hom = 𝟙 F.hom
+    simp
+  · apply Bicategory.InducedBicategory.hom₂_ext
+    change inv η.hom ≫ η.hom = 𝟙 G.hom
+    simp
 
 /-! ## Two-fibre products -/
 
@@ -288,7 +304,9 @@ theorem fibredInSetoidsTwoFibreProduct_apex_isCategoryFibredInSetoids
     {F : FibredCategoryOverHom X S} {G : FibredCategoryOverHom Y S}
     (P : FibredInSetoidsTwoFibreProduct F G) :
     IsCategoryFibredInSetoids P.product.diagram.base := by
-  sorry
+  exact (isCategoryFibredInSetoids_iff_isFibered_and_setoidFibres
+    P.product.diagram.base).mpr
+    ⟨P.product.apex_fibred, P.fibres_are_setoids⟩
 
 theorem categoriesFibredInSetoids_have_twoFibreProducts
     {C : Cat.{v, u}} (X Y S : FibredCategoryOver C)

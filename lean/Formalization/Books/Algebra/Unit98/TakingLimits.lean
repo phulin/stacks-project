@@ -344,7 +344,13 @@ theorem gradedComponentMap_comp {A : Type u} [CommRing A]
     {i j k : ℕ+ᵒᵖ} (f : i ⟶ j) (g : j ⟶ k) :
     gradedComponentMap G F d (f ≫ g) =
       gradedComponentMap G F d f ≫ gradedComponentMap G F d g := by
-  sorry
+  simp only [gradedComponentMap]
+  apply AddCommGrpCat.hom_ext
+  ext x
+  change (transitionMap F.system (leOfHom (f ≫ g).unop)).hom x =
+    (transitionMap F.system (leOfHom g.unop)).hom
+      ((transitionMap F.system (leOfHom f.unop)).hom x)
+  rw [← ConcreteCategory.comp_apply, transitionMap_comp]
 
 /-- The inverse system of degree-`d` components. -/
 def gradedComponentSystem {A : Type u} [CommRing A]
@@ -438,7 +444,38 @@ theorem completionTensorCoordinate_naturality
           (φ.map i.unop)) =
       completionTensorCoordinate I (j.unop : ℕ) (hF j.unop)
         (φ.map j.unop) := by
-  sorry
+  letI : Module (A ⧸ I ^ (i.unop : ℕ)) (F.system.obj i) := (hF i.unop).module
+  letI : Module (A ⧸ I ^ (j.unop : ℕ)) (F.system.obj j) := (hF j.unop).module
+  apply LinearMap.ext
+  intro z
+  induction z using TensorProduct.induction_on with
+  | zero => simp
+  | add x y hx hy => simp only [map_add, hx, hy]
+  | tmul m r =>
+    induction r using AdicCompletion.induction_on I A with
+    | _ a =>
+      change (F.system.map f).hom
+          ((AdicCompletion.evalₐ I (i.unop : ℕ) (AdicCompletion.mk I A a)) •
+            (φ.map i.unop) m) =
+        (AdicCompletion.evalₐ I (j.unop : ℕ) (AdicCompletion.mk I A a)) •
+          (φ.map j.unop) m
+      rw [AdicCompletion.evalₐ_mk, AdicCompletion.evalₐ_mk]
+      change (F.system.map f).hom ((a.val i.unop) • (φ.map i.unop) m) =
+        (a.val j.unop) • (φ.map j.unop) m
+      rw [map_smul]
+      have hcompat :=
+        φ.compatible i.unop j.unop (leOfHom f.unop)
+      have hmap :
+          (F.system.map f).hom.comp (φ.map i.unop) = φ.map j.unop := by
+        rw [← hcompat]
+        congr 1
+      have hmap_apply := congrArg (fun q => q m) hmap
+      rw [LinearMap.comp_apply] at hmap_apply
+      rw [hmap_apply]
+      have hzero := @hF j.unop ((φ.map j.unop) m)
+        ⟨a.val i.unop - a.val j.unop,
+          SModEq.sub_mem.mp (a.property (leOfHom f.unop))⟩
+      rw [← sub_eq_zero, ← sub_smul]
 
 /-- The map induced by a compatible graded system of maps after tensoring with `A'`. -/
 noncomputable def inducedTensorLimitMap

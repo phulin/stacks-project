@@ -1,6 +1,9 @@
 import Formalization.Books.Algebra.Unit09.Localization
+import Formalization.Books.Algebra.Unit25.ZerodivisorsAndTotalRingsOfFractions
 import Formalization.Books.Algebra.Unit36.FiniteIntegralRingExtensions
 import Mathlib.Algebra.Colimit.DirectLimit
+import Mathlib.Algebra.Colimit.Ring
+import Mathlib.RingTheory.Idempotents
 import Mathlib.RingTheory.IntegralClosure.IsIntegral.AlmostIntegral
 import Mathlib.RingTheory.PowerSeries.Ideal
 import Mathlib.RingTheory.LaurentSeries
@@ -654,7 +657,96 @@ theorem finite_product_isNormalRing
     {ι : Type u} [Fintype ι] {R : ι → Type v}
     [∀ i, CommRing (R i)] (hR : ∀ i, IsNormalRing (R i)) :
     IsNormalRing (∀ i, R i) := by
-  sorry
+  classical
+  intro p
+  let I : ∀ i, Ideal (R i) := fun i =>
+    p.asIdeal.map (Pi.evalRingHom R i)
+  have hp : p.asIdeal = Ideal.pi I := by
+    exact (Ideal.piOrderIso.symm_apply_apply p.asIdeal).symm
+  have hex : ∃ i, I i ≠ ⊤ := by
+    by_contra h
+    have htop : ∀ i, I i = ⊤ := fun i => by
+      exact Classical.not_not.mp (fun hi => h ⟨i, hi⟩)
+    apply p.2.ne_top
+    rw [hp]
+    ext x
+    simp [Ideal.mem_pi, htop]
+  obtain ⟨i, hi⟩ := hex
+  have hi1 : (1 : R i) ∉ I i := (Ideal.ne_top_iff_one _).mp hi
+  have hother : ∀ j, i ≠ j → I j = ⊤ := by
+    intro j hij
+    apply (Ideal.eq_top_iff_one _).2
+    by_contra hj
+    have hxi : Pi.single i (1 : R i) ∉ p.asIdeal := by
+      intro hmem
+      apply hi1
+      simpa using (Ideal.mem_pi I (Pi.single i (1 : R i))).mp (hp ▸ hmem) i
+    have hxj : Pi.single j (1 : R j) ∉ p.asIdeal := by
+      intro hmem
+      apply hj
+      simpa using (Ideal.mem_pi I (Pi.single j (1 : R j))).mp (hp ▸ hmem) j
+    have hprod :
+        Pi.single i (1 : R i) * Pi.single j (1 : R j) = 0 := by
+      funext k
+      by_cases hki : k = i
+      · subst k
+        simp [hij]
+      · by_cases hkj : k = j
+        · subst k
+          simp [hij]
+        · simp [hki, hkj]
+    have hmem :
+        Pi.single i (1 : R i) * Pi.single j (1 : R j) ∈ p.asIdeal := by
+      rw [hprod]
+      exact p.asIdeal.zero_mem
+    rcases p.2.mem_or_mem hmem with hmem | hmem
+    · exact (hxi hmem).elim
+    · exact (hxj hmem).elim
+  have hker : RingHom.ker (Pi.evalRingHom R i) ≤ p.asIdeal := by
+    intro x hx
+    rw [hp, Ideal.mem_pi]
+    intro j
+    by_cases hji : j = i
+    · subst j
+      change x i = 0 at hx
+      rw [hx]
+      exact (I i).zero_mem
+    · rw [hother j (Ne.symm hji)]
+      trivial
+  have hIprime : (I i).IsPrime := by
+    change (p.asIdeal.map (Pi.evalRingHom R i)).IsPrime
+    exact Ideal.map_isPrime_of_surjective (Function.surjective_eval _)
+      hker
+  have hpcomap : p.asIdeal = (I i).comap (Pi.evalRingHom R i) := by
+    apply le_antisymm
+    · exact Ideal.le_comap_map
+    · intro x hx
+      rw [hp, Ideal.mem_pi]
+      intro j
+      by_cases hji : j = i
+      · subst j
+        exact hx
+      · rw [hother j (Ne.symm hji)]
+        trivial
+  let q : PrimeSpectrum (R i) := ⟨I i, hIprime⟩
+  let e0 :
+      Localization.AtPrime (q.asIdeal.comap (Pi.evalRingHom R i)) ≃+*
+        Localization.AtPrime q.asIdeal := by
+    exact RingEquiv.ofBijective
+      (Localization.AtPrime.mapPiEvalRingHom q.asIdeal)
+      (Localization.AtPrime.mapPiEvalRingHom_bijective q.asIdeal)
+  let e : Localization.AtPrime p.asIdeal ≃+* Localization.AtPrime q.asIdeal := by
+    have hpc : p.asIdeal.primeCompl =
+        (q.asIdeal.comap (Pi.evalRingHom R i)).primeCompl := by
+      ext x
+      change x ∉ p.asIdeal ↔ x ∉ (q.asIdeal.comap (Pi.evalRingHom R i))
+      rw [hpcomap]
+    change Localization p.asIdeal.primeCompl ≃+*
+      Localization q.asIdeal.primeCompl
+    rw [hpc]
+    exact e0
+  exact ⟨(e.isDomain_iff).mpr (hR i q).1,
+    (hR i q).2.of_equiv e.symm⟩
 
 /-- A ring is a finite product of normal domains when it is ring-isomorphic to
 a finite product of commutative normal domains. -/
@@ -675,7 +767,369 @@ theorem normalRing_reduced_finite_minimalPrimes_TFAE
         IsIntegrallyClosedIn R
           (Formalization.Books.Algebra.Unit09.totalQuotientRing R),
         IsFiniteProductOfNormalDomains R ] := by
-  sorry
+  classical
+  have hid : ∀ {x : Formalization.Books.Algebra.Unit09.totalQuotientRing R},
+      IsIdempotentElem x → IsIntegral R x := by
+    intro x hx
+    refine ⟨Polynomial.X * (Polynomial.X - 1), ?_, ?_⟩
+    · exact Polynomial.monic_X.mul (Polynomial.monic_X_sub_C _)
+    · simp only [Polynomial.eval₂_mul, Polynomial.eval₂_sub,
+        Polynomial.eval₂_X, Polynomial.eval₂_one]
+      calc
+        x * (x - 1) = x * x - x := by ring
+        _ = 0 := by rw [hx.eq, sub_self]
+  tfae_have 1 → 2 := fun h =>
+    normalRing_isIntegrallyClosedIn_totalQuotientRing h
+  tfae_have 2 → 3 := by
+    intro h
+    let P := Formalization.Books.Algebra.Unit25.MinimalPrimeSpectrum R
+    letI : Fintype {p : Ideal R // p ∈ minimalPrimes R} := hfinite.fintype
+    let _ : Finite P := Finite.of_injective
+      (fun p : P => (⟨p.1.asIdeal, p.2⟩ : {p : Ideal R // p ∈ minimalPrimes R}))
+      (by
+        intro p q hpq
+        apply Subtype.ext
+        apply PrimeSpectrum.ext
+        exact congrArg Subtype.val hpq)
+    letI : Fintype P := Fintype.ofFinite P
+    let n := Fintype.card P
+    let e : Fin n ≃ P := (Fintype.equivFin P).symm
+    let q : Fin n → PrimeSpectrum R := fun i => (e i).1
+    have hq : Set.range (fun i : Fin n => (q i).asIdeal) =
+        minimalPrimes R := by
+      ext I
+      constructor
+      · rintro ⟨i, rfl⟩
+        exact (e i).2
+      · intro hI
+        let p : P := ⟨⟨I, hI.isPrime⟩, hI⟩
+        refine ⟨e.symm p, ?_⟩
+        simpa [q, p] using congrArg (fun z : P => z.1.asIdeal)
+          (e.apply_symm_apply p)
+    have hqi : Function.Injective q := by
+      intro i j hij
+      apply e.injective
+      apply Subtype.ext
+      exact hij
+    have hz : (⋃ i : Fin n, ((q i).asIdeal : Set R)) =
+        Formalization.Books.Algebra.Unit25.zeroDivisors := by
+      apply Set.ext
+      intro x
+      constructor
+      · intro hx
+        rw [← Formalization.Books.Algebra.Unit25.iUnion_minimalPrimeSpectrum_eq_zeroDivisors]
+        rcases Set.mem_iUnion.mp hx with ⟨i, hi⟩
+        apply Set.mem_iUnion.mpr
+        refine ⟨e i, ?_⟩
+        simpa [q] using hi
+      · intro hx
+        rw [← Formalization.Books.Algebra.Unit25.iUnion_minimalPrimeSpectrum_eq_zeroDivisors]
+          at hx
+        rcases Set.mem_iUnion.mp hx with ⟨p, hp⟩
+        obtain ⟨i, rfl⟩ := e.surjective p
+        exact Set.mem_iUnion.mpr ⟨i, hp⟩
+    obtain ⟨E⟩ :=
+      Formalization.Books.Algebra.Unit25.totalQuotientRing_equiv_pi_minimalPrime_localizations
+        n q hq hqi hz
+    let g : ∀ i : Fin n, R →+* Localization.AtPrime (q i).asIdeal :=
+      fun i => (Pi.evalRingHom (fun j : Fin n =>
+        Localization.AtPrime (q j).asIdeal) i).comp
+          (E.toRingHom.comp (algebraMap R
+            (Formalization.Books.Algebra.Unit09.totalQuotientRing R)))
+    have hfrac (i : Fin n) :
+        IsFractionRing (g i).range (Localization.AtPrime (q i).asIdeal) := by
+      let hmin : (q i).asIdeal ∈ minimalPrimes R := by
+        rw [← hq]
+        exact Set.mem_range_self i
+      let hfield : IsField (Localization.AtPrime (q i).asIdeal) :=
+        Formalization.Books.Algebra.Unit25.isField_localizationAt_minimalPrime_of_isReduced
+          ⟨q i, hmin⟩
+      letI : IsField (Localization.AtPrime (q i).asIdeal) := hfield
+      letI : Field (Localization.AtPrime (q i).asIdeal) := hfield.toField
+      letI : Nontrivial (g i).range := by
+        refine ⟨⟨1, 0, ?_⟩⟩
+        intro hzero
+        have hzero' : (1 : Localization.AtPrime (q i).asIdeal) = 0 :=
+          congrArg (fun x : (g i).range =>
+            (x : Localization.AtPrime (q i).asIdeal)) hzero
+        exact one_ne_zero hzero'
+      change IsLocalization (nonZeroDivisors (g i).range)
+        (Localization.AtPrime (q i).asIdeal)
+      rw [isLocalization_iff]
+      refine ⟨?_, ?_, ?_⟩
+      · intro s
+        have hsne : algebraMap (g i).range
+            (Localization.AtPrime (q i).asIdeal) s ≠ 0 := by
+          intro hs
+          apply nonZeroDivisors.ne_zero s.2
+          apply Subtype.ext
+          exact hs
+        exact IsUnit.mk0 _ hsne
+      · intro z
+        let z' : ∀ j : Fin n, Localization.AtPrime (q j).asIdeal :=
+          Pi.single i z
+        let y := E.symm z'
+        obtain ⟨⟨r, s⟩, hys⟩ :=
+          IsLocalization.surj (M := nonZeroDivisors R)
+            (S := Formalization.Books.Algebra.Unit09.totalQuotientRing R) y
+        let ar : (g i).range := ⟨g i r, ⟨r, rfl⟩⟩
+        let as : (g i).range := ⟨g i s, ⟨s, rfl⟩⟩
+        have hsunit : IsUnit (g i s) := by
+          have hu : IsUnit ((E (algebraMap R
+              (Formalization.Books.Algebra.Unit09.totalQuotientRing R) s) :
+                ∀ j : Fin n, Localization.AtPrime (q j).asIdeal) i) :=
+            IsUnit.map (Pi.evalRingHom (fun j : Fin n =>
+              Localization.AtPrime (q j).asIdeal) i)
+              (IsUnit.map E.toRingHom
+                (IsLocalization.map_units
+                  (Formalization.Books.Algebra.Unit09.totalQuotientRing R) s))
+          simpa [g] using hu
+        let ds : nonZeroDivisors (g i).range :=
+          ⟨as, mem_nonZeroDivisors_of_ne_zero (by
+            intro has
+            apply hsunit.ne_zero
+            exact congrArg Subtype.val has)⟩
+        refine ⟨(ar, ds), ?_⟩
+        have hys' := congrArg E hys
+        have hi := congrArg
+          (fun w : ∀ j : Fin n, Localization.AtPrime (q j).asIdeal => w i) hys'
+        have hy : E y i = z := by
+          simp [y, z', E.apply_symm_apply]
+        have hds : algebraMap (g i).range
+            (Localization.AtPrime (q i).asIdeal) (ds : (g i).range) = g i (s : R) := by
+          rfl
+        have har : algebraMap (g i).range
+            (Localization.AtPrime (q i).asIdeal) (ar : (g i).range) = g i r := by
+          rfl
+        rw [hds, har]
+        simpa [g, map_mul, hy] using hi
+      · intro x y hxy
+        refine ⟨1, ?_⟩
+        apply congrArg (fun z : (g i).range => (1 : (g i).range) * z)
+        apply Subtype.ext
+        exact hxy
+    let eQ : Fin n → Formalization.Books.Algebra.Unit09.totalQuotientRing R :=
+      fun i => E.symm (Pi.single i 1)
+    have heQ : CompleteOrthogonalIdempotents eQ := by
+      have he' := (CompleteOrthogonalIdempotents.single
+        (fun i : Fin n => Localization.AtPrime (q i).asIdeal)).map E.symm.toRingHom
+      simpa [eQ, Function.comp_def] using he'
+    have herange : ∀ i, eQ i ∈ (algebraMap R
+        (Formalization.Books.Algebra.Unit09.totalQuotientRing R)).range := by
+      intro i
+      rcases h.isIntegral_iff.mp (hid (heQ.idem i)) with ⟨r, hr⟩
+      exact ⟨r, hr⟩
+    have hker : ∀ x, x ∈ RingHom.ker
+        (algebraMap R (Formalization.Books.Algebra.Unit09.totalQuotientRing R)) →
+        IsNilpotent x := by
+      intro x hx
+      have hx0 : algebraMap R
+          (Formalization.Books.Algebra.Unit09.totalQuotientRing R) x = 0 :=
+        RingHom.mem_ker.mp hx
+      have hinj : Function.Injective (algebraMap R
+          (Formalization.Books.Algebra.Unit09.totalQuotientRing R)) :=
+        IsLocalization.injective _ le_rfl
+      have : x = 0 := hinj (by simpa using hx0)
+      subst x
+      exact IsNilpotent.zero
+    obtain ⟨eR, heR, hemap⟩ :=
+      CompleteOrthogonalIdempotents.lift_of_isNilpotent_ker
+        (f := algebraMap R (Formalization.Books.Algebra.Unit09.totalQuotientRing R))
+        hker heQ herange
+    have heval (i : Fin n) : g i (eR i) = 1 := by
+      change (E (algebraMap R
+        (Formalization.Books.Algebra.Unit09.totalQuotientRing R) (eR i))) i = 1
+      have hmap := congr_fun hemap i
+      change algebraMap R
+          (Formalization.Books.Algebra.Unit09.totalQuotientRing R) (eR i) =
+        eQ i at hmap
+      rw [hmap]
+      simp [eQ]
+    have hcross (i j : Fin n) (hij : i ≠ j) : g j (eR i) = 0 := by
+      have hm := congrArg (g j) (heR.1.ortho hij)
+      rw [map_mul, heval j, mul_one] at hm
+      simpa using hm
+    let G : R →+* (∀ i : Fin n, (g i).range) :=
+      RingHom.pi fun i => (g i).rangeRestrict
+    have hGsurj : Function.Surjective G := by
+      intro a
+      choose r hr using fun i => (a i).property
+      refine ⟨∑ i, eR i * r i, ?_⟩
+      funext j
+      dsimp [G]
+      apply Subtype.ext
+      change g j (∑ i, eR i * r i) = (a j : Localization.AtPrime (q j).asIdeal)
+      simp only [map_sum, map_mul]
+      rw [Finset.sum_eq_single j]
+      · rw [heval j, one_mul, hr j]
+      · intro i hi hij
+        simp [hcross i j hij]
+      · simp
+    have hGinj : Function.Injective G := by
+      intro x y hxy
+      have hinj : Function.Injective (algebraMap R
+          (Formalization.Books.Algebra.Unit09.totalQuotientRing R)) :=
+        IsLocalization.injective _ le_rfl
+      apply hinj
+      apply E.injective
+      funext i
+      change g i x = g i y
+      exact congrArg Subtype.val (congr_fun hxy i)
+    let EG : R ≃+* (∀ i : Fin n, (g i).range) := RingEquiv.ofBijective G
+      ⟨hGinj, hGsurj⟩
+    letI : ∀ i : Fin n, SMul R (Localization.AtPrime (q i).asIdeal) :=
+      fun i => (g i).toAlgebra.toSMul
+    letI : ∀ i : Fin n, Algebra R (Localization.AtPrime (q i).asIdeal) :=
+      fun i => (g i).toAlgebra
+    letI : SMul R (∀ i : Fin n, Localization.AtPrime (q i).asIdeal) :=
+      Pi.instSMul
+    letI : Algebra R (∀ i : Fin n, Localization.AtPrime (q i).asIdeal) :=
+      Pi.algebra (ι := Fin n)
+        (A := fun i : Fin n => Localization.AtPrime (q i).asIdeal)
+    letI : Algebra R (∀ i : Fin n, (g i).range) := G.toAlgebra
+    letI : ∀ i : Fin n, SMul (g i).range
+        (Localization.AtPrime (q i).asIdeal) :=
+      fun i => (g i).range.subtype.toAlgebra.toSMul
+    letI : ∀ i : Fin n, Algebra (g i).range
+        (Localization.AtPrime (q i).asIdeal) :=
+      fun i => (g i).range.subtype.toAlgebra
+    letI : SMul (∀ i : Fin n, (g i).range)
+        (∀ i : Fin n, Localization.AtPrime (q i).asIdeal) := Pi.smul'
+    letI : Algebra (∀ i : Fin n, (g i).range)
+        (∀ i : Fin n, Localization.AtPrime (q i).asIdeal) :=
+      Pi.instAlgebraForall
+        (fun i : Fin n => Localization.AtPrime (q i).asIdeal)
+        (fun i : Fin n => (g i).range)
+    have hEalg : ∀ r, E (algebraMap R
+        (Formalization.Books.Algebra.Unit09.totalQuotientRing R) r) =
+        algebraMap R (∀ i : Fin n, Localization.AtPrime (q i).asIdeal) r := by
+      intro r
+      funext i
+      dsimp [g]
+      change (E (algebraMap R
+        (Formalization.Books.Algebra.Unit09.totalQuotientRing R) r)) i =
+        (E (algebraMap R
+          (Formalization.Books.Algebra.Unit09.totalQuotientRing R) r)) i
+      rfl
+    let Ealg : Formalization.Books.Algebra.Unit09.totalQuotientRing R ≃ₐ[R]
+        (∀ i : Fin n, Localization.AtPrime (q i).asIdeal) :=
+      { E with commutes' := hEalg }
+    letI : IsScalarTower R (∀ i : Fin n, (g i).range)
+        (∀ i : Fin n, Localization.AtPrime (q i).asIdeal) :=
+      ⟨by
+        intro r s x
+        change (G r * s) • x = r • (s • x)
+        funext i
+        simp only [Pi.smul_apply', Pi.smul_apply, Algebra.smul_def, Pi.mul_apply]
+        rw [map_mul]
+        have hGr : algebraMap (g i).range
+            (Localization.AtPrime (q i).asIdeal) (G r i) = g i r := by
+          rfl
+        have hsA :
+            (algebraMap (∀ i : Fin n, (g i).range)
+              (∀ i : Fin n, Localization.AtPrime (q i).asIdeal) s) i =
+              algebraMap (g i).range
+                (Localization.AtPrime (q i).asIdeal) (s i) := by
+          rfl
+        rw [hGr, hsA]
+        have hgr : algebraMap R (Localization.AtPrime (q i).asIdeal) r = g i r := by
+          rfl
+        rw [hgr]
+        exact mul_assoc _ _ _
+      ⟩
+    letI : Algebra.IsIntegral R (∀ i : Fin n, (g i).range) :=
+      Algebra.isIntegral_of_surjective (by
+        change Function.Surjective G
+        exact hGsurj)
+    have hclosed : IsIntegrallyClosedIn (∀ i : Fin n, (g i).range)
+        (∀ i : Fin n, Localization.AtPrime (q i).asIdeal) := by
+      refine ⟨?_, ?_⟩
+      · intro x y hxy
+        funext i
+        exact Subtype.ext (congrFun hxy i)
+      · intro x
+        constructor
+        · intro hx
+          have hxR : IsIntegral R x := isIntegral_trans x hx
+          have hxQ : IsIntegral R (Ealg.symm x) :=
+            (isIntegral_algEquiv Ealg.symm).mpr hxR
+          rcases h.isIntegral_iff.mp hxQ with ⟨r, hr⟩
+          refine ⟨G r, ?_⟩
+          have hGA : algebraMap (∀ i : Fin n, (g i).range)
+              (∀ i : Fin n, Localization.AtPrime (q i).asIdeal) (G r) =
+              algebraMap R (∀ i : Fin n, Localization.AtPrime (q i).asIdeal) r := by
+            change algebraMap (∀ i : Fin n, (g i).range)
+              (∀ i : Fin n, Localization.AtPrime (q i).asIdeal)
+                (algebraMap R (∀ i : Fin n, (g i).range) r) = _
+            exact IsScalarTower.algebraMap_apply R (∀ i : Fin n, (g i).range)
+              (∀ i : Fin n, Localization.AtPrime (q i).asIdeal) r
+          rw [hGA]
+          apply Ealg.symm.injective
+          change Ealg.symm (Ealg
+            (algebraMap R (Formalization.Books.Algebra.Unit09.totalQuotientRing R) r)) =
+            Ealg.symm x
+          rw [Ealg.symm_apply_apply]
+          exact hr
+        · rintro ⟨y, rfl⟩
+          exact isIntegral_algebraMap
+    have hS : ∀ i, IsNormalDomain (g i).range := by
+      intro i
+      let hfield : IsField (Localization.AtPrime (q i).asIdeal) :=
+        Formalization.Books.Algebra.Unit25.isField_localizationAt_minimalPrime_of_isReduced
+          ⟨q i, by rw [← hq]; exact Set.mem_range_self i⟩
+      letI : IsField (Localization.AtPrime (q i).asIdeal) := hfield
+      letI : Field (Localization.AtPrime (q i).asIdeal) := hfield.toField
+      letI : IsFractionRing (g i).range (Localization.AtPrime (q i).asIdeal) := hfrac i
+      have hclosed_i :=
+        (Formalization.Books.Algebra.Unit36.product_isIntegrallyClosedIn_iff.mp hclosed) i
+      exact ⟨inferInstance,
+        (isIntegrallyClosed_iff
+          (R := (g i).range)
+          (K := Localization.AtPrime (q i).asIdeal)).2 (by
+            intro x hx
+            exact hclosed_i.isIntegral_iff.mp hx)⟩
+    let u : Fin n ≃ ULift.{u} (Fin n) := Equiv.ulift.symm
+    let EU : (∀ i : Fin n, (g i).range) ≃+*
+        (∀ i : ULift.{u} (Fin n), (g i.down).range) :=
+      RingEquiv.piCongrLeft (fun i : ULift.{u} (Fin n) => (g i.down).range) u
+    exact ⟨ULift.{u} (Fin n), inferInstance,
+      fun i => CommRingCat.of (g i.down).range,
+      (fun i => hS i.down), ⟨EG.trans EU⟩⟩
+  tfae_have 3 → 1 := by
+    intro h
+    rcases h with ⟨ι, hι, S, hS, hE⟩
+    letI : Fintype ι := hι
+    obtain ⟨E⟩ := hE
+    have hfactor : ∀ i, IsNormalRing (S i : Type u) := by
+      intro i p
+      letI : IsDomain (S i : Type u) := (hS i).1
+      exact localization_isNormalDomain (hS i) p.asIdeal.primeCompl
+        p.asIdeal.primeCompl_le_nonZeroDivisors
+    have hprod : IsNormalRing (∀ i, (S i : Type u)) :=
+      finite_product_isNormalRing hfactor
+    have htransport : ∀ {A B : Type u} [CommRing A] [CommRing B],
+        (A ≃+* B) → IsNormalRing B → IsNormalRing A := by
+      intro A B _ _ e hB p
+      let q : PrimeSpectrum B := PrimeSpectrum.comapEquiv e p
+      have hqcomap : q.comap e = p := by
+        change (PrimeSpectrum.comapEquiv e).symm
+            ((PrimeSpectrum.comapEquiv e) p) = p
+        exact (PrimeSpectrum.comapEquiv e).symm_apply_apply p
+      have hsub : p.asIdeal.primeCompl.map e = q.asIdeal.primeCompl := by
+        have hmap := RingEquiv.map_primeCompl_comap_eq e q.asIdeal
+        have hqideal : q.asIdeal.comap e = p.asIdeal := by
+          change (q.comap e).asIdeal = p.asIdeal
+          rw [hqcomap]
+        simpa only [hqideal] using hmap
+      let eloc : Localization.AtPrime p.asIdeal ≃+*
+          Localization.AtPrime q.asIdeal :=
+        IsLocalization.ringEquivOfRingEquiv
+          (Localization.AtPrime p.asIdeal)
+          (Localization.AtPrime q.asIdeal) e hsub
+      exact ⟨(eloc.isDomain_iff).mpr (hB q).1,
+        (hB q).2.of_equiv eloc.symm⟩
+    exact htransport E hprod
+  tfae_finish
 
 /-! ## Directed colimits -/
 

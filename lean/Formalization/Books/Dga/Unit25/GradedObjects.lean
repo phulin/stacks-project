@@ -113,7 +113,6 @@ theorem gradedObjectTotalizationSpec_nonempty :
     obtain ⟨⟨p, q⟩, h⟩ := s
     have hq : q = -p + i := by omega
     subst q
-    simp only [sub_eq_add_neg, zero_add, neg_neg]
     dsimp [gradedObjectHomogeneousComp, gradedObjectHomogeneousComponent,
       gradedObjectHomogeneousId]
     have hp : -(0 - p) = p := by omega
@@ -307,8 +306,7 @@ theorem gradedObjectTotalizationSpec_nonempty :
           left
           constructor
           · omega
-          · congr 1
-            apply Function.hfunext
+          · apply Function.hfunext
               (congrArg (fun n => GradedDegreePair n)
                 (show (0 : ℤ) + j = j by omega))
             intro s s' hs
@@ -347,8 +345,7 @@ theorem gradedObjectTotalizationSpec_nonempty :
           left
           constructor
           · omega
-          · congr 1
-            apply Function.hfunext
+          · apply Function.hfunext
               (congrArg (fun n => GradedDegreePair n)
                 (show i + (0 : ℤ) = i by omega))
             intro s s' hs
@@ -786,8 +783,7 @@ theorem gradedObject_degree_zero_recovers_graded_objects :
       gradedObjectHomogeneousComponent, mapToFamily, familyToMap]
     have hp : -(0 - p) = p := by omega
     have hq : 0 - p = -p := by omega
-    simp [hp, hq, zero_sub, neg_neg, zero_add, eqToHom_trans,
-      Category.assoc]
+    simp
     have hf :
         (⟨(-(0 - p), -p), by omega⟩ : GradedDegreePair 0) =
           ⟨(p, -p), by omega⟩ := by
@@ -980,7 +976,7 @@ theorem gradedObject_degree_zero_recovers_graded_objects :
   let counitNatIso :
       G ⋙ F ≅ 𝟭 (CategoryTheory.GradedObject ℤ B) := by
     refine NatIso.ofComponents (fun A => counitIso A) (fun {X Y} f => ?_)
-    simp [counitIso, Category.id_comp, Category.comp_id]
+    simp [counitIso]
     dsimp [F, G]
     change familyToMap (homTo (homFrom (mapToFamily f))) ≫ 𝟙 Y =
       𝟙 X ≫ f

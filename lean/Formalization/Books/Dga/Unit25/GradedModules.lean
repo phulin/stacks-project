@@ -117,13 +117,13 @@ def gradedRightModuleHomogeneousSubmodule
         dsimp [IsGradedRightModuleMap] at hf hg ⊢
         rw [hf, hg]
         convert (hadd (i := s.1.1 - i) (j := i) (k := s.1.1)
-          (h := by omega) _ _ a).symm using 1 <;> apply Subsingleton.elim
+          (h := by omega) _ _ a).symm using 1
       smul_mem' := by
         intro r f hf s i a m
         dsimp [IsGradedRightModuleMap] at hf ⊢
         rw [hf]
         convert (hsmul (i := s.1.1 - i) (j := i) (k := s.1.1)
-          (h := by omega) r _ a).symm using 1 <;> apply Subsingleton.elim }
+          (h := by omega) r _ a).symm using 1 }
 
 theorem gradedRightModuleHomogeneous_addCommGroup_nonempty
     (L M : GradedRightModule (R := R) (A := A)) (n : ℤ) :
@@ -141,7 +141,7 @@ theorem gradedRightModuleHomogeneous_module_nonempty
     (L M : GradedRightModule (R := R) (A := A)) (n : ℤ) :
     Nonempty (Module R (GradedRightModuleHomogeneous L M n)) := by
   let P := gradedRightModuleHomogeneousSubmodule L M n
-  letI : AddCommGroup P := gradedRightModuleHomogeneousAddCommGroup L M n
+  let : AddCommGroup P := gradedRightModuleHomogeneousAddCommGroup L M n
   change Nonempty (@Module R P _ (inferInstance : AddCommMonoid P))
   exact ⟨Submodule.module' P⟩
 
@@ -252,7 +252,7 @@ theorem gradedRightModuleHomogeneousCompFamily_is_map
             GradedDegreePair j).1.2) := by
       change L.component (-(j - s.1.1) - k) =
         L.component (-(j - s.1.1 + k))
-      congr 1 <;> omega
+      congr 1; omega
     have hrightActionAt_heq :
         ∀ {x y z d : ℤ} (hxy : x = y)
           (h1 : x + d = z) (h2 : y + d = z)

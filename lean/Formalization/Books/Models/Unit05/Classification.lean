@@ -426,7 +426,7 @@ theorem determinant_five_by_five_formula (D : LocalNumericalData 5)
         8 * D.a 3 4 ^ 2 * D.w 0 * D.w 1 * D.w 2 +
         8 * D.a 0 4 ^ 2 * D.w 1 * D.w 2 * D.w 3 -
         2 * D.a 0 1 ^ 2 * D.a 2 3 ^ 2 * D.w 4 -
-        2 * D.a 0 1 ^ 2 * D.a 3 4 ^ 2 * D.w 1 -
+        2 * D.a 0 1 ^ 2 * D.a 3 4 ^ 2 * D.w 2 -
         2 * D.a 1 2 ^ 2 * D.a 3 4 ^ 2 * D.w 0 -
         2 * D.a 0 4 ^ 2 * D.a 1 2 ^ 2 * D.w 3 -
         2 * D.a 0 4 ^ 2 * D.a 2 3 ^ 2 * D.w 1 +

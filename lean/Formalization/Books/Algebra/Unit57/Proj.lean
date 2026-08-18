@@ -53,7 +53,7 @@ def projToSpectrum (G : GradedRingData S) :
 theorem projectiveSpectrum_induced_topology (G : GradedRingData S) :
     Topology.IsInducing (projToSpectrum G) := by
   refine ⟨TopologicalSpace.ext_isClosed fun Z ↦ ?_⟩
-  simp only [isClosed_induced_iff, ProjectiveSpectrum.isClosed_iff_zeroLocus]
+  rw [isClosed_induced_iff, ProjectiveSpectrum.isClosed_iff_zeroLocus]
   constructor
   · rintro ⟨s, rfl⟩
     refine ⟨PrimeSpectrum.zeroLocus s, ?_, ?_⟩
@@ -199,7 +199,8 @@ private lemma zgraded_unit_zpow_mem (H : ZGradedRingData A) (u : Aˣ) {k : ℤ}
       simpa [nsmul_eq_mul] using SetLike.pow_mem_graded n hu
   | negSucc n =>
       have hv : (↑(u⁻¹) : A) ∈ H.component (-k) := hgeq ▸ hg
-      have hn : Int.negSucc n = -((n + 1 : ℕ) : ℤ) := by omega
+      have hn : Int.negSucc n = -((n + 1 : ℕ) : ℤ) := by
+        simpa using Int.negSucc_eq n
       rw [hn, zpow_neg, zpow_natCast]
       have hpow : (↑((u ^ (n + 1))⁻¹) : A) = (↑(u⁻¹) : A) ^ (n + 1) := by
         simp [← inv_pow]

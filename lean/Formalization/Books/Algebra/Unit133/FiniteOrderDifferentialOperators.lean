@@ -2763,8 +2763,7 @@ theorem differentialOperator_check_on_algebra_generators
           differentialOperatorCommutator (R := A) (S := B) D y := by
     ext m
     simp [differentialOperatorCommutator, sub_eq_add_neg, add_assoc,
-      add_comm, add_left_comm]
-    abel
+      add_comm, add_left_comm, add_smul, smul_add, smul_smul]
   have hcomm_mul (x y : B) :
       differentialOperatorCommutator (R := A) (S := B) D (x * y) =
         (differentialOperatorCommutator (R := A) (S := B) D x).comp
@@ -2773,8 +2772,7 @@ theorem differentialOperator_check_on_algebra_generators
             (differentialOperatorCommutator (R := A) (S := B) D y) := by
     ext m
     simp [differentialOperatorCommutator, sub_eq_add_neg, add_assoc,
-      add_comm, add_left_comm, mul_assoc]
-    abel
+      add_comm, add_left_comm, mul_assoc, add_smul, smul_add, smul_smul]
   have hcomm_algebraMap (a : A) :
       differentialOperatorCommutator (R := A) (S := B) D (algebraMap A B a) = 0 := by
     ext m
@@ -2787,10 +2785,10 @@ theorem differentialOperator_check_on_algebra_generators
     intro s
     have hs : s ∈ Algebra.adjoin A (Set.range g) := by
       rw [hg]
-      exact Submodule.mem_top
-    apply Algebra.adjoin_induction (R := A) (s := Set.range g)
+      exact Algebra.mem_top
+    refine Algebra.adjoin_induction (R := A) (s := Set.range g)
       (p := fun x _ => IsDifferentialOperator (R := A) (S := B) (k - 1)
-        (differentialOperatorCommutator (R := A) (S := B) D x)) hs
+        (differentialOperatorCommutator (R := A) (S := B) D x)) ?_ ?_ ?_ ?_ hs
     · intro x hx
       rcases hx with ⟨i, rfl⟩
       exact hD i
@@ -2812,7 +2810,7 @@ theorem differentialOperator_check_on_algebra_generators
           (R := A) (S := B) (k - 1) 0
           (differentialOperatorCommutator (R := A) (S := B) D y)
           (DistribSMul.toLinearMap A N x) hpy (hmulN x)
-  rw [← Nat.sub_add_cancel (Nat.one_le_iff_ne_zero.mp hk)]
+  rw [← Nat.sub_add_cancel hk]
   intro s
   exact hcomm_all s
 

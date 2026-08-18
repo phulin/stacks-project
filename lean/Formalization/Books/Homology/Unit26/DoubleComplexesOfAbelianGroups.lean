@@ -324,11 +324,93 @@ theorem productTotalDifferential_comp_zero
       (show n - (p - 1 - 1) = n + 1 - (p - 1) by ring)
     try rw [show p - 1 - 1 + 1 = p - 1 by ring]
     rw [← hnat]
-    simpa [Category.assoc] using
-      congrArg (fun f => f ≫ eqToHom (by congr 1; ring))
+    have hp : p - 1 - 1 + 1 = p - 1 := by ring
+    have hn : n - (p - 1 - 1) = n + 1 - (p - 1) := by ring
+    simpa [Category.assoc, hp, hn, sub_eq_add_neg, add_assoc, add_comm,
+      add_left_comm] using
+      congrArg (fun f => f ≫ eqToHom (by congr 1 <;> ring))
         (A.d1_sq (p - 1 - 1) (n - (p - 1 - 1)))
   -/
-  sorry
+  have h11 :
+      A.d1 (p - 1 - 1) (n - (p - 1 - 1)) ≫
+          eqToHom (by congr 1 <;> ring) ≫
+          A.d1 (p - 1) (n + 1 - (p - 1)) ≫
+          eqToHom (by congr 1 <;> ring) = 0 := by
+    have hnat := eqToHom_naturality_assoc
+      (fun x : ℤ × ℤ => A.d1 x.1 x.2)
+      (show (p - 1 - 1 + 1, n - (p - 1 - 1)) =
+          (p - 1, n + 1 - (p - 1)) by
+        congr 1 <;> ring)
+      (eqToHom (by congr 1 <;> ring))
+    rw [← hnat]
+    simpa [Category.assoc] using
+      congrArg (fun f => f ≫ eqToHom (by congr 1 <;> ring))
+        (A.d1_sq (p - 1 - 1) (n - (p - 1 - 1)))
+  have h22 :
+      totalD2Component A n p ≫ totalD2Component A (n + 1) p = 0 := by
+    dsimp [totalD2Component]
+    simp only [Category.assoc]
+    rw [← eqToHom_naturality_assoc (fun q : ℤ => A.d2 p q)
+      (show n - p + 1 = n + 1 - p by ring)]
+    simpa [Category.assoc] using
+      congrArg (fun f => f ≫ eqToHom (by congr 1; ring))
+        (A.d2_sq p (n - p))
+  have hcomm :
+      A.d1 (p - 1) (n - (p - 1)) ≫
+          eqToHom (by congr 1 <;> ring) ≫
+        A.d2 p (n + 1 - p) ≫
+          eqToHom (by congr 1 <;> ring) =
+      A.d2 (p - 1) (n - (p - 1)) ≫
+          eqToHom (by congr 1 <;> ring) ≫
+        A.d1 (p - 1) (n + 1 - (p - 1)) ≫
+          eqToHom (by congr 1 <;> ring) := by
+    rw [← eqToHom_naturality_assoc
+      (fun x : ℤ × ℤ => A.d2 x.1 x.2)
+      (show (p, n - (p - 1) + 1) = (p, n + 1 - p) by
+        congr 1 <;> ring)
+      (eqToHom (by congr 1 <;> ring))]
+    rw [← eqToHom_naturality_assoc
+      (fun x : ℤ × ℤ => A.d1 x.1 x.2)
+      (show (p - 1, n - (p - 1) + 1) =
+          (p - 1, n + 1 - (p - 1)) by
+        congr 1 <;> ring)
+      (eqToHom (by congr 1 <;> ring))]
+    simpa [Category.assoc] using
+      congrArg (fun f => f ≫ eqToHom (by congr 1; ring))
+        (A.comm (p - 1) (n - (p - 1))).symm
+  have h11' :
+      Pi.π (fun r : ℤ => A.obj r (n - r)) (p - 1 - 1) ≫
+          A.d1 (p - 1 - 1) (n - (p - 1 - 1)) ≫
+          eqToHom (by congr 1 <;> ring) ≫
+          A.d1 (p - 1) (n + 1 - (p - 1)) ≫
+          eqToHom (by congr 1 <;> ring) = 0 := by
+    simpa [totalD1Component, Category.assoc] using
+      congrArg (fun f =>
+        Pi.π (fun r : ℤ => A.obj r (n - r)) (p - 1 - 1) ≫ f) h11
+  have h22' :
+      Pi.π (fun r : ℤ => A.obj r (n - r)) p ≫
+          A.d2 p (n - p) ≫
+          eqToHom (by congr 1 <;> ring) ≫
+          A.d2 p (n + 1 - p) ≫
+          eqToHom (by congr 1 <;> ring) = 0 := by
+    simpa [totalD2Component, Category.assoc] using
+      congrArg (fun f =>
+        Pi.π (fun r : ℤ => A.obj r (n - r)) p ≫ f) h22
+  have hcomm' :
+      Pi.π (fun r : ℤ => A.obj r (n - r)) (p - 1) ≫
+          A.d1 (p - 1) (n - (p - 1)) ≫
+          eqToHom (by congr 1 <;> ring) ≫
+        A.d2 p (n + 1 - p) ≫
+          eqToHom (by congr 1 <;> ring) =
+      Pi.π (fun r : ℤ => A.obj r (n - r)) (p - 1) ≫
+          A.d2 (p - 1) (n - (p - 1)) ≫
+          eqToHom (by congr 1 <;> ring) ≫
+          A.d1 (p - 1) (n + 1 - (p - 1)) ≫
+          eqToHom (by congr 1 <;> ring) := by
+    simpa [totalD1Component, totalD2Component, Category.assoc] using
+      congrArg (fun f =>
+        Pi.π (fun r : ℤ => A.obj r (n - r)) (p - 1) ≫ f) hcomm
+  rw [h11', hcomm', h22']
 
 /-- The product total cochain complex associated to a double complex. -/
 noncomputable def productTotalComplex

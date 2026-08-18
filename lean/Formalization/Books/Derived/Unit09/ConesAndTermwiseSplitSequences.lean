@@ -346,11 +346,117 @@ theorem make_injective
       termwiseSplitInjection i ∧
       ∃ s : L ⟶ L',
         s ≫ π = 𝟙 L ∧
-        Nonempty (Homotopy (π ≫ s) (𝟙 L')) ∧
-        ((IsBoundedBelow K ∧ IsBoundedBelow L) → IsBoundedBelow L') ∧
-        ((IsBoundedAbove K ∧ IsBoundedAbove L) → IsBoundedAbove L') ∧
-        ((IsBounded K ∧ IsBounded L) → IsBounded L') := by
-  sorry
+      Nonempty (Homotopy (π ≫ s) (𝟙 L')) ∧
+      ((IsBoundedBelow K ∧ IsBoundedBelow L) → IsBoundedBelow L') ∧
+      ((IsBoundedAbove K ∧ IsBoundedAbove L) → IsBoundedAbove L') ∧
+      ((IsBounded K ∧ IsBounded L) → IsBounded L') := by
+  let L' : BookComplex C := CochainComplex.mappingCone (𝟙 K) ⊞ L
+  let i : K ⟶ L' :=
+    biprod.lift (CochainComplex.mappingCone.inr (𝟙 K)) α
+  let π : L' ⟶ L := biprod.snd
+  have hiπ : i ≫ π = α := by
+    dsimp [i, π, L']
+    simp
+  have hi : termwiseSplitInjection i := by
+    intro n
+    change IsSplitMono (i.f n)
+    apply IsSplitMono.mk'
+    let r : L'.X n ⟶ K.X n :=
+      (biprod.fst : L' ⟶ CochainComplex.mappingCone (𝟙 K)).f n ≫
+        (CochainComplex.mappingCone.snd (𝟙 K)).v n n (add_zero n)
+    refine ⟨r, ?_⟩
+    dsimp [r, i, L']
+    rw [← Category.assoc, HomologicalComplex.biprod_lift_fst_f]
+    simp
+  have hsπ : (biprod.inr : L ⟶ L') ≫ π = 𝟙 L := by
+    dsimp [π, L']
+    simp
+  have hπs : Nonempty (Homotopy (π ≫ (biprod.inr : L ⟶ L')) (𝟙 L')) := by
+    have hzero : Homotopy
+        ((biprod.fst : L' ⟶ CochainComplex.mappingCone (𝟙 K)) ≫
+          (biprod.inl : CochainComplex.mappingCone (𝟙 K) ⟶ L')) 0 := by
+      simpa using
+        ((CochainComplex.mappingCone.homotopyToZeroOfId K).compRight
+          (biprod.inl : CochainComplex.mappingCone (𝟙 K) ⟶ L')).compLeft
+          (biprod.fst : L' ⟶ CochainComplex.mappingCone (𝟙 K))
+    have hsub : Homotopy
+        (𝟙 L' - π ≫ (biprod.inr : L ⟶ L')) 0 := by
+      apply (Homotopy.ofEq ?_).trans hzero
+      dsimp [π, L']
+      rw [← biprod.total]
+      abel
+    exact ⟨((Homotopy.equivSubZero).symm hsub).symm⟩
+  have hbelow :
+      (IsBoundedBelow K ∧ IsBoundedBelow L) → IsBoundedBelow L' := by
+    rintro ⟨hK, hL⟩
+    obtain ⟨nK, hnK⟩ := hK
+    obtain ⟨nL, hnL⟩ := hL
+    let n := min (nK - 1) nL
+    letI : K.IsStrictlyGE nK := hnK
+    letI : L.IsStrictlyGE nL := hnL
+    have hcone :
+        (CochainComplex.mappingCone (𝟙 K)).IsStrictlyGE n := by
+      apply CochainComplex.isStrictlyGE_mappingCone (𝟙 K) nK nK n
+    refine ⟨n, ?_⟩
+    rw [CochainComplex.isStrictlyGE_iff] at hcone ⊢
+    intro j hj
+    change IsZero ((CochainComplex.mappingCone (𝟙 K) ⊞ L).X j)
+    refine IsZero.of_iso ?_ ((HomologicalComplex.eval C (ComplexShape.up ℤ) j).mapBiprod _ _)
+    simp only [HomologicalComplex.eval_obj, biprod_isZero_iff]
+    refine ⟨hcone j hj, L.isZero_of_isStrictlyGE nL j (by dsimp [n] at hj ⊢; omega)⟩
+  have habove :
+      (IsBoundedAbove K ∧ IsBoundedAbove L) → IsBoundedAbove L' := by
+    rintro ⟨hK, hL⟩
+    obtain ⟨nK, hnK⟩ := hK
+    obtain ⟨nL, hnL⟩ := hL
+    let n := max nK nL
+    letI : K.IsStrictlyLE nK := hnK
+    letI : L.IsStrictlyLE nL := hnL
+    have hcone :
+        (CochainComplex.mappingCone (𝟙 K)).IsStrictlyLE n := by
+      rw [CochainComplex.isStrictlyLE_iff]
+      intro j hj
+      simp only [CochainComplex.mappingCone.isZero_X_iff]
+      refine ⟨K.isZero_of_isStrictlyLE nK (j + 1) (by dsimp [n] at hj ⊢; omega),
+        K.isZero_of_isStrictlyLE nK j (by dsimp [n] at hj ⊢; omega)⟩
+    refine ⟨n, ?_⟩
+    rw [CochainComplex.isStrictlyLE_iff] at hcone ⊢
+    intro j hj
+    change IsZero ((CochainComplex.mappingCone (𝟙 K) ⊞ L).X j)
+    refine IsZero.of_iso ?_ ((HomologicalComplex.eval C (ComplexShape.up ℤ) j).mapBiprod _ _)
+    simp only [HomologicalComplex.eval_obj, biprod_isZero_iff]
+    exact ⟨hcone j hj, L.isZero_of_isStrictlyLE nL j (by dsimp [n] at hj ⊢; omega)⟩
+  have hbounded :
+      (IsBounded K ∧ IsBounded L) → IsBounded L' := by
+    rintro ⟨⟨pK, qK, hpK, hqK⟩, ⟨pL, qL, hpL, hqL⟩⟩
+    refine ⟨min (pK - 1) pL, max qK qL, ?_, ?_⟩
+    · letI : K.IsStrictlyGE pK := hpK
+      letI : L.IsStrictlyGE pL := hpL
+      have hcone :
+          (CochainComplex.mappingCone (𝟙 K)).IsStrictlyGE (min (pK - 1) pL) := by
+        apply CochainComplex.isStrictlyGE_mappingCone (𝟙 K) pK pK _
+      rw [CochainComplex.isStrictlyGE_iff] at hcone ⊢
+      intro j hj
+      change IsZero ((CochainComplex.mappingCone (𝟙 K) ⊞ L).X j)
+      refine IsZero.of_iso ?_ ((HomologicalComplex.eval C (ComplexShape.up ℤ) j).mapBiprod _ _)
+      simp only [HomologicalComplex.eval_obj, biprod_isZero_iff]
+      exact ⟨hcone j hj, L.isZero_of_isStrictlyGE pL j (by omega)⟩
+    · letI : K.IsStrictlyLE qK := hqK
+      letI : L.IsStrictlyLE qL := hqL
+      have hcone :
+          (CochainComplex.mappingCone (𝟙 K)).IsStrictlyLE (max qK qL) := by
+        rw [CochainComplex.isStrictlyLE_iff]
+        intro j hj
+        simp only [CochainComplex.mappingCone.isZero_X_iff]
+        exact ⟨K.isZero_of_isStrictlyLE qK (j + 1) (by omega),
+          K.isZero_of_isStrictlyLE qK j (by omega)⟩
+      rw [CochainComplex.isStrictlyLE_iff] at hcone ⊢
+      intro j hj
+      change IsZero ((CochainComplex.mappingCone (𝟙 K) ⊞ L).X j)
+      refine IsZero.of_iso ?_ ((HomologicalComplex.eval C (ComplexShape.up ℤ) j).mapBiprod _ _)
+      simp only [HomologicalComplex.eval_obj, biprod_isZero_iff]
+      exact ⟨hcone j hj, L.isZero_of_isStrictlyLE qL j (by omega)⟩
+  exact ⟨L', i, π, hiπ, hi, biprod.inr, hsπ, hπs, hbelow, habove, hbounded⟩
 
 theorem make_surjective
     {C : Type u} [Category.{v} C] [AdditiveCategory C]
@@ -360,11 +466,206 @@ theorem make_surjective
       termwiseSplitSurjection π ∧
       ∃ s : K' ⟶ K,
         i ≫ s = 𝟙 K ∧
-        Nonempty (Homotopy (s ≫ i) (𝟙 K')) ∧
-        ((IsBoundedBelow K ∧ IsBoundedBelow L) → IsBoundedBelow K') ∧
-        ((IsBoundedAbove K ∧ IsBoundedAbove L) → IsBoundedAbove K') ∧
-        ((IsBounded K ∧ IsBounded L) → IsBounded K') := by
-  sorry
+      Nonempty (Homotopy (s ≫ i) (𝟙 K')) ∧
+      ((IsBoundedBelow K ∧ IsBoundedBelow L) → IsBoundedBelow K') ∧
+      ((IsBoundedAbove K ∧ IsBoundedAbove L) → IsBoundedAbove K') ∧
+      ((IsBounded K ∧ IsBounded L) → IsBounded K') := by
+  let K' : BookComplex C := K ⊞ CochainComplex.mappingCocone (𝟙 L)
+  let i : K ⟶ K' := biprod.inl
+  let π : K' ⟶ L :=
+    biprod.desc α (CochainComplex.mappingCocone.fst (𝟙 L))
+  have hiπ : i ≫ π = α := by
+    dsimp [i, π, K']
+    simp
+  have hπ : termwiseSplitSurjection π := by
+    intro n
+    change IsSplitEpi (π.f n)
+    apply IsSplitEpi.mk'
+    let s : L.X n ⟶ K'.X n :=
+      (CochainComplex.mappingCocone.inl (𝟙 L)).v n n (add_zero n) ≫
+        (biprod.inr : CochainComplex.mappingCocone (𝟙 L) ⟶ K').f n
+    refine ⟨s, ?_⟩
+    dsimp [s, π, K']
+    rw [Category.assoc, HomologicalComplex.biprod_inr_desc_f]
+    simp
+  have his : i ≫ (biprod.fst : K' ⟶ K) = 𝟙 K := by
+    dsimp [i, K']
+    simp
+  have hsi : Nonempty (Homotopy ((biprod.fst : K' ⟶ K) ≫ i) (𝟙 K')) := by
+    have hMzero : Homotopy
+        (𝟙 (CochainComplex.mappingCocone (𝟙 L))) 0 := by
+      let h := CochainComplex.mappingCone.homotopyToZeroOfId L
+      let hom : ∀ i j, (CochainComplex.mappingCocone (𝟙 L)).X i ⟶
+          (CochainComplex.mappingCocone (𝟙 L)).X j := fun i j =>
+        -h.hom (i + -1) (j + -1)
+      refine { hom := hom, zero := ?_, comm := ?_ }
+      · intro i j hij
+        dsimp [hom]
+        rw [h.zero _ _ (by
+          intro hrel
+          apply hij
+          change j + 1 = i
+          change j + -1 + 1 = i + -1 at hrel
+          omega)]
+        simp only [neg_zero]
+        rfl
+      · intro i
+        rw [dNext_eq hom (i' := i + 1) (by simp),
+          prevD_eq hom (j' := i - 1) (by simp)]
+        dsimp [hom, CochainComplex.mappingCocone,
+          CochainComplex.shiftFunctor_obj_d']
+        have hc := h.comm (i + -1)
+        rw [dNext_eq h.hom (i' := i) (by simp),
+          prevD_eq h.hom (j' := i + -2) (by
+            simp only [ComplexShape.up_Rel]
+            omega)] at hc
+        rw [show i + 1 + -1 = i by omega,
+          show i - 1 + -1 = i + -2 by omega]
+        convert hc using 1 <;>
+          simp [Int.negOnePow_neg, Int.negOnePow_one, Linear.units_smul_comp,
+            Linear.comp_units_smul, smul_smul, Int.units_mul_self, add_assoc]
+        all_goals
+          change
+            ((CochainComplex.mappingCone (𝟙 L)).d (i + -1) i ≫ h.hom i (i + -1) +
+              h.hom (i + -1) (i + -2) ≫
+                (CochainComplex.mappingCone (𝟙 L)).d (i + -2) (i + -1)) + 0 = _
+          exact add_zero _
+    have hzero : Homotopy
+        ((biprod.snd : K' ⟶ CochainComplex.mappingCocone (𝟙 L)) ≫
+          (biprod.inr : CochainComplex.mappingCocone (𝟙 L) ⟶ K')) 0 := by
+      simpa using (hMzero.compRight
+          (biprod.inr : CochainComplex.mappingCocone (𝟙 L) ⟶ K')).compLeft
+          (biprod.snd : K' ⟶ CochainComplex.mappingCocone (𝟙 L))
+    have hsub : Homotopy
+        (𝟙 K' - (biprod.fst : K' ⟶ K) ≫ i) 0 := by
+      apply (Homotopy.ofEq ?_).trans hzero
+      dsimp [i, K']
+      rw [← biprod.total]
+      abel
+    exact ⟨((Homotopy.equivSubZero).symm hsub).symm⟩
+  have hbelow :
+      (IsBoundedBelow K ∧ IsBoundedBelow L) → IsBoundedBelow K' := by
+    rintro ⟨hK, hL⟩
+    obtain ⟨nK, hnK⟩ := hK
+    obtain ⟨nL, hnL⟩ := hL
+    let n := min nK nL
+    letI : K.IsStrictlyGE nK := hnK
+    letI : L.IsStrictlyGE nL := hnL
+    have hcone0 :
+        (CochainComplex.mappingCone (𝟙 L)).IsStrictlyGE (nL - 1) := by
+      apply CochainComplex.isStrictlyGE_mappingCone (𝟙 L) nL nL (nL - 1)
+    letI : (CochainComplex.mappingCone (𝟙 L)).IsStrictlyGE (nL - 1) := hcone0
+    have hcone' :
+        (CochainComplex.mappingCocone (𝟙 L)).IsStrictlyGE nL := by
+      dsimp [CochainComplex.mappingCocone]
+      apply CochainComplex.isStrictlyGE_shift
+        (CochainComplex.mappingCone (𝟙 L)) (nL - 1) (-1) nL
+      omega
+    have hcone :
+        (CochainComplex.mappingCocone (𝟙 L)).IsStrictlyGE n := by
+      rw [CochainComplex.isStrictlyGE_iff] at hcone'
+      rw [CochainComplex.isStrictlyGE_iff]
+      intro j hj
+      exact hcone' j (by dsimp [n] at hj ⊢; omega)
+    refine ⟨n, ?_⟩
+    rw [CochainComplex.isStrictlyGE_iff] at hcone ⊢
+    intro j hj
+    change IsZero ((K ⊞ CochainComplex.mappingCocone (𝟙 L)).X j)
+    refine IsZero.of_iso ?_ ((HomologicalComplex.eval C (ComplexShape.up ℤ) j).mapBiprod _ _)
+    simp only [HomologicalComplex.eval_obj, biprod_isZero_iff]
+    exact ⟨K.isZero_of_isStrictlyGE nK j (by dsimp [n] at hj ⊢; omega), hcone j hj⟩
+  have habove :
+      (IsBoundedAbove K ∧ IsBoundedAbove L) → IsBoundedAbove K' := by
+    rintro ⟨hK, hL⟩
+    obtain ⟨nK, hnK⟩ := hK
+    obtain ⟨nL, hnL⟩ := hL
+    let n := max nK (nL + 1)
+    letI : K.IsStrictlyLE nK := hnK
+    letI : L.IsStrictlyLE nL := hnL
+    have hcone0 :
+        (CochainComplex.mappingCone (𝟙 L)).IsStrictlyLE nL := by
+      rw [CochainComplex.isStrictlyLE_iff]
+      intro j hj
+      simp only [CochainComplex.mappingCone.isZero_X_iff]
+      exact ⟨L.isZero_of_isStrictlyLE nL (j + 1) (by omega),
+        L.isZero_of_isStrictlyLE nL j (by omega)⟩
+    letI : (CochainComplex.mappingCone (𝟙 L)).IsStrictlyLE nL := hcone0
+    have hcone' :
+        (CochainComplex.mappingCocone (𝟙 L)).IsStrictlyLE (nL + 1) := by
+      dsimp [CochainComplex.mappingCocone]
+      apply CochainComplex.isStrictlyLE_shift
+        (CochainComplex.mappingCone (𝟙 L)) nL (-1) (nL + 1)
+      omega
+    have hcone :
+        (CochainComplex.mappingCocone (𝟙 L)).IsStrictlyLE n := by
+      rw [CochainComplex.isStrictlyLE_iff] at hcone'
+      rw [CochainComplex.isStrictlyLE_iff]
+      intro j hj
+      exact hcone' j (by dsimp [n] at hj ⊢; omega)
+    refine ⟨n, ?_⟩
+    rw [CochainComplex.isStrictlyLE_iff] at hcone ⊢
+    intro j hj
+    change IsZero ((K ⊞ CochainComplex.mappingCocone (𝟙 L)).X j)
+    refine IsZero.of_iso ?_ ((HomologicalComplex.eval C (ComplexShape.up ℤ) j).mapBiprod _ _)
+    simp only [HomologicalComplex.eval_obj, biprod_isZero_iff]
+    exact ⟨K.isZero_of_isStrictlyLE nK j (by dsimp [n] at hj ⊢; omega), hcone j hj⟩
+  have hbounded :
+      (IsBounded K ∧ IsBounded L) → IsBounded K' := by
+    rintro ⟨⟨pK, qK, hpK, hqK⟩, ⟨pL, qL, hpL, hqL⟩⟩
+    refine ⟨min pK pL, max qK (qL + 1), ?_, ?_⟩
+    · letI : K.IsStrictlyGE pK := hpK
+      letI : L.IsStrictlyGE pL := hpL
+      have hcone0 :
+          (CochainComplex.mappingCone (𝟙 L)).IsStrictlyGE (pL - 1) := by
+        apply CochainComplex.isStrictlyGE_mappingCone (𝟙 L) pL pL (pL - 1)
+      letI : (CochainComplex.mappingCone (𝟙 L)).IsStrictlyGE (pL - 1) := hcone0
+      have hcone' :
+          (CochainComplex.mappingCocone (𝟙 L)).IsStrictlyGE pL := by
+        dsimp [CochainComplex.mappingCocone]
+        apply CochainComplex.isStrictlyGE_shift
+          (CochainComplex.mappingCone (𝟙 L)) (pL - 1) (-1) pL
+        omega
+      have hcone :
+          (CochainComplex.mappingCocone (𝟙 L)).IsStrictlyGE (min pK pL) := by
+        rw [CochainComplex.isStrictlyGE_iff] at hcone'
+        rw [CochainComplex.isStrictlyGE_iff]
+        intro j hj
+        exact hcone' j (by omega)
+      rw [CochainComplex.isStrictlyGE_iff] at hcone ⊢
+      intro j hj
+      change IsZero ((K ⊞ CochainComplex.mappingCocone (𝟙 L)).X j)
+      refine IsZero.of_iso ?_ ((HomologicalComplex.eval C (ComplexShape.up ℤ) j).mapBiprod _ _)
+      simp only [HomologicalComplex.eval_obj, biprod_isZero_iff]
+      exact ⟨K.isZero_of_isStrictlyGE pK j (by omega), hcone j hj⟩
+    · letI : K.IsStrictlyLE qK := hqK
+      letI : L.IsStrictlyLE qL := hqL
+      have hcone0 :
+          (CochainComplex.mappingCone (𝟙 L)).IsStrictlyLE qL := by
+        rw [CochainComplex.isStrictlyLE_iff]
+        intro j hj
+        simp only [CochainComplex.mappingCone.isZero_X_iff]
+        exact ⟨L.isZero_of_isStrictlyLE qL (j + 1) (by omega),
+          L.isZero_of_isStrictlyLE qL j (by omega)⟩
+      letI : (CochainComplex.mappingCone (𝟙 L)).IsStrictlyLE qL := hcone0
+      have hcone' :
+          (CochainComplex.mappingCocone (𝟙 L)).IsStrictlyLE (qL + 1) := by
+        dsimp [CochainComplex.mappingCocone]
+        apply CochainComplex.isStrictlyLE_shift
+          (CochainComplex.mappingCone (𝟙 L)) qL (-1) (qL + 1)
+        omega
+      have hcone :
+          (CochainComplex.mappingCocone (𝟙 L)).IsStrictlyLE (max qK (qL + 1)) := by
+        rw [CochainComplex.isStrictlyLE_iff] at hcone'
+        rw [CochainComplex.isStrictlyLE_iff]
+        intro j hj
+        exact hcone' j (by omega)
+      rw [CochainComplex.isStrictlyLE_iff] at hcone ⊢
+      intro j hj
+      change IsZero ((K ⊞ CochainComplex.mappingCocone (𝟙 L)).X j)
+      refine IsZero.of_iso ?_ ((HomologicalComplex.eval C (ComplexShape.up ℤ) j).mapBiprod _ _)
+      simp only [HomologicalComplex.eval_obj, biprod_isZero_iff]
+      exact ⟨K.isZero_of_isStrictlyLE qK j (by omega), hcone j hj⟩
+  exact ⟨K', i, π, hiπ, hπ, (biprod.fst : K' ⟶ K), his, hsi, hbelow, habove, hbounded⟩
 
 /-! ## Termwise split exact sequences and their triangles -/
 
@@ -418,7 +719,9 @@ theorem termwiseSplitConnectingMap_f
     {C : Type u} [Category.{v} C] [AdditiveCategory C]
     {A B D : BookComplex C} (S : TermwiseSplitExactSequence A B D) (n : ℤ) :
     (termwiseSplitConnectingMap S).f n = termwiseSplitConnectingFamily S n := by
-  sorry
+  change (CochainComplex.homOfDegreewiseSplit (ShortComplex.mk S.f S.g S.zero) S.splitting).f n = _
+  rw [CochainComplex.homOfDegreewiseSplit_f]
+  rfl
 
 noncomputable def termwiseSplitTriangleWith
     {C : Type u} [Category.{v} C] [AdditiveCategory C]
@@ -457,12 +760,257 @@ theorem triangle_independent_splittings
     (σ σ' : ∀ n : ℤ,
       ((termwiseSplitShortComplex S).map
         (HomologicalComplex.eval C (ComplexShape.up ℤ) n)).Splitting) :
-    Nonempty (Homotopy
+      Nonempty (Homotopy
       (CochainComplex.homOfDegreewiseSplit (termwiseSplitShortComplex S) σ)
       (CochainComplex.homOfDegreewiseSplit (termwiseSplitShortComplex S) σ')) ∧
       ∃ e : termwiseSplitTrianglehWith S σ ≅ termwiseSplitTrianglehWith S σ',
         e.hom.hom₁ = 𝟙 _ ∧ e.hom.hom₂ = 𝟙 _ ∧ e.hom.hom₃ = 𝟙 _ := by
-  sorry
+  have hh : Homotopy
+      (CochainComplex.homOfDegreewiseSplit (termwiseSplitShortComplex S) σ)
+      (CochainComplex.homOfDegreewiseSplit (termwiseSplitShortComplex S) σ') := by
+    let rσ : ∀ i : ℤ, (termwiseSplitShortComplex S).X₂.X i ⟶
+        (termwiseSplitShortComplex S).X₁.X i := fun i => by
+      exact (σ i).r
+    let sσ : ∀ i : ℤ, (termwiseSplitShortComplex S).X₃.X i ⟶
+        (termwiseSplitShortComplex S).X₂.X i := fun i => by
+      exact (σ i).s
+    let rσ' : ∀ i : ℤ, (termwiseSplitShortComplex S).X₂.X i ⟶
+        (termwiseSplitShortComplex S).X₁.X i := fun i => by
+      exact (σ' i).r
+    let sσ' : ∀ i : ℤ, (termwiseSplitShortComplex S).X₃.X i ⟶
+        (termwiseSplitShortComplex S).X₂.X i := fun i => by
+      exact (σ' i).s
+    let k : ∀ i : ℤ, (termwiseSplitShortComplex S).X₃.X i ⟶
+        (termwiseSplitShortComplex S).X₁.X i := fun i =>
+      sσ' i ≫ rσ i - sσ i ≫ rσ' i
+    let dB : ∀ p : ℤ,
+        (termwiseSplitShortComplex S).X₂.X p ⟶
+          (termwiseSplitShortComplex S).X₂.X (p + 1) := fun p =>
+      (termwiseSplitShortComplex S).X₂.d p (p + 1)
+    let hom : ∀ i j, (termwiseSplitShortComplex S).X₃.X i ⟶
+        ((CochainComplex.shiftFunctor C (1 : ℤ)).obj
+          (termwiseSplitShortComplex S).X₁).X j :=
+      fun i j => if hij : i + (-1 : ℤ) = j then
+        k i ≫
+          ((termwiseSplitShortComplex S).X₁.XIsoOfEq (by omega : i = j + 1)).hom ≫
+            (CochainComplex.shiftFunctorObjXIso
+              (termwiseSplitShortComplex S).X₁ (1 : ℤ) j (j + 1) rfl).inv
+      else 0
+    refine { hom := hom, zero := ?_, comm := ?_ }
+    · intro i j hij
+      dsimp only [hom]
+      split
+      · rename_i h
+        exfalso
+        apply hij
+        change j + 1 = i
+        have h' := congrArg (fun x : ℤ => x + 1) h
+        omega
+      · change (0 : (termwiseSplitShortComplex S).X₃.X i ⟶
+          ((CochainComplex.shiftFunctor C (1 : ℤ)).obj
+            (termwiseSplitShortComplex S).X₁).X j) = 0
+        rfl
+    · intro p
+      rw [dNext_eq hom (i' := p + 1) (by simp),
+        prevD_eq hom (j' := p - 1) (by simp)]
+      dsimp only [hom]
+      have hp : p + 1 + (-1 : ℤ) = p := by omega
+      have hm : p + (-1 : ℤ) = p - 1 := by omega
+      simp only [dif_pos hp, dif_pos hm]
+      have hcσ :
+          (CochainComplex.cocycleOfDegreewiseSplit
+            (termwiseSplitShortComplex S) σ).1.v p (p + 1) (by omega) =
+            (sσ p ≫ dB p ≫ rσ (p + 1)) ≫
+              (CochainComplex.shiftFunctorObjXIso
+                (termwiseSplitShortComplex S).X₁ (1 : ℤ) p (p + 1) rfl).inv := by
+        dsimp [CochainComplex.cocycleOfDegreewiseSplit]
+        simp only [Cocycle.mk_coe, Cochain.mk_v, Category.comp_id]
+        apply (cancel_mono (CochainComplex.shiftFunctorObjXIso
+          (termwiseSplitShortComplex S).X₁ (1 : ℤ) p (p + 1) rfl).hom).1
+        change (sσ p ≫ dB p ≫ rσ (p + 1)) ≫
+            (CochainComplex.shiftFunctorObjXIso
+              (termwiseSplitShortComplex S).X₁ (1 : ℤ) p (p + 1) rfl).hom =
+          (((sσ p ≫ dB p ≫ rσ (p + 1)) ≫
+            𝟙 ((termwiseSplitShortComplex S).X₁.X (p + 1))) ≫
+              (CochainComplex.shiftFunctorObjXIso
+                (termwiseSplitShortComplex S).X₁ (1 : ℤ) p (p + 1) rfl).hom)
+        rw [Category.comp_id]
+      have hcσ' :
+          (CochainComplex.cocycleOfDegreewiseSplit
+            (termwiseSplitShortComplex S) σ').1.v p (p + 1) (by omega) =
+            (sσ' p ≫ dB p ≫ rσ' (p + 1)) ≫
+              (CochainComplex.shiftFunctorObjXIso
+                (termwiseSplitShortComplex S).X₁ (1 : ℤ) p (p + 1) rfl).inv := by
+        dsimp [CochainComplex.cocycleOfDegreewiseSplit]
+        simp only [Cocycle.mk_coe, Cochain.mk_v, Category.comp_id]
+        apply (cancel_mono (CochainComplex.shiftFunctorObjXIso
+          (termwiseSplitShortComplex S).X₁ (1 : ℤ) p (p + 1) rfl).hom).1
+        change (sσ' p ≫ dB p ≫ rσ' (p + 1)) ≫
+            (CochainComplex.shiftFunctorObjXIso
+              (termwiseSplitShortComplex S).X₁ (1 : ℤ) p (p + 1) rfl).hom =
+          (((sσ' p ≫ dB p ≫ rσ' (p + 1)) ≫
+            𝟙 ((termwiseSplitShortComplex S).X₁.X (p + 1))) ≫
+              (CochainComplex.shiftFunctorObjXIso
+                (termwiseSplitShortComplex S).X₁ (1 : ℤ) p (p + 1) rfl).hom)
+        rw [Category.comp_id]
+      have hd :
+          (CochainComplex.shiftFunctorObjXIso
+              (termwiseSplitShortComplex S).X₁ (1 : ℤ) (p - 1) (p - 1 + 1) (by omega)).inv ≫
+            ((CochainComplex.shiftFunctor C (1 : ℤ)).obj
+              (termwiseSplitShortComplex S).X₁).d (p - 1) p ≫
+              (CochainComplex.shiftFunctorObjXIso
+                (termwiseSplitShortComplex S).X₁ (1 : ℤ) p (p + 1) (by omega)).hom =
+            (-1 : ℤ) • (termwiseSplitShortComplex S).X₁.d (p - 1 + 1) (p + 1) := by
+        dsimp [CochainComplex.shiftFunctorObjXIso, CochainComplex.shiftFunctor]
+        simp
+      rw [CochainComplex.homOfDegreewiseSplit_f,
+        CochainComplex.homOfDegreewiseSplit_f]
+      rw [hcσ, hcσ']
+      rw [← cancel_mono (CochainComplex.shiftFunctorObjXIso
+        (termwiseSplitShortComplex S).X₁ (1 : ℤ) p (p + 1) rfl).hom]
+      simp only [Preadditive.add_comp]
+      simp only [Category.assoc, Iso.inv_hom_id_assoc, Iso.inv_hom_id,
+        Category.comp_id]
+      rw [hd]
+      have hfrσ (i : ℤ) : S.f.f i ≫ rσ i = 𝟙 _ := by
+        exact (σ i).f_r
+      have hsgσ (i : ℤ) : sσ i ≫ S.g.f i = 𝟙 _ := by
+        exact (σ i).s_g
+      have hrfσ (i : ℤ) : rσ i ≫ S.f.f i =
+          𝟙 _ - S.g.f i ≫ sσ i := by
+        exact (σ i).r_f
+      have hgsσ (i : ℤ) : S.g.f i ≫ sσ i =
+          𝟙 _ - rσ i ≫ S.f.f i := by
+        exact (σ i).g_s
+      have hfrσ' (i : ℤ) : S.f.f i ≫ rσ' i = 𝟙 _ := by
+        exact (σ' i).f_r
+      have hsgσ' (i : ℤ) : sσ' i ≫ S.g.f i = 𝟙 _ := by
+        exact (σ' i).s_g
+      have hrfσ' (i : ℤ) : rσ' i ≫ S.f.f i =
+          𝟙 _ - S.g.f i ≫ sσ' i := by
+        exact (σ' i).r_f
+      have hgsσ' (i : ℤ) : S.g.f i ≫ sσ' i =
+          𝟙 _ - rσ' i ≫ S.f.f i := by
+        exact (σ' i).g_s
+      have hshift :
+          ((termwiseSplitShortComplex S).X₁.XIsoOfEq
+              (by omega : p = p - 1 + 1)).hom ≫
+            ((-1 : ℤ) • (termwiseSplitShortComplex S).X₁.d (p - 1 + 1) (p + 1)) =
+          (-1 : ℤ) • (termwiseSplitShortComplex S).X₁.d p (p + 1) := by
+        rw [Preadditive.comp_zsmul]
+        rw [HomologicalComplex.XIsoOfEq_hom_comp_d
+          (termwiseSplitShortComplex S).X₁
+          (by omega : p = p - 1 + 1) (p + 1)]
+      let fS : ∀ i : ℤ, (termwiseSplitShortComplex S).X₁.X i ⟶
+          (termwiseSplitShortComplex S).X₂.X i := fun i => by
+        exact S.f.f i
+      let gS : ∀ i : ℤ, (termwiseSplitShortComplex S).X₂.X i ⟶
+          (termwiseSplitShortComplex S).X₃.X i := fun i => by
+        exact S.g.f i
+      have hgS (i j : ℤ) : gS i ≫
+          (termwiseSplitShortComplex S).X₃.d i j =
+            (termwiseSplitShortComplex S).X₂.d i j ≫ gS j := by
+        exact S.g.comm i j
+      have hsgσ'B (i : ℤ) : sσ' i ≫ gS i = 𝟙 _ := by
+        exact (σ' i).s_g
+      have hgsσ'B (i : ℤ) : gS i ≫ sσ' i =
+          𝟙 _ - rσ' i ≫ fS i := by
+        exact (σ' i).g_s
+      have hfrσ'B (i : ℤ) : fS i ≫ rσ' i = 𝟙 _ := by
+        exact (σ' i).f_r
+      have hD :
+          (termwiseSplitShortComplex S).X₃.d p (p + 1) ≫
+              sσ' (p + 1) ≫ rσ (p + 1) =
+            sσ' p ≫ dB p ≫ rσ (p + 1) -
+              sσ' p ≫ dB p ≫ rσ' (p + 1) := by
+        calc
+          (termwiseSplitShortComplex S).X₃.d p (p + 1) ≫
+                sσ' (p + 1) ≫ rσ (p + 1) =
+              (sσ' p ≫ gS p) ≫
+                (termwiseSplitShortComplex S).X₃.d p (p + 1) ≫
+                  sσ' (p + 1) ≫ rσ (p + 1) := by
+                    rw [hsgσ'B p]
+                    simp
+          _ = sσ' p ≫ dB p ≫ gS (p + 1) ≫
+                sσ' (p + 1) ≫ rσ (p + 1) := by
+                  simpa only [dB, Category.assoc] using
+                    congrArg (fun z => sσ' p ≫ z ≫ sσ' (p + 1) ≫ rσ (p + 1))
+                      (hgS p (p + 1))
+          _ = sσ' p ≫ dB p ≫
+                (𝟙 _ - rσ' (p + 1) ≫ fS (p + 1)) ≫
+                  rσ (p + 1) := by
+                  simpa only [Category.assoc] using
+                    congrArg (fun z => sσ' p ≫ dB p ≫ z ≫ rσ (p + 1))
+                      (hgsσ'B (p + 1))
+          _ = sσ' p ≫ dB p ≫ rσ (p + 1) -
+                sσ' p ≫ dB p ≫ rσ' (p + 1) := by
+                  simp only [Preadditive.comp_sub, Category.assoc,
+                    Category.id_comp, Category.comp_id, hfrσ'B (p + 1)]
+      dsimp [k, dB]
+      abel
+  refine ⟨⟨hh⟩, ?_⟩
+  let q : BookComplex C ⥤ BookHomotopyCategory C :=
+    HomotopyCategory.quotient C (ComplexShape.up ℤ)
+  let hσ : D ⟶
+      (CategoryTheory.shiftFunctor (BookComplex C) (1 : ℤ)).obj
+        A := by
+    change (termwiseSplitShortComplex S).X₃ ⟶
+      (CategoryTheory.shiftFunctor (BookComplex C) (1 : ℤ)).obj
+        A
+    exact CochainComplex.homOfDegreewiseSplit (termwiseSplitShortComplex S) σ
+  let hσ' : D ⟶
+      (CategoryTheory.shiftFunctor (BookComplex C) (1 : ℤ)).obj
+        A := by
+    change (termwiseSplitShortComplex S).X₃ ⟶
+      (CategoryTheory.shiftFunctor (BookComplex C) (1 : ℤ)).obj
+        A
+    exact CochainComplex.homOfDegreewiseSplit (termwiseSplitShortComplex S) σ'
+  have hq : q.map hσ = q.map hσ' :=
+    HomotopyCategory.eq_of_homotopy _ _ hh
+  let Tσ : Triangle (BookHomotopyCategory C) :=
+    Triangle.mk (q.map S.f) (q.map S.g)
+      (q.map hσ ≫ (q.commShiftIso (1 : ℤ)).hom.app A)
+  let Tσ' : Triangle (BookHomotopyCategory C) :=
+    Triangle.mk (q.map S.f) (q.map S.g)
+      (q.map hσ' ≫ (q.commShiftIso (1 : ℤ)).hom.app A)
+  let e₀ : Tσ ≅ Tσ' :=
+    Triangle.isoMk _ _
+      (Iso.refl (q.obj A))
+      (Iso.refl (q.obj B))
+      (Iso.refl (q.obj D))
+      (by
+        dsimp [Tσ, Tσ']
+        change q.map S.f ≫ 𝟙 (q.obj B) = 𝟙 (q.obj A) ≫ q.map S.f
+        simp only [Category.comp_id, Category.id_comp])
+      (by
+        dsimp [Tσ, Tσ']
+        change q.map S.g ≫ 𝟙 (q.obj D) = 𝟙 (q.obj B) ≫ q.map S.g
+        simp only [Category.comp_id, Category.id_comp])
+      (by
+        dsimp [Tσ, Tσ']
+        change (q.map hσ ≫ (q.commShiftIso (1 : ℤ)).hom.app A) ≫
+            (shiftFunctor (BookHomotopyCategory C) 1).map (𝟙 (q.obj A)) =
+          𝟙 (q.obj D) ≫
+            (q.map hσ' ≫ (q.commShiftIso (1 : ℤ)).hom.app A)
+        simpa using congrArg (fun x => x ≫
+          (q.commShiftIso (1 : ℤ)).hom.app
+            A) hq)
+  have he₀ : e₀.hom.hom₁ = 𝟙 (q.obj A) ∧
+      e₀.hom.hom₂ = 𝟙 (q.obj B) ∧
+      e₀.hom.hom₃ = 𝟙 (q.obj D) := by
+    simp [e₀, Triangle.isoMk, Triangle.homMk, eqToIso,
+      CategoryTheory.eqToHom_refl]
+    constructor
+    · rfl
+    constructor <;> rfl
+  simpa only [termwiseSplitTrianglehWith, termwiseSplitTriangleWith,
+    termwiseSplitShortComplex, Functor.mapTriangle_obj,
+    CochainComplex.triangleOfDegreewiseSplit,
+    Triangle.mk_mor₁, Triangle.mk_mor₂, Triangle.mk_mor₃,
+    Triangle.mk_obj₁, Triangle.mk_obj₂, Triangle.mk_obj₃,
+    Tσ, Tσ'] using!
+    (show ∃ e : Tσ ≅ Tσ', e.hom.hom₁ = 𝟙 _ ∧
+      e.hom.hom₂ = 𝟙 _ ∧ e.hom.hom₃ = 𝟙 _ from ⟨e₀, he₀⟩)
 
 /-! ## Consequences in the homotopy category -/
 

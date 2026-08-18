@@ -164,7 +164,64 @@ theorem discreteFibredCategoryOver_two_morphism_is_eqToHom
     (hY : IsDiscreteFibredCategoryOver Y)
     {F G : FibredCategoryOverHom X Y} (η : F ⟶ G) :
     ∃ h : F = G, η = eqToHom h := by
-  sorry
+  have hη : IsIso η.toNatTrans := by
+    rw [NatTrans.isIso_iff_isIso_app]
+    intro Z
+    let U := (structureFunctor X.underlying).obj Z
+    let z : Functor.Fiber (structureFunctor X.underlying) U := ⟨Z, rfl⟩
+    let _ : IsDiscrete (Functor.Fiber (structureFunctor Y.underlying) U) := hY U
+    change IsIso (Functor.Fiber.fiberInclusion.map
+      ((overMorphismFiberNatTrans η U).app z))
+    infer_instance
+  let _ : IsIso η.toNatTrans := hη
+  let e : overFunctor F.underlying ≅ overFunctor G.underlying :=
+    { hom := η.toNatTrans
+      inv := inv η.toNatTrans
+      hom_inv_id := by simp
+      inv_hom_id := by simp }
+  have hobj : ∀ Z, (overFunctor F.underlying).obj Z =
+      (overFunctor G.underlying).obj Z := by
+    intro Z
+    let U := (structureFunctor X.underlying).obj Z
+    let z : Functor.Fiber (structureFunctor X.underlying) U := ⟨Z, rfl⟩
+    let α := (overMorphismFiberNatTrans η U).app z
+    have hα := (hY U).eq_of_hom α
+    exact congrArg (fun q : Functor.Fiber (structureFunctor Y.underlying) U => q.1) hα
+  have happ : ∀ Z, η.toNatTrans.app Z = eqToHom (hobj Z) := by
+    intro Z
+    let U := (structureFunctor X.underlying).obj Z
+    let z : Functor.Fiber (structureFunctor X.underlying) U := ⟨Z, rfl⟩
+    let α := (overMorphismFiberNatTrans η U).app z
+    have hα := (hY U).eq_of_hom α
+    have hαhom : α = eqToHom hα := by
+      exact @Subsingleton.elim _ ((hY U).subsingleton _ _) _ _
+    have hαmap := congrArg (Functor.Fiber.fiberInclusion.map) hαhom
+    have hm := CategoryTheory.eqToHom_map
+      (Functor.Fiber.fiberInclusion
+        (p := structureFunctor Y.underlying) (S := U)) hα
+    calc
+      η.toNatTrans.app Z = Functor.Fiber.fiberInclusion.map α := by rfl
+      _ = Functor.Fiber.fiberInclusion.map (eqToHom hα) := hαmap
+      _ = eqToHom
+          (congrArg
+            (fun q : Functor.Fiber (structureFunctor Y.underlying) U => q.1) hα) := hm
+      _ = eqToHom (hobj Z) := by congr 1
+  have heq : overFunctor F.underlying = overFunctor G.underlying :=
+    Functor.ext_of_iso e hobj (happ := happ)
+  have hleft : F.underlying.leftHom = G.underlying.leftHom := by
+    apply Cat.Hom.ext
+    exact heq
+  have hunder : F.underlying = G.underlying := by
+    apply CategoryOver.Hom.ext
+    apply Over.OverMorphism.ext
+    exact hleft
+  have h : F = G := FibredCategoryOverHom.ext hunder
+  refine ⟨h, ?_⟩
+  cases h
+  apply OverNatTrans.ext
+  apply NatTrans.ext
+  funext Z
+  simpa using happ Z
 
 /-- The source-facing constructor for a 1-morphism over the base; the
 preservation field is automatic for a discrete-fibred target. -/
@@ -181,7 +238,15 @@ local discreteness of all its hom-categories. -/
 theorem categoriesFibredInSetsOver_is_locallyDiscrete
     (C : Cat.{v, u}) :
     Bicategory.IsLocallyDiscrete (CategoriesFibredInSetsOver C) := by
-  sorry
+  intro X Y
+  apply (isDiscrete_iff_every_morphism_is_eqToHom).mpr
+  intro F G η
+  rcases discreteFibredCategoryOver_two_morphism_is_eqToHom
+      (X := X.obj) (Y := Y.obj) Y.property η.hom with ⟨h, hη⟩
+  have h' : F = G := Bicategory.InducedBicategory.hom_ext h
+  refine ⟨h', ?_⟩
+  apply Bicategory.InducedBicategory.hom₂_ext
+  exact hη
 
 theorem categoriesFibredInSetsOver_is_two_one_category
     (C : Cat.{v, u}) :
@@ -1097,7 +1162,7 @@ theorem setPresheafHom_fibre_condition
     {X Y : setPresheafCategory F} (f : X ⟶ Y) :
     F.map f.base.op (setPresheafObjectValue F Y) =
       setPresheafObjectValue F X := by
-  sorry
+  exact (Discrete.eq_of_hom f.fiber).symm
 
 theorem setPresheafHom_exists_iff
     {C : Type uC} [Category.{vC} C]
@@ -1106,7 +1171,11 @@ theorem setPresheafHom_exists_iff
     (∃ h : X ⟶ Y, h.base = f) ↔
       F.map f.op (setPresheafObjectValue F Y) =
         setPresheafObjectValue F X := by
-  sorry
+  constructor
+  · rintro ⟨h, rfl⟩
+    exact setPresheafHom_fibre_condition F h
+  · intro h
+    exact ⟨setPresheafHomOf F f h, rfl⟩
 
 theorem setPresheaf_morphism_description
     {C : Type uC} [Category.{vC} C]

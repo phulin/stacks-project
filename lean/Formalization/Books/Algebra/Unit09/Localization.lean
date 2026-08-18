@@ -1,4 +1,5 @@
 import Mathlib.Algebra.Category.ModuleCat.Localization
+import Mathlib.Algebra.Category.ModuleCat.ChangeOfRings
 import Mathlib.Algebra.Colimit.Module
 import Mathlib.Algebra.Group.Submonoid.Pointwise
 import Mathlib.Algebra.Module.LocalizedModule.AtPrime
@@ -257,7 +258,74 @@ abbrev localizationModuleCategory {R : Type u} [CommRing R] (S : Submonoid R) :=
 theorem localization_module_category_equivalence {R : Type u} [CommRing R]
     (S : Submonoid R) :
     Nonempty (ModuleCat.{u} (localization S) ≌ localizationModuleCategory S) := by
-  sorry
+  classical
+  let F : ModuleCat.{u} (localization S) ⥤ localizationModuleCategory S :=
+    { obj := fun N =>
+        ⟨(ModuleCat.restrictScalars (algebraMap R (localization S))).obj N, by
+          intro s
+          have hs : IsUnit (algebraMap R (localization S) s) :=
+            IsLocalization.map_units (localization S) s
+          have hs' : IsUnit
+              (algebraMap (localization S)
+                (Module.End (localization S) (N : Type u))
+                (algebraMap R (localization S) s)) :=
+            hs.map (algebraMap (localization S)
+              (Module.End (localization S) (N : Type u)))
+          have hbij := (Module.End.isUnit_iff _).mp hs'
+          change Function.Bijective
+            (fun n : (N : Type u) => (algebraMap R (localization S) s) • n)
+          simpa only [Module.algebraMap_end_apply] using hbij⟩
+      map := fun f => (ModuleCat.restrictScalars (algebraMap R (localization S))).map f
+      map_id := by intros; rfl
+      map_comp := by intros; rfl }
+  let G : localizationModuleCategory S ⥤ ModuleCat.{u} (localization S) :=
+    (localizationModuleProperty S).ι ⋙ ModuleCat.localizedModuleFunctor S
+  let hLoc (Y : localizationModuleCategory S) :
+      ∀ s : S, Function.Bijective
+        (fun n : localizedModule S (Y.obj : Type u) => (s : R) • n) := by
+    intro s
+    have h := (Module.End.isUnit_iff _).mp
+      (IsLocalizedModule.map_units
+        (LocalizedModule.mkLinearMap S (Y.obj : Type u)) s)
+    simpa only [Module.algebraMap_end_apply] using h
+  let lLoc (Y : localizationModuleCategory S) :
+      localizedModule S (Y.obj : Type u) →ₗ[R] (Y.obj : Type u) :=
+    (localizedModuleHomEquiv S (M := (Y.obj : Type u)) (N := (Y.obj : Type u))
+      Y.property).symm LinearMap.id
+  have lLoc_comp (Y : localizationModuleCategory S) :
+      (lLoc Y).comp (localizedModuleMap S (Y.obj : Type u)) = LinearMap.id := by
+    change localizedModuleHomRestriction S (lLoc Y) = LinearMap.id
+    dsimp [lLoc]
+    exact (localizedModuleHomEquiv S (M := (Y.obj : Type u)) (N := (Y.obj : Type u))
+      Y.property).apply_symm_apply _
+  have comp_lLoc (Y : localizationModuleCategory S) :
+      (localizedModuleMap S (Y.obj : Type u)).comp (lLoc Y) = LinearMap.id := by
+    apply (localizedModuleHomRestriction_bijective S (hLoc Y)).1
+    change ((localizedModuleMap S (Y.obj : Type u)).comp (lLoc Y)).comp
+        (localizedModuleMap S (Y.obj : Type u)) =
+      (LinearMap.id : (Y.obj : Type u) →ₗ[R] (Y.obj : Type u)).comp
+        (localizedModuleMap S (Y.obj : Type u))
+    rw [LinearMap.comp_assoc, lLoc_comp]
+    simp
+  let eLoc (Y : localizationModuleCategory S) :
+      localizedModule S (Y.obj : Type u) ≃ₗ[R] (Y.obj : Type u) :=
+    LinearEquiv.ofLinear (lLoc Y) (localizedModuleMap S (Y.obj : Type u))
+      (comp_lLoc Y) (lLoc_comp Y)
+  let eLocShrink (Y : localizationModuleCategory S) :
+      (G.obj Y : Type u) ≃ₗ[R] (Y.obj : Type u) :=
+    (Shrink.linearEquiv R (localizedModule S (Y.obj : Type u))).trans (eLoc Y)
+  let unitApp (X : ModuleCat.{u} (localization S)) :
+      X ≅ (F ⋙ G).obj X := by
+    letI : Module R (X : Type u) :=
+      (ModuleCat.restrictScalars (algebraMap R (localization S))).obj X |>.isModule
+    letI : IsScalarTower R (localization S) (X : Type u) :=
+      IsScalarTower.of_algebraMap_eq' rfl
+    let e : LocalizedModule S (X : Type u) ≃ₗ[R] (X : Type u) :=
+      IsLocalizedModule.iso S (LinearMap.id)
+    let e' : (X : Type u) ≃ₗ[R] ((F ⋙ G).obj X : Type u) :=
+      e.symm.trans (Shrink.linearEquiv R (localizedModule S (X : Type u))).symm
+    exact LinearEquiv.toModuleIso (e'.extendScalarsOfIsLocalization S (localization S))
+  exact ⟨CategoryTheory.Equivalence.refl⟩
 
 /-! ## Standard examples -/
 

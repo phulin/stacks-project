@@ -2,7 +2,7 @@ import Mathlib.RingTheory.FiniteType
 import Mathlib.RingTheory.Jacobson.Ring
 import Mathlib.RingTheory.LocalRing.ResidueField.Ideal
 import Mathlib.RingTheory.Localization.Away.Basic
-import Mathlib.RingTheory.Spectrum.Maximal.Basic
+import Mathlib.RingTheory.Spectrum.Maximal.Defs
 
 /-!
 # Commutative Algebra, Chapter 34: Hilbert Nullstellensatz

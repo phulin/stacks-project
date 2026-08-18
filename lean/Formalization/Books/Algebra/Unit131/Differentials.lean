@@ -647,7 +647,7 @@ private lemma differential_map_kernel_le_power_smul
 
 theorem differential_mod_power_ideal
     {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]
-    (I : Ideal S) {n : ℕ} (hn : 1 ≤ n) :
+    (I : Ideal S) {n : ℕ} (_hn : 1 ≤ n) :
     let S' := S ⧸ I ^ (n + 1)
     let T := S ⧸ I ^ n
     letI : Algebra S' T :=
@@ -657,11 +657,11 @@ theorem differential_mod_power_ideal
   dsimp
   let S' := S ⧸ I ^ (n + 1)
   let T := S ⧸ I ^ n
-  letI : Algebra S' T :=
+  let : Algebra S' T :=
     (Ideal.Quotient.factorPow I (Nat.le_succ n)).toAlgebra
-  letI : Algebra S T := Algebra.compHom T (algebraMap S S')
-  letI : IsScalarTower S S' T := IsScalarTower.of_algebraMap_eq' rfl
-  letI : IsScalarTower S T T := by
+  let : Algebra S T := Algebra.compHom T (algebraMap S S')
+  let : IsScalarTower S S' T := IsScalarTower.of_algebraMap_eq' rfl
+  let : IsScalarTower S T T := by
     constructor
     intro r t x
     change (algebraMap S T r * t) * x = algebraMap S T r * (t * x)
@@ -674,7 +674,7 @@ theorem differential_mod_power_ideal
       _ _ _ _ _ _ (inferInstance : IsScalarTower S T T) _ _ _ _ _
       (inferInstance : IsScalarTower S T T) _ _
       (LinearMap.id) g
-  letI : IsScalarTower S' T T := by
+  let : IsScalarTower S' T T := by
     constructor
     intro r t x
     change (algebraMap S' T r * t) * x = algebraMap S' T r * (t * x)
@@ -684,7 +684,7 @@ theorem differential_mod_power_ideal
       S S' T T (ModuleOfDifferentials R S')
       _ _ _ _ _ _ _ _ _ _ (inferInstance : IsScalarTower S T T) _ _ _ _
       (inferInstance : IsScalarTower S' T T)
-  letI : TensorProduct.CompatibleSMul S S' S' (ModuleOfDifferentials R S') :=
+  let : TensorProduct.CompatibleSMul S S' S' (ModuleOfDifferentials R S') :=
     TensorProduct.CompatibleSMul.of_algebraMap_surjective
       (M := S') (N := ModuleOfDifferentials R S')
       (show Function.Surjective (algebraMap S S') from Ideal.Quotient.mk_surjective)
@@ -770,9 +770,9 @@ theorem differential_mod_power_ideal
             change (algebraMap S T a) • t ⊗ₜ[S] v = 0
             simp [ha0]
           · intro u v hu hv
-            simpa only [TensorProduct.tmul_add, hu, hv, add_zero]
+            simp only [TensorProduct.tmul_add, hu, hv, add_zero]
       | add u v hu hv =>
-          simpa only [map_add, hu, hv, add_zero]
+          simp only [map_add, hu, hv, add_zero]
     apply sub_eq_zero.mp
     rw [← hz]
     exact hz0

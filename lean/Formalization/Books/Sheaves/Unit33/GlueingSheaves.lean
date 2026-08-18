@@ -5,6 +5,7 @@ import Mathlib.Algebra.Category.Grp.Limits
 import Mathlib.Algebra.Category.ModuleCat.Sheaf
 import Mathlib.CategoryTheory.Sites.SheafHom
 import Mathlib.Topology.Sheaves.Functors
+import Mathlib.Topology.Sheaves.Over
 import Mathlib.Topology.Sets.OpenCover
 import Mathlib.Topology.Sheaves.SheafCondition.UniqueGluing
 
@@ -220,7 +221,33 @@ theorem exists_sheafRestrictionSectionsIso (C : Type u) [Category.{v} C]
     Nonempty (F.presheaf.obj
         (op (Opens.comap (openInclusion U).hom V)) ≅
       ((sheafMapRestriction C h).obj F).presheaf.obj (op ⊤)) := by
-  sorry
+  let hf : Topology.IsOpenEmbedding (openSubsetInclusion h) := by
+    change Topology.IsOpenEmbedding (Set.inclusion (SetLike.coe_subset_coe.2 h))
+    exact Opens.isOpenEmbedding_of_le h
+  have htop : hf.functor.obj ⊤ = Opens.comap (openInclusion U).hom V := by
+    ext x
+    constructor
+    · rintro ⟨y, -, hxy⟩
+      rw [← hxy]
+      exact y.property
+    · intro hx
+      refine ⟨⟨x.1, hx⟩, trivial, ?_⟩
+      rfl
+  let e := (hf.sheafPullbackIso C).app F
+  let e' : ((hf.sheafPullback C).obj F).presheaf.obj (op ⊤) ≅
+      ((sheafPullback C (openSubsetInclusion h)).obj F).presheaf.obj (op ⊤) :=
+    { hom := e.inv.hom.app (op ⊤)
+      inv := e.hom.hom.app (op ⊤)
+      hom_inv_id := by
+        change e.inv.hom.app (op ⊤) ≫ e.hom.hom.app (op ⊤) = 𝟙 _
+        exact congrArg (fun f => f.hom.app (op ⊤)) e.inv_hom_id
+      inv_hom_id := by
+        change e.hom.hom.app (op ⊤) ≫ e.inv.hom.app (op ⊤) = 𝟙 _
+        exact congrArg (fun f => f.hom.app (op ⊤)) e.hom_inv_id }
+  refine ⟨eqToIso ?_ ≪≫ e'⟩
+  change F.presheaf.obj (op (Opens.comap (openInclusion U).hom V)) =
+    F.presheaf.obj (op (hf.functor.obj ⊤))
+  rw [htop]
 
 /-- A chosen section comparison for an open-subspace restriction. -/
 noncomputable def sheafRestrictionSectionsIso (C : Type u) [Category.{v} C]
@@ -316,7 +343,27 @@ theorem exists_sheafInternalHomSectionsEquiv {X : TopCat.{v}}
     Nonempty (sheafInternalHomSections F G U ≃
       ((sheafRestriction (Type v) U).obj F ⟶
         (sheafRestriction (Type v) U).obj G)) := by
-  sorry
+  let E := (U.sheafEquivOver (A := Type v)).functor
+  let qF := (U.sheafRestrictSheafEquivOver (A := Type v)).app F
+  let qG := (U.sheafRestrictSheafEquivOver (A := Type v)).app G
+  let eF : E.obj (((Opens.grothendieckTopology X).overPullback (Type v) U).obj F) ≅
+      (U.sheafRestrict (C := Type v)).obj F :=
+    E.mapIso qF.symm ≪≫
+      (U.sheafEquivOver (A := Type v)).counitIso.app
+        ((U.sheafRestrict (C := Type v)).obj F)
+  let eG : E.obj (((Opens.grothendieckTopology X).overPullback (Type v) U).obj G) ≅
+      (U.sheafRestrict (C := Type v)).obj G :=
+    E.mapIso qG.symm ≪≫
+      (U.sheafEquivOver (A := Type v)).counitIso.app
+        ((U.sheafRestrict (C := Type v)).obj G)
+  let rF :=
+    (Topology.IsOpenEmbedding.sheafPullbackIso (Type v) U.isOpenEmbedding).app F
+  let rG :=
+    (Topology.IsOpenEmbedding.sheafPullbackIso (Type v) U.isOpenEmbedding).app G
+  exact ⟨
+    ((U.sheafEquivOver (A := Type v)).fullyFaithfulFunctor.homEquiv.trans
+      (eF.homCongr eG)).trans
+      (rF.symm.homCongr rG.symm)⟩
 
 /-- A chosen version of the internal-Hom identification on an open. -/
 noncomputable def sheafInternalHomSectionsEquiv {X : TopCat.{v}}

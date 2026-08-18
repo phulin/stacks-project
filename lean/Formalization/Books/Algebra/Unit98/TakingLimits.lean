@@ -74,12 +74,130 @@ structure LimitQuotientPresentation {A : Type u} [CommRing A] (I : Ideal A)
             (⊤ : Submodule A (inverseLimitModule F))))) =
       limit.π F (Opposite.op n)
 
+private theorem power_smul_top_eq_bot_of_torsion
+    {A : Type u} [CommRing A] (I : Ideal A)
+    {M : Type w} [AddCommGroup M] [Module A M] (n : ℕ)
+    (hM : Module.IsTorsionBySet A M ((I ^ n : Ideal A) : Set A)) :
+    I ^ n • (⊤ : Submodule A M) = ⊥ := by
+  apply le_antisymm
+  · refine Submodule.smul_le.mpr ?_
+    intro a ha x hx
+    exact @hM x ⟨a, show a ∈ (I ^ n : Ideal A) from ha⟩
+  · exact bot_le
+
+private theorem isAdicComplete_of_completion_retraction
+    {A : Type u} [CommRing A] (I : Ideal A)
+    {M : Type w} [AddCommGroup M] [Module A M]
+    (hI : I.FG)
+    (r : AdicCompletion I M →ₗ[A] M)
+    (hr : r.comp (AdicCompletion.of I M) = LinearMap.id) :
+    IsAdicComplete I M := by
+  refine { toIsHausdorff := ?_, toIsPrecomplete := ?_ }
+  · refine ⟨?_⟩
+    intro x hx
+    have hzero : AdicCompletion.of I M x = 0 := by
+      apply IsHausdorff.haus (I := I)
+        (inferInstance : IsHausdorff I (AdicCompletion I M))
+      intro n
+      rw [SModEq.sub_mem]
+      have hmap :
+          Submodule.map (AdicCompletion.of I M)
+              (I ^ n • (⊤ : Submodule A M)) ≤
+            I ^ n • (⊤ : Submodule A (AdicCompletion I M)) := by
+        rw [Submodule.map_smul'', Submodule.map_top]
+        exact smul_mono_right _ le_top
+      have hxmem := hmap (Submodule.mem_map_of_mem (SModEq.sub_mem.mp (hx n)))
+      simpa using hxmem
+    have hrex := congrArg (fun f => f x) hr
+    rw [LinearMap.comp_apply, LinearMap.id_apply] at hrex
+    rw [← hrex, hzero, map_zero]
+  · refine ⟨?_⟩
+    intro f hf
+    obtain ⟨z, hz⟩ := (AdicCompletion.isAdicComplete hI).toIsPrecomplete.prec'
+      (fun n => AdicCompletion.of I M (f n)) (by
+        intro m n hmn
+        rw [SModEq.sub_mem]
+        have hmap :
+            Submodule.map (AdicCompletion.of I M)
+                (I ^ m • (⊤ : Submodule A M)) ≤
+              I ^ m • (⊤ : Submodule A (AdicCompletion I M)) := by
+          rw [Submodule.map_smul'', Submodule.map_top]
+          exact smul_mono_right _ le_top
+        exact hmap (Submodule.mem_map_of_mem (SModEq.sub_mem.mp (hf hmn))))
+    refine ⟨r z, ?_⟩
+    intro n
+    rw [SModEq.sub_mem]
+    have hmap :
+        Submodule.map r (I ^ n • (⊤ : Submodule A (AdicCompletion I M))) ≤
+          I ^ n • (⊤ : Submodule A M) := by
+      rw [Submodule.map_smul'', Submodule.map_top]
+      exact smul_mono_right _ le_top
+    have hzmem := hmap (Submodule.mem_map_of_mem (SModEq.sub_mem.mp (hz n)))
+    have hrex := congrArg (fun g => g (f n)) hr
+    rw [LinearMap.comp_apply, LinearMap.id_apply] at hrex
+    simpa [map_sub, hrex] using hzmem
+
 /-- The limit of a power-annihilated inverse system is adically complete. -/
 theorem limit_complete_pre {A : Type u} [CommRing A] (I : Ideal A)
     (hI : I.FG) (F : NaturalInverseSystem.{u, w} A)
     (hF : IsPowerAnnihilated I F) :
     IsAdicComplete I (inverseLimitModule F) := by
-  sorry
+  let hker (n : ℕ+) :
+      I ^ (n : ℕ) • (⊤ : Submodule A (inverseLimitModule F)) ≤
+        LinearMap.ker (limit.π F (Opposite.op n)).hom := by
+    refine Submodule.smul_le.mpr ?_
+    intro a ha x hx
+    change (limit.π F (Opposite.op n)).hom (a • x) = 0
+    rw [map_smul]
+    exact @hF n ((limit.π F (Opposite.op n)).hom x) ⟨a, ha⟩
+  let q (n : ℕ+) :
+      (inverseLimitModule F ⧸
+        (I ^ (n : ℕ) • (⊤ : Submodule A (inverseLimitModule F)))) →ₗ[A]
+        F.obj (Opposite.op n) :=
+    (I ^ (n : ℕ) • (⊤ : Submodule A (inverseLimitModule F))).liftQ
+      (limit.π F (Opposite.op n)).hom (hker n)
+  let c : Cone F :=
+    { pt := ModuleCat.of A (AdicCompletion I (inverseLimitModule F))
+      π :=
+        { app := fun i =>
+            ModuleCat.ofHom
+              ((q i.unop).comp
+                (AdicCompletion.eval I (inverseLimitModule F) (i.unop : ℕ)))
+          naturality := by
+            intro i j f
+            apply ModuleCat.hom_ext
+            ext x
+            apply AdicCompletion.induction_on I (inverseLimitModule F) x
+            intro b
+            have hproj :
+                (F.map f).hom.comp (limit.π F i).hom =
+                  (limit.π F j).hom := by
+              exact congrArg ModuleCat.Hom.hom (limit.w F f)
+            have hji : j.unop ≤ i.unop := leOfHom f.unop
+            have hdiff : b.val j.unop - b.val i.unop ∈
+                I ^ (j.unop : ℕ) • (⊤ : Submodule A (inverseLimitModule F)) :=
+              SModEq.sub_mem.mp (b.property hji)
+            have hzero := hker j.unop hdiff
+            rw [LinearMap.mem_ker, map_sub, sub_eq_zero] at hzero
+            change
+              (limit.π F j).hom (b.val j.unop) =
+                (F.map f).hom ((limit.π F i).hom (b.val i.unop))
+            calc
+              (limit.π F j).hom (b.val j.unop) =
+                  (limit.π F j).hom (b.val i.unop) := hzero
+              _ = (F.map f).hom ((limit.π F i).hom (b.val i.unop)) := by
+                exact (congrArg (fun y => y (b.val i.unop)) hproj).symm
+      }
+    }
+  let r : AdicCompletion I (inverseLimitModule F) →ₗ[A]
+      inverseLimitModule F :=
+    (limit.lift F c).hom
+  apply isAdicComplete_of_completion_retraction I hI r
+  apply LinearMap.ext
+  intro x
+  apply Concrete.limit_ext F
+  intro n
+  simp [r, c, q, AdicCompletion.eval_comp_of]
 
 /-- A compatible quotient system has the expected quotients and complete limit. -/
 theorem limit_complete {A : Type u} [CommRing A] (I : Ideal A)
@@ -87,7 +205,39 @@ theorem limit_complete {A : Type u} [CommRing A] (I : Ideal A)
     (hF : IsQuotientInverseSystem I F) :
     (∀ n : ℕ+, Nonempty (LimitQuotientPresentation I F n)) ∧
       IsAdicComplete I (inverseLimitModule F) := by
-  sorry
+  constructor
+  · sorry
+  · apply limit_complete_pre I hI F
+    intro n
+    rcases hF n with ⟨s⟩
+    intro x a
+    obtain ⟨z, hz⟩ := Submodule.mkQ_surjective
+      (I ^ (n : ℕ) • (⊤ : Submodule A (F.obj (Opposite.op (n + 1)))))
+      (s.equivalence.inv.hom x)
+    calc
+      (a : A) • x = (a : A) • s.equivalence.hom.hom (s.equivalence.inv.hom x) := by simp
+      _ = s.equivalence.hom.hom ((a : A) • s.equivalence.inv.hom x) := by
+        rw [map_smul]
+      _ = s.equivalence.hom.hom ((a : A) •
+          (I ^ (n : ℕ) • (⊤ : Submodule A (F.obj (Opposite.op (n + 1))))).mkQ z) := by
+        rw [← hz]
+      _ = 0 := by
+        have haz :
+            (I ^ (n : ℕ) • (⊤ : Submodule A (F.obj (Opposite.op (n + 1))))).mkQ
+                ((a : A) • z) = 0 := by
+          change Submodule.Quotient.mk ((a : A) • z) = 0
+          apply (Submodule.Quotient.mk_eq_zero _).mpr
+          exact Submodule.smul_mem_smul a.property (by simp)
+        calc
+          s.equivalence.hom.hom ((a : A) •
+              (I ^ (n : ℕ) •
+                (⊤ : Submodule A (F.obj (Opposite.op (n + 1))))).mkQ z) =
+              s.equivalence.hom.hom
+                ((I ^ (n : ℕ) •
+                  (⊤ : Submodule A (F.obj (Opposite.op (n + 1))))).mkQ
+                    ((a : A) • z)) := by
+            simp only [map_smul]
+          _ = 0 := by rw [haz, map_zero]
 
 /-! ## Graded inverse systems -/
 
@@ -184,7 +334,10 @@ theorem gradedComponentMap_id {A : Type u} [CommRing A]
     (G : GradedRingData A) (F : GradedInverseSystem.{u, w} G) (d : ℤ)
     (i : ℕ+ᵒᵖ) :
     gradedComponentMap G F d (𝟙 i) = 𝟙 _ := by
-  sorry
+  simp only [gradedComponentMap, transitionMap_refl]
+  apply AddCommGrpCat.hom_ext
+  ext x
+  rfl
 
 theorem gradedComponentMap_comp {A : Type u} [CommRing A]
     (G : GradedRingData A) (F : GradedInverseSystem.{u, w} G) (d : ℤ)

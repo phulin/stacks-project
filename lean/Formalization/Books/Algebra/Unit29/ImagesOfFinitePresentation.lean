@@ -47,10 +47,10 @@ theorem isRetrocompact_iff_isCompact_iff_finite_union_basicOpen_iff_exists_fg_id
     rw [← hs]
     ext p
     simp only [Set.mem_compl_iff, PrimeSpectrum.mem_zeroLocus, SetLike.mem_coe,
-      Set.subset_def, Set.mem_iUnion, Finset.mem_coe, PrimeSpectrum.mem_basicOpen]
+      Set.subset_def, Set.mem_iUnion, PrimeSpectrum.mem_basicOpen]
     constructor
     · intro hp
-      push_neg at hp
+      push Not at hp
       exact ⟨hp.choose, hp.choose_spec.1, hp.choose_spec.2⟩
     · rintro ⟨i, hi, hpi⟩ hsub
       exact hpi (hsub i hi)
@@ -75,7 +75,7 @@ theorem affine_map_quasiCompact_and_constructible_preimage
     obtain ⟨s, hs⟩ := PrimeSpectrum.isCompact_isOpen_iff.mp ⟨hUcomp, hUopen⟩
     rw [← hs, Set.preimage_compl, PrimeSpectrum.preimage_comap_zeroLocus]
     apply (PrimeSpectrum.isCompact_isOpen_iff.mpr ⟨s.image φ, ?_⟩).1
-    simp only [Finset.coe_image, Set.image_image]
+    simp only [Finset.coe_image]
   refine ⟨hφ, ?_⟩
   intro E hE
   exact hE.preimage hφ.continuous fun U hUopen hUretro ↦ by
@@ -108,11 +108,11 @@ theorem exists_finitePresentation_ringHom_of_isConstructible
     Localization.Away (Ideal.Quotient.mk (Ideal.span (Set.range i.1.g)) i.1.f)
   let φ : R →+* S := algebraMap R S
   refine ⟨S, inferInstance, φ, ?_, ?_⟩
-  · letI : ∀ i : s,
+  · let : ∀ i : s,
       Algebra.FinitePresentation R
         (Localization.Away (Ideal.Quotient.mk (Ideal.span (Set.range i.1.g)) i.1.f)) := by
       intro i
-      letI : Algebra.FinitePresentation R
+      let : Algebra.FinitePresentation R
           (R ⧸ Ideal.span (Set.range i.1.g)) :=
         Algebra.FinitePresentation.quotient
           ⟨(Set.finite_range i.1.g).toFinset, by simp⟩

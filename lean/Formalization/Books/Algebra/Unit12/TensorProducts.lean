@@ -87,7 +87,21 @@ theorem tensorProduct_universal_unique {R M N T T' : Type*} [CommRing R]
     (g : BilinearMap R M N T) (g' : BilinearMap R M N T')
     (hg : IsTensorProduct g) (hg' : IsTensorProduct g') :
     ∃! e : T ≃ₗ[R] T', ∀ m n, e (g m n) = g' m n := by
-  sorry
+  let e : T ≃ₗ[R] T' := hg.equiv.symm.trans hg'.equiv
+  have he : ∀ m n, e (g m n) = g' m n := by
+    intro m n
+    apply hg'.equiv.symm.injective
+    simp [e, hg.equiv_symm_apply, hg'.equiv_symm_apply]
+  refine ⟨e, he, ?_⟩
+  intro e' he'
+  apply LinearEquiv.ext
+  intro t
+  refine hg.inductionOn t ?_ ?_ ?_
+  · simp
+  · intro m n
+    rw [he' m n, he m n]
+  · intro x y hx hy
+    simp [hx, hy]
 
 /-! ## Symmetries, products, units, and multilinear tensor products -/
 
@@ -174,7 +188,47 @@ theorem multilinearTensorProduct_universal_unique {R : Type u} [CommRing R]
     (hg : IsMultilinearTensorProduct M T g)
     (hg' : IsMultilinearTensorProduct M T' g') :
     ∃! e : T ≃ₗ[R] T', ∀ x, e (g x) = g' x := by
-  sorry
+  let e₁ : multilinearTensorProduct (R := R) M ≃ₗ[R] T :=
+    LinearEquiv.ofBijective (PiTensorProduct.lift g) hg
+  let e₂ : multilinearTensorProduct (R := R) M ≃ₗ[R] T' :=
+    LinearEquiv.ofBijective (PiTensorProduct.lift g') hg'
+  have he₁ : e₁.toLinearMap = PiTensorProduct.lift g := by
+    rfl
+  have he₂ : e₂.toLinearMap = PiTensorProduct.lift g' := by
+    rfl
+  have hx : ∀ x, e₁.symm (g x) = PiTensorProduct.tprod R x := by
+    intro x
+    apply e₁.injective
+    rw [e₁.apply_symm_apply]
+    change g x = e₁.toLinearMap (PiTensorProduct.tprod R x)
+    rw [he₁]
+    exact (PiTensorProduct.lift.tprod (φ := g) x).symm
+  have hx' : ∀ x, e₂ (PiTensorProduct.tprod R x) = g' x := by
+    intro x
+    change e₂.toLinearMap (PiTensorProduct.tprod R x) = g' x
+    rw [he₂]
+    exact PiTensorProduct.lift.tprod (φ := g') x
+  let e : T ≃ₗ[R] T' := e₁.symm.trans e₂
+  have he : ∀ x, e (g x) = g' x := by
+    intro x
+    change e₂ (e₁.symm (g x)) = g' x
+    rw [hx x, hx' x]
+  refine ⟨e, he, ?_⟩
+  intro e' he'
+  have hcomp : e'.toLinearMap.comp e₁.toLinearMap = e₂.toLinearMap := by
+    apply PiTensorProduct.ext
+    apply MultilinearMap.ext
+    intro x
+    change e' (e₁.toLinearMap (PiTensorProduct.tprod R x)) =
+      e₂.toLinearMap (PiTensorProduct.tprod R x)
+    rw [he₁, he₂, PiTensorProduct.lift.tprod, PiTensorProduct.lift.tprod]
+    exact he' x
+  apply LinearEquiv.ext
+  intro t
+  obtain ⟨z, rfl⟩ := e₁.surjective t
+  change e' (e₁ z) = e₂ (e₁.symm (e₁ z))
+  rw [e₁.symm_apply_apply]
+  exact DFunLike.congr_fun hcomp z
 
 /-- The canonical associator for three binary tensor products. -/
 def tensorProductAssociator {R M N P : Type*} [CommRing R]

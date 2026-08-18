@@ -1,5 +1,6 @@
 import Mathlib.Algebra.Category.Ring.Epi
 import Mathlib.Algebra.Polynomial.Div
+import Mathlib.Algebra.Polynomial.Laurent
 import Mathlib.Data.PNat.Notation
 import Mathlib.RingTheory.KrullDimension.Basic
 import Mathlib.RingTheory.LocalRing.Basic
@@ -367,7 +368,146 @@ theorem source_degree_assignment (i : ℕ+) :
 `ℤ`-grading to see this. -/
 theorem target_y_one_not_mem_range (k : Type u) [Field k] :
     targetYElement k 1 ∉ Set.range (sourceToTarget k) := by
-  sorry
+  let nonpositive : LaurentPolynomial (targetRing k) → Prop :=
+    fun f => ∀ n ∈ f.coeff.support, n ≤ 0
+  have nonpositive_add : ∀ f g, nonpositive f → nonpositive g →
+      nonpositive (f + g) := by
+    intro f g hf hg n hn
+    rcases Finset.mem_union.mp (Finsupp.support_add hn) with hn | hn
+    · exact hf n hn
+    · exact hg n hn
+  have nonpositive_mul : ∀ f g, nonpositive f → nonpositive g →
+      nonpositive (f * g) := by
+    intro f g hf hg n hn
+    rcases Finset.mem_add.1
+      (AddMonoidAlgebra.support_coeff_mul_subset f g hn) with ⟨a, ha, b, hb, rfl⟩
+    exact add_nonpos (hf a ha) (hg b hb)
+  have nonpositive_single (n : ℤ) (hn : n ≤ 0) (r : targetRing k) :
+      nonpositive (AddMonoidAlgebra.single n r) := by
+    intro m hm
+    have hm' : m ∈ ({n} : Finset ℤ) :=
+      Finsupp.support_single_subset hm
+    exact Finset.mem_singleton.mp hm' ▸ hn
+  let coeffMap : k →+* LaurentPolynomial (targetRing k) :=
+    (LaurentPolynomial.C : targetRing k →+*
+      LaurentPolynomial (targetRing k)).comp
+      ((Ideal.Quotient.mk (targetRelationIdeal k)).comp
+        (MvPolynomial.C : k →+* targetPolynomialRing k))
+  let targetEval : targetPolynomialRing k →+* LaurentPolynomial (targetRing k) :=
+    MvPolynomial.eval₂Hom coeffMap (fun v : targetVariable =>
+      match v with
+      | Sum.inl i => AddMonoidAlgebra.single (-1) (targetXElement k i)
+      | Sum.inr i => AddMonoidAlgebra.single 1 (targetYElement k i))
+  have targetEval_X (i : ℕ+) :
+      targetEval (targetX k i) =
+        AddMonoidAlgebra.single (-1) (targetXElement k i) := by
+    simp [targetEval, targetX]
+  have targetEval_Y (i : ℕ+) :
+      targetEval (targetY k i) =
+        AddMonoidAlgebra.single 1 (targetYElement k i) := by
+    simp [targetEval, targetY]
+  have targetEval_x_power (i : ℕ+) :
+      targetEval (targetX k i ^ nilpotenceExponent i) = 0 := by
+    rw [map_pow, targetEval_X, AddMonoidAlgebra.single_pow]
+    simp [target_x_power_eq_zero]
+  have targetEval_relation (i : ℕ+) :
+      targetEval (targetY k i - targetX k (i + 1) *
+        targetY k (i + 1) ^ 2) = 0 := by
+    rw [map_sub, map_mul, map_pow, targetEval_Y, targetEval_X, targetEval_Y]
+    rw [target_y_relation, AddMonoidAlgebra.single_pow,
+      AddMonoidAlgebra.single_mul_single]
+    have hdeg : (-1 : ℤ) + 2 • 1 = 1 := by decide
+    rw [hdeg]
+    exact sub_self _
+  have htarget_kernel : targetRelationIdeal k ≤ RingHom.ker targetEval := by
+    change Ideal.span (targetRelationGenerators k) ≤ RingHom.ker targetEval
+    refine Ideal.span_le.mpr ?_
+    intro p hp
+    change p ∈
+        (Set.range (fun i : ℕ+ => targetX k i ^ nilpotenceExponent i) ∪
+          Set.range (fun i : ℕ+ =>
+            targetY k i - targetX k (i + 1) * targetY k (i + 1) ^ 2)) at hp
+    change targetEval p = 0
+    rcases hp with hp | hp
+    · rcases hp with ⟨i, rfl⟩
+      exact targetEval_x_power i
+    · rcases hp with ⟨i, rfl⟩
+      exact targetEval_relation i
+  let targetLift : targetRing k →+* LaurentPolynomial (targetRing k) :=
+    Ideal.Quotient.lift (targetRelationIdeal k) targetEval htarget_kernel
+  have targetLift_X (i : ℕ+) :
+      targetLift (targetXElement k i) =
+        AddMonoidAlgebra.single (-1) (targetXElement k i) := by
+    simp [targetLift, targetXElement, targetX, targetEval]
+  have targetLift_Y (i : ℕ+) :
+      targetLift (targetYElement k i) =
+        AddMonoidAlgebra.single 1 (targetYElement k i) := by
+    simp [targetLift, targetYElement, targetY, targetEval]
+  let sourceEval : sourceRing k →+* LaurentPolynomial (targetRing k) :=
+    targetLift.comp (sourceToTarget k)
+  let sourcePolyEval : sourcePolynomialRing k →+*
+      LaurentPolynomial (targetRing k) :=
+    targetEval.comp (sourcePolynomialMap k)
+  have sourcePolyEval_X (i : ℕ+) :
+      nonpositive (sourcePolyEval (sourceX k i)) := by
+    change nonpositive (targetEval (sourcePolynomialMap k (sourceX k i)))
+    rw [sourcePolynomialMap_x, targetEval_X]
+    exact nonpositive_single (-1) (by decide) _
+  have sourcePolyEval_Z (i : ℕ+) :
+      nonpositive (sourcePolyEval (sourceZ k i)) := by
+    change nonpositive (targetEval (sourcePolynomialMap k (sourceZ k i)))
+    rw [sourcePolynomialMap_z, map_mul, targetEval_X, targetEval_Y,
+      AddMonoidAlgebra.single_mul_single]
+    have hdeg : (-1 : ℤ) + 1 = 0 := by decide
+    rw [hdeg]
+    exact nonpositive_single 0 (by decide) _
+  have sourcePolyEval_C (r : k) :
+      nonpositive (sourcePolyEval (MvPolynomial.C r)) := by
+    have hc :
+        sourcePolyEval (MvPolynomial.C r) =
+          AddMonoidAlgebra.single 0 (algebraMap k (targetRing k) r) := by
+      simp [sourcePolyEval, sourcePolynomialMap, targetEval, coeffMap]
+      congr 1
+    rw [hc]
+    exact nonpositive_single 0 (by decide) _
+  have sourcePolyEval_nonpositive :
+      ∀ p : sourcePolynomialRing k, nonpositive (sourcePolyEval p) := by
+    intro p
+    induction p using MvPolynomial.induction_on with
+    | C r =>
+        exact sourcePolyEval_C r
+    | add p q hp hq =>
+        rw [map_add]
+        exact nonpositive_add _ _ hp hq
+    | mul_X p v hp =>
+        rw [map_mul]
+        cases v with
+        | inl i => exact nonpositive_mul _ _ hp (sourcePolyEval_X i)
+        | inr i => exact nonpositive_mul _ _ hp (sourcePolyEval_Z i)
+  have sourceEval_mk (p : sourcePolynomialRing k) :
+      sourceEval (Ideal.Quotient.mk (sourceRelationIdeal k) p) =
+        sourcePolyEval p := by
+    change targetEval (sourcePolynomialMap k p) =
+      targetEval (sourcePolynomialMap k p)
+    rfl
+  intro h
+  obtain ⟨a, ha⟩ := h
+  have hnon : nonpositive (sourceEval a) := by
+    obtain ⟨p, rfl⟩ := Ideal.Quotient.mk_surjective a
+    rw [sourceEval_mk]
+    exact sourcePolyEval_nonpositive p
+  change nonpositive (targetLift (sourceToTarget k a)) at hnon
+  rw [ha, targetLift_Y] at hnon
+  have hmem :
+      (1 : ℤ) ∈
+        (AddMonoidAlgebra.single 1 (targetYElement k 1)).coeff.support := by
+    change (1 : ℤ) ∈
+      (Finsupp.single (1 : ℤ) (targetYElement k 1)).support
+    rw [Finsupp.mem_support_iff]
+    simpa only [Finsupp.single_eq_same] using target_y_one_ne_zero k
+  have hle : (1 : ℤ) ≤ 0 := hnon 1 hmem
+  have hnot : ¬ ((1 : ℤ) ≤ 0) := by decide
+  exact hnot hle
 
 /-- The quotient map in the example is not surjective. -/
 theorem sourceToTarget_not_surjective (k : Type u) [Field k] :
@@ -424,7 +564,15 @@ theorem source_tensor_identity_middle_right (k : Type u) [Field k] (i : ℕ+) :
       sourceTargetTensor k
         (targetXElement k (i + 1) * targetYElement k (i + 1))
         (targetYElement k (i + 1)) := by
-  sorry
+  have hx : algebraMap (sourceRing k) (targetRing k) (sourceXElement k (i + 1)) =
+      targetXElement k (i + 1) := by
+    change sourceToTarget k (sourceXElement k (i + 1)) = _
+    exact sourceToTarget_x k (i + 1)
+  simpa [sourceTargetTensor, Algebra.smul_def, hx, mul_assoc, mul_comm,
+    mul_left_comm] using
+    (TensorProduct.smul_tmul (R := sourceRing k) (R' := sourceRing k)
+      (M := targetRing k) (N := targetRing k) (sourceXElement k (i + 1))
+      (targetYElement k (i + 1)) (targetYElement k (i + 1))).symm
 
 theorem source_tensor_identity_last (k : Type u) [Field k] (i : ℕ+) :
     sourceTargetTensor k
@@ -432,7 +580,15 @@ theorem source_tensor_identity_last (k : Type u) [Field k] (i : ℕ+) :
         (targetYElement k (i + 1)) =
       sourceTargetTensor k 1
         (targetXElement k (i + 1) * targetYElement k (i + 1) ^ 2) := by
-  sorry
+  have hz : algebraMap (sourceRing k) (targetRing k) (sourceZElement k (i + 1)) =
+      targetXElement k (i + 1) * targetYElement k (i + 1) := by
+    change sourceToTarget k (sourceZElement k (i + 1)) = _
+    exact sourceToTarget_z k (i + 1)
+  simpa [sourceTargetTensor, Algebra.smul_def, hz, pow_two, mul_assoc, mul_comm,
+    mul_left_comm] using
+    (TensorProduct.smul_tmul (R := sourceRing k) (R' := sourceRing k)
+      (M := targetRing k) (N := targetRing k) (sourceZElement k (i + 1))
+      (1 : targetRing k) (targetYElement k (i + 1)))
 
 /-- The complete tensor identity displayed in the source. -/
 theorem source_tensor_identity (k : Type u) [Field k] (i : ℕ+) :
@@ -458,7 +614,64 @@ theorem source_tensor_identity (k : Type u) [Field k] (i : ℕ+) :
 /-- The tensor identities yield the algebraic epimorphism property. -/
 theorem sourceToTarget_isAlgebraEpi (k : Type u) [Field k] :
     Algebra.IsEpi (sourceRing k) (targetRing k) := by
-  sorry
+  rw [Algebra.isEpi_iff_forall_one_tmul_eq]
+  intro a
+  obtain ⟨p, rfl⟩ := Ideal.Quotient.mk_surjective a
+  have hvar : ∀ v : targetVariable,
+      (1 : targetRing k) ⊗ₜ[sourceRing k]
+          Ideal.Quotient.mk (targetRelationIdeal k) (MvPolynomial.X v) =
+        Ideal.Quotient.mk (targetRelationIdeal k) (MvPolynomial.X v) ⊗ₜ[sourceRing k]
+          (1 : targetRing k) := by
+    intro v
+    rcases v with i | i
+    · have hx : algebraMap (sourceRing k) (targetRing k) (sourceXElement k i) =
+          Ideal.Quotient.mk (targetRelationIdeal k) (MvPolynomial.X (.inl i)) := by
+        change sourceToTarget k (sourceXElement k i) = _
+        exact sourceToTarget_x k i
+      rw [← hx]
+      exact (Algebra.TensorProduct.tmul_one_eq_one_tmul
+        (R := sourceRing k) (A := targetRing k) (B := targetRing k)
+        (sourceXElement k i)).symm
+    · calc
+        (1 : targetRing k) ⊗ₜ[sourceRing k] targetYElement k i =
+            (1 : targetRing k) ⊗ₜ[sourceRing k]
+              (targetXElement k (i + 1) * targetYElement k (i + 1) ^ 2) := by
+                rw [target_y_relation k i]
+        _ = targetYElement k i ⊗ₜ[sourceRing k] (1 : targetRing k) :=
+          (source_tensor_identity k i).symm
+  have hmul : ∀ a b : targetRing k,
+      ((1 : targetRing k) ⊗ₜ[sourceRing k] a = a ⊗ₜ[sourceRing k] (1 : targetRing k)) →
+      ((1 : targetRing k) ⊗ₜ[sourceRing k] b = b ⊗ₜ[sourceRing k] (1 : targetRing k)) →
+      (1 : targetRing k) ⊗ₜ[sourceRing k] (a * b) =
+        (a * b) ⊗ₜ[sourceRing k] (1 : targetRing k) := by
+    intro a b ha hb
+    calc
+      (1 : targetRing k) ⊗ₜ[sourceRing k] (a * b) =
+          ((1 : targetRing k) ⊗ₜ[sourceRing k] a) *
+            ((1 : targetRing k) ⊗ₜ[sourceRing k] b) := by
+              simp only [Algebra.TensorProduct.tmul_mul_tmul, mul_one]
+      _ = (a ⊗ₜ[sourceRing k] (1 : targetRing k)) *
+            (b ⊗ₜ[sourceRing k] (1 : targetRing k)) := by rw [ha, hb]
+      _ = (a * b) ⊗ₜ[sourceRing k] (1 : targetRing k) := by
+              simp only [Algebra.TensorProduct.tmul_mul_tmul, mul_one]
+  induction p using MvPolynomial.induction_on with
+  | C r =>
+      have hs := Algebra.TensorProduct.tmul_one_eq_one_tmul
+        (R := sourceRing k) (A := targetRing k) (B := targetRing k)
+        (Ideal.Quotient.mk (sourceRelationIdeal k) (MvPolynomial.C r))
+      have hc : algebraMap (sourceRing k) (targetRing k)
+            (Ideal.Quotient.mk (sourceRelationIdeal k) (MvPolynomial.C r)) =
+          Ideal.Quotient.mk (targetRelationIdeal k) (MvPolynomial.C r) := by
+        change sourceToTarget k
+            (Ideal.Quotient.mk (sourceRelationIdeal k) (MvPolynomial.C r)) = _
+        simp [sourceToTarget, sourcePolynomialMapToTarget, sourcePolynomialMap]
+      rw [← hc]
+      exact hs.symm
+  | add p q hp hq =>
+      simp only [map_add, TensorProduct.tmul_add, TensorProduct.add_tmul]
+      rw [hp, hq]
+  | mul_X p v hp =>
+      exact hmul _ _ hp (hvar v)
 
 /-- Multiplication is the canonical map from the tensor product to the target. -/
 noncomputable def sourceTargetTensorMultiplication (k : Type u) [Field k] :

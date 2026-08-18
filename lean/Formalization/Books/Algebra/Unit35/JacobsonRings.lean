@@ -8,6 +8,7 @@ import Mathlib.LinearAlgebra.FreeAlgebra
 import Mathlib.LinearAlgebra.Matrix.GeneralLinearGroup.Basic
 import Mathlib.LinearAlgebra.Matrix.Rank
 import Mathlib.RingTheory.DiscreteValuationRing.Basic
+import Mathlib.RingTheory.DedekindDomain.Dvr
 import Mathlib.RingTheory.Extension.Generators
 import Mathlib.RingTheory.Ideal.MinimalPrime.Localization
 import Mathlib.RingTheory.Ideal.Int

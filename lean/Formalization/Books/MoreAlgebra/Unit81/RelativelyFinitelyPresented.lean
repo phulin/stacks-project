@@ -312,12 +312,12 @@ theorem relativelyFinitelyPresented_iff_all_presentations
 
 /-- The quotient-algebra formulation of relative finite presentation. -/
 theorem relativelyFinitelyPresented_iff_surjective_from_finitelyPresented
-    {R A M : Type*} [CommRing R] [CommRing A]
+    {R : Type u} {A : Type v} {M : Type w} [CommRing R] [CommRing A]
     [AddCommGroup M] [Module A M] (f : R →+* A)
     (hf : RingHom.FiniteType f) :
     letI : Algebra R A := f.toAlgebra
     RelativelyFinitelyPresented f M ↔
-      ∀ {A' : Type*} [CommRing A'] [Algebra R A']
+      ∀ {A' : Type u} [CommRing A'] [Algebra R A']
         (q : A' →ₐ[R] A),
         Function.Surjective q →
           RingHom.FinitePresentation (algebraMap R A') →

@@ -2798,13 +2798,20 @@ def tensorProductDifferentialOperator (D : M →ₗ[R] M') :
     M ⊗[R] N →ₗ[R] M' ⊗[R] N :=
   TensorProduct.map D (LinearMap.id : N →ₗ[R] N)
 
+/-- The tensor-product module structures are accompanied by their
+factorwise action on pure tensors, since Mathlib does not install every
+such `(A ⊗[R] B)`-module structure globally. -/
 theorem differentialOperator_tensor_product_base_change
     (k : ℕ) (D : differentialOperatorSubmodule (R := R) (S := A) k
       (M := M) (N := M'))
     [Module (A ⊗[R] B) (M ⊗[R] N)]
     [Module (A ⊗[R] B) (M' ⊗[R] N)]
     [IsScalarTower R (A ⊗[R] B) (M ⊗[R] N)]
-    [IsScalarTower R (A ⊗[R] B) (M' ⊗[R] N)] :
+    [IsScalarTower R (A ⊗[R] B) (M' ⊗[R] N)]
+    (hM : ∀ (a : A) (b : B) (m : M) (n : N),
+      (a ⊗ₜ[R] b) • (m ⊗ₜ[R] n) = (a • m) ⊗ₜ[R] (b • n))
+    (hM' : ∀ (a : A) (b : B) (m : M') (n : N),
+      (a ⊗ₜ[R] b) • (m ⊗ₜ[R] n) = (a • m) ⊗ₜ[R] (b • n)) :
     IsDifferentialOperator (R := R) (S := A ⊗[R] B) k
       (tensorProductDifferentialOperator (R := R) (M := M) (M' := M')
         (N := N) D.1) := by

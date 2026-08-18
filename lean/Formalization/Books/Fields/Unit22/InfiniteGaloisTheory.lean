@@ -40,7 +40,9 @@ theorem galois_action_continuous
     {F E : Type*} [Field F] [Field E] [Algebra F E] [IsGalois F E]
     [TopologicalSpace E] [DiscreteTopology E] :
     Continuous (galoisAction (F := F) (E := E)) := by
-  sorry
+  change Continuous fun p : Gal(E / F) × E => p.1 • p.2
+  exact (continuousSMul_iff_stabilizer_isOpen.mpr
+    (fun x => stabilizer_isOpen_of_isIntegral x)).continuous_smul
 
 /-- The Krull topology has the source's universal property: a map into the
     Galois group is continuous whenever its induced action on the discrete
@@ -51,14 +53,62 @@ theorem galois_krullTopology_universal
     (f : X → Gal(E / F))
     (h : Continuous (fun p : X × E => f p.1 p.2)) :
     Continuous f := by
-  sorry
+  classical
+  refine continuous_iff_continuousAt.mpr (fun x => continuousAt_def.mpr ?_)
+  intro N hN
+  let N' : Set Gal(E / F) := (fun g => f x * g) ⁻¹' N
+  have hN' : N' ∈ nhds (1 : Gal(E / F)) := by
+    have hc : Continuous (fun g : Gal(E / F) => f x * g) :=
+      continuous_const.mul continuous_id
+    change (fun g : Gal(E / F) => f x * g) ⁻¹' N ∈ nhds (1 : Gal(E / F))
+    simpa using hc.continuousAt.preimage_mem_nhds hN
+  obtain ⟨E', hEfin, hE⟩ :=
+    (krullTopology_mem_nhds_one_iff F E N').mp hN'
+  letI : FiniteDimensional F E' := hEfin
+  let b := Module.finBasis F E'
+  have hprod (i : Fin (Module.finrank F E')) :
+      ∃ u ∈ nhds x, ∃ v ∈ nhds ((b i : E') : E), u ×ˢ v ⊆
+        (fun p : X × E => f p.1 p.2) ⁻¹' {f x ((b i : E') : E)} := by
+    have hi : (fun p : X × E => f p.1 p.2) ⁻¹' {f x ((b i : E') : E)} ∈
+        nhds (x, ((b i : E') : E)) := by
+      exact h.continuousAt.preimage_mem_nhds (isOpen_discrete _ |>.mem_nhds rfl)
+    exact mem_nhds_prod_iff.mp hi
+  choose u hu v hv huv using hprod
+  have hU : (⋂ i, u i) ∈ nhds x := Filter.iInter_mem.mpr hu
+  refine Filter.mem_of_superset hU ?_
+  intro y hy
+  have hbi : ∀ i, f y ((b i : E') : E) = f x ((b i : E') : E) := by
+    intro i
+    have hi : y ∈ u i := Set.mem_iInter.mp hy i
+    have hvm : ((b i : E') : E) ∈ v i := mem_of_mem_nhds (hv i)
+    have hi' := huv i
+      (show (y, ((b i : E') : E)) ∈ u i ×ˢ v i from ⟨hi, hvm⟩)
+    simpa using hi'
+  have hlin :
+      (f y).toLinearMap.comp E'.val.toLinearMap =
+        (f x).toLinearMap.comp E'.val.toLinearMap := by
+    apply b.ext
+    intro i
+    exact hbi i
+  have hfix : (f x)⁻¹ * f y ∈ E'.fixingSubgroup := by
+    rw [IntermediateField.mem_fixingSubgroup_iff]
+    intro z hz
+    apply (f x).injective
+    rw [AlgEquiv.aut_inv, AlgEquiv.mul_apply, AlgEquiv.apply_symm_apply]
+    have hz' := congrArg (fun q : E' →ₗ[F] E => q ⟨z, hz⟩) hlin
+    simpa [LinearMap.comp_apply] using hz'
+  have hNy : f x * ((f x)⁻¹ * f y) ∈ N := by
+    exact hE hfix
+  simpa [mul_assoc] using hNy
 
 /-- The Galois group of an infinite Galois extension is profinite for its
     canonical Krull topology. -/
 theorem galois_krullTopology_is_profinite_group
     {F E : Type*} [Field F] [Field E] [Algebra F E] [IsGalois F E] :
     Formalization.Books.Topology.Unit29.IsProfiniteGroup (G := Gal(E / F)) := by
-  sorry
+  unfold Formalization.Books.Topology.Unit29.IsProfiniteGroup
+  rw [Formalization.Books.Topology.Unit22.isProfiniteSpace_iff_hausdorff_quasiCompact_totallyDisconnected]
+  exact ⟨inferInstance, inferInstance, inferInstance⟩
 
 /-! ## Restriction in a Galois tower -/
 
@@ -79,7 +129,35 @@ theorem galoisRestrictionHom_surjective_continuous
     [IsGalois K M] [IsGalois K L] :
     Function.Surjective (galoisRestrictionHom (K := K) (M := M) (L := L)) ∧
       Continuous (galoisRestrictionHom (K := K) (M := M) (L := L)) := by
-  sorry
+  letI : TopologicalSpace M := ⊥
+  letI : DiscreteTopology M := ⟨rfl⟩
+  letI : MulAction (Gal(L / K)) M :=
+    MulAction.compHom M (galoisRestrictionHom (K := K) (M := M) (L := L))
+  refine ⟨AlgEquiv.restrictNormalHom_surjective (F := K) (K₁ := M) L, ?_⟩
+  apply galois_krullTopology_universal
+  refine (continuousSMul_iff_stabilizer_isOpen.mpr ?_).continuous_smul
+  intro x
+  have hx : IsOpen (MulAction.stabilizer (Gal(L / K))
+      (algebraMap M L x) : Set (Gal(L / K))) :=
+    stabilizer_isOpen_of_isIntegral (algebraMap M L x)
+  convert hx using 1
+  ext σ
+  change galoisRestrictionHom (K := K) (M := M) (L := L) σ x = x ↔
+    σ (algebraMap M L x) = algebraMap M L x
+  constructor
+  · intro h
+    calc
+      σ (algebraMap M L x) =
+          algebraMap M L (galoisRestrictionHom (K := K) (M := M) (L := L) σ x) :=
+        (AlgEquiv.restrictNormal_commutes σ M x).symm
+      _ = algebraMap M L x := congrArg (algebraMap M L) h
+  · intro h
+    apply (algebraMap M L).injective
+    calc
+      algebraMap M L (galoisRestrictionHom (K := K) (M := M) (L := L) σ x) =
+          σ (algebraMap M L x) :=
+        AlgEquiv.restrictNormal_commutes σ M x
+      _ = algebraMap M L x := h
 
 /-! ## Finite Galois subextensions and the inverse limit -/
 
@@ -111,7 +189,8 @@ theorem finite_galois_subextensions_cover
     {K L : Type*} [Field K] [Field L] [Algebra K L] [IsGalois K L] :
     ∀ x : L, ∃ A : FiniteGaloisIntermediateField K L,
       x ∈ (A.toIntermediateField : Set L) := by
-  sorry
+  exact fun x => ⟨FiniteGaloisIntermediateField.adjoin K {x},
+    FiniteGaloisIntermediateField.subset_adjoin K {x} (Set.mem_singleton x)⟩
 
 /-- The finite Galois intermediate fields have supremum the whole extension;
     this is the intermediate-field form of the source's filtered-colimit
@@ -120,7 +199,11 @@ theorem finite_galois_subextensions_iSup
     {K L : Type*} [Field K] [Field L] [Algebra K L] [IsGalois K L] :
     (⨆ A : FiniteGaloisIntermediateField K L, A.toIntermediateField) =
       (⊤ : IntermediateField K L) := by
-  sorry
+  exact eq_top_iff.mpr (fun x _ =>
+    let h := finite_galois_subextensions_cover (K := K) (L := L) x
+    let A := h.choose
+    (le_iSup (fun A : FiniteGaloisIntermediateField K L => A.toIntermediateField) A)
+      h.choose_spec)
 
 /-- Each finite Galois intermediate field supplies the finite group used in
     the inverse system. -/
@@ -141,7 +224,15 @@ theorem finite_galois_group_transition_surjective
     Function.Surjective
       (ConcreteCategory.hom (C := FiniteGrp)
         ((finGaloisGroupFunctor K L).map f)) := by
-  sorry
+  letI : Normal K B.unop := IsGalois.to_normal
+  letI : Algebra B.unop A.unop :=
+    RingHom.toAlgebra (Subsemiring.inclusion <| leOfHom f.1)
+  haveI : IsScalarTower K B.unop A.unop :=
+    IsScalarTower.of_algebraMap_eq (congrFun rfl)
+  change Function.Surjective (ConcreteCategory.hom (C := FiniteGrp)
+    (finGaloisGroupMap f))
+  exact AlgEquiv.restrictNormalHom_surjective (F := K)
+    (K₁ := B.unop) (E := A.unop)
 
 /- The projection from the full Galois group to a finite Galois level is the
    canonical restriction map. -/
@@ -157,7 +248,10 @@ theorem finite_galois_projection_continuous_surjective
     (A : FiniteGaloisIntermediateField K L) :
     Continuous (finite_galois_projection (K := K) (L := L) A) ∧
       Function.Surjective (finite_galois_projection (K := K) (L := L) A) := by
-  sorry
+  constructor
+  · exact InfiniteGalois.restrictNormalHom_continuous A.toIntermediateField
+  · exact AlgEquiv.restrictNormalHom_surjective (F := K)
+      (K₁ := A.toIntermediateField) (E := L)
 
 /-- The full Galois group is continuously isomorphic, as a topological group,
     to the inverse limit of its finite Galois groups. -/
@@ -192,7 +286,7 @@ theorem closedSubgroupEquivIntermediateField_apply
     (H : ClosedSubgroup Gal(L / K)) :
     closedSubgroupEquivIntermediateField (K := K) (L := L) H =
       IntermediateField.fixedField (H : Subgroup Gal(L / K)) := by
-  sorry
+  rfl
 
 /-- The correspondence sends an intermediate field to its fixing subgroup. -/
 theorem closedSubgroupEquivIntermediateField_symm_apply
@@ -200,7 +294,7 @@ theorem closedSubgroupEquivIntermediateField_symm_apply
     (M : IntermediateField K L) :
     (closedSubgroupEquivIntermediateField (K := K) (L := L)).symm M =
       ⟨M.fixingSubgroup, InfiniteGalois.fixingSubgroup_isClosed M⟩ := by
-  sorry
+  rfl
 
 /-- The closed-subgroup/fixed-field correspondence is a bijection, with the
     inverse given by the subgroup fixing the intermediate field. -/
@@ -225,7 +319,18 @@ theorem infinite_galois_closed_subgroup_open_iff_finite_fixedField
     (H : ClosedSubgroup Gal(L / K)) :
     IsOpen (H : Set Gal(L / K)) ↔
       FiniteDimensional K (IntermediateField.fixedField (H : Subgroup Gal(L / K))) := by
-  sorry
+  change IsOpen H.carrier ↔ _
+  have hH : (IntermediateField.fixedField (H : Subgroup Gal(L / K))).fixingSubgroup = H :=
+    InfiniteGalois.fixingSubgroup_fixedField H
+  constructor
+  · intro h
+    apply (InfiniteGalois.isOpen_iff_finite
+      (IntermediateField.fixedField (H : Subgroup Gal(L / K)))).mp
+    simpa only [hH] using h
+  · intro h
+    have h' := (InfiniteGalois.isOpen_iff_finite
+      (IntermediateField.fixedField (H : Subgroup Gal(L / K)))).mpr h
+    simpa only [hH] using h'
 
 /-- Under the correspondence, a closed subgroup is normal exactly when its
     fixed field is Galois over the base. -/
@@ -234,7 +339,17 @@ theorem infinite_galois_closed_subgroup_normal_iff_galois_fixedField
     (H : ClosedSubgroup Gal(L / K)) :
     (H : Subgroup Gal(L / K)).Normal ↔
       IsGalois K (IntermediateField.fixedField (H : Subgroup Gal(L / K))) := by
-  sorry
+  have hH : (IntermediateField.fixedField (H : Subgroup Gal(L / K))).fixingSubgroup = H :=
+    InfiniteGalois.fixingSubgroup_fixedField H
+  constructor
+  · intro h
+    apply (InfiniteGalois.normal_iff_isGalois
+      (IntermediateField.fixedField (H : Subgroup Gal(L / K)))).mp
+    simpa only [hH] using h
+  · intro h
+    have h' := (InfiniteGalois.normal_iff_isGalois
+      (IntermediateField.fixedField (H : Subgroup Gal(L / K)))).mpr h
+    simpa only [hH] using h'
 
 /-- The fixing subgroup of an intermediate field is normal exactly when the
     intermediate field is Galois over the base. -/
@@ -269,7 +384,47 @@ theorem infinite_galois_short_exact
         Formalization.Books.Topology.Unit29.IsProfiniteGroup (G := Gal(L / M)) ∧
           Formalization.Books.Topology.Unit29.IsProfiniteGroup (G := Gal(L / K)) ∧
             Formalization.Books.Topology.Unit29.IsProfiniteGroup (G := Gal(M / K)) := by
-  sorry
+  dsimp
+  letI : IsGalois M L :=
+    Formalization.Books.Fields.Unit21.galois_goes_up (F := K) (E := M) (K := L)
+  letI : TopologicalSpace L := ⊥
+  letI : DiscreteTopology L := ⟨rfl⟩
+  refine ⟨⟨?_, ?_, ?_⟩, ?_, ?_, ?_, ?_, ?_⟩
+  · exact AlgEquiv.restrictScalarsHom_injective K
+  · apply MonoidHom.mulExact_of_comp_of_mem_range
+    · ext σ x
+      simp only [MonoidHom.comp_apply, AlgEquiv.restrictScalarsHom_apply]
+      apply (algebraMap M L).injective
+      change (algebraMap M L) ((AlgEquiv.restrictScalars K σ).restrictNormal M x) =
+        algebraMap M L x
+      rw [AlgEquiv.restrictNormal_commutes]
+      exact σ.commutes x
+    · intro τ hp
+      let σ : Gal(L / M) :=
+        { τ with
+          commutes' := by
+            intro x
+            have hp' : τ.restrictNormal M = (1 : Gal(M / K)) := by
+              simpa only [galoisRestrictionHom, AlgEquiv.restrictNormalHom,
+                MonoidHom.mk'_apply, MonoidHom.mem_ker] using hp
+            calc
+              τ (algebraMap M L x) =
+                  algebraMap M L ((τ.restrictNormal M) x) :=
+                (AlgEquiv.restrictNormal_commutes τ M x).symm
+              _ = algebraMap M L ((1 : Gal(M / K)) x) := by rw [hp']
+              _ = algebraMap M L x := rfl }
+      refine ⟨σ, ?_⟩
+      ext x
+      rfl
+  · exact galoisRestrictionHom_surjective_continuous (K := K) (M := M) (L := L) |>.1
+  · apply galois_krullTopology_universal
+    change Continuous (galoisAction (F := M) (E := L))
+    exact galois_action_continuous (F := M) (E := L)
+  · exact (galoisRestrictionHom_surjective_continuous
+      (K := K) (M := M) (L := L)).2
+  · exact galois_krullTopology_is_profinite_group (F := M) (E := L)
+  · exact galois_krullTopology_is_profinite_group (F := K) (E := L)
+  · exact galois_krullTopology_is_profinite_group (F := K) (E := M)
 
 end
 

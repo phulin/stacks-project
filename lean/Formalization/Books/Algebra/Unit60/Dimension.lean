@@ -183,6 +183,7 @@ def HasIdealOfDefinitionGeneratedBy
 
 theorem local_dimension_characterization
     (R : Type u) [CommRing R] [IsLocalRing R] [IsNoetherianRing R]
+    (hR : Nontrivial R)
     (d₀ : ℕ) :
     List.TFAE
       [ ringKrullDim R = d₀
@@ -282,6 +283,7 @@ theorem one_equation_dimension_le
 
 theorem one_equation_dimension_eq_of_not_mem_minimalPrimes
     (R : Type u) [CommRing R] [IsLocalRing R] [IsNoetherianRing R]
+    (hR : Nontrivial R)
     (x : R) (hx : x ∈ maximalIdeal R)
     (hmin : ∀ p ∈ (⊥ : Ideal R).minimalPrimes, x ∉ p) :
     ringKrullDim R =
@@ -290,6 +292,7 @@ theorem one_equation_dimension_eq_of_not_mem_minimalPrimes
 
 theorem one_equation_dimension_eq_of_nonzerodivisor
     (R : Type u) [CommRing R] [IsLocalRing R] [IsNoetherianRing R]
+    (hR : Nontrivial R)
     (x : R) (hx : x ∈ maximalIdeal R) (hreg : x ∈ nonZeroDivisors R) :
     ringKrullDim R =
       ringKrullDim (R ⧸ Ideal.span ({x} : Set R)) + 1 := by

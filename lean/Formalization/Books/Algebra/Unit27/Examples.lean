@@ -2221,11 +2221,303 @@ theorem affine_open_is_generated_by_three (a : ℚ) (ha0 : a ≠ 0) (ha1 : a ≠
         {affineLocalizationMap a (Polynomial.X ^ 2 - Polynomial.X),
           affineLocalizationMap a (Polynomial.X ^ 3 - Polynomial.X),
           affineOpenThirdGenerator a} := by
-  sorry
+  by_cases h : a = 0
+  · exact (ha0 h).elim
+  by_cases h' : a = 1
+  · exact (ha1 h').elim
+  by_cases h'' : a = 1 / 2
+  · exact (haHalf h'').elim
+  let S : Subalgebra ℚ (AffineAmbient a) :=
+    Algebra.adjoin ℚ
+      {affineLocalizationMap a (Polynomial.X ^ 2 - Polynomial.X),
+        affineLocalizationMap a (Polynomial.X ^ 3 - Polynomial.X),
+        affineOpenThirdGenerator a}
+  apply le_antisymm
+  · change Algebra.adjoin ℚ
+      (Set.range (affineBaseImage a) ∪ {affineOpenThirdGenerator a}) ≤ S
+    apply Algebra.adjoin_le
+    intro x hx
+    rcases hx with hx | hx
+    · rcases hx with ⟨y, rfl⟩
+      have hy : (y : Polynomial ℚ) ∈
+          Algebra.adjoin ℚ ({(affineA : Polynomial ℚ), (affineB : Polynomial ℚ)} :
+            Set (Polynomial ℚ)) := by
+        rw [← affine_base_is_generated_by_A_and_B]
+        exact y.property
+      refine Algebra.adjoin_induction (R := ℚ) (A := Polynomial ℚ)
+        (s := {(affineA : Polynomial ℚ), (affineB : Polynomial ℚ)})
+        (p := fun z _ => affineLocalizationMap a z ∈ S) ?_ ?_ ?_ ?_ hy
+      · intro z hz
+        rcases Set.mem_insert_iff.mp hz with rfl | hz
+        · change affineLocalizationMap a (Polynomial.X ^ 2 - Polynomial.X) ∈ S
+          change affineLocalizationMap a (Polynomial.X ^ 2 - Polynomial.X) ∈
+            Algebra.adjoin ℚ
+              {affineLocalizationMap a (Polynomial.X ^ 2 - Polynomial.X),
+                affineLocalizationMap a (Polynomial.X ^ 3 - Polynomial.X),
+                affineOpenThirdGenerator a}
+          exact Algebra.subset_adjoin (by simp)
+        · have hz' : z = (affineB : Polynomial ℚ) := by
+            exact Set.mem_singleton_iff.mp hz
+          subst z
+          have hB : (affineB : Polynomial ℚ) =
+              (Polynomial.X ^ 3 - Polynomial.X) - (Polynomial.X ^ 2 - Polynomial.X) := by
+            simp [affineB, affineBaseElement]
+          rw [hB, map_sub]
+          exact S.sub_mem (Algebra.subset_adjoin (by simp))
+            (Algebra.subset_adjoin (by simp))
+      · intro r
+        change affineLocalizationMap a (Polynomial.C r) ∈ S
+        rw [show Polynomial.C r = algebraMap ℚ (Polynomial ℚ) r by simp]
+        change algebraMap ℚ (AffineAmbient a) r ∈ S
+        exact S.algebraMap_mem r
+      · intro x y hx hy hx' hy'
+        simpa only [map_add] using S.add_mem hx' hy'
+      · intro x y hx hy hx' hy'
+        simpa only [map_mul] using S.mul_mem hx' hy'
+    · rcases Set.mem_singleton_iff.mp hx with rfl
+      exact Algebra.subset_adjoin (by simp)
+  · apply Algebra.adjoin_le
+    intro x hx
+    rcases Set.mem_insert_iff.mp hx with rfl | hx
+    · have h :
+          affineLocalizationMap a (affineA : Polynomial ℚ) ∈
+            affineOpenSubalgebra a :=
+        Algebra.subset_adjoin (Or.inl ⟨affineA, rfl⟩)
+      simpa [affineA, affineBaseElement] using h
+    · rcases Set.mem_insert_iff.mp hx with rfl | hx
+      · have h :
+            affineLocalizationMap a (affineBZero : Polynomial ℚ) ∈
+              affineOpenSubalgebra a :=
+          Algebra.subset_adjoin (Or.inl ⟨affineBZero, rfl⟩)
+        simpa [affineBZero, affineBaseElement] using h
+      · rcases Set.mem_singleton_iff.mp hx with rfl
+        exact Algebra.subset_adjoin (Or.inr (Set.mem_singleton _))
 
 theorem affine_open_is_equalizer (a : ℚ) (ha0 : a ≠ 0) (ha1 : a ≠ 1) :
     affineOpenSubalgebra a = affineOpenEqualizer a ha0 ha1 := by
-  sorry
+  apply le_antisymm
+  · change Algebra.adjoin ℚ
+      (Set.range (affineBaseImage a) ∪ {affineOpenThirdGenerator a}) ≤
+        affineOpenEqualizer a ha0 ha1
+    apply Algebra.adjoin_le
+    intro x hx
+    rcases hx with hx | hx
+    · rcases hx with ⟨y, rfl⟩
+      change affineAmbientEvaluation a 0 ha0.symm
+          (affineLocalizationMap a (y : Polynomial ℚ)) =
+        affineAmbientEvaluation a 1 ha1.symm
+          (affineLocalizationMap a (y : Polynomial ℚ))
+      simp [affineAmbientEvaluation, affineBaseSubalgebra, affineLocalizationMap]
+      exact y.property
+    · rcases Set.mem_singleton_iff.mp hx with rfl
+      change affineAmbientEvaluation a 0 ha0.symm
+          (affineOpenThirdGenerator a) =
+        affineAmbientEvaluation a 1 ha1.symm
+          (affineOpenThirdGenerator a)
+      simp [affineAmbientEvaluation, affineOpenThirdGenerator,
+        affineDenominatorInverse, affineLocalizationMap]
+      ring_nf
+      calc
+        a * a⁻¹ - a ^ 2 * a⁻¹ = 1 - a := by
+          rw [show a ^ 2 * a⁻¹ = a * (a * a⁻¹) by ring,
+            mul_inv_cancel₀ ha0]
+          ring
+        _ = 1 - a * (1 - a)⁻¹ + a ^ 2 * (1 - a)⁻¹ := by
+          calc
+            1 - a = 1 - a * ((1 - a) * (1 - a)⁻¹) := by
+              rw [mul_inv_cancel₀ (sub_ne_zero.mpr (Ne.symm ha1))]
+              ring
+            _ = 1 - a * (1 - a)⁻¹ + a ^ 2 * (1 - a)⁻¹ := by ring
+  · change ∀ z, z ∈ affineOpenEqualizer a ha0 ha1 →
+      z ∈ affineOpenSubalgebra a
+    have hu : affineLocalizationMap a (Polynomial.X - Polynomial.C a) *
+        affineDenominatorInverse a = 1 := by
+      change
+        (↑((IsLocalization.Away.algebraMap_isUnit (R := Polynomial ℚ)
+          (S := AffineAmbient a) (Polynomial.X - Polynomial.C a)).unit) :
+            AffineAmbient a) *
+          ↑((IsLocalization.Away.algebraMap_isUnit (R := Polynomial ℚ)
+            (S := AffineAmbient a) (Polynomial.X - Polynomial.C a)).unit⁻¹) = 1
+      simp
+    have hc : a ^ 2 - a ≠ 0 := by
+      simpa [show a ^ 2 - a = a * (a - 1) by ring] using
+        (mul_ne_zero ha0 (sub_ne_zero.mpr ha1))
+    let q : Polynomial ℚ :=
+      Polynomial.X * (Polynomial.X - Polynomial.C a) +
+        Polynomial.C (a ^ 2 - a)
+    have hq : affineLocalizationMap a q * affineDenominatorInverse a =
+        affineOpenThirdGenerator a := by
+      dsimp [q, affineOpenThirdGenerator]
+      rw [map_add, map_mul]
+      change
+        (affineLocalizationMap a Polynomial.X *
+            affineLocalizationMap a (Polynomial.X - Polynomial.C a) +
+          affineLocalizationMap a (Polynomial.C (a ^ 2 - a))) *
+            affineDenominatorInverse a =
+          affineLocalizationMap a (Polynomial.C (a ^ 2 - a)) *
+            affineDenominatorInverse a + affineLocalizationMap a Polynomial.X
+      rw [add_mul, mul_assoc, hu, mul_one]
+      ring
+    have hgen :
+        affineAmbientEvaluation a 0 ha0.symm (affineOpenThirdGenerator a) =
+          affineAmbientEvaluation a 1 ha1.symm (affineOpenThirdGenerator a) := by
+      simp [affineAmbientEvaluation, affineOpenThirdGenerator,
+        affineDenominatorInverse, affineLocalizationMap]
+      ring_nf
+      calc
+        a * a⁻¹ - a ^ 2 * a⁻¹ = 1 - a := by
+          rw [show a ^ 2 * a⁻¹ = a * (a * a⁻¹) by ring,
+            mul_inv_cancel₀ ha0]
+          ring
+        _ = 1 - a * (1 - a)⁻¹ + a ^ 2 * (1 - a)⁻¹ := by
+          calc
+            1 - a = 1 - a * ((1 - a) * (1 - a)⁻¹) := by
+              rw [mul_inv_cancel₀ (sub_ne_zero.mpr (Ne.symm ha1))]
+              ring
+            _ = 1 - a * (1 - a)⁻¹ + a ^ 2 * (1 - a)⁻¹ := by ring
+    have hmain : ∀ (n : ℕ) (z : AffineAmbient a),
+        z ∈ affineOpenEqualizer a ha0 ha1 →
+        ∀ f : Polynomial ℚ,
+          z * affineLocalizationMap a (Polynomial.X - Polynomial.C a) ^ n =
+            affineLocalizationMap a f →
+          z ∈ affineOpenSubalgebra a := by
+      intro n
+      induction n with
+      | zero =>
+          intro z hz f hf
+          have hz' : z = affineLocalizationMap a f := by
+            simpa using hf
+          rw [hz']
+          have hfeq : Polynomial.aeval (0 : ℚ) f = Polynomial.aeval (1 : ℚ) f := by
+            change affineAmbientEvaluation a 0 ha0.symm z =
+              affineAmbientEvaluation a 1 ha1.symm z at hz
+            rw [hz'] at hz
+            simpa [affineAmbientEvaluation, affineLocalizationMap] using hz
+          let y : affineBaseSubalgebra := affineBaseElement f hfeq
+          have hy : affineBaseImage a y ∈ affineOpenSubalgebra a :=
+            Algebra.subset_adjoin (Or.inl ⟨y, rfl⟩)
+          change affineLocalizationMap a (y : Polynomial ℚ) ∈
+            affineOpenSubalgebra a at hy
+          dsimp [y] at hy
+          change affineLocalizationMap a f ∈ affineOpenSubalgebra a at hy
+          exact hy
+      | succ n ih =>
+          intro z hz f hf
+          let k : ℚ := f.eval a / (a ^ 2 - a) ^ (n + 1)
+          have hroot :
+              Polynomial.IsRoot (f -
+                Polynomial.C k * q ^ (n + 1)) a := by
+            rw [Polynomial.IsRoot]
+            simp [q, k, hc]
+          rcases (Polynomial.dvd_iff_isRoot).2 hroot with ⟨f₁, hf₁⟩
+          have hfeq : f =
+              (Polynomial.X - Polynomial.C a) * f₁ +
+                Polynomial.C k * q ^ (n + 1) := by
+            simpa [add_comm] using (sub_eq_iff_eq_add.mp hf₁)
+          let z₁ : AffineAmbient a :=
+            affineLocalizationMap a f₁ *
+              affineDenominatorInverse a ^ n
+          have hzrep : z = affineLocalizationMap a f *
+              affineDenominatorInverse a ^ (n + 1) := by
+            have hpow :
+                affineLocalizationMap a (Polynomial.X - Polynomial.C a) ^ (n + 1) *
+                    affineDenominatorInverse a ^ (n + 1) = 1 := by
+              rw [← mul_pow, hu, one_pow]
+            calc
+              z = z * 1 := (mul_one z).symm
+              _ = z *
+                  (affineLocalizationMap a (Polynomial.X - Polynomial.C a) ^ (n + 1) *
+                    affineDenominatorInverse a ^ (n + 1)) := by rw [hpow]
+              _ = (z * affineLocalizationMap a
+                    (Polynomial.X - Polynomial.C a) ^ (n + 1)) *
+                    affineDenominatorInverse a ^ (n + 1) := by ring
+              _ = affineLocalizationMap a f *
+                    affineDenominatorInverse a ^ (n + 1) := by rw [hf]
+          have hzsum :
+              z = z₁ +
+                algebraMap ℚ (AffineAmbient a) k *
+                  (affineOpenThirdGenerator a) ^ (n + 1) := by
+            rw [hzrep, hfeq, map_add, map_mul, map_mul, map_pow, add_mul]
+            calc
+              (affineLocalizationMap a (Polynomial.X - Polynomial.C a) *
+                    affineLocalizationMap a f₁) *
+                  affineDenominatorInverse a ^ (n + 1) +
+                affineLocalizationMap a (Polynomial.C k) *
+                    affineLocalizationMap a q ^ (n + 1) *
+                  affineDenominatorInverse a ^ (n + 1) =
+                  affineLocalizationMap a f₁ *
+                      affineDenominatorInverse a ^ n *
+                      (affineLocalizationMap a (Polynomial.X - Polynomial.C a) *
+                        affineDenominatorInverse a) +
+                    affineLocalizationMap a (Polynomial.C k) *
+                      (affineLocalizationMap a q *
+                        affineDenominatorInverse a) ^ (n + 1) := by
+                congr 1
+                · rw [pow_succ]
+                  ring
+                · calc
+                    affineLocalizationMap a (Polynomial.C k) *
+                          affineLocalizationMap a q ^ (n + 1) *
+                        affineDenominatorInverse a ^ (n + 1) =
+                      affineLocalizationMap a (Polynomial.C k) *
+                        (affineLocalizationMap a q ^ (n + 1) *
+                          affineDenominatorInverse a ^ (n + 1)) := by ring
+                    _ = affineLocalizationMap a (Polynomial.C k) *
+                        (affineLocalizationMap a q *
+                          affineDenominatorInverse a) ^ (n + 1) := by
+                      rw [← mul_pow]
+              _ = affineLocalizationMap a f₁ *
+                      affineDenominatorInverse a ^ n +
+                    algebraMap ℚ (AffineAmbient a) k *
+                      (affineLocalizationMap a q *
+                        affineDenominatorInverse a) ^ (n + 1) := by
+                rw [hu, mul_one]
+                congr 1
+              _ = z₁ +
+                    algebraMap ℚ (AffineAmbient a) k *
+                      (affineOpenThirdGenerator a) ^ (n + 1) := by
+                dsimp [z₁]
+                simpa only [hq]
+          have hz₁ : z₁ ∈ affineOpenEqualizer a ha0 ha1 := by
+            change affineAmbientEvaluation a 0 ha0.symm z₁ =
+              affineAmbientEvaluation a 1 ha1.symm z₁
+            change affineAmbientEvaluation a 0 ha0.symm z =
+              affineAmbientEvaluation a 1 ha1.symm z at hz
+            rw [hzsum] at hz
+            simp only [map_add, map_mul, map_pow] at hz
+            rw [hgen] at hz
+            simpa [affineAmbientEvaluation] using hz
+          have hf₁' :
+              z₁ * affineLocalizationMap a (Polynomial.X - Polynomial.C a) ^ n =
+                affineLocalizationMap a f₁ := by
+            dsimp [z₁]
+            have huv : affineDenominatorInverse a *
+                affineLocalizationMap a (Polynomial.X - Polynomial.C a) = 1 := by
+              rw [mul_comm, hu]
+            calc
+              affineLocalizationMap a f₁ * affineDenominatorInverse a ^ n *
+                  affineLocalizationMap a (Polynomial.X - Polynomial.C a) ^ n =
+                affineLocalizationMap a f₁ *
+                  (affineDenominatorInverse a ^ n *
+                    affineLocalizationMap a (Polynomial.X - Polynomial.C a) ^ n) := by
+                      ring
+              _ = affineLocalizationMap a f₁ *
+                  (affineDenominatorInverse a *
+                    affineLocalizationMap a (Polynomial.X - Polynomial.C a)) ^ n := by
+                      rw [← mul_pow]
+              _ = affineLocalizationMap a f₁ := by rw [huv, one_pow, mul_one]
+          have hz₁' := ih z₁ hz₁ f₁ hf₁'
+          rw [hzsum]
+          exact (affineOpenSubalgebra a).add_mem hz₁'
+            ((affineOpenSubalgebra a).mul_mem
+              ((affineOpenSubalgebra a).algebraMap_mem k)
+              ((affineOpenSubalgebra a).pow_mem
+                (Algebra.subset_adjoin (Or.inr (Set.mem_singleton _))) (n + 1)))
+    intro z hz
+    obtain ⟨n, f, hf⟩ := IsLocalization.Away.surj
+      (R := Polynomial ℚ) (S := AffineAmbient a)
+      (x := Polynomial.X - Polynomial.C a) z
+    exact hmain n z hz f hf
 
 theorem affine_open_isFiniteType (a : ℚ) (ha0 : a ≠ 0) (ha1 : a ≠ 1)
     (haHalf : a ≠ 1 / 2) :
@@ -2268,12 +2560,235 @@ def affineMa (a : ℚ) : Ideal affineBaseSubalgebra := affineMaximalIdeal a
 def affineMOneMinusA (a : ℚ) : Ideal affineBaseSubalgebra :=
   affineMaximalIdeal (1 - a)
 
+private theorem affine_base_subtract_eval_mem
+    (r : ℚ) (J : Ideal affineBaseSubalgebra)
+    (hA : affineA -
+        algebraMap ℚ affineBaseSubalgebra (affineEvaluation r affineA) ∈ J)
+    (hB : affineB -
+        algebraMap ℚ affineBaseSubalgebra (affineEvaluation r affineB) ∈ J)
+    (z : Polynomial ℚ)
+    (hz : z ∈ Algebra.adjoin ℚ
+      ({(affineA : Polynomial ℚ), (affineB : Polynomial ℚ)} :
+        Set (Polynomial ℚ)))
+    (heq : Polynomial.aeval (0 : ℚ) z = Polynomial.aeval (1 : ℚ) z) :
+    affineBaseElement z heq -
+        algebraMap ℚ affineBaseSubalgebra
+          (affineEvaluation r (affineBaseElement z heq)) ∈ J := by
+  refine Algebra.adjoin_induction (R := ℚ) (A := Polynomial ℚ)
+    (s := {(affineA : Polynomial ℚ), (affineB : Polynomial ℚ)})
+    (p := fun z _ => ∀ heq : Polynomial.aeval (0 : ℚ) z =
+        Polynomial.aeval (1 : ℚ) z,
+      affineBaseElement z heq -
+          algebraMap ℚ affineBaseSubalgebra
+            (affineEvaluation r (affineBaseElement z heq)) ∈ J) ?_ ?_ ?_ ?_ hz heq
+  · intro z hz' heq
+    have hzcases : z = (affineA : Polynomial ℚ) ∨
+        z = (affineB : Polynomial ℚ) := by
+      simpa [Set.mem_insert_iff, Set.mem_singleton_iff] using hz'
+    rcases hzcases with rfl | rfl
+    · have h : affineBaseElement (affineA : Polynomial ℚ) heq = affineA := by
+        apply Subtype.ext
+        rfl
+      rw [h]
+      exact hA
+    · have h : affineBaseElement (affineB : Polynomial ℚ) heq = affineB := by
+        apply Subtype.ext
+        rfl
+      rw [h]
+      exact hB
+  · intro c heq
+    have h : affineBaseElement ((algebraMap ℚ (Polynomial ℚ)) c) heq =
+        algebraMap ℚ affineBaseSubalgebra c := by
+      apply Subtype.ext
+      simp [affineBaseElement]
+    rw [h]
+    have heval : affineEvaluation r
+        (algebraMap ℚ affineBaseSubalgebra c) = c := by
+      simp [affineEvaluation]
+    rw [heval]
+    simpa only [sub_self] using J.zero_mem
+  · intro x y hx hy hx' hy' heq
+    have hxbase : x ∈ affineBaseSubalgebra := by
+      rw [affine_base_is_generated_by_A_and_B]
+      exact hx
+    have hybase : y ∈ affineBaseSubalgebra := by
+      rw [affine_base_is_generated_by_A_and_B]
+      exact hy
+    change Polynomial.aeval (0 : ℚ) x = Polynomial.aeval (1 : ℚ) x at hxbase
+    change Polynomial.aeval (0 : ℚ) y = Polynomial.aeval (1 : ℚ) y at hybase
+    have h : affineBaseElement (x + y) heq =
+        affineBaseElement x hxbase + affineBaseElement y hybase := by
+      apply Subtype.ext
+      rfl
+    rw [h, map_add, map_add]
+    have hm := J.add_mem (hx' hxbase) (hy' hybase)
+    convert hm using 1 <;> ring
+  · intro x y hx hy hx' hy' heq
+    have hxbase : x ∈ affineBaseSubalgebra := by
+      rw [affine_base_is_generated_by_A_and_B]
+      exact hx
+    have hybase : y ∈ affineBaseSubalgebra := by
+      rw [affine_base_is_generated_by_A_and_B]
+      exact hy
+    change Polynomial.aeval (0 : ℚ) x = Polynomial.aeval (1 : ℚ) x at hxbase
+    change Polynomial.aeval (0 : ℚ) y = Polynomial.aeval (1 : ℚ) y at hybase
+    have h : affineBaseElement (x * y) heq =
+        affineBaseElement x hxbase * affineBaseElement y hybase := by
+      apply Subtype.ext
+      rfl
+    rw [h, map_mul, map_mul]
+    have h1 := J.mul_mem_left (affineBaseElement x hxbase) (hy' hybase)
+    have h2 := J.mul_mem_right
+      (algebraMap ℚ affineBaseSubalgebra
+        (affineEvaluation r (affineBaseElement y hybase))) (hx' hxbase)
+    have hm := J.add_mem h1 h2
+    convert hm using 1 <;> ring
+
 theorem affine_evaluation_kernel_formulas (a : ℚ) :
     affineM0 = Ideal.span {affineA, affineBZero} ∧
       affineMa a = Ideal.span {affineF1 a, affineF2AtA a} ∧
       affineMOneMinusA a =
         Ideal.span {affineF1 a, affineF2AtOneMinusA a} := by
-  sorry
+  have hkernel :
+      ∀ (r : ℚ) (J : Ideal affineBaseSubalgebra),
+        J ≤ RingHom.ker (affineEvaluation r) →
+        (affineA -
+            algebraMap ℚ affineBaseSubalgebra
+              (affineEvaluation r affineA) ∈ J) →
+        (affineB -
+            algebraMap ℚ affineBaseSubalgebra
+              (affineEvaluation r affineB) ∈ J) →
+        RingHom.ker (affineEvaluation r) = J := by
+    intro r J hJ hA hB
+    apply le_antisymm
+    · intro y hy
+      have hz : (y : Polynomial ℚ) ∈
+          Algebra.adjoin ℚ ({(affineA : Polynomial ℚ), (affineB : Polynomial ℚ)} :
+            Set (Polynomial ℚ)) := by
+        rw [← affine_base_is_generated_by_A_and_B]
+        exact y.property
+      have heq : Polynomial.aeval (0 : ℚ) (y : Polynomial ℚ) =
+          Polynomial.aeval (1 : ℚ) (y : Polynomial ℚ) := y.property
+      have h := affine_base_subtract_eval_mem r J hA hB
+        (y : Polynomial ℚ) hz heq
+      have hy' : affineEvaluation r y = 0 := hy
+      have hsub : affineBaseElement (y : Polynomial ℚ) y.property = y := by
+        apply Subtype.ext
+        rfl
+      rw [hsub] at h
+      simpa [hy'] using h
+    · exact hJ
+  have hM0 : affineM0 = Ideal.span {affineA, affineBZero} := by
+    let J : Ideal affineBaseSubalgebra := Ideal.span {affineA, affineBZero}
+    change RingHom.ker (affineEvaluation 0) = J
+    refine hkernel 0 J ?_ ?_ ?_
+    · apply Ideal.span_le.mpr
+      intro x hx
+      rcases Set.mem_insert_iff.mp hx with rfl | hx
+      · apply RingHom.mem_ker.mpr
+        simp [affineEvaluation, affineA, affineBaseElement]
+      · rcases Set.mem_singleton_iff.mp hx with rfl
+        apply RingHom.mem_ker.mpr
+        simp [affineEvaluation, affineBZero, affineBaseElement]
+    · change affineA -
+          algebraMap ℚ affineBaseSubalgebra
+            (affineEvaluation 0 affineA) ∈ Ideal.span {affineA, affineBZero}
+      simpa [affineEvaluation, affineA, affineBaseElement] using
+        (Ideal.subset_span (s := ({affineA, affineBZero} :
+          Set affineBaseSubalgebra)) (by simp) :
+          affineA ∈ Ideal.span {affineA, affineBZero})
+    · have hB0 : affineBZero - affineA ∈ J :=
+        J.sub_mem (Ideal.subset_span (by simp)) (Ideal.subset_span (by simp))
+      have heq : affineB -
+            algebraMap ℚ affineBaseSubalgebra
+              (affineEvaluation 0 affineB) = affineBZero - affineA := by
+        apply Subtype.ext
+        simp [affineEvaluation, affineB, affineBZero, affineA, affineBaseElement]
+      rw [heq]
+      exact hB0
+  have hMa : affineMa a = Ideal.span {affineF1 a, affineF2AtA a} := by
+    let J : Ideal affineBaseSubalgebra := Ideal.span {affineF1 a, affineF2AtA a}
+    change RingHom.ker (affineEvaluation a) = J
+    refine hkernel a J ?_ ?_ ?_
+    · apply Ideal.span_le.mpr
+      intro x hx
+      rcases Set.mem_insert_iff.mp hx with rfl | hx
+      · apply RingHom.mem_ker.mpr
+        simp [affineEvaluation, affineF1, affinePolynomialF1, affineBaseElement]
+      · rcases Set.mem_singleton_iff.mp hx with rfl
+        apply RingHom.mem_ker.mpr
+        simp [affineEvaluation, affineF2AtA, affinePolynomialF2AtA,
+          affineBaseElement]
+    · have hF1 : affineF1 a ∈ J := Ideal.subset_span (by simp)
+      have heq : affineA -
+            algebraMap ℚ affineBaseSubalgebra
+              (affineEvaluation a affineA) = affineF1 a := by
+        apply Subtype.ext
+        simp [affineEvaluation, affineA, affineF1, affinePolynomialF1,
+          affineBaseElement]
+        ring
+      rw [heq]
+      exact hF1
+    · have hF1 : affineF1 a ∈ J := Ideal.subset_span (by simp)
+      have hF2 : affineF2AtA a ∈ J := Ideal.subset_span (by simp)
+      have hm := J.add_mem hF2
+        (J.mul_mem_left (algebraMap ℚ affineBaseSubalgebra (a - 1)) hF1)
+      have heq : affineB -
+            algebraMap ℚ affineBaseSubalgebra
+              (affineEvaluation a affineB) =
+          affineF2AtA a +
+            algebraMap ℚ affineBaseSubalgebra (a - 1) * affineF1 a := by
+        apply Subtype.ext
+        simp [affineEvaluation, affineB, affineF1, affineF2AtA,
+          affinePolynomialF1, affinePolynomialF2AtA, affineA,
+          affineBaseElement]
+        ring
+      rw [heq]
+      exact hm
+  have hMOneMinusA :
+      affineMOneMinusA a = Ideal.span {affineF1 a, affineF2AtOneMinusA a} := by
+    let J : Ideal affineBaseSubalgebra :=
+      Ideal.span {affineF1 a, affineF2AtOneMinusA a}
+    change RingHom.ker (affineEvaluation (1 - a)) = J
+    refine hkernel (1 - a) J ?_ ?_ ?_
+    · apply Ideal.span_le.mpr
+      intro x hx
+      rcases Set.mem_insert_iff.mp hx with rfl | hx
+      · apply RingHom.mem_ker.mpr
+        simp [affineEvaluation, affineF1, affinePolynomialF1, affineBaseElement]
+      · rcases Set.mem_singleton_iff.mp hx with rfl
+        apply RingHom.mem_ker.mpr
+        simp [affineEvaluation, affineF2AtOneMinusA,
+          affinePolynomialF2AtOneMinusA, affineBaseElement]
+    · have hF1 : affineF1 a ∈ J := Ideal.subset_span (by simp)
+      have heq : affineA -
+            algebraMap ℚ affineBaseSubalgebra
+              (affineEvaluation (1 - a) affineA) = affineF1 a := by
+        apply Subtype.ext
+        simp [affineEvaluation, affineA, affineF1, affinePolynomialF1,
+          affineBaseElement]
+        ring
+      rw [heq]
+      exact hF1
+    · have hF1 : affineF1 a ∈ J := Ideal.subset_span (by simp)
+      have hF2 : affineF2AtOneMinusA a ∈ J := Ideal.subset_span (by simp)
+      have hm := J.add_mem hF2
+        (J.mul_mem_left (algebraMap ℚ affineBaseSubalgebra (-a)) hF1)
+      have heq : affineB -
+            algebraMap ℚ affineBaseSubalgebra
+              (affineEvaluation (1 - a) affineB) =
+          affineF2AtOneMinusA a -
+            algebraMap ℚ affineBaseSubalgebra a * affineF1 a := by
+        apply Subtype.ext
+        simp [affineEvaluation, affineB, affineF1, affineF2AtOneMinusA,
+          affinePolynomialF1, affinePolynomialF2AtOneMinusA, affineA,
+          affineBaseElement]
+        ring
+      rw [heq]
+      convert hm using 1
+      rw [map_neg]
+      ring
+  exact ⟨hM0, hMa, hMOneMinusA⟩
 
 theorem affine_evaluation_at_zero_extends (a : ℚ) (ha0 : a ≠ 0) :
     ∃ e : AffineOpenRing a →+* ℚ,
@@ -2301,7 +2816,115 @@ theorem affine_evaluation_at_one_minus_a_extends (a : ℚ) (haHalf : a ≠ 1 / 2
 theorem affine_evaluation_at_a_does_not_extend (a : ℚ) (ha0 : a ≠ 0) (ha1 : a ≠ 1) :
     ¬ ∃ e : AffineOpenRing a →+* ℚ,
       e.comp (affineBaseToOpen a) = affineEvaluation a := by
-  sorry
+  rintro ⟨e, he⟩
+  have hidentity :
+      affineLocalizationMap a ((Polynomial.X ^ 2 - Polynomial.X) ^ 2) *
+          affineLocalizationMap a (Polynomial.X - Polynomial.C a) *
+            affineOpenThirdGenerator a =
+        affineLocalizationMap a
+            ((Polynomial.X ^ 2 - Polynomial.X) ^ 2 * Polynomial.C (a ^ 2 - a)) +
+          affineLocalizationMap a
+            ((Polynomial.X ^ 2 - Polynomial.X) ^ 2 *
+              (Polynomial.X - Polynomial.C a) * Polynomial.X) := by
+    have hu : affineLocalizationMap a (Polynomial.X - Polynomial.C a) *
+        affineDenominatorInverse a = 1 := by
+      change
+        (↑((IsLocalization.Away.algebraMap_isUnit (R := Polynomial ℚ)
+          (S := AffineAmbient a) (Polynomial.X - Polynomial.C a)).unit) :
+            AffineAmbient a) *
+          ↑((IsLocalization.Away.algebraMap_isUnit (R := Polynomial ℚ)
+            (S := AffineAmbient a) (Polynomial.X - Polynomial.C a)).unit⁻¹) = 1
+      simp
+    rw [affineOpenThirdGenerator]
+    calc
+      affineLocalizationMap a ((Polynomial.X ^ 2 - Polynomial.X) ^ 2) *
+            affineLocalizationMap a (Polynomial.X - Polynomial.C a) *
+          (affineLocalizationMap a (Polynomial.C (a ^ 2 - a)) *
+              affineDenominatorInverse a + affineLocalizationMap a Polynomial.X) =
+        (affineLocalizationMap a ((Polynomial.X ^ 2 - Polynomial.X) ^ 2) *
+            affineLocalizationMap a (Polynomial.C (a ^ 2 - a))) *
+            (affineLocalizationMap a (Polynomial.X - Polynomial.C a) *
+              affineDenominatorInverse a) +
+          affineLocalizationMap a ((Polynomial.X ^ 2 - Polynomial.X) ^ 2) *
+            affineLocalizationMap a (Polynomial.X - Polynomial.C a) *
+              affineLocalizationMap a Polynomial.X := by ring
+      _ = affineLocalizationMap a
+            ((Polynomial.X ^ 2 - Polynomial.X) ^ 2 * Polynomial.C (a ^ 2 - a)) +
+          affineLocalizationMap a ((Polynomial.X ^ 2 - Polynomial.X) ^ 2) *
+            affineLocalizationMap a (Polynomial.X - Polynomial.C a) *
+              affineLocalizationMap a Polynomial.X := by
+        rw [hu, mul_one, map_mul]
+      _ = _ := by
+        congr 1
+        rw [map_mul, map_mul]
+  let pL : affineBaseSubalgebra :=
+    affineBaseElement
+      ((Polynomial.X ^ 2 - Polynomial.X) ^ 2 * (Polynomial.X - Polynomial.C a)) (by
+        change Polynomial.aeval (0 : ℚ)
+            ((Polynomial.X ^ 2 - Polynomial.X) ^ 2 * (Polynomial.X - Polynomial.C a)) =
+          Polynomial.aeval (1 : ℚ)
+            ((Polynomial.X ^ 2 - Polynomial.X) ^ 2 * (Polynomial.X - Polynomial.C a))
+        simp only [map_mul, map_pow]
+        simp)
+  let pR : affineBaseSubalgebra :=
+    affineBaseElement
+      ((Polynomial.X ^ 2 - Polynomial.X) ^ 2 * Polynomial.C (a ^ 2 - a)) (by
+        change Polynomial.aeval (0 : ℚ)
+            ((Polynomial.X ^ 2 - Polynomial.X) ^ 2 * Polynomial.C (a ^ 2 - a)) =
+          Polynomial.aeval (1 : ℚ)
+            ((Polynomial.X ^ 2 - Polynomial.X) ^ 2 * Polynomial.C (a ^ 2 - a))
+        simp only [map_mul, map_pow]
+        simp)
+  let pS : affineBaseSubalgebra :=
+    affineBaseElement
+      ((Polynomial.X ^ 2 - Polynomial.X) ^ 2 *
+        (Polynomial.X - Polynomial.C a) * Polynomial.X) (by
+        change Polynomial.aeval (0 : ℚ)
+            ((Polynomial.X ^ 2 - Polynomial.X) ^ 2 *
+              (Polynomial.X - Polynomial.C a) * Polynomial.X) =
+          Polynomial.aeval (1 : ℚ)
+            ((Polynomial.X ^ 2 - Polynomial.X) ^ 2 *
+              (Polynomial.X - Polynomial.C a) * Polynomial.X)
+        simp only [map_mul, map_pow]
+        simp)
+  have hid :
+      affineBaseToOpen a pL * affineOpenThird a =
+        affineBaseToOpen a pR + affineBaseToOpen a pS := by
+    apply Subtype.ext
+    change affineLocalizationMap a
+          ((Polynomial.X ^ 2 - Polynomial.X) ^ 2 * (Polynomial.X - Polynomial.C a)) *
+        affineOpenThirdGenerator a =
+      affineLocalizationMap a
+          ((Polynomial.X ^ 2 - Polynomial.X) ^ 2 * Polynomial.C (a ^ 2 - a)) +
+        affineLocalizationMap a
+          ((Polynomial.X ^ 2 - Polynomial.X) ^ 2 *
+            (Polynomial.X - Polynomial.C a) * Polynomial.X)
+    simpa only [map_mul] using hidentity
+  have heval (p : affineBaseSubalgebra) :
+      e (affineBaseToOpen a p) = affineEvaluation a p := by
+    exact congrArg (fun f : affineBaseSubalgebra →+* ℚ => f p) he
+  have hval := congrArg (fun z : AffineOpenRing a => e z) hid
+  rw [map_mul, map_add, heval, heval, heval] at hval
+  have hzero : affineEvaluation a pL = 0 := by
+    change Polynomial.eval a
+      ((Polynomial.X ^ 2 - Polynomial.X) ^ 2 * (Polynomial.X - Polynomial.C a)) = 0
+    simp
+  have hright : affineEvaluation a pR ≠ 0 := by
+    change Polynomial.eval a
+      ((Polynomial.X ^ 2 - Polynomial.X) ^ 2 * Polynomial.C (a ^ 2 - a)) ≠ 0
+    simp
+    intro hzero
+    have hfactor : a * (a - 1) = 0 := by nlinarith [hzero]
+    rcases mul_eq_zero.mp hfactor with h0 | h1
+    · exact ha0 h0
+    · exact ha1 (sub_eq_zero.mp h1)
+  have hszero : affineEvaluation a pS = 0 := by
+    change Polynomial.eval a
+      ((Polynomial.X ^ 2 - Polynomial.X) ^ 2 *
+        (Polynomial.X - Polynomial.C a) * Polynomial.X) = 0
+    simp
+  rw [hzero, hszero, zero_mul, add_zero] at hval
+  exact hright hval.symm
 
 def affineOpenSpectrumMap (a : ℚ) :
     PrimeSpectrum (AffineOpenRing a) → PrimeSpectrum affineBaseSubalgebra :=

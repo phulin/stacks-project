@@ -80,8 +80,10 @@ theorem fully_faithful_adjoint_kernel_zero_is_equivalence
       @isIso_of_hom_comp_eq_id _ _ _ _
         (adj.unit.app (G.obj Y)) (hUnitApp _) (G.map (adj.counit.app Y))
         (adj.right_triangle_components Y)
+    have hGZero : Functor.kernel G Z :=
+      (Triangle.isZero₃_iff_isIso₁ _ hT').2 hi
     exact (Triangle.isZero₃_iff_isIso₁ _ hT).1
-      (hG Z ((Triangle.isZero₃_iff_isIso₁ _ hT').2 hi))
+      (hG Z hGZero)
   refine { faithful := hFaithful, full := hFull, essSurj := ?_ }
   refine { mem_essImage := ?_ }
   intro Y

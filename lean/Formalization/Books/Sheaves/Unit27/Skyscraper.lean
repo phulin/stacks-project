@@ -1260,6 +1260,14 @@ noncomputable def moduleSkyscraperSheafFunctor {X : TopCat.{v}}
     ModuleCat.{v} (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x) ⥤ Mod O :=
   (Classical.choice (exists_moduleSkyscraperSheafFunctor O x)).functor
 
+/-- The chosen module skyscraper functor has the prescribed stalk naturally in
+its support-module argument.  This is the module-valued compatibility needed
+to lift the additive skyscraper adjunction. -/
+theorem exists_moduleSkyscraperSheafFunctor_stalkIso {X : TopCat.{v}}
+    (O : RingSheaf X) (x : X) :
+    Nonempty (moduleSkyscraperSheafFunctor O x ⋙ moduleStalkFunctor O x ≅ 𝟭 _) := by
+  sorry
+
 /-- A sheaf of `O`-modules is a skyscraper sheaf when it is isomorphic to one
 with value a module over a support stalk. -/
 def IsModuleSkyscraperSheaf {X : TopCat.{v}} (O : RingSheaf X)
@@ -1775,23 +1783,6 @@ private noncomputable def moduleHomOfStalkLinear
           simpa only [ConcreteCategory.comp_apply] using
             congrArg (fun z => (ConcreteCategory.hom z) s) hhcomp.symm
         _ = _ := by
-          change
-            (ConcreteCategory.hom
-              (skyscraperPresheafStalkOfSpecializes x
-                (AddCommGrpCat.of (↑A)) (specializes_refl x)).hom)
-                ((ConcreteCategory.hom
-                  (TopCat.Presheaf.germ
-                    (skyscraperPresheaf x (AddCommGrpCat.of (↑A)))
-                    U x hxU))
-                  ((ConcreteCategory.hom (eD.hom.app (Opposite.op U))) s)) =
-              (ConcreteCategory.hom
-                (skyscraperPresheafStalkOfSpecializes x
-                  (AddCommGrpCat.of (↑A)) (specializes_refl x)).hom)
-                ((ConcreteCategory.hom
-                  (TopCat.Presheaf.germ
-                    (skyscraperPresheaf x (AddCommGrpCat.of (↑A)))
-                    U x hxU))
-                  ((ConcreteCategory.hom (eD.hom.app (Opposite.op U))) t))
           exact hst''
         _ = (ConcreteCategory.hom eU.hom)
                 ((ConcreteCategory.hom (eD.hom.app (Opposite.op U))) t) := by
@@ -1855,11 +1846,6 @@ private noncomputable def moduleHomOfStalkLinear
             ((TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map h))
             (TopCat.Presheaf.germ F.val.presheaf U.unop x hxU (r • m)) =
           (ConcreteCategory.hom φ) (s • ma) := by
-      change
-        (ConcreteCategory.hom
-            ((TopCat.Presheaf.stalkFunctor AddCommGrpCat x).map h))
-            (TopCat.Presheaf.germ F.val.presheaf U.unop x hxU (r • m)) =
-          (ConcreteCategory.hom φ) (s • ma)
       rw [hφ, PresheafOfModules.germ_ringCat_smul]
       rfl
     have h₃ :
@@ -1922,7 +1908,7 @@ private noncomputable def moduleHomOfStalkLinear
     exact h₁.trans (h₂.trans (h₃.trans (h₄.trans h₅)))
   · let eTop : D.val.presheaf.obj U ≅ ⊤_ AddCommGrpCat :=
       eD.app U ≪≫ eqToIso (by simp [skyscraperPresheaf_obj, hxU])
-    letI : Subsingleton (↑(D.val.presheaf.obj U)) := by
+    let : Subsingleton (↑(D.val.presheaf.obj U)) := by
       exact AddCommGrpCat.subsingleton_of_isZero
         ((isZero_zero AddCommGrpCat).of_iso
           (eTop ≪≫ (HasZeroObject.zeroIsoTerminal :

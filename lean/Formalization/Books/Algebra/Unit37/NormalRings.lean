@@ -1141,7 +1141,6 @@ theorem directLimit_isNormalRing
     [DirectedSystem R (f · · ·)]
     (hR : ∀ i, IsNormalRing (R i)) :
     IsNormalRing (DirectLimit R f) := by
-  /-
   intro q
   let oi : ∀ i, R i →+* DirectLimit R f := DirectLimit.Ring.of R (f · · ·)
   let p : ∀ i, Ideal (R i) := fun i => q.asIdeal.comap (oi i)
@@ -1353,8 +1352,11 @@ theorem directLimit_isNormalRing
     have hPmap_m : Polynomial.map (Ring.DirectLimit.of S (g · · ·) n) P_m = P := by
       calc
           Polynomial.map (Ring.DirectLimit.of S (g · · ·) n) P_m =
-              Polynomial.map (Ring.DirectLimit.of S (g · · ·) n).comp
-                (g i n (him.trans hmn)) P_i := by rw [P_m, Polynomial.map_map]
+              Polynomial.map ((Ring.DirectLimit.of S (g · · ·) n).comp
+                (g i n (him.trans hmn))) P_i := by
+            change Polynomial.map (Ring.DirectLimit.of S (g · · ·) n)
+                (Polynomial.map (g i n (him.trans hmn)) P_i) = _
+            rw [Polynomial.map_map]
           _ = Polynomial.map (Ring.DirectLimit.of S (g · · ·) i) P_i := by
             congr 1
             ext z
@@ -1370,13 +1372,21 @@ theorem directLimit_isNormalRing
     let Q_m := P_m.scaleRoots b_m
     have hQmap_m : Polynomial.map (Ring.DirectLimit.of S (g · · ·) n) Q_m =
         P.scaleRoots b := by
-      rw [Q_m, Polynomial.map_scaleRoots P_m b_m
+      change Polynomial.map (Ring.DirectLimit.of S (g · · ·) n)
+          (P_m.scaleRoots b_m) = P.scaleRoots b
+      rw [Polynomial.map_scaleRoots P_m b_m
         (Ring.DirectLimit.of S (g · · ·) n) (by simp [hP_m.leadingCoeff])]
       rw [hPmap_m, hb_m]
     have hroot_m : Ring.DirectLimit.of S (g · · ·) n
         (Polynomial.eval₂ (RingHom.id (S n)) a_m Q_m) = 0 := by
-      rw [Polynomial.hom_eval₂]
-      simpa [hQmap_m, ha_m] using hscaled
+      apply (IsFractionRing.injective U (FractionRing U))
+      rw [Polynomial.hom_eval₂, Polynomial.hom_eval₂]
+      have hs : (Polynomial.map (Ring.DirectLimit.of S (g · · ·) n) Q_m).eval₂
+          (algebraMap U (FractionRing U)) (algebraMap U (FractionRing U) a) = 0 := by
+        rw [hQmap_m]
+        exact hscaled
+      rw [Polynomial.eval₂_map] at hs
+      simpa [ha_m] using hs
     obtain ⟨l, hml, hroot_l⟩ := Ring.DirectLimit.of.zero_exact hroot_m
     let P_l := Polynomial.map (g n l hml) P_m
     let a_l := g n l hml a_m
@@ -1385,18 +1395,27 @@ theorem directLimit_isNormalRing
       exact hP_m.map _
     have hroot_l' : Polynomial.eval₂ (RingHom.id (S l)) a_l
         (P_l.scaleRoots b_l) = 0 := by
-      have h := hroot_l
-      rw [Polynomial.hom_eval₂] at h
-      rw [P_l, b_l]
-      rw [← Polynomial.eval₂_map]
-      simpa [a_l] using h
+      change Polynomial.eval₂ (RingHom.id (S l)) (g n l hml a_m)
+          ((Polynomial.map (g n l hml) P_m).scaleRoots (g n l hml b_m)) = 0
+      have h : Polynomial.eval₂ ((g n l hml).comp (RingHom.id (S n)))
+          (g n l hml a_m) Q_m = 0 := by
+        rw [← Polynomial.hom_eval₂]
+        exact hroot_l
+      have hmapQ : Polynomial.map (g n l hml) Q_m =
+          (Polynomial.map (g n l hml) P_m).scaleRoots (g n l hml b_m) := by
+        change Polynomial.map (g n l hml) (P_m.scaleRoots b_m) = _
+        rw [Polynomial.map_scaleRoots P_m b_m (g n l hml)
+          (by simp [hP_m.leadingCoeff])]
+      rw [← hmapQ, Polynomial.eval₂_map]
+      simpa using h
     have hb_l : b_l ≠ 0 := by
       have hb_ne : b ≠ 0 := mem_nonZeroDivisors_iff_ne_zero.mp hb
       intro h
       apply hb_ne
       rw [← hb_m]
-      rw [show b_m = g k n hkn b_k by rfl, hml, ← map_map]
-      exact congrArg (g m l hml) h
+      change g n l hml b_m = 0 at h
+      rw [← Ring.DirectLimit.of_f (G := S)
+        (f := fun i j h => g i j h) hml b_m, h, map_zero]
     letI : IsDomain (S l) := (hS l).1
     have hb_lF : algebraMap (S l) (FractionRing (S l)) b_l ≠ 0 :=
       IsFractionRing.to_map_ne_zero_of_mem_nonZeroDivisors
@@ -1404,7 +1423,7 @@ theorem directLimit_isNormalRing
     have hscaled_lF : Polynomial.eval₂ (algebraMap (S l) (FractionRing (S l)))
         (algebraMap (S l) (FractionRing (S l)) a_l)
           (P_l.scaleRoots b_l) = 0 := by
-      simpa only [Polynomial.hom_eval₂] using
+      simpa [Polynomial.hom_eval₂] using
         congrArg (algebraMap (S l) (FractionRing (S l))) hroot_l'
     have hroot_lF : Polynomial.eval₂ (algebraMap (S l) (FractionRing (S l)))
         (algebraMap (S l) (FractionRing (S l)) a_l /
@@ -1459,18 +1478,22 @@ theorem directLimit_isNormalRing
   have hk : ∀ i j (hij : i ≤ j) (x : S i),
       k j (g i j hij x) = k i x := by
     intro i j hij x
-    apply IsLocalization.ringHom_ext (R := R i) (M := (p i).primeCompl)
-    ext z
-    dsimp [k, g]
-    rw [IsLocalization.map_eq, IsLocalization.map_eq, IsLocalization.map_eq]
-    rw [DirectLimit.Ring.of_f (G := R)
-      (f := fun i j h => f i j h) hij z]
+    have hkj : (k j).comp (g i j hij) = k i := by
+      apply IsLocalization.ringHom_ext (R := R i) (M := (p i).primeCompl)
+      ext z
+      dsimp [k, g]
+      rw [IsLocalization.map_eq, IsLocalization.map_eq, IsLocalization.map_eq]
+      rw [DirectLimit.Ring.of_f (G := R)
+        (f := fun i j h => f i j h) hij z]
+    exact DFunLike.congr_fun hkj x
   let u : U →+* Q :=
     Ring.DirectLimit.lift S (g · · ·) Q k hk
   have hu_stage : ∀ i (x : S i),
       u (Ring.DirectLimit.of S (g · · ·) i x) = k i x := by
     intro i x
-    simpa [u] using
+    change Ring.DirectLimit.lift S (g · · ·) Q k hk
+        (Ring.DirectLimit.of S (g · · ·) i x) = k i x
+    exact
       (Ring.DirectLimit.lift_of Q k hk i x)
   let ri : ∀ i, R i →+* U := fun i =>
     (Ring.DirectLimit.of S (g · · ·) i).comp (algebraMap (R i) (S i))
@@ -1487,51 +1510,61 @@ theorem directLimit_isNormalRing
         dsimp [ri]
         exact Ring.DirectLimit.of_f (G := S) (f := fun i j h => g i j h)
           hij (algebraMap (R i) (S i) x)
-  let r : DirectLimit R f →+* U :=
+  let eR : DirectLimit R f ≃+* Ring.DirectLimit R (f · · ·) :=
+    (Ring.DirectLimit.ringEquiv R f).symm
+  let r' : Ring.DirectLimit R (f · · ·) →+* U :=
     Ring.DirectLimit.lift R (f · · ·) U ri hri
+  let r : DirectLimit R f →+* U := r'.comp eR.toRingHom
   have hr_stage : ∀ i (x : R i),
       r (DirectLimit.Ring.of R (f · · ·) i x) = ri i x := by
     intro i x
-    simpa [r] using
+    change r' (Ring.DirectLimit.of R (f · · ·) i x) = ri i x
+    simpa [r'] using
       (Ring.DirectLimit.lift_of U ri hri i x)
   have hunit : ∀ s : q.asIdeal.primeCompl,
       IsUnit (r (s : DirectLimit R f)) := by
     intro s
-    obtain ⟨i, x, hx⟩ := Ring.DirectLimit.exists_of (G := R)
-      (f := fun i j h => f i j h) (s : DirectLimit R f)
+    obtain ⟨i, x, hx⟩ := DirectLimit.exists_eq_mk (f := f) (s : DirectLimit R f)
     have hxp : x ∉ p i := by
       intro hxp
       apply s.property
-      rw [← hx]
+      rw [hx]
       change oi i x ∈ q.asIdeal
       exact hxp
     have hrs : r (s : DirectLimit R f) =
         Ring.DirectLimit.of S (g · · ·) i (algebraMap (R i) (S i) x) := by
-      rw [← hx, hr_stage]
-      rfl
+      calc
+        r (s : DirectLimit R f) =
+            r (DirectLimit.Ring.of R (f · · ·) i x) := by rw [hx]; rfl
+        _ = ri i x := hr_stage i x
+        _ = Ring.DirectLimit.of S (g · · ·) i (algebraMap (R i) (S i) x) := by
+          rfl
     rw [hrs]
-    exact (IsLocalization.map_units (S := S i) ⟨x, hxp⟩).map _
+    exact (IsLocalization.map_units (S := S i) (M := (p i).primeCompl)
+      ⟨x, hxp⟩).map _
   let v : Q →+* U :=
     IsLocalization.lift (M := q.asIdeal.primeCompl) (S := Q) (g := r) hunit
   have hvr : v.comp (algebraMap (DirectLimit R f) Q) = r := by
     simpa [v] using
       (IsLocalization.lift_comp (M := q.asIdeal.primeCompl) hunit)
   have hur : u.comp r = algebraMap (DirectLimit R f) Q := by
-    apply Ring.DirectLimit.hom_ext
-    intro i
     apply RingHom.ext
-    intro x
-    calc
-      u (r (DirectLimit.Ring.of R (f · · ·) i x)) =
-          u (ri i x) := by rw [hr_stage]
+    intro z
+    induction z using DirectLimit.induction with
+    | _ i x =>
+      calc
+        u (r (DirectLimit.Ring.of R (f · · ·) i x)) =
+            u (ri i x) := by rw [hr_stage]
       _ = k i (algebraMap (R i) (S i) x) := by
-        rw [ri, RingHom.comp_apply, hu_stage]
-      _ = algebraMap (DirectLimit R f) Q (oi i x) := by
-        dsimp [k]
-        rw [IsLocalization.map_eq]
-      _ = algebraMap (DirectLimit R f) Q
-          (DirectLimit.Ring.of R (f · · ·) i x) := by rfl
-  have hvk : ∀ i, v.comp (k i) = RingHom.id (S i) := by
+          change u (Ring.DirectLimit.of S (g · · ·) i
+            (algebraMap (R i) (S i) x)) = _
+          exact hu_stage i (algebraMap (R i) (S i) x)
+        _ = algebraMap (DirectLimit R f) Q (oi i x) := by
+          dsimp [k]
+          rw [IsLocalization.map_eq]
+        _ = algebraMap (DirectLimit R f) Q
+            (DirectLimit.Ring.of R (f · · ·) i x) := by rfl
+  have hvk : ∀ i, v.comp (k i) = Ring.DirectLimit.of S (g · · ·) i := by
     intro i
     apply IsLocalization.ringHom_ext (R := R i) (M := (p i).primeCompl)
     ext x
@@ -1546,19 +1579,13 @@ theorem directLimit_isNormalRing
       _ = ri i x := by
         rw [show oi i x = DirectLimit.Ring.of R (f · · ·) i x by rfl,
           hr_stage]
-      _ = algebraMap (R i) (S i) x := by
+      _ = Ring.DirectLimit.of S (g · · ·) i (algebraMap (R i) (S i) x) := by
         rfl
   have huv : u.comp v = RingHom.id Q := by
     apply IsLocalization.ringHom_ext (R := DirectLimit R f)
       (M := q.asIdeal.primeCompl)
-    ext x
-    change u (v (algebraMap (DirectLimit R f) Q x)) =
-      algebraMap (DirectLimit R f) Q x
-    calc
-      u (v (algebraMap (DirectLimit R f) Q x)) = u (r x) := by
-        rw [DFunLike.congr_fun hvr x]
-      _ = algebraMap (DirectLimit R f) Q x :=
-        DFunLike.congr_fun hur x
+    rw [RingHom.comp_assoc, hvr, hur]
+    simp
   have hvu : v.comp u = RingHom.id U := by
     apply Ring.DirectLimit.hom_ext
     intro i
@@ -1567,12 +1594,12 @@ theorem directLimit_isNormalRing
     calc
       v (u (Ring.DirectLimit.of S (g · · ·) i x)) = v (k i x) := by
         rw [hu_stage]
-      _ = x := DFunLike.congr_fun (congrArg (fun z => z x) (hvk i))
+      _ = Ring.DirectLimit.of S (g · · ·) i x :=
+        DFunLike.congr_fun (hvk i) x
   let e : U ≃+* Q := RingEquiv.ofRingHom u v huv hvu
-  exact ⟨(e.isDomain_iff).mpr hUdomain,
-    hUclosed.of_equiv e.symm⟩
-  -/
-  sorry
+  exact ⟨(e.isDomain_iff).mp hUdomain,
+    hUclosed.of_equiv e⟩
+  
 
 end
 

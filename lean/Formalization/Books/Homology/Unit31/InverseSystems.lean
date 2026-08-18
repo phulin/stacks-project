@@ -2756,7 +2756,913 @@ theorem acyclic_limit_of_ordinal_inverse_system
     (hsurjective : ∀ (β : Set.Iio α) (n : ℤ),
       Function.Surjective (ordinalPrefixMap K β n)) :
     (inverseSystemLimit K).Acyclic := by
-  sorry
+  let P : ∀ α : Ordinal, Prop := fun α =>
+    ∀ (K : OrdinalInverseSystemOfCochainComplexes α)
+      (hacyclic : ∀ β : Set.Iio α, (K.obj (Opposite.op β)).Acyclic)
+      (hsurjective : ∀ (β : Set.Iio α) (n : ℤ),
+        Function.Surjective (ordinalPrefixMap K β n)),
+      (inverseSystemLimit K).Acyclic
+  have hP : P α := by
+    apply WellFoundedLT.induction α
+    intro a ih K hacyclic hsurjective
+    have hprefixAcyclic (b : Set.Iio a) :
+        (inverseSystemLimit (ordinalPrefixSystem K b)).Acyclic := by
+      apply ih b.1 b.2
+      · intro c
+        simpa [ordinalPrefixSystem, ordinalIioInclusion] using
+          hacyclic ((ordinalIioInclusion b).obj c)
+      · intro c m
+        have hdiagram :
+            ordinalPrefixComponent K ((ordinalIioInclusion b).obj c) m =
+              ordinalPrefixComponent (ordinalPrefixSystem K b) c m := by
+          rfl
+        cases hdiagram
+        exact hsurjective ((ordinalIioInclusion b).obj c) m
+    let liftElementMap : ∀ (t : Ordinal)
+        (F : InverseSystem (Set.Iio t) AddCommGrpCat)
+        (z : ∀ b : Set.Iio t, (F.obj (Opposite.op b) : Type))
+        (_hz : ∀ {b c : Set.Iio t} (f : Opposite.op b ⟶ Opposite.op c),
+          (F.map f).hom (z b) = z c),
+        (AddCommGrpCat.of ℤ ⟶ inverseSystemLimit F) := by
+      intro t F z hz
+      exact limit.lift F
+        { pt := AddCommGrpCat.of ℤ
+          π :=
+            { app := fun b =>
+                AddCommGrpCat.ofHom
+                  { toFun := fun k : ℤ => k • z b.unop
+                    map_zero' := by simp
+                    map_add' := by
+                      intro k l
+                      exact add_zsmul _ _ _ }
+              naturality := by
+                intro b c f
+                apply ConcreteCategory.hom_ext _ _
+                change ∀ k : ℤ, _
+                intro k
+                simp only [AddCommGrpCat.ofHom_apply, AddCommGrpCat.id_apply,
+                  Functor.const_obj_map, ConcreteCategory.comp_apply]
+                change k • z c.unop = (F.map f).hom (k • z b.unop)
+                rw [map_zsmul, hz f] } }
+    let liftElement : ∀ (t : Ordinal)
+        (F : InverseSystem (Set.Iio t) AddCommGrpCat)
+        (z : ∀ b : Set.Iio t, (F.obj (Opposite.op b) : Type))
+        (hz : ∀ {b c : Set.Iio t} (f : Opposite.op b ⟶ Opposite.op c),
+          (F.map f).hom (z b) = z c),
+        (inverseSystemLimit F : AddCommGrpCat) :=
+      fun t F z hz => (liftElementMap t F z hz).hom 1
+    have liftElement_π : ∀ (t : Ordinal)
+        (F : InverseSystem (Set.Iio t) AddCommGrpCat)
+        (z : ∀ b : Set.Iio t, (F.obj (Opposite.op b) : Type))
+        (hz : ∀ {b c : Set.Iio t} (f : Opposite.op b ⟶ Opposite.op c),
+          (F.map f).hom (z b) = z c) (b : Set.Iio t),
+        (limit.π F (Opposite.op b)).hom (liftElement t F z hz) = z b := by
+      intro t F z hz b
+      dsimp [liftElement]
+      change (limit.π F (Opposite.op b)).hom
+          ((liftElementMap t F z hz).hom 1) = z b
+      rw [← ConcreteCategory.comp_apply, limit.lift_π]
+      simp only [AddCommGrpCat.hom_ofHom, one_zsmul]
+      change (1 : ℤ) • z b = z b
+      simp
+    have limit_element_ext : ∀ (t : Ordinal)
+        (F : InverseSystem (Set.Iio t) AddCommGrpCat)
+        (u v : (inverseSystemLimit F : AddCommGrpCat)),
+        (∀ b : Set.Iio t,
+          (limit.π F (Opposite.op b)).hom u =
+            (limit.π F (Opposite.op b)).hom v) → u = v := by
+      intro t F u v huv
+      let scalarMap : ∀ {G : AddCommGrpCat},
+          (w : (G : Type)) → (AddCommGrpCat.of ℤ ⟶ G) := fun {G} w =>
+        AddCommGrpCat.ofHom
+          { toFun := fun k : ℤ => k • w
+            map_zero' := by simp
+            map_add' := by
+              intro k l
+              exact add_zsmul _ _ _ }
+      have hmap : scalarMap u = scalarMap v := by
+        apply limit.hom_ext
+        intro b
+        apply ConcreteCategory.hom_ext _ _
+        change ∀ k : ℤ, _
+        intro k
+        dsimp [scalarMap]
+        rw [map_zsmul, map_zsmul, huv b.unop]
+      have hone := congrArg (fun f => f.hom 1) hmap
+      simpa [scalarMap, AddCommGrpCat.hom_ofHom] using hone
+    rw [HomologicalComplex.acyclic_iff]
+    intro n
+    rw [HomologicalComplex.exactAt_iff, ShortComplex.ab_exact_iff]
+    intro x hx
+    change ∃ y : (inverseSystemLimit K).X ((ComplexShape.up ℤ).prev n),
+      (inverseSystemLimit K).d ((ComplexShape.up ℤ).prev n) n y = x
+    have hnext : (ComplexShape.up ℤ).next n = n + 1 :=
+      (ComplexShape.up ℤ).next_eq' (ComplexShape.up_mk n (n + 1) rfl)
+    change (inverseSystemLimit K).d n ((ComplexShape.up ℤ).next n) x = 0 at hx
+    rw [hnext] at hx
+    let xComponent (b : Set.Iio a) : (K.obj (Opposite.op b)).X n :=
+      (limit.π K (Opposite.op b)).f n x
+    have hxComponent (b : Set.Iio a) :
+        (K.obj (Opposite.op b)).d n (n + 1)
+            (xComponent b) = 0 := by
+      have hcomm := (limit.π K (Opposite.op b)).comm' n
+        (n + 1) (ComplexShape.up_mk n (n + 1) rfl)
+      have hval := congrArg (fun f => f x) hcomm
+      change (K.obj (Opposite.op b)).d n (n + 1)
+          (xComponent b) =
+        (limit.π K (Opposite.op b)).f (n + 1)
+          ((inverseSystemLimit K).d n (n + 1) x) at hval
+      rw [hx, map_zero] at hval
+      exact hval
+    let p : ℤ := (ComplexShape.up ℤ).prev n
+    have stageExact (b : Set.Iio a) :
+        ∃ y : (K.obj (Opposite.op b)).X p,
+          (K.obj (Opposite.op b)).d p n y = xComponent b := by
+      have hb := hacyclic b n
+      rw [HomologicalComplex.exactAt_iff] at hb
+      obtain ⟨y, hy⟩ :=
+        (ShortComplex.ab_exact_iff ((K.obj (Opposite.op b)).sc n)).1 hb
+          (xComponent b) (by
+            change (K.obj (Opposite.op b)).d n
+              ((ComplexShape.up ℤ).next n) (xComponent b) = 0
+            rw [hnext]
+            exact hxComponent b)
+      exact ⟨y, hy⟩
+    let stageIn : ∀ (b : Set.Iio a) (c : Set.Iio b.1), Set.Iio a := fun b c =>
+      ⟨c.1, by exact lt_trans c.2 (show b.1 < a from b.2)⟩
+    let Compatible : ∀ (b : Set.Iio a),
+        (∀ c : Set.Iio b.1, (K.obj (Opposite.op (stageIn b c))).X p) → Prop :=
+      fun b g => ∀ {c d : Set.Iio b.1} (f : Opposite.op c ⟶ Opposite.op d),
+        (K.map (homOfLE (show stageIn b d ≤ stageIn b c from leOfHom f.unop)).op).f p
+            (g c) = g d
+    let Primitive : ∀ (b : Set.Iio a),
+        (∀ c : Set.Iio b.1, (K.obj (Opposite.op (stageIn b c))).X p) → Prop :=
+      fun b g => ∀ c : Set.Iio b.1,
+        (K.obj (Opposite.op (stageIn b c))).d p n (g c) = xComponent (stageIn b c)
+    have hgood : ∀ (b : Set.Iio a)
+        (g : ∀ c : Set.Iio b.1, (K.obj (Opposite.op (stageIn b c))).X p),
+        Compatible b g →
+        Primitive b g →
+        ∃ y : (K.obj (Opposite.op b)).X p,
+          (K.obj (Opposite.op b)).d p n y = xComponent b ∧
+            ∀ {c : Set.Iio b.1} (f : Opposite.op b ⟶ Opposite.op (stageIn b c)),
+              (K.map f).f p y = g c := by
+      intro b g hg hprim
+      have priorCompat : ∀ {c d : Set.Iio b.1}
+          (f : Opposite.op c ⟶ Opposite.op d),
+          (ordinalPrefixComponent K b p).map f (g c) = g d := by
+        intro c d f
+        change (K.map ((ordinalIioInclusion b).op.map f)).f p (g c) = g d
+        have hmap : (ordinalIioInclusion b).op.map f =
+            (homOfLE (show stageIn b d ≤ stageIn b c from leOfHom f.unop)).op :=
+          Subsingleton.elim _ _
+        rw [hmap]
+        exact hg f
+      let yPrime : (K.obj (Opposite.op b)).X p :=
+        Classical.choose (stageExact b)
+      have hyPrime :
+          (K.obj (Opposite.op b)).d p n yPrime = xComponent b :=
+        Classical.choose_spec (stageExact b)
+      let eP : (inverseSystemLimit (ordinalPrefixSystem K b)).X p ≅
+          inverseSystemLimit (ordinalPrefixComponent K b p) :=
+        preservesLimitIso
+          (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) p)
+          (ordinalPrefixSystem K b)
+      let yPrefix' : (inverseSystemLimit (ordinalPrefixComponent K b p) : AddCommGrpCat) :=
+        liftElement b.1 (ordinalPrefixComponent K b p) g priorCompat
+      let yPrefix : (inverseSystemLimit (ordinalPrefixSystem K b)).X p :=
+        eP.inv yPrefix'
+      have prefixMap_d : ∀ (q m : ℤ)
+          (hqm : (ComplexShape.up ℤ).Rel q m)
+          (z : (K.obj (Opposite.op b)).X q),
+          ordinalPrefixMap K b m
+              ((K.obj (Opposite.op b)).d q m z) =
+            (preservesLimitIso
+              (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) m)
+              (ordinalPrefixSystem K b)).hom
+              ((inverseSystemLimit (ordinalPrefixSystem K b)).d q m
+                ((preservesLimitIso
+                  (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) q)
+                  (ordinalPrefixSystem K b)).inv
+                  (ordinalPrefixMap K b q z))) := by
+        intro q m hqm z
+        let hobjq : (inverseSystemLimit (ordinalPrefixSystem K b)).X q =
+            (limit (ordinalPrefixSystem K b)).X q := by rfl
+        let hobjm : (inverseSystemLimit (ordinalPrefixSystem K b)).X m =
+            (limit (ordinalPrefixSystem K b)).X m := by rfl
+        change ordinalPrefixMap K b m ((K.obj (Opposite.op b)).d q m z) =
+          (preservesLimitIso
+            (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) m)
+            (ordinalPrefixSystem K b)).hom
+            (eqToHom hobjm
+              ((inverseSystemLimit (ordinalPrefixSystem K b)).d q m
+                (eqToHom hobjq.symm
+                  ((preservesLimitIso
+                    (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) q)
+                    (ordinalPrefixSystem K b)).inv
+                    (ordinalPrefixMap K b q z)))))
+        apply limit_element_ext b.1 (ordinalPrefixComponent K b m)
+          _ _
+        intro c
+        change (ConcreteCategory.hom
+            ((limit.lift (ordinalPrefixComponent K b m) (ordinalPrefixCone K b m)) ≫
+              limit.π (ordinalPrefixComponent K b m) (Opposite.op c)))
+            ((K.obj (Opposite.op b)).d q m z) = _
+        rw [limit.lift_π]
+        change (K.map (ordinalPrefixIndexMap b (Opposite.op c))).f m
+            ((K.obj (Opposite.op b)).d q m z) =
+          (limit.π (ordinalPrefixComponent K b m) (Opposite.op c)).hom
+            ((preservesLimitIso
+              (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) m)
+              (ordinalPrefixSystem K b)).hom
+              ((inverseSystemLimit (ordinalPrefixSystem K b)).d q m
+                ((preservesLimitIso
+                  (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) q)
+                  (ordinalPrefixSystem K b)).inv
+                  (ordinalPrefixMap K b q z))))
+        have hπm := preservesLimitIso_hom_π
+          (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) m)
+          (ordinalPrefixSystem K b) (Opposite.op c)
+        have hπq := preservesLimitIso_inv_π
+          (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) q)
+          (ordinalPrefixSystem K b) (Opposite.op c)
+        have hπm' :
+            (preservesLimitIso
+                (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) m)
+                (ordinalPrefixSystem K b)).hom ≫
+                limit.π (ordinalPrefixComponent K b m) (Opposite.op c) =
+              (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) m).map
+                (limit.π (ordinalPrefixSystem K b) (Opposite.op c)) := by
+          simpa [ordinalPrefixComponent] using hπm
+        have hπq' :
+            (preservesLimitIso
+                (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) q)
+                (ordinalPrefixSystem K b)).inv ≫
+                (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) q).map
+                  (limit.π (ordinalPrefixSystem K b) (Opposite.op c)) =
+              limit.π (ordinalPrefixComponent K b q) (Opposite.op c) := by
+          simpa [ordinalPrefixComponent] using hπq
+        have hcomm := (limit.π (ordinalPrefixSystem K b) (Opposite.op c)).comm'
+          q m hqm
+        have hπmval := congrArg (fun f => f
+            ((inverseSystemLimit (ordinalPrefixSystem K b)).d q m
+              ((preservesLimitIso
+                (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) q)
+                (ordinalPrefixSystem K b)).inv
+                (ordinalPrefixMap K b q z)))) hπm'
+        have hπqval := congrArg (fun f => f (ordinalPrefixMap K b q z)) hπq'
+        have hLval := congrArg (fun f => f
+            ((preservesLimitIso
+              (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) q)
+              (ordinalPrefixSystem K b)).inv
+              (ordinalPrefixMap K b q z))) hcomm
+        have hmapπq :
+            (limit.π (ordinalPrefixComponent K b q) (Opposite.op c)).hom
+                (ordinalPrefixMap K b q z) =
+              (K.map (ordinalPrefixIndexMap b (Opposite.op c))).f q z := by
+          change (ConcreteCategory.hom
+              ((limit.lift (ordinalPrefixComponent K b q) (ordinalPrefixCone K b q)) ≫
+                limit.π (ordinalPrefixComponent K b q) (Opposite.op c))) z = _
+          rw [limit.lift_π]
+          change (K.map (ordinalPrefixIndexMap b (Opposite.op c))).f q z = _
+          rfl
+        have hKval := congrArg (fun f => f z)
+          ((K.map (ordinalPrefixIndexMap b (Opposite.op c))).comm' q m hqm)
+        have hdirect :
+            (K.map (ordinalPrefixIndexMap b (Opposite.op c))).f m
+                ((K.obj (Opposite.op b)).d q m z) =
+              (limit.π (ordinalPrefixComponent K b m) (Opposite.op c)).hom
+                ((preservesLimitIso
+                  (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) m)
+                  (ordinalPrefixSystem K b)).hom
+                  ((inverseSystemLimit (ordinalPrefixSystem K b)).d q m
+                    ((preservesLimitIso
+                      (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) q)
+                      (ordinalPrefixSystem K b)).inv
+                      (ordinalPrefixMap K b q z)))) := by
+          have hval := congrArg (fun f => f (ordinalPrefixMap K b q z)) hπq'
+          have hvalD := congrArg
+            (fun z => ((ordinalPrefixSystem K b).obj (Opposite.op c)).d q m z)
+            hval.symm
+          have hLval' := hLval
+          change
+            ((ordinalPrefixSystem K b).obj (Opposite.op c)).d q m
+                ((limit.π (ordinalPrefixSystem K b) (Opposite.op c)).f q
+                  ((preservesLimitIso
+                    (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) q)
+                    (ordinalPrefixSystem K b)).inv
+                    (ordinalPrefixMap K b q z))) =
+              (limit.π (ordinalPrefixSystem K b) (Opposite.op c)).f m
+                ((inverseSystemLimit (ordinalPrefixSystem K b)).d q m
+                  ((preservesLimitIso
+                    (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) q)
+                    (ordinalPrefixSystem K b)).inv
+                    (ordinalPrefixMap K b q z))) at hLval'
+          have hcomp :
+              ((ordinalPrefixSystem K b).obj (Opposite.op c)).d q m
+                  ((ConcreteCategory.hom
+                    ((preservesLimitIso
+                        (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) q)
+                        (ordinalPrefixSystem K b)).inv ≫
+                      (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) q).map
+                        (limit.π (ordinalPrefixSystem K b) (Opposite.op c))))
+                    ((ConcreteCategory.hom (ordinalPrefixMap K b q)) z)) =
+                ((ordinalPrefixSystem K b).obj (Opposite.op c)).d q m
+                  ((limit.π (ordinalPrefixSystem K b) (Opposite.op c)).f q
+                    ((preservesLimitIso
+                      (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) q)
+                      (ordinalPrefixSystem K b)).inv
+                      (ordinalPrefixMap K b q z))) := by
+            rfl
+          have hπmval' :
+              (limit.π (ordinalPrefixSystem K b) (Opposite.op c)).f m
+                  ((inverseSystemLimit (ordinalPrefixSystem K b)).d q m
+                    ((preservesLimitIso
+                      (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) q)
+                      (ordinalPrefixSystem K b)).inv
+                      (ordinalPrefixMap K b q z))) =
+                (limit.π (ordinalPrefixComponent K b m) (Opposite.op c)).hom
+                  ((preservesLimitIso
+                    (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) m)
+                    (ordinalPrefixSystem K b)).hom
+                    ((inverseSystemLimit (ordinalPrefixSystem K b)).d q m
+                      ((preservesLimitIso
+                        (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) q)
+                        (ordinalPrefixSystem K b)).inv
+                        (ordinalPrefixMap K b q z)))) := by
+            change
+              (ConcreteCategory.hom
+                ((HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) m).map
+                  (limit.π (ordinalPrefixSystem K b) (Opposite.op c))))
+                    ((inverseSystemLimit (ordinalPrefixSystem K b)).d q m
+                      ((preservesLimitIso
+                        (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) q)
+                        (ordinalPrefixSystem K b)).inv
+                        (ordinalPrefixMap K b q z))) =
+                (ConcreteCategory.hom
+                  ((preservesLimitIso
+                      (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) m)
+                      (ordinalPrefixSystem K b)).hom ≫
+                    limit.π (ordinalPrefixSystem K b ⋙
+                      HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) m)
+                      (Opposite.op c)))
+                  ((inverseSystemLimit (ordinalPrefixSystem K b)).d q m
+                    ((preservesLimitIso
+                      (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) q)
+                      (ordinalPrefixSystem K b)).inv
+                      (ordinalPrefixMap K b q z)))
+            exact hπmval.symm
+          have hKval' := hKval.symm
+          change
+            (K.map (ordinalPrefixIndexMap b (Opposite.op c))).f m
+                ((K.obj (Opposite.op b)).d q m z) =
+              ((ordinalPrefixSystem K b).obj (Opposite.op c)).d q m
+                ((K.map (ordinalPrefixIndexMap b (Opposite.op c))).f q z) at hKval'
+          rw [hKval', ← hmapπq, hvalD, hcomp, hLval', hπmval']
+        exact hdirect
+      have prefixMap_π : ∀ (r : ℤ) (c : Set.Iio b.1)
+          (z : (K.obj (Opposite.op b)).X r),
+          (limit.π (ordinalPrefixComponent K b r) (Opposite.op c)).hom
+              (ordinalPrefixMap K b r z) =
+            (K.map (ordinalPrefixIndexMap b (Opposite.op c))).f r z := by
+        intro r c z
+        change (ConcreteCategory.hom
+            ((limit.lift (ordinalPrefixComponent K b r) (ordinalPrefixCone K b r)) ≫
+              limit.π (ordinalPrefixComponent K b r) (Opposite.op c))) z = _
+        rw [limit.lift_π]
+        change (K.map (ordinalPrefixIndexMap b (Opposite.op c))).f r z = _
+        rfl
+      have hprefixY :
+          (preservesLimitIso
+            (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) n)
+            (ordinalPrefixSystem K b)).hom
+            ((inverseSystemLimit (ordinalPrefixSystem K b)).d p n yPrefix) =
+          ordinalPrefixMap K b n (xComponent b) := by
+        apply limit_element_ext b.1 (ordinalPrefixComponent K b n) _ _
+        intro c
+        change (limit.π (ordinalPrefixComponent K b n) (Opposite.op c)).hom
+              ((preservesLimitIso
+                (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) n)
+                (ordinalPrefixSystem K b)).hom
+                ((inverseSystemLimit (ordinalPrefixSystem K b)).d p n yPrefix)) =
+            (limit.π (ordinalPrefixComponent K b n) (Opposite.op c)).hom
+              (ordinalPrefixMap K b n (xComponent b))
+        have hπn := preservesLimitIso_hom_π
+          (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) n)
+          (ordinalPrefixSystem K b) (Opposite.op c)
+        have hπn' :
+            (preservesLimitIso
+                (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) n)
+                (ordinalPrefixSystem K b)).hom ≫
+                limit.π (ordinalPrefixComponent K b n) (Opposite.op c) =
+              (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) n).map
+                (limit.π (ordinalPrefixSystem K b) (Opposite.op c)) := by
+          simpa [ordinalPrefixComponent] using hπn
+        have hleft := congrArg (fun f => f
+            ((inverseSystemLimit (ordinalPrefixSystem K b)).d p n yPrefix)) hπn'
+        have hcomm := (limit.π (ordinalPrefixSystem K b) (Opposite.op c)).comm'
+          p n (ComplexShape.up_mk p n (by simp [p]))
+        have hcommval := congrArg (fun f => f yPrefix) hcomm
+        have hπp := preservesLimitIso_inv_π
+          (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) p)
+          (ordinalPrefixSystem K b) (Opposite.op c)
+        have hπp' :
+            (preservesLimitIso
+                (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) p)
+                (ordinalPrefixSystem K b)).inv ≫
+                (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) p).map
+                  (limit.π (ordinalPrefixSystem K b) (Opposite.op c)) =
+              limit.π (ordinalPrefixComponent K b p) (Opposite.op c) := by
+          simpa [ordinalPrefixComponent] using hπp
+        have hPval : (limit.π (ordinalPrefixSystem K b) (Opposite.op c)).f p yPrefix =
+            g c := by
+          have hval := congrArg (fun f => f yPrefix') hπp'
+          have hval' := hval
+          change
+            (limit.π (ordinalPrefixSystem K b) (Opposite.op c)).f p
+                ((preservesLimitIso
+                  (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) p)
+                  (ordinalPrefixSystem K b)).inv yPrefix') =
+              (limit.π (ordinalPrefixComponent K b p) (Opposite.op c)).hom yPrefix' at hval'
+          dsimp [yPrefix, eP]
+          exact hval'.trans
+            (liftElement_π b.1 (ordinalPrefixComponent K b p) g priorCompat c)
+        have hKval := congrArg (fun f => f x)
+          (congrArg (fun f => f.f n)
+            (limit.w K (ordinalPrefixIndexMap b (Opposite.op c))))
+        have hmapval := prefixMap_π n c (xComponent b)
+        have hleft' := hleft
+        change
+          (limit.π (ordinalPrefixComponent K b n) (Opposite.op c)).hom
+              ((preservesLimitIso
+                (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) n)
+                (ordinalPrefixSystem K b)).hom
+                ((inverseSystemLimit (ordinalPrefixSystem K b)).d p n yPrefix)) =
+            (limit.π (ordinalPrefixSystem K b) (Opposite.op c)).f n
+              ((inverseSystemLimit (ordinalPrefixSystem K b)).d p n yPrefix) at hleft'
+        have hcommval' := hcommval.symm
+        change
+          (limit.π (ordinalPrefixSystem K b) (Opposite.op c)).f n
+              ((inverseSystemLimit (ordinalPrefixSystem K b)).d p n yPrefix) =
+            ((ordinalPrefixSystem K b).obj (Opposite.op c)).d p n
+              ((limit.π (ordinalPrefixSystem K b) (Opposite.op c)).f p yPrefix) at hcommval'
+        have hstage : stageIn b c = (ordinalIioInclusion b).obj c := by
+          apply Subtype.ext
+          rfl
+        have hcomponent :
+            (limit.π (ordinalPrefixComponent K b n) (Opposite.op c)).hom
+                ((preservesLimitIso
+                  (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) n)
+                  (ordinalPrefixSystem K b)).hom
+                  ((inverseSystemLimit (ordinalPrefixSystem K b)).d p n yPrefix)) =
+              ((ordinalPrefixSystem K b).obj (Opposite.op c)).d p n
+                ((limit.π (ordinalPrefixSystem K b) (Opposite.op c)).f p yPrefix) := by
+          exact hleft'.trans hcommval'
+        let xComponentC :
+            ((ordinalPrefixSystem K b).obj (Opposite.op c)).X n :=
+          xComponent ((ordinalIioInclusion b).obj c)
+        let mapValueC :
+            ((ordinalPrefixSystem K b).obj (Opposite.op c)).X n :=
+          (K.map (ordinalPrefixIndexMap b (Opposite.op c))).f n
+            (xComponent b)
+        have hstep :
+            ((ordinalPrefixSystem K b).obj (Opposite.op c)).d p n
+                ((limit.π (ordinalPrefixSystem K b) (Opposite.op c)).f p yPrefix) =
+              xComponentC := by
+          rw [hPval]
+          change
+            ((ordinalPrefixSystem K b).obj (Opposite.op c)).d p n (g c) =
+              xComponent ((ordinalIioInclusion b).obj c)
+          have hstage' := hstage
+          cases hstage'
+          exact hprim c
+        have hcomponentC :
+            (limit.π (ordinalPrefixComponent K b n) (Opposite.op c)).hom
+                ((preservesLimitIso
+                  (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) n)
+                  (ordinalPrefixSystem K b)).hom
+                  ((inverseSystemLimit (ordinalPrefixSystem K b)).d p n yPrefix)) =
+              xComponentC := hcomponent.trans hstep
+        have hKstep : xComponentC = mapValueC := by
+          dsimp [xComponentC, mapValueC]
+          change
+            (limit.π K (Opposite.op ((ordinalIioInclusion b).obj c))).f n x =
+              (K.map (ordinalPrefixIndexMap b (Opposite.op c))).f n
+                ((limit.π K (Opposite.op b)).f n x)
+          exact hKval.symm
+        have hmapstep : mapValueC =
+            (limit.π (ordinalPrefixComponent K b n) (Opposite.op c)).hom
+                (ordinalPrefixMap K b n (xComponent b)) := by
+          dsimp [mapValueC]
+          exact hmapval.symm
+        exact (hcomponentC.trans hKstep).trans hmapstep
+      let zPrime : (inverseSystemLimit (ordinalPrefixSystem K b)).X p :=
+        eP.inv (ordinalPrefixMap K b p yPrime)
+      let diff : (inverseSystemLimit (ordinalPrefixSystem K b)).X p :=
+        yPrefix - zPrime
+      have hpn : (ComplexShape.up ℤ).Rel p n :=
+        ComplexShape.up_mk p n (by simp [p])
+      have hdiffpn :
+          (inverseSystemLimit (ordinalPrefixSystem K b)).d p n diff = 0 := by
+        have hinj : Function.Injective (fun z =>
+            (preservesLimitIso
+              (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) n)
+              (ordinalPrefixSystem K b)).hom z) := by
+          intro u v huv
+          have h := congrArg (fun z =>
+              (preservesLimitIso
+                (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) n)
+                (ordinalPrefixSystem K b)).inv z) huv
+          simpa [ConcreteCategory.comp_apply] using h
+        apply hinj
+        let dY : (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) n).obj
+            (limit (ordinalPrefixSystem K b)) :=
+          (inverseSystemLimit (ordinalPrefixSystem K b)).d p n yPrefix
+        let dZ : (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) n).obj
+            (limit (ordinalPrefixSystem K b)) :=
+          (inverseSystemLimit (ordinalPrefixSystem K b)).d p n zPrime
+        have hsub :
+            (AddCommGrpCat.Hom.hom
+                (preservesLimitIso
+                  (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) n)
+                  (ordinalPrefixSystem K b)).hom)
+                dY -
+              (AddCommGrpCat.Hom.hom
+                (preservesLimitIso
+                  (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) n)
+                  (ordinalPrefixSystem K b)).hom)
+                dZ = 0 := by
+          dsimp [dY, dZ]
+          rw [hprefixY]
+          rw [← hyPrime]
+          rw [prefixMap_d p n hpn yPrime]
+          simp [zPrime, eP, hyPrime]
+          exact sub_self _
+        have hd_diff :
+            (inverseSystemLimit (ordinalPrefixSystem K b)).d p n diff = dY - dZ := by
+          dsimp [diff, dY, dZ]
+          rw [map_sub]
+          rfl
+        rw [hd_diff]
+        change
+          (AddCommGrpCat.Hom.hom
+              (preservesLimitIso
+                (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) n)
+                (ordinalPrefixSystem K b)).hom) (dY - dZ) =
+            (AddCommGrpCat.Hom.hom
+              (preservesLimitIso
+                (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) n)
+                (ordinalPrefixSystem K b)).hom) 0
+        rw [map_sub, hsub]
+        change 0 =
+          (AddCommGrpCat.Hom.hom
+            (preservesLimitIso
+              (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) n)
+              (ordinalPrefixSystem K b)).hom) 0
+        rw [map_zero]
+      have hnextP : (ComplexShape.up ℤ).next p = n := by
+        simp [p]
+      have hdiff :
+          (inverseSystemLimit (ordinalPrefixSystem K b)).d p
+              ((ComplexShape.up ℤ).next p) diff = 0 := by
+        rw [hnextP]
+        exact hdiffpn
+      have hLexact := hprefixAcyclic b p
+      rw [HomologicalComplex.exactAt_iff] at hLexact
+      obtain ⟨w, hw⟩ :=
+        (ShortComplex.ab_exact_iff
+          ((inverseSystemLimit (ordinalPrefixSystem K b)).sc p)).1 hLexact
+          diff hdiff
+      let q : ℤ := (ComplexShape.up ℤ).prev p
+      have hqp : (ComplexShape.up ℤ).Rel q p :=
+        ComplexShape.up_mk q p (by simp [q])
+      let eQ : (inverseSystemLimit (ordinalPrefixSystem K b)).X q ≅
+          inverseSystemLimit (ordinalPrefixComponent K b q) :=
+        preservesLimitIso
+          (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) q)
+          (ordinalPrefixSystem K b)
+      obtain ⟨wB, hwB⟩ := hsurjective b q (eQ.hom w)
+      let yNew : (K.obj (Opposite.op b)).X p :=
+        yPrime + (K.obj (Opposite.op b)).d q p wB
+      have hyNew : (K.obj (Opposite.op b)).d p n yNew = xComponent b := by
+        have hzero : (K.obj (Opposite.op b)).d p n
+              ((K.obj (Opposite.op b)).d q p wB) = 0 := by
+          have hzero' := congrArg (fun f => f wB)
+            ((K.obj (Opposite.op b)).d_comp_d q p n)
+          change (K.obj (Opposite.op b)).d p n
+              ((K.obj (Opposite.op b)).d q p wB) = 0 at hzero'
+          exact hzero'
+        dsimp [yNew]
+        rw [map_add, hyPrime, hzero, add_zero]
+      have hmapY : ordinalPrefixMap K b p yNew = yPrefix' := by
+        have hcorr :
+            ordinalPrefixMap K b p
+                ((K.obj (Opposite.op b)).d q p wB) =
+              eP.hom ((inverseSystemLimit (ordinalPrefixSystem K b)).d q p w) := by
+          have hcorr' := prefixMap_d q p hqp wB
+          rw [hwB] at hcorr'
+          have hQ :
+              (ConcreteCategory.hom eQ.inv) ((ConcreteCategory.hom eQ.hom) w) = w := by
+            have h := congrArg (fun f => (ConcreteCategory.hom f) w)
+              eQ.hom_inv_id
+            change
+              (ConcreteCategory.hom eQ.inv) ((ConcreteCategory.hom eQ.hom) w) = w at h
+            exact h
+          dsimp [eQ] at hQ
+          dsimp [eQ] at hcorr'
+          have hQd := congrArg
+            (fun z =>
+              (ConcreteCategory.hom
+                (preservesLimitIso
+                  (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) p)
+                  (ordinalPrefixSystem K b)).hom)
+                ((inverseSystemLimit (ordinalPrefixSystem K b)).d q p z)) hQ
+          change
+            ordinalPrefixMap K b p
+                ((K.obj (Opposite.op b)).d q p wB) =
+              (ConcreteCategory.hom
+                (preservesLimitIso
+                  (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) p)
+                  (ordinalPrefixSystem K b)).hom)
+                ((inverseSystemLimit (ordinalPrefixSystem K b)).d q p w)
+          exact hcorr'.trans hQd
+        have hinj : Function.Injective (fun z => eP.inv z) := by
+          intro u v huv
+          have h := congrArg (fun z => eP.hom z) huv
+          simpa [ConcreteCategory.comp_apply] using h
+        apply hinj
+        dsimp [yNew]
+        rw [map_add, hcorr]
+        have hPcancel :
+            (ConcreteCategory.hom eP.inv)
+                ((ConcreteCategory.hom eP.hom)
+                  ((inverseSystemLimit (ordinalPrefixSystem K b)).d q p w)) =
+              (inverseSystemLimit (ordinalPrefixSystem K b)).d q p w := by
+          have h := congrArg
+            (fun f => (ConcreteCategory.hom f)
+              ((inverseSystemLimit (ordinalPrefixSystem K b)).d q p w))
+            eP.hom_inv_id
+          change
+            (ConcreteCategory.hom eP.inv)
+                ((ConcreteCategory.hom eP.hom)
+                  ((inverseSystemLimit (ordinalPrefixSystem K b)).d q p w)) =
+              (inverseSystemLimit (ordinalPrefixSystem K b)).d q p w at h
+          exact h
+        change
+          (AddCommGrpCat.Hom.hom eP.inv)
+              ((ConcreteCategory.hom (ordinalPrefixMap K b p)) yPrime +
+                (AddCommGrpCat.Hom.hom eP.hom)
+                  ((inverseSystemLimit (ordinalPrefixSystem K b)).d q p w)) =
+            (AddCommGrpCat.Hom.hom eP.inv) yPrefix'
+        rw [map_add, hPcancel]
+        have hw' :
+            (inverseSystemLimit (ordinalPrefixSystem K b)).d q p w = diff := by
+          exact hw
+        rw [hw']
+        dsimp [zPrime, diff, yPrefix]
+        abel
+      refine ⟨yNew, hyNew, ?_⟩
+      intro c f
+      have hproj := congrArg
+        (fun z => (limit.π (ordinalPrefixComponent K b p) (Opposite.op c)).hom z)
+        hmapY
+      rw [prefixMap_π p c yNew] at hproj
+      rw [liftElement_π b.1 (ordinalPrefixComponent K b p) g priorCompat c] at hproj
+      have hf : (ordinalPrefixIndexMap b (Opposite.op c)) = f := by
+        apply Subsingleton.elim
+      rw [hf] at hproj
+      exact hproj
+    let extend : ∀ (b : Set.Iio a)
+        (g : ∀ c : Set.Iio b.1, (K.obj (Opposite.op (stageIn b c))).X p),
+        Compatible b g → Primitive b g → (K.obj (Opposite.op b)).X p := by
+      intro b g hg hprim
+      exact Classical.choose (hgood b g hg hprim)
+    have extend_spec : ∀ (b : Set.Iio a)
+        (g : ∀ c : Set.Iio b.1, (K.obj (Opposite.op (stageIn b c))).X p),
+        (hg : Compatible b g) →
+        (hprim : Primitive b g) →
+        (K.obj (Opposite.op b)).d p n (extend b g hg hprim) = xComponent b ∧
+          ∀ {c : Set.Iio b.1} (f : Opposite.op b ⟶ Opposite.op (stageIn b c)),
+            (K.map f).f p (extend b g hg hprim) = g c := by
+      intro b g hg hprim
+      exact Classical.choose_spec (hgood b g hg hprim)
+    classical
+    let extendTotal : ∀ (b : Set.Iio a)
+        (g : ∀ c : Set.Iio b.1, (K.obj (Opposite.op (stageIn b c))).X p),
+        (K.obj (Opposite.op b)).X p := fun b g =>
+      if h : Compatible b g ∧ Primitive b g then extend b g h.1 h.2 else 0
+    let y : ∀ b : Set.Iio a, (K.obj (Opposite.op b)).X p :=
+      WellFounded.fix (r := fun c b : Set.Iio a => c < b)
+        (C := fun b => (K.obj (Opposite.op b)).X p)
+        wellFounded_lt (fun b rec =>
+          extendTotal b (fun c => rec (stageIn b c) (by
+            change c.1 < b.1
+            exact c.2)))
+    let Good : ∀ b : Set.Iio a, Prop := fun b =>
+      (K.obj (Opposite.op b)).d p n (y b) = xComponent b ∧
+        ∀ {c : Set.Iio b.1} (f : Opposite.op b ⟶ Opposite.op (stageIn b c)),
+          (K.map f).f p (y b) = y (stageIn b c)
+    have hyGood : ∀ b : Set.Iio a, Good b := by
+      intro b
+      apply WellFoundedLT.induction b
+      intro b ih
+      let g : ∀ c : Set.Iio b.1,
+          (K.obj (Opposite.op (stageIn b c))).X p := fun c =>
+        y (stageIn b c)
+      have hg : Compatible b g := by
+        intro c d f
+        have hgoodc := ih (stageIn b c) (by exact c.2)
+        have hcd : stageIn b d ≤ stageIn b c := by
+          exact leOfHom f.unop
+        rcases hcd.eq_or_lt with heq | hlt
+        · have hdc : d = c := by
+            apply Subtype.ext
+            exact congrArg (fun z : Set.Iio a => z.1) heq
+          subst d
+          simpa using hgoodc.2 (f := (homOfLE le_rfl).op)
+        · let d' : Set.Iio (stageIn b c).1 := ⟨d.1, hlt⟩
+          have hfc := hgoodc.2 (f :=
+            (homOfLE (show stageIn (stageIn b c) d' ≤ stageIn b c from
+              le_of_lt d'.2)).op)
+          simpa [g, stageIn, d'] using hfc
+      have hprim : Primitive b g := by
+        intro c
+        exact (ih (stageIn b c) (by exact c.2)).1
+      have hcond : Compatible b g ∧ Primitive b g := ⟨hg, hprim⟩
+      have hy : y b = extend b g hg hprim := by
+        dsimp [y]
+        rw [WellFounded.fix_eq]
+        change extendTotal b g = extend b g hg hprim
+        simp [extendTotal, hcond]
+      refine ⟨?_, ?_⟩
+      · rw [hy]
+        exact (extend_spec b g hg hprim).1
+      · intro c f
+        rw [hy]
+        simpa [g] using (extend_spec b g hg hprim).2 f
+    have yCompatible : ∀ {b c : Set.Iio a}
+        (f : Opposite.op b ⟶ Opposite.op c),
+        (K.map f).f p (y b) = y c := by
+      intro b c f
+      have hbc : c ≤ b := leOfHom f.unop
+      rcases hbc.eq_or_lt with rfl | hlt
+      · have hf : f = (homOfLE le_rfl).op := by
+          apply Subsingleton.elim
+        rw [hf]
+        simpa using (hyGood b).2 (f := (homOfLE le_rfl).op)
+      · let c' : Set.Iio b.1 := ⟨c.1, hlt⟩
+        have hc : stageIn b c' = c := by
+          apply Subtype.ext
+          rfl
+        let f' : Opposite.op b ⟶ Opposite.op (stageIn b c') := by
+          simpa [hc] using f
+        have h := (hyGood b).2 f'
+        have hc' := hc
+        cases hc'
+        have hf : f' = f := by
+          apply Subsingleton.elim
+        rw [hf] at h
+        exact h
+    let eGlobalP :=
+      preservesLimitIso
+        (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) p) K
+    let eGlobalN :=
+      preservesLimitIso
+        (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) n) K
+    let yLimit' :
+        (inverseSystemLimit
+          (K ⋙ HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) p) :
+            AddCommGrpCat) :=
+      liftElement a
+        (K ⋙ HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) p)
+        (fun b => y b) (by
+          intro b c f
+          change (K.map f).f p (y b) = y c
+          exact yCompatible f)
+    let yLimit : (inverseSystemLimit K).X p := eGlobalP.inv yLimit'
+    have hpnGlobal : (ComplexShape.up ℤ).Rel p n :=
+      ComplexShape.up_mk p n (by simp [p])
+    have hglobal :
+        (inverseSystemLimit K).d p n yLimit = x := by
+      have hinj : Function.Injective (fun z => eGlobalN.hom z) := by
+        intro u v huv
+        have h := congrArg (fun z => eGlobalN.inv z) huv
+        simpa [ConcreteCategory.comp_apply] using h
+      apply hinj
+      let F : InverseSystem (Set.Iio a) AddCommGrpCat :=
+        K ⋙ HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) n
+      let u : (inverseSystemLimit F : AddCommGrpCat) :=
+        ConcreteCategory.hom eGlobalN.hom ((inverseSystemLimit K).d p n yLimit)
+      let v : (inverseSystemLimit F : AddCommGrpCat) :=
+        ConcreteCategory.hom eGlobalN.hom x
+      change u = v
+      apply limit_element_ext a F u v
+      intro b
+      change (limit.π
+          (K ⋙ HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) n)
+          (Opposite.op b)).hom
+          (eGlobalN.hom ((inverseSystemLimit K).d p n yLimit)) =
+        (limit.π
+          (K ⋙ HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) n)
+          (Opposite.op b)).hom (eGlobalN.hom x)
+      have hπn := preservesLimitIso_hom_π
+        (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) n) K
+        (Opposite.op b)
+      have hπn' :
+          eGlobalN.hom ≫
+              limit.π
+                (K ⋙ HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) n)
+                (Opposite.op b) =
+            (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) n).map
+              (limit.π K (Opposite.op b)) := by
+        simpa [eGlobalN] using hπn
+      have hleft := congrArg (fun f => f
+          ((inverseSystemLimit K).d p n yLimit)) hπn'
+      have hcomm := (limit.π K (Opposite.op b)).comm' p n hpnGlobal
+      have hcommval := congrArg (fun f => f yLimit) hcomm
+      have hπp := preservesLimitIso_inv_π
+        (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) p) K
+        (Opposite.op b)
+      have hπp' :
+          eGlobalP.inv ≫
+              (HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) p).map
+                (limit.π K (Opposite.op b)) =
+            limit.π
+              (K ⋙ HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) p)
+              (Opposite.op b) := by
+        simpa [eGlobalP] using hπp
+      have hPval : (limit.π K (Opposite.op b)).f p yLimit = y b := by
+        have hval := congrArg (fun f => f yLimit') hπp'
+        have hY := liftElement_π a
+          (K ⋙ HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) p)
+          (fun b => y b) (by
+            intro b c f
+            change (K.map f).f p (y b) = y c
+            exact yCompatible f) b
+        have hPstep : (limit.π K (Opposite.op b)).f p yLimit =
+            (limit.π
+              (K ⋙ HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) p)
+              (Opposite.op b)).hom yLimit' := by
+          have hval' := hval
+          change
+            (limit.π K (Opposite.op b)).f p
+                (eGlobalP.inv yLimit') =
+              (limit.π
+                (K ⋙ HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) p)
+                (Opposite.op b)).hom yLimit' at hval'
+          exact hval'
+        exact hPstep.trans hY
+      have hKval := congrArg (fun f => f x)
+        (congrArg (fun f => f.f n)
+          (limit.w K (homOfLE (show b ≤ b from le_rfl)).op))
+      have hxproj :
+          (limit.π
+            (K ⋙ HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) n)
+            (Opposite.op b)).hom (eGlobalN.hom x) = xComponent b := by
+        have hval := congrArg (fun f => f x) hπn'
+        have hval' := hval
+        change
+          (limit.π
+            (K ⋙ HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) n)
+            (Opposite.op b)).hom (eGlobalN.hom x) =
+            (limit.π K (Opposite.op b)).f n x at hval'
+        simpa [xComponent] using hval'
+      have hstep1 :
+          (limit.π
+              (K ⋙ HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) n)
+              (Opposite.op b)).hom
+              (eGlobalN.hom ((inverseSystemLimit K).d p n yLimit)) =
+            (limit.π K (Opposite.op b)).f n
+              ((inverseSystemLimit K).d p n yLimit) := by
+        have hleft' := hleft
+        change
+          (limit.π
+            (K ⋙ HomologicalComplex.eval AddCommGrpCat (ComplexShape.up ℤ) n)
+            (Opposite.op b)).hom
+              (eGlobalN.hom ((inverseSystemLimit K).d p n yLimit)) =
+            (limit.π K (Opposite.op b)).f n
+              ((inverseSystemLimit K).d p n yLimit) at hleft'
+        exact hleft'
+      have hstep2 :
+          (limit.π K (Opposite.op b)).f n
+              ((inverseSystemLimit K).d p n yLimit) =
+            (K.obj (Opposite.op b)).d p n
+              ((limit.π K (Opposite.op b)).f p yLimit) := by
+        have hcommval' := hcommval.symm
+        change
+          (limit.π K (Opposite.op b)).f n
+              ((inverseSystemLimit K).d p n yLimit) =
+            (K.obj (Opposite.op b)).d p n
+              ((limit.π K (Opposite.op b)).f p yLimit) at hcommval'
+        exact hcommval'
+      have hstep3 :
+          (K.obj (Opposite.op b)).d p n
+              ((limit.π K (Opposite.op b)).f p yLimit) = xComponent b := by
+        rw [hPval]
+        exact (hyGood b).1
+      exact (((hstep1.trans hstep2).trans hstep3).trans hxproj.symm)
+    exact ⟨yLimit, hglobal⟩
+  exact hP K hacyclic hsurjective
 
 /- The source's proof-only constructions of the systems of cycles and images
 are already represented by the canonical kernel/image and homology APIs used

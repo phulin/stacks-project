@@ -485,18 +485,16 @@ def ExtSpectralSequencePagewiseEquivalent
     {M N : D} {r₁ r₂ : ℕ} {E₁ E₂ : ℤ → ℤ → AddCommGrpCat}
     (S : ExtSpectralSequenceData M N r₁ E₁)
     (T : ExtSpectralSequenceData M N r₂ E₂) : Prop :=
-  ∀ r p q : ℕ × ℤ × ℤ, Nonempty
-    (S.sequence.page r.1 (r.2.1, r.2.2) ≅
-      T.sequence.page r.1 (r.2.1, r.2.2))
+  ∀ (r : ℕ) (p q : ℤ), Nonempty
+    (S.sequence.page r (p, q) ≅ T.sequence.page r (p, q))
 
 def ExtSpectralSequencePagewiseEquivalentTo
     {D : Type u'} [Category.{v'} D] [Preadditive D] [HasShift D ℤ]
     {M N₁ N₂ : D} {r₁ r₂ : ℕ} {E₁ E₂ : ℤ → ℤ → AddCommGrpCat}
     (S : ExtSpectralSequenceData M N₁ r₁ E₁)
     (T : ExtSpectralSequenceData M N₂ r₂ E₂) : Prop :=
-  ∀ r p q : ℕ × ℤ × ℤ, Nonempty
-    (S.sequence.page r.1 (r.2.1, r.2.2) ≅
-      T.sequence.page r.1 (r.2.1, r.2.2))
+  ∀ (r : ℕ) (p q : ℤ), Nonempty
+    (S.sequence.page r (p, q) ≅ T.sequence.page r (p, q))
 
 theorem ext_into_filtered_complex_spectral_sequence
     {C : Type u} [Category.{v} C] [Abelian C]

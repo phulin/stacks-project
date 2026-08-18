@@ -1,5 +1,6 @@
 import Mathlib.Algebra.Category.Ring.FilteredColimits
 import Mathlib.Algebra.Category.Ring.FinitePresentation
+import Mathlib.Algebra.Category.Ring.Under.Basic
 import Mathlib.Algebra.Module.FinitePresentation
 import Mathlib.CategoryTheory.Comma.Over.Basic
 import Mathlib.CategoryTheory.Filtered.Basic
@@ -83,7 +84,497 @@ theorem ringColimitFpCategory {R A : Type u} [CommRing R] [CommRing A]
     (f : R →+* A) :
     IsFiltered (FinitelyPresentedAlgebraMapCategory f) ∧
       Nonempty (IsColimit (finitelyPresentedAlgebraMapCocone f)) := by
-  sorry
+  let P := finitelyPresentedAlgebraProperty R
+  have hfiltered : IsFiltered (FinitelyPresentedAlgebraMapCategory f) := by
+    refine {
+      cocone_objs := ?_
+      cocone_maps := ?_
+      nonempty := ?_ }
+    · intro X Y
+      letI : Algebra (CommRingCat.of R) (X.left.obj.right) := RingHom.toAlgebra X.left.obj.hom.hom
+      letI : Algebra (CommRingCat.of R) (Y.left.obj.right) := RingHom.toAlgebra Y.left.obj.hom.hom
+      letI : Algebra (CommRingCat.of R) ((P.ι.obj X.left).right) :=
+        RingHom.toAlgebra (P.ι.obj X.left).hom.hom
+      letI : Algebra (CommRingCat.of R) ((P.ι.obj Y.left).right) :=
+        RingHom.toAlgebra (P.ι.obj Y.left).hom.hom
+      let T : Under (CommRingCat.of R) :=
+        CommRingCat.mkUnder (CommRingCat.of R) ((X.left.obj).right ⊗[R] (Y.left.obj).right)
+      have hT : P T := by
+        letI : Algebra.FinitePresentation R (X.left.obj.right) := X.left.property
+        letI : Algebra.FinitePresentation R (Y.left.obj.right) := Y.left.property
+        letI : Algebra.FinitePresentation (X.left.obj.right)
+            ((X.left.obj.right) ⊗[R] (Y.left.obj.right)) := Algebra.FinitePresentation.baseChange _
+        dsimp [P, finitelyPresentedAlgebraProperty, T]
+        exact (RingHom.finitePresentation_algebraMap (A := R)
+          (B := (X.left.obj.right) ⊗[R] (Y.left.obj.right))).2
+          (Algebra.FinitePresentation.trans R (X.left.obj.right)
+            ((X.left.obj.right) ⊗[R] (Y.left.obj.right)))
+      let u : X.left.obj ⟶ T := Under.homMk (CommRingCat.ofHom
+        (Algebra.TensorProduct.includeLeftRingHom (R := R)
+          (A := X.left.obj.right) (B := Y.left.obj.right)))
+      let v : Y.left.obj ⟶ T := Under.homMk (CommRingCat.ofHom
+          (Algebra.TensorProduct.includeRight (R := R)
+          (A := X.left.obj.right) (B := Y.left.obj.right)).toRingHom) (by
+            ext r
+            change 1 ⊗ₜ[R] (Y.left.obj.hom.hom r) =
+              algebraMap R ((X.left.obj.right) ⊗[R] (Y.left.obj.right)) r
+            rw [Algebra.TensorProduct.algebraMap_apply']
+            rfl)
+      letI : Algebra (CommRingCat.of R) A := RingHom.toAlgebra f
+      letI : IsScalarTower (CommRingCat.of R) (CommRingCat.of R) A := ⟨by
+        intro r s a
+        exact smul_assoc r s a
+      ⟩
+      let tx : X.left.obj.right →ₐ[CommRingCat.of R] A := {
+        __ := X.hom.right.hom
+        commutes' := by
+          intro a
+          have hw := X.hom.w
+          dsimp [underRingHom] at hw
+          have hw' := congrArg (fun q => q.hom a) hw
+          change X.hom.right.hom (X.left.obj.hom.hom a) = f a at hw'
+          change X.hom.right.hom (X.left.obj.hom.hom a) = f a
+          exact hw' }
+      let ty : Y.left.obj.right →ₐ[CommRingCat.of R] A := {
+        __ := Y.hom.right.hom
+        commutes' := by
+          intro a
+          have hw := Y.hom.w
+          dsimp [underRingHom] at hw
+          have hw' := congrArg (fun q => q.hom a) hw
+          change Y.hom.right.hom (Y.left.obj.hom.hom a) = f a at hw'
+          change Y.hom.right.hom (Y.left.obj.hom.hom a) = f a
+          exact hw' }
+      let w : T ⟶ underRingHom f := Under.homMk (CommRingCat.ofHom
+        (Algebra.TensorProduct.lift (C := A) tx ty
+          (fun _ _ => Commute.all _ _)).toRingHom) (by
+            ext r
+            change (Algebra.TensorProduct.lift tx ty
+              (fun _ _ => Commute.all _ _)) (algebraMap R
+                ((X.left.obj.right) ⊗[R] (Y.left.obj.right)) r) = f r
+            rw [(Algebra.TensorProduct.lift tx ty
+              (fun _ _ => Commute.all _ _)).commutes]
+            rfl)
+      let Z : FinitelyPresentedAlgebraMapCategory f :=
+        CostructuredArrow.mk (Y := ObjectProperty.FullSubcategory.mk T hT) w
+      refine ⟨Z, ?_, ?_, trivial⟩
+      · exact CostructuredArrow.homMk (P.homMk u) (by
+          apply Under.UnderMorphism.ext
+          dsimp [u, w]
+          ext x
+          change ((Algebra.TensorProduct.lift tx ty
+            (fun _ _ => Commute.all _ _)).comp
+            Algebra.TensorProduct.includeLeft).toRingHom x = _
+          rw [Algebra.TensorProduct.lift_comp_includeLeft]
+          rfl)
+      · exact CostructuredArrow.homMk (P.homMk v) (by
+          apply Under.UnderMorphism.ext
+          dsimp [v, w]
+          ext x
+          change ((Algebra.TensorProduct.lift tx ty
+            (fun _ _ => Commute.all _ _)).comp
+            Algebra.TensorProduct.includeRight).toRingHom x = _
+          rw [Algebra.TensorProduct.lift_comp_includeRight']
+          rfl)
+    · intro X Y g h
+      letI : Algebra (CommRingCat.of R) X.left.obj.right :=
+        RingHom.toAlgebra X.left.obj.hom.hom
+      letI : Algebra (CommRingCat.of R) Y.left.obj.right :=
+        RingHom.toAlgebra Y.left.obj.hom.hom
+      letI : Algebra (CommRingCat.of R) A := RingHom.toAlgebra f
+      obtain ⟨n, p, hp⟩ :=
+        Algebra.FiniteType.iff_quotient_mvPolynomial''.mp
+          (RingHom.FiniteType.of_finitePresentation X.left.property)
+      let d : Fin n → Y.left.obj.right := fun i =>
+        g.left.hom.right.hom (p (MvPolynomial.X i)) -
+          h.left.hom.right.hom (p (MvPolynomial.X i))
+      let I : Ideal Y.left.obj.right := Ideal.span (Set.range d)
+      have hI : I.FG := by
+        exact Submodule.fg_span (Set.finite_range d)
+      letI : Algebra.FinitePresentation (CommRingCat.of R) Y.left.obj.right := by
+        apply (RingHom.finitePresentation_algebraMap
+          (A := CommRingCat.of R) (B := Y.left.obj.right)).mp
+        convert Y.left.property using 1 <;> rfl
+      let Q : Under (CommRingCat.of R) :=
+        CommRingCat.mkUnder (CommRingCat.of R) (Y.left.obj.right ⧸ I)
+      letI : Algebra (CommRingCat.of R) Q.right := RingHom.toAlgebra Q.hom.hom
+      letI : Algebra.FinitePresentation (CommRingCat.of R) Q.right :=
+        Algebra.FinitePresentation.quotient hI
+      have hQ : P Q := by
+        dsimp [P, Q, finitelyPresentedAlgebraProperty]
+        exact (RingHom.finitePresentation_algebraMap
+          (A := CommRingCat.of R) (B := Q.right)).2 inferInstance
+      let aY : Y.left.obj.right →+* A := Y.hom.right.hom
+      have hg : Y.hom.right.hom.comp g.left.hom.right.hom = X.hom.right.hom := by
+        convert congrArg (fun z => z.right.hom) (CostructuredArrow.w g) using 1 <;> rfl
+      have hh : Y.hom.right.hom.comp h.left.hom.right.hom = X.hom.right.hom := by
+        convert congrArg (fun z => z.right.hom) (CostructuredArrow.w h) using 1 <;> rfl
+      have haI : ∀ z : Y.left.obj.right, z ∈ I → aY z = 0 := by
+        intro z hz
+        have hle : I ≤ RingHom.ker aY := by
+          dsimp [I]
+          refine Ideal.span_le.2 ?_
+          rintro _ ⟨i, rfl⟩
+          change aY (d i) = 0
+          dsimp [d]
+          rw [map_sub]
+          have hgi := congrArg (fun z => z (p (MvPolynomial.X i))) hg
+          have hhi := congrArg (fun z => z (p (MvPolynomial.X i))) hh
+          dsimp [underRingHom] at hgi hhi
+          have hgi' : aY (g.left.hom.right.hom (p (MvPolynomial.X i))) =
+              X.hom.right.hom (p (MvPolynomial.X i)) := by
+            convert hgi using 1 <;> rfl
+          have hhi' : aY (h.left.hom.right.hom (p (MvPolynomial.X i))) =
+              X.hom.right.hom (p (MvPolynomial.X i)) := by
+            convert hhi using 1 <;> rfl
+          rw [hgi', hhi']
+          exact sub_self _
+        exact hle hz
+      let b : Q.right →+* A := Ideal.Quotient.lift I aY haI
+      let q : Y.left.obj ⟶ Q := Under.homMk (CommRingCat.ofHom
+        (Ideal.Quotient.mk I))
+      let v : Q ⟶ underRingHom f := Under.homMk (CommRingCat.ofHom b) (by
+        ext r
+        change b (algebraMap (CommRingCat.of R) Q.right r) = f r
+        change b (Ideal.Quotient.mk I (Y.left.obj.hom.hom r)) = f r
+        rw [Ideal.Quotient.lift_mk]
+        have hw := Y.hom.w
+        dsimp [underRingHom] at hw
+        have hw' := congrArg (fun z => z.hom r) hw
+        change aY (Y.left.obj.hom.hom r) = f r at hw'
+        exact hw')
+      let Z : FinitelyPresentedAlgebraMapCategory f :=
+        CostructuredArrow.mk (Y := ObjectProperty.FullSubcategory.mk Q hQ) v
+      let k : Y ⟶ Z := CostructuredArrow.homMk (P.homMk q) (by
+        apply Under.UnderMorphism.ext
+        dsimp [q, v, b, Z]
+        ext x
+        change b (Ideal.Quotient.mk I x) = aY x
+        dsimp [b]
+        rw [Ideal.Quotient.lift_mk])
+      refine ⟨Z, k, ?_⟩
+      apply CostructuredArrow.hom_ext
+      apply ObjectProperty.hom_ext
+      apply Under.UnderMorphism.ext
+      apply CommRingCat.hom_ext
+      ext x
+      let qRing : Y.left.obj.right →+* (Y.left.obj.right ⧸ I) := Ideal.Quotient.mk I
+      have heq :
+          (qRing.comp g.left.hom.right.hom).comp p.toRingHom =
+            (qRing.comp h.left.hom.right.hom).comp p.toRingHom := by
+        apply MvPolynomial.ringHom_ext
+        · intro r
+          simp only [RingHom.comp_apply]
+          change qRing (g.left.hom.right.hom (p (MvPolynomial.C r))) =
+            qRing (h.left.hom.right.hom (p (MvPolynomial.C r)))
+          have hpC : p (MvPolynomial.C r) =
+              algebraMap (CommRingCat.of R) X.left.obj.right r := by
+            exact p.commutes r
+          rw [hpC]
+          change qRing (g.left.hom.right.hom (X.left.obj.hom.hom r)) =
+            qRing (h.left.hom.right.hom (X.left.obj.hom.hom r))
+          have hgbase := congrArg (fun z => z.hom r) (Under.w g.left.hom)
+          have hhbase := congrArg (fun z => z.hom r) (Under.w h.left.hom)
+          dsimp at hgbase hhbase
+          rw [hgbase, hhbase]
+        · intro i
+          simp only [RingHom.comp_apply]
+          change Ideal.Quotient.mk I (g.left.hom.right.hom (p (MvPolynomial.X i))) =
+            Ideal.Quotient.mk I (h.left.hom.right.hom (p (MvPolynomial.X i)))
+          rw [Ideal.Quotient.mk_eq_mk_iff_sub_mem]
+          apply Ideal.subset_span
+          exact ⟨i, rfl⟩
+      have hqeq : qRing.comp g.left.hom.right.hom = qRing.comp h.left.hom.right.hom := by
+        apply RingHom.ext
+        intro x
+        obtain ⟨z, rfl⟩ := hp x
+        exact congrArg (fun t => t z) heq
+      dsimp [k, q, Z, Q]
+      exact congrArg (fun t => t x) hqeq
+    · let B : Under (CommRingCat.of R) := Under.mk (CommRingCat.ofHom (RingHom.id R))
+      have hB : P B := by exact RingHom.FinitePresentation.id R
+      exact ⟨CostructuredArrow.mk (Y := ObjectProperty.FullSubcategory.mk B hB)
+        (Under.homMk (CommRingCat.ofHom f))⟩
+  refine ⟨hfiltered, ?_⟩
+  letI : IsFiltered (FinitelyPresentedAlgebraMapCategory f) := hfiltered
+  have hsurj : ∀ a : A, ∃ i xi,
+      a = (finitelyPresentedAlgebraMapCocone f).ι.app i xi := by
+    intro a
+    letI : Algebra (CommRingCat.of R) A := RingHom.toAlgebra f
+    let B : Under (CommRingCat.of R) :=
+      CommRingCat.mkUnder (CommRingCat.of R) (MvPolynomial (Fin 1) R)
+    have hB : P B := by
+      letI : Algebra.FinitePresentation R (MvPolynomial (Fin 1) R) := inferInstance
+      dsimp [P, B, finitelyPresentedAlgebraProperty]
+      exact (RingHom.finitePresentation_algebraMap
+        (A := CommRingCat.of R) (B := MvPolynomial (Fin 1) R)).2 inferInstance
+    let evalA : MvPolynomial (Fin 1) R →ₐ[R] A :=
+      MvPolynomial.aeval (fun _ => a)
+    let m : B ⟶ underRingHom f := Under.homMk (CommRingCat.ofHom evalA.toRingHom) (by
+      ext r
+      change evalA (algebraMap R (MvPolynomial (Fin 1) R) r) = f r
+      rw [evalA.commutes]
+      rfl)
+    let X : FinitelyPresentedAlgebraMapCategory f :=
+      CostructuredArrow.mk (Y := ObjectProperty.FullSubcategory.mk B hB) m
+    refine ⟨X, MvPolynomial.X 0, ?_⟩
+    change a = evalA (MvPolynomial.X 0)
+    rw [show evalA (MvPolynomial.X 0) = a by
+      dsimp [evalA]
+      rw [MvPolynomial.aeval_X]]
+  have htype : IsColimit
+      ((forget CommRingCat).mapCocone (finitelyPresentedAlgebraMapCocone f)) := by
+    refine Types.FilteredColimit.isColimitOf
+      (F := finitelyPresentedAlgebraMapDiagram f ⋙ forget CommRingCat)
+      ((forget CommRingCat).mapCocone (finitelyPresentedAlgebraMapCocone f)) ?_ ?_
+    · intro a
+      change A at a
+      obtain ⟨i, xi, hxi⟩ := hsurj a
+      refine ⟨i, xi, ?_⟩
+      exact hxi
+    · intro i j xi xj h
+      obtain ⟨z, u, v, _⟩ := hfiltered.cocone_objs i j
+      have hu := congrArg (fun q => q.hom xi)
+        ((finitelyPresentedAlgebraMapCocone f).w u)
+      have hv := congrArg (fun q => q.hom xj)
+        ((finitelyPresentedAlgebraMapCocone f).w v)
+      dsimp [finitelyPresentedAlgebraMapCocone, finitelyPresentedAlgebraMapDiagram] at hu hv
+      have hcommon : z.hom.right.hom (u.left.hom.right.hom xi) =
+          z.hom.right.hom (v.left.hom.right.hom xj) := by
+        exact hu.trans (h.trans hv.symm)
+      letI : Algebra (CommRingCat.of R) z.left.obj.right :=
+        RingHom.toAlgebra z.left.obj.hom.hom
+      let B : Under (CommRingCat.of R) :=
+        CommRingCat.mkUnder (CommRingCat.of R) (MvPolynomial (Fin 1) R)
+      have hB : P B := by
+        letI : Algebra.FinitePresentation R (MvPolynomial (Fin 1) R) := inferInstance
+        dsimp [P, B, finitelyPresentedAlgebraProperty]
+        exact (RingHom.finitePresentation_algebraMap
+          (A := CommRingCat.of R) (B := MvPolynomial (Fin 1) R)).2 inferInstance
+      let pXi : MvPolynomial (Fin 1) R →ₐ[R] z.left.obj.right :=
+        MvPolynomial.aeval (fun _ => u.left.hom.right.hom xi)
+      let pXj : MvPolynomial (Fin 1) R →ₐ[R] z.left.obj.right :=
+        MvPolynomial.aeval (fun _ => v.left.hom.right.hom xj)
+      let uXi : B ⟶ z.left.obj := Under.homMk (CommRingCat.ofHom pXi.toRingHom) (by
+        ext r
+        change pXi (algebraMap R (MvPolynomial (Fin 1) R) r) =
+          z.left.obj.hom.hom r
+        rw [pXi.commutes]
+        rfl)
+      let uXj : B ⟶ z.left.obj := Under.homMk (CommRingCat.ofHom pXj.toRingHom) (by
+        ext r
+        change pXj (algebraMap R (MvPolynomial (Fin 1) R) r) =
+          z.left.obj.hom.hom r
+        rw [pXj.commutes]
+        rfl)
+      letI : Algebra (CommRingCat.of R) A := RingHom.toAlgebra f
+      let zMap : z.left.obj.right →+* A := by
+        dsimp [underRingHom]
+        exact z.hom.right.hom
+      let zAlg : z.left.obj.right →ₐ[R] A := {
+        __ := zMap
+        commutes' := by
+          intro r
+          have hw := z.hom.w
+          dsimp [underRingHom] at hw
+          have hw' := congrArg (fun q => q.hom r) hw
+          change z.hom.right.hom (z.left.obj.hom.hom r) = f r at hw'
+          change z.hom.right.hom (z.left.obj.hom.hom r) = f r
+          exact hw' }
+      let pA : MvPolynomial (Fin 1) R →ₐ[R] A :=
+        MvPolynomial.aeval (fun _ => zMap (u.left.hom.right.hom xi))
+      have hcompXi : zAlg.comp pXi = pA := by
+        apply MvPolynomial.algHom_ext
+        intro k
+        have hk : k = 0 := Fin.eq_zero k
+        subst k
+        change zMap (pXi (MvPolynomial.X 0)) = pA (MvPolynomial.X 0)
+        rw [MvPolynomial.aeval_X, MvPolynomial.aeval_X]
+      have hcompXj : zAlg.comp pXj = pA := by
+        apply MvPolynomial.algHom_ext
+        intro k
+        have hk : k = 0 := Fin.eq_zero k
+        subst k
+        change zMap (pXj (MvPolynomial.X 0)) = pA (MvPolynomial.X 0)
+        rw [MvPolynomial.aeval_X, MvPolynomial.aeval_X]
+        convert hcommon.symm using 1 <;> rfl
+      let wA : B ⟶ underRingHom f := Under.homMk (CommRingCat.ofHom pA.toRingHom) (by
+        ext r
+        change pA (algebraMap R (MvPolynomial (Fin 1) R) r) = f r
+        rw [pA.commutes]
+        rfl)
+      let W : FinitelyPresentedAlgebraMapCategory f :=
+        CostructuredArrow.mk (Y := ObjectProperty.FullSubcategory.mk B hB) wA
+      have hmapXi : uXi ≫ z.hom = wA := by
+        apply Under.UnderMorphism.ext
+        apply CommRingCat.hom_ext
+        change (zAlg.comp pXi).toRingHom = pA.toRingHom
+        exact congrArg AlgHom.toRingHom hcompXi
+      have hmapXj : uXj ≫ z.hom = wA := by
+        apply Under.UnderMorphism.ext
+        apply CommRingCat.hom_ext
+        change (zAlg.comp pXj).toRingHom = pA.toRingHom
+        exact congrArg AlgHom.toRingHom hcompXj
+      let gw : W ⟶ z := CostructuredArrow.homMk (P.homMk uXi) (by
+        exact hmapXi)
+      let hw : W ⟶ z := CostructuredArrow.homMk (P.homMk uXj) (by
+        exact hmapXj)
+      obtain ⟨l, t, htq⟩ := hfiltered.cocone_maps gw hw
+      refine ⟨l, u ≫ t, v ≫ t, ?_⟩
+      have hleft := congrArg
+        (fun q => q.left.hom.right.hom (MvPolynomial.X 0)) htq
+      dsimp [gw, hw, uXi, uXj] at hleft
+      change t.left.hom.right.hom (u.left.hom.right.hom xi) =
+        t.left.hom.right.hom (v.left.hom.right.hom xj)
+      change t.left.hom.right.hom (pXi (MvPolynomial.X 0)) =
+        t.left.hom.right.hom (pXj (MvPolynomial.X 0)) at hleft
+      rw [MvPolynomial.aeval_X, MvPolynomial.aeval_X] at hleft
+      exact hleft
+  have hdesc (s : Cocone (finitelyPresentedAlgebraMapDiagram f))
+      (i : FinitelyPresentedAlgebraMapCategory f) (x : i.left.obj.right) :
+      htype.desc ((forget CommRingCat).mapCocone s)
+          ((finitelyPresentedAlgebraMapCocone f).ι.app i x) =
+        s.ι.app i x := by
+    have hh := congrArg (fun q => q x)
+      (htype.fac ((forget CommRingCat).mapCocone s) i)
+    exact hh
+  have hrel : ∀ (i j : FinitelyPresentedAlgebraMapCategory f)
+      (xi : i.left.obj.right) (xj : j.left.obj.right),
+      (finitelyPresentedAlgebraMapCocone f).ι.app i xi =
+          (finitelyPresentedAlgebraMapCocone f).ι.app j xj →
+        ∃ (k : FinitelyPresentedAlgebraMapCategory f) (g : i ⟶ k) (h : j ⟶ k),
+          (finitelyPresentedAlgebraMapDiagram f).map g xi =
+            (finitelyPresentedAlgebraMapDiagram f).map h xj := by
+    intro i j xi xj h
+    apply (Types.FilteredColimit.isColimit_eq_iff
+      (finitelyPresentedAlgebraMapDiagram f ⋙ forget CommRingCat) htype).mp
+    exact h
+  have hsmap (s : Cocone (finitelyPresentedAlgebraMapDiagram f))
+      {i k : FinitelyPresentedAlgebraMapCategory f} (g : i ⟶ k)
+      (x : i.left.obj.right) :
+      s.ι.app i x = s.ι.app k
+        ((finitelyPresentedAlgebraMapDiagram f).map g x) := by
+    have hh := congrArg (fun q => q.hom x) (s.w g)
+    exact hh.symm
+  have hcmap {i k : FinitelyPresentedAlgebraMapCategory f} (g : i ⟶ k)
+      (x : i.left.obj.right) :
+      (finitelyPresentedAlgebraMapCocone f).ι.app i x =
+        (finitelyPresentedAlgebraMapCocone f).ι.app k
+          ((finitelyPresentedAlgebraMapDiagram f).map g x) := by
+    have hh := congrArg (fun q => q.hom x)
+      ((finitelyPresentedAlgebraMapCocone f).w g)
+    exact hh.symm
+  let descRingHom (s : Cocone (finitelyPresentedAlgebraMapDiagram f)) : A →+* s.pt := {
+    toFun := htype.desc ((forget CommRingCat).mapCocone s)
+    map_one' := by
+      obtain ⟨i, xi, hxi⟩ := hsurj (1 : A)
+      obtain ⟨k, g, h, heq⟩ := hrel i i xi (1 : i.left.obj.right)
+        (hxi.symm.trans ((finitelyPresentedAlgebraMapCocone f).ι.app i).hom.map_one.symm)
+      change htype.desc ((forget CommRingCat).mapCocone s) (1 : A) = (1 : s.pt)
+      rw [hxi, hdesc s i xi, hsmap s g xi, heq]
+      rw [← hsmap s h (1 : i.left.obj.right)]
+      exact (s.ι.app i).hom.map_one
+    map_mul' := by
+      letI : CommRing ((forget CommRingCat).mapCocone s).pt :=
+        inferInstanceAs (CommRing s.pt)
+      intro a b
+      obtain ⟨i, xi, hxi⟩ := hsurj a
+      obtain ⟨j, xj, hxj⟩ := hsurj b
+      obtain ⟨k, g, h, _⟩ := hfiltered.cocone_objs i j
+      let aiterm : A := (finitelyPresentedAlgebraMapCocone f).ι.app i xi
+      let bjterm : A := (finitelyPresentedAlgebraMapCocone f).ι.app j xj
+      have hxiA : a = aiterm := hxi
+      have hxjA : b = bjterm := hxj
+      let zterm : A := (finitelyPresentedAlgebraMapCocone f).ι.app k
+        ((finitelyPresentedAlgebraMapDiagram f).map g xi *
+          (finitelyPresentedAlgebraMapDiagram f).map h xj)
+      have hprod : a * b = zterm := by
+        dsimp [zterm, aiterm, bjterm]
+        rw [hxi, hxj, hcmap g xi, hcmap h xj]
+        exact ((finitelyPresentedAlgebraMapCocone f).ι.app k).hom.map_mul _ _ |>.symm
+      let d : A → s.pt := fun x => htype.desc ((forget CommRingCat).mapCocone s) x
+      change d (a * b) = d a * d b
+      have hdk := hdesc s k
+        ((finitelyPresentedAlgebraMapDiagram f).map g xi *
+          (finitelyPresentedAlgebraMapDiagram f).map h xj)
+      have hdk' : d zterm = (s.ι.app k).hom
+          ((finitelyPresentedAlgebraMapDiagram f).map g xi *
+            (finitelyPresentedAlgebraMapDiagram f).map h xj) := by
+        dsimp [d, zterm]
+        exact hdk
+      have hdi := hdesc s i xi
+      have hdj := hdesc s j xj
+      have hdi' : d aiterm = (s.ι.app i).hom xi := by
+        dsimp [d, aiterm]
+        exact hdi
+      have hdj' : d bjterm = (s.ι.app j).hom xj := by
+        dsimp [d, bjterm]
+        exact hdj
+      rw [hprod, hdk', (s.ι.app k).hom.map_mul, hxiA, hdi', hxjA, hdj',
+        hsmap s g xi, hsmap s h xj]
+    map_zero' := by
+      obtain ⟨i, xi, hxi⟩ := hsurj (0 : A)
+      obtain ⟨k, g, h, heq⟩ := hrel i i xi (0 : i.left.obj.right)
+        (hxi.symm.trans ((finitelyPresentedAlgebraMapCocone f).ι.app i).hom.map_zero.symm)
+      change htype.desc ((forget CommRingCat).mapCocone s) (0 : A) = (0 : s.pt)
+      rw [hxi, hdesc s i xi, hsmap s g xi, heq]
+      rw [← hsmap s h (0 : i.left.obj.right)]
+      exact (s.ι.app i).hom.map_zero
+    map_add' := by
+      letI : CommRing ((forget CommRingCat).mapCocone s).pt :=
+        inferInstanceAs (CommRing s.pt)
+      intro a b
+      obtain ⟨i, xi, hxi⟩ := hsurj a
+      obtain ⟨j, xj, hxj⟩ := hsurj b
+      obtain ⟨k, g, h, _⟩ := hfiltered.cocone_objs i j
+      let aiterm : A := (finitelyPresentedAlgebraMapCocone f).ι.app i xi
+      let bjterm : A := (finitelyPresentedAlgebraMapCocone f).ι.app j xj
+      have hxiA : a = aiterm := hxi
+      have hxjA : b = bjterm := hxj
+      let zterm : A := (finitelyPresentedAlgebraMapCocone f).ι.app k
+        ((finitelyPresentedAlgebraMapDiagram f).map g xi +
+          (finitelyPresentedAlgebraMapDiagram f).map h xj)
+      have hplus : a + b = zterm := by
+        dsimp [zterm, aiterm, bjterm]
+        rw [hxi, hxj, hcmap g xi, hcmap h xj]
+        exact ((finitelyPresentedAlgebraMapCocone f).ι.app k).hom.map_add _ _ |>.symm
+      let d : A → s.pt := fun x => htype.desc ((forget CommRingCat).mapCocone s) x
+      change d (a + b) = d a + d b
+      have hdk := hdesc s k
+        ((finitelyPresentedAlgebraMapDiagram f).map g xi +
+          (finitelyPresentedAlgebraMapDiagram f).map h xj)
+      have hdk' : d zterm = (s.ι.app k).hom
+          ((finitelyPresentedAlgebraMapDiagram f).map g xi +
+            (finitelyPresentedAlgebraMapDiagram f).map h xj) := by
+        dsimp [d, zterm]
+        exact hdk
+      have hdi := hdesc s i xi
+      have hdj := hdesc s j xj
+      have hdi' : d aiterm = (s.ι.app i).hom xi := by
+        dsimp [d, aiterm]
+        exact hdi
+      have hdj' : d bjterm = (s.ι.app j).hom xj := by
+        dsimp [d, bjterm]
+        exact hdj
+      rw [hplus, hdk', (s.ι.app k).hom.map_add, hxiA, hdi', hxjA, hdj',
+        hsmap s g xi, hsmap s h xj]
+    }
+  refine ⟨{
+    desc := fun s => CommRingCat.ofHom (descRingHom s)
+    fac := by
+      intro s i
+      apply CommRingCat.hom_ext
+      ext x
+      exact hdesc s i x
+    uniq := by
+      intro s m hm
+      apply CommRingCat.hom_ext
+      ext a
+      obtain ⟨i, xi, hxi⟩ := hsurj a
+      rw [hxi]
+      have hm' := congrArg (fun q => q.hom xi) (hm i)
+      have hd := hdesc s i xi
+      exact hm'.trans hd.symm }⟩
 
 /- A directed system of rings is a functor from the canonical preorder
 category.  `System` and `IsDirectedSet` are the established Chapter 21
@@ -118,14 +609,97 @@ structure DirectedSurjectiveFinitelyPresentedAlgebraColimit
   transitionSurjective : ∀ {i j : index} (h : i ≤ j),
     Function.Surjective (diagram.map (homOfLE h)).right.hom
 
+private def finitePresentationEval {R A : Type u} [CommRing R] [CommRing A]
+    (f : R →+* A) (S : Finset A) : MvPolynomial (↑S) R →+* A :=
+  MvPolynomial.eval₂Hom f (fun x => (x : A))
+
+private structure finitePresentationData {R A : Type u} [CommRing R] [CommRing A]
+    (f : R →+* A) where
+  vars : Finset A
+  rels : Finset (MvPolynomial (↑vars) R)
+  rel_zero : ∀ p ∈ rels, finitePresentationEval f vars p = 0
+
+private def finitePresentationIdeal {R A : Type u} [CommRing R] [CommRing A]
+    {f : R →+* A} (i : finitePresentationData f) : Ideal (MvPolynomial (↑i.vars) R) :=
+  Ideal.span (i.rels : Set (MvPolynomial (↑i.vars) R))
+
+private abbrev finitePresentationStage {R A : Type u} [CommRing R] [CommRing A]
+    {f : R →+* A} (i : finitePresentationData f) : Type u :=
+  MvPolynomial (↑i.vars) R ⧸ finitePresentationIdeal i
+
+private def finitePresentationStageMap {R A : Type u} [CommRing R] [CommRing A]
+    {f : R →+* A} (i : finitePresentationData f) :
+    R →+* finitePresentationStage i :=
+  letI : CommRing (finitePresentationStage i) := Ideal.Quotient.commRing _
+  (Ideal.Quotient.mk (finitePresentationIdeal i)).comp (algebraMap R (MvPolynomial (↑i.vars) R))
+
+private def finitePresentationInclusion {A : Type u} {S T : Finset A} (h : S ⊆ T) :
+    (↑S : Type u) → (↑T : Type u) :=
+  fun x => ⟨x.1, h x.2⟩
+
+private def finitePresentationDataLE {R A : Type u} [CommRing R] [CommRing A]
+    {f : R →+* A} (i j : finitePresentationData f) : Prop :=
+  ∃ h : i.vars ⊆ j.vars,
+    ∀ p ∈ i.rels,
+      MvPolynomial.rename (finitePresentationInclusion h) p ∈ j.rels
+
 /-- Every ring map is a directed colimit of finitely presented algebras, and a
 finite-type target admits a presentation with surjective transitions. -/
-  theorem ringColimitFp {R A : Type u} [CommRing R] [CommRing A]
+theorem ringColimitFp {R A : Type u} [CommRing R] [CommRing A]
     (f : R →+* A) :
     Nonempty (DirectedFinitelyPresentedAlgebraColimit f) ∧
       (f.FiniteType →
         Nonempty (DirectedSurjectiveFinitelyPresentedAlgebraColimit f)) := by
-  sorry
+  let I := finitePresentationData f
+  letI : Preorder I :=
+    { le := finitePresentationDataLE
+      le_refl := by
+        intro i
+        exact ⟨fun _ hp => hp, fun p hp => by
+          simpa [finitePresentationInclusion] using hp⟩
+      le_trans := by
+        intro i j k hij hjk
+        obtain ⟨hijS, hijR⟩ := hij
+        obtain ⟨hjkS, hjkR⟩ := hjk
+        refine ⟨hijS.trans hjkS, ?_⟩
+        intro p hp
+        have h := hjkR (MvPolynomial.rename (finitePresentationInclusion hijS) p)
+          (hijR p hp)
+        convert h using 1
+        · rw [MvPolynomial.rename_rename]
+          congr 1
+          funext x
+          rfl }
+  let transition : ∀ {i j : I}, i ≤ j →
+      finitePresentationStage i →+* finitePresentationStage j := by
+    intro i j h
+    let hS : i.vars ⊆ j.vars := Classical.choose h
+    let hR : ∀ p ∈ i.rels,
+        MvPolynomial.rename (finitePresentationInclusion hS) p ∈ j.rels :=
+      Classical.choose_spec h
+    let r := (Ideal.Quotient.mk (finitePresentationIdeal j)).comp
+      (MvPolynomial.rename (finitePresentationInclusion hS)).toRingHom
+    exact Ideal.Quotient.lift (finitePresentationIdeal i) r (by
+      apply Ideal.span_le.2
+      intro p hp
+      change r p = 0
+      change Ideal.Quotient.mk (finitePresentationIdeal j)
+        (MvPolynomial.rename (finitePresentationInclusion hS) p) = 0
+      exact Ideal.Quotient.eq_zero_iff_mem.2 (Ideal.subset_span (hR p hp)))
+  have transition_id : ∀ i : I, transition (show i ≤ i from le_rfl) = RingHom.id _ := by
+    intro i
+    apply Ideal.Quotient.ringHom_ext
+    ext p
+    simp [transition, finitePresentationInclusion]
+  have transition_comp : ∀ {i j k : I} (hij : i ≤ j) (hjk : j ≤ k),
+      (transition hjk).comp (transition hij) = transition (hij.trans hjk) := by
+    intro i j k hij hjk
+    apply Ideal.Quotient.ringHom_ext
+    ext p
+    simp [transition, finitePresentationInclusion, Function.comp_def]
+  exact ⟨by sorry, by
+    intro hf
+    sorry⟩
 
 /-! ## The compactness criterion -/
 

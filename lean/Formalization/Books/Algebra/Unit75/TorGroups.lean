@@ -210,6 +210,8 @@ structure TorLongExactSequence {R : Type u} [CommRing R]
   map₁ : Tor M S.X₁ 1 →ₗ[R] Tor M S.X₂ 1
   map₂ : Tor M S.X₂ 1 →ₗ[R] Tor M S.X₃ 1
   connecting : Tor M S.X₃ 1 →ₗ[R] TensorProduct R M S.X₁
+  map₁_eq : map₁ = (torMapSecond M S.X₁ S.X₂ S.f 1).hom
+  map₂_eq : map₂ = (torMapSecond M S.X₂ S.X₃ S.g 1).hom
   exact₁ : Function.Exact map₁ map₂
   exact₂ : Function.Exact map₂ connecting
   exact₃ : Function.Exact connecting (tensorByMap M S.f)
@@ -361,14 +363,13 @@ noncomputable def columnComplex {R : Type u} [CommRing R]
     subst k
     exact A.delta_sq i l
 
-/-- Exactness of an augmented nonnegative module chain complex. -/
+/-- A fixed chain complex and augmentation are a resolution in the sense of
+the preceding chapter's `Resolution` interface. -/
 def IsResolution {R : Type u} [CommRing R]
     (F : ModuleChainComplex R) (M : ModuleCat.{u} R)
     (augmentation : F.X 0 ⟶ M) : Prop :=
-  ∃ h : F.d 1 0 ≫ augmentation = 0,
-    (ShortComplex.mk (F.d 1 0) augmentation h).Exact ∧
-      ∀ n, (ShortComplex.mk (F.d (n + 2) (n + 1))
-        (F.d (n + 1) n) (F.d_comp_d (n + 2) (n + 1) n)).Exact
+  ∃ (Q : Resolution R M) (hQ : Q.complex = F),
+    hQ ▸ Q.augmentation = augmentation
 
 /-- The row-resolution hypothesis in the double-complex lemma. -/
 def RowsAreResolutions {R : Type u} [CommRing R]
@@ -437,25 +438,45 @@ noncomputable def upComplexMap {R : Type u} [CommRing R]
     subst i
     exact (upTermMap_comm Φ j).symm
 
+/-! The source calls the comparison canonical and requires functoriality.  A
+chosen isomorphism for each double complex would not provide that property,
+so the two requirements are bundled in one family before making a choice. -/
+structure DoubleComplexHomologyIsoFamily (R : Type u) [CommRing R] where
+  iso : ∀ (A : DoubleComplex R) (_hrow : RowsAreResolutions A)
+    (_hcol : ColumnsAreResolutions A) (i : ℕ),
+    chainHomology (rightComplex A) i ≅ chainHomology (upComplex A) i
+  natural : ∀ {A B : DoubleComplex R} (Φ : DoubleComplexMap A B)
+    (hrowA : RowsAreResolutions A) (hcolA : ColumnsAreResolutions A)
+    (hrowB : RowsAreResolutions B) (hcolB : ColumnsAreResolutions B)
+    (i : ℕ),
+    chainHomologyMap (rightComplexMap Φ) i ≫
+        (iso B hrowB hcolB i).hom =
+      (iso A hrowA hcolA i).hom ≫
+        chainHomologyMap (upComplexMap Φ) i
+
+/-- The source's canonical, functorial double-complex comparison. -/
+theorem exists_doubleComplex_homology_iso_family {R : Type u} [CommRing R] :
+    Nonempty (DoubleComplexHomologyIsoFamily R) := by
+  sorry
+
+/-- A chosen family of the canonical double-complex comparisons. -/
+noncomputable def doubleComplexHomologyIsoFamily {R : Type u} [CommRing R] :
+    DoubleComplexHomologyIsoFamily R :=
+  Classical.choice (exists_doubleComplex_homology_iso_family (R := R))
+
 /-- The double-complex lemma produces the canonical homology isomorphism. -/
 theorem doubleComplex_homology_iso_exists {R : Type u} [CommRing R]
     (A : DoubleComplex R) (hrow : RowsAreResolutions A)
     (hcol : ColumnsAreResolutions A) (i : ℕ) :
-    Nonempty (chainHomology (rightComplex A) i ≅ chainHomology (upComplex A) i) := by
-  sorry
+    Nonempty (chainHomology (rightComplex A) i ≅ chainHomology (upComplex A) i) :=
+  ⟨(doubleComplexHomologyIsoFamily (R := R)).iso A hrow hcol i⟩
 
-/-
-The source constructs this comparison through a zig-zag in the homology of the
-double complex.  The conventional signs in that zig-zag are not canonical at
-the level of displayed representatives, so the declaration below records the
-resulting comparison with the source's stated normalization.
--/
-/-- A chosen representative of the canonical double-complex homology isomorphism. -/
+/-- The chosen representative of the canonical double-complex comparison. -/
 noncomputable def doubleComplexHomologyIso {R : Type u} [CommRing R]
     (A : DoubleComplex R) (hrow : RowsAreResolutions A)
     (hcol : ColumnsAreResolutions A) (i : ℕ) :
     chainHomology (rightComplex A) i ≅ chainHomology (upComplex A) i :=
-  Classical.choice (doubleComplex_homology_iso_exists A hrow hcol i)
+  (doubleComplexHomologyIsoFamily (R := R)).iso A hrow hcol i
 
 /-- The double-complex homology isomorphism is functorial. -/
 theorem doubleComplex_homology_iso_natural {R : Type u} [CommRing R]
@@ -466,37 +487,43 @@ theorem doubleComplex_homology_iso_natural {R : Type u} [CommRing R]
     chainHomologyMap (rightComplexMap Φ) i ≫
         (doubleComplexHomologyIso B hrowB hcolB i).hom =
       (doubleComplexHomologyIso A hrowA hcolA i).hom ≫
-        chainHomologyMap (upComplexMap Φ) i := by
-  sorry
-
-/-- A witness for the intermediate zig-zag homology module used in the proof
-of the double-complex lemma. -/
-structure ZigZagHomologyModel {R : Type u} [CommRing R]
-    (A : DoubleComplex R) (i : ℕ) where
-  carrier : ModuleCat.{u} R
-  toRight : carrier ≅ chainHomology (rightComplex A) i
-  toUp : carrier ≅ chainHomology (upComplex A) i
-
-/-- The exact rows and columns admit the source's common zig-zag homology
-model. -/
-theorem exists_zigZagHomologyModel {R : Type u} [CommRing R]
-    (A : DoubleComplex R) (hrow : RowsAreResolutions A)
-    (hcol : ColumnsAreResolutions A) (i : ℕ) :
-    Nonempty (ZigZagHomologyModel A i) := by
-  sorry
+        chainHomologyMap (upComplexMap Φ) i :=
+  (doubleComplexHomologyIsoFamily (R := R)).natural Φ
+    hrowA hcolA hrowB hcolB i
 
 /-! ## Symmetry and finiteness -/
+
+/-! As with the double-complex comparison, naturality belongs to the family
+of symmetry isomorphisms, not to unrelated choices made object by object. -/
+structure TorSymmetryIsoFamily (R : Type u) [CommRing R] where
+  iso : ∀ (M N : ModuleCat.{u} R) (i : ℕ), Tor M N i ≅ Tor N M i
+  natural : ∀ {M₁ M₂ N₁ N₂ : ModuleCat.{u} R}
+    (φ : M₁ ⟶ M₂) (ψ : N₁ ⟶ N₂) (i : ℕ),
+    (iso M₁ N₁ i).hom ≫
+        torMapFirst (N := M₁) ψ i ≫ torMapSecond N₂ M₁ M₂ φ i =
+      torMapFirst (N := N₁) φ i ≫ torMapSecond M₂ N₁ N₂ ψ i ≫
+        (iso M₂ N₂ i).hom
+
+/-- The source's canonical symmetry isomorphisms, natural in both variables. -/
+theorem exists_tor_symmetry_iso_family {R : Type u} [CommRing R] :
+    Nonempty (TorSymmetryIsoFamily R) := by
+  sorry
+
+/-- A chosen family of the canonical Tor symmetry isomorphisms. -/
+noncomputable def torSymmetryIsoFamily {R : Type u} [CommRing R] :
+    TorSymmetryIsoFamily R :=
+  Classical.choice (exists_tor_symmetry_iso_family (R := R))
 
 /-- Tor is canonically symmetric in its two module variables. -/
 theorem tor_left_right {R : Type u} [CommRing R]
     (M N : ModuleCat.{u} R) (i : ℕ) :
-    Nonempty (Tor M N i ≅ Tor N M i) := by
-  sorry
+    Nonempty (Tor M N i ≅ Tor N M i) :=
+  ⟨(torSymmetryIsoFamily (R := R)).iso M N i⟩
 
 /-- A chosen representative of the canonical symmetry isomorphism for Tor. -/
 noncomputable def torLeftRightIso {R : Type u} [CommRing R]
     (M N : ModuleCat.{u} R) (i : ℕ) : Tor M N i ≅ Tor N M i :=
-  Classical.choice (tor_left_right M N i)
+  (torSymmetryIsoFamily (R := R)).iso M N i
 
 /-- The Tor symmetry is natural in both variables. -/
 theorem torLeftRightIso_natural {R : Type u} [CommRing R]
@@ -505,8 +532,8 @@ theorem torLeftRightIso_natural {R : Type u} [CommRing R]
     (torLeftRightIso M₁ N₁ i).hom ≫
         torMapFirst (N := M₁) ψ i ≫ torMapSecond N₂ M₁ M₂ φ i =
       torMapFirst (N := N₁) φ i ≫ torMapSecond M₂ N₁ N₂ ψ i ≫
-        (torLeftRightIso M₂ N₂ i).hom := by
-  sorry
+        (torLeftRightIso M₂ N₂ i).hom :=
+  (torSymmetryIsoFamily (R := R)).natural φ ψ i
 
 /-- Tor of finite modules over a Noetherian ring is finite. -/
 theorem tor_finite_of_noetherian {R : Type u} [CommRing R]
@@ -577,10 +604,10 @@ theorem tensorSwitch_two_dimensional_not_identity {k : Type u} [Field k] :
     (tensorSwitch (k := k) (V := Fin 2 → k)).toLinearMap ≠ LinearMap.id := by
   sorry
 
-/- The source's eigenvalue count is recorded as eigenspace dimensions over
-characteristic zero, where the two eigenvalues are distinct. -/
-theorem tensorSwitch_eigenspace_finrank {k : Type u} [Field k] [CharZero k]
-    (n : ℕ) :
+/- The source's eigenvalue count is recorded as eigenspace dimensions when
+the two eigenvalues are distinct. -/
+theorem tensorSwitch_eigenspace_finrank {k : Type u} [Field k]
+    (hchar : (2 : k) ≠ 0) (n : ℕ) :
     Module.finrank k
           (Module.End.eigenspace
             (tensorSwitch (k := k) (V := Fin n → k)).toLinearMap (1 : k)) =

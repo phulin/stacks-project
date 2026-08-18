@@ -934,6 +934,7 @@ private theorem closedSubsetPushforward_unit_stalk_comp
     (closedSubsetPushforward_stalkIso (C := C) hZ
         ((TopCat.Sheaf.pullback C (closedSubsetInclusion Z)).obj G) z).hom =
     (closedSubsetPullbackStalkIso G z).hom := by
+  sorry
   /- Prior attempt (retained after the stalk-comparison proof stopped elaborating):
   let f := closedSubsetInclusion Z
   let eP := closedSubsetPullbackStalkIso G z
@@ -1268,7 +1269,6 @@ private theorem closedSubsetPushforward_unit_stalk_comp
   change m ≫ eS.hom = eP.hom
   exact hcomp
   -/
-  sorry
 /-
   /-
   TODO(Unit32, closed pushforward unit on stalks): the proof below reached the

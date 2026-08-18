@@ -315,7 +315,53 @@ theorem directLimit_ring_flat
       letI : Module (A i) M := Module.compHom M (DirectLimit.Ring.of A f i)
       Module.Flat (A i) M) :
     Module.Flat (DirectLimit A f) M := by
-  sorry
+  classical
+  apply Module.Flat.of_forall_isTrivialRelation
+  intro l c x hcx
+  have hrep : ∀ z : DirectLimit A f, ∃ i a, DirectLimit.Ring.of A f i a = z := by
+    intro z
+    induction z using DirectLimit.induction with
+    | _ i a => exact ⟨i, a, rfl⟩
+  choose i ci hci using fun n => hrep (c n)
+  obtain ⟨j, hj⟩ := Finset.exists_le (Finset.univ.image i)
+  let _ : Module (A j) M := Module.compHom M (DirectLimit.Ring.of A f j)
+  let cj : Fin l → A j := fun n =>
+    f (i n) j (hj (i n) (Finset.mem_image.mpr ⟨n, Finset.mem_univ _, rfl⟩)) (ci n)
+  have hc : ∀ n, DirectLimit.Ring.of A f j (cj n) = c n := by
+    intro n
+    change DirectLimit.Ring.of A f j
+      (f (i n) j (hj (i n) (Finset.mem_image.mpr ⟨n, Finset.mem_univ _, rfl⟩)) (ci n)) = c n
+    rw [DirectLimit.Ring.of_f, hci n]
+  have hcj : ∑ n, cj n • x n = 0 := by
+    calc
+      ∑ n, cj n • x n =
+          ∑ n, (DirectLimit.Ring.of A f (i n) (ci n)) • x n := by
+            apply Finset.sum_congr rfl
+            intro n hn
+            change (DirectLimit.Ring.of A f j (cj n)) • x n =
+              (DirectLimit.Ring.of A f (i n) (ci n)) • x n
+            rw [hc n, hci n]
+      _ = ∑ n, c n • x n := by
+        apply Finset.sum_congr rfl
+        intro n hn
+        rw [hci n]
+      _ = 0 := hcx
+  obtain ⟨k, a, y, hay, ha⟩ :=
+    (Module.Flat.iff_forall_isTrivialRelation.mp (hflat j)) hcj
+  refine ⟨k, fun n m => DirectLimit.Ring.of A f j (a n m), y, ?_, ?_⟩
+  · intro n
+    rw [hay n]
+    apply Finset.sum_congr rfl
+    intro m hm
+    rfl
+  · intro m
+    calc
+      ∑ n, c n * DirectLimit.Ring.of A f j (a n m) =
+          DirectLimit.Ring.of A f j (∑ n, cj n * a n m) := by
+            simp [hc, map_sum, map_mul]
+      _ = 0 := by
+        have hz : ∑ n, cj n * a n m = 0 := ha m
+        simpa [hz] using (map_zero (DirectLimit.Ring.of A f j))
 
 theorem directLimit_ring_baseChange_flat
     {R : Type u} [CommRing R] {ι : Type v} [Preorder ι] [Nonempty ι]
@@ -331,7 +377,11 @@ theorem directLimit_ring_baseChange_flat
       g i j h (r ⊗ₜ[A i] x) = r ⊗ₜ[A j] φ i j h x)
     (hflat : ∀ i, Module.Flat (A i) (M i)) :
     Module.Flat R (DirectLimit (fun i => R ⊗[A i] M i) g) := by
-  sorry
+  have hcan := hcanonical
+  apply directLimit_flat g
+  intro i
+  let _ := hflat i
+  infer_instance
 
 end ColimitsOfRings
 
@@ -341,13 +391,13 @@ theorem flat_base_change
     {R S M : Type*} [CommRing R] [CommRing S] [Algebra R S]
     [AddCommGroup M] [Module R M] (hflat : Module.Flat R M) :
     Module.Flat S (S ⊗[R] M) := by
-  sorry
+  infer_instance
 
 theorem faithfullyFlat_base_change
     {R S M : Type*} [CommRing R] [CommRing S] [Algebra R S]
     [AddCommGroup M] [Module R M] (hflat : Module.FaithfullyFlat R M) :
     Module.FaithfullyFlat S (S ⊗[R] M) := by
-  sorry
+  infer_instance
 
 theorem flatness_descends
     {R S M : Type*} [CommRing R] [CommRing S] [Algebra R S]

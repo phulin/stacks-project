@@ -28,8 +28,6 @@ import Mathlib.RingTheory.RegularLocalRing.Polynomial
 import Mathlib.RingTheory.RootsOfUnity.PrimitiveRoots
 import Mathlib.RingTheory.UniqueFactorizationDomain.Multiplicity
 
-set_option maxHeartbeats 20000000
-
 /-!
 # Exercises, Chapter 1: Algebra
 
@@ -908,42 +906,22 @@ theorem sixVariableQuadratic_quotient_not_mvPolynomial_five
     rfl
   have hc_scalars (r : IsLocalRing.ResidueField L) (x : m.Cotangent) :
       c ((eK.symm r) • x) = r • c x := by
-    obtain ⟨x, rfl⟩ := m.toCotangent_surjective x
     let a : k := eK.symm r
-    have hxL : algebraMap Q L (x : Q) ∈ IsLocalRing.maximalIdeal L := by
-      rw [← IsLocalization.AtPrime.map_eq_maximalIdeal m L]
-      exact Ideal.mem_map_of_mem (algebraMap Q L) x.2
-    have hsource : a • m.toCotangent (⟨x, x.2⟩ : m) =
-        algebraMap k Q a • m.toCotangent (⟨x, x.2⟩ : m) := by
-      exact (IsScalarTower.algebraMap_smul Q a
-        (m.toCotangent (⟨x, x.2⟩ : m))).symm
-    have har : r = Ideal.Quotient.mk (IsLocalRing.maximalIdeal L)
-        (algebraMap k L a) := by
-      rw [← heK_alg a]
-      exact (eK.apply_symm_apply r).symm
-    calc
-      c (a • m.toCotangent (⟨x, x.2⟩ : m)) =
-          c (algebraMap k Q a • m.toCotangent (⟨x, x.2⟩ : m)) := by rw [hsource]
-      _ = algebraMap k Q a • c (m.toCotangent (⟨x, x.2⟩ : m)) := by
-        exact map_smul c (algebraMap k Q a) _
-      _ = algebraMap k Q a •
-          (IsLocalRing.maximalIdeal L).toCotangent
-            ⟨algebraMap Q L (x : Q), hxL⟩ := by
-        rw [hc_to]
-      _ = algebraMap Q L (algebraMap k Q a) •
-          (IsLocalRing.maximalIdeal L).toCotangent
-            ⟨algebraMap Q L (x : Q), hxL⟩ := by
-        exact (IsScalarTower.algebraMap_smul L _ _).symm
-      _ = algebraMap k L a •
-          (IsLocalRing.maximalIdeal L).toCotangent
-            ⟨algebraMap Q L (x : Q), hxL⟩ := by
-        rw [IsScalarTower.algebraMap_eq k Q L, RingHom.comp_apply]
-      _ = (algebraMap L (IsLocalRing.ResidueField L) (algebraMap k L a)) •
-          (IsLocalRing.maximalIdeal L).toCotangent
-            ⟨algebraMap Q L (x : Q), hxL⟩ := by
-        exact (IsScalarTower.algebraMap_smul L _ _).symm
-      _ = r • c (m.toCotangent (⟨x, x.2⟩ : m)) := by
-        rw [IsLocalRing.ResidueField.algebraMap_eq, IsLocalRing.residue_def, har, hc_to]
+    rw [show a • x = algebraMap k Q a • x from
+      (IsScalarTower.algebraMap_smul Q a x).symm]
+    rw [map_smul]
+    rw [show algebraMap k Q a • c x =
+        algebraMap Q L (algebraMap k Q a) • c x from
+      (IsScalarTower.algebraMap_smul L (algebraMap k Q a) (c x)).symm]
+    rw [← IsScalarTower.algebraMap_apply k Q L]
+    rw [show algebraMap k L a • c x =
+        algebraMap L (IsLocalRing.ResidueField L) (algebraMap k L a) • c x from
+      (IsScalarTower.algebraMap_smul
+        (IsLocalRing.ResidueField L) (algebraMap k L a) (c x)).symm]
+    rw [IsLocalRing.ResidueField.algebraMap_eq, IsLocalRing.residue_def]
+    rw [show Ideal.Quotient.mk (IsLocalRing.maximalIdeal L)
+        (algebraMap k L a) = r by
+      rw [← heK_alg a, eK.apply_symm_apply]]
   have hlindependent : LinearIndependent
       (IsLocalRing.ResidueField L)
       (fun j => c (m.toCotangent (xi j))) := by

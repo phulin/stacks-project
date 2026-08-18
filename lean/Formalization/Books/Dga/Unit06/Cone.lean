@@ -69,6 +69,14 @@ structure DgmConeActionData
     tensorHomComplex action (𝟙 A.complex) ≫ action =
       (HomologicalComplex.associator (dgmConeComplex f) A.complex A.complex).hom ≫
         tensorHomComplex (𝟙 dgmConeComplex f) A.multiplication ≫ action
+  inclusion_action :
+    L.action ≫ CochainComplex.mappingCone.inr f.underlying =
+      tensorHomComplex (CochainComplex.mappingCone.inr f.underlying)
+          (𝟙 A.complex) ≫ action
+  projection_action :
+    action ≫ (CochainComplex.mappingCone.triangle f.underlying).mor₃ =
+      tensorHomComplex (CochainComplex.mappingCone.triangle f.underlying).mor₃
+          (𝟙 A.complex) ≫ dgmShiftAction K (1 : ℤ)
 
 /-- The diagonal action on the mapping cone exists and satisfies the module
 object laws. -/
@@ -138,7 +146,7 @@ noncomputable def dgmConeInclusionHom
     {K L : DifferentialGradedModule A}
     (f : DifferentialGradedModuleHom K L) :
     DifferentialGradedModuleHom L (dgmCone f) :=
-  ⟨dgmConeInclusion f, by sorry⟩
+  ⟨dgmConeInclusion f, (dgmConeActionData f).inclusion_action⟩
 
 /-- The canonical projection as a differential graded module morphism. -/
 noncomputable def dgmConeProjectionHom
@@ -147,7 +155,7 @@ noncomputable def dgmConeProjectionHom
     {K L : DifferentialGradedModule A}
     (f : DifferentialGradedModuleHom K L) :
     DifferentialGradedModuleHom (dgmCone f) (dgmShift K (1 : ℤ)) :=
-  ⟨dgmConeProjection f, by sorry⟩
+  ⟨dgmConeProjection f, (dgmConeActionData f).projection_action⟩
 
 /-- The source's cone triangle data. -/
 structure DgmConeTriangleData
@@ -173,6 +181,22 @@ noncomputable def dgmConeTriangleData
 
 /-! ## Functoriality -/
 
+/-- A compatible homotopy induces a morphism of differential graded module
+cones. -/
+theorem dgmConeMapOfHomotopy_exists
+    {R : Type u} [CommRing R]
+    {A : DifferentialGradedAlgebra R}
+    {K₁ L₁ K₂ L₂ : DifferentialGradedModule A}
+    {f₁ : DifferentialGradedModuleHom K₁ L₁}
+    {f₂ : DifferentialGradedModuleHom K₂ L₂}
+    {a : DifferentialGradedModuleHom K₁ K₂}
+    {b : DifferentialGradedModuleHom L₁ L₂}
+    (H : DifferentialGradedModuleHomotopy
+      (differentialGradedModuleHomComp f₁ b)
+      (differentialGradedModuleHomComp a f₂)) :
+    Nonempty (DifferentialGradedModuleHom (dgmCone f₁) (dgmCone f₂)) := by
+  sorry
+
 /-- The cone map associated to a chosen compatible homotopy. -/
 noncomputable def dgmConeMapOfHomotopy
     {R : Type u} [CommRing R]
@@ -182,10 +206,11 @@ noncomputable def dgmConeMapOfHomotopy
     {f₂ : DifferentialGradedModuleHom K₂ L₂}
     {a : DifferentialGradedModuleHom K₁ K₂}
     {b : DifferentialGradedModuleHom L₁ L₂}
-    (H : Homotopy (f₁.underlying ≫ b.underlying)
-      (a.underlying ≫ f₂.underlying)) :
+    (H : DifferentialGradedModuleHomotopy
+      (differentialGradedModuleHomComp f₁ b)
+      (differentialGradedModuleHomComp a f₂)) :
     DifferentialGradedModuleHom (dgmCone f₁) (dgmCone f₂) :=
-  ⟨CochainComplex.mappingCone.mapOfHomotopy H, by sorry⟩
+  Classical.choice (dgmConeMapOfHomotopy_exists H)
 
 /-- A morphism of cone triangles in the differential graded module homotopy
 category. -/
@@ -198,6 +223,11 @@ structure DgmConeTriangleMorphism
     {a : DifferentialGradedModuleHom K₁ K₂}
     {b : DifferentialGradedModuleHom L₁ L₂}
     (c : DifferentialGradedModuleHom (dgmCone f₁) (dgmCone f₂)) where
+  comm_first :
+    (differentialGradedModuleHomotopyQuotient A).map f₁ ≫
+        (differentialGradedModuleHomotopyQuotient A).map b =
+      (differentialGradedModuleHomotopyQuotient A).map a ≫
+        (differentialGradedModuleHomotopyQuotient A).map f₂
   comm_inclusion :
     (differentialGradedModuleHomotopyQuotient A).map
           (dgmConeInclusionHom f₁) ≫
@@ -230,6 +260,8 @@ theorem dgmCone_functorial
       (differentialGradedModuleHomComp f₁ b)) :
     ∃ c : DifferentialGradedModuleHom (dgmCone f₁) (dgmCone f₂),
       DgmConeTriangleMorphism (a := a) (b := b) c := by
-  sorry
+  rcases hcomm with ⟨H⟩
+  rcases differentialGradedModuleHomotopy_symm H with ⟨H'⟩
+  exact ⟨dgmConeMapOfHomotopy H', by sorry⟩
 
 end Formalization.Books.Dga.Unit06

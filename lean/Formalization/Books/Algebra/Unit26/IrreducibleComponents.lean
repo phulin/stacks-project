@@ -112,8 +112,6 @@ theorem irreducibleClosedSets_through_prime_correspond_localization
         apply Subtype.ext
         apply PrimeSpectrum.ext
         dsimp
-        change PrimeSpectrum.vanishingIdeal
-            (PrimeSpectrum.zeroLocus (q.1.asIdeal : Set R)) = q.1.asIdeal
         rw [PrimeSpectrum.vanishingIdeal_zeroLocus_eq_radical]
         exact q.1.2.radical
       right_inv := fun Z => by
@@ -144,7 +142,10 @@ theorem irreducibleComponents_through_prime_correspond_minimalPrimes_localizatio
                 rw [(Formalization.Books.Topology.Unit08.irreducibleComponent_isClosed C.2.1).closure_eq]
                 exact C.2.2⟩,
           (PrimeSpectrum.vanishingIdeal_mem_minimalPrimes).2 <|
-            (Formalization.Books.Topology.Unit08.irreducibleComponent_isClosed C.2.1).closure_eq ▸ C.2.1⟩
+            by
+              simpa only [
+                (Formalization.Books.Topology.Unit08.irreducibleComponent_isClosed
+                  C.2.1).closure_eq] using C.2.1⟩
       invFun := fun q =>
         ⟨PrimeSpectrum.zeroLocus (q.1.1.asIdeal : Set R),
           (PrimeSpectrum.zeroLocus_ideal_mem_irreducibleComponents).2 <| by
@@ -156,6 +157,7 @@ theorem irreducibleComponents_through_prime_correspond_minimalPrimes_localizatio
         exact (PrimeSpectrum.zeroLocus_vanishingIdeal_eq_closure C.1).trans
           (Formalization.Books.Topology.Unit08.irreducibleComponent_isClosed C.2.1).closure_eq
       right_inv := fun q => by
+        apply Subtype.ext
         apply Subtype.ext
         apply PrimeSpectrum.ext
         dsimp
@@ -171,12 +173,28 @@ theorem irreducibleComponents_through_prime_correspond_minimalPrimes_localizatio
         ⟨o.symm q.1, by
           have h := IsLocalization.minimalPrimes_map p.asIdeal.primeCompl
             (Localization.AtPrime p.asIdeal) (⊥ : Ideal R)
-          simpa [o] using (show q.1.asIdeal ∈ minimalPrimes R from q.2)⟩
+          have h' : minimalPrimes (Localization.AtPrime p.asIdeal) =
+              Ideal.under R ⁻¹' minimalPrimes R := by
+            simpa only [Ideal.map_bot] using h
+          rw [h']
+          change Ideal.under R (o.symm q.1).asIdeal ∈ minimalPrimes R
+          have ho : Ideal.under R (o.symm q.1).asIdeal = q.1.1.asIdeal := by
+            change (o (o.symm q.1)).1.asIdeal = q.1.1.asIdeal
+            rw [o.apply_symm_apply]
+          rw [ho]
+          exact q.2⟩
       invFun := fun q =>
         ⟨o q.1, by
           have h := IsLocalization.minimalPrimes_map p.asIdeal.primeCompl
             (Localization.AtPrime p.asIdeal) (⊥ : Ideal R)
-          simpa [o] using (show q.1.asIdeal ∈ minimalPrimes R from ?_)⟩
+          have h' : minimalPrimes (Localization.AtPrime p.asIdeal) =
+              Ideal.under R ⁻¹' minimalPrimes R := by
+            simpa only [Ideal.map_bot] using h
+          have hq : q.1.asIdeal ∈ Ideal.under R ⁻¹' minimalPrimes R := by
+            rw [← h']
+            exact q.2
+          change Ideal.under R q.1.asIdeal ∈ minimalPrimes R
+          exact hq⟩
       left_inv := fun q => by simp [o]
       right_inv := fun q => by simp [o] }
   exact ⟨e.trans m⟩

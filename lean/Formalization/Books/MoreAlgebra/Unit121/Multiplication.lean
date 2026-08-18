@@ -75,7 +75,34 @@ theorem finiteLength_restrictScalars
     {M : Type v} [AddCommGroup M] [Module S M]
     (hM : IsFiniteLength S M) :
     @IsFiniteLength R _ M _ (Module.compHom M f) := by
-  sorry
+  let _ : Algebra R S := f.toAlgebra
+  let _ : Module R M := Module.restrictScalars R S M
+  let _ : IsScalarTower R S M := IsScalarTower.restrictScalars R S M
+  apply Module.length_ne_top_iff.mp
+  rw [IsLocalRing.length_restrictScalars R S M]
+  apply WithTop.mul_ne_top
+  · exact Module.length_ne_top_iff.mpr hM
+  · have hmodule : fieldExtensionModule (residueAlgebra f) =
+        (inferInstance : Module (IsLocalRing.ResidueField R) (IsLocalRing.ResidueField S)) := by
+      apply Module.ext'
+      intro c x
+      obtain ⟨r, rfl⟩ := IsLocalRing.residue_surjective c
+      rfl
+    have hfiniteCustom :
+        @Module.Finite (IsLocalRing.ResidueField R) (IsLocalRing.ResidueField S)
+          _ _ (fieldExtensionModule (residueAlgebra f)) := E.finite
+    have hfinite : Module.Finite (IsLocalRing.ResidueField R) (IsLocalRing.ResidueField S) := by
+      change @Module.Finite (IsLocalRing.ResidueField R) (IsLocalRing.ResidueField S)
+        _ _ (inferInstance : Module (IsLocalRing.ResidueField R) (IsLocalRing.ResidueField S))
+      exact hmodule ▸ hfiniteCustom
+    have hlen :
+        @Module.length (IsLocalRing.ResidueField R) (IsLocalRing.ResidueField S)
+          _ _ (inferInstance : Module (IsLocalRing.ResidueField R) (IsLocalRing.ResidueField S)) =
+          Module.finrank (IsLocalRing.ResidueField R) (IsLocalRing.ResidueField S) := by
+      exact @Module.length_eq_finrank (IsLocalRing.ResidueField R) (IsLocalRing.ResidueField S)
+        _ _ _ hfinite
+    rw [hlen]
+    exact ENat.natCast_ne_top _
 
 /-- The scalar-restriction length is the residue-field degree times the original length. -/
 theorem finiteLength_restrictScalars_length

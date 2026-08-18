@@ -48,7 +48,10 @@ theorem finiteLength_flat_baseChange
         (S ⧸ (IsLocalRing.maximalIdeal R).map (algebraMap R S)) < ⊤)
     (X : FiniteLengthEndomorphism R) :
     IsFiniteLength S (S ⊗[R] X.carrier) := by
-  sorry
+  apply Module.length_ne_top_iff.mp
+  rw [IsLocalRing.length_baseChange R S X.carrier]
+  exact WithTop.mul_ne_top (Module.length_ne_top_iff.mpr X.finite_length)
+    (ne_of_lt _hfiber)
 
 noncomputable def fiberLengthNat
     {R S : Type*} [CommRing R] [CommRing S]

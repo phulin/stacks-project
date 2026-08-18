@@ -1,4 +1,7 @@
 import Mathlib.AlgebraicTopology.SimplexCategory.GeneratorsRelations.Basic
+import Mathlib.AlgebraicTopology.SimplexCategory.ToMkOne
+import Mathlib.Algebra.BigOperators.Intervals
+import Mathlib.Order.Interval.Finset.Fin
 import Mathlib.SetTheory.Cardinal.NatCard
 
 /-!
@@ -31,19 +34,104 @@ on the source indices.
 
 theorem hom_card_zero_to (n : ℕ) :
     Nat.card (SimplexCategory.mk 0 ⟶ SimplexCategory.mk n) = n + 1 := by
-  sorry
+  let e : Fin (n + 1) ≃ (SimplexCategory.mk 0 ⟶ SimplexCategory.mk n) :=
+    Equiv.ofBijective (SimplexCategory.const (SimplexCategory.mk 0) (SimplexCategory.mk n)) (by
+      constructor
+      · intro i j h
+        have h' := congrArg (fun f => f.toOrderHom 0) h
+        simpa [SimplexCategory.const_apply] using h'
+      · intro f
+        obtain ⟨i, hi⟩ := SimplexCategory.exists_eq_const_of_zero f
+        exact ⟨i, hi.symm⟩)
+  simpa using (Nat.card_congr e).symm
 
 theorem hom_card_to_zero (n : ℕ) :
     Nat.card (SimplexCategory.mk n ⟶ SimplexCategory.mk 0) = 1 := by
-  sorry
+  let e : Fin 1 ≃ (SimplexCategory.mk n ⟶ SimplexCategory.mk 0) :=
+    Equiv.ofBijective (SimplexCategory.const (SimplexCategory.mk n) (SimplexCategory.mk 0)) (by
+      constructor
+      · intro i j h
+        exact Subsingleton.elim i j
+      · intro f
+        refine ⟨0, ?_⟩
+        exact (SimplexCategory.eq_const_to_zero f).symm)
+  exact (Nat.card_congr e).symm.trans (Nat.card_fin 1)
 
 theorem hom_card_one_to (n : ℕ) :
     Nat.card (SimplexCategory.mk 1 ⟶ SimplexCategory.mk n) = (n + 1) * (n + 2) / 2 := by
-  sorry
+  let P := {p : Fin (n + 1) × Fin (n + 1) // p.1 ≤ p.2}
+  let e : (SimplexCategory.mk 1 ⟶ SimplexCategory.mk n) ≃ P :=
+    { toFun := fun f =>
+        ⟨(f.toOrderHom 0, f.toOrderHom 1),
+          f.toOrderHom.monotone (by decide : (0 : Fin 2) ≤ 1)⟩
+      invFun := fun p => SimplexCategory.mkOfLe p.1.1 p.1.2 p.2
+      left_inv := by
+        intro f
+        apply SimplexCategory.Hom.ext_one_left
+        · rfl
+        · rfl
+      right_inv := by
+        rintro ⟨⟨i, j⟩, h⟩
+        rfl }
+  let e2 : P ≃ Σ i : Fin (n + 1), {j : Fin (n + 1) // i ≤ j} :=
+    { toFun := fun p => ⟨p.1.1, ⟨p.1.2, p.2⟩⟩
+      invFun := fun q => ⟨(q.1, q.2.1), q.2.2⟩
+      left_inv := by rintro ⟨⟨i, j⟩, h⟩; rfl
+      right_inv := by rintro ⟨i, ⟨j, h⟩⟩; rfl }
+  have hp : Fintype.card P =
+      (Finset.univ.sum fun i : Fin (n + 1) =>
+        Fintype.card {j : Fin (n + 1) // i ≤ j}) := by
+    rw [Fintype.card_congr e2, Fintype.card_sigma]
+  have hi (i : Fin (n + 1)) :
+      Fintype.card {j : Fin (n + 1) // i ≤ j} = n + 1 - i := by
+    rw [Fintype.card_subtype]
+    have hfin : (Finset.univ.filter (fun x : Fin (n + 1) => i ≤ x)) = Finset.Ici i := by
+      ext j
+      simp
+    rw [hfin]
+    exact Fin.card_Ici i
+  have hsum :
+      (Finset.univ.sum (fun i : Fin (n + 1) => n + 1 - i.val)) =
+        (n + 1) * (n + 2) / 2 := by
+    rw [Fin.sum_univ_eq_sum_range]
+    rw [show (Finset.range (n + 1)).sum (fun i => n + 1 - i) =
+        (Finset.range (n + 1)).sum (fun i => (n - i) + 1) by
+          apply Finset.sum_congr rfl
+          intro i hi
+          have hi' : i < n + 1 := Finset.mem_range.mp hi
+          congr 1
+          omega]
+    rw [Finset.sum_add_distrib]
+    have hreflect :
+        (Finset.range (n + 1)).sum (fun i => n - i) =
+          (Finset.range (n + 1)).sum (fun i => i) := by
+      simpa using (Finset.sum_range_reflect (fun i => i) (n + 1))
+    rw [hreflect, Finset.sum_range_id]
+    simp only [Finset.sum_const, Finset.card_range, Nat.nsmul_eq_mul, Nat.mul_one]
+    calc
+      (n + 1) * n / 2 + (n + 1) =
+          ((n + 1) * n + 2 * (n + 1)) / 2 := by
+            rw [Nat.add_div_of_dvd_left (dvd_mul_right 2 (n + 1))]
+            simp
+      _ = (n + 1) * (n + 2) / 2 := by
+        apply congrArg (fun x : ℕ => x / 2)
+        conv_rhs => rw [Nat.mul_add]
+        simp [Nat.mul_comm]
+  calc
+    Nat.card (SimplexCategory.mk 1 ⟶ SimplexCategory.mk n) = Fintype.card P := by
+      simpa only [Nat.card_eq_fintype_card] using (Nat.card_congr e)
+    _ = Finset.univ.sum (fun i : Fin (n + 1) =>
+        Fintype.card {j : Fin (n + 1) // i ≤ j}) := hp
+    _ = Finset.univ.sum (fun i : Fin (n + 1) => n + 1 - i.val) := by
+      apply Finset.sum_congr rfl
+      intro i hi'
+      exact hi i
+    _ = (n + 1) * (n + 2) / 2 := hsum
 
 theorem hom_card_to_one (n : ℕ) :
     Nat.card (SimplexCategory.mk n ⟶ SimplexCategory.mk 1) = n + 2 := by
-  sorry
+  let e := SimplexCategory.toMk₁Equiv (n := n)
+  exact (Nat.card_congr e).symm.trans (Nat.card_fin (n + 2))
 
 /-!
 The factorization assertion in the source is represented using Mathlib's

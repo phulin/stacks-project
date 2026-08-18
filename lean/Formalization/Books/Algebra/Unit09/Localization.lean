@@ -263,9 +263,9 @@ theorem localization_module_category_equivalence {R : Type u} [CommRing R]
         localizationModuleProperty S
           ((ModuleCat.restrictScalars (algebraMap R (localization S))).obj N) := by
     intro N s
-    letI : Module R (N : Type u) :=
+    let : Module R (N : Type u) :=
       Module.compHom (N : Type u) (algebraMap R (localization S))
-    letI : IsScalarTower R (localization S) (N : Type u) :=
+    let : IsScalarTower R (localization S) (N : Type u) :=
       IsScalarTower.of_compHom R (localization S) (N : Type u)
     let hloc : IsLocalizedModule S
         (LinearMap.id : (N : Type u) →ₗ[R] (N : Type u)) :=
@@ -331,8 +331,7 @@ theorem localization_module_category_equivalence {R : Type u} [CommRing R]
             change e0 ((Localization.mk (S := S) r (1 : S) : localization S) •
               LocalizedModule.mk m s) = r • e0 (LocalizedModule.mk m s)
             rw [LocalizedModule.mk_smul_mk (S := S) r m 1 s]
-            simpa [← LocalizedModule.smul'_mk] using
-              e0.map_smul r (LocalizedModule.mk m s) }
+            simp [← LocalizedModule.smul'_mk] }
     apply (localizationModuleProperty S).isoMk
     exact LinearEquiv.toModuleIso (LinearEquiv.ofBijective eMap e0.bijective)
   let unit : 𝟭 (ModuleCat.{u} (localization S)) ≅ F ⋙ G :=
@@ -341,10 +340,10 @@ theorem localization_module_category_equivalence {R : Type u} [CommRing R]
       have h :
           (unitComponent X).inv ≫ (𝟭 (ModuleCat.{u} (localization S))).map f =
             (F ⋙ G).map f ≫ (unitComponent Y).inv := by
-        letI : IsLocalizedModule S
+        let : IsLocalizedModule S
             (LinearMap.id : (F.obj X).obj →ₗ[R] (F.obj X).obj) :=
           localized_id (F.obj X)
-        letI : IsLocalizedModule S
+        let : IsLocalizedModule S
             (LinearMap.id : (F.obj Y).obj →ₗ[R] (F.obj Y).obj) :=
           localized_id (F.obj Y)
         apply ModuleCat.hom_ext
@@ -401,10 +400,10 @@ theorem localization_module_category_equivalence {R : Type u} [CommRing R]
       ext x
       change localizedModule S (X.obj : Type u) at x
       dsimp [counitComponent, F, G, F₀]
-      letI : IsLocalizedModule S
+      let : IsLocalizedModule S
           (LinearMap.id : (X.obj : Type u) →ₗ[R] (X.obj : Type u)) :=
         localized_id X
-      letI : IsLocalizedModule S
+      let : IsLocalizedModule S
           (LinearMap.id : (Y.obj : Type u) →ₗ[R] (Y.obj : Type u)) :=
         localized_id Y
       have hmapid :
@@ -839,7 +838,7 @@ theorem localizedModule_is_colimit_of_stages {R : Type u} [CommRing R]
       (x : G f) :
       directLimitMap (Module.DirectLimit.of R (LocalizationIndex S) G transition f x) =
         stageMap' f x := by
-    simpa only [directLimitMap, directLimit, G, transition,
+      simp only [directLimitMap, directLimit, G, transition,
       Module.DirectLimit.lift_of]
   let sourceEq (f : LocalizationIndex S) :
       ModuleCat.of R (localizationStage S M f) =
@@ -983,7 +982,7 @@ theorem localizedModule_is_colimit_of_stages {R : Type u} [CommRing R]
           apply LocalizedModule.mk_eq.mpr
           refine ⟨⟨(g.denominator : R),
             (Submonoid.mem_powers_iff _ _).2 ⟨1, by simp⟩⟩, ?_⟩
-          simp only [one_smul, Submonoid.smul_def, mul_zero, smul_zero]
+          simp only [one_smul, Submonoid.smul_def]
           have hu' : (u : R) • m = 0 := by
             simpa only [Submonoid.smul_def, one_smul, smul_zero] using hu
           simpa [g, smul_smul, mul_assoc, mul_comm, mul_left_comm] using

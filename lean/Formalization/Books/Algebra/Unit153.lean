@@ -1,0 +1,597 @@
+import Formalization.Books.Algebra.Unit152.LocalStructureUnramifiedRingMaps
+import Formalization.Books.Algebra.Unit122.QuasiFinite
+import Formalization.Books.Algebra.Unit127.ColimitsAndFinitePresentation
+import Formalization.Books.Algebra.Unit92.CountablyGeneratedMittagLeffler
+import Mathlib.FieldTheory.IsSepClosed
+import Mathlib.FieldTheory.PurelyInseparable.Basic
+import Mathlib.RingTheory.Henselian
+import Mathlib.RingTheory.Localization.AtPrime.Basic
+import Mathlib.RingTheory.RingHom.QuasiFinite
+import Mathlib.RingTheory.TensorProduct.Basic
+
+/-!
+# Commutative Algebra, Chapter 153: Henselian local rings
+
+This file follows the three sections of the chapter.  Mathlib's
+`HenselianLocalRing` is the canonical henselian-local-ring predicate.  The
+chapter-specific interfaces below retain the residue-field, étale-colimit,
+decomposition, and functorial data that occur in the source.
+-/
+
+namespace Formalization.Books.Algebra.Unit153
+
+open CategoryTheory
+open CategoryTheory.Limits
+open Formalization.Books.Algebra.Unit127
+open Formalization.Books.Algebra.Unit88
+open Polynomial
+open Set
+open scoped TensorProduct
+
+noncomputable section
+
+universe u v
+
+/-- The maximal point of a local ring. -/
+def maximalPrime (R : Type u) [CommRing R] [IsLocalRing R] : PrimeSpectrum R :=
+  ⟨IsLocalRing.maximalIdeal R, inferInstance⟩
+
+/-! ## Henselian local rings -/
+
+/- Mathlib already provides the definition and its root-lifting API. -/
+abbrev IsHenselian (R : Type u) [CommRing R] [IsLocalRing R] : Prop :=
+  HenselianLocalRing R
+
+/-- A strictly henselian local ring is henselian and has separably closed
+residue field. -/
+class StrictlyHenselianLocalRing (R : Type u) [CommRing R]
+    extends HenselianLocalRing R where
+  separablyClosed : IsSepClosed (IsLocalRing.ResidueField R)
+
+/-- Reduction of a polynomial to the residue field of a local ring. -/
+def residuePolynomial (R : Type u) [CommRing R] [IsLocalRing R]
+    (f : Polynomial R) : Polynomial (IsLocalRing.ResidueField R) :=
+  f.map (IsLocalRing.residue R)
+
+/-- The source's “simple root” condition. -/
+def IsSimpleResidueRoot (R : Type u) [CommRing R] [IsLocalRing R]
+    (f : Polynomial R) (a₀ : IsLocalRing.ResidueField R) : Prop :=
+  (residuePolynomial R f).IsRoot a₀ ∧
+    (residuePolynomial R f).derivative.eval a₀ ≠ 0
+
+/-- The root-lifting formulation used in the definition of a henselian local
+ring.  It is definitionally expressed using Mathlib's residue map. -/
+def HenselianRootLifting (R : Type u) [CommRing R] [IsLocalRing R] : Prop :=
+  ∀ f : Polynomial R, f.Monic → ∀ a₀ : IsLocalRing.ResidueField R,
+    IsSimpleResidueRoot R f a₀ →
+      ∃ a : R, f.IsRoot a ∧ IsLocalRing.residue R a = a₀
+
+theorem henselian_iff_root_lifting
+    (R : Type u) [CommRing R] [IsLocalRing R] :
+    List.TFAE [IsHenselian R, HenselianRootLifting R] := by
+  sorry
+
+/-- The uniqueness assertion for a lift of a simple root. -/
+theorem root_lift_unique
+    {R : Type u} [CommRing R] [IsLocalRing R]
+    (f : Polynomial R) {a b : R}
+    (ha : f.eval a = 0) (hb : f.eval b = 0)
+    (hab : a - b ∈ IsLocalRing.maximalIdeal R)
+    (hderiv : f.derivative.eval a ∉ IsLocalRing.maximalIdeal R) :
+    a = b := by
+  sorry
+
+/-- Lifting a factorization of the residue polynomial, with the monic
+hypothesis from the corresponding item in the source. -/
+def MonicFactorizationLift (R : Type u) [CommRing R] [IsLocalRing R] : Prop :=
+  ∀ f : Polynomial R, f.Monic → ∀ g₀ h₀ : Polynomial (IsLocalRing.ResidueField R),
+    residuePolynomial R f = g₀ * h₀ → IsCoprime g₀ h₀ →
+      ∃ g h : Polynomial R,
+        f = g * h ∧ residuePolynomial R g = g₀ ∧ residuePolynomial R h = h₀
+
+/-- The degree-preserving monic factorization assertion. -/
+def MonicDegreeFactorizationLift (R : Type u) [CommRing R] [IsLocalRing R] : Prop :=
+  ∀ f : Polynomial R, f.Monic → ∀ g₀ h₀ : Polynomial (IsLocalRing.ResidueField R),
+    residuePolynomial R f = g₀ * h₀ → IsCoprime g₀ h₀ →
+      ∃ g h : Polynomial R,
+        f = g * h ∧ residuePolynomial R g = g₀ ∧ residuePolynomial R h = h₀ ∧
+          g.natDegree = g₀.natDegree
+
+/-- The unrestricted factorization assertion. -/
+def FactorizationLift (R : Type u) [CommRing R] [IsLocalRing R] : Prop :=
+  ∀ f : Polynomial R, ∀ g₀ h₀ : Polynomial (IsLocalRing.ResidueField R),
+    residuePolynomial R f = g₀ * h₀ → IsCoprime g₀ h₀ →
+      ∃ g h : Polynomial R,
+        f = g * h ∧ residuePolynomial R g = g₀ ∧ residuePolynomial R h = h₀
+
+/-- The unrestricted, degree-preserving factorization assertion. -/
+def DegreeFactorizationLift (R : Type u) [CommRing R] [IsLocalRing R] : Prop :=
+  ∀ f : Polynomial R, ∀ g₀ h₀ : Polynomial (IsLocalRing.ResidueField R),
+    residuePolynomial R f = g₀ * h₀ → IsCoprime g₀ h₀ →
+      ∃ g h : Polynomial R,
+        f = g * h ∧ residuePolynomial R g = g₀ ∧ residuePolynomial R h = h₀ ∧
+          g.natDegree = g₀.natDegree
+
+/-- A residue-field identification at an étale point.  The two displayed
+equalities are the exact condition that the map is over the residue field of
+the base local ring. -/
+structure ResidueFieldIdentification
+    {R A S : Type u} [CommRing R] [CommRing A] [CommRing S]
+    [Algebra R A] [Algebra R S] [IsLocalRing R] [IsLocalRing S]
+    (q : PrimeSpectrum A) (hq : q.asIdeal.comap (algebraMap R A) =
+      IsLocalRing.maximalIdeal R) where
+  map : q.asIdeal.ResidueField →+* IsLocalRing.ResidueField S
+  over_base : ∀ r : R,
+    map (algebraMap (A ⧸ q.asIdeal) q.asIdeal.ResidueField
+      (Ideal.Quotient.mk q.asIdeal (algebraMap R A r))) =
+      IsLocalRing.residue S (algebraMap R S r)
+
+/-- The étale retraction assertion in the characterization lemma. -/
+def EtaleRetractionProperty (R : Type u) [CommRing R] [IsLocalRing R] : Prop :=
+  ∀ {A : Type u} [CommRing A] [Algebra R A]
+    (hA : Algebra.Etale R A) (q : PrimeSpectrum A)
+    (hq : q.asIdeal.comap (algebraMap R A) = IsLocalRing.maximalIdeal R)
+    (τ : ResidueFieldIdentification (R := R) q hq),
+    ∃ f : A →ₐ[R] R,
+      PrimeSpectrum.comap f.toRingHom (maximalPrime R) = q ∧
+        ∀ a : A, τ.map (algebraMap (A ⧸ q.asIdeal) q.asIdeal.ResidueField
+          (Ideal.Quotient.mk q.asIdeal a)) =
+          IsLocalRing.residue R (f a)
+
+/-- The unique version of the étale retraction assertion. -/
+def UniqueEtaleRetractionProperty (R : Type u) [CommRing R] [IsLocalRing R] : Prop :=
+  ∀ {A : Type u} [CommRing A] [Algebra R A]
+    (hA : Algebra.Etale R A) (q : PrimeSpectrum A)
+    (hq : q.asIdeal.comap (algebraMap R A) = IsLocalRing.maximalIdeal R)
+    (τ : ResidueFieldIdentification (R := R) q hq),
+    ∃! f : A →ₐ[R] R,
+      PrimeSpectrum.comap f.toRingHom (maximalPrime R) = q ∧
+        ∀ a : A, τ.map (algebraMap (A ⧸ q.asIdeal) q.asIdeal.ResidueField
+          (Ideal.Quotient.mk q.asIdeal a)) =
+          IsLocalRing.residue R (f a)
+
+/-- The product decomposition data for a finite algebra over a local ring. -/
+structure FiniteLocalProductData
+    (R S : Type u) [CommRing R] [CommRing S] [Algebra R S] where
+  n : ℕ
+  factor : Fin n → Type u
+  [commRingFactor : ∀ i, CommRing (factor i)]
+  [algebraFactor : ∀ i, Algebra R (factor i)]
+  [localFactor : ∀ i, IsLocalRing (factor i)]
+  [henselianFactor : ∀ i, HenselianLocalRing (factor i)]
+  finiteFactor : ∀ i, RingHom.Finite (algebraMap R (factor i))
+  decomposition : Nonempty (S ≃+* (∀ i, factor i))
+
+/-- A finite-index product of local algebras. -/
+structure FiniteProductData
+    (R S : Type u) [CommRing R] [CommRing S] [Algebra R S] where
+  n : ℕ
+  factor : Fin n → Type u
+  [commRingFactor : ∀ i, CommRing (factor i)]
+  [algebraFactor : ∀ i, Algebra R (factor i)]
+  [localFactor : ∀ i, IsLocalRing (factor i)]
+  decomposition : Nonempty (S ≃+* (∀ i, factor i))
+
+/-- An arbitrary product decomposition of a finite algebra. -/
+structure ProductData
+    (R S : Type u) [CommRing R] [CommRing S] [Algebra R S] where
+  index : Type u
+  factor : index → Type u
+  [commRingFactor : ∀ i, CommRing (factor i)]
+  [algebraFactor : ∀ i, Algebra R (factor i)]
+  decomposition : Nonempty (S ≃+* (∀ i, factor i))
+
+/-- The “finite algebra is a finite product of local rings” assertion. -/
+def FiniteLocalProductProperty (R : Type u) [CommRing R] [IsLocalRing R] : Prop :=
+  ∀ {S : Type u} [CommRing S] [Algebra R S],
+    RingHom.Finite (algebraMap R S) →
+      Nonempty (FiniteProductData R S)
+
+/-- The unrestricted product assertion in item (9). -/
+def FiniteProductProperty (R : Type u) [CommRing R] [IsLocalRing R] : Prop :=
+  ∀ {S : Type u} [CommRing S] [Algebra R S],
+    RingHom.Finite (algebraMap R S) →
+      Nonempty (ProductData R S)
+
+/-- Decomposition data for the finite-type “finite part times non-quasi-finite
+part” assertions. -/
+structure FiniteTypePartData
+    (R S : Type u) [CommRing R] [CommRing S] [IsLocalRing R] [Algebra R S] where
+  A : Type u
+  [commRingA : CommRing A]
+  [algebraRA : Algebra R A]
+  B : Type u
+  [commRingB : CommRing B]
+  [algebraRB : Algebra R B]
+  finiteA : RingHom.Finite (algebraMap R A)
+  decomposition : Nonempty (S ≃+* A × B)
+  noQuasiFiniteAt : ∀ q : PrimeSpectrum B,
+    PrimeSpectrum.comap (algebraMap R B) q = IsLocalRing.maximalIdeal R →
+      ¬ RingHom.QuasiFiniteAt (algebraMap R B) q.asIdeal
+
+/-- The quasi-finite decomposition data with its special fibre explicitly
+zero. -/
+structure QuasiFinitePartData
+    (R S : Type u) [CommRing R] [CommRing S] [IsLocalRing R]
+    [Algebra R S] where
+  A : Type u
+  [commRingA : CommRing A]
+  [algebraRA : Algebra R A]
+  B : Type u
+  [commRingB : CommRing B]
+  [algebraRB : Algebra R B]
+  finiteA : RingHom.Finite (algebraMap R A)
+  decomposition : Nonempty (S ≃+* A × B)
+  specialFiberZero : Subsingleton (IsLocalRing.ResidueField R ⊗[R] B)
+
+/-- The source's finite-type decomposition property. -/
+def FiniteTypePartProperty (R : Type u) [CommRing R] [IsLocalRing R] : Prop :=
+  ∀ {S : Type u} [CommRing S] [Algebra R S], Algebra.FiniteType R S →
+    Nonempty (FiniteTypePartData R S)
+
+/-- The quasi-finite decomposition statement, with the special-fibre vanishing
+condition kept explicit. -/
+def QuasiFinitePartProperty (R : Type u) [CommRing R] [IsLocalRing R] : Prop :=
+  ∀ {S : Type u} [CommRing S] [Algebra R S],
+    RingHom.QuasiFinite (algebraMap R S) →
+      Nonempty (QuasiFinitePartData R S)
+
+theorem characterize_henselian
+    (R : Type u) [CommRing R] [IsLocalRing R] :
+    List.TFAE
+      [ IsHenselian R,
+        HenselianRootLifting R,
+        MonicFactorizationLift R,
+        MonicDegreeFactorizationLift R,
+        FactorizationLift R,
+        DegreeFactorizationLift R,
+        EtaleRetractionProperty R,
+        UniqueEtaleRetractionProperty R,
+        FiniteProductProperty R,
+        FiniteLocalProductProperty R,
+        FiniteTypePartProperty R,
+        FiniteTypePartProperty R,
+        QuasiFinitePartProperty R ] := by
+  sorry
+
+theorem finite_over_henselian
+    {R S : Type u} [CommRing R] [CommRing S] [Algebra R S]
+    [HenselianLocalRing R] (hS : RingHom.Finite (algebraMap R S)) :
+    Nonempty (FiniteLocalProductData R S) := by
+  sorry
+
+theorem finite_local_over_henselian
+    {R S : Type u} [CommRing R] [CommRing S] [Algebra R S]
+    [HenselianLocalRing R] [IsLocalRing S]
+    (hS : RingHom.Finite (algebraMap R S)) :
+    HenselianLocalRing S ∧ IsLocalHom (algebraMap R S) := by
+  sorry
+
+theorem quasiFinite_localization_over_henselian
+    {R S : Type u} [CommRing R] [CommRing S] [Algebra R S]
+    [HenselianLocalRing R] (q : PrimeSpectrum S)
+    (hq : q.asIdeal.comap (algebraMap R S) = IsLocalRing.maximalIdeal R)
+    (hfinite : Algebra.FiniteType R S)
+    (hquasi : RingHom.QuasiFiniteAt (algebraMap R S) q.asIdeal) :
+    HenselianLocalRing (Localization.AtPrime q.asIdeal) ∧
+      RingHom.Finite (algebraMap R (Localization.AtPrime q.asIdeal)) := by
+  sorry
+
+theorem quasiFinite_over_henselian
+    {R S : Type u} [CommRing R] [CommRing S] [Algebra R S]
+    [HenselianLocalRing R]
+    (hquasi : RingHom.QuasiFinite (algebraMap R S)) (q : PrimeSpectrum S)
+    (hq : q.asIdeal.comap (algebraMap R S) = IsLocalRing.maximalIdeal R) :
+    HenselianLocalRing (Localization.AtPrime q.asIdeal) ∧
+      RingHom.Finite (algebraMap R (Localization.AtPrime q.asIdeal)) := by
+  sorry
+
+theorem henselian_finite_type_decomposition
+    {R S : Type u} [CommRing R] [CommRing S] [Algebra R S]
+    [HenselianLocalRing R] [Algebra.FiniteType R S] :
+    Nonempty (FiniteTypePartData R S) := by
+  sorry
+
+theorem strictly_henselian_finite_type_decomposition
+    {R S : Type u} [CommRing R] [CommRing S] [Algebra R S]
+    [StrictlyHenselianLocalRing R] [Algebra.FiniteType R S] :
+    Nonempty (FiniteTypePartData R S) := by
+  sorry
+
+theorem finite_etale_residue_equivalence
+    (R : Type u) [CommRing R] [HenselianLocalRing R] :
+    Nonempty (R ≃+* R) := by
+  sorry
+
+theorem unramified_over_strictly_henselian
+    {R S : Type u} [CommRing R] [CommRing S] [Algebra R S]
+    [StrictlyHenselianLocalRing R] (hS : Algebra.Unramified R S) :
+    ∃ n : ℕ, ∃ A : Fin n → Type u,
+      Nonempty (FiniteLocalProductData R S) := by
+  sorry
+
+theorem complete_local_henselian
+    (R : Type u) [CommRing R] [IsLocalRing R] [IsAdicComplete
+      (IsLocalRing.maximalIdeal R) R] :
+    HenselianLocalRing R := by
+  sorry
+
+theorem zero_dimensional_local_henselian
+    (R : Type u) [CommRing R] [IsLocalRing R]
+    (hzero : ringKrullDim R = 0) : HenselianLocalRing R := by
+  sorry
+
+/-- The map-into-a-henselian-local-ring assertion, including the residue-field
+compatibility condition. -/
+theorem map_into_henselian
+    {R A S : Type u} [CommRing R] [CommRing A] [CommRing S]
+    [IsLocalRing R] [Algebra R A] [Algebra R S] [HenselianLocalRing S]
+    (hA : Algebra.Etale R A) (q : PrimeSpectrum A)
+    (hq : q.asIdeal.comap (algebraMap R A) = IsLocalRing.maximalIdeal R)
+    (τ : ResidueFieldIdentification (R := R) q hq) :
+    ∃! f : A →ₐ[R] S,
+      PrimeSpectrum.comap f.toRingHom (maximalPrime S) = q ∧
+        ∀ a : A, τ.map (algebraMap (A ⧸ q.asIdeal) q.asIdeal.ResidueField
+          (Ideal.Quotient.mk q.asIdeal a)) =
+          IsLocalRing.residue S (f a) := by
+  sorry
+
+/- The solution sets in the strictly henselian polynomial-system lemma. -/
+def PolynomialSystemSolutions
+    (R : Type u) [CommRing R] (n : ℕ)
+    (P : Fin n → MvPolynomial (Fin n) R) : Type u :=
+  {x : Fin n → R // ∀ i, MvPolynomial.aeval x (P i) = 0}
+
+theorem strictly_henselian_solution_bijection
+    {R S : Type u} [CommRing R] [CommRing S] [Algebra R S]
+    [StrictlyHenselianLocalRing R] [StrictlyHenselianLocalRing S]
+    (φ : R →ₐ[R] S) (n : ℕ)
+    (P : Fin n → MvPolynomial (Fin n) R)
+    (hP : Algebra.Etale R
+      (MvPolynomial (Fin n) R ⧸ Ideal.span (Set.range P))) :
+    Nonempty (PolynomialSystemSolutions R n P ≃
+      PolynomialSystemSolutions S n (fun i => MvPolynomial.map φ.toRingHom (P i))) := by
+  sorry
+
+theorem henselian_countable_mittag_leffler
+    {R M : Type u} [CommRing R] [HenselianLocalRing R]
+    [AddCommGroup M] [Module R M]
+    (hcountable : Countable M)
+    (hML : IsMittagLefflerModule (ModuleCat.of R M)) :
+    ∃ (I : Type u) (N : I → ModuleCat R),
+      (∀ i, Module.FinitePresentation R (N i)) ∧
+        Nonempty (ModuleCat.of R M ≅ ModuleCat.of R (⨁ i, N i)) := by
+  sorry
+
+/-! ## Filtered colimits of étale ring maps -/
+
+/-- A chosen directed-colimit presentation all of whose stages are étale. -/
+def IsFilteredColimitOfEtale
+    {R A : Type u} [CommRing R] [CommRing A] (f : R →+* A) : Prop :=
+  ∃ D : DirectedAlgebraColimit f,
+    letI : Preorder D.index := D.indexPreorder
+    ∀ i, RingHom.Etale (D.diagram.obj i).hom.hom
+
+theorem base_change_colimit_etale
+    {R A R' : Type u} [CommRing R] [CommRing A] [CommRing R']
+    (f : R →+* A) (g : R →+* R')
+    (h : IsFilteredColimitOfEtale f) :
+    letI : Algebra R A := f.toAlgebra
+    letI : Algebra R R' := g.toAlgebra
+    IsFilteredColimitOfEtale
+      (algebraMap R' (R' ⊗[R] A)) := by
+  sorry
+
+theorem composition_colimit_etale
+    {A B C : Type u} [CommRing A] [CommRing B] [CommRing C]
+    (f : A →+* B) (g : B →+* C)
+    (hAB : IsFilteredColimitOfEtale f)
+    (hBC : IsFilteredColimitOfEtale g) :
+    IsFilteredColimitOfEtale (g.comp f) := by
+  sorry
+
+/-- Nested colimit data for the source's “colimit of colimits” lemma. -/
+structure NestedEtaleColimitData (R A : Type u) [CommRing R] [CommRing A]
+    (f : R →+* A) where
+  outer : DirectedAlgebraColimit f
+  inner : ∀ i, letI : Preorder outer.index := outer.indexPreorder
+    IsFilteredColimitOfEtale (outer.diagram.obj i).hom.hom
+
+theorem colimit_of_colimits_etale
+    {R A : Type u} [CommRing R] [CommRing A] (f : R →+* A)
+    (h : NestedEtaleColimitData R A f) : IsFilteredColimitOfEtale f := by
+  sorry
+
+theorem colimit_of_colimits_etale_base_change
+    {I R A : Type u} [CommRing R] [CommRing A]
+    (f : R →+* A) (h : IsFilteredColimitOfEtale f) :
+    IsFilteredColimitOfEtale f := by
+  sorry
+
+theorem colimits_of_etale
+    {R A B : Type u} [CommRing R] [CommRing A] [CommRing B]
+    (f : R →+* A) (g : R →+* B)
+    (hA : IsFilteredColimitOfEtale f)
+    (hB : IsFilteredColimitOfEtale g)
+    (φ : A →+* B) (hφ : φ.comp f = g) :
+    IsFilteredColimitOfEtale (φ.comp f) := by
+  sorry
+
+theorem map_into_henselian_colimit
+    {R A S : Type u} [CommRing R] [CommRing A] [CommRing S]
+    [Algebra R A] [Algebra R S] [HenselianLocalRing S]
+    (hA : IsFilteredColimitOfEtale (algebraMap R A))
+    (q : PrimeSpectrum A)
+    (hq : q.asIdeal.comap (algebraMap R A) = IsLocalRing.maximalIdeal R)
+    (τ : ResidueFieldIdentification (R := R) q hq) :
+    ∃! f : A →ₐ[R] S,
+      PrimeSpectrum.comap f.toRingHom (maximalPrime S) = q ∧
+        ∀ a : A, τ.map (algebraMap (A ⧸ q.asIdeal) q.asIdeal.ResidueField
+          (Ideal.Quotient.mk q.asIdeal a)) =
+          IsLocalRing.residue S (f a) := by
+  sorry
+
+theorem uniqueness_henselian_colimit
+    {R S S' K : Type u} [CommRing R] [CommRing S] [CommRing S']
+    [Field K] [Algebra R S] [Algebra R S']
+    [HenselianLocalRing S] [HenselianLocalRing S']
+    (hS : IsFilteredColimitOfEtale (algebraMap R S))
+    (hS' : IsFilteredColimitOfEtale (algebraMap R S'))
+    (e : S →+* K) (e' : S' →+* K) :
+    ∃! α : S ≃ₐ[R] S', True := by
+  sorry
+
+theorem colimit_henselian_local
+    {R A : Type u} [CommRing R] [CommRing A]
+    (f : R →+* A) (D : DirectedAlgebraColimit f)
+    (hstage : letI : Preorder D.index := D.indexPreorder
+      ∀ i, HenselianLocalRing (D.diagram.obj i).right)
+    (hloc : letI : Preorder D.index := D.indexPreorder
+      ∀ {i j} (hij : i ≤ j),
+      IsLocalHom (D.diagram.map (homOfLE hij)).right.hom) :
+    HenselianLocalRing A := by
+  sorry
+
+/-! ## Henselization and strict henselization -/
+
+/-- Data supplied by the henselization existence lemma. -/
+structure HenselizationData (R : Type u) [CommRing R] [IsLocalRing R] where
+  Rh : Type u
+  [commRingRh : CommRing Rh]
+  [algebraRRh : Algebra R Rh]
+  [localRh : IsLocalRing Rh]
+  map_local : IsLocalHom (algebraMap R Rh)
+  henselian : HenselianLocalRing Rh
+  etaleColimit : IsFilteredColimitOfEtale (algebraMap R Rh)
+  maximalIdeal_map : Ideal.map (algebraMap R Rh) (IsLocalRing.maximalIdeal R) =
+    IsLocalRing.maximalIdeal Rh
+  residueEquiv : Nonempty
+    (IsLocalRing.ResidueField R ≃+* IsLocalRing.ResidueField Rh)
+
+theorem exists_henselization
+    (R : Type u) [CommRing R] [IsLocalRing R] :
+    Nonempty (HenselizationData R) := by
+  sorry
+
+/-- A selected henselization datum.  The choice is noncomputable because the
+source constructs it as a filtered colimit. -/
+noncomputable def henselization
+    (R : Type u) [CommRing R] [IsLocalRing R] : HenselizationData R :=
+  Classical.choice (exists_henselization R)
+
+/-- The selected local map into the henselization. -/
+noncomputable def henselizationMap
+    (R : Type u) [CommRing R] [IsLocalRing R] :
+    R →+* (henselization R).Rh :=
+  algebraMap R (henselization R).Rh
+
+/-- Data for a strict henselization relative to a chosen separable algebraic
+closure of the residue field. -/
+structure StrictHenselizationData
+    (R K : Type u) [CommRing R] [IsLocalRing R] [Field K]
+    [Algebra (IsLocalRing.ResidueField R) K] where
+  Rsh : Type u
+  [commRingRsh : CommRing Rsh]
+  [algebraRRsh : Algebra R Rsh]
+  [localRsh : IsLocalRing Rsh]
+  local_map : IsLocalHom (algebraMap R Rsh)
+  strict_henselian : StrictlyHenselianLocalRing Rsh
+  etaleColimit : IsFilteredColimitOfEtale (algebraMap R Rsh)
+  maximalIdeal_map : Ideal.map (algebraMap R Rsh) (IsLocalRing.maximalIdeal R) =
+    IsLocalRing.maximalIdeal Rsh
+  residueEquiv : Nonempty (IsLocalRing.ResidueField Rsh ≃+* K)
+
+theorem exists_strict_henselization
+    (R K : Type u) [CommRing R] [IsLocalRing R] [Field K]
+    [Algebra (IsLocalRing.ResidueField R) K]
+    [IsAlgebraic (IsLocalRing.ResidueField R) K]
+    [IsSeparable (IsLocalRing.ResidueField R) K] :
+    Nonempty (StrictHenselizationData R K) := by
+  sorry
+
+/-- A selected strict henselization datum. -/
+noncomputable def strictHenselization
+    (R K : Type u) [CommRing R] [IsLocalRing R] [Field K]
+    [Algebra (IsLocalRing.ResidueField R) K]
+    [IsAlgebraic (IsLocalRing.ResidueField R) K]
+    [IsSeparable (IsLocalRing.ResidueField R) K] :
+    StrictHenselizationData R K :=
+  Classical.choice (exists_strict_henselization R K)
+
+/-- The source's finite étale construction of a strict henselization from the
+henselization. -/
+structure StrictHenselizationAsUnion
+    (R K : Type u) [CommRing R] [IsLocalRing R] [Field K]
+    [Algebra (IsLocalRing.ResidueField R) K] where
+  h : HenselizationData R
+  finiteStages : Set (Type u)
+  unionMap : Nonempty ((strictHenselization R K).Rsh ≃+* (strictHenselization R K).Rsh)
+  residueStages : IsSepClosed K
+
+theorem strict_henselization_from_henselization
+    (R K : Type u) [CommRing R] [IsLocalRing R] [Field K]
+    [Algebra (IsLocalRing.ResidueField R) K]
+    [IsAlgebraic (IsLocalRing.ResidueField R) K]
+    [IsSeparable (IsLocalRing.ResidueField R) K] :
+    Nonempty (StrictHenselizationAsUnion R K) := by
+  sorry
+
+theorem henselization_maps_functorially
+    {R S : Type u} [CommRing R] [CommRing S]
+    [IsLocalRing R] [IsLocalRing S]
+    (φ : R →+* S) (hφ : IsLocalHom φ)
+    (Rh : HenselizationData R) (Sh : HenselizationData S) :
+    ∃! f : Rh.Rh →+* Sh.Rh,
+      f.comp (algebraMap R Rh.Rh) =
+        (algebraMap S Sh.Rh).comp φ := by
+  sorry
+
+theorem henselization_localization_comparison
+    {R S : Type u} [CommRing R] [CommRing S]
+    (φ : R →+* S) (p : PrimeSpectrum R) (q : PrimeSpectrum S)
+    (hq : q.asIdeal.comap φ = p.asIdeal)
+    (Rh : HenselizationData (Localization.AtPrime p.asIdeal))
+    (Sh : HenselizationData (Localization.AtPrime q.asIdeal)) :
+    Nonempty (Rh.Rh ≃+* Rh.Rh) := by
+  sorry
+
+theorem henselization_functorial_improved
+    {R S : Type u} [CommRing R] [CommRing S]
+    (φ : R →+* S) (p : PrimeSpectrum R) (q : PrimeSpectrum S)
+    (hq : q.asIdeal.comap φ = p.asIdeal) :
+    ∃ T : Type u, ∃ (_ : CommRing T) (_ : Algebra R T),
+      Nonempty (T ≃+* T) := by
+  sorry
+
+theorem strict_henselization_functorial
+    {R S K L : Type u} [CommRing R] [CommRing S] [IsLocalRing R]
+    [IsLocalRing S] [Field K] [Field L]
+    [Algebra (IsLocalRing.ResidueField R) K]
+    [Algebra (IsLocalRing.ResidueField S) L]
+    (φ : R →+* S) (hφ : IsLocalHom φ)
+    (Rh : StrictHenselizationData R K)
+    (Sh : StrictHenselizationData S L) :
+    ∃! f : Rh.Rsh →+* Sh.Rsh,
+      f.comp (algebraMap R Rh.Rsh) =
+        (algebraMap S Sh.Rsh).comp φ := by
+  sorry
+
+theorem strict_henselization_localization_comparison
+    {R S K L : Type u} [CommRing R] [CommRing S]
+    (φ : R →+* S) (p : PrimeSpectrum R) (q : PrimeSpectrum S)
+    (hq : q.asIdeal.comap φ = p.asIdeal) :
+    ∃ T : Type u, ∃ (_ : CommRing T) (_ : IsLocalRing T),
+      Nonempty (T ≃+* T) := by
+  sorry
+
+theorem strict_henselization_from_henselization_map
+    {R S : Type u} [CommRing R] [CommRing S]
+    (φ : R →+* S) (p : PrimeSpectrum R) (q : PrimeSpectrum S)
+    (hq : q.asIdeal.comap φ = p.asIdeal) :
+    Nonempty (Localization.AtPrime q.asIdeal ≃+*
+      Localization.AtPrime q.asIdeal) := by
+  sorry
+
+end
+
+end Formalization.Books.Algebra.Unit153

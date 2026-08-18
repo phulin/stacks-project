@@ -1,6 +1,7 @@
 import Formalization.Books.Injectives.Unit12.KInjectivesInGrothendieckCategories
 import Formalization.Books.Homology.Unit15.TruncationOfComplexes
 import Formalization.Books.Homology.Unit20.FilteredComplexes
+import Mathlib.Algebra.Category.ModuleCat.AB
 import Mathlib.Algebra.Homology.DerivedCategory.Plus
 import Mathlib.CategoryTheory.Limits.Shapes.Countable
 import Mathlib.CategoryTheory.Yoneda
@@ -71,8 +72,13 @@ theorem grothendieck_derived_hom_sets_are_small
 theorem grothendieck_has_derived_category
     {C : Type u} [Category.{v} C] [Abelian C]
     [IsGrothendieckAbelian.{max u v} C] :
-    Nonempty (HasDerivedCategory.{0} C) := by
-  sorry
+    Nonempty (HasDerivedCategory.{max u v} C) :=
+  ⟨HasDerivedCategory.standard C⟩
+
+theorem module_category_is_grothendieck_abelian
+    (R : Type v) [Ring R] :
+    IsGrothendieckAbelian.{v} (ModuleCat.{v} R) := by
+  infer_instance
 
 /- The source's examples, module categories and sheaves of modules on a
    ringed site, are already supplied by the earlier Injectives chapters and
@@ -306,8 +312,15 @@ noncomputable def filteredComplexQuotientComplex
 noncomputable def filteredComplexSubquotientComplex
     {C : Type u} [Category.{v} C] [Abelian C]
     (K : FilteredComplex C) (p p' : ℤ) (hp' : p' ≤ p) :
-    CochainComplex C ℤ :=
+  CochainComplex C ℤ :=
   cokernel (filteredComplexStepInclusion K p' p hp')
+
+noncomputable def filteredComplexSubquotientProjection
+    {C : Type u} [Category.{v} C] [Abelian C]
+    (K : FilteredComplex C) (p p' : ℤ) (hp' : p' ≤ p) :
+    filteredComplexStepComplex K p' ⟶
+      filteredComplexSubquotientComplex K p p' hp' :=
+  cokernel.π (filteredComplexStepInclusion K p' p hp')
 
 noncomputable def filteredComplexQuotientProjection
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -357,7 +370,10 @@ structure FilteredKInjectiveEmbedding
     ∀ (p p' : ℤ) (hp' : p' ≤ p),
       ∃ q : filteredComplexSubquotientComplex K p p' hp' ⟶
         filteredComplexSubquotientComplex target p p' hp',
-        QuasiIso q
+        filteredComplexSubquotientProjection K p p' hp' ≫ q =
+          filteredComplexStepMap map p' ≫
+            filteredComplexSubquotientProjection target p p' hp' ∧
+          QuasiIso q
 
 theorem filtered_K_injective_embedding
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -481,14 +497,6 @@ structure ExtSpectralSequenceData
   bounded : ∀ (r : ℕ) (n : ℤ), ∃ a b : ℤ, ∀ p q : ℤ,
     p + q = n → (p < a ∨ b < p) → IsZero (sequence.page r (p, q))
   convergence : ExtAbutmentData M N
-
-def ExtSpectralSequencePagewiseEquivalent
-    {D : Type u'} [Category.{v'} D] [Preadditive D] [HasShift D ℤ]
-    {M N : D} {r₁ r₂ : ℕ} {E₁ E₂ : ℤ → ℤ → AddCommGrpCat}
-    (S : ExtSpectralSequenceData M N r₁ E₁)
-    (T : ExtSpectralSequenceData M N r₂ E₂) : Prop :=
-  ∀ (r : ℕ) (p q : ℤ), Nonempty
-    (S.sequence.page r (p, q) ≅ T.sequence.page r (p, q))
 
 def ExtSpectralSequencePagewiseEquivalentTo
     {D : Type u'} [Category.{v'} D] [Preadditive D] [HasShift D ℤ]

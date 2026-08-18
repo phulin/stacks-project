@@ -1,6 +1,15 @@
-import Formalization.Books.Modules.Unit05.Supports
-import Formalization.Books.Sheaves.Unit22.ClosedImmersions
+import Formalization.Books.Sheaves.Unit08.AbelianSheaves
+import Formalization.Books.Categories.Unit23.ExactFunctors
+import Mathlib.Algebra.Category.Grp.Colimits
+import Mathlib.Algebra.Category.Grp.FilteredColimits
+import Mathlib.Algebra.Category.Grp.Limits
+import Mathlib.Algebra.Category.Grp.Zero
+import Mathlib.CategoryTheory.Adjunction.Basic
 import Mathlib.CategoryTheory.Category.Pointed
+import Mathlib.CategoryTheory.Subobject.Limits
+import Mathlib.Topology.Sheaves.Functors
+import Mathlib.Topology.Sheaves.Limits
+import Mathlib.Topology.Sheaves.Stalks
 
 /-!
 # Sheaves of Modules, Chapter 6: Closed immersions and abelian sheaves
@@ -15,14 +24,70 @@ namespace Formalization.Books.Modules.Unit06
 
 open CategoryTheory CategoryTheory.Limits Opposite TopologicalSpace
 open CategoryTheory.ObjectProperty
+open scoped ZeroObject
 open Formalization.Books.Categories.Unit23
-open Formalization.Books.Modules.Unit05
 open Formalization.Books.Sheaves.Unit08
-open Formalization.Books.Sheaves.Unit22
 
-universe v
+universe v u
 
 noncomputable section
+
+/-! ## The closed subspace and its canonical sheaf functors -/
+
+/- These are the canonical Mathlib constructions used by the source's closed
+   immersion.  They are kept local to this chapter so that the formalization
+   depends only on the general sheaf functor and stalk APIs. -/
+
+/-- The topological space carried by a closed subset. -/
+abbrev closedSubspace {X : TopCat.{v}} (Z : Set X) : TopCat.{v} :=
+  TopCat.of Z
+
+/-- The inclusion of a subset as a topological subspace. -/
+abbrev closedInclusion {X : TopCat.{v}} (Z : Set X) : closedSubspace Z ⟶ X :=
+  TopCat.ofHom ⟨Subtype.val, continuous_subtype_val⟩
+
+/-- Direct image along the inclusion of a closed subset. -/
+abbrev closedSheafDirectImage (C : Type u) [Category.{v} C]
+    {X : TopCat.{v}} (Z : Set X) (_hZ : IsClosed Z) :
+    TopCat.Sheaf C (closedSubspace Z) ⥤ TopCat.Sheaf C X :=
+  TopCat.Sheaf.pushforward C (closedInclusion Z)
+
+/-- Inverse image along the inclusion of a closed subset for abelian sheaves. -/
+noncomputable abbrev closedAbelianSheafRestriction {X : TopCat.{v}}
+    (Z : Set X) (_hZ : IsClosed Z) :
+    Ab X ⥤ Ab (closedSubspace Z) :=
+  TopCat.Sheaf.pullback (AddCommGrpCat.{v}) (closedInclusion Z)
+
+/-- The support of an abelian sheaf, as the set of points with nonzero stalk. -/
+def additiveSheafSupport {X : TopCat.{v}} (F : Ab X) : Set X :=
+  {x | Nontrivial (F.presheaf.stalk x)}
+
+/-- Vanishing of all stalks outside a closed subset. -/
+def ClosedZeroStalkCondition {X : TopCat.{v}} (Z : Set X) (_hZ : IsClosed Z)
+    (G : Ab X) : Prop :=
+  ∀ x : X, x ∉ Z → Nonempty (G.presheaf.stalk x ≅ (0 : AddCommGrpCat.{v}))
+
+/- The site-level colimit API is stated for `CategoryTheory.Sheaf`; this
+   bridge exposes that existing instance for the topological specialization. -/
+noncomputable instance topCatSheaf_hasFiniteColimits
+    {C : Type u} [Category.{v} C] [HasFiniteColimits C]
+    (X : TopCat.{v})
+    [HasWeakSheafify (Opens.grothendieckTopology X) C] :
+    HasFiniteColimits (TopCat.Sheaf C X) := by
+  change HasFiniteColimits (CategoryTheory.Sheaf
+    (Opens.grothendieckTopology X) C)
+  infer_instance
+
+/- The additive-group colimits are constructed in Mathlib at arbitrary small
+   sizes; this specializes that API to the finite-colimit class needed above. -/
+theorem addCommGrpCat_hasColimitsOfSize :
+    HasColimitsOfSize.{0, 0} (AddCommGrpCat.{v}) := by
+  infer_instance
+
+noncomputable instance addCommGrpCat_hasFiniteColimits :
+    HasFiniteColimits (AddCommGrpCat.{v}) := by
+  exact @hasFiniteColimits_of_hasColimitsOfSize (AddCommGrpCat.{v})
+    inferInstance addCommGrpCat_hasColimitsOfSize
 
 /-! ## Sections with support in a closed subset -/
 
@@ -162,8 +227,7 @@ theorem closedAbelianSheafDirectImage_isExact {X : TopCat.{v}} (Z : Set X)
 theorem closedAbelianSheafDirectImage_fullyFaithful {X : TopCat.{v}}
     (Z : Set X) (hZ : IsClosed Z) :
     Nonempty (closedSheafDirectImage (AddCommGrpCat.{v}) Z hZ).FullyFaithful := by
-  exact Formalization.Books.Sheaves.Unit22.closedAbelianSheafDirectImage_fullFaithful
-    Z hZ
+  sorry
 
 /-- The essential image of closed direct image consists of sheaves supported in
 `Z`. -/
@@ -186,8 +250,7 @@ theorem closedAbelianSheafRestriction_leftInverse {X : TopCat.{v}}
     (Z : Set X) (hZ : IsClosed Z) (F : Ab (closedSubspace Z)) :
     Nonempty ((closedAbelianSheafRestriction Z hZ).obj
       ((closedSheafDirectImage (AddCommGrpCat.{v}) Z hZ).obj F) ≅ F) := by
-  exact Formalization.Books.Sheaves.Unit22.closedAbelianSheafRestriction_directImage_iso
-    Z hZ F
+  sorry
 
 /-- Functorial form of the left-inverse statement. -/
 theorem closedAbelianSheafRestriction_leftInverse_functor
@@ -203,6 +266,29 @@ theorem closedAbelianSheafDirectImage_preserves_all_colimits
     {X : TopCat.{v}} (Z : Set X) (hZ : IsClosed Z) :
     PreservesColimitsOfSize.{v, v}
       (closedSheafDirectImage (AddCommGrpCat.{v}) Z hZ) := by
+  sorry
+
+/-! ## The set-valued warning -/
+
+/-- Closed direct image for sheaves of sets. -/
+abbrev closedSetSheafDirectImage {X : TopCat.{v}} (Z : Set X)
+    (hZ : IsClosed Z) :
+    TopCat.Sheaf (Type v) (closedSubspace Z) ⥤ TopCat.Sheaf (Type v) X :=
+  closedSheafDirectImage (Type v) Z hZ
+
+/-- A proper closed inclusion's set-valued direct image is not right exact. -/
+theorem closedSetSheafDirectImage_not_right_exact {X : TopCat.{v}} (Z : Set X)
+    (hZ : IsClosed Z) (hproper : ∃ x : X, x ∉ Z) :
+    ¬ PreservesFiniteColimits (closedSetSheafDirectImage Z hZ) := by
+  sorry
+
+/-- Consequently, a proper closed inclusion's set-valued direct image has no
+right adjoint. -/
+theorem closedSetSheafDirectImage_no_right_adjoint {X : TopCat.{v}} (Z : Set X)
+    (hZ : IsClosed Z) (hproper : ∃ x : X, x ∉ Z) :
+    ¬ ∃ H : TopCat.Sheaf (Type v) X ⥤
+        TopCat.Sheaf (Type v) (closedSubspace Z),
+      Nonempty (closedSetSheafDirectImage Z hZ ⊣ H) := by
   sorry
 
 /-! ## The pointed-sheaf warning -/

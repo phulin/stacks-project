@@ -29,6 +29,7 @@ namespace Formalization.Books.MoreAlgebra.Unit03
 
 open CategoryTheory
 open scoped Pointwise
+open scoped TensorProduct
 
 universe u
 
@@ -226,8 +227,7 @@ theorem exists_finite_stablyFree_lift
     [Module.Finite (R ⧸ I) E] [StablyFree (R ⧸ I) E] :
     ∃ M : ModuleCat.{u} R,
         Module.Finite R M ∧ StablyFree R M ∧
-        Nonempty ((M ⧸ (I • (⊤ : Submodule R M))) ≃ₗ[R ⧸ I] E) := by sorry
-/-
+        Nonempty ((M ⧸ (I • (⊤ : Submodule R M))) ≃ₗ[R ⧸ I] E) := by
   classical
   let A := R ⧸ I
   letI : Module.IsStablyFree A E := ‹StablyFree A E›
@@ -358,12 +358,12 @@ theorem exists_finite_stablyFree_lift
           change p (i' y) = y at h
           rw [h]
           simp
-          simp
         · change p ((x : F) + i' y) = y
           rw [map_add, x.property]
           have h := congrArg (fun f : G →ₗ[R] G => f y) hi'
           change p (i' y) = y at h
           rw [h]
+          exact zero_add y
       right_inv := by
         intro x
         simp [i', hi']
@@ -386,8 +386,8 @@ theorem exists_finite_stablyFree_lift
   letI : IsScalarTower R A E :=
     ⟨fun r a x => by
       change (r • a) • x = r • (a • x)
-      rw [Algebra.smul_def, smul_smul, Ideal.Quotient.algebraMap_eq]
-      rfl⟩
+      change ((I.mkQ r) * a) • x = (I.mkQ r) • (a • x)
+      rw [mul_smul]⟩
   letI : Module.Free R (K × G) := Module.Free.of_equiv eK.symm
   have hstable : StablyFree R K := Module.IsStablyFree.of_free_prod R K G
   let IK : Submodule R K := I • (⊤ : Submodule R K)
@@ -431,7 +431,6 @@ theorem exists_finite_stablyFree_lift
     intro x
     apply Subtype.ext
     simp only [LinearMap.comp_apply, LinearMap.id_apply]
-    change ((eK.symm ((LinearMap.ker p).subtype x))).1 = x
     simp [ret, eK, x.property]
   have hret_mem {x : F} (hx : x ∈ I • (⊤ : Submodule R F)) :
       ret x ∈ IK := by
@@ -450,7 +449,9 @@ theorem exists_finite_stablyFree_lift
     have h' : a (ae.symm y) = y := by
       exact ae.apply_symm_apply y
     have h'' : qG y = qG (ae.symm y) := by
-      simpa [a, LinearMap.comp_apply] using h
+      calc
+        qG y = qG (a (ae.symm y)) := by rw [h']
+        _ = qG (ae.symm y) := by simpa [a, LinearMap.comp_apply] using h
     exact h''.symm
   have hqi' (y : G) : qF (i' y) = ibar (qG y) := by
     change qF (i (ae.symm y)) = ibar (qG y)
@@ -464,7 +465,7 @@ theorem exists_finite_stablyFree_lift
       change e.symm (e (0, qG y)) = _
       rw [e.symm_apply_apply]
     rw [hqi', hi_bar]
-    rfl
+    ext <;> simp
   have hφ_surj : Function.Surjective φ := by
     intro y
     obtain ⟨x, hx⟩ := hqF (e (y, 0))
@@ -472,9 +473,10 @@ theorem exists_finite_stablyFree_lift
     refine ⟨Submodule.Quotient.mk z.1, ?_⟩
     have hz : e.symm (qF (eK z)) = (y, 0) := by
       rw [show eK z = x by simp [z], hx, e.symm_apply_apply]
-    have hfirst := congrArg Prod.fst (hcompat z.1 z.2 |>.trans hz.symm)
+    have hfirst := congrArg Prod.fst (hcompat z.1 z.2 |>.symm.trans hz)
     rw [hφ_mk]
-    simpa [f0, fbarR] using hfirst
+    change fbar (qF ((LinearMap.ker p).subtype z.1)) = y
+    simpa using hfirst
   have hφ_inj : Function.Injective φ := by
     intro x y hxy
     obtain ⟨x', rfl⟩ := Submodule.Quotient.mk_surjective IK x
@@ -482,7 +484,9 @@ theorem exists_finite_stablyFree_lift
     have hxy' : fbar (qF (x' : F)) = fbar (qF (y' : F)) := by
       have h := hxy
       rw [hφ_mk, hφ_mk] at h
-      simpa [f0, fbarR] using h
+      change fbar (qF ((LinearMap.ker p).subtype x')) =
+        fbar (qF ((LinearMap.ker p).subtype y')) at h
+      simpa using h
     have hqxy : qF (x' : F) = qF (y' : F) := by
       apply e.symm.injective
       rw [hker_component x', hker_component y', hxy']
@@ -502,8 +506,11 @@ theorem exists_finite_stablyFree_lift
     have hmemK : x' - y' ∈ IK := by
       have h := hret_mem hmemF
       have hret' : ret ((x' : F) - (y' : F)) = x' - y' := by
-        simpa [ret, LinearMap.comp_apply] using
-          congrArg (fun f => f (x' - y')) hret
+        rw [map_sub]
+        have hx := congrArg (fun f => f x') hret
+        have hy := congrArg (fun f => f y') hret
+        simpa [LinearMap.comp_apply] using
+          congrArg₂ (fun a b => a - b) hx hy
       rw [hret'] at h
       exact h
     rw [← sub_eq_zero]
@@ -511,7 +518,6 @@ theorem exists_finite_stablyFree_lift
   exact ⟨ModuleCat.of R K, inferInstance, hstable,
     ⟨LinearEquiv.ofBijective φ ⟨hφ_inj, hφ_surj⟩⟩⟩
 
- -/
 /-! ## Lifting finite projectivity -/
 
 /-- A finite flat module whose reduction modulo a Jacobson-radical ideal is
@@ -523,6 +529,26 @@ theorem finiteProjective_of_finiteFlat_of_projective_quotient
     (hM : Module.Projective (R ⧸ I)
       (M ⧸ (I • (⊤ : Submodule R M)))) :
     Module.Projective R M := by
+  classical
+  let Q := M ⧸ (I • (⊤ : Submodule R M))
+  let eQ : (R ⧸ I) ⊗[R] M ≃ₗ[R ⧸ I] Q :=
+    (TensorProduct.quotTensorEquivQuotSMul M I).extendScalarsOfSurjective
+      Ideal.Quotient.mk_surjective
+  letI : Module.FinitePresentation (R ⧸ I) Q :=
+    Module.finitePresentation_of_projective (R ⧸ I) Q
+  letI : Module.Flat (R ⧸ I) Q := inferInstance
+  have hQrank (m : Ideal R) (hm : m.IsPrime) (hIm : I ≤ m) :
+      Module.rankAtStalk Q
+          ⟨m.map (Ideal.Quotient.mk I),
+            Ideal.isPrime_map_quotientMk_of_isPrime hIm⟩ =
+        Module.rankAtStalk M ⟨m, hm⟩ := by
+    rw [← Module.rankAtStalk_eq_of_equiv eQ]
+    rw [Module.rankAtStalk_baseChange]
+    congr 1
+    apply PrimeSpectrum.ext
+    exact Ideal.comap_map_mk hIm
+  have hQloc : IsLocallyConstant (Module.rankAtStalk (R := R ⧸ I) Q) :=
+    Module.isLocallyConstant_rankAtStalk
   sorry
 
 /-! ## Uniqueness of finite-projective lifts -/
@@ -552,8 +578,7 @@ theorem finiteProjective_map_isIso_of_inducesQuotientEquiv
     (hφ : ∃ e : (P ⧸ (I • (⊤ : Submodule R P))) ≃ₗ[R ⧸ I]
         (P' ⧸ (I • (⊤ : Submodule R P'))),
       InducesQuotientEquiv I φ e) :
-    ∃ e : P ≃ₗ[R] P', e.toLinearMap = φ := by sorry
-/-
+    ∃ e : P ≃ₗ[R] P', e.toLinearMap = φ := by
   classical
   obtain ⟨e, he⟩ := hφ
   let q : P →ₗ[R] (P ⧸ (I • (⊤ : Submodule R P))) :=
@@ -574,19 +599,20 @@ theorem finiteProjective_map_isIso_of_inducesQuotientEquiv
           (I • (⊤ : Submodule R X)).mkQ x) → Function.Surjective f := by
     intro X _ _ _ f hf
     apply LinearMap.range_eq_top.mp
+    apply top_unique
     apply Submodule.le_of_le_smul_of_le_jacobson_bot
       Module.Finite.fg_top hI'
     intro x hx
     have hzero : (I • (⊤ : Submodule R X)).mkQ (x - f x) = 0 := by
       rw [map_sub, hf x, sub_self]
     have hmem : x - f x ∈ I • (⊤ : Submodule R X) := by
-      exact (Submodule.Quotient.mk_eq_zero I).mp hzero
+      exact (Submodule.Quotient.mk_eq_zero (I • (⊤ : Submodule R X))).mp hzero
     rw [← sub_add_cancel x (f x)]
     exact Submodule.add_mem _
       ((le_sup_right : I • (⊤ : Submodule R X) ≤
         LinearMap.range f ⊔ I • (⊤ : Submodule R X)) hmem)
       ((le_sup_left : LinearMap.range f ≤
-        LinearMap.range f ⊔ I • (⊤ : Submodule R X)) ⟨f x, rfl⟩)
+        LinearMap.range f ⊔ I • (⊤ : Submodule R X)) ⟨x, rfl⟩)
   have hleft (x : P) : q (ψ (φ x)) = q x := by
     calc
       q (ψ (φ x)) = e.symm (q' (φ x)) := by
@@ -599,7 +625,7 @@ theorem finiteProjective_map_isIso_of_inducesQuotientEquiv
       q' (φ (ψ y)) = e (q (ψ y)) := (he (ψ y)).symm
       _ = e (e.symm (q' y)) := by
         have h := congrArg (fun f => f y) hψ
-        simpa [q, q', eR, LinearMap.comp_apply] using h
+        simpa [q, q', eR, LinearMap.comp_apply] using congrArg (fun z => e z) h
       _ = q' y := e.apply_symm_apply _
   have hleft_surj : Function.Surjective (ψ.comp φ) :=
     surj_of_quotient_eq (ψ.comp φ) hleft
@@ -618,7 +644,6 @@ theorem finiteProjective_map_isIso_of_inducesQuotientEquiv
       obtain ⟨x, hx⟩ := hright_surj y
       exact ⟨ψ x, by simpa [LinearMap.comp_apply] using hx⟩
   exact ⟨LinearEquiv.ofBijective φ hφ_bij, rfl⟩
- -/
 
 /-- Finite projective modules with isomorphic reductions modulo a
 Jacobson-radical ideal are isomorphic. -/
@@ -631,8 +656,7 @@ theorem finiteProjective_quotientEquiv_imp_isomorphic
     [Module.Finite R P'] [Module.Projective R P']
     (h : Nonempty ((P ⧸ (I • (⊤ : Submodule R P))) ≃ₗ[R ⧸ I]
       (P' ⧸ (I • (⊤ : Submodule R P'))))) :
-    Nonempty (P ≃ₗ[R] P') := by sorry
-/-
+    Nonempty (P ≃ₗ[R] P') := by
   classical
   obtain ⟨e⟩ := h
   let q' : P' →ₗ[R] (P' ⧸ (I • (⊤ : Submodule R P'))) :=
@@ -645,10 +669,9 @@ theorem finiteProjective_quotientEquiv_imp_isomorphic
   have hφ' : InducesQuotientEquiv I φ e := by
     intro x
     have h := congrArg (fun f => f x) hφ
-    simpa [eR, q', LinearMap.comp_apply] using h
+    simpa [eR, q', LinearMap.comp_apply] using h.symm
   obtain ⟨e', _⟩ := finiteProjective_map_isIso_of_inducesQuotientEquiv
     I hI φ ⟨e, hφ'⟩
   exact ⟨e'⟩
--/
 
 end Formalization.Books.MoreAlgebra.Unit03

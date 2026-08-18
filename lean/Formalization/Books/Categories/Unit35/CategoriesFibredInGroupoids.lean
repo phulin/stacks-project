@@ -880,7 +880,52 @@ theorem categoriesFibredInGroupoids_have_twoFibreProducts
     (hS : IsGroupoidFibredCategoryOver S)
     (F : FibredCategoryOverHom X S) (G : FibredCategoryOverHom Y S) :
     Nonempty (FibredInGroupoidsTwoFibreProduct F G) := by
-  sorry
+  refine ⟨{
+    product := canonicalFibredTwoFibreProduct X Y S F G
+    fibres_are_groupoids := ?_ }⟩
+  intro U
+  obtain ⟨e⟩ := twoFibreProductOver_fibre_equivalent
+    F.underlying G.underlying U
+  let _ : IsGroupoid
+      (IsoComma (overMorphismFiberFunctor F.underlying U)
+        (overMorphismFiberFunctor G.underlying U)) := by
+    constructor
+    intro a b f
+    let _ : IsIso f.hom.left := (hX U).all_isIso _
+    let _ : IsIso f.hom.right := (hY U).all_isIso _
+    let g : b ⟶ a := by
+      refine { hom :=
+        { left := inv f.hom.left, right := inv f.hom.right, w := ?_ } }
+      calc
+        (overMorphismFiberFunctor F.underlying U).map (inv f.hom.left) ≫
+            a.obj.hom =
+          (overMorphismFiberFunctor F.underlying U).map (inv f.hom.left) ≫
+            (a.obj.hom ≫
+              (overMorphismFiberFunctor G.underlying U).map f.hom.right) ≫
+              (overMorphismFiberFunctor G.underlying U).map
+                (inv f.hom.right) := by simp [Category.assoc]
+        _ = (overMorphismFiberFunctor F.underlying U).map
+              (inv f.hom.left) ≫
+            ((overMorphismFiberFunctor F.underlying U).map f.hom.left ≫
+              b.obj.hom) ≫
+              (overMorphismFiberFunctor G.underlying U).map
+                (inv f.hom.right) := by rw [f.hom.w]
+        _ = b.obj.hom ≫
+            (overMorphismFiberFunctor G.underlying U).map
+              (inv f.hom.right) := by simp [Category.assoc]
+    refine ⟨⟨g, ?_, ?_⟩⟩
+    · apply ObjectProperty.hom_ext
+      apply Comma.hom_ext <;> simp [g]
+    · apply ObjectProperty.hom_ext
+      apply Comma.hom_ext <;> simp [g]
+  let _ : e.functor.IsEquivalence := by infer_instance
+  refine { all_isIso := ?_ }
+  intro a b f
+  let _ : IsIso (e.functor.map f) :=
+    (inferInstance : IsGroupoid
+      (IsoComma (overMorphismFiberFunctor F.underlying U)
+        (overMorphismFiberFunctor G.underlying U))).all_isIso _
+  exact e.fullyFaithfulFunctor.isIso_of_isIso_map f
 
 /-- The two descriptions of the category-valued 2-fibre product in the
 source are canonically equivalent for categories fibred in groupoids: the
@@ -902,7 +947,77 @@ theorem twoFibreProductOverCategory_canonically_equivalent
     Nonempty
       (TwoFibreProductOverCategory F.underlying G.underlying ≌
         IsoComma (overFunctor F.underlying) (overFunctor G.underlying)) := by
-  sorry
+  let pX := structureFunctor X.underlying
+  let pY := structureFunctor Y.underlying
+  let pS := structureFunctor S.underlying
+  let ι : TwoFibreProductOverCategory F.underlying G.underlying ⥤
+      IsoComma (overFunctor F.underlying) (overFunctor G.underlying) :=
+    (TwoFibreProductOverProperty F.underlying G.underlying).ι
+  let hι : ι.IsEquivalence := by
+    refine { faithful := inferInstance, full := inferInstance, essSurj := ?_ }
+    constructor
+    intro ξ
+    let hFx : pS.obj ((overFunctor F.underlying).obj ξ.obj.left) =
+        pX.obj ξ.obj.left :=
+      Functor.congr_obj (overFunctor_comm F.underlying) ξ.obj.left
+    let hGy : pS.obj ((overFunctor G.underlying).obj ξ.obj.right) =
+        pY.obj ξ.obj.right :=
+      Functor.congr_obj (overFunctor_comm G.underlying) ξ.obj.right
+    let baseα : pX.obj ξ.obj.left ⟶ pY.obj ξ.obj.right :=
+      eqToHom hFx.symm ≫ pS.map ξ.obj.hom ≫ eqToHom hGy
+    obtain ⟨y', φ, hφ⟩ :=
+      (groupoidFibredCategoryOver_isFibredInGroupoids Y hY).exists_lift
+        baseα rfl
+    let hdom : pY.obj y' = pX.obj ξ.obj.left :=
+      CategoryTheory.IsHomLift.domain_eq pY baseα φ
+    let _ : pY.IsHomLift baseα φ := hφ
+    have hφmap : pY.map φ = eqToHom hdom ≫ baseα := by
+      simpa using CategoryTheory.IsHomLift.fac' pY baseα φ
+    let _ : IsIso ξ.obj.hom := ξ.property
+    let _ : IsIso baseα := by
+      dsimp [baseα]
+      infer_instance
+    let _ : IsIso (pY.map φ) := by
+      rw [hφmap]
+      infer_instance
+    let _ : pY.IsStronglyCartesian (pY.map φ) φ :=
+      fibredInGroupoids_all_morphisms_stronglyCartesian pY
+        (groupoidFibredCategoryOver_isFibredInGroupoids Y hY) φ
+    let _ : IsIso φ := stronglyCartesian_of_base_isIso pY (pY.map φ) φ
+    let hGy' : pS.obj ((overFunctor G.underlying).obj y') =
+        pX.obj ξ.obj.left :=
+      (Functor.congr_obj (overFunctor_comm G.underlying) y').trans hdom
+    let β : (overFunctor F.underlying).obj ξ.obj.left ⟶
+        (overFunctor G.underlying).obj y' :=
+      ξ.obj.hom ≫ inv ((overFunctor G.underlying).map φ)
+    let _ : IsIso β := by
+      dsimp [β]
+      infer_instance
+    have hβ : pS.IsHomLift (𝟙 (pX.obj ξ.obj.left)) β := by
+      apply CategoryTheory.IsHomLift.of_fac' pS (𝟙 (pX.obj ξ.obj.left)) β
+        hFx hGy'
+      have hGφ : pS.map ((overFunctor G.underlying).map φ) =
+          eqToHom (Functor.congr_obj (overFunctor_comm G.underlying) y') ≫
+            pY.map φ ≫
+              eqToHom (Functor.congr_obj (overFunctor_comm G.underlying)
+                ξ.obj.right).symm := by
+        exact Functor.congr_hom (overFunctor_comm G.underlying) φ
+      simp [Functor.map_comp, Functor.map_inv, hGφ, hφmap, baseα, hGy', β,
+        Category.assoc, eqToHom_trans]
+    let z : TwoFibreProductOverCategory F.underlying G.underlying :=
+      { obj :=
+          { obj := { left := ξ.obj.left, right := y', hom := β }
+            property := by
+              change IsIso β
+              infer_instance }
+        property := ⟨pX.obj ξ.obj.left, rfl, hdom, hβ⟩ }
+    refine ⟨z, ?_⟩
+    refine ⟨ObjectProperty.isoMk _
+      (Comma.isoMk (Iso.refl _) (asIso φ) ?_)⟩
+    change (overFunctor F.underlying).map (𝟙 ξ.obj.left) ≫ ξ.obj.hom =
+      β ≫ (overFunctor G.underlying).map φ
+    simp [β]
+  exact ⟨@Functor.asEquivalence _ _ _ _ ι hι⟩
 
 /-! ## Fibrewise functors and equivalences -/
 
@@ -1318,6 +1433,59 @@ theorem fibredInGroupoids_equivalence_iff_fibrewise
       essSurj := hGess
     }
 
+private theorem canonicalFibredTwoFibreProduct_fibres_are_groupoids
+    {C : Cat.{v, u}} (X Y S : FibredCategoryOver C)
+    (hX : IsGroupoidFibredCategoryOver X)
+    (hY : IsGroupoidFibredCategoryOver Y)
+    (hS : IsGroupoidFibredCategoryOver S)
+    (F : FibredCategoryOverHom X S) (G : FibredCategoryOverHom Y S) :
+    ∀ U : C,
+      IsGroupoid (Functor.Fiber
+        (canonicalFibredTwoFibreProduct X Y S F G).diagram.base U) := by
+  intro U
+  obtain ⟨e⟩ := twoFibreProductOver_fibre_equivalent
+    F.underlying G.underlying U
+  let _ : IsGroupoid
+      (IsoComma (overMorphismFiberFunctor F.underlying U)
+        (overMorphismFiberFunctor G.underlying U)) := by
+    constructor
+    intro a b f
+    let _ : IsIso f.hom.left := (hX U).all_isIso _
+    let _ : IsIso f.hom.right := (hY U).all_isIso _
+    let g : b ⟶ a := by
+      refine { hom :=
+        { left := inv f.hom.left, right := inv f.hom.right, w := ?_ } }
+      calc
+        (overMorphismFiberFunctor F.underlying U).map (inv f.hom.left) ≫
+            a.obj.hom =
+          (overMorphismFiberFunctor F.underlying U).map (inv f.hom.left) ≫
+            (a.obj.hom ≫
+              (overMorphismFiberFunctor G.underlying U).map f.hom.right) ≫
+              (overMorphismFiberFunctor G.underlying U).map
+                (inv f.hom.right) := by simp [Category.assoc]
+        _ = (overMorphismFiberFunctor F.underlying U).map
+              (inv f.hom.left) ≫
+            ((overMorphismFiberFunctor F.underlying U).map f.hom.left ≫
+              b.obj.hom) ≫
+              (overMorphismFiberFunctor G.underlying U).map
+                (inv f.hom.right) := by rw [f.hom.w]
+        _ = b.obj.hom ≫
+            (overMorphismFiberFunctor G.underlying U).map
+              (inv f.hom.right) := by simp [Category.assoc]
+    refine ⟨⟨g, ?_, ?_⟩⟩
+    · apply ObjectProperty.hom_ext
+      apply Comma.hom_ext <;> simp [g]
+    · apply ObjectProperty.hom_ext
+      apply Comma.hom_ext <;> simp [g]
+  let _ : e.functor.IsEquivalence := by infer_instance
+  refine { all_isIso := ?_ }
+  intro a b f
+  let _ : IsIso (e.functor.map f) :=
+    (inferInstance : IsGroupoid
+      (IsoComma (overMorphismFiberFunctor F.underlying U)
+        (overMorphismFiberFunctor G.underlying U))).all_isIso _
+  exact e.fullyFaithfulFunctor.isIso_of_isIso_map f
+
 /-- Equivalence over the fixed base, expressed in the category of fibred
 category morphisms.  Its isomorphisms are precisely the vertical natural
 isomorphisms used as 2-morphisms in the source. -/
@@ -1355,9 +1523,72 @@ theorem fibredInGroupoids_fullyFaithful_iff_diagonal_isEquivalence
     (hX : IsGroupoidFibredCategoryOver X)
     (hY : IsGroupoidFibredCategoryOver Y)
     (F : FibredCategoryOverHom X Y) :
-    Nonempty (overFunctor F.underlying).FullyFaithful ↔
+      Nonempty (overFunctor F.underlying).FullyFaithful ↔
       (fibredCategoryDiagonalFunctor F).IsEquivalence := by
-  sorry
+  constructor
+  · rintro ⟨hH⟩
+    let H := overFunctor F.underlying
+    let D := fibredCategoryDiagonalFunctor F
+    let _ : H.FullyFaithful := hH
+    let preimage {x y : X.underlying.left}
+        (f : D.obj x ⟶ D.obj y) : x ⟶ y :=
+      f.hom.hom.left
+    have hmap_preimage {x y : X.underlying.left}
+        (f : D.obj x ⟶ D.obj y) :
+        D.map (preimage f) = f := by
+      apply ObjectProperty.hom_ext
+      apply ObjectProperty.hom_ext
+      apply Comma.hom_ext
+      · rfl
+      · apply hH.map_injective
+        have hw : H.map f.hom.hom.left = H.map f.hom.hom.right := by
+          simpa [D, fibredCategoryDiagonalFunctor, isoCommaDiagonal]
+            using f.hom.hom.w
+        exact hw
+    have hDff : D.FullyFaithful :=
+      Functor.FullyFaithful.mk preimage
+        (by intro x y f; exact hmap_preimage f)
+        (by intro x y f; rfl)
+    exact ⟨hDff.faithful, hDff.full, by
+      constructor
+      intro z
+      let f : z.obj.obj.left ⟶ z.obj.obj.right :=
+        hH.preimage z.obj.obj.hom
+      letI : IsIso (H.map f) := by
+        dsimp [f]
+        rw [hH.map_preimage]
+        exact z.obj.property
+      let _ : IsIso f := by
+        exact hH.isIso_of_isIso_map f
+      refine ⟨z.obj.obj.left, ⟨ObjectProperty.isoMk _
+        (ObjectProperty.isoMk _
+          (Comma.isoMk (Iso.refl _)
+            (@asIso _ _ _ _ f (hH.isIso_of_isIso_map f)) ?_))⟩⟩
+      dsimp [D, fibredCategoryDiagonalFunctor, isoCommaDiagonal,
+        ObjectProperty.isoMk, Comma.isoMk]
+      simp [f, hH.map_preimage]
+      ⟩
+  · intro hD
+    let pX := structureFunctor X.underlying
+    let pY := structureFunctor Y.underlying
+    let pT := twoFibreProductOverBaseFunctor F.underlying F.underlying
+    let D := fibredCategoryDiagonalFunctor F
+    let _ : pX.IsFibredInGroupoids :=
+      groupoidFibredCategoryOver_isFibredInGroupoids X hX
+    let _ : pY.IsFibredInGroupoids :=
+      groupoidFibredCategoryOver_isFibredInGroupoids Y hY
+    obtain ⟨P⟩ := categoriesFibredInGroupoids_have_twoFibreProducts
+      X X Y hX hX hY F F
+    have hpT : pT.IsFibredInGroupoids := by
+      simpa [pT, canonicalFibredTwoFibreProduct_diagram] using
+        fibredInGroupoidsTwoFibreProduct_apex_isFibredInGroupoids P
+    have hDfibre : ∀ U : C,
+        (fibreFunctor pX pT D rfl U).IsEquivalence := by
+      intro U
+      exact (fibredInGroupoids_equivalence_iff_fibrewise
+        pX pT D rfl (groupoidFibredCategoryOver_isFibredInGroupoids X hX)
+          hpT).mp hD U
+    exact ⟨Functor.FullyFaithful.ofFullyFaithful (overFunctor F.underlying)⟩
 
 /-! ## Equivalences and functor categories -/
 

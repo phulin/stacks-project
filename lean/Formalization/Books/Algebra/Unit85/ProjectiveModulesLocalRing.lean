@@ -206,19 +206,15 @@ private theorem countableFreeExtension_exists
     (D : CountableFreeDecomposition (R := R) (M := M)) (x : M) :
     Nonempty (CountableFreeExtension D x) := by
   classical
-  letI := D.finiteF
-  letI := D.freeF
   let eCF : M ≃ₗ[R] ModuleCat.carrier D.C × ModuleCat.carrier D.F :=
     D.e.trans (LinearEquiv.prodComm R (ModuleCat.carrier D.F)
       (ModuleCat.carrier D.C))
   obtain ⟨Q, hyQ, hQcomp, hQfree⟩ :=
-    hproperty (ModuleCat.carrier D.C) (ModuleCat.carrier D.F) ⟨eCF⟩ (eCF x).1
-  letI : Module.Free R Q := hQfree
+    @hproperty (ModuleCat.carrier D.C) (ModuleCat.carrier D.F) _ _ _ _
+      D.finiteF D.freeF ⟨eCF⟩ (eCF x).1
   obtain ⟨U, hQU⟩ := hQcomp
   obtain ⟨T, hTmem, hTcomp, hTfinite, hTfree⟩ :=
     free_element_mem_finite_free_direct_summand hQfree ⟨(eCF x).1, hyQ⟩
-  letI : Module.Finite R T := hTfinite
-  letI : Module.Free R T := hTfree
   obtain ⟨V, hTV⟩ := hTcomp
   let eC : ModuleCat.carrier D.C ≃ₗ[R] T × (V × U) :=
     ((Submodule.prodEquivOfIsCompl Q U hQU).symm.trans
@@ -235,7 +231,7 @@ private theorem countableFreeExtension_exists
     refine ⟨((eCF x).2, zT), ?_⟩
     apply e.injective
     rw [e.apply_symm_apply]
-    simp only [e, LinearEquiv.trans_apply, LinearEquiv.prodAssoc_apply,
+    simp only [e, LinearEquiv.trans_apply,
       LinearEquiv.prodCongr_apply]
     change (((eCF x).2, zT), 0, 0) =
       (((D.e x).1, (eC (D.e x).2).1), (eC (D.e x).2).2)
@@ -249,12 +245,8 @@ private theorem countableFreeExtension_exists
     rw [hD]
     congr 1
     all_goals
-      simp only [LinearEquiv.trans_apply, LinearEquiv.prodAssoc_apply,
-        LinearEquiv.prodCongr_apply]
       simp [eC, zT, zQ,
-        Submodule.prodEquivOfIsCompl_symm_apply_left,
-        Submodule.prodEquivOfIsCompl_symm_apply_right, hprojQ, hTVzero,
-        hQUzero]
+        hprojQ, hTVzero, hQUzero]
   refine ⟨{
     Q := Q
     U := U
@@ -341,14 +333,14 @@ theorem free_of_countablyGenerated_of_free_direct_summand_property
       rw [show (D n).e.symm (f, (E n).eC.symm (t, (0, 0))) =
           (D n).e.symm (f, 0) + (D n).e.symm (0, (E n).eC.symm (t, (0, 0))) by
         rw [← map_add]
-        congr 1 <;> simp]
+        congr 1; simp]
       apply Submodule.mem_sup.mpr
       refine ⟨(D n).e.symm (f, 0), ?_,
         (D n).e.symm (0, (E n).eC.symm (t, (0, 0))), ?_, rfl⟩
       · exact ⟨f, by
-          simp [P, inc, CountableFreeExtension.next, E]⟩
+          simp [inc]⟩
       · exact ⟨t, by
-          simp [A, incT, CountableFreeExtension.next, E]
+          simp [incT, E]
           rfl⟩
     · intro hy
       rcases Submodule.mem_sup'.mp hy with
@@ -362,15 +354,15 @@ theorem free_of_countablyGenerated_of_free_direct_summand_property
       change (D n).e.symm (f, (E n).eC.symm (t, (0, 0))) =
         (D n).e.symm (f, 0) + (D n).e.symm (0, (E n).eC.symm (t, (0, 0)))
       rw [← map_add]
-      congr 1 <;> simp
+      congr 1; simp
   have hincE (n : ℕ) (f : ModuleCat.carrier (D n).F) :
       (E n).e (inc n f) = ((f, 0), (0, 0)) := by
     rw [(E n).e_eq]
-    simp [inc] <;> rfl
+    simp [inc]; rfl
   have hincTE (n : ℕ) (t : (E n).T) :
       (E n).e (incT n t) = ((0, t), (0, 0)) := by
     rw [(E n).e_eq]
-    simp [incT] <;> rfl
+    simp [incT]; rfl
   have hdisjoint (n : ℕ) : Disjoint (A n) (P n) := by
     rw [Submodule.disjoint_def]
     intro y hyA hyP
@@ -389,7 +381,7 @@ theorem free_of_countablyGenerated_of_free_direct_summand_property
   have hPzero : P 0 = ⊥ := by
     apply le_antisymm
     · rintro y ⟨z, rfl⟩
-      simp [P, inc, D, D0]
+      simp [inc, D, D0]
     · exact (bot_le : (⊥ : Submodule R M) ≤ P 0)
   have hPmono : Monotone P := by
     intro m n hmn
@@ -447,7 +439,7 @@ theorem free_of_countablyGenerated_of_free_direct_summand_property
         have hjne : j ≠ n := by
           intro hjeq
           subst j
-          simpa using hj
+          simp at hj
         have hjmem : j ∈ s := by
           apply DFinsupp.mem_support_iff.mpr
           simpa [DFinsupp.erase_apply, hjne] using hj

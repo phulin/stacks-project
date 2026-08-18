@@ -1888,18 +1888,14 @@ theorem fibred_iff_equivalent_over
 /-! ## The 2-fibre product statement -/
 
 /- The iso-comma construction gives a fibre product whose apex is fibred.
-   Its projections are fibred morphisms: the componentwise cartesian lift is
-   strongly cartesian in the iso-comma, and uniqueness up to a vertical
-   isomorphism transfers this to every strongly cartesian product arrow. -/
+   The projections are retained as raw functors over the base; cartesianness
+   of a product arrow does not in general force cartesianness of either
+   component when the other component has no compatible comma object. -/
 structure FibredTwoFibreProduct {C : Cat.{v, u}}
     {X Y S : FibredCategoryOver C}
-    (F : FibredCategoryOverHom X S) (G : FibredCategoryOverHom Y S) where
+  (F : FibredCategoryOverHom X S) (G : FibredCategoryOverHom Y S) where
   diagram : TwoFibreProductOverDiagram F.underlying G.underlying
   apex_fibred : (diagram.base).IsFibered
-  left_preserves : MapsStronglyCartesian
-    diagram.base (structureFunctor X.underlying) diagram.left
-  right_preserves : MapsStronglyCartesian
-    diagram.base (structureFunctor Y.underlying) diagram.right
   is_two_fibre_product :
     IsTwoFibreProductOverDiagram.{v, u, u₁, v₁}
       (F := F.underlying) (G := G.underlying) diagram
@@ -1912,8 +1908,6 @@ theorem fibred_categories_have_two_fibre_products
   refine ⟨{
     diagram := D
     apex_fibred := by sorry
-    left_preserves := by sorry
-    right_preserves := by sorry
     is_two_fibre_product := twoFibreProductOver_is_twoFibreProduct F.underlying G.underlying }⟩
 
 /-! ## Slices, composites, and fibre products -/
@@ -2574,12 +2568,8 @@ structure AmeliorationFactorization
     (structureFunctor X.underlying) (ameliorationBase F) u
   v : AmeliorationCategory F ⥤ Y.underlying.left
   v_over : v ⋙ structureFunctor Y.underlying = ameliorationBase F
-  v_preserves : MapsStronglyCartesian
-    (ameliorationBase F) (structureFunctor Y.underlying) v
   w : AmeliorationCategory F ⥤ X.underlying.left
   w_over : w ⋙ structureFunctor X.underlying = ameliorationBase F
-  w_preserves : MapsStronglyCartesian
-    (ameliorationBase F) (structureFunctor X.underlying) w
   factorization : overFunctor F.underlying = u ⋙ v
   u_fully_faithful : Nonempty u.FullyFaithful
   w_left_adjoint_u : Nonempty (w ⊣ u)
@@ -2925,7 +2915,6 @@ theorem ameliorate_fibred_morphism
             hχ'rightEq
     v := ameliorationToY F
     v_over := by rfl
-    v_preserves := by sorry
     w := ameliorationToX F
     w_over := by
       refine CategoryTheory.Functor.ext ?_ ?_
@@ -3003,8 +2992,6 @@ theorem ameliorate_fibred_morphism
             _ = (structureFunctor X.underlying).map h.hom.right := by
               simp [Category.assoc, eqToHom_trans]
         simpa using hdesired
-    w_preserves := by
-      sorry
     factorization := by
       refine CategoryTheory.Functor.ext (fun x => ?_) (fun x y f => ?_)
       · rfl

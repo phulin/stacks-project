@@ -602,7 +602,7 @@ theorem pthRootLevel_element_pow_mem_base
     exact (map_inv₀ (PerfectClosure.of k p) a).symm
   · rintro x z hx hz ⟨a, ha⟩ ⟨b, hb⟩
     refine ⟨a * b, ?_⟩
-    simpa only [mul_pow, ha, hb, map_mul]
+    simp only [mul_pow, ha, hb, map_mul]
 
 /-- Each finite root level is algebraic over its base field. -/
 theorem pthRootLevel_is_algebraic

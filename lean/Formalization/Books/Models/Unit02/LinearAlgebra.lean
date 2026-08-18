@@ -1333,6 +1333,24 @@ theorem orthogonal_projection_sequence
   exact orthogonal_projection_data L B hB A hquotient
     (by simpa [p, W] using hker)
 
+private theorem int_free_of_torsion_free_finite
+    (M : Type*) [AddCommGroup M] [Module ℤ M]
+    [Module.IsTorsionFree ℤ M] [Module.Finite ℤ M] :
+    Module.Free ℤ M := by
+  infer_instance
+
+private theorem int_finite_of_surjective
+    (M P : Type*) [AddCommGroup M] [Module ℤ M]
+    [AddCommGroup P] [Module ℤ P] [Module.Finite ℤ M]
+    (f : M →ₗ[ℤ] P) (hf : Function.Surjective f) :
+    Module.Finite ℤ P := by
+  exact Module.Finite.of_surjective f hf
+
+private theorem projective_of_free
+    (M : Type*) [AddCommGroup M] [Module ℤ M] [Module.Free ℤ M] :
+    Module.Projective ℤ M := by
+  exact Module.Projective.of_free
+
 /-! The dual-lattice injections associated with an orthogonal decomposition. -/
 theorem orthogonal_direct_sum
     (L : Type*) [AddCommGroup L] [Module ℤ L] [Module.Free ℤ L]
@@ -1355,7 +1373,7 @@ theorem orthogonal_direct_sum
   let C : Submodule ℤ L := A ⊔ B.orthogonal A
   obtain ⟨p, q, hp, hker, hex, hsur, hq⟩ :=
     orthogonal_projection_sequence L B hB A hquotient
-  letI : Module ℤ A := A.module
+  let _instA : Module ℤ A := A.module
   let pA : L →ₗ[ℤ] Module.Dual ℤ A := B.domRestrict₂ A
   have hkerpA : LinearMap.ker pA = B.orthogonal A := by
     ext x
@@ -1469,23 +1487,42 @@ theorem orthogonal_direct_sum
     rw [Submodule.mem_sup]
     refine ⟨a, a.property, x - y - (a : L), hW, ?_⟩
     abel
-  letI : Module ℤ (L ⧸ A) := Submodule.Quotient.module A
-  letI : Module.IsTorsionFree ℤ (L ⧸ A) := by
-    change @Module.IsTorsionFree ℤ (L ⧸ A) _ _ (Submodule.Quotient.module A)
-    have hmod : (Submodule.Quotient.module A : Module ℤ (L ⧸ A)) =
-        AddCommGroup.toIntModule (L ⧸ A) := Subsingleton.elim _ _
+  have hmod : (Submodule.Quotient.module A : Module ℤ (L ⧸ A)) =
+      AddCommGroup.toIntModule (L ⧸ A) := Subsingleton.elim _ _
+  have htfA : @Module.IsTorsionFree ℤ (L ⧸ A) _ _ (Submodule.Quotient.module A) := by
     rw [hmod]
     exact hquotient
-  letI : IsScalarTower ℤ ℤ L :=
-    ⟨fun a b x => by simpa only [smul_eq_mul] using (smul_smul a b x).symm⟩
-  letI : Module.Finite ℤ (L ⧸ A) :=
-    Module.Finite.of_surjective (A.mkQ : L →ₗ[ℤ] (L ⧸ A)) A.mkQ_surjective
-  have hAproj : Module.Projective ℤ (L ⧸ A) := inferInstance
+  have htfA' : @Module.IsTorsionFree ℤ (L ⧸ A) _ _ (AddCommGroup.toIntModule (L ⧸ A)) := by
+    rw [← hmod]
+    exact htfA
+  have hfiniteA : @Module.Finite ℤ (L ⧸ A) _ _ (Submodule.Quotient.module A) := by
+    exact @int_finite_of_surjective L (L ⧸ A) _ _ _
+      (Submodule.Quotient.module A) _ A.mkQ A.mkQ_surjective
+  have hfiniteA' : @Module.Finite ℤ (L ⧸ A) _ _ (AddCommGroup.toIntModule (L ⧸ A)) := by
+    rw [← hmod]
+    exact hfiniteA
+  have hAfree' : @Module.Free ℤ (L ⧸ A) _ _ (AddCommGroup.toIntModule (L ⧸ A)) := by
+    exact @int_free_of_torsion_free_finite (L ⧸ A) _
+      (AddCommGroup.toIntModule (L ⧸ A)) htfA' hfiniteA'
+  have hAfree : @Module.Free ℤ (L ⧸ A) _ _ (Submodule.Quotient.module A) := by
+    rw [hmod]
+    exact hAfree'
+  have hAproj' : @Module.Projective ℤ _ (L ⧸ A) _
+      (AddCommGroup.toIntModule (L ⧸ A)) := by
+    exact @projective_of_free (L ⧸ A) _
+      (AddCommGroup.toIntModule (L ⧸ A)) hAfree'
+  have hAproj : @Module.Projective ℤ _ (L ⧸ A) _ (Submodule.Quotient.module A) := by
+    rw [hmod]
+    exact hAproj'
   let rA := A.dualRestrict
   have hrA : Function.Surjective rA := by
-    obtain ⟨s, hs⟩ := LinearMap.exists_rightInverse_of_surjective
-      (A.mkQ : L →ₗ[ℤ] (L ⧸ A))
-      (LinearMap.range_eq_top.mpr A.mkQ_surjective)
+    have hA_surj := A.mkQ_surjective
+    have hA_range :=
+      (@LinearMap.range_eq_top ℤ ℤ L (L ⧸ A) _ _ _ _ _
+        (Submodule.Quotient.module A) (RingHom.id ℤ) _ A.mkQ).2 hA_surj
+    obtain ⟨s, hs⟩ := @LinearMap.exists_rightInverse_of_surjective ℤ _
+      (L ⧸ A) _ (Submodule.Quotient.module A) L _ _ hAproj A.mkQ
+      hA_range
     let t : L →ₗ[ℤ] L := LinearMap.id - s.comp A.mkQ
     have ht : ∀ x, t x ∈ A := by
       intro x
@@ -1499,7 +1536,6 @@ theorem orthogonal_direct_sum
       intro a
       apply Subtype.ext
       dsimp [π]
-      change t (a : L) = (a : L)
       have haq : A.mkQ (a : L) = 0 :=
         (Submodule.Quotient.mk_eq_zero A).mpr a.property
       simp [t, haq]
@@ -1516,7 +1552,7 @@ theorem orthogonal_direct_sum
     apply LinearMap.mem_ker.mpr
     apply (Submodule.Quotient.mk_eq_zero (LinearMap.range f)).mpr
     refine ⟨C.mkQ x, ?_⟩
-    simp only [f, Submodule.liftQ_apply, LinearMap.comp_apply]
+    simp only [f]
     apply congrArg (LinearMap.range (B.restrict A)).mkQ
     apply DFunLike.ext
     intro a
@@ -1535,7 +1571,7 @@ theorem orthogonal_direct_sum
     rw [hφ]
     simpa only [Submodule.mkQ_apply] using
       congrArg (LinearMap.range f).mkQ hu
-  letI : Module ℤ (B.orthogonal A) := (B.orthogonal A).module
+  let _instW : Module ℤ (B.orthogonal A) := (B.orthogonal A).module
   let pW : L →ₗ[ℤ] Module.Dual ℤ (B.orthogonal A) :=
     B.domRestrict₂ (B.orthogonal A)
   have hpW : ∀ x y, pW x y = B x (y : L) := by
@@ -1708,40 +1744,51 @@ theorem orthogonal_direct_sum
     change (LinearMap.range g).mkQ (uG u) = Submodule.Quotient.mk t
     rw [← hu]
     rfl
-  letI : Module ℤ (L ⧸ (B.orthogonal A)) :=
-    Submodule.Quotient.module (B.orthogonal A)
-  have hWtf : Module.IsTorsionFree ℤ (L ⧸ (B.orthogonal A)) := by
-    apply Module.IsTorsionFree.of_smul_eq_zero
-    intro k z hz
-    rcases z with ⟨x⟩
-    by_cases hk : k = 0
-    · exact Or.inl hk
-    right
-    apply (Submodule.Quotient.mk_eq_zero (B.orthogonal A)).2
-    rw [LinearMap.BilinForm.mem_orthogonal_iff]
-    intro a ha
-    have hka : k • B a x = 0 := by
-      have hxW : k • x ∈ B.orthogonal A := by
-        apply (Submodule.Quotient.mk_eq_zero (B.orthogonal A)).1
-        change (B.orthogonal A).mkQ (k • x) = 0
-        rw [← Int.cast_smul_eq_zsmul ℤ]
-        rw [(B.orthogonal A).mkQ.map_smul]
-        exact hz
-      have h := hxW a ha
-      rw [← Int.cast_smul_eq_zsmul ℤ] at h
-      exact ((B a).map_smul k x).symm.trans h
-    exact (smul_eq_zero.mp hka).resolve_left (by simpa using hk)
-  letI : Module.IsTorsionFree ℤ (L ⧸ (B.orthogonal A)) := hWtf
-  letI : Module.Finite ℤ (L ⧸ (B.orthogonal A)) :=
-    Module.Finite.of_surjective ((B.orthogonal A).mkQ :
-      L →ₗ[ℤ] (L ⧸ (B.orthogonal A))) (B.orthogonal A).mkQ_surjective
-  have hWfree : Module.Free ℤ (L ⧸ (B.orthogonal A)) := by infer_instance
-  have hWproj : Module.Projective ℤ (L ⧸ (B.orthogonal A)) := inferInstance
+  have hWmod : (Submodule.Quotient.module (B.orthogonal A) :
+      Module ℤ (L ⧸ (B.orthogonal A))) =
+      AddCommGroup.toIntModule (L ⧸ (B.orthogonal A)) := Subsingleton.elim _ _
+  have hWtf : @Module.IsTorsionFree ℤ (L ⧸ (B.orthogonal A)) _ _
+      (Submodule.Quotient.module (B.orthogonal A)) := by
+    simpa using orthogonal_quotient_isTorsionFree L B A
+  have hWtf' : @Module.IsTorsionFree ℤ (L ⧸ (B.orthogonal A)) _ _
+      (AddCommGroup.toIntModule (L ⧸ (B.orthogonal A))) := by
+    rw [← hWmod]
+    exact hWtf
+  have hWfinite : @Module.Finite ℤ (L ⧸ (B.orthogonal A)) _ _
+      (Submodule.Quotient.module (B.orthogonal A)) := by
+    exact @int_finite_of_surjective L (L ⧸ (B.orthogonal A)) _ _ _
+      (Submodule.Quotient.module (B.orthogonal A)) _
+      (B.orthogonal A).mkQ (B.orthogonal A).mkQ_surjective
+  have hWfinite' : @Module.Finite ℤ (L ⧸ (B.orthogonal A)) _ _
+      (AddCommGroup.toIntModule (L ⧸ (B.orthogonal A))) := by
+    rw [← hWmod]
+    exact hWfinite
+  have hWfree' : @Module.Free ℤ (L ⧸ (B.orthogonal A)) _ _
+      (AddCommGroup.toIntModule (L ⧸ (B.orthogonal A))) := by
+    exact @int_free_of_torsion_free_finite (L ⧸ (B.orthogonal A)) _
+      (AddCommGroup.toIntModule (L ⧸ (B.orthogonal A))) hWtf' hWfinite'
+  have hWfree : @Module.Free ℤ (L ⧸ (B.orthogonal A)) _ _
+      (Submodule.Quotient.module (B.orthogonal A)) := by
+    rw [hWmod]
+    exact hWfree'
+  have hWproj' : @Module.Projective ℤ _ (L ⧸ (B.orthogonal A)) _
+      (AddCommGroup.toIntModule (L ⧸ (B.orthogonal A))) := by
+    exact @projective_of_free (L ⧸ (B.orthogonal A)) _
+      (AddCommGroup.toIntModule (L ⧸ (B.orthogonal A))) hWfree'
+  have hWproj : @Module.Projective ℤ _ (L ⧸ (B.orthogonal A)) _
+      (Submodule.Quotient.module (B.orthogonal A)) := by
+    rw [hWmod]
+    exact hWproj'
   let rW := (B.orthogonal A).dualRestrict
   have hrW : Function.Surjective rW := by
-    obtain ⟨s, hs⟩ := LinearMap.exists_rightInverse_of_surjective
-      ((B.orthogonal A).mkQ : L →ₗ[ℤ] (L ⧸ (B.orthogonal A)))
-      (LinearMap.range_eq_top.mpr (B.orthogonal A).mkQ_surjective)
+    have hW_surj := (B.orthogonal A).mkQ_surjective
+    have hW_range :=
+      (@LinearMap.range_eq_top ℤ ℤ L (L ⧸ (B.orthogonal A)) _ _ _ _ _
+        (Submodule.Quotient.module (B.orthogonal A)) (RingHom.id ℤ) _
+        (B.orthogonal A).mkQ).2 hW_surj
+    obtain ⟨s, hs⟩ := @LinearMap.exists_rightInverse_of_surjective ℤ _
+      (L ⧸ (B.orthogonal A)) _ (Submodule.Quotient.module (B.orthogonal A))
+      L _ _ hWproj (B.orthogonal A).mkQ hW_range
     let t : L →ₗ[ℤ] L := LinearMap.id - s.comp (B.orthogonal A).mkQ
     have ht : ∀ x, t x ∈ B.orthogonal A := by
       intro x

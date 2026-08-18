@@ -294,14 +294,18 @@ theorem PositiveContractingHomotopy.exactAt
   have hsection : section_ ≫ S.toCycles = 𝟙 _ := by
     apply (cancel_mono S.iCycles).1
     simp only [section_, Category.assoc, ShortComplex.toCycles_i,
-      Category.id_comp, Category.comp_id]
+      Category.id_comp]
     change S.iCycles ≫ h.homotopy m ≫ K.d m (m + 1) = _
     calc
       _ = S.iCycles ≫
           (h.homotopy m ≫ K.d m (m + 1) +
             K.d (m + 1) (m + 2) ≫ h.homotopy (m + 1)) := by
-        simp only [Preadditive.comp_add, Category.assoc,
-          ShortComplex.iCycles_g, comp_zero, add_zero]
+        rw [Preadditive.comp_add]
+        simp only [← Category.assoc]
+        change (S.iCycles ≫ h.homotopy m) ≫ K.d m (m + 1) =
+          (S.iCycles ≫ h.homotopy m) ≫ K.d m (m + 1) +
+            (S.iCycles ≫ S.g) ≫ h.homotopy (m + 1)
+        rw [ShortComplex.iCycles_g, zero_comp, add_zero]
       _ = S.iCycles ≫ 𝟙 _ := by rw [h.identity m]
       _ = _ := by simp
   exact (⟨section_, hsection⟩ : SplitEpi S.toCycles).epi

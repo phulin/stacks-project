@@ -526,15 +526,19 @@ theorem isNumericalPolynomial_of_sub
         (∑ j ∈ Finset.range (r + 1),
             integerBinomial n (j + 1) •
               (a j + if j + 1 ≤ r then a (j + 1) else 0)) =
-            (∑ j ∈ Finset.range (r + 1),
+            ∑ j ∈ Finset.range (r + 1),
+              (integerBinomial n (j + 1) • a j +
+                integerBinomial n (j + 1) •
+                  (if j + 1 ≤ r then a (j + 1) else 0)) := by
+          apply Finset.sum_congr rfl
+          intro j hj
+          rw [smul_add]
+        _ = (∑ j ∈ Finset.range (r + 1),
                 integerBinomial n (j + 1) • a j) +
               ∑ j ∈ Finset.range (r + 1),
                 integerBinomial n (j + 1) •
                   (if j + 1 ≤ r then a (j + 1) else 0) := by
-          rw [← Finset.sum_add_distrib]
-          apply Finset.sum_congr rfl
-          intro j hj
-          rw [smul_add]
+          rw [Finset.sum_add_distrib]
         _ = _ := by rw [hcond]
     have hdecomp :
         (∑ j ∈ Finset.range (r + 2), integerBinomial n j • b j) =

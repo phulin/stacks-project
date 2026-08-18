@@ -396,13 +396,13 @@ theorem notWLocalExample_properties
   classical
   have hTprofinite : IsProfiniteSpace T := hT
   obtain ⟨P, ⟨e⟩⟩ := hT
-  letI : T2Space T := e.symm.t2Space
-  letI : CompactSpace T := e.symm.compactSpace
-  letI : TotallyDisconnectedSpace T := e.symm.totallyDisconnectedSpace
+  let _ : T2Space T := e.symm.t2Space
+  let _ : CompactSpace T := e.symm.compactSpace
+  let _ : TotallyDisconnectedSpace T := e.symm.totallyDisconnectedSpace
   have hTpres : PrespectralSpace T :=
     PrespectralSpace.of_isTopologicalBasis isTopologicalBasis_isClopen
       (fun U hU => hU.isClosed.isCompact)
-  letI : SpectralSpace T :=
+  let _ : SpectralSpace T :=
     Formalization.Books.Topology.Unit23.spectralSpace_iff_source_conditions.mpr
       ⟨inferInstance, inferInstance, inferInstance, inferInstance, hTpres⟩
   let q : T × Bool → NotWLocalExamplePoint T t :=
@@ -427,7 +427,7 @@ theorem notWLocalExample_properties
       exact (U.2.preimage continuous_fst).inter
         ((isOpen_discrete ({true} : Set Bool)).preimage continuous_snd)
   have hcompactX : CompactSpace (NotWLocalExamplePoint T t) := by
-    letI : CompactSpace Bool := Finite.compactSpace
+    let _ : CompactSpace Bool := Finite.compactSpace
     have hqsurj : Function.Surjective q := by
       intro x
       exact ⟨(x.base, x.component), rfl⟩
@@ -435,7 +435,7 @@ theorem notWLocalExample_properties
       rw [← Set.image_univ]
       exact (@isCompact_univ (T × Bool) _).image hqcont
     exact ⟨by simpa [Set.range_eq_univ.2 hqsurj] using hqimage⟩
-  letI := hcompactX
+  let _ := hcompactX
   let H : Set (NotWLocalExamplePoint T t) :=
     Set.univ \ ({⟨t, false⟩} : Set (NotWLocalExamplePoint T t))
   have hHcompact : IsCompact H := by
@@ -458,7 +458,7 @@ theorem notWLocalExample_properties
     rcases hA' with (hAH | hA)
     · refine ⟨{A}, ?_, ?_⟩
       · simp [hAR]
-      · simpa [hAH]
+      · simp [hAH]
     · rcases hA with ⟨U, hUA⟩ | ⟨U, htU, hUA⟩
       · have htU' : t ∈ (U : Set T) := by
           rw [← hUA] at ht1A
@@ -536,7 +536,6 @@ theorem notWLocalExample_properties
   have hCyl_open {C : Set T} (hC : IsClopen C) : IsOpen (Cyl C) := by
     change IsOpen[TopologicalSpace.generateFrom (notWLocalExampleSubbasis t)] (Cyl C)
     apply isOpen_generateFrom_of_mem
-    change Cyl C ∈ notWLocalExampleSubbasis t
     exact Or.inl (Or.inl ⟨⟨C, hC.isOpen⟩, rfl⟩)
   have hH_open : IsOpen H := by
     change IsOpen[TopologicalSpace.generateFrom (notWLocalExampleSubbasis t)] H
@@ -546,7 +545,6 @@ theorem notWLocalExample_properties
       IsOpen (One C) := by
     change IsOpen[TopologicalSpace.generateFrom (notWLocalExampleSubbasis t)] (One C)
     apply isOpen_generateFrom_of_mem
-    change One C ∈ notWLocalExampleSubbasis t
     exact Or.inr ⟨⟨⟨C, hC.isOpen⟩, htC⟩, rfl⟩
   have hCyl_clopen {C : Set T} (hC : IsClopen C) :
       IsClopen (Cyl C) := by
@@ -563,15 +561,13 @@ theorem notWLocalExample_properties
     intro A hA
     simp [notWLocalExampleSubbasis] at hA
     rcases hA with (rfl | ⟨U, hUA⟩) | ⟨U, hUt, hUA⟩
-    · change IsOpen ((fun s : T =>
-          (⟨s, true⟩ : NotWLocalExamplePoint T t)) ⁻¹'
-        (Set.univ \ ({⟨t, false⟩} : Set (NotWLocalExamplePoint T t))))
+    ·
       have hpre : (fun s : T =>
           (⟨s, true⟩ : NotWLocalExamplePoint T t)) ⁻¹'
           ({⟨t, false⟩} : Set (NotWLocalExamplePoint T t)) = ∅ := by
         ext s
         simp
-      rw [Set.preimage_diff, Set.preimage_univ, hpre]
+      rw [Set.preimage_sdiff, Set.preimage_univ, hpre]
       simp
     · rw [← hUA]
       simpa [Set.preimage] using U.2
@@ -623,7 +619,7 @@ theorem notWLocalExample_properties
       One C ⊆ H := by
     intro y hy
     change y ∈ Set.univ \ ({⟨t, false⟩} : Set (NotWLocalExamplePoint T t))
-    simp only [Set.mem_diff, Set.mem_univ, true_and]
+    simp only [Set.mem_sdiff, Set.mem_univ, true_and]
     intro hy'
     have hyeq : y = ⟨t, false⟩ := Set.mem_singleton_iff.mp hy'
     change y.base ∈ C ∧ y.component = true at hy
@@ -791,12 +787,24 @@ theorem notWLocalExample_properties
       ⟩)
     · exact Or.inl (Or.inr ⟨⟨C.1 ∩ D.1, IsClopen.inter C.2 D.2⟩, by
         ext x
-        simp [Cyl, and_assoc, and_left_comm, and_comm]
+        change (x ∈ H ∧ x.base ∈ C.1 ∧ x.base ∈ D.1) ↔
+          x.base ∈ C.1 ∧ x ∈ H ∧ x.base ∈ D.1
+        constructor
+        · rintro ⟨hxH, hxC, hxD⟩
+          exact ⟨hxC, hxH, hxD⟩
+        · rintro ⟨hxC, hxH, hxD⟩
+          exact ⟨hxH, hxC, hxD⟩
       ⟩)
     · exact Or.inr ⟨⟨C.1 ∩ D.1,
           ⟨IsClopen.inter C.2 D.2.1, fun ht => D.2.2 ht.2⟩⟩, by
         ext x
-        simp [Cyl, One, and_assoc, and_left_comm, and_comm]
+        change (x.base ∈ C.1 ∧ x.base ∈ D.1) ∧ x.component = true ↔
+          x.base ∈ C.1 ∧ x.base ∈ D.1 ∧ x.component = true
+        constructor
+        · rintro ⟨⟨hxC, hxD⟩, hxt⟩
+          exact ⟨hxC, hxD, hxt⟩
+        · rintro ⟨hxC, hxD, hxt⟩
+          exact ⟨⟨hxC, hxD⟩, hxt⟩
       ⟩
     · exact Or.inl (Or.inr ⟨⟨C.1 ∩ D.1, IsClopen.inter C.2 D.2⟩, by
         ext x
@@ -822,7 +830,13 @@ theorem notWLocalExample_properties
     · exact Or.inr ⟨⟨C.1 ∩ D.1,
           ⟨IsClopen.inter C.2.1 D.2, fun ht => C.2.2 ht.1⟩⟩, by
         ext x
-        simp [Cyl, One, and_assoc, and_left_comm, and_comm]
+        change (x.base ∈ C.1 ∧ x.base ∈ D.1) ∧ x.component = true ↔
+          (x.base ∈ C.1 ∧ x.component = true) ∧ x.base ∈ D.1
+        constructor
+        · rintro ⟨⟨hxC, hxD⟩, hxt⟩
+          exact ⟨⟨hxC, hxt⟩, hxD⟩
+        · rintro ⟨⟨hxC, hxt⟩, hxD⟩
+          exact ⟨⟨hxC, hxD⟩, hxt⟩
       ⟩
     · refine Or.inr ⟨⟨C.1 ∩ D.1,
           ⟨IsClopen.inter C.2.1 D.2, fun ht => C.2.2 ht.1⟩⟩, ?_⟩
@@ -867,7 +881,7 @@ theorem notWLocalExample_properties
       (hy : y ∈ H) : x ∈ H := by
     rcases x with ⟨sx, bx⟩
     rcases y with ⟨sy, by'⟩
-    simp only [H, Set.mem_diff, Set.mem_univ, true_and] at hy ⊢
+    simp only [H, Set.mem_sdiff, Set.mem_univ, true_and] at hy ⊢
     intro hx
     rcases hcomp with hcomp | hcomp
     · simp_all
@@ -878,7 +892,7 @@ theorem notWLocalExample_properties
     by_cases hxt : x.base = t
     · have hyNe : y ≠ ⟨t, false⟩ := by
         intro hyEq
-        have hyfalse : y.component = false := by simpa [hyEq]
+        have hyfalse : y.component = false := by simp [hyEq]
         exact Bool.noConfusion (hyc.symm.trans hyfalse)
       have hyH : y ∈ H := by simp [H, hyNe]
       have hxH : x ∉ H := by
@@ -902,7 +916,7 @@ theorem notWLocalExample_properties
       have htC : t ∉ C := by
         intro ht
         have : t ∈ ({t} : Set T)ᶜ := hCt ht
-        simpa using this
+        simp at this
       have hxOne : x ∉ One C := by simp [One, hxc]
       exact hxOne ((specializes_iff_forall_open.mp hxy) _
         (hOne_open hC htC) hyOne)
@@ -921,10 +935,10 @@ theorem notWLocalExample_properties
         exact hxC hxopen
       refine ⟨hbase, ?_⟩
       cases hxc : x.component <;> cases hyc : y.component
-      · exact Or.inl (by simpa [hxc, hyc])
+      · exact Or.inl (by simp)
       · exact False.elim (hcontra_false_true hxy hbase hxc hyc)
-      · exact Or.inr (by simp [hxc, hyc])
-      · exact Or.inl (by simpa [hxc, hyc])
+      · exact Or.inr (by simp)
+      · exact Or.inl (by simp)
     · rintro ⟨hbase, hcomp⟩
       apply specializes_iff_forall_open.mpr
       intro O hO hyO
@@ -946,7 +960,7 @@ theorem notWLocalExample_properties
     · intro hcl
       by_contra hnot
       have hs : x ⤳ (⟨x.base, false⟩ : NotWLocalExamplePoint T t) :=
-        hspecializes_iff.mpr ⟨rfl, Or.inr ⟨by simpa [hnot], rfl⟩⟩
+        hspecializes_iff.mpr ⟨rfl, Or.inr ⟨by simp [hnot], rfl⟩⟩
       have hm := specializes_iff_mem_closure.mp hs
       have heq : (⟨x.base, false⟩ : NotWLocalExamplePoint T t) = x :=
         Set.mem_singleton_iff.mp (hcl.closure_subset hm)
@@ -968,7 +982,7 @@ theorem notWLocalExample_properties
       closedPoints (NotWLocalExamplePoint T t) =
         notWLocalExampleClosedPointSet t := by
     ext x
-    simp only [mem_closedPoints_iff, notWLocalExampleClosedPointSet, Set.mem_setOf_eq,
+    simp only [mem_closedPoints_iff, notWLocalExampleClosedPointSet, Set.mem_ofPred_eq,
       hclosed_iff]
   have hC_nontrivial {C : Set T} (hC : IsClopen C) (ht : t ∈ C) :
       ∃ s ∈ C, s ≠ t := by
@@ -1020,7 +1034,7 @@ theorem notWLocalExample_properties
         · rcases hyx'.2 with hsame | hgen'
           · simp_all
           · simp_all
-  letI : T0Space (NotWLocalExamplePoint T t) := hT0
+  let : T0Space (NotWLocalExamplePoint T t) := hT0
   have hbase_cont : Continuous (fun x : NotWLocalExamplePoint T t => x.base) := by
     rw [continuous_def]
     intro U hU
@@ -1051,11 +1065,11 @@ theorem notWLocalExample_properties
       intro y hy
       change y.base ∈ D at hy
       have hyH : y ∈ H := by
-        simp only [H, Set.mem_diff, Set.mem_univ, true_and]
+        simp only [H, Set.mem_sdiff, Set.mem_univ, true_and]
         intro hyEq
         have hyEq' : y = (⟨t, false⟩ : NotWLocalExamplePoint T t) :=
           Set.mem_singleton_iff.mp hyEq
-        have hyt : y.base = t := by simpa [hyEq']
+        have hyt : y.base = t := by simp [hyEq']
         have hyt_ne : y.base ≠ t := by simpa using (hDC hy).2
         exact hyt_ne hyt
       have hyC : y.base ∈ C.1 := (hDC hy).1
@@ -1117,7 +1131,84 @@ theorem notWLocalExample_properties
       intro x hx
       change x.base ∈ (V j : Set T) at hx
       exact (hCOf s).2.2 (hsV hx)
-  sorry
+  have hquasiSober : QuasiSober (NotWLocalExamplePoint T t) := by
+    constructor
+    intro Z hZ hZclosed
+    let pZ : Set T := (fun x : NotWLocalExamplePoint T t => x.base) '' Z
+    have hpZ : IsIrreducible pZ :=
+      hZ.image (fun x : NotWLocalExamplePoint T t => x.base) hbase_cont.continuousOn
+    obtain ⟨s, hpZs⟩ :=
+      (Formalization.Books.Topology.Unit08.hausdorff_irreducible_iff_singleton
+        (E := pZ)).mp hpZ
+    obtain ⟨z, hzZ⟩ := hZ.nonempty
+    have hzbase : z.base = s := by
+      have hzmem : z.base ∈ pZ := ⟨z, hzZ, rfl⟩
+      rw [hpZs] at hzmem
+      exact Set.mem_singleton_iff.mp hzmem
+    let z1 : NotWLocalExamplePoint T t := ⟨s, true⟩
+    let z0 : NotWLocalExamplePoint T t := ⟨s, false⟩
+    by_cases hz1 : z1 ∈ Z
+    · refine ⟨z1, ?_⟩
+      change closure ({z1} : Set (NotWLocalExamplePoint T t)) = Z
+      apply Set.Subset.antisymm
+      · exact closure_minimal (singleton_subset_iff.mpr hz1) hZclosed
+      · intro y hy
+        have hybase : y.base = s := by
+          have hymem : y.base ∈ pZ := ⟨y, hy, rfl⟩
+          rw [hpZs] at hymem
+          exact Set.mem_singleton_iff.mp hymem
+        exact specializes_iff_mem_closure.mp
+          (hspecializes_iff.mpr
+            ⟨by simpa [z1] using hybase.symm, by cases y.component <;> simp [z1]⟩)
+    · have hz0Z : z0 ∈ Z := by
+        rcases z with ⟨b, c⟩
+        cases c with
+        | false =>
+            change b = s at hzbase
+            cases hzbase
+            simpa [z0] using hzZ
+        | true =>
+            change b = s at hzbase
+            cases hzbase
+            apply False.elim
+            apply hz1
+            simpa [z1] using hzZ
+      refine ⟨z0, ?_⟩
+      change closure ({z0} : Set (NotWLocalExamplePoint T t)) = Z
+      apply Set.Subset.antisymm
+      · exact closure_minimal (singleton_subset_iff.mpr hz0Z) hZclosed
+      · intro y hy
+        have hybase : y.base = s := by
+          have hymem : y.base ∈ pZ := ⟨y, hy, rfl⟩
+          rw [hpZs] at hymem
+          exact Set.mem_singleton_iff.mp hymem
+        have hyeq : y = z0 := by
+          rcases y with ⟨b, c⟩
+          cases c with
+          | false =>
+              change b = s at hybase
+              cases hybase
+              rfl
+          | true =>
+              change b = s at hybase
+              cases hybase
+              apply False.elim
+              apply hz1
+              simpa [z1] using hy
+        rw [hyeq]
+        exact subset_closure rfl
+  have hspectral : SpectralSpace (NotWLocalExamplePoint T t) :=
+    Formalization.Books.Topology.Unit23.spectralSpace_iff_source_conditions.mpr
+      ⟨hT0, inferInstance, hquasiSober, hquasiSeparated, hprespectral⟩
+  have hbij := (@spectralSplit_iff_closedPointComponentMap_bijective
+    (NotWLocalExamplePoint T t) _ hspectral).mp hfinite_clopen_refinement
+  have hnclosed : ¬ IsClosed (closedPoints (NotWLocalExamplePoint T t)) := by
+    rw [hclosedPoints_eq]
+    intro hcl
+    have hm := hcl.closure_subset hdistinguished_closure
+    simp [notWLocalExampleDistinguishedPoint, notWLocalExampleClosedPointSet] at hm
+  exact ⟨hspectral, hclosedPoints_eq, hdistinguished_closure,
+    hfinite_clopen_refinement, hbij, hnclosed⟩
 
 /-! ## W-local spaces -/
 
@@ -1141,7 +1232,8 @@ theorem notWLocalExample_not_isWLocalSpace
     {T : Type u} [TopologicalSpace T] (hT : IsProfiniteSpace T) (t : T)
     (hnotcompact : ¬ IsCompact (({t} : Set T)ᶜ)) :
     ¬ IsWLocalSpace (NotWLocalExamplePoint T t) := by
-  sorry
+  intro hW
+  exact (notWLocalExample_properties.{u, 0} hT t hnotcompact).2.2.2.2.2 hW.2.1
 
 /-- The assertions immediately following the definition of w-locality. -/
 theorem isWLocalSpace_properties
@@ -1152,14 +1244,156 @@ theorem isWLocalSpace_properties
           ∀ x₀ : closedPoints X,
             connectedComponent (x₀ : X) =
               pointsSpecializingTo ({(x₀ : X)} : Set X) := by
-  sorry
+  have hbij : Function.Bijective (closedPointComponentMap (X := X)) :=
+    (@spectralSplit_of_closedPoints_closed_of_unique_specialization.{u, 0}
+      X _ hX.1 hX.2.1 hX.2.2).2
+  have hclosedSpectral : SpectralSpace (closedPoints X) :=
+    @Formalization.Books.Topology.Unit23.spectralSpace_subtype_of_isClosed
+      X _ hX.1 (closedPoints X) hX.2.1
+  have hclosed_singleton : ∀ z : closedPoints X,
+      IsClosed ({z} : Set (closedPoints X)) := by
+    intro z
+    have heq : (Subtype.val : closedPoints X → X) ⁻¹'
+        ({(z : X)} : Set X) = ({z} : Set (closedPoints X)) := by
+      ext y
+      constructor
+      · intro hy
+        exact Subtype.ext hy
+      · intro hy
+        exact congrArg Subtype.val (Set.mem_singleton_iff.mp hy)
+    rw [← heq]
+    exact z.property.preimage continuous_subtype_val
+  have hprof : IsProfiniteSpace (closedPoints X) :=
+    ((@Formalization.Books.Topology.Unit23.isProfiniteSpace_TFAE_spectral_separation_conditions
+      (closedPoints X) _ hclosedSpectral).out 5 0).mp hclosed_singleton
+  have hccprof : IsProfiniteSpace (ConnectedComponents X) :=
+    @Formalization.Books.Topology.Unit23.connectedComponents_isProfiniteSpace X _ hX.1
+  have hcompactX : CompactSpace X := hX.1.toCompactSpace
+  have hT0X : T0Space X := hX.1.toT0Space
+  have hcompactClosed : CompactSpace (closedPoints X) :=
+    isCompact_iff_compactSpace.mp
+      (@Formalization.Books.Topology.Unit12.isCompact_closedPoints X _ hcompactX hT0X)
+  have hccT2 : T2Space (ConnectedComponents X) :=
+    (Formalization.Books.Topology.Unit22.isProfiniteSpace_iff_hausdorff_quasiCompact_totallyDisconnected
+      (X := ConnectedComponents X)).mp hccprof |>.1
+  have hfcont : Continuous (closedPointComponentMap (X := X)) := by
+    exact ConnectedComponents.continuous_coe.comp continuous_subtype_val
+  have hhomeo : IsHomeomorph (closedPointComponentMap (X := X)) :=
+    (@isHomeomorph_iff_continuous_bijective
+      (closedPoints X) (ConnectedComponents X) _ _ (closedPointComponentMap (X := X))
+        hcompactClosed hccT2).mpr ⟨hfcont, hbij⟩
+  have hcomponent :
+      ∀ x₀ : closedPoints X,
+        connectedComponent (x₀ : X) =
+          pointsSpecializingTo ({(x₀ : X)} : Set X) := by
+    intro x₀
+    apply Set.Subset.antisymm
+    · intro x hx
+      obtain ⟨z, hxz, _⟩ := hX.2.2 x
+      have hzcompx : (z : X) ∈ connectedComponent x := by
+        apply closure_minimal (singleton_subset_iff.mpr mem_connectedComponent)
+          (Formalization.Books.Topology.Unit07.connectedComponent_is_closed x)
+        exact specializes_iff_mem_closure.mp hxz
+      have hcompx0 : connectedComponent (x₀ : X) = connectedComponent x :=
+        Formalization.Books.Topology.Unit07.connectedComponent_eq_of_mem hx
+      have hzcompx0 : (z : X) ∈ connectedComponent (x₀ : X) := by
+        rw [hcompx0]
+        exact hzcompx
+      have hcc : closedPointComponentMap x₀ = closedPointComponentMap z :=
+        ConnectedComponents.coe_eq_coe.mpr
+          (Formalization.Books.Topology.Unit07.connectedComponent_eq_of_mem hzcompx0)
+      have hzx₀ : z = x₀ := by
+        exact (hbij.1 hcc).symm
+      refine ⟨(x₀ : X), ?_, ?_⟩
+      · exact Set.mem_singleton_iff.mpr rfl
+      · simpa [hzx₀] using hxz
+    · intro x hx
+      obtain ⟨y, hy, hxy⟩ := hx
+      have hy' : y = (x₀ : X) := Set.mem_singleton_iff.mp hy
+      subst y
+      have hx₀comp : (x₀ : X) ∈ connectedComponent x := by
+        apply closure_minimal (singleton_subset_iff.mpr mem_connectedComponent)
+          (Formalization.Books.Topology.Unit07.connectedComponent_is_closed x)
+        exact specializes_iff_mem_closure.mp hxy
+      have hcomp : connectedComponent x = connectedComponent (x₀ : X) :=
+        Formalization.Books.Topology.Unit07.connectedComponent_eq_of_mem hx₀comp
+      rw [← hcomp]
+      exact mem_connectedComponent
+  exact ⟨hhomeo, hprof, hccprof, hcomponent⟩
 
 /-- A closed subspace of a w-local spectral space is w-local. -/
 theorem isWLocalSpace_subtype_of_isClosed
     {X : Type u} [TopologicalSpace X] (hX : IsWLocalSpace X)
     {Y : Set X} (hY : IsClosed Y) :
     IsWLocalSpace Y := by
-  sorry
+  have hYspectral : SpectralSpace Y :=
+    @Formalization.Books.Topology.Unit23.spectralSpace_subtype_of_isClosed
+      X _ hX.1 Y hY
+  have hclosedPoints :
+      closedPoints Y = (Subtype.val : Y → X) ⁻¹' closedPoints X := by
+    ext y
+    simp only [mem_closedPoints_iff]
+    constructor
+    · intro hy
+      obtain ⟨z, hyz, huniq⟩ := hX.2.2 (y : X)
+      have hclY : closure ({(y : X)} : Set X) ⊆ Y :=
+        closure_minimal (singleton_subset_iff.mpr y.property) hY
+      have hzY : (z : X) ∈ Y :=
+        hclY (specializes_iff_mem_closure.mp hyz)
+      let zY : Y := ⟨(z : X), hzY⟩
+      have hyzY : y ⤳ zY :=
+        (subtype_specializes_iff y zY).mpr hyz
+      have hzYeq : zY = y :=
+        Set.mem_singleton_iff.mp
+          ((mem_closedPoints_iff.mp hy).closure_subset
+            (specializes_iff_mem_closure.mp hyzY))
+      have hzval : (z : X) = (y : X) := congrArg Subtype.val hzYeq
+      simpa [hzval] using z.property
+    · intro hy
+      have heq : (Subtype.val : Y → X) ⁻¹'
+          ({(y : X)} : Set X) = ({y} : Set Y) := by
+        ext z
+        constructor
+        · intro hz
+          exact Subtype.ext hz
+        · intro hz
+          exact congrArg Subtype.val (Set.mem_singleton_iff.mp hz)
+      rw [← heq]
+      exact hy.preimage continuous_subtype_val
+  have hclosedY : IsClosed (closedPoints Y) := by
+    rw [hclosedPoints]
+    exact hX.2.1.preimage continuous_subtype_val
+  have huniqueY : ∀ y : Y, ∃! z₀ : closedPoints Y, y ⤳ (z₀ : Y) := by
+    intro y
+    obtain ⟨z, hyz, huniq⟩ := hX.2.2 (y : X)
+    have hclY : closure ({(y : X)} : Set X) ⊆ Y :=
+      closure_minimal (singleton_subset_iff.mpr y.property) hY
+    have hzY : (z : X) ∈ Y :=
+      hclY (specializes_iff_mem_closure.mp hyz)
+    let zY : Y := ⟨(z : X), hzY⟩
+    have hyzY : y ⤳ zY :=
+      (subtype_specializes_iff y zY).mpr hyz
+    have hzYclosed : zY ∈ closedPoints Y := by
+      rw [hclosedPoints]
+      change (z : X) ∈ closedPoints X
+      exact z.property
+    refine ⟨⟨zY, hzYclosed⟩, hyzY, ?_⟩
+    intro z' hz'
+    have hz'pre : (z' : Y) ∈ (Subtype.val : Y → X) ⁻¹' closedPoints X := by
+      rw [← hclosedPoints]
+      exact z'.property
+    have hz'X : (z' : X) ∈ closedPoints X := hz'pre
+    let zX' : closedPoints X := ⟨(z' : X), hz'X⟩
+    have hyz'X : (y : X) ⤳ (z' : X) :=
+      (subtype_specializes_iff y z').mp hz'
+    have hzx' : zX' = z := huniq zX' hyz'X
+    have hzYeq : (z' : Y) = zY := by
+      apply Subtype.ext
+      change (z' : X) = (z : X)
+      exact congrArg Subtype.val hzx'
+    apply Subtype.ext
+    exact hzYeq
+  exact ⟨hYspectral, hclosedY, huniqueY⟩
 
 /-! ## The cartesian base-change lemma -/
 

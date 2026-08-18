@@ -155,6 +155,19 @@ noncomputable abbrev localCohomologyPresheafRestriction
         (localCohomologyPresheafObject X U F i) :=
   moduleRestriction (localCohomologyPresheaf X F i) h
 
+theorem localCohomologyPresheafRestriction_natural
+    (X : RingedSpace.{v}) (i : ℤ)
+    {F G : Mod X.structureSheaf} (φ : F ⟶ G)
+    {U V : Opens X.carrier} (h : U ≤ V) :
+    localCohomologyPresheafRestriction X F i h ≫
+        (ModuleCat.restrictScalars
+          (X.structureSheaf.1.map (homOfLE h).op).hom).map
+          ((localCohomologyPresheafFunctor X i).map φ).app (op U) =
+      ((localCohomologyPresheafFunctor X i).map φ).app (op V) ≫
+        localCohomologyPresheafRestriction X G i h := by
+  exact presheafOfOModulesMorphism_naturality
+    ((localCohomologyPresheafFunctor X i).map φ) h
+
 noncomputable def cohomologyRestrictionMap
     (X : RingedSpace.{v}) (F : Mod X.structureSheaf) (i : ℤ)
     {U V : Opens X.carrier} (h : U ≤ V) :

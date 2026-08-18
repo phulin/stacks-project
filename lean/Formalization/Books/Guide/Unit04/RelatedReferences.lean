@@ -219,7 +219,9 @@ theorem siteTorsorTrivial_exists {C : Type u} [Category.{v} C]
               (carrier.obj.map (𝟙 U).op) q = q := by
             rw [h_id, carrier.obj.map_id]
             rfl
-          simpa [hp, hq, pG, qG] using sub_add_cancel qG pG
+          rw [hp, hq]
+          change qG - pG + pG = qG
+          exact sub_add_cancel qG pG
         · intro b hb
           have h_id : (𝟙 U).op = 𝟙 (op U) := by simp
           have hp : ConcreteCategory.hom
@@ -305,9 +307,8 @@ def SiteTorsorEquivalence.refl {C : Type u} [Category.{v} C]
 
 /-- Data specifying the quotient construction of the contracted product.
 
-The fields record the two presentations of the quotient: translating the first
-factor by `a` is identified with translating the second factor by `-a`, and the
-resulting action can be computed in either factor. -/
+The fields record the two presentations of the quotient, compatibility with
+restriction in the slice, and the resulting action in either factor. -/
 structure SiteTorsorContractedProductData {C : Type u} [Category.{v} C]
     {J : GrothendieckTopology C}
     {G : Sheaf J AddCommGrpCat.{w}} {X : C}
@@ -315,6 +316,10 @@ structure SiteTorsorContractedProductData {C : Type u} [Category.{v} C]
   torsor : SiteTorsor.{t, w, v, u} J G X
   pair : ∀ (U : (Over C X)ᵒᵖ),
     P.carrier.obj.obj U → Q.carrier.obj.obj U → torsor.carrier.obj.obj U
+  pair_natural : ∀ {U V : (Over C X)ᵒᵖ} (q : U ⟶ V)
+    (p : P.carrier.obj.obj U) (r : Q.carrier.obj.obj U),
+    torsor.carrier.obj.map q (pair U p r) =
+      pair V (P.carrier.obj.map q p) (Q.carrier.obj.map q r)
   pair_left_right : ∀ (U : (Over C X)ᵒᵖ)
     (a : (G.over X).obj.obj U) (p : P.carrier.obj.obj U) (q : Q.carrier.obj.obj U),
     pair U (P.action U a p) q = pair U p (Q.action U (-a) q)
@@ -667,7 +672,7 @@ def NonabelianBandedGerbeClass {C : Type u} [Category.{v} C]
 
 /-! #### Čech presentations in degree two -/
 
-/-- A finite part of the Čech nerve of a covering family in the slice over `X`.
+/-- A truncated part of the Čech nerve of a covering family in the slice over `X`.
 
 The site is not assumed to have pullbacks, so the intersections and their face
 maps are recorded as part of the presentation.  This is the weakest useful
@@ -900,60 +905,6 @@ def SiteCechTwoCocycleClass {C : Type u} [Category.{v} C]
     (J : GrothendieckTopology C) (G : Sheaf J AddCommGrpCat.{w}) (X : C) : Type _ :=
   Quotient (siteCechTwoCocycleSetoid J G X)
 
-/-- The comparison between the derived degree-two group and the Čech
-presentation quotient.  This isolates the choice of Čech presentations from
-the later gerbe constructions. -/
-theorem siteH2_equiv_siteCechTwoCocycleClass
-    {C : Type u} [Category.{v} C] {J : GrothendieckTopology C}
-    (G : Sheaf J AddCommGrpCat.{w}) (X : C)
-    [HasSheafify (J.over X) AddCommGrpCat.{w}]
-    [HasExt.{w'} (Sheaf (J.over X) AddCommGrpCat.{w})] :
-    Nonempty (siteH2 G X ≃ SiteCechTwoCocycleClass.{w, v, u, t} J G X) := by
-  sorry
-
-/-- A chosen map from derived degree-two cohomology to Čech classes. -/
-noncomputable def siteH2_to_siteCechTwoCocycleClass
-    {C : Type u} [Category.{v} C] {J : GrothendieckTopology C}
-    (G : Sheaf J AddCommGrpCat.{w}) (X : C)
-    [HasSheafify (J.over X) AddCommGrpCat.{w}]
-    [HasExt.{w'} (Sheaf (J.over X) AddCommGrpCat.{w})] :
-    siteH2 G X → SiteCechTwoCocycleClass.{w, v, u, t} J G X :=
-  (Classical.choice (siteH2_equiv_siteCechTwoCocycleClass G X)).toFun
-
-/-- A chosen inverse from Čech classes to derived degree-two cohomology. -/
-noncomputable def siteCechTwoCocycleClass_to_siteH2
-    {C : Type u} [Category.{v} C] {J : GrothendieckTopology C}
-    (G : Sheaf J AddCommGrpCat.{w}) (X : C)
-    [HasSheafify (J.over X) AddCommGrpCat.{w}]
-    [HasExt.{w'} (Sheaf (J.over X) AddCommGrpCat.{w})] :
-    SiteCechTwoCocycleClass.{w, v, u, t} J G X → siteH2 G X :=
-  (Classical.choice (siteH2_equiv_siteCechTwoCocycleClass G X)).invFun
-
-/-- The chosen derived/Čech maps are inverse. -/
-theorem siteH2_to_siteCechTwoCocycleClass_left_inverse
-    {C : Type u} [Category.{v} C] {J : GrothendieckTopology C}
-    (G : Sheaf J AddCommGrpCat.{w}) (X : C)
-    [HasSheafify (J.over X) AddCommGrpCat.{w}]
-    [HasExt.{w'} (Sheaf (J.over X) AddCommGrpCat.{w})]
-    (c : siteH2 G X) :
-    siteCechTwoCocycleClass_to_siteH2 G X
-      (siteH2_to_siteCechTwoCocycleClass G X c) = c := by
-  let e := Classical.choice (siteH2_equiv_siteCechTwoCocycleClass G X)
-  change e.invFun (e.toFun c) = c
-  exact e.left_inv c
-
-theorem siteH2_to_siteCechTwoCocycleClass_right_inverse
-    {C : Type u} [Category.{v} C] {J : GrothendieckTopology C}
-    (G : Sheaf J AddCommGrpCat.{w}) (X : C)
-    [HasSheafify (J.over X) AddCommGrpCat.{w}]
-    [HasExt.{w'} (Sheaf (J.over X) AddCommGrpCat.{w})]
-    (c : SiteCechTwoCocycleClass.{w, v, u, t} J G X) :
-    siteH2_to_siteCechTwoCocycleClass G X
-      (siteCechTwoCocycleClass_to_siteH2 G X c) = c := by
-  let e := Classical.choice (siteH2_equiv_siteCechTwoCocycleClass G X)
-  change e.toFun (e.invFun c) = c
-  exact e.right_inv c
-
 /-- Refinement and coboundary invariance descend to Čech cocycle classes. -/
 theorem siteCechTwoCocycle_refinement_respects_class
     {C : Type u} [Category.{v} C]
@@ -966,72 +917,6 @@ theorem siteCechTwoCocycle_refinement_respects_class
       Quotient.mk (siteCechTwoCocycleSetoid J G X)
         { cover := 𝒲, cocycle := SiteCechTwoCocycle.pullback ρ P.cocycle } := by
   sorry
-
-/-! #### Gluing and extraction interfaces -/
-
-/-- The output of gluing a degree-two cocycle.  The established
-`FiberedCategory.DescentData` API retains the local objects, transition
-isomorphisms, and their cocycle identity in one usable datum. -/
-structure SiteCechTwoCocycleGerbeGluing {C : Type u} [Category.{v} C]
-    {J : GrothendieckTopology C} {X : C}
-    {G : Sheaf J AddCommGrpCat.{w}}
-  (P : SiteCechTwoCocyclePresentation G X) where
-  gerbe : AbelianBandedGerbe.{t, w, v, u} J G X
-  descentData : gerbe.value.DescentData P.cover.cover
-
-/-- Existence of the gerbe obtained by gluing a Čech two-cocycle. -/
-theorem siteCechTwoCocycle_gluing_exists
-    {C : Type u} [Category.{v} C]
-    {J : GrothendieckTopology C} {X : C}
-    {G : Sheaf J AddCommGrpCat.{w}}
-    (P : SiteCechTwoCocyclePresentation G X) :
-    Nonempty (SiteCechTwoCocycleGerbeGluing P) := by
-  sorry
-
-/-- The chosen cocycle-to-banded-gerbe gluing construction. -/
-noncomputable def siteCechTwoCocycle_to_abelianBandedGerbe
-    {C : Type u} [Category.{v} C]
-    {J : GrothendieckTopology C} {X : C}
-    {G : Sheaf J AddCommGrpCat.{w}}
-    (P : SiteCechTwoCocyclePresentation G X) :
-    AbelianBandedGerbe.{t, w, v, u} J G X :=
-  (Classical.choice (siteCechTwoCocycle_gluing_exists P)).gerbe
-
-/-! #### Gerbe-to-cocycle extraction -/
-
-/-- Local choices used to extract a Čech cocycle from a banded gerbe.  The
-established descent datum keeps the local objects and transition arrows, while
-`compatibility` records the band equation whose value is the degree-two
-cocycle. -/
-structure AbelianBandedGerbeCocycleExtraction
-    {C : Type u} [Category.{v} C]
-    {J : GrothendieckTopology C} {X : C}
-    {G : Sheaf J AddCommGrpCat.{w}}
-    (P : AbelianBandedGerbe.{t, w, v, u} J G X) where
-  cover : SiteCechCover.{t, v, u} J X
-  descentData : P.value.DescentData cover.cover
-  cocycle : SiteCechTwoCocycle G cover
-  compatibility : Prop
-
-/-- Local nonemptiness, local connectedness, and the fixed band produce a
-degree-two Čech cocycle presentation. -/
-theorem abelianBandedGerbe_cocycle_extraction_exists
-    {C : Type u} [Category.{v} C]
-    {J : GrothendieckTopology C} {X : C}
-    {G : Sheaf J AddCommGrpCat.{w}}
-    (P : AbelianBandedGerbe.{t, w, v, u} J G X) :
-    Nonempty (AbelianBandedGerbeCocycleExtraction P) := by
-  sorry
-
-/-- The chosen gerbe-to-cocycle extraction. -/
-noncomputable def abelianBandedGerbe_to_siteCechTwoCocycle
-    {C : Type u} [Category.{v} C]
-    {J : GrothendieckTopology C} {X : C}
-    {G : Sheaf J AddCommGrpCat.{w}}
-    (P : AbelianBandedGerbe.{t, w, v, u} J G X) :
-    SiteCechTwoCocyclePresentation G X :=
-  let E := Classical.choice (abelianBandedGerbe_cocycle_extraction_exists P)
-  { cover := E.cover, cocycle := E.cocycle }
 
 /-- A band-preserving equivalence datum for abelian-banded gerbes.
 
@@ -1345,96 +1230,6 @@ def AbelianBandedGerbeClass {C : Type u} [Category.{v} C]
     Type _ :=
   Quotient (abelianBandedGerbeSetoid.{t, w, v, u} J G X)
 
-/-- Equivalent banded gerbes yield equivalent extracted cocycle presentations. -/
-theorem abelianBandedGerbeEquivalence_cocycle_compatible
-    {C : Type u} [Category.{v} C]
-    {J : GrothendieckTopology C} {X : C}
-    {G : Sheaf J AddCommGrpCat.{w}}
-    {P Q : AbelianBandedGerbe.{t, w, v, u} J G X}
-    (e : AbelianBandedGerbeEquivalence P Q) :
-    SiteCechTwoCocyclePresentation.Equivalent
-      (abelianBandedGerbe_to_siteCechTwoCocycle P)
-      (abelianBandedGerbe_to_siteCechTwoCocycle Q) := by
-  sorry
-
-/-- A cohomologous pair of cocycles glues to equivalent abelian-banded
-gerbes. -/
-theorem siteCechTwoCocycle_cohomologous_gluing_compatible
-    {C : Type u} [Category.{v} C]
-    {J : GrothendieckTopology C} {X : C}
-    {G : Sheaf J AddCommGrpCat.{w}}
-    {P Q : SiteCechTwoCocyclePresentation G X}
-    (h : SiteCechTwoCocyclePresentation.Equivalent P Q) :
-    Nonempty (AbelianBandedGerbeEquivalence
-      (siteCechTwoCocycle_to_abelianBandedGerbe P)
-      (siteCechTwoCocycle_to_abelianBandedGerbe Q)) := by
-  sorry
-
-/-- The gluing map is well-defined on the Čech quotient and lands in the
-existing `abelianBandedGerbeSetoid` quotient. -/
-noncomputable def siteCechTwoCocycleClass_to_abelianBandedGerbeClass
-    {C : Type u} [Category.{v} C]
-    {J : GrothendieckTopology C} {X : C}
-    (G : Sheaf J AddCommGrpCat.{w})
-    (P : SiteCechTwoCocycleClass.{w, v, u, t} J G X) :
-    AbelianBandedGerbeClass J G X := by
-  refine Quotient.lift (fun Q => Quotient.mk (abelianBandedGerbeSetoid J G X)
-    (siteCechTwoCocycle_to_abelianBandedGerbe Q)) ?_ P
-  intro Q R h
-  exact Quotient.sound (siteCechTwoCocycle_cohomologous_gluing_compatible h)
-
-/-- The extraction map is well-defined on the existing
-`abelianBandedGerbeSetoid` quotient. -/
-noncomputable def abelianBandedGerbeClass_to_siteCechTwoCocycleClass
-    {C : Type u} [Category.{v} C]
-    {J : GrothendieckTopology C} {X : C}
-    (G : Sheaf J AddCommGrpCat.{w}) (P : AbelianBandedGerbeClass J G X) :
-    SiteCechTwoCocycleClass.{w, v, u, t} J G X := by
-  refine Quotient.lift (fun Q => Quotient.mk (siteCechTwoCocycleSetoid J G X)
-    (abelianBandedGerbe_to_siteCechTwoCocycle Q)) ?_ P
-  intro Q R h
-  exact Quotient.sound (abelianBandedGerbeEquivalence_cocycle_compatible
-    (Nonempty.some h))
-
-/-- Extracting after gluing returns the original Čech class. -/
-theorem siteCechTwoCocycleClass_extraction_gluing
-    {C : Type u} [Category.{v} C]
-    {J : GrothendieckTopology C} {X : C}
-    (G : Sheaf J AddCommGrpCat.{w})
-    (c : SiteCechTwoCocycleClass.{w, v, u, t} J G X) :
-    abelianBandedGerbeClass_to_siteCechTwoCocycleClass G
-      (siteCechTwoCocycleClass_to_abelianBandedGerbeClass G c) = c := by
-  sorry
-
-/-- Gluing after extracting returns the original banded-gerbe class. -/
-theorem siteCechTwoCocycleClass_gluing_extraction
-    {C : Type u} [Category.{v} C]
-    {J : GrothendieckTopology C} {X : C}
-    (G : Sheaf J AddCommGrpCat.{w})
-    (c : AbelianBandedGerbeClass J G X) :
-    siteCechTwoCocycleClass_to_abelianBandedGerbeClass G
-      (abelianBandedGerbeClass_to_siteCechTwoCocycleClass G c) = c := by
-  sorry
-
-/-- The two quotient-level constructions package as the Čech form of
-Giraud's degree-two correspondence. -/
-theorem siteCechTwoCocycleClass_equiv_abelianBandedGerbeClass
-    {C : Type u} [Category.{v} C]
-    {J : GrothendieckTopology C}
-    (G : Sheaf J AddCommGrpCat.{w}) (X : C) :
-    Nonempty (SiteCechTwoCocycleClass.{w, v, u, t} J G X ≃
-      AbelianBandedGerbeClass.{t, w, v, u} J G X) := by
-  exact ⟨{
-    toFun := fun c => siteCechTwoCocycleClass_to_abelianBandedGerbeClass G c
-    invFun := fun c => abelianBandedGerbeClass_to_siteCechTwoCocycleClass G c
-    left_inv := by
-      intro c
-      exact siteCechTwoCocycleClass_extraction_gluing G c
-    right_inv := by
-      intro c
-      exact siteCechTwoCocycleClass_gluing_extraction G c
-  }⟩
-
 /-! ### Extensions and torsors in degree one -/
 
 /-- The constant unit sheaf used as the left hand term in degree-one `Ext`. -/
@@ -1445,11 +1240,7 @@ abbrev siteH1UnitSheaf {C : Type u} [Category.{v} C]
   (constantSheaf (J.over X) AddCommGrpCat.{w}).obj
     (AddCommGrpCat.of (ULift ℤ))
 
-/-- A concrete representative of an extension of the unit sheaf by `G.over X`.
-
-The field `extensionClass` is the corresponding derived extension class.  The
-comparison between representatives and derived classes is part of the
-degree-one correspondence below. -/
+/-- A concrete representative of an extension of the unit sheaf by `G.over X`. -/
 structure SiteH1ExtensionRepresentative {C : Type u} [Category.{v} C]
     {J : GrothendieckTopology C}
     (G : Sheaf J AddCommGrpCat.{w}) (X : C)
@@ -1461,7 +1252,6 @@ structure SiteH1ExtensionRepresentative {C : Type u} [Category.{v} C]
   projection : middle ⟶ siteH1UnitSheaf J X
   zero : inclusion ≫ projection = 0
   exact : (ShortComplex.mk inclusion projection zero).ShortExact
-  extensionClass : siteH1 G X
 
 /-- An `Ext` class in degree one, regarded as an extension class. -/
 abbrev SiteH1ExtensionClass {C : Type u} [Category.{v} C]
@@ -1475,16 +1265,19 @@ abbrev SiteH1ExtensionClass {C : Type u} [Category.{v} C]
 
 `extension_to_torsor` is the fibre construction over the unit section of an
 extension, while `torsor_to_extension` is the associated extension obtained
-from the torsor action.  The comparison equations are stated separately
-below, so representative-level constructions and quotient proofs remain
-distinct interfaces. -/
+from the torsor action.  The inverse laws are fields of the correspondence,
+so the quotient-level bijection has them available as part of its interface. -/
 structure SiteH1TorsorCorrespondence {C : Type u} [Category.{v} C]
     {J : GrothendieckTopology C}
     (G : Sheaf J AddCommGrpCat.{w}) (X : C)
     [HasSheafify (J.over X) AddCommGrpCat.{w}]
-    [HasExt.{w'} (Sheaf (J.over X) AddCommGrpCat.{w})] where
+  [HasExt.{w'} (Sheaf (J.over X) AddCommGrpCat.{w})] where
   extension_to_torsor : siteH1 G X → SiteTorsorClass.{t, w, v, u} J G X
   torsor_to_extension : SiteTorsorClass.{t, w, v, u} J G X → siteH1 G X
+  extension_to_torsor_torsor_to_extension :
+    ∀ P, extension_to_torsor (torsor_to_extension P) = P
+  torsor_to_extension_extension_to_torsor :
+    ∀ e, torsor_to_extension (extension_to_torsor e) = e
 
 /-- Existence of the fibre/associated-extension comparison. -/
 theorem siteH1TorsorCorrespondence_exists {C : Type u} [Category.{v} C]
@@ -1512,17 +1305,6 @@ noncomputable def siteH1ExtensionToTorsorClass {C : Type u} [Category.{v} C]
     [HasExt.{w'} (Sheaf (J.over X) AddCommGrpCat.{w})] :
     siteH1 G X → SiteTorsorClass J G X :=
   (siteH1TorsorCorrespondence G X).extension_to_torsor
-
-/-- Apply the fibre construction to a concrete extension representative. -/
-noncomputable def siteH1ExtensionRepresentativeToTorsorClass
-    {C : Type u} [Category.{v} C]
-    {J : GrothendieckTopology C}
-    (G : Sheaf J AddCommGrpCat.{w}) (X : C)
-    [HasWeakSheafify (J.over X) AddCommGrpCat.{w}]
-    [HasSheafify (J.over X) AddCommGrpCat.{w}]
-    [HasExt.{w'} (Sheaf (J.over X) AddCommGrpCat.{w})]
-    (E : SiteH1ExtensionRepresentative G X) : SiteTorsorClass J G X :=
-  siteH1ExtensionToTorsorClass G X E.extensionClass
 
 /-- Form the derived extension class associated to a torsor class. -/
 noncomputable def siteTorsorClassToSiteH1 {C : Type u} [Category.{v} C]
@@ -1589,32 +1371,23 @@ theorem siteH1_equiv_siteTorsorClass
 
 Proof roadmap:
 
-1. Choose local objects and local arrows in an `AbelianBandedGerbe`; use the
-   band compatibility fields to extract a degree-two Čech cocycle valued in
-   `G.over X`, and prove refinements change it only by a coboundary.
-2. Starting from a degree-two cocycle, build the corresponding locally
-   nonempty and locally connected fibred category, equip its automorphism
-   sheaves with the prescribed band, and verify the gerbe axioms.
-3. Show equivalent banded gerbes determine the same cohomology class, while
-   cohomologous cocycles give `AbelianBandedGerbeEquivalence`s, so both maps
-   descend to the existing quotient types.
-4. Compare the two constructions locally, glue the local comparisons, prove
-  both composites equal, and package them as an `Equiv`.
+1. Construct a gerbe from a degree-two cohomology class and equip its
+   automorphisms with the prescribed band.
+2. Extract a cohomology class from a banded gerbe using local objects and
+   local arrows.
+3. Show that the two constructions are inverse after passing to the
+   respective equivalence-class quotients.
 
-The cocycle, refinement, gluing, extraction, and quotient-compatibility
-interfaces above isolate the comparison and inverse-law proofs. -/
+The Cech presentation API above is intentionally kept separate: without
+additional acyclicity or hypercover hypotheses it is not identified here with
+derived cohomology. -/
 theorem siteH2_equiv_abelianBandedGerbe
     {C : Type u} [Category.{v} C] {J : GrothendieckTopology C}
     (G : Sheaf J AddCommGrpCat.{w}) (X : C)
     [HasSheafify (J.over X) AddCommGrpCat.{w}]
     [HasExt.{w'} (Sheaf (J.over X) AddCommGrpCat.{w})] :
     Nonempty (siteH2 G X ≃ AbelianBandedGerbeClass.{t, w, v, u} J G X) := by
-  let e₁ : siteH2 G X ≃ SiteCechTwoCocycleClass.{w, v, u, t} J G X :=
-    Classical.choice (siteH2_equiv_siteCechTwoCocycleClass G X)
-  let e₂ : SiteCechTwoCocycleClass.{w, v, u, t} J G X ≃
-      AbelianBandedGerbeClass J G X :=
-    Classical.choice (siteCechTwoCocycleClass_equiv_abelianBandedGerbeClass G X)
-  exact ⟨e₁.trans e₂⟩
+  sorry
 
 /-- In the nonabelian case, degree-two cohomology is defined by `G`-gerbes. -/
 abbrev nonabelianSiteH2 {C : Type u} [Category.{v} C]

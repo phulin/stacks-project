@@ -10,6 +10,7 @@ import Mathlib.LinearAlgebra.Charpoly.Basic
 import Mathlib.LinearAlgebra.Determinant
 import Mathlib.LinearAlgebra.Trace
 import Mathlib.RingTheory.Length
+import Mathlib.RingTheory.Nakayama
 import Mathlib.RingTheory.LocalRing.ResidueField.Basic
 
 /-!
@@ -86,7 +87,166 @@ theorem isNoetherian_and_isArtinian (X : FiniteLengthEndomorphism.{u, v} R) :
 theorem isNoetherianObject_and_isArtinianObject
     (X : FiniteLengthEndomorphism.{u, v} R) :
     IsNoetherianObject X ∧ IsArtinianObject X := by
-  sorry
+  have underlying_injective {A B : FiniteLengthEndomorphism.{u, v} R}
+      (f : A ⟶ B)
+      (hf : ∀ {Z : FiniteLengthEndomorphism.{u, v} R} (g h : Z ⟶ A),
+        g ≫ f = h ≫ f → g = h) : Function.Injective f.hom.hom := by
+    intro x y hxy
+    let K : Submodule R A.carrier := LinearMap.ker f.hom.hom
+    have hcomm : ∀ z : A.carrier,
+        f.hom.hom (A.endomorphism.hom z) =
+          B.endomorphism.hom (f.hom.hom z) := by
+      intro z
+      have hz := congrArg (fun g : A.carrier ⟶ B.carrier => g z) f.comm
+      simpa [ModuleCat.comp_apply] using hz
+    have hstable : ∀ z : A.carrier, z ∈ K → A.endomorphism.hom z ∈ K := by
+      intro z hz
+      change f.hom.hom (A.endomorphism.hom z) = 0
+      rw [hcomm, hz, map_zero]
+    let phiK : Module.End R K :=
+      A.endomorphism.hom.restrict hstable
+    let A' : FiniteLengthEndomorphism.{u, v} R :=
+      { carrier := ModuleCat.of R K
+        finite_length := A.finite_length.of_injective K.injective_subtype
+        endomorphism := ModuleCat.ofHom phiK }
+    let i : A' ⟶ A :=
+      { hom := ModuleCat.ofHom K.subtype
+        comm := by
+          apply ModuleCat.hom_ext
+          apply LinearMap.ext
+          intro z
+          rfl }
+    let z : A' ⟶ A :=
+      { hom := ModuleCat.ofHom 0
+        comm := by
+          apply ModuleCat.hom_ext
+          simp }
+    have hcomp : i ≫ f = z ≫ f := by
+      apply Morph.ext
+      change i.hom ≫ f.hom = z.hom ≫ f.hom
+      apply ModuleCat.hom_ext
+      apply LinearMap.ext
+      intro w
+      change (i.hom ≫ f.hom).hom w = (z.hom ≫ f.hom).hom w
+      rw [ModuleCat.comp_apply, ModuleCat.comp_apply]
+      change f.hom.hom (K.subtype w) = f.hom.hom 0
+      rw [show K.subtype w = (w : A.carrier) by rfl, w.property, map_zero]
+    have hiz : i = z := hf i z hcomp
+    have hxy' : f.hom.hom (x - y) = 0 := by
+      rw [map_sub, hxy, sub_self]
+    let w : K := ⟨x - y, hxy'⟩
+    have hw := congrArg (fun k : A' ⟶ A => k.hom.hom w) hiz
+    have hzero : x - y = 0 := by
+      change x - y = 0 at hw
+      exact hw
+    exact sub_eq_zero.mp hzero
+  let rangeMap : Subobject X → Submodule R X.carrier :=
+    fun P => LinearMap.range P.arrow.hom.hom
+  have hrange_mono {P Q : Subobject X} (hPQ : P ≤ Q) :
+      rangeMap P ≤ rangeMap Q := by
+    intro x hx
+    obtain ⟨y, rfl⟩ := hx
+    refine ⟨(Subobject.ofLE P Q hPQ).hom.hom y, ?_⟩
+    have hw := congrArg
+      (fun k : (P : FiniteLengthEndomorphism.{u, v} R) ⟶ X => k.hom.hom y)
+      (Subobject.ofLE_arrow hPQ)
+    change Q.arrow.hom.hom ((Subobject.ofLE P Q hPQ).hom.hom y) =
+      P.arrow.hom.hom y at hw
+    exact hw
+  have hpair_morphism {P Q : Subobject X}
+      (hPQ : rangeMap P = rangeMap Q) :
+      ∃ i : (P : FiniteLengthEndomorphism.{u, v} R) ⟶
+          (Q : FiniteLengthEndomorphism.{u, v} R), i ≫ Q.arrow = P.arrow := by
+    let pToRange :=
+      P.arrow.hom.hom.codRestrict (rangeMap P)
+        (fun y => LinearMap.mem_range_self P.arrow.hom.hom y)
+    let qToRange :=
+      Q.arrow.hom.hom.codRestrict (rangeMap Q)
+        (fun y => LinearMap.mem_range_self Q.arrow.hom.hom y)
+    have hp_inj : Function.Injective pToRange := by
+      intro a b hab
+      apply underlying_injective P.arrow
+        (fun g h hgh => (cancel_mono P.arrow).mp hgh)
+      exact congrArg Subtype.val hab
+    have hq_inj : Function.Injective qToRange := by
+      intro a b hab
+      apply underlying_injective Q.arrow
+        (fun g h hgh => (cancel_mono Q.arrow).mp hgh)
+      exact congrArg Subtype.val hab
+    have hp_surj : Function.Surjective pToRange := by
+      intro y
+      exact ⟨Classical.choose y.property,
+        Subtype.ext (Classical.choose_spec y.property)⟩
+    have hq_surj : Function.Surjective qToRange := by
+      intro y
+      exact ⟨Classical.choose y.property,
+        Subtype.ext (Classical.choose_spec y.property)⟩
+    let eP := LinearEquiv.ofBijective pToRange ⟨hp_inj, hp_surj⟩
+    let eQ := LinearEquiv.ofBijective qToRange ⟨hq_inj, hq_surj⟩
+    let e :=
+      eP.trans ((LinearEquiv.ofEq (rangeMap P) (rangeMap Q) hPQ).trans eQ.symm)
+    have he (y : (P : FiniteLengthEndomorphism.{u, v} R).carrier) :
+        Q.arrow.hom.hom (e y) = P.arrow.hom.hom y := by
+      change (eQ (eQ.symm
+        ((LinearEquiv.ofEq (rangeMap P) (rangeMap Q) hPQ) (eP y)))).val =
+        (eP y).val
+      rw [eQ.apply_symm_apply]
+      rfl
+    have hPcomm (y : (P : FiniteLengthEndomorphism.{u, v} R).carrier) :
+        P.arrow.hom.hom ((P : FiniteLengthEndomorphism.{u, v} R).endomorphism.hom y) =
+          X.endomorphism.hom (P.arrow.hom.hom y) := by
+      have hw := congrArg
+        (fun k : (P : FiniteLengthEndomorphism.{u, v} R).carrier ⟶ X.carrier => k.hom y)
+        P.arrow.comm
+      simpa [ModuleCat.comp_apply] using hw
+    have hQcomm (y : (Q : FiniteLengthEndomorphism.{u, v} R).carrier) :
+        Q.arrow.hom.hom ((Q : FiniteLengthEndomorphism.{u, v} R).endomorphism.hom y) =
+          X.endomorphism.hom (Q.arrow.hom.hom y) := by
+      have hw := congrArg
+        (fun k : (Q : FiniteLengthEndomorphism.{u, v} R).carrier ⟶ X.carrier => k.hom y)
+        Q.arrow.comm
+      simpa [ModuleCat.comp_apply] using hw
+    let i : (P : FiniteLengthEndomorphism.{u, v} R) ⟶
+        (Q : FiniteLengthEndomorphism.{u, v} R) :=
+      { hom := ModuleCat.ofHom e.toLinearMap
+        comm := by
+          apply ModuleCat.hom_ext
+          apply LinearMap.ext
+          intro y
+          change e ((P : FiniteLengthEndomorphism.{u, v} R).endomorphism.hom y) =
+            (Q : FiniteLengthEndomorphism.{u, v} R).endomorphism.hom (e y)
+          apply underlying_injective Q.arrow
+            (fun g h hgh => (cancel_mono Q.arrow).mp hgh)
+          rw [he, hQcomm, he]
+          exact hPcomm y }
+    refine ⟨i, ?_⟩
+    apply Morph.ext
+    change i.hom ≫ Q.arrow.hom = P.arrow.hom
+    apply ModuleCat.hom_ext
+    apply LinearMap.ext
+    intro y
+    rw [ModuleCat.comp_apply]
+    change Q.arrow.hom.hom (e y) = P.arrow.hom.hom y
+    exact he y
+  have hrange_inj : Function.Injective rangeMap := by
+    intro P Q hPQ
+    obtain ⟨i, hi⟩ := hpair_morphism hPQ
+    obtain ⟨j, hj⟩ := hpair_morphism hPQ.symm
+    exact le_antisymm (Subobject.le_of_comm i hi) (Subobject.le_of_comm j hj)
+  have hmodule := isNoetherian_and_isArtinian X
+  constructor
+  · rw [isNoetherianObject_iff_monotone_chain_condition]
+    intro f
+    let g : ℕ →o Submodule R X.carrier :=
+      ⟨fun n => rangeMap (f n), fun n m hnm => hrange_mono (f.2 hnm)⟩
+    obtain ⟨n, hn⟩ := monotone_stabilizes_iff_noetherian.mpr hmodule.1 g
+    exact ⟨n, fun m hnm => hrange_inj (hn m hnm)⟩
+  · rw [isArtinianObject_iff_antitone_chain_condition]
+    intro f
+    let g : ℕ →o (Submodule R X.carrier)ᵒᵈ :=
+      ⟨fun n => rangeMap (f n), fun n m hnm => hrange_mono (f.2 hnm)⟩
+    obtain ⟨n, hn⟩ := monotone_stabilizes_iff_artinian.mpr hmodule.2 g
+    exact ⟨n, fun m hnm => hrange_inj (hn m hnm)⟩
 
 end FiniteLengthEndomorphism
 
@@ -109,7 +269,36 @@ theorem IsSimplePair.annihilated_by_maximalIdeal
     [AddCommGroup M] [Module R M] (hM : IsFiniteLength R M)
     (φ : Module.End R M) (hφ : IsSimplePair φ) :
     Module.IsTorsionBySet R M (IsLocalRing.maximalIdeal R) := by
-  sorry
+  have hNoeth : IsNoetherian R M :=
+    (isFiniteLength_iff_isNoetherian_isArtinian.mp hM).1
+  let N : Submodule R M := IsLocalRing.maximalIdeal R • (⊤ : Submodule R M)
+  have hN : Submodule.map φ N ≤ N := by
+    change Submodule.map φ (IsLocalRing.maximalIdeal R • (⊤ : Submodule R M)) ≤ _
+    rw [Submodule.map_smul'']
+    exact smul_mono_right _ le_top
+  exact (hφ.2 N hN).elim
+    (fun hNbot x a => by
+      have hx : (a : R) • x ∈ N :=
+        Submodule.smul_mem_smul a.property (Submodule.mem_top)
+      have hxbot : (a : R) • x ∈ (⊥ : Submodule R M) := hNbot ▸ hx
+      exact (Submodule.mem_bot R).mp hxbot)
+    (fun hNtop => by
+      have hIN : (⊤ : Submodule R M) ≤
+          IsLocalRing.maximalIdeal R • (⊤ : Submodule R M) := by
+        intro x hx
+        have hxN : x ∈ N := hNtop.symm ▸ hx
+        simpa [N] using hxN
+      have hbot : (⊤ : Submodule R M) = ⊥ :=
+        Submodule.eq_bot_of_le_smul_of_le_jacobson_bot
+          (IsLocalRing.maximalIdeal R) (⊤ : Submodule R M)
+          (hNoeth.noetherian ⊤) hIN
+          (IsLocalRing.maximalIdeal_le_jacobson ⊥)
+      exact False.elim ((not_nontrivial_iff_subsingleton.mpr
+        ⟨fun x y =>
+          ((Submodule.mem_bot R).mp
+            (hbot ▸ (Submodule.mem_top : x ∈ (⊤ : Submodule R M)))).trans
+            ((Submodule.mem_bot R).mp
+              (hbot ▸ (Submodule.mem_top : y ∈ (⊤ : Submodule R M)))).symm⟩) hφ.1))
 
 /-- The residue-field vector space attached to a simple pair.  The explicit fields make the
 source's finiteness and annihilation assertions available to later constructions. -/
@@ -128,7 +317,32 @@ theorem exists_simplePairData
     [AddCommGroup M] [Module R M] (hM : IsFiniteLength R M)
     (φ : Module.End R M) (hφ : IsSimplePair φ) :
     Nonempty (SimplePairData R M φ) := by
-  sorry
+  have hNoeth : IsNoetherian R M :=
+    (isFiniteLength_iff_isNoetherian_isArtinian.mp hM).1
+  let hAnn : Module.IsTorsionBySet R M (IsLocalRing.maximalIdeal R) :=
+    IsSimplePair.annihilated_by_maximalIdeal hM φ hφ
+  let hFinite : Module.Finite R M := ⟨hNoeth.noetherian ⊤⟩
+  let _ : Module.Finite R M := hFinite
+  let _ : Module (R ⧸ IsLocalRing.maximalIdeal R) M := hAnn.module
+  let ψ : @Module.End (R ⧸ IsLocalRing.maximalIdeal R) M _ _ hAnn.module :=
+    { toFun := φ
+      map_add' := φ.map_add
+      map_smul' := by
+        intro a x
+        obtain ⟨r, rfl⟩ := Ideal.Quotient.mk_surjective a
+        simpa only [RingHom.id_apply, hAnn.mk_smul] using φ.map_smul r x }
+  have hFiniteK :
+      @Module.Finite (R ⧸ IsLocalRing.maximalIdeal R) M _ _ hAnn.module :=
+    Module.Finite.of_restrictScalars_finite R _ _
+  refine ⟨{
+    simple := hφ
+    annihilated := hAnn
+    residue_endomorphism := ψ
+    finite_dimensional := hFiniteK
+    residue_endomorphism_apply := ?_
+  }⟩
+  intro x
+  rfl
 
 noncomputable def simplePairData
     {R M : Type*} [CommRing R] [IsLocalRing R]

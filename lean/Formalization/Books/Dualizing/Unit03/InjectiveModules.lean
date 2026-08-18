@@ -1316,9 +1316,284 @@ theorem polynomial_short_exact
     ∃ d : polynomial_hom_module A E →ₗ[Polynomial A] polynomial_hom_module A E,
       (∀ φ f, d φ f = polynomial_differential_formula A E φ f) ∧
         Function.Injective (polynomial_first_map A E) ∧
-        Function.Exact (polynomial_first_map A E) d ∧
+      Function.Exact (polynomial_first_map A E) d ∧
         Function.Surjective d := by
-  sorry
+  let mulRight (p : Polynomial A) :
+      polynomial_base_module A →ₗ[A] polynomial_base_module A :=
+    { toFun := fun f =>
+        let f' : Polynomial A := f
+        let z : Polynomial A := f' * p
+        z
+      map_add' := by
+        intro f g
+        let f' : Polynomial A := f
+        let g' : Polynomial A := g
+        change (f' + g') * p = f' * p + g' * p
+        rw [add_mul]
+      map_smul' := by
+        intro a f
+        let f' : Polynomial A := f
+        change ((algebraMap A (Polynomial A)) a * f') * p =
+          (algebraMap A (Polynomial A)) a * (f' * p)
+        rw [mul_assoc] }
+  let M := (ModuleCat.restrictScalars (algebraMap A (Polynomial A))).obj
+    (ModuleCat.of (Polynomial A) (PolynomialModule A E))
+  let outX : M →ₗ[A] M :=
+    { toFun := fun m => (Polynomial.X : Polynomial A) • m
+      map_add' := by intro m n; rw [smul_add]
+      map_smul' := by
+        intro a m
+        change (Polynomial.X : Polynomial A) •
+            ((algebraMap A (Polynomial A)) a • (m : PolynomialModule A E)) =
+          (algebraMap A (Polynomial A)) a •
+            ((Polynomial.X : Polynomial A) • (m : PolynomialModule A E))
+        rw [smul_comm (Polynomial.X : Polynomial A) (algebraMap A (Polynomial A) a)] }
+  let q := ModuleCat.CoextendScalars.equiv (algebraMap A (Polynomial A)) M
+  have hsmul
+      (g : polynomial_base_module A →ₗ[A] M) (p : Polynomial A) :
+      p • g = g.comp (mulRight p) := by
+    apply LinearMap.ext
+    intro f
+    rfl
+  have hcomm (p r : Polynomial A) :
+      (mulRight p).comp (mulRight r) = (mulRight r).comp (mulRight p) := by
+    apply LinearMap.ext
+    intro f
+    let f' : Polynomial A := f
+    change (f' * r) * p = (f' * p) * r
+    ring
+  let delta (φ : polynomial_hom_module A E) :
+      polynomial_base_module A →ₗ[A] M :=
+    (q φ).comp (mulRight (Polynomial.X : Polynomial A)) - outX.comp (q φ)
+  let d : polynomial_hom_module A E →ₗ[Polynomial A] polynomial_hom_module A E :=
+    { toFun := fun φ => q.symm (delta φ)
+      map_add' := by
+        intro φ ψ
+        have hdelta : delta (φ + ψ) = delta φ + delta ψ := by
+          apply LinearMap.ext
+          intro f
+          dsimp [delta]
+          rw [q.map_add]
+          rw [LinearMap.add_apply, LinearMap.add_apply]
+          rw [outX.map_add]
+          simp only [sub_add_sub_comm]
+        rw [hdelta, q.symm.map_add]
+      map_smul' := by
+        intro p φ
+        rw [← q.symm.map_smul]
+        apply q.symm.injective
+        change delta (p • φ) = p • delta φ
+        dsimp [delta]
+        rw [q.map_smul]
+        rw [hsmul (q φ) p]
+        rw [hsmul ((q φ).comp (mulRight (Polynomial.X : Polynomial A)) -
+          outX.comp (q φ)) p]
+        apply LinearMap.ext
+        intro f
+        simp only [LinearMap.sub_apply, LinearMap.comp_apply]
+        have hc := congrArg (fun g : polynomial_base_module A →ₗ[A] polynomial_base_module A =>
+          g f) (hcomm p (Polynomial.X : Polynomial A))
+        simpa using congrArg (q φ) hc }
+  refine ⟨d, ?_, ?_, ?_, ?_⟩
+  intro φ f
+  change q (d φ) f = (show M from polynomial_differential_formula A E φ f)
+  dsimp [d]
+  rw [q.apply_symm_apply]
+  change (delta φ) f =
+    (q φ) (show polynomial_base_module A from
+      (show Polynomial A from (Polynomial.X : Polynomial A) * (show Polynomial A from f))) -
+      (Polynomial.X : Polynomial A) • q φ f
+  dsimp [delta, outX]
+  have hmul : (mulRight (Polynomial.X : Polynomial A)) f =
+      (show polynomial_base_module A from
+        (show Polynomial A from (Polynomial.X : Polynomial A) * (show Polynomial A from f))) := by
+    change (show Polynomial A from f) * (Polynomial.X : Polynomial A) =
+      (Polynomial.X : Polynomial A) * (show Polynomial A from f)
+    ring
+  rw [hmul]
+  · intro p r h
+    have h1 := congrArg (fun F => F
+      (show polynomial_base_module A from (1 : Polynomial A))) h
+    change (1 : Polynomial A) • p = (1 : Polynomial A) • r at h1
+    simpa only [one_smul] using h1
+  · intro φ
+    constructor
+    · intro hφ
+      have hdelta : delta φ = 0 := by
+        have h := congrArg q hφ
+        simpa [d] using h
+      let p : M := q φ (show polynomial_base_module A from (1 : Polynomial A))
+      have hX (f : Polynomial A) :
+          q φ (show polynomial_base_module A from (Polynomial.X : Polynomial A) * f) =
+            (Polynomial.X : Polynomial A) • q φ f := by
+        have hf := congrArg (fun F => F (show polynomial_base_module A from f)) hdelta
+        change (q φ) ((mulRight (Polynomial.X : Polynomial A)) f) -
+            (Polynomial.X : Polynomial A) • q φ f = 0 at hf
+        have hf' := sub_eq_zero.mp hf
+        change q φ (f * (Polynomial.X : Polynomial A)) =
+          (Polynomial.X : Polynomial A) • q φ f at hf'
+        simpa [mul_comm] using hf'
+      have hvalue (f : Polynomial A) :
+          q φ (show polynomial_base_module A from f) = f • p := by
+        induction f using Polynomial.induction_on' with
+        | add f g hf hg =>
+            change q φ (f + g) = (f + g) • p
+            calc
+              q φ (show polynomial_base_module A from f + g) =
+                  q φ (show polynomial_base_module A from f) +
+                    q φ (show polynomial_base_module A from g) :=
+                (q φ).map_add _ _
+              _ = f • p + g • p := by rw [hf, hg]
+              _ = (f + g) • p := (add_smul f g p).symm
+        | monomial n a =>
+            induction n with
+            | zero =>
+                change q φ (Polynomial.C a) = (Polynomial.C a) • p
+                have hbase :
+                    (show polynomial_base_module A from Polynomial.C a) =
+                      a • (show polynomial_base_module A from (1 : Polynomial A)) := by
+                  change (Polynomial.C a : Polynomial A) =
+                    (algebraMap A (Polynomial A) a) * (1 : Polynomial A)
+                  rw [Polynomial.C_eq_algebraMap, mul_one]
+                calc
+                  q φ (show polynomial_base_module A from Polynomial.C a) =
+                      q φ (a • (show polynomial_base_module A from (1 : Polynomial A))) := by
+                    exact congrArg (q φ) hbase
+                  _ = a • q φ (show polynomial_base_module A from (1 : Polynomial A)) :=
+                    (q φ).map_smul a _
+                  _ = (Polynomial.C a) • p := by
+                    dsimp [p]
+                    rw [Polynomial.C_eq_algebraMap]
+                    rfl
+            | succ n ih =>
+                rw [show (Polynomial.monomial (Nat.succ n) a : Polynomial A) =
+                  (Polynomial.X : Polynomial A) * Polynomial.monomial n a by
+                  rw [← Polynomial.monomial_mul_X, mul_comm]]
+                rw [hX, ih, smul_smul]
+      refine ⟨p, ?_⟩
+      apply q.injective
+      apply LinearMap.ext
+      intro f
+      change q (polynomial_first_map A E p) f = q φ f
+      exact (hvalue f).symm
+    · rintro ⟨p, rfl⟩
+      change q.symm (delta (polynomial_first_map A E p)) = q.symm 0
+      apply congrArg q.symm
+      apply LinearMap.ext
+      intro f
+      dsimp [delta]
+      let f' : Polynomial A := f
+      change ((f' * (Polynomial.X : Polynomial A)) • p) -
+          (Polynomial.X : Polynomial A) •
+            (f' • p) = 0
+      rw [mul_smul, smul_comm, sub_self]
+  · intro ψ
+    let eCoeff : AddMonoidAlgebra A ℕ ≃ₗ[A] (ℕ →₀ A) :=
+      { toFun := AddMonoidAlgebra.coeff
+        invFun := AddMonoidAlgebra.ofCoeff
+        left_inv := by intro x; exact AddMonoidAlgebra.ofCoeff_coeff x
+        right_inv := by intro x; exact AddMonoidAlgebra.coeff_ofCoeff x
+        map_add' := by intro x y; rfl
+        map_smul' := by intro a x; rfl }
+    let eCoeffHom : (AddMonoidAlgebra A ℕ →ₗ[A] M) ≃ₗ[A]
+        ((ℕ →₀ A) →ₗ[A] M) :=
+      { toFun := fun g => g.comp eCoeff.symm.toLinearMap
+        invFun := fun g => g.comp eCoeff.toLinearMap
+        left_inv := by intro g; ext x; simp
+        right_inv := by intro g; ext x; simp
+        map_add' := by intro g h; ext x; simp
+        map_smul' := by intro a g; ext x; simp }
+    let eF :
+        (ℕ → M) ≃ₗ[A] (AddMonoidAlgebra A ℕ →ₗ[A] M) :=
+      (Finsupp.llift M A A ℕ).trans eCoeffHom.symm
+    let eC :
+        (AddMonoidAlgebra A ℕ →ₗ[A] M) ≃ₗ[A] (Polynomial A →ₗ[A] M) :=
+      LinearEquiv.arrowCongr (Polynomial.toFinsuppIsoLinear A).symm
+        (LinearEquiv.refl A M)
+    let qP : polynomial_base_module A ≃ₗ[A] Polynomial A :=
+      { toFun := fun p => p
+        invFun := fun p => p
+        left_inv := by intro p; rfl
+        right_inv := by intro p; rfl
+        map_add' := by intro p r; rfl
+        map_smul' := by
+          intro a p
+          change Polynomial.C a * (show Polynomial A from p) =
+            a • (show Polynomial A from p)
+          rw [Polynomial.smul_eq_C_mul] }
+    let v : ℕ → M :=
+      Nat.rec 0 (fun n z => q ψ
+        (show polynomial_base_module A from (Polynomial.X : Polynomial A) ^ n) +
+        outX z)
+    let g : polynomial_base_module A →ₗ[A] M :=
+      (eF.trans eC v).comp qP.toLinearMap
+    let φ : polynomial_hom_module A E := q.symm g
+    have hv (n : ℕ) :
+        v (n + 1) = q ψ
+            (show polynomial_base_module A from (Polynomial.X : Polynomial A) ^ n) +
+          outX (v n) := by
+      rfl
+    have hg (n : ℕ) (a : A) :
+        g (show polynomial_base_module A from Polynomial.monomial n a) = a • v n := by
+      change (eF.trans eC v) (Polynomial.monomial n a) = a • v n
+      dsimp [eF, eC, eCoeffHom, eCoeff]
+      simp
+      change (Finsupp.single n a).sum (fun x r => r • v x) = a • v n
+      rw [Finsupp.sum_single_index
+        (h := fun x r => r • v x)
+        (h_zero := by exact zero_smul A (v n))]
+    have hdeltaψ (f : Polynomial A) :
+        (delta φ) (show polynomial_base_module A from f) = q ψ f := by
+      induction f using Polynomial.induction_on' with
+      | add f h hf hh =>
+          calc
+            (delta φ) (show polynomial_base_module A from f + h) =
+                delta φ (show polynomial_base_module A from f) +
+                  delta φ (show polynomial_base_module A from h) :=
+              (delta φ).map_add _ _
+            _ = q ψ f + q ψ h := by rw [hf, hh]
+            _ = q ψ (f + h) := (q ψ).map_add _ _ |>.symm
+      | monomial n a =>
+          dsimp [delta]
+          change q φ (mulRight (Polynomial.X : Polynomial A)
+              (show polynomial_base_module A from Polynomial.monomial n a)) -
+            outX (q φ (show polynomial_base_module A from Polynomial.monomial n a)) =
+              q ψ (Polynomial.monomial n a)
+          rw [show (mulRight (Polynomial.X : Polynomial A))
+              (show polynomial_base_module A from Polynomial.monomial n a) =
+              (show polynomial_base_module A from Polynomial.monomial (n + 1) a) by
+                change Polynomial.monomial n a * (Polynomial.X : Polynomial A) =
+                  Polynomial.monomial (n + 1) a
+                exact Polynomial.monomial_mul_X n a]
+          have hqφ (f : Polynomial A) :
+              q φ (show polynomial_base_module A from f) = g f := by
+            dsimp [φ]
+            rw [q.apply_symm_apply]
+          rw [hqφ, hqφ, hg, hg, hv]
+          rw [outX.map_smul]
+          rw [show (Polynomial.monomial n a : Polynomial A) =
+              a • (Polynomial.X ^ n) by
+                rw [Algebra.smul_def, ← Polynomial.C_eq_algebraMap,
+                  Polynomial.C_mul_X_pow_eq_monomial]]
+          rw [smul_add, add_sub_cancel_right]
+          have hpow :
+              (show polynomial_base_module A from a • (Polynomial.X ^ n)) =
+                a • (show polynomial_base_module A from (Polynomial.X ^ n)) := by
+            change (a • (Polynomial.X ^ n : Polynomial A)) =
+              (algebraMap A (Polynomial A) a) * Polynomial.X ^ n
+            rw [Polynomial.smul_eq_C_mul, Polynomial.C_eq_algebraMap]
+          calc
+            a • (q ψ) (show polynomial_base_module A from Polynomial.X ^ n) =
+                (q ψ) (a • (show polynomial_base_module A from Polynomial.X ^ n)) :=
+              ((q ψ).map_smul a
+                (show polynomial_base_module A from Polynomial.X ^ n)).symm
+            _ = (q ψ) (show polynomial_base_module A from a • (Polynomial.X ^ n)) :=
+              congrArg (q ψ) hpow.symm
+    refine ⟨φ, ?_⟩
+    apply q.injective
+    change delta φ = q ψ
+    dsimp [φ]
+    exact LinearMap.ext hdeltaψ
 
 theorem polynomial_module_injective_amplitude
     (A E : Type u) [CommRing A] [AddCommGroup E] [Module A E]
@@ -1327,7 +1602,78 @@ theorem polynomial_module_injective_amplitude
         (ModuleCat.of (Polynomial A) (PolynomialModule A E)) 1 ∧
       CategoryTheory.injectiveDimension
           (ModuleCat.of (Polynomial A) (PolynomialModule A E)) ≠ ⊤ := by
-  sorry
+  have hD : Module.Injective A (DirectSum ℕ (fun _ : ℕ => E)) :=
+    directSum_injective
+  let eR :
+      ((ModuleCat.restrictScalars (algebraMap A (Polynomial A))).obj
+        (ModuleCat.of (Polynomial A) (PolynomialModule A E)) : Type _) ≃ₗ[A]
+      DirectSum ℕ (fun _ : ℕ => E) :=
+    { toFun := fun p => polynomial_module_directSum_equiv A E p
+      invFun := fun p => (polynomial_module_directSum_equiv A E).symm p
+      left_inv := by
+        intro p
+        exact (polynomial_module_directSum_equiv A E).symm_apply_apply p
+      right_inv := by
+        intro p
+        exact (polynomial_module_directSum_equiv A E).apply_symm_apply p
+      map_add' := by
+        intro p r
+        exact (polynomial_module_directSum_equiv A E).map_add p r
+      map_smul' := by
+        intro a p
+        change polynomial_module_directSum_equiv A E
+            (Polynomial.C a • (show PolynomialModule A E from p)) = a •
+          polynomial_module_directSum_equiv A E p
+        rw [Polynomial.C_eq_algebraMap, algebraMap_smul (Polynomial A)]
+        exact (polynomial_module_directSum_equiv A E).map_smul a p }
+  have hR : Module.Injective A
+      ((ModuleCat.restrictScalars (algebraMap A (Polynomial A))).obj
+        (ModuleCat.of (Polynomial A) (PolynomialModule A E)) : Type _) := by
+    constructor
+    intro X Y _ _ _ _ f hf g
+    obtain ⟨h, hh⟩ := Module.Injective.out (self := hD) f hf
+      (eR.toLinearMap.comp g)
+    refine ⟨eR.symm.toLinearMap.comp h, ?_⟩
+    intro x
+    change eR.symm (h (f x)) = g x
+    rw [hh]
+    simp
+  have hhom : Module.Injective (Polynomial A) (polynomial_hom_module A E) :=
+    @hom_injective A (Polynomial A)
+      ((ModuleCat.restrictScalars (algebraMap A (Polynomial A))).obj
+        (ModuleCat.of (Polynomial A) (PolynomialModule A E)) : Type _)
+      inferInstance inferInstance inferInstance inferInstance inferInstance
+      (algebraMap A (Polynomial A)) hR
+  obtain ⟨d, _, hinj, hex, hsurj⟩ := polynomial_short_exact A E
+  let S : ShortComplex (ModuleCat (Polynomial A)) :=
+    ShortComplex.moduleCatMk (polynomial_first_map A E) d hex.linearMap_comp_eq_zero
+  have hS : S.ShortExact :=
+    ModuleCat.shortComplex_shortExact S hex hinj hsurj
+  have hX2 : CategoryTheory.Injective S.X₂ := by
+    change CategoryTheory.Injective
+      (ModuleCat.of (Polynomial A) (polynomial_hom_module A E))
+    exact Module.injective_object_of_injective_module (inj := hhom)
+      (Polynomial A) (polynomial_hom_module A E)
+  have hX3 : CategoryTheory.Injective S.X₃ := by
+    change CategoryTheory.Injective
+      (ModuleCat.of (Polynomial A) (polynomial_hom_module A E))
+    exact Module.injective_object_of_injective_module (inj := hhom)
+      (Polynomial A) (polynomial_hom_module A E)
+  have hX3dim : CategoryTheory.HasInjectiveDimensionLT S.X₃ 1 :=
+    CategoryTheory.injective_iff_hasInjectiveDimensionLT_one.mp hX3
+  have hX2dim1 : CategoryTheory.HasInjectiveDimensionLT S.X₂ 1 :=
+    CategoryTheory.injective_iff_hasInjectiveDimensionLT_one.mp hX2
+  have hX2dim : CategoryTheory.HasInjectiveDimensionLT S.X₂ 2 := by
+    exact @CategoryTheory.hasInjectiveDimensionLT_of_ge _ _ _ S.X₂ 1 2
+      (by norm_num) hX2dim1
+  have hdimS : CategoryTheory.HasInjectiveDimensionLT S.X₁ 2 :=
+    hS.hasInjectiveDimensionLT_X₁ 1 hX3dim hX2dim
+  have hdim : CategoryTheory.HasInjectiveDimensionLE
+      (ModuleCat.of (Polynomial A) (PolynomialModule A E)) 1 := by
+    exact hdimS
+  refine ⟨hdim, ?_⟩
+  apply (CategoryTheory.injectiveDimension_ne_top_iff _).2
+  exact ⟨1, hdim⟩
 
 end
 end Formalization.Books.Dualizing.Unit03

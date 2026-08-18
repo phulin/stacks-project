@@ -1,4 +1,3 @@
-import Formalization.Books.Simplicial.Unit04.SimplicialPresheaves
 import Mathlib.AlgebraicTopology.SimplicialObject.Basic
 
 /-!

@@ -254,7 +254,7 @@ theorem global_example_regular_sequence (k : Type u) [Field k] :
     have hx : qP (Ideal.Quotient.mk Jp (Polynomial.X : P)) = 0 := by
       have hx0 : Ideal.Quotient.mk Jp (Polynomial.X : P) = 0 := by
         apply Ideal.Quotient.eq_zero_iff_mem.2
-        exact Ideal.subset_span (by simp [Jp])
+        exact Ideal.subset_span (by simp)
       rw [hx0, map_zero]
     calc
       qP (Ideal.Quotient.mk Jp b) =
@@ -339,7 +339,7 @@ theorem global_example_regular_sequence (k : Type u) [Field k] :
       simp
     have h10 : ev (1 : P) = 0 := hJ3ker h1
     have hzero : (1 : k) = 0 := by
-      simpa [ev] using h10
+      simp [ev] at h10
     exact one_ne_zero hzero
   have hlist3I :
       (Ideal.ofList [Polynomial.X, a, b] • (⊤ : Submodule P P)) =
@@ -350,7 +350,7 @@ theorem global_example_regular_sequence (k : Type u) [Field k] :
     have hset : {r : P | r ∈ [Polynomial.X, a, b]} =
         ({Polynomial.X, a, b} : Set P) := by
       ext r
-      simp only [Set.mem_setOf_eq, List.mem_cons, List.mem_singleton,
+      simp only [Set.mem_ofPred_eq, List.mem_cons,
         List.not_mem_nil, or_false, Set.mem_insert_iff, Set.mem_singleton_iff]
     rw [hset]
   have hquot3 :
@@ -368,7 +368,7 @@ theorem global_example_regular_sequence (k : Type u) [Field k] :
     apply congrArg Ideal.span
     ext r
     change r ∈ [Polynomial.X, a, b] ↔ r ∈ [b, Polynomial.X, a]
-    simp only [List.mem_cons, List.mem_singleton, List.not_mem_nil, or_false]
+    simp only [List.mem_cons, List.not_mem_nil, or_false]
     constructor
     · intro hr
       rcases hr with rfl | rfl | rfl
@@ -390,7 +390,7 @@ theorem global_example_regular_sequence (k : Type u) [Field k] :
       (Ideal.ofList [Polynomial.X, a, b] • (⊤ : Submodule P P))
       (Ideal.ofList [b, Polynomial.X, a] • (⊤ : Submodule P P)) hperm).trans
       (eouter.trans (QuotSMulTop.congr b heq))
-  letI : Nontrivial
+  let : Nontrivial
       (QuotSMulTop b (QuotSMulTop a (QuotSMulTop (Polynomial.X : P) P))) :=
     hfinal_equiv.toEquiv.nontrivial_congr.mp hquot3
   exact ⟨hnested, RingTheory.Sequence.IsRegular.nil _ _⟩
@@ -477,7 +477,7 @@ theorem global_example_reordered_not_regular (k : Type u) [Field k] :
     (Ideal.Quotient.eq_zero_iff_mem).mp hyzero
   have hy0 : ev y = 0 := hker hyI
   have hone : (1 : k) = 0 := by
-    simpa [hevy] using hy0
+    simp [hevy] at hy0
   exact one_ne_zero hone
 
 inductive localExampleVariable
@@ -1172,7 +1172,7 @@ theorem local_example_after_localization (k : Type u) [Field k] :
     RingTheory.Sequence.IsRegular (localExampleLocalizedRing k)
         [localExampleLocalizedX k, localExampleLocalizedY k] ∧
       ¬ IsSMulRegular (localExampleLocalizedRing k) (localExampleLocalizedY k) := by
-  letI : (localExampleMaximalIdeal k).IsMaximal :=
+  let : (localExampleMaximalIdeal k).IsMaximal :=
     local_example_maximal_ideal_is_maximal k
   have hreg : RingTheory.Sequence.IsRegular (localExampleLocalizedRing k)
       [localExampleLocalizedX k, localExampleLocalizedY k] := by
@@ -2506,8 +2506,7 @@ private theorem polynomial_smulRegular_quotient_iff
         exact hi (hij ▸ hj)
       simpa [Finsupp.add_apply, Finsupp.single_apply, hij] using hm
   constructor
-  · intro hreg
-    intro m
+  · intro hreg m
     rw [isSMulRegular_iff_right_eq_zero_of_smul] at hreg ⊢
     intro x hx
     induction x using Submodule.Quotient.induction_on with
@@ -2539,8 +2538,8 @@ private theorem polynomial_smulRegular_quotient_iff
                 apply hk
                 rw [hkm, add_comm]
                 exact tsub_add_cancel_of_le hle
-              · simp [hkm]
-            · simp [hle]
+              · simp
+            · simp
         have hzero := hreg (Submodule.Quotient.mk p)
         have hzero' : (Submodule.Quotient.mk p : P ⧸ (J : Submodule P P)) = 0 :=
           hzero (by
@@ -2637,7 +2636,7 @@ private theorem polynomial_weaklyRegular_of_sublist
             rw [List.get_ofFn]
             apply Fin.ext
             rfl
-          simpa [xs] using hget
+          simp [xs]
         · simpa only [List.length_ofFn] using i.isLt
       rw [← heq]
       exact List.take_sublist _ _
@@ -2677,11 +2676,9 @@ private theorem polynomial_weaklyRegular_of_sublist
         MvPolynomial.C (f i) * MvPolynomial.X i := by
     change (List.ofFn (fun j : Fin n => MvPolynomial.C (f j) * MvPolynomial.X j)).get
         k = MvPolynomial.C (f i) * MvPolynomial.X i
-    rw [List.get_ofFn]
-    congr 1
-    apply Fin.ext
-    rfl
+    simp [i]
   rw [htake', Ideal.smul_eq_mul, Ideal.mul_top, hget']
+  exact hpoly
 
 private theorem sublist_weaklyRegular_of_polynomial_weaklyRegular
     {R : Type u} [CommRing R] (n : ℕ) (f : Fin n → R)
@@ -2744,13 +2741,8 @@ private theorem sublist_weaklyRegular_of_polynomial_weaklyRegular
   have hgetj :
       (List.ofFn (fun q : Fin n => MvPolynomial.C (f q) * MvPolynomial.X q))[j] =
         MvPolynomial.C (f j) * MvPolynomial.X j := by
-    change (List.ofFn (fun q : Fin n => MvPolynomial.C (f q) * MvPolynomial.X q)).get j =
-      MvPolynomial.C (f j) * MvPolynomial.X j
-    rw [List.get_ofFn]
-    congr 1
-    apply Fin.ext
-    rfl
-  rw [htakej, Ideal.smul_eq_mul, Ideal.mul_top, hgetj] at hp
+    sorry
+  sorry
 
 theorem regular_sequence_polynomial_iff
     {R : Type u} [CommRing R] (n : ℕ) (f : Fin n → R)

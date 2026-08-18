@@ -2790,32 +2790,12 @@ theorem ameliorate_fibred_morphism
         have hFa_cast : eqToHom hFa ≫ eqToHom hFa.symm = 𝟙 _ := by
           rw [eqToHom_trans]
           exact eqToHom_refl _ _
-        have hζ_cast : eqToHom (hFζ.trans hζX).symm ≫
-              eqToHom hFζ ≫ eqToHom hζX = 𝟙 _ := by
-          have hinner : eqToHom hFζ ≫ eqToHom hζX =
-                eqToHom (hFζ.trans hζX) := by
-            rw [eqToHom_trans]
-          have hinv : eqToHom (hFζ.trans hζX).symm ≫
-                eqToHom (hFζ.trans hζX) = 𝟙 _ := by
-            rw [eqToHom_trans]
-            exact eqToHom_refl _ _
-          calc
-            eqToHom (hFζ.trans hζX).symm ≫
-                eqToHom hFζ ≫ eqToHom hζX =
-              eqToHom (hFζ.trans hζX).symm ≫
-                (eqToHom hFζ ≫ eqToHom hζX) := by
-                  simp
-            _ = eqToHom (hFζ.trans hζX).symm ≫
-                eqToHom (hFζ.trans hζX) := by rw [hinner]
-            _ = 𝟙 _ := hinv
         have hχmap : (structureFunctor Y.underlying).map χ.hom.left = gY := by
           dsimp [χ, ameliorationFromX, ObjectProperty.homMk]
           rw [Functor.map_comp, hmapζ, hFmapχright, hχrightmap]
           simp only [gX, Category.assoc]
           rw [hFa_cast]
-          have hζ_post := congrArg (fun k => k ≫ gY) hζ_cast
-          set_option linter.unnecessarySimpa false in
-            simpa [gY, Category.assoc] using hζ_post
+          simp [gY, Category.assoc]
         have hχbase : (ameliorationBase F).IsHomLift g χ := by
           let hdomχ : (ameliorationBase F).obj ζ =
                 (structureFunctor Y.underlying).obj ζ.obj.left := by rfl

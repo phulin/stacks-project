@@ -18,8 +18,394 @@ namespace Formalization.Books.Algebra.Unit30
 open Set
 open _root_.Topology
 open scoped TensorProduct
+attribute [local instance] Polynomial.algebra Polynomial.isLocalization
 
 /-! ## Generic finite presentation and constructible images -/
+
+private theorem test_localized_eval
+    {R S : Type*} [CommRing R] [CommRing S] [IsDomain R] [IsDomain S]
+    (m : R) (hm : m ≠ 0)
+    (φ : R →+* S) (x : S) (hφ : Function.Injective φ)
+    (hev : Function.Surjective (Polynomial.eval₂RingHom φ x)) :
+    Function.Surjective
+      (IsLocalization.map (S := Polynomial (Localization.Away m))
+        (Localization (Submonoid.map (Polynomial.eval₂RingHom φ x)
+          (Submonoid.map (Polynomial.C : R →+* Polynomial R) (Submonoid.powers m))))
+        (Polynomial.eval₂RingHom φ x)
+        (Submonoid.map (Polynomial.C : R →+* Polynomial R) (Submonoid.powers m)).le_comap_map) := by
+  let M := Submonoid.map (Polynomial.C : R →+* Polynomial R) (Submonoid.powers m)
+  let T := Submonoid.map φ (Submonoid.powers m)
+  have hT : Submonoid.map (Polynomial.eval₂RingHom φ x) M = T := by
+    ext z
+    constructor
+    · rintro ⟨p, ⟨q, ⟨n, rfl⟩, rfl⟩, rfl⟩
+      exact ⟨m ^ n, ⟨n, rfl⟩, by
+        change φ (m ^ n) = Polynomial.eval₂ φ x (Polynomial.C (m ^ n))
+        rw [Polynomial.eval₂_C]⟩
+    · rintro ⟨s, ⟨n, rfl⟩, rfl⟩
+      refine ⟨Polynomial.C (m ^ n), ?_, ?_⟩
+      · exact ⟨m ^ n, ⟨n, rfl⟩, rfl⟩
+      · change Polynomial.eval₂ φ x (Polynomial.C (m ^ n)) = φ (m ^ n)
+        rw [Polynomial.eval₂_C]
+  letI : IsLocalization T (Localization (Submonoid.map
+      (Polynomial.eval₂RingHom φ x) M)) := by
+    rw [← hT]
+    infer_instance
+  let e : Polynomial (Localization.Away m) →+*
+      Localization (Submonoid.map (Polynomial.eval₂RingHom φ x) M) :=
+    IsLocalization.map _ (Polynomial.eval₂RingHom φ x) M.le_comap_map
+  let g : Localization.Away m →+*
+      Localization (Submonoid.map (Polynomial.eval₂RingHom φ x) M) :=
+    IsLocalization.map _ φ (Submonoid.powers m).le_comap_map
+  have hcomp : e.comp (algebraMap (Localization.Away m)
+      (Polynomial (Localization.Away m))) = g := by
+    apply IsLocalization.ringHom_ext (Submonoid.powers m)
+    ext a
+    simp only [RingHom.comp_apply]
+    have ha : Polynomial.C (algebraMap R (Localization.Away m) a) =
+        algebraMap (Polynomial R) (Polynomial (Localization.Away m)) (Polynomial.C a) := by
+      simp [Polynomial.algebraMap_apply]
+    rw [Polynomial.algebraMap_apply]
+    have hb : Polynomial.C (algebraMap (Localization.Away m) (Localization.Away m)
+        (algebraMap R (Localization.Away m) a)) =
+        Polynomial.C (algebraMap R (Localization.Away m) a) := by simp
+    have heC : e (Polynomial.C (algebraMap R (Localization.Away m) a)) =
+        (algebraMap S (Localization (Submonoid.map
+          (Polynomial.eval₂RingHom φ x) M))) (φ a) := by
+      rw [ha]
+      dsimp [e]
+      change (IsLocalization.map (Localization (Submonoid.map
+        (Polynomial.eval₂RingHom φ x) M)) (Polynomial.eval₂RingHom φ x)
+        M.le_comap_map)
+        (algebraMap (Polynomial R) (Polynomial (Localization.Away m))
+          (Polynomial.C a)) = _
+      rw [IsLocalization.map_eq]
+      simp [Polynomial.eval₂RingHom_comp_C]
+    have hg : g (algebraMap R (Localization.Away m) a) =
+        (algebraMap S (Localization (Submonoid.map
+          (Polynomial.eval₂RingHom φ x) M))) (φ a) := by
+      dsimp [g]
+      rw [IsLocalization.map_eq]
+    simpa [hb] using heC.trans hg.symm
+  exact IsLocalization.map_surjective_of_surjective
+    (M := M) (S := Polynomial (Localization.Away m))
+    (Q := Localization (Submonoid.map (Polynomial.eval₂RingHom φ x) M))
+    (g := Polynomial.eval₂RingHom φ x) hev
+
+private theorem test_localization_submonoid
+    {R S : Type*} [CommRing R] [CommRing S]
+    (φ : R →+* S) (x : S) (m : R) :
+    Submonoid.map (Polynomial.eval₂RingHom φ x)
+        (Submonoid.map (Polynomial.C : R →+* Polynomial R) (Submonoid.powers m)) =
+      Submonoid.map φ (Submonoid.powers m) := by
+  ext z
+  constructor
+  · rintro ⟨p, ⟨q, ⟨n, rfl⟩, rfl⟩, rfl⟩
+    exact ⟨m ^ n, ⟨n, rfl⟩, by
+      change φ (m ^ n) = Polynomial.eval₂ φ x (Polynomial.C (m ^ n))
+      rw [Polynomial.eval₂_C]⟩
+  · rintro ⟨s, ⟨n, rfl⟩, rfl⟩
+    refine ⟨Polynomial.C (m ^ n), ?_, ?_⟩
+    · exact ⟨m ^ n, ⟨n, rfl⟩, rfl⟩
+    · change Polynomial.eval₂ φ x (Polynomial.C (m ^ n)) = φ (m ^ n)
+      rw [Polynomial.eval₂_C]
+
+private theorem ker_eval_eq_span_of_map_eq_minpoly
+    {A B K L : Type*} [CommRing A] [CommRing B] [Field K] [Field L]
+    [Algebra K L]
+    (ψ : A →+* B) (α : A →+* K) (β : B →+* L) (γ : K →+* L)
+    (x : B) (q : Polynomial A)
+    (hα : Function.Injective α) (hβ : Function.Injective β)
+    (hcomp : β.comp ψ = γ.comp α) (hγ : γ = algebraMap K L)
+    (hqmonic : q.Monic) (hqroot : Polynomial.eval₂RingHom ψ x q = 0)
+    (hqmap : q.map α = minpoly K (β x)) :
+    RingHom.ker (Polynomial.eval₂RingHom ψ x) = Ideal.span ({q} : Set (Polynomial A)) := by
+  letI : Nontrivial A := ⟨⟨0, 1, fun h => by
+    have := congrArg α h
+    simpa using this⟩⟩
+  ext p
+  constructor
+  · intro hp
+    have hroot : Polynomial.eval₂RingHom ψ x (p %ₘ q) = 0 := by
+      change Polynomial.eval₂ ψ x (p %ₘ q) = 0
+      rw [Polynomial.eval₂_modByMonic_eq_self_of_root hqroot]
+      exact hp
+    have hroot' :
+        Polynomial.eval₂ γ (β x) ((p %ₘ q).map α) = 0 := by
+      rw [Polynomial.eval₂_map, ← hcomp]
+      rw [← Polynomial.hom_eval₂]
+      simpa using congrArg β hroot
+    have hdvd : minpoly K (β x) ∣ (p %ₘ q).map α :=
+      minpoly.dvd K (β x) (by
+        simpa [Polynomial.aeval_def, hγ] using hroot')
+    rw [← hqmap] at hdvd
+    have hdeg : ((p %ₘ q).map α).degree < (q.map α).degree := by
+      rw [Polynomial.degree_map_eq_of_injective hα,
+        Polynomial.degree_map_eq_of_injective hα]
+      exact Polynomial.degree_modByMonic_lt p hqmonic
+    have hzero : (p %ₘ q).map α = 0 :=
+      Polynomial.eq_zero_of_dvd_of_degree_lt hdvd (hqmap ▸ hdeg)
+    have hrem : p %ₘ q = 0 := Polynomial.map_injective α hα (by simpa using hzero)
+    simpa [Ideal.mem_span_singleton] using
+      (Polynomial.mem_ker_modByMonic hqmonic).mp hrem
+  · intro hp
+    rw [Ideal.mem_span_singleton] at hp
+    obtain ⟨r, rfl⟩ := hp
+    change Polynomial.eval₂RingHom ψ x (q * r) = 0
+    rw [map_mul, hqroot, zero_mul]
+
+private theorem one_generator_local_fp
+    {R S : Type*} [CommRing R] [CommRing S] [IsDomain R] [IsDomain S]
+    (φ : R →+* S) (hφ : Function.Injective φ)
+    (x : S) (hev : Function.Surjective (Polynomial.eval₂RingHom φ x))
+    (hxa : ∃ p : Polynomial (FractionRing R), p ≠ 0 ∧
+      Polynomial.eval₂ (IsFractionRing.lift
+        (g := (algebraMap S (FractionRing S)).comp φ)
+        (A := R) (K := FractionRing R) (L := FractionRing S)
+        (fun a b h => hφ (IsFractionRing.injective S (FractionRing S) h)))
+        (algebraMap S (FractionRing S) x) p = 0) :
+  ∃ m : R, m ≠ 0 ∧ RingHom.FinitePresentation (Localization.awayMap φ m) := by
+  classical
+  let K := FractionRing R
+  let L := FractionRing S
+  letI : Algebra R S := φ.toAlgebra
+  letI : Algebra K L :=
+    RingHom.toAlgebra (IsFractionRing.lift
+      (g := (algebraMap S L).comp φ)
+      (A := R) (K := K) (L := L)
+      (fun a b h => hφ (IsFractionRing.injective S L h)))
+  let xL := algebraMap S L x
+  let p := minpoly K xL
+  have hxa' : IsAlgebraic K xL := by
+    change ∃ p : Polynomial K, p ≠ 0 ∧
+      Polynomial.eval₂ (IsFractionRing.lift
+        (g := (algebraMap S L).comp φ) (A := R) (K := K) (L := L)
+        (fun a b h => hφ (IsFractionRing.injective S L h)))
+        (algebraMap S L x) p = 0
+    exact hxa
+  have hpmonic : p.Monic := minpoly.monic (IsAlgebraic.isIntegral hxa')
+  let M₀ := nonZeroDivisors R
+  let d₀ := IsLocalization.commonDenom M₀ p.support p.coeff
+  let d : R := d₀
+  have hd : d ≠ 0 := by
+    change (d₀ : R) ≠ 0
+    exact mem_nonZeroDivisors_iff_ne_zero.mp d₀.property
+  have hmem : p.scaleRoots (algebraMap R K d) ∈ Polynomial.lifts (algebraMap R K) := by
+    exact IsLocalization.scaleRoots_commonDenom_mem_lifts M₀ p (by
+      rw [hpmonic.leadingCoeff]
+      exact one_mem _)
+  obtain ⟨q, hqmap, -, hqmonic⟩ :=
+    Polynomial.lifts_and_natDegree_eq_and_monic hmem
+      (Polynomial.monic_scaleRoots_iff _ |>.mpr hpmonic)
+  let M := Submonoid.map (Polynomial.C : R →+* Polynomial R) (Submonoid.powers d)
+  let T := Submonoid.map φ (Submonoid.powers d)
+  have hTnonzero : T ≤ nonZeroDivisors S :=
+    map_le_nonZeroDivisors_of_injective φ hφ
+      (powers_le_nonZeroDivisors_of_noZeroDivisors hd)
+  let Q := Localization (Submonoid.map (Polynomial.eval₂RingHom φ x) M)
+  have hT : Submonoid.map (Polynomial.eval₂RingHom φ x) M = T := by
+    ext z
+    constructor
+    · rintro ⟨p', ⟨r', ⟨n, rfl⟩, rfl⟩, rfl⟩
+      exact ⟨d ^ n, ⟨n, rfl⟩, by
+        change φ (d ^ n) = Polynomial.eval₂ φ x (Polynomial.C (d ^ n))
+        rw [Polynomial.eval₂_C]⟩
+    · rintro ⟨s, ⟨n, rfl⟩, rfl⟩
+      refine ⟨Polynomial.C (d ^ n), ?_, ?_⟩
+      · exact ⟨d ^ n, ⟨n, rfl⟩, rfl⟩
+      · change Polynomial.eval₂ φ x (Polynomial.C (d ^ n)) = φ (d ^ n)
+        rw [Polynomial.eval₂_C]
+  letI : IsLocalization T Q := by
+    rw [← hT]
+    infer_instance
+  let g : Localization.Away d →+* Q :=
+    IsLocalization.map Q φ (Submonoid.powers d).le_comap_map
+  let e : Polynomial (Localization.Away d) →+* Q :=
+    IsLocalization.map Q (Polynomial.eval₂RingHom φ x) M.le_comap_map
+  have hesurj : Function.Surjective e := by
+    exact test_localized_eval d hd φ x hφ hev
+  let α : Localization.Away d →+* K :=
+    IsLocalization.Away.lift d
+      (IsFractionRing.isUnit_map_of_injective (IsFractionRing.injective R K) d₀)
+  let β : Q →+* L :=
+    IsLocalization.lift (M := T) (S := Q)
+      (fun y : T => IsFractionRing.isUnit_map_of_injective
+        (IsFractionRing.injective S L) ⟨y.1, hTnonzero y.2⟩)
+  have hα : Function.Injective α := by
+    change Function.Injective (IsLocalization.lift (M := Submonoid.powers d)
+      (fun y : Submonoid.powers d => IsFractionRing.isUnit_map_of_injective
+        (IsFractionRing.injective R K) ⟨y.1, powers_le_nonZeroDivisors_of_noZeroDivisors hd y.2⟩))
+    rw [IsLocalization.lift_injective_iff]
+    intro a b
+    constructor
+    · intro h
+      simpa [α] using congrArg α h
+    · intro h
+      have hab : a = b := (IsFractionRing.injective R K) h
+      simpa [hab]
+  have hβ : Function.Injective β := by
+    change Function.Injective (IsLocalization.lift (M := T) (S := Q)
+      (fun y : T => IsFractionRing.isUnit_map_of_injective
+        (IsFractionRing.injective S L) ⟨y.1, hTnonzero y.2⟩))
+    rw [IsLocalization.lift_injective_iff]
+    intro a b
+    constructor
+    · intro h
+      simpa [β] using congrArg β h
+    · intro h
+      have hab : a = b := (IsFractionRing.injective S L) h
+      simpa [hab]
+  have hcomp : β.comp g = (algebraMap K L).comp α := by
+    have hbase : (algebraMap K L).comp (algebraMap R K) =
+        (algebraMap S L).comp φ := by
+      have hKL : (algebraMap K L : K →+* L) = IsFractionRing.lift
+          (g := (algebraMap S L).comp φ) (A := R) (K := K) (L := L)
+          (fun a b h => hφ (IsFractionRing.injective S L h)) := rfl
+      rw [hKL]
+      apply RingHom.ext
+      intro a
+      change IsFractionRing.lift
+          (g := (algebraMap S L).comp φ) (A := R) (K := K) (L := L)
+          (fun a b h => hφ (IsFractionRing.injective S L h))
+          (algebraMap R K a) = (algebraMap S L) (φ a)
+      exact IsFractionRing.lift_algebraMap
+        (A := R) (K := K) (L := L)
+        (g := (algebraMap S L).comp φ)
+        (fun a b h => hφ (IsFractionRing.injective S L h)) a
+    apply IsLocalization.ringHom_ext (Submonoid.powers d)
+    ext a
+    simp [α, β, g, IsLocalization.lift_eq]
+    exact congrArg (fun k : R →+* L => k a) hbase.symm
+  let r := (q.map (algebraMap R (Localization.Away d))).scaleRoots
+    (IsLocalization.Away.invSelf d)
+  have hD : algebraMap R K d ≠ 0 := by
+    intro h
+    apply hd
+    exact (IsFractionRing.injective R K) (by simpa using h)
+  have hrmap : r.map α = p := by
+    dsimp [r]
+    have hmapq : (q.map (algebraMap R (Localization.Away d))).map α =
+        q.map (algebraMap R K) := by
+      have hαcomp : α.comp (algebraMap R (Localization.Away d)) = algebraMap R K := by
+        simpa [α] using (IsLocalization.Away.lift_comp d
+          (IsFractionRing.isUnit_map_of_injective (IsFractionRing.injective R K) d₀))
+      simpa [hαcomp] using
+        (Polynomial.map_map (f := algebraMap R (Localization.Away d)) α q)
+    rw [Polynomial.map_scaleRoots]
+    · rw [hmapq, hqmap, ← Polynomial.scaleRoots_mul]
+      have hinv : α (IsLocalization.Away.invSelf d) = (algebraMap R K d)⁻¹ := by
+        have hmul : (algebraMap R K d) * α (IsLocalization.Away.invSelf d) = 1 := by
+          have hmul' := congrArg α (IsLocalization.Away.mul_invSelf d)
+          rw [map_mul, map_one] at hmul'
+          rw [show α (algebraMap R (Localization.Away d) d) = algebraMap R K d by
+            simp [α]] at hmul'
+          exact hmul'
+        exact ((mul_eq_one_iff_inv_eq₀ hD).mp hmul).symm
+      rw [hinv]
+      simp [hD]
+    · have hmonic : (q.map (algebraMap R (Localization.Away d))).Monic :=
+        hqmonic.map _
+      rw [hmonic.leadingCoeff]
+      intro hzero
+      have hK : (1 : K) = 0 := by
+        simpa using hzero
+      exact (one_ne_zero : (1 : K) ≠ 0) hK
+  let xQ : Q := algebraMap S Q x
+  have hroot : Polynomial.eval₂RingHom g xQ r = 0 := by
+    apply hβ
+    change β (Polynomial.eval₂ g xQ r) = β 0
+    rw [Polynomial.hom_eval₂, hcomp]
+    rw [← Polynomial.eval₂_map, hrmap]
+    have hxQ : β xQ = xL := by
+      dsimp [xQ, β]
+      rw [IsLocalization.lift_eq]
+    rw [hxQ]
+    simpa [xL, p, Polynomial.aeval_def] using minpoly.aeval K xL
+  have hker : RingHom.ker (Polynomial.eval₂RingHom g xQ) =
+      Ideal.span ({r} : Set (Polynomial (Localization.Away d))) := by
+    apply ker_eval_eq_span_of_map_eq_minpoly g α β (algebraMap K L) xQ r hα hβ hcomp rfl
+    · exact (Polynomial.monic_scaleRoots_iff _).mpr (hqmonic.map _)
+    · exact hroot
+    · have hxQ : β xQ = xL := by
+        dsimp [xQ, β]
+        rw [IsLocalization.lift_eq]
+      simpa [hxQ, xL, p]
+  have heq : e = Polynomial.eval₂RingHom g xQ := by
+    apply Polynomial.ringHom_ext
+    intro a
+    · have heC : e.comp (Polynomial.C : Localization.Away d →+*
+          Polynomial (Localization.Away d)) = g := by
+        apply IsLocalization.ringHom_ext (Submonoid.powers d)
+        ext b
+        change e (Polynomial.C (algebraMap R (Localization.Away d) b)) =
+          g (algebraMap R (Localization.Away d) b)
+        have hC : Polynomial.C (algebraMap R (Localization.Away d) b) =
+            algebraMap (Polynomial R) (Polynomial (Localization.Away d))
+              (Polynomial.C b) := by
+          simp [Polynomial.algebraMap_apply]
+        rw [hC]
+        dsimp [e]
+        change (IsLocalization.map Q (Polynomial.eval₂RingHom φ x)
+          M.le_comap_map)
+          (algebraMap (Polynomial R) (Polynomial (Localization.Away d))
+            (Polynomial.C b)) = g (algebraMap R (Localization.Away d) b)
+        rw [IsLocalization.map_eq]
+        dsimp [g]
+        rw [Polynomial.eval₂_C]
+        rw [IsLocalization.map_eq]
+      simpa [RingHom.comp_apply] using congrArg
+        (fun k : Localization.Away d →+* Q => k a) heC
+    · have hX : e Polynomial.X = xQ := by
+        have hX' : Polynomial.X =
+            algebraMap (Polynomial R) (Polynomial (Localization.Away d)) Polynomial.X := by
+          simp [Polynomial.algebraMap_apply]
+        rw [hX']
+        dsimp [e]
+        change (IsLocalization.map Q (Polynomial.eval₂RingHom φ x)
+          M.le_comap_map)
+          (algebraMap (Polynomial R) (Polynomial (Localization.Away d)) Polynomial.X) = xQ
+        rw [IsLocalization.map_eq]
+        simp [xQ]
+      simpa [hX, xQ]
+  have hef : e.FinitePresentation :=
+    RingHom.FinitePresentation.of_surjective e hesurj (by
+      rw [heq, hker]
+      exact Submodule.fg_span (Set.finite_singleton r))
+  have hbase : (algebraMap (Localization.Away d)
+      (Polynomial (Localization.Away d))).FinitePresentation := by
+    rw [RingHom.finitePresentation_algebraMap]
+    infer_instance
+  have hgf : g.FinitePresentation := by
+    rw [← show e.comp (algebraMap (Localization.Away d)
+      (Polynomial (Localization.Away d))) = g from by
+        rw [heq]
+        ext a
+        simp [Polynomial.algebraMap_apply]]
+    exact hef.comp hbase
+  have hpow : T = Submonoid.powers (φ d) := by
+    ext z
+    constructor
+    · rintro ⟨s, ⟨n, rfl⟩, rfl⟩
+      exact ⟨n, by simp⟩
+    · rintro ⟨n, rfl⟩
+      exact ⟨d ^ n, ⟨n, rfl⟩, by simp⟩
+  letI : IsLocalization T (Localization.Away (φ d)) := by
+    rw [hpow]
+    infer_instance
+  let eQ : Q ≃ₐ[S] Localization.Away (φ d) :=
+    IsLocalization.algEquiv T Q (Localization.Away (φ d))
+  have heQ : (eQ : Q →+* Localization.Away (φ d)).FinitePresentation :=
+    RingHom.FinitePresentation.of_bijective eQ.bijective
+  have hfinal : ((eQ : Q →+* Localization.Away (φ d)).comp g).FinitePresentation :=
+    heQ.comp hgf
+  have hmap : (eQ : Q →+* Localization.Away (φ d)).comp g =
+      Localization.awayMap φ d := by
+    apply IsLocalization.ringHom_ext (Submonoid.powers d)
+    ext a
+    simp [eQ, g, Localization.awayMap, IsLocalization.Away.map,
+      IsLocalization.map_eq]
+  refine ⟨d, hd, ?_⟩
+  simpa [hmap] using hfinal
 
 /- The map in the first lemma is the canonical map
 `R_f → S_{φ(f)g}`.  It is obtained by the universal property of localization;

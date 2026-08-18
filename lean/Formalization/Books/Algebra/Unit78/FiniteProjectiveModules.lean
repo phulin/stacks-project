@@ -1401,12 +1401,12 @@ private lemma exists_not_mem_of_finite_submodules_of_local
   classical
   let Q : Submodule R X :=
     IsLocalRing.maximalIdeal R • (⊤ : Submodule R X)
-  letI : Module (IsLocalRing.ResidueField R) (X ⧸ Q) := by
+  let : Module (IsLocalRing.ResidueField R) (X ⧸ Q) := by
     dsimp [Q]
     exact inferInstanceAs
       (Module (R ⧸ IsLocalRing.maximalIdeal R)
         (X ⧸ (IsLocalRing.maximalIdeal R • (⊤ : Submodule R X))))
-  letI : IsScalarTower R (IsLocalRing.ResidueField R) (X ⧸ Q) := by
+  let : IsScalarTower R (IsLocalRing.ResidueField R) (X ⧸ Q) := by
     dsimp [Q]
     exact inferInstanceAs
       (IsScalarTower R (R ⧸ IsLocalRing.maximalIdeal R)
@@ -1471,7 +1471,7 @@ private lemma smul_top_ne_top_of_basis
           (Finsupp.lapply i : (ι →₀ S) →ₗ[S] S) = P.1 := by
     rw [Submodule.map_smul'', Submodule.map_top,
       LinearMap.range_eq_top.mpr hsurj]
-    simp [Ideal.smul_eq_mul, Ideal.mul_top]
+    simp [Ideal.mul_top]
   have hone : (1 : S) ∈ P.1 := by
     have hmem' :
         (Finsupp.lapply i : (ι →₀ S) →ₗ[S] S) (b.repr (b i)) ∈
@@ -1495,7 +1495,7 @@ private lemma exists_unimodular_split
           Nonempty (Module.Basis (Fin n) S
             (M ⧸ Submodule.span S ({x} : Set M))) := by
   classical
-  letI : Finite (MaximalSpectrum S) := hS
+  let : Finite (MaximalSpectrum S) := hS
   let I : Ideal S := Ideal.span (Set.range (b.repr x))
   have hone : (1 : S) ∈ I := by
     by_contra h
@@ -1573,18 +1573,18 @@ private lemma exists_unimodular_split
     apply LinearMap.ext
     intro y
     apply Subtype.ext
-    simp [rK, y.property]
-  letI : Module.Finite S K := Module.Finite.of_surjective rK (by
+    simp [rK]
+  let : Module.Finite S K := Module.Finite.of_surjective rK (by
     intro y
     refine ⟨(y : M), ?_⟩
     apply Subtype.ext
-    simp [rK, y.property])
-  letI : Module.Flat S K := Module.Flat.of_retract K.subtype rK hrK
+    simp [rK])
+  let : Module.Flat S K := Module.Flat.of_retract K.subtype rK hrK
   have hM (P : MaximalSpectrum S) :
       Module.finrank (S ⧸ P.1)
         ((S ⧸ P.1) ⊗[S] M) = n + 1 := by
-    letI : P.1.IsMaximal := P.isMaximal
-    letI : Field (S ⧸ P.1) := Ideal.Quotient.field P.1
+    let : P.1.IsMaximal := P.isMaximal
+    let : Field (S ⧸ P.1) := Ideal.Quotient.field P.1
     rw [Module.finrank_baseChange,
       Module.finrank_eq_card_basis b]
     simp
@@ -1592,12 +1592,12 @@ private lemma exists_unimodular_split
   have hKrank (P : MaximalSpectrum S) :
       Module.finrank (S ⧸ P.1)
         ((S ⧸ P.1) ⊗[S] K) = n := by
-    letI : P.1.IsMaximal := P.isMaximal
-    letI : Field (S ⧸ P.1) := Ideal.Quotient.field P.1
+    let : P.1.IsMaximal := P.isMaximal
+    let : Field (S ⧸ P.1) := Ideal.Quotient.field P.1
     have hL : Module.finrank (S ⧸ P.1)
         ((S ⧸ P.1) ⊗[S] L) = 1 := by
-      letI : Module.Finite S L := Module.Finite.of_basis bL
-      letI : Module.Free S L := Module.Free.of_basis bL
+      let : Module.Finite S L := Module.Finite.of_basis bL
+      let : Module.Free S L := Module.Free.of_basis bL
       rw [Module.finrank_baseChange,
         Module.finrank_eq_card_basis bL]
       simp
@@ -1637,7 +1637,7 @@ private lemma exists_basis_subset_of_subsingleton
     [IsScalarTower R S M] (N : Submodule R M) :
     ∃ (ι : Type v) (b : Module.Basis ι S M), ∀ i, b i ∈ N := by
   classical
-  letI : Subsingleton M := Module.subsingleton S M
+  let : Subsingleton M := Module.subsingleton S M
   let b' : Module.Basis (ULift.{v} (Fin 0)) S M := Module.Basis.empty M
   refine ⟨_, b', ?_⟩
   intro i
@@ -1648,11 +1648,11 @@ private theorem exists_basis_subset_aux
       [IsLocalRing R] [Infinite (IsLocalRing.ResidueField R)]
       [Algebra R S] [AddCommGroup M] [Module R M] [Module S M]
       [IsScalarTower R S M] [Module.Finite S M] [Module.Free S M]
-      (b : Module.Basis (Fin n) S M) (N : Submodule R M)
-      (hS : Formalization.Books.Algebra.Unit03.IsSemilocalRing S)
-      (hm : Ideal.map (algebraMap R S) (IsLocalRing.maximalIdeal R) ≤
+      (_b : Module.Basis (Fin n) S M) (N : Submodule R M)
+      (_hS : Formalization.Books.Algebra.Unit03.IsSemilocalRing S)
+      (_hm : Ideal.map (algebraMap R S) (IsLocalRing.maximalIdeal R) ≤
         Ring.jacobson S)
-      (hN : Submodule.span S (N : Set M) = ⊤),
+      (_hN : Submodule.span S (N : Set M) = ⊤),
       ∃ (ι : Type v) (b' : Module.Basis ι S M), ∀ i, b' i ∈ N := by
   intro n
   induction n with
@@ -1666,7 +1666,7 @@ private theorem exists_basis_subset_aux
   | succ n ih =>
       rintro R S M _ _ _ _ _ _ _ _ _ _ _ _ b N hS hm hN
       classical
-      letI : Finite (MaximalSpectrum S) := hS
+      let : Finite (MaximalSpectrum S) := hS
       let qP (P : MaximalSpectrum S) : Submodule R N :=
         ((P.1 • (⊤ : Submodule S M)).restrictScalars R).comap N.subtype
       have hqP (P : MaximalSpectrum S) : qP P ≠ ⊤ := by
@@ -1689,7 +1689,7 @@ private theorem exists_basis_subset_aux
         intro r hr y hy
         change (r • (y : N) : M) ∈ P.1 • (⊤ : Submodule S M)
         have hrP : algebraMap R S r ∈ P.1 := by
-          letI : P.1.IsMaximal := P.isMaximal
+          let : P.1.IsMaximal := P.isMaximal
           exact (Ring.jacobson_le_of_isMaximal P.1)
             (hm (Ideal.mem_map_of_mem (algebraMap R S) hr))
         rw [← IsScalarTower.algebraMap_smul S r (y : M)]
@@ -1731,8 +1731,8 @@ private theorem exists_basis_subset_aux
         intro z hz
         obtain ⟨m, rfl⟩ := L.mkQ_surjective z
         exact hgen m
-      letI : Module.Finite S (M ⧸ L) := Module.Finite.of_basis bQ
-      letI : Module.Free S (M ⧸ L) := Module.Free.of_basis bQ
+      let : Module.Finite S (M ⧸ L) := Module.Finite.of_basis bQ
+      let : Module.Free S (M ⧸ L) := Module.Free.of_basis bQ
       obtain ⟨ιQ, bQ', hbQ'⟩ := ih bQ NQ hS hm hNQ
       choose y hyN hyq using fun i : ιQ =>
         (Submodule.mem_map.mp (hbQ' i))
@@ -1756,8 +1756,8 @@ private theorem exists_basis_subset_aux
             have hqx : q x = 0 := by
               apply (Submodule.Quotient.mk_eq_zero L).2
               change x ∈ L
-              simpa [L] using
-                (Submodule.subset_span (R := S) (s := ({x} : Set M)) (by simp))
+              change x ∈ Submodule.span S ({x} : Set M)
+              exact Submodule.subset_span (by simp)
             have hzero : q (u.1 • x) = 0 := by
               rw [map_smul]
               rw [hqx, smul_zero]
@@ -1805,7 +1805,7 @@ private theorem exists_basis_subset_aux
       intro i
       cases i with
       | inl i =>
-          simpa [bM, b0, e, g, x] using xn.property
+          simp [bM, b0, e, g, x]
       | inr i =>
           simpa [bM, b0, e, g] using hyN i
 
@@ -1826,13 +1826,13 @@ theorem exists_basis_subset_of_semilocal
     ∃ (ι : Type*) (b : Module.Basis ι S M), ∀ i, b i ∈ N := by
   classical
   rcases subsingleton_or_nontrivial S with hS0 | hS0
-  · letI := hS0
+  · let _ := hS0
     exact exists_basis_subset_of_subsingleton N
-  · letI := hS0
+  · let _ := hS0
     let b₀ := Module.Free.chooseBasis S M
-    letI : Finite (Module.Free.ChooseBasisIndex S M) :=
+    let _ : Finite (Module.Free.ChooseBasisIndex S M) :=
       Module.Finite.finite_basis b₀
-    letI : Fintype (Module.Free.ChooseBasisIndex S M) :=
+    let _ : Fintype (Module.Free.ChooseBasisIndex S M) :=
       Fintype.ofFinite _
     let n := Fintype.card (Module.Free.ChooseBasisIndex S M)
     let b : Module.Basis (Fin n) S M :=

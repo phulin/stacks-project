@@ -41,7 +41,7 @@ theorem nakayama_part_one
   obtain ⟨f, hf, hfm⟩ :=
     Submodule.exists_sub_one_mem_and_smul_eq_zero_of_fg_of_le_smul I
       (⊤ : Submodule R M) Module.Finite.fg_top hle
-  exact ⟨f, hf, fun m => hfm m (by simp)⟩
+  exact ⟨f, hf, fun m => hfm m Submodule.mem_top⟩
 
 /-- Nakayama, part (2): the Jacobson-radical version of part (1). -/
 theorem nakayama_part_two

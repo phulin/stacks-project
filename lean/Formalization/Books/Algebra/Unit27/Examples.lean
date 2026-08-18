@@ -4275,11 +4275,12 @@ theorem affine_open_distinguished_opens_cover (a : ℚ) (ha0 : a ≠ 0) (ha1 : a
             (Polynomial.X - Polynomial.C (1 - a)) *
               (Polynomial.X - Polynomial.C a) * Polynomial.X =
           (Polynomial.X ^ 3 - Polynomial.X ^ 2) +
-            Polynomial.C (a * (1 - a) ^ 2) := by
+        Polynomial.C (a * (1 - a) ^ 2) := by
       simp
       ring
-    convert congrArg (affineLocalizationMap a) hpoly using 1 ;
-      simp only [map_mul, map_add] ; ring
+    convert congrArg (affineLocalizationMap a) hpoly using 1
+    simp only [map_mul, map_add]
+    ring
   let I : Ideal (AffineOpenRing a) :=
     Ideal.span {affineOpenF1 a, affineOpenG a}
   have hF1 : affineOpenF1 a ∈ I := Ideal.subset_span (by simp)
@@ -4322,8 +4323,7 @@ theorem affine_open_distinguished_opens_cover (a : ℚ) (ha0 : a ≠ 0) (ha1 : a
           algebraMap ℚ (AffineAmbient a) (2 - a) *
             affineLocalizationMap a (Polynomial.X ^ 2 - Polynomial.X) +
           algebraMap ℚ (AffineAmbient a) (2 * a * (1 - a))
-    simp [affinePolynomialG, affineQuadratic,
-      affineLocalizationMap, hC']
+    simp [affinePolynomialG, affineQuadratic, hC']
     rw [h2]
     ring
   have hb :

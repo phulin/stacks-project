@@ -766,7 +766,7 @@ theorem regular_function_on_finite_complement_is_polynomial
         rw [hU0eq] at hz0'
         have hz0J := hz0'.2
         rw [MvPolynomial.mem_zeroLocus_iff] at hz0J
-        push_neg at hz0J
+        push Not at hz0J
         exact hz0J
       obtain ⟨p0, hp0J, hp0val⟩ := hp0data
       have hp0ne : p0 ≠ 0 := by
@@ -779,7 +779,7 @@ theorem regular_function_on_finite_complement_is_polynomial
       have hpdata : ∃ p, p ∈ J ∧ MvPolynomial.aeval u p ≠ 0 := by
         have huJ := hu'.2
         rw [MvPolynomial.mem_zeroLocus_iff] at huJ
-        push_neg at huJ
+        push Not at huJ
         exact huJ
       obtain ⟨p, hpJ, hpval⟩ := hpdata
       have hpne : p ≠ 0 := by

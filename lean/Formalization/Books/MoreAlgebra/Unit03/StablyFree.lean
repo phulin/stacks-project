@@ -61,7 +61,7 @@ theorem stablyFree_projective
 two-out-of-three lemma.  It combines Mathlib's canonical splitting of a
 short exact sequence with its module biproduct/product equivalence. -/
 noncomputable def shortExact_middle_linearEquiv_prod
-    {R : Type u} [CommRing R]
+    {R : Type u} [Ring R]
     (S : ShortComplex (ModuleCat.{u} R)) (hS : S.ShortExact)
     [Module.Projective R S.X₃] :
     S.X₂ ≃ₗ[R] (S.X₁ × S.X₃) :=
@@ -71,7 +71,7 @@ noncomputable def shortExact_middle_linearEquiv_prod
 /-- In a short exact sequence of finite projective modules, stable freeness
 has the two-out-of-three property. -/
 theorem shortExact_isStablyFree_two_of_three
-    {R : Type u} [CommRing R]
+    {R : Type u} [Ring R]
     (S : ShortComplex (ModuleCat.{u} R)) (hS : S.ShortExact)
     [Module.Finite R S.X₁] [Module.Projective R S.X₁]
     [Module.Finite R S.X₂] [Module.Projective R S.X₂]

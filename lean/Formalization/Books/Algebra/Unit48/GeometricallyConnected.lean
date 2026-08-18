@@ -2,11 +2,13 @@ import Mathlib.Algebra.Algebra.Subalgebra.Basic
 import Mathlib.Algebra.Colimit.DirectLimit
 import Mathlib.FieldTheory.IsSepClosed
 import Mathlib.LinearAlgebra.FiniteDimensional.Defs
+import Mathlib.RingTheory.Flat.Basic
 import Mathlib.RingTheory.FiniteType
 import Mathlib.RingTheory.Spectrum.Prime.Topology
 import Mathlib.RingTheory.TensorProduct.Basic
 import Mathlib.Topology.Connected.Basic
 import Mathlib.Topology.Connected.TotallyDisconnected
+import Formalization.Books.Algebra.Unit21.OpenAndClosed
 
 /-!
 # Commutative Algebra, Chapter 48: Geometrically connected algebras

@@ -1,5 +1,6 @@
 import Formalization.Books.Algebra.Unit10.InternalHom
 import Mathlib.Algebra.Category.ModuleCat.Colimits
+import Mathlib.Algebra.Category.ModuleCat.FilteredColimits
 import Mathlib.CategoryTheory.Filtered.Basic
 import Mathlib.CategoryTheory.Limits.Presentation
 
@@ -64,7 +65,27 @@ theorem finite_iff_hom_filteredColimit_injective
     Module.Finite R N ↔
       ∀ (C : FilteredModuleColimit N),
         Function.Injective (filteredModuleHomColimitMap C).hom := by
-  sorry
+  constructor
+  · intro h C
+    letI : Category.{u} C.index := C.indexCategory
+    letI : IsFiltered C.index := C.indexFiltered
+    letI : HasColimit C.presentation.diag := C.presentation.hasColimit
+    have map_apply {A B : ModuleCat R} (f : A ⟶ B) (g : N ⟶ A) :
+        (moduleHomFunctor N).map f g = g ≫ f := by
+      change (ihom N).map f g = _
+      exact ModuleCat.ihom_map_apply f g
+    intro f g hfg
+    obtain ⟨i, fi, hfi⟩ :=
+      Types.jointly_surjective_of_isColimit
+        (isColimitOfPreserves (forget (ModuleCat R))
+          (colimit.isColimit (C.presentation.diag ⋙ moduleHomFunctor N))) f
+    obtain ⟨j, gj, hgj⟩ :=
+      Types.jointly_surjective_of_isColimit
+        (isColimitOfPreserves (forget (ModuleCat R))
+          (colimit.isColimit (C.presentation.diag ⋙ moduleHomFunctor N))) g
+    sorry
+  · intro h
+    sorry
 
 /-! ## Relations -/
 

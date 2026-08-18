@@ -69,7 +69,51 @@ theorem isIntegral_of_finite_submodule
     (M : Submodule R S) [Module.Finite R M] (y : S)
     (h1 : (1 : S) ∈ M) (hstable : ∀ m ∈ M, y * m ∈ M) :
     IsIntegral R y := by
-  sorry
+  let A' : Subalgebra R S :=
+    { carrier := {x | ∀ m ∈ M, x * m ∈ M}
+      mul_mem' := fun {a b} ha hb m hm => by
+        simpa [mul_assoc] using ha _ (hb _ hm)
+      one_mem' := fun m hm => by simpa using hm
+      add_mem' := fun {a b} ha hb m hm => by
+        simpa [add_mul] using M.add_mem (ha _ hm) (hb _ hm)
+      zero_mem' := fun m _hm => by simp
+      algebraMap_mem' := fun r m hm => by
+        simpa [Algebra.smul_def, mul_assoc, mul_left_comm, mul_comm] using M.smul_mem r hm }
+  let f : A' →ₐ[R] Module.End R M :=
+    AlgHom.ofLinearMap
+      { toFun := fun x => (DistribSMul.toLinearMap R S x).restrict x.prop
+        map_add' := by intro x z; ext m; exact add_mul _ _ _
+        map_smul' := by
+          intro r x
+          ext m
+          simp [DistribSMul.toLinearMap_apply, LinearMap.restrict_apply,
+            Algebra.smul_def, mul_assoc]
+          change (algebraMap R S r) * ((x : S) * (m : S)) =
+            (algebraMap R S r) * ((x : S) * (m : S))
+          rfl }
+      (by
+        ext m
+        change (1 : S) * (m : S) = (m : S)
+        simp)
+      (by
+        intro x z
+        ext m
+        change ((x : S) * (z : S)) * (m : S) =
+          (x : S) * ((z : S) * (m : S))
+        rw [mul_assoc])
+  have hf : Function.Injective f := by
+    intro x z hx
+    apply Subtype.ext
+    have hx1 := congr_arg (fun g : Module.End R M => g ⟨1, h1⟩) hx
+    have hx2 := congr_arg Subtype.val hx1
+    change (x : S) * (1 : S) = (z : S) * (1 : S) at hx2
+    simpa using hx2
+  change IsIntegral R (A'.val ⟨y, hstable⟩)
+  apply (isIntegral_algHom_iff A'.val Subtype.val_injective).2
+  have hiff : ∀ x : A', IsIntegral R (f x) ↔ IsIntegral R x :=
+    fun x => @isIntegral_algHom_iff R _ A' (Module.End R M) _ _ _ _ f hf x
+  apply (hiff _).mp
+  apply Algebra.IsIntegral.isIntegral
 
 /-- A finite ring map is integral. -/
 theorem finite_isIntegral
@@ -84,7 +128,16 @@ theorem finite_subalgebra_of_integral_elements
     (s : Finset S) :
     (∀ x ∈ s, IsIntegral R x) ↔
       ∃ A : Subalgebra R S, Module.Finite R A ∧ ∀ x ∈ s, x ∈ A := by
-  sorry
+  classical
+  constructor
+  · intro h
+    refine ⟨Algebra.adjoin R (s : Set S),
+      Module.Finite.of_fg (fg_adjoin_of_finite s.finite_toSet h), ?_⟩
+    intro x hx
+    exact Algebra.subset_adjoin hx
+  · rintro ⟨A, hA, hmem⟩ x hx
+    letI := hA
+    exact IsIntegral.of_mem_of_fg A Submodule.FG.of_finite x (hmem x hx)
 
 /-- Finite is equivalent to integral and finite type. -/
 theorem finite_iff_isIntegral_and_finiteType
@@ -99,7 +152,18 @@ theorem finite_iff_finite_integral_generators
     Module.Finite R S ↔
       ∃ s : Finset S,
         Algebra.adjoin R (s : Set S) = ⊤ ∧ ∀ x ∈ s, IsIntegral R x := by
-  sorry
+  classical
+  constructor
+  · intro h
+    letI := h
+    obtain ⟨s, hs⟩ := (inferInstance : Algebra.FiniteType R S).out
+    exact ⟨s, hs, fun x hx => Algebra.IsIntegral.isIntegral x⟩
+  · rintro ⟨s, hs, hintegral⟩
+    have hfin : Module.Finite R (Algebra.adjoin R (s : Set S)) :=
+      Module.Finite.of_fg (fg_adjoin_of_finite s.finite_toSet hintegral)
+    rw [hs] at hfin
+    letI := hfin
+    exact Module.Finite.equiv (Subalgebra.topEquiv (R := R) (A := S)).toLinearEquiv
 
 /-- Integrality is transitive in an algebra tower. -/
 theorem integral_transitive
@@ -149,7 +213,89 @@ theorem product_isIntegral_iff
     (f : ∀ i, R i →+* S i) (s : ∀ i, S i) :
     (RingHom.pi (fun i => (f i).comp (Pi.evalRingHom R i))).IsIntegralElem s ↔
       ∀ i, (f i).IsIntegralElem (s i) := by
-  sorry
+  classical
+  constructor
+  · rintro ⟨p, hp, hp0⟩ i
+    refine ⟨p.map (Pi.evalRingHom R i), hp.map _, ?_⟩
+    rw [Polynomial.eval₂_map]
+    simpa [Polynomial.eval₂_eq_sum, Polynomial.sum_def, RingHom.comp_apply] using
+      congr_fun hp0 i
+  · intro h
+    choose p hp hroot using h
+    let N : ℕ := ∑ i, (p i).natDegree
+    let q : ∀ i, (R i)[X] :=
+      fun i => p i * Polynomial.X ^ (N - (p i).natDegree)
+    have hdeg_le (i : ι) : (p i).natDegree ≤ N := by
+      dsimp [N]
+      exact Finset.single_le_sum (f := fun j => (p j).natDegree)
+        (fun _ _ => Nat.zero_le _) (Finset.mem_univ i)
+    have hq_monic (i : ι) : (q i).Monic := by
+      dsimp [q]
+      exact (hp i).mul (Polynomial.monic_X_pow _)
+    have hq_coeff (i : ι) : (q i).coeff N = 1 := by
+      by_cases hRi : Nontrivial (R i)
+      · letI := hRi
+        have hdegree : (q i).natDegree = N := by
+          dsimp [q]
+          rw [(hp i).natDegree_mul (Polynomial.monic_X_pow _),
+            Polynomial.natDegree_X_pow]
+          exact Nat.add_sub_of_le (hdeg_le i)
+        rw [← hdegree]
+        exact (hq_monic i).coeff_natDegree
+      · letI := not_nontrivial_iff_subsingleton.mp hRi
+        exact Subsingleton.elim _ _
+    have hq_root (i : ι) :
+        Polynomial.eval₂ (f i) (s i) (q i) = 0 := by
+      dsimp [q]
+      simp [Polynomial.eval₂_mul, hroot i]
+    let p' : (∀ i, R i)[X] := (Polynomial.piEquiv R).symm q
+    have hp'_coeff (i : ι) : p'.coeff N i = 1 := by
+      have hi := congr_arg (fun r : ∀ i, (R i)[X] => (r i).coeff N)
+        ((Polynomial.piEquiv R).apply_symm_apply q)
+      have hqi := hq_coeff i
+      have hi' : (p'.map (Pi.evalRingHom R i)).coeff N = (q i).coeff N := by
+        change (p'.map (Pi.evalRingHom R i)).coeff N = (q i).coeff N at hi
+        exact hi
+      rw [Polynomial.coeff_map] at hi'
+      exact hi'.trans hqi
+    have hp'_coeff_zero {n : ℕ} (hn : N < n) : p'.coeff n = 0 := by
+      ext i
+      have hi := congr_arg (fun r : ∀ i, (R i)[X] => (r i).coeff n)
+        ((Polynomial.piEquiv R).apply_symm_apply q)
+      have hqi : (q i).coeff n = 0 := by
+        by_cases hRi : Nontrivial (R i)
+        · letI := hRi
+          have hdegree : (q i).natDegree = N := by
+            dsimp [q]
+            rw [(hp i).natDegree_mul (Polynomial.monic_X_pow _),
+              Polynomial.natDegree_X_pow]
+            exact Nat.add_sub_of_le (hdeg_le i)
+          exact Polynomial.coeff_eq_zero_of_natDegree_lt (hdegree.trans_lt hn)
+        · letI := not_nontrivial_iff_subsingleton.mp hRi
+          exact Subsingleton.elim _ _
+      have hi' : (p'.map (Pi.evalRingHom R i)).coeff n = (q i).coeff n := by
+        change (p'.map (Pi.evalRingHom R i)).coeff n = (q i).coeff n at hi
+        exact hi
+      rw [Polynomial.coeff_map] at hi'
+      exact hi'.trans hqi
+    have hp'_monic : p'.Monic :=
+      (Polynomial.MonicDegreeEq.monic
+        (⟨p', funext hp'_coeff, fun n hn => hp'_coeff_zero hn⟩ :
+          Polynomial.MonicDegreeEq (∀ i, R i) N))
+    refine ⟨p', hp'_monic, ?_⟩
+    funext i
+    have hi := congr_arg (fun r : ∀ i, (R i)[X] => r i)
+      ((Polynomial.piEquiv R).apply_symm_apply q)
+    have hi' : p'.map (Pi.evalRingHom R i) = q i := by
+      change p'.map (Pi.evalRingHom R i) = q i at hi
+      exact hi
+    have hi'' :
+        Polynomial.eval₂ ((f i).comp (Pi.evalRingHom R i)) (s i) p' = 0 := by
+      have ht := hq_root i
+      rw [← hi'] at ht
+      rw [Polynomial.eval₂_map] at ht
+      exact ht
+    simpa [Polynomial.eval₂_eq_sum, Polynomial.sum_def, RingHom.comp_apply] using hi''
 
 /-- Membership in the integral closure of a product is coordinatewise. -/
 theorem product_integralClosure_mem_iff

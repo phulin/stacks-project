@@ -27,7 +27,64 @@ theorem bound_neighbours (T : NumericalType) (genusValue : ℤ)
     (hij : 0 < T.a i j) :
     T.m i * T.a i j ≤ T.m j * |T.a j j| ∧
       T.m i * T.w i ≤ T.m j * |T.a j j| := by
-  sorry
+  have hji : 0 < T.a j i := by
+    rw [T.a_symmetric]
+    exact hij
+  have hne : i ≠ j := by
+    intro h
+    subst j
+    have hrow := T.row_sum i
+    have hsumpos : 0 < ∑ k, T.a i k * T.m k := by
+      apply Finset.sum_pos'
+      · intro k hk
+        by_cases hki : k = i
+        · subst k
+          exact le_of_lt (mul_pos hij (T.m_pos _))
+        · exact mul_nonneg (T.a_offdiag_nonneg (Ne.symm hki))
+            (le_of_lt (T.m_pos _))
+      · refine ⟨i, Finset.mem_univ _, ?_⟩
+        exact mul_pos hij (T.m_pos _)
+    rw [hrow] at hsumpos
+    omega
+  have hdiag : T.a j j < 0 := by
+    by_contra hnot
+    have hnonneg : 0 ≤ T.a j j := le_of_not_gt hnot
+    have hsumpos : 0 < ∑ k, T.a j k * T.m k := by
+      apply Finset.sum_pos'
+      · intro k hk
+        by_cases hkj : k = j
+        · subst k
+          exact mul_nonneg hnonneg (le_of_lt (T.m_pos _))
+        · exact mul_nonneg (T.a_offdiag_nonneg (Ne.symm hkj))
+            (le_of_lt (T.m_pos _))
+      · refine ⟨i, Finset.mem_univ _, ?_⟩
+        exact mul_pos hji (T.m_pos _)
+    rw [T.row_sum j] at hsumpos
+    omega
+  have hnonneg : ∀ k ∈ (Finset.univ.erase j), 0 ≤ T.a j k * T.m k := by
+    intro k hk
+    exact mul_nonneg
+      (T.a_offdiag_nonneg (Ne.symm (Finset.mem_erase.mp hk).1))
+      (le_of_lt (T.m_pos _))
+  have hle_sum : T.a j i * T.m i ≤
+      (Finset.univ.erase j).sum (fun k => T.a j k * T.m k) :=
+    Finset.single_le_sum hnonneg (by simp [hne])
+  have hrow : (Finset.univ.erase j).sum (fun k => T.a j k * T.m k) +
+      T.a j j * T.m j = 0 := by
+    simpa [Finset.sum_erase_add] using T.row_sum j
+  have hfirst : T.m i * T.a i j ≤ T.m j * |T.a j j| := by
+    rw [T.a_symmetric i j, abs_of_neg hdiag]
+    nlinarith [hle_sum, hrow]
+  constructor
+  · exact hfirst
+  · rcases T.w_dvd i j with ⟨c, hc⟩
+    have hcpos : 0 < c := by
+      nlinarith [hij, T.w_pos i]
+    have hwle : T.w i ≤ T.a i j := by
+      nlinarith [hc, T.w_pos i]
+    have hmw : T.m i * T.w i ≤ T.m i * T.a i j := by
+      nlinarith [hwle, T.m_pos i]
+    exact hmw.trans hfirst
 
 /-!
 The four bounds for the non-`(-2)` part of a minimal type of genus at least

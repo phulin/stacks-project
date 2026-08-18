@@ -336,7 +336,7 @@ structure SupportGrothendieckSpectralSequenceFamily
       (abelianSheafGlobalSections (closedSubspace Z))
       (abelianSheafGlobalSections_isLeftExact (closedSubspace Z))
       K (complexes.obj K)
-  spectralMap : ∀ {K L : DPlus (Ab X)} (f : K ⟶ L),
+  spectralMap : ∀ {K L : DPlus (Ab X)} (_f : K ⟶ L),
     Nonempty (FilteredComplexSpectralSequenceHom
       (spectralData K).spectralSequence
       (spectralData L).spectralSequence)

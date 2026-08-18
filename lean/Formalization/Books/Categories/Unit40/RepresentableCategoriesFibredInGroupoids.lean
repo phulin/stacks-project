@@ -61,7 +61,13 @@ theorem isFibredEquivalenceOver_iff_exists_fibredMorphism
     (p : S ⥤ C) (q : T ⥤ C) :
     IsFibredEquivalenceOver p q ↔
       ∃ F : FibredMorphism p q, IsFibredEquivalenceOverMap F := by
-  sorry
+  constructor
+  · rintro ⟨F, G, hF, hG, hFcart, hGcart, hFG, hGF⟩
+    refine ⟨{ functor := F, over := hF, preserves := hFcart }, ?_⟩
+    exact ⟨G, hG, hGcart, hFG, hGF⟩
+  · rintro ⟨F, hF⟩
+    rcases hF with ⟨G, hG, hGcart, hFG, hGF⟩
+    exact ⟨F.functor, G, F.over, hG, F.preserves, hGcart, hFG, hGF⟩
 
 /-! ## The slice and representability -/
 
@@ -83,7 +89,9 @@ theorem sliceProjection_fibres_are_setoids
 theorem sliceMap_mapsStronglyCartesian
     {C : Type uC} [Category.{vC} C] {X Y : C} (f : X ⟶ Y) :
     MapsStronglyCartesian (Over.forget X) (Over.forget Y) (Over.map f) := by
-  sorry
+  intro a b φ _hφ
+  exact fibredInGroupoids_all_morphisms_stronglyCartesian
+    (Over.forget Y) (sliceProjection_isFibredInSets Y).1 ((Over.map f).map φ)
 
 def sliceFibredMorphism
     {C : Type uC} [Category.{vC} C] {X Y : C} (f : X ⟶ Y) :
@@ -126,7 +134,17 @@ theorem isRepresentableCategoryFibredInGroupoids_iff_exists_slice_equivalence
     IsRepresentableCategoryFibredInGroupoids p ↔
       p.IsFibredInGroupoids ∧
         ∃ X : C, IsFibredEquivalenceOver p (Over.forget X) := by
-  sorry
+  constructor
+  · rintro ⟨hp, ⟨P⟩⟩
+    refine ⟨hp, P.representingObject, ?_⟩
+    exact (isFibredEquivalenceOver_iff_exists_fibredMorphism
+      p (Over.forget P.representingObject)).mpr
+      ⟨P.equivalence, P.isEquivalence⟩
+  · rintro ⟨hp, X, hX⟩
+    obtain ⟨F, hF⟩ :=
+      (isFibredEquivalenceOver_iff_exists_fibredMorphism
+        p (Over.forget X)).mp hX
+    exact ⟨hp, ⟨{ representingObject := X, equivalence := F, isEquivalence := hF }⟩⟩
 
 /-! ## The object-class presheaf characterization -/
 
@@ -228,7 +246,24 @@ theorem fibredMorphismTwoIsomorphismRelation_isEquivalence
     {p : S ⥤ C} {q : T ⥤ C} :
     Equivalence
       (FibredMorphismTwoIsomorphismRelation (p := p) (q := q)) := by
-  sorry
+  constructor
+  · intro F
+    exact ⟨𝟙 F.functor, by intro Z; simp [FibredMorphismNatTrans], by infer_instance⟩
+  · rintro F G ⟨η, hη, hηiso⟩
+    letI := hηiso
+    refine ⟨inv η, ?_, by infer_instance⟩
+    intro Z
+    simp only [FibredMorphismNatTrans, Functor.map_inv]
+    rw [hη Z]
+    simp
+  · rintro F G H ⟨η, hη, hηiso⟩ ⟨θ, hθ, hθiso⟩
+    letI := hηiso
+    letI := hθiso
+    refine ⟨η ≫ θ, ?_, by infer_instance⟩
+    intro Z
+    simp only [FibredMorphismNatTrans, NatTrans.comp_app, Functor.map_comp]
+    rw [hη Z, hθ Z]
+    simp
 
 /- The source's displayed equality is represented by an equivalence of the
    quotient type with the hom type in the base. -/

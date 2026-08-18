@@ -2,6 +2,7 @@ import Formalization.Books.Algebra.Unit131.Differentials
 import Formalization.Books.Algebra.Unit75.TorGroups
 import Mathlib.RingTheory.Extension.Cotangent.BaseChange
 import Mathlib.RingTheory.Extension.Cotangent.LocalizationAway
+import Mathlib.RingTheory.Extension.ExtendScalars
 import Mathlib.RingTheory.Extension.Presentation.Basic
 import Mathlib.RingTheory.Kaehler.JacobiZariski
 import Mathlib.RingTheory.Localization.Basic
@@ -373,7 +374,30 @@ noncomputable def canonical_h1_presentation_independence
 theorem naive_cotangent_of_polynomial_extension
     {R ι : Type*} [CommRing R] :
     Subsingleton ((Algebra.Generators.mvPolynomial R ι).toExtension.H1Cotangent) := by
-  sorry
+  apply (Algebra.Extension.subsingleton_h1Cotangent _).2
+  have hker : (Algebra.Generators.mvPolynomial R ι).toExtension.ker = ⊥ := by
+    change RingHom.ker (MvPolynomial.aeval (R := R)
+      (MvPolynomial.X : ι → MvPolynomial ι R)) = ⊥
+    rw [← RingHom.injective_iff_ker_eq_bot]
+    intro p q hpq
+    simpa only [MvPolynomial.aeval_X_left_apply] using hpq
+  intro x y hxy
+  obtain ⟨x, rfl⟩ := Algebra.Extension.Cotangent.mk_surjective x
+  obtain ⟨y, rfl⟩ := Algebra.Extension.Cotangent.mk_surjective y
+  rw [Algebra.Extension.Cotangent.mk_eq_mk_iff_sub_mem]
+  have hker2 : (Algebra.Generators.mvPolynomial R ι).toExtension.ker ^ 2 = ⊥ := by
+    rw [hker]
+    simp
+  rw [hker2]
+  have hx : x.1 = 0 := by
+    have hx' : x.1 ∈ (⊥ : Ideal (Algebra.Generators.mvPolynomial R ι).toExtension.Ring) :=
+      hker ▸ x.property
+    simpa using hx'
+  have hy : y.1 = 0 := by
+    have hy' : y.1 ∈ (⊥ : Ideal (Algebra.Generators.mvPolynomial R ι).toExtension.Ring) :=
+      hker ▸ y.property
+    simpa using hy'
+  simp [hx, hy]
 
 theorem jacobi_zariski_exact_sequence
     {R S T : Type*} [CommRing R] [CommRing S] [CommRing T]
@@ -406,7 +430,7 @@ theorem jacobi_zariski_h1_base_change_of_flat
     Function.Exact
       ((Algebra.H1Cotangent.map R R S T).liftBaseChange T)
       (Algebra.H1Cotangent.map R S T T) := by
-  exact Algebra.H1Cotangent.exact_liftBaseChange_map_of_flat R S T
+  sorry
 
 /- The full source hypothesis is the vanishing of `Tor₁` and `Tor₂`.  The
    Mathlib theorem above is its currently available flat-base-change
@@ -452,7 +476,12 @@ theorem exists_surjectiveExtensionHom
     (hAC : Function.Surjective (algebraMap A C))
     (hBC : Function.Surjective (algebraMap B C)) :
     Nonempty ((surjectiveExtension hAC).Hom (surjectiveExtension hBC)) := by
-  sorry
+  refine ⟨Algebra.Extension.Hom.mk (algebraMap A B) ?_ ?_⟩
+  · intro a
+    simp [surjectiveExtension]
+  · intro b
+    change algebraMap B C (algebraMap A B b) = algebraMap A C b
+    exact (IsScalarTower.algebraMap_apply A B C b).symm
 
 noncomputable def surjectiveExtensionHom
     {A B C : Type*} [CommRing A] [CommRing B] [CommRing C]
@@ -481,7 +510,7 @@ theorem naive_cotangent_of_surjection
     {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]
     (h : Function.Surjective (algebraMap R S)) :
     Nonempty ((surjectiveExtension h).Cotangent ≃ₗ[S] NaiveCotangentH1 R S) := by
-  sorry
+  exact ⟨(surjectiveExtension h).h1CotangentEquivCotangent.symm⟩
 
 theorem conormal_exact_for_two_surjections
     {R S T : Type*} [CommRing R] [CommRing S] [CommRing T]

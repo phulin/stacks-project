@@ -1,4 +1,5 @@
 import Formalization.Books.Categories.Unit23.ExactFunctors
+import Formalization.Books.Modules.Unit08.LocallyGenerated
 import Formalization.Books.Sheaves.Unit07.Sheaves
 import Formalization.Books.Sheaves.Unit08.AbelianSheaves
 import Formalization.Books.Sheaves.Unit11.Stalks
@@ -149,42 +150,31 @@ noncomputable def extensionByZeroAdjunction {X : TopCat.{v}} (U : Opens X) :
     extensionByZero U ⊣ abelianRestrictionToOpen U :=
   openAbelianSheafExtensionAdjunction U
 
-/-! ## Integral generators and local generation -/
+/-! ## Integral generators and local generation
 
-noncomputable def integralConstantSheaf {X : TopCat.{v}} :
+The additive local-generation interface is already defined in the earlier
+Modules chapter.  The exercise uses that source-faithful interface directly;
+these aliases only adapt its namespace to the current chapter. -/
+
+noncomputable abbrev integralConstantSheaf {X : TopCat.{v}} :
     Formalization.Books.Sheaves.Unit08.Ab.{v, v} X :=
-  (CategoryTheory.constantSheaf (Opens.grothendieckTopology X)
-      AddCommGrpCat).obj (AddCommGrpCat.of (ULift.{v} ℤ))
+  Formalization.Books.Modules.Unit08.integralConstantSheaf
 
-noncomputable def integralDirectSum {X : TopCat.{v}} (I : Type v) :
-    Formalization.Books.Sheaves.Unit08.Ab.{v, v} X :=
-  letI : HasColimitsOfShape (Discrete I)
-      (TopCat.Sheaf AddCommGrpCat.{v} X) :=
-    CategoryTheory.Sheaf.instHasColimitsOfShape
-      (J := Opens.grothendieckTopology X) (D := AddCommGrpCat.{v}) (K := Discrete I)
-  ∐ fun _ : I => integralConstantSheaf (X := X)
-
-noncomputable def additiveGlobalGenerationMap
+noncomputable abbrev additiveGlobalGenerationMap
     {X : TopCat.{v}}
     {F : Formalization.Books.Sheaves.Unit08.Ab.{v, v} X}
     {I : Type v}
     (s : I → (integralConstantSheaf (X := X) ⟶ F)) :
-    integralDirectSum I ⟶ F :=
-  letI : HasColimitsOfShape (Discrete I)
-      (TopCat.Sheaf AddCommGrpCat.{v} X) :=
-    CategoryTheory.Sheaf.instHasColimitsOfShape
-      (J := Opens.grothendieckTopology X) (D := AddCommGrpCat.{v}) (K := Discrete I)
-  Cofan.IsColimit.desc (coproductIsCoproduct _) s
+    (∐ fun _ : I => integralConstantSheaf (X := X)) ⟶ F :=
+  Formalization.Books.Modules.Unit08.additiveGlobalGenerationMap s
 
-def additiveGloballyGenerated {X : TopCat.{v}}
+abbrev additiveGloballyGenerated {X : TopCat.{v}}
     (F : Formalization.Books.Sheaves.Unit08.Ab.{v, v} X) : Prop :=
-  ∃ (I : Type v) (s : I → (integralConstantSheaf (X := X) ⟶ F)),
-    Epi (additiveGlobalGenerationMap s)
+  Formalization.Books.Modules.Unit08.additiveGloballyGenerated F
 
-def additiveLocallyGenerated {X : TopCat.{v}}
+abbrev additiveLocallyGenerated {X : TopCat.{v}}
     (F : Formalization.Books.Sheaves.Unit08.Ab.{v, v} X) : Prop :=
-  ∀ x : X, ∃ U : Opens X, x ∈ U ∧
-    additiveGloballyGenerated ((openSheafRestriction AddCommGrpCat U).obj F)
+  Formalization.Books.Modules.Unit08.additiveLocallyGenerated F
 
 /-- The integral constant sheaf used in the generation exercise. -/
 noncomputable abbrev integerConstantSheaf {X : TopCat.{v}} :
@@ -662,6 +652,28 @@ def IsStalkFunctor {X : TopCat.{v}}
   ∃ x : X, Nonempty
     (F ≅ TopCat.Sheaf.forget (Type v) X ⋙
       TopCat.Presheaf.stalkFunctor (Type v) x)
+
+/-! The empty space gives a concrete witness for the final exercise: its
+sheaf category has no stalk points, while the constant singleton functor is
+still exact. -/
+
+/-- An empty topological space at the ambient universe level. -/
+abbrev emptyTopologicalSpace : TopCat.{v} :=
+  TopCat.of (ULift.{v} Empty)
+
+/-- The constant singleton-valued functor on sheaves over the empty space. -/
+noncomputable def emptySheafExactFunctor :
+    Sh.{v, v} emptyTopologicalSpace ⥤ Type v :=
+  (Functor.const (Sh.{v, v} emptyTopologicalSpace)).obj (ULift.{v} PUnit)
+
+/-- Finite colimits of sheaves over the empty space, exposed through the
+site-level sheaf colimit instance. -/
+theorem emptySheafHasFiniteColimits :
+    HasFiniteColimits (Sh.{v, v} emptyTopologicalSpace) := by
+  change HasFiniteColimits
+    (CategoryTheory.Sheaf
+      (Opens.grothendieckTopology emptyTopologicalSpace) (Type v))
+  infer_instance
 
 end
 

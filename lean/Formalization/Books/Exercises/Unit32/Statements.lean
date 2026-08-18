@@ -28,6 +28,21 @@ noncomputable section
 are built into the standard `Type` category API and are used by the
 stalkwise criteria below, so no parallel definitions are introduced here. -/
 
+/-- In the category of sets, monomorphisms are injective functions. -/
+theorem type_mono_iff_injective {α β : Type v} (f : α → β) :
+    Mono (TypeCat.ofHom f) ↔ Function.Injective f := by
+  simpa using (mono_iff_injective (TypeCat.ofHom f))
+
+/-- In the category of sets, isomorphisms are bijective functions. -/
+theorem type_isIso_iff_bijective {α β : Type v} (f : α → β) :
+    IsIso (TypeCat.ofHom f) ↔ Function.Bijective f := by
+  simpa using (isIso_iff_bijective (TypeCat.ofHom f))
+
+/-- In the category of sets, epimorphisms are surjective functions. -/
+theorem type_epi_iff_surjective {α β : Type v} (f : α → β) :
+    Epi (TypeCat.ofHom f) ↔ Function.Surjective f := by
+  simpa using (epi_iff_surjective (TypeCat.ofHom f))
+
 /-! ## Exercises `mono-sheaves-sets`, `isomorphism-sheaves-sets`, and
 `epi-sheaves-sets` -/
 
@@ -310,16 +325,26 @@ theorem modifiedProduct_sections_need_not_equal_basis_subgroup :
 
 /-! ## Exercise `exact-but-not-a-stalk-functor` -/
 
-/-- The source exercise asks for an exact functor on sheaves which is not a
-stalk functor.  Its witness is left existential here because the source does
-not specify a particular topological space or construction. -/
+/-- The constant singleton functor on sheaves over the empty space is exact. -/
+theorem emptySheafExactFunctor_is_exact :
+    @IsExact (Sh.{v, v} emptyTopologicalSpace) _ (Type v) _
+      inferInstance emptySheafHasFiniteColimits emptySheafExactFunctor := by
+  sorry
+
+/-- The empty-space constant functor is not a stalk functor because the space
+has no points. -/
+theorem emptySheafExactFunctor_not_a_stalk_functor :
+    ¬ IsStalkFunctor emptySheafExactFunctor := by
+  sorry
+
+/-- A concrete witness for the exact functor exercise. -/
 theorem exists_exact_functor_not_a_stalk_functor :
     ∃ (X : TopCat.{v})
       (hL : HasFiniteLimits (Sh.{v, v} X))
       (hC : HasFiniteColimits (Sh.{v, v} X))
       (F : Sh.{v, v} X ⥤ Type v),
       @IsExact (Sh.{v, v} X) _ (Type v) _ hL hC F ∧
-        ¬ IsStalkFunctor F := by
+      ¬ IsStalkFunctor F := by
   sorry
 
 end

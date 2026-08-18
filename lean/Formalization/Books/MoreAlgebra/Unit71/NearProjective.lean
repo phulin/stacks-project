@@ -2,6 +2,7 @@ import Formalization.Books.Algebra.Unit71.ExtGroups
 import Mathlib.Algebra.Homology.ShortComplex.ShortExact
 import Mathlib.Algebra.Module.Projective
 import Mathlib.LinearAlgebra.Dual.Defs
+import Mathlib.LinearAlgebra.Dual.Lemmas
 import Mathlib.RingTheory.Ideal.Maps
 import Mathlib.RingTheory.Finiteness.Finsupp
 
@@ -283,14 +284,53 @@ theorem isIdealProjective_of_shortExact
     (hS : S.ShortExact) (hP : Module.Projective R S.X₂)
     (hM : IsIdealProjective I S.X₃) :
     IsIdealProjective I S.X₁ := by
-  sorry
+  intro a ha
+  rcases hM a ha with ⟨Q, hQ, f, g, hfg⟩
+  letI : Module.Projective R (Q : Type u) := hQ
+  have hcomp :
+      (CategoryTheory.Abelian.Ext.mk₀ (a • 𝟙 S.X₃)).comp hS.extClass
+          (zero_add 1) = 0 := by
+    rw [← hfg, ← CategoryTheory.Abelian.Ext.mk₀_comp_mk₀_assoc]
+    simp only [CategoryTheory.Abelian.Ext.eq_zero_of_projective,
+      CategoryTheory.Abelian.Ext.comp_zero]
+  have hx₁ :
+      hS.extClass.comp
+          (CategoryTheory.Abelian.Ext.mk₀ (a • 𝟙 S.X₁)) (add_zero 1) = 0 := by
+    simpa only [CategoryTheory.Abelian.Ext.mk₀_smul,
+      CategoryTheory.Abelian.Ext.comp_smul,
+      CategoryTheory.Abelian.Ext.comp_mk₀_id] using
+      (show a • hS.extClass = 0 by
+        simpa only [CategoryTheory.Abelian.Ext.mk₀_smul,
+          CategoryTheory.Abelian.Ext.smul_comp,
+          CategoryTheory.Abelian.Ext.mk₀_id_comp] using hcomp)
+  obtain ⟨x₂, hx₂⟩ :=
+    CategoryTheory.Abelian.Ext.contravariant_sequence_exact₁ hS S.X₁
+      (CategoryTheory.Abelian.Ext.mk₀ (a • 𝟙 S.X₁)) (by simp) hx₁
+  obtain ⟨f', rfl⟩ :=
+    CategoryTheory.Abelian.Ext.homEquiv₀.symm.surjective x₂
+  have hfa : S.f ≫ f' = a • 𝟙 S.X₁ :=
+    CategoryTheory.Abelian.Ext.homEquiv₀.symm.injective (by simpa using hx₂)
+  exact ⟨S.X₂, hP, S.f, f', hfa⟩
 
 /-- The dual of a finite `I`-projective module is `I`-projective. -/
 theorem isIdealProjective_dual
     (I : Ideal R) (M : ModuleCat.{u} R) [Module.Finite R M]
     (hM : IsIdealProjective I M) :
     IsIdealProjective I (ModuleCat.of R (Module.Dual R M)) := by
-  sorry
+  intro a ha
+  rcases factorsThroughFiniteProjective_of_factorsThroughProjective
+      (hM a ha) with ⟨P, hPfin, hPproj, f, g, hfg⟩
+  letI : Module.Finite R (P : Type u) := hPfin
+  letI : Module.Projective R (P : Type u) := hPproj
+  refine ⟨ModuleCat.of R (Module.Dual R (P : Type u)), inferInstance,
+    ModuleCat.ofHom g.hom.dualMap, ModuleCat.ofHom f.hom.dualMap, ?_⟩
+  apply ModuleCat.hom_ext
+  ext φ x
+  change (f.hom.dualMap.comp g.hom.dualMap) φ x = _
+  rw [LinearMap.dualMap_comp_dualMap]
+  change (g.hom.comp f.hom).dualMap φ x = _
+  rw [ModuleCat.hom_ext_iff.mp hfg]
+  simp
 
 end NearProjective
 

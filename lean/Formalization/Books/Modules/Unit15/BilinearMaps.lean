@@ -1039,8 +1039,7 @@ private noncomputable def sheafRingHomMul {X : TopCat.{v}}
               (show (O.obj.obj U : Type v) from b.hom.app U s)) := by
           rw [map_mul] }
 
-@[instance_reducible]
-private noncomputable def sheafHomAddCommGroup {X : TopCat.{v}}
+private noncomputable instance sheafHomAddCommGroup {X : TopCat.{v}}
     {O : RingSheaf.{v, v} X} {F : Mod O} (S : TopCat.Sheaf (Type v) X) :
     AddCommGroup (S ⟶ moduleSetSheaf F) := by
   letI : Add (S ⟶ moduleSetSheaf F) := ⟨sheafHomAdd S⟩
@@ -1116,8 +1115,7 @@ private noncomputable def sheafHomAddCommGroup {X : TopCat.{v}}
           (show (F.val.obj U : Type v) from a.hom.app U s)
     exact add_comm _ _ }
 
-@[instance_reducible]
-private noncomputable def sheafRingHomAddCommGroup {X : TopCat.{v}}
+private noncomputable instance sheafRingHomAddCommGroup {X : TopCat.{v}}
     {O : RingSheaf.{v, v} X} (S : TopCat.Sheaf (Type v) X) :
     AddCommGroup (S ⟶ ringSetSheaf O) := by
   letI : Add (S ⟶ ringSetSheaf O) := ⟨sheafRingHomAdd S⟩
@@ -1193,8 +1191,7 @@ private noncomputable def sheafRingHomAddCommGroup {X : TopCat.{v}}
             (show (O.obj.obj U : Type v) from a.hom.app U s)
       exact add_comm _ _ }
 
-@[instance_reducible]
-private noncomputable def sheafRingHomRing {X : TopCat.{v}}
+private noncomputable instance sheafRingHomRing {X : TopCat.{v}}
     {O : RingSheaf.{v, v} X} (S : TopCat.Sheaf (Type v) X) :
     Ring (S ⟶ ringSetSheaf O) := by
   letI : AddCommGroup (S ⟶ ringSetSheaf O) := sheafRingHomAddCommGroup S
@@ -1315,8 +1312,7 @@ private noncomputable def sheafRingHomRing {X : TopCat.{v}}
             (show (O.obj.obj U : Type v) from c.hom.app U s)
       exact right_distrib _ _ _ }
 
-@[instance_reducible]
-private noncomputable def sheafHomModule {X : TopCat.{v}}
+private noncomputable instance sheafHomModule {X : TopCat.{v}}
     {O : RingSheaf.{v, v} X} {F : Mod O} (S : TopCat.Sheaf (Type v) X) :
     (letI : Ring (S ⟶ ringSetSheaf O) := sheafRingHomRing S;
       letI : AddCommGroup (S ⟶ moduleSetSheaf F) := sheafHomAddCommGroup S;

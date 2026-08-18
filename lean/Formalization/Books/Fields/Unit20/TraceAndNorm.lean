@@ -134,7 +134,7 @@ theorem characteristic_polynomial_multiplication_eq_pow_minpoly
   let c := Module.finBasis F L
   let e := Module.finrank F L
   have hpbdim : pb.dim = (minpoly K α).natDegree := by
-    simpa [pb, IntermediateField.minpoly_gen] using (PowerBasis.natDegree_minpoly pb)
+    simp [pb]
   have hdim : e * (minpoly K α).natDegree = Module.finrank K L := by
     dsimp [e]
     calc
@@ -322,22 +322,23 @@ theorem field_trace_eq_zero_of_purely_inseparable_simple_extension
   apply field_trace_eq_zero_of_not_separable
   intro hsep
   let F := IntermediateField.adjoin K ({α} : Set L)
-  letI : Fact p.Prime := ⟨hp⟩
+  let : Fact p.Prime := ⟨hp⟩
   have hpi : IsPurelyInseparable K F := by
     change IsPurelyInseparable K (IntermediateField.adjoin K ({α} : Set L))
     exact (IntermediateField.isPurelyInseparable_adjoin_simple_iff_pow_mem
       (F := K) (E := L) p).2 ⟨1, by simpa using hαp⟩
-  letI := hpi
+  let := hpi
   have hsepF : Algebra.IsSeparable K F := by
     change Algebra.IsSeparable K (IntermediateField.adjoin K ({α} : Set L))
     exact (IntermediateField.isSeparable_adjoin_simple_iff_isSeparable
       (F := K) (E := L)).2 (Algebra.IsSeparable.isSeparable K α)
-  letI := hsepF
+  let := hsepF
   have hbot := IntermediateField.eq_bot_of_isPurelyInseparable_of_isSeparable F
-  have ha : α ∈ F := IntermediateField.subset_adjoin K _ (Set.mem_singleton α)
+  have htopbot : (⊤ : IntermediateField K L) = (⊥ : IntermediateField K L) :=
+    hgen.symm.trans hbot
   have harange : α ∈ (algebraMap K L).range := by
     apply IntermediateField.mem_bot.mp
-    exact hbot ▸ ha
+    exact htopbot ▸ (show α ∈ (⊤ : IntermediateField K L) from trivial)
   apply hα
   exact harange
 
@@ -430,7 +431,7 @@ theorem bilinearFormDiscriminant_basis_change_is_square
     ∃ u : Kˣ,
       (Q.toMatrix b').det = (u : K) ^ 2 * (Q.toMatrix b).det := by
   classical
-  letI := b.finiteDimensional_of_finite
+  let := b.finiteDimensional_of_finite
   have hb := bilinearFormDiscriminant_eq_of_basis (Q := Q) b
   have hb' := bilinearFormDiscriminant_eq_of_basis (Q := Q) b'
   have hclass : squareClassMk ((Q.toMatrix b).det) =
@@ -603,7 +604,7 @@ theorem quadratic_discriminant_trichotomy
         quadraticDiscriminantOddCharacteristicCase K L) := by
   classical
   by_cases hsep : Algebra.IsSeparable K L
-  · letI := hsep
+  · let := hsep
     let pb := Field.powerBasisOfFiniteOfSeparable K L
     have hpbdim : pb.dim = 2 := by
       rw [← PowerBasis.finrank pb, hdegree]
@@ -641,7 +642,7 @@ theorem quadratic_discriminant_trichotomy
       rw [Polynomial.coeff_eq_zero_of_natDegree_lt]
       · simp only [Polynomial.coeff_add, Polynomial.coeff_X_pow,
           Polynomial.coeff_C_mul_X, Polynomial.coeff_C]
-        simp [hn, hn1, hn2, hn1', hn2']
+        simp [hn, hn1, hn2]
       rw [hPdeg]
       exact hnlt
     obtain ⟨e, he, hnorm, htr⟩ :=
@@ -701,7 +702,7 @@ theorem quadratic_discriminant_trichotomy
             (Algebra.discr_reindex K pb.basis f).symm
         _ = (u : K) ^ 2 * Algebra.discr K (Module.finBasis K L) := hu
     by_cases hchar : ringChar K = 2
-    · letI : CharP K 2 := ringChar.of_eq hchar
+    · let : CharP K 2 := ringChar.of_eq hchar
       have hdisc_ne : Algebra.discr K pb.basis ≠ 0 :=
         Algebra.discr_not_zero_of_basis K pb.basis
       have htne : Algebra.trace K L pb.gen ≠ 0 := by
@@ -736,7 +737,7 @@ theorem quadratic_discriminant_trichotomy
         have hzero : squareClassMk (0 : K) ≠ squareClassMk (1 : K) := by
           intro hz
           rcases Quotient.exact hz with ⟨u, hu⟩
-          simpa using hu
+          simp at hu
         exact hzero (h0.1.symm.trans h1.1)
       · intro h
         exact h.2.1 h.1.2.1
@@ -765,7 +766,7 @@ theorem quadratic_discriminant_trichotomy
         linear_combination (4 : L) * hbeta_sq'
       have hpbtop : IntermediateField.adjoin K ({pb.gen} : Set L) = ⊤ := by
         apply (Field.primitive_element_iff_minpoly_natDegree_eq K pb.gen).2
-        simpa [hPdeg, hdegree]
+        simp [hPdeg, hdegree]
       let G := IntermediateField.adjoin K ({beta} : Set L)
       have hbeta_mem : beta ∈ G :=
         IntermediateField.subset_adjoin K _ (Set.mem_singleton beta)
@@ -810,7 +811,7 @@ theorem quadratic_discriminant_trichotomy
                 beta ^ 2 - (algebraMap K L c) ^ 2 := by ring
             _ = algebraMap K L d - algebraMap K L (c ^ 2) := by
               rw [hbeta_sq, map_pow]
-            _ = 0 := by rw [hc]; ring
+            _ = 0 := by rw [hc]; ring_nf
         rcases mul_eq_zero.mp hprod with hminus | hplus
         · have hbeq : beta = algebraMap K L c := sub_eq_zero.mp hminus
           have hgen_eq : pb.gen = (2 : K)⁻¹ •
@@ -853,7 +854,7 @@ theorem quadratic_discriminant_trichotomy
         have hzero : squareClassMk (0 : K) ≠ squareClassMk (1 : K) := by
           intro hz
           rcases Quotient.exact hz with ⟨u, hu⟩
-          simpa using hu
+          simp at hu
         exact hzero (h.1.1.symm.trans h.2.1)
       · intro h
         exact h.2.1 h.1.2.1
@@ -876,7 +877,7 @@ theorem quadratic_discriminant_trichotomy
         exact (hsep hsep').elim
     have hpi : IsPurelyInseparable K L :=
       (isPurelyInseparable_iff_finSepDegree_eq_one (F := K) (E := L)).2 hfinsep
-    letI := hpi
+    let := hpi
     obtain ⟨n, hn⟩ := IsPurelyInseparable.finrank_eq_pow K L (ringExpChar K)
     rw [hdegree] at hn
     have hq : ringExpChar K = 2 := by
@@ -885,7 +886,7 @@ theorem quadratic_discriminant_trichotomy
     have hchar : ringChar K = 2 := by
       dsimp [ringExpChar] at hq
       omega
-    letI : CharP K 2 := ringChar.of_eq hchar
+    let : CharP K 2 := ringChar.of_eq hchar
     have hbotne : (⊥ : IntermediateField K L) ≠ ⊤ := by
       intro heq
       have hfin :=
@@ -936,7 +937,7 @@ theorem quadratic_discriminant_trichotomy
       have hzero : squareClassMk (0 : K) ≠ squareClassMk (1 : K) := by
         intro hz
         rcases Quotient.exact hz with ⟨u, hu⟩
-        simpa using hu
+        simp at hu
       exact hzero (hpure.1.symm.trans h.2.1)
     · intro h
       exact h.2.1 hpure.2.1

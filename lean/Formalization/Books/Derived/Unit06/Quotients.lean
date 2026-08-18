@@ -89,7 +89,29 @@ pretriangulated. -/
 theorem exactFunctorKernel_properties
     (F : C ⥤ D) [F.CommShift ℤ] [F.IsTriangulated] :
     IsStrictlyFullSaturatedPretriangulated (exactFunctorKernel F) := by
-  sorry
+  let hClosed : (exactFunctorKernel F).IsClosedUnderIsomorphisms :=
+    ⟨fun e hX => hX.of_iso (F.mapIso e).symm⟩
+  let hPres : PreservesBinaryBiproducts F :=
+    ⟨fun {X Y} => preservesBinaryBiproduct_of_preservesBiproduct F X Y⟩
+  refine ⟨hClosed, ?_, ?_⟩
+  · exact
+      { exists_zero := ⟨0, ⟨isZero_zero C, F.map_isZero (isZero_zero C)⟩⟩
+        toIsStableUnderShift := ⟨fun a => ⟨fun X hX =>
+          ((shiftFunctor D a).map_isZero hX).of_iso ((F.commShiftIso a).app X)⟩⟩
+        toIsTriangulatedClosed₂ :=
+          ⟨fun T hT h₁ h₃ =>
+            ⟨T.obj₂,
+              (F.mapTriangle.obj T).isZero₂_of_isZero₁₃
+                (F.map_distinguished T hT) h₁ h₃,
+              ⟨Iso.refl _⟩⟩⟩ }
+  · intro X Y h
+    obtain ⟨Z, hZ, ⟨e⟩⟩ := h
+    have hXY : IsZero (F.obj (X ⊞ Y)) := hZ.of_iso (F.mapIso e)
+    have hPresXY : PreservesBinaryBiproduct X Y F := hPres.preserves
+    have hB : IsZero (F.obj X ⊞ F.obj Y) :=
+      hXY.of_iso (@Functor.mapBiprod _ _ _ _ _ _ F X Y _ _ hPresXY).symm
+    obtain ⟨hX, hY⟩ := (biprod_isZero_iff _ _).1 hB
+    exact ⟨⟨X, hX, ⟨Iso.refl X⟩⟩, ⟨Y, hY, ⟨Iso.refl Y⟩⟩⟩
 
 end ExactFunctorKernels
 
@@ -110,7 +132,50 @@ pretriangulated. -/
 theorem homologicalFunctorKernel_properties
     (H : C ⥤ A) [H.IsHomological] :
     IsStrictlyFullSaturatedPretriangulated (homologicalFunctorKernel H) := by
-  sorry
+  refine ⟨inferInstance, inferInstance, ?_⟩
+  intro X Y h
+  obtain ⟨Z, hZ, ⟨e⟩⟩ := h
+  have hXY : homologicalFunctorKernel H (X ⊞ Y) :=
+    (homologicalFunctorKernel H).prop_of_iso e.symm hZ
+  let hPresH : PreservesBinaryBiproducts H :=
+    ⟨fun {X Y} => preservesBinaryBiproduct_of_preservesBiproduct H X Y⟩
+  have hX : homologicalFunctorKernel H X := by
+    intro n
+    let hPresShift : PreservesBinaryBiproducts (shiftFunctor C n) :=
+      ⟨fun {X Y} =>
+        preservesBinaryBiproduct_of_preservesBiproduct (shiftFunctor C n) X Y⟩
+    have hPresShiftXY : PreservesBinaryBiproduct X Y (shiftFunctor C n) :=
+      hPresShift.preserves
+    have hB : IsZero (H.obj ((shiftFunctor C n).obj X ⊞
+        (shiftFunctor C n).obj Y)) := by
+      exact (hXY n).of_iso (H.mapIso
+        (@Functor.mapBiprod _ _ _ _ _ _ (shiftFunctor C n) X Y _ _ hPresShiftXY).symm)
+    have hPresHXY : PreservesBinaryBiproduct ((shiftFunctor C n).obj X)
+        ((shiftFunctor C n).obj Y) H := hPresH.preserves
+    have hB' : IsZero (H.obj ((shiftFunctor C n).obj X) ⊞
+        H.obj ((shiftFunctor C n).obj Y)) :=
+      hB.of_iso (@Functor.mapBiprod _ _ _ _ _ _ H
+        ((shiftFunctor C n).obj X) ((shiftFunctor C n).obj Y) _ _ hPresHXY).symm
+    exact ((biprod_isZero_iff _ _).1 hB').1
+  have hY : homologicalFunctorKernel H Y := by
+    intro n
+    let hPresShift : PreservesBinaryBiproducts (shiftFunctor C n) :=
+      ⟨fun {X Y} =>
+        preservesBinaryBiproduct_of_preservesBiproduct (shiftFunctor C n) X Y⟩
+    have hPresShiftXY : PreservesBinaryBiproduct X Y (shiftFunctor C n) :=
+      hPresShift.preserves
+    have hB : IsZero (H.obj ((shiftFunctor C n).obj X ⊞
+        (shiftFunctor C n).obj Y)) := by
+      exact (hXY n).of_iso (H.mapIso
+        (@Functor.mapBiprod _ _ _ _ _ _ (shiftFunctor C n) X Y _ _ hPresShiftXY).symm)
+    have hPresHXY : PreservesBinaryBiproduct ((shiftFunctor C n).obj X)
+        ((shiftFunctor C n).obj Y) H := hPresH.preserves
+    have hB' : IsZero (H.obj ((shiftFunctor C n).obj X) ⊞
+        H.obj ((shiftFunctor C n).obj Y)) :=
+      hB.of_iso (@Functor.mapBiprod _ _ _ _ _ _ H
+        ((shiftFunctor C n).obj X) ((shiftFunctor C n).obj Y) _ _ hPresHXY).symm
+    exact ((biprod_isZero_iff _ _).1 hB').2
+  exact ⟨⟨X, hX, ⟨Iso.refl X⟩⟩, ⟨Y, hY, ⟨Iso.refl Y⟩⟩⟩
 
 /-- Objects whose homology vanishes in all sufficiently negative degrees. -/
 def homologicalKernelBelow (H : C ⥤ A) : ObjectProperty C :=
@@ -131,7 +196,159 @@ theorem homologicalKernel_bounded_properties
     IsStrictlyFullSaturatedPretriangulated (homologicalKernelBelow H) ∧
       IsStrictlyFullSaturatedPretriangulated (homologicalKernelAbove H) ∧
       IsStrictlyFullSaturatedPretriangulated (homologicalKernelBounded H) := by
-  sorry
+  let hBelowClosed : (homologicalKernelBelow H).IsClosedUnderIsomorphisms :=
+    ⟨fun e hX => by
+      obtain ⟨N, hN⟩ := hX
+      refine ⟨N, fun n hn => (hN n hn).of_iso
+        ((homologicalDegree H n).mapIso e.symm)⟩⟩
+  have hBelowShift : ∀ (a : ℤ) (X : C), homologicalKernelBelow H X →
+      homologicalKernelBelow H (X⟦a⟧) := by
+    intro a X hX
+    obtain ⟨N, hN⟩ := hX
+    refine ⟨N - a, ?_⟩
+    intro b hb
+    apply (hN (a + b) (by omega)).of_iso
+    exact H.mapIso ((shiftFunctorAdd C a b).app X).symm
+  have hBelowExt : ∀ (T : Triangle C), T ∈ distTriang C →
+      homologicalKernelBelow H T.obj₁ → homologicalKernelBelow H T.obj₃ →
+      (homologicalKernelBelow H).isoClosure T.obj₂ := by
+    intro T hT h₁ h₃
+    obtain ⟨N₁, h₁N⟩ := h₁
+    obtain ⟨N₃, h₃N⟩ := h₃
+    refine ⟨T.obj₂, ⟨min N₁ N₃, ?_⟩, ⟨Iso.refl _⟩⟩
+    intro n hn
+    exact
+      (H.map_distinguished_exact _ (Triangle.shift_distinguished T hT n)).isZero_of_both_zeros
+        (h₁N n (by omega) |>.eq_of_src _ _)
+        (h₃N n (by omega) |>.eq_of_tgt _ _)
+  let hBelowTri : (homologicalKernelBelow H).IsTriangulated :=
+    { exists_zero := ⟨0, ⟨isZero_zero C, by
+        change ∃ N : ℤ, ∀ n : ℤ, n ≤ N → IsZero ((homologicalDegree H n).obj 0)
+        exact ⟨0, fun n _ =>
+          H.map_isZero ((shiftFunctor C n).map_isZero (isZero_zero C))⟩⟩⟩
+      toIsStableUnderShift := ⟨fun a => ⟨hBelowShift a⟩⟩
+      toIsTriangulatedClosed₂ := ⟨hBelowExt⟩ }
+  let hAboveClosed : (homologicalKernelAbove H).IsClosedUnderIsomorphisms :=
+    ⟨fun e hX => by
+      obtain ⟨N, hN⟩ := hX
+      refine ⟨N, fun n hn => (hN n hn).of_iso
+        ((homologicalDegree H n).mapIso e.symm)⟩⟩
+  have hAboveShift : ∀ (a : ℤ) (X : C), homologicalKernelAbove H X →
+      homologicalKernelAbove H (X⟦a⟧) := by
+    intro a X hX
+    obtain ⟨N, hN⟩ := hX
+    refine ⟨N - a, ?_⟩
+    intro b hb
+    apply (hN (a + b) (by omega)).of_iso
+    exact H.mapIso ((shiftFunctorAdd C a b).app X).symm
+  have hAboveExt : ∀ (T : Triangle C), T ∈ distTriang C →
+      homologicalKernelAbove H T.obj₁ → homologicalKernelAbove H T.obj₃ →
+      (homologicalKernelAbove H).isoClosure T.obj₂ := by
+    intro T hT h₁ h₃
+    obtain ⟨N₁, h₁N⟩ := h₁
+    obtain ⟨N₃, h₃N⟩ := h₃
+    refine ⟨T.obj₂, ⟨max N₁ N₃, ?_⟩, ⟨Iso.refl _⟩⟩
+    intro n hn
+    exact
+      (H.map_distinguished_exact _ (Triangle.shift_distinguished T hT n)).isZero_of_both_zeros
+        (h₁N n (by omega) |>.eq_of_src _ _)
+        (h₃N n (by omega) |>.eq_of_tgt _ _)
+  let hAboveTri : (homologicalKernelAbove H).IsTriangulated :=
+    { exists_zero := ⟨0, ⟨isZero_zero C, by
+        change ∃ N : ℤ, ∀ n : ℤ, N ≤ n → IsZero ((homologicalDegree H n).obj 0)
+        exact ⟨0, fun n _ =>
+          H.map_isZero ((shiftFunctor C n).map_isZero (isZero_zero C))⟩⟩⟩
+      toIsStableUnderShift := ⟨fun a => ⟨hAboveShift a⟩⟩
+      toIsTriangulatedClosed₂ := ⟨hAboveExt⟩ }
+  let hPresH : PreservesBinaryBiproducts H :=
+    ⟨fun {X Y} => preservesBinaryBiproduct_of_preservesBiproduct H X Y⟩
+  have hComponent : ∀ (X Y : C) (n : ℤ),
+      IsZero (H.obj ((X ⊞ Y)⟦n⟧)) →
+        IsZero (H.obj (X⟦n⟧)) ∧ IsZero (H.obj (Y⟦n⟧)) := by
+    intro X Y n h
+    let hPresShift : PreservesBinaryBiproducts (shiftFunctor C n) :=
+      ⟨fun {X Y} =>
+        preservesBinaryBiproduct_of_preservesBiproduct (shiftFunctor C n) X Y⟩
+    have hPresShiftXY : PreservesBinaryBiproduct X Y (shiftFunctor C n) :=
+      hPresShift.preserves
+    have hB : IsZero (H.obj ((shiftFunctor C n).obj X ⊞
+        (shiftFunctor C n).obj Y)) :=
+      h.of_iso (H.mapIso
+        (@Functor.mapBiprod _ _ _ _ _ _ (shiftFunctor C n) X Y _ _ hPresShiftXY).symm)
+    have hPresHXY : PreservesBinaryBiproduct ((shiftFunctor C n).obj X)
+        ((shiftFunctor C n).obj Y) H := hPresH.preserves
+    have hB' : IsZero (H.obj ((shiftFunctor C n).obj X) ⊞
+        H.obj ((shiftFunctor C n).obj Y)) :=
+      hB.of_iso (@Functor.mapBiprod _ _ _ _ _ _ H
+        ((shiftFunctor C n).obj X) ((shiftFunctor C n).obj Y) _ _ hPresHXY).symm
+    exact (biprod_isZero_iff _ _).1 hB'
+  have hBelowSat : IsSaturated (homologicalKernelBelow H) := by
+    intro X Y h
+    obtain ⟨Z, hZ, ⟨e⟩⟩ := h
+    have hXY : homologicalKernelBelow H (X ⊞ Y) :=
+      hBelowClosed.of_iso e.symm hZ
+    obtain ⟨N, hN⟩ := hXY
+    have hX : homologicalKernelBelow H X :=
+      ⟨N, fun n hn => (hComponent X Y n (hN n hn)).1⟩
+    have hY : homologicalKernelBelow H Y :=
+      ⟨N, fun n hn => (hComponent X Y n (hN n hn)).2⟩
+    exact ⟨⟨X, hX, ⟨Iso.refl X⟩⟩, ⟨Y, hY, ⟨Iso.refl Y⟩⟩⟩
+  have hAboveSat : IsSaturated (homologicalKernelAbove H) := by
+    intro X Y h
+    obtain ⟨Z, hZ, ⟨e⟩⟩ := h
+    have hXY : homologicalKernelAbove H (X ⊞ Y) :=
+      hAboveClosed.of_iso e.symm hZ
+    obtain ⟨N, hN⟩ := hXY
+    have hX : homologicalKernelAbove H X :=
+      ⟨N, fun n hn => (hComponent X Y n (hN n hn)).1⟩
+    have hY : homologicalKernelAbove H Y :=
+      ⟨N, fun n hn => (hComponent X Y n (hN n hn)).2⟩
+    exact ⟨⟨X, hX, ⟨Iso.refl X⟩⟩, ⟨Y, hY, ⟨Iso.refl Y⟩⟩⟩
+  let hBoundedClosed : (homologicalKernelBounded H).IsClosedUnderIsomorphisms :=
+    ⟨fun e hX => ⟨hBelowClosed.of_iso e hX.1, hAboveClosed.of_iso e hX.2⟩⟩
+  let hBoundedTri : (homologicalKernelBounded H).IsTriangulated :=
+    { exists_zero := ⟨0, ⟨isZero_zero C, by
+        change homologicalKernelBelow H 0 ∧ homologicalKernelAbove H 0
+        constructor
+        · change ∃ N : ℤ, ∀ n : ℤ, n ≤ N → IsZero ((homologicalDegree H n).obj 0)
+          exact ⟨0, fun n _ =>
+            H.map_isZero ((shiftFunctor C n).map_isZero (isZero_zero C))⟩
+        · change ∃ N : ℤ, ∀ n : ℤ, N ≤ n → IsZero ((homologicalDegree H n).obj 0)
+          exact ⟨0, fun n _ =>
+            H.map_isZero ((shiftFunctor C n).map_isZero (isZero_zero C))⟩⟩⟩
+      toIsStableUnderShift := ⟨fun a => ⟨fun X hX =>
+        ⟨hBelowShift a X hX.1, hAboveShift a X hX.2⟩⟩⟩
+      toIsTriangulatedClosed₂ := ⟨fun T hT h₁ h₃ => by
+        obtain ⟨Z, hZ, ⟨e⟩⟩ := hBelowExt T hT h₁.1 h₃.1
+        obtain ⟨Z', hZ', ⟨e'⟩⟩ := hAboveExt T hT h₁.2 h₃.2
+        have hZ₂ : homologicalKernelAbove H T.obj₂ :=
+          hAboveClosed.of_iso e'.symm hZ'
+        have hZ₃ : homologicalKernelAbove H Z :=
+          hAboveClosed.of_iso e hZ₂
+        exact ⟨Z, ⟨hZ, hZ₃⟩, ⟨e⟩⟩⟩ }
+  have hBoundedSat : IsSaturated (homologicalKernelBounded H) := by
+    intro X Y h
+    obtain ⟨Z, hZ, ⟨e⟩⟩ := h
+    have hXYBelow : homologicalKernelBelow H (X ⊞ Y) :=
+      hBelowClosed.of_iso e.symm hZ.1
+    have hXYAbove : homologicalKernelAbove H (X ⊞ Y) :=
+      hAboveClosed.of_iso e.symm hZ.2
+    obtain ⟨NBelow, hNBelow⟩ := hXYBelow
+    obtain ⟨NAbove, hNAbove⟩ := hXYAbove
+    have hXBelow : homologicalKernelBelow H X :=
+      ⟨NBelow, fun n hn => (hComponent X Y n (hNBelow n hn)).1⟩
+    have hYBelow : homologicalKernelBelow H Y :=
+      ⟨NBelow, fun n hn => (hComponent X Y n (hNBelow n hn)).2⟩
+    have hXAbove : homologicalKernelAbove H X :=
+      ⟨NAbove, fun n hn => (hComponent X Y n (hNAbove n hn)).1⟩
+    have hYAbove : homologicalKernelAbove H Y :=
+      ⟨NAbove, fun n hn => (hComponent X Y n (hNAbove n hn)).2⟩
+    have hX : homologicalKernelBounded H X := ⟨hXBelow, hXAbove⟩
+    have hY : homologicalKernelBounded H Y := ⟨hYBelow, hYAbove⟩
+    exact ⟨⟨X, hX, ⟨Iso.refl X⟩⟩, ⟨Y, hY, ⟨Iso.refl Y⟩⟩⟩
+  exact ⟨⟨hBelowClosed, hBelowTri, hBelowSat⟩,
+    ⟨hAboveClosed, hAboveTri, hAboveSat⟩,
+    ⟨hBoundedClosed, hBoundedTri, hBoundedSat⟩⟩
 
 end HomologicalFunctorKernels
 

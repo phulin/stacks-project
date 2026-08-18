@@ -1,4 +1,6 @@
 import Formalization.Books.Fields.Unit10.AlgebraicClosure
+import Mathlib.Algebra.Polynomial.FieldDivision
+import Mathlib.RingTheory.Polynomial.UniqueFactorization
 import Mathlib.FieldTheory.Galois.Basic
 import Mathlib.GroupTheory.Sylow
 
@@ -25,7 +27,46 @@ noncomputable section
 theorem real_polynomial_exists_root_of_odd_natDegree
     {P : Polynomial ℝ} (hP : Odd P.natDegree) :
     ∃ x : ℝ, P.IsRoot x := by
-  sorry
+  have aux : ∀ n : ℕ, ∀ P : Polynomial ℝ,
+      P.natDegree = n → Odd P.natDegree → ∃ x : ℝ, P.IsRoot x := by
+    intro n
+    induction n using Nat.strong_induction_on with
+    | h n ih =>
+      intro P hPn hP
+      have hPpos : 0 < P.natDegree := by
+        rcases hP with ⟨k, hk⟩
+        omega
+      have hP0 : P ≠ 0 := Polynomial.ne_zero_of_natDegree_gt hPpos
+      obtain ⟨g, hg, hgP⟩ := Polynomial.exists_irreducible_of_natDegree_pos hPpos
+      obtain ⟨Q, hQ⟩ := hgP
+      have hg0 : g ≠ 0 := hg.ne_zero
+      have hQ0 : Q ≠ 0 := by
+        intro hQ0
+        apply hP0
+        rw [hQ, hQ0, mul_zero]
+      have hdeg : P.natDegree = g.natDegree + Q.natDegree := by
+        rw [hQ, Polynomial.natDegree_mul hg0 hQ0]
+      have hgpos : 0 < g.natDegree := hg.natDegree_pos
+      have hg_le : g.natDegree ≤ 2 := hg.natDegree_le_two
+      rcases (show g.natDegree = 1 ∨ g.natDegree = 2 by omega) with hg1 | hg2
+      · have hgd : g.degree = 1 := by
+          rw [Polynomial.degree_eq_natDegree hg0, hg1]
+          norm_num
+        obtain ⟨x, hx⟩ := Polynomial.exists_root_of_degree_eq_one hgd
+        refine ⟨x, ?_⟩
+        exact hx.dvd ⟨Q, hQ⟩
+      · have hQodd : Odd Q.natDegree := by
+          rcases hP with ⟨k, hk⟩
+          refine ⟨k - 1, ?_⟩
+          rw [hdeg, hg2] at hk
+          omega
+        have hrootQ : ∃ x, Q.IsRoot x := by
+          exact ih Q.natDegree (by rw [← hPn, hdeg, hg2]; omega) Q rfl hQodd
+        obtain ⟨x, hx⟩ := hrootQ
+        refine ⟨x, ?_⟩
+        rw [hQ]
+        exact Polynomial.root_mul_left_of_isRoot g hx
+  exact aux P.natDegree P rfl hP
 
 /- The source's conclusion that there are no nontrivial odd-degree extensions
    is stated for finite extensions, since “degree” is then `Module.finrank`.
@@ -36,7 +77,18 @@ theorem real_odd_degree_extension_is_trivial
     {K : Type*} [Field K] [Algebra ℝ K] [FiniteDimensional ℝ K]
     (hK : Odd (Module.finrank ℝ K)) :
     Nonempty (K ≃ₐ[ℝ] ℝ) := by
-  sorry
+  rcases Real.nonempty_algEquiv_or K with hR | hC
+  · exact hR
+  · rcases hC with ⟨eC⟩
+    have hfin : Module.finrank ℝ K = 2 := by
+      calc
+        Module.finrank ℝ K = Module.finrank ℝ ℂ := eC.toLinearEquiv.finrank_eq
+        _ = 2 := Complex.finrank_real_complex
+    have hf : False := by
+      rcases hK with ⟨n, hn⟩
+      rw [hfin] at hn
+      omega
+    exact hf.elim
 
 /-! ## Finite Galois extensions of the reals -/
 
@@ -48,7 +100,21 @@ theorem real_finite_galois_group_is_two_group
     {K : Type*} [Field K] [Algebra ℝ K] [FiniteDimensional ℝ K]
     [IsGalois ℝ K] :
     IsPGroup 2 (Gal(K / ℝ)) := by
-  sorry
+  rcases Real.nonempty_algEquiv_or K with hR | hC
+  · rcases hR with ⟨eR⟩
+    apply IsPGroup.of_card (n := 0)
+    calc
+      Nat.card (Gal(K / ℝ)) = Module.finrank ℝ K := IsGalois.card_aut_eq_finrank ℝ K
+      _ = Module.finrank ℝ ℝ := eR.toLinearEquiv.finrank_eq
+      _ = 1 := by simp
+      _ = 2 ^ 0 := by norm_num
+  · rcases hC with ⟨eC⟩
+    apply IsPGroup.of_card (n := 1)
+    calc
+      Nat.card (Gal(K / ℝ)) = Module.finrank ℝ K := IsGalois.card_aut_eq_finrank ℝ K
+      _ = Module.finrank ℝ ℂ := eC.toLinearEquiv.finrank_eq
+      _ = 2 := Complex.finrank_real_complex
+      _ = 2 ^ 1 := by norm_num
 
 /- The source's intermediate Sylow assertions are collected in this
    source-facing specification.  The fixed field is viewed as an extension
@@ -61,7 +127,14 @@ theorem real_sylow_fixed_field_spec
       (IntermediateField.fixedField (P : Subgroup (Gal(K / ℝ))))) ∧
       IntermediateField.fixedField (P : Subgroup (Gal(K / ℝ))) = ⊥ ∧
         (P : Subgroup (Gal(K / ℝ))) = ⊤ := by
-  sorry
+  have hG : IsPGroup 2 (Gal(K / ℝ)) := real_finite_galois_group_is_two_group
+  have hPtop : (P : Subgroup (Gal(K / ℝ))) = ⊤ := by
+    symm
+    exact P.is_maximal' (hG.to_subgroup ⊤) le_top
+  refine ⟨?_, ?_, hPtop⟩
+  · rw [hPtop, IsGalois.fixedField_top]
+    simpa using (show Odd (1 : ℕ) from ⟨0, by simp⟩)
+  · rw [hPtop, IsGalois.fixedField_top]
 
 /- The source's assertion that the only algebraic extensions of `ℝ` are `ℝ`
    and `ℂ` up to isomorphism is already supplied, in stronger form, by
@@ -83,7 +156,18 @@ theorem nontrivial_real_finite_galois_extension_is_complex
     {K : Type*} [Field K] [Algebra ℝ K] [FiniteDimensional ℝ K]
     [IsGalois ℝ K] (hK : Nontrivial (Gal(K / ℝ))) :
     Nonempty (K ≃ₐ[ℝ] ℂ) := by
-  sorry
+  rcases Real.nonempty_algEquiv_or K with hR | hC
+  · rcases hR with ⟨eR⟩
+    have hcard : Nat.card (Gal(K / ℝ)) = 1 := by
+      calc
+        Nat.card (Gal(K / ℝ)) = Module.finrank ℝ K :=
+          IsGalois.card_aut_eq_finrank ℝ K
+        _ = Module.finrank ℝ ℝ := eR.toLinearEquiv.finrank_eq
+        _ = 1 := by simp
+    have hsub : Subsingleton (Gal(K / ℝ)) :=
+      (Nat.card_eq_one_iff_unique.mp hcard).1
+    exact ((not_subsingleton_iff_nontrivial.mpr hK) hsub).elim
+  · exact hC
 
 /- `Complex.finrank_real_complex` records that the nontrivial branch has
    degree two, as used in the source's Sylow discussion. -/
@@ -100,7 +184,15 @@ theorem nontrivial_real_finite_galois_extension_is_complex
 /-- Every complex number has a square root. -/
 theorem complex_exists_square_root (z : ℂ) :
     ∃ w : ℂ, w ^ 2 = z := by
-  sorry
+  have hf : 0 < (Polynomial.X ^ 2 - Polynomial.C z : Polynomial ℂ).degree := by
+    rw [Polynomial.degree_sub_eq_left_of_degree_lt]
+    · simp
+    · exact lt_of_le_of_lt Polynomial.degree_C_le (by norm_num)
+  obtain ⟨w, hw⟩ :=
+    Complex.exists_root (f := Polynomial.X ^ 2 - Polynomial.C z) hf
+  have hw' : w ^ 2 - z = 0 := by
+    simpa [Polynomial.IsRoot] using hw
+  exact ⟨w, sub_eq_zero.mp hw'⟩
 
 /- The normal-closure step in the source is also proof narration; Mathlib's
    `IntermediateField.normalClosure`/`IsNormalClosure` interfaces, exposed in

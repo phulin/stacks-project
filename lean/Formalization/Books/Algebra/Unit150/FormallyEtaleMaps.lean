@@ -60,7 +60,7 @@ theorem formallyEtale_baseChange
     letI : Algebra R' (R' ⊗[R] S) := Algebra.TensorProduct.leftAlgebra
     Algebra.FormallyEtale R' (R' ⊗[R] S) := by
   let : Algebra R' (R' ⊗[R] S) := Algebra.TensorProduct.leftAlgebra
-  let : Algebra.FormallyEtale R S := h
+  haveI : Algebra.FormallyEtale R S := h
   infer_instance
 
 /-- For a ring map of finite presentation, formal étaleness is equivalent to
@@ -81,7 +81,7 @@ theorem formallyEtale_iff_etale_of_finitePresentation
 theorem formallyEtale_directedColimit
     {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S)
     (D : DirectedAlgebraColimit f)
-    (h : ∀ i,
+    (_h : ∀ i,
       letI : Preorder D.index := D.indexPreorder
       RingHom.FormallyEtale (D.diagram.obj i).hom.hom) :
     f.FormallyEtale := by
@@ -160,8 +160,8 @@ structure AssociatedGradedRingEquivalence
 associated graded rings. -/
 theorem formallyEtale_lift_infinitesimal
     {R S : Type u} [CommRing R] [CommRing S] (f : R →+* S) (J : Ideal S)
-    (hquot : Function.Surjective ((Ideal.Quotient.mk J).comp f))
-    (hf : f.FormallyEtale) :
+    (_hquot : Function.Surjective ((Ideal.Quotient.mk J).comp f))
+    (_hf : f.FormallyEtale) :
     (∀ n, Function.Bijective (infinitesimalQuotientMap f J n)) ∧
       Nonempty (AssociatedGradedRingEquivalence
         (infinitesimalKernel f J) J) := by
@@ -192,7 +192,7 @@ principal-parts argument. -/
 theorem formallyEtale_omega
     {R S S' : Type u} [CommRing R] [CommRing S] [CommRing S']
     [Algebra R S] [Algebra S S'] [Algebra R S'] [IsScalarTower R S S']
-    (hf : Algebra.FormallyEtale S S') (k : ℕ) :
+    (_hf : Algebra.FormallyEtale S S') (k : ℕ) :
     letI : Algebra S (S ⊗[R] S) := Algebra.TensorProduct.leftAlgebra
     letI : Algebra S' (S' ⊗[S]
       ((S ⊗[R] S) ⧸ (Unit133.diagonalIdeal (R := R) (S := S)) ^ (k + 1))) :=
@@ -213,7 +213,7 @@ theorem formallyEtale_omega_differentials
     (hf : Algebra.FormallyEtale S S') :
     Nonempty (S' ⊗[S] ModuleOfDifferentials R S ≃ₗ[S']
       ModuleOfDifferentials R S') := by
-  let : Algebra.FormallyEtale S S' := hf
+  haveI : Algebra.FormallyEtale S S' := hf
   exact ⟨KaehlerDifferential.tensorKaehlerEquivOfFormallyEtale R S S'⟩
 
 /-- The module used after base change in the principal-parts lemma. -/
@@ -226,7 +226,7 @@ theorem formallyEtale_principalParts
     {R S S' M : Type u} [CommRing R] [CommRing S] [CommRing S']
     [Algebra R S] [Algebra S S'] [Algebra R S'] [IsScalarTower R S S']
     [AddCommGroup M] [Module S M] [Module R M] [IsScalarTower R S M]
-    (hf : Algebra.FormallyEtale S S') (k : ℕ) :
+    (_hf : Algebra.FormallyEtale S S') (k : ℕ) :
     letI : Module S' (principalPartsBaseChangeModule (S := S) (S' := S') M) :=
       TensorProduct.leftModule
     letI : IsScalarTower R S'
@@ -263,8 +263,9 @@ theorem formallyEtale_differentialOperator_extension
     [AddCommGroup M] [AddCommGroup N]
     [Module S M] [Module S N] [Module R M] [Module R N]
     [IsScalarTower R S M] [IsScalarTower R S N]
-    (hf : Algebra.FormallyEtale S S') (k : ℕ)
+    (_hf : Algebra.FormallyEtale S S') (k : ℕ)
     (D : DifferentialOperator (R := R) (S := S) (M := M) (N := N) k) :
+    letI : Algebra.FormallyEtale S S' := hf
     letI : Module S' (principalPartsBaseChangeModule (S := S) (S' := S') M) :=
       TensorProduct.leftModule
     letI : Module S' (principalPartsBaseChangeModule (S := S) (S' := S') N) :=
@@ -307,7 +308,7 @@ theorem formallyEtale_differentialOperator_comp_extension
     [Module S M] [Module S N] [Module S L]
     [Module R M] [Module R N] [Module R L]
     [IsScalarTower R S M] [IsScalarTower R S N] [IsScalarTower R S L]
-    (hf : Algebra.FormallyEtale S S') (k₁ k₂ : ℕ)
+    (_hf : Algebra.FormallyEtale S S') (k₁ k₂ : ℕ)
     (D₁ : DifferentialOperator (R := R) (S := S) (M := M) (N := N) k₁)
     (D₂ : DifferentialOperator (R := R) (S := S) (M := N) (N := L) k₂)
     : letI : Module S' (principalPartsBaseChangeModule (S := S) (S' := S') M) :=

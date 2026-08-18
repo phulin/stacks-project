@@ -321,8 +321,6 @@ theorem dottedArrow_baseChange_equivalence
     Nonempty
       (DottedArrowCategory (BaseChangeData.leftSquare B) ≌
         DottedArrowCategory (BaseChangeData.outerSquare B)) := by
-  sorry
-/-
   let forward : DottedArrowCategory (BaseChangeData.leftSquare B) ⥤
       DottedArrowCategory (BaseChangeData.outerSquare B) := {
     obj := fun A => by
@@ -1145,17 +1143,35 @@ theorem dottedArrow_baseChange_equivalence
         vertex := H.hom ≫ (Bicategory.leftUnitor A'.a).inv
         left := by
           dsimp [leftToP, outerHom, TwoCommutativeDiagram.Hom.comp]
-          simp [Bicategory.Strict.associator_eqToIso,
-            Bicategory.Strict.leftUnitor_eqToIso,
-            Bicategory.Strict.rightUnitor_eqToIso, Category.assoc,
-            H.beta_naturality]
+          dsimp [P]
+          change A.beta ≫
+            (H.hom ≫ (Bicategory.leftUnitor A'.a).inv) ▷ B.p = _
+          rw [Bicategory.comp_whiskerRight H.hom
+            (Bicategory.leftUnitor A'.a).inv B.p]
+          have hβ : A.beta ≫ H.hom ▷ B.p = A'.beta := by
+            exact H.beta_naturality
+          calc
+            _ = (A.beta ≫ H.hom ▷ B.p) ≫
+                (Bicategory.leftUnitor A'.a).inv ▷ B.p := by
+                  simp only [Category.assoc]
+            _ = A'.beta ≫ (Bicategory.leftUnitor A'.a).inv ▷ B.p := by
+                  rw [hβ]
+            _ = _ := by
+              dsimp [TwoCommutativeDiagram.strictAssocInv]
+              rw [Bicategory.leftUnitor_inv_whiskerRight]
+              rw [← Category.assoc]
+              rw [Bicategory.leftUnitor_inv_naturality]
+              simp [Bicategory.Strict.associator_eqToIso,
+                Bicategory.Strict.leftUnitor_eqToIso,
+                Bicategory.Strict.rightUnitor_eqToIso, Category.assoc]
         right := by
           dsimp [leftToP, outerHom, TwoCommutativeDiagram.Hom.comp,
             forward]
           simp [Bicategory.Strict.associator_eqToIso,
             Bicategory.Strict.leftUnitor_eqToIso,
             Bicategory.Strict.rightUnitor_eqToIso, Category.assoc,
-            Bicategory.comp_whiskerRight] }
+            Bicategory.comp_whiskerRight,
+            Bicategory.leftUnitor_inv_whiskerRight] }
       let τ₁ := TwoCommutativeDiagram.TwoHom.comp δ
         (liftMapHom (forward.map H))
       let τ₂ := TwoCommutativeDiagram.TwoHom.comp explicitMap
@@ -1262,10 +1278,6 @@ theorem dottedArrow_baseChange_equivalence
         inv (liftHom (forward.obj A)).right = 𝟙 _
     simpa [unitHom, leftToP, TwoCommutativeDiagram.Hom.comp,
       Category.id_comp, Category.assoc] using hδ)⟩
--/
-
-
-
 /-! ## Composition -/
 
 /-- The data of the composable solid diagram in the composition lemma. -/

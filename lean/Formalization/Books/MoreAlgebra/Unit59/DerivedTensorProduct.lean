@@ -1069,18 +1069,22 @@ noncomputable abbrev torProductSource
   ModuleCat.of A (TensorProduct A
     (torOverAlgebra f M n : Type u) (torOverAlgebra f N m : Type u))
 
+noncomputable abbrev moduleTensor
+    {R : Type u} [CommRing R] (M N : ModuleCat.{u} R) : ModuleCat.{u} R :=
+  (MonoidalCategory.tensor (ModuleCat.{u} R)).obj (M, N)
+
 theorem exists_torProductMap
     {R A : Type u} [CommRing R] [CommRing A]
     (f : R →+* A) (M N : ModuleCat.{u} R) (n m : ℕ) :
     Nonempty (torProductSource f M N n m ⟶
-      torOverAlgebra f (MonoidalCategory.tensor M N) (n + m)) := by
+      torOverAlgebra f (moduleTensor M N) (n + m)) := by
   sorry
 
 noncomputable def torProductMap
     {R A : Type u} [CommRing R] [CommRing A]
     (f : R →+* A) (M N : ModuleCat.{u} R) (n m : ℕ) :
     torProductSource f M N n m ⟶
-      torOverAlgebra f (MonoidalCategory.tensor M N) (n + m) :=
+      torOverAlgebra f (moduleTensor M N) (n + m) :=
   Classical.choice (exists_torProductMap f M N n m)
 
 /- The multiplication special case is packaged as a graded `A`-algebra
@@ -1093,10 +1097,10 @@ structure TorStarAlgebraData
     Nonempty (degree n ≅ torOverAlgebra f (algebraAsRModule g) n)
   product_to_tensor : ∀ n m : ℕ,
     ModuleCat.of A (TensorProduct A (degree n : Type u) (degree m : Type u)) ⟶
-      torOverAlgebra f (MonoidalCategory.tensor (algebraAsRModule g)
+      torOverAlgebra f (moduleTensor (algebraAsRModule g)
         (algebraAsRModule g)) (n + m)
   multiplication : ∀ n m : ℕ,
-    torOverAlgebra f (MonoidalCategory.tensor (algebraAsRModule g)
+    torOverAlgebra f (moduleTensor (algebraAsRModule g)
       (algebraAsRModule g)) (n + m) ⟶ degree (n + m)
 
 noncomputable def torStarTensorMap

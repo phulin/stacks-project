@@ -1,5 +1,3 @@
-import Formalization.Books.SpacesCohomology.Unit01.Core
-
 /-!
 # Cohomology of Algebraic Spaces, Chapter 1: Introduction
 

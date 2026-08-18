@@ -163,7 +163,79 @@ theorem siteTorsorTrivial_exists {C : Type u} [Category.{v} C]
     (J : GrothendieckTopology C)
     (G : Sheaf J AddCommGrpCat.{w}) (X : C) :
     Nonempty (SiteTorsor.{t, w, v, u} J G X) := by
-  sorry
+  let carrier : Sheaf (J.over X) (Type w) :=
+    ⟨(G.over X).obj ⋙ forget AddCommGrpCat.{w},
+      Presheaf.isSheaf_comp_of_isSheaf (J := J.over X)
+        ((G.over X).obj) (forget AddCommGrpCat.{w}) (G.over X).property⟩
+  refine ⟨{
+    carrier := carrier
+    action := fun U a p => a + (show (G.over X).obj.obj U from p)
+    action_zero := by
+      intro U p
+      change 0 + (show (G.over X).obj.obj U from p) =
+        (show (G.over X).obj.obj U from p)
+      exact zero_add _
+    action_add := by
+      intro U a b p
+      change (a + b) + (show (G.over X).obj.obj U from p) =
+        a + (b + (show (G.over X).obj.obj U from p))
+      exact add_assoc _ _ _
+    action_natural := by
+      intro U V q a p
+      change ((G.over X).obj.map q) (a + (show (G.over X).obj.obj U from p)) =
+        (G.over X).obj.map q a +
+          (G.over X).obj.map q (show (G.over X).obj.obj U from p)
+      exact map_add _ _ _
+    locally_nonempty := by
+      intro U
+      refine ⟨PUnit, fun _ => U, fun _ => 𝟙 U, ?_, ?_⟩
+      · apply (J.over X).covering_of_eq_top
+        apply top_unique
+        intro V f _
+        rw [Sieve.mem_ofArrows_iff]
+        exact ⟨PUnit.unit, f, by simp⟩
+      · intro i
+        exact ⟨(0 : (G.over X).obj.obj (op U))⟩
+    locally_simply_transitive := by
+      intro U p q
+      refine ⟨PUnit, fun _ => U, fun _ => 𝟙 U, ?_, ?_⟩
+      · apply (J.over X).covering_of_eq_top
+        apply top_unique
+        intro V f _
+        rw [Sieve.mem_ofArrows_iff]
+        exact ⟨PUnit.unit, f, by simp⟩
+      · intro i
+        have hi : i = PUnit.unit := Subsingleton.elim _ _
+        subst i
+        let pG : (G.over X).obj.obj (op U) := show (G.over X).obj.obj (op U) from p
+        let qG : (G.over X).obj.obj (op U) := show (G.over X).obj.obj (op U) from q
+        refine ⟨qG - pG, ?_, ?_⟩
+        · have h_id : (𝟙 U).op = 𝟙 (op U) := by simp
+          have hp : ConcreteCategory.hom
+              (carrier.obj.map (𝟙 U).op) p = p := by
+            rw [h_id, carrier.obj.map_id]
+            rfl
+          have hq : ConcreteCategory.hom
+              (carrier.obj.map (𝟙 U).op) q = q := by
+            rw [h_id, carrier.obj.map_id]
+            rfl
+          simpa [hp, hq, pG, qG] using sub_add_cancel qG pG
+        · intro b hb
+          have h_id : (𝟙 U).op = 𝟙 (op U) := by simp
+          have hp : ConcreteCategory.hom
+              (carrier.obj.map (𝟙 U).op) p = p := by
+            rw [h_id, carrier.obj.map_id]
+            rfl
+          have hq : ConcreteCategory.hom
+              (carrier.obj.map (𝟙 U).op) q = q := by
+            rw [h_id, carrier.obj.map_id]
+            rfl
+          have hbp : b + pG = qG := by
+            simpa [hp, hq, pG, qG] using hb
+          calc
+            b = (b + pG) - pG := by simp
+            _ = qG - pG := by rw [hbp]
+  }⟩
 
 /-- A chosen trivial torsor. -/
 noncomputable def siteTorsorTrivial {C : Type u} [Category.{v} C]

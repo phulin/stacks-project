@@ -91,7 +91,66 @@ theorem hasGoingDown_of_isOpenMap
     {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]
     (hopen : IsOpenMap (PrimeSpectrum.comap (algebraMap R S))) :
     Algebra.HasGoingDown R S := by
-  sorry
+  rw [hasGoingDown_iff_generalizingMap]
+  intro q p hpq
+  let K := p.asIdeal.ResidueField
+  let B := S ⊗[R] K
+  let M : Submonoid B :=
+    Submonoid.map
+      (Algebra.TensorProduct.includeLeft : S →ₐ[R] B).toMonoidHom
+      q.asIdeal.primeCompl
+  have hnil (s : S) (hs : s ∉ q.asIdeal) :
+      ¬ IsNilpotent (algebraMap S B s) := by
+    apply (PrimeSpectrum.mem_image_comap_basicOpen s p).mp
+    apply (hopen _ (PrimeSpectrum.basicOpen s).isOpen).stableUnderGeneralization hpq
+    exact ⟨q, (PrimeSpectrum.mem_basicOpen s q).2 hs, rfl⟩
+  have hzero : (0 : B) ∉ M := by
+    intro h0
+    obtain ⟨s, hs, hs0⟩ := (Submonoid.mem_map).mp h0
+    apply hnil s hs
+    rw [← hs0]
+    exact IsNilpotent.zero
+  let L := Localization M
+  have hL : Nontrivial L := by
+    apply not_subsingleton_iff_nontrivial.mp
+    intro hsub
+    exact hzero ((IsLocalization.subsingleton_iff).mp hsub)
+  letI : Nontrivial L := hL
+  letI : Algebra R L :=
+    ((algebraMap B L).comp (algebraMap R B)).toAlgebra
+  letI : IsScalarTower R B L := IsScalarTower.of_algebraMap_eq' rfl
+  let fS : S →ₐ[R] L :=
+    (IsScalarTower.toAlgHom R B L).comp
+      (Algebra.TensorProduct.includeLeft : S →ₐ[R] B)
+  let fK : K →ₐ[R] L :=
+    (IsScalarTower.toAlgHom R B L).comp
+      (Algebra.TensorProduct.includeRight : K →ₐ[R] B)
+  let fSloc : Localization.AtPrime q.asIdeal →ₐ[R] L :=
+    IsLocalization.liftAlgHom (f := fS) (fun y => by
+      obtain ⟨s, hs⟩ := y
+      change IsUnit (algebraMap B L
+        ((Algebra.TensorProduct.includeLeft : S →ₐ[R] B) s))
+      exact IsLocalization.map_units L
+        ⟨_, Submonoid.mem_map_of_mem
+          (Algebra.TensorProduct.includeLeft : S →ₐ[R] B).toMonoidHom hs⟩)
+  letI := Algebra.TensorProduct.rightAlgebra (R := R) (A := K)
+    (B := Localization.AtPrime q.asIdeal)
+  let fFiber : K ⊗[R] Localization.AtPrime q.asIdeal →ₐ[R] L :=
+    Algebra.TensorProduct.lift fK fSloc (fun _ _ => Commute.all _ _)
+  obtain ⟨q', hq'⟩ :=
+    (PrimeSpectrum.nontrivial_iff_mem_rangeComap p).mp
+      (RingHom.domain_nontrivial fFiber.toRingHom)
+  refine ⟨PrimeSpectrum.comap (algebraMap S (Localization.AtPrime q.asIdeal)) q',
+    ?_, ?_⟩
+  · apply (primeSpectrum_specializes_iff_ideal_inclusion _ q).2
+    have hdisj : Disjoint (q.asIdeal.primeCompl : Set S)
+        (PrimeSpectrum.comap (algebraMap S (Localization.AtPrime q.asIdeal)) q').asIdeal := by
+      rw [← PrimeSpectrum.localization_comap_range
+        (Localization.AtPrime q.asIdeal) q.asIdeal.primeCompl]
+      exact ⟨q', rfl⟩
+    exact disjoint_compl_left_iff.mp hdisj
+  · rw [← PrimeSpectrum.comap_comp_apply]
+    simpa [IsScalarTower.algebraMap_eq R S (Localization.AtPrime q.asIdeal)] using hq'
 
 /-! ## Composition and images -/
 
@@ -114,13 +173,19 @@ theorem isClosed_range_comap_of_stableUnderSpecialization
     (hT : StableUnderSpecialization
       (Set.range (PrimeSpectrum.comap (algebraMap R S)))) :
     IsClosed (Set.range (PrimeSpectrum.comap (algebraMap R S))) := by
-  sorry
+  exact PrimeSpectrum.isClosed_range_of_stableUnderSpecialization (algebraMap R S) hT
 
 theorem hasGoingUp_iff_isClosedMap_comap
     {R S : Type*} [CommRing R] [CommRing S] [Algebra R S] :
     Algebra.HasGoingUp R S ↔
       IsClosedMap (PrimeSpectrum.comap (algebraMap R S)) := by
-  sorry
+  rw [hasGoingUp_iff_specializingMap]
+  constructor
+  · intro h Z hZ
+    exact PrimeSpectrum.isClosed_image_of_stableUnderSpecialization _ _ hZ
+      (h.stableUnderSpecialization_image hZ.stableUnderSpecialization)
+  · intro h
+    exact h.specializingMap
 
 theorem isClosed_of_constructible_stableUnderSpecialization
     {R : Type*} [CommRing R] {E : Set (PrimeSpectrum R)}
@@ -199,7 +264,19 @@ theorem same_image
           (tensorLocalizationBaseMap (k := k) (A := S') (R := R) f)) ∘
         (PrimeSpectrum.comap
           (tensorLocalizationMap (k := k) (R := R) S' f)) := by
-  sorry
+  constructor
+  · ext p
+    simp [tensorLocalizationBaseMap, tensorLocalizationMap,
+      tensorSubalgebraMap]
+  · have hcomp :
+      tensorLocalizationBaseMap (k := k) (A := S) (R := R)
+          (tensorSubalgebraMap (k := k) (R := R) S' f) =
+        (tensorLocalizationMap (k := k) (R := R) S' f).comp
+          (tensorLocalizationBaseMap (k := k) (A := S') (R := R) f) := by
+      ext x
+      simp [tensorLocalizationBaseMap, tensorLocalizationMap,
+        tensorSubalgebraMap]
+    rw [hcomp, PrimeSpectrum.comap_comp]
 
 theorem map_into_tensor_algebra_isOpenMap
     {k R S : Type*} [Field k] [CommRing R] [CommRing S]

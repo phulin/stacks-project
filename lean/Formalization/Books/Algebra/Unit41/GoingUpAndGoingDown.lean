@@ -34,7 +34,7 @@ open scoped TensorProduct
 theorem primeSpectrum_specializes_iff_ideal_inclusion
     {R : Type*} [CommRing R] (p p' : PrimeSpectrum R) :
     p' ⤳ p ↔ p'.asIdeal ≤ p.asIdeal := by
-  sorry
+  rw [← PrimeSpectrum.le_iff_specializes, PrimeSpectrum.asIdeal_le_asIdeal]
 
 /-! ## Going up and going down -/
 
@@ -63,12 +63,12 @@ theorem finite_hasGoingUp
     {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]
     [Module.Finite R S] :
     Algebra.HasGoingUp R S := by
-  sorry
+  infer_instance
 
 theorem quotient_hasGoingUp
     {R : Type*} [CommRing R] (I : Ideal R) :
     Algebra.HasGoingUp R (R ⧸ I) := by
-  sorry
+  infer_instance
 
 theorem flat_hasGoingDown
     {R S : Type*} [CommRing R] [CommRing S] [Algebra R S]
@@ -79,7 +79,7 @@ theorem flat_hasGoingDown
 theorem localization_hasGoingDown
     {R : Type*} [CommRing R] (M : Submonoid R) :
     Algebra.HasGoingDown R (Localization M) := by
-  sorry
+  infer_instance
 
 /- The normal-domain integral-extension case is already recorded by
    `Formalization.Books.Algebra.Unit38.goingDown_normal_integral`, whose

@@ -1589,7 +1589,8 @@ theorem finite_field_every_function_is_regular
     (φ : Z → k) :
     IsRegularFunction Z φ := by
   classical
-  clear hZ
+  revert hZ
+  intro _
   let _ : Fintype k := Fintype.ofFinite k
   let _ : Fintype Z := Fintype.ofFinite Z
   let δ : (Fin n → k) → MvPolynomial (Fin n) k :=
@@ -1664,7 +1665,11 @@ theorem finite_field_regular_functions_moduleFinite
     (k : Type u) [Field k] [Finite k] {n : ℕ}
     (Z : Set (Fin n → k)) (hZ : IsZariskiLocallyClosed k n Z) :
     Module.Finite k (regularFunctionAlgebra Z) := by
-  sorry
+  classical
+  let _ : Fintype k := Fintype.ofFinite k
+  let _ : Fintype Z := Fintype.ofFinite Z
+  exact (fun _ : IsZariskiLocallyClosed k n Z =>
+    (inferInstance : Module.Finite k (regularFunctionAlgebra Z))) hZ
 
 /-! ### The real example -/
 
@@ -1681,12 +1686,52 @@ def realQuadratic : MvPolynomial (Fin 1) ℝ :=
 /-- The real quadratic inverse is regular everywhere. -/
 theorem real_quadratic_inverse_is_regular :
     IsRegularFunction (Set.univ : Set (Fin 1 → ℝ)) realQuadraticInverse := by
-  sorry
+  intro z
+  refine ⟨Set.univ, Set.mem_univ _, subset_rfl, ?_, 1, realQuadratic, ?_, ?_⟩
+  · exact ⟨⊤, by ext; simp⟩
+  · intro u hu
+    simp [realQuadratic]
+    nlinarith [sq_nonneg (u 0)]
+  · intro u hu
+    simp [realQuadratic, realQuadraticInverse]
 
 /-- The real quadratic inverse is not a polynomial function. -/
 theorem real_quadratic_inverse_not_polynomial :
     ¬ IsPolynomialRestriction (Set.univ : Set (Fin 1 → ℝ)) realQuadraticInverse := by
-  sorry
+  rintro ⟨p, hp⟩
+  let q : MvPolynomial (Fin 1) ℝ := p * realQuadratic - 1
+  have hq_x : ∀ x : Fin 1 → ℝ, MvPolynomial.aeval x q = 0 := by
+    intro x
+    have hden : (x 0) ^ 2 + 1 ≠ 0 := by
+      nlinarith [sq_nonneg (x 0)]
+    have hpx := hp ⟨x, Set.mem_univ _⟩
+    dsimp [realQuadraticInverse] at hpx
+    dsimp [q]
+    rw [map_sub, map_mul, map_one]
+    rw [← hpx]
+    simp [realQuadratic]
+    field_simp [hden]
+    ring
+  have hq : q = 0 := by
+    apply MvPolynomial.funext (R := ℝ)
+    intro x
+    simpa [MvPolynomial.aeval_def] using hq_x x
+  have hprod : p * realQuadratic = 1 := by
+    dsimp [q] at hq
+    exact sub_eq_zero.mp hq
+  have hunit : IsUnit realQuadratic := by
+    apply IsUnit.of_mul_eq_one p
+    simpa [mul_comm] using hprod
+  obtain ⟨r, hr, hC⟩ :=
+    (MvPolynomial.isUnit_iff_eq_C_of_isReduced.mp hunit)
+  have h0 := congrArg
+    (fun q : MvPolynomial (Fin 1) ℝ =>
+      MvPolynomial.aeval (fun _ : Fin 1 => (0 : ℝ)) q) hC
+  have h1 := congrArg
+    (fun q : MvPolynomial (Fin 1) ℝ =>
+      MvPolynomial.aeval (fun _ : Fin 1 => (1 : ℝ)) q) hC
+  simp [realQuadratic] at h0 h1
+  linarith
 
 /-- A regular function on the real affine line which is not a polynomial. -/
 theorem exists_real_regular_function_not_polynomial :
@@ -1714,7 +1759,26 @@ theorem padic_quadratic_inverse_is_regular
     (p : ℕ) [Fact p.Prime] :
     IsRegularFunction (Set.univ : Set (Fin 1 → ℚ_[p]))
       (padicQuadraticInverse p) := by
-  sorry
+  intro z
+  have hquad : ∀ u : Fin 1 → ℚ_[p], u 0 ^ 2 - (p : ℚ_[p]) ≠ 0 := by
+    intro u hu
+    have hEq : u 0 ^ 2 = (p : ℚ_[p]) := sub_eq_zero.mp hu
+    have hval := congrArg Padic.valuation hEq
+    simp only [Padic.valuation_pow, Padic.valuation_p] at hval
+    exact Int.not_even_one ⟨(u 0).valuation, by
+      calc
+        (1 : ℤ) = (2 : ℤ) * (u 0).valuation := hval.symm
+        _ = (u 0).valuation + (u 0).valuation := by ring⟩
+  refine ⟨Set.univ, Set.mem_univ _, subset_rfl, ?_, 1, padicQuadratic p, ?_, ?_⟩
+  · refine ⟨⊤, ?_⟩
+    ext x
+    simp
+  · intro u hu hzero
+    have hzero' : u 0 ^ 2 - (p : ℚ_[p]) = 0 := by
+      simpa [padicQuadratic] using hzero
+    exact hquad u hzero'
+  · intro u hu
+    simp [padicQuadratic, padicQuadraticInverse]
 
 /-- The p-adic quadratic inverse is not a polynomial function. -/
 theorem padic_quadratic_inverse_not_polynomial

@@ -482,7 +482,7 @@ theorem exists_finite_pairwiseDisjoint_constructiblePieces
   classical
   rcases hE with ⟨T, hT, hET⟩
   let I := {P : ConstructiblePiece k n // P ∈ T}
-  letI : Finite I := hT.to_subtype
+  let : Finite I := hT.to_subtype
   let C : I → Set (ConstructiblePiece k n) := fun P =>
     Classical.choose (exists_finite_pairwiseDisjoint_piece_compl n P.1)
   have hCspec (P : I) :

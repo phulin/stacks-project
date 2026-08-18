@@ -244,16 +244,80 @@ theorem filteredDifferential_E₁_page
 
 /-! ### The `d₁` boundary description and the induced homology filtration -/
 
-def filteredDifferentialD1ShortExact {C : Type u} [Category.{v} C]
-    [Abelian C] (K : FilteredDifferentialObject C) (p : ℤ) : ShortComplex C :=
-  by
-    sorry
+def filteredDifferentialTwoStepSubobjectMap
+    {C : Type u} [Category.{v} C] [Abelian C]
+    (K : FilteredDifferentialObject C) (p : ℤ) :
+    (K.carrier.filtration.obj (p + 2) : C) ⟶
+      (K.carrier.filtration.obj p : C) :=
+  Subobject.ofLE (K.carrier.filtration.obj (p + 2))
+    (K.carrier.filtration.obj p) (K.carrier.filtration.antitone (by omega))
+
+def filteredDifferentialTwoStepQuotientCarrier
+    {C : Type u} [Category.{v} C] [Abelian C]
+    (K : FilteredDifferentialObject C) (p : ℤ) : C :=
+  cokernel (filteredDifferentialTwoStepSubobjectMap K p)
+
+structure FilteredDifferentialTwoStepQuotientData
+    {C : Type u} [Category.{v} C] [Abelian C]
+    (K : FilteredDifferentialObject C) (p : ℤ) where
+  differential : filteredDifferentialTwoStepQuotientCarrier K p ⟶
+    filteredDifferentialTwoStepQuotientCarrier K p
+  square_zero : differential ≫ differential = 0
+  induced : cokernel.π (filteredDifferentialTwoStepSubobjectMap K p) ≫ differential =
+    filteredStepDifferential K p ≫
+      cokernel.π (filteredDifferentialTwoStepSubobjectMap K p)
+
+theorem filteredDifferentialTwoStepQuotientData_exists
+    {C : Type u} [Category.{v} C] [Abelian C]
+    (K : FilteredDifferentialObject C) (p : ℤ) :
+    Nonempty (FilteredDifferentialTwoStepQuotientData K p) := by
+  sorry
+
+noncomputable def filteredDifferentialTwoStepQuotientData
+    {C : Type u} [Category.{v} C] [Abelian C]
+    (K : FilteredDifferentialObject C) (p : ℤ) :
+    FilteredDifferentialTwoStepQuotientData K p :=
+  Classical.choice (filteredDifferentialTwoStepQuotientData_exists K p)
+
+def filteredDifferentialTwoStepQuotient
+    {C : Type u} [Category.{v} C] [Abelian C]
+    (K : FilteredDifferentialObject C) (p : ℤ) :
+    PlainDifferentialObject C where
+  carrier := filteredDifferentialTwoStepQuotientCarrier K p
+  d := (filteredDifferentialTwoStepQuotientData K p).differential
+  d_squared := (filteredDifferentialTwoStepQuotientData K p).square_zero
+
+theorem filteredDifferentialD1ShortExact_exists
+    {C : Type u} [Category.{v} C] [Abelian C]
+    (K : FilteredDifferentialObject C) (p : ℤ) :
+    Nonempty (PlainDifferentialShortExact
+      (filteredGradedDifferentialObject K (p + 1))
+      (filteredDifferentialTwoStepQuotient K p)
+      (filteredGradedDifferentialObject K p)) := by
+  sorry
+
+noncomputable def filteredDifferentialD1ShortExact
+    {C : Type u} [Category.{v} C] [Abelian C]
+    (K : FilteredDifferentialObject C) (p : ℤ) :
+    PlainDifferentialShortExact
+      (filteredGradedDifferentialObject K (p + 1))
+      (filteredDifferentialTwoStepQuotient K p)
+      (filteredGradedDifferentialObject K p) :=
+  Classical.choice (filteredDifferentialD1ShortExact_exists K p)
+
+def filteredDifferentialD1ShortComplex
+    {C : Type u} [Category.{v} C] [Abelian C]
+    (K : FilteredDifferentialObject C) (p : ℤ) : ShortComplex C :=
+  ShortComplex.mk
+    (filteredDifferentialD1ShortExact K p).f.hom
+    (filteredDifferentialD1ShortExact K p).g.hom
+    (filteredDifferentialD1ShortExact K p).complex
 
 theorem filteredDifferentialD1_boundary_description
     {C : Type u} [Category.{v} C] [Abelian C]
     (K : FilteredDifferentialObject C) (p : ℤ) :
-    (filteredDifferentialD1ShortExact K p).ShortExact := by
-  sorry
+    (filteredDifferentialD1ShortComplex K p).ShortExact :=
+  (filteredDifferentialD1ShortExact K p).exact
 
 def filteredDifferentialUnderlyingObject {C : Type u} [Category.{v} C]
     [Abelian C] (K : FilteredDifferentialObject C) : PlainDifferentialObject C where
@@ -360,7 +424,11 @@ structure FilteredDifferentialLimitData {C : Type u} [Category.{v} C]
   Binf : ∀ _p, Subobject K.carrier.carrier
   Zinf : ∀ _p, Subobject K.carrier.carrier
   Binf_spec : ∀ p, ∀ r, filteredDifferentialBoundaryPlus K p r ≤ Binf p
+  Binf_least : ∀ p Y,
+    (∀ r, filteredDifferentialBoundaryPlus K p r ≤ Y) → Binf p ≤ Y
   Zinf_spec : ∀ p, ∀ r, Zinf p ≤ filteredDifferentialCyclePlus K p r
+  Zinf_greatest : ∀ p Y,
+    (∀ r, Y ≤ filteredDifferentialCyclePlus K p r) → Y ≤ Zinf p
   Binf_le_Zinf : ∀ p, Binf p ≤ Zinf p
 
 noncomputable def filteredDifferentialLimitPage {C : Type u}
@@ -377,11 +445,11 @@ def IsSubquotientOf {C : Type u} [Category.{v} C] [Abelian C]
 def filteredDifferentialLimit_graded_subquotient
     {C : Type u} [Category.{v} C] [Abelian C]
     (K : FilteredDifferentialObject C) (L : FilteredDifferentialLimitData K) :
-    Prop :=
+  Prop :=
   ∀ p : ℤ,
-    IsSubquotientOf
-      (X := gradedPiece (filteredDifferentialHomologyFilteredObject K) p)
-      (Y := filteredDifferentialLimitPage K L p)
+    Nonempty
+      (gradedPiece (filteredDifferentialHomologyFilteredObject K) p ≅
+        filteredDifferentialLimitPage K L p)
 
 def filteredDifferentialWeaklyConverges
     {C : Type u} [Category.{v} C] [Abelian C]

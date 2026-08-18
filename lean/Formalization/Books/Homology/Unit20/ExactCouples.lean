@@ -61,21 +61,49 @@ abbrev exactCoupleDerivedE {C : Type u} [Category.{v} C] [Abelian C]
     {A E : C} (D : ExactCouple C A E) : C :=
   differentialHomology (exactCoupleDifferential D) (exactCoupleDifferential_sq D)
 
+noncomputable def exactCoupleDerivedBoundaryMap {C : Type u} [Category.{v} C]
+    [Abelian C] {A E : C} (D : ExactCouple C A E) :
+    Abelian.image (exactCoupleDifferential D) ⟶
+      kernel (exactCoupleDifferential D) :=
+  kernel.lift (exactCoupleDifferential D)
+    (Abelian.image.ι (exactCoupleDifferential D))
+    (Abelian.image_ι_comp_eq_zero (exactCoupleDifferential_sq D))
+
 /-- The image object which is the next `A`-term of a derived exact couple. -/
 abbrev exactCoupleDerivedA {C : Type u} [Category.{v} C] [Abelian C]
     {A E : C} (D : ExactCouple C A E) : C := Abelian.image D.alpha
+
+/-- The induced maps are retained as part of the derived-couple interface. -/
+structure ExactCoupleDerivedData {C : Type u} [Category.{v} C]
+    [Abelian C] {A E : C} (D : ExactCouple C A E) where
+  couple : ExactCouple C (exactCoupleDerivedA D) (exactCoupleDerivedE D)
+  alpha_spec : couple.alpha ≫ Abelian.image.ι D.alpha =
+    Abelian.image.ι D.alpha ≫ D.alpha
+  f_cycle : kernel (exactCoupleDifferential D) ⟶ exactCoupleDerivedA D
+  f_cycle_spec : f_cycle ≫ Abelian.image.ι D.alpha =
+    kernel.ι (exactCoupleDifferential D) ≫ D.f
+  f_spec : cokernel.π (exactCoupleDerivedBoundaryMap D) ≫ couple.f = f_cycle
+  g_cycle : exactCoupleDerivedA D ⟶ kernel (exactCoupleDifferential D)
+  g_cycle_spec : g_cycle ≫ kernel.ι (exactCoupleDifferential D) =
+    Abelian.image.ι D.alpha ≫ D.g
+  g_spec : g_cycle ≫ cokernel.π (exactCoupleDerivedBoundaryMap D) = couple.g
 
 /-- The derived exact couple, with `A' = Im(alpha)` and
 `E' = Ker(d)/Im(d)`. -/
 theorem exactCoupleDerived_exists {C : Type u} [Category.{v} C] [Abelian C]
     {A E : C} (D : ExactCouple C A E) :
-    Nonempty (ExactCouple C (exactCoupleDerivedA D) (exactCoupleDerivedE D)) := by
+    Nonempty (ExactCoupleDerivedData D) := by
   sorry
+
+noncomputable def exactCoupleDerivedData {C : Type u} [Category.{v} C]
+    [Abelian C] {A E : C} (D : ExactCouple C A E) :
+    ExactCoupleDerivedData D :=
+  Classical.choice (exactCoupleDerived_exists D)
 
 noncomputable def exactCoupleDerived {C : Type u} [Category.{v} C]
     [Abelian C] {A E : C} (D : ExactCouple C A E) :
     ExactCouple C (exactCoupleDerivedA D) (exactCoupleDerivedE D) :=
-  Classical.choice (exactCoupleDerived_exists D)
+  (exactCoupleDerivedData D).couple
 
 /- The induced maps are the maps of the chosen derived exact couple, so the
 three names below cannot drift apart from its exactness data. -/
@@ -114,10 +142,8 @@ theorem exactCouple_image_formula {C : Type u} [Category.{v} C] [Abelian C]
 
 theorem exactCoupleDerived_is_exact {C : Type u} [Category.{v} C] [Abelian C]
     {A E : C} (D : ExactCouple C A E) :
-    (exactCoupleDerived D).alpha ≫ (exactCoupleDerived D).g = 0 ∧
-      (exactCoupleDerived D).g ≫ (exactCoupleDerived D).f = 0 ∧
-      (exactCoupleDerived D).f ≫ (exactCoupleDerived D).alpha = 0 := by
-  sorry
+    Nonempty (ExactCouple C (exactCoupleDerivedA D) (exactCoupleDerivedE D)) := by
+  exact ⟨exactCoupleDerived D⟩
 
 /-! ### The associated spectral sequence -/
 
@@ -159,6 +185,25 @@ def exactCoupleCycleSubobject {C : Type u} [Category.{v} C] [Abelian C]
   (Subobject.pullback D.f).obj
     ((Subobject.«exists» (exactCoupleAlphaPow D n)).obj ⊤)
 
+/-- The filtration starts with `B₁ = 0` and `Z₁ = E`. -/
+def exactCoupleB {C : Type u} [Category.{v} C] [Abelian C]
+    {A E : C} (D : ExactCouple C A E) : ℕ → Subobject E
+  | 0 => ⊥
+  | n + 1 => exactCoupleBoundarySubobject D n
+
+def exactCoupleZ {C : Type u} [Category.{v} C] [Abelian C]
+    {A E : C} (D : ExactCouple C A E) : ℕ → Subobject E
+  | 0 => ⊤
+  | n + 1 => exactCoupleCycleSubobject D n
+
+def IsSubobjectUnion {C : Type u} [Category.{v} C] {E : C}
+    (F : ℕ → Subobject E) (B : Subobject E) : Prop :=
+  (∀ n, F n ≤ B) ∧ ∀ Y, (∀ n, F n ≤ Y) → B ≤ Y
+
+def IsSubobjectIntersection {C : Type u} [Category.{v} C] {E : C}
+    (F : ℕ → Subobject E) (Z : Subobject E) : Prop :=
+  (∀ n, Z ≤ F n) ∧ ∀ Y, (∀ n, Y ≤ F n) → Y ≤ Z
+
 theorem exactCouple_boundary_le_cycle {C : Type u} [Category.{v} C]
     [Abelian C] {A E : C} (D : ExactCouple C A E) (n : ℕ) :
     exactCoupleBoundarySubobject D n ≤ exactCoupleCycleSubobject D n := by
@@ -170,6 +215,14 @@ noncomputable def exactCouplePageComponent {C : Type u} [Category.{v} C]
     [Abelian C] {A E : C} (D : ExactCouple C A E) (n : ℕ) : C :=
   subquotientObject (exactCoupleBoundarySubobject D n)
     (exactCoupleCycleSubobject D n) (exactCouple_boundary_le_cycle D n)
+
+theorem exactCouple_associated_page_quotient
+    {C : Type u} [Category.{v} C] [Abelian C]
+    {A E : C} (D : ExactCouple C A E) :
+    ∀ n : ℕ,
+      Nonempty (plainPageObject (exactCoupleAssociatedSpectralSequence D)
+        (n + 1 : ℤ) ≅ exactCouplePageComponent D n) := by
+  sorry
 
 noncomputable def exactCouplePageClassOfCycle {C : Type u} [Category.{v} C]
     [Abelian C] {A E : C} (D : ExactCouple C A E) (n : ℕ)
@@ -185,11 +238,12 @@ structure ExactCoupleDifferentialRule {C : Type u} [Category.{v} C]
     [Abelian C] {A E : C} (D : ExactCouple C A E) (n : ℕ) where
   differential : exactCouplePageComponent (C := C) D n ⟶
     exactCouplePageComponent (C := C) D n
+  differential_squared : differential ≫ differential = 0
   rule : ∀ {T : C}
     (x : T ⟶ (exactCoupleCycleSubobject (C := C) D n : C))
     (y : T ⟶ A),
     x ≫ (exactCoupleCycleSubobject D n).arrow ≫ D.f =
-        y ≫ exactCoupleAlphaPow D (n + 1) →
+        y ≫ exactCoupleAlphaPow D n →
       ∃ yCycle : T ⟶ (exactCoupleCycleSubobject (C := C) D n : C),
         yCycle ≫ (exactCoupleCycleSubobject D n).arrow = y ≫ D.g ∧
           exactCouplePageClassOfCycle D n x ≫ differential =
@@ -201,16 +255,40 @@ theorem exactCouple_differential_rule
     ∀ n : ℕ, Nonempty (ExactCoupleDifferentialRule D n) := by
   sorry
 
+/-- The quotient-page identifications and differential compatibility carried
+by the exact-couple construction. -/
+structure ExactCoupleAssociatedData {C : Type u} [Category.{v} C]
+    [Abelian C] {A E : C} (D : ExactCouple C A E) where
+  sequence : PlainSpectralSequence.{v, u, 0} C 1
+  pageIso : ∀ n : ℕ,
+    plainPageObject sequence (n + 1 : ℤ) ≅ exactCouplePageComponent D n
+  differentialRule : ∀ n : ℕ, Nonempty (ExactCoupleDifferentialRule D n)
+  differential_compatibility : ∀ n : ℕ,
+    ∃ R : ExactCoupleDifferentialRule D n,
+      plainPageDifferential sequence (n + 1 : ℤ) ≫ (pageIso n).hom =
+        (pageIso n).hom ≫ R.differential
+
+theorem exactCouple_associated_data_exists
+    {C : Type u} [Category.{v} C] [Abelian C]
+    {A E : C} (D : ExactCouple C A E) :
+    Nonempty (ExactCoupleAssociatedData D) := by
+  sorry
+
+noncomputable def exactCoupleAssociatedData
+    {C : Type u} [Category.{v} C] [Abelian C]
+    {A E : C} (D : ExactCouple C A E) : ExactCoupleAssociatedData D :=
+  Classical.choice (exactCouple_associated_data_exists D)
+
 /-- If the indicated union and intersection exist, the exact-couple
 filtration has `B∞ ⊆ Z∞` and hence a limit quotient. -/
 theorem exactCouple_limit_inclusion
     {C : Type u} [Category.{v} C] [Abelian C]
     {A E : C} (D : ExactCouple C A E)
-    (hB : ∃ B : Subobject E, ∀ n, exactCoupleBoundarySubobject D n ≤ B)
-    (hZ : ∃ Z : Subobject E, ∀ n, Z ≤ exactCoupleCycleSubobject D n) :
+    (hB : ∃ B : Subobject E, IsSubobjectUnion (exactCoupleB D) B)
+    (hZ : ∃ Z : Subobject E, IsSubobjectIntersection (exactCoupleZ D) Z) :
     ∃ B Z : Subobject E,
-      (∀ n, exactCoupleBoundarySubobject D n ≤ B) ∧
-      (∀ n, Z ≤ exactCoupleCycleSubobject D n) ∧ B ≤ Z := by
+      IsSubobjectUnion (exactCoupleB D) B ∧
+      IsSubobjectIntersection (exactCoupleZ D) Z ∧ B ≤ Z := by
   sorry
 
 /-! ### Shifted exact couples -/
@@ -252,7 +330,7 @@ theorem shiftedExactCouple_derived_exists
     {C : Type u} [Category.{v} C] [Abelian C]
     {S T : C ≌ C} {A E : C}
     (D : ShiftedExactCouple C S T A E) :
-    ∃ A' E' : C, Nonempty (ShiftedExactCouple C S T A' E') := by
+    ∃ A' E' : C, Nonempty (ShiftedExactCouple C (T.trans S) T A' E') := by
   sorry
 
 theorem shiftedExactCouple_spectral_sequence

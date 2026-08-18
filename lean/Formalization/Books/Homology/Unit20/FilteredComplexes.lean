@@ -50,16 +50,17 @@ def filteredComplexGradedPiece {C : Type u} [Category.{v} C] [Abelian C]
 
 abbrev filteredComplexE₀ {C : Type u} [Category.{v} C] [Abelian C]
     (K : FilteredComplex C) (p q : ℤ) : C :=
-  (filteredComplexGradedPiece K p).X q
+  gradedPiece (K.X (p + q)) p
 
 def filteredComplexD₀ {C : Type u} [Category.{v} C] [Abelian C]
     (K : FilteredComplex C) (p q : ℤ) :
     filteredComplexE₀ K p q ⟶ filteredComplexE₀ K p (q + 1) :=
-  (filteredComplexGradedPiece K p).d q (q + 1)
+  gradedPieceMap (C := C) (K.d (p + q) (p + q + 1)) p ≫
+    eqToHom (by congr 2 <;> ring)
 
 def filteredComplexE₁ {C : Type u} [Category.{v} C] [Abelian C]
     (K : FilteredComplex C) (p q : ℤ) : C :=
-  (HomologicalComplex.homologyFunctor C (ComplexShape.up ℤ) q).obj
+  (HomologicalComplex.homologyFunctor C (ComplexShape.up ℤ) (p + q)).obj
     (filteredComplexGradedPiece K p)
 
 theorem filteredComplex_E₀_formula {C : Type u} [Category.{v} C]
@@ -70,7 +71,7 @@ theorem filteredComplex_E₀_formula {C : Type u} [Category.{v} C]
 theorem filteredComplex_E₁_formula {C : Type u} [Category.{v} C]
     [Abelian C] (K : FilteredComplex C) (p q : ℤ) :
     filteredComplexE₁ K p q =
-      (HomologicalComplex.homologyFunctor C (ComplexShape.up ℤ) q).obj
+      (HomologicalComplex.homologyFunctor C (ComplexShape.up ℤ) (p + q)).obj
         (filteredComplexGradedPiece K p) := rfl
 
 /-! ### `Zᵣ`, `Bᵣ`, and the bidegree of `dᵣ` -/
@@ -121,19 +122,20 @@ noncomputable def filteredComplexPageClass {C : Type u} [Category.{v} C]
 
 structure FilteredComplexPageDifferentials {C : Type u} [Category.{v} C]
     [Abelian C] (K : FilteredComplex C) where
-  differential : ∀ r p q : ℤ,
-    filteredComplexPage K r p q ⟶ filteredComplexPage K r (p + r) (q - r + 1)
-  square_zero : ∀ r p q : ℤ,
+  differential : ∀ (r : ℕ) (p q : ℤ),
+    filteredComplexPage K (r : ℤ) p q ⟶
+      filteredComplexPage K (r : ℤ) (p + r) (q - r + 1)
+  square_zero : ∀ (r : ℕ) (p q : ℤ),
     differential r p q ≫ differential r (p + r) (q - r + 1) = 0
-  lift_rule : ∀ (r p q : ℤ) {T : C}
-    (z : T ⟶ (filteredComplexCyclePlus K r p q : C))
-    (zNext : T ⟶ (filteredComplexCyclePlus K r (p + r) (q - r + 1) : C))
-    (_hz : zNext ≫ (filteredComplexCyclePlus K r (p + r) (q - r + 1)).arrow =
-      z ≫ (filteredComplexCyclePlus K r p q).arrow ≫
+  lift_rule : ∀ (r : ℕ) (p q : ℤ) {T : C}
+    (z : T ⟶ (filteredComplexCyclePlus K (r : ℤ) p q : C))
+    (zNext : T ⟶ (filteredComplexCyclePlus K (r : ℤ) (p + r) (q - r + 1) : C))
+    (_hz : zNext ≫ (filteredComplexCyclePlus K (r : ℤ) (p + r) (q - r + 1)).arrow =
+      z ≫ (filteredComplexCyclePlus K (r : ℤ) p q).arrow ≫
         filteredComplexDifferential K (p + q) ≫
           eqToHom (congrArg (fun n : ℤ => (K.X n).carrier) (by omega))),
-    filteredComplexPageClass K r p q z ≫ differential r p q =
-      filteredComplexPageClass K r (p + r) (q - r + 1) zNext
+    filteredComplexPageClass K (r : ℤ) p q z ≫ differential r p q =
+      filteredComplexPageClass K (r : ℤ) (p + r) (q - r + 1) zNext
 
 theorem filteredComplex_page_differentials_exists
     {C : Type u} [Category.{v} C] [Abelian C] (K : FilteredComplex C) :
@@ -437,8 +439,14 @@ structure FilteredComplexLimitData {C : Type u} [Category.{v} C]
     [Abelian C] (K : FilteredComplex C) where
   Binf : ∀ (p q : ℤ), Subobject (K.X (p + q)).carrier
   Zinf : ∀ (p q : ℤ), Subobject (K.X (p + q)).carrier
-  Binf_spec : ∀ p q r, filteredComplexBoundaryPlus K r p q ≤ Binf p q
-  Zinf_spec : ∀ p q r, Zinf p q ≤ filteredComplexCyclePlus K r p q
+  Binf_spec : ∀ p q (r : ℕ),
+    filteredComplexBoundaryPlus K (r : ℤ) p q ≤ Binf p q
+  Binf_least : ∀ p q Y,
+    (∀ (r : ℕ), filteredComplexBoundaryPlus K (r : ℤ) p q ≤ Y) → Binf p q ≤ Y
+  Zinf_spec : ∀ p q (r : ℕ),
+    Zinf p q ≤ filteredComplexCyclePlus K (r : ℤ) p q
+  Zinf_greatest : ∀ p q Y,
+    (∀ (r : ℕ), Y ≤ filteredComplexCyclePlus K (r : ℤ) p q) → Y ≤ Zinf p q
   Binf_le_Zinf : ∀ p q, Binf p q ≤ Zinf p q
 
 noncomputable def filteredComplexLimitPage {C : Type u} [Category.{v} C]
@@ -450,9 +458,9 @@ def filteredComplexLimit_graded_subquotient
     {C : Type u} [Category.{v} C] [Abelian C]
     (K : FilteredComplex C) (L : FilteredComplexLimitData K) : Prop :=
   ∀ p q : ℤ,
-    IsSubquotientOf
-      (X := gradedPiece (filteredComplexCohomologyFilteredObject K (p + q)) p)
-      (Y := filteredComplexLimitPage K L p q)
+    Nonempty
+      (gradedPiece (filteredComplexCohomologyFilteredObject K (p + q)) p ≅
+        filteredComplexLimitPage K L p q)
 
 /-! ### Regularity, boundedness, and convergence -/
 
@@ -608,7 +616,7 @@ structure FilteredComplexTrivialConvergenceHypotheses {C : Type u}
   high_zero : ∀ n : ℤ, ∃ p₀ : ℤ, ∀ p : ℤ, p₀ ≤ p →
     IsZero (filteredComplexStepCohomology K n p)
   low_iso : ∀ n : ℤ, ∃ p₀ : ℤ, ∀ p : ℤ, p ≤ p₀ →
-    Nonempty (filteredComplexStepCohomology K n p ≅ filteredComplexCohomology K n)
+    IsIso (filteredComplexStepCohomologyMap K n p)
 
 theorem filteredComplex_trivial_convergence
     {C : Type u} [Category.{v} C] [Abelian C] (K : FilteredComplex C)

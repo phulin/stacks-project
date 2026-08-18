@@ -84,6 +84,10 @@ theorem plainDifferentialObject_abelian {C : Type u} [Category.{v} C]
     [Abelian C] : Nonempty (Abelian (PlainDifferentialObject C)) := by
   sorry
 
+noncomputable instance plainDifferentialObjectAbelian {C : Type u} [Category.{v} C]
+    [Abelian C] : Abelian (PlainDifferentialObject C) :=
+  Classical.choice (plainDifferentialObject_abelian (C := C))
+
 /-- The homology object `H(A,d) = Ker(d)/Im(d)`. -/
 abbrev plainDifferentialHomology {C : Type u} [Category.{v} C]
     [Abelian C] (A : PlainDifferentialObject C) : C :=
@@ -101,8 +105,9 @@ structure PlainDifferentialShortExact {C : Type u} [Category.{v} C]
 structure LongExactSequence {C : Type u} [Category.{v} C]
     [Abelian C] (X : ℤ → C) where
   differential : ∀ n, X n ⟶ X (n + 1)
-  exact : ∀ n (h : differential n ≫ differential (n + 1) = 0),
-    (ShortComplex.mk (differential n) (differential (n + 1)) h).Exact
+  complex : ∀ n, differential n ≫ differential (n + 1) = 0
+  exact : ∀ n,
+    (ShortComplex.mk (differential n) (differential (n + 1)) (complex n)).Exact
 
 def differentialHomologyLongTerm {C : Type u} [Category.{v} C]
     [Abelian C] (A B D : PlainDifferentialObject C) (n : ℤ) : C :=
@@ -237,15 +242,17 @@ def selfMapBoundaryPreimage {C : Type u} [Category.{v} C] [Abelian C]
     {A : PlainDifferentialObject C}
     (α : PlainDifferentialInjectiveEndomorphism A) (r : ℕ) :
     Subobject A.carrier :=
-  (Subobject.pullback (selfMapAlphaPow α (r - 1))).obj
-    ((Subobject.«exists» A.d).obj ⊤)
+  if r = 0 then ⊥ else
+    (Subobject.pullback (selfMapAlphaPow α (r - 1))).obj
+      ((Subobject.«exists» A.d).obj ⊤)
 
 def selfMapCyclePreimage {C : Type u} [Category.{v} C] [Abelian C]
     {A : PlainDifferentialObject C}
     (α : PlainDifferentialInjectiveEndomorphism A) (r : ℕ) :
     Subobject A.carrier :=
-  (Subobject.pullback A.d).obj
-    ((Subobject.«exists» (selfMapAlphaPow α r)).obj ⊤)
+  if r = 0 then ⊤ else
+    (Subobject.pullback A.d).obj
+      ((Subobject.«exists» (selfMapAlphaPow α r)).obj ⊤)
 
 theorem selfMap_boundary_preimage_le_cycle_preimage
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -305,8 +312,9 @@ noncomputable def selfMapPageComponent
     {C : Type u} [Category.{v} C] [Abelian C]
     {A : PlainDifferentialObject C}
     (α : PlainDifferentialInjectiveEndomorphism A) (r : ℕ) : C :=
-  subquotientObject (selfMapBoundaryPlus α r) (selfMapCyclePlus α r)
-    (selfMap_boundary_plus_le_cycle_plus α r)
+  if r = 0 then differentialSelfMapE₀ α else
+    subquotientObject (selfMapBoundaryPlus α r) (selfMapCyclePlus α r)
+      (selfMap_boundary_plus_le_cycle_plus α r)
 
 noncomputable def selfMapPageClassOfCycle
     {C : Type u} [Category.{v} C] [Abelian C]
@@ -314,8 +322,14 @@ noncomputable def selfMapPageClassOfCycle
     (α : PlainDifferentialInjectiveEndomorphism A) (r : ℕ)
     {T : C} (z : T ⟶ (selfMapCyclePlus α r : C)) :
     T ⟶ selfMapPageComponent α r :=
-  z ≫ cokernel.π (Subobject.ofLE (selfMapBoundaryPlus α r)
-    (selfMapCyclePlus α r) (selfMap_boundary_plus_le_cycle_plus α r))
+  by
+    by_cases hr : r = 0
+    · subst r
+      exact (z ≫ (selfMapCyclePlus α 0).arrow ≫ cokernel.π α.hom.hom) ≫
+        eqToHom (by rfl)
+    · exact (z ≫ cokernel.π (Subobject.ofLE (selfMapBoundaryPlus α r)
+        (selfMapCyclePlus α r) (selfMap_boundary_plus_le_cycle_plus α r))) ≫
+        eqToHom (by simp [selfMapPageComponent, hr, subquotientObject])
 
 /-- The lift rule for the self-map spectral sequence, expressed on test-object
 morphisms so it also makes sense in an arbitrary abelian category. -/
@@ -368,8 +382,9 @@ theorem selfMap_page_formula
     {A : PlainDifferentialObject C}
     (α : PlainDifferentialInjectiveEndomorphism A) (r : ℕ) :
     selfMapPageComponent α r =
-      subquotientObject (selfMapBoundaryPlus α r)
-        (selfMapCyclePlus α r) (selfMap_boundary_plus_le_cycle_plus α r) := rfl
+      if r = 0 then differentialSelfMapE₀ α else
+        subquotientObject (selfMapBoundaryPlus α r)
+          (selfMapCyclePlus α r) (selfMap_boundary_plus_le_cycle_plus α r) := rfl
 
 /-! ### Shifted differential objects -/
 
@@ -447,9 +462,10 @@ structure ShiftedDifferentialShortExact {C : Type u} [Category.{v} C]
 
 structure ShiftedLongExactSequence {C : Type u} [Category.{v} C]
     [Abelian C] (S : C ≌ C) (X : ℤ → C) where
-  differential : ∀ n, X n ⟶ S.functor.obj (X (n + 1))
-  exact : ∀ n (h : differential n ≫ S.functor.map (differential (n + 1)) = 0),
-    (ShortComplex.mk (differential n) (S.functor.map (differential (n + 1))) h).Exact
+  differential : ∀ n, X n ⟶ X (n + 1)
+  complex : ∀ n, differential n ≫ differential (n + 1) = 0
+  exact : ∀ n,
+    (ShortComplex.mk (differential n) (differential (n + 1)) (complex n)).Exact
 
 theorem shiftedDifferentialShortExact_homology_long_exact
     {C : Type u} [Category.{v} C] [Abelian C] {S : C ≌ C}
@@ -462,6 +478,10 @@ theorem shiftedDifferentialObject_abelian {C : Type u} [Category.{v} C]
     [Abelian C] {S : C ≌ C} :
     Nonempty (Abelian (ShiftedDifferentialObject C S)) := by
   sorry
+
+noncomputable instance shiftedDifferentialObjectAbelian {C : Type u} [Category.{v} C]
+    [Abelian C] {S : C ≌ C} : Abelian (ShiftedDifferentialObject C S) :=
+  Classical.choice (shiftedDifferentialObject_abelian (C := C) (S := S))
 
 /- The shift-family variant in the source is represented by a commuting pair
 of equivalences and a shifted injective self-map. -/

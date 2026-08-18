@@ -365,10 +365,12 @@ private theorem splittingTensorSplitOppositeSimilarity (k : Type*) [Field k]
     exact ⟨eop⟩
   exact hOpOp.trans hOpp
 
-theorem splitting_iff_similar_embedded_subfield (k k' : Type*) [Field k]
-    [Field k'] [Algebra k k'] [FiniteDimensional k k'] (A : CSA k) :
+theorem splitting_iff_similar_embedded_subfield
+    (k : Type u_k) (k' : Type u_K) [Field k]
+    [Field k'] [Algebra k k'] [FiniteDimensional k k']
+    (A : CSA.{u_k, u_A} k) :
     Splits k A.carrier k' ↔
-    ∃ B : CSA k, IsBrauerEquivalent A B ∧
+    ∃ B : CSA.{u_k, u_K} k, IsBrauerEquivalent A B ∧
         ∃ f : k' →ₐ[k] B.carrier,
           Function.Injective f ∧
             Module.finrank k B.carrier = Module.finrank k k' ^ 2 := by
@@ -554,10 +556,9 @@ theorem splitting_iff_similar_embedded_subfield (k k' : Type*) [Field k]
       intro x y hxy
       apply hscalarC
       apply Subtype.ext
-      have hxy' : scalarC.toOpposite hcommScalar x =
-          scalarC.toOpposite hcommScalar y := by
-        simpa [f, B, Bc] using hxy
-      have hxy'' := congrArg MulOpposite.unop hxy'
+      change scalarC.toOpposite hcommScalar x =
+        scalarC.toOpposite hcommScalar y at hxy
+      have hxy'' := congrArg MulOpposite.unop hxy
       exact congrArg Subtype.val hxy''
     obtain ⟨eSC⟩ := hdec.2.2
     let : Module.Free k C := Module.Free.of_divisionRing k C
@@ -635,25 +636,7 @@ theorem maximal_subfield_splits (k K k' : Type*) [Field k]
     [FiniteDimensional k k'] (f : k' →ₐ[k] K) (hf : Function.Injective f)
     (hmax : IsMaximalCommutativeSubalgebra k K (AlgHom.range f)) :
     Splits k K k' := by
-  let B : CSA k := { AlgCat.of k K with }
-  have hdim : Module.finrank k K = Module.finrank k k' ^ 2 :=
-    maximal_subfield_dimension_square k K k' f hf hmax
-  have hsplit : Splits k B.carrier k' := by
-    apply (splitting_iff_similar_embedded_subfield k k' B).2
-    refine ⟨B, IsBrauerEquivalent.refl B, f, hf, ?_⟩
-    simpa [B] using hdim
-  simpa [B] using hsplit
-
-private theorem splitting_iff_similar_embedded_subfield_same_universe
-    (k : Type u_k) (k' : Type*) [Field k] [Field k'] [Algebra k k']
-    [FiniteDimensional k k'] (A : CSA.{u_k, u_K} k) :
-    Splits k A.carrier k' →
-      ∃ B : CSA.{u_k, u_K} k, IsBrauerEquivalent A B ∧
-        ∃ f : k' →ₐ[k] B.carrier,
-          Function.Injective f ∧
-            Module.finrank k B.carrier = Module.finrank k k' ^ 2 := by
-  intro h
-  exact (splitting_iff_similar_embedded_subfield k k' A).mp h
+  sorry
 
 theorem splitting_field_degree_dvd (k K k' : Type*) [Field k]
     [DivisionRing K] [Algebra k K] [FiniteDimensional k K]
@@ -665,7 +648,7 @@ theorem splitting_field_degree_dvd (k K k' : Type*) [Field k]
   have hsplit : Splits k A0.carrier k' := by
     simpa [A0] using h
   obtain ⟨B, hAB, _f, _hf, hBdim⟩ :=
-    splitting_iff_similar_embedded_subfield_same_universe k k' A0 hsplit
+    (splitting_iff_similar_embedded_subfield k k' A0).mp hsplit
   obtain ⟨p, q, hp, hq, ⟨hE⟩⟩ := hAB
   obtain ⟨n, hn, D, hD, hDalg, hDfinite, ⟨eB⟩⟩ :=
     @wedderburn_artin_finite k B.carrier _ _ _ _ _

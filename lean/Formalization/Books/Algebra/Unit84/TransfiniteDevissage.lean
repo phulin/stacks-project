@@ -1171,6 +1171,20 @@ theorem isDirectSumOfCountablyGeneratedModules_of_isComplemented
     IsDirectSumOfCountablyGeneratedModules (ModuleCat.of R P) := by
   sorry
 
+/- A complemented submodule, equivalently the image of a split idempotent,
+   inherits the Kaplansky dévissage property.  The complemented submodule
+   formulation keeps the induction invariant at the level of the existing
+   `KaplanskyDevissage`/`IncreasingDevissage` interfaces. -/
+theorem hasKaplanskyDevissage_of_isComplemented
+    {R : Type u} {M P : Type v} [CommRing R]
+    [AddCommGroup M] [Module R M] [AddCommGroup P] [Module R P]
+    (hM : HasKaplanskyDevissage (ModuleCat.of R M))
+    (hP : ∃ Q : Submodule R M,
+      IsComplemented Q ∧ Nonempty (P ≃ₗ[R] Q)) :
+    HasKaplanskyDevissage (ModuleCat.of R P) := by
+  rw [← isDirectSumOfCountablyGeneratedModules_iff_hasKaplanskyDevissage] at hM ⊢
+  exact isDirectSumOfCountablyGeneratedModules_of_isComplemented hM hP
+
 /-- Every projective module is a direct sum of countably generated projective
 modules. -/
 theorem projective_isDirectSumOfCountablyGeneratedProjectiveModules

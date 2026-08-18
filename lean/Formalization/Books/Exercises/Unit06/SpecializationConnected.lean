@@ -91,7 +91,17 @@ theorem spectrum_generic_point_iff_minimal_prime {A : Type u} [CommRing A]
       ∃ C : Set (PrimeSpectrum A),
         C ∈ irreducibleComponents (PrimeSpectrum A) ∧
           IsGenericPoint p C := by
-  sorry
+  constructor
+  · intro hp
+    refine ⟨PrimeSpectrum.zeroLocus (p.asIdeal : Set A), ?_, ?_⟩
+    · rw [← PrimeSpectrum.zeroLocus_minimalPrimes]
+      exact Set.mem_image_of_mem _ hp
+    · rw [isGenericPoint_def, PrimeSpectrum.closure_singleton]
+  · rintro ⟨C, hC, hpC⟩
+    rw [← PrimeSpectrum.vanishingIdeal_singleton]
+    apply (PrimeSpectrum.vanishingIdeal_mem_minimalPrimes (R := A)).2
+    rw [hpC.def]
+    exact hC
 
 /-! ## Disjoint closed subsets -/
 
@@ -101,7 +111,8 @@ theorem zeroLocus_disjoint_iff_sup_eq_top {A : Type u} [CommRing A]
     (I J : Ideal A) :
     Disjoint (PrimeSpectrum.zeroLocus (I : Set A))
       (PrimeSpectrum.zeroLocus (J : Set A)) ↔ I ⊔ J = ⊤ := by
-  sorry
+  rw [Set.disjoint_iff_inter_eq_empty, ← PrimeSpectrum.zeroLocus_sup,
+    PrimeSpectrum.zeroLocus_empty_iff_eq_top]
 
 /-! ## Connected spaces and components -/
 
@@ -109,7 +120,7 @@ theorem zeroLocus_disjoint_iff_sup_eq_top {A : Type u} [CommRing A]
 class, equivalently connectedness of the whole space. -/
 theorem connected_space_iff_connected_univ {X : Type u} [TopologicalSpace X] :
     ConnectedSpace X ↔ IsConnected (Set.univ : Set X) := by
-  sorry
+  exact connectedSpace_iff_univ
 
 /-- For a nonzero ring, disconnectedness of the spectrum is equivalent to a
 nontrivial product decomposition of the ring. -/

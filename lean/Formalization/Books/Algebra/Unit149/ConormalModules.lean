@@ -62,6 +62,19 @@ theorem universalFirstOrderThickening_isUniversal
     IsUniversalFirstOrderThickening (universalFirstOrderThickening h) :=
   Classical.choose_spec (exists_universal_first_order_thickening h)
 
+/-- The square-zero kernel of a universal first-order thickening. -/
+abbrev universalFirstOrderThickeningKernel
+    {R S : Type u} [CommRing R] [CommRing S] [Algebra R S]
+    (h : Algebra.FormallyUnramified R S) :
+    Ideal (universalFirstOrderThickening h).Ring :=
+  (universalFirstOrderThickening h).ker
+
+theorem universalFirstOrderThickening_kernel_square_zero
+    {R S : Type u} [CommRing R] [CommRing S] [Algebra R S]
+    (h : Algebra.FormallyUnramified R S) :
+    universalFirstOrderThickeningKernel h ^ 2 = ⊥ :=
+  (universalFirstOrderThickening_isUniversal h).1
+
 /-- The algebra map underlying the chosen universal first-order thickening. -/
 noncomputable def universalFirstOrderThickeningMap
     {R S : Type u} [CommRing R] [CommRing S] [Algebra R S]
@@ -96,6 +109,12 @@ noncomputable def quotientFirstOrderThickening
   let f : (R ⧸ I ^ 2) →ₐ[R] (R ⧸ I) := Ideal.Quotient.factorₐ R hI
   exact Algebra.Extension.ofSurjective f (Ideal.Quotient.factor_surjective hI)
 
+/-- The quotient map underlying `quotientFirstOrderThickening`. -/
+noncomputable def quotientFirstOrderThickeningMap
+    {R : Type u} [CommRing R] (I : Ideal R) :
+    (quotientFirstOrderThickening I).Ring →ₐ[R] R ⧸ I :=
+  IsScalarTower.toAlgHom R (quotientFirstOrderThickening I).Ring (R ⧸ I)
+
 /-- The quotient `R/I² → R/I` is the universal first-order thickening. -/
 theorem universal_first_order_thickening_quotient
     {R : Type u} [CommRing R] (I : Ideal R) :
@@ -115,6 +134,12 @@ theorem conormalModule_quotient
 
 /-! ## Localization -/
 
+/-- The multiplicative subset in an extension ring lying over a target subset. -/
+def localizationPreimage
+    {R S : Type u} [CommRing R] [CommRing S] [Algebra R S]
+    (P : Algebra.Extension.{u} R S) (M : Submonoid S) : Submonoid P.Ring :=
+  M.comap (algebraMap P.Ring S)
+
 /-- Localization of the target preserves the universal first-order property.
 
 `P.localization M` has underlying ring
@@ -124,6 +149,7 @@ theorem universal_first_order_thickening_localize_target
     {A B B' : Type u} [CommRing A] [CommRing B] [CommRing B']
     [Algebra A B] [Algebra B B'] [Algebra A B']
     [IsScalarTower A B B']
+    (hAB : Algebra.FormallyUnramified A B)
     (P : Algebra.Extension.{u} A B)
     (hP : IsUniversalFirstOrderThickening P)
     (M : Submonoid B) [IsLocalization M B'] :
@@ -141,6 +167,7 @@ theorem universal_first_order_thickening_localize_base
     {A B Aₘ Bₘ : Type u} [CommRing A] [CommRing B] [CommRing Aₘ] [CommRing Bₘ]
     [Algebra A B] [Algebra A Aₘ] [Algebra B Bₘ] [Algebra A Bₘ]
     [Algebra Aₘ Bₘ] [IsScalarTower A Aₘ Bₘ] [IsScalarTower A B Bₘ]
+    (hAB : Algebra.FormallyUnramified A B)
     (M : Submonoid A) [IsLocalization M Aₘ]
     [IsLocalization (M.map (algebraMap A B)) Bₘ]
     (P : Algebra.Extension.{u} A B)
@@ -155,6 +182,36 @@ theorem universal_first_order_thickening_localize_base
 
 /-! ## Differentials -/
 
+/-- The canonical differential map in the final lemma of the source section.
+
+It is the base change to `B` of the Kähler differential map induced by
+`A → P.Ring`, with codomain
+`B ⊗[P.Ring] Ω[P.Ring⁄R]`.  This is deliberately not `P.CotangentSpace`,
+which uses differentials relative to `A`.
+-/
+noncomputable def differentialComparisonMap
+    {R A B : Type u} [CommRing R] [CommRing A] [CommRing B]
+    [Algebra R A] [Algebra R B] [Algebra A B] [IsScalarTower R A B]
+    (P : Algebra.Extension.{u} A B) :
+    B ⊗[A] KaehlerDifferential R A →ₗ[B]
+      B ⊗[P.Ring] KaehlerDifferential R P.Ring :=
+  let q : KaehlerDifferential R P.Ring →ₗ[A]
+      B ⊗[P.Ring] KaehlerDifferential R P.Ring :=
+    by
+      exact (TensorProduct.mk P.Ring B (KaehlerDifferential R P.Ring) 1).restrictScalars A
+  LinearMap.liftBaseChange B (q ∘ₗ KaehlerDifferential.map R R A P.Ring)
+
+/-- The canonical differential map is an isomorphism for the universal
+first-order thickening. -/
+theorem differentialComparisonMap_bijective
+    {R A B : Type u} [CommRing R] [CommRing A] [CommRing B]
+    [Algebra R A] [Algebra R B] [Algebra A B] [IsScalarTower R A B]
+    (hAB : Algebra.FormallyUnramified A B)
+    (P : Algebra.Extension.{u} A B)
+    (hP : IsUniversalFirstOrderThickening P) :
+    Function.Bijective (differentialComparisonMap (R := R) (A := A) (B := B) P) := by
+  sorry
+
 /-- The universal thickening remains formally unramified over the base. -/
 theorem universal_first_order_thickening_formallyUnramified
     {A B : Type u} [CommRing A] [CommRing B] [Algebra A B]
@@ -167,7 +224,7 @@ theorem universal_first_order_thickening_formallyUnramified
 
 The displayed equivalence is the source's canonical map
 `Ω[A/R] ⊗[A] B → Ω[P.Ring/R] ⊗[P.Ring] B`, with the target written as
-Mathlib's `P.CotangentSpace`.
+the explicit base-changed differential module.
 -/
 theorem differentials_universal_first_order_thickening
     {R A B : Type u} [CommRing R] [CommRing A] [CommRing B]
@@ -177,8 +234,11 @@ theorem differentials_universal_first_order_thickening
     (hP : IsUniversalFirstOrderThickening P) :
     Algebra.FormallyUnramified A P.Ring ∧
       Nonempty
-        (B ⊗[A] KaehlerDifferential R A ≃ₗ[B] P.CotangentSpace) := by
-  sorry
+        (B ⊗[A] KaehlerDifferential R A ≃ₗ[B]
+          B ⊗[P.Ring] KaehlerDifferential R P.Ring) := by
+  exact ⟨universal_first_order_thickening_formallyUnramified P hP,
+    ⟨LinearEquiv.ofBijective (differentialComparisonMap (R := R) (A := A) (B := B) P)
+      (differentialComparisonMap_bijective (R := R) (A := A) (B := B) hAB P hP)⟩⟩
 
 end
 

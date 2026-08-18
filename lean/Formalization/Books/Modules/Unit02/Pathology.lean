@@ -61,7 +61,33 @@ source's assertion that the module category has only the zero object. -/
 theorem zeroRingedSpace_module_category_isZero
     (X : TopCat.{v}) (F : Mod (zeroRingedSpace X).structureSheaf) :
     IsZero F := by
-  sorry
+  rw [IsZero.iff_id_eq_zero]
+  apply SheafOfModules.hom_ext
+  apply PresheafOfModules.hom_ext
+  intro U
+  have hT : IsTerminal ((zeroRingedSpace X).structureSheaf.obj.obj U) :=
+    terminalIsTerminal
+  have hp : (0 : PUnit) = 1 := Subsingleton.elim _ _
+  have h01 : (0 : (zeroRingedSpace X).structureSheaf.obj.obj U) = 1 := by
+    let f := (hT.from (RingCat.of PUnit)).hom
+    calc
+      (0 : (zeroRingedSpace X).structureSheaf.obj.obj U) = f 0 := f.map_zero.symm
+      _ = f 1 := congrArg f hp
+      _ = 1 := f.map_one
+  have hmodule : Subsingleton (F.val.obj U) := by
+    refine ⟨fun s t => ?_⟩
+    calc
+      s = (1 : (zeroRingedSpace X).structureSheaf.obj.obj U) • s :=
+        (one_smul _ _).symm
+      _ = (0 : (zeroRingedSpace X).structureSheaf.obj.obj U) • s := by rw [h01]
+      _ = 0 := zero_smul _ _
+      _ = (0 : (zeroRingedSpace X).structureSheaf.obj.obj U) • t :=
+        (zero_smul _ _).symm
+      _ = (1 : (zeroRingedSpace X).structureSheaf.obj.obj U) • t := by rw [h01]
+      _ = t := one_smul _ _
+  exact ModuleCat.hom_ext (by
+    ext s
+    exact hmodule.elim _ _)
 
 /-! ## The locally ringed-space warning -/
 

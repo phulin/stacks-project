@@ -1,7 +1,13 @@
 import Formalization.Books.Fields.Unit21.GaloisTheory
+import Mathlib.Algebra.CharP.Lemmas
 import Mathlib.Data.ZMod.Basic
+import Mathlib.FieldTheory.Finite.Basic
+import Mathlib.FieldTheory.Galois.NormalBasis
 import Mathlib.FieldTheory.IntermediateField.Adjoin.Basic
+import Mathlib.FieldTheory.SeparableDegree
+import Mathlib.GroupTheory.Coset.Card
 import Mathlib.GroupTheory.SpecificGroups.Cyclic
+import Mathlib.RingTheory.Trace.Basic
 
 /-!
 # Fields, Chapter 25: Artin–Schreier extensions
@@ -14,6 +20,8 @@ written with `ZMod.cast`.
 -/
 
 namespace Formalization.Books.Fields.Unit25
+
+open Polynomial
 
 noncomputable section
 
@@ -37,7 +45,79 @@ theorem artin_schreier_extension_is_galois
     (hroot : b ^ p - b = algebraMap K L a)
     (hgen : IntermediateField.adjoin K ({b} : Set L) = ⊤) :
     IsGalois K L := by
-  sorry
+  letI : Fact p.Prime := ⟨CharP.char_prime_of_ne_zero K hp.ne'⟩
+  letI : CharP L p := CharP.of_ringHom_of_ne_zero (algebraMap K L) p hp.ne_zero
+  have hsplit_zero : (X ^ p - X : L[X]).Splits := by
+    have hK : (X ^ p - X : K[X]).Splits := by
+      convert (Subfield.splits_bot K p).map (Subfield.subtype (⊥ : Subfield K)) using 1 <;>
+        simp
+    convert hK.map (algebraMap K L) using 1 <;> simp
+  have hsplit : (X ^ p - X - C (algebraMap K L a) : L[X]).Splits := by
+    have ht := hsplit_zero.taylor (-b)
+    have heq :
+        taylor (-b) (X ^ p - X : L[X]) = X ^ p - X - C (algebraMap K L a) := by
+      rw [taylor_apply]
+      simp only [sub_comp, pow_comp, X_comp, C_comp, C_neg, ← sub_eq_add_neg]
+      rw [sub_pow_char]
+      rw [← map_pow]
+      calc
+        X ^ p - C (b ^ p) - (X - C b) = X ^ p - X - (C (b ^ p) - C b) := by
+          ring
+        _ = X ^ p - X - C (b ^ p - b) := by rw [map_sub]
+        _ = X ^ p - X - C (algebraMap K L a) := by rw [hroot]
+    rw [heq] at ht
+    exact ht
+  have hroot_aeval :
+      aeval b (X ^ p - X - C a : K[X]) = 0 := by
+    simp only [aeval_sub, aeval_X_pow, aeval_X, aeval_C, hroot, sub_self]
+  have hfmonic : (X ^ p - X - C a : K[X]).Monic := by
+    have h := monic_X_pow_sub (p := X + C a) (n := p) (by
+      rw [degree_X_add_C]
+      simpa using (Fact.out : Nat.Prime p).one_lt)
+    rw [show X ^ p - X - C a = X ^ p - (X + C a) by ring]
+    exact h
+  have hbint : IsIntegral K b := by
+    refine ⟨X ^ p - X - C a, ?_, hroot_aeval⟩
+    exact hfmonic
+  have hminpoly : ((minpoly K b).map (algebraMap K L)).Splits := by
+    apply hsplit.of_dvd
+    · have hmonicL :
+          (X ^ p - X - C (algebraMap K L a) : L[X]).Monic := by
+        convert hfmonic.map (algebraMap K L) using 1 <;> simp
+      exact hmonicL.ne_zero
+    convert Polynomial.map_dvd (algebraMap K L)
+      (minpoly.dvd K b hroot_aeval) using 1 <;> simp
+  have hseparable_b : IsSeparable K b := by
+    change (minpoly K b).Separable
+    have hfsep : (X ^ p - X - C a : K[X]).Separable := (separable_def' _).mpr (by
+      refine ⟨0, -1, ?_⟩
+      rw [derivative_sub, derivative_sub, derivative_X_pow, derivative_X, derivative_C]
+      simp only [Nat.cast_eq_zero, CharP.cast_eq_zero, zero_sub, sub_zero]
+      simp)
+    apply Polynomial.Separable.of_dvd hfsep
+    exact minpoly.dvd K b hroot_aeval
+  letI : Algebra.IsAlgebraic K (⊤ : IntermediateField K L) := by
+    rw [← hgen]
+    exact IntermediateField.isAlgebraic_adjoin (S := ({b} : Set L))
+      (fun x hx ↦ by simpa only [Set.mem_singleton_iff] using hx ▸ hbint)
+  letI : Algebra.IsAlgebraic K L :=
+    (IntermediateField.topEquiv (F := K) (E := L)).isAlgebraic
+  apply isGalois_iff.mpr
+  constructor
+  · rw [← IntermediateField.isSeparable_top K L, ← hgen,
+      IntermediateField.isSeparable_adjoin_iff_isSeparable]
+    intro x hx
+    simpa only [Set.mem_singleton_iff] using hx ▸ hseparable_b
+  · apply normal_iff.mpr
+    intro x
+    refine ⟨?_, ?_⟩
+    · exact Algebra.IsIntegral.isIntegral x
+    · have hx : x ∈ IntermediateField.adjoin K ({b} : Set L) := by
+        rw [hgen]
+        exact IntermediateField.mem_top
+      exact IntermediateField.splits_of_mem_adjoin K L
+        (fun y hy ↦ by
+          simpa only [Set.mem_singleton_iff] using hy ▸ ⟨hbint, hminpoly⟩) hx
 
 /- The source identifies the roots of `x^p - x = 0` with `ℤ/pℤ`.  Lean keeps
    that identification explicit: the group homomorphism has codomain
@@ -55,7 +135,92 @@ theorem artin_schreier_galois_group_map
         ∀ σ : Gal(L / K),
           algebraMap K L (ZMod.cast (Multiplicative.toAdd (φ σ)) : K) =
             artinSchreierDifference b σ := by
-  sorry
+  classical
+  letI : Fact p.Prime := ⟨CharP.char_prime_of_ne_zero K hp.ne'⟩
+  letI : CharP L p := CharP.of_ringHom_of_ne_zero (algebraMap K L) p hp.ne_zero
+  have hroot_image (σ : Gal(L / K)) :
+      (σ b) ^ p - σ b = algebraMap K L a := by
+    have h := congrArg σ hroot
+    simpa only [map_sub, map_pow, σ.commutes] using h
+  have hdiff_pow (σ : Gal(L / K)) :
+      (artinSchreierDifference b σ) ^ p = artinSchreierDifference b σ := by
+    dsimp [artinSchreierDifference]
+    rw [sub_pow_char]
+    calc
+      (σ b) ^ p - b ^ p =
+          (((σ b) ^ p - σ b) - (b ^ p - b)) + (σ b - b) := by
+        simp only [sub_eq_add_neg]
+        abel
+      _ = 0 + (σ b - b) := by rw [hroot_image σ, hroot]; ring
+      _ = σ b - b := by simp
+  have hcast (σ : Gal(L / K)) : ∃ z : ZMod p,
+      algebraMap K L (ZMod.cast z : K) = artinSchreierDifference b σ := by
+    have hmem : artinSchreierDifference b σ ∈ (⊥ : Subfield L) :=
+      (Subfield.mem_bot_iff_pow_eq_self L p).2 (hdiff_pow σ)
+    obtain ⟨n, hn⟩ := (mem_bot_iff_intCast p L).mp hmem
+    refine ⟨n, ?_⟩
+    rw [ZMod.cast_intCast']
+    simpa [← hn]
+  choose z hz using hcast
+  have hdiff_mul (σ τ : Gal(L / K)) :
+      artinSchreierDifference b (σ * τ) =
+        artinSchreierDifference b σ + artinSchreierDifference b τ := by
+    dsimp [artinSchreierDifference]
+    calc
+      (σ * τ) b - b = σ (τ b) - b := by rfl
+      _ = (σ (τ b) - σ b) + (σ b - b) := by ring
+      _ = σ (τ b - b) + (σ b - b) := by rw [map_sub]
+      _ = σ (artinSchreierDifference b τ) + (σ b - b) := by rfl
+      _ = artinSchreierDifference b τ + (σ b - b) := by rw [← hz τ]; simp
+      _ = (τ b - b) + (σ b - b) := by rfl
+      _ = (σ b - b) + (τ b - b) := by ring
+  let φ : Gal(L / K) →* Multiplicative (ZMod p) :=
+    { toFun := fun σ ↦ Multiplicative.ofAdd (z σ)
+      map_one' := by
+        change z 1 = 0
+        apply ZMod.castHom_injective K
+        apply (algebraMap K L).injective
+        simpa [hz (1 : Gal(L / K)), artinSchreierDifference]
+      map_mul' := by
+        intro σ τ
+        change z (σ * τ) = z σ + z τ
+        apply ZMod.castHom_injective K
+        apply (algebraMap K L).injective
+        change algebraMap K L (ZMod.cast (z (σ * τ)) : K) =
+          algebraMap K L (ZMod.cast (z σ + z τ) : K)
+        rw [ZMod.cast_add']
+        rw [map_add, hz (σ * τ), hz σ, hz τ, hdiff_mul] }
+  have hinj : Function.Injective φ := by
+    intro σ τ hστ
+    have hzt : z σ = z τ := by
+      simpa [φ] using congrArg Multiplicative.toAdd hστ
+    have hdiff_eq : artinSchreierDifference b σ = artinSchreierDifference b τ := by
+      rw [← hz σ, ← hz τ, hzt]
+    have hσb : σ b = τ b := by
+      apply sub_eq_zero.mp
+      calc
+        σ b - τ b = (σ b - b) - (τ b - b) := by ring
+        _ = 0 := sub_eq_zero.mpr hdiff_eq
+    apply AlgEquiv.ext
+    intro x
+    have hx : x ∈ IntermediateField.adjoin K ({b} : Set L) := by
+      rw [hgen]
+      exact IntermediateField.mem_top
+    refine IntermediateField.adjoin_induction K
+      (mem := ?_) (algebraMap := ?_) (add := ?_) (inv := ?_) (mul := ?_) hx
+    · intro y hy
+      simpa only [Set.mem_singleton_iff] using hy ▸ hσb
+    · intro c
+      simp
+    · intro x y hx hy hxy hxy'
+      simpa only [map_add] using congrArg₂ (· + ·) hxy hxy'
+    · intro x hx hxy
+      simpa only [map_inv₀] using congrArg Inv.inv hxy
+    · intro x y hx hy hxy hxy'
+      simpa only [map_mul] using congrArg₂ (· * ·) hxy hxy'
+  refine ⟨φ, hinj, ?_⟩
+  intro σ
+  simpa [φ] using hz σ
 
 /- The preceding injection realizes the Galois group as a subgroup of the
    cyclic additive group `ZMod p`; this is the source's stated consequence. -/
@@ -66,7 +231,12 @@ theorem artin_schreier_galois_group_is_cyclic
     (hroot : b ^ p - b = algebraMap K L a)
     (hgen : IntermediateField.adjoin K ({b} : Set L) = ⊤) :
     IsCyclic (Gal(L / K)) ∧ Nat.card (Gal(L / K)) ∣ p := by
-  sorry
+  obtain ⟨φ, hφ, _⟩ := artin_schreier_galois_group_map p hp a b hroot hgen
+  constructor
+  · exact isCyclic_of_injective φ hφ
+  · have hcard : Nat.card (Multiplicative (ZMod p)) = p := by
+      rw [Nat.card_congr Multiplicative.toAdd, Nat.card_zmod]
+    simpa [hcard] using Subgroup.card_dvd_of_injective φ hφ
 
 /- In the converse, “the Galois group is `ℤ/pℤ`” means a group equivalence
    with the multiplicative wrapper of the additive group `ZMod p`. -/
@@ -79,7 +249,157 @@ theorem exists_artin_schreier_generator
     ∃ z : L,
       IntermediateField.adjoin K ({z} : Set L) = ⊤ ∧
         ∃ a : K, z ^ p - z = algebraMap K L a := by
-  sorry
+  classical
+  obtain ⟨e⟩ := hG
+  letI : Fact p.Prime := ⟨CharP.char_prime_of_ne_zero K hp.ne'⟩
+  letI : NeZero p := ⟨hp.ne'⟩
+  letI : Finite (Multiplicative (ZMod p)) :=
+    Finite.of_injective Multiplicative.ofAdd Multiplicative.ofAdd.injective
+  letI : Finite (Gal(L / K)) := Finite.of_injective e e.injective
+  letI : FiniteDimensional K L := IsGalois.finiteDimensional_of_finite K L
+  letI : Fintype (Gal(L / K)) := AlgEquiv.fintype K L
+  letI : CharP L p := CharP.of_ringHom_of_ne_zero (algebraMap K L) p hp.ne_zero
+  have hcard : Nat.card (Multiplicative (ZMod p)) = p := by
+    rw [Nat.card_congr Multiplicative.toAdd, Nat.card_zmod]
+  have hfinrank : Module.finrank K L = p := by
+    rw [← IsGalois.card_aut_eq_finrank K L]
+    rw [Nat.card_congr e.toEquiv, hcard]
+  have hprime_finrank : Nat.Prime (Module.finrank K L) := hfinrank.symm ▸ Fact.out
+  let gfun : ZMod p → Gal(L / K) :=
+    fun i ↦ e.symm (Multiplicative.ofAdd i)
+  have hgfun_inj : Function.Injective gfun := by
+    intro i j hij
+    apply Multiplicative.ofAdd.injective
+    exact e.symm.injective hij
+  have hgfun_surj : Function.Surjective gfun := by
+    intro σ
+    refine ⟨Multiplicative.toAdd (e σ), ?_⟩
+    simp [gfun]
+  let gfunEquiv : ZMod p ≃ Gal(L / K) := Equiv.ofBijective gfun
+    ⟨hgfun_inj, hgfun_surj⟩
+  have hgfun_add (i j : ZMod p) : gfun (i + j) = gfun i * gfun j := by
+    dsimp [gfun]
+    rw [← e.symm.map_mul]
+  let x : L := IsGalois.normalBasis K L 1
+  have hlin : LinearIndependent K (fun σ : Gal(L / K) ↦ σ x) := by
+    change LinearIndependent K
+      (fun σ : Gal(L / K) ↦ σ (IsGalois.normalBasis K L 1))
+    have heq : (IsGalois.normalBasis K L : Gal(L / K) → L) =
+        (fun σ : Gal(L / K) ↦ σ (IsGalois.normalBasis K L 1)) := by
+      funext σ
+      exact IsGalois.normalBasis_apply σ
+    rw [← heq]
+    exact (IsGalois.normalBasis K L).linearIndependent
+  let v : ZMod p → L := fun i ↦ gfun i x
+  have hvlin : LinearIndependent K v := by
+    simpa [v, Function.comp_def] using hlin.comp gfun hgfun_inj
+  let T : L := ∑ i : ZMod p, v i
+  let w : L := ∑ i : ZMod p, (ZMod.cast i : K) • v i
+  have hT_ne : T ≠ 0 := by
+    intro hT
+    have hzero := (Fintype.linearIndependent_iff.mp hvlin (fun _ ↦ (1 : K)))
+      (by simpa [T] using hT)
+    simpa using hzero 0
+  have hT_trace : algebraMap K L (Algebra.trace K L x) = T := by
+    rw [trace_eq_sum_automorphisms]
+    symm
+    simpa [T] using Fintype.sum_equiv gfunEquiv (fun i ↦ v i)
+      (fun σ : Gal(L / K) ↦ σ x) (fun i ↦ rfl)
+  have htrace_ne : Algebra.trace K L x ≠ 0 := by
+    intro htrace
+    apply hT_ne
+    rw [← hT_trace, htrace, map_zero]
+  let g : Gal(L / K) := gfun 1
+  have hgv (i : ZMod p) : g (v i) = v (1 + i) := by
+    change (gfun 1 * gfun i) x = (gfun (1 + i)) x
+    rw [hgfun_add]
+  have hgw : g w - w = -T := by
+    have hgw' : g w = ∑ i : ZMod p, (ZMod.cast i : K) • v (1 + i) := by
+      simp only [w, map_sum, map_smul, hgv]
+    have hshift :
+        (∑ i : ZMod p, (ZMod.cast i : K) • v (1 + i)) =
+          ∑ i : ZMod p, ((ZMod.cast i : K) - 1) • v i := by
+      rw [Fintype.sum_equiv (Equiv.addLeft (1 : ZMod p))]
+      intro i
+      change (ZMod.cast i : K) • v (1 + i) =
+        ((ZMod.cast (1 + i) : K) - 1) • v (1 + i)
+      rw [ZMod.cast_add']
+      simp [add_comm]
+    rw [hgw', hshift, ← Finset.sum_sub_distrib]
+    simp [T, w, sub_smul]
+  let z : L := -(Algebra.trace K L x)⁻¹ • w
+  have hz_shift : g z = z + 1 := by
+    dsimp [z]
+    calc
+      g (-(Algebra.trace K L x)⁻¹ • w) =
+          -(Algebra.trace K L x)⁻¹ • g w := by simp
+      _ = -(Algebra.trace K L x)⁻¹ • (w - T) := by
+        have hgw_eq : g w = w - T := by linear_combination hgw
+        rw [hgw_eq]
+      _ = -(Algebra.trace K L x)⁻¹ • w + 1 := by
+        rw [← hT_trace]
+        have htrace_map_ne : algebraMap K L (Algebra.trace K L x) ≠ 0 :=
+          (map_ne_zero (algebraMap K L)).mpr htrace_ne
+        rw [smul_sub]
+        have hone : -(Algebra.trace K L x)⁻¹ •
+            algebraMap K L (Algebra.trace K L x) = (-1 : L) := by
+          simp [Algebra.smul_def, htrace_ne, htrace_map_ne]
+        rw [hone]
+        ring
+  have hδ : g (z ^ p - z) = z ^ p - z := by
+    dsimp [z]
+    rw [map_sub, map_pow]
+    rw [hz_shift, add_pow_char, one_pow]
+    ring
+  have hg_gen : ∀ σ : Gal(L / K), ∃ n : ℤ, g ^ n = σ := by
+    intro σ
+    obtain ⟨n, hn⟩ := ZMod.intCast_surjective (Multiplicative.toAdd (e σ))
+    refine ⟨n, ?_⟩
+    apply e.injective
+    apply Multiplicative.toAdd.injective
+    simpa [g, gfun, hn]
+  let H : Subgroup (Gal(L / K)) :=
+    { carrier := {σ | σ (z ^ p - z) = z ^ p - z}
+      one_mem' := by simp
+      mul_mem' := by
+        intro σ τ hσ hτ
+        simp only [Set.mem_setOf_eq] at hσ hτ ⊢
+        change σ (τ (z ^ p - z)) = z ^ p - z
+        rw [hτ, hσ]
+      inv_mem' := by
+        intro σ hσ
+        simp only [Set.mem_setOf_eq] at hσ ⊢
+        apply σ.injective
+        simp [hσ] }
+  have hgH : g ∈ H := hδ
+  have hHtop : H = ⊤ := by
+    apply top_unique
+    intro σ hσ
+    obtain ⟨n, rfl⟩ := hg_gen σ
+    exact H.zpow_mem hgH n
+  have hδ_fixed (σ : Gal(L / K)) : σ (z ^ p - z) = z ^ p - z := by
+    have : σ ∈ H := by simpa [hHtop]
+    exact this
+  have hδ_bot : z ^ p - z ∈ (⊥ : IntermediateField K L) := by
+    rw [← IsGalois.fixedField_top]
+    rw [IntermediateField.mem_fixedField_iff]
+    intro σ hσ
+    exact hδ_fixed σ
+  have hz_not_bot : z ∉ (⊥ : IntermediateField K L) := by
+    intro hzbot
+    obtain ⟨c, hc⟩ := IntermediateField.mem_bot.mp hzbot
+    have : g z = z := by rw [← hc]; exact g.commutes c
+    have hshift : z + 1 = z := by rw [← hz_shift]; exact this
+    have hone : (1 : L) = 0 := by
+      exact add_left_cancel (a := z) (by simpa using hshift)
+    exact one_ne_zero hone
+  have hsimple : IsSimpleOrder (IntermediateField K L) :=
+    IntermediateField.isSimpleOrder_of_finrank_prime K L hprime_finrank
+  have hzgen : IntermediateField.adjoin K ({z} : Set L) = ⊤ := by
+    exact (hsimple.eq_bot_or_eq_top (IntermediateField.adjoin K ({z} : Set L))).resolve_left
+      (by intro hzbot; exact hz_not_bot (hzbot ▸ IntermediateField.mem_adjoin_simple_self K z))
+  obtain ⟨a, ha⟩ := IntermediateField.mem_bot.mp hδ_bot
+  refine ⟨z, hzgen, a, ha.symm⟩
 
 end
 

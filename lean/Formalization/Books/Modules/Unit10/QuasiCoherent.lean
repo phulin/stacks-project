@@ -1,4 +1,5 @@
 import Formalization.Books.Modules.Unit08.LocallyGenerated
+import Formalization.Books.Sheaves.Unit22.RingedSpaces
 import Mathlib.Algebra.Category.ModuleCat.Sheaf.Quasicoherent
 import Mathlib.CategoryTheory.Sites.GlobalSections
 
@@ -767,30 +768,51 @@ def NotLocallyFiniteLinearCombination {X : RingedSpace.{v}}
 
 /-- Data of the countable wedge example in the source. -/
 structure WedgeOfLinesExample where
-  X : RingedSpace.{v}
+  X : RingedSpace.{0}
+  /-- The structure sheaf in the example is the sheaf of continuous
+  real-valued functions. -/
+  structureSheaf_is_continuousReal :
+    X.structureSheaf =
+      Formalization.Books.Sheaves.Unit22.realContinuousFunctionRingSheaf X.carrier
   origin : X
   neighbourhood : ℕ → Opens X.carrier
   origin_mem_neighbourhood : ∀ n, origin ∈ neighbourhood n
   neighbourhood_basis : ∀ U : Opens X.carrier, origin ∈ U →
     ∃ n, neighbourhood n ≤ U
+  /-- The branches are the countably many copies of the real line glued at
+  their common origin. -/
+  line : ULift.{0} ℕ → ℝ → X
+  line_continuous : ∀ i, Continuous (line i)
+  line_cover : ∀ x, ∃ i t, line i t = x
+  line_eq_iff : ∀ i j s t, line i s = line j t ↔
+    (i = j ∧ s = t) ∨ (s = 0 ∧ t = 0)
   branches : ℕ → Set X.carrier
+  branch_eq_range : ∀ i, branches i = Set.range (line (ULift.up i))
   branches_cover : ⋃ i, branches i = Set.univ
   branches_meet_only_at_origin : ∀ i j, i ≠ j →
     branches i ∩ branches j ⊆ {origin}
+  /-- We index the source's neighbourhoods from `1` to avoid the
+  meaningless expression `1 / 0` at index zero. -/
+  neighbourhood_inter_branch : ∀ n i,
+    (neighbourhood (n + 1) : Set X.carrier) ∩ branches i =
+      line (ULift.up i) ''
+        Set.Ioo (-(1 : ℝ) / ((n + 1 : ℕ) : ℝ))
+          ((1 : ℝ) / ((n + 1 : ℕ) : ℝ))
   cutoff : CutoffFunction
   coordinate : X → ℝ
   coefficients : ℕ → ℕ → X → ℝ
+  coefficient_continuous : ∀ j i, Continuous (coefficients j i)
   coefficient_formula : ∀ j i x,
     coefficients j i x =
       scaledCutoff cutoff j (coordinate x) * branchIndicator (branches i) origin x
   locallyFinite : LocallyFiniteBranchCoefficients coefficients
-  map : (SheafOfModules.free CountableIndex : Mod X.structureSheaf) ⟶
-    (SheafOfModules.free CountablePairIndex : Mod X.structureSheaf)
+  map : (SheafOfModules.free (ULift.{0} ℕ) : Mod X.structureSheaf) ⟶
+    (SheafOfModules.free (ULift.{0} (ℕ × ℕ)) : Mod X.structureSheaf)
   coefficientSections : ℕ →
-    (SheafOfModules.free CountablePairIndex : Mod X.structureSheaf).sections
+    (SheafOfModules.free (ULift.{0} (ℕ × ℕ)) : Mod X.structureSheaf).sections
   map_on_generators : ∀ j,
     (SheafOfModules.freeHomEquiv
-      (SheafOfModules.free CountablePairIndex : Mod X.structureSheaf) map)
+      (SheafOfModules.free (ULift.{0} (ℕ × ℕ)) : Mod X.structureSheaf) map)
         (ULift.up j) = coefficientSections j
   no_local_matrix : NotLocallyFiniteLinearCombination map neighbourhood
 

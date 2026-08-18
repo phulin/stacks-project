@@ -103,7 +103,7 @@ theorem flat_iff_surjective_hom
 structure DirectedFreeFiniteSystem
     {R : Type u} {M : Type v} [CommRing R]
     [AddCommGroup M] [Module R M] where
-  index : Type v
+  index : Type (max u v)
   [indexPreorder : Preorder index]
   [indexNonempty : Nonempty index]
   [indexDirected : IsDirectedOrder index]

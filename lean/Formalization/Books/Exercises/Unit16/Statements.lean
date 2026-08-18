@@ -480,11 +480,20 @@ noncomputable def matrixProductComponentCorrespondence :
       (irreducibleComponents matrixProductClosedSet)ᵒᵈ := by
   exact Ideal.minimalPrimes.equivIrreducibleComponents matrixProductIdeal
 
-/-- The three irreducible components of `V(XY)`, represented by their prime
-ideals of equations. -/
+/-- The three irreducible components of `V(XY)`, represented by their defining
+ideals.  The component statement does not require separate prime-ideal
+instances for the displayed equations. -/
 theorem matrix_product_irreducible_components :
-    matrixProductIdeal.minimalPrimes =
-      {matrixXZeroIdeal, matrixYZeroIdeal, matrixProductMiddleIdeal} := by
+    irreducibleComponents matrixProductClosedSet =
+      {{p : matrixProductClosedSet |
+          (p : PrimeSpectrum matrixProductRing) ∈
+            PrimeSpectrum.zeroLocus (matrixXZeroIdeal : Set matrixProductRing)},
+        {p : matrixProductClosedSet |
+          (p : PrimeSpectrum matrixProductRing) ∈
+            PrimeSpectrum.zeroLocus (matrixYZeroIdeal : Set matrixProductRing)},
+        {p : matrixProductClosedSet |
+          (p : PrimeSpectrum matrixProductRing) ∈
+            PrimeSpectrum.zeroLocus (matrixProductMiddleIdeal : Set matrixProductRing)}} := by
   sorry
 
 end Formalization.Books.Exercises.Unit16

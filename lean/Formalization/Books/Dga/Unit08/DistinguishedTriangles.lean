@@ -146,17 +146,34 @@ noncomputable def dgmAssociatedTriangle
     (hS : DgmAdmissibleShortExactSequence S) : DgmTriangle (A := A) :=
   dgmAssociatedTriangleWithData hS (dgmAdmissibleConnectingData hS)
 
+/-- The connecting maps obtained from two choices in the admissible
+short-exact-sequence construction are homotopic.  This is the map-level
+assertion used to identify the two associated triangles in the homotopy
+category. -/
+theorem dgmConnectingMap_homotopic_of_choices
+    {R : Type u} [CommRing R]
+    {A : DifferentialGradedAlgebra R}
+    {S : ShortComplex (DifferentialGradedModuleCategory A)}
+    (hS : DgmAdmissibleShortExactSequence S)
+    (c c' : DgmAdmissibleConnectingData hS) :
+    DifferentialGradedModuleHomotopic c.connecting.map c'.connecting.map := by
+  sorry
+
 /-- Changing the splittings in the connecting-map construction changes the
-associated triangle only by an isomorphism in the homotopy category. -/
+associated triangle by the canonical isomorphism whose three component maps
+are identities on `S.X₁`, `S.X₂`, and `S.X₃`. -/
 theorem dgmAssociatedTriangle_independent_of_splittings
     {R : Type u} [CommRing R]
     {A : DifferentialGradedAlgebra R}
     {S : ShortComplex (DifferentialGradedModuleCategory A)}
     (hS : DgmAdmissibleShortExactSequence S)
     (c c' : DgmAdmissibleConnectingData hS) :
-    DgmTriangleIsomorphic
-      (dgmAssociatedTriangleWithData hS c)
-      (dgmAssociatedTriangleWithData hS c') := by
+    ∃ e : DgmTriangleIsomorphism
+        (dgmAssociatedTriangleWithData hS c)
+        (dgmAssociatedTriangleWithData hS c'),
+      e.e₁ = (𝟙 S.X₁ : DifferentialGradedModuleHom S.X₁ S.X₁) ∧
+      e.e₂ = (𝟙 S.X₂ : DifferentialGradedModuleHom S.X₂ S.X₂) ∧
+      e.e₃ = (𝟙 S.X₃ : DifferentialGradedModuleHom S.X₃ S.X₃) := by
   sorry
 
 /-! ## Distinguished triangles -/

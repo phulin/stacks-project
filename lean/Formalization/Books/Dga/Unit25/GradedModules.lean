@@ -422,19 +422,6 @@ private theorem gradedRightModuleHomogeneousComp_add_right
     (g.1 sg) (f.1 sf m) + (g'.1 sg) (f.1 sf m)
   rw [LinearMap.add_apply]
 
-private theorem gradedRightModuleHomogeneous_linearMap_coe_heq
-    {α β γ δ : Type _}
-    [AddCommGroup α] [AddCommGroup β] [AddCommGroup γ] [AddCommGroup δ]
-    [Module R α] [Module R β] [Module R γ] [Module R δ]
-    (eα : α = β) (eγ : γ = δ)
-    (u : α →ₗ[R] γ) (v : β →ₗ[R] δ) (huv : HEq u v) :
-    HEq (u : α → γ) (v : β → δ) := by
-  cases eα
-  cases eγ
-  have huv' : u = v := eq_of_heq huv
-  cases huv'
-  rfl
-
 private theorem gradedRightModuleHomogeneousComp_id_left
     {K L : GradedRightModule (R := R) (A := A)} {j : ℤ}
     (f : GradedRightModuleHomogeneous K L j) :
@@ -513,9 +500,9 @@ private theorem gradedRightModuleHomogeneousComp_id_right
   have hfamily : ∀ {n m : ℤ} (h' : n = m)
       (u : GradedRightModuleHomogeneous K L n)
       (t : GradedDegreePair m),
-      HEq ((cast (congrArg (fun d => GradedRightModuleHomogeneous K L d)
-        h') u).1 t)
-        (u.1 (cast (congrArg (fun d => GradedDegreePair d) h'.symm) t)) := by
+      HEq (fun x => (cast (congrArg (fun d => GradedRightModuleHomogeneous K L d)
+        h') u).1 t x)
+        (fun x => u.1 (cast (congrArg (fun d => GradedDegreePair d) h'.symm) t) x) := by
     intro n m h' u t
     cases h'
     rfl
@@ -527,8 +514,8 @@ private theorem gradedRightModuleHomogeneousComp_id_right
   · rfl
   · intro x y hxy
     cases hxy
-    congr 1 <;> omega
-  · intro e h
+    congr 1; omega
+  · intro _ _
     have hsf :
         (⟨(-(0 - p), i - p), by omega⟩ : GradedDegreePair i) =
           cast (congrArg (fun d => GradedDegreePair d)
@@ -547,16 +534,12 @@ private theorem gradedRightModuleHomogeneousComp_id_right
         apply (Subtype.heq_iff_coe_heq rfl (heq_of_eq hp.symm)).2
         change HEq (-(0 - p), i - p) (p, i - p)
         apply heq_of_eq
-        change (-(0 - p), i - p) = (p, i - p)
         apply Prod.ext
         · simp only [zero_sub, neg_neg]
         · rfl
       exact hsub
     rw [← hsf] at hmap
-    exact gradedRightModuleHomogeneous_linearMap_coe_heq
-      (by congr 1 <;> simp only [zero_sub, neg_neg])
-      (by congr 1 <;> simp only [zero_sub, neg_neg])
-      _ _ hmap
+    exact hmap
 
 
 /-- The totalization specification for the graded module category. -/

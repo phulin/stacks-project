@@ -70,6 +70,15 @@ noncomputable def baseChangeRingSquare
         rw [← RingHom.algebraMap_toAlgebra f, ← RingHom.algebraMap_toAlgebra g]
         exact Algebra.TensorProduct.tmul_one_eq_one_tmul x }
 
+/-- The tensor product ring in the base-change square, with the algebra
+structures induced by the two displayed ring maps. -/
+noncomputable abbrev baseChangeTensor
+    {R A R' : Type u} [CommRing R] [CommRing A] [CommRing R']
+    (f : R →+* A) (g : R →+* R') : Type u :=
+  letI : Algebra R A := f.toAlgebra
+  letI : Algebra R R' := g.toAlgebra
+  A ⊗[R] R'
+
 /-- The derived base-change data attached to a ring square.
 
 The natural transformation is the source's functorial comparison map
@@ -182,31 +191,14 @@ theorem polynomialAtZero_not_torIndependent
 of `A` and `R'` makes the derived comparison map an isomorphism. -/
 theorem comparisonMap_isIso_of_torIndependent
     {R A R' : Type u} [CommRing R] [CommRing A] [CommRing R']
+    (f : R →+* A) (g : R →+* R')
     [HasDerivedCategory.{w} (ModuleCat.{u} R)]
     [HasDerivedCategory.{w} (ModuleCat.{u} A)]
     [HasDerivedCategory.{w} (ModuleCat.{u} R')]
-    [HasDerivedCategory.{w} (ModuleCat.{u} (A ⊗[R] R'))]
-    (f : R →+* A) (g : R →+* R')
-    (d : DerivedRingSquare (baseChangeRingSquare f g))
+    [HasDerivedCategory.{w} (ModuleCat.{u} (baseChangeTensor f g))]
     (hTor : TorIndependentVia f g)
     (K : Derived A) :
-    IsIso (comparisonMap d K) := by
-  sorry
-
-/-- For the base-change square, invertibility of the comparison map on the
-degree-zero object `A` forces the positive Tor groups of `A` and `R'` over
-`R` to vanish. -/
-theorem torIndependent_of_comparisonMap_isIso_on_base
-    {R A R' : Type u} [CommRing R] [CommRing A] [CommRing R']
-    [HasDerivedCategory.{w} (ModuleCat.{u} R)]
-    [HasDerivedCategory.{w} (ModuleCat.{u} A)]
-    [HasDerivedCategory.{w} (ModuleCat.{u} R')]
-    [HasDerivedCategory.{w} (ModuleCat.{u} (A ⊗[R] R'))]
-    (f : R →+* A) (g : R →+* R')
-    (d : DerivedRingSquare (baseChangeRingSquare f g))
-    (hcomp : IsIso (comparisonMap d
-      (moduleStalk A (ModuleCat.of A A)))) :
-    TorIndependentVia f g := by
+    IsIso (comparisonMap (derivedRingSquare (baseChangeRingSquare f g)) K) := by
   sorry
 
 /-- The square used in the polynomial-quotient counterexample. -/
@@ -252,6 +244,20 @@ structure TorTensorModule
     Nonempty ((ModuleCat.restrictScalars (tensorBaseMap R A B)).obj (object i) ≅
       Tor (ModuleCat.of R A) (ModuleCat.of R B) i)
 
+/-- Existence of the canonical tensor-product action on the Tor groups. -/
+theorem existsTorTensorModule
+    (R A B : Type u) [CommRing R] [CommRing A] [CommRing B]
+    [Algebra R A] [Algebra R B] :
+    Nonempty (TorTensorModule R A B) := by
+  sorry
+
+/-- A chosen model of all Tor groups carrying their canonical
+`A ⊗[R] B`-module structures. -/
+noncomputable def torTensorModule
+    (R A B : Type u) [CommRing R] [CommRing A] [CommRing B]
+    [Algebra R A] [Algebra R B] : TorTensorModule R A B :=
+  Classical.choice (existsTorTensorModule R A B)
+
 /-- The source's flat-base-change diagram, with its tensor-product maps. -/
 structure FlatBaseChangeSquare
     {R A B R' A' B' : Type u}
@@ -292,9 +298,10 @@ theorem tor_flat_baseChange
     (S : FlatBaseChangeSquare (R := R) (A := A) (B := B)
       (R' := R') (A' := A') (B' := B'))
     (hR : RingHom.Flat (algebraMap R R'))
-    (hA : RingHom.Flat S.aBase) (hB : RingHom.Flat S.bBase)
-    (T : TorTensorModule R A B) (T' : TorTensorModule R' A' B') (i : ℕ) :
-    Nonempty ((ModuleCat.extendScalars S.baseMap).obj (T.object i) ≅ T'.object i) := by
+    (hA : RingHom.Flat S.aBase) (hB : RingHom.Flat S.bBase) (i : ℕ) :
+    Nonempty ((ModuleCat.extendScalars S.baseMap).obj
+      ((torTensorModule R A B).object i) ≅
+      (torTensorModule R' A' B').object i) := by
   sorry
 
 /-- The canonical change-of-rings map supplied by the earlier Tor
@@ -347,6 +354,7 @@ noncomputable abbrev derivedCohomologyLeftObject
 noncomputable abbrev derivedCohomologySourceObject
     {R A B : Type u} [CommRing R] [CommRing A] [CommRing B]
     [Algebra R A] [Algebra R B]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)]
     [HasDerivedCategory.{w} (ModuleCat.{u} A)]
     [HasDerivedCategory.{w} (ModuleCat.{u} B)] (M : Derived A) : Derived B :=
   (derivedBaseChangeFunctor (algebraMap R B)).obj
@@ -361,6 +369,8 @@ structure DerivedCohomologyBaseChange
     [CommRing R] [CommRing A] [CommRing B] [CommRing R'] [CommRing A'] [CommRing B']
     [Algebra R A] [Algebra R B] [Algebra R R']
     [Algebra R' A'] [Algebra R' B']
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R')]
     [HasDerivedCategory.{w} (ModuleCat.{u} A)]
     [HasDerivedCategory.{w} (ModuleCat.{u} B)]
     [HasDerivedCategory.{w} (ModuleCat.{u} A')]
@@ -390,6 +400,8 @@ theorem derivedCohomology_flat_baseChange
     [CommRing R] [CommRing A] [CommRing B] [CommRing R'] [CommRing A'] [CommRing B']
     [Algebra R A] [Algebra R B] [Algebra R R']
     [Algebra R' A'] [Algebra R' B']
+    [HasDerivedCategory.{w} (ModuleCat.{u} R)]
+    [HasDerivedCategory.{w} (ModuleCat.{u} R')]
     [HasDerivedCategory.{w} (ModuleCat.{u} A)]
     [HasDerivedCategory.{w} (ModuleCat.{u} B)]
     [HasDerivedCategory.{w} (ModuleCat.{u} A')]
@@ -422,16 +434,20 @@ noncomputable def rToAp
     {R A B : Type u} [CommRing R] [CommRing A] [CommRing B]
     [Algebra R A] [Algebra R B] (P : LocalPrimePair R A B) :
     Localization.AtPrime P.r.asIdeal →+* Localization.AtPrime P.p.asIdeal :=
-  Localization.localRingHom P.r.asIdeal P.p.asIdeal (algebraMap R A)
-    (congrArg PrimeSpectrum.asIdeal P.pOver).symm
+  let h : P.r.asIdeal = P.p.asIdeal.comap (algebraMap R A) := by
+    simpa [PrimeSpectrum.comap_asIdeal] using
+      (congrArg PrimeSpectrum.asIdeal P.pOver).symm
+  Localization.localRingHom P.r.asIdeal P.p.asIdeal (algebraMap R A) h
 
 /-- The canonical local-ring map induced by `R → B` at a pair of primes over one another. -/
 noncomputable def rToBq
     {R A B : Type u} [CommRing R] [CommRing A] [CommRing B]
     [Algebra R A] [Algebra R B] (P : LocalPrimePair R A B) :
     Localization.AtPrime P.r.asIdeal →+* Localization.AtPrime P.q.asIdeal :=
-  Localization.localRingHom P.r.asIdeal P.q.asIdeal (algebraMap R B)
-    (congrArg PrimeSpectrum.asIdeal P.qOver).symm
+  let h : P.r.asIdeal = P.q.asIdeal.comap (algebraMap R B) := by
+    simpa [PrimeSpectrum.comap_asIdeal] using
+      (congrArg PrimeSpectrum.asIdeal P.qOver).symm
+  Localization.localRingHom P.r.asIdeal P.q.asIdeal (algebraMap R B) h
 
 end LocalPrimePair
 
@@ -475,27 +491,50 @@ noncomputable def pToS
     {R A B : Type u} [CommRing R] [CommRing A] [CommRing B]
     [Algebra R A] [Algebra R B] (S : TensorPrimePair R A B) :
     Localization.AtPrime S.p.asIdeal →+* Localization.AtPrime S.s.asIdeal :=
-  Localization.localRingHom S.p.asIdeal S.s.asIdeal S.aToTensor
-    (congrArg PrimeSpectrum.asIdeal S.pContraction).symm
+  let h : S.p.asIdeal = S.s.asIdeal.comap S.aToTensor := by
+    simpa [PrimeSpectrum.comap_asIdeal] using
+      (congrArg PrimeSpectrum.asIdeal S.pContraction).symm
+  Localization.localRingHom S.p.asIdeal S.s.asIdeal S.aToTensor h
 
 /-- The localization map from `B_𝔮` to the localization at `s`. -/
 noncomputable def qToS
     {R A B : Type u} [CommRing R] [CommRing A] [CommRing B]
     [Algebra R A] [Algebra R B] (S : TensorPrimePair R A B) :
     Localization.AtPrime S.q.asIdeal →+* Localization.AtPrime S.s.asIdeal :=
-  Localization.localRingHom S.q.asIdeal S.s.asIdeal S.bToTensor
-    (congrArg PrimeSpectrum.asIdeal S.qContraction).symm
+  let h : S.q.asIdeal = S.s.asIdeal.comap S.bToTensor := by
+    simpa [PrimeSpectrum.comap_asIdeal] using
+      (congrArg PrimeSpectrum.asIdeal S.qContraction).symm
+  Localization.localRingHom S.q.asIdeal S.s.asIdeal S.bToTensor h
 
 end TensorPrimePair
+
+/-- A chosen tensor-module model for the local Tor groups.  It reuses the
+same canonical action interface after specializing the rings to the local
+maps `R_𝔯 → A_𝔭` and `R_𝔯 → B_𝔮`. -/
+noncomputable def localTorTensorModule
+    {R A B : Type u} [CommRing R] [CommRing A] [CommRing B]
+    [Algebra R A] [Algebra R B] (S : TensorPrimePair R A B) :
+    letI : Algebra (Localization.AtPrime S.r.asIdeal)
+        (Localization.AtPrime S.p.asIdeal) := S.toLocalPrimePair.rToAp.toAlgebra
+    letI : Algebra (Localization.AtPrime S.r.asIdeal)
+        (Localization.AtPrime S.q.asIdeal) := S.toLocalPrimePair.rToBq.toAlgebra
+    TorTensorModule (Localization.AtPrime S.r.asIdeal)
+      (Localization.AtPrime S.p.asIdeal) (Localization.AtPrime S.q.asIdeal) := by
+  letI : Algebra (Localization.AtPrime S.r.asIdeal)
+      (Localization.AtPrime S.p.asIdeal) := S.toLocalPrimePair.rToAp.toAlgebra
+  letI : Algebra (Localization.AtPrime S.r.asIdeal)
+      (Localization.AtPrime S.q.asIdeal) := S.toLocalPrimePair.rToBq.toAlgebra
+  exact torTensorModule _ _ _
 
 /-- The global Tor group localized at the prime `s` of `A ⊗[R] B`. -/
 noncomputable def localizedGlobalTor
     {R A B : Type u} [CommRing R] [CommRing A] [CommRing B]
-    [Algebra R A] [Algebra R B] (S : TensorPrimePair R A B) (i : ℕ) :
+    [Algebra R A] [Algebra R B] (T : TorTensorModule R A B)
+    (S : TensorPrimePair R A B) (i : ℕ) :
     ModuleCat (Localization.AtPrime S.s.asIdeal) :=
   (ModuleCat.extendScalars
       (algebraMap (A ⊗[R] B) (Localization.AtPrime S.s.asIdeal))).obj
-    (Tor (ModuleCat.of R A) (ModuleCat.of R B) i)
+    (T.object i)
 
 /-- A chosen map from the tensor product of the localized rings to the
 localization at `s`.  The existence and compatibility of this map are part
@@ -539,10 +578,7 @@ noncomputable def localizedLocalTor
       (Localization.AtPrime S.p.asIdeal) := S.toLocalPrimePair.rToAp.toAlgebra
   letI : Algebra (Localization.AtPrime S.r.asIdeal)
       (Localization.AtPrime S.q.asIdeal) := S.toLocalPrimePair.rToBq.toAlgebra
-  exact
-    (ModuleCat.extendScalars L.map).obj
-      (Tor (ModuleCat.of _ (Localization.AtPrime S.p.asIdeal))
-        (ModuleCat.of _ (Localization.AtPrime S.q.asIdeal)) i)
+  exact (ModuleCat.extendScalars L.map).obj ((localTorTensorModule S).object i)
 
 /-- The localized comparison identity from the source.  Both sides are now
 the actual localized Tor constructions; only the canonical map between the
@@ -551,7 +587,7 @@ structure LocalizedTorIdentity
     {R A B : Type u} [CommRing R] [CommRing A] [CommRing B]
     [Algebra R A] [Algebra R B] (S : TensorPrimePair R A B) where
   localTensor : LocalTensorMap S
-  comparison : ∀ i, Nonempty (localizedGlobalTor S i ≅
+  comparison : ∀ i, Nonempty (localizedGlobalTor (torTensorModule R A B) S i ≅
     localizedLocalTor S localTensor i)
 
 /-- Tor independence is equivalent to Tor independence after localization at
@@ -571,12 +607,31 @@ theorem tor_localization_identity
     Nonempty (LocalizedTorIdentity S) := by
   sorry
 
+/-- The localized comparison isomorphism supplied by the prime-localization
+identity. -/
+theorem localizedTor_comparison
+    {R A B : Type u} [CommRing R] [CommRing A] [CommRing B]
+    [Algebra R A] [Algebra R B] (S : TensorPrimePair R A B)
+    (D : LocalizedTorIdentity S) (i : ℕ) :
+    Nonempty (localizedGlobalTor (torTensorModule R A B) S i ≅
+      localizedLocalTor S D.localTensor i) := by
+  exact D.comparison i
+
+/-- Vanishing is invariant under the localized comparison isomorphism. -/
+theorem localizedTor_isZero_iff
+    {R A B : Type u} [CommRing R] [CommRing A] [CommRing B]
+    [Algebra R A] [Algebra R B] (S : TensorPrimePair R A B)
+    (D : LocalizedTorIdentity S) (i : ℕ) :
+    IsZero (localizedGlobalTor (torTensorModule R A B) S i) ↔
+      IsZero (localizedLocalTor S D.localTensor i) := by
+  sorry
+
 /-- A chosen localized Tor object supplied by the localization identity. -/
 noncomputable def localizedTor
     {R A B : Type u} [CommRing R] [CommRing A] [CommRing B]
     [Algebra R A] [Algebra R B] (S : TensorPrimePair R A B) (i : ℕ) :
     ModuleCat (Localization.AtPrime S.s.asIdeal) :=
-  localizedGlobalTor S i
+  localizedGlobalTor (torTensorModule R A B) S i
 
 /-- Vanishing of all positive-degree prime-localized Tor modules is equivalent
 to Tor independence. -/

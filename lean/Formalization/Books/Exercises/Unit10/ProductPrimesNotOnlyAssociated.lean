@@ -289,6 +289,148 @@ theorem product_example_has_extra_associated_prime (k : Type u) [Field k] :
           (productExampleQuotient k) ∧
       productExampleMaximalIdeal k ≠ productExamplePrimeP k ∧
       productExampleMaximalIdeal k ≠ productExamplePrimeQ k := by
-  sorry
+  let m : Ideal (productExamplePolynomialRing k) := productExampleMaximalIdeal k
+  have hMset : m =
+      Ideal.span (MvPolynomial.X '' (Set.univ : Set (Fin 3))) := by
+    dsimp [m, productExampleMaximalIdeal]
+    congr 1
+    ext t
+    simp only [Set.mem_insert_iff, Set.mem_singleton_iff, Set.mem_image, Set.mem_univ,
+      true_and]
+    constructor
+    · rintro (rfl | rfl | rfl) <;>
+        simp [productExampleX, productExampleY, productExampleZ]
+    · rintro ⟨i, rfl⟩
+      fin_cases i <;> simp [productExampleX, productExampleY, productExampleZ]
+  let f : productExamplePolynomialRing k →+* k :=
+    MvPolynomial.eval₂Hom (RingHom.id k) (fun _ : Fin 3 => 0)
+  have hml : m ≤ Ideal.comap f (⊥ : Ideal k) := by
+    rw [hMset]
+    apply Ideal.span_le.2
+    rintro t ⟨i, -, rfl⟩
+    simp [f]
+  have hker : Ideal.comap f (⊥ : Ideal k) = m := by
+    apply le_antisymm
+    · intro a ha
+      rw [hMset, MvPolynomial.mem_ideal_span_X_image]
+      intro d hd
+      by_cases hd0 : d = 0
+      · subst d
+        exfalso
+        have hne : a.coeff 0 ≠ 0 := MvPolynomial.mem_support_iff.mp hd
+        exact hne (by simpa [f, MvPolynomial.constantCoeff_eq] using ha)
+      · obtain ⟨i, hi⟩ := Finsupp.support_nonempty_iff.mpr hd0
+        exact ⟨i, Set.mem_univ _, Finsupp.mem_support_iff.mp hi⟩
+    · exact hml
+  have hmprime : m.IsPrime := by
+    rw [← hker]
+    infer_instance
+  have hPm : productExamplePrimeP k ≤ m := by
+    rw [productExamplePrimeP, hMset]
+    apply Ideal.span_le.2
+    rintro t (rfl | rfl) <;>
+      exact Ideal.subset_span (by simp [productExampleX, productExampleY])
+  have hQm : productExamplePrimeQ k ≤ m := by
+    rw [productExamplePrimeQ, hMset]
+    apply Ideal.span_le.2
+    rintro t (rfl | rfl) <;>
+      exact Ideal.subset_span (by simp [productExampleX, productExampleZ])
+  have hPQm2 : productExamplePrimeP k * productExamplePrimeQ k ≤ m ^ 2 := by
+    simpa [pow_two] using Ideal.mul_mono hPm hQm
+  have hxP : productExampleX k ∈ productExamplePrimeP k := by
+    rw [productExamplePrimeP]
+    exact Ideal.subset_span (by simp [productExampleX])
+  have hyP : productExampleY k ∈ productExamplePrimeP k := by
+    rw [productExamplePrimeP]
+    exact Ideal.subset_span (by simp [productExampleY])
+  have hxQ : productExampleX k ∈ productExamplePrimeQ k := by
+    rw [productExamplePrimeQ]
+    exact Ideal.subset_span (by simp [productExampleX])
+  have hzQ : productExampleZ k ∈ productExamplePrimeQ k := by
+    rw [productExamplePrimeQ]
+    exact Ideal.subset_span (by simp [productExampleZ])
+  have hmx : m ≤
+      Submodule.comap (LinearMap.lsmul (productExamplePolynomialRing k)
+        (productExamplePolynomialRing k) (productExampleX k))
+        (productExamplePrimeP k * productExamplePrimeQ k : Submodule
+          (productExamplePolynomialRing k) (productExamplePolynomialRing k)) := by
+    rw [hMset]
+    apply Ideal.span_le.2
+    rintro t ⟨i, -, rfl⟩
+    fin_cases i
+    · change productExampleX k * productExampleX k ∈
+        productExamplePrimeP k * productExamplePrimeQ k
+      exact Ideal.mul_mem_mul hxP hxQ
+    · change productExampleX k * productExampleY k ∈
+        productExamplePrimeP k * productExamplePrimeQ k
+      simpa [mul_comm] using Ideal.mul_mem_mul hyP hxQ
+    · change productExampleX k * productExampleZ k ∈
+        productExamplePrimeP k * productExamplePrimeQ k
+      exact Ideal.mul_mem_mul hxP hzQ
+  have hmvars : m = MvPolynomial.idealOfVars (Fin 3) k := by
+    simpa [MvPolynomial.idealOfVars, Set.image_univ] using hMset
+  have hcomap :
+      Submodule.comap (LinearMap.lsmul (productExamplePolynomialRing k)
+        (productExamplePolynomialRing k) (productExampleX k))
+        (productExamplePrimeP k * productExamplePrimeQ k : Submodule
+          (productExamplePolynomialRing k) (productExamplePolynomialRing k)) = m := by
+    apply le_antisymm
+    · intro a ha
+      change productExampleX k * a ∈
+        productExamplePrimeP k * productExamplePrimeQ k at ha
+      have ha2 : productExampleX k * a ∈ m ^ 2 := hPQm2 ha
+      have ha2' : productExampleX k * a ∈
+          MvPolynomial.idealOfVars (Fin 3) k ^ 2 := by
+        simpa [hmvars] using ha2
+      have hcoeff := (MvPolynomial.mem_pow_idealOfVars_iff' 2
+        (productExampleX k * a)).mp ha2'
+        (Finsupp.single (0 : Fin 3) 1) (by simp)
+      have hconst : a.coeff 0 = 0 := by
+        have hcoeff' : (productExampleX k * a).coeff
+            (Finsupp.single (0 : Fin 3) 1) = 0 := hcoeff
+        calc
+          a.coeff 0 = (productExampleX k * a).coeff
+              (Finsupp.single (0 : Fin 3) 1) := by
+                simpa [productExampleX] using
+                  (MvPolynomial.coeff_X_mul (R := k)
+                    (0 : Fin 3 →₀ ℕ) (0 : Fin 3) a).symm
+          _ = 0 := hcoeff'
+      rw [hMset, MvPolynomial.mem_ideal_span_X_image]
+      intro d hd
+      by_cases hd0 : d = 0
+      · subst d
+        exfalso
+        have hne : a.coeff 0 ≠ 0 := MvPolynomial.mem_support_iff.mp hd
+        exact hne hconst
+      · obtain ⟨i, hi⟩ := Finsupp.support_nonempty_iff.mpr hd0
+        exact ⟨i, Set.mem_univ _, Finsupp.mem_support_iff.mp hi⟩
+    · exact hmx
+  let fa : (productExamplePolynomialRing k ⧸ m) →ₗ[productExamplePolynomialRing k]
+      (productExamplePolynomialRing k ⧸
+        (productExamplePrimeP k * productExamplePrimeQ k)) :=
+    Submodule.mapQ (m : Submodule (productExamplePolynomialRing k)
+      (productExamplePolynomialRing k))
+      (productExamplePrimeP k * productExamplePrimeQ k :
+        Submodule (productExamplePolynomialRing k) (productExamplePolynomialRing k))
+      (LinearMap.lsmul (productExamplePolynomialRing k)
+        (productExamplePolynomialRing k) (productExampleX k)) hmx
+  have hfa_injective : Function.Injective fa := by
+    apply LinearMap.ker_eq_bot.mp
+    rw [Submodule.ker_mapQ, hcomap, Submodule.mkQ_map_self]
+  have hass : m ∈ associatedPrimes (productExamplePolynomialRing k)
+      (productExamplePolynomialRing k ⧸
+        (productExamplePrimeP k * productExamplePrimeQ k)) := by
+    rw [AssociatedPrimes.mem_iff, isAssociatedPrime_iff_exists_injective_linearMap]
+    exact ⟨hmprime, fa, hfa_injective⟩
+  refine ⟨?_, ?_, ?_⟩
+  · simpa [m, productExampleQuotient] using hass
+  · intro h
+    apply (product_example_primes_incomparable k).2.2.2
+    rw [← h]
+    exact hQm
+  · intro h
+    apply (product_example_primes_incomparable k).2.2.1
+    rw [← h]
+    exact hPm
 
 end Formalization.Books.Exercises.Unit10

@@ -4,7 +4,9 @@ import Mathlib.Algebra.Colimit.DirectLimit
 import Mathlib.RingTheory.IntegralClosure.IsIntegral.AlmostIntegral
 import Mathlib.RingTheory.PowerSeries.Ideal
 import Mathlib.RingTheory.PolynomialAlgebra
+import Mathlib.RingTheory.Polynomial.IsIntegral
 import Mathlib.RingTheory.PrincipalIdealDomain
+import Mathlib.Algebra.GCDMonoid.IntegrallyClosed
 import Mathlib.RingTheory.Spectrum.Maximal.Defs
 
 /-!
@@ -90,7 +92,14 @@ theorem normalDomain_iff_completelyNormal
     {R K : Type*} [CommRing R] [IsDomain R] [Field K]
     [Algebra R K] [IsFractionRing R K] [IsNoetherianRing R] :
     IsNormalDomain R ↔ IsCompletelyNormal R K := by
-  sorry
+  constructor
+  · rintro ⟨_, hclosed⟩ g hg
+    exact (isIntegrallyClosed_iff K).mp hclosed
+      ((isAlmostIntegral_iff_isIntegral_of_noetherian).mp hg)
+  · intro hcomplete
+    refine ⟨inferInstance, (isIntegrallyClosed_iff K).mpr ?_⟩
+    intro g hg
+    exact hcomplete (isIntegral_isAlmostIntegral hg)
 
 /-! ## Permanence properties for normal domains -/
 
@@ -100,13 +109,16 @@ theorem localization_isNormalDomain
     {R : Type*} [CommRing R] (hR : IsNormalDomain R)
     (M : Submonoid R) (hM : M ≤ nonZeroDivisors R) :
     IsNormalDomain (Localization M) := by
-  sorry
+  letI : IsDomain R := hR.1
+  letI : IsIntegrallyClosed R := hR.2
+  refine ⟨IsLocalization.isDomain_localization hM, ?_⟩
+  exact isIntegrallyClosed_of_isLocalization (Localization M) M hM
 
 /-- A principal ideal domain is a normal domain. -/
 theorem principalIdealDomain_isNormalDomain
     {R : Type*} [CommRing R] [IsDomain R] [IsPrincipalIdealRing R] :
     IsNormalDomain R := by
-  sorry
+  exact ⟨inferInstance, inferInstance⟩
 
 /-! ## Polynomial and power-series rings -/
 
@@ -119,7 +131,7 @@ theorem polynomial_coeff_isIntegral
     [Algebra R K] [IsFractionRing R K]
     (f : Polynomial K) (hf : IsIntegral (Polynomial R) f) (i : ℕ) :
     IsIntegral R (f.coeff i) := by
-  sorry
+  exact hf.coeff i
 
 /-- Almost integrality of a polynomial over a polynomial ring can be checked
 on its coefficients. -/

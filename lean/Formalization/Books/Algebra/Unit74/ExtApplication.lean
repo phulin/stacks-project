@@ -183,8 +183,8 @@ theorem split_injection_after_completion
   let H := (F1 : Type u) →ₗ[R] N
   let precomp : ((F0 : Type u) →ₗ[R] N) →ₗ[R] H :=
     { toFun := fun g => g.comp d1
-      map_add' := by intro g h; ext x <;> rfl
-      map_smul' := by intro r g; ext x <;> rfl }
+      map_add' := by intro g h; ext x; rfl
+      map_smul' := by intro r g; ext x; rfl }
   let C := H ⧸ LinearMap.range precomp
   let c : H →ₗ[R] C := (LinearMap.range precomp).mkQ
   have hCfinite : Module.Finite R C := inferInstance

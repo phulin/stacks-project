@@ -522,8 +522,7 @@ theorem make_surjective
         rw [show i + 1 + -1 = i by omega,
           show i - 1 + -1 = i + -2 by omega]
         convert hc using 1 <;>
-          simp [Int.negOnePow_neg, Int.negOnePow_one, Linear.units_smul_comp,
-            Linear.comp_units_smul, smul_smul, Int.units_mul_self, add_assoc]
+          simp [Int.negOnePow_neg, Int.negOnePow_one]
         all_goals
           change
             ((CochainComplex.mappingCone (𝟙 L)).d (i + -1) i ≫ h.hom i (i + -1) +
@@ -637,8 +636,8 @@ theorem make_surjective
       refine IsZero.of_iso ?_ ((HomologicalComplex.eval C (ComplexShape.up ℤ) j).mapBiprod _ _)
       simp only [HomologicalComplex.eval_obj, biprod_isZero_iff]
       exact ⟨K.isZero_of_isStrictlyGE pK j (by omega), hcone j hj⟩
-    · letI : K.IsStrictlyLE qK := hqK
-      letI : L.IsStrictlyLE qL := hqL
+    · let : K.IsStrictlyLE qK := hqK
+      let : L.IsStrictlyLE qL := hqL
       have hcone0 :
           (CochainComplex.mappingCone (𝟙 L)).IsStrictlyLE qL := by
         rw [CochainComplex.isStrictlyLE_iff]
@@ -646,7 +645,7 @@ theorem make_surjective
         simp only [CochainComplex.mappingCone.isZero_X_iff]
         exact ⟨L.isZero_of_isStrictlyLE qL (j + 1) (by omega),
           L.isZero_of_isStrictlyLE qL j (by omega)⟩
-      letI : (CochainComplex.mappingCone (𝟙 L)).IsStrictlyLE qL := hcone0
+      let : (CochainComplex.mappingCone (𝟙 L)).IsStrictlyLE qL := hcone0
       have hcone' :
           (CochainComplex.mappingCocone (𝟙 L)).IsStrictlyLE (qL + 1) := by
         dsimp [CochainComplex.mappingCocone]
@@ -824,7 +823,7 @@ theorem triangle_independent_splittings
               (CochainComplex.shiftFunctorObjXIso
                 (termwiseSplitShortComplex S).X₁ (1 : ℤ) p (p + 1) rfl).inv := by
         dsimp [CochainComplex.cocycleOfDegreewiseSplit]
-        simp only [Cocycle.mk_coe, Cochain.mk_v, Category.comp_id]
+        simp only [Cocycle.mk_coe, Cochain.mk_v]
         apply (cancel_mono (CochainComplex.shiftFunctorObjXIso
           (termwiseSplitShortComplex S).X₁ (1 : ℤ) p (p + 1) rfl).hom).1
         change (sσ p ≫ dB p ≫ rσ (p + 1)) ≫
@@ -842,7 +841,7 @@ theorem triangle_independent_splittings
               (CochainComplex.shiftFunctorObjXIso
                 (termwiseSplitShortComplex S).X₁ (1 : ℤ) p (p + 1) rfl).inv := by
         dsimp [CochainComplex.cocycleOfDegreewiseSplit]
-        simp only [Cocycle.mk_coe, Cochain.mk_v, Category.comp_id]
+        simp only [Cocycle.mk_coe, Cochain.mk_v]
         apply (cancel_mono (CochainComplex.shiftFunctorObjXIso
           (termwiseSplitShortComplex S).X₁ (1 : ℤ) p (p + 1) rfl).hom).1
         change (sσ' p ≫ dB p ≫ rσ' (p + 1)) ≫
@@ -869,7 +868,7 @@ theorem triangle_independent_splittings
       rw [← cancel_mono (CochainComplex.shiftFunctorObjXIso
         (termwiseSplitShortComplex S).X₁ (1 : ℤ) p (p + 1) rfl).hom]
       simp only [Preadditive.add_comp]
-      simp only [Category.assoc, Iso.inv_hom_id_assoc, Iso.inv_hom_id,
+      simp only [Category.assoc, Iso.inv_hom_id,
         Category.comp_id]
       rw [hd]
       have hfrσ (i : ℤ) : S.f.f i ≫ rσ i = 𝟙 _ := by
@@ -955,7 +954,7 @@ theorem triangle_independent_splittings
                     congrArg (fun z => sσ p ≫ dB p ≫ z ≫ rσ (p + 1))
                       (hgsσB (p + 1))
           _ = 0 := by
-                  simp [Preadditive.sub_comp, Preadditive.comp_sub, Category.assoc,
+                  simp [Preadditive.sub_comp, Category.assoc,
                     hfrσB (p + 1)]
       have hA0 :
           sσ p ≫ rσ p ≫ (termwiseSplitShortComplex S).X₁.d p (p + 1) = 0 := by
@@ -1006,7 +1005,7 @@ theorem triangle_independent_splittings
           _ = sσ' p ≫ dB p ≫ rσ (p + 1) -
                 sσ' p ≫ dB p ≫ rσ' (p + 1) := by
                   simp only [Preadditive.sub_comp, Preadditive.comp_sub, Category.assoc,
-                    Category.id_comp, Category.comp_id]
+                    Category.id_comp]
                   dsimp [fS]
                   rw [hfrσB (p + 1)]
                   simp only [Category.comp_id]
@@ -1095,8 +1094,7 @@ theorem triangle_independent_splittings
   have he₀ : e₀.hom.hom₁ = 𝟙 (q.obj A) ∧
       e₀.hom.hom₂ = 𝟙 (q.obj B) ∧
       e₀.hom.hom₃ = 𝟙 (q.obj D) := by
-    simp [e₀, Triangle.isoMk, Triangle.homMk, eqToIso,
-      CategoryTheory.eqToHom_refl]
+    simp [e₀, Triangle.isoMk, Triangle.homMk]
     constructor
     · rfl
     constructor <;> rfl
@@ -1124,7 +1122,7 @@ theorem nilpotent
       (HomotopyCategory.quotient C (ComplexShape.up ℤ)).map S₂.g = 0)
     (h₃ : (HomotopyCategory.quotient C (ComplexShape.up ℤ)).map S₂.f ≫
       (HomotopyCategory.quotient C (ComplexShape.up ℤ)).map b' = 0)
-    (h₄ : (HomotopyCategory.quotient C (ComplexShape.up ℤ)).map b' ≫
+    {h₄ : (HomotopyCategory.quotient C (ComplexShape.up ℤ)).map b' ≫
       (HomotopyCategory.quotient C (ComplexShape.up ℤ)).map S₃.g = 0) :
     (HomotopyCategory.quotient C (ComplexShape.up ℤ)).map (b ≫ b') = 0 := by
   let q : BookComplex C ⥤ BookHomotopyCategory C :=
@@ -1180,8 +1178,8 @@ theorem nilpotent
             S₂.g.f n ≫ termwiseSplitSection S₂ n) ≫ b'₀.f n := by
           rw [hid]
       _ = 0 := by
-        simp only [Preadditive.add_comp, Category.assoc] <;>
-          rw [hleft] <;>
+        simp only [Preadditive.add_comp, Category.assoc] ;
+          rw [hleft] ;
           simpa only [zero_add, Category.assoc, zero_comp, comp_zero] using
             congrArg (fun z => z ≫ termwiseSplitSection S₂ n ≫ b'₀.f n) hright
   have hqb : q.map b = q.map b₀ :=
@@ -1237,11 +1235,11 @@ theorem same_up_to_isomorphisms_of_termwise_split
         q.map (𝟙 A) ≫ (termwiseSplitTriangleh S).mor₁ := by
     change q.map S.f ≫ q.map (𝟙 B) = q.map (𝟙 A) ≫ q.map S.f
     simp
-  letI : IsIso (q.map (𝟙 A)) := by
+  let : IsIso (q.map (𝟙 A)) := by
     have hqA : q.map (𝟙 A) = 𝟙 (q.obj A) := q.map_id A
     rw [hqA]
     infer_instance
-  letI : IsIso (q.map (𝟙 B)) := by
+  let : IsIso (q.map (𝟙 B)) := by
     have hqB : q.map (𝟙 B) = 𝟙 (q.obj B) := q.map_id B
     rw [hqB]
     infer_instance
@@ -1249,7 +1247,7 @@ theorem same_up_to_isomorphisms_of_termwise_split
     HomotopyCategory.Pretriangulated.complete_distinguished_triangle_morphism
       (coneTriangleh S.f) (termwiseSplitTriangleh S) hcone hsplit
       (q.map (𝟙 A)) (q.map (𝟙 B)) hcomm₁
-  letI : IsIso c := by
+  let : IsIso c := by
     apply isIso₃_of_isIso₁₂
       (Triangle.homMk (coneTriangleh S.f) (termwiseSplitTriangleh S)
         (q.map (𝟙 A)) (q.map (𝟙 B)) c hcomm₁ hc₂ hc₃)
@@ -1264,8 +1262,8 @@ theorem same_up_to_isomorphisms_of_termwise_split
         change q.map S.f ≫ 𝟙 (q.obj B) =
           𝟙 (q.obj A) ≫ q.map S.f
         simp) hc₂ hc₃
-  exact ⟨e, by change q.map (𝟙 A) = 𝟙 (q.obj A); simp [e, q],
-    by change q.map (𝟙 B) = 𝟙 (q.obj B); simp [e, q]⟩
+  exact ⟨e, by change q.map (𝟙 A) = 𝟙 (q.obj A); simp [q],
+    by change q.map (𝟙 B) = 𝟙 (q.obj B); simp [q]⟩
 
 theorem same_up_to_isomorphisms_of_map
     {C : Type u} [Category.{v} C] [AdditiveCategory C]
@@ -1303,15 +1301,13 @@ theorem same_up_to_isomorphisms_of_map
           (CochainComplex.mappingCone.inl (𝟙 K)).v (n + 1) n (by omega)) := by
     dsimp [s, M]
     rw [← HomologicalComplex.biprodXIso_hom_fst]
-    simp only [Category.assoc, Iso.inv_hom_id_assoc,
-      HomologicalComplex.biprod_lift_fst_f, biprod.lift_fst]
+    simp only [Category.assoc, Iso.inv_hom_id_assoc, biprod.lift_fst]
   have hs_snd (n : ℤ) :
       s n ≫ (biprod.snd : M ⟶ L).f n =
         (CochainComplex.mappingCone.snd f).v n n (add_zero n) := by
     dsimp [s, M]
     rw [← HomologicalComplex.biprodXIso_hom_snd]
-    simp only [Category.assoc, Iso.inv_hom_id_assoc,
-      HomologicalComplex.biprod_lift_snd_f, biprod.lift_snd]
+    simp only [Category.assoc, Iso.inv_hom_id_assoc, biprod.lift_snd]
   have hginv (n : ℤ) :
       ((HomologicalComplex.eval C (ComplexShape.up ℤ) n).mapBiprod
           (CochainComplex.mappingCone (𝟙 K)) L).inv ≫
@@ -1356,41 +1352,27 @@ theorem same_up_to_isomorphisms_of_map
         dsimp [coneInclusion]
         simp [u, CochainComplex.mappingCone.map,
           CochainComplex.mappingCone.id_X,
-          CochainComplex.mappingCone.inl_v_fst_v,
-          CochainComplex.mappingCone.inl_v_snd_v,
-          CochainComplex.mappingCone.inr_f_fst_v,
-          CochainComplex.mappingCone.inr_f_snd_v,
-          CochainComplex.mappingCone.inr_f_fst_v_assoc,
-          CochainComplex.mappingCone.inr_f_snd_v_assoc,
-          coneInclusion, biprod.lift_desc, Category.assoc]
+          biprod.lift_desc, Category.assoc]
       · rw [hsg n]
         dsimp [coneInclusion]
         simp [u, CochainComplex.mappingCone.map,
           CochainComplex.mappingCone.id_X,
-          CochainComplex.mappingCone.inl_v_fst_v,
-          CochainComplex.mappingCone.inl_v_snd_v,
-          CochainComplex.mappingCone.inr_f_fst_v,
-          CochainComplex.mappingCone.inr_f_snd_v,
-          CochainComplex.mappingCone.inr_f_fst_v_assoc,
-          CochainComplex.mappingCone.inr_f_snd_v_assoc,
-          coneInclusion, biprod.lift_desc, Category.assoc]
+          biprod.lift_desc, Category.assoc]
     · dsimp [r, s, i, g, u, M]
       change r n ≫ i.f n + g.f n ≫ s n = 𝟙 _
       ext
-      · simp [s, r, i, g, u, M, CochainComplex.mappingCone.map,
-          CochainComplex.mappingCone.id_X, CochainComplex.mappingCone.desc_f,
-          Category.assoc, hs_fst, hs_snd, coneInclusion]
+        · simp [s, r, i, g, u, M, CochainComplex.mappingCone.map,
+          CochainComplex.mappingCone.desc_f,
+          Category.assoc, hs_snd, coneInclusion]
         simpa [add_comm] using
           (CochainComplex.mappingCone.id_X (𝟙 K) n (n + 1) (by omega))
-      · simp [s, r, i, g, u, M, CochainComplex.mappingCone.map,
-          CochainComplex.mappingCone.id_X, CochainComplex.mappingCone.desc_f,
-          Category.assoc, hs_fst, hs_snd, coneInclusion]
-      · simp [s, r, i, g, u, M, CochainComplex.mappingCone.map,
-          CochainComplex.mappingCone.id_X, CochainComplex.mappingCone.desc_f,
-          Category.assoc, hs_fst, hs_snd, coneInclusion]
-      · simp [s, r, i, g, u, M, CochainComplex.mappingCone.map,
-          CochainComplex.mappingCone.id_X, CochainComplex.mappingCone.desc_f,
-          Category.assoc, hs_fst, hs_snd, coneInclusion]
+        · simp [s, r, i, g, u, M, CochainComplex.mappingCone.map,
+          CochainComplex.mappingCone.desc_f,
+          Category.assoc, hs_snd, coneInclusion]
+        · simp [s, r, i, g, u, M, CochainComplex.mappingCone.map,
+          Category.assoc, hs_snd, coneInclusion]
+        · simp [s, r, i, g, u, M, CochainComplex.mappingCone.map,
+          Category.assoc, hs_snd, coneInclusion]
   let S : TermwiseSplitExactSequence K M (Cone f) := {
     f := i
     g := g
@@ -1426,7 +1408,7 @@ theorem same_up_to_isomorphisms_of_map
     inv := biprod.inr
     homotopyHomInvId := hπs.some
     homotopyInvHomId := Homotopy.ofEq (by simp [π, M]) }
-  letI : IsIso (q.map π) := by
+  let : IsIso (q.map π) := by
     change IsIso (HomotopyCategory.isoOfHomotopyEquiv hπ).hom
     infer_instance
   have hcomm₁ :

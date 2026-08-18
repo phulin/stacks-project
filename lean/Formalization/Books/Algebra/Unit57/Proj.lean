@@ -53,13 +53,14 @@ def projToSpectrum (G : GradedRingData S) :
 theorem projectiveSpectrum_induced_topology (G : GradedRingData S) :
     Topology.IsInducing (projToSpectrum G) := by
   refine ⟨TopologicalSpace.ext_isClosed fun Z ↦ ?_⟩
-  simp only [isClosed_induced_iff, ProjectiveSpectrum.isClosed_iff_zeroLocus,
-    PrimeSpectrum.isClosed_iff_zeroLocus]
+  simp only [isClosed_induced_iff, ProjectiveSpectrum.isClosed_iff_zeroLocus]
   constructor
   · rintro ⟨s, rfl⟩
-    refine ⟨PrimeSpectrum.zeroLocus s, ⟨s, rfl⟩, ?_⟩
+    refine ⟨PrimeSpectrum.zeroLocus s, ?_, ?_⟩
+    · exact (PrimeSpectrum.isClosed_iff_zeroLocus _).2 ⟨s, rfl⟩
     rfl
-  · rintro ⟨t, ⟨s, rfl⟩, h⟩
+  · rintro ⟨t, ht, h⟩
+    obtain ⟨s, rfl⟩ := (PrimeSpectrum.isClosed_iff_zeroLocus _).1 ht
     exact ⟨s, h.symm⟩
 
 /-- Homogeneity as closure under all homogeneous components. -/
@@ -195,7 +196,7 @@ private lemma zgraded_unit_zpow_mem (H : ZGradedRingData A) (u : Aˣ) {k : ℤ}
     simp
   cases n with
   | ofNat n =>
-      simpa [Int.ofNat_eq_natCast, nsmul_eq_mul] using SetLike.pow_mem_graded n hu
+      simpa [nsmul_eq_mul] using SetLike.pow_mem_graded n hu
   | negSucc n =>
       have hv : (↑(u⁻¹) : A) ∈ H.component (-k) := hgeq ▸ hg
       have hn : Int.negSucc n = -((n + 1 : ℕ) : ℤ) := by omega

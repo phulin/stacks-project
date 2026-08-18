@@ -188,7 +188,13 @@ def leftResolutionColumnMap
 theorem leftResolutionColumnMap_comp_zero
     (A : DoubleComplex AddCommGrpCat.{u}) (p : ℤ) :
     leftResolutionColumnMap A (p + 1) ≫ leftResolutionColumnMap A p = 0 := by
-  sorry
+  dsimp [leftResolutionColumnMap]
+  simp only [Category.assoc]
+  rw [← eqToHom_naturality_assoc (fun r : ℤ => columnMap A r)
+    (show -(p + 1 + 1) + 1 = -(p + 1) by ring)]
+  simpa [Category.assoc] using
+    congrArg (fun f => f ≫ eqToHom (by congr 1; ring))
+      (columnMap_comp_zero A (-(p + 1 + 1)))
 
 /-! ## Resolution data -/
 
@@ -299,7 +305,26 @@ noncomputable def productTotalDifferential
 theorem productTotalDifferential_comp_zero
     (A : DoubleComplex AddCommGrpCat.{u}) (n : ℤ) :
     productTotalDifferential A n ≫ productTotalDifferential A (n + 1) = 0 := by
-  sorry
+  unfold productTotalDifferential productTotalTerm
+  apply Pi.hom_ext
+  intro p
+  rw [Category.assoc, Pi.lift_π]
+  rw [Preadditive.comp_add, Linear.comp_units_smul]
+  simp only [← Category.assoc, Pi.lift_π]
+  simp only [Preadditive.add_comp, Linear.units_smul_comp, smul_add, smul_smul,
+    Category.assoc]
+  have h11 :
+      A.d1 (p - 1 - 1) (n - (p - 1 - 1)) ≫
+          eqToHom (by congr 1 <;> ring) ≫
+        A.d1 (p - 1) (n + 1 - (p - 1)) ≫
+          eqToHom (by congr 1 <;> ring) = 0 := by
+    have hnat := eqToHom_naturality (fun q : ℤ =>
+      A.d1 (p - 1) q)
+      (show n - (p - 1 - 1) = n + 1 - (p - 1) by ring)
+    rw [← hnat]
+    simpa [Category.assoc] using
+      congrArg (fun f => f ≫ eqToHom (by congr 1; ring))
+        (A.d1_sq (p - 1 - 1) (n - (p - 1 - 1)))
 
 /-- The product total cochain complex associated to a double complex. -/
 noncomputable def productTotalComplex

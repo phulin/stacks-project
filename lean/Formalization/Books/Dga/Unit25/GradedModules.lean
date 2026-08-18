@@ -336,7 +336,16 @@ def gradedRightModuleHomogeneousComp
 theorem gradedRightModuleHomogeneousId_nonempty
     (L : GradedRightModule (R := R) (A := A)) :
     Nonempty (GradedRightModuleHomogeneous L L 0) := by
-  sorry
+  let idFamily : GradedRightModuleHomogeneousFamily L L 0 :=
+    fun ⟨⟨p, q⟩, h⟩ => by
+      have hq : q = -p := by omega
+      subst q
+      dsimp
+      convert LinearMap.id (R := R) (M := L.component p) using 1 <;> simp
+  refine ⟨⟨idFamily, ?_⟩⟩
+  intro s i a m
+  dsimp [idFamily, IsGradedRightModuleMap]
+  simp
 
 noncomputable def gradedRightModuleHomogeneousId
     (L : GradedRightModule (R := R) (A := A)) :

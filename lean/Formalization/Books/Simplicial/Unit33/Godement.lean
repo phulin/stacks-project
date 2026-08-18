@@ -1,3 +1,4 @@
+import Formalization.Books.Simplicial.Unit20.Augmentations
 import Formalization.Books.Simplicial.Unit26.Homotopies
 import Mathlib.CategoryTheory.Whiskering
 
@@ -146,7 +147,8 @@ theorem godement_simplicial_object
   rcases godement_simplicial_data Y d s h with ⟨data⟩
   exact ⟨data.object⟩
 
-/-- The augmentation transformation appearing in Lemma 33.2. -/
+/-- The degree-zero transformation used as the augmentation datum in Lemma 33.2.
+The resulting simplicial augmentation is stored in `GodementAugmentationData`. -/
 def godementAugmentation {C : Type u} [Category.{v} C]
     (Y : C ⥤ C) (d : Y ⟶ 𝟭 C) : Y ⟶ 𝟭 C := d
 
@@ -161,8 +163,17 @@ def godementAugmentationComponent {C : Type u} [Category.{v} C]
 
 structure GodementAugmentationData {C : Type u} [Category.{v} C]
     (Y : C ⥤ C) (d : Y ⟶ 𝟭 C) (s : Y ⟶ Y ⋙ Y) where
+  /-- The simplicial object whose degrees are the iterated endofunctors. -/
+  simplicial : GodementSimplicialData Y d s
+  /-- The augmentation as an actual morphism of simplicial objects. -/
+  augmentation :
+    Formalization.Books.Simplicial.Unit20.Augmentation
+      simplicial.object (𝟭 C)
   component : ∀ n, godementDegree Y n ⟶ 𝟭 C
   component_zero : component 0 = godementAugmentationComponent Y d 0
+  component_formula : ∀ n,
+    eqToHom (simplicial.object_obj n).symm ≫
+        augmentation.app (op (SimplexCategory.mk n)) = component n
   face_naturality : ∀ {n} (i : Fin (n + 2)),
     godementFace Y d (n := n + 1) i ≫ component n = component (n + 1)
   degeneracy_naturality : ∀ {n} (i : Fin (n + 1)),
@@ -225,24 +236,6 @@ def godementWhiskeredAugmentationComponent
       (Functor.associator F (𝟭 C) G).hom ≫
       Functor.whiskerLeft F (Functor.rightUnitor G).hom
 
-/-! The functorial example carries the canonical degreewise maps above as an
-augmentation of the whiskered simplicial object. -/
-
-structure GodementWhiskeredAugmentationData
-    {A : Type u} {B : Type u'} {C : Type v}
-    [Category.{v'} A] [Category.{u} B] [Category.{v} C]
-    (F : A ⥤ C) (Y : C ⥤ C) (G : C ⥤ B)
-    (d : Y ⟶ 𝟭 C) (s : Y ⟶ Y ⋙ Y) where
-  component : ∀ n, godementWhiskeredDegree F Y G n ⟶ F ⋙ G
-  component_def : ∀ n,
-    component n = godementWhiskeredAugmentationComponent F Y G d n
-  face_naturality : ∀ {n} (i : Fin (n + 2)),
-    godementWhiskeredSimplicialFace F Y G d n i ≫ component n =
-      component (n + 1)
-  degeneracy_naturality : ∀ {n} (i : Fin (n + 1)),
-    godementWhiskeredSimplicialDegeneracy F Y G s n i ≫ component (n + 1) =
-      component n
-
 structure GodementWhiskeredSimplicialData
     {A : Type u} {B : Type u'} {C : Type v}
     [Category.{v'} A] [Category.{u} B] [Category.{v} C]
@@ -259,6 +252,33 @@ structure GodementWhiskeredSimplicialData
     eqToHom (object_obj n).symm ≫ object.σ j ≫
         eqToHom (object_obj (n + 1)) =
       godementWhiskeredSimplicialDegeneracy F Y G s n j
+
+/-! The functorial example carries the canonical degreewise maps above as an
+augmentation of the whiskered simplicial object. -/
+
+structure GodementWhiskeredAugmentationData
+    {A : Type u} {B : Type u'} {C : Type v}
+    [Category.{v'} A] [Category.{u} B] [Category.{v} C]
+    (F : A ⥤ C) (Y : C ⥤ C) (G : C ⥤ B)
+    (d : Y ⟶ 𝟭 C) (s : Y ⟶ Y ⋙ Y) where
+  /-- The simplicial object receiving the augmentation. -/
+  simplicial : GodementWhiskeredSimplicialData F Y G d s
+  /-- The augmentation of the whiskered simplicial object. -/
+  augmentation :
+    Formalization.Books.Simplicial.Unit20.Augmentation
+      simplicial.object (F ⋙ G)
+  component : ∀ n, godementWhiskeredDegree F Y G n ⟶ F ⋙ G
+  component_def : ∀ n,
+    component n = godementWhiskeredAugmentationComponent F Y G d n
+  component_formula : ∀ n,
+    eqToHom (simplicial.object_obj n).symm ≫
+        augmentation.app (op (SimplexCategory.mk n)) = component n
+  face_naturality : ∀ {n} (i : Fin (n + 2)),
+    godementWhiskeredSimplicialFace F Y G d n i ≫ component n =
+      component (n + 1)
+  degeneracy_naturality : ∀ {n} (i : Fin (n + 1)),
+    godementWhiskeredSimplicialDegeneracy F Y G s n i ≫ component (n + 1) =
+      component n
 
 theorem godement_functorial
     {A : Type u} {B : Type u'} {C : Type v}
@@ -328,16 +348,16 @@ theorem godement_section_components
 
 def godementOuterAugmentationComponent {B : Type u'} {C : Type v}
     [Category.{u} B] [Category.{v} C]
-    (Y : C ⥤ C) (d : Y ⟶ 𝟭 C) (G : C ⥤ B) :
-    godementDegree Y 0 ⋙ G ⟶ G :=
-  Functor.whiskerRight (godementAugmentationComponent Y d 0) G ≫
+    (Y : C ⥤ C) (d : Y ⟶ 𝟭 C) (G : C ⥤ B) (n : ℕ) :
+    godementDegree Y n ⋙ G ⟶ G :=
+  Functor.whiskerRight (godementAugmentationComponent Y d n) G ≫
     (Functor.leftUnitor G).hom
 
 def godementInnerAugmentationComponent {A : Type u} {C : Type v}
     [Category.{v'} A] [Category.{v} C]
-    (F : A ⥤ C) (Y : C ⥤ C) (d : Y ⟶ 𝟭 C) :
-    F ⋙ godementDegree Y 0 ⟶ F :=
-  Functor.whiskerLeft F (godementAugmentationComponent Y d 0) ≫
+    (F : A ⥤ C) (Y : C ⥤ C) (d : Y ⟶ 𝟭 C) (n : ℕ) :
+    F ⋙ godementDegree Y n ⟶ F :=
+  Functor.whiskerLeft F (godementAugmentationComponent Y d n) ≫
     (Functor.rightUnitor F).hom
 
 structure GodementOuterMorphism {B : Type u'} {C : Type v}
@@ -352,9 +372,9 @@ structure GodementOuterMorphism {B : Type u'} {C : Type v}
   degeneracy : ∀ {n} (j : Fin (n + 1)),
     aₙ n ≫ Functor.whiskerRight (godementDegeneracy Y s j) G' =
       Functor.whiskerRight (godementDegeneracy Y s j) G ≫ aₙ (n + 1)
-  augmentation :
-    aₙ 0 ≫ godementOuterAugmentationComponent Y d G' =
-      godementOuterAugmentationComponent Y d G ≫ a
+  augmentation : ∀ n,
+    aₙ n ≫ godementOuterAugmentationComponent Y d G' n =
+      godementOuterAugmentationComponent Y d G n ≫ a
 
 structure GodementInnerMorphism {A : Type u} {C : Type v}
     [Category.{v'} A] [Category.{v} C]
@@ -369,9 +389,9 @@ structure GodementInnerMorphism {A : Type u} {C : Type v}
     bₙ n ≫ Functor.whiskerLeft F'
         (godementDegeneracy Y s j) =
       Functor.whiskerLeft F (godementDegeneracy Y s j) ≫ bₙ (n + 1)
-  augmentation :
-    bₙ 0 ≫ godementInnerAugmentationComponent F' Y d =
-      godementInnerAugmentationComponent F Y d ≫ b
+  augmentation : ∀ n,
+    bₙ n ≫ godementInnerAugmentationComponent F' Y d n =
+      godementInnerAugmentationComponent F Y d n ≫ b
 
 /-- The five degreewise conditions for the source's simplicial homotopy. -/
 structure GodementDegreewiseHomotopy {D : Type u} [Category.{v} D]

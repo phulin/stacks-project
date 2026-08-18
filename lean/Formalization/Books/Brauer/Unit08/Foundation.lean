@@ -1,4 +1,4 @@
-import Formalization.Books.Brauer.Unit01.Centralizer
+import Formalization.Books.Brauer.Unit07.Foundation
 import Mathlib.FieldTheory.Galois.Basic
 import Mathlib.FieldTheory.IsAlgClosed.AlgebraicClosure
 import Mathlib.FieldTheory.IsSepClosed

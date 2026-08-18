@@ -1,4 +1,4 @@
-import Formalization.Books.Brauer.Unit01.NoncommutativeAlgebras
+import Formalization.Books.Brauer.Unit02.Foundation
 import Mathlib.Algebra.Module.LinearMap.End
 import Mathlib.RingTheory.SimpleModule.WedderburnArtin
 

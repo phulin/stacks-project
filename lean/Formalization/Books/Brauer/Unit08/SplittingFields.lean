@@ -1,4 +1,4 @@
-import Formalization.Books.Brauer.Unit01.SplittingFields
+import Formalization.Books.Brauer.Unit08.Foundation
 
 /-!
 # Brauer groups, Chapter 8: Splitting fields

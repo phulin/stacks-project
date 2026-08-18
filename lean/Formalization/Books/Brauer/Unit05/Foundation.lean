@@ -1,4 +1,4 @@
-import Formalization.Books.Brauer.Unit01.AlgebraLemmas
+import Formalization.Books.Brauer.Unit04.Foundation
 import Mathlib.Algebra.BrauerGroup.Defs
 import Mathlib.FieldTheory.IsAlgClosed.Basic
 import Mathlib.FieldTheory.IsAlgClosed.AlgebraicClosure
@@ -71,8 +71,10 @@ structure WedderburnDivisionRepresentative (k : Type u_k) (A : Type u_A)
   division : FiniteCentralDivisionAlgebra k
   csa : CSA.{u_k, u_A} k
   csa_carrier : csa.carrier = division.carrier
-  equivalence : Nonempty
-    (A ≃ₐ[k] Matrix (Fin degree) (Fin degree) division.carrier)
+  equivalence :
+    letI := division.divisionRing
+    letI := division.algebra
+    Nonempty (A ≃ₐ[k] Matrix (Fin degree) (Fin degree) division.carrier)
 
 theorem similarity_is_equivalence (k : Type*) [Field k] :
     Equivalence (@IsBrauerEquivalent k _) :=
@@ -222,7 +224,7 @@ private theorem matrix_division_factor_is_central (k A D : Type*) [Field k]
     _ = Matrix.scalar (Fin n) x := ha
 
 theorem wedderburn_artin_finite_central_division_representative
-    (k : Type u_k) (A : CSA.{u_k, u_A} k) :
+    (k : Type u_k) [Field k] (A : CSA.{u_k, u_A} k) :
     Nonempty (WedderburnDivisionRepresentative k A.carrier) := by
   classical
   obtain ⟨n, hn, D, hD, hDalg, hDfinite, ⟨e⟩⟩ :=

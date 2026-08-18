@@ -1,3 +1,4 @@
+import Formalization.Books.Brauer.Unit02.Foundation
 import Formalization.Books.Brauer.Unit02.NoncommutativeAlgebras
 
 /-!

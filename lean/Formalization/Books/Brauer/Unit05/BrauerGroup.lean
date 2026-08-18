@@ -1,5 +1,5 @@
 import Formalization.Books.Brauer.Unit04.AlgebraLemmas
-import Formalization.Books.Brauer.Unit01.BrauerGroup
+import Formalization.Books.Brauer.Unit05.Foundation
 
 /-!
 # Brauer groups, Chapter 5: The Brauer group of a field

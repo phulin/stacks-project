@@ -1,4 +1,4 @@
-import Formalization.Books.Brauer.Unit01.AlgebraLemmas
+import Formalization.Books.Brauer.Unit04.Foundation
 
 /-!
 # Lemmas on algebras

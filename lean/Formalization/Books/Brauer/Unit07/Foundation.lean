@@ -1,4 +1,4 @@
-import Formalization.Books.Brauer.Unit01.SkolemNoether
+import Formalization.Books.Brauer.Unit06.Foundation
 import Mathlib.Algebra.Algebra.Subalgebra.Centralizer
 import Mathlib.Algebra.Algebra.Subalgebra.Lattice
 

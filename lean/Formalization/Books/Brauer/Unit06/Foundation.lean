@@ -1,4 +1,4 @@
-import Formalization.Books.Brauer.Unit01.BrauerGroup
+import Formalization.Books.Brauer.Unit05.Foundation
 import Mathlib.Algebra.Algebra.Equiv
 import Mathlib.LinearAlgebra.GeneralLinearGroup.AlgEquiv
 

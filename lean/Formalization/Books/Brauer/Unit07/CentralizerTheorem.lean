@@ -1,4 +1,4 @@
-import Formalization.Books.Brauer.Unit01.Centralizer
+import Formalization.Books.Brauer.Unit07.Foundation
 
 /-!
 # Brauer groups, Chapter 7: The centralizer theorem

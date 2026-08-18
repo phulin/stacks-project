@@ -1,5 +1,5 @@
 import Formalization.Books.Brauer.Unit02.NoncommutativeAlgebras
-import Formalization.Books.Brauer.Unit01.Wedderburn
+import Formalization.Books.Brauer.Unit03.Foundation
 
 /-!
 # Brauer groups, Chapter 3: Wedderburn's theorem

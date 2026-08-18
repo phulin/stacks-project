@@ -1,4 +1,4 @@
-import Formalization.Books.Brauer.Unit01.SkolemNoether
+import Formalization.Books.Brauer.Unit06.Foundation
 
 /-!
 # Brauer groups, Chapter 6: Skolem--Noether

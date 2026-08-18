@@ -1,4 +1,4 @@
-import Formalization.Books.Brauer.Unit01.Wedderburn
+import Formalization.Books.Brauer.Unit03.Foundation
 import Mathlib.Algebra.Field.IsField
 import Mathlib.Algebra.Field.ULift
 import Mathlib.Algebra.Azumaya.Defs

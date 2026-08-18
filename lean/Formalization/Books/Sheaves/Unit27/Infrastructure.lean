@@ -966,7 +966,7 @@ theorem exists_moduleSkyscraperSheafFunctor {X : TopCat.{v}}
       alpha A A (𝟙 A) = 𝟙 _ := by
     dsimp [alpha]
     rw [hk_id A, S.map_id]
-    simp [Category.assoc]
+    simp
   have hα_comp (A B C : ModuleCat.{v}
       (TopCat.Presheaf.stalk (C := RingCat.{v}) O.obj x))
       (f : A ⟶ B) (g : B ⟶ C) :

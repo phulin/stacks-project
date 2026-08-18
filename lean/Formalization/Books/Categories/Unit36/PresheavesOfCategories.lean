@@ -1480,7 +1480,7 @@ theorem fibred_category_equivalent_to_split
     {S : Type uS} [Category.{vS} S]
     {C : Type uC} [Category.{vC} C]
     (p : S ⥤ C) [p.IsFibered] :
-    ∃ F : Cᵒᵖ ⥤ Cat.{vS, uS},
+    ∃ F : Cᵒᵖ ⥤ Cat.{vS, max (max uC vC) uS},
       IsFibredEquivalenceOver p (splitFibredProjection F) := by
   sorry
 

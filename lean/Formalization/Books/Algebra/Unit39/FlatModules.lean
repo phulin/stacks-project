@@ -1,4 +1,3 @@
-import Mathlib.Algebra.Category.ModuleCat.FilteredColimits
 import Mathlib.Algebra.Colimit.DirectLimit
 import Mathlib.RingTheory.Flat.EquationalCriterion
 import Mathlib.RingTheory.Flat.FaithfullyFlat.Algebra
@@ -54,14 +53,18 @@ theorem faithfullyFlat_module_iff_tensor_exact
   Module.FaithfullyFlat.iff_exact_iff_lTensor_exact R M
 
 theorem ringHom_flat_iff_module_flat
-    {R S : Type*} [CommRing R] [CommRing S] [Algebra R S] :
-    RingHom.Flat (algebraMap R S) ↔ Module.Flat R S :=
-  RingHom.flat_algebraMap_iff
+    {R S : Type*} [CommRing R] [CommRing S] (f : R →+* S) :
+    RingHom.Flat f ↔ @Module.Flat R S _ _ f.toModule := by
+  change (letI : Algebra R S := f.toAlgebra; Module.Flat R S) ↔
+    @Module.Flat R S _ _ f.toModule
+  rfl
 
 theorem ringHom_faithfullyFlat_iff_module_faithfullyFlat
-    {R S : Type*} [CommRing R] [CommRing S] [Algebra R S] :
-    RingHom.FaithfullyFlat (algebraMap R S) ↔ Module.FaithfullyFlat R S :=
-  RingHom.faithfullyFlat_algebraMap_iff
+    {R S : Type*} [CommRing R] [CommRing S] (f : R →+* S) :
+    RingHom.FaithfullyFlat f ↔ @Module.FaithfullyFlat R S _ _ f.toModule := by
+  change (letI : Algebra R S := f.toAlgebra; Module.FaithfullyFlat R S) ↔
+    @Module.FaithfullyFlat R S _ _ f.toModule
+  rfl
 
 end Definitions
 

@@ -233,6 +233,24 @@ theorem differentialComparisonMap_bijective
     Function.Bijective (differentialComparisonMap (R := R) (A := A) (B := B) P) := by
   sorry
 
+/--
+The canonical linear equivalence induced by the differential comparison map.
+
+This packages the source's assertion that the comparison map is an isomorphism
+in a reusable form, while `differentialComparisonMap` remains available when
+the actual canonical map is needed.
+-/
+noncomputable def differentialComparisonEquiv
+    {R A B : Type u} [CommRing R] [CommRing A] [CommRing B]
+    [Algebra R A] [Algebra R B] [Algebra A B] [IsScalarTower R A B]
+    (hAB : Algebra.FormallyUnramified A B)
+    (P : Algebra.Extension.{u} A B)
+    (hP : IsUniversalFirstOrderThickening P) :
+    B ⊗[A] KaehlerDifferential R A ≃ₗ[B]
+      B ⊗[P.Ring] KaehlerDifferential R P.Ring :=
+  LinearEquiv.ofBijective (differentialComparisonMap (R := R) (A := A) (B := B) P)
+    (differentialComparisonMap_bijective (R := R) (A := A) (B := B) hAB P hP)
+
 /-- The universal thickening remains formally unramified over the base. -/
 theorem universal_first_order_thickening_formallyUnramified
     {A B : Type u} [CommRing A] [CommRing B] [Algebra A B]
@@ -258,8 +276,7 @@ theorem differentials_universal_first_order_thickening
         (B ⊗[A] KaehlerDifferential R A ≃ₗ[B]
           B ⊗[P.Ring] KaehlerDifferential R P.Ring) := by
   exact ⟨universal_first_order_thickening_formallyUnramified P hP,
-    ⟨LinearEquiv.ofBijective (differentialComparisonMap (R := R) (A := A) (B := B) P)
-      (differentialComparisonMap_bijective (R := R) (A := A) (B := B) hAB P hP)⟩⟩
+    ⟨differentialComparisonEquiv hAB P hP⟩⟩
 
 end
 

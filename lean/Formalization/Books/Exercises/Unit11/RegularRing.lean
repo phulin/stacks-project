@@ -48,9 +48,13 @@ abbrev originResidueModule (k : Type u) [Field k] :
     ModuleCat (twoVariablePolynomialRing k) :=
   ModuleCat.of (twoVariablePolynomialRing k) (originResidueRing k)
 
-/-- The quotient model of the source's coefficient field is canonically `k`. -/
+/-- The quotient model of the source's coefficient field, together with the
+identification under which the quotient map is evaluation at the origin. -/
 theorem origin_residue_ring_isomorphic_to_field (k : Type u) [Field k] :
-    Nonempty (originResidueRing k ≃+* k) := by
+    ∃ e : originResidueRing k ≃+* k,
+      e.toRingHom.comp
+          (Ideal.Quotient.mkₐ (twoVariablePolynomialRing k) (originIdeal k)).toRingHom =
+        originEvaluationAtZero k := by
   sorry
 
 /-! ## The displayed Koszul complex -/
@@ -94,9 +98,14 @@ def koszulComplex (k : Type u) [Field k] :
     (ModuleCat.ofHom (koszulAugmentation k))
     (0 : originResidueModule k ⟶ (0 : ModuleCat (twoVariablePolynomialRing k)))
 
-/-- The displayed Koszul complex is exact. -/
+/-- The displayed Koszul complex is exact, including injectivity at its left
+endpoint and surjectivity at its right endpoint.  `ComposableArrows.Exact`
+only records exactness at the internal terms, so the endpoint properties are
+included explicitly. -/
 theorem koszulComplex_exact (k : Type u) [Field k] :
-    (koszulComplex k).Exact := by
+    (koszulComplex k).Exact ∧
+      Mono ((koszulComplex k).map' 0 1) ∧
+      Epi ((koszulComplex k).map' 4 5) := by
   sorry
 
 /-! ## The Ext computation -/

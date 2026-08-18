@@ -1,5 +1,4 @@
 import Formalization.Books.Algebra.Unit78.FiniteProjectiveModules
-import Formalization.Books.Algebra.Unit81.CharacterizingFlatness
 import Mathlib.RingTheory.Finiteness.Descent
 
 /-!

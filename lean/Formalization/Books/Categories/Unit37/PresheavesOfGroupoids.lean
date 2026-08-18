@@ -328,14 +328,16 @@ theorem fibred_groupoids_equivalent_to_split
     {S : Type uS} [Category.{vS} S]
     {C : Type uC} [Category.{vC} C]
     (p : S ⥤ C) [p.IsFibredInGroupoids] :
-    ∃ (F : Cᵒᵖ ⥤ CategoryTheory.Cat.{vS, uS}),
+    ∃ (F : Cᵒᵖ ⥤
+      CategoryTheory.Cat.{vS, max (max uC vC) uS}),
       (∀ U : C, IsGroupoid (F.obj (Opposite.op U))) ∧
         IsFibredEquivalenceOver p (groupoidPresheafProjection F) := by
   have hpib : p.IsFibered :=
     (fibredInGroupoids_iff_fibred_groupoid_fibres p).mp
       (inferInstance : p.IsFibredInGroupoids) |>.2
   have hsplit :
-      ∃ F : Cᵒᵖ ⥤ CategoryTheory.Cat.{vS, uS},
+      ∃ F : Cᵒᵖ ⥤
+        CategoryTheory.Cat.{vS, max (max uC vC) uS},
         IsFibredEquivalenceOver p (splitFibredProjection F) :=
     by sorry
   obtain ⟨F, hF⟩ := hsplit

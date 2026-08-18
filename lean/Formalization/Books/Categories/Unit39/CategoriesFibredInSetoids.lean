@@ -296,6 +296,8 @@ structure FibredInSetoidsTwoFibreProduct
     {C : Cat.{v, u}} {X Y S : FibredCategoryOver C}
     (F : FibredCategoryOverHom X S) (G : FibredCategoryOverHom Y S) where
   product : FibredTwoFibreProduct.{u₁, v₁, v, u} F G
+  product_diagram_is_canonical :
+    product.diagram = twoFibreProductOverDiagram F.underlying G.underlying
   fibres_are_setoids : ∀ U : C,
     IsSetoid (Functor.Fiber product.diagram.base U)
 

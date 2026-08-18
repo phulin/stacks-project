@@ -1953,7 +1953,7 @@ theorem epimorphism_iff_restrictScalars_fullyFaithful
         Nonempty F.FullyFaithful ] := by
   dsimp
   tfae_have h12 : 1 ↔ 2 := by
-    letI : Algebra R S := f.toAlgebra
+    let _ : Algebra R S := f.toAlgebra
     constructor
     · intro h
       have hepi : Algebra.IsEpi R S := (CommRingCat.epi_iff_epi).mp h
@@ -1965,12 +1965,11 @@ theorem epimorphism_iff_restrictScalars_fullyFaithful
       · intro g k e
         exact F.map_injective e
       · intro g
-        letI : Module S (F.obj N) := inferInstanceAs (Module S N)
-        letI : SMulCommClass R S (F.obj N) := ModuleCat.sMulCommClass_mk f N
-        letI : IsScalarTower R S (F.obj N) :=
+        let _ : Module S (F.obj N) := inferInstanceAs (Module S N)
+        let _ : SMulCommClass R S (F.obj N) := ModuleCat.sMulCommClass_mk f N
+        let _ : IsScalarTower R S (F.obj N) :=
           ⟨by
             intro r s x
-            change (r • s) • x = r • (s • x)
             rw [Algebra.smul_def, ModuleCat.restrictScalars.smul_def f r,
               mul_smul]
             rfl⟩
@@ -1993,7 +1992,7 @@ theorem epimorphism_iff_restrictScalars_fullyFaithful
                           rw [Algebra.smul_def]
                           have har : algebraMap R S r = f r := rfl
                           have hmb : (f r * b) • x' = r • (b • x') := by
-                            simp [smul_eq_mul, mul_smul,
+                            simp [mul_smul,
                               ModuleCat.restrictScalars.smul_def f r]
                             rfl
                           rw [har, hmb, map_smul]
@@ -2018,7 +2017,7 @@ theorem epimorphism_iff_restrictScalars_fullyFaithful
                 have ht : 1 ⊗ₜ[R] s = s ⊗ₜ[R] (1 : S) :=
                   (Algebra.isEpi_iff_forall_one_tmul_eq R S).mp hepi s
                 let L : (S ⊗[R] S) →ₗ[R] F.obj N := TensorProduct.lift hbilin
-                letI : Algebra S (S ⊗[R] S) :=
+                let _ : Algebra S (S ⊗[R] S) :=
                   (Algebra.TensorProduct.includeLeft (R := R) (S := S)
                     (A := S) (B := S)).toRingHom.toAlgebra
                 let Ls : (S ⊗[R] S) →ₗ[S] F.obj N :=
@@ -2028,7 +2027,7 @@ theorem epimorphism_iff_restrictScalars_fullyFaithful
                       intro a t
                       induction t using TensorProduct.induction_on with
                       | zero => simp
-                      | add t u ht hu => simp [ht, hu, add_smul]
+                      | add t u ht hu => simp [ht, hu]
                       | tmul b c =>
                           change (a * b) • g.hom (c • x') =
                             a • (b • g.hom (c • x'))
@@ -2045,7 +2044,43 @@ theorem epimorphism_iff_restrictScalars_fullyFaithful
           rfl
         
     · intro h
-      sorry
+      apply (CommRingCat.epi_iff_epi).mpr
+      rw [Algebra.isEpi_iff_forall_one_tmul_eq]
+      intro s
+      let _ : Algebra S (S ⊗[R] S) :=
+        (Algebra.TensorProduct.includeLeft (R := R) (S := S) (A := S) (B := S)).toRingHom.toAlgebra
+      let g : (ModuleCat.restrictScalars f).obj (ModuleCat.of S S) ⟶
+          (ModuleCat.restrictScalars f).obj (ModuleCat.of S (S ⊗[R] S)) :=
+        ModuleCat.ofHom
+          { toFun := fun x => (1 : S) ⊗ₜ[R] (x : S)
+            map_add' := by
+              intro x y
+              rw [TensorProduct.tmul_add]
+            map_smul' := by
+              intro r x
+              change (1 : S) ⊗ₜ[R] (f r * x) =
+                r • ((1 : S) ⊗ₜ[R] x)
+              have har : algebraMap R S r = f r := rfl
+              rw [← har, ← Algebra.smul_def]
+              rw [← TensorProduct.tmul_smul] }
+      let l : ModuleCat.of S S ⟶ ModuleCat.of S (S ⊗[R] S) :=
+        Classical.choose ((h (ModuleCat.of S S)
+          (ModuleCat.of S (S ⊗[R] S))).2 g)
+      have hl : (ModuleCat.restrictScalars f).map l = g :=
+        Classical.choose_spec ((h (ModuleCat.of S S)
+          (ModuleCat.of S (S ⊗[R] S))).2 g)
+      have happly := congrArg (fun q => q (s : S)) hl
+      change l.hom (s : S) = (1 : S) ⊗ₜ[R] s at happly
+      have h1 := congrArg (fun q => q (1 : S)) hl
+      change l.hom (1 : S) = (1 : S) ⊗ₜ[R] (1 : S) at h1
+      calc
+        (1 : S) ⊗ₜ[R] s = l.hom (s : S) := happly.symm
+        _ = l.hom (s • (1 : S)) := by rw [smul_eq_mul, mul_one]
+        _ = s • l.hom (1 : S) := l.hom.map_smul s 1
+        _ = s • ((1 : S) ⊗ₜ[R] (1 : S)) := by rw [h1]
+        _ = s ⊗ₜ[R] (1 : S) := by
+          change (s • (1 : S)) ⊗ₜ[R] (1 : S) = _
+          rw [smul_eq_mul, mul_one]
   tfae_have h23 : 2 ↔ 3 := by
     constructor
     · intro h

@@ -83,7 +83,9 @@ theorem tensorAlgebra_pure_tensor_mul
     {n m : ℕ} (x : Fin n → M) (y : Fin m → M) :
     TensorAlgebra.tprod R M n x * TensorAlgebra.tprod R M m y =
       TensorAlgebra.tprod R M (n + m) (Fin.append x y) := by
-  sorry
+  rw [← TensorPower.toTensorAlgebra_tprod, ← TensorPower.toTensorAlgebra_tprod,
+    ← TensorPower.toTensorAlgebra_gMul, TensorPower.tprod_mul_tprod,
+    TensorPower.toTensorAlgebra_tprod]
 
 /-- The canonical tensor-to-exterior algebra map records the quotient relation. -/
 def tensorAlgebraToExterior
@@ -123,7 +125,7 @@ theorem exterior_generator_swap
     {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M] (x y : M) :
     ExteriorAlgebra.ι R x * ExteriorAlgebra.ι R y =
       -ExteriorAlgebra.ι R y * ExteriorAlgebra.ι R x := by
-  sorry
+  simpa [eq_neg_iff_add_eq_zero] using ExteriorAlgebra.ι_add_mul_swap x y
 
 /-- Pure symmetric tensors span their symmetric power. -/
 theorem symmetric_pure_tensor_span

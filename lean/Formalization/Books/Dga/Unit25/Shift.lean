@@ -83,9 +83,8 @@ theorem totalizationSpec_nonempty : Nonempty (TotalizationSpec S) := by
     dsimp [homogeneousComp, homogeneousId]
     rw [Functor.congr_hom S.shift_zero f]
     apply eq_of_heq
-    simp only [Functor.id_map, Category.id_comp, Category.comp_id,
-      Category.assoc, eqToHom_trans, eqToHom_refl, cast_heq_iff_heq,
-      eqToHom_comp_heq_iff, heq_comp_eqToHom_iff]
+    simp only [Functor.id_map, Category.assoc, eqToHom_trans,
+      cast_heq_iff_heq, eqToHom_comp_heq_iff]
     exact comp_eqToHom_heq f _
   have hcomp_id :
       ∀ {X Y : C} {i : ℤ} (f : homogeneous S X Y i),
@@ -94,9 +93,7 @@ theorem totalizationSpec_nonempty : Nonempty (TotalizationSpec S) := by
     intro X Y i f
     dsimp [homogeneousComp, homogeneousId]
     apply eq_of_heq
-    simp only [eqToHom_map, Category.assoc, eqToHom_trans, eqToHom_refl,
-      Category.comp_id, Category.id_comp, cast_heq_iff_heq,
-      eqToHom_comp_heq_iff, heq_comp_eqToHom_iff]
+    simp only [eqToHom_map, eqToHom_trans, cast_heq_iff_heq]
     exact comp_eqToHom_heq f _
   let total_comp :
       ∀ {X Y Z : C},
@@ -118,7 +115,7 @@ theorem totalizationSpec_nonempty : Nonempty (TotalizationSpec S) := by
                         (homogeneousComp S i j fi gj)
                     map_add' := by
                       intro gj gj'
-                      letI : Functor.Additive (S.shift i) := S.additive i
+                      let _ : Functor.Additive (S.shift i) := S.additive i
                       have hcomp := congrArg
                         (DirectSum.lof R ℤ
                           (fun n => homogeneous S X Z n) (i + j))
@@ -131,8 +128,8 @@ theorem totalizationSpec_nonempty : Nonempty (TotalizationSpec S) := by
                         (fun n => homogeneous S X Z n) (i + j)).map_add _ _
                     map_smul' := by
                       intro r gj
-                      letI : Functor.Additive (S.shift i) := S.additive i
-                      letI : Functor.Linear R (S.shift i) := S.linear i
+                      let _ : Functor.Additive (S.shift i) := S.additive i
+                      let _ : Functor.Linear R (S.shift i) := S.linear i
                       have hcomp := congrArg
                         (DirectSum.lof R ℤ
                           (fun n => homogeneous S X Z n) (i + j))
@@ -144,7 +141,7 @@ theorem totalizationSpec_nonempty : Nonempty (TotalizationSpec S) := by
                         (fun n => homogeneous S X Z n) (i + j)).map_smul _ _ })
             map_add' := by
               intro fi fi'
-              letI : Functor.Additive (S.shift i) := S.additive i
+              let _ : Functor.Additive (S.shift i) := S.additive i
               apply DirectSum.linearMap_ext
               intro j
               apply LinearMap.ext
@@ -164,8 +161,8 @@ theorem totalizationSpec_nonempty : Nonempty (TotalizationSpec S) := by
                 (fun n => homogeneous S X Z n) (i + j)).map_add _ _
             map_smul' := by
               intro r fi
-              letI : Functor.Additive (S.shift i) := S.additive i
-              letI : Functor.Linear R (S.shift i) := S.linear i
+              let _ : Functor.Additive (S.shift i) := S.additive i
+              let _ : Functor.Linear R (S.shift i) := S.linear i
               apply DirectSum.linearMap_ext
               intro j
               apply LinearMap.ext
@@ -271,10 +268,7 @@ theorem totalizationSpec_nonempty : Nonempty (TotalizationSpec S) := by
     rw [Functor.congr_hom (S.shift_comp i j) h]
     apply eq_of_heq
     simp only [cast_heq_iff_heq, Category.assoc, eqToHom_trans,
-      eqToHom_refl, Category.comp_id, Category.id_comp,
-      eqToHom_comp_heq_iff, heq_comp_eqToHom_iff,
-      comp_eqToHom_heq_iff, eqToHom_map, eqToHom_trans_assoc,
-      Functor.comp_obj, Functor.comp_map]
+      eqToHom_map, Functor.comp_obj]
     congr 1
     · exact congrArg (fun n : ℤ => (S.shift n).obj Z) (by omega)
     · congr 1
@@ -656,7 +650,7 @@ theorem degree_zero_recovers :
     dsimp [homogeneousComp, mapToFamily, familyToMap]
     rw [Functor.congr_hom S.shift_zero g]
     simp only [Functor.id_map, Category.assoc, Category.comp_id,
-      Category.id_comp, eqToHom_trans, eqToHom_refl]
+      eqToHom_trans, eqToHom_refl]
   have hsource_id (A : C) :
       homFrom (mapToFamily (𝟙 A)) =
         𝟙 (DegreeZero.of (gradedCategory S) (categoryObject S A)) := by

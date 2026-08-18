@@ -330,7 +330,7 @@ noncomputable def gradedRightModuleHomogeneousId
     rcases s with ⟨⟨p, q⟩, h⟩
     have hq : q = -p := by omega
     subst q
-    simp only [Prod.fst, Prod.snd, Subtype.coe_mk] at h ⊢
+    simp only [Subtype.coe_mk] at h ⊢
     change L.component (-(-p + i)) at m
     exact htransport_action
       (i := -(-p + i)) (j := p - i) (k := -(-p)) (l := p) (d := i)

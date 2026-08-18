@@ -530,7 +530,7 @@ def integerPolynomialMaximalIdeal (p : ℕ) (g : Polynomial (ZMod p)) :
 theorem integer_polynomial_maximal_ideal_classification
     (I : Ideal integerPolynomialRing) :
     I.IsMaximal ↔
-      ∃ p : ℕ, ∃ hp : Nat.Prime p, ∃ g : Polynomial (ZMod p),
+      ∃ p : ℕ, ∃ _hp : Nat.Prime p, ∃ g : Polynomial (ZMod p),
         Irreducible g ∧ I = integerPolynomialMaximalIdeal p g := by
   classical
   constructor

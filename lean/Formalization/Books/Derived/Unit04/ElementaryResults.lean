@@ -468,8 +468,8 @@ theorem special_triangle_isIso₁
     change Function.Bijective (fun x : W ⟶ T.obj₁ => x ≫ φ.hom₁) at hb
     exact hb)
 
-/-- The dual two-out-of-three statement for co-special triangles. -/
 set_option maxHeartbeats 1000000 in
+/-- The dual two-out-of-three statement for co-special triangles. -/
 theorem coSpecial_triangle_two_out_of_three
     {T T' : Triangle C} (hT : CoSpecialTriangle T)
     (hT' : CoSpecialTriangle T') (φ : T ⟶ T')
@@ -492,9 +492,9 @@ theorem coSpecial_triangle_two_out_of_three
   let _ : IsIso φ.hom₃.op := h1op'
   exact isIso_of_op φ.hom₃
 
+set_option maxHeartbeats 1000000 in
 /-- The middle component of a co-special-triangle morphism is an isomorphism
 when the first and third components are. -/
-set_option maxHeartbeats 1000000 in
 theorem coSpecial_triangle_isIso₂
     {T T' : Triangle C} (hT : CoSpecialTriangle T)
     (hT' : CoSpecialTriangle T') (φ : T ⟶ T')
@@ -517,9 +517,9 @@ theorem coSpecial_triangle_isIso₂
     (special_triangle_isIso₂ (C := Cᵒᵖ) (T := Topp) (T' := Top)
       hTopp hTop phop h3op h1op)
 
+set_option maxHeartbeats 1000000 in
 /-- The first component of a co-special-triangle morphism is an isomorphism
 when the second and third components are. -/
-set_option maxHeartbeats 1000000 in
 theorem coSpecial_triangle_isIso₁
     {T T' : Triangle C} (hT : CoSpecialTriangle T)
     (hT' : CoSpecialTriangle T') (φ : T ⟶ T')
@@ -554,8 +554,8 @@ theorem distinguished_triangle_special
   · exact F.homologySequence_exact₃ T hT n (n + 1) (by rfl)
   · exact F.homologySequence_exact₁ T hT n (n + 1) (by rfl)
 
-/-- Every distinguished triangle is co-special. -/
 set_option maxHeartbeats 1000000 in
+/-- Every distinguished triangle is co-special. -/
 theorem distinguished_triangle_coSpecial
     (T : Triangle C) (hT : T ∈ distTriang C) : CoSpecialTriangle T := by
   let Top : Triangle Cᵒᵖ :=

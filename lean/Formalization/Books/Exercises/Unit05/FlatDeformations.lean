@@ -1,8 +1,10 @@
 import Mathlib.Algebra.DualNumber
 import Mathlib.Algebra.MvPolynomial.Basic
 import Mathlib.Algebra.Algebra.ZMod
+import Mathlib.Data.Nat.Choose.Dvd
 import Mathlib.LinearAlgebra.Basis.VectorSpace
 import Mathlib.RingTheory.Flat.Basic
+import Mathlib.RingTheory.Flat.EquationalCriterion
 import Mathlib.RingTheory.Flat.Stability
 import Mathlib.RingTheory.Ideal.Quotient.Operations
 import Mathlib.RingTheory.MvPolynomial.Ideal
@@ -291,7 +293,88 @@ theorem sixVariablePowerLift_flat (p : ℕ) (_hp : Nat.Prime p) :
 -/
 theorem sixVariablePowerLift_specialFiber (p : ℕ) (hp : Nat.Prime p) :
     Nonempty (sixVariablePowerLiftSpecialFiber p ≃+* sixVariablePowerAlgebra p) := by
-  sorry
+  let R₂ := ZMod (p ^ 2)
+  let R₁ := ZMod p
+  let P₂ := MvPolynomial (Fin 6) R₂
+  let P₁ := MvPolynomial (Fin 6) R₁
+  let I₂ : Ideal P₂ := sixVariablePowerIdeal p R₂
+  let I₁ : Ideal P₁ := sixVariablePowerIdeal p R₁
+  let J : Ideal P₂ := Ideal.span {algebraMap R₂ P₂ (p : R₂)}
+  have hp2 : p ∣ p ^ 2 := by
+    exact ⟨p, by ring⟩
+  let c : R₂ →+* R₁ := ZMod.castHom hp2 R₁
+  let f : P₂ →+* P₁ := MvPolynomial.map c
+  have hc : ∀ a : R₂, c a = 0 ↔ (p : R₂) ∣ a := by
+    intro a
+    obtain ⟨z, rfl⟩ := ZMod.intCast_surjective a
+    constructor
+    · intro hz
+      have hz0 : (z : R₁) = 0 := by
+        rw [← ZMod.cast_intCast hp2 z]
+        exact hz
+      have hz' : (p : ℤ) ∣ z := by
+        rw [← ZMod.intCast_zmod_eq_zero_iff_dvd]
+        exact hz0
+      obtain ⟨k, hk⟩ := hz'
+      refine ⟨(k : R₂), ?_⟩
+      simpa [hk] using congrArg (fun w : ℤ => (w : R₂)) hk
+    · rintro ⟨a, ha⟩
+      rw [ha, map_mul]
+      have cp : c (p : R₂) = 0 := by
+        change ZMod.cast (p : ZMod (p ^ 2)) = 0
+        rw [ZMod.cast_natCast hp2]
+        exact (ZMod.natCast_eq_zero_iff p p).2 dvd_rfl
+      rw [cp, zero_mul]
+  have hker : RingHom.ker f = J := by
+    ext q
+    rw [RingHom.mem_ker]
+    rw [← MvPolynomial.C_dvd_iff_map_hom_eq_zero c (p : R₂) hc q]
+    change MvPolynomial.C (p : R₂) ∣ q ↔
+      q ∈ Ideal.span {MvPolynomial.C (p : R₂)}
+    rw [Ideal.mem_span_singleton]
+  have hf : Function.Surjective f := by
+    exact MvPolynomial.map_surjective c (ZMod.castHom_surjective hp2)
+  have hI_map : Ideal.map f I₂ = I₁ := by
+    unfold I₂ I₁ sixVariablePowerIdeal
+    rw [Ideal.map_span]
+    apply congrArg Ideal.span
+    ext q
+    constructor
+    · rintro ⟨q, ⟨i, rfl⟩, rfl⟩
+      refine ⟨i, ?_⟩
+      dsimp [f]
+      rw [map_pow, MvPolynomial.map_X]
+    · rintro ⟨i, rfl⟩
+      refine ⟨(MvPolynomial.X i : P₂) ^ p, ⟨i, rfl⟩, ?_⟩
+      dsimp [f]
+      rw [map_pow, MvPolynomial.map_X]
+  let e₀ : (P₂ ⧸ RingHom.ker f) ≃+* P₁ :=
+    f.quotientKerEquivOfSurjective hf
+  let e : (P₂ ⧸ J) ≃+* P₁ :=
+    (Ideal.quotEquivOfEq hker.symm).trans e₀
+  have hecomp : (e : (P₂ ⧸ J) →+* P₁).comp (Ideal.Quotient.mk J) = f := by
+    apply RingHom.ext
+    intro x
+    simp [e, e₀]
+  have hmap : I₁ = Ideal.map (e : (P₂ ⧸ J) →+* P₁)
+      (Ideal.map (Ideal.Quotient.mk J) I₂) := by
+    calc
+      I₁ = Ideal.map f I₂ := hI_map.symm
+      _ = Ideal.map ((e : (P₂ ⧸ J) →+* P₁).comp
+          (Ideal.Quotient.mk J)) I₂ := by rw [hecomp]
+      _ = Ideal.map (e : (P₂ ⧸ J) →+* P₁)
+          (Ideal.map (Ideal.Quotient.mk J) I₂) :=
+        (Ideal.map_map _ _).symm
+  have hJmap : Ideal.map (Ideal.Quotient.mk I₂) J =
+      Ideal.span {algebraMap R₂ (P₂ ⧸ I₂) (p : R₂)} := by
+    change Ideal.map (Ideal.Quotient.mk I₂)
+        (Ideal.span {algebraMap R₂ P₂ (p : R₂)}) = _
+    rw [Ideal.map_span, Set.image_singleton]
+    rfl
+  let e' : (P₂ ⧸ J) ⧸ Ideal.map (Ideal.Quotient.mk J) I₂ ≃+* P₁ ⧸ I₁ :=
+    Ideal.quotientEquiv (Ideal.map (Ideal.Quotient.mk J) I₂) I₁ e hmap
+  exact ⟨(Ideal.quotEquivOfEq hJmap.symm).trans
+      ((DoubleQuot.quotQuotEquivComm I₂ J).trans e')⟩
 
 /-- The second exercise supplies a flat `ℤ/p²ℤ`-algebra lifting the displayed
 characteristic-`p` algebra. -/
@@ -334,6 +417,229 @@ theorem no_flat_sixVariableQuadratic_lift
         Nonempty
           (principalSpecialFiber (R := ZMod (p ^ 2)) (B := B) (p : ZMod (p ^ 2))
             ≃+* sixVariableQuadraticAlgebra p) := by
+  rintro ⟨B, _, _, hflat, ⟨e⟩⟩
+  let R := ZMod (p ^ 2)
+  let K : Ideal B := Ideal.span {algebraMap R B (p : R)}
+  let π : B →+* (B ⧸ K) := Ideal.Quotient.mk K
+  letI : Module.Flat R B := hflat
+  have hscalar : ∀ a : R, (p : R) * a = 0 →
+      ∃ c : R, a = (p : R) * c := by
+    intro a ha
+    obtain ⟨z, rfl⟩ := ZMod.intCast_surjective a
+    have hzdiv : (p ^ 2 : ℤ) ∣ (p : ℤ) * z := by
+      apply (ZMod.intCast_zmod_eq_zero_iff_dvd _ _).mp
+      rw [Int.cast_mul]
+      simpa using ha
+    obtain ⟨k, hk⟩ := hzdiv
+    have hpz : (p : ℤ) ≠ 0 := by exact_mod_cast hp.ne_zero
+    have hz : z = (p : ℤ) * k := by
+      apply (mul_left_cancel₀ hpz)
+      calc
+        (p : ℤ) * z = (p ^ 2 : ℤ) * k := hk
+        _ = (p : ℤ) * ((p : ℤ) * k) := by ring
+    refine ⟨(k : R), ?_⟩
+    simpa [hz, Int.cast_mul]
+  have hdivide : ∀ y : B, (p : R) • y = 0 →
+      ∃ z : B, y = (p : R) • z := by
+    intro y hy
+    have htr : Module.IsTrivialRelation
+        (fun _ : Fin 1 => (p : R)) (fun _ : Fin 1 => y) := by
+      apply Module.Flat.isTrivialRelation_of_sum_smul_eq_zero
+      simpa [Fin.sum_univ_succ] using hy
+    rcases htr with ⟨k, a, z, ha, haz⟩
+    have hfactor : ∀ j : Fin k, ∃ c : R, a 0 j = (p : R) * c := by
+      intro j
+      apply hscalar
+      simpa using haz j
+    choose c hc using hfactor
+    refine ⟨∑ j, c j • z j, ?_⟩
+    calc
+      y = ∑ j, a 0 j • z j := ha 0
+      _ = ∑ j, ((p : R) * c j) • z j := by simp_rw [hc]
+      _ = (p : R) • ∑ j, c j • z j := by
+        rw [Finset.smul_sum]
+        congr 1
+        funext j
+        rw [mul_smul]
+  let D : B → B → B := fun u v =>
+    ∑ k ∈ Finset.range (p + 1) with 0 < k ∧ k < p,
+      algebraMap R B ((p.choose k / p : ℕ) : R) * u ^ k * v ^ (p - k)
+  have hbinom (u v : B) :
+      (u + v) ^ p = u ^ p + v ^ p + (p : R) • D u v := by
+    classical
+    rw [add_pow]
+    simp only [D, Algebra.smul_def]
+    rw [← Finset.sum_filter_add_sum_filter_not (Finset.range (p + 1))
+      (fun k => 0 < k ∧ k < p)]
+    have hcomp : (Finset.range (p + 1)).filter (fun k => ¬ (0 < k ∧ k < p)) =
+        {0, p} := by
+      ext k
+      simp only [Finset.mem_filter, Finset.mem_range, Finset.mem_insert,
+        Finset.mem_singleton]
+      omega
+    rw [hcomp]
+    rw [Finset.sum_insert]
+    · simp only [Finset.sum_singleton, Nat.choose_zero_right, Nat.choose_self,
+        pow_zero, mul_one, Nat.sub_self, Nat.sub_zero, Nat.cast_one]
+      have hsum :
+          (∑ k ∈ Finset.range (p + 1) with 0 < k ∧ k < p,
+            u ^ k * v ^ (p - k) * (p.choose k : B)) =
+            ∑ k ∈ Finset.range (p + 1) with 0 < k ∧ k < p,
+              (algebraMap R B) (p : R) *
+                (u ^ k * v ^ (p - k) *
+                  (algebraMap R B) ((p.choose k / p : ℕ) : R)) := by
+        apply Finset.sum_congr rfl
+        intro k hk
+        have hk' : k < p + 1 ∧ 0 < k ∧ k < p := by
+          simpa only [Finset.mem_filter, Finset.mem_range] using hk
+        have hk0 : k ≠ 0 := by
+          exact Nat.ne_of_gt hk'.2.1
+        have hklt : k < p := by
+          exact hk'.2.2
+        have hdiv : p ∣ p.choose k := hp.dvd_choose_self hk0 hklt
+        have hcast : (p.choose k : B) =
+            (algebraMap R B) (p : R) *
+              (algebraMap R B) ((p.choose k / p : ℕ) : R) := by
+          have hn : p * (p.choose k / p) = p.choose k :=
+            Nat.mul_div_cancel' hdiv
+          calc
+            (p.choose k : B) = ((p * (p.choose k / p) : ℕ) : B) := by
+              exact congrArg (fun n : ℕ => (n : B)) hn.symm
+            _ = (algebraMap R B) (p : R) *
+                (algebraMap R B) ((p.choose k / p : ℕ) : R) := by
+              have hpmap : (algebraMap R B) (p : R) = (p : B) := by
+                simpa [R] using (map_natCast (algebraMap R B) p)
+              have hqmap : (algebraMap R B)
+                  ((p.choose k / p : ℕ) : R) =
+                    (p.choose k / p : B) := by
+                simpa [R] using (map_natCast (algebraMap R B)
+                  (p.choose k / p))
+              rw [hpmap, hqmap]
+              simp only [Nat.cast_mul]
+        rw [hcast]
+        ring
+      calc
+        (∑ x ∈ Finset.range (p + 1) with 0 < x ∧ x < p,
+              u ^ x * v ^ (p - x) * (p.choose x : B)) +
+            ((1 : B) * v ^ p + u ^ p) =
+            u ^ p + v ^ p +
+              ∑ x ∈ Finset.range (p + 1) with 0 < x ∧ x < p,
+                u ^ x * v ^ (p - x) * (p.choose x : B) := by
+          ring
+        _ = u ^ p + v ^ p +
+              ∑ x ∈ Finset.range (p + 1) with 0 < x ∧ x < p,
+                (algebraMap R B) (p : R) *
+                  (u ^ x * v ^ (p - x) *
+                    (algebraMap R B) ((p.choose x / p : ℕ) : R)) := by
+          rw [hsum]
+        _ = u ^ p + v ^ p +
+              (algebraMap R B) (p : R) * D u v := by
+          simp only [D]
+          rw [Finset.mul_sum]
+          congr 1
+          apply Finset.sum_congr rfl
+          intro k hk
+          ring
+    · intro h
+      apply hp.ne_zero
+      have h' : 0 = p := by simpa only [Finset.mem_singleton] using h
+      exact h'.symm
+  let A := sixVariableQuadraticAlgebra p
+  let φ : B →+* A := e.toRingHom.comp π
+  let y : Fin 6 → A := fun i =>
+    Ideal.Quotient.mk (sixVariableQuadraticIdeal p (ZMod p))
+      (MvPolynomial.X i)
+  have hφsurj : Function.Surjective φ := by
+    exact e.surjective.comp π.surjective
+  choose x hx using fun i => hφsurj (y i)
+  have hy_pow (i : Fin 6) : y i ^ p = 0 := by
+    change (Ideal.Quotient.mk (sixVariableQuadraticIdeal p (ZMod p))
+      (MvPolynomial.X i)) ^ p = 0
+    rw [← map_pow]
+    rw [Ideal.Quotient.eq_zero_iff_mem]
+    change (MvPolynomial.X i) ^ p ∈ sixVariableQuadraticIdeal p (ZMod p)
+    exact Ideal.subset_span (Or.inl ⟨i, rfl⟩)
+  have hpow_mem (i : Fin 6) : x i ^ p ∈ K := by
+    have hφpow : φ (x i ^ p) = 0 := by
+      rw [map_pow, hx i, hy_pow]
+    have hπpow : π (x i ^ p) = 0 := by
+      apply e.injective
+      simpa [φ] using hφpow
+    exact (Ideal.Quotient.eq_zero_iff_mem).mp hπpow
+  choose z hz using fun i => (Ideal.mem_span_singleton'.mp (hpow_mem i))
+  let a := x 0 * x 1
+  let b := x 2 * x 3
+  let c := x 4 * x 5
+  let q := a + b + c
+  have hq_mem : q ∈ K := by
+    have hφq : φ q = 0 := by
+      dsimp [q, a, b, c]
+      rw [map_add, map_add, map_mul, map_mul, map_mul,
+        hx 0, hx 1, hx 2, hx 3, hx 4, hx 5]
+      change (y 0 * y 1 + y 2 * y 3 + y 4 * y 5) = 0
+      exact Ideal.Quotient.eq_zero_iff_mem.mpr <| by
+        change MvPolynomial.X 0 * MvPolynomial.X 1 +
+            MvPolynomial.X 2 * MvPolynomial.X 3 +
+              MvPolynomial.X 4 * MvPolynomial.X 5 ∈
+            sixVariableQuadraticIdeal p (ZMod p)
+        exact Ideal.subset_span (Or.inr rfl)
+    have hπq : π q = 0 := by
+      apply e.injective
+      simpa [φ] using hφq
+    exact (Ideal.Quotient.eq_zero_iff_mem).mp hπq
+  obtain ⟨w, hw⟩ := Ideal.mem_span_singleton'.mp hq_mem
+  let P : B := algebraMap R B (p : R)
+  have hp2 : 2 ≤ p := hp.two_le
+  have hR2 : (p : R) ^ 2 = 0 := by
+    change (p : ZMod (p ^ 2)) ^ 2 = 0
+    rw [← Nat.cast_pow]
+    exact (ZMod.natCast_eq_zero_iff (p ^ 2) (p ^ 2)).2 dvd_rfl
+  have hP2 : P ^ 2 = 0 := by
+    change (algebraMap R B (p : R)) ^ 2 = 0
+    rw [← map_pow]
+    simpa using congrArg (algebraMap R B) hR2
+  have hPpow : P ^ p = 0 := by
+    rw [show p = 2 + (p - 2) by omega, pow_add, hP2, zero_mul]
+  have hxp (i : Fin 6) : x i ^ p = P * z i := by
+    rw [← hz i]
+    dsimp [P]
+    ring
+  have ha_pow : a ^ p = 0 := by
+    dsimp [a]
+    rw [mul_pow, hxp, hxp]
+    calc
+      (P * z 0) * (P * z 1) = P ^ 2 * (z 0 * z 1) := by ring
+      _ = 0 := by rw [hP2, zero_mul]
+  have hb_pow : b ^ p = 0 := by
+    dsimp [b]
+    rw [mul_pow, hxp, hxp]
+    calc
+      (P * z 2) * (P * z 3) = P ^ 2 * (z 2 * z 3) := by ring
+      _ = 0 := by rw [hP2, zero_mul]
+  have hc_pow : c ^ p = 0 := by
+    dsimp [c]
+    rw [mul_pow, hxp, hxp]
+    calc
+      (P * z 4) * (P * z 5) = P ^ 2 * (z 4 * z 5) := by ring
+      _ = 0 := by rw [hP2, zero_mul]
+  have hq_pow : q ^ p = 0 := by
+    rw [← hw, mul_pow, hPpow, mul_zero]
+  have hsum_pow :
+      q ^ p = a ^ p + b ^ p + c ^ p +
+        (p : R) • (D a b + D (a + b) c) := by
+    calc
+      q ^ p = (a + b + c) ^ p := by rfl
+      _ = (a + b) ^ p + c ^ p + (p : R) • D (a + b) c :=
+        hbinom (a + b) c
+      _ = a ^ p + b ^ p + c ^ p +
+          (p : R) • (D a b + D (a + b) c) := by
+        rw [hbinom a b]
+        simp only [add_assoc]
+        module
+  have hDkill : (p : R) • (D a b + D (a + b) c) = 0 := by
+    rw [← hq_pow, hsum_pow, ha_pow, hb_pow, hc_pow]
+    simp
+  exfalso
   sorry
 
 /-- In particular, the characteristic-two algebra in the source has no flat

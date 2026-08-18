@@ -221,12 +221,12 @@ theorem special_triangle_two_out_of_three
       calc
         F.map φ.hom₃ = (𝟙 _ : F.obj T.obj₃ ⟶ F.obj T.obj₃) ≫ F.map φ.hom₃ := by simp
         _ = (e.inv.app T.obj₃ ≫ e.hom.app T.obj₃) ≫ F.map φ.hom₃ := by simp
-        _ = e.inv.app T.obj₃ ≫ (e.hom.app T.obj₃ ≫ F.map φ.hom₃) := by simp [Category.assoc]
+        _ = e.inv.app T.obj₃ ≫ (e.hom.app T.obj₃ ≫ F.map φ.hom₃) := by simp
         _ = e.inv.app T.obj₃ ≫
             ((F.shift (0 : ℤ)).map φ.hom₃ ≫ e.hom.app T'.obj₃) := by
               rw [e.hom.naturality]
         _ = e.inv.app T.obj₃ ≫
-            (F.shift (0 : ℤ)).map φ.hom₃ ≫ e.hom.app T'.obj₃ := by simp [Category.assoc]
+            (F.shift (0 : ℤ)).map φ.hom₃ ≫ e.hom.app T'.obj₃ := by simp
     rw [h]
     infer_instance
   exact isIso_of_yoneda_map_bijective φ.hom₃ (by
@@ -336,12 +336,12 @@ theorem special_triangle_isIso₂
       calc
         F.map φ.hom₂ = (𝟙 _ : F.obj T.obj₂ ⟶ F.obj T.obj₂) ≫ F.map φ.hom₂ := by simp
         _ = (e.inv.app T.obj₂ ≫ e.hom.app T.obj₂) ≫ F.map φ.hom₂ := by simp
-        _ = e.inv.app T.obj₂ ≫ (e.hom.app T.obj₂ ≫ F.map φ.hom₂) := by simp [Category.assoc]
+        _ = e.inv.app T.obj₂ ≫ (e.hom.app T.obj₂ ≫ F.map φ.hom₂) := by simp
         _ = e.inv.app T.obj₂ ≫
             ((F.shift (0 : ℤ)).map φ.hom₂ ≫ e.hom.app T'.obj₂) := by
               rw [e.hom.naturality]
         _ = e.inv.app T.obj₂ ≫
-            (F.shift (0 : ℤ)).map φ.hom₂ ≫ e.hom.app T'.obj₂ := by simp [Category.assoc]
+            (F.shift (0 : ℤ)).map φ.hom₂ ≫ e.hom.app T'.obj₂ := by simp
     rw [h]
     infer_instance
   exact isIso_of_yoneda_map_bijective φ.hom₂ (by
@@ -451,12 +451,12 @@ theorem special_triangle_isIso₁
       calc
         F.map φ.hom₁ = (𝟙 _ : F.obj T.obj₁ ⟶ F.obj T.obj₁) ≫ F.map φ.hom₁ := by simp
         _ = (e.inv.app T.obj₁ ≫ e.hom.app T.obj₁) ≫ F.map φ.hom₁ := by simp
-        _ = e.inv.app T.obj₁ ≫ (e.hom.app T.obj₁ ≫ F.map φ.hom₁) := by simp [Category.assoc]
+        _ = e.inv.app T.obj₁ ≫ (e.hom.app T.obj₁ ≫ F.map φ.hom₁) := by simp
         _ = e.inv.app T.obj₁ ≫
             ((F.shift (0 : ℤ)).map φ.hom₁ ≫ e.hom.app T'.obj₁) := by
               rw [e.hom.naturality]
         _ = e.inv.app T.obj₁ ≫
-            (F.shift (0 : ℤ)).map φ.hom₁ ≫ e.hom.app T'.obj₁ := by simp [Category.assoc]
+            (F.shift (0 : ℤ)).map φ.hom₁ ≫ e.hom.app T'.obj₁ := by simp
     rw [h]
     infer_instance
   exact isIso_of_yoneda_map_bijective φ.hom₁ (by

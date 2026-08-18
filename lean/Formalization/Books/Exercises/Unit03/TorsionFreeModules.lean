@@ -497,12 +497,12 @@ theorem integerDoubling_coimage_image_not_isIso :
             _ = g.hom.hom (integerDoubling x) := by
               congr 1
               simp [integerDoubling, LinearMap.smulRight_apply,
-                LinearMap.id_apply, smul_eq_mul, mul_comm]
+                LinearMap.id_apply, mul_comm]
             _ = h.hom.hom (integerDoubling x) := hx'
             _ = h.hom.hom ((2 : ℤ) • x) := by
               congr 1
               simp [integerDoubling, LinearMap.smulRight_apply,
-                LinearMap.id_apply, smul_eq_mul, mul_comm]
+                LinearMap.id_apply, mul_comm]
             _ = _ := hmaph
         calc
           (LinearMap.lsmul ℤ Z.obj 2) (g.hom.hom x - h.hom.hom x) =
@@ -563,7 +563,7 @@ theorem integerDoubling_coimage_image_not_isIso :
     have htwo : (2 : ℤ) • one = integerDoubling one := by
       change (2 : ℤ) • (1 : ℤ) = integerDoubling (1 : ℤ)
       simp [integerDoubling, LinearMap.smulRight_apply, LinearMap.id_apply,
-        smul_eq_mul, mul_comm]
+        mul_comm]
     have hlin := invF.hom.hom.map_smul (2 : ℤ) one
     have hlin' : (2 : ℤ) • invF.hom.hom one = one := by
       calc
@@ -572,10 +572,9 @@ theorem integerDoubling_coimage_image_not_isIso :
         _ = invF.hom.hom (integerDoubling one) := by rw [htwo]
         _ = one := h1
     let invOne : ℤ := by
-      change ℤ
       exact invF.hom.hom one
     have hcontra : (2 : ℤ) * invOne = 1 := by
-      change (2 : ℤ) * invOne = 1
+      change (2 : ℤ) • (invF.hom.hom one) = (1 : ℤ) at hlin'
       exact hlin'
     omega
   intro hcomp

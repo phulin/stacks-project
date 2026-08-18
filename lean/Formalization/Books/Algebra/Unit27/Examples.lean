@@ -2625,7 +2625,7 @@ private theorem affine_base_subtract_eval_mem
       rfl
     rw [h, map_add, map_add]
     have hm := J.add_mem (hx' hxbase) (hy' hybase)
-    convert hm using 1 <;> ring
+    convert hm using 1; ring
   · intro x y hx hy hx' hy' heq
     have hxbase : x ∈ affineBaseSubalgebra := by
       rw [affine_base_is_generated_by_A_and_B]
@@ -2645,7 +2645,7 @@ private theorem affine_base_subtract_eval_mem
       (algebraMap ℚ affineBaseSubalgebra
         (affineEvaluation r (affineBaseElement y hybase))) (hx' hxbase)
     have hm := J.add_mem h1 h2
-    convert hm using 1 <;> ring
+    convert hm using 1; ring
 
 theorem affine_evaluation_kernel_formulas (a : ℚ) :
     affineM0 = Ideal.span {affineA, affineBZero} ∧
@@ -3545,8 +3545,7 @@ theorem affine_first_basic_open_homeomorph (a : ℚ) (ha0 : a ≠ 0) (ha1 : a �
     ext x
     change (Localization.awayMap (affineBaseToOpen a) (affineF1 a))
         (algebraMap affineBaseSubalgebra (AffineBaseAway a) x) = _
-    simp [Localization.awayMap, IsLocalization.Away.map,
-      IsLocalization.map_mk']
+    simp [Localization.awayMap, IsLocalization.Away.map]
     rfl
   rw [heq, ← hq]
   rfl
@@ -4028,8 +4027,8 @@ theorem affine_second_basic_open_complement (a : ℚ) (ha0 : a ≠ 0) (ha1 : a �
         {affinePoint a} ∪ (s : Set (PrimeSpectrum affineBaseSubalgebra)) := by
   sorry
 
-theorem affine_second_basic_open_homeomorph (a : ℚ) (ha0 : a ≠ 0) (ha1 : a ≠ 1)
-    (haHalf : a ≠ 1 / 2) :
+theorem affine_second_basic_open_homeomorph (a : ℚ) (_ha0 : a ≠ 0) (_ha1 : a ≠ 1)
+    (_haHalf : a ≠ 1 / 2) :
     ∃ e :
         {p : PrimeSpectrum (AffineOpenRing a) //
             p ∈ (PrimeSpectrum.basicOpen (affineOpenG a) :
@@ -4218,8 +4217,7 @@ theorem affine_second_basic_open_homeomorph (a : ℚ) (ha0 : a ≠ 0) (ha1 : a �
     ext x
     change (Localization.awayMap (affineBaseToOpen a) (affineG a))
         (algebraMap affineBaseSubalgebra (Localization.Away (affineG a)) x) = _
-    simp [Localization.awayMap, IsLocalization.Away.map,
-      IsLocalization.map_mk']
+    simp [Localization.awayMap, IsLocalization.Away.map]
     rfl
   rw [heq, ← hq]
   rfl
@@ -4323,8 +4321,8 @@ theorem affine_open_distinguished_opens_cover (a : ℚ) (ha0 : a ≠ 0) (ha1 : a
           algebraMap ℚ (AffineAmbient a) (2 - a) *
             affineLocalizationMap a (Polynomial.X ^ 2 - Polynomial.X) +
           algebraMap ℚ (AffineAmbient a) (2 * a * (1 - a))
-    simp [affinePolynomialG, affineQuadratic, hC']
-    rw [h2]
+    simp [affinePolynomialG, affineQuadratic]
+    simp [affineLocalizationMap, hC', h2]
     ring
   have hb :
       affineBaseToOpen a bthird =

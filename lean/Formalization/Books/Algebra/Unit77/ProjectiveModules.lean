@@ -280,7 +280,7 @@ theorem projective_of_ext_one_vanishes_on_finite_length_modules
           ((q₂loc.comp k').restrictScalars R).comp
               (LocalizedModule.mkLinearMap I.primeCompl (LinearMap.ker f)) = q0 := by
         ext x
-        simp [q₂loc, q₂locR, k', q₂', hq₂']
+        simp [q₂loc, q₂locR, k', q₂']
         exact LinearMap.congr_fun hq₂' x
       have hq₂loc :
           LocalizedModule.lift I.primeCompl q0 hunit =

@@ -9,6 +9,7 @@ import Mathlib.LinearAlgebra.Matrix.Rank
 import Mathlib.RingTheory.DiscreteValuationRing.Basic
 import Mathlib.RingTheory.Ideal.MinimalPrime.Localization
 import Mathlib.RingTheory.Ideal.Int
+import Mathlib.RingTheory.Ideal.NatInt
 import Mathlib.RingTheory.Localization.FractionRing
 import Mathlib.RingTheory.Spectrum.Maximal.Localization
 import Mathlib.RingTheory.Spectrum.Prime.Jacobson
@@ -43,7 +44,8 @@ theorem jacobsonRing_iff_radical_ideal {R : Type u} [CommRing R] :
 theorem primeSpectrum_closedPoints_eq_maximalIdeals {R : Type u} [CommRing R] :
     closedPoints (PrimeSpectrum R) =
       {p : PrimeSpectrum R | p.asIdeal.IsMaximal} := by
-  sorry
+  ext p
+  simp [mem_closedPoints_iff, PrimeSpectrum.isClosed_singleton_iff_isMaximal]
 
 /- A field and the usual finite-type algebras over a field are Jacobson. -/
 theorem finiteType_algebra_over_field_isJacobson
@@ -80,19 +82,323 @@ theorem characterize_nonJacobson_ring
         ¬ p.asIdeal.IsMaximal ∧ f ∉ p.asIdeal ∧
           primeSpectrumLocallyClosedSet p f = {p} ∧
           IsField (primeSpectrumLocalizationAtPrimeElement p f) := by
-  sorry
+  intro hR
+  have hJ : ¬ JacobsonSpace (PrimeSpectrum R) := by
+    intro h
+    exact hR ((jacobson_iff_primeSpectrum_isJacobsonSpace).2 h)
+  rw [jacobsonSpace_iff_locallyClosed] at hJ
+  push Not at hJ
+  obtain ⟨Z, hZne, hZloc, hZclosed⟩ := hJ
+  rcases hZloc with ⟨U, T, hU, hT, hZT⟩
+  rcases hZne with ⟨x, hx⟩
+  rw [hZT] at hx
+  obtain ⟨V, ⟨f, rfl⟩, hxV, hVU⟩ :=
+    PrimeSpectrum.isTopologicalBasis_basic_opens.exists_subset_of_mem_open hx.1 hU
+  obtain ⟨I₀, hIT₀⟩ := (PrimeSpectrum.isClosed_iff_zeroLocus_ideal T).mp hT
+  let I := I₀.radical
+  have hIT : T = PrimeSpectrum.zeroLocus (I : Set R) := by
+    rw [hIT₀, ← PrimeSpectrum.zeroLocus_radical]
+  have hIle : I ≤ x.asIdeal := by
+    rw [hIT] at hx
+    exact hx.2
+  have hIrad : I.IsRadical := Ideal.radical_isRadical _
+  have hI_top : I ≠ ⊤ := by
+    intro h
+    exact x.2.ne_top (top_unique (h ▸ hIle))
+  let A := R ⧸ I
+  let fA : A := Ideal.Quotient.mk I f
+  have hxf : f ∉ x.asIdeal := (PrimeSpectrum.mem_basicOpen f x).mp hxV
+  have hfA : fA ≠ 0 := by
+    intro hf
+    have hmem : f ∈ I := by
+      apply (Ideal.Quotient.eq_zero_iff_mem).mp
+      simpa [fA] using hf
+    exact hxf (hIle hmem)
+  haveI : Nontrivial A := Ideal.Quotient.nontrivial_iff.mpr hI_top
+  have hnot : ¬ Subsingleton (Localization.Away fA) := by
+    intro hsub
+    have hzero : (0 : A) ∈ Submonoid.powers fA :=
+      (IsLocalization.subsingleton_iff (M := Submonoid.powers fA)
+        (S := Localization.Away fA)).mp hsub
+    rcases hzero with ⟨n, hn⟩
+    have hpowA : fA ^ n = 0 := by simpa using hn
+    have hpow : f ^ n ∈ x.asIdeal := by
+      apply hIle
+      apply (Ideal.Quotient.eq_zero_iff_mem).mp
+      simpa [fA] using hpowA
+    exact hxf (x.2.mem_of_pow_mem n hpow)
+  haveI : Nontrivial (Localization.Away fA) :=
+    not_subsingleton_iff_nontrivial.mp hnot
+  let S := Localization.Away fA
+  obtain ⟨M, hM⟩ := Ideal.exists_maximal S
+  let J : Ideal A := M.under A
+  have hMprime : M.IsPrime := hM.isPrime
+  have hdisj : Disjoint (Submonoid.powers fA : Set A) (J : Set A) :=
+    (IsLocalization.isPrime_iff_isPrime_disjoint (M := Submonoid.powers fA)
+      (S := S) M).mp hMprime |>.2
+  have hJprime : J.IsPrime :=
+    (IsLocalization.isPrime_iff_isPrime_disjoint (M := Submonoid.powers fA)
+      (S := S) M).mp hMprime |>.1
+  let p : PrimeSpectrum R :=
+    PrimeSpectrum.comap (Ideal.Quotient.mk I) ⟨J, hJprime⟩
+  have hpI : I ≤ p.asIdeal := by
+    change I ≤ J.comap (Ideal.Quotient.mk I)
+    intro a ha
+    apply Ideal.ker_le_comap (Ideal.Quotient.mk I)
+    exact Ideal.Quotient.eq_zero_iff_mem.mpr ha
+  have hpf : f ∉ p.asIdeal := by
+    intro hf
+    apply Set.disjoint_left.mp hdisj (Submonoid.mem_powers fA)
+    change fA ∈ J
+    exact hf
+  have hpT : p ∈ T := by
+    rw [hIT]
+    exact hpI
+  have hpU : p ∈ U := hVU ((PrimeSpectrum.mem_basicOpen f p).mpr hpf)
+  have hpZ : p ∈ Z := by
+    rw [hZT]
+    exact ⟨hpU, hpT⟩
+  have hpmax : ¬ p.asIdeal.IsMaximal := by
+    intro hp
+    have hmem : p ∈ Z ∩ closedPoints (PrimeSpectrum R) :=
+      ⟨hpZ, mem_closedPoints_iff.mpr
+        ((PrimeSpectrum.isClosed_singleton_iff_isMaximal p).mpr hp)⟩
+    rw [hZclosed] at hmem
+    exact hmem
+  have hlocal : primeSpectrumLocallyClosedSet p f = {p} := by
+    ext q
+    constructor
+    · intro hq
+      have hqp : p.asIdeal ≤ q.asIdeal := hq.1
+      have hqf : f ∉ q.asIdeal :=
+        (PrimeSpectrum.mem_basicOpen f q).mp hq.2
+      have hqI : I ≤ q.asIdeal := hpI.trans hqp
+      let Q : Ideal A := q.asIdeal.map (Ideal.Quotient.mk I)
+      have hQprime : Q.IsPrime :=
+        Ideal.map_isPrime_of_surjective Ideal.Quotient.mk_surjective
+          (by
+            intro a ha
+            exact hqI (Ideal.Quotient.eq_zero_iff_mem.mp ha))
+      have hQcomap : Q.comap (Ideal.Quotient.mk I) = q.asIdeal := by
+        rw [Ideal.comap_map_of_surjective _ Ideal.Quotient.mk_surjective]
+        exact sup_eq_left.mpr (by
+          intro a ha
+          exact hqI (Ideal.Quotient.eq_zero_iff_mem.mp ha))
+      have hQdisj : Disjoint (Submonoid.powers fA : Set A) (Q : Set A) := by
+        refine Set.disjoint_left.2 fun z hzpow hzQ => ?_
+        rcases hzpow with ⟨n, rfl⟩
+        have hzQ' : f ^ n ∈ q.asIdeal := by
+          rw [← hQcomap]
+          change Ideal.Quotient.mk I (f ^ n) ∈ Q
+          simpa [Q, fA] using hzQ
+        exact hqf (q.2.mem_of_pow_mem n hzQ')
+      let N : Ideal S := Q.map (algebraMap A S)
+      have hNprime : N.IsPrime :=
+        IsLocalization.isPrime_of_isPrime_disjoint (M := Submonoid.powers fA)
+          (S := S) Q hQprime hQdisj
+      have hJQ : J ≤ Q := by
+        rw [← Ideal.map_comap_of_surjective (Ideal.Quotient.mk I)
+          Ideal.Quotient.mk_surjective J]
+        rw [Ideal.map_le_iff_le_comap, hQcomap]
+        simpa [p] using hqp
+      have hMN : M ≤ N := by
+        rw [← IsLocalization.map_under (M := Submonoid.powers fA) (S := S) M]
+        exact Ideal.map_mono hJQ
+      have hMN_eq : M = N := hM.eq_of_le hNprime.ne_top hMN
+      have hJQ_eq : J = Q := by
+        rw [← IsLocalization.under_map_of_isPrime_disjoint
+          (M := Submonoid.powers fA) (S := S) hQprime hQdisj]
+        exact congr_arg (Ideal.under A) hMN_eq
+      apply PrimeSpectrum.ext
+      change q.asIdeal = J.comap (Ideal.Quotient.mk I)
+      rw [hJQ_eq, Ideal.comap_map_of_surjective _ Ideal.Quotient.mk_surjective]
+      symm
+      apply sup_eq_left.mpr
+      have hker : Ideal.comap (Ideal.Quotient.mk I) (⊥ : Ideal A) = I := by
+        rw [← RingHom.ker_eq_comap_bot, Ideal.mk_ker]
+      rw [hker]
+      exact hqI
+    · intro hq
+      rw [Set.mem_singleton_iff] at hq
+      subst q
+      change p.asIdeal ≤ p.asIdeal ∧ f ∉ p.asIdeal
+      exact ⟨le_rfl, hpf⟩
+  refine ⟨p, f, hpmax, hpf, hlocal, ?_⟩
+  let g : A →+* R ⧸ p.asIdeal :=
+    Ideal.Quotient.lift I (Ideal.Quotient.mk p.asIdeal) (by
+      intro a ha
+      exact Ideal.Quotient.eq_zero_iff_mem.mpr (hpI ha))
+  have hg : Function.Surjective g := by
+    intro y
+    obtain ⟨a, rfl⟩ := Ideal.Quotient.mk_surjective y
+    refine ⟨Ideal.Quotient.mk I a, ?_⟩
+    exact Ideal.Quotient.lift_mk _ _ _
+  have hgf : g fA = Ideal.Quotient.mk p.asIdeal f := by
+    exact Ideal.Quotient.lift_mk _ _ _
+  have hgker : RingHom.ker g = J := by
+    dsimp [g]
+    exact Ideal.ker_quotient_lift (Ideal.Quotient.mk p.asIdeal) _ |>.trans (by
+      rw [Ideal.mk_ker]
+      change p.asIdeal.map (Ideal.Quotient.mk I) = J
+      change (J.comap (Ideal.Quotient.mk I)).map (Ideal.Quotient.mk I) = J
+      exact Ideal.map_comap_of_surjective (Ideal.Quotient.mk I)
+        Ideal.Quotient.mk_surjective J)
+  have hgpowers : (0 : R ⧸ p.asIdeal) ∉ Submonoid.powers (g fA) := by
+    intro h
+    rcases h with ⟨n, hn⟩
+    have : g fA = 0 := by
+      exact eq_zero_of_pow_eq_zero hn
+    exact hpf (Ideal.Quotient.eq_zero_iff_mem.mp (hgf ▸ this))
+  let B := Localization.Away (Ideal.Quotient.mk p.asIdeal f)
+  letI : IsLocalization (Submonoid.powers (g fA)) B := by
+    rw [hgf]
+    infer_instance
+  letI : IsLocalization (Submonoid.map g (Submonoid.powers fA)) B := by
+    rw [Submonoid.map_powers]
+    infer_instance
+  let φ : S →+* B :=
+    IsLocalization.map B g (Submonoid.powers fA).le_comap_map
+  have hφ : Function.Surjective φ := by
+    exact IsLocalization.map_surjective_of_surjective
+      (M := Submonoid.powers fA) (S := S) (Q := B) hg
+  haveI : IsDomain (R ⧸ p.asIdeal) :=
+    (Ideal.Quotient.isDomain_iff_prime p.asIdeal).mpr p.2
+  have hBdomain : IsDomain B :=
+    IsLocalization.Away.isDomain B
+      (Ideal.Quotient.eq_zero_iff_mem.not.mpr hpf)
+  letI : IsDomain B := hBdomain
+  have hBinj : Function.Injective (algebraMap (R ⧸ p.asIdeal) B) := by
+    exact IsLocalization.injective _ (le_nonZeroDivisors_of_noZeroDivisors hgpowers)
+  have hunderK : (RingHom.ker φ).under A = J := by
+    ext a
+    change φ (algebraMap A S a) = 0 ↔ a ∈ J
+    have hφcomp : φ (algebraMap A S a) =
+        algebraMap (R ⧸ p.asIdeal) B (g a) := by
+      simp [φ, IsLocalization.map_comp]
+    rw [hφcomp]
+    constructor
+    · intro hzero
+      have : g a = 0 := by
+        apply hBinj
+        simpa using hzero
+      exact hgker ▸ (RingHom.mem_ker.mpr this)
+    · intro ha
+      have hga : g a = 0 :=
+        RingHom.mem_ker.mp (hgker.symm ▸ ha)
+      simpa [hga]
+  have hkerφ : RingHom.ker φ = M := by
+    apply (IsLocalization.orderEmbedding (M := Submonoid.powers fA) (S := S)).injective
+    exact hunderK.trans rfl
+  have eφ : S ⧸ M ≃+* B := by
+    rw [← hkerφ]
+    exact RingHom.quotientKerEquivOfSurjective hφ
+  have hfieldM : IsField (S ⧸ M) :=
+    (Ideal.Quotient.maximal_ideal_iff_isField_quotient M).mp hM
+  exact eφ.symm.toMulEquiv.isField hfieldM
 
 theorem jacobson_locally_closed_sets_infinite
     {R : Type u} [CommRing R] [IsJacobsonRing R]
     (p : PrimeSpectrum R) (f : R)
     (hp : ¬ p.asIdeal.IsMaximal) (hf : f ∉ p.asIdeal) :
     (primeSpectrumLocallyClosedSet p f).Infinite := by
-  sorry
+  classical
+  by_contra hInf
+  have hfin : (primeSpectrumLocallyClosedSet p f).Finite := not_not.mp hInf
+  have hpS : p ∈ primeSpectrumLocallyClosedSet p f := by
+    change p.asIdeal ≤ p.asIdeal ∧ f ∉ p.asIdeal
+    exact ⟨le_rfl, hf⟩
+  let t : Finset (PrimeSpectrum R) := hfin.toFinset
+  let ι := {q : PrimeSpectrum R // q ∈ t.erase p}
+  have hchoice (q : ι) : ∃ a : R, a ∈ q.1.asIdeal ∧ a ∉ p.asIdeal := by
+    have hqS : q.1 ∈ primeSpectrumLocallyClosedSet p f := by
+      apply hfin.mem_toFinset.mp
+      exact Finset.mem_of_mem_erase q.2
+    have hqp : p.asIdeal ≤ q.1.asIdeal := hqS.1
+    have hqne : q.1 ≠ p := by
+      intro h
+      exact (Finset.mem_erase.mp q.2).1 h
+    have hnle : ¬ q.1.asIdeal ≤ p.asIdeal := by
+      intro hle
+      apply hqne
+      apply PrimeSpectrum.ext
+      exact le_antisymm hle hqp
+    exact SetLike.not_le_iff_exists.mp hnle
+  choose g hgq hgp using hchoice
+  let G : R := ∏ q : ι, g q
+  letI : p.asIdeal.IsPrime := p.2
+  have hGp : G ∉ p.asIdeal := by
+    intro h
+    change (∏ q : ι, g q) ∈ p.asIdeal at h
+    have h' := (Ideal.IsPrime.prod_mem_iff (s := Finset.univ)
+      (x := g) (p := p.asIdeal)).mp h
+    obtain ⟨q, hq, hqmem⟩ := h'
+    exact hgp q hqmem
+  have hGq (q : ι) : G ∈ q.1.asIdeal := by
+    exact Ideal.prod_mem q.1.asIdeal (Finset.mem_univ q) (hgq q)
+  have hfg : primeSpectrumLocallyClosedSet p (f * G) = {p} := by
+    ext q
+    constructor
+    · intro hq
+      have hqfg : f * G ∉ q.asIdeal :=
+        (PrimeSpectrum.mem_basicOpen (f * G) q).mp hq.2
+      have hqf : f ∉ q.asIdeal := by
+        intro hqf
+        exact hqfg (by simpa [mul_comm] using q.asIdeal.mul_mem_left G hqf)
+      have hqS : q ∈ primeSpectrumLocallyClosedSet p f :=
+        ⟨hq.1, (PrimeSpectrum.mem_basicOpen f q).mpr hqf⟩
+      by_cases hqp : q = p
+      · exact Set.mem_singleton_iff.mpr hqp
+      · have hqt : q ∈ t := hfin.mem_toFinset.mpr hqS
+        have hqerase : q ∈ t.erase p := Finset.mem_erase.mpr ⟨hqp, hqt⟩
+        let q' : ι := ⟨q, hqerase⟩
+        have hqG : G ∈ q.asIdeal := by
+          simpa [q'] using hGq q'
+        exact (hqfg (by simpa [mul_comm] using q.asIdeal.mul_mem_right f hqG)).elim
+    · intro hq
+      rw [Set.mem_singleton_iff] at hq
+      subst q
+      change p.asIdeal ≤ p.asIdeal ∧ f * G ∉ p.asIdeal
+      exact ⟨le_rfl, p.2.mul_notMem hf hGp⟩
+  have hJ : JacobsonSpace (PrimeSpectrum R) :=
+    (jacobson_iff_primeSpectrum_isJacobsonSpace).mp inferInstance
+  have hloc : IsLocallyClosed (primeSpectrumLocallyClosedSet p (f * G)) :=
+    (PrimeSpectrum.isClosed_zeroLocus _).isLocallyClosed.inter
+      PrimeSpectrum.isOpen_basicOpen.isLocallyClosed
+  have hnonempty : (primeSpectrumLocallyClosedSet p (f * G)).Nonempty := by
+    rw [hfg]
+    exact Set.singleton_nonempty p
+  have hclosed := (jacobsonSpace_iff_locallyClosed.mp hJ)
+    (primeSpectrumLocallyClosedSet p (f * G)) hnonempty hloc
+  rw [hfg] at hclosed
+  obtain ⟨q, hq, hqc⟩ := hclosed
+  rw [Set.mem_singleton_iff] at hq
+  subst q
+  exact hp ((PrimeSpectrum.isClosed_singleton_iff_isMaximal p).mp
+    (mem_closedPoints_iff.mp hqc))
 
 /-! ## The PID criterion and elementary examples -/
 
 theorem integer_isJacobson : IsJacobsonRing ℤ := by
-  sorry
+  rw [isJacobsonRing_iff_prime_eq]
+  intro P hP
+  rw [Ideal.isPrime_int_iff] at hP
+  rcases hP with rfl | ⟨p, hp, rfl⟩
+  · rw [Ideal.jacobson_bot]
+    apply le_antisymm
+    · intro x hx
+      rw [← Ideal.jacobson_bot] at hx
+      have hx0 : x = 0 := by
+        by_contra hx0
+        have hu : IsUnit (x * x + 1) := (Ideal.mem_jacobson_bot.mp hx) x
+        have habs := Int.isUnit_iff_abs_eq.mp hu
+        have hx2 : 0 < x * x := mul_self_pos.mpr hx0
+        have hpos : 0 < x * x + 1 := by omega
+        rw [abs_of_pos hpos] at habs
+        omega
+      exact hx0 ▸ Ideal.zero_mem _
+    · exact bot_le
+  · letI : Fact (Nat.Prime p) := ⟨hp⟩
+    exact Ideal.jacobson_eq_self_of_isMaximal
 
 theorem isJacobsonRing_of_domain_noetherian_nonzero_primes_maximal
     {R : Type u} [CommRing R] [IsDomain R] [IsNoetherianRing R]

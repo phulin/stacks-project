@@ -896,8 +896,7 @@ theorem exists_tensorProductMultiplication_localization
     exact s.2
   · intro z
     refine ⟨((1 : k') ⊗ₜ[k] z, ⟨1, by simp [M]⟩), ?_⟩
-    simp only [Prod.snd, Prod.fst, Subtype.coe_mk, Submonoid.coe_one, one_mul]
-    simp only [map_one, one_mul]
+    simp only [map_one]
     rw [show algebraMap (k' ⊗[k] k') k' = f.toRingHom by
       simp [RingHom.algebraMap_toAlgebra]]
     simp [f, tensorProductMultiplication]
@@ -1047,7 +1046,7 @@ private theorem isReduced_tensorProduct_of_isReduced_of_separable_algebraic_base
   let _ : IsScalarTower k k' T :=
     IsScalarTower.of_algebraMap_eq' (R := k) (S := k') (A := T) (by
       ext x
-      simp [Algebra.TensorProduct.algebraMap_def, ← IsScalarTower.algebraMap_apply])
+      simp [← IsScalarTower.algebraMap_apply])
   let iK : K →ₐ[k] T :=
     (Algebra.TensorProduct.includeLeft : K →ₐ[k'] T).restrictScalars k
   let iA : A →ₐ[k] T :=
@@ -1167,8 +1166,7 @@ private theorem isReduced_tensorProduct_of_isReduced_of_separable_algebraic_base
       change p (x ⊗ₜ[k'] (1 : A)) * p ((1 : K) ⊗ₜ[k'] y) =
         s0X (x ⊗ₜ[k] y)
       rw [Algebra.TensorProduct.lift_tmul, Algebra.TensorProduct.lift_tmul]
-      simp [jK, jA, jK0, jA0, s0X, Algebra.TensorProduct.one_def,
-        Algebra.TensorProduct.tmul_mul_tmul]
+      simp [jK, jA, jK0, jA0, s0X]
       rw [Algebra.TensorProduct.tmul_mul_tmul]
       rw [Algebra.TensorProduct.tmul_mul_tmul]
       rw [Algebra.TensorProduct.tmul_mul_tmul]

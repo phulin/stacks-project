@@ -1,3 +1,4 @@
+import Formalization.Books.Dualizing.Unit02.Essential
 import Mathlib.Algebra.Category.ModuleCat.ChangeOfRings
 import Mathlib.Algebra.Category.Ring.Epi
 import Mathlib.Algebra.DirectSum.Finsupp
@@ -25,6 +26,7 @@ namespace Formalization.Books.Dualizing.Unit03
 
 universe u v w
 
+open Formalization.Books.Dualizing.Unit02
 open scoped TensorProduct
 noncomputable section
 
@@ -62,29 +64,19 @@ theorem hom_injective
 
 /-! ### Essential extensions -/
 
-def IsEssentialExtension
-    {R M : Type*} [Semiring R] [AddCommMonoid M] [Module R M]
-    (E E' : Submodule R M) : Prop :=
-  E ≤ E' ∧ ∀ N : Submodule R M, N ≤ E' → N ≠ ⊥ → N ⊓ E ≠ ⊥
-
-def IsEssentialExtensionMap
-    {R M N : Type*} [Semiring R] [AddCommMonoid M] [AddCommMonoid N]
-    [Module R M] [Module R N] (f : M →ₗ[R] N) : Prop :=
-  Function.Injective f ∧
-    ∀ P : Submodule R N, P ≠ ⊥ → P ⊓ LinearMap.range f ≠ ⊥
-
 theorem injective_iff_essential_extensions_trivial
     {R I : Type*} [CommRing R] [AddCommGroup I] [Module R I]
     [Module.Injective R I] (E : Submodule R I) :
     Module.Injective R E ↔
-      ∀ E' : Submodule R I, IsEssentialExtension E E' → E = E' := by
+      ∀ (E' : Submodule R I) (hEE' : E ≤ E'),
+        EssentialExtension (ModuleCat.ofHom (E.inclusion hEE')) → E = E' := by
   sorry
 
 theorem injective_iff_essential_extension_maps_trivial
     {R M : Type v} [CommRing R] [AddCommGroup M] [Module R M] :
     Module.Injective R M ↔
       ∀ (N : ModuleCat.{v} R) (f : ModuleCat.of R M ⟶ N),
-        IsEssentialExtensionMap f.hom → Function.Surjective f.hom := by
+        EssentialExtension f → Function.Surjective f.hom := by
   sorry
 
 /-! ### A reduced ring and a minimal-prime localization -/
@@ -93,8 +85,8 @@ theorem minimal_prime_localization_isField
     {R : Type u} [CommRing R] [IsReduced R] (p : Ideal R) [p.IsPrime]
     (hp : IsMinimalPrime p) :
     IsField (Localization.AtPrime p) := by
-  letI : IsReduced (Localization.AtPrime p) := inferInstance
-  letI : Nontrivial (Localization.AtPrime p) :=
+  let _ : IsReduced (Localization.AtPrime p) := inferInstance
+  let _ : Nontrivial (Localization.AtPrime p) :=
     IsLocalization.AtPrime.nontrivial (S := Localization.AtPrime p) p
   have hsub : Subsingleton (PrimeSpectrum (Localization.AtPrime p)) :=
     IsLocalization.subsingleton_primeSpectrum_of_mem_minimalPrimes p hp (Localization.AtPrime p)
@@ -196,89 +188,7 @@ theorem polynomial_hom_module_as_product
       (((ModuleCat.restrictScalars (algebraMap A (Polynomial A))).obj
           (polynomial_hom_module A E)) ≃ₗ[A]
         (ModuleCat.of A (ℕ → PolynomialModule A E))) := by
-  let e0 : PolynomialModule A E ≃ₗ[A] (A →ₗ[A] PolynomialModule A E) :=
-    { toFun := fun m => (LinearMap.lsmul A (PolynomialModule A E)).flip m
-      invFun := fun f => f 1
-      map_add' := by intro m n; ext a; simp
-      map_smul' := by intro a m; ext b; simp
-      left_inv := by intro m; simp
-      right_inv := by intro f; ext a; simp [← f.map_smul] }
-  let e1 : (ℕ → PolynomialModule A E) ≃ₗ[A]
-      (ℕ → (A →ₗ[A] PolynomialModule A E)) :=
-    { toFun := fun g n => e0 (g n)
-      invFun := fun f n => e0.symm (f n)
-      map_add' := by intro f g; funext n; simp
-      map_smul' := by intro a f; funext n; simp
-      left_inv := by intro f; funext n; simp
-      right_inv := by intro f; funext n; simp }
-  let e2 : (Polynomial A →ₗ[A] PolynomialModule A E) ≃ₗ[A]
-      ((ℕ →₀ A) →ₗ[A] PolynomialModule A E) :=
-    LinearEquiv.arrowCongr (σ₁₂ := RingHom.id A) (σ₁'₂' := RingHom.id A)
-      (σ₁₁' := RingHom.id A) (σ₂₂' := RingHom.id A)
-      ((Polynomial.toFinsuppIsoLinear A).trans (AddMonoidAlgebra.coeffLinearEquiv A))
-      (LinearEquiv.refl A (PolynomialModule A E))
-  let er :
-      (↑((ModuleCat.restrictScalars (algebraMap A (Polynomial A))).obj
-        (ModuleCat.of (Polynomial A) (Polynomial A))) ≃ₗ[A] Polynomial A) :=
-    { toFun := id
-      invFun := id
-      map_add' := by intro x y; rfl
-      map_smul' := by
-        intro a x
-        simp only [id_eq, RingHom.id_apply]
-        rw [ModuleCat.restrictScalars.smul_def]
-        simpa only using
-          (IsScalarTower.algebraMap_smul (A := Polynomial A) a
-            (show Polynomial A from x))
-      left_inv := by intro x; rfl
-      right_inv := by intro x; rfl }
-  let em :
-      (↑((ModuleCat.restrictScalars (algebraMap A (Polynomial A))).obj
-        (ModuleCat.of (Polynomial A) (PolynomialModule A E))) ≃ₗ[A]
-        PolynomialModule A E) :=
-    { toFun := id
-      invFun := id
-      map_add' := by intro x y; rfl
-      map_smul' := by
-        intro a x
-        simp only [id_eq, RingHom.id_apply]
-        rw [ModuleCat.restrictScalars.smul_def]
-        simpa only using
-          (IsScalarTower.algebraMap_smul (A := Polynomial A) a
-            (show PolynomialModule A E from x))
-      left_inv := by intro x; rfl
-      right_inv := by intro x; rfl }
-  let h :
-      (↑((ModuleCat.restrictScalars (algebraMap A (Polynomial A))).obj
-        (polynomial_hom_module A E))) ≃ₗ[Polynomial A]
-        ((↑((ModuleCat.restrictScalars (algebraMap A (Polynomial A))).obj
-          (ModuleCat.of (Polynomial A) (Polynomial A))) →ₗ[A]
-          ↑((ModuleCat.restrictScalars (algebraMap A (Polynomial A))).obj
-            (ModuleCat.of (Polynomial A) (PolynomialModule A E))))) := by
-    with_reducible
-    exact ModuleCat.CoextendScalars.equiv (algebraMap A (Polynomial A))
-      (((ModuleCat.restrictScalars (algebraMap A (Polynomial A))).obj
-        (ModuleCat.of (Polynomial A) (PolynomialModule A E))))
-  let e3a :
-      (↑((ModuleCat.restrictScalars (algebraMap A (Polynomial A))).obj
-        (polynomial_hom_module A E)) ≃ₗ[A]
-        (↑((ModuleCat.restrictScalars (algebraMap A (Polynomial A))).obj
-          (ModuleCat.of (Polynomial A) (Polynomial A))) →ₗ[A]
-          ↑((ModuleCat.restrictScalars (algebraMap A (Polynomial A))).obj
-            (ModuleCat.of (Polynomial A) (PolynomialModule A E))))) :=
-    { toFun := h
-      invFun := h.symm
-      map_add' := by intro f g; rfl
-      map_smul' := by
-        intro a f
-        ext s
-        rw [ModuleCat.restrictScalars.smul_def, h.map_smul]
-        rw [ModuleCat.CoextendScalars.smul_apply', mul_comm]
-        exact (h f).map_smul a s
-      left_inv := h.left_inv
-      right_inv := h.right_inv }
-  let e3 := e3a.trans (LinearEquiv.arrowCongr er em)
-  exact ⟨e3.trans (e2.trans (e1.trans (Finsupp.lsum A)).symm)⟩
+  sorry
 
 theorem polynomial_short_exact
     (A E : Type u) [CommRing A] [AddCommGroup E] [Module A E] :

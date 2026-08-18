@@ -28,19 +28,23 @@ theorem homogeneousIdeal_iff_homogeneous_generators
     IsHomogeneousIdeal 𝒜 I ↔
       ∃ S : Set (SetLike.homogeneousSubmonoid 𝒜),
         I = Ideal.span ((↑) '' S) := by
-  sorry
+  exact Ideal.IsHomogeneous.iff_exists 𝒜 I
 
 theorem homogeneousIdeal_iff_components
     (𝒜 : ℕ → Submodule ℤ R) [GradedAlgebra 𝒜] (I : Ideal R) :
     IsHomogeneousIdeal 𝒜 I ↔
       ∀ r, r ∈ I → ∀ n, GradedRing.proj 𝒜 n r ∈ I := by
-  sorry
+  constructor
+  · intro hI r hr n
+    exact hI n hr
+  · intro hI n r hr
+    exact hI r hr n
 
 theorem homogeneousIdeal_components_mem_iff
     (𝒜 : ℕ → Submodule ℤ R) [GradedAlgebra 𝒜]
     {I : Ideal R} (hI : IsHomogeneousIdeal 𝒜 I) (r : R) :
     r ∈ I ↔ ∀ n, GradedRing.proj 𝒜 n r ∈ I := by
-  sorry
+  simpa only [GradedRing.proj_apply] using hI.mem_iff
 
 /-! ## 27.2. The point set `Proj(R)` and its topology -/
 
@@ -50,7 +54,12 @@ theorem homogeneousIdeal_components_mem_iff
 theorem projToPrimeSpectrum_injective
     (𝒜 : ℕ → Submodule ℤ R) [GradedAlgebra 𝒜] :
     Function.Injective (projToPrimeSpectrum 𝒜) := by
-  sorry
+  intro x y h
+  change (⟨x.asHomogeneousIdeal.toIdeal, x.isPrime⟩ : PrimeSpectrum R) =
+    ⟨y.asHomogeneousIdeal.toIdeal, y.isPrime⟩ at h
+  apply ProjectiveSpectrum.ext
+  apply HomogeneousIdeal.ext
+  exact congrArg PrimeSpectrum.asIdeal h
 
 theorem projToPrimeSpectrum_inducing
     (𝒜 : ℕ → Submodule ℤ R) [GradedAlgebra 𝒜] :

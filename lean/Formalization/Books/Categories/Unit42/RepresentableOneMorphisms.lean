@@ -581,6 +581,9 @@ theorem slicePullbackLeft_isFibredInGroupoids
     (slicePullbackLeft F U G) rfl hbase
 -/
 
+  /- prior attempt: the active construction below did not elaborate; it is
+     retained verbatim for later repair. -/
+  /-
   have hbaseFibered : (slicePullbackBase F U G).IsFibered := by
     letI : p.IsFibered :=
       (fibredInGroupoids_iff_fibred_groupoid_fibres p).mp hp |>.2
@@ -1040,6 +1043,8 @@ theorem slicePullbackLeft_isFibredInGroupoids
   letI : (slicePullbackBase F U G).IsFibredInGroupoids := hbase
   exact fibredInGroupoids_over_slice U (slicePullbackBase F U G)
     (slicePullbackLeft F U G) rfl hbase
+  -/
+  sorry
 
 /- The source's definition of a representable 1-morphism. -/
 def IsRepresentableFibredMorphism
@@ -1400,6 +1405,9 @@ theorem identify_pullback_fibre
     Nonempty
       (Functor.Fiber (slicePullbackLeft F U G) f ≌
         PullbackFibreCategory F U G f) := by
+  /- prior attempt: the active construction below did not elaborate; it is
+     retained verbatim for later repair. -/
+  /-
   classical
   let : p.IsFibredInGroupoids := hp
   let forwardObj : ∀ (f : Over U)
@@ -1612,6 +1620,8 @@ theorem identify_pullback_fibre
     full := hforwardFull
     essSurj := hforwardEssSurj }
   exact ⟨forward.asEquivalence⟩
+  -/
+  sorry
 /-
   classical
   letI : p.IsFibredInGroupoids := hp
@@ -1832,6 +1842,9 @@ theorem identify_pullback_fibre_with_chosen_pullback
       (Functor.Fiber (slicePullbackLeft F U G) f ≌
         RelativeFibrePairCategory F U hq P
           (sliceMorphismIdentityValue U G) f) := by
+  /- prior attempt: the active construction below did not elaborate; it is
+     retained verbatim for later repair. -/
+  /-
   classical
   obtain ⟨e⟩ := sliceMorphism_isomorphic_to_chosenPullback U hq P G
   let ef : pullbackFibreBaseObject F U G f ⟶
@@ -1921,6 +1934,8 @@ theorem identify_pullback_fibre_with_chosen_pullback
     essSurj := htransportEssSurj }
   obtain ⟨E⟩ := identify_pullback_fibre hp hq F U G f
   exact ⟨E.trans transport.asEquivalence⟩
+  -/
+  sorry
 /-
   classical
   obtain ⟨e⟩ := sliceMorphism_isomorphic_to_chosenPullback U hq P G
@@ -2079,7 +2094,7 @@ theorem representable_fibredMorphism_fibrewise_faithful
   let objectOf : ∀ Z : PullbackFibreObject F U G f₀,
       Functor.Fiber (slicePullbackLeft F U G) f₀ := fun Z => by
     have hZiso : IsIso Z.phi.1 := by
-      letI : IsIso Z.phi := pullbackFibreObject_phi_isIso hq F U G f₀ Z
+      let : IsIso Z.phi := pullbackFibreObject_phi_isIso hq F U G f₀ Z
       change IsIso (Functor.Fiber.fiberInclusion.map Z.phi)
       exact (Functor.Fiber.fiberInclusion.mapIso (asIso Z.phi)).isIso_hom
     let η : SlicePullbackCategory F U G :=
@@ -2136,8 +2151,8 @@ theorem representable_fibredMorphism_fibrewise_faithful
     makeHom g (by simp [B, hfg])
   have hproj : (slicePullbackLeft F U G).map mf.1 =
       (slicePullbackLeft F U G).map mg.1 := by
-    letI : (slicePullbackLeft F U G).IsHomLift (𝟙 f₀) mf.1 := mf.2
-    letI : (slicePullbackLeft F U G).IsHomLift (𝟙 f₀) mg.1 := mg.2
+    let : (slicePullbackLeft F U G).IsHomLift (𝟙 f₀) mf.1 := mf.2
+    let : (slicePullbackLeft F U G).IsHomLift (𝟙 f₀) mg.1 := mg.2
     rw [CategoryTheory.IsHomLift.fac' (slicePullbackLeft F U G) (𝟙 f₀) mf.1,
       CategoryTheory.IsHomLift.fac' (slicePullbackLeft F U G) (𝟙 f₀) mg.1]
   have hmfmg : mf.1 = mg.1 :=

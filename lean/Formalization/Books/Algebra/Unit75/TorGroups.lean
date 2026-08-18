@@ -1299,7 +1299,109 @@ theorem flat_iff_tor_criteria {R : Type u} [CommRing R]
       TorFunctorZero M 1,
       TorOneVanishingOnIdeals M,
       TorOneVanishingOnFinitelyGeneratedIdeals M] := by
-  sorry
+  have hflat_to_all :
+      Module.Flat R M →
+        ∀ i : ℕ, 0 < i → TorFunctorZero M i := by
+    intro hflat i hi N
+    obtain ⟨n, rfl⟩ := Nat.exists_eq_succ_of_ne_zero (Nat.ne_of_gt hi)
+    let G : FreeResolution R N :=
+      Classical.choice (exists_free_resolution N)
+    let K := tensorComplex G.complex M
+    have hK : K.ExactAt (n + 1) := by
+      apply (HomologicalComplex.exactAt_iff' (K := K) (j := n + 1)
+        (i := n + 2) (k := n) (by simp) (by simp)).2
+      dsimp [HomologicalComplex.sc', K, tensorComplex,
+        HomologicalComplex.shortComplexFunctor']
+      simp only [Nat.add_assoc]
+      apply ModuleCat.shortComplex_exact
+      have hex :
+          Function.Exact (G.complex.d (n + 2) (n + 1)).hom
+            (G.complex.d (n + 1) n).hom :=
+        (ShortComplex.ShortExact.moduleCat_exact_iff_function_exact
+          (ShortComplex.mk (G.complex.d (n + 2) (n + 1))
+            (G.complex.d (n + 1) n) (G.complex.d_comp_d' (n + 2) (n + 1) n
+              (by simp) (by simp)))).mp (G.resolution.exact_succ n)
+      exact Module.Flat.rTensor_exact M hex
+    have hz : IsZero (chainHomology K (n + 1)) := by
+      exact hK.isZero_homology
+    have hz' : IsZero (Tor N M (n + 1)) := by
+      simpa [Tor, resolutionTor, K, G] using hz
+    exact IsZero.of_iso hz' (torLeftRightIso M N (n + 1))
+  have hflat_crit :
+      Module.Flat R (M : Type u) ↔
+        ∀ (I : Ideal R), I.FG →
+          Function.Injective (I.subtype.rTensor (M : Type u)) :=
+    (Formalization.Books.Algebra.Unit39.flat_criteria
+      (R := R) (M := (M : Type u))).out 0 3
+  have hfg_to_flat :
+      TorOneVanishingOnFinitelyGeneratedIdeals M → Module.Flat R M := by
+    intro hzero
+    apply hflat_crit.mpr
+    intro I hIFG
+    let S : ShortComplex (ModuleCat.{u} R) :=
+      ShortComplex.mk (ModuleCat.ofHom I.subtype)
+        (ModuleCat.ofHom (Submodule.mkQ I)) (by
+          apply ModuleCat.hom_ext
+          ext x
+          exact Ideal.Quotient.eq_zero_iff_mem.mpr x.property)
+    have hS : S.ShortExact := by
+      apply ModuleCat.shortComplex_shortExact
+      · simpa [S] using (LinearMap.exact_subtype_mkQ I)
+      · exact Subtype.val_injective
+      · exact Submodule.mkQ_surjective I
+    let hseq := Classical.choice (exists_tor_long_exact_sequence M S hS)
+    have hzeroS : IsZero (Tor M S.X₃ 1) := by
+      simpa [S] using hzero I hIFG
+    have hconn : hseq.connecting = 0 := by
+      have hc : ModuleCat.ofHom hseq.connecting = 0 :=
+        hzeroS.eq_of_src _ _
+      exact congrArg (fun f => f.hom) hc
+    have hinj : Function.Injective (tensorByMap M S.f) :=
+      (LinearMap.injective_iff_eq_zero_of_exact hseq.exact₃).2 hconn
+    rw [← LinearMap.lTensor_inj_iff_rTensor_inj]
+    simpa [S, tensorByMap] using hinj
+  have hone_to_flat :
+      TorFunctorZero M 1 → Module.Flat R M := by
+    intro h
+    apply hfg_to_flat
+    intro I hIFG
+    change ∀ N : ModuleCat.{u} R, IsZero (Tor M N 1) at h
+    exact h (ModuleCat.of R (R ⧸ I))
+  have hideals_of_flat :
+      Module.Flat R M → TorOneVanishingOnIdeals M := by
+    intro h I
+    have h' := hflat_to_all h 1 (by simp)
+    change ∀ N : ModuleCat.{u} R, IsZero (Tor M N 1) at h'
+    exact h' (ModuleCat.of R (R ⧸ I))
+  have hfg_of_flat :
+      Module.Flat R M → TorOneVanishingOnFinitelyGeneratedIdeals M := by
+    intro h I hIFG
+    exact hideals_of_flat h I
+  tfae_have 1 ↔ 2 := by
+    constructor
+    · exact hflat_to_all
+    · intro h
+      apply hfg_to_flat
+      intro I hIFG
+      exact (h 1 (by simp)) (ModuleCat.of R (R ⧸ I))
+  tfae_have 1 ↔ 3 := by
+    constructor
+    · intro h
+      have h' := hflat_to_all h 1 (by simp)
+      exact h'
+    · exact hone_to_flat
+  tfae_have 1 ↔ 4 := by
+    constructor
+    · exact hideals_of_flat
+    · intro h
+      apply hfg_to_flat
+      intro I hIFG
+      exact h I
+  tfae_have 1 ↔ 5 := by
+    constructor
+    · exact hfg_of_flat
+    · exact hfg_to_flat
+  tfae_finish
 
 /-- The canonical multiplication/action map `I ⊗ M → M`. -/
 def idealTensorActionMap {R : Type u} [CommRing R]
@@ -1889,12 +1991,59 @@ theorem tensorSwitch_two_dimensional_charTwo_not_semisimple
     {k : Type u} [Field k] [CharP k 2] :
     ¬ Module.End.IsSemisimple
         (tensorSwitch (k := k) (V := Fin 2 → k)).toLinearMap := by
-  sorry
+  intro hs
+  let T := TensorProduct k (Fin 2 → k) (Fin 2 → k)
+  let f : Module.End k T :=
+    (tensorSwitch (k := k) (V := Fin 2 → k)).toLinearMap
+  have hone : algebraMap k (Module.End k T) 1 = LinearMap.id := by
+    ext z
+    simp [Module.End.one_eq_id]
+  have hf2 : f.comp f = LinearMap.id := by
+    ext z
+    simp [f, tensorSwitch, T, LinearMap.comp_apply]
+  have hnil : IsNilpotent (f - algebraMap k (Module.End k T) 1) := by
+    rw [hone]
+    refine ⟨2, ?_⟩
+    change (f - LinearMap.id).comp (f - LinearMap.id) = 0
+    have hexpand :
+        (f - LinearMap.id).comp (f - LinearMap.id) =
+          (LinearMap.id : Module.End k T) + LinearMap.id - (f + f) := by
+      rw [LinearMap.comp_sub, LinearMap.sub_comp, LinearMap.comp_id,
+        LinearMap.id_comp, hf2]
+      abel
+    rw [hexpand]
+    have htwo : (2 : k) = 0 := CharP.cast_eq_zero k 2
+    have hff : f + f = (0 : Module.End k T) := by
+      calc
+        f + f = (2 : k) • f := (two_smul k f).symm
+        _ = 0 := by rw [htwo, zero_smul]
+    have hid : (LinearMap.id : Module.End k T) + LinearMap.id = 0 := by
+      calc
+        (LinearMap.id : Module.End k T) + LinearMap.id =
+            (2 : k) • LinearMap.id := (two_smul k _).symm
+        _ = 0 := by rw [htwo, zero_smul]
+    rw [hff, hid]
+    exact sub_self (0 : Module.End k T)
+  have hsub : (f - algebraMap k (Module.End k T) 1).IsSemisimple :=
+    (Module.End.isSemisimple_sub_algebraMap_iff (f := f) (μ := (1 : k))).mpr hs
+  have hzero := Module.End.eq_zero_of_isNilpotent_isSemisimple hnil hsub
+  rw [hone] at hzero
+  apply (tensorSwitch_two_dimensional_not_identity (k := k))
+  simpa [f, T] using sub_eq_zero.mp hzero
 
 theorem neg_tensorSwitch_two_dimensional_not_identity
     {k : Type u} [Field k] :
     -(tensorSwitch (k := k) (V := Fin 2 → k)).toLinearMap ≠ LinearMap.id := by
-  sorry
+  intro h
+  let x : Fin 2 → k := Pi.single 0 1
+  let y : Fin 2 → k := Pi.single 1 1
+  have h' := congrArg (fun f => f (x ⊗ₜ[k] y)) h
+  let p0 : (Fin 2 → k) →ₗ[k] k := LinearMap.proj 0
+  let p1 : (Fin 2 → k) →ₗ[k] k := LinearMap.proj 1
+  let q := (TensorProduct.lid k k).toLinearMap.comp
+    (TensorProduct.map p0 p1)
+  have hq := congrArg q h'
+  simp [tensorSwitch, q, p0, p1, x, y] at hq
 
 end
 

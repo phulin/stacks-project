@@ -151,8 +151,253 @@ theorem simple_invert
   · intro U s
     change IsUnit (algebraMap (O.obj U) (Localization (S.obj U)) s)
     exact IsLocalization.map_units (Localization (S.obj U)) s
-  · sorry
-  · sorry
+  · intro A φ hφ
+    let ψ : localizedRingPresheaf S ⟶ A := {
+      app U := CommRingCat.ofHom <| IsLocalization.lift (fun s => hφ U s)
+      naturality := by
+        intro U V i
+        apply CommRingCat.hom_ext
+        apply IsLocalization.ringHom_ext (S.obj U)
+        ext a
+        change
+          (IsLocalization.lift (fun s => hφ V s))
+              (IsLocalization.map (Localization (S.obj V)) (O.map i).hom
+                (S.map i) (algebraMap (O.obj U) (Localization (S.obj U)) a)) =
+            (A.map i).hom
+              ((IsLocalization.lift (fun s => hφ U s))
+                (algebraMap (O.obj U) (Localization (S.obj U)) a))
+        rw [IsLocalization.map_eq, IsLocalization.lift_eq,
+          IsLocalization.lift_eq]
+        have h := congrArg (fun z => z a) (φ.naturality i)
+        change (φ.app V).hom ((O.map i).hom a) =
+          (A.map i).hom ((φ.app U).hom a) at h
+        exact h
+    }
+    refine ⟨ψ, ?_, ?_⟩
+    · apply NatTrans.ext
+      funext U
+      induction U with
+      | op U =>
+        ext a
+        change (IsLocalization.lift (fun s => hφ (op U) s))
+            (algebraMap (O.obj (op U)) (Localization (S.obj (op U))) a) =
+          (φ.app (op U)).hom a
+        rw [IsLocalization.lift_eq]
+    · intro ψ' hψ'
+      apply NatTrans.ext
+      funext U
+      induction U with
+      | op U =>
+        apply CommRingCat.hom_ext
+        apply IsLocalization.ringHom_ext (S.obj (op U))
+        ext a
+        have h := congr_app hψ' (op U)
+        have ha := congrArg (fun z => z a) h
+        change (ψ'.app (op U)).hom
+            (algebraMap (O.obj (op U)) (Localization (S.obj (op U))) a) =
+          (φ.app (op U)).hom a at ha
+        change (ψ'.app (op U)).hom
+            (algebraMap (O.obj (op U)) (Localization (S.obj (op U))) a) =
+          (IsLocalization.lift (fun s => hφ (op U) s))
+            (algebraMap (O.obj (op U)) (Localization (S.obj (op U))) a)
+        rw [IsLocalization.lift_eq]
+        exact ha
+  · intro x
+    let fU (U : (OpenNhds x)ᵒᵖ) :
+        ((OpenNhds.inclusion x).op ⋙ localizedRingPresheaf S).obj U ⟶
+          CommRingCat.of (Localization (stalkSubmonoid S x)) :=
+      by
+        let jU : (Opens X)ᵒᵖ := (OpenNhds.inclusion x).op.obj U
+        let hxU : x ∈ jU.unop := U.unop.2
+        letI : Algebra (O.obj jU) (((OpenNhds.inclusion x).op ⋙
+            localizedRingPresheaf S).obj U) := by
+          change Algebra (O.obj jU) (Localization (S.obj jU))
+          infer_instance
+        letI : IsLocalization (S.obj jU)
+            (((OpenNhds.inclusion x).op ⋙ localizedRingPresheaf S).obj U) := by
+          change IsLocalization (S.obj jU) (Localization (S.obj jU))
+          infer_instance
+        change CommRingCat.of (Localization (S.obj jU)) ⟶
+          CommRingCat.of (Localization (stalkSubmonoid S x))
+        exact CommRingCat.ofHom <|
+          IsLocalization.lift
+            (g := (algebraMap (O.stalk x) (Localization (stalkSubmonoid S x))).comp
+              (O.germ jU.unop x hxU).hom)
+            (fun s => by
+              change IsUnit ((algebraMap (O.stalk x)
+                (Localization (stalkSubmonoid S x))) ((O.germ jU.unop x hxU).hom s))
+              let p : Σ V : {V : Opens X // x ∈ V}, S.obj (op V.1) :=
+                ⟨⟨jU.unop, hxU⟩, s⟩
+              apply IsLocalization.map_units (M := stalkSubmonoid S x)
+                (Localization (stalkSubmonoid S x))
+                ⟨(O.germ jU.unop x hxU).hom s, by
+                  apply Submonoid.subset_closure
+                  exact ⟨p, rfl⟩⟩)
+    let χ : CategoryTheory.Limits.Cocone
+        ((OpenNhds.inclusion x).op ⋙ localizedRingPresheaf S) :=
+      CategoryTheory.Limits.Cocone.mk (CommRingCat.of (Localization (stalkSubmonoid S x)))
+        { app := fun U => fU U
+          naturality := by
+            intro U V i
+            let jU : (Opens X)ᵒᵖ := (OpenNhds.inclusion x).op.obj U
+            let jV : (Opens X)ᵒᵖ := (OpenNhds.inclusion x).op.obj V
+            let j := (OpenNhds.inclusion x).op.map i
+            letI : Algebra (O.obj jU) (((OpenNhds.inclusion x).op ⋙
+                localizedRingPresheaf S).obj U) := by
+              change Algebra (O.obj jU) (Localization (S.obj jU))
+              infer_instance
+            letI : IsLocalization (S.obj jU)
+                (((OpenNhds.inclusion x).op ⋙ localizedRingPresheaf S).obj U) := by
+              change IsLocalization (S.obj jU) (Localization (S.obj jU))
+              infer_instance
+            letI : Algebra (O.obj jV) (((OpenNhds.inclusion x).op ⋙
+                localizedRingPresheaf S).obj V) := by
+              change Algebra (O.obj jV) (Localization (S.obj jV))
+              infer_instance
+            letI : IsLocalization (S.obj jV)
+                (((OpenNhds.inclusion x).op ⋙ localizedRingPresheaf S).obj V) := by
+              change IsLocalization (S.obj jV) (Localization (S.obj jV))
+              infer_instance
+            apply CommRingCat.hom_ext
+            apply IsLocalization.ringHom_ext
+              (S.obj ((OpenNhds.inclusion x).op.obj U))
+            ext a
+            let hxU : x ∈ jU.unop := U.unop.2
+            let hxV : x ∈ jV.unop := V.unop.2
+            change
+              (IsLocalization.lift
+                  (g := (algebraMap (O.stalk x)
+                    (Localization (stalkSubmonoid S x))).comp
+                    (O.germ jV.unop x hxV).hom) _)
+                (IsLocalization.map (Localization (S.obj jV))
+                  (O.map j).hom (S.map j)
+                  (algebraMap (O.obj jU) (Localization (S.obj jU)) a)) =
+              (IsLocalization.lift
+                  (g := (algebraMap (O.stalk x)
+                    (Localization (stalkSubmonoid S x))).comp
+                    (O.germ jU.unop x hxU).hom) _)
+                (algebraMap (O.obj jU) (Localization (S.obj jU)) a)
+            rw [IsLocalization.map_eq, IsLocalization.lift_eq,
+              IsLocalization.lift_eq]
+            exact congrArg (fun z => (algebraMap (O.stalk x)
+              (Localization (stalkSubmonoid S x))) z)
+              (O.germ_res_apply' j x hxV a) }
+    let f : (localizedRingPresheaf S).stalk x ⟶
+        CommRingCat.of (Localization (stalkSubmonoid S x)) :=
+      CategoryTheory.Limits.colimit.desc _ χ
+    have hf_germ (U : Opens X) (hx : x ∈ U) :
+        (localizedRingPresheaf S).germ U x hx ≫ f =
+          fU (op ⟨U, hx⟩) := by
+      exact CategoryTheory.Limits.colimit.ι_desc _ _
+    let q : O.stalk x ⟶ (localizedRingPresheaf S).stalk x :=
+      (TopCat.Presheaf.stalkFunctor CommRingCat x).map
+        (localizationPresheafMap S)
+    have hq_gen (U : Opens X) (hx : x ∈ U) (s : S.obj (op U)) :
+        IsUnit (q.hom ((O.germ U x hx).hom s)) := by
+      have h := TopCat.Presheaf.stalkFunctor_map_germ_apply
+        U x hx (localizationPresheafMap S) s
+      change IsUnit (((TopCat.Presheaf.stalkFunctor CommRingCat x).map
+        (localizationPresheafMap S)).hom ((O.germ U x hx).hom s))
+      rw [h]
+      exact IsUnit.map ((localizedRingPresheaf S).germ U x hx).hom
+        (IsLocalization.map_units (Localization (S.obj (op U))) s)
+    let unitPreimage : Submonoid (O.stalk x) :=
+      { carrier := {z | IsUnit (q.hom z)}
+        one_mem' := by simpa using
+          (isUnit_one : IsUnit (1 : (localizedRingPresheaf S).stalk x))
+        mul_mem' := by
+          intro a b ha hb
+          change IsUnit (q.hom (a * b))
+          simpa only [map_mul] using ha.mul hb }
+    have hunit_le : stalkSubmonoid S x ≤ unitPreimage := by
+      apply Submonoid.closure_le.2
+      rintro y ⟨p, rfl⟩
+      rcases p with ⟨U, s⟩
+      exact hq_gen U.1 U.2 s
+    have hq : ∀ z : stalkSubmonoid S x, IsUnit (q.hom z.1) := by
+      intro z
+      exact hunit_le z.2
+    let g : Localization (stalkSubmonoid S x) →+* (localizedRingPresheaf S).stalk x :=
+      IsLocalization.lift (g := q.hom) (fun z => hq z)
+    have hqf : q ≫ f = CommRingCat.ofHom
+        (algebraMap (O.stalk x) (Localization (stalkSubmonoid S x))) := by
+      apply O.stalk_hom_ext
+      intro U hx
+      change (O.germ U x hx ≫ q) ≫ f = _
+      have hmap := TopCat.Presheaf.stalkFunctor_map_germ
+        U x hx (localizationPresheafMap S)
+      have hmap' : O.germ U x hx ≫ q =
+          (localizationPresheafMap S).app (op U) ≫
+            (localizedRingPresheaf S).germ U x hx := by
+        change O.germ U x hx ≫
+          (TopCat.Presheaf.stalkFunctor CommRingCat x).map
+            (localizationPresheafMap S) = _
+        exact hmap
+      rw [← Category.assoc, hmap', hf_germ]
+      apply CommRingCat.hom_ext
+      ext a
+      change (fU (op ⟨U, hx⟩)).hom
+          (((localizationPresheafMap S).app (op U)).hom ((O.germ U x hx).hom a)) = _
+      simp [fU]
+    have hfg : CommRingCat.ofHom g ≫ f = 𝟙 _ := by
+      apply CommRingCat.hom_ext
+      apply IsLocalization.ringHom_ext (stalkSubmonoid S x)
+      ext z
+      change f.hom (g (algebraMap (O.stalk x)
+        (Localization (stalkSubmonoid S x)) z)) = _
+      rw [IsLocalization.lift_eq]
+      exact congrArg (fun h => h z) hqf
+    have hfgU (U : (OpenNhds x)ᵒᵖ) :
+        fU U ≫ CommRingCat.ofHom g =
+          (localizedRingPresheaf S).germ U.unop.1 x U.unop.2 := by
+      let jU : (Opens X)ᵒᵖ := (OpenNhds.inclusion x).op.obj U
+      let hxU : x ∈ jU.unop := U.unop.2
+      letI : Algebra (O.obj jU) (((OpenNhds.inclusion x).op ⋙
+          localizedRingPresheaf S).obj U) := by
+        change Algebra (O.obj jU) (Localization (S.obj jU))
+        infer_instance
+      letI : IsLocalization (S.obj jU)
+          (((OpenNhds.inclusion x).op ⋙ localizedRingPresheaf S).obj U) := by
+        change IsLocalization (S.obj jU) (Localization (S.obj jU))
+        infer_instance
+      apply CommRingCat.hom_ext
+      apply IsLocalization.ringHom_ext
+        (S.obj jU)
+      ext a
+      change
+        g
+            ((IsLocalization.lift
+              (g := (algebraMap (O.stalk x)
+                (Localization (stalkSubmonoid S x))).comp
+                (O.germ jU.unop x hxU).hom) _)
+              (algebraMap (O.obj jU) (Localization (S.obj jU)) a)) =
+          (localizedRingPresheaf S).germ jU.unop x hxU
+            (algebraMap (O.obj jU) (Localization (S.obj jU)) a)
+      rw [IsLocalization.lift_eq]
+      have hgcomp : g.comp (algebraMap (O.stalk x)
+          (Localization (stalkSubmonoid S x))) = q.hom := by
+        exact IsLocalization.lift_comp _
+      change g (algebraMap (O.stalk x)
+        (Localization (stalkSubmonoid S x))
+        ((O.germ jU.unop x hxU).hom a)) = _
+      rw [← RingHom.comp_apply, hgcomp]
+      change q.hom ((O.germ jU.unop x hxU).hom a) =
+        ((localizedRingPresheaf S).germ jU.unop x hxU).hom
+          (((localizationPresheafMap S).app (op jU.unop)).hom a)
+      simpa [q] using
+        TopCat.Presheaf.stalkFunctor_map_germ_apply jU.unop x hxU
+          (localizationPresheafMap S) a
+    have hgf : f ≫ CommRingCat.ofHom g = 𝟙 _ := by
+      apply (localizedRingPresheaf S).stalk_hom_ext
+      intro U hx
+      rw [← Category.assoc, hf_germ]
+      convert hfgU (op ⟨U, hx⟩) using 1 <;>
+        simp [TopCat.Presheaf.germ, OpenNhds.inclusion]
+    let e : (localizedRingPresheaf S).stalk x ≅
+        CommRingCat.of (Localization (stalkSubmonoid S x)) :=
+      { hom := f, inv := CommRingCat.ofHom g,
+        hom_inv_id := hgf, inv_hom_id := hfg }
+    exact ⟨e⟩
   · sorry
   · sorry
 

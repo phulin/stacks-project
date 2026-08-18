@@ -1,5 +1,6 @@
 import Formalization.Books.Fields.Unit08.AlgebraicExtensions
 import Mathlib.Analysis.SpecialFunctions.Exp
+import Mathlib.NumberTheory.Transcendental.Lindemann.AnalyticalPart
 import Mathlib.FieldTheory.LinearDisjoint
 import Mathlib.RingTheory.AlgebraicIndependent.Adjoin
 import Mathlib.RingTheory.AlgebraicIndependent.AlgebraicClosure

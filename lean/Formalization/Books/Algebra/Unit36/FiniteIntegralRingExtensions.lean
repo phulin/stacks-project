@@ -1205,9 +1205,9 @@ theorem silly_normal_short_exact
       Good z → Good w → Good (z + w) := by
     rintro ⟨a, b, hab⟩ ⟨a', b', hab'⟩
     refine ⟨a + a', b + b', ?_⟩
-    dsimp [Good] at *
+    dsimp at *
     rw [← hab, ← hab']
-    simp [add_left_comm, add_comm]
+    simp only [add_left_comm, add_comm]
   have hgood_A (a : ratioXYSubalgebra x y) : Good (a : ratioLocalization R x y) := by
     exact ⟨a, 0, by simp⟩
   have hgood_B (b : ratioYXSubalgebra x y) : Good (b : ratioLocalization R x y) := by

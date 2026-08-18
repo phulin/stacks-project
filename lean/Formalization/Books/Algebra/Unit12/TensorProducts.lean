@@ -313,24 +313,173 @@ theorem tensor_with_bimodule {A B M N P : Type*} [CommRing A] [CommRing B]
     tensorProductBModule A B M (TensorProduct B N P)
   letI : SMulCommClass A B (TensorProduct A M (TensorProduct B N P)) :=
     tensorProductBModule_smulCommClass A B M (TensorProduct B N P)
-  refine ⟨?_, ?_, ?_⟩
-  · change SMulCommClass A B ((TensorProduct A M N) ⊗[B] P)
-    exact inferInstance
-  · change SMulCommClass A B (TensorProduct A M (TensorProduct B N P))
-    exact inferInstance
-  · let e :
-        ((TensorProduct A M N) ⊗[B] P) ≃ₗ[A]
-          TensorProduct A M (TensorProduct B N P) :=
-      _root_.IsTensorProduct.assocOfMapSMul
-      (TensorProduct.mk A M N) (TensorProduct.isTensorProduct A M N)
-      (TensorProduct.mk B N P) (TensorProduct.isTensorProduct B N P)
-      (fun a m n => rfl)
-      (fun b m n => by
-        change m ⊗ₜ[A] (b • n) =
-          (TensorProduct.comm A M N).symm
-            (b • (TensorProduct.comm A M N) (m ⊗ₜ[A] n))
-        rfl)
-    exact ⟨e⟩
+  let j (p : P) : N →ₗ[A] TensorProduct B N P :=
+    { toFun := fun n => n ⊗ₜ[B] p
+      map_add' := by intro n n'; exact TensorProduct.add_tmul _ _ _
+      map_smul' := by intro a n; rfl }
+  let inner (p : P) : TensorProduct A M N →ₗ[A]
+      TensorProduct A M (TensorProduct B N P) :=
+    TensorProduct.map (LinearMap.id : M →ₗ[A] M) (j p)
+  letI : SMulCommClass B A (TensorProduct A M (TensorProduct B N P)) :=
+    tensorProductBModule_smulCommClass_symm A B M (TensorProduct B N P)
+  let Fbil : (TensorProduct A M N) →ₗ[B] P →ₗ[B]
+      TensorProduct A M (TensorProduct B N P) :=
+    LinearMap.mk₂' B B (fun x p => inner p x)
+      (by intro x y p; simp [inner])
+      (by
+        intro b x p
+        refine TensorProduct.induction_on x ?_ ?_ ?_
+        · simp [inner]
+        · intro m n
+          simp only [inner, TensorProduct.map_tmul, TensorProduct.comm_tmul,
+            TensorProduct.smul_tmul']
+          change m ⊗ₜ[A] ((b • n) ⊗ₜ[B] p) =
+            m ⊗ₜ[A] (b • (n ⊗ₜ[B] p))
+          rfl
+        · intro x y hx hy
+          simp [inner, hx, hy, TensorProduct.smul_add])
+      (by
+        intro x p q
+        refine TensorProduct.induction_on x ?_ ?_ ?_
+        · simp [inner]
+        · intro m n
+          change m ⊗ₜ[A] (n ⊗ₜ[B] (p + q)) =
+            m ⊗ₜ[A] (n ⊗ₜ[B] p) + m ⊗ₜ[A] (n ⊗ₜ[B] q)
+          rw [TensorProduct.tmul_add, TensorProduct.tmul_add]
+        · intro z z' hz hz'
+          simp only [inner, map_add, hz, hz']
+          abel)
+      (by
+        intro b x p
+        refine TensorProduct.induction_on x ?_ ?_ ?_
+        · simp [inner]
+        · intro m n
+          simp only [inner, TensorProduct.map_tmul, TensorProduct.comm_tmul,
+            TensorProduct.smul_tmul']
+          change m ⊗ₜ[A] (n ⊗ₜ[B] (b • p)) =
+            m ⊗ₜ[A] (b • (n ⊗ₜ[B] p))
+          rw [TensorProduct.tmul_smul]
+        · intro x y hx hy
+          simp [inner, hx, hy, TensorProduct.smul_add])
+  let F_B : (TensorProduct A M N) ⊗[B] P →ₗ[B]
+      TensorProduct A M (TensorProduct B N P) := TensorProduct.lift Fbil
+  let F : (TensorProduct A M N) ⊗[B] P →ₗ[A]
+      TensorProduct A M (TensorProduct B N P) :=
+    { F_B with
+      map_smul' := by
+        intro a z
+        refine TensorProduct.induction_on z ?_ ?_ ?_
+        · simp [F_B]
+        · intro x p
+          change inner p (a • x) = a • inner p x
+          exact (inner p).map_smul a x
+        · intro x y hx hy
+          rw [smul_add]
+          change F_B (a • x + a • y) = a • F_B (x + y)
+          simp only [F_B.map_add, smul_add]
+          have hx' : F_B (a • x) = a • F_B x := by exact hx
+          have hy' : F_B (a • y) = a • F_B y := by exact hy
+          rw [hx', hy'] }
+  let k₀ (m : M) : N →ₗ[B] TensorProduct A M N :=
+    { toFun := fun n => m ⊗ₜ[A] n
+      map_add' := by intro n n'; exact TensorProduct.tmul_add _ _ _
+      map_smul' := by
+        intro b n
+        change m ⊗ₜ[A] (b • n) = b • (m ⊗ₜ[A] n)
+        rfl }
+  let outer (m : M) : TensorProduct B N P →ₗ[B]
+      ((TensorProduct A M N) ⊗[B] P) :=
+    TensorProduct.map (k₀ m) (LinearMap.id : P →ₗ[B] P)
+  let k (m : M) : TensorProduct B N P →ₗ[A]
+      ((TensorProduct A M N) ⊗[B] P) :=
+    { outer m with
+      map_smul' := by
+        intro a z
+        refine TensorProduct.induction_on z ?_ ?_ ?_
+        · simp [outer]
+        · intro n p
+          change ((m ⊗ₜ[A] (a • n)) ⊗ₜ[B] p) =
+            a • ((m ⊗ₜ[A] n) ⊗ₜ[B] p)
+          rw [TensorProduct.tmul_smul]
+          rfl
+        · intro z z' hz hz'
+          rw [smul_add]
+          change outer m (a • z + a • z') = a • outer m (z + z')
+          simp only [(outer m).map_add, smul_add]
+          have hz'': outer m (a • z) = a • outer m z := by exact hz
+          have hz''': outer m (a • z') = a • outer m z' := by exact hz'
+          rw [hz'', hz'''] }
+  let Gbil : M →ₗ[A] (TensorProduct B N P) →ₗ[A]
+      ((TensorProduct A M N) ⊗[B] P) :=
+    LinearMap.mk₂' A A (fun m z => k m z)
+      (by
+        intro m m' z
+        refine TensorProduct.induction_on z ?_ ?_ ?_
+        · simp [k, outer]
+        · intro n p
+          change ((m + m') ⊗ₜ[A] n) ⊗ₜ[B] p =
+            (m ⊗ₜ[A] n) ⊗ₜ[B] p + (m' ⊗ₜ[A] n) ⊗ₜ[B] p
+          rw [TensorProduct.add_tmul, TensorProduct.add_tmul]
+        · intro z z' hz hz'
+          simp only [k, map_add, hz, hz']
+          abel)
+      (by
+        intro a m z
+        refine TensorProduct.induction_on z ?_ ?_ ?_
+        · simp [k]
+        · intro n p
+          change ((a • m) ⊗ₜ[A] n) ⊗ₜ[B] p =
+            a • ((m ⊗ₜ[A] n) ⊗ₜ[B] p)
+          rfl
+        · intro z z' hz hz'
+          rw [map_add, map_add, hz, hz', smul_add])
+      (by intro m z z'; exact (k m).map_add z z')
+      (by intro a m z; exact (k m).map_smul a z)
+  let G : TensorProduct A M (TensorProduct B N P) →ₗ[A]
+      ((TensorProduct A M N) ⊗[B] P) := TensorProduct.lift Gbil
+  have hGF : ∀ z, G (F z) = z := by
+    intro z
+    refine TensorProduct.induction_on z ?_ ?_ ?_
+    · simp [F, G]
+    · intro x p
+      refine TensorProduct.induction_on x ?_ ?_ ?_
+      · simp [F, G]
+      · intro m n
+        change G (m ⊗ₜ[A] (n ⊗ₜ[B] p)) =
+          (m ⊗ₜ[A] n) ⊗ₜ[B] p
+        rfl
+      · intro x y hx hy
+        rw [TensorProduct.add_tmul, map_add, map_add, hx, hy]
+    · intro z z' hz hz'
+      rw [map_add, map_add, hz, hz']
+  have hFG : ∀ z, F (G z) = z := by
+    intro z
+    refine TensorProduct.induction_on z ?_ ?_ ?_
+    · simp [F, G]
+    · intro m z
+      refine TensorProduct.induction_on z ?_ ?_ ?_
+      · simp [F, G]
+      · intro n p
+        change F ((m ⊗ₜ[A] n) ⊗ₜ[B] p) =
+          m ⊗ₜ[A] (n ⊗ₜ[B] p)
+        rfl
+      · intro z z' hz hz'
+        rw [TensorProduct.tmul_add, map_add, map_add, hz, hz']
+    · intro z z' hz hz'
+      rw [map_add, map_add, hz, hz']
+  have hX : IsBimodule A B ((TensorProduct A M N) ⊗[B] P) := by
+    change SMulCommClass A B ((TensorProduct A M N) ⊗[B] P)
+    infer_instance
+  have hY : IsBimodule A B (TensorProduct A M (TensorProduct B N P)) := by
+    change SMulCommClass A B (TensorProduct A M (TensorProduct B N P))
+    exact tensorProductBModule_smulCommClass A B M (TensorProduct B N P)
+  refine ⟨hX, hY, ⟨LinearEquiv.ofLinear F G ?_ ?_⟩⟩
+  · apply LinearMap.ext
+    intro z
+    exact hFG z
+  · apply LinearMap.ext
+    intro z
+    exact hGF z
 
 /-- The tensor/Hom adjunction for modules. -/
 noncomputable def tensorHomEquiv {R M N P : Type*} [CommRing R]
@@ -524,6 +673,11 @@ noncomputable def tensorProductLocalizationEquiv
           localizedModuleFraction S n t) =
       localizedModuleFraction S (m ⊗ₜ[R] n) (s * t) := by
   simp [tensorProductLocalizationEquiv, localizedModuleFraction]
+  rw [Localization.mk_eq_mk']
+  rw [← IsLocalization.mk'_mul]
+  simp only [one_mul]
+  rw [← Localization.mk_eq_mk']
+  simp
 
 end
 end Formalization.Books.Algebra.Unit12

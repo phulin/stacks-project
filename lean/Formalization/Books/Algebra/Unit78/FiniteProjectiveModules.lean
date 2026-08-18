@@ -5,6 +5,10 @@ import Mathlib.Algebra.Module.Projective
 import Mathlib.Data.ZMod.Basic
 import Mathlib.LinearAlgebra.Contraction
 import Mathlib.LinearAlgebra.Basis.Basic
+import Mathlib.LinearAlgebra.Basis.Prod
+import Mathlib.LinearAlgebra.Projection
+import Mathlib.LinearAlgebra.TensorProduct.Quotient
+import Mathlib.LinearAlgebra.TensorProduct.Prod
 import Mathlib.RingTheory.Flat.Basic
 import Mathlib.RingTheory.Flat.EquationalCriterion
 import Mathlib.RingTheory.Flat.FaithfullyFlat.Algebra
@@ -21,6 +25,8 @@ import Mathlib.RingTheory.KrullDimension.Zero
 import Mathlib.RingTheory.LocalRing.Module
 import Mathlib.RingTheory.LocalRing.RingHom.Basic
 import Mathlib.RingTheory.LocalRing.ResidueField.Basic
+import Mathlib.RingTheory.Ideal.Maximal
+import Mathlib.RingTheory.Ideal.Quotient.ChineseRemainder
 import Mathlib.RingTheory.Localization.Away.Basic
 import Mathlib.RingTheory.RingHom.Flat
 import Mathlib.RingTheory.Spectrum.Maximal.Defs
@@ -1441,6 +1447,368 @@ private lemma exists_not_mem_of_finite_submodules_of_local
   change Q.mkQ x ∈ (p i).map Q.mkQ
   exact Submodule.mem_map_of_mem hxi
 
+private lemma smul_top_ne_top_of_basis
+    {S M : Type*} [CommRing S] [AddCommGroup M] [Module S M]
+    {ι : Type*} (b : Module.Basis ι S M) (i : ι)
+    (P : MaximalSpectrum S) :
+    P.1 • (⊤ : Submodule S M) ≠ ⊤ := by
+  intro htop
+  have hmap :
+      (P.1 • (⊤ : Submodule S M)).map b.repr.toLinearMap =
+        P.1 • (⊤ : Submodule S (ι →₀ S)) := by
+    rw [Submodule.map_smul'', Submodule.map_top,
+      LinearMap.range_eq_top.mpr b.repr.surjective]
+  have hmem : b.repr (b i) ∈ P.1 • (⊤ : Submodule S (ι →₀ S)) := by
+    rw [← hmap]
+    exact Submodule.mem_map_of_mem (by rw [htop]; exact Submodule.mem_top)
+  have hsurj : Function.Surjective
+      (Finsupp.lapply i : (ι →₀ S) →ₗ[S] S) := by
+    intro r
+    refine ⟨Finsupp.single i r, ?_⟩
+    simp
+  have hmap' :
+      (P.1 • (⊤ : Submodule S (ι →₀ S))).map
+          (Finsupp.lapply i : (ι →₀ S) →ₗ[S] S) = P.1 := by
+    rw [Submodule.map_smul'', Submodule.map_top,
+      LinearMap.range_eq_top.mpr hsurj]
+    simp [Ideal.smul_eq_mul, Ideal.mul_top]
+  have hone : (1 : S) ∈ P.1 := by
+    have hmem' :
+        (Finsupp.lapply i : (ι →₀ S) →ₗ[S] S) (b.repr (b i)) ∈
+          (P.1 • (⊤ : Submodule S (ι →₀ S))).map
+            (Finsupp.lapply i : (ι →₀ S) →ₗ[S] S) :=
+      Submodule.mem_map_of_mem hmem
+    rw [hmap'] at hmem'
+    simpa only [Finsupp.lapply_apply, b.repr_self, Finsupp.single_eq_same] using hmem'
+  exact P.isMaximal.ne_top (P.1.eq_top_iff_one.mpr hone)
+
+private lemma exists_unimodular_split
+    {S M : Type*} [CommRing S] [Nontrivial S] [AddCommGroup M] [Module S M]
+    [Module.Finite S M] [Module.Free S M]
+    {n : ℕ} (hS : Finite (MaximalSpectrum S))
+    (b : Module.Basis (Fin (n + 1)) S M) (x : M)
+    (hx : ∀ P : MaximalSpectrum S,
+      x ∉ P.1 • (⊤ : Submodule S M)) :
+    ∃ (f : M →ₗ[S] S), f x = 1 ∧
+      ∃ K : Submodule S M,
+        IsCompl (Submodule.span S ({x} : Set M)) K ∧
+          Nonempty (Module.Basis (Fin n) S
+            (M ⧸ Submodule.span S ({x} : Set M))) := by
+  classical
+  letI : Finite (MaximalSpectrum S) := hS
+  let I : Ideal S := Ideal.span (Set.range (b.repr x))
+  have hone : (1 : S) ∈ I := by
+    by_contra h
+    have hne : I ≠ ⊤ := by
+      intro htop
+      apply h
+      rw [htop]
+      exact Submodule.mem_top
+    obtain ⟨P, hP, hIP⟩ := Ideal.exists_le_maximal I hne
+    let P' : MaximalSpectrum S := ⟨P, hP⟩
+    apply hx P'
+    rw [← b.sum_repr x]
+    apply Submodule.sum_mem
+    intro i hi
+    exact Submodule.smul_mem_smul
+      (hIP (Submodule.subset_span (Set.mem_range_self _)))
+      Submodule.mem_top
+  have hI : I = ⊤ := I.eq_top_iff_one.mpr hone
+  obtain ⟨c, hc⟩ : ∃ c : Fin (n + 1) → S,
+      ∑ i, c i * b.repr x i = 1 := by
+    apply (Ideal.mem_span_range_iff_exists_fun (R := S)
+      (v := fun i => b.repr x i)).mp
+    simpa [I] using hone
+  let f : M →ₗ[S] S := ∑ i, c i • b.coord i
+  have hf : f x = 1 := by
+    dsimp [f]
+    simpa [b.coord_apply] using hc
+  let L : Submodule S M := Submodule.span S ({x} : Set M)
+  let j : S →ₗ[S] M := LinearMap.toSpanSingleton S M x
+  let jL : S →ₗ[S] L := j.codRestrict L (by
+    intro r
+    apply L.smul_mem r
+    change x ∈ Submodule.span S ({x} : Set M)
+    exact Submodule.subset_span (by simp))
+  have hjL : Function.Bijective jL := by
+    constructor
+    · intro r s hrs
+      have hrs' := congrArg (fun z : L => f (z : M)) hrs
+      have hjf (t : S) : f (jL t : M) = t := by
+        change f (t • x) = t
+        rw [map_smul, hf]
+        simp
+      rw [hjf r, hjf s] at hrs'
+      exact hrs'
+    · intro y
+      obtain ⟨r, hr⟩ := (Submodule.mem_span_singleton.mp y.property)
+      refine ⟨r, Subtype.ext ?_⟩
+      exact hr
+  let eL : S ≃ₗ[S] L := LinearEquiv.ofBijective jL hjL
+  let bL : Module.Basis Unit S L := (Module.Basis.singleton Unit S).map eL
+  let p : M →ₗ[S] L := (f.smulRight x).codRestrict L (by
+    intro y
+    apply L.smul_mem (f y)
+    change x ∈ Submodule.span S ({x} : Set M)
+    exact Submodule.subset_span (by simp))
+  have hp : ∀ y : L, p y = y := by
+    intro y
+    obtain ⟨r, hr⟩ := Submodule.mem_span_singleton.mp y.property
+    apply Subtype.ext
+    rw [← hr]
+    change f (r • x) • x = r • x
+    rw [map_smul, hf]
+    simp
+  let K : Submodule S M := LinearMap.ker p
+  have hK : IsCompl L K := by
+    exact LinearMap.isCompl_of_proj hp
+  let rK : M →ₗ[S] K := (LinearMap.id - L.subtype.comp p).codRestrict K (by
+    intro y
+    change p (y - (p y : M)) = 0
+    rw [map_sub]
+    have hpy : p (p y : M) = p y := by
+      exact hp (p y)
+    rw [hpy, sub_self])
+  have hrK : rK.comp K.subtype = LinearMap.id := by
+    apply LinearMap.ext
+    intro y
+    apply Subtype.ext
+    simp [rK, y.property]
+  letI : Module.Finite S K := Module.Finite.of_surjective rK (by
+    intro y
+    refine ⟨(y : M), ?_⟩
+    apply Subtype.ext
+    simp [rK, y.property])
+  letI : Module.Flat S K := Module.Flat.of_retract K.subtype rK hrK
+  have hM (P : MaximalSpectrum S) :
+      Module.finrank (S ⧸ P.1)
+        ((S ⧸ P.1) ⊗[S] M) = n + 1 := by
+    letI : P.1.IsMaximal := P.isMaximal
+    letI : Field (S ⧸ P.1) := Ideal.Quotient.field P.1
+    rw [Module.finrank_baseChange,
+      Module.finrank_eq_card_basis b]
+    simp
+  let e := L.prodEquivOfIsCompl K hK
+  have hKrank (P : MaximalSpectrum S) :
+      Module.finrank (S ⧸ P.1)
+        ((S ⧸ P.1) ⊗[S] K) = n := by
+    letI : P.1.IsMaximal := P.isMaximal
+    letI : Field (S ⧸ P.1) := Ideal.Quotient.field P.1
+    have hL : Module.finrank (S ⧸ P.1)
+        ((S ⧸ P.1) ⊗[S] L) = 1 := by
+      letI : Module.Finite S L := Module.Finite.of_basis bL
+      letI : Module.Free S L := Module.Free.of_basis bL
+      rw [Module.finrank_baseChange,
+        Module.finrank_eq_card_basis bL]
+      simp
+    have hprod : Module.finrank (S ⧸ P.1)
+        ((S ⧸ P.1) ⊗[S] (L × K)) =
+          Module.finrank (S ⧸ P.1) ((S ⧸ P.1) ⊗[S] L) +
+            Module.finrank (S ⧸ P.1) ((S ⧸ P.1) ⊗[S] K) := by
+      simpa only [Module.finrank_prod] using
+        (TensorProduct.prodRight S (S ⧸ P.1) (S ⧸ P.1) L K).finrank_eq
+    have he : Module.finrank (S ⧸ P.1)
+        ((S ⧸ P.1) ⊗[S] (L × K)) =
+          Module.finrank (S ⧸ P.1) ((S ⧸ P.1) ⊗[S] M) := by
+      exact (e.baseChange S (S ⧸ P.1)).finrank_eq
+    have hdim : 1 + Module.finrank (S ⧸ P.1)
+        ((S ⧸ P.1) ⊗[S] K) = n + 1 := by
+      calc
+        1 + Module.finrank (S ⧸ P.1)
+              ((S ⧸ P.1) ⊗[S] K) =
+            Module.finrank (S ⧸ P.1)
+              ((S ⧸ P.1) ⊗[S] L) +
+                Module.finrank (S ⧸ P.1)
+                  ((S ⧸ P.1) ⊗[S] K) := by rw [hL]
+        _ = Module.finrank (S ⧸ P.1)
+              ((S ⧸ P.1) ⊗[S] (L × K)) := hprod.symm
+        _ = Module.finrank (S ⧸ P.1)
+              ((S ⧸ P.1) ⊗[S] M) := he
+        _ = n + 1 := hM P
+    omega
+  obtain ⟨bK⟩ := Module.nonempty_basis_of_flat_of_finrank_eq S K n hKrank
+  let eQ := L.quotientEquivOfIsCompl K hK
+  refine ⟨f, hf, K, hK, ?_⟩
+  exact ⟨bK.map eQ.symm⟩
+
+private lemma exists_basis_subset_of_subsingleton
+    {R S M : Type*} [CommRing R] [CommRing S] [Subsingleton S]
+    [Algebra R S] [AddCommGroup M] [Module R M] [Module S M]
+    [IsScalarTower R S M] (N : Submodule R M) :
+    ∃ (ι : Type v) (b : Module.Basis ι S M), ∀ i, b i ∈ N := by
+  classical
+  letI : Subsingleton M := Module.subsingleton S M
+  let b' : Module.Basis (ULift.{v} (Fin 0)) S M := Module.Basis.empty M
+  refine ⟨_, b', ?_⟩
+  intro i
+  exact isEmptyElim i
+
+private theorem exists_basis_subset_aux
+    : ∀ n : ℕ, ∀ {R S M : Type*} [CommRing R] [CommRing S] [Nontrivial S]
+      [IsLocalRing R] [Infinite (IsLocalRing.ResidueField R)]
+      [Algebra R S] [AddCommGroup M] [Module R M] [Module S M]
+      [IsScalarTower R S M] [Module.Finite S M] [Module.Free S M]
+      (b : Module.Basis (Fin n) S M) (N : Submodule R M)
+      (hS : Formalization.Books.Algebra.Unit03.IsSemilocalRing S)
+      (hm : Ideal.map (algebraMap R S) (IsLocalRing.maximalIdeal R) ≤
+        Ring.jacobson S)
+      (hN : Submodule.span S (N : Set M) = ⊤),
+      ∃ (ι : Type v) (b' : Module.Basis ι S M), ∀ i, b' i ∈ N := by
+  intro n
+  induction n with
+  | zero =>
+      rintro R S M _ _ _ _ _ _ _ _ _ _ _ _ b N hS hm hN
+      let b' : Module.Basis (ULift.{v} (Fin 0)) S M :=
+        b.reindex (Equiv.ulift.symm)
+      refine ⟨_, b', ?_⟩
+      intro i
+      exact Fin.elim0 (Equiv.ulift i)
+  | succ n ih =>
+      rintro R S M _ _ _ _ _ _ _ _ _ _ _ _ b N hS hm hN
+      classical
+      letI : Finite (MaximalSpectrum S) := hS
+      let qP (P : MaximalSpectrum S) : Submodule R N :=
+        ((P.1 • (⊤ : Submodule S M)).restrictScalars R).comap N.subtype
+      have hqP (P : MaximalSpectrum S) : qP P ≠ ⊤ := by
+        intro htop
+        have hspan : Submodule.span S (N : Set M) ≤
+            P.1 • (⊤ : Submodule S M) := by
+          apply Submodule.span_le.mpr
+          intro y hy
+          have hy' : (⟨y, hy⟩ : N) ∈ qP P := by
+            rw [htop]
+            exact Submodule.mem_top
+          exact hy'
+        have hle : (⊤ : Submodule S M) ≤ P.1 • (⊤ : Submodule S M) := by
+          rw [hN] at hspan
+          exact hspan
+        exact smul_top_ne_top_of_basis b 0 P (top_unique hle)
+      have hQ (P : MaximalSpectrum S) :
+          IsLocalRing.maximalIdeal R • (⊤ : Submodule R N) ≤ qP P := by
+        apply Submodule.smul_le.mpr
+        intro r hr y hy
+        change (r • (y : N) : M) ∈ P.1 • (⊤ : Submodule S M)
+        have hrP : algebraMap R S r ∈ P.1 := by
+          letI : P.1.IsMaximal := P.isMaximal
+          exact (Ring.jacobson_le_of_isMaximal P.1)
+            (hm (Ideal.mem_map_of_mem (algebraMap R S) hr))
+        rw [← IsScalarTower.algebraMap_smul S r (y : M)]
+        exact Submodule.smul_mem_smul hrP
+          (Submodule.mem_top : (y : M) ∈ (⊤ : Submodule S M))
+      obtain ⟨xn, hxn⟩ :=
+        exists_not_mem_of_finite_submodules_of_local (p := qP) hQ hqP
+      let x : M := xn
+      have hx (P : MaximalSpectrum S) :
+          x ∉ P.1 • (⊤ : Submodule S M) := by
+        intro hxP
+        apply hxn P
+        change (⟨x, xn.property⟩ : N) ∈ qP P
+        exact hxP
+      obtain ⟨f, hf, K, hK, ⟨bQ⟩⟩ :=
+        exists_unimodular_split hS b x hx
+      let L : Submodule S M := Submodule.span S ({x} : Set M)
+      let q : M →ₗ[S] M ⧸ L := L.mkQ
+      let qR : M →ₗ[R] M ⧸ L := q.restrictScalars R
+      let NQ : Submodule R (M ⧸ L) := N.map qR
+      have hNQ : Submodule.span S (NQ : Set (M ⧸ L)) = ⊤ := by
+        have hgen (m : M) : q m ∈ Submodule.span S (NQ : Set (M ⧸ L)) := by
+          have hm' : m ∈ Submodule.span S (N : Set M) := by
+            rw [hN]
+            exact Submodule.mem_top
+          refine Submodule.span_induction
+            (p := fun y _ => q y ∈ Submodule.span S (NQ : Set (M ⧸ L)))
+            ?_ ?_ ?_ ?_ hm'
+          · intro y hy
+            apply Submodule.subset_span
+            change qR y ∈ NQ
+            exact Submodule.mem_map_of_mem hy
+          · exact Submodule.zero_mem _
+          · intro y z hy hz hy' hz'
+            simpa [map_add] using add_mem hy' hz'
+          · intro a y hy hy'
+            simpa [map_smul] using Submodule.smul_mem _ a hy'
+        apply top_unique
+        intro z hz
+        obtain ⟨m, rfl⟩ := L.mkQ_surjective z
+        exact hgen m
+      letI : Module.Finite S (M ⧸ L) := Module.Finite.of_basis bQ
+      letI : Module.Free S (M ⧸ L) := Module.Free.of_basis bQ
+      obtain ⟨ιQ, bQ', hbQ'⟩ := ih bQ NQ hS hm hNQ
+      choose y hyN hyq using fun i : ιQ =>
+        (Submodule.mem_map.mp (hbQ' i))
+      have hqy : (fun i => q (y i)) = bQ' := by
+        funext i
+        simpa [qR] using hyq i
+      have hqycomp : (q ∘ y) = bQ' := by
+        funext i
+        exact congrFun hqy i
+      let g : S × (ιQ →₀ S) →ₗ[S] M :=
+        (LinearMap.toSpanSingleton S M x).coprod
+          (Finsupp.linearCombination S y)
+      have hg : Function.Bijective g := by
+        constructor
+        · intro z w hzw
+          have hqzw := congrArg q hzw
+          have hqg (u : S × (ιQ →₀ S)) :
+              q (g u) = Finsupp.linearCombination S (fun i => q (y i)) u.2 := by
+            dsimp [g]
+            rw [map_add, q.map_finsupp_linearCombination]
+            have hqx : q x = 0 := by
+              apply (Submodule.Quotient.mk_eq_zero L).2
+              change x ∈ L
+              simpa [L] using
+                (Submodule.subset_span (R := S) (s := ({x} : Set M)) (by simp))
+            have hzero : q (u.1 • x) = 0 := by
+              rw [map_smul]
+              rw [hqx, smul_zero]
+            change q (u.1 • x) +
+              (Finsupp.linearCombination S (fun i => q (y i))) u.2 = _
+            rw [hzero]
+            simp
+          have hc : Finsupp.linearCombination S (fun i => q (y i)) z.2 =
+              Finsupp.linearCombination S (fun i => q (y i)) w.2 := by
+            rw [hqg z, hqg w] at hqzw
+            exact hqzw
+          have hc' : z.2 = w.2 := by
+            have hlin : LinearIndependent S (fun i => q (y i)) := by
+              rw [hqy]
+              exact bQ'.linearIndependent
+            exact hlin hc
+          have ha : z.1 • x = w.1 • x := by
+            simpa [g, hc'] using hzw
+          have ha' : z.1 = w.1 := by
+            simpa [hf] using congrArg f ha
+          exact Prod.ext ha' hc'
+        · intro m
+          let c := bQ'.repr (q m)
+          let z := Finsupp.linearCombination S y c
+          have hqz : q z = q m := by
+            dsimp [z, c]
+            rw [q.map_finsupp_linearCombination]
+            rw [hqycomp]
+            exact bQ'.linearCombination_repr (q m)
+          have hmem : m - z ∈ L := by
+            rw [← Submodule.Quotient.mk_eq_zero]
+            change q (m - z) = 0
+            rw [map_sub, hqz, sub_self]
+          obtain ⟨a, ha⟩ := Submodule.mem_span_singleton.mp hmem
+          refine ⟨(a, c), ?_⟩
+          dsimp [g, z]
+          change a • x + z = m
+          rw [ha]
+          exact sub_add_cancel m z
+      let e : (S × (ιQ →₀ S)) ≃ₗ[S] M := LinearEquiv.ofBijective g hg
+      let b0 : Module.Basis (Unit ⊕ ιQ) S (S × (ιQ →₀ S)) :=
+        (Module.Basis.singleton Unit S).prod (Finsupp.basisSingleOne)
+      let bM : Module.Basis (Unit ⊕ ιQ) S M := b0.map e
+      refine ⟨Unit ⊕ ιQ, bM, ?_⟩
+      intro i
+      cases i with
+      | inl i =>
+          simpa [bM, b0, e, g, x] using xn.property
+      | inr i =>
+          simpa [bM, b0, e, g] using hyN i
+
 /--
 If a finite free module over a semilocal algebra is generated by an
 `R`-submodule and the extended maximal ideal lies in the Jacobson radical,
@@ -1456,7 +1824,20 @@ theorem exists_basis_subset_of_semilocal
     (hm : Ideal.map (algebraMap R S) (IsLocalRing.maximalIdeal R) ≤ Ring.jacobson S)
     (hN : Submodule.span S (N : Set M) = ⊤) :
     ∃ (ι : Type*) (b : Module.Basis ι S M), ∀ i, b i ∈ N := by
-  sorry
+  classical
+  rcases subsingleton_or_nontrivial S with hS0 | hS0
+  · letI := hS0
+    exact exists_basis_subset_of_subsingleton N
+  · letI := hS0
+    let b₀ := Module.Free.chooseBasis S M
+    letI : Finite (Module.Free.ChooseBasisIndex S M) :=
+      Module.Finite.finite_basis b₀
+    letI : Fintype (Module.Free.ChooseBasisIndex S M) :=
+      Fintype.ofFinite _
+    let n := Fintype.card (Module.Free.ChooseBasisIndex S M)
+    let b : Module.Basis (Fin n) S M :=
+      b₀.reindex (Fintype.equivFin (Module.Free.ChooseBasisIndex S M))
+    exact exists_basis_subset_aux n b N hS hm hN
 
 /-! ## Evaluation and tensor products -/
 

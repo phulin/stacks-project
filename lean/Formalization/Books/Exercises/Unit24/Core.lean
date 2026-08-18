@@ -1,7 +1,6 @@
 import Mathlib.Algebra.MvPolynomial.Basic
 import Mathlib.Algebra.MvPolynomial.Eval
 import Mathlib.Data.Complex.Basic
-import Mathlib.FieldTheory.IsAlgClosed.Basic
 import Mathlib.RingTheory.AdjoinRoot
 import Mathlib.RingTheory.Ideal.GoingDown
 import Mathlib.RingTheory.Ideal.HasGoingUp

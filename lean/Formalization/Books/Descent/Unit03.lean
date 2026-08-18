@@ -151,11 +151,36 @@ noncomputable def relativeTensorModuleMap (R A M : Type u) [CommRing R] [CommRin
     relativeTensorModule R A M n →ₗ[R] relativeTensorModule R A M m :=
   Classical.choice (relativeTensorModuleMap_exists R A M φ)
 
+/- The degreewise module map is semilinear for the corresponding Amitsur
+ring map.  The preceding `R`-linear map records its underlying map on the
+displayed tensor-product presentation. -/
+theorem relativeTensorModuleMap_semilinear_exists (R A M : Type u)
+    [CommRing R] [CommRing A] [Algebra R A] [AddCommGroup M] [Module R M]
+    {n m : ℕ} (φ : SimplexCategory.mk n ⟶ SimplexCategory.mk m) :
+    Nonempty (relativeTensorModule R A M n →ₛₗ[relativeTensorMap R A φ]
+      relativeTensorModule R A M m) := by
+  sorry
+
+noncomputable def relativeTensorModuleMapSemilinear (R A M : Type u)
+    [CommRing R] [CommRing A] [Algebra R A] [AddCommGroup M] [Module R M]
+    {n m : ℕ} (φ : SimplexCategory.mk n ⟶ SimplexCategory.mk m) :
+    relativeTensorModule R A M n →ₛₗ[relativeTensorMap R A φ]
+      relativeTensorModule R A M m :=
+  Classical.choice (relativeTensorModuleMap_semilinear_exists R A M φ)
+
 theorem relativeTensorModuleMap_tmul (R A M : Type u) [CommRing R] [CommRing A]
     [Algebra R A] [AddCommGroup M] [Module R M]
     {n m : ℕ} (φ : SimplexCategory.mk n ⟶ SimplexCategory.mk m)
     (a : relativeTensorProduct R A n) (m' : M) :
     relativeTensorModuleMap R A M φ (a ⊗ₜ[R] m') =
+      relativeTensorMap R A φ a ⊗ₜ[R] m' := by
+  sorry
+
+theorem relativeTensorModuleMapSemilinear_tmul (R A M : Type u)
+    [CommRing R] [CommRing A] [Algebra R A] [AddCommGroup M] [Module R M]
+    {n m : ℕ} (φ : SimplexCategory.mk n ⟶ SimplexCategory.mk m)
+    (a : relativeTensorProduct R A n) (m' : M) :
+    relativeTensorModuleMapSemilinear R A M φ (a ⊗ₜ[R] m') =
       relativeTensorMap R A φ a ⊗ₜ[R] m' := by
   sorry
 
@@ -296,6 +321,18 @@ abbrev descentTerm (R A N : Type u) [CommRing R] [CommRing A] [Algebra R A]
     (n : ℕ) (i : Fin (n + 1)) : Type u :=
   descentTermModule R A N n i
 
+/- The source regards `N_{n,i}` as a module over the full Amitsur ring in
+degree `n`.  The recursive carrier above is retained as the convenient
+`R`-module presentation; this instance supplies the degree-ring action needed
+for its semilinear transition maps. -/
+theorem descentTermModuleOver_exists (n : ℕ) (i : Fin (n + 1)) :
+    Nonempty (Module (relativeTensorProduct R A n) (descentTerm R A N n i)) := by
+  sorry
+
+noncomputable instance descentTermModuleOver (n : ℕ) (i : Fin (n + 1)) :
+    Module (relativeTensorProduct R A n) (descentTerm R A N n i) :=
+  Classical.choice (descentTermModuleOver_exists (R := R) (A := A) (N := N) n i)
+
 /-- The degree-zero normal form is canonically the original module. -/
 def descentTermZeroEquiv (R A N : Type u) [CommRing R] [CommRing A] [Algebra R A]
     [AddCommGroup N] [Module R N] [Module A N] [IsScalarTower R A N]
@@ -323,6 +360,18 @@ noncomputable def descentTransportMap {n : ℕ} {i j : Fin (n + 1)}
     descentTerm R A N n i ≃ₗ[R] descentTerm R A N n j :=
   Classical.choice (descentTransportMap_exists D h)
 
+theorem descentTransportMapOver_exists {n : ℕ} {i j : Fin (n + 1)}
+    (D : DescentDatum (R := R) (A := A) (N := N)) (h : i ≤ j) :
+    Nonempty (descentTerm R A N n i ≃ₗ[relativeTensorProduct R A n]
+      descentTerm R A N n j) := by
+  sorry
+
+noncomputable def descentTransportMapOver {n : ℕ} {i j : Fin (n + 1)}
+    (D : DescentDatum (R := R) (A := A) (N := N)) (h : i ≤ j) :
+    descentTerm R A N n i ≃ₗ[relativeTensorProduct R A n]
+      descentTerm R A N n j :=
+  Classical.choice (descentTransportMapOver_exists D h)
+
 /-- The pure tensor with `x` in position `i` and units elsewhere. -/
 def descentUnitTensor {n : ℕ} (i : Fin (n + 1)) (x : N) : descentTerm R A N n i :=
   descentUnitTensorPlaced R A N n i x
@@ -341,10 +390,33 @@ noncomputable def descentReindexMap {n m : ℕ}
       descentTerm R A N m (β.toOrderHom i) :=
   Classical.choice (descentReindexMap_exists D β i)
 
+/- The source's `N_{β,i}` is semilinear for the Amitsur ring map.  This is the
+exact interface; the preceding `R`-linear map is its underlying shadow. -/
+theorem descentReindexMap_semilinear_exists {n m : ℕ}
+    (D : DescentDatum (R := R) (A := A) (N := N))
+    (β : SimplexCategory.mk n ⟶ SimplexCategory.mk m) (i : Fin (n + 1)) :
+    Nonempty (descentTerm R A N n i →ₛₗ[relativeTensorMap R A β]
+      descentTerm R A N m (β.toOrderHom i)) := by
+  sorry
+
+noncomputable def descentReindexMapSemilinear {n m : ℕ}
+    (D : DescentDatum (R := R) (A := A) (N := N))
+    (β : SimplexCategory.mk n ⟶ SimplexCategory.mk m) (i : Fin (n + 1)) :
+    descentTerm R A N n i →ₛₗ[relativeTensorMap R A β]
+      descentTerm R A N m (β.toOrderHom i) :=
+  Classical.choice (descentReindexMap_semilinear_exists D β i)
+
 theorem descentReindexMap_unit {n m : ℕ}
     (D : DescentDatum (R := R) (A := A) (N := N))
     (β : SimplexCategory.mk n ⟶ SimplexCategory.mk m) (i : Fin (n + 1)) (x : N) :
     descentReindexMap D β i (descentUnitTensor i x) =
+      descentUnitTensor (β.toOrderHom i) x := by
+  sorry
+
+theorem descentReindexMapSemilinear_unit {n m : ℕ}
+    (D : DescentDatum (R := R) (A := A) (N := N))
+    (β : SimplexCategory.mk n ⟶ SimplexCategory.mk m) (i : Fin (n + 1)) (x : N) :
+    descentReindexMapSemilinear D β i (descentUnitTensor i x) =
       descentUnitTensor (β.toOrderHom i) x := by
   sorry
 
@@ -458,7 +530,7 @@ variable {R A N : Type u} [CommRing R] [CommRing A] [Algebra R A]
   [AddCommGroup N] [Module R N] [Module A N] [IsScalarTower R A N]
 
 def descentCochainDegreeModule
-    (D : DescentDatum (R := R) (A := A) (N := N)) (n : ℕ) : ModuleCat R :=
+    (_D : DescentDatum (R := R) (A := A) (N := N)) (n : ℕ) : ModuleCat R :=
   match n with
   | 0 => ModuleCat.of R N
   | n + 1 => descentTermModule R A N (n + 1) ⟨n + 1, Nat.lt_succ_self (n + 1)⟩

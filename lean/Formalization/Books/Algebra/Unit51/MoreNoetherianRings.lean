@@ -70,7 +70,7 @@ theorem map_artin_rees
     [IsNoetherianRing R]
     [Module.Finite R K] [Module.Finite R M] [Module.Finite R N]
     (I : Ideal R) (g : K →ₗ[R] M) (f : M →ₗ[R] N)
-    (hg : Function.Injective g) (hgf : Function.Exact g f) :
+    (_hg : Function.Injective g) (hgf : Function.Exact g f) :
     ∃ c : ℕ, ∀ n ≥ c,
       Submodule.comap f (I ^ n • (⊤ : Submodule R N)) =
           LinearMap.range g ⊔
@@ -186,7 +186,7 @@ theorem powersIntersectionSubmodule_localizes_to_bot
   let S := Localization.AtPrime p
   let q := p.primeCompl
   let J : Ideal S := I.map (algebraMap R S)
-  letI : Module.FinitePresentation R M := Module.finitePresentation_of_finite R M
+  let _ : Module.FinitePresentation R M := Module.finitePresentation_of_finite R M
   have hJ : J ≠ ⊤ := by
     apply ne_top_of_le_ne_top (b := IsLocalRing.maximalIdeal S)
     · exact (IsLocalRing.maximalIdeal.isMaximal S).ne_top

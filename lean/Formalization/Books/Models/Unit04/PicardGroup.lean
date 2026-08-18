@@ -33,7 +33,12 @@ def picardWeightMap (T : NumericalType) :
 theorem picard_weight_square (T : NumericalType) :
     (picardWeightMap T).comp (Matrix.toLin' (picardMatrix T)) =
       Matrix.toLin' T.a := by
-  sorry
+  dsimp [picardWeightMap]
+  rw [← Matrix.toLin'_mul]
+  congr 1
+  ext i j
+  simp [picardMatrix, Matrix.mul_apply, Matrix.diagonal]
+  rw [← mul_comm, Int.ediv_mul_cancel (T.w_dvd i j)]
 
 /-! The weight map sends the Picard relations into the intersection relations. -/
 theorem picard_weight_map_range (T : NumericalType) :
@@ -41,7 +46,9 @@ theorem picard_weight_map_range (T : NumericalType) :
       LinearMap.ker
         ((Submodule.mkQ (LinearMap.range (Matrix.toLin' T.a))).comp
           (picardWeightMap T)) := by
-  sorry
+  rintro x ⟨y, rfl⟩
+  rw [LinearMap.mem_ker, LinearMap.comp_apply, ← picard_weight_square T]
+  exact (Submodule.Quotient.mk_eq_zero _).mpr ⟨y, rfl⟩
 
 /-! The canonical map from the Picard group to the unscaled matrix cokernel. -/
 def picardGroupToMatrixCokernel (T : NumericalType) :
@@ -54,7 +61,22 @@ def picardGroupToMatrixCokernel (T : NumericalType) :
 /-! The comparison map is injective. -/
 theorem picardGroupToMatrixCokernel_injective (T : NumericalType) :
     Function.Injective (picardGroupToMatrixCokernel T) := by
-  sorry
+  unfold picardGroupToMatrixCokernel
+  rw [← LinearMap.ker_eq_bot]
+  apply Submodule.ker_liftQ_eq_bot
+  rintro x hx
+  rw [LinearMap.mem_ker, LinearMap.comp_apply] at hx
+  rcases (Submodule.Quotient.mk_eq_zero _).mp hx with ⟨y, hy⟩
+  refine ⟨y, ?_⟩
+  have hmap :
+      picardWeightMap T ((Matrix.toLin' (picardMatrix T)) y) = picardWeightMap T x := by
+    rw [← LinearMap.comp_apply, picard_weight_square T, hy]
+  apply funext
+  intro i
+  apply mul_left_cancel₀ (ne_of_gt (T.w_pos i))
+  have hi := congrFun hmap i
+  simp only [picardWeightMap, Matrix.toLin'_apply, Matrix.mulVec_diagonal] at hi
+  exact hi
 
 /-! The Picard group is a finitely generated abelian group of rank one. -/
 theorem picard_group_finite_rank_one (T : NumericalType) :
@@ -134,7 +156,38 @@ theorem contracted_weight_ratio_one_or_two (T T' : NumericalType)
     (e : Fin T'.n ≃ RemainingIndex T i)
     (hcontraction : IsContraction T T' i e) :
     ∀ j, T.w (e j).1 / T'.w j = 1 ∨ T.w (e j).1 / T'.w j = 2 := by
-  sorry
+  intro j
+  rw [hcontraction.2.2.2.1 j]
+  unfold contractedWeight
+  split_ifs with hcond
+  · right
+    have hwi : T.w i ∣ T.a (e j).1 i := by
+      simpa [T.a_symmetric] using T.w_dvd i (e j).1
+    have ha_even : Even (T.a (e j).1 i) := by
+      have he := Even.mul_right hcond.1 (T.w i)
+      rw [Int.ediv_mul_cancel hwi] at he
+      exact he
+    have hwj_even : Even (T.w (e j).1) := by
+      by_contra hneven
+      have hprod : Odd ((T.a (e j).1 i / T.w (e j).1) * T.w (e j).1) :=
+        hcond.2.mul (Int.not_even_iff_odd.mp hneven)
+      rw [Int.ediv_mul_cancel (T.w_dvd (e j).1 i)] at hprod
+      exact (Int.not_odd_iff_even.mpr ha_even) hprod
+    obtain ⟨k, hk⟩ := hwj_even.two_dvd
+    have hk_formula : T.w (e j).1 / 2 = k := by
+      apply Int.ediv_eq_of_eq_mul_left
+      · norm_num
+      · simpa [mul_comm] using hk
+    have hk_ne : k ≠ 0 := by
+      intro hk0
+      rw [hk0] at hk
+      have hwpos := T.w_pos (e j).1
+      omega
+    rw [hk_formula]
+    exact Int.ediv_eq_of_eq_mul_left hk_ne hk
+  · left
+    apply Int.ediv_self
+    exact ne_of_gt (T.w_pos (e j).1)
 
 /-! Twice every target basis vector lies in the image of `p`. -/
 theorem contractionP_two_smul_basis_mem_range (T T' : NumericalType)
@@ -143,7 +196,30 @@ theorem contractionP_two_smul_basis_mem_range (T T' : NumericalType)
     (hcontraction : IsContraction T T' i e) :
     ∀ j : Fin T'.n,
       (2 : ℤ) • (Pi.single j 1) ∈ LinearMap.range (contractionP T T' i e) := by
-  sorry
+  intro j
+  rcases contracted_weight_ratio_one_or_two T T' i hi e hcontraction j with hratio | hratio
+  · refine ⟨2 • Pi.single (e j).1 1, ?_⟩
+    ext k
+    have hne : (e j).1 ≠ i := (e j).2
+    by_cases hkj : k = j
+    · subst k
+      simp [contractionP, hratio, Pi.single_apply, hne]
+    · have hek : (e k).1 ≠ (e j).1 := by
+        intro h
+        apply hkj
+        exact e.injective (Subtype.ext h)
+      simp [contractionP, hkj, hek, Pi.single_apply, hne]
+  · refine ⟨Pi.single (e j).1 1, ?_⟩
+    ext k
+    have hne : (e j).1 ≠ i := (e j).2
+    by_cases hkj : k = j
+    · subst k
+      simp [contractionP, hratio, Pi.single_apply, hne]
+    · have hek : (e k).1 ≠ (e j).1 := by
+        intro h
+        apply hkj
+        exact e.injective (Subtype.ext h)
+      simp [contractionP, hkj, hek, Pi.single_apply, hne]
 
 /-! The target quotient map used to descend `p` to the Picard cokernel. -/
 def contractionTargetMap (T T' : NumericalType) (i : Fin T.n)
@@ -158,7 +234,18 @@ theorem contraction_square_range (T T' : NumericalType) (i : Fin T.n)
     (hcontraction : IsContraction T T' i e) :
     LinearMap.range (Matrix.toLin' (picardMatrix T)) ≤
       LinearMap.ker (contractionTargetMap T T' i e) := by
-  sorry
+  rintro x ⟨y, rfl⟩
+  change (Submodule.mkQ (LinearMap.range (Matrix.toLin' (picardMatrix T'))))
+      ((contractionP T T' i e) ((Matrix.toLin' (picardMatrix T)) y)) = 0
+  have hs : (contractionP T T' i e) ((Matrix.toLin' (picardMatrix T)) y) =
+      (Matrix.toLin' (picardMatrix T')) ((contractionQ T T' i e) y) := by
+    simpa only [LinearMap.comp_apply] using
+      LinearMap.congr_fun (contraction_square T T' i e hcontraction) y
+  rw [hs]
+  apply (Submodule.Quotient.mk_eq_zero _).mpr
+  show (Matrix.toLin' (picardMatrix T')) ((contractionQ T T' i e) y) ∈
+    LinearMap.range (Matrix.toLin' (picardMatrix T'))
+  exact ⟨contractionQ T T' i e y, rfl⟩
 
 /-! The homomorphism of Picard groups induced by contraction. -/
 def contractionPicardMap (T T' : NumericalType) (i : Fin T.n)

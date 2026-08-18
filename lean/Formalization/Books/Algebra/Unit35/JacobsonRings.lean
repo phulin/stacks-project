@@ -102,12 +102,13 @@ theorem isJacobsonRing_of_domain_noetherian_nonzero_primes_maximal
   sorry
 
 /- The “unit times idempotent” property and the quotient-localization property
-   used in the product-of-fields example. -/
+   used in the product-of-fields example.  The latter records surjectivity of
+   the canonical localization map, not merely an abstract ring equivalence. -/
 def IsUnitMulIdempotent {R : Type u} [CommRing R] (f : R) : Prop :=
   ∃ u e : R, IsUnit u ∧ IsIdempotentElem e ∧ f = u * e
 
 def LocalizationAwayIsQuotient (R : Type u) [CommRing R] : Prop :=
-  ∀ f : R, ∃ I : Ideal R, Nonempty (Localization.Away f ≃+* R ⧸ I)
+  ∀ f : R, Function.Surjective (algebraMap R (Localization.Away f))
 
 theorem isJacobsonRing_of_localizationAwayIsQuotient
     {R : Type u} [CommRing R] (h : LocalizationAwayIsQuotient R) :
@@ -126,11 +127,13 @@ theorem productOfFields_localization_identities
     (f : ProductOfFields A k) :
     ∃ (u e : ProductOfFields A k),
       IsUnit u ∧ IsIdempotentElem e ∧ f = u * e ∧
-        PrimeSpectrum.basicOpen f = PrimeSpectrum.basicOpen e ∧
+      PrimeSpectrum.basicOpen f = PrimeSpectrum.basicOpen e ∧
         Nonempty (Localization.Away f ≃+* Localization.Away e) ∧
         Nonempty
           (Localization.Away e ≃+*
-            (ProductOfFields A k ⧸ Ideal.span ({1 - e} : Set (ProductOfFields A k)))) := by
+            (ProductOfFields A k ⧸ Ideal.span ({1 - e} : Set (ProductOfFields A k)))) ∧
+        Function.Surjective
+          (algebraMap (ProductOfFields A k) (Localization.Away f)) := by
   sorry
 
 theorem productOfFields_isJacobson
@@ -518,7 +521,9 @@ def matrixProductRankTwoComponentIdeal {k : Type u} [Field k] :
 
 def matrixProductRankOneComponentIdeal {k : Type u} [Field k] :
     Ideal (MatrixPairPolynomial k) :=
-  Ideal.span (matrixPairProductEquations (k := k) ∪ {matrixPairDetX (k := k)})
+  Ideal.span
+    (matrixPairProductEquations (k := k) ∪
+      {matrixPairDetX (k := k), matrixPairDetY (k := k)})
 
 def matrixProductRankZeroComponentIdeal {k : Type u} [Field k] :
     Ideal (MatrixPairPolynomial k) :=
@@ -704,7 +709,7 @@ theorem idempotent_matrix_different_rank_orbits_disjoint
   sorry
 
 theorem matrixTrace_diagonalIdempotent
-    {k : Type u} [Field k] (n r : ℕ) :
+    {k : Type u} [Field k] (n r : ℕ) (hr : r ≤ n) :
     matrixTrace (k := k)
         (Matrix.diagonal (fun i : Fin n => if i.1 < r then (1 : k) else 0)) = r := by
   sorry
@@ -728,8 +733,9 @@ theorem characteristic_three_third_exterior_power_trace_separates_full_rank
     {k : Type u} [Field k] [CharP k 3] :
     thirdExteriorPowerTrace (k := k)
           (Matrix.diagonal (fun i : Fin 3 => (1 : k))) = 1 ∧
-      thirdExteriorPowerTrace (k := k)
-          (Matrix.diagonal (fun i : Fin 3 => (0 : k))) = 0 := by
+      ∀ r : ℕ, r < 3 →
+        thirdExteriorPowerTrace (k := k)
+          (Matrix.diagonal (fun i : Fin 3 => if i.1 < r then (1 : k) else 0)) = 0 := by
   sorry
 
 end

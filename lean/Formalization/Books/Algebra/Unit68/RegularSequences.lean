@@ -20,7 +20,7 @@ introducing a parallel definition.
 namespace Formalization.Books.Algebra.Unit68
 
 open Function
-open scoped TensorProduct
+open scoped Pointwise TensorProduct
 
 noncomputable section
 
@@ -1574,7 +1574,50 @@ theorem regular_sequence_join
     (hgs : RingTheory.Sequence.IsRegular (A ⧸ I)
       (gs.map (Ideal.Quotient.mk I))) :
     RingTheory.Sequence.IsRegular A (fs ++ gs) := by
-  sorry
+  subst I
+  rw [RingTheory.Sequence.isRegular_iff]
+  refine ⟨(RingTheory.Sequence.isWeaklyRegular_append_iff' A fs gs).2 ⟨hfs.1, ?_⟩, ?_⟩
+  ·
+    have hS : (Ideal.ofList fs : Submodule A A) • (⊤ : Submodule A A) = Ideal.ofList fs := by
+      rw [Ideal.smul_eq_mul, Ideal.mul_top]
+    let e : (A ⧸ (Ideal.ofList fs • (⊤ : Submodule A A))) ≃ₗ[A ⧸ Ideal.ofList fs]
+        (A ⧸ Ideal.ofList fs) := {
+      (Submodule.quotEquivOfEq _ _ hS).toAddEquiv with
+      map_smul' := by
+        intro r x
+        obtain ⟨r, rfl⟩ := Ideal.Quotient.mk_surjective r
+        induction x using Submodule.Quotient.induction_on with
+        | _ x => rfl }
+    exact (e.isWeaklyRegular_congr
+      (gs.map (Ideal.Quotient.mk (Ideal.ofList fs)))).mpr hgs.1
+  · intro htop
+    have hmap :
+        (Ideal.ofList gs).map (Ideal.Quotient.mk (Ideal.ofList fs)) =
+          Ideal.ofList (gs.map (Ideal.Quotient.mk (Ideal.ofList fs))) := by
+      rw [Ideal.map_ofList]
+    have hsup : Ideal.ofList fs ⊔ Ideal.ofList gs = (⊤ : Ideal A) := by
+      simpa [Ideal.ofList_append, Ideal.smul_eq_mul, Ideal.mul_top] using htop.symm
+    have hsubQ : Subsingleton ((A ⧸ Ideal.ofList fs) ⧸
+          (Ideal.ofList (gs.map (Ideal.Quotient.mk (Ideal.ofList fs))) :
+            Submodule (A ⧸ Ideal.ofList fs) (A ⧸ Ideal.ofList fs))) := by
+      rw [← hmap]
+      apply (DoubleQuot.quotQuotEquivQuotSup
+        (Ideal.ofList fs) (Ideal.ofList gs)).toEquiv.subsingleton_congr.mpr
+      rw [hsup]
+      infer_instance
+    have hJ :
+        (Ideal.ofList (gs.map (Ideal.Quotient.mk (Ideal.ofList fs))) :
+          Submodule (A ⧸ Ideal.ofList fs) (A ⧸ Ideal.ofList fs)) •
+            (⊤ : Submodule (A ⧸ Ideal.ofList fs) (A ⧸ Ideal.ofList fs)) =
+          Ideal.ofList (gs.map (Ideal.Quotient.mk (Ideal.ofList fs))) := by
+      rw [Ideal.smul_eq_mul, Ideal.mul_top]
+    have hsub : Subsingleton ((A ⧸ Ideal.ofList fs) ⧸
+          ((Ideal.ofList (gs.map (Ideal.Quotient.mk (Ideal.ofList fs))) :
+              Submodule (A ⧸ Ideal.ofList fs) (A ⧸ Ideal.ofList fs)) •
+            (⊤ : Submodule (A ⧸ Ideal.ofList fs) (A ⧸ Ideal.ofList fs)))) := by
+      rw [hJ]
+      exact hsubQ
+    exact hgs.top_ne_smul (Submodule.Quotient.subsingleton_iff.mp hsub).symm
 
 theorem regular_sequence_of_short_exact
     {R M₁ M₂ M₃ : Type*} [CommRing R]
@@ -1586,7 +1629,86 @@ theorem regular_sequence_of_short_exact
     (h₁ : RingTheory.Sequence.IsRegular M₁ xs)
     (h₃ : RingTheory.Sequence.IsRegular M₃ xs) :
     RingTheory.Sequence.IsRegular M₂ xs := by
-  sorry
+  induction xs generalizing M₁ M₂ M₃ with
+  | nil =>
+      letI := h₃.nontrivial
+      letI := hg.nontrivial
+      exact RingTheory.Sequence.IsRegular.nil R M₂
+  | cons r rs ih =>
+      simp only [RingTheory.Sequence.isRegular_cons_iff] at h₁ h₃ ⊢
+      refine ⟨?_, ?_⟩
+      · rw [isSMulRegular_iff_right_eq_zero_of_smul]
+        intro x hx
+        have hxg0 : r • g x = 0 := by
+          rw [← g.map_smul, hx, map_zero]
+        have hxg : g x = 0 := by
+          apply h₃.1
+          change r • g x = r • (0 : M₃)
+          simpa only [smul_zero] using hxg0
+        obtain ⟨y, hy⟩ := hfg x |>.mp hxg
+        have hfy : f (r • y) = 0 := by
+          rw [f.map_smul, hy, hx]
+        have hy0 : y = 0 := h₁.1 (hf (by
+          simpa only [smul_zero, map_zero] using hfy))
+        rw [← hy, hy0, map_zero]
+      · let M₄ := M₃ ⧸ (⊤ : Submodule R M₃)
+        let q₃ : M₃ →ₗ[R] M₄ := (⊤ : Submodule R M₃).mkQ
+        have hq₃ : Exact g q₃ := by
+          intro x
+          constructor
+          · intro _
+            exact hg x
+          · rintro ⟨y, rfl⟩
+            rw [Submodule.mkQ_apply, Submodule.Quotient.mk_eq_zero]
+            exact Submodule.mem_top
+        have hr₄ : IsSMulRegular M₄ r := by
+          rw [isSMulRegular_iff_right_eq_zero_of_smul]
+          intro x hx
+          exact Subsingleton.elim _ _
+        have hfi : Function.Injective (QuotSMulTop.map r f) := by
+          intro x
+          induction x using Submodule.Quotient.induction_on with
+          | _ x =>
+            intro y hxy
+            induction y using Submodule.Quotient.induction_on with
+            | _ y =>
+              have hzero :
+                  (Submodule.Quotient.mk (f x - f y) : QuotSMulTop r M₂) = 0 := by
+                rw [Submodule.Quotient.mk_sub]
+                simpa only [QuotSMulTop.map_apply_mk] using sub_eq_zero.mpr hxy
+              have hmem : f x - f y ∈ r • (⊤ : Submodule R M₂) :=
+                (Submodule.Quotient.mk_eq_zero _).mp hzero
+              obtain ⟨z, _, hz⟩ :=
+                (Submodule.mem_smul_pointwise_iff_exists (f x - f y) r
+                  (⊤ : Submodule R M₂)).mp hmem
+              have hz' : r • z = f (x - y) := by
+                rw [f.map_sub]
+                exact hz
+              have hgz : g (r • z) = 0 := by
+                rw [hz']
+                exact (hfg (f (x - y))).mpr ⟨x - y, rfl⟩
+              have hgz0 : r • g z = 0 := by
+                simpa only [g.map_smul] using hgz
+              have hgz : g z = 0 := by
+                apply h₃.1
+                change r • g z = r • (0 : M₃)
+                simpa only [smul_zero] using hgz0
+              obtain ⟨w, hw⟩ := (hfg z).mp hgz
+              have hxy' : x - y = r • w := by
+                apply hf
+                rw [f.map_sub, f.map_smul, hw]
+                exact (f.map_sub x y).symm.trans hz'.symm
+              apply sub_eq_zero.mp
+              rw [← Submodule.Quotient.mk_sub,
+                Submodule.Quotient.mk_eq_zero]
+              rw [hxy']
+              exact (Submodule.mem_smul_pointwise_iff_exists _ _ _).2
+                ⟨w, Submodule.mem_top, rfl⟩
+        have hq : Exact (QuotSMulTop.map r f) (QuotSMulTop.map r g) :=
+          QuotSMulTop.map_first_exact_on_four_term_exact_of_isSMulRegular_last
+            hfg hq₃ hr₄
+        exact ih (QuotSMulTop.map r f) (QuotSMulTop.map r g) hfi hq
+          (QuotSMulTop.map_surjective r hg) h₁.2 h₃.2
 
 /- The source's first induction step uses the displayed short exact sequence
   `0 → M/fM → M/f^eM → M/f^(e-1)M → 0`; it is an intermediate proof interface, so the

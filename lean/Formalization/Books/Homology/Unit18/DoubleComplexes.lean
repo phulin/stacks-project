@@ -105,11 +105,17 @@ def columnMap (A : DoubleComplex C) (p : ℤ) : column A p ⟶ column A (p + 1) 
 
 theorem rowMap_comp_zero (A : DoubleComplex C) (p : ℤ) :
     rowMap A p ≫ rowMap A (p + 1) = 0 := by
-  sorry
+  apply HomologicalComplex.Hom.ext
+  ext r
+  change A.d2 r p ≫ A.d2 r (p + 1) = 0
+  exact A.d2_sq r p
 
 theorem columnMap_comp_zero (A : DoubleComplex C) (q : ℤ) :
     columnMap A q ≫ columnMap A (q + 1) = 0 := by
-  sorry
+  apply HomologicalComplex.Hom.ext
+  ext r
+  change A.d1 q r ≫ A.d1 (q + 1) r = 0
+  exact A.d1_sq q r
 
 /- The source's observation that a double complex is a complex of complexes
    is made explicit by the following two HomologicalComplex objects. -/
@@ -240,7 +246,25 @@ theorem tensor_d1_sq
     (X : CochainComplex A ℤ) (Y : CochainComplex B ℤ) (p q : ℤ) :
     T.functor.map (Prod.mkHom (X.d p (p + 1)) (𝟙 (Y.X q))) ≫
     T.functor.map (Prod.mkHom (X.d (p + 1) ((p + 1) + 1)) (𝟙 (Y.X q))) = 0 := by
-  sorry
+  have hzero :
+      ∀ {U V : A} (Z : B),
+        T.functor.map (Prod.mkHom (0 : U ⟶ V) (𝟙 Z)) = 0 := by
+    intro U V Z
+    have h := T.map_add_left Z (0 : U ⟶ V) 0
+    have h' :
+        T.functor.map (Prod.mkHom (0 : U ⟶ V) (𝟙 Z)) + 0 =
+          T.functor.map (Prod.mkHom (0 : U ⟶ V) (𝟙 Z)) +
+            T.functor.map (Prod.mkHom (0 : U ⟶ V) (𝟙 Z)) := by
+      simpa only [zero_add, add_zero] using h
+    exact (add_left_cancel h').symm
+  rw [← T.functor.map_comp]
+  rw [show
+    Prod.mkHom (X.d p (p + 1)) (𝟙 (Y.X q)) ≫
+        Prod.mkHom (X.d (p + 1) ((p + 1) + 1)) (𝟙 (Y.X q)) =
+      Prod.mkHom (X.d p (p + 1) ≫ X.d (p + 1) ((p + 1) + 1)) (𝟙 (Y.X q)) by
+    ext <;> simp]
+  rw [X.d_comp_d]
+  exact @hzero (X.X p) (X.X ((p + 1) + 1)) (Y.X q)
 
 theorem tensor_d2_sq
     {A B C : Type u} [Category.{v} A] [Category.{v} B] [Category.{v} C]
@@ -249,7 +273,26 @@ theorem tensor_d2_sq
     (X : CochainComplex A ℤ) (Y : CochainComplex B ℤ) (p q : ℤ) :
     T.functor.map (Prod.mkHom (𝟙 (X.X p)) (Y.d q (q + 1))) ≫
         T.functor.map (Prod.mkHom (𝟙 (X.X p)) (Y.d (q + 1) ((q + 1) + 1))) = 0 := by
-  sorry
+  have hzero :
+      ∀ (U : A) {V W : B},
+        T.functor.map (Prod.mkHom (𝟙 U) (0 : V ⟶ W)) = 0 := by
+    intro U V W
+    have h := T.map_add_right U (0 : V ⟶ W) 0
+    have h' :
+        T.functor.map (Prod.mkHom (𝟙 U) (0 : V ⟶ W)) + 0 =
+          T.functor.map (Prod.mkHom (𝟙 U) (0 : V ⟶ W)) +
+            T.functor.map (Prod.mkHom (𝟙 U) (0 : V ⟶ W)) := by
+      simpa only [zero_add, add_zero] using h
+    exact (add_left_cancel h').symm
+  rw [← T.functor.map_comp]
+  rw [show
+    Prod.mkHom (𝟙 (X.X p)) (Y.d q (q + 1)) ≫
+        Prod.mkHom (𝟙 (X.X p)) (Y.d (q + 1) ((q + 1) + 1)) =
+      Prod.mkHom (𝟙 (X.X p))
+        (Y.d q (q + 1) ≫ Y.d (q + 1) ((q + 1) + 1)) by
+    ext <;> simp]
+  rw [Y.d_comp_d]
+  exact @hzero (X.X p) (Y.X q) (Y.X ((q + 1) + 1))
 
 theorem tensor_differentials_commute
     {A B C : Type u} [Category.{v} A] [Category.{v} B] [Category.{v} C]

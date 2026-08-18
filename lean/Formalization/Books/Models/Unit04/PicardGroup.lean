@@ -107,7 +107,7 @@ private theorem rational_span_finrank_eq_real_span {n m : ℕ}
       let y : pQ := ⟨x, hx⟩
       have hy : ∑ i, (b.repr y) i • (b i : Fin m → ℚ) = x := by
         have hy' : pQ.subtype (∑ i, (b.repr y) i • b i) = x := by
-          simpa [y] using congrArg Subtype.val (b.sum_repr y)
+          exact (congrArg Subtype.val (b.sum_repr y)).trans rfl
         calc
           ∑ i, (b.repr y) i • (b i : Fin m → ℚ) =
               pQ.subtype (∑ i, (b.repr y) i • b i) := by
@@ -137,9 +137,9 @@ private theorem rational_span_finrank_eq_real_span {n m : ℕ}
       rw [hz]
       exact Submodule.zero_mem _
     · intro x y hx hy hcx hcy
-      convert Submodule.add_mem _ hcx hcy using 1 <;> (ext j <;> simp)
+      convert Submodule.add_mem _ hcx hcy using 1 ; (ext j ; simp)
     · intro a x hx hcx
-      convert Submodule.smul_mem _ (a : ℝ) hcx using 1 <;> (ext j <;> simp)
+      convert Submodule.smul_mem _ (a : ℝ) hcx using 1 ; (ext j ; simp)
     · simpa [pQ] using hx
   have hcast_u (x : Fin m → ℚ) (hx : x ∈ pQ) :
       (fun j => (x j : ℝ)) ∈
@@ -161,9 +161,9 @@ private theorem rational_span_finrank_eq_real_span {n m : ℕ}
       rw [hz]
       exact Submodule.zero_mem _
     · intro x y hx hy hcx hcy
-      convert Submodule.add_mem _ hcx hcy using 1 <;> (ext j <;> simp)
+      convert Submodule.add_mem _ hcx hcy using 1 ; (ext j ; simp)
     · intro a x hx hcx
-      convert Submodule.smul_mem _ (a : ℝ) hcx using 1 <;> (ext j <;> simp)
+      convert Submodule.smul_mem _ (a : ℝ) hcx using 1 ; (ext j ; simp)
     · exact hx'
   have hspan :
       Submodule.span ℝ (Set.range (fun i j => (v i j : ℝ))) =
@@ -357,7 +357,8 @@ private theorem int_matrix_range_finrank_eq_real_range {n : ℕ}
       (Set.finite_range (fun j : Fin n => c (fZ (Pi.single j 1))))
   have hZQ : Module.finrank ℚ (Submodule.span ℚ (pZ : Set (Fin n → ℝ))) =
       Module.finrank ℤ pZ := by
-    simpa [pZ] using (Submodule.finrank_span_eq_finrank_span ℤ ℚ S)
+    unfold pZ
+    exact Submodule.finrank_span_eq_finrank_span ℤ ℚ S
   have hS : S = Set.range (fun j : Fin n => fun i => (A i j : ℝ)) := by
     apply Set.ext
     intro x

@@ -314,7 +314,12 @@ theorem extTensorMap_natural_in_second {R R' : Type u} [CommRing R] [CommRing R'
         (CategoryTheory.Abelian.Ext.mk₀
           ((ModuleCat.extendScalars f ⋙ ModuleCat.restrictScalars f).map ψ))
         R M (Nat.add_zero i)).comp (extTensorMap f M N₁ i) := by
-  sorry
+  have hunit := (ModuleCat.ExtendRestrictScalarsAdj.unit f).naturality ψ
+  change ψ ≫ tensorUnitMap f N₂ =
+      tensorUnitMap f N₁ ≫ (ModuleCat.restrictScalars f).map
+        ((ModuleCat.extendScalars f).map ψ) at hunit
+  ext x
+  simp [extTensorMap, CategoryTheory.Abelian.Ext.postcompOfLinear, hunit]
 
 /-! ## Flat base change -/
 

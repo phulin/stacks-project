@@ -473,7 +473,24 @@ theorem coSpecial_triangle_two_out_of_three
     {T T' : Triangle C} (hT : CoSpecialTriangle T)
     (hT' : CoSpecialTriangle T') (φ : T ⟶ T')
     (h₁ : IsIso φ.hom₁) (h₂ : IsIso φ.hom₂) : IsIso φ.hom₃ := by
-  sorry
+  dsimp [CoSpecialTriangle] at hT hT'
+  let Top : Triangle Cᵒᵖ := (triangleOpEquivalence C).functor.obj (Opposite.op T)
+  let Topp : Triangle Cᵒᵖ := (triangleOpEquivalence C).functor.obj (Opposite.op T')
+  let phop : Topp ⟶ Top := (triangleOpEquivalence C).functor.map (Opposite.op φ)
+  have h2op : IsIso phop.hom₂ := by
+    change IsIso (φ.hom₂.op : Topp.obj₂ ⟶ Top.obj₂)
+    exact (isIso_op_iff φ.hom₂).2 h₂
+  have h3op : IsIso phop.hom₃ := by
+    change IsIso (φ.hom₁.op : Topp.obj₃ ⟶ Top.obj₃)
+    exact (isIso_op_iff φ.hom₁).2 h₁
+  have h1op : IsIso phop.hom₁ :=
+    special_triangle_isIso₁ (C := Cᵒᵖ) (T := Topp) (T' := Top)
+      hT' hT phop h2op h3op
+  have h1op' : IsIso (φ.hom₃.op : Topp.obj₁ ⟶ Top.obj₁) := by
+    change IsIso (φ.hom₃.op : Topp.obj₁ ⟶ Top.obj₁) at h1op
+    exact h1op
+  let _ : IsIso φ.hom₃.op := h1op'
+  exact isIso_of_op φ.hom₃
 
 /-- The middle component of a co-special-triangle morphism is an isomorphism
 when the first and third components are. -/

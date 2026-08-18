@@ -928,21 +928,22 @@ theorem integral_domain_over_field_isField
     {k S : Type*} [Field k] [CommRing S] [Algebra k S]
     [IsDomain S] [Algebra.IsIntegral k S] :
     IsField S := by
-  sorry
+  exact isField_of_isIntegral_of_isField' (Field.toIsField k)
 
 /-- A finite-dimensional domain algebra over a field is a field. -/
 theorem finiteDimensional_domain_over_field_isField
     {k S : Type*} [Field k] [CommRing S] [Algebra k S]
     [IsDomain S] [Module.Finite k S] :
     IsField S := by
-  sorry
+  exact isField_of_isIntegral_of_isField' (Field.toIsField k)
 
 /-- In an integral algebra over a field, every prime ideal is maximal. -/
 theorem prime_isMaximal_of_integral_over_field
     {k S : Type*} [Field k] [CommRing S] [Algebra k S]
     [Algebra.IsIntegral k S] (p : PrimeSpectrum S) :
     p.asIdeal.IsMaximal := by
-  sorry
+  apply Ideal.Quotient.maximal_of_isField
+  exact isField_of_isIntegral_of_isField' (Field.toIsField k)
 
 /-- Distinct primes in an integral extension with the same contraction are
 incomparable. -/
@@ -953,7 +954,19 @@ theorem primes_incomparable_of_same_comap
     (heq : PrimeSpectrum.comap f q = PrimeSpectrum.comap f q')
     (hneq : q ≠ q') :
     ¬ q.asIdeal ≤ q'.asIdeal ∧ ¬ q'.asIdeal ≤ q.asIdeal := by
-  sorry
+  let _ : Algebra R S := f.toAlgebra
+  let _ : Algebra.IsIntegral R S := ⟨hf⟩
+  have hcomap : q.asIdeal.comap f = q'.asIdeal.comap f :=
+    congrArg PrimeSpectrum.asIdeal heq
+  constructor
+  · intro hle
+    have hlt : q.asIdeal < q'.asIdeal :=
+      lt_of_le_of_ne hle (fun h => hneq (PrimeSpectrum.ext h))
+    exact (ne_of_lt (Ideal.IsIntegral.comap_lt_comap hlt)) hcomap
+  · intro hle
+    have hlt : q'.asIdeal < q.asIdeal :=
+      lt_of_le_of_ne hle (fun h => hneq (PrimeSpectrum.ext h.symm))
+    exact (ne_of_lt (Ideal.IsIntegral.comap_lt_comap hlt)) hcomap.symm
 
 /-- A finite ring map has finite fibers on prime spectra. -/
 theorem finite_primeSpectrum_fiber

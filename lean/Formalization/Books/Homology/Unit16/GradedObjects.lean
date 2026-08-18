@@ -437,7 +437,88 @@ def IsGradedPairKernel {C : Type u} [Category.{v} C]
 theorem gradedPairKernel_is_componentwise {C : Type u} [Category.{v} C]
     [Abelian C] [HasCountableCoproducts C] {A B : GradedPair C} (f : A ⟶ B) :
     IsGradedPairKernel f (gradedPairComponentwiseKernelι f) := by
-  sorry
+  constructor
+  · apply GradedPair.hom_ext
+    · change (Limits.Sigma.map (fun i => kernel.ι (f.componentHom i)) ≫
+          A.decomposition.hom) ≫ f.carrierHom = 0
+      apply Limits.Sigma.hom_ext
+      intro i
+      simpa [Category.assoc] using
+        (calc
+          (Sigma.ι (fun j => kernel (f.componentHom j)) i ≫
+                Limits.Sigma.map (fun j => kernel.ι (f.componentHom j))) ≫
+              A.decomposition.hom ≫ f.carrierHom =
+              (kernel.ι (f.componentHom i) ≫ Sigma.ι A.component i) ≫
+                A.decomposition.hom ≫ f.carrierHom := by
+                  simpa only [Category.assoc] using
+                    congrArg (fun h => h ≫ A.decomposition.hom ≫ f.carrierHom)
+                      (Limits.Sigma.ι_map (fun j => kernel.ι (f.componentHom j)) i)
+          _ = kernel.ι (f.componentHom i) ≫
+                (f.componentHom i ≫ Sigma.ι B.component i ≫ B.decomposition.hom) := by
+                  simpa only [Category.assoc] using
+                    congrArg (fun h => kernel.ι (f.componentHom i) ≫ h)
+                      (f.comm i)
+          _ = 0 := by simp)
+    · intro i
+      change kernel.ι (f.componentHom i) ≫ f.componentHom i = 0
+      simp
+  · intro X g hg
+    let hcomp : ∀ i : ℤ, X.component i ⟶ kernel (f.componentHom i) :=
+      fun i => kernel.lift (f.componentHom i) (g.componentHom i) (by
+        have hg_i := congrArg (fun q : X ⟶ B => q.componentHom i) hg
+        change g.componentHom i ≫ f.componentHom i = 0 at hg_i
+        exact hg_i)
+    let h : X ⟶ gradedPairComponentwiseKernel f :=
+      { carrierHom := X.decomposition.inv ≫
+          Limits.Sigma.desc (fun i =>
+            hcomp i ≫ Sigma.ι (fun j => kernel (f.componentHom j)) i)
+        componentHom := hcomp
+        comm := by
+          intro i
+          dsimp [gradedPairComponentwiseKernel]
+          simp [Category.assoc] }
+    refine ⟨h, ?_, ?_⟩
+    · apply GradedPair.hom_ext
+      · change
+          (X.decomposition.inv ≫
+              Limits.Sigma.desc (fun i =>
+                hcomp i ≫ Sigma.ι (fun j => kernel (f.componentHom j)) i)) ≫
+            (Limits.Sigma.map (fun i => kernel.ι (f.componentHom i)) ≫
+              A.decomposition.hom) = g.carrierHom
+        apply (cancel_epi X.decomposition.hom).1
+        apply Limits.Sigma.hom_ext
+        intro i
+        simpa [hcomp, Category.assoc] using (g.comm i).symm
+      · intro i
+        change hcomp i ≫ kernel.ι (f.componentHom i) = g.componentHom i
+        simp [hcomp]
+    · intro h' hh
+      have hcomp_eq : ∀ i : ℤ, h'.componentHom i = hcomp i := by
+        intro i
+        dsimp [gradedPairComponentwiseKernel] at h'
+        apply (cancel_mono (kernel.ι (f.componentHom i))).1
+        have hhi := congrArg (fun q : X ⟶ A => q.componentHom i) hh
+        change h'.componentHom i ≫ kernel.ι (f.componentHom i) =
+            g.componentHom i at hhi
+        rw [hhi, kernel.lift_ι]
+      apply GradedPair.hom_ext
+      · apply (cancel_epi X.decomposition.hom).1
+        apply Limits.Sigma.hom_ext
+        intro i
+        calc
+          Sigma.ι X.component i ≫ X.decomposition.hom ≫ h'.carrierHom =
+              h'.componentHom i ≫
+                Sigma.ι (gradedPairComponentwiseKernel f).component i ≫
+                  (gradedPairComponentwiseKernel f).decomposition.hom := h'.comm i
+          _ = hcomp i ≫
+                Sigma.ι (gradedPairComponentwiseKernel f).component i ≫
+                (gradedPairComponentwiseKernel f).decomposition.hom := by
+                rw [hcomp_eq i]
+                simp [gradedPairComponentwiseKernel]
+          _ = Sigma.ι X.component i ≫ X.decomposition.hom ≫ h.carrierHom :=
+                (h.comm i).symm
+      · intro i
+        exact hcomp_eq i
 
 /-! ### Shifts and homogeneous maps -/
 
@@ -469,7 +550,35 @@ theorem homIntoShiftEquiv_exists {C : Type u} [Category.{v} C] (k : ℤ)
     (A B : GradedObject ℤ C) :
     Nonempty (HomogeneousGradedMap k A B ≃
       ((gradedShift C (-k)).obj A ⟶ B)) := by
-  sorry
+  classical
+  let e : ℤ ≃ ℤ :=
+    { toFun := fun i => -k + i
+      invFun := fun i => k + i
+      left_inv := by
+        intro i
+        simpa only [neg_one_smul] using add_neg_cancel_left k i
+      right_inv := by
+        intro i
+        simpa only [neg_one_smul] using neg_add_cancel_left k i }
+  change Nonempty ((∀ i : ℤ, A i ⟶ B (k + i)) ≃
+    (∀ i : ℤ, A (-k + i) ⟶ B i))
+  let r := (Equiv.piCongrLeft (fun j : ℤ => A j ⟶ B (k + j)) e).symm
+  let s : (∀ i : ℤ, A (e i) ⟶ B (k + e i)) ≃
+      (∀ i : ℤ, A (-k + i) ⟶ B i) :=
+    Equiv.piCongrRight (fun i =>
+      { toFun := fun f => by
+          have hi : k + e i = i := by
+            dsimp [e]
+            simpa only [neg_one_smul] using add_neg_cancel_left k i
+          exact f ≫ eqToHom (congrArg B hi)
+        invFun := fun g => by
+          have hi : k + e i = i := by
+            dsimp [e]
+            simpa only [neg_one_smul] using add_neg_cancel_left k i
+          exact g ≫ eqToHom (congrArg B hi).symm
+        left_inv := by intro f; simp
+        right_inv := by intro g; simp })
+  exact ⟨r.trans s⟩
 
 noncomputable def homIntoShiftEquiv {C : Type u} [Category.{v} C] (k : ℤ)
     (A B : GradedObject ℤ C) :

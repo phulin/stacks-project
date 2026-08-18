@@ -31,7 +31,13 @@ theorem nilradical_unique_minimal_prime {A : Type u} [CommRing A]
     (h : (nilradical A).IsPrime) :
     nilradical A ∈ minimalPrimes A ∧
       ∀ p : Ideal A, p ∈ minimalPrimes A → p = nilradical A := by
-  sorry
+  rw [minimalPrimes_eq_minimals]
+  constructor
+  · change Minimal Ideal.IsPrime (nilradical A)
+    exact ⟨h, fun q hq _ => @nilradical_le_prime A _ q hq⟩
+  · intro p hp
+    change Minimal Ideal.IsPrime p at hp
+    exact (hp.eq_of_le h (@nilradical_le_prime A _ p hp.1)).symm
 
 /-- Irreducibility is unchanged on passing to the closure. -/
 theorem irreducible_iff_closure_irreducible {X : Type u} [TopologicalSpace X]
@@ -48,7 +54,16 @@ theorem closed_irreducible_iff_prime_zeroLocus {A : Type u} [CommRing A]
     IsClosed T ∧ IsIrreducible T ↔
       ∃ p : Ideal A, p.IsPrime ∧
         T = PrimeSpectrum.zeroLocus (p : Set A) := by
-  sorry
+  constructor
+  · rintro ⟨hclosed, hirr⟩
+    obtain ⟨I, hI⟩ := (PrimeSpectrum.isClosed_iff_zeroLocus_ideal T).mp hclosed
+    refine ⟨I.radical, (PrimeSpectrum.isIrreducible_zeroLocus_iff I).mp (hI ▸ hirr), ?_⟩
+    rw [PrimeSpectrum.zeroLocus_radical]
+    exact hI
+  · rintro ⟨p, hp, rfl⟩
+    exact ⟨PrimeSpectrum.isClosed_zeroLocus _, by
+      rw [PrimeSpectrum.isIrreducible_zeroLocus_iff_of_radical p hp.isRadical]
+      exact hp⟩
 
 /-! ## Generic points and sobriety -/
 
@@ -79,7 +94,7 @@ theorem spectrum_point_closure_bijective {A : Type u} [CommRing A] :
         (⟨closure ({p} : Set (PrimeSpectrum A)),
           isIrreducible_singleton.closure, isClosed_closure⟩ :
           TopologicalSpace.IrreducibleCloseds (PrimeSpectrum A))) := by
-  sorry
+  exact (PrimeSpectrum.pointsEquivIrreducibleCloseds A).toEquiv.bijective
 
 /-! ## A non-generic irreducible subset of `Spec(ℤ)` -/
 

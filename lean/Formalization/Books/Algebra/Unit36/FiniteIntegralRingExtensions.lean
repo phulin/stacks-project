@@ -1136,7 +1136,11 @@ theorem silly_normal_short_exact
     Function.Injective (sillyNormalLeft x y) ∧
       Function.Exact (sillyNormalLeft x y) (sillyNormalRight x y) ∧
       Function.Surjective (sillyNormalRight x y) := by
-  
+  /- Prior attempt: the proof below established the unit identities, the
+  polynomial normal-form argument, and the injectivity and surjectivity
+  components, but did not close the middle exactness goal and exceeded the
+  kernel elaboration timeout.
+
   classical
   let hxunit : IsUnit (algebraMap R (ratioLocalization R x y) x) :=
     IsLocalization.Away.isUnit_of_dvd (x * y) (dvd_mul_right x y)
@@ -1205,9 +1209,9 @@ theorem silly_normal_short_exact
     rw [← hab, ← hab']
     simp [add_left_comm, add_comm]
   have hgood_A (a : ratioXYSubalgebra x y) : Good (a : ratioLocalization R x y) := by
-    exact ⟨a, 0, by simp [Good]⟩
+    exact ⟨a, 0, by simp⟩
   have hgood_B (b : ratioYXSubalgebra x y) : Good (b : ratioLocalization R x y) := by
-    exact ⟨0, b, by simp [Good]⟩
+    exact ⟨0, b, by simp⟩
   have hgood_monomial (n m : ℕ) (a b : R)
       (hpow' : (ratioXY x y) ^ n * (ratioYX x y) ^ m =
         if m ≤ n then (ratioXY x y) ^ (n - m)
@@ -1317,6 +1321,8 @@ theorem silly_normal_short_exact
     have hsecond := congrArg (fun p => (p.2 : ratioLocalization R x y)) hrs
     simpa [sillyNormalLeft] using hsecond
   refine ⟨hinjLeft, ?_, hsurj⟩
+  -/
+  sorry
 
 end
 

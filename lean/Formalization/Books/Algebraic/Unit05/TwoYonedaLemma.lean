@@ -133,7 +133,7 @@ theorem relativeTwoYonedaFromFibre_evaluation_iso
     Nonempty
       ((RelativeTwoYonedaEvaluation p U).obj
           ((RelativeTwoYonedaFromFibre p P U).obj x) ≅ x) := by
-  exact ⟨(Classical.choose (pullback_identity_iso p P U)).inv.app x⟩
+  exact ⟨asIso (Classical.choose (pullback_identity_iso p P U)).inv.app x⟩
 
 /-- With the standard unital normalization of pullbacks, evaluation recovers
 `x` literally at `U/U`. -/

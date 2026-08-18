@@ -214,8 +214,8 @@ theorem exercise_GU_GD_case_three :
   let _ : IsDomain integerLocalizationAt11 :=
     IsLocalization.Away.isDomain (S := integerLocalizationAt11) (x := (11 : ℤ))
       (by norm_num)
-  letI : Fact (Nat.Prime 11) := ⟨by decide⟩
-  letI : NeZero (11 : ℕ) := ⟨by decide⟩
+  let : Fact (Nat.Prime 11) := ⟨by decide⟩
+  let : NeZero (11 : ℕ) := ⟨by decide⟩
   constructor
   · intro hgu
     rw [goingUpProperty_iff_primeSpectrum] at hgu
@@ -262,7 +262,7 @@ theorem exercise_GU_GD_case_three :
   · change @Algebra.HasGoingDown ℤ integerLocalizationAt11 _ _
       integerToLocalizationAt11.toAlgebra
     have hflat : RingHom.Flat integerToLocalizationAt11 := by
-      letI : IsLocalization (Submonoid.powers (11 : ℤ))
+      let : IsLocalization (Submonoid.powers (11 : ℤ))
           (Localization (Submonoid.powers (11 : ℤ))) :=
         Localization.isLocalization (R := ℤ)
           (M := Submonoid.powers (11 : ℤ))
@@ -312,7 +312,7 @@ theorem exercise_GU_GD_case_four (k : Type u) [Field k] [IsAlgClosed k] :
           (MvPolynomial.X (0 : Fin 2)) (by norm_num)
       · have hzmem : MvPolynomial.X (2 : Fin 3) ^ 2 -
             MvPolynomial.X (0 : Fin 3) ∈ algebraicTowerIdeal k := by
-          exact Ideal.subset_span (by simp [algebraicTowerIdeal])
+          exact Ideal.subset_span (by simp)
         have hzero : Ideal.Quotient.mk (algebraicTowerIdeal k)
             (MvPolynomial.X (2 : Fin 3) ^ 2 - MvPolynomial.X (0 : Fin 3)) = 0 := by
           rw [Ideal.Quotient.eq_zero_iff_mem]
@@ -425,10 +425,10 @@ theorem exercise_GU_GD_case_four (k : Type u) [Field k] [IsAlgClosed k] :
           (fun i : Fin 2 => if i = 0 then 0 else 1)
       intro hg
       have hg' := congrArg ev₂ hg
-      simpa [g, ev₂] using hg'
+      simp [g, ev₂] at hg'
     have hgen : MvPolynomial.X (0 : Fin 3) ^ 2 -
         MvPolynomial.X (1 : Fin 3) ∈ algebraicTowerIdeal k := by
-      exact Ideal.subset_span (by simp [algebraicTowerIdeal])
+      exact Ideal.subset_span (by simp)
     have hrelmem : MvPolynomial.X (1 : Fin 3) -
         MvPolynomial.X (0 : Fin 3) ^ 2 ∈ algebraicTowerIdeal k := by
       simpa using (algebraicTowerIdeal k).neg_mem hgen
@@ -502,16 +502,16 @@ theorem exercise_GU_GD_case_five :
   let _ : IsDomain gaussianLocalizationAtTwoPlusI :=
     IsLocalization.Away.isDomain (S := gaussianLocalizationAtTwoPlusI)
       (x := gaussianTwoPlusI) ha0
-  letI : Fact (Nat.Prime 5) := ⟨by decide⟩
-  letI : NeZero (5 : ℕ) := ⟨by decide⟩
+  let : Fact (Nat.Prime 5) := ⟨by decide⟩
+  let : NeZero (5 : ℕ) := ⟨by decide⟩
   have hInt0 : ∀ x : gaussianIntegerModel,
       (algebraMap ℤ gaussianIntegerModel).IsIntegralElem x := by
     intro x
     exact Algebra.IsIntegral.isIntegral x
   have hGU0 : GoingUpProperty (algebraMap ℤ gaussianIntegerModel) := by
-    letI : Algebra ℤ gaussianIntegerModel :=
+    let : Algebra ℤ gaussianIntegerModel :=
       (algebraMap ℤ gaussianIntegerModel).toAlgebra
-    letI : Algebra.IsIntegral ℤ gaussianIntegerModel := ⟨by
+    let : Algebra.IsIntegral ℤ gaussianIntegerModel := ⟨by
       intro x
       change (algebraMap ℤ gaussianIntegerModel).IsIntegralElem x
       exact hInt0 x⟩
@@ -546,7 +546,7 @@ theorem exercise_GU_GD_case_five :
     by_cases h5q : (5 : ℤ) ∈ q.asIdeal
     · have hpbot : p = (⊥ : PrimeSpectrum ℤ) := by
         by_contra hpbot
-        letI : p.asIdeal.IsPrime := p.2
+        let : p.asIdeal.IsPrime := p.2
         have hpbotI : p.asIdeal ≠ (⊥ : Ideal ℤ) := by
           intro hpbotI
           exact hpbot (PrimeSpectrum.ext hpbotI)
@@ -719,7 +719,7 @@ theorem exercise_GU_GD_case_five :
       exact Algebra.HasGoingDown.of_flat
     have hflat : RingHom.Flat
         (algebraMap gaussianIntegerModel gaussianLocalizationAtTwoPlusI) := by
-      letI : IsLocalization (Submonoid.powers gaussianTwoPlusI)
+      let : IsLocalization (Submonoid.powers gaussianTwoPlusI)
           gaussianLocalizationAtTwoPlusI :=
         Localization.isLocalization (R := gaussianIntegerModel)
           (M := Submonoid.powers gaussianTwoPlusI)
@@ -814,8 +814,8 @@ theorem exercise_GU_GD_case_six :
   let _ : IsDomain gaussianLocalizationAtFourteenPlusSevenI :=
     IsLocalization.Away.isDomain (S := gaussianLocalizationAtFourteenPlusSevenI)
       (x := gaussianFourteenPlusSevenI) ha0
-  letI : Fact (Nat.Prime 7) := ⟨by decide⟩
-  letI : NeZero (7 : ℕ) := ⟨by decide⟩
+  let : Fact (Nat.Prime 7) := ⟨by decide⟩
+  let : NeZero (7 : ℕ) := ⟨by decide⟩
   constructor
   · intro hgu
     rw [goingUpProperty_iff_primeSpectrum] at hgu
@@ -890,7 +890,7 @@ theorem exercise_GU_GD_case_six :
       exact Algebra.HasGoingDown.of_flat
     have hflat : RingHom.Flat
         (algebraMap gaussianIntegerModel gaussianLocalizationAtFourteenPlusSevenI) := by
-      letI : IsLocalization (Submonoid.powers gaussianFourteenPlusSevenI)
+      let : IsLocalization (Submonoid.powers gaussianFourteenPlusSevenI)
           gaussianLocalizationAtFourteenPlusSevenI :=
         Localization.isLocalization (R := gaussianIntegerModel)
           (M := Submonoid.powers gaussianFourteenPlusSevenI)

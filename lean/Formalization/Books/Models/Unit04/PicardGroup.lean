@@ -89,7 +89,7 @@ private theorem rational_span_finrank_eq_real_span {n m : ℕ}
         (Submodule.span ℚ (Set.range (fun i j => (v i j : ℝ)))) := by
   let pQ : Submodule ℚ (Fin m → ℚ) := Submodule.span ℚ (Set.range v)
   let b := Module.Free.chooseBasis ℚ pQ
-  letI : Fintype (Module.Free.ChooseBasisIndex ℚ pQ) := Fintype.ofFinite _
+  let : Fintype (Module.Free.ChooseBasisIndex ℚ pQ) := Fintype.ofFinite _
   let u : Module.Free.ChooseBasisIndex ℚ pQ → Fin m → ℚ :=
     fun i => b i
   have hu : LinearIndependent ℚ u := by
@@ -137,9 +137,9 @@ private theorem rational_span_finrank_eq_real_span {n m : ℕ}
       rw [hz]
       exact Submodule.zero_mem _
     · intro x y hx hy hcx hcy
-      convert Submodule.add_mem _ hcx hcy using 1 <;> ext j <;> simp
+      convert Submodule.add_mem _ hcx hcy using 1 <;> (ext j <;> simp)
     · intro a x hx hcx
-      convert Submodule.smul_mem _ (a : ℝ) hcx using 1 <;> ext j <;> simp
+      convert Submodule.smul_mem _ (a : ℝ) hcx using 1 <;> (ext j <;> simp)
     · simpa [pQ] using hx
   have hcast_u (x : Fin m → ℚ) (hx : x ∈ pQ) :
       (fun j => (x j : ℝ)) ∈
@@ -161,10 +161,9 @@ private theorem rational_span_finrank_eq_real_span {n m : ℕ}
       rw [hz]
       exact Submodule.zero_mem _
     · intro x y hx hy hcx hcy
-      convert Submodule.add_mem _ hcx hcy using 1 <;> ext j <;> simp
+      convert Submodule.add_mem _ hcx hcy using 1 <;> (ext j <;> simp)
     · intro a x hx hcx
-      convert Submodule.smul_mem _ (a : ℝ) hcx using 1 <;> ext j <;>
-        simp [u]
+      convert Submodule.smul_mem _ (a : ℝ) hcx using 1 <;> (ext j <;> simp)
     · exact hx'
   have hspan :
       Submodule.span ℝ (Set.range (fun i j => (v i j : ℝ))) =
@@ -284,8 +283,7 @@ private theorem int_matrix_range_finrank_eq_real_range {n : ℕ}
       rintro y ⟨j, rfl⟩
       refine ⟨Pi.single j 1, ?_⟩
       ext k
-      simp [fR, fZ, c, Matrix.toLin'_apply, Matrix.mulVec,
-        Matrix.mulVec_apply_eq_sum]
+      simp [fR, fZ, c, Matrix.toLin'_apply, Matrix.mulVec]
     · rintro y ⟨x, rfl⟩
       have hdecomp (x : Fin n → ℝ) :
           x = ∑ j, x j • Pi.single j 1 := by
@@ -304,8 +302,7 @@ private theorem int_matrix_range_finrank_eq_real_range {n : ℕ}
         Submodule.subset_span ⟨j, rfl⟩
       convert Submodule.smul_mem _ (x j) hmem using 1
       ext k
-      simp [fR, fZ, c, Matrix.toLin'_apply, Matrix.mulVec,
-        Matrix.mulVec_apply_eq_sum]
+      simp [fR, fZ, c, Matrix.toLin'_apply]
   have hc_injective : Function.Injective c := by
     intro x y hxy
     apply funext
@@ -354,8 +351,8 @@ private theorem int_matrix_range_finrank_eq_real_range {n : ℕ}
       exact ⟨⟨x, hx⟩, Subtype.ext hxy⟩
   let eZ : LinearMap.range fZ ≃ₗ[ℤ] pZ :=
     LinearEquiv.ofBijective cR hcR_bijective
-  letI : Module.Flat ℤ ℚ := IsLocalization.flat ℚ (nonZeroDivisors ℤ)
-  letI : Module.Finite ℤ pZ :=
+  let : Module.Flat ℤ ℚ := IsLocalization.flat ℚ (nonZeroDivisors ℤ)
+  let : Module.Finite ℤ pZ :=
     Module.Finite.span_of_finite ℤ
       (Set.finite_range (fun j : Fin n => c (fZ (Pi.single j 1))))
   have hZQ : Module.finrank ℚ (Submodule.span ℚ (pZ : Set (Fin n → ℝ))) =
@@ -368,13 +365,11 @@ private theorem int_matrix_range_finrank_eq_real_range {n : ℕ}
     · rintro ⟨j, rfl⟩
       refine ⟨j, ?_⟩
       funext i
-      simp [S, c, fZ, Matrix.toLin'_apply, Matrix.mulVec,
-        Matrix.mulVec_apply_eq_sum]
+      simp [c, fZ, Matrix.toLin'_apply]
     · rintro ⟨j, rfl⟩
       refine ⟨j, ?_⟩
       funext i
-      simp [S, c, fZ, Matrix.toLin'_apply, Matrix.mulVec,
-        Matrix.mulVec_apply_eq_sum]
+      simp [c, fZ, Matrix.toLin'_apply]
   have hpZQ :
       Submodule.span ℚ (pZ : Set (Fin n → ℝ)) =
         Submodule.span ℚ S := by
@@ -1113,12 +1108,12 @@ private theorem picard_group_genus_nonpositive_linear :
       have hFinj : Function.Injective F := by
         exact eT'.injective.comp
           (contract_picard_group T T' i hi e hcontraction).1
-      letI : Module.IsTorsionFree ℤ (picardGroup T) :=
+      let : Module.IsTorsionFree ℤ (picardGroup T) :=
         Function.Injective.moduleIsTorsionFree F hFinj (by
           intro r x
           exact F.map_smul r x)
       have hfinite := (picard_group_finite_rank_one T).1
-      letI : Module.Finite ℤ (picardGroup T) := hfinite
+      let : Module.Finite ℤ (picardGroup T) := hfinite
       exact ⟨LinearEquiv.ofFinrankEq (picardGroup T) ℤ (by
         rw [(picard_group_finite_rank_one T).2]
         simp)⟩

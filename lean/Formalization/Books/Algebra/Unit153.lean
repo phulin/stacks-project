@@ -310,7 +310,8 @@ theorem finite_local_over_henselian
     {R S : Type u} [CommRing R] [CommRing S] [Algebra R S]
     [HenselianLocalRing R] [IsLocalRing S]
     (hS : RingHom.Finite (algebraMap R S)) :
-    HenselianLocalRing S ∧ IsLocalHom (algebraMap R S) := by
+    HenselianLocalRing S ∧
+      RingHom.Finite (algebraMap R S) ∧ IsLocalHom (algebraMap R S) := by
   sorry
 
 theorem quasiFinite_localization_over_henselian

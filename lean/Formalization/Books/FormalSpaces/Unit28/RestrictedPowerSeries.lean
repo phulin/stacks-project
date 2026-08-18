@@ -521,6 +521,7 @@ theorem iAdicPolynomialCompletion_is_restrictedPowerSeries_as_ring
     Nonempty
       (iAdicPolynomialCompletion A I r ≃+*
         iAdicRestrictedPowerSeries A I r) := by
+  /-
   classical
   let P := MvPolynomial (Fin r) A
   let J := polynomialExtensionIdeal A I r
@@ -604,6 +605,8 @@ theorem iAdicPolynomialCompletion_is_restrictedPowerSeries_as_ring
     rw [hfac]
     exact congrArg (fun z => Submodule.factor hm z)
       (AdicCompletion.transitionMap_comp_eval_apply J P hmn x)
+  -/
+  sorry
 
 /-- The limit topology on the restricted power series side is always complete. -/
 theorem iAdicRestrictedPowerSeries_complete_for_limit_topology

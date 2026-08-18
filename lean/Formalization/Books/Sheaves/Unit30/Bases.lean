@@ -313,14 +313,21 @@ def basisSectionGermFamily {X : TopCat.{v}} {ι : Type v} (B : ι → Opens X)
     ∀ x : X, x ∈ B i → basisStalk B P x :=
   fun _x _hx => basisGermAt B P _hx σ
 
-/-- Condition (*) identifies basis sections with locally represented stalk families. -/
+/-! The codomain used by the condition (*) comparison. -/
+def basisSectionGermFamilySubtype {X : TopCat.{v}} {ι : Type v}
+    (B : ι → Opens X) (P : BasisPresheaf B) (i : ι) (σ : P.obj (op i)) :
+    {s : ∀ x : X, x ∈ B i → basisStalk B P x //
+      BasisLocallyRepresented B P (B i) s} :=
+  ⟨basisSectionGermFamily B P i σ, by
+    intro x hx
+    exact ⟨i, hx, le_rfl, σ, by intro y hy; rfl⟩⟩
+
+/-! Condition (*) identifies sections with the *canonical* family of germs. -/
 theorem basisConditionStarSections {X : TopCat.{v}} {ι : Type v}
     (B : ι → Opens X) (hB : Opens.IsBasis (Set.range B))
     (P : BasisPresheaf B) (i : ι) :
     BasisSheafCondition B P →
-      Nonempty (P.obj (op i) ≃
-        {s : ∀ x : X, x ∈ B i → basisStalk B P x //
-          BasisLocallyRepresented B P (B i) s}) := by
+      Function.Bijective (basisSectionGermFamilySubtype B P i) := by
   sorry
 
 /-- Extension preserves stalks. -/

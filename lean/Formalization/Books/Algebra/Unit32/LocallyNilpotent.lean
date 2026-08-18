@@ -256,20 +256,30 @@ theorem idempotent_lift_step_formula
     (e - (2 * e - 1) * (e ^ 2 - e) = 3 * e ^ 2 - 2 * e ^ 3) ∧
       ((3 * e ^ 2 - 2 * e ^ 3) ^ 2 - (3 * e ^ 2 - 2 * e ^ 3) =
         (4 * e ^ 2 - 4 * e - 3) * (e ^ 2 - e) ^ 2) := by
-  sorry
+  constructor <;> ring
 
 theorem idempotent_sub_cube_eq
     {R : Type u} [CommRing R] {e₁ e₂ : R}
     (he₁ : IsIdempotentElem e₁) (he₂ : IsIdempotentElem e₂) :
     (e₁ - e₂) ^ 3 = e₁ - e₂ := by
-  sorry
+  have hcomm : Commute e₁ e₂ := .all _ _
+  simp only [pow_succ, pow_zero, mul_sub, one_mul, sub_mul, he₁.eq, he₂.eq,
+    hcomm.eq, mul_assoc]
+  simp only [← mul_assoc, he₂.eq]
+  abel
 
 theorem idempotent_sub_odd_pow_eq
     {R : Type u} [CommRing R] {e₁ e₂ : R}
     (he₁ : IsIdempotentElem e₁) (he₂ : IsIdempotentElem e₂)
     {k : ℕ} (hk : Odd k) :
     (e₁ - e₂) ^ k = e₁ - e₂ := by
-  sorry
+  obtain ⟨n, rfl⟩ := hk
+  have hcube : (e₁ - e₂) ^ 3 = e₁ - e₂ :=
+    idempotent_sub_cube_eq he₁ he₂
+  have hpow : (e₁ - e₂) ^ (2 * n + 1) = e₁ - e₂ := by
+    induction n <;>
+      simp [mul_add, add_assoc, pow_add _ (2 * _) 3, ← pow_succ, hcube, *]
+  exact hpow
 
 theorem exists_idempotent_lift_polynomial
     {A : Type u} [Ring A] (e : A) (h : IsNilpotent (e ^ 2 - e)) :
@@ -277,7 +287,102 @@ theorem exists_idempotent_lift_polynomial
       ∃ (s : Finset (ℕ × ℕ)) (a : ℕ × ℕ → ℤ),
         e' = e + (e ^ 2 - e) *
           (∑ ij ∈ s, (a ij : A) * e ^ ij.1 * (e ^ 2 - e) ^ ij.2) := by
-  sorry
+  obtain ⟨n, hn⟩ := h
+  let q : Polynomial ℤ := Polynomial.X ^ 2 - Polynomial.X
+  let p : ℕ → Polynomial ℤ :=
+    Nat.rec Polynomial.X (fun _ p => 3 * p ^ 2 - 2 * p ^ 3)
+  have qpow_step {m : ℕ} (hm : 1 ≤ m) (r : Polynomial ℤ)
+      (hr : q ^ m ∣ r ^ 2 - r) :
+      q ^ (m + 1) ∣ (3 * r ^ 2 - 2 * r ^ 3) ^ 2 -
+        (3 * r ^ 2 - 2 * r ^ 3) := by
+    rcases hr with ⟨s, hs⟩
+    let t : Polynomial ℤ := 3 * r ^ 2 - 2 * r ^ 3
+    have hpow : q ^ (2 * m) = q ^ (m + 1) * q ^ (m - 1) := by
+      rw [← pow_add]
+      congr 1
+      omega
+    refine ⟨q ^ (m - 1) * (4 * r ^ 2 - 4 * r - 3) * s ^ 2, ?_⟩
+    calc
+      t ^ 2 - t = (4 * r ^ 2 - 4 * r - 3) * (r ^ 2 - r) ^ 2 := by
+        dsimp [t]
+        ring
+      _ = (4 * r ^ 2 - 4 * r - 3) * (q ^ m * s) ^ 2 := by rw [hs]
+      _ = q ^ (m + 1) *
+          (q ^ (m - 1) * (4 * r ^ 2 - 4 * r - 3) * s ^ 2) := by
+        rw [mul_pow, ← pow_mul, Nat.mul_comm, hpow]
+        ring
+  have hp (n : ℕ) : q ^ (n + 1) ∣ p n ^ 2 - p n := by
+    induction n with
+    | zero =>
+        refine ⟨1, ?_⟩
+        simp [p, q]
+    | succ n ih =>
+        simpa [p, Nat.add_assoc] using
+          qpow_step (m := n + 1) (by omega) (p n) ih
+  have q_sub_update (r : Polynomial ℤ) (hr : q ∣ r - Polynomial.X) :
+      q ∣ (3 * r ^ 2 - 2 * r ^ 3) - Polynomial.X := by
+    rcases hr with ⟨s, hs⟩
+    refine ⟨-(2 * r - 1) * (s * (r + Polynomial.X - 1) + 1) + s, ?_⟩
+    calc
+      (3 * r ^ 2 - 2 * r ^ 3) - Polynomial.X =
+          -(2 * r - 1) * (r ^ 2 - r) + (r - Polynomial.X) := by ring
+      _ = q * (-(2 * r - 1) * (s * (r + Polynomial.X - 1) + 1) + s) := by
+        rw [show r ^ 2 - r =
+            (r - Polynomial.X) * (r + Polynomial.X - 1) + q by ring, hs]
+        ring
+  have hp_sub (n : ℕ) : q ∣ p n - Polynomial.X := by
+    induction n with
+    | zero =>
+        refine ⟨0, ?_⟩
+        simp [p]
+    | succ n ih =>
+        simpa [p] using q_sub_update (p n) ih
+  let ev : Polynomial ℤ → A := fun r => r.eval₂ (Int.castRingHom A) e
+  have ev_mul (r s : Polynomial ℤ) : ev (r * s) = ev r * ev s := by
+    apply Polynomial.eval₂_mul_noncomm
+    intro k
+    simp [ev]
+  have ev_sub (r s : Polynomial ℤ) : ev (r - s) = ev r - ev s := by
+    dsimp [ev]
+    rw [Polynomial.eval₂_sub]
+  have ev_pow (r : Polynomial ℤ) (k : ℕ) : ev (r ^ k) = ev r ^ k := by
+    induction k with
+    | zero => simp [ev]
+    | succ k ih =>
+        rw [pow_succ, ev_mul, ih, pow_succ]
+  have ev_X : ev Polynomial.X = e := by simp [ev]
+  have ev_q : ev q = e ^ 2 - e := by
+    simp [ev, q]
+  have heval_zero : ev (p n ^ 2 - p n) = 0 := by
+    obtain ⟨r, hr⟩ := hp n
+    rw [hr, ev_mul, ev_pow, ev_q, pow_succ, hn]
+    simp
+  let e' : A := ev (p n)
+  have he' : IsIdempotentElem e' := by
+    rw [IsIdempotentElem]
+    dsimp [e']
+    have hz := heval_zero
+    rw [ev_sub, ev_pow] at hz
+    simpa [pow_two] using sub_eq_zero.mp hz
+  obtain ⟨r, hr⟩ := hp_sub n
+  let s : Finset (ℕ × ℕ) := r.support.image (fun i => (i, 0))
+  let a : ℕ × ℕ → ℤ := fun ij => r.coeff ij.1
+  have hsum :
+      (∑ ij ∈ s, (a ij : A) * e ^ ij.1 * (e ^ 2 - e) ^ ij.2) = ev r := by
+    classical
+    rw [show ev r = r.eval₂ (Int.castRingHom A) e by rfl,
+      Polynomial.eval₂_eq_sum]
+    rw [show s = r.support.image (fun i => (i, 0)) by rfl, Finset.sum_image]
+    · simp [a, Polynomial.sum_def]
+    · intro i hi j hj hij
+      simpa using congrArg Prod.fst hij
+  refine ⟨e', he', s, a, ?_⟩
+  have hrel : e' = e + (e ^ 2 - e) * ev r := by
+    dsimp [e']
+    have hrel' := congrArg ev hr
+    rw [ev_sub, ev_mul, ev_X, ev_q] at hrel'
+    simpa [ev, add_comm] using (sub_eq_iff_eq_add.mp hrel')
+  rw [hrel, hsum]
 
 /-! ## Nth roots -/
 

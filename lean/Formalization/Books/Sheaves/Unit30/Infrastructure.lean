@@ -275,7 +275,7 @@ theorem basisSheafCondition_iff_cover_gluing {X : TopCat.{v}} {ι : Type v}
       rw [hfj]
       exact hh
   · intro h
-    letI : (inducedFunctor B).IsCoverDense (Opens.grothendieckTopology X) :=
+    let : (inducedFunctor B).IsCoverDense (Opens.grothendieckTopology X) :=
       TopCat.Opens.coverDense_inducedFunctor hB
     intro i S hS
     obtain ⟨I, Y, f, rfl⟩ := S.exists_eq_ofArrows
@@ -345,8 +345,7 @@ theorem basisSheafCondition_iff_cofinal_cover_system {X : TopCat.{v}} {ι : Type
             ∀ j, ∃ h : B (U.member j) ≤ B i,
               P.map (InducedCategory.homMk (homOfLE h)).op t = s j := by
   constructor
-  · intro h
-    intro i U hUi s hs
+  · intro h i U hUi s hs
     exact (basisSheafCondition_iff_cover_gluing B hB P).1 h i U s hs
   · intro h
     apply (basisSheafCondition_iff_cover_gluing B hB P).2
@@ -1097,9 +1096,9 @@ theorem basisAlgebraicExtension_stalk_eq {C : Type u} [Category.{v} C]
     (hP : BasisAlgebraicSheaf B (CategoryTheory.forget C) P) (x : X) :
     Nonempty ((basisAlgebraicExtension B hB P hP).presheaf.stalk x ≅
       basisAlgebraicStalk B P x) := by
-  haveI : IsFiltered ((basisNeighborhoodIndex B x)ᵒᵖ) :=
+  have : IsFiltered ((basisNeighborhoodIndex B x)ᵒᵖ) :=
     basisNeighborhoodIndex_isFiltered B hB x
-  haveI : (inducedFunctor B).IsCoverDense (Opens.grothendieckTopology X) :=
+  have : (inducedFunctor B).IsCoverDense (Opens.grothendieckTopology X) :=
     TopCat.Opens.coverDense_inducedFunctor hB
   let E := basisAlgebraicExtension B hB P hP
   let F : (basisNeighborhoodIndex B x)ᵒᵖ ⥤ (OpenNhds x)ᵒᵖ :=
@@ -1234,9 +1233,9 @@ theorem exists_basisModuleExtension {X : TopCat.{v}} {ι : Type v}
     (F : BasisModulePresheaf B ((inducedFunctor B).op ⋙ O.1))
     (hF : BasisModuleSheaf B F) :
     Nonempty (BasisModuleExtensionData B hB O F hF) := by
-  letI : (inducedFunctor B).IsCoverDense (Opens.grothendieckTopology X) :=
+  let : (inducedFunctor B).IsCoverDense (Opens.grothendieckTopology X) :=
     TopCat.Opens.coverDense_inducedFunctor hB
-  letI : (inducedFunctor B).IsContinuous (basisTopology B)
+  let : (inducedFunctor B).IsContinuous (basisTopology B)
       (Opens.grothendieckTopology X) :=
     Functor.IsCoverDense.isContinuous _ _ _
       (Functor.coverPreserving_restrictedTopology _ _)
@@ -1249,18 +1248,18 @@ theorem exists_basisModuleExtension {X : TopCat.{v}} {ι : Type v}
       (inducedFunctor B).sheafPushforwardContinuous RingCat
         (basisTopology B) (Opens.grothendieckTopology X) |>.obj O :=
     𝟙 _
-  letI : Presheaf.IsLocallyInjective (Opens.grothendieckTopology X)
+  let : Presheaf.IsLocallyInjective (Opens.grothendieckTopology X)
       (𝟙 O.obj) := by infer_instance
-  letI : Presheaf.IsLocallySurjective (Opens.grothendieckTopology X)
+  let : Presheaf.IsLocallySurjective (Opens.grothendieckTopology X)
       (𝟙 O.obj) := by infer_instance
-  letI : (PresheafOfModules.pushforward φ.hom).IsRightAdjoint :=
+  let : (PresheafOfModules.pushforward φ.hom).IsRightAdjoint :=
     Functor.isRightAdjoint_of_leftAdjointObjIsDefined_eq_top
       (PresheafOfModules.pullbackObjIsDefined_eq_top φ.hom)
   let E :=
     (SheafOfModules.forget Rb ⋙ PresheafOfModules.pullback φ.hom ⋙
       PresheafOfModules.sheafification (𝟙 O.obj)).obj Fb
   let S := SheafOfModules.pushforward φ
-  letI : S.Faithful := by
+  let : S.Faithful := by
     constructor
     intro M N f g h
     apply SheafOfModules.hom_ext
@@ -1297,7 +1296,7 @@ theorem exists_basisModuleExtension {X : TopCat.{v}} {ι : Type v}
     change ((SheafOfModules.toSheaf.{v} O).map f).hom =
       ((SheafOfModules.toSheaf.{v} O).map g).hom
     exact h'
-  letI : S.Full := by
+  let : S.Full := by
     constructor
     intro M N h
     let α : M.val.presheaf ⟶ N.val.presheaf :=
@@ -1446,21 +1445,21 @@ theorem exists_basisModuleExtension {X : TopCat.{v}} {ι : Type v}
     let η := (PresheafOfModules.pullbackPushforwardAdjunction φ.hom).unit.app F
     let σ := (PresheafOfModules.sheafificationAdjunction (𝟙 O.obj)).unit.app P
     let e := η ≫ (PresheafOfModules.pushforward φ.hom).map σ
-    haveI : PresheafOfModules.IsLocallyInjective
+    have : PresheafOfModules.IsLocallyInjective
         (Opens.grothendieckTopology X) σ := by
       change Presheaf.IsLocallyInjective (Opens.grothendieckTopology X)
         ((PresheafOfModules.toPresheaf O.obj).map σ)
       rw [PresheafOfModules.toPresheaf_map_sheafificationAdjunction_unit_app]
       exact (Opens.grothendieckTopology X).W_toSheafify P.presheaf |>.isLocallyInjective
-    haveI : PresheafOfModules.IsLocallySurjective
+    have : PresheafOfModules.IsLocallySurjective
         (Opens.grothendieckTopology X) σ := by
       change Presheaf.IsLocallySurjective (Opens.grothendieckTopology X)
         ((PresheafOfModules.toPresheaf O.obj).map σ)
       rw [PresheafOfModules.toPresheaf_map_sheafificationAdjunction_unit_app]
       exact (Opens.grothendieckTopology X).W_toSheafify P.presheaf |>.isLocallySurjective
-    letI : (inducedFunctor B).IsCocontinuous (basisTopology B)
+    let : (inducedFunctor B).IsCocontinuous (basisTopology B)
         (Opens.grothendieckTopology X) := by infer_instance
-    haveI : PresheafOfModules.IsLocallyInjective
+    have : PresheafOfModules.IsLocallyInjective
         (basisTopology B) ((PresheafOfModules.pushforward φ.hom).map σ) := by
       change Presheaf.IsLocallyInjective (basisTopology B)
         (((Functor.whiskeringLeft (basisIndex B)ᵒᵖ (Opens X)ᵒᵖ AddCommGrpCat).obj
@@ -1469,7 +1468,7 @@ theorem exists_basisModuleExtension {X : TopCat.{v}} {ι : Type v}
       exact Presheaf.isLocallyInjective_whisker (basisTopology B)
         (Opens.grothendieckTopology X) (inducedFunctor B)
         ((PresheafOfModules.toPresheaf O.obj).map σ)
-    haveI : PresheafOfModules.IsLocallySurjective
+    have : PresheafOfModules.IsLocallySurjective
         (basisTopology B) ((PresheafOfModules.pushforward φ.hom).map σ) := by
       change Presheaf.IsLocallySurjective (basisTopology B)
         (((Functor.whiskeringLeft (basisIndex B)ᵒᵖ (Opens X)ᵒᵖ AddCommGrpCat).obj
@@ -1569,11 +1568,11 @@ theorem basisModuleExtension_stalk_module_iso {X : TopCat.{v}} {ι : Type v}
       Nonempty ((ModuleCat.restrictScalars e.hom.hom).obj
           ((moduleStalkFunctor O x).obj (basisModuleExtension B hB O F hF)) ≅
         basisModuleStalkObject B hB F x) := by
-  letI : IsFiltered ((basisNeighborhoodIndex B x)ᵒᵖ) :=
+  let : IsFiltered ((basisNeighborhoodIndex B x)ᵒᵖ) :=
     basisNeighborhoodIndex_isFiltered B hB x
-  letI : IsCofiltered (basisNeighborhoodIndex B x) :=
+  let : IsCofiltered (basisNeighborhoodIndex B x) :=
     isCofiltered_of_isFiltered_op (basisNeighborhoodIndex B x)
-  letI : (inducedFunctor B).IsCoverDense (Opens.grothendieckTopology X) :=
+  let : (inducedFunctor B).IsCoverDense (Opens.grothendieckTopology X) :=
     TopCat.Opens.coverDense_inducedFunctor hB
   let K : (basisNeighborhoodIndex B x)ᵒᵖ ⥤ (OpenNhds x)ᵒᵖ :=
     { obj := fun i => op ⟨B i.unop.1, i.unop.2⟩
@@ -1598,7 +1597,7 @@ theorem basisModuleExtension_stalk_module_iso {X : TopCat.{v}} {ι : Type v}
     NatIso.ofComponents (fun i => Iso.refl _) (by
       intro i j f
       dsimp [Rdiag, K, G]
-      subsingleton)
+      rfl)
   let eR : basisAlgebraicStalk (C := RingCat) B
       ((inducedFunctor B).op ⋙ O.1) x ≅
       TopCat.Presheaf.stalk (C := RingCat) O.obj x :=
@@ -1653,7 +1652,7 @@ theorem basisModuleExtension_stalk_module_iso {X : TopCat.{v}} {ι : Type v}
     ext z
     let Mdiag :=
       (ObjectProperty.ι (fun i : basisIndex B => x ∈ B i)).op ⋙ RF
-    letI (i : (basisNeighborhoodIndex B x)ᵒᵖ) :
+    let (i : (basisNeighborhoodIndex B x)ᵒᵖ) :
         Module (Rdiag.obj i) (Mdiag.obj i) := by
       change Module (((ObjectProperty.ι (fun i : basisIndex B => x ∈ B i)).op ⋙
         ((inducedFunctor B).op ⋙ O.1)).obj i)
@@ -1695,7 +1694,7 @@ theorem basisModuleExtension_stalk_module_iso {X : TopCat.{v}} {ι : Type v}
       dsimp [Gaddx, K, idx, q, P]
       exact (q.hom.app idx) ((qr.inv.app idx) m₁)
     let rG : G.obj (K.obj k) := (dR.hom.app k) r₁
-    letI (i : (OpenNhds x)ᵒᵖ) : Module (G.obj i) (Gaddx.obj i) := by
+    let (i : (OpenNhds x)ᵒᵖ) : Module (G.obj i) (Gaddx.obj i) := by
       dsimp [G, Gaddx, Gadd]
       infer_instance
     have hGlobal := CategoryTheory.Limits.IsColimit.ι_smul G Gaddx

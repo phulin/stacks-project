@@ -822,7 +822,19 @@ theorem twoYonedaHomPresheaf_map_comp
     (twoYonedaGroupoidRestriction p (f ≫ g).unop).toCatHom =
       (twoYonedaGroupoidRestriction p f.unop).toCatHom ≫
         (twoYonedaGroupoidRestriction p g.unop).toCatHom := by
-  sorry
+  apply Cat.ext
+  apply Functor.ext
+  · intro G
+    apply Subtype.ext
+    dsimp [twoYonedaGroupoidRestriction, twoYonedaGroupoidRestrictionObj]
+    simp [unop_comp, Over.mapComp_eq, Functor.assoc]
+  · intro G H η
+    apply Functor.Fiber.hom_ext
+    change Functor.whiskerLeft (Over.map (f ≫ g).unop) η.1 =
+      Functor.whiskerLeft (Over.map g.unop)
+        (Functor.whiskerLeft (Over.map f.unop) η.1)
+    rw [unop_comp, Over.mapComp_eq]
+    rfl
 
 /-- The contravariant functor of categories of slice morphisms appearing in
 the alternative proof. -/
@@ -906,7 +918,9 @@ theorem twoYonedaAssociatedFunctorMap_map_id
     (X : twoYonedaAssociatedCategory p) :
     twoYonedaAssociatedFunctorMap p (𝟙 X) =
       𝟙 (twoYonedaAssociatedFunctorObj p X) := by
-  sorry
+  apply Functor.Fiber.hom_ext
+  dsimp [twoYonedaAssociatedFunctorMap, twoYonedaAssociatedFunctorObj]
+  simp
 
 theorem twoYonedaAssociatedFunctorMap_map_comp
     {C : Type uC} [Category.{vC} C]
@@ -916,7 +930,9 @@ theorem twoYonedaAssociatedFunctorMap_map_comp
     twoYonedaAssociatedFunctorMap p (f ≫ g) =
       twoYonedaAssociatedFunctorMap p f ≫
         twoYonedaAssociatedFunctorMap p g := by
-  sorry
+  apply Functor.Fiber.hom_ext
+  dsimp [twoYonedaAssociatedFunctorMap]
+  simp [groupoidPresheaf_comp_fiber, Category.assoc]
 
 def twoYonedaAssociatedFunctor
     {C : Type uC} [Category.{vC} C]

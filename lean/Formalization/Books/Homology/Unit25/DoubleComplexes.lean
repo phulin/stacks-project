@@ -481,6 +481,33 @@ theorem doubleComplex_first_quadrant_convergence
       doubleComplexFirstConverges A ∧ doubleComplexSecondConverges A := by
   sorry
 
+/-- If the vertical cohomology of a finite-diagonal double complex is
+concentrated in degree zero, the first spectral sequence gives its edge
+isomorphism from the surviving second-page row to total cohomology. -/
+/- TODO(proof agents -- spectral-sequence collapse leaf): use
+`doubleComplex_spectral_sequence_terms` to identify the second page with
+`doubleComplexFirstIteratedCohomology`.  The hypothesis `hvertical` makes every
+term off the row `q = 0` zero.  Consequently all differentials entering or
+leaving `(n, 0)` are zero from page two onward.  Apply
+`doubleComplex_first_quadrant_convergence A hA` to identify the stable term
+with the corresponding associated-graded piece of total cohomology.  Since
+the induced filtration in total degree `n` has only that one nonzero graded
+piece, the canonical subquotient map is an isomorphism.  Compose these
+canonical identifications; in particular, do not choose unrelated page and
+abutment isomorphisms.  The filtration/subquotient argument should be factored
+as a general one-row-collapse lemma in Unit24 if another chapter needs it. -/
+theorem doubleComplex_first_edge_iso_of_vertical_cohomology_zero
+    {C : Type u} [Category.{v} C] [Abelian C]
+    [HasCountableCoproducts C] (A : DoubleComplex C)
+    (hA : HasFiniteDiagonalSupport A)
+    (hvertical : ∀ p q : ℤ, q ≠ 0 →
+      IsZero (doubleComplexVerticalCohomology A p q))
+    (n : ℤ) :
+    Nonempty
+      (doubleComplexFirstIteratedCohomology A n 0 ≅
+        doubleComplexFirstTotalCohomology A n) := by
+  sorry
+
 theorem doubleComplex_first_quadrant_weak_serre_first
     {C : Type u} [Category.{v} C] [Abelian C]
     [HasCountableCoproducts C] (A : DoubleComplex C)

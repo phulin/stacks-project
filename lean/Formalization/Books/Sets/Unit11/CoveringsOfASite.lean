@@ -705,7 +705,6 @@ theorem second_stage_is_limit
 theorem closureFunction_values_cofinal {C : Type u} [Category.{v} C]
     (K : SiteCoveringClass C) (H : CoveringCoding C)
     (κ : Cardinal.{max (u + 1) (v + 1)})
-    (hκ : Cardinal.aleph0 ≤ κ)
     {β₂ : Ordinal.{max (u + 1) (v + 1)}}
     (hβ₂ : Order.IsSuccLimit β₂) :
     ∀ γ < closureFunction K H κ β₂,
@@ -716,7 +715,6 @@ theorem closureFunction_values_cofinal {C : Type u} [Category.{v} C]
 
 theorem exists_common_closure_stage {C : Type u} [Category.{v} C]
     {β₂ : Ordinal.{max (u + 1) (v + 1)}}
-    (hβ₂ : Order.IsSuccLimit β₂)
     {I : Type (max u v)}
     (hI : Cardinal.lift.{max (u + 1) (v + 1), max u v}
       (Cardinal.mk I) < Ordinal.cof β₂)
@@ -747,7 +745,7 @@ theorem vonNeumann_mem_closureFunction_iff {C : Type u} [Category.{v} C]
   constructor
   · intro hx
     rw [ZFSet.mem_vonNeumann] at hx
-    obtain ⟨β, hβ⟩ := closureFunction_values_cofinal K H κ hκ hβ₂
+    obtain ⟨β, hβ⟩ := closureFunction_values_cofinal K H κ hβ₂
       (ZFSet.rank x) hx
     exact ⟨β, (ZFSet.mem_vonNeumann).2 hβ⟩
   · rintro ⟨β, hx⟩
@@ -864,7 +862,7 @@ theorem boundedCoverings_at_closureStage_isSite {C : Type u}
         (Cardinal.mk U.Index) < Ordinal.cof β₂ :=
       hU.2.trans_lt hβ₂.2
     obtain ⟨βV', hβV'⟩ := exists_common_closure_stage
-      (C := C) (β₂ := β₂) (I := U.Index) hβ₂lim hI
+      (C := C) (β₂ := β₂) (I := U.Index) hI
       (fun i => (βV i).1) (fun i => (βV i).2)
     let β : Set.Iio β₂ :=
       ⟨max βU.1 βV'.1, by

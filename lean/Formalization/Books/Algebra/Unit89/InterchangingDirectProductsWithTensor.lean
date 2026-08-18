@@ -163,7 +163,8 @@ theorem kernel_tensored_finitelyPresented
     {R : Type u} [CommRing R] (M P Q : ModuleCat.{w} R)
     (hP : Module.FinitePresentation R (P : Type w))
     (f : (P : Type w) →ₗ[R] (M : Type w))
-    (x : TensorProduct R (P : Type w) (Q : Type w)) :
+    (x : TensorProduct R (P : Type w) (Q : Type w))
+    (hx : x ∈ LinearMap.ker (f.rTensor (Q : Type w))) :
     ∃ P' : ModuleCat.{w} R,
       Module.FinitePresentation R (P' : Type w) ∧
         ∃ f' : (P : Type w) →ₗ[R] (P' : Type w),
